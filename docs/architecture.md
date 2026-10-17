@@ -118,17 +118,19 @@ API 계층 → 진행 → 이벤트 운영 → 콘텐츠
 - 난수는 판마다 서버가 시드를 만들어 쓴다. 같은 시드와 같은 보고·선택 순서면 같은 판이 재현되어 버그 재현과 밸런스 검증에 쓴다.
 - 서버의 시간 관련 로직은 현재 시각을 직접 읽지 않고 보고된 값으로만 계산하므로 테스트에서 임의의 시각 열로 검증할 수 있다.
 
-## 5. API 개요 (제안)
+## 5. API 개요
 
-| 용도 | 요청 |
-|---|---|
-| 세션 발급 | `POST /sessions` |
-| 판 시작 | `POST /games` |
-| 현재 상태 조회 (재접속 시 이어하기) | `GET /games/{id}` |
-| 시간 경과 보고 (구간 결과 수신) | `POST /games/{id}/advance` (게임 시각을 보내면 월급·손익·발생 이벤트를 응답) |
-| 선택 제출 | `POST /games/{id}/choices` |
-| 이벤트 스킵 | `POST /games/{id}/events/{eventId}/skip` |
-| 결과 조회 | `GET /games/{id}/result` |
+모든 경로는 `/api`로 시작한다. 계약의 원본은 `contracts/openapi/game.yaml`이다.
+
+| 용도 | 요청 | 상태 |
+|---|---|---|
+| 세션 확보 (없으면 발급, `IG_SESSION` 쿠키) | `POST /api/sessions` | 구현됨 (워킹 스켈레톤) |
+| 판 시작 (진행 중인 판이 있으면 버리고 새로 시작) | `POST /api/games` | 구현됨 |
+| 진행 중인 판 조회 (재접속 시 이어하기) | `GET /api/games/current` | 구현됨. 세션당 판이 하나라 ID 대신 `current`를 쓴다 |
+| 시간 경과 보고 | `POST /api/games/{id}/advance` | 구현됨 (시각 검증만). 월급·손익·이벤트 응답은 agent5가 추가 |
+| 선택 제출 | `POST /api/games/{id}/choices` | 예정 |
+| 이벤트 스킵 | `POST /api/games/{id}/events/{eventId}/skip` | 예정 |
+| 결과 조회 | `GET /api/games/{id}/result` | 예정 |
 
 - 클라이언트에는 확률, 숨은 방향 등 규칙 정보가 내려가지 않는다. 응답에는 화면에 필요한 값(힌트 문구, 결과, 실제 행동과 원인 문구)만 담는다.
 - 상세 명세는 OpenAPI로 작성하고 도메인별로 나눈다.
@@ -157,7 +159,7 @@ server/                          Spring Boot (Gradle)
 web/                    클라이언트 (React, Vite)
 contracts/              OpenAPI 명세 (도메인별). 통합 담당만 수정
 content/                직접 작성한 이벤트 데이터 원본. 서버가 읽는다
-e2e/                    Playwright
+web/e2e/                Playwright (웹 도구로 함께 린트·타입 검사한다)
 docs/                   설계 문서
 ```
 
@@ -181,7 +183,7 @@ investorgame/asset/
 - `web`은 게임 시계를 구동하고, 시간이 흐를 때 서버 API를 호출해 응답으로 화면을 그린다.
 - 게임 규칙, 확률, 숨은 값을 클라이언트 코드에 두지 않는다. 클라이언트가 아는 것은 시계와 화면 표시뿐이다.
 - OpenAPI에서 생성한 타입과 API 클라이언트를 쓴다.
-- 새로고침이나 재접속 시 세션 토큰으로 `GET /games/{id}`를 호출해 서버의 현재 상태에서 이어한다.
+- 새로고침이나 재접속 시 세션 쿠키로 `GET /api/games/current`를 호출해 서버의 현재 상태에서 이어한다. **재접속하면 일시정지 상태로 이어하고, 사용자가 "계속"을 눌러야 시계가 흐른다** (워킹 스켈레톤에서 정함). 새로 태어날 때는 바로 흐른다.
 - 네트워크 오류 시 "연결이 끊어졌습니다" 화면을 보여 주고 재연결을 시도한다.
 
 ## 8. 에이전트 분업 (Orca)
@@ -195,7 +197,7 @@ Orca는 AI 에이전트 도구이며, 도메인별로 권한을 나눠 병렬 �
 | `agent1` | 판정 | 캐릭터, 행동 | `character_*` | `server/.../character/**`, `behavior/**`, 마이그레이션 `*__character_*.sql` | `contracts` |
 | `agent2` | 시장·이벤트 | 자산, 이벤트 운영 | `asset_*`, `event_*` | `server/.../asset/**`, `event/**`, 마이그레이션 `*__asset_*.sql`, `*__event_*.sql` | `contracts` |
 | `agent3` | 플랫폼 | 세션, 콘텐츠, 결과 | `session_*`, `content_*`, `result_*` | `server/.../session/**`, `content/**`, `result/**`, 마이그레이션 `*__session_*.sql`, `*__content_*.sql`, `*__result_*.sql`, 저장소 `content/` | `contracts` |
-| `agent4` | 클라이언트 | (도메인 아님) | 없음 | `web/**`, `e2e/**` | `contracts` |
+| `agent4` | 클라이언트 | (도메인 아님) | 없음 | `web/**` (E2E는 `web/e2e/`) | `contracts` |
 | `agent5` | 진행 | 진행 | `progress_*` | `server/.../progress/**`, `api/**`, 마이그레이션 `*__progress_*.sql` | `contracts` |
 
 - 테스트 경로(`src/test/.../<도메인>`)는 해당 도메인의 소유 경로에 포함한다.

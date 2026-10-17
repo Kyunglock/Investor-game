@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: investor-game
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/investor}
+    username: ${DB_USER:investor}
+    password: ${DB_PASSWORD:investor}
+  flyway:
+    # 에이전트들이 병렬로 추가한 마이그레이션의 병합 순서가 번호 순서와 어긋날 수 있다. 운영은 끈다 (db.md 6절).
+    out-of-order: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+game:
+  days-per-month: 30
+  days-per-year: 360
+
+progress:
+  start-age: 25
+  end-age: 65
+  max-skip-days: 360
+
+character:
+  initial-stat:
+    min: 15
+    max: 85
+
+asset:
+  initial-cash:
+    min-unit: 1
+    max-unit: 50
+    unit: 1000000
+
+session:
+  ttl: 1d
+  cookie-secure: true
