@@ -50,6 +50,7 @@ public record Resolution(
     List<Deviation> deviations  // 이탈 원인. 이탈이 없으면 빈 목록. 순서대로 적용된 단계
 ) {}
 
+// 아래 두 타입은 이벤트 운영도 쓰므로 공유 타입(investorgame.common)에 있다 (README 4절).
 public record Deviation(
     String statCode,          // "conviction", "patience", "courage"
     Action from,
@@ -59,12 +60,13 @@ public record Deviation(
 public record Hint(
     HintDirection direction,  // UP, DOWN, NEUTRAL
     HintStrength strength     // MILD, STRONG. direction이 NEUTRAL이면 의미 없음 (MILD로 고정)
-) {}
-
-public enum HintDirection { UP, DOWN, NEUTRAL }
-public enum HintStrength { MILD, STRONG }
+) {
+    public enum HintDirection { UP, DOWN, NEUTRAL }
+    public enum HintStrength { MILD, STRONG }
+}
 ```
 
+- `Deviation`과 `Hint`를 행동 도메인에 두면 이벤트 운영이 행동을 import하게 되어 도메인 경계 규칙(진행만 다른 도메인을 부른다)에 걸린다. 그래서 구현할 때 공유 타입으로 옮겼다.
 - 힌트 문구는 이 도메인이 정하지 않는다. 이벤트 운영이 `(direction, strength)`에 맞는 문구를 콘텐츠에서 골라 `event_instance.hint_code`에 저장한다.
 
 ## 4. 규칙

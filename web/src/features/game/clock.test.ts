@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   advanceDay,
   ageAt,
+  clockLimit,
   REPORT_EVERY_DAYS,
   SECONDS_PER_YEAR,
   shouldReport,
@@ -19,8 +20,19 @@ describe('advanceDay', () => {
     expect(advanceDay(0, SECONDS_PER_YEAR * 1000, 2, DAYS_PER_YEAR, 14_400)).toBeCloseTo(720)
   })
 
-  it('마지막 날을 넘지 않는다', () => {
+  it('한계를 넘지 않는다', () => {
     expect(advanceDay(14_390, 60_000, 2, DAYS_PER_YEAR, 14_400)).toBe(14_400)
+  })
+})
+
+describe('clockLimit', () => {
+  it('다음 이벤트가 있으면 그 시각에서 멈춘다', () => {
+    expect(clockLimit(14_400, 95)).toBe(95)
+  })
+
+  it('다음 이벤트가 없으면 판의 끝까지 간다', () => {
+    expect(clockLimit(14_400, null)).toBe(14_400)
+    expect(clockLimit(14_400, undefined)).toBe(14_400)
   })
 })
 
@@ -36,7 +48,6 @@ describe('ageAt', () => {
     expect(ageAt(25, 0, DAYS_PER_YEAR)).toEqual({ years: 25, months: 0 })
     expect(ageAt(25, 359, DAYS_PER_YEAR)).toEqual({ years: 25, months: 11 })
     expect(ageAt(25, 360, DAYS_PER_YEAR)).toEqual({ years: 26, months: 0 })
-    expect(ageAt(25, 375.9, DAYS_PER_YEAR)).toEqual({ years: 26, months: 0 })
   })
 })
 

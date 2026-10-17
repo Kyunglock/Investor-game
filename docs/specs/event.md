@@ -162,7 +162,7 @@ public record CompleteResult(
 
 | 종류 | 조건 | 다음 후보 일수 |
 |---|---|---|
-| `JOB` | `SAVING`이고 아직 없음 | `event.job.day` (초기값 0, 판 시작) |
+| `JOB` | `SAVING`이고 아직 없음 | `event.job.day` (초기값 60. 태어나자마자 직장을 고르지 않도록 두 달의 구직 기간을 둔다) |
 | `TRAIT` | `SAVING`, `JOB`이 해결됨, 콘텐츠의 성향 이벤트가 남음 | 마지막 `TRAIT`(없으면 `JOB` 해결 일수) + `event.trait.gap-days` 구간에서 뽑은 값 |
 | `OFFER` | `SAVING`, `salaryStarted`, `traitsFinalized`, 대기·예약된 `OFFER` 없음 | 처음이면 `max(현재, 첫 월급 후)`; 거절되었다면 마지막 `OFFER` + `game.days-per-year` (1년마다 다시 묻는다, 확정) |
 | `TRAINING` | `JOB`이 해결됨 | 마지막 `TRAINING`(없으면 `JOB` 해결 일수) + `event.training.gap-days` 구간에서 뽑은 값 |
@@ -204,7 +204,7 @@ public record CompleteResult(
 
 | 설정 (스타일 코드별) | 단기(`short`) | 장기(`long`) | 의미 |
 |---|---|---|---|
-| `event.style.<코드>.news-gap-days` | 15~45 | 60~150 | 뉴스 간격 구간 |
+| `event.style.<코드>.news-gap-days` | 120~240 | 240~480 | 뉴스 간격 구간. 처음 값(15~45 / 60~150)은 40년 동안 뉴스가 단기 약 470번, 장기 약 130번이라 10분짜리 판에서 매번 선택하기에 너무 많아 늘렸다. 지금 값은 단기 약 80번, 장기 약 40번이다 |
 | `event.style.<코드>.magnitude-percent` | 150 | 100 | 변동 폭 배율 |
 | `event.style.<코드>.chain-continue-percent` | 30 | 70 | 연결 뉴스가 이어질 확률 배율 |
 
@@ -302,7 +302,7 @@ public record CompleteResult(
 
 | 이름 | 초기값 | 의미 |
 |---|---|---|
-| `event.job.day` | 0 | 직업 선택 이벤트 발생 일수 |
+| `event.job.day` | 60 | 직업 선택 이벤트 발생 일수 (구직 기간) |
 | `event.job.option-count` | 3 | 직업 선택지 개수 |
 | `event.trait.gap-days` | 60~120 | 성향 이벤트 간격 |
 | `event.training.gap-days` | 120~240 | 자기계발 이벤트 간격 |
@@ -310,7 +310,7 @@ public record CompleteResult(
 | `event.news.interest-weight-percent` | 300 | 관심 섹터 뉴스의 가중치 배율 |
 | `event.news.no-repeat-window` | 5 | 같은 정의가 다시 나오지 않는 최근 개수 |
 | `event.news.max-chain-depth` | 5 | 연결 뉴스의 최대 깊이 |
-| `event.style.<코드>.news-gap-days` | 단기 15~45 / 장기 60~150 | 뉴스 간격 |
+| `event.style.<코드>.news-gap-days` | 단기 120~240 / 장기 240~480 | 뉴스 간격 (5.5절) |
 | `event.style.<코드>.magnitude-percent` | 단기 150 / 장기 100 | 변동 폭 배율 |
 | `event.style.<코드>.chain-continue-percent` | 단기 30 / 장기 70 | 연결 확률 배율 |
 | `game.days-per-year` | 360 | 투자 시작 재제안 주기 |
@@ -337,7 +337,7 @@ public record CompleteResult(
 
 | # | 입력 | 기대 결과 |
 |---|---|---|
-| 1 | 판 시작, `SAVING`, 구간 (0, 0] | `JOB` 이벤트 하나(day 0), 선택지 3개, 스킵 불가. 거기서 멈춘다 |
+| 1 | 판 시작 후 60일까지 시간을 보냄 | 60일째에 `JOB` 이벤트 하나, 선택지 3개, 스킵 불가. 판의 시각은 60일에서 멈춘다 |
 | 2 | 같은 상태·같은 시드로 `schedule`을 두 번 | 두 결과가 같다. 같은 `event_instance` 행이 하나만 있다(멱등) |
 | 3 | `JOB`이 `PENDING`인 채로 다시 `schedule` | 새 선택형을 만들지 않는다. 대기 중인 이벤트가 최대 하나다 |
 | 4 | `JOB` 해결 뒤 `SAVING`에서 구간을 길게 | 간격 구간 안에서 `TRAIT`이 나오고 멈춘다. `NOTICE`는 그 전에 섞여 delivered에 들어가고 멈추지 않는다 |

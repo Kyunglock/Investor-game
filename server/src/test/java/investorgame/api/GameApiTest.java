@@ -1,26 +1,24 @@
 package investorgame.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.jayway.jsonpath.JsonPath;
+import com.jayway.jsonpath.DocumentContext;
 import investorgame.TestcontainersConfiguration;
 import jakarta.servlet.http.Cookie;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-/** 워킹 스켈레톤의 흐름: 세션 발급 → 판 시작 → 이어하기 → 시각 보고 → 다시 시작하기. */
+/** API의 계약과 경계 조건. 한 판 전체의 흐름은 GameFlowTest에서 본다. */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 class GameApiTest {
@@ -35,36 +33,39 @@ class GameApiTest {
   }
 
   @Test
-  void 세션을_받아_판을_시작하면_능력치와_초기_자산이_생긴다() throws Exception {
-    Cookie session = newSession();
+  void 판을_시작하면_능력치와_현금이_생기고_구직_기간_뒤에_직업_선택이_온다() throws Exception {
+    GameClient client = GameClient.newSession(mvc);
 
-    mvc.perform(post("/api/games").cookie(session))
+    client
+        .startRaw()
         .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.status").value("ACTIVE"))
         .andExpect(jsonPath("$.phase").value("SAVING"))
-        .andExpect(jsonPath("$.lastReportedDay").value(0))
+        .andExpect(jsonPath("$.day").value(0))
         .andExpect(jsonPath("$.startAge").value(25))
         .andExpect(jsonPath("$.endAge").value(65))
-        .andExpect(jsonPath("$.daysPerYear").value(360))
         .andExpect(jsonPath("$.stats.insight").isNumber())
-        .andExpect(jsonPath("$.stats.luck").isNumber())
+        .andExpect(jsonPath("$.initialStats.insight").isNumber())
         .andExpect(jsonPath("$.cash").isNumber())
+        .andExpect(jsonPath("$.job").doesNotExist())
+        .andExpect(jsonPath("$.pendingEvent").doesNotExist())
+        .andExpect(jsonPath("$.nextEventDay").value(60))
         .andExpect(jsonPath("$.seed").doesNotExist());
+
+    DocumentContext job = client.startUntilJob();
+    assertThat(job.read("$.pendingEvent.kind", String.class)).isEqualTo("JOB");
+    assertThat(job.read("$.pendingEvent.options.length()", Integer.class)).isEqualTo(3);
   }
 
   @Test
   void 능력치는_15에서_85_사이이고_초기_현금은_100만원_단위다() throws Exception {
-    Cookie session = newSession();
+    GameClient client = GameClient.newSession(mvc);
     for (int i = 0; i < 20; i++) {
-      String body =
-          mvc.perform(post("/api/games").cookie(session))
-              .andReturn()
-              .getResponse()
-              .getContentAsString();
-      for (String stat : new String[] {"insight", "patience", "courage", "conviction", "luck"}) {
-        int value = JsonPath.read(body, "$.stats." + stat);
-        assertThat(value).isBetween(15, 85);
+      DocumentContext game = client.start();
+      for (String stat : List.of("insight", "patience", "courage", "conviction", "luck")) {
+        assertThat(game.read("$.stats." + stat, Integer.class)).isBetween(15, 85);
       }
-      long cash = ((Number) JsonPath.read(body, "$.cash")).longValue();
+      long cash = game.read("$.cash", Long.class);
       assertThat(cash).isBetween(1_000_000L, 50_000_000L);
       assertThat(cash % 1_000_000L).isZero();
     }
@@ -72,17 +73,15 @@ class GameApiTest {
 
   @Test
   void 같은_세션으로_다시_조회하면_진행_중인_판을_이어한다() throws Exception {
-    Cookie session = newSession();
-    String gameId = startGame(session);
+    GameClient client = GameClient.newSession(mvc);
+    String gameId = client.start().read("$.gameId");
 
-    mvc.perform(get("/api/games/current").cookie(session))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.gameId").value(gameId));
+    client.currentRaw().andExpect(status().isOk()).andExpect(jsonPath("$.gameId").value(gameId));
   }
 
   @Test
   void 진행_중인_판이_없으면_404() throws Exception {
-    mvc.perform(get("/api/games/current").cookie(newSession())).andExpect(status().isNotFound());
+    GameClient.newSession(mvc).currentRaw().andExpect(status().isNotFound());
   }
 
   @Test
@@ -103,7 +102,7 @@ class GameApiTest {
 
   @Test
   void 유효한_세션이_있으면_새로_발급하지_않는다() throws Exception {
-    Cookie session = newSession();
+    Cookie session = GameClient.newSession(mvc).session();
     String setCookie =
         mvc.perform(post("/api/sessions").cookie(session))
             .andExpect(status().isNoContent())
@@ -114,90 +113,95 @@ class GameApiTest {
   }
 
   @Test
-  void 시각을_보고하면_판이_그_시각으로_진행된다() throws Exception {
-    Cookie session = newSession();
-    String gameId = startGame(session);
+  void 다음_이벤트_시각을_넘어서_시간을_보낼_수_없다() throws Exception {
+    GameClient client = GameClient.newSession(mvc);
+    String gameId = client.start().read("$.gameId");
 
-    advance(session, gameId, 100)
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.lastReportedDay").value(100));
-    mvc.perform(get("/api/games/current").cookie(session))
-        .andExpect(jsonPath("$.lastReportedDay").value(100));
+    client.advanceRaw(gameId, 70).andExpect(status().isOk());
+    assertThat(client.current().read("$.day", Integer.class))
+        .as("이벤트가 생긴 60일째에서 판이 멈춘다")
+        .isEqualTo(60);
+    client
+        .advanceRaw(gameId, 71)
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
+  }
+
+  @Test
+  void 직업을_고르면_한_달마다_월급이_들어온다() throws Exception {
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext chosen = client.chooseFirstJob(client.startUntilJob());
+    String gameId = chosen.read("$.game.gameId");
+    long cash = chosen.read("$.game.cash", Long.class);
+    long salary = chosen.read("$.game.job.monthlySalary", Long.class);
+    assertThat(chosen.read("$.outcome.message", String.class)).contains("일하기 시작했다");
+
+    // 직업은 60일째에 정해졌으므로 첫 월급은 90일째다.
+    assertThat(client.advance(gameId, 89).read("$.cash", Long.class)).isEqualTo(cash);
+    assertThat(client.advance(gameId, 90).read("$.cash", Long.class)).isEqualTo(cash + salary);
+    assertThat(client.advance(gameId, 90).read("$.cash", Long.class))
+        .as("같은 날을 다시 보고해도 월급은 한 번만")
+        .isEqualTo(cash + salary);
+    assertThat(client.advance(gameId, 119).read("$.cash", Long.class)).isEqualTo(cash + salary);
   }
 
   @Test
   void 시각은_거꾸로_갈_수_없다() throws Exception {
-    Cookie session = newSession();
-    String gameId = startGame(session);
-    advance(session, gameId, 100);
+    GameClient client = GameClient.newSession(mvc);
+    String gameId = client.chooseFirstJob(client.startUntilJob()).read("$.game.gameId");
+    client.advance(gameId, 100);
 
-    advance(session, gameId, 99)
+    client
+        .advanceRaw(gameId, 99)
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
   }
 
   @Test
   void 한_번에_건너뛸_수_있는_구간을_넘으면_거부한다() throws Exception {
-    Cookie session = newSession();
-    String gameId = startGame(session);
+    GameClient client = GameClient.newSession(mvc);
+    String gameId = client.chooseFirstJob(client.startUntilJob()).read("$.game.gameId");
 
-    advance(session, gameId, 360).andExpect(status().isOk());
-    advance(session, gameId, 721).andExpect(status().isBadRequest());
+    client.advanceRaw(gameId, 60 + 361).andExpect(status().isBadRequest());
   }
 
   @Test
   void 음수_시각은_거부한다() throws Exception {
-    Cookie session = newSession();
-    String gameId = startGame(session);
+    GameClient client = GameClient.newSession(mvc);
+    String gameId = client.start().read("$.gameId");
 
-    advance(session, gameId, -1).andExpect(status().isBadRequest());
+    client.advanceRaw(gameId, -1).andExpect(status().isBadRequest());
   }
 
   @Test
   void 다른_세션의_판은_진행할_수_없다() throws Exception {
-    String gameId = startGame(newSession());
+    String gameId = GameClient.newSession(mvc).start().read("$.gameId");
 
-    advance(newSession(), gameId, 10).andExpect(status().isNotFound());
+    GameClient.newSession(mvc).advanceRaw(gameId, 0).andExpect(status().isNotFound());
+  }
+
+  @Test
+  void 없는_선택지와_이미_해결된_이벤트는_거부한다() throws Exception {
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.startUntilJob();
+    String gameId = game.read("$.gameId");
+    String eventId = game.read("$.pendingEvent.eventId");
+
+    client.chooseRaw(gameId, eventId, "astronaut").andExpect(status().isBadRequest());
+    client.chooseFirstJob(game);
+    client
+        .chooseRaw(gameId, eventId, game.read("$.pendingEvent.options[0].code"))
+        .andExpect(status().isBadRequest());
   }
 
   @Test
   void 다시_시작하면_새_판이_생기고_이전_판은_진행할_수_없다() throws Exception {
-    Cookie session = newSession();
-    String first = startGame(session);
-    String second = startGame(session);
+    GameClient client = GameClient.newSession(mvc);
+    String first = client.start().read("$.gameId");
+    String second = client.start().read("$.gameId");
 
     assertThat(second).isNotEqualTo(first);
-    mvc.perform(get("/api/games/current").cookie(session))
-        .andExpect(jsonPath("$.gameId").value(second));
-    advance(session, first, 10).andExpect(status().isNotFound());
-  }
-
-  private Cookie newSession() throws Exception {
-    Cookie cookie =
-        mvc.perform(post("/api/sessions"))
-            .andExpect(status().isNoContent())
-            .andReturn()
-            .getResponse()
-            .getCookie(SessionCookies.NAME);
-    assertThat(cookie).isNotNull();
-    return new Cookie(cookie.getName(), cookie.getValue());
-  }
-
-  private String startGame(Cookie session) throws Exception {
-    String body =
-        mvc.perform(post("/api/games").cookie(session))
-            .andExpect(status().isCreated())
-            .andReturn()
-            .getResponse()
-            .getContentAsString();
-    return JsonPath.read(body, "$.gameId");
-  }
-
-  private ResultActions advance(Cookie session, String gameId, int day) throws Exception {
-    return mvc.perform(
-        post("/api/games/{gameId}/advance", gameId)
-            .cookie(session)
-            .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"day\":" + day + "}"));
+    assertThat(client.current().read("$.gameId", String.class)).isEqualTo(second);
+    client.advanceRaw(first, 0).andExpect(status().isNotFound());
   }
 }

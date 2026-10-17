@@ -1,10 +1,11 @@
 package investorgame.api;
 
-import investorgame.common.Stats;
+import investorgame.progress.ChoiceOutcome;
 import investorgame.progress.GameView;
 import investorgame.progress.ProgressService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +17,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 요청·응답 변환만 한다. 규칙 판단은 진행 도메인에 있다. 계약은 contracts/openapi/game.yaml. */
+/**
+ * 요청을 진행 도메인에 넘기기만 한다. 응답은 진행의 화면용 타입을 그대로 쓰며, 그 타입에는 숨은 값이 없다. 계약은 contracts/openapi/game.yaml.
+ */
 @RestController
 @RequestMapping("/api/games")
 class GameController {
@@ -30,57 +33,36 @@ class GameController {
   }
 
   @PostMapping
-  ResponseEntity<GameResponse> start(
+  ResponseEntity<GameView> start(
       @CookieValue(name = SessionCookies.NAME, required = false) String token) {
     UUID sessionId = cookies.requireSession(token);
-    return ResponseEntity.status(HttpStatus.CREATED)
-        .body(GameResponse.from(progress.start(sessionId)));
+    return ResponseEntity.status(HttpStatus.CREATED).body(progress.start(sessionId));
   }
 
   @GetMapping("/current")
-  ResponseEntity<GameResponse> current(
+  ResponseEntity<GameView> current(
       @CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    UUID sessionId = cookies.requireSession(token);
-    return ResponseEntity.of(progress.current(sessionId).map(GameResponse::from));
+    return ResponseEntity.of(progress.current(cookies.requireSession(token)));
   }
 
   @PostMapping("/{gameId}/advance")
-  GameResponse advance(
+  GameView advance(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @PathVariable UUID gameId,
       @Valid @RequestBody AdvanceRequest request) {
-    UUID sessionId = cookies.requireSession(token);
-    return GameResponse.from(progress.advance(sessionId, gameId, request.day()));
+    return progress.advance(cookies.requireSession(token), gameId, request.day());
+  }
+
+  @PostMapping("/{gameId}/events/{eventId}/choose")
+  ChoiceOutcome choose(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @PathVariable UUID gameId,
+      @PathVariable UUID eventId,
+      @Valid @RequestBody ChoiceRequest request) {
+    return progress.choose(cookies.requireSession(token), gameId, eventId, request.option());
   }
 
   record AdvanceRequest(@Min(0) int day) {}
 
-  record StatsResponse(int insight, int patience, int courage, int conviction, int luck) {
-    static StatsResponse from(Stats stats) {
-      return new StatsResponse(
-          stats.insight(), stats.patience(), stats.courage(), stats.conviction(), stats.luck());
-    }
-  }
-
-  record GameResponse(
-      UUID gameId,
-      String phase,
-      int lastReportedDay,
-      int startAge,
-      int endAge,
-      int daysPerYear,
-      StatsResponse stats,
-      long cash) {
-    static GameResponse from(GameView view) {
-      return new GameResponse(
-          view.gameId(),
-          view.phase().name(),
-          view.lastReportedDay(),
-          view.startAge(),
-          view.endAge(),
-          view.daysPerYear(),
-          StatsResponse.from(view.stats()),
-          view.cash());
-    }
-  }
+  record ChoiceRequest(@NotBlank String option) {}
 }

@@ -6,7 +6,7 @@
 /** 한 판 10분에 40년(25→65세)이면 1년이 15초다. */
 export const SECONDS_PER_YEAR = 15
 
-/** 서버의 한 번에 건너뛸 수 있는 상한(360일)보다 충분히 작게 보고한다. */
+/** 이벤트가 없어도 월급이 화면에 반영되도록 주기적으로 보고한다. 서버의 건너뛰기 상한(360일)보다 충분히 작다. */
 export const REPORT_EVERY_DAYS = 90
 
 export const SPEEDS = [1, 2] as const
@@ -16,16 +16,21 @@ export function totalDays(startAge: number, endAge: number, daysPerYear: number)
   return (endAge - startAge) * daysPerYear
 }
 
-/** 경과 시간만큼 게임 일수를 앞으로 보낸다. 마지막 날을 넘지 않는다. */
+/** 시계가 갈 수 있는 끝. 다음 이벤트 시각을 넘지 않아야 서버가 그 시각에 이벤트를 띄운다. */
+export function clockLimit(lastDay: number, nextEventDay: number | null | undefined): number {
+  return nextEventDay == null ? lastDay : Math.min(lastDay, nextEventDay)
+}
+
+/** 경과 시간만큼 게임 일수를 앞으로 보낸다. limit을 넘지 않는다. */
 export function advanceDay(
   day: number,
   elapsedMs: number,
   speed: Speed,
   daysPerYear: number,
-  lastDay: number,
+  limit: number,
 ): number {
   const daysPerMs = daysPerYear / (SECONDS_PER_YEAR * 1000)
-  return Math.min(lastDay, day + elapsedMs * daysPerMs * speed)
+  return Math.min(limit, day + elapsedMs * daysPerMs * speed)
 }
 
 export function shouldReport(day: number, reportedDay: number): boolean {

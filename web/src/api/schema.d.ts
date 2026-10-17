@@ -35,7 +35,7 @@ export interface paths {
         put?: never;
         /**
          * 새 판을 시작한다
-         * @description 진행 중인 판이 있으면 버리고 새로 시작한다 (다시 시작하기).
+         * @description 진행 중인 판이 있으면 버리고 새로 시작한다. 구직 기간(약 두 달) 뒤에 직업 선택 이벤트가 온다.
          */
         post: operations["startGame"];
         delete?: never;
@@ -51,7 +51,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 진행 중인 판을 가져온다 (이어하기) */
+        /** 가장 최근 판을 가져온다 (이어하기, 끝난 판의 결과 보기) */
         get: operations["getCurrentGame"];
         put?: never;
         post?: never;
@@ -72,9 +72,30 @@ export interface paths {
         put?: never;
         /**
          * 게임 시각을 보고한다
-         * @description 시각은 거꾸로 갈 수 없고, 한 번에 건너뛸 수 있는 구간에 상한이 있다.
+         * @description 그 사이의 월급을 넣고 다음 이벤트가 생기면 만든다. 시각은 거꾸로 갈 수 없고, 한 번에 건너뛸 수 있는 구간에 상한이 있으며,
+         *     대기 중인 이벤트를 지나칠 수 없다. 종료 나이에 도달하면 판이 끝난다.
          */
         post: operations["advanceGame"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/games/{gameId}/events/{eventId}/choose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 대기 중인 이벤트에 선택을 제출한다
+         * @description 뉴스이면 선택이 능력치 판정을 거쳐 실제 행동이 되고, 매매와 주가 변동이 반영된다.
+         */
+        post: operations["chooseEvent"];
         delete?: never;
         options?: never;
         head?: never;
@@ -99,26 +120,134 @@ export interface components {
             /** @description 운 */
             luck: number;
         };
+        Named: {
+            code: string;
+            name: string;
+        };
+        Holding: {
+            sectorCode: string;
+            sectorName: string;
+            /**
+             * Format: int64
+             * @description 평가액(원)
+             */
+            amount: number;
+        };
+        Job: {
+            code: string;
+            title: string;
+            /**
+             * Format: int64
+             * @description 현재 연차의 월급(원)
+             */
+            monthlySalary: number;
+        };
+        Option: {
+            code: string;
+            label: string;
+        };
+        PendingEvent: {
+            /** Format: uuid */
+            eventId: string;
+            /** @enum {string} */
+            kind: "JOB" | "TRAIT" | "OFFER" | "NEWS";
+            occursDay: number;
+            sectorCode?: string | null;
+            sectorName?: string | null;
+            title: string;
+            body: string;
+            /** @description 안목에 따른 애매한 힌트 문구. 뉴스일 때 */
+            hint?: string | null;
+            /** @description 줏대를 흔드는 다른 뉴스. 뉴스일 때 */
+            sway?: string | null;
+            options: components["schemas"]["Option"][];
+        };
+        Result: {
+            /** Format: int64 */
+            initialAsset: number;
+            /** Format: int64 */
+            finalAsset: number;
+            /** @description 수익률(만분율) */
+            returnBp: number;
+            finalAge: number;
+            /** @description 능력치 코드별 이탈 횟수 */
+            deviationCounts: {
+                [key: string]: number;
+            };
+        };
         Game: {
             /** Format: uuid */
             gameId: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "ENDED";
             phase: components["schemas"]["Phase"];
-            /** @description 서버가 마지막으로 받은 게임 일수 */
-            lastReportedDay: number;
+            /** @description 서버가 마지막으로 확인한 게임 일수 */
+            day: number;
             startAge: number;
             endAge: number;
-            /** @description 게임 달력의 1년 일수 */
             daysPerYear: number;
             stats: components["schemas"]["Stats"];
-            /**
-             * Format: int64
-             * @description 현금(원)
-             */
+            /** @description 태어날 때의 능력치. 별명은 이 값으로 정해서 게임 중에 바뀌지 않는다 */
+            initialStats: components["schemas"]["Stats"];
+            /** Format: int64 */
             cash: number;
+            /** Format: int64 */
+            totalAsset: number;
+            /** Format: int64 */
+            initialAsset: number;
+            holdings: components["schemas"]["Holding"][];
+            job?: components["schemas"]["Job"] | null;
+            investmentStyle?: components["schemas"]["Named"] | null;
+            interestSector?: components["schemas"]["Named"] | null;
+            pendingEvent?: components["schemas"]["PendingEvent"] | null;
+            /** @description 다음 이벤트가 생길 게임 일수. 클라이언트는 이 시각까지만 시계를 보낸다 */
+            nextEventDay?: number | null;
+            result?: components["schemas"]["Result"] | null;
         };
         AdvanceRequest: {
-            /** @description 클라이언트가 보고하는 게임 일수 */
             day: number;
+        };
+        ChoiceRequest: {
+            option: string;
+        };
+        ChoiceOutcome: {
+            game: components["schemas"]["Game"];
+            outcome: components["schemas"]["Outcome"];
+        };
+        Outcome: {
+            /** @enum {string} */
+            kind: "JOB" | "TRAIT" | "OFFER" | "NEWS";
+            /** @description 사용자가 누른 선택 */
+            chosen: string;
+            /** @description 판정을 거친 실제 행동 */
+            actual: string;
+            deviations: {
+                statCode: string;
+                from: string;
+                to: string;
+            }[];
+            trade?: {
+                /** @enum {string} */
+                status: "EXECUTED" | "HELD" | "NOTHING_TO_SELL" | "INSUFFICIENT_CASH";
+                /** Format: int64 */
+                amount: number;
+            } | null;
+            price?: {
+                sectorCode: string;
+                sectorName: string;
+                /** @enum {string} */
+                direction: "UP" | "DOWN";
+                changeBp: number;
+                /** Format: int64 */
+                pnl: number;
+                lossSoftened: boolean;
+            } | null;
+            growth: {
+                statCode: string;
+                before: number;
+                after: number;
+            }[];
+            message?: string | null;
         };
         Error: {
             /** @enum {string} */
@@ -155,7 +284,9 @@ export interface components {
             };
         };
     };
-    parameters: never;
+    parameters: {
+        GameId: string;
+    };
     requestBodies: never;
     headers: never;
     pathItems: never;
@@ -210,7 +341,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 진행 중인 판 */
+            /** @description 진행 중이거나 끝난 판 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -228,7 +359,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                gameId: string;
+                gameId: components["parameters"]["GameId"];
             };
             cookie?: never;
         };
@@ -245,6 +376,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Game"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    chooseEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gameId: components["parameters"]["GameId"];
+                eventId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChoiceRequest"];
+            };
+        };
+        responses: {
+            /** @description 선택 결과와 판 상태 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChoiceOutcome"];
                 };
             };
             400: components["responses"]["InvalidRequest"];

@@ -1,0 +1,35 @@
+[
+  {
+    "code": "bonus-windfall",
+    "order": 1,
+    "title": "예상 못 한 보너스",
+    "body": "회사에서 보너스 300만 원이 들어왔다. 동료들은 벌써 어디에 쓸지 이야기하고 있다.",
+    "options": [
+      { "code": "save", "label": "통장에 넣어 두고 천천히 생각한다", "traitDeltas": { "style.long": 2, "sector.finance": 1 } },
+      { "code": "hot-stock", "label": "요즘 뜬다는 반도체 주식을 바로 산다", "traitDeltas": { "style.short": 2, "sector.semiconductor": 2 } },
+      { "code": "game", "label": "자주 하는 게임 회사 주식을 조금 산다", "traitDeltas": { "style.short": 1, "sector.game": 2 } }
+    ]
+  },
+  {
+    "code": "friend-tip",
+    "order": 2,
+    "title": "친구의 정보",
+    "body": "제약회사에 다니는 친구가 \"우리 회사 신약 곧 발표 난다\"고 귀띔했다.",
+    "options": [
+      { "code": "ignore", "label": "확인되지 않은 정보는 믿지 않는다", "traitDeltas": { "style.long": 2 } },
+      { "code": "research", "label": "회사 재무제표부터 찾아본다", "traitDeltas": { "style.long": 1, "sector.bio": 2 } },
+      { "code": "all-in", "label": "기회다. 바로 뛰어든다", "traitDeltas": { "style.short": 2, "sector.bio": 2 } }
+    ]
+  },
+  {
+    "code": "market-crash",
+    "order": 3,
+    "title": "뉴스 속 폭락장",
+    "body": "뉴스에서 증시가 하루 만에 5% 빠졌다고 한다. 에너지와 식품 업종만 버티고 있다.",
+    "options": [
+      { "code": "wait", "label": "이럴 때일수록 길게 본다", "traitDeltas": { "style.long": 2, "sector.food": 1 } },
+      { "code": "defensive", "label": "버티는 에너지 업종을 눈여겨본다", "traitDeltas": { "style.long": 1, "sector.energy": 2 } },
+      { "code": "bottom", "label": "바닥이다. 반등을 노린다", "traitDeltas": { "style.short": 2, "sector.finance": 1 } }
+    ]
+  }
+]

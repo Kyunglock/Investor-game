@@ -47,6 +47,10 @@ public record Stats(int insight, int patience, int courage, int conviction, int 
 
 public enum Phase { SAVING, INVESTING, ENDED }   // 판의 단계 (확정: 투자 시작 전/후)
 
+// 행동이 만들고 이벤트 운영이 기록·사용한다. 구현 시 행동에서 옮겨 왔다 (behavior.md 3절).
+public record Hint(HintDirection direction, HintStrength strength) { /* 중첩 enum */ }
+public record Deviation(String statCode, Action from, Action to) {}
+
 public interface SeededRandom {
     /** 판 시드에서 키별로 독립적인 생성기를 유도한다. 같은 키는 항상 같은 수열을 만든다. */
     RandomGenerator forKey(Object... keyParts);
@@ -58,7 +62,21 @@ public interface SeededRandom {
 - **게임 달력** (제안): 1년 = 12개월 × 30일 = 360일. 설정 `game.days-per-month`(30), `game.days-per-year`(360)로 두고 `common`이 소유한다. 월급은 매월 지급, 연차는 360일 단위다.
 - 난수는 `java.util.random.RandomGenerator`를 인자로 받는다 (code-style.md 3.4절). 규칙 하나가 난수를 **뽑는 순서**를 스펙에 적는다. 같은 시드이면 같은 결과가 나와야 한다.
 
-## 5. 공통 규칙
+## 5. 구현 상태 (워킹 스켈레톤)
+
+핵심 흐름(직업 → 월급 → 성향 → 투자 시작 → 뉴스 선택 → 판정 → 손익 → 성장 → 65세 종료)은 구현되어 있다. 각 에이전트는 아래 빈 부분을 스펙대로 채운다.
+
+| 스펙 | 구현된 것 | 남은 것 |
+|---|---|---|
+| behavior | 전부 | - |
+| character | 생성, 직업, 성향 확정, 성장, 연차 | 세션 만료 시 삭제(`deleteByGame`) |
+| asset | 생성, 매매, 주가 변동, 월급, 총자산 | 자기계발 지출(`spend`), 삭제 |
+| event | 직업·성향·투자 제안·뉴스, 관심 섹터 가중치, 스타일별 간격·폭 | 뉴스 연결(갈래), 자기계발, 알림성, 스킵, 삭제 |
+| content | JSON 로드와 검증, 버전 기록 | 뉴스 연결 정의 검증, 분량 확장 |
+| result | 결과 저장·조회 | 집계(`result_stat`), 세션 만료 시 삭제 |
+| progress | 판 시작, 시각 보고, 선택 처리, 종료 | 세션 만료 정리 작업, 스펙 문서(progress.md) |
+
+## 6. 공통 규칙
 
 - 도메인 사이의 호출은 진행(agent5)만 한다. 이 문서의 인터페이스는 진행이 부르는 입구다.
 - 공개 인터페이스를 바꾸는 변경은 PR을 만들고 `cross-domain` 라벨을 붙인다.

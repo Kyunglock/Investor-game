@@ -12,8 +12,14 @@ export default defineConfig({
     baseURL: 'http://localhost:5173',
     trace: 'retain-on-failure',
   },
-  // 모바일 우선 (decisions.md 20번). 데스크톱 화면은 반응형으로 따라온다.
-  projects: [{ name: 'mobile', use: { ...devices['Pixel 7'] } }],
+  // 모바일 우선이되 데스크톱에서는 넓게 쓴다 (decisions.md 20번). 두 화면 모두 검사한다.
+  projects: [
+    { name: 'mobile', use: { ...devices['Pixel 7'] } },
+    {
+      name: 'desktop',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } },
+    },
+  ],
   webServer: [
     {
       // Testcontainers로 Postgres를 띄우므로 로컬 DB 없이 Docker만 있으면 된다.

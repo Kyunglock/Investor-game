@@ -127,8 +127,8 @@ API 계층 → 진행 → 이벤트 운영 → 콘텐츠
 | 세션 확보 (없으면 발급, `IG_SESSION` 쿠키) | `POST /api/sessions` | 구현됨 (워킹 스켈레톤) |
 | 판 시작 (진행 중인 판이 있으면 버리고 새로 시작) | `POST /api/games` | 구현됨 |
 | 진행 중인 판 조회 (재접속 시 이어하기) | `GET /api/games/current` | 구현됨. 세션당 판이 하나라 ID 대신 `current`를 쓴다 |
-| 시간 경과 보고 | `POST /api/games/{id}/advance` | 구현됨 (시각 검증만). 월급·손익·이벤트 응답은 agent5가 추가 |
-| 선택 제출 | `POST /api/games/{id}/choices` | 예정 |
+| 시간 경과 보고 | `POST /api/games/{id}/advance` | 구현됨. 월급 입금, 다음 이벤트 생성, 종료 처리. 응답의 `nextEventDay`까지만 클라이언트가 시계를 보낸다 |
+| 선택 제출 | `POST /api/games/{id}/events/{eventId}/choose` | 구현됨. 뉴스는 판정 → 매매 → 주가 변동 → 성장을 거친 결과를 돌려준다 |
 | 이벤트 스킵 | `POST /api/games/{id}/events/{eventId}/skip` | 예정 |
 | 결과 조회 | `GET /api/games/{id}/result` | 예정 |
 

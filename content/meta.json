@@ -1,0 +1,15 @@
+{
+  "version": "0.1.0",
+  "styles": [
+    { "code": "short", "name": "단기 투자자" },
+    { "code": "long", "name": "장기 투자자" }
+  ],
+  "sectors": [
+    { "code": "semiconductor", "name": "반도체" },
+    { "code": "bio", "name": "바이오" },
+    { "code": "energy", "name": "에너지" },
+    { "code": "game", "name": "게임" },
+    { "code": "food", "name": "식품" },
+    { "code": "finance", "name": "금융" }
+  ]
+}

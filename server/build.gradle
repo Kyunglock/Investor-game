@@ -42,6 +42,13 @@ tasks.withType(JavaCompile).configureEach {
 	options.compilerArgs += ['-Werror', '-Xlint:all', '-Xlint:-processing', '-Xlint:-serial']
 }
 
+// 직접 작성한 이벤트 콘텐츠(저장소의 content/)를 서버 클래스패스의 content/로 넣는다.
+tasks.named('processResources') {
+	from('../content') {
+		into 'content'
+	}
+}
+
 tasks.named('test') {
 	useJUnitPlatform()
 }

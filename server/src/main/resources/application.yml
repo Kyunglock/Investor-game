@@ -28,12 +28,54 @@ character:
   initial-stat:
     min: 15
     max: 85
+  growth:
+    deviation-exp: 3
+    exp-per-point: 5
+    max-stat: 95
 
 asset:
   initial-cash:
     min-unit: 1
     max-unit: 50
     unit: 1000000
+  buy-ratio-bp: 3000
+  min-trade: 1000
+
+behavior:
+  deviation-cap-bp: 5000
+  impulse-sell-percent: 40
+  hint:
+    accuracy-base-bp: 2500
+    accuracy-per-point-bp: 55
+    neutral-below-insight: 35
+    neutral-percent: 50
+    strong-from-insight: 65
+    strong-percent: 70
+  luck:
+    chance-per-point-bp: 30
+    loss-factor-percent: 30
+
+event:
+  job:
+    # 태어나자마자 직장을 고르지 않도록 두 달의 구직 기간을 둔다.
+    day: 60
+    option-count: 3
+  trait:
+    gap-days: { min: 60, max: 120 }
+  news:
+    interest-weight-percent: 300
+    no-repeat-window: 5
+  # 40년 동안 뉴스마다 선택해야 하므로 단기 약 80번, 장기 약 40번이 되도록 잡았다 (specs/event.md 7절).
+  styles:
+    short:
+      news-gap-days: { min: 120, max: 240 }
+      magnitude-percent: 150
+    long:
+      news-gap-days: { min: 240, max: 480 }
+      magnitude-percent: 100
+    default:
+      news-gap-days: { min: 240, max: 480 }
+      magnitude-percent: 100
 
 session:
   ttl: 1d
