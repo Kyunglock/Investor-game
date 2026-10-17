@@ -136,19 +136,45 @@ API 계층 → 진행 → 이벤트 운영 → 콘텐츠
 ## 6. 폴더 구조 (제안)
 
 ```
-server/                 Spring Boot (Gradle)
-  src/main/java/.../
-    character/  asset/  event/  behavior/  progress/   게임 규칙 도메인
+server/                          Spring Boot (Gradle)
+  build.gradle, settings.gradle  빌드 설정 (통합 담당)
+  src/main/java/investorgame/
+    InvestorGameApplication.java 진입점
+    api/                         컨트롤러, 요청·응답 변환, 전역 예외 처리 (규칙 판단 없음)
+    config/                      Spring 설정 (Flyway, 직렬화 등). 통합 담당
+    common/                      도메인에 속하지 않는 공용 코드. 통합 담당
+      random/                    판 시드에서 하위 시드를 유도하는 코드
+      error/                     공통 예외 타입
+    character/  behavior/  asset/  event/  progress/   게임 규칙 도메인
     session/    content/  result/                      플랫폼 도메인
-    api/                                                컨트롤러, 요청·응답 변환
   src/main/resources/
-    db/migration/                                       Flyway 마이그레이션 (한 폴더, 파일명에 도메인 표시)
+    application.yml
+    db/migration/                Flyway 마이그레이션 (한 폴더, 파일명에 도메인 표시)
+  src/test/java/investorgame/
+    <도메인>/                    도메인 단위 테스트 (해당 도메인 소유자)
+    architecture/                ArchUnit 경계 검사 (통합 담당)
+  src/test/resources/
 web/                    클라이언트 (React, Vite)
 contracts/              OpenAPI 명세 (도메인별). 통합 담당만 수정
 content/                직접 작성한 이벤트 데이터 원본. 서버가 읽는다
 e2e/                    Playwright
 docs/                   설계 문서
 ```
+
+### 6.1 서버 패키지 규칙 (확정)
+
+도메인 하나는 다음 구조를 가진다.
+
+```
+investorgame/asset/
+  AssetService.java        공개 인터페이스. 다른 도메인이 호출하는 유일한 입구
+  Trade.java ...           공개 입력·출력 record
+  internal/                구현, 저장소, 행 매핑. 다른 도메인이 import하면 빌드 실패
+```
+
+- **도메인 우선으로 나눈다.** `controller/service/repository` 같은 계층 폴더로 나누지 않는다. 에이전트가 자기 도메인 폴더 하나만 보면 되고, 권한 경로를 `asset/**` 하나로 쓸 수 있다.
+- **`common`에는 두 도메인 이상이 실제로 쓰는 코드만 둔다.** "쓸 것 같다"는 이유로 넣지 않는다. 도메인 규칙과 게임 수치는 넣지 않는다.
+- **`common`, `config`, `architecture` 테스트는 통합 담당이 소유한다.** 에이전트는 추가가 필요하면 PR 댓글로 요청한다.
 
 ## 7. 클라이언트 구조 (제안)
 
@@ -189,7 +215,7 @@ Orca는 AI 에이전트 도구이며, 도메인별로 권한을 나눠 병렬 �
 
 | 역할 | 수정 가능 | 책임 |
 |---|---|---|
-| 통합 (사람 또는 메인 에이전트) | `contracts`, 빌드 설정, 의존성 | API 계약 관리, 병합, 충돌 해결 |
+| 통합 (사람 또는 메인 에이전트) | `contracts`, 빌드 설정, 의존성, `server/.../common`, `config`, `architecture` 테스트 | API 계약 관리, 공용 코드 관리, 병합, 충돌 해결 |
 | 리뷰 | 없음 (지적만) | 스타일 위반, 중복, 도메인 경계 위반, 불필요한 추상화 지적 |
 | 문서 | `docs/` | PRD, 스펙, 아키텍처 갱신 |
 

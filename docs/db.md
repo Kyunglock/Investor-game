@@ -34,7 +34,7 @@
 | 자산 | `asset_` | `asset_account`, `asset_holding`, `asset_ledger` |
 | 이벤트 운영 | `event_` | `event_instance`, `event_resolution`, `event_deviation` |
 | 콘텐츠 | `content_` | `content_version` |
-| 결과 | `result_` | `result_game` |
+| 결과 | `result_` | `result_game`, `result_stat` |
 
 행동은 상태가 없어서 테이블이 없다.
 
@@ -75,7 +75,7 @@ content_version.version ─── progress_game.content_version
 | id | uuid | PK, 이 값이 `game_id` |
 | session_id | uuid | 세션 ID (참조만, FK 없음) |
 | status | text | `ACTIVE`, `ENDED`, `ABANDONED`. CHECK |
-| phase | text | `SAVING`, `INVESTING`, `ENDED` 등 단계 코드 (제안) |
+| phase | text | 단계 코드 (확정: 단계가 필요하다). 투자 시작 전 `SAVING`, 사용자가 수락한 뒤 `INVESTING`, 종료 `ENDED`. 시작 전과 후의 이벤트 구성이 다르다. 투자 시작 제안 단계(`OFFER` 등)를 둘지는 스펙에서 정한다 |
 | last_reported_day | integer | 클라이언트가 마지막으로 보고한 게임 일수. 감소 불가 |
 | start_age | smallint | 시작 나이 |
 | end_age | smallint | 종료 나이 |
@@ -86,7 +86,8 @@ content_version.version ─── progress_game.content_version
 | ended_at | timestamptz | null이면 진행 중 |
 
 - 인덱스: `(session_id, status)` (세션의 진행 중 판 조회), `(status, updated_at)` (방치된 판 정리)
-- 세션당 `ACTIVE` 판을 1개로 제한하려면 부분 유니크 인덱스 `(session_id) where status = 'ACTIVE'`. 동시에 여러 판을 허용할지는 미결정(architecture.md 11절 6번).
+- **세션당 `ACTIVE` 판은 1개다 (확정).** 부분 유니크 인덱스 `(session_id) where status = 'ACTIVE'`로 보장한다.
+- **다시 시작하기를 지원한다 (확정).** 진행 중인 판을 `ABANDONED`로 바꾸고 새 판을 만든다. 끝나지 않은 판은 `result_game`에 저장하지 않는다 (제안).
 
 난수 처리(제안): 난수 생성기의 진행 위치를 저장하지 않고, 판단마다 `seed`와 순번에서 **하위 시드를 유도**한다. 예: 이벤트 인스턴스의 시드는 `hash(seed, 'event', 이벤트 순번)`. 요청이 재시도되거나 순서가 바뀌어도 같은 결과가 나온다.
 
@@ -96,7 +97,9 @@ content_version.version ─── progress_game.content_version
 |---|---|---|
 | game_id | uuid | PK. 한 판에 캐릭터 하나 |
 | job_code | text | 직업 코드. 직업 선택 이벤트 전에는 null |
+| job_start_day | integer | 현재 직업을 시작한 게임 일수. 연차(연봉 상승) 계산에 쓴다 |
 | interest_sector | text | 관심 섹터 코드. 성향 확정 전에는 null |
+| investment_style | text | 투자 스타일 코드(장기/단기 등). 성향 이벤트로 확정되며, 이후 이벤트 구성에 영향을 준다. 확정 전에는 null |
 | created_at / updated_at | timestamptz | |
 
 ### 3.4 `character_stat`
@@ -177,6 +180,10 @@ content_version.version ─── progress_game.content_version
 | id | uuid | PK |
 | game_id | uuid | |
 | seq | integer | 판 안에서의 발생 순번 |
+| chain_code | text | 연결된 뉴스 묶음(이야기)의 코드. 연결되지 않으면 null |
+| parent_event_id | uuid | 이 이벤트를 일으킨 앞선 이벤트 ID (참조만). 첫 이벤트는 null |
+| depth | smallint | 연결 깊이. 첫 이벤트는 0 |
+| branch_code | text | 앞선 이벤트의 결과에 따라 갈린 갈래 코드. 갈래가 없으면 null |
 | kind | text | `NEWS`, `JOB`, `TRAIT`, `NOTICE` 등 |
 | definition_code | text | 콘텐츠의 이벤트 정의 코드 (참조만) |
 | sector_code | text | 뉴스 이벤트일 때 |
@@ -228,7 +235,7 @@ content_version.version ─── progress_game.content_version
 | loaded_at | timestamptz | 서버가 로드한 시각 |
 | summary | jsonb | 종류별 개수 등 요약 |
 
-- 정의 전체를 DB에 적재할지는 미결정이다 (9절). 현재는 서버 시작 시 파일을 읽어 메모리에 두고, 버전만 기록한다.
+- 정의 전체는 DB에 적재하지 않는다 (확정, 제안안 수용). 서버 시작 시 JSON 파일을 읽어 메모리에 두고, 버전만 기록한다.
 
 ### 3.13 `result_game`
 
@@ -241,10 +248,32 @@ content_version.version ─── progress_game.content_version
 | final_asset | bigint | 최종 총자산 (원) |
 | final_age | smallint | |
 | started_at / ended_at | timestamptz | |
-| stats_snapshot | jsonb | 종료 시점 능력치. 넣을지는 미결정이며 null 허용 |
+| stats_snapshot | jsonb | 종료 시점 능력치 (확정: 저장한다). not null |
 | summary | jsonb | 이탈 횟수 등 요약. 활용 방안이 정해질 때 확장 |
 
 - 인덱스: `(session_id, ended_at desc)` (세션의 이전 결과 조회)
+- **세션이 만료되면 이 행도 함께 지운다** (확정). 이 테이블은 개인과 연결되는 기록이므로 보존하지 않는다.
+
+### 3.14 `result_stat`
+
+개인과 연결되지 않는 집계용 기록. 판이 정상적으로 끝날 때 `result_game`과 같은 트랜잭션에서 한 행을 쌓는다 (제안). **세션 ID와 `game_id`를 저장하지 않는다.** 세션이 만료되어 `result_game`이 지워져도 이 행은 남는다 (확정: 개인과 연결되지 않는 집계만 남긴다).
+
+| 컬럼 | 타입 | 비고 |
+|---|---|---|
+| id | bigint | PK (identity). 다른 테이블과 연결되지 않는 행 ID |
+| content_version | text | |
+| ended_on | date | 종료 날짜만 저장한다. 시각은 저장하지 않는다 (개인을 좁혀낼 단서를 줄인다) |
+| final_age | smallint | |
+| initial_asset | bigint | |
+| final_asset | bigint | |
+| job_code | text | |
+| investment_style | text | |
+| interest_sector | text | |
+| stats_snapshot | jsonb | 종료 시점 능력치 |
+| deviation_counts | jsonb | 능력치별 이탈 횟수 |
+
+- 끝나지 않은 판(다시 시작하기, 방치)은 쌓지 않는다.
+- 필요한 집계(평균, 분포 등)는 이 테이블에서 조회 시점에 계산한다. 미리 집계 테이블을 만들지 않는다 (제안). 행이 많아지면 그때 집계 테이블을 추가한다.
 
 ## 4. 데이터 생명주기와 정합성
 
@@ -261,13 +290,16 @@ FK가 없으므로 정합성은 애플리케이션이 지킨다.
 **판 종료**
 
 1. 진행이 `status = ENDED`로 바꾸고 결과 도메인에 저장을 요청한다 (`result_game`).
-2. 종료된 판의 상세 데이터(`asset_ledger`, `event_*`, `character_stat_log`)는 보존 기간을 정해 지운다. 보존 기간은 미결정이다.
+2. 종료된 판의 상세 데이터(`asset_ledger`, `event_*`, `character_stat_log`)는 세션이 만료될 때 함께 지운다.
 
-**방치된 판 정리**
+**세션 만료와 데이터 정리 (확정)**
 
-- 일정 기간 갱신이 없는 `ACTIVE` 판은 `ABANDONED`로 바꾼다.
+- 로그인 기능은 없다. 익명 세션은 마지막 접속 후 하루가 지나면 만료되고, 그 세션에 묶인 데이터를 정리 작업이 지운다.
+- 정리 작업은 주기적으로 실행된다. 주기는 구현 단계에서 정한다.
 - 정리는 진행이 각 도메인의 삭제 인터페이스에 `game_id`를 넘겨 호출한다. 다른 도메인의 테이블을 직접 지우지 않는다.
-- 만료된 세션은 해당 세션의 판이 정리된 뒤에 지운다.
+- 판이 정리된 뒤에 만료된 세션 행을 지운다.
+- 진행 중이던 판이 있는 세션이 만료되면 그 판은 `ABANDONED`로 바꾼 뒤 지운다.
+- 결과 기록(`result_game`)도 같이 지운다. 개인과 연결되지 않는 집계 행(`result_stat`)만 남는다 (3.14절).
 
 **고아 데이터 방지**
 
@@ -292,7 +324,7 @@ server/src/main/resources/db/migration/V<yyyyMMddHHmm>__<도메인>_<설명>.sql
 - 이력 테이블(`flyway_schema_history`)은 하나다.
 - 버전 번호는 시각 기반으로 쓴다 (제안). 에이전트들이 병렬로 마이그레이션을 추가해도 같은 번호를 쓰지 않게 하려는 장치다. CI가 번호 중복을 검사한다.
 - 파일 이름에 도메인이 들어가고, 에이전트는 자기 도메인 이름이 들어간 파일만 추가한다 (architecture.md 8절).
-- 병합 순서가 번호 순서와 어긋날 수 있어서 개발과 CI 환경은 Flyway의 `outOfOrder`를 켠다. 운영 환경에서는 통합 담당이 병합 순서를 관리한다. 운영 환경 정책은 미결정이다.
+- 병합 순서가 번호 순서와 어긋날 수 있어서 개발과 CI 환경은 Flyway의 `outOfOrder`를 켠다. **운영 환경은 끈다** (확정, 제안안 수용). 운영에는 번호 순서대로만 반영하고, 이미 적용된 번호보다 앞선 파일이 나중에 병합되면 새 번호로 다시 만든다.
 - 적용된 파일은 수정하지 않는다. 변경은 새 버전을 추가한다 (확정).
 - FK 제약 구문(`REFERENCES`, `FOREIGN KEY`)이 마이그레이션에 들어가면 CI가 실패하게 한다 (제안).
 - 마이그레이션이 접두사 규칙을 지키는지(`asset_`로 시작하는 테이블은 `asset` 이름의 파일에서만 만든다) CI가 검사한다 (제안).
