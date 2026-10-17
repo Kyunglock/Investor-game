@@ -30,7 +30,7 @@
 |---|---|---|
 | 세션 | `session_` | `session_info` |
 | 진행 | `progress_` | `progress_game` |
-| 캐릭터 | `character_` | `character_profile`, `character_stat`, `character_stat_log` |
+| 캐릭터 | `character_` | `character_profile`, `character_stat`, `character_stat_log`, `character_trait_score` |
 | 자산 | `asset_` | `asset_account`, `asset_holding`, `asset_ledger` |
 | 이벤트 운영 | `event_` | `event_instance`, `event_resolution`, `event_deviation` |
 | 콘텐츠 | `content_` | `content_version` |
@@ -133,6 +133,16 @@ content_version.version ─── progress_game.content_version
 
 - 인덱스: `(game_id, id)`
 
+### 3.5-1 `character_trait_score`
+
+성향 이벤트의 선택을 점수로 누적한다. 투자 스타일과 관심 섹터를 확정하는 근거다 (character.md 4.3절).
+
+| 컬럼 | 타입 | 비고 |
+|---|---|---|
+| game_id | uuid | PK의 일부 |
+| trait_code | text | `style.<스타일 코드>`, `sector.<섹터 코드>`. PK의 일부 |
+| score | integer | 누적 점수 |
+
 ### 3.6 `asset_account`
 
 | 컬럼 | 타입 | 비고 |
@@ -153,7 +163,7 @@ content_version.version ─── progress_game.content_version
 
 - 보유가 0이 되어도 행을 지우지 않고 0으로 둔다 (제안). 조회와 갱신이 단순해진다.
 
-### 3.8 `asset_ledger`
+### 3.8 `asset_ledger` (월급 중복 방지 인덱스는 아래 참고)
 
 현금과 평가액의 모든 변화를 남기는 장부. 총자산 검증과 결과 분석에 쓴다.
 
@@ -170,6 +180,7 @@ content_version.version ─── progress_game.content_version
 | created_at | timestamptz | |
 
 - 인덱스: `(game_id, id)`
+- 부분 유니크 인덱스: `(game_id, game_day) where kind = 'SALARY'` — 같은 날 월급이 중복 입금되지 않게 한다 (asset.md 6절)
 
 ### 3.9 `event_instance`
 
