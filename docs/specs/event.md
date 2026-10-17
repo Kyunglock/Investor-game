@@ -70,7 +70,7 @@ public record SchedulingContext(
     String investmentStyle,      // 확정 전 null
     String interestSector,       // 확정 전 null
     boolean salaryStarted,       // 첫 월급을 받았는가 (투자 시작 제안 조건)
-    boolean traitsFinalized      // 투자 스타일이 확정되었는가 (투자 시작 제안 조건, 제안)
+    boolean traitsFinalized      // 투자 스타일이 확정되었는가 (투자 시작 제안 조건, 확정)
 ) {}
 
 public interface HintProvider {
@@ -344,7 +344,7 @@ public record CompleteResult(
 | 5 | `NOTICE`만 있는 구간 | 모두 delivered, `stoppedAtDay = toDay` |
 | 6 | `TRAIT`의 선택을 `complete` | `actual = chosen`, `event_deviation` 없음. 마지막 성향이면 `traitsComplete=true` |
 | 7 | `salaryStarted=false` | `OFFER`가 나오지 않는다 |
-| 8 | `salaryStarted=true`, `traitsFinalized=false` | `OFFER`가 나오지 않는다 (제안) |
+| 8 | `salaryStarted=true`, `traitsFinalized=false` | `OFFER`가 나오지 않는다 (확정) |
 | 9 | 둘 다 true | `OFFER`가 나온다. 선택지는 `accept`, `decline` |
 | 10 | `OFFER` 거절 후 | 다음 `OFFER` 후보 일수가 거절한 날 + 360 |
 | 11 | `INVESTING`에서 `NEWS` | 뉴스가 나온다. 선택지 `BUY/SELL/HOLD`, `skippable=false`, 숨은 값은 `EventView`에 없다 |
