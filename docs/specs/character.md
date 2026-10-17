@@ -122,7 +122,7 @@ public record StatChange(String statCode, int expGained, int valueBefore, int va
 - 능력치가 오르면 `character_stat_log`에 한 행을 남긴다 (`reason`은 `DEVIATION` 또는 `TRAINING`, `event_id`는 `GrowthSource`의 `eventId`).
 - 한 번의 `grow` 호출에 여러 원인이 있으면 입력 순서대로 처리하고, 능력치별로 변화를 합쳐 `StatChange`로 돌려준다.
 
-> 성장 속도(`deviation-exp` 3, `exp-per-point` 5)는 초기값이다. 이탈 두 번이면 거의 +1이 되는 정도를 의도했다. 체감 테스트 후 조정한다.
+> 성장 속도(`deviation-exp` 3, `exp-per-point` 5)는 사용자가 "알아서 하라"고 해서 제가 정한 초기값이다 (확정: 위임). 이탈 두 번이면 거의 +1이 되는 정도를 의도했다. 체감 테스트 후 조정한다.
 
 ## 5. 설정값 (초기값)
 

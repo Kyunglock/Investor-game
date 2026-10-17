@@ -29,7 +29,7 @@
 | [behavior.md](./behavior.md) | 초안 v0.1 | agent1 | 없음 (순수 규칙) |
 | [character.md](./character.md) | 초안 v0.1 | agent1 | 없음 |
 | [asset.md](./asset.md) | 초안 v0.1 | agent2 | 없음 |
-| event.md | 예정 | agent2 | 콘텐츠 |
+| [event.md](./event.md) | 초안 v0.1 | agent2 | 콘텐츠 (유일한 직접 호출) |
 | content.md, session.md, result.md | 예정 | agent3 | 없음 |
 | progress.md | 예정 | agent5 | 위 전부 |
 
@@ -44,6 +44,13 @@ public enum Sentiment { POS, NEG }            // 줏대 판정용 "다른 뉴스
 
 public record Stats(int insight, int patience, int courage, int conviction, int luck) {}
 // 능력치 값은 0~100. 생성 시 범위를 검증한다.
+
+public enum Phase { SAVING, INVESTING, ENDED }   // 판의 단계 (확정: 투자 시작 전/후)
+
+public interface SeededRandom {
+    /** 판 시드에서 키별로 독립적인 생성기를 유도한다. 같은 키는 항상 같은 수열을 만든다. */
+    RandomGenerator forKey(Object... keyParts);
+}
 ```
 
 - 능력치 이름은 DB에 행으로 저장되지만(`character_stat`), 규칙이 정해진 다섯 가지는 `Stats`로 다룬다. 새 능력치를 추가하려면 그 능력치의 규칙이 필요하므로 코드 변경이 따른다 (제안). DB는 마이그레이션이 필요 없다.

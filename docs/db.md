@@ -200,7 +200,8 @@ content_version.version ─── progress_game.content_version
 | sector_code | text | 뉴스 이벤트일 때 |
 | occurs_day | integer | 발생 게임 일수 |
 | skippable | boolean | 선택형은 false, 알림성은 true |
-| status | text | `PENDING`, `RESOLVED`, `SKIPPED`. CHECK |
+| status | text | `SCHEDULED`(미래에 예약됨), `PENDING`(사용자에게 전달됨), `RESOLVED`, `SKIPPED`. CHECK (event.md) |
+| options | jsonb | 사용자에게 보여 준 선택지 코드 목록. 직업처럼 뽑는 선택지를 재접속해도 같게 보이려고 저장한다 |
 | hidden_direction | text | `UP`, `DOWN`. 뉴스일 때. 숨은 값 |
 | hidden_magnitude_bp | integer | 변동 폭 (1bp = 0.01%). 숨은 값 |
 | hint_code | text | 안목으로 뽑힌 힌트 문구 코드. 재접속 시 같은 문구를 보여 주려고 저장 |
@@ -209,7 +210,7 @@ content_version.version ─── progress_game.content_version
 | created_at / resolved_at | timestamptz | |
 
 - 유니크: `(game_id, seq)`
-- 인덱스: `(game_id, status)` (대기 중인 이벤트 조회)
+- 인덱스: `(game_id, status, occurs_day)` (대기·예약된 이벤트와 다음 발생 일수 조회), `(game_id, kind, occurs_day)` (종류별 마지막 발생 조회)
 
 ### 3.10 `event_resolution`
 
