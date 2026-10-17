@@ -40,7 +40,7 @@ export function GameScreen({ game }: { game: Game }) {
                 ? '다음 뉴스를 기다리는 중'
                 : game.job
                   ? '월급을 모으며 살아가는 중'
-                  : '첫 직장을 찾는 중'}
+                  : '무럭무럭 자라는 중'}
             </p>
           </section>
         )}

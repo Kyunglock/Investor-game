@@ -68,7 +68,7 @@ export function OutcomeCard({ outcome, onContinue }: { outcome: Outcome; onConti
           ))}
         </>
       ) : (
-        <p className="text-lg" data-testid="outcome-message">
+        <p className="whitespace-pre-line text-lg" data-testid="outcome-message">
           {outcome.message}
         </p>
       )}

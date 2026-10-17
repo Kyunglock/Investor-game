@@ -21,7 +21,7 @@ paths:
     post:
       operationId: startGame
       summary: 새 판을 시작한다
-      description: 진행 중인 판이 있으면 버리고 새로 시작한다. 구직 기간(약 두 달) 뒤에 직업 선택 이벤트가 온다.
+      description: 진행 중인 판이 있으면 버리고 새로 시작한다. 1세에 태어나 성장기의 성향 이벤트를 거친 뒤 직업 선택이 온다.
       responses:
         '201':
           description: 새 판
@@ -99,7 +99,8 @@ components:
   schemas:
     Phase:
       type: string
-      enum: [SAVING, INVESTING, ENDED]
+      enum: [CHILDHOOD, SAVING, INVESTING, ENDED]
+      description: 성장기(성향 이벤트) → 저축기(취업 후) → 투자기 → 종료
     Stats:
       type: object
       required: [insight, patience, courage, conviction, luck]

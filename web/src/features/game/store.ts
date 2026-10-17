@@ -1,6 +1,13 @@
 import { create } from 'zustand'
 import { api, type Game, type Outcome } from '../../api/client'
-import { advanceDay, clockLimit, type Speed, shouldReport, totalDays } from './clock'
+import {
+  advanceDay,
+  clockLimit,
+  type Speed,
+  secondsPerYear,
+  shouldReport,
+  totalDays,
+} from './clock'
 
 /** revealing: 태어나서 능력치가 공개되는 중. 사용자가 "인생 시작하기"를 누르면 playing이 된다. */
 type Status = 'loading' | 'none' | 'revealing' | 'playing' | 'ended' | 'error'
@@ -131,7 +138,14 @@ export const useGameStore = create<GameState>((set, get) => {
       }
       const lastDay = totalDays(game.startAge, game.endAge, game.daysPerYear)
       const limit = clockLimit(lastDay, game.nextEventDay)
-      const next = advanceDay(day, elapsedMs, speed, game.daysPerYear, limit)
+      const next = advanceDay(
+        day,
+        elapsedMs,
+        speed,
+        game.daysPerYear,
+        limit,
+        secondsPerYear(game.phase),
+      )
       set({ day: next })
       if (!reporting && (shouldReport(next, game.day) || next >= limit)) {
         void report()

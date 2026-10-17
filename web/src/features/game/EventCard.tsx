@@ -2,7 +2,7 @@ import type { Game, PendingEvent } from '../../api/client'
 
 const KIND_LABELS: Record<PendingEvent['kind'], string> = {
   JOB: '직업',
-  TRAIT: '선택의 순간',
+  TRAIT: '일상',
   OFFER: '제안',
   NEWS: '뉴스',
 }
@@ -30,6 +30,9 @@ export function EventCard({ event, game, busy, onChoose }: Props) {
           {KIND_LABELS[event.kind]}
         </span>
         {event.sectorName && <span className="text-slate-500">{event.sectorName}</span>}
+        <span className="ml-auto text-slate-400">
+          {game.startAge + Math.floor(event.occursDay / game.daysPerYear)}세
+        </span>
       </div>
       <h2 className="text-xl font-bold leading-snug">{event.title}</h2>
       <p className="mt-2 text-slate-600">{event.body}</p>

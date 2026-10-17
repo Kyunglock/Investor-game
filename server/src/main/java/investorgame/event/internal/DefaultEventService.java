@@ -116,13 +116,14 @@ class DefaultEventService implements EventService {
     ChoiceTicket.Effect effect =
         switch (row.kind()) {
           case JOB -> new ChoiceTicket.Job(optionCode);
-          case TRAIT ->
-              new ChoiceTicket.Trait(
-                  renderer.trait(row.definitionCode()).options().stream()
-                      .filter(o -> o.code().equals(optionCode))
-                      .findFirst()
-                      .orElseThrow()
-                      .traitDeltas());
+          case TRAIT -> {
+            TraitDefinition.Option chosen =
+                renderer.trait(row.definitionCode()).options().stream()
+                    .filter(o -> o.code().equals(optionCode))
+                    .findFirst()
+                    .orElseThrow();
+            yield new ChoiceTicket.Trait(chosen.traitDeltas(), chosen.note());
+          }
           case OFFER -> new ChoiceTicket.Offer(ACCEPT.equals(optionCode));
           case NEWS -> new ChoiceTicket.News();
         };
@@ -155,7 +156,7 @@ class DefaultEventService implements EventService {
             && repository.findAll(gameId).stream()
                     .filter(r -> r.kind() == EventKind.TRAIT && r.resolved())
                     .count()
-                >= content.traits().size();
+                >= content.traitStages().size();
     return new CompleteResult(traitsComplete);
   }
 
@@ -173,8 +174,10 @@ class DefaultEventService implements EventService {
       return Optional.empty();
     }
     List<Candidate> candidates = new ArrayList<>();
-    if (context.phase() == Phase.SAVING) {
-      savingCandidates(rows, context, random, candidates);
+    if (context.phase() == Phase.CHILDHOOD) {
+      childhoodCandidates(rows, context, candidates);
+    } else if (context.phase() == Phase.SAVING) {
+      savingCandidates(rows, context, candidates);
     } else if (context.phase() == Phase.INVESTING && context.investingStartDay() != null) {
       List<EventRow> news = ofKind(rows, EventKind.NEWS);
       int base = news.isEmpty() ? context.investingStartDay() : last(news).occursDay();
@@ -187,32 +190,37 @@ class DefaultEventService implements EventService {
         .filter(c -> c.day() <= context.endDay());
   }
 
+  /** 성장기: 콘텐츠가 정한 나이마다 일상의 성향 이벤트가 오고, 성향이 다 정해지면 직업 선택이 온다. */
+  private void childhoodCandidates(
+      List<EventRow> rows, SchedulingContext context, List<Candidate> candidates) {
+    List<EventRow> traits = ofKind(rows, EventKind.TRAIT);
+    List<ContentCatalog.TraitStage> stages = content.traitStages();
+    if (traits.size() < stages.size()) {
+      int day = dayOfAge(stages.get(traits.size()).age(), context);
+      int after = traits.isEmpty() ? 0 : last(traits).occursDay();
+      candidates.add(new Candidate(EventKind.TRAIT, Math.max(day, after)));
+    } else if (context.traitsFinalized() && ofKind(rows, EventKind.JOB).isEmpty()) {
+      int day = dayOfAge(properties.job().age(), context);
+      candidates.add(new Candidate(EventKind.JOB, Math.max(day, last(traits).occursDay())));
+    }
+  }
+
+  /** 저축기: 첫 월급 이후 투자 시작을 묻고, 거절하면 1년 뒤에 다시 묻는다 (decisions.md 6번). */
   private void savingCandidates(
-      List<EventRow> rows,
-      SchedulingContext context,
-      SeededRandom random,
-      List<Candidate> candidates) {
-    List<EventRow> jobs = ofKind(rows, EventKind.JOB);
-    if (jobs.isEmpty()) {
-      candidates.add(new Candidate(EventKind.JOB, properties.job().day()));
+      List<EventRow> rows, SchedulingContext context, List<Candidate> candidates) {
+    if (context.salaryStartDay() == null) {
       return;
     }
-    int jobDay = jobs.getFirst().occursDay();
-    List<EventRow> traits = ofKind(rows, EventKind.TRAIT);
-    if (traits.size() < content.traits().size()) {
-      int base = traits.isEmpty() ? jobDay : last(traits).occursDay();
-      int gap = roll(random, properties.trait().gapDays(), "TRAIT", traits.size());
-      candidates.add(new Candidate(EventKind.TRAIT, base + gap));
-    }
-    if (context.salaryStartDay() != null && context.traitsFinalized()) {
-      List<EventRow> offers = ofKind(rows, EventKind.OFFER);
-      int day =
-          offers.isEmpty()
-              ? Math.max(
-                  context.salaryStartDay(), traits.isEmpty() ? jobDay : last(traits).occursDay())
-              : last(offers).occursDay() + calendar.daysPerYear();
-      candidates.add(new Candidate(EventKind.OFFER, day));
-    }
+    List<EventRow> offers = ofKind(rows, EventKind.OFFER);
+    int day =
+        offers.isEmpty()
+            ? context.salaryStartDay()
+            : last(offers).occursDay() + calendar.daysPerYear();
+    candidates.add(new Candidate(EventKind.OFFER, day));
+  }
+
+  private int dayOfAge(int age, SchedulingContext context) {
+    return (age - context.startAge()) * calendar.daysPerYear();
   }
 
   // ---- 이벤트 만들기 ----
@@ -235,7 +243,11 @@ class DefaultEventService implements EventService {
               candidate.day(),
               sampleJobs(random.forKey("event", "job-options")));
       case TRAIT -> {
-        TraitDefinition trait = content.traits().get(ofKind(rows, EventKind.TRAIT).size());
+        // 단계마다 장면을 판 시드로 랜덤하게 뽑는다. 판마다 다른 질문이 나오고, 같은 판은 다시 불러도 같다.
+        int stage = ofKind(rows, EventKind.TRAIT).size();
+        List<TraitDefinition> scenes = content.traitStages().get(stage).scenes();
+        TraitDefinition trait =
+            scenes.get(random.forKey("event", "trait-scene", stage).nextInt(scenes.size()));
         yield simple(
             id,
             seq,

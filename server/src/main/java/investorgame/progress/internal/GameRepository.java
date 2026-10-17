@@ -104,6 +104,19 @@ class GameRepository {
         .update();
   }
 
+  void changePhase(UUID gameId, Phase phase) {
+    jdbc.sql(
+            """
+            UPDATE progress_game
+            SET phase = :phase, version = version + 1, updated_at = :now
+            WHERE id = :gameId
+            """)
+        .param("phase", phase.name())
+        .param("now", now())
+        .param("gameId", gameId)
+        .update();
+  }
+
   void startInvesting(UUID gameId, int day) {
     jdbc.sql(
             """

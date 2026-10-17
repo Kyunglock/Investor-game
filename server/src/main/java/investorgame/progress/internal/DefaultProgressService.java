@@ -91,7 +91,7 @@ class DefaultProgressService implements ProgressService {
             UUID.randomUUID(),
             sessionId,
             "ACTIVE",
-            Phase.SAVING,
+            Phase.CHILDHOOD,
             0,
             properties.startAge(),
             properties.endAge(),
@@ -163,6 +163,7 @@ class DefaultProgressService implements ProgressService {
           case ChoiceTicket.News news -> resolveNews(game, ticket, random);
           case ChoiceTicket.Job job -> {
             characters.assignJob(gameId, job.jobCode(), ticket.occursDay());
+            games.changePhase(gameId, Phase.SAVING);
             events.complete(gameId, eventId, new Completion(option, option, List.of()));
             JobDefinition definition = content.job(job.jobCode());
             yield simpleOutcome(
@@ -173,14 +174,15 @@ class DefaultProgressService implements ProgressService {
             CompleteResult result =
                 events.complete(gameId, eventId, new Completion(option, option, List.of()));
             if (!result.traitsComplete()) {
-              yield simpleOutcome(ticket, "선택이 마음 한쪽에 남았다.");
+              yield simpleOutcome(ticket, trait.note());
             }
             TraitResult traits =
                 characters.finalizeTraits(gameId, random.forKey("character", "traits"));
             yield simpleOutcome(
                 ticket,
-                "당신은 %s다. 관심이 가는 분야는 %s."
+                "%s\n\n자라 온 날들을 돌아보니 당신은 %s다. 관심이 가는 분야는 %s."
                     .formatted(
+                        trait.note(),
                         content.styleName(traits.investmentStyle()),
                         content.sectorName(traits.interestSector())));
           }
@@ -338,6 +340,7 @@ class DefaultProgressService implements ProgressService {
   private SchedulingContext context(GameRow game, CharacterView character) {
     return new SchedulingContext(
         game.phase(),
+        game.startAge(),
         character.investmentStyle(),
         character.interestSector(),
         character.jobStartDay() == null ? null : character.jobStartDay() + calendar.daysPerMonth(),

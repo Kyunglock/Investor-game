@@ -14,7 +14,7 @@ async function born(page: Page) {
   await expect(page.getByTestId('birth-reveal')).toBeVisible()
   await page.clock.runFor(5_000)
   await page.getByRole('button', { name: '인생 시작하기' }).click()
-  await expect(page.getByTestId('age')).toHaveText('25세 0개월')
+  await expect(page.getByTestId('age')).toHaveText('1세 0개월')
 }
 
 /** 화면 상태에 맞춰 한 걸음 진행한다. 이벤트를 처리했으면 그 종류를 돌려준다. */
@@ -35,7 +35,8 @@ async function step(page: Page): Promise<string> {
     await expect(outcomeCard(page)).toBeVisible()
     return kind
   }
-  await page.clock.runFor(2_000)
+  // 시계는 다음 이벤트 시각에서 멈추므로 크게 감아도 이벤트를 건너뛰지 않는다.
+  await page.clock.runFor(6_000)
   await eventCard(page)
     .or(outcomeCard(page))
     .waitFor({ timeout: 1_500 })
@@ -43,7 +44,7 @@ async function step(page: Page): Promise<string> {
   return 'time'
 }
 
-async function playUntil(page: Page, kind: string, maxSteps = 120) {
+async function playUntil(page: Page, kind: string, maxSteps = 150) {
   for (let i = 0; i < maxSteps; i++) {
     if ((await step(page)) === kind) {
       return
@@ -73,24 +74,29 @@ test('태어나면 능력치가 안목부터 하나씩 공개되고 별명이 �
   expect(nickname?.trim()).toBeTruthy()
 
   await page.getByRole('button', { name: '인생 시작하기' }).click()
+  await expect(page.getByTestId('age')).toHaveText('1세 0개월')
   await expect(page.getByTestId('nickname')).toHaveText(nickname ?? '')
-  await expect(page.getByTestId('job')).toHaveText('구직 중')
+  await expect(page.getByTestId('job')).toHaveText('학생')
 })
 
-test('구직 기간이 지나면 직업 선택이 오고, 성향이 정해진 뒤 투자를 시작해 뉴스에 선택한다', async ({
+test('성장기의 일상 선택으로 성향이 정해지고, 직업을 고른 뒤 투자를 시작해 뉴스에 선택한다', async ({
   page,
 }) => {
+  // 1세부터 투자 단계의 뉴스까지 가므로 오래 걸린다.
+  test.setTimeout(120_000)
   await born(page)
-  await expect(eventCard(page)).toBeHidden()
+
+  await playUntil(page, 'TRAIT')
+  await expect(page.getByTestId('outcome-message')).toContainText('—')
+  await expect(page.getByTestId('style')).toHaveText('아직 모름')
 
   await playUntil(page, 'JOB')
   await expect(page.getByTestId('outcome-message')).toContainText('일하기 시작했다')
+  await expect(page.getByTestId('style')).not.toHaveText('아직 모름')
   await step(page)
-  await expect(page.getByTestId('job')).not.toHaveText('구직 중')
+  await expect(page.getByTestId('job')).not.toHaveText('학생')
 
   await playUntil(page, 'OFFER')
-  await expect(page.getByTestId('style')).not.toHaveText('아직 모름')
-
   await playUntil(page, 'NEWS')
   await expect(page.getByTestId('outcome-actions')).toContainText('선택 매수')
   await expect(page.getByTestId('outcome-actions')).toContainText('실제')
@@ -98,29 +104,29 @@ test('구직 기간이 지나면 직업 선택이 오고, 성향이 정해진 �
 
 test('새로고침하면 서버의 상태에서 일시정지로 이어한다', async ({ page }) => {
   await born(page)
-  await playUntil(page, 'JOB')
+  await playUntil(page, 'TRAIT')
   await step(page)
   await page.clock.runFor(1_000)
   await page.getByRole('button', { name: '일시정지' }).click()
 
-  const job = await page.getByTestId('job').textContent()
+  const age = await page.getByTestId('age').textContent()
   const nickname = await page.getByTestId('nickname').textContent()
   await page.reload()
 
-  await expect(page.getByTestId('job')).toHaveText(job ?? '')
   await expect(page.getByTestId('nickname')).toHaveText(nickname ?? '')
+  await expect(page.getByTestId('age')).toHaveText(age ?? '')
   await expect(page.getByRole('button', { name: '계속' }).or(eventCard(page))).toBeVisible()
 })
 
-test('다시 시작하면 다시 태어나 25세에서 시작한다', async ({ page }) => {
+test('다시 시작하면 다시 태어나 1세에서 시작한다', async ({ page }) => {
   await born(page)
-  await playUntil(page, 'JOB')
+  await playUntil(page, 'TRAIT')
   await step(page)
 
   await page.getByRole('button', { name: '다시 시작하기' }).click()
   await expect(page.getByTestId('birth-reveal')).toBeVisible()
   await page.clock.runFor(5_000)
   await page.getByRole('button', { name: '인생 시작하기' }).click()
-  await expect(page.getByTestId('age')).toHaveText('25세 0개월')
-  await expect(page.getByTestId('job')).toHaveText('구직 중')
+  await expect(page.getByTestId('age')).toHaveText('1세 0개월')
+  await expect(page.getByTestId('job')).toHaveText('학생')
 })

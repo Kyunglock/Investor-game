@@ -50,7 +50,7 @@ export function BirthReveal({ game, onStart }: { game: Game; onStart: () => void
 
       {done && (
         <div className="animate-reveal mt-8 text-center">
-          <p className="text-slate-500">초기 자산 {won(game.initialAsset)}</p>
+          <p className="text-slate-500">부모님이 만들어 준 통장 {won(game.initialAsset)}</p>
           <p className="mt-4 text-sm text-slate-500">당신의 별명은</p>
           <p className="mt-1 text-3xl font-bold text-blue-600" data-testid="reveal-nickname">
             {nick.name}

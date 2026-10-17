@@ -31,12 +31,13 @@ class GameFlowTest {
   @Autowired WebApplicationContext context;
 
   @Test
-  void 직업_성향_투자_시작_뉴스를_거쳐_65세에_끝난다() throws Exception {
+  void 성장기_성향_직업_투자_시작_뉴스를_거쳐_65세에_끝난다() throws Exception {
     MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
     GameClient client = GameClient.newSession(mvc);
     DocumentContext game = client.start();
     String gameId = game.read("$.gameId");
-    int endDay = (65 - 25) * 360;
+    int endDay = (65 - 1) * 360;
+    List<String> kindOrder = new ArrayList<>();
 
     Map<String, Integer> seenKinds = new HashMap<>();
     List<DocumentContext> newsOutcomes = new ArrayList<>();
@@ -48,6 +49,7 @@ class GameFlowTest {
       if (pending != null) {
         String kind = (String) pending.get("kind");
         seenKinds.merge(kind, 1, Integer::sum);
+        kindOrder.add(kind);
         String option =
             switch (kind) {
               case "OFFER" -> "accept";
@@ -81,7 +83,10 @@ class GameFlowTest {
         .isGreaterThan(game.read("$.result.initialAsset", Long.class));
 
     assertThat(seenKinds.get("JOB")).isEqualTo(1);
-    assertThat(seenKinds.get("TRAIT")).isEqualTo(3);
+    assertThat(seenKinds.get("TRAIT")).as("성장 단계 6개에서 하나씩").isEqualTo(6);
+    assertThat(kindOrder.subList(0, 8))
+        .as("성장기의 성향 이벤트가 모두 끝난 뒤에 직업, 그다음 투자 시작 제안")
+        .containsExactly("TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "JOB", "OFFER");
     assertThat(seenKinds.get("OFFER")).isEqualTo(1);
     assertThat(seenKinds.getOrDefault("NEWS", 0)).isGreaterThanOrEqualTo(20);
     assertThat(game.read("$.investmentStyle.code", String.class)).isIn("short", "long");

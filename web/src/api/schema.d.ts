@@ -35,7 +35,7 @@ export interface paths {
         put?: never;
         /**
          * 새 판을 시작한다
-         * @description 진행 중인 판이 있으면 버리고 새로 시작한다. 구직 기간(약 두 달) 뒤에 직업 선택 이벤트가 온다.
+         * @description 진행 중인 판이 있으면 버리고 새로 시작한다. 1세에 태어나 성장기의 성향 이벤트를 거친 뒤 직업 선택이 온다.
          */
         post: operations["startGame"];
         delete?: never;
@@ -106,8 +106,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @enum {string} */
-        Phase: "SAVING" | "INVESTING" | "ENDED";
+        /**
+         * @description 성장기(성향 이벤트) → 저축기(취업 후) → 투자기 → 종료
+         * @enum {string}
+         */
+        Phase: "CHILDHOOD" | "SAVING" | "INVESTING" | "ENDED";
         Stats: {
             /** @description 안목 */
             insight: number;

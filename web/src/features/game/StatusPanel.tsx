@@ -31,7 +31,11 @@ export function StatusPanel({ game, day }: { game: Game; day: number }) {
           </dd>
           <dt className="text-slate-500">직업</dt>
           <dd className="text-right" data-testid="job">
-            {game.job ? `${game.job.title} · 월 ${won(game.job.monthlySalary)}` : '구직 중'}
+            {game.job
+              ? `${game.job.title} · 월 ${won(game.job.monthlySalary)}`
+              : game.phase === 'CHILDHOOD'
+                ? '학생'
+                : '구직 중'}
           </dd>
           <dt className="text-slate-500">투자 스타일</dt>
           <dd className="text-right" data-testid="style">

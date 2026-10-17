@@ -8,7 +8,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jayway.jsonpath.DocumentContext;
 import investorgame.TestcontainersConfiguration;
 import jakarta.servlet.http.Cookie;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,27 +35,54 @@ class GameApiTest {
   }
 
   @Test
-  void 판을_시작하면_능력치와_현금이_생기고_구직_기간_뒤에_직업_선택이_온다() throws Exception {
+  void 일세에_태어나_성장기의_첫_성향_이벤트는_여섯_살에_온다() throws Exception {
     GameClient client = GameClient.newSession(mvc);
 
     client
         .startRaw()
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.status").value("ACTIVE"))
-        .andExpect(jsonPath("$.phase").value("SAVING"))
+        .andExpect(jsonPath("$.phase").value("CHILDHOOD"))
         .andExpect(jsonPath("$.day").value(0))
-        .andExpect(jsonPath("$.startAge").value(25))
+        .andExpect(jsonPath("$.startAge").value(1))
         .andExpect(jsonPath("$.endAge").value(65))
         .andExpect(jsonPath("$.stats.insight").isNumber())
         .andExpect(jsonPath("$.initialStats.insight").isNumber())
         .andExpect(jsonPath("$.cash").isNumber())
         .andExpect(jsonPath("$.job").doesNotExist())
         .andExpect(jsonPath("$.pendingEvent").doesNotExist())
-        .andExpect(jsonPath("$.nextEventDay").value(60))
+        .andExpect(jsonPath("$.nextEventDay").value((6 - 1) * 360))
         .andExpect(jsonPath("$.seed").doesNotExist());
+  }
 
-    DocumentContext job = client.startUntilJob();
-    assertThat(job.read("$.pendingEvent.kind", String.class)).isEqualTo("JOB");
+  @Test
+  void 성향_장면은_판마다_랜덤이고_같은_판은_다시_불러도_같다() throws Exception {
+    Set<String> firstScenes = new HashSet<>();
+    for (int i = 0; i < 15; i++) {
+      GameClient client = GameClient.newSession(mvc);
+      DocumentContext game = client.start();
+      String gameId = game.read("$.gameId");
+      int eventDay = game.read("$.nextEventDay", Integer.class);
+      for (int day = 360; day < eventDay; day += 360) {
+        client.advance(gameId, day);
+      }
+      String title = client.advance(gameId, eventDay).read("$.pendingEvent.title");
+      assertThat(client.current().read("$.pendingEvent.title", String.class))
+          .as("재접속해도 같은 장면")
+          .isEqualTo(title);
+      firstScenes.add(title);
+    }
+    assertThat(firstScenes).as("15판이면 첫 장면이 여러 가지로 나온다").hasSizeGreaterThan(1);
+  }
+
+  @Test
+  void 성향이_모두_정해진_뒤에_스물네_살에_직업_선택이_온다() throws Exception {
+    DocumentContext job = GameClient.newSession(mvc).startUntilJob();
+
+    assertThat(job.read("$.day", Integer.class)).isEqualTo((24 - 1) * 360);
+    assertThat(job.read("$.phase", String.class)).isEqualTo("CHILDHOOD");
+    assertThat(job.read("$.investmentStyle.code", String.class)).isIn("short", "long");
+    assertThat(job.read("$.interestSector.code", String.class)).isNotBlank();
     assertThat(job.read("$.pendingEvent.options.length()", Integer.class)).isEqualTo(3);
   }
 
@@ -115,14 +144,21 @@ class GameApiTest {
   @Test
   void 다음_이벤트_시각을_넘어서_시간을_보낼_수_없다() throws Exception {
     GameClient client = GameClient.newSession(mvc);
-    String gameId = client.start().read("$.gameId");
+    DocumentContext game = client.start();
+    String gameId = game.read("$.gameId");
+    int eventDay = game.read("$.nextEventDay", Integer.class);
+    // 한 번에 360일까지만 갈 수 있으므로 이벤트 하루 전까지 나눠서 간다.
+    for (int day = 360; day < eventDay - 1; day += 360) {
+      client.advance(gameId, day);
+    }
+    client.advance(gameId, eventDay - 1);
 
-    client.advanceRaw(gameId, 70).andExpect(status().isOk());
+    client.advanceRaw(gameId, eventDay + 10).andExpect(status().isOk());
     assertThat(client.current().read("$.day", Integer.class))
-        .as("이벤트가 생긴 60일째에서 판이 멈춘다")
-        .isEqualTo(60);
+        .as("이벤트가 생긴 날에서 판이 멈춘다")
+        .isEqualTo(eventDay);
     client
-        .advanceRaw(gameId, 71)
+        .advanceRaw(gameId, eventDay + 11)
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
   }
@@ -132,27 +168,31 @@ class GameApiTest {
     GameClient client = GameClient.newSession(mvc);
     DocumentContext chosen = client.chooseFirstJob(client.startUntilJob());
     String gameId = chosen.read("$.game.gameId");
+    int jobDay = chosen.read("$.game.day", Integer.class);
     long cash = chosen.read("$.game.cash", Long.class);
     long salary = chosen.read("$.game.job.monthlySalary", Long.class);
     assertThat(chosen.read("$.outcome.message", String.class)).contains("일하기 시작했다");
+    assertThat(chosen.read("$.game.phase", String.class)).isEqualTo("SAVING");
 
-    // 직업은 60일째에 정해졌으므로 첫 월급은 90일째다.
-    assertThat(client.advance(gameId, 89).read("$.cash", Long.class)).isEqualTo(cash);
-    assertThat(client.advance(gameId, 90).read("$.cash", Long.class)).isEqualTo(cash + salary);
-    assertThat(client.advance(gameId, 90).read("$.cash", Long.class))
+    // 첫 월급은 직업을 정한 날부터 30일 뒤다.
+    assertThat(client.advance(gameId, jobDay + 29).read("$.cash", Long.class)).isEqualTo(cash);
+    assertThat(client.advance(gameId, jobDay + 30).read("$.cash", Long.class))
+        .isEqualTo(cash + salary);
+    assertThat(client.advance(gameId, jobDay + 30).read("$.cash", Long.class))
         .as("같은 날을 다시 보고해도 월급은 한 번만")
         .isEqualTo(cash + salary);
-    assertThat(client.advance(gameId, 119).read("$.cash", Long.class)).isEqualTo(cash + salary);
   }
 
   @Test
   void 시각은_거꾸로_갈_수_없다() throws Exception {
     GameClient client = GameClient.newSession(mvc);
-    String gameId = client.chooseFirstJob(client.startUntilJob()).read("$.game.gameId");
-    client.advance(gameId, 100);
+    DocumentContext chosen = client.chooseFirstJob(client.startUntilJob());
+    String gameId = chosen.read("$.game.gameId");
+    int jobDay = chosen.read("$.game.day", Integer.class);
+    client.advance(gameId, jobDay + 10);
 
     client
-        .advanceRaw(gameId, 99)
+        .advanceRaw(gameId, jobDay + 9)
         .andExpect(status().isBadRequest())
         .andExpect(jsonPath("$.code").value("INVALID_REQUEST"));
   }
@@ -160,9 +200,9 @@ class GameApiTest {
   @Test
   void 한_번에_건너뛸_수_있는_구간을_넘으면_거부한다() throws Exception {
     GameClient client = GameClient.newSession(mvc);
-    String gameId = client.chooseFirstJob(client.startUntilJob()).read("$.game.gameId");
+    String gameId = client.start().read("$.gameId");
 
-    client.advanceRaw(gameId, 60 + 361).andExpect(status().isBadRequest());
+    client.advanceRaw(gameId, 361).andExpect(status().isBadRequest());
   }
 
   @Test

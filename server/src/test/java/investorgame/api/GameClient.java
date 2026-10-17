@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import jakarta.servlet.http.Cookie;
+import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -82,12 +83,39 @@ final class GameClient {
     return json(result);
   }
 
-  /** 직업 선택은 구직 기간(설정 event.job.day = 60일) 뒤에 뜬다. 거기까지 시간을 보내고 직업 선택이 대기 중인 판을 돌려준다. */
+  /**
+   * 성장기의 성향 이벤트에 첫 번째 선택지로 답하며 직업 선택이 올 때까지 진행한다. 직업 선택이 대기 중인 판을 돌려준다. 클라이언트처럼 다음 이벤트 시각까지만 시간을
+   * 보낸다.
+   */
   DocumentContext startUntilJob() throws Exception {
     DocumentContext game = start();
-    int jobDay = game.read("$.nextEventDay", Integer.class);
-    return advance(game.read("$.gameId"), jobDay);
+    String gameId = game.read("$.gameId");
+    for (int step = 0; step < 200; step++) {
+      Map<String, Object> pending = game.read("$.pendingEvent");
+      String kind = pending == null ? null : (String) pending.get("kind");
+      if ("JOB".equals(kind)) {
+        return game;
+      }
+      if (kind != null) {
+        Object next =
+            choose(
+                    gameId,
+                    game.read("$.pendingEvent.eventId"),
+                    game.read("$.pendingEvent.options[0].code"))
+                .read("$.game");
+        game = JsonPath.parse(next);
+        continue;
+      }
+      int day = game.read("$.day", Integer.class);
+      game =
+          advance(
+              gameId, Math.min(day + MAX_STEP_DAYS, game.read("$.nextEventDay", Integer.class)));
+    }
+    throw new AssertionError("직업 선택이 오지 않았다");
   }
+
+  /** 서버의 한 번에 건너뛸 수 있는 상한(360일) 안에서 진행한다. */
+  static final int MAX_STEP_DAYS = 360;
 
   /** 대기 중인 직업 선택에서 첫 번째 직업을 고른다. */
   DocumentContext chooseFirstJob(DocumentContext game) throws Exception {

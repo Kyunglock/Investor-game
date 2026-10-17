@@ -3,10 +3,10 @@ package investorgame.event.internal;
 import java.util.Map;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/** 모든 수치는 체감 테스트 후 조정할 초기값이다 (specs/event.md 7절). */
+/** 모든 수치는 체감 테스트 후 조정할 초기값이다 (specs/event.md 7절). 성향 이벤트의 나이는 콘텐츠가 정한다. */
 @ConfigurationProperties("event")
 public record EventProperties(
-    JobSettings job, TraitSettings trait, NewsSettings news, Map<String, StyleSettings> styles) {
+    JobSettings job, NewsSettings news, Map<String, StyleSettings> styles) {
 
   public static final String DEFAULT_STYLE = "default";
 
@@ -17,9 +17,8 @@ public record EventProperties(
 
   public record Range(int min, int max) {}
 
-  public record JobSettings(int day, int optionCount) {}
-
-  public record TraitSettings(Range gapDays) {}
+  /** age: 직업 선택이 오는 나이. 성향이 다 정해지기 전에는 오지 않는다. */
+  public record JobSettings(int age, int optionCount) {}
 
   /**
    * @param interestWeightPercent 관심 섹터 뉴스의 가중치 배율. 300이면 3배

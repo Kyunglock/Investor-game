@@ -21,8 +21,11 @@ public interface ContentCatalog {
 
   JobDefinition job(String code);
 
-  /** order 순서로 정렬되어 있다. */
+  /** 모든 성향 장면. 나이순이다. */
   List<TraitDefinition> traits();
+
+  /** 성장 단계. 나이순이며 단계마다 장면이 하나 이상 있다. 판마다 단계별로 하나를 뽑는다. */
+  List<TraitStage> traitStages();
 
   List<NewsDefinition> news();
 
@@ -37,6 +40,8 @@ public interface ContentCatalog {
   OfferText offerText();
 
   record NamedCode(String code, String name) {}
+
+  record TraitStage(int age, List<TraitDefinition> scenes) {}
 
   record TextBlock(String title, String body) {}
 

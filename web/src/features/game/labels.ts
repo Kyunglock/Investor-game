@@ -13,6 +13,7 @@ export const STAT_LABELS: Record<keyof Stats, string> = {
 export const STAT_KEYS = Object.keys(STAT_LABELS) as (keyof Stats)[]
 
 export const PHASE_LABELS: Record<Phase, string> = {
+  CHILDHOOD: '성장기',
   SAVING: '저축 중',
   INVESTING: '투자 중',
   ENDED: '종료',

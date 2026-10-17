@@ -20,7 +20,8 @@ game:
   days-per-year: 360
 
 progress:
-  start-age: 25
+  # 1세에 태어나 성장기에 성향이 정해지고, 취업 후 투자한다 (decisions.md).
+  start-age: 1
   end-age: 65
   max-skip-days: 360
 
@@ -57,11 +58,9 @@ behavior:
 
 event:
   job:
-    # 태어나자마자 직장을 고르지 않도록 두 달의 구직 기간을 둔다.
-    day: 60
+    # 성향이 다 정해진 뒤, 이 나이에 첫 직장을 고른다.
+    age: 24
     option-count: 3
-  trait:
-    gap-days: { min: 60, max: 120 }
   news:
     interest-weight-percent: 300
     no-repeat-window: 5

@@ -11,6 +11,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
@@ -21,12 +22,16 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 class JsonContentCatalog implements ContentCatalog {
 
+  private static final String STYLE_PREFIX = "style.";
+  private static final String SECTOR_PREFIX = "sector.";
+
   static final List<String> FILES =
       List.of("meta.json", "jobs.json", "traits.json", "news.json", "phrases.json");
 
   private final Meta meta;
   private final List<JobDefinition> jobs;
   private final List<TraitDefinition> traits;
+  private final List<TraitStage> traitStages;
   private final List<NewsDefinition> news;
   private final Phrases phrases;
   private final Map<String, String> sectorNames;
@@ -37,7 +42,14 @@ class JsonContentCatalog implements ContentCatalog {
     this.jobs = read(json, "jobs.json", new TypeReference<>() {});
     this.traits =
         read(json, "traits.json", new TypeReference<List<TraitDefinition>>() {}).stream()
-            .sorted(Comparator.comparingInt(TraitDefinition::order))
+            .sorted(Comparator.comparingInt(TraitDefinition::age))
+            .toList();
+    this.traitStages =
+        traits.stream()
+            .collect(Collectors.groupingBy(TraitDefinition::age, TreeMap::new, Collectors.toList()))
+            .entrySet()
+            .stream()
+            .map(e -> new TraitStage(e.getKey(), List.copyOf(e.getValue())))
             .toList();
     this.news = read(json, "news.json", new TypeReference<>() {});
     this.phrases = read(json, "phrases.json", new TypeReference<>() {});
@@ -85,6 +97,11 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public List<TraitStage> traitStages() {
+    return traitStages;
+  }
+
+  @Override
   public List<NewsDefinition> news() {
     return news;
   }
@@ -114,8 +131,14 @@ class JsonContentCatalog implements ContentCatalog {
     require(!jobs.isEmpty(), "직업이 하나도 없다");
     require(!traits.isEmpty(), "성향 이벤트가 하나도 없다");
     require(!news.isEmpty(), "뉴스가 하나도 없다");
+    require(
+        traits.stream().map(TraitDefinition::code).distinct().count() == traits.size(),
+        "성향 장면 코드가 겹친다");
     for (TraitDefinition trait : traits) {
-      require(!trait.options().isEmpty(), "성향 이벤트에 선택지가 없다: " + trait.code());
+      require(trait.options().size() >= 2, "성향 장면에 선택지가 둘 이상 있어야 한다: " + trait.code());
+      for (TraitDefinition.Option option : trait.options()) {
+        validateTraitDeltas(trait.code() + "/" + option.code(), option.traitDeltas());
+      }
     }
     for (NewsDefinition definition : news) {
       require(
@@ -132,6 +155,26 @@ class JsonContentCatalog implements ContentCatalog {
     }
     require(!hintPhrases("NEUTRAL", "MILD").isEmpty(), "모호한 힌트 문구가 없다");
     require(!swayPhrases("POS").isEmpty() && !swayPhrases("NEG").isEmpty(), "다른 뉴스 문구가 없다");
+  }
+
+  /** 모든 선택지가 스타일과 섹터를 하나씩 이상 드러내야 한다. 그래야 판마다 어떤 장면이 뽑히고 무엇을 골라도 투자 스타일과 관심 섹터가 반드시 정해진다. */
+  private void validateTraitDeltas(String where, Map<String, Integer> deltas) {
+    boolean hasStyle = false;
+    boolean hasSector = false;
+    for (String key : deltas.keySet()) {
+      if (key.startsWith(STYLE_PREFIX)) {
+        require(
+            styleNames.containsKey(key.substring(STYLE_PREFIX.length())), "알 수 없는 스타일: " + where);
+        hasStyle = true;
+      } else if (key.startsWith(SECTOR_PREFIX)) {
+        require(
+            sectorNames.containsKey(key.substring(SECTOR_PREFIX.length())), "알 수 없는 섹터: " + where);
+        hasSector = true;
+      } else {
+        require(false, "알 수 없는 성향 키: " + where + " " + key);
+      }
+    }
+    require(hasStyle && hasSector, "선택지가 스타일과 섹터를 모두 드러내야 한다: " + where);
   }
 
   private static void require(boolean condition, String message) {

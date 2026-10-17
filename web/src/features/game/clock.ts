@@ -3,8 +3,18 @@
  * 수치는 "일단 만들어 보고 판단"하기로 한 초기값이다 (decisions.md 2번).
  */
 
-/** 한 판 10분에 40년(25→65세)이면 1년이 15초다. */
-export const SECONDS_PER_YEAR = 15
+import type { Phase } from '../../api/client'
+
+/**
+ * 성장기는 이벤트가 적어서 빨리 흐르고, 성인기에 시간을 더 쓴다 (decisions.md).
+ * 성장기 약 23년 × 4초 + 성인기 약 41년 × 12초 ≈ 9분 40초로 한 판 10분에 맞춘다.
+ */
+const SECONDS_PER_YEAR_CHILDHOOD = 4
+const SECONDS_PER_YEAR_ADULT = 12
+
+export function secondsPerYear(phase: Phase): number {
+  return phase === 'CHILDHOOD' ? SECONDS_PER_YEAR_CHILDHOOD : SECONDS_PER_YEAR_ADULT
+}
 
 /** 이벤트가 없어도 월급이 화면에 반영되도록 주기적으로 보고한다. 서버의 건너뛰기 상한(360일)보다 충분히 작다. */
 export const REPORT_EVERY_DAYS = 90
@@ -28,8 +38,9 @@ export function advanceDay(
   speed: Speed,
   daysPerYear: number,
   limit: number,
+  yearSeconds: number,
 ): number {
-  const daysPerMs = daysPerYear / (SECONDS_PER_YEAR * 1000)
+  const daysPerMs = daysPerYear / (yearSeconds * 1000)
   return Math.min(limit, day + elapsedMs * daysPerMs * speed)
 }
 
