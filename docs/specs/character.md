@@ -32,10 +32,11 @@ public interface CharacterService {
     void assignJob(UUID gameId, String jobCode, int startDay);
 
     /** 성향 이벤트의 선택 하나를 점수로 누적한다. */
-    void recordTraitChoice(UUID gameId, Map<String, Integer> traitDeltas);
+    List<StatChange> recordTraitChoice(UUID gameId, Map<String, Integer> traitDeltas,
+                                       Map<String, Integer> statDeltas, int gameDay);
 
     /** 누적 점수로 투자 스타일과 관심 섹터를 확정한다. */
-    TraitResult finalizeTraits(UUID gameId, RandomGenerator rng);
+    TraitResult finalizeTraits(UUID gameId, TraitAxes axes, RandomGenerator rng);
 
     /** 성장 원인을 반영한다. 운은 성장하지 않는다. */
     List<StatChange> grow(UUID gameId, List<GrowthSource> sources, int gameDay);
@@ -57,11 +58,18 @@ public record CharacterView(
     Stats initialStats,             // 판 시작 시 능력치
     String jobCode,                 // 없으면 null
     Integer jobStartDay,            // 없으면 null
-    String investmentStyle,         // 확정 전 null
-    String interestSector           // 확정 전 null
+    String investmentStyle,         // 기간 축. 확정 전 null
+    String riskProfile,             // 위험 축 (bold/safe). 확정 전 null
+    String mindProfile,             // 소신 축 (own/crowd). 확정 전 null
+    String interestSector,          // 관심 섹터. 확정 전 null
+    String investorType             // "{기간}-{위험}-{소신}". 확정 전 null
 ) {}
 
-public record TraitResult(String investmentStyle, String interestSector) {}
+public record TraitResult(String investmentStyle, String riskProfile, String mindProfile,
+                          String interestSector, String investorTypeCode) {}
+
+/** 위험·소신 축의 후보 코드. 점수가 없는 축은 여기서 난수로 정한다. 캐릭터는 콘텐츠를 읽지 않으므로 진행이 넘긴다. */
+public record TraitAxes(List<String> risks, List<String> minds) {}
 
 public sealed interface GrowthSource permits DeviationGrowth, Training {}
 public record DeviationGrowth(String statCode, UUID eventId) implements GrowthSource {}   // 이탈을 겪음. eventId는 원인 이벤트
@@ -93,18 +101,18 @@ public record StatChange(String statCode, int expGained, int valueBefore, int va
 
 ### 4.3 투자 성향 (확정)
 
-성향 이벤트는 "상황을 주고 어떻게 행동하는지"로 판단한다. 판정으로 뒤집지 않는다 (확정).
+성향 이벤트는 "상황을 주고 어떻게 행동하는지"로 판단한다(상황극, 선택지 3~4개). 판정으로 뒤집지 않는다 (확정). 네 축을 잰다: **기간**(`style.short/long`), **위험**(`risk.bold/safe`), **소신**(`mind.own/crowd`), **관심**(`sector.<코드>`) (경제 개편 설계 4.2절).
 
-1. 이벤트 운영이 각 선택지에 점수표를 붙인다. 예: `{"style.long": 2, "sector.bio": 1}`.
-2. 사용자가 선택하면 진행이 점수표를 `recordTraitChoice`로 넘기고, 이 도메인이 `character_trait_score`에 누적한다.
-3. 성향 이벤트가 끝나면 진행이 `finalizeTraits`를 부른다.
-   - **투자 스타일** = `style.*` 점수가 가장 높은 항목. 동점이면 난수로 정한다.
-   - **관심 섹터** = `sector.*` 점수가 가장 높은 항목. 동점이면 난수로 정한다.
-   - 점수가 하나도 없는 범주는 확정하지 않고 오류를 던진다 (진행이 성향 이벤트 이후에만 부르도록 한다).
+1. 콘텐츠가 각 선택지에 축 점수표(`traitDeltas`)와 능력치 변화(`statDeltas`, 선택)를 붙인다. 예: `{"style.long": 2, "risk.safe": 1, "sector.bio": 1}`, `{"patience": 1}`.
+2. 사용자가 선택하면 진행이 둘을 `recordTraitChoice`로 넘긴다. 점수는 `character_trait_score`에 누적하고, **능력치는 즉시 더한다**: 범위 `[character.trait-stat.min(5), growth.max-stat(95)]`로 자르고, 운은 무시한다(확정). 바뀐 능력치마다 `character_stat_log(reason='TRAIT')`를 남기고 `StatChange(expGained=0)`로 돌려준다. `initial_value`는 바꾸지 않는다(별명은 그대로).
+3. 성향 이벤트가 끝나면 진행이 `finalizeTraits(gameId, axes, rng)`를 부른다. 뽑는 순서는 **기간 → 위험 → 소신 → 관심**.
+   - 각 축 = 그 접두사의 점수가 가장 높은 항목. 동점이면 난수로 정한다.
+   - 기간·관심 점수가 하나도 없으면 오류(진행이 성향 이벤트 이후에만 부른다). 위험·소신 점수가 없으면 `axes`의 후보 전체에서 난수로 정한다(내 결정).
+   - **투자자 유형 코드** = `{기간}-{위험}-{소신}`. 이름·설명은 콘텍츠(`meta.investorTypes`)에 있고 진행이 찾는다.
 4. 확정은 한 번만 가능하다. 다시 부르면 이미 확정된 값을 돌려준다(멱등).
-5. 동점 난수는 `sort(코드 이름)` 순서로 후보를 정렬한 뒤 `nextInt(후보 수)`로 뽑는다 (재현성).
+5. 동점 난수는 `sort(코드 이름)` 순서로 후보를 정렬한 뒤 `nextInt(후보 수)`로 뽑는다 (재현성). 점수가 없는 축도 난수를 한 번 뽑아 순서를 고정한다.
 
-점수 항목의 이름 규칙: `style.<스타일 코드>`, `sector.<섹터 코드>`. 스타일 코드 목록은 콘텐츠가 정의한다 (decisions.md 남은 질문 B).
+점수 항목의 이름 규칙: `style.<코드>`, `risk.<코드>`, `mind.<코드>`, `sector.<코드>`. 코드 목록은 콘텐츠(`meta.json`)가 정의한다.
 
 ### 4.4 성장 (확정: 경험치와 자기계발, 다양한 루트)
 
@@ -132,7 +140,8 @@ public record StatChange(String statCode, int expGained, int valueBefore, int va
 | `character.initial-stat.max` | 85 | 초기 능력치 최댓값 |
 | `character.growth.deviation-exp` | 3 | 이탈 한 번의 경험치 |
 | `character.growth.exp-per-point` | 5 | 능력치 +1에 필요한 경험치 |
-| `character.growth.max-stat` | 95 | 성장 상한 |
+| `character.growth.max-stat` | 95 | 성장 상한 (성향 선택의 상한이기도 하다) |
+| `character.trait-stat.min` | 5 | 성향 선택으로 내려갈 수 있는 하한 |
 | `game.days-per-year` | 360 | 연차 계산 기준. 달력 설정은 `common`이 소유한다 |
 
 ## 6. DB
@@ -161,7 +170,10 @@ public record StatChange(String statCode, int expGained, int valueBefore, int va
 | 4 | `assignJob` 두 번 | 두 번째는 오류 |
 | 5 | `tenureYears` startDay 0, currentDay 359 / 360 / 720 | 0 / 1 / 2 |
 | 6 | 직업 없는 캐릭터의 `tenureYears` | 0 |
-| 7 | 성향 선택 3개를 누적하고 `finalizeTraits` | 가장 높은 점수의 스타일·섹터가 확정된다 |
+| 7 | 성향 선택 3개를 누적하고 `finalizeTraits` | 가장 높은 점수의 네 축이 확정되고 유형 코드가 `{기간}-{위험}-{소신}`이다 |
+| 7-1 | 위험·소신 점수 없이 `finalizeTraits` | 후보에서 난수로 정하며 같은 시드면 같다 |
+| 7-2 | `statDeltas {courage:+2, luck:+3}` | 용기만 +2, 운·초기값은 그대로 |
+| 7-3 | `-3`을 40번 / `+3`을 40번 | 5 / 95에서 멈추고, 더 못 움직이면 빈 목록 |
 | 8 | 스타일 점수가 동점 | 난수로 정하며 같은 시드에서는 같은 결과 |
 | 9 | 점수가 없는 상태에서 `finalizeTraits` | 오류 |
 | 10 | `finalizeTraits` 두 번 | 두 번째는 확정된 값을 그대로 돌려준다 |

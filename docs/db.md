@@ -99,7 +99,10 @@ content_version.version ─── progress_game.content_version
 | job_code | text | 직업 코드. 직업 선택 이벤트 전에는 null |
 | job_start_day | integer | 현재 직업을 시작한 게임 일수. 연차(연봉 상승) 계산에 쓴다 |
 | interest_sector | text | 관심 섹터 코드. 성향 확정 전에는 null |
-| investment_style | text | 투자 스타일 코드(장기/단기 등). 성향 이벤트로 확정되며, 이후 이벤트 구성에 영향을 준다. 확정 전에는 null |
+| investment_style | text | 기간 축 코드(short/long). 성향 이벤트로 확정되며, 이후 이벤트 구성에 영향을 준다. 확정 전에는 null |
+| risk_profile | text | 위험 축 코드(bold/safe). 유형 이름에만 쓴다. 확정 전 null |
+| mind_profile | text | 소신 축 코드(own/crowd). 유형 이름에만 쓴다. 확정 전 null |
+| investor_type | text | 투자자 유형 코드 `{기간}-{위험}-{소신}`. 확정 전 null |
 | created_at / updated_at | timestamptz | |
 
 ### 3.4 `character_stat`
@@ -140,7 +143,7 @@ content_version.version ─── progress_game.content_version
 | 컬럼 | 타입 | 비고 |
 |---|---|---|
 | game_id | uuid | PK의 일부 |
-| trait_code | text | `style.<스타일 코드>`, `sector.<섹터 코드>`. PK의 일부 |
+| trait_code | text | `style.<코드>`, `risk.<코드>`, `mind.<코드>`, `sector.<코드>`. PK의 일부 |
 | score | integer | 누적 점수 |
 
 ### 3.6 `asset_account`
