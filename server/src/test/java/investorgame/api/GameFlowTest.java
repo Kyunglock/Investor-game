@@ -115,6 +115,26 @@ class GameFlowTest {
         .as("끝난 판은 새로고침해도 결과를 보여 준다")
         .isEqualTo("ENDED");
 
+    // 투자자 유형: 네 축 조합 코드와 이름이 응답에 있고, 재접속해도 남는다 (경제 개편 설계 4.2절).
+    assertThat(game.read("$.investorType.code", String.class))
+        .matches("(short|long)-(bold|safe)-(own|crowd)");
+    assertThat(game.read("$.investorType.name", String.class)).isNotBlank();
+    assertThat(game.read("$.investorType.description", String.class)).isNotBlank();
+    assertThat(game.read("$.riskProfile.code", String.class)).isIn("bold", "safe");
+    assertThat(game.read("$.mindProfile.code", String.class)).isIn("own", "crowd");
+    assertThat(reloaded.read("$.investorType.code", String.class)).isNotNull();
+    List<Map<String, Object>> styles = game.read("$.log[?(@.kind=='STYLE')].payload");
+    assertThat(styles).hasSize(1);
+    assertThat(styles.get(0))
+        .containsKeys("investorTypeCode", "investorTypeName", "riskCode", "mindCode");
+    List<Map<String, Object>> growthPayloads = game.read("$.log[?(@.kind=='GROWTH')].payload");
+    assertThat(growthPayloads)
+        .allSatisfy(p -> assertThat(p.get("reason")).isIn("DEVIATION", "TRAIT"));
+    for (String response : responses) {
+      List<String> reasons = JsonPath.parse(response).read("$..growth[*].reason");
+      assertThat(reasons).allMatch(r -> r.equals("DEVIATION") || r.equals("TRAIT"));
+    }
+
     // 인생 기록: 진행이 사건마다 기록한 것이 탄생부터 종료까지 순서대로 남는다.
     List<String> kinds = game.read("$.log[*].kind");
     assertThat(kinds).startsWith("BIRTH").endsWith("END");

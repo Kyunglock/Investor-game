@@ -26,8 +26,14 @@ public record ChoiceTicket(
 
   public record Job(String jobCode) implements Effect {}
 
-  /** note: 이 일상 행동에서 무엇이 드러났는지 알려 주는 문구. */
-  public record Trait(Map<String, Integer> traitDeltas, String note) implements Effect {}
+  /**
+   * @param traitDeltas 네 축 점수 ("style.", "risk.", "mind.", "sector.")
+   * @param statDeltas 즉시 더해지는 능력치 변화 (운 제외). 없으면 빈 맵
+   * @param note 이 일상 행동에서 무엇이 드러났는지 알려 주는 문구
+   */
+  public record Trait(
+      Map<String, Integer> traitDeltas, Map<String, Integer> statDeltas, String note)
+      implements Effect {}
 
   public record Offer(boolean accepted) implements Effect {}
 }

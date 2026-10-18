@@ -34,5 +34,6 @@ public record ChoiceOutcome(GameView game, Outcome outcome) {
       long pnl,
       boolean lossSoftened) {}
 
-  public record Growth(String statCode, int before, int after) {}
+  /** reason: DEVIATION(이탈 경험) 또는 TRAIT(성장기의 선택). */
+  public record Growth(String statCode, int before, int after, String reason) {}
 }

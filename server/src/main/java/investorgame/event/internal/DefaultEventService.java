@@ -122,7 +122,7 @@ class DefaultEventService implements EventService {
                     .filter(o -> o.code().equals(optionCode))
                     .findFirst()
                     .orElseThrow();
-            yield new ChoiceTicket.Trait(chosen.traitDeltas(), chosen.note());
+            yield new ChoiceTicket.Trait(chosen.traitDeltas(), chosen.statDeltas(), chosen.note());
           }
           case OFFER -> new ChoiceTicket.Offer(ACCEPT.equals(optionCode));
           case NEWS -> new ChoiceTicket.News();

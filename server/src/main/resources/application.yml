@@ -40,6 +40,9 @@ character:
     deviation-exp: 3
     exp-per-point: 5
     max-stat: 95
+  trait-stat:
+    # 성향 선택으로 내려갈 수 있는 하한. 상한은 growth.max-stat (경제 개편 설계 4.3절)
+    min: 5
 
 asset:
   initial-cash:

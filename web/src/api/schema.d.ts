@@ -127,6 +127,13 @@ export interface components {
             code: string;
             name: string;
         };
+        /** @description 성장기 선택으로 정해지는 투자자 유형. 기간 × 위험 × 소신 조합 8종 */
+        InvestorType: {
+            /** @description "{기간}-{위험}-{소신}" 예 long-safe-own */
+            code: string;
+            name: string;
+            description: string;
+        };
         Holding: {
             sectorCode: string;
             sectorName: string;
@@ -223,7 +230,12 @@ export interface components {
             holdings: components["schemas"]["Holding"][];
             job?: components["schemas"]["Job"] | null;
             investmentStyle?: components["schemas"]["Named"] | null;
+            /** @description 위험 축 (공격/안정). 성향 확정 전 null */
+            riskProfile?: components["schemas"]["Named"] | null;
+            /** @description 소신 축 (소신/추종). 성향 확정 전 null */
+            mindProfile?: components["schemas"]["Named"] | null;
             interestSector?: components["schemas"]["Named"] | null;
+            investorType?: components["schemas"]["InvestorType"] | null;
             pendingEvent?: components["schemas"]["PendingEvent"] | null;
             /** @description 다음 이벤트가 생길 게임 일수. 클라이언트는 이 시각까지만 시계를 보낸다 */
             nextEventDay?: number | null;
@@ -275,6 +287,11 @@ export interface components {
                 statCode: string;
                 before: number;
                 after: number;
+                /**
+                 * @description DEVIATION은 이탈 경험, TRAIT은 성장기 선택으로 움직인 것
+                 * @enum {string}
+                 */
+                reason: "DEVIATION" | "TRAIT";
             }[];
             message?: string | null;
         };

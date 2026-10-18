@@ -116,6 +116,14 @@ components:
       properties:
         code: { type: string }
         name: { type: string }
+    InvestorType:
+      type: object
+      description: 성장기 선택으로 정해지는 투자자 유형. 기간 × 위험 × 소신 조합 8종
+      required: [code, name, description]
+      properties:
+        code: { type: string, description: '"{기간}-{위험}-{소신}" 예 long-safe-own' }
+        name: { type: string }
+        description: { type: string }
     Holding:
       type: object
       required: [sectorCode, sectorName, amount]
@@ -210,8 +218,16 @@ components:
           oneOf: [{ $ref: '#/components/schemas/Job' }, { type: 'null' }]
         investmentStyle:
           oneOf: [{ $ref: '#/components/schemas/Named' }, { type: 'null' }]
+        riskProfile:
+          oneOf: [{ $ref: '#/components/schemas/Named' }, { type: 'null' }]
+          description: 위험 축 (공격/안정). 성향 확정 전 null
+        mindProfile:
+          oneOf: [{ $ref: '#/components/schemas/Named' }, { type: 'null' }]
+          description: 소신 축 (소신/추종). 성향 확정 전 null
         interestSector:
           oneOf: [{ $ref: '#/components/schemas/Named' }, { type: 'null' }]
+        investorType:
+          oneOf: [{ $ref: '#/components/schemas/InvestorType' }, { type: 'null' }]
         pendingEvent:
           oneOf: [{ $ref: '#/components/schemas/PendingEvent' }, { type: 'null' }]
         nextEventDay:
@@ -283,11 +299,15 @@ components:
           type: array
           items:
             type: object
-            required: [statCode, before, after]
+            required: [statCode, before, after, reason]
             properties:
               statCode: { type: string }
               before: { type: integer }
               after: { type: integer }
+              reason:
+                type: string
+                enum: [DEVIATION, TRAIT]
+                description: DEVIATION은 이탈 경험, TRAIT은 성장기 선택으로 움직인 것
         message: { type: [string, 'null'] }
     Error:
       type: object

@@ -29,7 +29,10 @@ public record GameView(
     List<Holding> holdings,
     Job job,
     Named investmentStyle,
+    Named riskProfile,
+    Named mindProfile,
     Named interestSector,
+    InvestorType investorType,
     PendingEvent pendingEvent,
     Integer nextEventDay,
     Result result,
@@ -46,6 +49,9 @@ public record GameView(
   public record Job(String code, String title, long monthlySalary) {}
 
   public record Named(String code, String name) {}
+
+  /** 네 축(기간·위험·소신) 조합으로 정해지는 투자자 유형. 성향이 확정되기 전에는 null이다. */
+  public record InvestorType(String code, String name, String description) {}
 
   /** kind: JOB, TRAIT, OFFER, NEWS. 뉴스가 아니면 sector, hint, sway는 null이다. */
   public record PendingEvent(

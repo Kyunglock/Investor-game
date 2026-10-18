@@ -11,6 +11,7 @@ import investorgame.character.CharacterService;
 import investorgame.character.CharacterView;
 import investorgame.character.GrowthSource;
 import investorgame.character.StatChange;
+import investorgame.character.TraitAxes;
 import investorgame.character.TraitResult;
 import investorgame.common.Action;
 import investorgame.common.GameProperties;
@@ -20,6 +21,7 @@ import investorgame.common.error.NotFoundException;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.common.random.SeededRandom;
 import investorgame.content.ContentCatalog;
+import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
 import investorgame.event.ChoiceTicket;
 import investorgame.event.CompleteResult;
@@ -35,6 +37,7 @@ import investorgame.result.GameResult;
 import investorgame.result.ResultService;
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -50,6 +53,8 @@ class DefaultProgressService implements ProgressService {
 
   private static final long PERCENT = 100;
   private static final int BP = 10_000;
+  private static final String DEVIATION = "DEVIATION";
+  private static final String TRAIT = "TRAIT";
 
   private final GameRepository games;
   private final LogRepository logs;
@@ -199,7 +204,10 @@ class DefaultProgressService implements ProgressService {
                 ticket, "%s(으)로 일하기 시작했다. 월급은 매달 들어온다.".formatted(definition.title()));
           }
           case ChoiceTicket.Trait trait -> {
-            characters.recordTraitChoice(gameId, trait.traitDeltas());
+            // 성장기의 선택은 판정으로 뒤집지 않지만 능력치를 조금 움직인다 (경제 개편 설계 4.3절).
+            List<StatChange> moved =
+                characters.recordTraitChoice(
+                    gameId, trait.traitDeltas(), trait.statDeltas(), ticket.occursDay());
             CompleteResult result =
                 events.complete(gameId, eventId, new Completion(option, option, List.of()));
             logs.append(
@@ -210,25 +218,33 @@ class DefaultProgressService implements ProgressService {
                     "eventTitle", pendingView.title(),
                     "optionCode", option,
                     "optionLabel", optionLabel));
+            List<ChoiceOutcome.Growth> growth = logGrowth(gameId, ticket.occursDay(), moved, TRAIT);
             if (!result.traitsComplete()) {
-              yield simpleOutcome(ticket, trait.note());
+              yield simpleOutcome(ticket, trait.note(), growth);
             }
             TraitResult traits =
-                characters.finalizeTraits(gameId, random.forKey("character", "traits"));
-            logs.append(
-                gameId,
-                ticket.occursDay(),
-                "STYLE",
-                Map.of(
-                    "styleCode", traits.investmentStyle(),
-                    "styleName", content.styleName(traits.investmentStyle())));
+                characters.finalizeTraits(
+                    gameId,
+                    new TraitAxes(codes(content.risks()), codes(content.minds())),
+                    random.forKey("character", "traits"));
+            InvestorType type = content.investorType(traits.investorTypeCode());
+            Map<String, Object> stylePayload = new HashMap<>();
+            stylePayload.put("styleCode", traits.investmentStyle());
+            stylePayload.put("styleName", content.styleName(traits.investmentStyle()));
+            stylePayload.put("riskCode", traits.riskProfile());
+            stylePayload.put("mindCode", traits.mindProfile());
+            stylePayload.put("investorTypeCode", type.code());
+            stylePayload.put("investorTypeName", type.name());
+            logs.append(gameId, ticket.occursDay(), "STYLE", stylePayload);
             yield simpleOutcome(
                 ticket,
-                "%s\n\n자라 온 날들을 돌아보니 당신은 %s다. 관심이 가는 분야는 %s."
+                "%s\n\n자라 온 날들을 돌아보니 당신은 '%s'형 투자자다. %s 관심이 가는 분야는 %s."
                     .formatted(
                         trait.note(),
-                        content.styleName(traits.investmentStyle()),
-                        content.sectorName(traits.interestSector())));
+                        type.name(),
+                        type.description(),
+                        content.sectorName(traits.interestSector())),
+                growth);
           }
           case ChoiceTicket.Offer offer -> {
             events.complete(gameId, eventId, new Completion(option, option, List.of()));
@@ -329,15 +345,8 @@ class DefaultProgressService implements ProgressService {
             "changeBp", ticket.magnitudeBp(),
             "pnl", price.pnl(),
             "lossSoftened", price.lossSoftened()));
-    for (StatChange g : growth) {
-      if (g.valueAfter() != g.valueBefore()) {
-        logs.append(
-            gameId,
-            ticket.occursDay(),
-            "GROWTH",
-            Map.of("statCode", g.statCode(), "before", g.valueBefore(), "after", g.valueAfter()));
-      }
-    }
+    List<ChoiceOutcome.Growth> growthViews =
+        logGrowth(gameId, ticket.occursDay(), growth, DEVIATION);
 
     return new ChoiceOutcome.Outcome(
         ticket.kind().name(),
@@ -354,14 +363,42 @@ class DefaultProgressService implements ProgressService {
             ticket.magnitudeBp(),
             price.pnl(),
             price.lossSoftened()),
-        growth.stream()
-            .filter(g -> g.valueAfter() != g.valueBefore())
-            .map(g -> new ChoiceOutcome.Growth(g.statCode(), g.valueBefore(), g.valueAfter()))
-            .toList(),
+        growthViews,
         null);
   }
 
+  /** 값이 실제로 바뀐 능력치만 인생 기록에 남기고 결과용으로 돌려준다. */
+  private List<ChoiceOutcome.Growth> logGrowth(
+      UUID gameId, int day, List<StatChange> changes, String reason) {
+    List<ChoiceOutcome.Growth> views = new ArrayList<>();
+    for (StatChange g : changes) {
+      if (g.valueAfter() == g.valueBefore()) {
+        continue;
+      }
+      logs.append(
+          gameId,
+          day,
+          "GROWTH",
+          Map.of(
+              "statCode", g.statCode(),
+              "before", g.valueBefore(),
+              "after", g.valueAfter(),
+              "reason", reason));
+      views.add(new ChoiceOutcome.Growth(g.statCode(), g.valueBefore(), g.valueAfter(), reason));
+    }
+    return views;
+  }
+
+  private static List<String> codes(List<ContentCatalog.NamedCode> named) {
+    return named.stream().map(ContentCatalog.NamedCode::code).toList();
+  }
+
   private static ChoiceOutcome.Outcome simpleOutcome(ChoiceTicket ticket, String message) {
+    return simpleOutcome(ticket, message, List.of());
+  }
+
+  private static ChoiceOutcome.Outcome simpleOutcome(
+      ChoiceTicket ticket, String message, List<ChoiceOutcome.Growth> growth) {
     return new ChoiceOutcome.Outcome(
         ticket.kind().name(),
         ticket.optionCode(),
@@ -369,7 +406,7 @@ class DefaultProgressService implements ProgressService {
         List.of(),
         null,
         null,
-        List.of(),
+        growth,
         message);
   }
 
@@ -504,15 +541,29 @@ class DefaultProgressService implements ProgressService {
             ? null
             : new GameView.Named(
                 character.investmentStyle(), content.styleName(character.investmentStyle())),
+        character.riskProfile() == null
+            ? null
+            : new GameView.Named(
+                character.riskProfile(), content.riskName(character.riskProfile())),
+        character.mindProfile() == null
+            ? null
+            : new GameView.Named(
+                character.mindProfile(), content.mindName(character.mindProfile())),
         character.interestSector() == null
             ? null
             : new GameView.Named(
                 character.interestSector(), content.sectorName(character.interestSector())),
+        character.investorType() == null ? null : investorTypeView(character.investorType()),
         pending.map(this::pendingView).orElse(null),
         nextEventDay,
         ended ? results.find(game.id()).map(DefaultProgressService::resultView).orElse(null) : null,
         logs.findAll(game.id()),
         logs.findYears(game.id()));
+  }
+
+  private GameView.InvestorType investorTypeView(String code) {
+    InvestorType type = content.investorType(code);
+    return new GameView.InvestorType(type.code(), type.name(), type.description());
   }
 
   private GameView.Job job(CharacterView character, int day) {
