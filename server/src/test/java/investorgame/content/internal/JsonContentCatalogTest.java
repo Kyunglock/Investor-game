@@ -6,9 +6,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import investorgame.common.StatCodes;
 import investorgame.content.ContentCatalog;
 import investorgame.content.InvestorType;
+import investorgame.content.NewsDefinition;
+import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -90,6 +93,73 @@ class JsonContentCatalogTest {
           .contains(
               "style.short", "style.long", "risk.bold", "risk.safe", "mind.own", "mind.crowd");
     }
+  }
+
+  @Test
+  void 종목은_섹터마다_셋이고_코드와_이름이_겹치지_않는다() {
+    JsonContentCatalog catalog = load();
+    for (ContentCatalog.NamedCode sector : catalog.sectors()) {
+      assertThat(catalog.stocksOf(sector.code())).as(sector.code()).hasSize(3);
+    }
+    assertThat(catalog.stocks()).extracting(StockDefinition::code).doesNotHaveDuplicates();
+    assertThat(catalog.stocks())
+        .extracting(StockDefinition::name)
+        .doesNotHaveDuplicates()
+        .noneMatch(
+            n ->
+                Set.of(
+                        "삼성전자",
+                        "SK하이닉스",
+                        "셀트리온",
+                        "카카오",
+                        "네이버",
+                        "크래프톤",
+                        "농심",
+                        "오리온",
+                        "KB금융",
+                        "한국전력",
+                        "두산에너빌리티",
+                        "한화솔루션",
+                        "엔씨소프트",
+                        "넥슨게임즈",
+                        "CJ제일제당",
+                        "카카오뱅크",
+                        "삼성화재",
+                        "삼성바이오로직스",
+                        "알테오젠",
+                        "한미반도체")
+                    .contains(n));
+    assertThat(catalog.stocks())
+        .allMatch(s -> s.basePrice() > 0 && Set.of("low", "mid", "high").contains(s.volatility()));
+    assertThat(catalog.stock("ssj").name()).isNotBlank();
+    assertThatThrownBy(() -> catalog.stock("nope")).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void 뉴스_제목의_stock_자리표시는_닫혀_있고_섹터_전체_뉴스가_둘_이상이다() {
+    JsonContentCatalog catalog = load();
+    assertThat(catalog.news())
+        .filteredOn(NewsDefinition::sectorWide)
+        .hasSizeGreaterThanOrEqualTo(2);
+    assertThat(catalog.news()).filteredOn(n -> !n.sectorWide()).isNotEmpty();
+    for (NewsDefinition n : catalog.news()) {
+      long open = n.title().chars().filter(ch -> ch == '{').count();
+      long close = n.title().chars().filter(ch -> ch == '}').count();
+      assertThat(open).as(n.code()).isEqualTo(close);
+    }
+  }
+
+  @Test
+  void 생활_이벤트_문구와_알림이_있다() {
+    JsonContentCatalog catalog = load();
+    assertThat(catalog.lifeText("marriage").acceptLabel()).isNotBlank();
+    assertThat(catalog.lifeText("child").declineLabel()).isNotBlank();
+    assertThatThrownBy(() -> catalog.lifeText("divorce"))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThat(catalog.notices())
+        .hasSizeGreaterThanOrEqualTo(6)
+        .allMatch(n -> n.weight() > 0 && (n.amount() != 0 || n.salaryPercent() != 0));
+    assertThat(catalog.notices()).anyMatch(n -> n.requiresMarried());
   }
 
   @Test

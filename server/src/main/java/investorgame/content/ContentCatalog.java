@@ -47,6 +47,21 @@ public interface ContentCatalog {
 
   List<NewsDefinition> news();
 
+  /** 모든 종목. 코드 이름순. */
+  List<StockDefinition> stocks();
+
+  /** 없으면 IllegalArgumentException. */
+  StockDefinition stock(String code);
+
+  /** 섹터의 종목. 코드 이름순. */
+  List<StockDefinition> stocksOf(String sectorCode);
+
+  /** 알림성 생활 이벤트 정의. */
+  List<NoticeDefinition> notices();
+
+  /** kind: "marriage" 또는 "child". 없으면 IllegalArgumentException. */
+  LifeText lifeText(String kind);
+
   /** direction: UP/DOWN/NEUTRAL, strength: MILD/STRONG. */
   List<String> hintPhrases(String direction, String strength);
 

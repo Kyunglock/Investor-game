@@ -4,7 +4,10 @@ import investorgame.common.StatCodes;
 import investorgame.content.ContentCatalog;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
+import investorgame.content.LifeText;
 import investorgame.content.NewsDefinition;
+import investorgame.content.NoticeDefinition;
+import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,7 +33,14 @@ class JsonContentCatalog implements ContentCatalog {
   private static final String MIND_PREFIX = "mind.";
 
   static final List<String> FILES =
-      List.of("meta.json", "jobs.json", "traits.json", "news.json", "phrases.json");
+      List.of(
+          "meta.json",
+          "jobs.json",
+          "traits.json",
+          "news.json",
+          "phrases.json",
+          "stocks.json",
+          "life.json");
 
   private final Meta meta;
   private final List<JobDefinition> jobs;
@@ -38,6 +48,8 @@ class JsonContentCatalog implements ContentCatalog {
   private final List<TraitStage> traitStages;
   private final List<NewsDefinition> news;
   private final Phrases phrases;
+  private final List<StockDefinition> stocks;
+  private final Life life;
   private final Map<String, String> sectorNames;
   private final Map<String, String> styleNames;
   private final Map<String, String> riskNames;
@@ -62,6 +74,11 @@ class JsonContentCatalog implements ContentCatalog {
             .toList();
     this.news = read(json, "news.json", new TypeReference<>() {});
     this.phrases = read(json, "phrases.json", new TypeReference<>() {});
+    this.stocks =
+        read(json, "stocks.json", new TypeReference<List<StockDefinition>>() {}).stream()
+            .sorted(Comparator.comparing(StockDefinition::code))
+            .toList();
+    this.life = read(json, "life.json", new TypeReference<>() {});
     this.sectorNames = toMap(meta.sectors());
     this.styleNames = toMap(meta.styles());
     this.riskNames = toMap(meta.risks());
@@ -160,6 +177,38 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public List<StockDefinition> stocks() {
+    return stocks;
+  }
+
+  @Override
+  public StockDefinition stock(String code) {
+    return stocks.stream()
+        .filter(s -> s.code().equals(code))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("알 수 없는 종목: " + code));
+  }
+
+  @Override
+  public List<StockDefinition> stocksOf(String sectorCode) {
+    return stocks.stream().filter(s -> s.sector().equals(sectorCode)).toList();
+  }
+
+  @Override
+  public List<NoticeDefinition> notices() {
+    return life.notices();
+  }
+
+  @Override
+  public LifeText lifeText(String kind) {
+    return switch (kind) {
+      case "marriage" -> life.marriage();
+      case "child" -> life.child();
+      default -> throw new IllegalArgumentException("알 수 없는 생활 이벤트: " + kind);
+    };
+  }
+
+  @Override
   public List<String> hintPhrases(String direction, String strength) {
     return phrases.hints().getOrDefault(direction, Map.of()).getOrDefault(strength, List.of());
   }
@@ -215,6 +264,8 @@ class JsonContentCatalog implements ContentCatalog {
       }
     }
     require(!hintPhrases("NEUTRAL", "MILD").isEmpty(), "모호한 힌트 문구가 없다");
+    validateStocks();
+    validateLife();
     require(!swayPhrases("POS").isEmpty() && !swayPhrases("NEG").isEmpty(), "다른 뉴스 문구가 없다");
   }
 
@@ -242,6 +293,37 @@ class JsonContentCatalog implements ContentCatalog {
       }
     }
     require(hasStyle && hasSector, "선택지가 스타일과 섹터를 모두 드러내야 한다: " + where);
+  }
+
+  private static final Set<String> VOLATILITIES = Set.of("low", "mid", "high");
+
+  /** 섹터마다 종목이 하나 이상 있어야 뉴스가 매매 대상 종목을 뽑을 수 있다 (경제 개편 설계 5.4절). */
+  private void validateStocks() {
+    require(!stocks.isEmpty(), "종목이 하나도 없다");
+    require(
+        stocks.stream().map(StockDefinition::code).distinct().count() == stocks.size(),
+        "종목 코드가 겹친다");
+    require(
+        stocks.stream().map(StockDefinition::name).distinct().count() == stocks.size(),
+        "종목 이름이 겹친다");
+    for (StockDefinition stock : stocks) {
+      require(sectorNames.containsKey(stock.sector()), "종목이 알 수 없는 섹터를 쓴다: " + stock.code());
+      require(stock.basePrice() > 0, "종목 기준가는 0보다 커야 한다: " + stock.code());
+      require(VOLATILITIES.contains(stock.volatility()), "알 수 없는 변동성 등급: " + stock.code());
+    }
+    for (NamedCode sector : meta.sectors()) {
+      require(!stocksOf(sector.code()).isEmpty(), "종목이 없는 섹터: " + sector.code());
+    }
+  }
+
+  private void validateLife() {
+    require(life.marriage() != null && life.child() != null, "결혼·자녀 문구가 없다");
+    require(life.notices() != null && !life.notices().isEmpty(), "알림 이벤트가 없다");
+    for (NoticeDefinition notice : life.notices()) {
+      require(notice.weight() > 0, "알림 가중치는 0보다 커야 한다: " + notice.code());
+      require(
+          notice.amount() != 0 || notice.salaryPercent() != 0, "알림은 금액이 있어야 한다: " + notice.code());
+    }
   }
 
   /** 성향 선택이 움직이는 능력치는 운을 뺀 넷이고 폭이 제한된다. 운은 타고난 값이다 (확정). */
@@ -309,6 +391,8 @@ class JsonContentCatalog implements ContentCatalog {
       List<NamedCode> minds,
       List<NamedCode> sectors,
       List<InvestorType> investorTypes) {}
+
+  record Life(LifeText marriage, LifeText child, List<NoticeDefinition> notices) {}
 
   record Phrases(
       Map<String, Map<String, List<String>>> hints,

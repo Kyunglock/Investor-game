@@ -1,0 +1,88 @@
+{
+  "marriage": {
+    "title": "결혼할까?",
+    "body": "오래 만난 사람이 있다. 양가 어른들도 슬슬 날짜를 묻는다. 결혼 비용은 3천만 원쯤 들고, 둘이 벌면 생활비도 함께 늘어난다.",
+    "acceptLabel": "결혼한다",
+    "declineLabel": "아직은 혼자가 좋다"
+  },
+  "child": {
+    "title": "아이를 가질까?",
+    "body": "배우자가 조심스럽게 말을 꺼냈다. 출산에 3백만 원쯤, 그 뒤로 매달 양육비가 든다. 대학까지 보내려면 긴 싸움이다.",
+    "acceptLabel": "아이를 가진다",
+    "declineLabel": "지금은 아니다"
+  },
+  "notices": [
+    {
+      "code": "condolence",
+      "title": "경조사비",
+      "body": "친구 결혼식과 친척 장례가 한 달에 겹쳤다.",
+      "amount": -300000,
+      "salaryPercent": 0,
+      "weight": 10,
+      "requiresMarried": false
+    },
+    {
+      "code": "hospital",
+      "title": "병원비",
+      "body": "건강 검진에서 재검이 나왔다. 다행히 큰 병은 아니었다.",
+      "amount": -1500000,
+      "salaryPercent": 0,
+      "weight": 6,
+      "requiresMarried": false
+    },
+    {
+      "code": "car-repair",
+      "title": "자동차 수리",
+      "body": "주차장에서 긁혔다. 보험 처리하면 할증이 붙는다.",
+      "amount": -800000,
+      "salaryPercent": 0,
+      "weight": 8,
+      "requiresMarried": false
+    },
+    {
+      "code": "moving",
+      "title": "이사",
+      "body": "집주인이 전세금을 올려 달랬다. 결국 이사했다.",
+      "amount": -2000000,
+      "salaryPercent": 0,
+      "weight": 4,
+      "requiresMarried": false
+    },
+    {
+      "code": "parents",
+      "title": "부모님 용돈",
+      "body": "명절에 봉투를 두 개 준비했다.",
+      "amount": -500000,
+      "salaryPercent": 0,
+      "weight": 8,
+      "requiresMarried": false
+    },
+    {
+      "code": "family-trip",
+      "title": "가족 여행",
+      "body": "온 가족이 처음으로 바다를 봤다. 돈이 아깝지 않았다.",
+      "amount": -2500000,
+      "salaryPercent": 0,
+      "weight": 6,
+      "requiresMarried": true
+    },
+    {
+      "code": "bonus",
+      "title": "명절 보너스",
+      "body": "회사 실적이 좋아 보너스가 나왔다.",
+      "amount": 0,
+      "salaryPercent": 50,
+      "weight": 6,
+      "requiresMarried": false
+    },
+    {
+      "code": "prize",
+      "title": "경품 당첨",
+      "body": "마트 영수증 이벤트에서 2등에 당첨됐다.",
+      "amount": 500000,
+      "salaryPercent": 0,
+      "weight": 3,
+      "requiresMarried": false
+    }
+  ]
+}
