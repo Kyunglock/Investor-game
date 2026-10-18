@@ -396,6 +396,11 @@ export interface components {
         };
         ChoiceRequest: {
             option: string;
+            /**
+             * Format: int64
+             * @description 뉴스의 매수·매도 수량. 생략하면 매수는 현금의 일정 비율, 매도는 전량. 매도는 보유 수량에서 잘리고, 매수는 현금이 모자라면 INSUFFICIENT_CASH. 뉴스가 아니면 무시
+             */
+            quantity?: number;
         };
         ChoiceOutcome: {
             game: components["schemas"]["Game"];

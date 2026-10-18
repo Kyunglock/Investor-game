@@ -50,6 +50,13 @@ async function step(page: Page): Promise<string> {
           ? eventCard(page).getByRole('button', { name: '매수' })
           : eventCard(page).getByRole('button').first()
     await button.click()
+    if (kind === 'NEWS') {
+      // 뉴스의 매수·매도는 수량을 묻고 확정해야 보내진다.
+      await page.getByTestId('news-trade-submit').click()
+      // 결과는 성격이 손을 움직이는 동안 잠깐 감춰져 있다.
+      await expect(page.getByTestId('outcome-thinking')).toBeVisible()
+      await page.clock.runFor(2_500)
+    }
     await expect(outcomeCard(page)).toBeVisible()
     return kind
   }
@@ -118,6 +125,7 @@ test('성장기의 일상 선택으로 성향이 정해지고, 직업을 고른 
   await playUntil(page, 'NEWS')
   await expect(page.getByTestId('outcome-actions')).toContainText('선택 매수')
   await expect(page.getByTestId('outcome-actions')).toContainText('실제')
+  await expect(page.getByTestId('outcome-verdict')).toContainText('성격이 선택을')
 })
 
 test('새로고침하면 서버의 상태에서 일시정지로 이어한다', async ({ page }) => {

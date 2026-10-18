@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import type { Game, PendingEvent } from '../../api/client'
 import { won, yearOf } from './labels'
-import { quantityForCash, signedPercent } from './market'
+import {
+  BUY_PERCENTS,
+  quantityForCash,
+  quantityForHolding,
+  SELL_PERCENTS,
+  signedPercent,
+} from './market'
 import { Overlay } from './Overlay'
 import { Sparkline } from './Sparkline'
 
@@ -13,14 +19,17 @@ const KIND_LABELS: Record<PendingEvent['kind'], string> = {
   NEWS: '뉴스',
 }
 
-/** 뉴스 매수가 쓰는 현금 비율. 서버 설정(progress.news-buy-ratio-bp)과 같은 값이며 표시용 어림이다. */
+/** 뉴스 매수의 기본 수량이 쓰는 현금 비율. 서버 기본(progress.news-buy-ratio-bp)과 같은 값이며, 사용자가 수량을 바꿀 수 있다. */
 const NEWS_BUY_PERCENT = 30
+
+type TradeSide = 'BUY' | 'SELL'
 
 interface Props {
   event: PendingEvent
   game: Game
   busy: boolean
-  onChoose: (option: string) => void
+  /** quantity는 뉴스의 매수·매도 수량. 관망과 뉴스가 아닌 선택에는 없다. */
+  onChoose: (option: string, quantity?: number) => void
 }
 
 /** 선택형 이벤트 카드. 스킵할 수 없고, 뉴스일 때는 화면을 어둡게 한다 (설계 5.3절). */
@@ -34,8 +43,42 @@ function Body({ event, game, busy, onChoose }: Props) {
   const isNews = event.kind === 'NEWS'
   const holding = game.holdings.find((h) => h.stockCode === event.stockCode)
   const quote = game.market.stocks.find((s) => s.code === event.stockCode)
+  const price = quote?.price ?? 0
   const age = game.startAge + Math.floor(event.occursDay / game.daysPerYear)
   const [picked, setPicked] = useState<string | null>(null)
+  // 뉴스에서 매수·매도를 누르면 바로 보내지 않고 수량을 묻는다. 관망은 바로 보낸다.
+  const [side, setSide] = useState<TradeSide | null>(null)
+  const [quantity, setQuantity] = useState('')
+  const qty = Math.max(0, Math.floor(Number(quantity) || 0))
+  const fill = (percent: number) =>
+    setQuantity(
+      String(
+        side === 'BUY'
+          ? quantityForCash(game.cash, price, percent)
+          : quantityForHolding(holding?.quantity ?? 0, percent),
+      ),
+    )
+  const canSubmit =
+    !busy &&
+    qty >= 1 &&
+    (side === 'BUY' ? qty * price <= game.cash : qty <= (holding?.quantity ?? 0))
+
+  const pick = (code: string) => {
+    if (isNews && (code === 'BUY' || code === 'SELL')) {
+      setSide(code)
+      setQuantity(
+        String(
+          code === 'BUY'
+            ? quantityForCash(game.cash, price, NEWS_BUY_PERCENT)
+            : (holding?.quantity ?? 0),
+        ),
+      )
+      return
+    }
+    setSide(null)
+    setPicked(code)
+    onChoose(code)
+  }
 
   return (
     <section
@@ -57,7 +100,7 @@ function Body({ event, game, busy, onChoose }: Props) {
         </span>
       </div>
       <h2 className="mt-2 font-serif-kr text-[22px] font-black leading-snug">{event.title}</h2>
-      <p className="mt-1.5 text-[13px]">{event.body}</p>
+      <p className="mt-1.5 text-[13px] leading-relaxed">{event.body}</p>
 
       {isNews && quote && (
         <div
@@ -86,7 +129,7 @@ function Body({ event, game, busy, onChoose }: Props) {
           className="mt-3 border-l-[3px] border-teal bg-teal-soft px-2.5 py-2 font-mono-num text-xs text-[#3b5a52]"
           data-testid="hint"
         >
-          힌트 · {event.hint}
+          {event.hint}
         </p>
       )}
       {isNews && event.sway && (
@@ -99,9 +142,10 @@ function Body({ event, game, busy, onChoose }: Props) {
       <div className={`mt-3 grid gap-2 ${isNews ? 'grid-cols-3' : 'grid-cols-1'}`}>
         {event.options.map((option) => {
           const disabled = busy || (isNews && option.code === 'SELL' && !holding)
+          const active = picked === option.code || side === option.code
           const sub =
             isNews && option.code === 'BUY'
-              ? `현금의 ${NEWS_BUY_PERCENT}% ≈ ${quantityForCash(game.cash, quote?.price ?? 0, NEWS_BUY_PERCENT)}주`
+              ? `현금 ${won(game.cash)}`
               : isNews && option.code === 'SELL' && holding
                 ? `보유 ${holding.quantity}주 ≈ ${won(holding.value)}`
                 : null
@@ -110,15 +154,11 @@ function Body({ event, game, busy, onChoose }: Props) {
               key={option.code}
               type="button"
               disabled={disabled}
+              aria-pressed={side === option.code}
               className={`min-h-12 rounded border px-2 py-2 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-                picked === option.code
-                  ? 'border-wine bg-wine-soft'
-                  : 'border-line bg-card hover:bg-bg'
+                active ? 'border-wine bg-wine-soft' : 'border-line bg-card hover:bg-bg'
               }`}
-              onClick={() => {
-                setPicked(option.code)
-                onChoose(option.code)
-              }}
+              onClick={() => pick(option.code)}
             >
               {option.label}
               {sub && (
@@ -130,6 +170,59 @@ function Body({ event, game, busy, onChoose }: Props) {
           )
         })}
       </div>
+
+      {isNews && side && (
+        <div
+          className="mt-2.5 rounded border border-line bg-bg px-3 py-2.5"
+          data-testid="news-trade"
+        >
+          <label className="flex items-center gap-2">
+            <span className="shrink-0 text-xs text-muted">
+              {side === 'BUY' ? '매수' : '매도'} 수량
+            </span>
+            <input
+              type="number"
+              min={1}
+              inputMode="numeric"
+              className="min-h-10 w-full rounded border border-line bg-card px-2.5 text-right font-mono-num text-base"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              data-testid="news-trade-quantity"
+              aria-label="수량"
+            />
+            <span className="text-xs text-muted">주</span>
+          </label>
+          <div className={`mt-2 grid gap-1.5 ${side === 'BUY' ? 'grid-cols-4' : 'grid-cols-3'}`}>
+            {(side === 'BUY' ? BUY_PERCENTS : SELL_PERCENTS).map((p) => (
+              <button
+                key={p}
+                type="button"
+                className="min-h-8 rounded border border-line bg-card font-mono-num text-[11px] hover:bg-bg"
+                onClick={() => fill(p)}
+              >
+                {p}%
+              </button>
+            ))}
+          </div>
+          <p className="mt-2 flex justify-between text-xs text-muted">
+            <span>주문 금액</span>
+            <b className="font-mono-num text-sm text-ink">{won(qty * price)}</b>
+          </p>
+          <button
+            type="button"
+            className="mt-2.5 min-h-11 w-full rounded bg-wine text-sm font-bold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={!canSubmit}
+            onClick={() => {
+              setPicked(side)
+              onChoose(side, qty)
+            }}
+            data-testid="news-trade-submit"
+          >
+            {side === 'BUY' ? '매수' : '매도'} 확정
+          </button>
+        </div>
+      )}
+
       <p className="mt-3 text-[11px] text-faint">
         {event.kind === 'TRAIT'
           ? '성장기의 선택은 성격에 뒤집히지 않습니다. 고른 대로 자랍니다.'

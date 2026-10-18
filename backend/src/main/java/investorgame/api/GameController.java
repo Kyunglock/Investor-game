@@ -63,7 +63,8 @@ class GameController {
       @PathVariable UUID gameId,
       @PathVariable UUID eventId,
       @Valid @RequestBody ChoiceRequest request) {
-    return progress.choose(cookies.requireSession(token), gameId, eventId, request.option());
+    return progress.choose(
+        cookies.requireSession(token), gameId, eventId, request.option(), request.quantity());
   }
 
   @PostMapping("/{gameId}/trades")
@@ -98,5 +99,6 @@ class GameController {
       @NotNull Action side,
       @Min(1) @Max(MAX_TRADE_QUANTITY) long quantity) {}
 
-  record ChoiceRequest(@NotBlank String option) {}
+  /** quantity는 뉴스의 매수·매도 수량. 생략하면 서버 기본(매수는 현금의 일정 비율, 매도는 전량). */
+  record ChoiceRequest(@NotBlank String option, @Min(1) @Max(MAX_TRADE_QUANTITY) Long quantity) {}
 }

@@ -14,7 +14,8 @@ export function PortfolioCard({ game }: { game: Game }) {
 
   return (
     <Card title="포트폴리오" aside={`${monthLabel} 기준`} testId="portfolio-card">
-      <div className="grid grid-cols-4 gap-2 text-[11px] text-faint">
+      {/* 320px 카드에 억 단위 금액 4개를 한 줄로 놓으면 겹쳐서 2×2로 둔다 */}
+      <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-[11px] text-faint">
         <div>
           총자산
           <b

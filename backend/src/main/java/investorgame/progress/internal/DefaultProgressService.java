@@ -194,7 +194,8 @@ class DefaultProgressService implements ProgressService {
 
   @Override
   @Transactional
-  public ChoiceOutcome choose(UUID sessionId, UUID gameId, UUID eventId, String option) {
+  public ChoiceOutcome choose(
+      UUID sessionId, UUID gameId, UUID eventId, String option, Long quantity) {
     GameRow game = lock(sessionId, gameId);
     EventView pendingView =
         events
@@ -212,7 +213,8 @@ class DefaultProgressService implements ProgressService {
 
     ChoiceOutcome.Outcome outcome =
         switch (ticket.effect()) {
-          case ChoiceTicket.News news -> resolveNews(game, ticket, pendingView.title(), random);
+          case ChoiceTicket.News news ->
+              resolveNews(game, ticket, pendingView.title(), quantity, random);
           case ChoiceTicket.Job job -> {
             characters.assignJob(gameId, job.jobCode(), ticket.occursDay());
             games.changePhase(gameId, Phase.SAVING);
@@ -335,8 +337,9 @@ class DefaultProgressService implements ProgressService {
 
   // ---- 뉴스 선택: 판정 → 매매 → 충격 → 성장 (domains.md 3절 처리 흐름 2) ----
 
+  /** quantity가 없으면 매수는 현금의 news-buy-ratio-bp 비율, 매도는 전량이다. 있으면 그 수량으로 하되 매도는 보유 수량에서 잘린다. */
   private ChoiceOutcome.Outcome resolveNews(
-      GameRow game, ChoiceTicket ticket, String eventTitle, SeededRandom random) {
+      GameRow game, ChoiceTicket ticket, String eventTitle, Long quantity, SeededRandom random) {
     UUID gameId = game.id();
     CharacterView character = characters.get(gameId);
     AccountView account = assets.get(gameId);
@@ -353,13 +356,16 @@ class DefaultProgressService implements ProgressService {
     ChoiceOutcome.Trade trade =
         switch (resolution.actual()) {
           case BUY -> {
-            long quantity = account.cash() * properties.newsBuyRatioBp() / BP / price;
-            yield quantity < 1
+            long buying =
+                quantity != null
+                    ? quantity
+                    : account.cash() * properties.newsBuyRatioBp() / BP / price;
+            yield buying < 1
                 ? new ChoiceOutcome.Trade(
                     TradeResult.Status.INSUFFICIENT_CASH.name(), 0, price, 0, null)
                 : tradeView(
                     assets.buy(
-                        gameId, stockCode, quantity, price, ticket.occursDay(), ticket.eventId()));
+                        gameId, stockCode, buying, price, ticket.occursDay(), ticket.eventId()));
           }
           case SELL ->
               holding
@@ -367,7 +373,9 @@ class DefaultProgressService implements ProgressService {
                       assets.sell(
                           gameId,
                           stockCode,
-                          account.holdings().get(stockCode).quantity(),
+                          quantity != null
+                              ? quantity
+                              : account.holdings().get(stockCode).quantity(),
                           price,
                           ticket.occursDay(),
                           ticket.eventId()))

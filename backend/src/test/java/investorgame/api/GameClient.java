@@ -68,11 +68,48 @@ final class GameClient {
   }
 
   ResultActions chooseRaw(String gameId, String eventId, String option) throws Exception {
+    return chooseBody(gameId, eventId, "{\"option\":\"" + option + "\"}");
+  }
+
+  /** 뉴스에 수량을 같이 보낸다. */
+  ResultActions chooseRaw(String gameId, String eventId, String option, long quantity)
+      throws Exception {
+    return chooseBody(
+        gameId, eventId, "{\"option\":\"%s\",\"quantity\":%d}".formatted(option, quantity));
+  }
+
+  private ResultActions chooseBody(String gameId, String eventId, String body) throws Exception {
     return mvc.perform(
         post("/api/games/{gameId}/events/{eventId}/choose", gameId, eventId)
             .cookie(session)
             .contentType(MediaType.APPLICATION_JSON)
-            .content("{\"option\":\"" + option + "\"}"));
+            .content(body));
+  }
+
+  /** 투자 단계의 판을 다음 뉴스가 대기 중일 때까지 진행한다. 그 사이의 다른 선택은 첫 번째 선택지로 답한다. */
+  DocumentContext untilNews(DocumentContext game) throws Exception {
+    String gameId = game.read("$.gameId");
+    for (int step = 0; step < 100; step++) {
+      Map<String, Object> pending = game.read("$.pendingEvent");
+      if (pending != null) {
+        if ("NEWS".equals(pending.get("kind"))) {
+          return game;
+        }
+        Object next =
+            choose(
+                    gameId,
+                    (String) pending.get("eventId"),
+                    game.read("$.pendingEvent.options[0].code"))
+                .read("$.game");
+        game = JsonPath.parse(next);
+        continue;
+      }
+      int day = game.read("$.day", Integer.class);
+      Integer next = game.read("$.nextEventDay");
+      game =
+          advance(gameId, Math.min(day + MAX_STEP_DAYS, next == null ? day + MAX_STEP_DAYS : next));
+    }
+    throw new AssertionError("뉴스가 오지 않았다");
   }
 
   ResultActions tradeRaw(String gameId, String stockCode, String side, long quantity)

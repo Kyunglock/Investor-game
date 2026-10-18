@@ -47,8 +47,8 @@ export function GameScreen({ game }: { game: Game }) {
             event={game.pendingEvent}
             game={game}
             busy={choosing}
-            onChoose={(option) => {
-              void choose(option)
+            onChoose={(option, quantity) => {
+              void choose(option, quantity)
             }}
           />
         ) : null}

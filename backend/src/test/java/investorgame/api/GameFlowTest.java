@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -276,13 +277,19 @@ class GameFlowTest {
     DocumentContext game = client.startInvesting();
     String gameId = game.read("$.gameId");
     String stock = game.read("$.market.stocks[0].code");
+    boolean affordable =
+        game.read("$.cash", Long.class) >= game.read("$.market.stocks[0].price", Long.class);
 
     DocumentContext result = client.trade(gameId, stock, "BUY", 1);
 
     assertThat(result.read("$.outcome.kind", String.class)).isEqualTo("TRADE");
     assertThat(result.read("$.outcome.chosen", String.class)).isEqualTo("BUY");
     String actual = result.read("$.outcome.actual");
-    if ("BUY".equals(actual)) {
+    if ("BUY".equals(actual) && !affordable) {
+      // 시드에 따라 투자 시작 직후 현금이 한 주 값에 못 미칠 수 있다.
+      assertThat(result.read("$.outcome.trade.status", String.class))
+          .isEqualTo("INSUFFICIENT_CASH");
+    } else if ("BUY".equals(actual)) {
       assertThat(result.read("$.game.holdings[0].stockCode", String.class)).isEqualTo(stock);
       assertThat(result.read("$.game.holdings[0].quantity", Integer.class)).isEqualTo(1);
       assertThat(result.read("$.outcome.trade.status", String.class)).isEqualTo("EXECUTED");
@@ -294,6 +301,51 @@ class GameFlowTest {
     List<String> kinds = result.read("$.game.log[*].kind");
     assertThat(kinds).contains("TRADE");
     assertThat(result.jsonString()).doesNotContain("seed").doesNotContain("hidden");
+  }
+
+  @Test
+  void 뉴스_선택에_수량을_보내면_그_수량으로_산다() throws Exception {
+    MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.untilNews(client.startInvesting());
+    String gameId = game.read("$.gameId");
+    String eventId = game.read("$.pendingEvent.eventId");
+    String stock = game.read("$.pendingEvent.stockCode");
+    long cash = game.read("$.cash", Long.class);
+    List<Number> prices = game.read("$.market.stocks[?(@.code=='" + stock + "')].price");
+    long price = prices.get(0).longValue();
+    // 시드에 따라 현금이 모자랄 수 있으니 살 수 있는 만큼만 보낸다. 서버 기본(현금의 30%)과 다른 수량이어야 뜻이 있다.
+    long quantity = Math.max(1, Math.min(2, cash / price));
+
+    MvcResult raw = client.chooseRaw(gameId, eventId, "BUY", quantity).andReturn();
+    assertThat(raw.getResponse().getStatus())
+        .as(raw.getResponse().getContentAsString())
+        .isEqualTo(200);
+    DocumentContext result = GameClient.json(raw);
+
+    if (!"BUY".equals(result.read("$.outcome.actual"))) {
+      assertThat(result.read("$.outcome.trade.quantity", Integer.class)).isEqualTo(0);
+    } else if (cash < price) {
+      assertThat(result.read("$.outcome.trade.status", String.class))
+          .isEqualTo("INSUFFICIENT_CASH");
+    } else {
+      assertThat(result.read("$.outcome.trade.status", String.class)).isEqualTo("EXECUTED");
+      assertThat(result.read("$.outcome.trade.quantity", Long.class)).isEqualTo(quantity);
+      List<Number> held = result.read("$.game.holdings[?(@.stockCode=='" + stock + "')].quantity");
+      assertThat(held.stream().map(Number::longValue)).containsExactly(quantity);
+    }
+  }
+
+  @Test
+  void 뉴스_선택의_수량이_0이면_400이다() throws Exception {
+    MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.untilNews(client.startInvesting());
+    String gameId = game.read("$.gameId");
+    String eventId = game.read("$.pendingEvent.eventId");
+
+    client.chooseRaw(gameId, eventId, "BUY", 0).andExpect(status().isBadRequest());
+    assertThat(client.current().read("$.pendingEvent.eventId", String.class)).isEqualTo(eventId);
   }
 
   @Test

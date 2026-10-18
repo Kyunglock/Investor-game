@@ -43,7 +43,8 @@ interface GameState {
   load: () => Promise<void>
   born: () => Promise<void>
   startLife: () => void
-  choose: (option: string) => Promise<void>
+  /** quantity는 뉴스의 매수·매도 수량. 없으면 서버 기본. */
+  choose: (option: string, quantity?: number) => Promise<void>
   dismissOutcome: () => void
   tick: (elapsedMs: number) => void
   pause: () => void
@@ -166,7 +167,7 @@ export const useGameStore = create<GameState>((set, get) => {
       }
     },
 
-    choose: async (option) => {
+    choose: async (option, quantity) => {
       const { game, choosing } = get()
       if (!game?.pendingEvent || choosing) {
         return
@@ -174,7 +175,7 @@ export const useGameStore = create<GameState>((set, get) => {
       set({ choosing: true })
       const { data } = await api.POST('/api/games/{gameId}/events/{eventId}/choose', {
         params: { path: { gameId: game.gameId, eventId: game.pendingEvent.eventId } },
-        body: { option },
+        body: quantity == null ? { option } : { option, quantity },
       })
       set({ choosing: false })
       if (data) {

@@ -21,8 +21,11 @@ public interface ProgressService {
    */
   GameView advance(UUID sessionId, UUID gameId, int day);
 
-  /** 대기 중인 이벤트에 선택을 제출한다. 뉴스이면 판정·매매·주가 변동·성장을 거친 결과를 돌려준다. */
-  ChoiceOutcome choose(UUID sessionId, UUID gameId, UUID eventId, String option);
+  /**
+   * 대기 중인 이벤트에 선택을 제출한다. 뉴스이면 판정·매매·주가 변동·성장을 거친 결과를 돌려준다. quantity는 뉴스의 매수·매도 수량이며, 없으면(null) 매수는
+   * 현금의 일정 비율, 매도는 전량이다. 뉴스가 아니면 무시한다.
+   */
+  ChoiceOutcome choose(UUID sessionId, UUID gameId, UUID eventId, String option, Long quantity);
 
   /** 자유 매매. 투자 단계에서 대기 중인 이벤트가 없을 때 현재가로 사고판다. 용기 판정만 거친다 (경제 개편 설계 8절). side는 BUY 또는 SELL. */
   ChoiceOutcome trade(UUID sessionId, UUID gameId, String stockCode, Action side, long quantity);

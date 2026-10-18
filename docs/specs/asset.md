@@ -134,7 +134,7 @@ public record InterestResult(boolean accrued, long interest, long debtAfter) {}
 | `asset.initial-cash.max-unit` | 50 | 초기 현금 최대 단위 수 |
 | `asset.initial-cash.unit` | 1,000,000 | 초기 현금 단위(원) |
 | `asset.debt-interest-bp` | 100 | 빚의 월 이자 (1%) |
-| `progress.news-buy-ratio-bp` | 3000 | 뉴스 매수가 쓰는 현금 비율 (진행 설정. 수량은 진행이 계산) |
+| `progress.news-buy-ratio-bp` | 3000 | 뉴스 매수의 기본 수량이 쓰는 현금 비율 (진행 설정). 사용자가 선택에 수량을 같이 보내면 그 수량을 쓴다 |
 
 ## 6. DB
 
