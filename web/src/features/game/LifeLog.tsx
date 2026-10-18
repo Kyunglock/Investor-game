@@ -10,6 +10,7 @@ const TONE_CLASS: Record<LogTone, string> = {
   decision: '',
   flipped: 'bg-teal-soft',
   growth: 'text-teal',
+  decline: 'text-wine',
   end: 'bg-wine-soft',
   offer: '',
 }

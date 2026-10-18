@@ -109,7 +109,7 @@ public record ChoiceTicket(
 public sealed interface ChoiceEffect permits NewsEffect, JobEffect, TraitEffect, TrainingEffect, OfferEffect {}
 public record NewsEffect() implements ChoiceEffect {}                          // 판정·자산 반영은 진행이 한다
 public record JobEffect(String jobCode) implements ChoiceEffect {}             // 진행이 캐릭터에 직업을 확정
-public record TraitEffect(Map<String, Integer> traitDeltas) implements ChoiceEffect {}   // 진행이 캐릭터에 점수 누적
+public record TraitEffect(Map<String, Integer> traitDeltas, Map<String, Integer> statDeltas, String note) implements ChoiceEffect {}   // 진행이 캐릭터에 축 점수 누적 + 능력치 즉시 변경(statDeltas는 선택, 운 금지, 폭은 content.trait-stat-max-delta). 구현 이름은 ChoiceTicket.Trait
 public record TrainingEffect(String statCode, int expAmount, long cost) implements ChoiceEffect {}  // 비용이 0이고 expAmount가 0이면 "하지 않는다"
 public record OfferEffect(boolean accepted) implements ChoiceEffect {}         // 수락이면 진행이 단계를 바꿈
 
@@ -290,7 +290,7 @@ public record CompleteResult(
 |---|---|
 | 뉴스 | 위 JSON의 필드. `styles`가 없으면 모든 스타일 |
 | 직업 | `code`, `title`, 선택 가중치, 월급 정보 (진행·자산용, 콘텐츠 스펙) |
-| 성향 | `code`, `order`, `title`, `body`(상황), 선택지 목록(`code`, `label`, `traitDeltas`) |
+| 성향 | `code`, `age`, `title`, `body`(상황), 선택지 3~4개(`code`, `label`, `traitDeltas`(style/risk/mind/sector), `statDeltas`(선택), `note`) |
 | 자기계발 | `code`, `title`, `body`, 선택지 목록(`code`, `label`, `statCode`, `expAmount`, `cost`) |
 | 알림 | `code`, `title`, `body`, 단계 조건 |
 | 힌트 문구 | 방향(`UP`/`DOWN`/`NEUTRAL`) × 강도(`MILD`/`STRONG`) 별 문구 목록 (poc.md 6절) |

@@ -121,6 +121,15 @@ describe('logLine', () => {
     ).toBe('그 선택으로 용기 41 → 42 ↑')
   })
 
+  it('능력치가 내려간 기록은 "↓"와 decline 톤이다', () => {
+    const line = logLine(
+      entry('GROWTH', 0, { statCode: 'patience', before: 41, after: 40, reason: 'TRAIT' }),
+      game,
+    )
+    expect(line.text).toBe('그 선택으로 인내심 41 → 40 ↓')
+    expect(line.tone).toBe('decline')
+  })
+
   it('reason이 없는 옛 기록은 "경험으로"로 쓴다', () => {
     expect(
       logLine(entry('GROWTH', 0, { statCode: 'courage', before: 41, after: 42 }), game).text,

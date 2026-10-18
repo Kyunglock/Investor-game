@@ -16,7 +16,15 @@ import { nickname } from './nickname'
  * 인생 기록 한 줄의 문구. 서버는 코드와 숫자만 주고(설계 6.3절) 문구는 여기서 만든다 (설계 5.5절).
  * payload의 키 이름은 서버 진행 도메인과 약속한 것이다.
  */
-export type LogTone = 'neutral' | 'birth' | 'decision' | 'flipped' | 'growth' | 'end' | 'offer'
+export type LogTone =
+  | 'neutral'
+  | 'birth'
+  | 'decision'
+  | 'flipped'
+  | 'growth'
+  | 'decline'
+  | 'end'
+  | 'offer'
 
 export interface LogLine {
   seq: number
@@ -109,7 +117,7 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
     case 'GROWTH':
       return {
         ...base,
-        tone: 'growth',
+        tone: num(p.after) < num(p.before) ? 'decline' : 'growth',
         text: growthText(
           str(p.statCode),
           num(p.before),

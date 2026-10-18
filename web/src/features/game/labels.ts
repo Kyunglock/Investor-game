@@ -51,7 +51,7 @@ export function growthText(
   reason?: string | null,
 ): string {
   const cause = reason === 'TRAIT' ? '그 선택으로' : '경험으로'
-  return `${cause} ${statLabel(statCode)} ${before} → ${after} ↑`
+  return `${cause} ${statLabel(statCode)} ${before} → ${after} ${after < before ? '↓' : '↑'}`
 }
 
 export const TRADE_NOTES: Record<string, string | undefined> = {

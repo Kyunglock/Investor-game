@@ -77,7 +77,11 @@ function Body({ outcome, onContinue }: { outcome: Outcome; onContinue: () => voi
         </p>
       )}
       {outcome.growth.map((g) => (
-        <p key={g.statCode} className="mt-1 text-xs text-teal" data-testid="outcome-growth">
+        <p
+          key={g.statCode}
+          className={`mt-1 text-xs ${g.after < g.before ? 'text-wine' : 'text-teal'}`}
+          data-testid="outcome-growth"
+        >
           {growthText(g.statCode, g.before, g.after, g.reason)}
         </p>
       ))}
