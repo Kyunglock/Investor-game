@@ -17,6 +17,7 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
   }
   const deviations = Object.entries(result.deviationCounts).sort(([, a], [, b]) => b - a)
   const up = result.returnBp >= 0
+  const bankrupt = result.ending === 'BANKRUPT'
 
   return (
     <Document
@@ -36,8 +37,8 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
             {nickname(game.initialStats).name}
           </h2>
           <p className="text-[13px] text-muted">
-            {result.finalAge}세, 투자 인생을 마쳤습니다 · {game.job?.title ?? '무직'} ·{' '}
-            {game.investorType?.name ?? '유형 미정'}
+            {result.finalAge}세, {bankrupt ? '파산했습니다' : '투자 인생을 마쳤습니다'} ·{' '}
+            {game.job?.title ?? '무직'} · {game.investorType?.name ?? '유형 미정'}
           </p>
         </div>
       </div>
@@ -51,6 +52,12 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
           ({up ? '+' : ''}
           {percent(result.returnBp)})
         </span>
+      </p>
+
+      <p className="mt-1 text-[13px] text-muted" data-testid="result-epilogue">
+        {bankrupt
+          ? `빚 ${won(game.debt)}을 갚을 길이 없어 ${result.finalAge}세에 파산했습니다.`
+          : `이후로는 매달 연금 ${won(game.household.pension)}으로 여생을 보냅니다.`}
       </p>
 
       <p className="mt-2 text-[13px] text-muted" data-testid="result-family">
@@ -122,8 +129,8 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
       )}
 
       <div className="mt-6 flex flex-col gap-3.5">
-        <AssetCurve game={game} ageYears={game.endAge} full />
-        <LifeMap game={game} ageYears={game.endAge} />
+        <AssetCurve game={game} ageYears={result.finalAge} full />
+        <LifeMap game={game} ageYears={result.finalAge} />
         <details>
           <summary className="cursor-pointer text-[13px] text-muted">인생 기록 전체 보기</summary>
           <div className="mt-2">

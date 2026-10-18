@@ -20,9 +20,9 @@ game:
   days-per-year: 360
 
 progress:
-  # 15세에 시작해 성장기(15~24세) 10장면으로 성향이 정해지고, 취업 후 투자한다 (decisions.md 23번).
+  # 15세에 시작해 성장기(15~24세) 10장면으로 성향이 정해지고, 취업 후 투자한다 (decisions.md 23번). 70세에 끝난다 (27번)
   start-age: 15
-  end-age: 65
+  end-age: 70
   max-skip-days: 360
   # 뉴스 선택의 매수가 쓰는 현금 비율(만분율). 수량은 진행이 현재가로 계산한다. 자유 매매는 사용자가 수량을 정한다
   news-buy-ratio-bp: 3000
@@ -83,6 +83,9 @@ household:
   wedding-cost: 30000000
   childbirth-cost: 3000000
   spouse-income: 1800000
+  # 은퇴 뒤 매달 연금. 1인/부부. 생활비보다 작아 노후 자금이 천천히 준다 (decisions.md 27번)
+  pension-single: 1000000
+  pension-couple: 1600000
   inflation-percent: 2
   inflation-base-age: 25
   retire-age: 60
@@ -93,13 +96,13 @@ behavior:
   # 능력치에 따른 편차를 크게: 능력치 0이면 이탈 80%, 100이면 0% (decisions.md 23번)
   deviation-cap-bp: 8000
   hint:
-    # 안목 0이면 정답률 25%, 100이면 95%
-    accuracy-base-bp: 2500
-    accuracy-per-point-bp: 70
+    # 안목 0이면 정답률 40%(믿으면 조금 손해), 100이면 95%. 강한 힌트("아주 좋다!")는 안목과 무관하게 50%로 나와
+    # 낮은 안목에서는 자신만만한 헛소리가 된다 (decisions.md 28번)
+    accuracy-base-bp: 4000
+    accuracy-per-point-bp: 55
     neutral-below-insight: 40
-    neutral-percent: 50
-    strong-from-insight: 65
-    strong-percent: 70
+    neutral-percent: 30
+    strong-percent: 50
   luck:
     # 운 100이면 손실 완화 50%
     chance-per-point-bp: 50

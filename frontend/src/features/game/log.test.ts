@@ -113,6 +113,24 @@ describe('logLine', () => {
     })
   })
 
+  it('종료(파산): 빚과 나이', () => {
+    const line = logLine(
+      entry('END', 43 * 360, {
+        finalAge: 44,
+        ending: 'BANKRUPT',
+        debt: 12_000_000,
+        initialAsset: 1_000_000,
+        finalAsset: -12_000_000,
+        returnBp: -13_000,
+      }),
+      game,
+    )
+    expect(line.text).toBe(
+      '44세, 빚 12,000,000원을 갚지 못해 파산했다. 1,000,000원 → -12,000,000원 (-130.0%)',
+    )
+    expect(line.tone).toBe('end')
+  })
+
   it('성향으로 능력치가 움직인 기록은 "그 선택으로"로 쓴다', () => {
     expect(
       logLine(

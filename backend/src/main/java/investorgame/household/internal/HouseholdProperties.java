@@ -8,6 +8,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param startAge 판이 시작하는 나이. progress.start-age와 같은 값을 따로 둔다 (도메인이 진행 설정을 읽지 않는다)
  * @param inflationBaseAge 이 나이부터 물가가 오른다 (취업 나이)
  * @param retireAge 월급과 배우자 소득이 끊기는 나이
+ * @param pensionSingle 은퇴 뒤 매달 연금(1인). 물가 반영
+ * @param pensionCouple 은퇴 뒤 매달 연금(부부)
  */
 @ConfigurationProperties("household")
 public record HouseholdProperties(
@@ -17,6 +19,8 @@ public record HouseholdProperties(
     long weddingCost,
     long childbirthCost,
     long spouseIncome,
+    long pensionSingle,
+    long pensionCouple,
     int inflationPercent,
     int inflationBaseAge,
     int retireAge,

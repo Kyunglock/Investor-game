@@ -138,6 +138,16 @@ class JdbcHouseholdService implements HouseholdService {
   }
 
   @Override
+  @Transactional(readOnly = true)
+  public long pension(UUID gameId, int gameDay) {
+    HouseholdView view = get(gameId);
+    if (view.retiredDay() == null) {
+      return 0;
+    }
+    return inflate(view.married() ? properties.pensionCouple() : properties.pensionSingle(), gameDay);
+  }
+
+  @Override
   public long weddingCost(int gameDay) {
     return inflate(properties.weddingCost(), gameDay);
   }

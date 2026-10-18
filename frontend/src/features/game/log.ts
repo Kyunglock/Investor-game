@@ -195,10 +195,18 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       }
     case 'END': {
       const bp = num(p.returnBp)
+      const money = `${won(num(p.initialAsset))} → ${won(num(p.finalAsset))} (${bp >= 0 ? '+' : ''}${percent(bp)})`
+      if (p.ending === 'BANKRUPT') {
+        return {
+          ...base,
+          tone: 'end',
+          text: `${num(p.finalAge)}세, 빚 ${won(num(p.debt))}을 갚지 못해 파산했다. ${money}`,
+        }
+      }
       return {
         ...base,
         tone: 'end',
-        text: `${num(p.finalAge)}세, 투자 인생을 마쳤다. ${won(num(p.initialAsset))} → ${won(num(p.finalAsset))} (${bp >= 0 ? '+' : ''}${percent(bp)})`,
+        text: `${num(p.finalAge)}세, 투자 인생을 마쳤다. ${money}`,
       }
     }
     default:

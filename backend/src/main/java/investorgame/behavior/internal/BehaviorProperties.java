@@ -11,7 +11,6 @@ public record BehaviorProperties(int deviationCapBp, HintSettings hint, LuckSett
       int accuracyPerPointBp,
       int neutralBelowInsight,
       int neutralPercent,
-      int strongFromInsight,
       int strongPercent) {}
 
   public record LuckSettings(int chancePerPointBp, int lossFactorPercent) {}

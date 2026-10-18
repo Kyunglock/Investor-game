@@ -45,7 +45,7 @@ class GameApiTest {
         .andExpect(jsonPath("$.phase").value("CHILDHOOD"))
         .andExpect(jsonPath("$.day").value(0))
         .andExpect(jsonPath("$.startAge").value(15))
-        .andExpect(jsonPath("$.endAge").value(65))
+        .andExpect(jsonPath("$.endAge").value(70))
         .andExpect(jsonPath("$.stats.insight").isNumber())
         .andExpect(jsonPath("$.initialStats.insight").isNumber())
         .andExpect(jsonPath("$.cash").isNumber())

@@ -2,6 +2,7 @@ package investorgame.progress;
 
 import investorgame.common.Phase;
 import investorgame.common.Stats;
+import investorgame.result.Ending;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -86,7 +87,7 @@ public record GameView(
       int change12mBp,
       List<Long> spark) {}
 
-  /** 가계부. 금액은 이번 달 기준. */
+  /** 가계부. 금액은 이번 달 기준. pension은 은퇴 뒤 매달 들어오는 연금, 은퇴 전 0. */
   public record Household(
       boolean married,
       Integer marriedAge,
@@ -94,7 +95,8 @@ public record GameView(
       long monthlyIncome,
       long spouseIncome,
       long monthlyExpense,
-      boolean retired) {}
+      boolean retired,
+      long pension) {}
 
   public record Child(int age) {}
 
@@ -126,11 +128,15 @@ public record GameView(
   /** 한 해를 마친 시점의 자산. */
   public record Yearly(int age, long totalAsset, long cash) {}
 
-  /** returnBp는 수익률(만분율). deviationCounts는 능력치별 이탈 횟수(뉴스 + 자유 매매). */
+  /**
+   * returnBp는 수익률(만분율). deviationCounts는 능력치별 이탈 횟수(뉴스 + 자유 매매). ending이 BANKRUPT면 finalAge는 파산한
+   * 나이다.
+   */
   public record Result(
       long initialAsset,
       long finalAsset,
       int returnBp,
       int finalAge,
+      Ending ending,
       Map<String, Integer> deviationCounts) {}
 }

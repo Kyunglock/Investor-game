@@ -32,7 +32,7 @@ class DefaultBehaviorServiceTest {
       new DefaultBehaviorService(
           new BehaviorProperties(
               5000,
-              new BehaviorProperties.HintSettings(2500, 55, 35, 50, 65, 70),
+              new BehaviorProperties.HintSettings(4000, 55, 35, 50, 50),
               new BehaviorProperties.LuckSettings(30, 30)));
 
   @Test
@@ -178,13 +178,13 @@ class DefaultBehaviorServiceTest {
   }
 
   @Test
-  void 안목_0의_힌트는_모호하지_않을_때_약_25퍼센트_맞는다() {
-    assertThat(hintAccuracy(0)).isBetween(0.23, 0.27);
+  void 안목_0의_힌트는_모호하지_않을_때_약_40퍼센트_맞아_믿으면_조금_손해다() {
+    assertThat(hintAccuracy(0)).isBetween(0.38, 0.42);
   }
 
   @Test
-  void 안목_100의_힌트는_약_80퍼센트_맞고_모호하지_않다() {
-    assertThat(hintAccuracy(100)).isBetween(0.78, 0.82);
+  void 안목_100의_힌트는_약_95퍼센트_맞고_모호하지_않다() {
+    assertThat(hintAccuracy(100)).isBetween(0.93, 0.97);
     SplittableRandom rng = new SplittableRandom(1);
     for (int i = 0; i < TRIALS; i++) {
       assertThat(service.hint(100, Direction.UP, rng).direction())
@@ -193,11 +193,29 @@ class DefaultBehaviorServiceTest {
   }
 
   @Test
-  void 모호와_강한_힌트의_경계() {
+  void 모호_힌트의_경계와_안목에_무관한_강한_힌트() {
     assertThat(anyHint(34, h -> h.direction() == HintDirection.NEUTRAL)).isTrue();
     assertThat(anyHint(35, h -> h.direction() == HintDirection.NEUTRAL)).isFalse();
-    assertThat(anyHint(64, h -> h.strength() == HintStrength.STRONG)).isFalse();
-    assertThat(anyHint(65, h -> h.strength() == HintStrength.STRONG)).isTrue();
+    // "아주 좋다!"는 안목 0에서도 나온다. 낮은 안목에서는 자신만만한 헛소리다 (decisions.md 28번).
+    assertThat(anyHint(0, h -> h.strength() == HintStrength.STRONG)).isTrue();
+    assertThat(anyHint(100, h -> h.strength() == HintStrength.STRONG)).isTrue();
+    assertThat(anyHint(100, h -> h.strength() == HintStrength.MILD)).isTrue();
+  }
+
+  @Test
+  void 안목_0의_강한_힌트도_약_40퍼센트만_맞는다() {
+    SplittableRandom rng = new SplittableRandom(3);
+    int strong = 0;
+    int correct = 0;
+    for (int i = 0; i < TRIALS; i++) {
+      Hint hint = service.hint(0, Direction.DOWN, rng);
+      if (hint.strength() == HintStrength.STRONG) {
+        strong++;
+        correct += hint.direction() == HintDirection.DOWN ? 1 : 0;
+      }
+    }
+    assertThat(strong).isPositive();
+    assertThat((double) correct / strong).isBetween(0.37, 0.43);
   }
 
   @Test

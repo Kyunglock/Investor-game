@@ -28,6 +28,9 @@ public interface HouseholdService {
   /** 배우자 소득. 미혼이거나 은퇴 뒤면 0. 물가 반영. */
   long spouseIncome(UUID gameId, int gameDay);
 
+  /** 연금. 은퇴 전이면 0, 은퇴 뒤 1인/부부 금액. 물가 반영 (decisions.md 27번). */
+  long pension(UUID gameId, int gameDay);
+
   long weddingCost(int gameDay);
 
   long childbirthCost(int gameDay);

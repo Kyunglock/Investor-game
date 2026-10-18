@@ -246,6 +246,11 @@ export interface components {
              */
             monthlyExpense: number;
             retired: boolean;
+            /**
+             * Format: int64
+             * @description 은퇴 뒤 매달 들어오는 연금. 은퇴 전 0
+             */
+            pension: number;
         };
         TradeRequest: {
             stockCode: string;
@@ -303,11 +308,20 @@ export interface components {
         Result: {
             /** Format: int64 */
             initialAsset: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description 파산이면 음수
+             */
             finalAsset: number;
             /** @description 수익률(만분율) */
             returnBp: number;
+            /** @description 끝난 나이. 파산이면 파산한 나이 */
             finalAge: number;
+            /**
+             * @description NORMAL은 종료 나이 도달, BANKRUPT는 총자산이 0 아래로 떨어진 달의 파산 (decisions.md 27번)
+             * @enum {string}
+             */
+            ending: "NORMAL" | "BANKRUPT";
             /** @description 능력치 코드별 이탈 횟수 */
             deviationCounts: {
                 [key: string]: number;

@@ -6,10 +6,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import investorgame.TestcontainersConfiguration;
+import investorgame.asset.AssetService;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,7 +22,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 /**
- * 한 판을 25세부터 65세까지 실제 API로 끝까지 플레이한다. 클라이언트처럼 다음 이벤트 시각(nextEventDay)까지만 시간을 보내고, 대기 중인 이벤트가 있으면
+ * 한 판을 15세부터 70세까지 실제 API로 끝까지 플레이한다. 클라이언트처럼 다음 이벤트 시각(nextEventDay)까지만 시간을 보내고, 대기 중인 이벤트가 있으면
  * 선택한다.
  */
 @SpringBootTest
@@ -31,14 +33,15 @@ class GameFlowTest {
   private static final List<String> NEWS_CHOICES = List.of("BUY", "HOLD", "SELL", "BUY");
 
   @Autowired WebApplicationContext context;
+  @Autowired AssetService assets;
 
   @Test
-  void 성장기_성향_직업_투자_시작_뉴스를_거쳐_65세에_끝난다() throws Exception {
+  void 성장기_성향_직업_투자_시작_뉴스를_거쳐_70세에_끝난다() throws Exception {
     MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
     GameClient client = GameClient.newSession(mvc);
     DocumentContext game = client.start();
     String gameId = game.read("$.gameId");
-    int endDay = (65 - 15) * 360;
+    int endDay = (70 - 15) * 360;
     List<String> kindOrder = new ArrayList<>();
 
     Map<String, Integer> seenKinds = new HashMap<>();
@@ -83,15 +86,21 @@ class GameFlowTest {
 
     assertThat(game.read("$.status", String.class)).isEqualTo("ENDED");
     assertThat(game.read("$.phase", String.class)).isEqualTo("ENDED");
-    assertThat(game.read("$.result.finalAge", Integer.class)).isEqualTo(65);
+    assertThat(game.read("$.result.finalAge", Integer.class)).isEqualTo(70);
+    assertThat(game.read("$.result.ending", String.class)).isEqualTo("NORMAL");
     assertThat(game.read("$.result.finalAsset", Long.class))
-        .as("40년 동안 월급을 받았으므로 자산이 늘었다")
+        .as("35년 동안 월급을 받았으므로 자산이 늘었다")
         .isGreaterThan(game.read("$.result.initialAsset", Long.class));
+    // 은퇴(60세) 뒤에는 연금이 들어온다 (decisions.md 27번).
+    assertThat(game.read("$.household.pension", Long.class)).isPositive();
+    assertThat(game.read("$.household.monthlyIncome", Long.class)).isZero();
+    Map<String, Object> endPayload = game.read("$.log[-1].payload");
+    assertThat(endPayload).containsEntry("ending", "NORMAL").containsKeys("debt", "finalAge");
 
     // 첫 직업은 반드시 하나. 구조조정·번아웃으로 실직하면 재취업 선택이 더 올 수 있다 (decisions.md 26번).
     assertThat(seenKinds.get("JOB")).isGreaterThanOrEqualTo(1);
     assertThat(seenKinds.getOrDefault("CAREER", 0))
-        .as("40년 동안 직장 장면이 여러 번")
+        .as("35년 동안 직장 장면이 여러 번")
         .isGreaterThanOrEqualTo(3);
     // 성장 단계 10개에서 하나씩, 취업 뒤 일상 장면(adult) 풀 8개를 40년 동안 다 쓴다.
     assertThat(seenKinds.get("TRAIT")).as("성장기 10 + 취업 뒤 일상 8").isEqualTo(18);
@@ -126,7 +135,7 @@ class GameFlowTest {
 
     // 시장·가계: 종목 18개가 매달 움직이고, 월급은 전부 자산이 되지 않으며 결혼·자녀·은퇴가 삶에 들어온다 (경제 개편 설계).
     assertThat(game.read("$.market.stocks.length()", Integer.class)).isEqualTo(18);
-    assertThat(game.read("$.market.month", Integer.class)).isEqualTo((65 - 15) * 12);
+    assertThat(game.read("$.market.month", Integer.class)).isEqualTo((70 - 15) * 12);
     List<Map<String, Object>> holdings = game.read("$.holdings");
     for (Map<String, Object> h : holdings) {
       assertThat(h)
@@ -197,12 +206,61 @@ class GameFlowTest {
     List<String> lastKinds = lastNews.read("$.game.log[*].kind");
     assertThat(lastKinds.get(lastKinds.size() - 1)).isIn("PRICE", "GROWTH");
 
-    // 연간 자산: 15세부터 65세까지 해마다 한 줄, 마지막 줄은 최종 자산과 같다.
+    // 연간 자산: 15세부터 70세까지 해마다 한 줄, 마지막 줄은 최종 자산과 같다.
     List<Integer> ages = game.read("$.yearly[*].age");
-    assertThat(ages).startsWith(15).endsWith(65).doesNotHaveDuplicates().hasSize(51);
+    assertThat(ages).startsWith(15).endsWith(70).doesNotHaveDuplicates().hasSize(56);
     List<Map<String, Object>> yearly = game.read("$.yearly");
     assertThat(((Number) yearly.get(yearly.size() - 1).get("totalAsset")).longValue())
         .isEqualTo(game.read("$.result.finalAsset", Long.class));
+  }
+
+  @Test
+  void 다_팔아도_빚을_못_갚으면_그_달에_파산으로_끝난다() throws Exception {
+    MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.startInvesting();
+    String gameId = game.read("$.gameId");
+    UUID id = UUID.fromString(gameId);
+    int day = game.read("$.day", Integer.class);
+    int startAge = game.read("$.startAge", Integer.class);
+
+    // 갚을 수 없는 큰 빚을 지운다 (생활 사건의 지출로). 다음 달 정산에서 총자산이 0 아래가 된다.
+    assets.spend(id, "LIFE_COST", 100_000_000_000L, day, UUID.randomUUID());
+
+    for (int step = 0; step < 20 && "ACTIVE".equals(game.read("$.status")); step++) {
+      Map<String, Object> pending = game.read("$.pendingEvent");
+      if (pending != null) {
+        String option =
+            "OFFER".equals(pending.get("kind"))
+                ? "accept"
+                : game.read("$.pendingEvent.options[0].code");
+        Object next = client.choose(gameId, (String) pending.get("eventId"), option).read("$.game");
+        game = JsonPath.parse(next);
+        continue;
+      }
+      int now = game.read("$.day", Integer.class);
+      Integer next = game.read("$.nextEventDay");
+      game = client.advance(gameId, Math.min(now + 90, next == null ? now + 90 : next));
+    }
+
+    assertThat(game.read("$.status", String.class)).isEqualTo("ENDED");
+    assertThat(game.read("$.result.ending", String.class)).isEqualTo("BANKRUPT");
+    int finalAge = game.read("$.result.finalAge", Integer.class);
+    int endedDay = game.read("$.day", Integer.class);
+    assertThat(endedDay % 30).as("매월 1일 정산에서 끝난다").isZero();
+    assertThat(endedDay).isLessThan((70 - 15) * 360);
+    assertThat(finalAge).isEqualTo(startAge + endedDay / 360).isLessThan(70);
+    assertThat(game.read("$.totalAsset", Long.class)).isNegative();
+    assertThat(game.read("$.result.finalAsset", Long.class)).isNegative();
+    assertThat(game.read("$.pendingEvent", Object.class)).as("파산 뒤에는 선택이 없다").isNull();
+    List<String> kinds = game.read("$.log[*].kind");
+    assertThat(kinds).endsWith("END");
+    Map<String, Object> endPayload = game.read("$.log[-1].payload");
+    assertThat(endPayload).containsEntry("ending", "BANKRUPT");
+    assertThat(((Number) endPayload.get("debt")).longValue()).isPositive();
+    List<Integer> ages = game.read("$.yearly[*].age");
+    assertThat(ages).as("자산 곡선이 파산한 나이에서 끝난다").endsWith(finalAge);
+    assertThat(client.current().read("$.result.ending", String.class)).isEqualTo("BANKRUPT");
   }
 
   @Test

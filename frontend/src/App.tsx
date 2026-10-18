@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { BirthCertificate } from './features/game/BirthCertificate'
+import { EndingCredits } from './features/game/EndingCredits'
 import { GameScreen } from './features/game/GameScreen'
 import { LifeRecord } from './features/game/LifeRecord'
 import { StartScreen } from './features/game/StartScreen'
@@ -15,6 +16,8 @@ export function App() {
   const outcome = useGameStore((s) => s.outcome)
   const marketOpen = useGameStore((s) => s.marketOpen)
   const { load, born, startLife, pause, resume, setSpeed } = useGameStore.getState()
+  // 크레딧을 다 본(또는 건너뛴) 판. 끝난 판은 크레딧 뒤에 기록부가 나온다 (엔딩 설계 3절).
+  const [creditsSeenFor, setCreditsSeenFor] = useState<string | null>(null)
 
   useEffect(() => {
     void load()
@@ -49,7 +52,13 @@ export function App() {
         {status === 'none' && <StartScreen onBorn={restart} />}
         {status === 'revealing' && game && <BirthCertificate game={game} onStart={startLife} />}
         {status === 'playing' && game && <GameScreen game={game} />}
-        {status === 'ended' && game && <LifeRecord game={game} onRestart={restart} />}
+        {status === 'ended' &&
+          game &&
+          (creditsSeenFor === game.gameId ? (
+            <LifeRecord game={game} onRestart={restart} />
+          ) : (
+            <EndingCredits game={game} onDone={() => setCreditsSeenFor(game.gameId)} />
+          ))}
       </main>
     </div>
   )

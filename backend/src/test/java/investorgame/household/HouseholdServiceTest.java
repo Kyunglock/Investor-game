@@ -1,6 +1,7 @@
 package investorgame.household;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import investorgame.TestcontainersConfiguration;
@@ -86,6 +87,26 @@ class HouseholdServiceTest {
     assertThat(household.get(gameId).retiredDay()).isEqualTo(retireDay);
     assertThat(household.spouseIncome(gameId, retireDay)).isZero();
     assertThat(household.monthlyExpense(gameId, retireDay)).as("생활비는 계속 나간다").isPositive();
+  }
+
+  @Test
+  void 은퇴_뒤에는_연금이_나오고_부부면_더_많다() {
+    int retireDay = (60 - 15) * YEAR;
+    assertThat(household.pension(gameId, retireDay)).as("은퇴 전 0").isZero();
+
+    household.retire(gameId, retireDay);
+
+    // 1인 100만. 물가는 생활비와 같은 배율 (decisions.md 27번)
+    long single = household.pension(gameId, retireDay);
+    assertThat(single)
+        .as("1,000,000 × 1.02^35, 연 단위 정수 곱셈이라 끝자리는 조금 다를 수 있다")
+        .isCloseTo(household.monthlyExpense(gameId, retireDay) * 1_000_000 / 1_400_000, within(100L));
+    assertThat(single).isLessThan(household.monthlyExpense(gameId, retireDay));
+    household.marry(gameId, retireDay);
+    assertThat(household.pension(gameId, retireDay)).as("부부 160만").isGreaterThan(single);
+    assertThat(household.pension(gameId, retireDay + YEAR))
+        .as("물가 반영")
+        .isGreaterThan(household.pension(gameId, retireDay));
   }
 
   @Test

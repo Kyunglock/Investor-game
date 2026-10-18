@@ -43,6 +43,7 @@ import investorgame.progress.ChoiceOutcome;
 import investorgame.progress.GameView;
 import investorgame.progress.ProgressService;
 import investorgame.progress.StockHistory;
+import investorgame.result.Ending;
 import investorgame.result.GameResult;
 import investorgame.result.ResultService;
 import java.security.SecureRandom;
@@ -71,6 +72,7 @@ class DefaultProgressService implements ProgressService {
   private static final String SALARY = "SALARY";
   private static final String SPOUSE_INCOME = "SPOUSE_INCOME";
   private static final String SEVERANCE = "SEVERANCE";
+  private static final String PENSION = "PENSION";
   private static final String WINDFALL = "WINDFALL";
   private static final String EXPENSE = "EXPENSE";
   private static final String LIFE_COST = "LIFE_COST";
@@ -178,7 +180,14 @@ class DefaultProgressService implements ProgressService {
 
     // 보고된 시각이 다음 이벤트를 넘어도 판은 그 이벤트 시각에서 멈춘다. 달 처리도 거기까지만 한다.
     int stopDay = Math.min(day, nextEventDay(game, last).orElse(day));
-    processMonths(game, last, stopDay);
+    OptionalInt bankruptDay = processMonths(game, last, stopDay);
+    if (bankruptDay.isPresent()) {
+      // 파산한 달에서 멈춘다. 이벤트는 더 예약하지 않고 바로 끝낸다 (decisions.md 27번).
+      GameRow bankrupt = withDay(game, bankruptDay.getAsInt());
+      games.updateDay(gameId, bankruptDay.getAsInt());
+      end(bankrupt, Ending.BANKRUPT);
+      return view(games.findLatest(sessionId).orElseThrow());
+    }
     GameRow advanced = withDay(game, stopDay);
     games.updateDay(gameId, stopDay);
     scheduleAt(advanced, last, stopDay);
@@ -747,10 +756,11 @@ class DefaultProgressService implements ProgressService {
   // ---- 시간 흐름: 매월 1일 (경제 개편 설계 9절) ----
 
   /**
-   * (fromExclusive, toInclusive] 안의 매월 1일마다: 시장 → 월급·배우자 소득(은퇴 달이면 퇴직금) → 생활비 → 이자 → 월말 총자산(연 경계면
-   * 연간 자산). 생활비는 직업이 생긴 뒤부터 나간다.
+   * (fromExclusive, toInclusive] 안의 매월 1일마다: 시장 → 월급·배우자 소득(은퇴 달이면 퇴직금, 그 뒤 달은 연금) → 생활비 → 이자 → 월말
+   * 총자산(연 경계면 연간 자산). 생활비는 직업이 생긴 뒤부터 나간다. 정산 뒤 총자산이 0 아래면 그 달에 파산이다: 그 날을 돌려주고 멈춘다
+   * (decisions.md 27번).
    */
-  private void processMonths(GameRow game, int fromExclusive, int toInclusive) {
+  private OptionalInt processMonths(GameRow game, int fromExclusive, int toInclusive) {
     UUID gameId = game.id();
     int month = calendar.daysPerMonth();
     SeededRandom random = new HashSeededRandom(game.seed());
@@ -780,6 +790,8 @@ class DefaultProgressService implements ProgressService {
               gameId, day, "RETIRE", Map.of("age", ageAt(game, day), "severance", severance));
         } else if (!retired && working) {
           assets.credit(gameId, SALARY, salary, day);
+        } else if (retired) {
+          assets.credit(gameId, PENSION, household.pension(gameId, day), day);
         }
         long spouse = household.spouseIncome(gameId, day);
         if (spouse > 0) {
@@ -798,7 +810,11 @@ class DefaultProgressService implements ProgressService {
             total,
             assets.get(gameId).cash());
       }
+      if (total < 0) {
+        return OptionalInt.of(day);
+      }
     }
+    return OptionalInt.empty();
   }
 
   /** 월급 = 기본 월급 × (1 + 연차 인상)^연차 × (1 + 협상·승진 인상분). */
@@ -865,6 +881,12 @@ class DefaultProgressService implements ProgressService {
     if (game.lastReportedDay() < endDay(game) || events.pending(game.id()).isPresent()) {
       return;
     }
+    end(game, Ending.NORMAL);
+  }
+
+  /** 판을 끝내고 결과를 남긴다. 파산이면 finalAge는 파산한 나이이고 연간 자산의 마지막 줄도 그 나이에 남아 곡선이 바닥에서 끝난다. */
+  private void end(GameRow game, Ending ending) {
+    int finalAge = ageAt(game, game.lastReportedDay());
     OffsetDateTime endedAt = games.now();
     games.end(game.id(), endedAt);
     AccountView account = assets.get(game.id());
@@ -876,19 +898,22 @@ class DefaultProgressService implements ProgressService {
             game.contentVersion(),
             account.initialCash(),
             finalAsset,
-            game.endAge(),
+            finalAge,
+            ending,
             characters.get(game.id()).stats(),
             deviationCounts(game.id()),
             game.createdAt(),
             endedAt));
     // 종료일에 알림 비용이 겹치면 연 경계에서 먼저 쓴 값이 최종 자산과 어긋나므로 덮어쓴다.
-    logs.replaceYear(game.id(), game.endAge(), finalAsset, account.cash());
+    logs.replaceYear(game.id(), finalAge, finalAsset, account.cash());
     logs.append(
         game.id(),
         game.lastReportedDay(),
         "END",
         Map.of(
-            "finalAge", game.endAge(),
+            "finalAge", finalAge,
+            "ending", ending.name(),
+            "debt", account.debt(),
             "initialAsset", account.initialCash(),
             "finalAsset", finalAsset,
             "returnBp", returnBp(account.initialCash(), finalAsset)));
@@ -1061,7 +1086,8 @@ class DefaultProgressService implements ProgressService {
         income,
         household.spouseIncome(game.id(), day),
         independent ? household.monthlyExpense(game.id(), day) : 0,
-        retired);
+        retired,
+        household.pension(game.id(), day));
   }
 
   private GameView.InvestorType investorTypeView(String code) {
@@ -1108,6 +1134,7 @@ class DefaultProgressService implements ProgressService {
         result.finalAsset(),
         returnBp(initial, result.finalAsset()),
         result.finalAge(),
+        result.ending(),
         Map.copyOf(result.deviationCounts()));
   }
 

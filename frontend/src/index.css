@@ -109,8 +109,21 @@ body {
   }
 }
 
+/* 엔딩 크레딧이 화면 아래에서 올라와 위로 사라진다. 길이는 줄 수에 따라 컴포넌트가 정한다 */
+@keyframes credits-roll {
+  from {
+    transform: translateY(100vh);
+  }
+  to {
+    transform: translateY(-100%);
+  }
+}
+
 .animate-reveal {
   animation: reveal-in 0.45s ease-out both;
+}
+.animate-credits {
+  animation: credits-roll var(--credits-duration, 60s) linear both;
 }
 .animate-slide-in {
   animation: slide-in 0.3s ease-out both;
@@ -130,7 +143,8 @@ body {
   .animate-slide-in,
   .animate-flash,
   .animate-blink,
-  .animate-drop {
+  .animate-drop,
+  .animate-credits {
     animation: none;
   }
 }

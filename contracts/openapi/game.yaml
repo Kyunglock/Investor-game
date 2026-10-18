@@ -207,7 +207,7 @@ components:
     Household:
       type: object
       description: 가계부. 금액은 이번 달 기준(원)
-      required: [married, children, monthlyIncome, spouseIncome, monthlyExpense, retired]
+      required: [married, children, monthlyIncome, spouseIncome, monthlyExpense, retired, pension]
       properties:
         married: { type: boolean }
         marriedAge: { type: [integer, 'null'] }
@@ -222,6 +222,7 @@ components:
         spouseIncome: { type: integer, format: int64 }
         monthlyExpense: { type: integer, format: int64, description: 생활비 + 자녀 비용 }
         retired: { type: boolean }
+        pension: { type: integer, format: int64, description: 은퇴 뒤 매달 들어오는 연금. 은퇴 전 0 }
     TradeRequest:
       type: object
       required: [stockCode, side, quantity]
@@ -281,12 +282,16 @@ components:
           items: { $ref: '#/components/schemas/Option' }
     Result:
       type: object
-      required: [initialAsset, finalAsset, returnBp, finalAge, deviationCounts]
+      required: [initialAsset, finalAsset, returnBp, finalAge, ending, deviationCounts]
       properties:
         initialAsset: { type: integer, format: int64 }
-        finalAsset: { type: integer, format: int64 }
+        finalAsset: { type: integer, format: int64, description: 파산이면 음수 }
         returnBp: { type: integer, description: 수익률(만분율) }
-        finalAge: { type: integer }
+        finalAge: { type: integer, description: 끝난 나이. 파산이면 파산한 나이 }
+        ending:
+          type: string
+          enum: [NORMAL, BANKRUPT]
+          description: NORMAL은 종료 나이 도달, BANKRUPT는 총자산이 0 아래로 떨어진 달의 파산 (decisions.md 27번)
         deviationCounts:
           type: object
           additionalProperties: { type: integer }

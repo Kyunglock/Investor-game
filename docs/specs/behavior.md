@@ -105,12 +105,12 @@ public record Hint(
 ### 4.4 힌트
 
 ```
-정답률(bp) = 2500 + 안목 × 70            # 안목 0이면 25%, 100이면 95%
+정답률(bp) = 4000 + 안목 × 55            # 안목 0이면 40%(믿으면 조금 손해), 100이면 95%
 ```
 
-1. **모호 판정.** `insight < 40`이면 `behavior.hint.neutral-percent`(초기값 50%) 확률로 `NEUTRAL`을 돌려준다.
+1. **모호 판정.** `insight < 40`이면 `behavior.hint.neutral-percent`(초기값 30%) 확률로 `NEUTRAL`을 돌려준다.
 2. **정오 판정.** 정답률로 뽑는다. 맞으면 `truth` 방향, 틀리면 반대 방향이다.
-3. **강도 판정.** `insight >= 65`이면 `behavior.hint.strong-percent`(초기값 70%) 확률로 `STRONG`, 아니면 `MILD`.
+3. **강도 판정.** 안목과 무관하게 `behavior.hint.strong-percent`(초기값 50%) 확률로 `STRONG`, 아니면 `MILD`. 낮은 안목의 "아주 좋다!"는 자신만만한 헛소리다 (decisions.md 28번).
 
 난수 순서: 모호 → 정오 → 강도 (항상 세 번 뽑는다).
 
@@ -129,12 +129,11 @@ public record Hint(
 | 이름 | 초기값 | 의미 |
 |---|---|---|
 | `behavior.deviation-cap-bp` | 8000 | 능력치 0일 때 이탈 확률 |
-| `behavior.hint.accuracy-base-bp` | 2500 | 안목 0의 힌트 정답률 |
-| `behavior.hint.accuracy-per-point-bp` | 70 | 안목 1점당 정답률 증가 |
+| `behavior.hint.accuracy-base-bp` | 4000 | 안목 0의 힌트 정답률 |
+| `behavior.hint.accuracy-per-point-bp` | 55 | 안목 1점당 정답률 증가 |
 | `behavior.hint.neutral-below-insight` | 40 | 이 값 미만이면 모호 판정 대상 |
-| `behavior.hint.neutral-percent` | 50 | 모호 확률 |
-| `behavior.hint.strong-from-insight` | 65 | 이 값 이상이면 강한 힌트 대상 |
-| `behavior.hint.strong-percent` | 70 | 강한 힌트 확률 |
+| `behavior.hint.neutral-percent` | 30 | 모호 확률 |
+| `behavior.hint.strong-percent` | 50 | 강한 힌트 확률 (안목 무관) |
 | `behavior.luck.chance-per-point-bp` | 50 | 운 1점당 손실 완화 확률 |
 | `behavior.luck.loss-factor-percent` | 30 | 손실 완화 시 손실 비율 |
 
@@ -164,10 +163,10 @@ public record Hint(
 | 8 | 선택 `BUY`, 줏대 0, 분위기 `POS`, 줏대 난수가 걸림 | 줏대는 `BUY`로 바꿔도 같으므로 이탈 기록 없음 |
 | 9 | 선택 `HOLD`, 줏대 0, 분위기 `POS`, 줏대 난수가 걸리고 용기 난수도 걸림 | 줏대로 `BUY`, 이어서 용기로 `HOLD`. 이탈 `[conviction: HOLD→BUY, courage: BUY→HOLD]`, 실제 `HOLD` |
 | 10 | 줏대 0, 인내심 0, 용기 0, 같은 시드로 두 번 호출 | 두 결과가 동일하다 (재현성) |
-| 11 | 안목 0, 진실 `UP`, 대량 반복(예: 20,000회) | `NEUTRAL`이 아닌 힌트 중 정답 비율이 약 25% (허용 오차 ±2%p) |
-| 12 | 안목 100, 진실 `UP`, 대량 반복 | 정답 비율이 약 80% (±2%p). `NEUTRAL`은 나오지 않는다 |
+| 11 | 안목 0, 진실 `UP`, 대량 반복(예: 20,000회) | `NEUTRAL`이 아닌 힌트 중 정답 비율이 약 40% (허용 오차 ±2%p) |
+| 12 | 안목 100, 진실 `UP`, 대량 반복 | 정답 비율이 약 95% (±2%p). `NEUTRAL`은 나오지 않는다 |
 | 13 | 안목 34와 35 | 34는 모호 판정 대상이고 35는 아니다 (경계) |
-| 14 | 안목 64와 65 | 64는 `STRONG`이 나오지 않고 65는 나온다 (경계) |
+| 14 | 안목 0과 100 | 둘 다 `STRONG`이 나온다. 안목 0의 `STRONG`도 정답 비율은 약 40% |
 | 15 | 운 0, 대량 반복 | 항상 100을 돌려준다 |
 | 16 | 운 100, 대량 반복 | 약 30%가 30을 돌려준다 (±2%p) |
 | 17 | 이탈 확률: 능력치 0과 100, 대량 반복 | 약 50%와 0% |

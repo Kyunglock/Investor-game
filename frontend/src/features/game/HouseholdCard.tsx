@@ -6,8 +6,8 @@ import { signedWon, won } from './labels'
 export function HouseholdCard({ game }: { game: Game }) {
   const h = game.household
   const working = game.job !== null && game.job !== undefined
-  const childrenCost = 0 // 자녀 비용은 생활비에 합쳐져 오므로 따로 나누지 않는다
-  const saving = h.monthlyIncome + h.spouseIncome - h.monthlyExpense
+  // 자녀 비용은 생활비에 합쳐져 온다. 은퇴 뒤에는 월급 대신 연금 (decisions.md 27번).
+  const saving = h.monthlyIncome + h.spouseIncome + h.pension - h.monthlyExpense
   const monthLabel = `${Math.floor(game.market.month % 12) + 1}월`
   const childrenText =
     h.children.length === 0
@@ -23,7 +23,11 @@ export function HouseholdCard({ game }: { game: Game }) {
       ) : (
         <table className="w-full border-collapse text-xs">
           <tbody>
-            <Row label={h.retired ? '월급 (은퇴)' : '월급'} value={h.monthlyIncome} />
+            {h.retired ? (
+              <Row label="연금" value={h.pension} />
+            ) : (
+              <Row label="월급" value={h.monthlyIncome} />
+            )}
             {h.married && <Row label="배우자 소득" value={h.spouseIncome} />}
             <Row
               label={
@@ -35,7 +39,7 @@ export function HouseholdCard({ game }: { game: Game }) {
                   </span>
                 </>
               }
-              value={-h.monthlyExpense + childrenCost}
+              value={-h.monthlyExpense}
             />
             {game.debt > 0 && (
               <tr>

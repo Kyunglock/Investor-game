@@ -1,6 +1,7 @@
 package investorgame.result.internal;
 
 import investorgame.common.Stats;
+import investorgame.result.Ending;
 import investorgame.result.GameResult;
 import investorgame.result.ResultService;
 import java.time.OffsetDateTime;
@@ -31,10 +32,10 @@ class JdbcResultService implements ResultService {
             """
             INSERT INTO result_game
               (game_id, session_id, content_version, initial_asset, final_asset, final_age,
-               started_at, ended_at, stats_snapshot, summary)
+               ending, started_at, ended_at, stats_snapshot, summary)
             VALUES
               (:gameId, :sessionId, :contentVersion, :initialAsset, :finalAsset, :finalAge,
-               :startedAt, :endedAt, CAST(:stats AS jsonb), CAST(:summary AS jsonb))
+               :ending, :startedAt, :endedAt, CAST(:stats AS jsonb), CAST(:summary AS jsonb))
             ON CONFLICT (game_id) DO NOTHING
             """)
         .param("gameId", result.gameId())
@@ -43,6 +44,7 @@ class JdbcResultService implements ResultService {
         .param("initialAsset", result.initialAsset())
         .param("finalAsset", result.finalAsset())
         .param("finalAge", result.finalAge())
+        .param("ending", result.ending().name())
         .param("startedAt", result.startedAt())
         .param("endedAt", result.endedAt())
         .param("stats", json.writeValueAsString(result.finalStats().toCodes()))
@@ -57,7 +59,8 @@ class JdbcResultService implements ResultService {
     return jdbc.sql(
             """
             SELECT game_id, session_id, content_version, initial_asset, final_asset, final_age,
-                   started_at, ended_at, stats_snapshot::text AS stats, summary::text AS summary
+                   ending, started_at, ended_at, stats_snapshot::text AS stats,
+                   summary::text AS summary
             FROM result_game WHERE game_id = :gameId
             """)
         .param("gameId", gameId)
@@ -70,6 +73,7 @@ class JdbcResultService implements ResultService {
                     rs.getLong("initial_asset"),
                     rs.getLong("final_asset"),
                     rs.getInt("final_age"),
+                    Ending.valueOf(rs.getString("ending")),
                     Stats.fromCodes(
                         json.readValue(
                             rs.getString("stats"), new TypeReference<Map<String, Integer>>() {})),
