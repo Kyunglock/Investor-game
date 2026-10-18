@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>투자자 시뮬레이터 · 투자 화면 목업</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;900&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f3f4f3; --card: #fff; --line: #d7dcd8; --line-soft: #e8ebe8;
+    --ink: #1d2626; --muted: #6f7a78; --faint: #a3adaa;
+    --wine: #8b2342; --wine-soft: #f7e6ea; --teal: #2e7465; --teal-soft: #e2f0ea; --gold: #b2862b;
+    --up: #c0392b; --down: #2d5fa6;
+    --serif: "Noto Serif KR", serif; --sans: "Noto Sans KR", system-ui, sans-serif; --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.55; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+  .q { margin: 36px 0 16px; }
+  .q:first-child { margin-top: 0; }
+  .q h1 { font-family: var(--serif); font-weight: 900; font-size: 24px; margin: 0 0 4px; }
+  .q p { color: var(--muted); margin: 0; font-size: 13px; }
+  .mono { font-family: var(--mono); }
+  .up { color: var(--up); } .down { color: var(--down); }
+
+  /* 상단 바 */
+  .topbar { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 10px 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .brand { font-family: var(--serif); font-weight: 900; font-size: 16px; } .brand b { color: var(--wine); }
+  .age { font-family: var(--serif); font-weight: 900; font-size: 30px; line-height: 1; }
+  .crumb { color: var(--muted); font-size: 12px; }
+  .crumb .bar { display: block; height: 3px; width: 160px; background: var(--line-soft); margin-top: 4px; border-radius: 2px; overflow: hidden; }
+  .crumb .bar i { display: block; height: 100%; width: 52%; background: var(--wine); }
+  .ctrls { margin-left: auto; display: flex; gap: 4px; }
+  .btn { border: 1px solid var(--line); background: var(--card); border-radius: 4px; padding: 6px 10px; font-size: 12px; font-family: var(--mono); color: var(--ink); cursor: pointer; min-height: 32px; }
+  .btn.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn.sans { font-family: var(--sans); }
+  .btn.dis { opacity: .4; }
+  .toast { position: relative; margin: 10px 0 0 auto; width: fit-content; background: var(--card); border: 1px solid var(--line); border-left: 3px solid var(--teal); padding: 6px 12px; font-size: 12px; border-radius: 4px; box-shadow: 0 4px 14px rgba(0,0,0,.08); }
+  .toast b { font-family: var(--mono); font-weight: 600; }
+
+  /* 3단 */
+  .grid { display: grid; grid-template-columns: 280px minmax(0,1fr) 320px; gap: 14px; margin-top: 14px; }
+  @media (max-width: 960px) { .grid { grid-template-columns: 1fr; } }
+  .col { display: flex; flex-direction: column; gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+  .card h2 { font-size: 15px; font-weight: 700; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; }
+  .card h2 span { font-weight: 400; font-size: 11px; color: var(--faint); }
+
+  /* 신원 */
+  .id { padding: 0; overflow: hidden; }
+  .id .head { background: var(--wine); color: #fff; font-family: var(--mono); font-size: 11px; padding: 6px 12px; display: flex; justify-content: space-between; letter-spacing: .04em; }
+  .id .body { padding: 12px; display: grid; grid-template-columns: 64px 1fr; gap: 12px; position: relative; }
+  .id .body::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, transparent 0 9px, rgba(139,35,66,.05) 9px 10px); pointer-events: none; }
+  .id .name { font-family: var(--serif); font-weight: 900; font-size: 19px; line-height: 1.2; margin-bottom: 6px; }
+  .id dl { display: grid; grid-template-columns: 54px 1fr; gap: 2px 6px; margin: 0; font-size: 12px; }
+  .id dt { color: var(--faint); } .id dd { margin: 0; }
+  .avatar { width: 64px; height: 64px; background: #e9eeea; border: 1px solid var(--line); display: grid; place-items: center; color: var(--faint); font-size: 10px; }
+
+  /* 능력치 */
+  .stat { display: grid; grid-template-columns: 44px 1fr 30px; align-items: center; gap: 8px; font-size: 12px; margin: 5px 0; }
+  .stat .track { height: 8px; background: var(--line-soft); border-radius: 2px; overflow: hidden; }
+  .stat .track i { display: block; height: 100%; background: var(--teal); }
+  .stat .n { font-family: var(--mono); text-align: right; }
+  .weak { font-size: 12px; color: var(--wine); font-weight: 700; margin-top: 6px; }
+
+  /* 가계부 */
+  .ledger { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .ledger td { padding: 4px 0; border-bottom: 1px solid var(--line-soft); }
+  .ledger td:last-child { text-align: right; font-family: var(--mono); }
+  .ledger tr.sum td { border-bottom: 0; border-top: 2px solid var(--line); font-weight: 700; padding-top: 6px; }
+  .ledger .sub { color: var(--faint); font-size: 11px; }
+  .fam { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .fam b { color: var(--ink); font-weight: 700; }
+  .debt { font-size: 12px; color: var(--up); margin-top: 4px; font-family: var(--mono); }
+
+  /* 장면 */
+  .scene { padding: 0; overflow: hidden; }
+  .scene .px { height: 120px; background: linear-gradient(#cfe3ea 0 45%, #e4e0d2 45% 75%, #b9ad94 75%); display: grid; place-items: center; color: #6f7a78; font-size: 12px; }
+  .scene .cap { padding: 8px 14px; font-size: 13px; }
+
+  /* 결정 카드 */
+  .decision { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 18px 22px; box-shadow: 0 12px 40px rgba(0,0,0,.12); }
+  .decision .tag { font-size: 11px; color: var(--wine); font-weight: 700; display: flex; justify-content: space-between; }
+  .decision .tag span { color: var(--faint); font-family: var(--mono); font-weight: 400; }
+  .decision h3 { font-family: var(--serif); font-weight: 900; font-size: 22px; margin: 8px 0 6px; line-height: 1.3; }
+  .decision p { margin: 0 0 10px; font-size: 13px; }
+  .quote { display: flex; align-items: center; gap: 12px; border: 1px solid var(--line-soft); border-radius: 4px; padding: 8px 10px; margin: 10px 0; }
+  .quote svg { width: 120px; height: 32px; flex: none; }
+  .quote .p { font-family: var(--mono); font-size: 13px; font-weight: 600; }
+  .quote .d { font-size: 11px; color: var(--faint); }
+  .note { background: var(--teal-soft); border-left: 3px solid var(--teal); padding: 8px 10px; font-size: 12px; color: #3b5a52; font-family: var(--mono); }
+  .sway { border-left: 3px solid var(--line); padding: 6px 10px; font-size: 12px; color: var(--muted); margin: 10px 0; }
+  .sway em { font-style: normal; font-size: 10px; color: var(--faint); display: block; }
+  .opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .opts.one { grid-template-columns: 1fr; }
+  .opt { border: 1px solid var(--line); background: var(--card); border-radius: 4px; padding: 12px 10px; font-weight: 700; text-align: center; font-size: 14px; min-height: 48px; }
+  .opts.one .opt { text-align: left; padding: 12px 14px; }
+  .opt.pick { background: var(--wine-soft); border-color: var(--wine); }
+  .opt small { display: block; font-weight: 400; font-size: 11px; color: var(--faint); font-family: var(--mono); }
+  .opts.one .opt small { font-family: var(--sans); margin-top: 2px; }
+  .foot { font-size: 11px; color: var(--faint); margin-top: 12px; }
+
+  /* 인생 기록 */
+  .log { list-style: none; margin: 0; padding: 0; }
+  .log li { display: grid; grid-template-columns: 34px 1fr; gap: 8px; padding: 7px 4px; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+  .log li:last-child { border-bottom: 0; }
+  .log .y { font-family: var(--mono); font-size: 11px; color: var(--faint); padding-top: 2px; }
+  .log li.hl { background: var(--teal-soft); }
+  .log li.dec .y::before { content: "▸ "; color: var(--wine); }
+  .log .g { color: var(--teal); }
+  .pill { display: inline-block; border: 1px solid var(--teal); color: var(--teal); border-radius: 10px; font-size: 10px; padding: 0 6px; margin-right: 4px; }
+
+  /* 포트폴리오 */
+  .kpi { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .kpi div { font-size: 11px; color: var(--faint); }
+  .kpi b { display: block; font-family: var(--mono); font-size: 14px; font-weight: 600; color: var(--ink); margin-top: 2px; }
+  .kpi b.big { font-size: 16px; }
+  .month { font-size: 12px; margin: 8px 0 10px; padding: 6px 8px; background: var(--bg); border-radius: 4px; }
+  .month b { font-family: var(--mono); font-weight: 600; }
+  .hold { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .hold th { font-weight: 400; color: var(--faint); font-size: 10px; text-align: right; padding: 0 0 4px; border-bottom: 1px solid var(--line); }
+  .hold th:first-child { text-align: left; }
+  .hold td { padding: 6px 0; border-bottom: 1px solid var(--line-soft); text-align: right; font-family: var(--mono); white-space: nowrap; }
+  .hold td:first-child { text-align: left; font-family: var(--sans); }
+  .hold td:first-child small { display: block; color: var(--faint); font-size: 10px; }
+  .hold tr:last-child td { border-bottom: 0; }
+  .primary { display: block; width: 100%; margin-top: 12px; background: var(--wine); color: #fff; border: 0; border-radius: 4px; padding: 12px; font-weight: 700; font-size: 14px; min-height: 44px; cursor: pointer; }
+  .primary.ghost { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
+
+  /* 인생 지도 / 곡선 (작게) */
+  .map { display: grid; grid-template-columns: repeat(13, 1fr); gap: 3px; }
+  .map i { aspect-ratio: 1; background: var(--line-soft); border-radius: 1px; }
+  .map i.t { background: var(--teal); } .map i.t2 { background: #7fb3a5; } .map i.c { background: #fff; outline: 2px solid var(--wine); outline-offset: -2px; }
+
+  /* 시장 패널 */
+  .modal-wrap { background: rgba(30,40,40,.45); padding: 32px 16px; border-radius: 6px; }
+  .market { background: var(--card); max-width: 920px; margin: 0 auto; border-radius: 6px; box-shadow: 0 12px 40px rgba(0,0,0,.25); overflow: hidden; }
+  .market .head { display: flex; align-items: baseline; justify-content: space-between; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+  .market .head h3 { font-family: var(--serif); font-weight: 900; font-size: 20px; margin: 0; }
+  .market .head h3 span { font-family: var(--mono); font-weight: 400; font-size: 12px; color: var(--faint); margin-left: 8px; }
+  .market .body { display: grid; grid-template-columns: minmax(0,1fr) 340px; }
+  @media (max-width: 760px) { .market .body { grid-template-columns: 1fr; } }
+  .tabs { display: flex; gap: 4px; padding: 12px 16px 0; flex-wrap: wrap; }
+  .tab { border: 1px solid var(--line); border-radius: 4px; padding: 5px 10px; font-size: 12px; background: var(--card); }
+  .tab.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .tab .pill { border-color: var(--wine); color: var(--wine); margin: 0 0 0 4px; }
+  .tab.on .pill { border-color: #fff; color: #fff; }
+  .stocks { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+  .stocks th { font-weight: 400; color: var(--faint); font-size: 10px; text-align: right; padding: 0 16px 6px 0; border-bottom: 1px solid var(--line); }
+  .stocks th:first-child { text-align: left; padding-left: 16px; }
+  .stocks td { padding: 10px 16px 10px 0; border-bottom: 1px solid var(--line-soft); text-align: right; font-family: var(--mono); }
+  .stocks td:first-child { text-align: left; font-family: var(--sans); font-weight: 700; padding-left: 16px; }
+  .stocks td:first-child i { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--wine); margin-right: 6px; vertical-align: middle; }
+  .stocks tr.sel td { background: var(--teal-soft); }
+  .stocks svg { width: 90px; height: 26px; vertical-align: middle; }
+  .detail { border-left: 1px solid var(--line); padding: 16px 20px; }
+  @media (max-width: 760px) { .detail { border-left: 0; border-top: 1px solid var(--line); } }
+  .detail h4 { margin: 0; font-family: var(--serif); font-weight: 900; font-size: 18px; }
+  .detail h4 span { font-family: var(--mono); font-weight: 400; font-size: 12px; color: var(--faint); margin-left: 6px; }
+  .detail .price { font-family: var(--mono); font-size: 22px; font-weight: 600; margin: 4px 0 0; }
+  .detail .price small { font-size: 12px; margin-left: 6px; }
+  .chart { width: 100%; height: 130px; margin: 10px 0 6px; }
+  .mine { font-size: 12px; background: var(--bg); padding: 6px 10px; border-radius: 4px; display: flex; justify-content: space-between; }
+  .mine b { font-family: var(--mono); font-weight: 600; }
+  .seg { display: grid; grid-template-columns: 1fr 1fr; margin-top: 14px; border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+  .seg div { text-align: center; padding: 8px; font-weight: 700; font-size: 13px; }
+  .seg .on { background: var(--wine); color: #fff; }
+  .qty { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: 10px; align-items: center; }
+  .qty input { font-family: var(--mono); font-size: 16px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 4px; width: 100%; text-align: right; }
+  .qty span { font-size: 12px; color: var(--muted); }
+  .quick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
+  .quick .btn { font-size: 11px; padding: 6px 0; text-align: center; }
+  .total { display: flex; justify-content: space-between; font-size: 12px; margin-top: 10px; color: var(--muted); }
+  .total b { font-family: var(--mono); color: var(--ink); font-weight: 600; font-size: 14px; }
+  .result { margin-top: 10px; font-size: 12px; padding: 8px 10px; border-left: 3px solid var(--wine); background: var(--wine-soft); color: var(--wine); }
+  .result.ok { border-color: var(--teal); background: var(--teal-soft); color: #3b5a52; }
+  .result .g { display: block; color: var(--teal); margin-top: 2px; }
+
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 760px) { .two { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="q">
+    <h1>1. 진행 화면 (투자 중, 38세)</h1>
+    <p>오른쪽 열이 투자 중심으로 바뀐다. 포트폴리오는 매달 숫자가 바뀌고, 왼쪽 아래에 가계부가 생긴다. 알림성 이벤트는 토스트와 인생 기록 한 줄로 지나간다.</p>
+  </div>
+
+  <div class="topbar">
+    <div class="brand">투자자 <b>시뮬레이터</b></div>
+    <div class="age">38세 <small style="font-size:14px;font-weight:600">4개월</small></div>
+    <div class="crumb">2062년 · 느긋한 농부 · 1년 ≈ 12초<span class="bar"><i></i></span></div>
+    <div class="ctrls">
+      <button class="btn sans">❚❚ 멈춤</button>
+      <button class="btn on">1×</button><button class="btn">2×</button>
+      <button class="btn sans">다시 시작</button>
+    </div>
+  </div>
+  <div class="toast">자동차 수리 · <b class="down">−800,000원</b></div>
+
+  <div class="grid">
+    <!-- 왼쪽 -->
+    <div class="col">
+      <div class="card id">
+        <div class="head"><span>신원 기록 · KOR</span><span>2025</span></div>
+        <div class="body">
+          <div class="avatar">도트 얼굴</div>
+          <div>
+            <div class="name">돌부처 같은<br>겁 많은 사람</div>
+            <dl>
+              <dt>단계</dt><dd>투자 중</dd>
+              <dt>직업</dt><dd>사무직 · 15년차</dd>
+              <dt>월급</dt><dd class="mono">4,230,000원</dd>
+              <dt>유형</dt><dd><b>느긋한 농부</b> · 장기</dd>
+              <dt>관심</dt><dd>식품</dd>
+            </dl>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>능력치 <span>0–100</span></h2>
+        <div class="stat"><span>안목</span><div class="track"><i style="width:48%"></i></div><span class="n">48</span></div>
+        <div class="stat"><span>인내심</span><div class="track"><i style="width:84%;background:var(--wine)"></i></div><span class="n">84</span></div>
+        <div class="stat"><span>용기</span><div class="track"><i style="width:31%;background:var(--gold)"></i></div><span class="n">31</span></div>
+        <div class="stat"><span>줏대</span><div class="track"><i style="width:57%"></i></div><span class="n">57</span></div>
+        <div class="stat"><span>운</span><div class="track"><i style="width:40%"></i></div><span class="n">40</span></div>
+        <p class="weak">약점: 용기 — 사려다 겁나서 관망하기 쉽다</p>
+      </div>
+
+      <div class="card">
+        <h2>가계부 <span>2062년 4월</span></h2>
+        <table class="ledger">
+          <tr><td>월급</td><td class="up">+4,230,000</td></tr>
+          <tr><td>배우자 소득</td><td class="up">+2,370,000</td></tr>
+          <tr><td>생활비 <span class="sub">부부</span></td><td class="down">−2,900,000</td></tr>
+          <tr><td>자녀 <span class="sub">2명 · 9세, 5세</span></td><td class="down">−1,850,000</td></tr>
+          <tr><td>빚 이자 <span class="sub">월 1%</span></td><td class="down">−0</td></tr>
+          <tr class="sum"><td>이번 달 저축</td><td class="up">+1,850,000</td></tr>
+        </table>
+        <p class="fam">가족 · <b>배우자</b>, <b>자녀 2</b> (31세 결혼)</p>
+      </div>
+    </div>
+
+    <!-- 가운데 -->
+    <div class="col">
+      <div class="card scene">
+        <div class="px">64×20 도트 장면 (원룸 → 거실, 아이 둘) — 장면 그림은 이번 범위 밖</div>
+        <div class="cap">서울 · 거실 · 모니터에 주가 선 <span style="color:var(--faint)">▾</span></div>
+      </div>
+
+      <!-- 뉴스 결정 카드 (칸 안에 그린 예시. 실제로는 어두운 오버레이 위) -->
+      <div class="decision">
+        <div class="tag"><span style="color:var(--wine)">뉴스 · 식품 · 오리옹</span><span>38세 · 2062년</span></div>
+        <h3>오리옹, 베트남 공장 화재로 생산 중단</h3>
+        <p>주력 과자 라인이 멈췄다. 복구에 몇 달이 걸릴 거라는 보도와, 보험으로 다 보전된다는 보도가 엇갈린다.</p>
+        <div class="quote">
+          <svg viewBox="0 0 120 32"><polyline fill="none" stroke="#2e7465" stroke-width="2" points="0,20 11,18 22,22 33,15 44,16 55,10 66,12 77,8 88,11 99,6 110,9 120,7"/></svg>
+          <div><div class="p">118,500원</div><div class="d">1개월 <span class="up">▲ 3.1%</span> · 12개월 <span class="up">▲ 18.4%</span> · 보유 42주 (평단 96,200)</div></div>
+        </div>
+        <div class="note">힌트 · 불안한데…</div>
+        <div class="sway"><em>다른 뉴스</em>커뮤니티 '지금 팔아라' 글 폭주</div>
+        <div class="opts">
+          <div class="opt">매수<small>현금의 30% ≈ 31주</small></div>
+          <div class="opt">관망</div>
+          <div class="opt">매도<small>보유 42주 ≈ 4,977,000원</small></div>
+        </div>
+        <p class="foot">선택은 당신이 하지만, 실행은 당신의 성격이 합니다.</p>
+      </div>
+
+      <div class="card">
+        <h2>인생 기록 <span>최근 순</span></h2>
+        <ul class="log">
+          <li><span class="y">38세</span><span>자동차 수리 · <span class="mono down">−800,000원</span></span></li>
+          <li class="dec"><span class="y">38세</span><span>삼송전자 20주 매수 <span class="mono">(1,944,000원)</span></span></li>
+          <li class="dec hl"><span class="y">37세</span><span>크래프통 매수 → 못 샀다 <span style="color:var(--wine)">(용기 부족)</span></span></li>
+          <li><span class="y">37세</span><span class="g">그 경험으로 용기 30 → 31 ↑</span></li>
+          <li><span class="y">36세</span><span>둘째 아이가 태어났다. 출산 비용 <span class="mono">3,000,000원</span>.</span></li>
+          <li class="dec"><span class="y">35세</span><span>CJ제일제담, 신제품 품절 사태 · 매수</span></li>
+          <li><span class="y">35세</span><span>CJ제일제담 주가 ▲ 7.2% (식품 ▲ 2.1%) · 내 손익 <span class="mono up">+612,000원</span></span></li>
+          <li><span class="y">33세</span><span>첫째 아이가 태어났다.</span></li>
+          <li><span class="y">31세</span><span>결혼했다. 결혼 비용 <span class="mono">30,000,000원</span>.</span></li>
+          <li><span class="y">25세</span><span><span class="pill">제안</span>투자를 시작해 볼까? · 투자를 시작한다</span></li>
+          <li><span class="y">24세</span><span>사무직에 취직했다. 첫 월급 <span class="mono">2,800,000원</span>.</span></li>
+          <li><span class="y">21세</span><span>'느긋한 농부'형 투자자로 자랐다. 관심 분야는 식품.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 오른쪽 -->
+    <div class="col">
+      <div class="card">
+        <h2>포트폴리오 <span>2062년 4월 기준</span></h2>
+        <div class="kpi">
+          <div>총자산<b class="big">162,340,000</b></div>
+          <div>현금<b>41,120,000</b></div>
+          <div>투자<b>121,220,000</b></div>
+          <div>빚<b style="color:var(--faint)">0</b></div>
+        </div>
+        <div class="month">이번 달 <b class="up">+2,418,000원 (+1.5%)</b> <span style="color:var(--faint)">· 전월 말 대비</span></div>
+        <table class="hold">
+          <tr><th>종목</th><th>수량</th><th>평단</th><th>현재가</th><th>수익률</th><th>평가액</th></tr>
+          <tr><td>오리옹<small>식품</small></td><td>42</td><td>96,200</td><td>118,500</td><td class="up">+23.2%</td><td>4,977,000</td></tr>
+          <tr><td>CJ제일제담<small>식품</small></td><td>120</td><td>302,000</td><td>341,000</td><td class="up">+12.9%</td><td>40,920,000</td></tr>
+          <tr><td>삼송전자<small>반도체</small></td><td>640</td><td>88,400</td><td>97,200</td><td class="up">+10.0%</td><td>62,208,000</td></tr>
+          <tr><td>KB금용<small>금융</small></td><td>150</td><td>92,100</td><td>87,400</td><td class="down">−5.1%</td><td>13,110,000</td></tr>
+        </table>
+        <button class="primary">매매</button>
+      </div>
+
+      <div class="card">
+        <h2>인생 지도 <span>한 칸 = 1년</span></h2>
+        <div class="map">
+          <i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i>
+          <i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t2"></i><i class="t"></i><i class="t"></i><i class="t"></i>
+          <i class="t"></i><i class="t"></i><i class="t"></i><i class="t2"></i><i class="t"></i><i class="t"></i><i class="t"></i><i class="t2"></i><i class="t"></i><i class="t"></i><i class="c"></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+          <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>자산 곡선 <span>총자산, 만원</span></h2>
+        <svg viewBox="0 0 280 110" style="width:100%;height:auto;font-family:var(--mono);font-size:8px;fill:var(--faint)">
+          <line x1="36" y1="90" x2="272" y2="90" stroke="#d7dcd8"/><line x1="36" y1="10" x2="36" y2="90" stroke="#d7dcd8"/>
+          <text x="2" y="92">0</text><text x="2" y="14">16,234</text>
+          <text x="33" y="104">1</text><text x="118" y="104">24</text><text x="170" y="104">38</text><text x="262" y="104">65</text>
+          <path d="M36 88 L120 88 L135 86 L150 83 L160 84 L170 78 L180 72 L190 69 L200 60 L172 60" fill="none" stroke="#2e7465" stroke-width="2"/>
+          <circle cx="172" cy="60" r="3" fill="#8b2342"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 시장 패널 ================= -->
+  <div class="q">
+    <h1>2. 시장 패널 (매매 버튼 → 어두운 배경 위 큰 카드)</h1>
+    <p>열려 있는 동안 시계는 멈춘다. 왼쪽에서 섹터 탭과 종목을 고르고, 오른쪽에서 차트를 보고 수량을 정해 주문한다. 주문도 용기 판정을 거친다.</p>
+  </div>
+  <div class="modal-wrap">
+    <div class="market">
+      <div class="head">
+        <h3>시장 <span>2062년 4월 · 38세</span></h3>
+        <button class="btn sans">닫기 ✕</button>
+      </div>
+      <div class="body">
+        <div>
+          <div class="tabs">
+            <span class="tab">반도체</span><span class="tab">바이오</span><span class="tab">에너지</span><span class="tab">게임</span>
+            <span class="tab on">식품<span class="pill">관심</span></span><span class="tab">금융</span>
+          </div>
+          <table class="stocks">
+            <tr><th>종목</th><th>현재가</th><th>1개월</th><th>12개월</th><th>최근 12달</th></tr>
+            <tr><td><i></i>CJ제일제담</td><td>341,000</td><td class="up">+2.4%</td><td class="up">+11.0%</td><td><svg viewBox="0 0 90 26"><polyline fill="none" stroke="#2e7465" stroke-width="1.5" points="0,18 8,17 16,19 24,14 32,15 40,12 48,13 56,9 64,11 72,8 80,9 90,6"/></svg></td></tr>
+            <tr class="sel"><td><i></i>오리옹</td><td>118,500</td><td class="up">+3.1%</td><td class="up">+18.4%</td><td><svg viewBox="0 0 90 26"><polyline fill="none" stroke="#2e7465" stroke-width="1.5" points="0,20 8,18 16,22 24,15 32,16 40,10 48,12 56,8 64,11 72,6 80,9 90,7"/></svg></td></tr>
+            <tr><td>농씸</td><td>452,000</td><td class="down">−1.8%</td><td class="up">+4.2%</td><td><svg viewBox="0 0 90 26"><polyline fill="none" stroke="#2e7465" stroke-width="1.5" points="0,12 8,14 16,11 24,13 32,15 40,12 48,16 56,14 64,12 72,13 80,11 90,14"/></svg></td></tr>
+          </table>
+          <p style="font-size:11px;color:var(--faint);padding:10px 16px 14px;margin:0">● 보유 중 · 가격은 매달 1일에 바뀌고, 뉴스가 터지면 그 위에 충격이 더해진다.</p>
+        </div>
+        <div class="detail">
+          <h4>오리옹 <span>식품</span></h4>
+          <p class="price">118,500원 <small class="up">▲ 3.1%</small></p>
+          <svg class="chart" viewBox="0 0 300 130" style="font-family:var(--mono);font-size:8px;fill:var(--faint)">
+            <line x1="34" y1="110" x2="296" y2="110" stroke="#d7dcd8"/><line x1="34" y1="8" x2="34" y2="110" stroke="#d7dcd8"/>
+            <text x="2" y="112">60k</text><text x="2" y="14">130k</text>
+            <text x="32" y="124">1세</text><text x="150" y="124">24세</text><text x="262" y="124">38세</text>
+            <path d="M34 100 L50 98 L66 101 L82 95 L98 97 L114 90 L130 92 L146 86 L162 80 L178 83 L194 70 L210 74 L226 60 L242 52 L258 56 L274 40 L290 32" fill="none" stroke="#2e7465" stroke-width="2"/>
+            <circle cx="290" cy="32" r="3" fill="#8b2342"/>
+          </svg>
+          <div class="mine"><span>내 보유 42주 · 평단 96,200</span><b class="up">+23.2%</b></div>
+          <div class="seg"><div class="on">매수</div><div>매도</div></div>
+          <div class="qty"><input value="34"><span>주</span></div>
+          <div class="quick"><span class="btn">10%</span><span class="btn">25%</span><span class="btn">50%</span><span class="btn">100%</span></div>
+          <div class="total"><span>주문 금액 · 현금 41,120,000</span><b>4,029,000원</b></div>
+          <button class="primary">매수 주문</button>
+          <div class="result">용기 부족 — 주문 버튼을 누르려다 겁나서 그만뒀다.<span class="g">그 경험으로 용기 31 → 32 ↑</span></div>
+          <p class="foot">선택은 당신이 하지만, 실행은 당신의 성격이 합니다.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 성향 장면 ================= -->
+  <div class="q">
+    <h1>3. 성장기 상황극 장면 (12세)</h1>
+    <p>밸런스 게임 대신 상황을 그리고 3~4개의 행동을 고른다. 각 선택이 네 축(기간·위험·소신·관심)과 능력치를 조금씩 움직인다. 오른쪽은 고른 뒤 결과 카드.</p>
+  </div>
+  <div class="two">
+    <div class="decision">
+      <div class="tag"><span>일상</span><span>12세 · 2036년</span></div>
+      <h3>반 친구가 "엄마 몰래 코인 샀는데 3배 됐다"고 자랑한다</h3>
+      <p>점심시간 내내 그 얘기다. 너도 명절에 받은 용돈 15만 원이 서랍에 있다.</p>
+      <div class="opts one">
+        <div class="opt">나도 당장 따라 산다</div>
+        <div class="opt pick">어떤 코인인지 일주일 찾아보고 결정한다</div>
+        <div class="opt">그 돈으로 갖고 싶던 게임기를 산다</div>
+        <div class="opt">저금통에 넣고 못 들은 척한다</div>
+      </div>
+      <p class="foot">성장기의 선택은 성격에 뒤집히지 않습니다. 고른 대로 자랍니다.</p>
+    </div>
+    <div class="decision">
+      <div class="tag"><span>결과</span><span>12세</span></div>
+      <p style="font-size:15px;margin-top:10px">뛰어들기 전에 알아봐야 마음이 놓인다 — <b>소신이 있고, 길게 보는 쪽</b>으로 조금 기울었다.</p>
+      <p class="g" style="color:var(--teal);font-size:12px">↑ 그 선택으로 안목 44 → 45</p>
+      <button class="primary">계속</button>
+      <p class="foot" style="margin-top:14px">21세 마지막 장면 뒤에는: <b>"자라 온 날들을 돌아보니 당신은 '느긋한 농부'형 투자자다. 서두르지 않고, 남 말보다 제 눈을 믿는다. 관심이 가는 분야는 식품."</b></p>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
