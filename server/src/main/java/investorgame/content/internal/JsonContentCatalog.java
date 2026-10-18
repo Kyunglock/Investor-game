@@ -12,6 +12,8 @@ import investorgame.content.TraitDefinition;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +61,7 @@ class JsonContentCatalog implements ContentCatalog {
 
   JsonContentCatalog(JsonMapper json, ContentProperties properties) {
     this.properties = properties;
+    // read()가 properties.dirs()를 쓰므로 먼저 받아 둔다.
     this.meta = read(json, "meta.json", new TypeReference<>() {});
     this.jobs = read(json, "jobs.json", new TypeReference<>() {});
     this.traits =
@@ -376,11 +379,24 @@ class JsonContentCatalog implements ContentCatalog {
     return codes.stream().collect(Collectors.toUnmodifiableMap(NamedCode::code, NamedCode::name));
   }
 
-  private static <T> T read(JsonMapper json, String file, TypeReference<T> type) {
-    try (InputStream in = new ClassPathResource("content/" + file).getInputStream()) {
+  /** content.dirs 중 파일이 있는 첫 디렉터리를, 없으면 클래스 경로(빌드가 복사한 content/)를 읽는다. */
+  private <T> T read(JsonMapper json, String file, TypeReference<T> type) {
+    Path onDisk =
+        properties.dirs().stream()
+            .map(dir -> Path.of(dir, file))
+            .filter(Files::isRegularFile)
+            .findFirst()
+            .orElse(null);
+    try (InputStream in =
+        onDisk != null
+            ? Files.newInputStream(onDisk)
+            : new ClassPathResource("content/" + file).getInputStream()) {
       return json.readValue(in, type);
     } catch (IOException e) {
-      throw new UncheckedIOException("콘텐츠 파일을 읽을 수 없다: " + file, e);
+      throw new UncheckedIOException(
+          "콘텐츠 파일을 읽을 수 없다: %s (content.dirs=%s와 클래스 경로 content/ 모두 없음. IDE에서 실행했다면 content.dirs에 저장소의 content 폴더를 넣는다)"
+              .formatted(file, properties.dirs()),
+          e);
     }
   }
 
