@@ -1,0 +1,6 @@
+# 저장소와 작업 트리 모두 LF로 맞춘다. Windows의 core.autocrlf=true가 CRLF로 바꾸면 Biome 검사가 실패한다.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.woff binary
+*.woff2 binary
