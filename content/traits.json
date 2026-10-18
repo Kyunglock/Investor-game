@@ -1,157 +1,1417 @@
 [
-  { "code": "k6-marshmallow", "age": 6, "title": "마시멜로 지금 하나 vs 10분 참고 두 개",
-    "body": "유치원 간식 시간. 선생님이 시계를 가리키며 웃는다.",
+  {
+    "code": "k6-snack",
+    "age": 6,
+    "title": "간식 시간, 선생님이 마시멜로 하나를 내놓는다",
+    "body": "\"지금 먹어도 돼. 10분 참으면 두 개 줄게.\" 옆자리 친구는 이미 입에 넣었다.",
     "options": [
-      { "code": "now", "label": "지금 하나 먹는다", "traitDeltas": { "style.short": 2, "sector.food": 1 }, "note": "눈앞의 달콤함을 참지 못했다 — 짧게 보는 기질" },
-      { "code": "wait", "label": "10분 참고 두 개 먹는다", "traitDeltas": { "style.long": 2, "sector.food": 1 }, "note": "기다릴 줄 아는 아이였다 — 길게 보는 기질" } ] },
-  { "code": "k6-birthday-gift", "age": 6, "title": "생일 선물: 변신 로봇 vs 동물 도감",
-    "body": "둘 다 갖고 싶은데 하나만 고르래.",
+      {
+        "code": "now",
+        "label": "지금 먹는다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 1,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "patience": -1
+        },
+        "note": "눈앞의 달콤함을 참지 못했다"
+      },
+      {
+        "code": "wait",
+        "label": "10분 참고 두 개 받는다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "patience": 1
+        },
+        "note": "기다릴 줄 아는 아이였다"
+      },
+      {
+        "code": "share",
+        "label": "친구와 나눠서 셋이 먹기로 한다",
+        "traitDeltas": {
+          "style.long": 1,
+          "mind.crowd": 2,
+          "sector.food": 1
+        },
+        "note": "혼자 많이보다 같이 적게가 좋았다"
+      },
+      {
+        "code": "ask",
+        "label": "다른 간식은 없냐고 묻는다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.bold": 1,
+          "mind.own": 2,
+          "sector.bio": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "주어진 선택지 밖을 먼저 봤다"
+      }
+    ]
+  },
+  {
+    "code": "k6-slide",
+    "age": 6,
+    "title": "놀이터에 새로 생긴 높은 미끄럼틀",
+    "body": "아무도 안 타고 밑에서 올려다보기만 한다. 엄마는 \"위험해 보이는데\" 하신다.",
     "options": [
-      { "code": "robot", "label": "버튼 누르면 변신하는 로봇", "traitDeltas": { "style.short": 1, "sector.semiconductor": 2 }, "note": "움직이고 반짝이는 기계에 끌렸다 — 기술에 관심" },
-      { "code": "encyclopedia", "label": "두꺼운 동물 도감", "traitDeltas": { "style.long": 1, "sector.bio": 2 }, "note": "살아 있는 것들이 궁금했다 — 생명과 의약에 관심" } ] },
-  { "code": "k6-playhouse", "age": 6, "title": "소꿉놀이: 가게 주인 vs 요리사",
-    "body": "친구들이 역할을 나누고 있다. 남은 자리는 두 개.",
+      {
+        "code": "first",
+        "label": "내가 먼저 올라간다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.bold": 2,
+          "mind.own": 2,
+          "sector.energy": 1
+        },
+        "statDeltas": {
+          "courage": 1
+        },
+        "note": "남이 안 가는 길이 오히려 끌렸다"
+      },
+      {
+        "code": "watch",
+        "label": "누가 타는 걸 보고 따라 탄다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 1,
+          "mind.crowd": 2,
+          "sector.game": 1
+        },
+        "note": "먼저 간 사람을 보고 판단했다"
+      },
+      {
+        "code": "small",
+        "label": "옆의 낮은 미끄럼틀을 탄다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 2,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "courage": -1
+        },
+        "note": "확실히 재미있는 쪽을 골랐다"
+      },
+      {
+        "code": "look",
+        "label": "계단만 올라가 위에서 구경한다",
+        "traitDeltas": {
+          "style.long": 2,
+          "mind.own": 1,
+          "sector.semiconductor": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "타기 전에 위에서 전체를 봤다"
+      }
+    ]
+  },
+  {
+    "code": "k6-gacha",
+    "age": 6,
+    "title": "문방구 앞 뽑기 기계와 손에 쥔 500원",
+    "body": "친구가 방금 반짝이는 반지를 뽑았다. 기계 옆에는 300원짜리 젤리도 있다.",
     "options": [
-      { "code": "shopkeeper", "label": "가게 주인 (돈 받는 역할)", "traitDeltas": { "style.short": 1, "sector.finance": 2 }, "note": "돈이 오가는 자리가 좋았다 — 금융에 관심" },
-      { "code": "chef", "label": "요리사 (모래 밥 짓는 역할)", "traitDeltas": { "style.long": 1, "sector.food": 2 }, "note": "뭔가를 만들어 내는 게 즐거웠다 — 먹거리에 관심" } ] },
-  { "code": "k6-rainy-day", "age": 6, "title": "비 오는 날: 만화 영화 vs 블록 탑 쌓기",
-    "body": "밖에 못 나가는 날. 엄마가 하나만 하라고 한다.",
+      {
+        "code": "gacha",
+        "label": "뽑기를 돌린다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 2,
+          "mind.crowd": 1,
+          "sector.game": 1
+        },
+        "note": "한 번에 큰 걸 노렸다"
+      },
+      {
+        "code": "jelly",
+        "label": "젤리를 사고 200원은 남긴다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 2,
+          "sector.food": 1
+        },
+        "note": "작아도 확실한 것을 골랐다"
+      },
+      {
+        "code": "keep",
+        "label": "그냥 집에 가져간다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "patience": 1
+        },
+        "note": "쓰지 않는 것도 선택이었다"
+      },
+      {
+        "code": "peek",
+        "label": "기계 안에 뭐가 남았는지 본다",
+        "traitDeltas": {
+          "style.short": 1,
+          "mind.own": 2,
+          "sector.semiconductor": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "운에 맡기기 전에 확인했다"
+      }
+    ]
+  },
+  {
+    "code": "k6-envelope",
+    "age": 6,
+    "title": "할머니가 몰래 쥐여 준 만 원",
+    "body": "\"엄마한테는 말하지 마.\" 지폐가 빳빳하다. 뭘 할지 하루 종일 생각난다.",
     "options": [
-      { "code": "cartoon", "label": "만화 영화 연속 보기", "traitDeltas": { "style.short": 2, "sector.game": 1 }, "note": "재밌는 걸 바로 즐겼다 — 짧게 보는 기질" },
-      { "code": "blocks", "label": "하루 종일 블록 탑 쌓기", "traitDeltas": { "style.long": 2, "sector.semiconductor": 1 }, "note": "오래 걸려도 완성하는 게 좋았다 — 길게 보는 기질" } ] },
-  { "code": "k6-children-day", "age": 6, "title": "어린이날 용돈 5천 원: 뽑기 다섯 번 vs 저금통",
-    "body": "문방구 앞 뽑기 기계가 반짝인다.",
+      {
+        "code": "toy",
+        "label": "바로 장난감 가게로 간다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 1,
+          "sector.game": 1
+        },
+        "note": "돈은 쓰라고 있는 것이었다"
+      },
+      {
+        "code": "piggy",
+        "label": "저금통에 넣는다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 2,
+          "mind.own": 1,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "patience": 1
+        },
+        "note": "모으는 재미를 벌써 알았다"
+      },
+      {
+        "code": "mom",
+        "label": "엄마에게 보여 주고 의논한다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 1,
+          "mind.crowd": 2,
+          "sector.bio": 1
+        },
+        "note": "큰일은 어른과 의논하는 아이"
+      },
+      {
+        "code": "seed",
+        "label": "씨앗과 화분을 산다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.bold": 1,
+          "mind.own": 2,
+          "sector.energy": 1
+        },
+        "note": "자라는 것에 돈을 썼다"
+      }
+    ]
+  },
+  {
+    "code": "k9-cards",
+    "age": 9,
+    "title": "반 아이들이 전부 모으는 캐릭터 카드, 나만 없다",
+    "body": "한 팩 1,500원. 반짝이 카드가 나오면 영웅이 된다. 용돈은 한 달에 1만 원.",
     "options": [
-      { "code": "gacha", "label": "뽑기 다섯 번", "traitDeltas": { "style.short": 2, "sector.game": 2 }, "note": "운에 거는 짜릿함을 알았다 — 짧게 보는 기질" },
-      { "code": "piggy", "label": "돼지 저금통에 쏙", "traitDeltas": { "style.long": 2, "sector.finance": 1 }, "note": "쌓이는 재미를 알았다 — 길게 보는 기질" } ] },
-
-  { "code": "k9-new-year-money", "age": 9, "title": "세뱃돈 10만 원: 장난감 가게 직행 vs 엄마 통장",
-    "body": "지갑이 두둑하다. 엄마는 \"알아서 해\"라고 했다.",
+      {
+        "code": "packs",
+        "label": "용돈 다 털어 여섯 팩 산다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 2,
+          "mind.crowd": 2,
+          "sector.game": 1
+        },
+        "statDeltas": {
+          "patience": -1
+        },
+        "note": "남들이 다 하면 나도 해야 했다"
+      },
+      {
+        "code": "one",
+        "label": "한 팩만 사서 분위기만 맞춘다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.safe": 1,
+          "mind.crowd": 1,
+          "sector.game": 1
+        },
+        "note": "끼어들되 선을 그었다"
+      },
+      {
+        "code": "trade",
+        "label": "안 사고 친구들과 교환만 한다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 1,
+          "mind.own": 2,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "돈 안 쓰고 끼는 길을 찾았다"
+      },
+      {
+        "code": "pass",
+        "label": "관심 없다며 다른 놀이를 한다",
+        "traitDeltas": {
+          "style.long": 2,
+          "mind.own": 2,
+          "sector.bio": 1
+        },
+        "statDeltas": {
+          "conviction": 1
+        },
+        "note": "유행과 거리를 두는 아이"
+      }
+    ]
+  },
+  {
+    "code": "k9-console",
+    "age": 9,
+    "title": "학교 앞 전자 상가에 새 게임기가 나왔다",
+    "body": "출시 첫날 줄이 길다. 반년 뒤면 값이 떨어진다는 소문도 있다.",
     "options": [
-      { "code": "toy-store", "label": "장난감 가게로 달려간다", "traitDeltas": { "style.short": 2, "sector.game": 1 }, "note": "갖고 싶은 건 바로 손에 넣었다 — 짧게 보는 기질" },
-      { "code": "bank", "label": "엄마 통장에 맡긴다", "traitDeltas": { "style.long": 2, "sector.finance": 1 }, "note": "돈이 자라는 게 신기했다 — 길게 보는 기질" } ] },
-  { "code": "k9-science-day", "age": 9, "title": "과학의 날: 물로켓 vs 현미경",
-    "body": "둘 중 하나만 참가할 수 있다.",
+      {
+        "code": "day1",
+        "label": "첫날 줄 서서 산다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 1,
+          "mind.crowd": 1,
+          "sector.game": 2
+        },
+        "note": "새것을 가장 먼저 쥐는 기쁨"
+      },
+      {
+        "code": "wait",
+        "label": "반년 기다려 싸게 산다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 2,
+          "mind.own": 1,
+          "sector.semiconductor": 1
+        },
+        "statDeltas": {
+          "patience": 1
+        },
+        "note": "기다림의 값을 아는 아이"
+      },
+      {
+        "code": "borrow",
+        "label": "산 친구 집에 가서 같이 한다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.safe": 1,
+          "mind.crowd": 2,
+          "sector.game": 1
+        },
+        "note": "가지는 것보다 즐기는 것"
+      },
+      {
+        "code": "inside",
+        "label": "게임기보다 안에 든 칩이 궁금하다",
+        "traitDeltas": {
+          "style.long": 1,
+          "mind.own": 2,
+          "sector.semiconductor": 2
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "물건 뒤의 원리를 들여다봤다"
+      }
+    ]
+  },
+  {
+    "code": "k9-science",
+    "age": 9,
+    "title": "과학의 날, 발명품 주제를 정해야 한다",
+    "body": "선생님은 \"뭐든 좋다\"고 한다. 상을 받으면 전교생 앞에서 발표한다.",
     "options": [
-      { "code": "water-rocket", "label": "물로켓 높이 쏘기 대회", "traitDeltas": { "style.short": 1, "sector.energy": 2 }, "note": "추진력과 폭발력에 빠졌다 — 에너지에 관심" },
-      { "code": "microscope", "label": "현미경으로 양파 세포 관찰", "traitDeltas": { "style.long": 1, "sector.bio": 2 }, "note": "작은 세계를 오래 들여다봤다 — 생명과 의약에 관심" } ] },
-  { "code": "k9-card-swap", "age": 9, "title": "딱지 열 장 vs 내 반짝이 카드 한 장",
-    "body": "친구가 바꾸자고 한다. 지금 바로 대답해야 한다.",
+      {
+        "code": "robot",
+        "label": "스스로 움직이는 로봇",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.bold": 2,
+          "mind.own": 1,
+          "sector.semiconductor": 2
+        },
+        "statDeltas": {
+          "courage": 1
+        },
+        "note": "어려운 것을 겁내지 않았다"
+      },
+      {
+        "code": "plant",
+        "label": "식물이 빨리 자라는 비료",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.bio": 2
+        },
+        "statDeltas": {
+          "patience": 1
+        },
+        "note": "느리게 확인되는 일을 골랐다"
+      },
+      {
+        "code": "popular",
+        "label": "작년 수상작을 조금 바꿔 만든다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.safe": 2,
+          "mind.crowd": 2,
+          "sector.game": 1
+        },
+        "note": "검증된 길을 따라갔다"
+      },
+      {
+        "code": "solar",
+        "label": "태양광으로 돌아가는 선풍기",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.bold": 1,
+          "mind.own": 1,
+          "sector.energy": 2
+        },
+        "note": "에너지가 어디서 오는지 궁금했다"
+      }
+    ]
+  },
+  {
+    "code": "k9-rumor",
+    "age": 9,
+    "title": "친구가 \"비밀인데, 내일 쪽지시험 본대\"",
+    "body": "선생님은 아무 말 없었다. 친구는 작년에도 비슷한 말을 했다가 틀린 적이 있다.",
     "options": [
-      { "code": "swap", "label": "열 장이면 이득! 바로 바꾼다", "traitDeltas": { "style.short": 2, "sector.game": 1 }, "note": "숫자만 보고 바로 거래했다 — 짧게 보는 기질" },
-      { "code": "check-price", "label": "형한테 카드 값어치부터 물어본다", "traitDeltas": { "style.long": 2, "sector.finance": 1 }, "note": "값을 따져 보고 움직였다 — 길게 보는 기질" } ] },
-  { "code": "k9-vacation-homework", "age": 9, "title": "방학 숙제: 첫 주에 끝내기 vs 개학 전날 몰아치기",
-    "body": "올해 숙제는 식물 관찰 일기와 발명품 만들기 중 하나.",
+      {
+        "code": "study",
+        "label": "일단 밤에 공부해 둔다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 2,
+          "mind.crowd": 1,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "patience": 1
+        },
+        "note": "틀려도 손해 없는 쪽을 택했다"
+      },
+      {
+        "code": "verify",
+        "label": "다른 친구에게도 들었는지 확인한다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.safe": 1,
+          "mind.own": 2,
+          "sector.bio": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "소문은 한 번 더 확인하는 아이"
+      },
+      {
+        "code": "ignore",
+        "label": "선생님 말 없었으니 무시한다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.bold": 2,
+          "mind.own": 2,
+          "sector.game": 1
+        },
+        "statDeltas": {
+          "conviction": 1
+        },
+        "note": "들려오는 말에 흔들리지 않았다"
+      },
+      {
+        "code": "spread",
+        "label": "반 단톡에 올려 다 같이 준비한다",
+        "traitDeltas": {
+          "style.short": 2,
+          "mind.crowd": 2,
+          "sector.semiconductor": 1
+        },
+        "note": "정보는 나눌수록 좋다고 믿었다"
+      }
+    ]
+  },
+  {
+    "code": "k12-friend-coin",
+    "age": 12,
+    "title": "반 친구가 \"엄마 몰래 코인 샀는데 3배 됐다\"고 자랑한다",
+    "body": "점심시간 내내 그 얘기다. 너도 명절에 받은 용돈 15만 원이 서랍에 있다.",
     "options": [
-      { "code": "early-plant", "label": "첫 주부터 매일 식물 관찰 일기", "traitDeltas": { "style.long": 2, "sector.bio": 1 }, "note": "꾸준히 쌓았다 — 길게 보는 기질" },
-      { "code": "last-day-invention", "label": "개학 전날 밤 발명품 뚝딱", "traitDeltas": { "style.short": 2, "sector.semiconductor": 1 }, "note": "마감 직전에 몰아쳤다 — 짧게 보는 기질" } ] },
-  { "code": "k9-stationery", "age": 9, "title": "오늘 나온 신상 카드 vs 다음 주 반값 할인",
-    "body": "문방구 아저씨가 다음 주엔 할인한다고 귀띔했다.",
+      {
+        "code": "follow",
+        "label": "나도 당장 따라 산다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 2,
+          "mind.crowd": 2,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "courage": 1,
+          "patience": -1
+        },
+        "note": "남이 벌었다는 말에 심장이 먼저 뛰었다"
+      },
+      {
+        "code": "research",
+        "label": "일주일 찾아보고 결정한다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.bold": 1,
+          "mind.own": 2,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "뛰어들기 전에 알아봐야 마음이 놓인다"
+      },
+      {
+        "code": "console",
+        "label": "갖고 싶던 게임기를 산다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.game": 2
+        },
+        "note": "확실한 즐거움이 불확실한 돈보다 좋았다"
+      },
+      {
+        "code": "ignore",
+        "label": "저금통에 넣고 못 들은 척한다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 2,
+          "mind.own": 1,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "patience": 1
+        },
+        "note": "흔들리지 않았다. 재미도 없었다"
+      }
+    ]
+  },
+  {
+    "code": "k12-birthday",
+    "age": 12,
+    "title": "생일 선물로 받은 10만 원, 쓸 곳이 너무 많다",
+    "body": "친구들은 다 신발을 샀다. 엄마는 \"통장에 넣어 줄까\" 하신다.",
     "options": [
-      { "code": "buy-now", "label": "오늘 산다. 다음 주면 다 팔린다", "traitDeltas": { "style.short": 2, "sector.game": 1 }, "note": "놓칠까 봐 먼저 샀다 — 짧게 보는 기질" },
-      { "code": "wait-sale", "label": "다음 주 반값을 기다린다", "traitDeltas": { "style.long": 2, "sector.finance": 1 }, "note": "싸게 살 때를 기다렸다 — 길게 보는 기질" } ] },
-
-  { "code": "k12-trading-cards", "age": 12, "title": "반 전체가 모으는 카드: 나도 산다 vs 유행 끝나길 기다린다",
-    "body": "쉬는 시간마다 카드 이야기뿐이다.",
+      {
+        "code": "shoes",
+        "label": "친구들과 같은 신발을 산다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.safe": 1,
+          "mind.crowd": 2,
+          "sector.food": 1
+        },
+        "note": "같은 것을 가져야 안심이 됐다"
+      },
+      {
+        "code": "account",
+        "label": "통장에 넣고 이자를 받는다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 2,
+          "mind.own": 1,
+          "sector.finance": 2
+        },
+        "statDeltas": {
+          "patience": 1
+        },
+        "note": "숫자가 불어나는 걸 지켜보는 재미"
+      },
+      {
+        "code": "gear",
+        "label": "유튜브 촬영용 장비를 산다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.bold": 2,
+          "mind.own": 2,
+          "sector.semiconductor": 1
+        },
+        "statDeltas": {
+          "courage": 1
+        },
+        "note": "쓰는 돈이 아니라 버는 도구를 샀다"
+      },
+      {
+        "code": "snack",
+        "label": "반 친구들 전부 떡볶이를 산다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 1,
+          "mind.crowd": 1,
+          "sector.food": 2
+        },
+        "note": "한 번에 크게 쓰는 호쾌함"
+      }
+    ]
+  },
+  {
+    "code": "k12-bazaar",
+    "age": 12,
+    "title": "학급 바자회, 우리 조 가게 메뉴를 정한다",
+    "body": "작년 1등은 솜사탕이었다. 재료비는 조원들이 나눠 낸다.",
     "options": [
-      { "code": "follow", "label": "다들 사니까 나도 산다", "traitDeltas": { "style.short": 2, "sector.game": 2 }, "note": "유행을 놓치기 싫었다 — 분위기에 빠르게 올라탄다" },
-      { "code": "wait-crash", "label": "유행 끝나면 헐값이니 기다린다", "traitDeltas": { "style.long": 2, "sector.finance": 1 }, "note": "남들이 몰릴 때 한발 물러섰다 — 길게 보는 기질" } ] },
-  { "code": "k12-field-trip-money", "age": 12, "title": "수학여행 용돈 3만 원: 첫날 휴게소에서 다 쓴다 vs 마지막 날 쓴다",
-    "body": "휴게소 호두과자 냄새가 버스 안까지 들어온다.",
+      {
+        "code": "cotton",
+        "label": "작년처럼 솜사탕",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.safe": 2,
+          "mind.crowd": 2,
+          "sector.food": 2
+        },
+        "note": "된 것을 다시 하는 편이 안전했다"
+      },
+      {
+        "code": "game",
+        "label": "직접 만든 보드게임 체험",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.bold": 2,
+          "mind.own": 2,
+          "sector.game": 2
+        },
+        "statDeltas": {
+          "courage": 1
+        },
+        "note": "남이 안 하는 걸 하고 싶었다"
+      },
+      {
+        "code": "survey",
+        "label": "하루 전 설문을 돌리고 정한다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.bio": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "감이 아니라 조사로 정했다"
+      },
+      {
+        "code": "cheap",
+        "label": "재료비 가장 적은 종이접기",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.energy": 1
+        },
+        "note": "잃을 게 적은 쪽을 골랐다"
+      }
+    ]
+  },
+  {
+    "code": "k12-video",
+    "age": 12,
+    "title": "\"이것만 사면 부자\"라는 영상이 알고리즘에 떴다",
+    "body": "조회수 300만. 댓글은 반반이다. 영상 끝에 링크가 있다.",
     "options": [
-      { "code": "first-day", "label": "첫날 휴게소 간식에 올인", "traitDeltas": { "style.short": 2, "sector.food": 2 }, "note": "지금 이 순간을 즐겼다 — 짧게 보는 기질" },
-      { "code": "last-day", "label": "마지막 날 남은 걸 보고 쓴다", "traitDeltas": { "style.long": 2, "sector.finance": 1 }, "note": "끝까지 계산했다 — 길게 보는 기질" } ] },
-  { "code": "k12-phone-or-bike", "age": 12, "title": "부모님이 하나만 사 준다: 스마트폰 vs 자전거",
-    "body": "반 친구 절반은 벌써 스마트폰이 있다.",
+      {
+        "code": "click",
+        "label": "링크를 눌러 본다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 1,
+          "mind.crowd": 2,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "conviction": -1
+        },
+        "note": "조회수가 믿음을 만들었다"
+      },
+      {
+        "code": "comments",
+        "label": "댓글의 반대 의견부터 읽는다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 1,
+          "mind.own": 2,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "좋은 말보다 싫은 말을 먼저 들었다"
+      },
+      {
+        "code": "report",
+        "label": "광고 같아 신고하고 넘긴다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 2,
+          "mind.own": 1,
+          "sector.semiconductor": 1
+        },
+        "statDeltas": {
+          "conviction": 1
+        },
+        "note": "너무 좋은 말은 믿지 않았다"
+      },
+      {
+        "code": "mimic",
+        "label": "나도 저런 영상을 만들어 본다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.bold": 2,
+          "mind.own": 1,
+          "sector.game": 1
+        },
+        "note": "구경하는 쪽보다 만드는 쪽"
+      }
+    ]
+  },
+  {
+    "code": "k15-dad-stock",
+    "age": 15,
+    "title": "아빠가 \"주식 하나 골라 봐\" 하며 5만 원을 건넨다",
+    "body": "\"네 이름으로 사 줄게. 뭘 고르든 1년은 안 판다.\" 뉴스에선 반도체가 뜨겁다.",
     "options": [
-      { "code": "phone", "label": "스마트폰", "traitDeltas": { "style.short": 1, "sector.semiconductor": 2 }, "note": "작은 화면 속 세상에 빠졌다 — 반도체에 관심" },
-      { "code": "bike", "label": "자전거", "traitDeltas": { "style.long": 1, "sector.energy": 2 }, "note": "직접 굴러가는 힘이 좋았다 — 에너지에 관심" } ] },
-  { "code": "k12-club", "age": 12, "title": "동아리: 게임 코딩반 vs 텃밭 가꾸기반",
-    "body": "두 동아리 모두 신청자가 딱 한 자리씩 남았다.",
+      {
+        "code": "hot",
+        "label": "요즘 뉴스에 나오는 반도체",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.bold": 1,
+          "mind.crowd": 2,
+          "sector.semiconductor": 2
+        },
+        "note": "뜨거운 곳에 돈을 두고 싶었다"
+      },
+      {
+        "code": "snack",
+        "label": "매일 사 먹는 과자 회사",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 2,
+          "mind.own": 1,
+          "sector.food": 2
+        },
+        "note": "아는 것을 샀다"
+      },
+      {
+        "code": "bio",
+        "label": "신약 만든다는 작은 회사",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.bold": 2,
+          "mind.own": 2,
+          "sector.bio": 2
+        },
+        "statDeltas": {
+          "courage": 1
+        },
+        "note": "커질 수 있는 작은 것에 걸었다"
+      },
+      {
+        "code": "bank",
+        "label": "은행 주식, 배당 준다는 걸로",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.finance": 2
+        },
+        "statDeltas": {
+          "patience": 1
+        },
+        "note": "꼬박꼬박 들어오는 것이 좋았다"
+      }
+    ]
+  },
+  {
+    "code": "k15-padding",
+    "age": 15,
+    "title": "친구들이 다 입는 패딩, 내 용돈 석 달치다",
+    "body": "안 입으면 티가 난다. 비슷한 디자인의 절반 값 제품도 있다.",
     "options": [
-      { "code": "coding", "label": "게임 코딩반", "traitDeltas": { "style.short": 1, "sector.game": 2 }, "note": "만든 게임이 바로 움직이는 게 짜릿했다 — 게임에 관심" },
-      { "code": "garden", "label": "텃밭 가꾸기반", "traitDeltas": { "style.long": 2, "sector.food": 2 }, "note": "석 달 뒤 수확을 기다렸다 — 길게 보는 기질" } ] },
-  { "code": "k12-class-pledge", "age": 12, "title": "반장 공약: 매주 급식 디저트 vs 학급 저금통으로 연말 파티",
-    "body": "둘 중 하나로 표를 얻어야 한다.",
+      {
+        "code": "buy",
+        "label": "석 달 모아서 그걸 산다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 1,
+          "mind.crowd": 2,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "patience": 1
+        },
+        "note": "참아서라도 어울리고 싶었다"
+      },
+      {
+        "code": "alt",
+        "label": "절반 값 제품을 산다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.safe": 2,
+          "mind.own": 1,
+          "sector.finance": 1
+        },
+        "note": "이름값에 돈을 내지 않았다"
+      },
+      {
+        "code": "none",
+        "label": "내 옷 입는다, 상관없다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.bold": 1,
+          "mind.own": 2,
+          "sector.energy": 1
+        },
+        "statDeltas": {
+          "conviction": 1
+        },
+        "note": "남 시선에 돈을 쓰지 않았다"
+      },
+      {
+        "code": "resell",
+        "label": "중고로 사서 나중에 되판다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 1,
+          "mind.own": 1,
+          "sector.game": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "쓰면서도 되팔 값을 계산했다"
+      }
+    ]
+  },
+  {
+    "code": "k15-club",
+    "age": 15,
+    "title": "동아리 선택 주간, 네 곳이 눈에 들어온다",
+    "body": "과학 탐구, 경제 토론, 게임 제작, 요리. 한 곳만 들어갈 수 있다.",
     "options": [
-      { "code": "dessert", "label": "매주 급식 디저트", "traitDeltas": { "style.short": 2, "sector.food": 1 }, "note": "당장 기쁜 걸 약속했다 — 짧게 보는 기질" },
-      { "code": "class-bank", "label": "학급 저금통으로 연말 파티", "traitDeltas": { "style.long": 2, "sector.finance": 2 }, "note": "모아서 크게 쓰는 걸 택했다 — 길게 보는 기질" } ] },
-
-  { "code": "k15-exam", "age": 15, "title": "시험 공부: 전날 밤샘 vs 매일 30분",
-    "body": "중간고사가 2주 남았다. 친구들은 PC방에 간다.",
+      {
+        "code": "science",
+        "label": "과학 탐구부",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.bio": 2
+        },
+        "note": "느리게 쌓이는 지식을 골랐다"
+      },
+      {
+        "code": "econ",
+        "label": "경제 토론부",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.bold": 1,
+          "mind.own": 2,
+          "sector.finance": 2
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "돈 이야기에 끌렸다"
+      },
+      {
+        "code": "gamedev",
+        "label": "게임 제작부",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.bold": 2,
+          "mind.own": 1,
+          "sector.game": 2
+        },
+        "note": "만들어서 보여 주는 쪽"
+      },
+      {
+        "code": "cook",
+        "label": "친구들이 많이 가는 요리부",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.safe": 1,
+          "mind.crowd": 2,
+          "sector.food": 2
+        },
+        "note": "사람 많은 곳이 편했다"
+      }
+    ]
+  },
+  {
+    "code": "k15-sale",
+    "age": 15,
+    "title": "온라인 할인이 10분 뒤 끝난다, 장바구니에 7만 원",
+    "body": "다 필요한 건 아니다. \"품절 임박\"이 깜빡인다.",
     "options": [
-      { "code": "cram", "label": "놀다가 전날 밤샘", "traitDeltas": { "style.short": 2, "sector.game": 1 }, "note": "막판 집중력에 걸었다 — 짧게 보는 기질" },
-      { "code": "steady", "label": "매일 30분씩 꾸준히", "traitDeltas": { "style.long": 2, "sector.bio": 1 }, "note": "조금씩 쌓는 힘을 믿었다 — 길게 보는 기질" } ] },
-  { "code": "k15-allowance-deal", "age": 15, "title": "용돈 협상: 주급 매주 받기 vs 연봉처럼 1년치 한 번에",
-    "body": "아빠가 두 가지 중에 고르라고 했다. 1년치는 10% 더 준단다.",
+      {
+        "code": "all",
+        "label": "전부 결제한다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 1,
+          "mind.crowd": 1,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "patience": -1
+        },
+        "note": "놓칠까 봐 손이 먼저 나갔다"
+      },
+      {
+        "code": "pick",
+        "label": "정말 필요한 두 개만 산다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 2,
+          "mind.own": 2,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "급해도 고를 건 골랐다"
+      },
+      {
+        "code": "close",
+        "label": "창을 닫는다. 또 할인한다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.energy": 1
+        },
+        "statDeltas": {
+          "conviction": 1
+        },
+        "note": "\"지금 아니면\"에 속지 않았다"
+      },
+      {
+        "code": "ask",
+        "label": "단톡방에 살지 말지 묻는다",
+        "traitDeltas": {
+          "style.short": 1,
+          "mind.crowd": 2,
+          "sector.game": 1
+        },
+        "note": "결정을 남과 나눴다"
+      }
+    ]
+  },
+  {
+    "code": "k18-first-pay",
+    "age": 18,
+    "title": "첫 알바 월급 60만 원이 들어왔다",
+    "body": "세 달 편의점 야간. 통장 잔고가 처음으로 여섯 자리다.",
     "options": [
-      { "code": "weekly", "label": "매주 받는다", "traitDeltas": { "style.short": 2, "sector.finance": 1 }, "note": "손에 쥐는 돈이 중요했다 — 짧게 보는 기질" },
-      { "code": "yearly", "label": "1년치 한 번에, 10% 더", "traitDeltas": { "style.long": 2, "sector.finance": 2 }, "note": "기다린 만큼 붙는 이자를 알았다 — 금융에 관심" } ] },
-  { "code": "k15-vacation", "age": 15, "title": "방학: 편의점 알바 vs 프로그래밍 독학",
-    "body": "돈을 벌지, 실력을 쌓을지.",
+      {
+        "code": "spend",
+        "label": "그동안 참은 것 다 산다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 1,
+          "sector.food": 1
+        },
+        "note": "번 돈은 쓰는 맛이 있었다"
+      },
+      {
+        "code": "save",
+        "label": "절반은 적금에 넣는다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 2,
+          "mind.own": 1,
+          "sector.finance": 2
+        },
+        "statDeltas": {
+          "patience": 1
+        },
+        "note": "번 돈을 반은 미래에 보냈다"
+      },
+      {
+        "code": "etf",
+        "label": "지수 추종 상품을 조금 산다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 1,
+          "mind.crowd": 1,
+          "sector.finance": 1
+        },
+        "note": "시장 전체에 올라타 봤다"
+      },
+      {
+        "code": "stock",
+        "label": "눈여겨본 종목 한 곳에 넣는다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.bold": 2,
+          "mind.own": 2,
+          "sector.semiconductor": 1
+        },
+        "statDeltas": {
+          "courage": 1
+        },
+        "note": "한 곳에 집중하는 쪽"
+      }
+    ]
+  },
+  {
+    "code": "k18-trip",
+    "age": 18,
+    "title": "수능 끝, 친구들이 다 같이 여행을 떠난단다",
+    "body": "단체 패키지 45만 원. 혼자 짜면 30만 원이지만 품이 든다.",
     "options": [
-      { "code": "convenience-store", "label": "편의점 알바로 돈 벌기", "traitDeltas": { "style.short": 2, "sector.food": 1 }, "note": "바로 들어오는 돈을 택했다 — 짧게 보는 기질" },
-      { "code": "self-study", "label": "프로그래밍 독학", "traitDeltas": { "style.long": 2, "sector.semiconductor": 2 }, "note": "나중을 위한 실력에 투자했다 — 기술에 관심" } ] },
-  { "code": "k15-used-console", "age": 15, "title": "친구가 게임기를 반값에 판다: 바로 산다 vs 시세부터 검색",
-    "body": "\"지금 안 사면 다른 애한테 판다?\"",
+      {
+        "code": "package",
+        "label": "같이 패키지로 간다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.safe": 1,
+          "mind.crowd": 2,
+          "sector.food": 1
+        },
+        "note": "편하고 같이 가는 게 좋았다"
+      },
+      {
+        "code": "plan",
+        "label": "혼자 계획해 따로 합류한다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.bold": 1,
+          "mind.own": 2,
+          "sector.energy": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "15만 원을 품으로 아꼈다"
+      },
+      {
+        "code": "stay",
+        "label": "안 가고 그 돈을 모은다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 2,
+          "mind.own": 1,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "patience": 1
+        },
+        "note": "추억보다 잔고를 택했다"
+      },
+      {
+        "code": "lead",
+        "label": "내가 전체 계획을 짜 준다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.bold": 2,
+          "mind.own": 1,
+          "sector.game": 1
+        },
+        "statDeltas": {
+          "courage": 1
+        },
+        "note": "앞에 서는 걸 겁내지 않았다"
+      }
+    ]
+  },
+  {
+    "code": "k18-uncle",
+    "age": 18,
+    "title": "친척이 \"내 회사 비상장 주식 좀 사 둘래?\" 한다",
+    "body": "상장하면 열 배라고 한다. 알바로 모은 200만 원이 있다. 부모님은 말리신다.",
     "options": [
-      { "code": "buy", "label": "반값이면 무조건. 바로 산다", "traitDeltas": { "style.short": 2, "sector.game": 2 }, "note": "기회라고 느끼면 먼저 움직였다 — 짧게 보는 기질" },
-      { "code": "search", "label": "정품인지, 시세가 얼마인지 검색부터", "traitDeltas": { "style.long": 2, "sector.semiconductor": 1 }, "note": "급할수록 확인했다 — 길게 보는 기질" } ] },
-  { "code": "k15-class-tshirt", "age": 15, "title": "체육대회 반티: 튀는 새 디자인 vs 작년 반티 재활용",
-    "body": "새로 맞추면 한 사람당 2만 원.",
+      {
+        "code": "allin",
+        "label": "200만 원 다 넣는다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.bold": 2,
+          "mind.crowd": 1,
+          "sector.bio": 1
+        },
+        "statDeltas": {
+          "courage": 1,
+          "conviction": -1
+        },
+        "note": "가까운 사람 말에 크게 걸었다"
+      },
+      {
+        "code": "some",
+        "label": "50만 원만 넣는다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.bold": 1,
+          "mind.own": 1,
+          "sector.finance": 1
+        },
+        "note": "잃어도 되는 만큼만 걸었다"
+      },
+      {
+        "code": "docs",
+        "label": "사업 계획서를 보여 달라고 한다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 2,
+          "sector.semiconductor": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "관계와 투자를 분리했다"
+      },
+      {
+        "code": "no",
+        "label": "정중히 거절한다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.safe": 2,
+          "mind.own": 1,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "conviction": 1
+        },
+        "note": "거절도 투자 판단이었다"
+      }
+    ]
+  },
+  {
+    "code": "k18-major",
+    "age": 18,
+    "title": "전공을 정해야 한다, 점수는 어디든 간다",
+    "body": "부모님은 안정적인 곳을, 친구들은 요즘 뜨는 곳을 말한다.",
     "options": [
-      { "code": "new-design", "label": "올해 유행하는 새 디자인", "traitDeltas": { "style.short": 2, "sector.game": 1 }, "note": "지금 가장 눈에 띄는 걸 골랐다 — 짧게 보는 기질" },
-      { "code": "recycle", "label": "작년 반티 재활용, 남는 돈은 회식", "traitDeltas": { "style.long": 2, "sector.energy": 1 }, "note": "아끼고 다시 쓰는 게 좋았다 — 길게 보는 기질" } ] },
-
-  { "code": "k18-dream-job", "age": 18, "title": "진로 상담: 제약 연구원 vs 게임 회사",
-    "body": "담임 선생님이 둘 중 하나로 원서 방향을 정하라고 했다.",
+      {
+        "code": "cs",
+        "label": "요즘 뜨는 컴퓨터공학",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.bold": 1,
+          "mind.crowd": 2,
+          "sector.semiconductor": 2
+        },
+        "note": "흐름이 있는 곳으로 갔다"
+      },
+      {
+        "code": "pharm",
+        "label": "오래 걸리지만 탄탄한 약학",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 2,
+          "mind.own": 1,
+          "sector.bio": 2
+        },
+        "statDeltas": {
+          "patience": 1
+        },
+        "note": "길고 확실한 길을 골랐다"
+      },
+      {
+        "code": "econ",
+        "label": "경영·금융",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.bold": 1,
+          "mind.own": 1,
+          "sector.finance": 2
+        },
+        "note": "돈의 흐름을 배우고 싶었다"
+      },
+      {
+        "code": "energy",
+        "label": "남들이 안 가는 신재생에너지",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.bold": 2,
+          "mind.own": 2,
+          "sector.energy": 2
+        },
+        "statDeltas": {
+          "courage": 1
+        },
+        "note": "비어 있는 자리를 택했다"
+      }
+    ]
+  },
+  {
+    "code": "k21-savings",
+    "age": 21,
+    "title": "휴학하며 모은 300만 원, 복학까지 반년",
+    "body": "친구는 코인, 선배는 적금, 유튜브는 미국 주식을 말한다.",
     "options": [
-      { "code": "pharma", "label": "제약 연구원", "traitDeltas": { "style.long": 2, "sector.bio": 2 }, "note": "오래 걸려도 의미 있는 일을 원했다 — 의약에 관심" },
-      { "code": "game-company", "label": "게임 회사", "traitDeltas": { "style.short": 1, "sector.game": 2 }, "note": "재미가 곧 일이길 바랐다 — 게임에 관심" } ] },
-  { "code": "k18-after-exam", "age": 18, "title": "수능 끝난 날: 모은 용돈으로 최신 노트북 vs 등록금에 보태기",
-    "body": "3년 동안 모은 용돈 150만 원이 있다.",
+      {
+        "code": "coin",
+        "label": "친구 따라 코인",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 2,
+          "mind.crowd": 2,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "courage": 1
+        },
+        "note": "큰 변동에 몸을 던졌다"
+      },
+      {
+        "code": "deposit",
+        "label": "반년 예금, 복학 때 쓴다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.safe": 2,
+          "mind.own": 1,
+          "sector.finance": 1
+        },
+        "note": "쓸 돈은 굴리지 않았다"
+      },
+      {
+        "code": "split",
+        "label": "셋으로 나눠 조금씩",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "한 바구니에 담지 않았다"
+      },
+      {
+        "code": "study",
+        "label": "공부에 쓰고 남은 건 묻어 둔다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.bold": 1,
+          "mind.own": 2,
+          "sector.bio": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "돈보다 안목에 먼저 투자했다"
+      }
+    ]
+  },
+  {
+    "code": "k21-roommate",
+    "age": 21,
+    "title": "룸메이트가 \"코인 지금이 바닥이래\" 한다",
+    "body": "석 달 전에도 같은 말을 했다. 그때 들어갔으면 30% 잃었다.",
     "options": [
-      { "code": "laptop", "label": "최신 노트북을 지른다", "traitDeltas": { "style.short": 2, "sector.semiconductor": 2 }, "note": "고생한 나에게 바로 보상했다 — 짧게 보는 기질" },
-      { "code": "tuition", "label": "등록금에 보탠다", "traitDeltas": { "style.long": 2, "sector.finance": 1 }, "note": "다음 단계를 먼저 챙겼다 — 길게 보는 기질" } ] },
-  { "code": "k18-coin-friend", "age": 18, "title": "친구가 코인으로 용돈 세 배를 벌었다며 같이 하잔다",
-    "body": "\"이번 거는 진짜야. 지금 아니면 늦어.\"",
+      {
+        "code": "in",
+        "label": "이번엔 진짜일 것 같아 들어간다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 2,
+          "mind.crowd": 2,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "conviction": -1
+        },
+        "note": "같은 말에 두 번 움직였다"
+      },
+      {
+        "code": "chart",
+        "label": "차트를 열어 직접 본다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.bold": 1,
+          "mind.own": 2,
+          "sector.semiconductor": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "말보다 숫자를 봤다"
+      },
+      {
+        "code": "nope",
+        "label": "석 달 전 일을 상기시킨다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 1,
+          "mind.own": 2,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "conviction": 1
+        },
+        "note": "기억이 귀를 지켰다"
+      },
+      {
+        "code": "tiny",
+        "label": "커피 한 잔 값만 넣어 본다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 2,
+          "mind.crowd": 1,
+          "sector.game": 1
+        },
+        "note": "호기심에는 작은 값만 냈다"
+      }
+    ]
+  },
+  {
+    "code": "k21-intern",
+    "age": 21,
+    "title": "인턴 두 곳에 붙었다",
+    "body": "직원 열 명의 스타트업과 모두가 아는 대기업. 급여는 대기업이 두 배.",
     "options": [
-      { "code": "join", "label": "나도 한다", "traitDeltas": { "style.short": 2, "sector.finance": 2 }, "note": "남이 번 소리에 마음이 급해졌다 — 짧게 보는 기질" },
-      { "code": "study", "label": "무슨 원리인지 공부부터 한다", "traitDeltas": { "style.long": 2, "sector.semiconductor": 1 }, "note": "모르는 데 돈을 넣지 않았다 — 길게 보는 기질" } ] },
-  { "code": "k18-trip-vote", "age": 18, "title": "졸업 여행 투표: 놀이공원 vs 바닷가 풍력발전소 견학",
-    "body": "반 전체가 한 표 차이로 갈리고 있다. 내 표가 결정한다.",
+      {
+        "code": "startup",
+        "label": "스타트업, 지분을 준단다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.bold": 2,
+          "mind.own": 2,
+          "sector.game": 1
+        },
+        "statDeltas": {
+          "courage": 1
+        },
+        "note": "월급 대신 가능성을 받았다"
+      },
+      {
+        "code": "big",
+        "label": "대기업, 이름과 급여",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.safe": 2,
+          "mind.crowd": 1,
+          "sector.semiconductor": 1
+        },
+        "note": "확실한 것을 골랐다"
+      },
+      {
+        "code": "ask",
+        "label": "두 곳 선배들에게 물어보고 정한다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 1,
+          "mind.crowd": 2,
+          "sector.bio": 1
+        },
+        "statDeltas": {
+          "insight": 1
+        },
+        "note": "먼저 간 사람의 말을 들었다"
+      },
+      {
+        "code": "both",
+        "label": "대기업 가고 스타트업엔 투자한다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.bold": 1,
+          "mind.own": 1,
+          "sector.finance": 1
+        },
+        "note": "둘 다 가지는 길을 찾았다"
+      }
+    ]
+  },
+  {
+    "code": "k21-club",
+    "age": 21,
+    "title": "교수님이 투자 동아리 창립 멤버를 뽑는다",
+    "body": "실제 돈 100만 원을 운용한다. 손실은 각자 부담. 열 명 중 셋만 뽑는다.",
     "options": [
-      { "code": "theme-park", "label": "놀이공원", "traitDeltas": { "style.short": 2, "sector.game": 1 }, "note": "확실한 재미를 골랐다 — 짧게 보는 기질" },
-      { "code": "wind-farm", "label": "바닷가 풍력발전소", "traitDeltas": { "style.long": 1, "sector.energy": 2 }, "note": "거대한 바람개비에 마음이 갔다 — 에너지에 관심" } ] },
-  { "code": "k18-lunch-vote", "age": 18, "title": "급식 투표: 매일 치킨 vs 매일 다른 건강식",
-    "body": "1년 동안 바꿀 수 없다.",
-    "options": [
-      { "code": "chicken", "label": "매일 치킨", "traitDeltas": { "style.short": 2, "sector.food": 2 }, "note": "확실한 행복을 반복했다 — 짧게 보는 기질" },
-      { "code": "healthy", "label": "매일 다른 건강식", "traitDeltas": { "style.long": 2, "sector.bio": 1 }, "note": "몸에 좋은 걸 길게 봤다 — 길게 보는 기질" } ] },
-
-  { "code": "k21-first-paycheck", "age": 21, "title": "첫 알바 월급: 고생했으니 다 쓴다 vs 반은 적금",
-    "body": "한 달 동안 카페에서 일해서 받은 첫 월급.",
-    "options": [
-      { "code": "spend", "label": "고생했으니 맛있는 거 다 쓴다", "traitDeltas": { "style.short": 2, "sector.food": 1 }, "note": "번 만큼 즐겼다 — 짧게 보는 기질" },
-      { "code": "save-half", "label": "반은 적금에 넣는다", "traitDeltas": { "style.long": 2, "sector.finance": 2 }, "note": "미래의 나를 위해 남겨 두었다 — 금융에 관심" } ] },
-  { "code": "k21-club", "age": 21, "title": "동아리: 주식 투자 동아리 vs 등산 동아리",
-    "body": "선배들이 양쪽에서 밥을 사 주겠다고 한다.",
-    "options": [
-      { "code": "stock-club", "label": "주식 투자 동아리", "traitDeltas": { "style.short": 2, "sector.finance": 2 }, "note": "시장의 움직임이 궁금했다 — 금융에 관심" },
-      { "code": "hiking", "label": "등산 동아리", "traitDeltas": { "style.long": 2, "sector.energy": 1 }, "note": "천천히 정상까지 오르는 게 좋았다 — 길게 보는 기질" } ] },
-  { "code": "k21-broken-laptop", "age": 21, "title": "노트북이 고장 났다: 수리해서 3년 더 vs 신형 24개월 할부",
-    "body": "수리비 15만 원, 신형은 월 8만 원.",
-    "options": [
-      { "code": "repair", "label": "고쳐서 3년 더 쓴다", "traitDeltas": { "style.long": 2, "sector.semiconductor": 1 }, "note": "쓸 수 있을 때까지 썼다 — 길게 보는 기질" },
-      { "code": "new-installment", "label": "신형으로 할부 구매", "traitDeltas": { "style.short": 2, "sector.semiconductor": 2 }, "note": "최신이 주는 설렘을 못 참았다 — 반도체에 관심" } ] },
-  { "code": "k21-friend-cafe", "age": 21, "title": "친구 카페 창업: 100만 원 보탠다 vs 정중히 거절",
-    "body": "\"대박 나면 지분 10% 줄게.\"",
-    "options": [
-      { "code": "invest", "label": "친구를 믿고 100만 원", "traitDeltas": { "style.short": 1, "sector.food": 2 }, "note": "사람과 가게를 믿었다 — 먹거리에 관심" },
-      { "code": "decline", "label": "사업 계획서부터 보자고 한다", "traitDeltas": { "style.long": 2, "sector.finance": 1 }, "note": "정에 끌려도 숫자를 봤다 — 길게 보는 기질" } ] },
-  { "code": "k21-summer", "age": 21, "title": "여름 방학: 제약회사 인턴 vs e스포츠 대회 출전",
-    "body": "같은 기간이라 둘 중 하나만 할 수 있다.",
-    "options": [
-      { "code": "pharma-intern", "label": "제약회사 인턴", "traitDeltas": { "style.long": 2, "sector.bio": 2 }, "note": "경력을 차곡차곡 쌓았다 — 의약에 관심" },
-      { "code": "esports", "label": "e스포츠 대회 출전", "traitDeltas": { "style.short": 2, "sector.game": 2 }, "note": "한 방에 이름을 알리고 싶었다 — 게임에 관심" } ] }
+      {
+        "code": "apply",
+        "label": "바로 지원한다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.bold": 2,
+          "mind.own": 1,
+          "sector.finance": 2
+        },
+        "statDeltas": {
+          "courage": 1
+        },
+        "note": "진짜 돈으로 배우고 싶었다"
+      },
+      {
+        "code": "watch",
+        "label": "1기는 지켜보고 2기에 간다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "patience": 1
+        },
+        "note": "남의 첫 판을 공부로 삼았다"
+      },
+      {
+        "code": "friends",
+        "label": "친구들이 지원하면 같이 한다",
+        "traitDeltas": {
+          "style.short": 1,
+          "risk.safe": 1,
+          "mind.crowd": 2,
+          "sector.game": 1
+        },
+        "note": "혼자 가는 길은 아니었다"
+      },
+      {
+        "code": "own",
+        "label": "지원 대신 혼자 소액으로 시작한다",
+        "traitDeltas": {
+          "style.long": 1,
+          "risk.safe": 2,
+          "mind.own": 2,
+          "sector.energy": 1
+        },
+        "statDeltas": {
+          "conviction": 1
+        },
+        "note": "내 돈 내 판단으로 가고 싶었다"
+      }
+    ]
+  }
 ]

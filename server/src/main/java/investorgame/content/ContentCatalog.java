@@ -12,6 +12,24 @@ public interface ContentCatalog {
 
   List<NamedCode> sectors();
 
+  /** 투자 스타일(기간) 코드 목록. */
+  List<NamedCode> styles();
+
+  /** 위험 축(공격/안정) 코드 목록. */
+  List<NamedCode> risks();
+
+  /** 소신 축(소신/추종) 코드 목록. */
+  List<NamedCode> minds();
+
+  String riskName(String code);
+
+  String mindName(String code);
+
+  /** 유형 코드 "{기간}-{위험}-{소신}". 없으면 IllegalArgumentException. */
+  InvestorType investorType(String code);
+
+  List<InvestorType> investorTypes();
+
   /** 알 수 없는 코드이면 코드를 그대로 돌려준다. */
   String sectorName(String code);
 

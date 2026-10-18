@@ -25,6 +25,13 @@ progress:
   end-age: 65
   max-skip-days: 360
 
+content:
+  # 성향 선택지가 능력치를 움직이는 최대 폭과 선택지 개수 (경제 개편 설계 4.4절)
+  trait-stat-max-delta: 3
+  trait-options:
+    min: 3
+    max: 4
+
 character:
   initial-stat:
     min: 15
