@@ -53,6 +53,8 @@ async function step(page: Page): Promise<string> {
     if (kind === 'NEWS') {
       // 뉴스의 매수·매도는 수량을 묻고 확정해야 보내진다.
       await page.getByTestId('news-trade-submit').click()
+    }
+    if (kind === 'NEWS' || kind === 'SHAKE') {
       // 결과는 성격이 손을 움직이는 동안 잠깐 감춰져 있다.
       await expect(page.getByTestId('outcome-thinking')).toBeVisible()
       await page.clock.runFor(2_500)
@@ -200,6 +202,12 @@ test('투자를 시작하면 시장 패널에서 종목을 사고 포트폴리�
   await expect(page.getByTestId('market-panel')).toBeHidden()
   if (!text.includes('부족')) {
     await expect(page.getByTestId('holding-row')).toHaveCount(1)
+    // 든 종목이 생기면 시장 패널은 보유 탭으로 열리고, 거기서 바로 팔 수 있다 (decisions.md 34번).
+    await page.getByTestId('open-market').click()
+    await expect(page.getByTestId('held-tab')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.getByTestId('stock-row')).toHaveCount(1)
+    await expect(page.getByTestId('trade-submit')).toBeVisible()
+    await page.getByRole('button', { name: '닫기' }).click()
   }
   await expect(page.locator('[data-testid="life-log-line"][data-kind="TRADE"]')).toHaveCount(1)
 })

@@ -1,6 +1,7 @@
 package investorgame.event;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 import investorgame.TestcontainersConfiguration;
 import investorgame.common.Hint;
@@ -52,7 +53,8 @@ class DefaultEventServiceTest {
             false,
             false,
             null,
-            0);
+            0,
+            List.of());
     EventView a = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
     EventView b = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
 
@@ -194,7 +196,8 @@ class DefaultEventServiceTest {
         false,
         married,
         marriedDay,
-        children);
+        children,
+        List.of());
   }
 
   /** 직장 체계 (decisions.md 26번): 직업이 있으면 직장 장면이, 실직 중이면 재취업 선택이 온다. */
@@ -224,7 +227,8 @@ class DefaultEventServiceTest {
             false,
             false,
             null,
-            0);
+            0,
+            List.of());
     EventView rehire = firstOf(jobless, unemployed, JOB_DAY + 30, EventKind.JOB, 7L);
     assertThat(rehire.title()).isEqualTo(content.jobRehireText().title());
     assertThat(rehire.options()).extracting(EventView.Option::code).contains("WAIT");
@@ -249,7 +253,8 @@ class DefaultEventServiceTest {
             true,
             true,
             JOB_DAY + YEAR,
-            0);
+            0,
+            List.of());
     int from = (60 - START_AGE) * YEAR;
     assertThat(nextOf(gameId, retired, from, EventKind.JOB, 3L)).isEmpty();
     assertThat(nextOf(UUID.randomUUID(), retired, from, EventKind.CAREER, 3L)).isEmpty();
@@ -269,6 +274,42 @@ class DefaultEventServiceTest {
           "번아웃", "burnout");
 
   /** fromDay부터 알림을 건너뛰며 kind의 선택형 이벤트가 PENDING으로 나올 때까지 진행한다. */
+  /** 보유가 있으면 투자기에 흔들림이 오고, 흔들리는 종목은 보유 중 하나이며 선택지는 버틴다·판다다 (decisions.md 33번). */
+  @Test
+  void 보유_종목이_있으면_흔들림이_오고_선택지는_버틴다_판다다() {
+    String held = content.stocks().get(0).code();
+    SchedulingContext holding =
+        new SchedulingContext(
+            Phase.INVESTING,
+            START_AGE,
+            "long",
+            "food",
+            JOB_DAY + 30,
+            true,
+            JOB_DAY + 30,
+            END_DAY,
+            JOB_DAY,
+            "office",
+            JOB_DAY,
+            false,
+            false,
+            null,
+            0,
+            List.of(held));
+    EventView shake = firstOf(UUID.randomUUID(), holding, JOB_DAY + 30, EventKind.SHAKE, 7L);
+
+    assertThat(shake.stockCode()).isEqualTo(held);
+    assertThat(shake.sectorCode()).isEqualTo(content.stock(held).sector());
+    assertThat(shake.title() + shake.body())
+        .doesNotContain("{stock}")
+        .contains(content.stock(held).name());
+    assertThat(shake.hintText()).isNull();
+    assertThat(shake.options())
+        .extracting(EventView.Option::code, EventView.Option::label)
+        .containsExactly(tuple("HOLD", "버틴다"), tuple("SELL", "판다"));
+    assertThat(shake.occursDay()).isBetween(JOB_DAY + 30 + 300, JOB_DAY + 30 + 600);
+  }
+
   private Optional<EventView> nextOf(
       UUID gameId, SchedulingContext context, int fromDay, EventKind kind, long seed) {
     HashSeededRandom random = new HashSeededRandom(seed);

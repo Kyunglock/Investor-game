@@ -12,6 +12,7 @@ import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.JobDefinition;
 import investorgame.content.NewsDefinition;
+import investorgame.content.ShakeDefinition;
 import investorgame.content.NoticeDefinition;
 import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
@@ -59,6 +60,8 @@ class DefaultEventService implements EventService {
   static final String MOVE_PREFIX = "move:";
 
   private static final List<String> NEWS_OPTIONS = List.of("BUY", "SELL", "HOLD");
+  /** 흔들림: 버틴다(HOLD)·판다(SELL). 문구는 렌더러가 붙인다 (decisions.md 33번). */
+  private static final List<String> SHAKE_OPTIONS = List.of("HOLD", "SELL");
   private static final int BP = 10_000;
   private static final int PERCENT = 100;
 
@@ -166,6 +169,7 @@ class DefaultEventService implements EventService {
                       : ChoiceTicket.LifeKind.CHILD,
                   ACCEPT.equals(optionCode));
           case NEWS -> new ChoiceTicket.News();
+          case SHAKE -> new ChoiceTicket.Shake();
           case NOTICE -> throw new InvalidRequestException("알림은 선택할 수 없다");
         };
     return new ChoiceTicket(
@@ -228,6 +232,7 @@ class DefaultEventService implements EventService {
       int base = news.isEmpty() ? context.investingStartDay() : last(news).occursDay();
       EventProperties.Range gap = properties.style(context.investmentStyle()).newsGapDays();
       candidates.add(new Candidate(EventKind.NEWS, base + roll(random, gap, "NEWS", news.size())));
+      shakeCandidate(rows, context, random, candidates);
     }
     if (context.phase() != Phase.CHILDHOOD && context.careerStartDay() != null) {
       adultTraitCandidate(rows, context, random, candidates);
@@ -378,6 +383,23 @@ class DefaultEventService implements EventService {
     }
   }
 
+  /** 보유 종목이 있을 때만: 마지막 흔들림(없으면 투자 시작일) + 간격. 어떤 종목이 흔들리는지는 만들 때 뽑는다 (decisions.md 33번). */
+  private void shakeCandidate(
+      List<EventRow> rows,
+      SchedulingContext context,
+      SeededRandom random,
+      List<Candidate> candidates) {
+    if (context.heldStockCodes().isEmpty()) {
+      return;
+    }
+    List<EventRow> shakes = ofKind(rows, EventKind.SHAKE);
+    int base = shakes.isEmpty() ? context.investingStartDay() : last(shakes).occursDay();
+    candidates.add(
+        new Candidate(
+            EventKind.SHAKE,
+            base + roll(random, properties.shake().gapDays(), "SHAKE", shakes.size())));
+  }
+
   private void noticeCandidate(
       List<EventRow> rows,
       SchedulingContext context,
@@ -450,7 +472,38 @@ class DefaultEventService implements EventService {
               List.of(ACCEPT, DECLINE));
       case NOTICE -> notice(id, seq, candidate.day(), context, random);
       case NEWS -> news(id, seq, rows, candidate.day(), context, random, hints);
+      case SHAKE -> shake(id, seq, candidate.day(), context, random);
     };
+  }
+
+  /**
+   * 보유 종목 흔들림. 보유 중 한 종목과 장면을 뽑고, 선택 뒤 그 종목이 움직일 숨은 방향·폭을 정한다. 힌트·다른 뉴스는 없다 (decisions.md
+   * 33번).
+   */
+  private EventRow shake(UUID id, int seq, int day, SchedulingContext context, SeededRandom random) {
+    RandomGenerator rng = random.forKey("event", "shake", seq);
+    List<String> held = context.heldStockCodes();
+    String stockCode = held.get(rng.nextInt(held.size()));
+    ShakeDefinition definition = weighted(content.shakes(), ShakeDefinition::weight, rng);
+    EventProperties.ShakeSettings settings = properties.shake();
+    Direction truth = rng.nextInt(BP) < settings.upBp() ? Direction.UP : Direction.DOWN;
+    int magnitude = rng.nextInt(settings.magnitudeBp().min(), settings.magnitudeBp().max() + 1);
+    return new EventRow(
+        id,
+        seq,
+        EventKind.SHAKE,
+        definition.code(),
+        content.stock(stockCode).sector(),
+        stockCode,
+        false,
+        day,
+        EventRow.PENDING,
+        truth.name(),
+        magnitude,
+        null,
+        null,
+        null,
+        SHAKE_OPTIONS);
   }
 
   /** 알림 정의를 가중치로 뽑는다. 결혼 뒤에만 나오는 정의는 미혼이면 후보에서 뺀다. 만들어지는 순간 RESOLVED다. */

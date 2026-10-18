@@ -13,7 +13,10 @@ import { PriceChart } from './PriceChart'
 import { Sparkline } from './Sparkline'
 import { useGameStore } from './store'
 
-/** 시장 패널: 섹터 탭 → 종목 → 차트와 주문 (경제 개편 설계 11.2절). 열려 있는 동안 시계는 멈춰 있다. */
+/** 섹터 탭 앞에 붙는 "보유" 탭의 코드. 내가 든 종목만 모아 보고 바로 사고판다 (decisions.md 34번). */
+const HELD_TAB = 'held'
+
+/** 시장 패널: 보유·섹터 탭 → 종목 → 차트와 주문 (경제 개편 설계 11.2절). 열려 있는 동안 시계는 멈춰 있다. */
 export function MarketPanel({ game }: { game: Game }) {
   const selected = useGameStore((s) => s.selectedStock)
   const histories = useGameStore((s) => s.histories)
@@ -29,9 +32,17 @@ export function MarketPanel({ game }: { game: Game }) {
     return [...seen.entries()].map(([code, name]) => ({ code, name }))
   }, [game.market.stocks])
   const selectedQuote = game.market.stocks.find((s) => s.code === selected)
+  const heldCodes = new Set(game.holdings.map((h) => h.stockCode))
+  // 든 종목이 있으면 보유 탭에서 시작한다. 팔러 들어오는 경우가 많기 때문이다.
   const [sector, setSector] = useState(
-    selectedQuote?.sectorCode ?? game.interestSector?.code ?? sectors[0]?.code ?? '',
+    game.holdings.length > 0
+      ? HELD_TAB
+      : (selectedQuote?.sectorCode ?? game.interestSector?.code ?? sectors[0]?.code ?? ''),
   )
+  const heldTab = sector === HELD_TAB
+  const listed = heldTab
+    ? game.market.stocks.filter((s) => heldCodes.has(s.code))
+    : game.market.stocks.filter((s) => s.sectorCode === sector)
   const [side, setSide] = useState<TradeSide>('BUY')
   const [quantity, setQuantity] = useState('')
 
@@ -85,6 +96,19 @@ export function MarketPanel({ game }: { game: Game }) {
           {/* 종목 목록 */}
           <div>
             <div className="flex flex-wrap gap-1 px-4 pt-3">
+              <button
+                type="button"
+                aria-pressed={heldTab}
+                className={`min-h-9 rounded border px-2.5 text-xs font-bold ${
+                  heldTab
+                    ? 'border-wine bg-wine text-white'
+                    : 'border-wine bg-card text-wine hover:bg-wine-soft'
+                }`}
+                onClick={() => setSector(HELD_TAB)}
+                data-testid="held-tab"
+              >
+                보유 {game.holdings.length}
+              </button>
               {sectors.map((s) => (
                 <button
                   key={s.code}
@@ -116,51 +140,65 @@ export function MarketPanel({ game }: { game: Game }) {
                   <th className="border-b border-line px-4 pb-1.5 text-left font-normal">종목</th>
                   <th className="border-b border-line pb-1.5 text-right font-normal">현재가</th>
                   <th className="border-b border-line pb-1.5 text-right font-normal">1개월</th>
-                  <th className="border-b border-line pb-1.5 text-right font-normal">12개월</th>
+                  <th className="border-b border-line pb-1.5 text-right font-normal">
+                    {heldTab ? '내 수익률' : '12개월'}
+                  </th>
                   <th className="border-b border-line pr-4 pb-1.5 text-right font-normal">
                     최근 12달
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {game.market.stocks
-                  .filter((s) => s.sectorCode === sector)
-                  .map((s) => {
-                    const owned = game.holdings.some((h) => h.stockCode === s.code)
-                    const active = s.code === selected
-                    return (
-                      <tr
-                        key={s.code}
-                        className={`cursor-pointer ${active ? 'bg-teal-soft' : 'hover:bg-bg'}`}
-                        data-testid="stock-row"
-                        data-stock={s.code}
-                        onClick={() => void selectStock(s.code)}
+                {heldTab && listed.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-6 text-center text-xs text-faint">
+                      아직 보유 종목이 없다. 섹터 탭에서 골라 사 보자.
+                    </td>
+                  </tr>
+                )}
+                {listed.map((s) => {
+                  const owned = heldCodes.has(s.code)
+                  const mine = game.holdings.find((h) => h.stockCode === s.code)
+                  const active = s.code === selected
+                  return (
+                    <tr
+                      key={s.code}
+                      className={`cursor-pointer ${active ? 'bg-teal-soft' : 'hover:bg-bg'}`}
+                      data-testid="stock-row"
+                      data-stock={s.code}
+                      onClick={() => void selectStock(s.code)}
+                    >
+                      <td className="border-b border-line-soft px-4 py-2.5 font-bold">
+                        {owned && (
+                          <i className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-wine align-middle" />
+                        )}
+                        {s.name}
+                        {heldTab && mine && (
+                          <span className="ml-1.5 font-mono-num text-[10px] font-normal text-faint">
+                            {mine.quantity.toLocaleString('ko-KR')}주 · 평단{' '}
+                            {mine.avgCost.toLocaleString('ko-KR')}
+                          </span>
+                        )}
+                      </td>
+                      <td className="border-b border-line-soft py-2.5 text-right font-mono-num">
+                        {s.price.toLocaleString('ko-KR')}
+                      </td>
+                      <td
+                        className={`border-b border-line-soft py-2.5 text-right font-mono-num ${tone(s.change1mBp)}`}
                       >
-                        <td className="border-b border-line-soft px-4 py-2.5 font-bold">
-                          {owned && (
-                            <i className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-wine align-middle" />
-                          )}
-                          {s.name}
-                        </td>
-                        <td className="border-b border-line-soft py-2.5 text-right font-mono-num">
-                          {s.price.toLocaleString('ko-KR')}
-                        </td>
-                        <td
-                          className={`border-b border-line-soft py-2.5 text-right font-mono-num ${tone(s.change1mBp)}`}
-                        >
-                          {signedPercent(s.change1mBp)}
-                        </td>
-                        <td
-                          className={`border-b border-line-soft py-2.5 text-right font-mono-num ${tone(s.change12mBp)}`}
-                        >
-                          {signedPercent(s.change12mBp)}
-                        </td>
-                        <td className="border-b border-line-soft py-2.5 pr-4 text-right">
-                          <Sparkline values={s.spark} />
-                        </td>
-                      </tr>
-                    )
-                  })}
+                        {signedPercent(s.change1mBp)}
+                      </td>
+                      <td
+                        className={`border-b border-line-soft py-2.5 text-right font-mono-num ${tone(heldTab && mine ? mine.pnlBp : s.change12mBp)}`}
+                      >
+                        {signedPercent(heldTab && mine ? mine.pnlBp : s.change12mBp)}
+                      </td>
+                      <td className="border-b border-line-soft py-2.5 pr-4 text-right">
+                        <Sparkline values={s.spark} />
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
             <p className="px-4 py-3 text-[11px] text-faint">

@@ -56,10 +56,18 @@ class GameFlowTest {
         String kind = (String) pending.get("kind");
         seenKinds.merge(kind, 1, Integer::sum);
         kindOrder.add(kind);
+        // 자동 플레이어는 70세까지 살아남아야 전체 흐름을 검사할 수 있다. 저소득 직업에 자녀 셋이면 생활비가 월급을 넘어
+        // 빚이 불어나 40대에 파산(decisions.md 27번)할 수 있으므로 월급이 가장 높은 직업을 고르고 자녀는 하나까지만 둔다.
         String option =
             switch (kind) {
               case "OFFER" -> "accept";
               case "NEWS" -> NEWS_CHOICES.get(newsCount++ % NEWS_CHOICES.size());
+              case "JOB" -> richestJob(game);
+              case "LIFE" ->
+                  game.read("$.household.children.length()", Integer.class) >= 1
+                          && game.read("$.household.married", Boolean.class)
+                      ? "decline"
+                      : "accept";
               default -> game.read("$.pendingEvent.options[0].code");
             };
         DocumentContext result = client.choose(gameId, (String) pending.get("eventId"), option);
@@ -86,7 +94,15 @@ class GameFlowTest {
 
     assertThat(game.read("$.status", String.class)).isEqualTo("ENDED");
     assertThat(game.read("$.phase", String.class)).isEqualTo("ENDED");
-    assertThat(game.read("$.result.finalAge", Integer.class)).isEqualTo(70);
+    // 파산으로 끝났다면 왜 그랬는지 보이게 한다(직업·직장 기록, 연간 자산, 빚).
+    assertThat(game.read("$.result.finalAge", Integer.class))
+        .as(
+            "ending=%s debt=%s jobs=%s yearly=%s",
+            game.read("$.result.ending"),
+            game.read("$.debt"),
+            game.read("$.log[?(@.kind in ['JOB','JOB_WAIT','CAREER','RETIRE'])].payload"),
+            game.read("$.yearly"))
+        .isEqualTo(70);
     assertThat(game.read("$.result.ending", String.class)).isEqualTo("NORMAL");
     assertThat(game.read("$.result.finalAsset", Long.class))
         .as("35년 동안 월급을 받았으므로 자산이 늘었다")
@@ -144,7 +160,7 @@ class GameFlowTest {
     }
     assertThat(game.read("$.household.married", Boolean.class)).isTrue();
     assertThat(game.read("$.household.retired", Boolean.class)).isTrue();
-    assertThat(game.read("$.household.children.length()", Integer.class)).isBetween(1, 3);
+    assertThat(game.read("$.household.children.length()", Integer.class)).isEqualTo(1);
     assertThat(game.read("$.debt", Long.class)).isGreaterThanOrEqualTo(0);
     assertThat(afterJob).isNotNull();
     assertThat(afterJob.read("$.household.monthlyExpense", Long.class)).isPositive();
@@ -189,8 +205,12 @@ class GameFlowTest {
     assertThat(kinds.stream().filter("TRAIT"::equals).count()).isEqualTo(18);
     assertThat(kinds.stream().filter("NEWS"::equals).count())
         .isEqualTo((long) seenKinds.get("NEWS"));
+    // 흔들림(SHAKE)도 선택 뒤 주가가 움직여 PRICE를 남긴다 (decisions.md 33번).
     assertThat(kinds.stream().filter("PRICE"::equals).count())
-        .isEqualTo((long) seenKinds.get("NEWS"));
+        .isEqualTo((long) seenKinds.get("NEWS") + seenKinds.getOrDefault("SHAKE", 0));
+    assertThat(seenKinds.getOrDefault("SHAKE", 0)).as("종목을 들고 있으면 흔들림이 온다").isPositive();
+    assertThat(kinds.stream().filter("SHAKE"::equals).count())
+        .isEqualTo((long) seenKinds.get("SHAKE"));
     assertThat(game.read("$.log[0].payload.initialAsset", Long.class))
         .isEqualTo(game.read("$.initialAsset", Long.class));
     for (String response : responses) {
@@ -212,6 +232,27 @@ class GameFlowTest {
     List<Map<String, Object>> yearly = game.read("$.yearly");
     assertThat(((Number) yearly.get(yearly.size() - 1).get("totalAsset")).longValue())
         .isEqualTo(game.read("$.result.finalAsset", Long.class));
+  }
+
+  /** 직업 선택지 문구 "직업 · 월 N만 원"에서 월급이 가장 높은 것. "기다린다"(WAIT)는 뺀다. */
+  private static String richestJob(DocumentContext game) {
+    List<Map<String, Object>> options = game.read("$.pendingEvent.options");
+    String best = null;
+    long bestSalary = -1;
+    for (Map<String, Object> option : options) {
+      String code = (String) option.get("code");
+      java.util.regex.Matcher m =
+          java.util.regex.Pattern.compile("월 ([\\d,]+)만 원").matcher((String) option.get("label"));
+      if (!m.find()) {
+        continue;
+      }
+      long salary = Long.parseLong(m.group(1).replace(",", ""));
+      if (salary > bestSalary) {
+        bestSalary = salary;
+        best = code;
+      }
+    }
+    return best != null ? best : (String) options.get(0).get("code");
   }
 
   @Test

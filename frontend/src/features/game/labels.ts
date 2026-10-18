@@ -25,6 +25,13 @@ export function actionLabel(code: string): string {
   return ACTION_LABELS[code] ?? code
 }
 
+/** 흔들림(SHAKE)의 관망·매도는 "버틴다·판다"로 읽힌다. 그 밖의 종류는 매수·매도·관망 (decisions.md 33번). */
+const SHAKE_ACTION_LABELS: Record<string, string> = { HOLD: '버틴다', SELL: '판다' }
+
+export function actionLabelFor(kind: string, code: string): string {
+  return kind === 'SHAKE' ? (SHAKE_ACTION_LABELS[code] ?? actionLabel(code)) : actionLabel(code)
+}
+
 export function sideLabel(side: string): string {
   return side === 'SELL' ? '매도' : '매수'
 }

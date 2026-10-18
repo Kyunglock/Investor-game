@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import type { Outcome, PendingEvent, Stats } from '../../api/client'
+import type { Outcome, Stats } from '../../api/client'
 import { ageAt } from './clock'
-import { takesOver } from './DecisionCard'
 import {
   actionLabel,
+  actionLabelFor,
   deviationMessage,
   growthText,
   percent,
@@ -19,17 +19,20 @@ import { useGameStore } from './store'
 /** 뉴스 선택 뒤 결과를 감추고 성격이 손을 움직이는 동안 기다리는 시간. 바로 나오면 억울할 틈이 없다. */
 const REVEAL_MS = 1_800
 
-/** 선택 → 실제 행동과 그 원인을 보여 준다. 원인이 보여야 억울함이 동기가 된다 (prd.md F6). 뉴스·일상의 결과는 선택처럼 화면을 덮는다. */
+/** 선택 → 실제 행동과 그 원인을 보여 준다. 원인이 보여야 억울함이 동기가 된다 (prd.md F6). 결과도 선택처럼 화면을 덮는다 (decisions.md 31번). */
 export function OutcomeCard(props: { outcome: Outcome; onContinue: () => void }) {
-  const card = <Body {...props} />
-  return takesOver(props.outcome.kind as PendingEvent['kind']) ? <Overlay>{card}</Overlay> : card
+  return (
+    <Overlay>
+      <Body {...props} />
+    </Overlay>
+  )
 }
 
 function Body({ outcome, onContinue }: { outcome: Outcome; onContinue: () => void }) {
   const deviated = outcome.chosen !== outcome.actual
   const price = outcome.price
-  const isNews = outcome.kind === 'NEWS'
-  // 뉴스만 잠깐 뜸을 들인다. 성장기·직업·제안은 뒤집히지 않으니 바로 보여 준다.
+  // 뉴스와 흔들림은 판정이 손을 움직이므로 잠깐 뜸을 들인다. 성장기·직업·제안은 뒤집히지 않으니 바로 보여 준다.
+  const isNews = outcome.kind === 'NEWS' || outcome.kind === 'SHAKE'
   const [revealed, setRevealed] = useState(!isNews)
   useEffect(() => {
     if (revealed) {
@@ -54,9 +57,10 @@ function Body({ outcome, onContinue }: { outcome: Outcome; onContinue: () => voi
                 <Face deviation={deviated ? outcome.deviations[0]?.statCode : null} />
                 <div className="min-w-0">
                   <p className="font-serif-kr text-xl font-black" data-testid="outcome-actions">
-                    선택 {actionLabel(outcome.chosen)} <span className="text-faint">→</span> 실제{' '}
+                    선택 {actionLabelFor(outcome.kind, outcome.chosen)}{' '}
+                    <span className="text-faint">→</span> 실제{' '}
                     <span className={deviated ? 'text-wine' : ''}>
-                      {actionLabel(outcome.actual)}
+                      {actionLabelFor(outcome.kind, outcome.actual)}
                     </span>
                   </p>
                   <p
@@ -125,7 +129,7 @@ function Body({ outcome, onContinue }: { outcome: Outcome; onContinue: () => voi
             <div className="mt-2 flex items-center gap-3" data-testid="outcome-thinking">
               <Face deviation={null} />
               <p className="font-serif-kr text-lg font-black">
-                {actionLabel(outcome.chosen)}를 골랐다.{' '}
+                {actionLabelFor(outcome.kind, outcome.chosen)}를 골랐다.{' '}
                 <span className="text-muted">손이 움직이는데…</span>
               </p>
             </div>

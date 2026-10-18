@@ -12,6 +12,7 @@ public record EventProperties(
     NewsSettings news,
     LifeSettings life,
     NoticeSettings notice,
+    ShakeSettings shake,
     Map<String, StyleSettings> styles) {
 
   public static final String DEFAULT_STYLE = "default";
@@ -69,6 +70,15 @@ public record EventProperties(
 
   /** 알림성 이벤트 간격(일). 직업이 생긴 뒤부터. */
   public record NoticeSettings(Range gapDays) {}
+
+  /**
+   * 보유 종목 흔들림 (decisions.md 33번).
+   *
+   * @param gapDays 흔들림 사이 간격(일). 보유가 있을 때만
+   * @param upBp 선택 뒤 그 종목이 오를 확률(만분율). 버틴 쪽이 조금 유리하게
+   * @param magnitudeBp 선택 뒤 변동 폭 구간(만분율)
+   */
+  public record ShakeSettings(Range gapDays, int upBp, Range magnitudeBp) {}
 
   /** 단기는 뉴스가 자주·크게, 장기는 드물게 (decisions.md 3번). */
   public record StyleSettings(Range newsGapDays, int magnitudePercent) {}

@@ -141,6 +141,7 @@ public record CompleteResult(
 | `LIFE` | 취업 뒤 | 예 | 불가 | 결혼(`marriage`)·자녀(`child`) 제안. 판정 없음. 수락이면 진행이 가계·자산에 반영 (경제 개편 설계 7.3절) |
 | `NOTICE` | 취업 뒤 | 아니오 | — | 지출·수입 알림. **만들어지는 순간 RESOLVED**이고 판은 멈추지 않는다. `ScheduleResult.notice`로 돌려주고 진행이 돈을 반영한다 |
 | `NEWS` | `INVESTING` | 예 | **불가** | 매수·매도·관망 선택. 숨은 방향·폭과 **매매 대상 종목** 하나가 있다. `sectorWide`면 충격이 섹터 전체 (확정) |
+| `SHAKE` | `INVESTING`, 보유 있음 | 예 | 불가 | 보유 종목 흔들림(인내심 시험). 보유 중 한 종목에 대해 **버틴다(`HOLD`) / 판다(`SELL`, 전량)**. 판정·충격은 뉴스와 같고 힌트·다른 뉴스는 없다 (decisions.md 33번) |
 
 - **스킵할 수 있는 것은 알림성(`NOTICE`)뿐이다** (확정). 선택형은 모두 스킵할 수 없다. 뉴스는 선택의 순간이기 때문이다.
 - 한 판에서 **대기 중(`PENDING`)인 선택형 이벤트는 최대 하나**다. 선택형을 만나면 `schedule`이 멈추기 때문이다.
@@ -176,6 +177,7 @@ public record CompleteResult(
 | `LIFE` 자녀 | 결혼함, 자녀 < `max-children`, 나이 ≤ `child-last-age` | 처음은 결혼일 + `child-first-gap-years`, 그다음은 마지막 자녀 제안 + `child-gap-years` (키 `("event","life","child",n)`) |
 | `NOTICE` | 취업함 | 마지막 `NOTICE`(없으면 취업일) + `event.notice.gap-days`. 정의는 `("event","notice",seq)`로 가중치 선택, `requiresMarried`는 결혼 뒤에만 |
 | `NEWS` | `INVESTING` | 마지막 뿌리 `NEWS`(없으면 `INVESTING` 시작 일수) + 투자 스타일별 간격 구간에서 뽑은 값 (5.4절) |
+| `SHAKE` | `INVESTING`, `heldStockCodes`가 비어 있지 않음 | 마지막 `SHAKE`(없으면 `INVESTING` 시작 일수) + `event.shake.gap-days`(300~600) 구간에서 뽑은 값(키 `("SHAKE", n)`). 종목·장면·숨은 방향(`up-bp`)·폭(`magnitude-bp`)은 `("event","shake",seq)`로 뽑는다 |
 | 연결 뉴스 | `SCHEDULED` 상태 | 예약된 `occurs_day` |
 
 - `OFFER`는 거절하면 다시 묻되, 수락하면 `SAVING`이 끝나므로 더 만들지 않는다.
@@ -322,7 +324,10 @@ public record CompleteResult(
 | `event.career.gap-days` | 540~1080 | 직장 장면 간격 |
 | `event.career.last-age` | 57 | 이 나이를 넘으면 직업·직장 이벤트가 없다 |
 | `event.training.gap-days` | 120~240 | 자기계발 이벤트 간격 |
-| `event.notice.gap-days` | 40~100 | 알림성 이벤트 간격 |
+| `event.notice.gap-days` | 240~600 | 알림성 이벤트 간격 |
+| `event.shake.gap-days` | 300~600 | 보유 종목 흔들림 간격 (보유가 있을 때만) |
+| `event.shake.up-bp` | 5500 | 흔들림 뒤 그 종목이 오를 확률 |
+| `event.shake.magnitude-bp` | 1000~2500 | 흔들림 뒤 변동 폭 |
 | `event.news.interest-weight-percent` | 300 | 관심 섹터 뉴스의 가중치 배율 |
 | `event.news.no-repeat-window` | 5 | 같은 정의가 다시 나오지 않는 최근 개수 |
 | `event.news.max-chain-depth` | 5 | 연결 뉴스의 최대 깊이 |

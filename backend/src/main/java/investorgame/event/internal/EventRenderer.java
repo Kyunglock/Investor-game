@@ -6,6 +6,7 @@ import investorgame.content.JobDefinition;
 import investorgame.content.LifeText;
 import investorgame.content.NewsDefinition;
 import investorgame.content.NoticeDefinition;
+import investorgame.content.ShakeDefinition;
 import investorgame.content.TraitDefinition;
 import investorgame.event.ChoiceTicket;
 import investorgame.event.EventView;
@@ -93,6 +94,18 @@ class EventRenderer {
                 new EventView.Option("BUY", "매수"),
                 new EventView.Option("SELL", "매도"),
                 new EventView.Option("HOLD", "관망")));
+      }
+      case SHAKE -> {
+        ShakeDefinition shake = content.shake(row.definitionCode());
+        String stockName = content.stock(row.stockCode()).name();
+        yield view(
+            row,
+            withStock(shake.title(), stockName),
+            withStock(shake.body(), stockName),
+            null,
+            null,
+            List.of(
+                new EventView.Option("HOLD", "버틴다"), new EventView.Option("SELL", "판다")));
       }
       case NOTICE -> throw new IllegalStateException("알림은 EventView가 아니라 Notice로 그린다");
     };

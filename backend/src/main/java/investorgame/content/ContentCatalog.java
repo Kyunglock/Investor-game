@@ -55,6 +55,11 @@ public interface ContentCatalog {
 
   List<NewsDefinition> news();
 
+  /** 보유 종목 흔들림 장면. 코드순 (decisions.md 33번). */
+  List<ShakeDefinition> shakes();
+
+  ShakeDefinition shake(String code);
+
   /** 모든 종목. 코드 이름순. */
   List<StockDefinition> stocks();
 

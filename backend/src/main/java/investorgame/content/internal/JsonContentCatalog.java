@@ -2,6 +2,7 @@ package investorgame.content.internal;
 
 import investorgame.common.StatCodes;
 import investorgame.content.CareerDefinition;
+import investorgame.content.ShakeDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
@@ -44,7 +45,8 @@ class JsonContentCatalog implements ContentCatalog {
           "news.json",
           "phrases.json",
           "stocks.json",
-          "life.json");
+          "life.json",
+          "shakes.json");
 
   private final Meta meta;
   private final List<JobDefinition> jobs;
@@ -55,6 +57,7 @@ class JsonContentCatalog implements ContentCatalog {
   private final List<NewsDefinition> news;
   private final Phrases phrases;
   private final List<StockDefinition> stocks;
+  private final List<ShakeDefinition> shakes;
   private final Life life;
   private final Map<String, String> sectorNames;
   private final Map<String, String> styleNames;
@@ -94,6 +97,10 @@ class JsonContentCatalog implements ContentCatalog {
     this.stocks =
         read(json, "stocks.json", new TypeReference<List<StockDefinition>>() {}).stream()
             .sorted(Comparator.comparing(StockDefinition::code))
+            .toList();
+    this.shakes =
+        read(json, "shakes.json", new TypeReference<List<ShakeDefinition>>() {}).stream()
+            .sorted(Comparator.comparing(ShakeDefinition::code))
             .toList();
     this.life = read(json, "life.json", new TypeReference<>() {});
     this.sectorNames = toMap(meta.sectors());
@@ -235,6 +242,19 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public List<ShakeDefinition> shakes() {
+    return shakes;
+  }
+
+  @Override
+  public ShakeDefinition shake(String code) {
+    return shakes.stream()
+        .filter(x -> x.code().equals(code))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("콘텐츠에 없는 흔들림 장면: " + code));
+  }
+
+  @Override
   public LifeText lifeText(String kind) {
     return switch (kind) {
       case "marriage" -> life.marriage();
@@ -282,6 +302,16 @@ class JsonContentCatalog implements ContentCatalog {
   private void validate() {
     require(!jobs.isEmpty(), "직업이 하나도 없다");
     require(jobs.stream().map(JobDefinition::code).distinct().count() == jobs.size(), "직업 코드가 겹친다");
+    require(!shakes.isEmpty(), "흔들림 장면이 하나도 없다");
+    require(
+        shakes.stream().map(ShakeDefinition::code).distinct().count() == shakes.size(),
+        "흔들림 장면 코드가 겹친다");
+    for (ShakeDefinition shake : shakes) {
+      require(shake.weight() > 0, "흔들림 장면의 가중치는 양수여야 한다: " + shake.code());
+      require(
+          (shake.title() + shake.body()).contains("{stock}"),
+          "흔들림 장면에는 종목 자리표시 {stock}이 있어야 한다: " + shake.code());
+    }
     require(!careers.isEmpty(), "직장 장면이 하나도 없다");
     require(
         careers.stream().map(CareerDefinition::code).distinct().count() == careers.size(),

@@ -113,6 +113,31 @@ describe('logLine', () => {
     })
   })
 
+  it('흔들림: 버틴다를 골랐는데 인내심 부족으로 팔았다', () => {
+    const line = logLine(
+      entry('SHAKE', 32 * 360, {
+        eventTitle: '한빛반도체 급락 알림',
+        chosen: 'HOLD',
+        actual: 'SELL',
+        deviations: [{ statCode: 'patience', from: 'HOLD', to: 'SELL' }],
+      }),
+      game,
+    )
+    expect(line.text).toBe('한빛반도체 급락 알림 · 선택 버틴다 → 실제 판다 (인내심 부족)')
+    expect(line.tone).toBe('flipped')
+    expect(
+      logLine(
+        entry('SHAKE', 32 * 360, {
+          eventTitle: '지루한 보유',
+          chosen: 'HOLD',
+          actual: 'HOLD',
+          deviations: [],
+        }),
+        game,
+      ).text,
+    ).toBe('지루한 보유 · 버틴다')
+  })
+
   it('종료(파산): 빚과 나이', () => {
     const line = logLine(
       entry('END', 43 * 360, {

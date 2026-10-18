@@ -262,7 +262,7 @@ components:
       required: [eventId, kind, occursDay, sectorWide, title, body, options]
       properties:
         eventId: { type: string, format: uuid }
-        kind: { type: string, enum: [JOB, TRAIT, OFFER, LIFE, CAREER, NEWS] }
+        kind: { type: string, enum: [JOB, TRAIT, OFFER, LIFE, CAREER, NEWS, SHAKE] }
         occursDay: { type: integer }
         sectorCode: { type: [string, 'null'] }
         sectorName: { type: [string, 'null'] }
@@ -305,7 +305,7 @@ components:
         day: { type: integer, description: 사건이 일어난 게임 일수 }
         kind:
           type: string
-          enum: [BIRTH, TRAIT, JOB, JOB_WAIT, CAREER, STYLE, OFFER, NEWS, PRICE, GROWTH, TRADE, LIFE, MARRIAGE, CHILD, RETIRE, END]
+          enum: [BIRTH, TRAIT, JOB, JOB_WAIT, CAREER, STYLE, OFFER, NEWS, SHAKE, PRICE, GROWTH, TRADE, LIFE, MARRIAGE, CHILD, RETIRE, END]
         payload:
           type: object
           additionalProperties: true
@@ -403,7 +403,7 @@ components:
       type: object
       required: [kind, chosen, actual, deviations, growth]
       properties:
-        kind: { type: string, enum: [JOB, TRAIT, OFFER, LIFE, CAREER, NEWS, TRADE] }
+        kind: { type: string, enum: [JOB, TRAIT, OFFER, LIFE, CAREER, NEWS, SHAKE, TRADE] }
         chosen: { type: string, description: 사용자가 누른 선택 }
         actual: { type: string, description: 판정을 거친 실제 행동 }
         deviations:

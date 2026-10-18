@@ -226,6 +226,9 @@ class DefaultProgressService implements ProgressService {
         switch (ticket.effect()) {
           case ChoiceTicket.News news ->
               resolveNews(game, ticket, pendingView.title(), quantity, random);
+          // 흔들림은 뉴스와 같은 판정·충격 흐름. "판다"는 전량이다 (decisions.md 33번).
+          case ChoiceTicket.Shake shake ->
+              resolveNews(game, ticket, pendingView.title(), null, random);
           case ChoiceTicket.Job job -> {
             events.complete(gameId, eventId, new Completion(option, option, List.of()));
             if (job.isWait()) {
@@ -542,7 +545,7 @@ class DefaultProgressService implements ProgressService {
     newsPayload.put(
         "trade",
         Map.of("status", trade.status(), "quantity", trade.quantity(), "amount", trade.amount()));
-    logs.append(gameId, ticket.occursDay(), "NEWS", newsPayload);
+    logs.append(gameId, ticket.occursDay(), ticket.kind().name(), newsPayload);
     Map<String, Object> pricePayload = new HashMap<>();
     pricePayload.put("sectorCode", ticket.sectorCode());
     pricePayload.put("sectorName", sectorName);
@@ -959,7 +962,8 @@ class DefaultProgressService implements ProgressService {
         home.retiredDay() != null,
         home.married(),
         home.marriedDay(),
-        home.childBirthDays().size());
+        home.childBirthDays().size(),
+        assets.get(game.id()).holdings().keySet().stream().sorted().toList());
   }
 
   // ---- 화면용 상태 ----

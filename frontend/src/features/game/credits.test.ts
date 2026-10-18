@@ -109,6 +109,39 @@ describe('scoreDecisions', () => {
     expect(scored[2]).toMatchObject({ chosen: 'HOLD', actual: 'SELL', age: 32, kind: 'NEWS' })
   })
 
+  it('흔들림도 뉴스처럼 점수를 매기고 문구는 버틴다·판다로 읽는다', () => {
+    const game = baseGame({
+      log: [
+        entry('SHAKE', 33, {
+          eventTitle: '한빛반도체 급락 알림',
+          stockCode: 'S1',
+          stockName: '한빛반도체',
+          chosen: 'HOLD',
+          actual: 'SELL',
+          trade: trade('EXECUTED', 3_000_000),
+        }),
+        // 팔고 나서 올랐다: 놓친 이익 −3,000,000 × 20% = −600,000
+        entry('PRICE', 33, { direction: 'UP', changeBp: 2000, pnl: 0 }),
+      ],
+    })
+    const scored = scoreDecisions(game)
+    expect(scored).toEqual([
+      {
+        age: 33,
+        title: '한빛반도체 급락 알림',
+        stockName: '한빛반도체',
+        chosen: 'HOLD',
+        actual: 'SELL',
+        score: -600_000,
+        kind: 'SHAKE',
+      },
+    ])
+    const credits = buildCredits(game)
+    const byKey = Object.fromEntries(credits.map((s) => [s.key, s]))
+    expect(byKey.worst.lines[0].sub).toBe('판다 한빛반도체 (원래는 버틴다) · -600,000원')
+    expect(byKey.news.lines.map((l) => l.text)).toContain('보유 종목이 1번 흔들렸다')
+  })
+
   it('자유 매매는 실현 손익이 점수고, 체결되지 않은 것은 뺀다', () => {
     const game = baseGame({
       log: [

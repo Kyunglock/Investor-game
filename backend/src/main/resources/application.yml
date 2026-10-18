@@ -139,6 +139,11 @@ event:
   # 알림성 지출·수입 이벤트 간격 (직업이 생긴 뒤부터)
   notice:
     gap-days: { min: 240, max: 600 }
+  # 보유 종목 흔들림: 버틸지 팔지 묻고 인내심·용기로 뒤집힌다. 그 뒤 55%로 오르고 10~25% 움직인다 (decisions.md 33번)
+  shake:
+    gap-days: { min: 300, max: 600 }
+    up-bp: 5500
+    magnitude-bp: { min: 1000, max: 2500 }
   # 40년 동안 뉴스마다 선택해야 하므로 단기 약 80번, 장기 약 40번이 되도록 잡았다 (specs/event.md 7절).
   styles:
     short:

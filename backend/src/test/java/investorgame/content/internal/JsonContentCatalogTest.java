@@ -74,6 +74,8 @@ class JsonContentCatalogTest {
   @Test
   void 직장_장면은_선택지가_2에서_4개이고_판정_능력치와_변화가_규칙_안이다() {
     JsonContentCatalog catalog = load();
+    assertThat(catalog.shakes()).hasSizeGreaterThanOrEqualTo(3);
+    assertThat(catalog.shakes()).allMatch(x -> (x.title() + x.body()).contains("{stock}"));
     assertThat(catalog.careers()).hasSizeGreaterThanOrEqualTo(4);
     assertThat(catalog.careers()).anyMatch(c -> c.movesJob());
     assertThat(catalog.careers())

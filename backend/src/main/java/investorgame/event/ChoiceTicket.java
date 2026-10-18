@@ -32,6 +32,9 @@ public record ChoiceTicket(
   /** 판정과 자산 반영은 진행이 한다. */
   public record News() implements Effect {}
 
+  /** 보유 종목 흔들림: 버틴다(HOLD)·판다(SELL). 뉴스와 같은 판정·충격 흐름을 진행이 돌린다 (decisions.md 33번). */
+  public record Shake() implements Effect {}
+
   /** 직업 선택. jobCode가 WAIT이면 고르지 않고 더 나은 자리를 기다린다 (decisions.md 26번). */
   public record Job(String jobCode) implements Effect {
     public static final String WAIT = "WAIT";

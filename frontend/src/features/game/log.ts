@@ -2,6 +2,7 @@ import type { Game, LogEntry, Stats } from '../../api/client'
 import { gradeOf } from './grade'
 import {
   actionLabel,
+  actionLabelFor,
   growthText,
   percent,
   STAT_KEYS,
@@ -119,6 +120,26 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
         ...base,
         tone: 'flipped',
         text: `${str(p.eventTitle)} · 선택 ${actionLabel(chosen)} → 실제 ${actionLabel(actual)} (${cause})`,
+      }
+    }
+    case 'SHAKE': {
+      // 보유 종목 흔들림: 버틴다·판다. 뒤집히면 원인 (decisions.md 33번).
+      const chosen = str(p.chosen)
+      const actual = str(p.actual)
+      const deviations = (p.deviations ?? []) as Deviation[]
+      const title = `${str(p.eventTitle)}`
+      if (chosen === actual || deviations.length === 0) {
+        return {
+          ...base,
+          tone: 'decision',
+          text: `${title} · ${actionLabelFor('SHAKE', chosen)}`,
+        }
+      }
+      const cause = deviations.map((d) => `${statLabel(d.statCode)} 부족`).join(', ')
+      return {
+        ...base,
+        tone: 'flipped',
+        text: `${title} · 선택 ${actionLabelFor('SHAKE', chosen)} → 실제 ${actionLabelFor('SHAKE', actual)} (${cause})`,
       }
     }
     case 'PRICE': {

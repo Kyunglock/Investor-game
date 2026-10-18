@@ -1,6 +1,7 @@
 package investorgame.event;
 
 import investorgame.common.Phase;
+import java.util.List;
 
 /**
  * 이벤트를 정하는 데 필요한 다른 도메인의 사실. 진행이 모아서 넘긴다.
@@ -17,6 +18,7 @@ import investorgame.common.Phase;
  * @param married 결혼했는가
  * @param marriedDay 결혼한 날. 자녀 이벤트의 기준. 미혼이면 null
  * @param childrenCount 자녀 수
+ * @param heldStockCodes 지금 보유한 종목 코드. 흔들림(SHAKE)은 보유가 있을 때만 온다. 없으면 빈 목록
  */
 public record SchedulingContext(
     Phase phase,
@@ -33,4 +35,5 @@ public record SchedulingContext(
     boolean retired,
     boolean married,
     Integer marriedDay,
-    int childrenCount) {}
+    int childrenCount,
+    List<String> heldStockCodes) {}

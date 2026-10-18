@@ -18,6 +18,7 @@ const KIND_LABELS: Record<PendingEvent['kind'], string> = {
   LIFE: '생활',
   CAREER: '직장',
   NEWS: '뉴스',
+  SHAKE: '흔들림',
 }
 
 /** 뉴스 매수의 기본 수량이 쓰는 현금 비율. 서버 기본(progress.news-buy-ratio-bp)과 같은 값이며, 사용자가 수량을 바꿀 수 있다. */
@@ -33,19 +34,19 @@ interface Props {
   onChoose: (option: string, quantity?: number) => void
 }
 
-/** 화면을 어둡게 덮는 종류. 뉴스(매수·매도)와 일상 장면 (설계 5.3절, decisions.md 31번). */
-export function takesOver(kind: PendingEvent['kind']): boolean {
-  return kind === 'NEWS' || kind === 'TRAIT'
-}
-
-/** 선택형 이벤트 카드. 스킵할 수 없고, 뉴스와 일상은 화면을 어둡게 덮는다. */
+/** 선택형 이벤트 카드. 스킵할 수 없다. 게임을 멈추는 것은 종류를 가리지 않고 모두 화면을 어둡게 덮는 알림이다 (decisions.md 31번). */
 export function DecisionCard(props: Props) {
-  const card = <Body {...props} />
-  return takesOver(props.event.kind) ? <Overlay>{card}</Overlay> : card
+  return (
+    <Overlay>
+      <Body {...props} />
+    </Overlay>
+  )
 }
 
 function Body({ event, game, busy, onChoose }: Props) {
   const isNews = event.kind === 'NEWS'
+  // 흔들림: 보유 종목을 버틸지 팔지. 시세는 보여 주되 수량은 묻지 않는다(판다 = 전량) (decisions.md 33번).
+  const isShake = event.kind === 'SHAKE'
   const holding = game.holdings.find((h) => h.stockCode === event.stockCode)
   const quote = game.market.stocks.find((s) => s.code === event.stockCode)
   const price = quote?.price ?? 0
@@ -107,7 +108,7 @@ function Body({ event, game, busy, onChoose }: Props) {
       <h2 className="mt-2 font-serif-kr text-[22px] font-black leading-snug">{event.title}</h2>
       <p className="mt-1.5 text-[13px] leading-relaxed">{event.body}</p>
 
-      {isNews && quote && (
+      {(isNews || isShake) && quote && (
         <div
           className="mt-3 flex items-center gap-3 rounded border border-line-soft px-2.5 py-2"
           data-testid="news-quote"
@@ -144,14 +145,16 @@ function Body({ event, game, busy, onChoose }: Props) {
         </div>
       )}
 
-      <div className={`mt-3 grid gap-2 ${isNews ? 'grid-cols-3' : 'grid-cols-1'}`}>
+      <div
+        className={`mt-3 grid gap-2 ${isNews ? 'grid-cols-3' : isShake ? 'grid-cols-2' : 'grid-cols-1'}`}
+      >
         {event.options.map((option) => {
           const disabled = busy || (isNews && option.code === 'SELL' && !holding)
           const active = picked === option.code || side === option.code
           const sub =
             isNews && option.code === 'BUY'
               ? `현금 ${won(game.cash)}`
-              : isNews && option.code === 'SELL' && holding
+              : (isNews || isShake) && option.code === 'SELL' && holding
                 ? `보유 ${holding.quantity}주 ≈ ${won(holding.value)}`
                 : null
           return (
@@ -233,7 +236,9 @@ function Body({ event, game, busy, onChoose }: Props) {
           ? '일상의 선택은 성격에 뒤집히지 않습니다. 고른 대로 자랍니다.'
           : event.kind === 'LIFE'
             ? '삶의 선택은 성격에 뒤집히지 않습니다.'
-            : '선택은 당신이 하지만, 실행은 당신의 성격이 합니다.'}
+            : isShake
+              ? '버티려 해도 인내심이 없으면 손이 먼저 팔고, 팔려 해도 용기가 없으면 그대로 둡니다.'
+              : '선택은 당신이 하지만, 실행은 당신의 성격이 합니다.'}
       </p>
     </section>
   )
