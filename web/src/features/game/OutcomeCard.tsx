@@ -2,9 +2,9 @@ import type { Outcome } from '../../api/client'
 import {
   actionLabel,
   deviationMessage,
+  growthText,
   percent,
   signedWon,
-  statLabel,
   TRADE_NOTES,
   won,
 } from './labels'
@@ -45,19 +45,32 @@ function Body({ outcome, onContinue }: { outcome: Outcome; onContinue: () => voi
           )}
           {outcome.trade?.status === 'EXECUTED' && (
             <p className="mt-2 text-[13px] text-muted">
-              {actionLabel(outcome.actual)} 금액{' '}
-              <span className="font-mono-num">{won(outcome.trade.amount)}</span>
+              {actionLabel(outcome.actual)}{' '}
+              <span className="font-mono-num">
+                {outcome.trade.quantity.toLocaleString('ko-KR')}주 × {won(outcome.trade.price)} ={' '}
+                {won(outcome.trade.amount)}
+              </span>
+              {outcome.trade.realizedPnl != null && outcome.trade.realizedPnl !== 0 && (
+                <>
+                  {' · 실현 '}
+                  <span
+                    className={`font-mono-num ${outcome.trade.realizedPnl > 0 ? 'text-up' : 'text-down'}`}
+                  >
+                    {signedWon(outcome.trade.realizedPnl)}
+                  </span>
+                </>
+              )}
             </p>
           )}
           {price && (
             <p className="mt-3 text-[13px]">
-              {price.sectorName} 주가{' '}
+              {price.stockName ?? price.sectorName} 주가{' '}
               <b className={`font-mono-num ${price.direction === 'UP' ? 'text-up' : 'text-down'}`}>
                 {price.direction === 'UP' ? '▲' : '▼'} {percent(price.changeBp)}
               </b>
               {price.pnl !== 0 && (
                 <>
-                  {' · 손익 '}
+                  {' · 내 손익 '}
                   <b
                     className={`animate-flash font-mono-num ${price.pnl > 0 ? 'text-up' : 'text-down'}`}
                   >
@@ -70,17 +83,21 @@ function Body({ outcome, onContinue }: { outcome: Outcome; onContinue: () => voi
           {price?.lossSoftened && (
             <p className="mt-1 text-xs text-teal">🍀 운 좋게 손실이 줄었다</p>
           )}
-          {outcome.growth.map((g) => (
-            <p key={g.statCode} className="mt-1 text-xs text-teal">
-              ↑ 경험으로 {statLabel(g.statCode)} {g.before} → {g.after}
-            </p>
-          ))}
         </>
       ) : (
         <p className="whitespace-pre-line text-[15px]" data-testid="outcome-message">
           {outcome.message}
         </p>
       )}
+      {outcome.growth.map((g) => (
+        <p
+          key={g.statCode}
+          className={`mt-1 text-xs ${g.after < g.before ? 'text-wine' : 'text-teal'}`}
+          data-testid="outcome-growth"
+        >
+          {growthText(g.statCode, g.before, g.after, g.reason)}
+        </p>
+      ))}
       <button
         type="button"
         className="mt-5 min-h-12 w-full rounded bg-wine font-semibold text-white hover:opacity-90"

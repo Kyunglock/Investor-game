@@ -76,6 +76,34 @@ class GameApiTest {
   }
 
   @Test
+  void 수량_0인_매매와_알_수_없는_종목은_거절된다() throws Exception {
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.startInvesting();
+    String gameId = game.read("$.gameId");
+
+    client.tradeRaw(gameId, "ssj", "BUY", 0).andExpect(status().isBadRequest());
+    client.tradeRaw(gameId, "ssj", "BUY", 1_000_000_001L).andExpect(status().isBadRequest());
+    client.tradeRaw(gameId, "nope", "BUY", 1).andExpect(status().isNotFound());
+    client.historyRaw(gameId, "nope").andExpect(status().isNotFound());
+  }
+
+  @Test
+  void 투자_시작_전에는_매매할_수_없다() throws Exception {
+    GameClient client = GameClient.newSession(mvc);
+    String gameId = client.start().read("$.gameId");
+    client.tradeRaw(gameId, "ssj", "BUY", 1).andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void 세션_없는_매매는_401이다() throws Exception {
+    mvc.perform(
+            post("/api/games/{gameId}/trades", java.util.UUID.randomUUID())
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                .content("{\"stockCode\":\"ssj\",\"side\":\"BUY\",\"quantity\":1}"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
   void 성향이_모두_정해진_뒤에_스물네_살에_직업_선택이_온다() throws Exception {
     DocumentContext job = GameClient.newSession(mvc).startUntilJob();
 
@@ -174,13 +202,15 @@ class GameApiTest {
     assertThat(chosen.read("$.outcome.message", String.class)).contains("일하기 시작했다");
     assertThat(chosen.read("$.game.phase", String.class)).isEqualTo("SAVING");
 
-    // 첫 월급은 직업을 정한 날부터 30일 뒤다.
+    // 첫 월급은 직업을 정한 날부터 30일 뒤다. 같은 날 생활비가 나가므로 번 돈이 전부 자산이 되지는 않는다 (경제 개편 설계 7절).
     assertThat(client.advance(gameId, jobDay + 29).read("$.cash", Long.class)).isEqualTo(cash);
+    DocumentContext payday = client.advance(gameId, jobDay + 30);
+    long expense = payday.read("$.household.monthlyExpense", Long.class);
+    assertThat(expense).isPositive().isLessThan(salary);
+    assertThat(payday.read("$.cash", Long.class)).isEqualTo(cash + salary - expense);
     assertThat(client.advance(gameId, jobDay + 30).read("$.cash", Long.class))
-        .isEqualTo(cash + salary);
-    assertThat(client.advance(gameId, jobDay + 30).read("$.cash", Long.class))
-        .as("같은 날을 다시 보고해도 월급은 한 번만")
-        .isEqualTo(cash + salary);
+        .as("같은 날을 다시 보고해도 월급과 생활비는 한 번만")
+        .isEqualTo(cash + salary - expense);
   }
 
   @Test

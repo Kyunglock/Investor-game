@@ -29,9 +29,11 @@
 | 도메인 | 접두사 | 테이블 |
 |---|---|---|
 | 세션 | `session_` | `session_info` |
-| 진행 | `progress_` | `progress_game` |
+| 진행 | `progress_` | `progress_game`, `progress_log`, `progress_year`, `progress_month`(달마다 마친 총자산) |
 | 캐릭터 | `character_` | `character_profile`, `character_stat`, `character_stat_log`, `character_trait_score` |
-| 자산 | `asset_` | `asset_account`, `asset_holding`, `asset_ledger` |
+| 자산 | `asset_` | `asset_account`(+`debt`), `asset_holding`(종목 수량·원가), `asset_ledger`(+`stock_code`, `quantity`, `price`, `debt_after`) |
+| 시장 | `market_` | `market_price`, `market_price_history` ([market.md](./specs/market.md) 5절) |
+| 가계 | `household_` | `household_state`, `household_child` ([household.md](./specs/household.md) 5절) |
 | 이벤트 운영 | `event_` | `event_instance`, `event_resolution`, `event_deviation` |
 | 콘텐츠 | `content_` | `content_version` |
 | 결과 | `result_` | `result_game`, `result_stat` |
@@ -99,7 +101,10 @@ content_version.version ─── progress_game.content_version
 | job_code | text | 직업 코드. 직업 선택 이벤트 전에는 null |
 | job_start_day | integer | 현재 직업을 시작한 게임 일수. 연차(연봉 상승) 계산에 쓴다 |
 | interest_sector | text | 관심 섹터 코드. 성향 확정 전에는 null |
-| investment_style | text | 투자 스타일 코드(장기/단기 등). 성향 이벤트로 확정되며, 이후 이벤트 구성에 영향을 준다. 확정 전에는 null |
+| investment_style | text | 기간 축 코드(short/long). 성향 이벤트로 확정되며, 이후 이벤트 구성에 영향을 준다. 확정 전에는 null |
+| risk_profile | text | 위험 축 코드(bold/safe). 유형 이름에만 쓴다. 확정 전 null |
+| mind_profile | text | 소신 축 코드(own/crowd). 유형 이름에만 쓴다. 확정 전 null |
+| investor_type | text | 투자자 유형 코드 `{기간}-{위험}-{소신}`. 확정 전 null |
 | created_at / updated_at | timestamptz | |
 
 ### 3.4 `character_stat`
@@ -140,7 +145,7 @@ content_version.version ─── progress_game.content_version
 | 컬럼 | 타입 | 비고 |
 |---|---|---|
 | game_id | uuid | PK의 일부 |
-| trait_code | text | `style.<스타일 코드>`, `sector.<섹터 코드>`. PK의 일부 |
+| trait_code | text | `style.<코드>`, `risk.<코드>`, `mind.<코드>`, `sector.<코드>`. PK의 일부 |
 | score | integer | 누적 점수 |
 
 ### 3.6 `asset_account`

@@ -1,0 +1,146 @@
+[
+  {
+    "code": "ssj",
+    "sector": "semiconductor",
+    "name": "삼송전자",
+    "basePrice": 72000,
+    "driftBpPerYear": 800,
+    "volatility": "mid"
+  },
+  {
+    "code": "sqh",
+    "sector": "semiconductor",
+    "name": "SQ하이닉스",
+    "basePrice": 130000,
+    "driftBpPerYear": 1000,
+    "volatility": "mid"
+  },
+  {
+    "code": "hmb",
+    "sector": "semiconductor",
+    "name": "한미반도채",
+    "basePrice": 80000,
+    "driftBpPerYear": 700,
+    "volatility": "mid"
+  },
+  {
+    "code": "ctl",
+    "sector": "bio",
+    "name": "셀트리언",
+    "basePrice": 180000,
+    "driftBpPerYear": 900,
+    "volatility": "high"
+  },
+  {
+    "code": "ssb",
+    "sector": "bio",
+    "name": "삼송바이오",
+    "basePrice": 900000,
+    "driftBpPerYear": 800,
+    "volatility": "high"
+  },
+  {
+    "code": "atj",
+    "sector": "bio",
+    "name": "알테오잰",
+    "basePrice": 300000,
+    "driftBpPerYear": 1000,
+    "volatility": "high"
+  },
+  {
+    "code": "kep",
+    "sector": "energy",
+    "name": "한국전륵",
+    "basePrice": 20000,
+    "driftBpPerYear": 500,
+    "volatility": "mid"
+  },
+  {
+    "code": "dse",
+    "sector": "energy",
+    "name": "두샨에너빌리티",
+    "basePrice": 20000,
+    "driftBpPerYear": 700,
+    "volatility": "mid"
+  },
+  {
+    "code": "hws",
+    "sector": "energy",
+    "name": "한화솔루숀",
+    "basePrice": 35000,
+    "driftBpPerYear": 600,
+    "volatility": "mid"
+  },
+  {
+    "code": "krt",
+    "sector": "game",
+    "name": "크래프통",
+    "basePrice": 250000,
+    "driftBpPerYear": 700,
+    "volatility": "high"
+  },
+  {
+    "code": "nxg",
+    "sector": "game",
+    "name": "넥손게임즈",
+    "basePrice": 15000,
+    "driftBpPerYear": 900,
+    "volatility": "high"
+  },
+  {
+    "code": "ncs",
+    "sector": "game",
+    "name": "엔씽소프트",
+    "basePrice": 200000,
+    "driftBpPerYear": 500,
+    "volatility": "high"
+  },
+  {
+    "code": "cjd",
+    "sector": "food",
+    "name": "CJ제일제담",
+    "basePrice": 300000,
+    "driftBpPerYear": 600,
+    "volatility": "low"
+  },
+  {
+    "code": "ori",
+    "sector": "food",
+    "name": "오리옹",
+    "basePrice": 100000,
+    "driftBpPerYear": 700,
+    "volatility": "low"
+  },
+  {
+    "code": "nsm",
+    "sector": "food",
+    "name": "농씸",
+    "basePrice": 400000,
+    "driftBpPerYear": 500,
+    "volatility": "low"
+  },
+  {
+    "code": "kbf",
+    "sector": "finance",
+    "name": "KB금용",
+    "basePrice": 80000,
+    "driftBpPerYear": 700,
+    "volatility": "low"
+  },
+  {
+    "code": "kkb",
+    "sector": "finance",
+    "name": "카카우뱅크",
+    "basePrice": 25000,
+    "driftBpPerYear": 600,
+    "volatility": "low"
+  },
+  {
+    "code": "ssf",
+    "sector": "finance",
+    "name": "삼송화재",
+    "basePrice": 300000,
+    "driftBpPerYear": 600,
+    "volatility": "low"
+  }
+]

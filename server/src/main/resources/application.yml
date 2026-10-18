@@ -24,6 +24,15 @@ progress:
   start-age: 1
   end-age: 65
   max-skip-days: 360
+  # 뉴스 선택의 매수가 쓰는 현금 비율(만분율). 수량은 진행이 현재가로 계산한다. 자유 매매는 사용자가 수량을 정한다
+  news-buy-ratio-bp: 3000
+
+content:
+  # 성향 선택지가 능력치를 움직이는 최대 폭과 선택지 개수 (경제 개편 설계 4.4절)
+  trait-stat-max-delta: 3
+  trait-options:
+    min: 3
+    max: 4
 
 character:
   initial-stat:
@@ -33,14 +42,45 @@ character:
     deviation-exp: 3
     exp-per-point: 5
     max-stat: 95
+  trait-stat:
+    # 성향 선택으로 내려갈 수 있는 하한. 상한은 growth.max-stat (경제 개편 설계 4.3절)
+    min: 5
+
+market:
+  # 월 단위 가격 변동 (경제 개편 설계 5.3절). 섹터 공통 잡음 ±4%, 종목 등급별 ±4/8/12%, 종목 뉴스의 섹터 파급 30%, 바닥 100원
+  sector-volatility-bp: 400
+  volatility-bp:
+    low: 400
+    mid: 800
+    high: 1200
+  spillover-percent: 30
+  min-price: 100
 
 asset:
   initial-cash:
     min-unit: 1
     max-unit: 50
     unit: 1000000
-  buy-ratio-bp: 3000
-  min-trade: 1000
+  # 빚(마이너스 통장) 월 이자 1% (경제 개편 설계 6.4절)
+  debt-interest-bp: 100
+
+household:
+  # 가계 (경제 개편 설계 7.2절·13절). 금액은 원. 물가는 취업 나이(24)부터 연 2% 복리. 60세 은퇴
+  living-single: 1400000
+  living-couple: 2200000
+  child-cost:
+    to-age6: 600000
+    to-age12: 800000
+    to-age18: 1000000
+    to-age22: 1300000
+  wedding-cost: 30000000
+  childbirth-cost: 3000000
+  spouse-income: 1800000
+  inflation-percent: 2
+  inflation-base-age: 24
+  retire-age: 60
+  # progress.start-age와 같은 값. 도메인이 진행 설정을 읽지 않으므로 따로 둔다
+  start-age: 1
 
 behavior:
   deviation-cap-bp: 5000
@@ -64,6 +104,18 @@ event:
   news:
     interest-weight-percent: 300
     no-repeat-window: 5
+  # 결혼·자녀 선택형 이벤트 시점 (경제 개편 설계 7.3절)
+  life:
+    marriage-age: { min: 27, max: 31 }
+    marriage-retry-years: 2
+    marriage-last-age: 35
+    child-first-gap-years: { min: 1, max: 2 }
+    child-gap-years: { min: 2, max: 3 }
+    max-children: 3
+    child-last-age: 42
+  # 알림성 지출·수입 이벤트 간격 (직업이 생긴 뒤부터)
+  notice:
+    gap-days: { min: 240, max: 600 }
   # 40년 동안 뉴스마다 선택해야 하므로 단기 약 80번, 장기 약 40번이 되도록 잡았다 (specs/event.md 7절).
   styles:
     short:

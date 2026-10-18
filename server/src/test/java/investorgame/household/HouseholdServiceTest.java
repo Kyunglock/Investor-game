@@ -1,0 +1,114 @@
+package investorgame.household;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import investorgame.TestcontainersConfiguration;
+import investorgame.common.error.InvalidRequestException;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+
+/** 경제 개편 설계 7.2절의 가계 규칙. 나이 = 1 + day/360, 물가 기준 나이 24세. 설정값은 application.yml의 초기값을 그대로 쓴다. */
+@SpringBootTest
+@Import(TestcontainersConfiguration.class)
+class HouseholdServiceTest {
+
+  private static final int YEAR = 360;
+  private static final int JOB_DAY = (24 - 1) * YEAR;
+
+  @Autowired HouseholdService household;
+
+  UUID gameId;
+
+  @BeforeEach
+  void setUp() {
+    gameId = UUID.randomUUID();
+    household.create(gameId);
+  }
+
+  @Test
+  void 혼자일_때_생활비는_1인_금액이고_24세까지는_물가가_오르지_않는다() {
+    assertThat(household.monthlyExpense(gameId, 0)).isEqualTo(1_400_000);
+    assertThat(household.monthlyExpense(gameId, JOB_DAY)).isEqualTo(1_400_000);
+    assertThat(household.monthlyExpense(gameId, JOB_DAY + YEAR))
+        .as("25세, 2% 오름")
+        .isEqualTo(1_428_000);
+    assertThat(household.spouseIncome(gameId, JOB_DAY)).isZero();
+    assertThat(household.get(gameId).married()).isFalse();
+  }
+
+  @Test
+  void 결혼하면_부부_생활비와_배우자_소득이_생긴다() {
+    household.marry(gameId, JOB_DAY);
+
+    assertThat(household.get(gameId).married()).isTrue();
+    assertThat(household.get(gameId).marriedDay()).isEqualTo(JOB_DAY);
+    assertThat(household.monthlyExpense(gameId, JOB_DAY)).isEqualTo(2_200_000);
+    assertThat(household.spouseIncome(gameId, JOB_DAY)).isEqualTo(1_800_000);
+    assertThat(household.weddingCost(JOB_DAY)).isEqualTo(30_000_000);
+    assertThat(household.weddingCost(JOB_DAY + YEAR)).isEqualTo(30_600_000);
+  }
+
+  @Test
+  void 자녀는_나이_구간별로_비용이_붙는다() {
+    household.marry(gameId, JOB_DAY);
+    int birth = JOB_DAY;
+    assertThat(household.addChild(gameId, birth)).isEqualTo(1);
+    long couple = 2_200_000;
+
+    assertThat(household.monthlyExpense(gameId, birth)).isEqualTo(couple + 600_000);
+    assertThat(deflated(household.monthlyExpense(gameId, birth + 7 * YEAR), 7))
+        .isEqualTo(couple + 800_000);
+    assertThat(deflated(household.monthlyExpense(gameId, birth + 13 * YEAR), 13))
+        .isEqualTo(couple + 1_000_000);
+    assertThat(deflated(household.monthlyExpense(gameId, birth + 19 * YEAR), 19))
+        .isEqualTo(couple + 1_300_000);
+    assertThat(deflated(household.monthlyExpense(gameId, birth + 23 * YEAR), 23))
+        .as("23세부터는 비용이 없다")
+        .isEqualTo(couple);
+    assertThat(household.childbirthCost(birth)).isEqualTo(3_000_000);
+  }
+
+  @Test
+  void 은퇴하면_배우자_소득이_끊긴다() {
+    household.marry(gameId, JOB_DAY);
+    int retireDay = (60 - 1) * YEAR;
+    assertThat(household.retireMonth(retireDay)).isTrue();
+    assertThat(household.retireMonth(retireDay + 30)).isFalse();
+    assertThat(household.retireMonth(JOB_DAY)).isFalse();
+
+    household.retire(gameId, retireDay);
+
+    assertThat(household.get(gameId).retiredDay()).isEqualTo(retireDay);
+    assertThat(household.spouseIncome(gameId, retireDay)).isZero();
+    assertThat(household.monthlyExpense(gameId, retireDay)).as("생활비는 계속 나간다").isPositive();
+  }
+
+  @Test
+  void 두_번_결혼하면_오류이고_자녀_seq는_1부터_오른다() {
+    household.marry(gameId, JOB_DAY);
+    assertThatThrownBy(() -> household.marry(gameId, JOB_DAY + YEAR))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(household.addChild(gameId, JOB_DAY + YEAR)).isEqualTo(1);
+    assertThat(household.addChild(gameId, JOB_DAY + 3 * YEAR)).isEqualTo(2);
+    assertThat(household.get(gameId).childBirthDays())
+        .containsExactly(JOB_DAY + YEAR, JOB_DAY + 3 * YEAR);
+  }
+
+  @Test
+  void 다시_만들어도_상태가_지워지지_않는다() {
+    household.marry(gameId, JOB_DAY);
+    household.create(gameId);
+    assertThat(household.get(gameId).married()).isTrue();
+  }
+
+  /** 물가 상승분(연 2% 복리, 24세 기준)을 되돌려 기준 금액으로 비교한다. 0 방향 버림이라 ±1원 오차를 허용한다. */
+  private static long deflated(long amount, int yearsAfterJob) {
+    double factor = Math.pow(1.02, yearsAfterJob);
+    return Math.round(amount / factor / 1000.0) * 1000;
+  }
+}

@@ -82,6 +82,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/games/{gameId}/trades": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 종목을 사거나 판다 (자유 매매)
+         * @description 투자 단계에서 아무 때나 현재가로 사고판다. 뉴스와 달리 "다른 뉴스"가 없어 줏대 판정은 없고 용기 판정만 거친다 (겁나서 주문을 못 낼 수 있다).
+         *     대기 중인 선택형 이벤트가 있으면 먼저 선택해야 한다 (400).
+         */
+        post: operations["trade"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/games/{gameId}/stocks/{stockCode}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 한 종목의 월별 가격 이력 (판 시작부터) */
+        get: operations["stockHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/games/{gameId}/events/{eventId}/choose": {
         parameters: {
             query?: never;
@@ -127,14 +165,102 @@ export interface components {
             code: string;
             name: string;
         };
+        /** @description 성장기 선택으로 정해지는 투자자 유형. 기간 × 위험 × 소신 조합 8종 */
+        InvestorType: {
+            /** @description "{기간}-{위험}-{소신}" 예 long-safe-own */
+            code: string;
+            name: string;
+            description: string;
+        };
+        /** @description 보유 종목. 평가는 현재가 기준이고 가격은 매달 바뀐다 */
         Holding: {
+            stockCode: string;
+            stockName: string;
             sectorCode: string;
             sectorName: string;
             /**
              * Format: int64
-             * @description 평가액(원)
+             * @description 보유 수량(주)
              */
-            amount: number;
+            quantity: number;
+            /**
+             * Format: int64
+             * @description 평단(원)
+             */
+            avgCost: number;
+            /**
+             * Format: int64
+             * @description 현재가(원)
+             */
+            price: number;
+            /**
+             * Format: int64
+             * @description 평가액 = 수량 × 현재가
+             */
+            value: number;
+            /**
+             * Format: int64
+             * @description 평가 손익 = 평가액 − 원가
+             */
+            pnl: number;
+            /** @description 수익률(만분율) */
+            pnlBp: number;
+        };
+        /** @description 종목 시세. 숨은 값(다음 달 변동)은 없다 */
+        StockQuote: {
+            code: string;
+            name: string;
+            sectorCode: string;
+            sectorName: string;
+            /** Format: int64 */
+            price: number;
+            /** @description 1개월 변화율(만분율) */
+            change1mBp: number;
+            /** @description 12개월 변화율(만분율) */
+            change12mBp: number;
+            /** @description 최근 12달 가격(이번 달 포함, 오래된 것부터). 이력이 짧으면 있는 만큼 */
+            spark: number[];
+        };
+        Market: {
+            /** @description 게임 달 번호 (판 시작 = 0) */
+            month: number;
+            stocks: components["schemas"]["StockQuote"][];
+        };
+        /** @description 가계부. 금액은 이번 달 기준(원) */
+        Household: {
+            married: boolean;
+            marriedAge?: number | null;
+            children: {
+                age: number;
+            }[];
+            /**
+             * Format: int64
+             * @description 월급. 은퇴 뒤 0
+             */
+            monthlyIncome: number;
+            /** Format: int64 */
+            spouseIncome: number;
+            /**
+             * Format: int64
+             * @description 생활비 + 자녀 비용
+             */
+            monthlyExpense: number;
+            retired: boolean;
+        };
+        TradeRequest: {
+            stockCode: string;
+            /** @enum {string} */
+            side: "BUY" | "SELL";
+            /** Format: int64 */
+            quantity: number;
+        };
+        StockHistory: {
+            stockCode: string;
+            points: {
+                month: number;
+                /** Format: int64 */
+                price: number;
+            }[];
         };
         Job: {
             code: string;
@@ -153,10 +279,17 @@ export interface components {
             /** Format: uuid */
             eventId: string;
             /** @enum {string} */
-            kind: "JOB" | "TRAIT" | "OFFER" | "NEWS";
+            kind: "JOB" | "TRAIT" | "OFFER" | "LIFE" | "NEWS";
             occursDay: number;
             sectorCode?: string | null;
             sectorName?: string | null;
+            /** @description 뉴스의 매매 대상 종목 */
+            stockCode?: string | null;
+            stockName?: string | null;
+            /** @description 뉴스 충격이 섹터 전체인가 */
+            sectorWide: boolean;
+            /** @description 뉴스 종목의 최근 12달 가격 */
+            spark?: number[] | null;
             title: string;
             body: string;
             /** @description 안목에 따른 애매한 힌트 문구. 뉴스일 때 */
@@ -185,7 +318,7 @@ export interface components {
             /** @description 사건이 일어난 게임 일수 */
             day: number;
             /** @enum {string} */
-            kind: "BIRTH" | "TRAIT" | "JOB" | "STYLE" | "OFFER" | "NEWS" | "PRICE" | "GROWTH" | "END";
+            kind: "BIRTH" | "TRAIT" | "JOB" | "STYLE" | "OFFER" | "NEWS" | "PRICE" | "GROWTH" | "TRADE" | "LIFE" | "MARRIAGE" | "CHILD" | "RETIRE" | "END";
             /** @description 종류별 필드 (docs/superpowers/specs/2026-10-18-ui-redesign-design.md 6.3절) */
             payload: {
                 [key: string]: unknown;
@@ -216,14 +349,39 @@ export interface components {
             initialStats: components["schemas"]["Stats"];
             /** Format: int64 */
             cash: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description 현금 + 평가액 − 빚
+             */
             totalAsset: number;
             /** Format: int64 */
             initialAsset: number;
+            /**
+             * Format: int64
+             * @description 보유 평가액 합
+             */
+            invested: number;
+            /**
+             * Format: int64
+             * @description 빚(마이너스 통장). 매월 이자가 붙는다
+             */
+            debt: number;
+            /**
+             * Format: int64
+             * @description 전월 말 총자산. 첫 달이면 null
+             */
+            lastMonthTotalAsset?: number | null;
             holdings: components["schemas"]["Holding"][];
+            market: components["schemas"]["Market"];
+            household: components["schemas"]["Household"];
             job?: components["schemas"]["Job"] | null;
             investmentStyle?: components["schemas"]["Named"] | null;
+            /** @description 위험 축 (공격/안정). 성향 확정 전 null */
+            riskProfile?: components["schemas"]["Named"] | null;
+            /** @description 소신 축 (소신/추종). 성향 확정 전 null */
+            mindProfile?: components["schemas"]["Named"] | null;
             interestSector?: components["schemas"]["Named"] | null;
+            investorType?: components["schemas"]["InvestorType"] | null;
             pendingEvent?: components["schemas"]["PendingEvent"] | null;
             /** @description 다음 이벤트가 생길 게임 일수. 클라이언트는 이 시각까지만 시계를 보낸다 */
             nextEventDay?: number | null;
@@ -245,7 +403,7 @@ export interface components {
         };
         Outcome: {
             /** @enum {string} */
-            kind: "JOB" | "TRAIT" | "OFFER" | "NEWS";
+            kind: "JOB" | "TRAIT" | "OFFER" | "LIFE" | "NEWS" | "TRADE";
             /** @description 사용자가 누른 선택 */
             chosen: string;
             /** @description 판정을 거친 실제 행동 */
@@ -259,11 +417,22 @@ export interface components {
                 /** @enum {string} */
                 status: "EXECUTED" | "HELD" | "NOTHING_TO_SELL" | "INSUFFICIENT_CASH";
                 /** Format: int64 */
+                quantity: number;
+                /** Format: int64 */
+                price: number;
+                /** Format: int64 */
                 amount: number;
+                /**
+                 * Format: int64
+                 * @description 매도의 실현 손익
+                 */
+                realizedPnl?: number | null;
             } | null;
             price?: {
                 sectorCode: string;
                 sectorName: string;
+                stockCode?: string | null;
+                stockName?: string | null;
                 /** @enum {string} */
                 direction: "UP" | "DOWN";
                 changeBp: number;
@@ -275,6 +444,11 @@ export interface components {
                 statCode: string;
                 before: number;
                 after: number;
+                /**
+                 * @description DEVIATION은 이탈 경험, TRAIT은 성장기 선택으로 움직인 것
+                 * @enum {string}
+                 */
+                reason: "DEVIATION" | "TRAIT";
             }[];
             message?: string | null;
         };
@@ -408,6 +582,60 @@ export interface operations {
                 };
             };
             400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    trade: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gameId: components["parameters"]["GameId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TradeRequest"];
+            };
+        };
+        responses: {
+            /** @description 판정을 거친 매매 결과와 판 상태. outcome.kind는 TRADE */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChoiceOutcome"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    stockHistory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gameId: components["parameters"]["GameId"];
+                stockCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 달마다 한 점 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockHistory"];
+                };
+            };
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
         };

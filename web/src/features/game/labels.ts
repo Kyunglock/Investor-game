@@ -25,6 +25,10 @@ export function actionLabel(code: string): string {
   return ACTION_LABELS[code] ?? code
 }
 
+export function sideLabel(side: string): string {
+  return side === 'SELL' ? '매도' : '매수'
+}
+
 export function statLabel(code: string): string {
   return STAT_LABELS[code as keyof Stats] ?? code
 }
@@ -41,6 +45,17 @@ export function deviationMessage(statCode: string, from: string, to: string): st
     default:
       return `${statLabel(statCode)} 때문에 ${actionLabel(from)} → ${actionLabel(to)}`
   }
+}
+
+/** 능력치가 오른 한 줄. reason이 TRAIT이면 성장기의 선택, 아니면(또는 없으면) 이탈 경험이다. */
+export function growthText(
+  statCode: string,
+  before: number,
+  after: number,
+  reason?: string | null,
+): string {
+  const cause = reason === 'TRAIT' ? '그 선택으로' : '경험으로'
+  return `${cause} ${statLabel(statCode)} ${before} → ${after} ${after < before ? '↓' : '↑'}`
 }
 
 export const TRADE_NOTES: Record<string, string | undefined> = {

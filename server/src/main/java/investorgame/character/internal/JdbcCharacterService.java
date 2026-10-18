@@ -4,6 +4,7 @@ import investorgame.character.CharacterService;
 import investorgame.character.CharacterView;
 import investorgame.character.GrowthSource;
 import investorgame.character.StatChange;
+import investorgame.character.TraitAxes;
 import investorgame.character.TraitResult;
 import investorgame.common.GameProperties;
 import investorgame.common.StatCodes;
@@ -29,6 +30,9 @@ class JdbcCharacterService implements CharacterService {
 
   private static final String STYLE_PREFIX = "style.";
   private static final String SECTOR_PREFIX = "sector.";
+  private static final String RISK_PREFIX = "risk.";
+  private static final String MIND_PREFIX = "mind.";
+  private static final String TRAIT_REASON = "TRAIT";
 
   private final JdbcClient jdbc;
   private final Clock clock;
@@ -91,7 +95,10 @@ class JdbcCharacterService implements CharacterService {
         profile.jobCode(),
         profile.jobStartDay(),
         profile.investmentStyle(),
-        profile.interestSector());
+        profile.riskProfile(),
+        profile.mindProfile(),
+        profile.interestSector(),
+        profile.investorType());
   }
 
   @Override
@@ -117,7 +124,8 @@ class JdbcCharacterService implements CharacterService {
 
   @Override
   @Transactional
-  public void recordTraitChoice(UUID gameId, Map<String, Integer> traitDeltas) {
+  public List<StatChange> recordTraitChoice(
+      UUID gameId, Map<String, Integer> traitDeltas, Map<String, Integer> statDeltas, int gameDay) {
     traitDeltas.forEach(
         (code, delta) ->
             jdbc.sql(
@@ -131,14 +139,49 @@ class JdbcCharacterService implements CharacterService {
                 .param("code", code)
                 .param("delta", delta)
                 .update());
+
+    // 능력치는 즉시 움직인다. 운은 타고난 값이라 무시한다 (확정). 태어날 때 값(initial_value)은 건드리지 않는다.
+    Map<String, StatRow> rows = new LinkedHashMap<>();
+    stats(gameId).forEach(row -> rows.put(row.statCode(), row));
+    int min = properties.traitStat().min();
+    int max = properties.growth().maxStat();
+    List<StatChange> changes = new ArrayList<>();
+    for (String code : StatCodes.ALL) {
+      Integer delta = statDeltas.get(code);
+      StatRow row = rows.get(code);
+      if (delta == null || row == null || code.equals(StatCodes.LUCK)) {
+        continue;
+      }
+      int after = Math.clamp(row.value() + delta, min, max);
+      if (after == row.value()) {
+        continue;
+      }
+      jdbc.sql(
+              """
+              UPDATE character_stat SET value = :value
+              WHERE game_id = :gameId AND stat_code = :code
+              """)
+          .param("value", after)
+          .param("gameId", gameId)
+          .param("code", code)
+          .update();
+      logChange(gameId, code, after - row.value(), TRAIT_REASON, null, gameDay);
+      changes.add(new StatChange(code, 0, row.value(), after));
+    }
+    return changes;
   }
 
   @Override
   @Transactional
-  public TraitResult finalizeTraits(UUID gameId, RandomGenerator rng) {
+  public TraitResult finalizeTraits(UUID gameId, TraitAxes axes, RandomGenerator rng) {
     Profile profile = profile(gameId);
     if (profile.investmentStyle() != null) {
-      return new TraitResult(profile.investmentStyle(), profile.interestSector());
+      return new TraitResult(
+          profile.investmentStyle(),
+          profile.riskProfile(),
+          profile.mindProfile(),
+          profile.interestSector(),
+          profile.investorType());
     }
     Map<String, Integer> scores = new HashMap<>();
     jdbc.sql("SELECT trait_code, score FROM character_trait_score WHERE game_id = :gameId")
@@ -147,21 +190,28 @@ class JdbcCharacterService implements CharacterService {
         .list()
         .forEach(s -> scores.put(s.traitCode(), s.score()));
 
-    // 동점 후보는 코드 이름순으로 정렬한 뒤 뽑아서 같은 시드면 같은 결과가 나오게 한다.
-    String style = top(scores, STYLE_PREFIX, rng);
-    String sector = top(scores, SECTOR_PREFIX, rng);
+    // 동점 후보는 코드 이름순으로 정렬한 뒤 뽑아서 같은 시드면 같은 결과가 나오게 한다. 뽑는 순서: 기간 → 위험 → 소신 → 관심.
+    String style = top(scores, STYLE_PREFIX, List.of(), rng);
+    String risk = top(scores, RISK_PREFIX, axes.risks(), rng);
+    String mind = top(scores, MIND_PREFIX, axes.minds(), rng);
+    String sector = top(scores, SECTOR_PREFIX, List.of(), rng);
+    String type = style + "-" + risk + "-" + mind;
     jdbc.sql(
             """
             UPDATE character_profile
-            SET investment_style = :style, interest_sector = :sector, updated_at = :now
+            SET investment_style = :style, risk_profile = :risk, mind_profile = :mind,
+                interest_sector = :sector, investor_type = :type, updated_at = :now
             WHERE game_id = :gameId
             """)
         .param("style", style)
+        .param("risk", risk)
+        .param("mind", mind)
         .param("sector", sector)
+        .param("type", type)
         .param("now", now())
         .param("gameId", gameId)
         .update();
-    return new TraitResult(style, sector);
+    return new TraitResult(style, risk, mind, sector, type);
   }
 
   @Override
@@ -191,7 +241,13 @@ class JdbcCharacterService implements CharacterService {
       int newValue = Math.min(growth.maxStat(), row.value() + totalExp / growth.expPerPoint());
       int remainingExp = totalExp - Math.max(0, newValue - row.value()) * growth.expPerPoint();
       if (newValue > row.value()) {
-        logChange(gameId, source, newValue - row.value(), gameDay);
+        logChange(
+            gameId,
+            code,
+            newValue - row.value(),
+            source instanceof GrowthSource.Training ? "TRAINING" : "DEVIATION",
+            source.eventId(),
+            gameDay);
       }
       rows.put(code, new StatRow(code, row.initialValue(), newValue, remainingExp));
     }
@@ -223,23 +279,26 @@ class JdbcCharacterService implements CharacterService {
     return startDay == null ? 0 : Math.max(0, currentDay - startDay) / calendar.daysPerYear();
   }
 
-  private void logChange(UUID gameId, GrowthSource source, int delta, int gameDay) {
+  private void logChange(
+      UUID gameId, String statCode, int delta, String reason, UUID eventId, int gameDay) {
     jdbc.sql(
             """
             INSERT INTO character_stat_log (game_id, stat_code, delta, reason, event_id, game_day, created_at)
             VALUES (:gameId, :code, :delta, :reason, :eventId, :gameDay, :now)
             """)
         .param("gameId", gameId)
-        .param("code", source.statCode())
+        .param("code", statCode)
         .param("delta", delta)
-        .param("reason", source instanceof GrowthSource.Training ? "TRAINING" : "DEVIATION")
-        .param("eventId", source.eventId())
+        .param("reason", reason)
+        .param("eventId", eventId)
         .param("gameDay", gameDay)
         .param("now", now())
         .update();
   }
 
-  private static String top(Map<String, Integer> scores, String prefix, RandomGenerator rng) {
+  /** 점수가 없을 때 fallback 후보가 비어 있으면 오류, 있으면 그 후보에서 난수로 정한다. 어느 쪽이든 난수는 한 번 뽑아 순서를 고정한다. */
+  private static String top(
+      Map<String, Integer> scores, String prefix, List<String> fallback, RandomGenerator rng) {
     int best = Integer.MIN_VALUE;
     List<String> candidates = new ArrayList<>();
     for (Map.Entry<String, Integer> entry : scores.entrySet()) {
@@ -255,7 +314,10 @@ class JdbcCharacterService implements CharacterService {
       }
     }
     if (candidates.isEmpty()) {
-      throw new InvalidRequestException("성향 점수가 없다: " + prefix);
+      if (fallback.isEmpty()) {
+        throw new InvalidRequestException("성향 점수가 없다: " + prefix);
+      }
+      candidates.addAll(fallback);
     }
     candidates.sort(null);
     return candidates.get(rng.nextInt(candidates.size()));
@@ -264,7 +326,8 @@ class JdbcCharacterService implements CharacterService {
   private Profile profile(UUID gameId) {
     return jdbc.sql(
             """
-            SELECT job_code, job_start_day, investment_style, interest_sector
+            SELECT job_code, job_start_day, investment_style, risk_profile, mind_profile,
+                   interest_sector, investor_type
             FROM character_profile
             WHERE game_id = :gameId
             """)
@@ -294,7 +357,13 @@ class JdbcCharacterService implements CharacterService {
   }
 
   private record Profile(
-      String jobCode, Integer jobStartDay, String investmentStyle, String interestSector) {}
+      String jobCode,
+      Integer jobStartDay,
+      String investmentStyle,
+      String riskProfile,
+      String mindProfile,
+      String interestSector,
+      String investorType) {}
 
   private record StatRow(String statCode, int initialValue, int value, int exp) {}
 

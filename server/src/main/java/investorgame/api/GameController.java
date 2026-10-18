@@ -1,11 +1,15 @@
 package investorgame.api;
 
+import investorgame.common.Action;
 import investorgame.progress.ChoiceOutcome;
 import investorgame.progress.GameView;
 import investorgame.progress.ProgressService;
+import investorgame.progress.StockHistory;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -62,7 +66,37 @@ class GameController {
     return progress.choose(cookies.requireSession(token), gameId, eventId, request.option());
   }
 
+  @PostMapping("/{gameId}/trades")
+  ChoiceOutcome trade(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @PathVariable UUID gameId,
+      @Valid @RequestBody TradeRequest request) {
+    return progress.trade(
+        cookies.requireSession(token),
+        gameId,
+        request.stockCode(),
+        request.side(),
+        request.quantity());
+  }
+
+  @GetMapping("/{gameId}/stocks/{stockCode}/history")
+  StockHistory history(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @PathVariable UUID gameId,
+      @PathVariable String stockCode) {
+    return progress.history(cookies.requireSession(token), gameId, stockCode);
+  }
+
   record AdvanceRequest(@Min(0) int day) {}
+
+  /** 한 번에 주문할 수 있는 최대 수량. 계약(TradeRequest.quantity.maximum)과 같은 값이다. */
+  static final long MAX_TRADE_QUANTITY = 1_000_000_000L;
+
+  /** side는 BUY 또는 SELL. HOLD는 진행이 400으로 거절한다. */
+  record TradeRequest(
+      @NotBlank String stockCode,
+      @NotNull Action side,
+      @Min(1) @Max(MAX_TRADE_QUANTITY) long quantity) {}
 
   record ChoiceRequest(@NotBlank String option) {}
 }

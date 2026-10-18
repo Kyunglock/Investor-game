@@ -46,6 +46,28 @@ class LogRepositoryTest {
   }
 
   @Test
+  void replaceYear_는_마지막_값으로_덮어쓴다() {
+    UUID gameId = UUID.randomUUID();
+    logs.upsertYear(gameId, 65, 100, 50);
+    logs.replaceYear(gameId, 65, 90, 40);
+
+    List<GameView.Yearly> years = logs.findYears(gameId);
+    assertThat(years).hasSize(1);
+    assertThat(years.get(0).totalAsset()).isEqualTo(90);
+    assertThat(years.get(0).cash()).isEqualTo(40);
+  }
+
+  @Test
+  void upsertMonth_같은_달을_두_번_넣어도_첫_값이_남고_없는_달은_비어_있다() {
+    UUID gameId = UUID.randomUUID();
+    logs.upsertMonth(gameId, 300, 1_000);
+    logs.upsertMonth(gameId, 300, 2_000);
+
+    assertThat(logs.findMonthTotal(gameId, 300)).hasValue(1_000);
+    assertThat(logs.findMonthTotal(gameId, 299)).isEmpty();
+  }
+
+  @Test
   void findAll_다른_판의_기록은_섞이지_않는다() {
     UUID a = UUID.randomUUID();
     UUID b = UUID.randomUUID();

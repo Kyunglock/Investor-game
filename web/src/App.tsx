@@ -4,6 +4,7 @@ import { GameScreen } from './features/game/GameScreen'
 import { LifeRecord } from './features/game/LifeRecord'
 import { StartScreen } from './features/game/StartScreen'
 import { useGameStore } from './features/game/store'
+import { Toast } from './features/game/Toast'
 import { TopBar } from './features/game/TopBar'
 
 export function App() {
@@ -12,6 +13,7 @@ export function App() {
   const running = useGameStore((s) => s.running)
   const speed = useGameStore((s) => s.speed)
   const outcome = useGameStore((s) => s.outcome)
+  const marketOpen = useGameStore((s) => s.marketOpen)
   const { load, born, startLife, pause, resume, setSpeed } = useGameStore.getState()
 
   useEffect(() => {
@@ -29,13 +31,14 @@ export function App() {
         running={running}
         speed={speed}
         showControls={status === 'playing'}
-        controlsDisabled={Boolean(game?.pendingEvent) || outcome !== null}
+        controlsDisabled={Boolean(game?.pendingEvent) || outcome !== null || marketOpen}
         onPause={pause}
         onResume={resume}
         onSpeed={setSpeed}
         onRestart={restart}
       />
 
+      {status === 'playing' && <Toast />}
       <main className="mx-auto max-w-6xl px-4 py-6 md:px-6">
         {status === 'loading' && <p className="text-muted">불러오는 중…</p>}
         {status === 'error' && (

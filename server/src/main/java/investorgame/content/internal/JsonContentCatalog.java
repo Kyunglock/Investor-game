@@ -1,8 +1,13 @@
 package investorgame.content.internal;
 
+import investorgame.common.StatCodes;
 import investorgame.content.ContentCatalog;
+import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
+import investorgame.content.LifeText;
 import investorgame.content.NewsDefinition;
+import investorgame.content.NoticeDefinition;
+import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,9 +29,18 @@ class JsonContentCatalog implements ContentCatalog {
 
   private static final String STYLE_PREFIX = "style.";
   private static final String SECTOR_PREFIX = "sector.";
+  private static final String RISK_PREFIX = "risk.";
+  private static final String MIND_PREFIX = "mind.";
 
   static final List<String> FILES =
-      List.of("meta.json", "jobs.json", "traits.json", "news.json", "phrases.json");
+      List.of(
+          "meta.json",
+          "jobs.json",
+          "traits.json",
+          "news.json",
+          "phrases.json",
+          "stocks.json",
+          "life.json");
 
   private final Meta meta;
   private final List<JobDefinition> jobs;
@@ -34,10 +48,17 @@ class JsonContentCatalog implements ContentCatalog {
   private final List<TraitStage> traitStages;
   private final List<NewsDefinition> news;
   private final Phrases phrases;
+  private final List<StockDefinition> stocks;
+  private final Life life;
   private final Map<String, String> sectorNames;
   private final Map<String, String> styleNames;
+  private final Map<String, String> riskNames;
+  private final Map<String, String> mindNames;
+  private final Map<String, InvestorType> investorTypes;
+  private final ContentProperties properties;
 
-  JsonContentCatalog(JsonMapper json) {
+  JsonContentCatalog(JsonMapper json, ContentProperties properties) {
+    this.properties = properties;
     this.meta = read(json, "meta.json", new TypeReference<>() {});
     this.jobs = read(json, "jobs.json", new TypeReference<>() {});
     this.traits =
@@ -53,9 +74,58 @@ class JsonContentCatalog implements ContentCatalog {
             .toList();
     this.news = read(json, "news.json", new TypeReference<>() {});
     this.phrases = read(json, "phrases.json", new TypeReference<>() {});
+    this.stocks =
+        read(json, "stocks.json", new TypeReference<List<StockDefinition>>() {}).stream()
+            .sorted(Comparator.comparing(StockDefinition::code))
+            .toList();
+    this.life = read(json, "life.json", new TypeReference<>() {});
     this.sectorNames = toMap(meta.sectors());
     this.styleNames = toMap(meta.styles());
+    this.riskNames = toMap(meta.risks());
+    this.mindNames = toMap(meta.minds());
+    this.investorTypes =
+        meta.investorTypes().stream()
+            .collect(Collectors.toUnmodifiableMap(InvestorType::code, t -> t));
     validate();
+  }
+
+  @Override
+  public List<NamedCode> styles() {
+    return meta.styles();
+  }
+
+  @Override
+  public List<NamedCode> risks() {
+    return meta.risks();
+  }
+
+  @Override
+  public List<NamedCode> minds() {
+    return meta.minds();
+  }
+
+  @Override
+  public String riskName(String code) {
+    return riskNames.getOrDefault(code, code);
+  }
+
+  @Override
+  public String mindName(String code) {
+    return mindNames.getOrDefault(code, code);
+  }
+
+  @Override
+  public InvestorType investorType(String code) {
+    InvestorType type = investorTypes.get(code);
+    if (type == null) {
+      throw new IllegalArgumentException("알 수 없는 투자자 유형: " + code);
+    }
+    return type;
+  }
+
+  @Override
+  public List<InvestorType> investorTypes() {
+    return meta.investorTypes();
   }
 
   @Override
@@ -107,6 +177,38 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public List<StockDefinition> stocks() {
+    return stocks;
+  }
+
+  @Override
+  public StockDefinition stock(String code) {
+    return stocks.stream()
+        .filter(s -> s.code().equals(code))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("알 수 없는 종목: " + code));
+  }
+
+  @Override
+  public List<StockDefinition> stocksOf(String sectorCode) {
+    return stocks.stream().filter(s -> s.sector().equals(sectorCode)).toList();
+  }
+
+  @Override
+  public List<NoticeDefinition> notices() {
+    return life.notices();
+  }
+
+  @Override
+  public LifeText lifeText(String kind) {
+    return switch (kind) {
+      case "marriage" -> life.marriage();
+      case "child" -> life.child();
+      default -> throw new IllegalArgumentException("알 수 없는 생활 이벤트: " + kind);
+    };
+  }
+
+  @Override
   public List<String> hintPhrases(String direction, String strength) {
     return phrases.hints().getOrDefault(direction, Map.of()).getOrDefault(strength, List.of());
   }
@@ -134,12 +236,20 @@ class JsonContentCatalog implements ContentCatalog {
     require(
         traits.stream().map(TraitDefinition::code).distinct().count() == traits.size(),
         "성향 장면 코드가 겹친다");
+    ContentProperties.Range optionRange = properties.traitOptions();
     for (TraitDefinition trait : traits) {
-      require(trait.options().size() >= 2, "성향 장면에 선택지가 둘 이상 있어야 한다: " + trait.code());
+      int count = trait.options().size();
+      require(
+          count >= optionRange.min() && count <= optionRange.max(),
+          "성향 장면의 선택지는 %d~%d개여야 한다: %s"
+              .formatted(optionRange.min(), optionRange.max(), trait.code()));
       for (TraitDefinition.Option option : trait.options()) {
-        validateTraitDeltas(trait.code() + "/" + option.code(), option.traitDeltas());
+        String where = trait.code() + "/" + option.code();
+        validateTraitDeltas(where, option.traitDeltas());
+        validateStatDeltas(where, option.statDeltas());
       }
     }
+    validateInvestorTypes(meta.styles(), meta.risks(), meta.minds(), meta.investorTypes());
     for (NewsDefinition definition : news) {
       require(
           sectorNames.containsKey(definition.sector()), "뉴스가 알 수 없는 섹터를 쓴다: " + definition.code());
@@ -154,6 +264,8 @@ class JsonContentCatalog implements ContentCatalog {
       }
     }
     require(!hintPhrases("NEUTRAL", "MILD").isEmpty(), "모호한 힌트 문구가 없다");
+    validateStocks();
+    validateLife();
     require(!swayPhrases("POS").isEmpty() && !swayPhrases("NEG").isEmpty(), "다른 뉴스 문구가 없다");
   }
 
@@ -170,11 +282,88 @@ class JsonContentCatalog implements ContentCatalog {
         require(
             sectorNames.containsKey(key.substring(SECTOR_PREFIX.length())), "알 수 없는 섹터: " + where);
         hasSector = true;
+      } else if (key.startsWith(RISK_PREFIX)) {
+        require(
+            riskNames.containsKey(key.substring(RISK_PREFIX.length())), "알 수 없는 위험 축: " + where);
+      } else if (key.startsWith(MIND_PREFIX)) {
+        require(
+            mindNames.containsKey(key.substring(MIND_PREFIX.length())), "알 수 없는 소신 축: " + where);
       } else {
         require(false, "알 수 없는 성향 키: " + where + " " + key);
       }
     }
     require(hasStyle && hasSector, "선택지가 스타일과 섹터를 모두 드러내야 한다: " + where);
+  }
+
+  private static final Set<String> VOLATILITIES = Set.of("low", "mid", "high");
+
+  /** 섹터마다 종목이 하나 이상 있어야 뉴스가 매매 대상 종목을 뽑을 수 있다 (경제 개편 설계 5.4절). */
+  private void validateStocks() {
+    require(!stocks.isEmpty(), "종목이 하나도 없다");
+    require(
+        stocks.stream().map(StockDefinition::code).distinct().count() == stocks.size(),
+        "종목 코드가 겹친다");
+    require(
+        stocks.stream().map(StockDefinition::name).distinct().count() == stocks.size(),
+        "종목 이름이 겹친다");
+    for (StockDefinition stock : stocks) {
+      require(sectorNames.containsKey(stock.sector()), "종목이 알 수 없는 섹터를 쓴다: " + stock.code());
+      require(stock.basePrice() > 0, "종목 기준가는 0보다 커야 한다: " + stock.code());
+      require(VOLATILITIES.contains(stock.volatility()), "알 수 없는 변동성 등급: " + stock.code());
+    }
+    for (NamedCode sector : meta.sectors()) {
+      require(!stocksOf(sector.code()).isEmpty(), "종목이 없는 섹터: " + sector.code());
+    }
+  }
+
+  private void validateLife() {
+    require(life.marriage() != null && life.child() != null, "결혼·자녀 문구가 없다");
+    require(life.notices() != null && !life.notices().isEmpty(), "알림 이벤트가 없다");
+    for (NoticeDefinition notice : life.notices()) {
+      require(notice.weight() > 0, "알림 가중치는 0보다 커야 한다: " + notice.code());
+      require(
+          notice.amount() != 0 || notice.salaryPercent() != 0, "알림은 금액이 있어야 한다: " + notice.code());
+    }
+  }
+
+  /** 성향 선택이 움직이는 능력치는 운을 뺀 넷이고 폭이 제한된다. 운은 타고난 값이다 (확정). */
+  private void validateStatDeltas(String where, Map<String, Integer> deltas) {
+    for (Map.Entry<String, Integer> entry : deltas.entrySet()) {
+      require(
+          StatCodes.ALL.contains(entry.getKey()) && !StatCodes.LUCK.equals(entry.getKey()),
+          "성향 선택이 움직일 수 없는 능력치: " + where + " " + entry.getKey());
+      require(
+          Math.abs(entry.getValue()) <= properties.traitStatMaxDelta(),
+          "능력치 변화 폭이 너무 크다: " + where + " " + entry.getKey());
+    }
+  }
+
+  /** 기간 × 위험 × 소신 조합마다 유형이 정확히 하나씩 있어야 한다. 빠지면 성향 확정 시점에 터지므로 시작 때 막는다. */
+  static void validateInvestorTypes(
+      List<NamedCode> styles,
+      List<NamedCode> risks,
+      List<NamedCode> minds,
+      List<InvestorType> types) {
+    Set<String> codes = types.stream().map(InvestorType::code).collect(Collectors.toSet());
+    require(codes.size() == types.size(), "투자자 유형 코드가 겹친다");
+    int expected = styles.size() * risks.size() * minds.size();
+    require(types.size() == expected, "투자자 유형은 %d개여야 한다".formatted(expected));
+    for (NamedCode style : styles) {
+      for (NamedCode risk : risks) {
+        for (NamedCode mind : minds) {
+          String code = style.code() + "-" + risk.code() + "-" + mind.code();
+          require(codes.contains(code), "투자자 유형이 없다: " + code);
+        }
+      }
+    }
+    for (InvestorType type : types) {
+      require(
+          type.name() != null
+              && !type.name().isBlank()
+              && type.description() != null
+              && !type.description().isBlank(),
+          "투자자 유형의 이름과 설명이 있어야 한다: " + type.code());
+    }
   }
 
   private static void require(boolean condition, String message) {
@@ -195,7 +384,15 @@ class JsonContentCatalog implements ContentCatalog {
     }
   }
 
-  record Meta(String version, List<NamedCode> styles, List<NamedCode> sectors) {}
+  record Meta(
+      String version,
+      List<NamedCode> styles,
+      List<NamedCode> risks,
+      List<NamedCode> minds,
+      List<NamedCode> sectors,
+      List<InvestorType> investorTypes) {}
+
+  record Life(LifeText marriage, LifeText child, List<NoticeDefinition> notices) {}
 
   record Phrases(
       Map<String, Map<String, List<String>>> hints,
