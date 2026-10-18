@@ -1,6 +1,6 @@
 # 스펙: 이벤트 운영 (event)
 
-> 담당: agent2 · 상태: 초안 v0.1 · 근거: [domains.md](../domains.md) 4절, [decisions.md](../decisions.md), [db.md](../db.md) 3.9~3.11절, [prd.md](../prd.md) 3절
+> 담당: agent2 · 상태: 2026-10-18 경제 개편 반영 (종목 뉴스, LIFE, NOTICE) · 근거: [domains.md](../domains.md) 4절, [decisions.md](../decisions.md), [db.md](../db.md) 3.9~3.11절, [prd.md](../prd.md) 3절
 > 표기: **(확정)**, **(제안)**, **(초기값)** 은 [README.md](./README.md) 참고.
 
 ## 1. 목적과 범위
@@ -62,7 +62,7 @@ public interface EventService {
 ## 3. 입력·출력 타입
 
 ```java
-public enum EventKind { JOB, TRAIT, TRAINING, OFFER, NOTICE, NEWS }
+public enum EventKind { JOB, OFFER, TRAIT, LIFE, NEWS, NOTICE }   // 구현된 순서 = 우선순위. TRAINING은 아직 없음
 public enum EventStatus { SCHEDULED, PENDING, RESOLVED, SKIPPED }
 
 public record SchedulingContext(
@@ -136,8 +136,9 @@ public record CompleteResult(
 | `TRAIT` | `CHILDHOOD` | 예 | 불가 | 성장기의 일상 장면에서 행동을 고르게 해 성향을 유추한다. 판정으로 뒤집지 않는다 (확정) |
 | `TRAINING` | 둘 다 | 예 | 불가 | 자기계발. 비용을 쓰고 능력치 경험치를 얻는 선택지와 "하지 않는다" 선택지가 있다 (확정: 성장 루트) |
 | `OFFER` | `SAVING` | 예 | 불가 | 투자 시작 제안. 수락/거절 (확정) |
-| `NOTICE` | 둘 다 | 아니오 | **가능** | 선택이 필요 없는 알림 (확정) |
-| `NEWS` | `INVESTING` | 예 | **불가** | 매수·매도·관망 선택. 숨은 방향·폭이 있다 (확정) |
+| `LIFE` | 취업 뒤 | 예 | 불가 | 결혼(`marriage`)·자녀(`child`) 제안. 판정 없음. 수락이면 진행이 가계·자산에 반영 (경제 개편 설계 7.3절) |
+| `NOTICE` | 취업 뒤 | 아니오 | — | 지출·수입 알림. **만들어지는 순간 RESOLVED**이고 판은 멈추지 않는다. `ScheduleResult.notice`로 돌려주고 진행이 돈을 반영한다 |
+| `NEWS` | `INVESTING` | 예 | **불가** | 매수·매도·관망 선택. 숨은 방향·폭과 **매매 대상 종목** 하나가 있다. `sectorWide`면 충격이 섹터 전체 (확정) |
 
 - **스킵할 수 있는 것은 알림성(`NOTICE`)뿐이다** (확정). 선택형은 모두 스킵할 수 없다. 뉴스는 선택의 순간이기 때문이다.
 - 한 판에서 **대기 중(`PENDING`)인 선택형 이벤트는 최대 하나**다. 선택형을 만나면 `schedule`이 멈추기 때문이다.
@@ -166,7 +167,9 @@ public record CompleteResult(
 | `JOB` | `CHILDHOOD`, 성향 이벤트가 모두 끝나 스타일이 확정됨, 아직 없음 | `event.job.age`(초기값 24)를 게임 일수로 바꾼 값. 마지막 성향 이벤트보다 앞서지 않는다 |
 | `OFFER` | `SAVING`, `salaryStarted`, `traitsFinalized`, 대기·예약된 `OFFER` 없음 | 처음이면 `max(현재, 첫 월급 후)`; 거절되었다면 마지막 `OFFER` + `game.days-per-year` (1년마다 다시 묻는다, 확정) |
 | `TRAINING` | `JOB`이 해결됨 | 마지막 `TRAINING`(없으면 `JOB` 해결 일수) + `event.training.gap-days` 구간에서 뽑은 값 |
-| `NOTICE` | 항상 | 마지막 `NOTICE`(없으면 기준일) + `event.notice.gap-days` 구간에서 뽑은 값 |
+| `LIFE` 결혼 | 취업함, 미혼, 나이 ≤ `marriage-last-age` | 처음은 `marriage-age` 구간의 나이(키 `("event","life","marriage-age")`), 거절했으면 마지막 + `marriage-retry-years`년 |
+| `LIFE` 자녀 | 결혼함, 자녀 < `max-children`, 나이 ≤ `child-last-age` | 처음은 결혼일 + `child-first-gap-years`, 그다음은 마지막 자녀 제안 + `child-gap-years` (키 `("event","life","child",n)`) |
+| `NOTICE` | 취업함 | 마지막 `NOTICE`(없으면 취업일) + `event.notice.gap-days`. 정의는 `("event","notice",seq)`로 가중치 선택, `requiresMarried`는 결혼 뒤에만 |
 | `NEWS` | `INVESTING` | 마지막 뿌리 `NEWS`(없으면 `INVESTING` 시작 일수) + 투자 스타일별 간격 구간에서 뽑은 값 (5.4절) |
 | 연결 뉴스 | `SCHEDULED` 상태 | 예약된 `occurs_day` |
 
@@ -189,7 +192,7 @@ public record CompleteResult(
 
 뿌리 뉴스(연결의 첫 이벤트)를 만들 때:
 
-1. **정의 선택.** 콘텐츠의 `root: true`이고 단계·스타일 조건에 맞는 뉴스 정의를 가중치로 뽑는다.
+1. **정의 선택.** 콘텐츠의 `root: true`이고 단계·스타일 조건에 맞는 뉴스 정의를 가중치로 뽑는다. 이어서 **종목**을 그 섹터의 종목(코드순)에서 `nextInt`로 뽑는다. 제목·본문의 `{stock}`은 종목 이름으로 바뀐다. 정의의 `sectorWide`는 충격 범위만 정한다 (매매는 항상 뽑힌 종목).
    - 섹터가 `interestSector`와 같으면 가중치에 `event.news.interest-weight-percent`(초기값 300 = 3배)를 곱한다. 다른 섹터 뉴스도 남는다 (확정 방향).
    - 최근 `event.news.no-repeat-window`(초기값 5)개 안에 나온 같은 정의는 제외한다 (제안).
    - 정의가 `styles`를 지정했으면 그 스타일에만 나온다.
@@ -237,7 +240,8 @@ public record CompleteResult(
 | 용도 | 키 |
 |---|---|
 | 종류별 간격 | `("event", 종류, 그 종류의 몇 번째)` |
-| 뉴스 정의 선택, 숨은 값, 변동 폭, 줏대 뉴스 | `("event", "news", seq)` — 이 안에서 뽑는 순서: 정의 → 방향 → 폭 → 분위기 → 분위기 문구 |
+| 뉴스 정의 선택, 종목, 숨은 값, 변동 폭, 줏대 뉴스 | `("event", "news", seq)` — 이 안에서 뽑는 순서: 정의 → **종목** → 방향 → 폭 → 분위기 → 분위기 문구 |
+| 결혼 제안 나이 / 자녀 간격 / 알림 정의 | `("event","life","marriage-age")` / `("event","life","child",n)` / `("event","notice",seq)` |
 | 직업 선택지 뽑기 | `("event", "job-options")` |
 | 연결 뉴스 | `("event", "followup", 부모의 seq)` — 순서: 항목 선택 → 이어질 확률 → 지연 일수 → 방향 → 폭 |
 | 힌트 문구 선택 | `("event", "hint", seq)` |

@@ -1,19 +1,19 @@
 # 스펙: 자산 (asset)
 
-> 담당: agent2 · 상태: 초안 v0.1 · 근거: [poc.md](../poc.md) 5절, [decisions.md](../decisions.md), [db.md](../db.md) 3.6~3.8절
+> 담당: agent2 · 상태: 2026-10-18 경제 개편 반영 (종목 수량 보유, 빚) · 근거: [poc.md](../poc.md) 5절, [decisions.md](../decisions.md), [db.md](../db.md) 3.6~3.8절, [경제 개편 설계](../superpowers/specs/2026-10-18-economy-redesign-design.md) 6절
 > 표기: **(확정)**, **(제안)**, **(초기값)** 은 [README.md](./README.md) 참고.
 
 ## 1. 목적과 범위
 
-한 판의 현금과 보유를 소유하고, 거래와 주가 변동을 반영한다.
+한 판의 현금·종목 보유(수량과 원가)·빚을 소유하고 거래와 수입·지출을 반영한다. **가격은 모른다.** 가격은 시장 도메인이 소유하고 진행이 인자로 넘긴다.
 
 | 맡는 것 | 맡지 않는 것 |
 |---|---|
 | 초기 자산 랜덤 생성 | 직업별 월급 액수 계산 (진행이 콘텐츠와 연차로 계산해 넘김) |
-| 매수·매도 처리 | 매수·매도 판정과 이탈 (행동) |
-| 월급 입금, 자기계발 비용 지출 | 주가 변동의 방향과 폭 결정 (이벤트 운영이 만들고 진행이 넘김) |
-| 주가 변동 반영과 손익 계산 | 운에 의한 손실 완화 여부 (행동이 정해 비율만 넘김) |
-| 총자산 계산, 거래 장부 | 능력치 읽기 (능력치를 모른다) |
+| 수량·가격으로 매수·매도, 원가 비례 차감, 실현 손익 | 매수·매도 판정과 이탈 (행동) |
+| 수입(월급·배우자·퇴직금·경품) 입금, 빚 상환 | 가격의 변동 (시장) |
+| 지출(생활비·일회성)과 빚, 월 이자 | 수량 계산 (뉴스 매수 비율은 진행이 현재가로 계산) |
+| 평가액·총자산(현금 + 평가 − 빚), 거래 장부 | 능력치·직업 읽기 |
 
 - **직업도 능력치도 모른다** (domains.md 4절). 필요한 값은 모두 인자로 받는다.
 - 다른 도메인을 호출하지 않는다.
@@ -31,21 +31,26 @@ public interface AssetService {
 
     AccountView get(UUID gameId);
 
-    /** 사용자의 실제 행동을 반영한다. 매수는 현금의 일정 비율, 매도는 해당 섹터 전량이다. */
-    TradeResult trade(UUID gameId, Action action, String sectorCode, int gameDay, UUID eventId);
+    /** 수량 × 가격을 현금에서 빼고 보유를 늘린다. 현금이 모자라면 부분 체결 없이 INSUFFICIENT_CASH. 수량 1 미만은 오류. */
+    TradeResult buy(UUID gameId, String stockCode, long quantity, long price, int gameDay, UUID eventId);
 
-    /** 뉴스의 숨은 방향·폭을 해당 섹터 보유에 반영한다. 손실이면 lossFactorPercent를 곱한다. */
-    PriceChangeResult applyPriceChange(UUID gameId, String sectorCode, Direction direction,
-                                       int magnitudeBp, int lossFactorPercent, int gameDay, UUID eventId);
+    /** 수량만큼 팔아 현금에 더하고 원가를 비례 차감한다. 보유보다 많으면 전량, 보유가 없으면 NOTHING_TO_SELL. */
+    TradeResult sell(UUID gameId, String stockCode, long quantity, long price, int gameDay, UUID eventId);
 
-    /** 월급을 입금한다. 같은 (gameId, gameDay)로 다시 부르면 중복 입금하지 않는다. */
-    SalaryResult creditSalary(UUID gameId, long amount, int gameDay);
+    /** 수입. 빚이 있으면 먼저 갚는다. SALARY·SPOUSE_INCOME·SEVERANCE는 같은 날 한 번만. */
+    IncomeResult credit(UUID gameId, String kind, long amount, int gameDay);
 
-    /** 자기계발 비용 등을 지출한다. 현금이 부족하면 지출하지 않는다. */
-    SpendResult spend(UUID gameId, long amount, int gameDay, UUID eventId);
+    /** 지출. 현금이 모자라면 모자란 만큼 빚. EXPENSE는 같은 날 한 번만, LIFE_COST는 여러 번. */
+    SpendResult spend(UUID gameId, String kind, long amount, int gameDay, UUID eventId);
 
-    /** 현금과 보유 평가액의 합. */
-    long totalAsset(UUID gameId);
+    /** 빚에 월 이자(asset.debt-interest-bp). 빚이 없거나 같은 날 이미 붙였으면 accrued=false. */
+    InterestResult accrueInterest(UUID gameId, int gameDay);
+
+    /** Σ 수량 × 가격. */
+    long holdingsValue(UUID gameId, Map<String, Long> prices);
+
+    /** 현금 + 평가액 − 빚. */
+    long totalAsset(UUID gameId, Map<String, Long> prices);
 
     /** 세션 만료 시 해당 판의 자산 데이터를 지운다. */
     void deleteByGame(UUID gameId);
@@ -55,26 +60,16 @@ public interface AssetService {
 ## 3. 입력·출력 타입
 
 ```java
-public record AccountView(UUID gameId, long cash, long initialCash, Map<String, Long> holdings) {}
+public record AccountView(UUID gameId, long cash, long initialCash, long debt, Map<String, Holding> holdings) {
+    public record Holding(long quantity, long costBasis) { long avgCost(); }   // 평단 = costBasis / quantity
+}
 
-public enum TradeStatus { EXECUTED, HELD, NOTHING_TO_SELL, INSUFFICIENT_CASH }
-
-public record TradeResult(
-    TradeStatus status,
-    Action action,       // 요청된 실제 행동
-    long amount,         // 거래된 금액(원). 실행되지 않으면 0
-    long cashAfter
-) {}
-
-public record PriceChangeResult(
-    long pnl,            // 이번 변동의 손익(원). 보유가 없으면 0
-    boolean lossSoftened,  // 운으로 손실이 줄었는가
-    long holdingAfter
-) {}
-
-public record SalaryResult(boolean credited, long amount, long cashAfter) {}   // 이미 입금된 날이면 credited=false
-
-public record SpendResult(boolean spent, long cashAfter) {}
+public record TradeResult(Status status, long quantity, long price, long amount, long realizedPnl, long cashAfter) {
+    public enum Status { EXECUTED, NOTHING_TO_SELL, INSUFFICIENT_CASH }
+}
+public record IncomeResult(boolean credited, long amount, long debtRepaid, long cashAfter) {}
+public record SpendResult(boolean spent, long fromCash, long toDebt, long cashAfter, long debtAfter) {}
+public record InterestResult(boolean accrued, long interest, long debtAfter) {}
 ```
 
 ## 4. 규칙
@@ -85,64 +80,51 @@ public record SpendResult(boolean spent, long cashAfter) {}
 - 보유는 비어 있다.
 - `initialCash`를 계정에 함께 저장한다 (결과의 수익률 계산에 쓴다).
 
-### 4.2 매수 (`BUY`)
+### 4.2 매수
 
-```
-금액 = 현금 × buy-ratio-bp / 10,000          # 정수 나눗셈, 소수점 이하 버림
-```
+- 금액 = 수량 × 가격. 현금보다 크면 부분 체결 없이 `INSUFFICIENT_CASH`. 수량 1 미만은 검증 오류.
+- 실행하면 현금이 줄고 종목 수량·원가(`cost_basis`)가 늘어난다. 장부에 `BUY`(현금 변화 음수, 수량·가격).
+- **뉴스 선택의 매수 수량**은 진행이 `현금 × progress.news-buy-ratio-bp / 10,000 / 현재가`(버림)로 계산해 넘긴다. 0이면 진행이 `INSUFFICIENT_CASH`로 처리한다. **자유 매매**는 사용자가 수량을 정한다 (설계 8절).
 
-- `buy-ratio-bp`의 초기값은 3000(30%). 매수 금액이 `min-trade`(초기값 1,000원) 미만이면 실행하지 않고 `INSUFFICIENT_CASH`를 돌려준다.
-- 실행하면 현금이 줄고 해당 섹터 보유가 늘어난다. 장부에 `BUY`(현금 변화 음수)를 한 행 남긴다.
+### 4.3 매도
 
-### 4.3 매도 (`SELL`)
+- `sold = min(수량, 보유)`. 보유가 0이면 `NOTHING_TO_SELL`(장부 없음).
+- 원가 차감 `costOut = cost_basis × sold / 보유`(전량이면 전부), `realizedPnl = sold × 가격 − costOut`.
+- 뉴스 선택의 매도는 **전량**이다 (진행이 보유 수량을 넘긴다).
 
-- 해당 섹터 보유 **전량**을 현금으로 바꾼다 (poc.md).
-- 보유가 0이면 실행하지 않고 `NOTHING_TO_SELL`을 돌려준다. 장부에 남기지 않는다. 줏대나 인내심 이탈로 보유가 없는데 매도가 선택된 경우가 여기에 해당한다 (행동 스펙 4.2절).
-- 실행하면 장부에 `SELL`(현금 변화 양수)을 한 행 남긴다.
+### 4.4 관망
 
-### 4.4 관망 (`HOLD`)
+- 자산을 부르지 않는다. 진행이 `HELD`를 결과에 적는다.
 
-- 아무것도 하지 않는다. `HELD`를 돌려준다. 장부에 남기지 않는다.
+### 4.5 가격 변동 (시장 도메인으로 이동)
 
-### 4.5 주가 변동
+- 가격은 시장이 매달 움직이고 뉴스 충격도 시장이 반영한다 ([market.md](./market.md)). 자산은 **평가만** 한다: `holdingsValue(prices)`.
+- 뉴스 선택의 손익 = 충격 전후 `holdingsValue` 차이 (진행이 계산). 운 완화는 진행이 충격 폭에 곱한다.
+- 2026-10-18 결정: "주가 변동은 뉴스 때만"을 뒤집어 **매달 움직인다** (경제 개편 설계 1절).
 
-```
-원 손익 = 보유 × 방향 부호 × magnitudeBp / 10,000        # UP은 +, DOWN은 −. 0 방향으로 버림
-손실이면: 손익 = 원 손익 × lossFactorPercent / 100        # 0 방향으로 버림
-```
+### 4.6 수입·지출·빚
 
-- 보유가 0이면 아무 일도 없다 (`pnl` 0). 장부에 남기지 않는다.
-- `lossSoftened`는 손실이고 `lossFactorPercent`가 100 미만일 때만 true다.
-- 보유 평가액은 0 아래로 내려가지 않는다. 손실이 보유보다 크면 보유는 0이 된다.
-- **주가 변동은 뉴스를 해결할 때만 일어난다** (확정). 시간이 흐른다고 보유 평가액이 저절로 바뀌지 않는다.
-- 변동은 해당 섹터에만 적용한다. 다른 섹터에는 영향을 주지 않는다 (제안).
-- 장부에 `PRICE_CHANGE`(평가액 변화)를 한 행 남긴다.
-
-**한 번의 선택에서의 순서** (진행이 지킨다): 실제 행동을 반영한 **뒤에** 주가 변동을 반영한다. 방금 산 보유도 이번 변동을 받고, 방금 판 보유는 변동을 받지 않는다 (poc.md와 같다).
-
-### 4.6 월급과 지출
-
-- 월급은 진행이 연차와 콘텐츠로 계산한 금액을 넘긴다. 이 도메인은 입금만 한다.
-- 월급 입금은 `(gameId, gameDay)`당 한 번만 일어난다. 같은 날에 다시 부르면 `credited=false`를 돌려준다 (재시도에 안전하다).
-- 지출은 현금이 모자라면 아무것도 바꾸지 않고 `spent=false`를 돌려준다. 현금은 음수가 되지 않는다.
+- 수입(`credit`)은 빚이 있으면 먼저 갚고 남는 만큼 현금. `SALARY`, `SPOUSE_INCOME`, `SEVERANCE`는 `(gameId, gameDay, kind)`당 한 번 (재시도 안전). `WINDFALL`(경품 등)은 제한 없음.
+- 지출(`spend`)은 현금이 모자라면 **모자란 만큼 빚**(마이너스 통장). 현금은 음수가 되지 않는다. `EXPENSE`(생활비)는 같은 날 한 번, `LIFE_COST`(결혼·출산·알림)는 여러 번 가능.
+- 이자(`accrueInterest`)는 빚 × `asset.debt-interest-bp` / 10,000. 같은 날 한 번. 빚 0이면 `accrued=false`.
 
 ### 4.7 총자산
 
-- 총자산 = 현금 + 모든 섹터의 보유 평가액의 합.
+- 총자산 = 현금 + Σ(수량 × 가격) − 빚.
 
 ### 4.8 장부 (`asset_ledger`)
 
 모든 변화를 한 행씩 남긴다. `amount`는 해당 `kind`가 바꾼 금액이다.
 
-| kind | amount | 현금 변화 | 평가액 변화 |
-|---|---|---|---|
-| `BUY` | 매수 금액(음수로 기록) | 감소 | 증가 |
-| `SELL` | 매도 금액(양수) | 증가 | 감소 |
-| `SALARY` | 월급(양수) | 증가 | 없음 |
-| `SPEND` | 지출(음수) | 감소 | 없음 |
-| `PRICE_CHANGE` | 손익(부호 있음) | 없음 | 증감 |
+| kind | amount | 비고 |
+|---|---|---|
+| `BUY` / `SELL` | 매수 금액(음수) / 매도 금액(양수) | `stock_code`, `quantity`, `price` |
+| `SALARY` / `SPOUSE_INCOME` / `SEVERANCE` / `WINDFALL` | 수입(양수) | 앞의 셋은 같은 날 한 번 |
+| `DEBT_REPAY` | 수입 중 빚 상환(음수) | 수입 행 바로 뒤 |
+| `EXPENSE` / `LIFE_COST` | 지출(음수) | `EXPENSE`는 같은 날 한 번 |
+| `INTEREST` | 이자(음수) | 같은 날 한 번. 빚만 늘어난다 |
 
-`cash_after`는 각 행 직후의 현금이다. 장부의 `cash_after` 마지막 행은 계정의 현금과 같아야 한다.
+`cash_after`·`debt_after`는 각 행 직후의 값이다. `PRICE_CHANGE`는 더 쓰지 않는다 (가격은 시장 이력에).
 
 ## 5. 설정값 (초기값)
 
@@ -151,8 +133,8 @@ public record SpendResult(boolean spent, long cashAfter) {}
 | `asset.initial-cash.min-unit` | 1 | 초기 현금 최소 단위 수 |
 | `asset.initial-cash.max-unit` | 50 | 초기 현금 최대 단위 수 |
 | `asset.initial-cash.unit` | 1,000,000 | 초기 현금 단위(원) |
-| `asset.buy-ratio-bp` | 3000 | 매수 시 현금 사용 비율 |
-| `asset.min-trade` | 1,000 | 최소 거래 금액(원) |
+| `asset.debt-interest-bp` | 100 | 빚의 월 이자 (1%) |
+| `progress.news-buy-ratio-bp` | 3000 | 뉴스 매수가 쓰는 현금 비율 (진행 설정. 수량은 진행이 계산) |
 
 ## 6. DB
 
@@ -160,7 +142,8 @@ public record SpendResult(boolean spent, long cashAfter) {}
 
 변경 사항:
 
-- 월급 중복 입금을 막기 위해 `asset_ledger`에 **부분 유니크 인덱스** `(game_id, game_day) where kind = 'SALARY'`를 둔다 (제안). db.md 3.8절에 반영한다.
+- `asset_holding`은 `(game_id, stock_code, quantity, cost_basis)`. `asset_account.debt`. `asset_ledger`에 `stock_code`, `quantity`, `price`, `debt_after`.
+- 같은 날 한 번만 처리하는 종류를 위해 **부분 유니크 인덱스** `(game_id, game_day, kind) WHERE kind IN ('SALARY','SPOUSE_INCOME','SEVERANCE','EXPENSE','INTEREST')`.
 - 세션 만료 시 `deleteByGame`으로 세 테이블에서 `game_id` 기준으로 지운다.
 - 마이그레이션 `V<번호>__asset_init.sql`이 세 테이블과 인덱스를 만든다. FK가 없다.
 

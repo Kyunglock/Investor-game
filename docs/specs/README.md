@@ -28,8 +28,10 @@
 |---|---|---|---|
 | [behavior.md](./behavior.md) | 초안 v0.1 | agent1 | 없음 (순수 규칙) |
 | [character.md](./character.md) | 초안 v0.1 | agent1 | 없음 |
-| [asset.md](./asset.md) | 초안 v0.1 | agent2 | 없음 |
-| [event.md](./event.md) | 초안 v0.1 | agent2 | 콘텐츠 (유일한 직접 호출) |
+| [asset.md](./asset.md) | 경제 개편 반영 | agent2 | 없음 (가격은 인자로 받는다) |
+| [market.md](./market.md) | 구현됨 | - | 콘텐츠 (직접 호출 허용) |
+| [household.md](./household.md) | 구현됨 | - | 없음 |
+| [event.md](./event.md) | 경제 개편 반영 | agent2 | 콘텐츠 (직접 호출 허용) |
 | content.md, session.md, result.md | 예정 | agent3 | 없음 |
 | progress.md | 예정 | agent5 | 위 전부 |
 
@@ -78,6 +80,6 @@ public interface SeededRandom {
 
 ## 6. 공통 규칙
 
-- 도메인 사이의 호출은 진행(agent5)만 한다. 이 문서의 인터페이스는 진행이 부르는 입구다.
+- 도메인 사이의 호출은 진행(agent5)만 한다. 이 문서의 인터페이스는 진행이 부르는 입구다. 예외는 콘텐츠를 직접 읽는 **이벤트 운영과 시장** 둘이다 (`DomainBoundaryTest.READS_CONTENT`).
 - 공개 인터페이스를 바꾸는 변경은 PR을 만들고 `cross-domain` 라벨을 붙인다.
 - 스펙과 구현이 어긋나면 같은 PR에서 스펙을 고친다.

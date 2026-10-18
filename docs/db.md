@@ -29,9 +29,11 @@
 | 도메인 | 접두사 | 테이블 |
 |---|---|---|
 | 세션 | `session_` | `session_info` |
-| 진행 | `progress_` | `progress_game` |
+| 진행 | `progress_` | `progress_game`, `progress_log`, `progress_year`, `progress_month`(달마다 마친 총자산) |
 | 캐릭터 | `character_` | `character_profile`, `character_stat`, `character_stat_log`, `character_trait_score` |
-| 자산 | `asset_` | `asset_account`, `asset_holding`, `asset_ledger` |
+| 자산 | `asset_` | `asset_account`(+`debt`), `asset_holding`(종목 수량·원가), `asset_ledger`(+`stock_code`, `quantity`, `price`, `debt_after`) |
+| 시장 | `market_` | `market_price`, `market_price_history` ([market.md](./specs/market.md) 5절) |
+| 가계 | `household_` | `household_state`, `household_child` ([household.md](./specs/household.md) 5절) |
 | 이벤트 운영 | `event_` | `event_instance`, `event_resolution`, `event_deviation` |
 | 콘텐츠 | `content_` | `content_version` |
 | 결과 | `result_` | `result_game`, `result_stat` |
