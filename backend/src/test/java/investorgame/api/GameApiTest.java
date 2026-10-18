@@ -35,7 +35,7 @@ class GameApiTest {
   }
 
   @Test
-  void 일세에_태어나_성장기의_첫_성향_이벤트는_여섯_살에_온다() throws Exception {
+  void 열다섯_살에_시작해_첫_성향_이벤트는_반년_뒤에_온다() throws Exception {
     GameClient client = GameClient.newSession(mvc);
 
     client
@@ -44,14 +44,14 @@ class GameApiTest {
         .andExpect(jsonPath("$.status").value("ACTIVE"))
         .andExpect(jsonPath("$.phase").value("CHILDHOOD"))
         .andExpect(jsonPath("$.day").value(0))
-        .andExpect(jsonPath("$.startAge").value(1))
+        .andExpect(jsonPath("$.startAge").value(15))
         .andExpect(jsonPath("$.endAge").value(65))
         .andExpect(jsonPath("$.stats.insight").isNumber())
         .andExpect(jsonPath("$.initialStats.insight").isNumber())
         .andExpect(jsonPath("$.cash").isNumber())
         .andExpect(jsonPath("$.job").doesNotExist())
         .andExpect(jsonPath("$.pendingEvent").doesNotExist())
-        .andExpect(jsonPath("$.nextEventDay").value((6 - 1) * 360))
+        .andExpect(jsonPath("$.nextEventDay").value(180))
         .andExpect(jsonPath("$.seed").doesNotExist());
   }
 
@@ -104,10 +104,10 @@ class GameApiTest {
   }
 
   @Test
-  void 성향이_모두_정해진_뒤에_스물네_살에_직업_선택이_온다() throws Exception {
+  void 성향이_모두_정해진_뒤에_스물다섯_살에_직업_선택이_온다() throws Exception {
     DocumentContext job = GameClient.newSession(mvc).startUntilJob();
 
-    assertThat(job.read("$.day", Integer.class)).isEqualTo((24 - 1) * 360);
+    assertThat(job.read("$.day", Integer.class)).isEqualTo((25 - 15) * 360);
     assertThat(job.read("$.phase", String.class)).isEqualTo("CHILDHOOD");
     assertThat(job.read("$.investmentStyle.code", String.class)).isIn("short", "long");
     assertThat(job.read("$.interestSector.code", String.class)).isNotBlank();
@@ -115,12 +115,12 @@ class GameApiTest {
   }
 
   @Test
-  void 능력치는_15에서_85_사이이고_초기_현금은_100만원_단위다() throws Exception {
+  void 능력치는_5에서_35_사이이고_초기_현금은_100만원_단위다() throws Exception {
     GameClient client = GameClient.newSession(mvc);
     for (int i = 0; i < 20; i++) {
       DocumentContext game = client.start();
       for (String stat : List.of("insight", "patience", "courage", "conviction", "luck")) {
-        assertThat(game.read("$.stats." + stat, Integer.class)).isBetween(15, 85);
+        assertThat(game.read("$.stats." + stat, Integer.class)).isBetween(5, 35);
       }
       long cash = game.read("$.cash", Long.class);
       assertThat(cash).isBetween(1_000_000L, 50_000_000L);

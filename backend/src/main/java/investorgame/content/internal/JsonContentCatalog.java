@@ -48,6 +48,7 @@ class JsonContentCatalog implements ContentCatalog {
   private final List<JobDefinition> jobs;
   private final List<TraitDefinition> traits;
   private final List<TraitStage> traitStages;
+  private final List<TraitDefinition> adultTraits;
   private final List<NewsDefinition> news;
   private final Phrases phrases;
   private final List<StockDefinition> stocks;
@@ -68,8 +69,14 @@ class JsonContentCatalog implements ContentCatalog {
         read(json, "traits.json", new TypeReference<List<TraitDefinition>>() {}).stream()
             .sorted(Comparator.comparingInt(TraitDefinition::age))
             .toList();
+    this.adultTraits =
+        traits.stream()
+            .filter(TraitDefinition::adult)
+            .sorted(Comparator.comparing(TraitDefinition::code))
+            .toList();
     this.traitStages =
         traits.stream()
+            .filter(t -> !t.adult())
             .collect(Collectors.groupingBy(TraitDefinition::age, TreeMap::new, Collectors.toList()))
             .entrySet()
             .stream()
@@ -175,6 +182,11 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public List<TraitDefinition> adultTraits() {
+    return adultTraits;
+  }
+
+  @Override
   public List<NewsDefinition> news() {
     return news;
   }
@@ -235,6 +247,7 @@ class JsonContentCatalog implements ContentCatalog {
   private void validate() {
     require(!jobs.isEmpty(), "직업이 하나도 없다");
     require(!traits.isEmpty(), "성향 이벤트가 하나도 없다");
+    require(!traitStages.isEmpty(), "성장기 성향 장면(adult가 아닌 것)이 하나도 없다");
     require(!news.isEmpty(), "뉴스가 하나도 없다");
     require(
         traits.stream().map(TraitDefinition::code).distinct().count() == traits.size(),

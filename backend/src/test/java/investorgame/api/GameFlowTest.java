@@ -38,7 +38,7 @@ class GameFlowTest {
     GameClient client = GameClient.newSession(mvc);
     DocumentContext game = client.start();
     String gameId = game.read("$.gameId");
-    int endDay = (65 - 1) * 360;
+    int endDay = (65 - 15) * 360;
     List<String> kindOrder = new ArrayList<>();
 
     Map<String, Integer> seenKinds = new HashMap<>();
@@ -89,10 +89,13 @@ class GameFlowTest {
         .isGreaterThan(game.read("$.result.initialAsset", Long.class));
 
     assertThat(seenKinds.get("JOB")).isEqualTo(1);
-    assertThat(seenKinds.get("TRAIT")).as("성장 단계 6개에서 하나씩").isEqualTo(6);
-    assertThat(kindOrder.subList(0, 8))
+    // 성장 단계 10개에서 하나씩, 취업 뒤 일상 장면(adult) 풀 8개를 40년 동안 다 쓴다.
+    assertThat(seenKinds.get("TRAIT")).as("성장기 10 + 취업 뒤 일상 8").isEqualTo(18);
+    assertThat(kindOrder.subList(0, 12))
         .as("성장기의 성향 이벤트가 모두 끝난 뒤에 직업, 그다음 투자 시작 제안")
-        .containsExactly("TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "JOB", "OFFER");
+        .containsExactly(
+            "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT",
+            "TRAIT", "JOB", "OFFER");
     assertThat(seenKinds.get("OFFER")).isEqualTo(1);
     assertThat(seenKinds.getOrDefault("NEWS", 0)).isGreaterThanOrEqualTo(20);
     assertThat(game.read("$.investmentStyle.code", String.class)).isIn("short", "long");
@@ -119,7 +122,7 @@ class GameFlowTest {
 
     // 시장·가계: 종목 18개가 매달 움직이고, 월급은 전부 자산이 되지 않으며 결혼·자녀·은퇴가 삶에 들어온다 (경제 개편 설계).
     assertThat(game.read("$.market.stocks.length()", Integer.class)).isEqualTo(18);
-    assertThat(game.read("$.market.month", Integer.class)).isEqualTo(64 * 12);
+    assertThat(game.read("$.market.month", Integer.class)).isEqualTo((65 - 15) * 12);
     List<Map<String, Object>> holdings = game.read("$.holdings");
     for (Map<String, Object> h : holdings) {
       assertThat(h)
@@ -169,7 +172,7 @@ class GameFlowTest {
     assertThat(kinds).startsWith("BIRTH").endsWith("END");
     assertThat(kinds).containsOnlyOnce("JOB", "STYLE", "OFFER", "MARRIAGE", "RETIRE");
     assertThat(kinds).contains("CHILD", "LIFE");
-    assertThat(kinds.stream().filter("TRAIT"::equals).count()).isEqualTo(6);
+    assertThat(kinds.stream().filter("TRAIT"::equals).count()).isEqualTo(18);
     assertThat(kinds.stream().filter("NEWS"::equals).count())
         .isEqualTo((long) seenKinds.get("NEWS"));
     assertThat(kinds.stream().filter("PRICE"::equals).count())
@@ -189,9 +192,9 @@ class GameFlowTest {
     List<String> lastKinds = lastNews.read("$.game.log[*].kind");
     assertThat(lastKinds.get(lastKinds.size() - 1)).isIn("PRICE", "GROWTH");
 
-    // 연간 자산: 1세부터 65세까지 해마다 한 줄, 마지막 줄은 최종 자산과 같다.
+    // 연간 자산: 15세부터 65세까지 해마다 한 줄, 마지막 줄은 최종 자산과 같다.
     List<Integer> ages = game.read("$.yearly[*].age");
-    assertThat(ages).startsWith(1).endsWith(65).doesNotHaveDuplicates().hasSize(65);
+    assertThat(ages).startsWith(15).endsWith(65).doesNotHaveDuplicates().hasSize(51);
     List<Map<String, Object>> yearly = game.read("$.yearly");
     assertThat(((Number) yearly.get(yearly.size() - 1).get("totalAsset")).longValue())
         .isEqualTo(game.read("$.result.finalAsset", Long.class));
@@ -391,7 +394,7 @@ class GameFlowTest {
     DocumentContext game = client.start();
     String gameId = game.read("$.gameId");
 
-    // 성장기 첫 성향 이벤트는 2세 이후에 온다. 1세를 마치는 360일까지는 이벤트 없이 보고할 수 있다.
+    // 첫 성향 이벤트가 바로(0일) 올 수 있다. 그러면 0일을 두 번 보고하고, 아니면 첫 해 끝까지 보고한다.
     Integer nextEventDay = game.read("$.nextEventDay");
     int target = Math.min(360, nextEventDay == null ? 360 : nextEventDay);
     client.advance(gameId, target);

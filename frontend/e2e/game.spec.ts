@@ -13,10 +13,10 @@ async function reportedDay(page: Page): Promise<number> {
   return Number(/(\d+)일/.exec(text)?.[1] ?? -1)
 }
 
-/** "6세 3개월" → 게임 일수 (1세 0개월 = 0일). */
+/** "16세 3개월" → 게임 일수 (15세 0개월 = 0일). */
 function dayOf(ageText: string): number {
   const m = /(\d+)세 (\d+)개월/.exec(ageText)
-  return m ? (Number(m[1]) - 1) * 360 + Number(m[2]) * 30 : 0
+  return m ? (Number(m[1]) - 15) * 360 + Number(m[2]) * 30 : 0
 }
 const outcomeCard = (page: Page) => page.getByTestId('outcome-card')
 
@@ -28,7 +28,7 @@ async function born(page: Page) {
   await expect(page.getByTestId('birth-reveal')).toBeVisible()
   await page.clock.runFor(5_000)
   await page.getByRole('button', { name: '삶을 시작하기' }).click()
-  await expect(page.getByTestId('age')).toHaveText('1세 0개월')
+  await expect(page.getByTestId('age')).toHaveText('15세 0개월')
 }
 
 /** 화면 상태에 맞춰 한 걸음 진행한다. 이벤트를 처리했으면 그 종류를 돌려준다. */
@@ -99,7 +99,7 @@ test('태어나면 능력치가 안목부터 하나씩 공개되고 별명이 �
   expect(nickname?.trim()).toBeTruthy()
 
   await page.getByRole('button', { name: '삶을 시작하기' }).click()
-  await expect(page.getByTestId('age')).toHaveText('1세 0개월')
+  await expect(page.getByTestId('age')).toHaveText('15세 0개월')
   await expect(page.getByTestId('nickname')).toHaveText(nickname ?? '')
   await expect(page.getByTestId('job')).toHaveText('학생')
 })
@@ -107,7 +107,7 @@ test('태어나면 능력치가 안목부터 하나씩 공개되고 별명이 �
 test('성장기의 일상 선택으로 성향이 정해지고, 직업을 고른 뒤 투자를 시작해 뉴스에 선택한다', async ({
   page,
 }) => {
-  // 1세부터 투자 단계의 뉴스까지 가므로 오래 걸린다.
+  // 15세부터 투자 단계의 뉴스까지 가므로 오래 걸린다.
   test.setTimeout(240_000)
   await born(page)
 
@@ -148,7 +148,7 @@ test('새로고침하면 서버의 상태에서 일시정지로 이어한다', a
   await expect(page.getByRole('button', { name: '계속' }).or(eventCard(page))).toBeVisible()
 })
 
-test('다시 시작하면 다시 태어나 1세에서 시작한다', async ({ page }) => {
+test('다시 시작하면 다시 태어나 15세에서 시작한다', async ({ page }) => {
   await born(page)
   await playUntil(page, 'TRAIT')
   await step(page)
@@ -157,7 +157,7 @@ test('다시 시작하면 다시 태어나 1세에서 시작한다', async ({ pa
   await expect(page.getByTestId('birth-reveal')).toBeVisible()
   await page.clock.runFor(5_000)
   await page.getByRole('button', { name: '삶을 시작하기' }).click()
-  await expect(page.getByTestId('age')).toHaveText('1세 0개월')
+  await expect(page.getByTestId('age')).toHaveText('15세 0개월')
   await expect(page.getByTestId('job')).toHaveText('학생')
 })
 

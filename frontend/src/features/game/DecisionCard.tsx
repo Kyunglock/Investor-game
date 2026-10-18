@@ -225,7 +225,7 @@ function Body({ event, game, busy, onChoose }: Props) {
 
       <p className="mt-3 text-[11px] text-faint">
         {event.kind === 'TRAIT'
-          ? '성장기의 선택은 성격에 뒤집히지 않습니다. 고른 대로 자랍니다.'
+          ? '일상의 선택은 성격에 뒤집히지 않습니다. 고른 대로 자랍니다.'
           : event.kind === 'LIFE'
             ? '삶의 선택은 성격에 뒤집히지 않습니다.'
             : '선택은 당신이 하지만, 실행은 당신의 성격이 합니다.'}

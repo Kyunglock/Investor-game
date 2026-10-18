@@ -163,8 +163,9 @@ public record CompleteResult(
 
 | 종류 | 조건 | 다음 후보 일수 |
 |---|---|---|
-| `TRAIT` | `CHILDHOOD`, 성장 단계가 남음 | 다음 성장 단계의 나이(콘텐츠의 `age`가 같은 장면들이 한 단계)를 게임 일수로 바꾼 값. 장면은 그 단계의 풀에서 `("event", "trait-scene", 단계 번호)` 키로 랜덤하게 하나 뽑는다 |
-| `JOB` | `CHILDHOOD`, 성향 이벤트가 모두 끝나 스타일이 확정됨, 아직 없음 | `event.job.age`(초기값 24)를 게임 일수로 바꾼 값. 마지막 성향 이벤트보다 앞서지 않는다 |
+| `TRAIT` 성장기 | `CHILDHOOD`, 성장 단계가 남음 | 다음 성장 단계의 나이(콘텐츠의 `adult`가 아닌 장면 중 `age`가 같은 것들이 한 단계. 15~24세 10단계)를 게임 일수로 바꾼 값 **+ 반년(180일)**. 시작 나이와 같은 단계가 0일에 바로 뜨지 않게 한다. 장면은 그 단계의 풀에서 `("event", "trait-scene", 단계 번호)` 키로 랜덤하게 하나 뽑는다 |
+| `TRAIT` 취업 뒤 | 취업함, 콘텐츠의 `adult` 장면 중 아직 안 나온 것이 있음 | 마지막 adult `TRAIT`(없으면 취업일) + `event.trait.adult-gap-days`(초기값 540~900) 구간에서 뽑은 값. 장면은 남은 adult 풀에서 `("event","trait-scene","adult",n)` 키로 뽑는다. 성향 확정(`traitsComplete`)에는 세지 않고 능력치만 움직인다 (decisions.md 23번) |
+| `JOB` | `CHILDHOOD`, 성향 이벤트가 모두 끝나 스타일이 확정됨, 아직 없음 | `event.job.age`(초기값 25)를 게임 일수로 바꾼 값. 마지막 성향 이벤트보다 앞서지 않는다 |
 | `OFFER` | `SAVING`, `salaryStarted`, `traitsFinalized`, 대기·예약된 `OFFER` 없음 | 처음이면 `max(현재, 첫 월급 후)`; 거절되었다면 마지막 `OFFER` + `game.days-per-year` (1년마다 다시 묻는다, 확정) |
 | `TRAINING` | `JOB`이 해결됨 | 마지막 `TRAINING`(없으면 `JOB` 해결 일수) + `event.training.gap-days` 구간에서 뽑은 값 |
 | `LIFE` 결혼 | 취업함, 미혼, 나이 ≤ `marriage-last-age` | 처음은 `marriage-age` 구간의 나이(키 `("event","life","marriage-age")`), 거절했으면 마지막 + `marriage-retry-years`년 |
@@ -294,7 +295,7 @@ public record CompleteResult(
 |---|---|
 | 뉴스 | 위 JSON의 필드. `styles`가 없으면 모든 스타일 |
 | 직업 | `code`, `title`, 선택 가중치, 월급 정보 (진행·자산용, 콘텐츠 스펙) |
-| 성향 | `code`, `age`, `title`, `body`(상황), 선택지 3~4개(`code`, `label`, `traitDeltas`(style/risk/mind/sector), `statDeltas`(선택), `note`) |
+| 성향 | `code`, `age`, `adult`(선택, true면 취업 뒤 일상 장면), `title`, `body`(상황), 선택지 3~4개(`code`, `label`, `traitDeltas`(style/risk/mind/sector), `statDeltas`(선택, 절댓값 ≤ `content.trait-stat-max-delta` 8), `note`) |
 | 자기계발 | `code`, `title`, `body`, 선택지 목록(`code`, `label`, `statCode`, `expAmount`, `cost`) |
 | 알림 | `code`, `title`, `body`, 단계 조건 |
 | 힌트 문구 | 방향(`UP`/`DOWN`/`NEUTRAL`) × 강도(`MILD`/`STRONG`) 별 문구 목록 (poc.md 6절) |
@@ -306,7 +307,8 @@ public record CompleteResult(
 
 | 이름 | 초기값 | 의미 |
 |---|---|---|
-| `event.job.age` | 24 | 직업 선택이 오는 나이 (성향 확정 뒤) |
+| `event.job.age` | 25 | 직업 선택이 오는 나이 (성향 확정 뒤) |
+| `event.trait.adult-gap-days` | 540~900 | 취업 뒤 일상 장면(adult) 간격 |
 | `event.job.option-count` | 3 | 직업 선택지 개수 |
 | `event.training.gap-days` | 120~240 | 자기계발 이벤트 간격 |
 | `event.notice.gap-days` | 40~100 | 알림성 이벤트 간격 |
@@ -340,7 +342,7 @@ public record CompleteResult(
 
 | # | 입력 | 기대 결과 |
 |---|---|---|
-| 1 | 1세에 판 시작 후 시간을 보냄 | 6세(1,800일째)에 첫 `TRAIT`. 성장 단계 6개가 끝나면 24세에 `JOB`(선택지 3개). 다음 이벤트 시각을 넘겨 보고해도 판은 그 시각에서 멈춘다 |
+| 1 | 15세에 판 시작 | 180일째(15세 중반)에 첫 `TRAIT`. 성장 단계 10개가 끝나면 25세에 `JOB`(선택지 3개). 다음 이벤트 시각을 넘겨 보고해도 판은 그 시각에서 멈춘다 |
 | 1-1 | 여러 판을 시작해 첫 성향 장면을 비교 | 판마다 다른 장면이 나온다. 같은 판은 재접속해도 같은 장면이다 |
 | 2 | 같은 상태·같은 시드로 `schedule`을 두 번 | 두 결과가 같다. 같은 `event_instance` 행이 하나만 있다(멱등) |
 | 3 | `JOB`이 `PENDING`인 채로 다시 `schedule` | 새 선택형을 만들지 않는다. 대기 중인 이벤트가 최대 하나다 |

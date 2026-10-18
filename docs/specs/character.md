@@ -86,7 +86,7 @@ public record StatChange(String statCode, int expGained, int valueBefore, int va
 
 ### 4.1 캐릭터 생성
 
-- 능력치 5종을 각각 **15~85 사이 정수로 균등 랜덤**으로 뽑는다 (초기값, poc.md).
+- 능력치 5종을 각각 **5~35 사이 정수로 균등 랜덤**으로 뽑는다 (초기값. 처음 15~85였으나 "초기에는 낮고 선택으로 크게 오르게" 하기로 해 낮췄다, decisions.md 23번).
 - 난수를 뽑는 순서는 `insight → patience → courage → conviction → luck` (항상 이 순서).
 - 생성한 값을 `initial_value`와 `value`에 같이 저장한다.
 - 직업, 투자 스타일, 관심 섹터는 `null`로 시작한다.
@@ -136,12 +136,12 @@ public record StatChange(String statCode, int expGained, int valueBefore, int va
 
 | 이름 | 초기값 | 의미 |
 |---|---|---|
-| `character.initial-stat.min` | 15 | 초기 능력치 최솟값 |
-| `character.initial-stat.max` | 85 | 초기 능력치 최댓값 |
-| `character.growth.deviation-exp` | 3 | 이탈 한 번의 경험치 |
+| `character.initial-stat.min` | 5 | 초기 능력치 최솟값 |
+| `character.initial-stat.max` | 35 | 초기 능력치 최댓값 |
+| `character.growth.deviation-exp` | 5 | 이탈 한 번의 경험치 (= 능력치 +1) |
 | `character.growth.exp-per-point` | 5 | 능력치 +1에 필요한 경험치 |
 | `character.growth.max-stat` | 95 | 성장 상한 (성향 선택의 상한이기도 하다) |
-| `character.trait-stat.min` | 5 | 성향 선택으로 내려갈 수 있는 하한 |
+| `character.trait-stat.min` | 1 | 성향 선택으로 내려갈 수 있는 하한 |
 | `game.days-per-year` | 360 | 연차 계산 기준. 달력 설정은 `common`이 소유한다 |
 
 ## 6. DB

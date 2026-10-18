@@ -111,7 +111,7 @@ class CharacterServiceTest {
   }
 
   @Test
-  void 성향으로_움직인_능력치는_하한_5와_상한_95에서_멈춘다() {
+  void 성향으로_움직인_능력치는_하한_1과_상한_95에서_멈춘다() {
     for (int i = 0; i < 40; i++) {
       characters.recordTraitChoice(
           gameId,
@@ -119,7 +119,7 @@ class CharacterServiceTest {
           Map.of("courage", -3, "insight", 3),
           1);
     }
-    assertThat(characters.get(gameId).stats().courage()).isEqualTo(5);
+    assertThat(characters.get(gameId).stats().courage()).isEqualTo(1);
     assertThat(characters.get(gameId).stats().insight()).isEqualTo(95);
 
     List<StatChange> unchanged =
@@ -142,10 +142,11 @@ class CharacterServiceTest {
 
     List<StatChange> changes = characters.grow(gameId, twice, 100);
 
-    assertThat(changes).containsExactly(new StatChange("patience", 6, before, before + 1));
+    // 이탈 한 번 = 경험치 5 = +1 (character.growth)
+    assertThat(changes).containsExactly(new StatChange("patience", 10, before, before + 2));
     List<StatChange> next =
         characters.grow(gameId, List.of(new GrowthSource.DeviationGrowth("patience", null)), 101);
-    assertThat(next.getFirst().valueAfter()).as("남은 1 + 3 = 4라 아직 오르지 않는다").isEqualTo(before + 1);
+    assertThat(next.getFirst().valueAfter()).as("한 번 더 이탈하면 +1").isEqualTo(before + 3);
   }
 
   @Test

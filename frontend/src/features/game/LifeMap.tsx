@@ -10,7 +10,7 @@ const FILL_CLASS: Record<YearFill, string> = {
   end: 'bg-card outline outline-2 -outline-offset-2 outline-faint',
 }
 
-/** 한 칸 = 1년, 1세부터 65세까지 (설계 5.2절). */
+/** 한 칸 = 1년, 시작 나이(15세)부터 65세까지 (설계 5.2절). */
 export function LifeMap({ game, ageYears }: { game: Game; ageYears: number }) {
   const cells = yearFills(game.yearly, game.initialAsset, ageYears, game.startAge, game.endAge).map(
     (fill, i) => ({ age: game.startAge + i, fill }),

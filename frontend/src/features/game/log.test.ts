@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import type { Game, LogEntry, Stats } from '../../api/client'
 import { logLine, logLines } from './log'
 
-const initialStats: Stats = { insight: 62, patience: 81, courage: 34, conviction: 55, luck: 47 }
+// 시작 능력치는 5~35 범위다.
+const initialStats: Stats = { insight: 22, patience: 31, courage: 9, conviction: 15, luck: 17 }
 const game = { startAge: 1, daysPerYear: 360, initialStats }
 
 const entry = (
@@ -20,7 +21,7 @@ describe('logLine', () => {
   it('탄생: 능력치와 별명', () => {
     const line = logLine(entry('BIRTH', 0, { stats: initialStats, initialAsset: 1000000 }), game)
     expect(line.text).toBe(
-      "2025년, 안목 62 · 인내심 81 · 용기 34 · 줏대 55 · 운 47을 타고났다. 별명은 '겁 많은 돌부처'.",
+      "2025년, 안목 22 · 인내심 31 · 용기 9 · 줏대 15 · 운 17을 타고났다. 별명은 '겁 많은 돌부처'.",
     )
     expect(line.tone).toBe('birth')
     expect(line.pill).toBe('탄생')

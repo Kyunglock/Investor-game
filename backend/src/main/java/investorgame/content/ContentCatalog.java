@@ -42,8 +42,11 @@ public interface ContentCatalog {
   /** 모든 성향 장면. 나이순이다. */
   List<TraitDefinition> traits();
 
-  /** 성장 단계. 나이순이며 단계마다 장면이 하나 이상 있다. 판마다 단계별로 하나를 뽑는다. */
+  /** 성장 단계(adult가 아닌 장면). 나이순이며 단계마다 장면이 하나 이상 있다. 판마다 단계별로 하나를 뽑는다. */
   List<TraitStage> traitStages();
+
+  /** 취업 뒤 일상 장면(adult). 코드순. */
+  List<TraitDefinition> adultTraits();
 
   List<NewsDefinition> news();
 

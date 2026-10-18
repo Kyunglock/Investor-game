@@ -25,9 +25,9 @@ import org.springframework.context.annotation.Import;
 class DefaultEventServiceTest {
 
   private static final int YEAR = 360;
-  private static final int START_AGE = 1;
+  private static final int START_AGE = 15;
   private static final int END_DAY = (65 - START_AGE) * YEAR;
-  private static final int JOB_DAY = (24 - START_AGE) * YEAR;
+  private static final int JOB_DAY = (25 - START_AGE) * YEAR;
   private static final HintProvider HINTS =
       (truth, seq) -> new Hint(HintDirection.NEUTRAL, HintStrength.MILD);
 

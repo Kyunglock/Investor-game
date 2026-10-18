@@ -170,10 +170,12 @@ class DefaultEventService implements EventService {
         completion.chosenOption(),
         completion.actualOption(),
         completion.deviations());
+    // 취업 뒤 일상 장면(adult)은 성향 확정에 세지 않는다.
     boolean traitsComplete =
         row.kind() == EventKind.TRAIT
+            && !isAdultTrait(row)
             && repository.findAll(gameId).stream()
-                    .filter(r -> r.kind() == EventKind.TRAIT && r.resolved())
+                    .filter(r -> r.kind() == EventKind.TRAIT && r.resolved() && !isAdultTrait(r))
                     .count()
                 >= content.traitStages().size();
     return new CompleteResult(traitsComplete);
@@ -204,6 +206,7 @@ class DefaultEventService implements EventService {
       candidates.add(new Candidate(EventKind.NEWS, base + roll(random, gap, "NEWS", news.size())));
     }
     if (context.phase() != Phase.CHILDHOOD && context.jobStartDay() != null) {
+      adultTraitCandidate(rows, context, random, candidates);
       lifeCandidates(rows, context, random, candidates);
       noticeCandidate(rows, context, random, candidates);
     }
@@ -219,13 +222,40 @@ class DefaultEventService implements EventService {
     List<EventRow> traits = ofKind(rows, EventKind.TRAIT);
     List<ContentCatalog.TraitStage> stages = content.traitStages();
     if (traits.size() < stages.size()) {
-      int day = dayOfAge(stages.get(traits.size()).age(), context);
+      // 장면은 그 나이의 중간(반년째)에 온다. 시작 나이와 같은 단계가 0일에 바로 뜨지 않게 한다.
+      int day = dayOfAge(stages.get(traits.size()).age(), context) + calendar.daysPerYear() / 2;
       int after = traits.isEmpty() ? 0 : last(traits).occursDay();
       candidates.add(new Candidate(EventKind.TRAIT, Math.max(day, after)));
     } else if (context.traitsFinalized() && ofKind(rows, EventKind.JOB).isEmpty()) {
       int day = dayOfAge(properties.job().age(), context);
       candidates.add(new Candidate(EventKind.JOB, Math.max(day, last(traits).occursDay())));
     }
+  }
+
+  /** 취업 뒤: 일상 장면(adult)이 간격을 두고 온다. 성향은 바꾸지 않고 능력치만 움직인다. 풀을 다 쓰면 더 오지 않는다 (decisions.md 23번). */
+  private void adultTraitCandidate(
+      List<EventRow> rows,
+      SchedulingContext context,
+      SeededRandom random,
+      List<Candidate> candidates) {
+    List<EventRow> used = adultTraits(rows);
+    if (used.size() >= content.adultTraits().size()) {
+      return;
+    }
+    int base = used.isEmpty() ? context.jobStartDay() : last(used).occursDay();
+    candidates.add(
+        new Candidate(
+            EventKind.TRAIT,
+            base + roll(random, properties.trait().adultGapDays(), "TRAIT", used.size())));
+  }
+
+  private List<EventRow> adultTraits(List<EventRow> rows) {
+    return ofKind(rows, EventKind.TRAIT).stream().filter(this::isAdultTrait).toList();
+  }
+
+  private boolean isAdultTrait(EventRow row) {
+    return row.kind() == EventKind.TRAIT
+        && content.adultTraits().stream().anyMatch(t -> t.code().equals(row.definitionCode()));
   }
 
   /** 저축기: 첫 월급 이후 투자 시작을 묻고, 거절하면 1년 뒤에 다시 묻는다 (decisions.md 6번). */
@@ -319,10 +349,22 @@ class DefaultEventService implements EventService {
               sampleJobs(random.forKey("event", "job-options")));
       case TRAIT -> {
         // 단계마다 장면을 판 시드로 랜덤하게 뽑는다. 판마다 다른 질문이 나오고, 같은 판은 다시 불러도 같다.
-        int stage = ofKind(rows, EventKind.TRAIT).size();
-        List<TraitDefinition> scenes = content.traitStages().get(stage).scenes();
-        TraitDefinition trait =
-            scenes.get(random.forKey("event", "trait-scene", stage).nextInt(scenes.size()));
+        // 취업 뒤(성장기가 아님)에는 아직 안 나온 adult 장면 중에서 뽑는다.
+        TraitDefinition trait;
+        if (context.phase() == Phase.CHILDHOOD) {
+          int stage = ofKind(rows, EventKind.TRAIT).size();
+          List<TraitDefinition> scenes = content.traitStages().get(stage).scenes();
+          trait = scenes.get(random.forKey("event", "trait-scene", stage).nextInt(scenes.size()));
+        } else {
+          List<EventRow> used = adultTraits(rows);
+          List<TraitDefinition> left =
+              content.adultTraits().stream()
+                  .filter(t -> used.stream().noneMatch(u -> t.code().equals(u.definitionCode())))
+                  .toList();
+          trait =
+              left.get(
+                  random.forKey("event", "trait-scene", "adult", used.size()).nextInt(left.size()));
+        }
         yield simple(
             id,
             seq,

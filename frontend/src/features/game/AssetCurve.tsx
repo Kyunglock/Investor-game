@@ -7,7 +7,7 @@ const H = 110
 const LEFT = 36
 const BOTTOM = 90
 const TOP = 10
-const JOB_AGE = 24
+const JOB_AGE = 25
 const MAN_WON = 10_000
 
 /** 총자산 곡선, 만원 단위 (설계 5.2절). full이면 결과 화면용으로 끝까지 그린다. */

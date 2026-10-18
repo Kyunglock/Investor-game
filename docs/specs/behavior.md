@@ -76,10 +76,10 @@ public record Hint(
 능력치가 높을수록 이탈이 줄어든다 (확정).
 
 ```
-이탈 확률(bp) = (100 - 능력치) × 50        # 능력치 0이면 5000bp(50%), 100이면 0bp
+이탈 확률(bp) = (100 - 능력치) × 80        # 능력치 0이면 8000bp(80%), 100이면 0bp
 ```
 
-(초기값) 상한 5000bp는 `behavior.deviation-cap-bp`로 설정한다. 수식은 `(100 - 능력치) × cap / 100`이다.
+(초기값) 상한 8000bp는 `behavior.deviation-cap-bp`로 설정한다 (처음 5000이었으나 능력치에 따른 편차를 키우기로 해 올렸다, decisions.md 23번). 수식은 `(100 - 능력치) × cap / 100`이다.
 
 ### 4.2 판정 순서 (확정)
 
@@ -107,10 +107,10 @@ public record Hint(
 ### 4.4 힌트
 
 ```
-정답률(bp) = 2500 + 안목 × 55            # 안목 0이면 25%, 100이면 80%
+정답률(bp) = 2500 + 안목 × 70            # 안목 0이면 25%, 100이면 95%
 ```
 
-1. **모호 판정.** `insight < 35`이면 `behavior.hint.neutral-percent`(초기값 50%) 확률로 `NEUTRAL`을 돌려준다.
+1. **모호 판정.** `insight < 40`이면 `behavior.hint.neutral-percent`(초기값 50%) 확률로 `NEUTRAL`을 돌려준다.
 2. **정오 판정.** 정답률로 뽑는다. 맞으면 `truth` 방향, 틀리면 반대 방향이다.
 3. **강도 판정.** `insight >= 65`이면 `behavior.hint.strong-percent`(초기값 70%) 확률로 `STRONG`, 아니면 `MILD`.
 
@@ -119,7 +119,7 @@ public record Hint(
 ### 4.5 운
 
 ```
-손실 완화 확률(bp) = 운 × 30            # 운 0이면 0%, 100이면 30%
+손실 완화 확률(bp) = 운 × 50            # 운 0이면 0%, 100이면 50%
 ```
 
 - 걸리면 `behavior.luck.loss-factor-percent`(초기값 30)를 돌려준다. 안 걸리면 100을 돌려준다.
@@ -130,15 +130,15 @@ public record Hint(
 
 | 이름 | 초기값 | 의미 |
 |---|---|---|
-| `behavior.deviation-cap-bp` | 5000 | 능력치 0일 때 이탈 확률 |
+| `behavior.deviation-cap-bp` | 8000 | 능력치 0일 때 이탈 확률 |
 | `behavior.impulse-sell-percent` | 40 | 충동 행동이 매도일 확률 (보유가 있을 때) |
 | `behavior.hint.accuracy-base-bp` | 2500 | 안목 0의 힌트 정답률 |
-| `behavior.hint.accuracy-per-point-bp` | 55 | 안목 1점당 정답률 증가 |
-| `behavior.hint.neutral-below-insight` | 35 | 이 값 미만이면 모호 판정 대상 |
+| `behavior.hint.accuracy-per-point-bp` | 70 | 안목 1점당 정답률 증가 |
+| `behavior.hint.neutral-below-insight` | 40 | 이 값 미만이면 모호 판정 대상 |
 | `behavior.hint.neutral-percent` | 50 | 모호 확률 |
 | `behavior.hint.strong-from-insight` | 65 | 이 값 이상이면 강한 힌트 대상 |
 | `behavior.hint.strong-percent` | 70 | 강한 힌트 확률 |
-| `behavior.luck.chance-per-point-bp` | 30 | 운 1점당 손실 완화 확률 |
+| `behavior.luck.chance-per-point-bp` | 50 | 운 1점당 손실 완화 확률 |
 | `behavior.luck.loss-factor-percent` | 30 | 손실 완화 시 손실 비율 |
 
 - 코드에 숫자를 쓰지 않는다. 모두 설정에서 읽는다 (code-style.md 3.3절). 수치 조정이 코드 변경 없이 되어야 한다.

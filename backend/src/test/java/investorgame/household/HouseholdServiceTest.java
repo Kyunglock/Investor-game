@@ -12,13 +12,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 
-/** 경제 개편 설계 7.2절의 가계 규칙. 나이 = 1 + day/360, 물가 기준 나이 24세. 설정값은 application.yml의 초기값을 그대로 쓴다. */
+/** 경제 개편 설계 7.2절의 가계 규칙. 나이 = 15 + day/360, 물가 기준 나이 25세. 설정값은 application.yml의 초기값을 그대로 쓴다. */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 class HouseholdServiceTest {
 
   private static final int YEAR = 360;
-  private static final int JOB_DAY = (24 - 1) * YEAR;
+  private static final int JOB_DAY = (25 - 15) * YEAR;
 
   @Autowired HouseholdService household;
 
@@ -31,11 +31,11 @@ class HouseholdServiceTest {
   }
 
   @Test
-  void 혼자일_때_생활비는_1인_금액이고_24세까지는_물가가_오르지_않는다() {
+  void 혼자일_때_생활비는_1인_금액이고_25세까지는_물가가_오르지_않는다() {
     assertThat(household.monthlyExpense(gameId, 0)).isEqualTo(1_400_000);
     assertThat(household.monthlyExpense(gameId, JOB_DAY)).isEqualTo(1_400_000);
     assertThat(household.monthlyExpense(gameId, JOB_DAY + YEAR))
-        .as("25세, 2% 오름")
+        .as("26세, 2% 오름")
         .isEqualTo(1_428_000);
     assertThat(household.spouseIncome(gameId, JOB_DAY)).isZero();
     assertThat(household.get(gameId).married()).isFalse();
@@ -76,7 +76,7 @@ class HouseholdServiceTest {
   @Test
   void 은퇴하면_배우자_소득이_끊긴다() {
     household.marry(gameId, JOB_DAY);
-    int retireDay = (60 - 1) * YEAR;
+    int retireDay = (60 - 15) * YEAR;
     assertThat(household.retireMonth(retireDay)).isTrue();
     assertThat(household.retireMonth(retireDay + 30)).isFalse();
     assertThat(household.retireMonth(JOB_DAY)).isFalse();
@@ -106,7 +106,7 @@ class HouseholdServiceTest {
     assertThat(household.get(gameId).married()).isTrue();
   }
 
-  /** 물가 상승분(연 2% 복리, 24세 기준)을 되돌려 기준 금액으로 비교한다. 0 방향 버림이라 ±1원 오차를 허용한다. */
+  /** 물가 상승분(연 2% 복리, 25세 기준)을 되돌려 기준 금액으로 비교한다. 0 방향 버림이라 ±1원 오차를 허용한다. */
   private static long deflated(long amount, int yearsAfterJob) {
     double factor = Math.pow(1.02, yearsAfterJob);
     return Math.round(amount / factor / 1000.0) * 1000;

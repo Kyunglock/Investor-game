@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("event")
 public record EventProperties(
     JobSettings job,
+    TraitSettings trait,
     NewsSettings news,
     LifeSettings life,
     NoticeSettings notice,
@@ -23,6 +24,9 @@ public record EventProperties(
 
   /** age: 직업 선택이 오는 나이. 성향이 다 정해지기 전에는 오지 않는다. */
   public record JobSettings(int age, int optionCount) {}
+
+  /** adultGapDays: 취업 뒤 일상 장면(adult 성향 장면) 사이 간격(일). 풀을 다 쓰면 더 오지 않는다. */
+  public record TraitSettings(Range adultGapDays) {}
 
   /**
    * @param interestWeightPercent 관심 섹터 뉴스의 가중치 배율. 300이면 3배

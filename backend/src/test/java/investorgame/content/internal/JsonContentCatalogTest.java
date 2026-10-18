@@ -24,7 +24,7 @@ import tools.jackson.databind.json.JsonMapper;
 class JsonContentCatalogTest {
 
   private static final ContentProperties PROPERTIES =
-      new ContentProperties(3, new ContentProperties.Range(3, 4), List.of("no-such-dir"));
+      new ContentProperties(8, new ContentProperties.Range(3, 4), List.of("no-such-dir"));
 
   private static JsonContentCatalog load() {
     return new JsonContentCatalog(JsonMapper.builder().build(), PROPERTIES);
@@ -49,7 +49,7 @@ class JsonContentCatalogTest {
         new JsonContentCatalog(
             JsonMapper.builder().build(),
             new ContentProperties(
-                3, new ContentProperties.Range(3, 4), List.of("no-such-dir", dir.toString())));
+                8, new ContentProperties.Range(3, 4), List.of("no-such-dir", dir.toString())));
 
     assertThat(fromDir.version()).isEqualTo("dir-9.9.9");
     assertThat(load().version()).as("디렉터리가 없으면 클래스 경로").isEqualTo("0.1.0");
@@ -80,10 +80,14 @@ class JsonContentCatalogTest {
   @Test
   void 성향_장면은_단계마다_있고_선택지가_3개에서_4개다() {
     JsonContentCatalog catalog = load();
-    assertThat(catalog.traitStages()).hasSize(6);
+    // 성장기 15~24세 10단계(단계마다 2~3장면)와 취업 뒤 일상 장면 8개 (decisions.md 23번)
+    assertThat(catalog.traitStages())
+        .extracting(ContentCatalog.TraitStage::age)
+        .containsExactly(15, 16, 17, 18, 19, 20, 21, 22, 23, 24);
     for (ContentCatalog.TraitStage stage : catalog.traitStages()) {
-      assertThat(stage.scenes()).as("%d세 장면", stage.age()).hasSize(4);
+      assertThat(stage.scenes()).as("%d세 장면", stage.age()).hasSizeBetween(2, 3);
     }
+    assertThat(catalog.adultTraits()).hasSize(8).allMatch(TraitDefinition::adult);
     for (TraitDefinition trait : catalog.traits()) {
       assertThat(trait.options()).as(trait.code()).hasSizeBetween(3, 4);
     }
@@ -103,7 +107,7 @@ class JsonContentCatalogTest {
             .as(where)
             .doesNotContain(StatCodes.LUCK)
             .allMatch(StatCodes.ALL::contains);
-        assertThat(option.statDeltas().values()).as(where).allMatch(v -> Math.abs(v) <= 3);
+        assertThat(option.statDeltas().values()).as(where).allMatch(v -> Math.abs(v) <= 8);
         assertThat(option.label().length()).as(where).isLessThanOrEqualTo(18);
       }
     }

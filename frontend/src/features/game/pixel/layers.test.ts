@@ -48,9 +48,9 @@ describe('layersFor', () => {
   it('특별 별명은 왕관·반창고·없음이고 약점 표시가 없다', () => {
     const all75 = stats(75, 75, 75, 75, 75)
     expect(layersFor(all75, all75, 1)).toEqual({ stage: 'baby', adornment: 'genius', mark: null })
-    const all20 = stats(20, 20, 20, 20, 20)
-    expect(layersFor(all20, all20, 65)).toEqual({ stage: 'old', adornment: 'rough', mark: null })
-    const flat = stats(50, 52, 54, 56, 58)
+    const all8 = stats(8, 8, 8, 8, 8)
+    expect(layersFor(all8, all8, 65)).toEqual({ stage: 'old', adornment: 'rough', mark: null })
+    const flat = stats(20, 22, 24, 26, 21)
     expect(layersFor(flat, flat, 40)).toEqual({ stage: 'middle', adornment: null, mark: null })
   })
 })

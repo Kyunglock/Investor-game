@@ -33,9 +33,10 @@ const WEAKNESS_EFFECTS: Record<StatKey, string> = {
   luck: '손실이 났을 때 운이 따라 주지 않는다',
 }
 
-const GIFTED_FROM = 70
-const STRUGGLING_BELOW = 30
-const FLAT_SPREAD = 15
+// 시작 능력치는 5~35로 낮다 (서버 character.initial-stat). 문턱도 그 범위에 맞춘다.
+const GIFTED_FROM = 30
+const STRUGGLING_BELOW = 12
+const FLAT_SPREAD = 8
 
 export interface Nickname {
   name: string
