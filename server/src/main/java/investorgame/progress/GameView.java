@@ -32,7 +32,9 @@ public record GameView(
     Named interestSector,
     PendingEvent pendingEvent,
     Integer nextEventDay,
-    Result result) {
+    Result result,
+    List<LogEntry> log,
+    List<Yearly> yearly) {
 
   public enum Status {
     ACTIVE,
@@ -59,6 +61,12 @@ public record GameView(
       List<Option> options) {}
 
   public record Option(String code, String label) {}
+
+  /** 인생 기록 한 줄. kind: BIRTH, TRAIT, JOB, STYLE, OFFER, NEWS, PRICE, GROWTH, END. 문구는 클라이언트가 만든다. */
+  public record LogEntry(long seq, int day, String kind, Map<String, Object> payload) {}
+
+  /** 한 해를 마친 시점의 자산. */
+  public record Yearly(int age, long totalAsset, long cash) {}
 
   /** returnBp는 수익률(만분율). deviationCounts는 능력치별 이탈 횟수다. */
   public record Result(

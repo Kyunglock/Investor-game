@@ -164,10 +164,30 @@ components:
           type: object
           additionalProperties: { type: integer }
           description: 능력치 코드별 이탈 횟수
+    LogEntry:
+      type: object
+      description: 인생 기록 한 줄. 문구는 클라이언트가 만들고 서버는 코드와 숫자만 준다. 숨은 값은 없다
+      required: [seq, day, kind, payload]
+      properties:
+        seq: { type: integer, format: int64 }
+        day: { type: integer, description: 사건이 일어난 게임 일수 }
+        kind: { type: string, enum: [BIRTH, TRAIT, JOB, STYLE, OFFER, NEWS, PRICE, GROWTH, END] }
+        payload:
+          type: object
+          additionalProperties: true
+          description: 종류별 필드 (docs/superpowers/specs/2026-10-18-ui-redesign-design.md 6.3절)
+    Yearly:
+      type: object
+      description: 한 해를 마친 시점의 자산
+      required: [age, totalAsset, cash]
+      properties:
+        age: { type: integer, description: 마친 나이 }
+        totalAsset: { type: integer, format: int64 }
+        cash: { type: integer, format: int64 }
     Game:
       type: object
       required:
-        [gameId, status, phase, day, startAge, endAge, daysPerYear, stats, initialStats, cash, totalAsset, initialAsset, holdings]
+        [gameId, status, phase, day, startAge, endAge, daysPerYear, stats, initialStats, cash, totalAsset, initialAsset, holdings, log, yearly]
       properties:
         gameId: { type: string, format: uuid }
         status: { type: string, enum: [ACTIVE, ENDED] }
@@ -199,6 +219,14 @@ components:
           description: 다음 이벤트가 생길 게임 일수. 클라이언트는 이 시각까지만 시계를 보낸다
         result:
           oneOf: [{ $ref: '#/components/schemas/Result' }, { type: 'null' }]
+        log:
+          type: array
+          description: 인생 기록. 시간순(오래된 것 먼저)
+          items: { $ref: '#/components/schemas/LogEntry' }
+        yearly:
+          type: array
+          description: 마친 나이별 자산. 나이 오름차순
+          items: { $ref: '#/components/schemas/Yearly' }
     AdvanceRequest:
       type: object
       required: [day]

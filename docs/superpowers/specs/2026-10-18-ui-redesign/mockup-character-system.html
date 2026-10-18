@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>캐릭터 체계 목업</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@900&family=Noto+Sans+KR:wght@400;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#f3f4f3; --card:#fff; --line:#d7dcd8; --ink:#1d2626; --muted:#6f7a78; --faint:#a3adaa; --wine:#8b2342; --wine-soft:#f7e6ea; --teal:#2e7465; --teal-soft:#e2f0ea; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:"Noto Sans KR",system-ui,sans-serif; font-size:14px; line-height:1.55; }
+  .wrap { max-width:1100px; margin:0 auto; padding:24px 16px 64px; }
+  h1 { font-family:"Noto Serif KR",serif; font-weight:900; font-size:26px; margin:0 0 4px; }
+  h2 { font-family:"Noto Serif KR",serif; font-weight:900; font-size:18px; margin:28px 0 8px; }
+  p.sub { color:var(--muted); margin:0 0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:6px; padding:16px; }
+  table { border-collapse:collapse; width:100%; }
+  th { font-weight:400; font-size:12px; color:var(--faint); padding:6px 4px; text-align:center; }
+  th.row { text-align:left; font-size:13px; color:var(--ink); font-weight:700; width:150px; }
+  th.row small { display:block; font-weight:400; color:var(--faint); font-size:11px; }
+  td { text-align:center; padding:6px 4px; border-top:1px solid #eef0ee; }
+  svg.px { width:64px; height:80px; image-rendering:pixelated; shape-rendering:crispEdges; background:#eef2ef; border:1px solid var(--line); }
+  .weak { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+  .weak div { text-align:center; font-size:12px; }
+  .weak b { display:block; font-size:13px; margin-top:4px; }
+  .weak span { color:var(--faint); font-size:11px; }
+  .special { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .special div { text-align:center; font-size:12px; }
+  .special b { display:block; font-size:13px; margin-top:4px; }
+  .stage { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-top:8px; font-size:12px; color:var(--muted); }
+  .stage b { color:var(--ink); display:block; }
+  .options { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:12px; }
+  .option { background:var(--card); border:1px solid var(--line); border-radius:6px; padding:14px 16px; cursor:pointer; display:flex; gap:12px; }
+  .option .letter { font-family:"Noto Serif KR",serif; font-weight:900; font-size:22px; color:var(--wine); }
+  .option h3 { margin:0 0 4px; font-size:14px; } .option p { margin:0; font-size:12px; color:var(--muted); }
+  .option.selected { border-color:var(--wine); background:var(--wine-soft); }
+  .note { background:var(--teal-soft); border-left:3px solid var(--teal); padding:8px 12px; font-size:13px; margin-top:12px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>캐릭터는 이렇게 조합합니다</h1>
+  <p class="sub">별명은 "<b>약점</b> + <b>강점</b>"으로 지어지죠(예: 겁 많은 족집게). 그래서 캐릭터도 세 겹을 포개서 만들면 그림 수가 폭발하지 않아요: <b>나이 몸통</b> × <b>강점 머리장식</b> × <b>약점 표시</b>. 아래 도트는 제가 대충 찍은 거라 거칠지만, 조합 원리만 봐 주세요.</p>
+
+  <div class="card">
+    <table id="grid"></table>
+    <div class="stage">
+      <div><b>아기 (1~6세)</b>작고 동글동글. 능력치 공개 장면에 등장</div>
+      <div><b>어린이 (7~13세)</b>성향 질문 받는 시기</div>
+      <div><b>청년 (14~39세)</b>취직·투자 시작</div>
+      <div><b>중년 (40~64세)</b>흰머리 섞임, 넥타이</div>
+      <div><b>노년 (65세)</b>허리 굽고 지팡이. 결과 화면</div>
+    </div>
+  </div>
+
+  <h2>약점 표시 (머리 옆에 작게)</h2>
+  <p class="sub">별명의 앞부분. 몸은 그대로 두고 작은 기호만 붙입니다.</p>
+  <div class="card weak" id="weak"></div>
+
+  <h2>특별 별명 셋</h2>
+  <div class="card special" id="special"></div>
+
+  <div class="note">인생 기록에 "경험으로 줏대 51 → 55" 같은 성장이 쌓이면, 약점이 더 이상 가장 낮은 능력치가 아니게 될 수 있어요. 그때 약점 표시가 떨어지는 연출(예: 사탕 지팡이가 사라지는 식)을 넣으면 성장이 눈에 보입니다. 이건 제 제안이에요.</div>
+
+  <h2>캐릭터는 어디에 보일까요?</h2>
+  <p class="sub">아까 목업 기준입니다. 하나 골라 주세요.</p>
+  <div class="options">
+    <div class="option" data-choice="both" onclick="toggleSelect(this)"><div class="letter">A</div><div><h3>신원 카드 + 장면 둘 다</h3><p>왼쪽 카드에 얼굴, 가운데 장면에 전신. 장면은 나이·단계마다 배경이 바뀜(집 → 학교 → 사무실 → 집).</p></div></div>
+    <div class="option" data-choice="scene" onclick="toggleSelect(this)"><div class="letter">B</div><div><h3>장면에만</h3><p>가운데 큰 그림 하나에 집중. 신원 카드는 글자만.</p></div></div>
+    <div class="option" data-choice="card" onclick="toggleSelect(this)"><div class="letter">C</div><div><h3>신원 카드에만</h3><p>장면 그림은 생략. 가장 가볍고 작업량이 적음.</p></div></div>
+  </div>
+</div>
+
+<script>
+// ---- 베이스 몸통 (16x20). headTop: 머리 맨 윗줄, 눈은 headTop+4 ----
+const BASE = {
+  baby: { headTop: 5, rows: [
+    '................','................','................','................','................',
+    '.....hhhhhh.....','....hhhhhhhh....','....hsssssss....','....ssssssss....','....skssssks....',
+    '....ssssssss....','.....ssmmss.....','......ssss......','.....cccccc.....','....cccccccc....',
+    '....cccccccc....','.....cccccc.....','.....ss..ss.....','................','................']},
+  child: { headTop: 3, rows: [
+    '................','................','................',
+    '.....hhhhhh.....','....hhhhhhhh....','....hsssssss....','....ssssssss....','....skssssks....',
+    '....ssssssss....','.....ssmmss.....','......ssss......','.....cccccc.....','....cccccccc....',
+    '...sccccccccs...','....cccccccc....','.....pppppp.....','.....pp..pp.....','.....bb..bb.....','................','................']},
+  adult: { headTop: 1, rows: [
+    '................',
+    '.....hhhhhh.....','....hhhhhhhh....','....hsssssss....','....ssssssss....','....skssssks....',
+    '....ssssssss....','.....ssmmss.....','......ssss......','....cccccccc....','...cccccccccc...',
+    '..sccccccccccs..','..sccccccccccs..','...cccccccccc...','....cccccccc....','....pppppppp....',
+    '....ppp..ppp....','....ppp..ppp....','....ppp..ppp....','....bbb..bbb....']},
+  middle: { headTop: 1, grey: true, rows: [
+    '................',
+    '.....hhhhhh.....','....hhhhhhhh....','....Gsssssss....','....ssssssss....','....skssssks....',
+    '....ssssssss....','.....ssmmss.....','......ssss......','....ccctcccc....','...ccccttcccc...',
+    '..scccctcccccs..','..sccccccccccs..','...cccccccccc...','....cccccccc....','....pppppppp....',
+    '....ppp..ppp....','....ppp..ppp....','....ppp..ppp....','....bbb..bbb....']},
+  old: { headTop: 3, white: true, rows: [
+    '................','................','................',
+    '.....hhhhhh.....','....hhhhhhhh....','....hsssssss....','....ssssssss....','....skssssks....',
+    '....ssssssss....','.....ssmmss.....','......ssss......','....cccccccc....','...cccccccccc...',
+    '..sccccccccccsd.','...cccccccccc.d.','....cccccccc..d.','....pppppppp..d.','....ppp..ppp..d.','....ppp..ppp..d.','....bbb..bbb....']},
+};
+const AGES = ['baby','child','adult','middle','old'];
+const AGE_LABEL = { baby:'아기', child:'어린이', adult:'청년', middle:'중년', old:'노년' };
+
+// ---- 강점 머리장식. headTop 기준 상대 좌표 (dy, dx, 문자) ----
+function glasses(ht, put){ // 족집게: 동그란 안경
+  for (const x of [4,5,6,9,10,11]) { put(ht+3,x,'k'); put(ht+5,x,'k'); }
+  for (const x of [4,6,9,11]) put(ht+4,x,'k');
+  put(ht+4,7,'k'); put(ht+4,8,'k'); put(ht+4,5,'z'); put(ht+4,10,'z');
+}
+function calm(ht, put){ // 돌부처: 감은 눈 + 염주
+  put(ht+4,5,'k'); put(ht+4,6,'k'); put(ht+4,9,'k'); put(ht+4,10,'k');
+  put(ht+4,4,'s'); put(ht+4,11,'s');
+  for (const x of [5,6,7,8,9,10]) put(ht+8,x,'n');
+}
+function hardhat(ht, put){ // 불도저: 노란 안전모
+  for (const x of [5,6,7,8,9,10]) put(ht,x,'y');
+  for (const x of [4,5,6,7,8,9,10,11]) { put(ht+1,x,'y'); }
+  for (const x of [3,4,5,6,7,8,9,10,11,12]) put(ht+2,x,'y');
+  put(ht-1,7,'y'); put(ht-1,8,'y');
+}
+function headband(ht, put){ // 소신파: 붉은 머리띠
+  for (const x of [4,5,6,7,8,9,10,11]) put(ht+2,x,'r');
+  put(ht+2,12,'r'); put(ht+3,13,'r');
+}
+function clover(ht, put){ // 행운아: 머리 위 네잎클로버
+  put(ht-2,12,'g'); put(ht-2,14,'g'); put(ht-1,13,'g'); put(ht,12,'g'); put(ht,14,'g'); put(ht+1,13,'g');
+}
+const STRENGTH = [
+  { key:'insight', title:'족집게', hint:'안목 · 동그란 안경', draw:glasses },
+  { key:'patience', title:'돌부처', hint:'인내심 · 감은 눈, 염주', draw:calm },
+  { key:'courage', title:'불도저', hint:'용기 · 안전모', draw:hardhat },
+  { key:'conviction', title:'소신파', hint:'줏대 · 머리띠', draw:headband },
+  { key:'luck', title:'행운아', hint:'운 · 네잎클로버', draw:clover },
+];
+
+// ---- 약점 표시 ----
+function qmark(ht, put){ // 눈치 없는: 물음표
+  for (const [dy,dx] of [[-1,12],[-1,13],[-1,14],[0,14],[1,13],[2,13],[4,13]]) put(ht+dy,dx,'R');
+}
+function anger(ht, put){ // 성질 급한: 💢 자국
+  for (const [dy,dx] of [[-1,12],[-1,14],[0,13],[1,12],[1,14]]) put(ht+dy,dx,'R');
+  put(ht-2,13,'R'); put(ht+2,13,'R');
+}
+function sweat(ht, put){ // 겁 많은: 식은땀 + 떨림
+  put(ht+2,12,'B'); put(ht+3,12,'B'); put(ht+3,13,'B'); put(ht+4,12,'B');
+  put(ht+3,2,'k'); put(ht+5,2,'k'); put(ht+4,1,'k');
+}
+function bigears(ht, put){ // 귀가 얇은: 큰 귀
+  for (const dy of [3,4,5]) { put(ht+dy,3,'s'); put(ht+dy,12,'s'); }
+  put(ht+4,2,'s'); put(ht+4,13,'s');
+}
+function raincloud(ht, put){ // 운 없는: 비구름
+  for (const x of [6,7,8,9]) put(ht-3,x,'C');
+  for (const x of [5,6,7,8,9,10]) put(ht-2,x,'C');
+  put(ht-1,6,'B'); put(ht-1,9,'B');
+}
+const WEAK = [
+  { key:'insight', title:'눈치 없는', hint:'물음표', draw:qmark },
+  { key:'patience', title:'성질 급한', hint:'화 자국', draw:anger },
+  { key:'courage', title:'겁 많은', hint:'식은땀, 떨림', draw:sweat },
+  { key:'conviction', title:'귀가 얇은', hint:'큰 귀', draw:bigears },
+  { key:'luck', title:'운 없는', hint:'머리 위 비구름', draw:raincloud },
+];
+
+// ---- 특별 별명 ----
+function crown(ht, put){ for (const x of [5,7,8,10]) put(ht-1,x,'y'); for (const x of [5,6,7,8,9,10]) put(ht,x,'y'); }
+function bandage(ht, put){ put(ht+2,9,'w'); put(ht+2,10,'w'); put(ht+3,10,'w'); put(ht+3,9,'w'); put(ht+6,5,'k'); }
+const SPECIAL = [
+  { title:'타고난 투자 천재', hint:'모두 70 이상 · 왕관', draw:crown },
+  { title:'앞날이 험난한 사람', hint:'모두 30 미만 · 반창고', draw:bandage },
+  { title:'무난한 보통 사람', hint:'차이 15 미만 · 장식 없음', draw:()=>{} },
+];
+
+const PAL = { h:'#3a2a22', G:'#8d8d86', s:'#f1c9a5', k:'#1d2626', m:'#b55a5a', c:'#2e7465', p:'#3b4a56', b:'#4b3a2f',
+  t:'#8b2342', d:'#6f5a46', z:'#dbeaf5', n:'#b58a2a', y:'#e3b53a', r:'#8b2342', g:'#4c9a6a', R:'#8b2342', B:'#4f8fd6', C:'#9aa3a0', w:'#fff' };
+
+function sprite(ageKey, layers) {
+  const base = BASE[ageKey];
+  const grid = base.rows.map(r => [...r]);
+  if (base.grey) grid.forEach((row,y) => row.forEach((ch,x) => { if (ch==='h' && (x+y)%3===0) grid[y][x]='G'; }));
+  if (base.white) grid.forEach((row,y) => row.forEach((ch,x) => { if (ch==='h') grid[y][x]='w'; }));
+  const put = (y,x,ch) => { if (grid[y] && grid[y][x] !== undefined) grid[y][x] = ch; };
+  layers.forEach(fn => fn(base.headTop, put));
+  let out = '';
+  grid.forEach((row,y) => row.forEach((ch,x) => { const c = PAL[ch]; if (c) out += `<rect x="${x}" y="${y}" width="1" height="1" fill="${c}"/>`; }));
+  return `<svg class="px" viewBox="0 0 16 20">${out}</svg>`;
+}
+
+// 강점 × 나이 표. 각 줄은 서로 다른 약점을 예시로 붙였다.
+const exampleWeak = { insight:'courage', patience:'luck', courage:'conviction', conviction:'patience', luck:'insight' };
+let html = '<tr><th class="row"></th>' + AGES.map(a => `<th>${AGE_LABEL[a]}</th>`).join('') + '</tr>';
+for (const s of STRENGTH) {
+  const w = WEAK.find(w => w.key === exampleWeak[s.key]);
+  html += `<tr><th class="row">${w.title} ${s.title}<small>${s.hint}</small></th>` +
+    AGES.map(a => `<td>${sprite(a, [s.draw, w.draw])}</td>`).join('') + '</tr>';
+}
+document.getElementById('grid').innerHTML = html;
+
+document.getElementById('weak').innerHTML = WEAK.map(w => `<div>${sprite('adult',[w.draw])}<b>${w.title}</b><span>${w.hint}</span></div>`).join('');
+document.getElementById('special').innerHTML = SPECIAL.map(s => `<div>${sprite('adult',[s.draw])}<b>${s.title}</b><span style="color:var(--faint);font-size:11px">${s.hint}</span></div>`).join('');
+</script>
+</body>
+</html>

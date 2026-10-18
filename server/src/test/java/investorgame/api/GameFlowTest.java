@@ -114,5 +114,52 @@ class GameFlowTest {
     assertThat(reloaded.read("$.status", String.class))
         .as("끝난 판은 새로고침해도 결과를 보여 준다")
         .isEqualTo("ENDED");
+
+    // 인생 기록: 진행이 사건마다 기록한 것이 탄생부터 종료까지 순서대로 남는다.
+    List<String> kinds = game.read("$.log[*].kind");
+    assertThat(kinds).startsWith("BIRTH").endsWith("END");
+    assertThat(kinds).containsOnlyOnce("JOB", "STYLE", "OFFER");
+    assertThat(kinds.stream().filter("TRAIT"::equals).count()).isEqualTo(6);
+    assertThat(kinds.stream().filter("NEWS"::equals).count())
+        .isEqualTo((long) seenKinds.get("NEWS"));
+    assertThat(kinds.stream().filter("PRICE"::equals).count())
+        .isEqualTo((long) seenKinds.get("NEWS"));
+    assertThat(game.read("$.log[0].payload.initialAsset", Long.class))
+        .isEqualTo(game.read("$.initialAsset", Long.class));
+    for (String response : responses) {
+      assertThat(response).as("기록에도 숨은 값이 없다").doesNotContain("truth");
+    }
+    DocumentContext lastNews = newsOutcomes.get(newsOutcomes.size() - 1);
+    List<Map<String, Object>> newsPayloads = lastNews.read("$.game.log[?(@.kind=='NEWS')].payload");
+    Map<String, Object> newsPayload = newsPayloads.get(newsPayloads.size() - 1);
+    assertThat(newsPayload.get("chosen")).isEqualTo(lastNews.read("$.outcome.chosen"));
+    assertThat(newsPayload.get("actual")).isEqualTo(lastNews.read("$.outcome.actual"));
+    assertThat(newsPayload).containsKeys("eventTitle", "sectorName", "deviations", "trade");
+    List<String> lastKinds = lastNews.read("$.game.log[*].kind");
+    assertThat(lastKinds.get(lastKinds.size() - 1)).isIn("PRICE", "GROWTH");
+
+    // 연간 자산: 1세부터 65세까지 해마다 한 줄, 마지막 줄은 최종 자산과 같다.
+    List<Integer> ages = game.read("$.yearly[*].age");
+    assertThat(ages).startsWith(1).endsWith(65).doesNotHaveDuplicates().hasSize(65);
+    List<Map<String, Object>> yearly = game.read("$.yearly");
+    assertThat(((Number) yearly.get(yearly.size() - 1).get("totalAsset")).longValue())
+        .isEqualTo(game.read("$.result.finalAsset", Long.class));
+  }
+
+  @Test
+  void 같은_시각을_두_번_보고해도_연간_자산은_한_줄이다() throws Exception {
+    MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.start();
+    String gameId = game.read("$.gameId");
+
+    // 성장기 첫 성향 이벤트는 2세 이후에 온다. 1세를 마치는 360일까지는 이벤트 없이 보고할 수 있다.
+    Integer nextEventDay = game.read("$.nextEventDay");
+    int target = Math.min(360, nextEventDay == null ? 360 : nextEventDay);
+    client.advance(gameId, target);
+    game = client.advance(gameId, target);
+
+    List<Integer> ages = game.read("$.yearly[*].age");
+    assertThat(ages).hasSize(target == 360 ? 1 : 0);
   }
 }

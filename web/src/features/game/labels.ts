@@ -48,6 +48,13 @@ export const TRADE_NOTES: Record<string, string | undefined> = {
   INSUFFICIENT_CASH: '현금이 부족해 사지 못했다',
 }
 
+/** 화면에 보이는 연도. 탄생 연도는 장식이라 2025년으로 고정한다 (ui-redesign 설계 5.1절). */
+export const BIRTH_YEAR = 2025
+
+export function yearOf(ageYears: number): number {
+  return BIRTH_YEAR + ageYears - 1
+}
+
 const numberFormat = new Intl.NumberFormat('ko-KR')
 
 export function won(amount: number): string {

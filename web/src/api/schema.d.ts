@@ -178,6 +178,28 @@ export interface components {
                 [key: string]: number;
             };
         };
+        /** @description 인생 기록 한 줄. 문구는 클라이언트가 만들고 서버는 코드와 숫자만 준다. 숨은 값은 없다 */
+        LogEntry: {
+            /** Format: int64 */
+            seq: number;
+            /** @description 사건이 일어난 게임 일수 */
+            day: number;
+            /** @enum {string} */
+            kind: "BIRTH" | "TRAIT" | "JOB" | "STYLE" | "OFFER" | "NEWS" | "PRICE" | "GROWTH" | "END";
+            /** @description 종류별 필드 (docs/superpowers/specs/2026-10-18-ui-redesign-design.md 6.3절) */
+            payload: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description 한 해를 마친 시점의 자산 */
+        Yearly: {
+            /** @description 마친 나이 */
+            age: number;
+            /** Format: int64 */
+            totalAsset: number;
+            /** Format: int64 */
+            cash: number;
+        };
         Game: {
             /** Format: uuid */
             gameId: string;
@@ -206,6 +228,10 @@ export interface components {
             /** @description 다음 이벤트가 생길 게임 일수. 클라이언트는 이 시각까지만 시계를 보낸다 */
             nextEventDay?: number | null;
             result?: components["schemas"]["Result"] | null;
+            /** @description 인생 기록. 시간순(오래된 것 먼저) */
+            log: components["schemas"]["LogEntry"][];
+            /** @description 마친 나이별 자산. 나이 오름차순 */
+            yearly: components["schemas"]["Yearly"][];
         };
         AdvanceRequest: {
             day: number;

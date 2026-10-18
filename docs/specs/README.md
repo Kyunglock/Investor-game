@@ -74,7 +74,7 @@ public interface SeededRandom {
 | event | 직업·성향·투자 제안·뉴스, 관심 섹터 가중치, 스타일별 간격·폭 | 뉴스 연결(갈래), 자기계발, 알림성, 스킵, 삭제 |
 | content | JSON 로드와 검증, 버전 기록 | 뉴스 연결 정의 검증, 분량 확장 |
 | result | 결과 저장·조회 | 집계(`result_stat`), 세션 만료 시 삭제 |
-| progress | 판 시작, 시각 보고, 선택 처리, 종료 | 세션 만료 정리 작업, 스펙 문서(progress.md) |
+| progress | 판 시작, 시각 보고, 선택 처리, 종료, 인생 기록(`progress_log`)·연간 자산(`progress_year`) 기록과 응답(`Game.log`, `Game.yearly`) | 세션 만료 정리 작업(두 테이블 삭제 포함), 스펙 문서(progress.md) |
 
 ## 6. 공통 규칙
 

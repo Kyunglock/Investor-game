@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>투자자 시뮬레이터 · 스타일 목업</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;900&family=Noto+Sans+KR:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f3f4f3;
+    --card: #ffffff;
+    --line: #d7dcd8;
+    --line-soft: #e8ebe8;
+    --ink: #1d2626;
+    --muted: #6f7a78;
+    --faint: #a3adaa;
+    --wine: #8b2342;
+    --wine-soft: #f7e6ea;
+    --teal: #2e7465;
+    --teal-soft: #e2f0ea;
+    --gold: #b2862b;
+    --serif: "Noto Serif KR", serif;
+    --sans: "Noto Sans KR", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 14px; line-height: 1.55; }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 16px 64px; }
+  .q { margin-bottom: 20px; }
+  .q h1 { font-family: var(--serif); font-weight: 900; font-size: 26px; margin: 0 0 4px; }
+  .q p { color: var(--muted); margin: 0; }
+
+  /* ===== 상단 바 ===== */
+  .topbar { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 10px 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .brand { font-family: var(--serif); font-weight: 900; font-size: 16px; }
+  .brand b { color: var(--wine); }
+  .age { font-family: var(--serif); font-weight: 900; font-size: 30px; line-height: 1; }
+  .age small { font-size: 14px; font-weight: 600; }
+  .crumb { color: var(--muted); font-size: 12px; }
+  .crumb .bar { display: block; height: 3px; width: 160px; background: var(--line-soft); margin-top: 4px; border-radius: 2px; overflow: hidden; }
+  .crumb .bar i { display: block; height: 100%; width: 42%; background: var(--wine); }
+  .ctrls { margin-left: auto; display: flex; gap: 4px; }
+  .btn { border: 1px solid var(--line); background: var(--card); border-radius: 4px; padding: 5px 10px; font-size: 12px; font-family: var(--mono); color: var(--ink); cursor: pointer; }
+  .btn.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .btn.sans { font-family: var(--sans); }
+
+  /* ===== 3단 ===== */
+  .grid { display: grid; grid-template-columns: 280px minmax(0,1fr) 300px; gap: 14px; margin-top: 14px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+  .col { display: flex; flex-direction: column; gap: 14px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(0,0,0,.03); }
+  .card h2 { font-size: 15px; font-weight: 700; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; }
+  .card h2 span { font-weight: 400; font-size: 11px; color: var(--faint); }
+
+  /* 신원 기록 */
+  .id { padding: 0; overflow: hidden; }
+  .id .head { background: var(--wine); color: #fff; font-family: var(--mono); font-size: 11px; padding: 6px 12px; display: flex; justify-content: space-between; letter-spacing: .04em; }
+  .id .body { padding: 12px; display: grid; grid-template-columns: 64px 1fr; gap: 12px; position: relative; }
+  .id .body::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(135deg, transparent 0 9px, rgba(139,35,66,.05) 9px 10px); pointer-events: none; }
+  .id .name { font-family: var(--serif); font-weight: 900; font-size: 19px; line-height: 1.2; margin-bottom: 6px; }
+  .id dl { display: grid; grid-template-columns: 54px 1fr; gap: 2px 6px; margin: 0; font-size: 12px; }
+  .id dt { color: var(--faint); } .id dd { margin: 0; }
+  .id .mrz { font-family: var(--mono); font-size: 10px; color: var(--faint); padding: 8px 12px; border-top: 1px dashed var(--line); letter-spacing: .08em; }
+  .avatar { width: 64px; height: 64px; background: #e9eeea; border: 1px solid var(--line); image-rendering: pixelated; }
+
+  /* 상태 바 */
+  .stat { display: grid; grid-template-columns: 44px 1fr 30px; align-items: center; gap: 8px; font-size: 12px; margin: 5px 0; }
+  .stat .track { height: 8px; background: var(--line-soft); border-radius: 2px; overflow: hidden; }
+  .stat .track i { display: block; height: 100%; }
+  .stat .n { font-family: var(--mono); text-align: right; }
+  .money { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line-soft); font-size: 11px; color: var(--faint); }
+  .money b { display: block; font-family: var(--mono); font-size: 14px; color: var(--ink); font-weight: 600; margin-top: 2px; }
+  .nick { font-size: 12px; color: var(--wine); font-weight: 700; }
+
+  /* 장면 */
+  .scene { padding: 0; overflow: hidden; }
+  .scene svg { display: block; width: 100%; height: auto; image-rendering: pixelated; shape-rendering: crispEdges; }
+  .scene .cap { padding: 8px 14px; font-size: 13px; }
+  .scene .cap span { color: var(--faint); }
+
+  /* 인생 기록 */
+  .log { list-style: none; margin: 0; padding: 0; }
+  .log li { display: grid; grid-template-columns: 34px 1fr; gap: 8px; padding: 8px 4px; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+  .log li:last-child { border-bottom: 0; }
+  .log .y { font-family: var(--mono); font-size: 11px; color: var(--faint); padding-top: 2px; }
+  .log li.hl { background: var(--teal-soft); }
+  .log li.dec::before { content: "▸"; color: var(--wine); grid-column: 1; text-align: right; font-size: 11px; }
+  .log .src { color: var(--teal); font-size: 11px; }
+  .pill { display: inline-block; border: 1px solid var(--teal); color: var(--teal); border-radius: 10px; font-size: 10px; padding: 0 6px; margin-right: 4px; }
+  .log .dev { color: var(--wine); }
+
+  /* 인생 지도 */
+  .map { display: grid; grid-template-columns: repeat(13, 1fr); gap: 3px; }
+  .map i { aspect-ratio: 1; background: var(--line-soft); border-radius: 1px; }
+  .map i.t { background: var(--teal); } .map i.t2 { background: #7fb3a5; }
+  .map i.cur { background: #fff; outline: 2px solid var(--wine); outline-offset: -2px; }
+  .map i.end { background: #fff; outline: 2px solid var(--faint); outline-offset: -2px; }
+  .legend { font-size: 11px; color: var(--faint); margin-top: 8px; }
+
+  /* 표 */
+  .kv { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .kv td { padding: 5px 0; border-bottom: 1px solid var(--line-soft); }
+  .kv td:last-child { text-align: right; font-family: var(--mono); }
+  .up { color: #c0392b; } .down { color: #2d5fa6; }
+
+  /* 결정 카드 */
+  .modal { margin-top: 28px; }
+  .modal-wrap { background: rgba(30,40,40,.45); padding: 40px 16px; border-radius: 6px; }
+  .decision { background: var(--card); max-width: 520px; margin: 0 auto; border-radius: 6px; padding: 18px 22px; box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+  .decision .tag { font-size: 11px; color: var(--wine); font-weight: 700; display: flex; justify-content: space-between; }
+  .decision .tag span { color: var(--faint); font-family: var(--mono); font-weight: 400; }
+  .decision h3 { font-family: var(--serif); font-weight: 900; font-size: 22px; margin: 8px 0 6px; }
+  .decision p { margin: 0 0 10px; font-size: 13px; }
+  .decision .note { background: var(--teal-soft); border-left: 3px solid var(--teal); padding: 8px 10px; font-size: 12px; color: #3b5a52; font-family: var(--mono); }
+  .decision .sway { border-left: 3px solid var(--line); padding: 6px 10px; font-size: 12px; color: var(--muted); margin: 10px 0; }
+  .decision .sway em { font-style: normal; font-size: 10px; color: var(--faint); display: block; }
+  .opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+  .opt { border: 1px solid var(--line); background: #eef0ee; border-radius: 4px; padding: 14px 10px; font-weight: 700; text-align: center; font-size: 14px; }
+  .opt small { display: block; font-weight: 400; font-size: 11px; color: var(--faint); font-family: var(--mono); }
+  .opt.sel { background: var(--wine-soft); border-color: var(--wine); }
+  .cd { height: 3px; background: var(--line-soft); margin-top: 12px; }
+  .cd i { display: block; height: 100%; width: 35%; background: var(--wine); }
+  .decision .foot { font-size: 11px; color: var(--faint); margin-top: 6px; }
+
+  /* 선택지 (브레인스토밍용) */
+  .choices { margin-top: 36px; }
+  .choices h2 { font-family: var(--serif); font-size: 20px; margin: 0 0 4px; }
+  .choices p { color: var(--muted); margin: 0 0 12px; }
+  .options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  @media (max-width: 900px) { .options { grid-template-columns: 1fr; } }
+  .option { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; cursor: pointer; display: flex; gap: 12px; }
+  .option .letter { font-family: var(--serif); font-weight: 900; font-size: 22px; color: var(--wine); }
+  .option h3 { margin: 0 0 4px; font-size: 14px; } .option p { margin: 0; font-size: 12px; }
+  .option.selected { border-color: var(--wine); background: var(--wine-soft); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="q">
+    <h1>다시 A안으로</h1>
+    <p>'80억 분의 1'의 색감(와인 레드 + 청록 + 종이빛 바탕), 글꼴(제목 명조·본문 고딕·숫자 모노), 도트 그림을 우리 게임에 입혀 본 모습입니다. 데이터는 지금 게임 그대로예요.</p>
+  </div>
+
+  <!-- ===== 상단 바 ===== -->
+  <div class="topbar">
+    <div class="brand">투자자 <b>시뮬레이터</b></div>
+    <div class="age">31<small>세</small></div>
+    <div class="crumb">2056년 · 조심조심 거북이 · 1년 ≈ 40초<span class="bar"><i></i></span></div>
+    <div class="ctrls">
+      <button class="btn sans">❚❚ 멈춤</button>
+      <button class="btn">1×</button><button class="btn on">2×</button><button class="btn">4×</button>
+      <button class="btn sans">다시 시작</button>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- ===== 왼쪽 ===== -->
+    <div class="col">
+      <div class="card id">
+        <div class="head"><span>신원 기록 · KOR</span><span>2025</span></div>
+        <div class="body">
+          <svg class="avatar" viewBox="0 0 16 16" id="avatar"></svg>
+          <div>
+            <div class="name">조심조심 거북이</div>
+            <dl>
+              <dt>단계</dt><dd>투자 중</dd>
+              <dt>직업</dt><dd>중소기업 사원</dd>
+              <dt>월급</dt><dd style="font-family:var(--mono)">2,800,000원</dd>
+              <dt>스타일</dt><dd>장기 투자형</dd>
+              <dt>관심</dt><dd>반도체</dd>
+            </dl>
+          </div>
+        </div>
+        <div class="mrz">I&lt;KORTURTLE&lt;&lt;CAREFUL&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;<br>250401KOR&lt;031&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;&lt;</div>
+      </div>
+
+      <div class="card">
+        <h2>능력치 <span>0–100</span></h2>
+        <div class="stat"><span>안목</span><span class="track"><i style="width:62%;background:var(--teal)"></i></span><span class="n">62</span></div>
+        <div class="stat"><span>인내심</span><span class="track"><i style="width:81%;background:var(--teal)"></i></span><span class="n">81</span></div>
+        <div class="stat"><span>용기</span><span class="track"><i style="width:34%;background:var(--gold)"></i></span><span class="n">34</span></div>
+        <div class="stat"><span>줏대</span><span class="track"><i style="width:55%;background:var(--teal)"></i></span><span class="n">55</span></div>
+        <div class="stat"><span>운</span><span class="track"><i style="width:47%;background:var(--wine)"></i></span><span class="n">47</span></div>
+        <p class="nick" style="margin:8px 0 0">약점: 용기 — 사려다 겁나서 관망한다</p>
+        <div class="money">
+          <div>총자산<b>48,200,000원</b></div>
+          <div>현금<b>12,900,000원</b></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 가운데 ===== -->
+    <div class="col">
+      <div class="card scene">
+        <svg id="scene" viewBox="0 0 64 20"></svg>
+        <div class="cap">서울 · 원룸 · 퇴근 후 주식 앱을 켜는 중 <span>▾</span></div>
+      </div>
+
+      <div class="card">
+        <h2>올해의 상황</h2>
+        <p style="margin:0;font-size:13px">반도체 주식을 들고 있다. 월급은 꼬박꼬박 들어오고, 뉴스가 올 때마다 손이 떨린다. 용기가 낮아 관망하는 일이 잦다.</p>
+      </div>
+
+      <div class="card">
+        <h2>인생 기록 <span>최근 순</span></h2>
+        <ul class="log">
+          <li class="hl dec"><span class="y">31세</span><span>반도체 호재 뉴스 · 선택 <b>매수</b> → 실제 <b class="dev">관망</b> <span class="dev">(용기 부족)</span></span></li>
+          <li><span class="y">30세</span><span>반도체 주가 ▲ 4.2% · 손익 <span class="up" style="font-family:var(--mono)">+1,240,000원</span></span></li>
+          <li><span class="y">29세</span><span>경험으로 줏대 51 → 55 <span class="src">↑</span></span></li>
+          <li><span class="y">27세</span><span><span class="pill">제안</span>월급을 모아 뒀더니 친구가 투자를 권했다. 반도체부터 시작하기로 했다.</span></li>
+          <li><span class="y">24세</span><span>중소기업에 취직했다. 첫 월급 2,800,000원.</span></li>
+          <li class="dec"><span class="y">13세</span><span>갖고 싶은 것 앞에서 · 결정: 모았다가 더 좋은 걸 산다</span></li>
+          <li><span class="y">1세</span><span><span class="pill">탄생</span>2025년 4월, 안목 62 · 인내심 81 · 용기 34 · 줏대 55 · 운 47을 타고났다. 별명은 '조심조심 거북이'.</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- ===== 오른쪽 ===== -->
+    <div class="col">
+      <div class="card">
+        <h2>보유 종목</h2>
+        <table class="kv">
+          <tr><td>반도체</td><td>18,400,000원</td></tr>
+          <tr><td>2차전지</td><td>9,100,000원</td></tr>
+          <tr><td>현금</td><td>12,900,000원</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>인생 지도 <span>한 칸 = 1년</span></h2>
+        <div class="map" id="map"></div>
+        <p class="legend">한 칸 = 1년 · 진할수록 자산이 늘었던 해<br>테두리 칸 = 65세 은퇴</p>
+      </div>
+
+      <div class="card">
+        <h2>자산 곡선 <span>총자산, 만원</span></h2>
+        <svg viewBox="0 0 260 110" style="width:100%;height:auto;font-family:var(--mono);font-size:8px;fill:var(--faint)">
+          <line x1="28" y1="90" x2="250" y2="90" stroke="#d7dcd8"/>
+          <line x1="28" y1="10" x2="28" y2="90" stroke="#d7dcd8"/>
+          <text x="2" y="92">0</text><text x="2" y="52">3000</text><text x="2" y="14">6000</text>
+          <text x="26" y="102">1</text><text x="100" y="102">24</text><text x="150" y="102">31</text><text x="240" y="102">65</text>
+          <path d="M28 88 L60 88 L100 85 L115 80 L130 70 L140 73 L150 58" fill="none" stroke="var(--teal)" stroke-width="2"/>
+          <path d="M150 58 L250 30" fill="none" stroke="#b7c4bf" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <circle cx="150" cy="58" r="3" fill="var(--wine)"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 뉴스 결정 ===== -->
+  <div class="modal">
+    <p style="color:var(--muted);margin:0 0 8px">뉴스가 오면 화면이 어두워지고 이런 카드가 뜹니다.</p>
+    <div class="modal-wrap">
+      <div class="decision">
+        <div class="tag">뉴스 · 반도체 <span>31세 · 2056년</span></div>
+        <h3>AI 서버 수요 폭증, 반도체 수출 사상 최대</h3>
+        <p>업계는 내년까지 공급 부족이 이어질 것으로 본다. 증권사들은 목표 주가를 일제히 올렸다.</p>
+        <div class="note">힌트 · 호재가 이미 주가에 반영됐을 수 있다. 안목이 높으면 보인다.</div>
+        <div class="sway"><em>다른 뉴스</em>"반도체 재고 급증… 하반기 조정 불가피" — 줏대가 낮으면 이쪽에 흔들린다.</div>
+        <div class="opts">
+          <div class="opt sel">매수<small>현금 1,290만</small></div>
+          <div class="opt">관망</div>
+          <div class="opt">매도<small>보유 1,840만</small></div>
+        </div>
+        <div class="cd"><i></i></div>
+        <div class="foot">선택은 당신이 하지만, 실행은 당신의 성격이 합니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 질문 ===== -->
+  <div class="choices">
+    <h2>이대로 갈까요, 살짝만 더할까요?</h2>
+    <p>위 목업이 A 그대로입니다. 원하시면 숫자·배속 버튼 정도에만 픽셀 폰트를 아주 조금 쓸 수도 있어요.</p>
+    <div class="options" style="grid-template-columns:repeat(2,1fr)">
+      <div class="option" data-choice="a-asis" onclick="toggleSelect(this)"><div class="letter">A</div><div><h3>이대로</h3><p>도트는 장면·아바타 그림에만. 글자와 UI는 원작처럼 깔끔하게.</p></div></div>
+      <div class="option" data-choice="a-plus" onclick="toggleSelect(this)"><div class="letter">A+</div><div><h3>숫자·배속 버튼만 픽셀 폰트</h3><p>나이 "31세", 금액, 1×/2× 버튼에만. 나머지는 A 그대로.</p></div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 작은 도트 그림: 문자 지도를 SVG 사각형으로 그린다.
+  function pixels(svgId, rows, palette, scale) {
+    const svg = document.getElementById(svgId);
+    let out = '';
+    rows.forEach((row, y) => {
+      [...row].forEach((ch, x) => {
+        const c = palette[ch];
+        if (c) out += `<rect x="${x*scale}" y="${y*scale}" width="${scale}" height="${scale}" fill="${c}"/>`;
+      });
+    });
+    svg.innerHTML = out;
+  }
+
+  // 아바타 16x16: 거북이 별명이니 초록 후드를 쓴 사람
+  pixels('avatar', [
+    '................',
+    '......gggg......',
+    '.....gggggg.....',
+    '....gggggggg....',
+    '....gssssssg....',
+    '....gsksskss....',
+    '....gssssssg....',
+    '.....ssmmss.....',
+    '......ssss......',
+    '....tttttttt....',
+    '...tttwwwwttt...',
+    '...ttttttttt....',
+    '...tt.tttt.tt...',
+    '.....tttttt.....',
+    '.....bb..bb.....',
+    '.....bb..bb.....',
+  ], { g:'#2e7465', s:'#f1c9a5', k:'#1d2626', m:'#b55a5a', t:'#3b6d5f', w:'#ffffff', b:'#4b3a2f' }, 1);
+
+  // 장면 64x20: 하늘, 구름, 해, 원룸 창문, 책상 앞 사람, 모니터
+  const S = [
+    'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+    'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+    'cccccyyycccccccccccccccccccccccccccccccccwwwwccccccccccccccccccc',
+    'ccccyyyyyccccccccccwwwwccccccccccccccccwwwwwwwwcccccccccccccccc',
+    'ccccyyyyycccccccccwwwwwwwccccccccccccccwwwwwwwwwwcccccccccccccc',
+    'cccccyyyccccccccccccwwwwcccccccccccccccccwwwwwwccccccccccccccccc',
+    'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc',
+    'hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh',
+    'hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh',
+    'hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh',
+    'rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr',
+    'rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr',
+    'rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr',
+    'rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr',
+    'rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr',
+    'rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr',
+    'rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr',
+    'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+    'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+    'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff',
+  ].map(r => [...r]);
+  // 벽에 창문, 책상, 모니터(주가 그래프), 사람을 덧그린다.
+  function put(x, y, ch) { if (S[y] && S[y][x] !== undefined) S[y][x] = ch; }
+  function rect(x, y, w, h, ch) { for (let j=0;j<h;j++) for (let i=0;i<w;i++) put(x+i, y+j, ch); }
+  rect(0, 7, 64, 10, 'r');                    // 벽
+  rect(6, 8, 10, 6, 'n'); rect(7, 9, 8, 4, 'c'); put(11, 9, 'n'); put(11,10,'n'); put(11,11,'n'); put(11,12,'n'); rect(7,11,8,1,'n'); // 창문
+  rect(40, 8, 12, 7, 'n'); rect(41, 9, 10, 5, 'c'); rect(41,11,10,1,'n'); put(46,9,'n');put(46,10,'n');put(46,12,'n');put(46,13,'n'); // 창문2
+  rect(18, 13, 20, 1, 'd'); rect(19, 14, 1, 3, 'd'); rect(36, 14, 1, 3, 'd');  // 책상
+  rect(24, 8, 9, 5, 'k'); rect(25, 9, 7, 3, 'z');                                   // 모니터
+  put(26,11,'u');put(27,10,'u');put(28,11,'u');put(29,10,'u');put(30,9,'u');put(31,9,'u'); // 주가 선
+  rect(28, 13, 1, 1, 'k');
+  // 사람(옆모습, 의자에 앉음)
+  rect(28, 11, 0, 0, 'k');
+  rect(27, 12, 3, 1, 'g'); rect(27, 13, 3, 0, 'g');
+  rect(27, 10, 3, 2, 's'); rect(27, 9, 3, 1, 'g'); // 머리+후드
+  rect(26, 12, 5, 3, 't'); rect(26, 15, 2, 2, 'b'); rect(29, 15, 2, 2, 'b');
+  rect(25, 14, 1, 3, 'd');                                  // 의자
+  rect(55, 11, 4, 1, 'p'); rect(56, 9, 2, 2, 'g'); rect(55, 12, 4, 4, 'o'); // 화분
+  pixels('scene', S.map(r => r.join('')), {
+    c:'#cfe6e1', y:'#f0d58a', w:'#ffffff', h:'#e9d6c8', r:'#efe7dc', n:'#b9a995',
+    f:'#8a7560', d:'#6f5a46', k:'#2c3435', z:'#e2f0ea', u:'#8b2342', g:'#2e7465',
+    s:'#f1c9a5', t:'#3b6d5f', b:'#4b3a2f', p:'#9c5a3c', o:'#c08a6a'
+  }, 1);
+
+  // 인생 지도 65칸
+  const map = document.getElementById('map');
+  let m = '';
+  for (let a = 1; a <= 65; a++) {
+    let cls = '';
+    if (a < 31) cls = a < 24 ? 't2' : 't';
+    if (a === 31) cls = 'cur';
+    if (a === 65) cls = 'end';
+    m += `<i class="${cls}" title="${a}세"></i>`;
+  }
+  map.innerHTML = m;
+</script>
+</body>
+</html>

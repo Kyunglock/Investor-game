@@ -1,0 +1,101 @@
+import type { Game } from '../../api/client'
+import { AssetCurve } from './AssetCurve'
+import { Document } from './Document'
+import { LifeLog } from './LifeLog'
+import { LifeMap } from './LifeMap'
+import { percent, STAT_KEYS, STAT_LABELS, statLabel, won, yearOf } from './labels'
+import { nickname } from './nickname'
+import { layersFor } from './pixel/layers'
+import { Sprite } from './pixel/SpriteView'
+
+/** 인생 기록부 (설계 5.7절). 끝난 판의 결과를 한 장의 문서로 보여 준다. */
+export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => void }) {
+  const result = game.result
+  if (!result) {
+    return null
+  }
+  const deviations = Object.entries(result.deviationCounts).sort(([, a], [, b]) => b - a)
+  const up = result.returnBp >= 0
+
+  return (
+    <Document
+      title="인생 기록부"
+      number={`No. KOR-${yearOf(game.startAge)}-${game.gameId.slice(0, 7)}`}
+      testId="result-screen"
+    >
+      <div className="flex items-start gap-4">
+        <Sprite
+          spec={layersFor(game.initialStats, game.stats, game.endAge)}
+          size={64}
+          className="border border-line bg-bg"
+        />
+        <div className="min-w-0">
+          <p className="text-[11px] text-faint">이름</p>
+          <h2 className="font-serif-kr text-[26px] font-black leading-tight">
+            {nickname(game.initialStats).name}
+          </h2>
+          <p className="text-[13px] text-muted">
+            {result.finalAge}세, 투자 인생을 마쳤습니다 · {game.job?.title ?? '무직'} ·{' '}
+            {game.investmentStyle?.name ?? '스타일 미정'}
+          </p>
+        </div>
+      </div>
+
+      <p className="mt-5 font-serif-kr text-2xl font-black">
+        <span className="font-mono-num text-base font-normal text-muted">
+          {won(result.initialAsset)} →
+        </span>{' '}
+        <span className="font-mono-num">{won(result.finalAsset)}</span>{' '}
+        <span className={`font-mono-num text-lg ${up ? 'text-up' : 'text-down'}`}>
+          ({up ? '+' : ''}
+          {percent(result.returnBp)})
+        </span>
+      </p>
+
+      <h3 className="mt-6 text-[11px] text-faint">최종 능력치</h3>
+      <ul className="mt-1.5 grid grid-cols-5 gap-2 text-center">
+        {STAT_KEYS.map((key) => (
+          <li key={key} className="rounded border border-line-soft bg-bg py-2">
+            <p className="text-[11px] text-faint">{STAT_LABELS[key]}</p>
+            <p className="font-mono-num font-semibold">{game.stats[key]}</p>
+          </li>
+        ))}
+      </ul>
+
+      {deviations.length > 0 && (
+        <>
+          <h3 className="mt-5 text-[11px] text-faint">내 선택이 뒤집힌 횟수</h3>
+          <ul className="mt-1.5 flex flex-wrap gap-2">
+            {deviations.map(([code, count]) => (
+              <li
+                key={code}
+                className="rounded-full border border-wine px-3 py-0.5 text-xs text-wine"
+              >
+                {statLabel(code)} 부족 {count}번
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <div className="mt-6 flex flex-col gap-3.5">
+        <AssetCurve game={game} ageYears={game.endAge} full />
+        <LifeMap game={game} ageYears={game.endAge} />
+        <details>
+          <summary className="cursor-pointer text-[13px] text-muted">인생 기록 전체 보기</summary>
+          <div className="mt-2">
+            <LifeLog game={game} />
+          </div>
+        </details>
+      </div>
+
+      <button
+        type="button"
+        className="mt-6 min-h-12 w-full rounded bg-wine font-semibold text-white hover:opacity-90"
+        onClick={onRestart}
+      >
+        다시 태어나기
+      </button>
+    </Document>
+  )
+}

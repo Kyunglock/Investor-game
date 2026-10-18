@@ -35,6 +35,7 @@ import investorgame.result.GameResult;
 import investorgame.result.ResultService;
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -51,6 +52,7 @@ class DefaultProgressService implements ProgressService {
   private static final int BP = 10_000;
 
   private final GameRepository games;
+  private final LogRepository logs;
   private final ProgressProperties properties;
   private final GameProperties calendar;
   private final CharacterService characters;
@@ -63,6 +65,7 @@ class DefaultProgressService implements ProgressService {
 
   DefaultProgressService(
       GameRepository games,
+      LogRepository logs,
       ProgressProperties properties,
       GameProperties calendar,
       CharacterService characters,
@@ -72,6 +75,7 @@ class DefaultProgressService implements ProgressService {
       ResultService results,
       ContentCatalog content) {
     this.games = games;
+    this.logs = logs;
     this.properties = properties;
     this.calendar = calendar;
     this.characters = characters;
@@ -102,8 +106,13 @@ class DefaultProgressService implements ProgressService {
     games.insert(game);
 
     SeededRandom random = new HashSeededRandom(game.seed());
-    characters.create(game.id(), random.forKey("character", "create"));
-    assets.create(game.id(), random.forKey("asset", "create"));
+    CharacterView character = characters.create(game.id(), random.forKey("character", "create"));
+    AccountView account = assets.create(game.id(), random.forKey("asset", "create"));
+    logs.append(
+        game.id(),
+        0,
+        "BIRTH",
+        Map.of("stats", character.initialStats().toCodes(), "initialAsset", account.initialCash()));
     scheduleAt(game, 0, 0);
     return view(game);
   }
@@ -136,6 +145,7 @@ class DefaultProgressService implements ProgressService {
     // 보고된 시각이 다음 이벤트를 넘어도 판은 그 이벤트 시각에서 멈춘다. 월급도 거기까지만 넣는다.
     int stopDay = Math.min(day, nextEventDay(game, last).orElse(day));
     paySalaries(game, last, stopDay);
+    recordYears(game, last, stopDay);
     GameRow advanced = withDay(game, stopDay);
     games.updateDay(gameId, stopDay);
     scheduleAt(advanced, last, stopDay);
@@ -155,17 +165,36 @@ class DefaultProgressService implements ProgressService {
   @Transactional
   public ChoiceOutcome choose(UUID sessionId, UUID gameId, UUID eventId, String option) {
     GameRow game = lock(sessionId, gameId);
+    EventView pendingView =
+        events
+            .pending(gameId)
+            .filter(e -> e.eventId().equals(eventId))
+            .orElseThrow(() -> new InvalidRequestException("대기 중인 이벤트가 아니다"));
     ChoiceTicket ticket = events.prepareChoice(gameId, eventId, option);
     SeededRandom random = new HashSeededRandom(game.seed());
+    String optionLabel =
+        pendingView.options().stream()
+            .filter(o -> o.code().equals(option))
+            .map(EventView.Option::label)
+            .findFirst()
+            .orElse(option);
 
     ChoiceOutcome.Outcome outcome =
         switch (ticket.effect()) {
-          case ChoiceTicket.News news -> resolveNews(game, ticket, random);
+          case ChoiceTicket.News news -> resolveNews(game, ticket, pendingView.title(), random);
           case ChoiceTicket.Job job -> {
             characters.assignJob(gameId, job.jobCode(), ticket.occursDay());
             games.changePhase(gameId, Phase.SAVING);
             events.complete(gameId, eventId, new Completion(option, option, List.of()));
             JobDefinition definition = content.job(job.jobCode());
+            logs.append(
+                gameId,
+                ticket.occursDay(),
+                "JOB",
+                Map.of(
+                    "jobCode", definition.code(),
+                    "jobTitle", definition.title(),
+                    "monthlySalary", definition.baseMonthlySalary()));
             yield simpleOutcome(
                 ticket, "%s(으)로 일하기 시작했다. 월급은 매달 들어온다.".formatted(definition.title()));
           }
@@ -173,11 +202,26 @@ class DefaultProgressService implements ProgressService {
             characters.recordTraitChoice(gameId, trait.traitDeltas());
             CompleteResult result =
                 events.complete(gameId, eventId, new Completion(option, option, List.of()));
+            logs.append(
+                gameId,
+                ticket.occursDay(),
+                "TRAIT",
+                Map.of(
+                    "eventTitle", pendingView.title(),
+                    "optionCode", option,
+                    "optionLabel", optionLabel));
             if (!result.traitsComplete()) {
               yield simpleOutcome(ticket, trait.note());
             }
             TraitResult traits =
                 characters.finalizeTraits(gameId, random.forKey("character", "traits"));
+            logs.append(
+                gameId,
+                ticket.occursDay(),
+                "STYLE",
+                Map.of(
+                    "styleCode", traits.investmentStyle(),
+                    "styleName", content.styleName(traits.investmentStyle())));
             yield simpleOutcome(
                 ticket,
                 "%s\n\n자라 온 날들을 돌아보니 당신은 %s다. 관심이 가는 분야는 %s."
@@ -188,6 +232,19 @@ class DefaultProgressService implements ProgressService {
           }
           case ChoiceTicket.Offer offer -> {
             events.complete(gameId, eventId, new Completion(option, option, List.of()));
+            logs.append(
+                gameId,
+                ticket.occursDay(),
+                "OFFER",
+                Map.of(
+                    "eventTitle",
+                    pendingView.title(),
+                    "optionCode",
+                    option,
+                    "optionLabel",
+                    optionLabel,
+                    "accepted",
+                    offer.accepted()));
             if (offer.accepted()) {
               games.startInvesting(gameId, ticket.occursDay());
               yield simpleOutcome(ticket, "투자를 시작했다. 이제 뉴스가 들려온다.");
@@ -205,7 +262,7 @@ class DefaultProgressService implements ProgressService {
   // ---- 뉴스 선택: 판정 → 매매 → 주가 변동 → 성장 (domains.md 3절 처리 흐름 2) ----
 
   private ChoiceOutcome.Outcome resolveNews(
-      GameRow game, ChoiceTicket ticket, SeededRandom random) {
+      GameRow game, ChoiceTicket ticket, String eventTitle, SeededRandom random) {
     UUID gameId = game.id();
     CharacterView character = characters.get(gameId);
     AccountView account = assets.get(gameId);
@@ -246,6 +303,42 @@ class DefaultProgressService implements ProgressService {
         ticket.eventId(),
         new Completion(chosen.name(), resolution.actual().name(), resolution.deviations()));
 
+    String sectorName = content.sectorName(ticket.sectorCode());
+    Map<String, Object> newsPayload = new HashMap<>();
+    newsPayload.put("eventTitle", eventTitle);
+    newsPayload.put("sectorCode", ticket.sectorCode());
+    newsPayload.put("sectorName", sectorName);
+    newsPayload.put("chosen", chosen.name());
+    newsPayload.put("actual", resolution.actual().name());
+    newsPayload.put(
+        "deviations",
+        resolution.deviations().stream()
+            .map(
+                d -> Map.of("statCode", d.statCode(), "from", d.from().name(), "to", d.to().name()))
+            .toList());
+    newsPayload.put("trade", Map.of("status", trade.status().name(), "amount", trade.amount()));
+    logs.append(gameId, ticket.occursDay(), "NEWS", newsPayload);
+    logs.append(
+        gameId,
+        ticket.occursDay(),
+        "PRICE",
+        Map.of(
+            "sectorCode", ticket.sectorCode(),
+            "sectorName", sectorName,
+            "direction", ticket.truth().name(),
+            "changeBp", ticket.magnitudeBp(),
+            "pnl", price.pnl(),
+            "lossSoftened", price.lossSoftened()));
+    for (StatChange g : growth) {
+      if (g.valueAfter() != g.valueBefore()) {
+        logs.append(
+            gameId,
+            ticket.occursDay(),
+            "GROWTH",
+            Map.of("statCode", g.statCode(), "before", g.valueBefore(), "after", g.valueAfter()));
+      }
+    }
+
     return new ChoiceOutcome.Outcome(
         ticket.kind().name(),
         chosen.name(),
@@ -256,7 +349,7 @@ class DefaultProgressService implements ProgressService {
         new ChoiceOutcome.Trade(trade.status().name(), trade.amount()),
         new ChoiceOutcome.Price(
             ticket.sectorCode(),
-            content.sectorName(ticket.sectorCode()),
+            sectorName,
             ticket.truth().name(),
             ticket.magnitudeBp(),
             price.pnl(),
@@ -323,18 +416,46 @@ class DefaultProgressService implements ProgressService {
     }
     OffsetDateTime endedAt = games.now();
     games.end(game.id(), endedAt);
+    AccountView account = assets.get(game.id());
+    long finalAsset = assets.totalAsset(game.id());
     results.save(
         new GameResult(
             game.id(),
             game.sessionId(),
             game.contentVersion(),
-            assets.get(game.id()).initialCash(),
-            assets.totalAsset(game.id()),
+            account.initialCash(),
+            finalAsset,
             game.endAge(),
             characters.get(game.id()).stats(),
             events.deviationCounts(game.id()),
             game.createdAt(),
             endedAt));
+    logs.upsertYear(game.id(), game.endAge(), finalAsset, account.cash());
+    logs.append(
+        game.id(),
+        game.lastReportedDay(),
+        "END",
+        Map.of(
+            "finalAge", game.endAge(),
+            "initialAsset", account.initialCash(),
+            "finalAsset", finalAsset,
+            "returnBp", returnBp(account.initialCash(), finalAsset)));
+  }
+
+  /** (fromExclusive, toInclusive] 안의 연 경계마다 그 해를 마친 자산을 남긴다. 한 번의 보고는 최대 1년이므로 많아야 하나다. */
+  private void recordYears(GameRow game, int fromExclusive, int toInclusive) {
+    int year = calendar.daysPerYear();
+    for (int k = fromExclusive / year + 1; k * year <= toInclusive; k++) {
+      logs.upsertYear(
+          game.id(),
+          game.startAge() - 1 + k,
+          assets.totalAsset(game.id()),
+          assets.get(game.id()).cash());
+    }
+  }
+
+  private static int returnBp(long initial, long finalAsset) {
+    return initial == 0 ? 0 : (int) ((finalAsset - initial) * BP / initial);
   }
 
   private SchedulingContext context(GameRow game, CharacterView character) {
@@ -389,9 +510,9 @@ class DefaultProgressService implements ProgressService {
                 character.interestSector(), content.sectorName(character.interestSector())),
         pending.map(this::pendingView).orElse(null),
         nextEventDay,
-        ended
-            ? results.find(game.id()).map(DefaultProgressService::resultView).orElse(null)
-            : null);
+        ended ? results.find(game.id()).map(DefaultProgressService::resultView).orElse(null) : null,
+        logs.findAll(game.id()),
+        logs.findYears(game.id()));
   }
 
   private GameView.Job job(CharacterView character, int day) {
@@ -419,11 +540,10 @@ class DefaultProgressService implements ProgressService {
 
   private static GameView.Result resultView(GameResult result) {
     long initial = result.initialAsset();
-    int returnBp = initial == 0 ? 0 : (int) ((result.finalAsset() - initial) * BP / initial);
     return new GameView.Result(
         initial,
         result.finalAsset(),
-        returnBp,
+        returnBp(initial, result.finalAsset()),
         result.finalAge(),
         Map.copyOf(result.deviationCounts()));
   }

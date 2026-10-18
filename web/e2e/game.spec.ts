@@ -13,7 +13,7 @@ async function born(page: Page) {
   await page.getByRole('button', { name: '태어나기' }).click()
   await expect(page.getByTestId('birth-reveal')).toBeVisible()
   await page.clock.runFor(5_000)
-  await page.getByRole('button', { name: '인생 시작하기' }).click()
+  await page.getByRole('button', { name: '삶을 시작하기' }).click()
   await expect(page.getByTestId('age')).toHaveText('1세 0개월')
 }
 
@@ -73,7 +73,7 @@ test('태어나면 능력치가 안목부터 하나씩 공개되고 별명이 �
   const nickname = await page.getByTestId('reveal-nickname').textContent()
   expect(nickname?.trim()).toBeTruthy()
 
-  await page.getByRole('button', { name: '인생 시작하기' }).click()
+  await page.getByRole('button', { name: '삶을 시작하기' }).click()
   await expect(page.getByTestId('age')).toHaveText('1세 0개월')
   await expect(page.getByTestId('nickname')).toHaveText(nickname ?? '')
   await expect(page.getByTestId('job')).toHaveText('학생')
@@ -107,7 +107,7 @@ test('새로고침하면 서버의 상태에서 일시정지로 이어한다', a
   await playUntil(page, 'TRAIT')
   await step(page)
   await page.clock.runFor(1_000)
-  await page.getByRole('button', { name: '일시정지' }).click()
+  await page.getByRole('button', { name: '멈춤' }).click()
 
   const age = await page.getByTestId('age').textContent()
   const nickname = await page.getByTestId('nickname').textContent()
@@ -123,10 +123,37 @@ test('다시 시작하면 다시 태어나 1세에서 시작한다', async ({ pa
   await playUntil(page, 'TRAIT')
   await step(page)
 
-  await page.getByRole('button', { name: '다시 시작하기' }).click()
+  await page.getByRole('button', { name: '다시 시작' }).click()
   await expect(page.getByTestId('birth-reveal')).toBeVisible()
   await page.clock.runFor(5_000)
-  await page.getByRole('button', { name: '인생 시작하기' }).click()
+  await page.getByRole('button', { name: '삶을 시작하기' }).click()
   await expect(page.getByTestId('age')).toHaveText('1세 0개월')
   await expect(page.getByTestId('job')).toHaveText('학생')
+})
+
+test('인생 기록은 서버에서 와서 새로고침해도 남는다', async ({ page }) => {
+  await born(page)
+  const birth = page.locator('[data-testid="life-log-line"][data-kind="BIRTH"]')
+  const trait = page.locator('[data-testid="life-log-line"][data-kind="TRAIT"]')
+  await expect(birth).toHaveCount(1)
+
+  await playUntil(page, 'TRAIT')
+  await step(page)
+  await expect(trait).toHaveCount(1)
+  await page.getByRole('button', { name: '멈춤' }).click()
+
+  await page.reload()
+  await expect(birth).toHaveCount(1)
+  await expect(trait).toHaveCount(1)
+})
+
+test('신원 카드와 능력치는 인생 기록보다 위에 있다 (모바일 순서)', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'mobile', '1단 배치는 모바일에서만 본다')
+  await born(page)
+  const identity = await page.getByTestId('identity-card').boundingBox()
+  const stats = await page.getByTestId('stat-insight').boundingBox()
+  const log = await page.getByTestId('life-log').boundingBox()
+  expect(identity && stats && log).toBeTruthy()
+  expect(identity?.y ?? 0).toBeLessThan(log?.y ?? 0)
+  expect(stats?.y ?? 0).toBeLessThan(log?.y ?? 0)
 })

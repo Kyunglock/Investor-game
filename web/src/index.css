@@ -1,21 +1,64 @@
 @import "tailwindcss";
 
+/* '80억 분의 1' 톤: 종이빛 바탕, 와인 레드와 청록 포인트 (docs/superpowers/specs/2026-10-18-ui-redesign-design.md 4절) */
 :root {
   color-scheme: light;
-  font-family: system-ui, -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  --bg: #f3f4f3;
+  --card: #ffffff;
+  --line: #d7dcd8;
+  --line-soft: #e8ebe8;
+  --ink: #1d2626;
+  --muted: #6f7a78;
+  --faint: #a3adaa;
+  --wine: #8b2342;
+  --wine-soft: #f7e6ea;
+  --teal: #2e7465;
+  --teal-soft: #e2f0ea;
+  --gold: #b2862b;
+  --up: #c0392b;
+  --down: #2d5fa6;
+  --font-serif: "Noto Serif KR", "Apple SD Gothic Neo", serif;
+  --font-sans:
+    "Noto Sans KR", system-ui, -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+  font-family: var(--font-sans);
+}
+
+/* Tailwind 유틸(text-ink, bg-card, font-serif-kr …)로 쓸 수 있게 테마에 올린다 */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-wine: var(--wine);
+  --color-wine-soft: var(--wine-soft);
+  --color-teal: var(--teal);
+  --color-teal-soft: var(--teal-soft);
+  --color-gold: var(--gold);
+  --color-up: var(--up);
+  --color-down: var(--down);
+  --font-serif-kr: var(--font-serif);
+  --font-sans-kr: var(--font-sans);
+  --font-mono-num: var(--font-mono);
 }
 
 body {
   margin: 0;
   min-width: 360px;
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
 }
 
+/* 카드·문서가 아래서 올라오며 나타난다 */
 @keyframes reveal-in {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.98);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -23,12 +66,71 @@ body {
   }
 }
 
+/* 인생 기록 새 줄이 위에 끼어든다 */
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 손익 금액이 한 번 깜빡인다 */
+@keyframes flash {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+
+/* 캐릭터 눈 깜빡임 (3초 주기) */
+@keyframes blink {
+  0%,
+  92%,
+  100% {
+    opacity: 1;
+  }
+  95% {
+    opacity: 0;
+  }
+}
+
+/* 약점 표시가 떨어지며 사라진다 */
+@keyframes drop {
+  to {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
 .animate-reveal {
   animation: reveal-in 0.45s ease-out both;
 }
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out both;
+}
+.animate-flash {
+  animation: flash 0.6s ease-out 1;
+}
+.animate-blink {
+  animation: blink 3s steps(1) infinite;
+}
+.animate-drop {
+  animation: drop 0.5s ease-in forwards;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-reveal {
+  .animate-reveal,
+  .animate-slide-in,
+  .animate-flash,
+  .animate-blink,
+  .animate-drop {
     animation: none;
   }
 }
