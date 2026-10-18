@@ -52,6 +52,45 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
         </span>
       </p>
 
+      <p className="mt-2 text-[13px] text-muted" data-testid="result-family">
+        가족 ·{' '}
+        {game.household.married
+          ? `배우자${game.household.children.length > 0 ? `, 자녀 ${game.household.children.length}` : ''}`
+          : '혼자'}
+        {game.debt > 0 && (
+          <>
+            {' · 남은 빚 '}
+            <span className="font-mono-num text-up">{won(game.debt)}</span>
+          </>
+        )}
+      </p>
+
+      {game.holdings.length > 0 && (
+        <>
+          <h3 className="mt-5 text-[11px] text-faint">최종 포트폴리오</h3>
+          <table className="mt-1.5 w-full border-collapse text-xs">
+            <tbody>
+              {game.holdings.map((h) => (
+                <tr key={h.stockCode}>
+                  <td className="border-b border-line-soft py-1">{h.stockName}</td>
+                  <td className="border-b border-line-soft py-1 text-right font-mono-num">
+                    {h.quantity.toLocaleString('ko-KR')}주
+                  </td>
+                  <td
+                    className={`border-b border-line-soft py-1 text-right font-mono-num ${h.pnlBp > 0 ? 'text-up' : h.pnlBp < 0 ? 'text-down' : ''}`}
+                  >
+                    {percent(h.pnlBp)}
+                  </td>
+                  <td className="border-b border-line-soft py-1 text-right font-mono-num">
+                    {won(h.value)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
+
       <h3 className="mt-6 text-[11px] text-faint">최종 능력치</h3>
       <ul className="mt-1.5 grid grid-cols-5 gap-2 text-center">
         {STAT_KEYS.map((key) => (

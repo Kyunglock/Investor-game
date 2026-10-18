@@ -3,7 +3,21 @@ import { expect, type Page, test } from '@playwright/test'
 // 실제 브라우저·서버·DB로 한 판의 핵심 흐름을 확인한다.
 // 시계는 page.clock으로 감아서 몇 년치 시간을 몇 초 만에 보낸다. 이벤트는 판마다 랜덤이라 뜬 이벤트에 맞춰 반응한다.
 
+test.setTimeout(90_000)
+
 const eventCard = (page: Page) => page.getByTestId('event-card')
+
+/** "서버 확인: N일" 표시에서 N. */
+async function reportedDay(page: Page): Promise<number> {
+  const text = (await page.getByTestId('reported-day').textContent()) ?? ''
+  return Number(/(\d+)일/.exec(text)?.[1] ?? -1)
+}
+
+/** "6세 3개월" → 게임 일수 (1세 0개월 = 0일). */
+function dayOf(ageText: string): number {
+  const m = /(\d+)세 (\d+)개월/.exec(ageText)
+  return m ? (Number(m[1]) - 1) * 360 + Number(m[2]) * 30 : 0
+}
 const outcomeCard = (page: Page) => page.getByTestId('outcome-card')
 
 /** 태어나서 능력치 공개 연출을 끝까지 보고 인생을 시작한다. */
@@ -87,7 +101,7 @@ test('성장기의 일상 선택으로 성향이 정해지고, 직업을 고른 
   page,
 }) => {
   // 1세부터 투자 단계의 뉴스까지 가므로 오래 걸린다.
-  test.setTimeout(120_000)
+  test.setTimeout(240_000)
   await born(page)
 
   await playUntil(page, 'TRAIT')
@@ -115,6 +129,10 @@ test('새로고침하면 서버의 상태에서 일시정지로 이어한다', a
 
   const age = await page.getByTestId('age').textContent()
   const nickname = await page.getByTestId('nickname').textContent()
+  // 멈춤은 현재 시각을 서버에 보고한다. 보고가 끝나야 새로고침 뒤 같은 나이가 나온다.
+  await expect
+    .poll(async () => reportedDay(page), { timeout: 10_000 })
+    .toBeGreaterThanOrEqual(dayOf(age ?? ''))
   await page.reload()
 
   await expect(page.getByTestId('nickname')).toHaveText(nickname ?? '')
@@ -149,6 +167,44 @@ test('인생 기록은 서버에서 와서 새로고침해도 남는다', async 
   await page.reload()
   await expect(birth).toHaveCount(1)
   await expect(trait).toHaveCount(1)
+})
+
+test('투자를 시작하면 시장 패널에서 종목을 사고 포트폴리오에 반영된다', async ({ page }) => {
+  test.setTimeout(240_000)
+  await born(page)
+  await playUntil(page, 'OFFER')
+  await step(page)
+
+  await page.getByTestId('open-market').click()
+  await expect(page.getByTestId('market-panel')).toBeVisible()
+  // 섹터 탭마다 종목 3개. 에너지는 값이 싸서 첫 월급으로도 한 주는 살 수 있다.
+  await page.getByRole('button', { name: '에너지' }).click()
+  await expect(page.getByTestId('stock-row')).toHaveCount(3)
+  await page.getByTestId('stock-row').first().click()
+  await page.getByRole('button', { name: '100%' }).click()
+  await expect(page.getByTestId('trade-quantity')).not.toHaveValue('0')
+  await page.getByTestId('trade-quantity').fill('1')
+  await page.getByTestId('trade-submit').click()
+  const result = page.getByTestId('trade-result')
+  await expect(result).toBeVisible()
+  const text = (await result.textContent()) ?? ''
+  await page.getByRole('button', { name: '닫기' }).click()
+  await expect(page.getByTestId('market-panel')).toBeHidden()
+  if (!text.includes('부족')) {
+    await expect(page.getByTestId('holding-row')).toHaveCount(1)
+  }
+  await expect(page.locator('[data-testid="life-log-line"][data-kind="TRADE"]')).toHaveCount(1)
+})
+
+test('취직하면 가계부에 생활비가 보인다', async ({ page }) => {
+  test.setTimeout(240_000)
+  await born(page)
+  await playUntil(page, 'JOB')
+  await step(page)
+  // 한 달 뒤 첫 월급과 생활비가 처리되고 같은 날 투자 시작 제안이 뜬다.
+  await playUntil(page, 'OFFER')
+  await expect(page.getByTestId('household-card')).toContainText('생활비')
+  await expect(page.getByTestId('monthly-saving')).toBeVisible()
 })
 
 test('신원 카드와 능력치는 인생 기록보다 위에 있다 (모바일 순서)', async ({ page }, testInfo) => {

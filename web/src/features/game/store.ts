@@ -1,5 +1,12 @@
 import { create } from 'zustand'
-import { api, type Game, type Outcome } from '../../api/client'
+import {
+  api,
+  type Game,
+  type LogEntry,
+  type Outcome,
+  type StockHistory,
+  type TradeSide,
+} from '../../api/client'
 import {
   advanceDay,
   clockLimit,
@@ -23,6 +30,16 @@ interface GameState {
   speed: Speed
   reporting: boolean
   choosing: boolean
+  /** 시장 패널. 열려 있는 동안 시계는 멈춘다 (경제 개편 설계 8.1절). */
+  marketOpen: boolean
+  selectedStock: string | null
+  /** 방금 낸 주문의 결과. 패널 안에 한 줄로 보여 준다. */
+  tradeOutcome: Outcome | null
+  trading: boolean
+  /** 종목별 월간 이력. 패널에서 종목을 고를 때 받아 둔다. */
+  histories: Record<string, StockHistory>
+  /** 방금 들어온 알림성 생활 이벤트. 토스트가 3초 뒤 지운다. */
+  lastNotice: LogEntry | null
   load: () => Promise<void>
   born: () => Promise<void>
   startLife: () => void
@@ -32,17 +49,34 @@ interface GameState {
   pause: () => void
   resume: () => void
   setSpeed: (speed: Speed) => void
+  openMarket: () => void
+  closeMarket: () => void
+  selectStock: (code: string) => Promise<void>
+  trade: (side: TradeSide, quantity: number) => Promise<void>
+  dismissNotice: () => void
 }
 
 export const useGameStore = create<GameState>((set, get) => {
-  /** 서버가 보낸 판으로 화면을 맞춘다. 대기 중인 선택이 있거나 끝났으면 시계를 멈춘다. */
+  /** 서버가 보낸 판으로 화면을 맞춘다. 대기 중인 선택이 있거나 끝났거나 시장 패널이 열려 있으면 시계를 멈춘다. */
   const apply = (game: Game, keepRunning: boolean) =>
-    set((state) => ({
-      status: game.status === 'ENDED' ? 'ended' : 'playing',
-      game,
-      day: Math.max(state.game?.gameId === game.gameId ? state.day : 0, game.day),
-      running: keepRunning && game.status === 'ACTIVE' && !game.pendingEvent,
-    }))
+    set((state) => {
+      const sameGame = state.game?.gameId === game.gameId
+      const knownSeqs = new Set(sameGame ? state.game?.log.map((e) => e.seq) : [])
+      const notices = game.log.filter((e) => e.kind === 'LIFE' && !knownSeqs.has(e.seq))
+      // 대기 중인 선택이 생기면 시장 패널은 닫는다. 선택이 먼저다.
+      const marketOpen = state.marketOpen && !game.pendingEvent && game.status === 'ACTIVE'
+      return {
+        status: game.status === 'ENDED' ? 'ended' : 'playing',
+        game,
+        day: Math.max(sameGame ? state.day : 0, game.day),
+        running: keepRunning && game.status === 'ACTIVE' && !game.pendingEvent && !marketOpen,
+        marketOpen,
+        lastNotice: sameGame && notices.length > 0 ? notices[notices.length - 1] : state.lastNotice,
+      }
+    })
+
+  /** 진행 중인 보고. 멈춤·패널 열기처럼 "지금 시각을 꼭 보고해야 하는" 호출은 이게 끝난 뒤 한 번 더 보고한다. */
+  let inFlight: Promise<void> | null = null
 
   const report = async () => {
     const { game, day, reporting } = get()
@@ -50,17 +84,29 @@ export const useGameStore = create<GameState>((set, get) => {
       return
     }
     set({ reporting: true })
-    const { data } = await api.POST('/api/games/{gameId}/advance', {
-      params: { path: { gameId: game.gameId } },
-      body: { day: Math.floor(day) },
-    })
-    set({ reporting: false })
-    if (data) {
-      apply(data, get().running)
-      return
+    inFlight = (async () => {
+      const { data } = await api.POST('/api/games/{gameId}/advance', {
+        params: { path: { gameId: game.gameId } },
+        body: { day: Math.floor(day) },
+      })
+      set({ reporting: false })
+      if (data) {
+        apply(data, get().running)
+        return
+      }
+      // 서버가 거부하면 서버의 상태가 기준이다. 다시 불러와 맞춘다.
+      await get().load()
+    })()
+    await inFlight
+    inFlight = null
+  }
+
+  /** 주기 보고가 진행 중이면 기다렸다가 다시 보고해, 서버가 화면의 현재 시각을 반드시 알게 한다. */
+  const reportNow = async () => {
+    if (inFlight) {
+      await inFlight
     }
-    // 서버가 거부하면 서버의 상태가 기준이다. 다시 불러와 맞춘다.
-    await get().load()
+    await report()
   }
 
   return {
@@ -72,6 +118,12 @@ export const useGameStore = create<GameState>((set, get) => {
     speed: 1,
     reporting: false,
     choosing: false,
+    marketOpen: false,
+    selectedStock: null,
+    tradeOutcome: null,
+    trading: false,
+    histories: {},
+    lastNotice: null,
 
     // 재접속하면 일시정지 상태로 이어한다. 상황을 보고 사용자가 계속을 누른다 (architecture.md 7절).
     load: async () => {
@@ -87,7 +139,17 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     born: async () => {
-      set({ status: 'loading', running: false, outcome: null, game: null, day: 0 })
+      set({
+        status: 'loading',
+        running: false,
+        outcome: null,
+        game: null,
+        day: 0,
+        marketOpen: false,
+        tradeOutcome: null,
+        histories: {},
+        lastNotice: null,
+      })
       await api.POST('/api/sessions')
       const { data } = await api.POST('/api/games')
       if (data) {
@@ -125,8 +187,8 @@ export const useGameStore = create<GameState>((set, get) => {
 
     dismissOutcome: () => {
       set({ outcome: null })
-      const { game } = get()
-      if (game && game.status === 'ACTIVE' && !game.pendingEvent) {
+      const { game, marketOpen } = get()
+      if (game && game.status === 'ACTIVE' && !game.pendingEvent && !marketOpen) {
         set({ running: true })
       }
     },
@@ -137,7 +199,7 @@ export const useGameStore = create<GameState>((set, get) => {
         return
       }
       const lastDay = totalDays(game.startAge, game.endAge, game.daysPerYear)
-      const limit = clockLimit(lastDay, game.nextEventDay)
+      const limit = clockLimit(lastDay, game.nextEventDay, game.day)
       const next = advanceDay(
         day,
         elapsedMs,
@@ -147,6 +209,7 @@ export const useGameStore = create<GameState>((set, get) => {
         secondsPerYear(game.phase),
       )
       set({ day: next })
+      // 보고 간격에 닿았거나 한계(다음 이벤트, 앞서가기 상한)에 막혔으면 보고한다. 상한에 막힌 동안은 응답이 올 때까지 시계가 선다.
       if (!reporting && (shouldReport(next, game.day) || next >= limit)) {
         void report()
       }
@@ -155,17 +218,75 @@ export const useGameStore = create<GameState>((set, get) => {
     pause: () => {
       set({ running: false })
       if (get().game?.status === 'ACTIVE') {
-        void report()
+        void reportNow()
       }
     },
 
     resume: () => {
+      const { game, outcome, marketOpen } = get()
+      if (game && game.status === 'ACTIVE' && !game.pendingEvent && !outcome && !marketOpen) {
+        set({ running: true })
+      }
+    },
+
+    setSpeed: (speed) => set({ speed }),
+
+    // 패널을 열면 시계를 멈추고 현재 시각을 보고해 가격·현금을 최신으로 맞춘다.
+    openMarket: () => {
+      const { game } = get()
+      if (game?.status !== 'ACTIVE' || game.pendingEvent) {
+        return
+      }
+      const selected =
+        get().selectedStock ?? game.holdings[0]?.stockCode ?? game.market.stocks[0]?.code ?? null
+      set({ running: false, marketOpen: true, tradeOutcome: null, selectedStock: selected })
+      void reportNow()
+      if (selected) {
+        void get().selectStock(selected)
+      }
+    },
+
+    closeMarket: () => {
+      set({ marketOpen: false, tradeOutcome: null })
       const { game, outcome } = get()
       if (game && game.status === 'ACTIVE' && !game.pendingEvent && !outcome) {
         set({ running: true })
       }
     },
 
-    setSpeed: (speed) => set({ speed }),
+    selectStock: async (code) => {
+      set({ selectedStock: code, tradeOutcome: null })
+      const { game, histories } = get()
+      if (!game || histories[code]) {
+        return
+      }
+      const { data } = await api.GET('/api/games/{gameId}/stocks/{stockCode}/history', {
+        params: { path: { gameId: game.gameId, stockCode: code } },
+      })
+      if (data) {
+        set((state) => ({ histories: { ...state.histories, [code]: data } }))
+      }
+    },
+
+    trade: async (side, quantity) => {
+      const { game, selectedStock, trading } = get()
+      if (!game || !selectedStock || trading || quantity < 1) {
+        return
+      }
+      set({ trading: true })
+      const { data } = await api.POST('/api/games/{gameId}/trades', {
+        params: { path: { gameId: game.gameId } },
+        body: { stockCode: selectedStock, side, quantity },
+      })
+      set({ trading: false })
+      if (data) {
+        set({ tradeOutcome: data.outcome })
+        apply(data.game, false)
+      } else {
+        await get().load()
+      }
+    },
+
+    dismissNotice: () => set({ lastNotice: null }),
   }
 })

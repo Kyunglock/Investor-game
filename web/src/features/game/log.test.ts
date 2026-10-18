@@ -142,6 +142,108 @@ describe('logLine', () => {
     )
   })
 
+  it('매매 체결: 종목·수량·금액, 매도면 실현 손익', () => {
+    expect(
+      logLine(
+        entry('TRADE', 0, {
+          stockName: '삼송전자',
+          side: 'BUY',
+          chosen: 'BUY',
+          actual: 'BUY',
+          deviations: [],
+          status: 'EXECUTED',
+          quantity: 20,
+          price: 97_200,
+          amount: 1_944_000,
+        }),
+        game,
+      ),
+    ).toMatchObject({ text: '삼송전자 20주 매수 (1,944,000원)', tone: 'decision' })
+    expect(
+      logLine(
+        entry('TRADE', 0, {
+          stockName: '오리옹',
+          side: 'SELL',
+          chosen: 'SELL',
+          actual: 'SELL',
+          deviations: [],
+          status: 'EXECUTED',
+          quantity: 4,
+          price: 80_000,
+          amount: 320_000,
+          realizedPnl: 32_000,
+        }),
+        game,
+      ).text,
+    ).toBe('오리옹 4주 매도 (320,000원) · 실현 +32,000원')
+  })
+
+  it('매매 이탈: 못 샀다/못 팔았다와 원인', () => {
+    const line = logLine(
+      entry('TRADE', 0, {
+        stockName: '크래프통',
+        side: 'BUY',
+        chosen: 'BUY',
+        actual: 'HOLD',
+        deviations: [{ statCode: 'courage', from: 'BUY', to: 'HOLD' }],
+        status: 'HELD',
+        quantity: 0,
+        price: 250_000,
+        amount: 0,
+      }),
+      game,
+    )
+    expect(line.text).toBe('크래프통 매수 → 못 샀다 (용기 부족)')
+    expect(line.tone).toBe('flipped')
+  })
+
+  it('생활 기록: 알림·결혼·자녀·은퇴', () => {
+    expect(logLine(entry('LIFE', 0, { title: '자동차 수리', amount: -800_000 }), game).text).toBe(
+      '자동차 수리 · -800,000원',
+    )
+    expect(logLine(entry('LIFE', 0, { title: '명절 보너스', amount: 1_400_000 }), game).text).toBe(
+      '명절 보너스 · +1,400,000원',
+    )
+    expect(logLine(entry('MARRIAGE', 0, { cost: 30_000_000 }), game).text).toBe(
+      '결혼했다. 결혼 비용 30,000,000원.',
+    )
+    expect(logLine(entry('CHILD', 0, { seq: 2, cost: 3_000_000 }), game).text).toBe(
+      '2번째 아이가 태어났다.',
+    )
+    expect(logLine(entry('RETIRE', 0, { age: 60, severance: 150_000_000 }), game).text).toBe(
+      '60세, 은퇴했다. 퇴직금 150,000,000원.',
+    )
+  })
+
+  it('뉴스·주가 기록은 종목명을 쓰고 섹터 전체면 덧붙인다', () => {
+    expect(
+      logLine(
+        entry('PRICE', 0, {
+          sectorName: '반도체',
+          stockName: '삼송전자',
+          sectorWide: false,
+          direction: 'UP',
+          changeBp: 420,
+          pnl: 1_240_000,
+        }),
+        game,
+      ).text,
+    ).toBe('삼송전자 주가 ▲ 4.2% · 손익 +1,240,000원')
+    expect(
+      logLine(
+        entry('PRICE', 0, {
+          sectorName: '금융',
+          stockName: 'KB금용',
+          sectorWide: true,
+          direction: 'DOWN',
+          changeBp: 300,
+          pnl: 0,
+        }),
+        game,
+      ).text,
+    ).toBe('KB금용 주가 ▼ 3.0% (금융 전체)')
+  })
+
   it('모르는 종류는 죽지 않고 종류 이름을 보여 준다', () => {
     const line = logLine(entry('WEDDING' as LogEntry['kind'], 0, {}), game)
     expect(line.text).toBe('WEDDING')

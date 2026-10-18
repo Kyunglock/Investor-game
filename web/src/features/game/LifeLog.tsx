@@ -12,6 +12,7 @@ const TONE_CLASS: Record<LogTone, string> = {
   growth: 'text-teal',
   decline: 'text-wine',
   end: 'bg-wine-soft',
+  life: '',
   offer: '',
 }
 

@@ -25,6 +25,10 @@ export function actionLabel(code: string): string {
   return ACTION_LABELS[code] ?? code
 }
 
+export function sideLabel(side: string): string {
+  return side === 'SELL' ? '매도' : '매수'
+}
+
 export function statLabel(code: string): string {
   return STAT_LABELS[code as keyof Stats] ?? code
 }

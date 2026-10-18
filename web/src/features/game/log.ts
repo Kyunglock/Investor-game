@@ -5,6 +5,7 @@ import {
   percent,
   STAT_KEYS,
   STAT_LABELS,
+  sideLabel,
   signedWon,
   statLabel,
   won,
@@ -25,6 +26,7 @@ export type LogTone =
   | 'decline'
   | 'end'
   | 'offer'
+  | 'life'
 
 export interface LogLine {
   seq: number
@@ -105,15 +107,66 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       }
     }
     case 'PRICE': {
+      // 종목명이 있으면 종목으로, 없으면(옛 기록) 섹터로 쓴다. 섹터 전체 충격은 덧붙인다.
       const arrow = p.direction === 'UP' ? '▲' : '▼'
       const pnl = num(p.pnl)
+      const subject = p.stockName ? str(p.stockName) : str(p.sectorName)
+      const wide = p.sectorWide === true && p.stockName ? ` (${str(p.sectorName)} 전체)` : ''
       const tail = pnl === 0 ? '' : ` · 손익 ${signedWon(pnl)}`
       return {
         ...base,
         tone: 'neutral',
-        text: `${str(p.sectorName)} 주가 ${arrow} ${percent(num(p.changeBp))}${tail}`,
+        text: `${subject} 주가 ${arrow} ${percent(num(p.changeBp))}${wide}${tail}`,
       }
     }
+    case 'TRADE': {
+      // 자유 매매. 이탈이면 "못 샀다/못 팔았다"와 원인 (경제 개편 설계 11.5절).
+      const side = str(p.side)
+      const actual = str(p.actual)
+      const deviations = (p.deviations ?? []) as Deviation[]
+      if (actual === 'HOLD' || deviations.length > 0) {
+        const cause = deviations.map((d) => `${statLabel(d.statCode)} 부족`).join(', ')
+        const failed = side === 'SELL' ? '못 팔았다' : '못 샀다'
+        return {
+          ...base,
+          tone: 'flipped',
+          text: `${str(p.stockName)} ${sideLabel(side)} → ${failed} (${cause})`,
+        }
+      }
+      if (p.status !== 'EXECUTED') {
+        const reason = p.status === 'INSUFFICIENT_CASH' ? '현금 부족' : '보유 없음'
+        return {
+          ...base,
+          tone: 'decision',
+          text: `${str(p.stockName)} ${sideLabel(side)} · ${reason}으로 체결되지 않았다`,
+        }
+      }
+      const realized =
+        typeof p.realizedPnl === 'number' && p.realizedPnl !== 0
+          ? ` · 실현 ${signedWon(p.realizedPnl)}`
+          : ''
+      return {
+        ...base,
+        tone: 'decision',
+        text: `${str(p.stockName)} ${num(p.quantity)}주 ${sideLabel(side)} (${won(num(p.amount))})${realized}`,
+      }
+    }
+    case 'LIFE':
+      return {
+        ...base,
+        tone: 'life',
+        text: `${str(p.title)} · ${signedWon(num(p.amount))}`,
+      }
+    case 'MARRIAGE':
+      return { ...base, tone: 'life', text: `결혼했다. 결혼 비용 ${won(num(p.cost))}.` }
+    case 'CHILD':
+      return { ...base, tone: 'life', text: `${num(p.seq)}번째 아이가 태어났다.` }
+    case 'RETIRE':
+      return {
+        ...base,
+        tone: 'life',
+        text: `${num(p.age)}세, 은퇴했다. 퇴직금 ${won(num(p.severance))}.`,
+      }
     case 'GROWTH':
       return {
         ...base,

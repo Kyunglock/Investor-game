@@ -16,8 +16,14 @@ export function secondsPerYear(phase: Phase): number {
   return phase === 'CHILDHOOD' ? SECONDS_PER_YEAR_CHILDHOOD : SECONDS_PER_YEAR_ADULT
 }
 
-/** 이벤트가 없어도 월급이 화면에 반영되도록 주기적으로 보고한다. 서버의 건너뛰기 상한(360일)보다 충분히 작다. */
-export const REPORT_EVERY_DAYS = 90
+/** 가격·월급·생활비가 매달 바뀌므로 한 달(30일)마다 보고한다. 성인기 1년 12초라 1초에 한 번이다 (경제 개편 설계 3절). */
+export const REPORT_EVERY_DAYS = 30
+
+/**
+ * 마지막 보고보다 이만큼 이상 앞서가지 않는다. 서버는 한 번에 360일(progress.max-skip-days)까지만 받으므로, 보고 응답이 늦어도 거절되는 보고를
+ * 만들지 않게 시계가 여기서 기다린다.
+ */
+export const MAX_UNREPORTED_DAYS = 330
 
 export const SPEEDS = [1, 2] as const
 export type Speed = (typeof SPEEDS)[number]
@@ -26,9 +32,14 @@ export function totalDays(startAge: number, endAge: number, daysPerYear: number)
   return (endAge - startAge) * daysPerYear
 }
 
-/** 시계가 갈 수 있는 끝. 다음 이벤트 시각을 넘지 않아야 서버가 그 시각에 이벤트를 띄운다. */
-export function clockLimit(lastDay: number, nextEventDay: number | null | undefined): number {
-  return nextEventDay == null ? lastDay : Math.min(lastDay, nextEventDay)
+/** 시계가 갈 수 있는 끝. 다음 이벤트 시각을 넘지 않아야 서버가 그 시각에 이벤트를 띄우고, 마지막 보고에서 너무 멀어지면 보고가 거절된다. */
+export function clockLimit(
+  lastDay: number,
+  nextEventDay: number | null | undefined,
+  reportedDay: number,
+): number {
+  const byEvent = nextEventDay == null ? lastDay : Math.min(lastDay, nextEventDay)
+  return Math.min(byEvent, reportedDay + MAX_UNREPORTED_DAYS)
 }
 
 /** 경과 시간만큼 게임 일수를 앞으로 보낸다. limit을 넘지 않는다. */

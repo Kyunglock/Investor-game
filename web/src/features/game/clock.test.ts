@@ -3,6 +3,7 @@ import {
   advanceDay,
   ageAt,
   clockLimit,
+  MAX_UNREPORTED_DAYS,
   REPORT_EVERY_DAYS,
   secondsPerYear,
   shouldReport,
@@ -43,12 +44,24 @@ describe('advanceDay', () => {
 
 describe('clockLimit', () => {
   it('다음 이벤트가 있으면 그 시각에서 멈춘다', () => {
-    expect(clockLimit(23_040, 1_800)).toBe(1_800)
+    expect(clockLimit(23_040, 1_800, 1_700)).toBe(1_800)
   })
 
   it('다음 이벤트가 없으면 판의 끝까지 간다', () => {
-    expect(clockLimit(23_040, null)).toBe(23_040)
-    expect(clockLimit(23_040, undefined)).toBe(23_040)
+    expect(clockLimit(23_040, null, 23_000)).toBe(23_040)
+    expect(clockLimit(23_040, undefined, 23_000)).toBe(23_040)
+  })
+
+  it('마지막 보고보다 너무 앞서가지 않는다 (서버의 건너뛰기 상한 360일 안)', () => {
+    expect(MAX_UNREPORTED_DAYS).toBeLessThan(360)
+    expect(clockLimit(23_040, null, 100)).toBe(100 + MAX_UNREPORTED_DAYS)
+    expect(clockLimit(23_040, 1_800, 1_700)).toBe(1_800)
+  })
+})
+
+describe('REPORT_EVERY_DAYS', () => {
+  it('가격이 매달 바뀌므로 30일마다 보고한다', () => {
+    expect(REPORT_EVERY_DAYS).toBe(30)
   })
 })
 
