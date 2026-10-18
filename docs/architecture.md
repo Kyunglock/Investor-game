@@ -138,7 +138,7 @@ API 계층 → 진행 → 이벤트 운영 → 콘텐츠
 ## 6. 폴더 구조 (제안)
 
 ```
-server/                          Spring Boot (Gradle)
+backend/                          Spring Boot (Gradle)
   build.gradle, settings.gradle  빌드 설정 (통합 담당)
   src/main/java/investorgame/
     InvestorGameApplication.java 진입점
@@ -156,10 +156,10 @@ server/                          Spring Boot (Gradle)
     <도메인>/                    도메인 단위 테스트 (해당 도메인 소유자)
     architecture/                ArchUnit 경계 검사 (통합 담당)
   src/test/resources/
-web/                    클라이언트 (React, Vite)
+frontend/                    클라이언트 (React, Vite)
 contracts/              OpenAPI 명세 (도메인별). 통합 담당만 수정
 content/                직접 작성한 이벤트 데이터 원본. 서버가 읽는다
-web/e2e/                Playwright (웹 도구로 함께 린트·타입 검사한다)
+frontend/e2e/                Playwright (웹 도구로 함께 린트·타입 검사한다)
 docs/                   설계 문서
 ```
 
@@ -195,11 +195,11 @@ Orca는 AI 에이전트 도구이며, 도메인별로 권한을 나눠 병렬 �
 
 | Agent ID | 이름 | 도메인 | 소유 테이블 (접두사) | 소유 경로 | 읽기 전용 |
 |---|---|---|---|---|---|
-| `agent1` | 판정 | 캐릭터, 행동 | `character_*` | `server/.../character/**`, `behavior/**`, 마이그레이션 `*__character_*.sql` | `contracts` |
-| `agent2` | 시장·이벤트 | 자산, 이벤트 운영 | `asset_*`, `event_*` | `server/.../asset/**`, `event/**`, 마이그레이션 `*__asset_*.sql`, `*__event_*.sql` | `contracts` |
-| `agent3` | 플랫폼 | 세션, 콘텐츠, 결과 | `session_*`, `content_*`, `result_*` | `server/.../session/**`, `content/**`, `result/**`, 마이그레이션 `*__session_*.sql`, `*__content_*.sql`, `*__result_*.sql`, 저장소 `content/` | `contracts` |
-| `agent4` | 클라이언트 | (도메인 아님) | 없음 | `web/**` (E2E는 `web/e2e/`) | `contracts` |
-| `agent5` | 진행 | 진행 | `progress_*` | `server/.../progress/**`, `api/**`, 마이그레이션 `*__progress_*.sql` | `contracts` |
+| `agent1` | 판정 | 캐릭터, 행동 | `character_*` | `backend/.../character/**`, `behavior/**`, 마이그레이션 `*__character_*.sql` | `contracts` |
+| `agent2` | 시장·이벤트 | 자산, 이벤트 운영 | `asset_*`, `event_*` | `backend/.../asset/**`, `event/**`, 마이그레이션 `*__asset_*.sql`, `*__event_*.sql` | `contracts` |
+| `agent3` | 플랫폼 | 세션, 콘텐츠, 결과 | `session_*`, `content_*`, `result_*` | `backend/.../session/**`, `content/**`, `result/**`, 마이그레이션 `*__session_*.sql`, `*__content_*.sql`, `*__result_*.sql`, 저장소 `content/` | `contracts` |
+| `agent4` | 클라이언트 | (도메인 아님) | 없음 | `frontend/**` (E2E는 `frontend/e2e/`) | `contracts` |
+| `agent5` | 진행 | 진행 | `progress_*` | `backend/.../progress/**`, `api/**`, 마이그레이션 `*__progress_*.sql` | `contracts` |
 
 - 테스트 경로(`src/test/.../<도메인>`)는 해당 도메인의 소유 경로에 포함한다.
 - **진행(agent5)** 은 다른 도메인을 엮는 조율 역할이라 인터페이스가 나오기 전에는 목(mock)으로 먼저 시작하고, 2단계에서 실제 도메인과 통합한다.
@@ -218,7 +218,7 @@ Orca는 AI 에이전트 도구이며, 도메인별로 권한을 나눠 병렬 �
 
 | 역할 | 수정 가능 | 책임 |
 |---|---|---|
-| 통합 (사람 또는 메인 에이전트) | `contracts`, 빌드 설정, 의존성, `server/.../common`, `config`, `architecture` 테스트 | API 계약 관리, 공용 코드 관리, 병합, 충돌 해결 |
+| 통합 (사람 또는 메인 에이전트) | `contracts`, 빌드 설정, 의존성, `backend/.../common`, `config`, `architecture` 테스트 | API 계약 관리, 공용 코드 관리, 병합, 충돌 해결 |
 | 리뷰 | 없음 (지적만) | 스타일 위반, 중복, 도메인 경계 위반, 불필요한 추상화 지적 |
 | 문서 | `docs/` | PRD, 스펙, 아키텍처 갱신 |
 

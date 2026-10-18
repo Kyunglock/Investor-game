@@ -21,7 +21,7 @@
 - 버튼 문구: `멈춤` / `계속`, `1×`, `2×`, `다시 시작`, `삶을 시작하기`, `태어나기`, `다시 태어나기`. 터치 대상 최소 44px, 최소 폭 360px에서 가로 스크롤 없음.
 - `prefers-reduced-motion: reduce`이면 모든 애니메이션을 끈다.
 - 커밋 메시지는 한글. 사용자가 명시적으로 요청할 때만 커밋·푸시한다 (메모리 규칙). 아래 커밋 단계는 **사용자가 "커밋해"라고 했을 때** 실행한다.
-- 서버 테스트: `cd server && ./gradlew test` (Testcontainers로 Postgres 필요). 웹: `cd web && pnpm test`, `pnpm check`, `pnpm build`, E2E `pnpm e2e`(서버·DB 떠 있어야 함).
+- 서버 테스트: `cd backend && ./gradlew test` (Testcontainers로 Postgres 필요). 웹: `cd frontend && pnpm test`, `pnpm check`, `pnpm build`, E2E `pnpm e2e`(서버·DB 떠 있어야 함).
 
 ## Review Focus
 
@@ -37,16 +37,16 @@
 
 **Files:**
 - Modify: `contracts/openapi/game.yaml` (`Game` 스키마, `components.schemas`)
-- Generate: `web/src/api/schema.d.ts` (`pnpm gen:api`)
-- Modify: `web/src/api/client.ts` (타입 export 추가)
+- Generate: `frontend/src/api/schema.d.ts` (`pnpm gen:api`)
+- Modify: `frontend/src/api/client.ts` (타입 export 추가)
 
 **Interfaces:**
 - Produces: `Game.log: LogEntry[]`, `Game.yearly: {age:number,totalAsset:number,cash:number}[]`, `LogEntry = {seq:number, day:number, kind:'BIRTH'|'TRAIT'|'JOB'|'STYLE'|'OFFER'|'NEWS'|'PRICE'|'GROWTH'|'END', payload: Record<string, unknown>}`. `client.ts`에서 `export type LogEntry = Schemas['LogEntry']`, `export type YearlyAsset = Game['yearly'][number]`.
 
 - [ ] **Step 1: `game.yaml`에 스펙 6.4절의 스키마를 추가한다.** `Game.required`에 `log`, `yearly`를 넣는다. `LogEntry.kind`는 enum 9개. `payload`는 `type: object, additionalProperties: true`.
-- [ ] **Step 2: `cd web && pnpm gen:api` 실행.** Expected: `src/api/schema.d.ts`에 `LogEntry`와 `Game.log`, `Game.yearly`가 생긴다.
+- [ ] **Step 2: `cd frontend && pnpm gen:api` 실행.** Expected: `src/api/schema.d.ts`에 `LogEntry`와 `Game.log`, `Game.yearly`가 생긴다.
 - [ ] **Step 3: `client.ts`에 `LogEntry`, `YearlyAsset` 타입 export.**
-- [ ] **Step 4: `cd web && pnpm build`** Expected: 타입 오류 없음 (아직 아무 코드도 `log`를 쓰지 않으므로).
+- [ ] **Step 4: `cd frontend && pnpm build`** Expected: 타입 오류 없음 (아직 아무 코드도 `log`를 쓰지 않으므로).
 - [ ] **Step 5: 커밋** `feat(contract): Game에 인생 기록과 연간 자산 추가`
 
 ---
@@ -54,12 +54,12 @@
 ### Task 2: 진행 도메인 테이블·저장소·뷰 필드
 
 **Files:**
-- Create: `server/src/main/resources/db/migration/V202610180011__progress_log.sql`
-- Create: `server/src/main/java/investorgame/progress/internal/LogRepository.java`
-- Create: `server/src/main/java/investorgame/progress/internal/LogRow.java`
-- Modify: `server/src/main/java/investorgame/progress/GameView.java`
-- Modify: `server/src/main/java/investorgame/progress/internal/DefaultProgressService.java:354-395` (`view`)
-- Test: `server/src/test/java/investorgame/progress/LogRepositoryTest.java`
+- Create: `backend/src/main/resources/db/migration/V202610180011__progress_log.sql`
+- Create: `backend/src/main/java/investorgame/progress/internal/LogRepository.java`
+- Create: `backend/src/main/java/investorgame/progress/internal/LogRow.java`
+- Modify: `backend/src/main/java/investorgame/progress/GameView.java`
+- Modify: `backend/src/main/java/investorgame/progress/internal/DefaultProgressService.java:354-395` (`view`)
+- Test: `backend/src/test/java/investorgame/progress/LogRepositoryTest.java`
 
 **Interfaces:**
 - Produces:
@@ -82,7 +82,7 @@
   - `append_두_줄을_넣으면_seq_순으로_읽힌다`: 같은 gameId에 `BIRTH`, `JOB` 순서로 append → `findAll` 크기 2, `get(0).kind()=="BIRTH"`, `get(1).payload().get("jobCode")=="dev"`.
   - `upsertYear_같은_나이를_두_번_넣어도_한_줄이다`: `upsertYear(g, 24, 100, 50)` 두 번 → `findYears` 크기 1, `totalAsset()==100`.
   - `findAll_다른_판의_기록은_섞이지_않는다`.
-- [ ] **Step 2: 테스트 실행, 컴파일 실패 확인** `cd server && ./gradlew test --tests '*LogRepositoryTest*'`
+- [ ] **Step 2: 테스트 실행, 컴파일 실패 확인** `cd backend && ./gradlew test --tests '*LogRepositoryTest*'`
 - [ ] **Step 3: 마이그레이션 작성** — 스펙 6.2절 SQL 그대로 (`progress_log`, `progress_year`, 인덱스).
 - [ ] **Step 4: `LogRow`, `LogRepository` 구현** (`@Repository`, package-private, `JdbcClient`, `JsonMapper`, `Clock` 주입. `GameRepository`와 같은 스타일).
 - [ ] **Step 5: `GameView`에 `log`, `yearly` 컴포넌트와 `LogEntry`, `Yearly` 레코드 추가.** `view()`에서 `logs.findAll(game.id())`를 `LogEntry`로 매핑, `logs.findYears(game.id())`를 넣는다. 다른 `new GameView(...)` 호출 지점이 있으면 전부 고친다.
@@ -94,8 +94,8 @@
 ### Task 3: 진행이 사건마다 기록하고 연 경계마다 자산을 저장
 
 **Files:**
-- Modify: `server/src/main/java/investorgame/progress/internal/DefaultProgressService.java` (`start` 87-110, `advance` 119-144, `choose` 156-204, `resolveNews` 207-269, `endIfFinished` 320-338)
-- Test: `server/src/test/java/investorgame/api/GameFlowTest.java`
+- Modify: `backend/src/main/java/investorgame/progress/internal/DefaultProgressService.java` (`start` 87-110, `advance` 119-144, `choose` 156-204, `resolveNews` 207-269, `endIfFinished` 320-338)
+- Test: `backend/src/test/java/investorgame/api/GameFlowTest.java`
 
 **Interfaces:**
 - Consumes: Task 2의 `LogRepository`. `EventView`(`title`, `options[code,label]`)는 `events.pending(gameId)`로 읽는다 — `ChoiceTicket`에는 제목·라벨이 없다.
@@ -136,12 +136,12 @@
 ### Task 4: 클라이언트 기반 — 글꼴, 색 변수, 상단 바, 문서 양식
 
 **Files:**
-- Modify: `web/package.json` (`@fontsource/noto-serif-kr`, `@fontsource/noto-sans-kr`, `@fontsource/jetbrains-mono` 추가, `pnpm install`)
-- Modify: `web/src/index.css`, `web/index.html`(theme-color `#f3f4f3`), `web/vite.config.ts`(manifest `background_color`/`theme_color` `#f3f4f3`)
-- Create: `web/src/features/game/TopBar.tsx`, `web/src/features/game/Document.tsx`, `web/src/features/game/Card.tsx`
-- Modify: `web/src/App.tsx`, `web/src/features/game/labels.ts`
-- Modify: `web/e2e/game.spec.ts` (버튼 문구 `일시정지`→`멈춤`, `다시 시작하기`→`다시 시작`)
-- Test: `web/src/features/game/labels.test.ts`
+- Modify: `frontend/package.json` (`@fontsource/noto-serif-kr`, `@fontsource/noto-sans-kr`, `@fontsource/jetbrains-mono` 추가, `pnpm install`)
+- Modify: `frontend/src/index.css`, `frontend/index.html`(theme-color `#f3f4f3`), `frontend/vite.config.ts`(manifest `background_color`/`theme_color` `#f3f4f3`)
+- Create: `frontend/src/features/game/TopBar.tsx`, `frontend/src/features/game/Document.tsx`, `frontend/src/features/game/Card.tsx`
+- Modify: `frontend/src/App.tsx`, `frontend/src/features/game/labels.ts`
+- Modify: `frontend/e2e/game.spec.ts` (버튼 문구 `일시정지`→`멈춤`, `다시 시작하기`→`다시 시작`)
+- Test: `frontend/src/features/game/labels.test.ts`
 
 **Interfaces:**
 - Produces:
@@ -153,7 +153,7 @@
 - Consumes: `store.ts`의 `pause/resume/setSpeed`, `SPEEDS`.
 
 - [ ] **Step 1: 실패하는 테스트** `labels.test.ts`: `yearOf(1) === 2025`, `yearOf(31) === 2055`.
-- [ ] **Step 2: 실행해 실패 확인** `cd web && pnpm test` Expected: `yearOf is not a function`.
+- [ ] **Step 2: 실행해 실패 확인** `cd frontend && pnpm test` Expected: `yearOf is not a function`.
 - [ ] **Step 3: 글꼴 패키지 설치, `main.tsx`에서 `@fontsource/noto-serif-kr/900.css`, `@fontsource/noto-sans-kr/400.css`, `.../700.css`, `@fontsource/jetbrains-mono/400.css`, `.../600.css` import.**
 - [ ] **Step 4: `index.css` 변수·유틸 작성, `body` 글꼴·바탕색을 변수로.** theme-color 두 곳 수정.
 - [ ] **Step 5: `yearOf`, `Card`, `Document`, `TopBar` 구현.** `App.tsx`의 `<header>`를 `TopBar`로 교체: `status==='playing'`이면 배속 묶음 보이고, 선택/결과 카드가 떠 있으면 `controlsDisabled`. `none`/`revealing`/`ended`에서는 제목만. `다시 시작`은 playing에서만.
@@ -167,8 +167,8 @@
 ### Task 5: 도트 캐릭터 — 문자 지도, 겹 포개기, Sprite
 
 **Files:**
-- Create: `web/src/features/game/pixel/palette.ts`, `sprite.ts`, `bodies.ts`, `adornments.ts`, `marks.ts`, `layers.ts`, `Sprite.tsx`
-- Test: `web/src/features/game/pixel/sprite.test.ts`, `layers.test.ts`
+- Create: `frontend/src/features/game/pixel/palette.ts`, `sprite.ts`, `bodies.ts`, `adornments.ts`, `marks.ts`, `layers.ts`, `Sprite.tsx`
+- Test: `frontend/src/features/game/pixel/sprite.test.ts`, `layers.test.ts`
 
 **Interfaces:**
 - Produces:
@@ -210,8 +210,8 @@
 ### Task 6: 장면 — 문자 지도와 선택 규칙
 
 **Files:**
-- Create: `web/src/features/game/pixel/scenes.ts`, `Scene.tsx`
-- Test: `web/src/features/game/pixel/scenes.test.ts`
+- Create: `frontend/src/features/game/pixel/scenes.ts`, `Scene.tsx`
+- Test: `frontend/src/features/game/pixel/scenes.test.ts`
 
 **Interfaces:**
 - Produces:
@@ -234,8 +234,8 @@
 ### Task 7: 인생 기록 문구, 인생 지도·자산 곡선 계산
 
 **Files:**
-- Create: `web/src/features/game/log.ts`, `web/src/features/game/timeline.ts`
-- Test: `web/src/features/game/log.test.ts`, `timeline.test.ts`
+- Create: `frontend/src/features/game/log.ts`, `frontend/src/features/game/timeline.ts`
+- Test: `frontend/src/features/game/log.test.ts`, `timeline.test.ts`
 
 **Interfaces:**
 - Produces:
@@ -271,9 +271,9 @@
 ### Task 8: 진행 화면 카드와 3단 배치
 
 **Files:**
-- Create: `web/src/features/game/IdentityCard.tsx`, `StatsCard.tsx`, `SceneCard.tsx`, `HoldingsCard.tsx`, `LifeLog.tsx`, `LifeMap.tsx`, `AssetCurve.tsx`
-- Modify: `web/src/features/game/GameScreen.tsx` (전면 재작성), 삭제: `StatusPanel.tsx`
-- Modify: `web/e2e/game.spec.ts` (필요 시 선택자)
+- Create: `frontend/src/features/game/IdentityCard.tsx`, `StatsCard.tsx`, `SceneCard.tsx`, `HoldingsCard.tsx`, `LifeLog.tsx`, `LifeMap.tsx`, `AssetCurve.tsx`
+- Modify: `frontend/src/features/game/GameScreen.tsx` (전면 재작성), 삭제: `StatusPanel.tsx`
+- Modify: `frontend/e2e/game.spec.ts` (필요 시 선택자)
 
 **Interfaces:**
 - Consumes: Task 4 `Card`, Task 5 `Sprite`/`layersFor`, Task 6 `Scene`/`sceneFor`/`stageFor`, Task 7 `logLines`/`yearFills`/`curvePoints`, 기존 `ageAt`, `nickname`, `labels`.
@@ -297,9 +297,9 @@
 ### Task 9: 결정 카드와 결과 카드
 
 **Files:**
-- Create: `web/src/features/game/DecisionCard.tsx` (EventCard 대체), `web/src/features/game/Overlay.tsx`
-- Modify: `web/src/features/game/OutcomeCard.tsx` (모양만), `GameScreen.tsx`(자리에 끼움), 삭제 `EventCard.tsx`
-- Modify: `web/e2e/game.spec.ts` (`event-card` 선택자 유지 — `DecisionCard` 루트에 `data-testid="event-card"`, `data-kind`)
+- Create: `frontend/src/features/game/DecisionCard.tsx` (EventCard 대체), `frontend/src/features/game/Overlay.tsx`
+- Modify: `frontend/src/features/game/OutcomeCard.tsx` (모양만), `GameScreen.tsx`(자리에 끼움), 삭제 `EventCard.tsx`
+- Modify: `frontend/e2e/game.spec.ts` (`event-card` 선택자 유지 — `DecisionCard` 루트에 `data-testid="event-card"`, `data-kind`)
 
 **Interfaces:**
 - Consumes: 기존 `PendingEvent`, `Outcome`, `KIND_LABELS`(DecisionCard로 이동), `deviationMessage`, `TRADE_NOTES`.
@@ -316,8 +316,8 @@
 
 **Files:**
 - Modify→Rename: `BirthReveal.tsx` → `BirthCertificate.tsx`, `ResultScreen.tsx` → `LifeRecord.tsx`
-- Modify: `web/src/App.tsx` (`none` 화면, import)
-- Modify: `web/e2e/game.spec.ts`
+- Modify: `frontend/src/App.tsx` (`none` 화면, import)
+- Modify: `frontend/e2e/game.spec.ts`
 
 **Interfaces:**
 - Consumes: Task 4 `Document`, Task 5 `Sprite`, Task 8 `LifeMap`, `AssetCurve`, `LifeLog`.
@@ -344,5 +344,5 @@
 - Modify: 메모리 `project-status-handoff.md` (구현 상태 갱신).
 
 - [ ] **Step 1: 문서 두 곳 갱신.**
-- [ ] **Step 2: 전체 검증** `cd server && ./gradlew test` / `cd web && pnpm test && pnpm check && pnpm build && pnpm e2e` 전부 PASS를 출력으로 확인.
+- [ ] **Step 2: 전체 검증** `cd backend && ./gradlew test` / `cd frontend && pnpm test && pnpm check && pnpm build && pnpm e2e` 전부 PASS를 출력으로 확인.
 - [ ] **Step 3: 커밋** `docs: 화면 개편 반영`

@@ -24,7 +24,7 @@ export default defineConfig({
     {
       // Testcontainers로 Postgres를 띄우므로 로컬 DB 없이 Docker만 있으면 된다.
       command: `${gradle} bootTestRun`,
-      cwd: '../server',
+      cwd: '../backend',
       url: 'http://localhost:8080/actuator/health',
       timeout: 240_000,
       reuseExistingServer: !process.env.CI,

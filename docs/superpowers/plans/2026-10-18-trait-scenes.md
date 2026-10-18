@@ -35,15 +35,15 @@
 ### Task 1: 콘텐츠 형식 — 선택지 `statDeltas`, 축·유형 정의, 검증
 
 **Files:**
-- Modify: `server/src/main/java/investorgame/content/TraitDefinition.java`
-- Modify: `server/src/main/java/investorgame/content/ContentCatalog.java`
-- Modify: `server/src/main/java/investorgame/content/internal/JsonContentCatalog.java`
-- Create: `server/src/main/java/investorgame/content/InvestorType.java`
-- Create: `server/src/main/java/investorgame/content/internal/ContentProperties.java`
-- Modify: `server/src/main/resources/application.yml` (`content.trait-stat-max-delta: 3`, `content.trait-options.min: 3`, `content.trait-options.max: 4`)
+- Modify: `backend/src/main/java/investorgame/content/TraitDefinition.java`
+- Modify: `backend/src/main/java/investorgame/content/ContentCatalog.java`
+- Modify: `backend/src/main/java/investorgame/content/internal/JsonContentCatalog.java`
+- Create: `backend/src/main/java/investorgame/content/InvestorType.java`
+- Create: `backend/src/main/java/investorgame/content/internal/ContentProperties.java`
+- Modify: `backend/src/main/resources/application.yml` (`content.trait-stat-max-delta: 3`, `content.trait-options.min: 3`, `content.trait-options.max: 4`)
 - Modify: `content/meta.json` (`risks`, `minds`, `investorTypes` 추가)
 - Modify: `content/traits.json` (기존 30장면에 임시로 `statDeltas` 없이도 로드되게 두되, Task 2에서 전부 교체)
-- Test: `server/src/test/java/investorgame/content/internal/JsonContentCatalogTest.java` (새 파일)
+- Test: `backend/src/test/java/investorgame/content/internal/JsonContentCatalogTest.java` (새 파일)
 
 **Interfaces:**
 - Produces:
@@ -79,7 +79,7 @@
 
 `ContentCatalog.styles()`가 없으면 `List<NamedCode> styles()`도 더한다 (`meta.styles`).
 
-- [ ] **Step 2: 테스트 실행, 실패 확인** — `cd server && ./gradlew test --tests 'investorgame.content.*'` → 컴파일 오류(메서드 없음).
+- [ ] **Step 2: 테스트 실행, 실패 확인** — `cd backend && ./gradlew test --tests 'investorgame.content.*'` → 컴파일 오류(메서드 없음).
 
 - [ ] **Step 3: 구현**
   - `ContentProperties(int traitStatMaxDelta, Range traitOptions)` + `record Range(int min, int max)`, `@ConfigurationProperties("content")`. `JsonContentCatalog` 생성자에 주입.
@@ -143,21 +143,21 @@
 - [ ] **Step 4: 커밋**
 
 ```bash
-git add content/ server/src/main server/src/test
+git add content/ backend/src/main backend/src/test
 git commit -m "feat: 성향 질문을 상황극 24장면으로 교체하고 축·유형·statDeltas 콘텐츠 검증 추가"
 ```
 
 ### Task 3: 캐릭터 — 축 점수, 능력치 흔들기, 유형 확정
 
 **Files:**
-- Modify: `server/src/main/java/investorgame/character/CharacterService.java`
-- Modify: `server/src/main/java/investorgame/character/CharacterView.java`
-- Modify: `server/src/main/java/investorgame/character/TraitResult.java`
-- Modify: `server/src/main/java/investorgame/character/internal/JdbcCharacterService.java`
-- Modify: `server/src/main/java/investorgame/character/internal/CharacterProperties.java` (+`TraitStat(int min)`)
-- Modify: `server/src/main/resources/application.yml` (`character.trait-stat.min: 5`)
-- Create: `server/src/main/resources/db/migration/V202610190001__character_profile_axes.sql`
-- Test: `server/src/test/java/investorgame/character/CharacterServiceTest.java`
+- Modify: `backend/src/main/java/investorgame/character/CharacterService.java`
+- Modify: `backend/src/main/java/investorgame/character/CharacterView.java`
+- Modify: `backend/src/main/java/investorgame/character/TraitResult.java`
+- Modify: `backend/src/main/java/investorgame/character/internal/JdbcCharacterService.java`
+- Modify: `backend/src/main/java/investorgame/character/internal/CharacterProperties.java` (+`TraitStat(int min)`)
+- Modify: `backend/src/main/resources/application.yml` (`character.trait-stat.min: 5`)
+- Create: `backend/src/main/resources/db/migration/V202610190001__character_profile_axes.sql`
+- Test: `backend/src/test/java/investorgame/character/CharacterServiceTest.java`
 
 **Interfaces:**
 - Produces:
@@ -199,8 +199,8 @@ git commit -m "feat: 성향 질문을 상황극 24장면으로 교체하고 축�
 ### Task 4: 이벤트 — 성향 티켓에 `statDeltas`
 
 **Files:**
-- Modify: `server/src/main/java/investorgame/event/ChoiceTicket.java` (`Trait(Map<String,Integer> traitDeltas, Map<String,Integer> statDeltas, String note)`)
-- Modify: `server/src/main/java/investorgame/event/internal/DefaultEventService.java` (`prepareChoice`의 TRAIT 분기에서 `chosen.statDeltas()` 전달)
+- Modify: `backend/src/main/java/investorgame/event/ChoiceTicket.java` (`Trait(Map<String,Integer> traitDeltas, Map<String,Integer> statDeltas, String note)`)
+- Modify: `backend/src/main/java/investorgame/event/internal/DefaultEventService.java` (`prepareChoice`의 TRAIT 분기에서 `chosen.statDeltas()` 전달)
 
 - [ ] **Step 1: 구현** — 두 줄 수정. 테스트는 Task 5의 `GameFlowTest`가 덮는다.
 
@@ -208,11 +208,11 @@ git commit -m "feat: 성향 질문을 상황극 24장면으로 교체하고 축�
 
 **Files:**
 - Modify: `contracts/openapi/game.yaml`
-- Modify: `server/src/main/java/investorgame/progress/GameView.java`
-- Modify: `server/src/main/java/investorgame/progress/ChoiceOutcome.java` (`Growth(String statCode, int before, int after, String reason)`)
-- Modify: `server/src/main/java/investorgame/progress/internal/DefaultProgressService.java`
-- Test: `server/src/test/java/investorgame/api/GameFlowTest.java`
-- Run: `cd web && pnpm gen:api` (타입 재생성, `src/api/schema.d.ts` 커밋)
+- Modify: `backend/src/main/java/investorgame/progress/GameView.java`
+- Modify: `backend/src/main/java/investorgame/progress/ChoiceOutcome.java` (`Growth(String statCode, int before, int after, String reason)`)
+- Modify: `backend/src/main/java/investorgame/progress/internal/DefaultProgressService.java`
+- Test: `backend/src/test/java/investorgame/api/GameFlowTest.java`
+- Run: `cd frontend && pnpm gen:api` (타입 재생성, `src/api/schema.d.ts` 커밋)
 
 **Interfaces:**
 - Consumes: Task 3 `recordTraitChoice`, `finalizeTraits(gameId, TraitAxes, rng)`, Task 1 `content.risks()/minds()/investorType()`.
@@ -245,24 +245,24 @@ assertThat(reloaded.read("$.investorType.code", String.class)).isNotNull();   //
 
 - [ ] **Step 3: 구현** — `choose`의 `Trait` 분기: `characters.recordTraitChoice(gameId, trait.traitDeltas(), trait.statDeltas(), ticket.occursDay())` → 각 변화마다 `logs.append(... "GROWTH", {statCode, before, after, reason: "TRAIT"})`; 결과 `Outcome.growth`에 담는다(`simpleOutcome`에 growth 인자 추가). 마지막 장면이면 `finalizeTraits(gameId, new TraitAxes(codes(content.risks()), codes(content.minds())), random.forKey("character","traits"))` → `STYLE` 로그 확장 → 메시지. `view()`에 유형 세 필드. `resolveNews`의 GROWTH에 `reason: "DEVIATION"`.
 
-- [ ] **Step 4: 통과 확인** — `./gradlew spotlessApply test` → 전부 PASS. `cd web && pnpm gen:api && pnpm exec tsc -b` → 타입 통과(아직 클라이언트는 새 필드를 안 쓴다).
+- [ ] **Step 4: 통과 확인** — `./gradlew spotlessApply test` → 전부 PASS. `cd frontend && pnpm gen:api && pnpm exec tsc -b` → 타입 통과(아직 클라이언트는 새 필드를 안 쓴다).
 
 - [ ] **Step 5: 커밋 (Task 3·4·5 묶음)**
 
 ```bash
-git add contracts server web/src/api/schema.d.ts
+git add contracts server frontend/src/api/schema.d.ts
 git commit -m "feat: 네 축 성향 점수와 투자자 유형 확정, 성향 선택의 능력치 변화를 기록·응답에 담기"
 ```
 
 ### Task 6: 클라이언트 — 유형 표시와 문구
 
 **Files:**
-- Modify: `web/src/features/game/IdentityCard.tsx` (`스타일` 줄 → `유형` 줄: `{investorType.name} · {investmentStyle.name}`; `data-testid="style"`는 이 `<dd>`에 그대로. 확정 전 `아직 모름`)
-- Modify: `web/src/features/game/log.ts` (`STYLE`: `'{investorTypeName}'형 투자자로 자랐다. 관심 분야는 {sectorName}.` — 섹터는 같은 응답의 `game.interestSector?.name`을 쓴다; `GROWTH`: `reason === 'TRAIT'` → `그 선택으로 {능력치} {before} → {after} ↑`, 아니면 기존 `경험으로 …`)
-- Modify: `web/src/features/game/OutcomeCard.tsx` (뉴스가 아닌 결과에도 `outcome.growth` 줄을 보여 준다. 문구는 `log.ts`와 같은 규칙; 공통 함수 `growthText(statCode, before, after, reason)`를 `labels.ts`에 두고 둘 다 쓴다)
-- Modify: `web/src/features/game/DecisionCard.tsx` (TRAIT일 때 바닥 문구 `성장기의 선택은 성격에 뒤집히지 않습니다. 고른 대로 자랍니다.`)
-- Modify: `web/src/features/game/LifeRecord.tsx` (직업 옆 `{investorType?.name ?? '유형 미정'}`)
-- Test: `web/src/features/game/log.test.ts`, `web/e2e/game.spec.ts`
+- Modify: `frontend/src/features/game/IdentityCard.tsx` (`스타일` 줄 → `유형` 줄: `{investorType.name} · {investmentStyle.name}`; `data-testid="style"`는 이 `<dd>`에 그대로. 확정 전 `아직 모름`)
+- Modify: `frontend/src/features/game/log.ts` (`STYLE`: `'{investorTypeName}'형 투자자로 자랐다. 관심 분야는 {sectorName}.` — 섹터는 같은 응답의 `game.interestSector?.name`을 쓴다; `GROWTH`: `reason === 'TRAIT'` → `그 선택으로 {능력치} {before} → {after} ↑`, 아니면 기존 `경험으로 …`)
+- Modify: `frontend/src/features/game/OutcomeCard.tsx` (뉴스가 아닌 결과에도 `outcome.growth` 줄을 보여 준다. 문구는 `log.ts`와 같은 규칙; 공통 함수 `growthText(statCode, before, after, reason)`를 `labels.ts`에 두고 둘 다 쓴다)
+- Modify: `frontend/src/features/game/DecisionCard.tsx` (TRAIT일 때 바닥 문구 `성장기의 선택은 성격에 뒤집히지 않습니다. 고른 대로 자랍니다.`)
+- Modify: `frontend/src/features/game/LifeRecord.tsx` (직업 옆 `{investorType?.name ?? '유형 미정'}`)
+- Test: `frontend/src/features/game/log.test.ts`, `frontend/e2e/game.spec.ts`
 
 **Interfaces:**
 - Consumes: `Game.investorType`, `Game.riskProfile`, `Game.mindProfile`, `Outcome.growth[].reason`, `LogEntry.payload.reason`.
@@ -283,7 +283,7 @@ it('STYLE 기록은 유형 이름을 쓴다', () => {
 ```
 `logLine`의 `GameInfo`에 `interestSector`를 더한다(`Pick<Game, ... | 'interestSector'>`).
 
-- [ ] **Step 2: 실패 확인** — `cd web && pnpm test` → FAIL.
+- [ ] **Step 2: 실패 확인** — `cd frontend && pnpm test` → FAIL.
 
 - [ ] **Step 3: 구현** — 위 파일들. `IdentityCard`의 `<dt>`를 `유형`으로.
 

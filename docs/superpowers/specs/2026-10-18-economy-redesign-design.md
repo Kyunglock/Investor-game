@@ -401,7 +401,7 @@ GET  /api/games/{gameId}/stocks/{stockCode}/history → { stockCode, points: [{ 
 ## 12. 클라이언트 구조 변경 (내 결정)
 
 ```
-web/src/features/game/
+frontend/src/features/game/
   PortfolioCard.tsx       HoldingsCard 대체
   MarketPanel.tsx         오버레이. 섹터 탭·종목 목록·차트·주문 폼
   Sparkline.tsx           12점 작은 선

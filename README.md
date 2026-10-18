@@ -8,8 +8,8 @@
 
 | 폴더 | 내용 |
 |---|---|
-| `server/` | Spring Boot (Java 21, Gradle). 게임 규칙 계산과 저장 |
-| `web/` | React + Vite (TypeScript, pnpm). 화면과 게임 시계. `web/e2e/`에 Playwright 테스트 |
+| `backend/` | Spring Boot (Java 21, Gradle). 게임 규칙 계산과 저장 |
+| `frontend/` | React + Vite (TypeScript, pnpm). 화면과 게임 시계. `frontend/e2e/`에 Playwright 테스트 |
 | `contracts/openapi/` | 클라이언트와 서버의 API 계약 |
 | `content/` | 직접 작성한 이벤트 데이터 (JSON) |
 | `docs/` | 설계 문서와 도메인 스펙 |
@@ -23,15 +23,15 @@
 
 ```bash
 # 1) 서버 — Testcontainers가 Postgres를 띄우므로 Docker만 있으면 된다
-cd server
+cd backend
 ./gradlew bootTestRun
 
 # (또는 로컬 Postgres를 쓰려면) 저장소 루트에서
 docker compose up -d
-cd server && ./gradlew bootRun
+cd backend && ./gradlew bootRun
 
 # 2) 웹 — http://localhost:5173 (API는 Vite가 서버로 프록시한다)
-cd web
+cd frontend
 pnpm install
 pnpm dev
 ```
@@ -39,9 +39,9 @@ pnpm dev
 ## 검사
 
 ```bash
-cd server && ./gradlew spotlessCheck test   # 단위·통합 테스트, 도메인 경계, 마이그레이션 규칙
+cd backend && ./gradlew spotlessCheck test   # 단위·통합 테스트, 도메인 경계, 마이그레이션 규칙
 
-cd web
+cd frontend
 pnpm check          # Biome 린트·포맷
 pnpm exec tsc -b    # 타입 검사
 pnpm test           # Vitest

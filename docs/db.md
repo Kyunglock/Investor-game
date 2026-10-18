@@ -334,7 +334,7 @@ FK가 없으므로 정합성은 애플리케이션이 지킨다.
 위치와 이름:
 
 ```
-server/src/main/resources/db/migration/V<yyyyMMddHHmm>__<도메인>_<설명>.sql
+backend/src/main/resources/db/migration/V<yyyyMMddHHmm>__<도메인>_<설명>.sql
 예: V202610171030__asset_init.sql
 ```
 

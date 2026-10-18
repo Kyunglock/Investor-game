@@ -35,7 +35,7 @@
 ## 3. 제약
 
 - 스택 그대로: React, Vite, Zustand, Tailwind v4, openapi-fetch (web). Spring Boot, JdbcTemplate, Flyway (server). 계약은 `contracts/openapi/game.yaml`이 먼저다.
-- 소유권: 클라이언트는 `web/**`(agent4), 진행 도메인과 `api/**`는 agent5, 계약과 의존성 추가는 통합 담당 (architecture.md 8절). 이 설계는 **진행·계약·클라이언트만** 건드리고 캐릭터·자산·이벤트·행동·콘텐츠·결과 도메인은 바꾸지 않는다.
+- 소유권: 클라이언트는 `frontend/**`(agent4), 진행 도메인과 `api/**`는 agent5, 계약과 의존성 추가는 통합 담당 (architecture.md 8절). 이 설계는 **진행·계약·클라이언트만** 건드리고 캐릭터·자산·이벤트·행동·콘텐츠·결과 도메인은 바꾸지 않는다.
 - 새 테이블은 `progress_*` 접두사만 (db.md 6절).
 - 기존 E2E 테스트의 `data-testid`(`age`, `nickname`, `total-asset`, `cash`, `job`, `style`, `stat-*`, `event-card`, `hint`, `outcome-card`, `outcome-actions`, `outcome-message`, `birth-reveal`, `reveal-*`, `reveal-nickname`, `result-screen`, `reported-day`)는 유지한다. 새 요소에는 새 id를 붙인다.
 - `prefers-reduced-motion`이면 모든 움직임을 끈다 (기존 규칙).
@@ -45,7 +45,7 @@
 
 ### 4.1 색
 
-CSS 변수로 `web/src/index.css`에 둔다. 다크 모드는 없다.
+CSS 변수로 `frontend/src/index.css`에 둔다. 다크 모드는 없다.
 
 | 변수 | 값 | 쓰임 |
 |---|---|---|
@@ -261,13 +261,13 @@ LogEntry:
     payload: { type: object, additionalProperties: true, description: 종류별 필드. 6.3절 }
 ```
 
-`required`에 `log`, `yearly`를 넣는다. 종류별 payload의 TypeScript 타입은 클라이언트가 `web/src/features/game/log.ts`에 손으로 두고 좁힌다 **(빌더)**.
+`required`에 `log`, `yearly`를 넣는다. 종류별 payload의 TypeScript 타입은 클라이언트가 `frontend/src/features/game/log.ts`에 손으로 두고 좁힌다 **(빌더)**.
 
 ## 7. 캐릭터 체계 (확정)
 
 ### 7.1 구성
 
-세 겹을 포개서 한 스프라이트(16×20 격자)를 만든다. 그림은 **문자 지도 + 팔레트**로 코드에 둔다 (`web/src/features/game/pixel/`), 이미지 파일은 쓰지 않는다 **(내 결정: 조합이 코드이므로 diff와 테스트가 쉽다)**.
+세 겹을 포개서 한 스프라이트(16×20 격자)를 만든다. 그림은 **문자 지도 + 팔레트**로 코드에 둔다 (`frontend/src/features/game/pixel/`), 이미지 파일은 쓰지 않는다 **(내 결정: 조합이 코드이므로 diff와 테스트가 쉽다)**.
 
 | 겹 | 종류 | 결정 근거 |
 |---|---|---|
@@ -306,7 +306,7 @@ LogEntry:
 ## 9. 클라이언트 구조 (내 결정)
 
 ```
-web/src/
+frontend/src/
   index.css                     색·글꼴 변수, 기본 애니메이션
   App.tsx                       상단 바 + 화면 분기 (지금과 같음)
   features/game/
@@ -344,11 +344,11 @@ web/src/
 - 인생 기록이 길어질 때의 표시(전부 보여 줘도 되고, 30줄 뒤는 `더 보기`로 접어도 된다).
 
 검토에서 정한 작은 결정 **(내 결정)**:
-- E2E(`web/e2e/game.spec.ts`)는 버튼 문구로 요소를 찾으므로 새 문구(`멈춤`, `삶을 시작하기`, `다시 시작`)에 맞게 선택자를 고친다. 비활성이지만 보이는 `계속` 버튼 때문에 `.or(eventCard)` 식 선택자는 손본다.
+- E2E(`frontend/e2e/game.spec.ts`)는 버튼 문구로 요소를 찾으므로 새 문구(`멈춤`, `삶을 시작하기`, `다시 시작`)에 맞게 선택자를 고친다. 비활성이지만 보이는 `계속` 버튼 때문에 `.or(eventCard)` 식 선택자는 손본다.
 - `progress_year.age`는 "마친 나이"(경계 day = k×360 → age k). 종료 시 `endAge` 줄은 값이 같아도 넣는다. 인생 지도의 1세 칸은 `initialAsset`과 비교한다.
 - 능력치 카드의 `약점:` 줄과 약점 표시는 둘 다 **현재** `stats`로 계산하고, 별명 이름만 `initialStats`를 쓴다.
 - `data-testid="nickname"`은 신원 카드 이름 자리 한 곳에만 둔다.
-- 진행 도메인의 로그·연간 자산 검증은 `server/src/test/java/investorgame/api/GameFlowTest.java`에 단언을 더하는 방식으로 한다.
+- 진행 도메인의 로그·연간 자산 검증은 `backend/src/test/java/investorgame/api/GameFlowTest.java`에 단언을 더하는 방식으로 한다.
 - 에이전트 배정(ownership.yml)이 아직 없으므로 한 브랜치에서 계약 → 서버 → 클라이언트 순으로 진행한다.
 
 ## 11. 작업 묶음 (참고)

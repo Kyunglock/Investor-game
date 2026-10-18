@@ -118,7 +118,7 @@ investorgame/asset/
 ### 4.2 구조
 
 ```
-web/src/
+frontend/src/
   features/<기능>/      화면 단위 기능 (components, hooks, store 한 곳에)
   shared/               여러 기능이 쓰는 컴포넌트·훅·유틸
   api/                  OpenAPI에서 생성한 타입과 클라이언트 (직접 수정하지 않는다)
