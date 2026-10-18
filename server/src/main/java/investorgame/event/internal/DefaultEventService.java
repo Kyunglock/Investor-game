@@ -11,6 +11,8 @@ import investorgame.common.random.SeededRandom;
 import investorgame.content.ContentCatalog;
 import investorgame.content.JobDefinition;
 import investorgame.content.NewsDefinition;
+import investorgame.content.NoticeDefinition;
+import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
 import investorgame.event.ChoiceTicket;
 import investorgame.event.CompleteResult;
@@ -44,6 +46,8 @@ class DefaultEventService implements EventService {
 
   static final String ACCEPT = "accept";
   static final String DECLINE = "decline";
+  static final String MARRIAGE = "marriage";
+  static final String CHILD = "child";
   private static final List<String> NEWS_OPTIONS = List.of("BUY", "SELL", "HOLD");
   private static final int BP = 10_000;
   private static final int PERCENT = 100;
@@ -79,11 +83,17 @@ class DefaultEventService implements EventService {
     List<EventRow> rows = repository.findAll(gameId);
     Optional<Candidate> next = nextCandidate(rows, context, fromDay, random);
     if (next.isEmpty() || next.get().day() > toDay) {
-      return new ScheduleResult(Optional.empty(), dayOf(next));
+      return new ScheduleResult(Optional.empty(), Optional.empty(), dayOf(next));
     }
     EventRow created = create(rows, next.get(), context, random, hints);
     repository.insert(gameId, created);
-    return new ScheduleResult(Optional.of(renderer.render(created)), OptionalInt.empty());
+    if (created.kind() == EventKind.NOTICE) {
+      // 알림은 선택이 없어 만들어지는 순간 해결된다. 판은 멈추지 않는다 (경제 개편 설계 7.3절).
+      return new ScheduleResult(
+          Optional.empty(), Optional.of(renderer.notice(created)), OptionalInt.empty());
+    }
+    return new ScheduleResult(
+        Optional.of(renderer.render(created)), Optional.empty(), OptionalInt.empty());
   }
 
   @Override
@@ -125,7 +135,14 @@ class DefaultEventService implements EventService {
             yield new ChoiceTicket.Trait(chosen.traitDeltas(), chosen.statDeltas(), chosen.note());
           }
           case OFFER -> new ChoiceTicket.Offer(ACCEPT.equals(optionCode));
+          case LIFE ->
+              new ChoiceTicket.Life(
+                  MARRIAGE.equals(row.definitionCode())
+                      ? ChoiceTicket.LifeKind.MARRIAGE
+                      : ChoiceTicket.LifeKind.CHILD,
+                  ACCEPT.equals(optionCode));
           case NEWS -> new ChoiceTicket.News();
+          case NOTICE -> throw new InvalidRequestException("알림은 선택할 수 없다");
         };
     return new ChoiceTicket(
         row.id(),
@@ -134,6 +151,8 @@ class DefaultEventService implements EventService {
         row.seq(),
         row.occursDay(),
         row.sectorCode(),
+        row.stockCode(),
+        row.sectorWide(),
         row.hiddenDirection() == null ? null : Direction.valueOf(row.hiddenDirection()),
         row.hiddenMagnitudeBp() == null ? 0 : row.hiddenMagnitudeBp(),
         row.swaySentiment() == null ? null : Sentiment.valueOf(row.swaySentiment()),
@@ -184,6 +203,10 @@ class DefaultEventService implements EventService {
       EventProperties.Range gap = properties.style(context.investmentStyle()).newsGapDays();
       candidates.add(new Candidate(EventKind.NEWS, base + roll(random, gap, "NEWS", news.size())));
     }
+    if (context.phase() != Phase.CHILDHOOD && context.jobStartDay() != null) {
+      lifeCandidates(rows, context, random, candidates);
+      noticeCandidate(rows, context, random, candidates);
+    }
     return candidates.stream()
         .min(Comparator.comparingInt(Candidate::day).thenComparing(Candidate::kind))
         .map(c -> new Candidate(c.kind(), Math.max(c.day(), fromDay)))
@@ -217,6 +240,58 @@ class DefaultEventService implements EventService {
             ? context.salaryStartDay()
             : last(offers).occursDay() + calendar.daysPerYear();
     candidates.add(new Candidate(EventKind.OFFER, day));
+  }
+
+  /** 결혼은 27~31세에 처음 묻고 거절하면 2년 뒤, 자녀는 결혼 1~2년 뒤부터 2~3년 간격으로 셋까지 (경제 개편 설계 7.3절). */
+  private void lifeCandidates(
+      List<EventRow> rows,
+      SchedulingContext context,
+      SeededRandom random,
+      List<Candidate> candidates) {
+    EventProperties.LifeSettings life = properties.life();
+    int year = calendar.daysPerYear();
+    if (!context.married()) {
+      List<EventRow> asked = ofKind(rows, EventKind.LIFE, MARRIAGE);
+      int day =
+          asked.isEmpty()
+              ? dayOfAge(
+                  random
+                      .forKey("event", "life", "marriage-age")
+                      .nextInt(life.marriageAge().min(), life.marriageAge().max() + 1),
+                  context)
+              : last(asked).occursDay() + life.marriageRetryYears() * year;
+      if (ageAt(day, context) <= life.marriageLastAge()) {
+        candidates.add(new Candidate(EventKind.LIFE, day));
+      }
+    } else if (context.childrenCount() < life.maxChildren() && context.marriedDay() != null) {
+      List<EventRow> asked = ofKind(rows, EventKind.LIFE, CHILD);
+      EventProperties.Range gap =
+          asked.isEmpty() ? life.childFirstGapYears() : life.childGapYears();
+      int base = asked.isEmpty() ? context.marriedDay() : last(asked).occursDay();
+      int years =
+          random.forKey("event", "life", "child", asked.size()).nextInt(gap.min(), gap.max() + 1);
+      int day = base + years * year;
+      if (ageAt(day, context) <= life.childLastAge()) {
+        candidates.add(new Candidate(EventKind.LIFE, day));
+      }
+    }
+  }
+
+  private void noticeCandidate(
+      List<EventRow> rows,
+      SchedulingContext context,
+      SeededRandom random,
+      List<Candidate> candidates) {
+    List<EventRow> notices = ofKind(rows, EventKind.NOTICE);
+    int base = notices.isEmpty() ? context.jobStartDay() : last(notices).occursDay();
+    candidates.add(
+        new Candidate(
+            EventKind.NOTICE,
+            base + roll(random, properties.notice().gapDays(), "NOTICE", notices.size())));
+  }
+
+  private int ageAt(int day, SchedulingContext context) {
+    return context.startAge() + day / calendar.daysPerYear();
   }
 
   private int dayOfAge(int age, SchedulingContext context) {
@@ -258,8 +333,42 @@ class DefaultEventService implements EventService {
       }
       case OFFER ->
           simple(id, seq, EventKind.OFFER, null, candidate.day(), List.of(ACCEPT, DECLINE));
+      case LIFE ->
+          simple(
+              id,
+              seq,
+              EventKind.LIFE,
+              context.married() ? CHILD : MARRIAGE,
+              candidate.day(),
+              List.of(ACCEPT, DECLINE));
+      case NOTICE -> notice(id, seq, candidate.day(), context, random);
       case NEWS -> news(id, seq, rows, candidate.day(), context, random, hints);
     };
+  }
+
+  /** 알림 정의를 가중치로 뽑는다. 결혼 뒤에만 나오는 정의는 미혼이면 후보에서 뺀다. 만들어지는 순간 RESOLVED다. */
+  private EventRow notice(
+      UUID id, int seq, int day, SchedulingContext context, SeededRandom random) {
+    List<NoticeDefinition> eligible =
+        content.notices().stream().filter(n -> context.married() || !n.requiresMarried()).toList();
+    NoticeDefinition definition =
+        weighted(eligible, NoticeDefinition::weight, random.forKey("event", "notice", seq));
+    return new EventRow(
+        id,
+        seq,
+        EventKind.NOTICE,
+        definition.code(),
+        null,
+        null,
+        false,
+        day,
+        EventRow.RESOLVED,
+        null,
+        null,
+        null,
+        null,
+        null,
+        List.of());
   }
 
   private EventRow news(
@@ -270,9 +379,11 @@ class DefaultEventService implements EventService {
       SchedulingContext context,
       SeededRandom random,
       HintProvider hints) {
-    // 이 안에서 뽑는 순서: 정의 → 방향 → 폭 → 분위기 → 분위기 문구 (specs/event.md 5.7절)
+    // 이 안에서 뽑는 순서: 정의 → 종목 → 방향 → 폭 → 분위기 → 분위기 문구 (specs/event.md 5.7절, 경제 개편 설계 5.4절)
     RandomGenerator rng = random.forKey("event", "news", seq);
     NewsDefinition definition = pickNews(rows, context, rng);
+    List<StockDefinition> stocks = content.stocksOf(definition.sector());
+    StockDefinition stock = stocks.get(rng.nextInt(stocks.size()));
     Direction truth =
         rng.nextInt(BP) < definition.directionRule().upBp() ? Direction.UP : Direction.DOWN;
     NewsDefinition.Magnitude range = definition.magnitude();
@@ -293,6 +404,8 @@ class DefaultEventService implements EventService {
         EventKind.NEWS,
         definition.code(),
         definition.sector(),
+        stock.code(),
+        definition.sectorWide(),
         day,
         EventRow.PENDING,
         truth.name(),
@@ -360,6 +473,8 @@ class DefaultEventService implements EventService {
         kind,
         definitionCode,
         null,
+        null,
+        false,
         day,
         EventRow.PENDING,
         null,
@@ -368,6 +483,12 @@ class DefaultEventService implements EventService {
         null,
         null,
         options);
+  }
+
+  private static List<EventRow> ofKind(List<EventRow> rows, EventKind kind, String definitionCode) {
+    return rows.stream()
+        .filter(r -> r.kind() == kind && definitionCode.equals(r.definitionCode()))
+        .toList();
   }
 
   private static int roll(

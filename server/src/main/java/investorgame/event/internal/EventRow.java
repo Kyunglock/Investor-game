@@ -11,6 +11,8 @@ record EventRow(
     EventKind kind,
     String definitionCode,
     String sectorCode,
+    String stockCode,
+    boolean sectorWide,
     int occursDay,
     String status,
     String hiddenDirection,

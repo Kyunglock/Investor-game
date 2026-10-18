@@ -108,6 +108,28 @@ class DefaultBehaviorServiceTest {
   }
 
   @Test
+  void 다른_뉴스가_없으면_줏대_판정을_건너뛴다() {
+    // 줏대 0이라 걸릴 난수(HIT)인데도 swaySentiment가 null이면 줏대 단계가 없다. 용기 100이라 그대로 매수.
+    Resolution r = resolve(Action.BUY, stats(50, 50, 100, 0, 50), null, false, HIT, MISS, HIT);
+    assertThat(r.actual()).isEqualTo(Action.BUY);
+    assertThat(r.deviations()).isEmpty();
+  }
+
+  @Test
+  void 다른_뉴스가_없어도_용기_판정은_그대로다() {
+    Resolution r = resolve(Action.SELL, stats(50, 50, 0, 100, 50), null, true, MISS, HIT, HIT);
+    assertThat(r.actual()).isEqualTo(Action.HOLD);
+    assertThat(r.deviations()).containsExactly(new Deviation("courage", Action.SELL, Action.HOLD));
+  }
+
+  @Test
+  void 다른_뉴스가_없어도_난수는_세_번_뽑는다() {
+    Scripted rng = new Scripted(HIT, MISS, HIT);
+    service.resolve(new ChoiceContext(Action.BUY, stats(50, 50, 100, 0, 50), null, false), rng);
+    assertThat(rng.remaining()).isZero();
+  }
+
+  @Test
   void 같은_시드면_같은_결과다() {
     Stats weak = stats(0, 0, 0, 0, 0);
     for (int seed = 0; seed < 100; seed++) {
@@ -224,6 +246,10 @@ class DefaultBehaviorServiceTest {
     @Override
     public int nextInt(int bound) {
       return Math.min(values.removeFirst(), bound - 1);
+    }
+
+    int remaining() {
+      return values.size();
     }
 
     @Override

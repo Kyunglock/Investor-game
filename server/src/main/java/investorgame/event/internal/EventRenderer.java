@@ -2,9 +2,12 @@ package investorgame.event.internal;
 
 import investorgame.content.ContentCatalog;
 import investorgame.content.JobDefinition;
+import investorgame.content.LifeText;
 import investorgame.content.NewsDefinition;
+import investorgame.content.NoticeDefinition;
 import investorgame.content.TraitDefinition;
 import investorgame.event.EventView;
+import investorgame.event.Notice;
 import java.util.List;
 import org.springframework.stereotype.Component;
 
@@ -46,12 +49,25 @@ class EventRenderer {
                 new EventView.Option(DefaultEventService.ACCEPT, offer.acceptLabel()),
                 new EventView.Option(DefaultEventService.DECLINE, offer.declineLabel())));
       }
-      case NEWS -> {
-        NewsDefinition news = news(row.definitionCode());
+      case LIFE -> {
+        LifeText text = content.lifeText(row.definitionCode());
         yield view(
             row,
-            news.title(),
-            news.body(),
+            text.title(),
+            text.body(),
+            null,
+            null,
+            List.of(
+                new EventView.Option(DefaultEventService.ACCEPT, text.acceptLabel()),
+                new EventView.Option(DefaultEventService.DECLINE, text.declineLabel())));
+      }
+      case NEWS -> {
+        NewsDefinition news = news(row.definitionCode());
+        String stockName = row.stockCode() == null ? "" : content.stock(row.stockCode()).name();
+        yield view(
+            row,
+            withStock(news.title(), stockName),
+            withStock(news.body(), stockName),
             phrase(row.hintCode(), true),
             phrase(row.swayCode(), false),
             List.of(
@@ -59,7 +75,33 @@ class EventRenderer {
                 new EventView.Option("SELL", "매도"),
                 new EventView.Option("HOLD", "관망")));
       }
+      case NOTICE -> throw new IllegalStateException("알림은 EventView가 아니라 Notice로 그린다");
     };
+  }
+
+  /** 알림성 이벤트. 금액은 정의 그대로 넘기고 월급 비율 계산은 진행이 한다. */
+  Notice notice(EventRow row) {
+    NoticeDefinition definition = noticeDefinition(row.definitionCode());
+    return new Notice(
+        row.id(),
+        row.occursDay(),
+        definition.code(),
+        definition.title(),
+        definition.body(),
+        definition.amount(),
+        definition.salaryPercent());
+  }
+
+  NoticeDefinition noticeDefinition(String code) {
+    return content.notices().stream()
+        .filter(n -> n.code().equals(code))
+        .findFirst()
+        .orElseThrow(() -> new IllegalStateException("콘텐츠에 없는 알림: " + code));
+  }
+
+  /** 뉴스 문구의 "{stock}" 자리표시를 종목 이름으로 바꾼다. */
+  private static String withStock(String text, String stockName) {
+    return text.replace("{stock}", stockName);
   }
 
   TraitDefinition trait(String code) {
@@ -84,7 +126,17 @@ class EventRenderer {
       String sway,
       List<EventView.Option> options) {
     return new EventView(
-        row.id(), row.kind(), row.occursDay(), row.sectorCode(), title, body, hint, sway, options);
+        row.id(),
+        row.kind(),
+        row.occursDay(),
+        row.sectorCode(),
+        row.stockCode(),
+        row.sectorWide(),
+        title,
+        body,
+        hint,
+        sway,
+        options);
   }
 
   private static EventView.Option jobOption(JobDefinition job) {

@@ -2,31 +2,41 @@ package investorgame.asset.internal;
 
 import investorgame.asset.AccountView;
 import investorgame.asset.AssetService;
-import investorgame.asset.PriceChangeResult;
-import investorgame.asset.SalaryResult;
+import investorgame.asset.IncomeResult;
+import investorgame.asset.InterestResult;
+import investorgame.asset.SpendResult;
 import investorgame.asset.TradeResult;
-import investorgame.common.Action;
-import investorgame.common.Direction;
+import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.random.RandomGenerator;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 금액은 모두 정수(원)이며 반올림하지 않고 0 방향으로 버린다 (specs/asset.md 4절). 호출하는 쪽(진행)이 판을 잠근 상태에서 부르므로 여기서는 잠그지 않는다.
+ * 금액은 모두 정수(원)이며 0 방향으로 버린다. 호출하는 쪽(진행)이 판을 잠근 상태에서 부르므로 여기서는 잠그지 않는다. 멱등은 장부의 부분 유니크 인덱스 (game_id,
+ * game_day, kind)로 지킨다.
  */
 @Service
 class JdbcAssetService implements AssetService {
 
   private static final long BP = 10_000;
-  private static final long PERCENT = 100;
+  static final String BUY = "BUY";
+  static final String SELL = "SELL";
+  static final String INTEREST = "INTEREST";
+  static final String DEBT_REPAY = "DEBT_REPAY";
+
+  /** 같은 날 한 번만 처리하는 종류. 마이그레이션의 부분 유니크 인덱스와 같은 목록이다. */
+  private static final Set<String> ONCE_PER_DAY =
+      Set.of("SALARY", "SPOUSE_INCOME", "SEVERANCE", "EXPENSE", INTEREST);
 
   private final JdbcClient jdbc;
   private final Clock clock;
@@ -45,8 +55,8 @@ class JdbcAssetService implements AssetService {
     long initialCash = rng.nextInt(range.minUnit(), range.maxUnit() + 1) * range.unit();
     jdbc.sql(
             """
-            INSERT INTO asset_account (game_id, cash, initial_cash, updated_at)
-            VALUES (:gameId, :cash, :cash, :now)
+            INSERT INTO asset_account (game_id, cash, initial_cash, debt, updated_at)
+            VALUES (:gameId, :cash, :cash, 0, :now)
             ON CONFLICT (game_id) DO NOTHING
             """)
         .param("gameId", gameId)
@@ -60,137 +70,169 @@ class JdbcAssetService implements AssetService {
   @Transactional(readOnly = true)
   public AccountView get(UUID gameId) {
     Account account = account(gameId);
-    Map<String, Long> holdings = new LinkedHashMap<>();
+    Map<String, AccountView.Holding> holdings = new LinkedHashMap<>();
     jdbc.sql(
             """
-            SELECT sector_code, amount FROM asset_holding
-            WHERE game_id = :gameId AND amount > 0
-            ORDER BY sector_code
+            SELECT stock_code, quantity, cost_basis FROM asset_holding
+            WHERE game_id = :gameId AND quantity > 0
+            ORDER BY stock_code
             """)
         .param("gameId", gameId)
-        .query(Holding.class)
+        .query(HoldingRow.class)
         .list()
-        .forEach(h -> holdings.put(h.sectorCode(), h.amount()));
-    return new AccountView(gameId, account.cash(), account.initialCash(), Map.copyOf(holdings));
+        .forEach(
+            h -> holdings.put(h.stockCode(), new AccountView.Holding(h.quantity(), h.costBasis())));
+    return new AccountView(
+        gameId, account.cash(), account.initialCash(), account.debt(), Map.copyOf(holdings));
   }
 
   @Override
   @Transactional
-  public TradeResult trade(
-      UUID gameId, Action action, String sectorCode, int gameDay, UUID eventId) {
-    long cash = account(gameId).cash();
-    return switch (action) {
-      case HOLD -> new TradeResult(TradeResult.Status.HELD, action, 0, cash);
-      case BUY -> {
-        long amount = cash * properties.buyRatioBp() / BP;
-        if (amount < properties.minTrade()) {
-          yield new TradeResult(TradeResult.Status.INSUFFICIENT_CASH, action, 0, cash);
-        }
-        long cashAfter = cash - amount;
-        setCash(gameId, cashAfter);
-        setHolding(gameId, sectorCode, holding(gameId, sectorCode) + amount);
-        ledger(gameId, gameDay, "BUY", sectorCode, -amount, cashAfter, eventId);
-        yield new TradeResult(TradeResult.Status.EXECUTED, action, amount, cashAfter);
-      }
-      case SELL -> {
-        long held = holding(gameId, sectorCode);
-        if (held == 0) {
-          yield new TradeResult(TradeResult.Status.NOTHING_TO_SELL, action, 0, cash);
-        }
-        long cashAfter = cash + held;
-        setCash(gameId, cashAfter);
-        setHolding(gameId, sectorCode, 0);
-        ledger(gameId, gameDay, "SELL", sectorCode, held, cashAfter, eventId);
-        yield new TradeResult(TradeResult.Status.EXECUTED, action, held, cashAfter);
-      }
-    };
-  }
-
-  @Override
-  @Transactional
-  public PriceChangeResult applyPriceChange(
-      UUID gameId,
-      String sectorCode,
-      Direction direction,
-      int magnitudeBp,
-      int lossFactorPercent,
-      int gameDay,
-      UUID eventId) {
-    long held = holding(gameId, sectorCode);
-    if (held == 0) {
-      return new PriceChangeResult(0, false, 0);
+  public TradeResult buy(
+      UUID gameId, String stockCode, long quantity, long price, int gameDay, UUID eventId) {
+    requirePositive(quantity, price);
+    Account account = account(gameId);
+    long amount = quantity * price;
+    if (amount > account.cash()) {
+      return new TradeResult(TradeResult.Status.INSUFFICIENT_CASH, 0, price, 0, 0, account.cash());
     }
-    long raw = held * (direction == Direction.UP ? magnitudeBp : -magnitudeBp) / BP;
-    boolean softened = raw < 0 && lossFactorPercent < PERCENT;
-    long pnl = raw < 0 ? raw * lossFactorPercent / PERCENT : raw;
-    long holdingAfter = Math.max(0, held + pnl);
-    setHolding(gameId, sectorCode, holdingAfter);
+    long cashAfter = account.cash() - amount;
+    AccountView.Holding held = holding(gameId, stockCode);
+    setCash(gameId, cashAfter);
+    setHolding(gameId, stockCode, held.quantity() + quantity, held.costBasis() + amount);
     ledger(
         gameId,
         gameDay,
-        "PRICE_CHANGE",
-        sectorCode,
-        holdingAfter - held,
-        account(gameId).cash(),
+        BUY,
+        stockCode,
+        -amount,
+        quantity,
+        price,
+        cashAfter,
+        account.debt(),
         eventId);
-    return new PriceChangeResult(holdingAfter - held, softened, holdingAfter);
+    return new TradeResult(TradeResult.Status.EXECUTED, quantity, price, amount, 0, cashAfter);
   }
 
   @Override
   @Transactional
-  public SalaryResult creditSalary(UUID gameId, long amount, int gameDay) {
-    long cash = account(gameId).cash();
-    long cashAfter = cash + amount;
-    int inserted =
-        jdbc.sql(
-                """
-                INSERT INTO asset_ledger (game_id, game_day, kind, amount, cash_after, created_at)
-                VALUES (:gameId, :gameDay, 'SALARY', :amount, :cashAfter, :now)
-                ON CONFLICT (game_id, game_day) WHERE kind = 'SALARY' DO NOTHING
-                """)
-            .param("gameId", gameId)
-            .param("gameDay", gameDay)
-            .param("amount", amount)
-            .param("cashAfter", cashAfter)
-            .param("now", now())
-            .update();
-    if (inserted == 0) {
-      return new SalaryResult(false, 0, cash);
+  public TradeResult sell(
+      UUID gameId, String stockCode, long quantity, long price, int gameDay, UUID eventId) {
+    requirePositive(quantity, price);
+    Account account = account(gameId);
+    AccountView.Holding held = holding(gameId, stockCode);
+    if (held.quantity() == 0) {
+      return new TradeResult(TradeResult.Status.NOTHING_TO_SELL, 0, price, 0, 0, account.cash());
     }
+    long sold = Math.min(quantity, held.quantity());
+    long amount = sold * price;
+    long costOut =
+        sold == held.quantity() ? held.costBasis() : held.costBasis() * sold / held.quantity();
+    long cashAfter = account.cash() + amount;
     setCash(gameId, cashAfter);
-    return new SalaryResult(true, amount, cashAfter);
+    setHolding(gameId, stockCode, held.quantity() - sold, held.costBasis() - costOut);
+    ledger(
+        gameId, gameDay, SELL, stockCode, amount, sold, price, cashAfter, account.debt(), eventId);
+    return new TradeResult(
+        TradeResult.Status.EXECUTED, sold, price, amount, amount - costOut, cashAfter);
+  }
+
+  @Override
+  @Transactional
+  public IncomeResult credit(UUID gameId, String kind, long amount, int gameDay) {
+    Account account = account(gameId);
+    long repaid = Math.min(account.debt(), amount);
+    long cashAfter = account.cash() + amount - repaid;
+    long debtAfter = account.debt() - repaid;
+    if (!ledger(gameId, gameDay, kind, null, amount, null, null, cashAfter, debtAfter, null)) {
+      return new IncomeResult(false, 0, 0, account.cash());
+    }
+    if (repaid > 0) {
+      ledger(gameId, gameDay, DEBT_REPAY, null, -repaid, null, null, cashAfter, debtAfter, null);
+    }
+    setBalance(gameId, cashAfter, debtAfter);
+    return new IncomeResult(true, amount, repaid, cashAfter);
+  }
+
+  @Override
+  @Transactional
+  public SpendResult spend(UUID gameId, String kind, long amount, int gameDay, UUID eventId) {
+    Account account = account(gameId);
+    long fromCash = Math.min(account.cash(), amount);
+    long toDebt = amount - fromCash;
+    long cashAfter = account.cash() - fromCash;
+    long debtAfter = account.debt() + toDebt;
+    if (!ledger(gameId, gameDay, kind, null, -amount, null, null, cashAfter, debtAfter, eventId)) {
+      return new SpendResult(false, 0, 0, account.cash(), account.debt());
+    }
+    setBalance(gameId, cashAfter, debtAfter);
+    return new SpendResult(true, fromCash, toDebt, cashAfter, debtAfter);
+  }
+
+  @Override
+  @Transactional
+  public InterestResult accrueInterest(UUID gameId, int gameDay) {
+    Account account = account(gameId);
+    if (account.debt() == 0) {
+      return new InterestResult(false, 0, 0);
+    }
+    long interest = account.debt() * properties.debtInterestBp() / BP;
+    long debtAfter = account.debt() + interest;
+    if (!ledger(
+        gameId, gameDay, INTEREST, null, -interest, null, null, account.cash(), debtAfter, null)) {
+      return new InterestResult(false, 0, account.debt());
+    }
+    setBalance(gameId, account.cash(), debtAfter);
+    return new InterestResult(true, interest, debtAfter);
   }
 
   @Override
   @Transactional(readOnly = true)
-  public long totalAsset(UUID gameId) {
-    return jdbc.sql(
-            """
-            SELECT a.cash + COALESCE((SELECT SUM(h.amount) FROM asset_holding h WHERE h.game_id = a.game_id), 0)
-            FROM asset_account a WHERE a.game_id = :gameId
-            """)
-        .param("gameId", gameId)
-        .query(Long.class)
-        .optional()
-        .orElseThrow(() -> new NotFoundException("자산 계정이 없다"));
+  public long holdingsValue(UUID gameId, Map<String, Long> prices) {
+    long value = 0;
+    for (Map.Entry<String, AccountView.Holding> e : get(gameId).holdings().entrySet()) {
+      value += e.getValue().quantity() * prices.getOrDefault(e.getKey(), 0L);
+    }
+    return value;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public long totalAsset(UUID gameId, Map<String, Long> prices) {
+    Account account = account(gameId);
+    return account.cash() + holdingsValue(gameId, prices) - account.debt();
+  }
+
+  private static void requirePositive(long quantity, long price) {
+    if (quantity < 1) {
+      throw new InvalidRequestException("수량은 1 이상이어야 한다");
+    }
+    if (price < 1) {
+      throw new InvalidRequestException("가격은 1 이상이어야 한다");
+    }
   }
 
   private Account account(UUID gameId) {
-    return jdbc.sql("SELECT cash, initial_cash FROM asset_account WHERE game_id = :gameId")
+    return jdbc.sql("SELECT cash, initial_cash, debt FROM asset_account WHERE game_id = :gameId")
         .param("gameId", gameId)
         .query(Account.class)
         .optional()
         .orElseThrow(() -> new NotFoundException("자산 계정이 없다"));
   }
 
-  private long holding(UUID gameId, String sectorCode) {
+  private AccountView.Holding holding(UUID gameId, String stockCode) {
     return jdbc.sql(
-            "SELECT amount FROM asset_holding WHERE game_id = :gameId AND sector_code = :sector")
+            """
+            SELECT quantity, cost_basis FROM asset_holding
+            WHERE game_id = :gameId AND stock_code = :stock
+            """)
         .param("gameId", gameId)
-        .param("sector", sectorCode)
-        .query(Long.class)
+        .param("stock", stockCode)
+        .query(
+            (rs, rowNum) ->
+                new AccountView.Holding(rs.getLong("quantity"), rs.getLong("cost_basis")))
         .optional()
-        .orElse(0L);
+        .orElse(new AccountView.Holding(0, 0));
   }
 
   private void setCash(UUID gameId, long cash) {
@@ -201,51 +243,86 @@ class JdbcAssetService implements AssetService {
         .update();
   }
 
-  private void setHolding(UUID gameId, String sectorCode, long amount) {
+  private void setBalance(UUID gameId, long cash, long debt) {
     jdbc.sql(
             """
-            INSERT INTO asset_holding (game_id, sector_code, amount, updated_at)
-            VALUES (:gameId, :sector, :amount, :now)
-            ON CONFLICT (game_id, sector_code)
-              DO UPDATE SET amount = EXCLUDED.amount, updated_at = EXCLUDED.updated_at
+            UPDATE asset_account SET cash = :cash, debt = :debt, updated_at = :now
+            WHERE game_id = :gameId
+            """)
+        .param("cash", cash)
+        .param("debt", debt)
+        .param("now", now())
+        .param("gameId", gameId)
+        .update();
+  }
+
+  private void setHolding(UUID gameId, String stockCode, long quantity, long costBasis) {
+    jdbc.sql(
+            """
+            INSERT INTO asset_holding (game_id, stock_code, quantity, cost_basis, updated_at)
+            VALUES (:gameId, :stock, :quantity, :costBasis, :now)
+            ON CONFLICT (game_id, stock_code)
+              DO UPDATE SET quantity = EXCLUDED.quantity, cost_basis = EXCLUDED.cost_basis,
+                            updated_at = EXCLUDED.updated_at
             """)
         .param("gameId", gameId)
-        .param("sector", sectorCode)
-        .param("amount", amount)
+        .param("stock", stockCode)
+        .param("quantity", quantity)
+        .param("costBasis", costBasis)
         .param("now", now())
         .update();
   }
 
-  private void ledger(
+  /** 장부에 한 행. 같은 날 한 번만 처리하는 종류가 이미 있으면 false를 돌려주고 아무것도 쓰지 않는다. */
+  private boolean ledger(
       UUID gameId,
       int gameDay,
       String kind,
-      String sectorCode,
+      String stockCode,
       long amount,
+      Long quantity,
+      Long price,
       long cashAfter,
+      long debtAfter,
       UUID eventId) {
-    jdbc.sql(
-            """
-            INSERT INTO asset_ledger
-              (game_id, game_day, kind, sector_code, amount, cash_after, event_id, created_at)
-            VALUES (:gameId, :gameDay, :kind, :sector, :amount, :cashAfter, :eventId, :now)
-            """)
-        .param("gameId", gameId)
-        .param("gameDay", gameDay)
-        .param("kind", kind)
-        .param("sector", sectorCode)
-        .param("amount", amount)
-        .param("cashAfter", cashAfter)
-        .param("eventId", eventId)
-        .param("now", now())
-        .update();
+    String conflict =
+        ONCE_PER_DAY.contains(kind)
+            ? "ON CONFLICT (game_id, game_day, kind) WHERE kind IN ('SALARY', 'SPOUSE_INCOME', 'SEVERANCE', 'EXPENSE', 'INTEREST') DO NOTHING"
+            : "";
+    try {
+      int inserted =
+          jdbc.sql(
+                  """
+                  INSERT INTO asset_ledger
+                    (game_id, game_day, kind, stock_code, amount, quantity, price, cash_after, debt_after,
+                     event_id, created_at)
+                  VALUES (:gameId, :gameDay, :kind, :stock, :amount, :quantity, :price, :cashAfter,
+                          :debtAfter, :eventId, :now)
+                  """
+                      + conflict)
+              .param("gameId", gameId)
+              .param("gameDay", gameDay)
+              .param("kind", kind)
+              .param("stock", stockCode)
+              .param("amount", amount)
+              .param("quantity", quantity)
+              .param("price", price)
+              .param("cashAfter", cashAfter)
+              .param("debtAfter", debtAfter)
+              .param("eventId", eventId)
+              .param("now", now())
+              .update();
+      return inserted > 0;
+    } catch (DuplicateKeyException e) {
+      return false;
+    }
   }
 
   private OffsetDateTime now() {
     return OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
   }
 
-  private record Account(long cash, long initialCash) {}
+  private record Account(long cash, long initialCash, long debt) {}
 
-  private record Holding(String sectorCode, long amount) {}
+  private record HoldingRow(String stockCode, long quantity, long costBasis) {}
 }

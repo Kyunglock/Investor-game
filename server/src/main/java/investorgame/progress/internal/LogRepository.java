@@ -6,6 +6,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
@@ -73,6 +74,31 @@ class LogRepository {
         .param("totalAsset", totalAsset)
         .param("cash", cash)
         .update();
+  }
+
+  /** 달마다 마친 총자산. 포트폴리오의 "이번 달" 비교용. 같은 달은 첫 값이 남는다. */
+  void upsertMonth(UUID gameId, int month, long totalAsset) {
+    jdbc.sql(
+            """
+            INSERT INTO progress_month (game_id, month, total_asset)
+            VALUES (:gameId, :month, :totalAsset)
+            ON CONFLICT (game_id, month) DO NOTHING
+            """)
+        .param("gameId", gameId)
+        .param("month", month)
+        .param("totalAsset", totalAsset)
+        .update();
+  }
+
+  OptionalLong findMonthTotal(UUID gameId, int month) {
+    return jdbc.sql(
+            "SELECT total_asset FROM progress_month WHERE game_id = :gameId AND month = :month")
+        .param("gameId", gameId)
+        .param("month", month)
+        .query(Long.class)
+        .optional()
+        .map(OptionalLong::of)
+        .orElse(OptionalLong.empty());
   }
 
   List<GameView.Yearly> findYears(UUID gameId) {

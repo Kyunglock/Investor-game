@@ -2,7 +2,6 @@ package investorgame.progress.internal;
 
 import investorgame.asset.AccountView;
 import investorgame.asset.AssetService;
-import investorgame.asset.PriceChangeResult;
 import investorgame.asset.TradeResult;
 import investorgame.behavior.BehaviorService;
 import investorgame.behavior.ChoiceContext;
@@ -14,6 +13,7 @@ import investorgame.character.StatChange;
 import investorgame.character.TraitAxes;
 import investorgame.character.TraitResult;
 import investorgame.common.Action;
+import investorgame.common.Direction;
 import investorgame.common.GameProperties;
 import investorgame.common.Phase;
 import investorgame.common.error.InvalidRequestException;
@@ -23,16 +23,25 @@ import investorgame.common.random.SeededRandom;
 import investorgame.content.ContentCatalog;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
+import investorgame.content.StockDefinition;
 import investorgame.event.ChoiceTicket;
 import investorgame.event.CompleteResult;
 import investorgame.event.Completion;
 import investorgame.event.EventService;
 import investorgame.event.EventView;
 import investorgame.event.HintProvider;
+import investorgame.event.Notice;
+import investorgame.event.ScheduleResult;
 import investorgame.event.SchedulingContext;
+import investorgame.household.HouseholdService;
+import investorgame.household.HouseholdView;
+import investorgame.market.MarketService;
+import investorgame.market.Quote;
+import investorgame.market.ShockResult;
 import investorgame.progress.ChoiceOutcome;
 import investorgame.progress.GameView;
 import investorgame.progress.ProgressService;
+import investorgame.progress.StockHistory;
 import investorgame.result.GameResult;
 import investorgame.result.ResultService;
 import java.security.SecureRandom;
@@ -47,7 +56,10 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 한 판의 조율. 다른 도메인끼리는 서로를 부르지 않으므로 필요한 값은 여기서 읽어 인자로 넘긴다 (domains.md 3절). 난수는 판 시드에서 키별로 유도한다. */
+/**
+ * 한 판의 조율. 다른 도메인끼리는 서로를 부르지 않으므로 필요한 값은 여기서 읽어 인자로 넘긴다 (domains.md 3절). 매월 1일마다 시장 → 수입 → 지출 → 이자
+ * 순서로 처리한다 (경제 개편 설계 9절). 난수는 판 시드에서 키별로 유도한다.
+ */
 @Service
 class DefaultProgressService implements ProgressService {
 
@@ -55,6 +67,13 @@ class DefaultProgressService implements ProgressService {
   private static final int BP = 10_000;
   private static final String DEVIATION = "DEVIATION";
   private static final String TRAIT = "TRAIT";
+  private static final String SALARY = "SALARY";
+  private static final String SPOUSE_INCOME = "SPOUSE_INCOME";
+  private static final String SEVERANCE = "SEVERANCE";
+  private static final String WINDFALL = "WINDFALL";
+  private static final String EXPENSE = "EXPENSE";
+  private static final String LIFE_COST = "LIFE_COST";
+  private static final String TRADE_LOG = "TRADE";
 
   private final GameRepository games;
   private final LogRepository logs;
@@ -62,6 +81,8 @@ class DefaultProgressService implements ProgressService {
   private final GameProperties calendar;
   private final CharacterService characters;
   private final AssetService assets;
+  private final MarketService market;
+  private final HouseholdService household;
   private final EventService events;
   private final BehaviorService behavior;
   private final ResultService results;
@@ -75,6 +96,8 @@ class DefaultProgressService implements ProgressService {
       GameProperties calendar,
       CharacterService characters,
       AssetService assets,
+      MarketService market,
+      HouseholdService household,
       EventService events,
       BehaviorService behavior,
       ResultService results,
@@ -85,6 +108,8 @@ class DefaultProgressService implements ProgressService {
     this.calendar = calendar;
     this.characters = characters;
     this.assets = assets;
+    this.market = market;
+    this.household = household;
     this.events = events;
     this.behavior = behavior;
     this.results = results;
@@ -113,6 +138,8 @@ class DefaultProgressService implements ProgressService {
     SeededRandom random = new HashSeededRandom(game.seed());
     CharacterView character = characters.create(game.id(), random.forKey("character", "create"));
     AccountView account = assets.create(game.id(), random.forKey("asset", "create"));
+    market.create(game.id());
+    household.create(game.id());
     logs.append(
         game.id(),
         0,
@@ -147,10 +174,9 @@ class DefaultProgressService implements ProgressService {
       throw new InvalidRequestException("대기 중인 선택을 먼저 해야 한다");
     }
 
-    // 보고된 시각이 다음 이벤트를 넘어도 판은 그 이벤트 시각에서 멈춘다. 월급도 거기까지만 넣는다.
+    // 보고된 시각이 다음 이벤트를 넘어도 판은 그 이벤트 시각에서 멈춘다. 달 처리도 거기까지만 한다.
     int stopDay = Math.min(day, nextEventDay(game, last).orElse(day));
-    paySalaries(game, last, stopDay);
-    recordYears(game, last, stopDay);
+    processMonths(game, last, stopDay);
     GameRow advanced = withDay(game, stopDay);
     games.updateDay(gameId, stopDay);
     scheduleAt(advanced, last, stopDay);
@@ -267,6 +293,7 @@ class DefaultProgressService implements ProgressService {
             }
             yield simpleOutcome(ticket, "1년 뒤에 다시 생각해 보기로 했다.");
           }
+          case ChoiceTicket.Life life -> resolveLife(game, ticket, life);
         };
 
     GameRow updated = lock(sessionId, gameId);
@@ -275,35 +302,104 @@ class DefaultProgressService implements ProgressService {
     return new ChoiceOutcome(view(games.findLatest(sessionId).orElseThrow()), outcome);
   }
 
-  // ---- 뉴스 선택: 판정 → 매매 → 주가 변동 → 성장 (domains.md 3절 처리 흐름 2) ----
+  // ---- 결혼·자녀 (경제 개편 설계 7.3절) ----
+
+  private ChoiceOutcome.Outcome resolveLife(
+      GameRow game, ChoiceTicket ticket, ChoiceTicket.Life life) {
+    UUID gameId = game.id();
+    int day = ticket.occursDay();
+    events.complete(
+        gameId,
+        ticket.eventId(),
+        new Completion(ticket.optionCode(), ticket.optionCode(), List.of()));
+    if (!life.accepted()) {
+      return simpleOutcome(ticket, "아직은 아니라고 했다.");
+    }
+    return switch (life.kind()) {
+      case MARRIAGE -> {
+        long cost = household.weddingCost(day);
+        household.marry(gameId, day);
+        assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
+        logs.append(gameId, day, "MARRIAGE", Map.of("cost", cost));
+        yield simpleOutcome(ticket, "결혼했다. 결혼 비용 %,d원이 들었다.".formatted(cost));
+      }
+      case CHILD -> {
+        long cost = household.childbirthCost(day);
+        int seq = household.addChild(gameId, day);
+        assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
+        logs.append(gameId, day, "CHILD", Map.of("seq", seq, "cost", cost));
+        yield simpleOutcome(ticket, "%d번째 아이가 태어났다.".formatted(seq));
+      }
+    };
+  }
+
+  // ---- 뉴스 선택: 판정 → 매매 → 충격 → 성장 (domains.md 3절 처리 흐름 2) ----
 
   private ChoiceOutcome.Outcome resolveNews(
       GameRow game, ChoiceTicket ticket, String eventTitle, SeededRandom random) {
     UUID gameId = game.id();
     CharacterView character = characters.get(gameId);
     AccountView account = assets.get(gameId);
+    Map<String, Long> prices = market.prices(gameId);
+    String stockCode = ticket.stockCode();
+    long price = prices.get(stockCode);
     Action chosen = Action.valueOf(ticket.optionCode());
-    boolean holding = account.holdings().getOrDefault(ticket.sectorCode(), 0L) > 0;
+    boolean holding = account.holdings().containsKey(stockCode);
 
     Resolution resolution =
         behavior.resolve(
             new ChoiceContext(chosen, character.stats(), ticket.swaySentiment(), holding),
             random.forKey("behavior", "resolve", ticket.seq()));
-    TradeResult trade =
-        assets.trade(
-            gameId, resolution.actual(), ticket.sectorCode(), ticket.occursDay(), ticket.eventId());
+    ChoiceOutcome.Trade trade =
+        switch (resolution.actual()) {
+          case BUY -> {
+            long quantity = account.cash() * properties.newsBuyRatioBp() / BP / price;
+            yield quantity < 1
+                ? new ChoiceOutcome.Trade(
+                    TradeResult.Status.INSUFFICIENT_CASH.name(), 0, price, 0, null)
+                : tradeView(
+                    assets.buy(
+                        gameId, stockCode, quantity, price, ticket.occursDay(), ticket.eventId()));
+          }
+          case SELL ->
+              holding
+                  ? tradeView(
+                      assets.sell(
+                          gameId,
+                          stockCode,
+                          account.holdings().get(stockCode).quantity(),
+                          price,
+                          ticket.occursDay(),
+                          ticket.eventId()))
+                  : new ChoiceOutcome.Trade(
+                      TradeResult.Status.NOTHING_TO_SELL.name(), 0, price, 0, null);
+          case HOLD -> new ChoiceOutcome.Trade("HELD", 0, price, 0, null);
+        };
+
+    // 운: 떨어지는 뉴스이고 충격을 받는 종목을 들고 있을 때만 폭을 줄인다 (경제 개편 설계 5.4절).
     int lossFactor =
         behavior.lossFactorPercent(
             character.stats().luck(), random.forKey("behavior", "luck", ticket.seq()));
-    PriceChangeResult price =
-        assets.applyPriceChange(
+    AccountView afterTrade = assets.get(gameId);
+    boolean exposed =
+        content.stocksOf(ticket.sectorCode()).stream()
+            .anyMatch(s -> afterTrade.holdings().containsKey(s.code()));
+    boolean softened = ticket.truth() == Direction.DOWN && exposed && lossFactor < PERCENT;
+    int magnitude =
+        softened ? (int) (ticket.magnitudeBp() * lossFactor / PERCENT) : ticket.magnitudeBp();
+    long before = assets.holdingsValue(gameId, prices);
+    ShockResult shock =
+        market.applyShock(
             gameId,
             ticket.sectorCode(),
+            stockCode,
+            ticket.sectorWide(),
             ticket.truth(),
-            ticket.magnitudeBp(),
-            lossFactor,
+            magnitude,
             ticket.occursDay(),
             ticket.eventId());
+    long pnl = assets.holdingsValue(gameId, market.prices(gameId)) - before;
+
     List<StatChange> growth =
         characters.grow(
             gameId,
@@ -320,31 +416,31 @@ class DefaultProgressService implements ProgressService {
         new Completion(chosen.name(), resolution.actual().name(), resolution.deviations()));
 
     String sectorName = content.sectorName(ticket.sectorCode());
+    String stockName = content.stock(stockCode).name();
     Map<String, Object> newsPayload = new HashMap<>();
     newsPayload.put("eventTitle", eventTitle);
     newsPayload.put("sectorCode", ticket.sectorCode());
     newsPayload.put("sectorName", sectorName);
+    newsPayload.put("stockCode", stockCode);
+    newsPayload.put("stockName", stockName);
     newsPayload.put("chosen", chosen.name());
     newsPayload.put("actual", resolution.actual().name());
+    newsPayload.put("deviations", deviationPayload(resolution));
     newsPayload.put(
-        "deviations",
-        resolution.deviations().stream()
-            .map(
-                d -> Map.of("statCode", d.statCode(), "from", d.from().name(), "to", d.to().name()))
-            .toList());
-    newsPayload.put("trade", Map.of("status", trade.status().name(), "amount", trade.amount()));
+        "trade",
+        Map.of("status", trade.status(), "quantity", trade.quantity(), "amount", trade.amount()));
     logs.append(gameId, ticket.occursDay(), "NEWS", newsPayload);
-    logs.append(
-        gameId,
-        ticket.occursDay(),
-        "PRICE",
-        Map.of(
-            "sectorCode", ticket.sectorCode(),
-            "sectorName", sectorName,
-            "direction", ticket.truth().name(),
-            "changeBp", ticket.magnitudeBp(),
-            "pnl", price.pnl(),
-            "lossSoftened", price.lossSoftened()));
+    Map<String, Object> pricePayload = new HashMap<>();
+    pricePayload.put("sectorCode", ticket.sectorCode());
+    pricePayload.put("sectorName", sectorName);
+    pricePayload.put("stockCode", stockCode);
+    pricePayload.put("stockName", stockName);
+    pricePayload.put("sectorWide", ticket.sectorWide());
+    pricePayload.put("direction", ticket.truth().name());
+    pricePayload.put("changeBp", magnitude);
+    pricePayload.put("pnl", pnl);
+    pricePayload.put("lossSoftened", softened);
+    logs.append(gameId, ticket.occursDay(), "PRICE", pricePayload);
     List<ChoiceOutcome.Growth> growthViews =
         logGrowth(gameId, ticket.occursDay(), growth, DEVIATION);
 
@@ -352,19 +448,140 @@ class DefaultProgressService implements ProgressService {
         ticket.kind().name(),
         chosen.name(),
         resolution.actual().name(),
-        resolution.deviations().stream()
-            .map(d -> new ChoiceOutcome.DeviationView(d.statCode(), d.from().name(), d.to().name()))
-            .toList(),
-        new ChoiceOutcome.Trade(trade.status().name(), trade.amount()),
+        deviationViews(resolution),
+        trade,
         new ChoiceOutcome.Price(
             ticket.sectorCode(),
             sectorName,
+            stockCode,
+            stockName,
             ticket.truth().name(),
-            ticket.magnitudeBp(),
-            price.pnl(),
-            price.lossSoftened()),
+            magnitude,
+            pnl,
+            softened),
         growthViews,
         null);
+  }
+
+  // ---- 자유 매매 (경제 개편 설계 8절) ----
+
+  @Override
+  @Transactional
+  public ChoiceOutcome trade(
+      UUID sessionId, UUID gameId, String stockCode, Action side, long quantity) {
+    GameRow game = lock(sessionId, gameId);
+    if (events.pending(gameId).isPresent()) {
+      throw new InvalidRequestException("먼저 선택을 해야 한다");
+    }
+    if (game.phase() != Phase.INVESTING) {
+      throw new InvalidRequestException("투자를 시작한 뒤에 사고팔 수 있다");
+    }
+    if (side == Action.HOLD) {
+      throw new InvalidRequestException("매수 또는 매도만 할 수 있다");
+    }
+    if (quantity < 1) {
+      throw new InvalidRequestException("수량은 1 이상이어야 한다");
+    }
+    StockDefinition stock = requireStock(stockCode);
+    int day = game.lastReportedDay();
+    CharacterView character = characters.get(gameId);
+    AccountView account = assets.get(gameId);
+    long price = market.prices(gameId).get(stockCode);
+    boolean holding = account.holdings().containsKey(stockCode);
+    long seq = logs.findAll(gameId).stream().filter(e -> TRADE_LOG.equals(e.kind())).count() + 1;
+
+    // 다른 뉴스가 없으므로 줏대 판정은 없고 용기 판정만 걸린다.
+    Resolution resolution =
+        behavior.resolve(
+            new ChoiceContext(side, character.stats(), null, holding),
+            new HashSeededRandom(game.seed()).forKey("behavior", "trade", seq));
+    ChoiceOutcome.Trade trade =
+        switch (resolution.actual()) {
+          case BUY -> tradeView(assets.buy(gameId, stockCode, quantity, price, day, null));
+          case SELL -> tradeView(assets.sell(gameId, stockCode, quantity, price, day, null));
+          case HOLD -> new ChoiceOutcome.Trade("HELD", 0, price, 0, null);
+        };
+    List<StatChange> growth =
+        characters.grow(
+            gameId,
+            resolution.deviations().stream()
+                .map(d -> (GrowthSource) new GrowthSource.DeviationGrowth(d.statCode(), null))
+                .toList(),
+            day);
+
+    Map<String, Object> payload = new HashMap<>();
+    payload.put("stockCode", stockCode);
+    payload.put("stockName", stock.name());
+    payload.put("side", side.name());
+    payload.put("chosen", side.name());
+    payload.put("actual", resolution.actual().name());
+    payload.put("deviations", deviationPayload(resolution));
+    payload.put("status", trade.status());
+    payload.put("quantity", trade.quantity());
+    payload.put("price", trade.price());
+    payload.put("amount", trade.amount());
+    payload.put("realizedPnl", trade.realizedPnl());
+    logs.append(gameId, day, TRADE_LOG, payload);
+    List<ChoiceOutcome.Growth> growthViews = logGrowth(gameId, day, growth, DEVIATION);
+
+    return new ChoiceOutcome(
+        view(games.findLatest(sessionId).orElseThrow()),
+        new ChoiceOutcome.Outcome(
+            TRADE_LOG,
+            side.name(),
+            resolution.actual().name(),
+            deviationViews(resolution),
+            trade,
+            null,
+            growthViews,
+            null));
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public StockHistory history(UUID sessionId, UUID gameId, String stockCode) {
+    GameRow game =
+        games
+            .findLatest(sessionId)
+            .filter(g -> g.id().equals(gameId))
+            .orElseThrow(() -> new NotFoundException("판이 없다"));
+    requireStock(stockCode);
+    return new StockHistory(
+        stockCode,
+        market.history(game.id(), stockCode).stream()
+            .map(p -> new StockHistory.Point(p.month(), p.price()))
+            .toList());
+  }
+
+  private StockDefinition requireStock(String stockCode) {
+    try {
+      return content.stock(stockCode);
+    } catch (IllegalArgumentException e) {
+      throw new NotFoundException("알 수 없는 종목이다");
+    }
+  }
+
+  private static ChoiceOutcome.Trade tradeView(TradeResult result) {
+    return new ChoiceOutcome.Trade(
+        result.status().name(),
+        result.quantity(),
+        result.price(),
+        result.amount(),
+        result.status() == TradeResult.Status.EXECUTED && result.realizedPnl() != 0
+            ? result.realizedPnl()
+            : null);
+  }
+
+  private static List<ChoiceOutcome.DeviationView> deviationViews(Resolution resolution) {
+    return resolution.deviations().stream()
+        .map(d -> new ChoiceOutcome.DeviationView(d.statCode(), d.from().name(), d.to().name()))
+        .toList();
+  }
+
+  private static List<Map<String, String>> deviationPayload(Resolution resolution) {
+    return resolution.deviations().stream()
+        .map(d -> Map.of("statCode", d.statCode(), "from", d.from().name(), "to", d.to().name()))
+        .toList();
   }
 
   /** 값이 실제로 바뀐 능력치만 인생 기록에 남기고 결과용으로 돌려준다. */
@@ -410,22 +627,53 @@ class DefaultProgressService implements ProgressService {
         message);
   }
 
-  // ---- 시간 흐름 ----
+  // ---- 시간 흐름: 매월 1일 (경제 개편 설계 9절) ----
 
-  /** 직업 시작일부터 30일마다 월급을 넣는다. 연차가 오르면 연봉도 오른다 (decisions.md 4번). */
-  private void paySalaries(GameRow game, int fromExclusive, int toInclusive) {
-    CharacterView character = characters.get(game.id());
-    if (character.jobCode() == null) {
-      return;
-    }
-    JobDefinition job = content.job(character.jobCode());
-    int start = character.jobStartDay();
+  /**
+   * (fromExclusive, toInclusive] 안의 매월 1일마다: 시장 → 월급·배우자 소득(은퇴 달이면 퇴직금) → 생활비 → 이자 → 월말 총자산(연 경계면
+   * 연간 자산). 생활비는 직업이 생긴 뒤부터 나간다.
+   */
+  private void processMonths(GameRow game, int fromExclusive, int toInclusive) {
+    UUID gameId = game.id();
     int month = calendar.daysPerMonth();
-    int firstPayday = Math.max(1, (fromExclusive - start) / month + 1);
-    for (int k = firstPayday; start + k * month <= toInclusive; k++) {
-      int payday = start + k * month;
-      assets.creditSalary(
-          game.id(), monthlySalary(job, (payday - start) / calendar.daysPerYear()), payday);
+    SeededRandom random = new HashSeededRandom(game.seed());
+    CharacterView character = characters.get(gameId);
+    JobDefinition job = character.jobCode() == null ? null : content.job(character.jobCode());
+
+    for (int m = fromExclusive / month + 1; m * month <= toInclusive; m++) {
+      int day = m * month;
+      market.advanceTo(gameId, day, random);
+      boolean working = job != null && day > character.jobStartDay();
+      if (working) {
+        HouseholdView home = household.get(gameId);
+        boolean retired = home.retiredDay() != null;
+        long salary = monthlySalary(job, tenureYears(character, day));
+        if (!retired && household.retireMonth(day)) {
+          long severance = salary * tenureYears(character, day);
+          assets.credit(gameId, SEVERANCE, severance, day);
+          household.retire(gameId, day);
+          logs.append(
+              gameId, day, "RETIRE", Map.of("age", ageAt(game, day), "severance", severance));
+        } else if (!retired) {
+          assets.credit(gameId, SALARY, salary, day);
+        }
+        long spouse = household.spouseIncome(gameId, day);
+        if (spouse > 0) {
+          assets.credit(gameId, SPOUSE_INCOME, spouse, day);
+        }
+        assets.spend(gameId, EXPENSE, household.monthlyExpense(gameId, day), day, null);
+      }
+      assets.accrueInterest(gameId, day);
+      Map<String, Long> prices = market.prices(gameId);
+      long total = assets.totalAsset(gameId, prices);
+      logs.upsertMonth(gameId, m, total);
+      if (day % calendar.daysPerYear() == 0) {
+        logs.upsertYear(
+            gameId,
+            game.startAge() - 1 + day / calendar.daysPerYear(),
+            total,
+            assets.get(gameId).cash());
+      }
     }
   }
 
@@ -437,6 +685,16 @@ class DefaultProgressService implements ProgressService {
     return salary;
   }
 
+  private int tenureYears(CharacterView character, int day) {
+    return character.jobStartDay() == null
+        ? 0
+        : Math.max(0, day - character.jobStartDay()) / calendar.daysPerYear();
+  }
+
+  private int ageAt(GameRow game, int day) {
+    return game.startAge() + day / calendar.daysPerYear();
+  }
+
   private void scheduleAt(GameRow game, int fromDay, int toDay) {
     CharacterView character = characters.get(game.id());
     SeededRandom random = new HashSeededRandom(game.seed());
@@ -444,7 +702,36 @@ class DefaultProgressService implements ProgressService {
         (truth, seq) ->
             behavior.hint(
                 character.stats().insight(), truth, random.forKey("behavior", "hint", seq));
-    events.schedule(game.id(), context(game, character), fromDay, toDay, random, hints);
+    ScheduleResult result =
+        events.schedule(game.id(), context(game, character), fromDay, toDay, random, hints);
+    result.notice().ifPresent(notice -> applyNotice(game, character, notice));
+  }
+
+  /** 알림성 생활 이벤트의 돈을 반영하고 기록한다 (경제 개편 설계 7.3절). */
+  private void applyNotice(GameRow game, CharacterView character, Notice notice) {
+    UUID gameId = game.id();
+    long amount = notice.amount();
+    if (notice.salaryPercent() > 0 && character.jobCode() != null) {
+      amount =
+          monthlySalary(
+                  content.job(character.jobCode()), tenureYears(character, notice.occursDay()))
+              * notice.salaryPercent()
+              / PERCENT;
+    }
+    if (amount > 0) {
+      assets.credit(gameId, WINDFALL, amount, notice.occursDay());
+    } else if (amount < 0) {
+      assets.spend(gameId, LIFE_COST, -amount, notice.occursDay(), notice.eventId());
+    }
+    logs.append(
+        gameId,
+        notice.occursDay(),
+        "LIFE",
+        Map.of(
+            "eventId", notice.eventId().toString(),
+            "noticeCode", notice.code(),
+            "title", notice.title(),
+            "amount", amount));
   }
 
   private void endIfFinished(GameRow game) {
@@ -454,7 +741,7 @@ class DefaultProgressService implements ProgressService {
     OffsetDateTime endedAt = games.now();
     games.end(game.id(), endedAt);
     AccountView account = assets.get(game.id());
-    long finalAsset = assets.totalAsset(game.id());
+    long finalAsset = assets.totalAsset(game.id(), market.prices(game.id()));
     results.save(
         new GameResult(
             game.id(),
@@ -464,7 +751,7 @@ class DefaultProgressService implements ProgressService {
             finalAsset,
             game.endAge(),
             characters.get(game.id()).stats(),
-            events.deviationCounts(game.id()),
+            deviationCounts(game.id()),
             game.createdAt(),
             endedAt));
     logs.upsertYear(game.id(), game.endAge(), finalAsset, account.cash());
@@ -479,16 +766,23 @@ class DefaultProgressService implements ProgressService {
             "returnBp", returnBp(account.initialCash(), finalAsset)));
   }
 
-  /** (fromExclusive, toInclusive] 안의 연 경계마다 그 해를 마친 자산을 남긴다. 한 번의 보고는 최대 1년이므로 많아야 하나다. */
-  private void recordYears(GameRow game, int fromExclusive, int toInclusive) {
-    int year = calendar.daysPerYear();
-    for (int k = fromExclusive / year + 1; k * year <= toInclusive; k++) {
-      logs.upsertYear(
-          game.id(),
-          game.startAge() - 1 + k,
-          assets.totalAsset(game.id()),
-          assets.get(game.id()).cash());
+  /** 뉴스 이탈(이벤트 도메인) + 자유 매매 이탈(진행의 TRADE 기록)을 합친다 (경제 개편 설계 8.2절). */
+  private Map<String, Integer> deviationCounts(UUID gameId) {
+    Map<String, Integer> counts = new HashMap<>(events.deviationCounts(gameId));
+    for (GameView.LogEntry entry : logs.findAll(gameId)) {
+      if (!TRADE_LOG.equals(entry.kind())) {
+        continue;
+      }
+      Object deviations = entry.payload().get("deviations");
+      if (deviations instanceof List<?> list) {
+        for (Object d : list) {
+          if (d instanceof Map<?, ?> map && map.get("statCode") instanceof String code) {
+            counts.merge(code, 1, Integer::sum);
+          }
+        }
+      }
     }
+    return counts;
   }
 
   private static int returnBp(long initial, long finalAsset) {
@@ -496,6 +790,7 @@ class DefaultProgressService implements ProgressService {
   }
 
   private SchedulingContext context(GameRow game, CharacterView character) {
+    HouseholdView home = household.get(game.id());
     return new SchedulingContext(
         game.phase(),
         game.startAge(),
@@ -504,23 +799,56 @@ class DefaultProgressService implements ProgressService {
         character.jobStartDay() == null ? null : character.jobStartDay() + calendar.daysPerMonth(),
         character.investmentStyle() != null,
         game.investingStartDay(),
-        endDay(game));
+        endDay(game),
+        character.jobStartDay(),
+        home.married(),
+        home.marriedDay(),
+        home.childBirthDays().size());
   }
 
   // ---- 화면용 상태 ----
 
   private GameView view(GameRow game) {
-    CharacterView character = characters.get(game.id());
-    AccountView account = assets.get(game.id());
+    UUID gameId = game.id();
+    CharacterView character = characters.get(gameId);
+    AccountView account = assets.get(gameId);
+    Map<String, Long> prices = market.prices(gameId);
+    List<Quote> quotes = market.quotes(gameId);
+    int month = market.currentMonth(gameId);
     boolean ended = game.ended();
-    Optional<EventView> pending = ended ? Optional.empty() : events.pending(game.id());
+    Optional<EventView> pending = ended ? Optional.empty() : events.pending(gameId);
     Integer nextEventDay =
         ended || pending.isPresent()
             ? null
             : nextEventDay(game, game.lastReportedDay()).stream().boxed().findFirst().orElse(null);
 
+    List<GameView.Holding> holdings = new ArrayList<>();
+    long invested = 0;
+    for (Map.Entry<String, AccountView.Holding> e : account.holdings().entrySet()) {
+      StockDefinition stock = content.stock(e.getKey());
+      long price = prices.getOrDefault(e.getKey(), 0L);
+      long value = e.getValue().quantity() * price;
+      long pnl = value - e.getValue().costBasis();
+      int pnlBp = e.getValue().costBasis() == 0 ? 0 : (int) (pnl * BP / e.getValue().costBasis());
+      invested += value;
+      holdings.add(
+          new GameView.Holding(
+              stock.code(),
+              stock.name(),
+              stock.sector(),
+              content.sectorName(stock.sector()),
+              e.getValue().quantity(),
+              e.getValue().avgCost(),
+              price,
+              value,
+              pnl,
+              pnlBp));
+    }
+    Map<String, Quote> quoteByCode = new HashMap<>();
+    quotes.forEach(q -> quoteByCode.put(q.stockCode(), q));
+
     return new GameView(
-        game.id(),
+        gameId,
         ended ? GameView.Status.ENDED : GameView.Status.ACTIVE,
         game.phase(),
         game.lastReportedDay(),
@@ -530,12 +858,12 @@ class DefaultProgressService implements ProgressService {
         character.stats(),
         character.initialStats(),
         account.cash(),
-        assets.totalAsset(game.id()),
+        account.cash() + invested - account.debt(),
         account.initialCash(),
-        account.holdings().entrySet().stream()
-            .map(
-                e -> new GameView.Holding(e.getKey(), content.sectorName(e.getKey()), e.getValue()))
-            .toList(),
+        invested,
+        account.debt(),
+        logs.findMonthTotal(gameId, month - 1).stream().boxed().findFirst().orElse(null),
+        holdings,
         job(character, game.lastReportedDay()),
         character.investmentStyle() == null
             ? null
@@ -554,11 +882,51 @@ class DefaultProgressService implements ProgressService {
             : new GameView.Named(
                 character.interestSector(), content.sectorName(character.interestSector())),
         character.investorType() == null ? null : investorTypeView(character.investorType()),
-        pending.map(this::pendingView).orElse(null),
+        new GameView.Market(month, quotes.stream().map(this::quoteView).toList()),
+        householdView(game, character),
+        pending.map(e -> pendingView(e, quoteByCode)).orElse(null),
         nextEventDay,
-        ended ? results.find(game.id()).map(DefaultProgressService::resultView).orElse(null) : null,
-        logs.findAll(game.id()),
-        logs.findYears(game.id()));
+        ended ? results.find(gameId).map(DefaultProgressService::resultView).orElse(null) : null,
+        logs.findAll(gameId),
+        logs.findYears(gameId));
+  }
+
+  private GameView.StockQuote quoteView(Quote quote) {
+    StockDefinition stock = content.stock(quote.stockCode());
+    return new GameView.StockQuote(
+        stock.code(),
+        stock.name(),
+        stock.sector(),
+        content.sectorName(stock.sector()),
+        quote.price(),
+        changeBp(quote.price(), quote.priceMonthAgo()),
+        changeBp(quote.price(), quote.priceYearAgo()),
+        quote.last12());
+  }
+
+  private static int changeBp(long now, long before) {
+    return before <= 0 ? 0 : (int) ((now - before) * BP / before);
+  }
+
+  private GameView.Household householdView(GameRow game, CharacterView character) {
+    HouseholdView home = household.get(game.id());
+    int day = game.lastReportedDay();
+    boolean working = character.jobCode() != null && day > character.jobStartDay();
+    boolean retired = home.retiredDay() != null;
+    long income =
+        working && !retired
+            ? monthlySalary(content.job(character.jobCode()), tenureYears(character, day))
+            : 0;
+    return new GameView.Household(
+        home.married(),
+        home.marriedDay() == null ? null : ageAt(game, home.marriedDay()),
+        home.childBirthDays().stream()
+            .map(birth -> new GameView.Child((day - birth) / calendar.daysPerYear()))
+            .toList(),
+        income,
+        household.spouseIncome(game.id(), day),
+        working ? household.monthlyExpense(game.id(), day) : 0,
+        retired);
   }
 
   private GameView.InvestorType investorTypeView(String code) {
@@ -571,17 +939,23 @@ class DefaultProgressService implements ProgressService {
       return null;
     }
     JobDefinition job = content.job(character.jobCode());
-    int tenure = Math.max(0, day - character.jobStartDay()) / calendar.daysPerYear();
-    return new GameView.Job(job.code(), job.title(), monthlySalary(job, tenure));
+    return new GameView.Job(
+        job.code(), job.title(), monthlySalary(job, tenureYears(character, day)));
   }
 
-  private GameView.PendingEvent pendingView(EventView event) {
+  private GameView.PendingEvent pendingView(EventView event, Map<String, Quote> quotes) {
+    String stockName = event.stockCode() == null ? null : content.stock(event.stockCode()).name();
+    Quote quote = event.stockCode() == null ? null : quotes.get(event.stockCode());
     return new GameView.PendingEvent(
         event.eventId(),
         event.kind().name(),
         event.occursDay(),
         event.sectorCode(),
         event.sectorCode() == null ? null : content.sectorName(event.sectorCode()),
+        event.stockCode(),
+        stockName,
+        event.sectorWide(),
+        quote == null ? null : quote.last12(),
         event.title(),
         event.body(),
         event.hintText(),

@@ -1,6 +1,7 @@
 package investorgame.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
@@ -42,6 +43,7 @@ class GameFlowTest {
     Map<String, Integer> seenKinds = new HashMap<>();
     List<DocumentContext> newsOutcomes = new ArrayList<>();
     List<String> responses = new ArrayList<>();
+    DocumentContext afterJob = null;
     int newsCount = 0;
 
     for (int step = 0; step < 2_000 && "ACTIVE".equals(game.read("$.status")); step++) {
@@ -73,6 +75,9 @@ class GameFlowTest {
               nextEventDay == null ? endDay : nextEventDay);
       game = client.advance(gameId, target);
       responses.add(game.jsonString());
+      if (afterJob == null && game.read("$.job") != null && day > 0) {
+        afterJob = game;
+      }
     }
 
     assertThat(game.read("$.status", String.class)).isEqualTo("ENDED");
@@ -107,7 +112,30 @@ class GameFlowTest {
       assertThat(response)
           .doesNotContain("seed")
           .doesNotContain("hidden")
-          .doesNotContain("magnitude");
+          .doesNotContain("magnitude")
+          .doesNotContain("drift");
+    }
+
+    // 시장·가계: 종목 18개가 매달 움직이고, 월급은 전부 자산이 되지 않으며 결혼·자녀·은퇴가 삶에 들어온다 (경제 개편 설계).
+    assertThat(game.read("$.market.stocks.length()", Integer.class)).isEqualTo(18);
+    assertThat(game.read("$.market.month", Integer.class)).isEqualTo(64 * 12);
+    List<Map<String, Object>> holdings = game.read("$.holdings");
+    for (Map<String, Object> h : holdings) {
+      assertThat(h)
+          .containsKeys(
+              "stockCode", "stockName", "quantity", "avgCost", "price", "value", "pnl", "pnlBp");
+    }
+    assertThat(game.read("$.household.married", Boolean.class)).isTrue();
+    assertThat(game.read("$.household.retired", Boolean.class)).isTrue();
+    assertThat(game.read("$.household.children.length()", Integer.class)).isBetween(1, 3);
+    assertThat(game.read("$.debt", Long.class)).isGreaterThanOrEqualTo(0);
+    assertThat(afterJob).isNotNull();
+    assertThat(afterJob.read("$.household.monthlyExpense", Long.class)).isPositive();
+    assertThat(afterJob.read("$.household.monthlyIncome", Long.class))
+        .isEqualTo(afterJob.read("$.job.monthlySalary", Long.class));
+    for (DocumentContext outcome : newsOutcomes) {
+      assertThat(outcome.read("$.outcome.price.stockCode", String.class)).isNotBlank();
+      assertThat(outcome.read("$.outcome.trade.quantity", Integer.class)).isNotNull();
     }
 
     DocumentContext reloaded = client.current();
@@ -138,7 +166,8 @@ class GameFlowTest {
     // 인생 기록: 진행이 사건마다 기록한 것이 탄생부터 종료까지 순서대로 남는다.
     List<String> kinds = game.read("$.log[*].kind");
     assertThat(kinds).startsWith("BIRTH").endsWith("END");
-    assertThat(kinds).containsOnlyOnce("JOB", "STYLE", "OFFER");
+    assertThat(kinds).containsOnlyOnce("JOB", "STYLE", "OFFER", "MARRIAGE", "RETIRE");
+    assertThat(kinds).contains("CHILD", "LIFE");
     assertThat(kinds.stream().filter("TRAIT"::equals).count()).isEqualTo(6);
     assertThat(kinds.stream().filter("NEWS"::equals).count())
         .isEqualTo((long) seenKinds.get("NEWS"));
@@ -154,7 +183,8 @@ class GameFlowTest {
     Map<String, Object> newsPayload = newsPayloads.get(newsPayloads.size() - 1);
     assertThat(newsPayload.get("chosen")).isEqualTo(lastNews.read("$.outcome.chosen"));
     assertThat(newsPayload.get("actual")).isEqualTo(lastNews.read("$.outcome.actual"));
-    assertThat(newsPayload).containsKeys("eventTitle", "sectorName", "deviations", "trade");
+    assertThat(newsPayload)
+        .containsKeys("eventTitle", "sectorName", "stockName", "deviations", "trade");
     List<String> lastKinds = lastNews.read("$.game.log[*].kind");
     assertThat(lastKinds.get(lastKinds.size() - 1)).isIn("PRICE", "GROWTH");
 
@@ -164,6 +194,91 @@ class GameFlowTest {
     List<Map<String, Object>> yearly = game.read("$.yearly");
     assertThat(((Number) yearly.get(yearly.size() - 1).get("totalAsset")).longValue())
         .isEqualTo(game.read("$.result.finalAsset", Long.class));
+  }
+
+  @Test
+  void 같은_달을_두_번_보고해도_가격_월급_지출은_한_번씩이다() throws Exception {
+    MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.startInvesting();
+    String gameId = game.read("$.gameId");
+    int day = game.read("$.day", Integer.class);
+    Integer next = game.read("$.nextEventDay");
+    int target = Math.min(day + 60, next == null ? day + 60 : next);
+
+    DocumentContext first = client.advance(gameId, target);
+    DocumentContext second = client.advance(gameId, target);
+
+    assertThat(second.read("$.cash", Long.class)).isEqualTo(first.read("$.cash", Long.class));
+    assertThat(second.read("$.debt", Long.class)).isEqualTo(first.read("$.debt", Long.class));
+    assertThat(second.read("$.market.month", Integer.class))
+        .isEqualTo(first.read("$.market.month", Integer.class));
+    assertThat(second.read("$.market.stocks[0].price", Long.class))
+        .isEqualTo(first.read("$.market.stocks[0].price", Long.class));
+    assertThat(second.read("$.market.month", Integer.class)).isEqualTo(target / 30);
+  }
+
+  @Test
+  void 투자_중_자유_매매는_용기_판정을_거쳐_포트폴리오에_반영된다() throws Exception {
+    MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.startInvesting();
+    String gameId = game.read("$.gameId");
+    String stock = game.read("$.market.stocks[0].code");
+
+    DocumentContext result = client.trade(gameId, stock, "BUY", 1);
+
+    assertThat(result.read("$.outcome.kind", String.class)).isEqualTo("TRADE");
+    assertThat(result.read("$.outcome.chosen", String.class)).isEqualTo("BUY");
+    String actual = result.read("$.outcome.actual");
+    if ("BUY".equals(actual)) {
+      assertThat(result.read("$.game.holdings[0].stockCode", String.class)).isEqualTo(stock);
+      assertThat(result.read("$.game.holdings[0].quantity", Integer.class)).isEqualTo(1);
+      assertThat(result.read("$.outcome.trade.status", String.class)).isEqualTo("EXECUTED");
+    } else {
+      assertThat(actual).isEqualTo("HOLD");
+      assertThat(result.read("$.outcome.deviations[0].statCode", String.class))
+          .isEqualTo("courage");
+    }
+    List<String> kinds = result.read("$.game.log[*].kind");
+    assertThat(kinds).contains("TRADE");
+    assertThat(result.jsonString()).doesNotContain("seed").doesNotContain("hidden");
+  }
+
+  @Test
+  void 대기_중_이벤트가_있으면_매매는_400이다() throws Exception {
+    MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.startInvesting();
+    String gameId = game.read("$.gameId");
+    String stock = game.read("$.market.stocks[0].code");
+    int next = game.read("$.nextEventDay", Integer.class);
+    int day = game.read("$.day", Integer.class);
+    while (game.read("$.pendingEvent") == null) {
+      day = Math.min(day + 360, next);
+      game = client.advance(gameId, day);
+      next = game.read("$.nextEventDay") == null ? day : game.read("$.nextEventDay", Integer.class);
+    }
+    long cash = game.read("$.cash", Long.class);
+
+    client.tradeRaw(gameId, stock, "BUY", 1).andExpect(status().isBadRequest());
+    assertThat(client.current().read("$.cash", Long.class)).isEqualTo(cash);
+  }
+
+  @Test
+  void 종목_이력은_달마다_한_점이다() throws Exception {
+    MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.startInvesting();
+    String gameId = game.read("$.gameId");
+    String stock = game.read("$.market.stocks[0].code");
+
+    DocumentContext history = client.history(gameId, stock);
+
+    assertThat(history.read("$.stockCode", String.class)).isEqualTo(stock);
+    assertThat(history.read("$.points.length()", Integer.class))
+        .isEqualTo(game.read("$.market.month", Integer.class) + 1);
+    assertThat(history.read("$.points[0].month", Integer.class)).isZero();
   }
 
   @Test

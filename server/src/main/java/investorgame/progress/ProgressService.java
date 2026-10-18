@@ -1,5 +1,6 @@
 package investorgame.progress;
 
+import investorgame.common.Action;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -22,4 +23,10 @@ public interface ProgressService {
 
   /** 대기 중인 이벤트에 선택을 제출한다. 뉴스이면 판정·매매·주가 변동·성장을 거친 결과를 돌려준다. */
   ChoiceOutcome choose(UUID sessionId, UUID gameId, UUID eventId, String option);
+
+  /** 자유 매매. 투자 단계에서 대기 중인 이벤트가 없을 때 현재가로 사고판다. 용기 판정만 거친다 (경제 개편 설계 8절). side는 BUY 또는 SELL. */
+  ChoiceOutcome trade(UUID sessionId, UUID gameId, String stockCode, Action side, long quantity);
+
+  /** 한 종목의 월별 가격 이력. */
+  StockHistory history(UUID sessionId, UUID gameId, String stockCode);
 }

@@ -22,8 +22,9 @@ class EventRepository {
 
   private static final String COLUMNS =
       """
-      id, seq, kind, definition_code, sector_code, occurs_day, status, hidden_direction,
-      hidden_magnitude_bp, hint_code, sway_sentiment, sway_code, options::text AS options
+      id, seq, kind, definition_code, sector_code, stock_code, sector_wide, occurs_day, status,
+      hidden_direction, hidden_magnitude_bp, hint_code, sway_sentiment, sway_code,
+      options::text AS options
       """;
 
   private final JdbcClient jdbc;
@@ -59,13 +60,13 @@ class EventRepository {
     jdbc.sql(
             """
             INSERT INTO event_instance
-              (id, game_id, seq, kind, definition_code, sector_code, occurs_day, skippable, status,
-               hidden_direction, hidden_magnitude_bp, hint_code, sway_sentiment, sway_code, options,
-               depth, created_at)
+              (id, game_id, seq, kind, definition_code, sector_code, stock_code, sector_wide,
+               occurs_day, skippable, status, hidden_direction, hidden_magnitude_bp, hint_code,
+               sway_sentiment, sway_code, options, depth, created_at, resolved_at)
             VALUES
-              (:id, :gameId, :seq, :kind, :definitionCode, :sectorCode, :occursDay, FALSE, :status,
-               :hiddenDirection, :hiddenMagnitudeBp, :hintCode, :swaySentiment, :swayCode,
-               CAST(:options AS jsonb), 0, :now)
+              (:id, :gameId, :seq, :kind, :definitionCode, :sectorCode, :stockCode, :sectorWide,
+               :occursDay, :skippable, :status, :hiddenDirection, :hiddenMagnitudeBp, :hintCode,
+               :swaySentiment, :swayCode, CAST(:options AS jsonb), 0, :now, :resolvedAt)
             ON CONFLICT (game_id, seq) DO NOTHING
             """)
         .param("id", row.id())
@@ -74,8 +75,12 @@ class EventRepository {
         .param("kind", row.kind().name())
         .param("definitionCode", row.definitionCode())
         .param("sectorCode", row.sectorCode())
+        .param("stockCode", row.stockCode())
+        .param("sectorWide", row.sectorWide())
         .param("occursDay", row.occursDay())
+        .param("skippable", row.kind() == EventKind.NOTICE)
         .param("status", row.status())
+        .param("resolvedAt", row.resolved() ? now() : null)
         .param("hiddenDirection", row.hiddenDirection())
         .param("hiddenMagnitudeBp", row.hiddenMagnitudeBp())
         .param("hintCode", row.hintCode())
@@ -150,6 +155,8 @@ class EventRepository {
         EventKind.valueOf(rs.getString("kind")),
         rs.getString("definition_code"),
         rs.getString("sector_code"),
+        rs.getString("stock_code"),
+        rs.getBoolean("sector_wide"),
         rs.getInt("occurs_day"),
         rs.getString("status"),
         rs.getString("hidden_direction"),

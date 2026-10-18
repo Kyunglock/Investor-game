@@ -1,10 +1,11 @@
 package investorgame.asset;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import investorgame.TestcontainersConfiguration;
-import investorgame.common.Action;
-import investorgame.common.Direction;
+import investorgame.common.error.InvalidRequestException;
+import java.util.Map;
 import java.util.SplittableRandom;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,12 +14,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 
-/** specs/asset.md 7절의 시나리오를 실제 Postgres에서 확인한다. */
+/** 경제 개편 설계 6절(수량 보유, 자유 매매, 빚)의 규칙을 실제 Postgres에서 확인한다. 가격은 인자로 받는다. */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 class AssetServiceTest {
 
-  private static final String SEMI = "semiconductor";
+  private static final String SSJ = "ssj";
+  private static final String SALARY = "SALARY";
+  private static final String EXPENSE = "EXPENSE";
+  private static final String LIFE_COST = "LIFE_COST";
 
   @Autowired AssetService assets;
 
@@ -34,78 +38,130 @@ class AssetServiceTest {
   @Test
   void 같은_판으로_다시_만들면_기존_계정을_돌려준다() {
     assertThat(assets.create(gameId, new SplittableRandom(99)).cash()).isEqualTo(initialCash);
+    assertThat(assets.get(gameId).debt()).isZero();
   }
 
   @Test
-  void 매수는_현금의_30퍼센트를_쓴다() {
-    TradeResult trade = assets.trade(gameId, Action.BUY, SEMI, 10, null);
+  void 수량과_가격으로_사면_현금이_줄고_원가가_쌓인다() {
+    TradeResult trade = assets.buy(gameId, SSJ, 10, 72_000, 10, null);
 
-    long amount = initialCash * 3000 / 10_000;
     assertThat(trade.status()).isEqualTo(TradeResult.Status.EXECUTED);
-    assertThat(trade.amount()).isEqualTo(amount);
-    assertThat(assets.get(gameId).cash()).isEqualTo(initialCash - amount);
-    assertThat(assets.get(gameId).holdings()).containsEntry(SEMI, amount);
-    assertThat(assets.totalAsset(gameId)).isEqualTo(initialCash);
+    assertThat(trade.amount()).isEqualTo(720_000);
+    assertThat(trade.quantity()).isEqualTo(10);
+    assertThat(trade.price()).isEqualTo(72_000);
+    assertThat(assets.get(gameId).cash()).isEqualTo(initialCash - 720_000);
+    AccountView.Holding holding = assets.get(gameId).holdings().get(SSJ);
+    assertThat(holding).isEqualTo(new AccountView.Holding(10, 720_000));
+    assertThat(holding.avgCost()).isEqualTo(72_000);
   }
 
   @Test
-  void 매도는_해당_섹터_전량이고_보유가_없으면_아무것도_하지_않는다() {
-    assertThat(assets.trade(gameId, Action.SELL, SEMI, 10, null).status())
+  void 현금이_모자라면_사지_않는다() {
+    TradeResult trade = assets.buy(gameId, SSJ, initialCash / 1_000 + 1, 1_000, 10, null);
+    assertThat(trade.status()).isEqualTo(TradeResult.Status.INSUFFICIENT_CASH);
+    assertThat(assets.get(gameId).cash()).isEqualTo(initialCash);
+    assertThat(assets.get(gameId).holdings()).isEmpty();
+  }
+
+  @Test
+  void 수량_0은_오류다() {
+    assertThatThrownBy(() -> assets.buy(gameId, SSJ, 0, 1_000, 10, null))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> assets.sell(gameId, SSJ, 0, 1_000, 10, null))
+        .isInstanceOf(InvalidRequestException.class);
+  }
+
+  @Test
+  void 일부_매도는_원가를_비례_차감하고_실현_손익을_돌려준다() {
+    assets.buy(gameId, SSJ, 10, 72_000, 10, null);
+
+    TradeResult sell = assets.sell(gameId, SSJ, 4, 80_000, 11, null);
+
+    assertThat(sell.status()).isEqualTo(TradeResult.Status.EXECUTED);
+    assertThat(sell.amount()).isEqualTo(320_000);
+    assertThat(sell.realizedPnl()).isEqualTo(32_000);
+    assertThat(assets.get(gameId).holdings().get(SSJ))
+        .isEqualTo(new AccountView.Holding(6, 432_000));
+    assertThat(assets.get(gameId).cash()).isEqualTo(initialCash - 720_000 + 320_000);
+  }
+
+  @Test
+  void 보유보다_많이_팔면_전량이고_없으면_NOTHING_TO_SELL() {
+    assertThat(assets.sell(gameId, SSJ, 5, 1_000, 10, null).status())
         .isEqualTo(TradeResult.Status.NOTHING_TO_SELL);
 
-    long bought = assets.trade(gameId, Action.BUY, SEMI, 10, null).amount();
-    TradeResult sell = assets.trade(gameId, Action.SELL, SEMI, 20, null);
-    assertThat(sell.amount()).isEqualTo(bought);
-    assertThat(assets.get(gameId).cash()).isEqualTo(initialCash);
-    assertThat(assets.get(gameId).holdings()).doesNotContainKey(SEMI);
+    assets.buy(gameId, SSJ, 10, 72_000, 10, null);
+    TradeResult sell = assets.sell(gameId, SSJ, 999, 70_000, 11, null);
+    assertThat(sell.quantity()).isEqualTo(10);
+    assertThat(sell.amount()).isEqualTo(700_000);
+    assertThat(sell.realizedPnl()).isEqualTo(-20_000);
+    assertThat(assets.get(gameId).holdings()).doesNotContainKey(SSJ);
+    assertThat(assets.get(gameId).cash()).isEqualTo(initialCash - 720_000 + 700_000);
   }
 
   @Test
-  void 관망은_아무것도_바꾸지_않는다() {
-    assertThat(assets.trade(gameId, Action.HOLD, SEMI, 10, null).status())
-        .isEqualTo(TradeResult.Status.HELD);
-    assertThat(assets.get(gameId).cash()).isEqualTo(initialCash);
+  void 지출은_현금이_모자라면_빚이_되고_현금은_음수가_되지_않는다() {
+    SpendResult spend = assets.spend(gameId, EXPENSE, initialCash + 500_000, 30, null);
+
+    assertThat(spend.spent()).isTrue();
+    assertThat(spend.fromCash()).isEqualTo(initialCash);
+    assertThat(spend.toDebt()).isEqualTo(500_000);
+    assertThat(assets.get(gameId).cash()).isZero();
+    assertThat(assets.get(gameId).debt()).isEqualTo(500_000);
   }
 
   @Test
-  void 주가가_오르면_보유가_늘고_손실은_운으로_줄어들_수_있다() {
-    long held = assets.trade(gameId, Action.BUY, SEMI, 10, null).amount();
+  void 수입은_빚을_먼저_갚는다() {
+    assets.spend(gameId, EXPENSE, initialCash + 500_000, 30, null);
 
-    PriceChangeResult up = assets.applyPriceChange(gameId, SEMI, Direction.UP, 1000, 30, 11, null);
-    assertThat(up.pnl()).as("이득에는 완화 비율을 적용하지 않는다").isEqualTo(held / 10);
-    assertThat(up.lossSoftened()).isFalse();
+    IncomeResult income = assets.credit(gameId, SALARY, 800_000, 30);
 
-    long before = up.holdingAfter();
-    PriceChangeResult softened =
-        assets.applyPriceChange(gameId, SEMI, Direction.DOWN, 1000, 30, 12, null);
-    assertThat(softened.pnl()).isEqualTo(-(before / 10) * 30 / 100);
-    assertThat(softened.lossSoftened()).isTrue();
-
-    PriceChangeResult full =
-        assets.applyPriceChange(gameId, SEMI, Direction.DOWN, 1000, 100, 13, null);
-    assertThat(full.lossSoftened()).isFalse();
+    assertThat(income.credited()).isTrue();
+    assertThat(income.debtRepaid()).isEqualTo(500_000);
+    assertThat(income.cashAfter()).isEqualTo(300_000);
+    assertThat(assets.get(gameId).debt()).isZero();
   }
 
   @Test
-  void 보유가_없으면_주가_변동이_아무것도_바꾸지_않는다() {
-    PriceChangeResult result =
-        assets.applyPriceChange(gameId, SEMI, Direction.DOWN, 1500, 100, 1, null);
-    assertThat(result.pnl()).isZero();
-    assertThat(assets.totalAsset(gameId)).isEqualTo(initialCash);
+  void 이자는_빚에만_붙고_같은_날_두_번_붙지_않는다() {
+    assertThat(assets.accrueInterest(gameId, 30).accrued()).as("빚이 없으면 붙지 않는다").isFalse();
+
+    assets.spend(gameId, EXPENSE, initialCash + 1_000_000, 30, null);
+    InterestResult interest = assets.accrueInterest(gameId, 30);
+    assertThat(interest.accrued()).isTrue();
+    assertThat(interest.interest()).isEqualTo(10_000);
+    assertThat(interest.debtAfter()).isEqualTo(1_010_000);
+    assertThat(assets.accrueInterest(gameId, 30).accrued()).isFalse();
+    assertThat(assets.get(gameId).debt()).isEqualTo(1_010_000);
   }
 
   @Test
-  void 다른_섹터의_보유는_영향을_받지_않는다() {
-    long bio = assets.trade(gameId, Action.BUY, "bio", 10, null).amount();
-    assets.trade(gameId, Action.BUY, SEMI, 11, null);
-    assets.applyPriceChange(gameId, SEMI, Direction.DOWN, 1500, 100, 12, null);
-    assertThat(assets.get(gameId).holdings()).containsEntry("bio", bio);
-  }
-
-  @Test
-  void 월급은_같은_날_한_번만_들어온다() {
-    assertThat(assets.creditSalary(gameId, 3_000_000, 30).credited()).isTrue();
-    assertThat(assets.creditSalary(gameId, 3_000_000, 30).credited()).isFalse();
+  void 같은_날_같은_종류의_수입_지출은_한_번만_처리된다() {
+    assertThat(assets.credit(gameId, SALARY, 3_000_000, 30).credited()).isTrue();
+    assertThat(assets.credit(gameId, SALARY, 3_000_000, 30).credited()).isFalse();
     assertThat(assets.get(gameId).cash()).isEqualTo(initialCash + 3_000_000);
+
+    assertThat(assets.spend(gameId, EXPENSE, 1_000_000, 30, null).spent()).isTrue();
+    assertThat(assets.spend(gameId, EXPENSE, 1_000_000, 30, null).spent()).isFalse();
+    assertThat(assets.spend(gameId, LIFE_COST, 100_000, 30, null).spent()).isTrue();
+    assertThat(assets.spend(gameId, LIFE_COST, 100_000, 30, null).spent())
+        .as("일회성 비용은 같은 날 여러 번 가능")
+        .isTrue();
+    assertThat(assets.get(gameId).cash()).isEqualTo(initialCash + 3_000_000 - 1_000_000 - 200_000);
+  }
+
+  @Test
+  void 총자산은_현금_더하기_평가_빼기_빚이다() {
+    assets.buy(gameId, SSJ, 10, 72_000, 10, null);
+    assets.buy(gameId, "ctl", 2, 180_000, 10, null);
+    assets.spend(gameId, EXPENSE, initialCash, 30, null);
+    assets.spend(gameId, LIFE_COST, 300_000, 31, null);
+    Map<String, Long> prices = Map.of(SSJ, 80_000L, "ctl", 150_000L, "nsm", 400_000L);
+
+    assertThat(assets.holdingsValue(gameId, prices)).isEqualTo(800_000 + 300_000);
+    long cash = assets.get(gameId).cash();
+    long debt = assets.get(gameId).debt();
+    assertThat(debt).isEqualTo(300_000 + (720_000 + 360_000));
+    assertThat(assets.totalAsset(gameId, prices)).isEqualTo(cash + 1_100_000 - debt);
   }
 }

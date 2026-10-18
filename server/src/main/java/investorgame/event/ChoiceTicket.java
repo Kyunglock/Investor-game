@@ -5,7 +5,12 @@ import investorgame.common.Sentiment;
 import java.util.Map;
 import java.util.UUID;
 
-/** 진행 전용. 숨은 값을 포함하므로 응답에 그대로 내리지 않는다. 뉴스가 아니면 truth, swaySentiment는 null이다. */
+/**
+ * 진행 전용. 숨은 값을 포함하므로 응답에 그대로 내리지 않는다. 뉴스가 아니면 stockCode, truth, swaySentiment는 null이다.
+ *
+ * @param stockCode 뉴스의 매매 대상 종목
+ * @param sectorWide 뉴스 충격이 섹터 전체인가
+ */
 public record ChoiceTicket(
     UUID eventId,
     EventKind kind,
@@ -13,6 +18,8 @@ public record ChoiceTicket(
     int seq,
     int occursDay,
     String sectorCode,
+    String stockCode,
+    boolean sectorWide,
     Direction truth,
     int magnitudeBp,
     Sentiment swaySentiment,
@@ -36,4 +43,12 @@ public record ChoiceTicket(
       implements Effect {}
 
   public record Offer(boolean accepted) implements Effect {}
+
+  /** 결혼·자녀 선택. 수락이면 진행이 가계와 자산에 반영한다. */
+  public record Life(LifeKind kind, boolean accepted) implements Effect {}
+
+  public enum LifeKind {
+    MARRIAGE,
+    CHILD
+  }
 }

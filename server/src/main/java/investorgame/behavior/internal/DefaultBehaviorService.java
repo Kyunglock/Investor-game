@@ -38,7 +38,9 @@ class DefaultBehaviorService implements BehaviorService {
     List<Deviation> deviations = new ArrayList<>();
     Action action = context.choice();
 
-    if (convictionRoll < deviationBp(context.stats().conviction())) {
+    // "다른 뉴스"가 없는 자유 매매는 줏대 판정을 건너뛴다. 난수는 이미 뽑았으므로 순서는 그대로다 (경제 개편 설계 8.2절).
+    if (context.swaySentiment() != null
+        && convictionRoll < deviationBp(context.stats().conviction())) {
       Action swayed = context.swaySentiment() == Sentiment.POS ? Action.BUY : Action.SELL;
       if (swayed != action) {
         deviations.add(new Deviation(StatCodes.CONVICTION, action, swayed));

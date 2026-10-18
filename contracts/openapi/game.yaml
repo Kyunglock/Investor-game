@@ -64,6 +64,47 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/games/{gameId}/trades:
+    post:
+      operationId: trade
+      summary: 종목을 사거나 판다 (자유 매매)
+      description: |
+        투자 단계에서 아무 때나 현재가로 사고판다. 뉴스와 달리 "다른 뉴스"가 없어 줏대 판정은 없고 용기 판정만 거친다 (겁나서 주문을 못 낼 수 있다).
+        대기 중인 선택형 이벤트가 있으면 먼저 선택해야 한다 (400).
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TradeRequest' }
+      responses:
+        '200':
+          description: 판정을 거친 매매 결과와 판 상태. outcome.kind는 TRADE
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChoiceOutcome' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/games/{gameId}/stocks/{stockCode}/history:
+    get:
+      operationId: stockHistory
+      summary: 한 종목의 월별 가격 이력 (판 시작부터)
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+        - name: stockCode
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 달마다 한 점
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StockHistory' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/games/{gameId}/events/{eventId}/choose:
     post:
       operationId: chooseEvent
@@ -126,11 +167,81 @@ components:
         description: { type: string }
     Holding:
       type: object
-      required: [sectorCode, sectorName, amount]
+      description: 보유 종목. 평가는 현재가 기준이고 가격은 매달 바뀐다
+      required: [stockCode, stockName, sectorCode, sectorName, quantity, avgCost, price, value, pnl, pnlBp]
       properties:
+        stockCode: { type: string }
+        stockName: { type: string }
         sectorCode: { type: string }
         sectorName: { type: string }
-        amount: { type: integer, format: int64, description: 평가액(원) }
+        quantity: { type: integer, format: int64, description: 보유 수량(주) }
+        avgCost: { type: integer, format: int64, description: 평단(원) }
+        price: { type: integer, format: int64, description: 현재가(원) }
+        value: { type: integer, format: int64, description: 평가액 = 수량 × 현재가 }
+        pnl: { type: integer, format: int64, description: 평가 손익 = 평가액 − 원가 }
+        pnlBp: { type: integer, description: 수익률(만분율) }
+    StockQuote:
+      type: object
+      description: 종목 시세. 숨은 값(다음 달 변동)은 없다
+      required: [code, name, sectorCode, sectorName, price, change1mBp, change12mBp, spark]
+      properties:
+        code: { type: string }
+        name: { type: string }
+        sectorCode: { type: string }
+        sectorName: { type: string }
+        price: { type: integer, format: int64 }
+        change1mBp: { type: integer, description: 1개월 변화율(만분율) }
+        change12mBp: { type: integer, description: 12개월 변화율(만분율) }
+        spark:
+          type: array
+          description: 최근 12달 가격(이번 달 포함, 오래된 것부터). 이력이 짧으면 있는 만큼
+          items: { type: integer, format: int64 }
+    Market:
+      type: object
+      required: [month, stocks]
+      properties:
+        month: { type: integer, description: 게임 달 번호 (판 시작 = 0) }
+        stocks:
+          type: array
+          items: { $ref: '#/components/schemas/StockQuote' }
+    Household:
+      type: object
+      description: 가계부. 금액은 이번 달 기준(원)
+      required: [married, children, monthlyIncome, spouseIncome, monthlyExpense, retired]
+      properties:
+        married: { type: boolean }
+        marriedAge: { type: [integer, 'null'] }
+        children:
+          type: array
+          items:
+            type: object
+            required: [age]
+            properties:
+              age: { type: integer }
+        monthlyIncome: { type: integer, format: int64, description: 월급. 은퇴 뒤 0 }
+        spouseIncome: { type: integer, format: int64 }
+        monthlyExpense: { type: integer, format: int64, description: 생활비 + 자녀 비용 }
+        retired: { type: boolean }
+    TradeRequest:
+      type: object
+      required: [stockCode, side, quantity]
+      properties:
+        stockCode: { type: string }
+        side: { type: string, enum: [BUY, SELL] }
+        quantity: { type: integer, format: int64, minimum: 1 }
+    StockHistory:
+      type: object
+      required: [stockCode, points]
+      properties:
+        stockCode: { type: string }
+        points:
+          type: array
+          items:
+            type: object
+            required: [month, price]
+            properties:
+              month: { type: integer }
+              price: { type: integer, format: int64 }
     Job:
       type: object
       required: [code, title, monthlySalary]
@@ -146,13 +257,20 @@ components:
         label: { type: string }
     PendingEvent:
       type: object
-      required: [eventId, kind, occursDay, title, body, options]
+      required: [eventId, kind, occursDay, sectorWide, title, body, options]
       properties:
         eventId: { type: string, format: uuid }
-        kind: { type: string, enum: [JOB, TRAIT, OFFER, NEWS] }
+        kind: { type: string, enum: [JOB, TRAIT, OFFER, LIFE, NEWS] }
         occursDay: { type: integer }
         sectorCode: { type: [string, 'null'] }
         sectorName: { type: [string, 'null'] }
+        stockCode: { type: [string, 'null'], description: 뉴스의 매매 대상 종목 }
+        stockName: { type: [string, 'null'] }
+        sectorWide: { type: boolean, description: 뉴스 충격이 섹터 전체인가 }
+        spark:
+          type: [array, 'null']
+          description: 뉴스 종목의 최근 12달 가격
+          items: { type: integer, format: int64 }
         title: { type: string }
         body: { type: string }
         hint: { type: [string, 'null'], description: 안목에 따른 애매한 힌트 문구. 뉴스일 때 }
@@ -179,7 +297,9 @@ components:
       properties:
         seq: { type: integer, format: int64 }
         day: { type: integer, description: 사건이 일어난 게임 일수 }
-        kind: { type: string, enum: [BIRTH, TRAIT, JOB, STYLE, OFFER, NEWS, PRICE, GROWTH, END] }
+        kind:
+          type: string
+          enum: [BIRTH, TRAIT, JOB, STYLE, OFFER, NEWS, PRICE, GROWTH, TRADE, LIFE, MARRIAGE, CHILD, RETIRE, END]
         payload:
           type: object
           additionalProperties: true
@@ -195,7 +315,7 @@ components:
     Game:
       type: object
       required:
-        [gameId, status, phase, day, startAge, endAge, daysPerYear, stats, initialStats, cash, totalAsset, initialAsset, holdings, log, yearly]
+        [gameId, status, phase, day, startAge, endAge, daysPerYear, stats, initialStats, cash, totalAsset, initialAsset, invested, debt, holdings, market, household, log, yearly]
       properties:
         gameId: { type: string, format: uuid }
         status: { type: string, enum: [ACTIVE, ENDED] }
@@ -209,11 +329,19 @@ components:
           allOf: [{ $ref: '#/components/schemas/Stats' }]
           description: 태어날 때의 능력치. 별명은 이 값으로 정해서 게임 중에 바뀌지 않는다
         cash: { type: integer, format: int64 }
-        totalAsset: { type: integer, format: int64 }
+        totalAsset: { type: integer, format: int64, description: 현금 + 평가액 − 빚 }
         initialAsset: { type: integer, format: int64 }
+        invested: { type: integer, format: int64, description: 보유 평가액 합 }
+        debt: { type: integer, format: int64, description: 빚(마이너스 통장). 매월 이자가 붙는다 }
+        lastMonthTotalAsset:
+          type: [integer, 'null']
+          format: int64
+          description: 전월 말 총자산. 첫 달이면 null
         holdings:
           type: array
           items: { $ref: '#/components/schemas/Holding' }
+        market: { $ref: '#/components/schemas/Market' }
+        household: { $ref: '#/components/schemas/Household' }
         job:
           oneOf: [{ $ref: '#/components/schemas/Job' }, { type: 'null' }]
         investmentStyle:
@@ -263,7 +391,7 @@ components:
       type: object
       required: [kind, chosen, actual, deviations, growth]
       properties:
-        kind: { type: string, enum: [JOB, TRAIT, OFFER, NEWS] }
+        kind: { type: string, enum: [JOB, TRAIT, OFFER, LIFE, NEWS, TRADE] }
         chosen: { type: string, description: 사용자가 누른 선택 }
         actual: { type: string, description: 판정을 거친 실제 행동 }
         deviations:
@@ -278,10 +406,13 @@ components:
         trade:
           oneOf:
             - type: object
-              required: [status, amount]
+              required: [status, quantity, price, amount]
               properties:
                 status: { type: string, enum: [EXECUTED, HELD, NOTHING_TO_SELL, INSUFFICIENT_CASH] }
+                quantity: { type: integer, format: int64 }
+                price: { type: integer, format: int64 }
                 amount: { type: integer, format: int64 }
+                realizedPnl: { type: [integer, 'null'], format: int64, description: 매도의 실현 손익 }
             - type: 'null'
         price:
           oneOf:
@@ -290,6 +421,8 @@ components:
               properties:
                 sectorCode: { type: string }
                 sectorName: { type: string }
+                stockCode: { type: [string, 'null'] }
+                stockName: { type: [string, 'null'] }
                 direction: { type: string, enum: [UP, DOWN] }
                 changeBp: { type: integer }
                 pnl: { type: integer, format: int64 }
