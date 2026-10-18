@@ -15,6 +15,7 @@ import investorgame.common.Sentiment;
 import investorgame.common.Stats;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.List;
 import java.util.SplittableRandom;
 import java.util.function.Predicate;
 import java.util.random.RandomGenerator;
@@ -31,7 +32,6 @@ class DefaultBehaviorServiceTest {
       new DefaultBehaviorService(
           new BehaviorProperties(
               5000,
-              40,
               new BehaviorProperties.HintSettings(2500, 55, 35, 50, 65, 70),
               new BehaviorProperties.LuckSettings(30, 30)));
 
@@ -52,23 +52,20 @@ class DefaultBehaviorServiceTest {
   }
 
   @Test
-  void 인내심이_부족하면_보유가_없을_때_충동_매수한다() {
+  void 인내심이_부족해도_보유가_없으면_관망은_그대로다() {
+    // 관망→매수는 인내심이 아니라 줏대(꼬드김)만 만든다 (decisions.md 25번)
     Resolution r =
         resolve(Action.HOLD, stats(50, 0, 50, 100, 50), Sentiment.POS, false, MISS, HIT, HIT);
-    assertThat(r.actual()).isEqualTo(Action.BUY);
-    assertThat(r.deviations()).containsExactly(new Deviation("patience", Action.HOLD, Action.BUY));
+    assertThat(r.actual()).isEqualTo(Action.HOLD);
+    assertThat(r.deviations()).isEmpty();
   }
 
   @Test
-  void 인내심이_부족하고_보유가_있으면_충동_매도할_수_있다() {
-    assertThat(
-            resolve(Action.HOLD, stats(50, 0, 50, 100, 50), Sentiment.POS, true, MISS, HIT, 39)
-                .actual())
-        .isEqualTo(Action.SELL);
-    assertThat(
-            resolve(Action.HOLD, stats(50, 0, 50, 100, 50), Sentiment.POS, true, MISS, HIT, 40)
-                .actual())
-        .isEqualTo(Action.BUY);
+  void 인내심이_부족하고_보유가_있으면_충동_매도한다() {
+    Resolution r =
+        resolve(Action.HOLD, stats(50, 0, 50, 100, 50), Sentiment.POS, true, MISS, HIT, HIT);
+    assertThat(r.actual()).isEqualTo(Action.SELL);
+    assertThat(r.deviations()).containsExactly(new Deviation("patience", Action.HOLD, Action.SELL));
   }
 
   @Test
@@ -80,12 +77,47 @@ class DefaultBehaviorServiceTest {
   }
 
   @Test
-  void 줏대가_부족하면_다른_뉴스를_따른다() {
+  void 줏대가_부족하면_꼬드김에_넘어가_다른_뉴스를_따르고_출처가_남는다() {
     Resolution r =
-        resolve(Action.BUY, stats(50, 50, 100, 0, 50), Sentiment.NEG, false, HIT, MISS, HIT);
+        resolve(Action.BUY, stats(50, 50, 100, 0, 50), Sentiment.NEG, true, HIT, MISS, 1);
     assertThat(r.actual()).isEqualTo(Action.SELL);
     assertThat(r.deviations())
-        .containsExactly(new Deviation("conviction", Action.BUY, Action.SELL));
+        .containsExactly(new Deviation("conviction", Action.BUY, Action.SELL, "friend"));
+  }
+
+  @Test
+  void 관망을_눌렀는데_매수한_것은_줏대의_꼬드김이다() {
+    Resolution r =
+        resolve(Action.HOLD, stats(50, 0, 100, 0, 50), Sentiment.POS, false, HIT, MISS, 0);
+    assertThat(r.actual()).isEqualTo(Action.BUY);
+    assertThat(r.deviations())
+        .containsExactly(new Deviation("conviction", Action.HOLD, Action.BUY, "youtuber"));
+  }
+
+  @Test
+  void 보유가_없으면_어떤_이탈로도_매도가_되지_않는다() {
+    // 나쁜 소식에 꼬드겨도 팔 게 없다: 사려던 사람은 접고(HOLD), 관망하던 사람은 그대로.
+    Resolution buy =
+        resolve(Action.BUY, stats(50, 0, 100, 0, 50), Sentiment.NEG, false, HIT, MISS, 2);
+    assertThat(buy.actual()).isEqualTo(Action.HOLD);
+    assertThat(buy.deviations())
+        .containsExactly(new Deviation("conviction", Action.BUY, Action.HOLD, "community"));
+
+    Resolution hold =
+        resolve(Action.HOLD, stats(50, 0, 100, 0, 50), Sentiment.NEG, false, HIT, HIT, 2);
+    assertThat(hold.actual()).isEqualTo(Action.HOLD);
+    assertThat(hold.deviations()).isEmpty();
+
+    Stats weak = stats(0, 0, 0, 0, 0);
+    SplittableRandom rng = new SplittableRandom(9);
+    for (int i = 0; i < 2_000; i++) {
+      for (Action choice : List.of(Action.BUY, Action.HOLD)) {
+        for (Sentiment sway : List.of(Sentiment.POS, Sentiment.NEG)) {
+          assertThat(service.resolve(new ChoiceContext(choice, weak, sway, false), rng).actual())
+              .isNotEqualTo(Action.SELL);
+        }
+      }
+    }
   }
 
   @Test
@@ -103,7 +135,7 @@ class DefaultBehaviorServiceTest {
     assertThat(r.actual()).isEqualTo(Action.HOLD);
     assertThat(r.deviations())
         .containsExactly(
-            new Deviation("conviction", Action.HOLD, Action.BUY),
+            new Deviation("conviction", Action.HOLD, Action.BUY, "youtuber"),
             new Deviation("courage", Action.BUY, Action.HOLD));
   }
 

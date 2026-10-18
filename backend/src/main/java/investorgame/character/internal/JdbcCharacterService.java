@@ -8,6 +8,7 @@ import investorgame.character.TraitAxes;
 import investorgame.character.TraitResult;
 import investorgame.common.GameProperties;
 import investorgame.common.StatCodes;
+import investorgame.common.StatGrade;
 import investorgame.common.Stats;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
@@ -62,9 +63,11 @@ class JdbcCharacterService implements CharacterService {
         .param("now", now())
         .update();
 
-    CharacterProperties.InitialStat range = properties.initialStat();
+    CharacterProperties.InitialStat initial = properties.initialStat();
     for (String code : StatCodes.ALL) {
-      int value = rng.nextInt(range.min(), range.max() + 1);
+      // 등급을 먼저 뽑고(확률 %), 그 등급의 점수 띠 안에서 균등하게 뽑는다. 난수는 능력치마다 등급 1번, 점수 1번.
+      StatGrade grade = rollGrade(rng, initial.gradePercent());
+      int value = rng.nextInt(Math.max(grade.min(), initial.floor()), grade.max() + 1);
       jdbc.sql(
               """
               INSERT INTO character_stat (game_id, stat_code, initial_value, value, exp)
@@ -76,6 +79,18 @@ class JdbcCharacterService implements CharacterService {
           .update();
     }
     return get(gameId);
+  }
+
+  private static StatGrade rollGrade(RandomGenerator rng, Map<StatGrade, Integer> percent) {
+    int roll = rng.nextInt(100);
+    int cumulative = 0;
+    for (StatGrade grade : StatGrade.values()) {
+      cumulative += percent.get(grade);
+      if (roll < cumulative) {
+        return grade;
+      }
+    }
+    return StatGrade.F;
   }
 
   @Override

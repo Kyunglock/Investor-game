@@ -27,16 +27,16 @@ const WEAKNESS_PREFIXES: Record<StatKey, string> = {
 /** 약점이 게임에서 어떻게 드러나는지. 억울함의 원인을 미리 알려 둔다. */
 const WEAKNESS_EFFECTS: Record<StatKey, string> = {
   insight: '힌트가 흐릿하거나 틀릴 수 있다',
-  patience: '지켜보려다 참지 못하고 충동적으로 사고팔 수 있다',
+  patience: '들고 있는 주식을 지켜보려다 못 참고 팔아 버릴 수 있다',
   courage: '매수·매도를 눌러도 겁나서 관망할 수 있다',
-  conviction: '다른 뉴스에 휘둘려 엉뚱한 선택을 할 수 있다',
+  conviction: '유튜버나 지인의 꼬드김에 넘어가 엉뚱한 선택을 할 수 있다',
   luck: '손실이 났을 때 운이 따라 주지 않는다',
 }
 
-// 시작 능력치는 5~35로 낮다 (서버 character.initial-stat). 문턱도 그 범위에 맞춘다.
-const GIFTED_FROM = 30
-const STRUGGLING_BELOW = 12
-const FLAT_SPREAD = 8
+// 시작 능력치는 등급(SSS~F)의 띠 안에서 뽑힌다 (grade.ts, decisions.md 24번). 모두 A 이상이면 천재, 모두 E 이하면 험난.
+const GIFTED_FROM = 60
+const STRUGGLING_BELOW = 30
+const FLAT_SPREAD = 10
 
 export interface Nickname {
   name: string

@@ -409,6 +409,10 @@ components:
               statCode: { type: string }
               from: { type: string }
               to: { type: string }
+              source:
+                type: [string, 'null']
+                enum: [youtuber, friend, community, broadcast, relative, null]
+                description: 줏대 이탈일 때 누구의 꼬드김이었는지. 다른 이탈이면 없다
         trade:
           oneOf:
             - type: object

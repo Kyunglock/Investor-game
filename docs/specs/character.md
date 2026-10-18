@@ -86,7 +86,11 @@ public record StatChange(String statCode, int expGained, int valueBefore, int va
 
 ### 4.1 캐릭터 생성
 
-- 능력치 5종을 각각 **5~35 사이 정수로 균등 랜덤**으로 뽑는다 (초기값. 처음 15~85였으나 "초기에는 낮고 선택으로 크게 오르게" 하기로 해 낮췄다, decisions.md 23번).
+- 능력치 5종을 각각 **등급을 먼저 뽑고, 그 등급의 점수 띠 안에서 균등하게** 뽑는다 (decisions.md 24번. 처음 15~85 균등, 다음 5~35 균등이었으나 "초기 점수가 너무 낮다"고 해 등급제로 바꿨다).
+  - 등급 확률(`character.initial-stat.grade-percent`): SSS 1%, SS 3%, S 5%, A 10%, B 16%, C 25%, D 20%, E 12%, F 8%.
+  - 점수 띠(`common.StatGrade`): SSS 90~100, SS 80~89, S 70~79, A 60~69, B 50~59, C 40~49, D 30~39, E 20~29, F 0~19. F는 `character.initial-stat.floor`(10) 아래로는 태어나지 않는다.
+  - 등급은 점수의 띠일 뿐이라 따로 저장하지 않는다. 점수가 바뀌면 등급도 따라 바뀐다. 화면은 등급과 점수를 같이 보여 준다 (프론트 `grade.ts`가 같은 띠를 쓴다).
+  - 난수는 능력치마다 등급 1번(0~99), 점수 1번 순서로 뽑는다.
 - 난수를 뽑는 순서는 `insight → patience → courage → conviction → luck` (항상 이 순서).
 - 생성한 값을 `initial_value`와 `value`에 같이 저장한다.
 - 직업, 투자 스타일, 관심 섹터는 `null`로 시작한다.
@@ -104,7 +108,7 @@ public record StatChange(String statCode, int expGained, int valueBefore, int va
 성향 이벤트는 "상황을 주고 어떻게 행동하는지"로 판단한다(상황극, 선택지 3~4개). 판정으로 뒤집지 않는다 (확정). 네 축을 잰다: **기간**(`style.short/long`), **위험**(`risk.bold/safe`), **소신**(`mind.own/crowd`), **관심**(`sector.<코드>`) (경제 개편 설계 4.2절).
 
 1. 콘텐츠가 각 선택지에 축 점수표(`traitDeltas`)와 능력치 변화(`statDeltas`, 선택)를 붙인다. 예: `{"style.long": 2, "risk.safe": 1, "sector.bio": 1}`, `{"patience": 1}`.
-2. 사용자가 선택하면 진행이 둘을 `recordTraitChoice`로 넘긴다. 점수는 `character_trait_score`에 누적하고, **능력치는 즉시 더한다**: 범위 `[character.trait-stat.min(5), growth.max-stat(95)]`로 자르고, 운은 무시한다(확정). 바뀐 능력치마다 `character_stat_log(reason='TRAIT')`를 남기고 `StatChange(expGained=0)`로 돌려준다. `initial_value`는 바꾸지 않는다(별명은 그대로).
+2. 사용자가 선택하면 진행이 둘을 `recordTraitChoice`로 넘긴다. 점수는 `character_trait_score`에 누적하고, **능력치는 즉시 더한다**: 범위 `[character.trait-stat.min(1), growth.max-stat(100)]`로 자르고, 운은 무시한다(확정). 바뀐 능력치마다 `character_stat_log(reason='TRAIT')`를 남기고 `StatChange(expGained=0)`로 돌려준다. `initial_value`는 바꾸지 않는다(별명은 그대로).
 3. 성향 이벤트가 끝나면 진행이 `finalizeTraits(gameId, axes, rng)`를 부른다. 뽑는 순서는 **기간 → 위험 → 소신 → 관심**.
    - 각 축 = 그 접두사의 점수가 가장 높은 항목. 동점이면 난수로 정한다.
    - 기간·관심 점수가 하나도 없으면 오류(진행이 성향 이벤트 이후에만 부른다). 위험·소신 점수가 없으면 `axes`의 후보 전체에서 난수로 정한다(내 결정).
@@ -136,11 +140,11 @@ public record StatChange(String statCode, int expGained, int valueBefore, int va
 
 | 이름 | 초기값 | 의미 |
 |---|---|---|
-| `character.initial-stat.min` | 5 | 초기 능력치 최솟값 |
-| `character.initial-stat.max` | 35 | 초기 능력치 최댓값 |
+| `character.initial-stat.floor` | 10 | F 등급도 이 점수 아래로는 태어나지 않는다 |
+| `character.initial-stat.grade-percent` | SSS 1, SS 3, S 5, A 10, B 16, C 25, D 20, E 12, F 8 | 등급별 확률(%). 합이 100이어야 한다 |
 | `character.growth.deviation-exp` | 5 | 이탈 한 번의 경험치 (= 능력치 +1) |
 | `character.growth.exp-per-point` | 5 | 능력치 +1에 필요한 경험치 |
-| `character.growth.max-stat` | 95 | 성장 상한 (성향 선택의 상한이기도 하다) |
+| `character.growth.max-stat` | 100 | 성장 상한 (성향 선택의 상한이기도 하다). SSS 띠 끝 |
 | `character.trait-stat.min` | 1 | 성향 선택으로 내려갈 수 있는 하한 |
 | `game.days-per-year` | 360 | 연차 계산 기준. 달력 설정은 `common`이 소유한다 |
 
@@ -164,9 +168,9 @@ public record StatChange(String statCode, int expGained, int valueBefore, int va
 
 | # | 입력 | 기대 결과 |
 |---|---|---|
-| 1 | `create`를 같은 시드로 두 번 | 능력치가 동일하다. 5개 모두 15~85 |
+| 1 | `create`를 같은 시드로 두 번 | 능력치가 동일하다. 5개 모두 10~100 |
 | 2 | `create`를 같은 `gameId`로 두 번 | 두 번째는 새로 만들지 않고 기존 값을 돌려준다(멱등) |
-| 3 | `create` 대량 반복(20,000회) | 각 능력치가 15~85 범위에서 대략 균등하다 |
+| 3 | `create` 대량 반복 | 등급 분포가 확률(SSS 1%, C 25%, F 8%…)에 가깝고 점수는 등급 띠 안이다 |
 | 4 | `assignJob` 두 번 | 두 번째는 오류 |
 | 5 | `tenureYears` startDay 0, currentDay 359 / 360 / 720 | 0 / 1 / 2 |
 | 6 | 직업 없는 캐릭터의 `tenureYears` | 0 |
@@ -179,7 +183,7 @@ public record StatChange(String statCode, int expGained, int valueBefore, int va
 | 10 | `finalizeTraits` 두 번 | 두 번째는 확정된 값을 그대로 돌려준다 |
 | 11 | `DeviationGrowth("patience")` 2번 (exp 3씩) | 총 6 exp → 인내심 +1, 남은 exp 1 |
 | 12 | `Training("insight", 10)` | 안목 +2 |
-| 13 | 능력치가 이미 95일 때 성장 | 값은 95 그대로, 경험치만 쌓인다 |
+| 13 | 능력치가 이미 100일 때 성장 | 값은 100 그대로, 경험치만 쌓인다 |
 | 14 | `DeviationGrowth("luck")` | 운은 변하지 않고 `StatChange`도 돌려주지 않는다 |
 | 15 | `grow`가 능력치를 올림 | `character_stat_log`에 `reason`과 `event_id`가 남는다 |
 | 16 | `deleteByGame` 후 `get` | 오류(없음) |

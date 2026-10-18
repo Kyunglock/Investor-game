@@ -1,6 +1,7 @@
 import type { Game } from '../../api/client'
 import { AssetCurve } from './AssetCurve'
 import { Document } from './Document'
+import { GradeBadge } from './GradeBadge'
 import { LifeLog } from './LifeLog'
 import { LifeMap } from './LifeMap'
 import { percent, STAT_KEYS, STAT_LABELS, statLabel, won, yearOf } from './labels'
@@ -96,7 +97,10 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
         {STAT_KEYS.map((key) => (
           <li key={key} className="rounded border border-line-soft bg-bg py-2">
             <p className="text-[11px] text-faint">{STAT_LABELS[key]}</p>
-            <p className="font-mono-num font-semibold">{game.stats[key]}</p>
+            <p className="font-mono-num font-semibold">
+              <GradeBadge score={game.stats[key]} className="mr-1" />
+              {game.stats[key]}
+            </p>
           </li>
         ))}
       </ul>

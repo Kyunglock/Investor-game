@@ -23,6 +23,10 @@ class DefaultBehaviorService implements BehaviorService {
   private static final int BP = 10_000;
   private static final int PERCENT = 100;
 
+  /** 줏대 이탈의 꼬드김 출처. 화면 문구는 프론트(labels.ts)가 코드별로 가진다 (behavior.md 4.2절). */
+  static final List<String> TEMPTERS =
+      List.of("youtuber", "friend", "community", "broadcast", "relative");
+
   private final BehaviorProperties properties;
 
   DefaultBehaviorService(BehaviorProperties properties) {
@@ -33,35 +37,44 @@ class DefaultBehaviorService implements BehaviorService {
   public Resolution resolve(ChoiceContext context, RandomGenerator rng) {
     int convictionRoll = rng.nextInt(BP);
     int secondRoll = rng.nextInt(BP);
-    int impulseRoll = rng.nextInt(PERCENT);
+    int tempterRoll = rng.nextInt(TEMPTERS.size());
 
     List<Deviation> deviations = new ArrayList<>();
     Action action = context.choice();
 
-    // "다른 뉴스"가 없는 자유 매매는 줏대 판정을 건너뛴다. 난수는 이미 뽑았으므로 순서는 그대로다 (경제 개편 설계 8.2절).
+    // 줏대: 누군가(유튜버·지인…)가 "다른 뉴스"를 들고 꼬드긴다. "다른 뉴스"가 없는 자유 매매는 건너뛴다. 난수는 이미 뽑았으므로 순서는 그대로다.
     if (context.swaySentiment() != null
         && convictionRoll < deviationBp(context.stats().conviction())) {
-      Action swayed = context.swaySentiment() == Sentiment.POS ? Action.BUY : Action.SELL;
-      if (swayed != action) {
-        deviations.add(new Deviation(StatCodes.CONVICTION, action, swayed));
-        action = swayed;
+      Action tempted = tempted(context.swaySentiment(), action, context.holding());
+      if (tempted != action) {
+        deviations.add(
+            new Deviation(StatCodes.CONVICTION, action, tempted, TEMPTERS.get(tempterRoll)));
+        action = tempted;
       }
     }
 
     if (action == Action.HOLD) {
-      if (secondRoll < deviationBp(context.stats().patience())) {
-        Action impulse =
-            context.holding() && impulseRoll < properties.impulseSellPercent()
-                ? Action.SELL
-                : Action.BUY;
-        deviations.add(new Deviation(StatCodes.PATIENCE, Action.HOLD, impulse));
-        action = impulse;
+      // 인내심: 들고 있는 걸 지켜보려다 못 참고 판다. 보유가 없으면 참을 것도 없다 (관망→매수는 줏대만 만든다).
+      if (context.holding() && secondRoll < deviationBp(context.stats().patience())) {
+        deviations.add(new Deviation(StatCodes.PATIENCE, Action.HOLD, Action.SELL));
+        action = Action.SELL;
       }
     } else if (secondRoll < deviationBp(context.stats().courage())) {
       deviations.add(new Deviation(StatCodes.COURAGE, action, Action.HOLD));
       action = Action.HOLD;
     }
     return new Resolution(action, List.copyOf(deviations));
+  }
+
+  /**
+   * 꼬드김이 미는 행동. 좋은 소식이면 사라고, 나쁜 소식이면 팔라고 한다. 팔 게 없으면(보유 없음) 사려던 사람은 접고(HOLD) 관망하던 사람은 그대로다. 보유 없이
+   * SELL이 되는 일은 없다.
+   */
+  private static Action tempted(Sentiment sway, Action current, boolean holding) {
+    if (sway == Sentiment.POS) {
+      return Action.BUY;
+    }
+    return holding ? Action.SELL : Action.HOLD;
   }
 
   @Override

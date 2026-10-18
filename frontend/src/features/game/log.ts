@@ -1,4 +1,5 @@
 import type { Game, LogEntry, Stats } from '../../api/client'
+import { gradeOf } from './grade'
 import {
   actionLabel,
   growthText,
@@ -43,6 +44,7 @@ interface Deviation {
   statCode: string
   from: string
   to: string
+  source?: string | null
 }
 
 const str = (v: unknown): string => (typeof v === 'string' ? v : String(v ?? ''))
@@ -55,7 +57,9 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
   switch (entry.kind) {
     case 'BIRTH': {
       const stats = (p.stats ?? game.initialStats) as Stats
-      const parts = STAT_KEYS.map((k) => `${STAT_LABELS[k]} ${stats[k]}`).join(' · ')
+      const parts = STAT_KEYS.map((k) => `${STAT_LABELS[k]} ${gradeOf(stats[k])} ${stats[k]}`).join(
+        ' · ',
+      )
       return {
         ...base,
         tone: 'birth',

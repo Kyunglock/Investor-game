@@ -1,5 +1,6 @@
 import type { Game } from '../../api/client'
 import { Card } from './Card'
+import { GradeBadge } from './GradeBadge'
 import { STAT_KEYS, STAT_LABELS } from './labels'
 import { nickname } from './nickname'
 
@@ -9,7 +10,7 @@ export function StatsCard({ game }: { game: Game }) {
   const current = nickname(game.stats)
 
   return (
-    <Card title="능력치" aside="0–100">
+    <Card title="능력치" aside="등급 · 점수">
       <ul className="flex flex-col gap-1.5">
         {STAT_KEYS.map((key) => {
           const color =
@@ -17,7 +18,7 @@ export function StatsCard({ game }: { game: Game }) {
           return (
             <li
               key={key}
-              className="grid grid-cols-[44px_1fr_30px] items-center gap-2 text-xs"
+              className="grid grid-cols-[44px_1fr_auto] items-center gap-2 text-xs"
               data-testid={`stat-${key}`}
             >
               <span>{STAT_LABELS[key]}</span>
@@ -27,7 +28,10 @@ export function StatsCard({ game }: { game: Game }) {
                   style={{ width: `${game.stats[key]}%` }}
                 />
               </span>
-              <span className="text-right font-mono-num">{game.stats[key]}</span>
+              <span className="flex items-center gap-1.5">
+                <GradeBadge score={game.stats[key]} />
+                <span className="w-6 text-right font-mono-num">{game.stats[key]}</span>
+              </span>
             </li>
           )
         })}

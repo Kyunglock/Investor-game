@@ -50,7 +50,7 @@ describe('layersFor', () => {
     expect(layersFor(all75, all75, 1)).toEqual({ stage: 'baby', adornment: 'genius', mark: null })
     const all8 = stats(8, 8, 8, 8, 8)
     expect(layersFor(all8, all8, 65)).toEqual({ stage: 'old', adornment: 'rough', mark: null })
-    const flat = stats(20, 22, 24, 26, 21)
+    const flat = stats(50, 52, 54, 56, 51)
     expect(layersFor(flat, flat, 40)).toEqual({ stage: 'middle', adornment: null, mark: null })
   })
 })

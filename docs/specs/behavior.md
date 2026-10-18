@@ -83,18 +83,16 @@ public record Hint(
 
 ### 4.2 판정 순서 (확정)
 
-1. **줏대 판정.** 줏대의 이탈 확률로 난수를 뽑는다. 걸리면 `swaySentiment`가 `POS`이면 `BUY`, `NEG`이면 `SELL`로 바꾼다. 바뀐 값이 현재 행동과 같으면 이탈이 아니다 (기록하지 않는다).
-2. **현재 행동이 `HOLD`이면 인내심 판정.** 인내심의 이탈 확률로 뽑는다. 걸리면:
-   - `holding`이 true이면 `behavior.impulse-sell-percent`(초기값 40%) 확률로 `SELL`, 나머지는 `BUY`.
-   - `holding`이 false이면 `BUY`.
+1. **줏대 판정(꼬드김).** 줏대의 이탈 확률로 난수를 뽑는다. 걸리면 누군가가 "다른 뉴스"를 들고 꼬드긴 것이다: `swaySentiment`가 `POS`이면 `BUY`로, `NEG`이면 `holding`이 true일 때 `SELL`로, false일 때 **`HOLD`**로 바꾼다(팔 게 없으니 사려던 사람은 접고, 관망하던 사람은 그대로). 바뀐 값이 현재 행동과 같으면 이탈이 아니다 (기록하지 않는다). 이탈이면 꼬드김 출처 코드(`source`)를 난수로 하나 고른다: `youtuber`, `friend`, `community`, `broadcast`, `relative` (화면 문구는 프론트 `labels.ts`). **관망을 눌렀는데 매수가 되는 유일한 경로다** (decisions.md 25번).
+2. **현재 행동이 `HOLD`이고 `holding`이 true이면 인내심 판정.** 인내심의 이탈 확률로 뽑는다. 걸리면 못 참고 `SELL`한다(충동 매도). 보유가 없으면 참을 것도 없으므로 판정하지 않는다.
 3. **현재 행동이 `BUY` 또는 `SELL`이면 용기 판정.** 용기의 이탈 확률로 뽑는다. 걸리면 `HOLD`로 바꾼다.
-4. 단계마다 행동이 바뀌었으면 `Deviation(statCode, from, to)`를 순서대로 기록한다.
+4. 단계마다 행동이 바뀌었으면 `Deviation(statCode, from, to, source)`를 순서대로 기록한다. `source`는 줏대 이탈에만 있다.
 
 경계 조건:
 
 - 줏대 단계에서 바뀐 행동은 이후 단계(인내심 또는 용기)의 입력이 된다. 예: 사용자가 `HOLD`, 줏대 이탈로 `BUY`가 되면 그다음은 용기 판정을 받는다.
 - 용기 이탈로 `HOLD`가 되면 인내심 판정을 받지 않는다. 단계는 한 번씩만 지나간다.
-- `SELL`로 바뀌었는데 `holding`이 false이면 행동은 그대로 `SELL`이다. 실행 시 팔 것이 없다는 처리는 자산이 한다 (poc.md 5절과 동일).
+- **보유가 없으면 어떤 판정으로도 `SELL`이 되지 않는다.** (사용자가 직접 `SELL`을 보낸 경우만 자산이 `NOTHING_TO_SELL`로 처리한다.)
 
 ### 4.3 난수를 뽑는 순서
 
@@ -102,7 +100,7 @@ public record Hint(
 
 1. 줏대 판정용 값 (`rng.nextInt(10000)`)
 2. 인내심/용기 판정용 값 (`rng.nextInt(10000)`) — 현재 행동이 `HOLD`이면 인내심, 아니면 용기에 쓴다
-3. 충동 매도 여부용 값 (`rng.nextInt(100)`) — 인내심 이탈이고 `holding`이 true일 때만 쓰지만 **항상 뽑는다**
+3. 꼬드김 출처용 값 (`rng.nextInt(5)`, 출처 코드 수) — 줏대 이탈일 때만 쓰지만 **항상 뽑는다**
 
 ### 4.4 힌트
 
@@ -131,7 +129,6 @@ public record Hint(
 | 이름 | 초기값 | 의미 |
 |---|---|---|
 | `behavior.deviation-cap-bp` | 8000 | 능력치 0일 때 이탈 확률 |
-| `behavior.impulse-sell-percent` | 40 | 충동 행동이 매도일 확률 (보유가 있을 때) |
 | `behavior.hint.accuracy-base-bp` | 2500 | 안목 0의 힌트 정답률 |
 | `behavior.hint.accuracy-per-point-bp` | 70 | 안목 1점당 정답률 증가 |
 | `behavior.hint.neutral-below-insight` | 40 | 이 값 미만이면 모호 판정 대상 |
@@ -158,11 +155,12 @@ public record Hint(
 |---|---|---|
 | 1 | 선택 `HOLD`, 인내심 100, 줏대 100, 용기 임의 | 어떤 난수에서도 실제 `HOLD`, 이탈 없음 |
 | 2 | 선택 `BUY`, 용기 100, 줏대 100 | 어떤 난수에서도 실제 `BUY`, 이탈 없음 |
-| 3 | 선택 `HOLD`, 인내심 0, 줏대 100, 보유 없음, 인내심 난수가 걸림 | 실제 `BUY`, 이탈 `[patience: HOLD→BUY]` |
-| 4 | 선택 `HOLD`, 인내심 0, 보유 있음, 충동 매도 값 < 40 | 실제 `SELL` |
-| 5 | 선택 `HOLD`, 인내심 0, 보유 있음, 충동 매도 값 ≥ 40 | 실제 `BUY` |
+| 3 | 선택 `HOLD`, 인내심 0, 줏대 100, 보유 없음, 인내심 난수가 걸림 | 실제 `HOLD`, 이탈 없음 (참을 게 없다) |
+| 4 | 선택 `HOLD`, 인내심 0, 보유 있음, 인내심 난수가 걸림 | 실제 `SELL`, 이탈 `[patience: HOLD→SELL]` |
+| 5 | 선택 `HOLD`, 줏대 0, 분위기 `POS`, 보유 없음, 줏대 난수가 걸림 | 실제 `BUY`, 이탈 `[conviction: HOLD→BUY, source]` |
+| 5a | 선택 `BUY`, 줏대 0, 분위기 `NEG`, 보유 없음, 줏대 난수가 걸림 | 실제 `HOLD`, 이탈 `[conviction: BUY→HOLD, source]`. 보유 없이 `SELL`은 어떤 입력에서도 나오지 않는다 |
 | 6 | 선택 `BUY`, 용기 0, 줏대 100, 용기 난수가 걸림 | 실제 `HOLD`, 이탈 `[courage: BUY→HOLD]` |
-| 7 | 선택 `BUY`, 줏대 0, 분위기 `NEG`, 줏대 난수가 걸리고 용기 난수는 안 걸림 | 실제 `SELL`, 이탈 `[conviction: BUY→SELL]` |
+| 7 | 선택 `BUY`, 줏대 0, 분위기 `NEG`, 보유 있음, 줏대 난수가 걸리고 용기 난수는 안 걸림 | 실제 `SELL`, 이탈 `[conviction: BUY→SELL, source]` |
 | 8 | 선택 `BUY`, 줏대 0, 분위기 `POS`, 줏대 난수가 걸림 | 줏대는 `BUY`로 바꿔도 같으므로 이탈 기록 없음 |
 | 9 | 선택 `HOLD`, 줏대 0, 분위기 `POS`, 줏대 난수가 걸리고 용기 난수도 걸림 | 줏대로 `BUY`, 이어서 용기로 `HOLD`. 이탈 `[conviction: HOLD→BUY, courage: BUY→HOLD]`, 실제 `HOLD` |
 | 10 | 줏대 0, 인내심 0, 용기 0, 같은 시드로 두 번 호출 | 두 결과가 동일하다 (재현성) |

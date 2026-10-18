@@ -37,15 +37,18 @@ content:
     max: 4
 
 character:
-  # 시작은 낮게(5~35), 성장기·일상의 선택과 이탈 경험으로 크게 오른다 (decisions.md 23번)
+  # 능력치마다 등급을 먼저 뽑고(확률 %), 그 등급의 점수 띠 안에서 균등하게 점수를 뽑는다 (decisions.md 24번).
+  # 띠: SSS 90~100, SS 80~89, S 70~79, A 60~69, B 50~59, C 40~49, D 30~39, E 20~29, F 0~19 (StatGrade)
   initial-stat:
-    min: 5
-    max: 35
+    # F 등급도 이 점수 아래로는 태어나지 않는다
+    floor: 10
+    grade-percent: { SSS: 1, SS: 3, S: 5, A: 10, B: 16, C: 25, D: 20, E: 12, F: 8 }
   growth:
     # 이탈 한 번 = 경험치 5 = 능력치 +1
     deviation-exp: 5
     exp-per-point: 5
-    max-stat: 95
+    # SSS 띠 끝까지 오를 수 있다
+    max-stat: 100
   trait-stat:
     # 성향 선택으로 내려갈 수 있는 하한. 상한은 growth.max-stat (경제 개편 설계 4.3절)
     min: 1
@@ -89,7 +92,6 @@ household:
 behavior:
   # 능력치에 따른 편차를 크게: 능력치 0이면 이탈 80%, 100이면 0% (decisions.md 23번)
   deviation-cap-bp: 8000
-  impulse-sell-percent: 40
   hint:
     # 안목 0이면 정답률 25%, 100이면 95%
     accuracy-base-bp: 2500

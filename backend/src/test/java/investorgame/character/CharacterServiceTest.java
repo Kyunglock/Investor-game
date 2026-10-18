@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import investorgame.TestcontainersConfiguration;
+import investorgame.common.StatGrade;
 import investorgame.common.Stats;
 import investorgame.common.error.InvalidRequestException;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SplittableRandom;
@@ -111,7 +113,7 @@ class CharacterServiceTest {
   }
 
   @Test
-  void 성향으로_움직인_능력치는_하한_1과_상한_95에서_멈춘다() {
+  void 성향으로_움직인_능력치는_하한_1과_상한_100에서_멈춘다() {
     for (int i = 0; i < 40; i++) {
       characters.recordTraitChoice(
           gameId,
@@ -120,7 +122,7 @@ class CharacterServiceTest {
           1);
     }
     assertThat(characters.get(gameId).stats().courage()).isEqualTo(1);
-    assertThat(characters.get(gameId).stats().insight()).isEqualTo(95);
+    assertThat(characters.get(gameId).stats().insight()).isEqualTo(100);
 
     List<StatChange> unchanged =
         characters.recordTraitChoice(
@@ -160,8 +162,27 @@ class CharacterServiceTest {
   }
 
   @Test
-  void 능력치는_95를_넘지_않는다() {
+  void 능력치는_100을_넘지_않는다() {
     characters.grow(gameId, List.of(new GrowthSource.Training("insight", 1_000, null)), 10);
-    assertThat(characters.get(gameId).stats().insight()).isEqualTo(95);
+    assertThat(characters.get(gameId).stats().insight()).isEqualTo(100);
+  }
+
+  /** 등급 확률(SSS 1%, SS 3%, S 5%, A 10%, B 16%, C 25%, D 20%, E 12%, F 8%)대로 태어나고 점수는 등급 띠 안이다. */
+  @Test
+  void 능력치는_등급을_먼저_뽑고_그_띠_안에서_점수를_뽑는다() {
+    Map<StatGrade, Integer> counts = new EnumMap<>(StatGrade.class);
+    int samples = 400;
+    SplittableRandom rng = new SplittableRandom(7);
+    for (int i = 0; i < samples; i++) {
+      Stats stats = characters.create(UUID.randomUUID(), rng).stats();
+      for (int value : stats.toCodes().values()) {
+        assertThat(value).isBetween(10, 100);
+        counts.merge(StatGrade.of(value), 1, Integer::sum);
+      }
+    }
+    int total = samples * 5;
+    assertThat(counts.getOrDefault(StatGrade.SSS, 0)).isBetween(5, 50);
+    assertThat(counts.getOrDefault(StatGrade.C, 0)).isBetween(total * 18 / 100, total * 32 / 100);
+    assertThat(counts.getOrDefault(StatGrade.F, 0)).isBetween(total * 4 / 100, total * 13 / 100);
   }
 }

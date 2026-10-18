@@ -417,6 +417,11 @@ export interface components {
                 statCode: string;
                 from: string;
                 to: string;
+                /**
+                 * @description 줏대 이탈일 때 누구의 꼬드김이었는지. 다른 이탈이면 없다
+                 * @enum {string|null}
+                 */
+                source?: "youtuber" | "friend" | "community" | "broadcast" | "relative" | null;
             }[];
             trade?: {
                 /** @enum {string} */

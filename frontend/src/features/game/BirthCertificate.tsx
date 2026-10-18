@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Game } from '../../api/client'
 import { Document } from './Document'
+import { GradeBadge } from './GradeBadge'
 import { STAT_KEYS, STAT_LABELS, won, yearOf } from './labels'
 import { nickname } from './nickname'
 import { layersFor } from './pixel/layers'
@@ -54,7 +55,7 @@ export function BirthCertificate({ game, onStart }: { game: Game; onStart: () =>
         {STAT_KEYS.map((key, index) => (
           <li
             key={key}
-            className="grid grid-cols-[52px_1fr_40px] items-center gap-3"
+            className="grid grid-cols-[52px_1fr_72px] items-center gap-3"
             data-testid={`reveal-${key}`}
           >
             <span className="text-[13px]">{STAT_LABELS[key]}</span>
@@ -121,8 +122,11 @@ function CountUpBar({ value, instant }: { value: number; instant: boolean }) {
       <span className="h-2 overflow-hidden rounded-sm bg-line-soft">
         <span className="block h-full bg-teal" style={{ width: `${shown}%` }} />
       </span>
-      <span className="animate-reveal text-right font-mono-num text-base font-semibold">
-        {shown}
+      <span className="flex items-center justify-end gap-1.5">
+        {shown >= value && <GradeBadge score={value} className="animate-reveal" />}
+        <span className="animate-reveal w-6 text-right font-mono-num text-base font-semibold">
+          {shown}
+        </span>
       </span>
     </>
   )

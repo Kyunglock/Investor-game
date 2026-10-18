@@ -33,13 +33,33 @@ export function statLabel(code: string): string {
   return STAT_LABELS[code as keyof Stats] ?? code
 }
 
-/** 이탈 원인이 보여야 억울함이 동기가 된다 (prd.md 2절). */
-export function deviationMessage(statCode: string, from: string, to: string): string {
+/** 줏대 이탈의 꼬드김 출처(서버 behavior.md 4.2절의 source 코드)별 문구. */
+const TEMPTERS: Record<string, string> = {
+  youtuber: "구독자 많은 주식 유튜버가 '지금이 기회'라며 떠드는 걸 보고",
+  friend: "친구가 '내부 정보'라며 귀띔해 준 말에",
+  community: '주식 커뮤니티에 올라온 글에 홀려',
+  broadcast: '증권 방송 전문가의 말을 믿고',
+  relative: "친척 어른이 '이건 된다'며 권하는 바람에",
+}
+
+/** 이탈 원인이 보여야 억울함이 동기가 된다 (prd.md 2절). source는 줏대 이탈일 때 꼬드김 출처. */
+export function deviationMessage(
+  statCode: string,
+  from: string,
+  to: string,
+  source?: string | null,
+): string {
   switch (statCode) {
-    case 'conviction':
-      return `줏대 부족 — 다른 뉴스에 휘둘려 ${actionLabel(to)}했다`
+    case 'conviction': {
+      const tempter = (source && TEMPTERS[source]) || '다른 뉴스에 휘둘려'
+      const did =
+        to === 'HOLD'
+          ? `${actionLabel(from)}하려던 걸 접었다`
+          : `${actionLabel(from)} 대신 ${actionLabel(to)}했다`
+      return `줏대 부족 — ${tempter} ${did}`
+    }
     case 'patience':
-      return `인내심 부족 — 참지 못하고 충동적으로 ${actionLabel(to)}했다`
+      return `인내심 부족 — 들고 있던 걸 지켜보려다 못 참고 ${actionLabel(to)}했다`
     case 'courage':
       return `용기 부족 — ${actionLabel(from)} 버튼을 누르려다 겁나서 관망했다`
     default:

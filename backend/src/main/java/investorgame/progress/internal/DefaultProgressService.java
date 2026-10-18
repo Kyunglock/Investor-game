@@ -582,13 +582,26 @@ class DefaultProgressService implements ProgressService {
 
   private static List<ChoiceOutcome.DeviationView> deviationViews(Resolution resolution) {
     return resolution.deviations().stream()
-        .map(d -> new ChoiceOutcome.DeviationView(d.statCode(), d.from().name(), d.to().name()))
+        .map(
+            d ->
+                new ChoiceOutcome.DeviationView(
+                    d.statCode(), d.from().name(), d.to().name(), d.source()))
         .toList();
   }
 
   private static List<Map<String, String>> deviationPayload(Resolution resolution) {
     return resolution.deviations().stream()
-        .map(d -> Map.of("statCode", d.statCode(), "from", d.from().name(), "to", d.to().name()))
+        .map(
+            d -> {
+              Map<String, String> entry = new HashMap<>();
+              entry.put("statCode", d.statCode());
+              entry.put("from", d.from().name());
+              entry.put("to", d.to().name());
+              if (d.source() != null) {
+                entry.put("source", d.source());
+              }
+              return entry;
+            })
         .toList();
   }
 

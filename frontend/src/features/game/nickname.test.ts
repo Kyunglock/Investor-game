@@ -25,15 +25,15 @@ describe('nickname', () => {
   })
 
   it('모두 높으면 천재, 모두 낮으면 험난, 고르면 보통이다', () => {
-    // 시작 능력치는 5~35라 문턱이 낮다: 모두 30 이상이면 천재, 모두 12 미만이면 험난, 퍼짐이 8 미만이면 보통.
+    // 모두 A(60) 이상이면 천재, 모두 E 이하(30 미만)면 험난, 퍼짐이 10 미만이면 보통.
     expect(
-      nickname({ insight: 33, patience: 30, courage: 31, conviction: 35, luck: 30 }).name,
+      nickname({ insight: 63, patience: 60, courage: 91, conviction: 75, luck: 60 }).name,
     ).toBe('타고난 투자 천재')
-    expect(nickname({ insight: 7, patience: 11, courage: 5, conviction: 9, luck: 6 }).name).toBe(
-      '앞날이 험난한 사람',
-    )
     expect(
-      nickname({ insight: 20, patience: 22, courage: 24, conviction: 26, luck: 21 }).name,
+      nickname({ insight: 17, patience: 29, courage: 10, conviction: 22, luck: 16 }).name,
+    ).toBe('앞날이 험난한 사람')
+    expect(
+      nickname({ insight: 40, patience: 42, courage: 44, conviction: 49, luck: 41 }).name,
     ).toBe('무난한 보통 사람')
   })
 

@@ -71,7 +71,7 @@ function Body({ outcome, onContinue }: { outcome: Outcome; onContinue: () => voi
                   key={`${d.statCode}-${d.from}-${d.to}`}
                   className="mt-2 border-l-[3px] border-wine bg-wine-soft px-2.5 py-1.5 text-[13px] text-wine"
                 >
-                  {deviationMessage(d.statCode, d.from, d.to)}
+                  {deviationMessage(d.statCode, d.from, d.to, d.source)}
                 </p>
               ))}
               {outcome.trade && TRADE_NOTES[outcome.trade.status] && (
