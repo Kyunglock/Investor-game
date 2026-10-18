@@ -25,6 +25,10 @@ async function step(page: Page): Promise<string> {
   }
   if (await eventCard(page).isVisible()) {
     const kind = (await eventCard(page).getAttribute('data-kind')) ?? ''
+    if (kind === 'TRAIT') {
+      // 성장기 장면은 밸런스 게임이 아니라 선택지 3~4개의 상황극이다.
+      expect(await eventCard(page).getByRole('button').count()).toBeGreaterThanOrEqual(3)
+    }
     const button =
       kind === 'OFFER'
         ? eventCard(page).getByRole('button', { name: '투자를 시작한다' })
@@ -87,7 +91,7 @@ test('성장기의 일상 선택으로 성향이 정해지고, 직업을 고른 
   await born(page)
 
   await playUntil(page, 'TRAIT')
-  await expect(page.getByTestId('outcome-message')).toContainText('—')
+  await expect(page.getByTestId('outcome-message')).not.toBeEmpty()
   await expect(page.getByTestId('style')).toHaveText('아직 모름')
 
   await playUntil(page, 'JOB')

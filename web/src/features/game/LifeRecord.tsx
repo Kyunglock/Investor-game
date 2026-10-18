@@ -36,7 +36,7 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
           </h2>
           <p className="text-[13px] text-muted">
             {result.finalAge}세, 투자 인생을 마쳤습니다 · {game.job?.title ?? '무직'} ·{' '}
-            {game.investmentStyle?.name ?? '스타일 미정'}
+            {game.investorType?.name ?? '유형 미정'}
           </p>
         </div>
       </div>

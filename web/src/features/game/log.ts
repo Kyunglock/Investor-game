@@ -1,6 +1,7 @@
 import type { Game, LogEntry, Stats } from '../../api/client'
 import {
   actionLabel,
+  growthText,
   percent,
   STAT_KEYS,
   STAT_LABELS,
@@ -25,7 +26,8 @@ export interface LogLine {
   pill?: '탄생' | '제안'
 }
 
-type GameInfo = Pick<Game, 'startAge' | 'daysPerYear' | 'initialStats'>
+type GameInfo = Pick<Game, 'startAge' | 'daysPerYear' | 'initialStats'> &
+  Partial<Pick<Game, 'interestSector'>>
 
 interface Deviation {
   statCode: string
@@ -63,8 +65,16 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
         tone: 'neutral',
         text: `${str(p.jobTitle)}에 취직했다. 첫 월급 ${won(num(p.monthlySalary))}.`,
       }
-    case 'STYLE':
-      return { ...base, tone: 'neutral', text: `투자 스타일이 '${str(p.styleName)}'로 굳었다.` }
+    case 'STYLE': {
+      // 유형 이름이 없는 옛 기록은 스타일 이름으로 대신한다.
+      const type = p.investorTypeName ? str(p.investorTypeName) : str(p.styleName)
+      const sector = game.interestSector?.name
+      return {
+        ...base,
+        tone: 'neutral',
+        text: `'${type}'형 투자자로 자랐다.${sector ? ` 관심 분야는 ${sector}.` : ''}`,
+      }
+    }
     case 'OFFER':
       return {
         ...base,
@@ -100,7 +110,12 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       return {
         ...base,
         tone: 'growth',
-        text: `경험으로 ${statLabel(str(p.statCode))} ${num(p.before)} → ${num(p.after)} ↑`,
+        text: growthText(
+          str(p.statCode),
+          num(p.before),
+          num(p.after),
+          typeof p.reason === 'string' ? p.reason : null,
+        ),
       }
     case 'END': {
       const bp = num(p.returnBp)

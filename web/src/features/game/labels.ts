@@ -43,6 +43,17 @@ export function deviationMessage(statCode: string, from: string, to: string): st
   }
 }
 
+/** 능력치가 오른 한 줄. reason이 TRAIT이면 성장기의 선택, 아니면(또는 없으면) 이탈 경험이다. */
+export function growthText(
+  statCode: string,
+  before: number,
+  after: number,
+  reason?: string | null,
+): string {
+  const cause = reason === 'TRAIT' ? '그 선택으로' : '경험으로'
+  return `${cause} ${statLabel(statCode)} ${before} → ${after} ↑`
+}
+
 export const TRADE_NOTES: Record<string, string | undefined> = {
   NOTHING_TO_SELL: '팔 종목이 없었다',
   INSUFFICIENT_CASH: '현금이 부족해 사지 못했다',

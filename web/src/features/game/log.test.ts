@@ -78,9 +78,12 @@ describe('logLine', () => {
     expect(
       logLine(entry('JOB', 0, { jobTitle: '중소기업 사원', monthlySalary: 2800000 }), game).text,
     ).toBe('중소기업 사원에 취직했다. 첫 월급 2,800,000원.')
-    expect(logLine(entry('STYLE', 0, { styleName: '장기 투자형' }), game).text).toBe(
-      "투자 스타일이 '장기 투자형'로 굳었다.",
-    )
+    expect(
+      logLine(entry('STYLE', 0, { styleName: '장기 투자자', investorTypeName: '느긋한 농부' }), {
+        ...game,
+        interestSector: { code: 'food', name: '식품' },
+      }).text,
+    ).toBe("'느긋한 농부'형 투자자로 자랐다. 관심 분야는 식품.")
     expect(
       logLine(
         entry('OFFER', 0, { eventTitle: '친구의 권유', optionLabel: '투자를 시작한다' }),
@@ -107,6 +110,27 @@ describe('logLine', () => {
       text: '65세, 투자 인생을 마쳤다. 1,000,000원 → 48,200,000원 (+4720.0%)',
       tone: 'end',
     })
+  })
+
+  it('성향으로 능력치가 움직인 기록은 "그 선택으로"로 쓴다', () => {
+    expect(
+      logLine(
+        entry('GROWTH', 0, { statCode: 'courage', before: 41, after: 42, reason: 'TRAIT' }),
+        game,
+      ).text,
+    ).toBe('그 선택으로 용기 41 → 42 ↑')
+  })
+
+  it('reason이 없는 옛 기록은 "경험으로"로 쓴다', () => {
+    expect(
+      logLine(entry('GROWTH', 0, { statCode: 'courage', before: 41, after: 42 }), game).text,
+    ).toBe('경험으로 용기 41 → 42 ↑')
+  })
+
+  it('STYLE 기록에 유형 이름이 없는 옛 기록은 스타일 이름으로 쓴다', () => {
+    expect(logLine(entry('STYLE', 0, { styleName: '장기 투자자' }), game).text).toBe(
+      "'장기 투자자'형 투자자로 자랐다.",
+    )
   })
 
   it('모르는 종류는 죽지 않고 종류 이름을 보여 준다', () => {
