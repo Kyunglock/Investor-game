@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import type { Outcome, Stats } from '../../api/client'
+import type { Outcome, PendingEvent, Stats } from '../../api/client'
 import { ageAt } from './clock'
+import { takesOver } from './DecisionCard'
 import {
   actionLabel,
   deviationMessage,
@@ -18,10 +19,10 @@ import { useGameStore } from './store'
 /** 뉴스 선택 뒤 결과를 감추고 성격이 손을 움직이는 동안 기다리는 시간. 바로 나오면 억울할 틈이 없다. */
 const REVEAL_MS = 1_800
 
-/** 선택 → 실제 행동과 그 원인을 보여 준다. 원인이 보여야 억울함이 동기가 된다 (prd.md F6). */
+/** 선택 → 실제 행동과 그 원인을 보여 준다. 원인이 보여야 억울함이 동기가 된다 (prd.md F6). 뉴스·일상의 결과는 선택처럼 화면을 덮는다. */
 export function OutcomeCard(props: { outcome: Outcome; onContinue: () => void }) {
   const card = <Body {...props} />
-  return props.outcome.kind === 'NEWS' ? <Overlay>{card}</Overlay> : card
+  return takesOver(props.outcome.kind as PendingEvent['kind']) ? <Overlay>{card}</Overlay> : card
 }
 
 function Body({ outcome, onContinue }: { outcome: Outcome; onContinue: () => void }) {

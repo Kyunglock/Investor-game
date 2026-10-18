@@ -142,13 +142,14 @@ event:
   # 40년 동안 뉴스마다 선택해야 하므로 단기 약 80번, 장기 약 40번이 되도록 잡았다 (specs/event.md 7절).
   styles:
     short:
-      news-gap-days: { min: 120, max: 240 }
+      # 뉴스(매수·매도 선택)는 1년에 한 번꼴 (decisions.md 30번). 단기는 조금 잦다
+      news-gap-days: { min: 300, max: 390 }
       magnitude-percent: 150
     long:
-      news-gap-days: { min: 240, max: 480 }
+      news-gap-days: { min: 330, max: 420 }
       magnitude-percent: 100
     default:
-      news-gap-days: { min: 240, max: 480 }
+      news-gap-days: { min: 330, max: 420 }
       magnitude-percent: 100
 
 session:

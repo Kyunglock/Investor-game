@@ -213,7 +213,7 @@ public record CompleteResult(
 
 | 설정 (스타일 코드별) | 단기(`short`) | 장기(`long`) | 의미 |
 |---|---|---|---|
-| `event.style.<코드>.news-gap-days` | 120~240 | 240~480 | 뉴스 간격 구간. 처음 값(15~45 / 60~150)은 40년 동안 뉴스가 단기 약 470번, 장기 약 130번이라 10분짜리 판에서 매번 선택하기에 너무 많아 늘렸다. 지금 값은 단기 약 80번, 장기 약 40번이다 |
+| `event.style.<코드>.news-gap-days` | 300~390 | 330~420 | 뉴스 간격 구간. 처음 값(15~45 / 60~150)은 40년 동안 뉴스가 단기 약 470번, 장기 약 130번이라 너무 많아 120~240 / 240~480으로 늘렸고, 그래도 "매수·매도가 너무 자주 나온다"는 평가로 **1년에 한 번꼴**로 다시 늘렸다 (decisions.md 30번). 투자 44년 동안 단기 약 46번, 장기 약 42번 |
 | `event.style.<코드>.magnitude-percent` | 150 | 100 | 변동 폭 배율 |
 | `event.style.<코드>.chain-continue-percent` | 30 | 70 | 연결 뉴스가 이어질 확률 배율 |
 
@@ -326,7 +326,7 @@ public record CompleteResult(
 | `event.news.interest-weight-percent` | 300 | 관심 섹터 뉴스의 가중치 배율 |
 | `event.news.no-repeat-window` | 5 | 같은 정의가 다시 나오지 않는 최근 개수 |
 | `event.news.max-chain-depth` | 5 | 연결 뉴스의 최대 깊이 |
-| `event.style.<코드>.news-gap-days` | 단기 120~240 / 장기 240~480 | 뉴스 간격 (5.5절) |
+| `event.style.<코드>.news-gap-days` | 단기 300~390 / 장기 330~420 | 뉴스 간격, 1년에 한 번꼴 (5.5절) |
 | `event.style.<코드>.magnitude-percent` | 단기 150 / 장기 100 | 변동 폭 배율 |
 | `event.style.<코드>.chain-continue-percent` | 단기 30 / 장기 70 | 연결 확률 배율 |
 | `game.days-per-year` | 360 | 투자 시작 재제안 주기 |

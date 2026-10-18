@@ -33,11 +33,15 @@ interface Props {
   onChoose: (option: string, quantity?: number) => void
 }
 
-/** 선택형 이벤트 카드. 스킵할 수 없고, 뉴스일 때는 화면을 어둡게 한다 (설계 5.3절). */
+/** 화면을 어둡게 덮는 종류. 뉴스(매수·매도)와 일상 장면 (설계 5.3절, decisions.md 31번). */
+export function takesOver(kind: PendingEvent['kind']): boolean {
+  return kind === 'NEWS' || kind === 'TRAIT'
+}
+
+/** 선택형 이벤트 카드. 스킵할 수 없고, 뉴스와 일상은 화면을 어둡게 덮는다. */
 export function DecisionCard(props: Props) {
-  const isNews = props.event.kind === 'NEWS'
   const card = <Body {...props} />
-  return isNews ? <Overlay>{card}</Overlay> : card
+  return takesOver(props.event.kind) ? <Overlay>{card}</Overlay> : card
 }
 
 function Body({ event, game, busy, onChoose }: Props) {
