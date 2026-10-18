@@ -101,6 +101,22 @@ class LogRepository {
         .orElse(OptionalLong.empty());
   }
 
+  /** 종료 해처럼 같은 날의 마지막 값이 맞아야 하는 줄은 덮어쓴다. */
+  void replaceYear(UUID gameId, int age, long totalAsset, long cash) {
+    jdbc.sql(
+            """
+            INSERT INTO progress_year (game_id, age, total_asset, cash)
+            VALUES (:gameId, :age, :totalAsset, :cash)
+            ON CONFLICT (game_id, age)
+              DO UPDATE SET total_asset = EXCLUDED.total_asset, cash = EXCLUDED.cash
+            """)
+        .param("gameId", gameId)
+        .param("age", age)
+        .param("totalAsset", totalAsset)
+        .param("cash", cash)
+        .update();
+  }
+
   List<GameView.Yearly> findYears(UUID gameId) {
     return jdbc.sql(
             "SELECT age, total_asset, cash FROM progress_year WHERE game_id = :gameId ORDER BY age")

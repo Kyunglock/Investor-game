@@ -754,7 +754,8 @@ class DefaultProgressService implements ProgressService {
             deviationCounts(game.id()),
             game.createdAt(),
             endedAt));
-    logs.upsertYear(game.id(), game.endAge(), finalAsset, account.cash());
+    // 종료일에 알림 비용이 겹치면 연 경계에서 먼저 쓴 값이 최종 자산과 어긋나므로 덮어쓴다.
+    logs.replaceYear(game.id(), game.endAge(), finalAsset, account.cash());
     logs.append(
         game.id(),
         game.lastReportedDay(),

@@ -64,6 +64,29 @@ class AssetServiceTest {
   }
 
   @Test
+  void 수량이_너무_커서_금액이_넘치면_사지_않는다() {
+    TradeResult trade = assets.buy(gameId, SSJ, Long.MAX_VALUE / 2, 72_000, 10, null);
+    assertThat(trade.status()).isEqualTo(TradeResult.Status.INSUFFICIENT_CASH);
+    assertThat(assets.get(gameId).cash()).isEqualTo(initialCash);
+    assertThat(assets.get(gameId).holdings()).isEmpty();
+  }
+
+  @Test
+  void 큰_보유의_일부_매도도_원가를_정확히_비례_차감한다() {
+    // 원가 × 수량이 long을 넘는 크기. 평단 9,000,000,000원 × 2,000,000주
+    long quantity = 2_000_000;
+    long price = 9_000_000_000L;
+    assets.credit(gameId, "WINDFALL", price * quantity, 5);
+    assets.buy(gameId, SSJ, quantity, price, 10, null);
+
+    TradeResult sell = assets.sell(gameId, SSJ, 500_000, price, 11, null);
+
+    assertThat(sell.realizedPnl()).isZero();
+    assertThat(assets.get(gameId).holdings().get(SSJ))
+        .isEqualTo(new AccountView.Holding(1_500_000, price * 1_500_000));
+  }
+
+  @Test
   void 수량_0은_오류다() {
     assertThatThrownBy(() -> assets.buy(gameId, SSJ, 0, 1_000, 10, null))
         .isInstanceOf(InvalidRequestException.class);

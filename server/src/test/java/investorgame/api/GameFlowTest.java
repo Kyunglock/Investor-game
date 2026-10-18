@@ -219,6 +219,57 @@ class GameFlowTest {
   }
 
   @Test
+  void 한_번에_열두_달을_뛰어도_가격_월급_지출은_달마다_한_번씩이다() throws Exception {
+    MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
+    GameClient client = GameClient.newSession(mvc);
+    // 직업만 고르고 투자 제안은 거절해, 1년 동안 뉴스 없이 월급·생활비만 흐르게 한다.
+    Object started = client.chooseFirstJob(client.startUntilJob()).read("$.game");
+    DocumentContext game = JsonPath.parse(started);
+    String gameId = game.read("$.gameId");
+    int day = game.read("$.day", Integer.class);
+    game = client.advance(gameId, game.read("$.nextEventDay", Integer.class));
+    assertThat(game.read("$.pendingEvent.kind", String.class)).isEqualTo("OFFER");
+    Object declined =
+        client.choose(gameId, game.read("$.pendingEvent.eventId"), "decline").read("$.game");
+    game = JsonPath.parse(declined);
+    int from = game.read("$.day", Integer.class);
+    long cash = game.read("$.cash", Long.class);
+    long salary = game.read("$.job.monthlySalary", Long.class);
+    long expense = game.read("$.household.monthlyExpense", Long.class);
+    int monthBefore = game.read("$.market.month", Integer.class);
+    Integer next = game.read("$.nextEventDay");
+    int target = from + 360;
+    // 1년 안에 결혼 제안이나 알림이 있으면 그 전까지만 본다 (그 사이는 월급·생활비만 움직인다).
+    int stop = next == null ? target : Math.min(target, next);
+    int months = stop / 30 - from / 30;
+    assertThat(months).as("최소 몇 달은 이벤트 없이 흐른다").isPositive();
+
+    DocumentContext after = client.advance(gameId, stop);
+
+    assertThat(after.read("$.market.month", Integer.class)).isEqualTo(monthBefore + months);
+    long saved = after.read("$.cash", Long.class) - cash + after.read("$.debt", Long.class);
+    List<String> kindsInRange = after.read("$.log[?(@.day > " + from + ")].kind");
+    assertThat(saved)
+        .as(
+            "from=%d stop=%d afterDay=%d months=%d salary=%d expense=%d cashBefore=%d cashAfter=%d debt=%d income=%d expenseAfter=%d kinds=%s",
+            from,
+            stop,
+            after.read("$.day", Integer.class),
+            months,
+            salary,
+            expense,
+            cash,
+            after.read("$.cash", Long.class),
+            after.read("$.debt", Long.class),
+            after.read("$.household.monthlyIncome", Long.class),
+            after.read("$.household.monthlyExpense", Long.class),
+            kindsInRange)
+        // 25세부터 물가(연 2%)가 생활비를 올리고 연차가 바뀌면 월급이 오르므로 ±20% 안에서 "달 수 × (월급 − 생활비)"다.
+        .isBetween((salary - expense) * months * 8 / 10, (salary - expense) * months * 12 / 10);
+    assertThat(day).isLessThan(from);
+  }
+
+  @Test
   void 투자_중_자유_매매는_용기_판정을_거쳐_포트폴리오에_반영된다() throws Exception {
     MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
     GameClient client = GameClient.newSession(mvc);

@@ -92,10 +92,11 @@ class JdbcAssetService implements AssetService {
       UUID gameId, String stockCode, long quantity, long price, int gameDay, UUID eventId) {
     requirePositive(quantity, price);
     Account account = account(gameId);
-    long amount = quantity * price;
-    if (amount > account.cash()) {
+    // 곱하기 전에 비교해 long 오버플로로 현금이 늘어나는 일을 막는다 (수량 × 가격 > 현금이면 살 수 없다).
+    if (quantity > account.cash() / price) {
       return new TradeResult(TradeResult.Status.INSUFFICIENT_CASH, 0, price, 0, 0, account.cash());
     }
+    long amount = quantity * price;
     long cashAfter = account.cash() - amount;
     AccountView.Holding held = holding(gameId, stockCode);
     setCash(gameId, cashAfter);
@@ -127,7 +128,9 @@ class JdbcAssetService implements AssetService {
     long sold = Math.min(quantity, held.quantity());
     long amount = sold * price;
     long costOut =
-        sold == held.quantity() ? held.costBasis() : held.costBasis() * sold / held.quantity();
+        sold == held.quantity()
+            ? held.costBasis()
+            : proportion(held.costBasis(), sold, held.quantity());
     long cashAfter = account.cash() + amount;
     setCash(gameId, cashAfter);
     setHolding(gameId, stockCode, held.quantity() - sold, held.costBasis() - costOut);
@@ -201,6 +204,11 @@ class JdbcAssetService implements AssetService {
   public long totalAsset(UUID gameId, Map<String, Long> prices) {
     Account account = account(gameId);
     return account.cash() + holdingsValue(gameId, prices) - account.debt();
+  }
+
+  /** total × part / whole 을 오버플로 없이 계산한다 (몫과 나머지로 나눠 곱한다). part ≤ whole. */
+  private static long proportion(long total, long part, long whole) {
+    return total / whole * part + (total % whole) * part / whole;
   }
 
   private static void requirePositive(long quantity, long price) {

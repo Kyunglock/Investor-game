@@ -228,7 +228,7 @@ components:
       properties:
         stockCode: { type: string }
         side: { type: string, enum: [BUY, SELL] }
-        quantity: { type: integer, format: int64, minimum: 1 }
+        quantity: { type: integer, format: int64, minimum: 1, maximum: 1000000000 }
     StockHistory:
       type: object
       required: [stockCode, points]

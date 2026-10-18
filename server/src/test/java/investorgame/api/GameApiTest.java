@@ -82,6 +82,7 @@ class GameApiTest {
     String gameId = game.read("$.gameId");
 
     client.tradeRaw(gameId, "ssj", "BUY", 0).andExpect(status().isBadRequest());
+    client.tradeRaw(gameId, "ssj", "BUY", 1_000_000_001L).andExpect(status().isBadRequest());
     client.tradeRaw(gameId, "nope", "BUY", 1).andExpect(status().isNotFound());
     client.historyRaw(gameId, "nope").andExpect(status().isNotFound());
   }

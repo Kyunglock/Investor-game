@@ -6,6 +6,7 @@ import investorgame.progress.GameView;
 import investorgame.progress.ProgressService;
 import investorgame.progress.StockHistory;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -88,8 +89,14 @@ class GameController {
 
   record AdvanceRequest(@Min(0) int day) {}
 
+  /** 한 번에 주문할 수 있는 최대 수량. 계약(TradeRequest.quantity.maximum)과 같은 값이다. */
+  static final long MAX_TRADE_QUANTITY = 1_000_000_000L;
+
   /** side는 BUY 또는 SELL. HOLD는 진행이 400으로 거절한다. */
-  record TradeRequest(@NotBlank String stockCode, @NotNull Action side, @Min(1) long quantity) {}
+  record TradeRequest(
+      @NotBlank String stockCode,
+      @NotNull Action side,
+      @Min(1) @Max(MAX_TRADE_QUANTITY) long quantity) {}
 
   record ChoiceRequest(@NotBlank String option) {}
 }
