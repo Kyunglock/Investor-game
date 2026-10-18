@@ -74,7 +74,7 @@ export function growthText(
   after: number,
   reason?: string | null,
 ): string {
-  const cause = reason === 'TRAIT' ? '그 선택으로' : '경험으로'
+  const cause = reason === 'TRAIT' || reason === 'CAREER' ? '그 선택으로' : '경험으로'
   return `${cause} ${statLabel(statCode)} ${before} → ${after} ${after < before ? '↓' : '↑'}`
 }
 

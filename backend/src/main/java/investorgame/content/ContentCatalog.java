@@ -39,6 +39,11 @@ public interface ContentCatalog {
 
   JobDefinition job(String code);
 
+  /** 취업 뒤 직장 장면. 코드순 (decisions.md 26번). */
+  List<CareerDefinition> careers();
+
+  CareerDefinition career(String code);
+
   /** 모든 성향 장면. 나이순이다. */
   List<TraitDefinition> traits();
 
@@ -72,6 +77,15 @@ public interface ContentCatalog {
   List<String> swayPhrases(String sentiment);
 
   TextBlock jobEventText();
+
+  /** "더 나은 자리를 기다린다"를 고른 뒤 다시 오는 직업 선택의 문구. */
+  TextBlock jobRetryText();
+
+  /** 실직 뒤 다시 오는 직업 선택의 문구. */
+  TextBlock jobRehireText();
+
+  /** 직업 선택의 "기다린다" 선택지 문구. */
+  String jobWaitLabel();
 
   OfferText offerText();
 

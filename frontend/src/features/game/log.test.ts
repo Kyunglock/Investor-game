@@ -264,3 +264,27 @@ describe('logLines', () => {
     expect(logLines(g).map((l) => l.seq)).toEqual([2, 1])
   })
 })
+
+describe('직장 기록', () => {
+  it('재취업·기다림·직장 장면 줄', () => {
+    expect(
+      logLine(
+        entry('JOB', 3600, { jobTitle: '개발자', monthlySalary: 3500000, rehire: true }),
+        game,
+      ).text,
+    ).toBe('개발자(으)로 다시 취직했다. 월급 3,500,000원.')
+    expect(logLine(entry('JOB_WAIT', 3600, {}), game).text).toBe('더 나은 자리를 기다리기로 했다.')
+    const career = logLine(
+      entry('CAREER', 4000, {
+        eventTitle: '연봉 협상',
+        optionLabel: '세게 요구한다',
+        success: false,
+        text: '분위기만 싸해졌다.',
+      }),
+      game,
+    )
+    expect(career.text).toBe('연봉 협상 · 세게 요구한다 → 분위기만 싸해졌다.')
+    expect(career.tone).toBe('flipped')
+    expect(career.pill).toBe('직장')
+  })
+})

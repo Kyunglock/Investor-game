@@ -1,6 +1,7 @@
 package investorgame.content.internal;
 
 import investorgame.common.StatCodes;
+import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
@@ -38,6 +39,7 @@ class JsonContentCatalog implements ContentCatalog {
       List.of(
           "meta.json",
           "jobs.json",
+          "careers.json",
           "traits.json",
           "news.json",
           "phrases.json",
@@ -46,6 +48,7 @@ class JsonContentCatalog implements ContentCatalog {
 
   private final Meta meta;
   private final List<JobDefinition> jobs;
+  private final List<CareerDefinition> careers;
   private final List<TraitDefinition> traits;
   private final List<TraitStage> traitStages;
   private final List<TraitDefinition> adultTraits;
@@ -65,6 +68,10 @@ class JsonContentCatalog implements ContentCatalog {
     // read()가 properties.dirs()를 쓰므로 먼저 받아 둔다.
     this.meta = read(json, "meta.json", new TypeReference<>() {});
     this.jobs = read(json, "jobs.json", new TypeReference<>() {});
+    this.careers =
+        read(json, "careers.json", new TypeReference<List<CareerDefinition>>() {}).stream()
+            .sorted(Comparator.comparing(CareerDefinition::code))
+            .toList();
     this.traits =
         read(json, "traits.json", new TypeReference<List<TraitDefinition>>() {}).stream()
             .sorted(Comparator.comparingInt(TraitDefinition::age))
@@ -172,6 +179,19 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public List<CareerDefinition> careers() {
+    return careers;
+  }
+
+  @Override
+  public CareerDefinition career(String code) {
+    return careers.stream()
+        .filter(c -> c.code().equals(code))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("알 수 없는 직장 장면: " + code));
+  }
+
+  @Override
   public List<TraitDefinition> traits() {
     return traits;
   }
@@ -239,6 +259,21 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public TextBlock jobRetryText() {
+    return phrases.jobRetry();
+  }
+
+  @Override
+  public TextBlock jobRehireText() {
+    return phrases.jobRehire();
+  }
+
+  @Override
+  public String jobWaitLabel() {
+    return phrases.jobWait();
+  }
+
+  @Override
   public OfferText offerText() {
     return phrases.offer();
   }
@@ -246,6 +281,34 @@ class JsonContentCatalog implements ContentCatalog {
   /** 잘못된 콘텐츠는 서버 시작 단계에서 실패시킨다. 게임 중에 터지는 것보다 낫다. */
   private void validate() {
     require(!jobs.isEmpty(), "직업이 하나도 없다");
+    require(jobs.stream().map(JobDefinition::code).distinct().count() == jobs.size(), "직업 코드가 겹친다");
+    require(!careers.isEmpty(), "직장 장면이 하나도 없다");
+    require(
+        careers.stream().map(CareerDefinition::code).distinct().count() == careers.size(),
+        "직장 장면 코드가 겹친다");
+    for (CareerDefinition career : careers) {
+      require(career.weight() > 0, "직장 장면의 가중치는 양수여야 한다: " + career.code());
+      require(
+          career.options().size() >= 2 && career.options().size() <= 4,
+          "직장 장면의 선택지는 2~4개여야 한다: " + career.code());
+      for (CareerDefinition.Option option : career.options()) {
+        String where = career.code() + "/" + option.code();
+        require(
+            option.stat() == null || StatCodes.ALL.contains(option.stat()),
+            "직장 장면의 판정 능력치가 아니다: " + where);
+        require(
+            !option.success().moveJob() || !option.success().quit(), "이직과 실직을 같이 둘 수 없다: " + where);
+        for (CareerDefinition.Effect effect : List.of(option.success(), option.fail())) {
+          require(
+              effect.statDeltas().keySet().stream()
+                  .allMatch(k -> StatCodes.ALL.contains(k) && !StatCodes.LUCK.equals(k)),
+              "직장 장면의 능력치 변화는 운을 뺀 능력치 코드여야 한다: " + where);
+        }
+      }
+    }
+    require(
+        phrases.jobRetry() != null && phrases.jobRehire() != null && phrases.jobWait() != null,
+        "phrases.json에 jobRetry, jobRehire, jobWait가 있어야 한다");
     require(!traits.isEmpty(), "성향 이벤트가 하나도 없다");
     require(!traitStages.isEmpty(), "성장기 성향 장면(adult가 아닌 것)이 하나도 없다");
     require(!news.isEmpty(), "뉴스가 하나도 없다");
@@ -427,5 +490,8 @@ class JsonContentCatalog implements ContentCatalog {
       Map<String, Map<String, List<String>>> hints,
       Map<String, List<String>> sway,
       TextBlock job,
+      TextBlock jobRetry,
+      TextBlock jobRehire,
+      String jobWait,
       OfferText offer) {}
 }

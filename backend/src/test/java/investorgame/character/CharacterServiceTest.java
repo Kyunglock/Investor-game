@@ -49,9 +49,45 @@ class CharacterServiceTest {
 
     assertThatThrownBy(() -> characters.assignJob(gameId, "farmer", 10))
         .isInstanceOf(InvalidRequestException.class);
+    assertThat(characters.get(gameId).careerStartDay()).isZero();
     assertThat(characters.tenureYears(gameId, 359)).isZero();
     assertThat(characters.tenureYears(gameId, 360)).isEqualTo(1);
     assertThat(characters.tenureYears(gameId, 720)).isEqualTo(2);
+  }
+
+  /** 직장 체계 (decisions.md 26번): 인상분 누적, 이직하면 연차·인상분 초기화, 실직하면 직업이 없어지고 처음 일한 날은 남는다. */
+  @Test
+  void 인상분은_쌓이고_이직하면_연차와_인상분이_초기화되고_실직하면_직업이_없어진다() {
+    assertThatThrownBy(() -> characters.addSalaryBonus(gameId, 500))
+        .isInstanceOf(InvalidRequestException.class);
+    characters.assignJob(gameId, "office", 100);
+    characters.addSalaryBonus(gameId, 1200);
+    characters.addSalaryBonus(gameId, 600);
+    assertThat(characters.get(gameId).salaryBonusBp()).isEqualTo(1800);
+
+    characters.changeJob(gameId, "developer", 1000, 1000);
+    CharacterView moved = characters.get(gameId);
+    assertThat(moved.jobCode()).isEqualTo("developer");
+    assertThat(moved.jobStartDay()).isEqualTo(1000);
+    assertThat(moved.careerStartDay()).as("처음 일한 날은 그대로").isEqualTo(100);
+    assertThat(moved.salaryBonusBp()).isEqualTo(1000);
+    assertThat(characters.tenureYears(gameId, 1000 + 360)).isEqualTo(1);
+
+    characters.quitJob(gameId);
+    CharacterView jobless = characters.get(gameId);
+    assertThat(jobless.jobCode()).isNull();
+    assertThat(jobless.jobStartDay()).isNull();
+    assertThat(jobless.salaryBonusBp()).isZero();
+    assertThat(jobless.careerStartDay()).isEqualTo(100);
+    assertThat(characters.tenureYears(gameId, 5000)).isZero();
+    assertThatThrownBy(() -> characters.quitJob(gameId))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> characters.changeJob(gameId, "farmer", 2000, 0))
+        .isInstanceOf(InvalidRequestException.class);
+
+    characters.assignJob(gameId, "farmer", 2000);
+    assertThat(characters.get(gameId).jobCode()).isEqualTo("farmer");
+    assertThat(characters.get(gameId).careerStartDay()).isEqualTo(100);
   }
 
   @Test

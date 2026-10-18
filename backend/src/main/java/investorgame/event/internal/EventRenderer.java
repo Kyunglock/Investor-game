@@ -1,11 +1,13 @@
 package investorgame.event.internal;
 
+import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.JobDefinition;
 import investorgame.content.LifeText;
 import investorgame.content.NewsDefinition;
 import investorgame.content.NoticeDefinition;
 import investorgame.content.TraitDefinition;
+import investorgame.event.ChoiceTicket;
 import investorgame.event.EventView;
 import investorgame.event.Notice;
 import java.util.List;
@@ -26,10 +28,27 @@ class EventRenderer {
   EventView render(EventRow row) {
     return switch (row.kind()) {
       case JOB -> {
-        ContentCatalog.TextBlock text = content.jobEventText();
+        ContentCatalog.TextBlock text =
+            DefaultEventService.JOB_RETRY.equals(row.definitionCode())
+                ? content.jobRetryText()
+                : DefaultEventService.JOB_REHIRE.equals(row.definitionCode())
+                    ? content.jobRehireText()
+                    : content.jobEventText();
         List<EventView.Option> options =
-            row.options().stream().map(code -> jobOption(content.job(code))).toList();
+            row.options().stream()
+                .map(
+                    code ->
+                        ChoiceTicket.Job.WAIT.equals(code)
+                            ? new EventView.Option(code, content.jobWaitLabel())
+                            : jobOption(content.job(code)))
+                .toList();
         yield view(row, text.title(), text.body(), null, null, options);
+      }
+      case CAREER -> {
+        CareerDefinition career = content.career(row.definitionCode());
+        List<EventView.Option> options =
+            row.options().stream().map(code -> careerOption(career, code)).toList();
+        yield view(row, career.title(), career.body(), null, null, options);
       }
       case TRAIT -> {
         TraitDefinition trait = trait(row.definitionCode());
@@ -142,6 +161,25 @@ class EventRenderer {
   private static EventView.Option jobOption(JobDefinition job) {
     return new EventView.Option(
         job.code(), "%s · 월 %,d만 원".formatted(job.title(), job.baseMonthlySalary() / TEN_THOUSAND));
+  }
+
+  /** 이직 제안의 "move:<직업>"은 옮길 직업과 시작 월급을 문구에 붙인다. */
+  private EventView.Option careerOption(CareerDefinition career, String code) {
+    boolean move = code.startsWith(DefaultEventService.MOVE_PREFIX);
+    String optionCode = move ? "move" : code;
+    CareerDefinition.Option option =
+        career.options().stream()
+            .filter(o -> o.code().equals(optionCode))
+            .findFirst()
+            .orElseThrow(() -> new IllegalStateException("콘텐츠에 없는 직장 선택지: " + code));
+    if (!move) {
+      return new EventView.Option(code, option.label());
+    }
+    JobDefinition target = content.job(code.substring(DefaultEventService.MOVE_PREFIX.length()));
+    long salary = target.baseMonthlySalary() * (100 + option.success().moveSalaryPercent()) / 100;
+    return new EventView.Option(
+        code,
+        "%s → %s · 월 %,d만 원".formatted(option.label(), target.title(), salary / TEN_THOUSAND));
   }
 
   /** 문구 코드는 "방향.강도.번호"(힌트) 또는 "분위기.번호"(다른 뉴스)다. */

@@ -2,6 +2,7 @@ package investorgame.event;
 
 import investorgame.common.Direction;
 import investorgame.common.Sentiment;
+import investorgame.content.CareerDefinition;
 import java.util.Map;
 import java.util.UUID;
 
@@ -31,7 +32,21 @@ public record ChoiceTicket(
   /** 판정과 자산 반영은 진행이 한다. */
   public record News() implements Effect {}
 
-  public record Job(String jobCode) implements Effect {}
+  /** 직업 선택. jobCode가 WAIT이면 고르지 않고 더 나은 자리를 기다린다 (decisions.md 26번). */
+  public record Job(String jobCode) implements Effect {
+    public static final String WAIT = "WAIT";
+
+    public boolean isWait() {
+      return WAIT.equals(jobCode);
+    }
+  }
+
+  /**
+   * 직장 장면의 선택. 판정(능력치로 성공 확률)과 효과 반영은 진행이 한다.
+   *
+   * @param targetJobCode 이직 제안이면 옮길 직업. 아니면 null
+   */
+  public record Career(CareerDefinition.Option option, String targetJobCode) implements Effect {}
 
   /**
    * @param traitDeltas 네 축 점수 ("style.", "risk.", "mind.", "sector.")

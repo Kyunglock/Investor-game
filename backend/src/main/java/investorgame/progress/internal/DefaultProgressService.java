@@ -20,6 +20,7 @@ import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.common.random.SeededRandom;
+import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
@@ -74,6 +75,7 @@ class DefaultProgressService implements ProgressService {
   private static final String EXPENSE = "EXPENSE";
   private static final String LIFE_COST = "LIFE_COST";
   private static final String TRADE_LOG = "TRADE";
+  private static final String CAREER_LOG = "CAREER";
 
   private final GameRepository games;
   private final LogRepository logs;
@@ -216,9 +218,18 @@ class DefaultProgressService implements ProgressService {
           case ChoiceTicket.News news ->
               resolveNews(game, ticket, pendingView.title(), quantity, random);
           case ChoiceTicket.Job job -> {
-            characters.assignJob(gameId, job.jobCode(), ticket.occursDay());
-            games.changePhase(gameId, Phase.SAVING);
             events.complete(gameId, eventId, new Completion(option, option, List.of()));
+            if (job.isWait()) {
+              // 더 나은 자리를 기다린다. 다음 직업 선택은 event.job.wait-days 뒤에 온다 (decisions.md 26번).
+              logs.append(gameId, ticket.occursDay(), "JOB_WAIT", Map.of());
+              yield simpleOutcome(ticket, "이번 제안은 넘기고 더 나은 자리를 기다리기로 했다.");
+            }
+            CharacterView before = characters.get(gameId);
+            boolean rehire = before.careerStartDay() != null;
+            characters.assignJob(gameId, job.jobCode(), ticket.occursDay());
+            if (game.phase() == Phase.CHILDHOOD) {
+              games.changePhase(gameId, Phase.SAVING);
+            }
             JobDefinition definition = content.job(job.jobCode());
             logs.append(
                 gameId,
@@ -227,10 +238,16 @@ class DefaultProgressService implements ProgressService {
                 Map.of(
                     "jobCode", definition.code(),
                     "jobTitle", definition.title(),
-                    "monthlySalary", definition.baseMonthlySalary()));
+                    "monthlySalary", definition.baseMonthlySalary(),
+                    "rehire", rehire));
             yield simpleOutcome(
-                ticket, "%s(으)로 일하기 시작했다. 월급은 매달 들어온다.".formatted(definition.title()));
+                ticket,
+                rehire
+                    ? "%s(으)로 다시 일하기 시작했다. 월급이 다시 들어온다.".formatted(definition.title())
+                    : "%s(으)로 일하기 시작했다. 월급은 매달 들어온다.".formatted(definition.title()));
           }
+          case ChoiceTicket.Career career ->
+              resolveCareer(game, ticket, career, pendingView.title(), random);
           case ChoiceTicket.Trait trait -> {
             // 성장기의 선택은 판정으로 뒤집지 않지만 능력치를 조금 움직인다 (경제 개편 설계 4.3절).
             List<StatChange> moved =
@@ -302,6 +319,85 @@ class DefaultProgressService implements ProgressService {
     scheduleAt(updated, updated.lastReportedDay(), updated.lastReportedDay());
     endIfFinished(updated);
     return new ChoiceOutcome(view(games.findLatest(sessionId).orElseThrow()), outcome);
+  }
+
+  // ---- 직장 장면: 능력치로 판정 → 월급·직장·돈·능력치 반영 (decisions.md 26번) ----
+
+  private ChoiceOutcome.Outcome resolveCareer(
+      GameRow game,
+      ChoiceTicket ticket,
+      ChoiceTicket.Career career,
+      String eventTitle,
+      SeededRandom random) {
+    UUID gameId = game.id();
+    int day = ticket.occursDay();
+    CareerDefinition.Option option = career.option();
+    CharacterView character = characters.get(gameId);
+    boolean success = true;
+    if (option.rolls()) {
+      int stat = character.stats().toCodes().get(option.stat());
+      int chanceBp = option.baseBp() + stat * option.perPointBp();
+      success = random.forKey("career", ticket.seq()).nextInt(BP) < chanceBp;
+    }
+    CareerDefinition.Effect effect = success ? option.success() : option.fail();
+    events.complete(
+        gameId,
+        ticket.eventId(),
+        new Completion(ticket.optionCode(), ticket.optionCode(), List.of()));
+
+    JobDefinition job = content.job(character.jobCode());
+    long salaryBefore = monthlySalary(job, tenureYears(character, day), character.salaryBonusBp());
+    StringBuilder message = new StringBuilder(effect.text());
+    if (effect.quit()) {
+      long severance = salaryBefore * effect.severanceMonths();
+      if (severance > 0) {
+        assets.credit(gameId, SEVERANCE, severance, day);
+        message.append(" 위로금 %,d원을 받았다.".formatted(severance));
+      }
+      characters.quitJob(gameId);
+      message.append(" 월급이 끊기고 생활비는 계속 나간다.");
+    } else if (effect.moveJob() && career.targetJobCode() != null) {
+      characters.changeJob(
+          gameId, career.targetJobCode(), day, (int) (effect.moveSalaryPercent() * PERCENT));
+      JobDefinition target = content.job(career.targetJobCode());
+      long salaryAfter = monthlySalary(target, 0, (int) (effect.moveSalaryPercent() * PERCENT));
+      message.append(" 월급 %,d원 → %,d원.".formatted(salaryBefore, salaryAfter));
+    } else if (effect.salaryPercent() != 0) {
+      characters.addSalaryBonus(gameId, (int) (effect.salaryPercent() * PERCENT));
+      CharacterView after = characters.get(gameId);
+      long salaryAfter = monthlySalary(job, tenureYears(after, day), after.salaryBonusBp());
+      message.append(" 월급 %,d원 → %,d원.".formatted(salaryBefore, salaryAfter));
+    }
+    if (effect.amount() > 0) {
+      assets.credit(gameId, WINDFALL, effect.amount(), day);
+    } else if (effect.amount() < 0) {
+      assets.spend(gameId, LIFE_COST, -effect.amount(), day, ticket.eventId());
+    }
+    List<ChoiceOutcome.Growth> growth = List.of();
+    if (!effect.statDeltas().isEmpty()) {
+      growth =
+          logGrowth(
+              gameId,
+              day,
+              characters.recordTraitChoice(gameId, Map.of(), effect.statDeltas(), day),
+              CAREER_LOG);
+    }
+    CharacterView after = characters.get(gameId);
+    Map<String, Object> payload = new HashMap<>();
+    payload.put("eventTitle", eventTitle);
+    payload.put("optionCode", option.code());
+    payload.put("optionLabel", option.label());
+    payload.put("success", success);
+    payload.put("text", message.toString());
+    payload.put("jobTitle", after.jobCode() == null ? null : content.job(after.jobCode()).title());
+    payload.put(
+        "monthlySalary",
+        after.jobCode() == null
+            ? 0
+            : monthlySalary(
+                content.job(after.jobCode()), tenureYears(after, day), after.salaryBonusBp()));
+    logs.append(gameId, day, CAREER_LOG, payload);
+    return simpleOutcome(ticket, message.toString(), growth);
   }
 
   // ---- 결혼·자녀 (경제 개편 설계 7.3절) ----
@@ -664,18 +760,25 @@ class DefaultProgressService implements ProgressService {
     for (int m = fromExclusive / month + 1; m * month <= toInclusive; m++) {
       int day = m * month;
       market.advanceTo(gameId, day, random);
+      // 생활비는 처음 일을 시작한 뒤부터 나간다(실직 중에도). 월급은 지금 직업이 있을 때만 (decisions.md 26번).
+      boolean independent = character.careerStartDay() != null && day > character.careerStartDay();
       boolean working = job != null && day > character.jobStartDay();
-      if (working) {
+      if (independent) {
         HouseholdView home = household.get(gameId);
         boolean retired = home.retiredDay() != null;
-        long salary = monthlySalary(job, tenureYears(character, day));
+        long salary =
+            working
+                ? monthlySalary(job, tenureYears(character, day), character.salaryBonusBp())
+                : 0;
         if (!retired && household.retireMonth(day)) {
           long severance = salary * tenureYears(character, day);
-          assets.credit(gameId, SEVERANCE, severance, day);
+          if (severance > 0) {
+            assets.credit(gameId, SEVERANCE, severance, day);
+          }
           household.retire(gameId, day);
           logs.append(
               gameId, day, "RETIRE", Map.of("age", ageAt(game, day), "severance", severance));
-        } else if (!retired) {
+        } else if (!retired && working) {
           assets.credit(gameId, SALARY, salary, day);
         }
         long spouse = household.spouseIncome(gameId, day);
@@ -698,12 +801,13 @@ class DefaultProgressService implements ProgressService {
     }
   }
 
-  private static long monthlySalary(JobDefinition job, int tenureYears) {
+  /** 월급 = 기본 월급 × (1 + 연차 인상)^연차 × (1 + 협상·승진 인상분). */
+  private static long monthlySalary(JobDefinition job, int tenureYears, int bonusBp) {
     long salary = job.baseMonthlySalary();
     for (int year = 0; year < tenureYears; year++) {
       salary = salary * (PERCENT + job.raisePercentPerYear()) / PERCENT;
     }
-    return salary;
+    return salary * (BP + bonusBp) / BP;
   }
 
   private int tenureYears(CharacterView character, int day) {
@@ -735,7 +839,9 @@ class DefaultProgressService implements ProgressService {
     if (notice.salaryPercent() > 0 && character.jobCode() != null) {
       amount =
           monthlySalary(
-                  content.job(character.jobCode()), tenureYears(character, notice.occursDay()))
+                  content.job(character.jobCode()),
+                  tenureYears(character, notice.occursDay()),
+                  character.salaryBonusBp())
               * notice.salaryPercent()
               / PERCENT;
     }
@@ -823,6 +929,9 @@ class DefaultProgressService implements ProgressService {
         game.investingStartDay(),
         endDay(game),
         character.jobStartDay(),
+        character.jobCode(),
+        character.careerStartDay(),
+        home.retiredDay() != null,
         home.married(),
         home.marriedDay(),
         home.childBirthDays().size());
@@ -933,11 +1042,15 @@ class DefaultProgressService implements ProgressService {
   private GameView.Household householdView(GameRow game, CharacterView character) {
     HouseholdView home = household.get(game.id());
     int day = game.lastReportedDay();
+    boolean independent = character.careerStartDay() != null && day > character.careerStartDay();
     boolean working = character.jobCode() != null && day > character.jobStartDay();
     boolean retired = home.retiredDay() != null;
     long income =
         working && !retired
-            ? monthlySalary(content.job(character.jobCode()), tenureYears(character, day))
+            ? monthlySalary(
+                content.job(character.jobCode()),
+                tenureYears(character, day),
+                character.salaryBonusBp())
             : 0;
     return new GameView.Household(
         home.married(),
@@ -947,7 +1060,7 @@ class DefaultProgressService implements ProgressService {
             .toList(),
         income,
         household.spouseIncome(game.id(), day),
-        working ? household.monthlyExpense(game.id(), day) : 0,
+        independent ? household.monthlyExpense(game.id(), day) : 0,
         retired);
   }
 
@@ -962,7 +1075,10 @@ class DefaultProgressService implements ProgressService {
     }
     JobDefinition job = content.job(character.jobCode());
     return new GameView.Job(
-        job.code(), job.title(), monthlySalary(job, tenureYears(character, day)));
+        job.code(),
+        job.title(),
+        monthlySalary(job, tenureYears(character, day), character.salaryBonusBp()),
+        tenureYears(character, day));
   }
 
   private GameView.PendingEvent pendingView(EventView event, Map<String, Quote> quotes) {

@@ -42,7 +42,11 @@ export function IdentityCard({ game, ageYears }: { game: Game; ageYears: number 
               {game.job ? game.job.title : game.phase === 'CHILDHOOD' ? '학생' : '구직 중'}
             </dd>
             <dt className="text-faint">월급</dt>
-            <dd className="font-mono-num">{game.job ? won(game.job.monthlySalary) : '—'}</dd>
+            <dd className="font-mono-num">
+              {game.job
+                ? `${won(game.job.monthlySalary)}${game.job.tenureYears > 0 ? ` · ${game.job.tenureYears}년차` : ''}`
+                : '—'}
+            </dd>
             <dt className="text-faint">유형</dt>
             <dd data-testid="style">
               {game.investorType ? (

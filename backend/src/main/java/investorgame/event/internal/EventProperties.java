@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties("event")
 public record EventProperties(
     JobSettings job,
+    CareerSettings career,
     TraitSettings trait,
     NewsSettings news,
     LifeSettings life,
@@ -22,8 +23,20 @@ public record EventProperties(
 
   public record Range(int min, int max) {}
 
-  /** age: 직업 선택이 오는 나이. 성향이 다 정해지기 전에는 오지 않는다. */
-  public record JobSettings(int age, int optionCount) {}
+  /**
+   * @param age 첫 직업 선택이 오는 나이. 성향이 다 정해지기 전에는 오지 않는다
+   * @param optionCount 직업 선택지 수 ("기다린다" 제외)
+   * @param waitDays "더 나은 자리를 기다린다"를 고르면 이 뒤에 다시 온다
+   * @param maxWaits 연속으로 기다릴 수 있는 횟수. 넘으면 "기다린다" 선택지가 없다
+   * @param rehireDays 실직한 뒤 다시 직업 선택이 오기까지
+   */
+  public record JobSettings(int age, int optionCount, int waitDays, int maxWaits, int rehireDays) {}
+
+  /**
+   * @param gapDays 직장 장면 사이 간격(일). 직업이 있을 때만
+   * @param lastAge 이 나이를 넘으면 직업·직장 이벤트가 오지 않는다
+   */
+  public record CareerSettings(Range gapDays, int lastAge) {}
 
   /** adultGapDays: 취업 뒤 일상 장면(adult 성향 장면) 사이 간격(일). 풀을 다 쓰면 더 오지 않는다. */
   public record TraitSettings(Range adultGapDays) {}

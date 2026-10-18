@@ -34,7 +34,7 @@ export interface LogLine {
   age: number
   tone: LogTone
   text: string
-  pill?: '탄생' | '제안'
+  pill?: '탄생' | '제안' | '직장'
 }
 
 type GameInfo = Pick<Game, 'startAge' | 'daysPerYear' | 'initialStats'> &
@@ -77,7 +77,18 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       return {
         ...base,
         tone: 'neutral',
-        text: `${str(p.jobTitle)}에 취직했다. 첫 월급 ${won(num(p.monthlySalary))}.`,
+        text: p.rehire
+          ? `${str(p.jobTitle)}(으)로 다시 취직했다. 월급 ${won(num(p.monthlySalary))}.`
+          : `${str(p.jobTitle)}에 취직했다. 첫 월급 ${won(num(p.monthlySalary))}.`,
+      }
+    case 'JOB_WAIT':
+      return { ...base, tone: 'decision', text: '더 나은 자리를 기다리기로 했다.' }
+    case 'CAREER':
+      return {
+        ...base,
+        tone: p.success === false ? 'flipped' : 'decision',
+        pill: '직장',
+        text: `${str(p.eventTitle)} · ${str(p.optionLabel)} → ${str(p.text)}`,
       }
     case 'STYLE': {
       // 유형 이름이 없는 옛 기록은 스타일 이름으로 대신한다.

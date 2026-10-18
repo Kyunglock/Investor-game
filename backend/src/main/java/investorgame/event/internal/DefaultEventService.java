@@ -8,6 +8,7 @@ import investorgame.common.Sentiment;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
 import investorgame.common.random.SeededRandom;
+import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.JobDefinition;
 import investorgame.content.NewsDefinition;
@@ -48,6 +49,15 @@ class DefaultEventService implements EventService {
   static final String DECLINE = "decline";
   static final String MARRIAGE = "marriage";
   static final String CHILD = "child";
+
+  /** 직업 선택 행의 definition_code: null이면 첫 선택, RETRY는 기다린 뒤, REHIRE는 실직 뒤. 문구가 달라진다. */
+  static final String JOB_RETRY = "retry";
+
+  static final String JOB_REHIRE = "rehire";
+
+  /** 이직 제안의 선택지 코드는 "move:<직업 코드>"다. 옮길 직업을 행에 같이 남긴다. */
+  static final String MOVE_PREFIX = "move:";
+
   private static final List<String> NEWS_OPTIONS = List.of("BUY", "SELL", "HOLD");
   private static final int BP = 10_000;
   private static final int PERCENT = 100;
@@ -126,6 +136,20 @@ class DefaultEventService implements EventService {
     ChoiceTicket.Effect effect =
         switch (row.kind()) {
           case JOB -> new ChoiceTicket.Job(optionCode);
+          case CAREER -> {
+            CareerDefinition career = content.career(row.definitionCode());
+            String code = optionCode.startsWith(MOVE_PREFIX) ? "move" : optionCode;
+            CareerDefinition.Option chosen =
+                career.options().stream()
+                    .filter(o -> o.code().equals(code))
+                    .findFirst()
+                    .orElseThrow();
+            String target =
+                optionCode.startsWith(MOVE_PREFIX)
+                    ? optionCode.substring(MOVE_PREFIX.length())
+                    : null;
+            yield new ChoiceTicket.Career(chosen, target);
+          }
           case TRAIT -> {
             TraitDefinition.Option chosen =
                 renderer.trait(row.definitionCode()).options().stream()
@@ -205,10 +229,11 @@ class DefaultEventService implements EventService {
       EventProperties.Range gap = properties.style(context.investmentStyle()).newsGapDays();
       candidates.add(new Candidate(EventKind.NEWS, base + roll(random, gap, "NEWS", news.size())));
     }
-    if (context.phase() != Phase.CHILDHOOD && context.jobStartDay() != null) {
+    if (context.phase() != Phase.CHILDHOOD && context.careerStartDay() != null) {
       adultTraitCandidate(rows, context, random, candidates);
       lifeCandidates(rows, context, random, candidates);
       noticeCandidate(rows, context, random, candidates);
+      careerCandidates(rows, context, random, candidates);
     }
     return candidates.stream()
         .min(Comparator.comparingInt(Candidate::day).thenComparing(Candidate::kind))
@@ -226,9 +251,55 @@ class DefaultEventService implements EventService {
       int day = dayOfAge(stages.get(traits.size()).age(), context) + calendar.daysPerYear() / 2;
       int after = traits.isEmpty() ? 0 : last(traits).occursDay();
       candidates.add(new Candidate(EventKind.TRAIT, Math.max(day, after)));
-    } else if (context.traitsFinalized() && ofKind(rows, EventKind.JOB).isEmpty()) {
-      int day = dayOfAge(properties.job().age(), context);
+    } else if (context.traitsFinalized() && context.jobStartDay() == null) {
+      // 첫 직업 선택. "기다린다"를 골랐으면 wait-days 뒤에 다시 온다.
+      List<EventRow> jobs = ofKind(rows, EventKind.JOB);
+      int day =
+          jobs.isEmpty()
+              ? dayOfAge(properties.job().age(), context)
+              : last(jobs).occursDay() + properties.job().waitDays();
       candidates.add(new Candidate(EventKind.JOB, Math.max(day, last(traits).occursDay())));
+    }
+  }
+
+  /**
+   * 취업 뒤 직장 (decisions.md 26번). 직업이 있으면 직장 장면(CAREER)이 간격을 두고 오고, 실직 중이면 다시 직업 선택(JOB)이 온다. 은퇴했거나
+   * career.last-age를 넘으면 둘 다 없다.
+   */
+  private void careerCandidates(
+      List<EventRow> rows,
+      SchedulingContext context,
+      SeededRandom random,
+      List<Candidate> candidates) {
+    if (context.retired()) {
+      return;
+    }
+    List<EventRow> careers = ofKind(rows, EventKind.CAREER);
+    List<EventRow> jobs = ofKind(rows, EventKind.JOB);
+    int day;
+    EventKind kind;
+    if (context.jobStartDay() == null) {
+      // 실직 중: 마지막 직장 장면(실직 원인) 또는 마지막 직업 선택(기다림) 뒤에 다시 고른다.
+      EventRow lastCareer = careers.isEmpty() ? null : last(careers);
+      EventRow lastJob = jobs.isEmpty() ? null : last(jobs);
+      boolean waited =
+          lastJob != null && (lastCareer == null || lastJob.occursDay() > lastCareer.occursDay());
+      day =
+          waited
+              ? lastJob.occursDay() + properties.job().waitDays()
+              : (lastCareer == null ? context.careerStartDay() : lastCareer.occursDay())
+                  + properties.job().rehireDays();
+      kind = EventKind.JOB;
+    } else {
+      int base =
+          careers.isEmpty()
+              ? context.jobStartDay()
+              : Math.max(context.jobStartDay(), last(careers).occursDay());
+      day = base + roll(random, properties.career().gapDays(), "CAREER", careers.size());
+      kind = EventKind.CAREER;
+    }
+    if (ageAt(day, context) <= properties.career().lastAge()) {
+      candidates.add(new Candidate(kind, day));
     }
   }
 
@@ -242,7 +313,7 @@ class DefaultEventService implements EventService {
     if (used.size() >= content.adultTraits().size()) {
       return;
     }
-    int base = used.isEmpty() ? context.jobStartDay() : last(used).occursDay();
+    int base = used.isEmpty() ? context.careerStartDay() : last(used).occursDay();
     candidates.add(
         new Candidate(
             EventKind.TRAIT,
@@ -313,7 +384,7 @@ class DefaultEventService implements EventService {
       SeededRandom random,
       List<Candidate> candidates) {
     List<EventRow> notices = ofKind(rows, EventKind.NOTICE);
-    int base = notices.isEmpty() ? context.jobStartDay() : last(notices).occursDay();
+    int base = notices.isEmpty() ? context.careerStartDay() : last(notices).occursDay();
     candidates.add(
         new Candidate(
             EventKind.NOTICE,
@@ -339,14 +410,8 @@ class DefaultEventService implements EventService {
     int seq = rows.stream().mapToInt(EventRow::seq).max().orElse(0) + 1;
     UUID id = UUID.randomUUID();
     return switch (candidate.kind()) {
-      case JOB ->
-          simple(
-              id,
-              seq,
-              EventKind.JOB,
-              null,
-              candidate.day(),
-              sampleJobs(random.forKey("event", "job-options")));
+      case JOB -> jobEvent(id, seq, rows, candidate.day(), context, random);
+      case CAREER -> careerEvent(id, seq, rows, candidate.day(), context, random);
       case TRAIT -> {
         // 단계마다 장면을 판 시드로 랜덤하게 뽑는다. 판마다 다른 질문이 나오고, 같은 판은 다시 불러도 같다.
         // 취업 뒤(성장기가 아님)에는 아직 안 나온 adult 장면 중에서 뽑는다.
@@ -484,15 +549,95 @@ class DefaultEventService implements EventService {
         rng);
   }
 
-  private List<String> sampleJobs(RandomGenerator rng) {
+  /**
+   * 직업 선택 (decisions.md 26번). 선택지는 가중치로 뽑되, 기다린 뒤라면 직전 제안의 최고 월급보다 나은 직업을 하나는 섞는다(있다면). 끝에 "기다린다"
+   * 선택지는 아직 기다릴 수 있고 지금 제안보다 월급이 많은 직업이 남아 있을 때만 붙는다.
+   */
+  private EventRow jobEvent(
+      UUID id,
+      int seq,
+      List<EventRow> rows,
+      int day,
+      SchedulingContext context,
+      SeededRandom random) {
+    List<EventRow> streak = jobStreak(rows);
+    boolean rehire = context.careerStartDay() != null;
+    RandomGenerator rng = random.forKey("event", "job-options", streak.size());
+    long bestBefore =
+        streak.stream()
+            .flatMap(r -> r.options().stream())
+            .filter(code -> !ChoiceTicket.Job.WAIT.equals(code))
+            .mapToLong(code -> content.job(code).baseMonthlySalary())
+            .max()
+            .orElse(0);
     List<JobDefinition> remaining = new ArrayList<>(content.jobs());
     List<String> picked = new ArrayList<>();
+    if (!streak.isEmpty()) {
+      List<JobDefinition> better =
+          remaining.stream().filter(j -> j.baseMonthlySalary() > bestBefore).toList();
+      if (!better.isEmpty()) {
+        JobDefinition job = weighted(better, JobDefinition::weight, rng);
+        remaining.remove(job);
+        picked.add(job.code());
+      }
+    }
     while (picked.size() < properties.job().optionCount() && !remaining.isEmpty()) {
       JobDefinition job = weighted(remaining, JobDefinition::weight, rng);
       remaining.remove(job);
       picked.add(job.code());
     }
-    return picked;
+    long bestNow =
+        picked.stream().mapToLong(code -> content.job(code).baseMonthlySalary()).max().orElse(0);
+    boolean betterExists = content.jobs().stream().anyMatch(j -> j.baseMonthlySalary() > bestNow);
+    if (streak.size() < properties.job().maxWaits() && betterExists) {
+      picked.add(ChoiceTicket.Job.WAIT);
+    }
+    String definition = streak.isEmpty() ? (rehire ? JOB_REHIRE : null) : JOB_RETRY;
+    return simple(id, seq, EventKind.JOB, definition, day, picked);
+  }
+
+  /** 지금 이어지고 있는 "기다림" 줄: 마지막 직장 장면(실직) 뒤의 직업 선택들. 성장기라면 지금까지의 직업 선택 전부. */
+  private List<EventRow> jobStreak(List<EventRow> rows) {
+    List<EventRow> careers = ofKind(rows, EventKind.CAREER);
+    int after = careers.isEmpty() ? -1 : last(careers).occursDay();
+    return ofKind(rows, EventKind.JOB).stream().filter(r -> r.occursDay() > after).toList();
+  }
+
+  /**
+   * 직장 장면. 연차 조건을 만족하는 장면 중 직전 장면을 뺀 나머지에서 가중치로 뽑는다. 이직 제안은 지금보다 월급이 많은 직업이 있을 때만 나오고, 옮길 직업을 선택지
+   * 코드("move:<직업>")에 남긴다.
+   */
+  private EventRow careerEvent(
+      UUID id,
+      int seq,
+      List<EventRow> rows,
+      int day,
+      SchedulingContext context,
+      SeededRandom random) {
+    RandomGenerator rng = random.forKey("event", "career", seq);
+    List<EventRow> previous = ofKind(rows, EventKind.CAREER);
+    String lastCode = previous.isEmpty() ? null : last(previous).definitionCode();
+    int tenure = Math.max(0, day - context.jobStartDay()) / calendar.daysPerYear();
+    long currentSalary = content.job(context.jobCode()).baseMonthlySalary();
+    List<JobDefinition> betterJobs =
+        content.jobs().stream().filter(j -> j.baseMonthlySalary() > currentSalary).toList();
+    List<CareerDefinition> eligible =
+        content.careers().stream()
+            .filter(c -> c.minTenureYears() <= tenure)
+            .filter(c -> !c.code().equals(lastCode))
+            .filter(c -> !c.movesJob() || !betterJobs.isEmpty())
+            .toList();
+    if (eligible.isEmpty()) {
+      eligible = content.careers().stream().filter(c -> !c.movesJob()).toList();
+    }
+    CareerDefinition career = weighted(eligible, CareerDefinition::weight, rng);
+    JobDefinition target =
+        career.movesJob() ? weighted(betterJobs, JobDefinition::weight, rng) : null;
+    List<String> options =
+        career.options().stream()
+            .map(o -> o.success().moveJob() ? MOVE_PREFIX + target.code() : o.code())
+            .toList();
+    return simple(id, seq, EventKind.CAREER, career.code(), day, options);
   }
 
   private static <T> T weighted(List<T> items, ToIntFunction<T> weight, RandomGenerator rng) {

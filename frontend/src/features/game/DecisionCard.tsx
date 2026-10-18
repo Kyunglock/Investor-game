@@ -16,6 +16,7 @@ const KIND_LABELS: Record<PendingEvent['kind'], string> = {
   TRAIT: '일상',
   OFFER: '제안',
   LIFE: '생활',
+  CAREER: '직장',
   NEWS: '뉴스',
 }
 

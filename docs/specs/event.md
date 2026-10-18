@@ -62,7 +62,7 @@ public interface EventService {
 ## 3. 입력·출력 타입
 
 ```java
-public enum EventKind { JOB, OFFER, TRAIT, LIFE, NEWS, NOTICE }   // 구현된 순서 = 우선순위. TRAINING은 아직 없음
+public enum EventKind { JOB, OFFER, TRAIT, LIFE, CAREER, NEWS, NOTICE }   // 구현된 순서 = 우선순위. TRAINING은 아직 없음
 public enum EventStatus { SCHEDULED, PENDING, RESOLVED, SKIPPED }
 
 public record SchedulingContext(
@@ -108,7 +108,8 @@ public record ChoiceTicket(
 
 public sealed interface ChoiceEffect permits NewsEffect, JobEffect, TraitEffect, TrainingEffect, OfferEffect {}
 public record NewsEffect() implements ChoiceEffect {}                          // 판정·자산 반영은 진행이 한다
-public record JobEffect(String jobCode) implements ChoiceEffect {}             // 진행이 캐릭터에 직업을 확정
+public record JobEffect(String jobCode) implements ChoiceEffect {}             // 진행이 캐릭터에 직업을 정함. jobCode가 WAIT이면 기다림
+public record CareerEffect(CareerDefinition.Option option, String targetJobCode) implements ChoiceEffect {}  // 직장 장면. 판정·반영은 진행
 public record TraitEffect(Map<String, Integer> traitDeltas, Map<String, Integer> statDeltas, String note) implements ChoiceEffect {}   // 진행이 캐릭터에 축 점수 누적 + 능력치 즉시 변경(statDeltas는 선택, 운 금지, 폭은 content.trait-stat-max-delta). 구현 이름은 ChoiceTicket.Trait
 public record TrainingEffect(String statCode, int expAmount, long cost) implements ChoiceEffect {}  // 비용이 0이고 expAmount가 0이면 "하지 않는다"
 public record OfferEffect(boolean accepted) implements ChoiceEffect {}         // 수락이면 진행이 단계를 바꿈
@@ -132,7 +133,8 @@ public record CompleteResult(
 
 | 종류 | 단계 | 선택형 | 스킵 | 설명 |
 |---|---|---|---|---|
-| `JOB` | `CHILDHOOD` 끝 | 예 | 불가 | 직업 선택. 성향이 다 정해진 뒤 한 번 (이직 불가, 확정). 고르면 `SAVING`으로 바뀐다 |
+| `JOB` | `CHILDHOOD` 끝, 실직 뒤 | 예 | 불가 | 직업 선택. 성향이 다 정해진 뒤 처음 오고, 실직하면 다시 온다. 선택지 끝에 **"더 나은 자리를 기다린다"(`WAIT`)**가 붙을 수 있다(5.3절). 성장기에 고르면 `SAVING`으로 바뀐다 (decisions.md 26번) |
+| `CAREER` | 직업이 있을 때 | 예 | 불가 | 직장 장면(연봉 협상·승진 심사·이직 제안·구조조정·번아웃). 선택지마다 능력치로 성공을 가르고, 결과가 월급 인상분·직장·돈·능력치를 움직인다. 판정과 반영은 진행이 한다 (decisions.md 26번) |
 | `TRAIT` | `CHILDHOOD` | 예 | 불가 | 성장기의 일상 장면에서 행동을 고르게 해 성향을 유추한다. 판정으로 뒤집지 않는다 (확정) |
 | `TRAINING` | 둘 다 | 예 | 불가 | 자기계발. 비용을 쓰고 능력치 경험치를 얻는 선택지와 "하지 않는다" 선택지가 있다 (확정: 성장 루트) |
 | `OFFER` | `SAVING` | 예 | 불가 | 투자 시작 제안. 수락/거절 (확정) |
@@ -165,7 +167,9 @@ public record CompleteResult(
 |---|---|---|
 | `TRAIT` 성장기 | `CHILDHOOD`, 성장 단계가 남음 | 다음 성장 단계의 나이(콘텐츠의 `adult`가 아닌 장면 중 `age`가 같은 것들이 한 단계. 15~24세 10단계)를 게임 일수로 바꾼 값 **+ 반년(180일)**. 시작 나이와 같은 단계가 0일에 바로 뜨지 않게 한다. 장면은 그 단계의 풀에서 `("event", "trait-scene", 단계 번호)` 키로 랜덤하게 하나 뽑는다 |
 | `TRAIT` 취업 뒤 | 취업함, 콘텐츠의 `adult` 장면 중 아직 안 나온 것이 있음 | 마지막 adult `TRAIT`(없으면 취업일) + `event.trait.adult-gap-days`(초기값 540~900) 구간에서 뽑은 값. 장면은 남은 adult 풀에서 `("event","trait-scene","adult",n)` 키로 뽑는다. 성향 확정(`traitsComplete`)에는 세지 않고 능력치만 움직인다 (decisions.md 23번) |
-| `JOB` | `CHILDHOOD`, 성향 이벤트가 모두 끝나 스타일이 확정됨, 아직 없음 | `event.job.age`(초기값 25)를 게임 일수로 바꾼 값. 마지막 성향 이벤트보다 앞서지 않는다 |
+| `JOB` 첫 선택 | `CHILDHOOD`, 성향 이벤트가 모두 끝나 스타일이 확정됨, 직업 없음 | 처음은 `event.job.age`(초기값 25)를 게임 일수로 바꾼 값(마지막 성향 이벤트보다 앞서지 않는다). `WAIT`을 골랐으면 마지막 `JOB` + `event.job.wait-days`(180) |
+| `JOB` 재취업 | 취업한 적 있음, 지금 직업 없음, 은퇴 전, 나이 ≤ `event.career.last-age` | 실직시킨 마지막 `CAREER` + `event.job.rehire-days`(150). 그 뒤 `WAIT`을 골랐으면 마지막 `JOB` + `wait-days` |
+| `CAREER` | 직업 있음, 은퇴 전, 나이 ≤ `event.career.last-age`(57) | `max(지금 직업 시작일, 마지막 CAREER)` + `event.career.gap-days`(540~1080) 구간에서 뽑은 값(키 `("CAREER", n)`) |
 | `OFFER` | `SAVING`, `salaryStarted`, `traitsFinalized`, 대기·예약된 `OFFER` 없음 | 처음이면 `max(현재, 첫 월급 후)`; 거절되었다면 마지막 `OFFER` + `game.days-per-year` (1년마다 다시 묻는다, 확정) |
 | `TRAINING` | `JOB`이 해결됨 | 마지막 `TRAINING`(없으면 `JOB` 해결 일수) + `event.training.gap-days` 구간에서 뽑은 값 |
 | `LIFE` 결혼 | 취업함, 미혼, 나이 ≤ `marriage-last-age` | 처음은 `marriage-age` 구간의 나이(키 `("event","life","marriage-age")`), 거절했으면 마지막 + `marriage-retry-years`년 |
@@ -182,7 +186,8 @@ public record CompleteResult(
 
 | 종류 | 선택지 |
 |---|---|
-| `JOB` | 콘텐츠의 직업 중 `event.job.option-count`(초기값 3)개를 가중치대로 뽑는다. 뽑은 선택지 코드를 `options`에 저장해 재접속해도 같은 선택지가 보인다 |
+| `JOB` | 콘텐츠의 직업 중 `event.job.option-count`(초기값 3)개를 가중치대로 뽑는다(키 `("event","job-options",기다린 횟수)`). **기다린 뒤**라면 이번 "기다림 줄"(마지막 `CAREER` 뒤의 `JOB`들)에서 제안된 최고 월급보다 나은 직업을 하나는 섞는다(있다면). 끝에 **`WAIT`("더 나은 자리를 기다린다")**는 기다린 횟수 < `event.job.max-waits`(3)이고 지금 제안보다 월급이 많은 직업이 남아 있을 때만 붙는다. `definition_code`는 첫 선택 null, 기다린 뒤 `retry`, 실직 뒤 `rehire`로 문구(`phrases.json`의 `job`/`jobRetry`/`jobRehire`)를 가른다. 뽑은 코드를 `options`에 저장해 재접속해도 같다 |
+| `CAREER` | 연차 ≥ `minTenureYears`인 장면 중 직전 장면을 뺀 나머지에서 가중치로 하나(키 `("event","career",seq)`). 이직 제안(`moveJob` 선택지가 있는 장면)은 지금 직업보다 기본 월급이 많은 직업이 있을 때만 나오고, 옮길 직업을 가중치로 골라 선택지 코드 **`move:<직업 코드>`**에 남긴다. 나머지 선택지는 콘텐츠 코드 그대로 |
 | `TRAIT` | 콘텐츠의 성향 이벤트 정의가 가진 선택지 전부 (2~4개) |
 | `TRAINING` | 콘텐츠의 자기계발 정의 선택지 + 항상 "하지 않는다" 선택지 |
 | `OFFER` | `accept`, `decline` |
@@ -294,7 +299,8 @@ public record CompleteResult(
 | 정의 | 필요한 필드 |
 |---|---|
 | 뉴스 | 위 JSON의 필드. `styles`가 없으면 모든 스타일 |
-| 직업 | `code`, `title`, 선택 가중치, 월급 정보 (진행·자산용, 콘텐츠 스펙) |
+| 직업 | `code`, `title`, 선택 가중치, 월급 정보 (진행·자산용, 콘텐츠 스펙). 14개, 월급이 많을수록 가중치가 낮다 |
+| 직장 장면 (`careers.json`) | `code`, `title`, `body`, `weight`, `minTenureYears`, 선택지 2~4개(`code`, `label`, 판정 `stat`·`baseBp`·`perPointBp`(없으면 항상 성공), `success`/`fail` 효과: `salaryPercent`, `quit`, `severanceMonths`, `moveJob`, `moveSalaryPercent`, `amount`, `statDeltas`(운 제외), `text`) |
 | 성향 | `code`, `age`, `adult`(선택, true면 취업 뒤 일상 장면), `title`, `body`(상황), 선택지 3~4개(`code`, `label`, `traitDeltas`(style/risk/mind/sector), `statDeltas`(선택, 절댓값 ≤ `content.trait-stat-max-delta` 8), `note`) |
 | 자기계발 | `code`, `title`, `body`, 선택지 목록(`code`, `label`, `statCode`, `expAmount`, `cost`) |
 | 알림 | `code`, `title`, `body`, 단계 조건 |
@@ -309,7 +315,12 @@ public record CompleteResult(
 |---|---|---|
 | `event.job.age` | 25 | 직업 선택이 오는 나이 (성향 확정 뒤) |
 | `event.trait.adult-gap-days` | 540~900 | 취업 뒤 일상 장면(adult) 간격 |
-| `event.job.option-count` | 3 | 직업 선택지 개수 |
+| `event.job.option-count` | 3 | 직업 선택지 개수 (`WAIT` 제외) |
+| `event.job.wait-days` | 180 | "기다린다" 뒤 다시 직업 선택이 오기까지 |
+| `event.job.max-waits` | 3 | 연속으로 기다릴 수 있는 횟수 |
+| `event.job.rehire-days` | 150 | 실직 뒤 다시 직업 선택이 오기까지 |
+| `event.career.gap-days` | 540~1080 | 직장 장면 간격 |
+| `event.career.last-age` | 57 | 이 나이를 넘으면 직업·직장 이벤트가 없다 |
 | `event.training.gap-days` | 120~240 | 자기계발 이벤트 간격 |
 | `event.notice.gap-days` | 40~100 | 알림성 이벤트 간격 |
 | `event.news.interest-weight-percent` | 300 | 관심 섹터 뉴스의 가중치 배율 |

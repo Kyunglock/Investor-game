@@ -47,6 +47,9 @@ class DefaultEventServiceTest {
             JOB_DAY + 30,
             END_DAY,
             JOB_DAY,
+            "office",
+            JOB_DAY,
+            false,
             false,
             null,
             0);
@@ -186,10 +189,84 @@ class DefaultEventServiceTest {
         null,
         END_DAY,
         JOB_DAY,
+        "office",
+        JOB_DAY,
+        false,
         married,
         marriedDay,
         children);
   }
+
+  /** 직장 체계 (decisions.md 26번): 직업이 있으면 직장 장면이, 실직 중이면 재취업 선택이 온다. */
+  @Test
+  void 직업이_있으면_직장_장면이_오고_실직_중이면_재취업_선택이_온다() {
+    UUID employed = UUID.randomUUID();
+    SchedulingContext working = lifeOnly(false, null, 0);
+    // 540~1080일 간격이라 JOB_DAY + 1080 전에는 반드시 하나 있다. 그 전에 일상·결혼·알림이 끼어들 수 있으니 CAREER가 나올 때까지 민다.
+    EventView career = firstOf(employed, working, JOB_DAY, EventKind.CAREER, 7L);
+    assertThat(career.options()).hasSizeBetween(2, 4);
+    assertThat(content.career(careerCode(career))).isNotNull();
+
+    UUID jobless = UUID.randomUUID();
+    SchedulingContext unemployed =
+        new SchedulingContext(
+            Phase.SAVING,
+            START_AGE,
+            "long",
+            "food",
+            null,
+            true,
+            null,
+            END_DAY,
+            null,
+            null,
+            JOB_DAY,
+            false,
+            false,
+            null,
+            0);
+    EventView rehire = firstOf(jobless, unemployed, JOB_DAY + 30, EventKind.JOB, 7L);
+    assertThat(rehire.title()).isEqualTo(content.jobRehireText().title());
+    assertThat(rehire.options()).extracting(EventView.Option::code).contains("WAIT");
+  }
+
+  @Test
+  void 은퇴했으면_직업과_직장_이벤트가_없다() {
+    UUID gameId = UUID.randomUUID();
+    SchedulingContext retired =
+        new SchedulingContext(
+            Phase.INVESTING,
+            START_AGE,
+            "long",
+            "food",
+            JOB_DAY + 30,
+            true,
+            JOB_DAY + 30,
+            END_DAY,
+            null,
+            null,
+            JOB_DAY,
+            true,
+            true,
+            JOB_DAY + YEAR,
+            0);
+    int from = (60 - START_AGE) * YEAR;
+    assertThat(nextOf(gameId, retired, from, EventKind.JOB, 3L)).isEmpty();
+    assertThat(nextOf(UUID.randomUUID(), retired, from, EventKind.CAREER, 3L)).isEmpty();
+  }
+
+  private static String careerCode(EventView view) {
+    // 렌더링된 뷰에는 정의 코드가 없으므로 제목으로 찾는다.
+    return CAREER_TITLES.getOrDefault(view.title(), view.title());
+  }
+
+  private static final java.util.Map<String, String> CAREER_TITLES =
+      java.util.Map.of(
+          "연봉 협상", "raise",
+          "승진 심사", "promotion",
+          "이직 제안", "headhunt",
+          "구조조정", "layoff",
+          "번아웃", "burnout");
 
   /** fromDay부터 알림을 건너뛰며 kind의 선택형 이벤트가 PENDING으로 나올 때까지 진행한다. */
   private Optional<EventView> nextOf(

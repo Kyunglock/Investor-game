@@ -1,0 +1,145 @@
+[
+  {
+    "code": "raise",
+    "title": "연봉 협상",
+    "body": "연말 면담이 잡혔다. 올해 한 일을 정리해 보니 할 말은 있다. 문제는 어떻게 말하느냐다.",
+    "weight": 10,
+    "minTenureYears": 1,
+    "options": [
+      {
+        "code": "hard",
+        "label": "세게 요구한다",
+        "stat": "courage",
+        "baseBp": 2000,
+        "perPointBp": 60,
+        "success": { "salaryPercent": 12, "text": "담판이 통했다. 월급이 12% 올랐다.", "statDeltas": { "courage": 2 } },
+        "fail": { "text": "분위기만 싸해졌다. 인상은 없었고, 한동안 눈치를 봐야 했다.", "statDeltas": { "courage": 1 } }
+      },
+      {
+        "code": "soft",
+        "label": "근거를 준비해 차분히 말한다",
+        "stat": "insight",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 6, "text": "정리한 성과가 먹혔다. 월급이 6% 올랐다.", "statDeltas": { "insight": 2 } },
+        "fail": { "text": "'내년에 보자'는 답만 들었다.", "statDeltas": { "insight": 1 } }
+      },
+      {
+        "code": "skip",
+        "label": "올해는 넘어간다",
+        "success": { "text": "조용히 한 해를 보냈다. 기다리는 법을 조금 배웠다.", "statDeltas": { "patience": 2 } }
+      }
+    ]
+  },
+  {
+    "code": "promotion",
+    "title": "승진 심사",
+    "body": "승진 심사가 돌아왔다. 자리는 하나, 후보는 셋. 남은 몇 달을 어떻게 쓰느냐가 갈림길이다.",
+    "weight": 7,
+    "minTenureYears": 3,
+    "options": [
+      {
+        "code": "push",
+        "label": "큰 프로젝트를 맡아 승부를 본다",
+        "stat": "patience",
+        "baseBp": 3000,
+        "perPointBp": 50,
+        "success": { "salaryPercent": 15, "text": "프로젝트를 끝까지 끌고 갔고, 승진했다. 월급이 15% 올랐다.", "statDeltas": { "patience": 2, "conviction": 1 } },
+        "fail": { "text": "프로젝트가 늘어지다 끝났고, 승진은 다른 사람 몫이 됐다.", "statDeltas": { "patience": 1 } }
+      },
+      {
+        "code": "network",
+        "label": "윗사람들과 관계를 다진다",
+        "stat": "insight",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 10, "text": "눈치가 통했다. 승진과 함께 월급이 10% 올랐다.", "statDeltas": { "insight": 1 } },
+        "fail": { "text": "줄을 잘못 섰다. 밀어주던 사람이 먼저 나갔다.", "statDeltas": { "conviction": -1 } }
+      },
+      {
+        "code": "pass",
+        "label": "승진에 연연하지 않는다",
+        "success": { "text": "남들 눈치 안 보고 내 일만 했다. 마음은 편했다.", "statDeltas": { "conviction": 2 } }
+      }
+    ]
+  },
+  {
+    "code": "headhunt",
+    "title": "이직 제안",
+    "body": "헤드헌터에게 연락이 왔다. 지금보다 조건이 좋은 자리다. 다만 옮기면 연차는 처음부터 다시 쌓고, 지금까지 올린 인상분도 사라진다.",
+    "weight": 7,
+    "minTenureYears": 2,
+    "options": [
+      {
+        "code": "move",
+        "label": "이직한다",
+        "success": { "moveJob": true, "moveSalaryPercent": 10, "text": "새 회사로 옮겼다. 첫 달부터 월급이 올랐지만 연차는 다시 1년차다.", "statDeltas": { "courage": 2 } }
+      },
+      {
+        "code": "counter",
+        "label": "제안을 흘려 역제안을 받아 본다",
+        "stat": "conviction",
+        "baseBp": 3000,
+        "perPointBp": 50,
+        "success": { "salaryPercent": 8, "text": "회사가 붙잡았다. 월급 8% 인상으로 남기로 했다.", "statDeltas": { "conviction": 1 } },
+        "fail": { "text": "회사는 잡지 않았고 제안도 식었다. 남긴 남았는데 어색해졌다.", "statDeltas": { "conviction": -1 } }
+      },
+      {
+        "code": "stay",
+        "label": "남는다",
+        "success": { "text": "익숙한 자리를 지켰다. 연차는 계속 쌓인다.", "statDeltas": { "patience": 1 } }
+      }
+    ]
+  },
+  {
+    "code": "layoff",
+    "title": "구조조정",
+    "body": "회사 실적이 꺾였다. 희망퇴직 공고가 붙었고, 신청하지 않으면 정리해고 명단에 오를 수도 있다는 소문이 돈다.",
+    "weight": 4,
+    "minTenureYears": 2,
+    "options": [
+      {
+        "code": "stay",
+        "label": "버틴다",
+        "stat": "luck",
+        "baseBp": 4500,
+        "perPointBp": 40,
+        "success": { "text": "명단에서 빠졌다. 회사는 조용해졌고 월급은 계속 나온다.", "statDeltas": { "patience": 2 } },
+        "fail": { "quit": true, "severanceMonths": 2, "text": "정리해고 통보를 받았다. 위로금은 두 달치 월급. 다음 직장을 찾아야 한다.", "statDeltas": { "patience": 1 } }
+      },
+      {
+        "code": "volunteer",
+        "label": "희망퇴직을 신청한다",
+        "success": { "quit": true, "severanceMonths": 6, "text": "여섯 달치 월급을 받고 나왔다. 당분간은 통장을 믿고 다음 직장을 찾는다.", "statDeltas": { "courage": 1 } }
+      }
+    ]
+  },
+  {
+    "code": "burnout",
+    "title": "번아웃",
+    "body": "아침에 눈을 뜨는 게 무겁다. 일은 쌓이고 몸은 신호를 보낸다.",
+    "weight": 5,
+    "minTenureYears": 1,
+    "options": [
+      {
+        "code": "push",
+        "label": "버티며 일한다",
+        "stat": "patience",
+        "baseBp": 3000,
+        "perPointBp": 50,
+        "success": { "salaryPercent": 4, "text": "버틴 덕에 인정받았다. 월급이 4% 올랐다.", "statDeltas": { "patience": 2 } },
+        "fail": { "amount": -2000000, "text": "몸이 먼저 무너졌다. 병원비 200만 원이 들었다.", "statDeltas": { "patience": -2 } }
+      },
+      {
+        "code": "rest",
+        "label": "휴가를 길게 내고 쉰다",
+        "success": { "amount": -1000000, "text": "한 달을 쉬었다. 여행에 100만 원을 썼고, 머리가 맑아졌다.", "statDeltas": { "patience": 2, "insight": 1 } }
+      },
+      {
+        "code": "quit",
+        "label": "회사를 그만둔다",
+        "success": { "quit": true, "severanceMonths": 1, "text": "사표를 냈다. 한 달치 월급을 받고 나왔다. 다음 직장은 천천히 찾기로 했다.", "statDeltas": { "courage": 2 } }
+      }
+    ]
+  }
+]

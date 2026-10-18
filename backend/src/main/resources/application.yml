@@ -107,9 +107,17 @@ behavior:
 
 event:
   job:
-    # 성향이 다 정해진 뒤, 이 나이에 첫 직장을 고른다.
+    # 성향이 다 정해진 뒤, 이 나이에 첫 직장을 고른다. "더 나은 자리를 기다린다"는 wait-days 뒤 다시 오고 max-waits번까지 (decisions.md 26번)
     age: 25
     option-count: 3
+    wait-days: 180
+    max-waits: 3
+    # 실직한 뒤 다시 직업 선택이 오기까지
+    rehire-days: 150
+  career:
+    # 직업이 있는 동안 직장 장면(연봉 협상·승진·이직 제안·구조조정·번아웃)이 이 간격으로 온다. last-age를 넘으면 직업·직장 이벤트가 없다
+    gap-days: { min: 540, max: 1080 }
+    last-age: 57
   trait:
     # 취업 뒤에도 일상 장면(콘텐츠의 adult 장면)이 이 간격으로 와서 능력치를 움직인다. 풀을 다 쓰면 끝
     adult-gap-days: { min: 540, max: 900 }

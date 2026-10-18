@@ -244,11 +244,12 @@ components:
               price: { type: integer, format: int64 }
     Job:
       type: object
-      required: [code, title, monthlySalary]
+      required: [code, title, monthlySalary, tenureYears]
       properties:
         code: { type: string }
         title: { type: string }
-        monthlySalary: { type: integer, format: int64, description: 현재 연차의 월급(원) }
+        monthlySalary: { type: integer, format: int64, description: 연차 인상과 협상·승진 인상분을 더한 지금 월급(원) }
+        tenureYears: { type: integer, description: 지금 직장의 연차(년). 이직하면 0부터 다시 }
     Option:
       type: object
       required: [code, label]
@@ -260,7 +261,7 @@ components:
       required: [eventId, kind, occursDay, sectorWide, title, body, options]
       properties:
         eventId: { type: string, format: uuid }
-        kind: { type: string, enum: [JOB, TRAIT, OFFER, LIFE, NEWS] }
+        kind: { type: string, enum: [JOB, TRAIT, OFFER, LIFE, CAREER, NEWS] }
         occursDay: { type: integer }
         sectorCode: { type: [string, 'null'] }
         sectorName: { type: [string, 'null'] }
@@ -299,7 +300,7 @@ components:
         day: { type: integer, description: 사건이 일어난 게임 일수 }
         kind:
           type: string
-          enum: [BIRTH, TRAIT, JOB, STYLE, OFFER, NEWS, PRICE, GROWTH, TRADE, LIFE, MARRIAGE, CHILD, RETIRE, END]
+          enum: [BIRTH, TRAIT, JOB, JOB_WAIT, CAREER, STYLE, OFFER, NEWS, PRICE, GROWTH, TRADE, LIFE, MARRIAGE, CHILD, RETIRE, END]
         payload:
           type: object
           additionalProperties: true
@@ -397,7 +398,7 @@ components:
       type: object
       required: [kind, chosen, actual, deviations, growth]
       properties:
-        kind: { type: string, enum: [JOB, TRAIT, OFFER, LIFE, NEWS, TRADE] }
+        kind: { type: string, enum: [JOB, TRAIT, OFFER, LIFE, CAREER, NEWS, TRADE] }
         chosen: { type: string, description: 사용자가 누른 선택 }
         actual: { type: string, description: 판정을 거친 실제 행동 }
         deviations:
@@ -449,7 +450,7 @@ components:
               after: { type: integer }
               reason:
                 type: string
-                enum: [DEVIATION, TRAIT]
+                enum: [DEVIATION, TRAIT, CAREER]
                 description: DEVIATION은 이탈 경험, TRAIT은 성장기 선택으로 움직인 것
         message: { type: [string, 'null'] }
     Error:

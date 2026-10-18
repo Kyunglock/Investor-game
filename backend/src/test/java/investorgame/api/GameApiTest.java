@@ -111,7 +111,8 @@ class GameApiTest {
     assertThat(job.read("$.phase", String.class)).isEqualTo("CHILDHOOD");
     assertThat(job.read("$.investmentStyle.code", String.class)).isIn("short", "long");
     assertThat(job.read("$.interestSector.code", String.class)).isNotBlank();
-    assertThat(job.read("$.pendingEvent.options.length()", Integer.class)).isEqualTo(3);
+    // 직업 3개 + (더 나은 직업이 남아 있으면) "기다린다" (decisions.md 26번)
+    assertThat(job.read("$.pendingEvent.options.length()", Integer.class)).isBetween(3, 4);
   }
 
   @Test

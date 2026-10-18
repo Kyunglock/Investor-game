@@ -72,6 +72,29 @@ class JsonContentCatalogTest {
   }
 
   @Test
+  void 직장_장면은_선택지가_2에서_4개이고_판정_능력치와_변화가_규칙_안이다() {
+    JsonContentCatalog catalog = load();
+    assertThat(catalog.careers()).hasSizeGreaterThanOrEqualTo(4);
+    assertThat(catalog.careers()).anyMatch(c -> c.movesJob());
+    assertThat(catalog.careers())
+        .anyMatch(c -> c.options().stream().anyMatch(o -> o.success().quit() || o.fail().quit()));
+    for (var career : catalog.careers()) {
+      assertThat(career.options()).as(career.code()).hasSizeBetween(2, 4);
+      for (var option : career.options()) {
+        if (option.rolls()) {
+          assertThat(StatCodes.ALL).contains(option.stat());
+          assertThat(option.baseBp() + 100 * option.perPointBp()).isLessThanOrEqualTo(10_000);
+        }
+        assertThat(option.success().text()).as(career.code() + "/" + option.code()).isNotBlank();
+      }
+    }
+    assertThat(catalog.jobs()).hasSizeGreaterThanOrEqualTo(10);
+    assertThat(catalog.jobWaitLabel()).isNotBlank();
+    assertThat(catalog.jobRetryText().title()).isNotBlank();
+    assertThat(catalog.jobRehireText().title()).isNotBlank();
+  }
+
+  @Test
   void 알_수_없는_유형_코드는_오류다() {
     assertThatThrownBy(() -> load().investorType("none-none-none"))
         .isInstanceOf(IllegalArgumentException.class);

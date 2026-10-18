@@ -267,9 +267,11 @@ export interface components {
             title: string;
             /**
              * Format: int64
-             * @description 현재 연차의 월급(원)
+             * @description 연차 인상과 협상·승진 인상분을 더한 지금 월급(원)
              */
             monthlySalary: number;
+            /** @description 지금 직장의 연차(년). 이직하면 0부터 다시 */
+            tenureYears: number;
         };
         Option: {
             code: string;
@@ -279,7 +281,7 @@ export interface components {
             /** Format: uuid */
             eventId: string;
             /** @enum {string} */
-            kind: "JOB" | "TRAIT" | "OFFER" | "LIFE" | "NEWS";
+            kind: "JOB" | "TRAIT" | "OFFER" | "LIFE" | "CAREER" | "NEWS";
             occursDay: number;
             sectorCode?: string | null;
             sectorName?: string | null;
@@ -318,7 +320,7 @@ export interface components {
             /** @description 사건이 일어난 게임 일수 */
             day: number;
             /** @enum {string} */
-            kind: "BIRTH" | "TRAIT" | "JOB" | "STYLE" | "OFFER" | "NEWS" | "PRICE" | "GROWTH" | "TRADE" | "LIFE" | "MARRIAGE" | "CHILD" | "RETIRE" | "END";
+            kind: "BIRTH" | "TRAIT" | "JOB" | "JOB_WAIT" | "CAREER" | "STYLE" | "OFFER" | "NEWS" | "PRICE" | "GROWTH" | "TRADE" | "LIFE" | "MARRIAGE" | "CHILD" | "RETIRE" | "END";
             /** @description 종류별 필드 (docs/superpowers/specs/2026-10-18-ui-redesign-design.md 6.3절) */
             payload: {
                 [key: string]: unknown;
@@ -408,7 +410,7 @@ export interface components {
         };
         Outcome: {
             /** @enum {string} */
-            kind: "JOB" | "TRAIT" | "OFFER" | "LIFE" | "NEWS" | "TRADE";
+            kind: "JOB" | "TRAIT" | "OFFER" | "LIFE" | "CAREER" | "NEWS" | "TRADE";
             /** @description 사용자가 누른 선택 */
             chosen: string;
             /** @description 판정을 거친 실제 행동 */
@@ -458,7 +460,7 @@ export interface components {
                  * @description DEVIATION은 이탈 경험, TRAIT은 성장기 선택으로 움직인 것
                  * @enum {string}
                  */
-                reason: "DEVIATION" | "TRAIT";
+                reason: "DEVIATION" | "TRAIT" | "CAREER";
             }[];
             message?: string | null;
         };

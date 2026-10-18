@@ -109,6 +109,8 @@ class JdbcCharacterService implements CharacterService {
         Stats.fromCodes(initial),
         profile.jobCode(),
         profile.jobStartDay(),
+        profile.careerStartDay(),
+        profile.salaryBonusBp(),
         profile.investmentStyle(),
         profile.riskProfile(),
         profile.mindProfile(),
@@ -124,7 +126,8 @@ class JdbcCharacterService implements CharacterService {
         jdbc.sql(
                 """
                 UPDATE character_profile
-                SET job_code = :jobCode, job_start_day = :startDay, updated_at = :now
+                SET job_code = :jobCode, job_start_day = :startDay, salary_bonus_bp = 0,
+                    career_start_day = COALESCE(career_start_day, :startDay), updated_at = :now
                 WHERE game_id = :gameId AND job_code IS NULL
                 """)
             .param("jobCode", jobCode)
@@ -133,7 +136,65 @@ class JdbcCharacterService implements CharacterService {
             .param("gameId", gameId)
             .update();
     if (updated == 0) {
-      throw new InvalidRequestException("직업은 한 번만 정할 수 있다");
+      throw new InvalidRequestException("직업이 있을 때는 새 직업을 정할 수 없다");
+    }
+  }
+
+  @Override
+  @Transactional
+  public void changeJob(UUID gameId, String jobCode, int day, int startBonusBp) {
+    int updated =
+        jdbc.sql(
+                """
+                UPDATE character_profile
+                SET job_code = :jobCode, job_start_day = :day, salary_bonus_bp = :bonus, updated_at = :now
+                WHERE game_id = :gameId AND job_code IS NOT NULL
+                """)
+            .param("jobCode", jobCode)
+            .param("day", day)
+            .param("bonus", startBonusBp)
+            .param("now", now())
+            .param("gameId", gameId)
+            .update();
+    if (updated == 0) {
+      throw new InvalidRequestException("직업이 없으면 옮길 수 없다");
+    }
+  }
+
+  @Override
+  @Transactional
+  public void quitJob(UUID gameId) {
+    int updated =
+        jdbc.sql(
+                """
+                UPDATE character_profile
+                SET job_code = NULL, job_start_day = NULL, salary_bonus_bp = 0, updated_at = :now
+                WHERE game_id = :gameId AND job_code IS NOT NULL
+                """)
+            .param("now", now())
+            .param("gameId", gameId)
+            .update();
+    if (updated == 0) {
+      throw new InvalidRequestException("직업이 없으면 잃을 수 없다");
+    }
+  }
+
+  @Override
+  @Transactional
+  public void addSalaryBonus(UUID gameId, int bonusBp) {
+    int updated =
+        jdbc.sql(
+                """
+                UPDATE character_profile
+                SET salary_bonus_bp = salary_bonus_bp + :bonus, updated_at = :now
+                WHERE game_id = :gameId AND job_code IS NOT NULL
+                """)
+            .param("bonus", bonusBp)
+            .param("now", now())
+            .param("gameId", gameId)
+            .update();
+    if (updated == 0) {
+      throw new InvalidRequestException("직업이 없으면 인상분을 쌓을 수 없다");
     }
   }
 
@@ -341,8 +402,8 @@ class JdbcCharacterService implements CharacterService {
   private Profile profile(UUID gameId) {
     return jdbc.sql(
             """
-            SELECT job_code, job_start_day, investment_style, risk_profile, mind_profile,
-                   interest_sector, investor_type
+            SELECT job_code, job_start_day, career_start_day, salary_bonus_bp, investment_style,
+                   risk_profile, mind_profile, interest_sector, investor_type
             FROM character_profile
             WHERE game_id = :gameId
             """)
@@ -374,6 +435,8 @@ class JdbcCharacterService implements CharacterService {
   private record Profile(
       String jobCode,
       Integer jobStartDay,
+      Integer careerStartDay,
+      int salaryBonusBp,
       String investmentStyle,
       String riskProfile,
       String mindProfile,

@@ -10,7 +10,10 @@ import investorgame.common.Phase;
  * @param traitsFinalized 투자 스타일이 확정되었는가. 직업 선택과 투자 시작 제안은 이후에만 나온다 (decisions.md 6번)
  * @param investingStartDay 투자를 시작한 날. 시작 전이면 null
  * @param endDay 판이 끝나는 날. 이 뒤로는 이벤트를 만들지 않는다
- * @param jobStartDay 직업을 시작한 날. 생활 이벤트(결혼·알림)는 이후에만 나온다. 없으면 null
+ * @param jobStartDay 지금 직업을 시작한 날(연차 기준). 실직 중이면 null
+ * @param jobCode 지금 직업. 실직 중이면 null. 이직 제안은 이보다 월급이 많은 직업이 있을 때만 나온다
+ * @param careerStartDay 처음 일을 시작한 날. 생활 이벤트(결혼·알림·일상 장면)는 이후에만 나온다. 한 번도 일한 적 없으면 null
+ * @param retired 은퇴했는가. 은퇴 뒤에는 직업·직장 이벤트가 없다
  * @param married 결혼했는가
  * @param marriedDay 결혼한 날. 자녀 이벤트의 기준. 미혼이면 null
  * @param childrenCount 자녀 수
@@ -25,6 +28,9 @@ public record SchedulingContext(
     Integer investingStartDay,
     int endDay,
     Integer jobStartDay,
+    String jobCode,
+    Integer careerStartDay,
+    boolean retired,
     boolean married,
     Integer marriedDay,
     int childrenCount) {}

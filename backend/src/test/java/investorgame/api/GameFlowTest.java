@@ -88,7 +88,11 @@ class GameFlowTest {
         .as("40년 동안 월급을 받았으므로 자산이 늘었다")
         .isGreaterThan(game.read("$.result.initialAsset", Long.class));
 
-    assertThat(seenKinds.get("JOB")).isEqualTo(1);
+    // 첫 직업은 반드시 하나. 구조조정·번아웃으로 실직하면 재취업 선택이 더 올 수 있다 (decisions.md 26번).
+    assertThat(seenKinds.get("JOB")).isGreaterThanOrEqualTo(1);
+    assertThat(seenKinds.getOrDefault("CAREER", 0))
+        .as("40년 동안 직장 장면이 여러 번")
+        .isGreaterThanOrEqualTo(3);
     // 성장 단계 10개에서 하나씩, 취업 뒤 일상 장면(adult) 풀 8개를 40년 동안 다 쓴다.
     assertThat(seenKinds.get("TRAIT")).as("성장기 10 + 취업 뒤 일상 8").isEqualTo(18);
     assertThat(kindOrder.subList(0, 12))
@@ -161,16 +165,17 @@ class GameFlowTest {
         .containsKeys("investorTypeCode", "investorTypeName", "riskCode", "mindCode");
     List<Map<String, Object>> growthPayloads = game.read("$.log[?(@.kind=='GROWTH')].payload");
     assertThat(growthPayloads)
-        .allSatisfy(p -> assertThat(p.get("reason")).isIn("DEVIATION", "TRAIT"));
+        .allSatisfy(p -> assertThat(p.get("reason")).isIn("DEVIATION", "TRAIT", "CAREER"));
     for (String response : responses) {
       List<String> reasons = JsonPath.parse(response).read("$..growth[*].reason");
-      assertThat(reasons).allMatch(r -> r.equals("DEVIATION") || r.equals("TRAIT"));
+      assertThat(reasons).allMatch(r -> List.of("DEVIATION", "TRAIT", "CAREER").contains(r));
     }
 
     // 인생 기록: 진행이 사건마다 기록한 것이 탄생부터 종료까지 순서대로 남는다.
     List<String> kinds = game.read("$.log[*].kind");
     assertThat(kinds).startsWith("BIRTH").endsWith("END");
-    assertThat(kinds).containsOnlyOnce("JOB", "STYLE", "OFFER", "MARRIAGE", "RETIRE");
+    assertThat(kinds).containsOnlyOnce("STYLE", "OFFER", "MARRIAGE", "RETIRE");
+    assertThat(kinds).contains("JOB", "CAREER");
     assertThat(kinds).contains("CHILD", "LIFE");
     assertThat(kinds.stream().filter("TRAIT"::equals).count()).isEqualTo(18);
     assertThat(kinds.stream().filter("NEWS"::equals).count())

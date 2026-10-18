@@ -65,7 +65,8 @@ public record GameView(
       long pnl,
       int pnlBp) {}
 
-  public record Job(String code, String title, long monthlySalary) {}
+  /** monthlySalary는 연차 인상과 협상·승진 인상분을 더한 지금 월급. tenureYears는 지금 직장의 연차. */
+  public record Job(String code, String title, long monthlySalary, int tenureYears) {}
 
   public record Named(String code, String name) {}
 

@@ -98,10 +98,13 @@ public record StatChange(String statCode, int expGained, int valueBefore, int va
 
 ### 4.2 직업
 
-- `assignJob`은 한 판에 한 번만 가능하다. 이미 있으면 오류를 던진다 (이직 불가, 확정).
-- `startDay`는 직업을 시작한 게임 일수다. 연차 계산에 쓴다.
+- `assignJob`은 직업이 없을 때(첫 취업 또는 실직 뒤)만 가능하다. 이미 있으면 오류를 던진다. 처음이면 `career_start_day`(처음 일을 시작한 날)도 이 날이 된다. 생활비는 진행이 이 날부터 내보낸다(실직 중에도) (decisions.md 26번).
+- `changeJob`(이직): 직업이 있을 때만. `job_start_day`를 그날로 바꿔 **연차를 0부터 다시 세고**, `salary_bonus_bp`를 시작 인상분으로 바꾼다. `career_start_day`는 그대로.
+- `quitJob`(실직): `job_code`·`job_start_day`를 null로, `salary_bonus_bp`를 0으로. 직업이 없으면 오류.
+- `addSalaryBonus`: 연봉 협상·승진의 인상분(만분율)을 누적한다. 직업이 없으면 오류.
+- `startDay`는 지금 직업을 시작한 게임 일수다. 연차 계산에 쓴다.
 - 연차(년) = `(currentDay - startDay) / 360` (정수 나눗셈). 게임 달력은 1년 = 12개월 × 30일 = 360일이다 (제안, README 4절).
-- 직업별 월급과 연차별 상승 곡선은 콘텐츠가 정의하고, 월급 계산은 진행이 한다 (연차를 이 도메인에서 읽어 넘긴다).
+- 직업별 월급과 연차별 상승 곡선은 콘텐츠가 정의하고, 월급 계산은 진행이 한다: `기본 월급 × (1 + 연차 인상)^연차 × (1 + salary_bonus_bp/10000)`.
 
 ### 4.3 투자 성향 (확정)
 

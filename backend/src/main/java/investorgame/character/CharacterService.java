@@ -13,8 +13,20 @@ public interface CharacterService {
 
   CharacterView get(UUID gameId);
 
-  /** 직업을 확정한다. 판당 한 번만 가능하다(이직 불가). */
+  /** 직업을 정한다. 직업이 없을 때(첫 취업 또는 실직 뒤)만 가능하다. 처음이면 careerStartDay도 이 날이 된다. */
   void assignJob(UUID gameId, String jobCode, int startDay);
+
+  /**
+   * 다른 직업으로 옮긴다. 연차(jobStartDay)는 이 날부터 다시 세고 인상분은 startBonusBp로 바뀐다. 직업이 없으면 오류 (decisions.md
+   * 26번).
+   */
+  void changeJob(UUID gameId, String jobCode, int day, int startBonusBp);
+
+  /** 직업을 잃는다. jobCode·jobStartDay가 null이 되고 인상분은 0이 된다. 직업이 없으면 오류. */
+  void quitJob(UUID gameId);
+
+  /** 연봉 협상·승진의 인상분을 더한다(만분율, 음수 가능). 직업이 없으면 오류. */
+  void addSalaryBonus(UUID gameId, int bonusBp);
 
   /**
    * 성향 장면의 선택 하나를 반영한다. traitDeltas는 축 점수("style.", "risk.", "mind.", "sector.")에 누적하고, statDeltas는
