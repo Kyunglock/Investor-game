@@ -44,6 +44,16 @@ character:
     # 성향 선택으로 내려갈 수 있는 하한. 상한은 growth.max-stat (경제 개편 설계 4.3절)
     min: 5
 
+market:
+  # 월 단위 가격 변동 (경제 개편 설계 5.3절). 섹터 공통 잡음 ±4%, 종목 등급별 ±4/8/12%, 종목 뉴스의 섹터 파급 30%, 바닥 100원
+  sector-volatility-bp: 400
+  volatility-bp:
+    low: 400
+    mid: 800
+    high: 1200
+  spillover-percent: 30
+  min-price: 100
+
 asset:
   initial-cash:
     min-unit: 1

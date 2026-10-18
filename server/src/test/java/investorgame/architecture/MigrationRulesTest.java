@@ -20,7 +20,16 @@ class MigrationRulesTest {
   private static final Path DIR = Path.of("src/main/resources/db/migration");
 
   private static final Set<String> DOMAINS =
-      Set.of("character", "asset", "event", "progress", "session", "content", "result");
+      Set.of(
+          "character",
+          "asset",
+          "market",
+          "household",
+          "event",
+          "progress",
+          "session",
+          "content",
+          "result");
 
   private static final Pattern FILE_NAME = Pattern.compile("V(\\d{12})__([a-z]+)_[a-z0-9_]+\\.sql");
 
