@@ -49,14 +49,16 @@ async function step(page: Page): Promise<string> {
         : kind === 'NEWS'
           ? eventCard(page).getByRole('button', { name: '매수' })
           : eventCard(page).getByRole('button').first()
+    const totalBefore = await page.getByTestId('total-asset').textContent()
     await button.click()
     if (kind === 'NEWS') {
       // 뉴스의 매수·매도는 수량을 묻고 확정해야 보내진다.
       await page.getByTestId('news-trade-submit').click()
     }
     if (kind === 'NEWS' || kind === 'SHAKE') {
-      // 결과는 성격이 손을 움직이는 동안 잠깐 감춰져 있다.
+      // 결과는 성격이 손을 움직이는 동안 잠깐 감춰져 있다. 그동안 총자산이 먼저 움직이면 결과가 샌다.
       await expect(page.getByTestId('outcome-thinking')).toBeVisible()
+      await expect(page.getByTestId('total-asset')).toHaveText(totalBefore ?? '')
       await page.clock.runFor(2_500)
     }
     await expect(outcomeCard(page)).toBeVisible()

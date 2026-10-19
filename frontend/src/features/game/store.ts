@@ -24,6 +24,11 @@ interface GameState {
   game: Game | null
   /** 방금 한 선택의 결과. 사용자가 "계속"을 누를 때까지 보여 준다. */
   outcome: Outcome | null
+  /**
+   * 뉴스·흔들림의 선택 뒤 서버가 보낸 판. 결과 카드가 "실행 중"인 동안 총자산·보유가 먼저 바뀌어 결과가 새지 않도록, 결과가 드러날 때까지 화면에 반영하지 않고
+   * 들고 있는다.
+   */
+  heldGame: Game | null
   /** 화면의 게임 일수. 시계가 흐르며 늘고, 서버에는 정수로 보고한다. */
   day: number
   running: boolean
@@ -45,6 +50,8 @@ interface GameState {
   startLife: () => void
   /** quantity는 뉴스의 매수·매도 수량. 없으면 서버 기본. */
   choose: (option: string, quantity?: number) => Promise<void>
+  /** 결과 카드가 결과를 드러낼 때 부른다. 들고 있던 판을 화면에 반영한다. */
+  revealOutcome: () => void
   dismissOutcome: () => void
   tick: (elapsedMs: number) => void
   pause: () => void
@@ -114,6 +121,7 @@ export const useGameStore = create<GameState>((set, get) => {
     status: 'loading',
     game: null,
     outcome: null,
+    heldGame: null,
     day: 0,
     running: false,
     speed: 1,
@@ -130,7 +138,7 @@ export const useGameStore = create<GameState>((set, get) => {
     load: async () => {
       const { data, response } = await api.GET('/api/games/current')
       if (data) {
-        set({ outcome: null })
+        set({ outcome: null, heldGame: null })
         apply(data, false)
       } else if (response.status === 401 || response.status === 404) {
         set({ status: 'none', game: null, running: false })
@@ -144,6 +152,7 @@ export const useGameStore = create<GameState>((set, get) => {
         status: 'loading',
         running: false,
         outcome: null,
+        heldGame: null,
         game: null,
         day: 0,
         marketOpen: false,
@@ -179,14 +188,28 @@ export const useGameStore = create<GameState>((set, get) => {
       })
       set({ choosing: false })
       if (data) {
-        set({ outcome: data.outcome })
-        apply(data.game, false)
+        const kind = data.outcome.kind
+        if (kind === 'NEWS' || kind === 'SHAKE') {
+          set({ outcome: data.outcome, heldGame: data.game })
+        } else {
+          set({ outcome: data.outcome })
+          apply(data.game, false)
+        }
       } else {
         await get().load()
       }
     },
 
+    revealOutcome: () => {
+      const { heldGame } = get()
+      if (heldGame) {
+        set({ heldGame: null })
+        apply(heldGame, false)
+      }
+    },
+
     dismissOutcome: () => {
+      get().revealOutcome()
       set({ outcome: null })
       const { game, marketOpen } = get()
       if (game && game.status === 'ACTIVE' && !game.pendingEvent && !marketOpen) {
