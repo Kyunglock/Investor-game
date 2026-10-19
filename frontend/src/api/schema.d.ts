@@ -391,6 +391,8 @@ export interface components {
             market: components["schemas"]["Market"];
             household: components["schemas"]["Household"];
             job?: components["schemas"]["Job"] | null;
+            /** @description 직업 대신 전업투자자를 골랐는가. 그러면 job은 언제나 null이다 */
+            fullTimeInvestor: boolean;
             investmentStyle?: components["schemas"]["Named"] | null;
             /** @description 위험 축 (공격/안정). 성향 확정 전 null */
             riskProfile?: components["schemas"]["Named"] | null;

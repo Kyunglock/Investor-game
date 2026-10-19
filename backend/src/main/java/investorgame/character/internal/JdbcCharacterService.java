@@ -111,6 +111,7 @@ class JdbcCharacterService implements CharacterService {
         profile.jobStartDay(),
         profile.careerStartDay(),
         profile.salaryBonusBp(),
+        profile.fullTimeInvestorDay(),
         profile.investmentStyle(),
         profile.riskProfile(),
         profile.mindProfile(),
@@ -128,7 +129,7 @@ class JdbcCharacterService implements CharacterService {
                 UPDATE character_profile
                 SET job_code = :jobCode, job_start_day = :startDay, salary_bonus_bp = 0,
                     career_start_day = COALESCE(career_start_day, :startDay), updated_at = :now
-                WHERE game_id = :gameId AND job_code IS NULL
+                WHERE game_id = :gameId AND job_code IS NULL AND full_time_investor_day IS NULL
                 """)
             .param("jobCode", jobCode)
             .param("startDay", startDay)
@@ -136,7 +137,28 @@ class JdbcCharacterService implements CharacterService {
             .param("gameId", gameId)
             .update();
     if (updated == 0) {
-      throw new InvalidRequestException("직업이 있을 때는 새 직업을 정할 수 없다");
+      throw new InvalidRequestException("직업이 있거나 전업투자자일 때는 새 직업을 정할 수 없다");
+    }
+  }
+
+  @Override
+  @Transactional
+  public void becomeFullTimeInvestor(UUID gameId, int day) {
+    profile(gameId);
+    int updated =
+        jdbc.sql(
+                """
+                UPDATE character_profile
+                SET full_time_investor_day = :day,
+                    career_start_day = COALESCE(career_start_day, :day), updated_at = :now
+                WHERE game_id = :gameId AND job_code IS NULL AND full_time_investor_day IS NULL
+                """)
+            .param("day", day)
+            .param("now", now())
+            .param("gameId", gameId)
+            .update();
+    if (updated == 0) {
+      throw new InvalidRequestException("직업이 있거나 이미 전업투자자다");
     }
   }
 
@@ -402,8 +424,8 @@ class JdbcCharacterService implements CharacterService {
   private Profile profile(UUID gameId) {
     return jdbc.sql(
             """
-            SELECT job_code, job_start_day, career_start_day, salary_bonus_bp, investment_style,
-                   risk_profile, mind_profile, interest_sector, investor_type
+            SELECT job_code, job_start_day, career_start_day, salary_bonus_bp, full_time_investor_day,
+                   investment_style, risk_profile, mind_profile, interest_sector, investor_type
             FROM character_profile
             WHERE game_id = :gameId
             """)
@@ -437,6 +459,7 @@ class JdbcCharacterService implements CharacterService {
       Integer jobStartDay,
       Integer careerStartDay,
       int salaryBonusBp,
+      Integer fullTimeInvestorDay,
       String investmentStyle,
       String riskProfile,
       String mindProfile,

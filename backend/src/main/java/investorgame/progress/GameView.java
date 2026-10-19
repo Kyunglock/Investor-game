@@ -15,6 +15,7 @@ import java.util.UUID;
  * @param initialStats 태어날 때의 능력치. 별명은 이 값으로 정해서 게임 중에 바뀌지 않는다
  * @param totalAsset 현금 + 보유 평가액 − 빚
  * @param lastMonthTotalAsset 전월 말 총자산. 첫 달이면 null
+ * @param fullTimeInvestor 직업 대신 전업투자자를 골랐는가. 그러면 job은 언제나 null이다
  * @param nextEventDay 다음 이벤트가 생길 게임 일수. 클라이언트는 이 시각까지만 시계를 보낸다. 대기 중인 이벤트가 있거나 끝났으면 null
  */
 public record GameView(
@@ -35,6 +36,7 @@ public record GameView(
     Long lastMonthTotalAsset,
     List<Holding> holdings,
     Job job,
+    boolean fullTimeInvestor,
     Named investmentStyle,
     Named riskProfile,
     Named mindProfile,

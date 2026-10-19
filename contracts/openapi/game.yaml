@@ -321,7 +321,7 @@ components:
     Game:
       type: object
       required:
-        [gameId, status, phase, day, startAge, endAge, daysPerYear, stats, initialStats, cash, totalAsset, initialAsset, invested, debt, holdings, market, household, log, yearly]
+        [gameId, status, phase, day, startAge, endAge, daysPerYear, stats, initialStats, cash, totalAsset, initialAsset, invested, debt, holdings, fullTimeInvestor, market, household, log, yearly]
       properties:
         gameId: { type: string, format: uuid }
         status: { type: string, enum: [ACTIVE, ENDED] }
@@ -350,6 +350,7 @@ components:
         household: { $ref: '#/components/schemas/Household' }
         job:
           oneOf: [{ $ref: '#/components/schemas/Job' }, { type: 'null' }]
+        fullTimeInvestor: { type: boolean, description: 직업 대신 전업투자자를 골랐는가. 그러면 job은 언제나 null이다 }
         investmentStyle:
           oneOf: [{ $ref: '#/components/schemas/Named' }, { type: 'null' }]
         riskProfile:

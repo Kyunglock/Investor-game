@@ -5,7 +5,8 @@ import { signedWon, won } from './labels'
 /** 가계부: 이번 달 수입·지출·저축과 가족 (경제 개편 설계 11.3절). 금액은 서버 값이다. */
 export function HouseholdCard({ game }: { game: Game }) {
   const h = game.household
-  const working = game.job !== null && game.job !== undefined
+  // 전업투자자는 월급만 없을 뿐 생활비가 나가므로 가계부를 보여 준다 (decisions.md 35번).
+  const working = (game.job !== null && game.job !== undefined) || game.fullTimeInvestor
   // 자녀 비용은 생활비에 합쳐져 온다. 은퇴 뒤에는 월급 대신 연금 (decisions.md 27번).
   const saving = h.monthlyIncome + h.spouseIncome + h.pension - h.monthlyExpense
   const monthLabel = `${Math.floor(game.market.month % 12) + 1}월`

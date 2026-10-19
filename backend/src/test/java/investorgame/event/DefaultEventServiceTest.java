@@ -55,7 +55,8 @@ class DefaultEventServiceTest {
             false,
             null,
             0,
-            List.of());
+            List.of(),
+            false);
     EventView a = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
     EventView b = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
 
@@ -198,7 +199,8 @@ class DefaultEventServiceTest {
         married,
         marriedDay,
         children,
-        List.of());
+        List.of(),
+        false);
   }
 
   /** 직장 체계 (decisions.md 26번): 직업이 있으면 직장 장면이, 실직 중이면 재취업 선택이 온다. */
@@ -229,10 +231,60 @@ class DefaultEventServiceTest {
             false,
             null,
             0,
-            List.of());
+            List.of(),
+            false);
     EventView rehire = firstOf(jobless, unemployed, JOB_DAY + 30, EventKind.JOB, 7L);
     assertThat(rehire.title()).isEqualTo(content.jobRehireText().title());
     assertThat(rehire.options()).extracting(EventView.Option::code).contains("WAIT");
+  }
+
+  @Test
+  void 직업_선택에는_언제나_전업투자자가_있고_전업투자자에게는_직업과_직장_이벤트가_없다() {
+    SchedulingContext jobless =
+        new SchedulingContext(
+            Phase.SAVING,
+            START_AGE,
+            "long",
+            "food",
+            null,
+            true,
+            null,
+            END_DAY,
+            null,
+            null,
+            JOB_DAY,
+            false,
+            false,
+            null,
+            0,
+            List.of(),
+            false);
+    EventView rehire = firstOf(UUID.randomUUID(), jobless, JOB_DAY + 30, EventKind.JOB, 7L);
+    assertThat(rehire.options())
+        .last()
+        .isEqualTo(new EventView.Option("INVEST", content.jobInvestLabel()));
+
+    SchedulingContext investor =
+        new SchedulingContext(
+            Phase.INVESTING,
+            START_AGE,
+            "long",
+            "food",
+            null,
+            true,
+            JOB_DAY,
+            END_DAY,
+            null,
+            null,
+            JOB_DAY,
+            false,
+            false,
+            null,
+            0,
+            List.of(),
+            true);
+    assertThat(nextOf(UUID.randomUUID(), investor, JOB_DAY, EventKind.JOB, 3L)).isEmpty();
+    assertThat(nextOf(UUID.randomUUID(), investor, JOB_DAY, EventKind.CAREER, 3L)).isEmpty();
   }
 
   @Test
@@ -255,7 +307,8 @@ class DefaultEventServiceTest {
             true,
             JOB_DAY + YEAR,
             0,
-            List.of());
+            List.of(),
+            false);
     int from = (60 - START_AGE) * YEAR;
     assertThat(nextOf(gameId, retired, from, EventKind.JOB, 3L)).isEmpty();
     assertThat(nextOf(UUID.randomUUID(), retired, from, EventKind.CAREER, 3L)).isEmpty();
@@ -281,7 +334,8 @@ class DefaultEventServiceTest {
             false,
             null,
             0,
-            List.of());
+            List.of(),
+            false);
     List<String> seen = new ArrayList<>();
     int from = JOB_DAY;
     for (Optional<EventView> trait = nextOf(gameId, retired, from, EventKind.TRAIT, 5L);
@@ -334,7 +388,8 @@ class DefaultEventServiceTest {
             false,
             null,
             0,
-            List.of(held));
+            List.of(held),
+            false);
     EventView shake = firstOf(UUID.randomUUID(), holding, JOB_DAY + 30, EventKind.SHAKE, 7L);
 
     assertThat(shake.stockCode()).isEqualTo(held);

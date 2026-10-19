@@ -294,6 +294,11 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public String jobInvestLabel() {
+    return phrases.jobInvest();
+  }
+
+  @Override
   public OfferText offerText() {
     return phrases.offer();
   }
@@ -337,8 +342,11 @@ class JsonContentCatalog implements ContentCatalog {
       }
     }
     require(
-        phrases.jobRetry() != null && phrases.jobRehire() != null && phrases.jobWait() != null,
-        "phrases.json에 jobRetry, jobRehire, jobWait가 있어야 한다");
+        phrases.jobRetry() != null
+            && phrases.jobRehire() != null
+            && phrases.jobWait() != null
+            && phrases.jobInvest() != null,
+        "phrases.json에 jobRetry, jobRehire, jobWait, jobInvest가 있어야 한다");
     require(!traits.isEmpty(), "성향 이벤트가 하나도 없다");
     require(!traitStages.isEmpty(), "성장기 성향 장면(adult가 아닌 것)이 하나도 없다");
     require(!news.isEmpty(), "뉴스가 하나도 없다");
@@ -526,5 +534,6 @@ class JsonContentCatalog implements ContentCatalog {
       TextBlock jobRetry,
       TextBlock jobRehire,
       String jobWait,
+      String jobInvest,
       OfferText offer) {}
 }

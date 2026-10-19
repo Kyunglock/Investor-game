@@ -78,9 +78,11 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       return {
         ...base,
         tone: 'neutral',
-        text: p.rehire
-          ? `${str(p.jobTitle)}(으)로 다시 취직했다. 월급 ${won(num(p.monthlySalary))}.`
-          : `${str(p.jobTitle)}에 취직했다. 첫 월급 ${won(num(p.monthlySalary))}.`,
+        text: p.fullTimeInvestor
+          ? '직장 대신 전업투자자가 됐다. 월급은 없다.'
+          : p.rehire
+            ? `${str(p.jobTitle)}(으)로 다시 취직했다. 월급 ${won(num(p.monthlySalary))}.`
+            : `${str(p.jobTitle)}에 취직했다. 첫 월급 ${won(num(p.monthlySalary))}.`,
       }
     case 'JOB_WAIT':
       return { ...base, tone: 'decision', text: '더 나은 자리를 기다리기로 했다.' }

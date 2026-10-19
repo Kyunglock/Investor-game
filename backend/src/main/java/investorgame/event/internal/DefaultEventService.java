@@ -271,14 +271,14 @@ class DefaultEventService implements EventService {
 
   /**
    * 취업 뒤 직장 (decisions.md 26번). 직업이 있으면 직장 장면(CAREER)이 간격을 두고 오고, 실직 중이면 다시 직업 선택(JOB)이 온다. 은퇴했거나
-   * career.last-age를 넘으면 둘 다 없다.
+   * 전업투자자이거나 career.last-age를 넘으면 둘 다 없다.
    */
   private void careerCandidates(
       List<EventRow> rows,
       SchedulingContext context,
       SeededRandom random,
       List<Candidate> candidates) {
-    if (context.retired()) {
+    if (context.retired() || context.fullTimeInvestor()) {
       return;
     }
     List<EventRow> careers = ofKind(rows, EventKind.CAREER);
@@ -615,7 +615,7 @@ class DefaultEventService implements EventService {
 
   /**
    * 직업 선택 (decisions.md 26번). 선택지는 가중치로 뽑되, 기다린 뒤라면 직전 제안의 최고 월급보다 나은 직업을 하나는 섞는다(있다면). 끝에 "기다린다"
-   * 선택지는 아직 기다릴 수 있고 지금 제안보다 월급이 많은 직업이 남아 있을 때만 붙는다.
+   * 선택지는 아직 기다릴 수 있고 지금 제안보다 월급이 많은 직업이 남아 있을 때만 붙고, 맨 끝에는 언제나 "전업투자자가 된다"가 붙는다.
    */
   private EventRow jobEvent(
       UUID id,
@@ -630,7 +630,7 @@ class DefaultEventService implements EventService {
     long bestBefore =
         streak.stream()
             .flatMap(r -> r.options().stream())
-            .filter(code -> !ChoiceTicket.Job.WAIT.equals(code))
+            .filter(ChoiceTicket.Job::isJobCode)
             .mapToLong(code -> content.job(code).baseMonthlySalary())
             .max()
             .orElse(0);
@@ -656,6 +656,8 @@ class DefaultEventService implements EventService {
     if (streak.size() < properties.job().maxWaits() && betterExists) {
       picked.add(ChoiceTicket.Job.WAIT);
     }
+    // 직업을 아예 고르지 않을 수도 있다: 월급 없이 투자로만 산다 (decisions.md 35번).
+    picked.add(ChoiceTicket.Job.INVEST);
     String definition = streak.isEmpty() ? (rehire ? JOB_REHIRE : null) : JOB_RETRY;
     return simple(id, seq, EventKind.JOB, definition, day, picked);
   }

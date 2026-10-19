@@ -255,6 +255,74 @@ class GameFlowTest {
     return best != null ? best : (String) options.get(0).get("code");
   }
 
+  /** 전업투자자 (decisions.md 35번): 직업 대신 고르면 투자 시작 제안 없이 바로 투자기이고, 월급도 구직 제안도 없다. */
+  @Test
+  void 직업_대신_전업투자자를_고르면_월급_없이_바로_투자를_시작한다() throws Exception {
+    MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.start();
+    String gameId = game.read("$.gameId");
+    for (int step = 0; step < 100; step++) {
+      Map<String, Object> pending = game.read("$.pendingEvent");
+      if (pending != null && "JOB".equals(pending.get("kind"))) {
+        break;
+      }
+      if (pending != null) {
+        String option = game.read("$.pendingEvent.options[0].code");
+        game =
+            JsonPath.parse(
+                client
+                    .choose(gameId, (String) pending.get("eventId"), option)
+                    .<Object>read("$.game"));
+        continue;
+      }
+      int day = game.read("$.day", Integer.class);
+      game = client.advance(gameId, game.read("$.nextEventDay", Integer.class));
+      assertThat(game.read("$.day", Integer.class)).isGreaterThan(day);
+    }
+    assertThat(game.read("$.pendingEvent.kind", String.class)).isEqualTo("JOB");
+    game =
+        JsonPath.parse(
+            client
+                .choose(gameId, game.read("$.pendingEvent.eventId"), "INVEST")
+                .<Object>read("$.game"));
+
+    assertThat(game.read("$.phase", String.class)).isEqualTo("INVESTING");
+    assertThat(game.read("$.fullTimeInvestor", Boolean.class)).isTrue();
+    assertThat(game.read("$.job", Object.class)).isNull();
+    List<Map<String, Object>> jobLogs = game.read("$.log[?(@.kind=='JOB')].payload");
+    assertThat(jobLogs).hasSize(1);
+    assertThat(jobLogs.get(0))
+        .containsEntry("fullTimeInvestor", true)
+        .containsEntry("jobTitle", "전업투자자");
+
+    // 10년을 보내도 월급·구직 제안·직장 장면·투자 시작 제안이 없고, 생활비는 나간다.
+    int until = game.read("$.day", Integer.class) + 10 * 360;
+    List<String> kinds = new ArrayList<>();
+    for (int step = 0; step < 500 && game.read("$.day", Integer.class) < until; step++) {
+      Map<String, Object> pending = game.read("$.pendingEvent");
+      if (pending != null) {
+        kinds.add((String) pending.get("kind"));
+        String option = game.read("$.pendingEvent.options[0].code");
+        game =
+            JsonPath.parse(
+                client
+                    .choose(gameId, (String) pending.get("eventId"), option)
+                    .<Object>read("$.game"));
+        continue;
+      }
+      if (!"ACTIVE".equals(game.read("$.status"))) {
+        break;
+      }
+      int day = game.read("$.day", Integer.class);
+      Integer next = game.read("$.nextEventDay");
+      game = client.advance(gameId, Math.min(day + REPORT_EVERY_DAYS, next == null ? until : next));
+    }
+    assertThat(kinds).doesNotContain("JOB", "CAREER", "OFFER").contains("NEWS");
+    assertThat(game.read("$.household.monthlyIncome", Long.class)).isZero();
+    assertThat(game.read("$.household.monthlyExpense", Long.class)).isPositive();
+  }
+
   @Test
   void 다_팔아도_빚을_못_갚으면_그_달에_파산으로_끝난다() throws Exception {
     MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();

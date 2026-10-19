@@ -92,6 +92,9 @@ public interface ContentCatalog {
   /** 직업 선택의 "기다린다" 선택지 문구. */
   String jobWaitLabel();
 
+  /** 직업 선택의 "전업투자자가 된다" 선택지 문구. */
+  String jobInvestLabel();
+
   OfferText offerText();
 
   record NamedCode(String code, String name) {}

@@ -66,6 +66,7 @@ import org.springframework.transaction.annotation.Transactional;
 class DefaultProgressService implements ProgressService {
 
   private static final long PERCENT = 100;
+  private static final String FULL_TIME_INVESTOR = "전업투자자";
   private static final int BP = 10_000;
   private static final String DEVIATION = "DEVIATION";
   private static final String TRAIT = "TRAIT";
@@ -235,6 +236,30 @@ class DefaultProgressService implements ProgressService {
               // 더 나은 자리를 기다린다. 다음 직업 선택은 event.job.wait-days 뒤에 온다 (decisions.md 26번).
               logs.append(gameId, ticket.occursDay(), "JOB_WAIT", Map.of());
               yield simpleOutcome(ticket, "이번 제안은 넘기고 더 나은 자리를 기다리기로 했다.");
+            }
+            if (job.isInvest()) {
+              // 전업투자자: 월급이 없다는 것 말고는 직장인과 같다. 투자 시작 제안을 건너뛰고 바로 투자기로 간다 (decisions.md 35번).
+              boolean rehire = characters.get(gameId).careerStartDay() != null;
+              characters.becomeFullTimeInvestor(gameId, ticket.occursDay());
+              if (game.phase() != Phase.INVESTING) {
+                games.startInvesting(gameId, ticket.occursDay());
+              }
+              logs.append(
+                  gameId,
+                  ticket.occursDay(),
+                  "JOB",
+                  Map.of(
+                      "jobCode",
+                      ChoiceTicket.Job.INVEST,
+                      "jobTitle",
+                      FULL_TIME_INVESTOR,
+                      "monthlySalary",
+                      0,
+                      "rehire",
+                      rehire,
+                      "fullTimeInvestor",
+                      true));
+              yield simpleOutcome(ticket, "직장 대신 전업투자자의 길을 골랐다. 월급은 없고, 이제 뉴스가 들려온다.");
             }
             CharacterView before = characters.get(gameId);
             boolean rehire = before.careerStartDay() != null;
@@ -968,7 +993,8 @@ class DefaultProgressService implements ProgressService {
         home.married(),
         home.marriedDay(),
         home.childBirthDays().size(),
-        assets.get(game.id()).holdings().keySet().stream().sorted().toList());
+        assets.get(game.id()).holdings().keySet().stream().sorted().toList(),
+        character.fullTimeInvestorDay() != null);
   }
 
   // ---- 화면용 상태 ----
@@ -1030,6 +1056,7 @@ class DefaultProgressService implements ProgressService {
         logs.findMonthTotal(gameId, month - 1).stream().boxed().findFirst().orElse(null),
         holdings,
         job(character, game.lastReportedDay()),
+        character.fullTimeInvestorDay() != null,
         character.investmentStyle() == null
             ? null
             : new GameView.Named(

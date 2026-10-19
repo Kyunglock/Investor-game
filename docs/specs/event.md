@@ -167,9 +167,9 @@ public record CompleteResult(
 | 종류 | 조건 | 다음 후보 일수 |
 |---|---|---|
 | `TRAIT` 성장기 | `CHILDHOOD`, 성장 단계가 남음 | 다음 성장 단계의 나이(콘텐츠의 `adult`가 아닌 장면 중 `age`가 같은 것들이 한 단계. 15~24세 10단계)를 게임 일수로 바꾼 값 **+ 반년(180일)**. 시작 나이와 같은 단계가 0일에 바로 뜨지 않게 한다. 장면은 그 단계의 풀에서 `("event", "trait-scene", 단계 번호)` 키로 랜덤하게 하나 뽑는다 |
-| `TRAIT` 취업 뒤 | 취업함, 콘텐츠의 `adult` 장면 중 아직 안 나온 것이 있음 | 마지막 adult `TRAIT`(없으면 취업일) + `event.trait.adult-gap-days`(초기값 540~900) 구간에서 뽑은 값. 장면은 남은 adult 풀에서 `("event","trait-scene","adult",n)` 키로 뽑는다. 성향 확정(`traitsComplete`)에는 세지 않고 능력치만 움직인다 (decisions.md 23번) |
+| `TRAIT` 취업 뒤 | 취업함, 콘텐츠의 `adult` 장면 중 아직 안 나온 것이 있음(`job` 장면은 직장에 다니는 동안에만 — decisions.md 36번) | 마지막 adult `TRAIT`(없으면 취업일) + `event.trait.adult-gap-days`(초기값 540~900) 구간에서 뽑은 값. 장면은 남은 adult 풀에서 `("event","trait-scene","adult",n)` 키로 뽑는다. 성향 확정(`traitsComplete`)에는 세지 않고 능력치만 움직인다 (decisions.md 23번) |
 | `JOB` 첫 선택 | `CHILDHOOD`, 성향 이벤트가 모두 끝나 스타일이 확정됨, 직업 없음 | 처음은 `event.job.age`(초기값 25)를 게임 일수로 바꾼 값(마지막 성향 이벤트보다 앞서지 않는다). `WAIT`을 골랐으면 마지막 `JOB` + `event.job.wait-days`(180) |
-| `JOB` 재취업 | 취업한 적 있음, 지금 직업 없음, 은퇴 전, 나이 ≤ `event.career.last-age` | 실직시킨 마지막 `CAREER` + `event.job.rehire-days`(150). 그 뒤 `WAIT`을 골랐으면 마지막 `JOB` + `wait-days` |
+| `JOB` 재취업 | 취업한 적 있음, 지금 직업 없음, 전업투자자 아님, 은퇴 전, 나이 ≤ `event.career.last-age` | 실직시킨 마지막 `CAREER` + `event.job.rehire-days`(150). 그 뒤 `WAIT`을 골랐으면 마지막 `JOB` + `wait-days` |
 | `CAREER` | 직업 있음, 은퇴 전, 나이 ≤ `event.career.last-age`(57) | `max(지금 직업 시작일, 마지막 CAREER)` + `event.career.gap-days`(540~1080) 구간에서 뽑은 값(키 `("CAREER", n)`) |
 | `OFFER` | `SAVING`, `salaryStarted`, `traitsFinalized`, 대기·예약된 `OFFER` 없음 | 처음이면 `max(현재, 첫 월급 후)`; 거절되었다면 마지막 `OFFER` + `game.days-per-year` (1년마다 다시 묻는다, 확정) |
 | `TRAINING` | `JOB`이 해결됨 | 마지막 `TRAINING`(없으면 `JOB` 해결 일수) + `event.training.gap-days` 구간에서 뽑은 값 |
@@ -303,7 +303,7 @@ public record CompleteResult(
 | 뉴스 | 위 JSON의 필드. `styles`가 없으면 모든 스타일 |
 | 직업 | `code`, `title`, 선택 가중치, 월급 정보 (진행·자산용, 콘텐츠 스펙). 14개, 월급이 많을수록 가중치가 낮다 |
 | 직장 장면 (`careers.json`) | `code`, `title`, `body`, `weight`, `minTenureYears`, 선택지 2~4개(`code`, `label`, 판정 `stat`·`baseBp`·`perPointBp`(없으면 항상 성공), `success`/`fail` 효과: `salaryPercent`, `quit`, `severanceMonths`, `moveJob`, `moveSalaryPercent`, `amount`, `statDeltas`(운 제외), `text`) |
-| 성향 | `code`, `age`, `adult`(선택, true면 취업 뒤 일상 장면), `title`, `body`(상황), 선택지 3~4개(`code`, `label`, `traitDeltas`(style/risk/mind/sector), `statDeltas`(선택, 절댓값 ≤ `content.trait-stat-max-delta` 8), `note`) |
+| 성향 | `code`, `age`, `adult`(선택, true면 취업 뒤 일상 장면), `job`(선택, true면 직장에 다니는 동안에만), `title`, `body`(상황), 선택지 3~4개(`code`, `label`, `traitDeltas`(style/risk/mind/sector), `statDeltas`(선택, 절댓값 ≤ `content.trait-stat-max-delta` 8), `note`) |
 | 자기계발 | `code`, `title`, `body`, 선택지 목록(`code`, `label`, `statCode`, `expAmount`, `cost`) |
 | 알림 | `code`, `title`, `body`, 단계 조건 |
 | 힌트 문구 | 방향(`UP`/`DOWN`/`NEUTRAL`) × 강도(`MILD`/`STRONG`) 별 문구 목록 (poc.md 6절) |

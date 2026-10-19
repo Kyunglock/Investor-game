@@ -10,6 +10,7 @@ import java.util.UUID;
  * @param jobStartDay 지금 직업을 시작한 날(연차 기준). 실직 중이면 null
  * @param careerStartDay 처음 일을 시작한 날. 생활비는 이때부터 나간다. 한 번도 일한 적 없으면 null
  * @param salaryBonusBp 연봉 협상·승진으로 쌓인 인상분(만분율). 직장을 옮기거나 잃으면 0으로 돌아간다
+ * @param fullTimeInvestorDay 직업 대신 전업투자자를 고른 날. 이후 직업이 없고 구직 제안도 오지 않는다. 아니면 null
  */
 public record CharacterView(
     UUID gameId,
@@ -19,6 +20,7 @@ public record CharacterView(
     Integer jobStartDay,
     Integer careerStartDay,
     int salaryBonusBp,
+    Integer fullTimeInvestorDay,
     String investmentStyle,
     String riskProfile,
     String mindProfile,

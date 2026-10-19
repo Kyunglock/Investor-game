@@ -218,6 +218,9 @@ export function buildCredits(game: Game): CreditSection[] {
     const age = ageOf(game, e.day)
     switch (e.kind) {
       case 'JOB':
+        if (p.fullTimeInvestor) {
+          return { text: `${age}세, 전업투자자가 됐다`, sub: '월급 없음' }
+        }
         return {
           text: `${age}세, ${str(p.jobTitle)}${p.rehire ? '(으)로 다시 취직' : '에 취직'}`,
           sub: `월급 ${won(num(p.monthlySalary))}`,

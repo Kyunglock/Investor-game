@@ -35,12 +35,24 @@ public record ChoiceTicket(
   /** 보유 종목 흔들림: 버틴다(HOLD)·판다(SELL). 뉴스와 같은 판정·충격 흐름을 진행이 돌린다 (decisions.md 33번). */
   public record Shake() implements Effect {}
 
-  /** 직업 선택. jobCode가 WAIT이면 고르지 않고 더 나은 자리를 기다린다 (decisions.md 26번). */
+  /**
+   * 직업 선택. jobCode가 WAIT이면 고르지 않고 더 나은 자리를 기다리고, INVEST면 직업 대신 전업투자자가 된다 (decisions.md 26번, 35번).
+   */
   public record Job(String jobCode) implements Effect {
     public static final String WAIT = "WAIT";
+    public static final String INVEST = "INVEST";
 
     public boolean isWait() {
       return WAIT.equals(jobCode);
+    }
+
+    public boolean isInvest() {
+      return INVEST.equals(jobCode);
+    }
+
+    /** WAIT·INVEST가 아니라 실제 직업 코드인가. */
+    public static boolean isJobCode(String code) {
+      return !WAIT.equals(code) && !INVEST.equals(code);
     }
   }
 

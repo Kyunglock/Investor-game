@@ -39,9 +39,13 @@ class EventRenderer {
             row.options().stream()
                 .map(
                     code ->
-                        ChoiceTicket.Job.WAIT.equals(code)
-                            ? new EventView.Option(code, content.jobWaitLabel())
-                            : jobOption(content.job(code)))
+                        switch (code) {
+                          case ChoiceTicket.Job.WAIT ->
+                              new EventView.Option(code, content.jobWaitLabel());
+                          case ChoiceTicket.Job.INVEST ->
+                              new EventView.Option(code, content.jobInvestLabel());
+                          default -> jobOption(content.job(code));
+                        })
                 .toList();
         yield view(row, text.title(), text.body(), null, null, options);
       }

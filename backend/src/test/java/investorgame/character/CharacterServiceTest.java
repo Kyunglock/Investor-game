@@ -90,6 +90,30 @@ class CharacterServiceTest {
     assertThat(characters.get(gameId).careerStartDay()).isEqualTo(100);
   }
 
+  /** 전업투자자 (decisions.md 35번): 직업 없이 생활비만 나가기 시작하고, 되돌려 직업을 가질 수 없다. */
+  @Test
+  void 전업투자자는_직업이_없을_때만_될_수_있고_되면_직업을_정할_수_없다() {
+    characters.assignJob(gameId, "office", 100);
+    assertThatThrownBy(() -> characters.becomeFullTimeInvestor(gameId, 200))
+        .isInstanceOf(InvalidRequestException.class);
+    characters.quitJob(gameId);
+
+    characters.becomeFullTimeInvestor(gameId, 300);
+    CharacterView investor = characters.get(gameId);
+    assertThat(investor.fullTimeInvestorDay()).isEqualTo(300);
+    assertThat(investor.careerStartDay()).as("처음 일한 날은 그대로").isEqualTo(100);
+    assertThat(investor.jobCode()).isNull();
+    assertThatThrownBy(() -> characters.assignJob(gameId, "farmer", 400))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> characters.becomeFullTimeInvestor(gameId, 400))
+        .isInstanceOf(InvalidRequestException.class);
+
+    UUID fresh = UUID.randomUUID();
+    characters.create(fresh, new SplittableRandom(2));
+    characters.becomeFullTimeInvestor(fresh, 500);
+    assertThat(characters.get(fresh).careerStartDay()).as("한 번도 일한 적 없으면 생활비는 이날부터").isEqualTo(500);
+  }
+
   @Test
   void 성향_점수가_가장_높은_스타일과_섹터로_확정된다() {
     record(Map.of("style.long", 2, "risk.safe", 2, "mind.own", 1, "sector.bio", 1));
