@@ -1,8 +1,8 @@
 package investorgame.household;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.within;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 
 import investorgame.TestcontainersConfiguration;
 import investorgame.common.error.InvalidRequestException;
@@ -100,7 +100,8 @@ class HouseholdServiceTest {
     long single = household.pension(gameId, retireDay);
     assertThat(single)
         .as("1,000,000 × 1.02^35, 연 단위 정수 곱셈이라 끝자리는 조금 다를 수 있다")
-        .isCloseTo(household.monthlyExpense(gameId, retireDay) * 1_000_000 / 1_400_000, within(100L));
+        .isCloseTo(
+            household.monthlyExpense(gameId, retireDay) * 1_000_000 / 1_400_000, within(100L));
     assertThat(single).isLessThan(household.monthlyExpense(gameId, retireDay));
     household.marry(gameId, retireDay);
     assertThat(household.pension(gameId, retireDay)).as("부부 160만").isGreaterThan(single);

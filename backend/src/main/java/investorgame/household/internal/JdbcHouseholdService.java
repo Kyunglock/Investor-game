@@ -144,7 +144,8 @@ class JdbcHouseholdService implements HouseholdService {
     if (view.retiredDay() == null) {
       return 0;
     }
-    return inflate(view.married() ? properties.pensionCouple() : properties.pensionSingle(), gameDay);
+    return inflate(
+        view.married() ? properties.pensionCouple() : properties.pensionSingle(), gameDay);
   }
 
   @Override

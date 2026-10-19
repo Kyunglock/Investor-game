@@ -104,8 +104,7 @@ class EventRenderer {
             withStock(shake.body(), stockName),
             null,
             null,
-            List.of(
-                new EventView.Option("HOLD", "버틴다"), new EventView.Option("SELL", "판다")));
+            List.of(new EventView.Option("HOLD", "버틴다"), new EventView.Option("SELL", "판다")));
       }
       case NOTICE -> throw new IllegalStateException("알림은 EventView가 아니라 Notice로 그린다");
     };

@@ -760,8 +760,8 @@ class DefaultProgressService implements ProgressService {
 
   /**
    * (fromExclusive, toInclusive] 안의 매월 1일마다: 시장 → 월급·배우자 소득(은퇴 달이면 퇴직금, 그 뒤 달은 연금) → 생활비 → 이자 → 월말
-   * 총자산(연 경계면 연간 자산). 생활비는 직업이 생긴 뒤부터 나간다. 정산 뒤 총자산이 0 아래면 그 달에 파산이다: 그 날을 돌려주고 멈춘다
-   * (decisions.md 27번).
+   * 총자산(연 경계면 연간 자산). 생활비는 직업이 생긴 뒤부터 나간다. 정산 뒤 총자산이 0 아래면 그 달에 파산이다: 그 날을 돌려주고 멈춘다 (decisions.md
+   * 27번).
    */
   private OptionalInt processMonths(GameRow game, int fromExclusive, int toInclusive) {
     UUID gameId = game.id();

@@ -12,8 +12,8 @@ import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.JobDefinition;
 import investorgame.content.NewsDefinition;
-import investorgame.content.ShakeDefinition;
 import investorgame.content.NoticeDefinition;
+import investorgame.content.ShakeDefinition;
 import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
 import investorgame.event.ChoiceTicket;
@@ -60,8 +60,10 @@ class DefaultEventService implements EventService {
   static final String MOVE_PREFIX = "move:";
 
   private static final List<String> NEWS_OPTIONS = List.of("BUY", "SELL", "HOLD");
+
   /** 흔들림: 버틴다(HOLD)·판다(SELL). 문구는 렌더러가 붙인다 (decisions.md 33번). */
   private static final List<String> SHAKE_OPTIONS = List.of("HOLD", "SELL");
+
   private static final int BP = 10_000;
   private static final int PERCENT = 100;
 
@@ -476,11 +478,9 @@ class DefaultEventService implements EventService {
     };
   }
 
-  /**
-   * 보유 종목 흔들림. 보유 중 한 종목과 장면을 뽑고, 선택 뒤 그 종목이 움직일 숨은 방향·폭을 정한다. 힌트·다른 뉴스는 없다 (decisions.md
-   * 33번).
-   */
-  private EventRow shake(UUID id, int seq, int day, SchedulingContext context, SeededRandom random) {
+  /** 보유 종목 흔들림. 보유 중 한 종목과 장면을 뽑고, 선택 뒤 그 종목이 움직일 숨은 방향·폭을 정한다. 힌트·다른 뉴스는 없다 (decisions.md 33번). */
+  private EventRow shake(
+      UUID id, int seq, int day, SchedulingContext context, SeededRandom random) {
     RandomGenerator rng = random.forKey("event", "shake", seq);
     List<String> held = context.heldStockCodes();
     String stockCode = held.get(rng.nextInt(held.size()));

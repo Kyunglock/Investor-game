@@ -2,13 +2,13 @@ package investorgame.content.internal;
 
 import investorgame.common.StatCodes;
 import investorgame.content.CareerDefinition;
-import investorgame.content.ShakeDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
 import investorgame.content.LifeText;
 import investorgame.content.NewsDefinition;
 import investorgame.content.NoticeDefinition;
+import investorgame.content.ShakeDefinition;
 import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
 import java.io.IOException;
