@@ -58,6 +58,12 @@ public interface ContentCatalog {
   /** 보유 종목 흔들림 장면. 코드순 (decisions.md 33번). */
   List<ShakeDefinition> shakes();
 
+  /** 시장 위기의 갈래. 코드순. */
+  List<CrisisDefinition> crises();
+
+  /** 갈래와 상관없이 섞여 나오는 전조 문구. 어느 위기의 전조인지(혹은 아무 일도 없을지) 읽히지 않게 한다. */
+  List<String> commonOmens();
+
   ShakeDefinition shake(String code);
 
   /** 모든 종목. 코드 이름순. */
@@ -97,6 +103,9 @@ public interface ContentCatalog {
 
   OfferText offerText();
 
+  /** 빚투 제안의 문구. 제목·본문의 {stock}은 종목 이름, {drop}은 낙폭(%)이다. */
+  LeverageText leverageText();
+
   record NamedCode(String code, String name) {}
 
   record TraitStage(int age, List<TraitDefinition> scenes) {}
@@ -104,4 +113,6 @@ public interface ContentCatalog {
   record TextBlock(String title, String body) {}
 
   record OfferText(String title, String body, String acceptLabel, String declineLabel) {}
+
+  record LeverageText(String title, String body, String borrowLabel, String passLabel) {}
 }

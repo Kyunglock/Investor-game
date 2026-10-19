@@ -19,7 +19,7 @@ public interface AssetService {
   TradeResult buy(
       UUID gameId, String stockCode, long quantity, long price, int gameDay, UUID eventId);
 
-  /** 수량만큼 팔아 현금에 더하고 원가를 비례 차감한다. 보유보다 많으면 전량, 보유가 없으면 NOTHING_TO_SELL. */
+  /** 수량만큼 팔아 현금에 더하고(빚이 있으면 먼저 갚는다) 원가를 비례 차감한다. 보유보다 많으면 전량, 보유가 없으면 NOTHING_TO_SELL. */
   TradeResult sell(
       UUID gameId, String stockCode, long quantity, long price, int gameDay, UUID eventId);
 
@@ -31,6 +31,9 @@ public interface AssetService {
 
   /** 지출. 현금이 모자라면 모자란 만큼 빚이 된다. kind가 EXPENSE이면 같은 날 한 번만, LIFE_COST는 여러 번 가능. */
   SpendResult spend(UUID gameId, String kind, long amount, int gameDay, UUID eventId);
+
+  /** 대출. 현금과 빚이 amount만큼 함께 늘어난다(빚투). 빚에는 다달이 이자가 붙고 수입이 들어오면 먼저 갚는다. amount가 1 미만이면 오류. */
+  void borrow(UUID gameId, long amount, int gameDay, UUID eventId);
 
   /** 빚에 월 이자를 붙인다. 빚이 없거나 같은 날 이미 붙였으면 accrued=false. */
   InterestResult accrueInterest(UUID gameId, int gameDay);

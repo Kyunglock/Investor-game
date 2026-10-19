@@ -325,6 +325,30 @@ describe('buildCredits', () => {
     expect(work?.lines).toEqual([{ text: '25세, 전업투자자가 됐다', sub: '월급 없음' }])
   })
 
+  it('위기와 빚투가 있었으면 지나온 폭풍 장에 남는다', () => {
+    const game = baseGame({
+      log: [
+        entry('BIRTH', 15, {}),
+        entry('LEVERAGE', 34, { stockName: '삼송전자', borrowed: true, loan: 30_000_000 }),
+        entry('CRISIS', 36, {
+          name: '부동산 금융 위기',
+          model: '2008년 리먼 브라더스 사태',
+          severity: 'RECESSION',
+          startAge: 33,
+          endAge: 36,
+          dropBp: 2_800,
+          omens: [],
+        }),
+        entry('END', 70, {}),
+      ],
+    })
+    const storms = buildCredits(game).find((s) => s.key === 'storms')
+    expect(storms?.lines.map((l) => l.text)).toEqual([
+      '34세, 삼송전자에 빚투',
+      '33~36세, 부동산 금융 위기 (불황)',
+    ])
+  })
+
   it('파산 엔딩: 파산 문장과 뒤집힌 횟수, 가장 잘한·아쉬운 선택', () => {
     const game = baseGame({
       debt: 12_000_000,

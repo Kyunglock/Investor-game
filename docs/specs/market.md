@@ -57,6 +57,13 @@ public record ShockResult(Map<String, Long> before, Map<String, Long> after) {} 
 - 그 달의 이력을 **덮어쓴다** (월 1점 유지). 바닥은 `min-price`.
 - 운 완화: 진행이 `DOWN`이고 영향받는 종목을 보유했을 때만 `magnitudeBp × lossFactor / 100`으로 줄여서 넘긴다 (설계 5.4절).
 
+### 3.2.1 경기 흐름 (decisions.md 38번)
+
+- `cycle(random)`: 키 `("market","cycle")` 하나에서 순서대로 뽑는다. 같은 판은 언제나 같다. **화면에 내보내지 않는다.**
+- 불안한 시기 `windows`(1~3)를 `[first-month, last-month]` 구간에 나눠 하나씩 둔다. 시기마다 `silent-percent`로 전조 없는 위기인지 굴리고, 아니면 전조를 흘린 뒤 `outcome-percent`(대공황·불황·조정, 나머지는 아무 일 없음)로 결과를 굴린다.
+- 위기 달의 변동: 빠지는 동안 `−fallBp × 갈래의 섹터 비율 / 100`, 회복하는 동안 `+recoveryBp`. 겹치면 더한다.
+- `averageDropBp(from, to)`: from 달 가격 대비 (from, to] 최저가 낙폭의 종목 평균. 회고 기록에 쓴다.
+
 ### 3.3 시세
 
 `priceMonthAgo`·`priceYearAgo`는 이력이 짧으면 있는 가장 오래된 값. `last12`는 이번 달 포함 최근 12달(있는 만큼).

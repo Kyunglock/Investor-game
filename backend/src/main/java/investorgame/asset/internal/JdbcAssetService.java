@@ -33,6 +33,7 @@ class JdbcAssetService implements AssetService {
   static final String SELL = "SELL";
   static final String INTEREST = "INTEREST";
   static final String DEBT_REPAY = "DEBT_REPAY";
+  static final String LOAN = "LOAN";
 
   /** 같은 날 한 번만 처리하는 종류. 마이그레이션의 부분 유니크 인덱스와 같은 목록이다. */
   private static final Set<String> ONCE_PER_DAY =
@@ -131,11 +132,16 @@ class JdbcAssetService implements AssetService {
         sold == held.quantity()
             ? held.costBasis()
             : proportion(held.costBasis(), sold, held.quantity());
-    long cashAfter = account.cash() + amount;
-    setCash(gameId, cashAfter);
+    // 마이너스 통장처럼 판 돈은 빚부터 갚는다. 현금을 쥔 채 빚에 이자가 붙는 일이 없게 한다 (decisions.md 39번).
+    long repaid = Math.min(account.debt(), amount);
+    long cashAfter = account.cash() + amount - repaid;
+    long debtAfter = account.debt() - repaid;
+    setBalance(gameId, cashAfter, debtAfter);
     setHolding(gameId, stockCode, held.quantity() - sold, held.costBasis() - costOut);
-    ledger(
-        gameId, gameDay, SELL, stockCode, amount, sold, price, cashAfter, account.debt(), eventId);
+    ledger(gameId, gameDay, SELL, stockCode, amount, sold, price, cashAfter, debtAfter, eventId);
+    if (repaid > 0) {
+      ledger(gameId, gameDay, DEBT_REPAY, null, -repaid, null, null, cashAfter, debtAfter, eventId);
+    }
     return new TradeResult(
         TradeResult.Status.EXECUTED, sold, price, amount, amount - costOut, cashAfter);
   }
@@ -155,6 +161,19 @@ class JdbcAssetService implements AssetService {
     }
     setBalance(gameId, cashAfter, debtAfter);
     return new IncomeResult(true, amount, repaid, cashAfter);
+  }
+
+  @Override
+  @Transactional
+  public void borrow(UUID gameId, long amount, int gameDay, UUID eventId) {
+    if (amount < 1) {
+      throw new InvalidRequestException("대출 금액은 1원 이상이어야 한다");
+    }
+    Account account = account(gameId);
+    long cashAfter = account.cash() + amount;
+    long debtAfter = account.debt() + amount;
+    ledger(gameId, gameDay, LOAN, null, amount, null, null, cashAfter, debtAfter, eventId);
+    setBalance(gameId, cashAfter, debtAfter);
   }
 
   @Override

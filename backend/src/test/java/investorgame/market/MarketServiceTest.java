@@ -144,4 +144,60 @@ class MarketServiceTest {
     assertThat(quote.priceYearAgo()).isEqualTo(quote.price());
     assertThat(quote.last12()).containsExactly(quote.price());
   }
+
+  /** 경기 흐름 (decisions.md 38번): 같은 판은 같고, 전조와 위기가 서로를 보장하지 않으며, 대공황은 판마다 오기도 안 오기도 한다. */
+  @Test
+  void 경기_흐름은_시드로_정해지고_전조가_위기를_보장하지_않는다() {
+    assertThat(market.cycle(new HashSeededRandom(3L)))
+        .isEqualTo(market.cycle(new HashSeededRandom(3L)));
+
+    int withDepression = 0;
+    int omensWithoutCrisis = 0;
+    int silentCrises = 0;
+    int omenedCrises = 0;
+    for (long seed = 1; seed <= 400; seed++) {
+      MarketCycle cycle = market.cycle(new HashSeededRandom(seed));
+      if (cycle.crises().stream().anyMatch(c -> c.severity() == MarketCycle.Severity.DEPRESSION)) {
+        withDepression++;
+      }
+      long told = cycle.omens().size();
+      long toldBeforeCrises = cycle.crises().stream().mapToLong(c -> c.omens().size()).sum();
+      if (told > toldBeforeCrises) {
+        omensWithoutCrisis++;
+      }
+      silentCrises += (int) cycle.crises().stream().filter(c -> c.omens().isEmpty()).count();
+      omenedCrises += (int) cycle.crises().stream().filter(c -> !c.omens().isEmpty()).count();
+      for (MarketCycle.Crisis crisis : cycle.crises()) {
+        assertThat(crisis.startMonth()).isBetween(132, 540);
+        assertThat(crisis.revealMonth()).isGreaterThanOrEqualTo(crisis.bottomMonth());
+        for (String omen : crisis.omens()) {
+          assertThat(cycle.omens())
+              .anyMatch(o -> o.text().equals(omen) && o.month() < crisis.startMonth());
+        }
+      }
+    }
+    assertThat(withDepression).as("대공황은 랜덤: 어떤 판엔 오고 어떤 판엔 안 온다").isBetween(80, 320);
+    assertThat(omensWithoutCrisis).as("전조만 나오고 아무 일 없이 지나가는 판이 있다").isPositive();
+    assertThat(silentCrises).as("전조 없이 오는 위기도 있다").isPositive();
+    assertThat(omenedCrises).isPositive();
+  }
+
+  @Test
+  void 위기가_오면_빠지는_동안_가격이_내려가고_낙폭을_돌아볼_수_있다() {
+    long seed = 1;
+    MarketCycle.Crisis depression = null;
+    for (; seed <= 400 && depression == null; seed++) {
+      depression =
+          market.cycle(new HashSeededRandom(seed)).crises().stream()
+              .filter(c -> c.severity() == MarketCycle.Severity.DEPRESSION)
+              .findFirst()
+              .orElse(null);
+    }
+    assertThat(depression).isNotNull();
+    SeededRandom crisisRandom = new HashSeededRandom(seed - 1);
+    market.advanceTo(gameId, depression.revealMonth() * MONTH, crisisRandom);
+
+    int drop = market.averageDropBp(gameId, depression.startMonth() - 1, depression.revealMonth());
+    assertThat(drop).as("대공황은 평균 30%% 넘게 빠진다: %d", drop).isGreaterThan(3_000);
+  }
 }

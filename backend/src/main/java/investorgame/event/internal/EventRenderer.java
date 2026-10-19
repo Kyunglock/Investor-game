@@ -110,6 +110,20 @@ class EventRenderer {
             null,
             List.of(new EventView.Option("HOLD", "버틴다"), new EventView.Option("SELL", "판다")));
       }
+      case LEVERAGE -> {
+        ContentCatalog.LeverageText text = content.leverageText();
+        String stockName = content.stock(row.stockCode()).name();
+        String drop = String.valueOf(row.hiddenMagnitudeBp() / 100);
+        yield view(
+            row,
+            withStock(text.title(), stockName).replace("{drop}", drop),
+            withStock(text.body(), stockName).replace("{drop}", drop),
+            null,
+            null,
+            List.of(
+                new EventView.Option(ChoiceTicket.Leverage.BORROW, text.borrowLabel()),
+                new EventView.Option(ChoiceTicket.Leverage.PASS, text.passLabel())));
+      }
       case NOTICE -> throw new IllegalStateException("알림은 EventView가 아니라 Notice로 그린다");
     };
   }

@@ -3,6 +3,7 @@ package investorgame.content.internal;
 import investorgame.common.StatCodes;
 import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
+import investorgame.content.CrisisDefinition;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
 import investorgame.content.LifeText;
@@ -46,7 +47,8 @@ class JsonContentCatalog implements ContentCatalog {
           "phrases.json",
           "stocks.json",
           "life.json",
-          "shakes.json");
+          "shakes.json",
+          "crises.json");
 
   private final Meta meta;
   private final List<JobDefinition> jobs;
@@ -58,6 +60,7 @@ class JsonContentCatalog implements ContentCatalog {
   private final Phrases phrases;
   private final List<StockDefinition> stocks;
   private final List<ShakeDefinition> shakes;
+  private final Crises crises;
   private final Life life;
   private final Map<String, String> sectorNames;
   private final Map<String, String> styleNames;
@@ -103,6 +106,7 @@ class JsonContentCatalog implements ContentCatalog {
             .sorted(Comparator.comparing(ShakeDefinition::code))
             .toList();
     this.life = read(json, "life.json", new TypeReference<>() {});
+    this.crises = read(json, "crises.json", new TypeReference<>() {});
     this.sectorNames = toMap(meta.sectors());
     this.styleNames = toMap(meta.styles());
     this.riskNames = toMap(meta.risks());
@@ -247,6 +251,18 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public List<CrisisDefinition> crises() {
+    return crises.scenarios().stream()
+        .sorted(Comparator.comparing(CrisisDefinition::code))
+        .toList();
+  }
+
+  @Override
+  public List<String> commonOmens() {
+    return crises.commonOmens();
+  }
+
+  @Override
   public ShakeDefinition shake(String code) {
     return shakes.stream()
         .filter(x -> x.code().equals(code))
@@ -303,6 +319,11 @@ class JsonContentCatalog implements ContentCatalog {
     return phrases.offer();
   }
 
+  @Override
+  public LeverageText leverageText() {
+    return phrases.leverage();
+  }
+
   /** 잘못된 콘텐츠는 서버 시작 단계에서 실패시킨다. 게임 중에 터지는 것보다 낫다. */
   private void validate() {
     require(!jobs.isEmpty(), "직업이 하나도 없다");
@@ -316,6 +337,13 @@ class JsonContentCatalog implements ContentCatalog {
       require(
           (shake.title() + shake.body()).contains("{stock}"),
           "흔들림 장면에는 종목 자리표시 {stock}이 있어야 한다: " + shake.code());
+    }
+    require(!crises.scenarios().isEmpty(), "시장 위기 갈래가 하나도 없다");
+    for (CrisisDefinition crisis : crises.scenarios()) {
+      require(!crisis.omens().isEmpty(), "시장 위기에 전조가 없다: " + crisis.code());
+      require(
+          sectorNames.keySet().containsAll(crisis.sectorPercent().keySet()),
+          "시장 위기가 알 수 없는 섹터를 쓴다: " + crisis.code());
     }
     require(!careers.isEmpty(), "직장 장면이 하나도 없다");
     require(
@@ -345,7 +373,8 @@ class JsonContentCatalog implements ContentCatalog {
         phrases.jobRetry() != null
             && phrases.jobRehire() != null
             && phrases.jobWait() != null
-            && phrases.jobInvest() != null,
+            && phrases.jobInvest() != null
+            && phrases.leverage() != null,
         "phrases.json에 jobRetry, jobRehire, jobWait, jobInvest가 있어야 한다");
     require(!traits.isEmpty(), "성향 이벤트가 하나도 없다");
     require(!traitStages.isEmpty(), "성장기 성향 장면(adult가 아닌 것)이 하나도 없다");
@@ -527,6 +556,8 @@ class JsonContentCatalog implements ContentCatalog {
 
   record Life(LifeText marriage, LifeText child, List<NoticeDefinition> notices) {}
 
+  record Crises(List<CrisisDefinition> scenarios, List<String> commonOmens) {}
+
   record Phrases(
       Map<String, Map<String, List<String>>> hints,
       Map<String, List<String>> sway,
@@ -535,5 +566,6 @@ class JsonContentCatalog implements ContentCatalog {
       TextBlock jobRehire,
       String jobWait,
       String jobInvest,
-      OfferText offer) {}
+      OfferText offer,
+      LeverageText leverage) {}
 }

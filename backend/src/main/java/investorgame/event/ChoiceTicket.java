@@ -35,6 +35,12 @@ public record ChoiceTicket(
   /** 보유 종목 흔들림: 버틴다(HOLD)·판다(SELL). 뉴스와 같은 판정·충격 흐름을 진행이 돌린다 (decisions.md 33번). */
   public record Shake() implements Effect {}
 
+  /** 빚투 제안. borrow면 대출을 받아 그 종목을 더 산다. 판정 없이 고른 대로 한다 (decisions.md 39번). */
+  public record Leverage(boolean borrow) implements Effect {
+    public static final String BORROW = "BORROW";
+    public static final String PASS = "PASS";
+  }
+
   /**
    * 직업 선택. jobCode가 WAIT이면 고르지 않고 더 나은 자리를 기다리고, INVEST면 직업 대신 전업투자자가 된다 (decisions.md 26번, 35번).
    */

@@ -286,7 +286,7 @@ export interface components {
             /** Format: uuid */
             eventId: string;
             /** @enum {string} */
-            kind: "JOB" | "TRAIT" | "OFFER" | "LIFE" | "CAREER" | "NEWS" | "SHAKE";
+            kind: "JOB" | "TRAIT" | "OFFER" | "LIFE" | "CAREER" | "NEWS" | "SHAKE" | "LEVERAGE";
             occursDay: number;
             sectorCode?: string | null;
             sectorName?: string | null;
@@ -334,7 +334,7 @@ export interface components {
             /** @description 사건이 일어난 게임 일수 */
             day: number;
             /** @enum {string} */
-            kind: "BIRTH" | "TRAIT" | "JOB" | "JOB_WAIT" | "CAREER" | "STYLE" | "OFFER" | "NEWS" | "SHAKE" | "PRICE" | "GROWTH" | "TRADE" | "LIFE" | "MARRIAGE" | "CHILD" | "RETIRE" | "END";
+            kind: "BIRTH" | "TRAIT" | "JOB" | "JOB_WAIT" | "CAREER" | "STYLE" | "OFFER" | "NEWS" | "SHAKE" | "PRICE" | "GROWTH" | "TRADE" | "LIFE" | "MARRIAGE" | "CHILD" | "RETIRE" | "LEVERAGE" | "OMEN" | "CRISIS" | "END";
             /** @description 종류별 필드 (docs/superpowers/specs/2026-10-18-ui-redesign-design.md 6.3절) */
             payload: {
                 [key: string]: unknown;
@@ -426,7 +426,7 @@ export interface components {
         };
         Outcome: {
             /** @enum {string} */
-            kind: "JOB" | "TRAIT" | "OFFER" | "LIFE" | "CAREER" | "NEWS" | "SHAKE" | "TRADE";
+            kind: "JOB" | "TRAIT" | "OFFER" | "LIFE" | "CAREER" | "NEWS" | "SHAKE" | "LEVERAGE" | "TRADE";
             /** @description 사용자가 누른 선택 */
             chosen: string;
             /** @description 판정을 거친 실제 행동 */

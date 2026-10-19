@@ -14,6 +14,7 @@ import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -56,7 +57,8 @@ class DefaultEventServiceTest {
             null,
             0,
             List.of(),
-            false);
+            false,
+            Map.of());
     EventView a = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
     EventView b = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
 
@@ -200,7 +202,8 @@ class DefaultEventServiceTest {
         marriedDay,
         children,
         List.of(),
-        false);
+        false,
+        Map.of());
   }
 
   /** 직장 체계 (decisions.md 26번): 직업이 있으면 직장 장면이, 실직 중이면 재취업 선택이 온다. */
@@ -232,7 +235,8 @@ class DefaultEventServiceTest {
             null,
             0,
             List.of(),
-            false);
+            false,
+            Map.of());
     EventView rehire = firstOf(jobless, unemployed, JOB_DAY + 30, EventKind.JOB, 7L);
     assertThat(rehire.title()).isEqualTo(content.jobRehireText().title());
     assertThat(rehire.options()).extracting(EventView.Option::code).contains("WAIT");
@@ -258,7 +262,8 @@ class DefaultEventServiceTest {
             null,
             0,
             List.of(),
-            false);
+            false,
+            Map.of());
     EventView rehire = firstOf(UUID.randomUUID(), jobless, JOB_DAY + 30, EventKind.JOB, 7L);
     assertThat(rehire.options())
         .last()
@@ -282,7 +287,8 @@ class DefaultEventServiceTest {
             null,
             0,
             List.of(),
-            true);
+            true,
+            Map.of());
     assertThat(nextOf(UUID.randomUUID(), investor, JOB_DAY, EventKind.JOB, 3L)).isEmpty();
     assertThat(nextOf(UUID.randomUUID(), investor, JOB_DAY, EventKind.CAREER, 3L)).isEmpty();
   }
@@ -308,7 +314,8 @@ class DefaultEventServiceTest {
             JOB_DAY + YEAR,
             0,
             List.of(),
-            false);
+            false,
+            Map.of());
     int from = (60 - START_AGE) * YEAR;
     assertThat(nextOf(gameId, retired, from, EventKind.JOB, 3L)).isEmpty();
     assertThat(nextOf(UUID.randomUUID(), retired, from, EventKind.CAREER, 3L)).isEmpty();
@@ -335,7 +342,8 @@ class DefaultEventServiceTest {
             null,
             0,
             List.of(),
-            false);
+            false,
+            Map.of());
     List<String> seen = new ArrayList<>();
     int from = JOB_DAY;
     for (Optional<EventView> trait = nextOf(gameId, retired, from, EventKind.TRAIT, 5L);
@@ -367,6 +375,44 @@ class DefaultEventServiceTest {
           "번아웃", "burnout");
 
   /** fromDay부터 알림을 건너뛰며 kind의 선택형 이벤트가 PENDING으로 나올 때까지 진행한다. */
+  /** 빚투 (decisions.md 39번): 든 종목이 12달 고점보다 30% 넘게 빠졌을 때만, 가장 많이 빠진 종목으로 묻는다. */
+  @Test
+  void 든_종목이_크게_빠지면_빚투를_묻는다() {
+    String fallen = content.stocks().get(0).code();
+    String other = content.stocks().get(1).code();
+    SchedulingContext calm = investing(List.of(fallen, other), Map.of(fallen, 2_900, other, 1_000));
+    assertThat(nextOf(UUID.randomUUID(), calm, JOB_DAY + 30, EventKind.LEVERAGE, 7L)).isEmpty();
+
+    SchedulingContext plunged =
+        investing(List.of(fallen, other), Map.of(fallen, 4_500, other, 3_200));
+    EventView ask = firstOf(UUID.randomUUID(), plunged, JOB_DAY + 30, EventKind.LEVERAGE, 7L);
+    assertThat(ask.stockCode()).isEqualTo(fallen);
+    assertThat(ask.title()).contains(content.stock(fallen).name()).contains("45%");
+    assertThat(ask.options()).extracting(EventView.Option::code).containsExactly("BORROW", "PASS");
+  }
+
+  private static SchedulingContext investing(List<String> held, Map<String, Integer> drops) {
+    return new SchedulingContext(
+        Phase.INVESTING,
+        START_AGE,
+        "long",
+        "food",
+        JOB_DAY + 30,
+        true,
+        JOB_DAY + 30,
+        END_DAY,
+        JOB_DAY,
+        "office",
+        JOB_DAY,
+        false,
+        false,
+        null,
+        0,
+        held,
+        false,
+        drops);
+  }
+
   /** 보유가 있으면 투자기에 흔들림이 오고, 흔들리는 종목은 보유 중 하나이며 선택지는 버틴다·판다다 (decisions.md 33번). */
   @Test
   void 보유_종목이_있으면_흔들림이_오고_선택지는_버틴다_판다다() {
@@ -389,7 +435,8 @@ class DefaultEventServiceTest {
             null,
             0,
             List.of(held),
-            false);
+            false,
+            Map.of());
     EventView shake = firstOf(UUID.randomUUID(), holding, JOB_DAY + 30, EventKind.SHAKE, 7L);
 
     assertThat(shake.stockCode()).isEqualTo(held);

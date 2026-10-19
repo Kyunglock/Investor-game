@@ -35,7 +35,7 @@ export interface LogLine {
   age: number
   tone: LogTone
   text: string
-  pill?: '탄생' | '제안' | '직장'
+  pill?: '탄생' | '제안' | '직장' | '세상'
 }
 
 type GameInfo = Pick<Game, 'startAge' | 'daysPerYear' | 'initialStats'> &
@@ -195,6 +195,31 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
         tone: 'life',
         text: `${str(p.title)} · ${signedWon(num(p.amount))}`,
       }
+    case 'LEVERAGE':
+      return {
+        ...base,
+        tone: p.borrowed ? 'flipped' : 'decision',
+        text: p.borrowed
+          ? `${str(p.stockName)}이(가) ${percent(num(p.dropBp))} 빠졌을 때 ${won(num(p.loan))}을 빌려 ${num(p.quantity).toLocaleString('ko-KR')}주를 더 샀다 (빚투).`
+          : `${str(p.stockName)}이(가) ${percent(num(p.dropBp))} 빠졌지만 빚은 지지 않았다.`,
+      }
+    case 'OMEN':
+      // 전조는 들린 대로만. 무엇의 전조인지, 정말 전조였는지는 지나 봐야 안다 (decisions.md 38번).
+      return { ...base, tone: 'neutral', pill: '세상', text: str(p.text) }
+    case 'CRISIS': {
+      const kind = p.severity === 'DEPRESSION' ? '대공황' : '불황'
+      const omens = Array.isArray(p.omens) ? (p.omens as unknown[]).map(str) : []
+      const told =
+        omens.length > 0
+          ? ` 돌이켜 보면 전조가 있었다: ${omens.map((o) => `"${o}"`).join(' ')}`
+          : ' 아무 전조도 없이 왔다.'
+      return {
+        ...base,
+        tone: 'decline',
+        pill: '세상',
+        text: `돌아보니 ${num(p.startAge)}~${num(p.endAge)}세의 그 시절은 ${str(p.name)}, ${kind}이었다. 주가는 평균 ${percent(num(p.dropBp))} 빠졌다가 회복했다 (${str(p.model)}을 닮았다).${told}`,
+      }
+    }
     case 'MARRIAGE':
       return { ...base, tone: 'life', text: `결혼했다. 결혼 비용 ${won(num(p.cost))}.` }
     case 'CHILD':

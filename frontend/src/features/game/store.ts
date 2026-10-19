@@ -64,13 +64,16 @@ interface GameState {
   dismissNotice: () => void
 }
 
+const TOAST_KINDS = new Set<LogEntry['kind']>(['LIFE', 'OMEN', 'CRISIS'])
+
 export const useGameStore = create<GameState>((set, get) => {
   /** 서버가 보낸 판으로 화면을 맞춘다. 대기 중인 선택이 있거나 끝났거나 시장 패널이 열려 있으면 시계를 멈춘다. */
   const apply = (game: Game, keepRunning: boolean) =>
     set((state) => {
       const sameGame = state.game?.gameId === game.gameId
       const knownSeqs = new Set(sameGame ? state.game?.log.map((e) => e.seq) : [])
-      const notices = game.log.filter((e) => e.kind === 'LIFE' && !knownSeqs.has(e.seq))
+      // 알림(LIFE)·전조(OMEN)·위기 회고(CRISIS)는 판을 멈추지 않고 토스트로 지나간다.
+      const notices = game.log.filter((e) => TOAST_KINDS.has(e.kind) && !knownSeqs.has(e.seq))
       // 대기 중인 선택이 생기면 시장 패널은 닫는다. 선택이 먼저다.
       const marketOpen = state.marketOpen && !game.pendingEvent && game.status === 'ACTIVE'
       return {

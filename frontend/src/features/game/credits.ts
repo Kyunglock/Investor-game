@@ -292,6 +292,25 @@ export function buildCredits(game: Game): CreditSection[] {
   }
   sections.push({ key: 'news', title: '뉴스 앞에서', lines: newsLines })
 
+  // 지나고 나서야 이름이 붙은 위기와, 빠질 때 빚을 얹었는지 (decisions.md 38·39번).
+  const stormLines: CreditLine[] = entries(game, 'CRISIS', 'LEVERAGE').map((e) => {
+    const p = e.payload as Payload
+    const age = ageOf(game, e.day)
+    if (e.kind === 'CRISIS') {
+      return {
+        text: `${num(p.startAge)}~${num(p.endAge)}세, ${str(p.name)} (${p.severity === 'DEPRESSION' ? '대공황' : '불황'})`,
+        sub: `주가 평균 ${percent(num(p.dropBp))} 하락 · ${str(p.model)}을 닮았다`,
+        tone: 'down',
+      }
+    }
+    return p.borrowed
+      ? { text: `${age}세, ${str(p.stockName)}에 빚투`, sub: `대출 ${won(num(p.loan))}` }
+      : { text: `${age}세, ${str(p.stockName)} 급락에도 빚은 지지 않았다`, tone: 'muted' }
+  })
+  if (stormLines.length > 0) {
+    sections.push({ key: 'storms', title: '지나온 폭풍', lines: stormLines })
+  }
+
   const scored = scoreDecisions(game)
   const best = scored.reduce<ScoredDecision | null>(
     (acc, d) => (d.score > 0 && (!acc || d.score > acc.score) ? d : acc),

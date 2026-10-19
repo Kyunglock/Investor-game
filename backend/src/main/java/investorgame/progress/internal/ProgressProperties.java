@@ -7,6 +7,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  *
  * @param maxSkipDays 한 번의 시각 보고로 건너뛸 수 있는 최대 게임 일수
  * @param newsBuyRatioBp 뉴스 선택의 매수가 쓰는 현금 비율 (만분율)
+ * @param leverageLoanBp 빚투를 고르면 빌리는 돈 = 총자산 × 이 비율 (만분율)
  */
 @ConfigurationProperties("progress")
-public record ProgressProperties(int startAge, int endAge, int maxSkipDays, int newsBuyRatioBp) {}
+public record ProgressProperties(
+    int startAge, int endAge, int maxSkipDays, int newsBuyRatioBp, int leverageLoanBp) {}

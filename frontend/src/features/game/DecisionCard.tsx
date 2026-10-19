@@ -19,6 +19,7 @@ const KIND_LABELS: Record<PendingEvent['kind'], string> = {
   CAREER: '직장',
   NEWS: '뉴스',
   SHAKE: '흔들림',
+  LEVERAGE: '빚투',
 }
 
 /** 뉴스 매수의 기본 수량이 쓰는 현금 비율. 서버 기본(progress.news-buy-ratio-bp)과 같은 값이며, 사용자가 수량을 바꿀 수 있다. */
@@ -47,6 +48,8 @@ function Body({ event, game, busy, onChoose }: Props) {
   const isNews = event.kind === 'NEWS'
   // 흔들림: 보유 종목을 버틸지 팔지. 시세는 보여 주되 수량은 묻지 않는다(판다 = 전량) (decisions.md 33번).
   const isShake = event.kind === 'SHAKE'
+  // 빚투: 크게 빠진 보유 종목에 대출을 얹을지. 판정 없이 고른 대로 한다 (decisions.md 39번).
+  const isLeverage = event.kind === 'LEVERAGE'
   const holding = game.holdings.find((h) => h.stockCode === event.stockCode)
   const quote = game.market.stocks.find((s) => s.code === event.stockCode)
   const price = quote?.price ?? 0
@@ -108,7 +111,7 @@ function Body({ event, game, busy, onChoose }: Props) {
       <h2 className="mt-2 font-serif-kr text-[22px] font-black leading-snug">{event.title}</h2>
       <p className="mt-1.5 text-[13px] leading-relaxed">{event.body}</p>
 
-      {(isNews || isShake) && quote && (
+      {(isNews || isShake || isLeverage) && quote && (
         <div
           className="mt-3 flex items-center gap-3 rounded border border-line-soft px-2.5 py-2"
           data-testid="news-quote"
@@ -146,7 +149,7 @@ function Body({ event, game, busy, onChoose }: Props) {
       )}
 
       <div
-        className={`mt-3 grid gap-2 ${isNews ? 'grid-cols-3' : isShake ? 'grid-cols-2' : 'grid-cols-1'}`}
+        className={`mt-3 grid gap-2 ${isNews ? 'grid-cols-3' : isShake || isLeverage ? 'grid-cols-2' : 'grid-cols-1'}`}
       >
         {event.options.map((option) => {
           const disabled = busy || (isNews && option.code === 'SELL' && !holding)
@@ -156,7 +159,9 @@ function Body({ event, game, busy, onChoose }: Props) {
               ? `현금 ${won(game.cash)}`
               : (isNews || isShake) && option.code === 'SELL' && holding
                 ? `보유 ${holding.quantity}주 ≈ ${won(holding.value)}`
-                : null
+                : isLeverage && option.code === 'BORROW'
+                  ? `대출 약 ${won(Math.floor(Math.max(0, game.totalAsset) / 2))} · 월 이자 1%`
+                  : null
           return (
             <button
               key={option.code}

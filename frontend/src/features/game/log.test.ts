@@ -28,6 +28,65 @@ describe('logLine', () => {
     expect(line.age).toBe(1)
   })
 
+  it('전조는 무엇의 전조인지 말하지 않고, 위기는 끝난 뒤 이름과 지나간 전조를 함께 돌아본다', () => {
+    const omen = logLine(
+      entry('OMEN', 30 * 360, { text: '증시 거래량이 사상 최대를 기록했다.' }),
+      game,
+    )
+    expect(omen.text).toBe('증시 거래량이 사상 최대를 기록했다.')
+    expect(omen.pill).toBe('세상')
+
+    const crisis = logLine(
+      entry('CRISIS', 35 * 360, {
+        name: '기술주 버블 붕괴',
+        model: '2000년 IT 버블',
+        severity: 'DEPRESSION',
+        startAge: 32,
+        endAge: 36,
+        dropBp: 5_400,
+        omens: ['증시 거래량이 사상 최대를 기록했다.'],
+      }),
+      game,
+    )
+    expect(crisis.tone).toBe('decline')
+    expect(crisis.text).toContain('돌아보니 32~36세의 그 시절은 기술주 버블 붕괴, 대공황이었다.')
+    expect(crisis.text).toContain('"증시 거래량이 사상 최대를 기록했다."')
+
+    const silent = logLine(
+      entry('CRISIS', 35 * 360, {
+        name: '외환 위기',
+        model: '1997년 IMF 외환위기',
+        severity: 'RECESSION',
+        startAge: 40,
+        endAge: 42,
+        dropBp: 2_500,
+        omens: [],
+      }),
+      game,
+    )
+    expect(silent.text).toContain('외환 위기, 불황이었다')
+    expect(silent.text).toContain('아무 전조도 없이 왔다.')
+  })
+
+  it('빚투: 빌렸으면 금액과 수량, 안 빌렸으면 그렇다고', () => {
+    const borrowed = logLine(
+      entry('LEVERAGE', 30 * 360, {
+        stockName: '삼송전자',
+        dropBp: 3_500,
+        borrowed: true,
+        loan: 50_000_000,
+        quantity: 700,
+      }),
+      game,
+    )
+    expect(borrowed.text).toContain('50,000,000원을 빌려 700주를 더 샀다 (빚투)')
+    const passed = logLine(
+      entry('LEVERAGE', 30 * 360, { stockName: '삼송전자', dropBp: 3_500, borrowed: false }),
+      game,
+    )
+    expect(passed.text).toContain('빚은 지지 않았다')
+  })
+
   it('나이는 startAge + floor(day / daysPerYear)', () => {
     expect(logLine(entry('JOB', 23 * 360 + 359, {}), game).age).toBe(24)
   })

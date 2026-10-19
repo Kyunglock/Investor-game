@@ -13,6 +13,7 @@ public record EventProperties(
     LifeSettings life,
     NoticeSettings notice,
     ShakeSettings shake,
+    LeverageSettings leverage,
     Map<String, StyleSettings> styles) {
 
   public static final String DEFAULT_STYLE = "default";
@@ -79,6 +80,14 @@ public record EventProperties(
    * @param magnitudeBp 선택 뒤 변동 폭 구간(만분율)
    */
   public record ShakeSettings(Range gapDays, int upBp, Range magnitudeBp) {}
+
+  /**
+   * 빚투 제안 (decisions.md 39번).
+   *
+   * @param dropBp 보유 종목이 12달 고점보다 이만큼(만분율) 넘게 빠지면 묻는다
+   * @param gapDays 빚투 제안 사이 최소 간격(일)
+   */
+  public record LeverageSettings(int dropBp, int gapDays) {}
 
   /** 단기는 뉴스가 자주·크게, 장기는 드물게 (decisions.md 3번). */
   public record StyleSettings(Range newsGapDays, int magnitudePercent) {}

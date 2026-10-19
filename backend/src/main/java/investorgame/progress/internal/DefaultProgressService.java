@@ -22,6 +22,7 @@ import investorgame.common.random.HashSeededRandom;
 import investorgame.common.random.SeededRandom;
 import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
+import investorgame.content.CrisisDefinition;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
 import investorgame.content.StockDefinition;
@@ -36,6 +37,7 @@ import investorgame.event.ScheduleResult;
 import investorgame.event.SchedulingContext;
 import investorgame.household.HouseholdService;
 import investorgame.household.HouseholdView;
+import investorgame.market.MarketCycle;
 import investorgame.market.MarketService;
 import investorgame.market.Quote;
 import investorgame.market.ShockResult;
@@ -50,10 +52,12 @@ import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -230,6 +234,7 @@ class DefaultProgressService implements ProgressService {
           // 흔들림은 뉴스와 같은 판정·충격 흐름. "판다"는 전량이다 (decisions.md 33번).
           case ChoiceTicket.Shake shake ->
               resolveNews(game, ticket, pendingView.title(), null, random);
+          case ChoiceTicket.Leverage leverage -> resolveLeverage(game, ticket, leverage);
           case ChoiceTicket.Job job -> {
             events.complete(gameId, eventId, new Completion(option, option, List.of()));
             if (job.isWait()) {
@@ -764,6 +769,65 @@ class DefaultProgressService implements ProgressService {
     return named.stream().map(ContentCatalog.NamedCode::code).toList();
   }
 
+  /**
+   * 빚투 (decisions.md 39번). 고르면 총자산의 leverage-loan-bp만큼 대출받아 그 종목을 산다. 판정은 없다: 바닥이었는지는 그 뒤 시장이 정한다.
+   * 빚에는 다달이 이자가 붙고 수입이 들어오면 먼저 갚는다.
+   */
+  private ChoiceOutcome.Outcome resolveLeverage(
+      GameRow game, ChoiceTicket ticket, ChoiceTicket.Leverage leverage) {
+    UUID gameId = game.id();
+    String option = ticket.optionCode();
+    events.complete(gameId, ticket.eventId(), new Completion(option, option, List.of()));
+    String stockName = content.stock(ticket.stockCode()).name();
+    Map<String, Long> prices = market.prices(gameId);
+    long price = prices.get(ticket.stockCode());
+    long loan =
+        leverage.borrow()
+            ? Math.max(0, assets.totalAsset(gameId, prices)) * properties.leverageLoanBp() / BP
+            : 0;
+    long quantity = loan / price;
+    ChoiceOutcome.Trade trade = null;
+    String message;
+    if (quantity > 0) {
+      assets.borrow(gameId, quantity * price, ticket.occursDay(), ticket.eventId());
+      trade =
+          tradeView(
+              assets.buy(
+                  gameId,
+                  ticket.stockCode(),
+                  quantity,
+                  price,
+                  ticket.occursDay(),
+                  ticket.eventId()));
+      message =
+          "%s원을 빌려 %s %,d주를 더 샀다. 매달 이자가 붙는다. 바닥이었는지는 아무도 모른다."
+              .formatted(String.format("%,d", quantity * price), stockName, quantity);
+    } else if (leverage.borrow()) {
+      message = "빌릴 수 있는 돈으로는 한 주도 살 수 없었다.";
+    } else {
+      message = "빚은 지지 않기로 했다.";
+    }
+    logs.append(
+        gameId,
+        ticket.occursDay(),
+        "LEVERAGE",
+        Map.of(
+            "stockCode",
+            ticket.stockCode(),
+            "stockName",
+            stockName,
+            "dropBp",
+            ticket.magnitudeBp(),
+            "borrowed",
+            quantity > 0,
+            "loan",
+            quantity * price,
+            "quantity",
+            quantity));
+    return new ChoiceOutcome.Outcome(
+        ticket.kind().name(), option, option, List.of(), trade, null, List.of(), message);
+  }
+
   private static ChoiceOutcome.Outcome simpleOutcome(ChoiceTicket ticket, String message) {
     return simpleOutcome(ticket, message, List.of());
   }
@@ -794,10 +858,12 @@ class DefaultProgressService implements ProgressService {
     SeededRandom random = new HashSeededRandom(game.seed());
     CharacterView character = characters.get(gameId);
     JobDefinition job = character.jobCode() == null ? null : content.job(character.jobCode());
+    MarketCycle cycle = market.cycle(random);
 
     for (int m = fromExclusive / month + 1; m * month <= toInclusive; m++) {
       int day = m * month;
       market.advanceTo(gameId, day, random);
+      recordCycle(game, cycle, m, day);
       // 생활비는 처음 일을 시작한 뒤부터 나간다(실직 중에도). 월급은 지금 직업이 있을 때만 (decisions.md 26번).
       boolean independent = character.careerStartDay() != null && day > character.careerStartDay();
       boolean working = job != null && day > character.jobStartDay();
@@ -858,6 +924,41 @@ class DefaultProgressService implements ProgressService {
     return character.jobStartDay() == null
         ? 0
         : Math.max(0, day - character.jobStartDay()) / calendar.daysPerYear();
+  }
+
+  /**
+   * 경기 흐름을 기록한다 (decisions.md 38번). 전조는 그 달에 흘러나온 대로 남기지만 무엇의 전조인지는 말하지 않는다. 위기는 회복까지 끝난 달에야 "돌아보니
+   * 그때가 대공황(불황)이었다"고 남긴다. 조정과 아무 일 없이 지나간 시기는 돌아볼 거리가 없어 남기지 않는다.
+   */
+  private void recordCycle(GameRow game, MarketCycle cycle, int month, int day) {
+    UUID gameId = game.id();
+    for (MarketCycle.Omen omen : cycle.omens()) {
+      if (omen.month() == month) {
+        logs.append(gameId, day, "OMEN", Map.of("text", omen.text()));
+      }
+    }
+    int perMonth = calendar.daysPerMonth();
+    for (MarketCycle.Crisis crisis : cycle.crises()) {
+      if (crisis.severity() == MarketCycle.Severity.CORRECTION || crisis.revealMonth() != month) {
+        continue;
+      }
+      CrisisDefinition definition =
+          content.crises().stream()
+              .filter(c -> c.code().equals(crisis.crisisCode()))
+              .findFirst()
+              .orElseThrow();
+      Map<String, Object> payload = new LinkedHashMap<>();
+      payload.put("name", definition.name());
+      payload.put("model", definition.model());
+      payload.put("severity", crisis.severity().name());
+      payload.put("startAge", ageAt(game, crisis.startMonth() * perMonth));
+      payload.put("bottomAge", ageAt(game, crisis.bottomMonth() * perMonth));
+      payload.put("endAge", ageAt(game, day));
+      payload.put(
+          "dropBp", market.averageDropBp(gameId, crisis.startMonth() - 1, crisis.revealMonth()));
+      payload.put("omens", crisis.omens());
+      logs.append(gameId, day, "CRISIS", payload);
+    }
   }
 
   private int ageAt(GameRow game, int day) {
@@ -994,7 +1095,22 @@ class DefaultProgressService implements ProgressService {
         home.marriedDay(),
         home.childBirthDays().size(),
         assets.get(game.id()).holdings().keySet().stream().sorted().toList(),
-        character.fullTimeInvestorDay() != null);
+        character.fullTimeInvestorDay() != null,
+        heldDropBp(game.id()));
+  }
+
+  /** 보유 종목별 최근 12달 고점 대비 낙폭(만분율). 빚투 제안의 근거다 (decisions.md 39번). */
+  private Map<String, Integer> heldDropBp(UUID gameId) {
+    Set<String> held = assets.get(gameId).holdings().keySet();
+    Map<String, Integer> drops = new HashMap<>();
+    for (Quote quote : market.quotes(gameId)) {
+      if (!held.contains(quote.stockCode())) {
+        continue;
+      }
+      long high = quote.last12().stream().mapToLong(Long::longValue).max().orElse(quote.price());
+      drops.put(quote.stockCode(), high <= 0 ? 0 : (int) ((high - quote.price()) * BP / high));
+    }
+    return drops;
   }
 
   // ---- 화면용 상태 ----

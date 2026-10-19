@@ -63,6 +63,8 @@ class GameFlowTest {
               case "OFFER" -> "accept";
               case "NEWS" -> NEWS_CHOICES.get(newsCount++ % NEWS_CHOICES.size());
               case "JOB" -> richestJob(game);
+              // 빚투를 매번 받으면 떨어지는 종목에 계속 빚을 얹다가 파산한다(그게 정상이다). 이 검사는 70세까지의 흐름이 목적이라 거절한다.
+              case "LEVERAGE" -> "PASS";
               case "LIFE" ->
                   game.read("$.household.children.length()", Integer.class) >= 1
                           && game.read("$.household.married", Boolean.class)
@@ -100,7 +102,8 @@ class GameFlowTest {
             "ending=%s debt=%s jobs=%s yearly=%s",
             game.read("$.result.ending"),
             game.read("$.debt"),
-            game.read("$.log[?(@.kind in ['JOB','JOB_WAIT','CAREER','RETIRE'])].payload"),
+            game.read(
+                "$.log[?(@.kind in ['JOB','JOB_WAIT','CAREER','RETIRE','LEVERAGE','CRISIS'])].payload"),
             game.read("$.yearly"))
         .isEqualTo(70);
     assertThat(game.read("$.result.ending", String.class)).isEqualTo("NORMAL");

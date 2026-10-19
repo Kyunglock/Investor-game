@@ -41,6 +41,12 @@ public interface MarketService {
   /** 한 종목의 월별 전체 이력. 달 오름차순. */
   List<PricePoint> history(UUID gameId, String stockCode);
 
+  /** 이 판의 경기 흐름(전조·위기). 시드로 정해져 같은 판은 언제 불러도 같다. 화면에 내보내면 안 된다. */
+  MarketCycle cycle(SeededRandom random);
+
+  /** fromMonth의 가격 대비 (fromMonth, toMonth] 동안의 최저가 낙폭을 종목 평균으로(만분율, 하락이면 양수). 위기를 돌아볼 때 쓴다. */
+  int averageDropBp(UUID gameId, int fromMonth, int toMonth);
+
   /** 마지막으로 처리한 달 번호 (0부터). */
   int currentMonth(UUID gameId);
 }

@@ -172,6 +172,8 @@ class DefaultEventService implements EventService {
                   ACCEPT.equals(optionCode));
           case NEWS -> new ChoiceTicket.News();
           case SHAKE -> new ChoiceTicket.Shake();
+          case LEVERAGE ->
+              new ChoiceTicket.Leverage(ChoiceTicket.Leverage.BORROW.equals(optionCode));
           case NOTICE -> throw new InvalidRequestException("알림은 선택할 수 없다");
         };
     return new ChoiceTicket(
@@ -235,6 +237,7 @@ class DefaultEventService implements EventService {
       EventProperties.Range gap = properties.style(context.investmentStyle()).newsGapDays();
       candidates.add(new Candidate(EventKind.NEWS, base + roll(random, gap, "NEWS", news.size())));
       shakeCandidate(rows, context, random, candidates);
+      leverageCandidate(rows, context, candidates);
     }
     if (context.phase() != Phase.CHILDHOOD && context.careerStartDay() != null) {
       adultTraitCandidate(rows, context, random, candidates);
@@ -415,6 +418,29 @@ class DefaultEventService implements EventService {
             base + roll(random, properties.shake().gapDays(), "SHAKE", shakes.size())));
   }
 
+  /** 빚투 제안: 든 종목이 크게 빠졌고 지난 제안에서 충분히 지났으면 지금 묻는다 (decisions.md 39번). */
+  private void leverageCandidate(
+      List<EventRow> rows, SchedulingContext context, List<Candidate> candidates) {
+    if (plunged(context).isEmpty()) {
+      return;
+    }
+    List<EventRow> asked = ofKind(rows, EventKind.LEVERAGE);
+    int base =
+        asked.isEmpty()
+            ? context.investingStartDay()
+            : last(asked).occursDay() + properties.leverage().gapDays();
+    candidates.add(new Candidate(EventKind.LEVERAGE, base));
+  }
+
+  /** 가장 많이 빠진 보유 종목. 기준 낙폭을 넘는 것이 없으면 비어 있다. 같은 낙폭이면 코드순. */
+  private Optional<Map.Entry<String, Integer>> plunged(SchedulingContext context) {
+    return context.heldDropBp().entrySet().stream()
+        .filter(e -> e.getValue() >= properties.leverage().dropBp())
+        .max(
+            Map.Entry.<String, Integer>comparingByValue()
+                .thenComparing(Map.Entry.comparingByKey(Comparator.reverseOrder())));
+  }
+
   private void noticeCandidate(
       List<EventRow> rows,
       SchedulingContext context,
@@ -486,6 +512,7 @@ class DefaultEventService implements EventService {
       case NOTICE -> notice(id, seq, candidate.day(), context, random);
       case NEWS -> news(id, seq, rows, candidate.day(), context, random, hints);
       case SHAKE -> shake(id, seq, candidate.day(), context, random);
+      case LEVERAGE -> leverage(id, seq, candidate.day(), context);
     };
   }
 
@@ -515,6 +542,27 @@ class DefaultEventService implements EventService {
         null,
         null,
         SHAKE_OPTIONS);
+  }
+
+  /** 빚투 제안. 가장 많이 빠진 보유 종목을 묻고, 낙폭은 제목에 쓰도록 남긴다. 숨은 방향은 없다: 그 뒤는 시장이 정한다. */
+  private EventRow leverage(UUID id, int seq, int day, SchedulingContext context) {
+    Map.Entry<String, Integer> worst = plunged(context).orElseThrow();
+    return new EventRow(
+        id,
+        seq,
+        EventKind.LEVERAGE,
+        null,
+        content.stock(worst.getKey()).sector(),
+        worst.getKey(),
+        false,
+        day,
+        EventRow.PENDING,
+        null,
+        worst.getValue(),
+        null,
+        null,
+        null,
+        List.of(ChoiceTicket.Leverage.BORROW, ChoiceTicket.Leverage.PASS));
   }
 
   /** 알림 정의를 가중치로 뽑는다. 결혼 뒤에만 나오는 정의는 미혼이면 후보에서 뺀다. 만들어지는 순간 RESOLVED다. */
