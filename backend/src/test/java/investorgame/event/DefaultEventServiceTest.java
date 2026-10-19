@@ -31,6 +31,11 @@ class DefaultEventServiceTest {
   private static final int START_AGE = 15;
   private static final int END_DAY = (65 - START_AGE) * YEAR;
   private static final int JOB_DAY = (25 - START_AGE) * YEAR;
+
+  /** 주거 이벤트가 끼어들지 않는 상태: 내 집 포함 2채, 세 만기 없음. 주거 검사는 따로 한다. */
+  private static final HousingFacts SETTLED =
+      new HousingFacts("OWN", null, 2, true, false, null, 0);
+
   private static final HintProvider HINTS =
       (truth, seq) -> new Hint(HintDirection.NEUTRAL, HintStrength.MILD);
 
@@ -58,7 +63,8 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             false,
-            Map.of());
+            Map.of(),
+            SETTLED);
     EventView a = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
     EventView b = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
 
@@ -203,7 +209,8 @@ class DefaultEventServiceTest {
         children,
         List.of(),
         false,
-        Map.of());
+        Map.of(),
+        SETTLED);
   }
 
   /** 직장 체계 (decisions.md 26번): 직업이 있으면 직장 장면이, 실직 중이면 재취업 선택이 온다. */
@@ -236,7 +243,8 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             false,
-            Map.of());
+            Map.of(),
+            SETTLED);
     EventView rehire = firstOf(jobless, unemployed, JOB_DAY + 30, EventKind.JOB, 7L);
     assertThat(rehire.title()).isEqualTo(content.jobRehireText().title());
     assertThat(rehire.options()).extracting(EventView.Option::code).contains("WAIT");
@@ -263,7 +271,8 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             false,
-            Map.of());
+            Map.of(),
+            SETTLED);
     EventView rehire = firstOf(UUID.randomUUID(), jobless, JOB_DAY + 30, EventKind.JOB, 7L);
     assertThat(rehire.options())
         .last()
@@ -288,7 +297,8 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             true,
-            Map.of());
+            Map.of(),
+            SETTLED);
     assertThat(nextOf(UUID.randomUUID(), investor, JOB_DAY, EventKind.JOB, 3L)).isEmpty();
     assertThat(nextOf(UUID.randomUUID(), investor, JOB_DAY, EventKind.CAREER, 3L)).isEmpty();
   }
@@ -315,7 +325,8 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             false,
-            Map.of());
+            Map.of(),
+            SETTLED);
     int from = (60 - START_AGE) * YEAR;
     assertThat(nextOf(gameId, retired, from, EventKind.JOB, 3L)).isEmpty();
     assertThat(nextOf(UUID.randomUUID(), retired, from, EventKind.CAREER, 3L)).isEmpty();
@@ -343,7 +354,8 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             false,
-            Map.of());
+            Map.of(),
+            SETTLED);
     List<String> seen = new ArrayList<>();
     int from = JOB_DAY;
     for (Optional<EventView> trait = nextOf(gameId, retired, from, EventKind.TRAIT, 5L);
@@ -391,6 +403,87 @@ class DefaultEventServiceTest {
     assertThat(ask.options()).extracting(EventView.Option::code).containsExactly("BORROW", "PASS");
   }
 
+  /** 주거 설계 4절: 일을 시작하면 독립, 세 만기마다 연장·이사·매수, 결혼하면 "집 살까?". */
+  @Test
+  void 독립하면_세를_고르고_만기와_결혼_뒤에는_집을_묻는다() {
+    EventView moveOut =
+        firstOf(
+            UUID.randomUUID(), housed(HousingFacts.PARENTS, null), JOB_DAY, EventKind.HOUSING, 3L);
+    assertThat(moveOut.options())
+        .extracting(EventView.Option::code)
+        .containsExactly("MONTHLY", "VILLA", "VILLA_INSURED", "APT_JEONSE");
+
+    HousingFacts renting =
+        new HousingFacts("APT_JEONSE", JOB_DAY + 2 * YEAR, 0, false, false, null, 0);
+    EventView leaseEnd =
+        firstOf(UUID.randomUUID(), housed(renting, null), JOB_DAY, EventKind.HOUSING, 3L);
+    assertThat(leaseEnd.occursDay()).isEqualTo(JOB_DAY + 2 * YEAR);
+    assertThat(leaseEnd.options())
+        .extracting(EventView.Option::code)
+        .startsWith("KEEP")
+        .contains("BUY_SEOUL", "BUY_GYEONGGI");
+
+    HousingFacts settled = new HousingFacts("APT_JEONSE", null, 0, false, false, null, 0);
+    assertThat(nextOf(UUID.randomUUID(), housed(settled, null), JOB_DAY, EventKind.HOUSING, 3L))
+        .as("결혼·출산·집값 급등이 없으면 묻지 않는다")
+        .isEmpty();
+    EventView buy =
+        firstOf(UUID.randomUUID(), housed(settled, JOB_DAY + YEAR), JOB_DAY, EventKind.HOUSING, 3L);
+    assertThat(buy.occursDay()).isEqualTo(JOB_DAY + YEAR);
+    assertThat(buy.options())
+        .extracting(EventView.Option::code)
+        .contains("BUY_SEOUL", "GAP", "PASS");
+  }
+
+  /** 전세사기는 보증보험 없는 빌라 전세의 만기에만, 확률로 숨어 있다. */
+  @Test
+  void 전세사기는_보증보험_없는_빌라_만기에만_가끔_있다() {
+    int frauds = 0;
+    int insuredFrauds = 0;
+    for (long seed = 1; seed <= 200; seed++) {
+      HousingFacts villa = new HousingFacts("VILLA_JEONSE", JOB_DAY, 0, false, true, null, 0);
+      HousingFacts insured = new HousingFacts("VILLA_JEONSE", JOB_DAY, 0, false, false, null, 0);
+      if (fraudAt(villa, seed)) {
+        frauds++;
+      }
+      if (fraudAt(insured, seed)) {
+        insuredFrauds++;
+      }
+    }
+    assertThat(frauds).as("200번 중 7%%쯤").isBetween(3, 35);
+    assertThat(insuredFrauds).isZero();
+  }
+
+  private boolean fraudAt(HousingFacts facts, long seed) {
+    UUID gameId = UUID.randomUUID();
+    EventView leaseEnd = firstOf(gameId, housed(facts, null), JOB_DAY, EventKind.HOUSING, seed);
+    ChoiceTicket ticket = events.prepareChoice(gameId, leaseEnd.eventId(), "MONTHLY");
+    return ((ChoiceTicket.Housing) ticket.effect()).fraud();
+  }
+
+  private static SchedulingContext housed(HousingFacts facts, Integer marriedDay) {
+    return new SchedulingContext(
+        Phase.SAVING,
+        START_AGE,
+        "long",
+        "food",
+        JOB_DAY + 30,
+        true,
+        null,
+        END_DAY,
+        JOB_DAY,
+        "office",
+        JOB_DAY,
+        true,
+        marriedDay != null,
+        marriedDay,
+        0,
+        List.of(),
+        false,
+        Map.of(),
+        facts);
+  }
+
   private static SchedulingContext investing(List<String> held, Map<String, Integer> drops) {
     return new SchedulingContext(
         Phase.INVESTING,
@@ -410,7 +503,8 @@ class DefaultEventServiceTest {
         0,
         held,
         false,
-        drops);
+        drops,
+        SETTLED);
   }
 
   /** 보유가 있으면 투자기에 흔들림이 오고, 흔들리는 종목은 보유 중 하나이며 선택지는 버틴다·판다다 (decisions.md 33번). */
@@ -436,7 +530,8 @@ class DefaultEventServiceTest {
             0,
             List.of(held),
             false,
-            Map.of());
+            Map.of(),
+            SETTLED);
     EventView shake = firstOf(UUID.randomUUID(), holding, JOB_DAY + 30, EventKind.SHAKE, 7L);
 
     assertThat(shake.stockCode()).isEqualTo(held);

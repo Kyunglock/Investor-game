@@ -103,6 +103,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/games/{gameId}/homes/{seq}/listing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 가진 아파트를 매물로 내놓거나 거둔다
+         * @description 내놓아도 바로 팔리지 않는다. 다음 달부터 달마다 매수자가 나와야 팔린다(평소 25%, 집값이 빠질 땐 5%, 뜨거우면 45%).
+         *     대기 중인 선택형 이벤트가 있으면 먼저 선택해야 한다 (400).
+         */
+        post: operations["listHome"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/games/{gameId}/stocks/{stockCode}/history": {
         parameters: {
             query?: never;
@@ -281,12 +302,76 @@ export interface components {
         Option: {
             code: string;
             label: string;
+            /** @description 이 선택에 드는 돈(주거 선택지만). 필요한 현금·대출·월 부담 */
+            detail?: string | null;
+            /** @description 고를 수 없는 이유(현금 부족·DSR 초과). 고를 수 있으면 null */
+            blocked?: string | null;
+        };
+        /** @description 주거 (주거 설계). 총자산에는 집 시세 + 보증금 − 주담대 − 전세대출 − 세입자 보증금이 들어간다 */
+        Housing: {
+            /** @enum {string} */
+            tenure: "PARENTS" | "MONTHLY" | "VILLA_JEONSE" | "APT_JEONSE" | "OWN";
+            regionName?: string | null;
+            /**
+             * Format: int64
+             * @description 지금 사는 집에 맡긴 보증금
+             */
+            deposit: number;
+            /** Format: int64 */
+            monthlyRent: number;
+            /** Format: int64 */
+            jeonseLoan: number;
+            /** @description 전세보증보험 */
+            insured: boolean;
+            /** @description 세 만기 나이 */
+            leaseEndAge?: number | null;
+            /** @description 지금 주담대 금리(연 */
+            mortgageRateBp: number;
+            /**
+             * Format: int64
+             * @description 한 달 주거비(월세 + 주담대 원리금 + 전세대출 이자 + 보증료)
+             */
+            monthlyCost: number;
+            homes: components["schemas"]["Home"][];
+            quotes: components["schemas"]["HomeQuote"][];
+        };
+        Home: {
+            seq: number;
+            regionName: string;
+            /**
+             * Format: int64
+             * @description 지금 시세
+             */
+            price: number;
+            /** Format: int64 */
+            purchasePrice: number;
+            /** Format: int64 */
+            mortgage: number;
+            /** Format: int64 */
+            monthlyPayment: number;
+            /** @description 내가 사는 집. 아니면 세입자가 사는 갭투자 집 */
+            residence: boolean;
+            /** Format: int64 */
+            tenantDeposit: number;
+            /** @description 매물로 내놓아 매수자를 기다리는 중 */
+            listed: boolean;
+        };
+        HomeQuote: {
+            region: string;
+            name: string;
+            /** Format: int64 */
+            price: number;
+            change12mBp: number;
+            last12: number[];
+        };
+        ListingRequest: {
+            listed: boolean;
         };
         PendingEvent: {
             /** Format: uuid */
             eventId: string;
             /** @enum {string} */
-            kind: "JOB" | "TRAIT" | "OFFER" | "LIFE" | "CAREER" | "NEWS" | "SHAKE" | "LEVERAGE";
+            kind: "JOB" | "TRAIT" | "OFFER" | "LIFE" | "CAREER" | "NEWS" | "SHAKE" | "LEVERAGE" | "HOUSING";
             occursDay: number;
             sectorCode?: string | null;
             sectorName?: string | null;
@@ -334,7 +419,7 @@ export interface components {
             /** @description 사건이 일어난 게임 일수 */
             day: number;
             /** @enum {string} */
-            kind: "BIRTH" | "TRAIT" | "JOB" | "JOB_WAIT" | "CAREER" | "STYLE" | "OFFER" | "NEWS" | "SHAKE" | "PRICE" | "GROWTH" | "TRADE" | "LIFE" | "MARRIAGE" | "CHILD" | "RETIRE" | "LEVERAGE" | "OMEN" | "CRISIS" | "END";
+            kind: "BIRTH" | "TRAIT" | "JOB" | "JOB_WAIT" | "CAREER" | "STYLE" | "OFFER" | "NEWS" | "SHAKE" | "PRICE" | "GROWTH" | "TRADE" | "LIFE" | "MARRIAGE" | "CHILD" | "RETIRE" | "LEVERAGE" | "OMEN" | "CRISIS" | "HOUSING" | "HOME_SOLD" | "TENANT" | "END";
             /** @description 종류별 필드 (docs/superpowers/specs/2026-10-18-ui-redesign-design.md 6.3절) */
             payload: {
                 [key: string]: unknown;
@@ -390,6 +475,7 @@ export interface components {
             holdings: components["schemas"]["Holding"][];
             market: components["schemas"]["Market"];
             household: components["schemas"]["Household"];
+            housing: components["schemas"]["Housing"];
             job?: components["schemas"]["Job"] | null;
             /** @description 직업 대신 전업투자자를 골랐는가. 그러면 job은 언제나 null이다 */
             fullTimeInvestor: boolean;
@@ -426,7 +512,7 @@ export interface components {
         };
         Outcome: {
             /** @enum {string} */
-            kind: "JOB" | "TRAIT" | "OFFER" | "LIFE" | "CAREER" | "NEWS" | "SHAKE" | "LEVERAGE" | "TRADE";
+            kind: "JOB" | "TRAIT" | "OFFER" | "LIFE" | "CAREER" | "NEWS" | "SHAKE" | "LEVERAGE" | "HOUSING" | "TRADE";
             /** @description 사용자가 누른 선택 */
             chosen: string;
             /** @description 판정을 거친 실제 행동 */
@@ -636,6 +722,36 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChoiceOutcome"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    listHome: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gameId: components["parameters"]["GameId"];
+                seq: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ListingRequest"];
+            };
+        };
+        responses: {
+            /** @description 판 상태 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Game"];
                 };
             };
             400: components["responses"]["InvalidRequest"];

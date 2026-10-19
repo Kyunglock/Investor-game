@@ -35,6 +35,9 @@ public interface HouseholdService {
 
   long childbirthCost(int gameDay);
 
+  /** 기준 금액(취업 나이 시점)에 그날까지의 물가를 붙인다. 월세처럼 다른 도메인이 정한 금액에 쓴다. */
+  long inflated(long amount, int gameDay);
+
   /** 이 날이 은퇴 나이의 첫날인가. */
   boolean retireMonth(int gameDay);
 }

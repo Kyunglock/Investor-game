@@ -33,11 +33,11 @@ class HouseholdServiceTest {
 
   @Test
   void 혼자일_때_생활비는_1인_금액이고_25세까지는_물가가_오르지_않는다() {
-    assertThat(household.monthlyExpense(gameId, 0)).isEqualTo(1_400_000);
-    assertThat(household.monthlyExpense(gameId, JOB_DAY)).isEqualTo(1_400_000);
+    assertThat(household.monthlyExpense(gameId, 0)).isEqualTo(900_000);
+    assertThat(household.monthlyExpense(gameId, JOB_DAY)).isEqualTo(900_000);
     assertThat(household.monthlyExpense(gameId, JOB_DAY + YEAR))
         .as("26세, 2% 오름")
-        .isEqualTo(1_428_000);
+        .isEqualTo(918_000);
     assertThat(household.spouseIncome(gameId, JOB_DAY)).isZero();
     assertThat(household.get(gameId).married()).isFalse();
   }
@@ -48,7 +48,7 @@ class HouseholdServiceTest {
 
     assertThat(household.get(gameId).married()).isTrue();
     assertThat(household.get(gameId).marriedDay()).isEqualTo(JOB_DAY);
-    assertThat(household.monthlyExpense(gameId, JOB_DAY)).isEqualTo(2_200_000);
+    assertThat(household.monthlyExpense(gameId, JOB_DAY)).isEqualTo(1_500_000);
     assertThat(household.spouseIncome(gameId, JOB_DAY)).isEqualTo(1_800_000);
     assertThat(household.weddingCost(JOB_DAY)).isEqualTo(30_000_000);
     assertThat(household.weddingCost(JOB_DAY + YEAR)).isEqualTo(30_600_000);
@@ -59,7 +59,7 @@ class HouseholdServiceTest {
     household.marry(gameId, JOB_DAY);
     int birth = JOB_DAY;
     assertThat(household.addChild(gameId, birth)).isEqualTo(1);
-    long couple = 2_200_000;
+    long couple = 1_500_000;
 
     assertThat(household.monthlyExpense(gameId, birth)).isEqualTo(couple + 600_000);
     assertThat(deflated(household.monthlyExpense(gameId, birth + 7 * YEAR), 7))
@@ -96,15 +96,14 @@ class HouseholdServiceTest {
 
     household.retire(gameId, retireDay);
 
-    // 1인 100만. 물가는 생활비와 같은 배율 (decisions.md 27번)
+    // 1인 70만. 물가는 생활비와 같은 배율 (decisions.md 27번). 주거비가 따로 나가면서(주거 설계 2절) 생활비에 맞춰 낮췄다
     long single = household.pension(gameId, retireDay);
     assertThat(single)
-        .as("1,000,000 × 1.02^35, 연 단위 정수 곱셈이라 끝자리는 조금 다를 수 있다")
-        .isCloseTo(
-            household.monthlyExpense(gameId, retireDay) * 1_000_000 / 1_400_000, within(100L));
+        .as("700,000 × 1.02^35, 연 단위 정수 곱셈이라 끝자리는 조금 다를 수 있다")
+        .isCloseTo(household.monthlyExpense(gameId, retireDay) * 700_000 / 900_000, within(100L));
     assertThat(single).isLessThan(household.monthlyExpense(gameId, retireDay));
     household.marry(gameId, retireDay);
-    assertThat(household.pension(gameId, retireDay)).as("부부 160만").isGreaterThan(single);
+    assertThat(household.pension(gameId, retireDay)).as("부부 110만").isGreaterThan(single);
     assertThat(household.pension(gameId, retireDay + YEAR))
         .as("물가 반영")
         .isGreaterThan(household.pension(gameId, retireDay));

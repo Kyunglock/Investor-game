@@ -208,11 +208,14 @@ class GameApiTest {
     assertThat(client.advance(gameId, jobDay + 29).read("$.cash", Long.class)).isEqualTo(cash);
     DocumentContext payday = client.advance(gameId, jobDay + 30);
     long expense = payday.read("$.household.monthlyExpense", Long.class);
-    assertThat(expense).isPositive().isLessThan(salary);
-    assertThat(payday.read("$.cash", Long.class)).isEqualTo(cash + salary - expense);
+    // 독립하면서 월세를 골랐다(GameClient.chooseFirstJob). 주거비는 생활비와 따로 나간다 (주거 설계 2절).
+    long rent = payday.read("$.housing.monthlyCost", Long.class);
+    assertThat(rent).isPositive();
+    assertThat(expense + rent).isPositive().isLessThan(salary);
+    assertThat(payday.read("$.cash", Long.class)).isEqualTo(cash + salary - expense - rent);
     assertThat(client.advance(gameId, jobDay + 30).read("$.cash", Long.class))
         .as("같은 날을 다시 보고해도 월급과 생활비는 한 번만")
-        .isEqualTo(cash + salary - expense);
+        .isEqualTo(cash + salary - expense - rent);
   }
 
   @Test
@@ -262,7 +265,7 @@ class GameApiTest {
     client.chooseRaw(gameId, eventId, "astronaut").andExpect(status().isBadRequest());
     client.chooseFirstJob(game);
     client
-        .chooseRaw(gameId, eventId, game.read("$.pendingEvent.options[0].code"))
+        .chooseRaw(gameId, eventId, GameClient.firstOpen(game))
         .andExpect(status().isBadRequest());
   }
 

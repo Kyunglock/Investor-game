@@ -14,6 +14,7 @@ public record EventProperties(
     NoticeSettings notice,
     ShakeSettings shake,
     LeverageSettings leverage,
+    HousingSettings housing,
     Map<String, StyleSettings> styles) {
 
   public static final String DEFAULT_STYLE = "default";
@@ -88,6 +89,15 @@ public record EventProperties(
    * @param gapDays 빚투 제안 사이 최소 간격(일)
    */
   public record LeverageSettings(int dropBp, int gapDays) {}
+
+  /**
+   * 주거 이벤트 (주거 설계 4절).
+   *
+   * @param fraudBp 보증보험 없는 빌라 전세가 만기 때 보증금을 못 돌려받을 확률(만분율)
+   * @param buyGapDays "집 살까?" 사이 최소 간격(일)
+   * @param surgeBp 서울 아파트가 12달 새 이만큼 넘게 오르면 "집 살까?"가 온다
+   */
+  public record HousingSettings(int fraudBp, int buyGapDays, int surgeBp) {}
 
   /** 단기는 뉴스가 자주·크게, 장기는 드물게 (decisions.md 3번). */
   public record StyleSettings(Range newsGapDays, int magnitudePercent) {}

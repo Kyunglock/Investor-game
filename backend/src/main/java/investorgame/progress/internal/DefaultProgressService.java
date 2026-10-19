@@ -29,6 +29,7 @@ import investorgame.content.StockDefinition;
 import investorgame.event.ChoiceTicket;
 import investorgame.event.CompleteResult;
 import investorgame.event.Completion;
+import investorgame.event.EventKind;
 import investorgame.event.EventService;
 import investorgame.event.EventView;
 import investorgame.event.HintProvider;
@@ -37,6 +38,7 @@ import investorgame.event.ScheduleResult;
 import investorgame.event.SchedulingContext;
 import investorgame.household.HouseholdService;
 import investorgame.household.HouseholdView;
+import investorgame.housing.HousingService;
 import investorgame.market.MarketCycle;
 import investorgame.market.MarketService;
 import investorgame.market.Quote;
@@ -96,6 +98,8 @@ class DefaultProgressService implements ProgressService {
   private final BehaviorService behavior;
   private final ResultService results;
   private final ContentCatalog content;
+  private final HousingService housing;
+  private final HousingFlow housingFlow;
   private final SecureRandom seeds = new SecureRandom();
 
   DefaultProgressService(
@@ -110,7 +114,9 @@ class DefaultProgressService implements ProgressService {
       EventService events,
       BehaviorService behavior,
       ResultService results,
-      ContentCatalog content) {
+      ContentCatalog content,
+      HousingService housing,
+      HousingFlow housingFlow) {
     this.games = games;
     this.logs = logs;
     this.properties = properties;
@@ -123,6 +129,8 @@ class DefaultProgressService implements ProgressService {
     this.behavior = behavior;
     this.results = results;
     this.content = content;
+    this.housing = housing;
+    this.housingFlow = housingFlow;
   }
 
   @Override
@@ -149,6 +157,7 @@ class DefaultProgressService implements ProgressService {
     AccountView account = assets.create(game.id(), random.forKey("asset", "create"));
     market.create(game.id());
     household.create(game.id());
+    housing.create(game.id());
     logs.append(
         game.id(),
         0,
@@ -235,6 +244,13 @@ class DefaultProgressService implements ProgressService {
           case ChoiceTicket.Shake shake ->
               resolveNews(game, ticket, pendingView.title(), null, random);
           case ChoiceTicket.Leverage leverage -> resolveLeverage(game, ticket, leverage);
+          case ChoiceTicket.Housing home ->
+              housingFlow.resolve(
+                  gameId,
+                  ticket,
+                  home,
+                  household.get(gameId),
+                  monthlyIncome(characters.get(gameId), ticket.occursDay()));
           case ChoiceTicket.Job job -> {
             events.complete(gameId, eventId, new Completion(option, option, List.of()));
             if (job.isWait()) {
@@ -613,6 +629,17 @@ class DefaultProgressService implements ProgressService {
 
   @Override
   @Transactional
+  public GameView listHome(UUID sessionId, UUID gameId, int seq, boolean listed) {
+    GameRow game = lock(sessionId, gameId);
+    if (events.pending(gameId).isPresent()) {
+      throw new InvalidRequestException("먼저 선택을 해야 한다");
+    }
+    housingFlow.setListed(gameId, seq, listed, game.lastReportedDay());
+    return view(game);
+  }
+
+  @Override
+  @Transactional
   public ChoiceOutcome trade(
       UUID sessionId, UUID gameId, String stockCode, Action side, long quantity) {
     GameRow game = lock(sessionId, gameId);
@@ -782,9 +809,7 @@ class DefaultProgressService implements ProgressService {
     Map<String, Long> prices = market.prices(gameId);
     long price = prices.get(ticket.stockCode());
     long loan =
-        leverage.borrow()
-            ? Math.max(0, assets.totalAsset(gameId, prices)) * properties.leverageLoanBp() / BP
-            : 0;
+        leverage.borrow() ? Math.max(0, netWorth(gameId)) * properties.leverageLoanBp() / BP : 0;
     long quantity = loan / price;
     ChoiceOutcome.Trade trade = null;
     String message;
@@ -893,9 +918,10 @@ class DefaultProgressService implements ProgressService {
         }
         assets.spend(gameId, EXPENSE, household.monthlyExpense(gameId, day), day, null);
       }
+      // 월세·주담대 원리금·전세대출 이자, 갭투자 세입자 갱신, 매물 매수자 (주거 설계).
+      housingFlow.month(gameId, m, day, random);
       assets.accrueInterest(gameId, day);
-      Map<String, Long> prices = market.prices(gameId);
-      long total = assets.totalAsset(gameId, prices);
+      long total = netWorth(gameId);
       logs.upsertMonth(gameId, m, total);
       if (day % calendar.daysPerYear() == 0) {
         logs.upsertYear(
@@ -991,8 +1017,7 @@ class DefaultProgressService implements ProgressService {
               / PERCENT;
     }
     if (notice.assetPercent() > 0) {
-      long scaled =
-          assets.totalAsset(gameId, market.prices(gameId)) * notice.assetPercent() / PERCENT;
+      long scaled = netWorth(gameId) * notice.assetPercent() / PERCENT;
       amount = -Math.max(-amount, scaled);
     }
     if (amount > 0) {
@@ -1024,7 +1049,7 @@ class DefaultProgressService implements ProgressService {
     OffsetDateTime endedAt = games.now();
     games.end(game.id(), endedAt);
     AccountView account = assets.get(game.id());
-    long finalAsset = assets.totalAsset(game.id(), market.prices(game.id()));
+    long finalAsset = netWorth(game.id());
     results.save(
         new GameResult(
             game.id(),
@@ -1096,7 +1121,8 @@ class DefaultProgressService implements ProgressService {
         home.childBirthDays().size(),
         assets.get(game.id()).holdings().keySet().stream().sorted().toList(),
         character.fullTimeInvestorDay() != null,
-        heldDropBp(game.id()));
+        heldDropBp(game.id()),
+        housingFlow.facts(game.id(), home));
   }
 
   /** 보유 종목별 최근 12달 고점 대비 낙폭(만분율). 빚투 제안의 근거다 (decisions.md 39번). */
@@ -1165,7 +1191,7 @@ class DefaultProgressService implements ProgressService {
         character.stats(),
         character.initialStats(),
         account.cash(),
-        account.cash() + invested - account.debt(),
+        account.cash() + invested - account.debt() + housingFlow.equity(gameId),
         account.initialCash(),
         invested,
         account.debt(),
@@ -1192,7 +1218,8 @@ class DefaultProgressService implements ProgressService {
         character.investorType() == null ? null : investorTypeView(character.investorType()),
         new GameView.Market(month, quotes.stream().map(this::quoteView).toList()),
         householdView(game, character),
-        pending.map(e -> pendingView(e, quoteByCode)).orElse(null),
+        housingFlow.view(gameId, game.startAge()),
+        pending.map(e -> pendingView(game, character, e, quoteByCode)).orElse(null),
         nextEventDay,
         ended ? results.find(gameId).map(DefaultProgressService::resultView).orElse(null) : null,
         logs.findAll(gameId),
@@ -1259,7 +1286,8 @@ class DefaultProgressService implements ProgressService {
         tenureYears(character, day));
   }
 
-  private GameView.PendingEvent pendingView(EventView event, Map<String, Quote> quotes) {
+  private GameView.PendingEvent pendingView(
+      GameRow game, CharacterView character, EventView event, Map<String, Quote> quotes) {
     String stockName = event.stockCode() == null ? null : content.stock(event.stockCode()).name();
     Quote quote = event.stockCode() == null ? null : quotes.get(event.stockCode());
     return new GameView.PendingEvent(
@@ -1276,7 +1304,51 @@ class DefaultProgressService implements ProgressService {
         event.body(),
         event.hintText(),
         event.swayText(),
-        event.options().stream().map(o -> new GameView.Option(o.code(), o.label())).toList());
+        options(game, character, event));
+  }
+
+  /** 주거 선택지에는 드는 돈과 고를 수 없는 이유를 붙인다. 전세사기는 고른 뒤에야 드러나므로 여기서는 모른 채 계산한다. */
+  private List<GameView.Option> options(GameRow game, CharacterView character, EventView event) {
+    if (event.kind() != EventKind.HOUSING) {
+      return event.options().stream()
+          .map(o -> new GameView.Option(o.code(), o.label(), null, null))
+          .toList();
+    }
+    List<HousingFlow.Plan> plans =
+        housingFlow.plans(
+            game.id(),
+            event.options().stream().map(EventView.Option::code).toList(),
+            false,
+            household.get(game.id()),
+            monthlyIncome(character, event.occursDay()),
+            event.occursDay());
+    List<GameView.Option> options = new ArrayList<>();
+    for (int i = 0; i < plans.size(); i++) {
+      EventView.Option option = event.options().get(i);
+      options.add(
+          new GameView.Option(
+              option.code(), option.label(), plans.get(i).detail(), plans.get(i).blocked()));
+    }
+    return options;
+  }
+
+  /** 대출 심사(DSR)에 쓰는 월 소득: 월급(은퇴 전) + 배우자 소득. */
+  private long monthlyIncome(CharacterView character, int day) {
+    UUID gameId = character.gameId();
+    boolean retired = household.get(gameId).retiredDay() != null;
+    long salary =
+        character.jobCode() == null || retired
+            ? 0
+            : monthlySalary(
+                content.job(character.jobCode()),
+                tenureYears(character, day),
+                character.salaryBonusBp());
+    return salary + household.spouseIncome(gameId, day);
+  }
+
+  /** 총자산: 현금 + 주식 평가액 − 빚 + 집 시세 + 보증금 − 주담대 − 전세대출 − 세입자 보증금. 파산은 이 값으로 가린다. */
+  private long netWorth(UUID gameId) {
+    return assets.totalAsset(gameId, market.prices(gameId)) + housingFlow.equity(gameId);
   }
 
   private static GameView.Result resultView(GameResult result) {

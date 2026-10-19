@@ -23,6 +23,7 @@ import investorgame.event.EventKind;
 import investorgame.event.EventService;
 import investorgame.event.EventView;
 import investorgame.event.HintProvider;
+import investorgame.event.HousingFacts;
 import investorgame.event.ScheduleResult;
 import investorgame.event.SchedulingContext;
 import java.util.ArrayList;
@@ -63,6 +64,8 @@ class DefaultEventService implements EventService {
 
   /** 흔들림: 버틴다(HOLD)·판다(SELL). 문구는 렌더러가 붙인다 (decisions.md 33번). */
   private static final List<String> SHAKE_OPTIONS = List.of("HOLD", "SELL");
+
+  private static final String FRAUD = "FRAUD";
 
   private static final int BP = 10_000;
   private static final int PERCENT = 100;
@@ -174,6 +177,8 @@ class DefaultEventService implements EventService {
           case SHAKE -> new ChoiceTicket.Shake();
           case LEVERAGE ->
               new ChoiceTicket.Leverage(ChoiceTicket.Leverage.BORROW.equals(optionCode));
+          case HOUSING ->
+              new ChoiceTicket.Housing(row.definitionCode(), FRAUD.equals(row.hiddenDirection()));
           case NOTICE -> throw new InvalidRequestException("알림은 선택할 수 없다");
         };
     return new ChoiceTicket(
@@ -185,7 +190,10 @@ class DefaultEventService implements EventService {
         row.sectorCode(),
         row.stockCode(),
         row.sectorWide(),
-        row.hiddenDirection() == null ? null : Direction.valueOf(row.hiddenDirection()),
+        // 주거 이벤트의 숨은 값은 주가 방향이 아니라 전세사기 표시다(effect에 담았다).
+        row.hiddenDirection() == null || row.kind() == EventKind.HOUSING
+            ? null
+            : Direction.valueOf(row.hiddenDirection()),
         row.hiddenMagnitudeBp() == null ? 0 : row.hiddenMagnitudeBp(),
         row.swaySentiment() == null ? null : Sentiment.valueOf(row.swaySentiment()),
         effect);
@@ -244,6 +252,7 @@ class DefaultEventService implements EventService {
       lifeCandidates(rows, context, random, candidates);
       noticeCandidate(rows, context, random, candidates);
       careerCandidates(rows, context, random, candidates);
+      housingCandidates(rows, context, candidates);
     }
     return candidates.stream()
         .min(Comparator.comparingInt(Candidate::day).thenComparing(Candidate::kind))
@@ -418,6 +427,46 @@ class DefaultEventService implements EventService {
             base + roll(random, properties.shake().gapDays(), "SHAKE", shakes.size())));
   }
 
+  /**
+   * 주거 (주거 설계 4절). 처음 일을 시작하면 독립(move-out), 세입자는 만기(lease-end)마다, 2채 미만이면 결혼·출산·서울 집값 급등 뒤에 "집
+   * 살까?"(buy, 최소 buy-gap-days 간격)가 온다.
+   */
+  private void housingCandidates(
+      List<EventRow> rows, SchedulingContext context, List<Candidate> candidates) {
+    HousingFacts housing = context.housing();
+    if ("PARENTS".equals(housing.tenure())) {
+      candidates.add(new Candidate(EventKind.HOUSING, context.careerStartDay()));
+      return;
+    }
+    if (housing.leaseEndDay() != null) {
+      candidates.add(new Candidate(EventKind.HOUSING, housing.leaseEndDay()));
+    }
+    if (housing.homes() >= 2) {
+      return;
+    }
+    List<EventRow> buys =
+        ofKind(rows, EventKind.HOUSING).stream()
+            .filter(r -> ChoiceTicket.Housing.BUY.equals(r.definitionCode()))
+            .toList();
+    int lastBuy = buys.isEmpty() ? -1 : last(buys).occursDay();
+    int base =
+        buys.isEmpty() ? context.careerStartDay() : lastBuy + properties.housing().buyGapDays();
+    List<Integer> triggers = new ArrayList<>();
+    if (context.marriedDay() != null) {
+      triggers.add(context.marriedDay());
+    }
+    if (housing.lastChildDay() != null) {
+      triggers.add(housing.lastChildDay());
+    }
+    if (housing.seoulChange12mBp() >= properties.housing().surgeBp()) {
+      triggers.add(Math.max(base, lastBuy + 1));
+    }
+    triggers.stream()
+        .filter(d -> d > lastBuy)
+        .min(Integer::compare)
+        .ifPresent(d -> candidates.add(new Candidate(EventKind.HOUSING, Math.max(base, d))));
+  }
+
   /** 빚투 제안: 든 종목이 크게 빠졌고 지난 제안에서 충분히 지났으면 지금 묻는다 (decisions.md 39번). */
   private void leverageCandidate(
       List<EventRow> rows, SchedulingContext context, List<Candidate> candidates) {
@@ -513,6 +562,7 @@ class DefaultEventService implements EventService {
       case NEWS -> news(id, seq, rows, candidate.day(), context, random, hints);
       case SHAKE -> shake(id, seq, candidate.day(), context, random);
       case LEVERAGE -> leverage(id, seq, candidate.day(), context);
+      case HOUSING -> housing(id, seq, candidate.day(), context, random);
     };
   }
 
@@ -542,6 +592,59 @@ class DefaultEventService implements EventService {
         null,
         null,
         SHAKE_OPTIONS);
+  }
+
+  /**
+   * 주거 이벤트. 독립 전이면 move-out, 만기가 됐으면 lease-end, 아니면 buy. 보증보험 없는 빌라 전세의 만기에는 전세사기를 굴려 숨겨 둔다(고른 뒤에
+   * 드러난다). 선택지는 형편과 상관없이 늘 같은 목록이고, 감당할 수 있는지는 진행이 따져 막는다.
+   */
+  private EventRow housing(
+      UUID id, int seq, int day, SchedulingContext context, SeededRandom random) {
+    HousingFacts housing = context.housing();
+    String definition;
+    List<String> options = new ArrayList<>();
+    boolean roomForHome = housing.homes() < 2;
+    if ("PARENTS".equals(housing.tenure())) {
+      definition = ChoiceTicket.Housing.MOVE_OUT;
+      options.addAll(ChoiceTicket.Housing.RENTALS);
+    } else if (housing.leaseEndDay() != null && housing.leaseEndDay() <= day) {
+      definition = ChoiceTicket.Housing.LEASE_END;
+      options.add(ChoiceTicket.Housing.KEEP);
+      options.addAll(ChoiceTicket.Housing.RENTALS);
+      if (roomForHome) {
+        options.add(ChoiceTicket.Housing.BUY_SEOUL);
+        options.add(ChoiceTicket.Housing.BUY_GYEONGGI);
+      }
+    } else {
+      definition = ChoiceTicket.Housing.BUY;
+      if (!housing.ownsResidence()) {
+        options.add(ChoiceTicket.Housing.BUY_SEOUL);
+        options.add(ChoiceTicket.Housing.BUY_GYEONGGI);
+      }
+      options.add(ChoiceTicket.Housing.GAP);
+      options.add(ChoiceTicket.Housing.PASS);
+    }
+    boolean fraud =
+        ChoiceTicket.Housing.LEASE_END.equals(definition)
+            && housing.villaUninsured()
+            && random.forKey("event", "housing", "fraud", seq).nextInt(BP)
+                < properties.housing().fraudBp();
+    return new EventRow(
+        id,
+        seq,
+        EventKind.HOUSING,
+        definition,
+        null,
+        null,
+        false,
+        day,
+        EventRow.PENDING,
+        fraud ? FRAUD : null,
+        null,
+        null,
+        null,
+        null,
+        List.copyOf(options));
   }
 
   /** 빚투 제안. 가장 많이 빠진 보유 종목을 묻고, 낙폭은 제목에 쓰도록 남긴다. 숨은 방향은 없다: 그 뒤는 시장이 정한다. */

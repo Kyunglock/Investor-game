@@ -3,6 +3,7 @@ import { AssetCurve } from './AssetCurve'
 import { ageAt } from './clock'
 import { DecisionCard } from './DecisionCard'
 import { HouseholdCard } from './HouseholdCard'
+import { HousingCard } from './HousingCard'
 import { IdentityCard } from './IdentityCard'
 import { LifeLog } from './LifeLog'
 import { LifeMap } from './LifeMap'
@@ -36,6 +37,7 @@ export function GameScreen({ game }: { game: Game }) {
         <IdentityCard game={game} ageYears={ageYears} />
         <StatsCard game={game} />
         <HouseholdCard game={game} />
+        <HousingCard game={game} />
       </div>
 
       {/* 가운데 위: 장면과 선택/결과 */}

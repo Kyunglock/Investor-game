@@ -4,7 +4,15 @@
       "code": "credit",
       "name": "부동산 금융 위기",
       "model": "2008년 리먼 브라더스 사태",
-      "sectorPercent": { "finance": 170, "energy": 110, "semiconductor": 100, "game": 90, "bio": 80, "food": 60 },
+      "sectorPercent": {
+        "finance": 170,
+        "energy": 110,
+        "semiconductor": 100,
+        "game": 90,
+        "bio": 80,
+        "food": 60
+      },
+      "realEstatePercent": 70,
       "omens": [
         "은행 창구에서 신용이 낮아도 집값의 90%까지 빌려준다는 대출 상품을 권했다.",
         "집값이 해마다 두 자릿수로 오른다. 뉴스는 '부동산 불패'라고 한다.",
@@ -17,7 +25,15 @@
       "code": "tech",
       "name": "기술주 버블 붕괴",
       "model": "2000년 IT 버블",
-      "sectorPercent": { "semiconductor": 160, "game": 170, "bio": 130, "finance": 80, "energy": 60, "food": 50 },
+      "sectorPercent": {
+        "semiconductor": 160,
+        "game": 170,
+        "bio": 130,
+        "finance": 80,
+        "energy": 60,
+        "food": 50
+      },
+      "realEstatePercent": 20,
       "omens": [
         "이름에 '닷컴'이나 'AI'만 붙으면 상장 첫날 주가가 세 배가 된다.",
         "회사 동료가 이익이 한 번도 난 적 없는 회사 주식을 대출받아 샀다고 자랑했다.",
@@ -30,7 +46,15 @@
       "code": "currency",
       "name": "외환 위기",
       "model": "1997년 IMF 외환위기",
-      "sectorPercent": { "finance": 150, "energy": 120, "food": 110, "semiconductor": 110, "game": 100, "bio": 90 },
+      "sectorPercent": {
+        "finance": 150,
+        "energy": 120,
+        "food": 110,
+        "semiconductor": 110,
+        "game": 100,
+        "bio": 90
+      },
+      "realEstatePercent": 60,
       "omens": [
         "대기업 몇 곳이 빚을 갚으려고 또 빚을 낸다는 기사가 났다.",
         "환율이 한 달 새 크게 움직였다. 정부는 '기초 체력은 튼튼하다'고 말한다.",
@@ -43,7 +67,15 @@
       "code": "depression",
       "name": "세계 대공황",
       "model": "1929년 대공황",
-      "sectorPercent": { "finance": 140, "semiconductor": 130, "energy": 130, "game": 120, "bio": 110, "food": 70 },
+      "sectorPercent": {
+        "finance": 140,
+        "semiconductor": 130,
+        "energy": 130,
+        "game": 120,
+        "bio": 110,
+        "food": 70
+      },
+      "realEstatePercent": 50,
       "omens": [
         "주가가 몇 년째 쉬지 않고 오른다. 신용으로 주식을 사는 사람이 사상 최대다.",
         "공장 재고가 쌓인다는 기사가 났지만 아무도 신경 쓰지 않는다.",

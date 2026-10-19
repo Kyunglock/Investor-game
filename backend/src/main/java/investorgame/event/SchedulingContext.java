@@ -21,6 +21,7 @@ import java.util.Map;
  * @param childrenCount 자녀 수
  * @param heldStockCodes 지금 보유한 종목 코드. 흔들림(SHAKE)은 보유가 있을 때만 온다. 없으면 빈 목록
  * @param fullTimeInvestor 직업 대신 전업투자자를 골랐는가. 그러면 직업 선택·직장 장면이 더 오지 않는다
+ * @param housing 주거 이벤트(독립·세 만기·집 사기)를 정하는 사실
  * @param heldDropBp 보유 종목별 최근 12달 고점 대비 낙폭(만분율, 하락이면 양수). 크게 빠진 종목이 있으면 빚투 제안이 온다
  */
 public record SchedulingContext(
@@ -41,4 +42,5 @@ public record SchedulingContext(
     int childrenCount,
     List<String> heldStockCodes,
     boolean fullTimeInvestor,
-    Map<String, Integer> heldDropBp) {}
+    Map<String, Integer> heldDropBp,
+    HousingFacts housing) {}

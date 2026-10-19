@@ -180,6 +180,11 @@ class JdbcHouseholdService implements HouseholdService {
     return 0;
   }
 
+  @Override
+  public long inflated(long amount, int gameDay) {
+    return inflate(amount, gameDay);
+  }
+
   /** 기준 나이(취업) 이후 해마다 inflationPercent 복리. 그 전에는 오르지 않는다 (경제 개편 설계 7.2절). */
   private long inflate(long amount, int gameDay) {
     int age = properties.startAge() + gameDay / calendar.daysPerYear();

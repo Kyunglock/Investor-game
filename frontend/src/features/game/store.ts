@@ -62,9 +62,11 @@ interface GameState {
   selectStock: (code: string) => Promise<void>
   trade: (side: TradeSide, quantity: number) => Promise<void>
   dismissNotice: () => void
+  /** 가진 아파트를 매물로 내놓거나 거둔다. 팔리는 것은 매수자가 나와야 한다 (주거 설계 3절). */
+  listHome: (seq: number, listed: boolean) => Promise<void>
 }
 
-const TOAST_KINDS = new Set<LogEntry['kind']>(['LIFE', 'OMEN', 'CRISIS'])
+const TOAST_KINDS = new Set<LogEntry['kind']>(['LIFE', 'OMEN', 'CRISIS', 'HOME_SOLD', 'TENANT'])
 
 export const useGameStore = create<GameState>((set, get) => {
   /** 서버가 보낸 판으로 화면을 맞춘다. 대기 중인 선택이 있거나 끝났거나 시장 패널이 열려 있으면 시계를 멈춘다. */
@@ -72,7 +74,7 @@ export const useGameStore = create<GameState>((set, get) => {
     set((state) => {
       const sameGame = state.game?.gameId === game.gameId
       const knownSeqs = new Set(sameGame ? state.game?.log.map((e) => e.seq) : [])
-      // 알림(LIFE)·전조(OMEN)·위기 회고(CRISIS)는 판을 멈추지 않고 토스트로 지나간다.
+      // 알림(LIFE)·전조(OMEN)·위기 회고(CRISIS)·집이 팔림·세입자 교체는 판을 멈추지 않고 토스트로 지나간다.
       const notices = game.log.filter((e) => TOAST_KINDS.has(e.kind) && !knownSeqs.has(e.seq))
       // 대기 중인 선택이 생기면 시장 패널은 닫는다. 선택이 먼저다.
       const marketOpen = state.marketOpen && !game.pendingEvent && game.status === 'ACTIVE'
@@ -315,5 +317,22 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     dismissNotice: () => set({ lastNotice: null }),
+
+    listHome: async (seq, listed) => {
+      const { game } = get()
+      if (!game) {
+        return
+      }
+      await reportNow()
+      const { data } = await api.POST('/api/games/{gameId}/homes/{seq}/listing', {
+        params: { path: { gameId: game.gameId, seq } },
+        body: { listed },
+      })
+      if (data) {
+        apply(data, get().running)
+      } else {
+        await get().load()
+      }
+    },
   }
 })

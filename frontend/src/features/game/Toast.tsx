@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { signedWon } from './labels'
+import { signedWon, won } from './labels'
 import { useGameStore } from './store'
 
 const SHOW_MS = 3_000
@@ -28,7 +28,11 @@ export function Toast() {
       ? String(p.text ?? '')
       : notice.kind === 'CRISIS'
         ? `돌아보니 그때는 ${String(p.name ?? '')}${p.severity === 'DEPRESSION' ? ' — 대공황' : ' — 불황'}이었다`
-        : null
+        : notice.kind === 'HOME_SOLD'
+          ? `${String(p.regionName ?? '')}가 ${won(Number(p.price ?? 0))}에 팔렸다`
+          : notice.kind === 'TENANT'
+            ? `${String(p.regionName ?? '')} 세입자 교체 · 보증금 ${signedWon(Number(p.after ?? 0) - Number(p.before ?? 0))}`
+            : null
   return (
     <div className="mx-auto max-w-6xl px-4 md:px-6">
       <output

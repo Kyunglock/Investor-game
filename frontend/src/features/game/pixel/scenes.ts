@@ -1,4 +1,4 @@
-import type { Phase } from '../../../api/client'
+import type { Game, Phase } from '../../../api/client'
 import type { AgeStage } from './bodies'
 import type { PixelMap } from './sprite'
 
@@ -45,36 +45,50 @@ export function sceneFor(stage: AgeStage, phase: Phase, hasJob: boolean): SceneK
   return phase === 'INVESTING' ? 'studio' : 'office'
 }
 
-const EOK = 100_000_000
-
-/** 사는 곳. 수십억 자산가가 원룸에 살면 어색하므로 순자산과 가족으로 정한다. 결혼했거나 자녀가 있으면 원룸이 아니다. */
-export function dwellingFor(totalAsset: number, married: boolean, children: number): string {
-  if (totalAsset >= 50 * EOK) {
-    return '한강뷰 펜트하우스'
+/** 사는 곳. 실제로 고른 거주 형태를 따른다(주거 설계): 수십억이 있어도 월세를 고르면 월세다. */
+export function dwellingFor(home: {
+  tenure: Game['housing']['tenure']
+  regionName?: string | null
+  married: boolean
+  children: number
+}): string {
+  const family = home.married || home.children > 0
+  switch (home.tenure) {
+    case 'PARENTS':
+      return '부모님 집'
+    case 'MONTHLY':
+      return family ? '투룸 월세' : '원룸 월세'
+    case 'VILLA_JEONSE':
+      return '빌라 전세'
+    case 'APT_JEONSE':
+      return '아파트 전세'
+    case 'OWN':
+      return '내 집 (아파트)'
   }
-  if (totalAsset >= 20 * EOK) {
-    return '고급 아파트'
-  }
-  if (totalAsset >= 5 * EOK) {
-    return children > 0 ? '넓은 아파트' : '아파트'
-  }
-  if (totalAsset >= 1.5 * EOK) {
-    return married || children > 0 ? '전세 아파트' : '투룸 전세'
-  }
-  return married || children > 0 ? '신혼 빌라' : '원룸'
 }
 
 /** 장면 문구. 사는 곳을 채우고, 전업투자자에게는 "퇴근 후"가 아닌 문구를 쓴다. */
 export function sceneCaption(
   key: SceneKey,
-  home: { totalAsset: number; married: boolean; children: number; fullTimeInvestor: boolean },
+  home: {
+    tenure: Game['housing']['tenure']
+    regionName?: string | null
+    married: boolean
+    children: number
+    fullTimeInvestor: boolean
+  },
 ): string {
   const activity =
     key === 'studio' && home.fullTimeInvestor
       ? '하루 종일 시세판을 보는 중'
       : '퇴근 후 주식 앱을 켜는 중'
+  // 경기 아파트에 살면 서울이 아니다.
+  const inGyeonggi =
+    (home.tenure === 'OWN' || home.tenure === 'APT_JEONSE') &&
+    Boolean(home.regionName?.startsWith('경기'))
   return SCENES[key].caption
-    .replace('{집}', dwellingFor(home.totalAsset, home.married, home.children))
+    .replace(/^서울 · \{집\}/, `${inGyeonggi ? '경기' : '서울'} · {집}`)
+    .replace('{집}', dwellingFor(home))
     .replace('{활동}', activity)
 }
 

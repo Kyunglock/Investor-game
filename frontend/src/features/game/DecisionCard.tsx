@@ -20,6 +20,7 @@ const KIND_LABELS: Record<PendingEvent['kind'], string> = {
   NEWS: '뉴스',
   SHAKE: '흔들림',
   LEVERAGE: '빚투',
+  HOUSING: '집',
 }
 
 /** 뉴스 매수의 기본 수량이 쓰는 현금 비율. 서버 기본(progress.news-buy-ratio-bp)과 같은 값이며, 사용자가 수량을 바꿀 수 있다. */
@@ -152,7 +153,9 @@ function Body({ event, game, busy, onChoose }: Props) {
         className={`mt-3 grid gap-2 ${isNews ? 'grid-cols-3' : isShake || isLeverage ? 'grid-cols-2' : 'grid-cols-1'}`}
       >
         {event.options.map((option) => {
-          const disabled = busy || (isNews && option.code === 'SELL' && !holding)
+          // 주거 선택지는 서버가 돈이 모자라거나 DSR에 걸리면 막아서 이유와 함께 보낸다 (주거 설계 4절).
+          const disabled =
+            busy || (isNews && option.code === 'SELL' && !holding) || Boolean(option.blocked)
           const active = picked === option.code || side === option.code
           const sub =
             isNews && option.code === 'BUY'
@@ -178,6 +181,12 @@ function Body({ event, game, busy, onChoose }: Props) {
                 <span className="block font-mono-num text-[11px] font-normal text-faint">
                   {sub}
                 </span>
+              )}
+              {option.detail && (
+                <span className="block text-[11px] font-normal text-faint">{option.detail}</span>
+              )}
+              {option.blocked && (
+                <span className="block text-[11px] font-normal text-wine">{option.blocked}</span>
               )}
             </button>
           )

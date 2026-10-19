@@ -200,4 +200,32 @@ class MarketServiceTest {
     int drop = market.averageDropBp(gameId, depression.startMonth() - 1, depression.revealMonth());
     assertThat(drop).as("대공황은 평균 30%% 넘게 빠진다: %d", drop).isGreaterThan(3_000);
   }
+
+  /** 주거 설계 2·3절: 아파트 시세는 지역마다 추세를 따르고, 금리는 범위 안에서 위기 때 오른다. */
+  @Test
+  void 아파트_시세와_주담대_금리는_달마다_움직이고_위기_때_금리가_오른다() {
+    assertThat(market.homePrices(gameId)).containsOnlyKeys("seoul", "gyeonggi");
+    assertThat(market.mortgageRateBp(gameId)).isEqualTo(550);
+
+    long seed = 1;
+    MarketCycle.Crisis crisis = null;
+    for (; seed <= 400 && crisis == null; seed++) {
+      crisis =
+          market.cycle(new HashSeededRandom(seed)).crises().stream()
+              .filter(c -> c.severity() == MarketCycle.Severity.DEPRESSION)
+              .findFirst()
+              .orElse(null);
+    }
+    UUID other = UUID.randomUUID();
+    market.create(other);
+    SeededRandom crisisRandom = new HashSeededRandom(seed - 1);
+    market.advanceTo(other, (crisis.startMonth() - 1) * MONTH, crisisRandom);
+    int before = market.mortgageRateBp(other);
+    long seoulBefore = market.homePrices(other).get("seoul");
+    market.advanceTo(other, crisis.bottomMonth() * MONTH, crisisRandom);
+    assertThat(market.mortgageRateBp(other)).as("위기로 빠지는 동안 금리가 오른다").isGreaterThan(before);
+    assertThat(market.mortgageRateBp(other)).isBetween(300, 800);
+    assertThat(market.homeQuotes(other)).allSatisfy(q -> assertThat(q.last12()).hasSize(12));
+    assertThat(market.homePrices(other).get("seoul")).as("대공황이면 집값도 빠진다").isLessThan(seoulBefore);
+  }
 }

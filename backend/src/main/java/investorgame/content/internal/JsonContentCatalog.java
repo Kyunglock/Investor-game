@@ -4,6 +4,7 @@ import investorgame.common.StatCodes;
 import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.CrisisDefinition;
+import investorgame.content.HomeRegion;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
 import investorgame.content.LifeText;
@@ -48,7 +49,8 @@ class JsonContentCatalog implements ContentCatalog {
           "stocks.json",
           "life.json",
           "shakes.json",
-          "crises.json");
+          "crises.json",
+          "homes.json");
 
   private final Meta meta;
   private final List<JobDefinition> jobs;
@@ -61,6 +63,7 @@ class JsonContentCatalog implements ContentCatalog {
   private final List<StockDefinition> stocks;
   private final List<ShakeDefinition> shakes;
   private final Crises crises;
+  private final List<HomeRegion> homeRegions;
   private final Life life;
   private final Map<String, String> sectorNames;
   private final Map<String, String> styleNames;
@@ -107,6 +110,7 @@ class JsonContentCatalog implements ContentCatalog {
             .toList();
     this.life = read(json, "life.json", new TypeReference<>() {});
     this.crises = read(json, "crises.json", new TypeReference<>() {});
+    this.homeRegions = read(json, "homes.json", new TypeReference<>() {});
     this.sectorNames = toMap(meta.sectors());
     this.styleNames = toMap(meta.styles());
     this.riskNames = toMap(meta.risks());
@@ -258,6 +262,19 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public List<HomeRegion> homeRegions() {
+    return homeRegions;
+  }
+
+  @Override
+  public HomeRegion homeRegion(String code) {
+    return homeRegions.stream()
+        .filter(r -> r.code().equals(code))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("콘텐츠에 없는 지역: " + code));
+  }
+
+  @Override
   public List<String> commonOmens() {
     return crises.commonOmens();
   }
@@ -320,6 +337,24 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public TextBlock housingText(String definition) {
+    TextBlock text = phrases.housing().texts().get(definition);
+    if (text == null) {
+      throw new IllegalArgumentException("주거 문구가 없다: " + definition);
+    }
+    return text;
+  }
+
+  @Override
+  public String housingLabel(String code) {
+    String label = phrases.housing().labels().get(code);
+    if (label == null) {
+      throw new IllegalArgumentException("주거 선택지 문구가 없다: " + code);
+    }
+    return label;
+  }
+
+  @Override
   public LeverageText leverageText() {
     return phrases.leverage();
   }
@@ -337,6 +372,10 @@ class JsonContentCatalog implements ContentCatalog {
       require(
           (shake.title() + shake.body()).contains("{stock}"),
           "흔들림 장면에는 종목 자리표시 {stock}이 있어야 한다: " + shake.code());
+    }
+    require(!homeRegions.isEmpty(), "아파트 지역이 하나도 없다");
+    for (HomeRegion region : homeRegions) {
+      require(region.basePrice() > 0, "아파트 기준가는 양수여야 한다: " + region.code());
     }
     require(!crises.scenarios().isEmpty(), "시장 위기 갈래가 하나도 없다");
     for (CrisisDefinition crisis : crises.scenarios()) {
@@ -374,7 +413,8 @@ class JsonContentCatalog implements ContentCatalog {
             && phrases.jobRehire() != null
             && phrases.jobWait() != null
             && phrases.jobInvest() != null
-            && phrases.leverage() != null,
+            && phrases.leverage() != null
+            && phrases.housing() != null,
         "phrases.json에 jobRetry, jobRehire, jobWait, jobInvest가 있어야 한다");
     require(!traits.isEmpty(), "성향 이벤트가 하나도 없다");
     require(!traitStages.isEmpty(), "성장기 성향 장면(adult가 아닌 것)이 하나도 없다");
@@ -567,5 +607,8 @@ class JsonContentCatalog implements ContentCatalog {
       String jobWait,
       String jobInvest,
       OfferText offer,
-      LeverageText leverage) {}
+      LeverageText leverage,
+      HousingPhrases housing) {}
+
+  record HousingPhrases(Map<String, TextBlock> texts, Map<String, String> labels) {}
 }

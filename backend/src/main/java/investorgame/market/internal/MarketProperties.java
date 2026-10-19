@@ -11,6 +11,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param spilloverPercent 종목 뉴스가 같은 섹터 다른 종목에 미치는 비율
  * @param minPrice 가격 바닥(원)
  * @param cycle 경기 흐름: 불안한 시기·전조·위기 (decisions.md 38번)
+ * @param homes 아파트 시세의 월 잡음 폭(±, 만분율). 추세는 콘텐츠(homes.json)가 정한다
+ * @param mortgage 주담대 금리 (주거 설계 3절)
  */
 @ConfigurationProperties("market")
 public record MarketProperties(
@@ -18,7 +20,29 @@ public record MarketProperties(
     Map<String, Integer> volatilityBp,
     int spilloverPercent,
     long minPrice,
-    Cycle cycle) {
+    Cycle cycle,
+    Homes homes,
+    Mortgage mortgage) {
+
+  public record Homes(int volatilityBp) {}
+
+  /**
+   * 금리 = 지난달 금리 + (기준 + 위기 가산 − 지난달) × revertPercent / 100 + 잡음. 기준으로 천천히 되돌아가고 [minBp, maxBp]로
+   * 자른다.
+   *
+   * @param baseBp 평소 금리(연)
+   * @param crisisBp 위기로 빠지는 동안 기준에 더하는 값
+   * @param recoveryBp 회복하는 동안 기준에 더하는 값(음수면 내린다)
+   * @param noiseBp 달마다 잡음 폭(±)
+   */
+  public record Mortgage(
+      int baseBp,
+      int crisisBp,
+      int recoveryBp,
+      int noiseBp,
+      int revertPercent,
+      int minBp,
+      int maxBp) {}
 
   public record Range(int min, int max) {}
 

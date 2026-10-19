@@ -58,6 +58,11 @@ public interface ContentCatalog {
   /** 보유 종목 흔들림 장면. 코드순 (decisions.md 33번). */
   List<ShakeDefinition> shakes();
 
+  /** 아파트를 살 수 있는 지역. 콘텐츠 순서 그대로(서울, 경기). */
+  List<HomeRegion> homeRegions();
+
+  HomeRegion homeRegion(String code);
+
   /** 시장 위기의 갈래. 코드순. */
   List<CrisisDefinition> crises();
 
@@ -102,6 +107,12 @@ public interface ContentCatalog {
   String jobInvestLabel();
 
   OfferText offerText();
+
+  /** 주거 이벤트(move-out·lease-end·buy)의 문구. */
+  TextBlock housingText(String definition);
+
+  /** 주거 선택지 문구. */
+  String housingLabel(String code);
 
   /** 빚투 제안의 문구. 제목·본문의 {stock}은 종목 이름, {drop}은 낙폭(%)이다. */
   LeverageText leverageText();

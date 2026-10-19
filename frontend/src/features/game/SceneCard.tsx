@@ -17,7 +17,8 @@ export function SceneCard({ game, ageYears }: { game: Game; ageYears: number }) 
       <Scene sceneKey={key} sprite={spec} />
       <p className="px-3.5 py-2 text-[13px]">
         {sceneCaption(key, {
-          totalAsset: game.totalAsset,
+          tenure: game.housing.tenure,
+          regionName: game.housing.regionName,
           married: game.household.married,
           children: game.household.children.length,
           fullTimeInvestor: game.fullTimeInvestor,

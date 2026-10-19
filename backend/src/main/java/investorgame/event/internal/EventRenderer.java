@@ -110,6 +110,18 @@ class EventRenderer {
             null,
             List.of(new EventView.Option("HOLD", "버틴다"), new EventView.Option("SELL", "판다")));
       }
+      case HOUSING -> {
+        ContentCatalog.TextBlock text = content.housingText(row.definitionCode());
+        yield view(
+            row,
+            text.title(),
+            text.body(),
+            null,
+            null,
+            row.options().stream()
+                .map(code -> new EventView.Option(code, content.housingLabel(code)))
+                .toList());
+      }
       case LEVERAGE -> {
         ContentCatalog.LeverageText text = content.leverageText();
         String stockName = content.stock(row.stockCode()).name();

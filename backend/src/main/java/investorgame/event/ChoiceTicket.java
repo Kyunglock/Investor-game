@@ -3,6 +3,7 @@ package investorgame.event;
 import investorgame.common.Direction;
 import investorgame.common.Sentiment;
 import investorgame.content.CareerDefinition;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -34,6 +35,26 @@ public record ChoiceTicket(
 
   /** 보유 종목 흔들림: 버틴다(HOLD)·판다(SELL). 뉴스와 같은 판정·충격 흐름을 진행이 돌린다 (decisions.md 33번). */
   public record Shake() implements Effect {}
+
+  /**
+   * 주거 선택 (주거 설계 4절). definition은 move-out·lease-end·buy, fraud면 이번 만기에 빌라 집주인이 보증금을 돌려주지
+   * 못한다(전세사기). 감당할 수 있는지는 진행이 시세·현금·소득으로 따진다.
+   */
+  public record Housing(String definition, boolean fraud) implements Effect {
+    public static final String MOVE_OUT = "move-out";
+    public static final String LEASE_END = "lease-end";
+    public static final String BUY = "buy";
+    public static final String KEEP = "KEEP";
+    public static final String MONTHLY = "MONTHLY";
+    public static final String VILLA = "VILLA";
+    public static final String VILLA_INSURED = "VILLA_INSURED";
+    public static final String APT_JEONSE = "APT_JEONSE";
+    public static final String BUY_SEOUL = "BUY_SEOUL";
+    public static final String BUY_GYEONGGI = "BUY_GYEONGGI";
+    public static final String GAP = "GAP";
+    public static final String PASS = "PASS";
+    public static final List<String> RENTALS = List.of(MONTHLY, VILLA, VILLA_INSURED, APT_JEONSE);
+  }
 
   /** 빚투 제안. borrow면 대출을 받아 그 종목을 더 산다. 판정 없이 고른 대로 한다 (decisions.md 39번). */
   public record Leverage(boolean borrow) implements Effect {

@@ -292,6 +292,34 @@ export function buildCredits(game: Game): CreditSection[] {
   }
   sections.push({ key: 'news', title: '뉴스 앞에서', lines: newsLines })
 
+  // 살아온 집: 이사·매수·전세사기·매도 (주거 설계).
+  const homeLines: CreditLine[] = entries(game, 'HOUSING', 'HOME_SOLD')
+    .filter((e) => (e.payload as Payload).option !== 'PASS')
+    .map((e) => {
+      const p = e.payload as Payload
+      const age = ageOf(game, e.day)
+      if (e.kind === 'HOME_SOLD') {
+        return {
+          text: `${age}세, ${str(p.regionName)} 매도`,
+          sub: `${won(num(p.price))} (산 값 ${won(num(p.purchasePrice))})`,
+          tone: num(p.price) >= num(p.purchasePrice) ? 'up' : 'down',
+        }
+      }
+      if (p.fraud) {
+        return {
+          text: `${age}세, 전세사기`,
+          sub: `보증금 ${won(num(p.lost))}을 잃었다`,
+          tone: 'down',
+        }
+      }
+      return num(p.price) > 0
+        ? { text: `${age}세, ${str(p.regionName)} 매수`, sub: won(num(p.price)) }
+        : { text: `${age}세, ${str(p.label)}`, sub: `보증금 ${won(num(p.deposit))}` }
+    })
+  if (homeLines.length > 0) {
+    sections.push({ key: 'homes', title: '살아온 집', lines: homeLines })
+  }
+
   // 지나고 나서야 이름이 붙은 위기와, 빠질 때 빚을 얹었는지 (decisions.md 38·39번).
   const stormLines: CreditLine[] = entries(game, 'CRISIS', 'LEVERAGE').map((e) => {
     const p = e.payload as Payload

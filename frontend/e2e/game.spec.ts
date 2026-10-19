@@ -48,7 +48,8 @@ async function step(page: Page): Promise<string> {
         ? eventCard(page).getByRole('button', { name: '투자를 시작한다' })
         : kind === 'NEWS'
           ? eventCard(page).getByRole('button', { name: '매수' })
-          : eventCard(page).getByRole('button').first()
+          : // 주거 선택지는 돈이 모자라면 막혀 있다. 누를 수 있는 첫 버튼을 고른다.
+            eventCard(page).getByRole('button', { disabled: false }).first()
     const totalBefore = await page.getByTestId('total-asset').textContent()
     await button.click()
     if (kind === 'NEWS') {
@@ -223,6 +224,9 @@ test('취직하면 가계부에 생활비가 보인다', async ({ page }) => {
   await playUntil(page, 'OFFER')
   await expect(page.getByTestId('household-card')).toContainText('생활비')
   await expect(page.getByTestId('monthly-saving')).toBeVisible()
+  // 독립하면서 첫 선택지(월세)로 집을 구했고, 주거비가 생활비와 따로 나간다 (주거 설계).
+  await expect(page.getByTestId('tenure')).toContainText('월세')
+  await expect(page.getByTestId('household-card')).toContainText('주거비')
 })
 
 test('신원 카드와 능력치는 인생 기록보다 위에 있다 (모바일 순서)', async ({ page }, testInfo) => {

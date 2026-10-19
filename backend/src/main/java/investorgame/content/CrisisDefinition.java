@@ -10,6 +10,7 @@ import java.util.Map;
  * @param name 끝난 뒤 돌아볼 때 부르는 이름
  * @param model 본뜬 실제 사건. 끝난 뒤 기록에만 쓴다
  * @param sectorPercent 섹터별 낙폭 비율(%). 100이면 기본 낙폭 그대로, 빠진 섹터는 100
+ * @param realEstatePercent 아파트 시세의 낙폭·회복 비율(%). 집값은 주식보다 덜, 느리게 움직인다
  * @param omens 위기 전에 흘러나오는 전조 문구
  */
 public record CrisisDefinition(
@@ -17,6 +18,7 @@ public record CrisisDefinition(
     String name,
     String model,
     Map<String, Integer> sectorPercent,
+    int realEstatePercent,
     List<String> omens) {
 
   public int sectorPercentOf(String sector) {

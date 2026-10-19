@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import jakarta.servlet.http.Cookie;
+import java.util.List;
 import java.util.Map;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -96,10 +97,7 @@ final class GameClient {
           return game;
         }
         Object next =
-            choose(
-                    gameId,
-                    (String) pending.get("eventId"),
-                    game.read("$.pendingEvent.options[0].code"))
+            choose(gameId, (String) pending.get("eventId"), GameClient.firstOpen(game))
                 .read("$.game");
         game = JsonPath.parse(next);
         continue;
@@ -153,8 +151,7 @@ final class GameClient {
       Map<String, Object> pending = game.read("$.pendingEvent");
       if (pending != null) {
         String kind = (String) pending.get("kind");
-        String option =
-            "OFFER".equals(kind) ? "accept" : game.read("$.pendingEvent.options[0].code");
+        String option = "OFFER".equals(kind) ? "accept" : GameClient.firstOpen(game);
         Object next = choose(gameId, (String) pending.get("eventId"), option).read("$.game");
         game = JsonPath.parse(next);
         if ("OFFER".equals(kind) && "INVESTING".equals(game.read("$.phase"))) {
@@ -193,10 +190,7 @@ final class GameClient {
       }
       if (kind != null) {
         Object next =
-            choose(
-                    gameId,
-                    game.read("$.pendingEvent.eventId"),
-                    game.read("$.pendingEvent.options[0].code"))
+            choose(gameId, game.read("$.pendingEvent.eventId"), GameClient.firstOpen(game))
                 .read("$.game");
         game = JsonPath.parse(next);
         continue;
@@ -213,15 +207,31 @@ final class GameClient {
   static final int MAX_STEP_DAYS = 360;
 
   /** 대기 중인 직업 선택에서 첫 번째 직업을 고른다. */
+  /**
+   * 첫 직업을 고르고, 바로 이어지는 독립(주거 move-out)은 월세로 정한다. 돌려주는 문서의 outcome은 직업 선택의 결과, game은 월세까지 정한 뒤의 판이다.
+   */
   DocumentContext chooseFirstJob(DocumentContext game) throws Exception {
     assertThat(game.read("$.pendingEvent.kind", String.class)).isEqualTo("JOB");
-    return choose(
-        game.read("$.gameId"),
-        game.read("$.pendingEvent.eventId"),
-        game.read("$.pendingEvent.options[0].code"));
+    DocumentContext chosen =
+        choose(
+            game.read("$.gameId"), game.read("$.pendingEvent.eventId"), GameClient.firstOpen(game));
+    Object afterJob = chosen.read("$.game");
+    DocumentContext after = JsonPath.parse(afterJob);
+    if ("HOUSING".equals(after.read("$.pendingEvent.kind"))) {
+      DocumentContext moved =
+          choose(after.read("$.gameId"), after.read("$.pendingEvent.eventId"), "MONTHLY");
+      chosen.set("$.game", moved.read("$.game"));
+    }
+    return chosen;
   }
 
   static DocumentContext json(MvcResult result) throws Exception {
     return JsonPath.parse(result.getResponse().getContentAsString());
+  }
+
+  /** 고를 수 있는 첫 선택지. 주거 선택지는 돈이 모자라면 막혀 있다(blocked). */
+  static String firstOpen(DocumentContext game) {
+    List<String> open = game.read("$.pendingEvent.options[?(@.blocked == null)].code");
+    return open.getFirst();
   }
 }

@@ -68,6 +68,54 @@ describe('logLine', () => {
     expect(silent.text).toContain('아무 전조도 없이 왔다.')
   })
 
+  it('집: 매수·전세사기·매도·역전세', () => {
+    const bought = logLine(
+      entry('HOUSING', 30 * 360, {
+        option: 'BUY_SEOUL',
+        regionName: '서울 아파트 (84㎡)',
+        price: 1_000_000_000,
+        mortgage: 500_000_000,
+        fraud: false,
+      }),
+      game,
+    )
+    expect(bought.text).toBe('서울 아파트 (84㎡)를 1,000,000,000원에 샀다 (주담대 500,000,000원).')
+    expect(bought.pill).toBe('집')
+
+    const fraud = logLine(
+      entry('HOUSING', 30 * 360, {
+        option: 'MONTHLY',
+        label: '월세로 산다',
+        deposit: 10_000_000,
+        monthlyRent: 600_000,
+        price: 0,
+        fraud: true,
+        lost: 150_000_000,
+      }),
+      game,
+    )
+    expect(fraud.tone).toBe('flipped')
+    expect(fraud.text).toContain('전세사기를 당했다. 보증금 150,000,000원을 돌려받지 못했다.')
+
+    const sold = logLine(
+      entry('HOME_SOLD', 40 * 360, {
+        regionName: '경기 아파트 (84㎡)',
+        price: 700_000_000,
+        purchasePrice: 600_000_000,
+        residence: true,
+      }),
+      game,
+    )
+    expect(sold.text).toContain('+100,000,000원')
+    expect(sold.text).toContain('살 곳을 새로 구해야 한다')
+
+    const reverse = logLine(
+      entry('TENANT', 40 * 360, { regionName: '서울', before: 500_000_000, after: 450_000_000 }),
+      game,
+    )
+    expect(reverse.text).toContain('50,000,000원을 돌려줬다 (역전세)')
+  })
+
   it('빚투: 빌렸으면 금액과 수량, 안 빌렸으면 그렇다고', () => {
     const borrowed = logLine(
       entry('LEVERAGE', 30 * 360, {

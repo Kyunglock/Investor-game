@@ -35,6 +35,17 @@ function baseGame(over: Partial<Game> = {}): Game {
     debt: 0,
     holdings: [],
     fullTimeInvestor: false,
+    housing: {
+      tenure: 'OWN',
+      deposit: 0,
+      monthlyRent: 0,
+      jeonseLoan: 0,
+      insured: false,
+      mortgageRateBp: 550,
+      monthlyCost: 0,
+      homes: [],
+      quotes: [],
+    },
     market: { month: 660, stocks: [] },
     household: {
       married: false,

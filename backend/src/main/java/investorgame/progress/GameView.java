@@ -44,6 +44,7 @@ public record GameView(
     InvestorType investorType,
     Market market,
     Household household,
+    Housing housing,
     PendingEvent pendingEvent,
     Integer nextEventDay,
     Result result,
@@ -119,7 +120,47 @@ public record GameView(
       String sway,
       List<Option> options) {}
 
-  public record Option(String code, String label) {}
+  /**
+   * @param detail 이 선택에 드는 돈(주거: 필요한 현금·대출·월 부담). 없으면 null
+   * @param blocked 고를 수 없는 이유(주거: 현금 부족·DSR 초과). 고를 수 있으면 null
+   */
+  public record Option(String code, String label, String detail, String blocked) {}
+
+  /**
+   * 주거 (주거 설계). totalAsset에는 집 시세 + 보증금 − 주담대 − 전세대출 − 세입자 보증금이 들어간다.
+   *
+   * @param tenure PARENTS, MONTHLY, VILLA_JEONSE, APT_JEONSE, OWN
+   * @param leaseEndAge 세 만기 나이. 세입자가 아니면 null
+   * @param mortgageRateBp 지금 주담대 금리(연)
+   * @param monthlyCost 지금 한 달 주거비(월세 + 주담대 원리금 + 전세대출 이자 + 보증료)
+   */
+  public record Housing(
+      String tenure,
+      String regionName,
+      long deposit,
+      long monthlyRent,
+      long jeonseLoan,
+      boolean insured,
+      Integer leaseEndAge,
+      int mortgageRateBp,
+      long monthlyCost,
+      List<Home> homes,
+      List<HomeQuote> quotes) {}
+
+  /** 가진 아파트. price는 지금 시세. residence가 아니면 세입자가 사는 갭투자 집이다. listed면 매수자를 기다리는 중이다. */
+  public record Home(
+      int seq,
+      String regionName,
+      long price,
+      long purchasePrice,
+      long mortgage,
+      long monthlyPayment,
+      boolean residence,
+      long tenantDeposit,
+      boolean listed) {}
+
+  public record HomeQuote(
+      String region, String name, long price, int change12mBp, List<Long> last12) {}
 
   /**
    * 인생 기록 한 줄. kind: BIRTH, TRAIT, JOB, STYLE, OFFER, NEWS, PRICE, GROWTH, TRADE, LIFE, MARRIAGE,
