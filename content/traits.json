@@ -1521,6 +1521,7 @@
     "code": "a-bonus",
     "age": 30,
     "adult": true,
+    "job": true,
     "title": "성과급 300만 원이 들어왔다",
     "body": "동료들은 여행을 가거나 차를 바꾼다. 통장에 두면 금세 생활비에 섞인다.",
     "options": [
@@ -1590,6 +1591,7 @@
     "code": "a-loan",
     "age": 30,
     "adult": true,
+    "job": true,
     "title": "친한 동료가 \"급해서 그런데 500만 원만\" 한다",
     "body": "이자를 쳐서 갚겠단다. 거절하면 사이가 어색해질 것 같다.",
     "options": [
@@ -1659,6 +1661,7 @@
     "code": "a-crash",
     "age": 30,
     "adult": true,
+    "job": true,
     "title": "아침 뉴스에 \"증시 폭락\", 회사 메신저가 난리다",
     "body": "동료들은 다 판다고 한다. 내 계좌도 빨갛다.",
     "options": [
@@ -1727,6 +1730,7 @@
     "code": "a-promotion",
     "age": 30,
     "adult": true,
+    "job": true,
     "title": "승진 제안과 다른 회사의 스카우트가 같은 주에 왔다",
     "body": "승진은 안정적이지만 연봉 인상이 작다. 이직은 연봉 30% 인상이지만 회사가 작다.",
     "options": [
@@ -1795,6 +1799,7 @@
     "code": "a-house",
     "age": 30,
     "adult": true,
+    "job": true,
     "title": "집값이 오른다, 다들 \"지금 안 사면 못 산다\"고 한다",
     "body": "대출을 최대로 받으면 살 수 있다. 이자는 월급의 40%가 된다.",
     "options": [
@@ -1933,6 +1938,7 @@
     "code": "a-sidejob",
     "age": 30,
     "adult": true,
+    "job": true,
     "title": "지인이 \"주말 부업 같이 하자\"며 월 100만 원을 말한다",
     "body": "초기 비용 300만 원. 성공하면 월급의 3분의 1이 더 생긴다.",
     "options": [
@@ -2002,6 +2008,7 @@
     "code": "a-pension",
     "age": 30,
     "adult": true,
+    "job": true,
     "title": "회사가 퇴직연금 운용 방식을 고르라고 한다",
     "body": "원리금 보장은 연 2%. 주식형은 오르내림이 크다. 동료 대부분은 보장형이다.",
     "options": [

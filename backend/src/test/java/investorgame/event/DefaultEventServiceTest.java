@@ -11,6 +11,7 @@ import investorgame.common.Phase;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.content.ContentCatalog;
 import investorgame.content.StockDefinition;
+import investorgame.content.TraitDefinition;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -258,6 +259,44 @@ class DefaultEventServiceTest {
     int from = (60 - START_AGE) * YEAR;
     assertThat(nextOf(gameId, retired, from, EventKind.JOB, 3L)).isEmpty();
     assertThat(nextOf(UUID.randomUUID(), retired, from, EventKind.CAREER, 3L)).isEmpty();
+  }
+
+  @Test
+  void 직장이_배경인_일상_장면은_직장이_없으면_나오지_않는다() {
+    UUID gameId = UUID.randomUUID();
+    SchedulingContext retired =
+        new SchedulingContext(
+            Phase.INVESTING,
+            START_AGE,
+            "long",
+            "food",
+            JOB_DAY + 30,
+            true,
+            JOB_DAY + 30,
+            END_DAY,
+            JOB_DAY,
+            "office",
+            JOB_DAY,
+            true,
+            false,
+            null,
+            0,
+            List.of());
+    List<String> seen = new ArrayList<>();
+    int from = JOB_DAY;
+    for (Optional<EventView> trait = nextOf(gameId, retired, from, EventKind.TRAIT, 5L);
+        trait.isPresent();
+        trait = nextOf(gameId, retired, from, EventKind.TRAIT, 5L)) {
+      seen.add(trait.get().title());
+      events.complete(gameId, trait.get().eventId(), new Completion("x", "x", List.of()));
+      from = trait.get().occursDay();
+    }
+    assertThat(seen)
+        .containsExactlyInAnyOrderElementsOf(
+            content.adultTraits().stream()
+                .filter(t -> !t.job())
+                .map(TraitDefinition::title)
+                .toList());
   }
 
   private static String careerCode(EventView view) {

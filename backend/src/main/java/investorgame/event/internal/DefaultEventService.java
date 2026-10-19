@@ -310,21 +310,34 @@ class DefaultEventService implements EventService {
     }
   }
 
-  /** 취업 뒤: 일상 장면(adult)이 간격을 두고 온다. 성향은 바꾸지 않고 능력치만 움직인다. 풀을 다 쓰면 더 오지 않는다 (decisions.md 23번). */
+  /**
+   * 취업 뒤: 일상 장면(adult)이 간격을 두고 온다. 성향은 바꾸지 않고 능력치만 움직인다. 지금 고를 수 있는 장면이 없으면(풀을 다 썼거나 실직 중인데 직장 장면만
+   * 남음) 오지 않는다 (decisions.md 23번).
+   */
   private void adultTraitCandidate(
       List<EventRow> rows,
       SchedulingContext context,
       SeededRandom random,
       List<Candidate> candidates) {
-    List<EventRow> used = adultTraits(rows);
-    if (used.size() >= content.adultTraits().size()) {
+    if (adultTraitsLeft(rows, context).isEmpty()) {
       return;
     }
+    List<EventRow> used = adultTraits(rows);
     int base = used.isEmpty() ? context.careerStartDay() : last(used).occursDay();
     candidates.add(
         new Candidate(
             EventKind.TRAIT,
             base + roll(random, properties.trait().adultGapDays(), "TRAIT", used.size())));
+  }
+
+  /** 아직 안 나온 adult 장면. 직장이 배경인 장면(job)은 직장에 다니는 동안에만 고른다. 실직·은퇴 중에는 풀에 남겨 두었다가 다시 취업하면 나온다. */
+  private List<TraitDefinition> adultTraitsLeft(List<EventRow> rows, SchedulingContext context) {
+    List<EventRow> used = adultTraits(rows);
+    boolean working = context.jobStartDay() != null && !context.retired();
+    return content.adultTraits().stream()
+        .filter(t -> working || !t.job())
+        .filter(t -> used.stream().noneMatch(u -> t.code().equals(u.definitionCode())))
+        .toList();
   }
 
   private List<EventRow> adultTraits(List<EventRow> rows) {
@@ -445,14 +458,12 @@ class DefaultEventService implements EventService {
           List<TraitDefinition> scenes = content.traitStages().get(stage).scenes();
           trait = scenes.get(random.forKey("event", "trait-scene", stage).nextInt(scenes.size()));
         } else {
-          List<EventRow> used = adultTraits(rows);
-          List<TraitDefinition> left =
-              content.adultTraits().stream()
-                  .filter(t -> used.stream().noneMatch(u -> t.code().equals(u.definitionCode())))
-                  .toList();
+          List<TraitDefinition> left = adultTraitsLeft(rows, context);
           trait =
               left.get(
-                  random.forKey("event", "trait-scene", "adult", used.size()).nextInt(left.size()));
+                  random
+                      .forKey("event", "trait-scene", "adult", adultTraits(rows).size())
+                      .nextInt(left.size()));
         }
         yield simple(
             id,
