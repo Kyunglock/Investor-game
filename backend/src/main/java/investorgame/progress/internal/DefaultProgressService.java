@@ -252,7 +252,9 @@ class DefaultProgressService implements ProgressService {
                   ticket,
                   home,
                   household.get(gameId),
-                  monthlyIncome(characters.get(gameId), ticket.occursDay()));
+                  monthlyIncome(characters.get(gameId), ticket.occursDay()),
+                  cheongyakPoints(game, characters.get(gameId), ticket.occursDay()),
+                  random);
           case ChoiceTicket.Job job -> {
             events.complete(gameId, eventId, new Completion(option, option, List.of()));
             if (job.isWait()) {
@@ -1356,6 +1358,7 @@ class DefaultProgressService implements ProgressService {
             false,
             household.get(game.id()),
             monthlyIncome(character, event.occursDay()),
+            cheongyakPoints(game, character, event.occursDay()),
             event.occursDay());
     List<GameView.Option> options = new ArrayList<>();
     for (int i = 0; i < plans.size(); i++) {
@@ -1365,6 +1368,15 @@ class DefaultProgressService implements ProgressService {
               option.code(), option.label(), plans.get(i).detail(), plans.get(i).blocked()));
     }
     return options;
+  }
+
+  private int cheongyakPoints(GameRow game, CharacterView character, int day) {
+    return HousingFlow.cheongyakPoints(
+        game.startAge(),
+        character.careerStartDay(),
+        household.get(game.id()),
+        day,
+        calendar.daysPerYear());
   }
 
   /** 대출 심사(DSR)에 쓰는 월 소득: 월급(은퇴 전) + 배우자 소득. */

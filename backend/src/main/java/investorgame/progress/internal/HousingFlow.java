@@ -190,15 +190,15 @@ class HousingFlow {
       boolean fraud,
       HouseholdView home,
       long monthlyIncome,
+      int points,
       int day) {
     HousingView view = housing.get(gameId);
     Map<String, Long> prices = market.homePrices(gameId);
     int rate = market.mortgageRateBp(gameId);
     long cash = assets.get(gameId).cash();
     boolean family = home.married() || !home.childBirthDays().isEmpty();
-    boolean renting = view.tenure() != Tenure.PARENTS && view.tenure() != Tenure.OWN;
     // 이사하면 지금 보증금을 돌려받고 전세대출을 갚는다. 전세사기면 보증금은 돌아오지 않는다.
-    long returning = renting ? (fraud ? 0 : view.deposit()) - view.jeonseLoan() : 0;
+    long returning = returning(view, fraud);
     long existingBurden =
         view.homes().stream().mapToLong(h -> housing.monthlyPayment(h.mortgage(), rate)).sum();
     List<Plan> plans = new ArrayList<>();
@@ -214,6 +214,7 @@ class HousingFlow {
               family,
               monthlyIncome,
               existingBurden,
+              points,
               day));
     }
     return plans;
@@ -229,6 +230,7 @@ class HousingFlow {
       boolean family,
       long income,
       long existingBurden,
+      int points,
       int day) {
     return switch (code) {
       case ChoiceTicket.Housing.PASS -> new Plan(code, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null);
@@ -284,38 +286,28 @@ class HousingFlow {
           rental(code, Tenure.APT_JEONSE, view, prices, rate, cash, returning, family, income, day);
       case ChoiceTicket.Housing.BUY_SEOUL, ChoiceTicket.Housing.BUY_GYEONGGI -> {
         String region = ChoiceTicket.Housing.BUY_SEOUL.equals(code) ? SEOUL : GYEONGGI;
-        long price = prices.get(region);
-        long ltv = price * rules.ltvBp() / BP;
-        long room = income * rules.dsrBp() / BP - existingBurden;
-        long perProbe = housing.monthlyPayment(PROBE, rate);
-        long dsr = room <= 0 || perProbe <= 0 ? 0 : room * PROBE / perProbe;
-        long mortgage = round(Math.min(ltv, dsr));
-        long need = price - mortgage;
-        long available = cash + returning;
-        long burden = housing.monthlyPayment(mortgage, rate);
-        String blocked =
-            need > available
-                ? (income <= 0
-                    ? "소득이 없어 주담대가 안 된다. 현금 %s가 모자란다".formatted(money(need - available))
-                    : mortgage < ltv
-                        ? "DSR 40%%에 걸려 대출이 %s뿐이다. 현금 %s가 모자란다"
-                            .formatted(money(mortgage), money(need - available))
-                        : short_(need - available))
-                : null;
+        yield buyPlan(
+            code, region, prices.get(region), rate, cash, returning, income, existingBurden, "시세");
+      }
+      case ChoiceTicket.Housing.APPLY -> {
+        long price = prices.get(SEOUL) * rules.cheongyakPriceBp() / BP;
+        Plan won =
+            buyPlan(code, SEOUL, price, rate, cash, returning, income, existingBurden, "분양가");
+        int chance = cheongyakChanceBp(points);
         yield new Plan(
             code,
-            region,
+            SEOUL,
             price,
-            mortgage,
+            won.mortgage(),
             0,
             0,
             0,
             0,
-            need,
-            burden,
-            "시세 %s · 주담대 %s (연 %s) · 필요 현금 %s · 월 원리금 %s"
-                .formatted(money(price), money(mortgage), rate(rate), money(need), money(burden)),
-            blocked);
+            won.cashNeeded(),
+            won.monthlyBurden(),
+            "내 가점 %d점 · 당첨 가능성 약 %d%% · %s · 당첨돼도 돈이 모자라면 포기해야 한다"
+                .formatted(points, chance / 100, won.detail()),
+            null);
       }
       case ChoiceTicket.Housing.GAP -> {
         long price = prices.get(SEOUL);
@@ -340,6 +332,51 @@ class HousingFlow {
       }
       default -> throw new IllegalArgumentException("알 수 없는 주거 선택지: " + code);
     };
+  }
+
+  /** 아파트를 산다: 대출은 LTV와 DSR 중 작은 쪽, 나머지는 현금(이사하면 돌려받는 보증금 포함). */
+  private Plan buyPlan(
+      String code,
+      String region,
+      long price,
+      int rate,
+      long cash,
+      long returning,
+      long income,
+      long existingBurden,
+      String priceLabel) {
+    long ltv = price * rules.ltvBp() / BP;
+    long room = income * rules.dsrBp() / BP - existingBurden;
+    long perProbe = housing.monthlyPayment(PROBE, rate);
+    long dsr = room <= 0 || perProbe <= 0 ? 0 : room * PROBE / perProbe;
+    long mortgage = round(Math.min(ltv, dsr));
+    long need = price - mortgage;
+    long available = cash + returning;
+    long burden = housing.monthlyPayment(mortgage, rate);
+    String blocked =
+        need > available
+            ? (income <= 0
+                ? "소득이 없어 주담대가 안 된다. 현금 %s가 모자란다".formatted(money(need - available))
+                : mortgage < ltv
+                    ? "DSR 40%%에 걸려 대출이 %s뿐이다. 현금 %s가 모자란다"
+                        .formatted(money(mortgage), money(need - available))
+                    : short_(need - available))
+            : null;
+    return new Plan(
+        code,
+        region,
+        price,
+        mortgage,
+        0,
+        0,
+        0,
+        0,
+        need,
+        burden,
+        "%s %s · 주담대 %s (연 %s) · 필요 현금 %s · 월 원리금 %s"
+            .formatted(
+                priceLabel, money(price), money(mortgage), rate(rate), money(need), money(burden)),
+        blocked);
   }
 
   private Plan rental(
@@ -417,15 +454,26 @@ class HousingFlow {
       ChoiceTicket ticket,
       ChoiceTicket.Housing effect,
       HouseholdView home,
-      long monthlyIncome) {
+      long monthlyIncome,
+      int points,
+      SeededRandom random) {
     String code = ticket.optionCode();
     Plan plan =
-        plans(gameId, List.of(code), effect.fraud(), home, monthlyIncome, ticket.occursDay())
+        plans(
+                gameId,
+                List.of(code),
+                effect.fraud(),
+                home,
+                monthlyIncome,
+                points,
+                ticket.occursDay())
             .getFirst();
     if (plan.blocked() != null && effect.fraud()) {
       // 고를 때는 몰랐던 전세사기로 돈이 모자라졌다. 가장 싼 월세로 밀려난다(보증금이 모자라면 마이너스 통장).
       code = ChoiceTicket.Housing.MONTHLY;
-      plan = plans(gameId, List.of(code), true, home, monthlyIncome, ticket.occursDay()).getFirst();
+      plan =
+          plans(gameId, List.of(code), true, home, monthlyIncome, points, ticket.occursDay())
+              .getFirst();
     } else if (plan.blocked() != null) {
       throw new InvalidRequestException(plan.blocked());
     }
@@ -433,6 +481,7 @@ class HousingFlow {
     int day = ticket.occursDay();
     HousingView before = housing.get(gameId);
     StringBuilder message = new StringBuilder();
+    Map<String, Object> payloadExtra = new LinkedHashMap<>();
     long lost = 0;
     if (effect.fraud()) {
       lost = before.deposit();
@@ -441,7 +490,46 @@ class HousingFlow {
               .formatted(money(before.deposit()), money(before.jeonseLoan())));
     }
     switch (code) {
-      case ChoiceTicket.Housing.PASS -> message.append("아직은 사지 않기로 했다.");
+      case ChoiceTicket.Housing.PASS ->
+          message.append(
+              ChoiceTicket.Housing.CHEONGYAK.equals(effect.definition())
+                  ? "이번 분양은 넘겼다."
+                  : "아직은 사지 않기로 했다.");
+      case ChoiceTicket.Housing.APPLY -> {
+        // 가점으로 당첨을 굴린다. 당첨돼도 계약금이 모자라면 포기한다 (decisions.md 42번).
+        boolean won =
+            random.forKey("progress", "cheongyak", ticket.seq()).nextInt((int) BP)
+                < cheongyakChanceBp(points);
+        if (!won) {
+          message.append("가점 %d점으로는 떨어졌다. 경쟁률이 수백 대 일이었다.".formatted(points));
+        } else if (plan.cashNeeded()
+            > assets.get(gameId).cash() + returning(before, effect.fraud())) {
+          message.append(
+              "가점 %d점으로 당첨됐다! 그런데 계약금이 %s 모자랐다. 눈물을 머금고 포기했다."
+                  .formatted(
+                      points,
+                      money(
+                          plan.cashNeeded()
+                              - assets.get(gameId).cash()
+                              - returning(before, effect.fraud()))));
+        } else {
+          Lease ended =
+              housing.buyResidence(gameId, plan.region(), plan.price(), plan.mortgage(), day);
+          settle(gameId, ended, effect.fraud(), day);
+          payIn(gameId, plan.price() - plan.mortgage(), day);
+          message.append(
+              "가점 %d점으로 당첨됐다! %s를 분양가 %s에 샀다(시세의 %d%%). 주담대 %s."
+                  .formatted(
+                      points,
+                      regionName(plan.region()),
+                      money(plan.price()),
+                      rules.cheongyakPriceBp() / 100,
+                      money(plan.mortgage())));
+        }
+        payloadExtra.put("won", won);
+        payloadExtra.put("points", points);
+        payloadExtra.put("bought", won && housing.get(gameId).ownsResidence());
+      }
       case ChoiceTicket.Housing.KEEP -> {
         if (effect.fraud() || (before.tenure() == Tenure.MONTHLY && before.deposit() == 0)) {
           settle(gameId, rent(gameId, plan, Tenure.MONTHLY, day), effect.fraud(), day);
@@ -502,6 +590,7 @@ class HousingFlow {
     payload.put("regionName", plan.region() == null ? null : regionName(plan.region()));
     payload.put("fraud", effect.fraud());
     payload.put("lost", lost);
+    payload.putAll(payloadExtra);
     logs.append(gameId, day, "HOUSING", payload);
     return new ChoiceOutcome.Outcome(
         ticket.kind().name(),
@@ -512,6 +601,47 @@ class HousingFlow {
         null,
         List.of(),
         message.toString().trim());
+  }
+
+  /** 이사하면 돌려받는 돈: 보증금(전세사기면 0) − 전세대출. 세입자가 아니면 0. */
+  private static long returning(HousingView view, boolean fraud) {
+    boolean renting = view.tenure() != Tenure.PARENTS && view.tenure() != Tenure.OWN;
+    return renting ? (fraud ? 0 : view.deposit()) - view.jeonseLoan() : 0;
+  }
+
+  /**
+   * 청약 가점 (실제 84점 만점을 줄인 것). 무주택 기간(30세나 결혼 중 빠른 날부터, 1년마다 2점, 최대 32), 부양가족(본인 5 + 배우자·자녀 1명마다 5,
+   * 최대 35), 청약통장(독립한 날 만들었다고 보고 1년마다 1점 + 2, 최대 17).
+   */
+  static int cheongyakPoints(
+      int startAge, Integer careerStartDay, HouseholdView home, int day, int daysPerYear) {
+    int age30 = (30 - startAge) * daysPerYear;
+    int from = home.marriedDay() == null ? age30 : Math.min(age30, home.marriedDay());
+    int noHome = day < from ? 0 : Math.min(32, 2 + 2 * ((day - from) / daysPerYear));
+    int family = (home.married() ? 1 : 0) + home.childBirthDays().size();
+    int dependents = Math.min(35, 5 + 5 * family);
+    int account =
+        careerStartDay == null
+            ? 0
+            : Math.min(17, 2 + Math.max(0, day - careerStartDay) / daysPerYear);
+    return noHome + dependents + account;
+  }
+
+  /** 가점별 당첨 확률(만분율). 서울 인기 단지는 60점대도 쉽지 않다. */
+  static int cheongyakChanceBp(int points) {
+    if (points >= 70) {
+      return 6000;
+    }
+    if (points >= 60) {
+      return 2500;
+    }
+    if (points >= 50) {
+      return 800;
+    }
+    if (points >= 40) {
+      return 300;
+    }
+    return 100;
   }
 
   private Lease rent(UUID gameId, Plan plan, Tenure tenure, int day) {

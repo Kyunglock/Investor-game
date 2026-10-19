@@ -45,6 +45,8 @@ public record ChoiceTicket(
     public static final String MOVE_OUT = "move-out";
     public static final String LEASE_END = "lease-end";
     public static final String BUY = "buy";
+    public static final String CHEONGYAK = "cheongyak";
+    public static final String APPLY = "APPLY";
     public static final String KEEP = "KEEP";
     public static final String MONTHLY = "MONTHLY";
     public static final String VILLA = "VILLA";

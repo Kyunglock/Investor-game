@@ -209,6 +209,15 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       const lost = num(p.lost)
       const head = p.fraud ? `전세사기를 당했다. 보증금 ${won(lost)}을 돌려받지 못했다. ` : ''
       const option = str(p.option)
+      if (option === 'APPLY') {
+        // 청약 (decisions.md 42번): 떨어짐 / 당첨됐지만 돈이 없어 포기 / 당첨돼 분양가로 삼.
+        const text = !p.won
+          ? `청약에 떨어졌다 (가점 ${num(p.points)}점).`
+          : p.bought
+            ? `청약에 당첨됐다 (가점 ${num(p.points)}점)! ${str(p.regionName)}를 분양가 ${won(num(p.price))}에 샀다.`
+            : `청약에 당첨됐지만 계약금이 모자라 포기했다 (가점 ${num(p.points)}점).`
+        return { ...base, tone: p.bought ? 'growth' : 'life', pill: '집', text }
+      }
       const what =
         option === 'PASS'
           ? '집은 아직 사지 않기로 했다.'

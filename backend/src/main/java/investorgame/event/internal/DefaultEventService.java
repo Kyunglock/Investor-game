@@ -438,21 +438,37 @@ class DefaultEventService implements EventService {
    */
   private void housingCandidates(
       List<EventRow> rows, SchedulingContext context, List<Candidate> candidates) {
+    earliestHousing(rows, context)
+        .ifPresent(due -> candidates.add(new Candidate(EventKind.HOUSING, due.getValue())));
+  }
+
+  /**
+   * 주거 이벤트마다 언제 오는가. 처음 일을 시작하면 독립(move-out), 세입자는 만기(lease-end)마다, 집이 없으면 청약 공고(cheongyak)가
+   * cheongyak-gap-days마다, 2채 미만이면 결혼·출산·서울 집값 급등 뒤에 "집 살까?"(buy, 최소 buy-gap-days 간격)가 온다. 순서가 같은 날의
+   * 우선순위다.
+   */
+  private Map<String, Integer> housingDue(List<EventRow> rows, SchedulingContext context) {
     HousingFacts housing = context.housing();
+    Map<String, Integer> due = new java.util.LinkedHashMap<>();
     if ("PARENTS".equals(housing.tenure())) {
-      candidates.add(new Candidate(EventKind.HOUSING, context.careerStartDay()));
-      return;
+      due.put(ChoiceTicket.Housing.MOVE_OUT, context.careerStartDay());
+      return due;
     }
     if (housing.leaseEndDay() != null) {
-      candidates.add(new Candidate(EventKind.HOUSING, housing.leaseEndDay()));
+      due.put(ChoiceTicket.Housing.LEASE_END, housing.leaseEndDay());
+    }
+    if (housing.homes() == 0) {
+      List<EventRow> notices = housingOf(rows, ChoiceTicket.Housing.CHEONGYAK);
+      due.put(
+          ChoiceTicket.Housing.CHEONGYAK,
+          notices.isEmpty()
+              ? context.careerStartDay() + properties.housing().cheongyakGapDays()
+              : last(notices).occursDay() + properties.housing().cheongyakGapDays());
     }
     if (housing.homes() >= 2) {
-      return;
+      return due;
     }
-    List<EventRow> buys =
-        ofKind(rows, EventKind.HOUSING).stream()
-            .filter(r -> ChoiceTicket.Housing.BUY.equals(r.definitionCode()))
-            .toList();
+    List<EventRow> buys = housingOf(rows, ChoiceTicket.Housing.BUY);
     int lastBuy = buys.isEmpty() ? -1 : last(buys).occursDay();
     int base =
         buys.isEmpty() ? context.careerStartDay() : lastBuy + properties.housing().buyGapDays();
@@ -469,7 +485,26 @@ class DefaultEventService implements EventService {
     triggers.stream()
         .filter(d -> d > lastBuy)
         .min(Integer::compare)
-        .ifPresent(d -> candidates.add(new Candidate(EventKind.HOUSING, Math.max(base, d))));
+        .ifPresent(d -> due.put(ChoiceTicket.Housing.BUY, Math.max(base, d)));
+    return due;
+  }
+
+  /** 가장 먼저 오는 주거 이벤트. 같은 날이면 housingDue의 순서가 먼저다. */
+  private Optional<Map.Entry<String, Integer>> earliestHousing(
+      List<EventRow> rows, SchedulingContext context) {
+    Map.Entry<String, Integer> earliest = null;
+    for (Map.Entry<String, Integer> entry : housingDue(rows, context).entrySet()) {
+      if (earliest == null || entry.getValue() < earliest.getValue()) {
+        earliest = entry;
+      }
+    }
+    return Optional.ofNullable(earliest);
+  }
+
+  private List<EventRow> housingOf(List<EventRow> rows, String definition) {
+    return ofKind(rows, EventKind.HOUSING).stream()
+        .filter(r -> definition.equals(r.definitionCode()))
+        .toList();
   }
 
   /** 빚투 제안: 든 종목이 크게 빠졌고 지난 제안에서 충분히 지났으면 지금 묻는다 (decisions.md 39번). */
@@ -567,7 +602,7 @@ class DefaultEventService implements EventService {
       case NEWS -> news(id, seq, rows, candidate.day(), context, random, hints);
       case SHAKE -> shake(id, seq, candidate.day(), context, random);
       case LEVERAGE -> leverage(id, seq, candidate.day(), context);
-      case HOUSING -> housing(id, seq, candidate.day(), context, random);
+      case HOUSING -> housing(id, seq, candidate.day(), rows, context, random);
     };
   }
 
@@ -600,20 +635,28 @@ class DefaultEventService implements EventService {
   }
 
   /**
-   * 주거 이벤트. 독립 전이면 move-out, 만기가 됐으면 lease-end, 아니면 buy. 보증보험 없는 빌라 전세의 만기에는 전세사기를 굴려 숨겨 둔다(고른 뒤에
-   * 드러난다). 선택지는 형편과 상관없이 늘 같은 목록이고, 감당할 수 있는지는 진행이 따져 막는다.
+   * 주거 이벤트. 가장 먼저 온 것(housingDue): 독립·만기·청약·집 사기. 보증보험 없는 빌라 전세의 만기에는 전세사기를 굴려 숨겨 둔다(고른 뒤에 드러난다).
+   * 선택지는 형편과 상관없이 늘 같은 목록이고, 감당할 수 있는지는 진행이 따져 막는다.
    */
   private EventRow housing(
-      UUID id, int seq, int day, SchedulingContext context, SeededRandom random) {
+      UUID id,
+      int seq,
+      int day,
+      List<EventRow> rows,
+      SchedulingContext context,
+      SeededRandom random) {
     HousingFacts housing = context.housing();
     String definition;
     List<String> options = new ArrayList<>();
     boolean roomForHome = housing.homes() < 2;
-    if ("PARENTS".equals(housing.tenure())) {
-      definition = ChoiceTicket.Housing.MOVE_OUT;
+    definition =
+        earliestHousing(rows, context).map(Map.Entry::getKey).orElse(ChoiceTicket.Housing.BUY);
+    if (ChoiceTicket.Housing.MOVE_OUT.equals(definition)) {
       options.addAll(ChoiceTicket.Housing.RENTALS);
-    } else if (housing.leaseEndDay() != null && housing.leaseEndDay() <= day) {
-      definition = ChoiceTicket.Housing.LEASE_END;
+    } else if (ChoiceTicket.Housing.CHEONGYAK.equals(definition)) {
+      options.add(ChoiceTicket.Housing.APPLY);
+      options.add(ChoiceTicket.Housing.PASS);
+    } else if (ChoiceTicket.Housing.LEASE_END.equals(definition)) {
       options.add(ChoiceTicket.Housing.KEEP);
       options.addAll(ChoiceTicket.Housing.RENTALS);
       if (roomForHome) {
@@ -676,8 +719,14 @@ class DefaultEventService implements EventService {
   /** 알림 정의를 가중치로 뽑는다. 결혼 뒤에만 나오는 정의는 미혼이면 후보에서 뺀다. 만들어지는 순간 RESOLVED다. */
   private EventRow notice(
       UUID id, int seq, int day, SchedulingContext context, SeededRandom random) {
+    // 결혼·직장·자녀가 있어야 말이 되는 알림은 그때만 고른다(무직인데 명절 보너스가 나오지 않게).
+    boolean working = context.jobStartDay() != null && !context.retired();
     List<NoticeDefinition> eligible =
-        content.notices().stream().filter(n -> context.married() || !n.requiresMarried()).toList();
+        content.notices().stream()
+            .filter(n -> context.married() || !n.requiresMarried())
+            .filter(n -> working || !n.requiresJob())
+            .filter(n -> context.childrenCount() > 0 || !n.requiresChildren())
+            .toList();
     NoticeDefinition definition =
         weighted(eligible, NoticeDefinition::weight, random.forKey("event", "notice", seq));
     return new EventRow(

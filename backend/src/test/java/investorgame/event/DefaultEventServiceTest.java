@@ -180,6 +180,55 @@ class DefaultEventServiceTest {
     assertThat(notices).isPositive();
   }
 
+  /** 무직이면 명절 보너스·연말정산이, 자녀가 없으면 학원·입학 알림이 나오지 않는다. */
+  @Test
+  void 직장과_자녀가_있어야_말이_되는_알림은_그때만_나온다() {
+    UUID gameId = UUID.randomUUID();
+    SchedulingContext jobless =
+        new SchedulingContext(
+            Phase.SAVING,
+            START_AGE,
+            "long",
+            "food",
+            null,
+            true,
+            null,
+            END_DAY,
+            null,
+            null,
+            JOB_DAY,
+            true,
+            false,
+            null,
+            0,
+            List.of(),
+            false,
+            Map.of(),
+            SETTLED);
+    HashSeededRandom random = new HashSeededRandom(2L);
+    int from = JOB_DAY;
+    int notices = 0;
+    for (int i = 0; i < 60; i++) {
+      var next = events.peekNextEventDay(gameId, jobless, from, random);
+      if (next.isEmpty()) {
+        break;
+      }
+      ScheduleResult result =
+          events.schedule(gameId, jobless, from, next.getAsInt(), random, HINTS);
+      result
+          .pending()
+          .ifPresent(
+              v -> events.complete(gameId, v.eventId(), new Completion("x", "x", List.of())));
+      if (result.notice().isPresent()) {
+        notices++;
+        assertThat(result.notice().get().code())
+            .isNotIn("bonus", "tax-refund", "academy", "school", "family-trip");
+      }
+      from = next.getAsInt();
+    }
+    assertThat(notices).isPositive();
+  }
+
   @Test
   void LIFE_선택은_판정_없이_수락_여부만_돌려준다() {
     UUID gameId = UUID.randomUUID();
@@ -413,17 +462,17 @@ class DefaultEventServiceTest {
         .extracting(EventView.Option::code)
         .containsExactly("MONTHLY", "VILLA", "VILLA_INSURED", "APT_JEONSE");
 
-    HousingFacts renting =
-        new HousingFacts("APT_JEONSE", JOB_DAY + 2 * YEAR, 0, false, false, null, 0);
+    HousingFacts renting = new HousingFacts("APT_JEONSE", JOB_DAY + YEAR, 0, false, false, null, 0);
     EventView leaseEnd =
         firstOf(UUID.randomUUID(), housed(renting, null), JOB_DAY, EventKind.HOUSING, 3L);
-    assertThat(leaseEnd.occursDay()).isEqualTo(JOB_DAY + 2 * YEAR);
+    assertThat(leaseEnd.occursDay()).isEqualTo(JOB_DAY + YEAR);
     assertThat(leaseEnd.options())
         .extracting(EventView.Option::code)
         .startsWith("KEEP")
         .contains("BUY_SEOUL", "BUY_GYEONGGI");
 
-    HousingFacts settled = new HousingFacts("APT_JEONSE", null, 0, false, false, null, 0);
+    // 1주택이면 청약이 없고, 결혼·출산·집값 급등이 없으면 "집 살까?"도 없다.
+    HousingFacts settled = new HousingFacts("APT_JEONSE", null, 1, false, false, null, 0);
     assertThat(nextOf(UUID.randomUUID(), housed(settled, null), JOB_DAY, EventKind.HOUSING, 3L))
         .as("결혼·출산·집값 급등이 없으면 묻지 않는다")
         .isEmpty();

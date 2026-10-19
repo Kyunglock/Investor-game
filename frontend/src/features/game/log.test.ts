@@ -82,6 +82,24 @@ describe('logLine', () => {
     )
   })
 
+  it('청약: 떨어짐·당첨 뒤 포기·당첨', () => {
+    const at = (payload: Record<string, unknown>) =>
+      logLine(entry('HOUSING', 30 * 360, { option: 'APPLY', ...payload }), game).text
+    expect(at({ won: false, points: 42 })).toBe('청약에 떨어졌다 (가점 42점).')
+    expect(at({ won: true, bought: false, points: 64 })).toBe(
+      '청약에 당첨됐지만 계약금이 모자라 포기했다 (가점 64점).',
+    )
+    expect(
+      at({
+        won: true,
+        bought: true,
+        points: 71,
+        regionName: '서울 아파트 (84㎡)',
+        price: 700_000_000,
+      }),
+    ).toBe('청약에 당첨됐다 (가점 71점)! 서울 아파트 (84㎡)를 분양가 700,000,000원에 샀다.')
+  })
+
   it('집: 매수·전세사기·매도·역전세', () => {
     const bought = logLine(
       entry('HOUSING', 30 * 360, {

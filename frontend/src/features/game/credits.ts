@@ -294,7 +294,11 @@ export function buildCredits(game: Game): CreditSection[] {
 
   // 살아온 집: 이사·매수·전세사기·매도 (주거 설계).
   const homeLines: CreditLine[] = entries(game, 'HOUSING', 'HOME_SOLD')
-    .filter((e) => (e.payload as Payload).option !== 'PASS')
+    .filter((e) => {
+      const p = e.payload as Payload
+      // 넘긴 공고·떨어진 청약은 살아온 집이 아니다.
+      return p.option !== 'PASS' && (p.option !== 'APPLY' || p.bought === true)
+    })
     .map((e) => {
       const p = e.payload as Payload
       const age = ageOf(game, e.day)
@@ -310,6 +314,13 @@ export function buildCredits(game: Game): CreditSection[] {
           text: `${age}세, 전세사기`,
           sub: `보증금 ${won(num(p.lost))}을 잃었다`,
           tone: 'down',
+        }
+      }
+      if (p.option === 'APPLY') {
+        return {
+          text: `${age}세, 청약 당첨 · ${str(p.regionName)}`,
+          sub: `분양가 ${won(num(p.price))}`,
+          tone: 'up',
         }
       }
       return num(p.price) > 0

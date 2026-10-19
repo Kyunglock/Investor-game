@@ -8,6 +8,8 @@ package investorgame.content;
  * @param assetPercent 0보다 크면 지출을 순자산 × percent / 100까지 키운다. amount는 최소 지출로 남는다(부자가 된 뒤에도 같은 돈만 쓰면
  *     어색하다)
  * @param requiresMarried true면 결혼한 뒤에만 나온다
+ * @param requiresJob true면 직장에 다니는 동안에만 나온다(보너스·연말정산)
+ * @param requiresChildren true면 자녀가 있을 때만 나온다(학원·입학)
  */
 public record NoticeDefinition(
     String code,
@@ -17,4 +19,6 @@ public record NoticeDefinition(
     int salaryPercent,
     int assetPercent,
     int weight,
-    boolean requiresMarried) {}
+    boolean requiresMarried,
+    boolean requiresJob,
+    boolean requiresChildren) {}

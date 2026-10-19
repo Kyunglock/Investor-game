@@ -47,6 +47,8 @@ progress:
     sale-chance-hot-bp: 4500
     falling-bp: -500
     hot-bp: 1500
+    # 청약 분양가는 시세의 70% (decisions.md 42번)
+    cheongyak-price-bp: 7000
 
 content:
   # 콘텐츠 JSON 디렉터리 후보(작업 디렉터리 기준). 있으면 클래스 경로보다 먼저 읽어 IDE 실행에서도 콘텐츠가 보인다. 운영은 클래스 경로만 쓴다
@@ -219,6 +221,8 @@ event:
     fraud-bp: 700
     buy-gap-days: 720
     surge-bp: 1500
+    # 집이 없으면 1년 반마다 서울 분양 공고(청약). 가점으로 당첨을 굴린다 (decisions.md 42번)
+    cheongyak-gap-days: 540
   # 40년 동안 뉴스마다 선택해야 하므로 단기 약 80번, 장기 약 40번이 되도록 잡았다 (specs/event.md 7절).
   styles:
     short:
