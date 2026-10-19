@@ -110,7 +110,7 @@ class EventRenderer {
     };
   }
 
-  /** 알림성 이벤트. 금액은 정의 그대로 넘기고 월급 비율 계산은 진행이 한다. */
+  /** 알림성 이벤트. 금액은 정의 그대로 넘기고 월급·순자산 비율 계산은 진행이 한다. */
   Notice notice(EventRow row) {
     NoticeDefinition definition = noticeDefinition(row.definitionCode());
     return new Notice(
@@ -120,7 +120,8 @@ class EventRenderer {
         definition.title(),
         definition.body(),
         definition.amount(),
-        definition.salaryPercent());
+        definition.salaryPercent(),
+        definition.assetPercent());
   }
 
   NoticeDefinition noticeDefinition(String code) {

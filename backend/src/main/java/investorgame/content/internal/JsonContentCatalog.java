@@ -432,6 +432,9 @@ class JsonContentCatalog implements ContentCatalog {
       require(notice.weight() > 0, "알림 가중치는 0보다 커야 한다: " + notice.code());
       require(
           notice.amount() != 0 || notice.salaryPercent() != 0, "알림은 금액이 있어야 한다: " + notice.code());
+      require(
+          notice.assetPercent() == 0 || notice.amount() < 0,
+          "순자산 비율은 최소 지출(음수 amount)이 있는 알림에만 쓴다: " + notice.code());
     }
   }
 

@@ -864,6 +864,11 @@ class DefaultProgressService implements ProgressService {
               * notice.salaryPercent()
               / PERCENT;
     }
+    if (notice.assetPercent() > 0) {
+      long scaled =
+          assets.totalAsset(gameId, market.prices(gameId)) * notice.assetPercent() / PERCENT;
+      amount = -Math.max(-amount, scaled);
+    }
     if (amount > 0) {
       assets.credit(gameId, WINDFALL, amount, notice.occursDay());
     } else if (amount < 0) {

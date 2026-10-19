@@ -18,6 +18,7 @@
       "body": "친구 결혼식과 친척 장례가 한 달에 겹쳤다.",
       "amount": -300000,
       "salaryPercent": 0,
+      "assetPercent": 0,
       "weight": 10,
       "requiresMarried": false
     },
@@ -27,6 +28,7 @@
       "body": "건강 검진에서 재검이 나왔다. 다행히 큰 병은 아니었다.",
       "amount": -1500000,
       "salaryPercent": 0,
+      "assetPercent": 0,
       "weight": 6,
       "requiresMarried": false
     },
@@ -36,6 +38,7 @@
       "body": "주차장에서 긁혔다. 보험 처리하면 할증이 붙는다.",
       "amount": -800000,
       "salaryPercent": 0,
+      "assetPercent": 0,
       "weight": 8,
       "requiresMarried": false
     },
@@ -45,6 +48,7 @@
       "body": "집주인이 전세금을 올려 달랬다. 결국 이사했다.",
       "amount": -2000000,
       "salaryPercent": 0,
+      "assetPercent": 0,
       "weight": 4,
       "requiresMarried": false
     },
@@ -54,6 +58,7 @@
       "body": "명절에 봉투를 두 개 준비했다.",
       "amount": -500000,
       "salaryPercent": 0,
+      "assetPercent": 0,
       "weight": 8,
       "requiresMarried": false
     },
@@ -63,6 +68,7 @@
       "body": "온 가족이 처음으로 바다를 봤다. 돈이 아깝지 않았다.",
       "amount": -2500000,
       "salaryPercent": 0,
+      "assetPercent": 1,
       "weight": 6,
       "requiresMarried": true
     },
@@ -72,6 +78,7 @@
       "body": "회사 실적이 좋아 보너스가 나왔다.",
       "amount": 0,
       "salaryPercent": 50,
+      "assetPercent": 0,
       "weight": 6,
       "requiresMarried": false
     },
@@ -81,6 +88,7 @@
       "body": "마트 영수증 이벤트에서 2등에 당첨됐다.",
       "amount": 500000,
       "salaryPercent": 0,
+      "assetPercent": 0,
       "weight": 3,
       "requiresMarried": false
     }

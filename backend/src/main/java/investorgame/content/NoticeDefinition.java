@@ -5,6 +5,8 @@ package investorgame.content;
  *
  * @param amount 양수면 수입, 음수면 지출(원). salaryPercent가 0일 때 쓴다
  * @param salaryPercent 0보다 크면 amount 대신 월급 × percent / 100을 수입으로 준다
+ * @param assetPercent 0보다 크면 지출을 순자산 × percent / 100까지 키운다. amount는 최소 지출로 남는다(부자가 된 뒤에도 같은 돈만 쓰면
+ *     어색하다)
  * @param requiresMarried true면 결혼한 뒤에만 나온다
  */
 public record NoticeDefinition(
@@ -13,5 +15,6 @@ public record NoticeDefinition(
     String body,
     long amount,
     int salaryPercent,
+    int assetPercent,
     int weight,
     boolean requiresMarried) {}
