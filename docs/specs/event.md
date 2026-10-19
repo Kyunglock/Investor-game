@@ -305,7 +305,7 @@ public record CompleteResult(
 | 뉴스 | 위 JSON의 필드. `styles`가 없으면 모든 스타일 |
 | 직업 | `code`, `title`, 선택 가중치, 월급 정보 (진행·자산용, 콘텐츠 스펙). 14개, 월급이 많을수록 가중치가 낮다 |
 | 직장 장면 (`careers.json`) | `code`, `title`, `body`, `weight`, `minTenureYears`, 선택지 2~4개(`code`, `label`, 판정 `stat`·`baseBp`·`perPointBp`(없으면 항상 성공), `success`/`fail` 효과: `salaryPercent`, `quit`, `severanceMonths`, `moveJob`, `moveSalaryPercent`, `amount`, `statDeltas`(운 제외), `text`) |
-| 성향 | `code`, `age`, `adult`(선택, true면 취업 뒤 일상 장면), `job`(선택, true면 직장에 다니는 동안에만), `title`, `body`(상황), 선택지 3~4개(`code`, `label`, `traitDeltas`(style/risk/mind/sector), `statDeltas`(선택, 절댓값 ≤ `content.trait-stat-max-delta` 8), `note`) |
+| 성향 | `code`, `age`, `adult`(선택, true면 취업 뒤 일상 장면), `job`(선택, true면 직장에 다니는 동안에만), 선택지의 `amount`·`outcomes`(선택, 결과가 갈리는 돈·능력치·문구 — decisions.md 41번), `title`, `body`(상황), 선택지 3~4개(`code`, `label`, `traitDeltas`(style/risk/mind/sector), `statDeltas`(선택, 절댓값 ≤ `content.trait-stat-max-delta` 8), `note`) |
 | 자기계발 | `code`, `title`, `body`, 선택지 목록(`code`, `label`, `statCode`, `expAmount`, `cost`) |
 | 알림 | `code`, `title`, `body`, 단계 조건 |
 | 힌트 문구 | 방향(`UP`/`DOWN`/`NEUTRAL`) × 강도(`MILD`/`STRONG`) 별 문구 목록 (poc.md 6절) |

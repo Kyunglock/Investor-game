@@ -69,10 +69,11 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       }
     }
     case 'TRAIT':
+      // 결과가 갈리는 선택(빌려준 돈)은 어떻게 됐는지 덧붙인다 (decisions.md 41번).
       return {
         ...base,
         tone: 'decision',
-        text: `${str(p.eventTitle)} · 결정: ${str(p.optionLabel)}`,
+        text: `${str(p.eventTitle)} · 결정: ${str(p.optionLabel)}${p.result ? ` → ${str(p.result)}` : ''}`,
       }
     case 'JOB':
       return {

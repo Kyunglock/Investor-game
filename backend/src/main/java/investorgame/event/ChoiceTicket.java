@@ -3,6 +3,7 @@ package investorgame.event;
 import investorgame.common.Direction;
 import investorgame.common.Sentiment;
 import investorgame.content.CareerDefinition;
+import investorgame.content.TraitDefinition;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -95,8 +96,13 @@ public record ChoiceTicket(
    * @param statDeltas 즉시 더해지는 능력치 변화 (운 제외). 없으면 빈 맵
    * @param note 이 일상 행동에서 무엇이 드러났는지 알려 주는 문구
    */
+  /** 성향 장면의 선택. amount·outcomes는 콘텐츠 그대로: 결과는 진행이 판 시드로 굴린다 (decisions.md 41번). */
   public record Trait(
-      Map<String, Integer> traitDeltas, Map<String, Integer> statDeltas, String note)
+      Map<String, Integer> traitDeltas,
+      Map<String, Integer> statDeltas,
+      String note,
+      long amount,
+      List<TraitDefinition.Outcome> outcomes)
       implements Effect {}
 
   public record Offer(boolean accepted) implements Effect {}

@@ -26,6 +26,7 @@ import investorgame.content.CrisisDefinition;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
 import investorgame.content.StockDefinition;
+import investorgame.content.TraitDefinition;
 import investorgame.event.ChoiceTicket;
 import investorgame.event.CompleteResult;
 import investorgame.event.Completion;
@@ -61,6 +62,7 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
+import java.util.random.RandomGenerator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -308,22 +310,43 @@ class DefaultProgressService implements ProgressService {
               resolveCareer(game, ticket, career, pendingView.title(), random);
           case ChoiceTicket.Trait trait -> {
             // 성장기의 선택은 판정으로 뒤집지 않지만 능력치를 조금 움직인다 (경제 개편 설계 4.3절).
+            // 결과가 갈리는 선택(빌려준 돈을 돌려받을지)은 판 시드로 굴려 돈·능력치·문구를 더한다 (decisions.md 41번).
+            TraitDefinition.Outcome result =
+                trait.outcomes().isEmpty()
+                    ? null
+                    : weightedOutcome(
+                        trait.outcomes(), random.forKey("progress", "trait-outcome", ticket.seq()));
+            Map<String, Integer> statDeltas = new HashMap<>(trait.statDeltas());
+            long amount = trait.amount();
+            if (result != null) {
+              result.statDeltas().forEach((k, v) -> statDeltas.merge(k, v, Integer::sum));
+              amount += result.amount();
+            }
+            if (amount > 0) {
+              assets.credit(gameId, WINDFALL, amount, ticket.occursDay());
+            } else if (amount < 0) {
+              assets.spend(gameId, LIFE_COST, -amount, ticket.occursDay(), eventId);
+            }
             List<StatChange> moved =
                 characters.recordTraitChoice(
-                    gameId, trait.traitDeltas(), trait.statDeltas(), ticket.occursDay());
-            CompleteResult result =
+                    gameId, trait.traitDeltas(), statDeltas, ticket.occursDay());
+            CompleteResult completed =
                 events.complete(gameId, eventId, new Completion(option, option, List.of()));
-            logs.append(
-                gameId,
-                ticket.occursDay(),
-                "TRAIT",
-                Map.of(
-                    "eventTitle", pendingView.title(),
-                    "optionCode", option,
-                    "optionLabel", optionLabel));
+            Map<String, Object> traitPayload = new HashMap<>();
+            traitPayload.put("eventTitle", pendingView.title());
+            traitPayload.put("optionCode", option);
+            traitPayload.put("optionLabel", optionLabel);
+            if (result != null) {
+              traitPayload.put("result", result.note());
+            }
+            if (amount != 0) {
+              traitPayload.put("amount", amount);
+            }
+            logs.append(gameId, ticket.occursDay(), "TRAIT", traitPayload);
             List<ChoiceOutcome.Growth> growth = logGrowth(gameId, ticket.occursDay(), moved, TRAIT);
-            if (!result.traitsComplete()) {
-              yield simpleOutcome(ticket, trait.note(), growth);
+            String note = result == null ? trait.note() : trait.note() + " " + result.note();
+            if (!completed.traitsComplete()) {
+              yield simpleOutcome(ticket, note, growth);
             }
             TraitResult traits =
                 characters.finalizeTraits(
@@ -851,6 +874,18 @@ class DefaultProgressService implements ProgressService {
             quantity));
     return new ChoiceOutcome.Outcome(
         ticket.kind().name(), option, option, List.of(), trade, null, List.of(), message);
+  }
+
+  private static TraitDefinition.Outcome weightedOutcome(
+      List<TraitDefinition.Outcome> outcomes, RandomGenerator rng) {
+    int roll = rng.nextInt(outcomes.stream().mapToInt(TraitDefinition.Outcome::weight).sum());
+    for (TraitDefinition.Outcome outcome : outcomes) {
+      roll -= outcome.weight();
+      if (roll < 0) {
+        return outcome;
+      }
+    }
+    return outcomes.getLast();
   }
 
   private static ChoiceOutcome.Outcome simpleOutcome(ChoiceTicket ticket, String message) {

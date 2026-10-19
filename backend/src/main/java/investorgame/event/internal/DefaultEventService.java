@@ -164,7 +164,12 @@ class DefaultEventService implements EventService {
                     .filter(o -> o.code().equals(optionCode))
                     .findFirst()
                     .orElseThrow();
-            yield new ChoiceTicket.Trait(chosen.traitDeltas(), chosen.statDeltas(), chosen.note());
+            yield new ChoiceTicket.Trait(
+                chosen.traitDeltas(),
+                chosen.statDeltas(),
+                chosen.note(),
+                chosen.amount(),
+                chosen.outcomes());
           }
           case OFFER -> new ChoiceTicket.Offer(ACCEPT.equals(optionCode));
           case LIFE ->

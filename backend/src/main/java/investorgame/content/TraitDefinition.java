@@ -32,15 +32,29 @@ public record TraitDefinition(
    * @param statDeltas 선택 즉시 더해지는 능력치 변화. 키는 insight, patience, courage, conviction (운 금지). JSON에
    *     없으면 빈 맵
    * @param note 이 행동에서 무엇이 드러났는지 한 줄로 알려 주는 문구
+   * @param amount 고르는 즉시 오가는 돈(원, 음수면 나간다). JSON에 없으면 0
+   * @param outcomes 고른 뒤 결과가 갈리는 선택(돈을 빌려줬는데 갚을지 튈지). 가중치로 하나가 나와 그 돈·능력치·문구가 더해진다. 없으면 빈 목록
    */
   public record Option(
       String code,
       String label,
       Map<String, Integer> traitDeltas,
       Map<String, Integer> statDeltas,
-      String note) {
+      String note,
+      Long amount,
+      List<Outcome> outcomes) {
 
     public Option {
+      statDeltas = statDeltas == null ? Map.of() : Map.copyOf(statDeltas);
+      amount = amount == null ? 0L : amount;
+      outcomes = outcomes == null ? List.of() : List.copyOf(outcomes);
+    }
+  }
+
+  /** 갈리는 결과 하나. statDeltas는 선택지의 statDeltas에 더해진다. */
+  public record Outcome(int weight, long amount, Map<String, Integer> statDeltas, String note) {
+
+    public Outcome {
       statDeltas = statDeltas == null ? Map.of() : Map.copyOf(statDeltas);
     }
   }

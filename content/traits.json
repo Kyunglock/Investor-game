@@ -1604,11 +1604,29 @@
           "mind.crowd": 1,
           "sector.finance": 1
         },
-        "statDeltas": {
-          "courage": 4,
-          "conviction": -4
-        },
-        "note": "관계 때문에 돈 판단이 흐려졌다"
+        "statDeltas": {},
+        "note": "관계를 믿고 빌려줬다",
+        "amount": -5000000,
+        "outcomes": [
+          {
+            "weight": 65,
+            "amount": 5250000,
+            "statDeltas": {
+              "courage": 4,
+              "conviction": -2
+            },
+            "note": "석 달 뒤 이자까지 쳐서 525만 원을 돌려받았다. 사람을 믿은 보람이 있었다."
+          },
+          {
+            "weight": 35,
+            "amount": 0,
+            "statDeltas": {
+              "insight": -6,
+              "courage": 4
+            },
+            "note": "동료가 퇴사하더니 연락이 끊겼다. 500만 원은 돌아오지 않았다. 사람 보는 눈이 없었다."
+          }
+        ]
       },
       {
         "code": "no",
@@ -1638,7 +1656,8 @@
           "insight": 5,
           "patience": 3
         },
-        "note": "잃어도 되는 선을 정했다"
+        "note": "잃어도 되는 선을 정했다",
+        "amount": -1000000
       },
       {
         "code": "ask",

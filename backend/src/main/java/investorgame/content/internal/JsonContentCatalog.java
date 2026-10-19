@@ -433,6 +433,12 @@ class JsonContentCatalog implements ContentCatalog {
         String where = trait.code() + "/" + option.code();
         validateTraitDeltas(where, option.traitDeltas());
         validateStatDeltas(where, option.statDeltas());
+        for (TraitDefinition.Outcome outcome : option.outcomes()) {
+          require(outcome.weight() > 0, "결과 가중치는 양수여야 한다: " + where);
+          Map<String, Integer> merged = new java.util.HashMap<>(option.statDeltas());
+          outcome.statDeltas().forEach((k, v) -> merged.merge(k, v, Integer::sum));
+          validateStatDeltas(where, merged);
+        }
       }
     }
     validateInvestorTypes(meta.styles(), meta.risks(), meta.minds(), meta.investorTypes());

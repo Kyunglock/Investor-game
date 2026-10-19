@@ -113,6 +113,26 @@ class JsonContentCatalogTest {
       assertThat(stage.scenes()).as("%d세 장면", stage.age()).hasSizeBetween(2, 3);
     }
     assertThat(catalog.adultTraits()).hasSize(8).allMatch(TraitDefinition::adult);
+    // 동료에게 빌려준 돈은 돌려받기도, 떼이기도 한다. 떼이면 안목이 깎이고 용기는 오른다 (decisions.md 41번).
+    TraitDefinition.Option lend =
+        catalog.adultTraits().stream()
+            .filter(t -> t.code().equals("a-loan"))
+            .findFirst()
+            .orElseThrow()
+            .options()
+            .stream()
+            .filter(o -> o.code().equals("lend"))
+            .findFirst()
+            .orElseThrow();
+    assertThat(lend.amount()).isEqualTo(-5_000_000);
+    assertThat(lend.outcomes()).hasSize(2);
+    assertThat(lend.outcomes())
+        .anyMatch(o -> o.amount() > 5_000_000)
+        .anyMatch(
+            o ->
+                o.amount() == 0
+                    && o.statDeltas().get("insight") < 0
+                    && o.statDeltas().get("courage") > 0);
     for (TraitDefinition trait : catalog.traits()) {
       assertThat(trait.options()).as(trait.code()).hasSizeBetween(3, 4);
     }

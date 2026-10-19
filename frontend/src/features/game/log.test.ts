@@ -68,6 +68,20 @@ describe('logLine', () => {
     expect(silent.text).toContain('아무 전조도 없이 왔다.')
   })
 
+  it('성향 장면: 결과가 갈리면 어떻게 됐는지 덧붙인다', () => {
+    const line = logLine(
+      entry('TRAIT', 30 * 360, {
+        eventTitle: '친한 동료가 "급해서 그런데 500만 원만" 한다',
+        optionLabel: '빌려준다',
+        result: '500만 원은 돌아오지 않았다.',
+      }),
+      game,
+    )
+    expect(line.text).toBe(
+      '친한 동료가 "급해서 그런데 500만 원만" 한다 · 결정: 빌려준다 → 500만 원은 돌아오지 않았다.',
+    )
+  })
+
   it('집: 매수·전세사기·매도·역전세', () => {
     const bought = logLine(
       entry('HOUSING', 30 * 360, {
