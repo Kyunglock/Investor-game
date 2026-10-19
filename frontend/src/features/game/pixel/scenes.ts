@@ -17,6 +17,7 @@ export type SceneKey =
 
 export interface Scene {
   map: PixelMap
+  /** {집}은 사는 곳(자산·가족에 따라 원룸에서 펜트하우스까지)으로, {활동}은 직장 여부에 따른 문구로 바꿔 보여 준다 (sceneCaption) */
   caption: string
   /** 캐릭터의 왼쪽 위 열과 발이 닿는 행 */
   anchor: { x: number; y: number }
@@ -42,6 +43,39 @@ export function sceneFor(stage: AgeStage, phase: Phase, hasJob: boolean): SceneK
     return 'street'
   }
   return phase === 'INVESTING' ? 'studio' : 'office'
+}
+
+const EOK = 100_000_000
+
+/** 사는 곳. 수십억 자산가가 원룸에 살면 어색하므로 순자산과 가족으로 정한다. 결혼했거나 자녀가 있으면 원룸이 아니다. */
+export function dwellingFor(totalAsset: number, married: boolean, children: number): string {
+  if (totalAsset >= 50 * EOK) {
+    return '한강뷰 펜트하우스'
+  }
+  if (totalAsset >= 20 * EOK) {
+    return '고급 아파트'
+  }
+  if (totalAsset >= 5 * EOK) {
+    return children > 0 ? '넓은 아파트' : '아파트'
+  }
+  if (totalAsset >= 1.5 * EOK) {
+    return married || children > 0 ? '전세 아파트' : '투룸 전세'
+  }
+  return married || children > 0 ? '신혼 빌라' : '원룸'
+}
+
+/** 장면 문구. 사는 곳을 채우고, 전업투자자에게는 "퇴근 후"가 아닌 문구를 쓴다. */
+export function sceneCaption(
+  key: SceneKey,
+  home: { totalAsset: number; married: boolean; children: number; fullTimeInvestor: boolean },
+): string {
+  const activity =
+    key === 'studio' && home.fullTimeInvestor
+      ? '하루 종일 시세판을 보는 중'
+      : '퇴근 후 주식 앱을 켜는 중'
+  return SCENES[key].caption
+    .replace('{집}', dwellingFor(home.totalAsset, home.married, home.children))
+    .replace('{활동}', activity)
 }
 
 // ---- 그리기 도구 ----
@@ -235,7 +269,7 @@ export const SCENES: Record<SceneKey, Scene> = {
     }),
   },
   studio: {
-    caption: '서울 · 원룸 · 퇴근 후 주식 앱을 켜는 중',
+    caption: '서울 · {집} · {활동}',
     anchor: { x: 36, y: 20 },
     map: build((c) => {
       room(c)
@@ -248,7 +282,7 @@ export const SCENES: Record<SceneKey, Scene> = {
     }),
   },
   'studio-middle': {
-    caption: '서울 · 원룸 · 오랜 투자를 이어 가는 중',
+    caption: '서울 · {집} · 오랜 투자를 이어 가는 중',
     anchor: { x: 36, y: 20 },
     map: build((c) => {
       room(c)
@@ -262,7 +296,7 @@ export const SCENES: Record<SceneKey, Scene> = {
     }),
   },
   'home-old': {
-    caption: '서울 · 집 · 창가에서 지난날을 돌아보는 중',
+    caption: '서울 · {집} · 창가에서 지난날을 돌아보는 중',
     anchor: { x: 28, y: 20 },
     map: build((c) => {
       room(c)
