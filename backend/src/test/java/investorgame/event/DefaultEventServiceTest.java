@@ -9,6 +9,7 @@ import investorgame.common.Hint.HintDirection;
 import investorgame.common.Hint.HintStrength;
 import investorgame.common.Phase;
 import investorgame.common.random.HashSeededRandom;
+import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
@@ -422,18 +423,106 @@ class DefaultEventServiceTest {
                 .toList());
   }
 
-  private static String careerCode(EventView view) {
+  private String careerCode(EventView view) {
     // 렌더링된 뷰에는 정의 코드가 없으므로 제목으로 찾는다.
-    return CAREER_TITLES.getOrDefault(view.title(), view.title());
+    return careerOf(view).code();
   }
 
-  private static final java.util.Map<String, String> CAREER_TITLES =
-      java.util.Map.of(
-          "연봉 협상", "raise",
-          "승진 심사", "promotion",
-          "이직 제안", "headhunt",
-          "구조조정", "layoff",
-          "번아웃", "burnout");
+  private CareerDefinition careerOf(EventView view) {
+    return content.careers().stream()
+        .filter(c -> c.title().equals(view.title()))
+        .findFirst()
+        .orElseThrow();
+  }
+
+  private SchedulingContext workingAs(String jobCode) {
+    return new SchedulingContext(
+        Phase.SAVING,
+        START_AGE,
+        "long",
+        "food",
+        null,
+        true,
+        null,
+        END_DAY,
+        JOB_DAY,
+        jobCode,
+        JOB_DAY,
+        false,
+        false,
+        null,
+        0,
+        List.of(),
+        false,
+        Map.of(),
+        SETTLED);
+  }
+
+  /** 직장 생활 내내 나온 직장 장면을 (나이, 장면) 순서로 모은다. 다른 이벤트는 넘긴다. */
+  private List<Map.Entry<Integer, CareerDefinition>> careerLife(String jobCode, long seed) {
+    UUID gameId = UUID.randomUUID();
+    SchedulingContext context = workingAs(jobCode);
+    List<Map.Entry<Integer, CareerDefinition>> seen = new ArrayList<>();
+    int from = JOB_DAY;
+    while (true) {
+      Optional<EventView> next = nextOf(gameId, context, from, EventKind.CAREER, seed);
+      if (next.isEmpty()) {
+        return seen;
+      }
+      EventView view = next.get();
+      seen.add(Map.entry(START_AGE + view.occursDay() / YEAR, careerOf(view)));
+      events.complete(gameId, view.eventId(), new Completion("HOLD", "HOLD", List.of()));
+      from = view.occursDay();
+    }
+  }
+
+  /** decisions.md 43번: 직업마다 장면이 다르고, 나이가 차면 그 나이의 장면이 온다. */
+  @Test
+  void 직장_장면은_그_직업과_나이에_맞는_것만_나온다() {
+    for (var job : content.jobs()) {
+      for (long seed = 1; seed <= 3; seed++) {
+        for (var entry : careerLife(job.code(), seed)) {
+          assertThat(entry.getValue().fits(job.code(), entry.getKey()))
+              .as("%s %d세 %s", job.code(), entry.getKey(), entry.getValue().code())
+              .isTrue();
+        }
+      }
+    }
+  }
+
+  @Test
+  void 대기업은_40대에_실적_압박이_50대에_권고사직이_자주_온다() {
+    int pressure40s = 0;
+    int all40s = 0;
+    int exit50s = 0;
+    int all50s = 0;
+    for (long seed = 1; seed <= 20; seed++) {
+      for (var entry : careerLife("bigcorp", seed)) {
+        int age = entry.getKey();
+        String code = entry.getValue().code();
+        if (age >= 40 && age <= 49) {
+          all40s++;
+          pressure40s += code.equals("big-pressure") ? 1 : 0;
+        } else if (age >= 50) {
+          all50s++;
+          exit50s += code.equals("big-exit") ? 1 : 0;
+        }
+        assertThat(code).as("대기업에는 공무원 장면이 없다").doesNotStartWith("cs-");
+      }
+    }
+    // 직전 장면은 다시 안 나오므로 많아야 절반 남짓이다. 그래도 그 나이대의 가장 흔한 장면이어야 한다.
+    assertThat(pressure40s * 3).isGreaterThan(all40s);
+    assertThat(exit50s * 3).isGreaterThan(all50s);
+  }
+
+  @Test
+  void 공무원에게는_구조조정이_오지_않는다() {
+    for (long seed = 1; seed <= 10; seed++) {
+      assertThat(careerLife("civil-servant", seed))
+          .extracting(e -> e.getValue().code())
+          .doesNotContain("layoff", "headhunt", "raise");
+    }
+  }
 
   /** fromDay부터 알림을 건너뛰며 kind의 선택형 이벤트가 PENDING으로 나올 때까지 진행한다. */
   /** 빚투 (decisions.md 39번): 든 종목이 12달 고점보다 30% 넘게 빠졌을 때만, 가장 많이 빠진 종목으로 묻는다. */

@@ -388,8 +388,13 @@ class JsonContentCatalog implements ContentCatalog {
     require(
         careers.stream().map(CareerDefinition::code).distinct().count() == careers.size(),
         "직장 장면 코드가 겹친다");
+    Set<String> jobCodes = jobs.stream().map(JobDefinition::code).collect(Collectors.toSet());
     for (CareerDefinition career : careers) {
       require(career.weight() > 0, "직장 장면의 가중치는 양수여야 한다: " + career.code());
+      require(jobCodes.containsAll(career.jobs()), "직장 장면이 알 수 없는 직업을 쓴다: " + career.code());
+      require(
+          career.minAge() == null || career.maxAge() == null || career.minAge() <= career.maxAge(),
+          "직장 장면의 나이 범위가 거꾸로다: " + career.code());
       require(
           career.options().size() >= 2 && career.options().size() <= 4,
           "직장 장면의 선택지는 2~4개여야 한다: " + career.code());
@@ -407,6 +412,14 @@ class JsonContentCatalog implements ContentCatalog {
               "직장 장면의 능력치 변화는 운을 뺀 능력치 코드여야 한다: " + where);
         }
       }
+    }
+    for (String job : jobCodes) {
+      // 연차·나이 조건에 다 걸려도 뽑을 장면이 남도록 직업마다 나이 제한 없는 장면이 하나는 있어야 한다.
+      require(
+          careers.stream()
+              .anyMatch(
+                  c -> c.forJob(job) && !c.movesJob() && c.minAge() == null && c.maxAge() == null),
+          "나이 제한 없는 직장 장면이 없는 직업: " + job);
     }
     require(
         phrases.jobRetry() != null

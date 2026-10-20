@@ -8,9 +8,35 @@ import java.util.Map;
  * 26번).
  *
  * @param minTenureYears 이 연차 이상일 때만 나온다
+ * @param jobs 이 장면이 나오는 직업 코드. 비어 있으면 모든 직업
+ * @param minAge 이 나이 이상일 때만 나온다. null이면 제한 없음
+ * @param maxAge 이 나이 이하일 때만 나온다. null이면 제한 없음
  */
 public record CareerDefinition(
-    String code, String title, String body, int weight, int minTenureYears, List<Option> options) {
+    String code,
+    String title,
+    String body,
+    int weight,
+    int minTenureYears,
+    List<String> jobs,
+    Integer minAge,
+    Integer maxAge,
+    List<Option> options) {
+
+  public CareerDefinition {
+    jobs = jobs == null ? List.of() : List.copyOf(jobs);
+  }
+
+  /** 이 직업·나이에 나올 수 있는 장면인가 (연차는 따로 본다). */
+  public boolean fits(String jobCode, int age) {
+    return (jobs.isEmpty() || jobs.contains(jobCode))
+        && (minAge == null || age >= minAge)
+        && (maxAge == null || age <= maxAge);
+  }
+
+  public boolean forJob(String jobCode) {
+    return jobs.isEmpty() || jobs.contains(jobCode);
+  }
 
   /** 장면 중 이직 제안(moveJob 선택지가 있는 것)은 지금보다 월급이 많은 직업이 있을 때만 나온다. */
   public boolean movesJob() {
@@ -21,6 +47,7 @@ public record CareerDefinition(
    * @param stat 성공 판정에 쓰는 능력치 코드. null이면 판정 없이 항상 success
    * @param baseBp 능력치 0일 때 성공 확률(만분율)
    * @param perPointBp 능력치 1점당 성공 확률 증가(만분율)
+   * @param perRaisePercentBp 지금 직장에서 쌓은 인상분(실적) 1%p당 성공 확률 증가(만분율). 깎였으면 그만큼 줄어든다
    * @param fail 판정에 떨어졌을 때. stat이 없으면 쓰지 않는다
    */
   public record Option(
@@ -29,6 +56,7 @@ public record CareerDefinition(
       String stat,
       Integer baseBp,
       Integer perPointBp,
+      Integer perRaisePercentBp,
       Effect success,
       Effect fail) {
     public Option {
@@ -36,6 +64,7 @@ public record CareerDefinition(
       fail = fail == null ? Effect.NONE : fail;
       baseBp = baseBp == null ? 0 : baseBp;
       perPointBp = perPointBp == null ? 0 : perPointBp;
+      perRaisePercentBp = perRaisePercentBp == null ? 0 : perRaisePercentBp;
     }
 
     public boolean rolls() {
