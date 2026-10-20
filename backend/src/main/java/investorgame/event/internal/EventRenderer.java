@@ -39,9 +39,13 @@ class EventRenderer {
             row.options().stream()
                 .map(
                     code ->
-                        ChoiceTicket.Job.WAIT.equals(code)
-                            ? new EventView.Option(code, content.jobWaitLabel())
-                            : jobOption(content.job(code)))
+                        switch (code) {
+                          case ChoiceTicket.Job.WAIT ->
+                              new EventView.Option(code, content.jobWaitLabel());
+                          case ChoiceTicket.Job.INVEST ->
+                              new EventView.Option(code, content.jobInvestLabel());
+                          default -> jobOption(content.job(code));
+                        })
                 .toList();
         yield view(row, text.title(), text.body(), null, null, options);
       }
@@ -104,14 +108,39 @@ class EventRenderer {
             withStock(shake.body(), stockName),
             null,
             null,
+            List.of(new EventView.Option("HOLD", "버틴다"), new EventView.Option("SELL", "판다")));
+      }
+      case HOUSING -> {
+        ContentCatalog.TextBlock text = content.housingText(row.definitionCode());
+        yield view(
+            row,
+            text.title(),
+            text.body(),
+            null,
+            null,
+            row.options().stream()
+                .map(code -> new EventView.Option(code, content.housingLabel(code)))
+                .toList());
+      }
+      case LEVERAGE -> {
+        ContentCatalog.LeverageText text = content.leverageText();
+        String stockName = content.stock(row.stockCode()).name();
+        String drop = String.valueOf(row.hiddenMagnitudeBp() / 100);
+        yield view(
+            row,
+            withStock(text.title(), stockName).replace("{drop}", drop),
+            withStock(text.body(), stockName).replace("{drop}", drop),
+            null,
+            null,
             List.of(
-                new EventView.Option("HOLD", "버틴다"), new EventView.Option("SELL", "판다")));
+                new EventView.Option(ChoiceTicket.Leverage.BORROW, text.borrowLabel()),
+                new EventView.Option(ChoiceTicket.Leverage.PASS, text.passLabel())));
       }
       case NOTICE -> throw new IllegalStateException("알림은 EventView가 아니라 Notice로 그린다");
     };
   }
 
-  /** 알림성 이벤트. 금액은 정의 그대로 넘기고 월급 비율 계산은 진행이 한다. */
+  /** 알림성 이벤트. 금액은 정의 그대로 넘기고 월급·순자산 비율 계산은 진행이 한다. */
   Notice notice(EventRow row) {
     NoticeDefinition definition = noticeDefinition(row.definitionCode());
     return new Notice(
@@ -121,7 +150,8 @@ class EventRenderer {
         definition.title(),
         definition.body(),
         definition.amount(),
-        definition.salaryPercent());
+        definition.salaryPercent(),
+        definition.assetPercent());
   }
 
   NoticeDefinition noticeDefinition(String code) {

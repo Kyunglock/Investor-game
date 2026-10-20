@@ -11,8 +11,10 @@ import investorgame.common.Phase;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.content.ContentCatalog;
 import investorgame.content.StockDefinition;
+import investorgame.content.TraitDefinition;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -29,6 +31,11 @@ class DefaultEventServiceTest {
   private static final int START_AGE = 15;
   private static final int END_DAY = (65 - START_AGE) * YEAR;
   private static final int JOB_DAY = (25 - START_AGE) * YEAR;
+
+  /** 주거 이벤트가 끼어들지 않는 상태: 내 집 포함 2채, 세 만기 없음. 주거 검사는 따로 한다. */
+  private static final HousingFacts SETTLED =
+      new HousingFacts("OWN", null, 2, true, false, null, 0);
+
   private static final HintProvider HINTS =
       (truth, seq) -> new Hint(HintDirection.NEUTRAL, HintStrength.MILD);
 
@@ -54,7 +61,10 @@ class DefaultEventServiceTest {
             false,
             null,
             0,
-            List.of());
+            List.of(),
+            false,
+            Map.of(),
+            SETTLED);
     EventView a = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
     EventView b = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
 
@@ -170,6 +180,55 @@ class DefaultEventServiceTest {
     assertThat(notices).isPositive();
   }
 
+  /** 무직이면 명절 보너스·연말정산이, 자녀가 없으면 학원·입학 알림이 나오지 않는다. */
+  @Test
+  void 직장과_자녀가_있어야_말이_되는_알림은_그때만_나온다() {
+    UUID gameId = UUID.randomUUID();
+    SchedulingContext jobless =
+        new SchedulingContext(
+            Phase.SAVING,
+            START_AGE,
+            "long",
+            "food",
+            null,
+            true,
+            null,
+            END_DAY,
+            null,
+            null,
+            JOB_DAY,
+            true,
+            false,
+            null,
+            0,
+            List.of(),
+            false,
+            Map.of(),
+            SETTLED);
+    HashSeededRandom random = new HashSeededRandom(2L);
+    int from = JOB_DAY;
+    int notices = 0;
+    for (int i = 0; i < 60; i++) {
+      var next = events.peekNextEventDay(gameId, jobless, from, random);
+      if (next.isEmpty()) {
+        break;
+      }
+      ScheduleResult result =
+          events.schedule(gameId, jobless, from, next.getAsInt(), random, HINTS);
+      result
+          .pending()
+          .ifPresent(
+              v -> events.complete(gameId, v.eventId(), new Completion("x", "x", List.of())));
+      if (result.notice().isPresent()) {
+        notices++;
+        assertThat(result.notice().get().code())
+            .isNotIn("bonus", "tax-refund", "academy", "school", "family-trip");
+      }
+      from = next.getAsInt();
+    }
+    assertThat(notices).isPositive();
+  }
+
   @Test
   void LIFE_선택은_판정_없이_수락_여부만_돌려준다() {
     UUID gameId = UUID.randomUUID();
@@ -197,7 +256,10 @@ class DefaultEventServiceTest {
         married,
         marriedDay,
         children,
-        List.of());
+        List.of(),
+        false,
+        Map.of(),
+        SETTLED);
   }
 
   /** 직장 체계 (decisions.md 26번): 직업이 있으면 직장 장면이, 실직 중이면 재취업 선택이 온다. */
@@ -228,10 +290,66 @@ class DefaultEventServiceTest {
             false,
             null,
             0,
-            List.of());
+            List.of(),
+            false,
+            Map.of(),
+            SETTLED);
     EventView rehire = firstOf(jobless, unemployed, JOB_DAY + 30, EventKind.JOB, 7L);
     assertThat(rehire.title()).isEqualTo(content.jobRehireText().title());
     assertThat(rehire.options()).extracting(EventView.Option::code).contains("WAIT");
+  }
+
+  @Test
+  void 직업_선택에는_언제나_전업투자자가_있고_전업투자자에게는_직업과_직장_이벤트가_없다() {
+    SchedulingContext jobless =
+        new SchedulingContext(
+            Phase.SAVING,
+            START_AGE,
+            "long",
+            "food",
+            null,
+            true,
+            null,
+            END_DAY,
+            null,
+            null,
+            JOB_DAY,
+            false,
+            false,
+            null,
+            0,
+            List.of(),
+            false,
+            Map.of(),
+            SETTLED);
+    EventView rehire = firstOf(UUID.randomUUID(), jobless, JOB_DAY + 30, EventKind.JOB, 7L);
+    assertThat(rehire.options())
+        .last()
+        .isEqualTo(new EventView.Option("INVEST", content.jobInvestLabel()));
+
+    SchedulingContext investor =
+        new SchedulingContext(
+            Phase.INVESTING,
+            START_AGE,
+            "long",
+            "food",
+            null,
+            true,
+            JOB_DAY,
+            END_DAY,
+            null,
+            null,
+            JOB_DAY,
+            false,
+            false,
+            null,
+            0,
+            List.of(),
+            true,
+            Map.of(),
+            SETTLED);
+    assertThat(nextOf(UUID.randomUUID(), investor, JOB_DAY, EventKind.JOB, 3L)).isEmpty();
+    assertThat(nextOf(UUID.randomUUID(), investor, JOB_DAY, EventKind.CAREER, 3L)).isEmpty();
   }
 
   @Test
@@ -254,10 +372,54 @@ class DefaultEventServiceTest {
             true,
             JOB_DAY + YEAR,
             0,
-            List.of());
+            List.of(),
+            false,
+            Map.of(),
+            SETTLED);
     int from = (60 - START_AGE) * YEAR;
     assertThat(nextOf(gameId, retired, from, EventKind.JOB, 3L)).isEmpty();
     assertThat(nextOf(UUID.randomUUID(), retired, from, EventKind.CAREER, 3L)).isEmpty();
+  }
+
+  @Test
+  void 직장이_배경인_일상_장면은_직장이_없으면_나오지_않는다() {
+    UUID gameId = UUID.randomUUID();
+    SchedulingContext retired =
+        new SchedulingContext(
+            Phase.INVESTING,
+            START_AGE,
+            "long",
+            "food",
+            JOB_DAY + 30,
+            true,
+            JOB_DAY + 30,
+            END_DAY,
+            JOB_DAY,
+            "office",
+            JOB_DAY,
+            true,
+            false,
+            null,
+            0,
+            List.of(),
+            false,
+            Map.of(),
+            SETTLED);
+    List<String> seen = new ArrayList<>();
+    int from = JOB_DAY;
+    for (Optional<EventView> trait = nextOf(gameId, retired, from, EventKind.TRAIT, 5L);
+        trait.isPresent();
+        trait = nextOf(gameId, retired, from, EventKind.TRAIT, 5L)) {
+      seen.add(trait.get().title());
+      events.complete(gameId, trait.get().eventId(), new Completion("x", "x", List.of()));
+      from = trait.get().occursDay();
+    }
+    assertThat(seen)
+        .containsExactlyInAnyOrderElementsOf(
+            content.adultTraits().stream()
+                .filter(t -> !t.job())
+                .map(TraitDefinition::title)
+                .toList());
   }
 
   private static String careerCode(EventView view) {
@@ -274,6 +436,126 @@ class DefaultEventServiceTest {
           "번아웃", "burnout");
 
   /** fromDay부터 알림을 건너뛰며 kind의 선택형 이벤트가 PENDING으로 나올 때까지 진행한다. */
+  /** 빚투 (decisions.md 39번): 든 종목이 12달 고점보다 30% 넘게 빠졌을 때만, 가장 많이 빠진 종목으로 묻는다. */
+  @Test
+  void 든_종목이_크게_빠지면_빚투를_묻는다() {
+    String fallen = content.stocks().get(0).code();
+    String other = content.stocks().get(1).code();
+    SchedulingContext calm = investing(List.of(fallen, other), Map.of(fallen, 2_900, other, 1_000));
+    assertThat(nextOf(UUID.randomUUID(), calm, JOB_DAY + 30, EventKind.LEVERAGE, 7L)).isEmpty();
+
+    SchedulingContext plunged =
+        investing(List.of(fallen, other), Map.of(fallen, 4_500, other, 3_200));
+    EventView ask = firstOf(UUID.randomUUID(), plunged, JOB_DAY + 30, EventKind.LEVERAGE, 7L);
+    assertThat(ask.stockCode()).isEqualTo(fallen);
+    assertThat(ask.title()).contains(content.stock(fallen).name()).contains("45%");
+    assertThat(ask.options()).extracting(EventView.Option::code).containsExactly("BORROW", "PASS");
+  }
+
+  /** 주거 설계 4절: 일을 시작하면 독립, 세 만기마다 연장·이사·매수, 결혼하면 "집 살까?". */
+  @Test
+  void 독립하면_세를_고르고_만기와_결혼_뒤에는_집을_묻는다() {
+    EventView moveOut =
+        firstOf(
+            UUID.randomUUID(), housed(HousingFacts.PARENTS, null), JOB_DAY, EventKind.HOUSING, 3L);
+    assertThat(moveOut.options())
+        .extracting(EventView.Option::code)
+        .containsExactly("MONTHLY", "VILLA", "VILLA_INSURED", "APT_JEONSE");
+
+    HousingFacts renting = new HousingFacts("APT_JEONSE", JOB_DAY + YEAR, 0, false, false, null, 0);
+    EventView leaseEnd =
+        firstOf(UUID.randomUUID(), housed(renting, null), JOB_DAY, EventKind.HOUSING, 3L);
+    assertThat(leaseEnd.occursDay()).isEqualTo(JOB_DAY + YEAR);
+    assertThat(leaseEnd.options())
+        .extracting(EventView.Option::code)
+        .startsWith("KEEP")
+        .contains("BUY_SEOUL", "BUY_GYEONGGI");
+
+    // 1주택이면 청약이 없고, 결혼·출산·집값 급등이 없으면 "집 살까?"도 없다.
+    HousingFacts settled = new HousingFacts("APT_JEONSE", null, 1, false, false, null, 0);
+    assertThat(nextOf(UUID.randomUUID(), housed(settled, null), JOB_DAY, EventKind.HOUSING, 3L))
+        .as("결혼·출산·집값 급등이 없으면 묻지 않는다")
+        .isEmpty();
+    EventView buy =
+        firstOf(UUID.randomUUID(), housed(settled, JOB_DAY + YEAR), JOB_DAY, EventKind.HOUSING, 3L);
+    assertThat(buy.occursDay()).isEqualTo(JOB_DAY + YEAR);
+    assertThat(buy.options())
+        .extracting(EventView.Option::code)
+        .contains("BUY_SEOUL", "GAP", "PASS");
+  }
+
+  /** 전세사기는 보증보험 없는 빌라 전세의 만기에만, 확률로 숨어 있다. */
+  @Test
+  void 전세사기는_보증보험_없는_빌라_만기에만_가끔_있다() {
+    int frauds = 0;
+    int insuredFrauds = 0;
+    for (long seed = 1; seed <= 200; seed++) {
+      HousingFacts villa = new HousingFacts("VILLA_JEONSE", JOB_DAY, 0, false, true, null, 0);
+      HousingFacts insured = new HousingFacts("VILLA_JEONSE", JOB_DAY, 0, false, false, null, 0);
+      if (fraudAt(villa, seed)) {
+        frauds++;
+      }
+      if (fraudAt(insured, seed)) {
+        insuredFrauds++;
+      }
+    }
+    assertThat(frauds).as("200번 중 7%%쯤").isBetween(3, 35);
+    assertThat(insuredFrauds).isZero();
+  }
+
+  private boolean fraudAt(HousingFacts facts, long seed) {
+    UUID gameId = UUID.randomUUID();
+    EventView leaseEnd = firstOf(gameId, housed(facts, null), JOB_DAY, EventKind.HOUSING, seed);
+    ChoiceTicket ticket = events.prepareChoice(gameId, leaseEnd.eventId(), "MONTHLY");
+    return ((ChoiceTicket.Housing) ticket.effect()).fraud();
+  }
+
+  private static SchedulingContext housed(HousingFacts facts, Integer marriedDay) {
+    return new SchedulingContext(
+        Phase.SAVING,
+        START_AGE,
+        "long",
+        "food",
+        JOB_DAY + 30,
+        true,
+        null,
+        END_DAY,
+        JOB_DAY,
+        "office",
+        JOB_DAY,
+        true,
+        marriedDay != null,
+        marriedDay,
+        0,
+        List.of(),
+        false,
+        Map.of(),
+        facts);
+  }
+
+  private static SchedulingContext investing(List<String> held, Map<String, Integer> drops) {
+    return new SchedulingContext(
+        Phase.INVESTING,
+        START_AGE,
+        "long",
+        "food",
+        JOB_DAY + 30,
+        true,
+        JOB_DAY + 30,
+        END_DAY,
+        JOB_DAY,
+        "office",
+        JOB_DAY,
+        false,
+        false,
+        null,
+        0,
+        held,
+        false,
+        drops,
+        SETTLED);
+  }
+
   /** 보유가 있으면 투자기에 흔들림이 오고, 흔들리는 종목은 보유 중 하나이며 선택지는 버틴다·판다다 (decisions.md 33번). */
   @Test
   void 보유_종목이_있으면_흔들림이_오고_선택지는_버틴다_판다다() {
@@ -295,7 +577,10 @@ class DefaultEventServiceTest {
             false,
             null,
             0,
-            List.of(held));
+            List.of(held),
+            false,
+            Map.of(),
+            SETTLED);
     EventView shake = firstOf(UUID.randomUUID(), holding, JOB_DAY + 30, EventKind.SHAKE, 7L);
 
     assertThat(shake.stockCode()).isEqualTo(held);

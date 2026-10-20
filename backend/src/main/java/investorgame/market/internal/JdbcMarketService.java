@@ -5,7 +5,11 @@ import investorgame.common.GameProperties;
 import investorgame.common.error.NotFoundException;
 import investorgame.common.random.SeededRandom;
 import investorgame.content.ContentCatalog;
+import investorgame.content.CrisisDefinition;
+import investorgame.content.HomeRegion;
 import investorgame.content.StockDefinition;
+import investorgame.market.HomeQuote;
+import investorgame.market.MarketCycle;
 import investorgame.market.MarketService;
 import investorgame.market.PricePoint;
 import investorgame.market.Quote;
@@ -75,6 +79,10 @@ class JdbcMarketService implements MarketService {
         recordHistory(gameId, stock.code(), 0, stock.basePrice());
       }
     }
+    for (HomeRegion region : content.homeRegions()) {
+      recordHome(gameId, region.code(), 0, region.basePrice(), false);
+    }
+    recordRate(gameId, 0, properties.mortgage().baseBp(), false);
   }
 
   @Override
@@ -82,15 +90,24 @@ class JdbcMarketService implements MarketService {
   public List<Quote> advanceTo(UUID gameId, int toDay, SeededRandom random) {
     int target = toDay / calendar.daysPerMonth();
     Map<String, Long> prices = prices(gameId);
+    MarketCycle cycle = cycle(random);
+    // 아파트·금리가 생기기 전에 시작한 판은 지금 달에 기준가로 시작한다.
+    int seedMonth = currentMonth(gameId);
+    for (HomeRegion region : content.homeRegions()) {
+      recordHome(gameId, region.code(), seedMonth, region.basePrice(), false);
+    }
+    recordRate(gameId, seedMonth, properties.mortgage().baseBp(), false);
     for (int month = currentMonth(gameId) + 1; month <= target; month++) {
-      prices = tick(gameId, month, prices, random.forKey("market", "month", month));
+      prices = tick(gameId, month, prices, cycle, random.forKey("market", "month", month));
+      // 주식과 다른 키를 써서 아파트·금리를 더해도 주가의 난수 순서가 바뀌지 않는다.
+      tickHomes(gameId, month, cycle, random.forKey("market", "home", month));
     }
     return quotes(gameId);
   }
 
   /** 한 달. 섹터 움직임을 코드순으로 먼저 전부 뽑고, 종목 움직임을 코드순으로 뽑는다 (순서 고정). */
   private Map<String, Long> tick(
-      UUID gameId, int month, Map<String, Long> prices, RandomGenerator rng) {
+      UUID gameId, int month, Map<String, Long> prices, MarketCycle cycle, RandomGenerator rng) {
     int sectorVol = properties.sectorVolatilityBp();
     Map<String, Integer> sectorMoves = new TreeMap<>();
     for (ContentCatalog.NamedCode sector :
@@ -105,12 +122,293 @@ class JdbcMarketService implements MarketService {
       int change =
           stock.driftBpPerYear() / MONTHS_PER_YEAR
               + sectorMoves.get(stock.sector())
-              + rng.nextInt(-vol, vol + 1);
+              + rng.nextInt(-vol, vol + 1)
+              + cycleBp(cycle, stock, month);
       long price = floor(prices.get(stock.code()) * (BP + change) / BP);
       setPrice(gameId, stock.code(), price, month);
       next.put(stock.code(), price);
     }
     return next;
+  }
+
+  /** 아파트 시세와 금리의 한 달. 시세 = 지난달 × (추세/12 + 잡음 + 위기 변동 × 갈래의 부동산 비율), 금리는 위기 가산 쪽으로 되돌아간다. */
+  private void tickHomes(UUID gameId, int month, MarketCycle cycle, RandomGenerator rng) {
+    int vol = properties.homes().volatilityBp();
+    int crisisBp = 0;
+    int rateTarget = properties.mortgage().baseBp();
+    for (MarketCycle.Crisis crisis : cycle.crises()) {
+      int realEstate = crisisDefinition(crisis.crisisCode()).realEstatePercent();
+      if (month >= crisis.startMonth() && month <= crisis.bottomMonth()) {
+        crisisBp -= crisis.fallBp() * realEstate / 100;
+        rateTarget += properties.mortgage().crisisBp();
+      } else if (month > crisis.bottomMonth() && month <= crisis.revealMonth()) {
+        crisisBp += crisis.recoveryBp() * realEstate / 100;
+        rateTarget += properties.mortgage().recoveryBp();
+      }
+    }
+    Map<String, Long> current = homePrices(gameId);
+    for (HomeRegion region : content.homeRegions()) {
+      int change =
+          region.driftBpPerYear() / MONTHS_PER_YEAR + rng.nextInt(-vol, vol + 1) + crisisBp;
+      recordHome(
+          gameId,
+          region.code(),
+          month,
+          floor(current.get(region.code()) * (BP + change) / BP),
+          true);
+    }
+    MarketProperties.Mortgage mortgage = properties.mortgage();
+    int rate = mortgageRateBp(gameId);
+    int next =
+        rate
+            + (rateTarget - rate) * mortgage.revertPercent() / 100
+            + rng.nextInt(-mortgage.noiseBp(), mortgage.noiseBp() + 1);
+    recordRate(gameId, month, Math.clamp(next, mortgage.minBp(), mortgage.maxBp()), true);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<HomeQuote> homeQuotes(UUID gameId) {
+    List<HomeQuote> quotes = new ArrayList<>();
+    for (HomeRegion region : content.homeRegions()) {
+      List<Long> history =
+          jdbc.sql(
+                  """
+                  SELECT price FROM market_home_history
+                  WHERE game_id = :gameId AND region = :region
+                  ORDER BY month DESC LIMIT 13
+                  """)
+              .param("gameId", gameId)
+              .param("region", region.code())
+              .query(Long.class)
+              .list()
+              .reversed();
+      if (history.isEmpty()) {
+        history = List.of(region.basePrice());
+      }
+      long price = history.getLast();
+      long yearAgo = history.getFirst();
+      quotes.add(
+          new HomeQuote(
+              region.code(),
+              price,
+              yearAgo <= 0 ? 0 : (int) ((price - yearAgo) * BP / yearAgo),
+              List.copyOf(
+                  history.subList(Math.max(0, history.size() - SPARK_MONTHS), history.size()))));
+    }
+    return quotes;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Map<String, Long> homePrices(UUID gameId) {
+    Map<String, Long> prices = new LinkedHashMap<>();
+    jdbc.sql(
+            """
+            SELECT DISTINCT ON (region) region, price FROM market_home_history
+            WHERE game_id = :gameId ORDER BY region, month DESC
+            """)
+        .param("gameId", gameId)
+        .query((rs, i) -> prices.put(rs.getString("region"), rs.getLong("price")))
+        .list();
+    Map<String, Long> ordered = new LinkedHashMap<>();
+    for (HomeRegion region : content.homeRegions()) {
+      // 아파트가 생기기 전에 시작해 아직 한 달도 지나지 않은 판은 기준가로 본다.
+      ordered.put(region.code(), prices.getOrDefault(region.code(), region.basePrice()));
+    }
+    return ordered;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public int mortgageRateBp(UUID gameId) {
+    return jdbc.sql(
+            "SELECT rate_bp FROM market_rate_history WHERE game_id = :gameId ORDER BY month DESC LIMIT 1")
+        .param("gameId", gameId)
+        .query(Integer.class)
+        .optional()
+        .orElse(properties.mortgage().baseBp());
+  }
+
+  private void recordHome(UUID gameId, String region, int month, long price, boolean overwrite) {
+    jdbc.sql(
+            """
+            INSERT INTO market_home_history (game_id, region, month, price)
+            VALUES (:gameId, :region, :month, :price)
+            ON CONFLICT (game_id, region, month) DO
+            """
+                + (overwrite ? " UPDATE SET price = EXCLUDED.price" : " NOTHING"))
+        .param("gameId", gameId)
+        .param("region", region)
+        .param("month", month)
+        .param("price", price)
+        .update();
+  }
+
+  private void recordRate(UUID gameId, int month, int rateBp, boolean overwrite) {
+    jdbc.sql(
+            """
+            INSERT INTO market_rate_history (game_id, month, rate_bp)
+            VALUES (:gameId, :month, :rate)
+            ON CONFLICT (game_id, month) DO
+            """
+                + (overwrite ? " UPDATE SET rate_bp = EXCLUDED.rate_bp" : " NOTHING"))
+        .param("gameId", gameId)
+        .param("month", month)
+        .param("rate", rateBp)
+        .update();
+  }
+
+  /** 위기 중인 달의 추가 변동. 빠지는 동안은 갈래의 섹터 비율만큼, 회복하는 동안은 모든 종목이 같이 오른다. 겹치면 더한다. */
+  private int cycleBp(MarketCycle cycle, StockDefinition stock, int month) {
+    int bp = 0;
+    for (MarketCycle.Crisis crisis : cycle.crises()) {
+      if (month >= crisis.startMonth() && month <= crisis.bottomMonth()) {
+        CrisisDefinition definition = crisisDefinition(crisis.crisisCode());
+        bp -= crisis.fallBp() * definition.sectorPercentOf(stock.sector()) / 100;
+      } else if (month > crisis.bottomMonth() && month <= crisis.revealMonth()) {
+        bp += crisis.recoveryBp();
+      }
+    }
+    return bp;
+  }
+
+  /**
+   * 경기 흐름 (decisions.md 38번). ("market","cycle") 키 하나에서 순서대로 뽑아 같은 판은 언제나 같다. 불안한 시기를 구간으로 나눠 하나씩
+   * 두고, 시기마다 전조 없는 위기인지 먼저 굴린 뒤, 아니면 전조를 흘리고 결과(대공황·불황·조정·아무 일 없음)를 따로 굴린다.
+   */
+  @Override
+  public MarketCycle cycle(SeededRandom random) {
+    MarketProperties.Cycle settings = properties.cycle();
+    RandomGenerator rng = random.forKey("market", "cycle");
+    List<CrisisDefinition> scenarios = content.crises();
+    int windows = between(rng, settings.windows());
+    int span = (settings.lastMonth() - settings.firstMonth() + 1) / windows;
+    List<MarketCycle.Omen> omens = new ArrayList<>();
+    List<MarketCycle.Crisis> crises = new ArrayList<>();
+    for (int w = 0; w < windows; w++) {
+      int start = settings.firstMonth() + w * span + rng.nextInt(span);
+      CrisisDefinition scenario = scenarios.get(rng.nextInt(scenarios.size()));
+      if (rng.nextInt(100) < settings.silentPercent()) {
+        MarketCycle.Severity severity =
+            rng.nextInt(100) < settings.silentDepressionPercent()
+                ? MarketCycle.Severity.DEPRESSION
+                : MarketCycle.Severity.RECESSION;
+        crises.add(crisis(rng, settings, scenario, severity, start, List.of()));
+        continue;
+      }
+      List<MarketCycle.Omen> told = omensBefore(rng, settings, scenario, start);
+      omens.addAll(told);
+      MarketCycle.Severity severity = outcome(rng, settings);
+      if (severity != null) {
+        crises.add(
+            crisis(
+                rng,
+                settings,
+                scenario,
+                severity,
+                start,
+                told.stream().map(MarketCycle.Omen::text).toList()));
+      }
+    }
+    omens.sort(Comparator.comparingInt(MarketCycle.Omen::month));
+    return new MarketCycle(List.copyOf(omens), List.copyOf(crises));
+  }
+
+  /** 위기 시작 전 lead 달 사이에 전조를 흩는다. 갈래의 전조와 공통 전조를 섞어, 문구만 보고는 어떤 위기인지(혹은 아무 일 없을지) 알 수 없게 한다. */
+  private List<MarketCycle.Omen> omensBefore(
+      RandomGenerator rng, MarketProperties.Cycle settings, CrisisDefinition scenario, int start) {
+    int count = between(rng, settings.omens());
+    int lead = between(rng, settings.omenLeadMonths());
+    List<String> pool = new ArrayList<>(scenario.omens());
+    List<String> common = new ArrayList<>(content.commonOmens());
+    List<MarketCycle.Omen> told = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      List<String> from = !common.isEmpty() && rng.nextInt(100) < 30 ? common : pool;
+      if (from.isEmpty()) {
+        from = pool.isEmpty() ? common : pool;
+      }
+      if (from.isEmpty()) {
+        break;
+      }
+      String text = from.remove(rng.nextInt(from.size()));
+      told.add(new MarketCycle.Omen(Math.max(1, start - 1 - rng.nextInt(lead)), text));
+    }
+    told.sort(Comparator.comparingInt(MarketCycle.Omen::month));
+    return told;
+  }
+
+  /** 전조 뒤의 결과. outcomePercent를 차례로 쌓아 굴리고, 어디에도 안 걸리면 아무 일 없이 지나간다(null). */
+  private static MarketCycle.Severity outcome(
+      RandomGenerator rng, MarketProperties.Cycle settings) {
+    int roll = rng.nextInt(100);
+    int acc = 0;
+    for (MarketCycle.Severity severity : MarketCycle.Severity.values()) {
+      acc += settings.outcomePercent().getOrDefault(severity.name().toLowerCase(), 0);
+      if (roll < acc) {
+        return severity;
+      }
+    }
+    return null;
+  }
+
+  private static MarketCycle.Crisis crisis(
+      RandomGenerator rng,
+      MarketProperties.Cycle settings,
+      CrisisDefinition scenario,
+      MarketCycle.Severity severity,
+      int start,
+      List<String> omens) {
+    MarketProperties.Shape shape = settings.shapeOf(severity.name().toLowerCase());
+    return new MarketCycle.Crisis(
+        scenario.code(),
+        severity,
+        start,
+        between(rng, shape.fallMonths()),
+        between(rng, shape.fallBp()),
+        between(rng, shape.recoveryMonths()),
+        between(rng, shape.recoveryBp()),
+        omens);
+  }
+
+  private static int between(RandomGenerator rng, MarketProperties.Range range) {
+    return range.min() + rng.nextInt(range.max() - range.min() + 1);
+  }
+
+  private CrisisDefinition crisisDefinition(String code) {
+    return content.crises().stream()
+        .filter(c -> c.code().equals(code))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("콘텐츠에 없는 위기 갈래: " + code));
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public int averageDropBp(UUID gameId, int fromMonth, int toMonth) {
+    List<Integer> drops =
+        jdbc.sql(
+                """
+                SELECT s.price AS start_price, MIN(h.price) AS low
+                FROM market_price_history s
+                JOIN market_price_history h
+                  ON h.game_id = s.game_id AND h.stock_code = s.stock_code
+                 AND h.month > :fromMonth AND h.month <= :toMonth
+                WHERE s.game_id = :gameId AND s.month = :fromMonth
+                GROUP BY s.stock_code, s.price
+                """)
+            .param("gameId", gameId)
+            .param("fromMonth", fromMonth)
+            .param("toMonth", toMonth)
+            .query(
+                (rs, i) ->
+                    (int)
+                        ((rs.getLong("start_price") - rs.getLong("low"))
+                            * BP
+                            / rs.getLong("start_price")))
+            .list();
+    return drops.isEmpty()
+        ? 0
+        : (int) drops.stream().mapToInt(Integer::intValue).average().orElse(0);
   }
 
   @Override

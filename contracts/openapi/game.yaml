@@ -87,6 +87,33 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/games/{gameId}/homes/{seq}/listing:
+    post:
+      operationId: listHome
+      summary: 가진 아파트를 매물로 내놓거나 거둔다
+      description: |
+        내놓아도 바로 팔리지 않는다. 다음 달부터 달마다 매수자가 나와야 팔린다(평소 25%, 집값이 빠질 땐 5%, 뜨거우면 45%).
+        대기 중인 선택형 이벤트가 있으면 먼저 선택해야 한다 (400).
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+        - name: seq
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ListingRequest' }
+      responses:
+        '200':
+          description: 판 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Game' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/games/{gameId}/stocks/{stockCode}/history:
     get:
       operationId: stockHistory
@@ -257,12 +284,63 @@ components:
       properties:
         code: { type: string }
         label: { type: string }
+        detail: { type: [string, 'null'], description: 이 선택에 드는 돈(주거 선택지만). 필요한 현금·대출·월 부담 }
+        blocked: { type: [string, 'null'], description: 고를 수 없는 이유(현금 부족·DSR 초과). 고를 수 있으면 null }
+    Housing:
+      type: object
+      description: 주거 (주거 설계). 총자산에는 집 시세 + 보증금 − 주담대 − 전세대출 − 세입자 보증금이 들어간다
+      required: [tenure, deposit, monthlyRent, jeonseLoan, insured, mortgageRateBp, monthlyCost, homes, quotes]
+      properties:
+        tenure: { type: string, enum: [PARENTS, MONTHLY, VILLA_JEONSE, APT_JEONSE, OWN] }
+        regionName: { type: [string, 'null'] }
+        deposit: { type: integer, format: int64, description: 지금 사는 집에 맡긴 보증금 }
+        monthlyRent: { type: integer, format: int64 }
+        jeonseLoan: { type: integer, format: int64 }
+        insured: { type: boolean, description: 전세보증보험 }
+        leaseEndAge: { type: [integer, 'null'], description: 세 만기 나이 }
+        mortgageRateBp: { type: integer, description: 지금 주담대 금리(연, 만분율) }
+        monthlyCost: { type: integer, format: int64, description: 한 달 주거비(월세 + 주담대 원리금 + 전세대출 이자 + 보증료) }
+        homes:
+          type: array
+          items: { $ref: '#/components/schemas/Home' }
+        quotes:
+          type: array
+          items: { $ref: '#/components/schemas/HomeQuote' }
+    Home:
+      type: object
+      required: [seq, regionName, price, purchasePrice, mortgage, monthlyPayment, residence, tenantDeposit, listed]
+      properties:
+        seq: { type: integer }
+        regionName: { type: string }
+        price: { type: integer, format: int64, description: 지금 시세 }
+        purchasePrice: { type: integer, format: int64 }
+        mortgage: { type: integer, format: int64 }
+        monthlyPayment: { type: integer, format: int64 }
+        residence: { type: boolean, description: 내가 사는 집. 아니면 세입자가 사는 갭투자 집 }
+        tenantDeposit: { type: integer, format: int64 }
+        listed: { type: boolean, description: 매물로 내놓아 매수자를 기다리는 중 }
+    HomeQuote:
+      type: object
+      required: [region, name, price, change12mBp, last12]
+      properties:
+        region: { type: string }
+        name: { type: string }
+        price: { type: integer, format: int64 }
+        change12mBp: { type: integer }
+        last12:
+          type: array
+          items: { type: integer, format: int64 }
+    ListingRequest:
+      type: object
+      required: [listed]
+      properties:
+        listed: { type: boolean }
     PendingEvent:
       type: object
       required: [eventId, kind, occursDay, sectorWide, title, body, options]
       properties:
         eventId: { type: string, format: uuid }
-        kind: { type: string, enum: [JOB, TRAIT, OFFER, LIFE, CAREER, NEWS, SHAKE] }
+        kind: { type: string, enum: [JOB, TRAIT, OFFER, LIFE, CAREER, NEWS, SHAKE, LEVERAGE, HOUSING] }
         occursDay: { type: integer }
         sectorCode: { type: [string, 'null'] }
         sectorName: { type: [string, 'null'] }
@@ -305,7 +383,7 @@ components:
         day: { type: integer, description: 사건이 일어난 게임 일수 }
         kind:
           type: string
-          enum: [BIRTH, TRAIT, JOB, JOB_WAIT, CAREER, STYLE, OFFER, NEWS, SHAKE, PRICE, GROWTH, TRADE, LIFE, MARRIAGE, CHILD, RETIRE, END]
+          enum: [BIRTH, TRAIT, JOB, JOB_WAIT, CAREER, STYLE, OFFER, NEWS, SHAKE, PRICE, GROWTH, TRADE, LIFE, MARRIAGE, CHILD, RETIRE, LEVERAGE, OMEN, CRISIS, HOUSING, HOME_SOLD, TENANT, END]
         payload:
           type: object
           additionalProperties: true
@@ -321,7 +399,7 @@ components:
     Game:
       type: object
       required:
-        [gameId, status, phase, day, startAge, endAge, daysPerYear, stats, initialStats, cash, totalAsset, initialAsset, invested, debt, holdings, market, household, log, yearly]
+        [gameId, status, phase, day, startAge, endAge, daysPerYear, stats, initialStats, cash, totalAsset, initialAsset, invested, debt, holdings, fullTimeInvestor, market, household, housing, log, yearly]
       properties:
         gameId: { type: string, format: uuid }
         status: { type: string, enum: [ACTIVE, ENDED] }
@@ -348,8 +426,10 @@ components:
           items: { $ref: '#/components/schemas/Holding' }
         market: { $ref: '#/components/schemas/Market' }
         household: { $ref: '#/components/schemas/Household' }
+        housing: { $ref: '#/components/schemas/Housing' }
         job:
           oneOf: [{ $ref: '#/components/schemas/Job' }, { type: 'null' }]
+        fullTimeInvestor: { type: boolean, description: 직업 대신 전업투자자를 골랐는가. 그러면 job은 언제나 null이다 }
         investmentStyle:
           oneOf: [{ $ref: '#/components/schemas/Named' }, { type: 'null' }]
         riskProfile:
@@ -403,7 +483,7 @@ components:
       type: object
       required: [kind, chosen, actual, deviations, growth]
       properties:
-        kind: { type: string, enum: [JOB, TRAIT, OFFER, LIFE, CAREER, NEWS, SHAKE, TRADE] }
+        kind: { type: string, enum: [JOB, TRAIT, OFFER, LIFE, CAREER, NEWS, SHAKE, LEVERAGE, HOUSING, TRADE] }
         chosen: { type: string, description: 사용자가 누른 선택 }
         actual: { type: string, description: 판정을 거친 실제 행동 }
         deviations:

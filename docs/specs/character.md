@@ -100,6 +100,7 @@ public record StatChange(String statCode, int expGained, int valueBefore, int va
 
 - `assignJob`은 직업이 없을 때(첫 취업 또는 실직 뒤)만 가능하다. 이미 있으면 오류를 던진다. 처음이면 `career_start_day`(처음 일을 시작한 날)도 이 날이 된다. 생활비는 진행이 이 날부터 내보낸다(실직 중에도) (decisions.md 26번).
 - `changeJob`(이직): 직업이 있을 때만. `job_start_day`를 그날로 바꿔 **연차를 0부터 다시 세고**, `salary_bonus_bp`를 시작 인상분으로 바꾼다. `career_start_day`는 그대로.
+- `becomeFullTimeInvestor`(전업투자자): 직업이 없을 때만. `full_time_investor_day`를 그날로, 처음이면 `career_start_day`도. 되돌릴 수 없고 이후 `assignJob`은 오류 (decisions.md 35번).
 - `quitJob`(실직): `job_code`·`job_start_day`를 null로, `salary_bonus_bp`를 0으로. 직업이 없으면 오류.
 - `addSalaryBonus`: 연봉 협상·승진의 인상분(만분율)을 누적한다. 직업이 없으면 오류.
 - `startDay`는 지금 직업을 시작한 게임 일수다. 연차 계산에 쓴다.

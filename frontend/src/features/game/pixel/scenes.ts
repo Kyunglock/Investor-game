@@ -1,4 +1,4 @@
-import type { Phase } from '../../../api/client'
+import type { Game, Phase } from '../../../api/client'
 import type { AgeStage } from './bodies'
 import type { PixelMap } from './sprite'
 
@@ -17,6 +17,7 @@ export type SceneKey =
 
 export interface Scene {
   map: PixelMap
+  /** {집}은 사는 곳(자산·가족에 따라 원룸에서 펜트하우스까지)으로, {활동}은 직장 여부에 따른 문구로 바꿔 보여 준다 (sceneCaption) */
   caption: string
   /** 캐릭터의 왼쪽 위 열과 발이 닿는 행 */
   anchor: { x: number; y: number }
@@ -42,6 +43,53 @@ export function sceneFor(stage: AgeStage, phase: Phase, hasJob: boolean): SceneK
     return 'street'
   }
   return phase === 'INVESTING' ? 'studio' : 'office'
+}
+
+/** 사는 곳. 실제로 고른 거주 형태를 따른다(주거 설계): 수십억이 있어도 월세를 고르면 월세다. */
+export function dwellingFor(home: {
+  tenure: Game['housing']['tenure']
+  regionName?: string | null
+  married: boolean
+  children: number
+}): string {
+  const family = home.married || home.children > 0
+  switch (home.tenure) {
+    case 'PARENTS':
+      return '부모님 집'
+    case 'MONTHLY':
+      return family ? '투룸 월세' : '원룸 월세'
+    case 'VILLA_JEONSE':
+      return '빌라 전세'
+    case 'APT_JEONSE':
+      return '아파트 전세'
+    case 'OWN':
+      return '내 집 (아파트)'
+  }
+}
+
+/** 장면 문구. 사는 곳을 채우고, 전업투자자에게는 "퇴근 후"가 아닌 문구를 쓴다. */
+export function sceneCaption(
+  key: SceneKey,
+  home: {
+    tenure: Game['housing']['tenure']
+    regionName?: string | null
+    married: boolean
+    children: number
+    fullTimeInvestor: boolean
+  },
+): string {
+  const activity =
+    key === 'studio' && home.fullTimeInvestor
+      ? '하루 종일 시세판을 보는 중'
+      : '퇴근 후 주식 앱을 켜는 중'
+  // 경기 아파트에 살면 서울이 아니다.
+  const inGyeonggi =
+    (home.tenure === 'OWN' || home.tenure === 'APT_JEONSE') &&
+    Boolean(home.regionName?.startsWith('경기'))
+  return SCENES[key].caption
+    .replace(/^서울 · \{집\}/, `${inGyeonggi ? '경기' : '서울'} · {집}`)
+    .replace('{집}', dwellingFor(home))
+    .replace('{활동}', activity)
 }
 
 // ---- 그리기 도구 ----
@@ -235,7 +283,7 @@ export const SCENES: Record<SceneKey, Scene> = {
     }),
   },
   studio: {
-    caption: '서울 · 원룸 · 퇴근 후 주식 앱을 켜는 중',
+    caption: '서울 · {집} · {활동}',
     anchor: { x: 36, y: 20 },
     map: build((c) => {
       room(c)
@@ -248,7 +296,7 @@ export const SCENES: Record<SceneKey, Scene> = {
     }),
   },
   'studio-middle': {
-    caption: '서울 · 원룸 · 오랜 투자를 이어 가는 중',
+    caption: '서울 · {집} · 오랜 투자를 이어 가는 중',
     anchor: { x: 36, y: 20 },
     map: build((c) => {
       room(c)
@@ -262,7 +310,7 @@ export const SCENES: Record<SceneKey, Scene> = {
     }),
   },
   'home-old': {
-    caption: '서울 · 집 · 창가에서 지난날을 돌아보는 중',
+    caption: '서울 · {집} · 창가에서 지난날을 돌아보는 중',
     anchor: { x: 28, y: 20 },
     map: build((c) => {
       room(c)

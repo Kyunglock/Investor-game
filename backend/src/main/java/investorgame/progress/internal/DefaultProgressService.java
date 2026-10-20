@@ -22,12 +22,15 @@ import investorgame.common.random.HashSeededRandom;
 import investorgame.common.random.SeededRandom;
 import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
+import investorgame.content.CrisisDefinition;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
 import investorgame.content.StockDefinition;
+import investorgame.content.TraitDefinition;
 import investorgame.event.ChoiceTicket;
 import investorgame.event.CompleteResult;
 import investorgame.event.Completion;
+import investorgame.event.EventKind;
 import investorgame.event.EventService;
 import investorgame.event.EventView;
 import investorgame.event.HintProvider;
@@ -36,6 +39,8 @@ import investorgame.event.ScheduleResult;
 import investorgame.event.SchedulingContext;
 import investorgame.household.HouseholdService;
 import investorgame.household.HouseholdView;
+import investorgame.housing.HousingService;
+import investorgame.market.MarketCycle;
 import investorgame.market.MarketService;
 import investorgame.market.Quote;
 import investorgame.market.ShockResult;
@@ -50,11 +55,14 @@ import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.Set;
 import java.util.UUID;
+import java.util.random.RandomGenerator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -66,6 +74,7 @@ import org.springframework.transaction.annotation.Transactional;
 class DefaultProgressService implements ProgressService {
 
   private static final long PERCENT = 100;
+  private static final String FULL_TIME_INVESTOR = "전업투자자";
   private static final int BP = 10_000;
   private static final String DEVIATION = "DEVIATION";
   private static final String TRAIT = "TRAIT";
@@ -91,6 +100,8 @@ class DefaultProgressService implements ProgressService {
   private final BehaviorService behavior;
   private final ResultService results;
   private final ContentCatalog content;
+  private final HousingService housing;
+  private final HousingFlow housingFlow;
   private final SecureRandom seeds = new SecureRandom();
 
   DefaultProgressService(
@@ -105,7 +116,9 @@ class DefaultProgressService implements ProgressService {
       EventService events,
       BehaviorService behavior,
       ResultService results,
-      ContentCatalog content) {
+      ContentCatalog content,
+      HousingService housing,
+      HousingFlow housingFlow) {
     this.games = games;
     this.logs = logs;
     this.properties = properties;
@@ -118,6 +131,8 @@ class DefaultProgressService implements ProgressService {
     this.behavior = behavior;
     this.results = results;
     this.content = content;
+    this.housing = housing;
+    this.housingFlow = housingFlow;
   }
 
   @Override
@@ -144,6 +159,7 @@ class DefaultProgressService implements ProgressService {
     AccountView account = assets.create(game.id(), random.forKey("asset", "create"));
     market.create(game.id());
     household.create(game.id());
+    housing.create(game.id());
     logs.append(
         game.id(),
         0,
@@ -229,12 +245,46 @@ class DefaultProgressService implements ProgressService {
           // 흔들림은 뉴스와 같은 판정·충격 흐름. "판다"는 전량이다 (decisions.md 33번).
           case ChoiceTicket.Shake shake ->
               resolveNews(game, ticket, pendingView.title(), null, random);
+          case ChoiceTicket.Leverage leverage -> resolveLeverage(game, ticket, leverage);
+          case ChoiceTicket.Housing home ->
+              housingFlow.resolve(
+                  gameId,
+                  ticket,
+                  home,
+                  household.get(gameId),
+                  monthlyIncome(characters.get(gameId), ticket.occursDay()),
+                  cheongyakPoints(game, characters.get(gameId), ticket.occursDay()),
+                  random);
           case ChoiceTicket.Job job -> {
             events.complete(gameId, eventId, new Completion(option, option, List.of()));
             if (job.isWait()) {
               // 더 나은 자리를 기다린다. 다음 직업 선택은 event.job.wait-days 뒤에 온다 (decisions.md 26번).
               logs.append(gameId, ticket.occursDay(), "JOB_WAIT", Map.of());
               yield simpleOutcome(ticket, "이번 제안은 넘기고 더 나은 자리를 기다리기로 했다.");
+            }
+            if (job.isInvest()) {
+              // 전업투자자: 월급이 없다는 것 말고는 직장인과 같다. 투자 시작 제안을 건너뛰고 바로 투자기로 간다 (decisions.md 35번).
+              boolean rehire = characters.get(gameId).careerStartDay() != null;
+              characters.becomeFullTimeInvestor(gameId, ticket.occursDay());
+              if (game.phase() != Phase.INVESTING) {
+                games.startInvesting(gameId, ticket.occursDay());
+              }
+              logs.append(
+                  gameId,
+                  ticket.occursDay(),
+                  "JOB",
+                  Map.of(
+                      "jobCode",
+                      ChoiceTicket.Job.INVEST,
+                      "jobTitle",
+                      FULL_TIME_INVESTOR,
+                      "monthlySalary",
+                      0,
+                      "rehire",
+                      rehire,
+                      "fullTimeInvestor",
+                      true));
+              yield simpleOutcome(ticket, "직장 대신 전업투자자의 길을 골랐다. 월급은 없고, 이제 뉴스가 들려온다.");
             }
             CharacterView before = characters.get(gameId);
             boolean rehire = before.careerStartDay() != null;
@@ -262,22 +312,43 @@ class DefaultProgressService implements ProgressService {
               resolveCareer(game, ticket, career, pendingView.title(), random);
           case ChoiceTicket.Trait trait -> {
             // 성장기의 선택은 판정으로 뒤집지 않지만 능력치를 조금 움직인다 (경제 개편 설계 4.3절).
+            // 결과가 갈리는 선택(빌려준 돈을 돌려받을지)은 판 시드로 굴려 돈·능력치·문구를 더한다 (decisions.md 41번).
+            TraitDefinition.Outcome result =
+                trait.outcomes().isEmpty()
+                    ? null
+                    : weightedOutcome(
+                        trait.outcomes(), random.forKey("progress", "trait-outcome", ticket.seq()));
+            Map<String, Integer> statDeltas = new HashMap<>(trait.statDeltas());
+            long amount = trait.amount();
+            if (result != null) {
+              result.statDeltas().forEach((k, v) -> statDeltas.merge(k, v, Integer::sum));
+              amount += result.amount();
+            }
+            if (amount > 0) {
+              assets.credit(gameId, WINDFALL, amount, ticket.occursDay());
+            } else if (amount < 0) {
+              assets.spend(gameId, LIFE_COST, -amount, ticket.occursDay(), eventId);
+            }
             List<StatChange> moved =
                 characters.recordTraitChoice(
-                    gameId, trait.traitDeltas(), trait.statDeltas(), ticket.occursDay());
-            CompleteResult result =
+                    gameId, trait.traitDeltas(), statDeltas, ticket.occursDay());
+            CompleteResult completed =
                 events.complete(gameId, eventId, new Completion(option, option, List.of()));
-            logs.append(
-                gameId,
-                ticket.occursDay(),
-                "TRAIT",
-                Map.of(
-                    "eventTitle", pendingView.title(),
-                    "optionCode", option,
-                    "optionLabel", optionLabel));
+            Map<String, Object> traitPayload = new HashMap<>();
+            traitPayload.put("eventTitle", pendingView.title());
+            traitPayload.put("optionCode", option);
+            traitPayload.put("optionLabel", optionLabel);
+            if (result != null) {
+              traitPayload.put("result", result.note());
+            }
+            if (amount != 0) {
+              traitPayload.put("amount", amount);
+            }
+            logs.append(gameId, ticket.occursDay(), "TRAIT", traitPayload);
             List<ChoiceOutcome.Growth> growth = logGrowth(gameId, ticket.occursDay(), moved, TRAIT);
-            if (!result.traitsComplete()) {
-              yield simpleOutcome(ticket, trait.note(), growth);
+            String note = result == null ? trait.note() : trait.note() + " " + result.note();
+            if (!completed.traitsComplete()) {
+              yield simpleOutcome(ticket, note, growth);
             }
             TraitResult traits =
                 characters.finalizeTraits(
@@ -583,6 +654,17 @@ class DefaultProgressService implements ProgressService {
 
   @Override
   @Transactional
+  public GameView listHome(UUID sessionId, UUID gameId, int seq, boolean listed) {
+    GameRow game = lock(sessionId, gameId);
+    if (events.pending(gameId).isPresent()) {
+      throw new InvalidRequestException("먼저 선택을 해야 한다");
+    }
+    housingFlow.setListed(gameId, seq, listed, game.lastReportedDay());
+    return view(game);
+  }
+
+  @Override
+  @Transactional
   public ChoiceOutcome trade(
       UUID sessionId, UUID gameId, String stockCode, Action side, long quantity) {
     GameRow game = lock(sessionId, gameId);
@@ -739,6 +821,75 @@ class DefaultProgressService implements ProgressService {
     return named.stream().map(ContentCatalog.NamedCode::code).toList();
   }
 
+  /**
+   * 빚투 (decisions.md 39번). 고르면 총자산의 leverage-loan-bp만큼 대출받아 그 종목을 산다. 판정은 없다: 바닥이었는지는 그 뒤 시장이 정한다.
+   * 빚에는 다달이 이자가 붙고 수입이 들어오면 먼저 갚는다.
+   */
+  private ChoiceOutcome.Outcome resolveLeverage(
+      GameRow game, ChoiceTicket ticket, ChoiceTicket.Leverage leverage) {
+    UUID gameId = game.id();
+    String option = ticket.optionCode();
+    events.complete(gameId, ticket.eventId(), new Completion(option, option, List.of()));
+    String stockName = content.stock(ticket.stockCode()).name();
+    Map<String, Long> prices = market.prices(gameId);
+    long price = prices.get(ticket.stockCode());
+    long loan =
+        leverage.borrow() ? Math.max(0, netWorth(gameId)) * properties.leverageLoanBp() / BP : 0;
+    long quantity = loan / price;
+    ChoiceOutcome.Trade trade = null;
+    String message;
+    if (quantity > 0) {
+      assets.borrow(gameId, quantity * price, ticket.occursDay(), ticket.eventId());
+      trade =
+          tradeView(
+              assets.buy(
+                  gameId,
+                  ticket.stockCode(),
+                  quantity,
+                  price,
+                  ticket.occursDay(),
+                  ticket.eventId()));
+      message =
+          "%s원을 빌려 %s %,d주를 더 샀다. 매달 이자가 붙는다. 바닥이었는지는 아무도 모른다."
+              .formatted(String.format("%,d", quantity * price), stockName, quantity);
+    } else if (leverage.borrow()) {
+      message = "빌릴 수 있는 돈으로는 한 주도 살 수 없었다.";
+    } else {
+      message = "빚은 지지 않기로 했다.";
+    }
+    logs.append(
+        gameId,
+        ticket.occursDay(),
+        "LEVERAGE",
+        Map.of(
+            "stockCode",
+            ticket.stockCode(),
+            "stockName",
+            stockName,
+            "dropBp",
+            ticket.magnitudeBp(),
+            "borrowed",
+            quantity > 0,
+            "loan",
+            quantity * price,
+            "quantity",
+            quantity));
+    return new ChoiceOutcome.Outcome(
+        ticket.kind().name(), option, option, List.of(), trade, null, List.of(), message);
+  }
+
+  private static TraitDefinition.Outcome weightedOutcome(
+      List<TraitDefinition.Outcome> outcomes, RandomGenerator rng) {
+    int roll = rng.nextInt(outcomes.stream().mapToInt(TraitDefinition.Outcome::weight).sum());
+    for (TraitDefinition.Outcome outcome : outcomes) {
+      roll -= outcome.weight();
+      if (roll < 0) {
+        return outcome;
+      }
+    }
+    return outcomes.getLast();
+  }
+
   private static ChoiceOutcome.Outcome simpleOutcome(ChoiceTicket ticket, String message) {
     return simpleOutcome(ticket, message, List.of());
   }
@@ -760,8 +911,8 @@ class DefaultProgressService implements ProgressService {
 
   /**
    * (fromExclusive, toInclusive] 안의 매월 1일마다: 시장 → 월급·배우자 소득(은퇴 달이면 퇴직금, 그 뒤 달은 연금) → 생활비 → 이자 → 월말
-   * 총자산(연 경계면 연간 자산). 생활비는 직업이 생긴 뒤부터 나간다. 정산 뒤 총자산이 0 아래면 그 달에 파산이다: 그 날을 돌려주고 멈춘다
-   * (decisions.md 27번).
+   * 총자산(연 경계면 연간 자산). 생활비는 직업이 생긴 뒤부터 나간다. 정산 뒤 총자산이 0 아래면 그 달에 파산이다: 그 날을 돌려주고 멈춘다 (decisions.md
+   * 27번).
    */
   private OptionalInt processMonths(GameRow game, int fromExclusive, int toInclusive) {
     UUID gameId = game.id();
@@ -769,10 +920,12 @@ class DefaultProgressService implements ProgressService {
     SeededRandom random = new HashSeededRandom(game.seed());
     CharacterView character = characters.get(gameId);
     JobDefinition job = character.jobCode() == null ? null : content.job(character.jobCode());
+    MarketCycle cycle = market.cycle(random);
 
     for (int m = fromExclusive / month + 1; m * month <= toInclusive; m++) {
       int day = m * month;
       market.advanceTo(gameId, day, random);
+      recordCycle(game, cycle, m, day);
       // 생활비는 처음 일을 시작한 뒤부터 나간다(실직 중에도). 월급은 지금 직업이 있을 때만 (decisions.md 26번).
       boolean independent = character.careerStartDay() != null && day > character.careerStartDay();
       boolean working = job != null && day > character.jobStartDay();
@@ -802,9 +955,10 @@ class DefaultProgressService implements ProgressService {
         }
         assets.spend(gameId, EXPENSE, household.monthlyExpense(gameId, day), day, null);
       }
+      // 월세·주담대 원리금·전세대출 이자, 갭투자 세입자 갱신, 매물 매수자 (주거 설계).
+      housingFlow.month(gameId, m, day, random);
       assets.accrueInterest(gameId, day);
-      Map<String, Long> prices = market.prices(gameId);
-      long total = assets.totalAsset(gameId, prices);
+      long total = netWorth(gameId);
       logs.upsertMonth(gameId, m, total);
       if (day % calendar.daysPerYear() == 0) {
         logs.upsertYear(
@@ -833,6 +987,41 @@ class DefaultProgressService implements ProgressService {
     return character.jobStartDay() == null
         ? 0
         : Math.max(0, day - character.jobStartDay()) / calendar.daysPerYear();
+  }
+
+  /**
+   * 경기 흐름을 기록한다 (decisions.md 38번). 전조는 그 달에 흘러나온 대로 남기지만 무엇의 전조인지는 말하지 않는다. 위기는 회복까지 끝난 달에야 "돌아보니
+   * 그때가 대공황(불황)이었다"고 남긴다. 조정과 아무 일 없이 지나간 시기는 돌아볼 거리가 없어 남기지 않는다.
+   */
+  private void recordCycle(GameRow game, MarketCycle cycle, int month, int day) {
+    UUID gameId = game.id();
+    for (MarketCycle.Omen omen : cycle.omens()) {
+      if (omen.month() == month) {
+        logs.append(gameId, day, "OMEN", Map.of("text", omen.text()));
+      }
+    }
+    int perMonth = calendar.daysPerMonth();
+    for (MarketCycle.Crisis crisis : cycle.crises()) {
+      if (crisis.severity() == MarketCycle.Severity.CORRECTION || crisis.revealMonth() != month) {
+        continue;
+      }
+      CrisisDefinition definition =
+          content.crises().stream()
+              .filter(c -> c.code().equals(crisis.crisisCode()))
+              .findFirst()
+              .orElseThrow();
+      Map<String, Object> payload = new LinkedHashMap<>();
+      payload.put("name", definition.name());
+      payload.put("model", definition.model());
+      payload.put("severity", crisis.severity().name());
+      payload.put("startAge", ageAt(game, crisis.startMonth() * perMonth));
+      payload.put("bottomAge", ageAt(game, crisis.bottomMonth() * perMonth));
+      payload.put("endAge", ageAt(game, day));
+      payload.put(
+          "dropBp", market.averageDropBp(gameId, crisis.startMonth() - 1, crisis.revealMonth()));
+      payload.put("omens", crisis.omens());
+      logs.append(gameId, day, "CRISIS", payload);
+    }
   }
 
   private int ageAt(GameRow game, int day) {
@@ -864,6 +1053,10 @@ class DefaultProgressService implements ProgressService {
               * notice.salaryPercent()
               / PERCENT;
     }
+    if (notice.assetPercent() > 0) {
+      long scaled = netWorth(gameId) * notice.assetPercent() / PERCENT;
+      amount = -Math.max(-amount, scaled);
+    }
     if (amount > 0) {
       assets.credit(gameId, WINDFALL, amount, notice.occursDay());
     } else if (amount < 0) {
@@ -893,7 +1086,7 @@ class DefaultProgressService implements ProgressService {
     OffsetDateTime endedAt = games.now();
     games.end(game.id(), endedAt);
     AccountView account = assets.get(game.id());
-    long finalAsset = assets.totalAsset(game.id(), market.prices(game.id()));
+    long finalAsset = netWorth(game.id());
     results.save(
         new GameResult(
             game.id(),
@@ -963,7 +1156,24 @@ class DefaultProgressService implements ProgressService {
         home.married(),
         home.marriedDay(),
         home.childBirthDays().size(),
-        assets.get(game.id()).holdings().keySet().stream().sorted().toList());
+        assets.get(game.id()).holdings().keySet().stream().sorted().toList(),
+        character.fullTimeInvestorDay() != null,
+        heldDropBp(game.id()),
+        housingFlow.facts(game.id(), home));
+  }
+
+  /** 보유 종목별 최근 12달 고점 대비 낙폭(만분율). 빚투 제안의 근거다 (decisions.md 39번). */
+  private Map<String, Integer> heldDropBp(UUID gameId) {
+    Set<String> held = assets.get(gameId).holdings().keySet();
+    Map<String, Integer> drops = new HashMap<>();
+    for (Quote quote : market.quotes(gameId)) {
+      if (!held.contains(quote.stockCode())) {
+        continue;
+      }
+      long high = quote.last12().stream().mapToLong(Long::longValue).max().orElse(quote.price());
+      drops.put(quote.stockCode(), high <= 0 ? 0 : (int) ((high - quote.price()) * BP / high));
+    }
+    return drops;
   }
 
   // ---- 화면용 상태 ----
@@ -1018,13 +1228,14 @@ class DefaultProgressService implements ProgressService {
         character.stats(),
         character.initialStats(),
         account.cash(),
-        account.cash() + invested - account.debt(),
+        account.cash() + invested - account.debt() + housingFlow.equity(gameId),
         account.initialCash(),
         invested,
         account.debt(),
         logs.findMonthTotal(gameId, month - 1).stream().boxed().findFirst().orElse(null),
         holdings,
         job(character, game.lastReportedDay()),
+        character.fullTimeInvestorDay() != null,
         character.investmentStyle() == null
             ? null
             : new GameView.Named(
@@ -1044,7 +1255,8 @@ class DefaultProgressService implements ProgressService {
         character.investorType() == null ? null : investorTypeView(character.investorType()),
         new GameView.Market(month, quotes.stream().map(this::quoteView).toList()),
         householdView(game, character),
-        pending.map(e -> pendingView(e, quoteByCode)).orElse(null),
+        housingFlow.view(gameId, game.startAge()),
+        pending.map(e -> pendingView(game, character, e, quoteByCode)).orElse(null),
         nextEventDay,
         ended ? results.find(gameId).map(DefaultProgressService::resultView).orElse(null) : null,
         logs.findAll(gameId),
@@ -1111,7 +1323,8 @@ class DefaultProgressService implements ProgressService {
         tenureYears(character, day));
   }
 
-  private GameView.PendingEvent pendingView(EventView event, Map<String, Quote> quotes) {
+  private GameView.PendingEvent pendingView(
+      GameRow game, CharacterView character, EventView event, Map<String, Quote> quotes) {
     String stockName = event.stockCode() == null ? null : content.stock(event.stockCode()).name();
     Quote quote = event.stockCode() == null ? null : quotes.get(event.stockCode());
     return new GameView.PendingEvent(
@@ -1128,7 +1341,61 @@ class DefaultProgressService implements ProgressService {
         event.body(),
         event.hintText(),
         event.swayText(),
-        event.options().stream().map(o -> new GameView.Option(o.code(), o.label())).toList());
+        options(game, character, event));
+  }
+
+  /** 주거 선택지에는 드는 돈과 고를 수 없는 이유를 붙인다. 전세사기는 고른 뒤에야 드러나므로 여기서는 모른 채 계산한다. */
+  private List<GameView.Option> options(GameRow game, CharacterView character, EventView event) {
+    if (event.kind() != EventKind.HOUSING) {
+      return event.options().stream()
+          .map(o -> new GameView.Option(o.code(), o.label(), null, null))
+          .toList();
+    }
+    List<HousingFlow.Plan> plans =
+        housingFlow.plans(
+            game.id(),
+            event.options().stream().map(EventView.Option::code).toList(),
+            false,
+            household.get(game.id()),
+            monthlyIncome(character, event.occursDay()),
+            cheongyakPoints(game, character, event.occursDay()),
+            event.occursDay());
+    List<GameView.Option> options = new ArrayList<>();
+    for (int i = 0; i < plans.size(); i++) {
+      EventView.Option option = event.options().get(i);
+      options.add(
+          new GameView.Option(
+              option.code(), option.label(), plans.get(i).detail(), plans.get(i).blocked()));
+    }
+    return options;
+  }
+
+  private int cheongyakPoints(GameRow game, CharacterView character, int day) {
+    return HousingFlow.cheongyakPoints(
+        game.startAge(),
+        character.careerStartDay(),
+        household.get(game.id()),
+        day,
+        calendar.daysPerYear());
+  }
+
+  /** 대출 심사(DSR)에 쓰는 월 소득: 월급(은퇴 전) + 배우자 소득. */
+  private long monthlyIncome(CharacterView character, int day) {
+    UUID gameId = character.gameId();
+    boolean retired = household.get(gameId).retiredDay() != null;
+    long salary =
+        character.jobCode() == null || retired
+            ? 0
+            : monthlySalary(
+                content.job(character.jobCode()),
+                tenureYears(character, day),
+                character.salaryBonusBp());
+    return salary + household.spouseIncome(gameId, day);
+  }
+
+  /** 총자산: 현금 + 주식 평가액 − 빚 + 집 시세 + 보증금 − 주담대 − 전세대출 − 세입자 보증금. 파산은 이 값으로 가린다. */
+  private long netWorth(UUID gameId) {
+    return assets.totalAsset(gameId, market.prices(gameId)) + housingFlow.equity(gameId);
   }
 
   private static GameView.Result resultView(GameResult result) {

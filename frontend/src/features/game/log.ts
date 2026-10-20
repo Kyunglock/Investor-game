@@ -35,7 +35,7 @@ export interface LogLine {
   age: number
   tone: LogTone
   text: string
-  pill?: '탄생' | '제안' | '직장'
+  pill?: '탄생' | '제안' | '직장' | '세상' | '집'
 }
 
 type GameInfo = Pick<Game, 'startAge' | 'daysPerYear' | 'initialStats'> &
@@ -69,18 +69,21 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       }
     }
     case 'TRAIT':
+      // 결과가 갈리는 선택(빌려준 돈)은 어떻게 됐는지 덧붙인다 (decisions.md 41번).
       return {
         ...base,
         tone: 'decision',
-        text: `${str(p.eventTitle)} · 결정: ${str(p.optionLabel)}`,
+        text: `${str(p.eventTitle)} · 결정: ${str(p.optionLabel)}${p.result ? ` → ${str(p.result)}` : ''}`,
       }
     case 'JOB':
       return {
         ...base,
         tone: 'neutral',
-        text: p.rehire
-          ? `${str(p.jobTitle)}(으)로 다시 취직했다. 월급 ${won(num(p.monthlySalary))}.`
-          : `${str(p.jobTitle)}에 취직했다. 첫 월급 ${won(num(p.monthlySalary))}.`,
+        text: p.fullTimeInvestor
+          ? '직장 대신 전업투자자가 됐다. 월급은 없다.'
+          : p.rehire
+            ? `${str(p.jobTitle)}(으)로 다시 취직했다. 월급 ${won(num(p.monthlySalary))}.`
+            : `${str(p.jobTitle)}에 취직했다. 첫 월급 ${won(num(p.monthlySalary))}.`,
       }
     case 'JOB_WAIT':
       return { ...base, tone: 'decision', text: '더 나은 자리를 기다리기로 했다.' }
@@ -193,6 +196,74 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
         tone: 'life',
         text: `${str(p.title)} · ${signedWon(num(p.amount))}`,
       }
+    case 'LEVERAGE':
+      return {
+        ...base,
+        tone: p.borrowed ? 'flipped' : 'decision',
+        text: p.borrowed
+          ? `${str(p.stockName)}이(가) ${percent(num(p.dropBp))} 빠졌을 때 ${won(num(p.loan))}을 빌려 ${num(p.quantity).toLocaleString('ko-KR')}주를 더 샀다 (빚투).`
+          : `${str(p.stockName)}이(가) ${percent(num(p.dropBp))} 빠졌지만 빚은 지지 않았다.`,
+      }
+    case 'HOUSING': {
+      // 주거 선택 (주거 설계 4절). 전세사기는 고른 뒤에 드러난다.
+      const lost = num(p.lost)
+      const head = p.fraud ? `전세사기를 당했다. 보증금 ${won(lost)}을 돌려받지 못했다. ` : ''
+      const option = str(p.option)
+      if (option === 'APPLY') {
+        // 청약 (decisions.md 42번): 떨어짐 / 당첨됐지만 돈이 없어 포기 / 당첨돼 분양가로 삼.
+        const text = !p.won
+          ? `청약에 떨어졌다 (가점 ${num(p.points)}점).`
+          : p.bought
+            ? `청약에 당첨됐다 (가점 ${num(p.points)}점)! ${str(p.regionName)}를 분양가 ${won(num(p.price))}에 샀다.`
+            : `청약에 당첨됐지만 계약금이 모자라 포기했다 (가점 ${num(p.points)}점).`
+        return { ...base, tone: p.bought ? 'growth' : 'life', pill: '집', text }
+      }
+      const what =
+        option === 'PASS'
+          ? '집은 아직 사지 않기로 했다.'
+          : num(p.price) > 0
+            ? `${str(p.regionName)}를 ${won(num(p.price))}에 샀다${num(p.mortgage) > 0 ? ` (주담대 ${won(num(p.mortgage))})` : ''}.`
+            : `${str(p.label)} · 보증금 ${won(num(p.deposit))}${num(p.monthlyRent) > 0 ? `, 월세 ${won(num(p.monthlyRent))}` : ''}${num(p.jeonseLoan) > 0 ? `, 전세대출 ${won(num(p.jeonseLoan))}` : ''}.`
+      return { ...base, tone: p.fraud ? 'flipped' : 'life', pill: '집', text: `${head}${what}` }
+    }
+    case 'HOME_SOLD': {
+      const gain = num(p.price) - num(p.purchasePrice)
+      return {
+        ...base,
+        tone: 'life',
+        pill: '집',
+        text: `${str(p.regionName)}가 ${won(num(p.price))}에 팔렸다 (산 값 ${won(num(p.purchasePrice))}, ${signedWon(gain)}).${p.residence ? ' 살 곳을 새로 구해야 한다.' : ''}`,
+      }
+    }
+    case 'TENANT': {
+      const diff = num(p.after) - num(p.before)
+      return {
+        ...base,
+        tone: diff < 0 ? 'decline' : 'life',
+        pill: '집',
+        text:
+          diff < 0
+            ? `${str(p.regionName)} 세입자가 바뀌었다. 전세가가 내려 ${won(-diff)}을 돌려줬다 (역전세).`
+            : `${str(p.regionName)} 세입자가 바뀌었다. 전세가가 올라 보증금 ${won(diff)}을 더 받았다.`,
+      }
+    }
+    case 'OMEN':
+      // 전조는 들린 대로만. 무엇의 전조인지, 정말 전조였는지는 지나 봐야 안다 (decisions.md 38번).
+      return { ...base, tone: 'neutral', pill: '세상', text: str(p.text) }
+    case 'CRISIS': {
+      const kind = p.severity === 'DEPRESSION' ? '대공황' : '불황'
+      const omens = Array.isArray(p.omens) ? (p.omens as unknown[]).map(str) : []
+      const told =
+        omens.length > 0
+          ? ` 돌이켜 보면 전조가 있었다: ${omens.map((o) => `"${o}"`).join(' ')}`
+          : ' 아무 전조도 없이 왔다.'
+      return {
+        ...base,
+        tone: 'decline',
+        pill: '세상',
+        text: `돌아보니 ${num(p.startAge)}~${num(p.endAge)}세의 그 시절은 ${str(p.name)}, ${kind}이었다. 주가는 평균 ${percent(num(p.dropBp))} 빠졌다가 회복했다 (${str(p.model)}을 닮았다).${told}`,
+      }
+    }
     case 'MARRIAGE':
       return { ...base, tone: 'life', text: `결혼했다. 결혼 비용 ${won(num(p.cost))}.` }
     case 'CHILD':

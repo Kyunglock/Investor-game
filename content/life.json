@@ -15,11 +15,14 @@
     {
       "code": "condolence",
       "title": "경조사비",
-      "body": "친구 결혼식과 친척 장례가 한 달에 겹쳤다.",
+      "body": "친구 결혼식과 친척 장례가 한 달에 겹쳤다. 축의금·부의금 봉투만 다섯 개.",
       "amount": -300000,
       "salaryPercent": 0,
+      "assetPercent": 0,
       "weight": 10,
-      "requiresMarried": false
+      "requiresMarried": false,
+      "requiresJob": false,
+      "requiresChildren": false
     },
     {
       "code": "hospital",
@@ -27,8 +30,11 @@
       "body": "건강 검진에서 재검이 나왔다. 다행히 큰 병은 아니었다.",
       "amount": -1500000,
       "salaryPercent": 0,
+      "assetPercent": 0,
       "weight": 6,
-      "requiresMarried": false
+      "requiresMarried": false,
+      "requiresJob": false,
+      "requiresChildren": false
     },
     {
       "code": "car-repair",
@@ -36,26 +42,23 @@
       "body": "주차장에서 긁혔다. 보험 처리하면 할증이 붙는다.",
       "amount": -800000,
       "salaryPercent": 0,
-      "weight": 8,
-      "requiresMarried": false
+      "assetPercent": 0,
+      "weight": 5,
+      "requiresMarried": false,
+      "requiresJob": false,
+      "requiresChildren": false
     },
     {
-      "code": "moving",
-      "title": "이사",
-      "body": "집주인이 전세금을 올려 달랬다. 결국 이사했다.",
-      "amount": -2000000,
+      "code": "holiday",
+      "title": "명절 귀성",
+      "body": "설 연휴, 부모님 댁에 내려갔다. 용돈 봉투에 선물, 기름값까지.",
+      "amount": -600000,
       "salaryPercent": 0,
-      "weight": 4,
-      "requiresMarried": false
-    },
-    {
-      "code": "parents",
-      "title": "부모님 용돈",
-      "body": "명절에 봉투를 두 개 준비했다.",
-      "amount": -500000,
-      "salaryPercent": 0,
+      "assetPercent": 0,
       "weight": 8,
-      "requiresMarried": false
+      "requiresMarried": false,
+      "requiresJob": false,
+      "requiresChildren": false
     },
     {
       "code": "family-trip",
@@ -63,8 +66,11 @@
       "body": "온 가족이 처음으로 바다를 봤다. 돈이 아깝지 않았다.",
       "amount": -2500000,
       "salaryPercent": 0,
+      "assetPercent": 1,
       "weight": 6,
-      "requiresMarried": true
+      "requiresMarried": true,
+      "requiresJob": false,
+      "requiresChildren": false
     },
     {
       "code": "bonus",
@@ -72,8 +78,71 @@
       "body": "회사 실적이 좋아 보너스가 나왔다.",
       "amount": 0,
       "salaryPercent": 50,
+      "assetPercent": 0,
       "weight": 6,
-      "requiresMarried": false
+      "requiresMarried": false,
+      "requiresJob": true,
+      "requiresChildren": false
+    },
+    {
+      "code": "tax-refund",
+      "title": "연말정산 환급",
+      "body": "13월의 월급. 의료비와 카드 공제가 쌓여 꽤 돌려받았다.",
+      "amount": 0,
+      "salaryPercent": 30,
+      "assetPercent": 0,
+      "weight": 6,
+      "requiresMarried": false,
+      "requiresJob": true,
+      "requiresChildren": false
+    },
+    {
+      "code": "academy",
+      "title": "방학 특강",
+      "body": "학원에서 방학 특강 안내문이 왔다. 옆집 아이는 벌써 두 개를 듣는다.",
+      "amount": -1200000,
+      "salaryPercent": 0,
+      "assetPercent": 0,
+      "weight": 6,
+      "requiresMarried": false,
+      "requiresJob": false,
+      "requiresChildren": true
+    },
+    {
+      "code": "school",
+      "title": "입학 준비",
+      "body": "아이 입학 준비물에 교복, 노트북까지 한 번에 나갔다.",
+      "amount": -800000,
+      "salaryPercent": 0,
+      "assetPercent": 0,
+      "weight": 4,
+      "requiresMarried": false,
+      "requiresJob": false,
+      "requiresChildren": true
+    },
+    {
+      "code": "parents-70",
+      "title": "부모님 칠순",
+      "body": "형제들과 나눠 식당을 잡고 작은 잔치를 열었다.",
+      "amount": -2000000,
+      "salaryPercent": 0,
+      "assetPercent": 0,
+      "weight": 3,
+      "requiresMarried": false,
+      "requiresJob": false,
+      "requiresChildren": false
+    },
+    {
+      "code": "car-insurance",
+      "title": "자동차보험 갱신",
+      "body": "보험료가 작년보다 올랐다. 다이렉트로 바꿔도 이 정도다.",
+      "amount": -900000,
+      "salaryPercent": 0,
+      "assetPercent": 0,
+      "weight": 4,
+      "requiresMarried": false,
+      "requiresJob": false,
+      "requiresChildren": false
     },
     {
       "code": "prize",
@@ -81,8 +150,11 @@
       "body": "마트 영수증 이벤트에서 2등에 당첨됐다.",
       "amount": 500000,
       "salaryPercent": 0,
+      "assetPercent": 0,
       "weight": 3,
-      "requiresMarried": false
+      "requiresMarried": false,
+      "requiresJob": false,
+      "requiresChildren": false
     }
   ]
 }

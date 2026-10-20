@@ -218,6 +218,9 @@ export function buildCredits(game: Game): CreditSection[] {
     const age = ageOf(game, e.day)
     switch (e.kind) {
       case 'JOB':
+        if (p.fullTimeInvestor) {
+          return { text: `${age}세, 전업투자자가 됐다`, sub: '월급 없음' }
+        }
         return {
           text: `${age}세, ${str(p.jobTitle)}${p.rehire ? '(으)로 다시 취직' : '에 취직'}`,
           sub: `월급 ${won(num(p.monthlySalary))}`,
@@ -288,6 +291,64 @@ export function buildCredits(game: Game): CreditSection[] {
     }
   }
   sections.push({ key: 'news', title: '뉴스 앞에서', lines: newsLines })
+
+  // 살아온 집: 이사·매수·전세사기·매도 (주거 설계).
+  const homeLines: CreditLine[] = entries(game, 'HOUSING', 'HOME_SOLD')
+    .filter((e) => {
+      const p = e.payload as Payload
+      // 넘긴 공고·떨어진 청약은 살아온 집이 아니다.
+      return p.option !== 'PASS' && (p.option !== 'APPLY' || p.bought === true)
+    })
+    .map((e) => {
+      const p = e.payload as Payload
+      const age = ageOf(game, e.day)
+      if (e.kind === 'HOME_SOLD') {
+        return {
+          text: `${age}세, ${str(p.regionName)} 매도`,
+          sub: `${won(num(p.price))} (산 값 ${won(num(p.purchasePrice))})`,
+          tone: num(p.price) >= num(p.purchasePrice) ? 'up' : 'down',
+        }
+      }
+      if (p.fraud) {
+        return {
+          text: `${age}세, 전세사기`,
+          sub: `보증금 ${won(num(p.lost))}을 잃었다`,
+          tone: 'down',
+        }
+      }
+      if (p.option === 'APPLY') {
+        return {
+          text: `${age}세, 청약 당첨 · ${str(p.regionName)}`,
+          sub: `분양가 ${won(num(p.price))}`,
+          tone: 'up',
+        }
+      }
+      return num(p.price) > 0
+        ? { text: `${age}세, ${str(p.regionName)} 매수`, sub: won(num(p.price)) }
+        : { text: `${age}세, ${str(p.label)}`, sub: `보증금 ${won(num(p.deposit))}` }
+    })
+  if (homeLines.length > 0) {
+    sections.push({ key: 'homes', title: '살아온 집', lines: homeLines })
+  }
+
+  // 지나고 나서야 이름이 붙은 위기와, 빠질 때 빚을 얹었는지 (decisions.md 38·39번).
+  const stormLines: CreditLine[] = entries(game, 'CRISIS', 'LEVERAGE').map((e) => {
+    const p = e.payload as Payload
+    const age = ageOf(game, e.day)
+    if (e.kind === 'CRISIS') {
+      return {
+        text: `${num(p.startAge)}~${num(p.endAge)}세, ${str(p.name)} (${p.severity === 'DEPRESSION' ? '대공황' : '불황'})`,
+        sub: `주가 평균 ${percent(num(p.dropBp))} 하락 · ${str(p.model)}을 닮았다`,
+        tone: 'down',
+      }
+    }
+    return p.borrowed
+      ? { text: `${age}세, ${str(p.stockName)}에 빚투`, sub: `대출 ${won(num(p.loan))}` }
+      : { text: `${age}세, ${str(p.stockName)} 급락에도 빚은 지지 않았다`, tone: 'muted' }
+  })
+  if (stormLines.length > 0) {
+    sections.push({ key: 'storms', title: '지나온 폭풍', lines: stormLines })
+  }
 
   const scored = scoreDecisions(game)
   const best = scored.reduce<ScoredDecision | null>(

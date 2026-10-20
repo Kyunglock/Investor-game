@@ -13,8 +13,14 @@ public interface CharacterService {
 
   CharacterView get(UUID gameId);
 
-  /** 직업을 정한다. 직업이 없을 때(첫 취업 또는 실직 뒤)만 가능하다. 처음이면 careerStartDay도 이 날이 된다. */
+  /** 직업을 정한다. 직업이 없을 때(첫 취업 또는 실직 뒤)만 가능하다. 처음이면 careerStartDay도 이 날이 된다. 전업투자자면 오류. */
   void assignJob(UUID gameId, String jobCode, int startDay);
+
+  /**
+   * 직업 대신 전업투자자가 된다. 직업이 없을 때만 가능하고 되돌릴 수 없다. 처음이면 careerStartDay(생활비 기준)도 이 날이 된다. 월급이 없다는 것 말고는
+   * 직장인과 같다.
+   */
+  void becomeFullTimeInvestor(UUID gameId, int day);
 
   /**
    * 다른 직업으로 옮긴다. 연차(jobStartDay)는 이 날부터 다시 세고 인상분은 startBonusBp로 바뀐다. 직업이 없으면 오류 (decisions.md

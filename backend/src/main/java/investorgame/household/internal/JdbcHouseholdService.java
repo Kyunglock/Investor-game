@@ -144,7 +144,8 @@ class JdbcHouseholdService implements HouseholdService {
     if (view.retiredDay() == null) {
       return 0;
     }
-    return inflate(view.married() ? properties.pensionCouple() : properties.pensionSingle(), gameDay);
+    return inflate(
+        view.married() ? properties.pensionCouple() : properties.pensionSingle(), gameDay);
   }
 
   @Override
@@ -177,6 +178,11 @@ class JdbcHouseholdService implements HouseholdService {
       return cost.toAge22();
     }
     return 0;
+  }
+
+  @Override
+  public long inflated(long amount, int gameDay) {
+    return inflate(amount, gameDay);
   }
 
   /** 기준 나이(취업) 이후 해마다 inflationPercent 복리. 그 전에는 오르지 않는다 (경제 개편 설계 7.2절). */

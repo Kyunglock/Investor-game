@@ -80,6 +80,16 @@ class GameController {
         request.quantity());
   }
 
+  /** 가진 아파트를 매물로 내놓거나 거둔다. 내놓아도 바로 팔리지 않고 매수자가 나와야 팔린다 (주거 설계 3절). */
+  @PostMapping("/{gameId}/homes/{seq}/listing")
+  GameView listHome(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @PathVariable UUID gameId,
+      @PathVariable int seq,
+      @Valid @RequestBody ListingRequest request) {
+    return progress.listHome(cookies.requireSession(token), gameId, seq, request.listed());
+  }
+
   @GetMapping("/{gameId}/stocks/{stockCode}/history")
   StockHistory history(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
@@ -89,6 +99,8 @@ class GameController {
   }
 
   record AdvanceRequest(@Min(0) int day) {}
+
+  record ListingRequest(boolean listed) {}
 
   /** 한 번에 주문할 수 있는 최대 수량. 계약(TradeRequest.quantity.maximum)과 같은 값이다. */
   static final long MAX_TRADE_QUANTITY = 1_000_000_000L;

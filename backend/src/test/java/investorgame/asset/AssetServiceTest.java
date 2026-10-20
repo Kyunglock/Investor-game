@@ -55,6 +55,24 @@ class AssetServiceTest {
     assertThat(holding.avgCost()).isEqualTo(72_000);
   }
 
+  /** 빚투 (decisions.md 39번): 대출은 현금과 빚을 함께 늘리고, 수입이 들어오면 빚부터 갚는다. */
+  @Test
+  void 대출하면_현금과_빚이_함께_늘고_수입이_빚부터_갚는다() {
+    assets.borrow(gameId, 5_000_000, 10, null);
+    assertThat(assets.get(gameId).cash()).isEqualTo(initialCash + 5_000_000);
+    assertThat(assets.get(gameId).debt()).isEqualTo(5_000_000);
+    assertThat(assets.totalAsset(gameId, Map.of())).as("빌린 돈은 순자산이 아니다").isEqualTo(initialCash);
+
+    assets.credit(gameId, "SALARY", 2_000_000, 30);
+    assertThat(assets.get(gameId).debt()).isEqualTo(3_000_000);
+
+    assets.buy(gameId, SSJ, 10, 100_000, 31, null);
+    assets.sell(gameId, SSJ, 10, 100_000, 32, null);
+    assertThat(assets.get(gameId).debt()).as("판 돈도 빚부터 갚는다").isEqualTo(2_000_000);
+    assertThatThrownBy(() -> assets.borrow(gameId, 0, 40, null))
+        .isInstanceOf(InvalidRequestException.class);
+  }
+
   @Test
   void 현금이_모자라면_사지_않는다() {
     TradeResult trade = assets.buy(gameId, SSJ, initialCash / 1_000 + 1, 1_000, 10, null);

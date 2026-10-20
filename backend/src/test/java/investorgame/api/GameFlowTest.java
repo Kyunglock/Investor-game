@@ -63,12 +63,14 @@ class GameFlowTest {
               case "OFFER" -> "accept";
               case "NEWS" -> NEWS_CHOICES.get(newsCount++ % NEWS_CHOICES.size());
               case "JOB" -> richestJob(game);
+              // 빚투를 매번 받으면 떨어지는 종목에 계속 빚을 얹다가 파산한다(그게 정상이다). 이 검사는 70세까지의 흐름이 목적이라 거절한다.
+              case "LEVERAGE" -> "PASS";
               case "LIFE" ->
                   game.read("$.household.children.length()", Integer.class) >= 1
                           && game.read("$.household.married", Boolean.class)
                       ? "decline"
                       : "accept";
-              default -> game.read("$.pendingEvent.options[0].code");
+              default -> GameClient.firstOpen(game);
             };
         DocumentContext result = client.choose(gameId, (String) pending.get("eventId"), option);
         responses.add(result.jsonString());
@@ -100,7 +102,8 @@ class GameFlowTest {
             "ending=%s debt=%s jobs=%s yearly=%s",
             game.read("$.result.ending"),
             game.read("$.debt"),
-            game.read("$.log[?(@.kind in ['JOB','JOB_WAIT','CAREER','RETIRE'])].payload"),
+            game.read(
+                "$.log[?(@.kind in ['JOB','JOB_WAIT','CAREER','RETIRE','LEVERAGE','CRISIS'])].payload"),
             game.read("$.yearly"))
         .isEqualTo(70);
     assertThat(game.read("$.result.ending", String.class)).isEqualTo("NORMAL");
@@ -120,11 +123,11 @@ class GameFlowTest {
         .isGreaterThanOrEqualTo(3);
     // 성장 단계 10개에서 하나씩, 취업 뒤 일상 장면(adult) 풀 8개를 40년 동안 다 쓴다.
     assertThat(seenKinds.get("TRAIT")).as("성장기 10 + 취업 뒤 일상 8").isEqualTo(18);
-    assertThat(kindOrder.subList(0, 12))
-        .as("성장기의 성향 이벤트가 모두 끝난 뒤에 직업, 그다음 투자 시작 제안")
+    assertThat(kindOrder.subList(0, 13))
+        .as("성장기의 성향 이벤트가 모두 끝난 뒤에 직업, 독립(주거), 그다음 투자 시작 제안")
         .containsExactly(
             "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT",
-            "TRAIT", "JOB", "OFFER");
+            "TRAIT", "JOB", "HOUSING", "OFFER");
     assertThat(seenKinds.get("OFFER")).isEqualTo(1);
     assertThat(seenKinds.getOrDefault("NEWS", 0)).isGreaterThanOrEqualTo(20);
     assertThat(game.read("$.investmentStyle.code", String.class)).isIn("short", "long");
@@ -255,6 +258,88 @@ class GameFlowTest {
     return best != null ? best : (String) options.get(0).get("code");
   }
 
+  /** 전업투자자 (decisions.md 35번): 직업 대신 고르면 투자 시작 제안 없이 바로 투자기이고, 월급도 구직 제안도 없다. */
+  @Test
+  void 직업_대신_전업투자자를_고르면_월급_없이_바로_투자를_시작한다() throws Exception {
+    MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.start();
+    String gameId = game.read("$.gameId");
+    for (int step = 0; step < 100; step++) {
+      Map<String, Object> pending = game.read("$.pendingEvent");
+      if (pending != null && "JOB".equals(pending.get("kind"))) {
+        break;
+      }
+      if (pending != null) {
+        String option = GameClient.firstOpen(game);
+        game =
+            JsonPath.parse(
+                client
+                    .choose(gameId, (String) pending.get("eventId"), option)
+                    .<Object>read("$.game"));
+        continue;
+      }
+      int day = game.read("$.day", Integer.class);
+      game = client.advance(gameId, game.read("$.nextEventDay", Integer.class));
+      assertThat(game.read("$.day", Integer.class)).isGreaterThan(day);
+    }
+    assertThat(game.read("$.pendingEvent.kind", String.class)).isEqualTo("JOB");
+    game =
+        JsonPath.parse(
+            client
+                .choose(gameId, game.read("$.pendingEvent.eventId"), "INVEST")
+                .<Object>read("$.game"));
+
+    assertThat(game.read("$.phase", String.class)).isEqualTo("INVESTING");
+    assertThat(game.read("$.fullTimeInvestor", Boolean.class)).isTrue();
+    assertThat(game.read("$.job", Object.class)).isNull();
+    List<Map<String, Object>> jobLogs = game.read("$.log[?(@.kind=='JOB')].payload");
+    assertThat(jobLogs).hasSize(1);
+    assertThat(jobLogs.get(0))
+        .containsEntry("fullTimeInvestor", true)
+        .containsEntry("jobTitle", "전업투자자");
+
+    // 10년을 보내도 월급·구직 제안·직장 장면·투자 시작 제안이 없고, 생활비는 나간다.
+    int until = game.read("$.day", Integer.class) + 10 * 360;
+    List<String> kinds = new ArrayList<>();
+    for (int step = 0; step < 500 && game.read("$.day", Integer.class) < until; step++) {
+      Map<String, Object> pending = game.read("$.pendingEvent");
+      if (pending != null) {
+        kinds.add((String) pending.get("kind"));
+        String option = GameClient.firstOpen(game);
+        game =
+            JsonPath.parse(
+                client
+                    .choose(gameId, (String) pending.get("eventId"), option)
+                    .<Object>read("$.game"));
+        continue;
+      }
+      if (!"ACTIVE".equals(game.read("$.status"))) {
+        break;
+      }
+      int day = game.read("$.day", Integer.class);
+      Integer next = game.read("$.nextEventDay");
+      game = client.advance(gameId, Math.min(day + REPORT_EVERY_DAYS, next == null ? until : next));
+    }
+    assertThat(kinds)
+        .as(
+            "status=%s day=%s until=%d cash=%s debt=%s",
+            game.read("$.status"),
+            game.read("$.day"),
+            until,
+            game.read("$.cash"),
+            game.read("$.debt"))
+        .doesNotContain("JOB", "CAREER", "OFFER");
+    // 시작 현금이 적은 판은 월급 없이 생활비만 나가다 뉴스가 오기 전에 파산할 수 있다(전업투자자의 페널티). 살아 있으면 뉴스가 왔다.
+    if ("ACTIVE".equals(game.read("$.status"))) {
+      assertThat(kinds).contains("NEWS");
+    } else {
+      assertThat(game.read("$.result.ending", String.class)).isEqualTo("BANKRUPT");
+    }
+    assertThat(game.read("$.household.monthlyIncome", Long.class)).isZero();
+    assertThat(game.read("$.household.monthlyExpense", Long.class)).isPositive();
+  }
+
   @Test
   void 다_팔아도_빚을_못_갚으면_그_달에_파산으로_끝난다() throws Exception {
     MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
@@ -271,10 +356,7 @@ class GameFlowTest {
     for (int step = 0; step < 20 && "ACTIVE".equals(game.read("$.status")); step++) {
       Map<String, Object> pending = game.read("$.pendingEvent");
       if (pending != null) {
-        String option =
-            "OFFER".equals(pending.get("kind"))
-                ? "accept"
-                : game.read("$.pendingEvent.options[0].code");
+        String option = "OFFER".equals(pending.get("kind")) ? "accept" : GameClient.firstOpen(game);
         Object next = client.choose(gameId, (String) pending.get("eventId"), option).read("$.game");
         game = JsonPath.parse(next);
         continue;
@@ -343,7 +425,10 @@ class GameFlowTest {
     int from = game.read("$.day", Integer.class);
     long cash = game.read("$.cash", Long.class);
     long salary = game.read("$.job.monthlySalary", Long.class);
-    long expense = game.read("$.household.monthlyExpense", Long.class);
+    // 생활비와 주거비(독립할 때 고른 월세)가 따로 나간다 (주거 설계 2절).
+    long expense =
+        game.read("$.household.monthlyExpense", Long.class)
+            + game.read("$.housing.monthlyCost", Long.class);
     int monthBefore = game.read("$.market.month", Integer.class);
     Integer next = game.read("$.nextEventDay");
     int target = from + 360;
@@ -372,7 +457,7 @@ class GameFlowTest {
             after.read("$.household.monthlyIncome", Long.class),
             after.read("$.household.monthlyExpense", Long.class),
             kindsInRange)
-        // 25세부터 물가(연 2%)가 생활비를 올리고 연차가 바뀌면 월급이 오르므로 ±20% 안에서 "달 수 × (월급 − 생활비)"다.
+        // 25세부터 물가(연 2%)가 생활비를 올리고 연차가 바뀌면 월급이 오르므로 ±20% 안에서 "달 수 × (월급 − 생활비 − 주거비)"다.
         .isBetween((salary - expense) * months * 8 / 10, (salary - expense) * months * 12 / 10);
     assertThat(day).isLessThan(from);
   }

@@ -24,6 +24,7 @@ class DomainBoundaryTest {
           "asset",
           "market",
           "household",
+          "housing",
           "event",
           "progress",
           "session",

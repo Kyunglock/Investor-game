@@ -111,8 +111,9 @@ class GameApiTest {
     assertThat(job.read("$.phase", String.class)).isEqualTo("CHILDHOOD");
     assertThat(job.read("$.investmentStyle.code", String.class)).isIn("short", "long");
     assertThat(job.read("$.interestSector.code", String.class)).isNotBlank();
-    // 직업 3개 + (더 나은 직업이 남아 있으면) "기다린다" (decisions.md 26번)
-    assertThat(job.read("$.pendingEvent.options.length()", Integer.class)).isBetween(3, 4);
+    // 직업 3개 + (더 나은 직업이 남아 있으면) "기다린다" + "전업투자자" (decisions.md 26번, 35번)
+    assertThat(job.read("$.pendingEvent.options.length()", Integer.class)).isBetween(4, 5);
+    assertThat(job.read("$.pendingEvent.options[-1].code", String.class)).isEqualTo("INVEST");
   }
 
   @Test
@@ -207,11 +208,14 @@ class GameApiTest {
     assertThat(client.advance(gameId, jobDay + 29).read("$.cash", Long.class)).isEqualTo(cash);
     DocumentContext payday = client.advance(gameId, jobDay + 30);
     long expense = payday.read("$.household.monthlyExpense", Long.class);
-    assertThat(expense).isPositive().isLessThan(salary);
-    assertThat(payday.read("$.cash", Long.class)).isEqualTo(cash + salary - expense);
+    // 독립하면서 월세를 골랐다(GameClient.chooseFirstJob). 주거비는 생활비와 따로 나간다 (주거 설계 2절).
+    long rent = payday.read("$.housing.monthlyCost", Long.class);
+    assertThat(rent).isPositive();
+    assertThat(expense + rent).isPositive().isLessThan(salary);
+    assertThat(payday.read("$.cash", Long.class)).isEqualTo(cash + salary - expense - rent);
     assertThat(client.advance(gameId, jobDay + 30).read("$.cash", Long.class))
         .as("같은 날을 다시 보고해도 월급과 생활비는 한 번만")
-        .isEqualTo(cash + salary - expense);
+        .isEqualTo(cash + salary - expense - rent);
   }
 
   @Test
@@ -261,7 +265,7 @@ class GameApiTest {
     client.chooseRaw(gameId, eventId, "astronaut").andExpect(status().isBadRequest());
     client.chooseFirstJob(game);
     client
-        .chooseRaw(gameId, eventId, game.read("$.pendingEvent.options[0].code"))
+        .chooseRaw(gameId, eventId, GameClient.firstOpen(game))
         .andExpect(status().isBadRequest());
   }
 

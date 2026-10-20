@@ -24,6 +24,11 @@ interface GameState {
   game: Game | null
   /** 방금 한 선택의 결과. 사용자가 "계속"을 누를 때까지 보여 준다. */
   outcome: Outcome | null
+  /**
+   * 뉴스·흔들림의 선택 뒤 서버가 보낸 판. 결과 카드가 "실행 중"인 동안 총자산·보유가 먼저 바뀌어 결과가 새지 않도록, 결과가 드러날 때까지 화면에 반영하지 않고
+   * 들고 있는다.
+   */
+  heldGame: Game | null
   /** 화면의 게임 일수. 시계가 흐르며 늘고, 서버에는 정수로 보고한다. */
   day: number
   running: boolean
@@ -45,6 +50,8 @@ interface GameState {
   startLife: () => void
   /** quantity는 뉴스의 매수·매도 수량. 없으면 서버 기본. */
   choose: (option: string, quantity?: number) => Promise<void>
+  /** 결과 카드가 결과를 드러낼 때 부른다. 들고 있던 판을 화면에 반영한다. */
+  revealOutcome: () => void
   dismissOutcome: () => void
   tick: (elapsedMs: number) => void
   pause: () => void
@@ -55,7 +62,11 @@ interface GameState {
   selectStock: (code: string) => Promise<void>
   trade: (side: TradeSide, quantity: number) => Promise<void>
   dismissNotice: () => void
+  /** 가진 아파트를 매물로 내놓거나 거둔다. 팔리는 것은 매수자가 나와야 한다 (주거 설계 3절). */
+  listHome: (seq: number, listed: boolean) => Promise<void>
 }
+
+const TOAST_KINDS = new Set<LogEntry['kind']>(['LIFE', 'OMEN', 'CRISIS', 'HOME_SOLD', 'TENANT'])
 
 export const useGameStore = create<GameState>((set, get) => {
   /** 서버가 보낸 판으로 화면을 맞춘다. 대기 중인 선택이 있거나 끝났거나 시장 패널이 열려 있으면 시계를 멈춘다. */
@@ -63,7 +74,8 @@ export const useGameStore = create<GameState>((set, get) => {
     set((state) => {
       const sameGame = state.game?.gameId === game.gameId
       const knownSeqs = new Set(sameGame ? state.game?.log.map((e) => e.seq) : [])
-      const notices = game.log.filter((e) => e.kind === 'LIFE' && !knownSeqs.has(e.seq))
+      // 알림(LIFE)·전조(OMEN)·위기 회고(CRISIS)·집이 팔림·세입자 교체는 판을 멈추지 않고 토스트로 지나간다.
+      const notices = game.log.filter((e) => TOAST_KINDS.has(e.kind) && !knownSeqs.has(e.seq))
       // 대기 중인 선택이 생기면 시장 패널은 닫는다. 선택이 먼저다.
       const marketOpen = state.marketOpen && !game.pendingEvent && game.status === 'ACTIVE'
       return {
@@ -114,6 +126,7 @@ export const useGameStore = create<GameState>((set, get) => {
     status: 'loading',
     game: null,
     outcome: null,
+    heldGame: null,
     day: 0,
     running: false,
     speed: 1,
@@ -130,7 +143,7 @@ export const useGameStore = create<GameState>((set, get) => {
     load: async () => {
       const { data, response } = await api.GET('/api/games/current')
       if (data) {
-        set({ outcome: null })
+        set({ outcome: null, heldGame: null })
         apply(data, false)
       } else if (response.status === 401 || response.status === 404) {
         set({ status: 'none', game: null, running: false })
@@ -144,6 +157,7 @@ export const useGameStore = create<GameState>((set, get) => {
         status: 'loading',
         running: false,
         outcome: null,
+        heldGame: null,
         game: null,
         day: 0,
         marketOpen: false,
@@ -179,14 +193,28 @@ export const useGameStore = create<GameState>((set, get) => {
       })
       set({ choosing: false })
       if (data) {
-        set({ outcome: data.outcome })
-        apply(data.game, false)
+        const kind = data.outcome.kind
+        if (kind === 'NEWS' || kind === 'SHAKE') {
+          set({ outcome: data.outcome, heldGame: data.game })
+        } else {
+          set({ outcome: data.outcome })
+          apply(data.game, false)
+        }
       } else {
         await get().load()
       }
     },
 
+    revealOutcome: () => {
+      const { heldGame } = get()
+      if (heldGame) {
+        set({ heldGame: null })
+        apply(heldGame, false)
+      }
+    },
+
     dismissOutcome: () => {
+      get().revealOutcome()
       set({ outcome: null })
       const { game, marketOpen } = get()
       if (game && game.status === 'ACTIVE' && !game.pendingEvent && !marketOpen) {
@@ -289,5 +317,22 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     dismissNotice: () => set({ lastNotice: null }),
+
+    listHome: async (seq, listed) => {
+      const { game } = get()
+      if (!game) {
+        return
+      }
+      await reportNow()
+      const { data } = await api.POST('/api/games/{gameId}/homes/{seq}/listing', {
+        params: { path: { gameId: game.gameId, seq } },
+        body: { listed },
+      })
+      if (data) {
+        apply(data, get().running)
+      } else {
+        await get().load()
+      }
+    },
   }
 })

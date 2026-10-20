@@ -12,8 +12,8 @@ import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.JobDefinition;
 import investorgame.content.NewsDefinition;
-import investorgame.content.ShakeDefinition;
 import investorgame.content.NoticeDefinition;
+import investorgame.content.ShakeDefinition;
 import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
 import investorgame.event.ChoiceTicket;
@@ -23,6 +23,7 @@ import investorgame.event.EventKind;
 import investorgame.event.EventService;
 import investorgame.event.EventView;
 import investorgame.event.HintProvider;
+import investorgame.event.HousingFacts;
 import investorgame.event.ScheduleResult;
 import investorgame.event.SchedulingContext;
 import java.util.ArrayList;
@@ -60,8 +61,12 @@ class DefaultEventService implements EventService {
   static final String MOVE_PREFIX = "move:";
 
   private static final List<String> NEWS_OPTIONS = List.of("BUY", "SELL", "HOLD");
+
   /** 흔들림: 버틴다(HOLD)·판다(SELL). 문구는 렌더러가 붙인다 (decisions.md 33번). */
   private static final List<String> SHAKE_OPTIONS = List.of("HOLD", "SELL");
+
+  private static final String FRAUD = "FRAUD";
+
   private static final int BP = 10_000;
   private static final int PERCENT = 100;
 
@@ -159,7 +164,12 @@ class DefaultEventService implements EventService {
                     .filter(o -> o.code().equals(optionCode))
                     .findFirst()
                     .orElseThrow();
-            yield new ChoiceTicket.Trait(chosen.traitDeltas(), chosen.statDeltas(), chosen.note());
+            yield new ChoiceTicket.Trait(
+                chosen.traitDeltas(),
+                chosen.statDeltas(),
+                chosen.note(),
+                chosen.amount(),
+                chosen.outcomes());
           }
           case OFFER -> new ChoiceTicket.Offer(ACCEPT.equals(optionCode));
           case LIFE ->
@@ -170,6 +180,10 @@ class DefaultEventService implements EventService {
                   ACCEPT.equals(optionCode));
           case NEWS -> new ChoiceTicket.News();
           case SHAKE -> new ChoiceTicket.Shake();
+          case LEVERAGE ->
+              new ChoiceTicket.Leverage(ChoiceTicket.Leverage.BORROW.equals(optionCode));
+          case HOUSING ->
+              new ChoiceTicket.Housing(row.definitionCode(), FRAUD.equals(row.hiddenDirection()));
           case NOTICE -> throw new InvalidRequestException("알림은 선택할 수 없다");
         };
     return new ChoiceTicket(
@@ -181,7 +195,10 @@ class DefaultEventService implements EventService {
         row.sectorCode(),
         row.stockCode(),
         row.sectorWide(),
-        row.hiddenDirection() == null ? null : Direction.valueOf(row.hiddenDirection()),
+        // 주거 이벤트의 숨은 값은 주가 방향이 아니라 전세사기 표시다(effect에 담았다).
+        row.hiddenDirection() == null || row.kind() == EventKind.HOUSING
+            ? null
+            : Direction.valueOf(row.hiddenDirection()),
         row.hiddenMagnitudeBp() == null ? 0 : row.hiddenMagnitudeBp(),
         row.swaySentiment() == null ? null : Sentiment.valueOf(row.swaySentiment()),
         effect);
@@ -233,12 +250,14 @@ class DefaultEventService implements EventService {
       EventProperties.Range gap = properties.style(context.investmentStyle()).newsGapDays();
       candidates.add(new Candidate(EventKind.NEWS, base + roll(random, gap, "NEWS", news.size())));
       shakeCandidate(rows, context, random, candidates);
+      leverageCandidate(rows, context, candidates);
     }
     if (context.phase() != Phase.CHILDHOOD && context.careerStartDay() != null) {
       adultTraitCandidate(rows, context, random, candidates);
       lifeCandidates(rows, context, random, candidates);
       noticeCandidate(rows, context, random, candidates);
       careerCandidates(rows, context, random, candidates);
+      housingCandidates(rows, context, candidates);
     }
     return candidates.stream()
         .min(Comparator.comparingInt(Candidate::day).thenComparing(Candidate::kind))
@@ -269,14 +288,14 @@ class DefaultEventService implements EventService {
 
   /**
    * 취업 뒤 직장 (decisions.md 26번). 직업이 있으면 직장 장면(CAREER)이 간격을 두고 오고, 실직 중이면 다시 직업 선택(JOB)이 온다. 은퇴했거나
-   * career.last-age를 넘으면 둘 다 없다.
+   * 전업투자자이거나 career.last-age를 넘으면 둘 다 없다.
    */
   private void careerCandidates(
       List<EventRow> rows,
       SchedulingContext context,
       SeededRandom random,
       List<Candidate> candidates) {
-    if (context.retired()) {
+    if (context.retired() || context.fullTimeInvestor()) {
       return;
     }
     List<EventRow> careers = ofKind(rows, EventKind.CAREER);
@@ -308,21 +327,34 @@ class DefaultEventService implements EventService {
     }
   }
 
-  /** 취업 뒤: 일상 장면(adult)이 간격을 두고 온다. 성향은 바꾸지 않고 능력치만 움직인다. 풀을 다 쓰면 더 오지 않는다 (decisions.md 23번). */
+  /**
+   * 취업 뒤: 일상 장면(adult)이 간격을 두고 온다. 성향은 바꾸지 않고 능력치만 움직인다. 지금 고를 수 있는 장면이 없으면(풀을 다 썼거나 실직 중인데 직장 장면만
+   * 남음) 오지 않는다 (decisions.md 23번).
+   */
   private void adultTraitCandidate(
       List<EventRow> rows,
       SchedulingContext context,
       SeededRandom random,
       List<Candidate> candidates) {
-    List<EventRow> used = adultTraits(rows);
-    if (used.size() >= content.adultTraits().size()) {
+    if (adultTraitsLeft(rows, context).isEmpty()) {
       return;
     }
+    List<EventRow> used = adultTraits(rows);
     int base = used.isEmpty() ? context.careerStartDay() : last(used).occursDay();
     candidates.add(
         new Candidate(
             EventKind.TRAIT,
             base + roll(random, properties.trait().adultGapDays(), "TRAIT", used.size())));
+  }
+
+  /** 아직 안 나온 adult 장면. 직장이 배경인 장면(job)은 직장에 다니는 동안에만 고른다. 실직·은퇴 중에는 풀에 남겨 두었다가 다시 취업하면 나온다. */
+  private List<TraitDefinition> adultTraitsLeft(List<EventRow> rows, SchedulingContext context) {
+    List<EventRow> used = adultTraits(rows);
+    boolean working = context.jobStartDay() != null && !context.retired();
+    return content.adultTraits().stream()
+        .filter(t -> working || !t.job())
+        .filter(t -> used.stream().noneMatch(u -> t.code().equals(u.definitionCode())))
+        .toList();
   }
 
   private List<EventRow> adultTraits(List<EventRow> rows) {
@@ -400,6 +432,104 @@ class DefaultEventService implements EventService {
             base + roll(random, properties.shake().gapDays(), "SHAKE", shakes.size())));
   }
 
+  /**
+   * 주거 (주거 설계 4절). 처음 일을 시작하면 독립(move-out), 세입자는 만기(lease-end)마다, 2채 미만이면 결혼·출산·서울 집값 급등 뒤에 "집
+   * 살까?"(buy, 최소 buy-gap-days 간격)가 온다.
+   */
+  private void housingCandidates(
+      List<EventRow> rows, SchedulingContext context, List<Candidate> candidates) {
+    earliestHousing(rows, context)
+        .ifPresent(due -> candidates.add(new Candidate(EventKind.HOUSING, due.getValue())));
+  }
+
+  /**
+   * 주거 이벤트마다 언제 오는가. 처음 일을 시작하면 독립(move-out), 세입자는 만기(lease-end)마다, 집이 없으면 청약 공고(cheongyak)가
+   * cheongyak-gap-days마다, 2채 미만이면 결혼·출산·서울 집값 급등 뒤에 "집 살까?"(buy, 최소 buy-gap-days 간격)가 온다. 순서가 같은 날의
+   * 우선순위다.
+   */
+  private Map<String, Integer> housingDue(List<EventRow> rows, SchedulingContext context) {
+    HousingFacts housing = context.housing();
+    Map<String, Integer> due = new java.util.LinkedHashMap<>();
+    if ("PARENTS".equals(housing.tenure())) {
+      due.put(ChoiceTicket.Housing.MOVE_OUT, context.careerStartDay());
+      return due;
+    }
+    if (housing.leaseEndDay() != null) {
+      due.put(ChoiceTicket.Housing.LEASE_END, housing.leaseEndDay());
+    }
+    if (housing.homes() == 0) {
+      List<EventRow> notices = housingOf(rows, ChoiceTicket.Housing.CHEONGYAK);
+      due.put(
+          ChoiceTicket.Housing.CHEONGYAK,
+          notices.isEmpty()
+              ? context.careerStartDay() + properties.housing().cheongyakGapDays()
+              : last(notices).occursDay() + properties.housing().cheongyakGapDays());
+    }
+    if (housing.homes() >= 2) {
+      return due;
+    }
+    List<EventRow> buys = housingOf(rows, ChoiceTicket.Housing.BUY);
+    int lastBuy = buys.isEmpty() ? -1 : last(buys).occursDay();
+    int base =
+        buys.isEmpty() ? context.careerStartDay() : lastBuy + properties.housing().buyGapDays();
+    List<Integer> triggers = new ArrayList<>();
+    if (context.marriedDay() != null) {
+      triggers.add(context.marriedDay());
+    }
+    if (housing.lastChildDay() != null) {
+      triggers.add(housing.lastChildDay());
+    }
+    if (housing.seoulChange12mBp() >= properties.housing().surgeBp()) {
+      triggers.add(Math.max(base, lastBuy + 1));
+    }
+    triggers.stream()
+        .filter(d -> d > lastBuy)
+        .min(Integer::compare)
+        .ifPresent(d -> due.put(ChoiceTicket.Housing.BUY, Math.max(base, d)));
+    return due;
+  }
+
+  /** 가장 먼저 오는 주거 이벤트. 같은 날이면 housingDue의 순서가 먼저다. */
+  private Optional<Map.Entry<String, Integer>> earliestHousing(
+      List<EventRow> rows, SchedulingContext context) {
+    Map.Entry<String, Integer> earliest = null;
+    for (Map.Entry<String, Integer> entry : housingDue(rows, context).entrySet()) {
+      if (earliest == null || entry.getValue() < earliest.getValue()) {
+        earliest = entry;
+      }
+    }
+    return Optional.ofNullable(earliest);
+  }
+
+  private List<EventRow> housingOf(List<EventRow> rows, String definition) {
+    return ofKind(rows, EventKind.HOUSING).stream()
+        .filter(r -> definition.equals(r.definitionCode()))
+        .toList();
+  }
+
+  /** 빚투 제안: 든 종목이 크게 빠졌고 지난 제안에서 충분히 지났으면 지금 묻는다 (decisions.md 39번). */
+  private void leverageCandidate(
+      List<EventRow> rows, SchedulingContext context, List<Candidate> candidates) {
+    if (plunged(context).isEmpty()) {
+      return;
+    }
+    List<EventRow> asked = ofKind(rows, EventKind.LEVERAGE);
+    int base =
+        asked.isEmpty()
+            ? context.investingStartDay()
+            : last(asked).occursDay() + properties.leverage().gapDays();
+    candidates.add(new Candidate(EventKind.LEVERAGE, base));
+  }
+
+  /** 가장 많이 빠진 보유 종목. 기준 낙폭을 넘는 것이 없으면 비어 있다. 같은 낙폭이면 코드순. */
+  private Optional<Map.Entry<String, Integer>> plunged(SchedulingContext context) {
+    return context.heldDropBp().entrySet().stream()
+        .filter(e -> e.getValue() >= properties.leverage().dropBp())
+        .max(
+            Map.Entry.<String, Integer>comparingByValue()
+                .thenComparing(Map.Entry.comparingByKey(Comparator.reverseOrder())));
+  }
+
   private void noticeCandidate(
       List<EventRow> rows,
       SchedulingContext context,
@@ -443,14 +573,12 @@ class DefaultEventService implements EventService {
           List<TraitDefinition> scenes = content.traitStages().get(stage).scenes();
           trait = scenes.get(random.forKey("event", "trait-scene", stage).nextInt(scenes.size()));
         } else {
-          List<EventRow> used = adultTraits(rows);
-          List<TraitDefinition> left =
-              content.adultTraits().stream()
-                  .filter(t -> used.stream().noneMatch(u -> t.code().equals(u.definitionCode())))
-                  .toList();
+          List<TraitDefinition> left = adultTraitsLeft(rows, context);
           trait =
               left.get(
-                  random.forKey("event", "trait-scene", "adult", used.size()).nextInt(left.size()));
+                  random
+                      .forKey("event", "trait-scene", "adult", adultTraits(rows).size())
+                      .nextInt(left.size()));
         }
         yield simple(
             id,
@@ -473,14 +601,14 @@ class DefaultEventService implements EventService {
       case NOTICE -> notice(id, seq, candidate.day(), context, random);
       case NEWS -> news(id, seq, rows, candidate.day(), context, random, hints);
       case SHAKE -> shake(id, seq, candidate.day(), context, random);
+      case LEVERAGE -> leverage(id, seq, candidate.day(), context);
+      case HOUSING -> housing(id, seq, candidate.day(), rows, context, random);
     };
   }
 
-  /**
-   * 보유 종목 흔들림. 보유 중 한 종목과 장면을 뽑고, 선택 뒤 그 종목이 움직일 숨은 방향·폭을 정한다. 힌트·다른 뉴스는 없다 (decisions.md
-   * 33번).
-   */
-  private EventRow shake(UUID id, int seq, int day, SchedulingContext context, SeededRandom random) {
+  /** 보유 종목 흔들림. 보유 중 한 종목과 장면을 뽑고, 선택 뒤 그 종목이 움직일 숨은 방향·폭을 정한다. 힌트·다른 뉴스는 없다 (decisions.md 33번). */
+  private EventRow shake(
+      UUID id, int seq, int day, SchedulingContext context, SeededRandom random) {
     RandomGenerator rng = random.forKey("event", "shake", seq);
     List<String> held = context.heldStockCodes();
     String stockCode = held.get(rng.nextInt(held.size()));
@@ -506,11 +634,99 @@ class DefaultEventService implements EventService {
         SHAKE_OPTIONS);
   }
 
+  /**
+   * 주거 이벤트. 가장 먼저 온 것(housingDue): 독립·만기·청약·집 사기. 보증보험 없는 빌라 전세의 만기에는 전세사기를 굴려 숨겨 둔다(고른 뒤에 드러난다).
+   * 선택지는 형편과 상관없이 늘 같은 목록이고, 감당할 수 있는지는 진행이 따져 막는다.
+   */
+  private EventRow housing(
+      UUID id,
+      int seq,
+      int day,
+      List<EventRow> rows,
+      SchedulingContext context,
+      SeededRandom random) {
+    HousingFacts housing = context.housing();
+    String definition;
+    List<String> options = new ArrayList<>();
+    boolean roomForHome = housing.homes() < 2;
+    definition =
+        earliestHousing(rows, context).map(Map.Entry::getKey).orElse(ChoiceTicket.Housing.BUY);
+    if (ChoiceTicket.Housing.MOVE_OUT.equals(definition)) {
+      options.addAll(ChoiceTicket.Housing.RENTALS);
+    } else if (ChoiceTicket.Housing.CHEONGYAK.equals(definition)) {
+      options.add(ChoiceTicket.Housing.APPLY);
+      options.add(ChoiceTicket.Housing.PASS);
+    } else if (ChoiceTicket.Housing.LEASE_END.equals(definition)) {
+      options.add(ChoiceTicket.Housing.KEEP);
+      options.addAll(ChoiceTicket.Housing.RENTALS);
+      if (roomForHome) {
+        options.add(ChoiceTicket.Housing.BUY_SEOUL);
+        options.add(ChoiceTicket.Housing.BUY_GYEONGGI);
+      }
+    } else {
+      definition = ChoiceTicket.Housing.BUY;
+      if (!housing.ownsResidence()) {
+        options.add(ChoiceTicket.Housing.BUY_SEOUL);
+        options.add(ChoiceTicket.Housing.BUY_GYEONGGI);
+      }
+      options.add(ChoiceTicket.Housing.GAP);
+      options.add(ChoiceTicket.Housing.PASS);
+    }
+    boolean fraud =
+        ChoiceTicket.Housing.LEASE_END.equals(definition)
+            && housing.villaUninsured()
+            && random.forKey("event", "housing", "fraud", seq).nextInt(BP)
+                < properties.housing().fraudBp();
+    return new EventRow(
+        id,
+        seq,
+        EventKind.HOUSING,
+        definition,
+        null,
+        null,
+        false,
+        day,
+        EventRow.PENDING,
+        fraud ? FRAUD : null,
+        null,
+        null,
+        null,
+        null,
+        List.copyOf(options));
+  }
+
+  /** 빚투 제안. 가장 많이 빠진 보유 종목을 묻고, 낙폭은 제목에 쓰도록 남긴다. 숨은 방향은 없다: 그 뒤는 시장이 정한다. */
+  private EventRow leverage(UUID id, int seq, int day, SchedulingContext context) {
+    Map.Entry<String, Integer> worst = plunged(context).orElseThrow();
+    return new EventRow(
+        id,
+        seq,
+        EventKind.LEVERAGE,
+        null,
+        content.stock(worst.getKey()).sector(),
+        worst.getKey(),
+        false,
+        day,
+        EventRow.PENDING,
+        null,
+        worst.getValue(),
+        null,
+        null,
+        null,
+        List.of(ChoiceTicket.Leverage.BORROW, ChoiceTicket.Leverage.PASS));
+  }
+
   /** 알림 정의를 가중치로 뽑는다. 결혼 뒤에만 나오는 정의는 미혼이면 후보에서 뺀다. 만들어지는 순간 RESOLVED다. */
   private EventRow notice(
       UUID id, int seq, int day, SchedulingContext context, SeededRandom random) {
+    // 결혼·직장·자녀가 있어야 말이 되는 알림은 그때만 고른다(무직인데 명절 보너스가 나오지 않게).
+    boolean working = context.jobStartDay() != null && !context.retired();
     List<NoticeDefinition> eligible =
-        content.notices().stream().filter(n -> context.married() || !n.requiresMarried()).toList();
+        content.notices().stream()
+            .filter(n -> context.married() || !n.requiresMarried())
+            .filter(n -> working || !n.requiresJob())
+            .filter(n -> context.childrenCount() > 0 || !n.requiresChildren())
+            .toList();
     NoticeDefinition definition =
         weighted(eligible, NoticeDefinition::weight, random.forKey("event", "notice", seq));
     return new EventRow(
@@ -604,7 +820,7 @@ class DefaultEventService implements EventService {
 
   /**
    * 직업 선택 (decisions.md 26번). 선택지는 가중치로 뽑되, 기다린 뒤라면 직전 제안의 최고 월급보다 나은 직업을 하나는 섞는다(있다면). 끝에 "기다린다"
-   * 선택지는 아직 기다릴 수 있고 지금 제안보다 월급이 많은 직업이 남아 있을 때만 붙는다.
+   * 선택지는 아직 기다릴 수 있고 지금 제안보다 월급이 많은 직업이 남아 있을 때만 붙고, 맨 끝에는 언제나 "전업투자자가 된다"가 붙는다.
    */
   private EventRow jobEvent(
       UUID id,
@@ -619,7 +835,7 @@ class DefaultEventService implements EventService {
     long bestBefore =
         streak.stream()
             .flatMap(r -> r.options().stream())
-            .filter(code -> !ChoiceTicket.Job.WAIT.equals(code))
+            .filter(ChoiceTicket.Job::isJobCode)
             .mapToLong(code -> content.job(code).baseMonthlySalary())
             .max()
             .orElse(0);
@@ -645,6 +861,8 @@ class DefaultEventService implements EventService {
     if (streak.size() < properties.job().maxWaits() && betterExists) {
       picked.add(ChoiceTicket.Job.WAIT);
     }
+    // 직업을 아예 고르지 않을 수도 있다: 월급 없이 투자로만 산다 (decisions.md 35번).
+    picked.add(ChoiceTicket.Job.INVEST);
     String definition = streak.isEmpty() ? (rehire ? JOB_REHIRE : null) : JOB_RETRY;
     return simple(id, seq, EventKind.JOB, definition, day, picked);
   }

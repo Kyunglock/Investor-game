@@ -91,6 +91,8 @@ public record InterestResult(boolean accrued, long interest, long debtAfter) {}
 - `sold = min(수량, 보유)`. 보유가 0이면 `NOTHING_TO_SELL`(장부 없음).
 - 원가 차감 `costOut = cost_basis × sold / 보유`(전량이면 전부), `realizedPnl = sold × 가격 − costOut`.
 - 뉴스 선택의 매도는 **전량**이다 (진행이 보유 수량을 넘긴다).
+- 판 돈은 **빚부터 갚는다**(마이너스 통장, 장부 `DEBT_REPAY`). 현금을 쥔 채 빚 이자가 붙지 않게 한다 (decisions.md 39번).
+- `borrow`(빚투): 현금과 빚이 함께 늘어난다. 장부 `LOAN`.
 
 ### 4.4 관망
 

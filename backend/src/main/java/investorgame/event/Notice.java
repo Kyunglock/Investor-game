@@ -7,6 +7,7 @@ import java.util.UUID;
  *
  * @param amount 양수 수입, 음수 지출(원). salaryPercent가 0일 때
  * @param salaryPercent 0보다 크면 월급 × percent / 100 을 수입으로 (진행이 계산)
+ * @param assetPercent 0보다 크면 지출을 순자산 × percent / 100 까지 키운다 (진행이 계산)
  */
 public record Notice(
     UUID eventId,
@@ -15,4 +16,5 @@ public record Notice(
     String title,
     String body,
     long amount,
-    int salaryPercent) {}
+    int salaryPercent,
+    int assetPercent) {}

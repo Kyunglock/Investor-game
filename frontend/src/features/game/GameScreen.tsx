@@ -3,6 +3,7 @@ import { AssetCurve } from './AssetCurve'
 import { ageAt } from './clock'
 import { DecisionCard } from './DecisionCard'
 import { HouseholdCard } from './HouseholdCard'
+import { HousingCard } from './HousingCard'
 import { IdentityCard } from './IdentityCard'
 import { LifeLog } from './LifeLog'
 import { LifeMap } from './LifeMap'
@@ -26,7 +27,7 @@ export function GameScreen({ game }: { game: Game }) {
   const outcome = useGameStore((s) => s.outcome)
   const choosing = useGameStore((s) => s.choosing)
   const marketOpen = useGameStore((s) => s.marketOpen)
-  const { choose, dismissOutcome } = useGameStore.getState()
+  const { choose, revealOutcome, dismissOutcome } = useGameStore.getState()
 
   return (
     <div className="grid gap-3.5 md:grid-cols-[280px_minmax(0,1fr)] lg:grid-cols-[280px_minmax(0,1fr)_320px]">
@@ -36,13 +37,14 @@ export function GameScreen({ game }: { game: Game }) {
         <IdentityCard game={game} ageYears={ageYears} />
         <StatsCard game={game} />
         <HouseholdCard game={game} />
+        <HousingCard game={game} />
       </div>
 
       {/* 가운데 위: 장면과 선택/결과 */}
       <div className="order-1 flex flex-col gap-3.5 md:order-2">
         <SceneCard game={game} ageYears={ageYears} />
         {outcome ? (
-          <OutcomeCard outcome={outcome} onContinue={dismissOutcome} />
+          <OutcomeCard outcome={outcome} onReveal={revealOutcome} onContinue={dismissOutcome} />
         ) : game.pendingEvent ? (
           <DecisionCard
             event={game.pendingEvent}

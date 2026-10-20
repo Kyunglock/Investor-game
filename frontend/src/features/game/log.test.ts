@@ -28,6 +28,145 @@ describe('logLine', () => {
     expect(line.age).toBe(1)
   })
 
+  it('전조는 무엇의 전조인지 말하지 않고, 위기는 끝난 뒤 이름과 지나간 전조를 함께 돌아본다', () => {
+    const omen = logLine(
+      entry('OMEN', 30 * 360, { text: '증시 거래량이 사상 최대를 기록했다.' }),
+      game,
+    )
+    expect(omen.text).toBe('증시 거래량이 사상 최대를 기록했다.')
+    expect(omen.pill).toBe('세상')
+
+    const crisis = logLine(
+      entry('CRISIS', 35 * 360, {
+        name: '기술주 버블 붕괴',
+        model: '2000년 IT 버블',
+        severity: 'DEPRESSION',
+        startAge: 32,
+        endAge: 36,
+        dropBp: 5_400,
+        omens: ['증시 거래량이 사상 최대를 기록했다.'],
+      }),
+      game,
+    )
+    expect(crisis.tone).toBe('decline')
+    expect(crisis.text).toContain('돌아보니 32~36세의 그 시절은 기술주 버블 붕괴, 대공황이었다.')
+    expect(crisis.text).toContain('"증시 거래량이 사상 최대를 기록했다."')
+
+    const silent = logLine(
+      entry('CRISIS', 35 * 360, {
+        name: '외환 위기',
+        model: '1997년 IMF 외환위기',
+        severity: 'RECESSION',
+        startAge: 40,
+        endAge: 42,
+        dropBp: 2_500,
+        omens: [],
+      }),
+      game,
+    )
+    expect(silent.text).toContain('외환 위기, 불황이었다')
+    expect(silent.text).toContain('아무 전조도 없이 왔다.')
+  })
+
+  it('성향 장면: 결과가 갈리면 어떻게 됐는지 덧붙인다', () => {
+    const line = logLine(
+      entry('TRAIT', 30 * 360, {
+        eventTitle: '친한 동료가 "급해서 그런데 500만 원만" 한다',
+        optionLabel: '빌려준다',
+        result: '500만 원은 돌아오지 않았다.',
+      }),
+      game,
+    )
+    expect(line.text).toBe(
+      '친한 동료가 "급해서 그런데 500만 원만" 한다 · 결정: 빌려준다 → 500만 원은 돌아오지 않았다.',
+    )
+  })
+
+  it('청약: 떨어짐·당첨 뒤 포기·당첨', () => {
+    const at = (payload: Record<string, unknown>) =>
+      logLine(entry('HOUSING', 30 * 360, { option: 'APPLY', ...payload }), game).text
+    expect(at({ won: false, points: 42 })).toBe('청약에 떨어졌다 (가점 42점).')
+    expect(at({ won: true, bought: false, points: 64 })).toBe(
+      '청약에 당첨됐지만 계약금이 모자라 포기했다 (가점 64점).',
+    )
+    expect(
+      at({
+        won: true,
+        bought: true,
+        points: 71,
+        regionName: '서울 아파트 (84㎡)',
+        price: 700_000_000,
+      }),
+    ).toBe('청약에 당첨됐다 (가점 71점)! 서울 아파트 (84㎡)를 분양가 700,000,000원에 샀다.')
+  })
+
+  it('집: 매수·전세사기·매도·역전세', () => {
+    const bought = logLine(
+      entry('HOUSING', 30 * 360, {
+        option: 'BUY_SEOUL',
+        regionName: '서울 아파트 (84㎡)',
+        price: 1_000_000_000,
+        mortgage: 500_000_000,
+        fraud: false,
+      }),
+      game,
+    )
+    expect(bought.text).toBe('서울 아파트 (84㎡)를 1,000,000,000원에 샀다 (주담대 500,000,000원).')
+    expect(bought.pill).toBe('집')
+
+    const fraud = logLine(
+      entry('HOUSING', 30 * 360, {
+        option: 'MONTHLY',
+        label: '월세로 산다',
+        deposit: 10_000_000,
+        monthlyRent: 600_000,
+        price: 0,
+        fraud: true,
+        lost: 150_000_000,
+      }),
+      game,
+    )
+    expect(fraud.tone).toBe('flipped')
+    expect(fraud.text).toContain('전세사기를 당했다. 보증금 150,000,000원을 돌려받지 못했다.')
+
+    const sold = logLine(
+      entry('HOME_SOLD', 40 * 360, {
+        regionName: '경기 아파트 (84㎡)',
+        price: 700_000_000,
+        purchasePrice: 600_000_000,
+        residence: true,
+      }),
+      game,
+    )
+    expect(sold.text).toContain('+100,000,000원')
+    expect(sold.text).toContain('살 곳을 새로 구해야 한다')
+
+    const reverse = logLine(
+      entry('TENANT', 40 * 360, { regionName: '서울', before: 500_000_000, after: 450_000_000 }),
+      game,
+    )
+    expect(reverse.text).toContain('50,000,000원을 돌려줬다 (역전세)')
+  })
+
+  it('빚투: 빌렸으면 금액과 수량, 안 빌렸으면 그렇다고', () => {
+    const borrowed = logLine(
+      entry('LEVERAGE', 30 * 360, {
+        stockName: '삼송전자',
+        dropBp: 3_500,
+        borrowed: true,
+        loan: 50_000_000,
+        quantity: 700,
+      }),
+      game,
+    )
+    expect(borrowed.text).toContain('50,000,000원을 빌려 700주를 더 샀다 (빚투)')
+    const passed = logLine(
+      entry('LEVERAGE', 30 * 360, { stockName: '삼송전자', dropBp: 3_500, borrowed: false }),
+      game,
+    )
+    expect(passed.text).toContain('빚은 지지 않았다')
+  })
+
   it('나이는 startAge + floor(day / daysPerYear)', () => {
     expect(logLine(entry('JOB', 23 * 360 + 359, {}), game).age).toBe(24)
   })

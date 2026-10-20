@@ -20,7 +20,11 @@ import { useGameStore } from './store'
 const REVEAL_MS = 1_800
 
 /** 선택 → 실제 행동과 그 원인을 보여 준다. 원인이 보여야 억울함이 동기가 된다 (prd.md F6). 결과도 선택처럼 화면을 덮는다 (decisions.md 31번). */
-export function OutcomeCard(props: { outcome: Outcome; onContinue: () => void }) {
+export function OutcomeCard(props: {
+  outcome: Outcome
+  onReveal: () => void
+  onContinue: () => void
+}) {
   return (
     <Overlay>
       <Body {...props} />
@@ -28,7 +32,15 @@ export function OutcomeCard(props: { outcome: Outcome; onContinue: () => void })
   )
 }
 
-function Body({ outcome, onContinue }: { outcome: Outcome; onContinue: () => void }) {
+function Body({
+  outcome,
+  onReveal,
+  onContinue,
+}: {
+  outcome: Outcome
+  onReveal: () => void
+  onContinue: () => void
+}) {
   const deviated = outcome.chosen !== outcome.actual
   const price = outcome.price
   // 뉴스와 흔들림은 판정이 손을 움직이므로 잠깐 뜸을 들인다. 성장기·직업·제안은 뒤집히지 않으니 바로 보여 준다.
@@ -36,11 +48,13 @@ function Body({ outcome, onContinue }: { outcome: Outcome; onContinue: () => voi
   const [revealed, setRevealed] = useState(!isNews)
   useEffect(() => {
     if (revealed) {
+      // 결과를 드러낸 뒤에야 총자산·보유를 바꾼다. "실행 중"에 숫자가 먼저 움직이면 결과가 샌다.
+      onReveal()
       return
     }
     const id = setTimeout(() => setRevealed(true), REVEAL_MS)
     return () => clearTimeout(id)
-  }, [revealed])
+  }, [revealed, onReveal])
 
   return (
     <section

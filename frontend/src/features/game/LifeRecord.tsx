@@ -38,7 +38,8 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
           </h2>
           <p className="text-[13px] text-muted">
             {result.finalAge}세, {bankrupt ? '파산했습니다' : '투자 인생을 마쳤습니다'} ·{' '}
-            {game.job?.title ?? '무직'} · {game.investorType?.name ?? '유형 미정'}
+            {game.job?.title ?? (game.fullTimeInvestor ? '전업투자자' : '무직')} ·{' '}
+            {game.investorType?.name ?? '유형 미정'}
           </p>
         </div>
       </div>

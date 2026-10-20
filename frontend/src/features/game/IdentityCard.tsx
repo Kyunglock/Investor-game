@@ -39,7 +39,13 @@ export function IdentityCard({ game, ageYears }: { game: Game; ageYears: number 
             <dd>{PHASE_LABELS[game.phase]}</dd>
             <dt className="text-faint">직업</dt>
             <dd data-testid="job">
-              {game.job ? game.job.title : game.phase === 'CHILDHOOD' ? '학생' : '구직 중'}
+              {game.job
+                ? game.job.title
+                : game.fullTimeInvestor
+                  ? '전업투자자'
+                  : game.phase === 'CHILDHOOD'
+                    ? '학생'
+                    : '구직 중'}
             </dd>
             <dt className="text-faint">월급</dt>
             <dd className="font-mono-num">

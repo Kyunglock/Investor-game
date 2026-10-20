@@ -142,6 +142,7 @@ public record CompleteResult(
 | `NOTICE` | 취업 뒤 | 아니오 | — | 지출·수입 알림. **만들어지는 순간 RESOLVED**이고 판은 멈추지 않는다. `ScheduleResult.notice`로 돌려주고 진행이 돈을 반영한다 |
 | `NEWS` | `INVESTING` | 예 | **불가** | 매수·매도·관망 선택. 숨은 방향·폭과 **매매 대상 종목** 하나가 있다. `sectorWide`면 충격이 섹터 전체 (확정) |
 | `SHAKE` | `INVESTING`, 보유 있음 | 예 | 불가 | 보유 종목 흔들림(인내심 시험). 보유 중 한 종목에 대해 **버틴다(`HOLD`) / 판다(`SELL`, 전량)**. 판정·충격은 뉴스와 같고 힌트·다른 뉴스는 없다 (decisions.md 33번) |
+| `LEVERAGE` | `INVESTING`, 든 종목이 크게 빠짐 | 예 | 불가 | 빚투 제안. 가장 많이 빠진 보유 종목에 대해 **대출받아 더 산다(`BORROW`) / 빚은 지지 않는다(`PASS`)**. 판정 없음. 대출·매수는 진행이 한다 (decisions.md 39번) |
 
 - **스킵할 수 있는 것은 알림성(`NOTICE`)뿐이다** (확정). 선택형은 모두 스킵할 수 없다. 뉴스는 선택의 순간이기 때문이다.
 - 한 판에서 **대기 중(`PENDING`)인 선택형 이벤트는 최대 하나**다. 선택형을 만나면 `schedule`이 멈추기 때문이다.
@@ -167,9 +168,9 @@ public record CompleteResult(
 | 종류 | 조건 | 다음 후보 일수 |
 |---|---|---|
 | `TRAIT` 성장기 | `CHILDHOOD`, 성장 단계가 남음 | 다음 성장 단계의 나이(콘텐츠의 `adult`가 아닌 장면 중 `age`가 같은 것들이 한 단계. 15~24세 10단계)를 게임 일수로 바꾼 값 **+ 반년(180일)**. 시작 나이와 같은 단계가 0일에 바로 뜨지 않게 한다. 장면은 그 단계의 풀에서 `("event", "trait-scene", 단계 번호)` 키로 랜덤하게 하나 뽑는다 |
-| `TRAIT` 취업 뒤 | 취업함, 콘텐츠의 `adult` 장면 중 아직 안 나온 것이 있음 | 마지막 adult `TRAIT`(없으면 취업일) + `event.trait.adult-gap-days`(초기값 540~900) 구간에서 뽑은 값. 장면은 남은 adult 풀에서 `("event","trait-scene","adult",n)` 키로 뽑는다. 성향 확정(`traitsComplete`)에는 세지 않고 능력치만 움직인다 (decisions.md 23번) |
+| `TRAIT` 취업 뒤 | 취업함, 콘텐츠의 `adult` 장면 중 아직 안 나온 것이 있음(`job` 장면은 직장에 다니는 동안에만 — decisions.md 36번) | 마지막 adult `TRAIT`(없으면 취업일) + `event.trait.adult-gap-days`(초기값 540~900) 구간에서 뽑은 값. 장면은 남은 adult 풀에서 `("event","trait-scene","adult",n)` 키로 뽑는다. 성향 확정(`traitsComplete`)에는 세지 않고 능력치만 움직인다 (decisions.md 23번) |
 | `JOB` 첫 선택 | `CHILDHOOD`, 성향 이벤트가 모두 끝나 스타일이 확정됨, 직업 없음 | 처음은 `event.job.age`(초기값 25)를 게임 일수로 바꾼 값(마지막 성향 이벤트보다 앞서지 않는다). `WAIT`을 골랐으면 마지막 `JOB` + `event.job.wait-days`(180) |
-| `JOB` 재취업 | 취업한 적 있음, 지금 직업 없음, 은퇴 전, 나이 ≤ `event.career.last-age` | 실직시킨 마지막 `CAREER` + `event.job.rehire-days`(150). 그 뒤 `WAIT`을 골랐으면 마지막 `JOB` + `wait-days` |
+| `JOB` 재취업 | 취업한 적 있음, 지금 직업 없음, 전업투자자 아님, 은퇴 전, 나이 ≤ `event.career.last-age` | 실직시킨 마지막 `CAREER` + `event.job.rehire-days`(150). 그 뒤 `WAIT`을 골랐으면 마지막 `JOB` + `wait-days` |
 | `CAREER` | 직업 있음, 은퇴 전, 나이 ≤ `event.career.last-age`(57) | `max(지금 직업 시작일, 마지막 CAREER)` + `event.career.gap-days`(540~1080) 구간에서 뽑은 값(키 `("CAREER", n)`) |
 | `OFFER` | `SAVING`, `salaryStarted`, `traitsFinalized`, 대기·예약된 `OFFER` 없음 | 처음이면 `max(현재, 첫 월급 후)`; 거절되었다면 마지막 `OFFER` + `game.days-per-year` (1년마다 다시 묻는다, 확정) |
 | `TRAINING` | `JOB`이 해결됨 | 마지막 `TRAINING`(없으면 `JOB` 해결 일수) + `event.training.gap-days` 구간에서 뽑은 값 |
@@ -178,6 +179,7 @@ public record CompleteResult(
 | `NOTICE` | 취업함 | 마지막 `NOTICE`(없으면 취업일) + `event.notice.gap-days`. 정의는 `("event","notice",seq)`로 가중치 선택, `requiresMarried`는 결혼 뒤에만 |
 | `NEWS` | `INVESTING` | 마지막 뿌리 `NEWS`(없으면 `INVESTING` 시작 일수) + 투자 스타일별 간격 구간에서 뽑은 값 (5.4절) |
 | `SHAKE` | `INVESTING`, `heldStockCodes`가 비어 있지 않음 | 마지막 `SHAKE`(없으면 `INVESTING` 시작 일수) + `event.shake.gap-days`(300~600) 구간에서 뽑은 값(키 `("SHAKE", n)`). 종목·장면·숨은 방향(`up-bp`)·폭(`magnitude-bp`)은 `("event","shake",seq)`로 뽑는다 |
+| `LEVERAGE` | `INVESTING`, `heldDropBp`에 `event.leverage.drop-bp`(3000) 이상인 종목이 있음 | 마지막 `LEVERAGE` + `event.leverage.gap-days`(720), 없으면 `INVESTING` 시작 일수(지나 있으면 지금). 가장 많이 빠진 종목(같으면 코드순) |
 | 연결 뉴스 | `SCHEDULED` 상태 | 예약된 `occurs_day` |
 
 - `OFFER`는 거절하면 다시 묻되, 수락하면 `SAVING`이 끝나므로 더 만들지 않는다.
@@ -303,7 +305,7 @@ public record CompleteResult(
 | 뉴스 | 위 JSON의 필드. `styles`가 없으면 모든 스타일 |
 | 직업 | `code`, `title`, 선택 가중치, 월급 정보 (진행·자산용, 콘텐츠 스펙). 14개, 월급이 많을수록 가중치가 낮다 |
 | 직장 장면 (`careers.json`) | `code`, `title`, `body`, `weight`, `minTenureYears`, 선택지 2~4개(`code`, `label`, 판정 `stat`·`baseBp`·`perPointBp`(없으면 항상 성공), `success`/`fail` 효과: `salaryPercent`, `quit`, `severanceMonths`, `moveJob`, `moveSalaryPercent`, `amount`, `statDeltas`(운 제외), `text`) |
-| 성향 | `code`, `age`, `adult`(선택, true면 취업 뒤 일상 장면), `title`, `body`(상황), 선택지 3~4개(`code`, `label`, `traitDeltas`(style/risk/mind/sector), `statDeltas`(선택, 절댓값 ≤ `content.trait-stat-max-delta` 8), `note`) |
+| 성향 | `code`, `age`, `adult`(선택, true면 취업 뒤 일상 장면), `job`(선택, true면 직장에 다니는 동안에만), 선택지의 `amount`·`outcomes`(선택, 결과가 갈리는 돈·능력치·문구 — decisions.md 41번), `title`, `body`(상황), 선택지 3~4개(`code`, `label`, `traitDeltas`(style/risk/mind/sector), `statDeltas`(선택, 절댓값 ≤ `content.trait-stat-max-delta` 8), `note`) |
 | 자기계발 | `code`, `title`, `body`, 선택지 목록(`code`, `label`, `statCode`, `expAmount`, `cost`) |
 | 알림 | `code`, `title`, `body`, 단계 조건 |
 | 힌트 문구 | 방향(`UP`/`DOWN`/`NEUTRAL`) × 강도(`MILD`/`STRONG`) 별 문구 목록 (poc.md 6절) |

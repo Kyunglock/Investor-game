@@ -34,6 +34,18 @@ function baseGame(over: Partial<Game> = {}): Game {
     invested: 30_000_000,
     debt: 0,
     holdings: [],
+    fullTimeInvestor: false,
+    housing: {
+      tenure: 'OWN',
+      deposit: 0,
+      monthlyRent: 0,
+      jeonseLoan: 0,
+      insured: false,
+      mortgageRateBp: 550,
+      monthlyCost: 0,
+      homes: [],
+      quotes: [],
+    },
     market: { month: 660, stocks: [] },
     household: {
       married: false,
@@ -303,6 +315,49 @@ describe('buildCredits', () => {
       text: '70세. 남은 자산 80,000,000원과 매달 연금 1,990,000원으로 여생을 보냈다.',
       tone: 'accent',
     })
+  })
+
+  it('전업투자자는 직장 장에 취직 대신 전업투자자가 된 나이를 남긴다', () => {
+    const game = baseGame({
+      fullTimeInvestor: true,
+      log: [
+        entry('BIRTH', 15, {}),
+        entry('JOB', 25, {
+          jobCode: 'INVEST',
+          jobTitle: '전업투자자',
+          monthlySalary: 0,
+          rehire: false,
+          fullTimeInvestor: true,
+        }),
+        entry('END', 70, {}),
+      ],
+    })
+    const work = buildCredits(game).find((s) => s.key === 'work')
+    expect(work?.lines).toEqual([{ text: '25세, 전업투자자가 됐다', sub: '월급 없음' }])
+  })
+
+  it('위기와 빚투가 있었으면 지나온 폭풍 장에 남는다', () => {
+    const game = baseGame({
+      log: [
+        entry('BIRTH', 15, {}),
+        entry('LEVERAGE', 34, { stockName: '삼송전자', borrowed: true, loan: 30_000_000 }),
+        entry('CRISIS', 36, {
+          name: '부동산 금융 위기',
+          model: '2008년 리먼 브라더스 사태',
+          severity: 'RECESSION',
+          startAge: 33,
+          endAge: 36,
+          dropBp: 2_800,
+          omens: [],
+        }),
+        entry('END', 70, {}),
+      ],
+    })
+    const storms = buildCredits(game).find((s) => s.key === 'storms')
+    expect(storms?.lines.map((l) => l.text)).toEqual([
+      '34세, 삼송전자에 빚투',
+      '33~36세, 부동산 금융 위기 (불황)',
+    ])
   })
 
   it('파산 엔딩: 파산 문장과 뒤집힌 횟수, 가장 잘한·아쉬운 선택', () => {
