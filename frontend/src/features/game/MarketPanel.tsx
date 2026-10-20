@@ -16,7 +16,9 @@ import { Sparkline } from './Sparkline'
 import { HELD_TAB, MACRO_TAB, useGameStore } from './store'
 
 const NEWS_SHOWN = 6
-const NEWSPAPER_SHOWN = 12
+const NEWSPAPER_SHOWN = 5
+/** 시황 탭에 보이는 지표. 나머지는 해석 문구 안에서만 쓰인다 (매매창 설계 2.2절). */
+const MACRO_INDICATORS = ['index', 'sentiment']
 
 /**
  * 매매창 (매매창 설계 2절): 시황 탭(거시 지표·경제 신문·안목 해석)과 종목 탭(보유·섹터 → 차트·추세·종목 뉴스·주문). 열려 있는 동안 시계는 멈춰 있고,
@@ -130,54 +132,47 @@ export function MarketPanel({ game }: { game: Game }) {
 
 function MacroTab({ game }: { game: Game }) {
   const overview = useGameStore((s) => s.overview)
+  const shown = overview?.indicators.filter((i) => MACRO_INDICATORS.includes(i.code)) ?? []
   return (
     <div className="px-4 py-4" data-testid="macro-tab-body">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <AnalysisNote title="내가 읽은 경제" analysis={overview?.analysis} testId="macro-analysis" />
+      <div className="mt-3 grid grid-cols-2 gap-2">
         {overview
-          ? overview.indicators.map((i) => <IndicatorTile key={i.code} indicator={i} />)
-          : Array.from({ length: 9 }, (_, i) => i).map((i) => (
-              <div key={i} className="h-20 animate-pulse rounded border border-line-soft bg-bg" />
+          ? shown.map((i) => <IndicatorLine key={i.code} indicator={i} />)
+          : MACRO_INDICATORS.map((code) => (
+              <div
+                key={code}
+                className="h-12 animate-pulse rounded border border-line-soft bg-bg"
+              />
             ))}
       </div>
-      <div className="mt-4 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <div className="mt-4">
         <Newspaper game={game} items={overview?.newspaper ?? []} />
-        <div>
-          <AnalysisNote
-            title="내가 읽은 경제"
-            analysis={overview?.analysis}
-            testId="macro-analysis"
-          />
-          <p className="mt-2 text-[11px] text-faint">
-            지표와 소식은 사실 그대로다. 해석만 내 안목이 읽는다. 소문이 들린다고 꼭 무슨 일이
-            생기는 건 아니다.
-          </p>
-        </div>
       </div>
     </div>
   )
 }
 
-function IndicatorTile({ indicator }: { indicator: Indicator }) {
+/** 값과 1년 변화만. 색은 방향만 보여 준다. */
+function IndicatorLine({ indicator }: { indicator: Indicator }) {
   const change = indicatorChange(indicator.unit, indicator.value, indicator.yearAgo)
-  // 금리·물가·환율·부채는 오르는 게 좋은 소식이 아니다. 색은 방향만 보여 준다.
   const up = change.startsWith('+')
   const down = change.startsWith('−')
   return (
     <div
-      className="rounded border border-line-soft bg-bg px-2.5 py-2"
+      className="flex items-baseline justify-between rounded border border-line-soft bg-bg px-2.5 py-2"
       data-testid="indicator"
       data-code={indicator.code}
     >
-      <p className="text-[10px] text-faint">{indicator.name}</p>
-      <p className="font-mono-num text-[15px] font-semibold leading-tight">
+      <span className="text-[11px] text-faint">{indicator.name}</span>
+      <span className="font-mono-num text-[15px] font-semibold">
         {indicatorValue(indicator.unit, indicator.value)}
-      </p>
-      <p className="flex items-center justify-between text-[10px]">
-        <span className={`font-mono-num ${up ? 'text-up' : down ? 'text-down' : 'text-muted'}`}>
+        <small
+          className={`ml-1.5 text-[10px] font-normal ${up ? 'text-up' : down ? 'text-down' : 'text-muted'}`}
+        >
           1년 {change}
-        </span>
-        <Sparkline values={indicator.points.map((p) => p.value)} width={70} height={18} />
-      </p>
+        </small>
+      </span>
     </div>
   )
 }
