@@ -1711,11 +1711,11 @@
   {
     "code": "inv-yeouido",
     "title": "여의도 증권사 설립",
-    "body": "여의도에서 연락이 왔다. 당신의 투자 이력을 보고 증권사를 함께 세우자는 사람들이다. 자본금 10억을 넣고 금융위원회 인가를 받아야 한다. 받으면 여의도에 내 이름의 간판이 걸린다.",
+    "body": "여의도에서 연락이 왔다. 당신의 투자 이력을 보고 증권사를 함께 세우자는 사람들이다. 자본금 5억을 넣고 금융위원회 인가를 받아야 한다. 받으면 여의도에 내 이름의 간판이 걸린다.",
     "weight": 30,
     "minTenureYears": 5,
     "jobs": ["INVEST"],
-    "minNetWorth": 2000000000,
+    "minNetWorth": 1000000000,
     "options": [
       {
         "code": "found",
@@ -1723,7 +1723,7 @@
         "stat": "insight",
         "baseBp": 5000,
         "perPointBp": 30,
-        "success": { "amount": -1000000000, "statDeltas": { "conviction": 3, "courage": 2 }, "becomeJob": "securities-ceo", "text": "금융위 인가가 났다. 여의도 빌딩에 간판을 걸었다. 직원 앞에서 첫 조회를 하는데 손이 떨렸다." },
+        "success": { "amount": -500000000, "statDeltas": { "conviction": 3, "courage": 2 }, "becomeJob": "securities-ceo", "text": "금융위 인가가 났다. 여의도 빌딩에 간판을 걸었다. 직원 앞에서 첫 조회를 하는데 손이 떨렸다." },
         "fail": { "amount": -200000000, "statDeltas": { "courage": 1 }, "text": "인가 심사에서 떨어졌다. 법률·컨설팅 비용으로 2억이 사라졌다. 자산이 받쳐 주면 기회는 다시 온다." }
       },
       {

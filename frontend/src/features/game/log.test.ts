@@ -468,5 +468,17 @@ describe('직장 기록', () => {
     expect(career.text).toBe('연봉 협상 · 세게 요구한다 → 분위기만 싸해졌다.')
     expect(career.tone).toBe('flipped')
     expect(career.pill).toBe('직장')
+
+    const investor = logLine(
+      entry('CAREER', 4100, {
+        eventTitle: '주식 유튜브',
+        optionLabel: '채널을 연다',
+        success: true,
+        text: '구독자 10만.',
+        fullTimeInvestor: true,
+      }),
+      game,
+    )
+    expect(investor.pill).toBe('투자')
   })
 })
