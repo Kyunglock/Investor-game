@@ -141,6 +141,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/games/{gameId}/market/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 시황 (거시 지표, 경제 신문, 안목 해석)
+         * @description 이 달의 시황 해석이 없으면 여기서 정해져 저장된다. 같은 달에는 다시 불러도 같다 (매매창 설계 2.2절).
+         */
+        get: operations["marketOverview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/games/{gameId}/stocks/{stockCode}/analysis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 한 종목의 추세 사실과 안목 해석
+         * @description 숫자는 안목과 상관없이 정확하고 해석만 안목이 읽는다. 이 달의 해석이 없으면 여기서 정해져 저장된다 (매매창 설계 2.1절).
+         */
+        get: operations["stockAnalysis"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/games/{gameId}/events/{eventId}/choose": {
         parameters: {
             query?: never;
@@ -288,6 +328,94 @@ export interface components {
                 price: number;
             }[];
         };
+        /** @description 안목 해석 (매매창 설계 4절). 확률과 정답은 내려가지 않는다 */
+        Analysis: {
+            /** @description 해석한 달. 같은 달에는 다시 열어도 같다 */
+            month: number;
+            /** @description 해석한 때의 안목 */
+            insight: number;
+            /** @description 읽은 결론. 추세는 UP·DOWN·FLAT */
+            reading: string;
+            text: string;
+            /** @description 지난 해석이 드러나며 붙는 한마디. 지난 해석이 없으면 null */
+            remark?: {
+                /** @description 지난 해석이 맞았는가 */
+                correct: boolean;
+                text: string;
+            } | null;
+        };
+        /** @description 한 종목의 추세 사실과 안목 해석. 사실은 안목과 상관없이 정확하다 */
+        StockAnalysis: {
+            stockCode: string;
+            facts: {
+                /**
+                 * Format: int64
+                 * @description 6개월 이동평균(이번 달 포함)
+                 */
+                ma6: number;
+                /**
+                 * Format: int64
+                 * @description 12개월 이동평균
+                 */
+                ma12: number;
+                /**
+                 * Format: int64
+                 * @description 최근 12달 최고가
+                 */
+                high12: number;
+                /**
+                 * Format: int64
+                 * @description 최근 12달 최저가
+                 */
+                low12: number;
+                /** @description 고점 대비 하락률(만분율 */
+                dropFromHighBp: number;
+                /** @description 저점 대비 상승률(만분율 */
+                riseFromLowBp: number;
+                change3mBp: number;
+                change12mBp: number;
+                /** @description 같은 섹터 종목들의 12달 변화율 평균 */
+                sectorChange12mBp: number;
+                /** @description 12개월선 위(양수)·아래(음수)로 이어진 달 수 */
+                monthsVsMa12: number;
+            };
+            analysis: components["schemas"]["Analysis"];
+        };
+        /** @description 시황 (매매창 설계 2.2절) */
+        MarketOverview: {
+            month: number;
+            /** @description 순서 고정. 종합주가지수, 주담대 금리, 서울·경기 아파트, 물가, 환율, 가계부채 증가율, 투자 심리, 거래대금 */
+            indicators: {
+                code: string;
+                name: string;
+                /**
+                 * @description index는 판 시작 = 1000
+                 * @enum {string}
+                 */
+                unit: "index" | "bp" | "won" | "score" | "ratio";
+                /** Format: int64 */
+                value: number;
+                /**
+                 * Format: int64
+                 * @description 12달 전 값. 이력이 짧으면 가장 오래된 값
+                 */
+                yearAgo: number;
+                /** @description 최근 5년(60달) */
+                points: {
+                    month: number;
+                    /** Format: int64 */
+                    value: number;
+                }[];
+            }[];
+            /** @description 전조·헛소문·평범한 기사·위기 회고를 구분 없이 날짜순으로. 최근 것이 뒤다 */
+            newspaper: {
+                day: number;
+                /** @enum {string} */
+                kind: "OMEN" | "ARTICLE" | "CRISIS";
+                text: string;
+            }[];
+            analysis: components["schemas"]["Analysis"];
+        };
         Job: {
             code: string;
             title: string;
@@ -419,7 +547,7 @@ export interface components {
             /** @description 사건이 일어난 게임 일수 */
             day: number;
             /** @enum {string} */
-            kind: "BIRTH" | "TRAIT" | "JOB" | "JOB_WAIT" | "CAREER" | "STYLE" | "OFFER" | "NEWS" | "SHAKE" | "PRICE" | "GROWTH" | "TRADE" | "LIFE" | "MARRIAGE" | "CHILD" | "RETIRE" | "LEVERAGE" | "OMEN" | "CRISIS" | "HOUSING" | "HOME_SOLD" | "TENANT" | "END";
+            kind: "BIRTH" | "TRAIT" | "JOB" | "JOB_WAIT" | "CAREER" | "STYLE" | "OFFER" | "NEWS" | "SHAKE" | "PRICE" | "GROWTH" | "TRADE" | "LIFE" | "MARRIAGE" | "CHILD" | "RETIRE" | "LEVERAGE" | "OMEN" | "ARTICLE" | "CRISIS" | "HOUSING" | "HOME_SOLD" | "TENANT" | "END";
             /** @description 종류별 필드 (docs/superpowers/specs/2026-10-18-ui-redesign-design.md 6.3절) */
             payload: {
                 [key: string]: unknown;
@@ -778,6 +906,55 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StockHistory"];
+                };
+            };
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    marketOverview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gameId: components["parameters"]["GameId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 시황 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketOverview"];
+                };
+            };
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    stockAnalysis: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gameId: components["parameters"]["GameId"];
+                stockCode: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 사실과 해석 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockAnalysis"];
                 };
             };
             401: components["responses"]["SessionRequired"];

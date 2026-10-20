@@ -41,6 +41,18 @@ public interface MarketService {
   /** 한 종목의 월별 전체 이력. 달 오름차순. */
   List<PricePoint> history(UUID gameId, String stockCode);
 
+  /** 종합주가지수의 월별 전체 이력. 종목마다 기준가 대비 비율을 평균해 판 시작 = 1000. 달 오름차순. */
+  List<PricePoint> indexHistory(UUID gameId);
+
+  /** 주담대 금리(연, 만분율)의 월별 전체 이력. 달 오름차순. */
+  List<PricePoint> rateHistory(UUID gameId);
+
+  /** 한 지역 아파트 시세의 월별 전체 이력. 달 오름차순. */
+  List<PricePoint> homeHistory(UUID gameId, String region);
+
+  /** 거시 지표(환율·가계부채 증가율·투자 심리·거래대금)의 월별 전체 이력. 코드 순서는 고정이다 (매매창 설계 3.1절). */
+  List<IndicatorSeries> indicators(UUID gameId);
+
   /** 이 판의 경기 흐름(전조·위기). 시드로 정해져 같은 판은 언제 불러도 같다. 화면에 내보내면 안 된다. */
   MarketCycle cycle(SeededRandom random);
 

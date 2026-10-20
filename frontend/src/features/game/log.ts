@@ -248,7 +248,9 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       }
     }
     case 'OMEN':
+    case 'ARTICLE':
       // 전조는 들린 대로만. 무엇의 전조인지, 정말 전조였는지는 지나 봐야 안다 (decisions.md 38번).
+      // 평범한 기사와 헛소문도 전조와 똑같이 보여 서로 구분되지 않는다 (매매창 설계 3.3절).
       return { ...base, tone: 'neutral', pill: '세상', text: str(p.text) }
     case 'CRISIS': {
       const kind = p.severity === 'DEPRESSION' ? '대공황' : '불황'

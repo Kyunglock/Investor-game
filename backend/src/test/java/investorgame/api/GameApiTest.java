@@ -1,6 +1,7 @@
 package investorgame.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -85,6 +86,75 @@ class GameApiTest {
     client.tradeRaw(gameId, "ssj", "BUY", 1_000_000_001L).andExpect(status().isBadRequest());
     client.tradeRaw(gameId, "nope", "BUY", 1).andExpect(status().isNotFound());
     client.historyRaw(gameId, "nope").andExpect(status().isNotFound());
+  }
+
+  /** 매매창 설계 2·4절: 시황과 종목 분석은 사실과 해석을 주고, 같은 달에는 다시 불러도 해석이 같다. 확률·정답은 내려가지 않는다. */
+  @Test
+  void 시황과_종목_분석은_같은_달에_같고_숨은_값이_없다() throws Exception {
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.startInvesting();
+    String gameId = game.read("$.gameId");
+
+    DocumentContext overview =
+        GameClient.json(
+            mvc.perform(get("/api/games/{gameId}/market/overview", gameId).cookie(client.session()))
+                .andExpect(status().isOk())
+                .andReturn());
+    List<Object> codes = overview.read("$.indicators[*].code");
+    assertThat(codes)
+        .containsExactly(
+            "index", "rate", "seoul", "gyeonggi", "cpi", "fx", "debt", "sentiment", "turnover");
+    assertThat(overview.read("$.indicators[0].value", Integer.class)).isPositive();
+    assertThat(overview.read("$.indicators[0].points.length()", Integer.class)).isBetween(1, 60);
+    assertThat(overview.read("$.analysis.reading", String.class)).isIn("HOT", "STABLE", "COLD");
+    assertThat(overview.read("$.analysis.text", String.class)).isNotBlank().doesNotContain("{");
+    assertThat(overview.read("$.analysis.insight", Integer.class)).isBetween(10, 100);
+    assertThat(overview.read("$.analysis.remark", Object.class)).as("첫 해석에는 한마디가 없다").isNull();
+    assertThat(overview.jsonString()).doesNotContain("truth").doesNotContain("Bp\":4750");
+
+    DocumentContext again =
+        GameClient.json(
+            mvc.perform(get("/api/games/{gameId}/market/overview", gameId).cookie(client.session()))
+                .andReturn());
+    assertThat(again.read("$.analysis", Object.class))
+        .isEqualTo(overview.read("$.analysis", Object.class));
+
+    DocumentContext analysis =
+        GameClient.json(
+            mvc.perform(
+                    get("/api/games/{gameId}/stocks/{stockCode}/analysis", gameId, "ssj")
+                        .cookie(client.session()))
+                .andExpect(status().isOk())
+                .andReturn());
+    assertThat(analysis.read("$.stockCode", String.class)).isEqualTo("ssj");
+    assertThat(analysis.read("$.facts.ma12", Long.class)).isPositive();
+    assertThat(analysis.read("$.facts.high12", Long.class))
+        .isGreaterThanOrEqualTo(analysis.read("$.facts.low12", Long.class));
+    assertThat(analysis.read("$.analysis.reading", String.class)).isIn("UP", "DOWN", "FLAT");
+    assertThat(analysis.read("$.analysis.text", String.class)).isNotBlank().doesNotContain("{");
+    mvc.perform(
+            get("/api/games/{gameId}/stocks/{stockCode}/analysis", gameId, "nope")
+                .cookie(client.session()))
+        .andExpect(status().isNotFound());
+
+    // 한 달 뒤 다시 보면 지난 해석이 드러나며 한마디가 붙는다 (매매창 설계 4.5절).
+    int day = game.read("$.day", Integer.class);
+    Integer next = game.read("$.nextEventDay");
+    int target = Math.min(day + 30, next == null ? day + 30 : next);
+    if (target > day) {
+      client.advance(gameId, target);
+      DocumentContext later =
+          GameClient.json(
+              mvc.perform(
+                      get("/api/games/{gameId}/stocks/{stockCode}/analysis", gameId, "ssj")
+                          .cookie(client.session()))
+                  .andReturn());
+      if (later.read("$.analysis.month", Integer.class)
+          > analysis.read("$.analysis.month", Integer.class)) {
+        assertThat(later.read("$.analysis.remark.text", String.class)).isNotBlank();
+        assertThat(later.read("$.analysis.remark.correct", Boolean.class)).isNotNull();
+      }
+    }
   }
 
   @Test

@@ -27,8 +27,17 @@ public interface ProgressService {
    */
   ChoiceOutcome choose(UUID sessionId, UUID gameId, UUID eventId, String option, Long quantity);
 
-  /** 자유 매매. 투자 단계에서 대기 중인 이벤트가 없을 때 현재가로 사고판다. 용기 판정만 거친다 (경제 개편 설계 8절). side는 BUY 또는 SELL. */
+  /**
+   * 자유 매매. 투자 단계에서 현재가로 사고판다. 용기 판정만 거친다 (경제 개편 설계 8절). 대기 중인 선택이 있어도 된다: 매매창을 연 순간 도착한 이벤트가 매매를 막지
+   * 않는다 (매매창 설계 2절). side는 BUY 또는 SELL.
+   */
   ChoiceOutcome trade(UUID sessionId, UUID gameId, String stockCode, Action side, long quantity);
+
+  /** 시황: 거시 지표, 경제 신문, 안목 해석. 이 달의 해석이 없으면 정해서 저장한다 (매매창 설계 2.2절). */
+  MarketOverview overview(UUID sessionId, UUID gameId);
+
+  /** 한 종목의 추세 사실과 안목 해석. 이 달의 해석이 없으면 정해서 저장한다 (매매창 설계 2.1절). */
+  StockAnalysis analysis(UUID sessionId, UUID gameId, String stockCode);
 
   /** 가진 아파트를 매물로 내놓거나(listed) 거둔다. 대기 중인 선택이 있으면 먼저 선택해야 한다. */
   GameView listHome(UUID sessionId, UUID gameId, int seq, boolean listed);

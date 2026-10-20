@@ -2,6 +2,7 @@ package investorgame.behavior.internal;
 
 import investorgame.behavior.BehaviorService;
 import investorgame.behavior.ChoiceContext;
+import investorgame.behavior.Reading;
 import investorgame.behavior.Resolution;
 import investorgame.common.Action;
 import investorgame.common.Deviation;
@@ -101,6 +102,19 @@ class DefaultBehaviorService implements BehaviorService {
     return rng.nextInt(BP) < luck * settings.chancePerPointBp()
         ? settings.lossFactorPercent()
         : PERCENT;
+  }
+
+  @Override
+  public Reading analyze(int insight, int truth, int choices, RandomGenerator rng) {
+    int readRoll = rng.nextInt(BP);
+    int guessRoll = rng.nextInt(Math.max(1, choices));
+    int confidentRoll = rng.nextInt(PERCENT);
+    BehaviorProperties.AnalysisSettings settings = properties.analysis();
+
+    // 틀릴 때 정답의 반대가 아니라 찍기를 쓴다. 반대로 하면 안목이 낮을수록 뒤집어 읽는 게 정답이 된다 (매매창 설계 4.2절).
+    boolean read = readRoll < insight * settings.readAtMaxBp() / PERCENT;
+    int index = read ? truth : guessRoll;
+    return new Reading(index, confidentRoll < settings.confidentPercent());
   }
 
   /** 능력치가 0이면 상한, 100이면 0. */

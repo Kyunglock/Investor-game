@@ -9,6 +9,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param newsBuyRatioBp 뉴스 선택의 매수가 쓰는 현금 비율 (만분율)
  * @param leverageLoanBp 빚투를 고르면 빌리는 돈 = 총자산 × 이 비율 (만분율)
  * @param housing 주거 선택의 돈 계산 (주거 설계 3절)
+ * @param articleFirstMonth 평범한 경제 기사가 나오기 시작하는 달
+ * @param articleGapMonths 기사 사이 간격(달). 3~4면 1년에 3~4개 (매매창 설계 3.3절)
  */
 @ConfigurationProperties("progress")
 public record ProgressProperties(
@@ -17,7 +19,11 @@ public record ProgressProperties(
     int maxSkipDays,
     int newsBuyRatioBp,
     int leverageLoanBp,
-    HousingRules housing) {
+    HousingRules housing,
+    int articleFirstMonth,
+    Range articleGapMonths) {
+
+  public record Range(int min, int max) {}
 
   /**
    * 주거 돈 계산. 비율은 만분율, 금액은 25세 기준(물가가 붙는다).

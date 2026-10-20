@@ -46,7 +46,9 @@ import investorgame.market.Quote;
 import investorgame.market.ShockResult;
 import investorgame.progress.ChoiceOutcome;
 import investorgame.progress.GameView;
+import investorgame.progress.MarketOverview;
 import investorgame.progress.ProgressService;
+import investorgame.progress.StockAnalysis;
 import investorgame.progress.StockHistory;
 import investorgame.result.Ending;
 import investorgame.result.GameResult;
@@ -88,6 +90,9 @@ class DefaultProgressService implements ProgressService {
   private static final String TRADE_LOG = "TRADE";
   private static final String CAREER_LOG = "CAREER";
 
+  /** 최근에 나온 기사 몇 개는 다시 뽑지 않는다. */
+  private static final int ARTICLE_NO_REPEAT = 8;
+
   private final GameRepository games;
   private final LogRepository logs;
   private final ProgressProperties properties;
@@ -102,6 +107,7 @@ class DefaultProgressService implements ProgressService {
   private final ContentCatalog content;
   private final HousingService housing;
   private final HousingFlow housingFlow;
+  private final MarketDesk desk;
   private final SecureRandom seeds = new SecureRandom();
 
   DefaultProgressService(
@@ -118,7 +124,8 @@ class DefaultProgressService implements ProgressService {
       ResultService results,
       ContentCatalog content,
       HousingService housing,
-      HousingFlow housingFlow) {
+      HousingFlow housingFlow,
+      MarketDesk desk) {
     this.games = games;
     this.logs = logs;
     this.properties = properties;
@@ -133,6 +140,7 @@ class DefaultProgressService implements ProgressService {
     this.content = content;
     this.housing = housing;
     this.housingFlow = housingFlow;
+    this.desk = desk;
   }
 
   @Override
@@ -667,10 +675,8 @@ class DefaultProgressService implements ProgressService {
   @Transactional
   public ChoiceOutcome trade(
       UUID sessionId, UUID gameId, String stockCode, Action side, long quantity) {
+    // 대기 중인 선택이 있어도 막지 않는다. 매매창을 연 순간 도착한 이벤트는 창을 닫은 뒤에 처리한다 (매매창 설계 2절).
     GameRow game = lock(sessionId, gameId);
-    if (events.pending(gameId).isPresent()) {
-      throw new InvalidRequestException("먼저 선택을 해야 한다");
-    }
     if (game.phase() != Phase.INVESTING) {
       throw new InvalidRequestException("투자를 시작한 뒤에 사고팔 수 있다");
     }
@@ -749,6 +755,28 @@ class DefaultProgressService implements ProgressService {
         market.history(game.id(), stockCode).stream()
             .map(p -> new StockHistory.Point(p.month(), p.price()))
             .toList());
+  }
+
+  @Override
+  @Transactional
+  public MarketOverview overview(UUID sessionId, UUID gameId) {
+    GameRow game = latest(sessionId, gameId);
+    return desk.overview(game.id(), new HashSeededRandom(game.seed()));
+  }
+
+  @Override
+  @Transactional
+  public StockAnalysis analysis(UUID sessionId, UUID gameId, String stockCode) {
+    GameRow game = latest(sessionId, gameId);
+    return desk.analysis(game.id(), requireStock(stockCode), new HashSeededRandom(game.seed()));
+  }
+
+  /** 끝난 판도 읽을 수 있는 조회용. 잠그지 않는다. */
+  private GameRow latest(UUID sessionId, UUID gameId) {
+    return games
+        .findLatest(sessionId)
+        .filter(g -> g.id().equals(gameId))
+        .orElseThrow(() -> new NotFoundException("판이 없다"));
   }
 
   private StockDefinition requireStock(String stockCode) {
@@ -922,10 +950,15 @@ class DefaultProgressService implements ProgressService {
     JobDefinition job = character.jobCode() == null ? null : content.job(character.jobCode());
     MarketCycle cycle = market.cycle(random);
 
+    Map<Integer, String> articles = articles(game, random);
+
     for (int m = fromExclusive / month + 1; m * month <= toInclusive; m++) {
       int day = m * month;
       market.advanceTo(gameId, day, random);
       recordCycle(game, cycle, m, day);
+      if (articles.containsKey(m)) {
+        logs.append(gameId, day, "ARTICLE", Map.of("text", articles.get(m)));
+      }
       // 생활비는 처음 일을 시작한 뒤부터 나간다(실직 중에도). 월급은 지금 직업이 있을 때만 (decisions.md 26번).
       boolean independent = character.careerStartDay() != null && day > character.careerStartDay();
       boolean working = job != null && day > character.jobStartDay();
@@ -1021,6 +1054,35 @@ class DefaultProgressService implements ProgressService {
           "dropBp", market.averageDropBp(gameId, crisis.startMonth() - 1, crisis.revealMonth()));
       payload.put("omens", crisis.omens());
       logs.append(gameId, day, "CRISIS", payload);
+    }
+  }
+
+  /**
+   * 평범한 경제 기사가 나오는 달과 문구 (매매창 설계 3.3절). ("progress","articles") 키에서 간격과 문구를 차례로 뽑아 같은 판은 언제나 같다.
+   * 최근에 나온 기사는 다시 뽑지 않는다.
+   */
+  private Map<Integer, String> articles(GameRow game, SeededRandom random) {
+    List<String> pool = content.analysis().articles();
+    RandomGenerator rng = random.forKey("progress", "articles");
+    ProgressProperties.Range gap = properties.articleGapMonths();
+    int lastMonth = endDay(game) / calendar.daysPerMonth();
+    Map<Integer, String> articles = new HashMap<>();
+    List<Integer> recent = new ArrayList<>();
+    int month = properties.articleFirstMonth();
+    while (true) {
+      month += gap.min() + rng.nextInt(gap.max() - gap.min() + 1);
+      if (month > lastMonth) {
+        return articles;
+      }
+      int index = rng.nextInt(pool.size());
+      while (recent.contains(index)) {
+        index = (index + 1) % pool.size();
+      }
+      recent.add(index);
+      if (recent.size() > ARTICLE_NO_REPEAT) {
+        recent.removeFirst();
+      }
+      articles.put(month, pool.get(index));
     }
   }
 

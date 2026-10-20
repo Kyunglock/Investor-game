@@ -9,6 +9,7 @@ import investorgame.content.CrisisDefinition;
 import investorgame.content.HomeRegion;
 import investorgame.content.StockDefinition;
 import investorgame.market.HomeQuote;
+import investorgame.market.IndicatorSeries;
 import investorgame.market.MarketCycle;
 import investorgame.market.MarketService;
 import investorgame.market.PricePoint;
@@ -39,6 +40,7 @@ class JdbcMarketService implements MarketService {
   private static final long BP = 10_000;
   private static final int MONTHS_PER_YEAR = 12;
   private static final int SPARK_MONTHS = 12;
+  private static final long INDEX_BASE = 1_000;
 
   private final JdbcClient jdbc;
   private final Clock clock;
@@ -83,6 +85,14 @@ class JdbcMarketService implements MarketService {
       recordHome(gameId, region.code(), 0, region.basePrice(), false);
     }
     recordRate(gameId, 0, properties.mortgage().baseBp(), false);
+    seedIndicators(gameId, 0);
+  }
+
+  /** 거시 지표를 기준값으로 시작한다. 이미 있으면 그대로 둔다. */
+  private void seedIndicators(UUID gameId, int month) {
+    for (String code : INDICATOR_CODES) {
+      recordIndicator(gameId, month, code, properties.indicators().of(code).base(), false);
+    }
   }
 
   @Override
@@ -97,12 +107,211 @@ class JdbcMarketService implements MarketService {
       recordHome(gameId, region.code(), seedMonth, region.basePrice(), false);
     }
     recordRate(gameId, seedMonth, properties.mortgage().baseBp(), false);
+    seedIndicators(gameId, seedMonth);
     for (int month = currentMonth(gameId) + 1; month <= target; month++) {
       prices = tick(gameId, month, prices, cycle, random.forKey("market", "month", month));
-      // 주식과 다른 키를 써서 아파트·금리를 더해도 주가의 난수 순서가 바뀌지 않는다.
+      // 주식과 다른 키를 써서 아파트·금리·지표를 더해도 주가의 난수 순서가 바뀌지 않는다.
       tickHomes(gameId, month, cycle, random.forKey("market", "home", month));
+      tickIndicators(gameId, month, cycle, random);
     }
     return quotes(gameId);
+  }
+
+  /** 거시 지표 코드. 화면 순서이기도 하다. */
+  static final List<String> INDICATOR_CODES = List.of("fx", "debt", "sentiment", "turnover");
+
+  /** 경기 흐름의 어느 구간에 있는지. 지표의 목표가 여기서 정해진다 (매매창 설계 3.1절). */
+  private record Mood(Kind kind, String crisisCode, int monthsInto) {
+    enum Kind {
+      CALM,
+      ALARM,
+      FALL,
+      RECOVERY
+    }
+  }
+
+  /**
+   * 거시 지표의 한 달 (매매창 설계 3.1절). 값 = 지난달 + (목표 − 지난달) × revertPercent / 100 + 잡음. 난수는
+   * ("market","indicator",m) 키에서 코드 순서로 뽑는다. 가짜 신호는 달마다 자기 키로 굴려 상태를 들고 있지 않는다.
+   */
+  private void tickIndicators(UUID gameId, int month, MarketCycle cycle, SeededRandom random) {
+    MarketProperties.Indicators settings = properties.indicators();
+    Mood mood = moodOf(cycle, month);
+    if (mood.kind() == Mood.Kind.CALM && fakeSignalAt(month, random)) {
+      mood = new Mood(Mood.Kind.ALARM, null, 0);
+    }
+    RandomGenerator rng = random.forKey("market", "indicator", month);
+    Map<String, Long> current = currentIndicators(gameId);
+    for (String code : INDICATOR_CODES) {
+      MarketProperties.Indicator indicator = settings.of(code);
+      long target = targetOf(indicator, mood, settings.panicMonths());
+      long last = current.getOrDefault(code, (long) indicator.base());
+      long next =
+          last
+              + (target - last) * settings.revertPercent() / 100
+              + rng.nextInt(-indicator.noise(), indicator.noise() + 1);
+      recordIndicator(
+          gameId, month, code, Math.clamp(next, indicator.min(), indicator.max()), true);
+    }
+  }
+
+  /**
+   * 빠지는 중이면 FALL, 회복 중이면 RECOVERY, 전조 구간이면(결과와 상관없이) ALARM, 그 밖은 CALM. 전조 없는 위기는 빠지기 전까지 CALM이다.
+   */
+  private static Mood moodOf(MarketCycle cycle, int month) {
+    for (MarketCycle.Crisis crisis : cycle.crises()) {
+      if (month >= crisis.startMonth() && month <= crisis.bottomMonth()) {
+        return new Mood(Mood.Kind.FALL, crisis.crisisCode(), month - crisis.startMonth());
+      }
+      if (month > crisis.bottomMonth() && month <= crisis.revealMonth()) {
+        return new Mood(Mood.Kind.RECOVERY, crisis.crisisCode(), month - crisis.bottomMonth());
+      }
+    }
+    for (MarketCycle.Alarm alarm : cycle.alarms()) {
+      if (month >= alarm.firstOmenMonth() && month < alarm.startMonth()) {
+        return new Mood(Mood.Kind.ALARM, alarm.crisisCode(), month - alarm.firstOmenMonth());
+      }
+    }
+    return new Mood(Mood.Kind.CALM, null, 0);
+  }
+
+  /**
+   * 가짜 신호: 최근 fakeMonths 최대치 안의 어느 달에 시작된 신호가 아직 이어지고 있는가. 달마다 ("market","fake",m) 키로 시작 여부와 길이를
+   * 굴린다.
+   */
+  private boolean fakeSignalAt(int month, SeededRandom random) {
+    MarketProperties.Indicators settings = properties.indicators();
+    for (int start = Math.max(1, month - settings.fakeMonths().max() + 1);
+        start <= month;
+        start++) {
+      RandomGenerator rng = random.forKey("market", "fake", start);
+      boolean started = rng.nextInt(100) < settings.fakeStartPercent();
+      int length = between(rng, settings.fakeMonths());
+      if (started && month < start + length) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static long targetOf(MarketProperties.Indicator indicator, Mood mood, int panicMonths) {
+    boolean strong =
+        mood.crisisCode() != null && indicator.strongScenarios().contains(mood.crisisCode());
+    return switch (mood.kind()) {
+      case CALM -> indicator.base();
+      case ALARM -> strong ? indicator.alarmStrong() : indicator.alarm();
+      case FALL ->
+          indicator.panic() != 0 && mood.monthsInto() < panicMonths
+              ? indicator.panic()
+              : strong ? indicator.fallStrong() : indicator.fall();
+      case RECOVERY -> indicator.recovery();
+    };
+  }
+
+  private Map<String, Long> currentIndicators(UUID gameId) {
+    Map<String, Long> values = new LinkedHashMap<>();
+    jdbc.sql(
+            """
+            SELECT DISTINCT ON (code) code, value FROM market_indicator_history
+            WHERE game_id = :gameId ORDER BY code, month DESC
+            """)
+        .param("gameId", gameId)
+        .query((rs, i) -> values.put(rs.getString("code"), rs.getLong("value")))
+        .list();
+    return values;
+  }
+
+  private void recordIndicator(UUID gameId, int month, String code, long value, boolean overwrite) {
+    jdbc.sql(
+            """
+            INSERT INTO market_indicator_history (game_id, month, code, value)
+            VALUES (:gameId, :month, :code, :value)
+            ON CONFLICT (game_id, month, code) DO
+            """
+                + (overwrite ? " UPDATE SET value = EXCLUDED.value" : " NOTHING"))
+        .param("gameId", gameId)
+        .param("month", month)
+        .param("code", code)
+        .param("value", value)
+        .update();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<IndicatorSeries> indicators(UUID gameId) {
+    Map<String, List<PricePoint>> byCode = new LinkedHashMap<>();
+    for (String code : INDICATOR_CODES) {
+      byCode.put(code, new ArrayList<>());
+    }
+    jdbc.sql(
+            """
+            SELECT code, month, value FROM market_indicator_history
+            WHERE game_id = :gameId ORDER BY month, code
+            """)
+        .param("gameId", gameId)
+        .query(
+            (rs, i) -> {
+              List<PricePoint> points = byCode.get(rs.getString("code"));
+              if (points != null) {
+                points.add(new PricePoint(rs.getInt("month"), rs.getLong("value")));
+              }
+              return null;
+            })
+        .list();
+    return byCode.entrySet().stream()
+        .map(e -> new IndicatorSeries(e.getKey(), List.copyOf(e.getValue())))
+        .toList();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<PricePoint> indexHistory(UUID gameId) {
+    Map<String, Long> base = new LinkedHashMap<>();
+    for (StockDefinition stock : content.stocks()) {
+      base.put(stock.code(), stock.basePrice());
+    }
+    // 달마다 종목별 (가격 / 기준가 × 1000)의 평균. 종목이 몇십 개, 달이 몇백이라 메모리에서 모은다.
+    Map<Integer, long[]> sums = new TreeMap<>();
+    jdbc.sql("SELECT stock_code, month, price FROM market_price_history WHERE game_id = :gameId")
+        .param("gameId", gameId)
+        .query(
+            (rs, i) -> {
+              Long basePrice = base.get(rs.getString("stock_code"));
+              if (basePrice != null && basePrice > 0) {
+                long[] acc = sums.computeIfAbsent(rs.getInt("month"), m -> new long[2]);
+                acc[0] += rs.getLong("price") * INDEX_BASE / basePrice;
+                acc[1]++;
+              }
+              return null;
+            })
+        .list();
+    return sums.entrySet().stream()
+        .map(e -> new PricePoint(e.getKey(), e.getValue()[0] / e.getValue()[1]))
+        .toList();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<PricePoint> rateHistory(UUID gameId) {
+    return jdbc.sql(
+            "SELECT month, rate_bp FROM market_rate_history WHERE game_id = :gameId ORDER BY month")
+        .param("gameId", gameId)
+        .query((rs, i) -> new PricePoint(rs.getInt("month"), rs.getLong("rate_bp")))
+        .list();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<PricePoint> homeHistory(UUID gameId, String region) {
+    return jdbc.sql(
+            """
+            SELECT month, price FROM market_home_history
+            WHERE game_id = :gameId AND region = :region ORDER BY month
+            """)
+        .param("gameId", gameId)
+        .param("region", region)
+        .query((rs, i) -> new PricePoint(rs.getInt("month"), rs.getLong("price")))
+        .list();
   }
 
   /** 한 달. 섹터 움직임을 코드순으로 먼저 전부 뽑고, 종목 움직임을 코드순으로 뽑는다 (순서 고정). */
@@ -285,6 +494,7 @@ class JdbcMarketService implements MarketService {
     int windows = between(rng, settings.windows());
     int span = (settings.lastMonth() - settings.firstMonth() + 1) / windows;
     List<MarketCycle.Omen> omens = new ArrayList<>();
+    List<MarketCycle.Alarm> alarms = new ArrayList<>();
     List<MarketCycle.Crisis> crises = new ArrayList<>();
     for (int w = 0; w < windows; w++) {
       int start = settings.firstMonth() + w * span + rng.nextInt(span);
@@ -299,6 +509,9 @@ class JdbcMarketService implements MarketService {
       }
       List<MarketCycle.Omen> told = omensBefore(rng, settings, scenario, start);
       omens.addAll(told);
+      if (!told.isEmpty()) {
+        alarms.add(new MarketCycle.Alarm(scenario.code(), told.getFirst().month(), start));
+      }
       MarketCycle.Severity severity = outcome(rng, settings);
       if (severity != null) {
         crises.add(
@@ -311,8 +524,58 @@ class JdbcMarketService implements MarketService {
                 told.stream().map(MarketCycle.Omen::text).toList()));
       }
     }
+    // 헛소문은 불안한 시기를 모두 정한 뒤에 뽑는다. 난수를 뒤에 더한 것이라 앞의 전조·위기는 바뀌지 않는다.
+    omens.addAll(rumors(rng, settings, scenarios, alarms, crises));
     omens.sort(Comparator.comparingInt(MarketCycle.Omen::month));
-    return new MarketCycle(List.copyOf(omens), List.copyOf(crises));
+    return new MarketCycle(List.copyOf(omens), List.copyOf(alarms), List.copyOf(crises));
+  }
+
+  /**
+   * 헛소문 (매매창 설계 3.2절). 평온한 달에도 같은 전조 풀에서 1~2년에 하나꼴로 흘린다. 불안한 시기(전조 구간)나 위기와 겹치는 달은 건너뛰어 진짜 전조와 섞이지
+   * 않게 한다. 풀을 다 쓰면 다시 채운다.
+   */
+  private List<MarketCycle.Omen> rumors(
+      RandomGenerator rng,
+      MarketProperties.Cycle settings,
+      List<CrisisDefinition> scenarios,
+      List<MarketCycle.Alarm> alarms,
+      List<MarketCycle.Crisis> crises) {
+    List<String> pool = new ArrayList<>();
+    List<MarketCycle.Omen> told = new ArrayList<>();
+    int month = settings.rumorFirstMonth();
+    while (true) {
+      month += between(rng, settings.rumorGapMonths());
+      if (month > settings.rumorLastMonth()) {
+        return told;
+      }
+      if (pool.isEmpty()) {
+        scenarios.forEach(s -> pool.addAll(s.omens()));
+        pool.addAll(content.commonOmens());
+      }
+      if (pool.isEmpty()) {
+        return told;
+      }
+      String text = pool.remove(rng.nextInt(pool.size()));
+      if (busyAt(month, alarms, crises)) {
+        continue;
+      }
+      told.add(new MarketCycle.Omen(month, text));
+    }
+  }
+
+  private static boolean busyAt(
+      int month, List<MarketCycle.Alarm> alarms, List<MarketCycle.Crisis> crises) {
+    for (MarketCycle.Alarm alarm : alarms) {
+      if (month >= alarm.firstOmenMonth() && month <= alarm.startMonth()) {
+        return true;
+      }
+    }
+    for (MarketCycle.Crisis crisis : crises) {
+      if (month >= crisis.startMonth() && month <= crisis.revealMonth()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** 위기 시작 전 lead 달 사이에 전조를 흩는다. 갈래의 전조와 공통 전조를 섞어, 문구만 보고는 어떤 위기인지(혹은 아무 일 없을지) 알 수 없게 한다. */

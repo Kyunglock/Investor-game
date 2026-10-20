@@ -4,7 +4,7 @@ import { useGameStore } from './store'
 
 const SHOW_MS = 3_000
 
-/** 알림성 생활 이벤트·경기 전조·위기 회고를 상단 오른쪽에 3초 띄운다. 멈추지 않고 지나간다 (경제 개편 설계 11.5절). */
+/** 알림성 생활 이벤트·경기 전조(헛소문·평범한 기사 포함)·위기 회고를 상단 오른쪽에 3초 띄운다. 멈추지 않고 지나간다 (경제 개편 설계 11.5절). */
 export function Toast() {
   const notice = useGameStore((s) => s.lastNotice)
   const dismiss = useGameStore((s) => s.dismissNotice)
@@ -24,7 +24,7 @@ export function Toast() {
   const amount = typeof p.amount === 'number' ? p.amount : 0
   // 전조는 무엇의 전조인지 말하지 않고 들린 대로만 전한다. 위기는 끝난 뒤에야 이름이 붙는다 (decisions.md 38번).
   const text =
-    notice.kind === 'OMEN'
+    notice.kind === 'OMEN' || notice.kind === 'ARTICLE'
       ? String(p.text ?? '')
       : notice.kind === 'CRISIS'
         ? `돌아보니 그때는 ${String(p.name ?? '')}${p.severity === 'DEPRESSION' ? ' — 대공황' : ' — 불황'}이었다`

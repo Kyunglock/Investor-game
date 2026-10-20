@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import investorgame.common.StatCodes;
+import investorgame.content.AnalysisText;
 import investorgame.content.ContentCatalog;
 import investorgame.content.InvestorType;
 import investorgame.content.NewsDefinition;
@@ -239,6 +240,34 @@ class JsonContentCatalogTest {
         .hasSizeGreaterThanOrEqualTo(6)
         .allMatch(n -> n.weight() > 0 && (n.amount() != 0 || n.salaryPercent() != 0));
     assertThat(catalog.notices()).anyMatch(n -> n.requiresMarried());
+  }
+
+  /** 매매창 설계 4.4절·부록: 안목 구간 × 결론마다 문구 틀이 있고, 확신 말투와 그렇지 않은 말투가 둘 다 있으며, 한마디와 기사가 있다. */
+  @Test
+  void 해석_문구_틀은_모든_구간과_결론에_있고_확신_여부가_섞여_있다() {
+    AnalysisText analysis = load().analysis();
+    for (String tier : AnalysisText.TEMPLATE_TIERS) {
+      for (String reading : AnalysisText.TREND_READINGS) {
+        List<AnalysisText.Template> templates = analysis.trend().get(tier).get(reading);
+        assertThat(templates).as(tier + "/" + reading).isNotEmpty();
+        assertThat(templates).anyMatch(AnalysisText.Template::confident);
+        assertThat(templates).anyMatch(t -> !t.confident());
+      }
+      for (String reading : AnalysisText.MACRO_READINGS) {
+        assertThat(analysis.macro().get(tier).get(reading)).as(tier + "/" + reading).isNotEmpty();
+      }
+    }
+    for (String tier : AnalysisText.REMARK_TIERS) {
+      assertThat(analysis.remarks().trend().right().get(tier)).isNotEmpty();
+      assertThat(analysis.remarks().trend().wrong().get(tier)).isNotEmpty();
+      assertThat(analysis.remarks().macro().right().get(tier)).isNotEmpty();
+      assertThat(analysis.remarks().macro().wrong().get(tier)).isNotEmpty();
+    }
+    assertThat(analysis.articles()).hasSizeGreaterThanOrEqualTo(30);
+    assertThat(AnalysisText.templateTier(29)).isEqualTo("low");
+    assertThat(AnalysisText.templateTier(79)).isEqualTo("high");
+    assertThat(AnalysisText.templateTier(80)).isEqualTo("expert");
+    assertThat(AnalysisText.remarkTier(60)).isEqualTo("high");
   }
 
   @Test

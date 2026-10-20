@@ -29,6 +29,11 @@ public interface MarketService {
     Map<String, Long> prices(UUID gameId);
     List<Quote> quotes(UUID gameId);
     List<PricePoint> history(UUID gameId, String stockCode);
+    List<PricePoint> indexHistory(UUID gameId);                        // 종합주가지수(판 시작 = 1000)
+    List<PricePoint> rateHistory(UUID gameId);                         // 주담대 금리(연 만분율)
+    List<PricePoint> homeHistory(UUID gameId, String region);
+    List<IndicatorSeries> indicators(UUID gameId);                     // fx, debt, sentiment, turnover (매매창 설계 3.1절)
+    MarketCycle cycle(SeededRandom random);                            // 전조(헛소문 포함)·경보 구간·위기. 화면에 내보내지 않는다
     int currentMonth(UUID gameId);
 }
 public record Quote(String stockCode, long price, long priceMonthAgo, long priceYearAgo, List<Long> last12) {}
@@ -77,13 +82,18 @@ public record ShockResult(Map<String, Long> before, Map<String, Long> after) {} 
 | `market.spillover-percent` | 30 | 종목 뉴스의 같은 섹터 파급 |
 | `market.min-price` | 100 | 가격 바닥(원) |
 
+### 3.4 거시 지표와 헛소문 (매매창 설계 3절)
+
+- 지표 4종(환율 `fx`, 가계부채 증가율 `debt`, 투자 심리 `sentiment`, 거래대금 `turnover`)을 달마다 만든다. **표시만 하고 가격에는 영향이 없다.** 값 = 지난달 + (목표 − 지난달) × `revert-percent` + 잡음. 목표는 경기 흐름의 구간이 정한다: 평소 `base`, 전조 구간(`MarketCycle.alarms`, 결과와 상관없이) `alarm`(갈래가 `strong-scenarios`면 `alarm-strong`), 빠지는 동안 `fall`(첫 `panic-months`는 `panic`), 회복 `recovery`. 전조 없는 위기는 빠지기 전까지 평소다. 평온한 달에도 `fake-start-percent`로 가짜 신호가 시작돼 `fake-months` 동안 `alarm` 쪽으로 기운다. 난수 키 `("market","indicator",m)`, 가짜 신호는 `("market","fake",m)`.
+- 헛소문: `cycle()`이 불안한 시기를 모두 정한 뒤 `rumor-first-month`부터 `rumor-gap-months` 간격으로 같은 전조 풀에서 뽑아 `omens`에 섞는다. 전조 구간·위기와 겹치는 달은 건너뛴다. 어느 위기에도 묶이지 않아 회고에 나오지 않는다.
+
 ## 5. DB
 
-`market_price (game_id, stock_code, price, month, updated_at, PK(game_id, stock_code))`, `market_price_history (game_id, stock_code, month, price, PK(game_id, stock_code, month))`. FK 없음.
+`market_price (game_id, stock_code, price, month, updated_at, PK(game_id, stock_code))`, `market_price_history (game_id, stock_code, month, price, PK(game_id, stock_code, month))`, `market_home_history`, `market_rate_history`, `market_indicator_history (game_id, month, code, value, PK(game_id, month, code))`. FK 없음.
 
 ## 6. 테스트
 
-`MarketServiceTest`: 기준가·멱등, 12달 → 13점·같은 시드 재현, 바닥, 파급 30%, 섹터 전체, 충격이 그 달을 덮어씀, 시세의 전 달·전 해·최근 12달.
+`MarketServiceTest`: 기준가·멱등, 12달 → 13점·같은 시드 재현, 바닥, 파급 30%, 섹터 전체, 충격이 그 달을 덮어씀, 시세의 전 달·전 해·최근 12달, 헛소문이 위기와 겹치지 않음, 지표가 달마다 쌓이고 같은 시드면 같으며 대공황 바닥에서 심리가 식음.
 
 ## 7. 미결정
 

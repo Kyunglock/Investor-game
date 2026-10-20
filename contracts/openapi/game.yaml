@@ -132,6 +132,40 @@ paths:
               schema: { $ref: '#/components/schemas/StockHistory' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/games/{gameId}/market/overview:
+    get:
+      operationId: marketOverview
+      summary: 시황 (거시 지표, 경제 신문, 안목 해석)
+      description: 이 달의 시황 해석이 없으면 여기서 정해져 저장된다. 같은 달에는 다시 불러도 같다 (매매창 설계 2.2절).
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+      responses:
+        '200':
+          description: 시황
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MarketOverview' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/games/{gameId}/stocks/{stockCode}/analysis:
+    get:
+      operationId: stockAnalysis
+      summary: 한 종목의 추세 사실과 안목 해석
+      description: 숫자는 안목과 상관없이 정확하고 해석만 안목이 읽는다. 이 달의 해석이 없으면 여기서 정해져 저장된다 (매매창 설계 2.1절).
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+        - name: stockCode
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 사실과 해석
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/StockAnalysis' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/games/{gameId}/events/{eventId}/choose:
     post:
       operationId: chooseEvent
@@ -270,6 +304,83 @@ components:
             properties:
               month: { type: integer }
               price: { type: integer, format: int64 }
+    Analysis:
+      type: object
+      description: 안목 해석 (매매창 설계 4절). 확률과 정답은 내려가지 않는다
+      required: [month, insight, reading, text]
+      properties:
+        month: { type: integer, description: 해석한 달. 같은 달에는 다시 열어도 같다 }
+        insight: { type: integer, description: 해석한 때의 안목 }
+        reading: { type: string, description: 읽은 결론. 추세는 UP·DOWN·FLAT, 시황은 HOT·STABLE·COLD }
+        text: { type: string }
+        remark:
+          oneOf:
+            - type: object
+              required: [correct, text]
+              properties:
+                correct: { type: boolean, description: 지난 해석이 맞았는가 }
+                text: { type: string }
+            - type: 'null'
+          description: 지난 해석이 드러나며 붙는 한마디. 지난 해석이 없으면 null
+    StockAnalysis:
+      type: object
+      description: 한 종목의 추세 사실과 안목 해석. 사실은 안목과 상관없이 정확하다
+      required: [stockCode, facts, analysis]
+      properties:
+        stockCode: { type: string }
+        facts:
+          type: object
+          required: [ma6, ma12, high12, low12, dropFromHighBp, riseFromLowBp, change3mBp, change12mBp, sectorChange12mBp, monthsVsMa12]
+          properties:
+            ma6: { type: integer, format: int64, description: 6개월 이동평균(이번 달 포함) }
+            ma12: { type: integer, format: int64, description: 12개월 이동평균 }
+            high12: { type: integer, format: int64, description: 최근 12달 최고가 }
+            low12: { type: integer, format: int64, description: 최근 12달 최저가 }
+            dropFromHighBp: { type: integer, description: 고점 대비 하락률(만분율, 양수) }
+            riseFromLowBp: { type: integer, description: 저점 대비 상승률(만분율, 양수) }
+            change3mBp: { type: integer }
+            change12mBp: { type: integer }
+            sectorChange12mBp: { type: integer, description: 같은 섹터 종목들의 12달 변화율 평균 }
+            monthsVsMa12: { type: integer, description: 12개월선 위(양수)·아래(음수)로 이어진 달 수 }
+        analysis: { $ref: '#/components/schemas/Analysis' }
+    MarketOverview:
+      type: object
+      description: 시황 (매매창 설계 2.2절)
+      required: [month, indicators, newspaper, analysis]
+      properties:
+        month: { type: integer }
+        indicators:
+          type: array
+          description: 순서 고정. 종합주가지수, 주담대 금리, 서울·경기 아파트, 물가, 환율, 가계부채 증가율, 투자 심리, 거래대금
+          items:
+            type: object
+            required: [code, name, unit, value, yearAgo, points]
+            properties:
+              code: { type: string }
+              name: { type: string }
+              unit: { type: string, enum: [index, bp, won, score, ratio], description: index는 판 시작 = 1000, bp는 연 만분율, score는 0~100, ratio는 평소 = 10000 }
+              value: { type: integer, format: int64 }
+              yearAgo: { type: integer, format: int64, description: 12달 전 값. 이력이 짧으면 가장 오래된 값 }
+              points:
+                type: array
+                description: 최근 5년(60달)
+                items:
+                  type: object
+                  required: [month, value]
+                  properties:
+                    month: { type: integer }
+                    value: { type: integer, format: int64 }
+        newspaper:
+          type: array
+          description: 전조·헛소문·평범한 기사·위기 회고를 구분 없이 날짜순으로. 최근 것이 뒤다
+          items:
+            type: object
+            required: [day, kind, text]
+            properties:
+              day: { type: integer }
+              kind: { type: string, enum: [OMEN, ARTICLE, CRISIS] }
+              text: { type: string }
+        analysis: { $ref: '#/components/schemas/Analysis' }
     Job:
       type: object
       required: [code, title, monthlySalary, tenureYears]
@@ -383,7 +494,7 @@ components:
         day: { type: integer, description: 사건이 일어난 게임 일수 }
         kind:
           type: string
-          enum: [BIRTH, TRAIT, JOB, JOB_WAIT, CAREER, STYLE, OFFER, NEWS, SHAKE, PRICE, GROWTH, TRADE, LIFE, MARRIAGE, CHILD, RETIRE, LEVERAGE, OMEN, CRISIS, HOUSING, HOME_SOLD, TENANT, END]
+          enum: [BIRTH, TRAIT, JOB, JOB_WAIT, CAREER, STYLE, OFFER, NEWS, SHAKE, PRICE, GROWTH, TRADE, LIFE, MARRIAGE, CHILD, RETIRE, LEVERAGE, OMEN, ARTICLE, CRISIS, HOUSING, HOME_SOLD, TENANT, END]
         payload:
           type: object
           additionalProperties: true
