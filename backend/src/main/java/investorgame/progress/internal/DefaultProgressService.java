@@ -427,7 +427,10 @@ class DefaultProgressService implements ProgressService {
     boolean success = true;
     if (option.rolls()) {
       int stat = character.stats().toCodes().get(option.stat());
-      int chanceBp = option.baseBp() + stat * option.perPointBp();
+      // 실적(지금 직장에서 쌓은 인상분)이 판정에 들어가는 장면도 있다: 대기업 50대 권고사직 (decisions.md 43번).
+      int raisePercent = character.salaryBonusBp() / (int) PERCENT;
+      int chanceBp =
+          option.baseBp() + stat * option.perPointBp() + raisePercent * option.perRaisePercentBp();
       success = random.forKey("career", ticket.seq()).nextInt(BP) < chanceBp;
     }
     CareerDefinition.Effect effect = success ? option.success() : option.fail();
