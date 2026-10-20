@@ -164,6 +164,27 @@ class JdbcCharacterService implements CharacterService {
 
   @Override
   @Transactional
+  public void foundCompany(UUID gameId, String jobCode, int day) {
+    int updated =
+        jdbc.sql(
+                """
+                UPDATE character_profile
+                SET job_code = :jobCode, job_start_day = :day, salary_bonus_bp = 0,
+                    full_time_investor_day = NULL, updated_at = :now
+                WHERE game_id = :gameId AND full_time_investor_day IS NOT NULL
+                """)
+            .param("jobCode", jobCode)
+            .param("day", day)
+            .param("now", now())
+            .param("gameId", gameId)
+            .update();
+    if (updated == 0) {
+      throw new InvalidRequestException("전업투자자만 회사를 세울 수 있다");
+    }
+  }
+
+  @Override
+  @Transactional
   public void changeJob(UUID gameId, String jobCode, int day, int startBonusBp) {
     int updated =
         jdbc.sql(

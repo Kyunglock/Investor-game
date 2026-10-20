@@ -398,9 +398,16 @@ class JsonContentCatalog implements ContentCatalog {
         careers.stream().map(CareerDefinition::code).distinct().count() == careers.size(),
         "직장 장면 코드가 겹친다");
     Set<String> jobCodes = jobs.stream().map(JobDefinition::code).collect(Collectors.toSet());
+    Set<String> careerJobs = new java.util.HashSet<>(jobCodes);
+    careerJobs.add(CareerDefinition.FULL_TIME_INVESTOR);
+    Map<String, CareerDefinition> careersByCode =
+        careers.stream().collect(Collectors.toMap(CareerDefinition::code, c -> c, (a, b) -> a));
     for (CareerDefinition career : careers) {
       require(career.weight() > 0, "직장 장면의 가중치는 양수여야 한다: " + career.code());
-      require(jobCodes.containsAll(career.jobs()), "직장 장면이 알 수 없는 직업을 쓴다: " + career.code());
+      require(careerJobs.containsAll(career.jobs()), "직장 장면이 알 수 없는 직업을 쓴다: " + career.code());
+      boolean forInvestor = career.jobs().contains(CareerDefinition.FULL_TIME_INVESTOR);
+      require(
+          !forInvestor || career.jobs().size() == 1, "전업투자자의 장면은 직장인과 같이 쓸 수 없다: " + career.code());
       require(
           career.minAge() == null || career.maxAge() == null || career.minAge() <= career.maxAge(),
           "직장 장면의 나이 범위가 거꾸로다: " + career.code());
@@ -415,6 +422,27 @@ class JsonContentCatalog implements ContentCatalog {
         require(
             !option.success().moveJob() || !option.success().quit(), "이직과 실직을 같이 둘 수 없다: " + where);
         for (CareerDefinition.Effect effect : List.of(option.success(), option.fail())) {
+          // 전업투자자는 월급·직장이 없다. 회사를 세우는 것(becomeJob)만 직업을 바꾼다 (decisions.md 44번).
+          require(
+              !forInvestor || (effect.salaryPercent() == 0 && !effect.quit() && !effect.moveJob()),
+              "전업투자자의 장면은 월급·실직·이직을 쓸 수 없다: " + where);
+          require(
+              effect.becomeJob() == null
+                  || (forInvestor
+                      && jobCodes.contains(effect.becomeJob())
+                      && !job(effect.becomeJob()).offered()),
+              "회사 세우기(becomeJob)는 전업투자자의 장면에서 제안되지 않는 직업으로만: " + where);
+          CareerDefinition next =
+              effect.followUp() == null ? null : careersByCode.get(effect.followUp());
+          require(
+              effect.followUp() == null
+                  || (next != null
+                      && next.followUpOnly()
+                      && effect.followUpDays() > 0
+                      && !effect.quit()
+                      && !effect.moveJob()
+                      && effect.becomeJob() == null),
+              "후속 장면은 followUpOnly 장면이어야 하고 날 수가 있어야 하며 직장을 바꾸는 결과와 같이 둘 수 없다: " + where);
           require(
               effect.statDeltas().keySet().stream()
                   .allMatch(k -> StatCodes.ALL.contains(k) && !StatCodes.LUCK.equals(k)),
@@ -422,13 +450,11 @@ class JsonContentCatalog implements ContentCatalog {
         }
       }
     }
-    for (String job : jobCodes) {
-      // 연차·나이 조건에 다 걸려도 뽑을 장면이 남도록 직업마다 나이 제한 없는 장면이 하나는 있어야 한다.
+    for (String job : careerJobs) {
+      // 연차·나이·순자산 조건에 다 걸려도 뽑을 장면이 남도록 직업마다 조건 없는 장면이 하나는 있어야 한다.
       require(
-          careers.stream()
-              .anyMatch(
-                  c -> c.forJob(job) && !c.movesJob() && c.minAge() == null && c.maxAge() == null),
-          "나이 제한 없는 직장 장면이 없는 직업: " + job);
+          careers.stream().anyMatch(c -> c.forJob(job) && !c.movesJob() && c.unconditional()),
+          "조건 없는 직장 장면이 없는 직업: " + job);
     }
     require(
         phrases.jobRetry() != null

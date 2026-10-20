@@ -91,6 +91,14 @@ class EventRepository {
         .update();
   }
 
+  /** 해결된 이벤트의 실제 행동. 직장 장면은 판정 결과까지 담는다(CareerDefinition.actualAction). 아직이면 비어 있다. */
+  Optional<String> actualAction(UUID eventId) {
+    return jdbc.sql("SELECT actual_action FROM event_resolution WHERE event_id = :eventId")
+        .param("eventId", eventId)
+        .query(String.class)
+        .optional();
+  }
+
   /** 처음 해결되었으면 true. 이미 해결된 이벤트면 아무것도 하지 않고 false. */
   boolean resolve(
       UUID gameId, UUID eventId, String choice, String actual, List<Deviation> deviations) {
