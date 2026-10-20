@@ -525,6 +525,8 @@ class DefaultProgressService implements ProgressService {
     payload.put("optionCode", option.code());
     payload.put("optionLabel", option.label());
     payload.put("success", success);
+    // 전업투자자의 장면은 기록에서 '직장'이 아니라 '투자'로 보인다 (decisions.md 44번).
+    payload.put("fullTimeInvestor", character.fullTimeInvestorDay() != null);
     payload.put("text", message.toString());
     payload.put("jobTitle", after.jobCode() == null ? null : content.job(after.jobCode()).title());
     payload.put(

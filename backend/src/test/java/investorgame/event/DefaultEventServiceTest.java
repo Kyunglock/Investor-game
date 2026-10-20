@@ -552,11 +552,11 @@ class DefaultEventServiceTest {
     assertThat(standby.occursDay()).isEqualTo(exit.occursDay() + 120);
   }
 
-  /** decisions.md 44번: 여의도 증권사 설립은 순자산 20억부터, 직접 세운 회사는 직업 선택에 나오지 않는다. */
+  /** decisions.md 44번: 여의도 증권사 설립은 순자산 10억부터, 직접 세운 회사는 직업 선택에 나오지 않는다. */
   @Test
   void 전업투자자는_자산이_받쳐_줄_때만_증권사를_세울_수_있다() {
     SchedulingContext poor = investorWith(0L);
-    SchedulingContext rich = investorWith(3_000_000_000L);
+    SchedulingContext rich = investorWith(1_500_000_000L);
     boolean richFounds = false;
     for (long seed = 1; seed <= 5; seed++) {
       assertThat(careerLife(poor, seed))
