@@ -5,6 +5,7 @@
     "body": "연말 면담이 잡혔다. 올해 한 일을 정리해 보니 할 말은 있다. 문제는 어떻게 말하느냐다.",
     "weight": 10,
     "minTenureYears": 1,
+    "jobs": ["designer", "office", "sales", "developer", "accountant", "bigcorp", "lawyer"],
     "options": [
       {
         "code": "hard",
@@ -37,6 +38,7 @@
     "body": "승진 심사가 돌아왔다. 자리는 하나, 후보는 셋. 남은 몇 달을 어떻게 쓰느냐가 갈림길이다.",
     "weight": 7,
     "minTenureYears": 3,
+    "jobs": ["designer", "office", "sales", "accountant", "bigcorp"],
     "options": [
       {
         "code": "push",
@@ -69,6 +71,7 @@
     "body": "헤드헌터에게 연락이 왔다. 지금보다 조건이 좋은 자리다. 다만 옮기면 연차는 처음부터 다시 쌓고, 지금까지 올린 인상분도 사라진다.",
     "weight": 7,
     "minTenureYears": 2,
+    "jobs": ["parttime", "factory", "designer", "office", "sales", "nurse", "developer"],
     "options": [
       {
         "code": "move",
@@ -97,6 +100,7 @@
     "body": "회사 실적이 꺾였다. 희망퇴직 공고가 붙었고, 신청하지 않으면 정리해고 명단에 오를 수도 있다는 소문이 돈다.",
     "weight": 4,
     "minTenureYears": 2,
+    "jobs": ["factory", "designer", "office", "sales", "developer"],
     "options": [
       {
         "code": "stay",
@@ -120,6 +124,7 @@
     "body": "아침에 눈을 뜨는 게 무겁다. 일은 쌓이고 몸은 신호를 보낸다.",
     "weight": 5,
     "minTenureYears": 1,
+    "jobs": ["parttime", "factory", "civil-servant", "designer", "office", "teacher", "sales", "nurse", "developer", "accountant", "bigcorp", "pharmacist", "lawyer"],
     "options": [
       {
         "code": "push",
@@ -139,6 +144,1351 @@
         "code": "quit",
         "label": "회사를 그만둔다",
         "success": { "quit": true, "severanceMonths": 1, "text": "사표를 냈다. 한 달치 월급을 받고 나왔다. 다음 직장은 천천히 찾기로 했다.", "statDeltas": { "courage": 2 } }
+      }
+    ]
+  },
+  {
+    "code": "pt-customer",
+    "title": "진상 손님",
+    "body": "새벽 두 시, 술 취한 손님이 계산대 앞에서 소리를 지른다. 유통기한이 지난 걸 팔았다며 환불에 위로금까지 내놓으라고 한다.",
+    "weight": 9,
+    "minTenureYears": 0,
+    "jobs": ["parttime"],
+    "options": [
+      {
+        "code": "endure",
+        "label": "끝까지 웃으며 응대한다",
+        "stat": "patience",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 3, "statDeltas": { "patience": 2 }, "text": "손님은 제풀에 지쳐 나갔다. 다음 날 점장이 CCTV를 보고 시급을 올려 줬다." },
+        "fail": { "amount": -300000, "statDeltas": { "patience": 1 }, "text": "손님이 진열대를 엎고 나갔다. 깨진 물건값 30만 원을 떠안았다." }
+      },
+      {
+        "code": "police",
+        "label": "경찰을 부른다",
+        "stat": "courage",
+        "baseBp": 5000,
+        "perPointBp": 30,
+        "success": { "statDeltas": { "courage": 2 }, "text": "경찰이 와서 손님을 데려갔다. 본사에서 '대응 잘했다'는 연락이 왔다." },
+        "fail": { "quit": true, "statDeltas": { "courage": 1 }, "text": "본사에 '불친절하다'는 민원이 들어갔다. 점장 눈치가 보여 결국 그만뒀다." }
+      }
+    ]
+  },
+  {
+    "code": "pt-manager",
+    "title": "점장 제안",
+    "body": "점장이 그만두면서 사장님이 매장을 맡아 보라고 한다. 월급은 오르지만 매출이 빠지면 그 책임도 함께 진다.",
+    "weight": 8,
+    "minTenureYears": 2,
+    "jobs": ["parttime"],
+    "options": [
+      {
+        "code": "take",
+        "label": "점장을 맡는다",
+        "stat": "insight",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 20, "statDeltas": { "patience": 1, "insight": 1 }, "text": "매장을 잘 굴렸다. 매출이 올라 월급이 20% 뛰었다." },
+        "fail": { "amount": -2000000, "statDeltas": { "patience": 1 }, "text": "근처에 경쟁 편의점이 생겨 매출이 빠졌다. 메우느라 내 돈 200만 원이 들어갔다." }
+      },
+      {
+        "code": "decline",
+        "label": "하던 일만 한다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "책임 없는 자리가 편하다. 시간 맞춰 퇴근했다." }
+      }
+    ]
+  },
+  {
+    "code": "pt-franchise",
+    "title": "가맹점 창업",
+    "body": "본사 직원이 '알바 경험자 우대' 가맹 설명회를 권한다. 3천만 원이면 내 가게를 차릴 수 있다. 문제는 자리다.",
+    "weight": 7,
+    "minTenureYears": 3,
+    "jobs": ["parttime"],
+    "minAge": 30,
+    "options": [
+      {
+        "code": "open",
+        "label": "가게를 차린다",
+        "stat": "luck",
+        "baseBp": 3000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 70, "amount": -30000000, "statDeltas": { "courage": 2 }, "text": "목이 좋았다. 3천만 원을 들였지만 매달 남는 돈이 알바 시절의 두 배 가까이 됐다." },
+        "fail": { "quit": true, "amount": -30000000, "statDeltas": { "courage": 1 }, "text": "3천만 원을 들였는데 길 건너에 같은 브랜드가 또 들어왔다. 1년 만에 폐업했다." }
+      },
+      {
+        "code": "pass",
+        "label": "남의 가게에서 일한다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "위험은 사장님 몫. 시급은 그대로지만 잠은 편히 잔다." }
+      }
+    ]
+  },
+  {
+    "code": "pt-unmanned",
+    "title": "무인 매장 전환",
+    "body": "본사가 야간을 무인으로 돌린다고 한다. 야간 근무자는 주간 자리로 옮기거나 그만둬야 한다. 주간 자리는 몇 개 안 된다.",
+    "weight": 9,
+    "minTenureYears": 1,
+    "jobs": ["parttime"],
+    "minAge": 35,
+    "options": [
+      {
+        "code": "apply",
+        "label": "주간 자리를 신청한다",
+        "stat": "luck",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": { "statDeltas": { "patience": 1 }, "text": "주간 자리를 얻었다. 하는 일은 같고 잠은 밤에 잔다." },
+        "fail": { "quit": true, "statDeltas": { "patience": 1 }, "text": "자리가 모자랐다. 다음 주부터 나오지 말라는 문자를 받았다." }
+      },
+      {
+        "code": "leave",
+        "label": "이참에 그만둔다",
+        "success": { "quit": true, "severanceMonths": 1, "statDeltas": { "courage": 1 }, "text": "미련 없이 나왔다. 사장님이 한 달치를 챙겨 줬다." }
+      }
+    ]
+  },
+  {
+    "code": "farm-typhoon",
+    "title": "태풍 북상",
+    "body": "대형 태풍이 올라온다는 예보다. 수확을 열흘 앞둔 밭이 걱정이다.",
+    "weight": 10,
+    "minTenureYears": 0,
+    "jobs": ["farmer"],
+    "options": [
+      {
+        "code": "reinforce",
+        "label": "300만 원 들여 하우스를 보강한다",
+        "success": { "amount": -3000000, "statDeltas": { "insight": 1 }, "text": "태풍이 할퀴고 갔지만 보강한 덕에 피해는 거의 없었다." }
+      },
+      {
+        "code": "early",
+        "label": "덜 익었어도 미리 거둔다",
+        "success": { "amount": -1000000, "statDeltas": { "patience": 1 }, "text": "제값은 못 받았지만 한 해 농사를 날리진 않았다." }
+      },
+      {
+        "code": "pray",
+        "label": "하늘에 맡긴다",
+        "stat": "luck",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": { "amount": 4000000, "statDeltas": { "conviction": 1 }, "text": "태풍이 비껴갔다. 이웃 밭이 쓰러진 사이 값이 올라 수확을 비싸게 넘겼다." },
+        "fail": { "amount": -8000000, "statDeltas": { "patience": 1 }, "text": "밭이 쑥대밭이 됐다. 한 해 농사 800만 원어치를 날렸다." }
+      }
+    ]
+  },
+  {
+    "code": "farm-price",
+    "title": "농산물 값 폭락",
+    "body": "올해는 다들 같은 작물을 심었다. 산지 값이 반 토막이 나서 인건비도 안 나온다.",
+    "weight": 9,
+    "minTenureYears": 1,
+    "jobs": ["farmer"],
+    "options": [
+      {
+        "code": "direct",
+        "label": "온라인 직거래를 뚫어 본다",
+        "stat": "insight",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 10, "statDeltas": { "insight": 2 }, "text": "단골이 붙었다. 중간 상인을 거치지 않으니 남는 돈이 늘었다." },
+        "fail": { "amount": -1500000, "statDeltas": { "insight": 1 }, "text": "택배비와 포장비만 날렸다. 150만 원 손해." }
+      },
+      {
+        "code": "plow",
+        "label": "갈아엎고 내년을 기약한다",
+        "success": { "amount": 1000000, "statDeltas": { "patience": 2 }, "text": "마음이 아팠지만 정부 보상금 100만 원을 받았다." }
+      }
+    ]
+  },
+  {
+    "code": "farm-smart",
+    "title": "스마트팜 지원 사업",
+    "body": "군청에서 스마트팜 전환 지원 사업을 한다. 자부담 4천만 원. 잘 되면 수확이 몇 배지만 기계는 익혀야 쓴다.",
+    "weight": 6,
+    "minTenureYears": 3,
+    "jobs": ["farmer"],
+    "options": [
+      {
+        "code": "convert",
+        "label": "스마트팜으로 바꾼다",
+        "stat": "insight",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 40, "amount": -40000000, "statDeltas": { "insight": 2 }, "text": "센서와 자동 관수에 익숙해졌다. 수확이 늘어 벌이가 40% 올랐다." },
+        "fail": { "salaryPercent": -10, "amount": -40000000, "statDeltas": { "insight": 1 }, "text": "4천만 원을 들였는데 시스템이 자꾸 말썽이다. 수확은 오히려 줄었다." }
+      },
+      {
+        "code": "keep",
+        "label": "하던 대로 짓는다",
+        "success": { "statDeltas": { "conviction": 1 }, "text": "손에 익은 방식이 제일이다." }
+      }
+    ]
+  },
+  {
+    "code": "farm-land",
+    "title": "신도시 개발 소문",
+    "body": "마을에 신도시가 들어선다는 소문이 돈다. 땅을 사겠다는 사람이 찾아왔고, 보상 협상을 기다리자는 이웃도 있다.",
+    "weight": 4,
+    "minTenureYears": 5,
+    "jobs": ["farmer"],
+    "minAge": 45,
+    "options": [
+      {
+        "code": "sell",
+        "label": "지금 팔고 농사를 접는다",
+        "success": { "quit": true, "amount": 80000000, "statDeltas": { "courage": 1 }, "text": "8천만 원을 받고 땅을 넘겼다. 이제 다른 일을 찾아야 한다." }
+      },
+      {
+        "code": "hold",
+        "label": "보상 협상까지 버틴다",
+        "stat": "luck",
+        "baseBp": 2500,
+        "perPointBp": 40,
+        "success": { "quit": true, "amount": 150000000, "statDeltas": { "conviction": 2 }, "text": "개발이 확정됐다. 보상금 1억 5천만 원을 받고 농사를 접었다." },
+        "fail": { "statDeltas": { "conviction": 1 }, "text": "개발 계획이 백지화됐다. 땅값은 제자리, 농사는 계속이다." }
+      },
+      {
+        "code": "farm",
+        "label": "땅은 안 판다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "평생 지은 땅이다. 소문은 소문일 뿐." }
+      }
+    ]
+  },
+  {
+    "code": "fac-line",
+    "title": "라인 속도 경쟁",
+    "body": "이번 달 물량이 밀렸다. 반장이 안전 수칙을 좀 건너뛰더라도 속도를 맞추라고 한다.",
+    "weight": 9,
+    "minTenureYears": 0,
+    "jobs": ["factory"],
+    "options": [
+      {
+        "code": "speed",
+        "label": "속도를 맞춘다",
+        "stat": "luck",
+        "baseBp": 5000,
+        "perPointBp": 30,
+        "success": { "salaryPercent": 4, "statDeltas": { "courage": 1 }, "text": "물량을 다 뽑았다. 성과급이 붙어 월급이 4% 올랐다." },
+        "fail": { "amount": -3000000, "statDeltas": { "patience": -1 }, "text": "손을 다쳤다. 산재 처리가 늦어 병원비 300만 원을 먼저 냈다." }
+      },
+      {
+        "code": "safe",
+        "label": "수칙대로 한다",
+        "success": { "statDeltas": { "conviction": 2 }, "text": "반장 눈치는 봤지만 손가락은 열 개 그대로다." }
+      }
+    ]
+  },
+  {
+    "code": "fac-strike",
+    "title": "노조 파업",
+    "body": "임금 협상이 결렬됐다. 노조가 파업에 들어간다. 참여하면 그동안 월급이 안 나온다.",
+    "weight": 7,
+    "minTenureYears": 1,
+    "jobs": ["factory"],
+    "options": [
+      {
+        "code": "join",
+        "label": "파업에 참여한다",
+        "stat": "conviction",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 7, "statDeltas": { "conviction": 2 }, "text": "3주 만에 타결됐다. 임금이 7% 올랐다." },
+        "fail": { "amount": -2500000, "statDeltas": { "conviction": 1 }, "text": "파업이 길어졌다. 무노동 무임금으로 250만 원이 빠졌고 얻은 건 없다." }
+      },
+      {
+        "code": "work",
+        "label": "라인을 지킨다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "동료들 눈총을 받았지만 월급은 나왔다." }
+      }
+    ]
+  },
+  {
+    "code": "fac-foreman",
+    "title": "반장 자리",
+    "body": "오래 일한 반장이 정년퇴직한다. 라인을 맡을 사람을 찾는다. 사람 관리는 기계 다루기보다 어렵다.",
+    "weight": 7,
+    "minTenureYears": 4,
+    "jobs": ["factory"],
+    "options": [
+      {
+        "code": "take",
+        "label": "반장을 맡는다",
+        "stat": "patience",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 12, "statDeltas": { "patience": 2 }, "text": "라인을 무난히 이끌었다. 직책 수당으로 월급이 12% 올랐다." },
+        "fail": { "statDeltas": { "patience": 1 }, "text": "후배들과 부딪히기만 했다. 석 달 만에 자리를 내놨다." }
+      },
+      {
+        "code": "pass",
+        "label": "기계 앞이 편하다",
+        "success": { "statDeltas": { "conviction": 1 }, "text": "내 일만 깔끔히 한다." }
+      }
+    ]
+  },
+  {
+    "code": "fac-robot",
+    "title": "자동화 라인 도입",
+    "body": "공장이 로봇 라인을 들인다. 남는 사람은 재교육을 받아 설비 관리로 옮기고, 아니면 희망퇴직이다.",
+    "weight": 12,
+    "minTenureYears": 2,
+    "jobs": ["factory"],
+    "minAge": 40,
+    "options": [
+      {
+        "code": "retrain",
+        "label": "재교육을 받는다",
+        "stat": "patience",
+        "baseBp": 3000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 5, "statDeltas": { "insight": 2 }, "text": "설비 관리 자격증을 땄다. 몸은 덜 쓰고 월급은 5% 올랐다." },
+        "fail": { "quit": true, "severanceMonths": 3, "statDeltas": { "insight": 1 }, "text": "시험에 떨어졌다. 자리가 없어 위로금 세 달치를 받고 나왔다." }
+      },
+      {
+        "code": "leave",
+        "label": "희망퇴직을 받는다",
+        "success": { "quit": true, "severanceMonths": 8, "statDeltas": { "courage": 1 }, "text": "여덟 달치 위로금을 받고 공장을 나왔다." }
+      }
+    ]
+  },
+  {
+    "code": "cs-complaint",
+    "title": "악성 민원",
+    "body": "같은 사람이 열흘째 민원실에 와서 고함을 친다. 규정상 해줄 수 없는 일이다.",
+    "weight": 10,
+    "minTenureYears": 0,
+    "jobs": ["civil-servant"],
+    "options": [
+      {
+        "code": "rule",
+        "label": "규정대로 안 된다고 한다",
+        "stat": "conviction",
+        "baseBp": 5000,
+        "perPointBp": 30,
+        "success": { "statDeltas": { "conviction": 2 }, "text": "끝까지 원칙을 지켰다. 과장이 뒤에서 힘을 실어 줬다." },
+        "fail": { "statDeltas": { "conviction": 1, "patience": -1 }, "text": "민원인이 국민신문고에 실명으로 글을 올렸다. 경위서를 썼다." }
+      },
+      {
+        "code": "listen",
+        "label": "하소연을 끝까지 들어 준다",
+        "success": { "statDeltas": { "patience": 2 }, "text": "두 시간을 들어 줬더니 고맙다며 돌아갔다. 진이 빠졌다." }
+      }
+    ]
+  },
+  {
+    "code": "cs-transfer",
+    "title": "순환 인사 발령",
+    "body": "정기 인사 철이다. 아무도 안 가려는 기피 부서에 내 이름이 오르내린다.",
+    "weight": 8,
+    "minTenureYears": 1,
+    "jobs": ["civil-servant"],
+    "options": [
+      {
+        "code": "accept",
+        "label": "가라면 간다",
+        "success": { "salaryPercent": 3, "statDeltas": { "patience": 2 }, "text": "기피 부서에서 2년을 버텼다. 근무 평정에 가산점이 붙었다." }
+      },
+      {
+        "code": "lobby",
+        "label": "아는 선배에게 부탁해 본다",
+        "stat": "insight",
+        "baseBp": 4000,
+        "perPointBp": 30,
+        "success": { "statDeltas": { "insight": 1 }, "text": "이름이 빠졌다. 편한 부서에 남았다." },
+        "fail": { "statDeltas": { "insight": 1, "conviction": -1 }, "text": "부탁한 게 소문이 났다. 결국 그 부서로 갔고 눈치까지 보게 됐다." }
+      }
+    ]
+  },
+  {
+    "code": "cs-exam",
+    "title": "승진 시험",
+    "body": "승진 시험 공고가 떴다. 퇴근 뒤 반년은 공부에 매달려야 한다.",
+    "weight": 8,
+    "minTenureYears": 3,
+    "jobs": ["civil-servant"],
+    "options": [
+      {
+        "code": "study",
+        "label": "공부한다",
+        "stat": "patience",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 8, "statDeltas": { "patience": 2 }, "text": "합격했다. 한 계급 올라 월급이 8% 올랐다." },
+        "fail": { "statDeltas": { "patience": 1 }, "text": "아깝게 떨어졌다. 내년에 다시 보기로 했다." }
+      },
+      {
+        "code": "skip",
+        "label": "호봉만 쌓는다",
+        "success": { "statDeltas": { "conviction": 1 }, "text": "공무원은 오래 다니는 게 이기는 거다." }
+      }
+    ]
+  },
+  {
+    "code": "cs-pension",
+    "title": "연금 개혁",
+    "body": "공무원 연금을 손본다는 뉴스가 나왔다. 선배들이 개혁 전에 명예퇴직을 신청한다며 술렁인다.",
+    "weight": 9,
+    "minTenureYears": 10,
+    "jobs": ["civil-servant"],
+    "minAge": 45,
+    "options": [
+      {
+        "code": "retire",
+        "label": "명예퇴직을 신청한다",
+        "success": { "quit": true, "severanceMonths": 10, "statDeltas": { "courage": 2 }, "text": "명예퇴직 수당으로 열 달치를 받고 나왔다. 아직 일할 나이인데 할 일을 찾아야 한다." }
+      },
+      {
+        "code": "stay",
+        "label": "정년까지 다닌다",
+        "success": { "statDeltas": { "patience": 2 }, "text": "철밥통은 철밥통이다. 월급은 꼬박꼬박 나온다." }
+      }
+    ]
+  },
+  {
+    "code": "des-revision",
+    "title": "끝없는 수정 요청",
+    "body": "클라이언트가 스무 번째 수정을 보냈다. '처음 시안이 제일 나은 것 같아요.'",
+    "weight": 10,
+    "minTenureYears": 0,
+    "jobs": ["designer"],
+    "options": [
+      {
+        "code": "comply",
+        "label": "끝까지 맞춘다",
+        "stat": "patience",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 4, "statDeltas": { "patience": 2 }, "text": "클라이언트가 만족해 다음 프로젝트까지 맡겼다. 성과급이 붙었다." },
+        "fail": { "statDeltas": { "patience": 1, "conviction": -1 }, "text": "마감을 넘겼다. 회사가 계약금을 깎아 줬고 그 화살이 나에게 왔다." }
+      },
+      {
+        "code": "push",
+        "label": "수정 횟수를 정하자고 말한다",
+        "stat": "courage",
+        "baseBp": 4500,
+        "perPointBp": 30,
+        "success": { "statDeltas": { "courage": 2 }, "text": "오히려 프로답다는 말을 들었다. 일이 빨라졌다." },
+        "fail": { "statDeltas": { "courage": 1 }, "text": "클라이언트가 다른 회사로 갔다. 팀장에게 한 소리 들었다." }
+      }
+    ]
+  },
+  {
+    "code": "des-contest",
+    "title": "공모전",
+    "body": "유명 브랜드 디자인 공모전이 열렸다. 상금이 크다. 주말을 몇 번 갈아 넣어야 한다.",
+    "weight": 7,
+    "minTenureYears": 0,
+    "jobs": ["designer"],
+    "options": [
+      {
+        "code": "enter",
+        "label": "출품한다",
+        "stat": "luck",
+        "baseBp": 2000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 5, "amount": 5000000, "statDeltas": { "conviction": 2 }, "text": "대상을 탔다. 상금 500만 원과 함께 몸값이 올랐다." },
+        "fail": { "statDeltas": { "patience": 1 }, "text": "입선도 못 했다. 주말만 날렸다." }
+      },
+      {
+        "code": "rest",
+        "label": "주말은 쉰다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "주말엔 아무것도 안 그렸다. 머리가 맑아졌다." }
+      }
+    ]
+  },
+  {
+    "code": "des-freelance",
+    "title": "프리랜서 독립",
+    "body": "거래처 몇 곳이 개인적으로 일을 맡기고 싶다고 한다. 회사를 나와 혼자 해 볼까.",
+    "weight": 7,
+    "minTenureYears": 3,
+    "jobs": ["designer"],
+    "options": [
+      {
+        "code": "go",
+        "label": "프리랜서로 나선다",
+        "stat": "insight",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 30, "statDeltas": { "courage": 2 }, "text": "일감이 끊이지 않는다. 벌이가 30% 늘었다." },
+        "fail": { "salaryPercent": -20, "statDeltas": { "courage": 1 }, "text": "첫해 일감이 뚝 끊겼다. 수입이 20% 줄었다." }
+      },
+      {
+        "code": "stay",
+        "label": "회사가 낫다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "4대 보험과 고정 월급의 소중함을 안다." }
+      }
+    ]
+  },
+  {
+    "code": "des-ai",
+    "title": "생성형 AI",
+    "body": "회사가 이미지 생성 AI를 들였다. 시안 열 장이 1분이면 나온다. 팀장이 인원을 줄일 거라는 소문이 돈다.",
+    "weight": 12,
+    "minTenureYears": 1,
+    "jobs": ["designer"],
+    "minAge": 35,
+    "options": [
+      {
+        "code": "learn",
+        "label": "AI를 누구보다 잘 다룬다",
+        "stat": "insight",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 10, "statDeltas": { "insight": 2 }, "text": "AI로 작업 속도가 세 배가 됐다. 팀에서 꼭 필요한 사람이 됐다. 월급 10% 인상." },
+        "fail": { "statDeltas": { "insight": 1 }, "text": "배우긴 했는데 다들 배웠다. 달라진 건 없다." }
+      },
+      {
+        "code": "craft",
+        "label": "손맛으로 승부한다",
+        "stat": "luck",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "statDeltas": { "conviction": 2 }, "text": "직접 그린 그림을 찾는 고객이 오히려 늘었다." },
+        "fail": { "quit": true, "severanceMonths": 2, "statDeltas": { "conviction": 1 }, "text": "팀이 반으로 줄었다. 위로금 두 달치를 받고 나왔다." }
+      }
+    ]
+  },
+  {
+    "code": "off-boss",
+    "title": "꼰대 부장",
+    "body": "부장이 회식 자리에서 또 '요즘 애들은'을 시작한다. 내일 아침 보고서도 다시 써 오라고 한다.",
+    "weight": 10,
+    "minTenureYears": 0,
+    "jobs": ["office"],
+    "options": [
+      {
+        "code": "endure",
+        "label": "네, 알겠습니다",
+        "success": { "statDeltas": { "patience": 2 }, "text": "밤 열한 시까지 보고서를 고쳤다. 부장은 첫 버전을 골랐다." }
+      },
+      {
+        "code": "talk",
+        "label": "따로 찾아가 의견을 말한다",
+        "stat": "courage",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "statDeltas": { "courage": 2 }, "text": "의외로 들어 줬다. 그 뒤로 일이 조금 편해졌다." },
+        "fail": { "salaryPercent": -3, "statDeltas": { "courage": 1 }, "text": "찍혔다. 그해 고과가 바닥이라 월급이 3% 깎였다." }
+      }
+    ]
+  },
+  {
+    "code": "off-bankrupt",
+    "title": "회사 자금난",
+    "body": "거래처 대금이 몇 달째 밀렸다. 이번 달 월급이 열흘 늦게 들어왔다. 사장은 곧 괜찮아진다고 한다.",
+    "weight": 6,
+    "minTenureYears": 2,
+    "jobs": ["office"],
+    "options": [
+      {
+        "code": "trust",
+        "label": "사장을 믿고 남는다",
+        "stat": "luck",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "amount": 3000000, "statDeltas": { "conviction": 2 }, "text": "큰 거래를 따내 회사가 살아났다. 버틴 사람에게 보너스가 나왔다." },
+        "fail": { "quit": true, "statDeltas": { "conviction": 1 }, "text": "회사가 부도났다. 밀린 월급 두 달치는 체당금으로 겨우 일부만 받았다." }
+      },
+      {
+        "code": "move",
+        "label": "미리 다른 회사로 옮긴다",
+        "success": { "moveJob": true, "moveSalaryPercent": 0, "statDeltas": { "insight": 2 }, "text": "가라앉는 배에서 먼저 내렸다. 연차는 처음부터지만 월급은 제때 나온다." }
+      }
+    ]
+  },
+  {
+    "code": "off-stall",
+    "title": "만년 과장",
+    "body": "입사 동기들은 팀장을 달았는데 나는 몇 년째 과장이다. 이대로 늙을 순 없다는 생각이 든다.",
+    "weight": 10,
+    "minTenureYears": 3,
+    "jobs": ["office"],
+    "minAge": 40,
+    "options": [
+      {
+        "code": "cert",
+        "label": "자격증을 따서 몸값을 올린다",
+        "stat": "patience",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 6, "statDeltas": { "patience": 2 }, "text": "전문 자격증을 땄다. 자격 수당이 붙어 월급이 6% 올랐다." },
+        "fail": { "amount": -2000000, "statDeltas": { "patience": 1 }, "text": "두 번 떨어지고 포기했다. 학원비 200만 원만 들었다." }
+      },
+      {
+        "code": "accept",
+        "label": "내 자리는 여기다",
+        "success": { "statDeltas": { "conviction": 1 }, "text": "욕심을 내려놓으니 회사가 덜 괴롭다." }
+      }
+    ]
+  },
+  {
+    "code": "tea-parent",
+    "title": "학부모 민원",
+    "body": "학부모가 밤 열 시에 전화를 걸어 아이 성적표에 항의한다. 교장실에도 민원을 넣겠다고 한다.",
+    "weight": 10,
+    "minTenureYears": 0,
+    "jobs": ["teacher"],
+    "options": [
+      {
+        "code": "firm",
+        "label": "원칙대로 설명한다",
+        "stat": "insight",
+        "baseBp": 4500,
+        "perPointBp": 30,
+        "success": { "statDeltas": { "conviction": 2 }, "text": "근거를 하나하나 보여 줬다. 학부모가 수긍하고 돌아갔다." },
+        "fail": { "statDeltas": { "conviction": 1, "patience": -1 }, "text": "교육청 민원까지 갔다. 결론은 문제없음이지만 석 달을 시달렸다." }
+      },
+      {
+        "code": "apologize",
+        "label": "일단 사과하고 달랜다",
+        "success": { "statDeltas": { "patience": 2 }, "text": "불은 껐지만 찜찜함이 남았다." }
+      }
+    ]
+  },
+  {
+    "code": "tea-duty",
+    "title": "부장 교사",
+    "body": "교감이 학년 부장을 맡아 달라고 한다. 수당은 쥐꼬리인데 일은 두 배다.",
+    "weight": 8,
+    "minTenureYears": 3,
+    "jobs": ["teacher"],
+    "options": [
+      {
+        "code": "take",
+        "label": "맡는다",
+        "stat": "patience",
+        "baseBp": 4500,
+        "perPointBp": 30,
+        "success": { "salaryPercent": 5, "statDeltas": { "patience": 2 }, "text": "한 해를 잘 이끌었다. 부장 수당과 근무 평정 덕에 월급이 5% 올랐다." },
+        "fail": { "amount": -1000000, "statDeltas": { "patience": 1 }, "text": "일에 치여 몸살이 났다. 병원비 100만 원이 들었다." }
+      },
+      {
+        "code": "decline",
+        "label": "수업에만 집중한다",
+        "success": { "statDeltas": { "conviction": 1 }, "text": "아이들 얼굴을 더 많이 봤다." }
+      }
+    ]
+  },
+  {
+    "code": "tea-rural",
+    "title": "섬마을 학교",
+    "body": "인사 발령에 섬마을 분교가 걸렸다. 가면 도서벽지 수당과 승진 가산점이 붙는다. 가족과는 주말에만 본다.",
+    "weight": 6,
+    "minTenureYears": 2,
+    "jobs": ["teacher"],
+    "options": [
+      {
+        "code": "go",
+        "label": "간다",
+        "success": { "salaryPercent": 8, "statDeltas": { "patience": 1, "courage": 1 }, "text": "학생 일곱 명과 2년을 보냈다. 수당과 가산점으로 월급이 8% 올랐다." }
+      },
+      {
+        "code": "refuse",
+        "label": "사정을 말하고 빠진다",
+        "stat": "luck",
+        "baseBp": 5000,
+        "perPointBp": 30,
+        "success": { "statDeltas": { "insight": 1 }, "text": "사정을 봐줬다. 다른 사람이 갔다." },
+        "fail": { "salaryPercent": 8, "statDeltas": { "patience": 1 }, "text": "빠지지 못했다. 마지못해 갔다." }
+      }
+    ]
+  },
+  {
+    "code": "tea-retire",
+    "title": "명예퇴직 신청",
+    "body": "교단에 선 지 이십여 년. 아이들은 점점 낯설고 몸은 무겁다. 올해 명예퇴직 신청을 받는다고 한다.",
+    "weight": 9,
+    "minTenureYears": 10,
+    "jobs": ["teacher"],
+    "minAge": 50,
+    "options": [
+      {
+        "code": "retire",
+        "label": "명예퇴직한다",
+        "success": { "quit": true, "severanceMonths": 12, "statDeltas": { "courage": 1 }, "text": "명퇴 수당으로 열두 달치를 받고 교단을 내려왔다." }
+      },
+      {
+        "code": "stay",
+        "label": "정년까지 가르친다",
+        "success": { "statDeltas": { "patience": 2 }, "text": "올해 담임 반 아이들이 유난히 예쁘다." }
+      }
+    ]
+  },
+  {
+    "code": "sal-quota",
+    "title": "분기 마감",
+    "body": "분기 마감이 사흘 남았는데 목표의 70%다. 팀장이 '어떻게든 채워 오라'고 한다.",
+    "weight": 11,
+    "minTenureYears": 0,
+    "jobs": ["sales"],
+    "options": [
+      {
+        "code": "push",
+        "label": "무리해서라도 계약을 따낸다",
+        "stat": "courage",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 8, "statDeltas": { "courage": 2 }, "text": "마지막 날 큰 계약을 따냈다. 인센티브로 월급이 8% 올랐다." },
+        "fail": { "amount": -3000000, "statDeltas": { "courage": 1 }, "text": "밀어내기로 채웠다가 반품이 쏟아졌다. 내 인센티브에서 300만 원이 빠졌다." }
+      },
+      {
+        "code": "honest",
+        "label": "되는 만큼만 한다",
+        "success": { "statDeltas": { "conviction": 2 }, "text": "목표엔 못 미쳤지만 거래처와의 신뢰는 지켰다." }
+      }
+    ]
+  },
+  {
+    "code": "sal-dinner",
+    "title": "거래처 접대",
+    "body": "큰 거래처 구매 담당자가 술을 좋아한다. 이번 달 내내 저녁 자리가 잡혔다.",
+    "weight": 9,
+    "minTenureYears": 1,
+    "jobs": ["sales"],
+    "options": [
+      {
+        "code": "drink",
+        "label": "매일 술자리에 간다",
+        "stat": "luck",
+        "baseBp": 5000,
+        "perPointBp": 30,
+        "success": { "salaryPercent": 10, "statDeltas": { "patience": 1 }, "text": "거래처를 통째로 잡았다. 월급이 10% 올랐다." },
+        "fail": { "amount": -2000000, "statDeltas": { "patience": -1 }, "text": "간 수치가 바닥을 쳤다. 병원비 200만 원." }
+      },
+      {
+        "code": "golf",
+        "label": "술 대신 실력으로 승부한다",
+        "stat": "insight",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 5, "statDeltas": { "insight": 2 }, "text": "꼼꼼한 제안서가 통했다. 계약이 이어졌다." },
+        "fail": { "statDeltas": { "insight": 1 }, "text": "경쟁사가 접대로 거래처를 가져갔다." }
+      }
+    ]
+  },
+  {
+    "code": "sal-branch",
+    "title": "지점장 발령",
+    "body": "실적이 꼴찌인 지방 지점의 지점장 자리가 났다. 살리면 임원 후보, 못 살리면 지점째 정리다.",
+    "weight": 10,
+    "minTenureYears": 4,
+    "jobs": ["sales"],
+    "minAge": 40,
+    "options": [
+      {
+        "code": "go",
+        "label": "지점장으로 간다",
+        "stat": "insight",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 18, "statDeltas": { "courage": 1, "insight": 1 }, "text": "지점을 1등으로 끌어올렸다. 월급이 18% 올랐다." },
+        "fail": { "quit": true, "severanceMonths": 3, "statDeltas": { "courage": 1 }, "text": "지점이 문을 닫았다. 위로금 세 달치를 받고 나왔다." }
+      },
+      {
+        "code": "stay",
+        "label": "본사에 남는다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "자리는 지켰지만 승진 줄에서는 밀렸다." }
+      }
+    ]
+  },
+  {
+    "code": "nur-taeum",
+    "title": "태움",
+    "body": "선배 간호사가 유독 나에게만 모질다. 인계 때마다 공개적으로 망신을 준다.",
+    "weight": 10,
+    "minTenureYears": 0,
+    "jobs": ["nurse"],
+    "options": [
+      {
+        "code": "endure",
+        "label": "버틴다",
+        "stat": "patience",
+        "baseBp": 5000,
+        "perPointBp": 30,
+        "success": { "statDeltas": { "patience": 2 }, "text": "1년을 버텼더니 선배가 먼저 인정했다. 이제 후배를 챙기는 쪽이 됐다." },
+        "fail": { "quit": true, "statDeltas": { "patience": 1 }, "text": "버티다 무너졌다. 사직서를 냈다." }
+      },
+      {
+        "code": "transfer",
+        "label": "부서 이동을 신청한다",
+        "stat": "luck",
+        "baseBp": 5000,
+        "perPointBp": 30,
+        "success": { "statDeltas": { "courage": 1 }, "text": "다른 병동으로 옮겼다. 숨이 쉬어진다." },
+        "fail": { "statDeltas": { "courage": 1, "patience": -1 }, "text": "이동이 반려됐다. 분위기만 더 나빠졌다." }
+      }
+    ]
+  },
+  {
+    "code": "nur-epidemic",
+    "title": "감염병 대유행",
+    "body": "새 감염병이 번진다. 병원이 감염 병동에서 일할 자원자를 찾는다. 위험 수당이 붙는다.",
+    "weight": 6,
+    "minTenureYears": 1,
+    "jobs": ["nurse"],
+    "options": [
+      {
+        "code": "volunteer",
+        "label": "자원한다",
+        "stat": "luck",
+        "baseBp": 6000,
+        "perPointBp": 30,
+        "success": { "amount": 5000000, "statDeltas": { "courage": 2 }, "text": "석 달을 방호복 속에서 보냈다. 위험 수당 500만 원을 받았다." },
+        "fail": { "amount": -2000000, "statDeltas": { "courage": 1 }, "text": "감염됐다. 2주 격리에 치료비 200만 원이 들었다." }
+      },
+      {
+        "code": "stay",
+        "label": "원래 병동을 지킨다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "빈자리를 메우느라 원래 병동도 전쟁터였다." }
+      }
+    ]
+  },
+  {
+    "code": "nur-abroad",
+    "title": "해외 간호사 면허",
+    "body": "미국 간호사 면허를 따면 월급이 몇 배라는 얘기를 들었다. 시험과 서류에 1년, 비용 500만 원이 든다.",
+    "weight": 5,
+    "minTenureYears": 3,
+    "jobs": ["nurse"],
+    "options": [
+      {
+        "code": "try",
+        "label": "도전한다",
+        "stat": "insight",
+        "baseBp": 3000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 60, "amount": -5000000, "statDeltas": { "courage": 2, "insight": 1 }, "text": "면허를 따고 미국 병원에 취업했다. 월급이 60% 뛰었다." },
+        "fail": { "amount": -5000000, "statDeltas": { "courage": 1 }, "text": "시험에 떨어졌다. 500만 원만 날렸다." }
+      },
+      {
+        "code": "stay",
+        "label": "여기서 경력을 쌓는다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "한국 병원에서 연차를 쌓는다." }
+      }
+    ]
+  },
+  {
+    "code": "nur-head",
+    "title": "수간호사",
+    "body": "병동 수간호사가 정년퇴직한다. 경력으로 보면 내 차례지만, 후보가 둘이다.",
+    "weight": 9,
+    "minTenureYears": 8,
+    "jobs": ["nurse"],
+    "minAge": 40,
+    "options": [
+      {
+        "code": "apply",
+        "label": "지원한다",
+        "stat": "patience",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 12, "statDeltas": { "patience": 1, "conviction": 1 }, "text": "수간호사가 됐다. 월급이 12% 올랐다." },
+        "fail": { "statDeltas": { "patience": 1 }, "text": "다른 사람이 됐다. 그래도 병동은 내가 제일 잘 안다." }
+      },
+      {
+        "code": "pass",
+        "label": "현장이 좋다",
+        "success": { "statDeltas": { "conviction": 1 }, "text": "관리보다 환자 곁이 좋다." }
+      }
+    ]
+  },
+  {
+    "code": "dev-outage",
+    "title": "새벽 장애",
+    "body": "새벽 세 시, 서비스가 멈췄다는 알림이 울린다. 원인은 아무도 모른다.",
+    "weight": 10,
+    "minTenureYears": 0,
+    "jobs": ["developer"],
+    "options": [
+      {
+        "code": "fix",
+        "label": "직접 원인을 파고든다",
+        "stat": "insight",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 5, "statDeltas": { "insight": 2 }, "text": "한 시간 만에 원인을 찾아 고쳤다. 다음 평가에서 월급이 5% 올랐다." },
+        "fail": { "statDeltas": { "insight": 1, "conviction": -1 }, "text": "롤백만 하다 날이 샜다. 장애 보고서는 내 이름으로 올라갔다." }
+      },
+      {
+        "code": "escalate",
+        "label": "선배를 깨운다",
+        "success": { "statDeltas": { "patience": 1, "insight": 1 }, "text": "선배가 고쳤다. 어떻게 고쳤는지 옆에서 배웠다." }
+      }
+    ]
+  },
+  {
+    "code": "dev-startup",
+    "title": "스타트업 합류 제안",
+    "body": "대학 동기가 차린 스타트업이 시리즈 A를 받았다. CTO로 오라며 지분을 주겠다고 한다. 월급은 지금보다 적다.",
+    "weight": 7,
+    "minTenureYears": 2,
+    "jobs": ["developer"],
+    "options": [
+      {
+        "code": "join",
+        "label": "합류한다",
+        "stat": "luck",
+        "baseBp": 2500,
+        "perPointBp": 40,
+        "success": { "amount": 80000000, "statDeltas": { "courage": 2 }, "text": "회사가 대기업에 인수됐다. 지분이 8천만 원이 되어 돌아왔다." },
+        "fail": { "quit": true, "statDeltas": { "courage": 1 }, "text": "투자가 끊겨 회사가 문을 닫았다. 지분은 휴지가 됐다." }
+      },
+      {
+        "code": "stay",
+        "label": "지금 회사에 남는다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "동기의 SNS를 가끔 들여다본다." }
+      }
+    ]
+  },
+  {
+    "code": "dev-ai",
+    "title": "AI 코딩 도구",
+    "body": "회사가 AI 코딩 도구를 전면 도입하면서 개발 인력을 줄인다고 한다. 남는 건 AI를 부릴 줄 아는 사람이다.",
+    "weight": 11,
+    "minTenureYears": 1,
+    "jobs": ["developer"],
+    "minAge": 30,
+    "options": [
+      {
+        "code": "adapt",
+        "label": "AI와 일하는 법을 익힌다",
+        "stat": "luck",
+        "baseBp": 5000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 10, "statDeltas": { "insight": 2 }, "text": "혼자 셋 몫을 한다는 평을 들었다. 월급이 10% 올랐다." },
+        "fail": { "quit": true, "severanceMonths": 3, "statDeltas": { "insight": 1 }, "text": "익히긴 했지만 감원 명단은 운이었다. 위로금 세 달치를 받고 나왔다." }
+      },
+      {
+        "code": "deep",
+        "label": "남들이 못 하는 깊은 기술을 판다",
+        "stat": "insight",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 6, "statDeltas": { "conviction": 2 }, "text": "아무도 못 고치는 시스템을 혼자 안다. 회사가 붙잡았다." },
+        "fail": { "statDeltas": { "conviction": 1 }, "text": "깊이 판 기술이 통째로 사라졌다." }
+      }
+    ]
+  },
+  {
+    "code": "dev-40",
+    "title": "마흔의 개발자",
+    "body": "팀원이 다 나보다 열 살 어리다. 회사는 관리자 트랙을 권하고, 나는 아직 코드를 짜고 싶다.",
+    "weight": 12,
+    "minTenureYears": 3,
+    "jobs": ["developer"],
+    "minAge": 40,
+    "options": [
+      {
+        "code": "manage",
+        "label": "팀장이 된다",
+        "stat": "patience",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 12, "statDeltas": { "patience": 2 }, "text": "팀을 맡았다. 코드는 못 짜지만 월급이 12% 올랐다." },
+        "fail": { "statDeltas": { "patience": 1 }, "text": "사람 관리에 질려 반년 만에 내려왔다." }
+      },
+      {
+        "code": "code",
+        "label": "현업에 남는다",
+        "stat": "luck",
+        "baseBp": 5000,
+        "perPointBp": 30,
+        "success": { "statDeltas": { "conviction": 2 }, "text": "시니어 엔지니어로 인정받았다. 아무도 나를 대신하지 못한다." },
+        "fail": { "quit": true, "severanceMonths": 4, "statDeltas": { "conviction": 1 }, "text": "구조조정 때 '연봉 대비 효율' 명단에 올랐다. 위로금 네 달치를 받고 나왔다." }
+      }
+    ]
+  },
+  {
+    "code": "acc-busy",
+    "title": "감사 시즌",
+    "body": "3월 결산 감사 시즌이다. 두 달째 주말이 없다.",
+    "weight": 10,
+    "minTenureYears": 0,
+    "jobs": ["accountant"],
+    "options": [
+      {
+        "code": "grind",
+        "label": "밤을 새워 끝낸다",
+        "stat": "patience",
+        "baseBp": 4500,
+        "perPointBp": 30,
+        "success": { "salaryPercent": 5, "statDeltas": { "patience": 2 }, "text": "마감을 다 맞췄다. 시즌 보너스로 월급이 5% 올랐다." },
+        "fail": { "amount": -1500000, "statDeltas": { "patience": -1 }, "text": "마감 날 응급실에 실려 갔다. 병원비 150만 원." }
+      },
+      {
+        "code": "delegate",
+        "label": "주니어에게 나눠 맡긴다",
+        "success": { "statDeltas": { "insight": 1 }, "text": "마감은 하루 늦었지만 다 같이 살아남았다." }
+      }
+    ]
+  },
+  {
+    "code": "acc-fraud",
+    "title": "분식회계 정황",
+    "body": "감사하던 회사 장부에서 매출을 부풀린 흔적을 찾았다. 그 회사는 우리 법인의 큰 고객이다.",
+    "weight": 7,
+    "minTenureYears": 1,
+    "jobs": ["accountant"],
+    "options": [
+      {
+        "code": "report",
+        "label": "원칙대로 의견을 낸다",
+        "stat": "luck",
+        "baseBp": 5000,
+        "perPointBp": 30,
+        "success": { "salaryPercent": 8, "statDeltas": { "conviction": 2 }, "text": "'원칙 있는 회계사'로 이름이 났다. 다른 고객이 줄을 섰다." },
+        "fail": { "quit": true, "severanceMonths": 2, "statDeltas": { "conviction": 2 }, "text": "고객이 떨어져 나갔고, 그 책임이 나에게 돌아왔다. 결국 법인을 나왔다." }
+      },
+      {
+        "code": "ignore",
+        "label": "못 본 척한다",
+        "stat": "luck",
+        "baseBp": 5000,
+        "perPointBp": 30,
+        "success": { "statDeltas": { "conviction": -1 }, "text": "아무 일도 없었다. 찜찜함만 남았다." },
+        "fail": { "quit": true, "amount": -20000000, "statDeltas": { "conviction": -1 }, "text": "금감원 감리에 걸렸다. 과징금 2천만 원에 직무 정지까지 받았다." }
+      }
+    ]
+  },
+  {
+    "code": "acc-partner",
+    "title": "파트너 승진",
+    "body": "파트너 심사가 다가온다. 파트너가 되면 지분과 함께 수입이 크게 뛴다. 영업 실적이 관건이다.",
+    "weight": 9,
+    "minTenureYears": 6,
+    "jobs": ["accountant"],
+    "minAge": 40,
+    "options": [
+      {
+        "code": "try",
+        "label": "영업까지 뛰며 도전한다",
+        "stat": "insight",
+        "baseBp": 2500,
+        "perPointBp": 40,
+        "perRaisePercentBp": 100,
+        "success": { "salaryPercent": 30, "statDeltas": { "conviction": 2 }, "text": "파트너가 됐다. 수입이 30% 늘었다." },
+        "fail": { "statDeltas": { "patience": 1 }, "text": "이번엔 밀렸다. 내년을 기약한다." }
+      },
+      {
+        "code": "pass",
+        "label": "실무가 좋다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "숫자만 보는 지금이 편하다." }
+      }
+    ]
+  },
+  {
+    "code": "acc-own",
+    "title": "개인 사무소 개업",
+    "body": "대형 법인을 나와 세무·회계 사무소를 차리는 동료들이 늘었다. 개업 비용은 2천만 원 남짓.",
+    "weight": 7,
+    "minTenureYears": 3,
+    "jobs": ["accountant"],
+    "minAge": 35,
+    "options": [
+      {
+        "code": "open",
+        "label": "개업한다",
+        "stat": "insight",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 40, "amount": -20000000, "statDeltas": { "courage": 2 }, "text": "소개가 소개를 불렀다. 수입이 40% 늘었다." },
+        "fail": { "salaryPercent": -15, "amount": -20000000, "statDeltas": { "courage": 1 }, "text": "고객이 안 붙는다. 수입이 15% 줄었다." }
+      },
+      {
+        "code": "stay",
+        "label": "법인에 남는다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "이름 있는 간판 밑이 아직은 낫다." }
+      }
+    ]
+  },
+  {
+    "code": "big-overseas",
+    "title": "해외 주재원",
+    "body": "해외 법인 주재원 자리가 났다. 수당이 두둑하지만 낯선 땅에서 3년을 보내야 한다.",
+    "weight": 7,
+    "minTenureYears": 3,
+    "jobs": ["bigcorp"],
+    "maxAge": 45,
+    "options": [
+      {
+        "code": "go",
+        "label": "손을 든다",
+        "stat": "courage",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 15, "statDeltas": { "courage": 2 }, "text": "현지 법인을 안정시키고 돌아왔다. 경력이 빛나 월급이 15% 올랐다." },
+        "fail": { "amount": -5000000, "statDeltas": { "courage": 1 }, "text": "현지 사업이 꼬였다. 정착 비용 500만 원만 쓰고 조기 귀국했다." }
+      },
+      {
+        "code": "stay",
+        "label": "본사에 남는다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "본사 라인에서 자리를 지켰다." }
+      }
+    ]
+  },
+  {
+    "code": "big-pressure",
+    "title": "실적 압박",
+    "body": "40대 차장. 팀 목표는 미달이고, 임원 회의에 들어갈 때마다 실적표가 테이블 위에 놓인다. 올해 고과가 앞으로의 자리를 정한다는 말이 돈다.",
+    "weight": 30,
+    "minTenureYears": 1,
+    "jobs": ["bigcorp"],
+    "minAge": 40,
+    "maxAge": 49,
+    "options": [
+      {
+        "code": "overwork",
+        "label": "주말까지 갈아 넣어 목표를 맞춘다",
+        "stat": "patience",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 6, "statDeltas": { "patience": 2 }, "text": "목표를 넘겼다. 고과 S, 성과급이 붙어 월급이 6% 올랐다." },
+        "fail": { "salaryPercent": -5, "statDeltas": { "patience": 1 }, "text": "몸만 축나고 목표는 못 맞췄다. 고과 C, 월급이 5% 깎였다." }
+      },
+      {
+        "code": "polish",
+        "label": "보고서 숫자를 그럴듯하게 다듬는다",
+        "stat": "insight",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 4, "statDeltas": { "insight": 1 }, "text": "임원이 만족했다. 고과 A, 월급이 4% 올랐다." },
+        "fail": { "salaryPercent": -8, "statDeltas": { "conviction": -1 }, "text": "숫자가 맞지 않는 게 들통났다. 고과 D, 월급이 8% 깎였다." }
+      },
+      {
+        "code": "accept",
+        "label": "할 만큼만 하고 결과를 받아들인다",
+        "success": { "salaryPercent": -3, "statDeltas": { "conviction": 1 }, "text": "고과 B-. 성과급이 줄어 월급이 3% 깎였다. 그래도 저녁은 집에서 먹는다." }
+      }
+    ]
+  },
+  {
+    "code": "big-exit",
+    "title": "권고사직 면담",
+    "body": "50대 부장. 인사팀이 면담을 잡았다. '회사가 어렵다. 자리를 정리하는 중이다.' 지금 나가면 위로금이 두둑하고, 버티면 다음 명단에 또 오를 수 있다. 쌓아 온 실적이 많을수록 버틸 여지가 크다.",
+    "weight": 40,
+    "minTenureYears": 1,
+    "jobs": ["bigcorp"],
+    "minAge": 50,
+    "options": [
+      {
+        "code": "hold",
+        "label": "실적표를 내밀고 버틴다",
+        "stat": "luck",
+        "baseBp": 1500,
+        "perPointBp": 40,
+        "perRaisePercentBp": 150,
+        "success": { "statDeltas": { "patience": 2 }, "text": "살아남았다. 회사는 아직 내가 필요하다고 했다." },
+        "fail": { "quit": true, "severanceMonths": 3, "statDeltas": { "patience": 1 }, "text": "결국 등 떠밀려 나왔다. 위로금은 세 달치뿐이다." }
+      },
+      {
+        "code": "package",
+        "label": "희망퇴직 패키지를 받는다",
+        "success": { "quit": true, "severanceMonths": 18, "statDeltas": { "courage": 1 }, "text": "열여덟 달치 위로금을 받고 이십여 년 다닌 회사를 나왔다." }
+      },
+      {
+        "code": "sideline",
+        "label": "한직이라도 남는다",
+        "success": { "salaryPercent": -20, "statDeltas": { "patience": 2, "conviction": -1 }, "text": "창가 자리로 밀려났다. 직책 수당이 빠져 월급이 20% 깎였지만 자리는 지켰다." }
+      }
+    ]
+  },
+  {
+    "code": "big-executive",
+    "title": "임원 승진",
+    "body": "임원 인사 시즌이다. 별을 다는 사람은 한 해에 손에 꼽는다. 실적이 받쳐 줘야 한다.",
+    "weight": 8,
+    "minTenureYears": 10,
+    "jobs": ["bigcorp"],
+    "minAge": 48,
+    "options": [
+      {
+        "code": "aim",
+        "label": "임원을 노린다",
+        "stat": "luck",
+        "baseBp": 500,
+        "perPointBp": 30,
+        "perRaisePercentBp": 100,
+        "success": { "salaryPercent": 40, "statDeltas": { "conviction": 2 }, "text": "상무가 됐다. 월급이 40% 뛰었다. 대신 1년 계약직이다." },
+        "fail": { "statDeltas": { "patience": 1 }, "text": "이번에도 별은 다른 사람 차지였다." }
+      },
+      {
+        "code": "pass",
+        "label": "부장으로 만족한다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "올라갈수록 떨어질 곳도 높다." }
+      }
+    ]
+  },
+  {
+    "code": "pha-shortage",
+    "title": "감기약 품귀",
+    "body": "독감이 돌면서 감기약이 동났다. 도매상마다 물량이 없다고 한다.",
+    "weight": 9,
+    "minTenureYears": 0,
+    "jobs": ["pharmacist"],
+    "options": [
+      {
+        "code": "hunt",
+        "label": "발품을 팔아 물량을 구한다",
+        "stat": "patience",
+        "baseBp": 4500,
+        "perPointBp": 30,
+        "success": { "salaryPercent": 5, "statDeltas": { "patience": 2 }, "text": "물량을 구했다. 단골이 늘고 매출이 올랐다." },
+        "fail": { "statDeltas": { "patience": 1 }, "text": "헛걸음만 했다. 손님들은 다른 약국으로 갔다." }
+      },
+      {
+        "code": "wait",
+        "label": "들어오는 대로 판다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "기다리는 동안 손님들에게 사과만 했다." }
+      }
+    ]
+  },
+  {
+    "code": "pha-open",
+    "title": "약국 개국",
+    "body": "병원 건물 1층 약국 자리가 났다. 권리금과 인테리어에 8천만 원. 처방전이 얼마나 나오느냐에 달렸다.",
+    "weight": 7,
+    "minTenureYears": 2,
+    "jobs": ["pharmacist"],
+    "minAge": 32,
+    "options": [
+      {
+        "code": "open",
+        "label": "개국한다",
+        "stat": "luck",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 50, "amount": -80000000, "statDeltas": { "courage": 2 }, "text": "처방전이 쏟아졌다. 수입이 50% 늘었다." },
+        "fail": { "salaryPercent": -15, "amount": -80000000, "statDeltas": { "courage": 1 }, "text": "병원이 1년 만에 이전했다. 처방전이 끊겨 수입이 15% 줄었다." }
+      },
+      {
+        "code": "employed",
+        "label": "근무 약사로 남는다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "월급은 적어도 권리금 걱정은 없다." }
+      }
+    ]
+  },
+  {
+    "code": "pha-chain",
+    "title": "대형 약국 입점",
+    "body": "길 건너에 창고형 대형 약국이 들어선다. 같은 약을 훨씬 싸게 판다.",
+    "weight": 8,
+    "minTenureYears": 3,
+    "jobs": ["pharmacist"],
+    "options": [
+      {
+        "code": "care",
+        "label": "상담과 복약 지도로 승부한다",
+        "stat": "insight",
+        "baseBp": 4500,
+        "perPointBp": 30,
+        "success": { "statDeltas": { "insight": 2 }, "text": "단골 어르신들이 남았다. 매출은 그대로다." },
+        "fail": { "salaryPercent": -15, "statDeltas": { "insight": 1 }, "text": "손님 절반이 빠졌다. 수입이 15% 줄었다." }
+      },
+      {
+        "code": "price",
+        "label": "가격을 내려 맞선다",
+        "success": { "salaryPercent": -8, "statDeltas": { "courage": 1 }, "text": "손님은 지켰지만 남는 게 줄었다. 수입 8% 감소." }
+      }
+    ]
+  },
+  {
+    "code": "law-case",
+    "title": "대형 사건 수임",
+    "body": "언론에 오르내리는 대형 사건이 들어왔다. 이기면 이름이 나고, 지면 그만큼 소문도 난다.",
+    "weight": 9,
+    "minTenureYears": 0,
+    "jobs": ["lawyer"],
+    "options": [
+      {
+        "code": "take",
+        "label": "맡는다",
+        "stat": "insight",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "amount": 30000000, "statDeltas": { "insight": 2 }, "text": "승소했다. 성공 보수 3천만 원과 함께 이름이 났다." },
+        "fail": { "statDeltas": { "insight": 1, "conviction": -1 }, "text": "패소했다. 의뢰인이 이곳저곳에 험담을 하고 다닌다." }
+      },
+      {
+        "code": "decline",
+        "label": "무리하지 않는다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "감당할 만한 사건만 맡는다." }
+      }
+    ]
+  },
+  {
+    "code": "law-probono",
+    "title": "공익 소송",
+    "body": "돈이 안 되는 공익 소송을 맡아 달라는 부탁이 왔다. 몇 달은 다른 사건을 못 맡는다.",
+    "weight": 6,
+    "minTenureYears": 1,
+    "jobs": ["lawyer"],
+    "options": [
+      {
+        "code": "take",
+        "label": "맡는다",
+        "stat": "conviction",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 8, "statDeltas": { "conviction": 3 }, "text": "승소했다. 판결이 신문에 실렸고, 사무실에 의뢰가 늘었다." },
+        "fail": { "amount": -5000000, "statDeltas": { "conviction": 2 }, "text": "졌다. 몇 달 수입이 끊겨 500만 원이 비었다." }
+      },
+      {
+        "code": "decline",
+        "label": "정중히 거절한다",
+        "success": { "statDeltas": { "insight": 1 }, "text": "수입은 지켰다." }
+      }
+    ]
+  },
+  {
+    "code": "law-own",
+    "title": "개인 사무소",
+    "body": "로펌에서 나와 내 이름을 건 사무소를 낼까. 개업 비용 5천만 원. 사건이 안 들어오면 월세만 나간다.",
+    "weight": 7,
+    "minTenureYears": 3,
+    "jobs": ["lawyer"],
+    "minAge": 38,
+    "options": [
+      {
+        "code": "open",
+        "label": "개업한다",
+        "stat": "insight",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 40, "amount": -50000000, "statDeltas": { "courage": 2 }, "text": "사건이 꾸준히 들어온다. 수입이 40% 늘었다." },
+        "fail": { "salaryPercent": -25, "amount": -50000000, "statDeltas": { "courage": 1 }, "text": "변호사가 너무 많다. 수입이 25% 줄었다." }
+      },
+      {
+        "code": "stay",
+        "label": "로펌에 남는다",
+        "success": { "statDeltas": { "patience": 1 }, "text": "간판 큰 로펌의 월급이 아직은 낫다." }
+      }
+    ]
+  },
+  {
+    "code": "law-glut",
+    "title": "수임료 출혈 경쟁",
+    "body": "변호사 수가 해마다 늘어 수임료가 바닥이다. 법률 플랫폼에서는 상담료 3만 원짜리 광고가 쏟아진다.",
+    "weight": 9,
+    "minTenureYears": 5,
+    "jobs": ["lawyer"],
+    "minAge": 45,
+    "options": [
+      {
+        "code": "niche",
+        "label": "전문 분야를 판다",
+        "stat": "insight",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": { "salaryPercent": 10, "statDeltas": { "insight": 2 }, "text": "한 분야에서 손꼽히게 됐다. 수임료가 오히려 올랐다." },
+        "fail": { "salaryPercent": -5, "statDeltas": { "insight": 1 }, "text": "파고든 분야에 사건이 별로 없다." }
+      },
+      {
+        "code": "cut",
+        "label": "수임료를 내린다",
+        "success": { "salaryPercent": -10, "statDeltas": { "patience": 1 }, "text": "사건 수는 지켰지만 수입이 10% 줄었다." }
       }
     ]
   }

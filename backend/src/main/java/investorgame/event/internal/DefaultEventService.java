@@ -894,8 +894,8 @@ class DefaultEventService implements EventService {
   }
 
   /**
-   * 직장 장면. 연차 조건을 만족하는 장면 중 직전 장면을 뺀 나머지에서 가중치로 뽑는다. 이직 제안은 지금보다 월급이 많은 직업이 있을 때만 나오고, 옮길 직업을 선택지
-   * 코드("move:<직업>")에 남긴다.
+   * 직장 장면. 지금 직업·나이·연차 조건을 만족하는 장면 중 직전 장면을 뺀 나머지에서 가중치로 뽑는다 (decisions.md 43번). 이직 제안은 지금보다 월급이 많은
+   * 직업이 있을 때만 나오고, 옮길 직업을 선택지 코드("move:<직업>")에 남긴다.
    */
   private EventRow careerEvent(
       UUID id,
@@ -908,17 +908,25 @@ class DefaultEventService implements EventService {
     List<EventRow> previous = ofKind(rows, EventKind.CAREER);
     String lastCode = previous.isEmpty() ? null : last(previous).definitionCode();
     int tenure = Math.max(0, day - context.jobStartDay()) / calendar.daysPerYear();
+    int age = ageAt(day, context);
+    String jobCode = context.jobCode();
     long currentSalary = content.job(context.jobCode()).baseMonthlySalary();
     List<JobDefinition> betterJobs =
         content.jobs().stream().filter(j -> j.baseMonthlySalary() > currentSalary).toList();
     List<CareerDefinition> eligible =
         content.careers().stream()
+            .filter(c -> c.fits(jobCode, age))
             .filter(c -> c.minTenureYears() <= tenure)
             .filter(c -> !c.code().equals(lastCode))
             .filter(c -> !c.movesJob() || !betterJobs.isEmpty())
             .toList();
     if (eligible.isEmpty()) {
-      eligible = content.careers().stream().filter(c -> !c.movesJob()).toList();
+      // 연차·직전 장면 조건을 풀어도 그 직업의 장면은 지킨다. 콘텐츠 검증이 직업마다 나이 제한 없는 장면을 하나는 보장한다.
+      eligible =
+          content.careers().stream()
+              .filter(c -> c.forJob(jobCode) && !c.movesJob())
+              .filter(c -> c.minAge() == null && c.maxAge() == null)
+              .toList();
     }
     CareerDefinition career = weighted(eligible, CareerDefinition::weight, rng);
     JobDefinition target =
