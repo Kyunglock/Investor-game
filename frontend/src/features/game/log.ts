@@ -35,7 +35,7 @@ export interface LogLine {
   age: number
   tone: LogTone
   text: string
-  pill?: '탄생' | '제안' | '직장' | '세상' | '집'
+  pill?: '탄생' | '제안' | '직장' | '투자' | '세상' | '집'
 }
 
 type GameInfo = Pick<Game, 'startAge' | 'daysPerYear' | 'initialStats'> &
@@ -91,7 +91,7 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       return {
         ...base,
         tone: p.success === false ? 'flipped' : 'decision',
-        pill: '직장',
+        pill: p.fullTimeInvestor ? '투자' : '직장',
         text: `${str(p.eventTitle)} · ${str(p.optionLabel)} → ${str(p.text)}`,
       }
     case 'STYLE': {
