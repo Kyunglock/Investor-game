@@ -23,6 +23,7 @@ import java.util.Map;
  * @param fullTimeInvestor 직업 대신 전업투자자를 골랐는가. 그러면 직업 선택·직장 장면이 더 오지 않는다
  * @param housing 주거 이벤트(독립·세 만기·집 사기)를 정하는 사실
  * @param heldDropBp 보유 종목별 최근 12달 고점 대비 낙폭(만분율, 하락이면 양수). 크게 빠진 종목이 있으면 빚투 제안이 온다
+ * @param netWorth 지금 순자산(원). 전업투자자의 장면(증권사 설립 등)은 순자산이 받쳐 줄 때만 온다
  */
 public record SchedulingContext(
     Phase phase,
@@ -43,4 +44,5 @@ public record SchedulingContext(
     List<String> heldStockCodes,
     boolean fullTimeInvestor,
     Map<String, Integer> heldDropBp,
-    HousingFacts housing) {}
+    HousingFacts housing,
+    long netWorth) {}

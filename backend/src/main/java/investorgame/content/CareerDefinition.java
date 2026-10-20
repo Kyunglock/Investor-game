@@ -11,6 +11,8 @@ import java.util.Map;
  * @param jobs 이 장면이 나오는 직업 코드. 비어 있으면 모든 직업
  * @param minAge 이 나이 이상일 때만 나온다. null이면 제한 없음
  * @param maxAge 이 나이 이하일 때만 나온다. null이면 제한 없음
+ * @param minNetWorth 순자산이 이 이상일 때만 나온다(원). null이면 제한 없음. 전업투자자의 장면이 자산에 따라 커진다
+ * @param followUpOnly 다른 장면의 결과(followUp)로만 오고 무작위로는 뽑지 않는다
  */
 public record CareerDefinition(
     String code,
@@ -21,21 +23,66 @@ public record CareerDefinition(
     List<String> jobs,
     Integer minAge,
     Integer maxAge,
+    Long minNetWorth,
+    Boolean followUpOnly,
     List<Option> options) {
+
+  /** 직업 대신 전업투자자를 고른 사람의 직업 자리. 직업 선택의 INVEST 선택지와 같은 값이다 (decisions.md 35번). */
+  public static final String FULL_TIME_INVESTOR = "INVEST";
+
+  /** 판정에 떨어진 선택지는 실제 행동을 "코드!fail"로 남긴다. 후속 장면(followUp)을 찾을 때 쓴다. */
+  private static final String FAIL_SUFFIX = "!fail";
 
   public CareerDefinition {
     jobs = jobs == null ? List.of() : List.copyOf(jobs);
+    followUpOnly = followUpOnly != null && followUpOnly;
   }
 
-  /** 이 직업·나이에 나올 수 있는 장면인가 (연차는 따로 본다). */
-  public boolean fits(String jobCode, int age) {
-    return (jobs.isEmpty() || jobs.contains(jobCode))
+  /** 이 직업·나이·순자산에 나올 수 있는 장면인가 (연차는 따로 본다). */
+  public boolean fits(String jobCode, int age, long netWorth) {
+    return forJob(jobCode)
         && (minAge == null || age >= minAge)
-        && (maxAge == null || age <= maxAge);
+        && (maxAge == null || age <= maxAge)
+        && (minNetWorth == null || netWorth >= minNetWorth);
   }
 
+  /** jobs가 비어 있으면 모든 직업이지만 전업투자자는 따로 적어야 한다. 직장 이야기가 투자자에게 오면 안 되므로. */
   public boolean forJob(String jobCode) {
-    return jobs.isEmpty() || jobs.contains(jobCode);
+    return jobs.isEmpty() ? !FULL_TIME_INVESTOR.equals(jobCode) : jobs.contains(jobCode);
+  }
+
+  /** 조건(나이·순자산)이 하나도 없는 장면. 다른 조건에 다 걸렸을 때 물러설 곳이다. */
+  public boolean unconditional() {
+    return minAge == null && maxAge == null && minNetWorth == null && !followUpOnly;
+  }
+
+  public Option option(String optionCode) {
+    return options.stream()
+        .filter(o -> o.code().equals(optionCode))
+        .findFirst()
+        .orElseThrow(() -> new IllegalStateException("콘텐츠에 없는 직장 선택지: " + code + "/" + optionCode));
+  }
+
+  public static String actualAction(String optionCode, boolean success) {
+    return success ? optionCode : optionCode + FAIL_SUFFIX;
+  }
+
+  /** actualAction으로 남긴 실제 행동에서 결과를 되찾는다. 이직 선택지("move:<직업>")는 "move"로 본다. 모르는 행동이면 아무 결과도 없다. */
+  public Effect effectOf(String actualAction) {
+    boolean failed = actualAction.endsWith(FAIL_SUFFIX);
+    String optionCode =
+        failed
+            ? actualAction.substring(0, actualAction.length() - FAIL_SUFFIX.length())
+            : actualAction;
+    if (optionCode.startsWith("move:")) {
+      optionCode = "move";
+    }
+    String found = optionCode;
+    return options.stream()
+        .filter(o -> o.code().equals(found))
+        .findFirst()
+        .map(o -> failed ? o.fail() : o.success())
+        .orElse(Effect.NONE);
   }
 
   /** 장면 중 이직 제안(moveJob 선택지가 있는 것)은 지금보다 월급이 많은 직업이 있을 때만 나온다. */
@@ -82,6 +129,9 @@ public record CareerDefinition(
    * @param moveSalaryPercent 옮긴 직장에서 시작하는 인상분(%)
    * @param amount 현금 변화(원). 음수면 지출
    * @param statDeltas 능력치 변화 (운 제외)
+   * @param followUp 이 결과 뒤에 이어서 올 장면 코드(followUpOnly 장면). null이면 없음
+   * @param followUpDays followUp이 오기까지 걸리는 날 수
+   * @param becomeJob 전업투자자가 이 직업(회사 대표)이 된다. 직접 세운 회사라 직업 선택에는 나오지 않는 직업이다
    * @param text 결과 문구
    */
   public record Effect(
@@ -92,8 +142,12 @@ public record CareerDefinition(
       Integer moveSalaryPercent,
       Long amount,
       Map<String, Integer> statDeltas,
+      String followUp,
+      Integer followUpDays,
+      String becomeJob,
       String text) {
-    public static final Effect NONE = new Effect(0, false, 0, false, 0, 0L, Map.of(), "");
+    public static final Effect NONE =
+        new Effect(0, false, 0, false, 0, 0L, Map.of(), null, 0, null, "");
 
     public Effect {
       salaryPercent = salaryPercent == null ? 0 : salaryPercent;
@@ -103,6 +157,7 @@ public record CareerDefinition(
       moveSalaryPercent = moveSalaryPercent == null ? 0 : moveSalaryPercent;
       amount = amount == null ? 0L : amount;
       statDeltas = statDeltas == null ? Map.of() : Map.copyOf(statDeltas);
+      followUpDays = followUpDays == null ? 0 : followUpDays;
       text = text == null ? "" : text;
     }
   }

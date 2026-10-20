@@ -12,5 +12,6 @@
   { "code": "accountant", "title": "회계사", "weight": 3, "baseMonthlySalary": 4000000, "raisePercentPerYear": 5 },
   { "code": "bigcorp", "title": "대기업 사무직", "weight": 3, "baseMonthlySalary": 4200000, "raisePercentPerYear": 4 },
   { "code": "pharmacist", "title": "약사", "weight": 2, "baseMonthlySalary": 4500000, "raisePercentPerYear": 3 },
-  { "code": "lawyer", "title": "변호사", "weight": 1, "baseMonthlySalary": 5500000, "raisePercentPerYear": 5 }
+  { "code": "lawyer", "title": "변호사", "weight": 1, "baseMonthlySalary": 5500000, "raisePercentPerYear": 5 },
+  { "code": "securities-ceo", "title": "여의도 증권사 대표", "weight": 1, "baseMonthlySalary": 30000000, "raisePercentPerYear": 5, "offered": false }
 ]
