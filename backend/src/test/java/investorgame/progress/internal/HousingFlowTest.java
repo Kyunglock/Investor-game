@@ -194,7 +194,8 @@ class HousingFlowTest {
             List.of(),
             false,
             Map.of(),
-            facts);
+            facts,
+            0L);
     HashSeededRandom random = new HashSeededRandom(seed);
     int from = JOB_DAY;
     for (int i = 0; i < 50; i++) {
