@@ -1,6 +1,7 @@
 package investorgame.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.DocumentContext;
@@ -540,8 +541,9 @@ class GameFlowTest {
     assertThat(client.current().read("$.pendingEvent.eventId", String.class)).isEqualTo(eventId);
   }
 
+  /** 매매창 설계 2절: 창을 연 순간 도착한 이벤트가 매매를 막지 않는다. 대기 중인 선택은 그대로 남는다. */
   @Test
-  void 대기_중_이벤트가_있으면_매매는_400이다() throws Exception {
+  void 대기_중_이벤트가_있어도_매매할_수_있다() throws Exception {
     MockMvc mvc = MockMvcBuilders.webAppContextSetup(context).build();
     GameClient client = GameClient.newSession(mvc);
     DocumentContext game = client.startInvesting();
@@ -554,10 +556,13 @@ class GameFlowTest {
       game = client.advance(gameId, day);
       next = game.read("$.nextEventDay") == null ? day : game.read("$.nextEventDay", Integer.class);
     }
-    long cash = game.read("$.cash", Long.class);
+    String eventId = game.read("$.pendingEvent.eventId");
 
-    client.tradeRaw(gameId, stock, "BUY", 1).andExpect(status().isBadRequest());
-    assertThat(client.current().read("$.cash", Long.class)).isEqualTo(cash);
+    client
+        .tradeRaw(gameId, stock, "BUY", 1)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.outcome.kind").value("TRADE"));
+    assertThat(client.current().read("$.pendingEvent.eventId", String.class)).isEqualTo(eventId);
   }
 
   @Test

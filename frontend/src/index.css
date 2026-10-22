@@ -21,6 +21,20 @@
   --font-sans:
     "Noto Sans KR", system-ui, -apple-system, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+  /* 진행 화면의 가계부 수첩 (2026-10-22 시안 D): 종이, 파란 볼펜, 빨간 펜, 테이프, 포스트잇 */
+  --paper: #fdfdfb;
+  --pen: #22355c;
+  --pen-soft: #4c5770;
+  --red-pen: #c33a2c;
+  --blue-pen: #2d5da8;
+  --ruled: #dce4ee;
+  --grid: #eef2f7;
+  --margin-line: #e9a7a2;
+  --tape: rgba(242, 203, 107, 0.7);
+  --sticky: #f8e59a;
+  --desk: #e7e4de;
+  --font-note: "Gowun Dodum", var(--font-sans);
+  --font-pen: "Nanum Pen Script", var(--font-note);
   font-family: var(--font-sans);
 }
 
@@ -43,12 +57,56 @@
   --font-serif-kr: var(--font-serif);
   --font-sans-kr: var(--font-sans);
   --font-mono-num: var(--font-mono);
+  --color-paper: var(--paper);
+  --color-pen: var(--pen);
+  --color-pen-soft: var(--pen-soft);
+  --color-red-pen: var(--red-pen);
+  --color-blue-pen: var(--blue-pen);
+  --color-sticky: var(--sticky);
+  --color-desk: var(--desk);
+  --font-note: var(--font-note);
+  --font-pen: var(--font-pen);
+}
+
+/* 수첩 왼쪽: 줄 노트와 빨간 여백선. 오른쪽: 모눈. 장식이라 글자 대비에는 들어가지 않는다 */
+.paper-ruled {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(
+      90deg,
+      transparent 31px,
+      var(--margin-line) 31px,
+      var(--margin-line) 33px,
+      transparent 33px
+    ),
+    repeating-linear-gradient(0deg, transparent 0 31px, var(--ruled) 31px 32px);
+}
+.paper-grid {
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+/* 두 쪽 사이의 스프링 */
+.paper-binding {
+  background: repeating-linear-gradient(
+    0deg,
+    var(--paper) 0 18px,
+    #6b7180 18px 26px,
+    var(--paper) 26px 44px
+  );
+}
+/* 빨간 펜으로 대충 그린 동그라미 */
+.pen-circle {
+  border: 3px solid var(--red-pen);
+  border-radius: 50% 44% 52% 46% / 56% 50% 48% 44%;
 }
 
 body {
   margin: 0;
   min-width: 360px;
-  background: var(--bg);
+  background: var(--desk);
   color: var(--ink);
   font-size: 14px;
   line-height: 1.55;

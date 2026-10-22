@@ -35,6 +35,14 @@ describe('logLine', () => {
     )
     expect(omen.text).toBe('증시 거래량이 사상 최대를 기록했다.')
     expect(omen.pill).toBe('세상')
+    // 평범한 기사도 전조와 똑같이 보인다 (매매창 설계 3.3절).
+    const article = logLine(
+      entry('ARTICLE', 30 * 360, { text: '기름값이 몇 주째 조금씩 내린다.' }),
+      game,
+    )
+    expect(article.text).toBe('기름값이 몇 주째 조금씩 내린다.')
+    expect(article.pill).toBe('세상')
+    expect(article.tone).toBe(omen.tone)
 
     const crisis = logLine(
       entry('CRISIS', 35 * 360, {

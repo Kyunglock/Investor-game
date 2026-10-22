@@ -110,6 +110,8 @@ CSS 변수로 `frontend/src/index.css`에 둔다. 다크 모드는 없다.
 
 ### 5.2 진행 화면: 3단
 
+> 2026-10-22에 바뀜: 진행 화면은 3단 카드 격자 대신 펼친 가계부 수첩이다 (decisions.md 44번). 아래는 그 전의 배치다.
+
 데스크톱(≥ 1024px) `280px · 1fr · 300px`. 태블릿(≥ 768px) 2단(왼쪽 + 가운데, 오른쪽은 가운데 아래로). 모바일 1단, 순서: **장면 → 선택/결과 카드 자리 → 신원 카드 → 능력치·자산 → 인생 기록 → 보유 종목 → 인생 지도 → 자산 곡선**.
 
 **왼쪽**
@@ -222,6 +224,8 @@ CREATE TABLE progress_year (
 | `choose` 뉴스 (판정 후) | `NEWS` | `{ eventTitle, sectorCode, sectorName, chosen, actual, deviations: [{statCode, from, to}], trade: {status, amount} \| null }` |
 | 같은 `choose` 에서 주가 반영 후 | `PRICE` | `{ sectorCode, sectorName, direction, changeBp, pnl, lossSoftened }` |
 | 같은 `choose` 에서 성장이 있으면 (능력치마다 한 줄) | `GROWTH` | `{ statCode, before, after }` |
+| 매월 1일, 경기 흐름의 전조·헛소문 | `OMEN` | `{ text }` (decisions.md 38번, 매매창 설계 3.2절) |
+| 매월 1일, 평범한 경제 기사 | `ARTICLE` | `{ text }`. 전조와 똑같이 보인다 (매매창 설계 3.3절) |
 | 판 종료 | `END` | `{ finalAge, initialAsset, finalAsset, returnBp }` |
 
 `ChoiceTicket`에는 이벤트 제목과 선택지 라벨이 없다. `choose`에서 `prepareChoice` 전에 `EventService.pending(gameId)`가 주는 `EventView`(`title`, `options[code,label]`)를 읽어 payload를 채운다. 이벤트 도메인은 바꾸지 않는다 (검토에서 확인).

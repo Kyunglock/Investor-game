@@ -32,7 +32,11 @@ public interface BehaviorService {
 
     /** 운에 따라 손실을 줄일지 정한다. 반환값은 손실에 곱할 비율(퍼센트)이다. */
     int lossFactorPercent(int luck, RandomGenerator rng);
+
+    /** 안목으로 차트·지표를 읽는다 (4.6절). truth는 정답 번호, choices는 갈래 수. */
+    Reading analyze(int insight, int truth, int choices, RandomGenerator rng);
 }
+public record Reading(int index, boolean confident) {}
 ```
 
 ## 3. 입력·출력 타입
@@ -123,6 +127,16 @@ public record Hint(
 - 걸리면 `behavior.luck.loss-factor-percent`(초기값 30)를 돌려준다. 안 걸리면 100을 돌려준다.
 - 자산이 **손실일 때만** 이 비율을 적용한다. 이득이면 무시한다 (자산 스펙).
 - 이 메서드는 이득인지 손실인지 모르므로 항상 한 번 뽑는다.
+
+### 4.6 해석 (매매창 설계 4.2절)
+
+추세·시황 해석은 힌트와 다른 공식을 쓴다 (확정). 난수는 읽기 → 찍기 → 확신 순서로 항상 셋을 뽑는다.
+
+1. `readRoll < 안목 × behavior.analysis.read-at-max-bp / 100`이면 정답을 읽는다.
+2. 아니면 갈래(`choices`) 중 하나를 **찍는다**. 찍어서 정답이면 맞은 것이다. 정답의 반대로 몰지 않는 이유: 그러면 안목이 낮을수록 뒤집어 읽는 게 정답이 된다.
+3. 확신 말투는 안목과 무관하게 `confident-percent`로 정한다.
+
+세 갈래에서 안목 0은 약 33%, 안목 100은 47.5% + 52.5%/3 = 65%를 맞힌다. 뉴스 힌트(4.4절)는 그대로다.
 
 ## 5. 설정값 (초기값)
 

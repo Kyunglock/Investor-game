@@ -117,6 +117,9 @@ public interface ContentCatalog {
   /** 빚투 제안의 문구. 제목·본문의 {stock}은 종목 이름, {drop}은 낙폭(%)이다. */
   LeverageText leverageText();
 
+  /** 안목 해석의 문구 틀·한마디와 평범한 경제 기사 (매매창 설계 4절). */
+  AnalysisText analysis();
+
   record NamedCode(String code, String name) {}
 
   record TraitStage(int age, List<TraitDefinition> scenes) {}

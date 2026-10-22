@@ -18,7 +18,7 @@ interface Props {
 }
 
 const buttonBase =
-  'min-h-11 rounded px-3 text-sm ring-1 ring-line bg-card text-ink hover:bg-bg disabled:cursor-not-allowed disabled:opacity-40'
+  'min-h-11 min-w-11 rounded-full border-2 border-pen px-3 font-note text-sm bg-paper text-pen hover:bg-white disabled:cursor-not-allowed disabled:opacity-40'
 
 /** 제목, 나이, 연도, 배속 (설계 5.1절). 나이 글자는 E2E가 보는 `{n}세 {m}개월` 형식을 유지한다. */
 export function TopBar({
@@ -39,21 +39,19 @@ export function TopBar({
     game && age ? Math.min(1, (age.years - game.startAge) / (game.endAge - game.startAge)) : 0
 
   return (
-    <header className="border-b border-line bg-card">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 md:px-6">
-        <h1 className="font-serif-kr text-base font-black">
-          투자자 <span className="text-wine">시뮬레이터</span>
-        </h1>
+    <header>
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 pt-5 pb-1 text-pen md:px-6">
+        <h1 className="font-pen text-[32px] font-normal leading-none">투자자 시뮬레이터</h1>
         {game && age && showControls && (
           <>
-            <p className="font-serif-kr text-3xl font-black leading-none" data-testid="age">
+            <p className="font-pen text-[34px] leading-none" data-testid="age">
               {age.years}세 {age.months}개월
             </p>
-            <div className="text-xs text-muted">
+            <div className="font-note text-xs text-pen-soft">
               {yearOf(age.years)}년 · {nickname(game.initialStats).name} · 1년 ≈{' '}
               {secondsPerYear(game.phase) / speed}초
-              <span className="mt-1 block h-[3px] w-40 overflow-hidden rounded-sm bg-line-soft">
-                <span className="block h-full bg-wine" style={{ width: `${progress * 100}%` }} />
+              <span className="mt-1 block h-[3px] w-40 overflow-hidden rounded-full bg-[var(--ruled)]">
+                <span className="block h-full bg-red-pen" style={{ width: `${progress * 100}%` }} />
               </span>
             </div>
             <div className="ml-auto flex gap-1">
@@ -71,9 +69,7 @@ export function TopBar({
                   type="button"
                   aria-pressed={speed === s}
                   disabled={controlsDisabled}
-                  className={`${buttonBase} font-mono-num ${
-                    speed === s ? 'bg-ink text-white ring-ink hover:bg-ink' : ''
-                  }`}
+                  className={`${buttonBase} ${speed === s ? 'bg-pen text-white hover:bg-pen' : ''}`}
                   onClick={() => onSpeed(s)}
                 >
                   {s}×

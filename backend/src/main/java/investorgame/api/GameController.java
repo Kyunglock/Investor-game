@@ -3,7 +3,9 @@ package investorgame.api;
 import investorgame.common.Action;
 import investorgame.progress.ChoiceOutcome;
 import investorgame.progress.GameView;
+import investorgame.progress.MarketOverview;
 import investorgame.progress.ProgressService;
+import investorgame.progress.StockAnalysis;
 import investorgame.progress.StockHistory;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -96,6 +98,23 @@ class GameController {
       @PathVariable UUID gameId,
       @PathVariable String stockCode) {
     return progress.history(cookies.requireSession(token), gameId, stockCode);
+  }
+
+  /** 시황: 거시 지표·경제 신문·안목 해석. 이 달의 해석이 없으면 여기서 정해져 저장된다 (매매창 설계 2.2절). */
+  @GetMapping("/{gameId}/market/overview")
+  MarketOverview overview(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @PathVariable UUID gameId) {
+    return progress.overview(cookies.requireSession(token), gameId);
+  }
+
+  /** 한 종목의 추세 사실과 안목 해석 (매매창 설계 2.1절). */
+  @GetMapping("/{gameId}/stocks/{stockCode}/analysis")
+  StockAnalysis analysis(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @PathVariable UUID gameId,
+      @PathVariable String stockCode) {
+    return progress.analysis(cookies.requireSession(token), gameId, stockCode);
   }
 
   record AdvanceRequest(@Min(0) int day) {}

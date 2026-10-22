@@ -5,6 +5,8 @@ import '@fontsource/noto-sans-kr/400.css'
 import '@fontsource/noto-sans-kr/700.css'
 import '@fontsource/jetbrains-mono/400.css'
 import '@fontsource/jetbrains-mono/600.css'
+import '@fontsource/gowun-dodum/400.css'
+import '@fontsource/nanum-pen-script/400.css'
 import './index.css'
 import { App } from './App.tsx'
 

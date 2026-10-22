@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deviationMessage, yearOf } from './labels'
+import { deviationMessage, shortWon, signedShortWon, yearOf } from './labels'
 
 describe('yearOf', () => {
   it('1세는 탄생 연도 2025년이다', () => {
@@ -27,5 +27,23 @@ describe('deviationMessage', () => {
   it('인내심은 충동 매도, 용기는 겁나서 관망', () => {
     expect(deviationMessage('patience', 'HOLD', 'SELL')).toContain('못 참고 매도했다')
     expect(deviationMessage('courage', 'BUY', 'HOLD')).toContain('겁나서 관망했다')
+  })
+})
+
+describe('shortWon', () => {
+  it('억·만 단위로 줄이고 만원 아래는 버린다', () => {
+    expect(shortWon(248_580_568)).toBe('2억 4,858만원')
+    expect(shortWon(200_000_000)).toBe('2억원')
+    expect(shortWon(3_120_000)).toBe('312만원')
+    expect(shortWon(12_345_678_901)).toBe('123억 4,567만원')
+    expect(shortWon(9_999)).toBe('9,999원')
+    expect(shortWon(0)).toBe('0원')
+    expect(shortWon(-5_200_000)).toBe('−520만원')
+  })
+
+  it('부호를 붙인다', () => {
+    expect(signedShortWon(3_517_588)).toBe('+351만원')
+    expect(signedShortWon(-3_120_000)).toBe('−312만원')
+    expect(signedShortWon(0)).toBe('0원')
   })
 })

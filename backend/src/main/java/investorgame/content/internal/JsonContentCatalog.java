@@ -1,6 +1,7 @@
 package investorgame.content.internal;
 
 import investorgame.common.StatCodes;
+import investorgame.content.AnalysisText;
 import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.CrisisDefinition;
@@ -50,7 +51,8 @@ class JsonContentCatalog implements ContentCatalog {
           "life.json",
           "shakes.json",
           "crises.json",
-          "homes.json");
+          "homes.json",
+          "analysis.json");
 
   private final Meta meta;
   private final List<JobDefinition> jobs;
@@ -65,6 +67,7 @@ class JsonContentCatalog implements ContentCatalog {
   private final Crises crises;
   private final List<HomeRegion> homeRegions;
   private final Life life;
+  private final AnalysisText analysis;
   private final Map<String, String> sectorNames;
   private final Map<String, String> styleNames;
   private final Map<String, String> riskNames;
@@ -111,6 +114,7 @@ class JsonContentCatalog implements ContentCatalog {
     this.life = read(json, "life.json", new TypeReference<>() {});
     this.crises = read(json, "crises.json", new TypeReference<>() {});
     this.homeRegions = read(json, "homes.json", new TypeReference<>() {});
+    this.analysis = read(json, "analysis.json", new TypeReference<>() {});
     this.sectorNames = toMap(meta.sectors());
     this.styleNames = toMap(meta.styles());
     this.riskNames = toMap(meta.risks());
@@ -359,6 +363,11 @@ class JsonContentCatalog implements ContentCatalog {
     return phrases.leverage();
   }
 
+  @Override
+  public AnalysisText analysis() {
+    return analysis;
+  }
+
   /** 잘못된 콘텐츠는 서버 시작 단계에서 실패시킨다. 게임 중에 터지는 것보다 낫다. */
   private void validate() {
     require(!jobs.isEmpty(), "직업이 하나도 없다");
@@ -459,6 +468,42 @@ class JsonContentCatalog implements ContentCatalog {
     validateStocks();
     validateLife();
     require(!swayPhrases("POS").isEmpty() && !swayPhrases("NEG").isEmpty(), "다른 뉴스 문구가 없다");
+    validateAnalysis();
+  }
+
+  /** 해석은 어떤 안목·결론 조합에서도 문구를 골라야 하므로 모든 칸이 차 있어야 한다 (매매창 설계 4.4절). */
+  private void validateAnalysis() {
+    require(analysis != null && analysis.remarks() != null, "analysis.json이 비어 있다");
+    for (String tier : AnalysisText.TEMPLATE_TIERS) {
+      for (String reading : AnalysisText.TREND_READINGS) {
+        require(
+            !analysis
+                .trend()
+                .getOrDefault(tier, Map.of())
+                .getOrDefault(reading, List.of())
+                .isEmpty(),
+            "추세 해석 문구가 없다: " + tier + "/" + reading);
+      }
+      for (String reading : AnalysisText.MACRO_READINGS) {
+        require(
+            !analysis
+                .macro()
+                .getOrDefault(tier, Map.of())
+                .getOrDefault(reading, List.of())
+                .isEmpty(),
+            "시황 해석 문구가 없다: " + tier + "/" + reading);
+      }
+    }
+    for (AnalysisText.Verdicts verdicts :
+        List.of(analysis.remarks().trend(), analysis.remarks().macro())) {
+      for (String tier : AnalysisText.REMARK_TIERS) {
+        require(
+            !verdicts.right().getOrDefault(tier, List.of()).isEmpty(), "맞혔을 때 한마디가 없다: " + tier);
+        require(
+            !verdicts.wrong().getOrDefault(tier, List.of()).isEmpty(), "틀렸을 때 한마디가 없다: " + tier);
+      }
+    }
+    require(analysis.articles() != null && !analysis.articles().isEmpty(), "경제 기사가 없다");
   }
 
   /** 모든 선택지가 스타일과 섹터를 하나씩 이상 드러내야 한다. 그래야 판마다 어떤 장면이 뽑히고 무엇을 골라도 투자 스타일과 관심 섹터가 반드시 정해진다. */

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import investorgame.behavior.ChoiceContext;
+import investorgame.behavior.Reading;
 import investorgame.behavior.Resolution;
 import investorgame.common.Action;
 import investorgame.common.Deviation;
@@ -33,7 +34,8 @@ class DefaultBehaviorServiceTest {
           new BehaviorProperties(
               5000,
               new BehaviorProperties.HintSettings(4000, 55, 35, 50, 50),
-              new BehaviorProperties.LuckSettings(30, 30)));
+              new BehaviorProperties.LuckSettings(30, 30),
+              new BehaviorProperties.AnalysisSettings(4750, 50)));
 
   @Test
   void 인내심과_줏대가_100이면_관망은_그대로다() {
@@ -267,6 +269,58 @@ class DefaultBehaviorServiceTest {
       }
     }
     return (double) correct / pointed;
+  }
+
+  /** 매매창 설계 4.2절: 안목 0은 찍기(약 1/3), 안목 100은 65%. 뒤집어 읽어도 이득이 없다. */
+  @Test
+  void 해석은_안목_0이면_찍기이고_100이면_65퍼센트를_맞힌다() {
+    assertThat(analysisAccuracy(0)).isBetween(0.30, 0.37);
+    assertThat(analysisAccuracy(50)).isBetween(0.45, 0.53);
+    assertThat(analysisAccuracy(100)).isBetween(0.62, 0.68);
+
+    // 틀린 해석이 정답의 반대로 몰리지 않는다: 안목 0에서 세 갈래가 고르게 나온다.
+    SplittableRandom rng = new SplittableRandom(5);
+    int[] counts = new int[3];
+    for (int i = 0; i < TRIALS; i++) {
+      counts[service.analyze(0, 1, 3, rng).index()]++;
+    }
+    for (int count : counts) {
+      assertThat(count).isBetween(TRIALS / 3 - 700, TRIALS / 3 + 700);
+    }
+  }
+
+  @Test
+  void 확신_말투는_안목과_무관하게_절반이다() {
+    for (int insight : List.of(0, 100)) {
+      SplittableRandom rng = new SplittableRandom(3);
+      int confident = 0;
+      for (int i = 0; i < TRIALS; i++) {
+        if (service.analyze(insight, 0, 3, rng).confident()) {
+          confident++;
+        }
+      }
+      assertThat(confident).isBetween(TRIALS * 47 / 100, TRIALS * 53 / 100);
+    }
+  }
+
+  @Test
+  void 해석의_난수_순서는_읽기_찍기_확신_순으로_고정이다() {
+    Scripted rng = new Scripted(MISS, 2, HIT);
+    Reading reading = service.analyze(100, 0, 3, rng);
+    assertThat(reading).isEqualTo(new Reading(2, true));
+    assertThat(rng.remaining()).isZero();
+  }
+
+  private double analysisAccuracy(int insight) {
+    SplittableRandom rng = new SplittableRandom(insight + 1);
+    int correct = 0;
+    for (int i = 0; i < TRIALS; i++) {
+      int truth = i % 3;
+      if (service.analyze(insight, truth, 3, rng).index() == truth) {
+        correct++;
+      }
+    }
+    return (double) correct / TRIALS;
   }
 
   private boolean anyHint(int insight, Predicate<Hint> condition) {

@@ -228,4 +228,78 @@ class MarketServiceTest {
     assertThat(market.homeQuotes(other)).allSatisfy(q -> assertThat(q.last12()).hasSize(12));
     assertThat(market.homePrices(other).get("seoul")).as("대공황이면 집값도 빠진다").isLessThan(seoulBefore);
   }
+
+  /** 매매창 설계 3.2절: 평온한 시기에도 헛소문이 흘러나오고, 어느 위기·전조 구간과도 겹치지 않는다. */
+  @Test
+  void 헛소문은_평온한_달에만_나오고_위기와_겹치지_않는다() {
+    int rumors = 0;
+    for (long seed = 1; seed <= 100; seed++) {
+      MarketCycle cycle = market.cycle(new HashSeededRandom(seed));
+      for (MarketCycle.Omen omen : cycle.omens()) {
+        boolean real =
+            cycle.crises().stream().anyMatch(c -> c.omens().contains(omen.text()))
+                || cycle.alarms().stream()
+                    .anyMatch(
+                        a -> omen.month() >= a.firstOmenMonth() && omen.month() < a.startMonth());
+        if (real) {
+          continue;
+        }
+        rumors++;
+        assertThat(omen.month()).isBetween(108, 660);
+        for (MarketCycle.Crisis crisis : cycle.crises()) {
+          assertThat(omen.month() < crisis.startMonth() || omen.month() > crisis.revealMonth())
+              .as(
+                  "헛소문 %d달이 위기 %d~%d달과 겹친다",
+                  omen.month(), crisis.startMonth(), crisis.revealMonth())
+              .isTrue();
+        }
+      }
+      for (MarketCycle.Alarm alarm : cycle.alarms()) {
+        assertThat(alarm.firstOmenMonth()).isLessThan(alarm.startMonth());
+      }
+    }
+    // 100판 × 약 46년 동안 1~2년에 하나꼴이면 수천 개다. 위기와 겹쳐 빠진 것을 감안해도 수백은 넘는다.
+    assertThat(rumors).as("헛소문 수").isGreaterThan(500);
+  }
+
+  /** 매매창 설계 3.1절: 거시 지표는 달마다 네 개가 쌓이고, 같은 시드면 같으며, 빠지는 동안 투자 심리가 평소보다 내려간다. */
+  @Test
+  void 거시_지표는_달마다_쌓이고_위기_때_심리가_식는다() {
+    List<IndicatorSeries> fresh = market.indicators(gameId);
+    assertThat(fresh)
+        .extracting(IndicatorSeries::code)
+        .containsExactly("fx", "debt", "sentiment", "turnover");
+    assertThat(fresh).allSatisfy(s -> assertThat(s.points()).hasSize(1));
+
+    market.advanceTo(gameId, 12 * MONTH, random);
+    List<IndicatorSeries> after = market.indicators(gameId);
+    assertThat(after).allSatisfy(s -> assertThat(s.points()).hasSize(13));
+    assertThat(after.get(2).points()).allSatisfy(p -> assertThat(p.price()).isBetween(0L, 100L));
+    assertThat(market.indexHistory(gameId)).hasSize(13);
+    assertThat(market.indexHistory(gameId).getFirst().price()).isEqualTo(1_000L);
+    assertThat(market.rateHistory(gameId)).hasSize(13);
+    assertThat(market.homeHistory(gameId, "seoul")).hasSize(13);
+
+    UUID same = UUID.randomUUID();
+    market.create(same);
+    market.advanceTo(same, 12 * MONTH, new HashSeededRandom(7L));
+    assertThat(market.indicators(same)).as("같은 시드면 같다").isEqualTo(after);
+
+    long seed = 1;
+    MarketCycle.Crisis crisis = null;
+    for (; seed <= 400 && crisis == null; seed++) {
+      crisis =
+          market.cycle(new HashSeededRandom(seed)).crises().stream()
+              .filter(c -> c.severity() == MarketCycle.Severity.DEPRESSION)
+              .findFirst()
+              .orElse(null);
+    }
+    UUID other = UUID.randomUUID();
+    market.create(other);
+    market.advanceTo(other, crisis.bottomMonth() * MONTH, new HashSeededRandom(seed - 1));
+    List<PricePoint> sentiment = market.indicators(other).get(2).points();
+    assertThat(sentiment.get(crisis.bottomMonth()).price())
+        .as("대공황 바닥에서 투자 심리는 평소(50)보다 낮다")
+        .isLessThan(40);
+  }
 }

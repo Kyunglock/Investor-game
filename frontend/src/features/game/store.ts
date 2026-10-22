@@ -3,7 +3,9 @@ import {
   api,
   type Game,
   type LogEntry,
+  type MarketOverview,
   type Outcome,
+  type StockAnalysis,
   type StockHistory,
   type TradeSide,
 } from '../../api/client'
@@ -35,9 +37,17 @@ interface GameState {
   speed: Speed
   reporting: boolean
   choosing: boolean
-  /** 시장 패널. 열려 있는 동안 시계는 멈춘다 (경제 개편 설계 8.1절). */
+  /** 매매창. 열려 있는 동안 시계는 멈춘다 (경제 개편 설계 8.1절). 연 순간 이벤트가 도착해도 닫히지 않는다 (매매창 설계 2절). */
   marketOpen: boolean
+  /** 매매창의 탭: 시황, 보유, 섹터 코드. 처음은 보유 종목이 있으면 보유, 없으면 시황 (매매창 설계 2절). */
+  marketTab: string
   selectedStock: string | null
+  /** 시황. 매매창을 열 때 받는다. 달이 바뀌면 다시 받는다. */
+  overview: MarketOverview | null
+  /** 종목별 추세 사실과 해석. 종목을 고를 때 받아 둔다. 달이 바뀌면 비운다. */
+  analyses: Record<string, StockAnalysis>
+  /** histories·analyses·overview를 받은 달. 달이 바뀌면 전부 다시 받는다. */
+  cachedMonth: number | null
   /** 방금 낸 주문의 결과. 패널 안에 한 줄로 보여 준다. */
   tradeOutcome: Outcome | null
   trading: boolean
@@ -59,6 +69,7 @@ interface GameState {
   setSpeed: (speed: Speed) => void
   openMarket: () => void
   closeMarket: () => void
+  setMarketTab: (tab: string) => void
   selectStock: (code: string) => Promise<void>
   trade: (side: TradeSide, quantity: number) => Promise<void>
   dismissNotice: () => void
@@ -66,7 +77,17 @@ interface GameState {
   listHome: (seq: number, listed: boolean) => Promise<void>
 }
 
-const TOAST_KINDS = new Set<LogEntry['kind']>(['LIFE', 'OMEN', 'CRISIS', 'HOME_SOLD', 'TENANT'])
+const TOAST_KINDS = new Set<LogEntry['kind']>([
+  'LIFE',
+  'OMEN',
+  'ARTICLE',
+  'CRISIS',
+  'HOME_SOLD',
+  'TENANT',
+])
+
+export const MACRO_TAB = 'macro'
+export const HELD_TAB = 'held'
 
 export const useGameStore = create<GameState>((set, get) => {
   /** 서버가 보낸 판으로 화면을 맞춘다. 대기 중인 선택이 있거나 끝났거나 시장 패널이 열려 있으면 시계를 멈춘다. */
@@ -74,10 +95,10 @@ export const useGameStore = create<GameState>((set, get) => {
     set((state) => {
       const sameGame = state.game?.gameId === game.gameId
       const knownSeqs = new Set(sameGame ? state.game?.log.map((e) => e.seq) : [])
-      // 알림(LIFE)·전조(OMEN)·위기 회고(CRISIS)·집이 팔림·세입자 교체는 판을 멈추지 않고 토스트로 지나간다.
+      // 알림(LIFE)·전조(OMEN)·기사(ARTICLE)·위기 회고(CRISIS)·집이 팔림·세입자 교체는 판을 멈추지 않고 토스트로 지나간다.
       const notices = game.log.filter((e) => TOAST_KINDS.has(e.kind) && !knownSeqs.has(e.seq))
-      // 대기 중인 선택이 생기면 시장 패널은 닫는다. 선택이 먼저다.
-      const marketOpen = state.marketOpen && !game.pendingEvent && game.status === 'ACTIVE'
+      // 대기 중인 선택이 생겨도 열려 있는 매매창은 닫지 않는다. 창을 닫은 뒤에 선택이 보인다 (매매창 설계 2절).
+      const marketOpen = state.marketOpen && game.status === 'ACTIVE'
       return {
         status: game.status === 'ENDED' ? 'ended' : 'playing',
         game,
@@ -122,6 +143,30 @@ export const useGameStore = create<GameState>((set, get) => {
     await report()
   }
 
+  /** 달이 바뀌면 이력·해석·시황을 다시 받아야 한다. 해석은 달마다 한 번 정해지기 때문이다 (매매창 설계 4.3절). */
+  const resetCacheIfMonthChanged = (game: Game) => {
+    if (get().cachedMonth !== game.market.month) {
+      set({ cachedMonth: game.market.month, histories: {}, analyses: {}, overview: null })
+    }
+  }
+
+  const loadOverview = async () => {
+    const game = get().game
+    if (!game) {
+      return
+    }
+    resetCacheIfMonthChanged(game)
+    if (get().overview) {
+      return
+    }
+    const { data } = await api.GET('/api/games/{gameId}/market/overview', {
+      params: { path: { gameId: game.gameId } },
+    })
+    if (data) {
+      set({ overview: data })
+    }
+  }
+
   return {
     status: 'loading',
     game: null,
@@ -133,7 +178,11 @@ export const useGameStore = create<GameState>((set, get) => {
     reporting: false,
     choosing: false,
     marketOpen: false,
+    marketTab: MACRO_TAB,
     selectedStock: null,
+    overview: null,
+    analyses: {},
+    cachedMonth: null,
     tradeOutcome: null,
     trading: false,
     histories: {},
@@ -163,6 +212,9 @@ export const useGameStore = create<GameState>((set, get) => {
         marketOpen: false,
         tradeOutcome: null,
         histories: {},
+        overview: null,
+        analyses: {},
+        cachedMonth: null,
         lastNotice: null,
       })
       await api.POST('/api/sessions')
@@ -260,7 +312,7 @@ export const useGameStore = create<GameState>((set, get) => {
 
     setSpeed: (speed) => set({ speed }),
 
-    // 패널을 열면 시계를 멈추고 현재 시각을 보고해 가격·현금을 최신으로 맞춘다.
+    // 매매창을 열면 시계를 멈추고 현재 시각을 보고해 가격·현금을 최신으로 맞춘다. 그 뒤 시황과 고른 종목의 분석을 받는다.
     openMarket: () => {
       const { game } = get()
       if (game?.status !== 'ACTIVE' || game.pendingEvent) {
@@ -268,11 +320,20 @@ export const useGameStore = create<GameState>((set, get) => {
       }
       const selected =
         get().selectedStock ?? game.holdings[0]?.stockCode ?? game.market.stocks[0]?.code ?? null
-      set({ running: false, marketOpen: true, tradeOutcome: null, selectedStock: selected })
-      void reportNow()
-      if (selected) {
-        void get().selectStock(selected)
-      }
+      set({
+        running: false,
+        marketOpen: true,
+        marketTab: game.holdings.length > 0 ? HELD_TAB : MACRO_TAB,
+        tradeOutcome: null,
+        selectedStock: selected,
+      })
+      void (async () => {
+        await reportNow()
+        await loadOverview()
+        if (selected) {
+          await get().selectStock(selected)
+        }
+      })()
     },
 
     closeMarket: () => {
@@ -283,18 +344,44 @@ export const useGameStore = create<GameState>((set, get) => {
       }
     },
 
+    setMarketTab: (tab) => set({ marketTab: tab }),
+
     selectStock: async (code) => {
       set({ selectedStock: code, tradeOutcome: null })
-      const { game, histories } = get()
-      if (!game || histories[code]) {
+      const game = get().game
+      if (!game) {
         return
       }
-      const { data } = await api.GET('/api/games/{gameId}/stocks/{stockCode}/history', {
-        params: { path: { gameId: game.gameId, stockCode: code } },
-      })
-      if (data) {
-        set((state) => ({ histories: { ...state.histories, [code]: data } }))
+      resetCacheIfMonthChanged(game)
+      const { histories, analyses } = get()
+      const loads: Promise<void>[] = []
+      if (!histories[code]) {
+        loads.push(
+          api
+            .GET('/api/games/{gameId}/stocks/{stockCode}/history', {
+              params: { path: { gameId: game.gameId, stockCode: code } },
+            })
+            .then(({ data }) => {
+              if (data) {
+                set((state) => ({ histories: { ...state.histories, [code]: data } }))
+              }
+            }),
+        )
       }
+      if (!analyses[code]) {
+        loads.push(
+          api
+            .GET('/api/games/{gameId}/stocks/{stockCode}/analysis', {
+              params: { path: { gameId: game.gameId, stockCode: code } },
+            })
+            .then(({ data }) => {
+              if (data) {
+                set((state) => ({ analyses: { ...state.analyses, [code]: data } }))
+              }
+            }),
+        )
+      }
+      await Promise.all(loads)
     },
 
     trade: async (side, quantity) => {

@@ -129,6 +129,9 @@ API 계층 → 진행 → 이벤트 운영 → 콘텐츠
 | 진행 중인 판 조회 (재접속 시 이어하기) | `GET /api/games/current` | 구현됨. 세션당 판이 하나라 ID 대신 `current`를 쓴다 |
 | 시간 경과 보고 | `POST /api/games/{id}/advance` | 구현됨. 월급 입금, 다음 이벤트 생성, 종료 처리. 응답의 `nextEventDay`까지만 클라이언트가 시계를 보낸다 |
 | 선택 제출 | `POST /api/games/{id}/events/{eventId}/choose` | 구현됨. 뉴스는 판정 → 매매 → 주가 변동 → 성장을 거친 결과를 돌려준다 |
+| 자유 매매 | `POST /api/games/{id}/trades` | 구현됨. 대기 중인 선택이 있어도 받는다 (매매창 설계 2절) |
+| 시황 (거시 지표·경제 신문·안목 해석) | `GET /api/games/{id}/market/overview` | 구현됨. 이 달의 해석이 없으면 정해서 저장한다 |
+| 종목 분석 (추세 사실·안목 해석) | `GET /api/games/{id}/stocks/{stockCode}/analysis` | 구현됨 |
 | 이벤트 스킵 | `POST /api/games/{id}/events/{eventId}/skip` | 예정 |
 | 결과 조회 | `GET /api/games/{id}/result` | 예정 |
 
