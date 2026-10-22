@@ -114,7 +114,7 @@ class CharacterServiceTest {
     assertThat(characters.get(fresh).careerStartDay()).as("한 번도 일한 적 없으면 생활비는 이날부터").isEqualTo(500);
   }
 
-  /** 여의도 증권사 설립 (decisions.md 44번): 전업투자자만 회사를 세우고, 세우면 그 대표가 되어 월급이 나온다. */
+  /** 여의도 증권사 설립 (decisions.md 46번): 전업투자자만 회사를 세우고, 세우면 그 대표가 되어 월급이 나온다. */
   @Test
   void 전업투자자만_회사를_세워_대표가_될_수_있다() {
     assertThatThrownBy(() -> characters.foundCompany(gameId, "securities-ceo", 100))

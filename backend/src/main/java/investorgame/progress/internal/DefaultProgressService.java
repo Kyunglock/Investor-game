@@ -427,14 +427,14 @@ class DefaultProgressService implements ProgressService {
     boolean success = true;
     if (option.rolls()) {
       int stat = character.stats().toCodes().get(option.stat());
-      // 실적(지금 직장에서 쌓은 인상분)이 판정에 들어가는 장면도 있다: 대기업 50대 권고사직 (decisions.md 43번).
+      // 실적(지금 직장에서 쌓은 인상분)이 판정에 들어가는 장면도 있다: 대기업 50대 권고사직 (decisions.md 45번).
       int raisePercent = character.salaryBonusBp() / (int) PERCENT;
       int chanceBp =
           option.baseBp() + stat * option.perPointBp() + raisePercent * option.perRaisePercentBp();
       success = random.forKey("career", ticket.seq()).nextInt(BP) < chanceBp;
     }
     CareerDefinition.Effect effect = success ? option.success() : option.fail();
-    // 실제 행동에 판정 결과를 남겨 후속 장면(followUp)을 정할 수 있게 한다 (decisions.md 44번).
+    // 실제 행동에 판정 결과를 남겨 후속 장면(followUp)을 정할 수 있게 한다 (decisions.md 46번).
     events.complete(
         gameId,
         ticket.eventId(),
@@ -495,7 +495,7 @@ class DefaultProgressService implements ProgressService {
     payload.put("optionCode", option.code());
     payload.put("optionLabel", option.label());
     payload.put("success", success);
-    // 전업투자자의 장면은 기록에서 '직장'이 아니라 '투자'로 보인다 (decisions.md 44번).
+    // 전업투자자의 장면은 기록에서 '직장'이 아니라 '투자'로 보인다 (decisions.md 46번).
     payload.put("fullTimeInvestor", character.fullTimeInvestorDay() != null);
     payload.put("text", message.toString());
     payload.put("jobTitle", after.jobCode() == null ? null : content.job(after.jobCode()).title());

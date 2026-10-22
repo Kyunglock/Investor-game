@@ -22,7 +22,7 @@ public interface CharacterService {
    */
   void becomeFullTimeInvestor(UUID gameId, int day);
 
-  /** 전업투자자가 회사를 세워 그 대표(직업)가 된다. 전업투자자일 때만 가능하고, 이 날부터 월급이 나오며 더는 전업투자자가 아니다 (decisions.md 44번). */
+  /** 전업투자자가 회사를 세워 그 대표(직업)가 된다. 전업투자자일 때만 가능하고, 이 날부터 월급이 나오며 더는 전업투자자가 아니다 (decisions.md 46번). */
   void foundCompany(UUID gameId, String jobCode, int day);
 
   /**
