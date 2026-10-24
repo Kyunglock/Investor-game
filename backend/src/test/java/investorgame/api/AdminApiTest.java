@@ -48,6 +48,7 @@ class AdminApiTest {
         .andExpect(jsonPath("$.plays[?(@.gameId == '%s')].startAge", gameId).value(15))
         .andExpect(jsonPath("$.plays[?(@.gameId == '%s')].age", gameId).value(15))
         .andExpect(jsonPath("$.plays[?(@.gameId == '%s')].seed", gameId).doesNotExist())
-        .andExpect(jsonPath("$.sessions[0].games").isNumber());
+        .andExpect(jsonPath("$.sessions[0].games").isNumber())
+        .andExpect(jsonPath("$.sessions[?(@.firstIp == '127.0.0.1')]").isNotEmpty());
   }
 }

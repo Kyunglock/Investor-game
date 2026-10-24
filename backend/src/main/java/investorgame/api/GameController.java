@@ -13,6 +13,8 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -30,6 +32,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/games")
 class GameController {
 
+  /** 누가 어디까지 했는지 보는 플레이 로그: 시작, 첫 직업, 끝 (decisions.md 63번). */
+  private static final Logger PLAY = LoggerFactory.getLogger("investorgame.play");
+
   private final ProgressService progress;
   private final SessionCookies cookies;
 
@@ -42,7 +47,22 @@ class GameController {
   ResponseEntity<GameView> start(
       @CookieValue(name = SessionCookies.NAME, required = false) String token) {
     UUID sessionId = cookies.requireSession(token);
-    return ResponseEntity.status(HttpStatus.CREATED).body(progress.start(sessionId));
+    GameView game = progress.start(sessionId);
+    PLAY.info("start session={} game={} ip={}", sessionId, game.gameId(), ClientIp.current());
+    return ResponseEntity.status(HttpStatus.CREATED).body(game);
+  }
+
+  /** 끝난 판이면 한 줄 남긴다. */
+  private static void logIfEnded(UUID sessionId, GameView game) {
+    if (game.status() == GameView.Status.ENDED) {
+      PLAY.info(
+          "end session={} game={} ip={} age={} totalAsset={}",
+          sessionId,
+          game.gameId(),
+          ClientIp.current(),
+          game.startAge() + game.day() / game.daysPerYear(),
+          game.totalAsset());
+    }
   }
 
   @GetMapping("/current")
@@ -56,7 +76,10 @@ class GameController {
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @PathVariable UUID gameId,
       @Valid @RequestBody AdvanceRequest request) {
-    return progress.advance(cookies.requireSession(token), gameId, request.day());
+    UUID sessionId = cookies.requireSession(token);
+    GameView game = progress.advance(sessionId, gameId, request.day());
+    logIfEnded(sessionId, game);
+    return game;
   }
 
   @PostMapping("/{gameId}/events/{eventId}/choose")
@@ -65,8 +88,21 @@ class GameController {
       @PathVariable UUID gameId,
       @PathVariable UUID eventId,
       @Valid @RequestBody ChoiceRequest request) {
-    return progress.choose(
-        cookies.requireSession(token), gameId, eventId, request.option(), request.quantity());
+    UUID sessionId = cookies.requireSession(token);
+    ChoiceOutcome result =
+        progress.choose(sessionId, gameId, eventId, request.option(), request.quantity());
+    // 중간 진행도는 직업을 가진 시점: 직업 선택 결과로 직업이 생겼을 때 (decisions.md 63번).
+    if ("JOB".equals(result.outcome().kind()) && result.game().job() != null) {
+      PLAY.info(
+          "job session={} game={} ip={} job={} age={}",
+          sessionId,
+          gameId,
+          ClientIp.current(),
+          result.game().job().title(),
+          result.game().startAge() + result.game().day() / result.game().daysPerYear());
+    }
+    logIfEnded(sessionId, result.game());
+    return result;
   }
 
   @PostMapping("/{gameId}/trades")

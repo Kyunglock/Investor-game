@@ -68,6 +68,7 @@ export function AdminPage() {
   }
 
   const ended = log?.plays.filter((p) => p.status === 'ENDED').length ?? 0
+  const ipOf = new Map(log?.sessions.map((s) => [s.sessionId, s.lastIp ?? '—']) ?? [])
 
   return (
     <main className="mx-auto max-w-6xl space-y-4 px-4 py-6 md:px-6">
@@ -109,6 +110,7 @@ export function AdminPage() {
                   <tr>
                     <th className="py-1 font-normal">시작</th>
                     <th className="font-normal">세션</th>
+                    <th className="font-normal">IP</th>
                     <th className="font-normal">상태</th>
                     <th className="font-normal">나이</th>
                     <th className="font-normal">마지막</th>
@@ -125,6 +127,7 @@ export function AdminPage() {
                     >
                       <td className="py-1.5 font-mono-num">{time(p.startedAt)}</td>
                       <td className="font-mono-num">{shortId(p.sessionId)}</td>
+                      <td className="font-mono-num">{ipOf.get(p.sessionId) ?? '—'}</td>
                       <td>{STATUS_LABEL[p.status]}</td>
                       <td className="font-mono-num">
                         {p.startAge}→{p.age}세
@@ -149,6 +152,7 @@ export function AdminPage() {
                 <thead className="text-[11px] text-faint">
                   <tr>
                     <th className="py-1 font-normal">세션</th>
+                    <th className="font-normal">IP (처음 → 마지막)</th>
                     <th className="font-normal">처음 온 때</th>
                     <th className="font-normal">마지막 접속</th>
                     <th className="font-normal">판 수</th>
@@ -158,6 +162,10 @@ export function AdminPage() {
                   {log.sessions.map((s) => (
                     <tr key={s.sessionId} className="border-t border-line-soft">
                       <td className="py-1.5 font-mono-num">{shortId(s.sessionId)}</td>
+                      <td className="font-mono-num">
+                        {s.firstIp ?? '—'}
+                        {s.lastIp && s.lastIp !== s.firstIp && ` → ${s.lastIp}`}
+                      </td>
                       <td className="font-mono-num">{time(s.createdAt)}</td>
                       <td className="font-mono-num">{time(s.lastSeenAt)}</td>
                       <td className="font-mono-num">{s.games}</td>

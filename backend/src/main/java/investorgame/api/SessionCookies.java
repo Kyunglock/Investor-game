@@ -25,7 +25,7 @@ class SessionCookies {
     if (token == null || token.isBlank()) {
       throw new UnauthorizedException();
     }
-    return sessions.resolve(token).orElseThrow(UnauthorizedException::new);
+    return sessions.resolve(token, ClientIp.current()).orElseThrow(UnauthorizedException::new);
   }
 
   ResponseCookie create(String token) {

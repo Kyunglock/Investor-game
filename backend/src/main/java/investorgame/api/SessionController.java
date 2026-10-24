@@ -25,10 +25,11 @@ class SessionController {
   @PostMapping
   ResponseEntity<Void> ensure(
       @CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    if (token != null && sessions.resolve(token).isPresent()) {
+    String ip = ClientIp.current();
+    if (token != null && sessions.resolve(token, ip).isPresent()) {
       return ResponseEntity.noContent().build();
     }
-    IssuedSession issued = sessions.issue();
+    IssuedSession issued = sessions.issue(ip);
     return ResponseEntity.noContent()
         .header(HttpHeaders.SET_COOKIE, cookies.create(issued.token()).toString())
         .build();

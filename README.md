@@ -38,7 +38,7 @@ pnpm dev
 
 ### 플레이 기록 보기 (관리자)
 
-서버를 `ADMIN_TOKEN` 환경 변수와 함께 띄우고 `http://localhost:5173/admin`에서 그 토큰을 넣으면, 누가(익명 세션) 언제 몇 판을 했고 어디까지 갔는지 볼 수 있다. 토큰을 비워 두면 관리자 API는 꺼진다.
+서버를 `ADMIN_TOKEN` 환경 변수와 함께 띄우고 `http://localhost:5173/admin`에서 그 토큰을 넣으면, 누가(익명 세션 + 접속 IP) 언제 몇 판을 했고 어디까지 갔는지 볼 수 있다. 토큰을 비워 두면 관리자 API는 꺼진다. 서버 로그에도 `investorgame.play` 로거로 판 시작·첫 직업·종료가 IP와 함께 남는다.
 
 ```bash
 cd backend

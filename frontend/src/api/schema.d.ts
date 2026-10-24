@@ -268,6 +268,10 @@ export interface components {
             lastSeenAt: string;
             /** @description 최근 판 목록(plays) 안에서 센 판 수 */
             games: number;
+            /** @description 처음 접속한 IP (프록시 뒤면 X-Forwarded-For의 첫 주소) */
+            firstIp?: string | null;
+            /** @description 마지막 접속 IP */
+            lastIp?: string | null;
         };
         Play: {
             /** Format: uuid */
