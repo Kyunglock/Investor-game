@@ -153,12 +153,12 @@ test('새로고침하면 서버의 상태에서 일시정지로 이어한다', a
   await expect(page.getByRole('button', { name: '계속' }).or(eventCard(page))).toBeVisible()
 })
 
-test('다시 시작하면 다시 태어나 15세에서 시작한다', async ({ page }) => {
+test('다시 태어나기를 누르면 다시 태어나 15세에서 시작한다', async ({ page }) => {
   await born(page)
   await playUntil(page, 'TRAIT')
   await step(page)
 
-  await page.getByRole('button', { name: '다시 시작' }).click()
+  await page.getByRole('button', { name: '다시 태어나기' }).click()
   await expect(page.getByTestId('birth-reveal')).toBeVisible()
   await page.clock.runFor(5_000)
   await page.getByRole('button', { name: '삶을 시작하기' }).click()
