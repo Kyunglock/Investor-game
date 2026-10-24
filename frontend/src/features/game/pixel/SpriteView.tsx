@@ -3,6 +3,7 @@ import { ADORNMENTS } from './adornments'
 import { BODIES } from './bodies'
 import type { SpriteSpec } from './layers'
 import { MARKS } from './marks'
+import { MOODS } from './moods'
 import { PALETTE } from './palette'
 import {
   compose,
@@ -31,7 +32,9 @@ export function Sprite({ spec, size, crop = 'full', className = '' }: Props) {
   const body = BODIES[spec.stage]
   const baseLayers: Layer[] = spec.adornment ? [ADORNMENTS[spec.adornment]] : []
   const base = compose(body, baseLayers)
-  const withMark = spec.mark ? compose(body, [...baseLayers, MARKS[spec.mark]]) : base
+  // 표정은 장식·약점 표시 위에 마지막으로 포갠다. 약점 표시가 떨어지는 연출은 표정과 무관하다.
+  const mood: Layer[] = spec.mood ? [MOODS[spec.mood]] : []
+  const withMark = compose(body, [...baseLayers, ...(spec.mark ? [MARKS[spec.mark]] : []), ...mood])
   const markRects = diffRects(base, withMark, PALETTE)
 
   const [dropping, setDropping] = useState<Rect[]>([])

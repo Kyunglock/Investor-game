@@ -3,6 +3,8 @@ import { ADORNMENTS } from './adornments'
 import { BODIES } from './bodies'
 import type { SpriteSpec } from './layers'
 import { MARKS } from './marks'
+import type { MoodKey } from './moods'
+import { MOODS } from './moods'
 import { PALETTE } from './palette'
 import { SCENE_HEIGHT, SCENE_WIDTH } from './scenes'
 import { compose, type Layer, SPRITE_HEIGHT, toRects } from './sprite'
@@ -18,9 +20,12 @@ const RECOLOR: Record<Exclude<Figure['who'], 'me'>, Record<string, string>> = {
 export const Vignette = memo(function Vignette({
   art,
   me,
+  mood = null,
 }: {
   art: CreditArt
   me: Omit<SpriteSpec, 'stage'>
+  /** 모두의 표정 (순간 그림). 없으면 평소 얼굴 */
+  mood?: MoodKey | null
 }) {
   const background = toRects(
     VIGNETTES[art.vignette].map((row) => [...row]),
@@ -45,6 +50,9 @@ export const Vignette = memo(function Vignette({
         }
         if (figure.who === 'me' && me.mark) {
           layers.push(MARKS[me.mark])
+        }
+        if (mood) {
+          layers.push(MOODS[mood])
         }
         const palette = figure.who === 'me' ? PALETTE : { ...PALETTE, ...RECOLOR[figure.who] }
         const dy = SCENE_HEIGHT - SPRITE_HEIGHT

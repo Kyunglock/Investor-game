@@ -2,11 +2,13 @@ import type { Game } from '../../api/client'
 import { gradeOf } from './grade'
 import { PHASE_LABELS, STAT_KEYS, STAT_LABELS } from './labels'
 import { type LogLine, logLines } from './log'
+import { frugalMoment } from './moments'
 import { nickname } from './nickname'
 import { stageFor } from './pixel/bodies'
 import { layersFor } from './pixel/layers'
 import { Scene } from './pixel/Scene'
 import { sceneCaption, sceneFor } from './pixel/scenes'
+import { Vignette } from './pixel/Vignette'
 import { useGameStore } from './store'
 
 const VISIBLE = 12
@@ -73,6 +75,8 @@ function Photo({ game, ageYears }: { game: Game; ageYears: number }) {
   // 전업투자자는 직장이 없어도 일자리를 찾는 중이 아니다 (decisions.md 35번).
   const working = (game.job !== null && game.job !== undefined) || game.fullTimeInvestor
   const key = sceneFor(stageFor(ageYears), game.phase, working)
+  // 현금이 생활비에 못 미치거나 빚이 있으면 긴축 생활 장면 (decisions.md 62번).
+  const frugal = frugalMoment(game)
   return (
     <figure className="m-0 mb-6">
       <div className="relative -rotate-1">
@@ -85,17 +89,33 @@ function Photo({ game, ageYears }: { game: Game; ageYears: number }) {
           className="absolute -top-2 right-8 z-10 h-[22px] w-[84px] rotate-[5deg] bg-[var(--tape)]"
         />
         <div className="overflow-hidden border-8 border-white bg-white shadow-[0_2px_6px_rgba(0,0,0,0.12)]">
-          <Scene sceneKey={key} sprite={layersFor(game.initialStats, game.stats, ageYears)} />
+          {frugal ? (
+            <Vignette
+              art={frugal.art}
+              me={layersFor(game.initialStats, game.stats, ageYears)}
+              mood={frugal.mood}
+            />
+          ) : (
+            <Scene sceneKey={key} sprite={layersFor(game.initialStats, game.stats, ageYears)} />
+          )}
         </div>
       </div>
-      <figcaption className="mt-2 font-pen text-[24px] leading-tight">
-        {sceneCaption(key, {
-          tenure: game.housing.tenure,
-          regionName: game.housing.regionName,
-          married: game.household.married,
-          children: game.household.children.length,
-          fullTimeInvestor: game.fullTimeInvestor,
-        })}
+      <figcaption className="mt-2 font-pen text-[24px] leading-tight" data-testid="scene-caption">
+        {frugal
+          ? `${sceneCaption(key, {
+              tenure: game.housing.tenure,
+              regionName: game.housing.regionName,
+              married: game.household.married,
+              children: game.household.children.length,
+              fullTimeInvestor: game.fullTimeInvestor,
+            }).replace(/ · [^·]*$/, '')} · ${frugal.caption}`
+          : sceneCaption(key, {
+              tenure: game.housing.tenure,
+              regionName: game.housing.regionName,
+              married: game.household.married,
+              children: game.household.children.length,
+              fullTimeInvestor: game.fullTimeInvestor,
+            })}
       </figcaption>
     </figure>
   )
