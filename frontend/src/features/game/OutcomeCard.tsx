@@ -9,6 +9,7 @@ import {
   percent,
   signedWon,
   TRADE_NOTES,
+  withParticle,
   won,
 } from './labels'
 import { Overlay } from './Overlay'
@@ -143,7 +144,7 @@ function Body({
             <div className="mt-2 flex items-center gap-3" data-testid="outcome-thinking">
               <Face deviation={null} />
               <p className="font-serif-kr text-lg font-black">
-                {actionLabelFor(outcome.kind, outcome.chosen)}를 골랐다.{' '}
+                {withParticle(actionLabelFor(outcome.kind, outcome.chosen), '을', '를')} 골랐다.{' '}
                 <span className="text-muted">손이 움직이는데…</span>
               </p>
             </div>

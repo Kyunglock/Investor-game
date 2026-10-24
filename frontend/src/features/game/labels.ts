@@ -32,6 +32,14 @@ export function actionLabelFor(kind: string, code: string): string {
   return kind === 'SHAKE' ? (SHAKE_ACTION_LABELS[code] ?? actionLabel(code)) : actionLabel(code)
 }
 
+/** 받침에 따라 을/를·이/가 같은 조사를 고른다. 마지막 글자가 한글이 아니면(숫자·영문·괄호) 받침 있는 쪽을 쓴다. "관망을", "매수를". */
+export function withParticle(word: string, withBatchim: string, withoutBatchim: string): string {
+  const last = word.charCodeAt(word.length - 1)
+  const hangul = last >= 0xac00 && last <= 0xd7a3
+  const batchim = !hangul || (last - 0xac00) % 28 !== 0
+  return `${word}${batchim ? withBatchim : withoutBatchim}`
+}
+
 export function sideLabel(side: string): string {
   return side === 'SELL' ? '매도' : '매수'
 }

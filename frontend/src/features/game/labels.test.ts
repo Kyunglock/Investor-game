@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { deviationMessage, shortWon, signedShortWon, yearOf } from './labels'
+import { deviationMessage, shortWon, signedShortWon, withParticle, yearOf } from './labels'
 
 describe('yearOf', () => {
   it('1세는 탄생 연도 2025년이다', () => {
@@ -45,5 +45,15 @@ describe('shortWon', () => {
     expect(signedShortWon(3_517_588)).toBe('+351만원')
     expect(signedShortWon(-3_120_000)).toBe('−312만원')
     expect(signedShortWon(0)).toBe('0원')
+  })
+})
+
+describe('withParticle', () => {
+  it('받침이 있으면 을, 없으면 를. 한글이 아니면 받침 있는 쪽', () => {
+    expect(withParticle('관망', '을', '를')).toBe('관망을')
+    expect(withParticle('매수', '을', '를')).toBe('매수를')
+    expect(withParticle('버틴다', '을', '를')).toBe('버틴다를')
+    expect(withParticle('2000년 IT 버블', '을', '를')).toBe('2000년 IT 버블을')
+    expect(withParticle('IMF', '을', '를')).toBe('IMF을')
   })
 })
