@@ -20,7 +20,7 @@ describe('familyFigures', () => {
     }
     const xs = figures.map((f) => f.x).sort((a, b) => a - b)
     for (let i = 1; i < xs.length; i++) {
-      expect(xs[i] - xs[i - 1]).toBeGreaterThanOrEqual(10)
+      expect(xs[i] - xs[i - 1]).toBeGreaterThanOrEqual(12)
     }
   })
 
