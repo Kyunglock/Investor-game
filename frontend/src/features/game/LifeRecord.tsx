@@ -6,6 +6,7 @@ import { LifeLog } from './LifeLog'
 import { LifeMap } from './LifeMap'
 import { percent, STAT_KEYS, STAT_LABELS, statLabel, won, yearOf } from './labels'
 import { nickname } from './nickname'
+import { ProfileReport } from './ProfileReport'
 import { layersFor } from './pixel/layers'
 import { Sprite } from './pixel/SpriteView'
 
@@ -132,6 +133,7 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
       <div className="mt-6 flex flex-col gap-3.5">
         <AssetCurve game={game} ageYears={result.finalAge} full />
         <LifeMap game={game} ageYears={result.finalAge} />
+        <ProfileReport game={game} />
         <details>
           <summary className="cursor-pointer text-[13px] text-muted">인생 기록 전체 보기</summary>
           <div className="mt-2">

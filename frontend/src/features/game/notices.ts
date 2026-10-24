@@ -5,18 +5,17 @@ import { signedWon, won } from './labels'
  * 토스트로 지나가는 알림: 생활 이벤트·집이 팔림·세입자 교체와 세상 소식(전조·평범한 기사·헛소문·위기 회고). 상단 오른쪽에 하나씩 차례로 뜨고, 자세한
  * 것은 수첩의 "요즘 있었던 일"에서 본다 (#24, decisions.md 47번). 전조와 기사는 같은 모양이라 토스트만 보고 전조를 가려낼 수 없다 (38번).
  */
-const TOAST_KINDS = new Set<LogEntry['kind']>([
-  'LIFE',
-  'HOME_SOLD',
-  'TENANT',
-  'OMEN',
-  'ARTICLE',
-  'CRISIS',
-])
+const TOAST_KINDS = new Set<LogEntry['kind']>(['LIFE', 'HOME_SOLD', 'TENANT', 'OMEN', 'ARTICLE'])
 
 /** 새로 들어온 기록 줄 가운데 토스트로 띄울 것. 순서는 기록 순서(오래된 것 먼저) 그대로. */
 export function noticesOf(entries: LogEntry[]): LogEntry[] {
   return entries.filter((e) => TOAST_KINDS.has(e.kind))
+}
+
+/** 위기 회고(CRISIS)는 토스트가 아니라 시간을 멈추는 alert 카드로. 한 번에 여러 개면 마지막 것 (decisions.md 60번). */
+export function crisisOf(entries: LogEntry[]): LogEntry | null {
+  const found = entries.filter((e) => e.kind === 'CRISIS')
+  return found.length > 0 ? found[found.length - 1] : null
 }
 
 /** 세상 소식 한 줄. 전조는 무엇의 전조인지 말하지 않고 들린 대로만 전한다. 위기는 끝난 뒤에야 이름이 붙는다 (decisions.md 38번). */
