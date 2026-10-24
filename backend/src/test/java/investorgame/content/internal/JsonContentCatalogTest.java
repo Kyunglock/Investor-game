@@ -113,7 +113,7 @@ class JsonContentCatalogTest {
     for (ContentCatalog.TraitStage stage : catalog.traitStages()) {
       assertThat(stage.scenes()).as("%d세 장면", stage.age()).hasSizeBetween(2, 3);
     }
-    assertThat(catalog.adultTraits()).hasSize(8).allMatch(TraitDefinition::adult);
+    assertThat(catalog.adultTraits()).hasSize(7).allMatch(TraitDefinition::adult);
     // 동료에게 빌려준 돈은 돌려받기도, 떼이기도 한다. 떼이면 안목이 깎이고 용기는 오른다 (decisions.md 41번).
     TraitDefinition.Option lend =
         catalog.adultTraits().stream()
