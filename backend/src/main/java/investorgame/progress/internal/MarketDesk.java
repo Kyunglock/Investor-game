@@ -211,6 +211,13 @@ class MarketDesk {
 
   // ---- 종목 ----
 
+  /** 이 달에 이미 정해 둔 종목 해석의 문구. 없으면 비어 있다. 쓰지 않으므로 읽기 트랜잭션에서 불러도 된다. */
+  Optional<String> storedAnalysisText(UUID gameId, String stockCode) {
+    return analyses
+        .find(gameId, stockCode, market.currentMonth(gameId))
+        .map(AnalysisRepository.AnalysisRow::text);
+  }
+
   StockAnalysis analysis(UUID gameId, StockDefinition stock, SeededRandom random) {
     int month = market.currentMonth(gameId);
     List<PricePoint> history = market.history(gameId, stock.code());

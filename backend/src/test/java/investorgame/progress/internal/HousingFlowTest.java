@@ -40,7 +40,7 @@ class HousingFlowTest {
   private static final int YEAR = 360;
   private static final int JOB_DAY = 10 * YEAR;
   private static final HintProvider HINTS =
-      (truth, seq) -> new Hint(Hint.HintDirection.NEUTRAL, Hint.HintStrength.MILD);
+      (truth, seq) -> new Hint(Hint.HintDirection.NEUTRAL, Hint.HintStrength.MILD, Hint.Detail.LOW);
 
   @Autowired HousingFlow flow;
   @Autowired HousingService housing;

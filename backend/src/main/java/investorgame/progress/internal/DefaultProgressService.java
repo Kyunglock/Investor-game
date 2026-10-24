@@ -1148,6 +1148,11 @@ class DefaultProgressService implements ProgressService {
     ScheduleResult result =
         events.schedule(game.id(), context(game, character), fromDay, toDay, random, hints);
     result.notice().ifPresent(notice -> applyNotice(game, character, notice));
+    // 빚투 제안에는 그 종목의 안목 해석을 힌트로 붙인다. 지금(쓰기 트랜잭션) 이 달의 해석을 정해 두면 조회는 읽기만 한다 (decisions.md 53번).
+    result
+        .pending()
+        .filter(e -> e.kind() == EventKind.LEVERAGE && e.stockCode() != null)
+        .ifPresent(e -> desk.analysis(game.id(), content.stock(e.stockCode()), random));
   }
 
   /** 알림성 생활 이벤트의 돈을 반영하고 기록한다 (경제 개편 설계 7.3절). */
@@ -1450,7 +1455,9 @@ class DefaultProgressService implements ProgressService {
         quote == null ? null : quote.last12(),
         event.title(),
         event.body(),
-        event.hintText(),
+        event.kind() == EventKind.LEVERAGE && event.stockCode() != null
+            ? desk.storedAnalysisText(game.id(), event.stockCode()).orElse(null)
+            : event.hintText(),
         event.swayText(),
         options(game, character, event));
   }

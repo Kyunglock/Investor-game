@@ -1,5 +1,6 @@
 package investorgame.content.internal;
 
+import investorgame.common.Hint;
 import investorgame.common.StatCodes;
 import investorgame.content.AnalysisText;
 import investorgame.content.CareerDefinition;
@@ -301,8 +302,12 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
-  public List<String> hintPhrases(String direction, String strength) {
-    return phrases.hints().getOrDefault(direction, Map.of()).getOrDefault(strength, List.of());
+  public List<String> hintPhrases(String detail, String direction, String strength) {
+    return phrases
+        .hints()
+        .getOrDefault(detail, Map.of())
+        .getOrDefault(direction, Map.of())
+        .getOrDefault(strength, List.of());
   }
 
   @Override
@@ -498,12 +503,18 @@ class JsonContentCatalog implements ContentCatalog {
               && definition.magnitude().minBp() <= definition.magnitude().maxBp(),
           "뉴스 변동 폭이 잘못되었다: " + definition.code());
     }
-    for (String direction : Set.of("UP", "DOWN")) {
-      for (String strength : Set.of("MILD", "STRONG")) {
-        require(!hintPhrases(direction, strength).isEmpty(), "힌트 문구가 없다: " + direction + strength);
+    for (Hint.Detail detail : Hint.Detail.values()) {
+      for (String direction : Set.of("UP", "DOWN")) {
+        for (String strength : Set.of("MILD", "STRONG")) {
+          require(
+              !hintPhrases(detail.key(), direction, strength).isEmpty(),
+              "힌트 문구가 없다: " + detail.key() + " " + direction + strength);
+        }
       }
+      require(
+          !hintPhrases(detail.key(), "NEUTRAL", "MILD").isEmpty(),
+          "모호한 힌트 문구가 없다: " + detail.key());
     }
-    require(!hintPhrases("NEUTRAL", "MILD").isEmpty(), "모호한 힌트 문구가 없다");
     validateStocks();
     validateLife();
     require(!swayPhrases("POS").isEmpty() && !swayPhrases("NEG").isEmpty(), "다른 뉴스 문구가 없다");
@@ -689,7 +700,7 @@ class JsonContentCatalog implements ContentCatalog {
   record Crises(List<CrisisDefinition> scenarios, List<String> commonOmens) {}
 
   record Phrases(
-      Map<String, Map<String, List<String>>> hints,
+      Map<String, Map<String, Map<String, List<String>>>> hints,
       Map<String, List<String>> sway,
       TextBlock job,
       TextBlock jobRetry,

@@ -185,6 +185,16 @@ class DefaultBehaviorServiceTest {
   }
 
   @Test
+  void 힌트의_구체성은_안목_구간을_따른다() {
+    SplittableRandom rng = new SplittableRandom(3);
+    assertThat(service.hint(0, Direction.UP, rng).detail()).isEqualTo(Hint.Detail.LOW);
+    assertThat(service.hint(29, Direction.UP, rng).detail()).isEqualTo(Hint.Detail.LOW);
+    assertThat(service.hint(30, Direction.UP, rng).detail()).isEqualTo(Hint.Detail.MID);
+    assertThat(service.hint(60, Direction.UP, rng).detail()).isEqualTo(Hint.Detail.HIGH);
+    assertThat(service.hint(80, Direction.UP, rng).detail()).isEqualTo(Hint.Detail.EXPERT);
+  }
+
+  @Test
   void 안목_100의_힌트는_약_95퍼센트_맞고_모호하지_않다() {
     assertThat(hintAccuracy(100)).isBetween(0.93, 0.97);
     SplittableRandom rng = new SplittableRandom(1);

@@ -134,11 +134,15 @@ function Body({ event, game, busy, onChoose }: Props) {
         </div>
       )}
 
-      {isNews && event.hint && (
+      {(isNews || isLeverage) && event.hint && (
         <p
           className="mt-3 border-l-[3px] border-teal bg-teal-soft px-2.5 py-2 font-mono-num text-xs text-[#3b5a52]"
           data-testid="hint"
         >
+          {/* 빚투 제안의 힌트는 매매창과 같은, 그 종목에 대한 내 안목 해석이다 (decisions.md 53번) */}
+          {isLeverage && (
+            <span className="mr-1 text-[10px] text-faint">내 안목으로 본 {event.stockName}</span>
+          )}
           {event.hint}
         </p>
       )}

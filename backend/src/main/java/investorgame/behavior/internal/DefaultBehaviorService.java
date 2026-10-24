@@ -86,14 +86,17 @@ class DefaultBehaviorService implements BehaviorService {
     BehaviorProperties.HintSettings settings = properties.hint();
 
     if (insight < settings.neutralBelowInsight() && neutralRoll < settings.neutralPercent()) {
-      return new Hint(HintDirection.NEUTRAL, HintStrength.MILD);
+      return new Hint(HintDirection.NEUTRAL, HintStrength.MILD, Hint.Detail.of(insight));
     }
     int accuracyBp = settings.accuracyBaseBp() + insight * settings.accuracyPerPointBp();
     Direction pointed = accuracyRoll < accuracyBp ? truth : opposite(truth);
     // 강도는 안목과 무관하다. 낮은 안목의 "아주 좋다!"는 자신만만한 헛소리다 (decisions.md 28번).
     HintStrength strength =
         strongRoll < settings.strongPercent() ? HintStrength.STRONG : HintStrength.MILD;
-    return new Hint(pointed == Direction.UP ? HintDirection.UP : HintDirection.DOWN, strength);
+    return new Hint(
+        pointed == Direction.UP ? HintDirection.UP : HintDirection.DOWN,
+        strength,
+        Hint.Detail.of(insight));
   }
 
   @Override

@@ -92,7 +92,7 @@ class EventRenderer {
             row,
             withStock(news.title(), stockName),
             withStock(news.body(), stockName),
-            phrase(row.hintCode(), true),
+            hintText(row, news, stockName),
             phrase(row.swayCode(), false),
             List.of(
                 new EventView.Option("BUY", "매수"),
@@ -225,14 +225,29 @@ class EventRenderer {
         "%s → %s · 월 %,d만 원".formatted(option.label(), target.title(), salary / TEN_THOUSAND));
   }
 
-  /** 문구 코드는 "방향.강도.번호"(힌트) 또는 "분위기.번호"(다른 뉴스)다. */
+  /**
+   * 힌트 문구. 코드는 "방향.강도.구체성.번호"다. 구체성이 높은 문구는 종목·섹터와 이 종류의 뉴스가 보통 움직이는 폭({min}~{max}%, 뉴스 정의의 공개 범위)을
+   * 채운다 (decisions.md 53번). 실제로 굴린 폭은 숨은 값이라 쓰지 않는다.
+   */
+  private String hintText(EventRow row, NewsDefinition news, String stockName) {
+    if (row.hintCode() == null) {
+      return null;
+    }
+    String[] parts = row.hintCode().split("\\.");
+    List<String> phrases = content.hintPhrases(parts[2], parts[0], parts[1]);
+    return withStock(phrases.get(Integer.parseInt(parts[3])), stockName)
+        .replace("{sectorName}", content.sectorName(news.sector()))
+        .replace("{min}", String.valueOf(news.magnitude().minBp() / 100))
+        .replace("{max}", String.valueOf(news.magnitude().maxBp() / 100));
+  }
+
+  /** 다른 뉴스 문구. 코드는 "분위기.번호"다. */
   private String phrase(String code, boolean hint) {
     if (code == null) {
       return null;
     }
     String[] parts = code.split("\\.");
-    List<String> phrases =
-        hint ? content.hintPhrases(parts[0], parts[1]) : content.swayPhrases(parts[0]);
+    List<String> phrases = content.swayPhrases(parts[0]);
     return phrases.get(Integer.parseInt(parts[parts.length - 1]));
   }
 }

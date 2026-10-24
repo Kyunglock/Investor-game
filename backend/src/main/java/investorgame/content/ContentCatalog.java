@@ -87,7 +87,11 @@ public interface ContentCatalog {
   LifeText lifeText(String kind);
 
   /** direction: UP/DOWN/NEUTRAL, strength: MILD/STRONG. */
-  List<String> hintPhrases(String direction, String strength);
+  /**
+   * 힌트 문구. detail은 안목 구간(low·mid·high·expert), 높을수록 종목·섹터·폭({stock}·{sectorName}·{min}~{max}%)을 짚는다
+   * (decisions.md 53번).
+   */
+  List<String> hintPhrases(String detail, String direction, String strength);
 
   /** sentiment: POS/NEG. */
   List<String> swayPhrases(String sentiment);
