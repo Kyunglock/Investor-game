@@ -170,10 +170,11 @@ class AssetServiceTest {
     assets.spend(gameId, EXPENSE, initialCash + 1_000_000, 30, null);
     InterestResult interest = assets.accrueInterest(gameId, 30);
     assertThat(interest.accrued()).isTrue();
-    assertThat(interest.interest()).isEqualTo(10_000);
-    assertThat(interest.debtAfter()).isEqualTo(1_010_000);
+    // 월 1.5% (asset.debt-interest-bp 150, decisions.md 55번)
+    assertThat(interest.interest()).isEqualTo(15_000);
+    assertThat(interest.debtAfter()).isEqualTo(1_015_000);
     assertThat(assets.accrueInterest(gameId, 30).accrued()).isFalse();
-    assertThat(assets.get(gameId).debt()).isEqualTo(1_010_000);
+    assertThat(assets.get(gameId).debt()).isEqualTo(1_015_000);
   }
 
   @Test

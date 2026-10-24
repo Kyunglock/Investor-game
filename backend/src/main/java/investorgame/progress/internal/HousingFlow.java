@@ -3,6 +3,7 @@ package investorgame.progress.internal;
 import investorgame.asset.AssetService;
 import investorgame.common.GameProperties;
 import investorgame.common.error.InvalidRequestException;
+import investorgame.common.error.NotFoundException;
 import investorgame.common.random.SeededRandom;
 import investorgame.content.ContentCatalog;
 import investorgame.event.ChoiceTicket;
@@ -72,10 +73,16 @@ class HousingFlow {
     this.rules = properties.housing();
   }
 
-  /** 주거 이벤트를 정하는 사실. */
-  HousingFacts facts(UUID gameId, HouseholdView home, int luck) {
+  /** 주거 이벤트를 정하는 사실. 청약은 영끌로 분양가를 치를 수 있을 때만 공고가 온다 (#26). */
+  HousingFacts facts(
+      UUID gameId, HouseholdView home, int luck, long monthlyIncome, int points, int day) {
     HousingView view = housing.get(gameId);
     List<Integer> births = home.childBirthDays();
+    boolean affordable =
+        plans(gameId, List.of(ChoiceTicket.Housing.APPLY), false, home, monthlyIncome, points, day)
+                .getFirst()
+                .blocked()
+            == null;
     return new HousingFacts(
         view.tenure().name(),
         view.leaseEndDay(),
@@ -84,7 +91,8 @@ class HousingFlow {
         view.tenure() == Tenure.VILLA_JEONSE && !view.insured(),
         births.isEmpty() ? null : births.getLast(),
         seoulChange(gameId),
-        luck);
+        luck,
+        affordable);
   }
 
   /** 집 시세 + 내 보증금 − 주담대 − 전세대출 − 세입자 보증금. 총자산에 더한다. */
@@ -140,6 +148,35 @@ class HousingFlow {
         sell(gameId, home, prices.get(home.region()), day);
       }
     }
+  }
+
+  /** 주담대 일시 상환: 현금으로 원금을 갚는다. 남은 기간의 원리금균등 월 상환액은 다음 달부터 줄어든다 (decisions.md 58번). */
+  void repay(UUID gameId, int seq, long amount, int day) {
+    HousingView.Home home =
+        housing.get(gameId).homes().stream()
+            .filter(h -> h.seq() == seq)
+            .findFirst()
+            .orElseThrow(() -> new NotFoundException("그런 집이 없다"));
+    if (amount <= 0 || amount > home.mortgage()) {
+      throw new InvalidRequestException("갚을 금액은 남은 주담대 이하여야 한다");
+    }
+    long cash = assets.get(gameId).cash();
+    if (amount > cash) {
+      throw new InvalidRequestException("현금이 %s 모자란다".formatted(money(amount - cash)));
+    }
+    housing.repayMortgage(gameId, seq, amount);
+    assets.spend(gameId, "MORTGAGE_REPAY", amount, day, null);
+    logs.append(
+        gameId,
+        day,
+        "MORTGAGE_REPAY",
+        Map.of(
+            "regionName",
+            regionName(home.region()),
+            "amount",
+            amount,
+            "remaining",
+            home.mortgage() - amount));
   }
 
   private void sell(UUID gameId, HousingView.Home home, long price, int day) {

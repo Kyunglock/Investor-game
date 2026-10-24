@@ -177,7 +177,14 @@ function IndicatorLine({ indicator }: { indicator: Indicator }) {
   )
 }
 
-/** 전조·헛소문·기사·회고를 구분 없이 최근 순으로. 꼬리표가 없어야 소문만 보고 판단할 수 없다 (매매창 설계 3.3절). */
+/** 소식의 +/− 표시. 전조·회고는 늘 −라서 −만 보고는 전조인지 나쁜 기사인지 가릴 수 없다 (decisions.md 56번). */
+const SENTIMENT_MARK: Record<NewsItem['sentiment'], { text: string; className: string }> = {
+  POS: { text: '+', className: 'text-up' },
+  NEG: { text: '−', className: 'text-down' },
+  NEUTRAL: { text: '·', className: 'text-faint' },
+}
+
+/** 전조·헛소문·기사·회고를 구분 없이 최근 순으로. 종류 꼬리표는 없고, 시장에 +인지 −인지만 붙는다 (매매창 설계 3.3절, decisions.md 56번). */
 function Newspaper({ game, items }: { game: Game; items: NewsItem[] }) {
   const recent = [...items].reverse()
   const shown = recent.slice(0, NEWSPAPER_SHOWN)
@@ -186,10 +193,16 @@ function Newspaper({ game, items }: { game: Game; items: NewsItem[] }) {
   const line = (item: NewsItem, i: number) => (
     <li
       key={`${item.day}-${i}`}
-      className="grid grid-cols-[34px_1fr] gap-2 border-b border-line-soft py-1.5 text-[12px] last:border-b-0"
+      className="grid grid-cols-[34px_14px_1fr] gap-2 border-b border-line-soft py-1.5 text-[12px] last:border-b-0"
       data-testid="newspaper-line"
+      data-sentiment={item.sentiment}
     >
       <span className="pt-0.5 font-mono-num text-[11px] text-faint">{ageOf(item.day)}세</span>
+      <span
+        className={`pt-0.5 text-center font-mono-num text-[12px] font-bold ${SENTIMENT_MARK[item.sentiment].className}`}
+      >
+        {SENTIMENT_MARK[item.sentiment].text}
+      </span>
       <span className={item.kind === 'CRISIS' ? 'text-wine' : ''}>{item.text}</span>
     </li>
   )

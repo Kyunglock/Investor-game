@@ -112,10 +112,29 @@ class HousingFlowTest {
   }
 
   @Test
+  void 주담대를_현금으로_일시_상환하면_원금이_줄고_현금을_넘기면_막힌다() {
+    housing.buyResidence(gameId, "seoul", 1_000_000_000, 500_000_000, JOB_DAY);
+    long cash = assets.get(gameId).cash();
+    assets.credit(gameId, "WINDFALL", 200_000_000 - cash, JOB_DAY);
+    int seq = housing.get(gameId).homes().getFirst().seq();
+
+    flow.repay(gameId, seq, 150_000_000, JOB_DAY + 30);
+
+    assertThat(housing.get(gameId).homes().getFirst().mortgage()).isEqualTo(350_000_000);
+    assertThat(assets.get(gameId).cash()).isEqualTo(50_000_000);
+    assertThatThrownBy(() -> flow.repay(gameId, seq, 60_000_000, JOB_DAY + 30))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("현금");
+    assertThatThrownBy(() -> flow.repay(gameId, seq, 400_000_000, JOB_DAY + 30))
+        .isInstanceOf(InvalidRequestException.class);
+  }
+
+  @Test
   void 막힌_선택은_고를_수_없다() {
     housing.rent(gameId, Tenure.MONTHLY, null, 10_000_000, 600_000, 0, false, JOB_DAY);
     EventView leaseEnd =
-        leaseEndOf(new HousingFacts("MONTHLY", JOB_DAY + YEAR, 0, false, false, null, 0, 50), 1L);
+        leaseEndOf(
+            new HousingFacts("MONTHLY", JOB_DAY + YEAR, 0, false, false, null, 0, 50, true), 1L);
     ChoiceTicket ticket = events.prepareChoice(gameId, leaseEnd.eventId(), "BUY_SEOUL");
     assertThatThrownBy(
             () ->
@@ -164,7 +183,7 @@ class HousingFlowTest {
   /** 보증보험 없는 빌라 만기 중 전세사기가 숨은 판을 찾는다(7%라 시드를 돌린다). */
   private EventView fraudulentLeaseEnd() {
     HousingFacts villa =
-        new HousingFacts("VILLA_JEONSE", JOB_DAY + YEAR, 0, false, true, null, 0, 50);
+        new HousingFacts("VILLA_JEONSE", JOB_DAY + YEAR, 0, false, true, null, 0, 50, true);
     for (long seed = 1; seed <= 300; seed++) {
       UUID probe = UUID.randomUUID();
       EventView view = leaseEndOf(probe, villa, seed);

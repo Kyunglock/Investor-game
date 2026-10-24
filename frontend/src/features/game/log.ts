@@ -229,6 +229,14 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
             : `${str(p.label)} · 보증금 ${won(num(p.deposit))}${num(p.monthlyRent) > 0 ? `, 월세 ${won(num(p.monthlyRent))}` : ''}${num(p.jeonseLoan) > 0 ? `, 전세대출 ${won(num(p.jeonseLoan))}` : ''}.`
       return { ...base, tone: p.fraud ? 'flipped' : 'life', pill: '집', text: `${head}${what}` }
     }
+    case 'MORTGAGE_REPAY':
+      // 주담대 일시 상환 (decisions.md 58번).
+      return {
+        ...base,
+        tone: 'life',
+        pill: '집',
+        text: `${str(p.regionName)} 주담대 ${won(num(p.amount))}을 한꺼번에 갚았다. 남은 주담대 ${won(num(p.remaining))}.`,
+      }
     case 'HOME_SOLD': {
       const gain = num(p.price) - num(p.purchasePrice)
       return {

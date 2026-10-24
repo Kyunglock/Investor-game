@@ -20,6 +20,7 @@ import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.common.random.SeededRandom;
+import investorgame.content.AnalysisText;
 import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.CrisisDefinition;
@@ -283,7 +284,7 @@ class DefaultProgressService implements ProgressService {
           // 흔들림은 뉴스와 같은 판정·충격 흐름. "판다"는 전량이다 (decisions.md 33번).
           case ChoiceTicket.Shake shake ->
               resolveNews(game, ticket, pendingView.title(), null, random);
-          case ChoiceTicket.Leverage leverage -> resolveLeverage(game, ticket, leverage);
+          case ChoiceTicket.Leverage leverage -> resolveLeverage(game, ticket, leverage, quantity);
           case ChoiceTicket.Housing home ->
               housingFlow.resolve(
                   gameId,
@@ -721,6 +722,17 @@ class DefaultProgressService implements ProgressService {
 
   @Override
   @Transactional
+  public GameView repayMortgage(UUID sessionId, UUID gameId, int seq, long amount) {
+    GameRow game = lock(sessionId, gameId);
+    if (events.pending(gameId).isPresent()) {
+      throw new InvalidRequestException("먼저 선택을 해야 한다");
+    }
+    housingFlow.repay(gameId, seq, amount, game.lastReportedDay());
+    return view(game);
+  }
+
+  @Override
+  @Transactional
   public ChoiceOutcome trade(
       UUID sessionId, UUID gameId, String stockCode, Action side, long quantity) {
     // 대기 중인 선택이 있어도 막지 않는다. 매매창을 연 순간 도착한 이벤트는 창을 닫은 뒤에 처리한다 (매매창 설계 2절).
@@ -901,17 +913,21 @@ class DefaultProgressService implements ProgressService {
    * 빚투 (decisions.md 39번). 고르면 총자산의 leverage-loan-bp만큼 대출받아 그 종목을 산다. 판정은 없다: 바닥이었는지는 그 뒤 시장이 정한다.
    * 빚에는 다달이 이자가 붙고 수입이 들어오면 먼저 갚는다.
    */
+  /**
+   * 빚투 (decisions.md 39번). 빌릴 수 있는 최대는 순자산의 절반이고, 사용자가 수량(requested)을 정하면 그만큼만 빌려 산다. 최대를 넘으면 최대로
+   * 자른다. 수량이 없으면 최대로 (54번).
+   */
   private ChoiceOutcome.Outcome resolveLeverage(
-      GameRow game, ChoiceTicket ticket, ChoiceTicket.Leverage leverage) {
+      GameRow game, ChoiceTicket ticket, ChoiceTicket.Leverage leverage, Long requested) {
     UUID gameId = game.id();
     String option = ticket.optionCode();
     events.complete(gameId, ticket.eventId(), new Completion(option, option, List.of()));
     String stockName = content.stock(ticket.stockCode()).name();
     Map<String, Long> prices = market.prices(gameId);
     long price = prices.get(ticket.stockCode());
-    long loan =
+    long maxLoan =
         leverage.borrow() ? Math.max(0, netWorth(gameId)) * properties.leverageLoanBp() / BP : 0;
-    long quantity = loan / price;
+    long quantity = requested == null ? maxLoan / price : Math.min(requested, maxLoan / price);
     ChoiceOutcome.Trade trade = null;
     String message;
     if (quantity > 0) {
@@ -998,14 +1014,18 @@ class DefaultProgressService implements ProgressService {
     JobDefinition job = character.jobCode() == null ? null : content.job(character.jobCode());
     MarketCycle cycle = market.cycle(random);
 
-    Map<Integer, String> articles = articles(game, random);
+    Map<Integer, AnalysisText.Article> articles = articles(game, random);
 
     for (int m = fromExclusive / month + 1; m * month <= toInclusive; m++) {
       int day = m * month;
       market.advanceTo(gameId, day, random);
       recordCycle(game, cycle, m, day);
       if (articles.containsKey(m)) {
-        logs.append(gameId, day, "ARTICLE", Map.of("text", articles.get(m)));
+        logs.append(
+            gameId,
+            day,
+            "ARTICLE",
+            Map.of("text", articles.get(m).text(), "sentiment", articles.get(m).sentiment()));
       }
       // 생활비는 처음 일을 시작한 뒤부터 나간다(실직 중에도). 월급은 지금 직업이 있을 때만 (decisions.md 26번).
       boolean independent = character.careerStartDay() != null && day > character.careerStartDay();
@@ -1017,7 +1037,9 @@ class DefaultProgressService implements ProgressService {
             working
                 ? monthlySalary(job, tenureYears(character, day), character.salaryBonusBp())
                 : 0;
-        if (!retired && household.retireMonth(day)) {
+        // 정년이 없는 직업(직접 세운 회사·농부)은 60세에도 은퇴하지 않고 월급을 계속 받는다. 연금은 나이로 나온다 (decisions.md 57번).
+        boolean retires = job == null || job.retires();
+        if (!retired && retires && household.retireMonth(day)) {
           long severance = salary * tenureYears(character, day);
           if (severance > 0) {
             assets.credit(gameId, SEVERANCE, severance, day);
@@ -1027,8 +1049,10 @@ class DefaultProgressService implements ProgressService {
               gameId, day, "RETIRE", Map.of("age", ageAt(game, day), "severance", severance));
         } else if (!retired && working) {
           assets.credit(gameId, SALARY, salary, day);
-        } else if (retired) {
-          assets.credit(gameId, PENSION, household.pension(gameId, day), day);
+        }
+        long pension = household.pension(gameId, day);
+        if (pension > 0) {
+          assets.credit(gameId, PENSION, pension, day);
         }
         long spouse = household.spouseIncome(gameId, day);
         if (spouse > 0) {
@@ -1109,12 +1133,12 @@ class DefaultProgressService implements ProgressService {
    * 평범한 경제 기사가 나오는 달과 문구 (매매창 설계 3.3절). ("progress","articles") 키에서 간격과 문구를 차례로 뽑아 같은 판은 언제나 같다.
    * 최근에 나온 기사는 다시 뽑지 않는다.
    */
-  private Map<Integer, String> articles(GameRow game, SeededRandom random) {
-    List<String> pool = content.analysis().articles();
+  private Map<Integer, AnalysisText.Article> articles(GameRow game, SeededRandom random) {
+    List<AnalysisText.Article> pool = content.analysis().articles();
     RandomGenerator rng = random.forKey("progress", "articles");
     ProgressProperties.Range gap = properties.articleGapMonths();
     int lastMonth = endDay(game) / calendar.daysPerMonth();
-    Map<Integer, String> articles = new HashMap<>();
+    Map<Integer, AnalysisText.Article> articles = new HashMap<>();
     List<Integer> recent = new ArrayList<>();
     int month = properties.articleFirstMonth();
     while (true) {
@@ -1274,7 +1298,13 @@ class DefaultProgressService implements ProgressService {
         assets.get(game.id()).holdings().keySet().stream().sorted().toList(),
         character.fullTimeInvestorDay() != null,
         heldDropBp(game.id()),
-        housingFlow.facts(game.id(), home, character.stats().luck()),
+        housingFlow.facts(
+            game.id(),
+            home,
+            character.stats().luck(),
+            monthlyIncome(character, game.lastReportedDay()),
+            cheongyakPoints(game, character, game.lastReportedDay()),
+            game.lastReportedDay()),
         netWorth(game.id()));
   }
 

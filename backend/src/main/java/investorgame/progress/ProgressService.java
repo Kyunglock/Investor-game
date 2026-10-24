@@ -43,6 +43,9 @@ public interface ProgressService {
   /** 가진 아파트를 매물로 내놓거나(listed) 거둔다. 대기 중인 선택이 있으면 먼저 선택해야 한다. */
   GameView listHome(UUID sessionId, UUID gameId, int seq, boolean listed);
 
+  /** 주담대를 현금으로 일시 상환한다. 남은 원금·현금을 넘으면 400. 대기 중인 선택이 있으면 먼저 선택해야 한다 (decisions.md 58번). */
+  GameView repayMortgage(UUID sessionId, UUID gameId, int seq, long amount);
+
   /** 한 종목의 월별 가격 이력. */
   StockHistory history(UUID sessionId, UUID gameId, String stockCode);
 

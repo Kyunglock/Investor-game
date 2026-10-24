@@ -90,6 +90,13 @@ class HouseholdServiceTest {
   }
 
   @Test
+  void 은퇴하지_않아도_은퇴_나이가_지나면_연금이_나온다() {
+    int retireDay = (60 - 15) * YEAR;
+    assertThat(household.pension(gameId, retireDay)).as("은퇴 나이 당월은 아직").isZero();
+    assertThat(household.pension(gameId, retireDay + 30)).as("정년 없는 직업으로 일하는 중").isPositive();
+  }
+
+  @Test
   void 은퇴_뒤에는_연금이_나오고_부부면_더_많다() {
     int retireDay = (60 - 15) * YEAR;
     assertThat(household.pension(gameId, retireDay)).as("은퇴 전 0").isZero();

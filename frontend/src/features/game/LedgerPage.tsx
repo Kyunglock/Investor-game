@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Game } from '../../api/client'
 import { percent, shortWon, signedShortWon, signedWon, won } from './labels'
 import { changeBp, signedPercent } from './market'
@@ -156,7 +157,7 @@ function Household({ game }: { game: Game }) {
             {game.debt > 0 && (
               <tr>
                 <th scope="row" className="border-b border-[#a6acb8] py-1 text-left font-normal">
-                  빚 <span className="text-[12px] text-pen-soft">월 1% 이자</span>
+                  빚 <span className="text-[12px] text-pen-soft">월 1.5% 이자</span>
                 </th>
                 <td className="border-b border-[#a6acb8] text-right text-red-pen">
                   {won(game.debt)}
@@ -293,9 +294,17 @@ function Home({ game }: { game: Game }) {
                     {signedWon(gain)}
                   </span>
                   {home.mortgage > 0 &&
-                    ` · 주담대 ${won(home.mortgage)} (월 ${won(home.monthlyPayment)})`}
+                    ` · 주담대 ${won(home.mortgage)} (30년 원리금균등 · 월 ${won(home.monthlyPayment)})`}
                   {home.tenantDeposit > 0 && ` · 세입자 보증금 ${won(home.tenantDeposit)}`}
                 </p>
+                {home.mortgage > 0 && (
+                  <MortgageRepay
+                    seq={home.seq}
+                    mortgage={home.mortgage}
+                    cash={game.cash}
+                    busy={busy}
+                  />
+                )}
                 <button
                   type="button"
                   disabled={busy}
@@ -326,5 +335,104 @@ function Home({ game }: { game: Game }) {
         </ul>
       )}
     </section>
+  )
+}
+
+/** 주담대 일시 상환: 현금으로 원금을 갚아 남은 기간의 월 상환액을 줄인다 (decisions.md 58번). */
+function MortgageRepay({
+  seq,
+  mortgage,
+  cash,
+  busy,
+}: {
+  seq: number
+  mortgage: number
+  cash: number
+  busy: boolean
+}) {
+  const repayMortgage = useGameStore((s) => s.repayMortgage)
+  const [open, setOpen] = useState(false)
+  const [amount, setAmount] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [sending, setSending] = useState(false)
+  const max = Math.min(mortgage, Math.max(0, cash))
+  const value = Math.max(0, Math.floor(Number(amount) || 0))
+  const canSubmit = !busy && !sending && value >= 1 && value <= max
+  const submit = async () => {
+    setSending(true)
+    const failed = await repayMortgage(seq, value)
+    setSending(false)
+    setError(failed)
+    if (!failed) {
+      setOpen(false)
+      setAmount('')
+    }
+  }
+  if (!open) {
+    return (
+      <button
+        type="button"
+        disabled={busy || max < 1}
+        className="mt-1 mr-2 min-h-11 rounded-full border-2 border-pen px-4 text-[13px] hover:bg-white disabled:opacity-40"
+        onClick={() => setOpen(true)}
+        data-testid={`repay-home-${seq}`}
+      >
+        주담대 일시 상환
+      </button>
+    )
+  }
+  return (
+    <div className="mt-1 rounded border border-line bg-card px-3 py-2.5" data-testid="repay-form">
+      <label className="flex items-center gap-2">
+        <span className="shrink-0 text-xs text-muted">갚을 원금</span>
+        <input
+          type="number"
+          min={1}
+          inputMode="numeric"
+          className="min-h-10 w-full rounded border border-line bg-card px-2.5 text-right font-mono-num text-base"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          aria-label="갚을 원금"
+        />
+        <span className="text-xs text-muted">원</span>
+      </label>
+      <div className="mt-2 grid grid-cols-4 gap-1.5">
+        {[10, 25, 50, 100].map((p) => (
+          <button
+            key={p}
+            type="button"
+            className="min-h-8 rounded border border-line bg-card font-mono-num text-[11px] hover:bg-bg"
+            onClick={() => setAmount(String(Math.floor((max * p) / 100)))}
+          >
+            {p}%
+          </button>
+        ))}
+      </div>
+      <p className="mt-2 text-[11px] text-faint">
+        현금 {won(cash)} · 남은 주담대 {won(mortgage)} · 최대 {won(max)}
+      </p>
+      {error && (
+        <p role="alert" className="mt-1 text-[12px] text-wine">
+          {error}
+        </p>
+      )}
+      <div className="mt-2 flex gap-2">
+        <button
+          type="button"
+          disabled={!canSubmit}
+          className="min-h-11 flex-1 rounded bg-wine text-sm font-bold text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+          onClick={() => void submit()}
+        >
+          {sending ? '갚는 중…' : '갚기'}
+        </button>
+        <button
+          type="button"
+          className="min-h-11 rounded border border-line px-4 text-sm"
+          onClick={() => setOpen(false)}
+        >
+          닫기
+        </button>
+      </div>
+    </div>
   )
 }

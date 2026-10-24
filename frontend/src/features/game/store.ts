@@ -75,6 +75,8 @@ interface GameState {
   dismissNotice: () => void
   /** 가진 아파트를 매물로 내놓거나 거둔다. 팔리는 것은 매수자가 나와야 한다 (주거 설계 3절). */
   listHome: (seq: number, listed: boolean) => Promise<void>
+  /** 주담대를 현금으로 일시 상환한다 (decisions.md 58번). 실패하면 이유를 돌려준다. */
+  repayMortgage: (seq: number, amount: number) => Promise<string | null>
 }
 
 export const MACRO_TAB = 'macro'
@@ -393,6 +395,24 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     dismissNotice: () => set((state) => ({ notices: state.notices.slice(1) })),
+
+    repayMortgage: async (seq, amount) => {
+      const { game } = get()
+      if (!game) {
+        return null
+      }
+      await reportNow()
+      const { data, error } = await api.POST('/api/games/{gameId}/homes/{seq}/repay', {
+        params: { path: { gameId: game.gameId, seq } },
+        body: { amount },
+      })
+      if (data) {
+        apply(data, get().running)
+        return null
+      }
+      await get().load()
+      return (error as { message?: string } | undefined)?.message ?? '갚지 못했다'
+    },
 
     listHome: async (seq, listed) => {
       const { game } = get()

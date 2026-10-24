@@ -124,6 +124,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/games/{gameId}/homes/{seq}/repay": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 주담대를 현금으로 일시 상환한다
+         * @description 남은 원금 이하, 가진 현금 이하만 갚을 수 있다(아니면 400). 다음 달부터 남은 기간의 원리금균등 월 상환액이 줄어든다.
+         *     대기 중인 선택형 이벤트가 있으면 먼저 선택해야 한다 (400).
+         */
+        post: operations["repayMortgage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/games/{gameId}/stocks/{stockCode}/history": {
         parameters: {
             query?: never;
@@ -488,6 +509,11 @@ export interface components {
                 /** @enum {string} */
                 kind: "OMEN" | "ARTICLE" | "CRISIS";
                 text: string;
+                /**
+                 * @description 시장에 플러스(+)·마이너스(−)·중립. 전조와 위기 회고는 늘 NEG, 기사는 내용대로
+                 * @enum {string}
+                 */
+                sentiment: "POS" | "NEG" | "NEUTRAL";
             }[];
             analysis: components["schemas"]["Analysis"];
         };
@@ -570,6 +596,13 @@ export interface components {
         ListingRequest: {
             listed: boolean;
         };
+        RepayRequest: {
+            /**
+             * Format: int64
+             * @description 갚을 원금(원)
+             */
+            amount: number;
+        };
         PendingEvent: {
             /** Format: uuid */
             eventId: string;
@@ -622,7 +655,7 @@ export interface components {
             /** @description 사건이 일어난 게임 일수 */
             day: number;
             /** @enum {string} */
-            kind: "BIRTH" | "TRAIT" | "JOB" | "JOB_WAIT" | "CAREER" | "STYLE" | "OFFER" | "NEWS" | "SHAKE" | "PRICE" | "GROWTH" | "TRADE" | "LIFE" | "MARRIAGE" | "CHILD" | "RETIRE" | "LEVERAGE" | "OMEN" | "ARTICLE" | "CRISIS" | "HOUSING" | "HOME_SOLD" | "TENANT" | "END";
+            kind: "BIRTH" | "TRAIT" | "JOB" | "JOB_WAIT" | "CAREER" | "STYLE" | "OFFER" | "NEWS" | "SHAKE" | "PRICE" | "GROWTH" | "TRADE" | "LIFE" | "MARRIAGE" | "CHILD" | "RETIRE" | "LEVERAGE" | "OMEN" | "ARTICLE" | "CRISIS" | "HOUSING" | "HOME_SOLD" | "TENANT" | "MORTGAGE_REPAY" | "END";
             /** @description 종류별 필드 (docs/superpowers/specs/2026-10-18-ui-redesign-design.md 6.3절) */
             payload: {
                 [key: string]: unknown;
@@ -705,7 +738,7 @@ export interface components {
             option: string;
             /**
              * Format: int64
-             * @description 뉴스의 매수·매도 수량. 생략하면 매수는 현금의 일정 비율, 매도는 전량. 매도는 보유 수량에서 잘리고, 매수는 현금이 모자라면 INSUFFICIENT_CASH. 뉴스가 아니면 무시
+             * @description 뉴스의 매수·매도 수량, 또는 빚투(LEVERAGE)로 빌려 살 수량. 생략하면 뉴스 매수는 현금의 일정 비율, 매도는 전량, 빚투는 최대(순자산의 절반). 매도는 보유 수량에서, 빚투는 최대 대출에서 잘리고, 매수는 현금이 모자라면 INSUFFICIENT_CASH. 그 밖의 이벤트는 무시
              */
             quantity?: number;
         };
@@ -945,6 +978,36 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ListingRequest"];
+            };
+        };
+        responses: {
+            /** @description 판 상태 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Game"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    repayMortgage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gameId: components["parameters"]["GameId"];
+                seq: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RepayRequest"];
             };
         };
         responses: {
