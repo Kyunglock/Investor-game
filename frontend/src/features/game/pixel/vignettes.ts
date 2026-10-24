@@ -40,6 +40,12 @@ export interface Figure {
   x: number
 }
 
+/** 배우자와 아이는 옷·머리 색만 바꿔 플레이어와 구분한다. */
+export const RECOLOR: Record<Exclude<Figure['who'], 'me'>, Record<string, string>> = {
+  spouse: { c: '#b5657a', h: '#5a3a2e' },
+  kid: { c: '#e3b53a', p: '#4f8fd6' },
+}
+
 export interface CreditArt {
   vignette: VignetteKey
   figures: Figure[]

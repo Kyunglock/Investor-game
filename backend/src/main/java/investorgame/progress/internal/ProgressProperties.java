@@ -39,6 +39,8 @@ public record ProgressProperties(
    * @param monthlyFamily 월세(부부·자녀) 보증금·월세
    * @param conversionBpPerMonth 월세 보증금을 덜 내면 모자란 보증금 × 이 비율만큼 월세가 오른다(전월세 전환). 그래서 월세는 언제나 구할 수 있다
    * @param cheongyakPriceBp 청약 분양가 = 서울 아파트 시세 × 이 비율
+   * @param cheongyakDownBp 청약 계약금 = 분양가 × 이 비율. 현금(+돌려받을 보증금)으로 내야 하고, 나머지는 분양 대출(DSR 안에서)
+   *     (decisions.md 48번)
    * @param saleChanceBp 매물이 한 달에 팔릴 확률. 서울 12달 변동이 fallingBp 이하면 saleChanceFallingBp, hotBp 이상이면
    *     saleChanceHotBp
    */
@@ -58,7 +60,8 @@ public record ProgressProperties(
       int saleChanceHotBp,
       int fallingBp,
       int hotBp,
-      int cheongyakPriceBp) {}
+      int cheongyakPriceBp,
+      int cheongyakDownBp) {}
 
   public record Rent(long deposit, long rent) {}
 }

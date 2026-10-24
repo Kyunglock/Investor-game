@@ -329,8 +329,7 @@ class HousingFlow {
       }
       case ChoiceTicket.Housing.APPLY -> {
         long price = prices.get(SEOUL) * rules.cheongyakPriceBp() / BP;
-        Plan won =
-            buyPlan(code, SEOUL, price, rate, cash, returning, income, existingBurden, "분양가");
+        Plan won = cheongyakPlan(code, price, rate, cash, returning, income, existingBurden);
         int chance = cheongyakChanceBp(points);
         yield new Plan(
             code,
@@ -344,8 +343,7 @@ class HousingFlow {
             won.cashNeeded(),
             won.monthlyBurden(),
             "내 가점 %d점 · 당첨 가능성 약 %d%% · %s".formatted(points, chance / 100, won.detail()),
-            // 영끌(현금 + 돌려받을 보증금 + LTV·DSR 한도 주담대)로도 분양가를 못 치르면 청약을 넣을 수 없다 (#26, decisions.md 48번).
-            won.blocked() == null ? null : "영끌해도 청약을 넣을 수 없다. " + won.blocked());
+            won.blocked() == null ? null : "청약을 넣을 수 없다. " + won.blocked());
       }
       case ChoiceTicket.Housing.GAP -> {
         long price = prices.get(SEOUL);
@@ -414,6 +412,53 @@ class HousingFlow {
         "%s %s · 주담대 %s (연 %s) · 필요 현금 %s · 월 원리금 %s"
             .formatted(
                 priceLabel, money(price), money(mortgage), rate(rate), money(need), money(burden)),
+        blocked);
+  }
+
+  /**
+   * 청약 (decisions.md 48번): 계약금(분양가의 cheongyak-down-bp)은 현금(+돌려받을 보증금)으로 내야 하고, 나머지는 분양 대출로 — LTV는
+   * 따지지 않고 DSR 안에서만. DSR이 모자라면 그만큼 현금을 더 내야 한다. 둘 중 하나라도 안 되면 막힌다(그러면 공고 자체가 오지 않는다).
+   */
+  private Plan cheongyakPlan(
+      String code,
+      long price,
+      int rate,
+      long cash,
+      long returning,
+      long income,
+      long existingBurden) {
+    long down = price * rules.cheongyakDownBp() / BP;
+    long available = cash + returning;
+    long room = income * rules.dsrBp() / BP - existingBurden;
+    long perProbe = housing.monthlyPayment(PROBE, rate);
+    long dsr = room <= 0 || perProbe <= 0 ? 0 : room * PROBE / perProbe;
+    long mortgage = round(Math.min(price - down, dsr));
+    long need = price - mortgage;
+    long burden = housing.monthlyPayment(mortgage, rate);
+    String blocked =
+        available < down
+            ? "계약금 %s(분양가의 %d%%)이 모자란다"
+                .formatted(money(down - available), rules.cheongyakDownBp() / 100)
+            : need > available
+                ? (income <= 0
+                    ? "소득이 없어 분양 대출이 안 된다. 현금 %s가 모자란다".formatted(money(need - available))
+                    : "DSR %d%%에 걸려 대출이 %s뿐이다. 현금 %s가 모자란다"
+                        .formatted(rules.dsrBp() / 100, money(mortgage), money(need - available)))
+                : null;
+    return new Plan(
+        code,
+        SEOUL,
+        price,
+        mortgage,
+        0,
+        0,
+        0,
+        0,
+        need,
+        burden,
+        "분양가 %s · 계약금 %s · 분양 대출 %s (연 %s) · 필요 현금 %s · 월 원리금 %s"
+            .formatted(
+                money(price), money(down), money(mortgage), rate(rate), money(need), money(burden)),
         blocked);
   }
 
