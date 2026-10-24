@@ -3,11 +3,11 @@ import { signedWon } from './labels'
 import { toastText } from './notices'
 import { useGameStore } from './store'
 
-const SHOW_MS = 3_000
+const SHOW_MS = 4_000
 
 /**
- * 생활 알림(생활 이벤트·집이 팔림·세입자 교체)을 상단 오른쪽에 3초씩 띄운다. 한꺼번에 오면 하나씩 차례로 보여 준다. 멈추지 않고 지나간다 (경제 개편 설계
- * 11.5절). 세상 소식은 WorldNews가 맡는다 (#24).
+ * 알림 토스트: 생활 이벤트·집이 팔림·세입자 교체·세상 소식(전조·기사·위기 회고)을 상단 오른쪽에 4초씩, 한꺼번에 오면 하나씩 차례로 띄운다. 멈추지 않고
+ * 지나간다 (경제 개편 설계 11.5절). 세상 소식은 수첩의 "요즘 있었던 일"에서 다시 볼 수 있다 (#24, decisions.md 47번).
  */
 export function Toast() {
   const notice = useGameStore((s) => s.notices[0] ?? null)

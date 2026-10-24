@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import type { LogEntry } from '../../api/client'
-import { splitNotices, worldText } from './notices'
+import { noticesOf, worldText } from './notices'
 
 const entry = (seq: number, kind: LogEntry['kind'], payload: Record<string, unknown> = {}) =>
   ({ seq, day: seq * 30, kind, payload }) as LogEntry
 
-describe('splitNotices', () => {
-  it('생활 알림은 토스트로, 전조·기사·위기 회고는 세상 소식으로 나눈다', () => {
-    const { toasts, world } = splitNotices([
+describe('noticesOf', () => {
+  it('생활 알림과 세상 소식(전조·기사·위기 회고)만 토스트로, 매매 같은 것은 빼고, 기록 순서대로', () => {
+    const picked = noticesOf([
       entry(1, 'LIFE'),
       entry(2, 'OMEN'),
       entry(3, 'ARTICLE'),
@@ -15,8 +15,7 @@ describe('splitNotices', () => {
       entry(5, 'HOME_SOLD'),
       entry(6, 'CRISIS'),
     ])
-    expect(toasts.map((e) => e.seq)).toEqual([1, 5])
-    expect(world.map((e) => e.seq)).toEqual([2, 3, 6])
+    expect(picked.map((e) => e.seq)).toEqual([1, 2, 3, 5, 6])
   })
 })
 
