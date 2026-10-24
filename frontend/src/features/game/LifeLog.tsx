@@ -16,17 +16,17 @@ const TONE_CLASS: Record<LogTone, string> = {
   offer: '',
 }
 
-/** 최근 순 인생 기록 (설계 5.5절). 30줄이 넘으면 나머지는 접는다. */
+/** 결과 화면의 인생 기록. 태어난 날부터 시간순 (#22). 30줄이 넘으면 나머지는 접는다. */
 export function LifeLog({ game, title = '인생 기록' }: { game: Game; title?: string }) {
-  const lines = logLines(game)
+  const lines = logLines(game, 'oldest')
   const shown = lines.slice(0, VISIBLE)
   const rest = lines.slice(VISIBLE)
 
   return (
-    <Card title={title} aside="최근 순" testId="life-log">
+    <Card title={title} aside="시간순" testId="life-log">
       <ul className="m-0 list-none p-0">
         {shown.map((line, i) => (
-          <Line key={line.seq} line={line} kind={game.log[game.log.length - 1 - i]?.kind} />
+          <Line key={line.seq} line={line} kind={game.log[i]?.kind} />
         ))}
       </ul>
       {rest.length > 0 && (
@@ -34,11 +34,7 @@ export function LifeLog({ game, title = '인생 기록' }: { game: Game; title?:
           <summary className="cursor-pointer py-1">더 보기 ({rest.length}줄)</summary>
           <ul className="m-0 list-none p-0">
             {rest.map((line, i) => (
-              <Line
-                key={line.seq}
-                line={line}
-                kind={game.log[game.log.length - 1 - VISIBLE - i]?.kind}
-              />
+              <Line key={line.seq} line={line} kind={game.log[VISIBLE + i]?.kind} />
             ))}
           </ul>
         </details>

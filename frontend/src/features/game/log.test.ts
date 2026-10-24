@@ -443,7 +443,7 @@ describe('logLine', () => {
 })
 
 describe('logLines', () => {
-  it('최근 순으로 뒤집는다', () => {
+  it('기본은 최근 순, oldest면 시간순', () => {
     const g = {
       ...game,
       log: [
@@ -452,6 +452,7 @@ describe('logLines', () => {
       ],
     } as unknown as Game
     expect(logLines(g).map((l) => l.seq)).toEqual([2, 1])
+    expect(logLines(g, 'oldest').map((l) => l.seq)).toEqual([1, 2])
   })
 })
 
