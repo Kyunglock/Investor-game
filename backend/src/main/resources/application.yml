@@ -173,7 +173,7 @@ asset:
     max-unit: 50
     unit: 1000000
   # 빚(마이너스 통장) 월 이자 1% (경제 개편 설계 6.4절)
-  debt-interest-bp: 100
+  debt-interest-bp: 150
 
 household:
   # 가계 (경제 개편 설계 7.2절·13절). 금액은 원. 물가는 취업 나이(24)부터 연 2% 복리. 60세 은퇴

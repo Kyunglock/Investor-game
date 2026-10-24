@@ -156,7 +156,7 @@ function Household({ game }: { game: Game }) {
             {game.debt > 0 && (
               <tr>
                 <th scope="row" className="border-b border-[#a6acb8] py-1 text-left font-normal">
-                  빚 <span className="text-[12px] text-pen-soft">월 1% 이자</span>
+                  빚 <span className="text-[12px] text-pen-soft">월 1.5% 이자</span>
                 </th>
                 <td className="border-b border-[#a6acb8] text-right text-red-pen">
                   {won(game.debt)}
