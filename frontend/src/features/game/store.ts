@@ -17,7 +17,7 @@ import {
   shouldReport,
   totalDays,
 } from './clock'
-import { noticesOf } from './notices'
+import { crisisOf, noticesOf } from './notices'
 
 /** revealing: 태어나서 능력치가 공개되는 중. 사용자가 "인생 시작하기"를 누르면 playing이 된다. */
 type Status = 'loading' | 'none' | 'revealing' | 'playing' | 'ended' | 'error'
@@ -56,6 +56,8 @@ interface GameState {
   histories: Record<string, StockHistory>
   /** 아직 보여 주지 않은 알림(생활·세상 소식). 토스트가 맨 앞을 잠시 보여 주고 지운다. 한꺼번에 와도 덮이지 않는다 (#24). */
   notices: LogEntry[]
+  /** 방금 드러난 위기 회고. 떠 있는 동안 시계가 멈추고, 확인을 누르면 닫힌다 (decisions.md 60번). */
+  crisisAlert: LogEntry | null
   load: () => Promise<void>
   born: () => Promise<void>
   startLife: () => void
@@ -73,6 +75,7 @@ interface GameState {
   selectStock: (code: string) => Promise<void>
   trade: (side: TradeSide, quantity: number) => Promise<void>
   dismissNotice: () => void
+  dismissCrisis: () => void
   /** 가진 아파트를 매물로 내놓거나 거둔다. 팔리는 것은 매수자가 나와야 한다 (주거 설계 3절). */
   listHome: (seq: number, listed: boolean) => Promise<void>
   /** 주담대를 현금으로 일시 상환한다 (decisions.md 58번). 실패하면 이유를 돌려준다. */
@@ -89,16 +92,20 @@ export const useGameStore = create<GameState>((set, get) => {
       const sameGame = state.game?.gameId === game.gameId
       const knownSeqs = new Set(sameGame ? state.game?.log.map((e) => e.seq) : [])
       // 알림은 판을 멈추지 않고 토스트로 차례로 지나간다. 자세한 것은 수첩의 "요즘 있었던 일"에 남는다 (#24).
-      const toasts = noticesOf(sameGame ? game.log.filter((e) => !knownSeqs.has(e.seq)) : [])
+      const fresh = sameGame ? game.log.filter((e) => !knownSeqs.has(e.seq)) : []
+      const toasts = noticesOf(fresh)
+      const crisis = crisisOf(fresh) ?? state.crisisAlert
       // 대기 중인 선택이 생겨도 열려 있는 매매창은 닫지 않는다. 창을 닫은 뒤에 선택이 보인다 (매매창 설계 2절).
       const marketOpen = state.marketOpen && game.status === 'ACTIVE'
       return {
         status: game.status === 'ENDED' ? 'ended' : 'playing',
         game,
         day: Math.max(sameGame ? state.day : 0, game.day),
-        running: keepRunning && game.status === 'ACTIVE' && !game.pendingEvent && !marketOpen,
+        running:
+          keepRunning && game.status === 'ACTIVE' && !game.pendingEvent && !marketOpen && !crisis,
         marketOpen,
         notices: [...state.notices, ...toasts],
+        crisisAlert: crisis,
       }
     })
 
@@ -180,6 +187,7 @@ export const useGameStore = create<GameState>((set, get) => {
     trading: false,
     histories: {},
     notices: [],
+    crisisAlert: null,
 
     // 재접속하면 일시정지 상태로 이어한다. 상황을 보고 사용자가 계속을 누른다 (architecture.md 7절).
     load: async () => {
@@ -209,6 +217,7 @@ export const useGameStore = create<GameState>((set, get) => {
         analyses: {},
         cachedMonth: null,
         notices: [],
+        crisisAlert: null,
       })
       await api.POST('/api/sessions')
       const { data } = await api.POST('/api/games')
@@ -297,8 +306,15 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     resume: () => {
-      const { game, outcome, marketOpen } = get()
-      if (game && game.status === 'ACTIVE' && !game.pendingEvent && !outcome && !marketOpen) {
+      const { game, outcome, marketOpen, crisisAlert } = get()
+      if (
+        game &&
+        game.status === 'ACTIVE' &&
+        !game.pendingEvent &&
+        !outcome &&
+        !marketOpen &&
+        !crisisAlert
+      ) {
         set({ running: true })
       }
     },
@@ -395,6 +411,12 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     dismissNotice: () => set((state) => ({ notices: state.notices.slice(1) })),
+
+    // 회고를 닫으면 멈췄던 시계를 다시 돌린다 (선택 카드·매매창이 없을 때).
+    dismissCrisis: () => {
+      set({ crisisAlert: null })
+      get().resume()
+    },
 
     repayMortgage: async (seq, amount) => {
       const { game } = get()

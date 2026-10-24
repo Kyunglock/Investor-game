@@ -1,4 +1,5 @@
 import type { Game } from '../../api/client'
+import { CrisisCard } from './CrisisCard'
 import { ageAt } from './clock'
 import { DecisionCard } from './DecisionCard'
 import { DiaryPage } from './DiaryPage'
@@ -19,13 +20,16 @@ export function GameScreen({ game }: { game: Game }) {
   const outcome = useGameStore((s) => s.outcome)
   const choosing = useGameStore((s) => s.choosing)
   const marketOpen = useGameStore((s) => s.marketOpen)
-  const { choose, revealOutcome, dismissOutcome } = useGameStore.getState()
+  const crisisAlert = useGameStore((s) => s.crisisAlert)
+  const { choose, revealOutcome, dismissOutcome, dismissCrisis } = useGameStore.getState()
 
   return (
     <>
       {marketOpen && <MarketPanel game={game} />}
       {outcome ? (
         <OutcomeCard outcome={outcome} onReveal={revealOutcome} onContinue={dismissOutcome} />
+      ) : crisisAlert ? (
+        <CrisisCard entry={crisisAlert} game={game} onDone={dismissCrisis} />
       ) : game.pendingEvent ? (
         <DecisionCard
           event={game.pendingEvent}
