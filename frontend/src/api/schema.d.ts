@@ -587,7 +587,7 @@ export interface components {
             spark?: number[] | null;
             title: string;
             body: string;
-            /** @description 안목에 따른 애매한 힌트 문구. 뉴스일 때 */
+            /** @description 안목에 따른 힌트. 뉴스는 방향 힌트(안목이 높을수록 종목·섹터·폭을 짚는다) */
             hint?: string | null;
             /** @description 줏대를 흔드는 다른 뉴스. 뉴스일 때 */
             sway?: string | null;

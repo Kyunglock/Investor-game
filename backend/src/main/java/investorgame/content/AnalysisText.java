@@ -1,5 +1,6 @@
 package investorgame.content;
 
+import investorgame.common.Hint;
 import java.util.List;
 import java.util.Map;
 
@@ -32,13 +33,7 @@ public record AnalysisText(
   public static final List<String> MACRO_READINGS = List.of("HOT", "STABLE", "COLD");
 
   public static String templateTier(int insight) {
-    if (insight < 30) {
-      return "low";
-    }
-    if (insight < 60) {
-      return "mid";
-    }
-    return insight < 80 ? "high" : "expert";
+    return Hint.Detail.of(insight).key();
   }
 
   public static String remarkTier(int insight) {

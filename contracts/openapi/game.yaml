@@ -522,7 +522,7 @@ components:
           items: { type: integer, format: int64 }
         title: { type: string }
         body: { type: string }
-        hint: { type: [string, 'null'], description: 안목에 따른 애매한 힌트 문구. 뉴스일 때 }
+        hint: { type: [string, 'null'], description: 안목에 따른 힌트. 뉴스는 방향 힌트(안목이 높을수록 종목·섹터·폭을 짚는다), 빚투 제안은 그 종목의 안목 해석 }
         sway: { type: [string, 'null'], description: 줏대를 흔드는 다른 뉴스. 뉴스일 때 }
         options:
           type: array

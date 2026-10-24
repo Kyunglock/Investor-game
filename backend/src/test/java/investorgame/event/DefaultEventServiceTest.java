@@ -38,7 +38,7 @@ class DefaultEventServiceTest {
       new HousingFacts("OWN", null, 2, true, false, null, 0, 50);
 
   private static final HintProvider HINTS =
-      (truth, seq) -> new Hint(HintDirection.NEUTRAL, HintStrength.MILD);
+      (truth, seq) -> new Hint(HintDirection.NEUTRAL, HintStrength.MILD, Hint.Detail.LOW);
 
   @Autowired EventService events;
   @Autowired ContentCatalog content;
@@ -720,6 +720,27 @@ class DefaultEventServiceTest {
     return ((ChoiceTicket.Housing) ticket.effect()).fraud();
   }
 
+  /** 안목이 높은 힌트는 종목·섹터·이 뉴스가 보통 움직이는 폭을 짚어 말한다 (decisions.md 53번). 자리표시는 전부 채워진다. */
+  @Test
+  void 전문가_힌트는_종목과_폭을_짚고_자리표시가_남지_않는다() {
+    HintProvider expert =
+        (truth, seq) -> new Hint(HintDirection.UP, HintStrength.STRONG, Hint.Detail.EXPERT);
+    SchedulingContext investing = investing(List.of(), Map.of());
+    EventView news =
+        nextOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 7L, expert)
+            .orElseThrow();
+    String stockName = content.stock(news.stockCode()).name();
+    assertThat(news.hintText()).isNotNull().doesNotContain("{");
+    assertThat(news.hintText())
+        .satisfiesAnyOf(
+            t -> assertThat(t).contains(stockName).contains("%"),
+            t -> assertThat(t).contains(content.sectorName(news.sectorCode())));
+
+    EventView vague =
+        nextOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 7L).orElseThrow();
+    assertThat(vague.hintText()).isIn("글쎄…", "잘 모르겠다");
+  }
+
   private static SchedulingContext housed(HousingFacts facts, Integer marriedDay) {
     return new SchedulingContext(
         Phase.SAVING,
@@ -810,6 +831,16 @@ class DefaultEventServiceTest {
 
   private Optional<EventView> nextOf(
       UUID gameId, SchedulingContext context, int fromDay, EventKind kind, long seed) {
+    return nextOf(gameId, context, fromDay, kind, seed, HINTS);
+  }
+
+  private Optional<EventView> nextOf(
+      UUID gameId,
+      SchedulingContext context,
+      int fromDay,
+      EventKind kind,
+      long seed,
+      HintProvider hints) {
     HashSeededRandom random = new HashSeededRandom(seed);
     int from = fromDay;
     for (int i = 0; i < 200; i++) {
@@ -818,7 +849,7 @@ class DefaultEventServiceTest {
         return Optional.empty();
       }
       ScheduleResult result =
-          events.schedule(gameId, context, from, next.getAsInt(), random, HINTS);
+          events.schedule(gameId, context, from, next.getAsInt(), random, hints);
       if (result.pending().isPresent()) {
         EventView view = result.pending().get();
         if (view.kind() == kind) {

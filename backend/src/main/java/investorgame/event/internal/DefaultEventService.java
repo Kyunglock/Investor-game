@@ -818,7 +818,8 @@ class DefaultEventService implements EventService {
     int swayIndex = rng.nextInt(content.swayPhrases(sway.name()).size());
 
     Hint hint = hints.hintFor(truth, seq);
-    List<String> hintPhrases = content.hintPhrases(hint.direction().name(), hint.strength().name());
+    List<String> hintPhrases =
+        content.hintPhrases(hint.detail().key(), hint.direction().name(), hint.strength().name());
     int hintIndex = random.forKey("event", "hint", seq).nextInt(hintPhrases.size());
 
     return new EventRow(
@@ -833,7 +834,7 @@ class DefaultEventService implements EventService {
         EventRow.PENDING,
         truth.name(),
         magnitude,
-        hint.direction() + "." + hint.strength() + "." + hintIndex,
+        hint.direction() + "." + hint.strength() + "." + hint.detail().key() + "." + hintIndex,
         sway.name(),
         sway.name() + "." + swayIndex,
         NEWS_OPTIONS);
