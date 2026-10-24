@@ -56,6 +56,8 @@ interface GameState {
   histories: Record<string, StockHistory>
   /** 아직 보여 주지 않은 알림(생활·세상 소식). 토스트가 맨 앞을 잠시 보여 주고 지운다. 한꺼번에 와도 덮이지 않는다 (#24). */
   notices: LogEntry[]
+  /** 투자 성향 보고서를 펼쳤는가. 펼친 동안 시계가 멈춘다 (decisions.md 61번). */
+  reportOpen: boolean
   load: () => Promise<void>
   born: () => Promise<void>
   startLife: () => void
@@ -73,6 +75,8 @@ interface GameState {
   selectStock: (code: string) => Promise<void>
   trade: (side: TradeSide, quantity: number) => Promise<void>
   dismissNotice: () => void
+  openReport: () => void
+  closeReport: () => void
   /** 가진 아파트를 매물로 내놓거나 거둔다. 팔리는 것은 매수자가 나와야 한다 (주거 설계 3절). */
   listHome: (seq: number, listed: boolean) => Promise<void>
   /** 주담대를 현금으로 일시 상환한다 (decisions.md 58번). 실패하면 이유를 돌려준다. */
@@ -180,6 +184,7 @@ export const useGameStore = create<GameState>((set, get) => {
     trading: false,
     histories: {},
     notices: [],
+    reportOpen: false,
 
     // 재접속하면 일시정지 상태로 이어한다. 상황을 보고 사용자가 계속을 누른다 (architecture.md 7절).
     load: async () => {
@@ -395,6 +400,16 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     dismissNotice: () => set((state) => ({ notices: state.notices.slice(1) })),
+
+    // 보고서를 읽는 동안은 시계를 멈추고, 닫으면 다시 돌린다 (선택 카드·매매창이 없을 때).
+    openReport: () => {
+      get().pause()
+      set({ reportOpen: true })
+    },
+    closeReport: () => {
+      set({ reportOpen: false })
+      get().resume()
+    },
 
     repayMortgage: async (seq, amount) => {
       const { game } = get()
