@@ -265,6 +265,8 @@ event:
     surge-bp: 1500
     # 집이 없으면 1년 반마다 서울 분양 공고(청약). 가점으로 당첨을 굴린다 (decisions.md 42번)
     cheongyak-gap-days: 540
+    # 세 만기에 집주인이 재계약을 거절할 확률. 운 0이면 35%, 운 100이면 5%, 그 사이는 직선 (#25, decisions.md 49번)
+    refuse-bp: { unlucky: 3500, lucky: 500 }
   # 40년 동안 뉴스마다 선택해야 하므로 단기 약 80번, 장기 약 40번이 되도록 잡았다 (specs/event.md 7절).
   styles:
     short:

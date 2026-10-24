@@ -73,7 +73,7 @@ class HousingFlow {
   }
 
   /** 주거 이벤트를 정하는 사실. */
-  HousingFacts facts(UUID gameId, HouseholdView home) {
+  HousingFacts facts(UUID gameId, HouseholdView home, int luck) {
     HousingView view = housing.get(gameId);
     List<Integer> births = home.childBirthDays();
     return new HousingFacts(
@@ -83,7 +83,8 @@ class HousingFlow {
         view.ownsResidence(),
         view.tenure() == Tenure.VILLA_JEONSE && !view.insured(),
         births.isEmpty() ? null : births.getLast(),
-        seoulChange(gameId));
+        seoulChange(gameId),
+        luck);
   }
 
   /** 집 시세 + 내 보증금 − 주담대 − 전세대출 − 세입자 보증금. 총자산에 더한다. */
@@ -481,6 +482,9 @@ class HousingFlow {
     int day = ticket.occursDay();
     HousingView before = housing.get(gameId);
     StringBuilder message = new StringBuilder();
+    if (ChoiceTicket.Housing.LEASE_REFUSED.equals(effect.definition())) {
+      message.append("집주인이 재계약을 거절해 집을 옮겼다. ");
+    }
     Map<String, Object> payloadExtra = new LinkedHashMap<>();
     long lost = 0;
     if (effect.fraud()) {

@@ -44,6 +44,10 @@ public record ChoiceTicket(
   public record Housing(String definition, boolean fraud) implements Effect {
     public static final String MOVE_OUT = "move-out";
     public static final String LEASE_END = "lease-end";
+
+    /** 세 만기에 집주인이 재계약을 거절했다. 만기와 같지만 '2년 더 살기'가 없다. 운이 나쁠수록 잦다 (#25). */
+    public static final String LEASE_REFUSED = "lease-refused";
+
     public static final String BUY = "buy";
     public static final String CHEONGYAK = "cheongyak";
     public static final String APPLY = "APPLY";

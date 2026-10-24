@@ -1251,7 +1251,7 @@ class DefaultProgressService implements ProgressService {
         assets.get(game.id()).holdings().keySet().stream().sorted().toList(),
         character.fullTimeInvestorDay() != null,
         heldDropBp(game.id()),
-        housingFlow.facts(game.id(), home));
+        housingFlow.facts(game.id(), home, character.stats().luck()));
   }
 
   /** 보유 종목별 최근 12달 고점 대비 낙폭(만분율). 빚투 제안의 근거다 (decisions.md 39번). */

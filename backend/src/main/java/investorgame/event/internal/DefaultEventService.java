@@ -657,7 +657,16 @@ class DefaultEventService implements EventService {
       options.add(ChoiceTicket.Housing.APPLY);
       options.add(ChoiceTicket.Housing.PASS);
     } else if (ChoiceTicket.Housing.LEASE_END.equals(definition)) {
-      options.add(ChoiceTicket.Housing.KEEP);
+      // 전세사기가 아니면 운에 따라 집주인이 재계약을 거절한다. 그러면 '2년 더 살기' 없이 옮길 곳만 고른다 (#25).
+      boolean refused =
+          !(housing.villaUninsured() && fraud(seq, random))
+              && random.forKey("event", "housing", "refuse", seq).nextInt(BP)
+                  < refuseBp(housing.luck());
+      if (refused) {
+        definition = ChoiceTicket.Housing.LEASE_REFUSED;
+      } else {
+        options.add(ChoiceTicket.Housing.KEEP);
+      }
       options.addAll(ChoiceTicket.Housing.RENTALS);
       if (roomForHome) {
         options.add(ChoiceTicket.Housing.BUY_SEOUL);
@@ -675,8 +684,7 @@ class DefaultEventService implements EventService {
     boolean fraud =
         ChoiceTicket.Housing.LEASE_END.equals(definition)
             && housing.villaUninsured()
-            && random.forKey("event", "housing", "fraud", seq).nextInt(BP)
-                < properties.housing().fraudBp();
+            && fraud(seq, random);
     return new EventRow(
         id,
         seq,
@@ -693,6 +701,17 @@ class DefaultEventService implements EventService {
         null,
         null,
         List.copyOf(options));
+  }
+
+  private boolean fraud(int seq, SeededRandom random) {
+    return random.forKey("event", "housing", "fraud", seq).nextInt(BP)
+        < properties.housing().fraudBp();
+  }
+
+  private int refuseBp(int luck) {
+    EventProperties.Refuse refuse = properties.housing().refuseBp();
+    int clamped = Math.clamp(luck, 0, 100);
+    return refuse.unlucky() - (refuse.unlucky() - refuse.lucky()) * clamped / 100;
   }
 
   /** 빚투 제안. 가장 많이 빠진 보유 종목을 묻고, 낙폭은 제목에 쓰도록 남긴다. 숨은 방향은 없다: 그 뒤는 시장이 정한다. */

@@ -10,6 +10,7 @@ package investorgame.event;
  * @param villaUninsured 보증보험 없이 빌라 전세를 사는가. 만기 때 전세사기를 당할 수 있다
  * @param lastChildDay 막내가 태어난 날. 자녀가 없으면 null
  * @param seoulChange12mBp 서울 아파트 12달 변동(만분율). 크게 오르면 "집 살까?"가 온다
+ * @param luck 운(0~100). 운이 나쁠수록 세 만기에 집주인이 재계약을 거절하기 쉽다 (#25)
  */
 public record HousingFacts(
     String tenure,
@@ -18,8 +19,9 @@ public record HousingFacts(
     boolean ownsResidence,
     boolean villaUninsured,
     Integer lastChildDay,
-    int seoulChange12mBp) {
+    int seoulChange12mBp,
+    int luck) {
 
   public static final HousingFacts PARENTS =
-      new HousingFacts("PARENTS", null, 0, false, false, null, 0);
+      new HousingFacts("PARENTS", null, 0, false, false, null, 0, 50);
 }

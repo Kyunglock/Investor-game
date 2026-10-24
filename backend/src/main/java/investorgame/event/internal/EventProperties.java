@@ -97,8 +97,13 @@ public record EventProperties(
    * @param buyGapDays "집 살까?" 사이 최소 간격(일)
    * @param surgeBp 서울 아파트가 12달 새 이만큼 넘게 오르면 "집 살까?"가 온다
    * @param cheongyakGapDays 집이 없으면 이 간격으로 청약 공고가 온다(처음은 독립하고 이만큼 뒤)
+   * @param refuseBp 세 만기에 집주인이 재계약을 거절할 확률(만분율). 운 0이면 unlucky, 100이면 lucky, 그 사이는 직선 (#25)
    */
-  public record HousingSettings(int fraudBp, int buyGapDays, int surgeBp, int cheongyakGapDays) {}
+  public record HousingSettings(
+      int fraudBp, int buyGapDays, int surgeBp, int cheongyakGapDays, Refuse refuseBp) {}
+
+  /** 운에 따른 재계약 거절 확률의 양 끝(만분율). */
+  public record Refuse(int unlucky, int lucky) {}
 
   /** 단기는 뉴스가 자주·크게, 장기는 드물게 (decisions.md 3번). */
   public record StyleSettings(Range newsGapDays, int magnitudePercent) {}
