@@ -9,6 +9,7 @@ import investorgame.common.Hint.HintDirection;
 import investorgame.common.Hint.HintStrength;
 import investorgame.common.Phase;
 import investorgame.common.random.HashSeededRandom;
+import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
@@ -64,7 +65,8 @@ class DefaultEventServiceTest {
             List.of(),
             false,
             Map.of(),
-            SETTLED);
+            SETTLED,
+            0L);
     EventView a = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
     EventView b = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
 
@@ -204,7 +206,8 @@ class DefaultEventServiceTest {
             List.of(),
             false,
             Map.of(),
-            SETTLED);
+            SETTLED,
+            0L);
     HashSeededRandom random = new HashSeededRandom(2L);
     int from = JOB_DAY;
     int notices = 0;
@@ -259,7 +262,8 @@ class DefaultEventServiceTest {
         List.of(),
         false,
         Map.of(),
-        SETTLED);
+        SETTLED,
+        0L);
   }
 
   /** 직장 체계 (decisions.md 26번): 직업이 있으면 직장 장면이, 실직 중이면 재취업 선택이 온다. */
@@ -293,14 +297,15 @@ class DefaultEventServiceTest {
             List.of(),
             false,
             Map.of(),
-            SETTLED);
+            SETTLED,
+            0L);
     EventView rehire = firstOf(jobless, unemployed, JOB_DAY + 30, EventKind.JOB, 7L);
     assertThat(rehire.title()).isEqualTo(content.jobRehireText().title());
     assertThat(rehire.options()).extracting(EventView.Option::code).contains("WAIT");
   }
 
   @Test
-  void 직업_선택에는_언제나_전업투자자가_있고_전업투자자에게는_직업과_직장_이벤트가_없다() {
+  void 직업_선택에는_언제나_전업투자자가_있고_전업투자자에게는_직업_선택_대신_투자자의_장면이_온다() {
     SchedulingContext jobless =
         new SchedulingContext(
             Phase.SAVING,
@@ -321,7 +326,8 @@ class DefaultEventServiceTest {
             List.of(),
             false,
             Map.of(),
-            SETTLED);
+            SETTLED,
+            0L);
     EventView rehire = firstOf(UUID.randomUUID(), jobless, JOB_DAY + 30, EventKind.JOB, 7L);
     assertThat(rehire.options())
         .last()
@@ -347,9 +353,11 @@ class DefaultEventServiceTest {
             List.of(),
             true,
             Map.of(),
-            SETTLED);
+            SETTLED,
+            0L);
     assertThat(nextOf(UUID.randomUUID(), investor, JOB_DAY, EventKind.JOB, 3L)).isEmpty();
-    assertThat(nextOf(UUID.randomUUID(), investor, JOB_DAY, EventKind.CAREER, 3L)).isEmpty();
+    EventView scene = firstOf(UUID.randomUUID(), investor, JOB_DAY, EventKind.CAREER, 3L);
+    assertThat(careerOf(scene).jobs()).containsExactly("INVEST");
   }
 
   @Test
@@ -375,7 +383,8 @@ class DefaultEventServiceTest {
             List.of(),
             false,
             Map.of(),
-            SETTLED);
+            SETTLED,
+            0L);
     int from = (60 - START_AGE) * YEAR;
     assertThat(nextOf(gameId, retired, from, EventKind.JOB, 3L)).isEmpty();
     assertThat(nextOf(UUID.randomUUID(), retired, from, EventKind.CAREER, 3L)).isEmpty();
@@ -404,7 +413,8 @@ class DefaultEventServiceTest {
             List.of(),
             false,
             Map.of(),
-            SETTLED);
+            SETTLED,
+            0L);
     List<String> seen = new ArrayList<>();
     int from = JOB_DAY;
     for (Optional<EventView> trait = nextOf(gameId, retired, from, EventKind.TRAIT, 5L);
@@ -422,18 +432,189 @@ class DefaultEventServiceTest {
                 .toList());
   }
 
-  private static String careerCode(EventView view) {
+  private String careerCode(EventView view) {
     // 렌더링된 뷰에는 정의 코드가 없으므로 제목으로 찾는다.
-    return CAREER_TITLES.getOrDefault(view.title(), view.title());
+    return careerOf(view).code();
   }
 
-  private static final java.util.Map<String, String> CAREER_TITLES =
-      java.util.Map.of(
-          "연봉 협상", "raise",
-          "승진 심사", "promotion",
-          "이직 제안", "headhunt",
-          "구조조정", "layoff",
-          "번아웃", "burnout");
+  private CareerDefinition careerOf(EventView view) {
+    return content.careers().stream()
+        .filter(c -> c.title().equals(view.title()))
+        .findFirst()
+        .orElseThrow();
+  }
+
+  private SchedulingContext workingAs(String jobCode) {
+    return new SchedulingContext(
+        Phase.SAVING,
+        START_AGE,
+        "long",
+        "food",
+        null,
+        true,
+        null,
+        END_DAY,
+        JOB_DAY,
+        jobCode,
+        JOB_DAY,
+        false,
+        false,
+        null,
+        0,
+        List.of(),
+        false,
+        Map.of(),
+        SETTLED,
+        0L);
+  }
+
+  /** 직장 생활 내내 나온 직장 장면을 (나이, 장면) 순서로 모은다. 다른 이벤트는 넘긴다. */
+  private List<Map.Entry<Integer, CareerDefinition>> careerLife(String jobCode, long seed) {
+    return careerLife(workingAs(jobCode), seed);
+  }
+
+  private List<Map.Entry<Integer, CareerDefinition>> careerLife(
+      SchedulingContext context, long seed) {
+    UUID gameId = UUID.randomUUID();
+    List<Map.Entry<Integer, CareerDefinition>> seen = new ArrayList<>();
+    int from = JOB_DAY;
+    while (true) {
+      Optional<EventView> next = nextOf(gameId, context, from, EventKind.CAREER, seed);
+      if (next.isEmpty()) {
+        return seen;
+      }
+      EventView view = next.get();
+      seen.add(Map.entry(START_AGE + view.occursDay() / YEAR, careerOf(view)));
+      events.complete(gameId, view.eventId(), new Completion("HOLD", "HOLD", List.of()));
+      from = view.occursDay();
+    }
+  }
+
+  /** decisions.md 51번: 직업마다 장면이 다르고, 나이가 차면 그 나이의 장면이 온다. */
+  @Test
+  void 직장_장면은_그_직업과_나이에_맞는_것만_나온다() {
+    for (var job : content.jobs()) {
+      for (long seed = 1; seed <= 3; seed++) {
+        for (var entry : careerLife(job.code(), seed)) {
+          assertThat(entry.getValue().fits(job.code(), entry.getKey(), 0L))
+              .as("%s %d세 %s", job.code(), entry.getKey(), entry.getValue().code())
+              .isTrue();
+        }
+      }
+    }
+  }
+
+  @Test
+  void 대기업은_40대에_실적_압박이_50대에_권고사직이_자주_온다() {
+    int pressure40s = 0;
+    int all40s = 0;
+    int exit50s = 0;
+    int all50s = 0;
+    for (long seed = 1; seed <= 20; seed++) {
+      for (var entry : careerLife("bigcorp", seed)) {
+        int age = entry.getKey();
+        String code = entry.getValue().code();
+        if (age >= 40 && age <= 49) {
+          all40s++;
+          pressure40s += code.equals("big-pressure") ? 1 : 0;
+        } else if (age >= 50) {
+          all50s++;
+          exit50s += code.equals("big-exit") ? 1 : 0;
+        }
+        assertThat(code).as("대기업에는 공무원 장면이 없다").doesNotStartWith("cs-");
+      }
+    }
+    // 직전 장면은 다시 안 나오므로 많아야 절반 남짓이다. 그래도 그 나이대의 가장 흔한 장면이어야 한다.
+    assertThat(pressure40s * 3).isGreaterThan(all40s);
+    assertThat(exit50s * 3).isGreaterThan(all50s);
+  }
+
+  /** decisions.md 52번: 권고사직을 거절했다가 판정에 지면 대기발령이 이어서 온다. */
+  @Test
+  void 권고사직을_거절했다가_밀리면_대기발령이_이어진다() {
+    UUID gameId = UUID.randomUUID();
+    SchedulingContext context = workingAs("bigcorp");
+    int from = (50 - START_AGE) * YEAR;
+    EventView exit = null;
+    for (int i = 0; i < 20 && exit == null; i++) {
+      EventView next = firstOf(gameId, context, from, EventKind.CAREER, 5L);
+      if (careerCode(next).equals("big-exit")) {
+        exit = next;
+      } else {
+        events.complete(gameId, next.eventId(), new Completion("HOLD", "HOLD", List.of()));
+        from = next.occursDay();
+      }
+    }
+    assertThat(exit).isNotNull();
+    events.complete(gameId, exit.eventId(), new Completion("hold", "hold!fail", List.of()));
+    EventView standby = firstOf(gameId, context, exit.occursDay(), EventKind.CAREER, 5L);
+    assertThat(careerCode(standby)).isEqualTo("big-standby");
+    assertThat(standby.occursDay()).isEqualTo(exit.occursDay() + 120);
+  }
+
+  /** decisions.md 52번: 여의도 증권사 설립은 순자산 10억부터, 직접 세운 회사는 직업 선택에 나오지 않는다. */
+  @Test
+  void 전업투자자는_자산이_받쳐_줄_때만_증권사를_세울_수_있다() {
+    SchedulingContext poor = investorWith(0L);
+    SchedulingContext rich = investorWith(1_500_000_000L);
+    boolean richFounds = false;
+    for (long seed = 1; seed <= 5; seed++) {
+      assertThat(careerLife(poor, seed))
+          .extracting(e -> e.getValue().code())
+          .isNotEmpty()
+          .doesNotContain("inv-yeouido", "inv-fund", "inv-book");
+      for (var entry : careerLife(rich, seed)) {
+        assertThat(entry.getValue().jobs()).containsExactly("INVEST");
+        richFounds |= entry.getValue().code().equals("inv-yeouido");
+      }
+    }
+    assertThat(richFounds).isTrue();
+    for (long seed = 1; seed <= 10; seed++) {
+      EventView offer =
+          firstOf(UUID.randomUUID(), investorWith(0L, false), JOB_DAY + 30, EventKind.JOB, seed);
+      assertThat(offer.options())
+          .extracting(EventView.Option::code)
+          .doesNotContain("securities-ceo");
+    }
+  }
+
+  private SchedulingContext investorWith(long netWorth) {
+    return investorWith(netWorth, true);
+  }
+
+  /** fullTimeInvestor가 false면 직업이 없는 구직자다(재취업 선택이 온다). */
+  private SchedulingContext investorWith(long netWorth, boolean fullTimeInvestor) {
+    return new SchedulingContext(
+        Phase.INVESTING,
+        START_AGE,
+        "long",
+        "food",
+        null,
+        true,
+        JOB_DAY,
+        END_DAY,
+        null,
+        null,
+        JOB_DAY,
+        false,
+        false,
+        null,
+        0,
+        List.of(),
+        fullTimeInvestor,
+        Map.of(),
+        SETTLED,
+        netWorth);
+  }
+
+  @Test
+  void 공무원에게는_구조조정이_오지_않는다() {
+    for (long seed = 1; seed <= 10; seed++) {
+      assertThat(careerLife("civil-servant", seed))
+          .extracting(e -> e.getValue().code())
+          .doesNotContain("layoff", "headhunt", "raise");
+    }
+  }
 
   /** fromDay부터 알림을 건너뛰며 kind의 선택형 이벤트가 PENDING으로 나올 때까지 진행한다. */
   /** 빚투 (decisions.md 39번): 든 종목이 12달 고점보다 30% 넘게 빠졌을 때만, 가장 많이 빠진 종목으로 묻는다. */
@@ -559,7 +740,8 @@ class DefaultEventServiceTest {
         List.of(),
         false,
         Map.of(),
-        facts);
+        facts,
+        0L);
   }
 
   private static SchedulingContext investing(List<String> held, Map<String, Integer> drops) {
@@ -582,7 +764,8 @@ class DefaultEventServiceTest {
         held,
         false,
         drops,
-        SETTLED);
+        SETTLED,
+        0L);
   }
 
   /** 보유가 있으면 투자기에 흔들림이 오고, 흔들리는 종목은 보유 중 하나이며 선택지는 버틴다·판다다 (decisions.md 33번). */
@@ -609,7 +792,8 @@ class DefaultEventServiceTest {
             List.of(held),
             false,
             Map.of(),
-            SETTLED);
+            SETTLED,
+            0L);
     EventView shake = firstOf(UUID.randomUUID(), holding, JOB_DAY + 30, EventKind.SHAKE, 7L);
 
     assertThat(shake.stockCode()).isEqualTo(held);

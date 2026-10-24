@@ -457,19 +457,35 @@ class DefaultProgressService implements ProgressService {
     boolean success = true;
     if (option.rolls()) {
       int stat = character.stats().toCodes().get(option.stat());
-      int chanceBp = option.baseBp() + stat * option.perPointBp();
+      // 실적(지금 직장에서 쌓은 인상분)이 판정에 들어가는 장면도 있다: 대기업 50대 권고사직 (decisions.md 51번).
+      int raisePercent = character.salaryBonusBp() / (int) PERCENT;
+      int chanceBp =
+          option.baseBp() + stat * option.perPointBp() + raisePercent * option.perRaisePercentBp();
       success = random.forKey("career", ticket.seq()).nextInt(BP) < chanceBp;
     }
     CareerDefinition.Effect effect = success ? option.success() : option.fail();
+    // 실제 행동에 판정 결과를 남겨 후속 장면(followUp)을 정할 수 있게 한다 (decisions.md 52번).
     events.complete(
         gameId,
         ticket.eventId(),
-        new Completion(ticket.optionCode(), ticket.optionCode(), List.of()));
+        new Completion(
+            ticket.optionCode(),
+            CareerDefinition.actualAction(ticket.optionCode(), success),
+            List.of()));
 
-    JobDefinition job = content.job(character.jobCode());
-    long salaryBefore = monthlySalary(job, tenureYears(character, day), character.salaryBonusBp());
+    // 전업투자자는 직업이 없다. 투자자의 장면은 월급·직장을 건드리지 않는다(콘텐츠 검증).
+    JobDefinition job = character.jobCode() == null ? null : content.job(character.jobCode());
+    long salaryBefore =
+        job == null
+            ? 0
+            : monthlySalary(job, tenureYears(character, day), character.salaryBonusBp());
     StringBuilder message = new StringBuilder(effect.text());
-    if (effect.quit()) {
+    if (effect.becomeJob() != null) {
+      characters.foundCompany(gameId, effect.becomeJob(), day);
+      JobDefinition founded = content.job(effect.becomeJob());
+      message.append(
+          " 이제 %s다. 월급 %,d원이 나온다.".formatted(founded.title(), founded.baseMonthlySalary()));
+    } else if (effect.quit()) {
       long severance = salaryBefore * effect.severanceMonths();
       if (severance > 0) {
         assets.credit(gameId, SEVERANCE, severance, day);
@@ -509,6 +525,8 @@ class DefaultProgressService implements ProgressService {
     payload.put("optionCode", option.code());
     payload.put("optionLabel", option.label());
     payload.put("success", success);
+    // 전업투자자의 장면은 기록에서 '직장'이 아니라 '투자'로 보인다 (decisions.md 52번).
+    payload.put("fullTimeInvestor", character.fullTimeInvestorDay() != null);
     payload.put("text", message.toString());
     payload.put("jobTitle", after.jobCode() == null ? null : content.job(after.jobCode()).title());
     payload.put(
@@ -1251,7 +1269,8 @@ class DefaultProgressService implements ProgressService {
         assets.get(game.id()).holdings().keySet().stream().sorted().toList(),
         character.fullTimeInvestorDay() != null,
         heldDropBp(game.id()),
-        housingFlow.facts(game.id(), home, character.stats().luck()));
+        housingFlow.facts(game.id(), home, character.stats().luck()),
+        netWorth(game.id()));
   }
 
   /** 보유 종목별 최근 12달 고점 대비 낙폭(만분율). 빚투 제안의 근거다 (decisions.md 39번). */

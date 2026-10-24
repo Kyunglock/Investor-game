@@ -287,22 +287,35 @@ class DefaultEventService implements EventService {
   }
 
   /**
-   * 취업 뒤 직장 (decisions.md 26번). 직업이 있으면 직장 장면(CAREER)이 간격을 두고 오고, 실직 중이면 다시 직업 선택(JOB)이 온다. 은퇴했거나
-   * 전업투자자이거나 career.last-age를 넘으면 둘 다 없다.
+   * 취업 뒤 직장 (decisions.md 26번). 직업이 있으면 직장 장면(CAREER)이 간격을 두고 오고, 실직 중이면 다시 직업 선택(JOB)이 온다.
+   * 전업투자자에게는 투자자의 장면이 같은 간격으로 온다(decisions.md 52번). 직전 장면의 결과가 후속 장면(followUp)을 정했으면 그 날 수 뒤에 그것이
+   * 먼저 온다. 은퇴했거나 career.last-age를 넘으면 없다.
    */
   private void careerCandidates(
       List<EventRow> rows,
       SchedulingContext context,
       SeededRandom random,
       List<Candidate> candidates) {
-    if (context.retired() || context.fullTimeInvestor()) {
+    if (context.retired()) {
       return;
     }
     List<EventRow> careers = ofKind(rows, EventKind.CAREER);
     List<EventRow> jobs = ofKind(rows, EventKind.JOB);
+    Optional<FollowUp> followUp = followUp(careers);
     int day;
     EventKind kind;
-    if (context.jobStartDay() == null) {
+    if (followUp.isPresent() && (context.jobStartDay() != null || context.fullTimeInvestor())) {
+      day = last(careers).occursDay() + followUp.get().days();
+      kind = EventKind.CAREER;
+    } else if (context.fullTimeInvestor()) {
+      // 투자자가 된 날(마지막 직업 선택) 또는 마지막 장면부터 센다.
+      int base =
+          Math.max(
+              careers.isEmpty() ? context.careerStartDay() : last(careers).occursDay(),
+              jobs.isEmpty() ? context.careerStartDay() : last(jobs).occursDay());
+      day = base + roll(random, properties.career().gapDays(), "CAREER", careers.size());
+      kind = EventKind.CAREER;
+    } else if (context.jobStartDay() == null) {
       // 실직 중: 마지막 직장 장면(실직 원인) 또는 마지막 직업 선택(기다림) 뒤에 다시 고른다.
       EventRow lastCareer = careers.isEmpty() ? null : last(careers);
       EventRow lastJob = jobs.isEmpty() ? null : last(jobs);
@@ -325,6 +338,21 @@ class DefaultEventService implements EventService {
     if (ageAt(day, context) <= properties.career().lastAge()) {
       candidates.add(new Candidate(kind, day));
     }
+  }
+
+  private record FollowUp(String code, int days) {}
+
+  /** 마지막 직장 장면의 결과가 정한 후속 장면. 그 장면이 아직 안 끝났거나 결과에 후속이 없으면 비어 있다. */
+  private Optional<FollowUp> followUp(List<EventRow> careers) {
+    if (careers.isEmpty() || !last(careers).resolved()) {
+      return Optional.empty();
+    }
+    EventRow row = last(careers);
+    return repository
+        .actualAction(row.id())
+        .map(actual -> content.career(row.definitionCode()).effectOf(actual))
+        .filter(effect -> effect.followUp() != null)
+        .map(effect -> new FollowUp(effect.followUp(), effect.followUpDays()));
   }
 
   /**
@@ -858,7 +886,9 @@ class DefaultEventService implements EventService {
             .mapToLong(code -> content.job(code).baseMonthlySalary())
             .max()
             .orElse(0);
-    List<JobDefinition> remaining = new ArrayList<>(content.jobs());
+    // 직접 세운 회사의 대표 같은 직업은 제안에 나오지 않는다 (decisions.md 52번).
+    List<JobDefinition> remaining =
+        new ArrayList<>(content.jobs().stream().filter(JobDefinition::offered).toList());
     List<String> picked = new ArrayList<>();
     if (!streak.isEmpty()) {
       List<JobDefinition> better =
@@ -876,7 +906,10 @@ class DefaultEventService implements EventService {
     }
     long bestNow =
         picked.stream().mapToLong(code -> content.job(code).baseMonthlySalary()).max().orElse(0);
-    boolean betterExists = content.jobs().stream().anyMatch(j -> j.baseMonthlySalary() > bestNow);
+    boolean betterExists =
+        content.jobs().stream()
+            .filter(JobDefinition::offered)
+            .anyMatch(j -> j.baseMonthlySalary() > bestNow);
     if (streak.size() < properties.job().maxWaits() && betterExists) {
       picked.add(ChoiceTicket.Job.WAIT);
     }
@@ -894,8 +927,9 @@ class DefaultEventService implements EventService {
   }
 
   /**
-   * 직장 장면. 연차 조건을 만족하는 장면 중 직전 장면을 뺀 나머지에서 가중치로 뽑는다. 이직 제안은 지금보다 월급이 많은 직업이 있을 때만 나오고, 옮길 직업을 선택지
-   * 코드("move:<직업>")에 남긴다.
+   * 직장 장면. 직전 장면의 결과가 후속 장면을 정했으면 그것을 낸다. 아니면 지금 직업·나이·순자산·연차 조건을 만족하는 장면 중 직전 장면과 후속 전용 장면을 뺀
+   * 나머지에서 가중치로 뽑는다 (decisions.md 51·52번). 이직 제안은 지금보다 월급이 많은 직업이 있을 때만 나오고, 옮길 직업을 선택지
+   * 코드("move:<직업>")에 남긴다. 전업투자자는 직업 자리에 CareerDefinition.FULL_TIME_INVESTOR를 쓴다.
    */
   private EventRow careerEvent(
       UUID id,
@@ -906,19 +940,43 @@ class DefaultEventService implements EventService {
       SeededRandom random) {
     RandomGenerator rng = random.forKey("event", "career", seq);
     List<EventRow> previous = ofKind(rows, EventKind.CAREER);
+    Optional<FollowUp> followUp = followUp(previous);
+    if (followUp.isPresent()) {
+      CareerDefinition next = content.career(followUp.get().code());
+      return simple(
+          id,
+          seq,
+          EventKind.CAREER,
+          next.code(),
+          day,
+          next.options().stream().map(CareerDefinition.Option::code).toList());
+    }
     String lastCode = previous.isEmpty() ? null : last(previous).definitionCode();
-    int tenure = Math.max(0, day - context.jobStartDay()) / calendar.daysPerYear();
-    long currentSalary = content.job(context.jobCode()).baseMonthlySalary();
+    boolean investor = context.fullTimeInvestor();
+    String jobCode = investor ? CareerDefinition.FULL_TIME_INVESTOR : context.jobCode();
+    int start = investor ? context.careerStartDay() : context.jobStartDay();
+    int tenure = Math.max(0, day - start) / calendar.daysPerYear();
+    int age = ageAt(day, context);
+    long currentSalary = investor ? Long.MAX_VALUE : content.job(jobCode).baseMonthlySalary();
     List<JobDefinition> betterJobs =
-        content.jobs().stream().filter(j -> j.baseMonthlySalary() > currentSalary).toList();
+        content.jobs().stream()
+            .filter(JobDefinition::offered)
+            .filter(j -> j.baseMonthlySalary() > currentSalary)
+            .toList();
     List<CareerDefinition> eligible =
         content.careers().stream()
+            .filter(c -> !c.followUpOnly())
+            .filter(c -> c.fits(jobCode, age, context.netWorth()))
             .filter(c -> c.minTenureYears() <= tenure)
             .filter(c -> !c.code().equals(lastCode))
             .filter(c -> !c.movesJob() || !betterJobs.isEmpty())
             .toList();
     if (eligible.isEmpty()) {
-      eligible = content.careers().stream().filter(c -> !c.movesJob()).toList();
+      // 조건을 다 풀어도 그 직업의 장면은 지킨다. 콘텐츠 검증이 직업마다 조건 없는 장면을 하나는 보장한다.
+      eligible =
+          content.careers().stream()
+              .filter(c -> c.forJob(jobCode) && !c.movesJob() && c.unconditional())
+              .toList();
     }
     CareerDefinition career = weighted(eligible, CareerDefinition::weight, rng);
     JobDefinition target =

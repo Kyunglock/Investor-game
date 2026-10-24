@@ -114,6 +114,23 @@ class CharacterServiceTest {
     assertThat(characters.get(fresh).careerStartDay()).as("한 번도 일한 적 없으면 생활비는 이날부터").isEqualTo(500);
   }
 
+  /** 여의도 증권사 설립 (decisions.md 52번): 전업투자자만 회사를 세우고, 세우면 그 대표가 되어 월급이 나온다. */
+  @Test
+  void 전업투자자만_회사를_세워_대표가_될_수_있다() {
+    assertThatThrownBy(() -> characters.foundCompany(gameId, "securities-ceo", 100))
+        .isInstanceOf(InvalidRequestException.class);
+    characters.becomeFullTimeInvestor(gameId, 100);
+
+    characters.foundCompany(gameId, "securities-ceo", 900);
+    CharacterView ceo = characters.get(gameId);
+    assertThat(ceo.jobCode()).isEqualTo("securities-ceo");
+    assertThat(ceo.jobStartDay()).isEqualTo(900);
+    assertThat(ceo.fullTimeInvestorDay()).as("더는 전업투자자가 아니다").isNull();
+    assertThat(ceo.careerStartDay()).isEqualTo(100);
+    assertThatThrownBy(() -> characters.foundCompany(gameId, "securities-ceo", 1000))
+        .isInstanceOf(InvalidRequestException.class);
+  }
+
   @Test
   void 성향_점수가_가장_높은_스타일과_섹터로_확정된다() {
     record(Map.of("style.long", 2, "risk.safe", 2, "mind.own", 1, "sector.bio", 1));

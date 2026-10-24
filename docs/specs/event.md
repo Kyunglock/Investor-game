@@ -134,7 +134,7 @@ public record CompleteResult(
 | 종류 | 단계 | 선택형 | 스킵 | 설명 |
 |---|---|---|---|---|
 | `JOB` | `CHILDHOOD` 끝, 실직 뒤 | 예 | 불가 | 직업 선택. 성향이 다 정해진 뒤 처음 오고, 실직하면 다시 온다. 선택지 끝에 **"더 나은 자리를 기다린다"(`WAIT`)**가 붙을 수 있다(5.3절). 성장기에 고르면 `SAVING`으로 바뀐다 (decisions.md 26번) |
-| `CAREER` | 직업이 있을 때 | 예 | 불가 | 직장 장면(연봉 협상·승진 심사·이직 제안·구조조정·번아웃). 선택지마다 능력치로 성공을 가르고, 결과가 월급 인상분·직장·돈·능력치를 움직인다. 판정과 반영은 진행이 한다 (decisions.md 26번) |
+| `CAREER` | 직업이 있을 때 | 예 | 불가 | 직장 장면. 직업·나이마다 다르다(decisions.md 51번). 선택지마다 능력치로 성공을 가르고, 결과가 월급 인상분·직장·돈·능력치를 움직인다. 판정과 반영은 진행이 한다 (decisions.md 26번) |
 | `TRAIT` | `CHILDHOOD` | 예 | 불가 | 성장기의 일상 장면에서 행동을 고르게 해 성향을 유추한다. 판정으로 뒤집지 않는다 (확정) |
 | `TRAINING` | 둘 다 | 예 | 불가 | 자기계발. 비용을 쓰고 능력치 경험치를 얻는 선택지와 "하지 않는다" 선택지가 있다 (확정: 성장 루트) |
 | `OFFER` | `SAVING` | 예 | 불가 | 투자 시작 제안. 수락/거절 (확정) |
@@ -171,7 +171,7 @@ public record CompleteResult(
 | `TRAIT` 취업 뒤 | 취업함, 콘텐츠의 `adult` 장면 중 아직 안 나온 것이 있음(`job` 장면은 직장에 다니는 동안에만 — decisions.md 36번) | 마지막 adult `TRAIT`(없으면 취업일) + `event.trait.adult-gap-days`(초기값 540~900) 구간에서 뽑은 값. 장면은 남은 adult 풀에서 `("event","trait-scene","adult",n)` 키로 뽑는다. 성향 확정(`traitsComplete`)에는 세지 않고 능력치만 움직인다 (decisions.md 23번) |
 | `JOB` 첫 선택 | `CHILDHOOD`, 성향 이벤트가 모두 끝나 스타일이 확정됨, 직업 없음 | 처음은 `event.job.age`(초기값 25)를 게임 일수로 바꾼 값(마지막 성향 이벤트보다 앞서지 않는다). `WAIT`을 골랐으면 마지막 `JOB` + `event.job.wait-days`(180) |
 | `JOB` 재취업 | 취업한 적 있음, 지금 직업 없음, 전업투자자 아님, 은퇴 전, 나이 ≤ `event.career.last-age` | 실직시킨 마지막 `CAREER` + `event.job.rehire-days`(150). 그 뒤 `WAIT`을 골랐으면 마지막 `JOB` + `wait-days` |
-| `CAREER` | 직업 있음, 은퇴 전, 나이 ≤ `event.career.last-age`(57) | `max(지금 직업 시작일, 마지막 CAREER)` + `event.career.gap-days`(540~1080) 구간에서 뽑은 값(키 `("CAREER", n)`) |
+| `CAREER` | 직업 있음 또는 전업투자자, 은퇴 전, 나이 ≤ `event.career.last-age`(57) | 직전 결과에 후속이 있으면 마지막 `CAREER` + `followUpDays`. 아니면 `max(지금 직업 시작일, 마지막 CAREER)`(전업투자자는 `max(마지막 JOB, 마지막 CAREER)`) + `event.career.gap-days`(540~1080) 구간에서 뽑은 값(키 `("CAREER", n)`) |
 | `OFFER` | `SAVING`, `salaryStarted`, `traitsFinalized`, 대기·예약된 `OFFER` 없음 | 처음이면 `max(현재, 첫 월급 후)`; 거절되었다면 마지막 `OFFER` + `game.days-per-year` (1년마다 다시 묻는다, 확정) |
 | `TRAINING` | `JOB`이 해결됨 | 마지막 `TRAINING`(없으면 `JOB` 해결 일수) + `event.training.gap-days` 구간에서 뽑은 값 |
 | `LIFE` 결혼 | 취업함, 미혼, 나이 ≤ `marriage-last-age` | 처음은 `marriage-age` 구간의 나이(키 `("event","life","marriage-age")`), 거절했으면 마지막 + `marriage-retry-years`년 |
@@ -191,7 +191,7 @@ public record CompleteResult(
 | 종류 | 선택지 |
 |---|---|
 | `JOB` | 콘텐츠의 직업 중 `event.job.option-count`(초기값 3)개를 가중치대로 뽑는다(키 `("event","job-options",기다린 횟수)`). **기다린 뒤**라면 이번 "기다림 줄"(마지막 `CAREER` 뒤의 `JOB`들)에서 제안된 최고 월급보다 나은 직업을 하나는 섞는다(있다면). 끝에 **`WAIT`("더 나은 자리를 기다린다")**는 기다린 횟수 < `event.job.max-waits`(3)이고 지금 제안보다 월급이 많은 직업이 남아 있을 때만 붙는다. `definition_code`는 첫 선택 null, 기다린 뒤 `retry`, 실직 뒤 `rehire`로 문구(`phrases.json`의 `job`/`jobRetry`/`jobRehire`)를 가른다. 뽑은 코드를 `options`에 저장해 재접속해도 같다 |
-| `CAREER` | 연차 ≥ `minTenureYears`인 장면 중 직전 장면을 뺀 나머지에서 가중치로 하나(키 `("event","career",seq)`). 이직 제안(`moveJob` 선택지가 있는 장면)은 지금 직업보다 기본 월급이 많은 직업이 있을 때만 나오고, 옮길 직업을 가중치로 골라 선택지 코드 **`move:<직업 코드>`**에 남긴다. 나머지 선택지는 콘텐츠 코드 그대로 |
+| `CAREER` | 지금 직업이 `jobs`에 들고(비었으면 전부) 나이가 `minAge`~`maxAge` 안이며 연차 ≥ `minTenureYears`인 장면 중 직전 장면을 뺀 나머지에서 가중치로 하나(키 `("event","career",seq)`). 그런 장면이 없으면 그 직업의 조건 없는 장면(이직 제안 제외)에서 뽑는다 (decisions.md 51번). 직전 장면의 결과에 `followUp`이 있으면 무엇보다 그 장면을 낸다. 전업투자자는 직업 자리에 `INVEST`를 쓰고 순자산(`minNetWorth`)도 본다 (44번). 이직 제안(`moveJob` 선택지가 있는 장면)은 지금 직업보다 기본 월급이 많은 직업이 있을 때만 나오고, 옮길 직업을 가중치로 골라 선택지 코드 **`move:<직업 코드>`**에 남긴다. 나머지 선택지는 콘텐츠 코드 그대로 |
 | `TRAIT` | 콘텐츠의 성향 이벤트 정의가 가진 선택지 전부 (2~4개) |
 | `TRAINING` | 콘텐츠의 자기계발 정의 선택지 + 항상 "하지 않는다" 선택지 |
 | `OFFER` | `accept`, `decline` |
@@ -304,7 +304,7 @@ public record CompleteResult(
 |---|---|
 | 뉴스 | 위 JSON의 필드. `styles`가 없으면 모든 스타일 |
 | 직업 | `code`, `title`, 선택 가중치, 월급 정보 (진행·자산용, 콘텐츠 스펙). 14개, 월급이 많을수록 가중치가 낮다 |
-| 직장 장면 (`careers.json`) | `code`, `title`, `body`, `weight`, `minTenureYears`, 선택지 2~4개(`code`, `label`, 판정 `stat`·`baseBp`·`perPointBp`(없으면 항상 성공), `success`/`fail` 효과: `salaryPercent`, `quit`, `severanceMonths`, `moveJob`, `moveSalaryPercent`, `amount`, `statDeltas`(운 제외), `text`) |
+| 직장 장면 (`careers.json`) | `code`, `title`, `body`, `weight`, `minTenureYears`, `jobs`(나오는 직업 코드, 없으면 전부), `minAge`·`maxAge`(나이 범위, 없으면 제한 없음), `minNetWorth`(순자산 조건), `followUpOnly`(후속으로만 온다), 선택지 2~4개(`code`, `label`, 판정 `stat`·`baseBp`·`perPointBp`(없으면 항상 성공)·`perRaisePercentBp`(지금 직장의 인상분 1%p당 확률 가산), `success`/`fail` 효과: `salaryPercent`, `quit`, `severanceMonths`, `moveJob`, `moveSalaryPercent`, `amount`, `statDeltas`(운 제외), `followUp`·`followUpDays`(이어서 올 장면과 그때까지의 날 수), `becomeJob`(전업투자자가 그 직업의 대표가 된다), `text`). `jobs`에 `INVEST`를 쓰면 전업투자자의 장면이다 |
 | 성향 | `code`, `age`, `adult`(선택, true면 취업 뒤 일상 장면), `job`(선택, true면 직장에 다니는 동안에만), 선택지의 `amount`·`outcomes`(선택, 결과가 갈리는 돈·능력치·문구 — decisions.md 41번), `title`, `body`(상황), 선택지 3~4개(`code`, `label`, `traitDeltas`(style/risk/mind/sector), `statDeltas`(선택, 절댓값 ≤ `content.trait-stat-max-delta` 8), `note`) |
 | 자기계발 | `code`, `title`, `body`, 선택지 목록(`code`, `label`, `statCode`, `expAmount`, `cost`) |
 | 알림 | `code`, `title`, `body`, 단계 조건 |

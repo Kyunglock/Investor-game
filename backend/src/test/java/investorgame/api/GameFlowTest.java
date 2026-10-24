@@ -8,6 +8,8 @@ import com.jayway.jsonpath.DocumentContext;
 import com.jayway.jsonpath.JsonPath;
 import investorgame.TestcontainersConfiguration;
 import investorgame.asset.AssetService;
+import investorgame.content.CareerDefinition;
+import investorgame.content.ContentCatalog;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +37,7 @@ class GameFlowTest {
 
   @Autowired WebApplicationContext context;
   @Autowired AssetService assets;
+  @Autowired ContentCatalog content;
 
   @Test
   void 성장기_성향_직업_투자_시작_뉴스를_거쳐_70세에_끝난다() throws Exception {
@@ -300,7 +303,7 @@ class GameFlowTest {
         .containsEntry("fullTimeInvestor", true)
         .containsEntry("jobTitle", "전업투자자");
 
-    // 10년을 보내도 월급·구직 제안·직장 장면·투자 시작 제안이 없고, 생활비는 나간다.
+    // 10년을 보내도 월급·구직 제안·투자 시작 제안이 없고, 생활비는 나간다. 직장 장면 대신 투자자의 장면이 온다 (decisions.md 52번).
     int until = game.read("$.day", Integer.class) + 10 * 360;
     List<String> kinds = new ArrayList<>();
     for (int step = 0; step < 500 && game.read("$.day", Integer.class) < until; step++) {
@@ -330,7 +333,15 @@ class GameFlowTest {
             until,
             game.read("$.cash"),
             game.read("$.debt"))
-        .doesNotContain("JOB", "CAREER", "OFFER");
+        .doesNotContain("JOB", "OFFER");
+    List<String> sceneTitles = game.read("$.log[?(@.kind=='CAREER')].payload.eventTitle");
+    List<String> investorTitles =
+        content.careers().stream()
+            .filter(c -> c.jobs().contains("INVEST"))
+            .map(CareerDefinition::title)
+            .toList();
+    assertThat(investorTitles).containsAll(sceneTitles);
+    assertThat(game.read("$.fullTimeInvestor", Boolean.class)).isTrue();
     // 시작 현금이 적은 판은 월급 없이 생활비만 나가다 뉴스가 오기 전에 파산할 수 있다(전업투자자의 페널티). 살아 있으면 뉴스가 왔다.
     if ("ACTIVE".equals(game.read("$.status"))) {
       assertThat(kinds).contains("NEWS");
