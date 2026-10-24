@@ -3,6 +3,7 @@ import { ADORNMENTS } from './adornments'
 import { BODIES } from './bodies'
 import type { SpriteSpec } from './layers'
 import { MARKS } from './marks'
+import { MOODS } from './moods'
 import { PALETTE } from './palette'
 import { SCENE_HEIGHT, SCENE_WIDTH, SCENES, type SceneKey } from './scenes'
 import { compose, type Layer, SPRITE_HEIGHT, toRects } from './sprite'
@@ -19,7 +20,12 @@ export const Scene = memo(
 )
 
 function sameSpec(a: SpriteSpec, b: SpriteSpec): boolean {
-  return a.stage === b.stage && a.adornment === b.adornment && a.mark === b.mark
+  return (
+    a.stage === b.stage &&
+    a.adornment === b.adornment &&
+    a.mark === b.mark &&
+    (a.mood ?? null) === (b.mood ?? null)
+  )
 }
 
 function SceneView({ sceneKey, sprite }: Props) {
@@ -34,6 +40,9 @@ function SceneView({ sceneKey, sprite }: Props) {
   }
   if (sprite.mark) {
     layers.push(MARKS[sprite.mark])
+  }
+  if (sprite.mood) {
+    layers.push(MOODS[sprite.mood])
   }
   const person = toRects(compose(BODIES[sprite.stage], layers), PALETTE)
   const dx = scene.anchor.x

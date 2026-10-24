@@ -12,9 +12,12 @@ import {
   withParticle,
   won,
 } from './labels'
+import { momentForOutcome } from './moments'
 import { Overlay } from './Overlay'
 import { layersFor } from './pixel/layers'
+import type { MoodKey } from './pixel/moods'
 import { Sprite } from './pixel/SpriteView'
+import { Vignette } from './pixel/Vignette'
 import { useGameStore } from './store'
 
 /** 뉴스 선택 뒤 결과를 감추고 성격이 손을 움직이는 동안 기다리는 시간. 바로 나오면 억울할 틈이 없다. */
@@ -44,6 +47,9 @@ function Body({
 }) {
   const deviated = outcome.chosen !== outcome.actual
   const price = outcome.price
+  const game = useGameStore((s) => s.game)
+  // 아이가 태어났거나 큰 손익이면 그림과 표정이 붙는다 (decisions.md 62번). 결과가 드러난 뒤에만.
+  const moment = game ? momentForOutcome(outcome, game) : null
   // 뉴스와 흔들림은 판정이 손을 움직이므로 잠깐 뜸을 들인다. 성장기·직업·제안은 뒤집히지 않으니 바로 보여 준다.
   const isNews = outcome.kind === 'NEWS' || outcome.kind === 'SHAKE'
   const [revealed, setRevealed] = useState(!isNews)
@@ -63,13 +69,32 @@ function Body({
       data-testid="outcome-card"
       data-revealed={revealed}
     >
+      {revealed && moment && game && (
+        <figure className="m-0 mb-3" data-testid="moment" data-mood={moment.mood}>
+          <Vignette
+            art={moment.art}
+            me={layersFor(
+              game.initialStats,
+              game.stats,
+              ageAt(game.startAge, game.day, game.daysPerYear).years,
+            )}
+            mood={moment.mood}
+          />
+          <figcaption className="-mt-3 text-center font-pen text-[22px] leading-tight text-pen">
+            {moment.caption}
+          </figcaption>
+        </figure>
+      )}
       {isNews ? (
         <>
           <p className="text-[11px] font-bold text-wine">{revealed ? '결과' : '실행 중'}</p>
           {revealed ? (
             <>
               <div className="mt-2 flex items-center gap-3">
-                <Face deviation={deviated ? outcome.deviations[0]?.statCode : null} />
+                <Face
+                  deviation={deviated ? outcome.deviations[0]?.statCode : null}
+                  mood={moment?.mood ?? null}
+                />
                 <div className="min-w-0">
                   <p className="font-serif-kr text-xl font-black" data-testid="outcome-actions">
                     선택 {actionLabelFor(outcome.kind, outcome.chosen)}{' '}
@@ -182,7 +207,13 @@ function Body({
  * 내 캐릭터의 얼굴. 선택이 뒤집혔으면 그 원인 능력치의 약점 표시(식은땀, 큰 귀, 화 자국…)를 띄워 누가 손을 움직였는지 보인다.
  * 그대로 따랐으면 표시 없이 평소 얼굴이다.
  */
-function Face({ deviation }: { deviation: string | null | undefined }) {
+function Face({
+  deviation,
+  mood = null,
+}: {
+  deviation: string | null | undefined
+  mood?: MoodKey | null
+}) {
   const game = useGameStore((s) => s.game)
   const day = useGameStore((s) => s.day)
   if (!game) {
@@ -190,7 +221,7 @@ function Face({ deviation }: { deviation: string | null | undefined }) {
   }
   const ageYears = ageAt(game.startAge, day, game.daysPerYear).years
   const base = layersFor(game.initialStats, game.stats, ageYears)
-  const spec = { ...base, mark: (deviation as keyof Stats | null | undefined) ?? null }
+  const spec = { ...base, mark: (deviation as keyof Stats | null | undefined) ?? null, mood }
   return (
     <Sprite
       spec={spec}
