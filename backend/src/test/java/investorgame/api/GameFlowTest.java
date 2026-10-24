@@ -125,8 +125,8 @@ class GameFlowTest {
     assertThat(seenKinds.getOrDefault("CAREER", 0))
         .as("35년 동안 직장 장면이 여러 번")
         .isGreaterThanOrEqualTo(3);
-    // 성장 단계 10개에서 하나씩, 취업 뒤 일상 장면(adult) 풀 8개를 40년 동안 다 쓴다.
-    assertThat(seenKinds.get("TRAIT")).as("성장기 10 + 취업 뒤 일상 8").isEqualTo(18);
+    // 성장 단계 10개에서 하나씩, 취업 뒤 일상 장면(adult) 풀 7개를 40년 동안 다 쓴다.
+    assertThat(seenKinds.get("TRAIT")).as("성장기 10 + 취업 뒤 일상 7").isEqualTo(17);
     assertThat(kindOrder.subList(0, 13))
         .as("성장기의 성향 이벤트가 모두 끝난 뒤에 직업, 독립(주거), 그다음 투자 시작 제안")
         .containsExactly(
@@ -209,7 +209,7 @@ class GameFlowTest {
     assertThat(kinds).containsOnlyOnce("STYLE", "OFFER", "MARRIAGE", "RETIRE");
     assertThat(kinds).contains("JOB", "CAREER");
     assertThat(kinds).contains("CHILD", "LIFE");
-    assertThat(kinds.stream().filter("TRAIT"::equals).count()).isEqualTo(18);
+    assertThat(kinds.stream().filter("TRAIT"::equals).count()).isEqualTo(17);
     assertThat(kinds.stream().filter("NEWS"::equals).count())
         .isEqualTo((long) seenKinds.get("NEWS"));
     // 흔들림(SHAKE)도 선택 뒤 주가가 움직여 PRICE를 남긴다 (decisions.md 33번).
@@ -452,7 +452,11 @@ class GameFlowTest {
     DocumentContext after = client.advance(gameId, stop);
 
     assertThat(after.read("$.market.month", Integer.class)).isEqualTo(monthBefore + months);
-    long saved = after.read("$.cash", Long.class) - cash + after.read("$.debt", Long.class);
+    // 그 사이 알림(경조사비 등, LIFE 기록)으로 한 번에 오간 돈은 달마다의 흐름이 아니므로 빼고 본다.
+    List<Number> lifeAmounts =
+        after.read("$.log[?(@.day > " + from + " && @.kind == 'LIFE')].payload.amount");
+    long life = lifeAmounts.stream().mapToLong(Number::longValue).sum();
+    long saved = after.read("$.cash", Long.class) - cash + after.read("$.debt", Long.class) - life;
     List<String> kindsInRange = after.read("$.log[?(@.day > " + from + ")].kind");
     assertThat(saved)
         .as(
