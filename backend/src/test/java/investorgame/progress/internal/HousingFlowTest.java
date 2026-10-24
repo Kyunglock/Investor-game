@@ -24,6 +24,7 @@ import investorgame.housing.Tenure;
 import investorgame.market.MarketService;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -221,7 +222,8 @@ class HousingFlowTest {
             false,
             Map.of(),
             facts,
-            0L);
+            0L,
+            Set.of());
     HashSeededRandom random = new HashSeededRandom(seed);
     int from = JOB_DAY;
     for (int i = 0; i < 50; i++) {
