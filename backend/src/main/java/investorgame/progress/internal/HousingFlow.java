@@ -72,10 +72,16 @@ class HousingFlow {
     this.rules = properties.housing();
   }
 
-  /** 주거 이벤트를 정하는 사실. */
-  HousingFacts facts(UUID gameId, HouseholdView home, int luck) {
+  /** 주거 이벤트를 정하는 사실. 청약은 영끌로 분양가를 치를 수 있을 때만 공고가 온다 (#26). */
+  HousingFacts facts(
+      UUID gameId, HouseholdView home, int luck, long monthlyIncome, int points, int day) {
     HousingView view = housing.get(gameId);
     List<Integer> births = home.childBirthDays();
+    boolean affordable =
+        plans(gameId, List.of(ChoiceTicket.Housing.APPLY), false, home, monthlyIncome, points, day)
+                .getFirst()
+                .blocked()
+            == null;
     return new HousingFacts(
         view.tenure().name(),
         view.leaseEndDay(),
@@ -84,7 +90,8 @@ class HousingFlow {
         view.tenure() == Tenure.VILLA_JEONSE && !view.insured(),
         births.isEmpty() ? null : births.getLast(),
         seoulChange(gameId),
-        luck);
+        luck,
+        affordable);
   }
 
   /** 집 시세 + 내 보증금 − 주담대 − 전세대출 − 세입자 보증금. 총자산에 더한다. */

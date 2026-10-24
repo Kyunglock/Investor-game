@@ -1274,7 +1274,13 @@ class DefaultProgressService implements ProgressService {
         assets.get(game.id()).holdings().keySet().stream().sorted().toList(),
         character.fullTimeInvestorDay() != null,
         heldDropBp(game.id()),
-        housingFlow.facts(game.id(), home, character.stats().luck()),
+        housingFlow.facts(
+            game.id(),
+            home,
+            character.stats().luck(),
+            monthlyIncome(character, game.lastReportedDay()),
+            cheongyakPoints(game, character, game.lastReportedDay()),
+            game.lastReportedDay()),
         netWorth(game.id()));
   }
 
