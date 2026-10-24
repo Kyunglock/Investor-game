@@ -427,8 +427,12 @@ export const useGameStore = create<GameState>((set, get) => {
     openReport: () => {
       get().pause()
       set({ reportOpen: true })
+    },
     closeReport: () => {
       set({ reportOpen: false })
+      get().resume()
+    },
+
     repayMortgage: async (seq, amount) => {
       const { game } = get()
       if (!game) {
