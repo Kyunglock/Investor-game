@@ -51,7 +51,9 @@ class AdminController {
                         s.id(),
                         s.createdAt(),
                         s.lastSeenAt(),
-                        gamesBySession.getOrDefault(s.id(), 0L)))
+                        gamesBySession.getOrDefault(s.id(), 0L),
+                        s.firstIp(),
+                        s.lastIp()))
             .toList();
     return new PlayLog(sessionLines, games);
   }
@@ -72,5 +74,10 @@ class AdminController {
 
   /** games는 최근 판 목록(최대 500판) 안에서 센 수다. */
   record SessionLine(
-      UUID sessionId, OffsetDateTime createdAt, OffsetDateTime lastSeenAt, long games) {}
+      UUID sessionId,
+      OffsetDateTime createdAt,
+      OffsetDateTime lastSeenAt,
+      long games,
+      String firstIp,
+      String lastIp) {}
 }

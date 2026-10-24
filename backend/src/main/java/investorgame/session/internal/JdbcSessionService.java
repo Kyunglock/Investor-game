@@ -38,34 +38,36 @@ class JdbcSessionService implements SessionService {
 
   @Override
   @Transactional
-  public IssuedSession issue() {
+  public IssuedSession issue(String ip) {
     UUID id = UUID.randomUUID();
     String token = newToken();
     OffsetDateTime now = now();
     jdbc.sql(
             """
-            INSERT INTO session_info (id, token_hash, created_at, last_seen_at)
-            VALUES (:id, :tokenHash, :now, :now)
+            INSERT INTO session_info (id, token_hash, created_at, last_seen_at, first_ip, last_ip)
+            VALUES (:id, :tokenHash, :now, :now, :ip, :ip)
             """)
         .param("id", id)
         .param("tokenHash", hash(token))
         .param("now", now)
+        .param("ip", ip)
         .update();
     return new IssuedSession(id, token);
   }
 
   @Override
   @Transactional
-  public Optional<UUID> resolve(String token) {
+  public Optional<UUID> resolve(String token, String ip) {
     OffsetDateTime now = now();
     return jdbc.sql(
             """
             UPDATE session_info
-            SET last_seen_at = :now
+            SET last_seen_at = :now, last_ip = COALESCE(:ip, last_ip)
             WHERE token_hash = :tokenHash AND last_seen_at > :expiredBefore
             RETURNING id
             """)
         .param("now", now)
+        .param("ip", ip)
         .param("tokenHash", hash(token))
         .param("expiredBefore", now.minus(properties.ttl()))
         .query(UUID.class)
@@ -77,7 +79,7 @@ class JdbcSessionService implements SessionService {
   public List<SessionSummary> recent(int limit) {
     return jdbc.sql(
             """
-            SELECT id, created_at, last_seen_at FROM session_info
+            SELECT id, created_at, last_seen_at, first_ip, last_ip FROM session_info
             ORDER BY last_seen_at DESC
             LIMIT :limit
             """)

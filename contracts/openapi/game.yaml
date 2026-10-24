@@ -269,6 +269,8 @@ components:
         createdAt: { type: string, format: date-time, description: 처음 온 시각 }
         lastSeenAt: { type: string, format: date-time, description: 마지막 접속 시각 }
         games: { type: integer, description: 최근 판 목록(plays) 안에서 센 판 수 }
+        firstIp: { type: [string, 'null'], description: 처음 접속한 IP (프록시 뒤면 X-Forwarded-For의 첫 주소) }
+        lastIp: { type: [string, 'null'], description: 마지막 접속 IP }
     Play:
       type: object
       required: [gameId, sessionId, status, startAge, age, startedAt, updatedAt]
