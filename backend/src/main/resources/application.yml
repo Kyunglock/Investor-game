@@ -84,12 +84,13 @@ character:
     min: 1
 
 market:
-  # 월 단위 가격 변동 (경제 개편 설계 5.3절). 섹터 공통 잡음 ±4%, 종목 등급별 ±4/8/12%, 종목 뉴스의 섹터 파급 30%, 바닥 100원
-  sector-volatility-bp: 400
+  # 월 단위 가격 변동 (경제 개편 설계 5.3절). 섹터 공통 잡음 ±1.5%, 종목 등급별 ±1.5/3/4.5%, 종목 뉴스의 섹터 파급 30%, 바닥 100원.
+  # 2026-10-24 세 토막으로 줄임: 시간이 흐르며 생기는 흔들림은 작게, 뉴스 충격은 크게 (decisions.md 65번)
+  sector-volatility-bp: 150
   volatility-bp:
-    low: 400
-    mid: 800
-    high: 1200
+    low: 150
+    mid: 300
+    high: 450
   spillover-percent: 30
   min-price: 100
   # 아파트 시세 월 잡음 ±1%. 추세는 content/homes.json (주거 설계 3절)
@@ -272,7 +273,8 @@ event:
     short:
       # 뉴스(매수·매도 선택)는 1년에 한 번꼴 (decisions.md 30번). 단기는 조금 잦다
       news-gap-days: { min: 300, max: 390 }
-      magnitude-percent: 150
+      # 뉴스 폭은 content/news.json에서 두 배로 키웠다(65번). 단기는 그 위에 1.3배
+      magnitude-percent: 130
     long:
       news-gap-days: { min: 330, max: 420 }
       magnitude-percent: 100
