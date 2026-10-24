@@ -1026,7 +1026,9 @@ class DefaultProgressService implements ProgressService {
             working
                 ? monthlySalary(job, tenureYears(character, day), character.salaryBonusBp())
                 : 0;
-        if (!retired && household.retireMonth(day)) {
+        // 정년이 없는 직업(직접 세운 회사·농부)은 60세에도 은퇴하지 않고 월급을 계속 받는다. 연금은 나이로 나온다 (decisions.md 57번).
+        boolean retires = job == null || job.retires();
+        if (!retired && retires && household.retireMonth(day)) {
           long severance = salary * tenureYears(character, day);
           if (severance > 0) {
             assets.credit(gameId, SEVERANCE, severance, day);
@@ -1036,8 +1038,10 @@ class DefaultProgressService implements ProgressService {
               gameId, day, "RETIRE", Map.of("age", ageAt(game, day), "severance", severance));
         } else if (!retired && working) {
           assets.credit(gameId, SALARY, salary, day);
-        } else if (retired) {
-          assets.credit(gameId, PENSION, household.pension(gameId, day), day);
+        }
+        long pension = household.pension(gameId, day);
+        if (pension > 0) {
+          assets.credit(gameId, PENSION, pension, day);
         }
         long spouse = household.spouseIncome(gameId, day);
         if (spouse > 0) {

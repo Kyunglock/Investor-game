@@ -141,7 +141,10 @@ class JdbcHouseholdService implements HouseholdService {
   @Transactional(readOnly = true)
   public long pension(UUID gameId, int gameDay) {
     HouseholdView view = get(gameId);
-    if (view.retiredDay() == null) {
+    // 은퇴했거나, 정년 없는 직업으로 일하는 중이라도 은퇴 나이가 지났으면 연금이 나온다 (decisions.md 57번). 은퇴한 달은 아직 아니다.
+    boolean pastRetireAge =
+        gameDay > (properties.retireAge() - properties.startAge()) * calendar.daysPerYear();
+    if (view.retiredDay() == null && !pastRetireAge) {
       return 0;
     }
     return inflate(
