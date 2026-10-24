@@ -77,8 +77,8 @@ public record ShockResult(Map<String, Long> before, Map<String, Long> after) {} 
 
 | 이름 | 초기값 | 의미 |
 |---|---|---|
-| `market.sector-volatility-bp` | 400 | 섹터 공통 월간 잡음 폭 |
-| `market.volatility-bp.low/mid/high` | 400 / 800 / 1200 | 종목 등급별 월간 잡음 폭 |
+| `market.sector-volatility-bp` | 150 | 섹터 공통 월간 잡음 폭 (2026-10-24 400에서 줄임, decisions.md 65번) |
+| `market.volatility-bp.low/mid/high` | 150 / 300 / 450 | 종목 등급별 월간 잡음 폭 (400/800/1200에서 줄임) |
 | `market.spillover-percent` | 30 | 종목 뉴스의 같은 섹터 파급 |
 | `market.min-price` | 100 | 가격 바닥(원) |
 
