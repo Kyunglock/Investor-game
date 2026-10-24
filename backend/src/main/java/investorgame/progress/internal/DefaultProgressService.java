@@ -721,6 +721,17 @@ class DefaultProgressService implements ProgressService {
 
   @Override
   @Transactional
+  public GameView repayMortgage(UUID sessionId, UUID gameId, int seq, long amount) {
+    GameRow game = lock(sessionId, gameId);
+    if (events.pending(gameId).isPresent()) {
+      throw new InvalidRequestException("먼저 선택을 해야 한다");
+    }
+    housingFlow.repay(gameId, seq, amount, game.lastReportedDay());
+    return view(game);
+  }
+
+  @Override
+  @Transactional
   public ChoiceOutcome trade(
       UUID sessionId, UUID gameId, String stockCode, Action side, long quantity) {
     // 대기 중인 선택이 있어도 막지 않는다. 매매창을 연 순간 도착한 이벤트는 창을 닫은 뒤에 처리한다 (매매창 설계 2절).

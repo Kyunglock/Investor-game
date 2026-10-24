@@ -112,6 +112,24 @@ class HousingFlowTest {
   }
 
   @Test
+  void 주담대를_현금으로_일시_상환하면_원금이_줄고_현금을_넘기면_막힌다() {
+    housing.buyResidence(gameId, "seoul", 1_000_000_000, 500_000_000, JOB_DAY);
+    long cash = assets.get(gameId).cash();
+    assets.credit(gameId, "WINDFALL", 200_000_000 - cash, JOB_DAY);
+    int seq = housing.get(gameId).homes().getFirst().seq();
+
+    flow.repay(gameId, seq, 150_000_000, JOB_DAY + 30);
+
+    assertThat(housing.get(gameId).homes().getFirst().mortgage()).isEqualTo(350_000_000);
+    assertThat(assets.get(gameId).cash()).isEqualTo(50_000_000);
+    assertThatThrownBy(() -> flow.repay(gameId, seq, 60_000_000, JOB_DAY + 30))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("현금");
+    assertThatThrownBy(() -> flow.repay(gameId, seq, 400_000_000, JOB_DAY + 30))
+        .isInstanceOf(InvalidRequestException.class);
+  }
+
+  @Test
   void 막힌_선택은_고를_수_없다() {
     housing.rent(gameId, Tenure.MONTHLY, null, 10_000_000, 600_000, 0, false, JOB_DAY);
     EventView leaseEnd =

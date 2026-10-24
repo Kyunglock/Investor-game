@@ -36,6 +36,9 @@ public interface HousingService {
   /** 매물로 내놓거나(day) 거둔다(null). */
   void setListed(UUID gameId, int seq, Integer listedDay);
 
+  /** 주담대 원금을 일시 상환한다. 남은 원금보다 많거나 0 이하면 오류. 돈은 진행이 낸다 (decisions.md 58번). */
+  void repayMortgage(UUID gameId, int seq, long amount);
+
   /** 매수자가 나와 팔린다. 내가 살던 집이면 거주 형태가 월세(보증금 0, 만기 오늘)로 바뀌어 곧 이사할 곳을 고른다. */
   HomeSale sell(UUID gameId, int seq, long price, int day);
 
