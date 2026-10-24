@@ -1,5 +1,5 @@
 import type { Game } from '../../api/client'
-import { ageAt, SPEEDS, type Speed, secondsPerYear } from './clock'
+import { ageAt, secondsPerYear } from './clock'
 import { yearOf } from './labels'
 import { nickname } from './nickname'
 import { useGameStore } from './store'
@@ -7,29 +7,25 @@ import { useGameStore } from './store'
 interface Props {
   game: Game | null
   running: boolean
-  speed: Speed
   /** 선택·결과 카드가 떠 있어 시계가 멈춰 있을 때. 버튼은 보이되 눌리지 않는다 */
   controlsDisabled: boolean
   showControls: boolean
   onPause: () => void
   onResume: () => void
-  onSpeed: (speed: Speed) => void
   onRestart: () => void
 }
 
 const buttonBase =
   'min-h-11 min-w-11 rounded-full border-2 border-pen px-3 font-note text-sm bg-paper text-pen hover:bg-white disabled:cursor-not-allowed disabled:opacity-40'
 
-/** 제목, 나이, 연도, 배속 (설계 5.1절). 나이 글자는 E2E가 보는 `{n}세 {m}개월` 형식을 유지한다. */
+/** 제목, 나이, 연도 (설계 5.1절). 배속은 없다: 정배속만 있다. 나이 글자는 E2E가 보는 `{n}세 {m}개월` 형식을 유지한다. */
 export function TopBar({
   game,
   running,
-  speed,
   controlsDisabled,
   showControls,
   onPause,
   onResume,
-  onSpeed,
   onRestart,
 }: Props) {
   // 0.1초마다 바뀌는 day는 여기서만 구독한다. App이 구독하면 진행 화면 전체가 틱마다 다시 그려진다.
@@ -49,7 +45,7 @@ export function TopBar({
             </p>
             <div className="font-note text-xs text-pen-soft">
               {yearOf(age.years)}년 · {nickname(game.initialStats).name} · 1년 ≈{' '}
-              {secondsPerYear(game.phase) / speed}초
+              {secondsPerYear(game.phase)}초
               <span className="mt-1 block h-[3px] w-40 overflow-hidden rounded-full bg-[var(--ruled)]">
                 <span className="block h-full bg-red-pen" style={{ width: `${progress * 100}%` }} />
               </span>
@@ -63,20 +59,8 @@ export function TopBar({
               >
                 {running ? '❚❚ 멈춤' : '▶ 계속'}
               </button>
-              {SPEEDS.map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  aria-pressed={speed === s}
-                  disabled={controlsDisabled}
-                  className={`${buttonBase} ${speed === s ? 'bg-pen text-white hover:bg-pen' : ''}`}
-                  onClick={() => onSpeed(s)}
-                >
-                  {s}×
-                </button>
-              ))}
               <button type="button" className={buttonBase} onClick={onRestart}>
-                다시 시작
+                다시 태어나기
               </button>
             </div>
           </>

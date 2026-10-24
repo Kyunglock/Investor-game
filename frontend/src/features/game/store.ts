@@ -66,7 +66,6 @@ interface GameState {
   tick: (elapsedMs: number) => void
   pause: () => void
   resume: () => void
-  setSpeed: (speed: Speed) => void
   openMarket: () => void
   closeMarket: () => void
   setMarketTab: (tab: string) => void
@@ -309,8 +308,6 @@ export const useGameStore = create<GameState>((set, get) => {
         set({ running: true })
       }
     },
-
-    setSpeed: (speed) => set({ speed }),
 
     // 매매창을 열면 시계를 멈추고 현재 시각을 보고해 가격·현금을 최신으로 맞춘다. 그 뒤 시황과 고른 종목의 분석을 받는다.
     openMarket: () => {

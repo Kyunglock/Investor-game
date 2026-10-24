@@ -12,10 +12,9 @@ export function App() {
   const status = useGameStore((s) => s.status)
   const game = useGameStore((s) => s.game)
   const running = useGameStore((s) => s.running)
-  const speed = useGameStore((s) => s.speed)
   const outcome = useGameStore((s) => s.outcome)
   const marketOpen = useGameStore((s) => s.marketOpen)
-  const { load, born, startLife, pause, resume, setSpeed } = useGameStore.getState()
+  const { load, born, startLife, pause, resume } = useGameStore.getState()
   // 크레딧을 다 본(또는 건너뛴) 판. 끝난 판은 크레딧 뒤에 기록부가 나온다 (엔딩 설계 3절).
   const [creditsSeenFor, setCreditsSeenFor] = useState<string | null>(null)
 
@@ -32,12 +31,10 @@ export function App() {
       <TopBar
         game={game}
         running={running}
-        speed={speed}
         showControls={status === 'playing'}
         controlsDisabled={Boolean(game?.pendingEvent) || outcome !== null || marketOpen}
         onPause={pause}
         onResume={resume}
-        onSpeed={setSpeed}
         onRestart={restart}
       />
 
