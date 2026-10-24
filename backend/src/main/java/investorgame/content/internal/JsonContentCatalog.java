@@ -543,6 +543,11 @@ class JsonContentCatalog implements ContentCatalog {
       }
     }
     require(analysis.articles() != null && !analysis.articles().isEmpty(), "경제 기사가 없다");
+    for (AnalysisText.Article article : analysis.articles()) {
+      require(
+          article.text() != null && AnalysisText.SENTIMENTS.contains(article.sentiment()),
+          "경제 기사의 호재·악재 표시가 잘못되었다: " + article.text());
+    }
   }
 
   /** 모든 선택지가 스타일과 섹터를 하나씩 이상 드러내야 한다. 그래야 판마다 어떤 장면이 뽑히고 무엇을 골라도 투자 스타일과 관심 섹터가 반드시 정해진다. */

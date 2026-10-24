@@ -184,14 +184,22 @@ class MarketDesk {
     return facts;
   }
 
-  /** 전조·헛소문·기사·위기 회고를 구분 없이 날짜순으로. 종류는 화면이 꼬리표를 붙이지 않는다 (매매창 설계 3.3절). */
+  /**
+   * 전조·헛소문·기사·위기 회고를 구분 없이 날짜순으로. 종류 꼬리표는 없지만 +/− 표시는 붙는다: 전조·회고는 늘 −, 기사는 내용대로. 그래서 −만 보고는 전조인지 나쁜
+   * 기사인지 가릴 수 없다 (매매창 설계 3.3절, decisions.md 56번).
+   */
   private List<MarketOverview.NewsItem> newspaper(UUID gameId) {
     List<MarketOverview.NewsItem> items = new ArrayList<>();
     for (GameView.LogEntry entry : logs.findAll(gameId)) {
       Map<String, Object> p = entry.payload();
       switch (entry.kind()) {
-        case "OMEN", "ARTICLE" ->
-            items.add(new MarketOverview.NewsItem(entry.day(), entry.kind(), str(p.get("text"))));
+        case "OMEN" ->
+            items.add(
+                new MarketOverview.NewsItem(entry.day(), entry.kind(), str(p.get("text")), "NEG"));
+        case "ARTICLE" ->
+            items.add(
+                new MarketOverview.NewsItem(
+                    entry.day(), entry.kind(), str(p.get("text")), articleSentiment(p)));
         case "CRISIS" ->
             items.add(
                 new MarketOverview.NewsItem(
@@ -202,7 +210,8 @@ class MarketDesk {
                             str(p.get("startAge")),
                             str(p.get("endAge")),
                             str(p.get("name")),
-                            "DEPRESSION".equals(p.get("severity")) ? "대공황" : "불황")));
+                            "DEPRESSION".equals(p.get("severity")) ? "대공황" : "불황"),
+                    "NEG"));
         default -> {}
       }
     }
@@ -375,6 +384,20 @@ class MarketDesk {
             remark);
     analyses.insertIfAbsent(row);
     return view(analyses.find(gameId, target, month).orElse(row));
+  }
+
+  /** 기사 기록의 표시. 표시를 남기기 전의 옛 기록은 문구로 콘텐츠를 찾는다. */
+  private String articleSentiment(Map<String, Object> payload) {
+    Object stored = payload.get("sentiment");
+    if (stored != null) {
+      return String.valueOf(stored);
+    }
+    String text = str(payload.get("text"));
+    return content.analysis().articles().stream()
+        .filter(a -> a.text().equals(text))
+        .map(AnalysisText.Article::sentiment)
+        .findFirst()
+        .orElse("NEUTRAL");
   }
 
   private static Analysis view(AnalysisRepository.AnalysisRow row) {
