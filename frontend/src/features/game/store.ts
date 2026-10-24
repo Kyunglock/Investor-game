@@ -17,6 +17,7 @@ import {
   shouldReport,
   totalDays,
 } from './clock'
+import { splitNotices } from './notices'
 
 /** revealing: 태어나서 능력치가 공개되는 중. 사용자가 "인생 시작하기"를 누르면 playing이 된다. */
 type Status = 'loading' | 'none' | 'revealing' | 'playing' | 'ended' | 'error'
@@ -53,8 +54,10 @@ interface GameState {
   trading: boolean
   /** 종목별 월간 이력. 패널에서 종목을 고를 때 받아 둔다. */
   histories: Record<string, StockHistory>
-  /** 방금 들어온 알림성 생활 이벤트. 토스트가 3초 뒤 지운다. */
-  lastNotice: LogEntry | null
+  /** 아직 보여 주지 않은 생활 알림. 토스트가 맨 앞을 3초 보여 주고 지운다. 한꺼번에 와도 덮이지 않는다 (#24). */
+  notices: LogEntry[]
+  /** 지금 배너에 떠 있는 세상 소식(전조·기사·위기 회고). 다음 소식이 오면 바뀌고, 닫으면 빈다 (#24). */
+  worldNews: LogEntry[]
   load: () => Promise<void>
   born: () => Promise<void>
   startLife: () => void
@@ -72,18 +75,10 @@ interface GameState {
   selectStock: (code: string) => Promise<void>
   trade: (side: TradeSide, quantity: number) => Promise<void>
   dismissNotice: () => void
+  dismissWorldNews: () => void
   /** 가진 아파트를 매물로 내놓거나 거둔다. 팔리는 것은 매수자가 나와야 한다 (주거 설계 3절). */
   listHome: (seq: number, listed: boolean) => Promise<void>
 }
-
-const TOAST_KINDS = new Set<LogEntry['kind']>([
-  'LIFE',
-  'OMEN',
-  'ARTICLE',
-  'CRISIS',
-  'HOME_SOLD',
-  'TENANT',
-])
 
 export const MACRO_TAB = 'macro'
 export const HELD_TAB = 'held'
@@ -94,8 +89,10 @@ export const useGameStore = create<GameState>((set, get) => {
     set((state) => {
       const sameGame = state.game?.gameId === game.gameId
       const knownSeqs = new Set(sameGame ? state.game?.log.map((e) => e.seq) : [])
-      // 알림(LIFE)·전조(OMEN)·기사(ARTICLE)·위기 회고(CRISIS)·집이 팔림·세입자 교체는 판을 멈추지 않고 토스트로 지나간다.
-      const notices = game.log.filter((e) => TOAST_KINDS.has(e.kind) && !knownSeqs.has(e.seq))
+      // 생활 알림은 토스트로 차례로, 세상 소식은 큰 배너로. 둘 다 판을 멈추지 않는다 (#24).
+      const { toasts, world } = splitNotices(
+        sameGame ? game.log.filter((e) => !knownSeqs.has(e.seq)) : [],
+      )
       // 대기 중인 선택이 생겨도 열려 있는 매매창은 닫지 않는다. 창을 닫은 뒤에 선택이 보인다 (매매창 설계 2절).
       const marketOpen = state.marketOpen && game.status === 'ACTIVE'
       return {
@@ -104,7 +101,8 @@ export const useGameStore = create<GameState>((set, get) => {
         day: Math.max(sameGame ? state.day : 0, game.day),
         running: keepRunning && game.status === 'ACTIVE' && !game.pendingEvent && !marketOpen,
         marketOpen,
-        lastNotice: sameGame && notices.length > 0 ? notices[notices.length - 1] : state.lastNotice,
+        notices: [...state.notices, ...toasts],
+        worldNews: world.length > 0 ? world : state.worldNews,
       }
     })
 
@@ -185,7 +183,8 @@ export const useGameStore = create<GameState>((set, get) => {
     tradeOutcome: null,
     trading: false,
     histories: {},
-    lastNotice: null,
+    notices: [],
+    worldNews: [],
 
     // 재접속하면 일시정지 상태로 이어한다. 상황을 보고 사용자가 계속을 누른다 (architecture.md 7절).
     load: async () => {
@@ -214,7 +213,8 @@ export const useGameStore = create<GameState>((set, get) => {
         overview: null,
         analyses: {},
         cachedMonth: null,
-        lastNotice: null,
+        notices: [],
+        worldNews: [],
       })
       await api.POST('/api/sessions')
       const { data } = await api.POST('/api/games')
@@ -400,7 +400,9 @@ export const useGameStore = create<GameState>((set, get) => {
       }
     },
 
-    dismissNotice: () => set({ lastNotice: null }),
+    dismissNotice: () => set((state) => ({ notices: state.notices.slice(1) })),
+
+    dismissWorldNews: () => set({ worldNews: [] }),
 
     listHome: async (seq, listed) => {
       const { game } = get()

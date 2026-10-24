@@ -7,6 +7,7 @@ import { StartScreen } from './features/game/StartScreen'
 import { useGameStore } from './features/game/store'
 import { Toast } from './features/game/Toast'
 import { TopBar } from './features/game/TopBar'
+import { WorldNews } from './features/game/WorldNews'
 
 export function App() {
   const status = useGameStore((s) => s.status)
@@ -39,6 +40,7 @@ export function App() {
       />
 
       {status === 'playing' && <Toast />}
+      {status === 'playing' && <WorldNews />}
       <main className="mx-auto max-w-6xl px-4 py-6 md:px-6">
         {status === 'loading' && <p className="text-muted">불러오는 중…</p>}
         {status === 'error' && (

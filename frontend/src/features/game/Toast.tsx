@@ -1,12 +1,16 @@
 import { useEffect } from 'react'
-import { signedWon, won } from './labels'
+import { signedWon } from './labels'
+import { toastText } from './notices'
 import { useGameStore } from './store'
 
 const SHOW_MS = 3_000
 
-/** 알림성 생활 이벤트·경기 전조(헛소문·평범한 기사 포함)·위기 회고를 상단 오른쪽에 3초 띄운다. 멈추지 않고 지나간다 (경제 개편 설계 11.5절). */
+/**
+ * 생활 알림(생활 이벤트·집이 팔림·세입자 교체)을 상단 오른쪽에 3초씩 띄운다. 한꺼번에 오면 하나씩 차례로 보여 준다. 멈추지 않고 지나간다 (경제 개편 설계
+ * 11.5절). 세상 소식은 WorldNews가 맡는다 (#24).
+ */
 export function Toast() {
-  const notice = useGameStore((s) => s.lastNotice)
+  const notice = useGameStore((s) => s.notices[0] ?? null)
   const dismiss = useGameStore((s) => s.dismissNotice)
 
   useEffect(() => {
@@ -22,20 +26,11 @@ export function Toast() {
   }
   const p = notice.payload as Record<string, unknown>
   const amount = typeof p.amount === 'number' ? p.amount : 0
-  // 전조는 무엇의 전조인지 말하지 않고 들린 대로만 전한다. 위기는 끝난 뒤에야 이름이 붙는다 (decisions.md 38번).
-  const text =
-    notice.kind === 'OMEN' || notice.kind === 'ARTICLE'
-      ? String(p.text ?? '')
-      : notice.kind === 'CRISIS'
-        ? `돌아보니 그때는 ${String(p.name ?? '')}${p.severity === 'DEPRESSION' ? ' — 대공황' : ' — 불황'}이었다`
-        : notice.kind === 'HOME_SOLD'
-          ? `${String(p.regionName ?? '')}가 ${won(Number(p.price ?? 0))}에 팔렸다`
-          : notice.kind === 'TENANT'
-            ? `${String(p.regionName ?? '')} 세입자 교체 · 보증금 ${signedWon(Number(p.after ?? 0) - Number(p.before ?? 0))}`
-            : null
+  const text = toastText(notice)
   return (
     <div className="mx-auto max-w-6xl px-4 md:px-6">
       <output
+        key={notice.seq}
         className="animate-reveal mt-2 ml-auto block w-fit rounded border border-line border-l-[3px] border-l-teal bg-card px-3 py-1.5 text-xs shadow-[0_4px_14px_rgba(0,0,0,0.08)]"
         data-testid="notice-toast"
       >
