@@ -191,6 +191,29 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/admin/plays:
+    get:
+      operationId: getPlayLog
+      summary: 관리자 플레이 기록 — 누가(익명 세션) 언제 몇 판을 했는지
+      description: |
+        서버에 `ADMIN_TOKEN`이 설정되어 있고 `X-Admin-Token` 헤더가 같을 때만 연다 (decisions.md 46번).
+        최근 접속 세션 500개와 최근에 시작한 판 500개. 숨은 값(시드, 능력치)은 없다.
+      parameters:
+        - name: X-Admin-Token
+          in: header
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 플레이 기록
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PlayLog' }
+        '403':
+          description: 관리자 토큰이 없거나 틀림 (`ADMIN_REQUIRED`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 components:
   parameters:
     GameId:
@@ -199,6 +222,41 @@ components:
       required: true
       schema: { type: string, format: uuid }
   schemas:
+    PlayLog:
+      type: object
+      required: [sessions, plays]
+      properties:
+        sessions:
+          type: array
+          description: 마지막 접속이 최근인 순
+          items: { $ref: '#/components/schemas/PlaySession' }
+        plays:
+          type: array
+          description: 최근에 시작한 판 순
+          items: { $ref: '#/components/schemas/Play' }
+    PlaySession:
+      type: object
+      required: [sessionId, createdAt, lastSeenAt, games]
+      properties:
+        sessionId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time, description: 처음 온 시각 }
+        lastSeenAt: { type: string, format: date-time, description: 마지막 접속 시각 }
+        games: { type: integer, description: 최근 판 목록(plays) 안에서 센 판 수 }
+    Play:
+      type: object
+      required: [gameId, sessionId, status, startAge, age, startedAt, updatedAt]
+      properties:
+        gameId: { type: string, format: uuid }
+        sessionId: { type: string, format: uuid }
+        status: { type: string, enum: [ACTIVE, ENDED, ABANDONED] }
+        startAge: { type: integer }
+        age: { type: integer, description: 끝난 판이면 끝난 나이, 아니면 마지막으로 보고된 나이 }
+        startedAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        endedAt: { type: [string, 'null'], format: date-time }
+        initialAsset: { type: [integer, 'null'], format: int64, description: 끝난 판만 }
+        finalAsset: { type: [integer, 'null'], format: int64, description: 끝난 판만. 파산이면 음수 }
+        ending: { type: [string, 'null'], enum: [NORMAL, BANKRUPT, null], description: 끝난 판만 }
     Phase:
       type: string
       enum: [CHILDHOOD, SAVING, INVESTING, ENDED]

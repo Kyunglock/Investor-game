@@ -1,5 +1,7 @@
 package investorgame.result;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -10,4 +12,7 @@ public interface ResultService {
   void save(GameResult result);
 
   Optional<GameResult> find(UUID gameId);
+
+  /** 주어진 판들 가운데 결과가 있는 것만. 관리자 플레이 기록용. */
+  List<GameResult> findAll(Collection<UUID> gameIds);
 }

@@ -1,5 +1,6 @@
 package investorgame.session;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -11,4 +12,7 @@ public interface SessionService {
 
   /** 토큰이 유효하면 세션 ID를 돌려주고 마지막 접속 시각을 갱신한다. 만료되었거나 없으면 비어 있다. */
   Optional<UUID> resolve(String token);
+
+  /** 마지막 접속이 최근인 세션부터 limit개. 관리자 플레이 기록용이며 만료된 세션도 포함한다. */
+  List<SessionSummary> recent(int limit);
 }

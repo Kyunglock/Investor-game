@@ -25,6 +25,8 @@ export default defineConfig({
       // Testcontainers로 Postgres를 띄우므로 로컬 DB 없이 Docker만 있으면 된다.
       command: `${gradle} bootTestRun`,
       cwd: '../backend',
+      // 관리자 플레이 기록 E2E가 쓰는 토큰 (admin.spec.ts)
+      env: { ADMIN_TOKEN: 'e2e-admin-token' },
       url: 'http://localhost:8080/actuator/health',
       timeout: 240_000,
       reuseExistingServer: !process.env.CI,

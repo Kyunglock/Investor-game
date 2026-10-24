@@ -15,6 +15,10 @@ management:
       exposure:
         include: health
 
+# 관리자 플레이 기록(/api/admin/plays)을 여는 토큰. 비워 두면 관리자 API는 꺼진다 (decisions.md 46번)
+admin:
+  token: ${ADMIN_TOKEN:}
+
 game:
   days-per-month: 30
   days-per-year: 360

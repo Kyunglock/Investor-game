@@ -3,6 +3,7 @@ package investorgame.session.internal;
 import investorgame.session.IssuedSession;
 import investorgame.session.SessionProperties;
 import investorgame.session.SessionService;
+import investorgame.session.SessionSummary;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -12,6 +13,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Base64;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -68,6 +70,20 @@ class JdbcSessionService implements SessionService {
         .param("expiredBefore", now.minus(properties.ttl()))
         .query(UUID.class)
         .optional();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<SessionSummary> recent(int limit) {
+    return jdbc.sql(
+            """
+            SELECT id, created_at, last_seen_at FROM session_info
+            ORDER BY last_seen_at DESC
+            LIMIT :limit
+            """)
+        .param("limit", limit)
+        .query(SessionSummary.class)
+        .list();
   }
 
   private OffsetDateTime now() {

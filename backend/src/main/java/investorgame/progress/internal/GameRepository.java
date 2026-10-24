@@ -4,6 +4,7 @@ import investorgame.common.Phase;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -90,6 +91,33 @@ class GameRepository {
         .query(GameRow.class)
         .optional();
   }
+
+  /** 최근에 시작한 판부터. 나이는 마지막 보고 시각으로 센다. */
+  List<GameLine> recent(int limit, int daysPerYear) {
+    return jdbc.sql(
+            """
+            SELECT id AS game_id, session_id, status, start_age,
+                   start_age + last_reported_day / :daysPerYear AS age,
+                   created_at AS started_at, updated_at, ended_at
+            FROM progress_game
+            ORDER BY created_at DESC
+            LIMIT :limit
+            """)
+        .param("daysPerYear", daysPerYear)
+        .param("limit", limit)
+        .query(GameLine.class)
+        .list();
+  }
+
+  record GameLine(
+      UUID gameId,
+      UUID sessionId,
+      String status,
+      int startAge,
+      int age,
+      OffsetDateTime startedAt,
+      OffsetDateTime updatedAt,
+      OffsetDateTime endedAt) {}
 
   void updateDay(UUID gameId, int day) {
     jdbc.sql(
