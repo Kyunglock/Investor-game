@@ -26,7 +26,14 @@ const KIND_LABELS: Record<PendingEvent['kind'], string> = {
 /** 뉴스 매수의 기본 수량이 쓰는 현금 비율. 서버 기본(progress.news-buy-ratio-bp)과 같은 값이며, 사용자가 수량을 바꿀 수 있다. */
 const NEWS_BUY_PERCENT = 30
 
-type TradeSide = 'BUY' | 'SELL'
+/** 빚투 상한: 순자산의 이 비율까지 빌린다. 서버(progress.leverage-loan-bp)와 같은 값 (decisions.md 39번). */
+const LEVERAGE_LOAN_PERCENT = 50
+/** 빚투 수량 입력창의 기본값: 상한의 절반. 전에는 묻지 않고 상한을 다 빌렸다 (54번). */
+const LEVERAGE_DEFAULT_PERCENT = 50
+
+/** 수량을 묻는 선택지: 뉴스 매수·매도, 빚투. */
+type Picker = 'BUY' | 'SELL' | 'BORROW'
+const PICKER_LABEL: Record<Picker, string> = { BUY: '매수', SELL: '매도', BORROW: '빚투' }
 
 interface Props {
   event: PendingEvent
@@ -56,22 +63,30 @@ function Body({ event, game, busy, onChoose }: Props) {
   const price = quote?.price ?? 0
   const age = game.startAge + Math.floor(event.occursDay / game.daysPerYear)
   const [picked, setPicked] = useState<string | null>(null)
-  // 뉴스에서 매수·매도를 누르면 바로 보내지 않고 수량을 묻는다. 관망은 바로 보낸다.
-  const [side, setSide] = useState<TradeSide | null>(null)
+  // 뉴스에서 매수·매도를, 빚투에서 빌린다를 누르면 바로 보내지 않고 수량을 묻는다. 관망·거절은 바로 보낸다.
+  const [side, setSide] = useState<Picker | null>(null)
   const [quantity, setQuantity] = useState('')
   const qty = Math.max(0, Math.floor(Number(quantity) || 0))
+  // 빚투는 순자산(총자산)의 절반까지 빌릴 수 있다. 서버가 같은 상한으로 자른다 (decisions.md 39·54번).
+  const maxLoan = Math.floor((Math.max(0, game.totalAsset) * LEVERAGE_LOAN_PERCENT) / 100)
   const fill = (percent: number) =>
     setQuantity(
       String(
         side === 'BUY'
           ? quantityForCash(game.cash, price, percent)
-          : quantityForHolding(holding?.quantity ?? 0, percent),
+          : side === 'BORROW'
+            ? quantityForCash(maxLoan, price, percent)
+            : quantityForHolding(holding?.quantity ?? 0, percent),
       ),
     )
   const canSubmit =
     !busy &&
     qty >= 1 &&
-    (side === 'BUY' ? qty * price <= game.cash : qty <= (holding?.quantity ?? 0))
+    (side === 'BUY'
+      ? qty * price <= game.cash
+      : side === 'BORROW'
+        ? qty * price <= maxLoan
+        : qty <= (holding?.quantity ?? 0))
 
   const pick = (code: string) => {
     if (isNews && (code === 'BUY' || code === 'SELL')) {
@@ -83,6 +98,11 @@ function Body({ event, game, busy, onChoose }: Props) {
             : (holding?.quantity ?? 0),
         ),
       )
+      return
+    }
+    if (isLeverage && code === 'BORROW') {
+      setSide('BORROW')
+      setQuantity(String(quantityForCash(maxLoan, price, LEVERAGE_DEFAULT_PERCENT)))
       return
     }
     setSide(null)
@@ -163,7 +183,7 @@ function Body({ event, game, busy, onChoose }: Props) {
               : (isNews || isShake) && option.code === 'SELL' && holding
                 ? `보유 ${holding.quantity}주 ≈ ${won(holding.value)}`
                 : isLeverage && option.code === 'BORROW'
-                  ? `대출 약 ${won(Math.floor(Math.max(0, game.totalAsset) / 2))} · 월 이자 1%`
+                  ? `최대 ${won(maxLoan)} · 월 이자 1%`
                   : null
           return (
             <button
@@ -193,15 +213,13 @@ function Body({ event, game, busy, onChoose }: Props) {
         })}
       </div>
 
-      {isNews && side && (
+      {side && (
         <div
           className="mt-2.5 rounded border border-line bg-bg px-3 py-2.5"
           data-testid="news-trade"
         >
           <label className="flex items-center gap-2">
-            <span className="shrink-0 text-xs text-muted">
-              {side === 'BUY' ? '매수' : '매도'} 수량
-            </span>
+            <span className="shrink-0 text-xs text-muted">{PICKER_LABEL[side]} 수량</span>
             <input
               type="number"
               min={1}
@@ -214,8 +232,8 @@ function Body({ event, game, busy, onChoose }: Props) {
             />
             <span className="text-xs text-muted">주</span>
           </label>
-          <div className={`mt-2 grid gap-1.5 ${side === 'BUY' ? 'grid-cols-4' : 'grid-cols-3'}`}>
-            {(side === 'BUY' ? BUY_PERCENTS : SELL_PERCENTS).map((p) => (
+          <div className={`mt-2 grid gap-1.5 ${side === 'SELL' ? 'grid-cols-3' : 'grid-cols-4'}`}>
+            {(side === 'SELL' ? SELL_PERCENTS : BUY_PERCENTS).map((p) => (
               <button
                 key={p}
                 type="button"
@@ -227,7 +245,7 @@ function Body({ event, game, busy, onChoose }: Props) {
             ))}
           </div>
           <p className="mt-2 flex justify-between text-xs text-muted">
-            <span>주문 금액</span>
+            <span>{side === 'BORROW' ? '대출 금액' : '주문 금액'}</span>
             <b className="font-mono-num text-sm text-ink">{won(qty * price)}</b>
           </p>
           <button
@@ -240,7 +258,7 @@ function Body({ event, game, busy, onChoose }: Props) {
             }}
             data-testid="news-trade-submit"
           >
-            {side === 'BUY' ? '매수' : '매도'} 확정
+            {PICKER_LABEL[side]} 확정
           </button>
         </div>
       )}

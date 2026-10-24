@@ -283,7 +283,7 @@ class DefaultProgressService implements ProgressService {
           // 흔들림은 뉴스와 같은 판정·충격 흐름. "판다"는 전량이다 (decisions.md 33번).
           case ChoiceTicket.Shake shake ->
               resolveNews(game, ticket, pendingView.title(), null, random);
-          case ChoiceTicket.Leverage leverage -> resolveLeverage(game, ticket, leverage);
+          case ChoiceTicket.Leverage leverage -> resolveLeverage(game, ticket, leverage, quantity);
           case ChoiceTicket.Housing home ->
               housingFlow.resolve(
                   gameId,
@@ -901,17 +901,21 @@ class DefaultProgressService implements ProgressService {
    * 빚투 (decisions.md 39번). 고르면 총자산의 leverage-loan-bp만큼 대출받아 그 종목을 산다. 판정은 없다: 바닥이었는지는 그 뒤 시장이 정한다.
    * 빚에는 다달이 이자가 붙고 수입이 들어오면 먼저 갚는다.
    */
+  /**
+   * 빚투 (decisions.md 39번). 빌릴 수 있는 최대는 순자산의 절반이고, 사용자가 수량(requested)을 정하면 그만큼만 빌려 산다. 최대를 넘으면 최대로
+   * 자른다. 수량이 없으면 최대로 (54번).
+   */
   private ChoiceOutcome.Outcome resolveLeverage(
-      GameRow game, ChoiceTicket ticket, ChoiceTicket.Leverage leverage) {
+      GameRow game, ChoiceTicket ticket, ChoiceTicket.Leverage leverage, Long requested) {
     UUID gameId = game.id();
     String option = ticket.optionCode();
     events.complete(gameId, ticket.eventId(), new Completion(option, option, List.of()));
     String stockName = content.stock(ticket.stockCode()).name();
     Map<String, Long> prices = market.prices(gameId);
     long price = prices.get(ticket.stockCode());
-    long loan =
+    long maxLoan =
         leverage.borrow() ? Math.max(0, netWorth(gameId)) * properties.leverageLoanBp() / BP : 0;
-    long quantity = loan / price;
+    long quantity = requested == null ? maxLoan / price : Math.min(requested, maxLoan / price);
     ChoiceOutcome.Trade trade = null;
     String message;
     if (quantity > 0) {
