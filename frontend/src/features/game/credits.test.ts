@@ -294,6 +294,7 @@ describe('buildCredits', () => {
       'traits',
       'work',
       'family',
+      'child-1',
       'news',
       'last',
     ])
@@ -306,12 +307,11 @@ describe('buildCredits', () => {
       '35세 · 연봉 협상',
       '60세, 은퇴',
     ])
-    expect(credits[4].lines.map((l) => l.text)).toEqual([
-      '29세, 결혼',
-      '31세, 1번째 아이가 태어났다',
-    ])
-    expect(credits[5].lines[0].text).toBe('투자를 시작하지 않았다')
-    expect(credits[6].lines.at(-1)).toEqual({
+    expect(credits[4].lines.map((l) => l.text)).toEqual(['29세, 결혼'])
+    expect(credits[5].title).toBe('첫째')
+    expect(credits[5].lines.map((l) => l.text)).toEqual(['31세, 1번째 아이가 태어났다'])
+    expect(credits[6].lines[0].text).toBe('투자를 시작하지 않았다')
+    expect(credits[7].lines.at(-1)).toEqual({
       text: '70세. 남은 자산 80,000,000원과 매달 연금 1,990,000원으로 여생을 보냈다.',
       tone: 'accent',
     })
@@ -420,17 +420,14 @@ describe('buildCredits', () => {
 })
 
 describe('크레딧 그림 (#23)', () => {
-  it('장마다 그림이 붙고, 가족 그림에는 배우자와 아이(셋까지)가 선다', () => {
+  it('장마다 그림이 붙고, 가족 그림에는 결혼한 둘이 선다', () => {
     const family = baseGame({
-      household: {
-        ...baseGame().household,
-        married: true,
-        children: [{ age: 40 }, { age: 38 }, { age: 35 }, { age: 30 }],
-      },
+      household: { ...baseGame().household, married: true, children: [{ age: 40 }] },
+      log: [entry('MARRIAGE', 29, { cost: 30_000_000 }), entry('CHILD', 30, { seq: 1, cost: 0 })],
     })
     const art = creditArt(family, 'family')
     expect(art?.vignette).toBe('family')
-    expect(art?.figures.map((f) => f.who)).toEqual(['me', 'spouse', 'kid', 'kid', 'kid'])
+    expect(art?.figures.map((f) => f.who)).toEqual(['me', 'spouse'])
     // 16칸 몸이 64칸 배경 밖으로 나가지 않는다.
     for (const f of art?.figures ?? []) {
       expect(f.x + 16).toBeLessThanOrEqual(64)
@@ -438,7 +435,54 @@ describe('크레딧 그림 (#23)', () => {
     const keys = buildCredits(family)
       .filter((s) => s.art)
       .map((s) => s.key)
-    expect(keys).toEqual(expect.arrayContaining(['born', 'work', 'family', 'last']))
+    expect(keys).toEqual(expect.arrayContaining(['born', 'work', 'family', 'child-1', 'last']))
+  })
+
+  it('아이가 태어날 때마다 아기 침대 그림이 한 장씩 붙고, 먼저 난 아이들이 옆에 선다 (decisions.md 67번)', () => {
+    const family = baseGame({
+      household: {
+        ...baseGame().household,
+        married: true,
+        children: [{ age: 40 }, { age: 38 }, { age: 35 }],
+      },
+      log: [
+        entry('MARRIAGE', 29, { cost: 30_000_000 }),
+        entry('CHILD', 30, { seq: 1, cost: 0 }),
+        entry('CHILD', 32, { seq: 2, cost: 0 }),
+        entry('CHILD', 42, { seq: 3, cost: 0 }),
+      ],
+    })
+    const credits = buildCredits(family)
+    const children = credits.filter((s) => s.key.startsWith('child-'))
+    expect(children.map((s) => s.title)).toEqual(['첫째', '둘째', '셋째'])
+    expect(children.map((s) => s.lines[0].text)).toEqual([
+      '30세, 1번째 아이가 태어났다',
+      '32세, 2번째 아이가 태어났다',
+      '42세, 3번째 아이가 태어났다',
+    ])
+    expect(children.map((s) => s.art?.vignette)).toEqual(['baby', 'baby', 'baby'])
+    // 첫째: 부모 둘. 둘째: 첫째가 어린이로 옆에. 셋째: 자리가 셋뿐이라 부모와 첫째까지만.
+    expect(children[0].art?.figures.map((f) => f.who)).toEqual(['me', 'spouse'])
+    expect(children[1].art?.figures.map((f) => [f.who, f.stage])).toEqual([
+      ['me', 'adult'],
+      ['spouse', 'adult'],
+      ['kid', 'child'],
+    ])
+    expect(children[2].art?.figures.map((f) => [f.who, f.stage])).toEqual([
+      ['me', 'middle'],
+      ['spouse', 'middle'],
+      ['kid', 'child'],
+    ])
+    // 아기 침대(40칸~)를 가리지 않는다.
+    for (const s of children) {
+      for (const f of s.art?.figures ?? []) {
+        expect(f.x + 16).toBeLessThanOrEqual(40)
+      }
+    }
+    // 결혼 없이 혼자면 가족 장만 하나.
+    const single = buildCredits(baseGame())
+    expect(single.filter((s) => s.key === 'family' || s.key.startsWith('child-'))).toHaveLength(1)
+    expect(single.find((s) => s.key === 'family')?.lines[0].text).toBe('혼자 살았다')
   })
 
   it('살아온 집은 마지막 집의 겉모습, 마지막은 파산이면 비 오는 거리', () => {

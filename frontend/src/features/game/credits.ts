@@ -13,6 +13,7 @@ import {
   yearOf,
 } from './labels'
 import { nickname } from './nickname'
+import { stageFor } from './pixel/bodies'
 import type { CreditArt, Figure, VignetteKey } from './pixel/vignettes'
 
 /**
@@ -179,15 +180,52 @@ const HOME_VIGNETTE: Record<Game['housing']['tenure'], VignetteKey | null> = {
   OWN: 'apartment',
 }
 
+/** 아이가 태어난 장의 키. 아이마다 장이 하나씩이다. */
+const CHILD_KEY = 'child-'
+const ORDINALS = ['첫째', '둘째', '셋째', '넷째', '다섯째']
+
+function childSeq(key: string): number | null {
+  if (!key.startsWith(CHILD_KEY)) {
+    return null
+  }
+  const seq = Number(key.slice(CHILD_KEY.length))
+  return Number.isInteger(seq) && seq > 0 ? seq : null
+}
+
 /**
- * 장마다 하나씩 올리는 도트 그림 (#23). 타고난 것은 아기, 일은 일터, 가족은 배우자와 아이들(셋까지), 살아온 집은 마지막 집의 겉모습, 마지막은
- * 창가의 노년(파산이면 비 오는 거리). 사람 위치는 64칸 배경 위 16칸 몸의 왼쪽 열이다.
+ * 아이가 태어난 장의 그림: 아기 침대(오른쪽) 옆에 부모가 서고, 먼저 태어난 아이들은 그 왼쪽에 어린이 몸으로 선다. 침대 왼쪽에 자리가 셋(24·12·0)뿐이라
+ * 넘치는 사람은 그리지 않는다.
+ */
+function childArt(game: Game, birth: LogEntry, married: boolean): CreditArt {
+  const stage = stageFor(ageOf(game, birth.day))
+  const seq = num((birth.payload as Payload).seq)
+  const who: Figure['who'][] = ['me', ...(married ? (['spouse'] as const) : [])]
+  for (let i = 1; i < seq; i++) {
+    who.push('kid')
+  }
+  const slots = [24, 12, 0]
+  const figures: Figure[] = []
+  for (const w of who) {
+    const x = slots.shift()
+    if (x == null) {
+      break
+    }
+    figures.push({ who: w, stage: w === 'kid' ? 'child' : stage, x })
+  }
+  return { vignette: 'baby', figures }
+}
+
+/**
+ * 장마다 하나씩 올리는 도트 그림 (#23). 타고난 것은 아기, 일은 일터, 가족은 결혼한 둘(아이는 태어난 장마다 아기 침대 그림을 따로 가진다), 살아온
+ * 집은 마지막 집의 겉모습, 마지막은 창가의 노년(파산이면 비 오는 거리). 사람 위치는 64칸 배경 위 16칸 몸의 왼쪽 열이다.
  */
 export function creditArt(game: Game, key: string): CreditArt | undefined {
   const married = game.household.married
-  const kids = Math.min(3, game.household.children.length)
-  const kidFigures = (from: number): Figure[] =>
-    Array.from({ length: kids }, (_, i) => ({ who: 'kid', stage: 'child', x: from + i * 10 }))
+  const seq = childSeq(key)
+  if (seq != null) {
+    const birth = entries(game, 'CHILD').find((e) => num((e.payload as Payload).seq) === seq)
+    return birth ? childArt(game, birth, married) : undefined
+  }
   switch (key) {
     case 'born':
       return { vignette: 'nursery', figures: [{ who: 'me', stage: 'baby', x: 22 }] }
@@ -201,15 +239,14 @@ export function creditArt(game: Game, key: string): CreditArt | undefined {
         : { vignette: 'street', figures: [{ who: 'me', stage: 'adult', x: 18 }] }
     }
     case 'family':
-      if (!married && kids === 0) {
+      if (!married) {
         return { vignette: 'studio', figures: [{ who: 'me', stage: 'adult', x: 36 }] }
       }
       return {
         vignette: 'family',
         figures: [
-          { who: 'me', stage: 'adult', x: 3 },
-          ...(married ? [{ who: 'spouse', stage: 'adult', x: 15 } as const] : []),
-          ...kidFigures(married ? 27 : 15),
+          { who: 'me', stage: 'adult', x: 14 },
+          { who: 'spouse', stage: 'adult', x: 28 },
         ],
       }
     case 'homes': {
@@ -317,18 +354,27 @@ export function buildCredits(game: Game): CreditSection[] {
     lines: workLines.length > 0 ? workLines : [{ text: '직업을 갖지 못했다', tone: 'muted' }],
   })
 
-  const familyLines: CreditLine[] = entries(game, 'MARRIAGE', 'CHILD').map((e) => {
-    const p = e.payload as Payload
-    const age = ageOf(game, e.day)
-    return e.kind === 'MARRIAGE'
-      ? { text: `${age}세, 결혼` }
-      : { text: `${age}세, ${num(p.seq)}번째 아이가 태어났다` }
-  })
-  sections.push({
-    key: 'family',
-    title: '가족',
-    lines: familyLines.length > 0 ? familyLines : [{ text: '혼자 살았다', tone: 'muted' }],
-  })
+  // 가족: 결혼이 한 장, 아이는 태어날 때마다 한 장씩 그림과 함께 (decisions.md 67번).
+  const marriages = entries(game, 'MARRIAGE')
+  const births = entries(game, 'CHILD')
+  if (marriages.length === 0 && births.length === 0) {
+    sections.push({ key: 'family', title: '가족', lines: [{ text: '혼자 살았다', tone: 'muted' }] })
+  }
+  if (marriages.length > 0) {
+    sections.push({
+      key: 'family',
+      title: '가족',
+      lines: marriages.map((e) => ({ text: `${ageOf(game, e.day)}세, 결혼` })),
+    })
+  }
+  for (const e of births) {
+    const seq = num((e.payload as Payload).seq)
+    sections.push({
+      key: `${CHILD_KEY}${seq}`,
+      title: ORDINALS[seq - 1] ?? `${seq}번째`,
+      lines: [{ text: `${ageOf(game, e.day)}세, ${seq}번째 아이가 태어났다` }],
+    })
+  }
 
   const news = entries(game, 'NEWS')
   const shakes = entries(game, 'SHAKE')
