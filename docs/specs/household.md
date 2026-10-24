@@ -28,7 +28,7 @@ public interface HouseholdService {
     void retire(UUID gameId, int gameDay);           // 멱등
     long monthlyExpense(UUID gameId, int gameDay);
     long spouseIncome(UUID gameId, int gameDay);     // 미혼·은퇴 뒤 0
-    long pension(UUID gameId, int gameDay);          // 은퇴 전 0, 은퇴 뒤 1인/부부 연금, 물가 반영
+    long pension(UUID gameId, int gameDay);          // 은퇴 전 0, 은퇴 뒤(또는 은퇴 나이가 지난 뒤) 1인/부부 연금, 물가 반영
     long weddingCost(int gameDay);
     long childbirthCost(int gameDay);
     boolean retireMonth(int gameDay);                // == (retire-age − start-age) × 360
@@ -46,7 +46,7 @@ public record HouseholdView(boolean married, Integer marriedDay, List<Integer> c
 | 배우자 소득 | 결혼 뒤 매월, 은퇴 뒤 0 | 1,800,000 |
 | 물가 | 위 금액 전부. `years = max(0, 나이 − inflation-base-age)`, `(100+p)^years / 100^years` 정수 곱셈 | 2%, 기준 24세 |
 | 은퇴 | `retire-age` 첫날. 진행이 월급을 끊고 퇴직금(월급 × 연차)을 넣는다 | 60세 |
-| 연금 | 은퇴 뒤 매월. 1인 / 부부. 진행이 `PENSION`으로 넣는다 (decisions.md 27번) | 1,000,000 / 1,600,000 |
+| 연금 | 은퇴 뒤, 또는 은퇴 나이(60)가 지난 뒤 매월(정년 없는 직업이면 월급과 같이). 1인 / 부부. 진행이 `PENSION`으로 넣는다 (decisions.md 27·57번) | 1,000,000 / 1,600,000 |
 
 물가 기준을 1세가 아니라 **취업 나이**로 둔 이유: 1세 기준이면 취업 때 이미 1.58배가 되어 밸런스가 깨진다 (설계 13절).
 
