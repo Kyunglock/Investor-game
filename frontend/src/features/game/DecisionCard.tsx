@@ -187,7 +187,7 @@ function Body({ event, game, busy, onChoose }: Props) {
               : (isNews || isShake) && option.code === 'SELL' && holding
                 ? `보유 ${holding.quantity}주 ≈ ${won(holding.value)}`
                 : isLeverage && option.code === 'BORROW'
-                  ? `최대 ${won(maxLoan)} · 월 이자 1%`
+                  ? `최대 ${won(maxLoan)} · 월 이자 1.5%`
                   : null
           return (
             <button
