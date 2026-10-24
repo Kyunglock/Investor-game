@@ -12,6 +12,7 @@ import {
   yearOf,
 } from './labels'
 import { nickname } from './nickname'
+import type { CreditArt, Figure, VignetteKey } from './pixel/vignettes'
 
 /**
  * 엔딩 크레딧의 재료 (엔딩 설계 3절). 서버가 이미 준 기록·보유·결과·가계만으로 만든다. 문구는 여기서, 숫자는 서버에서.
@@ -28,6 +29,8 @@ export interface CreditSection {
   key: string
   title: string
   lines: CreditLine[]
+  /** 장 위에 올리는 도트 그림 (#23). 없으면 글만 */
+  art?: CreditArt
 }
 
 /** 점수가 붙은 선택 하나. 뉴스 선택은 충격 직후 손익 + 매도로 피한(놓친) 금액, 자유 매매는 실현 손익. */
@@ -165,6 +168,76 @@ function decisionLine(d: ScoredDecision): CreditLine {
 
 function entries(game: Game, ...kinds: LogEntry['kind'][]): LogEntry[] {
   return game.log.filter((e) => kinds.includes(e.kind))
+}
+
+const HOME_VIGNETTE: Record<Game['housing']['tenure'], VignetteKey | null> = {
+  PARENTS: null,
+  MONTHLY: 'oneroom',
+  VILLA_JEONSE: 'villa',
+  APT_JEONSE: 'apartment',
+  OWN: 'apartment',
+}
+
+/**
+ * 장마다 하나씩 올리는 도트 그림 (#23). 타고난 것은 아기, 일은 일터, 가족은 배우자와 아이들(셋까지), 살아온 집은 마지막 집의 겉모습, 마지막은
+ * 창가의 노년(파산이면 비 오는 거리). 사람 위치는 64칸 배경 위 16칸 몸의 왼쪽 열이다.
+ */
+export function creditArt(game: Game, key: string): CreditArt | undefined {
+  const married = game.household.married
+  const kids = Math.min(3, game.household.children.length)
+  const kidFigures = (from: number): Figure[] =>
+    Array.from({ length: kids }, (_, i) => ({ who: 'kid', stage: 'child', x: from + i * 10 }))
+  switch (key) {
+    case 'born':
+      return { vignette: 'nursery', figures: [{ who: 'me', stage: 'baby', x: 22 }] }
+    case 'work': {
+      if (game.fullTimeInvestor) {
+        return { vignette: 'studio', figures: [{ who: 'me', stage: 'adult', x: 36 }] }
+      }
+      const worked = game.log.some((e) => e.kind === 'JOB')
+      return worked
+        ? { vignette: 'office', figures: [{ who: 'me', stage: 'adult', x: 38 }] }
+        : { vignette: 'street', figures: [{ who: 'me', stage: 'adult', x: 18 }] }
+    }
+    case 'family':
+      if (!married && kids === 0) {
+        return { vignette: 'studio', figures: [{ who: 'me', stage: 'adult', x: 36 }] }
+      }
+      return {
+        vignette: 'family',
+        figures: [
+          { who: 'me', stage: 'adult', x: 3 },
+          ...(married ? [{ who: 'spouse', stage: 'adult', x: 15 } as const] : []),
+          ...kidFigures(married ? 27 : 15),
+        ],
+      }
+    case 'homes': {
+      const vignette = HOME_VIGNETTE[game.housing.tenure]
+      if (!vignette) {
+        return undefined
+      }
+      return {
+        vignette,
+        figures: [
+          { who: 'me', stage: 'middle', x: 0 },
+          ...(married ? [{ who: 'spouse', stage: 'middle', x: 11 } as const] : []),
+        ],
+      }
+    }
+    case 'last':
+      if (game.result?.ending === 'BANKRUPT') {
+        return { vignette: 'rain', figures: [{ who: 'me', stage: 'old', x: 20 }] }
+      }
+      return {
+        vignette: 'home-old',
+        figures: [
+          { who: 'me', stage: 'old', x: 28 },
+          ...(married ? [{ who: 'spouse', stage: 'old', x: 12 } as const] : []),
+        ],
+      }
+    default:
+      return undefined
+  }
 }
 
 export function buildCredits(game: Game): CreditSection[] {
@@ -395,5 +468,8 @@ export function buildCredits(game: Game): CreditSection[] {
   )
   sections.push({ key: 'last', title: '마지막', lines: lastLines })
 
-  return sections
+  return sections.map((s) => {
+    const art = creditArt(game, s.key)
+    return art ? { ...s, art } : s
+  })
 }

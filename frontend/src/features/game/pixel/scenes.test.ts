@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { dwellingFor, SCENES, sceneCaption, sceneFor } from './scenes'
+import { VIGNETTES } from './vignettes'
 
 describe('sceneFor', () => {
   it('나이·단계·직업으로 장면을 고른다 (설계 8절)', () => {
@@ -56,5 +57,16 @@ describe('sceneCaption', () => {
     expect(sceneCaption('studio', { ...home, fullTimeInvestor: true })).toBe(
       '서울 · 원룸 월세 · 하루 종일 시세판을 보는 중',
     )
+  })
+})
+
+describe('VIGNETTES', () => {
+  it('크레딧 그림도 모두 64열 20행이다 (#23)', () => {
+    for (const [key, map] of Object.entries(VIGNETTES)) {
+      expect(map, key).toHaveLength(20)
+      for (const row of map) {
+        expect(row, key).toHaveLength(64)
+      }
+    }
   })
 })

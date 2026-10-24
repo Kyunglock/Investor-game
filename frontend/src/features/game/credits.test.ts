@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Game, LogEntry, Stats } from '../../api/client'
-import { buildCredits, scoreDecisions, stockReturns } from './credits'
+import { buildCredits, creditArt, scoreDecisions, stockReturns } from './credits'
 
 const stats: Stats = { insight: 42, patience: 61, courage: 19, conviction: 35, luck: 57 }
 const YEAR = 360
@@ -416,5 +416,47 @@ describe('buildCredits', () => {
       text: '44세. 빚 12,000,000원을 갚지 못해 파산했다.',
       tone: 'down',
     })
+  })
+})
+
+describe('크레딧 그림 (#23)', () => {
+  it('장마다 그림이 붙고, 가족 그림에는 배우자와 아이(셋까지)가 선다', () => {
+    const family = baseGame({
+      household: {
+        ...baseGame().household,
+        married: true,
+        children: [{ age: 40 }, { age: 38 }, { age: 35 }, { age: 30 }],
+      },
+    })
+    const art = creditArt(family, 'family')
+    expect(art?.vignette).toBe('family')
+    expect(art?.figures.map((f) => f.who)).toEqual(['me', 'spouse', 'kid', 'kid', 'kid'])
+    // 16칸 몸이 64칸 배경 밖으로 나가지 않는다.
+    for (const f of art?.figures ?? []) {
+      expect(f.x + 16).toBeLessThanOrEqual(64)
+    }
+    const keys = buildCredits(family)
+      .filter((s) => s.art)
+      .map((s) => s.key)
+    expect(keys).toEqual(expect.arrayContaining(['born', 'work', 'family', 'last']))
+  })
+
+  it('살아온 집은 마지막 집의 겉모습, 마지막은 파산이면 비 오는 거리', () => {
+    expect(creditArt(baseGame(), 'homes')?.vignette).toBe('apartment')
+    const renting = baseGame({ housing: { ...baseGame().housing, tenure: 'VILLA_JEONSE' } })
+    expect(creditArt(renting, 'homes')?.vignette).toBe('villa')
+    expect(creditArt(baseGame(), 'last')?.vignette).toBe('home-old')
+    const broke = baseGame({
+      result: {
+        initialAsset: 10_000_000,
+        finalAsset: -5_000_000,
+        returnBp: -15_000,
+        finalAge: 44,
+        ending: 'BANKRUPT',
+        deviationCounts: {},
+      },
+    })
+    expect(creditArt(broke, 'last')?.vignette).toBe('rain')
+    expect(creditArt(baseGame(), 'news')).toBeUndefined()
   })
 })

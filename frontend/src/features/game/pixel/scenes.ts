@@ -92,15 +92,15 @@ export function sceneCaption(
     .replace('{활동}', activity)
 }
 
-// ---- 그리기 도구 ----
+// ---- 그리기 도구 (엔딩 크레딧 그림도 쓴다: vignettes.ts) ----
 
-type Canvas = string[][]
+export type Canvas = string[][]
 
 function canvas(fill: string): Canvas {
   return Array.from({ length: SCENE_HEIGHT }, () => Array(SCENE_WIDTH).fill(fill))
 }
 
-function rect(c: Canvas, x: number, y: number, w: number, h: number, ch: string) {
+export function rect(c: Canvas, x: number, y: number, w: number, h: number, ch: string) {
   for (let j = y; j < y + h; j++) {
     for (let i = x; i < x + w; i++) {
       if (c[j] && i >= 0 && i < SCENE_WIDTH) {
@@ -110,13 +110,13 @@ function rect(c: Canvas, x: number, y: number, w: number, h: number, ch: string)
   }
 }
 
-function dots(c: Canvas, ch: string, points: [number, number][]) {
+export function dots(c: Canvas, ch: string, points: [number, number][]) {
   for (const [x, y] of points) {
     rect(c, x, y, 1, 1, ch)
   }
 }
 
-function sky(c: Canvas, rows: number) {
+export function sky(c: Canvas, rows: number) {
   rect(c, 0, 0, SCENE_WIDTH, rows, 'S')
   rect(c, 5, 1, 3, 3, 'L')
   dots(c, 'L', [
@@ -132,14 +132,14 @@ function sky(c: Canvas, rows: number) {
 }
 
 /** 창틀과 그 안의 하늘 */
-function window(c: Canvas, x: number, y: number, w: number, h: number) {
+export function window(c: Canvas, x: number, y: number, w: number, h: number) {
   rect(c, x, y, w, h, 'N')
   rect(c, x + 1, y + 1, w - 2, h - 2, 'S')
   rect(c, x + Math.floor(w / 2), y + 1, 1, h - 2, 'N')
   rect(c, x + 1, y + Math.floor(h / 2), w - 2, 1, 'N')
 }
 
-function room(c: Canvas) {
+export function room(c: Canvas) {
   rect(c, 0, 0, SCENE_WIDTH, 17, 'F')
   rect(c, 0, 0, SCENE_WIDTH, 2, 'H')
   rect(c, 0, 17, SCENE_WIDTH, 3, 'D')
@@ -169,7 +169,7 @@ function monitor(c: Canvas, x: number, withChart: boolean) {
   }
 }
 
-function plant(c: Canvas, x: number) {
+export function plant(c: Canvas, x: number) {
   rect(c, x, 13, 4, 4, 'P')
   rect(c, x + 1, 12, 2, 1, 'O')
   rect(c, x + 1, 9, 2, 3, 'g')
@@ -193,7 +193,7 @@ function bookshelf(c: Canvas, x: number, w: number) {
 
 const toMap = (c: Canvas): PixelMap => c.map((row) => row.join(''))
 
-function build(draw: (c: Canvas) => void): PixelMap {
+export function build(draw: (c: Canvas) => void): PixelMap {
   const c = canvas('.')
   draw(c)
   return toMap(c)
