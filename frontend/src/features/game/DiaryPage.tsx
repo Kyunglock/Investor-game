@@ -183,7 +183,8 @@ function DiaryLine({ line, kind }: { line: LogLine; kind?: string }) {
       data-kind={kind}
     >
       <span className="font-pen text-[20px] leading-6 text-pen-soft">{line.age}살</span>
-      <span>
+      {/* 세상 소식(전조·기사·위기 회고)은 놓치기 쉬워 형광펜을 그어 둔다 (#24, decisions.md 47번) */}
+      <span className={line.pill === '세상' ? 'bg-sticky box-decoration-clone px-1' : ''}>
         {line.pill && (
           <span className="mr-1 font-pen text-[19px] text-pen-soft">[{line.pill}]</span>
         )}
