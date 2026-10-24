@@ -471,7 +471,7 @@ class DefaultEventService implements EventService {
   }
 
   /**
-   * 주거 이벤트마다 언제 오는가. 처음 일을 시작하면 독립(move-out), 세입자는 만기(lease-end)마다, 집이 없으면 청약 공고(cheongyak)가
+   * 주거 이벤트마다 언제 오는가. 처음 일을 시작하면 독립(move-out), 세입자는 만기(lease-end)마다, 집이 없고 영끌이 되면 청약 공고(cheongyak)가
    * cheongyak-gap-days마다, 2채 미만이면 결혼·출산·서울 집값 급등 뒤에 "집 살까?"(buy, 최소 buy-gap-days 간격)가 온다. 순서가 같은 날의
    * 우선순위다.
    */
@@ -485,7 +485,8 @@ class DefaultEventService implements EventService {
     if (housing.leaseEndDay() != null) {
       due.put(ChoiceTicket.Housing.LEASE_END, housing.leaseEndDay());
     }
-    if (housing.homes() == 0) {
+    // 돈이 안 돼 '넘긴다'밖에 못 고를 공고는 띄우지 않는다. 영끌이 되는 순간 다음 공고가 온다 (#26, decisions.md 48번).
+    if (housing.homes() == 0 && housing.cheongyakAffordable()) {
       List<EventRow> notices = housingOf(rows, ChoiceTicket.Housing.CHEONGYAK);
       due.put(
           ChoiceTicket.Housing.CHEONGYAK,

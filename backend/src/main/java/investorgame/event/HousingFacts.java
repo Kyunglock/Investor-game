@@ -11,6 +11,8 @@ package investorgame.event;
  * @param lastChildDay 막내가 태어난 날. 자녀가 없으면 null
  * @param seoulChange12mBp 서울 아파트 12달 변동(만분율). 크게 오르면 "집 살까?"가 온다
  * @param luck 운(0~100). 운이 나쁠수록 세 만기에 집주인이 재계약을 거절하기 쉽다 (#25)
+ * @param cheongyakAffordable 영끌(현금 + 돌려받을 보증금 + LTV·DSR 한도 주담대)로 분양가를 치를 수 있는가. 아니면 분양 공고 자체가 오지
+ *     않는다 (#26)
  */
 public record HousingFacts(
     String tenure,
@@ -20,8 +22,9 @@ public record HousingFacts(
     boolean villaUninsured,
     Integer lastChildDay,
     int seoulChange12mBp,
-    int luck) {
+    int luck,
+    boolean cheongyakAffordable) {
 
   public static final HousingFacts PARENTS =
-      new HousingFacts("PARENTS", null, 0, false, false, null, 0, 50);
+      new HousingFacts("PARENTS", null, 0, false, false, null, 0, 50, false);
 }

@@ -115,7 +115,8 @@ class HousingFlowTest {
   void 막힌_선택은_고를_수_없다() {
     housing.rent(gameId, Tenure.MONTHLY, null, 10_000_000, 600_000, 0, false, JOB_DAY);
     EventView leaseEnd =
-        leaseEndOf(new HousingFacts("MONTHLY", JOB_DAY + YEAR, 0, false, false, null, 0, 50), 1L);
+        leaseEndOf(
+            new HousingFacts("MONTHLY", JOB_DAY + YEAR, 0, false, false, null, 0, 50, true), 1L);
     ChoiceTicket ticket = events.prepareChoice(gameId, leaseEnd.eventId(), "BUY_SEOUL");
     assertThatThrownBy(
             () ->
@@ -164,7 +165,7 @@ class HousingFlowTest {
   /** 보증보험 없는 빌라 만기 중 전세사기가 숨은 판을 찾는다(7%라 시드를 돌린다). */
   private EventView fraudulentLeaseEnd() {
     HousingFacts villa =
-        new HousingFacts("VILLA_JEONSE", JOB_DAY + YEAR, 0, false, true, null, 0, 50);
+        new HousingFacts("VILLA_JEONSE", JOB_DAY + YEAR, 0, false, true, null, 0, 50, true);
     for (long seed = 1; seed <= 300; seed++) {
       UUID probe = UUID.randomUUID();
       EventView view = leaseEndOf(probe, villa, seed);
