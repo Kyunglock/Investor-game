@@ -2,12 +2,15 @@ import type { Stats } from '../../../api/client'
 import { nickname } from '../nickname'
 import type { AdornmentKey } from './adornments'
 import { type AgeStage, stageFor } from './bodies'
+import type { MoodKey } from './moods'
 
 /** 한 캐릭터를 그리는 데 필요한 세 겹: 나이 몸통, 강점 머리장식, 약점 표시. */
 export interface SpriteSpec {
   stage: AgeStage
   adornment: AdornmentKey | null
   mark: keyof Stats | null
+  /** 순간의 표정. 없으면 평소 얼굴 (decisions.md 62번) */
+  mood?: MoodKey | null
 }
 
 const SPECIAL: Record<string, AdornmentKey | null> = {
