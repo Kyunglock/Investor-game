@@ -191,6 +191,25 @@ class JdbcHousingService implements HousingService {
 
   @Override
   @Transactional
+  public void repayMortgage(UUID gameId, int seq, long amount) {
+    HousingView.Home home =
+        homes(gameId).stream()
+            .filter(h -> h.seq() == seq)
+            .findFirst()
+            .orElseThrow(() -> new NotFoundException("그런 집이 없다"));
+    if (amount <= 0 || amount > home.mortgage()) {
+      throw new InvalidRequestException("갚을 금액은 남은 주담대 이하여야 한다");
+    }
+    jdbc.sql(
+            "UPDATE housing_home SET mortgage = mortgage - :paid WHERE game_id = :gameId AND seq = :seq")
+        .param("paid", amount)
+        .param("gameId", gameId)
+        .param("seq", seq)
+        .update();
+  }
+
+  @Override
+  @Transactional
   public MonthlyHousingCost settleMonth(UUID gameId, int mortgageRateBp, int day) {
     State state = state(gameId);
     long interest = 0;

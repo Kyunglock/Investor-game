@@ -114,6 +114,33 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/games/{gameId}/homes/{seq}/repay:
+    post:
+      operationId: repayMortgage
+      summary: 주담대를 현금으로 일시 상환한다
+      description: |
+        남은 원금 이하, 가진 현금 이하만 갚을 수 있다(아니면 400). 다음 달부터 남은 기간의 원리금균등 월 상환액이 줄어든다.
+        대기 중인 선택형 이벤트가 있으면 먼저 선택해야 한다 (400).
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+        - name: seq
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RepayRequest' }
+      responses:
+        '200':
+          description: 판 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Game' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/games/{gameId}/stocks/{stockCode}/history:
     get:
       operationId: stockHistory
@@ -508,6 +535,11 @@ components:
       required: [listed]
       properties:
         listed: { type: boolean }
+    RepayRequest:
+      type: object
+      required: [amount]
+      properties:
+        amount: { type: integer, format: int64, minimum: 1, description: 갚을 원금(원) }
     PendingEvent:
       type: object
       required: [eventId, kind, occursDay, sectorWide, title, body, options]
@@ -556,7 +588,7 @@ components:
         day: { type: integer, description: 사건이 일어난 게임 일수 }
         kind:
           type: string
-          enum: [BIRTH, TRAIT, JOB, JOB_WAIT, CAREER, STYLE, OFFER, NEWS, SHAKE, PRICE, GROWTH, TRADE, LIFE, MARRIAGE, CHILD, RETIRE, LEVERAGE, OMEN, ARTICLE, CRISIS, HOUSING, HOME_SOLD, TENANT, END]
+          enum: [BIRTH, TRAIT, JOB, JOB_WAIT, CAREER, STYLE, OFFER, NEWS, SHAKE, PRICE, GROWTH, TRADE, LIFE, MARRIAGE, CHILD, RETIRE, LEVERAGE, OMEN, ARTICLE, CRISIS, HOUSING, HOME_SOLD, TENANT, MORTGAGE_REPAY, END]
         payload:
           type: object
           additionalProperties: true

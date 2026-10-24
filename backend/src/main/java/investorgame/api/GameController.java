@@ -92,6 +92,16 @@ class GameController {
     return progress.listHome(cookies.requireSession(token), gameId, seq, request.listed());
   }
 
+  /** 주담대를 현금으로 일시 상환한다 (decisions.md 58번). */
+  @PostMapping("/{gameId}/homes/{seq}/repay")
+  GameView repayMortgage(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @PathVariable UUID gameId,
+      @PathVariable int seq,
+      @Valid @RequestBody RepayRequest request) {
+    return progress.repayMortgage(cookies.requireSession(token), gameId, seq, request.amount());
+  }
+
   @GetMapping("/{gameId}/stocks/{stockCode}/history")
   StockHistory history(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
@@ -131,5 +141,7 @@ class GameController {
       @Min(1) @Max(MAX_TRADE_QUANTITY) long quantity) {}
 
   /** quantity는 뉴스의 매수·매도 수량. 생략하면 서버 기본(매수는 현금의 일정 비율, 매도는 전량). */
+  record RepayRequest(@Min(1) long amount) {}
+
   record ChoiceRequest(@NotBlank String option, @Min(1) @Max(MAX_TRADE_QUANTITY) Long quantity) {}
 }

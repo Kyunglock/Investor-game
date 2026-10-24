@@ -3,6 +3,7 @@ package investorgame.progress.internal;
 import investorgame.asset.AssetService;
 import investorgame.common.GameProperties;
 import investorgame.common.error.InvalidRequestException;
+import investorgame.common.error.NotFoundException;
 import investorgame.common.random.SeededRandom;
 import investorgame.content.ContentCatalog;
 import investorgame.event.ChoiceTicket;
@@ -147,6 +148,35 @@ class HousingFlow {
         sell(gameId, home, prices.get(home.region()), day);
       }
     }
+  }
+
+  /** 주담대 일시 상환: 현금으로 원금을 갚는다. 남은 기간의 원리금균등 월 상환액은 다음 달부터 줄어든다 (decisions.md 58번). */
+  void repay(UUID gameId, int seq, long amount, int day) {
+    HousingView.Home home =
+        housing.get(gameId).homes().stream()
+            .filter(h -> h.seq() == seq)
+            .findFirst()
+            .orElseThrow(() -> new NotFoundException("그런 집이 없다"));
+    if (amount <= 0 || amount > home.mortgage()) {
+      throw new InvalidRequestException("갚을 금액은 남은 주담대 이하여야 한다");
+    }
+    long cash = assets.get(gameId).cash();
+    if (amount > cash) {
+      throw new InvalidRequestException("현금이 %s 모자란다".formatted(money(amount - cash)));
+    }
+    housing.repayMortgage(gameId, seq, amount);
+    assets.spend(gameId, "MORTGAGE_REPAY", amount, day, null);
+    logs.append(
+        gameId,
+        day,
+        "MORTGAGE_REPAY",
+        Map.of(
+            "regionName",
+            regionName(home.region()),
+            "amount",
+            amount,
+            "remaining",
+            home.mortgage() - amount));
   }
 
   private void sell(UUID gameId, HousingView.Home home, long price, int day) {
