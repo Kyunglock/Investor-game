@@ -137,6 +137,22 @@ describe('logLine', () => {
     expect(fraud.tone).toBe('flipped')
     expect(fraud.text).toContain('전세사기를 당했다. 보증금 150,000,000원을 돌려받지 못했다.')
 
+    const refused = logLine(
+      entry('HOUSING', 30 * 360, {
+        definition: 'lease-refused',
+        option: 'APT_JEONSE',
+        label: '경기 아파트 전세 (전세대출)',
+        deposit: 200_000_000,
+        monthlyRent: 0,
+        price: 0,
+        fraud: false,
+      }),
+      game,
+    )
+    expect(refused.text).toBe(
+      '집주인이 재계약을 거절해 집을 옮겼다. 경기 아파트 전세 (전세대출) · 보증금 200,000,000원.',
+    )
+
     const sold = logLine(
       entry('HOME_SOLD', 40 * 360, {
         regionName: '경기 아파트 (84㎡)',

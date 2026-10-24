@@ -34,7 +34,7 @@ class DefaultEventServiceTest {
 
   /** 주거 이벤트가 끼어들지 않는 상태: 내 집 포함 2채, 세 만기 없음. 주거 검사는 따로 한다. */
   private static final HousingFacts SETTLED =
-      new HousingFacts("OWN", null, 2, true, false, null, 0);
+      new HousingFacts("OWN", null, 2, true, false, null, 0, 50);
 
   private static final HintProvider HINTS =
       (truth, seq) -> new Hint(HintDirection.NEUTRAL, HintStrength.MILD);
@@ -462,7 +462,8 @@ class DefaultEventServiceTest {
         .extracting(EventView.Option::code)
         .containsExactly("MONTHLY", "VILLA", "VILLA_INSURED", "APT_JEONSE");
 
-    HousingFacts renting = new HousingFacts("APT_JEONSE", JOB_DAY + YEAR, 0, false, false, null, 0);
+    HousingFacts renting =
+        new HousingFacts("APT_JEONSE", JOB_DAY + YEAR, 0, false, false, null, 0, 50);
     EventView leaseEnd =
         firstOf(UUID.randomUUID(), housed(renting, null), JOB_DAY, EventKind.HOUSING, 3L);
     assertThat(leaseEnd.occursDay()).isEqualTo(JOB_DAY + YEAR);
@@ -472,7 +473,7 @@ class DefaultEventServiceTest {
         .contains("BUY_SEOUL", "BUY_GYEONGGI");
 
     // 1주택이면 청약이 없고, 결혼·출산·집값 급등이 없으면 "집 살까?"도 없다.
-    HousingFacts settled = new HousingFacts("APT_JEONSE", null, 1, false, false, null, 0);
+    HousingFacts settled = new HousingFacts("APT_JEONSE", null, 1, false, false, null, 0, 50);
     assertThat(nextOf(UUID.randomUUID(), housed(settled, null), JOB_DAY, EventKind.HOUSING, 3L))
         .as("결혼·출산·집값 급등이 없으면 묻지 않는다")
         .isEmpty();
@@ -490,8 +491,9 @@ class DefaultEventServiceTest {
     int frauds = 0;
     int insuredFrauds = 0;
     for (long seed = 1; seed <= 200; seed++) {
-      HousingFacts villa = new HousingFacts("VILLA_JEONSE", JOB_DAY, 0, false, true, null, 0);
-      HousingFacts insured = new HousingFacts("VILLA_JEONSE", JOB_DAY, 0, false, false, null, 0);
+      HousingFacts villa = new HousingFacts("VILLA_JEONSE", JOB_DAY, 0, false, true, null, 0, 50);
+      HousingFacts insured =
+          new HousingFacts("VILLA_JEONSE", JOB_DAY, 0, false, false, null, 0, 50);
       if (fraudAt(villa, seed)) {
         frauds++;
       }
@@ -501,6 +503,33 @@ class DefaultEventServiceTest {
     }
     assertThat(frauds).as("200번 중 7%%쯤").isBetween(3, 35);
     assertThat(insuredFrauds).isZero();
+  }
+
+  /** 집주인 거절은 운에 따라: 운 0이면 35%, 100이면 5% (#25). 거절되면 '2년 더 살기'가 없다. */
+  @Test
+  void 운이_나쁠수록_집주인이_재계약을_자주_거절한다() {
+    int unlucky = 0;
+    int lucky = 0;
+    for (long seed = 1; seed <= 200; seed++) {
+      if (refusedAt(new HousingFacts("APT_JEONSE", JOB_DAY, 0, false, false, null, 0, 0), seed)) {
+        unlucky++;
+      }
+      if (refusedAt(new HousingFacts("APT_JEONSE", JOB_DAY, 0, false, false, null, 0, 100), seed)) {
+        lucky++;
+      }
+    }
+    assertThat(unlucky).as("200번 중 35%%쯤").isBetween(45, 100);
+    assertThat(lucky).as("200번 중 5%%쯤").isBetween(1, 25);
+  }
+
+  private boolean refusedAt(HousingFacts facts, long seed) {
+    EventView leaseEnd =
+        firstOf(UUID.randomUUID(), housed(facts, null), JOB_DAY, EventKind.HOUSING, seed);
+    List<String> codes = leaseEnd.options().stream().map(EventView.Option::code).toList();
+    assertThat(codes).contains("MONTHLY", "BUY_SEOUL");
+    boolean refused = !codes.contains("KEEP");
+    assertThat(leaseEnd.title()).isEqualTo(refused ? "집주인이 재계약을 거절했다" : "계약 만기가 다가온다");
+    return refused;
   }
 
   private boolean fraudAt(HousingFacts facts, long seed) {
