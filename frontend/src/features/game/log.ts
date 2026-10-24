@@ -309,7 +309,8 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
   }
 }
 
-/** 최근 순. */
-export function logLines(game: Game): LogLine[] {
-  return [...game.log].reverse().map((entry) => logLine(entry, game))
+/** 기본은 최근 순(진행 화면). 끝난 인생을 되돌아보는 기록부는 `oldest`로 시간순 (#22). */
+export function logLines(game: Game, order: 'recent' | 'oldest' = 'recent'): LogLine[] {
+  const entries = order === 'recent' ? [...game.log].reverse() : game.log
+  return entries.map((entry) => logLine(entry, game))
 }
