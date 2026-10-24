@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Game } from '../../api/client'
 import { buildCredits, type CreditSection, type CreditTone } from './credits'
+import { layersFor, type SpriteSpec } from './pixel/layers'
+import { Vignette } from './pixel/Vignette'
 
 const TONE_CLASS: Record<CreditTone, string> = {
   up: 'text-[#f0a090]',
@@ -25,6 +27,11 @@ function reducedMotion(): boolean {
  */
 export function EndingCredits({ game, onDone }: { game: Game; onDone: () => void }) {
   const sections = useMemo(() => buildCredits(game), [game])
+  // 그림 속 '나'는 진행 화면과 같은 장식(타고난 강점)·약점 표시를 단다.
+  const me = useMemo(() => {
+    const { adornment, mark } = layersFor(game.initialStats, game.stats, game.endAge)
+    return { adornment, mark }
+  }, [game])
   const [still] = useState(reducedMotion)
   const [rolled, setRolled] = useState(false)
   const lineCount = sections.reduce((n, s) => n + s.lines.length + 1, 0)
@@ -56,7 +63,7 @@ export function EndingCredits({ game, onDone }: { game: Game; onDone: () => void
 
       {still ? (
         <div className="h-full overflow-y-auto px-6 py-16">
-          <Roll sections={sections} />
+          <Roll sections={sections} me={me} />
           <DoneButton onDone={onDone} />
         </div>
       ) : (
@@ -66,7 +73,7 @@ export function EndingCredits({ game, onDone }: { game: Game; onDone: () => void
             style={{ '--credits-duration': `${duration}s` } as React.CSSProperties}
             onAnimationEnd={() => setRolled(true)}
           >
-            <Roll sections={sections} />
+            <Roll sections={sections} me={me} />
           </div>
           {rolled && (
             <div className="animate-reveal absolute inset-x-0 bottom-16 flex justify-center px-6">
@@ -79,11 +86,12 @@ export function EndingCredits({ game, onDone }: { game: Game; onDone: () => void
   )
 }
 
-function Roll({ sections }: { sections: CreditSection[] }) {
+function Roll({ sections, me }: { sections: CreditSection[]; me: Omit<SpriteSpec, 'stage'> }) {
   return (
     <div className="mx-auto flex max-w-[560px] flex-col items-center gap-14 text-center">
       {sections.map((section, i) => (
         <section key={section.key} data-testid={`credits-${section.key}`}>
+          {section.art && <Vignette art={section.art} me={me} />}
           <h2
             className={
               i === 0
