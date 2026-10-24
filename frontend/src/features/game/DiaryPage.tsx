@@ -7,6 +7,7 @@ import { stageFor } from './pixel/bodies'
 import { layersFor } from './pixel/layers'
 import { Scene } from './pixel/Scene'
 import { sceneCaption, sceneFor } from './pixel/scenes'
+import { useGameStore } from './store'
 
 const VISIBLE = 12
 
@@ -28,6 +29,7 @@ export function DiaryPage({ game, ageYears }: { game: Game; ageYears: number }) 
       <Photo game={game} ageYears={ageYears} />
       <Personality game={game} />
       <Diary game={game} />
+      <ReportButton game={game} />
       <p className="mt-4 text-right text-[11px] text-pen-soft" data-testid="reported-day">
         서버 확인: {game.day}일
       </p>
@@ -191,5 +193,23 @@ function DiaryLine({ line, kind }: { line: LogLine; kind?: string }) {
         {line.text}
       </span>
     </li>
+  )
+}
+
+/** 투자 성향 진단 보고서를 펼친다. 투자를 시작한 뒤부터 (decisions.md 61번). */
+function ReportButton({ game }: { game: Game }) {
+  const openReport = useGameStore((s) => s.openReport)
+  if (game.phase === 'CHILDHOOD') {
+    return null
+  }
+  return (
+    <button
+      type="button"
+      className="mt-4 min-h-11 rounded-full border-2 border-pen bg-paper px-4 font-note text-sm text-pen hover:bg-white"
+      onClick={openReport}
+      data-testid="open-report"
+    >
+      투자 성향 진단 보고서
+    </button>
   )
 }
