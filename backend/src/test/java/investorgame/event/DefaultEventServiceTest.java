@@ -490,7 +490,7 @@ class DefaultEventServiceTest {
     }
   }
 
-  /** decisions.md 43번: 직업마다 장면이 다르고, 나이가 차면 그 나이의 장면이 온다. */
+  /** decisions.md 51번: 직업마다 장면이 다르고, 나이가 차면 그 나이의 장면이 온다. */
   @Test
   void 직장_장면은_그_직업과_나이에_맞는_것만_나온다() {
     for (var job : content.jobs()) {
@@ -529,7 +529,7 @@ class DefaultEventServiceTest {
     assertThat(exit50s * 3).isGreaterThan(all50s);
   }
 
-  /** decisions.md 44번: 권고사직을 거절했다가 판정에 지면 대기발령이 이어서 온다. */
+  /** decisions.md 52번: 권고사직을 거절했다가 판정에 지면 대기발령이 이어서 온다. */
   @Test
   void 권고사직을_거절했다가_밀리면_대기발령이_이어진다() {
     UUID gameId = UUID.randomUUID();
@@ -552,7 +552,7 @@ class DefaultEventServiceTest {
     assertThat(standby.occursDay()).isEqualTo(exit.occursDay() + 120);
   }
 
-  /** decisions.md 44번: 여의도 증권사 설립은 순자산 10억부터, 직접 세운 회사는 직업 선택에 나오지 않는다. */
+  /** decisions.md 52번: 여의도 증권사 설립은 순자산 10억부터, 직접 세운 회사는 직업 선택에 나오지 않는다. */
   @Test
   void 전업투자자는_자산이_받쳐_줄_때만_증권사를_세울_수_있다() {
     SchedulingContext poor = investorWith(0L);

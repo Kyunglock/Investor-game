@@ -288,7 +288,7 @@ class DefaultEventService implements EventService {
 
   /**
    * 취업 뒤 직장 (decisions.md 26번). 직업이 있으면 직장 장면(CAREER)이 간격을 두고 오고, 실직 중이면 다시 직업 선택(JOB)이 온다.
-   * 전업투자자에게는 투자자의 장면이 같은 간격으로 온다(decisions.md 44번). 직전 장면의 결과가 후속 장면(followUp)을 정했으면 그 날 수 뒤에 그것이
+   * 전업투자자에게는 투자자의 장면이 같은 간격으로 온다(decisions.md 52번). 직전 장면의 결과가 후속 장면(followUp)을 정했으면 그 날 수 뒤에 그것이
    * 먼저 온다. 은퇴했거나 career.last-age를 넘으면 없다.
    */
   private void careerCandidates(
@@ -886,7 +886,7 @@ class DefaultEventService implements EventService {
             .mapToLong(code -> content.job(code).baseMonthlySalary())
             .max()
             .orElse(0);
-    // 직접 세운 회사의 대표 같은 직업은 제안에 나오지 않는다 (decisions.md 44번).
+    // 직접 세운 회사의 대표 같은 직업은 제안에 나오지 않는다 (decisions.md 52번).
     List<JobDefinition> remaining =
         new ArrayList<>(content.jobs().stream().filter(JobDefinition::offered).toList());
     List<String> picked = new ArrayList<>();
@@ -928,7 +928,7 @@ class DefaultEventService implements EventService {
 
   /**
    * 직장 장면. 직전 장면의 결과가 후속 장면을 정했으면 그것을 낸다. 아니면 지금 직업·나이·순자산·연차 조건을 만족하는 장면 중 직전 장면과 후속 전용 장면을 뺀
-   * 나머지에서 가중치로 뽑는다 (decisions.md 43·44번). 이직 제안은 지금보다 월급이 많은 직업이 있을 때만 나오고, 옮길 직업을 선택지
+   * 나머지에서 가중치로 뽑는다 (decisions.md 51·52번). 이직 제안은 지금보다 월급이 많은 직업이 있을 때만 나오고, 옮길 직업을 선택지
    * 코드("move:<직업>")에 남긴다. 전업투자자는 직업 자리에 CareerDefinition.FULL_TIME_INVESTOR를 쓴다.
    */
   private EventRow careerEvent(

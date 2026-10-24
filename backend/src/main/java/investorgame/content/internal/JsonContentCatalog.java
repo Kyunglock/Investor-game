@@ -422,7 +422,7 @@ class JsonContentCatalog implements ContentCatalog {
         require(
             !option.success().moveJob() || !option.success().quit(), "이직과 실직을 같이 둘 수 없다: " + where);
         for (CareerDefinition.Effect effect : List.of(option.success(), option.fail())) {
-          // 전업투자자는 월급·직장이 없다. 회사를 세우는 것(becomeJob)만 직업을 바꾼다 (decisions.md 44번).
+          // 전업투자자는 월급·직장이 없다. 회사를 세우는 것(becomeJob)만 직업을 바꾼다 (decisions.md 52번).
           require(
               !forInvestor || (effect.salaryPercent() == 0 && !effect.quit() && !effect.moveJob()),
               "전업투자자의 장면은 월급·실직·이직을 쓸 수 없다: " + where);

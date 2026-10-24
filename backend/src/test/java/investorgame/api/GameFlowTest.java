@@ -303,7 +303,7 @@ class GameFlowTest {
         .containsEntry("fullTimeInvestor", true)
         .containsEntry("jobTitle", "전업투자자");
 
-    // 10년을 보내도 월급·구직 제안·투자 시작 제안이 없고, 생활비는 나간다. 직장 장면 대신 투자자의 장면이 온다 (decisions.md 44번).
+    // 10년을 보내도 월급·구직 제안·투자 시작 제안이 없고, 생활비는 나간다. 직장 장면 대신 투자자의 장면이 온다 (decisions.md 52번).
     int until = game.read("$.day", Integer.class) + 10 * 360;
     List<String> kinds = new ArrayList<>();
     for (int step = 0; step < 500 && game.read("$.day", Integer.class) < until; step++) {
