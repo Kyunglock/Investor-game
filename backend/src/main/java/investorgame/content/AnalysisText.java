@@ -13,7 +13,15 @@ public record AnalysisText(
     Map<String, Map<String, List<Template>>> trend,
     Map<String, Map<String, List<Template>>> macro,
     Remarks remarks,
-    List<String> articles) {
+    List<Article> articles) {
+
+  /**
+   * 평범한 경제 기사. sentiment는 시장에 플러스(POS)·마이너스(NEG)·중립(NEUTRAL)인지 — 매매창 경제 신문의 +/− 표시 (decisions.md
+   * 56번).
+   */
+  public record Article(String text, String sentiment) {}
+
+  public static final List<String> SENTIMENTS = List.of("POS", "NEG", "NEUTRAL");
 
   /** confident면 확신에 찬 말투. 말투는 맞았는지와 무관하다. */
   public record Template(String text, boolean confident) {}

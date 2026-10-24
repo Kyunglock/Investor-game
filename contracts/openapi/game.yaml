@@ -433,11 +433,15 @@ components:
           description: 전조·헛소문·평범한 기사·위기 회고를 구분 없이 날짜순으로. 최근 것이 뒤다
           items:
             type: object
-            required: [day, kind, text]
+            required: [day, kind, text, sentiment]
             properties:
               day: { type: integer }
               kind: { type: string, enum: [OMEN, ARTICLE, CRISIS] }
               text: { type: string }
+              sentiment:
+                type: string
+                enum: [POS, NEG, NEUTRAL]
+                description: 시장에 플러스(+)·마이너스(−)·중립. 전조와 위기 회고는 늘 NEG, 기사는 내용대로
         analysis: { $ref: '#/components/schemas/Analysis' }
     Job:
       type: object

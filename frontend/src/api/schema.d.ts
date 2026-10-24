@@ -488,6 +488,11 @@ export interface components {
                 /** @enum {string} */
                 kind: "OMEN" | "ARTICLE" | "CRISIS";
                 text: string;
+                /**
+                 * @description 시장에 플러스(+)·마이너스(−)·중립. 전조와 위기 회고는 늘 NEG, 기사는 내용대로
+                 * @enum {string}
+                 */
+                sentiment: "POS" | "NEG" | "NEUTRAL";
             }[];
             analysis: components["schemas"]["Analysis"];
         };

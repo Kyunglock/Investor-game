@@ -20,6 +20,7 @@ import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.common.random.SeededRandom;
+import investorgame.content.AnalysisText;
 import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.CrisisDefinition;
@@ -1002,14 +1003,18 @@ class DefaultProgressService implements ProgressService {
     JobDefinition job = character.jobCode() == null ? null : content.job(character.jobCode());
     MarketCycle cycle = market.cycle(random);
 
-    Map<Integer, String> articles = articles(game, random);
+    Map<Integer, AnalysisText.Article> articles = articles(game, random);
 
     for (int m = fromExclusive / month + 1; m * month <= toInclusive; m++) {
       int day = m * month;
       market.advanceTo(gameId, day, random);
       recordCycle(game, cycle, m, day);
       if (articles.containsKey(m)) {
-        logs.append(gameId, day, "ARTICLE", Map.of("text", articles.get(m)));
+        logs.append(
+            gameId,
+            day,
+            "ARTICLE",
+            Map.of("text", articles.get(m).text(), "sentiment", articles.get(m).sentiment()));
       }
       // 생활비는 처음 일을 시작한 뒤부터 나간다(실직 중에도). 월급은 지금 직업이 있을 때만 (decisions.md 26번).
       boolean independent = character.careerStartDay() != null && day > character.careerStartDay();
@@ -1113,12 +1118,12 @@ class DefaultProgressService implements ProgressService {
    * 평범한 경제 기사가 나오는 달과 문구 (매매창 설계 3.3절). ("progress","articles") 키에서 간격과 문구를 차례로 뽑아 같은 판은 언제나 같다.
    * 최근에 나온 기사는 다시 뽑지 않는다.
    */
-  private Map<Integer, String> articles(GameRow game, SeededRandom random) {
-    List<String> pool = content.analysis().articles();
+  private Map<Integer, AnalysisText.Article> articles(GameRow game, SeededRandom random) {
+    List<AnalysisText.Article> pool = content.analysis().articles();
     RandomGenerator rng = random.forKey("progress", "articles");
     ProgressProperties.Range gap = properties.articleGapMonths();
     int lastMonth = endDay(game) / calendar.daysPerMonth();
-    Map<Integer, String> articles = new HashMap<>();
+    Map<Integer, AnalysisText.Article> articles = new HashMap<>();
     List<Integer> recent = new ArrayList<>();
     int month = properties.articleFirstMonth();
     while (true) {
