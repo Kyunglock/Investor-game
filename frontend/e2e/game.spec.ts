@@ -208,7 +208,7 @@ test('투자를 시작하면 시장 패널에서 종목을 사고 포트폴리�
   const result = page.getByTestId('trade-result')
   await expect(result).toBeVisible()
   const text = (await result.textContent()) ?? ''
-  await page.getByRole('button', { name: '닫기', exact: true }).click()
+  await page.getByRole('button', { name: /^닫기/ }).click()
   await expect(page.getByTestId('market-panel')).toBeHidden()
   if (!text.includes('부족')) {
     await expect(page.getByTestId('holding-row')).toHaveCount(1)
@@ -217,7 +217,7 @@ test('투자를 시작하면 시장 패널에서 종목을 사고 포트폴리�
     await expect(page.getByTestId('held-tab')).toHaveAttribute('aria-pressed', 'true')
     await expect(page.getByTestId('stock-row')).toHaveCount(1)
     await expect(page.getByTestId('trade-submit')).toBeVisible()
-    await page.getByRole('button', { name: '닫기', exact: true }).click()
+    await page.getByRole('button', { name: /^닫기/ }).click()
   }
   await expect(page.locator('[data-testid="life-log-line"][data-kind="TRADE"]')).toHaveCount(1)
 })
