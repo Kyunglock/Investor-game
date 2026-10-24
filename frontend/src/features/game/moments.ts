@@ -22,7 +22,13 @@ export function momentForOutcome(outcome: Outcome, game: Game): Moment | null {
     if (child) {
       const seq = Number((child.payload as Record<string, unknown>).seq ?? 1)
       return {
-        art: { vignette: 'baby', figures: [{ who: 'me', stage: 'adult', x: 20 }] },
+        art: {
+          vignette: 'baby',
+          figures: [
+            { who: 'me', stage: 'adult', x: 20 },
+            ...(game.household.married ? [{ who: 'spouse', stage: 'adult', x: 4 } as const] : []),
+          ],
+        },
         mood: 'joy',
         caption: `${seq}번째 아이가 태어났다. 세상이 달라 보인다.`,
       }

@@ -8,13 +8,7 @@ import { MOODS } from './moods'
 import { PALETTE } from './palette'
 import { SCENE_HEIGHT, SCENE_WIDTH } from './scenes'
 import { compose, type Layer, SPRITE_HEIGHT, toRects } from './sprite'
-import { type CreditArt, type Figure, VIGNETTES } from './vignettes'
-
-/** 배우자와 아이는 옷·머리 색만 바꿔 플레이어와 구분한다. */
-const RECOLOR: Record<Exclude<Figure['who'], 'me'>, Record<string, string>> = {
-  spouse: { c: '#b5657a', h: '#5a3a2e' },
-  kid: { c: '#e3b53a', p: '#4f8fd6' },
-}
+import { type CreditArt, RECOLOR, VIGNETTES } from './vignettes'
 
 /** 크레딧의 장 그림 (#23). me는 진행 화면과 같은 캐릭터(장식·약점 표시)로 그린다. */
 export const Vignette = memo(function Vignette({

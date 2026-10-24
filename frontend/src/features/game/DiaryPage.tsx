@@ -5,9 +5,10 @@ import { type LogLine, logLines } from './log'
 import { frugalMoment } from './moments'
 import { nickname } from './nickname'
 import { stageFor } from './pixel/bodies'
+import { familyFigures } from './pixel/family'
 import { layersFor } from './pixel/layers'
 import { Scene } from './pixel/Scene'
-import { sceneCaption, sceneFor } from './pixel/scenes'
+import { SCENES, sceneCaption, sceneFor } from './pixel/scenes'
 import { Vignette } from './pixel/Vignette'
 import { useGameStore } from './store'
 
@@ -77,6 +78,8 @@ function Photo({ game, ageYears }: { game: Game; ageYears: number }) {
   const key = sceneFor(stageFor(ageYears), game.phase, working)
   // 현금이 생활비에 못 미치거나 빚이 있으면 긴축 생활 장면 (decisions.md 62번).
   const frugal = frugalMoment(game)
+  // 결혼하고 아이가 생기면 사진에 같이 선다 (decisions.md 64번).
+  const figures = familyFigures(game, ageYears, frugal ? 34 : SCENES[key].anchor.x)
   return (
     <figure className="m-0 mb-6">
       <div className="relative -rotate-1">
@@ -91,12 +94,16 @@ function Photo({ game, ageYears }: { game: Game; ageYears: number }) {
         <div className="overflow-hidden border-8 border-white bg-white shadow-[0_2px_6px_rgba(0,0,0,0.12)]">
           {frugal ? (
             <Vignette
-              art={frugal.art}
+              art={{ ...frugal.art, figures }}
               me={layersFor(game.initialStats, game.stats, ageYears)}
               mood={frugal.mood}
             />
           ) : (
-            <Scene sceneKey={key} sprite={layersFor(game.initialStats, game.stats, ageYears)} />
+            <Scene
+              sceneKey={key}
+              sprite={layersFor(game.initialStats, game.stats, ageYears)}
+              figures={figures}
+            />
           )}
         </div>
       </div>
