@@ -67,6 +67,7 @@ import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
 import java.util.random.RandomGenerator;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -1305,7 +1306,17 @@ class DefaultProgressService implements ProgressService {
             monthlyIncome(character, game.lastReportedDay()),
             cheongyakPoints(game, character, game.lastReportedDay()),
             game.lastReportedDay()),
-        netWorth(game.id()));
+        netWorth(game.id()),
+        unaffordableStocks(game.id()));
+  }
+
+  /** 현재가가 현금보다 비싸 한 주도 못 사는 종목 (decisions.md 59번). */
+  private Set<String> unaffordableStocks(UUID gameId) {
+    long cash = assets.get(gameId).cash();
+    return market.prices(gameId).entrySet().stream()
+        .filter(e -> e.getValue() > cash)
+        .map(Map.Entry::getKey)
+        .collect(Collectors.toSet());
   }
 
   /** 보유 종목별 최근 12달 고점 대비 낙폭(만분율). 빚투 제안의 근거다 (decisions.md 39번). */

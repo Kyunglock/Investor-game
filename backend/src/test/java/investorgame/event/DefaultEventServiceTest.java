@@ -17,7 +17,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -66,7 +68,8 @@ class DefaultEventServiceTest {
             false,
             Map.of(),
             SETTLED,
-            0L);
+            0L,
+            Set.of());
     EventView a = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
     EventView b = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
 
@@ -207,7 +210,8 @@ class DefaultEventServiceTest {
             false,
             Map.of(),
             SETTLED,
-            0L);
+            0L,
+            Set.of());
     HashSeededRandom random = new HashSeededRandom(2L);
     int from = JOB_DAY;
     int notices = 0;
@@ -263,7 +267,8 @@ class DefaultEventServiceTest {
         false,
         Map.of(),
         SETTLED,
-        0L);
+        0L,
+        Set.of());
   }
 
   /** 직장 체계 (decisions.md 26번): 직업이 있으면 직장 장면이, 실직 중이면 재취업 선택이 온다. */
@@ -298,7 +303,8 @@ class DefaultEventServiceTest {
             false,
             Map.of(),
             SETTLED,
-            0L);
+            0L,
+            Set.of());
     EventView rehire = firstOf(jobless, unemployed, JOB_DAY + 30, EventKind.JOB, 7L);
     assertThat(rehire.title()).isEqualTo(content.jobRehireText().title());
     assertThat(rehire.options()).extracting(EventView.Option::code).contains("WAIT");
@@ -327,7 +333,8 @@ class DefaultEventServiceTest {
             false,
             Map.of(),
             SETTLED,
-            0L);
+            0L,
+            Set.of());
     EventView rehire = firstOf(UUID.randomUUID(), jobless, JOB_DAY + 30, EventKind.JOB, 7L);
     assertThat(rehire.options())
         .last()
@@ -354,7 +361,8 @@ class DefaultEventServiceTest {
             true,
             Map.of(),
             SETTLED,
-            0L);
+            0L,
+            Set.of());
     assertThat(nextOf(UUID.randomUUID(), investor, JOB_DAY, EventKind.JOB, 3L)).isEmpty();
     EventView scene = firstOf(UUID.randomUUID(), investor, JOB_DAY, EventKind.CAREER, 3L);
     assertThat(careerOf(scene).jobs()).containsExactly("INVEST");
@@ -384,7 +392,8 @@ class DefaultEventServiceTest {
             false,
             Map.of(),
             SETTLED,
-            0L);
+            0L,
+            Set.of());
     int from = (60 - START_AGE) * YEAR;
     assertThat(nextOf(gameId, retired, from, EventKind.JOB, 3L)).isEmpty();
     assertThat(nextOf(UUID.randomUUID(), retired, from, EventKind.CAREER, 3L)).isEmpty();
@@ -414,7 +423,8 @@ class DefaultEventServiceTest {
             false,
             Map.of(),
             SETTLED,
-            0L);
+            0L,
+            Set.of());
     List<String> seen = new ArrayList<>();
     int from = JOB_DAY;
     for (Optional<EventView> trait = nextOf(gameId, retired, from, EventKind.TRAIT, 5L);
@@ -465,7 +475,8 @@ class DefaultEventServiceTest {
         false,
         Map.of(),
         SETTLED,
-        0L);
+        0L,
+        Set.of());
   }
 
   /** 직장 생활 내내 나온 직장 장면을 (나이, 장면) 순서로 모은다. 다른 이벤트는 넘긴다. */
@@ -604,7 +615,8 @@ class DefaultEventServiceTest {
         fullTimeInvestor,
         Map.of(),
         SETTLED,
-        netWorth);
+        netWorth,
+        Set.of());
   }
 
   @Test
@@ -762,6 +774,45 @@ class DefaultEventServiceTest {
     assertThat(vague.hintText()).isIn("글쎄…", "잘 모르겠다");
   }
 
+  /** 살 돈도 없고 든 것도 없으면 뉴스가 오지 않고, 든 종목이 있으면 그 종목의 뉴스가 온다 (decisions.md 59번). */
+  @Test
+  void 살_수도_팔_수도_없으면_뉴스가_오지_않는다() {
+    Set<String> all =
+        content.stocks().stream().map(StockDefinition::code).collect(Collectors.toSet());
+    SchedulingContext broke = withUnaffordable(investing(List.of(), Map.of()), all);
+    assertThat(nextOf(UUID.randomUUID(), broke, JOB_DAY + 30, EventKind.NEWS, 42L)).isEmpty();
+
+    String held = content.stocks().getFirst().code();
+    SchedulingContext holding = withUnaffordable(investing(List.of(held), Map.of()), all);
+    EventView news = firstOf(UUID.randomUUID(), holding, JOB_DAY + 30, EventKind.NEWS, 42L);
+    assertThat(news.stockCode()).as("든 종목의 뉴스만 온다").isEqualTo(held);
+  }
+
+  private static SchedulingContext withUnaffordable(SchedulingContext c, Set<String> codes) {
+    return new SchedulingContext(
+        c.phase(),
+        c.startAge(),
+        c.investmentStyle(),
+        c.interestSector(),
+        c.salaryStartDay(),
+        c.traitsFinalized(),
+        c.investingStartDay(),
+        c.endDay(),
+        c.jobStartDay(),
+        c.jobCode(),
+        c.careerStartDay(),
+        c.retired(),
+        c.married(),
+        c.marriedDay(),
+        c.childrenCount(),
+        c.heldStockCodes(),
+        c.fullTimeInvestor(),
+        c.heldDropBp(),
+        c.housing(),
+        c.netWorth(),
+        codes);
+  }
+
   private static SchedulingContext housed(HousingFacts facts, Integer marriedDay) {
     return new SchedulingContext(
         Phase.SAVING,
@@ -783,7 +834,8 @@ class DefaultEventServiceTest {
         false,
         Map.of(),
         facts,
-        0L);
+        0L,
+        Set.of());
   }
 
   private static SchedulingContext investing(List<String> held, Map<String, Integer> drops) {
@@ -807,7 +859,8 @@ class DefaultEventServiceTest {
         false,
         drops,
         SETTLED,
-        0L);
+        0L,
+        Set.of());
   }
 
   /** 보유가 있으면 투자기에 흔들림이 오고, 흔들리는 종목은 보유 중 하나이며 선택지는 버틴다·판다다 (decisions.md 33번). */
@@ -835,7 +888,8 @@ class DefaultEventServiceTest {
             false,
             Map.of(),
             SETTLED,
-            0L);
+            0L,
+            Set.of());
     EventView shake = firstOf(UUID.randomUUID(), holding, JOB_DAY + 30, EventKind.SHAKE, 7L);
 
     assertThat(shake.stockCode()).isEqualTo(held);

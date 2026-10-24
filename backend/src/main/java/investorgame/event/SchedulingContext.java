@@ -3,6 +3,7 @@ package investorgame.event;
 import investorgame.common.Phase;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 이벤트를 정하는 데 필요한 다른 도메인의 사실. 진행이 모아서 넘긴다.
@@ -24,6 +25,8 @@ import java.util.Map;
  * @param housing 주거 이벤트(독립·세 만기·집 사기)를 정하는 사실
  * @param heldDropBp 보유 종목별 최근 12달 고점 대비 낙폭(만분율, 하락이면 양수). 크게 빠진 종목이 있으면 빚투 제안이 온다
  * @param netWorth 지금 순자산(원). 전업투자자의 장면(증권사 설립 등)은 순자산이 받쳐 줄 때만 온다
+ * @param unaffordableStockCodes 한 주도 못 사는(현재가 > 현금) 종목. 들고 있지도 않으면 그 종목의 뉴스는 고를 게 없어 띄우지 않는다
+ *     (decisions.md 59번)
  */
 public record SchedulingContext(
     Phase phase,
@@ -45,4 +48,11 @@ public record SchedulingContext(
     boolean fullTimeInvestor,
     Map<String, Integer> heldDropBp,
     HousingFacts housing,
-    long netWorth) {}
+    long netWorth,
+    Set<String> unaffordableStockCodes) {
+
+  /** 사거나 팔 수 있는 종목인가: 들고 있거나, 한 주는 살 수 있다. */
+  public boolean tradable(String stockCode) {
+    return heldStockCodes().contains(stockCode) || !unaffordableStockCodes().contains(stockCode);
+  }
+}
