@@ -147,7 +147,13 @@ class HousingFlowTest {
   }
 
   @Test
-  void 청약은_막지_않고_분양가와_가점을_보여_준다() {
+  void 영끌로도_분양가를_못_치르면_청약을_넣을_수_없다() {
+    HousingFlow.Plan broke =
+        flow.plans(gameId, List.of("APPLY"), false, single, 3_000_000, 45, JOB_DAY).getFirst();
+    assertThat(broke.blocked()).startsWith("영끌해도 청약을 넣을 수 없다.").contains("모자란다");
+
+    long cash = assets.get(gameId).cash();
+    assets.credit(gameId, "WINDFALL", broke.cashNeeded() - cash, JOB_DAY);
     HousingFlow.Plan apply =
         flow.plans(gameId, List.of("APPLY"), false, single, 3_000_000, 45, JOB_DAY).getFirst();
     assertThat(apply.blocked()).isNull();

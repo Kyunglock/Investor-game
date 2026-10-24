@@ -305,9 +305,9 @@ class HousingFlow {
             0,
             won.cashNeeded(),
             won.monthlyBurden(),
-            "내 가점 %d점 · 당첨 가능성 약 %d%% · %s · 당첨돼도 돈이 모자라면 포기해야 한다"
-                .formatted(points, chance / 100, won.detail()),
-            null);
+            "내 가점 %d점 · 당첨 가능성 약 %d%% · %s".formatted(points, chance / 100, won.detail()),
+            // 영끌(현금 + 돌려받을 보증금 + LTV·DSR 한도 주담대)로도 분양가를 못 치르면 청약을 넣을 수 없다 (#26, decisions.md 48번).
+            won.blocked() == null ? null : "영끌해도 청약을 넣을 수 없다. " + won.blocked());
       }
       case ChoiceTicket.Housing.GAP -> {
         long price = prices.get(SEOUL);
@@ -496,7 +496,7 @@ class HousingFlow {
                   ? "이번 분양은 넘겼다."
                   : "아직은 사지 않기로 했다.");
       case ChoiceTicket.Housing.APPLY -> {
-        // 가점으로 당첨을 굴린다. 당첨돼도 계약금이 모자라면 포기한다 (decisions.md 42번).
+        // 가점으로 당첨을 굴린다. 넣을 때 돈이 되는지 이미 따졌다(#26). 그래도 모자라면(전세사기 등) 포기한다 (decisions.md 42번).
         boolean won =
             random.forKey("progress", "cheongyak", ticket.seq()).nextInt((int) BP)
                 < cheongyakChanceBp(points);
