@@ -17,6 +17,11 @@ class ApiExceptionHandler {
     return error(HttpStatus.UNAUTHORIZED, "SESSION_REQUIRED", e.getMessage());
   }
 
+  @ExceptionHandler(AdminForbiddenException.class)
+  ResponseEntity<ErrorResponse> adminForbidden(AdminForbiddenException e) {
+    return error(HttpStatus.FORBIDDEN, "ADMIN_REQUIRED", e.getMessage());
+  }
+
   @ExceptionHandler(NotFoundException.class)
   ResponseEntity<ErrorResponse> notFound(NotFoundException e) {
     return error(HttpStatus.NOT_FOUND, "NOT_FOUND", e.getMessage());

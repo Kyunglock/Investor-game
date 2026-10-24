@@ -45,6 +45,7 @@ import investorgame.market.MarketService;
 import investorgame.market.Quote;
 import investorgame.market.ShockResult;
 import investorgame.progress.ChoiceOutcome;
+import investorgame.progress.GameSummary;
 import investorgame.progress.GameView;
 import investorgame.progress.MarketOverview;
 import investorgame.progress.ProgressService;
@@ -181,6 +182,35 @@ class DefaultProgressService implements ProgressService {
   @Transactional(readOnly = true)
   public Optional<GameView> current(UUID sessionId) {
     return games.findLatest(sessionId).map(this::view);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<GameSummary> recentGames(int limit) {
+    List<GameRepository.GameLine> lines = games.recent(limit, calendar.daysPerYear());
+    Map<UUID, GameResult> resultByGame = new HashMap<>();
+    for (GameResult r :
+        results.findAll(lines.stream().map(GameRepository.GameLine::gameId).toList())) {
+      resultByGame.put(r.gameId(), r);
+    }
+    return lines.stream()
+        .map(
+            g -> {
+              GameResult r = resultByGame.get(g.gameId());
+              return new GameSummary(
+                  g.gameId(),
+                  g.sessionId(),
+                  g.status(),
+                  g.startAge(),
+                  r == null ? g.age() : r.finalAge(),
+                  g.startedAt(),
+                  g.updatedAt(),
+                  g.endedAt(),
+                  r == null ? null : r.initialAsset(),
+                  r == null ? null : r.finalAsset(),
+                  r == null ? null : r.ending().name());
+            })
+        .toList();
   }
 
   @Override

@@ -201,10 +201,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/plays": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 관리자 플레이 기록 — 누가(익명 세션) 언제 몇 판을 했는지
+         * @description 서버에 `ADMIN_TOKEN`이 설정되어 있고 `X-Admin-Token` 헤더가 같을 때만 연다 (decisions.md 46번).
+         *     최근 접속 세션 500개와 최근에 시작한 판 500개. 숨은 값(시드, 능력치)은 없다.
+         */
+        get: operations["getPlayLog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        PlayLog: {
+            /** @description 마지막 접속이 최근인 순 */
+            sessions: components["schemas"]["PlaySession"][];
+            /** @description 최근에 시작한 판 순 */
+            plays: components["schemas"]["Play"][];
+        };
+        PlaySession: {
+            /** Format: uuid */
+            sessionId: string;
+            /**
+             * Format: date-time
+             * @description 처음 온 시각
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description 마지막 접속 시각
+             */
+            lastSeenAt: string;
+            /** @description 최근 판 목록(plays) 안에서 센 판 수 */
+            games: number;
+        };
+        Play: {
+            /** Format: uuid */
+            gameId: string;
+            /** Format: uuid */
+            sessionId: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "ENDED" | "ABANDONED";
+            startAge: number;
+            /** @description 끝난 판이면 끝난 나이 */
+            age: number;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            endedAt?: string | null;
+            /**
+             * Format: int64
+             * @description 끝난 판만
+             */
+            initialAsset?: number | null;
+            /**
+             * Format: int64
+             * @description 끝난 판만. 파산이면 음수
+             */
+            finalAsset?: number | null;
+            /**
+             * @description 끝난 판만
+             * @enum {string|null}
+             */
+            ending?: "NORMAL" | "BANKRUPT" | null;
+        };
         /**
          * @description 성장기(성향 이벤트) → 저축기(취업 후) → 투자기 → 종료
          * @enum {string}
@@ -989,6 +1064,37 @@ export interface operations {
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getPlayLog: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Admin-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 플레이 기록 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlayLog"];
+                };
+            };
+            /** @description 관리자 토큰이 없거나 틀림 (`ADMIN_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
 }

@@ -9,6 +9,7 @@ import '@fontsource/gowun-dodum/400.css'
 import '@fontsource/nanum-pen-script/400.css'
 import './index.css'
 import { App } from './App.tsx'
+import { AdminPage } from './features/admin/AdminPage'
 
 const root = document.getElementById('root')
 if (!root) {
@@ -17,6 +18,7 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    {/* 라우터 없이 주소 하나만 가른다. 관리자 플레이 기록 (decisions.md 46번) */}
+    {window.location.pathname === '/admin' ? <AdminPage /> : <App />}
   </StrictMode>,
 )

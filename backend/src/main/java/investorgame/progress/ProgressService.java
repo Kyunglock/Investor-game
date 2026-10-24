@@ -1,6 +1,7 @@
 package investorgame.progress;
 
 import investorgame.common.Action;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,4 +45,7 @@ public interface ProgressService {
 
   /** 한 종목의 월별 가격 이력. */
   StockHistory history(UUID sessionId, UUID gameId, String stockCode);
+
+  /** 최근에 시작한 판부터 limit개. 버려진 판도 포함한다. 관리자 플레이 기록용이며 세션을 따지지 않는다. */
+  List<GameSummary> recentGames(int limit);
 }
