@@ -8,6 +8,7 @@ import {
   sideLabel,
   signedWon,
   statLabel,
+  withParticle,
   won,
   yearOf,
 } from './labels'
@@ -411,7 +412,7 @@ export function buildCredits(game: Game): CreditSection[] {
     if (e.kind === 'CRISIS') {
       return {
         text: `${num(p.startAge)}~${num(p.endAge)}세, ${str(p.name)} (${p.severity === 'DEPRESSION' ? '대공황' : '불황'})`,
-        sub: `주가 평균 ${percent(num(p.dropBp))} 하락 · ${str(p.model)}을 닮았다`,
+        sub: `주가 평균 ${percent(num(p.dropBp))} 하락 · ${withParticle(str(p.model), '을', '를')} 닮았다`,
         tone: 'down',
       }
     }
