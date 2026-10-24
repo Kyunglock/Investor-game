@@ -456,8 +456,7 @@ class GameFlowTest {
     List<Number> lifeAmounts =
         after.read("$.log[?(@.day > " + from + " && @.kind == 'LIFE')].payload.amount");
     long life = lifeAmounts.stream().mapToLong(Number::longValue).sum();
-    long saved =
-        after.read("$.cash", Long.class) - cash + after.read("$.debt", Long.class) - life;
+    long saved = after.read("$.cash", Long.class) - cash + after.read("$.debt", Long.class) - life;
     List<String> kindsInRange = after.read("$.log[?(@.day > " + from + ")].kind");
     assertThat(saved)
         .as(
