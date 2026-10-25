@@ -11,6 +11,7 @@ import {
   sideLabel,
   signedWon,
   statLabel,
+  TRIP_LABELS,
   withParticle,
   won,
   yearOf,
@@ -200,6 +201,17 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       }
     }
     case 'LIFE':
+      // 가족 여행은 선택이라 어떻게 갔는지(또는 안 갔는지)가 남는다 (decisions.md 71번).
+      if (p.noticeCode === 'family-trip' && typeof p.option === 'string') {
+        if (p.option === 'none') {
+          return { ...base, tone: 'life', text: `${str(p.proposer)}의 여행 제안을 거절했다.` }
+        }
+        return {
+          ...base,
+          tone: 'life',
+          text: `가족 여행 (${TRIP_LABELS[p.option] ?? p.option}) · ${signedWon(num(p.amount))}`,
+        }
+      }
       return {
         ...base,
         tone: 'life',

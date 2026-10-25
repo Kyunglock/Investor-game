@@ -18,6 +18,16 @@
     "halfLabel": "절반만 보탠다",
     "noneLabel": "알아서 하라고 한다"
   },
+  "familyTrip": {
+    "title": "{who}의 가족 여행 제안",
+    "body": "{who}이(가) 올해는 다 같이 여행을 가자고 한다. 온 가족이 시간을 맞추기도 쉽지 않은 때다. 어디까지 쓸까?",
+    "spouse": "배우자",
+    "parents": "부모님",
+    "luxuryLabel": "초호화 여행을 간다 (보통의 4배)",
+    "normalLabel": "적당히 다녀온다",
+    "cheapLabel": "가까운 데 당일치기로",
+    "noneLabel": "이번엔 가지 않는다"
+  },
   "notices": [
     {
       "code": "condolence",
@@ -64,18 +74,6 @@
       "assetPercent": 0,
       "weight": 8,
       "requiresMarried": false,
-      "requiresJob": false,
-      "requiresChildren": false
-    },
-    {
-      "code": "family-trip",
-      "title": "가족 여행",
-      "body": "온 가족이 처음으로 바다를 봤다. 돈이 아깝지 않았다.",
-      "amount": -2500000,
-      "salaryPercent": 0,
-      "assetPercent": 1,
-      "weight": 6,
-      "requiresMarried": true,
       "requiresJob": false,
       "requiresChildren": false
     },

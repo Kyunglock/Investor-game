@@ -70,7 +70,9 @@ public record EventProperties(
       Range childGapYears,
       int maxChildren,
       int childLastAge,
-      Range childWeddingGapYears) {}
+      Range childWeddingGapYears,
+      Range tripGapYears,
+      int tripLastAge) {}
 
   /** 알림성 이벤트 간격(일). 직업이 생긴 뒤부터. */
   public record NoticeSettings(Range gapDays) {}

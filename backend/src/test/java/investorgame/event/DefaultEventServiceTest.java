@@ -136,6 +136,15 @@ class DefaultEventServiceTest {
       if (life.isEmpty()) {
         break;
       }
+      if (isTrip(life.get())) {
+        // 가족 여행 제안(decisions.md 71번)은 자녀 제안이 아니다. 셋째 뒤에는 여행만 남는다.
+        if (children == 3) {
+          break;
+        }
+        events.complete(gameId, life.get().eventId(), new Completion("none", "none", List.of()));
+        from = life.get().occursDay();
+        continue;
+      }
       askedAt.add(life.get().occursDay());
       events.complete(gameId, life.get().eventId(), new Completion("accept", "accept", List.of()));
       children++;
@@ -260,7 +269,8 @@ class DefaultEventServiceTest {
     SchedulingContext context =
         lifeWith(marriedDay, List.of(firstLeave, secondLeave, thirdLeave), (70 - START_AGE) * YEAR);
 
-    EventView first = nextOf(gameId, context, firstLeave, EventKind.LIFE, 7L).orElseThrow();
+    // 가족 여행 제안(decisions.md 71번)은 건너뛰고 자녀 결혼만 본다.
+    EventView first = nextNonTrip(gameId, context, firstLeave, 7L).orElseThrow();
     assertThat(first.occursDay() - firstLeave).isBetween(2 * YEAR, 5 * YEAR);
     assertThat(first.title()).isEqualTo("첫째가 결혼한다");
     assertThat(first.options())
@@ -268,14 +278,63 @@ class DefaultEventServiceTest {
         .containsExactly("full", "half", "none");
     events.complete(gameId, first.eventId(), new Completion("half", "half", List.of()));
 
-    EventView second = nextOf(gameId, context, first.occursDay(), EventKind.LIFE, 7L).orElseThrow();
+    EventView second = nextNonTrip(gameId, context, first.occursDay(), 7L).orElseThrow();
     assertThat(second.title()).isEqualTo("둘째가 결혼한다");
     assertThat(second.occursDay() - secondLeave).isBetween(2 * YEAR, 5 * YEAR);
     events.complete(gameId, second.eventId(), new Completion("none", "none", List.of()));
 
-    assertThat(nextOf(gameId, context, second.occursDay(), EventKind.LIFE, 7L))
-        .as("아이마다 한 번만 묻는다")
+    assertThat(nextNonTrip(gameId, context, second.occursDay(), 7L)).as("아이마다 한 번만 묻는다").isEmpty();
+  }
+
+  /** 다음 생활 선택 가운데 가족 여행 제안은 '안 간다'로 넘기고, 그 밖의 것(결혼·자녀·자녀 결혼)을 돌려준다. */
+  private Optional<EventView> nextNonTrip(
+      UUID gameId, SchedulingContext context, int fromDay, long seed) {
+    int from = fromDay;
+    for (int i = 0; i < 30; i++) {
+      Optional<EventView> life = nextOf(gameId, context, from, EventKind.LIFE, seed);
+      if (life.isEmpty() || !isTrip(life.get())) {
+        return life;
+      }
+      events.complete(gameId, life.get().eventId(), new Completion("none", "none", List.of()));
+      from = life.get().occursDay();
+    }
+    throw new AssertionError("가족 여행 제안이 끝없이 이어진다");
+  }
+
+  @Test
+  void 결혼하면_3에서_6년마다_가족_여행_제안이_오고_누가_제안했는지와_네_선택지가_있다() {
+    UUID gameId = UUID.randomUUID();
+    int marriedDay = (30 - START_AGE) * YEAR;
+    // 자녀 셋(더 묻지 않음), 독립한 날 없음(자녀 결혼 없음) → 생활 선택은 가족 여행뿐.
+    SchedulingContext married = lifeOnly(true, marriedDay, 3);
+
+    EventView trip = nextOf(gameId, married, marriedDay, EventKind.LIFE, 11L).orElseThrow();
+    assertThat(trip.occursDay() - marriedDay).isBetween(3 * YEAR, 6 * YEAR);
+    assertThat(trip.title()).contains("가족 여행 제안");
+    assertThat(trip.title()).containsAnyOf("배우자", "부모님");
+    assertThat(trip.options())
+        .extracting(EventView.Option::code)
+        .containsExactly("luxury", "normal", "cheap", "none");
+    events.complete(gameId, trip.eventId(), new Completion("none", "none", List.of()));
+
+    EventView again = nextOf(gameId, married, trip.occursDay(), EventKind.LIFE, 11L).orElseThrow();
+    assertThat(isTrip(again)).isTrue();
+    assertThat(again.occursDay() - trip.occursDay()).isBetween(3 * YEAR, 6 * YEAR);
+
+    // 미혼이면 오지 않는다.
+    assertThat(
+            nextOf(
+                    UUID.randomUUID(),
+                    lifeOnly(false, null, 0),
+                    (36 - START_AGE) * YEAR,
+                    EventKind.LIFE,
+                    11L)
+                .filter(DefaultEventServiceTest::isTrip))
         .isEmpty();
+  }
+
+  private static boolean isTrip(EventView view) {
+    return view.options().stream().anyMatch(o -> o.code().equals("luxury"));
   }
 
   /** 자녀 셋(더 묻지 않음)에 독립한 날이 정해진 가정. 생활 선택 가운데 자녀 결혼만 남는다. 자녀 수는 셋이어야 자녀 제안이 끼지 않는다. */

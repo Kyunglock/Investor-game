@@ -55,6 +55,9 @@ class DefaultEventService implements EventService {
   /** 자녀 결혼 선택의 정의 코드: "wedding:" + 자녀 순번 (decisions.md 68번). */
   static final String WEDDING_PREFIX = "wedding:";
 
+  /** 가족 여행 제안의 정의 코드: "trip:" + 제안한 사람(spouse·parents·child:n) (decisions.md 71번). */
+  static final String TRIP_PREFIX = "trip:";
+
   /** 직업 선택 행의 definition_code: null이면 첫 선택, RETRY는 기다린 뒤, REHIRE는 실직 뒤. 문구가 달라진다. */
   static final String JOB_RETRY = "retry";
 
@@ -179,11 +182,14 @@ class DefaultEventService implements EventService {
               row.definitionCode().startsWith(WEDDING_PREFIX)
                   ? new ChoiceTicket.ChildWedding(
                       weddingSeq(row.definitionCode()), weddingShareBp(optionCode))
-                  : new ChoiceTicket.Life(
-                      MARRIAGE.equals(row.definitionCode())
-                          ? ChoiceTicket.LifeKind.MARRIAGE
-                          : ChoiceTicket.LifeKind.CHILD,
-                      ACCEPT.equals(optionCode));
+                  : row.definitionCode().startsWith(TRIP_PREFIX)
+                      ? new ChoiceTicket.FamilyTrip(
+                          tripProposer(row.definitionCode()), tripCostBp(optionCode))
+                      : new ChoiceTicket.Life(
+                          MARRIAGE.equals(row.definitionCode())
+                              ? ChoiceTicket.LifeKind.MARRIAGE
+                              : ChoiceTicket.LifeKind.CHILD,
+                          ACCEPT.equals(optionCode));
           case NEWS -> new ChoiceTicket.News();
           case SHAKE -> new ChoiceTicket.Shake();
           case LEVERAGE ->
@@ -429,7 +435,7 @@ class DefaultEventService implements EventService {
     }
   }
 
-  /** 생활 선택 하나가 올 날. code는 marriage·child·wedding:n. */
+  /** 생활 선택 하나가 올 날. code는 marriage·child·wedding:n·trip:who. */
   private record LifeDue(String code, int day) {}
 
   /** 가장 이른 생활 선택. 같은 날이면 결혼·자녀가 자녀 결혼보다 먼저다. */
@@ -482,7 +488,55 @@ class DefaultEventService implements EventService {
         dues.add(new LifeDue(CHILD, day));
       }
     }
+    // 가족 여행 (decisions.md 71번): 결혼 뒤 3~6년마다 가족 가운데 누군가 여행을 가자고 한다. 자동으로 가지 않고 선택이다.
+    if (context.married() && context.marriedDay() != null) {
+      List<EventRow> trips =
+          rows.stream()
+              .filter(
+                  r ->
+                      r.kind() == EventKind.LIFE
+                          && r.definitionCode() != null
+                          && r.definitionCode().startsWith(TRIP_PREFIX))
+              .toList();
+      int base = trips.isEmpty() ? context.marriedDay() : last(trips).occursDay();
+      int day = base + roll(random, life.tripGapYears(), "TRIP", trips.size()) * year;
+      if (ageAt(day, context) <= life.tripLastAge()) {
+        String who =
+            tripProposer(context, day, random.forKey("event", "life", "trip-who", trips.size()));
+        dues.add(new LifeDue(TRIP_PREFIX + who, day));
+      }
+    }
     return dues;
+  }
+
+  /** 여행을 가자고 하는 사람: 배우자, 집에 있는 아이(독립까지 24년 안쪽이면 대략 여섯 살은 넘었다), 55세까지는 부모님도. */
+  private String tripProposer(SchedulingContext context, int day, RandomGenerator rng) {
+    List<String> who = new ArrayList<>();
+    who.add("spouse");
+    int year = calendar.daysPerYear();
+    for (int i = 0; i < context.childLeaveDays().size(); i++) {
+      int leave = context.childLeaveDays().get(i);
+      if (leave > day && leave - day <= 24 * year) {
+        who.add("child:" + (i + 1));
+      }
+    }
+    if (ageAt(day, context) <= 55) {
+      who.add("parents");
+    }
+    return who.get(rng.nextInt(who.size()));
+  }
+
+  static String tripProposer(String definitionCode) {
+    return definitionCode.substring(TRIP_PREFIX.length());
+  }
+
+  private static int tripCostBp(String optionCode) {
+    return switch (optionCode) {
+      case ChoiceTicket.FamilyTrip.LUXURY -> 40_000;
+      case ChoiceTicket.FamilyTrip.NORMAL -> 10_000;
+      case ChoiceTicket.FamilyTrip.CHEAP -> 2_000;
+      default -> 0;
+    };
   }
 
   static int weddingSeq(String definitionCode) {
@@ -686,7 +740,13 @@ class DefaultEventService implements EventService {
                     ChoiceTicket.ChildWedding.FULL,
                     ChoiceTicket.ChildWedding.HALF,
                     ChoiceTicket.ChildWedding.NONE)
-                : List.of(ACCEPT, DECLINE));
+                : code.startsWith(TRIP_PREFIX)
+                    ? List.of(
+                        ChoiceTicket.FamilyTrip.LUXURY,
+                        ChoiceTicket.FamilyTrip.NORMAL,
+                        ChoiceTicket.FamilyTrip.CHEAP,
+                        ChoiceTicket.FamilyTrip.NONE)
+                    : List.of(ACCEPT, DECLINE));
       }
       case NOTICE -> notice(id, seq, candidate.day(), context, random);
       case NEWS -> news(id, seq, rows, candidate.day(), context, random, hints);

@@ -138,7 +138,7 @@ public record CompleteResult(
 | `TRAIT` | `CHILDHOOD` | 예 | 불가 | 성장기의 일상 장면에서 행동을 고르게 해 성향을 유추한다. 판정으로 뒤집지 않는다 (확정) |
 | `TRAINING` | 둘 다 | 예 | 불가 | 자기계발. 비용을 쓰고 능력치 경험치를 얻는 선택지와 "하지 않는다" 선택지가 있다 (확정: 성장 루트) |
 | `OFFER` | `SAVING` | 예 | 불가 | 투자 시작 제안. 수락/거절 (확정) |
-| `LIFE` | 취업 뒤 | 예 | 불가 | 결혼(`marriage`)·자녀(`child`) 제안. 판정 없음. 수락이면 진행이 가계·자산에 반영 (경제 개편 설계 7.3절) |
+| `LIFE` | 취업 뒤 | 예 | 불가 | 결혼(`marriage`)·자녀(`child`) 제안, 자녀 결혼(`wedding:n`, decisions.md 68번), 가족 여행 제안(`trip:{who}`, 71번). 판정 없음. 진행이 가계·자산에 반영 (경제 개편 설계 7.3절) |
 | `NOTICE` | 취업 뒤 | 아니오 | — | 지출·수입 알림. **만들어지는 순간 RESOLVED**이고 판은 멈추지 않는다. `ScheduleResult.notice`로 돌려주고 진행이 돈을 반영한다 |
 | `NEWS` | `INVESTING` | 예 | **불가** | 매수·매도·관망 선택. 숨은 방향·폭과 **매매 대상 종목** 하나가 있다. `sectorWide`면 충격이 섹터 전체 (확정) |
 | `SHAKE` | `INVESTING`, 보유 있음 | 예 | 불가 | 보유 종목 흔들림(인내심 시험). 보유 중 한 종목에 대해 **버틴다(`HOLD`) / 판다(`SELL`, 전량)**. 판정·충격은 뉴스와 같고 힌트·다른 뉴스는 없다 (decisions.md 33번) |
@@ -176,6 +176,7 @@ public record CompleteResult(
 | `TRAINING` | `JOB`이 해결됨 | 마지막 `TRAINING`(없으면 `JOB` 해결 일수) + `event.training.gap-days` 구간에서 뽑은 값 |
 | `LIFE` 결혼 | 취업함, 미혼, 나이 ≤ `marriage-last-age` | 처음은 `marriage-age` 구간의 나이(키 `("event","life","marriage-age")`), 거절했으면 마지막 + `marriage-retry-years`년 |
 | `LIFE` 자녀 | 결혼함, 자녀 < `max-children`, 나이 ≤ `child-last-age` | 처음은 결혼일 + `child-first-gap-years`, 그다음은 마지막 자녀 제안 + `child-gap-years` (키 `("event","life","child",n)`) |
+| `LIFE` 가족 여행 | 결혼함, 나이 ≤ `trip-last-age` | 처음은 결혼일 + `trip-gap-years`, 그다음은 마지막 여행 제안 + `trip-gap-years` (키 `("event","gap","TRIP",n)`). 제안자는 배우자·집에 있는 아이·부모님(55세까지) 중 하나 (키 `("event","life","trip-who",n)`). 선택지 luxury/normal/cheap/none (decisions.md 71번) |
 | `NOTICE` | 취업함 | 마지막 `NOTICE`(없으면 취업일) + `event.notice.gap-days`. 정의는 `("event","notice",seq)`로 가중치 선택, `requiresMarried`는 결혼 뒤에만 |
 | `NEWS` | `INVESTING` | 마지막 뿌리 `NEWS`(없으면 `INVESTING` 시작 일수) + 투자 스타일별 간격 구간에서 뽑은 값 (5.4절) |
 | `SHAKE` | `INVESTING`, `heldStockCodes`가 비어 있지 않음 | 마지막 `SHAKE`(없으면 `INVESTING` 시작 일수) + `event.shake.gap-days`(300~600) 구간에서 뽑은 값(키 `("SHAKE", n)`). 종목·장면·숨은 방향(`up-bp`)·폭(`magnitude-bp`)은 `("event","shake",seq)`로 뽑는다 |

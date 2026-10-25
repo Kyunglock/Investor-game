@@ -149,3 +149,10 @@ export const SEX_LABELS: Record<Sex, string> = { M: '남', F: '여' }
 export function childWord(sex: unknown): string {
   return sex === 'F' ? '딸' : sex === 'M' ? '아들' : '아이'
 }
+
+/** 가족 여행 선택지 (decisions.md 71번). 기록·크레딧에 짧게 붙인다. */
+export const TRIP_LABELS: Record<string, string> = {
+  luxury: '초호화',
+  normal: '보통',
+  cheap: '당일치기',
+}
