@@ -121,12 +121,12 @@ public record Hint(
 ### 4.5 운
 
 ```
-손실 완화 확률(bp) = 운 × 50            # 운 0이면 0%, 100이면 50%
+운이 따를 확률(bp) = 운 × 50            # 운 0이면 0%, 100이면 50%
 ```
 
-- 걸리면 `behavior.luck.loss-factor-percent`(초기값 30)를 돌려준다. 안 걸리면 100을 돌려준다.
-- 자산이 **손실일 때만** 이 비율을 적용한다. 이득이면 무시한다 (자산 스펙).
-- 이 메서드는 이득인지 손실인지 모르므로 항상 한 번 뽑는다.
+- `luckFactorPercent(luck, truth, rng)`: 걸리면 내릴 뉴스(DOWN)는 `behavior.luck.loss-factor-percent`(30), 오를 뉴스(UP)는 `gain-bonus-percent`(150)를 돌려준다. 안 걸리면 100 (decisions.md 78번).
+- 진행은 **들고 있는 종목에 충격이 닿을 때만** 이 비율을 충격 폭에 곱한다. 샀는데 내리면 덜 잃고, 샀거나 들고 있는데 오르면 더 번다. 팔고 나서는 아무 일도 없다.
+- 결과(`Price.lossSoftened`/`luckBoosted`)와 `PRICE` 기록에 남는다.
 
 ### 4.6 해석 (매매창 설계 4.2절)
 
@@ -148,8 +148,9 @@ public record Hint(
 | `behavior.hint.neutral-below-insight` | 40 | 이 값 미만이면 모호 판정 대상 |
 | `behavior.hint.neutral-percent` | 30 | 모호 확률 |
 | `behavior.hint.strong-percent` | 50 | 강한 힌트 확률 (안목 무관) |
-| `behavior.luck.chance-per-point-bp` | 50 | 운 1점당 손실 완화 확률 |
-| `behavior.luck.loss-factor-percent` | 30 | 손실 완화 시 손실 비율 |
+| `behavior.luck.chance-per-point-bp` | 50 | 운 1점당 운이 따를 확률 |
+| `behavior.luck.loss-factor-percent` | 30 | 운이 따르면 내릴 뉴스의 손실 비율 |
+| `behavior.luck.gain-bonus-percent` | 150 | 운이 따르면 오를 뉴스의 이득 배율 |
 
 - 코드에 숫자를 쓰지 않는다. 모두 설정에서 읽는다 (code-style.md 3.3절). 수치 조정이 코드 변경 없이 되어야 한다.
 - 수치는 체감 테스트 후 조정한다 (poc.md 5절).
