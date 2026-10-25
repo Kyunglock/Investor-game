@@ -767,16 +767,21 @@ class DefaultProgressService implements ProgressService {
         };
 
     // 운: 떨어지는 뉴스이고 충격을 받는 종목을 들고 있을 때만 폭을 줄인다 (경제 개편 설계 5.4절).
-    int lossFactor =
-        behavior.lossFactorPercent(
-            character.stats().luck(), random.forKey("behavior", "luck", ticket.seq()));
+    // 운 (decisions.md 78번): 들고 있는 종목에 충격이 닿을 때, 운이 따르면 손실은 줄고 이득은 커진다.
+    int luckFactor =
+        behavior.luckFactorPercent(
+            character.stats().luck(),
+            ticket.truth(),
+            random.forKey("behavior", "luck", ticket.seq()));
     AccountView afterTrade = assets.get(gameId);
     boolean exposed =
         content.stocksOf(ticket.sectorCode()).stream()
             .anyMatch(s -> afterTrade.holdings().containsKey(s.code()));
-    boolean softened = ticket.truth() == Direction.DOWN && exposed && lossFactor < PERCENT;
+    boolean lucky = exposed && luckFactor != PERCENT;
+    boolean softened = lucky && ticket.truth() == Direction.DOWN;
+    boolean boosted = lucky && ticket.truth() == Direction.UP;
     int magnitude =
-        softened ? (int) (ticket.magnitudeBp() * lossFactor / PERCENT) : ticket.magnitudeBp();
+        lucky ? (int) (ticket.magnitudeBp() * luckFactor / PERCENT) : ticket.magnitudeBp();
     long before = assets.holdingsValue(gameId, prices);
     ShockResult shock =
         market.applyShock(
@@ -839,6 +844,7 @@ class DefaultProgressService implements ProgressService {
     pricePayload.put("changeBp", magnitude);
     pricePayload.put("pnl", pnl);
     pricePayload.put("lossSoftened", softened);
+    pricePayload.put("luckBoosted", boosted);
     logs.append(gameId, ticket.occursDay(), "PRICE", pricePayload);
     List<ChoiceOutcome.Growth> growthViews =
         logGrowth(gameId, ticket.occursDay(), growth, DEVIATION);
@@ -857,7 +863,8 @@ class DefaultProgressService implements ProgressService {
             ticket.truth().name(),
             magnitude,
             pnl,
-            softened),
+            softened,
+            boosted),
         growthViews,
         null,
         review);

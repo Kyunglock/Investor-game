@@ -755,7 +755,7 @@ components:
         price:
           oneOf:
             - type: object
-              required: [sectorCode, sectorName, direction, changeBp, pnl, lossSoftened]
+              required: [sectorCode, sectorName, direction, changeBp, pnl, lossSoftened, luckBoosted]
               properties:
                 sectorCode: { type: string }
                 sectorName: { type: string }
@@ -764,7 +764,8 @@ components:
                 direction: { type: string, enum: [UP, DOWN] }
                 changeBp: { type: integer }
                 pnl: { type: integer, format: int64 }
-                lossSoftened: { type: boolean }
+                lossSoftened: { type: boolean, description: 운이 따라 손실이 줄었다 (내릴 뉴스) }
+                luckBoosted: { type: boolean, description: 운이 따라 이득이 커졌다 (오를 뉴스, decisions.md 78번) }
             - type: 'null'
         growth:
           type: array

@@ -14,7 +14,11 @@ public record BehaviorProperties(
       int neutralPercent,
       int strongPercent) {}
 
-  public record LuckSettings(int chancePerPointBp, int lossFactorPercent) {}
+  /**
+   * 운 (decisions.md 78번). chancePerPointBp는 운 1점당 '운이 따를' 확률, 걸리면 내릴 뉴스의 손실은 lossFactorPercent만큼만,
+   * 오를 뉴스의 이득은 gainBonusPercent만큼 커진다.
+   */
+  public record LuckSettings(int chancePerPointBp, int lossFactorPercent, int gainBonusPercent) {}
 
   /**
    * 추세·시황 해석 (매매창 설계 4.2절). 제대로 읽을 확률 = 안목 × readAtMaxBp / 100, 나머지는 갈래 중 하나를 찍는다. 세 갈래에서 안목 100이
