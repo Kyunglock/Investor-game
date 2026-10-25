@@ -12,8 +12,8 @@ import java.util.random.RandomGenerator;
 import org.springframework.stereotype.Component;
 
 /**
- * 힘든 일 뒤 누군가의 위로 한 줄 (decisions.md 85번). 결혼했으면 배우자, 집에 있는 여섯 살 넘은 아이, 55세까지는 부모님, 그리고 언제나 친구 가운데 판 시드로 한
- * 명을 골라 상황에 맞는 문구를 준다. 위로를 받으면 행복도가 조금 돌아온다.
+ * 힘든 일 뒤 누군가의 위로 한 줄 (decisions.md 85번). 결혼했으면 배우자, 집에 있는 여섯 살 넘은 아이, 55세까지는 부모님, 그리고 언제나 친구 가운데 판
+ * 시드로 한 명을 골라 상황에 맞는 문구를 준다. 위로를 받으면 행복도가 조금 돌아온다.
  */
 @Component
 class Comforter {
@@ -38,7 +38,8 @@ class Comforter {
   }
 
   /** age는 내 나이. 모르면(null) 부모님은 빠진다. */
-  Optional<String> comfort(UUID gameId, String situation, int day, Integer age, RandomGenerator rng) {
+  Optional<String> comfort(
+      UUID gameId, String situation, int day, Integer age, RandomGenerator rng) {
     HouseholdView home = household.get(gameId);
     List<String> who = new ArrayList<>();
     if (home.married()) {

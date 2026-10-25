@@ -115,6 +115,7 @@ class DefaultProgressService implements ProgressService {
   private final ContentCatalog content;
   private final HousingService housing;
   private final HousingFlow housingFlow;
+  private final Comforter comforter;
   private final MarketDesk desk;
   private final SecureRandom seeds = new SecureRandom();
 
@@ -133,7 +134,8 @@ class DefaultProgressService implements ProgressService {
       ContentCatalog content,
       HousingService housing,
       HousingFlow housingFlow,
-      MarketDesk desk) {
+      MarketDesk desk,
+      Comforter comforter) {
     this.games = games;
     this.logs = logs;
     this.properties = properties;
@@ -148,6 +150,7 @@ class DefaultProgressService implements ProgressService {
     this.content = content;
     this.housing = housing;
     this.housingFlow = housingFlow;
+    this.comforter = comforter;
     this.desk = desk;
   }
 
@@ -612,8 +615,25 @@ class DefaultProgressService implements ProgressService {
             ? 0
             : monthlySalary(
                 content.job(after.jobCode()), tenureYears(after, day), after.salaryBonusBp()));
+    // 일을 잃거나 실패하면 누군가의 위로가 붙는다 (decisions.md 85번).
+    String comfort =
+        effect.quit() || effect.becomeInvestor() || !success
+            ? comforter
+                .comfort(
+                    gameId,
+                    effect.quit() || effect.becomeInvestor()
+                        ? Comforter.LAYOFF
+                        : Comforter.CAREER_FAIL,
+                    day,
+                    ageAt(game, day),
+                    random.forKey("comfort", ticket.seq()))
+                .orElse(null)
+            : null;
+    if (comfort != null) {
+      payload.put("comfort", comfort);
+    }
     logs.append(gameId, day, CAREER_LOG, payload);
-    return simpleOutcome(ticket, message.toString(), growth);
+    return withComfort(simpleOutcome(ticket, message.toString(), growth), comfort);
   }
 
   // ---- 결혼·자녀 (경제 개편 설계 7.3절) ----
@@ -871,6 +891,18 @@ class DefaultProgressService implements ProgressService {
     if (worth > 0 && Math.abs(pnl) * BP / worth >= BIG_MOVE_BP) {
       household.cheer(gameId, pnl > 0 ? HAPPY_BIG_GAIN : -HAPPY_BIG_LOSS);
     }
+    // 큰 손실 뒤에는 누군가의 위로가 붙는다 (decisions.md 85번).
+    String comfort =
+        worth > 0 && pnl < 0 && Math.abs(pnl) * BP / worth >= BIG_MOVE_BP
+            ? comforter
+                .comfort(
+                    gameId,
+                    Comforter.BIG_LOSS,
+                    ticket.occursDay(),
+                    ageAt(game, ticket.occursDay()),
+                    random.forKey("comfort", ticket.seq()))
+                .orElse(null)
+            : null;
     // 결과 뒤 안목 한마디 (decisions.md 73번): 뉴스에서만, 내 행동이 결과와 맞았는지(good)와 안목 구간으로 고른다.
     String review =
         ticket.kind() == EventKind.NEWS
@@ -944,7 +976,8 @@ class DefaultProgressService implements ProgressService {
             boosted),
         growthViews,
         null,
-        review);
+        review,
+        comfort);
   }
 
   // ---- 자유 매매 (경제 개편 설계 8절) ----
@@ -1012,7 +1045,16 @@ class DefaultProgressService implements ProgressService {
     return new ChoiceOutcome(
         view(games.findLatest(sessionId).orElseThrow()),
         new ChoiceOutcome.Outcome(
-            TRADE_LOG, side.name(), side.name(), List.of(), trade, null, List.of(), null, null));
+            TRADE_LOG,
+            side.name(),
+            side.name(),
+            List.of(),
+            trade,
+            null,
+            List.of(),
+            null,
+            null,
+            null));
   }
 
   @Override
@@ -1181,7 +1223,16 @@ class DefaultProgressService implements ProgressService {
             "quantity",
             quantity));
     return new ChoiceOutcome.Outcome(
-        ticket.kind().name(), option, option, List.of(), trade, null, List.of(), message, null);
+        ticket.kind().name(),
+        option,
+        option,
+        List.of(),
+        trade,
+        null,
+        List.of(),
+        message,
+        null,
+        null);
   }
 
   private static TraitDefinition.Outcome weightedOutcome(
@@ -1209,6 +1260,20 @@ class DefaultProgressService implements ProgressService {
     return phrases.isEmpty() ? null : phrases.get(rng.nextInt(phrases.size()));
   }
 
+  private static ChoiceOutcome.Outcome withComfort(ChoiceOutcome.Outcome outcome, String comfort) {
+    return new ChoiceOutcome.Outcome(
+        outcome.kind(),
+        outcome.chosen(),
+        outcome.actual(),
+        outcome.deviations(),
+        outcome.trade(),
+        outcome.price(),
+        outcome.growth(),
+        outcome.message(),
+        outcome.review(),
+        comfort);
+  }
+
   private static ChoiceOutcome.Outcome simpleOutcome(ChoiceTicket ticket, String message) {
     return simpleOutcome(ticket, message, List.of());
   }
@@ -1224,6 +1289,7 @@ class DefaultProgressService implements ProgressService {
         null,
         growth,
         message,
+        null,
         null);
   }
 

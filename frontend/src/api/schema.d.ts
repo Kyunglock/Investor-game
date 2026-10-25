@@ -849,6 +849,8 @@ export interface components {
             message?: string | null;
             /** @description 뉴스 결과 뒤 안목 구간별 되돌아보는 한마디. 뉴스가 아니면 null (decisions.md 73번) */
             review?: string | null;
+            /** @description 힘든 일(실직·실패·큰 손실·전세사기) 뒤 배우자·아이·부모님·친구의 위로 한 줄. 없으면 null (decisions.md 85번) */
+            comfort?: string | null;
         };
         Error: {
             /** @enum {string} */
