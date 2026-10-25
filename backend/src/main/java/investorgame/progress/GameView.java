@@ -14,6 +14,7 @@ import java.util.UUID;
  *
  * @param day 서버가 마지막으로 확인한 게임 일수
  * @param sex 내 성별. 판 시드로 정해져 바뀌지 않는다 (decisions.md 69번)
+ * @param happiness 행복도 0~100 (decisions.md 82번)
  * @param initialStats 태어날 때의 능력치. 별명은 이 값으로 정해서 게임 중에 바뀌지 않는다
  * @param totalAsset 현금 + 보유 평가액 − 빚
  * @param lastMonthTotalAsset 전월 말 총자산. 첫 달이면 null
@@ -29,6 +30,7 @@ public record GameView(
     int endAge,
     int daysPerYear,
     Sex sex,
+    int happiness,
     Stats stats,
     Stats initialStats,
     long cash,

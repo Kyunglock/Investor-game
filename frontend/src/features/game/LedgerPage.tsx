@@ -137,6 +137,11 @@ function Household({ game }: { game: Game }) {
   return (
     <section className="mt-2" data-testid="household-card">
       <h2 className="font-pen text-[28px] font-normal leading-8">{month}월 가계부</h2>
+      {/* 행복도 (decisions.md 82번): 돈만이 아니라 삶이 어떤지 */}
+      <p className="text-[13px] text-pen-soft" data-testid="ledger-happiness">
+        행복도 <span className="font-pen text-[20px] text-red-pen">{game.happiness}</span>
+        <span className="text-[11px]"> / 100</span>
+      </p>
       {!working ? (
         <p className="text-pen-soft">
           {game.phase === 'CHILDHOOD' ? '아직 부모님 집이다.' : '직업이 생기면 가계부가 시작된다.'}

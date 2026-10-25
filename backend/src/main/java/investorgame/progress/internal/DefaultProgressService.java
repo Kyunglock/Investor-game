@@ -509,6 +509,8 @@ class DefaultProgressService implements ProgressService {
       success = random.forKey("career", ticket.seq()).nextInt(BP) < chanceBp;
     }
     CareerDefinition.Effect effect = success ? option.success() : option.fail();
+    // 승진·인상은 기쁘고, 실패는 지치고, 일을 잃으면 더 지친다 (decisions.md 82번).
+    household.cheer(gameId, effect.quit() ? -HAPPY_QUIT : success ? HAPPY_CAREER : -HAPPY_CAREER);
     // 실제 행동에 판정 결과를 남겨 후속 장면(followUp)을 정할 수 있게 한다 (decisions.md 52번).
     events.complete(
         gameId,
@@ -636,6 +638,7 @@ class DefaultProgressService implements ProgressService {
         // 성별도 태어날 때 굴린다 (decisions.md 69번).
         Sex sex = random.forKey("life", "sex", day).nextBoolean() ? Sex.F : Sex.M;
         int seq = household.addChild(gameId, day, leaveAge, sex);
+        household.cheer(gameId, HAPPY_CHILD);
         assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
         logs.append(gameId, day, "CHILD", Map.of("seq", seq, "cost", cost, "sex", sex.name()));
         yield simpleOutcome(
@@ -659,6 +662,7 @@ class DefaultProgressService implements ProgressService {
     SpouseText.Profile who = content.spouseText().profile(marriage.spouseCode());
     long cost = household.weddingCost(day);
     household.marry(gameId, day, new Spouse(who.name(), who.job(), who.income(), who.intro()));
+    household.cheer(gameId, HAPPY_MARRIAGE);
     assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
     Map<String, Object> payload = new LinkedHashMap<>();
     payload.put("cost", cost);
@@ -685,6 +689,8 @@ class DefaultProgressService implements ProgressService {
     if (cost > 0) {
       assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
     }
+    // 대줄수록 뿌듯하고, 안 대주면 마음이 쓰인다 (decisions.md 82번).
+    household.cheer(gameId, wedding.shareBp() >= BP ? 8 : wedding.shareBp() > 0 ? 4 : -4);
     logs.append(
         gameId,
         day,
@@ -704,6 +710,20 @@ class DefaultProgressService implements ProgressService {
 
   /** 보통 가족 여행 비용(25세 기준, 물가가 붙는다). 순자산의 1%가 더 크면 그만큼 (옛 알림과 같은 셈법). */
   private static final long TRIP_BASE_COST = 2_500_000;
+
+  /** 행복도 변화 (decisions.md 82번). 기쁨은 작게 자주, 슬픔은 조금 더 크게. */
+  private static final int HAPPY_MARRIAGE = 15;
+
+  private static final int HAPPY_CHILD = 10;
+  private static final int HAPPY_CHILD_LEFT = 3;
+  private static final int HAPPY_CAREER = 5;
+  private static final int HAPPY_QUIT = 10;
+  private static final int HAPPY_FRUGAL = 2;
+  private static final int HAPPY_BIG_GAIN = 3;
+  private static final int HAPPY_BIG_LOSS = 5;
+
+  /** 한 번의 뉴스 손익이 순자산의 이 비율(만분율)을 넘으면 행복도가 움직인다. */
+  private static final long BIG_MOVE_BP = 500;
 
   private static final long TRIP_ASSET_PERCENT = 1;
 
@@ -727,6 +747,15 @@ class DefaultProgressService implements ProgressService {
     if (cost > 0) {
       assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
     }
+    // 호화로울수록 기쁘고, 안 가면 조금 서운하다 (decisions.md 82번).
+    household.cheer(
+        gameId,
+        switch (ticket.optionCode()) {
+          case ChoiceTicket.FamilyTrip.LUXURY -> 15;
+          case ChoiceTicket.FamilyTrip.NORMAL -> 10;
+          case ChoiceTicket.FamilyTrip.CHEAP -> 5;
+          default -> -5;
+        });
     String who = tripProposerName(trip.proposer());
     Map<String, Object> payload = new LinkedHashMap<>();
     payload.put("eventId", ticket.eventId().toString());
@@ -837,6 +866,11 @@ class DefaultProgressService implements ProgressService {
             ticket.occursDay(),
             ticket.eventId());
     long pnl = assets.holdingsValue(gameId, market.prices(gameId)) - before;
+    // 순자산의 5%를 넘는 손익은 기분에 남는다 (decisions.md 82번).
+    long worth = netWorth(gameId);
+    if (worth > 0 && Math.abs(pnl) * BP / worth >= BIG_MOVE_BP) {
+      household.cheer(gameId, pnl > 0 ? HAPPY_BIG_GAIN : -HAPPY_BIG_LOSS);
+    }
     // 결과 뒤 안목 한마디 (decisions.md 73번): 뉴스에서만, 내 행동이 결과와 맞았는지(good)와 안목 구간으로 고른다.
     String review =
         ticket.kind() == EventKind.NEWS
@@ -1253,9 +1287,16 @@ class DefaultProgressService implements ProgressService {
           assets.credit(gameId, SPOUSE_INCOME, spouse, day);
         }
         assets.spend(gameId, EXPENSE, household.monthlyExpense(gameId, day), day, null);
+        // 행복도는 달마다 50 쪽으로 돌아오고, 긴축(현금 < 생활비 또는 빚)이면 조금씩 지친다 (decisions.md 82번).
+        household.driftHappiness(gameId);
+        AccountView settled = assets.get(gameId);
+        if (settled.debt() > 0 || settled.cash() < household.monthlyExpense(gameId, day)) {
+          household.cheer(gameId, -HAPPY_FRUGAL);
+        }
         // 이달에 독립해 나간 아이를 기록한다. 양육비는 이달부터 들지 않는다 (decisions.md 68번).
         for (HouseholdView.Child child : home.children()) {
           if (child.leaveDay() > day - month && child.leaveDay() <= day) {
+            household.cheer(gameId, HAPPY_CHILD_LEFT);
             logs.append(
                 gameId,
                 day,
@@ -1590,6 +1631,7 @@ class DefaultProgressService implements ProgressService {
         game.endAge(),
         calendar.daysPerYear(),
         sexOf(game),
+        household.happiness(game.id()),
         character.stats(),
         character.initialStats(),
         account.cash(),

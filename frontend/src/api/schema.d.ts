@@ -722,6 +722,8 @@ export interface components {
             endAge: number;
             daysPerYear: number;
             sex: components["schemas"]["Sex"];
+            /** @description 행복도 0~100. 결혼·아이·여행·내 집은 올리고 실직·전세사기·긴축·큰 손실은 내린다 (decisions.md 82번) */
+            happiness: number;
             stats: components["schemas"]["Stats"];
             /** @description 태어날 때의 능력치. 별명은 이 값으로 정해서 게임 중에 바뀌지 않는다 */
             initialStats: components["schemas"]["Stats"];

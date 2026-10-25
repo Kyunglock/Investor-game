@@ -640,7 +640,7 @@ components:
     Game:
       type: object
       required:
-        [gameId, status, phase, day, startAge, endAge, daysPerYear, sex, stats, initialStats, cash, totalAsset, initialAsset, invested, debt, holdings, fullTimeInvestor, market, household, housing, log, yearly]
+        [gameId, status, phase, day, startAge, endAge, daysPerYear, sex, happiness, stats, initialStats, cash, totalAsset, initialAsset, invested, debt, holdings, fullTimeInvestor, market, household, housing, log, yearly]
       properties:
         gameId: { type: string, format: uuid }
         status: { type: string, enum: [ACTIVE, ENDED] }
@@ -650,6 +650,7 @@ components:
         endAge: { type: integer }
         daysPerYear: { type: integer }
         sex: { $ref: '#/components/schemas/Sex' }
+        happiness: { type: integer, description: 행복도 0~100. 결혼·아이·여행·내 집은 올리고 실직·전세사기·긴축·큰 손실은 내린다 (decisions.md 82번) }
         stats: { $ref: '#/components/schemas/Stats' }
         initialStats:
           allOf: [{ $ref: '#/components/schemas/Stats' }]

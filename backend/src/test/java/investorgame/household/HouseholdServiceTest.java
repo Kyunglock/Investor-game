@@ -89,6 +89,18 @@ class HouseholdServiceTest {
   }
 
   @Test
+  void 행복도는_50에서_시작해_0과_100_사이에서_움직이고_달마다_50으로_돌아온다() {
+    assertThat(household.happiness(gameId)).isEqualTo(50);
+    assertThat(household.cheer(gameId, 15)).isEqualTo(65);
+    assertThat(household.cheer(gameId, 90)).isEqualTo(100);
+    household.driftHappiness(gameId);
+    assertThat(household.happiness(gameId)).isEqualTo(99);
+    assertThat(household.cheer(gameId, -120)).isZero();
+    household.driftHappiness(gameId);
+    assertThat(household.happiness(gameId)).isEqualTo(1);
+  }
+
+  @Test
   void 은퇴하면_배우자_소득이_끊긴다() {
     household.marry(gameId, JOB_DAY);
     int retireDay = (60 - 15) * YEAR;

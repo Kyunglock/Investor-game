@@ -28,6 +28,15 @@ public interface HouseholdService {
   /** 은퇴. 이미 은퇴했으면 아무것도 하지 않는다. */
   void retire(UUID gameId, int gameDay);
 
+  /** 행복도 (decisions.md 82번). 0~100, 처음 50. */
+  int happiness(UUID gameId);
+
+  /** 행복도를 delta만큼 움직인다(0~100으로 자름). 새 값을 돌려준다. */
+  int cheer(UUID gameId, int delta);
+
+  /** 달마다 50 쪽으로 1점 돌아온다. 기쁨도 슬픔도 오래가지 않는다. */
+  void driftHappiness(UUID gameId);
+
   /** 생활비(1인/부부) + 자녀 나이별 비용(독립하면 0). 물가는 기준 나이부터 연 복리. */
   long monthlyExpense(UUID gameId, int gameDay);
 

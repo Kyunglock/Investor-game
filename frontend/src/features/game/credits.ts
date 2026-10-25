@@ -528,6 +528,11 @@ export function buildCredits(game: Game): CreditSection[] {
   const lastLines: CreditLine[] = [
     { text: `${won(game.initialAsset)} → ${won(finalAsset)}` },
     { text: signedPercent(returnBp), tone: returnBp >= 0 ? 'up' : 'down' },
+    // 돈만이 아니라 삶이 어땠는지 (decisions.md 82번).
+    {
+      text: `행복도 ${game.happiness}점`,
+      tone: game.happiness >= 60 ? 'accent' : game.happiness < 40 ? 'down' : 'muted',
+    },
   ]
   lastLines.push(
     bankrupt
