@@ -24,7 +24,7 @@ public interface HouseholdService {
     void create(UUID gameId);                        // 멱등
     HouseholdView get(UUID gameId);
     void marry(UUID gameId, int gameDay);            // 두 번이면 InvalidRequestException
-    int addChild(UUID gameId, int gameDay);          // 순번(1부터)
+    int addChild(UUID gameId, int gameDay, int leaveAge, Sex sex); // 순번(1부터). 독립 나이·성별은 태어날 때 정해진다 (decisions.md 68·69번)
     void retire(UUID gameId, int gameDay);           // 멱등
     long monthlyExpense(UUID gameId, int gameDay);
     long spouseIncome(UUID gameId, int gameDay);     // 미혼·은퇴 뒤 0
@@ -33,7 +33,9 @@ public interface HouseholdService {
     long childbirthCost(int gameDay);
     boolean retireMonth(int gameDay);                // == (retire-age − start-age) × 360
 }
-public record HouseholdView(boolean married, Integer marriedDay, List<Integer> childBirthDays, Integer retiredDay) {}
+public record HouseholdView(boolean married, Integer marriedDay, List<Child> children, Integer retiredDay) {
+    public record Child(int seq, int birthDay, int leaveDay, Sex sex) {}
+}
 ```
 
 ## 3. 규칙
@@ -56,7 +58,7 @@ public record HouseholdView(boolean married, Integer marriedDay, List<Integer> c
 
 ## 5. DB
 
-`household_state (game_id PK, married_day, retired_day, updated_at)`, `household_child (game_id, seq, birth_day, PK(game_id, seq))`. FK 없음.
+`household_state (game_id PK, married_day, retired_day, updated_at)`, `household_child (game_id, seq, birth_day, leave_day, sex, PK(game_id, seq))`. FK 없음. sex는 'M'/'F' (decisions.md 69번).
 
 ## 6. 테스트
 

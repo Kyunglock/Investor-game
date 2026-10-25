@@ -1,6 +1,7 @@
 package investorgame.progress;
 
 import investorgame.common.Phase;
+import investorgame.common.Sex;
 import investorgame.common.Stats;
 import investorgame.result.Ending;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.UUID;
  * Game).
  *
  * @param day 서버가 마지막으로 확인한 게임 일수
+ * @param sex 내 성별. 판 시드로 정해져 바뀌지 않는다 (decisions.md 69번)
  * @param initialStats 태어날 때의 능력치. 별명은 이 값으로 정해서 게임 중에 바뀌지 않는다
  * @param totalAsset 현금 + 보유 평가액 − 빚
  * @param lastMonthTotalAsset 전월 말 총자산. 첫 달이면 null
@@ -26,6 +28,7 @@ public record GameView(
     int startAge,
     int endAge,
     int daysPerYear,
+    Sex sex,
     Stats stats,
     Stats initialStats,
     long cash,
@@ -101,8 +104,8 @@ public record GameView(
       boolean retired,
       long pension) {}
 
-  /** leftHome: 독립해서 집을 나갔다 (decisions.md 68번). 그 뒤로는 양육비가 들지 않고 수첩 사진에도 없다. */
-  public record Child(int age, boolean leftHome) {}
+  /** leftHome: 독립해서 집을 나갔다 (decisions.md 68번). 그 뒤로는 양육비가 들지 않고 수첩 사진에도 없다. sex는 태어날 때 정해진 성별. */
+  public record Child(int age, boolean leftHome, Sex sex) {}
 
   /** kind: JOB, TRAIT, OFFER, LIFE, NEWS. 뉴스가 아니면 sector, stock, hint, sway, spark는 null이다. */
   public record PendingEvent(

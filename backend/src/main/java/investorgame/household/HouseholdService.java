@@ -1,5 +1,6 @@
 package investorgame.household;
 
+import investorgame.common.Sex;
 import java.util.UUID;
 
 /**
@@ -16,8 +17,8 @@ public interface HouseholdService {
   /** 이미 결혼했으면 InvalidRequestException. */
   void marry(UUID gameId, int gameDay);
 
-  /** 자녀를 더한다. 1부터 시작하는 순번을 돌려준다. leaveAge는 아이가 독립해 집을 나가는 나이(세) (decisions.md 68번). */
-  int addChild(UUID gameId, int gameDay, int leaveAge);
+  /** 자녀를 더한다. 1부터 시작하는 순번을 돌려준다. leaveAge는 아이가 독립해 집을 나가는 나이(세), sex는 성별 (decisions.md 68·69번). */
+  int addChild(UUID gameId, int gameDay, int leaveAge, Sex sex);
 
   /** 은퇴. 이미 은퇴했으면 아무것도 하지 않는다. */
   void retire(UUID gameId, int gameDay);

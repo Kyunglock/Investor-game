@@ -6,6 +6,7 @@ import { MARKS } from './marks'
 import { MOODS } from './moods'
 import { PALETTE } from './palette'
 import { SCENE_HEIGHT, SCENE_WIDTH, SCENES, type SceneKey } from './scenes'
+import { sexLayers } from './sexes'
 import { compose, type Layer, SPRITE_HEIGHT, toRects } from './sprite'
 import { type Figure, RECOLOR } from './vignettes'
 
@@ -28,6 +29,7 @@ export const Scene = memo(
 function sameSpec(a: SpriteSpec, b: SpriteSpec): boolean {
   return (
     a.stage === b.stage &&
+    a.sex === b.sex &&
     a.adornment === b.adornment &&
     a.mark === b.mark &&
     (a.mood ?? null) === (b.mood ?? null)
@@ -40,7 +42,9 @@ function SceneView({ sceneKey, sprite, figures }: Props) {
     scene.map.map((row) => [...row]),
     PALETTE,
   )
-  const people = figures ?? [{ who: 'me' as const, stage: sprite.stage, x: scene.anchor.x }]
+  const people = figures ?? [
+    { who: 'me' as const, sex: sprite.sex, stage: sprite.stage, x: scene.anchor.x },
+  ]
   const dy = scene.anchor.y - SPRITE_HEIGHT
 
   return (
@@ -57,8 +61,8 @@ function SceneView({ sceneKey, sprite, figures }: Props) {
         <rect key={`b-${r.x}-${r.y}`} x={r.x} y={r.y} width={1} height={1} fill={r.fill} />
       ))}
       {people.map((figure, i) => {
-        // 나는 장식·약점 표시·표정을 그대로, 가족은 옷·머리 색만 바꾼 맨 몸이다.
-        const layers: Layer[] = []
+        // 나는 장식·약점 표시·표정을 그대로, 가족은 옷·머리 색만 바꾼 맨 몸이다. 여자는 긴 머리·치마를 먼저 덧그린다.
+        const layers: Layer[] = sexLayers(figure.sex, figure.stage)
         if (figure.who === 'me') {
           if (sprite.adornment) {
             layers.push(ADORNMENTS[sprite.adornment])

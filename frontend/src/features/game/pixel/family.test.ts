@@ -2,17 +2,20 @@ import { describe, expect, it } from 'vitest'
 import type { Game } from '../../../api/client'
 import { familyFigures } from './family'
 
-const game = (married: boolean, ages: number[], left: number[] = []): Game =>
+const game = (married: boolean, ages: number[], left: number[] = [], sexes: string[] = []): Game =>
   ({
+    sex: 'M',
     household: {
       married,
-      children: ages.map((age, i) => ({ age, leftHome: left.includes(i) })),
+      children: ages.map((age, i) => ({ age, leftHome: left.includes(i), sex: sexes[i] ?? 'F' })),
     },
   }) as unknown as Game
 
 describe('familyFigures', () => {
   it('혼자면 나만 anchor 자리에', () => {
-    expect(familyFigures(game(false, []), 30, 36)).toEqual([{ who: 'me', stage: 'adult', x: 36 }])
+    expect(familyFigures(game(false, []), 30, 36)).toEqual([
+      { who: 'me', sex: 'M', stage: 'adult', x: 36 },
+    ])
   })
 
   it('결혼하면 배우자가 옆에, 아이는 나이대로 몸이 다르고 모두 배경 안에 서로 떨어져 선다', () => {
@@ -27,6 +30,18 @@ describe('familyFigures', () => {
     for (let i = 1; i < xs.length; i++) {
       expect(xs[i] - xs[i - 1]).toBeGreaterThanOrEqual(12)
     }
+  })
+
+  it('배우자는 나와 반대 성별, 아이는 태어날 때 정해진 성별 (decisions.md 69번)', () => {
+    const figures = familyFigures(game(true, [3, 10], [], ['M', 'F']), 42, 36)
+    expect(figures.map((f) => [f.who, f.sex])).toEqual([
+      ['me', 'M'],
+      ['spouse', 'F'],
+      ['kid', 'M'],
+      ['kid', 'F'],
+    ])
+    const woman = { ...game(true, []), sex: 'F' } as Game
+    expect(familyFigures(woman, 42, 36).map((f) => f.sex)).toEqual(['F', 'M'])
   })
 
   it('아이만 있어도(배우자 없이) 아이가 선다', () => {

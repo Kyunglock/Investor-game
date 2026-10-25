@@ -1,4 +1,4 @@
-import type { Phase, Stats } from '../../api/client'
+import type { Phase, Sex, Stats } from '../../api/client'
 
 /** 화면 표시용 이름과 문구. 규칙은 서버에 있고 여기에는 표시만 있다. */
 
@@ -140,4 +140,12 @@ export function signedShortWon(amount: number): string {
 
 export function percent(bp: number): string {
   return `${(bp / 100).toFixed(1)}%`
+}
+
+/** 성별 (decisions.md 69번). */
+export const SEX_LABELS: Record<Sex, string> = { M: '남', F: '여' }
+
+/** 아이를 부르는 말. 성별을 모르면(옛 기록) '아이'. */
+export function childWord(sex: unknown): string {
+  return sex === 'F' ? '딸' : sex === 'M' ? '아들' : '아이'
 }

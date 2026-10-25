@@ -1,6 +1,7 @@
 package investorgame.household.internal;
 
 import investorgame.common.GameProperties;
+import investorgame.common.Sex;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
 import investorgame.household.HouseholdService;
@@ -55,7 +56,7 @@ class JdbcHouseholdService implements HouseholdService {
     List<HouseholdView.Child> children =
         jdbc.sql(
                 """
-                SELECT seq, birth_day, leave_day FROM household_child
+                SELECT seq, birth_day, leave_day, sex FROM household_child
                 WHERE game_id = :gameId ORDER BY seq
                 """)
             .param("gameId", gameId)
@@ -86,7 +87,7 @@ class JdbcHouseholdService implements HouseholdService {
 
   @Override
   @Transactional
-  public int addChild(UUID gameId, int gameDay, int leaveAge) {
+  public int addChild(UUID gameId, int gameDay, int leaveAge, Sex sex) {
     state(gameId);
     int seq =
         jdbc.sql("SELECT COALESCE(MAX(seq), 0) + 1 FROM household_child WHERE game_id = :gameId")
@@ -95,13 +96,14 @@ class JdbcHouseholdService implements HouseholdService {
             .single();
     jdbc.sql(
             """
-            INSERT INTO household_child (game_id, seq, birth_day, leave_day)
-            VALUES (:gameId, :seq, :day, :leaveDay)
+            INSERT INTO household_child (game_id, seq, birth_day, leave_day, sex)
+            VALUES (:gameId, :seq, :day, :leaveDay, :sex)
             """)
         .param("gameId", gameId)
         .param("seq", seq)
         .param("day", gameDay)
         .param("leaveDay", gameDay + leaveAge * calendar.daysPerYear())
+        .param("sex", sex.name())
         .update();
     return seq;
   }

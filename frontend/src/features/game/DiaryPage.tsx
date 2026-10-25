@@ -95,13 +95,13 @@ function Photo({ game, ageYears }: { game: Game; ageYears: number }) {
           {frugal ? (
             <Vignette
               art={{ ...frugal.art, figures }}
-              me={layersFor(game.initialStats, game.stats, ageYears)}
+              me={layersFor(game.initialStats, game.stats, ageYears, game.sex)}
               mood={frugal.mood}
             />
           ) : (
             <Scene
               sceneKey={key}
-              sprite={layersFor(game.initialStats, game.stats, ageYears)}
+              sprite={layersFor(game.initialStats, game.stats, ageYears, game.sex)}
               figures={figures}
             />
           )}

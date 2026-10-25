@@ -7,6 +7,7 @@ import type { MoodKey } from './moods'
 import { MOODS } from './moods'
 import { PALETTE } from './palette'
 import { SCENE_HEIGHT, SCENE_WIDTH } from './scenes'
+import { sexLayers } from './sexes'
 import { compose, type Layer, SPRITE_HEIGHT, toRects } from './sprite'
 import { type CreditArt, RECOLOR, VIGNETTES } from './vignettes'
 
@@ -38,7 +39,7 @@ export const Vignette = memo(function Vignette({
         <rect key={`b-${r.x}-${r.y}`} x={r.x} y={r.y} width={1} height={1} fill={r.fill} />
       ))}
       {art.figures.map((figure, i) => {
-        const layers: Layer[] = []
+        const layers: Layer[] = sexLayers(figure.sex, figure.stage)
         if (figure.who === 'me' && me.adornment) {
           layers.push(ADORNMENTS[me.adornment])
         }

@@ -1,18 +1,19 @@
 import type { Game } from '../../../api/client'
 import { stageFor } from './bodies'
 import { SCENE_WIDTH } from './scenes'
+import { opposite } from './sexes'
 import { SPRITE_WIDTH } from './sprite'
 import type { Figure } from './vignettes'
 
 /**
  * 장면에 세울 가족 (decisions.md 64번). 나는 anchor 자리, 배우자와 아이들은 옆에 번갈아 선다. 아이의 몸은 나이대로(아기·어린이·어른). 배경 밖으로 나가지
- * 않고 서로 12칸 이상 떨어진다.
+ * 않고 서로 12칸 이상 떨어진다. 배우자는 나와 반대 성별, 아이는 태어날 때 정해진 성별이다 (decisions.md 69번).
  */
 /** 몸은 16칸 중 가운데 12칸을 차지한다. 12칸 띄우면 닿지 않는다. 내가 선 자리에서 가까운 칸부터, 내가 오른쪽이면 왼쪽을 먼저 */
 const MIN_GAP = 12
 
 export function familyFigures(game: Game, ageYears: number, meX: number): Figure[] {
-  const figures: Figure[] = [{ who: 'me', stage: stageFor(ageYears), x: meX }]
+  const figures: Figure[] = [{ who: 'me', sex: game.sex, stage: stageFor(ageYears), x: meX }]
   const others: Figure['who'][] = []
   if (game.household.married) {
     others.push('spouse')
@@ -22,15 +23,16 @@ export function familyFigures(game: Game, ageYears: number, meX: number): Figure
   for (let i = 0; i < home.length; i++) {
     others.push('kid')
   }
-  const kids = home.map((c) => c.age)
   let kidIndex = 0
   for (const who of others) {
-    const stage = who === 'spouse' ? stageFor(ageYears) : stageFor(kids[kidIndex++] ?? 0)
+    const kid = who === 'kid' ? home[kidIndex++] : null
+    const stage = kid ? stageFor(kid.age) : stageFor(ageYears)
+    const sex = kid ? kid.sex : opposite(game.sex)
     const x = place(figures, meX)
     if (x == null) {
       break
     }
-    figures.push({ who, stage, x })
+    figures.push({ who, sex, stage, x })
   }
   return figures
 }

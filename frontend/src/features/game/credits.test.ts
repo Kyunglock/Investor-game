@@ -26,6 +26,7 @@ function baseGame(over: Partial<Game> = {}): Game {
     startAge: 15,
     endAge: 70,
     daysPerYear: YEAR,
+    sex: 'M',
     stats,
     initialStats: stats,
     cash: 50_000_000,
@@ -309,7 +310,7 @@ describe('buildCredits', () => {
     ])
     expect(credits[4].lines.map((l) => l.text)).toEqual(['29세, 결혼'])
     expect(credits[5].title).toBe('첫째')
-    expect(credits[5].lines.map((l) => l.text)).toEqual(['31세, 1번째 아이가 태어났다'])
+    expect(credits[5].lines.map((l) => l.text)).toEqual(['31세, 첫째 아이가 태어났다'])
     expect(credits[6].lines[0].text).toBe('투자를 시작하지 않았다')
     expect(credits[7].lines.at(-1)).toEqual({
       text: '70세. 남은 자산 80,000,000원과 매달 연금 1,990,000원으로 여생을 보냈다.',
@@ -447,13 +448,15 @@ describe('크레딧 그림 (#23)', () => {
       household: {
         ...baseGame().household,
         married: true,
-        children: [{ age: 40, leftHome: false }],
+        children: [{ age: 40, leftHome: false, sex: 'F' }],
       },
       log: [entry('MARRIAGE', 29, { cost: 30_000_000 }), entry('CHILD', 30, { seq: 1, cost: 0 })],
     })
     const art = creditArt(family, 'family')
     expect(art?.vignette).toBe('family')
     expect(art?.figures.map((f) => f.who)).toEqual(['me', 'spouse'])
+    // 배우자는 나와 반대 성별 (decisions.md 69번).
+    expect(art?.figures.map((f) => f.sex)).toEqual(['M', 'F'])
     // 16칸 몸이 64칸 배경 밖으로 나가지 않는다.
     for (const f of art?.figures ?? []) {
       expect(f.x + 16).toBeLessThanOrEqual(64)
@@ -470,25 +473,26 @@ describe('크레딧 그림 (#23)', () => {
         ...baseGame().household,
         married: true,
         children: [
-          { age: 40, leftHome: false },
-          { age: 38, leftHome: false },
-          { age: 35, leftHome: false },
+          { age: 40, leftHome: false, sex: 'F' },
+          { age: 38, leftHome: false, sex: 'M' },
+          { age: 35, leftHome: false, sex: 'F' },
         ],
       },
       log: [
         entry('MARRIAGE', 29, { cost: 30_000_000 }),
-        entry('CHILD', 30, { seq: 1, cost: 0 }),
-        entry('CHILD', 32, { seq: 2, cost: 0 }),
+        entry('CHILD', 30, { seq: 1, cost: 0, sex: 'F' }),
+        entry('CHILD', 32, { seq: 2, cost: 0, sex: 'M' }),
         entry('CHILD', 42, { seq: 3, cost: 0 }),
       ],
     })
     const credits = buildCredits(family)
     const children = credits.filter((s) => s.key.startsWith('child-'))
-    expect(children.map((s) => s.title)).toEqual(['첫째', '둘째', '셋째'])
+    // 성별은 기록에 남은 것을 쓰고, 없던 옛 기록은 순번만 (decisions.md 69번).
+    expect(children.map((s) => s.title)).toEqual(['첫째 딸', '둘째 아들', '셋째'])
     expect(children.map((s) => s.lines[0].text)).toEqual([
-      '30세, 1번째 아이가 태어났다',
-      '32세, 2번째 아이가 태어났다',
-      '42세, 3번째 아이가 태어났다',
+      '30세, 첫째 딸이 태어났다',
+      '32세, 둘째 아들이 태어났다',
+      '42세, 셋째 아이가 태어났다',
     ])
     expect(children.map((s) => s.art?.vignette)).toEqual(['baby', 'baby', 'baby'])
     // 첫째: 부모 둘. 둘째: 첫째가 어린이로 옆에. 셋째: 자리가 셋뿐이라 부모와 첫째까지만.
@@ -498,6 +502,8 @@ describe('크레딧 그림 (#23)', () => {
       ['spouse', 'adult'],
       ['kid', 'child'],
     ])
+    // 옆에 선 첫째는 가계에 적힌 성별(딸)로 그린다.
+    expect(children[1].art?.figures.map((f) => f.sex)).toEqual(['M', 'F', 'F'])
     expect(children[2].art?.figures.map((f) => [f.who, f.stage])).toEqual([
       ['me', 'middle'],
       ['spouse', 'middle'],
@@ -515,11 +521,11 @@ describe('크레딧 그림 (#23)', () => {
         household: {
           ...baseGame().household,
           married: true,
-          children: [{ age: 30, leftHome: true }],
+          children: [{ age: 30, leftHome: true, sex: 'M' }],
         },
         log: [
           entry('MARRIAGE', 29, { cost: 30_000_000 }),
-          entry('CHILD', 30, { seq: 1, cost: 0 }),
+          entry('CHILD', 30, { seq: 1, cost: 0, sex: 'M' }),
           entry('CHILD_LEFT', 57, { seq: 1, childAge: 27, expense: 2_000_000 }),
           entry('CHILD_WEDDING', 60, {
             seq: 1,
@@ -532,7 +538,7 @@ describe('크레딧 그림 (#23)', () => {
     )
     const first = grown.find((s) => s.key === 'child-1')
     expect(first?.lines.map((l) => l.text)).toEqual([
-      '30세, 1번째 아이가 태어났다',
+      '30세, 첫째 아들이 태어났다',
       '57세, 첫째가 독립했다',
       '60세, 첫째가 결혼했다',
     ])

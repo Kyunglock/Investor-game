@@ -3,6 +3,7 @@ import { gradeOf } from './grade'
 import {
   actionLabel,
   actionLabelFor,
+  childWord,
   growthText,
   percent,
   STAT_KEYS,
@@ -10,6 +11,7 @@ import {
   sideLabel,
   signedWon,
   statLabel,
+  withParticle,
   won,
   yearOf,
 } from './labels'
@@ -287,7 +289,12 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
     case 'MARRIAGE':
       return { ...base, tone: 'life', text: `결혼했다. 결혼 비용 ${won(num(p.cost))}.` }
     case 'CHILD':
-      return { ...base, tone: 'life', text: `${num(p.seq)}번째 아이가 태어났다.` }
+      // 성별은 기록에 남은 것을 쓴다. 옛 기록엔 없을 수 있다 (decisions.md 69번).
+      return {
+        ...base,
+        tone: 'life',
+        text: `${childName(num(p.seq))} ${withParticle(childWord(p.sex), '이', '가')} 태어났다.`,
+      }
     case 'CHILD_LEFT':
       // 자녀 독립 (decisions.md 68번). 이달부터 양육비가 들지 않는다.
       return {

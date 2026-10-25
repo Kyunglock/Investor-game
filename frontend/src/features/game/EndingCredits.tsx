@@ -29,8 +29,8 @@ export function EndingCredits({ game, onDone }: { game: Game; onDone: () => void
   const sections = useMemo(() => buildCredits(game), [game])
   // 그림 속 '나'는 진행 화면과 같은 장식(타고난 강점)·약점 표시를 단다.
   const me = useMemo(() => {
-    const { adornment, mark } = layersFor(game.initialStats, game.stats, game.endAge)
-    return { adornment, mark }
+    const { sex, adornment, mark } = layersFor(game.initialStats, game.stats, game.endAge, game.sex)
+    return { sex, adornment, mark }
   }, [game])
   const [still] = useState(reducedMotion)
   const [rolled, setRolled] = useState(false)

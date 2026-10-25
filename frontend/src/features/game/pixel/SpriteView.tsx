@@ -5,6 +5,7 @@ import type { SpriteSpec } from './layers'
 import { MARKS } from './marks'
 import { MOODS } from './moods'
 import { PALETTE } from './palette'
+import { sexLayers } from './sexes'
 import {
   compose,
   diffRects,
@@ -30,7 +31,10 @@ interface Props {
 /** 캐릭터 한 명. 눈은 깜빡이고, 약점 표시가 바뀌면 옛 표시가 떨어지며 사라진다 (설계 4.4절). */
 export function Sprite({ spec, size, crop = 'full', className = '' }: Props) {
   const body = BODIES[spec.stage]
-  const baseLayers: Layer[] = spec.adornment ? [ADORNMENTS[spec.adornment]] : []
+  const baseLayers: Layer[] = [
+    ...sexLayers(spec.sex, spec.stage),
+    ...(spec.adornment ? [ADORNMENTS[spec.adornment]] : []),
+  ]
   const base = compose(body, baseLayers)
   // 표정은 장식·약점 표시 위에 마지막으로 포갠다. 약점 표시가 떨어지는 연출은 표정과 무관하다.
   const mood: Layer[] = spec.mood ? [MOODS[spec.mood]] : []

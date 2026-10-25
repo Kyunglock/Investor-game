@@ -2,6 +2,7 @@ import type { Game, LogEntry } from '../../api/client'
 import { gradeOf } from './grade'
 import {
   actionLabelFor,
+  childWord,
   percent,
   STAT_KEYS,
   STAT_LABELS,
@@ -14,6 +15,7 @@ import {
 } from './labels'
 import { nickname } from './nickname'
 import { stageFor } from './pixel/bodies'
+import { opposite } from './pixel/sexes'
 import type { CreditArt, Figure, VignetteKey } from './pixel/vignettes'
 
 /**
@@ -199,18 +201,22 @@ function childSeq(key: string): number | null {
 function childArt(game: Game, birth: LogEntry, married: boolean): CreditArt {
   const stage = stageFor(ageOf(game, birth.day))
   const seq = num((birth.payload as Payload).seq)
-  const who: Figure['who'][] = ['me', ...(married ? (['spouse'] as const) : [])]
+  const people: Pick<Figure, 'who' | 'sex' | 'stage'>[] = [{ who: 'me', sex: game.sex, stage }]
+  if (married) {
+    people.push({ who: 'spouse', sex: opposite(game.sex), stage })
+  }
+  // 먼저 난 아이들은 가계의 순번대로 성별을 가진다.
   for (let i = 1; i < seq; i++) {
-    who.push('kid')
+    people.push({ who: 'kid', sex: game.household.children[i - 1]?.sex ?? 'M', stage: 'child' })
   }
   const slots = [24, 12, 0]
   const figures: Figure[] = []
-  for (const w of who) {
+  for (const p of people) {
     const x = slots.shift()
     if (x == null) {
       break
     }
-    figures.push({ who: w, stage: w === 'kid' ? 'child' : stage, x })
+    figures.push({ ...p, x })
   }
   return { vignette: 'baby', figures }
 }
@@ -221,6 +227,8 @@ function childArt(game: Game, birth: LogEntry, married: boolean): CreditArt {
  */
 export function creditArt(game: Game, key: string): CreditArt | undefined {
   const married = game.household.married
+  const me = game.sex
+  const spouse = opposite(me)
   const seq = childSeq(key)
   if (seq != null) {
     const birth = entries(game, 'CHILD').find((e) => num((e.payload as Payload).seq) === seq)
@@ -228,25 +236,25 @@ export function creditArt(game: Game, key: string): CreditArt | undefined {
   }
   switch (key) {
     case 'born':
-      return { vignette: 'nursery', figures: [{ who: 'me', stage: 'baby', x: 22 }] }
+      return { vignette: 'nursery', figures: [{ who: 'me', sex: me, stage: 'baby', x: 22 }] }
     case 'work': {
       if (game.fullTimeInvestor) {
-        return { vignette: 'studio', figures: [{ who: 'me', stage: 'adult', x: 36 }] }
+        return { vignette: 'studio', figures: [{ who: 'me', sex: me, stage: 'adult', x: 36 }] }
       }
       const worked = game.log.some((e) => e.kind === 'JOB')
       return worked
-        ? { vignette: 'office', figures: [{ who: 'me', stage: 'adult', x: 38 }] }
-        : { vignette: 'street', figures: [{ who: 'me', stage: 'adult', x: 18 }] }
+        ? { vignette: 'office', figures: [{ who: 'me', sex: me, stage: 'adult', x: 38 }] }
+        : { vignette: 'street', figures: [{ who: 'me', sex: me, stage: 'adult', x: 18 }] }
     }
     case 'family':
       if (!married) {
-        return { vignette: 'studio', figures: [{ who: 'me', stage: 'adult', x: 36 }] }
+        return { vignette: 'studio', figures: [{ who: 'me', sex: me, stage: 'adult', x: 36 }] }
       }
       return {
         vignette: 'family',
         figures: [
-          { who: 'me', stage: 'adult', x: 14 },
-          { who: 'spouse', stage: 'adult', x: 28 },
+          { who: 'me', sex: me, stage: 'adult', x: 14 },
+          { who: 'spouse', sex: spouse, stage: 'adult', x: 28 },
         ],
       }
     case 'homes': {
@@ -257,20 +265,20 @@ export function creditArt(game: Game, key: string): CreditArt | undefined {
       return {
         vignette,
         figures: [
-          { who: 'me', stage: 'middle', x: 0 },
-          ...(married ? [{ who: 'spouse', stage: 'middle', x: 11 } as const] : []),
+          { who: 'me', sex: me, stage: 'middle', x: 0 },
+          ...(married ? [{ who: 'spouse', sex: spouse, stage: 'middle', x: 11 } as const] : []),
         ],
       }
     }
     case 'last':
       if (game.result?.ending === 'BANKRUPT') {
-        return { vignette: 'rain', figures: [{ who: 'me', stage: 'old', x: 20 }] }
+        return { vignette: 'rain', figures: [{ who: 'me', sex: me, stage: 'old', x: 20 }] }
       }
       return {
         vignette: 'home-old',
         figures: [
-          { who: 'me', stage: 'old', x: 28 },
-          ...(married ? [{ who: 'spouse', stage: 'old', x: 12 } as const] : []),
+          { who: 'me', sex: me, stage: 'old', x: 28 },
+          ...(married ? [{ who: 'spouse', sex: spouse, stage: 'old', x: 12 } as const] : []),
         ],
       }
     default:
@@ -376,7 +384,11 @@ export function buildCredits(game: Game): CreditSection[] {
   for (const e of births) {
     const seq = num((e.payload as Payload).seq)
     const name = ORDINALS[seq - 1] ?? `${seq}번째`
-    const lines: CreditLine[] = [{ text: `${ageOf(game, e.day)}세, ${seq}번째 아이가 태어났다` }]
+    // 성별은 기록에 남은 것을 쓴다. 옛 기록엔 없을 수 있다 (decisions.md 69번).
+    const word = childWord((e.payload as Payload).sex)
+    const lines: CreditLine[] = [
+      { text: `${ageOf(game, e.day)}세, ${name} ${withParticle(word, '이', '가')} 태어났다` },
+    ]
     const left = lefts.find((l) => num((l.payload as Payload).seq) === seq)
     if (left) {
       lines.push({
@@ -400,7 +412,11 @@ export function buildCredits(game: Game): CreditSection[] {
         tone: cost > 0 ? 'down' : undefined,
       })
     }
-    sections.push({ key: `${CHILD_KEY}${seq}`, title: name, lines })
+    sections.push({
+      key: `${CHILD_KEY}${seq}`,
+      title: word === '아이' ? name : `${name} ${word}`,
+      lines,
+    })
   }
 
   const news = entries(game, 'NEWS')

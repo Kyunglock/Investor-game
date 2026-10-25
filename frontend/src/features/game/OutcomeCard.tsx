@@ -77,6 +77,7 @@ function Body({
               game.initialStats,
               game.stats,
               ageAt(game.startAge, game.day, game.daysPerYear).years,
+              game.sex,
             )}
             mood={moment.mood}
           />
@@ -220,7 +221,7 @@ function Face({
     return null
   }
   const ageYears = ageAt(game.startAge, day, game.daysPerYear).years
-  const base = layersFor(game.initialStats, game.stats, ageYears)
+  const base = layersFor(game.initialStats, game.stats, ageYears, game.sex)
   const spec = { ...base, mark: (deviation as keyof Stats | null | undefined) ?? null, mood }
   return (
     <Sprite

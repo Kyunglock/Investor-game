@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Game } from '../../api/client'
 import { Document } from './Document'
 import { GradeBadge } from './GradeBadge'
-import { STAT_KEYS, STAT_LABELS, won, yearOf } from './labels'
+import { SEX_LABELS, STAT_KEYS, STAT_LABELS, won, yearOf } from './labels'
 import { nickname } from './nickname'
 import { layersFor } from './pixel/layers'
 import { Sprite } from './pixel/SpriteView'
@@ -47,8 +47,9 @@ export function BirthCertificate({ game, onStart }: { game: Game; onStart: () =>
         )}
       </h2>
       <p className="mt-2 text-[13px] text-muted">
-        {yearOf(game.startAge)}년, {game.startAge}세. 능력치 5개와 통장 {won(game.initialAsset)}을
-        가지고 인생을 시작합니다.
+        {yearOf(game.startAge)}년, {game.startAge}세,{' '}
+        <span data-testid="birth-sex">{SEX_LABELS[game.sex]}</span>. 능력치 5개와 통장{' '}
+        {won(game.initialAsset)}을 가지고 인생을 시작합니다.
       </p>
 
       <ul className="mt-5 flex flex-col gap-2.5 border-t border-line-soft pt-4">
@@ -75,7 +76,7 @@ export function BirthCertificate({ game, onStart }: { game: Game; onStart: () =>
         <div className="animate-reveal mt-6 border-t border-line-soft pt-5">
           <div className="flex items-center gap-4">
             <Sprite
-              spec={layersFor(game.initialStats, game.initialStats, game.startAge)}
+              spec={layersFor(game.initialStats, game.initialStats, game.startAge, game.sex)}
               size={64}
               className="border border-line bg-bg"
             />

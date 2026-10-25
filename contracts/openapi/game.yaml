@@ -370,6 +370,10 @@ components:
         stocks:
           type: array
           items: { $ref: '#/components/schemas/StockQuote' }
+    Sex:
+      type: string
+      enum: [M, F]
+      description: 성별. 나는 판 시드로, 아이는 태어날 때 정해지고 배우자는 나와 반대다. 그림을 가르는 데만 쓴다 (decisions.md 69번)
     Household:
       type: object
       description: 가계부. 금액은 이번 달 기준(원)
@@ -381,10 +385,11 @@ components:
           type: array
           items:
             type: object
-            required: [age, leftHome]
+            required: [age, leftHome, sex]
             properties:
               age: { type: integer }
               leftHome: { type: boolean, description: 독립해서 집을 나갔다. 그 뒤로는 양육비가 들지 않는다 (decisions.md 68번) }
+              sex: { $ref: '#/components/schemas/Sex' }
         monthlyIncome: { type: integer, format: int64, description: 월급. 은퇴 뒤 0 }
         spouseIncome: { type: integer, format: int64 }
         monthlyExpense: { type: integer, format: int64, description: 생활비 + 자녀 비용 }
@@ -625,7 +630,7 @@ components:
     Game:
       type: object
       required:
-        [gameId, status, phase, day, startAge, endAge, daysPerYear, stats, initialStats, cash, totalAsset, initialAsset, invested, debt, holdings, fullTimeInvestor, market, household, housing, log, yearly]
+        [gameId, status, phase, day, startAge, endAge, daysPerYear, sex, stats, initialStats, cash, totalAsset, initialAsset, invested, debt, holdings, fullTimeInvestor, market, household, housing, log, yearly]
       properties:
         gameId: { type: string, format: uuid }
         status: { type: string, enum: [ACTIVE, ENDED] }
@@ -634,6 +639,7 @@ components:
         startAge: { type: integer }
         endAge: { type: integer }
         daysPerYear: { type: integer }
+        sex: { $ref: '#/components/schemas/Sex' }
         stats: { $ref: '#/components/schemas/Stats' }
         initialStats:
           allOf: [{ $ref: '#/components/schemas/Stats' }]
