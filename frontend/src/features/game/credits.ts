@@ -534,6 +534,13 @@ export function buildCredits(game: Game): CreditSection[] {
       tone: game.happiness >= 60 ? 'accent' : game.happiness < 40 ? 'down' : 'muted',
     },
   ]
+  // 가족이 있었으면 얼마나 가까웠는지 (decisions.md 88번).
+  if (game.household.married || game.household.children.length > 0) {
+    lastLines.push({
+      text: `가족 점수 ${game.family}점`,
+      tone: game.family >= 60 ? 'accent' : game.family < 40 ? 'down' : 'muted',
+    })
+  }
   lastLines.push(
     bankrupt
       ? { text: `${finalAge}세. 빚 ${won(game.debt)}을 갚지 못해 파산했다.`, tone: 'down' }

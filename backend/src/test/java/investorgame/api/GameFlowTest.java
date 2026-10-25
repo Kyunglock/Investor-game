@@ -217,6 +217,7 @@ class GameFlowTest {
     assertThat(kinds).containsOnlyOnce("STYLE", "OFFER", "MARRIAGE", "RETIRE");
     // 행복도는 0~100 (decisions.md 82번).
     assertThat(game.read("$.happiness", Integer.class)).isBetween(0, 100);
+    assertThat(game.read("$.family", Integer.class)).isBetween(0, 100);
     // 결혼 상대 소개가 가계에 남는다 (decisions.md 77번).
     assertThat(game.read("$.household.spouse.name", String.class)).isNotBlank();
     assertThat(game.read("$.household.spouse.job", String.class)).isNotBlank();

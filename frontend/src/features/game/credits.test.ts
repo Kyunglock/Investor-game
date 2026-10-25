@@ -29,6 +29,7 @@ function baseGame(over: Partial<Game> = {}): Game {
     daysPerYear: YEAR,
     sex: 'M',
     happiness: 72,
+    family: 65,
     stats,
     initialStats: stats,
     cash: 50_000_000,
