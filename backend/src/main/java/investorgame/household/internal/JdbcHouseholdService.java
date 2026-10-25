@@ -153,6 +153,24 @@ class JdbcHouseholdService implements HouseholdService {
   }
 
   @Override
+  @Transactional(readOnly = true)
+  public int familyScore(UUID gameId) {
+    return state(gameId).family();
+  }
+
+  @Override
+  @Transactional
+  public int bond(UUID gameId, int delta) {
+    int next = Math.max(0, Math.min(100, state(gameId).family() + delta));
+    jdbc.sql("UPDATE household_state SET family = :f, updated_at = :now WHERE game_id = :gameId")
+        .param("f", next)
+        .param("now", now())
+        .param("gameId", gameId)
+        .update();
+    return next;
+  }
+
+  @Override
   @Transactional
   public void driftHappiness(UUID gameId) {
     int current = state(gameId).happiness();
@@ -256,7 +274,7 @@ class JdbcHouseholdService implements HouseholdService {
     return jdbc.sql(
             """
             SELECT married_day, retired_day, spouse_name, spouse_job, spouse_income, spouse_intro,
-                   happiness
+                   happiness, family
             FROM household_state WHERE game_id = :gameId
             """)
         .param("gameId", gameId)
@@ -276,5 +294,6 @@ class JdbcHouseholdService implements HouseholdService {
       String spouseJob,
       Long spouseIncome,
       String spouseIntro,
-      int happiness) {}
+      int happiness,
+      int family) {}
 }

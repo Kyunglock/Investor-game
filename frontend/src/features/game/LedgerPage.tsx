@@ -141,6 +141,13 @@ function Household({ game }: { game: Game }) {
       <p className="text-[13px] text-pen-soft" data-testid="ledger-happiness">
         행복도 <span className="font-pen text-[20px] text-red-pen">{game.happiness}</span>
         <span className="text-[11px]"> / 100</span>
+        {(h.married || h.children.length > 0) && (
+          // 가족 점수 (decisions.md 88번): 가족이 생긴 뒤에만
+          <span data-testid="ledger-family">
+            {' · '}가족 <span className="font-pen text-[20px] text-red-pen">{game.family}</span>
+            <span className="text-[11px]"> / 100</span>
+          </span>
+        )}
       </p>
       {!working ? (
         <p className="text-pen-soft">

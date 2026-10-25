@@ -46,12 +46,14 @@ public record TraitDefinition(
       Map<String, Integer> statDeltas,
       String note,
       Long amount,
-      List<Outcome> outcomes) {
+      List<Outcome> outcomes,
+      Integer familyDelta) {
 
     public Option {
       statDeltas = statDeltas == null ? Map.of() : Map.copyOf(statDeltas);
       amount = amount == null ? 0L : amount;
       outcomes = outcomes == null ? List.of() : List.copyOf(outcomes);
+      familyDelta = familyDelta == null ? 0 : familyDelta;
     }
   }
 

@@ -63,6 +63,8 @@ class Comforter {
       return Optional.empty();
     }
     household.cheer(gameId, HAPPY_COMFORT);
+    // 위로를 주고받으면 가족도 조금 가까워진다 (decisions.md 88번).
+    household.bond(gameId, 1);
     return Optional.of(lines.get(rng.nextInt(lines.size())));
   }
 }

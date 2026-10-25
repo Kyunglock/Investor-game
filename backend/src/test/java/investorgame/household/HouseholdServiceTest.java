@@ -101,6 +101,14 @@ class HouseholdServiceTest {
   }
 
   @Test
+  void 가족_점수는_50에서_시작해_0과_100_사이에서_움직인다() {
+    assertThat(household.familyScore(gameId)).isEqualTo(50);
+    assertThat(household.bond(gameId, 8)).isEqualTo(58);
+    assertThat(household.bond(gameId, 80)).isEqualTo(100);
+    assertThat(household.bond(gameId, -150)).isZero();
+  }
+
+  @Test
   void 은퇴하면_배우자_소득이_끊긴다() {
     household.marry(gameId, JOB_DAY);
     int retireDay = (60 - 15) * YEAR;
