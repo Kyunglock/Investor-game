@@ -34,7 +34,7 @@ class DefaultBehaviorServiceTest {
           new BehaviorProperties(
               5000,
               new BehaviorProperties.HintSettings(4000, 55, 35, 50, 50),
-              new BehaviorProperties.LuckSettings(30, 30),
+              new BehaviorProperties.LuckSettings(30, 30, 150),
               new BehaviorProperties.AnalysisSettings(4750, 50)));
 
   @Test
@@ -231,16 +231,24 @@ class DefaultBehaviorServiceTest {
   }
 
   @Test
-  void 운_0이면_손실을_줄이지_않고_100이면_약_30퍼센트_줄인다() {
+  void 운_0이면_아무_일도_없고_100이면_절반은_손실이_줄거나_이득이_커진다() {
     SplittableRandom rng = new SplittableRandom(7);
     int softened0 = 0;
     int softened100 = 0;
+    int boosted100 = 0;
     for (int i = 0; i < TRIALS; i++) {
-      softened0 += service.lossFactorPercent(0, rng) < 100 ? 1 : 0;
-      softened100 += service.lossFactorPercent(100, rng) < 100 ? 1 : 0;
+      softened0 += service.luckFactorPercent(0, Direction.DOWN, rng) < 100 ? 1 : 0;
+      int down = service.luckFactorPercent(100, Direction.DOWN, rng);
+      int up = service.luckFactorPercent(100, Direction.UP, rng);
+      assertThat(down).isIn(30, 100);
+      assertThat(up).isIn(150, 100);
+      softened100 += down < 100 ? 1 : 0;
+      boosted100 += up > 100 ? 1 : 0;
     }
     assertThat(softened0).isZero();
+    // 이 테스트 설정(1점당 30bp)에서 운 100이면 30% 확률로 운이 따른다 (decisions.md 78번).
     assertThat((double) softened100 / TRIALS).isBetween(0.28, 0.32);
+    assertThat((double) boosted100 / TRIALS).isBetween(0.28, 0.32);
   }
 
   @Test

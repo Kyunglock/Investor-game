@@ -268,9 +268,8 @@ class DefaultEventService implements EventService {
       if (content.stocks().stream().anyMatch(st -> context.tradable(st.code()))) {
         List<EventRow> news = ofKind(rows, EventKind.NEWS);
         int base = news.isEmpty() ? context.investingStartDay() : last(news).occursDay();
-        EventProperties.Range gap = properties.style(context.investmentStyle()).newsGapDays();
-        candidates.add(
-            new Candidate(EventKind.NEWS, base + roll(random, gap, "NEWS", news.size())));
+        nextNewsDay(base, context, random)
+            .ifPresent(day -> candidates.add(new Candidate(EventKind.NEWS, day)));
       }
       shakeCandidate(rows, context, random, candidates);
       leverageCandidate(rows, context, candidates);
@@ -581,6 +580,24 @@ class DefaultEventService implements EventService {
       case ChoiceTicket.ChildWedding.HALF -> 5_000;
       default -> 0;
     };
+  }
+
+  /**
+   * 뉴스는 해마다 yearly-chance-bp 확률로 한 번, 그 해 안의 한 날에 온다. 안 걸린 해는 없다 (decisions.md 80번). 해마다의 굴림과 날은 판
+   * 시드와 해 번호로 정해져 같은 판이면 같다. base(마지막 뉴스나 투자 시작) 뒤의 첫 뉴스 날을 돌려준다.
+   */
+  private Optional<Integer> nextNewsDay(int base, SchedulingContext context, SeededRandom random) {
+    int year = calendar.daysPerYear();
+    int endYear = context.endDay() / year;
+    for (int y = base / year; y <= endYear; y++) {
+      RandomGenerator rng = random.forKey("event", "news-year", y);
+      boolean comes = rng.nextInt(BP) < properties.news().yearlyChanceBp();
+      int day = y * year + rng.nextInt(year);
+      if (comes && day > base) {
+        return Optional.of(day);
+      }
+    }
+    return Optional.empty();
   }
 
   /** 보유 종목이 있을 때만: 마지막 흔들림(없으면 투자 시작일) + 간격. 어떤 종목이 흔들리는지는 만들 때 뽑는다 (decisions.md 33번). */

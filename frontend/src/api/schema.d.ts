@@ -829,7 +829,10 @@ export interface components {
                 changeBp: number;
                 /** Format: int64 */
                 pnl: number;
+                /** @description 운이 따라 손실이 줄었다 (내릴 뉴스) */
                 lossSoftened: boolean;
+                /** @description 운이 따라 이득이 커졌다 (오를 뉴스 */
+                luckBoosted: boolean;
             } | null;
             growth: {
                 statCode: string;

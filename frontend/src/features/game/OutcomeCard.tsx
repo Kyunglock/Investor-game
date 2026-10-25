@@ -165,6 +165,9 @@ function Body({
               {price?.lossSoftened && (
                 <p className="mt-1 text-xs text-teal">🍀 운 좋게 손실이 줄었다</p>
               )}
+              {price?.luckBoosted && (
+                <p className="mt-1 text-xs text-teal">🍀 운이 따라 더 올랐다</p>
+              )}
               {outcome.review && (
                 // 결과 뒤 안목 한마디 (decisions.md 73번). 안목 구간에 따라 운인지 실력인지 가려 말한다.
                 <p

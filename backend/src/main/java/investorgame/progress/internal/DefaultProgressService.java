@@ -387,6 +387,16 @@ class DefaultProgressService implements ProgressService {
                       ? -household.inflated(-amount, ticket.occursDay())
                       : household.inflated(amount, ticket.occursDay());
             }
+            // 성장기는 부모님 품이라 빚을 지지 않는다: 통장에 있는 만큼만 쓴다 (decisions.md 84번). 초기 자산이 100만 원일 수도 있어 그대로 두면
+            // 취업 전에 파산한다.
+            boolean capped = false;
+            if (!trait.adult() && amount < 0) {
+              long cash = assets.get(gameId).cash();
+              if (-amount > cash) {
+                amount = -cash;
+                capped = true;
+              }
+            }
             if (amount > 0) {
               assets.credit(gameId, WINDFALL, amount, ticket.occursDay());
             } else if (amount < 0) {
@@ -411,7 +421,10 @@ class DefaultProgressService implements ProgressService {
             List<ChoiceOutcome.Growth> growth = logGrowth(gameId, ticket.occursDay(), moved, TRAIT);
             // 돈이 오갔으면 얼마가 오갔는지 결과에 붙인다 (decisions.md 75번).
             String money =
-                amount == 0 ? "" : " (통장 %s%,d원)".formatted(amount > 0 ? "+" : "", amount);
+                amount == 0
+                    ? (capped ? " (통장이 비어 돈은 들지 않았다)" : "")
+                    : " (통장 %s%,d원%s)"
+                        .formatted(amount > 0 ? "+" : "", amount, capped ? ", 있는 만큼만" : "");
             String note =
                 (result == null ? trait.note() : trait.note() + " " + result.note()) + money;
             if (!completed.traitsComplete()) {
@@ -767,16 +780,21 @@ class DefaultProgressService implements ProgressService {
         };
 
     // 운: 떨어지는 뉴스이고 충격을 받는 종목을 들고 있을 때만 폭을 줄인다 (경제 개편 설계 5.4절).
-    int lossFactor =
-        behavior.lossFactorPercent(
-            character.stats().luck(), random.forKey("behavior", "luck", ticket.seq()));
+    // 운 (decisions.md 78번): 들고 있는 종목에 충격이 닿을 때, 운이 따르면 손실은 줄고 이득은 커진다.
+    int luckFactor =
+        behavior.luckFactorPercent(
+            character.stats().luck(),
+            ticket.truth(),
+            random.forKey("behavior", "luck", ticket.seq()));
     AccountView afterTrade = assets.get(gameId);
     boolean exposed =
         content.stocksOf(ticket.sectorCode()).stream()
             .anyMatch(s -> afterTrade.holdings().containsKey(s.code()));
-    boolean softened = ticket.truth() == Direction.DOWN && exposed && lossFactor < PERCENT;
+    boolean lucky = exposed && luckFactor != PERCENT;
+    boolean softened = lucky && ticket.truth() == Direction.DOWN;
+    boolean boosted = lucky && ticket.truth() == Direction.UP;
     int magnitude =
-        softened ? (int) (ticket.magnitudeBp() * lossFactor / PERCENT) : ticket.magnitudeBp();
+        lucky ? (int) (ticket.magnitudeBp() * luckFactor / PERCENT) : ticket.magnitudeBp();
     long before = assets.holdingsValue(gameId, prices);
     ShockResult shock =
         market.applyShock(
@@ -839,6 +857,7 @@ class DefaultProgressService implements ProgressService {
     pricePayload.put("changeBp", magnitude);
     pricePayload.put("pnl", pnl);
     pricePayload.put("lossSoftened", softened);
+    pricePayload.put("luckBoosted", boosted);
     logs.append(gameId, ticket.occursDay(), "PRICE", pricePayload);
     List<ChoiceOutcome.Growth> growthViews =
         logGrowth(gameId, ticket.occursDay(), growth, DEVIATION);
@@ -857,7 +876,8 @@ class DefaultProgressService implements ProgressService {
             ticket.truth().name(),
             magnitude,
             pnl,
-            softened),
+            softened,
+            boosted),
         growthViews,
         null,
         review);
@@ -904,58 +924,31 @@ class DefaultProgressService implements ProgressService {
     }
     StockDefinition stock = requireStock(stockCode);
     int day = game.lastReportedDay();
-    CharacterView character = characters.get(gameId);
-    AccountView account = assets.get(gameId);
     long price = market.prices(gameId).get(stockCode);
-    boolean holding = account.holdings().containsKey(stockCode);
-    long seq = logs.findAll(gameId).stream().filter(e -> TRADE_LOG.equals(e.kind())).count() + 1;
-
-    // 다른 뉴스가 없으므로 줏대 판정은 없고 용기 판정만 걸린다.
-    Resolution resolution =
-        behavior.resolve(
-            new ChoiceContext(side, character.stats(), null, holding),
-            new HashSeededRandom(game.seed()).forKey("behavior", "trade", seq));
+    // 매매창의 자유 매매는 성향 판정 없이 고른 대로 체결한다 (decisions.md 81번). 성향에 뒤집히는 것은 이벤트 선택뿐이다.
     ChoiceOutcome.Trade trade =
-        switch (resolution.actual()) {
-          case BUY -> tradeView(assets.buy(gameId, stockCode, quantity, price, day, null));
-          case SELL -> tradeView(assets.sell(gameId, stockCode, quantity, price, day, null));
-          case HOLD -> new ChoiceOutcome.Trade("HELD", 0, price, 0, null);
-        };
-    List<StatChange> growth =
-        characters.grow(
-            gameId,
-            resolution.deviations().stream()
-                .map(d -> (GrowthSource) new GrowthSource.DeviationGrowth(d.statCode(), null))
-                .toList(),
-            day);
+        side == Action.BUY
+            ? tradeView(assets.buy(gameId, stockCode, quantity, price, day, null))
+            : tradeView(assets.sell(gameId, stockCode, quantity, price, day, null));
 
     Map<String, Object> payload = new HashMap<>();
     payload.put("stockCode", stockCode);
     payload.put("stockName", stock.name());
     payload.put("side", side.name());
     payload.put("chosen", side.name());
-    payload.put("actual", resolution.actual().name());
-    payload.put("deviations", deviationPayload(resolution));
+    payload.put("actual", side.name());
+    payload.put("deviations", List.of());
     payload.put("status", trade.status());
     payload.put("quantity", trade.quantity());
     payload.put("price", trade.price());
     payload.put("amount", trade.amount());
     payload.put("realizedPnl", trade.realizedPnl());
     logs.append(gameId, day, TRADE_LOG, payload);
-    List<ChoiceOutcome.Growth> growthViews = logGrowth(gameId, day, growth, DEVIATION);
 
     return new ChoiceOutcome(
         view(games.findLatest(sessionId).orElseThrow()),
         new ChoiceOutcome.Outcome(
-            TRADE_LOG,
-            side.name(),
-            resolution.actual().name(),
-            deviationViews(resolution),
-            trade,
-            null,
-            growthViews,
-            null,
-            null));
+            TRADE_LOG, side.name(), side.name(), List.of(), trade, null, List.of(), null, null));
   }
 
   @Override
