@@ -73,6 +73,8 @@ interface GameState {
   resume: () => void
   openMarket: () => void
   closeMarket: () => void
+  /** 시황(지표·경제 신문)을 받는다. 매매창과 뉴스 카드가 쓴다 (decisions.md 79번). 이 달 것을 이미 받았으면 그대로 */
+  loadOverview: () => Promise<void>
   setMarketTab: (tab: string) => void
   selectStock: (code: string) => Promise<void>
   trade: (side: TradeSide, quantity: number) => Promise<void>
@@ -327,6 +329,7 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     // 매매창을 열면 시계를 멈추고 현재 시각을 보고해 가격·현금을 최신으로 맞춘다. 그 뒤 시황과 고른 종목의 분석을 받는다.
+    loadOverview,
     openMarket: () => {
       const { game } = get()
       if (game?.status !== 'ACTIVE' || game.pendingEvent) {

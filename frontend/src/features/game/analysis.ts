@@ -150,3 +150,27 @@ export function indicatorChange(unit: string, value: number, yearAgo: number): s
   const bp = Math.trunc(((value - yearAgo) * 10_000) / yearAgo)
   return `${bp > 0 ? '+' : bp < 0 ? '−' : ''}${(Math.abs(bp) / 100).toFixed(1)}%`
 }
+
+/** 뉴스 카드의 세계 시황에 보일 지표 코드. 이 순서대로, 없는 코드는 건너뛴다 (decisions.md 79번). */
+export const BRIEF_INDICATORS = ['index', 'mortgage', 'cpi', 'fx', 'sentiment']
+
+/** 세계 시황 다섯 줄: 선호 코드 순으로 고르고, 모자라면 나머지 지표로 채운다. */
+export function briefIndicators<T extends { code: string }>(indicators: T[], count = 5): T[] {
+  const byCode = new Map(indicators.map((i) => [i.code, i]))
+  const picked: T[] = []
+  for (const code of BRIEF_INDICATORS) {
+    const found = byCode.get(code)
+    if (found && picked.length < count) {
+      picked.push(found)
+    }
+  }
+  for (const i of indicators) {
+    if (picked.length >= count) {
+      break
+    }
+    if (!picked.includes(i)) {
+      picked.push(i)
+    }
+  }
+  return picked
+}

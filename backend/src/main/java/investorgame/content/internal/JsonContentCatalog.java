@@ -458,6 +458,14 @@ class JsonContentCatalog implements ContentCatalog {
               !forInvestor || (effect.salaryPercent() == 0 && !effect.quit() && !effect.moveJob()),
               "전업투자자의 장면은 월급·실직·이직을 쓸 수 없다: " + where);
           require(
+              !effect.becomeInvestor()
+                  || (!forInvestor
+                      && !effect.quit()
+                      && !effect.moveJob()
+                      && effect.followUp() == null
+                      && effect.becomeJob() == null),
+              "전업투자자 전향(becomeInvestor)은 직장인의 장면에서 단독으로만: " + where);
+          require(
               effect.becomeJob() == null
                   || (forInvestor
                       && jobCodes.contains(effect.becomeJob())
