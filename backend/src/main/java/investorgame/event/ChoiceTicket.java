@@ -102,13 +102,17 @@ public record ChoiceTicket(
    * @param statDeltas 즉시 더해지는 능력치 변화 (운 제외). 없으면 빈 맵
    * @param note 이 일상 행동에서 무엇이 드러났는지 알려 주는 문구
    */
-  /** 성향 장면의 선택. amount·outcomes는 콘텐츠 그대로: 결과는 진행이 판 시드로 굴린다 (decisions.md 41번). */
+  /**
+   * 성향 장면의 선택. amount·outcomes는 콘텐츠 그대로: 결과는 진행이 판 시드로 굴린다 (decisions.md 41번). adult면 성인 장면이라 금액에
+   * 물가가 붙는다 (75번).
+   */
   public record Trait(
       Map<String, Integer> traitDeltas,
       Map<String, Integer> statDeltas,
       String note,
       long amount,
-      List<TraitDefinition.Outcome> outcomes)
+      List<TraitDefinition.Outcome> outcomes,
+      boolean adult)
       implements Effect {}
 
   public record Offer(boolean accepted) implements Effect {}
