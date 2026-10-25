@@ -15,6 +15,7 @@ import investorgame.content.LifeText;
 import investorgame.content.NewsDefinition;
 import investorgame.content.NoticeDefinition;
 import investorgame.content.ShakeDefinition;
+import investorgame.content.SpouseText;
 import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
 import java.io.IOException;
@@ -311,6 +312,11 @@ class JsonContentCatalog implements ContentCatalog {
   @Override
   public FamilyTripText familyTripText() {
     return life.familyTrip();
+  }
+
+  @Override
+  public SpouseText spouseText() {
+    return life.spouse();
   }
 
   @Override
@@ -635,6 +641,14 @@ class JsonContentCatalog implements ContentCatalog {
   private void validateLife() {
     require(life.marriage() != null && life.child() != null, "결혼·자녀 문구가 없다");
     require(
+        life.spouse() != null
+            && !life.spouse().names().isEmpty()
+            && !life.spouse().personalities().isEmpty()
+            && !life.spouse().economies().isEmpty()
+            && !life.spouse().lives().isEmpty()
+            && life.spouse().economies().stream().allMatch(e -> e.income() > 0),
+        "결혼 상대 소개 재료가 비었다 (decisions.md 77번)");
+    require(
         life.childWedding() != null
             && life.childWedding().title().contains("{child}")
             && life.childWedding().fullLabel() != null
@@ -736,6 +750,7 @@ class JsonContentCatalog implements ContentCatalog {
       LifeText child,
       ChildWeddingText childWedding,
       FamilyTripText familyTrip,
+      SpouseText spouse,
       List<NoticeDefinition> notices) {}
 
   record Crises(List<CrisisDefinition> scenarios, List<String> commonOmens) {}

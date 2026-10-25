@@ -1,5 +1,6 @@
 package investorgame.event.internal;
 
+import investorgame.common.Korean;
 import investorgame.content.CareerDefinition;
 import investorgame.content.ChildWeddingText;
 import investorgame.content.ContentCatalog;
@@ -9,6 +10,7 @@ import investorgame.content.LifeText;
 import investorgame.content.NewsDefinition;
 import investorgame.content.NoticeDefinition;
 import investorgame.content.ShakeDefinition;
+import investorgame.content.SpouseText;
 import investorgame.content.TraitDefinition;
 import investorgame.event.ChoiceTicket;
 import investorgame.event.EventView;
@@ -104,6 +106,21 @@ class EventRenderer {
                   new EventView.Option(ChoiceTicket.FamilyTrip.NORMAL, text.normalLabel()),
                   new EventView.Option(ChoiceTicket.FamilyTrip.CHEAP, text.cheapLabel()),
                   new EventView.Option(ChoiceTicket.FamilyTrip.NONE, text.noneLabel())));
+        }
+        if (row.definitionCode().startsWith(DefaultEventService.MARRIAGE_PREFIX)) {
+          // 결혼 상대 소개 (decisions.md 77번): 이름·성격·직업과 월급·돈 습관·인상을 조합한 문장.
+          SpouseText.Profile who =
+              content.spouseText().profile(DefaultEventService.spouseCode(row.definitionCode()));
+          LifeText marriage = content.lifeText(DefaultEventService.MARRIAGE);
+          yield view(
+              row,
+              Korean.withParticle(who.name(), "과", "와") + " 결혼할까?",
+              who.intro() + " " + marriage.body(),
+              null,
+              null,
+              List.of(
+                  new EventView.Option(DefaultEventService.ACCEPT, marriage.acceptLabel()),
+                  new EventView.Option(DefaultEventService.DECLINE, marriage.declineLabel())));
         }
         LifeText text = content.lifeText(row.definitionCode());
         yield view(

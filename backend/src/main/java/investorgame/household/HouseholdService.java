@@ -14,8 +14,13 @@ public interface HouseholdService {
 
   HouseholdView get(UUID gameId);
 
-  /** 이미 결혼했으면 InvalidRequestException. */
-  void marry(UUID gameId, int gameDay);
+  /** 이미 결혼했으면 InvalidRequestException. 배우자 소개 없이(소득은 설정값) 결혼한다. */
+  default void marry(UUID gameId, int gameDay) {
+    marry(gameId, gameDay, null);
+  }
+
+  /** 배우자와 결혼한다. spouse가 있으면 그 소득이 배우자 소득이 된다 (decisions.md 77번). */
+  void marry(UUID gameId, int gameDay, Spouse spouse);
 
   /** 자녀를 더한다. 1부터 시작하는 순번을 돌려준다. leaveAge는 아이가 독립해 집을 나가는 나이(세), sex는 성별 (decisions.md 68·69번). */
   int addChild(UUID gameId, int gameDay, int leaveAge, Sex sex);

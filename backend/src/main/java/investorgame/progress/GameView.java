@@ -93,7 +93,7 @@ public record GameView(
       int change12mBp,
       List<Long> spark) {}
 
-  /** 가계부. 금액은 이번 달 기준. pension은 은퇴 뒤 매달 들어오는 연금, 은퇴 전 0. */
+  /** 가계부. 금액은 이번 달 기준. pension은 은퇴 뒤 매달 들어오는 연금, 은퇴 전 0. spouse는 미혼이거나 옛 판이면 null. */
   public record Household(
       boolean married,
       Integer marriedAge,
@@ -102,7 +102,11 @@ public record GameView(
       long spouseIncome,
       long monthlyExpense,
       boolean retired,
-      long pension) {}
+      long pension,
+      Spouse spouse) {}
+
+  /** 배우자 소개 (decisions.md 77번). */
+  public record Spouse(String name, String job, String intro) {}
 
   /** leftHome: 독립해서 집을 나갔다 (decisions.md 68번). 그 뒤로는 양육비가 들지 않고 수첩 사진에도 없다. sex는 태어날 때 정해진 성별. */
   public record Child(int age, boolean leftHome, Sex sex) {}
