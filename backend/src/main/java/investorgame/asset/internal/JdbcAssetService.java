@@ -32,6 +32,7 @@ class JdbcAssetService implements AssetService {
   static final String BUY = "BUY";
   static final String SELL = "SELL";
   static final String INTEREST = "INTEREST";
+  private static final long MONTHS_PER_YEAR = 12;
   static final String DEBT_REPAY = "DEBT_REPAY";
   static final String LOAN = "LOAN";
 
@@ -198,7 +199,8 @@ class JdbcAssetService implements AssetService {
     if (account.debt() == 0) {
       return new InterestResult(false, 0, 0);
     }
-    long interest = account.debt() * properties.debtInterestBp() / BP;
+    // 연이자의 1/12이 매월 붙는다 (decisions.md 72번).
+    long interest = account.debt() * properties.debtAnnualInterestBp() / MONTHS_PER_YEAR / BP;
     long debtAfter = account.debt() + interest;
     if (!ledger(
         gameId, gameDay, INTEREST, null, -interest, null, null, account.cash(), debtAfter, null)) {
