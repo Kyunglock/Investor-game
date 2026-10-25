@@ -18,9 +18,46 @@ export interface Moment {
 export const BIG_MOVE_BP = 500
 const BP = 10_000
 
-/** 결과 카드에 띄울 순간. 아이가 태어났으면 기쁨, 큰 손익이면 자신감·좌절. 없으면 null. */
+/** 가족 여행 그림: 바다에 나와 배우자. */
+function tripArt(game: Game): CreditArt {
+  return {
+    vignette: 'trip',
+    figures: [
+      { who: 'me', sex: game.sex, stage: 'adult', x: 14 },
+      { who: 'spouse', sex: opposite(game.sex), stage: 'adult', x: 26 },
+    ],
+  }
+}
+
+const TRIP_CAPTIONS: Record<string, string> = {
+  luxury: '호화롭게 다녀왔다. 통장은 가벼워졌지만 후회는 없다.',
+  normal: '가족 여행을 다녀왔다.',
+  cheap: '가까운 데라도 다녀오니 좋았다.',
+}
+
+/** 결과 카드에 띄울 순간. 아이가 태어났거나 가족 여행을 갔으면 기쁨, 큰 손익이면 자신감·좌절. 없으면 null. */
 export function momentForOutcome(outcome: Outcome, game: Game): Moment | null {
   if (outcome.kind === 'LIFE') {
+    // 가족 여행 선택 (decisions.md 71번). 안 갔으면 그림도 없다.
+    const trip = [...game.log]
+      .reverse()
+      .find(
+        (e) =>
+          e.kind === 'LIFE' &&
+          e.day === game.day &&
+          (e.payload as Record<string, unknown>).noticeCode === 'family-trip',
+      )
+    if (trip) {
+      const p = trip.payload as Record<string, unknown>
+      if (Number(p.amount ?? 0) >= 0) {
+        return null
+      }
+      return {
+        art: tripArt(game),
+        mood: 'joy',
+        caption: TRIP_CAPTIONS[String(p.option)] ?? '가족 여행을 다녀왔다.',
+      }
+    }
     const child = [...game.log].reverse().find((e) => e.kind === 'CHILD' && e.day === game.day)
     if (child) {
       const p = child.payload as Record<string, unknown>
@@ -62,20 +99,18 @@ export function momentForOutcome(outcome: Outcome, game: Game): Moment | null {
       }
 }
 
-/** 토스트에 그림을 붙일 생활 알림: 가족 여행. */
+/** 토스트에 그림을 붙일 생활 기록: 실제로 다녀온 가족 여행. 안 갔으면(금액 0) 그림 없음. */
 export function momentForNotice(entry: LogEntry, game: Game): Moment | null {
   const p = entry.payload as Record<string, unknown>
-  if (entry.kind === 'LIFE' && (p.noticeCode === 'family-trip' || p.title === '가족 여행')) {
+  if (
+    entry.kind === 'LIFE' &&
+    (p.noticeCode === 'family-trip' || p.title === '가족 여행') &&
+    Number(p.amount ?? 0) < 0
+  ) {
     return {
-      art: {
-        vignette: 'trip',
-        figures: [
-          { who: 'me', sex: game.sex, stage: 'adult', x: 14 },
-          { who: 'spouse', sex: opposite(game.sex), stage: 'adult', x: 26 },
-        ],
-      },
+      art: tripArt(game),
       mood: 'joy',
-      caption: '가족 여행을 다녀왔다.',
+      caption: TRIP_CAPTIONS[String(p.option)] ?? '가족 여행을 다녀왔다.',
     }
   }
   return null

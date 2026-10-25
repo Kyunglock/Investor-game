@@ -46,6 +46,29 @@ describe('momentForOutcome', () => {
     expect(momentForOutcome(outcome({ kind: 'LIFE' }), game())).toBeNull()
   })
 
+  it('가족 여행을 갔으면 바다 그림, 안 갔으면 없다 (decisions.md 71번)', () => {
+    const went: LogEntry = {
+      seq: 3,
+      day: 9000,
+      kind: 'LIFE',
+      payload: {
+        noticeCode: 'family-trip',
+        title: '가족 여행',
+        amount: -10_000_000,
+        option: 'luxury',
+      },
+    }
+    const m = momentForOutcome(outcome({ kind: 'LIFE' }), game({ log: [went] }))
+    expect(m?.art.vignette).toBe('trip')
+    expect(m?.caption).toContain('호화')
+    const stayed: LogEntry = {
+      ...went,
+      payload: { noticeCode: 'family-trip', title: '가족 여행', amount: 0, option: 'none' },
+    }
+    expect(momentForOutcome(outcome({ kind: 'LIFE' }), game({ log: [stayed] }))).toBeNull()
+    expect(momentForNotice(stayed, game())).toBeNull()
+  })
+
   it('총자산의 5%를 넘는 손익이면 급등은 자신감, 급락은 좌절', () => {
     const price = (pnl: number) =>
       ({

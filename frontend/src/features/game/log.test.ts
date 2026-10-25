@@ -408,6 +408,31 @@ describe('logLine', () => {
     expect(logLine(entry('LIFE', 0, { title: '자동차 수리', amount: -800_000 }), game).text).toBe(
       '자동차 수리 · -800,000원',
     )
+    // 가족 여행 선택 (decisions.md 71번).
+    expect(
+      logLine(
+        entry('LIFE', 0, {
+          noticeCode: 'family-trip',
+          title: '가족 여행',
+          amount: -2_500_000,
+          option: 'cheap',
+          proposer: '첫째',
+        }),
+        game,
+      ).text,
+    ).toBe('가족 여행 (당일치기) · -2,500,000원')
+    expect(
+      logLine(
+        entry('LIFE', 0, {
+          noticeCode: 'family-trip',
+          title: '가족 여행',
+          amount: 0,
+          option: 'none',
+          proposer: '부모님',
+        }),
+        game,
+      ).text,
+    ).toBe('부모님의 여행 제안을 거절했다.')
     expect(logLine(entry('LIFE', 0, { title: '명절 보너스', amount: 1_400_000 }), game).text).toBe(
       '명절 보너스 · +1,400,000원',
     )

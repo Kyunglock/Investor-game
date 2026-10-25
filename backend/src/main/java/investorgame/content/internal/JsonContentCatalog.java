@@ -7,6 +7,7 @@ import investorgame.content.CareerDefinition;
 import investorgame.content.ChildWeddingText;
 import investorgame.content.ContentCatalog;
 import investorgame.content.CrisisDefinition;
+import investorgame.content.FamilyTripText;
 import investorgame.content.HomeRegion;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
@@ -305,6 +306,11 @@ class JsonContentCatalog implements ContentCatalog {
   @Override
   public ChildWeddingText childWeddingText() {
     return life.childWedding();
+  }
+
+  @Override
+  public FamilyTripText familyTripText() {
+    return life.familyTrip();
   }
 
   @Override
@@ -717,6 +723,7 @@ class JsonContentCatalog implements ContentCatalog {
       LifeText marriage,
       LifeText child,
       ChildWeddingText childWedding,
+      FamilyTripText familyTrip,
       List<NoticeDefinition> notices) {}
 
   record Crises(List<CrisisDefinition> scenarios, List<String> commonOmens) {}

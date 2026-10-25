@@ -3,6 +3,7 @@ package investorgame.event.internal;
 import investorgame.content.CareerDefinition;
 import investorgame.content.ChildWeddingText;
 import investorgame.content.ContentCatalog;
+import investorgame.content.FamilyTripText;
 import investorgame.content.JobDefinition;
 import investorgame.content.LifeText;
 import investorgame.content.NewsDefinition;
@@ -88,6 +89,21 @@ class EventRenderer {
                   new EventView.Option(ChoiceTicket.ChildWedding.FULL, text.fullLabel()),
                   new EventView.Option(ChoiceTicket.ChildWedding.HALF, text.halfLabel()),
                   new EventView.Option(ChoiceTicket.ChildWedding.NONE, text.noneLabel())));
+        }
+        if (row.definitionCode().startsWith(DefaultEventService.TRIP_PREFIX)) {
+          FamilyTripText text = content.familyTripText();
+          String who = tripWho(DefaultEventService.tripProposer(row.definitionCode()), text);
+          yield view(
+              row,
+              text.title().replace("{who}", who),
+              text.body().replace("{who}", who),
+              null,
+              null,
+              List.of(
+                  new EventView.Option(ChoiceTicket.FamilyTrip.LUXURY, text.luxuryLabel()),
+                  new EventView.Option(ChoiceTicket.FamilyTrip.NORMAL, text.normalLabel()),
+                  new EventView.Option(ChoiceTicket.FamilyTrip.CHEAP, text.cheapLabel()),
+                  new EventView.Option(ChoiceTicket.FamilyTrip.NONE, text.noneLabel())));
         }
         LifeText text = content.lifeText(row.definitionCode());
         yield view(
@@ -198,6 +214,14 @@ class EventRenderer {
   private static final List<String> ORDINALS = List.of("첫째", "둘째", "셋째", "넷째", "다섯째");
 
   /** 자녀 순번을 부르는 말. 첫째·둘째·셋째. */
+  /** 여행을 제안한 사람의 이름: spouse·parents는 문구에서, child:n은 첫째·둘째…. */
+  static String tripWho(String proposer, FamilyTripText text) {
+    if (proposer.startsWith("child:")) {
+      return ordinal(Integer.parseInt(proposer.substring("child:".length())));
+    }
+    return "parents".equals(proposer) ? text.parents() : text.spouse();
+  }
+
   static String ordinal(int seq) {
     return seq >= 1 && seq <= ORDINALS.size() ? ORDINALS.get(seq - 1) : seq + "번째";
   }

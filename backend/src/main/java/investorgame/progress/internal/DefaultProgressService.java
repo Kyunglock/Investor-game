@@ -449,6 +449,7 @@ class DefaultProgressService implements ProgressService {
           }
           case ChoiceTicket.Life life -> resolveLife(game, ticket, life, random);
           case ChoiceTicket.ChildWedding wedding -> resolveChildWedding(game, ticket, wedding);
+          case ChoiceTicket.FamilyTrip trip -> resolveFamilyTrip(game, ticket, trip);
         };
 
     GameRow updated = lock(sessionId, gameId);
@@ -621,6 +622,60 @@ class DefaultProgressService implements ProgressService {
   }
 
   private static final List<String> CHILD_NAMES = List.of("첫째", "둘째", "셋째", "넷째", "다섯째");
+
+  /** 보통 가족 여행 비용(25세 기준, 물가가 붙는다). 순자산의 1%가 더 크면 그만큼 (옛 알림과 같은 셈법). */
+  private static final long TRIP_BASE_COST = 2_500_000;
+
+  private static final long TRIP_ASSET_PERCENT = 1;
+
+  /**
+   * 가족 여행 (decisions.md 71번): 보통 비용 = max(물가 반영 250만, 순자산 1%). 초호화는 4배, 당일치기는 1/5, 안 가면 0. 기록은 옛
+   * 알림과 같은 LIFE(`noticeCode` family-trip)라 토스트·수첩 사진이 그대로 따라온다.
+   */
+  private ChoiceOutcome.Outcome resolveFamilyTrip(
+      GameRow game, ChoiceTicket ticket, ChoiceTicket.FamilyTrip trip) {
+    UUID gameId = game.id();
+    int day = ticket.occursDay();
+    events.complete(
+        gameId,
+        ticket.eventId(),
+        new Completion(ticket.optionCode(), ticket.optionCode(), List.of()));
+    long normal =
+        Math.max(
+            household.inflated(TRIP_BASE_COST, day),
+            netWorth(gameId) * TRIP_ASSET_PERCENT / PERCENT);
+    long cost = normal * trip.costBp() / BP;
+    if (cost > 0) {
+      assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
+    }
+    String who = tripProposerName(trip.proposer());
+    Map<String, Object> payload = new LinkedHashMap<>();
+    payload.put("eventId", ticket.eventId().toString());
+    payload.put("noticeCode", "family-trip");
+    payload.put("title", "가족 여행");
+    payload.put("amount", -cost);
+    payload.put("option", ticket.optionCode());
+    payload.put("proposer", who);
+    logs.append(gameId, day, "LIFE", payload);
+    String message =
+        switch (ticket.optionCode()) {
+          case ChoiceTicket.FamilyTrip.LUXURY ->
+              "온 가족이 호화롭게 다녀왔다. %,d원이 들었다. 사진첩이 두꺼워졌다.".formatted(cost);
+          case ChoiceTicket.FamilyTrip.NORMAL ->
+              "가족 여행을 다녀왔다. %,d원이 들었다. 돈이 아깝지 않았다.".formatted(cost);
+          case ChoiceTicket.FamilyTrip.CHEAP ->
+              "가까운 바다에 당일치기로 다녀왔다. %,d원이 들었다. 그래도 다들 좋아했다.".formatted(cost);
+          default -> "이번엔 가지 않기로 했다. %s의 얼굴이 조금 어두웠다.".formatted(who);
+        };
+    return simpleOutcome(ticket, message);
+  }
+
+  private static String tripProposerName(String proposer) {
+    if (proposer.startsWith("child:")) {
+      return childName(Integer.parseInt(proposer.substring("child:".length())));
+    }
+    return "parents".equals(proposer) ? "부모님" : "배우자";
+  }
 
   private static String childName(int seq) {
     return seq >= 1 && seq <= CHILD_NAMES.size() ? CHILD_NAMES.get(seq - 1) : seq + "번째";

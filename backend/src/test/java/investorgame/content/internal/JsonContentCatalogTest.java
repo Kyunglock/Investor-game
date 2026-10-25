@@ -239,7 +239,8 @@ class JsonContentCatalogTest {
     assertThat(catalog.notices())
         .hasSizeGreaterThanOrEqualTo(6)
         .allMatch(n -> n.weight() > 0 && (n.amount() != 0 || n.salaryPercent() != 0));
-    assertThat(catalog.notices()).anyMatch(n -> n.requiresMarried());
+    assertThat(catalog.familyTripText().luxuryLabel()).isNotBlank();
+    assertThat(catalog.familyTripText().title()).contains("{who}");
   }
 
   /** 매매창 설계 4.4절·부록: 안목 구간 × 결론마다 문구 틀이 있고, 확신 말투와 그렇지 않은 말투가 둘 다 있으며, 한마디와 기사가 있다. */

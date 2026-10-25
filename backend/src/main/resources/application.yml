@@ -255,6 +255,9 @@ event:
     child-last-age: 42
     # 자녀가 독립한 뒤 이만큼 지나면 자녀 결혼 선택(결혼 비용을 얼마나 대줄지)이 온다 (decisions.md 68번)
     child-wedding-gap-years: { min: 2, max: 5 }
+    # 결혼 뒤 이 간격마다 가족 가운데 누군가 여행을 가자고 한다. 이 나이까지 (decisions.md 71번)
+    trip-gap-years: { min: 3, max: 6 }
+    trip-last-age: 65
   # 알림성 지출·수입 이벤트 간격 (직업이 생긴 뒤부터)
   notice:
     gap-days: { min: 240, max: 600 }
