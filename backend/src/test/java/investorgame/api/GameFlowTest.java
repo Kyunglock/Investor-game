@@ -131,8 +131,8 @@ class GameFlowTest {
     assertThat(seenKinds.getOrDefault("CAREER", 0))
         .as("35년 동안 직장 장면이 여러 번")
         .isGreaterThanOrEqualTo(3);
-    // 성장 단계 10개에서 하나씩, 취업 뒤 일상 장면(adult) 풀 7개를 40년 동안 다 쓴다.
-    assertThat(seenKinds.get("TRAIT")).as("성장기 10 + 취업 뒤 일상 7").isEqualTo(17);
+    // 성장 단계 10개에서 하나씩, 취업 뒤 일상 장면(adult) 풀 13개(양가 부모 장면 6개 포함, 결혼하므로 다 나온다)를 40년 동안 다 쓴다.
+    assertThat(seenKinds.get("TRAIT")).as("성장기 10 + 취업 뒤 일상 13").isEqualTo(23);
     assertThat(kindOrder.subList(0, 13))
         .as("성장기의 성향 이벤트가 모두 끝난 뒤에 직업, 독립(주거), 그다음 투자 시작 제안")
         .containsExactly(
@@ -221,7 +221,7 @@ class GameFlowTest {
     assertThat(game.<String>read("$.sex")).isIn("M", "F");
     List<String> childSexes = game.read("$.household.children[*].sex");
     assertThat(childSexes).isNotEmpty().allMatch(s -> List.of("M", "F").contains(s));
-    assertThat(kinds.stream().filter("TRAIT"::equals).count()).isEqualTo(17);
+    assertThat(kinds.stream().filter("TRAIT"::equals).count()).isEqualTo(23);
     assertThat(kinds.stream().filter("NEWS"::equals).count())
         .isEqualTo((long) seenKinds.get("NEWS"));
     // 흔들림(SHAKE)도 선택 뒤 주가가 움직여 PRICE를 남긴다 (decisions.md 33번).

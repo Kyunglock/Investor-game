@@ -2279,5 +2279,557 @@
         "amount": 600000
       }
     ]
+  },
+  {
+    "code": "m-holiday",
+    "age": 32,
+    "adult": true,
+    "married": true,
+    "title": "명절 앞두고 양가 용돈 액수로 배우자와 말이 갈렸다",
+    "body": "우리 집은 늘 넉넉히 드렸고, 처가(시가)는 \"마음만\"이라고 하신다. 배우자는 똑같이 드리자고 한다.",
+    "options": [
+      {
+        "code": "equal",
+        "label": "양가 똑같이 30만 원씩",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "patience": 4,
+          "conviction": 2
+        },
+        "note": "공평이 평화라는 걸 안다",
+        "amount": -600000
+      },
+      {
+        "code": "ours",
+        "label": "우리 집 50만, 처가는 20만",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 1,
+          "mind.own": 1,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "conviction": 4,
+          "insight": -3
+        },
+        "note": "배우자가 그날 저녁 말이 없었다",
+        "amount": -700000
+      },
+      {
+        "code": "theirs",
+        "label": "처가에 50만, 우리 집은 20만",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.crowd": 1,
+          "sector.bio": 1
+        },
+        "statDeltas": {
+          "patience": 3,
+          "courage": -2
+        },
+        "note": "배우자 편을 들었다. 어머니 전화가 짧았다",
+        "amount": -700000
+      },
+      {
+        "code": "skip",
+        "label": "올해는 형편상 건너뛴다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.energy": 1
+        },
+        "statDeltas": {
+          "conviction": 3,
+          "courage": 3
+        },
+        "note": "돈보다 솔직함을 택했다",
+        "outcomes": [
+          {
+            "weight": 60,
+            "amount": 0,
+            "note": "양가 모두 괜찮다 하셨다. 대신 전은 우리가 부쳤다."
+          },
+          {
+            "weight": 40,
+            "amount": -300000,
+            "statDeltas": {
+              "patience": -2
+            },
+            "note": "결국 늦게라도 봉투를 보냈다. 마음이 불편했다."
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "code": "m-seventy",
+    "age": 36,
+    "adult": true,
+    "married": true,
+    "title": "배우자 쪽 부모님 칠순, 잔치 비용 1,200만 원을 형제들이 나누자고 한다",
+    "body": "배우자의 형제는 셋. \"맏이가 더 내야지\"라는 말이 단톡방에 먼저 올라왔다. 배우자는 우리가 조금 더 내길 바라는 눈치다.",
+    "options": [
+      {
+        "code": "equal",
+        "label": "똑같이 300만 원씩",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.crowd": 1,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "patience": 4
+        },
+        "note": "규칙대로 했다",
+        "amount": -3000000
+      },
+      {
+        "code": "more",
+        "label": "우리가 500만 원을 낸다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.bold": 1,
+          "mind.own": 1,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "courage": 4,
+          "conviction": 2
+        },
+        "note": "배우자가 고마워했다. 통장은 가벼워졌다",
+        "amount": -5000000
+      },
+      {
+        "code": "less",
+        "label": "형편대로 100만 원만",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.energy": 1
+        },
+        "statDeltas": {
+          "conviction": 4,
+          "insight": 2
+        },
+        "note": "솔직하게 형편을 말했다",
+        "amount": -1000000,
+        "outcomes": [
+          {
+            "weight": 60,
+            "amount": 0,
+            "note": "형제들이 이해해 줬다."
+          },
+          {
+            "weight": 40,
+            "amount": 0,
+            "statDeltas": {
+              "patience": -3
+            },
+            "note": "단톡방이 조용해졌다. 배우자가 한참 핸드폰만 봤다."
+          }
+        ]
+      },
+      {
+        "code": "trip",
+        "label": "잔치 대신 가족 여행을 제안",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.bold": 1,
+          "mind.own": 1,
+          "sector.game": 1
+        },
+        "statDeltas": {
+          "insight": 4,
+          "courage": 2
+        },
+        "note": "돈 대신 시간을 선물했다",
+        "amount": -2000000
+      }
+    ]
+  },
+  {
+    "code": "m-surgery",
+    "age": 40,
+    "adult": true,
+    "married": true,
+    "title": "배우자 부모님이 수술을 받는다, 수술비 1,500만 원을 누가 낼지 형제들 사이가 싸늘하다",
+    "body": "보험은 절반만 나온다. 형제 하나는 \"지금 돈이 없다\"고 먼저 선을 그었다. 배우자는 병원 복도에서 울었다.",
+    "options": [
+      {
+        "code": "all",
+        "label": "우리가 다 낸다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.bold": 1,
+          "mind.own": 1,
+          "sector.bio": 1
+        },
+        "statDeltas": {
+          "courage": 6,
+          "patience": 2
+        },
+        "note": "계산보다 사람을 먼저 봤다",
+        "amount": -15000000
+      },
+      {
+        "code": "half",
+        "label": "절반은 우리가, 나머지는 형제",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "insight": 3,
+          "conviction": 3
+        },
+        "note": "할 만큼 하고 나머지는 맡겼다",
+        "amount": -7500000
+      },
+      {
+        "code": "share",
+        "label": "형제 수대로 똑같이 나눈다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.safe": 1,
+          "mind.crowd": 1,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "patience": 3,
+          "conviction": 2
+        },
+        "note": "원칙을 지켰다",
+        "amount": -5000000,
+        "outcomes": [
+          {
+            "weight": 70,
+            "amount": 0,
+            "note": "형제들이 각자 몫을 냈다."
+          },
+          {
+            "weight": 30,
+            "amount": -2500000,
+            "statDeltas": {
+              "insight": -2
+            },
+            "note": "형제 하나가 끝내 안 냈다. 모자란 돈은 우리가 메웠다."
+          }
+        ]
+      },
+      {
+        "code": "none",
+        "label": "지금은 못 낸다고 말한다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.energy": 1
+        },
+        "statDeltas": {
+          "conviction": 5,
+          "courage": 3,
+          "patience": -3
+        },
+        "note": "배우자가 며칠 동안 말을 걸지 않았다"
+      }
+    ]
+  },
+  {
+    "code": "m-business",
+    "age": 38,
+    "adult": true,
+    "married": true,
+    "title": "배우자 쪽 아버지가 가게를 넓힌다며 3,000만 원을 빌려 달라 한다",
+    "body": "\"2년이면 갚는다\"고 하신다. 배우자는 난처한 얼굴로 내 눈치만 본다. 거절하면 명절이 불편해질 것이다.",
+    "options": [
+      {
+        "code": "lend",
+        "label": "3,000만 원을 빌려 드린다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.bold": 1,
+          "mind.crowd": 1,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "courage": 5
+        },
+        "note": "가족을 믿었다",
+        "amount": -30000000,
+        "outcomes": [
+          {
+            "weight": 50,
+            "amount": 33000000,
+            "statDeltas": {
+              "insight": 3
+            },
+            "note": "2년 뒤 이자까지 쳐서 3,300만 원을 돌려받았다. 가게가 잘됐다."
+          },
+          {
+            "weight": 30,
+            "amount": 15000000,
+            "statDeltas": {
+              "patience": 3
+            },
+            "note": "절반만 돌아왔다. 나머지는 \"천천히\"라는 말로 끝났다."
+          },
+          {
+            "weight": 20,
+            "amount": 0,
+            "statDeltas": {
+              "insight": -4,
+              "patience": 4
+            },
+            "note": "가게가 문을 닫았다. 돈 이야기는 다시 꺼내지 않았다."
+          }
+        ]
+      },
+      {
+        "code": "part",
+        "label": "1,000만 원만 드린다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "insight": 4,
+          "conviction": 2
+        },
+        "note": "잃어도 되는 선을 정했다",
+        "amount": -10000000,
+        "outcomes": [
+          {
+            "weight": 60,
+            "amount": 10000000,
+            "note": "2년 뒤 그대로 돌려받았다."
+          },
+          {
+            "weight": 40,
+            "amount": 0,
+            "note": "돌아오지 않았다. 처음부터 각오한 돈이었다."
+          }
+        ]
+      },
+      {
+        "code": "guarantee",
+        "label": "돈 대신 보증을 선다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 1,
+          "mind.crowd": 1,
+          "sector.energy": 1
+        },
+        "statDeltas": {
+          "courage": 3,
+          "insight": -2
+        },
+        "note": "내 돈이 안 나간다고 믿었다",
+        "outcomes": [
+          {
+            "weight": 70,
+            "amount": 0,
+            "note": "무사히 갚으셨다. 보증은 서류로만 남았다."
+          },
+          {
+            "weight": 30,
+            "amount": -20000000,
+            "statDeltas": {
+              "insight": -4,
+              "courage": 3
+            },
+            "note": "가게가 기울어 보증이 실제 빚이 됐다. 2,000만 원을 대신 갚았다."
+          }
+        ]
+      },
+      {
+        "code": "refuse",
+        "label": "정중히 거절한다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.bio": 1
+        },
+        "statDeltas": {
+          "conviction": 6,
+          "patience": -2
+        },
+        "note": "명절 분위기가 한동안 어색했다"
+      }
+    ]
+  },
+  {
+    "code": "m-mother",
+    "age": 45,
+    "adult": true,
+    "married": true,
+    "title": "홀로 남은 어머니(장모님)를 모실지, 생활비를 보낼지 정해야 한다",
+    "body": "배우자는 모시자고 하고, 나는 매달 보내는 게 서로 편하다고 본다. 어느 쪽이든 돈과 시간이 든다.",
+    "options": [
+      {
+        "code": "live",
+        "label": "같이 산다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "patience": 5,
+          "courage": 2
+        },
+        "note": "방을 하나 내드렸다. 집이 좁아졌지만 식탁은 넓어졌다",
+        "amount": -5000000
+      },
+      {
+        "code": "send",
+        "label": "매달 50만 원을 보낸다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "insight": 3,
+          "patience": 2
+        },
+        "note": "거리를 두되 챙겼다. 1년치가 먼저 나갔다",
+        "amount": -6000000
+      },
+      {
+        "code": "care",
+        "label": "좋은 요양 시설을 알아본다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 1,
+          "mind.crowd": 1,
+          "sector.bio": 1
+        },
+        "statDeltas": {
+          "insight": 4,
+          "conviction": -2
+        },
+        "note": "전문가에게 맡겼다. 1년 비용이 만만치 않다",
+        "amount": -12000000
+      },
+      {
+        "code": "siblings",
+        "label": "형제에게 맡기고 가끔 들른다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.safe": 1,
+          "mind.crowd": 1,
+          "sector.energy": 1
+        },
+        "statDeltas": {
+          "conviction": -4,
+          "courage": -2
+        },
+        "note": "전화가 점점 뜸해졌다"
+      }
+    ]
+  },
+  {
+    "code": "m-repair",
+    "age": 42,
+    "adult": true,
+    "married": true,
+    "title": "부모님 집 보일러와 지붕 수리에 800만 원, 배우자는 처가도 비슷하다고 한다",
+    "body": "한쪽만 챙기면 말이 나온다. 둘 다 챙기면 이번 달 생활비가 흔들린다.",
+    "options": [
+      {
+        "code": "pay",
+        "label": "우리 집만 다 낸다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 1,
+          "mind.own": 1,
+          "sector.energy": 1
+        },
+        "statDeltas": {
+          "courage": 3,
+          "insight": -3
+        },
+        "note": "배우자가 \"처가는?\" 하고 물었다",
+        "amount": -8000000
+      },
+      {
+        "code": "both",
+        "label": "양가 모두 챙긴다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.bold": 1,
+          "mind.own": 1,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "courage": 5,
+          "patience": 2
+        },
+        "note": "공평하게, 그리고 비싸게",
+        "amount": -12000000
+      },
+      {
+        "code": "half",
+        "label": "형제와 반반 낸다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.crowd": 1,
+          "sector.food": 1
+        },
+        "statDeltas": {
+          "insight": 4,
+          "conviction": 2
+        },
+        "note": "혼자 지지 않았다",
+        "amount": -4000000
+      },
+      {
+        "code": "loan",
+        "label": "부모님 명의 대출을 권한다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.bio": 1
+        },
+        "statDeltas": {
+          "conviction": 4,
+          "patience": -2
+        },
+        "note": "내 돈은 지켰다",
+        "outcomes": [
+          {
+            "weight": 60,
+            "amount": 0,
+            "note": "부모님이 알아서 갚으셨다."
+          },
+          {
+            "weight": 40,
+            "amount": -2000000,
+            "statDeltas": {
+              "insight": -2
+            },
+            "note": "이자는 결국 우리가 냈다."
+          }
+        ]
+      }
+    ]
   }
 ]

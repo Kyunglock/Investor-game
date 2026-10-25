@@ -399,6 +399,8 @@ class DefaultEventService implements EventService {
     boolean working = context.jobStartDay() != null && !context.retired();
     return content.adultTraits().stream()
         .filter(t -> working || !t.job())
+        // 양가 부모 장면은 결혼한 뒤에만 (decisions.md 76번).
+        .filter(t -> context.married() || !t.married())
         .filter(t -> used.stream().noneMatch(u -> t.code().equals(u.definitionCode())))
         .toList();
   }
