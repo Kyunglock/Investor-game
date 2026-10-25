@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 class JdbcHouseholdService implements HouseholdService {
 
   private static final long PERCENT = 100;
-  private static final int CHILD_FREE_FROM = 23;
+  private static final int ADULT_FROM = 23;
 
   private final JdbcClient jdbc;
   private final Clock clock;
@@ -52,10 +52,14 @@ class JdbcHouseholdService implements HouseholdService {
   @Transactional(readOnly = true)
   public HouseholdView get(UUID gameId) {
     State state = state(gameId);
-    List<Integer> children =
-        jdbc.sql("SELECT birth_day FROM household_child WHERE game_id = :gameId ORDER BY seq")
+    List<HouseholdView.Child> children =
+        jdbc.sql(
+                """
+                SELECT seq, birth_day, leave_day FROM household_child
+                WHERE game_id = :gameId ORDER BY seq
+                """)
             .param("gameId", gameId)
-            .query(Integer.class)
+            .query(HouseholdView.Child.class)
             .list();
     return new HouseholdView(
         state.marriedDay() != null, state.marriedDay(), children, state.retiredDay());
@@ -82,7 +86,7 @@ class JdbcHouseholdService implements HouseholdService {
 
   @Override
   @Transactional
-  public int addChild(UUID gameId, int gameDay) {
+  public int addChild(UUID gameId, int gameDay, int leaveAge) {
     state(gameId);
     int seq =
         jdbc.sql("SELECT COALESCE(MAX(seq), 0) + 1 FROM household_child WHERE game_id = :gameId")
@@ -91,12 +95,13 @@ class JdbcHouseholdService implements HouseholdService {
             .single();
     jdbc.sql(
             """
-            INSERT INTO household_child (game_id, seq, birth_day)
-            VALUES (:gameId, :seq, :day)
+            INSERT INTO household_child (game_id, seq, birth_day, leave_day)
+            VALUES (:gameId, :seq, :day, :leaveDay)
             """)
         .param("gameId", gameId)
         .param("seq", seq)
         .param("day", gameDay)
+        .param("leaveDay", gameDay + leaveAge * calendar.daysPerYear())
         .update();
     return seq;
   }
@@ -121,8 +126,10 @@ class JdbcHouseholdService implements HouseholdService {
     HouseholdView view = get(gameId);
     long base = view.married() ? properties.livingCouple() : properties.livingSingle();
     long children = 0;
-    for (int birthDay : view.childBirthDays()) {
-      children += childCost((gameDay - birthDay) / calendar.daysPerYear());
+    for (HouseholdView.Child child : view.children()) {
+      if (!child.leftBy(gameDay)) {
+        children += childCost((gameDay - child.birthDay()) / calendar.daysPerYear());
+      }
     }
     return inflate(base + children, gameDay);
   }
@@ -177,10 +184,10 @@ class JdbcHouseholdService implements HouseholdService {
     if (age <= 18) {
       return cost.toAge18();
     }
-    if (age < CHILD_FREE_FROM) {
+    if (age < ADULT_FROM) {
       return cost.toAge22();
     }
-    return 0;
+    return cost.adult();
   }
 
   @Override

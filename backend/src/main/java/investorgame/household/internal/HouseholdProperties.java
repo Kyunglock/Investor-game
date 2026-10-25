@@ -26,6 +26,6 @@ public record HouseholdProperties(
     int retireAge,
     int startAge) {
 
-  /** 자녀 나이 구간별 월 비용. 23세 이상은 0. */
-  public record ChildCost(long toAge6, long toAge12, long toAge18, long toAge22) {}
+  /** 자녀 나이 구간별 월 비용. adult는 23세부터 독립해 나갈 때까지, 나간 뒤는 0 (decisions.md 68번). */
+  public record ChildCost(long toAge6, long toAge12, long toAge18, long toAge22, long adult) {}
 }

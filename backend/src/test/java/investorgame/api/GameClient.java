@@ -68,6 +68,10 @@ final class GameClient {
     return json(result);
   }
 
+  ResultActions quitRaw(String gameId) throws Exception {
+    return mvc.perform(post("/api/games/{gameId}/quit", gameId).cookie(session));
+  }
+
   ResultActions chooseRaw(String gameId, String eventId, String option) throws Exception {
     return chooseBody(gameId, eventId, "{\"option\":\"" + option + "\"}");
   }

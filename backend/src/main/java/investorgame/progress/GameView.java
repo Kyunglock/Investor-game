@@ -101,7 +101,8 @@ public record GameView(
       boolean retired,
       long pension) {}
 
-  public record Child(int age) {}
+  /** leftHome: 독립해서 집을 나갔다 (decisions.md 68번). 그 뒤로는 양육비가 들지 않고 수첩 사진에도 없다. */
+  public record Child(int age, boolean leftHome) {}
 
   /** kind: JOB, TRAIT, OFFER, LIFE, NEWS. 뉴스가 아니면 sector, stock, hint, sway, spark는 null이다. */
   public record PendingEvent(

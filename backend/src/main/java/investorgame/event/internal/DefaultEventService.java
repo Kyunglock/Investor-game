@@ -52,6 +52,9 @@ class DefaultEventService implements EventService {
   static final String MARRIAGE = "marriage";
   static final String CHILD = "child";
 
+  /** 자녀 결혼 선택의 정의 코드: "wedding:" + 자녀 순번 (decisions.md 68번). */
+  static final String WEDDING_PREFIX = "wedding:";
+
   /** 직업 선택 행의 definition_code: null이면 첫 선택, RETRY는 기다린 뒤, REHIRE는 실직 뒤. 문구가 달라진다. */
   static final String JOB_RETRY = "retry";
 
@@ -173,11 +176,14 @@ class DefaultEventService implements EventService {
           }
           case OFFER -> new ChoiceTicket.Offer(ACCEPT.equals(optionCode));
           case LIFE ->
-              new ChoiceTicket.Life(
-                  MARRIAGE.equals(row.definitionCode())
-                      ? ChoiceTicket.LifeKind.MARRIAGE
-                      : ChoiceTicket.LifeKind.CHILD,
-                  ACCEPT.equals(optionCode));
+              row.definitionCode().startsWith(WEDDING_PREFIX)
+                  ? new ChoiceTicket.ChildWedding(
+                      weddingSeq(row.definitionCode()), weddingShareBp(optionCode))
+                  : new ChoiceTicket.Life(
+                      MARRIAGE.equals(row.definitionCode())
+                          ? ChoiceTicket.LifeKind.MARRIAGE
+                          : ChoiceTicket.LifeKind.CHILD,
+                      ACCEPT.equals(optionCode));
           case NEWS -> new ChoiceTicket.News();
           case SHAKE -> new ChoiceTicket.Shake();
           case LEVERAGE ->
@@ -412,14 +418,45 @@ class DefaultEventService implements EventService {
     candidates.add(new Candidate(EventKind.OFFER, day));
   }
 
-  /** 결혼은 27~31세에 처음 묻고 거절하면 2년 뒤, 자녀는 결혼 1~2년 뒤부터 2~3년 간격으로 셋까지 (경제 개편 설계 7.3절). */
+  /** 결혼·자녀·자녀 결혼 가운데 올 수 있는 것을 모두 후보로 넣는다. 어느 것이 뜰지는 만들 때 가장 이른 것으로 정한다. */
   private void lifeCandidates(
       List<EventRow> rows,
       SchedulingContext context,
       SeededRandom random,
       List<Candidate> candidates) {
+    for (LifeDue due : lifeDues(rows, context, random)) {
+      candidates.add(new Candidate(EventKind.LIFE, due.day()));
+    }
+  }
+
+  /** 생활 선택 하나가 올 날. code는 marriage·child·wedding:n. */
+  private record LifeDue(String code, int day) {}
+
+  /** 가장 이른 생활 선택. 같은 날이면 결혼·자녀가 자녀 결혼보다 먼저다. */
+  private String lifeDefinition(
+      List<EventRow> rows, SchedulingContext context, SeededRandom random) {
+    return lifeDues(rows, context, random).stream()
+        .min(Comparator.comparingInt(LifeDue::day))
+        .map(LifeDue::code)
+        .orElseThrow();
+  }
+
+  /**
+   * 결혼은 27~31세에 처음 묻고 거절하면 2년 뒤, 자녀는 결혼 1~2년 뒤부터 2~3년 간격으로 셋까지 (경제 개편 설계 7.3절). 자녀가 독립해 나간 뒤 2~5년이면
+   * 그 아이의 결혼 선택이 온다 (decisions.md 68번). 아이마다 한 번이다.
+   */
+  private List<LifeDue> lifeDues(
+      List<EventRow> rows, SchedulingContext context, SeededRandom random) {
+    List<LifeDue> dues = new ArrayList<>();
     EventProperties.LifeSettings life = properties.life();
     int year = calendar.daysPerYear();
+    for (int i = 0; i < context.childLeaveDays().size(); i++) {
+      int seq = i + 1;
+      if (ofKind(rows, EventKind.LIFE, WEDDING_PREFIX + seq).isEmpty()) {
+        int years = roll(random, life.childWeddingGapYears(), "WEDDING", seq);
+        dues.add(new LifeDue(WEDDING_PREFIX + seq, context.childLeaveDays().get(i) + years * year));
+      }
+    }
     if (!context.married()) {
       List<EventRow> asked = ofKind(rows, EventKind.LIFE, MARRIAGE);
       int day =
@@ -431,7 +468,7 @@ class DefaultEventService implements EventService {
                   context)
               : last(asked).occursDay() + life.marriageRetryYears() * year;
       if (ageAt(day, context) <= life.marriageLastAge()) {
-        candidates.add(new Candidate(EventKind.LIFE, day));
+        dues.add(new LifeDue(MARRIAGE, day));
       }
     } else if (context.childrenCount() < life.maxChildren() && context.marriedDay() != null) {
       List<EventRow> asked = ofKind(rows, EventKind.LIFE, CHILD);
@@ -442,9 +479,22 @@ class DefaultEventService implements EventService {
           random.forKey("event", "life", "child", asked.size()).nextInt(gap.min(), gap.max() + 1);
       int day = base + years * year;
       if (ageAt(day, context) <= life.childLastAge()) {
-        candidates.add(new Candidate(EventKind.LIFE, day));
+        dues.add(new LifeDue(CHILD, day));
       }
     }
+    return dues;
+  }
+
+  static int weddingSeq(String definitionCode) {
+    return Integer.parseInt(definitionCode.substring(WEDDING_PREFIX.length()));
+  }
+
+  private static int weddingShareBp(String optionCode) {
+    return switch (optionCode) {
+      case ChoiceTicket.ChildWedding.FULL -> 10_000;
+      case ChoiceTicket.ChildWedding.HALF -> 5_000;
+      default -> 0;
+    };
   }
 
   /** 보유 종목이 있을 때만: 마지막 흔들림(없으면 투자 시작일) + 간격. 어떤 종목이 흔들리는지는 만들 때 뽑는다 (decisions.md 33번). */
@@ -623,14 +673,21 @@ class DefaultEventService implements EventService {
       }
       case OFFER ->
           simple(id, seq, EventKind.OFFER, null, candidate.day(), List.of(ACCEPT, DECLINE));
-      case LIFE ->
-          simple(
-              id,
-              seq,
-              EventKind.LIFE,
-              context.married() ? CHILD : MARRIAGE,
-              candidate.day(),
-              List.of(ACCEPT, DECLINE));
+      case LIFE -> {
+        String code = lifeDefinition(rows, context, random);
+        yield simple(
+            id,
+            seq,
+            EventKind.LIFE,
+            code,
+            candidate.day(),
+            code.startsWith(WEDDING_PREFIX)
+                ? List.of(
+                    ChoiceTicket.ChildWedding.FULL,
+                    ChoiceTicket.ChildWedding.HALF,
+                    ChoiceTicket.ChildWedding.NONE)
+                : List.of(ACCEPT, DECLINE));
+      }
       case NOTICE -> notice(id, seq, candidate.day(), context, random);
       case NEWS -> news(id, seq, rows, candidate.day(), context, random, hints);
       case SHAKE -> shake(id, seq, candidate.day(), context, random);

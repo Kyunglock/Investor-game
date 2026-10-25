@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Game } from '../../api/client'
 import { ageAt, secondsPerYear } from './clock'
 import { yearOf } from './labels'
@@ -13,6 +14,8 @@ interface Props {
   onPause: () => void
   onResume: () => void
   onRestart: () => void
+  /** 투자 인생을 여기서 끝낸다 (decisions.md 68번). 두 번 눌러 확인한다 */
+  onQuit: () => void
 }
 
 const buttonBase =
@@ -27,9 +30,12 @@ export function TopBar({
   onPause,
   onResume,
   onRestart,
+  onQuit,
 }: Props) {
   // 0.1초마다 바뀌는 day는 여기서만 구독한다. App이 구독하면 진행 화면 전체가 틱마다 다시 그려진다.
   const day = useGameStore((s) => s.day)
+  // 끝내기는 한 번 누르면 확인을 묻고, 다시 누르면 끝낸다. 다른 버튼을 누르면 묻기를 거둔다.
+  const [confirmQuit, setConfirmQuit] = useState(false)
   const age = game ? ageAt(game.startAge, day, game.daysPerYear) : null
   const progress =
     game && age ? Math.min(1, (age.years - game.startAge) / (game.endAge - game.startAge)) : 0
@@ -55,11 +61,37 @@ export function TopBar({
                 type="button"
                 className={buttonBase}
                 disabled={controlsDisabled}
-                onClick={running ? onPause : onResume}
+                onClick={() => {
+                  setConfirmQuit(false)
+                  ;(running ? onPause : onResume)()
+                }}
               >
                 {running ? '❚❚ 멈춤' : '▶ 계속'}
               </button>
-              <button type="button" className={buttonBase} onClick={onRestart}>
+              <button
+                type="button"
+                className={`${buttonBase} ${confirmQuit ? 'border-red-pen text-red-pen' : ''}`}
+                disabled={controlsDisabled}
+                onClick={() => {
+                  if (confirmQuit) {
+                    setConfirmQuit(false)
+                    onQuit()
+                  } else {
+                    setConfirmQuit(true)
+                  }
+                }}
+                data-testid="quit-button"
+              >
+                {confirmQuit ? '정말 끝낼까요?' : '여기서 끝내기'}
+              </button>
+              <button
+                type="button"
+                className={buttonBase}
+                onClick={() => {
+                  setConfirmQuit(false)
+                  onRestart()
+                }}
+              >
                 다시 태어나기
               </button>
             </div>

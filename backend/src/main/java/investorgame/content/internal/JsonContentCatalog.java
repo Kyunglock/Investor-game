@@ -4,6 +4,7 @@ import investorgame.common.Hint;
 import investorgame.common.StatCodes;
 import investorgame.content.AnalysisText;
 import investorgame.content.CareerDefinition;
+import investorgame.content.ChildWeddingText;
 import investorgame.content.ContentCatalog;
 import investorgame.content.CrisisDefinition;
 import investorgame.content.HomeRegion;
@@ -299,6 +300,11 @@ class JsonContentCatalog implements ContentCatalog {
       case "child" -> life.child();
       default -> throw new IllegalArgumentException("알 수 없는 생활 이벤트: " + kind);
     };
+  }
+
+  @Override
+  public ChildWeddingText childWeddingText() {
+    return life.childWedding();
   }
 
   @Override
@@ -610,6 +616,13 @@ class JsonContentCatalog implements ContentCatalog {
 
   private void validateLife() {
     require(life.marriage() != null && life.child() != null, "결혼·자녀 문구가 없다");
+    require(
+        life.childWedding() != null
+            && life.childWedding().title().contains("{child}")
+            && life.childWedding().fullLabel() != null
+            && life.childWedding().halfLabel() != null
+            && life.childWedding().noneLabel() != null,
+        "자녀 결혼 문구가 없거나 {child} 자리가 없다");
     require(life.notices() != null && !life.notices().isEmpty(), "알림 이벤트가 없다");
     for (NoticeDefinition notice : life.notices()) {
       require(notice.weight() > 0, "알림 가중치는 0보다 커야 한다: " + notice.code());
@@ -700,7 +713,11 @@ class JsonContentCatalog implements ContentCatalog {
       List<NamedCode> sectors,
       List<InvestorType> investorTypes) {}
 
-  record Life(LifeText marriage, LifeText child, List<NoticeDefinition> notices) {}
+  record Life(
+      LifeText marriage,
+      LifeText child,
+      ChildWeddingText childWedding,
+      List<NoticeDefinition> notices) {}
 
   record Crises(List<CrisisDefinition> scenarios, List<String> commonOmens) {}
 

@@ -1,6 +1,7 @@
 package investorgame.event.internal;
 
 import investorgame.content.CareerDefinition;
+import investorgame.content.ChildWeddingText;
 import investorgame.content.ContentCatalog;
 import investorgame.content.JobDefinition;
 import investorgame.content.LifeText;
@@ -74,6 +75,20 @@ class EventRenderer {
                 new EventView.Option(DefaultEventService.DECLINE, offer.declineLabel())));
       }
       case LIFE -> {
+        if (row.definitionCode().startsWith(DefaultEventService.WEDDING_PREFIX)) {
+          ChildWeddingText text = content.childWeddingText();
+          String child = ordinal(DefaultEventService.weddingSeq(row.definitionCode()));
+          yield view(
+              row,
+              text.title().replace("{child}", child),
+              text.body().replace("{child}", child),
+              null,
+              null,
+              List.of(
+                  new EventView.Option(ChoiceTicket.ChildWedding.FULL, text.fullLabel()),
+                  new EventView.Option(ChoiceTicket.ChildWedding.HALF, text.halfLabel()),
+                  new EventView.Option(ChoiceTicket.ChildWedding.NONE, text.noneLabel())));
+        }
         LifeText text = content.lifeText(row.definitionCode());
         yield view(
             row,
@@ -178,6 +193,13 @@ class EventRenderer {
         .filter(n -> n.code().equals(code))
         .findFirst()
         .orElseThrow(() -> new IllegalStateException("콘텐츠에 없는 뉴스: " + code));
+  }
+
+  private static final List<String> ORDINALS = List.of("첫째", "둘째", "셋째", "넷째", "다섯째");
+
+  /** 자녀 순번을 부르는 말. 첫째·둘째·셋째. */
+  static String ordinal(int seq) {
+    return seq >= 1 && seq <= ORDINALS.size() ? ORDINALS.get(seq - 1) : seq + "번째";
   }
 
   private EventView view(

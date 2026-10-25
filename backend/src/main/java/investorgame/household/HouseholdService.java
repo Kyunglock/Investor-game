@@ -16,13 +16,13 @@ public interface HouseholdService {
   /** 이미 결혼했으면 InvalidRequestException. */
   void marry(UUID gameId, int gameDay);
 
-  /** 자녀를 더한다. 1부터 시작하는 순번을 돌려준다. */
-  int addChild(UUID gameId, int gameDay);
+  /** 자녀를 더한다. 1부터 시작하는 순번을 돌려준다. leaveAge는 아이가 독립해 집을 나가는 나이(세) (decisions.md 68번). */
+  int addChild(UUID gameId, int gameDay, int leaveAge);
 
   /** 은퇴. 이미 은퇴했으면 아무것도 하지 않는다. */
   void retire(UUID gameId, int gameDay);
 
-  /** 생활비(1인/부부) + 자녀 나이별 비용. 물가는 기준 나이부터 연 복리. */
+  /** 생활비(1인/부부) + 자녀 나이별 비용(독립하면 0). 물가는 기준 나이부터 연 복리. */
   long monthlyExpense(UUID gameId, int gameDay);
 
   /** 배우자 소득. 미혼이거나 은퇴 뒤면 0. 물가 반영. */

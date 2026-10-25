@@ -116,6 +116,17 @@ public record ChoiceTicket(
   /** 결혼·자녀 선택. 수락이면 진행이 가계와 자산에 반영한다. */
   public record Life(LifeKind kind, boolean accepted) implements Effect {}
 
+  /**
+   * 자녀 결혼 (decisions.md 68번). 그때 물가의 결혼 비용 가운데 shareBp(만분율)만큼 대준다: 전부 10000, 절반 5000, 안 대주면 0.
+   *
+   * @param seq 결혼하는 자녀의 순번(1부터)
+   */
+  public record ChildWedding(int seq, int shareBp) implements Effect {
+    public static final String FULL = "full";
+    public static final String HALF = "half";
+    public static final String NONE = "none";
+  }
+
   public enum LifeKind {
     MARRIAGE,
     CHILD

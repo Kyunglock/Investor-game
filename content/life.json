@@ -11,6 +11,13 @@
     "acceptLabel": "아이를 가진다",
     "declineLabel": "지금은 아니다"
   },
+  "childWedding": {
+    "title": "{child}가 결혼한다",
+    "body": "{child}가 결혼 날짜를 잡았다. 요즘 결혼 비용은 만만치 않다. 얼마나 보태 줄지 정해야 한다. 전부 대주면 노후 자금이 줄고, 안 대주면 아이는 대출을 안고 시작한다.",
+    "fullLabel": "전부 대준다",
+    "halfLabel": "절반만 보탠다",
+    "noneLabel": "알아서 하라고 한다"
+  },
   "notices": [
     {
       "code": "condolence",

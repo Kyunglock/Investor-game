@@ -69,11 +69,14 @@ class GameFlowTest {
               case "JOB" -> richestJob(game);
               // 빚투를 매번 받으면 떨어지는 종목에 계속 빚을 얹다가 파산한다(그게 정상이다). 이 검사는 70세까지의 흐름이 목적이라 거절한다.
               case "LEVERAGE" -> "PASS";
+              // 자녀 결혼(선택지 full·half·none, decisions.md 68번)은 절반만 보탠다. 결혼·자녀는 하나까지만.
               case "LIFE" ->
-                  game.read("$.household.children.length()", Integer.class) >= 1
-                          && game.read("$.household.married", Boolean.class)
-                      ? "decline"
-                      : "accept";
+                  ((List<?>) pending.get("options")).toString().contains("half")
+                      ? "half"
+                      : game.read("$.household.children.length()", Integer.class) >= 1
+                              && game.read("$.household.married", Boolean.class)
+                          ? "decline"
+                          : "accept";
               default -> GameClient.firstOpen(game);
             };
         DocumentContext result = client.choose(gameId, (String) pending.get("eventId"), option);
