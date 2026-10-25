@@ -43,7 +43,7 @@ public interface AssetService {
     /** 지출. 현금이 모자라면 모자란 만큼 빚. EXPENSE는 같은 날 한 번만, LIFE_COST는 여러 번. */
     SpendResult spend(UUID gameId, String kind, long amount, int gameDay, UUID eventId);
 
-    /** 빚에 월 이자(asset.debt-interest-bp). 빚이 없거나 같은 날 이미 붙였으면 accrued=false. */
+    /** 빚에 월 이자(연이자 asset.debt-annual-interest-bp의 1/12). 빚이 없거나 같은 날 이미 붙였으면 accrued=false. */
     InterestResult accrueInterest(UUID gameId, int gameDay);
 
     /** Σ 수량 × 가격. */
@@ -108,7 +108,7 @@ public record InterestResult(boolean accrued, long interest, long debtAfter) {}
 
 - 수입(`credit`)은 빚이 있으면 먼저 갚고 남는 만큼 현금. `SALARY`, `SPOUSE_INCOME`, `SEVERANCE`는 `(gameId, gameDay, kind)`당 한 번 (재시도 안전). `WINDFALL`(경품 등)은 제한 없음.
 - 지출(`spend`)은 현금이 모자라면 **모자란 만큼 빚**(마이너스 통장). 현금은 음수가 되지 않는다. `EXPENSE`(생활비)는 같은 날 한 번, `LIFE_COST`(결혼·출산·알림)는 여러 번 가능.
-- 이자(`accrueInterest`)는 빚 × `asset.debt-interest-bp` / 10,000. 같은 날 한 번. 빚 0이면 `accrued=false`.
+- 이자(`accrueInterest`)는 빚 × `asset.debt-annual-interest-bp` / 12 / 10,000 (연이자의 1/12, decisions.md 72번). 같은 날 한 번. 빚 0이면 `accrued=false`.
 
 ### 4.7 총자산
 
@@ -135,7 +135,7 @@ public record InterestResult(boolean accrued, long interest, long debtAfter) {}
 | `asset.initial-cash.min-unit` | 1 | 초기 현금 최소 단위 수 |
 | `asset.initial-cash.max-unit` | 50 | 초기 현금 최대 단위 수 |
 | `asset.initial-cash.unit` | 1,000,000 | 초기 현금 단위(원) |
-| `asset.debt-interest-bp` | 100 | 빚의 월 이자 (1%) |
+| `asset.debt-annual-interest-bp` | 500 | 빚의 연이자 (5%). 매월 1/12 |
 | `progress.news-buy-ratio-bp` | 3000 | 뉴스 매수의 기본 수량이 쓰는 현금 비율 (진행 설정). 사용자가 선택에 수량을 같이 보내면 그 수량을 쓴다 |
 
 ## 6. DB
