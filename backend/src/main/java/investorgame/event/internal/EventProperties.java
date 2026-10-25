@@ -48,7 +48,8 @@ public record EventProperties(
    * @param interestWeightPercent 관심 섹터 뉴스의 가중치 배율. 300이면 3배
    * @param noRepeatWindow 같은 뉴스 정의가 다시 나오지 않는 최근 개수
    */
-  public record NewsSettings(int interestWeightPercent, int noRepeatWindow) {}
+  /** yearlyChanceBp: 해마다 뉴스가 한 번 나올 확률(만분율). 나머지 해는 없다 (decisions.md 80번). */
+  public record NewsSettings(int interestWeightPercent, int noRepeatWindow, int yearlyChanceBp) {}
 
   /**
    * 결혼·자녀 이벤트 시점 (경제 개편 설계 7.3절). 나이는 세, 간격은 년.
@@ -110,5 +111,5 @@ public record EventProperties(
   public record Refuse(int unlucky, int lucky) {}
 
   /** 단기는 뉴스가 자주·크게, 장기는 드물게 (decisions.md 3번). */
-  public record StyleSettings(Range newsGapDays, int magnitudePercent) {}
+  public record StyleSettings(int magnitudePercent) {}
 }
