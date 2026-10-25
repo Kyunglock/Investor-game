@@ -146,6 +146,8 @@ class GameFlowTest {
     for (DocumentContext outcome : newsOutcomes) {
       assertThat(outcome.read("$.outcome.price.direction", String.class)).isIn("UP", "DOWN");
       assertThat(outcome.read("$.outcome.trade.status", String.class)).isNotBlank();
+      // 뉴스 결과 뒤에는 안목 한마디가 붙는다 (decisions.md 73번).
+      assertThat(outcome.read("$.outcome.review", String.class)).isNotBlank();
     }
     long deviations =
         newsOutcomes.stream()
