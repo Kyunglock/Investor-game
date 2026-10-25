@@ -319,8 +319,8 @@ function WorldBrief({ game }: { game: Game }) {
         <p className="mt-1 text-faint">아직 들린 소식이 없다.</p>
       ) : (
         <ul className="mt-1 text-muted">
-          {news.map((h, i) => (
-            <li key={`${h.day}-${i}`} data-testid="brief-headline">
+          {news.map((h) => (
+            <li key={`${h.day}-${h.text}`} data-testid="brief-headline">
               <span className="font-mono-num text-[11px] text-faint">{ageOf(h.day)}세 </span>
               <span className={h.kind === 'CRISIS' ? 'text-wine' : ''}>{h.text}</span>
             </li>
