@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { LogEntry } from '../../api/client'
 import {
-  briefIndicators,
   indicatorChange,
   indicatorValue,
   insightGauge,
@@ -134,25 +133,5 @@ describe('indicator 표기', () => {
     expect(indicatorChange('index', 1100, 1000)).toBe('+10.0%')
     expect(indicatorChange('won', 1200, 1300)).toBe('−7.7%')
     expect(indicatorChange('won', 1200, 0)).toBe('—')
-  })
-})
-
-describe('briefIndicators (decisions.md 79번)', () => {
-  it('선호 코드 순으로 다섯을 고르고 모자라면 나머지로 채운다', () => {
-    const all = ['index', 'mortgage', 'seoul', 'cpi', 'fx', 'debt', 'sentiment', 'turnover'].map(
-      (code) => ({ code }),
-    )
-    expect(briefIndicators(all).map((i) => i.code)).toEqual([
-      'index',
-      'mortgage',
-      'cpi',
-      'fx',
-      'sentiment',
-    ])
-    expect(briefIndicators([{ code: 'seoul' }, { code: 'fx' }]).map((i) => i.code)).toEqual([
-      'fx',
-      'seoul',
-    ])
-    expect(briefIndicators([])).toEqual([])
   })
 })

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { Game, Indicator, MarketOverview, PendingEvent } from '../../api/client'
-import { briefIndicators, indicatorChange, indicatorValue } from './analysis'
+import type { Game, NewsItem, PendingEvent } from '../../api/client'
 import { won, yearOf } from './labels'
 import {
   BUY_PERCENTS,
@@ -287,53 +286,47 @@ function tone(bp: number): string {
   return bp > 0 ? 'text-up' : bp < 0 ? 'text-down' : ''
 }
 
+/** 세상사에 보이는 소식 수 (decisions.md 92번). */
+const WORLD_SHOWN = 5
+
 /**
- * 뉴스 카드의 세계 시황 (decisions.md 79번): 매매창 시황 탭과 같은 재료(지표·경제 신문)에서 지표 다섯 줄과 최근 기사 둘. 전조처럼 방향을 말하지 않고
- * 지금 세상이 어떤지만 보인다. 카드가 열릴 때 이 달 시황을 받는다.
+ * 뉴스 카드의 세상사 (decisions.md 79·92번): 매매창 경제 신문과 같은 재료에서 최근 소식 다섯. 지표는 보이지 않는다. 전조·기사·회고를 구분 없이 최근
+ * 순으로 보여 주고, 접고 펼칠 수 있다(접으면 다음 카드에서도 접힌 채). 카드가 열릴 때 이 달 시황을 받는다.
  */
 function WorldBrief({ game }: { game: Game }) {
   const overview = useGameStore((s) => s.overview)
-  const loadOverview = useGameStore((s) => s.loadOverview)
+  const open = useGameStore((s) => s.worldOpen)
+  const { loadOverview, setWorldOpen } = useGameStore.getState()
   useEffect(() => {
     void loadOverview()
   }, [loadOverview])
-  const lines: Indicator[] = overview ? briefIndicators<Indicator>(overview.indicators) : []
-  const headlines = overview ? [...overview.newspaper].reverse().slice(0, 2) : []
+  const news: NewsItem[] = overview ? [...overview.newspaper].reverse().slice(0, WORLD_SHOWN) : []
   const ageOf = (day: number) => game.startAge + Math.floor(day / game.daysPerYear)
   return (
-    <section
+    <details
       className="mt-2.5 border-l-[3px] border-line px-2.5 py-1.5 text-xs"
+      open={open}
+      onToggle={(e) => setWorldOpen(e.currentTarget.open)}
       data-testid="world-brief"
       data-loaded={overview != null}
     >
-      <p className="text-[10px] text-faint">세계 시황</p>
-      {overview ? (
-        <>
-          <ul className="mt-1 grid grid-cols-1 gap-x-3 gap-y-0.5 sm:grid-cols-2">
-            {lines.map((i) => (
-              <li key={i.code} className="flex justify-between gap-2" data-testid="brief-indicator">
-                <span className="text-muted">{i.name}</span>
-                <span className="font-mono-num">
-                  {indicatorValue(i.unit, i.value)}{' '}
-                  <span className="text-faint">{indicatorChange(i.unit, i.value, i.yearAgo)}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          {headlines.length > 0 && (
-            <ul className="mt-1.5 border-t border-line-soft pt-1.5 text-muted">
-              {headlines.map((h: MarketOverview['newspaper'][number]) => (
-                <li key={`${h.day}-${h.text}`} data-testid="brief-headline">
-                  <span className="font-mono-num text-[11px] text-faint">{ageOf(h.day)}세 </span>
-                  {h.text}
-                </li>
-              ))}
-            </ul>
-          )}
-        </>
+      <summary className="cursor-pointer text-[11px] text-faint" data-testid="world-toggle">
+        세상사{overview ? ` ${news.length}` : ''}
+      </summary>
+      {overview == null ? (
+        <p className="mt-1 text-faint">소식을 받는 중…</p>
+      ) : news.length === 0 ? (
+        <p className="mt-1 text-faint">아직 들린 소식이 없다.</p>
       ) : (
-        <p className="mt-1 text-faint">시황을 받는 중…</p>
+        <ul className="mt-1 text-muted">
+          {news.map((h, i) => (
+            <li key={`${h.day}-${i}`} data-testid="brief-headline">
+              <span className="font-mono-num text-[11px] text-faint">{ageOf(h.day)}세 </span>
+              <span className={h.kind === 'CRISIS' ? 'text-wine' : ''}>{h.text}</span>
+            </li>
+          ))}
+        </ul>
       )}
-    </section>
+    </details>
   )
 }
