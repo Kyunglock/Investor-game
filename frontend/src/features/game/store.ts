@@ -42,6 +42,8 @@ interface GameState {
   marketOpen: boolean
   /** 매매창의 탭: 시황, 보유, 섹터 코드. 처음은 보유 종목이 있으면 보유, 없으면 시황 (매매창 설계 2절). */
   marketTab: string
+  /** 뉴스 카드의 세상사가 펼쳐져 있는가. 접으면 다음 카드에서도 접힌 채로 (decisions.md 92번). */
+  worldOpen: boolean
   selectedStock: string | null
   /** 시황. 매매창을 열 때 받는다. 달이 바뀌면 다시 받는다. */
   overview: MarketOverview | null
@@ -76,6 +78,7 @@ interface GameState {
   /** 시황(지표·경제 신문)을 받는다. 매매창과 뉴스 카드가 쓴다 (decisions.md 79번). 이 달 것을 이미 받았으면 그대로 */
   loadOverview: () => Promise<void>
   setMarketTab: (tab: string) => void
+  setWorldOpen: (open: boolean) => void
   selectStock: (code: string) => Promise<void>
   trade: (side: TradeSide, quantity: number) => Promise<void>
   dismissNotice: () => void
@@ -187,6 +190,7 @@ export const useGameStore = create<GameState>((set, get) => {
     choosing: false,
     marketOpen: false,
     marketTab: MACRO_TAB,
+    worldOpen: true,
     selectedStock: null,
     overview: null,
     analyses: {},
@@ -362,6 +366,8 @@ export const useGameStore = create<GameState>((set, get) => {
     },
 
     setMarketTab: (tab) => set({ marketTab: tab }),
+
+    setWorldOpen: (open) => set({ worldOpen: open }),
 
     selectStock: async (code) => {
       set({ selectedStock: code, tradeOutcome: null })
