@@ -9,6 +9,7 @@ import investorgame.content.JobDefinition;
 import investorgame.content.LifeText;
 import investorgame.content.NewsDefinition;
 import investorgame.content.NoticeDefinition;
+import investorgame.content.OutingText;
 import investorgame.content.ShakeDefinition;
 import investorgame.content.SpouseText;
 import investorgame.content.TraitDefinition;
@@ -107,6 +108,22 @@ class EventRenderer {
                   new EventView.Option(ChoiceTicket.FamilyTrip.NORMAL, text.normalLabel()),
                   new EventView.Option(ChoiceTicket.FamilyTrip.CHEAP, text.cheapLabel()),
                   new EventView.Option(ChoiceTicket.FamilyTrip.NONE, text.noneLabel())));
+        }
+        if (row.definitionCode().startsWith(DefaultEventService.OUTING_PREFIX)) {
+          // 아이의 나들이 (decisions.md 87번): 조르는 아이의 순번과 종류가 정의 코드에 있다.
+          OutingText outing = content.outing(DefaultEventService.outingCode(row.definitionCode()));
+          String child = ordinal(DefaultEventService.outingChild(row.definitionCode()));
+          yield view(
+              row,
+              outing.title().replace("{child}", child),
+              outing.body().replace("{child}", child),
+              null,
+              null,
+              List.of(
+                  new EventView.Option(ChoiceTicket.FamilyTrip.LUXURY, outing.luxuryLabel()),
+                  new EventView.Option(ChoiceTicket.FamilyTrip.NORMAL, outing.normalLabel()),
+                  new EventView.Option(ChoiceTicket.FamilyTrip.CHEAP, outing.cheapLabel()),
+                  new EventView.Option(ChoiceTicket.FamilyTrip.NONE, outing.noneLabel())));
         }
         if (row.definitionCode().startsWith(DefaultEventService.MARRIAGE_PREFIX)) {
           // 결혼 상대 소개 (decisions.md 77번): 이름·성격·직업과 월급·돈 습관·인상을 조합한 문장.

@@ -46,6 +46,28 @@ describe('momentForOutcome', () => {
     expect(momentForOutcome(outcome({ kind: 'LIFE' }), game())).toBeNull()
   })
 
+  it('아이의 나들이를 갔으면 놀이동산 그림에 아이가 선다 (decisions.md 87번)', () => {
+    const went: LogEntry = {
+      seq: 4,
+      day: 9000,
+      kind: 'LIFE',
+      payload: { noticeCode: 'kid-outing', title: '놀이동산', amount: -300_000, option: 'normal' },
+    }
+    const withKid = game({
+      log: [went],
+      household: {
+        children: [{ age: 7, leftHome: false, sex: 'F' }],
+      } as unknown as Game['household'],
+    })
+    const m = momentForOutcome(outcome({ kind: 'LIFE' }), withKid)
+    expect(m?.art.vignette).toBe('park')
+    expect(m?.art.figures.map((f) => [f.who, f.sex])).toEqual([
+      ['me', 'F'],
+      ['kid', 'F'],
+    ])
+    expect(momentForNotice(went, withKid)?.art.vignette).toBe('park')
+  })
+
   it('가족 여행을 갔으면 바다 그림, 안 갔으면 없다 (decisions.md 71번)', () => {
     const went: LogEntry = {
       seq: 3,

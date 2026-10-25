@@ -30,6 +30,7 @@ export type VignetteKey =
   | 'rain'
   | 'baby'
   | 'trip'
+  | 'park'
   | 'frugal'
   | 'crash'
   | 'surge'
@@ -211,6 +212,67 @@ export const VIGNETTES: Record<VignetteKey, PixelMap> = {
     rect(c, 47, 5, 10, 1, 'W')
     rect(c, 51, 6, 2, 10, 'd')
     rect(c, 44, 16, 16, 2, 'y')
+  }),
+  // 놀이동산: 관람차와 풍선, 잔디 (decisions.md 87번).
+  park: build((c) => {
+    sky(c, 16)
+    // 관람차: 바퀴 테두리와 살, 곤돌라.
+    const cx = 46
+    const cy = 8
+    const ring: [number, number][] = []
+    for (let t = 0; t < 32; t++) {
+      const a = (t / 32) * Math.PI * 2
+      ring.push([Math.round(cx + Math.cos(a) * 7), Math.round(cy + Math.sin(a) * 6)])
+    }
+    dots(c, 'K', ring)
+    dots(c, 'K', [
+      [cx, cy - 5],
+      [cx, cy - 3],
+      [cx, cy + 3],
+      [cx, cy + 5],
+      [cx - 5, cy],
+      [cx - 3, cy],
+      [cx + 3, cy],
+      [cx + 5, cy],
+      [cx, cy],
+    ])
+    dots(c, 'R', [
+      [cx, cy - 7],
+      [cx + 7, cy],
+      [cx, cy + 7],
+      [cx - 7, cy],
+    ])
+    dots(c, 'y', [
+      [cx + 5, cy - 4],
+      [cx - 5, cy - 4],
+      [cx + 5, cy + 4],
+      [cx - 5, cy + 4],
+    ])
+    rect(c, cx - 2, cy + 7, 1, 9, 'd')
+    rect(c, cx + 2, cy + 7, 1, 9, 'd')
+    // 풍선 셋과 줄.
+    dots(c, 'R', [
+      [8, 3],
+      [9, 3],
+      [8, 4],
+      [9, 4],
+    ])
+    dots(c, 'B', [
+      [12, 2],
+      [13, 2],
+      [12, 3],
+      [13, 3],
+    ])
+    dots(c, 'y', [
+      [10, 5],
+      [11, 5],
+      [10, 6],
+      [11, 6],
+    ])
+    rect(c, 9, 5, 1, 4, 'k')
+    rect(c, 13, 4, 1, 5, 'k')
+    rect(c, 11, 7, 1, 2, 'k')
+    rect(c, 0, 16, SCENE_WIDTH, 4, 'Q')
   }),
   // 긴축: 불 꺼진 방, 책상 위 라면 한 그릇, 벽의 고지서.
   frugal: build((c) => {

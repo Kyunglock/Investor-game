@@ -341,6 +341,32 @@ class DefaultEventServiceTest {
         .isEmpty();
   }
 
+  @Test
+  void 어린_아이가_집에_있으면_1에서_2년마다_나들이를_조른다() {
+    UUID gameId = UUID.randomUUID();
+    int marriedDay = (30 - START_AGE) * YEAR;
+    // 첫째가 32세에 태어나 58세에 독립한다 → 33~45세 사이에는 어린 아이가 집에 있다.
+    SchedulingContext family = lifeWith(marriedDay, List.of((58 - START_AGE) * YEAR), END_DAY);
+    int from = (33 - START_AGE) * YEAR;
+    List<EventView> outings = new ArrayList<>();
+    for (int i = 0; i < 12 && outings.size() < 2; i++) {
+      Optional<EventView> life = nextOf(gameId, family, from, EventKind.LIFE, 13L);
+      if (life.isEmpty()) {
+        break;
+      }
+      if (life.get().options().stream().anyMatch(o -> o.code().equals("luxury"))
+          && life.get().title().contains("첫째")) {
+        outings.add(life.get());
+      }
+      events.complete(gameId, life.get().eventId(), new Completion("none", "none", List.of()));
+      from = life.get().occursDay();
+    }
+    assertThat(outings).as("나들이 제안이 온다 (decisions.md 87번)").isNotEmpty();
+    assertThat(outings.get(0).options())
+        .extracting(EventView.Option::code)
+        .containsExactly("luxury", "normal", "cheap", "none");
+  }
+
   private static boolean isTrip(EventView view) {
     return view.options().stream().anyMatch(o -> o.code().equals("luxury"));
   }

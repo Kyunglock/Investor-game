@@ -138,8 +138,9 @@ public record ChoiceTicket(
    * 가족 여행 제안 (decisions.md 71번). 보통 여행 비용의 몇 배(만분율)를 쓰는가: 초호화 40000, 보통 10000, 당일치기 2000, 안 가면 0.
    *
    * @param proposer 제안한 사람: spouse, parents, child:n
+   * @param outing 아이의 나들이면 그 코드(park·zoo·camp·sports-day, decisions.md 87번), 가족 여행이면 null
    */
-  public record FamilyTrip(String proposer, int costBp) implements Effect {
+  public record FamilyTrip(String proposer, int costBp, String outing) implements Effect {
     public static final String LUXURY = "luxury";
     public static final String NORMAL = "normal";
     public static final String CHEAP = "cheap";

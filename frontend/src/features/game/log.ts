@@ -212,6 +212,21 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
           text: `가족 여행 (${TRIP_LABELS[p.option] ?? p.option}) · ${signedWon(num(p.amount))}`,
         }
       }
+      // 아이의 나들이 (decisions.md 87번).
+      if (p.noticeCode === 'kid-outing' && typeof p.option === 'string') {
+        if (p.option === 'none') {
+          return {
+            ...base,
+            tone: 'life',
+            text: `${str(p.proposer)}의 ${str(p.title)} 조르기를 달랬다.`,
+          }
+        }
+        return {
+          ...base,
+          tone: 'life',
+          text: `${str(p.proposer)}와 ${str(p.title)} (${TRIP_LABELS[p.option] ?? p.option}) · ${signedWon(num(p.amount))}`,
+        }
+      }
       return {
         ...base,
         tone: 'life',
