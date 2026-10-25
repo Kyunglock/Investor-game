@@ -145,9 +145,11 @@ public record CareerDefinition(
       String followUp,
       Integer followUpDays,
       String becomeJob,
-      String text) {
+      String text,
+      String textFamily,
+      Boolean becomeInvestor) {
     public static final Effect NONE =
-        new Effect(0, false, 0, false, 0, 0L, Map.of(), null, 0, null, "");
+        new Effect(0, false, 0, false, 0, 0L, Map.of(), null, 0, null, "", null, false);
 
     public Effect {
       salaryPercent = salaryPercent == null ? 0 : salaryPercent;
@@ -159,6 +161,12 @@ public record CareerDefinition(
       statDeltas = statDeltas == null ? Map.of() : Map.copyOf(statDeltas);
       followUpDays = followUpDays == null ? 0 : followUpDays;
       text = text == null ? "" : text;
+      becomeInvestor = becomeInvestor != null && becomeInvestor;
+    }
+
+    /** 가족(결혼·자녀)이 있으면 textFamily, 없으면 text (decisions.md 83번). */
+    public String textFor(boolean family) {
+      return family && textFamily != null && !textFamily.isBlank() ? textFamily : text;
     }
   }
 }
