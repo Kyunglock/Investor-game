@@ -15,6 +15,7 @@ import investorgame.character.TraitResult;
 import investorgame.common.Action;
 import investorgame.common.Direction;
 import investorgame.common.GameProperties;
+import investorgame.common.Hint;
 import investorgame.common.Phase;
 import investorgame.common.Sex;
 import investorgame.common.error.InvalidRequestException;
@@ -753,6 +754,15 @@ class DefaultProgressService implements ProgressService {
             ticket.occursDay(),
             ticket.eventId());
     long pnl = assets.holdingsValue(gameId, market.prices(gameId)) - before;
+    // 결과 뒤 안목 한마디 (decisions.md 73번): 뉴스에서만, 내 행동이 결과와 맞았는지(good)와 안목 구간으로 고른다.
+    String review =
+        ticket.kind() == EventKind.NEWS
+            ? pick(
+                content.reviewPhrases(
+                    Hint.Detail.of(character.stats().insight()).key(),
+                    reviewGood(resolution.actual(), ticket.truth(), holding)),
+                random.forKey("behavior", "review", ticket.seq()))
+            : null;
 
     List<StatChange> growth =
         characters.grow(
@@ -814,7 +824,8 @@ class DefaultProgressService implements ProgressService {
             pnl,
             softened),
         growthViews,
-        null);
+        null,
+        review);
   }
 
   // ---- 자유 매매 (경제 개편 설계 8절) ----
@@ -908,6 +919,7 @@ class DefaultProgressService implements ProgressService {
             trade,
             null,
             growthViews,
+            null,
             null));
   }
 
@@ -1077,7 +1089,7 @@ class DefaultProgressService implements ProgressService {
             "quantity",
             quantity));
     return new ChoiceOutcome.Outcome(
-        ticket.kind().name(), option, option, List.of(), trade, null, List.of(), message);
+        ticket.kind().name(), option, option, List.of(), trade, null, List.of(), message, null);
   }
 
   private static TraitDefinition.Outcome weightedOutcome(
@@ -1090,6 +1102,19 @@ class DefaultProgressService implements ProgressService {
       }
     }
     return outcomes.getLast();
+  }
+
+  /** 내 행동이 결과와 맞았는가: 샀는데 올랐다, 팔았는데 내렸다, 들고 버텼는데 올랐다, 없이 지켜봤는데 내렸다. */
+  static boolean reviewGood(Action actual, Direction truth, boolean holding) {
+    return switch (actual) {
+      case BUY -> truth == Direction.UP;
+      case SELL -> truth == Direction.DOWN;
+      case HOLD -> holding ? truth == Direction.UP : truth == Direction.DOWN;
+    };
+  }
+
+  private static String pick(List<String> phrases, RandomGenerator rng) {
+    return phrases.isEmpty() ? null : phrases.get(rng.nextInt(phrases.size()));
   }
 
   private static ChoiceOutcome.Outcome simpleOutcome(ChoiceTicket ticket, String message) {
@@ -1106,7 +1131,8 @@ class DefaultProgressService implements ProgressService {
         null,
         null,
         growth,
-        message);
+        message,
+        null);
   }
 
   // ---- 시간 흐름: 매월 1일 (경제 개편 설계 9절) ----

@@ -686,7 +686,8 @@ class HousingFlow {
         null,
         null,
         List.of(),
-        message.toString().trim());
+        message.toString().trim(),
+        null);
   }
 
   /** 이사하면 돌려받는 돈: 보증금(전세사기면 0) − 전세대출. 세입자가 아니면 0. */
