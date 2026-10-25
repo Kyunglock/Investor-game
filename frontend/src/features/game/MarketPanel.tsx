@@ -559,7 +559,7 @@ function OrderBox({
 
       {tradeOutcome && <TradeResultLine game={game} />}
       <p className="mt-3 text-[11px] text-faint">
-        선택은 당신이 하지만, 실행은 당신의 성격이 합니다.
+        매매창의 주문은 성격에 뒤집히지 않습니다. 고른 대로 체결됩니다.
       </p>
     </>
   )
