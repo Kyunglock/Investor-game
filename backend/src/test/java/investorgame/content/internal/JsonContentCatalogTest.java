@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import investorgame.common.StatCodes;
 import investorgame.content.AnalysisText;
+import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
 import investorgame.content.InvestorType;
 import investorgame.content.NewsDefinition;
@@ -238,6 +239,30 @@ class JsonContentCatalogTest {
       long close = n.title().chars().filter(ch -> ch == '}').count();
       assertThat(open).as(n.code()).isEqualTo(close);
     }
+  }
+
+  @Test
+  void 번아웃은_가족_문구와_전업투자자_전향이_있고_못_버티면_여섯_달_안에_권고사직이_따라온다() {
+    JsonContentCatalog catalog = load();
+    CareerDefinition burnout =
+        catalog.careers().stream()
+            .filter(c -> c.code().equals("burnout"))
+            .findFirst()
+            .orElseThrow();
+    CareerDefinition.Option push =
+        burnout.options().stream().filter(o -> o.code().equals("push")).findFirst().orElseThrow();
+    assertThat(push.success().textFor(true)).contains("가족");
+    assertThat(push.success().textFor(false)).contains("불안");
+    assertThat(push.fail().followUp()).isEqualTo("burnout-layoff");
+    assertThat(push.fail().followUpDays()).isBetween(1, 180);
+    assertThat(burnout.options()).anyMatch(o -> o.success().becomeInvestor());
+    CareerDefinition layoff =
+        catalog.careers().stream()
+            .filter(c -> c.code().equals("burnout-layoff"))
+            .findFirst()
+            .orElseThrow();
+    assertThat(layoff.followUpOnly()).isTrue();
+    assertThat(layoff.options()).allMatch(o -> o.success().quit() || o.success().becomeInvestor());
   }
 
   @Test
