@@ -37,6 +37,12 @@ public interface HouseholdService {
   /** 달마다 50 쪽으로 1점 돌아온다. 기쁨도 슬픔도 오래가지 않는다. */
   void driftHappiness(UUID gameId);
 
+  /** 가족 점수 (decisions.md 88번). 0~100, 처음 50. 관계는 저절로 돌아오지 않는다. */
+  int familyScore(UUID gameId);
+
+  /** 가족 점수를 delta만큼 움직인다(0~100으로 자름). 새 값을 돌려준다. */
+  int bond(UUID gameId, int delta);
+
   /** 생활비(1인/부부) + 자녀 나이별 비용(독립하면 0). 물가는 기준 나이부터 연 복리. */
   long monthlyExpense(UUID gameId, int gameDay);
 

@@ -407,6 +407,10 @@ class DefaultProgressService implements ProgressService {
             } else if (amount < 0) {
               assets.spend(gameId, LIFE_COST, -amount, ticket.occursDay(), eventId);
             }
+            // 양가 부모 장면 등에서 가족을 챙기면 가까워지고 외면하면 멀어진다 (decisions.md 88번).
+            if (trait.familyDelta() != 0) {
+              household.bond(gameId, trait.familyDelta());
+            }
             List<StatChange> moved =
                 characters.recordTraitChoice(
                     gameId, trait.traitDeltas(), statDeltas, ticket.occursDay());
@@ -661,6 +665,7 @@ class DefaultProgressService implements ProgressService {
         Sex sex = random.forKey("life", "sex", day).nextBoolean() ? Sex.F : Sex.M;
         int seq = household.addChild(gameId, day, leaveAge, sex);
         household.cheer(gameId, HAPPY_CHILD);
+        household.bond(gameId, BOND_CHILD);
         assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
         logs.append(gameId, day, "CHILD", Map.of("seq", seq, "cost", cost, "sex", sex.name()));
         yield simpleOutcome(
@@ -685,6 +690,7 @@ class DefaultProgressService implements ProgressService {
     long cost = household.weddingCost(day);
     household.marry(gameId, day, new Spouse(who.name(), who.job(), who.income(), who.intro()));
     household.cheer(gameId, HAPPY_MARRIAGE);
+    household.bond(gameId, BOND_MARRIAGE);
     assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
     Map<String, Object> payload = new LinkedHashMap<>();
     payload.put("cost", cost);
@@ -713,6 +719,7 @@ class DefaultProgressService implements ProgressService {
     }
     // 대줄수록 뿌듯하고, 안 대주면 마음이 쓰인다 (decisions.md 82번).
     household.cheer(gameId, wedding.shareBp() >= BP ? 8 : wedding.shareBp() > 0 ? 4 : -4);
+    household.bond(gameId, wedding.shareBp() >= BP ? 8 : wedding.shareBp() > 0 ? 4 : -6);
     logs.append(
         gameId,
         day,
@@ -754,6 +761,11 @@ class DefaultProgressService implements ProgressService {
 
   /** 행복도 변화 (decisions.md 82번). 기쁨은 작게 자주, 슬픔은 조금 더 크게. */
   private static final int HAPPY_MARRIAGE = 15;
+
+  /** 가족 점수 변화 (decisions.md 88번). */
+  private static final int BOND_MARRIAGE = 10;
+
+  private static final int BOND_CHILD = 5;
 
   private static final int HAPPY_CHILD = 10;
   private static final int HAPPY_CHILD_LEFT = 3;
@@ -799,6 +811,15 @@ class DefaultProgressService implements ProgressService {
           case ChoiceTicket.FamilyTrip.LUXURY -> outing != null ? 10 : 15;
           case ChoiceTicket.FamilyTrip.NORMAL -> outing != null ? 8 : 10;
           case ChoiceTicket.FamilyTrip.CHEAP -> outing != null ? 4 : 5;
+          default -> outing != null ? -4 : -5;
+        });
+    // 같이 가면 가족이 가까워지고, 거절하면 멀어진다 (decisions.md 88번).
+    household.bond(
+        gameId,
+        switch (ticket.optionCode()) {
+          case ChoiceTicket.FamilyTrip.LUXURY -> outing != null ? 6 : 8;
+          case ChoiceTicket.FamilyTrip.NORMAL -> outing != null ? 5 : 6;
+          case ChoiceTicket.FamilyTrip.CHEAP -> outing != null ? 2 : 3;
           default -> outing != null ? -4 : -5;
         });
     String who = tripProposerName(trip.proposer());
@@ -1741,6 +1762,7 @@ class DefaultProgressService implements ProgressService {
         calendar.daysPerYear(),
         sexOf(game),
         household.happiness(game.id()),
+        household.familyScore(game.id()),
         character.stats(),
         character.initialStats(),
         account.cash(),

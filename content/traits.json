@@ -2302,7 +2302,8 @@
           "conviction": 2
         },
         "note": "공평이 평화라는 걸 안다",
-        "amount": -600000
+        "amount": -600000,
+        "familyDelta": 4
       },
       {
         "code": "ours",
@@ -2318,7 +2319,8 @@
           "insight": -3
         },
         "note": "배우자가 그날 저녁 말이 없었다",
-        "amount": -700000
+        "amount": -700000,
+        "familyDelta": -2
       },
       {
         "code": "theirs",
@@ -2334,7 +2336,8 @@
           "courage": -2
         },
         "note": "배우자 편을 들었다. 어머니 전화가 짧았다",
-        "amount": -700000
+        "amount": -700000,
+        "familyDelta": 3
       },
       {
         "code": "skip",
@@ -2364,7 +2367,8 @@
             },
             "note": "결국 늦게라도 봉투를 보냈다. 마음이 불편했다."
           }
-        ]
+        ],
+        "familyDelta": -3
       }
     ]
   },
@@ -2389,7 +2393,8 @@
           "patience": 4
         },
         "note": "규칙대로 했다",
-        "amount": -3000000
+        "amount": -3000000,
+        "familyDelta": 3
       },
       {
         "code": "more",
@@ -2405,7 +2410,8 @@
           "conviction": 2
         },
         "note": "배우자가 고마워했다. 통장은 가벼워졌다",
-        "amount": -5000000
+        "amount": -5000000,
+        "familyDelta": 6
       },
       {
         "code": "less",
@@ -2436,7 +2442,8 @@
             },
             "note": "단톡방이 조용해졌다. 배우자가 한참 핸드폰만 봤다."
           }
-        ]
+        ],
+        "familyDelta": -2
       },
       {
         "code": "trip",
@@ -2452,7 +2459,8 @@
           "courage": 2
         },
         "note": "돈 대신 시간을 선물했다",
-        "amount": -2000000
+        "amount": -2000000,
+        "familyDelta": 5
       }
     ]
   },
@@ -2478,7 +2486,8 @@
           "patience": 2
         },
         "note": "계산보다 사람을 먼저 봤다",
-        "amount": -15000000
+        "amount": -15000000,
+        "familyDelta": 8
       },
       {
         "code": "half",
@@ -2494,7 +2503,8 @@
           "conviction": 3
         },
         "note": "할 만큼 하고 나머지는 맡겼다",
-        "amount": -7500000
+        "amount": -7500000,
+        "familyDelta": 4
       },
       {
         "code": "share",
@@ -2525,7 +2535,8 @@
             },
             "note": "형제 하나가 끝내 안 냈다. 모자란 돈은 우리가 메웠다."
           }
-        ]
+        ],
+        "familyDelta": 2
       },
       {
         "code": "none",
@@ -2541,7 +2552,8 @@
           "courage": 3,
           "patience": -3
         },
-        "note": "배우자가 며칠 동안 말을 걸지 않았다"
+        "note": "배우자가 며칠 동안 말을 걸지 않았다",
+        "familyDelta": -8
       }
     ]
   },
@@ -2593,7 +2605,8 @@
             },
             "note": "가게가 문을 닫았다. 돈 이야기는 다시 꺼내지 않았다."
           }
-        ]
+        ],
+        "familyDelta": 6
       },
       {
         "code": "part",
@@ -2621,7 +2634,8 @@
             "amount": 0,
             "note": "돌아오지 않았다. 처음부터 각오한 돈이었다."
           }
-        ]
+        ],
+        "familyDelta": 3
       },
       {
         "code": "guarantee",
@@ -2652,7 +2666,8 @@
             },
             "note": "가게가 기울어 보증이 실제 빚이 됐다. 2,000만 원을 대신 갚았다."
           }
-        ]
+        ],
+        "familyDelta": 2
       },
       {
         "code": "refuse",
@@ -2667,7 +2682,8 @@
           "conviction": 6,
           "patience": -2
         },
-        "note": "명절 분위기가 한동안 어색했다"
+        "note": "명절 분위기가 한동안 어색했다",
+        "familyDelta": -6
       }
     ]
   },
@@ -2693,7 +2709,8 @@
           "courage": 2
         },
         "note": "방을 하나 내드렸다. 집이 좁아졌지만 식탁은 넓어졌다",
-        "amount": -5000000
+        "amount": -5000000,
+        "familyDelta": 8
       },
       {
         "code": "send",
@@ -2709,7 +2726,8 @@
           "patience": 2
         },
         "note": "거리를 두되 챙겼다. 1년치가 먼저 나갔다",
-        "amount": -6000000
+        "amount": -6000000,
+        "familyDelta": 4
       },
       {
         "code": "care",
@@ -2725,7 +2743,8 @@
           "conviction": -2
         },
         "note": "전문가에게 맡겼다. 1년 비용이 만만치 않다",
-        "amount": -12000000
+        "amount": -12000000,
+        "familyDelta": 2
       },
       {
         "code": "siblings",
@@ -2740,7 +2759,8 @@
           "conviction": -4,
           "courage": -2
         },
-        "note": "전화가 점점 뜸해졌다"
+        "note": "전화가 점점 뜸해졌다",
+        "familyDelta": -6
       }
     ]
   },
@@ -2766,7 +2786,8 @@
           "insight": -3
         },
         "note": "배우자가 \"처가는?\" 하고 물었다",
-        "amount": -8000000
+        "amount": -8000000,
+        "familyDelta": 3
       },
       {
         "code": "both",
@@ -2782,7 +2803,8 @@
           "patience": 2
         },
         "note": "공평하게, 그리고 비싸게",
-        "amount": -12000000
+        "amount": -12000000,
+        "familyDelta": 6
       },
       {
         "code": "half",
@@ -2798,7 +2820,8 @@
           "conviction": 2
         },
         "note": "혼자 지지 않았다",
-        "amount": -4000000
+        "amount": -4000000,
+        "familyDelta": 2
       },
       {
         "code": "loan",
@@ -2828,7 +2851,8 @@
             },
             "note": "이자는 결국 우리가 냈다."
           }
-        ]
+        ],
+        "familyDelta": -4
       }
     ]
   }
