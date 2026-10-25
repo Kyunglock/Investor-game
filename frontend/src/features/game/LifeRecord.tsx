@@ -1,4 +1,5 @@
 import type { Game } from '../../api/client'
+import { spouseWord } from '../../api/spouseTerms'
 import { AssetCurve } from './AssetCurve'
 import { Document } from './Document'
 import { GradeBadge } from './GradeBadge'
@@ -69,7 +70,7 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
       <p className="mt-2 text-[13px] text-muted" data-testid="result-family">
         가족 ·{' '}
         {game.household.married
-          ? `배우자${game.household.children.length > 0 ? `, 자녀 ${game.household.children.length}` : ''}`
+          ? `${spouseWord(game.sex)}${game.household.children.length > 0 ? `, 자녀 ${game.household.children.length}` : ''}`
           : '혼자'}
         {game.debt > 0 && (
           <>

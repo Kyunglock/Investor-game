@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Game } from '../../api/client'
+import { spouseWord } from '../../api/spouseTerms'
 import { childWord, percent, shortWon, signedShortWon, signedWon, won } from './labels'
 import { signedPercent } from './market'
 import { useGameStore } from './store'
@@ -161,7 +162,7 @@ function Household({ game }: { game: Game }) {
             ) : (
               <Row label="월급" value={h.monthlyIncome} />
             )}
-            {h.married && <Row label="배우자 소득" value={h.spouseIncome} />}
+            {h.married && <Row label={`${spouseWord(game.sex)} 소득`} value={h.spouseIncome} />}
             <Row label={`생활비 (${family})`} value={-h.monthlyExpense} />
             {game.housing.monthlyCost > 0 && (
               <Row label="주거비" value={-game.housing.monthlyCost} />
