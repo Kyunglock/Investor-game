@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Game, LogEntry, Stats } from '../../api/client'
-import { buildCredits, creditArt, scoreDecisions, stockReturns } from './credits'
+import { buildCredits, scoreDecisions, stockReturns } from './credits'
+import { yearOf } from './labels'
 
 const stats: Stats = { insight: 42, patience: 61, courage: 19, conviction: 35, luck: 57 }
 const YEAR = 360
@@ -140,6 +141,7 @@ describe('scoreDecisions', () => {
     const scored = scoreDecisions(game)
     expect(scored).toEqual([
       {
+        seq: expect.any(Number),
         age: 33,
         title: '한빛반도체 급락 알림',
         stockName: '한빛반도체',
@@ -150,9 +152,11 @@ describe('scoreDecisions', () => {
       },
     ])
     const credits = buildCredits(game)
-    const byKey = Object.fromEntries(credits.map((s) => [s.key, s]))
-    expect(byKey.worst.lines[0].sub).toBe('판다 한빛반도체 (원래는 버틴다) · -600,000원')
-    expect(byKey.news.lines.map((l) => l.text)).toContain('보유 종목이 1번 흔들렸다')
+    const lines = credits.flatMap((s) => s.lines)
+    expect(lines.find((l) => l.text.startsWith('가장 아쉬운 선택'))?.sub).toBe(
+      '판다 한빛반도체 (원래는 버틴다) · -600,000원',
+    )
+    expect(lines.map((l) => l.text)).toContain('보유 종목이 1번 흔들렸다')
   })
 
   it('자유 매매는 실현 손익이 점수고, 체결되지 않은 것은 뺀다', () => {
@@ -180,6 +184,7 @@ describe('scoreDecisions', () => {
     })
     expect(scoreDecisions(game)).toEqual([
       {
+        seq: expect.any(Number),
         age: 40,
         title: '해풍에너지 매도',
         stockName: '해풍에너지',
@@ -260,22 +265,36 @@ describe('stockReturns', () => {
   })
 })
 
-describe('buildCredits', () => {
-  it('정상 엔딩: 장 순서와 연금 문장', () => {
+describe('buildCredits (시간순, decisions.md 70번)', () => {
+  it('정상 엔딩: 제목 다음은 기록이 시간순으로 한 줄씩, 그림이 붙는 순간마다 그 해가 제목인 새 장', () => {
     const game = baseGame({
       investorType: { code: 'long-safe-own', name: '느긋한 농부', description: '길게 본다.' },
+      household: {
+        ...baseGame().household,
+        married: true,
+        children: [{ age: 39, leftHome: true, sex: 'F' }],
+      },
       log: [
         entry('BIRTH', 15, {}),
         entry('TRAIT', 15, { eventTitle: '용돈을 받았다', optionLabel: '저금통에 넣는다' }),
+        entry('STYLE', 24, { investorTypeName: '느긋한 농부' }),
         entry('JOB', 25, { jobTitle: '회계사', monthlySalary: 3_000_000 }),
         entry('MARRIAGE', 29, { cost: 30_000_000 }),
-        entry('CHILD', 31, { seq: 1, cost: 3_000_000 }),
+        entry('CHILD', 31, { seq: 1, cost: 3_000_000, sex: 'F' }),
+        entry('HOUSING', 33, {
+          option: 'APT_JEONSE',
+          label: '아파트 전세',
+          price: 0,
+          deposit: 300_000_000,
+          regionName: '경기',
+        }),
         entry('CAREER', 35, {
           eventTitle: '연봉 협상',
           optionLabel: '강하게 요구한다',
           text: '10% 인상',
           success: true,
         }),
+        entry('CHILD_LEFT', 58, { seq: 1, childAge: 27, expense: 2_000_000 }),
         entry('RETIRE', 60, { age: 60, severance: 100_000_000 }),
         entry('END', 70, {}),
       ],
@@ -289,36 +308,70 @@ describe('buildCredits', () => {
       },
     })
     const credits = buildCredits(game)
+    // 장: 제목 → 태어남 → 첫 일터 → 결혼 → 첫째 → 이사 → 돌아보며 → 마지막. 미리 정한 '일'·'가족' 장은 없다.
     expect(credits.map((s) => s.key)).toEqual([
       'title',
       'born',
-      'traits',
       'work',
       'family',
       'child-1',
-      'news',
+      `home-${game.log[6].seq}`,
+      'review',
       'last',
     ])
     expect(credits[0].title).toBe('겁 많은 돌부처의 투자 인생')
     expect(credits[0].lines[1]).toEqual({ text: '70세, 은퇴 후 연금 생활', tone: 'accent' })
-    expect(credits[2].lines[0]).toMatchObject({ text: '느긋한 농부', sub: '길게 본다.' })
-    expect(credits[2].lines[1]).toEqual({ text: '15세 · 용돈을 받았다', sub: '저금통에 넣는다' })
-    expect(credits[3].lines.map((l) => l.text)).toEqual([
+    // 시간순 장의 제목은 그 장이 시작된 해.
+    expect(credits.slice(1, 6).map((s) => s.title)).toEqual([
+      `${yearOf(15)}년`,
+      `${yearOf(25)}년`,
+      `${yearOf(29)}년`,
+      `${yearOf(31)}년`,
+      `${yearOf(33)}년`,
+    ])
+    // 줄은 전부 시간순. 성향 확정과 직장 일은 사이사이에 끼어든다.
+    expect(credits.slice(1, 6).flatMap((s) => s.lines.map((l) => l.text))).toEqual([
+      '15세, 태어났다',
+      '15세 · 용돈을 받았다',
+      '24세, 투자 성향이 정해졌다',
       '25세, 회계사에 취직',
+      '29세, 결혼',
+      '31세, 첫째 딸이 태어났다',
+      '33세, 아파트 전세',
       '35세 · 연봉 협상',
+      '58세, 첫째가 독립했다',
       '60세, 은퇴',
     ])
-    expect(credits[4].lines.map((l) => l.text)).toEqual(['29세, 결혼'])
-    expect(credits[5].title).toBe('첫째')
-    expect(credits[5].lines.map((l) => l.text)).toEqual(['31세, 첫째 아이가 태어났다'])
+    expect(credits[1].lines[0].sub).toContain('통장 10,000,000원')
+    expect(credits[1].lines[2]).toEqual({
+      text: '24세, 투자 성향이 정해졌다',
+      sub: '느긋한 농부 — 길게 본다.',
+      tone: 'accent',
+    })
     expect(credits[6].lines[0].text).toBe('투자를 시작하지 않았다')
     expect(credits[7].lines.at(-1)).toEqual({
       text: '70세. 남은 자산 80,000,000원과 매달 연금 1,990,000원으로 여생을 보냈다.',
       tone: 'accent',
     })
+    // 그림: 아기방 → 사무실 → 거실(둘) → 아기 침대 → 아파트(둘) → 창가의 노년(둘).
+    expect(credits.map((s) => s.art?.vignette)).toEqual([
+      undefined,
+      'nursery',
+      'office',
+      'family',
+      'baby',
+      'apartment',
+      undefined,
+      'home-old',
+    ])
+    expect(credits[3].art?.figures.map((f) => [f.who, f.sex])).toEqual([
+      ['me', 'M'],
+      ['spouse', 'F'],
+    ])
+    expect(credits[5].art?.figures.map((f) => f.who)).toEqual(['me', 'spouse'])
   })
 
-  it('전업투자자는 직장 장에 취직 대신 전업투자자가 된 나이를 남긴다', () => {
+  it('전업투자자는 첫 일터 그림이 시세판이고, 두 번째 직장부터는 그림 없이 줄만 이어진다', () => {
     const game = baseGame({
       fullTimeInvestor: true,
       log: [
@@ -335,9 +388,25 @@ describe('buildCredits', () => {
     })
     const work = buildCredits(game).find((s) => s.key === 'work')
     expect(work?.lines).toEqual([{ text: '25세, 전업투자자가 됐다', sub: '월급 없음' }])
+    expect(work?.art?.vignette).toBe('studio')
+
+    const twoJobs = baseGame({
+      log: [
+        entry('BIRTH', 15, {}),
+        entry('JOB', 25, { jobTitle: '회계사', monthlySalary: 3_000_000 }),
+        entry('JOB', 40, { jobTitle: '세무사', monthlySalary: 4_000_000, rehire: true }),
+        entry('END', 70, {}),
+      ],
+    })
+    const sections = buildCredits(twoJobs)
+    expect(sections.filter((s) => s.key === 'work')).toHaveLength(1)
+    expect(sections.find((s) => s.key === 'work')?.lines.map((l) => l.text)).toEqual([
+      '25세, 회계사에 취직',
+      '40세, 세무사(으)로 다시 취직',
+    ])
   })
 
-  it('위기와 빚투가 있었으면 지나온 폭풍 장에 남는다', () => {
+  it('위기·빚투·전세사기·매도는 기록된 자리에 줄로 남는다', () => {
     const game = baseGame({
       log: [
         entry('BIRTH', 15, {}),
@@ -351,21 +420,32 @@ describe('buildCredits', () => {
           dropBp: 2_800,
           omens: [],
         }),
+        entry('HOUSING', 38, { option: 'lease-end', label: '연장', fraud: true, lost: 50_000_000 }),
+        entry('HOUSING', 40, { option: 'PASS', label: '넘긴다' }),
+        entry('HOME_SOLD', 50, {
+          regionName: '서울',
+          price: 900_000_000,
+          purchasePrice: 700_000_000,
+        }),
         entry('END', 70, {}),
       ],
     })
-    const storms = buildCredits(game).find((s) => s.key === 'storms')
-    expect(storms?.lines.map((l) => l.text)).toEqual([
+    const born = buildCredits(game).find((s) => s.key === 'born')
+    expect(born?.lines.map((l) => l.text)).toEqual([
+      '15세, 태어났다',
       '34세, 삼송전자에 빚투',
       '33~36세, 부동산 금융 위기 (불황)',
+      '38세, 전세사기',
+      '50세, 서울 매도',
     ])
   })
 
-  it('파산 엔딩: 파산 문장과 뒤집힌 횟수, 가장 잘한·아쉬운 선택', () => {
+  it('파산 엔딩: 가장 잘한·아쉬운 선택이 그 나이 자리에 끼어들고, 돌아보며에 뉴스 횟수와 산 주식들이 모인다', () => {
     const game = baseGame({
       debt: 12_000_000,
       totalAsset: -12_000_000,
       log: [
+        entry('BIRTH', 15, {}),
         entry('NEWS', 30, {
           eventTitle: '호황',
           stockCode: 'S1',
@@ -384,6 +464,7 @@ describe('buildCredits', () => {
           trade: trade('HELD', 0),
         }),
         entry('PRICE', 31, { direction: 'DOWN', changeBp: 3000, pnl: -360_000 }),
+        entry('LEVERAGE', 32, { stockName: '한빛반도체', borrowed: false }),
       ],
       result: {
         initialAsset: 10_000_000,
@@ -397,26 +478,33 @@ describe('buildCredits', () => {
     const credits = buildCredits(game)
     const byKey = Object.fromEntries(credits.map((s) => [s.key, s]))
     expect(byKey.title.lines[1]).toEqual({ text: '44세, 파산', tone: 'down' })
-    expect(byKey.news.lines.map((l) => l.text)).toEqual([
+    expect(byKey.born.lines).toEqual([
+      expect.objectContaining({ text: '15세, 태어났다' }),
+      {
+        text: '가장 잘한 선택 · 30세 · 호황',
+        sub: '매수 한빛반도체 · +200,000원',
+        tone: 'up',
+      },
+      {
+        text: '가장 아쉬운 선택 · 31세 · 폭락',
+        sub: '관망 한빛반도체 (원래는 매도) · -360,000원',
+        tone: 'down',
+      },
+      { text: '32세, 한빛반도체 급락에도 빚은 지지 않았다', tone: 'muted' },
+    ])
+    expect(byKey.review.lines.map((l) => l.text)).toEqual([
       '뉴스 2번 앞에 섰다',
       '용기 부족으로 뒤집힌 선택 5번',
       '인내심 부족으로 뒤집힌 선택 2번',
+      '한빛반도체',
     ])
-    expect(byKey.best.lines[0]).toEqual({
-      text: '30세 · 호황',
-      sub: '매수 한빛반도체 · +200,000원',
-      tone: 'up',
-    })
-    expect(byKey.worst.lines[0]).toEqual({
-      text: '31세 · 폭락',
-      sub: '관망 한빛반도체 (원래는 매도) · -360,000원',
-      tone: 'down',
-    })
-    expect(byKey.stocks.lines[0].text).toBe('한빛반도체')
     expect(byKey.last.lines.at(-1)).toEqual({
       text: '44세. 빚 12,000,000원을 갚지 못해 파산했다.',
       tone: 'down',
     })
+    // 파산이면 마지막 그림은 비 오는 거리에 혼자.
+    expect(byKey.last.art?.vignette).toBe('rain')
+    expect(byKey.last.art?.figures.map((f) => f.who)).toEqual(['me'])
   })
 })
 
@@ -438,36 +526,12 @@ describe('중간에 그만둔 판 (decisions.md 68번)', () => {
       text: '44세. 자산 80,000,000원을 들고 투자에서 손을 뗐다.',
       tone: 'muted',
     })
-    expect(creditArt(quit, 'last')?.vignette).toBe('home-old')
+    expect(credits.at(-1)?.art?.vignette).toBe('home-old')
   })
 })
 
 describe('크레딧 그림 (#23)', () => {
-  it('장마다 그림이 붙고, 가족 그림에는 결혼한 둘이 선다', () => {
-    const family = baseGame({
-      household: {
-        ...baseGame().household,
-        married: true,
-        children: [{ age: 40, leftHome: false, sex: 'F' }],
-      },
-      log: [entry('MARRIAGE', 29, { cost: 30_000_000 }), entry('CHILD', 30, { seq: 1, cost: 0 })],
-    })
-    const art = creditArt(family, 'family')
-    expect(art?.vignette).toBe('family')
-    expect(art?.figures.map((f) => f.who)).toEqual(['me', 'spouse'])
-    // 배우자는 나와 반대 성별 (decisions.md 69번).
-    expect(art?.figures.map((f) => f.sex)).toEqual(['M', 'F'])
-    // 16칸 몸이 64칸 배경 밖으로 나가지 않는다.
-    for (const f of art?.figures ?? []) {
-      expect(f.x + 16).toBeLessThanOrEqual(64)
-    }
-    const keys = buildCredits(family)
-      .filter((s) => s.art)
-      .map((s) => s.key)
-    expect(keys).toEqual(expect.arrayContaining(['born', 'work', 'family', 'child-1', 'last']))
-  })
-
-  it('아이가 태어날 때마다 아기 침대 그림이 한 장씩 붙고, 먼저 난 아이들이 옆에 선다 (decisions.md 67번)', () => {
+  it('아이가 태어날 때마다 아기 침대 그림이 붙고, 먼저 난 아이들이 옆에 선다 (decisions.md 67번)', () => {
     const family = baseGame({
       household: {
         ...baseGame().household,
@@ -479,6 +543,7 @@ describe('크레딧 그림 (#23)', () => {
         ],
       },
       log: [
+        entry('BIRTH', 15, {}),
         entry('MARRIAGE', 29, { cost: 30_000_000 }),
         entry('CHILD', 30, { seq: 1, cost: 0, sex: 'F' }),
         entry('CHILD', 32, { seq: 2, cost: 0, sex: 'M' }),
@@ -487,8 +552,7 @@ describe('크레딧 그림 (#23)', () => {
     })
     const credits = buildCredits(family)
     const children = credits.filter((s) => s.key.startsWith('child-'))
-    // 성별은 기록에 남은 것을 쓰고, 없던 옛 기록은 순번만 (decisions.md 69번).
-    expect(children.map((s) => s.title)).toEqual(['첫째 딸', '둘째 아들', '셋째'])
+    // 성별은 기록에 남은 것을 쓰고, 없던 옛 기록은 '아이' (decisions.md 69번).
     expect(children.map((s) => s.lines[0].text)).toEqual([
       '30세, 첫째 딸이 태어났다',
       '32세, 둘째 아들이 태어났다',
@@ -509,13 +573,16 @@ describe('크레딧 그림 (#23)', () => {
       ['spouse', 'middle'],
       ['kid', 'child'],
     ])
-    // 아기 침대(40칸~)를 가리지 않는다.
-    for (const s of children) {
+    // 아기 침대(40칸~)를 가리지 않고, 16칸 몸이 64칸 배경 밖으로 나가지 않는다.
+    for (const s of credits) {
       for (const f of s.art?.figures ?? []) {
-        expect(f.x + 16).toBeLessThanOrEqual(40)
+        expect(f.x).toBeGreaterThanOrEqual(0)
+        expect(f.x + 16).toBeLessThanOrEqual(s.art?.vignette === 'baby' ? 40 : 64)
       }
     }
-    // 독립·결혼이 그 아이 장에 줄로 쌓인다 (decisions.md 68번).
+  })
+
+  it('독립·결혼은 아이 장이 아니라 그 일이 있던 자리에 줄로 남는다 (decisions.md 68·70번)', () => {
     const grown = buildCredits(
       baseGame({
         household: {
@@ -524,6 +591,7 @@ describe('크레딧 그림 (#23)', () => {
           children: [{ age: 30, leftHome: true, sex: 'M' }],
         },
         log: [
+          entry('BIRTH', 15, {}),
           entry('MARRIAGE', 29, { cost: 30_000_000 }),
           entry('CHILD', 30, { seq: 1, cost: 0, sex: 'M' }),
           entry('CHILD_LEFT', 57, { seq: 1, childAge: 27, expense: 2_000_000 }),
@@ -544,29 +612,38 @@ describe('크레딧 그림 (#23)', () => {
     ])
     expect(first?.lines[1].sub).toBe('27살에 집을 나갔다')
     expect(first?.lines[2].sub).toBe('결혼 비용 60,000,000원 가운데 30,000,000원을 보탰다')
-
-    // 결혼 없이 혼자면 가족 장만 하나.
-    const single = buildCredits(baseGame())
-    expect(single.filter((s) => s.key === 'family' || s.key.startsWith('child-'))).toHaveLength(1)
-    expect(single.find((s) => s.key === 'family')?.lines[0].text).toBe('혼자 살았다')
   })
 
-  it('살아온 집은 마지막 집의 겉모습, 마지막은 파산이면 비 오는 거리', () => {
-    expect(creditArt(baseGame(), 'homes')?.vignette).toBe('apartment')
-    const renting = baseGame({ housing: { ...baseGame().housing, tenure: 'VILLA_JEONSE' } })
-    expect(creditArt(renting, 'homes')?.vignette).toBe('villa')
-    expect(creditArt(baseGame(), 'last')?.vignette).toBe('home-old')
-    const broke = baseGame({
-      result: {
-        initialAsset: 10_000_000,
-        finalAsset: -5_000_000,
-        returnBp: -15_000,
-        finalAge: 44,
-        ending: 'BANKRUPT',
-        deviationCounts: {},
-      },
+  it('이사·매수마다 그때 집의 겉모습이 붙고, 결혼 전이면 혼자 선다', () => {
+    const game = baseGame({
+      log: [
+        entry('BIRTH', 15, {}),
+        entry('HOUSING', 26, {
+          option: 'MONTHLY',
+          label: '월세 원룸',
+          price: 0,
+          deposit: 5_000_000,
+        }),
+        entry('MARRIAGE', 29, { cost: 30_000_000 }),
+        entry('HOUSING', 30, { option: 'VILLA_INSURED', label: '빌라 전세', price: 0, deposit: 1 }),
+        entry('HOUSING', 36, {
+          option: 'APPLY',
+          label: '청약',
+          price: 700_000_000,
+          regionName: '서울',
+          won: true,
+          bought: true,
+        }),
+        entry('HOUSING', 40, { option: 'APPLY', label: '청약', won: false, bought: false }),
+      ],
     })
-    expect(creditArt(broke, 'last')?.vignette).toBe('rain')
-    expect(creditArt(baseGame(), 'news')).toBeUndefined()
+    const homes = buildCredits(game).filter((s) => s.key.startsWith('home-'))
+    expect(homes.map((s) => s.art?.vignette)).toEqual(['oneroom', 'villa', 'apartment'])
+    expect(homes.map((s) => s.art?.figures.length)).toEqual([1, 2, 2])
+    expect(homes[2].lines[0]).toEqual({
+      text: '36세, 청약 당첨 · 서울',
+      sub: '분양가 700,000,000원',
+      tone: 'up',
+    })
   })
 })
