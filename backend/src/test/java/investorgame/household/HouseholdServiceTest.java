@@ -81,6 +81,14 @@ class HouseholdServiceTest {
   }
 
   @Test
+  void 소개가_있는_배우자는_그_직업의_소득이_배우자_소득이_된다() {
+    household.marry(gameId, JOB_DAY, new Spouse("지우", "은행원", 3_800_000, "지우. 성격은 따뜻하다."));
+    assertThat(household.get(gameId).spouse())
+        .isEqualTo(new Spouse("지우", "은행원", 3_800_000, "지우. 성격은 따뜻하다."));
+    assertThat(household.spouseIncome(gameId, JOB_DAY)).isEqualTo(3_800_000);
+  }
+
+  @Test
   void 은퇴하면_배우자_소득이_끊긴다() {
     household.marry(gameId, JOB_DAY);
     int retireDay = (60 - 15) * YEAR;

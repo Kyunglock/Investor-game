@@ -16,6 +16,7 @@ import investorgame.common.Action;
 import investorgame.common.Direction;
 import investorgame.common.GameProperties;
 import investorgame.common.Hint;
+import investorgame.common.Korean;
 import investorgame.common.Phase;
 import investorgame.common.Sex;
 import investorgame.common.error.InvalidRequestException;
@@ -28,6 +29,7 @@ import investorgame.content.ContentCatalog;
 import investorgame.content.CrisisDefinition;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
+import investorgame.content.SpouseText;
 import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
 import investorgame.event.ChoiceTicket;
@@ -42,6 +44,7 @@ import investorgame.event.ScheduleResult;
 import investorgame.event.SchedulingContext;
 import investorgame.household.HouseholdService;
 import investorgame.household.HouseholdView;
+import investorgame.household.Spouse;
 import investorgame.housing.HousingService;
 import investorgame.market.MarketCycle;
 import investorgame.market.MarketService;
@@ -460,6 +463,7 @@ class DefaultProgressService implements ProgressService {
             yield simpleOutcome(ticket, "1년 뒤에 다시 생각해 보기로 했다.");
           }
           case ChoiceTicket.Life life -> resolveLife(game, ticket, life, random);
+          case ChoiceTicket.Marriage marriage -> resolveMarriage(game, ticket, marriage);
           case ChoiceTicket.ChildWedding wedding -> resolveChildWedding(game, ticket, wedding);
           case ChoiceTicket.FamilyTrip trip -> resolveFamilyTrip(game, ticket, trip);
         };
@@ -581,13 +585,6 @@ class DefaultProgressService implements ProgressService {
       return simpleOutcome(ticket, "아직은 아니라고 했다.");
     }
     return switch (life.kind()) {
-      case MARRIAGE -> {
-        long cost = household.weddingCost(day);
-        household.marry(gameId, day);
-        assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
-        logs.append(gameId, day, "MARRIAGE", Map.of("cost", cost));
-        yield simpleOutcome(ticket, "결혼했다. 결혼 비용 %,d원이 들었다.".formatted(cost));
-      }
       case CHILD -> {
         long cost = household.childbirthCost(day);
         // 아이마다 독립해 나갈 나이를 지금 굴린다 (decisions.md 68번).
@@ -602,6 +599,33 @@ class DefaultProgressService implements ProgressService {
             ticket, "%s %s이 태어났다.".formatted(childName(seq), sex == Sex.F ? "딸" : "아들"));
       }
     };
+  }
+
+  /** 결혼 (decisions.md 77번): 카드에서 소개된 그 사람과 결혼한다. 배우자의 직업·소득·소개가 가계에 남고 소득은 배우자 소득이 된다. */
+  private ChoiceOutcome.Outcome resolveMarriage(
+      GameRow game, ChoiceTicket ticket, ChoiceTicket.Marriage marriage) {
+    UUID gameId = game.id();
+    int day = ticket.occursDay();
+    events.complete(
+        gameId,
+        ticket.eventId(),
+        new Completion(ticket.optionCode(), ticket.optionCode(), List.of()));
+    if (!marriage.accepted()) {
+      return simpleOutcome(ticket, "아직은 아니라고 했다.");
+    }
+    SpouseText.Profile who = content.spouseText().profile(marriage.spouseCode());
+    long cost = household.weddingCost(day);
+    household.marry(gameId, day, new Spouse(who.name(), who.job(), who.income(), who.intro()));
+    assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
+    Map<String, Object> payload = new LinkedHashMap<>();
+    payload.put("cost", cost);
+    payload.put("name", who.name());
+    payload.put("job", who.job());
+    payload.put("intro", who.intro());
+    logs.append(gameId, day, "MARRIAGE", payload);
+    return simpleOutcome(
+        ticket,
+        "%s 결혼했다. 결혼 비용 %,d원이 들었다.".formatted(Korean.withParticle(who.name(), "과", "와"), cost));
   }
 
   /** 자녀 결혼 (decisions.md 68번): 그때 물가의 결혼 비용 가운데 고른 비율만큼 내 돈이 나간다. 안 대주면 한 푼도 나가지 않는다. */
@@ -1640,7 +1664,11 @@ class DefaultProgressService implements ProgressService {
         household.spouseIncome(game.id(), day),
         independent ? household.monthlyExpense(game.id(), day) : 0,
         retired,
-        household.pension(game.id(), day));
+        household.pension(game.id(), day),
+        home.spouse() == null
+            ? null
+            : new GameView.Spouse(
+                home.spouse().name(), home.spouse().job(), home.spouse().intro()));
   }
 
   private GameView.InvestorType investorTypeView(String code) {

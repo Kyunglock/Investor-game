@@ -311,7 +311,11 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
     case 'MARRIAGE':
       return {
         key: 'family',
-        line: { text: `${age}세, 결혼` },
+        // 소개가 있는 배우자면 누구와 결혼했는지, 어떤 사람이었는지 (decisions.md 77번).
+        line: {
+          text: `${age}세, ${p.name ? `${withParticle(str(p.name), '과', '와')} ` : ''}결혼`,
+          sub: p.intro ? str(p.intro) : undefined,
+        },
         art: coupleArt(game, 'family', e.day, 14, 28),
       }
     case 'CHILD': {

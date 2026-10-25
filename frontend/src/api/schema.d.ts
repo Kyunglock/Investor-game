@@ -417,6 +417,13 @@ export interface components {
         Household: {
             married: boolean;
             marriedAge?: number | null;
+            /** @description 배우자 소개 (decisions.md 77번). 미혼이거나 소개 없이 결혼한 옛 판이면 null */
+            spouse?: {
+                name: string;
+                job: string;
+                /** @description 결혼 카드에 나온 소개 문장 */
+                intro: string;
+            } | null;
             children: {
                 age: number;
                 /** @description 독립해서 집을 나갔다. 그 뒤로는 양육비가 들지 않는다 (decisions.md 68번) */
