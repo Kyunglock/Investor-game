@@ -216,9 +216,10 @@ behavior:
     neutral-percent: 30
     strong-percent: 50
   luck:
-    # 운 100이면 손실 완화 50%
+    # 운 100이면 50% 확률로 운이 따른다: 내릴 뉴스면 손실이 30%로 줄고, 오를 뉴스면 이득이 1.5배 (decisions.md 78번)
     chance-per-point-bp: 50
     loss-factor-percent: 30
+    gain-bonus-percent: 150
   # 추세·시황 해석 (매매창 설계 4.2절): 안목 100이면 47.5%로 제대로 읽고(안목에 비례) 나머지는 세 갈래 중 찍는다 → 안목 0이면 약 33%, 100이면 65%.
   # 확신에 찬 말투는 안목과 무관하게 절반
   analysis:

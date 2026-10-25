@@ -100,11 +100,12 @@ class DefaultBehaviorService implements BehaviorService {
   }
 
   @Override
-  public int lossFactorPercent(int luck, RandomGenerator rng) {
+  public int luckFactorPercent(int luck, Direction truth, RandomGenerator rng) {
     BehaviorProperties.LuckSettings settings = properties.luck();
-    return rng.nextInt(BP) < luck * settings.chancePerPointBp()
-        ? settings.lossFactorPercent()
-        : PERCENT;
+    if (rng.nextInt(BP) >= luck * settings.chancePerPointBp()) {
+      return PERCENT;
+    }
+    return truth == Direction.DOWN ? settings.lossFactorPercent() : settings.gainBonusPercent();
   }
 
   @Override
