@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { curvePoints, yearFills } from './timeline'
+import { curvePoints, yearDelta, yearFills } from './timeline'
 
 const y = (age: number, totalAsset: number) => ({ age, totalAsset, cash: totalAsset })
 
@@ -32,5 +32,37 @@ describe('curvePoints', () => {
       { age: 1, totalAsset: 100 },
       { age: 2, totalAsset: 130 },
     ])
+  })
+})
+
+describe('yearDelta (decisions.md 74번)', () => {
+  it('마친 해가 없으면 null, 첫 해는 시작 자산과, 그 뒤는 전년과 비교한다', () => {
+    expect(yearDelta([], 10_000_000)).toBeNull()
+    expect(yearDelta([{ age: 15, totalAsset: 11_000_000, cash: 0 }], 10_000_000)).toEqual({
+      age: 15,
+      delta: 1_000_000,
+      bp: 1_000,
+    })
+    expect(
+      yearDelta(
+        [
+          { age: 15, totalAsset: 11_000_000, cash: 0 },
+          { age: 16, totalAsset: 9_900_000, cash: 0 },
+        ],
+        10_000_000,
+      ),
+    ).toEqual({ age: 16, delta: -1_100_000, bp: -1_000 })
+  })
+
+  it('전년 자산이 0 이하면 변화율은 0', () => {
+    expect(
+      yearDelta(
+        [
+          { age: 40, totalAsset: -5_000_000, cash: 0 },
+          { age: 41, totalAsset: 1_000_000, cash: 0 },
+        ],
+        0,
+      ),
+    ).toEqual({ age: 41, delta: 6_000_000, bp: 0 })
   })
 })
