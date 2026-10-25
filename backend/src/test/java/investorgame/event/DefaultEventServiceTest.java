@@ -96,9 +96,9 @@ class DefaultEventServiceTest {
     assertThat(marriage.options())
         .extracting(EventView.Option::code)
         .containsExactly("accept", "decline");
-    // 결혼 상대 소개 (decisions.md 77번): 제목에 이름, 본문에 성격·직업·월급이 있다.
-    assertThat(marriage.title()).endsWith("결혼할까?");
-    assertThat(marriage.body()).contains("성격은").contains("직업은").contains("월");
+    // 결혼 상대 소개 (decisions.md 77번): 본문에 성격·직업·월급이 있다. 이름은 없다 (90번).
+    assertThat(marriage.title()).isEqualTo("결혼할까?");
+    assertThat(marriage.body()).startsWith("성격은").contains("직업은").contains("월");
   }
 
   @Test
@@ -260,7 +260,7 @@ class DefaultEventServiceTest {
             content
                 .spouseText()
                 .profile(((ChoiceTicket.Marriage) ticket.effect()).spouseCode())
-                .name())
+                .job())
         .isNotBlank();
     assertThat(ticket.stockCode()).isNull();
   }

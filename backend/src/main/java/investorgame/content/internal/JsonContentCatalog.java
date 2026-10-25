@@ -687,7 +687,6 @@ class JsonContentCatalog implements ContentCatalog {
         "나들이 문구가 비었다 (decisions.md 87번)");
     require(
         life.spouse() != null
-            && !life.spouse().names().isEmpty()
             && !life.spouse().personalities().isEmpty()
             && !life.spouse().economies().isEmpty()
             && !life.spouse().lives().isEmpty()

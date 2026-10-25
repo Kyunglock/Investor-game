@@ -497,7 +497,6 @@ class DefaultEventService implements EventService {
         RandomGenerator rng = random.forKey("event", "life", "spouse", asked.size());
         String code =
             spouse.encode(
-                rng.nextInt(spouse.names().size()),
                 rng.nextInt(spouse.personalities().size()),
                 rng.nextInt(spouse.economies().size()),
                 rng.nextInt(spouse.lives().size()));

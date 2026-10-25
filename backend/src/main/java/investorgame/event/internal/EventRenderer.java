@@ -1,6 +1,5 @@
 package investorgame.event.internal;
 
-import investorgame.common.Korean;
 import investorgame.content.CareerDefinition;
 import investorgame.content.ChildWeddingText;
 import investorgame.content.ContentCatalog;
@@ -126,13 +125,13 @@ class EventRenderer {
                   new EventView.Option(ChoiceTicket.FamilyTrip.NONE, outing.noneLabel())));
         }
         if (row.definitionCode().startsWith(DefaultEventService.MARRIAGE_PREFIX)) {
-          // 결혼 상대 소개 (decisions.md 77번): 이름·성격·직업과 월급·돈 습관·인상을 조합한 문장.
+          // 결혼 상대 소개 (decisions.md 77번): 성격·직업과 월급·돈 습관·인상을 조합한 문장. 이름은 없다 (90번).
           SpouseText.Profile who =
               content.spouseText().profile(DefaultEventService.spouseCode(row.definitionCode()));
           LifeText marriage = content.lifeText(DefaultEventService.MARRIAGE);
           yield view(
               row,
-              Korean.withParticle(who.name(), "과", "와") + " 결혼할까?",
+              marriage.title(),
               who.intro() + " " + marriage.body(),
               null,
               null,

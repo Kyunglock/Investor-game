@@ -58,7 +58,7 @@ public record HouseholdView(boolean married, Integer marriedDay, List<Child> chi
 
 ## 5. DB
 
-`household_state (game_id PK, married_day, retired_day, updated_at)`, `household_child (game_id, seq, birth_day, leave_day, sex, PK(game_id, seq))`. FK 없음. sex는 'M'/'F' (decisions.md 69번). `household_state`에는 배우자 소개(`spouse_*`, 77번)와 행복도(`happiness` 0~100, 처음 50, 82번)도 있다.
+`household_state (game_id PK, married_day, retired_day, updated_at)`, `household_child (game_id, seq, birth_day, leave_day, sex, PK(game_id, seq))`. FK 없음. sex는 'M'/'F' (decisions.md 69번). `household_state`에는 배우자 소개(`spouse_*`, 77번. 이름 `spouse_name`은 옛 판에만 있고 보여 주지 않는다, 90번)와 행복도(`happiness` 0~100, 처음 50, 82번)도 있다.
 
 ## 6. 테스트
 

@@ -16,7 +16,6 @@ import investorgame.common.Action;
 import investorgame.common.Direction;
 import investorgame.common.GameProperties;
 import investorgame.common.Hint;
-import investorgame.common.Korean;
 import investorgame.common.Phase;
 import investorgame.common.Sex;
 import investorgame.common.error.InvalidRequestException;
@@ -688,19 +687,16 @@ class DefaultProgressService implements ProgressService {
     }
     SpouseText.Profile who = content.spouseText().profile(marriage.spouseCode());
     long cost = household.weddingCost(day);
-    household.marry(gameId, day, new Spouse(who.name(), who.job(), who.income(), who.intro()));
+    household.marry(gameId, day, new Spouse(who.job(), who.income(), who.intro()));
     household.cheer(gameId, HAPPY_MARRIAGE);
     household.bond(gameId, BOND_MARRIAGE);
     assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
     Map<String, Object> payload = new LinkedHashMap<>();
     payload.put("cost", cost);
-    payload.put("name", who.name());
     payload.put("job", who.job());
     payload.put("intro", who.intro());
     logs.append(gameId, day, "MARRIAGE", payload);
-    return simpleOutcome(
-        ticket,
-        "%s 결혼했다. 결혼 비용 %,d원이 들었다.".formatted(Korean.withParticle(who.name(), "과", "와"), cost));
+    return simpleOutcome(ticket, "결혼했다. 결혼 비용 %,d원이 들었다.".formatted(cost));
   }
 
   /** 자녀 결혼 (decisions.md 68번): 그때 물가의 결혼 비용 가운데 고른 비율만큼 내 돈이 나간다. 안 대주면 한 푼도 나가지 않는다. */
@@ -1856,8 +1852,7 @@ class DefaultProgressService implements ProgressService {
         household.pension(game.id(), day),
         home.spouse() == null
             ? null
-            : new GameView.Spouse(
-                home.spouse().name(), home.spouse().job(), home.spouse().intro()));
+            : new GameView.Spouse(home.spouse().job(), home.spouse().intro()));
   }
 
   private GameView.InvestorType investorTypeView(String code) {

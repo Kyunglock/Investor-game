@@ -218,9 +218,10 @@ class GameFlowTest {
     // 행복도는 0~100 (decisions.md 82번).
     assertThat(game.read("$.happiness", Integer.class)).isBetween(0, 100);
     assertThat(game.read("$.family", Integer.class)).isBetween(0, 100);
-    // 결혼 상대 소개가 가계에 남는다 (decisions.md 77번).
-    assertThat(game.read("$.household.spouse.name", String.class)).isNotBlank();
+    // 결혼 상대 소개가 가계에 남는다 (decisions.md 77번). 이름은 없다 (90번).
+    assertThat(game.read("$.household.spouse", Object.class).toString()).doesNotContain("name=");
     assertThat(game.read("$.household.spouse.job", String.class)).isNotBlank();
+    assertThat(game.read("$.household.spouse.intro", String.class)).startsWith("성격은");
     assertThat(kinds).contains("JOB", "CAREER");
     assertThat(kinds).contains("CHILD", "LIFE");
     // 성별은 나와 아이 모두 M/F 가운데 하나다 (decisions.md 69번).
