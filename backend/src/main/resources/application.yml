@@ -244,6 +244,8 @@ event:
   news:
     interest-weight-percent: 300
     no-repeat-window: 5
+    # 뉴스(매수·매도 선택)는 해마다 75% 확률로 한 번, 아니면 없다 (decisions.md 80번)
+    yearly-chance-bp: 7500
   # 결혼·자녀 선택형 이벤트 시점 (경제 개편 설계 7.3절)
   life:
     marriage-age: { min: 27, max: 31 }
@@ -279,18 +281,14 @@ event:
     cheongyak-gap-days: 540
     # 세 만기에 집주인이 재계약을 거절할 확률. 운 0이면 35%, 운 100이면 5%, 그 사이는 직선 (#25, decisions.md 49번)
     refuse-bp: { unlucky: 3500, lucky: 500 }
-  # 40년 동안 뉴스마다 선택해야 하므로 단기 약 80번, 장기 약 40번이 되도록 잡았다 (specs/event.md 7절).
+  # 투자 스타일별 뉴스 폭. 빈도는 스타일과 무관하게 event.news.yearly-chance-bp (decisions.md 80번)
   styles:
     short:
-      # 뉴스(매수·매도 선택)는 1년에 한 번꼴 (decisions.md 30번). 단기는 조금 잦다
-      news-gap-days: { min: 300, max: 390 }
       # 뉴스 폭은 content/news.json에서 두 배로 키웠다(65번). 단기는 그 위에 1.3배
       magnitude-percent: 130
     long:
-      news-gap-days: { min: 330, max: 420 }
       magnitude-percent: 100
     default:
-      news-gap-days: { min: 330, max: 420 }
       magnitude-percent: 100
 
 session:
