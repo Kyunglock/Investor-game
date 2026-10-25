@@ -99,6 +99,9 @@ public interface ContentCatalog {
    */
   List<String> hintPhrases(String detail, String direction, String strength);
 
+  /** 뉴스 결과 뒤 안목 구간(low·mid·high·expert)별 되돌아보는 한마디. good은 내 행동이 결과와 맞았는가 (decisions.md 73번). */
+  List<String> reviewPhrases(String detail, boolean good);
+
   /** sentiment: POS/NEG. */
   List<String> swayPhrases(String sentiment);
 
