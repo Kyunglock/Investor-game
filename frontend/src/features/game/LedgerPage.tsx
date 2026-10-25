@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import type { Game } from '../../api/client'
 import { childWord, percent, shortWon, signedShortWon, signedWon, won } from './labels'
-import { changeBp, signedPercent } from './market'
+import { signedPercent } from './market'
 import { useGameStore } from './store'
-import { curvePoints } from './timeline'
+import { curvePoints, yearDelta } from './timeline'
 
 /** 거주 형태 이름 (주거 설계 1절). */
 export const TENURE_LABELS: Record<Game['housing']['tenure'], string> = {
@@ -28,7 +28,8 @@ export function LedgerPage({ game, ageYears }: { game: Game; ageYears: number })
 }
 
 function Worth({ game }: { game: Game }) {
-  const delta = game.lastMonthTotalAsset == null ? null : game.totalAsset - game.lastMonthTotalAsset
+  // 달마다 바뀌는 "지난달보다"는 읽기도 전에 지나가서, 한 해를 마칠 때만 바뀌는 "작년 한 해"로 (decisions.md 74번).
+  const year = yearDelta(game.yearly, game.initialAsset)
   return (
     <div data-testid="portfolio-card">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -41,13 +42,12 @@ function Worth({ game }: { game: Game }) {
             {shortWon(game.totalAsset)}
           </p>
         </div>
-        {delta !== null && game.lastMonthTotalAsset != null && (
+        {year && (
           <p
-            className={`font-pen text-[24px] ${delta < 0 ? 'text-blue-pen' : 'text-red-pen'}`}
-            data-testid="month-delta"
+            className={`font-pen text-[24px] ${year.delta < 0 ? 'text-blue-pen' : 'text-red-pen'}`}
+            data-testid="year-delta"
           >
-            지난달보다 {signedShortWon(delta)} (
-            {signedPercent(changeBp(game.totalAsset, game.lastMonthTotalAsset))})
+            {year.age}세 한 해 {signedShortWon(year.delta)} ({signedPercent(year.bp)})
           </p>
         )}
       </div>
