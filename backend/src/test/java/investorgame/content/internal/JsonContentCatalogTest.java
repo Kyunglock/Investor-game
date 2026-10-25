@@ -280,6 +280,8 @@ class JsonContentCatalogTest {
     assertThat(catalog.familyTripText().luxuryLabel()).isNotBlank();
     assertThat(catalog.spouseText().profile("0-0-0-0").intro()).contains("성격은").contains("월");
     assertThat(catalog.spouseText().economies()).allMatch(e -> e.income() > 0);
+    assertThat(catalog.comfortPhrases("layoff", "spouse")).isNotEmpty();
+    assertThat(catalog.comfortPhrases("fraud", "friend")).isNotEmpty();
     assertThat(catalog.familyTripText().title()).contains("{who}");
   }
 

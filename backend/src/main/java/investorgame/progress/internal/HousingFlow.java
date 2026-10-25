@@ -46,6 +46,7 @@ class HousingFlow {
   private final MarketService market;
   private final AssetService assets;
   private final HouseholdService household;
+  private final Comforter comforter;
   private final EventService events;
   private final LogRepository logs;
   private final ContentCatalog content;
@@ -60,12 +61,14 @@ class HousingFlow {
       EventService events,
       LogRepository logs,
       ContentCatalog content,
+      Comforter comforter,
       GameProperties calendar,
       ProgressProperties properties) {
     this.housing = housing;
     this.market = market;
     this.assets = assets;
     this.household = household;
+    this.comforter = comforter;
     this.events = events;
     this.logs = logs;
     this.content = content;
@@ -688,6 +691,16 @@ class HousingFlow {
     } else if (ChoiceTicket.Housing.MOVE_OUT.equals(effect.definition())) {
       household.cheer(gameId, 3);
     }
+    // 전세사기 뒤에는 누군가의 위로가 붙는다 (decisions.md 85번). 나이는 모르므로 부모님은 빠진다.
+    String comfort =
+        effect.fraud()
+            ? comforter
+                .comfort(gameId, Comforter.FRAUD, day, null, random.forKey("comfort", ticket.seq()))
+                .orElse(null)
+            : null;
+    if (comfort != null) {
+      payload.put("comfort", comfort);
+    }
     logs.append(gameId, day, "HOUSING", payload);
     return new ChoiceOutcome.Outcome(
         ticket.kind().name(),
@@ -698,7 +711,8 @@ class HousingFlow {
         null,
         List.of(),
         message.toString().trim(),
-        null);
+        null,
+        comfort);
   }
 
   /** 이사하면 돌려받는 돈: 보증금(전세사기면 0) − 전세대출. 세입자가 아니면 0. */

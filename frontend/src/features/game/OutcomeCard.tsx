@@ -194,6 +194,15 @@ function Body({
           {outcome.message}
         </p>
       )}
+      {revealed && outcome.comfort && (
+        // 힘든 일 뒤 누군가의 위로 (decisions.md 85번)
+        <p
+          className="mt-3 border-l-[3px] border-wine bg-wine-soft px-2.5 py-1.5 font-pen text-[18px] leading-snug text-pen"
+          data-testid="outcome-comfort"
+        >
+          {outcome.comfort}
+        </p>
+      )}
       {revealed &&
         outcome.growth.map((g) => (
           <p

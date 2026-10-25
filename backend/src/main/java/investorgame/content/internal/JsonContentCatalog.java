@@ -337,6 +337,11 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public List<String> comfortPhrases(String situation, String who) {
+    return phrases.comfort().getOrDefault(situation, Map.of()).getOrDefault(who, List.of());
+  }
+
+  @Override
   public List<String> swayPhrases(String sentiment) {
     return phrases.sway().getOrDefault(sentiment, List.of());
   }
@@ -553,6 +558,13 @@ class JsonContentCatalog implements ContentCatalog {
               && !reviewPhrases(detail.key(), false).isEmpty(),
           "결과 뒤 안목 문구가 없다: " + detail.key());
     }
+    for (String situation : List.of("layoff", "career-fail", "big-loss", "fraud")) {
+      for (String who : List.of("spouse", "child", "parents", "friend")) {
+        require(
+            !comfortPhrases(situation, who).isEmpty(),
+            "위로 문구가 없다: " + situation + "/" + who + " (decisions.md 85번)");
+      }
+    }
     validateStocks();
     validateLife();
     require(!swayPhrases("POS").isEmpty() && !swayPhrases("NEG").isEmpty(), "다른 뉴스 문구가 없다");
@@ -766,6 +778,7 @@ class JsonContentCatalog implements ContentCatalog {
   record Phrases(
       Map<String, Map<String, Map<String, List<String>>>> hints,
       Map<String, Map<String, List<String>>> review,
+      Map<String, Map<String, List<String>>> comfort,
       Map<String, List<String>> sway,
       TextBlock job,
       TextBlock jobRetry,
