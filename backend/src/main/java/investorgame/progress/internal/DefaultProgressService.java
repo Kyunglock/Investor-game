@@ -524,8 +524,38 @@ class DefaultProgressService implements ProgressService {
         job == null
             ? 0
             : monthlySalary(job, tenureYears(character, day), character.salaryBonusBp());
-    StringBuilder message = new StringBuilder(effect.text());
-    if (effect.becomeJob() != null) {
+    // 가족이 있으면 가족 때문에 버티고 위로받는 문구, 혼자면 불안과 친구의 문구 (decisions.md 83번).
+    HouseholdView family = household.get(gameId);
+    StringBuilder message =
+        new StringBuilder(effect.textFor(family.married() || !family.children().isEmpty()));
+    if (effect.becomeInvestor()) {
+      // 번아웃 등에서 전업투자자로 전향: 직업 선택의 INVEST와 같다 (decisions.md 35·83번). 위로금은 받고 나온다.
+      long severance = salaryBefore * effect.severanceMonths();
+      if (severance > 0) {
+        assets.credit(gameId, SEVERANCE, severance, day);
+        message.append(" 위로금 %,d원을 받았다.".formatted(severance));
+      }
+      characters.quitJob(gameId);
+      characters.becomeFullTimeInvestor(gameId, day);
+      if (game.phase() != Phase.INVESTING) {
+        games.startInvesting(gameId, day);
+      }
+      logs.append(
+          gameId,
+          day,
+          "JOB",
+          Map.of(
+              "jobCode",
+              ChoiceTicket.Job.INVEST,
+              "jobTitle",
+              FULL_TIME_INVESTOR,
+              "monthlySalary",
+              0,
+              "rehire",
+              true,
+              "fullTimeInvestor",
+              true));
+    } else if (effect.becomeJob() != null) {
       characters.foundCompany(gameId, effect.becomeJob(), day);
       JobDefinition founded = content.job(effect.becomeJob());
       message.append(
