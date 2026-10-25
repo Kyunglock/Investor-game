@@ -945,58 +945,31 @@ class DefaultProgressService implements ProgressService {
     }
     StockDefinition stock = requireStock(stockCode);
     int day = game.lastReportedDay();
-    CharacterView character = characters.get(gameId);
-    AccountView account = assets.get(gameId);
     long price = market.prices(gameId).get(stockCode);
-    boolean holding = account.holdings().containsKey(stockCode);
-    long seq = logs.findAll(gameId).stream().filter(e -> TRADE_LOG.equals(e.kind())).count() + 1;
-
-    // 다른 뉴스가 없으므로 줏대 판정은 없고 용기 판정만 걸린다.
-    Resolution resolution =
-        behavior.resolve(
-            new ChoiceContext(side, character.stats(), null, holding),
-            new HashSeededRandom(game.seed()).forKey("behavior", "trade", seq));
+    // 매매창의 자유 매매는 성향 판정 없이 고른 대로 체결한다 (decisions.md 81번). 성향에 뒤집히는 것은 이벤트 선택뿐이다.
     ChoiceOutcome.Trade trade =
-        switch (resolution.actual()) {
-          case BUY -> tradeView(assets.buy(gameId, stockCode, quantity, price, day, null));
-          case SELL -> tradeView(assets.sell(gameId, stockCode, quantity, price, day, null));
-          case HOLD -> new ChoiceOutcome.Trade("HELD", 0, price, 0, null);
-        };
-    List<StatChange> growth =
-        characters.grow(
-            gameId,
-            resolution.deviations().stream()
-                .map(d -> (GrowthSource) new GrowthSource.DeviationGrowth(d.statCode(), null))
-                .toList(),
-            day);
+        side == Action.BUY
+            ? tradeView(assets.buy(gameId, stockCode, quantity, price, day, null))
+            : tradeView(assets.sell(gameId, stockCode, quantity, price, day, null));
 
     Map<String, Object> payload = new HashMap<>();
     payload.put("stockCode", stockCode);
     payload.put("stockName", stock.name());
     payload.put("side", side.name());
     payload.put("chosen", side.name());
-    payload.put("actual", resolution.actual().name());
-    payload.put("deviations", deviationPayload(resolution));
+    payload.put("actual", side.name());
+    payload.put("deviations", List.of());
     payload.put("status", trade.status());
     payload.put("quantity", trade.quantity());
     payload.put("price", trade.price());
     payload.put("amount", trade.amount());
     payload.put("realizedPnl", trade.realizedPnl());
     logs.append(gameId, day, TRADE_LOG, payload);
-    List<ChoiceOutcome.Growth> growthViews = logGrowth(gameId, day, growth, DEVIATION);
 
     return new ChoiceOutcome(
         view(games.findLatest(sessionId).orElseThrow()),
         new ChoiceOutcome.Outcome(
-            TRADE_LOG,
-            side.name(),
-            resolution.actual().name(),
-            deviationViews(resolution),
-            trade,
-            null,
-            growthViews,
-            null,
-            null));
+            TRADE_LOG, side.name(), side.name(), List.of(), trade, null, List.of(), null, null));
   }
 
   @Override
