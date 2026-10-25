@@ -215,6 +215,9 @@ class GameFlowTest {
     List<String> kinds = game.read("$.log[*].kind");
     assertThat(kinds).startsWith("BIRTH").endsWith("END");
     assertThat(kinds).containsOnlyOnce("STYLE", "OFFER", "MARRIAGE", "RETIRE");
+    // 결혼 상대 소개가 가계에 남는다 (decisions.md 77번).
+    assertThat(game.read("$.household.spouse.name", String.class)).isNotBlank();
+    assertThat(game.read("$.household.spouse.job", String.class)).isNotBlank();
     assertThat(kinds).contains("JOB", "CAREER");
     assertThat(kinds).contains("CHILD", "LIFE");
     // 성별은 나와 아이 모두 M/F 가운데 하나다 (decisions.md 69번).

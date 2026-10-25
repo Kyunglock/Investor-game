@@ -96,7 +96,9 @@ class DefaultEventServiceTest {
     assertThat(marriage.options())
         .extracting(EventView.Option::code)
         .containsExactly("accept", "decline");
-    assertThat(marriage.title()).isEqualTo(content.lifeText("marriage").title());
+    // 결혼 상대 소개 (decisions.md 77번): 제목에 이름, 본문에 성격·직업·월급이 있다.
+    assertThat(marriage.title()).endsWith("결혼할까?");
+    assertThat(marriage.body()).contains("성격은").contains("직업은").contains("월");
   }
 
   @Test
@@ -252,8 +254,14 @@ class DefaultEventServiceTest {
     UUID gameId = UUID.randomUUID();
     EventView marriage = firstOf(gameId, lifeOnly(false, null, 0), JOB_DAY, EventKind.LIFE, 3L);
     ChoiceTicket ticket = events.prepareChoice(gameId, marriage.eventId(), "accept");
-    assertThat(ticket.effect())
-        .isEqualTo(new ChoiceTicket.Life(ChoiceTicket.LifeKind.MARRIAGE, true));
+    assertThat(ticket.effect()).isInstanceOf(ChoiceTicket.Marriage.class);
+    assertThat(((ChoiceTicket.Marriage) ticket.effect()).accepted()).isTrue();
+    assertThat(
+            content
+                .spouseText()
+                .profile(((ChoiceTicket.Marriage) ticket.effect()).spouseCode())
+                .name())
+        .isNotBlank();
     assertThat(ticket.stockCode()).isNull();
   }
 
