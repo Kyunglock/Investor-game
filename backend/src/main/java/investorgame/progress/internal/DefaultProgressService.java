@@ -376,6 +376,13 @@ class DefaultProgressService implements ProgressService {
               result.statDeltas().forEach((k, v) -> statDeltas.merge(k, v, Integer::sum));
               amount += result.amount();
             }
+            // 성인 장면의 돈은 25세 기준이라 물가를 붙인다. 성장기는 그대로 (decisions.md 75번).
+            if (trait.adult()) {
+              amount =
+                  amount < 0
+                      ? -household.inflated(-amount, ticket.occursDay())
+                      : household.inflated(amount, ticket.occursDay());
+            }
             if (amount > 0) {
               assets.credit(gameId, WINDFALL, amount, ticket.occursDay());
             } else if (amount < 0) {
@@ -398,7 +405,11 @@ class DefaultProgressService implements ProgressService {
             }
             logs.append(gameId, ticket.occursDay(), "TRAIT", traitPayload);
             List<ChoiceOutcome.Growth> growth = logGrowth(gameId, ticket.occursDay(), moved, TRAIT);
-            String note = result == null ? trait.note() : trait.note() + " " + result.note();
+            // 돈이 오갔으면 얼마가 오갔는지 결과에 붙인다 (decisions.md 75번).
+            String money =
+                amount == 0 ? "" : " (통장 %s%,d원)".formatted(amount > 0 ? "+" : "", amount);
+            String note =
+                (result == null ? trait.note() : trait.note() + " " + result.note()) + money;
             if (!completed.traitsComplete()) {
               yield simpleOutcome(ticket, note, growth);
             }
