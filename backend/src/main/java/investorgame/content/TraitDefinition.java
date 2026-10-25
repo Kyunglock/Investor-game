@@ -16,14 +16,18 @@ public record TraitDefinition(
     int age,
     Boolean adult,
     Boolean job,
+    Boolean married,
     String title,
     String body,
     List<Option> options) {
 
-  /** JSON에 adult가 없으면 성장기 장면이고, job이 없으면 직업과 무관한 장면이다. */
+  /**
+   * JSON에 adult가 없으면 성장기 장면이고, job이 없으면 직업과 무관한 장면, married가 없으면 결혼과 무관한 장면이다 (decisions.md 76번).
+   */
   public TraitDefinition {
     adult = adult != null && adult;
     job = job != null && job;
+    married = married != null && married;
   }
 
   /**
