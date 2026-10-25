@@ -387,6 +387,16 @@ class DefaultProgressService implements ProgressService {
                       ? -household.inflated(-amount, ticket.occursDay())
                       : household.inflated(amount, ticket.occursDay());
             }
+            // 성장기는 부모님 품이라 빚을 지지 않는다: 통장에 있는 만큼만 쓴다 (decisions.md 84번). 초기 자산이 100만 원일 수도 있어 그대로 두면
+            // 취업 전에 파산한다.
+            boolean capped = false;
+            if (!trait.adult() && amount < 0) {
+              long cash = assets.get(gameId).cash();
+              if (-amount > cash) {
+                amount = -cash;
+                capped = true;
+              }
+            }
             if (amount > 0) {
               assets.credit(gameId, WINDFALL, amount, ticket.occursDay());
             } else if (amount < 0) {
@@ -411,7 +421,10 @@ class DefaultProgressService implements ProgressService {
             List<ChoiceOutcome.Growth> growth = logGrowth(gameId, ticket.occursDay(), moved, TRAIT);
             // 돈이 오갔으면 얼마가 오갔는지 결과에 붙인다 (decisions.md 75번).
             String money =
-                amount == 0 ? "" : " (통장 %s%,d원)".formatted(amount > 0 ? "+" : "", amount);
+                amount == 0
+                    ? (capped ? " (통장이 비어 돈은 들지 않았다)" : "")
+                    : " (통장 %s%,d원%s)"
+                        .formatted(amount > 0 ? "+" : "", amount, capped ? ", 있는 만큼만" : "");
             String note =
                 (result == null ? trait.note() : trait.note() + " " + result.note()) + money;
             if (!completed.traitsComplete()) {
