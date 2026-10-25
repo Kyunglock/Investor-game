@@ -83,7 +83,7 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       return {
         ...base,
         tone: 'decision',
-        text: `${str(p.eventTitle)} · 결정: ${str(p.optionLabel)}${p.result ? ` → ${str(p.result)}` : ''}`,
+        text: `${str(p.eventTitle)} · 결정: ${str(p.optionLabel)}${p.result ? ` → ${str(p.result)}` : ''}${typeof p.amount === 'number' && p.amount !== 0 ? ` · ${signedWon(p.amount)}` : ''}`,
       }
     case 'JOB':
       return {

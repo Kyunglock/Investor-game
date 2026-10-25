@@ -170,8 +170,9 @@ class DefaultEventService implements EventService {
             yield new ChoiceTicket.Career(chosen, target);
           }
           case TRAIT -> {
+            TraitDefinition definition = renderer.trait(row.definitionCode());
             TraitDefinition.Option chosen =
-                renderer.trait(row.definitionCode()).options().stream()
+                definition.options().stream()
                     .filter(o -> o.code().equals(optionCode))
                     .findFirst()
                     .orElseThrow();
@@ -180,7 +181,8 @@ class DefaultEventService implements EventService {
                 chosen.statDeltas(),
                 chosen.note(),
                 chosen.amount(),
-                chosen.outcomes());
+                chosen.outcomes(),
+                definition.adult());
           }
           case OFFER -> new ChoiceTicket.Offer(ACCEPT.equals(optionCode));
           case LIFE ->
