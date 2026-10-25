@@ -178,7 +178,7 @@ public record CompleteResult(
 | `LIFE` 자녀 | 결혼함, 자녀 < `max-children`, 나이 ≤ `child-last-age` | 처음은 결혼일 + `child-first-gap-years`, 그다음은 마지막 자녀 제안 + `child-gap-years` (키 `("event","life","child",n)`) |
 | `LIFE` 가족 여행 | 결혼함, 나이 ≤ `trip-last-age` | 처음은 결혼일 + `trip-gap-years`, 그다음은 마지막 여행 제안 + `trip-gap-years` (키 `("event","gap","TRIP",n)`). 제안자는 배우자·집에 있는 아이·부모님(55세까지) 중 하나 (키 `("event","life","trip-who",n)`). 선택지 luxury/normal/cheap/none (decisions.md 71번) |
 | `NOTICE` | 취업함 | 마지막 `NOTICE`(없으면 취업일) + `event.notice.gap-days`. 정의는 `("event","notice",seq)`로 가중치 선택, `requiresMarried`는 결혼 뒤에만 |
-| `NEWS` | `INVESTING` | 마지막 뿌리 `NEWS`(없으면 `INVESTING` 시작 일수) + 투자 스타일별 간격 구간에서 뽑은 값 (5.4절) |
+| `NEWS` | `INVESTING` | 해마다 `event.news.yearly-chance-bp`(7500) 확률로 한 번, 그 해 안의 한 날(키 `("event","news-year",해)`). 안 걸린 해는 없다. 마지막 `NEWS`(없으면 `INVESTING` 시작) 뒤의 첫 날 (decisions.md 80번) |
 | `SHAKE` | `INVESTING`, `heldStockCodes`가 비어 있지 않음 | 마지막 `SHAKE`(없으면 `INVESTING` 시작 일수) + `event.shake.gap-days`(300~600) 구간에서 뽑은 값(키 `("SHAKE", n)`). 종목·장면·숨은 방향(`up-bp`)·폭(`magnitude-bp`)은 `("event","shake",seq)`로 뽑는다 |
 | `LEVERAGE` | `INVESTING`, `heldDropBp`에 `event.leverage.drop-bp`(3000) 이상인 종목이 있음 | 마지막 `LEVERAGE` + `event.leverage.gap-days`(720), 없으면 `INVESTING` 시작 일수(지나 있으면 지금). 가장 많이 빠진 종목(같으면 코드순) |
 | 연결 뉴스 | `SCHEDULED` 상태 | 예약된 `occurs_day` |
@@ -218,7 +218,7 @@ public record CompleteResult(
 
 | 설정 (스타일 코드별) | 단기(`short`) | 장기(`long`) | 의미 |
 |---|---|---|---|
-| `event.style.<코드>.news-gap-days` | 300~390 | 330~420 | 뉴스 간격 구간. 처음 값(15~45 / 60~150)은 40년 동안 뉴스가 단기 약 470번, 장기 약 130번이라 너무 많아 120~240 / 240~480으로 늘렸고, 그래도 "매수·매도가 너무 자주 나온다"는 평가로 **1년에 한 번꼴**로 다시 늘렸다 (decisions.md 30번). 투자 44년 동안 단기 약 46번, 장기 약 42번 |
+| `event.news.yearly-chance-bp` | 7500 | 7500 | 해마다 뉴스가 한 번 나올 확률. 안 걸린 해는 없다(1년에 0~1번). 예전의 스타일별 간격(`news-gap-days`, 1년에 한 번꼴, decisions.md 30번)을 대신한다 (80번). 투자 44년 동안 약 33번 |
 | `event.style.<코드>.magnitude-percent` | 150 | 100 | 변동 폭 배율 |
 | `event.style.<코드>.chain-continue-percent` | 30 | 70 | 연결 뉴스가 이어질 확률 배율 |
 
@@ -334,7 +334,7 @@ public record CompleteResult(
 | `event.news.interest-weight-percent` | 300 | 관심 섹터 뉴스의 가중치 배율 |
 | `event.news.no-repeat-window` | 5 | 같은 정의가 다시 나오지 않는 최근 개수 |
 | `event.news.max-chain-depth` | 5 | 연결 뉴스의 최대 깊이 |
-| `event.style.<코드>.news-gap-days` | 단기 300~390 / 장기 330~420 | 뉴스 간격, 1년에 한 번꼴 (5.5절) |
+| `event.news.yearly-chance-bp` | 7500 | 해마다 뉴스 한 번일 확률, 1년에 0~1번 (5.5절, decisions.md 80번) |
 | `event.style.<코드>.magnitude-percent` | 단기 150 / 장기 100 | 변동 폭 배율 |
 | `event.style.<코드>.chain-continue-percent` | 단기 30 / 장기 70 | 연결 확률 배율 |
 | `game.days-per-year` | 360 | 투자 시작 재제안 주기 |
