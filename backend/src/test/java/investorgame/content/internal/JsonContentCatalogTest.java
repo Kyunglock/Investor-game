@@ -125,6 +125,17 @@ class JsonContentCatalogTest {
             .filter(o -> o.code().equals("lend"))
             .findFirst()
             .orElseThrow();
+    // 돈 이야기를 하는 성인 장면은 선택지 대부분에서 실제로 돈이 오간다 (decisions.md 75번).
+    for (String code : List.of("a-bonus", "a-parents", "a-sidejob", "a-pension", "a-crash")) {
+      TraitDefinition money =
+          catalog.adultTraits().stream()
+              .filter(t -> t.code().equals(code))
+              .findFirst()
+              .orElseThrow();
+      long moving =
+          money.options().stream().filter(o -> o.amount() != 0 || !o.outcomes().isEmpty()).count();
+      assertThat(moving).as(code).isGreaterThanOrEqualTo(money.options().size() / 2L);
+    }
     assertThat(lend.amount()).isEqualTo(-5_000_000);
     assertThat(lend.outcomes()).hasSize(2);
     assertThat(lend.outcomes())
