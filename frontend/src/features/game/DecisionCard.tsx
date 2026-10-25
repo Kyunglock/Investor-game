@@ -322,8 +322,8 @@ function WorldBrief({ game }: { game: Game }) {
           </ul>
           {headlines.length > 0 && (
             <ul className="mt-1.5 border-t border-line-soft pt-1.5 text-muted">
-              {headlines.map((h: MarketOverview['newspaper'][number], i) => (
-                <li key={`${h.day}-${i}`} data-testid="brief-headline">
+              {headlines.map((h: MarketOverview['newspaper'][number]) => (
+                <li key={`${h.day}-${h.text}`} data-testid="brief-headline">
                   <span className="font-mono-num text-[11px] text-faint">{ageOf(h.day)}세 </span>
                   {h.text}
                 </li>
