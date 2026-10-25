@@ -30,6 +30,7 @@ import investorgame.content.ContentCatalog;
 import investorgame.content.CrisisDefinition;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
+import investorgame.content.OutingText;
 import investorgame.content.SpouseText;
 import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
@@ -779,10 +780,14 @@ class DefaultProgressService implements ProgressService {
         gameId,
         ticket.eventId(),
         new Completion(ticket.optionCode(), ticket.optionCode(), List.of()));
+    // 아이의 나들이는 그 나들이의 비용(물가만), 가족 여행은 max(물가 반영 250만, 순자산 1%) (decisions.md 71·87번).
+    OutingText outing = trip.outing() == null ? null : content.outing(trip.outing());
     long normal =
-        Math.max(
-            household.inflated(TRIP_BASE_COST, day),
-            netWorth(gameId) * TRIP_ASSET_PERCENT / PERCENT);
+        outing != null
+            ? household.inflated(outing.cost(), day)
+            : Math.max(
+                household.inflated(TRIP_BASE_COST, day),
+                netWorth(gameId) * TRIP_ASSET_PERCENT / PERCENT);
     long cost = normal * trip.costBp() / BP;
     if (cost > 0) {
       assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
@@ -791,31 +796,49 @@ class DefaultProgressService implements ProgressService {
     household.cheer(
         gameId,
         switch (ticket.optionCode()) {
-          case ChoiceTicket.FamilyTrip.LUXURY -> 15;
-          case ChoiceTicket.FamilyTrip.NORMAL -> 10;
-          case ChoiceTicket.FamilyTrip.CHEAP -> 5;
-          default -> -5;
+          case ChoiceTicket.FamilyTrip.LUXURY -> outing != null ? 10 : 15;
+          case ChoiceTicket.FamilyTrip.NORMAL -> outing != null ? 8 : 10;
+          case ChoiceTicket.FamilyTrip.CHEAP -> outing != null ? 4 : 5;
+          default -> outing != null ? -4 : -5;
         });
     String who = tripProposerName(trip.proposer());
     Map<String, Object> payload = new LinkedHashMap<>();
     payload.put("eventId", ticket.eventId().toString());
-    payload.put("noticeCode", "family-trip");
-    payload.put("title", "가족 여행");
+    payload.put("noticeCode", outing != null ? "kid-outing" : "family-trip");
+    payload.put("title", outing != null ? outing.name() : "가족 여행");
+    if (outing != null) {
+      payload.put("outing", outing.code());
+    }
     payload.put("amount", -cost);
     payload.put("option", ticket.optionCode());
     payload.put("proposer", who);
     logs.append(gameId, day, "LIFE", payload);
     String message =
-        switch (ticket.optionCode()) {
-          case ChoiceTicket.FamilyTrip.LUXURY ->
-              "온 가족이 호화롭게 다녀왔다. %,d원이 들었다. 사진첩이 두꺼워졌다.".formatted(cost);
-          case ChoiceTicket.FamilyTrip.NORMAL ->
-              "가족 여행을 다녀왔다. %,d원이 들었다. 돈이 아깝지 않았다.".formatted(cost);
-          case ChoiceTicket.FamilyTrip.CHEAP ->
-              "가까운 바다에 당일치기로 다녀왔다. %,d원이 들었다. 그래도 다들 좋아했다.".formatted(cost);
-          default -> "이번엔 가지 않기로 했다. %s의 얼굴이 조금 어두웠다.".formatted(who);
-        };
+        outing != null
+            ? outingMessage(outing, ticket.optionCode(), who, cost)
+            : switch (ticket.optionCode()) {
+              case ChoiceTicket.FamilyTrip.LUXURY ->
+                  "온 가족이 호화롭게 다녀왔다. %,d원이 들었다. 사진첩이 두꺼워졌다.".formatted(cost);
+              case ChoiceTicket.FamilyTrip.NORMAL ->
+                  "가족 여행을 다녀왔다. %,d원이 들었다. 돈이 아깝지 않았다.".formatted(cost);
+              case ChoiceTicket.FamilyTrip.CHEAP ->
+                  "가까운 바다에 당일치기로 다녀왔다. %,d원이 들었다. 그래도 다들 좋아했다.".formatted(cost);
+              default -> "이번엔 가지 않기로 했다. %s의 얼굴이 조금 어두웠다.".formatted(who);
+            };
     return simpleOutcome(ticket, message);
+  }
+
+  /** 나들이 결과 문구: 선택마다 콘텐츠 문구에 아이 이름을 채우고, 돈이 들었으면 금액을 붙인다 (decisions.md 87번). */
+  private static String outingMessage(OutingText outing, String option, String child, long cost) {
+    String text =
+        switch (option) {
+          case ChoiceTicket.FamilyTrip.LUXURY -> outing.luxuryText();
+          case ChoiceTicket.FamilyTrip.NORMAL -> outing.normalText();
+          case ChoiceTicket.FamilyTrip.CHEAP -> outing.cheapText();
+          default -> outing.noneText();
+        };
+    String filled = text.replace("{child}", child);
+    return cost > 0 ? filled + " (%,d원)".formatted(cost) : filled;
   }
 
   private static String tripProposerName(String proposer) {

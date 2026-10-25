@@ -13,6 +13,7 @@ import investorgame.content.ContentCatalog;
 import investorgame.content.JobDefinition;
 import investorgame.content.NewsDefinition;
 import investorgame.content.NoticeDefinition;
+import investorgame.content.OutingText;
 import investorgame.content.ShakeDefinition;
 import investorgame.content.SpouseText;
 import investorgame.content.StockDefinition;
@@ -62,6 +63,9 @@ class DefaultEventService implements EventService {
 
   /** 가족 여행 제안의 정의 코드: "trip:" + 제안한 사람(spouse·parents·child:n) (decisions.md 71번). */
   static final String TRIP_PREFIX = "trip:";
+
+  /** 아이의 나들이 정의 코드: "outing:" + 코드 + ":" + 아이 순번 (decisions.md 87번). */
+  static final String OUTING_PREFIX = "outing:";
 
   /** 직업 선택 행의 definition_code: null이면 첫 선택, RETRY는 기다린 뒤, REHIRE는 실직 뒤. 문구가 달라진다. */
   static final String JOB_RETRY = "retry";
@@ -191,12 +195,17 @@ class DefaultEventService implements EventService {
                       weddingSeq(row.definitionCode()), weddingShareBp(optionCode))
                   : row.definitionCode().startsWith(TRIP_PREFIX)
                       ? new ChoiceTicket.FamilyTrip(
-                          tripProposer(row.definitionCode()), tripCostBp(optionCode))
-                      : row.definitionCode().startsWith(MARRIAGE_PREFIX)
-                          ? new ChoiceTicket.Marriage(
-                              spouseCode(row.definitionCode()), ACCEPT.equals(optionCode))
-                          : new ChoiceTicket.Life(
-                              ChoiceTicket.LifeKind.CHILD, ACCEPT.equals(optionCode));
+                          tripProposer(row.definitionCode()), tripCostBp(optionCode), null)
+                      : row.definitionCode().startsWith(OUTING_PREFIX)
+                          ? new ChoiceTicket.FamilyTrip(
+                              "child:" + outingChild(row.definitionCode()),
+                              tripCostBp(optionCode),
+                              outingCode(row.definitionCode()))
+                          : row.definitionCode().startsWith(MARRIAGE_PREFIX)
+                              ? new ChoiceTicket.Marriage(
+                                  spouseCode(row.definitionCode()), ACCEPT.equals(optionCode))
+                              : new ChoiceTicket.Life(
+                                  ChoiceTicket.LifeKind.CHILD, ACCEPT.equals(optionCode));
           case NEWS -> new ChoiceTicket.News();
           case SHAKE -> new ChoiceTicket.Shake();
           case LEVERAGE ->
@@ -521,7 +530,51 @@ class DefaultEventService implements EventService {
         dues.add(new LifeDue(TRIP_PREFIX + who, day));
       }
     }
+    // 아이의 나들이 (decisions.md 87번): 어린 아이가 집에 있는 동안 1~2년마다 하나씩 조른다.
+    List<EventRow> outings =
+        rows.stream()
+            .filter(
+                r ->
+                    r.kind() == EventKind.LIFE
+                        && r.definitionCode() != null
+                        && r.definitionCode().startsWith(OUTING_PREFIX))
+            .toList();
+    if (context.marriedDay() != null && !context.childLeaveDays().isEmpty()) {
+      int base = outings.isEmpty() ? context.marriedDay() : last(outings).occursDay();
+      int day = base + roll(random, life.outingGapYears(), "OUTING", outings.size()) * year;
+      List<Integer> young = youngChildren(context, day);
+      if (!young.isEmpty()) {
+        RandomGenerator rng = random.forKey("event", "life", "outing", outings.size());
+        List<OutingText> kinds = content.outings();
+        String kind = kinds.get(rng.nextInt(kinds.size())).code();
+        int seq = young.get(rng.nextInt(young.size()));
+        dues.add(new LifeDue(OUTING_PREFIX + kind + ":" + seq, day));
+      }
+    }
     return dues;
+  }
+
+  /** 그날 집에 있는 어린 아이(독립까지 12~29년 남았으면 대략 한 살에서 열세 살)의 순번. */
+  private List<Integer> youngChildren(SchedulingContext context, int day) {
+    int year = calendar.daysPerYear();
+    List<Integer> young = new ArrayList<>();
+    for (int i = 0; i < context.childLeaveDays().size(); i++) {
+      int left = context.childLeaveDays().get(i) - day;
+      if (left >= 12 * year && left <= 29 * year) {
+        young.add(i + 1);
+      }
+    }
+    return young;
+  }
+
+  static String outingCode(String definitionCode) {
+    String rest = definitionCode.substring(OUTING_PREFIX.length());
+    return rest.substring(0, rest.indexOf(':'));
+  }
+
+  static int outingChild(String definitionCode) {
+    String rest = definitionCode.substring(OUTING_PREFIX.length());
+    return Integer.parseInt(rest.substring(rest.indexOf(':') + 1));
   }
 
   /** 여행을 가자고 하는 사람: 배우자, 집에 있는 아이(독립까지 24년 안쪽이면 대략 여섯 살은 넘었다), 55세까지는 부모님도. */
@@ -787,7 +840,7 @@ class DefaultEventService implements EventService {
                     ChoiceTicket.ChildWedding.FULL,
                     ChoiceTicket.ChildWedding.HALF,
                     ChoiceTicket.ChildWedding.NONE)
-                : code.startsWith(TRIP_PREFIX)
+                : code.startsWith(TRIP_PREFIX) || code.startsWith(OUTING_PREFIX)
                     ? List.of(
                         ChoiceTicket.FamilyTrip.LUXURY,
                         ChoiceTicket.FamilyTrip.NORMAL,

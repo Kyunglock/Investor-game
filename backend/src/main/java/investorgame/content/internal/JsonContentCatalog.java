@@ -14,6 +14,7 @@ import investorgame.content.JobDefinition;
 import investorgame.content.LifeText;
 import investorgame.content.NewsDefinition;
 import investorgame.content.NoticeDefinition;
+import investorgame.content.OutingText;
 import investorgame.content.ShakeDefinition;
 import investorgame.content.SpouseText;
 import investorgame.content.StockDefinition;
@@ -317,6 +318,19 @@ class JsonContentCatalog implements ContentCatalog {
   @Override
   public SpouseText spouseText() {
     return life.spouse();
+  }
+
+  @Override
+  public List<OutingText> outings() {
+    return life.outings();
+  }
+
+  @Override
+  public OutingText outing(String code) {
+    return life.outings().stream()
+        .filter(o -> o.code().equals(code))
+        .findFirst()
+        .orElseThrow(() -> new IllegalArgumentException("콘텐츠에 없는 나들이: " + code));
   }
 
   @Override
@@ -661,6 +675,17 @@ class JsonContentCatalog implements ContentCatalog {
   private void validateLife() {
     require(life.marriage() != null && life.child() != null, "결혼·자녀 문구가 없다");
     require(
+        life.outings() != null
+            && !life.outings().isEmpty()
+            && life.outings().stream()
+                .allMatch(
+                    o ->
+                        o.cost() > 0
+                            && o.title().contains("{child}")
+                            && o.luxuryText() != null
+                            && o.noneText() != null),
+        "나들이 문구가 비었다 (decisions.md 87번)");
+    require(
         life.spouse() != null
             && !life.spouse().names().isEmpty()
             && !life.spouse().personalities().isEmpty()
@@ -776,6 +801,7 @@ class JsonContentCatalog implements ContentCatalog {
       ChildWeddingText childWedding,
       FamilyTripText familyTrip,
       SpouseText spouse,
+      List<OutingText> outings,
       List<NoticeDefinition> notices) {}
 
   record Crises(List<CrisisDefinition> scenarios, List<String> commonOmens) {}

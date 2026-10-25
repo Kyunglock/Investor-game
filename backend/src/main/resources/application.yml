@@ -261,6 +261,8 @@ event:
     # 결혼 뒤 이 간격마다 가족 가운데 누군가 여행을 가자고 한다. 이 나이까지 (decisions.md 71번)
     trip-gap-years: { min: 3, max: 6 }
     trip-last-age: 65
+    # 아이가 어릴 때(대략 13세까지) 이 간격마다 놀이동산·동물원·캠핑·운동회 가운데 하나를 조른다 (decisions.md 87번)
+    outing-gap-years: { min: 1, max: 2 }
   # 알림성 지출·수입 이벤트 간격 (직업이 생긴 뒤부터)
   notice:
     gap-days: { min: 240, max: 600 }

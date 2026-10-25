@@ -95,6 +95,11 @@ public interface ContentCatalog {
   /** 결혼 상대 소개의 재료 (decisions.md 77번). */
   SpouseText spouseText();
 
+  /** 아이가 어릴 때의 나들이 (decisions.md 87번). 코드 순. */
+  java.util.List<OutingText> outings();
+
+  OutingText outing(String code);
+
   /** direction: UP/DOWN/NEUTRAL, strength: MILD/STRONG. */
   /**
    * 힌트 문구. detail은 안목 구간(low·mid·high·expert), 높을수록 종목·섹터·폭({stock}·{sectorName}·{min}~{max}%)을 짚는다

@@ -29,6 +29,24 @@ function tripArt(game: Game): CreditArt {
   }
 }
 
+/** 아이의 나들이 그림: 놀이동산에 나와 아이 (decisions.md 87번). 배우자는 집에서 쉬는 날이다. */
+function outingArt(game: Game): CreditArt {
+  const kid = game.household.children.find((c) => !c.leftHome)
+  return {
+    vignette: 'park',
+    figures: [
+      { who: 'me', sex: game.sex, stage: 'adult', x: 14 },
+      { who: 'kid', sex: kid?.sex ?? 'M', stage: 'child', x: 28 },
+    ],
+  }
+}
+
+const OUTING_CAPTIONS: Record<string, string> = {
+  luxury: '아이가 온종일 웃었다. 통장은 가벼워졌다.',
+  normal: '아이와 하루를 보냈다.',
+  cheap: '작게 놀아도 아이는 좋아했다.',
+}
+
 const TRIP_CAPTIONS: Record<string, string> = {
   luxury: '호화롭게 다녀왔다. 통장은 가벼워졌지만 후회는 없다.',
   normal: '가족 여행을 다녀왔다.',
@@ -45,12 +63,21 @@ export function momentForOutcome(outcome: Outcome, game: Game): Moment | null {
         (e) =>
           e.kind === 'LIFE' &&
           e.day === game.day &&
-          (e.payload as Record<string, unknown>).noticeCode === 'family-trip',
+          ['family-trip', 'kid-outing'].includes(
+            String((e.payload as Record<string, unknown>).noticeCode),
+          ),
       )
     if (trip) {
       const p = trip.payload as Record<string, unknown>
       if (Number(p.amount ?? 0) >= 0) {
         return null
+      }
+      if (p.noticeCode === 'kid-outing') {
+        return {
+          art: outingArt(game),
+          mood: 'joy',
+          caption: OUTING_CAPTIONS[String(p.option)] ?? '아이와 하루를 보냈다.',
+        }
       }
       return {
         art: tripArt(game),
@@ -102,6 +129,13 @@ export function momentForOutcome(outcome: Outcome, game: Game): Moment | null {
 /** 토스트에 그림을 붙일 생활 기록: 실제로 다녀온 가족 여행. 안 갔으면(금액 0) 그림 없음. */
 export function momentForNotice(entry: LogEntry, game: Game): Moment | null {
   const p = entry.payload as Record<string, unknown>
+  if (entry.kind === 'LIFE' && p.noticeCode === 'kid-outing' && Number(p.amount ?? 0) < 0) {
+    return {
+      art: outingArt(game),
+      mood: 'joy',
+      caption: OUTING_CAPTIONS[String(p.option)] ?? '아이와 하루를 보냈다.',
+    }
+  }
   if (
     entry.kind === 'LIFE' &&
     (p.noticeCode === 'family-trip' || p.title === '가족 여행') &&
