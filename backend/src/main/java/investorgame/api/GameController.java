@@ -105,6 +105,17 @@ class GameController {
     return result;
   }
 
+  /** 투자 인생을 여기서 끝낸다 (decisions.md 68번). */
+  @PostMapping("/{gameId}/quit")
+  GameView quit(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @PathVariable UUID gameId) {
+    UUID sessionId = cookies.requireSession(token);
+    GameView game = progress.quit(sessionId, gameId);
+    logIfEnded(sessionId, game);
+    return game;
+  }
+
   @PostMapping("/{gameId}/trades")
   ChoiceOutcome trade(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,

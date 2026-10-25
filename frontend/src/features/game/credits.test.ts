@@ -419,10 +419,36 @@ describe('buildCredits', () => {
   })
 })
 
+describe('중간에 그만둔 판 (decisions.md 68번)', () => {
+  it('제목 줄과 마지막 줄이 멈춘 나이를 말한다', () => {
+    const quit = baseGame({
+      result: {
+        initialAsset: 10_000_000,
+        finalAsset: 80_000_000,
+        returnBp: 70_000,
+        finalAge: 44,
+        ending: 'QUIT',
+        deviationCounts: {},
+      },
+    })
+    const credits = buildCredits(quit)
+    expect(credits[0].lines[1]).toEqual({ text: '44세, 여기서 멈췄다', tone: 'muted' })
+    expect(credits.at(-1)?.lines.at(-1)).toEqual({
+      text: '44세. 자산 80,000,000원을 들고 투자에서 손을 뗐다.',
+      tone: 'muted',
+    })
+    expect(creditArt(quit, 'last')?.vignette).toBe('home-old')
+  })
+})
+
 describe('크레딧 그림 (#23)', () => {
   it('장마다 그림이 붙고, 가족 그림에는 결혼한 둘이 선다', () => {
     const family = baseGame({
-      household: { ...baseGame().household, married: true, children: [{ age: 40 }] },
+      household: {
+        ...baseGame().household,
+        married: true,
+        children: [{ age: 40, leftHome: false }],
+      },
       log: [entry('MARRIAGE', 29, { cost: 30_000_000 }), entry('CHILD', 30, { seq: 1, cost: 0 })],
     })
     const art = creditArt(family, 'family')
@@ -443,7 +469,11 @@ describe('크레딧 그림 (#23)', () => {
       household: {
         ...baseGame().household,
         married: true,
-        children: [{ age: 40 }, { age: 38 }, { age: 35 }],
+        children: [
+          { age: 40, leftHome: false },
+          { age: 38, leftHome: false },
+          { age: 35, leftHome: false },
+        ],
       },
       log: [
         entry('MARRIAGE', 29, { cost: 30_000_000 }),
@@ -479,6 +509,36 @@ describe('크레딧 그림 (#23)', () => {
         expect(f.x + 16).toBeLessThanOrEqual(40)
       }
     }
+    // 독립·결혼이 그 아이 장에 줄로 쌓인다 (decisions.md 68번).
+    const grown = buildCredits(
+      baseGame({
+        household: {
+          ...baseGame().household,
+          married: true,
+          children: [{ age: 30, leftHome: true }],
+        },
+        log: [
+          entry('MARRIAGE', 29, { cost: 30_000_000 }),
+          entry('CHILD', 30, { seq: 1, cost: 0 }),
+          entry('CHILD_LEFT', 57, { seq: 1, childAge: 27, expense: 2_000_000 }),
+          entry('CHILD_WEDDING', 60, {
+            seq: 1,
+            total: 60_000_000,
+            cost: 30_000_000,
+            shareBp: 5000,
+          }),
+        ],
+      }),
+    )
+    const first = grown.find((s) => s.key === 'child-1')
+    expect(first?.lines.map((l) => l.text)).toEqual([
+      '30세, 1번째 아이가 태어났다',
+      '57세, 첫째가 독립했다',
+      '60세, 첫째가 결혼했다',
+    ])
+    expect(first?.lines[1].sub).toBe('27살에 집을 나갔다')
+    expect(first?.lines[2].sub).toBe('결혼 비용 60,000,000원 가운데 30,000,000원을 보탰다')
+
     // 결혼 없이 혼자면 가족 장만 하나.
     const single = buildCredits(baseGame())
     expect(single.filter((s) => s.key === 'family' || s.key.startsWith('child-'))).toHaveLength(1)

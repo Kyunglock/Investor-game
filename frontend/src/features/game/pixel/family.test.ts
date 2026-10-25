@@ -2,8 +2,13 @@ import { describe, expect, it } from 'vitest'
 import type { Game } from '../../../api/client'
 import { familyFigures } from './family'
 
-const game = (married: boolean, ages: number[]): Game =>
-  ({ household: { married, children: ages.map((age) => ({ age })) } }) as unknown as Game
+const game = (married: boolean, ages: number[], left: number[] = []): Game =>
+  ({
+    household: {
+      married,
+      children: ages.map((age, i) => ({ age, leftHome: left.includes(i) })),
+    },
+  }) as unknown as Game
 
 describe('familyFigures', () => {
   it('혼자면 나만 anchor 자리에', () => {
@@ -26,5 +31,14 @@ describe('familyFigures', () => {
 
   it('아이만 있어도(배우자 없이) 아이가 선다', () => {
     expect(familyFigures(game(false, [5]), 30, 10).map((f) => f.who)).toEqual(['me', 'kid'])
+  })
+
+  it('독립해 나간 아이는 집 사진에 없다 (decisions.md 68번)', () => {
+    const figures = familyFigures(game(true, [27, 24], [0]), 58, 36)
+    expect(figures.map((f) => [f.who, f.stage])).toEqual([
+      ['me', 'middle'],
+      ['spouse', 'middle'],
+      ['kid', 'adult'],
+    ])
   })
 })

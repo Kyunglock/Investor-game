@@ -251,6 +251,17 @@ class DefaultProgressService implements ProgressService {
     return view(games.findLatest(sessionId).orElseThrow());
   }
 
+  @Override
+  @Transactional
+  public GameView quit(UUID sessionId, UUID gameId) {
+    GameRow game = lock(sessionId, gameId);
+    if (events.pending(gameId).isPresent()) {
+      throw new InvalidRequestException("대기 중인 선택을 먼저 해야 한다");
+    }
+    end(game, Ending.QUIT);
+    return view(games.findLatest(sessionId).orElseThrow());
+  }
+
   private OptionalInt nextEventDay(GameRow game, int fromDay) {
     return events.peekNextEventDay(
         game.id(),
@@ -435,7 +446,8 @@ class DefaultProgressService implements ProgressService {
             }
             yield simpleOutcome(ticket, "1년 뒤에 다시 생각해 보기로 했다.");
           }
-          case ChoiceTicket.Life life -> resolveLife(game, ticket, life);
+          case ChoiceTicket.Life life -> resolveLife(game, ticket, life, random);
+          case ChoiceTicket.ChildWedding wedding -> resolveChildWedding(game, ticket, wedding);
         };
 
     GameRow updated = lock(sessionId, gameId);
@@ -544,7 +556,7 @@ class DefaultProgressService implements ProgressService {
   // ---- 결혼·자녀 (경제 개편 설계 7.3절) ----
 
   private ChoiceOutcome.Outcome resolveLife(
-      GameRow game, ChoiceTicket ticket, ChoiceTicket.Life life) {
+      GameRow game, ChoiceTicket ticket, ChoiceTicket.Life life, SeededRandom random) {
     UUID gameId = game.id();
     int day = ticket.occursDay();
     events.complete(
@@ -564,12 +576,50 @@ class DefaultProgressService implements ProgressService {
       }
       case CHILD -> {
         long cost = household.childbirthCost(day);
-        int seq = household.addChild(gameId, day);
+        // 아이마다 독립해 나갈 나이를 지금 굴린다 (decisions.md 68번).
+        ProgressProperties.Range leave = properties.childLeaveAge();
+        int leaveAge = random.forKey("life", "leave", day).nextInt(leave.min(), leave.max() + 1);
+        int seq = household.addChild(gameId, day, leaveAge);
         assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
         logs.append(gameId, day, "CHILD", Map.of("seq", seq, "cost", cost));
         yield simpleOutcome(ticket, "%d번째 아이가 태어났다.".formatted(seq));
       }
     };
+  }
+
+  /** 자녀 결혼 (decisions.md 68번): 그때 물가의 결혼 비용 가운데 고른 비율만큼 내 돈이 나간다. 안 대주면 한 푼도 나가지 않는다. */
+  private ChoiceOutcome.Outcome resolveChildWedding(
+      GameRow game, ChoiceTicket ticket, ChoiceTicket.ChildWedding wedding) {
+    UUID gameId = game.id();
+    int day = ticket.occursDay();
+    events.complete(
+        gameId,
+        ticket.eventId(),
+        new Completion(ticket.optionCode(), ticket.optionCode(), List.of()));
+    long total = household.weddingCost(day);
+    long cost = total * wedding.shareBp() / BP;
+    if (cost > 0) {
+      assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
+    }
+    logs.append(
+        gameId,
+        day,
+        "CHILD_WEDDING",
+        Map.of("seq", wedding.seq(), "total", total, "cost", cost, "shareBp", wedding.shareBp()));
+    String child = childName(wedding.seq());
+    String message =
+        cost == 0
+            ? "%s가 결혼했다. 결혼 비용 %,d원은 아이가 알아서 마련했다.".formatted(child, total)
+            : cost >= total
+                ? "%s가 결혼했다. 결혼 비용 %,d원을 모두 대줬다.".formatted(child, total)
+                : "%s가 결혼했다. 결혼 비용 %,d원 가운데 %,d원을 보탰다.".formatted(child, total, cost);
+    return simpleOutcome(ticket, message);
+  }
+
+  private static final List<String> CHILD_NAMES = List.of("첫째", "둘째", "셋째", "넷째", "다섯째");
+
+  private static String childName(int seq) {
+    return seq >= 1 && seq <= CHILD_NAMES.size() ? CHILD_NAMES.get(seq - 1) : seq + "번째";
   }
 
   // ---- 뉴스 선택: 판정 → 매매 → 충격 → 성장 (domains.md 3절 처리 흐름 2) ----
@@ -1060,6 +1110,19 @@ class DefaultProgressService implements ProgressService {
           assets.credit(gameId, SPOUSE_INCOME, spouse, day);
         }
         assets.spend(gameId, EXPENSE, household.monthlyExpense(gameId, day), day, null);
+        // 이달에 독립해 나간 아이를 기록한다. 양육비는 이달부터 들지 않는다 (decisions.md 68번).
+        for (HouseholdView.Child child : home.children()) {
+          if (child.leaveDay() > day - month && child.leaveDay() <= day) {
+            logs.append(
+                gameId,
+                day,
+                "CHILD_LEFT",
+                Map.of(
+                    "seq", child.seq(),
+                    "childAge", (day - child.birthDay()) / calendar.daysPerYear(),
+                    "expense", household.monthlyExpense(gameId, day)));
+          }
+        }
       }
       // 월세·주담대 원리금·전세대출 이자, 갭투자 세입자 갱신, 매물 매수자 (주거 설계).
       housingFlow.month(gameId, m, day, random);
@@ -1295,7 +1358,8 @@ class DefaultProgressService implements ProgressService {
         home.retiredDay() != null,
         home.married(),
         home.marriedDay(),
-        home.childBirthDays().size(),
+        home.children().size(),
+        home.children().stream().map(HouseholdView.Child::leaveDay).toList(),
         assets.get(game.id()).holdings().keySet().stream().sorted().toList(),
         character.fullTimeInvestorDay() != null,
         heldDropBp(game.id()),
@@ -1453,8 +1517,11 @@ class DefaultProgressService implements ProgressService {
     return new GameView.Household(
         home.married(),
         home.marriedDay() == null ? null : ageAt(game, home.marriedDay()),
-        home.childBirthDays().stream()
-            .map(birth -> new GameView.Child((day - birth) / calendar.daysPerYear()))
+        home.children().stream()
+            .map(
+                child ->
+                    new GameView.Child(
+                        (day - child.birthDay()) / calendar.daysPerYear(), child.leftBy(day)))
             .toList(),
         income,
         household.spouseIncome(game.id(), day),

@@ -137,7 +137,13 @@ export function AdminPage() {
                         {p.finalAsset == null ? '—' : shortWon(p.finalAsset)}
                       </td>
                       <td>
-                        {p.ending == null ? '—' : p.ending === 'BANKRUPT' ? '파산' : '끝까지'}
+                        {p.ending == null
+                          ? '—'
+                          : p.ending === 'BANKRUPT'
+                            ? '파산'
+                            : p.ending === 'QUIT'
+                              ? '중간에 그만둠'
+                              : '끝까지'}
                       </td>
                     </tr>
                   ))}

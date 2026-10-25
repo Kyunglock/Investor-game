@@ -288,6 +288,28 @@ class GameApiTest {
         .isEqualTo(cash + salary - expense - rent);
   }
 
+  /** 중간에 그만두기 (decisions.md 68번): 그 나이에서 QUIT으로 끝난다. 대기 중인 선택이 있으면 먼저 선택해야 한다. */
+  @Test
+  void 투자_인생은_중간에_그만둘_수_있고_대기_중인_선택이_있으면_먼저_골라야_한다() throws Exception {
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.start();
+    String gameId = game.read("$.gameId");
+    int next = game.read("$.nextEventDay", Integer.class);
+    client.advance(gameId, next);
+    client.quitRaw(gameId).andExpect(status().isBadRequest());
+
+    DocumentContext pending = client.current();
+    client.choose(gameId, pending.read("$.pendingEvent.eventId"), GameClient.firstOpen(pending));
+    client
+        .quitRaw(gameId)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("ENDED"))
+        .andExpect(jsonPath("$.result.ending").value("QUIT"))
+        .andExpect(jsonPath("$.result.finalAge").value(15))
+        .andExpect(jsonPath("$.log[-1].kind").value("END"));
+    assertThat(client.current().read("$.status", String.class)).isEqualTo("ENDED");
+  }
+
   @Test
   void 시각은_거꾸로_갈_수_없다() throws Exception {
     GameClient client = GameClient.newSession(mvc);

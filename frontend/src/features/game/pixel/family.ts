@@ -17,10 +17,12 @@ export function familyFigures(game: Game, ageYears: number, meX: number): Figure
   if (game.household.married) {
     others.push('spouse')
   }
-  for (let i = 0; i < game.household.children.length; i++) {
+  // 독립해 나간 아이는 집 사진에 없다 (decisions.md 68번).
+  const home = game.household.children.filter((c) => !c.leftHome)
+  for (let i = 0; i < home.length; i++) {
     others.push('kid')
   }
-  const kids = game.household.children.map((c) => c.age)
+  const kids = home.map((c) => c.age)
   let kidIndex = 0
   for (const who of others) {
     const stage = who === 'spouse' ? stageFor(ageYears) : stageFor(kids[kidIndex++] ?? 0)

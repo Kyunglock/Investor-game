@@ -58,7 +58,7 @@ class HouseholdServiceTest {
   void 자녀는_나이_구간별로_비용이_붙는다() {
     household.marry(gameId, JOB_DAY);
     int birth = JOB_DAY;
-    assertThat(household.addChild(gameId, birth)).isEqualTo(1);
+    assertThat(household.addChild(gameId, birth, 27)).isEqualTo(1);
     long couple = 1_500_000;
 
     assertThat(household.monthlyExpense(gameId, birth)).isEqualTo(couple + 600_000);
@@ -69,8 +69,13 @@ class HouseholdServiceTest {
     assertThat(deflated(household.monthlyExpense(gameId, birth + 19 * YEAR), 19))
         .isEqualTo(couple + 1_300_000);
     assertThat(deflated(household.monthlyExpense(gameId, birth + 23 * YEAR), 23))
-        .as("23세부터는 비용이 없다")
+        .as("23세부터 독립할 때까지는 어른 자녀 비용")
+        .isEqualTo(couple + 700_000);
+    assertThat(deflated(household.monthlyExpense(gameId, birth + 27 * YEAR), 27))
+        .as("27세에 독립하면 비용이 없다")
         .isEqualTo(couple);
+    assertThat(household.get(gameId).children())
+        .containsExactly(new HouseholdView.Child(1, birth, birth + 27 * YEAR));
     assertThat(household.childbirthCost(birth)).isEqualTo(3_000_000);
   }
 
@@ -121,8 +126,8 @@ class HouseholdServiceTest {
     household.marry(gameId, JOB_DAY);
     assertThatThrownBy(() -> household.marry(gameId, JOB_DAY + YEAR))
         .isInstanceOf(InvalidRequestException.class);
-    assertThat(household.addChild(gameId, JOB_DAY + YEAR)).isEqualTo(1);
-    assertThat(household.addChild(gameId, JOB_DAY + 3 * YEAR)).isEqualTo(2);
+    assertThat(household.addChild(gameId, JOB_DAY + YEAR, 25)).isEqualTo(1);
+    assertThat(household.addChild(gameId, JOB_DAY + 3 * YEAR, 30)).isEqualTo(2);
     assertThat(household.get(gameId).childBirthDays())
         .containsExactly(JOB_DAY + YEAR, JOB_DAY + 3 * YEAR);
   }

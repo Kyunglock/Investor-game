@@ -65,6 +65,7 @@ class DefaultEventServiceTest {
             null,
             0,
             List.of(),
+            List.of(),
             false,
             Map.of(),
             SETTLED,
@@ -207,6 +208,7 @@ class DefaultEventServiceTest {
             null,
             0,
             List.of(),
+            List.of(),
             false,
             Map.of(),
             SETTLED,
@@ -246,6 +248,63 @@ class DefaultEventServiceTest {
     assertThat(ticket.stockCode()).isNull();
   }
 
+  /** 자녀 결혼 (decisions.md 68번): 독립한 아이마다 2~5년 뒤에 한 번, 선택지는 전부·절반·안 대줌. */
+  @Test
+  void 자녀가_독립하면_2에서_5년_뒤에_그_아이의_결혼_선택이_한_번_온다() {
+    UUID gameId = UUID.randomUUID();
+    int marriedDay = (30 - START_AGE) * YEAR;
+    int firstLeave = (58 - START_AGE) * YEAR;
+    int secondLeave = (61 - START_AGE) * YEAR;
+    // 셋째는 68세에 나가 결혼 선택이 70세 종료를 넘으므로 오지 않는다.
+    int thirdLeave = (68 - START_AGE) * YEAR;
+    SchedulingContext context =
+        lifeWith(marriedDay, List.of(firstLeave, secondLeave, thirdLeave), (70 - START_AGE) * YEAR);
+
+    EventView first = nextOf(gameId, context, firstLeave, EventKind.LIFE, 7L).orElseThrow();
+    assertThat(first.occursDay() - firstLeave).isBetween(2 * YEAR, 5 * YEAR);
+    assertThat(first.title()).isEqualTo("첫째가 결혼한다");
+    assertThat(first.options())
+        .extracting(EventView.Option::code)
+        .containsExactly("full", "half", "none");
+    events.complete(gameId, first.eventId(), new Completion("half", "half", List.of()));
+
+    EventView second = nextOf(gameId, context, first.occursDay(), EventKind.LIFE, 7L).orElseThrow();
+    assertThat(second.title()).isEqualTo("둘째가 결혼한다");
+    assertThat(second.occursDay() - secondLeave).isBetween(2 * YEAR, 5 * YEAR);
+    events.complete(gameId, second.eventId(), new Completion("none", "none", List.of()));
+
+    assertThat(nextOf(gameId, context, second.occursDay(), EventKind.LIFE, 7L))
+        .as("아이마다 한 번만 묻는다")
+        .isEmpty();
+  }
+
+  /** 자녀 셋(더 묻지 않음)에 독립한 날이 정해진 가정. 생활 선택 가운데 자녀 결혼만 남는다. 자녀 수는 셋이어야 자녀 제안이 끼지 않는다. */
+  private static SchedulingContext lifeWith(int marriedDay, List<Integer> leaveDays, int endDay) {
+    return new SchedulingContext(
+        Phase.SAVING,
+        START_AGE,
+        "long",
+        "food",
+        null,
+        true,
+        null,
+        endDay,
+        JOB_DAY,
+        "office",
+        JOB_DAY,
+        false,
+        true,
+        marriedDay,
+        leaveDays.size(),
+        leaveDays,
+        List.of(),
+        false,
+        Map.of(),
+        SETTLED,
+        0L,
+        Set.of());
+  }
+
   private static SchedulingContext lifeOnly(boolean married, Integer marriedDay, int children) {
     return new SchedulingContext(
         Phase.SAVING,
@@ -263,6 +322,7 @@ class DefaultEventServiceTest {
         married,
         marriedDay,
         children,
+        List.of(),
         List.of(),
         false,
         Map.of(),
@@ -300,6 +360,7 @@ class DefaultEventServiceTest {
             null,
             0,
             List.of(),
+            List.of(),
             false,
             Map.of(),
             SETTLED,
@@ -330,6 +391,7 @@ class DefaultEventServiceTest {
             null,
             0,
             List.of(),
+            List.of(),
             false,
             Map.of(),
             SETTLED,
@@ -357,6 +419,7 @@ class DefaultEventServiceTest {
             false,
             null,
             0,
+            List.of(),
             List.of(),
             true,
             Map.of(),
@@ -389,6 +452,7 @@ class DefaultEventServiceTest {
             JOB_DAY + YEAR,
             0,
             List.of(),
+            List.of(),
             false,
             Map.of(),
             SETTLED,
@@ -419,6 +483,7 @@ class DefaultEventServiceTest {
             false,
             null,
             0,
+            List.of(),
             List.of(),
             false,
             Map.of(),
@@ -471,6 +536,7 @@ class DefaultEventServiceTest {
         false,
         null,
         0,
+        List.of(),
         List.of(),
         false,
         Map.of(),
@@ -611,6 +677,7 @@ class DefaultEventServiceTest {
         false,
         null,
         0,
+        List.of(),
         List.of(),
         fullTimeInvestor,
         Map.of(),
@@ -805,6 +872,7 @@ class DefaultEventServiceTest {
         c.married(),
         c.marriedDay(),
         c.childrenCount(),
+        List.of(),
         c.heldStockCodes(),
         c.fullTimeInvestor(),
         c.heldDropBp(),
@@ -831,6 +899,7 @@ class DefaultEventServiceTest {
         marriedDay,
         0,
         List.of(),
+        List.of(),
         false,
         Map.of(),
         facts,
@@ -855,6 +924,7 @@ class DefaultEventServiceTest {
         false,
         null,
         0,
+        List.of(),
         held,
         false,
         drops,
@@ -884,6 +954,7 @@ class DefaultEventServiceTest {
             false,
             null,
             0,
+            List.of(),
             List.of(held),
             false,
             Map.of(),

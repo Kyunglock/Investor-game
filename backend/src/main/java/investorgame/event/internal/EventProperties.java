@@ -60,6 +60,7 @@ public record EventProperties(
    * @param childGapYears 자녀 제안 사이 간격
    * @param maxChildren 최대 자녀 수
    * @param childLastAge 이 나이를 넘으면 묻지 않는다
+   * @param childWeddingGapYears 자녀가 독립한 뒤 결혼 선택까지 (decisions.md 68번)
    */
   public record LifeSettings(
       Range marriageAge,
@@ -68,7 +69,8 @@ public record EventProperties(
       Range childFirstGapYears,
       Range childGapYears,
       int maxChildren,
-      int childLastAge) {}
+      int childLastAge,
+      Range childWeddingGapYears) {}
 
   /** 알림성 이벤트 간격(일). 직업이 생긴 뒤부터. */
   public record NoticeSettings(Range gapDays) {}

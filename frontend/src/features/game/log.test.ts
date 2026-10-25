@@ -422,6 +422,35 @@ describe('logLine', () => {
     )
   })
 
+  it('자녀 독립·자녀 결혼·중간에 그만둔 끝 (decisions.md 68번)', () => {
+    expect(
+      logLine(entry('CHILD_LEFT', 0, { seq: 1, childAge: 27, expense: 1_800_000 }), game).text,
+    ).toBe('첫째가 27살에 독립해 집을 나갔다. 생활비가 1,800,000원으로 줄었다.')
+    expect(
+      logLine(
+        entry('CHILD_WEDDING', 0, { seq: 2, total: 60_000_000, cost: 30_000_000, shareBp: 5000 }),
+        game,
+      ).text,
+    ).toBe('둘째가 결혼했다. 결혼 비용 60,000,000원 가운데 30,000,000원을 보탰다.')
+    expect(
+      logLine(entry('CHILD_WEDDING', 0, { seq: 3, total: 60_000_000, cost: 0, shareBp: 0 }), game)
+        .text,
+    ).toBe('셋째가 결혼했다. 결혼 비용 60,000,000원은 아이가 알아서 마련했다.')
+    expect(
+      logLine(
+        entry('END', 44 * 360, {
+          finalAge: 44,
+          ending: 'QUIT',
+          debt: 0,
+          initialAsset: 10_000_000,
+          finalAsset: 15_000_000,
+          returnBp: 5000,
+        }),
+        game,
+      ).text,
+    ).toBe('44세, 투자 인생을 여기서 멈췄다. 10,000,000원 → 15,000,000원 (+50.0%)')
+  })
+
   it('뉴스·주가 기록은 종목명을 쓰고 섹터 전체면 덧붙인다', () => {
     expect(
       logLine(

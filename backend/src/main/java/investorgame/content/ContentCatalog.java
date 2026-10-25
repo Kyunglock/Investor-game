@@ -86,6 +86,9 @@ public interface ContentCatalog {
   /** kind: "marriage" 또는 "child". 없으면 IllegalArgumentException. */
   LifeText lifeText(String kind);
 
+  /** 자녀 결혼 선택의 문구 (decisions.md 68번). */
+  ChildWeddingText childWeddingText();
+
   /** direction: UP/DOWN/NEUTRAL, strength: MILD/STRONG. */
   /**
    * 힌트 문구. detail은 안목 구간(low·mid·high·expert), 높을수록 종목·섹터·폭({stock}·{sectorName}·{min}~{max}%)을 짚는다

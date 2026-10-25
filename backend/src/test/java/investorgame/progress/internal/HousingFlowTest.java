@@ -157,7 +157,14 @@ class HousingFlowTest {
     assertThat(HousingFlow.cheongyakPoints(15, JOB_DAY, young, JOB_DAY, YEAR))
         .as("25세 혼자: 무주택 0 + 부양 5 + 통장 2")
         .isEqualTo(7);
-    HouseholdView family = new HouseholdView(true, 12 * YEAR, List.of(14 * YEAR, 16 * YEAR), null);
+    HouseholdView family =
+        new HouseholdView(
+            true,
+            12 * YEAR,
+            List.of(
+                new HouseholdView.Child(1, 14 * YEAR, 41 * YEAR),
+                new HouseholdView.Child(2, 16 * YEAR, 43 * YEAR)),
+            null);
     int at40 = 25 * YEAR;
     assertThat(HousingFlow.cheongyakPoints(15, JOB_DAY, family, at40, YEAR))
         .as("40세 부부+자녀 둘: 무주택(27세 결혼부터 13년) 28 + 부양 20 + 통장 17")
@@ -218,6 +225,7 @@ class HousingFlowTest {
             false,
             null,
             0,
+            List.of(),
             List.of(),
             false,
             Map.of(),

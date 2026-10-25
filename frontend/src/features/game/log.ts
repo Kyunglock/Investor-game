@@ -51,6 +51,13 @@ interface Deviation {
 const str = (v: unknown): string => (typeof v === 'string' ? v : String(v ?? ''))
 const num = (v: unknown): number => (typeof v === 'number' ? v : Number(v ?? 0))
 
+const CHILD_NAMES = ['첫째', '둘째', '셋째', '넷째', '다섯째']
+
+/** 자녀 순번을 부르는 말 (decisions.md 68번). */
+export function childName(seq: number): string {
+  return CHILD_NAMES[seq - 1] ?? `${seq}번째`
+}
+
 export function logLine(entry: LogEntry, game: GameInfo): LogLine {
   const p = entry.payload as Record<string, unknown>
   const base = { seq: entry.seq, age: game.startAge + Math.floor(entry.day / game.daysPerYear) }
@@ -281,6 +288,25 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       return { ...base, tone: 'life', text: `결혼했다. 결혼 비용 ${won(num(p.cost))}.` }
     case 'CHILD':
       return { ...base, tone: 'life', text: `${num(p.seq)}번째 아이가 태어났다.` }
+    case 'CHILD_LEFT':
+      // 자녀 독립 (decisions.md 68번). 이달부터 양육비가 들지 않는다.
+      return {
+        ...base,
+        tone: 'life',
+        text: `${childName(num(p.seq))}가 ${num(p.childAge)}살에 독립해 집을 나갔다. 생활비가 ${won(num(p.expense))}으로 줄었다.`,
+      }
+    case 'CHILD_WEDDING': {
+      // 자녀 결혼 (decisions.md 68번): 결혼 비용 가운데 얼마를 대줬는가.
+      const total = num(p.total)
+      const cost = num(p.cost)
+      const paid =
+        cost <= 0
+          ? `결혼 비용 ${won(total)}은 아이가 알아서 마련했다.`
+          : cost >= total
+            ? `결혼 비용 ${won(total)}을 모두 대줬다.`
+            : `결혼 비용 ${won(total)} 가운데 ${won(cost)}을 보탰다.`
+      return { ...base, tone: 'life', text: `${childName(num(p.seq))}가 결혼했다. ${paid}` }
+    }
     case 'RETIRE':
       return {
         ...base,
@@ -306,6 +332,13 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
           ...base,
           tone: 'end',
           text: `${num(p.finalAge)}세, 빚 ${won(num(p.debt))}을 갚지 못해 파산했다. ${money}`,
+        }
+      }
+      if (p.ending === 'QUIT') {
+        return {
+          ...base,
+          tone: 'end',
+          text: `${num(p.finalAge)}세, 투자 인생을 여기서 멈췄다. ${money}`,
         }
       }
       return {

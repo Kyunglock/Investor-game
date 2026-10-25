@@ -84,6 +84,8 @@ interface GameState {
   listHome: (seq: number, listed: boolean) => Promise<void>
   /** 주담대를 현금으로 일시 상환한다 (decisions.md 58번). 실패하면 이유를 돌려준다. */
   repayMortgage: (seq: number, amount: number) => Promise<string | null>
+  /** 투자 인생을 여기서 끝낸다 (decisions.md 68번). 지금 시각을 보고한 뒤 끝내므로 결과는 지금 자산이다. */
+  quit: () => Promise<void>
 }
 
 export const MACRO_TAB = 'macro'
@@ -463,6 +465,23 @@ export const useGameStore = create<GameState>((set, get) => {
       })
       if (data) {
         apply(data, get().running)
+      } else {
+        await get().load()
+      }
+    },
+
+    quit: async () => {
+      const { game } = get()
+      if (!game) {
+        return
+      }
+      set({ running: false })
+      await reportNow()
+      const { data } = await api.POST('/api/games/{gameId}/quit', {
+        params: { path: { gameId: game.gameId } },
+      })
+      if (data) {
+        apply(data, false)
       } else {
         await get().load()
       }

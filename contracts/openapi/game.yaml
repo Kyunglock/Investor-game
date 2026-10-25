@@ -64,6 +64,24 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/games/{gameId}/quit:
+    post:
+      operationId: quitGame
+      summary: 투자 인생을 여기서 끝낸다
+      description: |
+        마지막으로 보고된 시각에서 판이 끝난다(ending QUIT). 결과는 그때의 자산이다 (decisions.md 68번).
+        대기 중인 선택형 이벤트가 있으면 먼저 선택해야 한다 (400).
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+      responses:
+        '200':
+          description: 끝난 판
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Game' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/games/{gameId}/trades:
     post:
       operationId: trade
@@ -285,7 +303,7 @@ components:
         endedAt: { type: [string, 'null'], format: date-time }
         initialAsset: { type: [integer, 'null'], format: int64, description: 끝난 판만 }
         finalAsset: { type: [integer, 'null'], format: int64, description: 끝난 판만. 파산이면 음수 }
-        ending: { type: [string, 'null'], enum: [NORMAL, BANKRUPT, null], description: 끝난 판만 }
+        ending: { type: [string, 'null'], enum: [NORMAL, BANKRUPT, QUIT, null], description: 끝난 판만 }
     Phase:
       type: string
       enum: [CHILDHOOD, SAVING, INVESTING, ENDED]
@@ -363,9 +381,10 @@ components:
           type: array
           items:
             type: object
-            required: [age]
+            required: [age, leftHome]
             properties:
               age: { type: integer }
+              leftHome: { type: boolean, description: 독립해서 집을 나갔다. 그 뒤로는 양육비가 들지 않는다 (decisions.md 68번) }
         monthlyIncome: { type: integer, format: int64, description: 월급. 은퇴 뒤 0 }
         spouseIncome: { type: integer, format: int64 }
         monthlyExpense: { type: integer, format: int64, description: 생활비 + 자녀 비용 }
@@ -575,8 +594,8 @@ components:
         finalAge: { type: integer, description: 끝난 나이. 파산이면 파산한 나이 }
         ending:
           type: string
-          enum: [NORMAL, BANKRUPT]
-          description: NORMAL은 종료 나이 도달, BANKRUPT는 총자산이 0 아래로 떨어진 달의 파산 (decisions.md 27번)
+          enum: [NORMAL, BANKRUPT, QUIT]
+          description: NORMAL은 종료 나이 도달, BANKRUPT는 총자산이 0 아래로 떨어진 달의 파산 (decisions.md 27번), QUIT은 사용자가 중간에 그만둠 (68번)
         deviationCounts:
           type: object
           additionalProperties: { type: integer }
@@ -590,7 +609,7 @@ components:
         day: { type: integer, description: 사건이 일어난 게임 일수 }
         kind:
           type: string
-          enum: [BIRTH, TRAIT, JOB, JOB_WAIT, CAREER, STYLE, OFFER, NEWS, SHAKE, PRICE, GROWTH, TRADE, LIFE, MARRIAGE, CHILD, RETIRE, LEVERAGE, OMEN, ARTICLE, CRISIS, HOUSING, HOME_SOLD, TENANT, MORTGAGE_REPAY, END]
+          enum: [BIRTH, TRAIT, JOB, JOB_WAIT, CAREER, STYLE, OFFER, NEWS, SHAKE, PRICE, GROWTH, TRADE, LIFE, MARRIAGE, CHILD, CHILD_LEFT, CHILD_WEDDING, RETIRE, LEVERAGE, OMEN, ARTICLE, CRISIS, HOUSING, HOME_SOLD, TENANT, MORTGAGE_REPAY, END]
         payload:
           type: object
           additionalProperties: true

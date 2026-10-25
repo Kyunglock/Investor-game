@@ -283,6 +283,7 @@ export function buildCredits(game: Game): CreditSection[] {
   const name = nickname(game.initialStats).name
   const finalAge = result?.finalAge ?? ageOf(game, game.day)
   const bankrupt = result?.ending === 'BANKRUPT'
+  const quit = result?.ending === 'QUIT'
   const sections: CreditSection[] = []
 
   sections.push({
@@ -292,7 +293,9 @@ export function buildCredits(game: Game): CreditSection[] {
       { text: `${yearOf(game.startAge)}년 – ${yearOf(finalAge)}년`, tone: 'muted' },
       bankrupt
         ? { text: `${finalAge}세, 파산`, tone: 'down' }
-        : { text: `${finalAge}세, 은퇴 후 연금 생활`, tone: 'accent' },
+        : quit
+          ? { text: `${finalAge}세, 여기서 멈췄다`, tone: 'muted' }
+          : { text: `${finalAge}세, 은퇴 후 연금 생활`, tone: 'accent' },
     ],
   })
 
@@ -367,13 +370,37 @@ export function buildCredits(game: Game): CreditSection[] {
       lines: marriages.map((e) => ({ text: `${ageOf(game, e.day)}세, 결혼` })),
     })
   }
+  // 아이 장에는 태어남 · 독립 · 결혼(비용을 얼마나 대줬는가)이 줄로 쌓인다 (decisions.md 68번).
+  const lefts = entries(game, 'CHILD_LEFT')
+  const weddings = entries(game, 'CHILD_WEDDING')
   for (const e of births) {
     const seq = num((e.payload as Payload).seq)
-    sections.push({
-      key: `${CHILD_KEY}${seq}`,
-      title: ORDINALS[seq - 1] ?? `${seq}번째`,
-      lines: [{ text: `${ageOf(game, e.day)}세, ${seq}번째 아이가 태어났다` }],
-    })
+    const name = ORDINALS[seq - 1] ?? `${seq}번째`
+    const lines: CreditLine[] = [{ text: `${ageOf(game, e.day)}세, ${seq}번째 아이가 태어났다` }]
+    const left = lefts.find((l) => num((l.payload as Payload).seq) === seq)
+    if (left) {
+      lines.push({
+        text: `${ageOf(game, left.day)}세, ${name}가 독립했다`,
+        sub: `${num((left.payload as Payload).childAge)}살에 집을 나갔다`,
+        tone: 'muted',
+      })
+    }
+    const wedding = weddings.find((w) => num((w.payload as Payload).seq) === seq)
+    if (wedding) {
+      const wp = wedding.payload as Payload
+      const cost = num(wp.cost)
+      lines.push({
+        text: `${ageOf(game, wedding.day)}세, ${name}가 결혼했다`,
+        sub:
+          cost <= 0
+            ? '결혼 비용은 아이가 알아서 마련했다'
+            : cost >= num(wp.total)
+              ? `결혼 비용 ${won(cost)}을 모두 대줬다`
+              : `결혼 비용 ${won(num(wp.total))} 가운데 ${won(cost)}을 보탰다`,
+        tone: cost > 0 ? 'down' : undefined,
+      })
+    }
+    sections.push({ key: `${CHILD_KEY}${seq}`, title: name, lines })
   }
 
   const news = entries(game, 'NEWS')
@@ -508,10 +535,15 @@ export function buildCredits(game: Game): CreditSection[] {
   lastLines.push(
     bankrupt
       ? { text: `${finalAge}세. 빚 ${won(game.debt)}을 갚지 못해 파산했다.`, tone: 'down' }
-      : {
-          text: `${finalAge}세. 남은 자산 ${won(finalAsset)}과 매달 연금 ${won(game.household.pension)}으로 여생을 보냈다.`,
-          tone: 'accent',
-        },
+      : quit
+        ? {
+            text: `${finalAge}세. 자산 ${won(finalAsset)}을 들고 투자에서 손을 뗐다.`,
+            tone: 'muted',
+          }
+        : {
+            text: `${finalAge}세. 남은 자산 ${won(finalAsset)}과 매달 연금 ${won(game.household.pension)}으로 여생을 보냈다.`,
+            tone: 'accent',
+          },
   )
   sections.push({ key: 'last', title: '마지막', lines: lastLines })
 

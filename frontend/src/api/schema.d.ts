@@ -82,6 +82,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/games/{gameId}/quit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 투자 인생을 여기서 끝낸다
+         * @description 마지막으로 보고된 시각에서 판이 끝난다(ending QUIT). 결과는 그때의 자산이다 (decisions.md 68번).
+         *     대기 중인 선택형 이벤트가 있으면 먼저 선택해야 한다 (400).
+         */
+        post: operations["quitGame"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/games/{gameId}/trades": {
         parameters: {
             query?: never;
@@ -303,7 +324,7 @@ export interface components {
              * @description 끝난 판만
              * @enum {string|null}
              */
-            ending?: "NORMAL" | "BANKRUPT" | null;
+            ending?: "NORMAL" | "BANKRUPT" | "QUIT" | null;
         };
         /**
          * @description 성장기(성향 이벤트) → 저축기(취업 후) → 투자기 → 종료
@@ -393,6 +414,8 @@ export interface components {
             marriedAge?: number | null;
             children: {
                 age: number;
+                /** @description 독립해서 집을 나갔다. 그 뒤로는 양육비가 들지 않는다 (decisions.md 68번) */
+                leftHome: boolean;
             }[];
             /**
              * Format: int64
@@ -643,10 +666,10 @@ export interface components {
             /** @description 끝난 나이. 파산이면 파산한 나이 */
             finalAge: number;
             /**
-             * @description NORMAL은 종료 나이 도달, BANKRUPT는 총자산이 0 아래로 떨어진 달의 파산 (decisions.md 27번)
+             * @description NORMAL은 종료 나이 도달, BANKRUPT는 총자산이 0 아래로 떨어진 달의 파산 (decisions.md 27번), QUIT은 사용자가 중간에 그만둠 (68번)
              * @enum {string}
              */
-            ending: "NORMAL" | "BANKRUPT";
+            ending: "NORMAL" | "BANKRUPT" | "QUIT";
             /** @description 능력치 코드별 이탈 횟수 */
             deviationCounts: {
                 [key: string]: number;
@@ -659,7 +682,7 @@ export interface components {
             /** @description 사건이 일어난 게임 일수 */
             day: number;
             /** @enum {string} */
-            kind: "BIRTH" | "TRAIT" | "JOB" | "JOB_WAIT" | "CAREER" | "STYLE" | "OFFER" | "NEWS" | "SHAKE" | "PRICE" | "GROWTH" | "TRADE" | "LIFE" | "MARRIAGE" | "CHILD" | "RETIRE" | "LEVERAGE" | "OMEN" | "ARTICLE" | "CRISIS" | "HOUSING" | "HOME_SOLD" | "TENANT" | "MORTGAGE_REPAY" | "END";
+            kind: "BIRTH" | "TRAIT" | "JOB" | "JOB_WAIT" | "CAREER" | "STYLE" | "OFFER" | "NEWS" | "SHAKE" | "PRICE" | "GROWTH" | "TRADE" | "LIFE" | "MARRIAGE" | "CHILD" | "CHILD_LEFT" | "CHILD_WEDDING" | "RETIRE" | "LEVERAGE" | "OMEN" | "ARTICLE" | "CRISIS" | "HOUSING" | "HOME_SOLD" | "TENANT" | "MORTGAGE_REPAY" | "END";
             /** @description 종류별 필드 (docs/superpowers/specs/2026-10-18-ui-redesign-design.md 6.3절) */
             payload: {
                 [key: string]: unknown;
@@ -927,6 +950,31 @@ export interface operations {
         };
         responses: {
             /** @description 진행된 판 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Game"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    quitGame: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gameId: components["parameters"]["GameId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 끝난 판 */
             200: {
                 headers: {
                     [name: string]: unknown;

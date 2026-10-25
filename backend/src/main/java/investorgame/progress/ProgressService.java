@@ -49,6 +49,12 @@ public interface ProgressService {
   /** 한 종목의 월별 가격 이력. */
   StockHistory history(UUID sessionId, UUID gameId, String stockCode);
 
+  /**
+   * 투자 인생을 여기서 끝낸다 (decisions.md 68번). 마지막으로 보고된 시각에서 판이 끝나고(QUIT) 결과는 그때의 자산이다. 대기 중인 선택이 있으면 먼저
+   * 선택해야 한다.
+   */
+  GameView quit(UUID sessionId, UUID gameId);
+
   /** 최근에 시작한 판부터 limit개. 버려진 판도 포함한다. 관리자 플레이 기록용이며 세션을 따지지 않는다. */
   List<GameSummary> recentGames(int limit);
 }

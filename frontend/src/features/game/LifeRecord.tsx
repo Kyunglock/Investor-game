@@ -19,6 +19,7 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
   const deviations = Object.entries(result.deviationCounts).sort(([, a], [, b]) => b - a)
   const up = result.returnBp >= 0
   const bankrupt = result.ending === 'BANKRUPT'
+  const quit = result.ending === 'QUIT'
 
   return (
     <Document
@@ -38,7 +39,8 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
             {nickname(game.initialStats).name}
           </h2>
           <p className="text-[13px] text-muted">
-            {result.finalAge}세, {bankrupt ? '파산했습니다' : '투자 인생을 마쳤습니다'} ·{' '}
+            {result.finalAge}세,{' '}
+            {bankrupt ? '파산했습니다' : quit ? '여기서 멈췄습니다' : '투자 인생을 마쳤습니다'} ·{' '}
             {game.job?.title ?? (game.fullTimeInvestor ? '전업투자자' : '무직')} ·{' '}
             {game.investorType?.name ?? '유형 미정'}
           </p>
@@ -59,7 +61,9 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
       <p className="mt-1 text-[13px] text-muted" data-testid="result-epilogue">
         {bankrupt
           ? `빚 ${won(game.debt)}을 갚을 길이 없어 ${result.finalAge}세에 파산했습니다.`
-          : `이후로는 매달 연금 ${won(game.household.pension)}으로 여생을 보냅니다.`}
+          : quit
+            ? `${result.finalAge}세에 투자 인생을 스스로 멈췄습니다.`
+            : `이후로는 매달 연금 ${won(game.household.pension)}으로 여생을 보냅니다.`}
       </p>
 
       <p className="mt-2 text-[13px] text-muted" data-testid="result-family">
