@@ -569,9 +569,31 @@ class DefaultEventServiceTest {
     assertThat(seen)
         .containsExactlyInAnyOrderElementsOf(
             content.adultTraits().stream()
-                .filter(t -> !t.job())
+                .filter(t -> !t.job() && !t.married())
                 .map(TraitDefinition::title)
                 .toList());
+  }
+
+  @Test
+  void 양가_부모_장면은_결혼한_뒤에만_나온다() {
+    UUID gameId = UUID.randomUUID();
+    SchedulingContext married = lifeOnly(true, JOB_DAY + YEAR, 3);
+    List<String> seen = new ArrayList<>();
+    int from = JOB_DAY;
+    for (Optional<EventView> trait = nextOf(gameId, married, from, EventKind.TRAIT, 5L);
+        trait.isPresent();
+        trait = nextOf(gameId, married, from, EventKind.TRAIT, 5L)) {
+      seen.add(trait.get().title());
+      events.complete(gameId, trait.get().eventId(), new Completion("x", "x", List.of()));
+      from = trait.get().occursDay();
+    }
+    List<String> inLaw =
+        content.adultTraits().stream()
+            .filter(TraitDefinition::married)
+            .map(TraitDefinition::title)
+            .toList();
+    assertThat(inLaw).hasSizeGreaterThanOrEqualTo(5);
+    assertThat(seen).containsAll(inLaw);
   }
 
   private String careerCode(EventView view) {
