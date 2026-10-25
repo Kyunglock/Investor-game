@@ -677,6 +677,17 @@ class HousingFlow {
     payload.put("fraud", effect.fraud());
     payload.put("lost", lost);
     payload.putAll(payloadExtra);
+    // 행복도 (decisions.md 82번): 전세사기는 크게 지치고, 내 집을 사면 기쁘고, 독립해 나가면 조금 기쁘다.
+    if (effect.fraud()) {
+      household.cheer(gameId, -15);
+    } else if (Boolean.TRUE.equals(payloadExtra.get("bought"))
+        || ChoiceTicket.Housing.BUY_SEOUL.equals(code)
+        || ChoiceTicket.Housing.BUY_GYEONGGI.equals(code)
+        || ChoiceTicket.Housing.GAP.equals(code)) {
+      household.cheer(gameId, 10);
+    } else if (ChoiceTicket.Housing.MOVE_OUT.equals(effect.definition())) {
+      household.cheer(gameId, 3);
+    }
     logs.append(gameId, day, "HOUSING", payload);
     return new ChoiceOutcome.Outcome(
         ticket.kind().name(),

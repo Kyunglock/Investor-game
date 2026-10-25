@@ -136,6 +136,33 @@ class JdbcHouseholdService implements HouseholdService {
 
   @Override
   @Transactional(readOnly = true)
+  public int happiness(UUID gameId) {
+    return state(gameId).happiness();
+  }
+
+  @Override
+  @Transactional
+  public int cheer(UUID gameId, int delta) {
+    int next = Math.max(0, Math.min(100, state(gameId).happiness() + delta));
+    jdbc.sql("UPDATE household_state SET happiness = :h, updated_at = :now WHERE game_id = :gameId")
+        .param("h", next)
+        .param("now", now())
+        .param("gameId", gameId)
+        .update();
+    return next;
+  }
+
+  @Override
+  @Transactional
+  public void driftHappiness(UUID gameId) {
+    int current = state(gameId).happiness();
+    if (current != 50) {
+      cheer(gameId, current > 50 ? -1 : 1);
+    }
+  }
+
+  @Override
+  @Transactional(readOnly = true)
   public long monthlyExpense(UUID gameId, int gameDay) {
     HouseholdView view = get(gameId);
     long base = view.married() ? properties.livingCouple() : properties.livingSingle();
@@ -228,7 +255,8 @@ class JdbcHouseholdService implements HouseholdService {
   private State state(UUID gameId) {
     return jdbc.sql(
             """
-            SELECT married_day, retired_day, spouse_name, spouse_job, spouse_income, spouse_intro
+            SELECT married_day, retired_day, spouse_name, spouse_job, spouse_income, spouse_intro,
+                   happiness
             FROM household_state WHERE game_id = :gameId
             """)
         .param("gameId", gameId)
@@ -247,5 +275,6 @@ class JdbcHouseholdService implements HouseholdService {
       String spouseName,
       String spouseJob,
       Long spouseIncome,
-      String spouseIntro) {}
+      String spouseIntro,
+      int happiness) {}
 }

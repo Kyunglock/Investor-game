@@ -50,7 +50,8 @@ export function TopBar({
               {age.years}세 {age.months}개월
             </p>
             <div className="font-note text-xs text-pen-soft">
-              {yearOf(age.years)}년 · {nickname(game.initialStats).name} · 1년 ≈{' '}
+              {yearOf(age.years)}년 · {nickname(game.initialStats).name} ·{' '}
+              <span data-testid="happiness">행복 {game.happiness}</span> · 1년 ≈{' '}
               {secondsPerYear(game.phase)}초
               <span className="mt-1 block h-[3px] w-40 overflow-hidden rounded-full bg-[var(--ruled)]">
                 <span className="block h-full bg-red-pen" style={{ width: `${progress * 100}%` }} />
