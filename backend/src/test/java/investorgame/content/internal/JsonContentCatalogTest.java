@@ -281,6 +281,11 @@ class JsonContentCatalogTest {
     assertThat(catalog.spouseText().profile("0-0-0-0").intro()).contains("성격은").contains("월");
     assertThat(catalog.spouseText().economies()).allMatch(e -> e.income() > 0);
     assertThat(catalog.comfortPhrases("layoff", "spouse")).isNotEmpty();
+    // 자녀 결혼 문구는 여러 벌이고 아이 이름·성별·금액 자리가 있다 (decisions.md 86번).
+    assertThat(catalog.childWeddingText().bodies()).hasSizeGreaterThanOrEqualTo(2);
+    assertThat(catalog.childWeddingText().bodyAt(5)).contains("{child}");
+    assertThat(catalog.childWeddingText().fullTexts()).allMatch(t -> t.contains("{word}"));
+    assertThat(catalog.childWeddingText().noneRichTexts()).isNotEmpty();
     assertThat(catalog.comfortPhrases("fraud", "friend")).isNotEmpty();
     assertThat(catalog.familyTripText().title()).contains("{who}");
   }

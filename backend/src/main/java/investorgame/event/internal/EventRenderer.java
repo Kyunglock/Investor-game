@@ -84,7 +84,8 @@ class EventRenderer {
           yield view(
               row,
               text.title().replace("{child}", child),
-              text.body().replace("{child}", child),
+              // 본문은 여러 벌을 돌려 가며 (decisions.md 86번). 같은 판·같은 순번이면 같다.
+              text.bodyAt(row.seq()).replace("{child}", child),
               null,
               null,
               List.of(

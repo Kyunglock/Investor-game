@@ -25,6 +25,7 @@ import investorgame.common.random.HashSeededRandom;
 import investorgame.common.random.SeededRandom;
 import investorgame.content.AnalysisText;
 import investorgame.content.CareerDefinition;
+import investorgame.content.ChildWeddingText;
 import investorgame.content.ContentCatalog;
 import investorgame.content.CrisisDefinition;
 import investorgame.content.InvestorType;
@@ -716,13 +717,29 @@ class DefaultProgressService implements ProgressService {
         day,
         "CHILD_WEDDING",
         Map.of("seq", wedding.seq(), "total", total, "cost", cost, "shareBp", wedding.shareBp()));
+    // 감동적인 결과 문구 여러 벌 가운데 하나 (decisions.md 86번). 넉넉한데 안 대줬으면 따로.
     String child = childName(wedding.seq());
-    String message =
+    HouseholdView home = household.get(gameId);
+    Sex childSex =
+        home.children().stream()
+            .filter(c -> c.seq() == wedding.seq())
+            .map(HouseholdView.Child::sex)
+            .findFirst()
+            .orElse(Sex.M);
+    ChildWeddingText text = content.childWeddingText();
+    List<String> pool =
         cost == 0
-            ? "%s가 결혼했다. 결혼 비용 %,d원은 아이가 알아서 마련했다.".formatted(child, total)
-            : cost >= total
-                ? "%s가 결혼했다. 결혼 비용 %,d원을 모두 대줬다.".formatted(child, total)
-                : "%s가 결혼했다. 결혼 비용 %,d원 가운데 %,d원을 보탰다.".formatted(child, total, cost);
+            ? (netWorth(gameId) >= total * RICH_WEDDING_MULTIPLE
+                ? text.noneRichTexts()
+                : text.noneTexts())
+            : cost >= total ? text.fullTexts() : text.halfTexts();
+    RandomGenerator rng = new HashSeededRandom(game.seed()).forKey("wedding-text", ticket.seq());
+    String message =
+        pool.get(rng.nextInt(pool.size()))
+            .replace("{child}", child)
+            .replace("{word}", childSex == Sex.F ? "딸" : "아들")
+            .replace("{total}", "%,d원".formatted(total))
+            .replace("{cost}", "%,d원".formatted(cost));
     return simpleOutcome(ticket, message);
   }
 
@@ -730,6 +747,9 @@ class DefaultProgressService implements ProgressService {
 
   /** 보통 가족 여행 비용(25세 기준, 물가가 붙는다). 순자산의 1%가 더 크면 그만큼 (옛 알림과 같은 셈법). */
   private static final long TRIP_BASE_COST = 2_500_000;
+
+  /** 순자산이 결혼 비용의 이 배수를 넘는데 한 푼도 안 대주면 '넉넉한데도' 문구 (decisions.md 86번). */
+  private static final long RICH_WEDDING_MULTIPLE = 10;
 
   /** 행복도 변화 (decisions.md 82번). 기쁨은 작게 자주, 슬픔은 조금 더 크게. */
   private static final int HAPPY_MARRIAGE = 15;

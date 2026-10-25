@@ -671,6 +671,11 @@ class JsonContentCatalog implements ContentCatalog {
     require(
         life.childWedding() != null
             && life.childWedding().title().contains("{child}")
+            && !life.childWedding().bodies().isEmpty()
+            && !life.childWedding().fullTexts().isEmpty()
+            && !life.childWedding().halfTexts().isEmpty()
+            && !life.childWedding().noneTexts().isEmpty()
+            && !life.childWedding().noneRichTexts().isEmpty()
             && life.childWedding().fullLabel() != null
             && life.childWedding().halfLabel() != null
             && life.childWedding().noneLabel() != null,
