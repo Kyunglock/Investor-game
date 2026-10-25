@@ -19,7 +19,8 @@ public record ChoiceOutcome(GameView game, Outcome outcome) {
       Trade trade,
       Price price,
       List<Growth> growth,
-      String message) {}
+      String message,
+      String review) {}
 
   /** source: 줏대 이탈의 꼬드김 출처 코드(youtuber, friend, …). 다른 이탈이면 null */
   public record DeviationView(String statCode, String from, String to, String source) {}

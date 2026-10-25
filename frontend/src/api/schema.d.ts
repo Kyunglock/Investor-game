@@ -835,6 +835,8 @@ export interface components {
                 reason: "DEVIATION" | "TRAIT" | "CAREER";
             }[];
             message?: string | null;
+            /** @description 뉴스 결과 뒤 안목 구간별 되돌아보는 한마디. 뉴스가 아니면 null (decisions.md 73번) */
+            review?: string | null;
         };
         Error: {
             /** @enum {string} */

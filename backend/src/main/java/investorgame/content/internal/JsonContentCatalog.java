@@ -323,6 +323,14 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public List<String> reviewPhrases(String detail, boolean good) {
+    return phrases
+        .review()
+        .getOrDefault(detail, Map.of())
+        .getOrDefault(good ? "good" : "bad", List.of());
+  }
+
+  @Override
   public List<String> swayPhrases(String sentiment) {
     return phrases.sway().getOrDefault(sentiment, List.of());
   }
@@ -526,6 +534,10 @@ class JsonContentCatalog implements ContentCatalog {
       require(
           !hintPhrases(detail.key(), "NEUTRAL", "MILD").isEmpty(),
           "모호한 힌트 문구가 없다: " + detail.key());
+      require(
+          !reviewPhrases(detail.key(), true).isEmpty()
+              && !reviewPhrases(detail.key(), false).isEmpty(),
+          "결과 뒤 안목 문구가 없다: " + detail.key());
     }
     validateStocks();
     validateLife();
@@ -730,6 +742,7 @@ class JsonContentCatalog implements ContentCatalog {
 
   record Phrases(
       Map<String, Map<String, Map<String, List<String>>>> hints,
+      Map<String, Map<String, List<String>>> review,
       Map<String, List<String>> sway,
       TextBlock job,
       TextBlock jobRetry,
