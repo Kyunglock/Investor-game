@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Game } from '../../api/client'
 import { childWord, percent, shortWon, signedShortWon, signedWon, won } from './labels'
 import { signedPercent } from './market'
@@ -363,7 +363,17 @@ function MortgageRepay({
   busy: boolean
 }) {
   const repayMortgage = useGameStore((s) => s.repayMortgage)
+  const pause = useGameStore((s) => s.pause)
+  const resume = useGameStore((s) => s.resume)
   const [open, setOpen] = useState(false)
+  // 금액을 입력하는 동안 시계를 멈춘다. 닫으면(상환·취소·화면 이동) 다시 흐른다 (decisions.md 89번).
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+    pause()
+    return () => resume()
+  }, [open, pause, resume])
   const [amount, setAmount] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [sending, setSending] = useState(false)
