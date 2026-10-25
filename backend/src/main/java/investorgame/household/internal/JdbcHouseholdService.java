@@ -64,10 +64,9 @@ class JdbcHouseholdService implements HouseholdService {
             .query(HouseholdView.Child.class)
             .list();
     Spouse spouse =
-        state.spouseName() == null
+        state.spouseJob() == null
             ? null
-            : new Spouse(
-                state.spouseName(), state.spouseJob(), state.spouseIncome(), state.spouseIntro());
+            : new Spouse(state.spouseJob(), state.spouseIncome(), withoutName(state));
     return new HouseholdView(
         state.marriedDay() != null, state.marriedDay(), children, state.retiredDay(), spouse);
   }
@@ -81,12 +80,11 @@ class JdbcHouseholdService implements HouseholdService {
                 """
                 UPDATE household_state
                 SET married_day = :day, updated_at = :now,
-                    spouse_name = :name, spouse_job = :job, spouse_income = :income, spouse_intro = :intro
+                    spouse_job = :job, spouse_income = :income, spouse_intro = :intro
                 WHERE game_id = :gameId AND married_day IS NULL
                 """)
             .param("day", gameDay)
             .param("now", now())
-            .param("name", spouse == null ? null : spouse.name())
             .param("job", spouse == null ? null : spouse.job())
             .param("income", spouse == null ? null : spouse.income())
             .param("intro", spouse == null ? null : spouse.intro())
@@ -283,6 +281,15 @@ class JdbcHouseholdService implements HouseholdService {
         .orElseThrow(() -> new NotFoundException("가계가 없다"));
   }
 
+  /** 이름이 있던 옛 판의 소개 문장은 "지우. 성격은 …"으로 시작한다. 이름은 보이지 않게 떼어 낸다 (decisions.md 90번). */
+  private static String withoutName(State state) {
+    String intro = state.spouseIntro();
+    String lead = state.spouseName() + ". ";
+    return state.spouseName() != null && intro != null && intro.startsWith(lead)
+        ? intro.substring(lead.length())
+        : intro;
+  }
+
   private OffsetDateTime now() {
     return OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
   }
@@ -290,7 +297,7 @@ class JdbcHouseholdService implements HouseholdService {
   private record State(
       Integer marriedDay,
       Integer retiredDay,
-      String spouseName,
+      String spouseName, // 이름이 있던 옛 판에만 있다 (decisions.md 90번)
       String spouseJob,
       Long spouseIncome,
       String spouseIntro,

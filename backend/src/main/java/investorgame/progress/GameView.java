@@ -110,7 +110,7 @@ public record GameView(
       Spouse spouse) {}
 
   /** 배우자 소개 (decisions.md 77번). */
-  public record Spouse(String name, String job, String intro) {}
+  public record Spouse(String job, String intro) {}
 
   /** leftHome: 독립해서 집을 나갔다 (decisions.md 68번). 그 뒤로는 양육비가 들지 않고 수첩 사진에도 없다. sex는 태어날 때 정해진 성별. */
   public record Child(int age, boolean leftHome, Sex sex) {}

@@ -314,11 +314,11 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       }
     }
     case 'MARRIAGE':
-      // 소개가 있는 배우자면 이름이 남는다 (decisions.md 77번).
+      // 배우자 이름은 쓰지 않는다. 옛 기록에 이름이 있어도 (decisions.md 90번).
       return {
         ...base,
         tone: 'life',
-        text: `${p.name ? `${withParticle(str(p.name), '과', '와')} ` : ''}결혼했다. 결혼 비용 ${won(num(p.cost))}.`,
+        text: `결혼했다. 결혼 비용 ${won(num(p.cost))}.`,
       }
     case 'CHILD':
       // 성별은 기록에 남은 것을 쓴다. 옛 기록엔 없을 수 있다 (decisions.md 69번).

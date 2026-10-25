@@ -278,7 +278,10 @@ class JsonContentCatalogTest {
         .hasSizeGreaterThanOrEqualTo(6)
         .allMatch(n -> n.weight() > 0 && (n.amount() != 0 || n.salaryPercent() != 0));
     assertThat(catalog.familyTripText().luxuryLabel()).isNotBlank();
-    assertThat(catalog.spouseText().profile("0-0-0-0").intro()).contains("성격은").contains("월");
+    assertThat(catalog.spouseText().profile("0-0-0").intro()).startsWith("성격은").contains("월");
+    // 이름이 있던 옛 카드의 코드도 이름 자리를 버리고 읽는다 (decisions.md 90번).
+    assertThat(catalog.spouseText().profile("3-0-0-0"))
+        .isEqualTo(catalog.spouseText().profile("0-0-0"));
     assertThat(catalog.spouseText().economies()).allMatch(e -> e.income() > 0);
     assertThat(catalog.comfortPhrases("layoff", "spouse")).isNotEmpty();
     assertThat(catalog.outings()).hasSizeGreaterThanOrEqualTo(4);
