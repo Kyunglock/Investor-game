@@ -19,7 +19,7 @@ export function Toast() {
   const dismiss = useGameStore((s) => s.dismissNotice)
   const game = useGameStore((s) => s.game)
   // 가족 여행 같은 순간은 그림이 붙고 조금 더 오래 남는다 (decisions.md 62번).
-  const moment = notice ? momentForNotice(notice) : null
+  const moment = notice && game ? momentForNotice(notice, game) : null
 
   useEffect(() => {
     if (!notice) {
@@ -50,6 +50,7 @@ export function Toast() {
                 game.initialStats,
                 game.stats,
                 game.startAge + Math.floor(game.day / game.daysPerYear),
+                game.sex,
               )}
               mood={moment.mood}
             />

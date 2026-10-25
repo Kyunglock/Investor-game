@@ -7,6 +7,7 @@ import investorgame.TestcontainersConfiguration;
 import investorgame.asset.AssetService;
 import investorgame.common.Hint;
 import investorgame.common.Phase;
+import investorgame.common.Sex;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.event.ChoiceTicket;
@@ -162,8 +163,8 @@ class HousingFlowTest {
             true,
             12 * YEAR,
             List.of(
-                new HouseholdView.Child(1, 14 * YEAR, 41 * YEAR),
-                new HouseholdView.Child(2, 16 * YEAR, 43 * YEAR)),
+                new HouseholdView.Child(1, 14 * YEAR, 41 * YEAR, Sex.M),
+                new HouseholdView.Child(2, 16 * YEAR, 43 * YEAR, Sex.F)),
             null);
     int at40 = 25 * YEAR;
     assertThat(HousingFlow.cheongyakPoints(15, JOB_DAY, family, at40, YEAR))

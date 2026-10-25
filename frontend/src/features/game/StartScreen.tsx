@@ -14,7 +14,11 @@ export function StartScreen({ onBorn }: { onBorn: () => void }) {
       </p>
       <div className="mt-5 flex justify-center gap-2 border-y border-line-soft py-4">
         {STAT_KEYS.map((key) => (
-          <Sprite key={key} spec={{ stage: 'adult', adornment: key, mark: null }} size={48} />
+          <Sprite
+            key={key}
+            spec={{ stage: 'adult', sex: 'M', adornment: key, mark: null }}
+            size={48}
+          />
         ))}
       </div>
       <button

@@ -29,7 +29,7 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
     >
       <div className="flex items-start gap-4">
         <Sprite
-          spec={layersFor(game.initialStats, game.stats, game.endAge)}
+          spec={layersFor(game.initialStats, game.stats, game.endAge, game.sex)}
           size={64}
           className="border border-line bg-bg"
         />

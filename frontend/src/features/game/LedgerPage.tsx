@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Game } from '../../api/client'
-import { percent, shortWon, signedShortWon, signedWon, won } from './labels'
+import { childWord, percent, shortWon, signedShortWon, signedWon, won } from './labels'
 import { changeBp, signedPercent } from './market'
 import { useGameStore } from './store'
 import { curvePoints } from './timeline'
@@ -132,7 +132,7 @@ function Household({ game }: { game: Game }) {
     h.monthlyIncome + h.spouseIncome + h.pension - h.monthlyExpense - game.housing.monthlyCost
   const month = Math.floor(game.market.month % 12) + 1
   const family = h.married
-    ? `부부${h.children.length > 0 ? ` · 자녀 ${h.children.map((c) => (c.leftHome ? `${c.age}살(독립)` : `${c.age}살`)).join(', ')}` : ''}`
+    ? `부부${h.children.length > 0 ? ` · 자녀 ${h.children.map((c) => `${c.age}살 ${childWord(c.sex)}${c.leftHome ? '(독립)' : ''}`).join(', ')}` : ''}`
     : '혼자'
   return (
     <section className="mt-2" data-testid="household-card">

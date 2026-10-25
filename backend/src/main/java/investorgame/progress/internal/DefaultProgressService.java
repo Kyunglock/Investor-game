@@ -16,6 +16,7 @@ import investorgame.common.Action;
 import investorgame.common.Direction;
 import investorgame.common.GameProperties;
 import investorgame.common.Phase;
+import investorgame.common.Sex;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
 import investorgame.common.random.HashSeededRandom;
@@ -579,10 +580,13 @@ class DefaultProgressService implements ProgressService {
         // 아이마다 독립해 나갈 나이를 지금 굴린다 (decisions.md 68번).
         ProgressProperties.Range leave = properties.childLeaveAge();
         int leaveAge = random.forKey("life", "leave", day).nextInt(leave.min(), leave.max() + 1);
-        int seq = household.addChild(gameId, day, leaveAge);
+        // 성별도 태어날 때 굴린다 (decisions.md 69번).
+        Sex sex = random.forKey("life", "sex", day).nextBoolean() ? Sex.F : Sex.M;
+        int seq = household.addChild(gameId, day, leaveAge, sex);
         assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
-        logs.append(gameId, day, "CHILD", Map.of("seq", seq, "cost", cost));
-        yield simpleOutcome(ticket, "%d번째 아이가 태어났다.".formatted(seq));
+        logs.append(gameId, day, "CHILD", Map.of("seq", seq, "cost", cost, "sex", sex.name()));
+        yield simpleOutcome(
+            ticket, "%s %s이 태어났다.".formatted(childName(seq), sex == Sex.F ? "딸" : "아들"));
       }
     };
   }
@@ -1446,6 +1450,7 @@ class DefaultProgressService implements ProgressService {
         game.startAge(),
         game.endAge(),
         calendar.daysPerYear(),
+        sexOf(game),
         character.stats(),
         character.initialStats(),
         account.cash(),
@@ -1497,6 +1502,13 @@ class DefaultProgressService implements ProgressService {
         quote.last12());
   }
 
+  /** 내 성별은 고르지 않고 판 시드로 정한다 (poc.md: 성별·부모는 고르지 않음, decisions.md 69번). */
+  private static Sex sexOf(GameRow game) {
+    return new HashSeededRandom(game.seed()).forKey("progress", "sex").nextBoolean()
+        ? Sex.F
+        : Sex.M;
+  }
+
   private static int changeBp(long now, long before) {
     return before <= 0 ? 0 : (int) ((now - before) * BP / before);
   }
@@ -1521,7 +1533,9 @@ class DefaultProgressService implements ProgressService {
             .map(
                 child ->
                     new GameView.Child(
-                        (day - child.birthDay()) / calendar.daysPerYear(), child.leftBy(day)))
+                        (day - child.birthDay()) / calendar.daysPerYear(),
+                        child.leftBy(day),
+                        child.sex()))
             .toList(),
         income,
         household.spouseIncome(game.id(), day),

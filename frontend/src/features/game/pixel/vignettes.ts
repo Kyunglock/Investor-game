@@ -1,3 +1,4 @@
+import type { Sex } from '../../../api/client'
 import type { AgeStage } from './bodies'
 import {
   build,
@@ -33,9 +34,10 @@ export type VignetteKey =
   | 'crash'
   | 'surge'
 
-/** 그림 속 한 사람. me는 플레이어(장식·약점 표시까지), spouse·kid는 옷 색만 다른 맨 몸이다. x는 16칸 몸의 왼쪽 열. */
+/** 그림 속 한 사람. me는 플레이어(장식·약점 표시까지), spouse·kid는 옷 색만 다른 맨 몸이다. 성별로 머리·치마가 갈린다 (decisions.md 69번). x는 16칸 몸의 왼쪽 열. */
 export interface Figure {
   who: 'me' | 'spouse' | 'kid'
+  sex: Sex
   stage: AgeStage
   x: number
 }

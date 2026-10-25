@@ -212,6 +212,10 @@ class GameFlowTest {
     assertThat(kinds).containsOnlyOnce("STYLE", "OFFER", "MARRIAGE", "RETIRE");
     assertThat(kinds).contains("JOB", "CAREER");
     assertThat(kinds).contains("CHILD", "LIFE");
+    // 성별은 나와 아이 모두 M/F 가운데 하나다 (decisions.md 69번).
+    assertThat(game.<String>read("$.sex")).isIn("M", "F");
+    List<String> childSexes = game.read("$.household.children[*].sex");
+    assertThat(childSexes).isNotEmpty().allMatch(s -> List.of("M", "F").contains(s));
     assertThat(kinds.stream().filter("TRAIT"::equals).count()).isEqualTo(17);
     assertThat(kinds.stream().filter("NEWS"::equals).count())
         .isEqualTo((long) seenKinds.get("NEWS"));

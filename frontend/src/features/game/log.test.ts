@@ -414,8 +414,12 @@ describe('logLine', () => {
     expect(logLine(entry('MARRIAGE', 0, { cost: 30_000_000 }), game).text).toBe(
       '결혼했다. 결혼 비용 30,000,000원.',
     )
-    expect(logLine(entry('CHILD', 0, { seq: 2, cost: 3_000_000 }), game).text).toBe(
-      '2번째 아이가 태어났다.',
+    expect(logLine(entry('CHILD', 0, { seq: 2, cost: 3_000_000, sex: 'F' }), game).text).toBe(
+      '둘째 딸이 태어났다.',
+    )
+    // 성별이 없던 옛 기록은 '아이'로 남는다 (decisions.md 69번).
+    expect(logLine(entry('CHILD', 0, { seq: 1, cost: 3_000_000 }), game).text).toBe(
+      '첫째 아이가 태어났다.',
     )
     expect(logLine(entry('RETIRE', 0, { age: 60, severance: 150_000_000 }), game).text).toBe(
       '60세, 은퇴했다. 퇴직금 150,000,000원.',

@@ -1,5 +1,8 @@
 import type { Game, LogEntry, Outcome } from '../../api/client'
+import { childWord, withParticle } from './labels'
+import { childName } from './log'
 import type { MoodKey } from './pixel/moods'
+import { opposite } from './pixel/sexes'
 import type { CreditArt } from './pixel/vignettes'
 
 /**
@@ -20,17 +23,20 @@ export function momentForOutcome(outcome: Outcome, game: Game): Moment | null {
   if (outcome.kind === 'LIFE') {
     const child = [...game.log].reverse().find((e) => e.kind === 'CHILD' && e.day === game.day)
     if (child) {
-      const seq = Number((child.payload as Record<string, unknown>).seq ?? 1)
+      const p = child.payload as Record<string, unknown>
+      const seq = Number(p.seq ?? 1)
       return {
         art: {
           vignette: 'baby',
           figures: [
-            { who: 'me', stage: 'adult', x: 20 },
-            ...(game.household.married ? [{ who: 'spouse', stage: 'adult', x: 4 } as const] : []),
+            { who: 'me', sex: game.sex, stage: 'adult', x: 20 },
+            ...(game.household.married
+              ? [{ who: 'spouse', sex: opposite(game.sex), stage: 'adult', x: 4 } as const]
+              : []),
           ],
         },
         mood: 'joy',
-        caption: `${seq}번째 아이가 태어났다. 세상이 달라 보인다.`,
+        caption: `${childName(seq)} ${withParticle(childWord(p.sex), '이', '가')} 태어났다. 세상이 달라 보인다.`,
       }
     }
     return null
@@ -45,27 +51,27 @@ export function momentForOutcome(outcome: Outcome, game: Game): Moment | null {
   }
   return pnl > 0
     ? {
-        art: { vignette: 'surge', figures: [{ who: 'me', stage: 'adult', x: 36 }] },
+        art: { vignette: 'surge', figures: [{ who: 'me', sex: game.sex, stage: 'adult', x: 36 }] },
         mood: 'confident',
         caption: '시세판이 온통 빨갛다. 내가 맞았다.',
       }
     : {
-        art: { vignette: 'crash', figures: [{ who: 'me', stage: 'adult', x: 36 }] },
+        art: { vignette: 'crash', figures: [{ who: 'me', sex: game.sex, stage: 'adult', x: 36 }] },
         mood: 'despair',
         caption: '파란 숫자를 한참 바라봤다.',
       }
 }
 
 /** 토스트에 그림을 붙일 생활 알림: 가족 여행. */
-export function momentForNotice(entry: LogEntry): Moment | null {
+export function momentForNotice(entry: LogEntry, game: Game): Moment | null {
   const p = entry.payload as Record<string, unknown>
   if (entry.kind === 'LIFE' && (p.noticeCode === 'family-trip' || p.title === '가족 여행')) {
     return {
       art: {
         vignette: 'trip',
         figures: [
-          { who: 'me', stage: 'adult', x: 14 },
-          { who: 'spouse', stage: 'adult', x: 26 },
+          { who: 'me', sex: game.sex, stage: 'adult', x: 14 },
+          { who: 'spouse', sex: opposite(game.sex), stage: 'adult', x: 26 },
         ],
       },
       mood: 'joy',
@@ -83,7 +89,7 @@ export function frugalMoment(game: Game): Moment | null {
   }
   if (game.debt > 0 || game.cash < expense) {
     return {
-      art: { vignette: 'frugal', figures: [{ who: 'me', stage: 'adult', x: 34 }] },
+      art: { vignette: 'frugal', figures: [{ who: 'me', sex: game.sex, stage: 'adult', x: 34 }] },
       mood: 'frugal',
       caption: game.debt > 0 ? '빚을 갚느라 생활비를 아끼는 중' : '생활비를 아끼는 중',
     }

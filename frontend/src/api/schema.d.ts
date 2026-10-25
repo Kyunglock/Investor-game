@@ -408,6 +408,11 @@ export interface components {
             month: number;
             stocks: components["schemas"]["StockQuote"][];
         };
+        /**
+         * @description 성별. 나는 판 시드로, 아이는 태어날 때 정해지고 배우자는 나와 반대다. 그림을 가르는 데만 쓴다 (decisions.md 69번)
+         * @enum {string}
+         */
+        Sex: "M" | "F";
         /** @description 가계부. 금액은 이번 달 기준(원) */
         Household: {
             married: boolean;
@@ -416,6 +421,7 @@ export interface components {
                 age: number;
                 /** @description 독립해서 집을 나갔다. 그 뒤로는 양육비가 들지 않는다 (decisions.md 68번) */
                 leftHome: boolean;
+                sex: components["schemas"]["Sex"];
             }[];
             /**
              * Format: int64
@@ -708,6 +714,7 @@ export interface components {
             startAge: number;
             endAge: number;
             daysPerYear: number;
+            sex: components["schemas"]["Sex"];
             stats: components["schemas"]["Stats"];
             /** @description 태어날 때의 능력치. 별명은 이 값으로 정해서 게임 중에 바뀌지 않는다 */
             initialStats: components["schemas"]["Stats"];

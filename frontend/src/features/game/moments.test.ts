@@ -8,6 +8,7 @@ const game = (over: Partial<Game> = {}): Game =>
     totalAsset: 100_000_000,
     cash: 5_000_000,
     debt: 0,
+    sex: 'F',
     household: { monthlyExpense: 2_000_000 },
     log: [],
     ...over,
@@ -18,14 +19,30 @@ const outcome = (over: Partial<Outcome>): Outcome =>
 
 describe('momentForOutcome', () => {
   it('아이가 태어난 생활 선택은 기쁨', () => {
-    const child: LogEntry = { seq: 9, day: 9000, kind: 'CHILD', payload: { seq: 2, cost: 1 } }
+    const child: LogEntry = {
+      seq: 9,
+      day: 9000,
+      kind: 'CHILD',
+      payload: { seq: 2, cost: 1, sex: 'M' },
+    }
     const m = momentForOutcome(
       outcome({ kind: 'LIFE', chosen: 'ACCEPT', actual: 'ACCEPT' }),
       game({ log: [child] }),
     )
     expect(m?.mood).toBe('joy')
     expect(m?.art.vignette).toBe('baby')
-    expect(m?.caption).toContain('2번째')
+    expect(m?.caption).toContain('둘째 아들')
+    expect(m?.art.figures.map((f) => [f.who, f.sex])).toEqual([['me', 'F']])
+    const married = game({ log: [child], household: { married: true } as Game['household'] })
+    expect(
+      momentForOutcome(
+        outcome({ kind: 'LIFE', chosen: 'ACCEPT', actual: 'ACCEPT' }),
+        married,
+      )?.art.figures.map((f) => [f.who, f.sex]),
+    ).toEqual([
+      ['me', 'F'],
+      ['spouse', 'M'],
+    ])
     expect(momentForOutcome(outcome({ kind: 'LIFE' }), game())).toBeNull()
   })
 
@@ -59,8 +76,9 @@ describe('momentForNotice', () => {
       kind: 'LIFE',
       payload: { noticeCode: 'hospital', title: '병원비', amount: -1 },
     }
-    expect(momentForNotice(trip)?.art.vignette).toBe('trip')
-    expect(momentForNotice(other)).toBeNull()
+    expect(momentForNotice(trip, game())?.art.vignette).toBe('trip')
+    expect(momentForNotice(trip, game())?.art.figures.map((f) => f.sex)).toEqual(['F', 'M'])
+    expect(momentForNotice(other, game())).toBeNull()
   })
 })
 
