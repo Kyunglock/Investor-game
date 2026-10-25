@@ -6,6 +6,7 @@ import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
 import investorgame.household.HouseholdService;
 import investorgame.household.HouseholdView;
+import investorgame.household.Spouse;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -62,22 +63,33 @@ class JdbcHouseholdService implements HouseholdService {
             .param("gameId", gameId)
             .query(HouseholdView.Child.class)
             .list();
+    Spouse spouse =
+        state.spouseName() == null
+            ? null
+            : new Spouse(
+                state.spouseName(), state.spouseJob(), state.spouseIncome(), state.spouseIntro());
     return new HouseholdView(
-        state.marriedDay() != null, state.marriedDay(), children, state.retiredDay());
+        state.marriedDay() != null, state.marriedDay(), children, state.retiredDay(), spouse);
   }
 
   @Override
   @Transactional
-  public void marry(UUID gameId, int gameDay) {
+  public void marry(UUID gameId, int gameDay, Spouse spouse) {
     state(gameId);
     int updated =
         jdbc.sql(
                 """
-                UPDATE household_state SET married_day = :day, updated_at = :now
+                UPDATE household_state
+                SET married_day = :day, updated_at = :now,
+                    spouse_name = :name, spouse_job = :job, spouse_income = :income, spouse_intro = :intro
                 WHERE game_id = :gameId AND married_day IS NULL
                 """)
             .param("day", gameDay)
             .param("now", now())
+            .param("name", spouse == null ? null : spouse.name())
+            .param("job", spouse == null ? null : spouse.job())
+            .param("income", spouse == null ? null : spouse.income())
+            .param("intro", spouse == null ? null : spouse.intro())
             .param("gameId", gameId)
             .update();
     if (updated == 0) {
@@ -143,7 +155,12 @@ class JdbcHouseholdService implements HouseholdService {
     if (!view.married() || view.retiredDay() != null) {
       return 0;
     }
-    return inflate(properties.spouseIncome(), gameDay);
+    // 소개가 있는 배우자는 그 직업의 소득, 아니면 설정값 (decisions.md 77번).
+    long base =
+        view.spouse() != null && view.spouse().income() > 0
+            ? view.spouse().income()
+            : properties.spouseIncome();
+    return inflate(base, gameDay);
   }
 
   @Override
@@ -209,7 +226,11 @@ class JdbcHouseholdService implements HouseholdService {
   }
 
   private State state(UUID gameId) {
-    return jdbc.sql("SELECT married_day, retired_day FROM household_state WHERE game_id = :gameId")
+    return jdbc.sql(
+            """
+            SELECT married_day, retired_day, spouse_name, spouse_job, spouse_income, spouse_intro
+            FROM household_state WHERE game_id = :gameId
+            """)
         .param("gameId", gameId)
         .query(State.class)
         .optional()
@@ -220,5 +241,11 @@ class JdbcHouseholdService implements HouseholdService {
     return OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC);
   }
 
-  private record State(Integer marriedDay, Integer retiredDay) {}
+  private record State(
+      Integer marriedDay,
+      Integer retiredDay,
+      String spouseName,
+      String spouseJob,
+      Long spouseIncome,
+      String spouseIntro) {}
 }

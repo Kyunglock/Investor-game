@@ -14,6 +14,7 @@ import investorgame.content.JobDefinition;
 import investorgame.content.NewsDefinition;
 import investorgame.content.NoticeDefinition;
 import investorgame.content.ShakeDefinition;
+import investorgame.content.SpouseText;
 import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
 import investorgame.event.ChoiceTicket;
@@ -49,7 +50,11 @@ class DefaultEventService implements EventService {
 
   static final String ACCEPT = "accept";
   static final String DECLINE = "decline";
+
+  /** 결혼 제안의 정의 코드: "marriage:" + 배우자 조합 코드 (decisions.md 77번). 거절하면 2년 뒤 다른 사람이 온다. */
   static final String MARRIAGE = "marriage";
+
+  static final String MARRIAGE_PREFIX = MARRIAGE + ":";
   static final String CHILD = "child";
 
   /** 자녀 결혼 선택의 정의 코드: "wedding:" + 자녀 순번 (decisions.md 68번). */
@@ -185,11 +190,11 @@ class DefaultEventService implements EventService {
                   : row.definitionCode().startsWith(TRIP_PREFIX)
                       ? new ChoiceTicket.FamilyTrip(
                           tripProposer(row.definitionCode()), tripCostBp(optionCode))
-                      : new ChoiceTicket.Life(
-                          MARRIAGE.equals(row.definitionCode())
-                              ? ChoiceTicket.LifeKind.MARRIAGE
-                              : ChoiceTicket.LifeKind.CHILD,
-                          ACCEPT.equals(optionCode));
+                      : row.definitionCode().startsWith(MARRIAGE_PREFIX)
+                          ? new ChoiceTicket.Marriage(
+                              spouseCode(row.definitionCode()), ACCEPT.equals(optionCode))
+                          : new ChoiceTicket.Life(
+                              ChoiceTicket.LifeKind.CHILD, ACCEPT.equals(optionCode));
           case NEWS -> new ChoiceTicket.News();
           case SHAKE -> new ChoiceTicket.Shake();
           case LEVERAGE ->
@@ -464,7 +469,7 @@ class DefaultEventService implements EventService {
       }
     }
     if (!context.married()) {
-      List<EventRow> asked = ofKind(rows, EventKind.LIFE, MARRIAGE);
+      List<EventRow> asked = marriageAsked(rows);
       int day =
           asked.isEmpty()
               ? dayOfAge(
@@ -474,7 +479,16 @@ class DefaultEventService implements EventService {
                   context)
               : last(asked).occursDay() + life.marriageRetryYears() * year;
       if (ageAt(day, context) <= life.marriageLastAge()) {
-        dues.add(new LifeDue(MARRIAGE, day));
+        // 상대는 제안마다 새로 뽑는다. 같은 판·같은 순번이면 같은 사람이다 (decisions.md 77번).
+        SpouseText spouse = content.spouseText();
+        RandomGenerator rng = random.forKey("event", "life", "spouse", asked.size());
+        String code =
+            spouse.encode(
+                rng.nextInt(spouse.names().size()),
+                rng.nextInt(spouse.personalities().size()),
+                rng.nextInt(spouse.economies().size()),
+                rng.nextInt(spouse.lives().size()));
+        dues.add(new LifeDue(MARRIAGE_PREFIX + code, day));
       }
     } else if (context.childrenCount() < life.maxChildren() && context.marriedDay() != null) {
       List<EventRow> asked = ofKind(rows, EventKind.LIFE, CHILD);
@@ -537,6 +551,20 @@ class DefaultEventService implements EventService {
       case ChoiceTicket.FamilyTrip.CHEAP -> 2_000;
       default -> 0;
     };
+  }
+
+  private static List<EventRow> marriageAsked(List<EventRow> rows) {
+    return rows.stream()
+        .filter(
+            r ->
+                r.kind() == EventKind.LIFE
+                    && r.definitionCode() != null
+                    && r.definitionCode().startsWith(MARRIAGE))
+        .toList();
+  }
+
+  static String spouseCode(String definitionCode) {
+    return definitionCode.substring(MARRIAGE_PREFIX.length());
   }
 
   static int weddingSeq(String definitionCode) {

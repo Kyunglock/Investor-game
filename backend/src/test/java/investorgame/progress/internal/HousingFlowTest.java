@@ -154,7 +154,7 @@ class HousingFlowTest {
   /** 청약 가점 (decisions.md 42번): 무주택 기간·부양가족·통장 기간. 가점이 높을수록 당첨이 쉽다. */
   @Test
   void 청약_가점은_무주택_기간과_부양가족과_통장_기간으로_매긴다() {
-    HouseholdView young = new HouseholdView(false, null, List.of(), null);
+    HouseholdView young = new HouseholdView(false, null, List.of(), null, null);
     assertThat(HousingFlow.cheongyakPoints(15, JOB_DAY, young, JOB_DAY, YEAR))
         .as("25세 혼자: 무주택 0 + 부양 5 + 통장 2")
         .isEqualTo(7);
@@ -165,6 +165,7 @@ class HousingFlowTest {
             List.of(
                 new HouseholdView.Child(1, 14 * YEAR, 41 * YEAR, Sex.M),
                 new HouseholdView.Child(2, 16 * YEAR, 43 * YEAR, Sex.F)),
+            null,
             null);
     int at40 = 25 * YEAR;
     assertThat(HousingFlow.cheongyakPoints(15, JOB_DAY, family, at40, YEAR))

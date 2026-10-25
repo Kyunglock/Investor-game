@@ -113,8 +113,11 @@ public record ChoiceTicket(
 
   public record Offer(boolean accepted) implements Effect {}
 
-  /** 결혼·자녀 선택. 수락이면 진행이 가계와 자산에 반영한다. */
+  /** 자녀 선택. 수락이면 진행이 가계와 자산에 반영한다. */
   public record Life(LifeKind kind, boolean accepted) implements Effect {}
+
+  /** 결혼 선택 (decisions.md 77번). spouseCode는 콘텐츠의 배우자 조합 코드("n-p-e-l"). 수락이면 진행이 그 사람과 결혼시킨다. */
+  public record Marriage(String spouseCode, boolean accepted) implements Effect {}
 
   /**
    * 자녀 결혼 (decisions.md 68번). 그때 물가의 결혼 비용 가운데 shareBp(만분율)만큼 대준다: 전부 10000, 절반 5000, 안 대주면 0.
@@ -140,7 +143,6 @@ public record ChoiceTicket(
   }
 
   public enum LifeKind {
-    MARRIAGE,
     CHILD
   }
 }

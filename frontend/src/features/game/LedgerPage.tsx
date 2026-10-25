@@ -132,7 +132,7 @@ function Household({ game }: { game: Game }) {
     h.monthlyIncome + h.spouseIncome + h.pension - h.monthlyExpense - game.housing.monthlyCost
   const month = Math.floor(game.market.month % 12) + 1
   const family = h.married
-    ? `부부${h.children.length > 0 ? ` · 자녀 ${h.children.map((c) => `${c.age}살 ${childWord(c.sex)}${c.leftHome ? '(독립)' : ''}`).join(', ')}` : ''}`
+    ? `부부${h.spouse ? `(${h.spouse.name} · ${h.spouse.job})` : ''}${h.children.length > 0 ? ` · 자녀 ${h.children.map((c) => `${c.age}살 ${childWord(c.sex)}${c.leftHome ? '(독립)' : ''}`).join(', ')}` : ''}`
     : '혼자'
   return (
     <section className="mt-2" data-testid="household-card">

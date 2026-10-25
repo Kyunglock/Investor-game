@@ -381,6 +381,16 @@ components:
       properties:
         married: { type: boolean }
         marriedAge: { type: [integer, 'null'] }
+        spouse:
+          oneOf:
+            - type: object
+              required: [name, job, intro]
+              properties:
+                name: { type: string }
+                job: { type: string }
+                intro: { type: string, description: 결혼 카드에 나온 소개 문장 }
+            - type: 'null'
+          description: 배우자 소개 (decisions.md 77번). 미혼이거나 소개 없이 결혼한 옛 판이면 null
         children:
           type: array
           items:

@@ -299,7 +299,12 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       }
     }
     case 'MARRIAGE':
-      return { ...base, tone: 'life', text: `결혼했다. 결혼 비용 ${won(num(p.cost))}.` }
+      // 소개가 있는 배우자면 이름이 남는다 (decisions.md 77번).
+      return {
+        ...base,
+        tone: 'life',
+        text: `${p.name ? `${withParticle(str(p.name), '과', '와')} ` : ''}결혼했다. 결혼 비용 ${won(num(p.cost))}.`,
+      }
     case 'CHILD':
       // 성별은 기록에 남은 것을 쓴다. 옛 기록엔 없을 수 있다 (decisions.md 69번).
       return {

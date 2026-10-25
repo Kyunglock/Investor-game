@@ -92,6 +92,9 @@ public interface ContentCatalog {
   /** 가족 여행 제안 문구 (decisions.md 71번). */
   FamilyTripText familyTripText();
 
+  /** 결혼 상대 소개의 재료 (decisions.md 77번). */
+  SpouseText spouseText();
+
   /** direction: UP/DOWN/NEUTRAL, strength: MILD/STRONG. */
   /**
    * 힌트 문구. detail은 안목 구간(low·mid·high·expert), 높을수록 종목·섹터·폭({stock}·{sectorName}·{min}~{max}%)을 짚는다
