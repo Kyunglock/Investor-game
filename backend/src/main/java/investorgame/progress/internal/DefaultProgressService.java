@@ -752,6 +752,9 @@ class DefaultProgressService implements ProgressService {
   /** 보통 가족 여행 비용(25세 기준, 물가가 붙는다). 순자산의 1%가 더 크면 그만큼 (옛 알림과 같은 셈법). */
   private static final long TRIP_BASE_COST = 2_500_000;
 
+  /** 여행·나들이 한 번에 드는 돈의 상한 (decisions.md 93번). */
+  private static final long TRIP_MAX_COST = 20_000_000;
+
   /** 순자산이 결혼 비용의 이 배수를 넘는데 한 푼도 안 대주면 '넉넉한데도' 문구 (decisions.md 86번). */
   private static final long RICH_WEDDING_MULTIPLE = 10;
 
@@ -788,15 +791,8 @@ class DefaultProgressService implements ProgressService {
         gameId,
         ticket.eventId(),
         new Completion(ticket.optionCode(), ticket.optionCode(), List.of()));
-    // 아이의 나들이는 그 나들이의 비용(물가만), 가족 여행은 max(물가 반영 250만, 순자산 1%) (decisions.md 71·87번).
     OutingText outing = trip.outing() == null ? null : content.outing(trip.outing());
-    long normal =
-        outing != null
-            ? household.inflated(outing.cost(), day)
-            : Math.max(
-                household.inflated(TRIP_BASE_COST, day),
-                netWorth(gameId) * TRIP_ASSET_PERCENT / PERCENT);
-    long cost = normal * trip.costBp() / BP;
+    long cost = tripCost(gameId, trip, day);
     if (cost > 0) {
       assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
     }
@@ -846,6 +842,20 @@ class DefaultProgressService implements ProgressService {
   }
 
   /** 나들이 결과 문구: 선택마다 콘텐츠 문구에 아이 이름을 채우고, 돈이 들었으면 금액을 붙인다 (decisions.md 87번). */
+  /**
+   * 여행·나들이에 드는 돈. 아이의 나들이는 그 나들이의 비용(물가만), 가족 여행은 max(물가 반영 250만, 순자산 1%)에 선택지 비율을 곱하고, 많아도 2천만 원까지
+   * (decisions.md 71·87·93번).
+   */
+  private long tripCost(UUID gameId, ChoiceTicket.FamilyTrip trip, int day) {
+    long normal =
+        trip.outing() != null
+            ? household.inflated(content.outing(trip.outing()).cost(), day)
+            : Math.max(
+                household.inflated(TRIP_BASE_COST, day),
+                netWorth(gameId) * TRIP_ASSET_PERCENT / PERCENT);
+    return Math.min(normal * trip.costBp() / BP, TRIP_MAX_COST);
+  }
+
   private static String outingMessage(OutingText outing, String option, String child, long cost) {
     String text =
         switch (option) {
@@ -1895,8 +1905,25 @@ class DefaultProgressService implements ProgressService {
         options(game, character, event));
   }
 
-  /** 주거 선택지에는 드는 돈과 고를 수 없는 이유를 붙인다. 전세사기는 고른 뒤에야 드러나므로 여기서는 모른 채 계산한다. */
+  /**
+   * 주거 선택지에는 드는 돈과 고를 수 없는 이유를 붙인다. 전세사기는 고른 뒤에야 드러나므로 여기서는 모른 채 계산한다. 여행·나들이 선택지에는 드는 돈을 붙인다
+   * (decisions.md 93번).
+   */
   private List<GameView.Option> options(GameRow game, CharacterView character, EventView event) {
+    if (event.kind() == EventKind.LIFE) {
+      return event.options().stream()
+          .map(
+              o ->
+                  events.prepareChoice(game.id(), event.eventId(), o.code()).effect()
+                          instanceof ChoiceTicket.FamilyTrip trip
+                      ? new GameView.Option(
+                          o.code(),
+                          o.label(),
+                          tripDetail(tripCost(game.id(), trip, event.occursDay())),
+                          null)
+                      : new GameView.Option(o.code(), o.label(), null, null))
+          .toList();
+    }
     if (event.kind() != EventKind.HOUSING) {
       return event.options().stream()
           .map(o -> new GameView.Option(o.code(), o.label(), null, null))
@@ -1919,6 +1946,10 @@ class DefaultProgressService implements ProgressService {
               option.code(), option.label(), plans.get(i).detail(), plans.get(i).blocked()));
     }
     return options;
+  }
+
+  private static String tripDetail(long cost) {
+    return cost > 0 ? HousingFlow.money(cost) + " 든다" : "돈이 들지 않는다";
   }
 
   private int cheongyakPoints(GameRow game, CharacterView character, int day) {

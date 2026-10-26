@@ -82,6 +82,13 @@ class GameFlowTest {
                               : "accept";
               default -> GameClient.firstOpen(game);
             };
+        if ("LIFE".equals(kind)
+            && ((List<?>) pending.get("options")).toString().contains("luxury")) {
+          // 여행·나들이 선택지에는 드는 돈이 붙는다 (decisions.md 93번).
+          for (Object o : (List<?>) pending.get("options")) {
+            assertThat(((Map<?, ?>) o).get("detail")).asString().containsAnyOf("든다", "들지 않는다");
+          }
+        }
         DocumentContext result = client.choose(gameId, (String) pending.get("eventId"), option);
         responses.add(result.jsonString());
         if ("NEWS".equals(kind)) {
