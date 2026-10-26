@@ -218,7 +218,7 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
           return {
             ...base,
             tone: 'life',
-            text: `${str(p.proposer)}의 ${str(p.title)} 조르기를 달랬다.`,
+            text: `${str(p.proposer)}의 ${str(p.title)}, 함께하지 못했다.`,
           }
         }
         return {
