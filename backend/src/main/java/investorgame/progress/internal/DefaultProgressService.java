@@ -91,6 +91,7 @@ class DefaultProgressService implements ProgressService {
   private static final String TRAIT = "TRAIT";
   private static final String SALARY = "SALARY";
   private static final String SPOUSE_INCOME = "SPOUSE_INCOME";
+  private static final String ALLOWANCE = "ALLOWANCE";
   private static final String SEVERANCE = "SEVERANCE";
   private static final String PENSION = "PENSION";
   private static final String WINDFALL = "WINDFALL";
@@ -1394,6 +1395,10 @@ class DefaultProgressService implements ProgressService {
       // 생활비는 처음 일을 시작한 뒤부터 나간다(실직 중에도). 월급은 지금 직업이 있을 때만 (decisions.md 26번).
       boolean independent = character.careerStartDay() != null && day > character.careerStartDay();
       boolean working = job != null && day > character.jobStartDay();
+      // 일을 시작하기 전, 정한 나이 전까지는 부모님 용돈이 들어온다 (decisions.md 94번).
+      if (!independent && ageAt(game, day) < properties.allowance().untilAge()) {
+        assets.credit(gameId, ALLOWANCE, properties.allowance().monthly(), day);
+      }
       if (independent) {
         HouseholdView home = household.get(gameId);
         boolean retired = home.retiredDay() != null;

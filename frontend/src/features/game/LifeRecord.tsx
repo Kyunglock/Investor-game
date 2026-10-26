@@ -53,10 +53,13 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
           {won(result.initialAsset)} →
         </span>{' '}
         <span className="font-mono-num">{won(result.finalAsset)}</span>{' '}
-        <span className={`font-mono-num text-lg ${up ? 'text-up' : 'text-down'}`}>
-          ({up ? '+' : ''}
-          {percent(result.returnBp)})
-        </span>
+        {/* 0원에서 시작했으면 수익률이 없다 (decisions.md 94번). */}
+        {result.initialAsset > 0 && (
+          <span className={`font-mono-num text-lg ${up ? 'text-up' : 'text-down'}`}>
+            ({up ? '+' : ''}
+            {percent(result.returnBp)})
+          </span>
+        )}
       </p>
 
       <p className="mt-1 text-[13px] text-muted" data-testid="result-epilogue">

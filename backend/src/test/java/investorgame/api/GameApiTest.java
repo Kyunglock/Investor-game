@@ -187,16 +187,15 @@ class GameApiTest {
   }
 
   @Test
-  void 능력치는_10에서_100_사이이고_초기_현금은_100만원_단위다() throws Exception {
+  void 능력치는_10에서_100_사이이고_0원에서_시작한다() throws Exception {
     GameClient client = GameClient.newSession(mvc);
     for (int i = 0; i < 20; i++) {
       DocumentContext game = client.start();
       for (String stat : List.of("insight", "patience", "courage", "conviction", "luck")) {
         assertThat(game.read("$.stats." + stat, Integer.class)).isBetween(10, 100);
       }
-      long cash = game.read("$.cash", Long.class);
-      assertThat(cash).isBetween(1_000_000L, 50_000_000L);
-      assertThat(cash % 1_000_000L).isZero();
+      // 0원에서 시작하고 부모님 용돈으로 모은다 (decisions.md 94번).
+      assertThat(game.read("$.cash", Long.class)).isZero();
     }
   }
 
