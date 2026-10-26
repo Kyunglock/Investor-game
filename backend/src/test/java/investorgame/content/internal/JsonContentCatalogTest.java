@@ -286,6 +286,10 @@ class JsonContentCatalogTest {
     assertThat(catalog.comfortPhrases("layoff", "spouse")).isNotEmpty();
     assertThat(catalog.outings()).hasSizeGreaterThanOrEqualTo(4);
     assertThat(catalog.outing("park").normalText()).contains("{child}");
+    // 운동회 말고도 학예회·생일 파티 같은 아이 행사가 있다 (decisions.md 99번).
+    assertThat(catalog.outings())
+        .extracting(o -> o.code())
+        .contains("sports-day", "school-play", "open-class", "birthday", "recital", "graduation");
     // 자녀 결혼 문구는 여러 벌이고 아이 이름·성별·금액 자리가 있다 (decisions.md 86번).
     assertThat(catalog.childWeddingText().bodies()).hasSizeGreaterThanOrEqualTo(2);
     assertThat(catalog.childWeddingText().bodyAt(5)).contains("{child}");
