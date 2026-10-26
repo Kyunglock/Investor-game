@@ -417,9 +417,9 @@ export interface components {
         Household: {
             married: boolean;
             marriedAge?: number | null;
-            /** @description 일을 시작하기 전 매달 들어오는 돈 (decisions.md 94·96번). 일을 시작했으면 null */
+            /** @description 일을 시작하기 전 매달 들어오는 아르바이트 돈 (decisions.md 96·98번). 20세 전이거나 일을 시작했으면 null */
             pocketMoney?: {
-                /** @description "부모님 용돈" 또는 "편의점 아르바이트" */
+                /** @description "편의점 아르바이트" 등 */
                 label: string;
                 /** Format: int64 */
                 monthly: number;

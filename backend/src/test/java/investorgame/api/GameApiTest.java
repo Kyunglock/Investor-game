@@ -194,7 +194,7 @@ class GameApiTest {
       for (String stat : List.of("insight", "patience", "courage", "conviction", "luck")) {
         assertThat(game.read("$.stats." + stat, Integer.class)).isBetween(10, 100);
       }
-      // 0원에서 시작하고 부모님 용돈으로 모은다 (decisions.md 94번).
+      // 0원에서 시작하고 20세 아르바이트 전까지 모이는 돈이 없다 (decisions.md 94·98번).
       assertThat(game.read("$.cash", Long.class)).isZero();
     }
   }

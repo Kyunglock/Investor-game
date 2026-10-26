@@ -51,7 +51,7 @@ export function BirthCertificate({ game, onStart }: { game: Game; onStart: () =>
         <span data-testid="birth-sex">{SEX_LABELS[game.sex]}</span>.{' '}
         {game.initialAsset > 0
           ? `능력치 5개와 통장 ${won(game.initialAsset)}을 가지고 인생을 시작합니다.`
-          : '능력치 5개와 빈 통장으로 인생을 시작합니다. 부모님께 매달 용돈을 받습니다.'}
+          : '능력치 5개와 빈 통장으로 인생을 시작합니다. 20세부터 아르바이트로 돈을 법니다.'}
       </p>
 
       <ul className="mt-5 flex flex-col gap-2.5 border-t border-line-soft pt-4">

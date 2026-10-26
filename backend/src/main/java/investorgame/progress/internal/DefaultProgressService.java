@@ -92,7 +92,6 @@ class DefaultProgressService implements ProgressService {
   private static final String TRAIT = "TRAIT";
   private static final String SALARY = "SALARY";
   private static final String SPOUSE_INCOME = "SPOUSE_INCOME";
-  private static final String ALLOWANCE = "ALLOWANCE";
   private static final String PART_TIME = "PART_TIME";
   private static final String SEVERANCE = "SEVERANCE";
   private static final String PENSION = "PENSION";
@@ -1397,15 +1396,13 @@ class DefaultProgressService implements ProgressService {
       // 생활비는 처음 일을 시작한 뒤부터 나간다(실직 중에도). 월급은 지금 직업이 있을 때만 (decisions.md 26번).
       boolean independent = character.careerStartDay() != null && day > character.careerStartDay();
       boolean working = job != null && day > character.jobStartDay();
-      // 일을 시작하기 전: 정한 나이 전까지는 부모님 용돈, 그 뒤로는 아르바이트 (decisions.md 94·96번).
+      // 일을 시작하기 전: 정한 나이부터 아르바이트. 그 전엔 용돈을 다 써서 모이는 돈이 없다 (decisions.md 96·98번).
       if (!independent) {
-        int untilAge = properties.allowance().untilAge();
-        if (ageAt(game, day) < untilAge) {
-          assets.credit(gameId, ALLOWANCE, properties.allowance().monthly(), day);
-        } else {
+        int fromAge = properties.partTimeFromAge();
+        if (ageAt(game, day) >= fromAge) {
           PartTimeJob partTime = partTimeOf(game);
           assets.credit(gameId, PART_TIME, partTime.monthly(), day);
-          if (ageAt(game, day - month) < untilAge) {
+          if (ageAt(game, day - month) < fromAge) {
             logs.append(
                 gameId,
                 day,
@@ -1853,13 +1850,10 @@ class DefaultProgressService implements ProgressService {
         new HashSeededRandom(game.seed()).forKey("progress", "part-time").nextInt(jobs.size()));
   }
 
-  /** 일을 시작하기 전 매달 들어오는 돈: 정한 나이 전엔 부모님 용돈, 그 뒤엔 아르바이트. 일을 시작했으면 null (decisions.md 94·96번). */
+  /** 일을 시작하기 전 매달 들어오는 아르바이트 돈. 정한 나이 전이거나 일을 시작했으면 null (decisions.md 96·98번). */
   private GameView.PocketMoney pocketMoney(GameRow game, boolean independent, int day) {
-    if (independent) {
+    if (independent || ageAt(game, day) < properties.partTimeFromAge()) {
       return null;
-    }
-    if (ageAt(game, day) < properties.allowance().untilAge()) {
-      return new GameView.PocketMoney("부모님 용돈", properties.allowance().monthly());
     }
     PartTimeJob partTime = partTimeOf(game);
     return new GameView.PocketMoney(partTime.name() + " 아르바이트", partTime.monthly());
