@@ -652,18 +652,18 @@
     "code": "k18-major",
     "age": 19,
     "title": "전공을 정해야 한다, 점수는 어디든 간다",
-    "body": "부모님은 안정적인 곳을, 친구들은 요즘 뜨는 곳을 말한다.",
+    "body": "부모님은 안정적인 곳을 말한다. 친구들은 AI가 코드를 다 짜는 세상이라 컴퓨터공학은 끝났다고 한다.",
     "options": [
       {
         "code": "cs",
-        "label": "요즘 뜨는 컴퓨터공학",
+        "label": "AI에 밀려도 컴퓨터공학",
         "traitDeltas": {
-          "style.short": 1,
+          "style.long": 1,
           "risk.bold": 1,
-          "mind.crowd": 2,
+          "mind.own": 2,
           "sector.semiconductor": 2
         },
-        "note": "흐름이 있는 곳으로 갔다"
+        "note": "다들 말렸지만 좋아하는 걸 택했다"
       },
       {
         "code": "pharm",
