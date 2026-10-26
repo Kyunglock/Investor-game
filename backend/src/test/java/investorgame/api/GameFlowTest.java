@@ -229,7 +229,7 @@ class GameFlowTest {
     assertThat(game.read("$.household.spouse", Object.class).toString()).doesNotContain("name=");
     assertThat(game.read("$.household.spouse.job", String.class)).isNotBlank();
     assertThat(game.read("$.household.spouse.intro", String.class)).startsWith("성격은");
-    // 20세에 용돈이 끊기고 아르바이트를 시작한다. 기록은 한 번 (decisions.md 96번).
+    // 20세에 아르바이트를 시작한다. 기록은 한 번 (decisions.md 96·98번).
     assertThat(game.read("$.log[?(@.payload.noticeCode == 'part-time')].day", List.class).size())
         .isEqualTo(1);
     assertThat(kinds).contains("JOB", "CAREER");

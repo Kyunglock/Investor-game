@@ -99,7 +99,7 @@ public record GameView(
 
   /**
    * 가계부. 금액은 이번 달 기준. pension은 은퇴 뒤 매달 들어오는 연금, 은퇴 전 0. spouse는 미혼이거나 옛 판이면 null. pocketMoney는 일을
-   * 시작하기 전 매달 들어오는 용돈·아르바이트, 일을 시작했으면 null (decisions.md 94·96번).
+   * 시작하기 전 매달 들어오는 아르바이트 돈, 20세 전이거나 일을 시작했으면 null (decisions.md 96·98번).
    */
   public record Household(
       boolean married,
@@ -113,7 +113,7 @@ public record GameView(
       Spouse spouse,
       PocketMoney pocketMoney) {}
 
-  /** 일을 시작하기 전의 돈줄: "부모님 용돈" 또는 "편의점 아르바이트" (decisions.md 94·96번). */
+  /** 일을 시작하기 전의 돈줄: "편의점 아르바이트" 등 (decisions.md 96번). */
   public record PocketMoney(String label, long monthly) {}
 
   /** 배우자 소개 (decisions.md 77번). */
