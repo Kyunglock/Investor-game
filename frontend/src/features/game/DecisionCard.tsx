@@ -173,7 +173,7 @@ function Body({ event, game, busy, onChoose }: Props) {
           <p>{event.sway}</p>
         </div>
       )}
-      {isNews && <WorldBrief game={game} />}
+      {isNews && <WorldBrief />}
 
       <div
         className={`mt-3 grid gap-2 ${isNews ? 'grid-cols-3' : isShake || isLeverage ? 'grid-cols-2' : 'grid-cols-1'}`}
@@ -290,18 +290,22 @@ function tone(bp: number): string {
 const WORLD_SHOWN = 5
 
 /**
- * 뉴스 카드의 세상사 (decisions.md 79·92번): 매매창 경제 신문과 같은 재료에서 최근 소식 다섯. 지표는 보이지 않는다. 전조·기사·회고를 구분 없이 최근
- * 순으로 보여 주고, 접고 펼칠 수 있다(접으면 다음 카드에서도 접힌 채). 카드가 열릴 때 이 달 시황을 받는다.
+ * 뉴스 카드의 세상사 (decisions.md 79·92·97번): 매매창 경제 신문과 같은 재료에서 거시경제를 판단할 소식(전조·거시 기사)만 최근 순으로 다섯. 지표·
+ * 나이·위기 회고는 보이지 않는다. 접고 펼칠 수 있다(접으면 다음 카드에서도 접힌 채). 카드가 열릴 때 이 달 시황을 받는다.
  */
-function WorldBrief({ game }: { game: Game }) {
+function WorldBrief() {
   const overview = useGameStore((s) => s.overview)
   const open = useGameStore((s) => s.worldOpen)
   const { loadOverview, setWorldOpen } = useGameStore.getState()
   useEffect(() => {
     void loadOverview()
   }, [loadOverview])
-  const news: NewsItem[] = overview ? [...overview.newspaper].reverse().slice(0, WORLD_SHOWN) : []
-  const ageOf = (day: number) => game.startAge + Math.floor(day / game.daysPerYear)
+  const news: NewsItem[] = overview
+    ? overview.newspaper
+        .filter((n) => n.macro && n.kind !== 'CRISIS')
+        .reverse()
+        .slice(0, WORLD_SHOWN)
+    : []
   return (
     <details
       className="mt-2.5 border-l-[3px] border-line px-2.5 py-1.5 text-xs"
@@ -321,8 +325,7 @@ function WorldBrief({ game }: { game: Game }) {
         <ul className="mt-1 text-muted">
           {news.map((h) => (
             <li key={`${h.day}-${h.text}`} data-testid="brief-headline">
-              <span className="font-mono-num text-[11px] text-faint">{ageOf(h.day)}세 </span>
-              <span className={h.kind === 'CRISIS' ? 'text-wine' : ''}>{h.text}</span>
+              {h.text}
             </li>
           ))}
         </ul>

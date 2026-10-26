@@ -482,7 +482,8 @@
   "articles": [
     {
       "text": "반도체 수출이 석 달 연속 늘었다는 통계가 나왔다.",
-      "sentiment": "POS"
+      "sentiment": "POS",
+      "macro": true
     },
     {
       "text": "한 자동차 회사가 해외 공장을 새로 짓겠다고 발표했다.",
@@ -514,7 +515,8 @@
     },
     {
       "text": "청년 취업자 수가 지난해보다 조금 늘었다고 한다.",
-      "sentiment": "POS"
+      "sentiment": "POS",
+      "macro": true
     },
     {
       "text": "동네에 새 대형마트가 들어선다며 아파트 단지가 술렁였다.",
@@ -538,7 +540,8 @@
     },
     {
       "text": "신용카드 사용액이 지난달보다 조금 줄었다는 통계가 나왔다.",
-      "sentiment": "NEG"
+      "sentiment": "NEG",
+      "macro": true
     },
     {
       "text": "출생아 수가 또 줄었다는 기사가 신문 사회면에 실렸다.",
@@ -546,19 +549,23 @@
     },
     {
       "text": "소비자물가가 2%대에서 크게 움직이지 않았다.",
-      "sentiment": "NEUTRAL"
+      "sentiment": "NEUTRAL",
+      "macro": true
     },
     {
       "text": "기름값이 몇 주째 조금씩 내린다.",
-      "sentiment": "POS"
+      "sentiment": "POS",
+      "macro": true
     },
     {
       "text": "중앙은행이 기준금리를 그대로 두기로 했다.",
-      "sentiment": "NEUTRAL"
+      "sentiment": "NEUTRAL",
+      "macro": true
     },
     {
       "text": "정부가 내년 예산을 올해보다 조금 늘려 짰다.",
-      "sentiment": "POS"
+      "sentiment": "POS",
+      "macro": true
     },
     {
       "text": "전기요금 인상 여부를 두고 논의가 길어지고 있다.",
@@ -570,31 +577,38 @@
     },
     {
       "text": "미국 증시가 사상 최고치를 다시 썼다는 소식이 들렸다.",
-      "sentiment": "POS"
+      "sentiment": "POS",
+      "macro": true
     },
     {
       "text": "유럽 경기가 둔화하고 있다는 보고서가 나왔지만, 국내 영향은 제한적이라고 한다.",
-      "sentiment": "NEG"
+      "sentiment": "NEG",
+      "macro": true
     },
     {
       "text": "중국의 공장 가동률이 지난달보다 올랐다.",
-      "sentiment": "POS"
+      "sentiment": "POS",
+      "macro": true
     },
     {
       "text": "국제 유가가 산유국 회의 소식에 잠깐 출렁였다.",
-      "sentiment": "NEUTRAL"
+      "sentiment": "NEUTRAL",
+      "macro": true
     },
     {
       "text": "외국인 투자자들이 이번 주 국내 주식을 조금 사들였다.",
-      "sentiment": "POS"
+      "sentiment": "POS",
+      "macro": true
     },
     {
       "text": "증권사 지점에 개인 투자자 상담이 평소보다 많다고 한다.",
-      "sentiment": "NEUTRAL"
+      "sentiment": "NEUTRAL",
+      "macro": true
     },
     {
       "text": "서울 아파트 거래량이 지난달과 비슷했다.",
-      "sentiment": "NEUTRAL"
+      "sentiment": "NEUTRAL",
+      "macro": true
     },
     {
       "text": "경기 신도시에 새 지하철역이 들어선다는 계획이 발표됐다.",
