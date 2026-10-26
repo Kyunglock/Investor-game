@@ -30,6 +30,7 @@ import investorgame.content.CrisisDefinition;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
 import investorgame.content.OutingText;
+import investorgame.content.PartTimeJob;
 import investorgame.content.SpouseText;
 import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
@@ -92,6 +93,7 @@ class DefaultProgressService implements ProgressService {
   private static final String SALARY = "SALARY";
   private static final String SPOUSE_INCOME = "SPOUSE_INCOME";
   private static final String ALLOWANCE = "ALLOWANCE";
+  private static final String PART_TIME = "PART_TIME";
   private static final String SEVERANCE = "SEVERANCE";
   private static final String PENSION = "PENSION";
   private static final String WINDFALL = "WINDFALL";
@@ -1395,9 +1397,28 @@ class DefaultProgressService implements ProgressService {
       // 생활비는 처음 일을 시작한 뒤부터 나간다(실직 중에도). 월급은 지금 직업이 있을 때만 (decisions.md 26번).
       boolean independent = character.careerStartDay() != null && day > character.careerStartDay();
       boolean working = job != null && day > character.jobStartDay();
-      // 일을 시작하기 전, 정한 나이 전까지는 부모님 용돈이 들어온다 (decisions.md 94번).
-      if (!independent && ageAt(game, day) < properties.allowance().untilAge()) {
-        assets.credit(gameId, ALLOWANCE, properties.allowance().monthly(), day);
+      // 일을 시작하기 전: 정한 나이 전까지는 부모님 용돈, 그 뒤로는 아르바이트 (decisions.md 94·96번).
+      if (!independent) {
+        int untilAge = properties.allowance().untilAge();
+        if (ageAt(game, day) < untilAge) {
+          assets.credit(gameId, ALLOWANCE, properties.allowance().monthly(), day);
+        } else {
+          PartTimeJob partTime = partTimeOf(game);
+          assets.credit(gameId, PART_TIME, partTime.monthly(), day);
+          if (ageAt(game, day - month) < untilAge) {
+            logs.append(
+                gameId,
+                day,
+                "LIFE",
+                Map.of(
+                    "noticeCode",
+                    "part-time",
+                    "title",
+                    partTime.name() + " 아르바이트를 시작했다 (매달)",
+                    "amount",
+                    partTime.monthly()));
+          }
+        }
       }
       if (independent) {
         HouseholdView home = household.get(gameId);
@@ -1825,6 +1846,25 @@ class DefaultProgressService implements ProgressService {
         quote.last12());
   }
 
+  /** 20세부터 하는 아르바이트. 판 시드로 하나 (decisions.md 96번). */
+  private PartTimeJob partTimeOf(GameRow game) {
+    List<PartTimeJob> jobs = content.partTimeJobs();
+    return jobs.get(
+        new HashSeededRandom(game.seed()).forKey("progress", "part-time").nextInt(jobs.size()));
+  }
+
+  /** 일을 시작하기 전 매달 들어오는 돈: 정한 나이 전엔 부모님 용돈, 그 뒤엔 아르바이트. 일을 시작했으면 null (decisions.md 94·96번). */
+  private GameView.PocketMoney pocketMoney(GameRow game, boolean independent, int day) {
+    if (independent) {
+      return null;
+    }
+    if (ageAt(game, day) < properties.allowance().untilAge()) {
+      return new GameView.PocketMoney("부모님 용돈", properties.allowance().monthly());
+    }
+    PartTimeJob partTime = partTimeOf(game);
+    return new GameView.PocketMoney(partTime.name() + " 아르바이트", partTime.monthly());
+  }
+
   /** 내 성별은 고르지 않고 판 시드로 정한다 (poc.md: 성별·부모는 고르지 않음, decisions.md 69번). */
   private static Sex sexOf(GameRow game) {
     return new HashSeededRandom(game.seed()).forKey("progress", "sex").nextBoolean()
@@ -1867,7 +1907,8 @@ class DefaultProgressService implements ProgressService {
         household.pension(game.id(), day),
         home.spouse() == null
             ? null
-            : new GameView.Spouse(home.spouse().job(), home.spouse().intro()));
+            : new GameView.Spouse(home.spouse().job(), home.spouse().intro()),
+        pocketMoney(game, independent, day));
   }
 
   private GameView.InvestorType investorTypeView(String code) {

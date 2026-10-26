@@ -15,6 +15,7 @@ import investorgame.content.LifeText;
 import investorgame.content.NewsDefinition;
 import investorgame.content.NoticeDefinition;
 import investorgame.content.OutingText;
+import investorgame.content.PartTimeJob;
 import investorgame.content.ShakeDefinition;
 import investorgame.content.SpouseText;
 import investorgame.content.StockDefinition;
@@ -308,6 +309,11 @@ class JsonContentCatalog implements ContentCatalog {
   @Override
   public ChildWeddingText childWeddingText() {
     return life.childWedding();
+  }
+
+  @Override
+  public List<PartTimeJob> partTimeJobs() {
+    return life.partTimes();
   }
 
   @Override
@@ -686,6 +692,11 @@ class JsonContentCatalog implements ContentCatalog {
                             && o.noneText() != null),
         "나들이 문구가 비었다 (decisions.md 87번)");
     require(
+        life.partTimes() != null
+            && !life.partTimes().isEmpty()
+            && life.partTimes().stream().allMatch(j -> !j.name().isBlank() && j.monthly() > 0),
+        "아르바이트가 비었다 (decisions.md 96번)");
+    require(
         life.spouse() != null
             && !life.spouse().personalities().isEmpty()
             && !life.spouse().economies().isEmpty()
@@ -801,6 +812,7 @@ class JsonContentCatalog implements ContentCatalog {
       FamilyTripText familyTrip,
       SpouseText spouse,
       List<OutingText> outings,
+      List<PartTimeJob> partTimes,
       List<NoticeDefinition> notices) {}
 
   record Crises(List<CrisisDefinition> scenarios, List<String> commonOmens) {}

@@ -381,6 +381,15 @@ components:
       properties:
         married: { type: boolean }
         marriedAge: { type: [integer, 'null'] }
+        pocketMoney:
+          oneOf:
+            - type: object
+              required: [label, monthly]
+              properties:
+                label: { type: string, description: '"부모님 용돈" 또는 "편의점 아르바이트"' }
+                monthly: { type: integer, format: int64 }
+            - type: 'null'
+          description: 일을 시작하기 전 매달 들어오는 돈 (decisions.md 94·96번). 일을 시작했으면 null
         spouse:
           oneOf:
             - type: object

@@ -98,6 +98,9 @@ public interface ContentCatalog {
   /** 아이가 어릴 때의 나들이 (decisions.md 87번). 코드 순. */
   java.util.List<OutingText> outings();
 
+  /** 20세부터의 아르바이트 (decisions.md 96번). 판 시드로 하나가 정해진다. */
+  java.util.List<PartTimeJob> partTimeJobs();
+
   OutingText outing(String code);
 
   /** direction: UP/DOWN/NEUTRAL, strength: MILD/STRONG. */

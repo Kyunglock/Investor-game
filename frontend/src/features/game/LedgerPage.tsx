@@ -153,6 +153,12 @@ function Household({ game }: { game: Game }) {
       {!working ? (
         <p className="text-pen-soft">
           {game.phase === 'CHILDHOOD' ? '아직 부모님 집이다.' : '직업이 생기면 가계부가 시작된다.'}
+          {/* 일을 시작하기 전의 돈줄: 용돈, 20세부터는 아르바이트 (decisions.md 94·96번) */}
+          {h.pocketMoney && (
+            <span className="block" data-testid="ledger-pocket-money">
+              {h.pocketMoney.label} 매달 {won(h.pocketMoney.monthly)}
+            </span>
+          )}
         </p>
       ) : (
         <table className="w-full border-collapse">
