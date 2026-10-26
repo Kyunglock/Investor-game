@@ -17,9 +17,17 @@ public record AnalysisText(
 
   /**
    * 평범한 경제 기사. sentiment는 시장에 플러스(POS)·마이너스(NEG)·중립(NEUTRAL)인지 — 매매창 경제 신문의 +/− 표시 (decisions.md
-   * 56번).
+   * 56번). macro는 거시경제(금리·물가·환율·수출·고용·소비·해외 증시·외국인 매매·집값 거래)를 판단할 재료인지 — 뉴스 카드의 세상사는 이것만 보인다
+   * (decisions.md 97번).
    */
-  public record Article(String text, String sentiment) {}
+  public record Article(String text, String sentiment, Boolean macro) {
+
+    /** 표시가 없으면 거시 기사가 아니다. */
+    @Override
+    public Boolean macro() {
+      return Boolean.TRUE.equals(macro);
+    }
+  }
 
   public static final List<String> SENTIMENTS = List.of("POS", "NEG", "NEUTRAL");
 

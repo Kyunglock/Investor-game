@@ -23,5 +23,6 @@ public record MarketOverview(
 
   /** kind: OMEN(전조·헛소문), ARTICLE(평범한 기사), CRISIS(위기 회고). 화면은 종류를 구분해 보여 주지 않는다. */
   /** sentiment: 시장에 POS(+)·NEG(−)·NEUTRAL(·). 전조와 위기 회고는 늘 NEG, 기사는 내용대로 (decisions.md 56번). */
-  public record NewsItem(int day, String kind, String text, String sentiment) {}
+  /** macro: 거시경제를 판단할 재료인가. 전조·위기 회고는 늘 true, 기사는 콘텐츠 표시대로 (decisions.md 97번). */
+  public record NewsItem(int day, String kind, String text, String sentiment, boolean macro) {}
 }

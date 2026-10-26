@@ -195,11 +195,16 @@ class MarketDesk {
       switch (entry.kind()) {
         case "OMEN" ->
             items.add(
-                new MarketOverview.NewsItem(entry.day(), entry.kind(), str(p.get("text")), "NEG"));
+                new MarketOverview.NewsItem(
+                    entry.day(), entry.kind(), str(p.get("text")), "NEG", true));
         case "ARTICLE" ->
             items.add(
                 new MarketOverview.NewsItem(
-                    entry.day(), entry.kind(), str(p.get("text")), articleSentiment(p)));
+                    entry.day(),
+                    entry.kind(),
+                    str(p.get("text")),
+                    articleSentiment(p),
+                    articleMacro(p)));
         case "CRISIS" ->
             items.add(
                 new MarketOverview.NewsItem(
@@ -211,7 +216,8 @@ class MarketDesk {
                             str(p.get("endAge")),
                             str(p.get("name")),
                             "DEPRESSION".equals(p.get("severity")) ? "대공황" : "불황"),
-                    "NEG"));
+                    "NEG",
+                    true));
         default -> {}
       }
     }
@@ -394,6 +400,12 @@ class MarketDesk {
   }
 
   /** 기사 기록의 표시. 표시를 남기기 전의 옛 기록은 문구로 콘텐츠를 찾는다. */
+  /** 기사가 거시경제 재료인가. 기록에는 문구만 있으므로 콘텐츠에서 같은 문구를 찾는다. 없으면(바뀐 옛 문구) 아니다 (decisions.md 97번). */
+  private boolean articleMacro(Map<String, Object> payload) {
+    String text = str(payload.get("text"));
+    return content.analysis().articles().stream().anyMatch(a -> a.text().equals(text) && a.macro());
+  }
+
   private String articleSentiment(Map<String, Object> payload) {
     Object stored = payload.get("sentiment");
     if (stored != null) {

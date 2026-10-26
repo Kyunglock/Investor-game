@@ -317,6 +317,8 @@ class JsonContentCatalogTest {
       assertThat(analysis.remarks().macro().wrong().get(tier)).isNotEmpty();
     }
     assertThat(analysis.articles()).hasSizeGreaterThanOrEqualTo(30);
+    // 뉴스 카드의 세상사는 거시경제 기사만 보인다. 거시 기사도, 생활·회사 기사도 섞여 있어야 한다 (decisions.md 97번).
+    assertThat(analysis.articles()).anyMatch(AnalysisText.Article::macro).anyMatch(x -> !x.macro());
     assertThat(AnalysisText.templateTier(29)).isEqualTo("low");
     assertThat(AnalysisText.templateTier(79)).isEqualTo("high");
     assertThat(AnalysisText.templateTier(80)).isEqualTo("expert");

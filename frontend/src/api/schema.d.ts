@@ -554,6 +554,8 @@ export interface components {
                 day: number;
                 /** @enum {string} */
                 kind: "OMEN" | "ARTICLE" | "CRISIS";
+                /** @description 거시경제를 판단할 재료인가. 전조·위기 회고는 늘 true, 기사는 콘텐츠 표시대로 (decisions.md 97번) */
+                macro: boolean;
                 text: string;
                 /**
                  * @description 시장에 플러스(+)·마이너스(−)·중립. 전조와 위기 회고는 늘 NEG, 기사는 내용대로
