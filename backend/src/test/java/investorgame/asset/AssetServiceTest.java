@@ -32,7 +32,10 @@ class AssetServiceTest {
   @BeforeEach
   void setUp() {
     gameId = UUID.randomUUID();
-    initialCash = assets.create(gameId, new SplittableRandom(1)).cash();
+    assets.create(gameId, new SplittableRandom(1));
+    // 판은 0원에서 시작하므로(decisions.md 94번) 매매를 검사할 돈을 먼저 넣어 둔다.
+    assets.credit(gameId, "ALLOWANCE", 30_000_000, 0);
+    initialCash = assets.get(gameId).cash();
   }
 
   @Test

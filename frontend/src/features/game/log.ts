@@ -365,7 +365,8 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       }
     case 'END': {
       const bp = num(p.returnBp)
-      const money = `${won(num(p.initialAsset))} → ${won(num(p.finalAsset))} (${bp >= 0 ? '+' : ''}${percent(bp)})`
+      // 0원에서 시작했으면 수익률이 없다 (decisions.md 94번).
+      const money = `${won(num(p.initialAsset))} → ${won(num(p.finalAsset))}${num(p.initialAsset) > 0 ? ` (${bp >= 0 ? '+' : ''}${percent(bp)})` : ''}`
       if (p.ending === 'BANKRUPT') {
         return {
           ...base,

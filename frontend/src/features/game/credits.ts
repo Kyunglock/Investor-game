@@ -527,7 +527,10 @@ export function buildCredits(game: Game): CreditSection[] {
   const returnBp = result?.returnBp ?? 0
   const lastLines: CreditLine[] = [
     { text: `${won(game.initialAsset)} → ${won(finalAsset)}` },
-    { text: signedPercent(returnBp), tone: returnBp >= 0 ? 'up' : 'down' },
+    // 0원에서 시작했으면 수익률이 없다 (decisions.md 94번).
+    ...(game.initialAsset > 0
+      ? [{ text: signedPercent(returnBp), tone: returnBp >= 0 ? 'up' : 'down' } as const]
+      : []),
     // 돈만이 아니라 삶이 어땠는지 (decisions.md 82번).
     {
       text: `행복도 ${game.happiness}점`,

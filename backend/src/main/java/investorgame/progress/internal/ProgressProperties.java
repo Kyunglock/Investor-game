@@ -12,6 +12,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param articleFirstMonth 평범한 경제 기사가 나오기 시작하는 달
  * @param articleGapMonths 기사 사이 간격(달). 3~4면 1년에 3~4개 (매매창 설계 3.3절)
  * @param childLeaveAge 자녀가 독립해 집을 나가는 나이(세). 태어날 때 아이마다 굴린다 (decisions.md 68번)
+ * @param allowance 부모님 용돈: untilAge 전까지, 일을 시작하기 전이면 매달 monthly원 (decisions.md 94번)
  */
 @ConfigurationProperties("progress")
 public record ProgressProperties(
@@ -23,9 +24,12 @@ public record ProgressProperties(
     HousingRules housing,
     int articleFirstMonth,
     Range articleGapMonths,
-    Range childLeaveAge) {
+    Range childLeaveAge,
+    Allowance allowance) {
 
   public record Range(int min, int max) {}
+
+  public record Allowance(long monthly, int untilAge) {}
 
   /**
    * 주거 돈 계산. 비율은 만분율, 금액은 25세 기준(물가가 붙는다).

@@ -34,6 +34,8 @@ progress:
   leverage-loan-bp: 5000
   # 자녀가 독립해 집을 나가는 나이. 태어날 때 아이마다 굴린다 (decisions.md 68번)
   child-leave-age: { min: 25, max: 30 }
+  # 부모님 용돈: 20세 전까지, 일을 시작하기 전이면 매달 50만 원 (decisions.md 94번)
+  allowance: { monthly: 500000, until-age: 20 }
   # 주거 돈 계산 (주거 설계 3절). LTV 50%, DSR 40%, 아파트 전세가 = 시세의 55%, 빌라 전세 = 경기 시세의 30%(1인)/40%(가족),
   # 전세대출 80%, 연장 +5%, 월세 1000만/60만(1인)·2000만/90만(가족). 매물은 한 달에 25%로 팔리고 집값이 빠질 땐 5%, 뜨거우면 45%
   housing:
@@ -173,9 +175,10 @@ market:
           panic: 16000, noise: 1500, min: 3000, max: 30000, strong-scenarios: [tech, depression] }
 
 asset:
+  # 0원에서 시작한다. 부모님 용돈(progress.allowance)으로 모은다 (decisions.md 94번)
   initial-cash:
-    min-unit: 1
-    max-unit: 50
+    min-unit: 0
+    max-unit: 0
     unit: 1000000
   # 빚(마이너스 통장·빚투)의 연이자 5%. 매월 1/12씩 붙는다 (decisions.md 72번)
   debt-annual-interest-bp: 500
