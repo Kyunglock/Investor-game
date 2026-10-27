@@ -305,10 +305,10 @@ content_version.version ─── progress_game.content_version
 | final_age | smallint | |
 | ending | text | `NORMAL`, `BANKRUPT`, `QUIT` |
 | bot_persona | text | 봇의 판이면 페르소나, 사람이면 null |
-| habits | vector(7) | 0~1 습관 지표: 뉴스 매수·매도, 흔들림 버티기, 빚투, 판정에 뒤집힘, 자유 매매 빈도, 분산 (`PlayProfile.Habits` 순서) |
+| habits | vector(6) | 0~1 습관 지표, 모두 확률이 끼기 전에 고른 행동: 뉴스 매수·매도, 흔들림 버티기, 빚투, 자유 매매 빈도, 분산 (`PlayProfile.Habits` 순서) |
 | invested | bigint | 체결된 매수 금액 누계 |
 | invest_pnl | bigint | 매도 금액 + 남은 평가액 − 매수 금액 |
-| invest_return_bp | integer | invest_pnl / invested (만분율) |
+| invest_return_bp | integer | invest_pnl / invested (만분율). 판정·운이 섞인 게임 점수다 |
 
 - `vector` 열은 pgvector 확장을 쓴다. 마이그레이션이 `CREATE EXTENSION IF NOT EXISTS vector`를 하므로 DB 사용자가 확장을 만들 수 있어야 한다. 로컬·테스트는 `pgvector/pgvector:pg17` 이미지다.
 - 인덱스는 아직 없다. 행이 수천 개면 이웃 찾기를 전부 비교로 해도 충분하다. 수만 개가 넘으면 HNSW 인덱스를 검토한다.

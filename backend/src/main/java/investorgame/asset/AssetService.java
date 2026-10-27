@@ -44,6 +44,6 @@ public interface AssetService {
   /** 현금 + 평가액 − 빚. */
   long totalAsset(UUID gameId, Map<String, Long> prices);
 
-  /** 체결된 매수·매도 금액의 누계와 산 종목 수. 매매가 없으면 모두 0. */
+  /** 체결된 매수·매도 금액의 누계. 매매가 없으면 모두 0. */
   StockTotals stockTotals(UUID gameId);
 }

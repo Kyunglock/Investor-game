@@ -211,8 +211,8 @@ class AssetServiceTest {
   }
 
   @Test
-  void 매매_누계는_체결된_매수_매도_금액과_산_종목_수다() {
-    assertThat(assets.stockTotals(gameId)).isEqualTo(new StockTotals(0, 0, 0));
+  void 매매_누계는_체결된_매수_매도_금액이다() {
+    assertThat(assets.stockTotals(gameId)).isEqualTo(new StockTotals(0, 0));
 
     assets.buy(gameId, SSJ, 10, 72_000, 10, null);
     assets.buy(gameId, "ctl", 2, 180_000, 10, null);
@@ -223,6 +223,6 @@ class AssetServiceTest {
 
     assertThat(assets.stockTotals(gameId))
         .as("보유 없는 매도와 현금이 모자란 매수는 체결되지 않아 세지 않는다")
-        .isEqualTo(new StockTotals(720_000 + 360_000 + 400_000, 360_000, 2));
+        .isEqualTo(new StockTotals(720_000 + 360_000 + 400_000, 360_000));
   }
 }

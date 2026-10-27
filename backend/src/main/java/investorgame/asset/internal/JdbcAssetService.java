@@ -235,18 +235,14 @@ class JdbcAssetService implements AssetService {
     return jdbc.sql(
             """
             SELECT COALESCE(-SUM(amount) FILTER (WHERE kind = :buy), 0) AS bought,
-                   COALESCE(SUM(amount) FILTER (WHERE kind = :sell), 0) AS sold,
-                   COUNT(DISTINCT stock_code) FILTER (WHERE kind = :buy) AS stocks_bought
+                   COALESCE(SUM(amount) FILTER (WHERE kind = :sell), 0) AS sold
             FROM asset_ledger
             WHERE game_id = :gameId
             """)
         .param("buy", BUY)
         .param("sell", SELL)
         .param("gameId", gameId)
-        .query(
-            (rs, rowNum) ->
-                new StockTotals(
-                    rs.getLong("bought"), rs.getLong("sold"), rs.getInt("stocks_bought")))
+        .query((rs, rowNum) -> new StockTotals(rs.getLong("bought"), rs.getLong("sold")))
         .single();
   }
 

@@ -135,7 +135,7 @@ class AdminApiTest {
             .singleRow();
     assertThat(profile).containsEntry("ending", "QUIT");
     String[] habits = ((String) profile.get("habits")).replaceAll("[\\[\\]]", "").split(",");
-    assertThat(habits).hasSize(7);
+    assertThat(habits).hasSize(6);
     // 판정에 뒤집히거나 현금이 모자라 못 샀어도, 습관은 고른 행동으로 센다.
     assertThat(Double.parseDouble(habits[0])).as("뉴스마다 사기로 골랐다").isEqualTo(1.0);
   }

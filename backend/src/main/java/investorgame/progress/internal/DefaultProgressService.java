@@ -1288,6 +1288,8 @@ class DefaultProgressService implements ProgressService {
         ticket.occursDay(),
         "LEVERAGE",
         Map.of(
+            "chosen",
+            option,
             "stockCode",
             ticket.stockCode(),
             "stockName",
@@ -1692,7 +1694,6 @@ class DefaultProgressService implements ProgressService {
         sessions.botPersona(game.sessionId()).orElse(null),
         PlayProfiles.habits(
             logs.findAll(gameId),
-            totals.stocksBought(),
             content.stocks().size(),
             investingYears,
             properties.profileFullTradesPerYear()),
