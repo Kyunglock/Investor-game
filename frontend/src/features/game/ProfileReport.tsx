@@ -47,7 +47,7 @@ export function ProfileReport({ game, onClose }: { game: Game; onClose?: () => v
       </section>
 
       <section className="mt-5">
-        <h2 className="text-[11px] font-bold tracking-wider text-faint uppercase">3. 다섯 축</h2>
+        <h2 className="text-[11px] font-bold tracking-wider text-faint uppercase">3. 네 축</h2>
         <ul className="mt-2 flex flex-col gap-3">
           {report.axes.map((axis) => (
             <li key={axis.key} data-testid={`axis-${axis.key}`}>

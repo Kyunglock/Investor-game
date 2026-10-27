@@ -1,14 +1,14 @@
 import type { Game, LogEntry } from '../../api/client'
 import { type ScoredDecision, type StockReturn, scoreDecisions, stockReturns } from './credits'
 import { gradeOf } from './grade'
-import { percent, STAT_KEYS, STAT_LABELS, signedWon, statLabel, won } from './labels'
+import { percent, STAT_KEYS, STAT_LABELS, signedWon, won } from './labels'
 import { nickname } from './nickname'
 
 /**
- * 투자 성향 진단 보고서 (decisions.md 61번). 서버가 이미 준 기록·보유·연간 자산만으로 만든다 — 숨은 값은 없다. 다섯 축(위험 감수·규율·판단·인내·분산)을
+ * 투자 성향 진단 보고서 (decisions.md 61번). 서버가 이미 준 기록·보유·연간 자산만으로 만든다 — 숨은 값은 없다. 네 축(위험 감수·판단·인내·분산)을
  * 0~100으로 매기고, 위험 감수 축으로 금융투자협회식 5단계(안정형~공격투자형)를 붙인다. 문구는 전부 여기서, 숫자는 전부 서버에서.
  */
-export type AxisKey = 'risk' | 'discipline' | 'judgement' | 'patience' | 'diversification'
+export type AxisKey = 'risk' | 'judgement' | 'patience' | 'diversification'
 
 export interface Axis {
   key: AxisKey
@@ -36,7 +36,6 @@ export interface ProfileStats {
   leverageTaken: number
   /** 뒤집힌 선택(이탈) 수와 원인 능력치별 수 */
   flipped: number
-  flippedByStat: Record<string, number>
   /** 방향을 맞힌/틀린 판단 수 (관망은 세지 않는다) */
   correctCalls: number
   wrongCalls: number
@@ -153,7 +152,6 @@ function collectStats(game: Game): ProfileStats {
     leverageOffered: 0,
     leverageTaken: 0,
     flipped: 0,
-    flippedByStat: {},
     correctCalls: 0,
     wrongCalls: 0,
     decided: 0,
@@ -179,13 +177,9 @@ function collectStats(game: Game): ProfileStats {
   let investingStart: number | null = null
 
   const countFlip = (p: Payload) => {
-    const deviations = (p.deviations ?? []) as { statCode?: string }[]
+    const deviations = (p.deviations ?? []) as unknown[]
     if (deviations.length > 0 && p.chosen !== p.actual) {
       s.flipped++
-      for (const d of deviations) {
-        const code = str(d.statCode)
-        s.flippedByStat[code] = (s.flippedByStat[code] ?? 0) + 1
-      }
     }
   }
   const touchTrade = (code: string, actual: string, day: number) => {
@@ -324,38 +318,6 @@ function riskAxis(s: ProfileStats, game: Game): Axis {
   return { key: 'risk', name: '위험 감수', score, level: level(score), evidence, comment }
 }
 
-function disciplineAxis(s: ProfileStats): Axis {
-  const decisions = s.newsCount + s.shakeCount + s.tradeCount
-  let score = 70
-  const evidence: string[] = []
-  if (decisions > 0) {
-    const flipRatio = s.flipped / decisions
-    score -= Math.round(flipRatio * 60)
-    evidence.push(
-      `선택 ${decisions}번 중 성격에 뒤집힌 선택 ${s.flipped}번 (${percent(ratioBp(s.flipped, decisions))})`,
-    )
-  }
-  if (s.shakeCount > 0) {
-    const held = s.shakeHeld / s.shakeCount
-    score += Math.round(held * 30) - 10
-    evidence.push(
-      `보유 종목이 흔들릴 때 버팀 ${s.shakeHeld} · 팔았음 ${s.shakeCount - s.shakeHeld}`,
-    )
-  }
-  const worstStat = Object.entries(s.flippedByStat).sort(([, a], [, b]) => b - a)[0]
-  if (worstStat) {
-    evidence.push(`가장 자주 발목을 잡은 능력치: ${statLabel(worstStat[0])} (${worstStat[1]}번)`)
-  }
-  score = clamp(score)
-  const comment =
-    score >= 70
-      ? '정한 대로 실행하는 힘이 강하다. 계획과 실제 행동의 간극이 작아 전략의 결과를 온전히 검증할 수 있다.'
-      : score >= 40
-        ? '대체로 계획대로 움직이지만 급락·급등 국면에서 감정이 개입한다. 뒤집힌 선택이 어떤 상황에서 나왔는지 돌아볼 만하다.'
-        : '선택과 실행이 자주 어긋난다. 전략보다 성격이 손익을 좌우하고 있어, 규칙을 단순하게 두고 미리 정해 두는 쪽이 낫다.'
-  return { key: 'discipline', name: '규율', score, level: level(score), evidence, comment }
-}
-
 function judgementAxis(s: ProfileStats): Axis {
   let score = 50
   const evidence: string[] = []
@@ -447,11 +409,6 @@ function summarize(report: Omit<ProfileReport, 'summary' | 'recommendations'>): 
 function recommend(axes: Axis[], s: ProfileStats): string[] {
   const out: string[] = []
   const by = Object.fromEntries(axes.map((a) => [a.key, a])) as Record<AxisKey, Axis>
-  if (by.discipline.score < 50) {
-    out.push(
-      '뉴스가 오기 전에 "이 종목은 몇 % 빠지면 판다, 몇 % 오르면 일부 판다"를 적어 두고 그대로 실행하라. 뒤집힌 선택은 대부분 즉흥적 판단에서 나왔다.',
-    )
-  }
   if (by.diversification.score < 50) {
     out.push(
       '한 종목 비중을 투자금의 30% 아래로 낮추고 섹터를 셋 이상으로 나눠라. 전조를 놓쳐도 한 종목의 급락이 전체를 흔들지 않게 된다.',
@@ -492,7 +449,6 @@ export function profileReport(game: Game): ProfileReport {
   const stats = collectStats(game)
   const axes = [
     riskAxis(stats, game),
-    disciplineAxis(stats),
     judgementAxis(stats),
     patienceAxis(stats),
     diversificationAxis(stats, game),

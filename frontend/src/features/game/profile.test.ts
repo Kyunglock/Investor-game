@@ -128,7 +128,7 @@ describe('profileReport', () => {
   it('기록이 없으면 보류 문구와 중간 등급', () => {
     const r = profileReport(game({ holdings: [], totalAsset: 20_000_000, yearly: [] }))
     expect(r.grade.name).toBeDefined()
-    expect(r.axes).toHaveLength(5)
+    expect(r.axes.map((a) => a.key)).toEqual(['risk', 'judgement', 'patience', 'diversification'])
     for (const a of r.axes) {
       expect(a.score).toBeGreaterThanOrEqual(0)
       expect(a.score).toBeLessThanOrEqual(100)
@@ -210,7 +210,6 @@ describe('profileReport', () => {
     expect(s.leverageOffered).toBe(2)
     expect(s.leverageTaken).toBe(1)
     expect(s.flipped).toBe(1)
-    expect(s.flippedByStat).toEqual({ conviction: 1 })
     // 매수→UP 적중, 매수→DOWN 실패, 버팀→UP 적중
     expect(s.correctCalls).toBe(2)
     expect(s.wrongCalls).toBe(1)
