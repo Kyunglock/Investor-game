@@ -52,6 +52,9 @@ public interface AssetService {
     /** 현금 + 평가액 − 빚. */
     long totalAsset(UUID gameId, Map<String, Long> prices);
 
+    /** 체결된 매수·매도 금액의 누계와 산 종목 수 (StockTotals). 투자 손익 = sold − bought + 평가액. 행동 프로필용 */
+    StockTotals stockTotals(UUID gameId);
+
     /** 세션 만료 시 해당 판의 자산 데이터를 지운다. */
     void deleteByGame(UUID gameId);
 }

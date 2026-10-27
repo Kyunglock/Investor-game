@@ -32,6 +32,21 @@ final class GameClient {
     return new GameClient(mvc, new Cookie(cookie.getName(), cookie.getValue()));
   }
 
+  /** 관리자 토큰으로 봇 세션을 받는다 (행동 프로필·봇 설계 4절). */
+  static GameClient newBotSession(MockMvc mvc, String adminToken, String persona) throws Exception {
+    Cookie cookie =
+        mvc.perform(
+                post("/api/admin/bot-sessions")
+                    .header(AdminController.TOKEN_HEADER, adminToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"persona\":\"" + persona + "\"}"))
+            .andReturn()
+            .getResponse()
+            .getCookie(SessionCookies.NAME);
+    assertThat(cookie).isNotNull();
+    return new GameClient(mvc, new Cookie(cookie.getName(), cookie.getValue()));
+  }
+
   Cookie session() {
     return session;
   }

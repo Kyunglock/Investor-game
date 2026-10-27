@@ -11,6 +11,12 @@ public interface ResultService {
   /** 같은 판으로 다시 부르면 기존 기록을 그대로 둔다. */
   void save(GameResult result);
 
+  /**
+   * 결과와 익명 행동 프로필을 한 트랜잭션에 남긴다. 결과가 이미 있으면(같은 판을 다시 부르면) 프로필도 쌓지 않는다. 프로필에는 판 ID가 없어 중복을 따로 막을 수 없기
+   * 때문이다.
+   */
+  void save(GameResult result, PlayProfile profile);
+
   Optional<GameResult> find(UUID gameId);
 
   /** 주어진 판들 가운데 결과가 있는 것만. 관리자 플레이 기록용. */

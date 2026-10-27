@@ -10,6 +10,12 @@ public interface SessionService {
   /** 새 세션을 발급한다. 토큰 원문은 이 반환값에만 있고 DB에는 해시만 저장한다. ip는 처음 접속한 주소 (decisions.md 63번). */
   IssuedSession issue(String ip);
 
+  /** 봇 플레이어용 세션. 이 세션의 판은 행동 프로필에 페르소나가 붙어 사람의 판과 구분된다 (행동 프로필·봇 설계 4절). */
+  IssuedSession issueBot(String ip, String persona);
+
+  /** 봇 세션이면 페르소나. 사람의 세션이거나 없는 세션이면 비어 있다. */
+  Optional<String> botPersona(UUID sessionId);
+
   /** 토큰이 유효하면 세션 ID를 돌려주고 마지막 접속 시각·IP를 갱신한다. 만료되었거나 없으면 비어 있다. */
   Optional<UUID> resolve(String token, String ip);
 

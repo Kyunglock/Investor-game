@@ -14,6 +14,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param childLeaveAge 자녀가 독립해 집을 나가는 나이(세). 태어날 때 아이마다 굴린다 (decisions.md 68번)
  * @param partTimeFromAge 일을 시작하기 전이면 이 나이부터 아르바이트. 그 전엔 부모님 용돈을 다 써서 모이는 돈이 없다 (decisions.md
  *     96·98번)
+ * @param profileFullTradesPerYear 행동 프로필의 자유 매매 빈도: 투자 1년에 이만큼 사고팔면 1이다 (행동 프로필·봇 설계 3절)
  */
 @ConfigurationProperties("progress")
 public record ProgressProperties(
@@ -26,7 +27,8 @@ public record ProgressProperties(
     int articleFirstMonth,
     Range articleGapMonths,
     Range childLeaveAge,
-    int partTimeFromAge) {
+    int partTimeFromAge,
+    int profileFullTradesPerYear) {
 
   public record Range(int min, int max) {}
 
