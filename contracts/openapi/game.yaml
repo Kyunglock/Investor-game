@@ -259,6 +259,32 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
+  /api/admin/bot-sessions:
+    post:
+      operationId: issueBotSession
+      summary: 봇 플레이어용 세션을 발급한다 (관리자)
+      description: |
+        `X-Admin-Token`이 맞을 때만 연다 (`/api/admin/plays`와 같은 토큰). 응답의 `IG_SESSION` 쿠키로 플레이한 판은 끝날 때
+        익명 행동 프로필에 페르소나가 붙어 사람의 판과 구분된다 (행동 프로필·봇 설계 4절).
+      parameters:
+        - name: X-Admin-Token
+          in: header
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BotSessionRequest' }
+      responses:
+        '204':
+          description: 세션이 발급됨 (`IG_SESSION` 쿠키)
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '403':
+          description: 관리자 토큰이 없거나 틀림 (`ADMIN_REQUIRED`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
 components:
   parameters:
     GameId:
@@ -267,6 +293,14 @@ components:
       required: true
       schema: { type: string, format: uuid }
   schemas:
+    BotSessionRequest:
+      type: object
+      required: [persona]
+      properties:
+        persona:
+          type: string
+          pattern: '^[a-z][a-z0-9-]{0,31}$'
+          description: 봇의 페르소나 코드 (예 panic, holder). 행동 프로필의 bot_persona가 된다
     PlayLog:
       type: object
       required: [sessions, plays]

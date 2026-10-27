@@ -2,6 +2,7 @@ package investorgame.progress.internal;
 
 import investorgame.asset.AccountView;
 import investorgame.asset.AssetService;
+import investorgame.asset.StockTotals;
 import investorgame.asset.TradeResult;
 import investorgame.behavior.BehaviorService;
 import investorgame.behavior.ChoiceContext;
@@ -61,7 +62,9 @@ import investorgame.progress.StockAnalysis;
 import investorgame.progress.StockHistory;
 import investorgame.result.Ending;
 import investorgame.result.GameResult;
+import investorgame.result.PlayProfile;
 import investorgame.result.ResultService;
+import investorgame.session.SessionService;
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -115,6 +118,7 @@ class DefaultProgressService implements ProgressService {
   private final EventService events;
   private final BehaviorService behavior;
   private final ResultService results;
+  private final SessionService sessions;
   private final ContentCatalog content;
   private final HousingService housing;
   private final HousingFlow housingFlow;
@@ -134,6 +138,7 @@ class DefaultProgressService implements ProgressService {
       EventService events,
       BehaviorService behavior,
       ResultService results,
+      SessionService sessions,
       ContentCatalog content,
       HousingService housing,
       HousingFlow housingFlow,
@@ -150,6 +155,7 @@ class DefaultProgressService implements ProgressService {
     this.events = events;
     this.behavior = behavior;
     this.results = results;
+    this.sessions = sessions;
     this.content = content;
     this.housing = housing;
     this.housingFlow = housingFlow;
@@ -1633,7 +1639,7 @@ class DefaultProgressService implements ProgressService {
     games.end(game.id(), endedAt);
     AccountView account = assets.get(game.id());
     long finalAsset = netWorth(game.id());
-    results.save(
+    GameResult result =
         new GameResult(
             game.id(),
             game.sessionId(),
@@ -1645,7 +1651,13 @@ class DefaultProgressService implements ProgressService {
             characters.get(game.id()).stats(),
             deviationCounts(game.id()),
             game.createdAt(),
-            endedAt));
+            endedAt);
+    // 투자를 시작하지 않은 판은 습관이 모두 0이라 비슷한 플레이어를 찾는 데 섞이면 방해만 된다.
+    if (game.investingStartDay() == null) {
+      results.save(result);
+    } else {
+      results.save(result, profile(game, finalAge, ending, endedAt));
+    }
     // 종료일에 알림 비용이 겹치면 연 경계에서 먼저 쓴 값이 최종 자산과 어긋나므로 덮어쓴다.
     logs.replaceYear(game.id(), finalAge, finalAsset, account.cash());
     logs.append(
@@ -1659,6 +1671,34 @@ class DefaultProgressService implements ProgressService {
             "initialAsset", account.initialCash(),
             "finalAsset", finalAsset,
             "returnBp", returnBp(account.initialCash(), finalAsset)));
+  }
+
+  /** 익명 행동 프로필 (행동 프로필·봇 설계 3절). 투자 성과는 월급과 상관없이 매매 누계와 남은 평가액으로 잰다. */
+  private PlayProfile profile(GameRow game, int finalAge, Ending ending, OffsetDateTime endedAt) {
+    UUID gameId = game.id();
+    StockTotals totals = assets.stockTotals(gameId);
+    long investPnl =
+        totals.sold() - totals.bought() + assets.holdingsValue(gameId, market.prices(gameId));
+    // 투자 1년이 안 돼 끝난 판도 매매 빈도가 부풀지 않게 1년으로 친다.
+    double investingYears =
+        Math.max(
+            1.0,
+            (double) (game.lastReportedDay() - game.investingStartDay()) / calendar.daysPerYear());
+    return new PlayProfile(
+        game.contentVersion(),
+        endedAt.toLocalDate(),
+        finalAge,
+        ending,
+        sessions.botPersona(game.sessionId()).orElse(null),
+        PlayProfiles.habits(
+            logs.findAll(gameId),
+            totals.stocksBought(),
+            content.stocks().size(),
+            investingYears,
+            properties.profileFullTradesPerYear()),
+        totals.bought(),
+        investPnl,
+        returnBp(totals.bought(), totals.bought() + investPnl));
   }
 
   /** 뉴스 이탈(이벤트 도메인) + 자유 매매 이탈(진행의 TRADE 기록)을 합친다 (경제 개편 설계 8.2절). */
