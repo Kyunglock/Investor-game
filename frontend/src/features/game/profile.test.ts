@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Game, LogEntry, Stats } from '../../api/client'
-import { maxDrawdownBp, profileReport } from './profile'
+import { profileReport } from './profile'
 
 const stats: Stats = { insight: 42, patience: 61, courage: 19, conviction: 35, luck: 57 }
 const YEAR = 360
@@ -117,18 +117,10 @@ function game(over: Partial<Game> = {}): Game {
   } as Game
 }
 
-describe('maxDrawdownBp', () => {
-  it('고점 대비 가장 많이 빠진 비율', () => {
-    expect(maxDrawdownBp([100, 80, 120, 60, 90])).toBe(5000)
-    expect(maxDrawdownBp([10, 20, 30])).toBe(0)
-  })
-})
-
 describe('profileReport', () => {
-  it('기록이 없으면 보류 문구와 중간 등급', () => {
+  it('고른 것이 없으면 진단을 보류하고 세 축은 중간 점수', () => {
     const r = profileReport(game({ holdings: [], totalAsset: 20_000_000, yearly: [] }))
-    expect(r.grade.name).toBeDefined()
-    expect(r.axes.map((a) => a.key)).toEqual(['risk', 'judgement', 'patience', 'diversification'])
+    expect(r.axes.map((a) => a.key)).toEqual(['risk', 'patience', 'diversification'])
     for (const a of r.axes) {
       expect(a.score).toBeGreaterThanOrEqual(0)
       expect(a.score).toBeLessThanOrEqual(100)
@@ -137,93 +129,61 @@ describe('profileReport', () => {
     expect(r.recommendations.length).toBeGreaterThan(0)
   })
 
-  it('뉴스·흔들림·빚투 기록을 세고 방향 적중과 승률을 매긴다', () => {
+  it('모든 수를 판정 전에 고른 행동으로 센다', () => {
     const log = [
       entry('STYLE', 24, { styleName: '장기' }),
-      entry('NEWS', 30, {
-        eventTitle: '삼송전자 신공장',
-        stockCode: 'A',
-        stockName: '삼송전자',
-        chosen: 'BUY',
-        actual: 'BUY',
-        deviations: [],
-        trade: { status: 'EXECUTED', amount: 10_000_000 },
-      }),
-      entry('PRICE', 30, {
-        stockName: '삼송전자',
-        direction: 'UP',
-        changeBp: 1000,
-        pnl: 1_000_000,
-      }),
+      entry('NEWS', 30, { stockCode: 'A', chosen: 'BUY', actual: 'BUY', deviations: [] }),
+      // 관망을 골랐는데 줏대 판정에 뒤집혀 샀다: 성향은 관망이고 산 종목에도 넣지 않는다.
       entry('NEWS', 31, {
-        eventTitle: '현디차 리콜',
         stockCode: 'B',
-        stockName: '현디차',
         chosen: 'HOLD',
         actual: 'BUY',
         deviations: [{ statCode: 'conviction' }],
-        trade: { status: 'EXECUTED', amount: 5_000_000 },
       }),
-      entry('PRICE', 31, {
-        stockName: '현디차',
-        direction: 'DOWN',
-        changeBp: 2000,
-        pnl: -1_000_000,
-      }),
+      entry('PRICE', 31, { direction: 'DOWN', changeBp: 2000, pnl: -1_000_000 }),
+      // 버티기를 골랐는데 인내 판정에 뒤집혀 팔았다.
       entry('SHAKE', 32, {
-        eventTitle: '급락',
         stockCode: 'A',
-        stockName: '삼송전자',
         chosen: 'HOLD',
-        actual: 'HOLD',
-        deviations: [],
-        trade: {},
-      }),
-      entry('PRICE', 32, { stockName: '삼송전자', direction: 'UP', changeBp: 500, pnl: 500_000 }),
-      entry('LEVERAGE', 33, {
-        stockName: '삼송전자',
-        borrowed: true,
-        loan: 10_000_000,
-        dropBp: 3000,
-        quantity: 1,
-      }),
-      entry('LEVERAGE', 35, { stockName: '삼송전자', borrowed: false, dropBp: 3000 }),
-      entry('TRADE', 36, {
-        stockCode: 'B',
-        stockName: '현디차',
-        side: 'SELL',
         actual: 'SELL',
-        status: 'EXECUTED',
-        amount: 6_000_000,
-        quantity: 5,
-        realizedPnl: 1_000_000,
-        deviations: [],
+        deviations: [{ statCode: 'patience' }],
       }),
+      entry('LEVERAGE', 33, { stockCode: 'B', chosen: 'BORROW', borrowed: false }),
+      entry('LEVERAGE', 35, { stockCode: 'A', chosen: 'PASS', borrowed: false }),
+      entry('TRADE', 36, { stockCode: 'A', side: 'SELL', chosen: 'SELL', status: 'EXECUTED' }),
+      entry('TRADE', 37, { stockCode: 'B', side: 'SELL', chosen: 'SELL', reason: 'HOUSING' }),
     ]
     const r = profileReport(game({ log }))
     const s = r.stats
-    expect(s.newsCount).toBe(2)
-    expect(s.newsBuy).toBe(2)
-    expect(s.shakeCount).toBe(1)
-    expect(s.shakeHeld).toBe(1)
-    expect(s.tradeCount).toBe(1)
-    expect(s.leverageOffered).toBe(2)
-    expect(s.leverageTaken).toBe(1)
-    expect(s.flipped).toBe(1)
-    // 매수→UP 적중, 매수→DOWN 실패, 버팀→UP 적중
-    expect(s.correctCalls).toBe(2)
-    expect(s.wrongCalls).toBe(1)
-    // 점수가 붙은 선택 4번(뉴스 2, 흔들림 1, 매매 1) 중 이익 3
-    expect(s.decided).toBe(4)
-    expect(s.winRateBp).toBe(7500)
-    expect(s.stocksTraded).toBe(2)
-    expect(s.sectorsTraded).toBe(2)
+    expect([s.newsCount, s.newsBuy, s.newsSell, s.newsHold]).toEqual([2, 1, 0, 1])
+    expect([s.shakeCount, s.shakeHeld]).toEqual([1, 1])
+    expect([s.leverageOffered, s.leverageChosen]).toEqual([2, 1])
+    expect([s.tradeCount, s.tradeBuy, s.tradeSell], '집값 마련 매도는 세지 않는다').toEqual([
+      1, 0, 1,
+    ])
+    expect(
+      [s.stocksChosen, s.sectorsChosen],
+      '사기로 고른 A(뉴스)와 빌리기로 고른 B(빚투)',
+    ).toEqual([2, 2])
     expect(s.yearsInvesting).toBe(16)
-    expect(s.maxDrawdownBp).toBe(4000)
-    expect(s.concentrationBp).toBe(7500)
-    expect(r.axes.find((a) => a.key === 'risk')?.evidence.join(' ')).toContain(
-      '빚투 제안 2번 중 1번',
-    )
+    expect(r.axes.find((a) => a.key === 'risk')?.score, '뉴스 매수 1/2, 빚투 1/2').toBe(50)
     expect(r.summary).toContain(r.grade.name)
+  })
+
+  it('빚투 기록에 chosen이 없던 판은 빌렸는지로 센다', () => {
+    const log = [
+      entry('LEVERAGE', 33, { stockCode: 'A', borrowed: true }),
+      entry('LEVERAGE', 35, { stockCode: 'A', borrowed: false }),
+    ]
+    expect(profileReport(game({ log })).stats.leverageChosen).toBe(1)
+  })
+
+  it('보유 비중·현금·수익처럼 가격이 정하는 값은 점수에 들어가지 않는다', () => {
+    const log = [
+      entry('NEWS', 30, { stockCode: 'A', chosen: 'BUY', actual: 'BUY', deviations: [] }),
+    ]
+    const rich = profileReport(game({ log, cash: 0, totalAsset: 900_000_000 }))
+    const poor = profileReport(game({ log, cash: 90_000_000, totalAsset: 1_000_000, holdings: [] }))
+    expect(rich.axes.map((a) => a.score)).toEqual(poor.axes.map((a) => a.score))
   })
 })
