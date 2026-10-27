@@ -54,7 +54,7 @@ ADMIN_TOKEN=아무-비밀값 ./gradlew bootTestRun
 docker compose up -d
 cd backend && ADMIN_TOKEN=아무-비밀값 ./gradlew bootRun
 
-# 2) 다른 터미널에서. 페르소나마다 50판, 4판씩 동시에 (한 판에 1~2분)
+# 2) 다른 터미널에서. 페르소나마다 50판(모두 400판), 4판씩 동시에. 4코어에서 2~3시간
 cd frontend
 pnpm bots --token 아무-비밀값 --games 50 --concurrency 4
 ```
