@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import type { Game } from '../../api/client'
 import { Document } from './Document'
-import { actionLabelFor, percent, signedWon, won, yearOf } from './labels'
+import { yearOf } from './labels'
 import { type Axis, profileReport } from './profile'
 
 const LEVEL_CLASS: Record<Axis['level'], string> = {
@@ -47,7 +47,7 @@ export function ProfileReport({ game, onClose }: { game: Game; onClose?: () => v
       </section>
 
       <section className="mt-5">
-        <h2 className="text-[11px] font-bold tracking-wider text-faint uppercase">3. 다섯 축</h2>
+        <h2 className="text-[11px] font-bold tracking-wider text-faint uppercase">3. 세 축</h2>
         <ul className="mt-2 flex flex-col gap-3">
           {report.axes.map((axis) => (
             <li key={axis.key} data-testid={`axis-${axis.key}`}>
@@ -75,100 +75,39 @@ export function ProfileReport({ game, onClose }: { game: Game; onClose?: () => v
       </section>
 
       <section className="mt-5">
-        <h2 className="text-[11px] font-bold tracking-wider text-faint uppercase">4. 행동 통계</h2>
+        <h2 className="text-[11px] font-bold tracking-wider text-faint uppercase">4. 고른 행동</h2>
         <table className="mt-1.5 w-full text-left text-[12px]">
           <tbody>
             <Row
               label="뉴스 앞에서"
-              value={`${s.newsCount}번 · 매수 ${s.newsBuy} / 매도 ${s.newsSell} / 관망 ${s.newsHold}`}
+              value={`${s.newsCount}번 · 사기 ${s.newsBuy} / 팔기 ${s.newsSell} / 관망 ${s.newsHold}`}
             />
             <Row
               label="보유 종목 흔들림"
-              value={`${s.shakeCount}번 · 버팀 ${s.shakeHeld} / 팔았음 ${s.shakeCount - s.shakeHeld}`}
+              value={`${s.shakeCount}번 · 버티기 ${s.shakeHeld} / 팔기 ${s.shakeCount - s.shakeHeld}`}
             />
             <Row
               label="자유 매매"
-              value={`${s.tradeCount}건 · 매수 ${s.tradeBuy} / 매도 ${s.tradeSell}`}
+              value={`${s.tradeCount}건 · 사기 ${s.tradeBuy} / 팔기 ${s.tradeSell}`}
             />
             <Row
               label="빚투"
               value={
                 s.leverageOffered === 0
                   ? '제안 없음'
-                  : `제안 ${s.leverageOffered}번 · 수락 ${s.leverageTaken}번`
+                  : `제안 ${s.leverageOffered}번 · 빌리기 ${s.leverageChosen}번`
               }
             />
-            <Row label="뒤집힌 선택" value={`${s.flipped}번`} />
-            <Row label="방향 적중" value={`${s.correctCalls} / ${s.correctCalls + s.wrongCalls}`} />
+            <Row
+              label="사기로 고른 종목"
+              value={`${s.stocksChosen}종목 · ${s.sectorsChosen}섹터`}
+            />
           </tbody>
         </table>
       </section>
 
       <section className="mt-5">
-        <h2 className="text-[11px] font-bold tracking-wider text-faint uppercase">5. 손익 분석</h2>
-        <table className="mt-1.5 w-full text-left text-[12px]">
-          <tbody>
-            <Row
-              label="누적 수익률"
-              value={`${percent(s.returnBp)} (연 환산 ${percent(s.cagrBp)})`}
-              tone={s.returnBp}
-            />
-            <Row label="최대 낙폭" value={percent(s.maxDrawdownBp)} tone={-s.maxDrawdownBp} />
-            <Row
-              label="승률"
-              value={s.decided === 0 ? '—' : `${percent(s.winRateBp)} (${s.decided}번)`}
-            />
-            <Row label="손익비" value={s.profitFactor == null ? '—' : String(s.profitFactor)} />
-            <Row
-              label="평균 이익 / 손실"
-              value={`${signedWon(s.avgWin)} / ${signedWon(s.avgLoss)}`}
-            />
-            <Row label="현금 비중" value={percent(s.cashRatioBp)} />
-          </tbody>
-        </table>
-        {report.best && (
-          <p className="mt-2 text-[12px]">
-            <b className="text-up">가장 잘한 선택</b> · {report.best.age}세 {report.best.title} ·{' '}
-            {actionLabelFor(report.best.kind, report.best.actual)} {report.best.stockName}{' '}
-            <span className="font-mono-num">{signedWon(report.best.score)}</span>
-          </p>
-        )}
-        {report.worst && (
-          <p className="mt-1 text-[12px]">
-            <b className="text-down">가장 아쉬운 선택</b> · {report.worst.age}세{' '}
-            {report.worst.title} · {actionLabelFor(report.worst.kind, report.worst.actual)}{' '}
-            {report.worst.stockName}{' '}
-            <span className="font-mono-num">{signedWon(report.worst.score)}</span>
-          </p>
-        )}
-        {report.stocks.length > 0 && (
-          <table className="mt-2 w-full text-left text-[12px]">
-            <thead className="text-[10px] text-faint">
-              <tr>
-                <th className="font-normal">종목</th>
-                <th className="font-normal">투입</th>
-                <th className="font-normal">손익</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.stocks.slice(0, 6).map((st) => (
-                <tr key={st.stockCode} className="border-t border-line-soft">
-                  <td className="py-0.5">{st.stockName}</td>
-                  <td className="font-mono-num">{won(st.invested)}</td>
-                  <td
-                    className={`font-mono-num ${st.pnl > 0 ? 'text-up' : st.pnl < 0 ? 'text-down' : ''}`}
-                  >
-                    {signedWon(st.pnl)} ({percent(st.pnlBp)})
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
-
-      <section className="mt-5">
-        <h2 className="text-[11px] font-bold tracking-wider text-faint uppercase">6. 처방</h2>
+        <h2 className="text-[11px] font-bold tracking-wider text-faint uppercase">5. 처방</h2>
         <ol className="mt-1.5 list-decimal pl-5 text-[13px] leading-relaxed">
           {report.recommendations.map((r) => (
             <li key={r}>{r}</li>
@@ -177,8 +116,9 @@ export function ProfileReport({ game, onClose }: { game: Game; onClose?: () => v
       </section>
 
       <p className="mt-5 text-[10px] text-faint">
-        이 보고서는 게임 안의 기록(선택·체결·주가·연간 자산)만으로 만든 진단이며, 실제 투자 조언이
-        아니다. 점수는 지금까지의 행동을 기준으로 하며 판이 진행되면 바뀐다.
+        이 보고서는 게임 안에서 고른 행동만으로 만든 진단이며, 실제 투자 조언이 아니다. 능력치
+        판정에 뒤집힌 결과와 주가·손익처럼 확률이 끼는 것은 넣지 않았다. 점수는 지금까지 고른 것을
+        기준으로 하며 판이 진행되면 바뀐다.
       </p>
       {onClose && (
         <button
@@ -194,12 +134,11 @@ export function ProfileReport({ game, onClose }: { game: Game; onClose?: () => v
   )
 }
 
-function Row({ label, value, tone }: { label: string; value: string; tone?: number }) {
-  const cls = tone == null ? '' : tone > 0 ? 'text-up' : tone < 0 ? 'text-down' : ''
+function Row({ label, value }: { label: string; value: string }) {
   return (
     <tr className="border-t border-line-soft">
       <td className="py-1 text-muted">{label}</td>
-      <td className={`py-1 font-mono-num ${cls}`}>{value}</td>
+      <td className="py-1 font-mono-num">{value}</td>
     </tr>
   )
 }
