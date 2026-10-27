@@ -28,6 +28,7 @@ import org.springframework.web.context.WebApplicationContext;
 class AdminApiTest {
 
   private static final String TOKEN = "test-admin-token";
+  private static final int MAX_SKIP_DAYS = 360;
 
   @Autowired WebApplicationContext context;
   @Autowired JdbcClient jdbc;
@@ -88,7 +89,11 @@ class AdminApiTest {
     for (int step = 0; step < 300 && !boughtOnNews; step++) {
       Map<String, Object> pending = game.read("$.pendingEvent");
       if (pending == null) {
-        game = client.advance(gameId, game.read("$.nextEventDay", Integer.class));
+        // 투자 뒤 뉴스 간격은 1년을 넘을 수 있어 한 번에 건너뛸 수 있는 만큼(progress.max-skip-days)씩 보낸다.
+        int day = game.read("$.day", Integer.class);
+        game =
+            client.advance(
+                gameId, Math.min(day + MAX_SKIP_DAYS, game.read("$.nextEventDay", Integer.class)));
         continue;
       }
       String kind = (String) pending.get("kind");
@@ -107,23 +112,32 @@ class AdminApiTest {
       boughtOnNews = "NEWS".equals(kind);
     }
     assertThat(boughtOnNews).as("투자를 시작하면 뉴스가 온다").isTrue();
+    // 뉴스 바로 뒤에 다른 선택이 기다릴 수 있다. 그만두기는 기다리는 선택이 없어야 한다.
+    while (game.read("$.pendingEvent") != null) {
+      String option =
+          "NEWS".equals(game.read("$.pendingEvent.kind")) ? "BUY" : GameClient.firstOpen(game);
+      game =
+          JsonPath.parse(
+              client
+                  .choose(gameId, game.read("$.pendingEvent.eventId"), option)
+                  .<Object>read("$.game"));
+    }
     client.quitRaw(gameId).andExpect(status().isOk());
 
     Map<String, Object> profile =
         jdbc.sql(
                 """
-                SELECT ending, final_age, habits::text AS habits, invested
+                SELECT ending, habits::text AS habits
                 FROM result_profile WHERE bot_persona = :persona
                 """)
             .param("persona", persona)
             .query()
             .singleRow();
     assertThat(profile).containsEntry("ending", "QUIT");
-    assertThat((Number) profile.get("invested")).as("뉴스 앞에서 샀다").matches(n -> n.longValue() > 0);
     String[] habits = ((String) profile.get("habits")).replaceAll("[\\[\\]]", "").split(",");
     assertThat(habits).hasSize(7);
-    assertThat(Double.parseDouble(habits[0])).as("뉴스 한 번에 실제로 샀는지는 판정에 달렸다").isBetween(0.0, 1.0);
-    assertThat(Double.parseDouble(habits[6])).as("한 종목을 샀다").isPositive();
+    // 판정에 뒤집히거나 현금이 모자라 못 샀어도, 습관은 고른 행동으로 센다.
+    assertThat(Double.parseDouble(habits[0])).as("뉴스마다 사기로 골랐다").isEqualTo(1.0);
   }
 
   @Test
