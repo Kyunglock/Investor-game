@@ -285,7 +285,7 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
       const line: CreditLine = p.fullTimeInvestor
         ? { text: `${age}세, 전업투자자가 됐다`, sub: '월급 없음' }
         : {
-            text: `${age}세, ${str(p.jobTitle)}${p.rehire ? '(으)로 다시 취직' : '에 취직'}`,
+            text: `${age}세, ${p.rehire ? `${withParticle(str(p.jobTitle), '으로', '로')} 다시 취직` : `${str(p.jobTitle)}에 취직`}`,
             sub: `월급 ${won(num(p.monthlySalary))}`,
           }
       if (jobsSeen > 0) {

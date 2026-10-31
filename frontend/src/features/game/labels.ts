@@ -37,7 +37,10 @@ export function withParticle(word: string, withBatchim: string, withoutBatchim: 
   const last = word.charCodeAt(word.length - 1)
   const hangul = last >= 0xac00 && last <= 0xd7a3
   const batchim = !hangul || (last - 0xac00) % 28 !== 0
-  return `${word}${batchim ? withBatchim : withoutBatchim}`
+  // 으로/로: ㄹ 받침 뒤에는 "로"다 (서울로). decisions.md 112번
+  const rieul = hangul && (last - 0xac00) % 28 === 8
+  const ro = withBatchim === '으로' && withoutBatchim === '로'
+  return `${word}${batchim && !(ro && rieul) ? withBatchim : withoutBatchim}`
 }
 
 export function sideLabel(side: string): string {

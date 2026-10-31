@@ -627,7 +627,7 @@ describe('직장 기록', () => {
         entry('JOB', 3600, { jobTitle: '개발자', monthlySalary: 3500000, rehire: true }),
         game,
       ).text,
-    ).toBe('개발자(으)로 다시 취직했다. 월급 3,500,000원.')
+    ).toBe('개발자로 다시 취직했다. 월급 3,500,000원.')
     expect(logLine(entry('JOB_WAIT', 3600, {}), game).text).toBe('더 나은 자리를 기다리기로 했다.')
     const career = logLine(
       entry('CAREER', 4000, {

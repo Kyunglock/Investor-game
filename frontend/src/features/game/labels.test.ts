@@ -51,6 +51,10 @@ describe('shortWon', () => {
 describe('withParticle', () => {
   it('받침이 있으면 을, 없으면 를. 한글이 아니면 받침 있는 쪽', () => {
     expect(withParticle('관망', '을', '를')).toBe('관망을')
+    // 으로/로: ㄹ 받침 뒤에는 로 (decisions.md 112번)
+    expect(withParticle('서울', '으로', '로')).toBe('서울로')
+    expect(withParticle('개발자', '으로', '로')).toBe('개발자로')
+    expect(withParticle('대기업 사무직', '으로', '로')).toBe('대기업 사무직으로')
     expect(withParticle('매수', '을', '를')).toBe('매수를')
     expect(withParticle('버틴다', '을', '를')).toBe('버틴다를')
     expect(withParticle('2000년 IT 버블', '을', '를')).toBe('2000년 IT 버블을')
