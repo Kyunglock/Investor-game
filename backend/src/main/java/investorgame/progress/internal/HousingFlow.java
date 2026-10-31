@@ -274,7 +274,8 @@ class HousingFlow {
       int points,
       int day) {
     return switch (code) {
-      case ChoiceTicket.Housing.PASS -> new Plan(code, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null);
+      case ChoiceTicket.Housing.PASS, ChoiceTicket.Housing.WAIT, ChoiceTicket.Housing.STAY ->
+          new Plan(code, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null);
       case ChoiceTicket.Housing.KEEP -> {
         if (view.tenure() == Tenure.MONTHLY && view.deposit() == 0) {
           // 살던 집을 판 뒤의 임시 월세는 연장할 것이 없다: 새로 월세를 든다.
@@ -572,6 +573,25 @@ class HousingFlow {
     }
     Map<String, Object> payloadExtra = new LinkedHashMap<>();
     long lost = 0;
+    // 배우자의 월세 불만 (#116): 단계와 아이 수에 따라 거스른 대가와 들어준 보람이 다르다.
+    boolean spouseRent = ChoiceTicket.Housing.isSpouseRent(effect.definition());
+    int level = spouseRent ? ChoiceTicket.Housing.spouseRentLevel(effect.definition()) : 0;
+    int children = spouseRent ? ChoiceTicket.Housing.spouseRentChildren(effect.definition()) : 0;
+    if (spouseRent) {
+      payloadExtra.put("level", level);
+      payloadExtra.put("children", children);
+      if (!ChoiceTicket.Housing.WAIT.equals(code) && !ChoiceTicket.Housing.STAY.equals(code)) {
+        boolean buying =
+            ChoiceTicket.Housing.BUY_SEOUL.equals(code)
+                || ChoiceTicket.Housing.BUY_GYEONGGI.equals(code);
+        message
+            .append(
+                buying
+                    ? content.spouseRentText().boughtText()
+                    : content.spouseRentText().movedText())
+            .append(' ');
+      }
+    }
     if (effect.fraud()) {
       lost = before.deposit();
       message.append(
@@ -584,6 +604,8 @@ class HousingFlow {
               ChoiceTicket.Housing.CHEONGYAK.equals(effect.definition())
                   ? "이번 분양은 넘겼다."
                   : "아직은 사지 않기로 했다.");
+      case ChoiceTicket.Housing.WAIT -> message.append(content.spouseRentText().waitText(level));
+      case ChoiceTicket.Housing.STAY -> message.append(content.spouseRentText().stayText(level));
       case ChoiceTicket.Housing.APPLY -> {
         // 가점으로 당첨을 굴린다. 넣을 때 돈이 되는지 이미 따졌다(#26). 그래도 모자라면(전세사기 등) 포기한다 (decisions.md 42번).
         boolean won =
@@ -690,6 +712,25 @@ class HousingFlow {
       household.cheer(gameId, 10);
     } else if (ChoiceTicket.Housing.MOVE_OUT.equals(effect.definition())) {
       household.cheer(gameId, 3);
+    }
+    // 배우자의 월세 불만 (#116, decisions.md 99번): 미루면 조금, 거스르면 많이 지치고 멀어진다. 단계가 오를수록, 아이가 있으면 더. 들어주면
+    // 가까워진다.
+    if (spouseRent) {
+      int step = Math.min(level, 3) - 1;
+      int kids = children > 0 ? 1 : 0;
+      if (ChoiceTicket.Housing.WAIT.equals(code)) {
+        household.cheer(gameId, -(new int[] {2, 3, 5}[step] + kids));
+        household.bond(gameId, -(new int[] {3, 5, 8}[step] + 2 * kids));
+      } else if (ChoiceTicket.Housing.STAY.equals(code)) {
+        household.cheer(gameId, -(new int[] {5, 7, 10}[step] + 2 * kids));
+        household.bond(gameId, -(new int[] {8, 12, 15}[step] + 3 * kids));
+      } else if (ChoiceTicket.Housing.BUY_SEOUL.equals(code)
+          || ChoiceTicket.Housing.BUY_GYEONGGI.equals(code)) {
+        household.bond(gameId, 10);
+      } else {
+        household.cheer(gameId, 5);
+        household.bond(gameId, 8);
+      }
     }
     // 전세사기 뒤에는 누군가의 위로가 붙는다 (decisions.md 85번). 나이는 모르므로 부모님은 빠진다.
     String comfort =

@@ -1,4 +1,5 @@
 import type { Game, LogEntry } from '../../api/client'
+import { spouseWord } from '../../api/spouseTerms'
 import { gradeOf } from './grade'
 import {
   actionLabelFor,
@@ -365,6 +366,20 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
       if (p.option === 'PASS' || (p.option === 'APPLY' && p.bought !== true)) {
         return null
       }
+      // 배우자의 월세 불만 (#116): 미룬 건 남기지 않고, 거스른 건 한 줄, 들어준 이사는 아래 이사 줄에 부제가 붙는다.
+      const spouseRent = str(p.definition).startsWith('spouse-rent')
+      if (spouseRent && p.option === 'WAIT') {
+        return null
+      }
+      if (spouseRent && p.option === 'STAY') {
+        return {
+          line: {
+            text: `${age}세, 월세를 고집했다`,
+            sub: `${spouseWord(game.sex)}의 말을 거슬렀다`,
+            tone: 'down',
+          },
+        }
+      }
       if (p.fraud) {
         return {
           line: {
@@ -384,6 +399,9 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
           : num(p.price) > 0
             ? { text: `${age}세, ${str(p.regionName)} 매수`, sub: won(num(p.price)) }
             : { text: `${age}세, ${str(p.label)}`, sub: `보증금 ${won(num(p.deposit))}` }
+      if (spouseRent) {
+        line.sub = `${spouseWord(game.sex)}의 말에 월세를 벗어났다 · ${line.sub}`
+      }
       const vignette = HOME_VIGNETTE[str(p.option)]
       if (!vignette) {
         return { line }

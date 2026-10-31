@@ -10,6 +10,7 @@ import investorgame.content.NewsDefinition;
 import investorgame.content.NoticeDefinition;
 import investorgame.content.OutingText;
 import investorgame.content.ShakeDefinition;
+import investorgame.content.SpouseRentText;
 import investorgame.content.SpouseText;
 import investorgame.content.TraitDefinition;
 import investorgame.event.ChoiceTicket;
@@ -176,16 +177,28 @@ class EventRenderer {
             List.of(new EventView.Option("HOLD", "버틴다"), new EventView.Option("SELL", "판다")));
       }
       case HOUSING -> {
-        ContentCatalog.TextBlock text = content.housingText(row.definitionCode());
-        yield view(
-            row,
-            text.title(),
-            text.body(),
-            null,
-            null,
+        List<EventView.Option> options =
             row.options().stream()
                 .map(code -> new EventView.Option(code, content.housingLabel(code)))
-                .toList());
+                .toList();
+        if (ChoiceTicket.Housing.isSpouseRent(row.definitionCode())) {
+          // 배우자의 월세 불만 (#116): 단계·아이 수·배우자 직업이 정의 코드에 있다.
+          SpouseRentText text = content.spouseRentText();
+          String code = row.definitionCode();
+          int level = ChoiceTicket.Housing.spouseRentLevel(code);
+          yield view(
+              row,
+              text.level(level).title(),
+              text.body(
+                  level,
+                  ChoiceTicket.Housing.spouseRentChildren(code),
+                  ChoiceTicket.Housing.spouseRentJob(code)),
+              null,
+              null,
+              options);
+        }
+        ContentCatalog.TextBlock text = content.housingText(row.definitionCode());
+        yield view(row, text.title(), text.body(), null, null, options);
       }
       case LEVERAGE -> {
         ContentCatalog.LeverageText text = content.leverageText();

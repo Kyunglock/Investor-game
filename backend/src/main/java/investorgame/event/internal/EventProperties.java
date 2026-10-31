@@ -104,9 +104,26 @@ public record EventProperties(
    * @param surgeBp 서울 아파트가 12달 새 이만큼 넘게 오르면 "집 살까?"가 온다
    * @param cheongyakGapDays 집이 없으면 이 간격으로 청약 공고가 온다(처음은 독립하고 이만큼 뒤)
    * @param refuseBp 세 만기에 집주인이 재계약을 거절할 확률(만분율). 운 0이면 unlucky, 100이면 lucky, 그 사이는 직선 (#25)
+   * @param spouseRent 결혼 뒤 월세에 살면 배우자가 월세살이를 그만하자고 하는 장면의 시점 (#116)
    */
   public record HousingSettings(
-      int fraudBp, int buyGapDays, int surgeBp, int cheongyakGapDays, Refuse refuseBp) {}
+      int fraudBp,
+      int buyGapDays,
+      int surgeBp,
+      int cheongyakGapDays,
+      Refuse refuseBp,
+      SpouseRentSettings spouseRent) {}
+
+  /**
+   * 배우자의 월세 불만 (#116).
+   *
+   * @param firstGapDays 결혼하고(또는 그 뒤 독립하고) 이만큼 지나도 월세면 처음 묻는다
+   * @param retryGapDays 미루거나 거스르면 이만큼 뒤에 다시, 더 세게 묻는다
+   * @param childGapDays 마지막으로 물은 뒤 아이가 태어나면 그로부터 이만큼 뒤에 앞당겨 묻는다
+   * @param lastAge 이 나이를 넘으면 더 묻지 않는다
+   */
+  public record SpouseRentSettings(
+      int firstGapDays, int retryGapDays, int childGapDays, int lastAge) {}
 
   /** 운에 따른 재계약 거절 확률의 양 끝(만분율). */
   public record Refuse(int unlucky, int lucky) {}

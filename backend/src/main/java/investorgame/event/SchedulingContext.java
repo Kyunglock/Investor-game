@@ -19,6 +19,8 @@ import java.util.Set;
  * @param retired 은퇴했는가. 은퇴 뒤에는 직업·직장 이벤트가 없다
  * @param married 결혼했는가
  * @param marriedDay 결혼한 날. 자녀 이벤트의 기준. 미혼이면 null
+ * @param spouseJob 배우자의 직업(decisions.md 77번). 배우자가 월세살이를 그만하자는 장면의 문구가 이에 따라 다르다 (#116). 미혼이거나 소개
+ *     없이 결혼한 옛 판이면 null
  * @param childrenCount 자녀 수
  * @param childLeaveDays 자녀마다 독립해 집을 나가는 날(순번 순). 그 뒤 자녀 결혼 선택이 온다 (decisions.md 68번)
  * @param heldStockCodes 지금 보유한 종목 코드. 흔들림(SHAKE)은 보유가 있을 때만 온다. 없으면 빈 목록
@@ -44,6 +46,7 @@ public record SchedulingContext(
     boolean retired,
     boolean married,
     Integer marriedDay,
+    String spouseJob,
     int childrenCount,
     List<Integer> childLeaveDays,
     List<String> heldStockCodes,

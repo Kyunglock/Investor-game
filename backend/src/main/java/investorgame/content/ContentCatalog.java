@@ -95,6 +95,9 @@ public interface ContentCatalog {
   /** 결혼 상대 소개의 재료 (decisions.md 77번). */
   SpouseText spouseText();
 
+  /** 결혼 뒤 월세에 살면 배우자가 월세살이를 그만하자고 하는 장면의 문구 (#116). */
+  SpouseRentText spouseRentText();
+
   /** 아이가 어릴 때의 나들이 (decisions.md 87번). 코드 순. */
   java.util.List<OutingText> outings();
 

@@ -1,4 +1,5 @@
 import type { Game, LogEntry, Stats } from '../../api/client'
+import { spouseWord } from '../../api/spouseTerms'
 import { gradeOf } from './grade'
 import {
   actionLabel,
@@ -42,7 +43,7 @@ export interface LogLine {
 }
 
 type GameInfo = Pick<Game, 'startAge' | 'daysPerYear' | 'initialStats'> &
-  Partial<Pick<Game, 'interestSector'>>
+  Partial<Pick<Game, 'interestSector' | 'sex'>>
 
 interface Deviation {
   statCode: string
@@ -248,6 +249,32 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
         p.definition === 'lease-refused' ? '집주인이 재계약을 거절해 집을 옮겼다. ' : ''
       const head = `${refused}${p.fraud ? `전세사기를 당했다. 보증금 ${won(lost)}을 돌려받지 못했다. ` : ''}`
       const option = str(p.option)
+      if (str(p.definition).startsWith('spouse-rent')) {
+        // 배우자의 월세 불만 (#116): 미뤘거나, 거슬렀거나, 들어줘서 월세를 벗어났다.
+        const spouse = game.sex ? spouseWord(game.sex) : '배우자'
+        const said = `${withParticle(spouse, '이', '가')} 월세살이를 그만하자고 했다.`
+        if (option === 'WAIT') {
+          return { ...base, tone: 'life', pill: '집', text: `${said} 조금만 더 모으자고 설득했다.` }
+        }
+        if (option === 'STAY') {
+          return {
+            ...base,
+            tone: 'decline',
+            pill: '집',
+            text: `${said} 그래도 그냥 월세에 남았다.`,
+          }
+        }
+        const moved =
+          num(p.price) > 0
+            ? `${str(p.regionName)}를 ${won(num(p.price))}에 샀다${num(p.mortgage) > 0 ? ` (주담대 ${won(num(p.mortgage))})` : ''}.`
+            : `${str(p.label)} · 보증금 ${won(num(p.deposit))}${num(p.jeonseLoan) > 0 ? `, 전세대출 ${won(num(p.jeonseLoan))}` : ''}.`
+        return {
+          ...base,
+          tone: 'life',
+          pill: '집',
+          text: `${spouse}의 말에 월세를 벗어났다. ${moved}`,
+        }
+      }
       if (option === 'APPLY') {
         // 청약 (decisions.md 42번): 떨어짐 / 당첨됐지만 돈이 없어 포기 / 당첨돼 분양가로 삼.
         const text = !p.won
