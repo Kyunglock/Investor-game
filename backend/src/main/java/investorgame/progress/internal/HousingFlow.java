@@ -42,6 +42,10 @@ class HousingFlow {
 
   private static final long BP = 10_000;
   private static final long LOAN_UNIT = 1_000_000;
+
+  /** 전세대출을 받을 때 현금으로 남겨 두는 생활비 달 수 (decisions.md 107번). */
+  private static final int CUSHION_MONTHS = 3;
+
   private static final long PROBE = 100_000_000;
   private static final String SEOUL = "seoul";
   private static final String GYEONGGI = "gyeonggi";
@@ -280,6 +284,8 @@ class HousingFlow {
     // 집을 살 때 현금이 모자라면 들고 있는 주식을 팔아 보탠다 (decisions.md 100번).
     long stocks = sellable(gameId);
     int rooms = neededRooms(home, day);
+    // 전세대출은 내 돈으로 모자란 만큼만 받는다. 생활비 석 달분은 현금으로 남긴다 (decisions.md 107번).
+    long cushion = CUSHION_MONTHS * household.monthlyExpense(gameId, day);
     // 이사하면 지금 보증금을 돌려받고 전세대출을 갚는다. 전세사기면 보증금은 돌아오지 않는다.
     long returning = returning(view, fraud);
     long existingBurden =
@@ -296,6 +302,7 @@ class HousingFlow {
               stocks,
               returning,
               rooms,
+              cushion,
               monthlyIncome,
               existingBurden,
               points,
@@ -313,6 +320,7 @@ class HousingFlow {
       long stocks,
       long returning,
       int rooms,
+      long cushion,
       long income,
       long existingBurden,
       int points,
@@ -335,6 +343,7 @@ class HousingFlow {
               cash,
               0,
               rooms,
+              cushion,
               income,
               day);
         }
@@ -342,10 +351,17 @@ class HousingFlow {
         int keepRooms = view.rooms() == null ? rooms : view.rooms();
         long deposit = view.deposit() * (BP + rules.renewRaiseBp()) / BP;
         long rent = view.monthlyRent() * (BP + rules.renewRaiseBp()) / BP;
+        // 오른 보증금은 내 돈으로 먼저 내고 모자란 만큼만 전세대출을 늘린다. 여유가 있으면 그만큼 갚는다 (decisions.md 107번).
+        boolean jeonse = view.tenure() == Tenure.VILLA_JEONSE || view.tenure() == Tenure.APT_JEONSE;
+        long cap = jeonse && income > 0 ? round(deposit * rules.jeonseLoanBp() / BP) : 0;
+        long spare = Math.max(0, cash - cushion);
         long loan =
-            view.jeonseLoan() > 0 && income > 0
-                ? round(deposit * rules.jeonseLoanBp() / BP)
-                : view.jeonseLoan();
+            jeonse
+                ? Math.clamp(
+                    roundUp(view.jeonseLoan() + (deposit - view.deposit()) - spare),
+                    income > 0 ? 0 : Math.min(view.jeonseLoan(), cap),
+                    Math.max(cap, income > 0 ? 0 : view.jeonseLoan()))
+                : 0;
         long need = Math.max(0, (deposit - view.deposit()) - (loan - view.jeonseLoan()));
         long burden = housing.leaseMonthlyCost(rent, loan, deposit, view.insured(), rate);
         yield new Plan(
@@ -372,12 +388,44 @@ class HousingFlow {
             keepRooms);
       }
       case ChoiceTicket.Housing.MONTHLY ->
-          rental(code, Tenure.MONTHLY, view, prices, rate, cash, returning, rooms, income, day);
+          rental(
+              code,
+              Tenure.MONTHLY,
+              view,
+              prices,
+              rate,
+              cash,
+              returning,
+              rooms,
+              cushion,
+              income,
+              day);
       case ChoiceTicket.Housing.VILLA, ChoiceTicket.Housing.VILLA_INSURED ->
           rental(
-              code, Tenure.VILLA_JEONSE, view, prices, rate, cash, returning, rooms, income, day);
+              code,
+              Tenure.VILLA_JEONSE,
+              view,
+              prices,
+              rate,
+              cash,
+              returning,
+              rooms,
+              cushion,
+              income,
+              day);
       case ChoiceTicket.Housing.APT_JEONSE ->
-          rental(code, Tenure.APT_JEONSE, view, prices, rate, cash, returning, rooms, income, day);
+          rental(
+              code,
+              Tenure.APT_JEONSE,
+              view,
+              prices,
+              rate,
+              cash,
+              returning,
+              rooms,
+              cushion,
+              income,
+              day);
       case ChoiceTicket.Housing.BUY_SEOUL, ChoiceTicket.Housing.BUY_GYEONGGI -> {
         String region = ChoiceTicket.Housing.BUY_SEOUL.equals(code) ? SEOUL : GYEONGGI;
         yield buyPlan(
@@ -558,6 +606,7 @@ class HousingFlow {
       long cash,
       long returning,
       int rooms,
+      long cushion,
       long income,
       int day) {
     long available = cash + returning;
@@ -592,8 +641,9 @@ class HousingFlow {
         tenure == Tenure.APT_JEONSE
             ? gyeonggi * rules.jeonseRatioBp() / BP
             : gyeonggi * rules.villaBp().get(Math.min(tier, rules.villaBp().size() - 1)) / BP;
-    // 소득이 없으면 전세대출이 안 나온다.
-    long loan = income > 0 ? round(deposit * rules.jeonseLoanBp() / BP) : 0;
+    // 전세대출은 내 돈(현금 + 돌려받을 보증금 − 생활비 석 달분)으로 모자란 만큼만, 보증금의 80%까지. 소득이 없으면 안 나온다 (decisions.md 107번).
+    long cap = income > 0 ? round(deposit * rules.jeonseLoanBp() / BP) : 0;
+    long loan = Math.clamp(roundUp(deposit - Math.max(0, available - cushion)), 0, cap);
     long need = deposit - loan;
     boolean insured = ChoiceTicket.Housing.VILLA_INSURED.equals(code);
     long burden = housing.leaseMonthlyCost(0, loan, deposit, insured, rate);
@@ -1088,6 +1138,11 @@ class HousingFlow {
 
   private static long round(long amount) {
     return Math.max(0, amount / LOAN_UNIT * LOAN_UNIT);
+  }
+
+  /** 대출 단위로 올림. 모자란 만큼을 빌릴 때 쓴다. */
+  private static long roundUp(long amount) {
+    return amount <= 0 ? 0 : (amount + LOAN_UNIT - 1) / LOAN_UNIT * LOAN_UNIT;
   }
 
   private static String short_(long amount) {
