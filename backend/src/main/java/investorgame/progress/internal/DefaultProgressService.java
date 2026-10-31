@@ -402,10 +402,14 @@ class DefaultProgressService implements ProgressService {
                       ? -household.inflated(-amount, ticket.occursDay())
                       : household.inflated(amount, ticket.occursDay());
             }
-            // 성장기는 부모님 품이라 빚을 지지 않는다: 통장에 있는 만큼만 쓴다 (decisions.md 84번). 초기 자산이 100만 원일 수도 있어 그대로 두면
-            // 취업 전에 파산한다.
+            // 20세 전엔 통장이 0원이고 돈은 부모님 품에서 오간다(decisions.md 98번·114번): 장면의 돈은 이야기일 뿐 통장을 건드리지 않는다.
+            // 20세부터 24세는 빚을 지지 않는다: 통장에 있는 만큼만 쓴다 (84번).
             boolean capped = false;
-            if (!trait.adult() && amount < 0) {
+            boolean parents =
+                !trait.adult() && ageAt(game, ticket.occursDay()) < properties.partTimeFromAge();
+            if (parents) {
+              amount = 0;
+            } else if (!trait.adult() && amount < 0) {
               long cash = assets.get(gameId).cash();
               if (-amount > cash) {
                 amount = -cash;
@@ -438,14 +442,32 @@ class DefaultProgressService implements ProgressService {
             }
             logs.append(gameId, ticket.occursDay(), "TRAIT", traitPayload);
             List<ChoiceOutcome.Growth> growth = logGrowth(gameId, ticket.occursDay(), moved, TRAIT);
-            // 돈이 오갔으면 얼마가 오갔는지 결과에 붙인다 (decisions.md 75번).
+            // 돈이 오갔으면 얼마가 오갔는지 결과에 붙인다 (decisions.md 75번). 20세 전엔 통장이 움직이지 않으니 붙이지 않는다 (114번).
             String money =
                 amount == 0
                     ? (capped ? " (통장이 비어 돈은 들지 않았다)" : "")
                     : " (통장 %s%,d원%s)"
-                        .formatted(amount > 0 ? "+" : "", amount, capped ? ", 있는 만큼만" : "");
-            String note =
-                (result == null ? trait.note() : trait.note() + " " + result.note()) + money;
+                        .formatted(amount > 0 ? "+" : "", amount, capped ? ", 통장에 있는 만큼만" : "");
+            // 성인 장면의 결과 문구에 적힌 금액({gain}·{cost})은 물가가 붙은 실제 금액이다 (114번).
+            String noteText =
+                Korean.fill(
+                    result == null ? trait.note() : trait.note() + " " + result.note(),
+                    Map.of(
+                        "gain",
+                        HousingFlow.money(
+                            Math.abs(
+                                result == null
+                                    ? 0
+                                    : trait.adult()
+                                        ? inflatedSigned(result.amount(), ticket.occursDay())
+                                        : result.amount())),
+                        "cost",
+                        HousingFlow.money(
+                            Math.abs(
+                                trait.adult()
+                                    ? inflatedSigned(trait.amount(), ticket.occursDay())
+                                    : trait.amount()))));
+            String note = noteText + money;
             if (!completed.traitsComplete()) {
               yield simpleOutcome(ticket, note, growth);
             }
@@ -2057,10 +2079,20 @@ class DefaultProgressService implements ProgressService {
         tenureYears(character, day));
   }
 
+  /** 음수면 음수로 물가를 붙인다. */
+  private long inflatedSigned(long amount, int day) {
+    return amount < 0 ? -household.inflated(-amount, day) : household.inflated(amount, day);
+  }
+
   private GameView.PendingEvent pendingView(
       GameRow game, CharacterView character, EventView event, Map<String, Quote> quotes) {
     String stockName = event.stockCode() == null ? null : content.stock(event.stockCode()).name();
     Quote quote = event.stockCode() == null ? null : quotes.get(event.stockCode());
+    // 성장기 장면의 "{cash}"에는 지금 통장 잔고가 들어간다 (decisions.md 114번).
+    Map<String, String> facts =
+        event.kind() == EventKind.TRAIT
+            ? Map.of("cash", HousingFlow.money(assets.get(game.id()).cash()))
+            : Map.of();
     return new GameView.PendingEvent(
         event.eventId(),
         event.kind().name(),
@@ -2071,8 +2103,8 @@ class DefaultProgressService implements ProgressService {
         stockName,
         event.sectorWide(),
         quote == null ? null : quote.last12(),
-        event.title(),
-        event.body(),
+        Korean.fill(event.title(), facts),
+        Korean.fill(event.body(), facts),
         event.kind() == EventKind.LEVERAGE && event.stockCode() != null
             ? desk.storedAnalysisText(game.id(), event.stockCode()).orElse(null)
             : event.hintText(),
