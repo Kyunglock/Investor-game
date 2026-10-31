@@ -817,6 +817,9 @@ class DefaultProgressService implements ProgressService {
   /** 여행·나들이 한 번에 드는 돈의 상한 (decisions.md 93번). */
   private static final long TRIP_MAX_COST = 20_000_000;
 
+  /** 초호화 여행은 보통의 4배. 상한은 여기에 걸린다 (decisions.md 119번). */
+  private static final long TRIP_LUXURY_BP = 40_000;
+
   /** 순자산이 결혼 비용의 이 배수를 넘는데 한 푼도 안 대주면 '넉넉한데도' 문구 (decisions.md 86번). */
   private static final long RICH_WEDDING_MULTIPLE = 10;
 
@@ -908,6 +911,10 @@ class DefaultProgressService implements ProgressService {
    * 여행·나들이에 드는 돈. 아이의 나들이는 그 나들이의 비용(물가만), 가족 여행은 max(물가 반영 250만, 순자산 1%)에 선택지 비율을 곱하고, 많아도 2천만 원까지
    * (decisions.md 71·87·93번).
    */
+  /**
+   * 여행 비용. 상한(2천만 원, decisions.md 93번)은 초호화(보통의 4배)에 걸리고 보통·당일치기는 그 비율대로 따라 내려가, 순자산이 커도 선택지마다 금액이
+   * 다르다 (119번). 나들이는 금액이 작아 상한에 닿지 않는다.
+   */
   private long tripCost(UUID gameId, ChoiceTicket.FamilyTrip trip, int day) {
     long normal =
         trip.outing() != null
@@ -915,7 +922,8 @@ class DefaultProgressService implements ProgressService {
             : Math.max(
                 household.inflated(TRIP_BASE_COST, day),
                 netWorth(gameId) * TRIP_ASSET_PERCENT / PERCENT);
-    return Math.min(normal * trip.costBp() / BP, TRIP_MAX_COST);
+    long cappedNormal = Math.min(normal, TRIP_MAX_COST * BP / TRIP_LUXURY_BP);
+    return cappedNormal * trip.costBp() / BP;
   }
 
   private static String outingMessage(OutingText outing, String option, String child, long cost) {
