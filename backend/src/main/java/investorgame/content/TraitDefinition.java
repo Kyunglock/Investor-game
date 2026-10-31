@@ -10,6 +10,8 @@ import java.util.Map;
  * @param age 이 장면이 속한 성장 단계의 나이. adult 장면은 단계가 없으므로 표시용이다
  * @param adult true면 성장기 단계가 아니라 취업 뒤 일상 장면이다. 간격을 두고 랜덤하게 오며 성향(스타일)은 바꾸지 않고 능력치만 움직인다
  * @param job true면 직장(동료·월급·회사)이 배경인 adult 장면이라 직장에 다니는 동안에만 나온다. 실직·은퇴 중에는 미뤄 두었다가 다시 취업하면 나온다
+ * @param holdings true면 들고 있는 주식이 전제인 adult 장면("내 계좌도 빨갛다", "투자 계좌를 일부 판다")이라 보유 종목이 있을 때만 나온다
+ *     (decisions.md 115번)
  */
 public record TraitDefinition(
     String code,
@@ -17,6 +19,7 @@ public record TraitDefinition(
     Boolean adult,
     Boolean job,
     Boolean married,
+    Boolean holdings,
     String title,
     String body,
     List<Option> options) {
@@ -28,6 +31,7 @@ public record TraitDefinition(
     adult = adult != null && adult;
     job = job != null && job;
     married = married != null && married;
+    holdings = holdings != null && holdings;
   }
 
   /**

@@ -646,12 +646,14 @@ class DefaultEventServiceTest {
       events.complete(gameId, trait.get().eventId(), new Completion("x", "x", List.of()));
       from = trait.get().occursDay();
     }
+    // 보유 주식이 전제인 장면은 든 종목이 없으면 나오지 않는다 (decisions.md 115번).
     assertThat(seen)
         .containsExactlyInAnyOrderElementsOf(
             content.adultTraits().stream()
-                .filter(t -> !t.job() && !t.married())
+                .filter(t -> !t.job() && !t.married() && !t.holdings())
                 .map(TraitDefinition::title)
                 .toList());
+    assertThat(content.adultTraits()).filteredOn(TraitDefinition::holdings).isNotEmpty();
   }
 
   @Test
