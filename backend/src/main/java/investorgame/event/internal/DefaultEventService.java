@@ -789,17 +789,27 @@ class DefaultEventService implements EventService {
     if (housing.leaseEndDay() != null) {
       due.put(ChoiceTicket.Housing.LEASE_END, housing.leaseEndDay());
     }
-    spouseRentDue(rows, context).ifPresent(d -> due.put(ChoiceTicket.Housing.SPOUSE_RENT, d));
+    // 하루에 주거 장면은 하나, 사이는 scene-gap-days 넘게 (decisions.md 110번). 만기·독립은 날이 정해져 있으니 나머지를 미룬다.
+    List<EventRow> scenes = ofKind(rows, EventKind.HOUSING);
+    int lastScene = scenes.isEmpty() ? -1 : last(scenes).occursDay();
+    spouseRentDue(rows, context)
+        .map(d -> spaced(d, lastScene, housing))
+        .ifPresent(d -> due.put(ChoiceTicket.Housing.SPOUSE_RENT, d));
     Optional<Integer> crampedDue = crampedDue(rows, context);
-    crampedDue.ifPresent(d -> due.put(ChoiceTicket.Housing.CRAMPED, d));
+    crampedDue
+        .map(d -> spaced(d, lastScene, housing))
+        .ifPresent(d -> due.put(ChoiceTicket.Housing.CRAMPED, d));
     // 돈이 안 돼 '넘긴다'밖에 못 고를 공고는 띄우지 않는다. 영끌이 되는 순간 다음 공고가 온다 (#26, decisions.md 48번).
     if (housing.homes() == 0 && housing.cheongyakAffordable()) {
       List<EventRow> notices = housingOf(rows, ChoiceTicket.Housing.CHEONGYAK);
       due.put(
           ChoiceTicket.Housing.CHEONGYAK,
-          notices.isEmpty()
-              ? context.careerStartDay() + properties.housing().cheongyakGapDays()
-              : last(notices).occursDay() + properties.housing().cheongyakGapDays());
+          spaced(
+              notices.isEmpty()
+                  ? context.careerStartDay() + properties.housing().cheongyakGapDays()
+                  : last(notices).occursDay() + properties.housing().cheongyakGapDays(),
+              lastScene,
+              housing));
     }
     if (housing.homes() >= 2) {
       return due;
@@ -809,7 +819,7 @@ class DefaultEventService implements EventService {
     int base =
         buys.isEmpty() ? context.careerStartDay() : lastBuy + properties.housing().buyGapDays();
     List<Integer> triggers = new ArrayList<>();
-    // "집이 좁다"가 오면 그 안에 매수 선택지가 있으니 같은 결혼·출산으로 "집 살까?"를 또 띄우지 않는다 (#117).
+    // 결혼·출산의 "집 살까?"는 그 뒤에 다른 주거 장면(만기·좁다·배우자 불만)이 왔으면 띄우지 않는다: 그 장면에 이미 매수 선택지가 있었다 (#117, 110번).
     if (context.marriedDay() != null && crampedDue.isEmpty()) {
       triggers.add(context.marriedDay());
     }
@@ -817,13 +827,26 @@ class DefaultEventService implements EventService {
       triggers.add(housing.lastChildDay());
     }
     if (housing.seoulChange12mBp() >= properties.housing().surgeBp()) {
-      triggers.add(Math.max(base, lastBuy + 1));
+      triggers.add(Math.max(base, lastScene + 1));
     }
     triggers.stream()
-        .filter(d -> d > lastBuy)
+        .filter(d -> d > lastScene)
         .min(Integer::compare)
-        .ifPresent(d -> due.put(ChoiceTicket.Housing.BUY, Math.max(base, d)));
+        .ifPresent(
+            d -> due.put(ChoiceTicket.Housing.BUY, spaced(Math.max(base, d), lastScene, housing)));
     return due;
+  }
+
+  /** 날이 정해지지 않은 주거 장면을 직전 주거 장면에서 scene-gap-days 뒤로 미루고, 만기가 그 안에 있으면 만기 뒤로 보낸다(만기에서 옮기면 된다). */
+  private int spaced(int due, int lastScene, HousingFacts housing) {
+    int gap = properties.housing().sceneGapDays();
+    int day = lastScene < 0 ? due : Math.max(due, lastScene + gap);
+    if (housing.leaseEndDay() != null
+        && day > housing.leaseEndDay() - gap
+        && day <= housing.leaseEndDay()) {
+      day = housing.leaseEndDay() + gap;
+    }
+    return day;
   }
 
   /**
@@ -840,6 +863,16 @@ class DefaultEventService implements EventService {
     }
     EventProperties.SpouseRentSettings settings = properties.housing().spouseRent();
     List<EventRow> asked = spouseRentAsked(rows);
+    // 전세사기·집주인 거절로 월세에 밀린 직후에 "적금 깨서 보증금 보태자"는 어설프다. 큰 일 뒤에는 반년 미룬다 (decisions.md 110번).
+    int shock =
+        ofKind(rows, EventKind.HOUSING).stream()
+            .filter(
+                r ->
+                    ChoiceTicket.Housing.LEASE_REFUSED.equals(r.definitionCode())
+                        || FRAUD.equals(r.hiddenDirection()))
+            .mapToInt(EventRow::occursDay)
+            .max()
+            .orElse(-1);
     int due;
     if (asked.isEmpty()) {
       due = Math.max(context.marriedDay(), context.careerStartDay()) + settings.firstGapDays();
@@ -854,6 +887,9 @@ class DefaultEventService implements EventService {
                     housing.lastChildDay() + settings.childGapDays(),
                     lastAsk + settings.childGapDays()));
       }
+    }
+    if (shock >= 0) {
+      due = Math.max(due, shock + properties.housing().afterShockDays());
     }
     return ageAt(due, context) <= settings.lastAge() ? Optional.of(due) : Optional.empty();
   }

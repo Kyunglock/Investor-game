@@ -298,6 +298,9 @@ event:
     cheongyak-gap-days: 540
     # 세 만기에 집주인이 재계약을 거절할 확률. 운 0이면 35%, 운 100이면 5%, 그 사이는 직선 (#25, decisions.md 49번)
     refuse-bp: { unlucky: 3500, lucky: 500 }
+    # 주거 장면은 하루에 하나, 사이는 적어도 넉 달. 전세사기·거절 뒤 배우자 월세 불만은 반년 뒤 (decisions.md 110번)
+    scene-gap-days: 120
+    after-shock-days: 180
     # 결혼 뒤 월세에 살면 배우자가 "언제까지 월세 살 거야?" (#116, decisions.md 104번): 결혼(또는 독립) 1년 뒤 처음, 미루거나 거스르면 1년 반 뒤 다시,
     # 그사이 아이가 태어나면 반년 뒤 앞당겨. 60세까지
     spouse-rent:

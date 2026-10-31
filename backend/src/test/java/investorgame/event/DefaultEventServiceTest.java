@@ -1075,6 +1075,54 @@ class DefaultEventServiceTest {
   }
 
   /** 전세사기는 보증보험 없는 빌라 전세의 만기에만, 확률로 숨어 있다. */
+  /**
+   * 주거 장면은 하루에 하나, 사이는 넉 달 (decisions.md 110번): 결혼 당일이 만기면 만기만 오고 같은 날 "집 살까?"는 오지 않는다(만기에 매수 선택지가
+   * 있었다). 배우자의 월세 불만은 그 뒤 제 날에 오며, 집주인 거절 뒤에는 반년 미룬다.
+   */
+  @Test
+  void 주거_장면은_하루에_하나만_오고_사이를_둔다() {
+    int marriedDay = JOB_DAY + YEAR;
+    HousingFacts monthly =
+        new HousingFacts("MONTHLY", marriedDay, 0, false, false, null, 0, 100, false, false);
+    UUID gameId = UUID.randomUUID();
+    EventView leaseEnd =
+        firstOf(gameId, housed(monthly, marriedDay, "은행원", 0), JOB_DAY, EventKind.HOUSING, 3L);
+    assertThat(leaseEnd.occursDay()).isEqualTo(marriedDay);
+    assertThat(leaseEnd.title()).isEqualTo("계약 만기가 다가온다");
+    events.complete(gameId, leaseEnd.eventId(), new Completion("KEEP", "KEEP", List.of()));
+
+    HousingFacts renewed =
+        new HousingFacts(
+            "MONTHLY", marriedDay + 2 * YEAR, 0, false, false, null, 0, 100, false, false);
+    EventView next =
+        firstOf(gameId, housed(renewed, marriedDay, "은행원", 0), marriedDay, EventKind.HOUSING, 3L);
+    assertThat(next.title()).as("같은 날 '집 살까?'가 따라붙지 않는다").isEqualTo("언제까지 월세 살 거야?");
+    assertThat(next.occursDay()).isEqualTo(marriedDay + YEAR);
+
+    // 운이 나쁜 세입자: 집주인이 거절한 뒤 월세로 밀리면 배우자의 불만은 반년 뒤에 온다.
+    for (long seed = 1; seed <= 30; seed++) {
+      UUID unlucky = UUID.randomUUID();
+      HousingFacts villa =
+          new HousingFacts("VILLA_JEONSE", marriedDay, 0, false, false, null, 0, 0, false, false);
+      EventView end =
+          firstOf(unlucky, housed(villa, marriedDay, "은행원", 0), JOB_DAY, EventKind.HOUSING, seed);
+      if (!end.title().equals("집주인이 재계약을 거절했다")) {
+        continue;
+      }
+      events.complete(unlucky, end.eventId(), new Completion("MONTHLY", "MONTHLY", List.of()));
+      HousingFacts pushed =
+          new HousingFacts(
+              "MONTHLY", marriedDay + 2 * YEAR, 0, false, false, null, 0, 0, false, false);
+      EventView ask =
+          firstOf(
+              unlucky, housed(pushed, marriedDay, "은행원", 0), marriedDay, EventKind.HOUSING, seed);
+      assertThat(ask.title()).isEqualTo("언제까지 월세 살 거야?");
+      assertThat(ask.occursDay()).isGreaterThanOrEqualTo(marriedDay + 180);
+      return;
+    }
+    throw new AssertionError("운 0으로 30판을 돌려도 거절이 한 번도 없다");
+  }
+
   @Test
   void 전세사기는_보증보험_없는_빌라_만기에만_가끔_있다() {
     int frauds = 0;
