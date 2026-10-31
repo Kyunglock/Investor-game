@@ -543,13 +543,14 @@ class DefaultEventService implements EventService {
             .toList();
     if (context.marriedDay() != null && !context.childBirthDays().isEmpty()) {
       int base = outings.isEmpty() ? context.marriedDay() : last(outings).occursDay();
-      int day = base + roll(random, life.outingGapYears(), "OUTING", outings.size()) * year;
-      // 그 나이에 맞는 나들이가 하나라도 있는 아이만 후보다. 두 살은 동물원도 아직이다.
-      List<Integer> young =
-          youngChildren(context, day).stream()
-              .filter(seq -> !fittingOutings(context, seq, day).isEmpty())
-              .toList();
-      if (!young.isEmpty()) {
+      int gap = base + roll(random, life.outingGapYears(), "OUTING", outings.size()) * year;
+      // 그 나이에 맞는 나들이가 하나라도 있는 아이만 후보다. 두 살은 동물원도 아직이라, 그런 아이만 있으면 맞는 나이가 될 때까지 미룬다.
+      Integer day = firstOutingDay(context, gap);
+      if (day != null) {
+        List<Integer> young =
+            youngChildren(context, day).stream()
+                .filter(seq -> !fittingOutings(context, seq, day).isEmpty())
+                .toList();
         RandomGenerator rng = random.forKey("event", "life", "outing", outings.size());
         int seq = young.get(rng.nextInt(young.size()));
         List<OutingText> kinds = fittingOutings(context, seq, day);
@@ -558,6 +559,29 @@ class DefaultEventService implements EventService {
       }
     }
     return dues;
+  }
+
+  /**
+   * from 이후 처음으로 어느 아이에게든 맞는 나들이가 있는 날. 그날 이미 있으면 그날, 아니면 어떤 아이가 어떤 나들이의 나이가 되는 가장 이른 날. 없으면 null.
+   */
+  private Integer firstOutingDay(SchedulingContext context, int from) {
+    if (youngChildren(context, from).stream()
+        .anyMatch(seq -> !fittingOutings(context, seq, from).isEmpty())) {
+      return from;
+    }
+    int year = calendar.daysPerYear();
+    Integer earliest = null;
+    for (int i = 0; i < context.childBirthDays().size(); i++) {
+      int birth = context.childBirthDays().get(i);
+      Integer leave = context.childLeaveDays().size() > i ? context.childLeaveDays().get(i) : null;
+      for (OutingText outing : content.outings()) {
+        int day = birth + outing.minAge() * year;
+        if (day > from && (leave == null || leave > day) && (earliest == null || day < earliest)) {
+          earliest = day;
+        }
+      }
+    }
+    return earliest;
   }
 
   /** 그날 집에 있는 어린 아이(한 살에서 열세 살)의 순번. */
