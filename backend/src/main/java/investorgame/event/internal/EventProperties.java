@@ -123,6 +123,13 @@ public record EventProperties(
    * @param crampedDelayDays 결혼·출산으로 세집이 좁아지면 이만큼 뒤에 "집이 좁다"가 온다 (#117)
    * @param crampedLeaseWindowDays 그때 세 만기가 이 안에 있으면 "집이 좁다"를 따로 띄우지 않는다(만기에 옮기면 된다)
    */
+  /**
+   * 주거 이벤트 (주거 설계 4절, decisions.md 110번).
+   *
+   * @param sceneGapDays 주거 장면 사이 최소 간격. 만기·독립처럼 날이 정해진 것은 그대로 오고, 집 살까·좁다·배우자 불만·청약은 직전 주거 장면에서 이만큼
+   *     뒤로 미룬다. 만기가 이 안에 있으면 만기 뒤로 미룬다(만기 선택지에 이미 넓은 집·매수가 있다)
+   * @param afterShockDays 전세사기·집주인 거절 뒤 배우자의 월세 불만은 이만큼 미룬다
+   */
   public record HousingSettings(
       int fraudBp,
       int buyGapDays,
@@ -131,7 +138,9 @@ public record EventProperties(
       Refuse refuseBp,
       SpouseRentSettings spouseRent,
       int crampedDelayDays,
-      int crampedLeaseWindowDays) {}
+      int crampedLeaseWindowDays,
+      int sceneGapDays,
+      int afterShockDays) {}
 
   /**
    * 배우자의 월세 불만 (#116).
