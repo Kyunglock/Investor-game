@@ -12,6 +12,7 @@ import investorgame.common.error.NotFoundException;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
@@ -244,6 +245,26 @@ class JdbcAssetService implements AssetService {
         .param("gameId", gameId)
         .query((rs, rowNum) -> new StockTotals(rs.getLong("bought"), rs.getLong("sold")))
         .single();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Map<String, Integer> lastBuyDays(UUID gameId) {
+    Map<String, Integer> days = new HashMap<>();
+    jdbc.sql(
+            """
+            SELECT l.stock_code, MAX(l.game_day) AS last_day
+            FROM asset_ledger l
+            JOIN asset_holding h ON h.game_id = l.game_id AND h.stock_code = l.stock_code
+            WHERE l.game_id = :gameId AND l.kind = :buy AND h.quantity > 0
+            GROUP BY l.stock_code
+            """)
+        .param("gameId", gameId)
+        .param("buy", BUY)
+        .query((rs, rowNum) -> Map.entry(rs.getString("stock_code"), rs.getInt("last_day")))
+        .list()
+        .forEach(e -> days.put(e.getKey(), e.getValue()));
+    return days;
   }
 
   /** total × part / whole 을 오버플로 없이 계산한다 (몫과 나머지로 나눠 곱한다). part ≤ whole. */

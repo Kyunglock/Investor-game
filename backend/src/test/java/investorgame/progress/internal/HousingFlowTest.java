@@ -399,6 +399,7 @@ class HousingFlowTest {
             List.of(),
             false,
             Map.of(),
+            Map.of(),
             facts,
             0L,
             Set.of());
@@ -500,6 +501,7 @@ class HousingFlowTest {
             List.of(),
             false,
             Map.of(),
+            Map.of(),
             monthly,
             0L,
             Set.of());
@@ -564,6 +566,7 @@ class HousingFlowTest {
             List.of(),
             List.of(),
             false,
+            Map.of(),
             Map.of(),
             facts,
             0L,

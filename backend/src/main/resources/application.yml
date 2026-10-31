@@ -280,6 +280,11 @@ event:
     gap-days: { min: 300, max: 600 }
     up-bp: 5500
     magnitude-bp: { min: 1000, max: 2500 }
+    # 산 지 반년 안 된 종목은 흔들지 않고, 뉴스와 한 달 안에 붙지 않는다. 급락 장면은 고점 대비 15% 넘게 빠졌을 때, 제자리걸음 장면은 반년 폭 15% 아래일 때만 (decisions.md 109번)
+    min-held-days: 180
+    after-news-days: 30
+    plunge-drop-bp: 1500
+    flat-range-bp: 1500
   # 빚투: 든 종목이 12달 고점보다 30% 넘게 빠지면 대출받아 더 살지 묻는다. 최소 2년 간격 (decisions.md 39번)
   leverage:
     drop-bp: 3000

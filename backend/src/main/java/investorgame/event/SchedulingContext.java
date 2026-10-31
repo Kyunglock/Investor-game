@@ -28,6 +28,8 @@ import java.util.Set;
  * @param fullTimeInvestor 직업 대신 전업투자자를 골랐는가. 그러면 직업 선택·직장 장면이 더 오지 않는다
  * @param housing 주거 이벤트(독립·세 만기·집 사기)를 정하는 사실
  * @param heldDropBp 보유 종목별 최근 12달 고점 대비 낙폭(만분율, 하락이면 양수). 크게 빠진 종목이 있으면 빚투 제안이 온다
+ * @param heldStocks 보유 종목별 사실(마지막으로 산 날, 최근 반년 가격 폭). 흔들림은 산 지 얼마 안 된 종목은 건너뛰고, 장면의 전제(급락·제자리걸음)에
+ *     맞는 종목에만 온다 (decisions.md 109번). 모르는 종목은 빠져 있을 수 있다
  * @param netWorth 지금 순자산(원). 전업투자자의 장면(증권사 설립 등)은 순자산이 받쳐 줄 때만 온다
  * @param unaffordableStockCodes 한 주도 못 사는(현재가 > 현금) 종목. 들고 있지도 않으면 그 종목의 뉴스는 고를 게 없어 띄우지 않는다
  *     (decisions.md 59번)
@@ -54,9 +56,24 @@ public record SchedulingContext(
     List<String> heldStockCodes,
     boolean fullTimeInvestor,
     Map<String, Integer> heldDropBp,
+    Map<String, HeldStock> heldStocks,
     HousingFacts housing,
     long netWorth,
     Set<String> unaffordableStockCodes) {
+
+  /**
+   * 보유 종목 하나의 사실.
+   *
+   * @param lastBuyDay 마지막으로 산 날. 모르면 null
+   * @param rangeBp 최근 반년 가격의 (고점 − 저점) / 현재가 (만분율). 작으면 제자리걸음이다
+   */
+  public record HeldStock(Integer lastBuyDay, int rangeBp) {}
+
+  /** 흔들어도 되는 종목인가: 산 지 minHeldDays가 지났다(산 날을 모르면 된다). */
+  public boolean heldLongEnough(String stockCode, int day, int minHeldDays) {
+    HeldStock facts = heldStocks().get(stockCode);
+    return facts == null || facts.lastBuyDay() == null || day - facts.lastBuyDay() >= minHeldDays;
+  }
 
   /** 사거나 팔 수 있는 종목인가: 들고 있거나, 한 주는 살 수 있다. */
   public boolean tradable(String stockCode) {

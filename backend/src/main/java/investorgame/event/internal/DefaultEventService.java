@@ -287,13 +287,14 @@ class DefaultEventService implements EventService {
       savingCandidates(rows, context, candidates);
     } else if (context.phase() == Phase.INVESTING && context.investingStartDay() != null) {
       // 살 돈도 없고 든 것도 없으면 뉴스에서 고를 게 관망뿐이라 띄우지 않는다. 돈이 생기면 다음 틱에 바로 온다 (decisions.md 59번).
+      Optional<Integer> newsDay = Optional.empty();
       if (content.stocks().stream().anyMatch(st -> context.tradable(st.code()))) {
         List<EventRow> news = ofKind(rows, EventKind.NEWS);
         int base = news.isEmpty() ? context.investingStartDay() : last(news).occursDay();
-        nextNewsDay(base, context, random)
-            .ifPresent(day -> candidates.add(new Candidate(EventKind.NEWS, day)));
+        newsDay = nextNewsDay(base, context, random);
+        newsDay.ifPresent(day -> candidates.add(new Candidate(EventKind.NEWS, day)));
       }
-      shakeCandidate(rows, context, random, candidates);
+      shakeCandidate(rows, context, random, newsDay, candidates);
       leverageCandidate(rows, context, candidates);
     }
     if (context.phase() != Phase.CHILDHOOD && context.careerStartDay() != null) {
@@ -705,21 +706,62 @@ class DefaultEventService implements EventService {
     return Optional.empty();
   }
 
-  /** 보유 종목이 있을 때만: 마지막 흔들림(없으면 투자 시작일) + 간격. 어떤 종목이 흔들리는지는 만들 때 뽑는다 (decisions.md 33번). */
+  /**
+   * 보유 종목이 있을 때만: 마지막 흔들림(없으면 투자 시작일) + 간격. 산 지 min-held-days가 안 된 종목만 들고 있으면 가장 먼저 그 날이 되는 때로 미루고,
+   * 뉴스(직전·다음)와는 after-news-days 넘게 떨어뜨린다 (decisions.md 109번). 어떤 종목이 흔들리는지는 만들 때 뽑는다 (33번).
+   */
   private void shakeCandidate(
       List<EventRow> rows,
       SchedulingContext context,
       SeededRandom random,
+      Optional<Integer> nextNewsDay,
       List<Candidate> candidates) {
     if (context.heldStockCodes().isEmpty()) {
       return;
     }
+    EventProperties.ShakeSettings settings = properties.shake();
     List<EventRow> shakes = ofKind(rows, EventKind.SHAKE);
     int base = shakes.isEmpty() ? context.investingStartDay() : last(shakes).occursDay();
-    candidates.add(
-        new Candidate(
-            EventKind.SHAKE,
-            base + roll(random, properties.shake().gapDays(), "SHAKE", shakes.size())));
+    int day = base + roll(random, settings.gapDays(), "SHAKE", shakes.size());
+    // 들고 있는 것 가운데 가장 먼저 "산 지 충분히 지난" 종목이 생기는 날까지 미룬다.
+    int earliest =
+        context.heldStockCodes().stream()
+            .mapToInt(
+                code -> {
+                  SchedulingContext.HeldStock facts = context.heldStocks().get(code);
+                  return facts == null || facts.lastBuyDay() == null
+                      ? 0
+                      : facts.lastBuyDay() + settings.minHeldDays();
+                })
+            .min()
+            .orElse(0);
+    day = Math.max(day, earliest);
+    List<EventRow> news = ofKind(rows, EventKind.NEWS);
+    if (!news.isEmpty()) {
+      day = Math.max(day, last(news).occursDay() + settings.afterNewsDays());
+    }
+    if (nextNewsDay.isPresent()
+        && day >= nextNewsDay.get() - settings.afterNewsDays()
+        && day < nextNewsDay.get() + settings.afterNewsDays()) {
+      day = nextNewsDay.get() + settings.afterNewsDays();
+    }
+    candidates.add(new Candidate(EventKind.SHAKE, day));
+  }
+
+  /** 장면의 전제가 그 종목에 맞는가: drop은 12달 고점 대비 낙폭, flat은 최근 반년 폭. 전제 없는 장면은 늘 맞는다. */
+  private static boolean shakeFits(
+      ShakeDefinition definition,
+      String stockCode,
+      SchedulingContext context,
+      EventProperties.ShakeSettings settings) {
+    if (definition.requires() == null) {
+      return true;
+    }
+    if (ShakeDefinition.REQUIRES_DROP.equals(definition.requires())) {
+      return context.heldDropBp().getOrDefault(stockCode, 0) >= settings.plungeDropBp();
+    }
+    SchedulingContext.HeldStock facts = context.heldStocks().get(stockCode);
+    return facts != null && facts.rangeBp() <= settings.flatRangeBp();
   }
 
   /**
@@ -989,14 +1031,25 @@ class DefaultEventService implements EventService {
     };
   }
 
-  /** 보유 종목 흔들림. 보유 중 한 종목과 장면을 뽑고, 선택 뒤 그 종목이 움직일 숨은 방향·폭을 정한다. 힌트·다른 뉴스는 없다 (decisions.md 33번). */
+  /**
+   * 보유 종목 흔들림. 산 지 충분히 지난 보유 종목 가운데 하나를 뽑고, 그 종목의 상태에 맞는 장면(급락 알림은 크게 빠졌을 때, 제자리걸음은 반년 폭이 작을 때)만
+   * 고른다. 선택 뒤 그 종목이 움직일 숨은 방향·폭을 정한다. 힌트·다른 뉴스는 없다 (decisions.md 33번·109번).
+   */
   private EventRow shake(
       UUID id, int seq, int day, SchedulingContext context, SeededRandom random) {
     RandomGenerator rng = random.forKey("event", "shake", seq);
-    List<String> held = context.heldStockCodes();
-    String stockCode = held.get(rng.nextInt(held.size()));
-    ShakeDefinition definition = weighted(content.shakes(), ShakeDefinition::weight, rng);
     EventProperties.ShakeSettings settings = properties.shake();
+    List<String> seasoned =
+        context.heldStockCodes().stream()
+            .filter(code -> context.heldLongEnough(code, day, settings.minHeldDays()))
+            .toList();
+    List<String> held = seasoned.isEmpty() ? context.heldStockCodes() : seasoned;
+    String stockCode = held.get(rng.nextInt(held.size()));
+    List<ShakeDefinition> fitting =
+        content.shakes().stream()
+            .filter(sh -> shakeFits(sh, stockCode, context, settings))
+            .toList();
+    ShakeDefinition definition = weighted(fitting, ShakeDefinition::weight, rng);
     Direction truth = rng.nextInt(BP) < settings.upBp() ? Direction.UP : Direction.DOWN;
     int magnitude = rng.nextInt(settings.magnitudeBp().min(), settings.magnitudeBp().max() + 1);
     return new EventRow(

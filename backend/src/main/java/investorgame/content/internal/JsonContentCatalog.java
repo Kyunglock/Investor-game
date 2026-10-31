@@ -445,7 +445,13 @@ class JsonContentCatalog implements ContentCatalog {
       require(
           (shake.title() + shake.body()).contains("{stock}"),
           "흔들림 장면에는 종목 자리표시 {stock}이 있어야 한다: " + shake.code());
+      require(
+          shake.requires() == null
+              || ShakeDefinition.REQUIRES_DROP.equals(shake.requires())
+              || ShakeDefinition.REQUIRES_FLAT.equals(shake.requires()),
+          "흔들림 장면의 전제는 drop·flat 가운데 하나다: " + shake.code());
     }
+    require(shakes.stream().anyMatch(sh -> sh.requires() == null), "전제 없는 흔들림 장면이 하나는 있어야 한다");
     require(!homeRegions.isEmpty(), "아파트 지역이 하나도 없다");
     for (HomeRegion region : homeRegions) {
       require(region.basePrice() > 0, "아파트 기준가는 양수여야 한다: " + region.code());
