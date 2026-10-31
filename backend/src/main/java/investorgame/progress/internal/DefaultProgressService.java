@@ -1810,6 +1810,7 @@ class DefaultProgressService implements ProgressService {
         assets.get(game.id()).holdings().keySet().stream().sorted().toList(),
         character.fullTimeInvestorDay() != null,
         heldDropBp(game.id()),
+        heldStocks(game.id()),
         housingFlow.facts(
             game.id(),
             home,
@@ -1842,6 +1843,27 @@ class DefaultProgressService implements ProgressService {
       drops.put(quote.stockCode(), high <= 0 ? 0 : (int) ((high - quote.price()) * BP / high));
     }
     return drops;
+  }
+
+  /** 보유 종목별 마지막 매수일과 최근 반년 가격 폭. 흔들림이 전제를 맞추는 데 쓴다 (decisions.md 109번). */
+  private Map<String, SchedulingContext.HeldStock> heldStocks(UUID gameId) {
+    Set<String> held = assets.get(gameId).holdings().keySet();
+    Map<String, Integer> lastBuy = assets.lastBuyDays(gameId);
+    Map<String, SchedulingContext.HeldStock> facts = new HashMap<>();
+    for (Quote quote : market.quotes(gameId)) {
+      if (!held.contains(quote.stockCode())) {
+        continue;
+      }
+      List<Long> recent =
+          quote.last12().subList(Math.max(0, quote.last12().size() - 6), quote.last12().size());
+      long high = recent.stream().mapToLong(Long::longValue).max().orElse(quote.price());
+      long low = recent.stream().mapToLong(Long::longValue).min().orElse(quote.price());
+      int rangeBp = quote.price() <= 0 ? 0 : (int) ((high - low) * BP / quote.price());
+      facts.put(
+          quote.stockCode(),
+          new SchedulingContext.HeldStock(lastBuy.get(quote.stockCode()), rangeBp));
+    }
+    return facts;
   }
 
   // ---- 화면용 상태 ----

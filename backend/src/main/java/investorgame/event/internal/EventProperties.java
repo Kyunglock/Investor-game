@@ -86,7 +86,22 @@ public record EventProperties(
    * @param upBp 선택 뒤 그 종목이 오를 확률(만분율). 버틴 쪽이 조금 유리하게
    * @param magnitudeBp 선택 뒤 변동 폭 구간(만분율)
    */
-  public record ShakeSettings(Range gapDays, int upBp, Range magnitudeBp) {}
+  /**
+   * 보유 종목 흔들림 (decisions.md 33번·109번).
+   *
+   * @param minHeldDays 산 지 이만큼 지난 종목만 흔든다
+   * @param afterNewsDays 뉴스(앞뒤)와 적어도 이만큼 떨어져서 온다
+   * @param plungeDropBp "급락 알림"(requires drop)은 12달 고점 대비 낙폭이 이 이상일 때만
+   * @param flatRangeBp "제자리걸음"(requires flat)은 최근 반년 가격 폭이 이 이하일 때만
+   */
+  public record ShakeSettings(
+      Range gapDays,
+      int upBp,
+      Range magnitudeBp,
+      int minHeldDays,
+      int afterNewsDays,
+      int plungeDropBp,
+      int flatRangeBp) {}
 
   /**
    * 빚투 제안 (decisions.md 39번).

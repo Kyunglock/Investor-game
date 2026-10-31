@@ -70,6 +70,7 @@ class DefaultEventServiceTest {
             List.of(),
             false,
             Map.of(),
+            Map.of(),
             SETTLED,
             0L,
             Set.of());
@@ -225,6 +226,7 @@ class DefaultEventServiceTest {
             List.of(),
             List.of(),
             false,
+            Map.of(),
             Map.of(),
             SETTLED,
             0L,
@@ -417,6 +419,7 @@ class DefaultEventServiceTest {
         List.of(),
         false,
         Map.of(),
+        Map.of(),
         SETTLED,
         0L,
         Set.of());
@@ -444,6 +447,7 @@ class DefaultEventServiceTest {
         List.of(),
         List.of(),
         false,
+        Map.of(),
         Map.of(),
         SETTLED,
         0L,
@@ -484,6 +488,7 @@ class DefaultEventServiceTest {
             List.of(),
             false,
             Map.of(),
+            Map.of(),
             SETTLED,
             0L,
             Set.of());
@@ -517,6 +522,7 @@ class DefaultEventServiceTest {
             List.of(),
             false,
             Map.of(),
+            Map.of(),
             SETTLED,
             0L,
             Set.of());
@@ -547,6 +553,7 @@ class DefaultEventServiceTest {
             List.of(),
             List.of(),
             true,
+            Map.of(),
             Map.of(),
             SETTLED,
             0L,
@@ -582,6 +589,7 @@ class DefaultEventServiceTest {
             List.of(),
             false,
             Map.of(),
+            Map.of(),
             SETTLED,
             0L,
             Set.of());
@@ -615,6 +623,7 @@ class DefaultEventServiceTest {
             List.of(),
             List.of(),
             false,
+            Map.of(),
             Map.of(),
             SETTLED,
             0L,
@@ -692,6 +701,7 @@ class DefaultEventServiceTest {
         List.of(),
         List.of(),
         false,
+        Map.of(),
         Map.of(),
         SETTLED,
         0L,
@@ -835,6 +845,7 @@ class DefaultEventServiceTest {
         List.of(),
         List.of(),
         fullTimeInvestor,
+        Map.of(),
         Map.of(),
         SETTLED,
         netWorth,
@@ -1180,6 +1191,7 @@ class DefaultEventServiceTest {
         c.heldStockCodes(),
         c.fullTimeInvestor(),
         c.heldDropBp(),
+        c.heldStocks(),
         c.housing(),
         c.netWorth(),
         codes);
@@ -1214,12 +1226,20 @@ class DefaultEventServiceTest {
         List.of(),
         false,
         Map.of(),
+        Map.of(),
         facts,
         0L,
         Set.of());
   }
 
   private static SchedulingContext investing(List<String> held, Map<String, Integer> drops) {
+    return investing(held, drops, Map.of());
+  }
+
+  private static SchedulingContext investing(
+      List<String> held,
+      Map<String, Integer> drops,
+      Map<String, SchedulingContext.HeldStock> facts) {
     return new SchedulingContext(
         Phase.INVESTING,
         START_AGE,
@@ -1242,6 +1262,7 @@ class DefaultEventServiceTest {
         held,
         false,
         drops,
+        facts,
         SETTLED,
         0L,
         Set.of());
@@ -1274,6 +1295,7 @@ class DefaultEventServiceTest {
             List.of(held),
             false,
             Map.of(),
+            Map.of(),
             SETTLED,
             0L,
             Set.of());
@@ -1289,6 +1311,52 @@ class DefaultEventServiceTest {
         .extracting(EventView.Option::code, EventView.Option::label)
         .containsExactly(tuple("HOLD", "버틴다"), tuple("SELL", "판다"));
     assertThat(shake.occursDay()).isBetween(JOB_DAY + 30 + 300, JOB_DAY + 30 + 600);
+  }
+
+  /** 산 지 반년이 안 된 종목만 들고 있으면 흔들림은 그 날이 될 때까지 미뤄지고, 뉴스와 한 달 안에 붙지 않는다 (decisions.md 109번). */
+  @Test
+  void 흔들림은_산_지_반년_지난_종목에만_오고_뉴스와_붙지_않는다() {
+    String fresh = content.stocks().get(0).code();
+    int bought = JOB_DAY + 30 + 500;
+    SchedulingContext justBought =
+        investing(
+            List.of(fresh), Map.of(), Map.of(fresh, new SchedulingContext.HeldStock(bought, 0)));
+    for (long seed = 1; seed <= 5; seed++) {
+      EventView shake = firstOf(UUID.randomUUID(), justBought, JOB_DAY + 30, EventKind.SHAKE, seed);
+      assertThat(shake.occursDay()).isGreaterThanOrEqualTo(bought + 180);
+    }
+
+    // 뉴스와 같은 날이 되면 뉴스 한 달 뒤로 밀린다.
+    UUID gameId = UUID.randomUUID();
+    SchedulingContext seasoned =
+        investing(List.of(fresh), Map.of(), Map.of(fresh, new SchedulingContext.HeldStock(0, 0)));
+    for (long seed = 1; seed <= 8; seed++) {
+      Optional<EventView> first = nextOf(gameId, seasoned, JOB_DAY + 30, EventKind.NEWS, seed);
+      if (first.isEmpty()) {
+        continue;
+      }
+      EventView news = first.get();
+      events.complete(gameId, news.eventId(), new Completion("HOLD", "HOLD", List.of()));
+      EventView shake = firstOf(gameId, seasoned, news.occursDay(), EventKind.SHAKE, seed);
+      assertThat(shake.occursDay()).isGreaterThanOrEqualTo(news.occursDay() + 30);
+    }
+  }
+
+  /** 급락 알림은 크게 빠진 종목에만, 제자리걸음은 반년 폭이 작은 종목에만 온다 (decisions.md 109번). */
+  @Test
+  void 흔들림_장면은_종목_상태에_맞는_것만_고른다() {
+    String calm = content.stocks().get(0).code();
+    // 빠지지도 않았고 많이 움직인 종목: 급락·제자리걸음 장면이 올 수 없다.
+    SchedulingContext lively =
+        investing(
+            List.of(calm),
+            Map.of(calm, 300),
+            Map.of(calm, new SchedulingContext.HeldStock(0, 4_000)));
+    for (long seed = 1; seed <= 12; seed++) {
+      EventView shake = firstOf(UUID.randomUUID(), lively, JOB_DAY + 30, EventKind.SHAKE, seed);
+      assertThat(shake.title()).doesNotContain("급락").doesNotContain("제자리걸음");
+      assertThat(shake.body()).doesNotContain("반년째 큰 움직임이 없다");
+    }
   }
 
   private Optional<EventView> nextOf(
