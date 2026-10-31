@@ -380,6 +380,7 @@ class HousingFlow {
       int day) {
     return switch (code) {
       case ChoiceTicket.Housing.PASS,
+          ChoiceTicket.Housing.NEVER,
           ChoiceTicket.Housing.WAIT,
           ChoiceTicket.Housing.STAY,
           ChoiceTicket.Housing.ENDURE ->
@@ -813,9 +814,10 @@ class HousingFlow {
     switch (code) {
       case ChoiceTicket.Housing.PASS ->
           message.append(
-              ChoiceTicket.Housing.CHEONGYAK.equals(effect.definition())
+              ChoiceTicket.Housing.isCheongyak(effect.definition())
                   ? "이번 분양은 넘겼다."
                   : "아직은 사지 않기로 했다.");
+      case ChoiceTicket.Housing.NEVER -> message.append("청약은 더 보지 않기로 했다. 공고가 떠도 묻지 않는다.");
       case ChoiceTicket.Housing.WAIT -> message.append(content.spouseRentText().waitText(level));
       case ChoiceTicket.Housing.STAY -> message.append(content.spouseRentText().stayText(level));
       case ChoiceTicket.Housing.ENDURE ->

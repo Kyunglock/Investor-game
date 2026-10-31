@@ -828,14 +828,26 @@ class DefaultEventService implements EventService {
         .map(d -> spaced(d, lastScene, housing))
         .ifPresent(d -> due.put(ChoiceTicket.Housing.CRAMPED, d));
     // 돈이 안 돼 '넘긴다'밖에 못 고를 공고는 띄우지 않는다. 영끌이 되는 순간 다음 공고가 온다 (#26, decisions.md 48번).
-    if (housing.homes() == 0 && housing.cheongyakAffordable()) {
-      List<EventRow> notices = housingOf(rows, ChoiceTicket.Housing.CHEONGYAK);
+    // 공고는 볼수록 간격이 늘고, 여섯 번 본 뒤·은퇴 뒤·"관심 없다"고 한 뒤에는 오지 않는다 (123번).
+    List<EventRow> notices = cheongyakNotices(rows);
+    if (housing.homes() == 0
+        && housing.cheongyakAffordable()
+        && !context.retired()
+        && notices.size() < properties.housing().cheongyakMaxNotices()
+        && notices.stream()
+            .noneMatch(
+                r ->
+                    repository
+                        .actualAction(r.id())
+                        .filter(ChoiceTicket.Housing.NEVER::equals)
+                        .isPresent())) {
+      int gap =
+          properties.housing().cheongyakGapDays()
+              * Math.min(notices.size() + 1, properties.housing().cheongyakGapGrowthMax());
       due.put(
           ChoiceTicket.Housing.CHEONGYAK,
           spaced(
-              notices.isEmpty()
-                  ? context.careerStartDay() + properties.housing().cheongyakGapDays()
-                  : last(notices).occursDay() + properties.housing().cheongyakGapDays(),
+              notices.isEmpty() ? context.careerStartDay() + gap : last(notices).occursDay() + gap,
               lastScene,
               housing));
     }
@@ -982,6 +994,13 @@ class DefaultEventService implements EventService {
       }
     }
     return Optional.ofNullable(earliest);
+  }
+
+  /** 분양 공고들. 정의 코드는 문구 벌에 따라 "cheongyak"·"cheongyak-2"…다. */
+  private List<EventRow> cheongyakNotices(List<EventRow> rows) {
+    return ofKind(rows, EventKind.HOUSING).stream()
+        .filter(r -> ChoiceTicket.Housing.isCheongyak(r.definitionCode()))
+        .toList();
   }
 
   private List<EventRow> housingOf(List<EventRow> rows, String definition) {
@@ -1168,8 +1187,12 @@ class DefaultEventService implements EventService {
     if (ChoiceTicket.Housing.MOVE_OUT.equals(definition)) {
       options.addAll(ChoiceTicket.Housing.RENTALS);
     } else if (ChoiceTicket.Housing.CHEONGYAK.equals(definition)) {
+      // 문구는 몇 벌을 본 횟수대로 돌린다: 첫 공고는 기본 문구 (decisions.md 123번).
+      definition =
+          content.housingTextVariant(ChoiceTicket.Housing.CHEONGYAK, cheongyakNotices(rows).size());
       options.add(ChoiceTicket.Housing.APPLY);
       options.add(ChoiceTicket.Housing.PASS);
+      options.add(ChoiceTicket.Housing.NEVER);
     } else if (ChoiceTicket.Housing.SPOUSE_RENT.equals(definition)) {
       // 배우자가 월세살이를 그만하자고 한다 (#116): 전세로 옮기거나, 집을 사거나, 설득해 미루거나, 거스른다. 월세 그대로는 선택지가 아니다.
       // 은퇴 뒤에는 직장 전제 문구 대신 은퇴 문구 (decisions.md 111번).
