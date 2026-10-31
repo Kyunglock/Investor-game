@@ -238,6 +238,41 @@ class HousingFlowTest {
     assertThat(apply.detail()).contains("가점 45점").contains("분양가");
   }
 
+  /** 전세대출은 내 돈으로 모자란 만큼만 (decisions.md 107번). 현금이 넉넉하면 대출 없이 보증금을 다 내고, 없으면 80%까지 빌린다. */
+  @Test
+  void 전세대출은_내_돈으로_모자란_만큼만_받는다() {
+    long gyeonggi = market.homePrices(gameId).get("gyeonggi");
+    long deposit = gyeonggi * 30 / 100;
+    long cash = assets.get(gameId).cash();
+    assets.credit(gameId, "WINDFALL", deposit * 2 - cash, JOB_DAY);
+
+    HousingFlow.Plan rich =
+        flow.plans(gameId, List.of("VILLA"), false, single, 3_000_000, 0, JOB_DAY).getFirst();
+    assertThat(rich.jeonseLoan()).as("현금이 넉넉하면 빌리지 않는다").isZero();
+    assertThat(rich.cashNeeded()).isEqualTo(deposit);
+
+    assets.spend(gameId, "LIFE_COST", assets.get(gameId).cash() - deposit / 2, JOB_DAY, null);
+    HousingFlow.Plan half =
+        flow.plans(gameId, List.of("VILLA"), false, single, 3_000_000, 0, JOB_DAY).getFirst();
+    long cushion = 3 * household.monthlyExpense(gameId, JOB_DAY);
+    assertThat(half.jeonseLoan())
+        .as("모자란 만큼(+생활비 석 달분)만, 100만 원 단위로 올림")
+        .isBetween(deposit / 2 + cushion, deposit / 2 + cushion + 1_000_000);
+    assertThat(half.cashNeeded()).isLessThanOrEqualTo(deposit / 2 - cushion + 1_000_000);
+    assertThat(half.blocked()).isNull();
+
+    assets.spend(gameId, "LIFE_COST", assets.get(gameId).cash() - 1_000_000, JOB_DAY, null);
+    HousingFlow.Plan poor =
+        flow.plans(gameId, List.of("VILLA"), false, single, 3_000_000, 0, JOB_DAY).getFirst();
+    assertThat(poor.jeonseLoan())
+        .as("많아도 보증금의 80%")
+        .isEqualTo(deposit * 80 / 100 / 1_000_000 * 1_000_000);
+    assertThat(poor.blocked()).contains("모자란다");
+    HousingFlow.Plan noIncome =
+        flow.plans(gameId, List.of("VILLA"), false, single, 0, 0, JOB_DAY).getFirst();
+    assertThat(noIncome.jeonseLoan()).as("소득이 없으면 안 나온다").isZero();
+  }
+
   /**
    * 집 크기 (#117, decisions.md 105번): 혼자 원룸, 부부 투룸, 아이 하나 쓰리룸, 둘 이상 포룸. 월세·빌라 전세가 계단처럼 오르고 아파트 전세는
    * 그대로다.
