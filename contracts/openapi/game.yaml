@@ -568,9 +568,11 @@ components:
     Housing:
       type: object
       description: 주거 (주거 설계). 총자산에는 집 시세 + 보증금 − 주담대 − 전세대출 − 세입자 보증금이 들어간다
-      required: [tenure, deposit, monthlyRent, jeonseLoan, insured, mortgageRateBp, monthlyCost, homes, quotes]
+      required: [tenure, deposit, monthlyRent, jeonseLoan, insured, mortgageRateBp, monthlyCost, homes, quotes, cramped]
       properties:
         tenure: { type: string, enum: [PARENTS, MONTHLY, VILLA_JEONSE, APT_JEONSE, OWN] }
+        roomsName: { type: [string, 'null'], description: 지금 세집의 크기(원룸·투룸·쓰리룸·포룸). 자가·아파트 전세(84㎡)·옛 판은 null (#117) }
+        cramped: { type: boolean, description: 식구 수에 비해 좁은 집에 사는가. 그동안 행복도·가족 점수가 조금씩 깎인다 }
         regionName: { type: [string, 'null'] }
         deposit: { type: integer, format: int64, description: 지금 사는 집에 맡긴 보증금 }
         monthlyRent: { type: integer, format: int64 }

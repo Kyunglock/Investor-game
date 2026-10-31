@@ -291,6 +291,10 @@ class JsonContentCatalogTest {
     assertThat(catalog.spouseRentText().stayText(3)).contains("끝내 월세를 고집했다");
     assertThat(catalog.housingLabel("WAIT")).isNotBlank();
     assertThat(catalog.housingLabel("STAY")).isNotBlank();
+    // 집이 좁다 (#117): 아이 이름 자리가 있고, 좁아도 그냥 산다 선택지가 있다.
+    assertThat(catalog.housingText("cramped-child").body()).contains("{child}");
+    assertThat(catalog.housingText("cramped-marriage").title()).isNotBlank();
+    assertThat(catalog.housingLabel("ENDURE")).isNotBlank();
     assertThat(catalog.comfortPhrases("layoff", "spouse")).isNotEmpty();
     assertThat(catalog.outings()).hasSizeGreaterThanOrEqualTo(4);
     assertThat(catalog.outing("park").normalText()).contains("{child}");

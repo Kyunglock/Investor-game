@@ -696,6 +696,8 @@ class DefaultEventService implements EventService {
       due.put(ChoiceTicket.Housing.LEASE_END, housing.leaseEndDay());
     }
     spouseRentDue(rows, context).ifPresent(d -> due.put(ChoiceTicket.Housing.SPOUSE_RENT, d));
+    Optional<Integer> crampedDue = crampedDue(rows, context);
+    crampedDue.ifPresent(d -> due.put(ChoiceTicket.Housing.CRAMPED, d));
     // 돈이 안 돼 '넘긴다'밖에 못 고를 공고는 띄우지 않는다. 영끌이 되는 순간 다음 공고가 온다 (#26, decisions.md 48번).
     if (housing.homes() == 0 && housing.cheongyakAffordable()) {
       List<EventRow> notices = housingOf(rows, ChoiceTicket.Housing.CHEONGYAK);
@@ -713,10 +715,11 @@ class DefaultEventService implements EventService {
     int base =
         buys.isEmpty() ? context.careerStartDay() : lastBuy + properties.housing().buyGapDays();
     List<Integer> triggers = new ArrayList<>();
-    if (context.marriedDay() != null) {
+    // "집이 좁다"가 오면 그 안에 매수 선택지가 있으니 같은 결혼·출산으로 "집 살까?"를 또 띄우지 않는다 (#117).
+    if (context.marriedDay() != null && crampedDue.isEmpty()) {
       triggers.add(context.marriedDay());
     }
-    if (housing.lastChildDay() != null) {
+    if (housing.lastChildDay() != null && crampedDue.isEmpty()) {
       triggers.add(housing.lastChildDay());
     }
     if (housing.seoulChange12mBp() >= properties.housing().surgeBp()) {
@@ -759,6 +762,43 @@ class DefaultEventService implements EventService {
       }
     }
     return ageAt(due, context) <= settings.lastAge() ? Optional.of(due) : Optional.empty();
+  }
+
+  /**
+   * 집이 좁다 (#117): 결혼·출산으로 세집이 식구 수에 비해 좁아졋으면 그로부터 두 달 뒤 묻는다. 그 일 뒤에 이미 물었으면 다시 묻지 않고(다음 만기에 옮기면
+   * 된다), 세 만기가 반년 안이면 따로 띄우지 않는다.
+   */
+  private Optional<Integer> crampedDue(List<EventRow> rows, SchedulingContext context) {
+    HousingFacts housing = context.housing();
+    if (!housing.cramped()) {
+      return Optional.empty();
+    }
+    int since = -1;
+    if (context.marriedDay() != null) {
+      since = context.marriedDay();
+    }
+    if (housing.lastChildDay() != null) {
+      since = Math.max(since, housing.lastChildDay());
+    }
+    if (since < 0) {
+      return Optional.empty();
+    }
+    List<EventRow> asked = crampedAsked(rows);
+    if (!asked.isEmpty() && last(asked).occursDay() >= since) {
+      return Optional.empty();
+    }
+    int due = since + properties.housing().crampedDelayDays();
+    if (housing.leaseEndDay() != null
+        && housing.leaseEndDay() <= due + properties.housing().crampedLeaseWindowDays()) {
+      return Optional.empty();
+    }
+    return Optional.of(due);
+  }
+
+  private static List<EventRow> crampedAsked(List<EventRow> rows) {
+    return ofKind(rows, EventKind.HOUSING).stream()
+        .filter(r -> ChoiceTicket.Housing.isCramped(r.definitionCode()))
+        .toList();
   }
 
   private static List<EventRow> spouseRentAsked(List<EventRow> rows) {
@@ -961,6 +1001,18 @@ class DefaultEventService implements EventService {
       }
       options.add(ChoiceTicket.Housing.WAIT);
       options.add(ChoiceTicket.Housing.STAY);
+    } else if (ChoiceTicket.Housing.CRAMPED.equals(definition)) {
+      // 집이 좁다 (#117): 더 넓은 집으로 옮기거나(세·매수), 좁아도 그냥 산다. 막내가 태어나 좁아졌으면 그 아이의 순번을 싣는다.
+      boolean byChild =
+          housing.lastChildDay() != null
+              && (context.marriedDay() == null || housing.lastChildDay() >= context.marriedDay());
+      definition = ChoiceTicket.Housing.crampedCode(byChild ? context.childrenCount() : null);
+      options.addAll(ChoiceTicket.Housing.RENTALS);
+      if (roomForHome) {
+        options.add(ChoiceTicket.Housing.BUY_SEOUL);
+        options.add(ChoiceTicket.Housing.BUY_GYEONGGI);
+      }
+      options.add(ChoiceTicket.Housing.ENDURE);
     } else if (ChoiceTicket.Housing.LEASE_END.equals(definition)) {
       // 전세사기가 아니면 운에 따라 집주인이 재계약을 거절한다. 그러면 '2년 더 살기' 없이 옮길 곳만 고른다 (#25).
       boolean refused =

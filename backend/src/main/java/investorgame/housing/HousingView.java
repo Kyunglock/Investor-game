@@ -10,6 +10,7 @@ import java.util.List;
  * @param jeonseLoan 보증금을 위해 받은 전세대출 잔액. 이자만 낸다
  * @param insured 전세보증보험에 들었는가. 들었으면 전세사기를 당해도 보증금을 돌려받는다
  * @param leaseEndDay 세 만기. 세입자가 아니면 null
+ * @param rooms 지금 사는 세집의 크기(방 수, 1 원룸 ~ 4 포룸, #117). 자가·부모님 집·옛 판은 null
  * @param homes 가진 아파트(최대 2채). 팔린 것은 빠진다
  */
 public record HousingView(
@@ -20,6 +21,7 @@ public record HousingView(
     long jeonseLoan,
     boolean insured,
     Integer leaseEndDay,
+    Integer rooms,
     List<Home> homes) {
 
   public boolean ownsResidence() {

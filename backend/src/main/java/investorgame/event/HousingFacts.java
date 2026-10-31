@@ -13,6 +13,7 @@ package investorgame.event;
  * @param luck 운(0~100). 운이 나쁠수록 세 만기에 집주인이 재계약을 거절하기 쉽다 (#25)
  * @param cheongyakAffordable 영끌(현금 + 돌려받을 보증금 + LTV·DSR 한도 주담대)로 분양가를 치를 수 있는가. 아니면 분양 공고 자체가 오지
  *     않는다 (#26)
+ * @param cramped 지금 세집이 식구 수에 비해 좁은가 (#117). 결혼·출산 뒤 좁으면 "집이 좁다" 장면이 온다
  */
 public record HousingFacts(
     String tenure,
@@ -23,8 +24,9 @@ public record HousingFacts(
     Integer lastChildDay,
     int seoulChange12mBp,
     int luck,
-    boolean cheongyakAffordable) {
+    boolean cheongyakAffordable,
+    boolean cramped) {
 
   public static final HousingFacts PARENTS =
-      new HousingFacts("PARENTS", null, 0, false, false, null, 0, 50, false);
+      new HousingFacts("PARENTS", null, 0, false, false, null, 0, 50, false, false);
 }

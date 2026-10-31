@@ -613,6 +613,10 @@ export interface components {
         Housing: {
             /** @enum {string} */
             tenure: "PARENTS" | "MONTHLY" | "VILLA_JEONSE" | "APT_JEONSE" | "OWN";
+            /** @description 지금 세집의 크기(원룸·투룸·쓰리룸·포룸). 자가·아파트 전세(84㎡)·옛 판은 null (#117) */
+            roomsName?: string | null;
+            /** @description 식구 수에 비해 좁은 집에 사는가. 그동안 행복도·가족 점수가 조금씩 깎인다 */
+            cramped: boolean;
             regionName?: string | null;
             /**
              * Format: int64

@@ -46,6 +46,12 @@ class HousingFlow {
   private static final String SEOUL = "seoul";
   private static final String GYEONGGI = "gyeonggi";
 
+  /** 세집의 크기(방 수, #117). 필요한 크기 = 1 + 결혼 1 + 집에 있는 아이(최대 2). 아파트 전세(84㎡)·자가는 늘 넉넉하다. */
+  static final String[] ROOM_NAMES = {"원룸", "투룸", "쓰리룸", "포룸"};
+
+  static final int MAX_ROOMS = ROOM_NAMES.length;
+  private static final List<String> CHILD_NAMES = List.of("첫째", "둘째", "셋째", "넷째", "다섯째");
+
   private final HousingService housing;
   private final MarketService market;
   private final AssetService assets;
@@ -99,7 +105,29 @@ class HousingFlow {
         births.isEmpty() ? null : births.getLast(),
         seoulChange(gameId),
         luck,
-        affordable);
+        affordable,
+        cramped(view, home, day));
+  }
+
+  /** 식구 수에 맞는 집 크기(방 수): 혼자 원룸, 부부 투룸, 아이 하나 쓰리룸, 둘 이상 포룸. 독립한 아이는 세지 않는다 (#117). */
+  static int neededRooms(HouseholdView home, int day) {
+    long atHome = home.children().stream().filter(c -> !c.leftBy(day)).count();
+    return Math.min(MAX_ROOMS, 1 + (home.married() ? 1 : 0) + (int) Math.min(2, atHome));
+  }
+
+  static String roomName(int rooms) {
+    return ROOM_NAMES[Math.clamp(rooms - 1, 0, MAX_ROOMS - 1)];
+  }
+
+  /** 월세·빌라 전세가 식구 수에 비해 좁은가. 크기를 모르는 옛 판·자가·아파트 전세(84㎡)는 좁지 않다. */
+  static boolean cramped(HousingView view, HouseholdView home, int day) {
+    return (view.tenure() == Tenure.MONTHLY || view.tenure() == Tenure.VILLA_JEONSE)
+        && view.rooms() != null
+        && view.rooms() < neededRooms(home, day);
+  }
+
+  static String childName(int seq) {
+    return seq >= 1 && seq <= CHILD_NAMES.size() ? CHILD_NAMES.get(seq - 1) : seq + "번째";
   }
 
   /** 집 시세 + 내 보증금 − 주담대 − 전세대출 − 세입자 보증금. 총자산에 더한다. */
@@ -118,6 +146,13 @@ class HousingFlow {
     MonthlyHousingCost cost = housing.settleMonth(gameId, market.mortgageRateBp(gameId), day);
     if (cost.total() > 0) {
       assets.spend(gameId, "HOUSING", cost.total(), day, null);
+    }
+    // 식구 수에 비해 좁은 집에 그대로 살면 달마다 조금씩 지치고, 석 달마다 가족 점수가 1점 깎인다 (#117, decisions.md 105번).
+    if (cramped(housing.get(gameId), household.get(gameId), day)) {
+      household.cheer(gameId, -1);
+      if (month % 3 == 0) {
+        household.bond(gameId, -1);
+      }
     }
     Map<String, Long> prices = market.homePrices(gameId);
     for (HousingView.Home home : housing.get(gameId).homes()) {
@@ -213,7 +248,7 @@ class HousingFlow {
 
   // ---- 선택 ----
 
-  /** 한 선택지에 드는 돈과 고를 수 없는 이유. */
+  /** 한 선택지에 드는 돈과 고를 수 없는 이유. rooms는 세집의 크기(방 수, #117), 세가 아니면 0. */
   record Plan(
       String code,
       String region,
@@ -226,7 +261,8 @@ class HousingFlow {
       long cashNeeded,
       long monthlyBurden,
       String detail,
-      String blocked) {}
+      String blocked,
+      int rooms) {}
 
   /** 주거 선택지마다 드는 돈. 화면에 보여 주고, 고를 때 다시 계산해 막는다. */
   List<Plan> plans(
@@ -243,7 +279,7 @@ class HousingFlow {
     long cash = assets.get(gameId).cash();
     // 집을 살 때 현금이 모자라면 들고 있는 주식을 팔아 보탠다 (decisions.md 100번).
     long stocks = sellable(gameId);
-    boolean family = home.married() || !home.childBirthDays().isEmpty();
+    int rooms = neededRooms(home, day);
     // 이사하면 지금 보증금을 돌려받고 전세대출을 갚는다. 전세사기면 보증금은 돌아오지 않는다.
     long returning = returning(view, fraud);
     long existingBurden =
@@ -259,7 +295,7 @@ class HousingFlow {
               cash,
               stocks,
               returning,
-              family,
+              rooms,
               monthlyIncome,
               existingBurden,
               points,
@@ -276,14 +312,17 @@ class HousingFlow {
       long cash,
       long stocks,
       long returning,
-      boolean family,
+      int rooms,
       long income,
       long existingBurden,
       int points,
       int day) {
     return switch (code) {
-      case ChoiceTicket.Housing.PASS, ChoiceTicket.Housing.WAIT, ChoiceTicket.Housing.STAY ->
-          new Plan(code, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null);
+      case ChoiceTicket.Housing.PASS,
+          ChoiceTicket.Housing.WAIT,
+          ChoiceTicket.Housing.STAY,
+          ChoiceTicket.Housing.ENDURE ->
+          new Plan(code, null, 0, 0, 0, 0, 0, 0, 0, 0, null, null, 0);
       case ChoiceTicket.Housing.KEEP -> {
         if (view.tenure() == Tenure.MONTHLY && view.deposit() == 0) {
           // 살던 집을 판 뒤의 임시 월세는 연장할 것이 없다: 새로 월세를 든다.
@@ -295,10 +334,12 @@ class HousingFlow {
               rate,
               cash,
               0,
-              family,
+              rooms,
               income,
               day);
         }
+        // 같은 집이니 크기도 그대로. 식구가 늘어 좁아졌으면 그렇다고 적는다 (#117).
+        int keepRooms = view.rooms() == null ? rooms : view.rooms();
         long deposit = view.deposit() * (BP + rules.renewRaiseBp()) / BP;
         long rent = view.monthlyRent() * (BP + rules.renewRaiseBp()) / BP;
         long loan =
@@ -318,22 +359,25 @@ class HousingFlow {
             0,
             need,
             burden,
-            "보증금 %s → %s%s · 더 낼 현금 %s · 월 %s"
+            "%s보증금 %s → %s%s · 더 낼 현금 %s · 월 %s%s"
                 .formatted(
+                    view.rooms() == null ? "" : roomName(keepRooms) + " · ",
                     money(view.deposit()),
                     money(deposit),
                     loan > 0 ? " (전세대출 %s)".formatted(money(loan)) : "",
                     money(need),
-                    money(burden)),
-            need > cash ? short_(need - cash) : null);
+                    money(burden),
+                    view.rooms() != null && keepRooms < rooms ? " · 식구에 비해 좁다" : ""),
+            need > cash ? short_(need - cash) : null,
+            keepRooms);
       }
       case ChoiceTicket.Housing.MONTHLY ->
-          rental(code, Tenure.MONTHLY, view, prices, rate, cash, returning, family, income, day);
+          rental(code, Tenure.MONTHLY, view, prices, rate, cash, returning, rooms, income, day);
       case ChoiceTicket.Housing.VILLA, ChoiceTicket.Housing.VILLA_INSURED ->
           rental(
-              code, Tenure.VILLA_JEONSE, view, prices, rate, cash, returning, family, income, day);
+              code, Tenure.VILLA_JEONSE, view, prices, rate, cash, returning, rooms, income, day);
       case ChoiceTicket.Housing.APT_JEONSE ->
-          rental(code, Tenure.APT_JEONSE, view, prices, rate, cash, returning, family, income, day);
+          rental(code, Tenure.APT_JEONSE, view, prices, rate, cash, returning, rooms, income, day);
       case ChoiceTicket.Housing.BUY_SEOUL, ChoiceTicket.Housing.BUY_GYEONGGI -> {
         String region = ChoiceTicket.Housing.BUY_SEOUL.equals(code) ? SEOUL : GYEONGGI;
         yield buyPlan(
@@ -365,7 +409,8 @@ class HousingFlow {
             won.cashNeeded(),
             won.monthlyBurden(),
             "내 가점 %d점 · 당첨 가능성 약 %d%% · %s".formatted(points, chance / 100, won.detail()),
-            won.blocked() == null ? null : "청약을 넣을 수 없다. " + won.blocked());
+            won.blocked() == null ? null : "청약을 넣을 수 없다. " + won.blocked(),
+            0);
       }
       case ChoiceTicket.Housing.GAP -> {
         long price = prices.get(SEOUL);
@@ -389,7 +434,8 @@ class HousingFlow {
             "시세 %s · 세입자 보증금 %s · 필요 현금 %s%s · 2년마다 전세가가 내리면 차액을 돌려준다"
                 .formatted(
                     money(price), money(tenant), money(need), stockNote(need, cash, cash + stocks)),
-            blocked);
+            blocked,
+            0);
       }
       default -> throw new IllegalArgumentException("알 수 없는 주거 선택지: " + code);
     };
@@ -444,7 +490,8 @@ class HousingFlow {
                 money(need),
                 stockNote(need, cash + returning, available),
                 money(burden)),
-        blocked);
+        blocked,
+        0);
   }
 
   /**
@@ -498,7 +545,8 @@ class HousingFlow {
                 money(need),
                 stockNote(need, cash + returning, available),
                 money(burden)),
-        blocked);
+        blocked,
+        0);
   }
 
   private Plan rental(
@@ -509,12 +557,15 @@ class HousingFlow {
       int rate,
       long cash,
       long returning,
-      boolean family,
+      int rooms,
       long income,
       int day) {
     long available = cash + returning;
+    // 월세·빌라 전세는 식구 수에 맞는 크기(방 수)로 구한다. 아이가 늘수록 보증금·월세가 계단처럼 오른다 (#117).
+    int tier = Math.clamp(rooms - 1, 0, MAX_ROOMS - 1);
     if (tenure == Tenure.MONTHLY) {
-      ProgressProperties.Rent base = family ? rules.monthlyFamily() : rules.monthlySingle();
+      ProgressProperties.Rent base =
+          rules.monthly().get(Math.min(tier, rules.monthly().size() - 1));
       long standard = household.inflated(base.deposit(), day);
       // 보증금이 모자라면 덜 내고 월세를 더 낸다(전월세 전환). 월세는 언제나 구할 수 있다.
       long deposit = Math.min(standard, round(available));
@@ -532,14 +583,15 @@ class HousingFlow {
           0,
           deposit,
           rent,
-          "보증금 %s · 월세 %s".formatted(money(deposit), money(rent)),
-          null);
+          "%s · 보증금 %s · 월세 %s".formatted(roomName(rooms), money(deposit), money(rent)),
+          null,
+          rooms);
     }
     long gyeonggi = prices.get(GYEONGGI);
     long deposit =
         tenure == Tenure.APT_JEONSE
             ? gyeonggi * rules.jeonseRatioBp() / BP
-            : gyeonggi * (family ? rules.villaFamilyBp() : rules.villaSingleBp()) / BP;
+            : gyeonggi * rules.villaBp().get(Math.min(tier, rules.villaBp().size() - 1)) / BP;
     // 소득이 없으면 전세대출이 안 나온다.
     long loan = income > 0 ? round(deposit * rules.jeonseLoanBp() / BP) : 0;
     long need = deposit - loan;
@@ -556,14 +608,17 @@ class HousingFlow {
         0,
         need,
         burden,
-        "보증금 %s%s · 필요 현금 %s · 월 %s%s"
+        "%s보증금 %s%s · 필요 현금 %s · 월 %s%s"
             .formatted(
+                tenure == Tenure.APT_JEONSE ? "" : roomName(rooms) + " · ",
                 money(deposit),
                 loan > 0 ? " (전세대출 %s)".formatted(money(loan)) : "",
                 money(need),
                 money(burden),
                 insured ? " (보증료 포함)" : ""),
-        need > available ? short_(need - available) : null);
+        need > available ? short_(need - available) : null,
+        // 84㎡ 아파트는 식구가 늘어도 넉넉하다.
+        tenure == Tenure.APT_JEONSE ? MAX_ROOMS : rooms);
   }
 
   /**
@@ -628,6 +683,20 @@ class HousingFlow {
             .append(' ');
       }
     }
+    // 집이 좁다 (#117): 옮기면 누가 태어나(결혼해) 옮겼는지 앞머리에 쓴다.
+    boolean cramped = ChoiceTicket.Housing.isCramped(effect.definition());
+    Integer crampedChild = cramped ? ChoiceTicket.Housing.crampedChild(effect.definition()) : null;
+    if (cramped) {
+      payloadExtra.put("childSeq", crampedChild);
+      if (!ChoiceTicket.Housing.ENDURE.equals(code)) {
+        message
+            .append(
+                crampedChild == null
+                    ? "결혼하고 더 넓은 집으로 옮겼다."
+                    : "%s가 태어나 더 넓은 집으로 옮겼다.".formatted(childName(crampedChild)))
+            .append(' ');
+      }
+    }
     if (effect.fraud()) {
       lost = before.deposit();
       message.append(
@@ -642,6 +711,8 @@ class HousingFlow {
                   : "아직은 사지 않기로 했다.");
       case ChoiceTicket.Housing.WAIT -> message.append(content.spouseRentText().waitText(level));
       case ChoiceTicket.Housing.STAY -> message.append(content.spouseRentText().stayText(level));
+      case ChoiceTicket.Housing.ENDURE ->
+          message.append("좁아도 그냥 살기로 했다. 짐은 거실까지 나와 있고, 식구가 늘 때마다 더 좁아질 것이다.");
       case ChoiceTicket.Housing.APPLY -> {
         // 가점으로 당첨을 굴린다. 넣을 때 돈이 되는지 이미 따졌다(#26). 그래도 모자라면(전세사기 등) 포기한다 (decisions.md 42번).
         boolean won =
@@ -745,6 +816,7 @@ class HousingFlow {
     payload.put("fraud", effect.fraud());
     payload.put("lost", lost);
     payload.put("stockSold", sold);
+    payload.put("roomsName", plan.rooms() > 0 ? roomName(plan.rooms()) : null);
     payload.putAll(payloadExtra);
     // 행복도 (decisions.md 82번): 전세사기는 크게 지치고, 내 집을 사면 기쁘고, 독립해 나가면 조금 기쁘다.
     if (effect.fraud()) {
@@ -756,6 +828,11 @@ class HousingFlow {
       household.cheer(gameId, 10);
     } else if (ChoiceTicket.Housing.MOVE_OUT.equals(effect.definition())) {
       household.cheer(gameId, 3);
+    }
+    // 좁아도 그냥 산다 (#117): 조금 지치고 멀어진다. 그 뒤로도 달마다 조금씩 (month 참고).
+    if (ChoiceTicket.Housing.ENDURE.equals(code)) {
+      household.cheer(gameId, -2);
+      household.bond(gameId, -2);
     }
     // 배우자의 월세 불만 (#116, decisions.md 104번): 미루면 조금, 거스르면 많이 지치고 멀어진다. 단계가 오를수록, 아이가 있으면 더. 들어주면
     // 가까워진다.
@@ -911,6 +988,7 @@ class HousingFlow {
         plan.monthlyRent(),
         plan.jeonseLoan(),
         ChoiceTicket.Housing.VILLA_INSURED.equals(plan.code()),
+        plan.rooms() > 0 ? plan.rooms() : null,
         day);
   }
 
@@ -936,18 +1014,19 @@ class HousingFlow {
   private String movedText(String code, Plan plan) {
     return switch (code) {
       case ChoiceTicket.Housing.MONTHLY ->
-          "보증금 %s, 월세 %s짜리 방을 구했다.".formatted(money(plan.deposit()), money(plan.monthlyRent()));
+          "보증금 %s, 월세 %s짜리 %s을 구했다."
+              .formatted(money(plan.deposit()), money(plan.monthlyRent()), roomName(plan.rooms()));
       case ChoiceTicket.Housing.APT_JEONSE ->
           "경기 아파트에 전세 %s로 들어갔다.".formatted(money(plan.deposit()));
       case ChoiceTicket.Housing.VILLA_INSURED ->
-          "빌라에 전세 %s로 들어갔다. 보증보험도 들었다.".formatted(money(plan.deposit()));
-      default -> "빌라에 전세 %s로 들어갔다.".formatted(money(plan.deposit()));
+          "빌라 %s에 전세 %s로 들어갔다. 보증보험도 들었다.".formatted(roomName(plan.rooms()), money(plan.deposit()));
+      default -> "빌라 %s에 전세 %s로 들어갔다.".formatted(roomName(plan.rooms()), money(plan.deposit()));
     };
   }
 
   // ---- 화면 ----
 
-  GameView.Housing view(UUID gameId, int startAge) {
+  GameView.Housing view(UUID gameId, int startAge, int day) {
     HousingView view = housing.get(gameId);
     Map<String, Long> prices = market.homePrices(gameId);
     int rate = market.mortgageRateBp(gameId);
@@ -988,7 +1067,9 @@ class HousingFlow {
         rate,
         burden,
         homes,
-        quotes);
+        quotes,
+        view.rooms() == null || view.tenure() == Tenure.APT_JEONSE ? null : roomName(view.rooms()),
+        cramped(view, household.get(gameId), day));
   }
 
   // ---- 도움 ----

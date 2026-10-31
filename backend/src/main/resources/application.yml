@@ -36,18 +36,22 @@ progress:
   child-leave-age: { min: 25, max: 30 }
   # 일을 시작하기 전이면 20세부터 아르바이트. 그 전엔 모이는 돈이 없다 (decisions.md 96·98번)
   part-time-from-age: 20
-  # 주거 돈 계산 (주거 설계 3절). LTV 50%, DSR 40%, 아파트 전세가 = 시세의 55%, 빌라 전세 = 경기 시세의 30%(1인)/40%(가족),
-  # 전세대출 80%, 연장 +5%, 월세 1000만/60만(1인)·2000만/90만(가족). 매물은 한 달에 25%로 팔리고 집값이 빠질 땐 5%, 뜨거우면 45%
+  # 주거 돈 계산 (주거 설계 3절). LTV 50%, DSR 40%, 아파트 전세가 = 시세의 55%(84㎡, 식구 수와 무관), 전세대출 80%, 연장 +5%.
+  # 월세·빌라 전세는 집 크기(방 수 1~4: 원룸·투룸·쓰리룸·포룸, #117·decisions.md 105번)를 따른다. 필요한 크기 = 1 + 결혼 1 + 집에 있는 아이(최대 2).
+  # 월세 1000만/60만 → 2000만/90만 → 3000만/120만 → 4000만/150만, 빌라 전세 = 경기 시세의 30 → 40 → 48 → 55%.
+  # 매물은 한 달에 25%로 팔리고 집값이 빠질 땐 5%, 뜨거우면 45%
   housing:
     ltv-bp: 5000
     dsr-bp: 4000
     jeonse-ratio-bp: 5500
-    villa-single-bp: 3000
-    villa-family-bp: 4000
+    villa-bp: [3000, 4000, 4800, 5500]
     jeonse-loan-bp: 8000
     renew-raise-bp: 500
-    monthly-single: { deposit: 10000000, rent: 600000 }
-    monthly-family: { deposit: 20000000, rent: 900000 }
+    monthly:
+      - { deposit: 10000000, rent: 600000 }
+      - { deposit: 20000000, rent: 900000 }
+      - { deposit: 30000000, rent: 1200000 }
+      - { deposit: 40000000, rent: 1500000 }
     # 보증금이 모자라면 모자란 만큼 × 0.5%를 월세에 얹는다(전월세 전환율 연 6%)
     conversion-bp-per-month: 50
     sale-chance-bp: 2500
@@ -296,6 +300,9 @@ event:
       retry-gap-days: 540
       child-gap-days: 180
       last-age: 60
+    # 결혼·출산으로 세집이 식구 수에 비해 좁아지면 두 달 뒤 "집이 좁다" (#117, decisions.md 105번). 세 만기가 반년 안이면 만기에 옮기면 되니 따로 띄우지 않는다
+    cramped-delay-days: 60
+    cramped-lease-window-days: 180
   # 투자 스타일별 뉴스 폭. 빈도는 스타일과 무관하게 event.news.yearly-chance-bp (decisions.md 80번)
   styles:
     short:

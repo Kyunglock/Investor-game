@@ -87,6 +87,31 @@ public record ChoiceTicket(
       return parts.length > 3 ? parts[3] : "";
     }
 
+    /**
+     * 집이 좁다 (#117): 결혼하거나 아이가 태어나 세집이 식구 수에 비해 좁아졌을 때. 정의 코드는 "cramped:marriage" 또는
+     * "cramped:child:자녀 순번". 더 넓은 집으로 옮기거나(월세·보증금이 오른다) 좁아도 그냥 산다(ENDURE, 행복도·가족 점수가 달마다 조금씩 깎인다).
+     */
+    public static final String CRAMPED = "cramped";
+
+    public static final String CRAMPED_PREFIX = CRAMPED + ":";
+
+    /** 좁아도 그냥 산다. */
+    public static final String ENDURE = "ENDURE";
+
+    public static boolean isCramped(String definition) {
+      return definition != null && definition.startsWith(CRAMPED);
+    }
+
+    public static String crampedCode(Integer childSeq) {
+      return childSeq == null ? CRAMPED_PREFIX + "marriage" : CRAMPED_PREFIX + "child:" + childSeq;
+    }
+
+    /** 좁아지게 한 아이의 순번. 결혼 때문이면 null. */
+    public static Integer crampedChild(String definition) {
+      String[] parts = definition.split(":");
+      return parts.length >= 3 && "child".equals(parts[1]) ? Integer.parseInt(parts[2]) : null;
+    }
+
     public static String spouseRentCode(int level, int children, String spouseJob) {
       return SPOUSE_RENT_PREFIX
           + level

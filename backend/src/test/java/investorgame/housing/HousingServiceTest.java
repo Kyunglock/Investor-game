@@ -35,16 +35,24 @@ class HousingServiceTest {
     assertThat(housing.get(gameId).tenure()).isEqualTo(Tenure.PARENTS);
 
     Lease ended =
-        housing.rent(gameId, Tenure.VILLA_JEONSE, null, 180_000_000, 0, 144_000_000, false, 3600);
+        housing.rent(
+            gameId, Tenure.VILLA_JEONSE, null, 180_000_000, 0, 144_000_000, false, null, 3600);
     assertThat(ended.tenure()).isEqualTo(Tenure.PARENTS);
     HousingView view = housing.get(gameId);
     assertThat(view.tenure()).isEqualTo(Tenure.VILLA_JEONSE);
     assertThat(view.leaseEndDay()).isEqualTo(3600 + 2 * YEAR);
 
     Lease moved =
-        housing.rent(gameId, Tenure.MONTHLY, null, 10_000_000, 600_000, 0, false, 3600 + 2 * YEAR);
+        housing.rent(
+            gameId, Tenure.MONTHLY, null, 10_000_000, 600_000, 0, false, 2, 3600 + 2 * YEAR);
     assertThat(moved.deposit()).as("끝난 세의 보증금을 돌려준다").isEqualTo(180_000_000);
     assertThat(moved.jeonseLoan()).isEqualTo(144_000_000);
+    // 집 크기(방 수, #117)는 세를 들 때 남고 연장해도 그대로다. 집을 사면 없다.
+    assertThat(housing.get(gameId).rooms()).isEqualTo(2);
+    housing.renew(gameId, 10_500_000, 630_000, 0, 3600 + 4 * YEAR);
+    assertThat(housing.get(gameId).rooms()).isEqualTo(2);
+    housing.buyResidence(gameId, "seoul", 1_000_000_000, 500_000_000, 3600 + 5 * YEAR);
+    assertThat(housing.get(gameId).rooms()).isNull();
   }
 
   @Test
@@ -93,7 +101,8 @@ class HousingServiceTest {
 
   @Test
   void 연장하면_같은_집에_2년_더_산다() {
-    housing.rent(gameId, Tenure.APT_JEONSE, "gyeonggi", 330_000_000, 0, 264_000_000, false, 3600);
+    housing.rent(
+        gameId, Tenure.APT_JEONSE, "gyeonggi", 330_000_000, 0, 264_000_000, false, null, 3600);
     housing.renew(gameId, 346_500_000, 0, 277_000_000, 3600 + 2 * YEAR);
     HousingView view = housing.get(gameId);
     assertThat(view.deposit()).isEqualTo(346_500_000);
