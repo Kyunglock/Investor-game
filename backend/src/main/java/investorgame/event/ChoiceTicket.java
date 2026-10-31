@@ -1,6 +1,7 @@
 package investorgame.event;
 
 import investorgame.common.Direction;
+import investorgame.common.Hint;
 import investorgame.common.Sentiment;
 import investorgame.content.CareerDefinition;
 import investorgame.content.TraitDefinition;
@@ -31,8 +32,12 @@ public record ChoiceTicket(
   /** 종류별로 진행이 다른 도메인에 반영할 효과. */
   public sealed interface Effect {}
 
-  /** 판정과 자산 반영은 진행이 한다. */
-  public record News() implements Effect {}
+  /**
+   * 판정과 자산 반영은 진행이 한다.
+   *
+   * @param hintDirection 플레이어가 본 힌트의 방향. 결과 뒤 한마디가 힌트와 내 판단을 가를 때 쓴다 (decisions.md 108번). 모르면 null
+   */
+  public record News(Hint.HintDirection hintDirection) implements Effect {}
 
   /** 보유 종목 흔들림: 버틴다(HOLD)·판다(SELL). 뉴스와 같은 판정·충격 흐름을 진행이 돌린다 (decisions.md 33번). */
   public record Shake() implements Effect {}

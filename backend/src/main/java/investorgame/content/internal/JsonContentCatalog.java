@@ -356,10 +356,12 @@ class JsonContentCatalog implements ContentCatalog {
 
   @Override
   public List<String> reviewPhrases(String detail, boolean good) {
-    return phrases
-        .review()
-        .getOrDefault(detail, Map.of())
-        .getOrDefault(good ? "good" : "bad", List.of());
+    return reviewPhrases(detail, good ? "good" : "bad");
+  }
+
+  @Override
+  public List<String> reviewPhrases(String group, String key) {
+    return phrases.review().getOrDefault(group, Map.of()).getOrDefault(key, List.of());
   }
 
   @Override
@@ -583,6 +585,13 @@ class JsonContentCatalog implements ContentCatalog {
           !reviewPhrases(detail.key(), true).isEmpty()
               && !reviewPhrases(detail.key(), false).isEmpty(),
           "결과 뒤 안목 문구가 없다: " + detail.key());
+    }
+    for (String key : List.of("kept-good", "kept-bad", "watched-good", "watched-bad")) {
+      require(!reviewPhrases("hold", key).isEmpty(), "관망 뒤 안목 문구가 없다: " + key);
+    }
+    for (String key :
+        List.of("hint-wrong-you-right", "hint-wrong-followed", "hint-right-ignored", "deviated")) {
+      require(!reviewPhrases("extra", key).isEmpty(), "안목 덧붙임 문구가 없다: " + key);
     }
     for (String situation : List.of("layoff", "career-fail", "big-loss", "fraud")) {
       for (String who : List.of("spouse", "child", "parents", "friend")) {

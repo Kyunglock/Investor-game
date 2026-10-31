@@ -17,6 +17,7 @@ import investorgame.common.Action;
 import investorgame.common.Direction;
 import investorgame.common.GameProperties;
 import investorgame.common.Hint;
+import investorgame.common.Korean;
 import investorgame.common.Phase;
 import investorgame.common.Sex;
 import investorgame.common.error.InvalidRequestException;
@@ -981,13 +982,16 @@ class DefaultProgressService implements ProgressService {
                     random.forKey("comfort", ticket.seq()))
                 .orElse(null)
             : null;
-    // 결과 뒤 안목 한마디 (decisions.md 73번): 뉴스에서만, 내 행동이 결과와 맞았는지(good)와 안목 구간으로 고른다.
+    // 결과 뒤 안목 한마디 (decisions.md 73번·108번): 뉴스에서만. 기준은 내가 누른 선택과 실제 방향이고, 힌트·판정 이탈은 따로 덧붙인다.
     String review =
         ticket.kind() == EventKind.NEWS
-            ? pick(
-                content.reviewPhrases(
-                    Hint.Detail.of(character.stats().insight()).key(),
-                    reviewGood(resolution.actual(), ticket.truth(), holding)),
+            ? reviewText(
+                Hint.Detail.of(character.stats().insight()).key(),
+                chosen,
+                resolution.actual(),
+                ticket.truth(),
+                holding,
+                ticket.effect() instanceof ChoiceTicket.News news ? news.hintDirection() : null,
                 random.forKey("behavior", "review", ticket.seq()))
             : null;
 
@@ -1327,12 +1331,69 @@ class DefaultProgressService implements ProgressService {
     return outcomes.getLast();
   }
 
-  /** 내 행동이 결과와 맞았는가: 샀는데 올랐다, 팔았는데 내렸다, 들고 버텼는데 올랐다, 없이 지켜봤는데 내렸다. */
-  static boolean reviewGood(Action actual, Direction truth, boolean holding) {
-    return switch (actual) {
+  /** 내가 고른 선택이 결과와 맞았는가: 샀는데 올랐다, 팔았는데 내렸다, 들고 버텼는데 올랐다, 없이 지켜봤는데 내렸다. */
+  static boolean reviewGood(Action chosen, Direction truth, boolean holding) {
+    return switch (chosen) {
       case BUY -> truth == Direction.UP;
       case SELL -> truth == Direction.DOWN;
       case HOLD -> holding ? truth == Direction.UP : truth == Direction.DOWN;
+    };
+  }
+
+  /**
+   * 안목 한마디 (decisions.md 108번). 첫 문장은 내가 누른 선택(chosen)과 실제 방향으로 고른다: 매수·매도는 안목 구간별 good/bad, 관망은 들고
+   * 버텼는지(kept)·없이 지켜봤는지(watched)에 맞는 문구. 힌트가 방향을 말했는데 결과와 달랐으면 힌트와 내 판단을 가르는 말을, 판정에 밀려 실제 행동이
+   * 달라졌으면 그 사실을 덧붙인다.
+   */
+  String reviewText(
+      String detail,
+      Action chosen,
+      Action actual,
+      Direction truth,
+      boolean holding,
+      Hint.HintDirection hint,
+      RandomGenerator rng) {
+    boolean good = reviewGood(chosen, truth, holding);
+    StringBuilder text = new StringBuilder();
+    if (chosen == Action.HOLD) {
+      String key = (holding ? "kept-" : "watched-") + (good ? "good" : "bad");
+      text.append(pick(content.reviewPhrases("hold", key), rng));
+    } else {
+      text.append(pick(content.reviewPhrases(detail, good), rng));
+    }
+    String hintNote = hintNoteKey(chosen, truth, hint);
+    if (hintNote != null) {
+      text.append(' ').append(pick(content.reviewPhrases("extra", hintNote), rng));
+    }
+    if (actual != chosen) {
+      text.append(' ')
+          .append(
+              pick(content.reviewPhrases("extra", "deviated"), rng)
+                  .replace("{action}", Korean.withParticle(actionName(actual), "이", "가")));
+    }
+    return text.toString();
+  }
+
+  /**
+   * 힌트가 방향을 말했을 때만: 힌트가 틀렸는데 내 판단이 맞았다 / 힌트가 틀렸고 따라갔다 / 힌트는 맞았는데 거슬렀다. 관망은 힌트를 따른 것도 거스른 것도 아니다.
+   */
+  static String hintNoteKey(Action chosen, Direction truth, Hint.HintDirection hint) {
+    if (hint == null || hint == Hint.HintDirection.NEUTRAL || chosen == Action.HOLD) {
+      return null;
+    }
+    boolean hintRight = hint.name().equals(truth.name());
+    boolean followed = (chosen == Action.BUY) == (hint == Hint.HintDirection.UP);
+    if (hintRight) {
+      return followed ? null : "hint-right-ignored";
+    }
+    return followed ? "hint-wrong-followed" : "hint-wrong-you-right";
+  }
+
+  private static String actionName(Action action) {
+    return switch (action) {
+      case BUY -> "매수";
+      case SELL -> "매도";
+      case HOLD -> "관망";
     };
   }
 
