@@ -108,6 +108,9 @@ class DefaultProgressService implements ProgressService {
   /** 최근에 나온 기사 몇 개는 다시 뽑지 않는다. */
   private static final int ARTICLE_NO_REPEAT = 8;
 
+  /** 다시 구직 본문: 생활비 이만큼의 달수가 통장에 있으면 "넉넉하다"고 말한다 (decisions.md 116번). */
+  private static final int REHIRE_AMPLE_MONTHS = 6;
+
   private final GameRepository games;
   private final LogRepository logs;
   private final ProgressProperties properties;
@@ -362,20 +365,40 @@ class DefaultProgressService implements ProgressService {
               games.changePhase(gameId, Phase.SAVING);
             }
             JobDefinition definition = content.job(job.jobCode());
+            // 재취업은 신입이 아니다: 그동안 일한 햇수의 일부를 연차로 인정해 인상분으로 얹는다 (decisions.md 116번).
+            int creditBp = 0;
+            if (rehire) {
+              int careerYears =
+                  Math.max(0, ticket.occursDay() - before.careerStartDay())
+                      / calendar.daysPerYear();
+              creditBp =
+                  rehireBonusBp(
+                      definition, careerYears * properties.rehireCreditPercent() / (int) PERCENT);
+              if (creditBp > 0) {
+                characters.addSalaryBonus(gameId, creditBp);
+              }
+            }
+            long salary = monthlySalary(definition, 0, creditBp);
             logs.append(
                 gameId,
                 ticket.occursDay(),
                 "JOB",
                 Map.of(
-                    "jobCode", definition.code(),
-                    "jobTitle", definition.title(),
-                    "monthlySalary", definition.baseMonthlySalary(),
-                    "rehire", rehire));
+                    "jobCode",
+                    definition.code(),
+                    "jobTitle",
+                    definition.title(),
+                    "monthlySalary",
+                    salary,
+                    "rehire",
+                    rehire));
             yield simpleOutcome(
                 ticket,
                 rehire
-                    ? "%s 다시 일하기 시작했다. 월급이 다시 들어온다."
-                        .formatted(Korean.withParticle(definition.title(), "으로", "로"))
+                    ? "%s 다시 일하기 시작했다. 경력을 인정받아 월급 %s부터다."
+                        .formatted(
+                            Korean.withParticle(definition.title(), "으로", "로"),
+                            HousingFlow.money(salary))
                     : "%s 일하기 시작했다. 월급은 매달 들어온다."
                         .formatted(Korean.withParticle(definition.title(), "으로", "로")));
           }
@@ -1585,6 +1608,12 @@ class DefaultProgressService implements ProgressService {
     return OptionalInt.empty();
   }
 
+  /** 인정 연차만큼의 연차 인상을 인상분(만분율)으로 바꾼다: (1 + 연차 인상)^인정 연차 − 1 (decisions.md 116번). */
+  static int rehireBonusBp(JobDefinition job, int creditedYears) {
+    long withCredit = monthlySalary(job, creditedYears, 0);
+    return (int) ((withCredit - job.baseMonthlySalary()) * BP / job.baseMonthlySalary());
+  }
+
   /** 월급 = 기본 월급 × (1 + 연차 인상)^연차 × (1 + 협상·승진 인상분). */
   private static long monthlySalary(JobDefinition job, int tenureYears, int bonusBp) {
     long salary = job.baseMonthlySalary();
@@ -2088,11 +2117,19 @@ class DefaultProgressService implements ProgressService {
       GameRow game, CharacterView character, EventView event, Map<String, Quote> quotes) {
     String stockName = event.stockCode() == null ? null : content.stock(event.stockCode()).name();
     Quote quote = event.stockCode() == null ? null : quotes.get(event.stockCode());
-    // 성장기 장면의 "{cash}"에는 지금 통장 잔고가 들어간다 (decisions.md 114번).
+    // 성장기 장면의 "{cash}"에는 지금 통장 잔고가, 다시 구직의 "{money}"에는 통장 상황 한 줄이 들어간다 (decisions.md 114·116번).
     Map<String, String> facts =
-        event.kind() == EventKind.TRAIT
-            ? Map.of("cash", HousingFlow.money(assets.get(game.id()).cash()))
-            : Map.of();
+        switch (event.kind()) {
+          case TRAIT -> Map.of("cash", HousingFlow.money(assets.get(game.id()).cash()));
+          case JOB ->
+              Map.of(
+                  "money",
+                  content.jobRehireMoneyText(
+                      assets.get(game.id()).cash()
+                          >= household.monthlyExpense(game.id(), event.occursDay())
+                              * REHIRE_AMPLE_MONTHS));
+          default -> Map.of();
+        };
     return new GameView.PendingEvent(
         event.eventId(),
         event.kind().name(),

@@ -355,6 +355,11 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public String jobRehireMoneyText(boolean ample) {
+    return ample ? phrases.jobRehireMoneyAmple() : phrases.jobRehireMoneyShort();
+  }
+
+  @Override
   public List<String> reviewPhrases(String detail, boolean good) {
     return reviewPhrases(detail, good ? "good" : "bad");
   }
@@ -884,6 +889,8 @@ class JsonContentCatalog implements ContentCatalog {
       TextBlock job,
       TextBlock jobRetry,
       TextBlock jobRehire,
+      String jobRehireMoneyShort,
+      String jobRehireMoneyAmple,
       String jobWait,
       String jobInvest,
       OfferText offer,

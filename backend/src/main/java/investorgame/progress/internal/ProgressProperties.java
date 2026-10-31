@@ -16,6 +16,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param partTimeFromAge 일을 시작하기 전이면 이 나이부터 아르바이트. 그 전엔 부모님 용돈을 다 써서 모이는 돈이 없다 (decisions.md
  *     96·98번)
  * @param profileFullTradesPerYear 행동 프로필의 자유 매매 빈도: 투자 1년에 이만큼 사고팔면 1이다 (행동 프로필·봇 설계 3절)
+ * @param rehireCreditPercent 재취업하면 그동안 일한 햇수의 이 비율만큼을 연차로 인정해 월급에 얹는다(인상분으로). 100이면 끊김 없이 이어진 것과 같다
+ *     (decisions.md 116번)
  */
 @ConfigurationProperties("progress")
 public record ProgressProperties(
@@ -29,7 +31,8 @@ public record ProgressProperties(
     Range articleGapMonths,
     Range childLeaveAge,
     int partTimeFromAge,
-    int profileFullTradesPerYear) {
+    int profileFullTradesPerYear,
+    int rehireCreditPercent) {
 
   public record Range(int min, int max) {}
 
