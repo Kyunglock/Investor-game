@@ -89,6 +89,9 @@ class AdminApiTest {
     for (int step = 0; step < 300 && !boughtOnNews; step++) {
       Map<String, Object> pending = game.read("$.pendingEvent");
       if (pending == null) {
+        assertThat(game.read("$.status", String.class))
+            .as("봇이 뉴스를 사기 전에 판이 끝나면(파산) 검사할 수 없다")
+            .isEqualTo("ACTIVE");
         // 투자 뒤 뉴스 간격은 1년을 넘을 수 있어 한 번에 건너뛸 수 있는 만큼(progress.max-skip-days)씩 보낸다.
         int day = game.read("$.day", Integer.class);
         game =
