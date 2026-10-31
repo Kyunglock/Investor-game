@@ -575,6 +575,23 @@ class JsonContentCatalog implements ContentCatalog {
           definition.magnitude().minBp() > 0
               && definition.magnitude().minBp() <= definition.magnitude().maxBp(),
           "뉴스 변동 폭이 잘못되었다: " + definition.code());
+      if (definition.stocks() != null) {
+        require(!definition.stocks().isEmpty(), "뉴스의 종목 목록이 비었다: " + definition.code());
+        for (String code : definition.stocks()) {
+          require(
+              stocksOf(definition.sector()).stream().anyMatch(st -> st.code().equals(code)),
+              "뉴스의 종목이 그 섹터에 없다: " + definition.code() + "/" + code);
+        }
+      }
+    }
+    // 종목마다 자기에게 어울리는 종목 뉴스(섹터 전체 뉴스 말고)가 하나는 있어야 한다 (decisions.md 113번).
+    for (StockDefinition stock : stocks) {
+      require(
+          news.stream()
+              .anyMatch(
+                  n ->
+                      n.sector().equals(stock.sector()) && !n.sectorWide() && n.fits(stock.code())),
+          "어울리는 종목 뉴스가 없는 종목: " + stock.code());
     }
     for (Hint.Detail detail : Hint.Detail.values()) {
       for (String direction : Set.of("UP", "DOWN")) {

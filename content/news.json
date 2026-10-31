@@ -13,7 +13,11 @@
     "directionRule": {
       "type": "FREE",
       "upBp": 5000
-    }
+    },
+    "stocks": [
+      "ssj",
+      "sqh"
+    ]
   },
   {
     "code": "semi-contract",
@@ -49,6 +53,25 @@
     "sectorWide": true
   },
   {
+    "code": "semi-equipment",
+    "sector": "semiconductor",
+    "root": true,
+    "weight": 10,
+    "title": "{stock}, 장비 수주 잔고 사상 최대",
+    "body": "{stock}의 패키징 장비 수주 잔고가 분기 기준 사상 최대를 기록했다. 고대역폭 메모리 증설이 이어지며 장비 발주가 몰린 덕이다. 다만 고객사가 둘에 집중돼 한 곳의 투자 속도만 늦춰져도 매출이 크게 흔들린다. 경쟁 장비사도 같은 공정에 진입을 노린다.",
+    "magnitude": {
+      "minBp": 600,
+      "maxBp": 3000
+    },
+    "directionRule": {
+      "type": "FREE",
+      "upBp": 5000
+    },
+    "stocks": [
+      "hmb"
+    ]
+  },
+  {
     "code": "bio-trial",
     "sector": "bio",
     "root": true,
@@ -62,7 +85,11 @@
     "directionRule": {
       "type": "FREE",
       "upBp": 5000
-    }
+    },
+    "stocks": [
+      "ctl",
+      "atj"
+    ]
   },
   {
     "code": "bio-fda",
@@ -78,7 +105,11 @@
     "directionRule": {
       "type": "FREE",
       "upBp": 5000
-    }
+    },
+    "stocks": [
+      "ctl",
+      "atj"
+    ]
   },
   {
     "code": "bio-regulation",
@@ -98,12 +129,12 @@
     "sectorWide": true
   },
   {
-    "code": "energy-plant",
-    "sector": "energy",
+    "code": "bio-cdmo",
+    "sector": "bio",
     "root": true,
     "weight": 10,
-    "title": "{stock}, 해외 플랜트 수주 소식",
-    "body": "{stock} 측이 중동의 대형 플랜트를 수주하기 직전이라는 보도가 나왔다. 규모는 약 3조 원으로, 올해 수주 목표의 절반에 가깝다. 하지만 저가 수주 경쟁이 심해 이익률이 낮을 것이라는 지적이 있다. 공사 기간 중 원자재 가격이 오르면 손해를 볼 수도 있다.",
+    "title": "{stock}, 대형 위탁생산 계약 협상",
+    "body": "{stock}이 글로벌 제약사와 수천억 원 규모의 위탁생산 계약을 협상 중이라는 보도가 나왔다. 새 공장 가동률이 올라가면 이익률이 뛴다. 다만 단가를 낮춰 줬다는 말과, 경쟁 위탁생산사가 같은 물량을 노린다는 말이 함께 돈다. 계약 발표는 분기 안으로 예상된다.",
     "magnitude": {
       "minBp": 600,
       "maxBp": 3000
@@ -111,7 +142,29 @@
     "directionRule": {
       "type": "FREE",
       "upBp": 5000
-    }
+    },
+    "stocks": [
+      "ssb"
+    ]
+  },
+  {
+    "code": "energy-plant",
+    "sector": "energy",
+    "root": true,
+    "weight": 10,
+    "title": "{stock}, 해외 발전 플랜트 수주 소식",
+    "body": "{stock} 측이 중동의 대형 발전 플랜트를 수주하기 직전이라는 보도가 나왔다. 규모는 약 3조 원으로, 올해 수주 목표의 절반에 가깝다. 하지만 저가 수주 경쟁이 심해 이익률이 낮을 것이라는 지적이 있다. 공사 기간 중 원자재 가격이 오르면 손해를 볼 수도 있다.",
+    "magnitude": {
+      "minBp": 600,
+      "maxBp": 3000
+    },
+    "directionRule": {
+      "type": "FREE",
+      "upBp": 5000
+    },
+    "stocks": [
+      "dse"
+    ]
   },
   {
     "code": "energy-rate",
@@ -127,7 +180,10 @@
     "directionRule": {
       "type": "FREE",
       "upBp": 5000
-    }
+    },
+    "stocks": [
+      "kep"
+    ]
   },
   {
     "code": "energy-oil",
@@ -135,7 +191,7 @@
     "root": true,
     "weight": 10,
     "title": "국제 유가 급등락",
-    "body": "산유국 회의를 앞두고 국제 유가가 하루에도 몇 번씩 출렁인다. 감산 연장 전망과 글로벌 수요 둔화 우려가 맞서고 있다. 유가가 오르면 정유·에너지 업체의 재고 평가이익이 늘지만, 운송·소비 쪽은 원가 부담이 커진다. 최근 한 달 변동 폭은 평소의 두 배였다.",
+    "body": "산유국 회의를 앞두고 국제 유가가 하루에도 몇 번씩 출렁인다. 감산 연장 전망과 글로벌 수요 둔화 우려가 맞서고 있다. 유가가 오르면 에너지·화학 업체는 판가와 원가가 함께 흔들리고, 전력 회사는 연료비 부담이 커진다. 최근 한 달 변동 폭은 평소의 두 배였다.",
     "magnitude": {
       "minBp": 600,
       "maxBp": 3000
@@ -145,6 +201,25 @@
       "upBp": 5000
     },
     "sectorWide": true
+  },
+  {
+    "code": "energy-solar",
+    "sector": "energy",
+    "root": true,
+    "weight": 10,
+    "title": "{stock}, 미국 태양광 모듈 관세 결정 임박",
+    "body": "{stock}의 미국 태양광 모듈 사업이 관세 결정을 앞두고 있다. 중국산에 높은 관세가 붙으면 미국 공장을 가진 {stock}은 반사이익을 보지만, 보조금이 줄면 발전 사업자의 발주 자체가 미뤄진다. 석유화학 부문은 여전히 적자라 태양광이 실적을 떠받치는 구조다.",
+    "magnitude": {
+      "minBp": 600,
+      "maxBp": 3000
+    },
+    "directionRule": {
+      "type": "FREE",
+      "upBp": 5000
+    },
+    "stocks": [
+      "hws"
+    ]
   },
   {
     "code": "game-launch",
@@ -192,7 +267,11 @@
     "directionRule": {
       "type": "FREE",
       "upBp": 5000
-    }
+    },
+    "stocks": [
+      "cjd",
+      "nsm"
+    ]
   },
   {
     "code": "food-export",
@@ -228,6 +307,25 @@
     "sectorWide": true
   },
   {
+    "code": "food-china",
+    "sector": "food",
+    "root": true,
+    "weight": 10,
+    "title": "{stock}, 중국 법인 매출 발표 앞둬",
+    "body": "{stock}의 중국 법인 매출 발표가 다가온다. 현지 제과 시장에서 점유율을 지켰다는 전언과, 경쟁사 저가 공세에 밀렸다는 전언이 엇갈린다. 중국 매출은 전체의 절반에 가까워 결과에 따라 실적 전망이 크게 바뀐다. 환율도 이익에 영향을 준다.",
+    "magnitude": {
+      "minBp": 600,
+      "maxBp": 3000
+    },
+    "directionRule": {
+      "type": "FREE",
+      "upBp": 5000
+    },
+    "stocks": [
+      "ori"
+    ]
+  },
+  {
     "code": "finance-earnings",
     "sector": "finance",
     "root": true,
@@ -241,7 +339,11 @@
     "directionRule": {
       "type": "FREE",
       "upBp": 5000
-    }
+    },
+    "stocks": [
+      "kbf",
+      "kkb"
+    ]
   },
   {
     "code": "finance-dividend",
@@ -257,7 +359,11 @@
     "directionRule": {
       "type": "FREE",
       "upBp": 5000
-    }
+    },
+    "stocks": [
+      "kbf",
+      "kkb"
+    ]
   },
   {
     "code": "finance-rate",
@@ -265,7 +371,7 @@
     "root": true,
     "weight": 10,
     "title": "기준금리 발표 임박",
-    "body": "기준금리 발표를 앞두고 시장의 예상이 동결과 인상으로 반반 갈려 있다. 물가가 아직 높다는 점은 인상 쪽, 소비와 투자가 둔화됐다는 점은 동결 쪽 근거다. 금리가 오르면 은행 이자 수익은 늘지만 대출 연체가 늘 수 있다. 발표 직후 변동성이 커질 수 있다.",
+    "body": "기준금리 발표를 앞두고 시장의 예상이 동결과 인상으로 반반 갈려 있다. 물가가 아직 높다는 점은 인상 쪽, 소비와 투자가 둔화됐다는 점은 동결 쪽 근거다. 금리가 오르면 은행 이자 수익과 보험사 운용 수익은 늘지만 대출 연체가 늘 수 있다. 발표 직후 변동성이 커질 수 있다.",
     "magnitude": {
       "minBp": 600,
       "maxBp": 2400
@@ -275,5 +381,43 @@
       "upBp": 5000
     },
     "sectorWide": true
+  },
+  {
+    "code": "finance-loss-ratio",
+    "sector": "finance",
+    "root": true,
+    "weight": 10,
+    "title": "{stock}, 자동차·실손 보험료 조정 앞둬",
+    "body": "{stock}의 자동차보험과 실손보험 손해율이 올라 보험료 조정을 앞두고 있다. 보험료를 올리면 이익이 회복되지만 당국은 물가를 이유로 인상 폭을 누르려 한다. 지난 분기 손해율은 업계 평균을 웃돌았다. 조정 결과는 다음 달 발표 예정이다.",
+    "magnitude": {
+      "minBp": 600,
+      "maxBp": 3000
+    },
+    "directionRule": {
+      "type": "FREE",
+      "upBp": 5000
+    },
+    "stocks": [
+      "ssf"
+    ]
+  },
+  {
+    "code": "finance-catastrophe",
+    "sector": "finance",
+    "root": true,
+    "weight": 10,
+    "title": "{stock}, 대형 재해 보험금 지급 추산",
+    "body": "집중호우로 차량과 공장 침수가 잇따르면서 {stock}의 보험금 지급 추산액이 수천억 원으로 불었다. 재보험으로 상당 부분을 돌릴 수 있다는 분석과, 손해율이 급등해 올해 이익이 깎일 것이라는 전망이 맞선다. 추산액은 다음 주 확정된다.",
+    "magnitude": {
+      "minBp": 600,
+      "maxBp": 3000
+    },
+    "directionRule": {
+      "type": "FREE",
+      "upBp": 5000
+    },
+    "stocks": [
+      "ssf"
+    ]
   }
 ]
