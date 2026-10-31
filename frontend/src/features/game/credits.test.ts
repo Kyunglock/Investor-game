@@ -406,7 +406,7 @@ describe('buildCredits (시간순, decisions.md 70번)', () => {
     expect(sections.filter((s) => s.key === 'work')).toHaveLength(1)
     expect(sections.find((s) => s.key === 'work')?.lines.map((l) => l.text)).toEqual([
       '25세, 회계사에 취직',
-      '40세, 세무사(으)로 다시 취직',
+      '40세, 세무사로 다시 취직',
     ])
   })
 

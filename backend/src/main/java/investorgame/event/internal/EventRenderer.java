@@ -1,5 +1,6 @@
 package investorgame.event.internal;
 
+import investorgame.common.Korean;
 import investorgame.content.CareerDefinition;
 import investorgame.content.ChildWeddingText;
 import investorgame.content.ContentCatalog;
@@ -17,6 +18,7 @@ import investorgame.event.ChoiceTicket;
 import investorgame.event.EventView;
 import investorgame.event.Notice;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Component;
 
 /** 저장된 이벤트를 화면용 문구로 바꾼다. 숨은 값은 옮기지 않는다. */
@@ -84,9 +86,9 @@ class EventRenderer {
           String child = ordinal(DefaultEventService.weddingSeq(row.definitionCode()));
           yield view(
               row,
-              text.title().replace("{child}", child),
+              Korean.fill(text.title(), Map.of("child", child)),
               // 본문은 여러 벌을 돌려 가며 (decisions.md 86번). 같은 판·같은 순번이면 같다.
-              text.bodyAt(row.seq()).replace("{child}", child),
+              Korean.fill(text.bodyAt(row.seq()), Map.of("child", child)),
               null,
               null,
               List.of(
@@ -99,8 +101,8 @@ class EventRenderer {
           String who = tripWho(DefaultEventService.tripProposer(row.definitionCode()), text);
           yield view(
               row,
-              text.title().replace("{who}", who),
-              text.body().replace("{who}", who),
+              Korean.fill(text.title(), Map.of("who", who)),
+              Korean.fill(text.body(), Map.of("who", who)),
               null,
               null,
               List.of(
@@ -115,8 +117,8 @@ class EventRenderer {
           String child = ordinal(DefaultEventService.outingChild(row.definitionCode()));
           yield view(
               row,
-              outing.title().replace("{child}", child),
-              outing.body().replace("{child}", child),
+              Korean.fill(outing.title(), Map.of("child", child)),
+              Korean.fill(outing.body(), Map.of("child", child)),
               null,
               null,
               List.of(
@@ -205,8 +207,8 @@ class EventRenderer {
           String name = child == null ? "" : ordinal(child);
           yield view(
               row,
-              text.title().replace("{child}", name),
-              text.body().replace("{child}", name),
+              Korean.fill(text.title(), Map.of("child", name)),
+              Korean.fill(text.body(), Map.of("child", name)),
               null,
               null,
               options);
@@ -220,8 +222,8 @@ class EventRenderer {
         String drop = String.valueOf(row.hiddenMagnitudeBp() / 100);
         yield view(
             row,
-            withStock(text.title(), stockName).replace("{drop}", drop),
-            withStock(text.body(), stockName).replace("{drop}", drop),
+            Korean.fill(text.title(), Map.of("stock", stockName, "drop", drop)),
+            Korean.fill(text.body(), Map.of("stock", stockName, "drop", drop)),
             null,
             null,
             List.of(
@@ -253,9 +255,9 @@ class EventRenderer {
         .orElseThrow(() -> new IllegalStateException("콘텐츠에 없는 알림: " + code));
   }
 
-  /** 뉴스 문구의 "{stock}" 자리표시를 종목 이름으로 바꾼다. */
+  /** 뉴스 문구의 "{stock}" 자리표시를 종목 이름으로 바꾸고 뒤 조사를 맞춘다 (decisions.md 112번). */
   private static String withStock(String text, String stockName) {
-    return text.replace("{stock}", stockName);
+    return Korean.fill(text, Map.of("stock", stockName));
   }
 
   TraitDefinition trait(String code) {
@@ -342,10 +344,17 @@ class EventRenderer {
     }
     String[] parts = row.hintCode().split("\\.");
     List<String> phrases = content.hintPhrases(parts[2], parts[0], parts[1]);
-    return withStock(phrases.get(Integer.parseInt(parts[3])), stockName)
-        .replace("{sectorName}", content.sectorName(news.sector()))
-        .replace("{min}", String.valueOf(news.magnitude().minBp() / 100))
-        .replace("{max}", String.valueOf(news.magnitude().maxBp() / 100));
+    return Korean.fill(
+        phrases.get(Integer.parseInt(parts[3])),
+        Map.of(
+            "stock",
+            stockName,
+            "sectorName",
+            content.sectorName(news.sector()),
+            "min",
+            String.valueOf(news.magnitude().minBp() / 100),
+            "max",
+            String.valueOf(news.magnitude().maxBp() / 100)));
   }
 
   /** 다른 뉴스 문구. 코드는 "분위기.번호"다. */

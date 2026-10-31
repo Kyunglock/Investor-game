@@ -4,6 +4,7 @@ import investorgame.behavior.BehaviorService;
 import investorgame.behavior.Reading;
 import investorgame.character.CharacterService;
 import investorgame.common.GameProperties;
+import investorgame.common.Korean;
 import investorgame.common.random.SeededRandom;
 import investorgame.content.AnalysisText;
 import investorgame.content.ContentCatalog;
@@ -428,12 +429,9 @@ class MarketDesk {
         row.prevCorrect() == null ? null : new Analysis.Remark(row.prevCorrect(), row.remark()));
   }
 
+  /** 자리표시를 채우고 뒤 조사를 값에 맞춘다 (decisions.md 112번). */
   static String fill(String template, Map<String, String> facts) {
-    String text = template;
-    for (Map.Entry<String, String> e : facts.entrySet()) {
-      text = text.replace("{" + e.getKey() + "}", e.getValue());
-    }
-    return text;
+    return Korean.fill(template, facts);
   }
 
   // ---- 숫자 표기 ----

@@ -551,9 +551,9 @@ class HousingFlow {
     String blocked =
         need > available
             ? (income <= 0
-                ? "소득이 없어 주담대가 안 된다. 현금 %s가 모자란다".formatted(money(need - available))
+                ? "소득이 없어 주담대가 안 된다. 현금 %s이 모자란다".formatted(money(need - available))
                 : mortgage < ltv
-                    ? "DSR 40%%에 걸려 대출이 %s뿐이다. 현금 %s가 모자란다"
+                    ? "DSR 40%%에 걸려 대출이 %s뿐이다. 현금 %s이 모자란다"
                         .formatted(money(mortgage), money(need - available))
                     : short_(need - available))
             : null;
@@ -608,8 +608,8 @@ class HousingFlow {
                 .formatted(money(down - available), rules.cheongyakDownBp() / 100)
             : need > available
                 ? (income <= 0
-                    ? "소득이 없어 분양 대출이 안 된다. 현금 %s가 모자란다".formatted(money(need - available))
-                    : "DSR %d%%에 걸려 대출이 %s뿐이다. 현금 %s가 모자란다"
+                    ? "소득이 없어 분양 대출이 안 된다. 현금 %s이 모자란다".formatted(money(need - available))
+                    : "DSR %d%%에 걸려 대출이 %s뿐이다. 현금 %s이 모자란다"
                         .formatted(rules.dsrBp() / 100, money(mortgage), money(need - available)))
                 : null;
     return new Plan(
@@ -789,7 +789,7 @@ class HousingFlow {
     if (effect.fraud()) {
       lost = before.deposit();
       message.append(
-          "집주인이 연락을 끊었다. 빌라는 경매로 넘어갔고 보증금 %s을 돌려받지 못했다. 전세대출 %s는 그대로 갚아야 한다. "
+          "집주인이 연락을 끊었다. 빌라는 경매로 넘어갔고 보증금 %s을 돌려받지 못했다. 전세대출 %s은 그대로 갚아야 한다. "
               .formatted(money(before.deposit()), money(before.jeonseLoan())));
     }
     switch (code) {
@@ -1106,10 +1106,11 @@ class HousingFlow {
           "보증금 %s, 월세 %s짜리 %s을 구했다."
               .formatted(money(plan.deposit()), money(plan.monthlyRent()), roomName(plan.rooms()));
       case ChoiceTicket.Housing.APT_JEONSE ->
-          "경기 아파트에 전세 %s로 들어갔다.".formatted(money(plan.deposit()));
+          "경기 아파트에 전세 %s으로 들어갔다.".formatted(money(plan.deposit()));
       case ChoiceTicket.Housing.VILLA_INSURED ->
-          "빌라 %s에 전세 %s로 들어갔다. 보증보험도 들었다.".formatted(roomName(plan.rooms()), money(plan.deposit()));
-      default -> "빌라 %s에 전세 %s로 들어갔다.".formatted(roomName(plan.rooms()), money(plan.deposit()));
+          "빌라 %s에 전세 %s으로 들어갔다. 보증보험도 들었다."
+              .formatted(roomName(plan.rooms()), money(plan.deposit()));
+      default -> "빌라 %s에 전세 %s으로 들어갔다.".formatted(roomName(plan.rooms()), money(plan.deposit()));
     };
   }
 

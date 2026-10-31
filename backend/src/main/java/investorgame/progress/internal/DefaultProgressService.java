@@ -374,8 +374,10 @@ class DefaultProgressService implements ProgressService {
             yield simpleOutcome(
                 ticket,
                 rehire
-                    ? "%s(으)로 다시 일하기 시작했다. 월급이 다시 들어온다.".formatted(definition.title())
-                    : "%s(으)로 일하기 시작했다. 월급은 매달 들어온다.".formatted(definition.title()));
+                    ? "%s 다시 일하기 시작했다. 월급이 다시 들어온다."
+                        .formatted(Korean.withParticle(definition.title(), "으로", "로"))
+                    : "%s 일하기 시작했다. 월급은 매달 들어온다."
+                        .formatted(Korean.withParticle(definition.title(), "으로", "로")));
           }
           case ChoiceTicket.Career career ->
               resolveCareer(game, ticket, career, pendingView.title(), random);
@@ -748,11 +750,17 @@ class DefaultProgressService implements ProgressService {
             : cost >= total ? text.fullTexts() : text.halfTexts();
     RandomGenerator rng = new HashSeededRandom(game.seed()).forKey("wedding-text", ticket.seq());
     String message =
-        pool.get(rng.nextInt(pool.size()))
-            .replace("{child}", child)
-            .replace("{word}", childSex == Sex.F ? "딸" : "아들")
-            .replace("{total}", "%,d원".formatted(total))
-            .replace("{cost}", "%,d원".formatted(cost));
+        Korean.fill(
+            pool.get(rng.nextInt(pool.size())),
+            Map.of(
+                "child",
+                child,
+                "word",
+                childSex == Sex.F ? "딸" : "아들",
+                "total",
+                "%,d원".formatted(total),
+                "cost",
+                "%,d원".formatted(cost)));
     return simpleOutcome(ticket, message);
   }
 
@@ -873,7 +881,7 @@ class DefaultProgressService implements ProgressService {
           case ChoiceTicket.FamilyTrip.CHEAP -> outing.cheapText();
           default -> outing.noneText();
         };
-    String filled = text.replace("{child}", child);
+    String filled = Korean.fill(text, Map.of("child", child));
     return cost > 0 ? filled + " (%,d원)".formatted(cost) : filled;
   }
 

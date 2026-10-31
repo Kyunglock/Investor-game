@@ -93,7 +93,7 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
         text: p.fullTimeInvestor
           ? '직장 대신 전업투자자가 됐다. 월급은 없다.'
           : p.rehire
-            ? `${str(p.jobTitle)}(으)로 다시 취직했다. 월급 ${won(num(p.monthlySalary))}.`
+            ? `${withParticle(str(p.jobTitle), '으로', '로')} 다시 취직했다. 월급 ${won(num(p.monthlySalary))}.`
             : `${str(p.jobTitle)}에 취직했다. 첫 월급 ${won(num(p.monthlySalary))}.`,
       }
     case 'JOB_WAIT':
@@ -240,8 +240,8 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
         ...base,
         tone: p.borrowed ? 'flipped' : 'decision',
         text: p.borrowed
-          ? `${str(p.stockName)}이(가) ${percent(num(p.dropBp))} 빠졌을 때 ${won(num(p.loan))}을 빌려 ${num(p.quantity).toLocaleString('ko-KR')}주를 더 샀다 (빚투).`
-          : `${str(p.stockName)}이(가) ${percent(num(p.dropBp))} 빠졌지만 빚은 지지 않았다.`,
+          ? `${withParticle(str(p.stockName), '이', '가')} ${percent(num(p.dropBp))} 빠졌을 때 ${won(num(p.loan))}을 빌려 ${num(p.quantity).toLocaleString('ko-KR')}주를 더 샀다 (빚투).`
+          : `${withParticle(str(p.stockName), '이', '가')} ${percent(num(p.dropBp))} 빠졌지만 빚은 지지 않았다.`,
       }
     case 'HOUSING': {
       // 주거 선택 (주거 설계 4절). 전세사기는 고른 뒤에 드러난다.

@@ -1,6 +1,6 @@
 import type { Game, LogEntry } from '../../api/client'
 import { gradeOf } from './grade'
-import { STAT_KEYS, STAT_LABELS } from './labels'
+import { STAT_KEYS, STAT_LABELS, withParticle } from './labels'
 import { nickname } from './nickname'
 
 /**
@@ -241,12 +241,12 @@ function summarize(report: Omit<ProfileReport, 'summary' | 'recommendations'>): 
   const s = report.stats
   const type = report.investorType ? `'${report.investorType}'으로 자란 ` : ''
   if (s.newsCount + s.shakeCount + s.tradeCount + s.leverageOffered === 0) {
-    return `${type}${report.name}은(는) 아직 투자 앞에서 고른 것이 없어 진단을 보류한다.`
+    return `${type}${withParticle(report.name, '은', '는')} 아직 투자 앞에서 고른 것이 없어 진단을 보류한다.`
   }
   const sorted = [...report.axes].sort((a, b) => b.score - a.score)
   const strong = sorted[0]
   const weak = sorted[sorted.length - 1]
-  return `${type}${report.name}은(는) ${report.grade.name}(${report.grade.description})에 해당한다. 가장 두드러진 강점은 ${strong.name}(${strong.score}점), 가장 큰 과제는 ${weak.name}(${weak.score}점)이다.`
+  return `${type}${withParticle(report.name, '은', '는')} ${report.grade.name}(${report.grade.description})에 해당한다. 가장 두드러진 강점은 ${strong.name}(${strong.score}점), 가장 큰 과제는 ${weak.name}(${weak.score}점)이다.`
 }
 
 function recommend(axes: Axis[]): string[] {
