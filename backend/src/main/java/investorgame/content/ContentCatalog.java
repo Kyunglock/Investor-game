@@ -106,6 +106,12 @@ public interface ContentCatalog {
 
   OutingText outing(String code);
 
+  /**
+   * 다시 구직 본문의 "{money}" 자리에 들어갈 통장 상황 한 줄 (decisions.md 116번). short는 생활비 여섯 달분이 안 남았을 때, 아니면
+   * ample.
+   */
+  String jobRehireMoneyText(boolean ample);
+
   /** direction: UP/DOWN/NEUTRAL, strength: MILD/STRONG. */
   /**
    * 힌트 문구. detail은 안목 구간(low·mid·high·expert), 높을수록 종목·섹터·폭({stock}·{sectorName}·{min}~{max}%)을 짚는다
