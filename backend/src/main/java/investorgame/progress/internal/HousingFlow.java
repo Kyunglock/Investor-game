@@ -100,6 +100,33 @@ class HousingFlow {
                 .getFirst()
                 .blocked()
             == null;
+    // 배우자의 월세 불만 (decisions.md 111번): 월세에 사는 기혼자만 따진다.
+    boolean canLeaveMonthly = false;
+    boolean cashForJeonse = false;
+    if (view.tenure() == Tenure.MONTHLY && home.married()) {
+      List<Plan> moves =
+          plans(
+              gameId,
+              List.of(
+                  ChoiceTicket.Housing.VILLA,
+                  ChoiceTicket.Housing.VILLA_INSURED,
+                  ChoiceTicket.Housing.APT_JEONSE,
+                  ChoiceTicket.Housing.BUY_SEOUL,
+                  ChoiceTicket.Housing.BUY_GYEONGGI),
+              false,
+              home,
+              monthlyIncome,
+              points,
+              day);
+      canLeaveMonthly = moves.stream().anyMatch(p -> p.blocked() == null);
+      cashForJeonse =
+          moves.stream()
+              .anyMatch(
+                  p ->
+                      ChoiceTicket.Housing.APT_JEONSE.equals(p.code())
+                          && p.blocked() == null
+                          && p.jeonseLoan() == 0);
+    }
     return new HousingFacts(
         view.tenure().name(),
         view.leaseEndDay(),
@@ -110,8 +137,16 @@ class HousingFlow {
         seoulChange(gameId),
         luck,
         affordable,
-        cramped(view, home, day));
+        cramped(view, home, day),
+        canLeaveMonthly,
+        cashForJeonse);
   }
+
+  /**
+   * 가족 점수가 이 아래면 가족이 남처럼 멀어진 것으로 본다. 이벤트 쪽 `event.life.cold-family-below`와 같은 값 (decisions.md
+   * 111번).
+   */
+  static final int COLD_FAMILY_BELOW = 20;
 
   /** 식구 수에 맞는 집 크기(방 수): 혼자 원룸, 부부 투룸, 아이 하나 쓰리룸, 둘 이상 포룸. 독립한 아이는 세지 않는다 (#117). */
   static int neededRooms(HouseholdView home, int day) {
@@ -157,6 +192,10 @@ class HousingFlow {
       if (month % 3 == 0) {
         household.bond(gameId, -1);
       }
+    }
+    // 가족 점수가 바닥이면(남처럼 멀어진 집) 달마다 조금씩 지친다. 여행·나들이 제안도 끊긴다 (decisions.md 111번).
+    if (household.familyScore(gameId) < COLD_FAMILY_BELOW) {
+      household.cheer(gameId, -1);
     }
     Map<String, Long> prices = market.homePrices(gameId);
     for (HousingView.Home home : housing.get(gameId).homes()) {

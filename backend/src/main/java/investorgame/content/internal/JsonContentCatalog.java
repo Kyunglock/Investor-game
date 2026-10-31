@@ -735,7 +735,9 @@ class JsonContentCatalog implements ContentCatalog {
             && !life.spouseRent().waitTexts().isEmpty()
             && !life.spouseRent().stayTexts().isEmpty()
             && life.spouseRent().movedText() != null
-            && life.spouseRent().boughtText() != null,
+            && life.spouseRent().boughtText() != null
+            && life.spouseRent().levels().size() >= 4
+            && life.spouseRent().jobLines().containsKey("retired"),
         "배우자의 월세 불만 문구가 비었다 (#116)");
     require(
         life.spouse() != null

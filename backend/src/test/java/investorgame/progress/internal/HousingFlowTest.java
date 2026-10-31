@@ -140,7 +140,8 @@ class HousingFlowTest {
     housing.rent(gameId, Tenure.MONTHLY, null, 10_000_000, 600_000, 0, false, null, JOB_DAY);
     EventView leaseEnd =
         leaseEndOf(
-            new HousingFacts("MONTHLY", JOB_DAY + YEAR, 0, false, false, null, 0, 50, true, false),
+            new HousingFacts(
+                "MONTHLY", JOB_DAY + YEAR, 0, false, false, null, 0, 50, true, false, false, false),
             1L);
     ChoiceTicket ticket = events.prepareChoice(gameId, leaseEnd.eventId(), "BUY_SEOUL");
     assertThatThrownBy(
@@ -176,7 +177,8 @@ class HousingFlowTest {
 
     EventView leaseEnd =
         leaseEndOf(
-            new HousingFacts("MONTHLY", JOB_DAY + YEAR, 0, false, false, null, 0, 50, true, false),
+            new HousingFacts(
+                "MONTHLY", JOB_DAY + YEAR, 0, false, false, null, 0, 50, true, false, false, false),
             1L);
     ChoiceTicket ticket = events.prepareChoice(gameId, leaseEnd.eventId(), "BUY_SEOUL");
     var outcome =
@@ -343,7 +345,18 @@ class HousingFlowTest {
 
     HousingFacts cramped =
         new HousingFacts(
-            "MONTHLY", JOB_DAY + 30 * YEAR, 0, false, false, JOB_DAY, 0, 50, false, true);
+            "MONTHLY",
+            JOB_DAY + 30 * YEAR,
+            0,
+            false,
+            false,
+            JOB_DAY,
+            0,
+            50,
+            false,
+            true,
+            false,
+            false);
     EventView ask = housingOf(cramped, JOB_DAY, JOB_DAY);
     assertThat(ask.title()).isEqualTo("집이 좁다");
     assertThat(ask.occursDay()).isEqualTo(JOB_DAY + 60);
@@ -402,6 +415,7 @@ class HousingFlowTest {
             Map.of(),
             facts,
             0L,
+            50,
             Set.of());
     HashSeededRandom random = new HashSeededRandom(1L);
     int from = fromDay;
@@ -477,7 +491,18 @@ class HousingFlowTest {
   private EventView spouseRentOf(int fromDay) {
     HousingFacts monthly =
         new HousingFacts(
-            "MONTHLY", JOB_DAY + 30 * YEAR, 0, false, false, null, 0, 50, false, false);
+            "MONTHLY",
+            JOB_DAY + 30 * YEAR,
+            0,
+            false,
+            false,
+            null,
+            0,
+            50,
+            false,
+            false,
+            false,
+            false);
     SchedulingContext context =
         new SchedulingContext(
             Phase.SAVING,
@@ -504,6 +529,7 @@ class HousingFlowTest {
             Map.of(),
             monthly,
             0L,
+            50,
             Set.of());
     HashSeededRandom random = new HashSeededRandom(1L);
     int from = fromDay;
@@ -527,7 +553,8 @@ class HousingFlowTest {
   /** 보증보험 없는 빌라 만기 중 전세사기가 숨은 판을 찾는다(7%라 시드를 돌린다). */
   private EventView fraudulentLeaseEnd() {
     HousingFacts villa =
-        new HousingFacts("VILLA_JEONSE", JOB_DAY + YEAR, 0, false, true, null, 0, 50, true, false);
+        new HousingFacts(
+            "VILLA_JEONSE", JOB_DAY + YEAR, 0, false, true, null, 0, 50, true, false, false, false);
     for (long seed = 1; seed <= 300; seed++) {
       UUID probe = UUID.randomUUID();
       EventView view = leaseEndOf(probe, villa, seed);
@@ -570,6 +597,7 @@ class HousingFlowTest {
             Map.of(),
             facts,
             0L,
+            50,
             Set.of());
     HashSeededRandom random = new HashSeededRandom(seed);
     int from = JOB_DAY;

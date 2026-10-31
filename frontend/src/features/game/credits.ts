@@ -568,8 +568,12 @@ export function buildCredits(game: Game): CreditSection[] {
   ]
   // 가족이 있었으면 얼마나 가까웠는지 (decisions.md 88번).
   if (game.household.married || game.household.children.length > 0) {
+    // 바닥이면 남처럼 멀어진 집이다 (decisions.md 111번).
     lastLines.push({
-      text: `가족 점수 ${game.family}점`,
+      text:
+        game.family < 20
+          ? `가족 점수 ${game.family}점 · 가족과 남처럼 멀어진 채 끝났다`
+          : `가족 점수 ${game.family}점`,
       tone: game.family >= 60 ? 'accent' : game.family < 40 ? 'down' : 'muted',
     })
   }

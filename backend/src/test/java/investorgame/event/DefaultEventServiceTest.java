@@ -37,7 +37,7 @@ class DefaultEventServiceTest {
 
   /** 주거 이벤트가 끼어들지 않는 상태: 내 집 포함 2채, 세 만기 없음. 주거 검사는 따로 한다. */
   private static final HousingFacts SETTLED =
-      new HousingFacts("OWN", null, 2, true, false, null, 0, 50, true, false);
+      new HousingFacts("OWN", null, 2, true, false, null, 0, 50, true, false, false, false);
 
   private static final HintProvider HINTS =
       (truth, seq) -> new Hint(HintDirection.NEUTRAL, HintStrength.MILD, Hint.Detail.LOW);
@@ -73,6 +73,7 @@ class DefaultEventServiceTest {
             Map.of(),
             SETTLED,
             0L,
+            50,
             Set.of());
     EventView a = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
     EventView b = firstOf(UUID.randomUUID(), investing, JOB_DAY + 30, EventKind.NEWS, 42L);
@@ -230,6 +231,7 @@ class DefaultEventServiceTest {
             Map.of(),
             SETTLED,
             0L,
+            50,
             Set.of());
     HashSeededRandom random = new HashSeededRandom(2L);
     int from = JOB_DAY;
@@ -422,6 +424,7 @@ class DefaultEventServiceTest {
         Map.of(),
         SETTLED,
         0L,
+        50,
         Set.of());
   }
 
@@ -451,6 +454,7 @@ class DefaultEventServiceTest {
         Map.of(),
         SETTLED,
         0L,
+        50,
         Set.of());
   }
 
@@ -491,6 +495,7 @@ class DefaultEventServiceTest {
             Map.of(),
             SETTLED,
             0L,
+            50,
             Set.of());
     EventView rehire = firstOf(jobless, unemployed, JOB_DAY + 30, EventKind.JOB, 7L);
     assertThat(rehire.title()).isEqualTo(content.jobRehireText().title());
@@ -525,6 +530,7 @@ class DefaultEventServiceTest {
             Map.of(),
             SETTLED,
             0L,
+            50,
             Set.of());
     EventView rehire = firstOf(UUID.randomUUID(), jobless, JOB_DAY + 30, EventKind.JOB, 7L);
     assertThat(rehire.options())
@@ -557,6 +563,7 @@ class DefaultEventServiceTest {
             Map.of(),
             SETTLED,
             0L,
+            50,
             Set.of());
     assertThat(nextOf(UUID.randomUUID(), investor, JOB_DAY, EventKind.JOB, 3L)).isEmpty();
     EventView scene = firstOf(UUID.randomUUID(), investor, JOB_DAY, EventKind.CAREER, 3L);
@@ -592,6 +599,7 @@ class DefaultEventServiceTest {
             Map.of(),
             SETTLED,
             0L,
+            50,
             Set.of());
     int from = (60 - START_AGE) * YEAR;
     assertThat(nextOf(gameId, retired, from, EventKind.JOB, 3L)).isEmpty();
@@ -627,6 +635,7 @@ class DefaultEventServiceTest {
             Map.of(),
             SETTLED,
             0L,
+            50,
             Set.of());
     List<String> seen = new ArrayList<>();
     int from = JOB_DAY;
@@ -705,6 +714,7 @@ class DefaultEventServiceTest {
         Map.of(),
         SETTLED,
         0L,
+        50,
         Set.of());
   }
 
@@ -849,6 +859,7 @@ class DefaultEventServiceTest {
         Map.of(),
         SETTLED,
         netWorth,
+        50,
         Set.of());
   }
 
@@ -889,7 +900,8 @@ class DefaultEventServiceTest {
         .containsExactly("MONTHLY", "VILLA", "VILLA_INSURED", "APT_JEONSE");
 
     HousingFacts renting =
-        new HousingFacts("APT_JEONSE", JOB_DAY + YEAR, 0, false, false, null, 0, 50, true, false);
+        new HousingFacts(
+            "APT_JEONSE", JOB_DAY + YEAR, 0, false, false, null, 0, 50, true, false, false, false);
     EventView leaseEnd =
         firstOf(UUID.randomUUID(), housed(renting, null), JOB_DAY, EventKind.HOUSING, 3L);
     assertThat(leaseEnd.occursDay()).isEqualTo(JOB_DAY + YEAR);
@@ -900,7 +912,8 @@ class DefaultEventServiceTest {
 
     // 1주택이면 청약이 없고, 결혼·출산·집값 급등이 없으면 "집 살까?"도 없다.
     HousingFacts settled =
-        new HousingFacts("APT_JEONSE", null, 1, false, false, null, 0, 50, true, false);
+        new HousingFacts(
+            "APT_JEONSE", null, 1, false, false, null, 0, 50, true, false, false, false);
     assertThat(nextOf(UUID.randomUUID(), housed(settled, null), JOB_DAY, EventKind.HOUSING, 3L))
         .as("결혼·출산·집값 급등이 없으면 묻지 않는다")
         .isEmpty();
@@ -921,7 +934,18 @@ class DefaultEventServiceTest {
     int marriedDay = JOB_DAY + YEAR;
     HousingFacts monthly =
         new HousingFacts(
-            "MONTHLY", JOB_DAY + 30 * YEAR, 0, false, false, null, 0, 50, false, false);
+            "MONTHLY",
+            JOB_DAY + 30 * YEAR,
+            0,
+            false,
+            false,
+            null,
+            0,
+            50,
+            false,
+            false,
+            false,
+            false);
     UUID gameId = UUID.randomUUID();
     SchedulingContext family = housed(monthly, marriedDay, "은행원", 0);
     EventView buy = firstOf(gameId, family, JOB_DAY, EventKind.HOUSING, 3L);
@@ -953,6 +977,8 @@ class DefaultEventServiceTest {
             0,
             50,
             false,
+            false,
+            false,
             false);
     EventView again =
         firstOf(
@@ -975,7 +1001,18 @@ class DefaultEventServiceTest {
     assertThat(single.title()).isEqualTo("계약 만기가 다가온다");
     HousingFacts jeonse =
         new HousingFacts(
-            "APT_JEONSE", JOB_DAY + 30 * YEAR, 0, false, false, null, 0, 50, false, false);
+            "APT_JEONSE",
+            JOB_DAY + 30 * YEAR,
+            0,
+            false,
+            false,
+            null,
+            0,
+            50,
+            false,
+            false,
+            false,
+            false);
     UUID jeonseGame = UUID.randomUUID();
     EventView jeonseBuy =
         firstOf(jeonseGame, housed(jeonse, marriedDay, "공무원", 0), JOB_DAY, EventKind.HOUSING, 3L);
@@ -1002,7 +1039,18 @@ class DefaultEventServiceTest {
     // 빌라 전세라 배우자의 월세 불만(#116)은 없고, 좁은 집만 문제다.
     HousingFacts cramped =
         new HousingFacts(
-            "VILLA_JEONSE", JOB_DAY + 30 * YEAR, 0, false, false, birth, 0, 50, false, true);
+            "VILLA_JEONSE",
+            JOB_DAY + 30 * YEAR,
+            0,
+            false,
+            false,
+            birth,
+            0,
+            50,
+            false,
+            true,
+            false,
+            false);
     UUID gameId = UUID.randomUUID();
     SchedulingContext family = housed(cramped, marriedDay, "공무원", 1);
     EventView ask = firstOf(gameId, family, birth, EventKind.HOUSING, 3L);
@@ -1030,7 +1078,8 @@ class DefaultEventServiceTest {
 
     // 만기가 반년 안이면 만기에 옮기면 되니 따로 띄우지 않는다.
     HousingFacts soon =
-        new HousingFacts("VILLA_JEONSE", birth + 150, 0, false, false, birth, 0, 50, false, true);
+        new HousingFacts(
+            "VILLA_JEONSE", birth + 150, 0, false, false, birth, 0, 50, false, true, false, false);
     UUID soonGame = UUID.randomUUID();
     SchedulingContext soonFamily = housed(soon, marriedDay, "공무원", 1);
     // "집이 좁다"가 없으니 결혼·출산의 "집 살까?"는 그대로 온다. 넘기면 바로 만기다.
@@ -1043,7 +1092,19 @@ class DefaultEventServiceTest {
 
     // 결혼해서 좁아졌으면 결혼 두 달 뒤, 문구는 둘이 살기엔 좁다.
     HousingFacts newlywed =
-        new HousingFacts("MONTHLY", JOB_DAY + 30 * YEAR, 0, false, false, null, 0, 50, false, true);
+        new HousingFacts(
+            "MONTHLY",
+            JOB_DAY + 30 * YEAR,
+            0,
+            false,
+            false,
+            null,
+            0,
+            50,
+            false,
+            true,
+            false,
+            false);
     EventView couple =
         firstOf(
             UUID.randomUUID(),
@@ -1060,9 +1121,32 @@ class DefaultEventServiceTest {
   void 영끌이_안_되면_분양_공고가_오지_않는다() {
     HousingFacts broke =
         new HousingFacts(
-            "MONTHLY", JOB_DAY + 20 * YEAR, 0, false, false, null, 0, 50, false, false);
+            "MONTHLY",
+            JOB_DAY + 20 * YEAR,
+            0,
+            false,
+            false,
+            null,
+            0,
+            50,
+            false,
+            false,
+            false,
+            false);
     HousingFacts able =
-        new HousingFacts("MONTHLY", JOB_DAY + 20 * YEAR, 0, false, false, null, 0, 50, true, false);
+        new HousingFacts(
+            "MONTHLY",
+            JOB_DAY + 20 * YEAR,
+            0,
+            false,
+            false,
+            null,
+            0,
+            50,
+            true,
+            false,
+            false,
+            false);
     EventView first =
         firstOf(UUID.randomUUID(), housed(broke, null), JOB_DAY, EventKind.HOUSING, 3L);
     assertThat(first.title()).as("영끌이 안 되면 공고 없이 만기만 온다").isEqualTo("계약 만기가 다가온다");
@@ -1083,7 +1167,8 @@ class DefaultEventServiceTest {
   void 주거_장면은_하루에_하나만_오고_사이를_둔다() {
     int marriedDay = JOB_DAY + YEAR;
     HousingFacts monthly =
-        new HousingFacts("MONTHLY", marriedDay, 0, false, false, null, 0, 100, false, false);
+        new HousingFacts(
+            "MONTHLY", marriedDay, 0, false, false, null, 0, 100, false, false, false, false);
     UUID gameId = UUID.randomUUID();
     EventView leaseEnd =
         firstOf(gameId, housed(monthly, marriedDay, "은행원", 0), JOB_DAY, EventKind.HOUSING, 3L);
@@ -1093,7 +1178,18 @@ class DefaultEventServiceTest {
 
     HousingFacts renewed =
         new HousingFacts(
-            "MONTHLY", marriedDay + 2 * YEAR, 0, false, false, null, 0, 100, false, false);
+            "MONTHLY",
+            marriedDay + 2 * YEAR,
+            0,
+            false,
+            false,
+            null,
+            0,
+            100,
+            false,
+            false,
+            false,
+            false);
     EventView next =
         firstOf(gameId, housed(renewed, marriedDay, "은행원", 0), marriedDay, EventKind.HOUSING, 3L);
     assertThat(next.title()).as("같은 날 '집 살까?'가 따라붙지 않는다").isEqualTo("언제까지 월세 살 거야?");
@@ -1103,7 +1199,8 @@ class DefaultEventServiceTest {
     for (long seed = 1; seed <= 30; seed++) {
       UUID unlucky = UUID.randomUUID();
       HousingFacts villa =
-          new HousingFacts("VILLA_JEONSE", marriedDay, 0, false, false, null, 0, 0, false, false);
+          new HousingFacts(
+              "VILLA_JEONSE", marriedDay, 0, false, false, null, 0, 0, false, false, false, false);
       EventView end =
           firstOf(unlucky, housed(villa, marriedDay, "은행원", 0), JOB_DAY, EventKind.HOUSING, seed);
       if (!end.title().equals("집주인이 재계약을 거절했다")) {
@@ -1112,7 +1209,18 @@ class DefaultEventServiceTest {
       events.complete(unlucky, end.eventId(), new Completion("MONTHLY", "MONTHLY", List.of()));
       HousingFacts pushed =
           new HousingFacts(
-              "MONTHLY", marriedDay + 2 * YEAR, 0, false, false, null, 0, 0, false, false);
+              "MONTHLY",
+              marriedDay + 2 * YEAR,
+              0,
+              false,
+              false,
+              null,
+              0,
+              0,
+              false,
+              false,
+              false,
+              false);
       EventView ask =
           firstOf(
               unlucky, housed(pushed, marriedDay, "은행원", 0), marriedDay, EventKind.HOUSING, seed);
@@ -1123,15 +1231,93 @@ class DefaultEventServiceTest {
     throw new AssertionError("운 0으로 30판을 돌려도 거절이 한 번도 없다");
   }
 
+  /**
+   * 배우자의 월세 불만은 네 번째에 끝난다 (decisions.md 111번): 네 번째면 배우자가 계약서를 들고 와 미루기·거스르기가 없고, 그 뒤로는 더 묻지 않는다.
+   * 감당할 수 없으면 네 번째가 오지 않고 월세로 굳어진다. 현금이 넉넉하면 "조금만 더 모으자"가 빠지고, 은퇴 뒤에는 은퇴 문구다.
+   */
+  @Test
+  void 배우자_월세_불만은_네_번째에_계약서를_들고_오고_그_뒤로는_묻지_않는다() {
+    int marriedDay = JOB_DAY + YEAR;
+    int farLease = JOB_DAY + 30 * YEAR;
+    HousingFacts canMove =
+        new HousingFacts(
+            "MONTHLY", farLease, 0, false, false, null, 0, 50, false, false, true, false);
+    UUID gameId = UUID.randomUUID();
+    SchedulingContext family = housed(canMove, marriedDay, "은행원", 0);
+    EventView buy = firstOf(gameId, family, JOB_DAY, EventKind.HOUSING, 3L);
+    events.complete(gameId, buy.eventId(), new Completion("PASS", "PASS", List.of()));
+    int from = marriedDay;
+    for (int level = 1; level <= 3; level++) {
+      EventView ask = firstOf(gameId, family, from, EventKind.HOUSING, 3L);
+      assertThat(ask.options()).extracting(EventView.Option::code).contains("WAIT", "STAY");
+      events.complete(gameId, ask.eventId(), new Completion("WAIT", "WAIT", List.of()));
+      from = ask.occursDay();
+    }
+    EventView last = firstOf(gameId, family, from, EventKind.HOUSING, 3L);
+    assertThat(last.title()).isEqualTo("배우자가 계약서를 들고 왔다");
+    assertThat(last.options())
+        .extracting(EventView.Option::code)
+        .containsExactly("VILLA", "VILLA_INSURED", "APT_JEONSE", "BUY_SEOUL", "BUY_GYEONGGI");
+    events.complete(gameId, last.eventId(), new Completion("APT_JEONSE", "APT_JEONSE", List.of()));
+    assertThat(firstOf(gameId, family, last.occursDay(), EventKind.HOUSING, 3L).title())
+        .as("네 번째 뒤로는 더 묻지 않는다: 다음 주거 장면은 멀리 있는 만기다")
+        .isEqualTo("계약 만기가 다가온다");
+
+    // 감당할 수 없으면 세 번째 뒤 네 번째가 오지 않고 월세로 굳어진다.
+    HousingFacts stuck =
+        new HousingFacts(
+            "MONTHLY", farLease, 0, false, false, null, 0, 50, false, false, false, false);
+    UUID poor = UUID.randomUUID();
+    SchedulingContext poorFamily = housed(stuck, marriedDay, "은행원", 0);
+    EventView poorBuy = firstOf(poor, poorFamily, JOB_DAY, EventKind.HOUSING, 3L);
+    events.complete(poor, poorBuy.eventId(), new Completion("PASS", "PASS", List.of()));
+    from = marriedDay;
+    for (int level = 1; level <= 3; level++) {
+      EventView ask = firstOf(poor, poorFamily, from, EventKind.HOUSING, 3L);
+      events.complete(poor, ask.eventId(), new Completion("WAIT", "WAIT", List.of()));
+      from = ask.occursDay();
+    }
+    assertThat(firstOf(poor, poorFamily, from, EventKind.HOUSING, 3L).title())
+        .isEqualTo("계약 만기가 다가온다");
+
+    // 현금이 넉넉하면 "조금만 더 모으자"가 빠진다. 은퇴 뒤에는 직장 문구 대신 은퇴 문구.
+    HousingFacts rich =
+        new HousingFacts(
+            "MONTHLY", farLease, 0, false, false, null, 0, 50, false, false, true, true);
+    UUID richGame = UUID.randomUUID();
+    SchedulingContext richFamily = withRetired(housed(rich, marriedDay, "은행원", 0));
+    EventView richBuy = firstOf(richGame, richFamily, JOB_DAY, EventKind.HOUSING, 3L);
+    events.complete(richGame, richBuy.eventId(), new Completion("PASS", "PASS", List.of()));
+    EventView richAsk = firstOf(richGame, richFamily, marriedDay, EventKind.HOUSING, 3L);
+    assertThat(richAsk.options())
+        .extracting(EventView.Option::code)
+        .doesNotContain("WAIT")
+        .contains("STAY");
+    assertThat(richAsk.body()).contains("은퇴").doesNotContain("금리표");
+  }
+
+  /** 가족 점수가 바닥이면 여행·나들이 제안이 끊긴다 (decisions.md 111번). */
+  @Test
+  void 가족_점수가_바닥이면_가족_여행_제안이_오지_않는다() {
+    int marriedDay = (30 - START_AGE) * YEAR;
+    SchedulingContext cold = withFamily(lifeOnly(true, marriedDay, 3), 10);
+    assertThat(
+            nextOf(UUID.randomUUID(), cold, marriedDay, EventKind.LIFE, 11L)
+                .filter(DefaultEventServiceTest::isTrip))
+        .isEmpty();
+  }
+
   @Test
   void 전세사기는_보증보험_없는_빌라_만기에만_가끔_있다() {
     int frauds = 0;
     int insuredFrauds = 0;
     for (long seed = 1; seed <= 200; seed++) {
       HousingFacts villa =
-          new HousingFacts("VILLA_JEONSE", JOB_DAY, 0, false, true, null, 0, 50, true, false);
+          new HousingFacts(
+              "VILLA_JEONSE", JOB_DAY, 0, false, true, null, 0, 50, true, false, false, false);
       HousingFacts insured =
-          new HousingFacts("VILLA_JEONSE", JOB_DAY, 0, false, false, null, 0, 50, true, false);
+          new HousingFacts(
+              "VILLA_JEONSE", JOB_DAY, 0, false, false, null, 0, 50, true, false, false, false);
       if (fraudAt(villa, seed)) {
         frauds++;
       }
@@ -1150,12 +1336,14 @@ class DefaultEventServiceTest {
     int lucky = 0;
     for (long seed = 1; seed <= 200; seed++) {
       if (refusedAt(
-          new HousingFacts("APT_JEONSE", JOB_DAY, 0, false, false, null, 0, 0, true, false),
+          new HousingFacts(
+              "APT_JEONSE", JOB_DAY, 0, false, false, null, 0, 0, true, false, false, false),
           seed)) {
         unlucky++;
       }
       if (refusedAt(
-          new HousingFacts("APT_JEONSE", JOB_DAY, 0, false, false, null, 0, 100, true, false),
+          new HousingFacts(
+              "APT_JEONSE", JOB_DAY, 0, false, false, null, 0, 100, true, false, false, false),
           seed)) {
         lucky++;
       }
@@ -1216,6 +1404,66 @@ class DefaultEventServiceTest {
     assertThat(news.stockCode()).as("든 종목의 뉴스만 온다").isEqualTo(held);
   }
 
+  private static SchedulingContext withRetired(SchedulingContext c) {
+    return new SchedulingContext(
+        c.phase(),
+        c.startAge(),
+        c.investmentStyle(),
+        c.interestSector(),
+        c.salaryStartDay(),
+        c.traitsFinalized(),
+        c.investingStartDay(),
+        c.endDay(),
+        c.jobStartDay(),
+        c.jobCode(),
+        c.careerStartDay(),
+        true,
+        c.married(),
+        c.marriedDay(),
+        c.spouseJob(),
+        c.childrenCount(),
+        c.childBirthDays(),
+        c.childLeaveDays(),
+        c.heldStockCodes(),
+        c.fullTimeInvestor(),
+        c.heldDropBp(),
+        c.heldStocks(),
+        c.housing(),
+        c.netWorth(),
+        c.family(),
+        c.unaffordableStockCodes());
+  }
+
+  private static SchedulingContext withFamily(SchedulingContext c, int family) {
+    return new SchedulingContext(
+        c.phase(),
+        c.startAge(),
+        c.investmentStyle(),
+        c.interestSector(),
+        c.salaryStartDay(),
+        c.traitsFinalized(),
+        c.investingStartDay(),
+        c.endDay(),
+        c.jobStartDay(),
+        c.jobCode(),
+        c.careerStartDay(),
+        c.retired(),
+        c.married(),
+        c.marriedDay(),
+        c.spouseJob(),
+        c.childrenCount(),
+        c.childBirthDays(),
+        c.childLeaveDays(),
+        c.heldStockCodes(),
+        c.fullTimeInvestor(),
+        c.heldDropBp(),
+        c.heldStocks(),
+        c.housing(),
+        c.netWorth(),
+        family,
+        c.unaffordableStockCodes());
+  }
+
   private static SchedulingContext withUnaffordable(SchedulingContext c, Set<String> codes) {
     return new SchedulingContext(
         c.phase(),
@@ -1242,6 +1490,7 @@ class DefaultEventServiceTest {
         c.heldStocks(),
         c.housing(),
         c.netWorth(),
+        50,
         codes);
   }
 
@@ -1264,7 +1513,7 @@ class DefaultEventServiceTest {
         JOB_DAY,
         "office",
         JOB_DAY,
-        true,
+        false,
         marriedDay != null,
         marriedDay,
         spouseJob,
@@ -1277,6 +1526,7 @@ class DefaultEventServiceTest {
         Map.of(),
         facts,
         0L,
+        50,
         Set.of());
   }
 
@@ -1313,6 +1563,7 @@ class DefaultEventServiceTest {
         facts,
         SETTLED,
         0L,
+        50,
         Set.of());
   }
 
@@ -1346,6 +1597,7 @@ class DefaultEventServiceTest {
             Map.of(),
             SETTLED,
             0L,
+            50,
             Set.of());
     EventView shake = firstOf(UUID.randomUUID(), holding, JOB_DAY + 30, EventKind.SHAKE, 7L);
 
