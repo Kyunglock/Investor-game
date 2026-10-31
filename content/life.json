@@ -50,11 +50,26 @@
     "noneLabel": "이번엔 가지 않는다"
   },
   "partTimes": [
-    { "name": "편의점", "monthly": 850000 },
-    { "name": "카페", "monthly": 800000 },
-    { "name": "과외", "monthly": 1200000 },
-    { "name": "배달", "monthly": 1100000 },
-    { "name": "물류센터", "monthly": 1000000 }
+    {
+      "name": "편의점",
+      "monthly": 850000
+    },
+    {
+      "name": "카페",
+      "monthly": 800000
+    },
+    {
+      "name": "과외",
+      "monthly": 1200000
+    },
+    {
+      "name": "배달",
+      "monthly": 1100000
+    },
+    {
+      "name": "물류센터",
+      "monthly": 1000000
+    }
   ],
   "spouse": {
     "personalities": [
@@ -306,10 +321,22 @@
       "requiresChildren": false
     },
     {
-      "code": "car-repair",
-      "title": "자동차 수리",
-      "body": "주차장에서 긁혔다. 보험 처리하면 할증이 붙는다.",
-      "amount": -800000,
+      "code": "phone",
+      "title": "휴대폰 교체",
+      "body": "쓰던 휴대폰이 떨어져 화면이 나갔다. 수리비가 새 폰 값의 반이라 결국 바꿨다.",
+      "amount": -1200000,
+      "salaryPercent": 0,
+      "assetPercent": 0,
+      "weight": 5,
+      "requiresMarried": false,
+      "requiresJob": false,
+      "requiresChildren": false
+    },
+    {
+      "code": "appliance",
+      "title": "가전 고장",
+      "body": "세탁기가 돌아가다 멈췄다. 출장 기사는 부품값보다 새로 사는 게 낫다고 했다.",
+      "amount": -700000,
       "salaryPercent": 0,
       "assetPercent": 0,
       "weight": 5,
@@ -385,18 +412,6 @@
       "salaryPercent": 0,
       "assetPercent": 0,
       "weight": 3,
-      "requiresMarried": false,
-      "requiresJob": false,
-      "requiresChildren": false
-    },
-    {
-      "code": "car-insurance",
-      "title": "자동차보험 갱신",
-      "body": "보험료가 작년보다 올랐다. 다이렉트로 바꿔도 이 정도다.",
-      "amount": -900000,
-      "salaryPercent": 0,
-      "assetPercent": 0,
-      "weight": 4,
       "requiresMarried": false,
       "requiresJob": false,
       "requiresChildren": false
