@@ -248,9 +248,21 @@ final class GameClient {
     return JsonPath.parse(result.getResponse().getContentAsString());
   }
 
-  /** 고를 수 있는 첫 선택지. 주거 선택지는 돈이 모자라면 막혀 있다(blocked). */
+  /** 고를 수 있는 첫 선택지. 주거 선택지는 돈이 모자라면 막혀 있다(blocked). 주거 이벤트는 안전한 쪽을 먼저 고른다. */
   static String firstOpen(DocumentContext game) {
     List<String> open = game.read("$.pendingEvent.options[?(@.blocked == null)].code");
+    if ("HOUSING".equals(game.read("$.pendingEvent.kind"))) {
+      // 자동 플레이어는 보증보험 없는 빌라 전세(전세사기로 보증금을 잃을 수 있다)나 큰 빚보다 머물기·월세·미루기를 먼저 고른다.
+      // 그래야 판 시드에 따라 파산해 70세 흐름 검사가 깨지는 일이 줄어든다.
+      for (String safe : SAFE_HOUSING) {
+        if (open.contains(safe)) {
+          return safe;
+        }
+      }
+    }
     return open.getFirst();
   }
+
+  private static final List<String> SAFE_HOUSING =
+      List.of("KEEP", "MONTHLY", "WAIT", "PASS", "ENDURE", "VILLA_INSURED", "APT_JEONSE");
 }
