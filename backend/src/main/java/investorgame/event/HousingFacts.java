@@ -14,6 +14,9 @@ package investorgame.event;
  * @param cheongyakAffordable 영끌(현금 + 돌려받을 보증금 + LTV·DSR 한도 주담대)로 분양가를 치를 수 있는가. 아니면 분양 공고 자체가 오지
  *     않는다 (#26)
  * @param cramped 지금 세집이 식구 수에 비해 좁은가 (#117). 결혼·출산 뒤 좁으면 "집이 좁다" 장면이 온다
+ * @param canLeaveMonthly 월세에서 전세·매수 가운데 하나라도 감당할 수 있는가. 배우자의 월세 불만이 끝까지 가면 배우자가 계약서를 들고 오는데, 감당할 수
+ *     없으면 그냥 월세로 굳어져 더 묻지 않는다 (decisions.md 111번)
+ * @param cashForJeonse 아파트 전세 보증금을 대출 없이 현금으로 낼 수 있는가. 그러면 배우자에게 "조금만 더 모으자"는 말이 통하지 않는다 (111번)
  */
 public record HousingFacts(
     String tenure,
@@ -25,8 +28,10 @@ public record HousingFacts(
     int seoulChange12mBp,
     int luck,
     boolean cheongyakAffordable,
-    boolean cramped) {
+    boolean cramped,
+    boolean canLeaveMonthly,
+    boolean cashForJeonse) {
 
   public static final HousingFacts PARENTS =
-      new HousingFacts("PARENTS", null, 0, false, false, null, 0, 50, false, false);
+      new HousingFacts("PARENTS", null, 0, false, false, null, 0, 50, false, false, false, false);
 }

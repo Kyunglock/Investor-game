@@ -272,6 +272,8 @@ event:
     trip-last-age: 65
     # 아이가 어릴 때(대략 13세까지) 이 간격마다 놀이동산·운동회·학예회 같은 나들이·행사 가운데 하나가 온다 (decisions.md 87·99번)
     outing-gap-years: { min: 1, max: 2 }
+    # 가족 점수가 이 아래면 남처럼 멀어진 집: 여행·나들이 제안이 끊기고 달마다 조금씩 지친다 (decisions.md 111번)
+    cold-family-below: 20
   # 알림성 지출·수입 이벤트 간격 (직업이 생긴 뒤부터)
   notice:
     gap-days: { min: 240, max: 600 }
@@ -308,6 +310,8 @@ event:
       retry-gap-days: 540
       child-gap-days: 180
       last-age: 60
+      # 네 번째면 배우자가 알아서 계약서를 들고 온다. 감당이 안 되면 월세로 굳어져 더 묻지 않는다 (decisions.md 111번)
+      final-level: 4
     # 결혼·출산으로 세집이 식구 수에 비해 좁아지면 두 달 뒤 "집이 좁다" (#117, decisions.md 105번). 세 만기가 반년 안이면 만기에 옮기면 되니 따로 띄우지 않는다
     cramped-delay-days: 60
     cramped-lease-window-days: 180

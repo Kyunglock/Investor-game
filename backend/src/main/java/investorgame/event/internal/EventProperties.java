@@ -74,7 +74,8 @@ public record EventProperties(
       Range childWeddingGapYears,
       Range tripGapYears,
       int tripLastAge,
-      Range outingGapYears) {}
+      Range outingGapYears,
+      int coldFamilyBelow) {}
 
   /** 알림성 이벤트 간격(일). 직업이 생긴 뒤부터. */
   public record NoticeSettings(Range gapDays) {}
@@ -149,9 +150,11 @@ public record EventProperties(
    * @param retryGapDays 미루거나 거스르면 이만큼 뒤에 다시, 더 세게 묻는다
    * @param childGapDays 마지막으로 물은 뒤 아이가 태어나면 그로부터 이만큼 뒤에 앞당겨 묻는다
    * @param lastAge 이 나이를 넘으면 더 묻지 않는다
+   * @param finalLevel 이 단계가 되면 배우자가 알아서 계약서를 들고 온다(미루기·거스르기 없음). 감당할 수 없으면 월세로 굳어져 더 묻지 않는다
+   *     (decisions.md 111번)
    */
   public record SpouseRentSettings(
-      int firstGapDays, int retryGapDays, int childGapDays, int lastAge) {}
+      int firstGapDays, int retryGapDays, int childGapDays, int lastAge, int finalLevel) {}
 
   /** 운에 따른 재계약 거절 확률의 양 끝(만분율). */
   public record Refuse(int unlucky, int lucky) {}

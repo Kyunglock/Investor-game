@@ -82,6 +82,9 @@ class DefaultEventService implements EventService {
 
   private static final String FRAUD = "FRAUD";
 
+  /** 은퇴한 뒤의 배우자 월세 불만 문구 키(life.json spouseRent.jobLines). */
+  static final String SPOUSE_RETIRED = "retired";
+
   private static final int BP = 10_000;
   private static final int PERCENT = 100;
 
@@ -527,8 +530,10 @@ class DefaultEventService implements EventService {
         dues.add(new LifeDue(CHILD, day));
       }
     }
+    // 가족 점수가 바닥이면 여행·나들이를 같이 가자는 사람이 없다 (decisions.md 111번).
+    boolean warm = context.family() >= life.coldFamilyBelow();
     // 가족 여행 (decisions.md 71번): 결혼 뒤 3~6년마다 가족 가운데 누군가 여행을 가자고 한다. 자동으로 가지 않고 선택이다.
-    if (context.married() && context.marriedDay() != null) {
+    if (warm && context.married() && context.marriedDay() != null) {
       List<EventRow> trips =
           rows.stream()
               .filter(
@@ -554,7 +559,7 @@ class DefaultEventService implements EventService {
                         && r.definitionCode() != null
                         && r.definitionCode().startsWith(OUTING_PREFIX))
             .toList();
-    if (context.marriedDay() != null && !context.childBirthDays().isEmpty()) {
+    if (warm && context.marriedDay() != null && !context.childBirthDays().isEmpty()) {
       int base = outings.isEmpty() ? context.marriedDay() : last(outings).occursDay();
       int gap = base + roll(random, life.outingGapYears(), "OUTING", outings.size()) * year;
       // 그 나이에 맞는 나들이가 하나라도 있는 아이만 후보다. 두 살은 동물원도 아직이라, 그런 아이만 있으면 맞는 나이가 될 때까지 미룬다.
@@ -863,6 +868,12 @@ class DefaultEventService implements EventService {
     }
     EventProperties.SpouseRentSettings settings = properties.housing().spouseRent();
     List<EventRow> asked = spouseRentAsked(rows);
+    // 마지막 단계(decisions.md 111번): 배우자가 계약서를 들고 온다. 감당할 수 없으면 월세로 굳어져 더 묻지 않고, 그 뒤로는 끝이다.
+    int level = asked.size() + 1;
+    if (level > settings.finalLevel()
+        || (level == settings.finalLevel() && !housing.canLeaveMonthly())) {
+      return Optional.empty();
+    }
     // 전세사기·집주인 거절로 월세에 밀린 직후에 "적금 깨서 보증금 보태자"는 어설프다. 큰 일 뒤에는 반년 미룬다 (decisions.md 110번).
     int shock =
         ofKind(rows, EventKind.HOUSING).stream()
@@ -1130,9 +1141,13 @@ class DefaultEventService implements EventService {
       options.add(ChoiceTicket.Housing.PASS);
     } else if (ChoiceTicket.Housing.SPOUSE_RENT.equals(definition)) {
       // 배우자가 월세살이를 그만하자고 한다 (#116): 전세로 옮기거나, 집을 사거나, 설득해 미루거나, 거스른다. 월세 그대로는 선택지가 아니다.
+      // 은퇴 뒤에는 직장 전제 문구 대신 은퇴 문구 (decisions.md 111번).
+      int level = spouseRentAsked(rows).size() + 1;
       definition =
           ChoiceTicket.Housing.spouseRentCode(
-              spouseRentAsked(rows).size() + 1, context.childrenCount(), context.spouseJob());
+              level,
+              context.childrenCount(),
+              context.retired() ? SPOUSE_RETIRED : context.spouseJob());
       options.add(ChoiceTicket.Housing.VILLA);
       options.add(ChoiceTicket.Housing.VILLA_INSURED);
       options.add(ChoiceTicket.Housing.APT_JEONSE);
@@ -1140,8 +1155,13 @@ class DefaultEventService implements EventService {
         options.add(ChoiceTicket.Housing.BUY_SEOUL);
         options.add(ChoiceTicket.Housing.BUY_GYEONGGI);
       }
-      options.add(ChoiceTicket.Housing.WAIT);
-      options.add(ChoiceTicket.Housing.STAY);
+      // 마지막 단계면 배우자가 계약서를 들고 와 미루기·거스르기가 없다. 현금이 넉넉하면 "조금만 더 모으자"는 통하지 않는다 (111번).
+      if (level < properties.housing().spouseRent().finalLevel()) {
+        if (!housing.cashForJeonse()) {
+          options.add(ChoiceTicket.Housing.WAIT);
+        }
+        options.add(ChoiceTicket.Housing.STAY);
+      }
     } else if (ChoiceTicket.Housing.CRAMPED.equals(definition)) {
       // 집이 좁다 (#117): 더 넓은 집으로 옮기거나(세·매수), 좁아도 그냥 산다. 막내가 태어나 좁아졌으면 그 아이의 순번을 싣는다.
       boolean byChild =

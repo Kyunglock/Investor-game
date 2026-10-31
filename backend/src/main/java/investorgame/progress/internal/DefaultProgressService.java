@@ -1819,6 +1819,7 @@ class DefaultProgressService implements ProgressService {
             cheongyakPoints(game, character, game.lastReportedDay()),
             game.lastReportedDay()),
         netWorth(game.id()),
+        household.familyScore(game.id()),
         unaffordableStocks(game.id()));
   }
 

@@ -284,10 +284,11 @@ class JsonContentCatalogTest {
         .isEqualTo(catalog.spouseText().profile("0-0-0"));
     assertThat(catalog.spouseText().economies()).allMatch(e -> e.income() > 0);
     // 배우자의 월세 불만 (#116): 단계별 문구, 아이 수와 배우자 직업에 따라 한 줄이 붙는다.
-    assertThat(catalog.spouseRentText().levels()).hasSize(3);
+    assertThat(catalog.spouseRentText().levels()).hasSize(4);
     assertThat(catalog.spouseRentText().body(1, 0, "은행원")).contains("금리표").doesNotContain("{");
     assertThat(catalog.spouseRentText().body(2, 2, null)).contains("아이가 2인데").doesNotContain("{");
-    assertThat(catalog.spouseRentText().level(9).title()).isEqualTo("집 때문에 부부 싸움이 났다");
+    assertThat(catalog.spouseRentText().level(3).title()).isEqualTo("집 때문에 부부 싸움이 났다");
+    assertThat(catalog.spouseRentText().level(9).title()).isEqualTo("배우자가 계약서를 들고 왔다");
     assertThat(catalog.spouseRentText().stayText(3)).contains("끝내 월세를 고집했다");
     assertThat(catalog.housingLabel("WAIT")).isNotBlank();
     assertThat(catalog.housingLabel("STAY")).isNotBlank();
