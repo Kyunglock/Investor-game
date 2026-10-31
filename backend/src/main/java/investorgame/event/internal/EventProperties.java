@@ -49,7 +49,12 @@ public record EventProperties(
    * @param noRepeatWindow 같은 뉴스 정의가 다시 나오지 않는 최근 개수
    */
   /** yearlyChanceBp: 해마다 뉴스가 한 번 나올 확률(만분율). 나머지 해는 없다 (decisions.md 80번). */
-  public record NewsSettings(int interestWeightPercent, int noRepeatWindow, int yearlyChanceBp) {}
+  /**
+   * @param investorPerYear 전업투자자에게는 뉴스가 해마다 이만큼 온다(직장인은 yearlyChanceBp 확률로 0~1번). 월급이 없으니 매매 기회가 더
+   *     잦아야 산다 (decisions.md 121번)
+   */
+  public record NewsSettings(
+      int interestWeightPercent, int noRepeatWindow, int yearlyChanceBp, int investorPerYear) {}
 
   /**
    * 결혼·자녀 이벤트 시점 (경제 개편 설계 7.3절). 나이는 세, 간격은 년.

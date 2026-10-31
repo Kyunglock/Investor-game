@@ -703,6 +703,9 @@ class DefaultProgressService implements ProgressService {
       GameRow game, ChoiceTicket ticket, ChoiceTicket.Life life, SeededRandom random) {
     UUID gameId = game.id();
     int day = ticket.occursDay();
+    if (life.accepted() && life.kind() == ChoiceTicket.LifeKind.CHILD) {
+      requireAffordable(gameId, household.childbirthCost(day));
+    }
     events.complete(
         gameId,
         ticket.eventId(),
@@ -729,11 +732,69 @@ class DefaultProgressService implements ProgressService {
     };
   }
 
+  /** 현금과 주식을 다 합쳐도 모자라면 고를 수 없다 (decisions.md 121번). 화면에서 막은 것을 서버도 지킨다. */
+  private void requireAffordable(UUID gameId, long cost) {
+    String blocked = bigCostCheck(gameId, cost).blocked();
+    if (blocked != null) {
+      throw new InvalidRequestException(blocked);
+    }
+  }
+
+  /** 전업투자자 선택지의 경고: 지금 순자산이 생활비 몇 달치인지. */
+  private String investorWarning(UUID gameId, int day) {
+    long expense = Math.max(1, household.monthlyExpense(gameId, day));
+    long months = Math.max(0, netWorth(gameId)) / expense;
+    return "월급 없이 뉴스와 매매로만 산다 · 지금 순자산은 생활비 %d달치".formatted(months);
+  }
+
+  /** 수락하면 바로 나가는 큰 비용(결혼·출산). 그런 선택이 아니면 null. */
+  private Long bigCost(ChoiceTicket.Effect effect, int day) {
+    if (effect instanceof ChoiceTicket.Marriage marriage && marriage.accepted()) {
+      return household.weddingCost(day);
+    }
+    if (effect instanceof ChoiceTicket.Life life
+        && life.accepted()
+        && life.kind() == ChoiceTicket.LifeKind.CHILD) {
+      return household.childbirthCost(day);
+    }
+    return null;
+  }
+
+  /** 선택지 설명과 막힘 이유 (decisions.md 121번). */
+  private record BigCostCheck(String detail, String blocked) {}
+
+  /** 현금과 들고 있는 주식(평가액)을 다 합쳐도 모자라면 막고, 현금만 모자라면 그만큼 빚이 된다고 미리 말한다. */
+  private BigCostCheck bigCostCheck(UUID gameId, long cost) {
+    AccountView account = assets.get(gameId);
+    long stocks = assets.holdingsValue(gameId, market.prices(gameId));
+    String detail = HousingFlow.money(cost) + " 든다";
+    if (account.cash() + stocks < cost) {
+      return new BigCostCheck(
+          detail,
+          "현금과 주식을 다 합쳐도 %s 모자란다"
+              .formatted(
+                  Korean.withParticle(
+                      HousingFlow.money(cost - account.cash() - stocks), "이", "가")));
+    }
+    if (account.cash() < cost) {
+      return new BigCostCheck(
+          detail
+              + " · 현금이 %s 모자라 그만큼 빚(마이너스 통장)이 된다"
+                  .formatted(HousingFlow.money(cost - account.cash())),
+          null);
+    }
+    return new BigCostCheck(detail, null);
+  }
+
   /** 결혼 (decisions.md 77번): 카드에서 소개된 그 사람과 결혼한다. 배우자의 직업·소득·소개가 가계에 남고 소득은 배우자 소득이 된다. */
   private ChoiceOutcome.Outcome resolveMarriage(
       GameRow game, ChoiceTicket ticket, ChoiceTicket.Marriage marriage) {
     UUID gameId = game.id();
     int day = ticket.occursDay();
+    long cost = household.weddingCost(day);
+    if (marriage.accepted()) {
+      requireAffordable(gameId, cost);
+    }
     events.complete(
         gameId,
         ticket.eventId(),
@@ -742,7 +803,6 @@ class DefaultProgressService implements ProgressService {
       return simpleOutcome(ticket, "아직은 아니라고 했다.");
     }
     SpouseText.Profile who = content.spouseText().profile(marriage.spouseCode());
-    long cost = household.weddingCost(day);
     household.marry(gameId, day, new Spouse(who.job(), who.income(), who.intro()));
     household.cheer(gameId, HAPPY_MARRIAGE);
     household.bond(gameId, BOND_MARRIAGE);
@@ -2168,15 +2228,38 @@ class DefaultProgressService implements ProgressService {
     if (event.kind() == EventKind.LIFE) {
       return event.options().stream()
           .map(
+              o -> {
+                ChoiceTicket.Effect effect =
+                    events.prepareChoice(game.id(), event.eventId(), o.code()).effect();
+                if (effect instanceof ChoiceTicket.FamilyTrip trip) {
+                  return new GameView.Option(
+                      o.code(),
+                      o.label(),
+                      tripDetail(tripCost(game.id(), trip, event.occursDay())),
+                      null);
+                }
+                // 결혼·출산 비용은 미리 보여 주고, 현금+주식으로도 안 되면 막는다 (decisions.md 121번).
+                Long cost = bigCost(effect, event.occursDay());
+                if (cost == null) {
+                  return new GameView.Option(o.code(), o.label(), null, null);
+                }
+                BigCostCheck check = bigCostCheck(game.id(), cost);
+                return new GameView.Option(o.code(), o.label(), check.detail(), check.blocked());
+              })
+          .toList();
+    }
+    if (event.kind() == EventKind.JOB) {
+      // 전업투자자 선택지에는 월급 없이 얼마나 버틸 수 있는지 미리 보여 준다 (decisions.md 121번).
+      return event.options().stream()
+          .map(
               o ->
-                  events.prepareChoice(game.id(), event.eventId(), o.code()).effect()
-                          instanceof ChoiceTicket.FamilyTrip trip
-                      ? new GameView.Option(
-                          o.code(),
-                          o.label(),
-                          tripDetail(tripCost(game.id(), trip, event.occursDay())),
-                          null)
-                      : new GameView.Option(o.code(), o.label(), null, null))
+                  new GameView.Option(
+                      o.code(),
+                      o.label(),
+                      ChoiceTicket.Job.INVEST.equals(o.code())
+                          ? investorWarning(game.id(), event.occursDay())
+                          : null,
+                      null))
           .toList();
     }
     if (event.kind() != EventKind.HOUSING) {

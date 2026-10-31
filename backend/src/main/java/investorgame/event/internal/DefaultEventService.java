@@ -713,6 +713,20 @@ class DefaultEventService implements EventService {
       RandomGenerator rng = random.forKey("event", "news-year", y);
       boolean comes = rng.nextInt(BP) < properties.news().yearlyChanceBp();
       int day = y * year + rng.nextInt(year);
+      if (context.fullTimeInvestor()) {
+        // 전업투자자는 해마다 investor-per-year번: 그해의 날들을 뽑아 base 뒤 첫 날 (decisions.md 121번).
+        int[] days = new int[properties.news().investorPerYear()];
+        for (int i = 0; i < days.length; i++) {
+          days[i] = y * year + rng.nextInt(year);
+        }
+        java.util.Arrays.sort(days);
+        for (int d : days) {
+          if (d > base) {
+            return Optional.of(d);
+          }
+        }
+        continue;
+      }
       if (comes && day > base) {
         return Optional.of(day);
       }
