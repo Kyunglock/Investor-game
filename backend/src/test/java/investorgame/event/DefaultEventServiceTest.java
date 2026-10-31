@@ -67,6 +67,7 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             List.of(),
+            List.of(),
             false,
             Map.of(),
             SETTLED,
@@ -222,6 +223,7 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             List.of(),
+            List.of(),
             false,
             Map.of(),
             SETTLED,
@@ -367,6 +369,23 @@ class DefaultEventServiceTest {
     assertThat(outings.get(0).options())
         .extracting(EventView.Option::code)
         .containsExactly("luxury", "normal", "cheap", "none");
+    // 나들이는 그 아이의 나이에 맞는 것만 온다 (decisions.md 106번): 두 살이 캠핑을 가자고 하지 않는다.
+    int birth = (58 - START_AGE) * YEAR - 26 * YEAR;
+    for (EventView view : outings) {
+      int age = (view.occursDay() - birth) / YEAR;
+      ChoiceTicket.FamilyTrip trip =
+          (ChoiceTicket.FamilyTrip) events.prepareChoice(gameId, view.eventId(), "normal").effect();
+      assertThat(content.outing(trip.outing()).fits(age))
+          .as("%d세 아이에게 %s", age, trip.outing())
+          .isTrue();
+    }
+    // 아이가 두 살이면 맞는 나들이가 없어 아직 오지 않는다. 세 살(동물원)부터다.
+    UUID toddler = UUID.randomUUID();
+    SchedulingContext young = lifeWith(marriedDay, List.of((58 - START_AGE) * YEAR), END_DAY);
+    Optional<EventView> first =
+        nextOf(toddler, young, birth + YEAR, EventKind.LIFE, 13L)
+            .filter(v -> v.title().contains("첫째"));
+    first.ifPresent(v -> assertThat((v.occursDay() - birth) / YEAR).isGreaterThanOrEqualTo(3));
   }
 
   private static boolean isTrip(EventView view) {
@@ -392,6 +411,7 @@ class DefaultEventServiceTest {
         marriedDay,
         null,
         leaveDays.size(),
+        leaveDays.stream().map(d -> d - 26 * YEAR).toList(),
         leaveDays,
         List.of(),
         false,
@@ -419,6 +439,7 @@ class DefaultEventServiceTest {
         marriedDay,
         null,
         children,
+        List.of(),
         List.of(),
         List.of(),
         false,
@@ -459,6 +480,7 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             List.of(),
+            List.of(),
             false,
             Map.of(),
             SETTLED,
@@ -491,6 +513,7 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             List.of(),
+            List.of(),
             false,
             Map.of(),
             SETTLED,
@@ -519,6 +542,7 @@ class DefaultEventServiceTest {
             null,
             null,
             0,
+            List.of(),
             List.of(),
             List.of(),
             true,
@@ -554,6 +578,7 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             List.of(),
+            List.of(),
             false,
             Map.of(),
             SETTLED,
@@ -585,6 +610,7 @@ class DefaultEventServiceTest {
             null,
             null,
             0,
+            List.of(),
             List.of(),
             List.of(),
             false,
@@ -661,6 +687,7 @@ class DefaultEventServiceTest {
         null,
         null,
         0,
+        List.of(),
         List.of(),
         List.of(),
         false,
@@ -803,6 +830,7 @@ class DefaultEventServiceTest {
         null,
         null,
         0,
+        List.of(),
         List.of(),
         List.of(),
         fullTimeInvestor,
@@ -1146,6 +1174,7 @@ class DefaultEventServiceTest {
         c.marriedDay(),
         c.spouseJob(),
         c.childrenCount(),
+        c.childBirthDays(),
         List.of(),
         c.heldStockCodes(),
         c.fullTimeInvestor(),
@@ -1181,6 +1210,7 @@ class DefaultEventServiceTest {
         children,
         List.of(),
         List.of(),
+        List.of(),
         false,
         Map.of(),
         facts,
@@ -1206,6 +1236,7 @@ class DefaultEventServiceTest {
         null,
         null,
         0,
+        List.of(),
         List.of(),
         held,
         false,
@@ -1237,6 +1268,7 @@ class DefaultEventServiceTest {
             null,
             null,
             0,
+            List.of(),
             List.of(),
             List.of(held),
             false,

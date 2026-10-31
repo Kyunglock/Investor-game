@@ -698,6 +698,9 @@ class JsonContentCatalog implements ContentCatalog {
                             && o.noneText() != null),
         "나들이 문구가 비었다 (decisions.md 87번)");
     require(
+        life.outings().stream().allMatch(o -> o.minAge() >= 1 && o.minAge() <= o.maxAge()),
+        "나들이마다 아이 나이 구간(minAge ≤ maxAge, 1세부터)이 있어야 한다 (decisions.md 106번)");
+    require(
         life.partTimes() != null
             && !life.partTimes().isEmpty()
             && life.partTimes().stream().allMatch(j -> !j.name().isBlank() && j.monthly() > 0),

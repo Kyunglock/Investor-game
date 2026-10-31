@@ -532,7 +532,7 @@ class DefaultEventService implements EventService {
         dues.add(new LifeDue(TRIP_PREFIX + who, day));
       }
     }
-    // 아이의 나들이 (decisions.md 87번): 어린 아이가 집에 있는 동안 1~2년마다 하나씩 조른다.
+    // 아이의 나들이 (decisions.md 87번): 어린 아이가 집에 있는 동안 1~2년마다 하나씩 조른다. 그 아이의 나이에 맞는 것만 (106번).
     List<EventRow> outings =
         rows.stream()
             .filter(
@@ -541,32 +541,48 @@ class DefaultEventService implements EventService {
                         && r.definitionCode() != null
                         && r.definitionCode().startsWith(OUTING_PREFIX))
             .toList();
-    if (context.marriedDay() != null && !context.childLeaveDays().isEmpty()) {
+    if (context.marriedDay() != null && !context.childBirthDays().isEmpty()) {
       int base = outings.isEmpty() ? context.marriedDay() : last(outings).occursDay();
       int day = base + roll(random, life.outingGapYears(), "OUTING", outings.size()) * year;
-      List<Integer> young = youngChildren(context, day);
+      // 그 나이에 맞는 나들이가 하나라도 있는 아이만 후보다. 두 살은 동물원도 아직이다.
+      List<Integer> young =
+          youngChildren(context, day).stream()
+              .filter(seq -> !fittingOutings(context, seq, day).isEmpty())
+              .toList();
       if (!young.isEmpty()) {
         RandomGenerator rng = random.forKey("event", "life", "outing", outings.size());
-        List<OutingText> kinds = content.outings();
-        String kind = kinds.get(rng.nextInt(kinds.size())).code();
         int seq = young.get(rng.nextInt(young.size()));
+        List<OutingText> kinds = fittingOutings(context, seq, day);
+        String kind = kinds.get(rng.nextInt(kinds.size())).code();
         dues.add(new LifeDue(OUTING_PREFIX + kind + ":" + seq, day));
       }
     }
     return dues;
   }
 
-  /** 그날 집에 있는 어린 아이(독립까지 12~29년 남았으면 대략 한 살에서 열세 살)의 순번. */
+  /** 그날 집에 있는 어린 아이(한 살에서 열세 살)의 순번. */
   private List<Integer> youngChildren(SchedulingContext context, int day) {
-    int year = calendar.daysPerYear();
     List<Integer> young = new ArrayList<>();
-    for (int i = 0; i < context.childLeaveDays().size(); i++) {
-      int left = context.childLeaveDays().get(i) - day;
-      if (left >= 12 * year && left <= 29 * year) {
+    for (int i = 0; i < context.childBirthDays().size(); i++) {
+      int age = childAge(context, i + 1, day);
+      boolean atHome =
+          context.childLeaveDays().size() <= i || context.childLeaveDays().get(i) > day;
+      if (atHome && age >= 1 && age <= 13) {
         young.add(i + 1);
       }
     }
     return young;
+  }
+
+  /** 그 아이의 그날 나이(세). */
+  private int childAge(SchedulingContext context, int seq, int day) {
+    return (day - context.childBirthDays().get(seq - 1)) / calendar.daysPerYear();
+  }
+
+  /** 그 아이의 나이에 맞는 나들이·행사 (decisions.md 106번). */
+  private List<OutingText> fittingOutings(SchedulingContext context, int seq, int day) {
+    int age = childAge(context, seq, day);
+    return content.outings().stream().filter(o -> o.fits(age)).toList();
   }
 
   static String outingCode(String definitionCode) {
@@ -579,14 +595,14 @@ class DefaultEventService implements EventService {
     return Integer.parseInt(rest.substring(rest.indexOf(':') + 1));
   }
 
-  /** 여행을 가자고 하는 사람: 배우자, 집에 있는 아이(독립까지 24년 안쪽이면 대략 여섯 살은 넘었다), 55세까지는 부모님도. */
+  /** 여행을 가자고 하는 사람: 배우자, 집에 있는 여섯 살 넘은 아이, 55세까지는 부모님도. */
   private String tripProposer(SchedulingContext context, int day, RandomGenerator rng) {
     List<String> who = new ArrayList<>();
     who.add("spouse");
-    int year = calendar.daysPerYear();
     for (int i = 0; i < context.childLeaveDays().size(); i++) {
       int leave = context.childLeaveDays().get(i);
-      if (leave > day && leave - day <= 24 * year) {
+      boolean oldEnough = context.childBirthDays().size() > i && childAge(context, i + 1, day) >= 6;
+      if (leave > day && oldEnough) {
         who.add("child:" + (i + 1));
       }
     }
