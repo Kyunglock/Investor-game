@@ -56,6 +56,11 @@ public record ChoiceTicket(
     public static final String BUY = "buy";
     public static final String CHEONGYAK = "cheongyak";
 
+    /** 분양 공고인가. 문구를 돌리느라 정의 코드가 "cheongyak-2"처럼 뒤에 번호를 달 수 있다 (decisions.md 123번). */
+    public static boolean isCheongyak(String definition) {
+      return definition != null && definition.startsWith(CHEONGYAK);
+    }
+
     /**
      * 결혼한 뒤 월세에 살면 배우자가 "언제까지 월세 살 거야?" 하고 묻는다 (#116). 정의 코드는 "spouse-rent:단계:자녀 수:배우자 직업"이고 단계는 물은
      * 횟수(1·2·3+)다. 미루거나 거스르면 행복도·가족 점수가 깎이고 다음에 더 세게 묻는다.
@@ -127,6 +132,10 @@ public record ChoiceTicket(
     }
 
     public static final String APPLY = "APPLY";
+
+    /** 청약은 관심 없다: 더 묻지 않는다 (decisions.md 123번). */
+    public static final String NEVER = "NEVER";
+
     public static final String KEEP = "KEEP";
     public static final String MONTHLY = "MONTHLY";
     public static final String VILLA = "VILLA";

@@ -355,6 +355,16 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public String housingTextVariant(String definition, int seq) {
+    int variants = 1;
+    while (phrases.housing().texts().containsKey(definition + "-" + (variants + 1))) {
+      variants++;
+    }
+    int pick = Math.floorMod(seq, variants);
+    return pick == 0 ? definition : definition + "-" + (pick + 1);
+  }
+
+  @Override
   public String moveOutStart(boolean fullTimeInvestor) {
     return phrases.housing().starts().get(fullTimeInvestor ? "investor" : "job");
   }

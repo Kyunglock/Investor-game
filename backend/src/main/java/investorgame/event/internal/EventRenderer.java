@@ -215,6 +215,7 @@ class EventRenderer {
               null,
               options);
         }
+        // 분양 공고의 정의 코드는 문구 벌("cheongyak-2")을 그대로 가리킨다 (decisions.md 123번).
         ContentCatalog.TextBlock text = content.housingText(row.definitionCode());
         yield view(row, text.title(), text.body(), null, null, options);
       }

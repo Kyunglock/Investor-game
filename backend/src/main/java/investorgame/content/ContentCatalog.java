@@ -106,6 +106,12 @@ public interface ContentCatalog {
 
   OutingText outing(String code);
 
+  /**
+   * 주거 문구의 변형 키: "정의", "정의-2", "정의-3"… 가운데 seq로 하나 (없으면 정의 그대로). 분양 공고처럼 자주 오는 장면의 문구를 돌린다
+   * (decisions.md 123번).
+   */
+  String housingTextVariant(String definition, int seq);
+
   /** 독립 장면 본문의 "{start}" 자리에 들어갈 첫 줄: 직장인은 첫 출근, 전업투자자는 투자로 살기로 했다 (decisions.md 117번). */
   String moveOutStart(boolean fullTimeInvestor);
 

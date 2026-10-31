@@ -1188,7 +1188,7 @@ class DefaultEventServiceTest {
     assertThat(notice.title()).isEqualTo("서울 아파트 분양 공고가 떴다");
     assertThat(notice.options())
         .extracting(EventView.Option::code)
-        .containsExactly("APPLY", "PASS");
+        .containsExactly("APPLY", "PASS", "NEVER");
   }
 
   /** 전세사기는 보증보험 없는 빌라 전세의 만기에만, 확률로 숨어 있다. */
@@ -1380,6 +1380,44 @@ class DefaultEventServiceTest {
             UUID.randomUUID(), housed(broke, marriedDay, "공무원", 0), JOB_DAY, EventKind.HOUSING, 3L);
     assertThat(next.title()).isEqualTo("계약 만기가 다가온다");
     assertThat(next.occursDay()).isEqualTo(JOB_DAY + 5 * YEAR);
+  }
+
+  /** 분양 공고 (decisions.md 123번): 볼수록 간격이 늘고(1.5년 → 3년), "관심 없다"고 하면 더 오지 않으며, 은퇴 뒤에도 오지 않는다. */
+  @Test
+  void 분양_공고는_볼수록_뜸해지고_관심_없다고_하면_끝난다() {
+    HousingFacts eligible =
+        new HousingFacts(
+            "APT_JEONSE",
+            JOB_DAY + 30 * YEAR,
+            0,
+            false,
+            false,
+            null,
+            0,
+            50,
+            true,
+            false,
+            false,
+            false,
+            false);
+    UUID gameId = UUID.randomUUID();
+    SchedulingContext ctx = housed(eligible, null);
+    EventView first = firstOf(gameId, ctx, JOB_DAY, EventKind.HOUSING, 3L);
+    assertThat(first.options())
+        .extracting(EventView.Option::code)
+        .containsExactly("APPLY", "PASS", "NEVER");
+    assertThat(first.occursDay()).isEqualTo(JOB_DAY + 540);
+    events.complete(gameId, first.eventId(), new Completion("PASS", "PASS", List.of()));
+    EventView second = firstOf(gameId, ctx, first.occursDay(), EventKind.HOUSING, 3L);
+    assertThat(second.occursDay()).as("두 번째는 3년 뒤").isEqualTo(first.occursDay() + 1080);
+    events.complete(gameId, second.eventId(), new Completion("NEVER", "NEVER", List.of()));
+    assertThat(firstOf(gameId, ctx, second.occursDay(), EventKind.HOUSING, 3L).title())
+        .as("관심 없다고 하면 다음 주거 장면은 멀리 있는 만기다")
+        .isEqualTo("계약 만기가 다가온다");
+
+    assertThat(firstOf(UUID.randomUUID(), withRetired(ctx), JOB_DAY, EventKind.HOUSING, 3L).title())
+        .as("은퇴 뒤에는 공고가 없다")
+        .isEqualTo("계약 만기가 다가온다");
   }
 
   @Test

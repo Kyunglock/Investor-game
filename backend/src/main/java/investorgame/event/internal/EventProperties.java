@@ -135,6 +135,8 @@ public record EventProperties(
    * @param sceneGapDays 주거 장면 사이 최소 간격. 만기·독립처럼 날이 정해진 것은 그대로 오고, 집 살까·좁다·배우자 불만·청약은 직전 주거 장면에서 이만큼
    *     뒤로 미룬다. 만기가 이 안에 있으면 만기 뒤로 미룬다(만기 선택지에 이미 넓은 집·매수가 있다)
    * @param afterShockDays 전세사기·집주인 거절 뒤 배우자의 월세 불만은 이만큼 미룬다
+   * @param cheongyakMaxNotices 분양 공고는 이만큼 본 뒤로는 더 오지 않는다 (decisions.md 123번)
+   * @param cheongyakGapGrowthMax 공고 간격은 본 횟수에 따라 1배, 2배, 3배…로 늘고 이 배수에서 멈춘다
    */
   public record HousingSettings(
       int fraudBp,
@@ -146,7 +148,9 @@ public record EventProperties(
       int crampedDelayDays,
       int crampedLeaseWindowDays,
       int sceneGapDays,
-      int afterShockDays) {}
+      int afterShockDays,
+      int cheongyakMaxNotices,
+      int cheongyakGapGrowthMax) {}
 
   /**
    * 배우자의 월세 불만 (#116).
