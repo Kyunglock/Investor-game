@@ -423,12 +423,16 @@ class DefaultEventService implements EventService {
             base + roll(random, properties.trait().adultGapDays(), "TRAIT", used.size())));
   }
 
-  /** 아직 안 나온 adult 장면. 직장이 배경인 장면(job)은 직장에 다니는 동안에만 고른다. 실직·은퇴 중에는 풀에 남겨 두었다가 다시 취업하면 나온다. */
+  /**
+   * 아직 안 나온 adult 장면. 직장이 배경인 장면(job)은 직장에 다니는 동안에만, 보유 주식이 전제인 장면(holdings)은 들고 있는 종목이 있을 때만 고른다
+   * (decisions.md 115번). 전제가 안 맞으면 풀에 남겨 두었다가 맞을 때 나온다.
+   */
   private List<TraitDefinition> adultTraitsLeft(List<EventRow> rows, SchedulingContext context) {
     List<EventRow> used = adultTraits(rows);
     boolean working = context.jobStartDay() != null && !context.retired();
     return content.adultTraits().stream()
         .filter(t -> working || !t.job())
+        .filter(t -> !t.holdings() || !context.heldStockCodes().isEmpty())
         // 양가 부모 장면은 결혼한 뒤에만 (decisions.md 76번).
         .filter(t -> context.married() || !t.married())
         .filter(t -> used.stream().noneMatch(u -> t.code().equals(u.definitionCode())))
