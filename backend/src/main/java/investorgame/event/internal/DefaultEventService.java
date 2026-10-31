@@ -72,6 +72,11 @@ class DefaultEventService implements EventService {
 
   static final String JOB_REHIRE = "rehire";
 
+  /** 투자 시작 제안의 정의 코드: 첫 월급 날의 첫 제안 / 1년 뒤 다시 (decisions.md 117번). 옛 판은 null이라 첫 제안으로 본다. */
+  static final String OFFER_FIRST = "first";
+
+  static final String OFFER_AGAIN = "again";
+
   /** 이직 제안의 선택지 코드는 "move:<직업 코드>"다. 옮길 직업을 행에 같이 남긴다. */
   static final String MOVE_PREFIX = "move:";
 
@@ -1052,7 +1057,14 @@ class DefaultEventService implements EventService {
             trait.options().stream().map(TraitDefinition.Option::code).toList());
       }
       case OFFER ->
-          simple(id, seq, EventKind.OFFER, null, candidate.day(), List.of(ACCEPT, DECLINE));
+          // 첫 제안은 첫 월급 날, 그 뒤는 1년마다. 문구가 다르다 (decisions.md 117번).
+          simple(
+              id,
+              seq,
+              EventKind.OFFER,
+              ofKind(rows, EventKind.OFFER).isEmpty() ? OFFER_FIRST : OFFER_AGAIN,
+              candidate.day(),
+              List.of(ACCEPT, DECLINE));
       case LIFE -> {
         String code = lifeDefinition(rows, context, random);
         yield simple(

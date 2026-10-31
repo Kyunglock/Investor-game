@@ -355,6 +355,11 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   @Override
+  public String moveOutStart(boolean fullTimeInvestor) {
+    return phrases.housing().starts().get(fullTimeInvestor ? "investor" : "job");
+  }
+
+  @Override
   public String jobRehireMoneyText(boolean ample) {
     return ample ? phrases.jobRehireMoneyAmple() : phrases.jobRehireMoneyShort();
   }
@@ -897,5 +902,6 @@ class JsonContentCatalog implements ContentCatalog {
       LeverageText leverage,
       HousingPhrases housing) {}
 
-  record HousingPhrases(Map<String, TextBlock> texts, Map<String, String> labels) {}
+  record HousingPhrases(
+      Map<String, String> starts, Map<String, TextBlock> texts, Map<String, String> labels) {}
 }

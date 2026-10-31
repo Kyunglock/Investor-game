@@ -106,6 +106,9 @@ public interface ContentCatalog {
 
   OutingText outing(String code);
 
+  /** 독립 장면 본문의 "{start}" 자리에 들어갈 첫 줄: 직장인은 첫 출근, 전업투자자는 투자로 살기로 했다 (decisions.md 117번). */
+  String moveOutStart(boolean fullTimeInvestor);
+
   /**
    * 다시 구직 본문의 "{money}" 자리에 들어갈 통장 상황 한 줄 (decisions.md 116번). short는 생활비 여섯 달분이 안 남았을 때, 아니면
    * ample.
@@ -175,7 +178,9 @@ public interface ContentCatalog {
 
   record TextBlock(String title, String body) {}
 
-  record OfferText(String title, String body, String acceptLabel, String declineLabel) {}
+  /** 투자 시작 제안. body는 첫 월급을 받은 날의 첫 제안, bodyAgain은 1년 뒤 다시 묻는 제안 (decisions.md 117번). */
+  record OfferText(
+      String title, String body, String bodyAgain, String acceptLabel, String declineLabel) {}
 
   record LeverageText(String title, String body, String borrowLabel, String passLabel) {}
 }

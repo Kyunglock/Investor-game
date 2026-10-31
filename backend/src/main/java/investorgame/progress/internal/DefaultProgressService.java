@@ -2128,6 +2128,9 @@ class DefaultProgressService implements ProgressService {
                       assets.get(game.id()).cash()
                           >= household.monthlyExpense(game.id(), event.occursDay())
                               * REHIRE_AMPLE_MONTHS));
+          // 독립 장면의 "{start}": 직장인은 첫 출근, 전업투자자는 투자로 살기로 했다 (117번).
+          case HOUSING ->
+              Map.of("start", content.moveOutStart(character.fullTimeInvestorDay() != null));
           default -> Map.of();
         };
     return new GameView.PendingEvent(

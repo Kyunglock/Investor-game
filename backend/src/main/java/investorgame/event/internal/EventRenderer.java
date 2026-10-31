@@ -73,7 +73,9 @@ class EventRenderer {
         yield view(
             row,
             offer.title(),
-            offer.body(),
+            DefaultEventService.OFFER_AGAIN.equals(row.definitionCode())
+                ? offer.bodyAgain()
+                : offer.body(),
             null,
             null,
             List.of(
