@@ -1,6 +1,8 @@
 package investorgame.progress.internal;
 
+import investorgame.asset.AccountView;
 import investorgame.asset.AssetService;
+import investorgame.asset.TradeResult;
 import investorgame.common.GameProperties;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
@@ -23,6 +25,8 @@ import investorgame.market.MarketService;
 import investorgame.progress.ChoiceOutcome;
 import investorgame.progress.GameView;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -143,7 +147,7 @@ class HousingFlow {
     if (cost.total() > 0) {
       assets.spend(gameId, "HOUSING", cost.total(), day, null);
     }
-    // 식구 수에 비해 좁은 집에 그대로 살면 달마다 조금씩 지치고, 석 달마다 가족 점수가 1점 깎인다 (#117, decisions.md 100번).
+    // 식구 수에 비해 좁은 집에 그대로 살면 달마다 조금씩 지치고, 석 달마다 가족 점수가 1점 깎인다 (#117, decisions.md 105번).
     if (cramped(housing.get(gameId), household.get(gameId), day)) {
       household.cheer(gameId, -1);
       if (month % 3 == 0) {
@@ -273,6 +277,8 @@ class HousingFlow {
     Map<String, Long> prices = market.homePrices(gameId);
     int rate = market.mortgageRateBp(gameId);
     long cash = assets.get(gameId).cash();
+    // 집을 살 때 현금이 모자라면 들고 있는 주식을 팔아 보탠다 (decisions.md 100번).
+    long stocks = sellable(gameId);
     int rooms = neededRooms(home, day);
     // 이사하면 지금 보증금을 돌려받고 전세대출을 갚는다. 전세사기면 보증금은 돌아오지 않는다.
     long returning = returning(view, fraud);
@@ -287,6 +293,7 @@ class HousingFlow {
               prices,
               rate,
               cash,
+              stocks,
               returning,
               rooms,
               monthlyIncome,
@@ -303,6 +310,7 @@ class HousingFlow {
       Map<String, Long> prices,
       int rate,
       long cash,
+      long stocks,
       long returning,
       int rooms,
       long income,
@@ -373,11 +381,21 @@ class HousingFlow {
       case ChoiceTicket.Housing.BUY_SEOUL, ChoiceTicket.Housing.BUY_GYEONGGI -> {
         String region = ChoiceTicket.Housing.BUY_SEOUL.equals(code) ? SEOUL : GYEONGGI;
         yield buyPlan(
-            code, region, prices.get(region), rate, cash, returning, income, existingBurden, "시세");
+            code,
+            region,
+            prices.get(region),
+            rate,
+            cash,
+            stocks,
+            returning,
+            income,
+            existingBurden,
+            "시세");
       }
       case ChoiceTicket.Housing.APPLY -> {
         long price = prices.get(SEOUL) * rules.cheongyakPriceBp() / BP;
-        Plan won = cheongyakPlan(code, price, rate, cash, returning, income, existingBurden);
+        Plan won =
+            cheongyakPlan(code, price, rate, cash, stocks, returning, income, existingBurden);
         int chance = cheongyakChanceBp(points);
         yield new Plan(
             code,
@@ -399,7 +417,9 @@ class HousingFlow {
         long tenant = price * rules.jeonseRatioBp() / BP;
         long need = price - tenant;
         String blocked =
-            view.homes().size() >= 2 ? "아파트는 2채까지다" : need > cash ? short_(need - cash) : null;
+            view.homes().size() >= 2
+                ? "아파트는 2채까지다"
+                : need > cash + stocks ? short_(need - cash - stocks) : null;
         yield new Plan(
             code,
             SEOUL,
@@ -411,8 +431,9 @@ class HousingFlow {
             tenant,
             need,
             0,
-            "시세 %s · 세입자 보증금 %s · 필요 현금 %s · 2년마다 전세가가 내리면 차액을 돌려준다"
-                .formatted(money(price), money(tenant), money(need)),
+            "시세 %s · 세입자 보증금 %s · 필요 현금 %s%s · 2년마다 전세가가 내리면 차액을 돌려준다"
+                .formatted(
+                    money(price), money(tenant), money(need), stockNote(need, cash, cash + stocks)),
             blocked,
             0);
       }
@@ -420,13 +441,14 @@ class HousingFlow {
     };
   }
 
-  /** 아파트를 산다: 대출은 LTV와 DSR 중 작은 쪽, 나머지는 현금(이사하면 돌려받는 보증금 포함). */
+  /** 아파트를 산다: 대출은 LTV와 DSR 중 작은 쪽, 나머지는 현금(이사하면 돌려받는 보증금 포함, 모자라면 주식을 판다). */
   private Plan buyPlan(
       String code,
       String region,
       long price,
       int rate,
       long cash,
+      long stocks,
       long returning,
       long income,
       long existingBurden,
@@ -437,7 +459,7 @@ class HousingFlow {
     long dsr = room <= 0 || perProbe <= 0 ? 0 : room * PROBE / perProbe;
     long mortgage = round(Math.min(ltv, dsr));
     long need = price - mortgage;
-    long available = cash + returning;
+    long available = cash + returning + stocks;
     long burden = housing.monthlyPayment(mortgage, rate);
     String blocked =
         need > available
@@ -459,27 +481,34 @@ class HousingFlow {
         0,
         need,
         burden,
-        "%s %s · 주담대 %s (연 %s) · 필요 현금 %s · 월 원리금 %s"
+        "%s %s · 주담대 %s (연 %s) · 필요 현금 %s%s · 월 원리금 %s"
             .formatted(
-                priceLabel, money(price), money(mortgage), rate(rate), money(need), money(burden)),
+                priceLabel,
+                money(price),
+                money(mortgage),
+                rate(rate),
+                money(need),
+                stockNote(need, cash + returning, available),
+                money(burden)),
         blocked,
         0);
   }
 
   /**
-   * 청약 (decisions.md 48번): 계약금(분양가의 cheongyak-down-bp)은 현금(+돌려받을 보증금)으로 내야 하고, 나머지는 분양 대출로 — LTV는
-   * 따지지 않고 DSR 안에서만. DSR이 모자라면 그만큼 현금을 더 내야 한다. 둘 중 하나라도 안 되면 막힌다(그러면 공고 자체가 오지 않는다).
+   * 청약 (decisions.md 48번): 계약금(분양가의 cheongyak-down-bp)은 현금(+돌려받을 보증금, 모자라면 주식을 판 돈)으로 내야 하고, 나머지는
+   * 분양 대출로 — LTV는 따지지 않고 DSR 안에서만. DSR이 모자라면 그만큼 현금을 더 내야 한다. 둘 중 하나라도 안 되면 막힌다(그러면 공고 자체가 오지 않는다).
    */
   private Plan cheongyakPlan(
       String code,
       long price,
       int rate,
       long cash,
+      long stocks,
       long returning,
       long income,
       long existingBurden) {
     long down = price * rules.cheongyakDownBp() / BP;
-    long available = cash + returning;
+    long available = cash + returning + stocks;
     long room = income * rules.dsrBp() / BP - existingBurden;
     long perProbe = housing.monthlyPayment(PROBE, rate);
     long dsr = room <= 0 || perProbe <= 0 ? 0 : room * PROBE / perProbe;
@@ -507,9 +536,15 @@ class HousingFlow {
         0,
         need,
         burden,
-        "분양가 %s · 계약금 %s · 분양 대출 %s (연 %s) · 필요 현금 %s · 월 원리금 %s"
+        "분양가 %s · 계약금 %s · 분양 대출 %s (연 %s) · 필요 현금 %s%s · 월 원리금 %s"
             .formatted(
-                money(price), money(down), money(mortgage), rate(rate), money(need), money(burden)),
+                money(price),
+                money(down),
+                money(mortgage),
+                rate(rate),
+                money(need),
+                stockNote(need, cash + returning, available),
+                money(burden)),
         blocked,
         0);
   }
@@ -628,6 +663,7 @@ class HousingFlow {
     }
     Map<String, Object> payloadExtra = new LinkedHashMap<>();
     long lost = 0;
+    long sold = 0;
     // 배우자의 월세 불만 (#116): 단계와 아이 수에 따라 거스른 대가와 들어준 보람이 다르다.
     boolean spouseRent = ChoiceTicket.Housing.isSpouseRent(effect.definition());
     int level = spouseRent ? ChoiceTicket.Housing.spouseRentLevel(effect.definition()) : 0;
@@ -685,7 +721,7 @@ class HousingFlow {
         if (!won) {
           message.append("가점 %d점으로는 떨어졌다. 경쟁률이 수백 대 일이었다.".formatted(points));
         } else if (plan.cashNeeded()
-            > assets.get(gameId).cash() + returning(before, effect.fraud())) {
+            > assets.get(gameId).cash() + returning(before, effect.fraud()) + sellable(gameId)) {
           message.append(
               "가점 %d점으로 당첨됐다! 그런데 계약금이 %s 모자랐다. 눈물을 머금고 포기했다."
                   .formatted(
@@ -693,11 +729,13 @@ class HousingFlow {
                       money(
                           plan.cashNeeded()
                               - assets.get(gameId).cash()
-                              - returning(before, effect.fraud()))));
+                              - returning(before, effect.fraud())
+                              - sellable(gameId))));
         } else {
           Lease ended =
               housing.buyResidence(gameId, plan.region(), plan.price(), plan.mortgage(), day);
           settle(gameId, ended, effect.fraud(), day);
+          sold = raise(gameId, plan.price() - plan.mortgage(), day);
           payIn(gameId, plan.price() - plan.mortgage(), day);
           message.append(
               "가점 %d점으로 당첨됐다! %s를 분양가 %s에 샀다(시세의 %d%%). 주담대 %s."
@@ -741,6 +779,7 @@ class HousingFlow {
         Lease ended =
             housing.buyResidence(gameId, plan.region(), plan.price(), plan.mortgage(), day);
         settle(gameId, ended, effect.fraud(), day);
+        sold = raise(gameId, plan.price() - plan.mortgage(), day);
         payIn(gameId, plan.price() - plan.mortgage(), day);
         message.append(
             "%s를 %s에 샀다. 주담대 %s, 월 원리금 약 %s. 금리는 경기 따라 바뀐다."
@@ -752,6 +791,7 @@ class HousingFlow {
       }
       case ChoiceTicket.Housing.GAP -> {
         housing.buyGap(gameId, plan.region(), plan.price(), plan.tenantDeposit(), day);
+        sold = raise(gameId, plan.price() - plan.tenantDeposit(), day);
         payIn(gameId, plan.price() - plan.tenantDeposit(), day);
         message.append(
             "세입자 보증금 %s을 끼고 %s를 %s에 샀다(갭투자)."
@@ -759,6 +799,9 @@ class HousingFlow {
                     money(plan.tenantDeposit()), regionName(plan.region()), money(plan.price())));
       }
       default -> throw new IllegalArgumentException("알 수 없는 주거 선택지: " + code);
+    }
+    if (sold > 0) {
+      message.append(" 모자란 현금은 주식 %s어치를 팔아 마련했다.".formatted(money(sold)));
     }
     Map<String, Object> payload = new LinkedHashMap<>();
     payload.put("definition", effect.definition());
@@ -772,6 +815,7 @@ class HousingFlow {
     payload.put("regionName", plan.region() == null ? null : regionName(plan.region()));
     payload.put("fraud", effect.fraud());
     payload.put("lost", lost);
+    payload.put("stockSold", sold);
     payload.put("roomsName", plan.rooms() > 0 ? roomName(plan.rooms()) : null);
     payload.putAll(payloadExtra);
     // 행복도 (decisions.md 82번): 전세사기는 크게 지치고, 내 집을 사면 기쁘고, 독립해 나가면 조금 기쁘다.
@@ -790,7 +834,7 @@ class HousingFlow {
       household.cheer(gameId, -2);
       household.bond(gameId, -2);
     }
-    // 배우자의 월세 불만 (#116, decisions.md 99번): 미루면 조금, 거스르면 많이 지치고 멀어진다. 단계가 오를수록, 아이가 있으면 더. 들어주면
+    // 배우자의 월세 불만 (#116, decisions.md 104번): 미루면 조금, 거스르면 많이 지치고 멀어진다. 단계가 오를수록, 아이가 있으면 더. 들어주면
     // 가까워진다.
     if (spouseRent) {
       int step = Math.min(level, 3) - 1;
@@ -837,6 +881,67 @@ class HousingFlow {
   private static long returning(HousingView view, boolean fraud) {
     boolean renting = view.tenure() != Tenure.PARENTS && view.tenure() != Tenure.OWN;
     return renting ? (fraud ? 0 : view.deposit()) - view.jeonseLoan() : 0;
+  }
+
+  /** 집값에 보탤 수 있는 주식: 평가액 − 빚. 팔면 빚부터 갚기 때문이다 (decisions.md 100번). */
+  private long sellable(UUID gameId) {
+    AccountView account = assets.get(gameId);
+    return Math.max(0, assets.holdingsValue(gameId, market.prices(gameId)) - account.debt());
+  }
+
+  /** 현금(+돌려받을 보증금)으로 모자라 주식을 팔아야 하면 그 금액을 알린다. 주식을 다 팔아도 모자라면 막힌 이유가 대신 보인다. */
+  private static String stockNote(long need, long cash, long available) {
+    return need > cash && need <= available ? " (주식 %s 매도)".formatted(money(need - cash)) : "";
+  }
+
+  /**
+   * 집값을 치르기 전에 현금이 amount에 모자라면 주식을 팔아 채운다 (decisions.md 100번). 평가액이 큰 종목부터 모자란 만큼만 판다(한 주 단위라 조금
+   * 남을 수 있다). 판 것은 매매창 매도처럼 TRADE로 남긴다.
+   *
+   * @return 판 금액
+   */
+  private long raise(UUID gameId, long amount, int day) {
+    Map<String, Long> prices = market.prices(gameId);
+    List<Map.Entry<String, AccountView.Holding>> order =
+        assets.get(gameId).holdings().entrySet().stream()
+            .filter(e -> e.getValue().quantity() > 0 && prices.getOrDefault(e.getKey(), 0L) > 0)
+            .sorted(
+                Comparator.comparingLong(
+                        (Map.Entry<String, AccountView.Holding> e) ->
+                            -e.getValue().quantity() * prices.get(e.getKey()))
+                    .thenComparing(Map.Entry::getKey))
+            .toList();
+    long raised = 0;
+    for (Map.Entry<String, AccountView.Holding> entry : order) {
+      AccountView account = assets.get(gameId);
+      // 팔면 빚부터 갚으므로 빚만큼 더 팔아야 현금이 된다.
+      long gap = amount - account.cash() + account.debt();
+      if (gap <= 0) {
+        break;
+      }
+      long price = prices.get(entry.getKey());
+      long quantity = Math.min(entry.getValue().quantity(), (gap + price - 1) / price);
+      TradeResult trade = assets.sell(gameId, entry.getKey(), quantity, price, day, null);
+      if (trade.status() != TradeResult.Status.EXECUTED) {
+        continue;
+      }
+      raised += trade.amount();
+      Map<String, Object> payload = new HashMap<>();
+      payload.put("stockCode", entry.getKey());
+      payload.put("stockName", content.stock(entry.getKey()).name());
+      payload.put("side", "SELL");
+      payload.put("chosen", "SELL");
+      payload.put("actual", "SELL");
+      payload.put("deviations", List.of());
+      payload.put("status", trade.status());
+      payload.put("quantity", trade.quantity());
+      payload.put("price", trade.price());
+      payload.put("amount", trade.amount());
+      payload.put("realizedPnl", trade.realizedPnl());
+      payload.put("reason", "HOUSING");
+      logs.append(gameId, day, "TRADE", payload);
+    }
+    return raised;
   }
 
   /**

@@ -2,7 +2,11 @@ package investorgame.api;
 
 import investorgame.progress.GameSummary;
 import investorgame.progress.ProgressService;
+import investorgame.session.IssuedSession;
 import investorgame.session.SessionService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.OffsetDateTime;
@@ -10,7 +14,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,11 +37,29 @@ class AdminController {
   private final AdminProperties properties;
   private final SessionService sessions;
   private final ProgressService progress;
+  private final SessionCookies cookies;
 
-  AdminController(AdminProperties properties, SessionService sessions, ProgressService progress) {
+  AdminController(
+      AdminProperties properties,
+      SessionService sessions,
+      ProgressService progress,
+      SessionCookies cookies) {
     this.properties = properties;
     this.sessions = sessions;
     this.progress = progress;
+    this.cookies = cookies;
+  }
+
+  /** 봇 플레이어용 세션을 발급한다 (행동 프로필·봇 설계 4절). 이 세션으로 끝낸 판의 행동 프로필에는 페르소나가 붙는다. */
+  @PostMapping("/bot-sessions")
+  ResponseEntity<Void> botSession(
+      @RequestHeader(name = TOKEN_HEADER, required = false) String token,
+      @Valid @RequestBody BotSessionRequest request) {
+    requireAdmin(token);
+    IssuedSession issued = sessions.issueBot(ClientIp.current(), request.persona());
+    return ResponseEntity.noContent()
+        .header(HttpHeaders.SET_COOKIE, cookies.create(issued.token()).toString())
+        .build();
   }
 
   @GetMapping("/plays")
@@ -69,6 +95,8 @@ class AdminController {
       throw new AdminForbiddenException();
     }
   }
+
+  record BotSessionRequest(@NotNull @Pattern(regexp = "[a-z][a-z0-9-]{0,31}") String persona) {}
 
   record PlayLog(List<SessionLine> sessions, List<GameSummary> plays) {}
 

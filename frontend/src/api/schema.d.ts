@@ -264,10 +264,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/bot-sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 봇 플레이어용 세션을 발급한다 (관리자)
+         * @description `X-Admin-Token`이 맞을 때만 연다 (`/api/admin/plays`와 같은 토큰). 응답의 `IG_SESSION` 쿠키로 플레이한 판은 끝날 때
+         *     익명 행동 프로필에 페르소나가 붙어 사람의 판과 구분된다 (행동 프로필·봇 설계 4절).
+         */
+        post: operations["issueBotSession"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        BotSessionRequest: {
+            /** @description 봇의 페르소나 코드 (예 panic, holder). 행동 프로필의 bot_persona가 된다 */
+            persona: string;
+        };
         PlayLog: {
             /** @description 마지막 접속이 최근인 순 */
             sessions: components["schemas"]["PlaySession"][];
@@ -1238,6 +1263,40 @@ export interface operations {
                     "application/json": components["schemas"]["PlayLog"];
                 };
             };
+            /** @description 관리자 토큰이 없거나 틀림 (`ADMIN_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    issueBotSession: {
+        parameters: {
+            query?: never;
+            header: {
+                "X-Admin-Token": string;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BotSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description 세션이 발급됨 (`IG_SESSION` 쿠키) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["InvalidRequest"];
             /** @description 관리자 토큰이 없거나 틀림 (`ADMIN_REQUIRED`) */
             403: {
                 headers: {

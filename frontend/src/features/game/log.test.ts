@@ -455,6 +455,26 @@ describe('logLine', () => {
     ).toBe('오리옹 4주 매도 (320,000원) · 실현 +32,000원')
   })
 
+  it('집값을 마련하려고 판 주식은 그렇다고 적는다', () => {
+    const line = logLine(
+      entry('TRADE', 0, {
+        stockName: '오리옹',
+        side: 'SELL',
+        chosen: 'SELL',
+        actual: 'SELL',
+        deviations: [],
+        status: 'EXECUTED',
+        quantity: 10,
+        price: 80_000,
+        amount: 800_000,
+        realizedPnl: 0,
+        reason: 'HOUSING',
+      }),
+      game,
+    )
+    expect(line.text).toBe('오리옹 10주 매도 (800,000원) · 집값 마련')
+  })
+
   it('매매 이탈: 못 샀다/못 팔았다와 원인', () => {
     const line = logLine(
       entry('TRADE', 0, {

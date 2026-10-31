@@ -5,6 +5,7 @@ import investorgame.asset.AssetService;
 import investorgame.asset.IncomeResult;
 import investorgame.asset.InterestResult;
 import investorgame.asset.SpendResult;
+import investorgame.asset.StockTotals;
 import investorgame.asset.TradeResult;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
@@ -225,6 +226,24 @@ class JdbcAssetService implements AssetService {
   public long totalAsset(UUID gameId, Map<String, Long> prices) {
     Account account = account(gameId);
     return account.cash() + holdingsValue(gameId, prices) - account.debt();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public StockTotals stockTotals(UUID gameId) {
+    // 원장의 매수 금액은 현금이 나가므로 음수로 쌓인다.
+    return jdbc.sql(
+            """
+            SELECT COALESCE(-SUM(amount) FILTER (WHERE kind = :buy), 0) AS bought,
+                   COALESCE(SUM(amount) FILTER (WHERE kind = :sell), 0) AS sold
+            FROM asset_ledger
+            WHERE game_id = :gameId
+            """)
+        .param("buy", BUY)
+        .param("sell", SELL)
+        .param("gameId", gameId)
+        .query((rs, rowNum) -> new StockTotals(rs.getLong("bought"), rs.getLong("sold")))
+        .single();
   }
 
   /** total × part / whole 을 오버플로 없이 계산한다 (몫과 나머지로 나눠 곱한다). part ≤ whole. */

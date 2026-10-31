@@ -113,14 +113,14 @@ class GameFlowTest {
 
     assertThat(game.read("$.status", String.class)).isEqualTo("ENDED");
     assertThat(game.read("$.phase", String.class)).isEqualTo("ENDED");
-    // 파산으로 끝났다면 왜 그랬는지 보이게 한다(직업·직장 기록, 연간 자산, 빚).
+    // 파산으로 끝났다면 왜 그랬는지 보이게 한다(직업·직장·가족·주거 기록, 연간 자산, 빚).
     assertThat(game.read("$.result.finalAge", Integer.class))
         .as(
             "ending=%s debt=%s jobs=%s yearly=%s",
             game.read("$.result.ending"),
             game.read("$.debt"),
             game.read(
-                "$.log[?(@.kind in ['JOB','JOB_WAIT','CAREER','RETIRE','LEVERAGE','CRISIS'])].payload"),
+                "$.log[?(@.kind in ['JOB','JOB_WAIT','CAREER','RETIRE','LEVERAGE','CRISIS','MARRIAGE','CHILD','HOUSING','HOME_SOLD','TENANT'])].payload"),
             game.read("$.yearly"))
         .isEqualTo(70);
     assertThat(game.read("$.result.ending", String.class)).isEqualTo("NORMAL");

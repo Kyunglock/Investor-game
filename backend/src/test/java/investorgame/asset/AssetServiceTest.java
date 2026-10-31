@@ -209,4 +209,20 @@ class AssetServiceTest {
     assertThat(debt).isEqualTo(300_000 + (720_000 + 360_000));
     assertThat(assets.totalAsset(gameId, prices)).isEqualTo(cash + 1_100_000 - debt);
   }
+
+  @Test
+  void 매매_누계는_체결된_매수_매도_금액이다() {
+    assertThat(assets.stockTotals(gameId)).isEqualTo(new StockTotals(0, 0));
+
+    assets.buy(gameId, SSJ, 10, 72_000, 10, null);
+    assets.buy(gameId, "ctl", 2, 180_000, 10, null);
+    assets.buy(gameId, SSJ, 5, 80_000, 11, null);
+    assets.sell(gameId, SSJ, 4, 90_000, 12, null);
+    assets.sell(gameId, "nsm", 1, 400_000, 12, null);
+    assets.buy(gameId, "ctl", 1_000_000, 180_000, 13, null);
+
+    assertThat(assets.stockTotals(gameId))
+        .as("보유 없는 매도와 현금이 모자란 매수는 체결되지 않아 세지 않는다")
+        .isEqualTo(new StockTotals(720_000 + 360_000 + 400_000, 360_000));
+  }
 }

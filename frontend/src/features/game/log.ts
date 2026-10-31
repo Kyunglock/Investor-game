@@ -195,10 +195,12 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
         typeof p.realizedPnl === 'number' && p.realizedPnl !== 0
           ? ` · 실현 ${signedWon(p.realizedPnl)}`
           : ''
+      // 집을 사면서 모자란 현금을 채우려고 판 주식 (decisions.md 100번).
+      const why = p.reason === 'HOUSING' ? ' · 집값 마련' : ''
       return {
         ...base,
         tone: 'decision',
-        text: `${str(p.stockName)} ${num(p.quantity)}주 ${sideLabel(side)} (${won(num(p.amount))})${realized}`,
+        text: `${str(p.stockName)} ${num(p.quantity)}주 ${sideLabel(side)} (${won(num(p.amount))})${realized}${why}`,
       }
     }
     case 'LIFE':
@@ -219,7 +221,7 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
           return {
             ...base,
             tone: 'life',
-            text: `${str(p.proposer)}의 ${str(p.title)} 조르기를 달랬다.`,
+            text: `${str(p.proposer)}의 ${str(p.title)}, 함께하지 못했다.`,
           }
         }
         return {
