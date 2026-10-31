@@ -825,7 +825,8 @@ class DefaultEventService implements EventService {
               lastScene,
               housing));
     }
-    if (housing.homes() >= 2) {
+    // 전부 막혀 '아직은 사지 않는다'만 누를 수 있는 "집 살까?"는 띄우지 않는다. 트리거는 남아 감당되는 때 온다 (decisions.md 118번).
+    if (housing.homes() >= 2 || !housing.buyAffordable()) {
       return due;
     }
     List<EventRow> buys = housingOf(rows, ChoiceTicket.Housing.BUY);

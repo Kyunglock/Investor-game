@@ -141,7 +141,19 @@ class HousingFlowTest {
     EventView leaseEnd =
         leaseEndOf(
             new HousingFacts(
-                "MONTHLY", JOB_DAY + YEAR, 0, false, false, null, 0, 50, true, false, false, false),
+                "MONTHLY",
+                JOB_DAY + YEAR,
+                0,
+                false,
+                false,
+                null,
+                0,
+                50,
+                true,
+                false,
+                false,
+                false,
+                true),
             1L);
     ChoiceTicket ticket = events.prepareChoice(gameId, leaseEnd.eventId(), "BUY_SEOUL");
     assertThatThrownBy(
@@ -178,7 +190,19 @@ class HousingFlowTest {
     EventView leaseEnd =
         leaseEndOf(
             new HousingFacts(
-                "MONTHLY", JOB_DAY + YEAR, 0, false, false, null, 0, 50, true, false, false, false),
+                "MONTHLY",
+                JOB_DAY + YEAR,
+                0,
+                false,
+                false,
+                null,
+                0,
+                50,
+                true,
+                false,
+                false,
+                false,
+                true),
             1L);
     ChoiceTicket ticket = events.prepareChoice(gameId, leaseEnd.eventId(), "BUY_SEOUL");
     var outcome =
@@ -356,7 +380,8 @@ class HousingFlowTest {
             false,
             true,
             false,
-            false);
+            false,
+            true);
     EventView ask = housingOf(cramped, JOB_DAY, JOB_DAY);
     assertThat(ask.title()).isEqualTo("집이 좁다");
     assertThat(ask.occursDay()).isEqualTo(JOB_DAY + 60);
@@ -502,7 +527,8 @@ class HousingFlowTest {
             false,
             false,
             false,
-            false);
+            false,
+            true);
     SchedulingContext context =
         new SchedulingContext(
             Phase.SAVING,
@@ -554,7 +580,19 @@ class HousingFlowTest {
   private EventView fraudulentLeaseEnd() {
     HousingFacts villa =
         new HousingFacts(
-            "VILLA_JEONSE", JOB_DAY + YEAR, 0, false, true, null, 0, 50, true, false, false, false);
+            "VILLA_JEONSE",
+            JOB_DAY + YEAR,
+            0,
+            false,
+            true,
+            null,
+            0,
+            50,
+            true,
+            false,
+            false,
+            false,
+            true);
     for (long seed = 1; seed <= 300; seed++) {
       UUID probe = UUID.randomUUID();
       EventView view = leaseEndOf(probe, villa, seed);
