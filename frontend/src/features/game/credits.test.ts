@@ -648,4 +648,35 @@ describe('크레딧 그림 (#23)', () => {
       tone: 'up',
     })
   })
+
+  it('배우자의 월세 불만: 미룬 건 남지 않고, 거스른 건 한 줄, 들어준 이사엔 부제가 붙는다 (#116)', () => {
+    const game = baseGame({
+      log: [
+        entry('BIRTH', 15, {}),
+        entry('MARRIAGE', 29, { cost: 30_000_000 }),
+        entry('HOUSING', 30, { definition: 'spouse-rent:1:0:은행원', option: 'WAIT', price: 0 }),
+        entry('HOUSING', 32, { definition: 'spouse-rent:2:1:은행원', option: 'STAY', price: 0 }),
+        entry('HOUSING', 33, {
+          definition: 'spouse-rent:3:1:은행원',
+          option: 'APT_JEONSE',
+          label: '경기 아파트 전세 (전세대출)',
+          price: 0,
+          deposit: 300_000_000,
+        }),
+      ],
+    })
+    const lines = buildCredits(game).flatMap((s) => s.lines)
+    expect(lines.filter((l) => l.text.startsWith('30세'))).toEqual([])
+    expect(lines.find((l) => l.text === '32세, 월세를 고집했다')).toEqual({
+      text: '32세, 월세를 고집했다',
+      sub: '아내의 말을 거슬렀다',
+      tone: 'down',
+    })
+    const moved = buildCredits(game).find((s) => s.key.startsWith('home-'))
+    expect(moved?.lines[0]).toEqual({
+      text: '33세, 경기 아파트 전세 (전세대출)',
+      sub: '아내의 말에 월세를 벗어났다 · 보증금 300,000,000원',
+    })
+    expect(moved?.art?.vignette).toBe('apartment')
+  })
 })

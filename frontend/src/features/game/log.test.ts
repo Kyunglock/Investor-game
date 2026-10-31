@@ -153,6 +153,40 @@ describe('logLine', () => {
       '집주인이 재계약을 거절해 집을 옮겼다. 경기 아파트 전세 (전세대출) · 보증금 200,000,000원.',
     )
 
+    // 배우자의 월세 불만 (#116): 미룸·거스름·들어줌. 호칭은 내 성별로 (decisions.md 91번).
+    const spouse = (option: string, extra: Record<string, unknown> = {}) =>
+      logLine(
+        entry('HOUSING', 32 * 360, {
+          definition: 'spouse-rent:2:1:은행원',
+          option,
+          price: 0,
+          fraud: false,
+          ...extra,
+        }),
+        { ...game, sex: 'M' },
+      )
+    expect(spouse('WAIT').text).toBe(
+      '아내가 월세살이를 그만하자고 했다. 조금만 더 모으자고 설득했다.',
+    )
+    const stayed = spouse('STAY')
+    expect(stayed.text).toBe('아내가 월세살이를 그만하자고 했다. 그래도 그냥 월세에 남았다.')
+    expect(stayed.tone).toBe('decline')
+    expect(
+      spouse('VILLA_INSURED', {
+        label: '빌라 전세 + 전세보증보험',
+        deposit: 200_000_000,
+        jeonseLoan: 160_000_000,
+      }).text,
+    ).toBe(
+      '아내의 말에 월세를 벗어났다. 빌라 전세 + 전세보증보험 · 보증금 200,000,000원, 전세대출 160,000,000원.',
+    )
+    expect(
+      logLine(
+        entry('HOUSING', 32 * 360, { definition: 'spouse-rent:1:0:', option: 'WAIT', price: 0 }),
+        { ...game, sex: 'F' },
+      ).text,
+    ).toContain('남편이')
+
     const sold = logLine(
       entry('HOME_SOLD', 40 * 360, {
         regionName: '경기 아파트 (84㎡)',

@@ -63,6 +63,7 @@ class DefaultEventServiceTest {
             false,
             false,
             null,
+            null,
             0,
             List.of(),
             List.of(),
@@ -216,6 +217,7 @@ class DefaultEventServiceTest {
             JOB_DAY,
             true,
             false,
+            null,
             null,
             0,
             List.of(),
@@ -388,6 +390,7 @@ class DefaultEventServiceTest {
         false,
         true,
         marriedDay,
+        null,
         leaveDays.size(),
         leaveDays,
         List.of(),
@@ -414,6 +417,7 @@ class DefaultEventServiceTest {
         false,
         married,
         marriedDay,
+        null,
         children,
         List.of(),
         List.of(),
@@ -451,6 +455,7 @@ class DefaultEventServiceTest {
             false,
             false,
             null,
+            null,
             0,
             List.of(),
             List.of(),
@@ -482,6 +487,7 @@ class DefaultEventServiceTest {
             false,
             false,
             null,
+            null,
             0,
             List.of(),
             List.of(),
@@ -510,6 +516,7 @@ class DefaultEventServiceTest {
             JOB_DAY,
             false,
             false,
+            null,
             null,
             0,
             List.of(),
@@ -543,6 +550,7 @@ class DefaultEventServiceTest {
             true,
             true,
             JOB_DAY + YEAR,
+            null,
             0,
             List.of(),
             List.of(),
@@ -574,6 +582,7 @@ class DefaultEventServiceTest {
             JOB_DAY,
             true,
             false,
+            null,
             null,
             0,
             List.of(),
@@ -649,6 +658,7 @@ class DefaultEventServiceTest {
         JOB_DAY,
         false,
         false,
+        null,
         null,
         0,
         List.of(),
@@ -791,6 +801,7 @@ class DefaultEventServiceTest {
         false,
         false,
         null,
+        null,
         0,
         List.of(),
         List.of(),
@@ -858,6 +869,74 @@ class DefaultEventServiceTest {
     assertThat(buy.options())
         .extracting(EventView.Option::code)
         .contains("BUY_SEOUL", "GAP", "PASS");
+  }
+
+  /**
+   * 배우자의 월세 불만 (#116): 결혼 뒤 월세에 살면 1년 뒤 "언제까지 월세 살 거야?"가 온다. 월세 그대로는 선택지가 아니고, 미루면 1년 반 뒤 더 세게 다시
+   * 묻는다. 문구는 배우자 직업과 아이 수에 따라 다르다. 결혼하지 않았거나 전세면 오지 않는다.
+   */
+  @Test
+  void 결혼_뒤_월세에_살면_배우자가_월세살이를_그만하자고_한다() {
+    int marriedDay = JOB_DAY + YEAR;
+    HousingFacts monthly =
+        new HousingFacts("MONTHLY", JOB_DAY + 30 * YEAR, 0, false, false, null, 0, 50, false);
+    UUID gameId = UUID.randomUUID();
+    SchedulingContext family = housed(monthly, marriedDay, "은행원", 0);
+    EventView buy = firstOf(gameId, family, JOB_DAY, EventKind.HOUSING, 3L);
+    assertThat(buy.title()).as("결혼 직후엔 '집 살까?'").isEqualTo("집을 살까?");
+    events.complete(gameId, buy.eventId(), new Completion("PASS", "PASS", List.of()));
+
+    EventView ask = firstOf(gameId, family, marriedDay, EventKind.HOUSING, 3L);
+    assertThat(ask.occursDay()).isEqualTo(marriedDay + YEAR);
+    assertThat(ask.title()).isEqualTo("언제까지 월세 살 거야?");
+    assertThat(ask.body()).as("은행원 배우자는 금리표를 들고 온다").contains("금리표").doesNotContain("아이");
+    assertThat(ask.options())
+        .extracting(EventView.Option::code)
+        .containsExactly(
+            "VILLA", "VILLA_INSURED", "APT_JEONSE", "BUY_SEOUL", "BUY_GYEONGGI", "WAIT", "STAY");
+    ChoiceTicket ticket = events.prepareChoice(gameId, ask.eventId(), "WAIT");
+    assertThat(((ChoiceTicket.Housing) ticket.effect()).definition())
+        .isEqualTo("spouse-rent:1:0:은행원");
+    events.complete(gameId, ask.eventId(), new Completion("WAIT", "WAIT", List.of()));
+
+    // 미루면 1년 반 뒤 다시, 더 세게. 그사이 아이가 태어났으면 문구에 아이가 들어간다.
+    HousingFacts withChild =
+        new HousingFacts(
+            "MONTHLY", JOB_DAY + 30 * YEAR, 0, false, false, ask.occursDay() + 100, 0, 50, false);
+    EventView again =
+        firstOf(
+            gameId,
+            housed(withChild, marriedDay, "은행원", 1),
+            ask.occursDay(),
+            EventKind.HOUSING,
+            3L);
+    assertThat(again.occursDay()).as("아이가 태어나면 반년 뒤로 앞당긴다").isEqualTo(ask.occursDay() + 100 + 180);
+    assertThat(again.title()).isEqualTo("배우자가 다시 집 이야기를 꺼냈다");
+    assertThat(again.body()).contains("아이까지 있는데");
+    assertThat(
+            ((ChoiceTicket.Housing) events.prepareChoice(gameId, again.eventId(), "STAY").effect())
+                .definition())
+        .isEqualTo("spouse-rent:2:1:은행원");
+
+    // 미혼이거나 전세면 묻지 않는다: 다음 주거 이벤트는 멀리 있는 만기다.
+    EventView single =
+        firstOf(UUID.randomUUID(), housed(monthly, null), JOB_DAY, EventKind.HOUSING, 3L);
+    assertThat(single.title()).isEqualTo("계약 만기가 다가온다");
+    HousingFacts jeonse =
+        new HousingFacts("APT_JEONSE", JOB_DAY + 30 * YEAR, 0, false, false, null, 0, 50, false);
+    UUID jeonseGame = UUID.randomUUID();
+    EventView jeonseBuy =
+        firstOf(jeonseGame, housed(jeonse, marriedDay, "공무원", 0), JOB_DAY, EventKind.HOUSING, 3L);
+    events.complete(jeonseGame, jeonseBuy.eventId(), new Completion("PASS", "PASS", List.of()));
+    assertThat(
+            firstOf(
+                    jeonseGame,
+                    housed(jeonse, marriedDay, "공무원", 0),
+                    marriedDay,
+                    EventKind.HOUSING,
+                    3L)
+                .title())
+        .isEqualTo("계약 만기가 다가온다");
   }
 
   /** 돈이 안 돼 '넘긴다'밖에 못 고를 분양 공고는 아예 오지 않는다 (#26). 영끌이 되면 독립 1년 반 뒤, 세 만기보다 먼저 온다. */
@@ -986,6 +1065,7 @@ class DefaultEventServiceTest {
         c.retired(),
         c.married(),
         c.marriedDay(),
+        c.spouseJob(),
         c.childrenCount(),
         List.of(),
         c.heldStockCodes(),
@@ -997,6 +1077,12 @@ class DefaultEventServiceTest {
   }
 
   private static SchedulingContext housed(HousingFacts facts, Integer marriedDay) {
+    return housed(facts, marriedDay, null, 0);
+  }
+
+  /** 결혼한 가족: 배우자 직업과 자녀 수까지 (#116). */
+  private static SchedulingContext housed(
+      HousingFacts facts, Integer marriedDay, String spouseJob, int children) {
     return new SchedulingContext(
         Phase.SAVING,
         START_AGE,
@@ -1012,7 +1098,8 @@ class DefaultEventServiceTest {
         true,
         marriedDay != null,
         marriedDay,
-        0,
+        spouseJob,
+        children,
         List.of(),
         List.of(),
         false,
@@ -1037,6 +1124,7 @@ class DefaultEventServiceTest {
         JOB_DAY,
         false,
         false,
+        null,
         null,
         0,
         List.of(),
@@ -1067,6 +1155,7 @@ class DefaultEventServiceTest {
             JOB_DAY,
             false,
             false,
+            null,
             null,
             0,
             List.of(),

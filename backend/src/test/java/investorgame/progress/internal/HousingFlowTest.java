@@ -20,9 +20,11 @@ import investorgame.event.ScheduleResult;
 import investorgame.event.SchedulingContext;
 import investorgame.household.HouseholdService;
 import investorgame.household.HouseholdView;
+import investorgame.household.Spouse;
 import investorgame.housing.HousingService;
 import investorgame.housing.Tenure;
 import investorgame.market.MarketService;
+import investorgame.progress.ChoiceOutcome;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -233,6 +235,105 @@ class HousingFlowTest {
     assertThat(apply.detail()).contains("가점 45점").contains("분양가");
   }
 
+  /**
+   * 배우자의 월세 불만 (#116, decisions.md 104번): 미루면 조금, 거스르면 많이 행복도·가족 점수가 깎이고 단계가 오르면 더. 들어주면 월세를 벗어나며
+   * 가까워진다.
+   */
+  @Test
+  void 배우자의_월세_불만을_미루거나_거스르면_멀어지고_들어주면_가까워진다() {
+    housing.rent(gameId, Tenure.MONTHLY, null, 10_000_000, 600_000, 0, false, JOB_DAY);
+    household.marry(gameId, JOB_DAY, new Spouse("은행원", 3_800_000, "성격은 다정하다."));
+    HouseholdView family = household.get(gameId);
+    assertThat(household.familyScore(gameId)).isEqualTo(50);
+
+    EventView first = spouseRentOf(JOB_DAY);
+    assertThat(first.title()).isEqualTo("언제까지 월세 살 거야?");
+    var waited = resolveSpouseRent(first, "WAIT", family);
+    assertThat(waited.message()).contains("조금만 더 모으자고 설득했다");
+    assertThat(household.familyScore(gameId)).as("미루면 −3").isEqualTo(47);
+    assertThat(housing.get(gameId).tenure()).isEqualTo(Tenure.MONTHLY);
+
+    EventView second = spouseRentOf(first.occursDay());
+    assertThat(second.title()).isEqualTo("배우자가 다시 집 이야기를 꺼냈다");
+    var stayed = resolveSpouseRent(second, "STAY", family);
+    assertThat(stayed.message()).contains("월세에 남기로 했다");
+    assertThat(household.familyScore(gameId)).as("2단계에서 거스르면 −12").isEqualTo(35);
+
+    EventView third = spouseRentOf(second.occursDay());
+    assertThat(third.title()).isEqualTo("집 때문에 부부 싸움이 났다");
+    assets.credit(gameId, "WINDFALL", 500_000_000, third.occursDay());
+    var moved = resolveSpouseRent(third, "VILLA_INSURED", family);
+    assertThat(moved.message()).startsWith("배우자의 말에 월세를 벗어났다.").contains("보증보험");
+    assertThat(household.familyScore(gameId)).as("들어주면 +8").isEqualTo(43);
+    assertThat(housing.get(gameId).tenure()).isEqualTo(Tenure.VILLA_JEONSE);
+    assertThat(housing.get(gameId).insured()).isTrue();
+  }
+
+  private ChoiceOutcome.Outcome resolveSpouseRent(
+      EventView view, String option, HouseholdView family) {
+    ChoiceTicket ticket = events.prepareChoice(gameId, view.eventId(), option);
+    assertThat(
+            ChoiceTicket.Housing.isSpouseRent(
+                ((ChoiceTicket.Housing) ticket.effect()).definition()))
+        .isTrue();
+    return flow.resolve(
+        gameId,
+        ticket,
+        (ChoiceTicket.Housing) ticket.effect(),
+        family,
+        3_000_000,
+        0,
+        new HashSeededRandom(1L));
+  }
+
+  /** 결혼한 월세 세입자에게 오는 다음 배우자 월세 불만 장면. 그 전의 다른 주거 이벤트("집 살까?")는 넘긴다. */
+  private EventView spouseRentOf(int fromDay) {
+    HousingFacts monthly =
+        new HousingFacts("MONTHLY", JOB_DAY + 30 * YEAR, 0, false, false, null, 0, 50, false);
+    SchedulingContext context =
+        new SchedulingContext(
+            Phase.SAVING,
+            15,
+            "long",
+            "food",
+            JOB_DAY + 30,
+            true,
+            null,
+            55 * YEAR,
+            JOB_DAY,
+            "office",
+            JOB_DAY,
+            true,
+            true,
+            JOB_DAY,
+            "은행원",
+            0,
+            List.of(),
+            List.of(),
+            false,
+            Map.of(),
+            monthly,
+            0L,
+            Set.of());
+    HashSeededRandom random = new HashSeededRandom(1L);
+    int from = fromDay;
+    for (int i = 0; i < 50; i++) {
+      int next = events.peekNextEventDay(gameId, context, from, random).orElseThrow();
+      ScheduleResult result = events.schedule(gameId, context, from, next, random, HINTS);
+      if (result.pending().isPresent()) {
+        EventView view = result.pending().get();
+        if (view.kind() == EventKind.HOUSING
+            && view.options().stream().anyMatch(o -> o.code().equals("WAIT"))) {
+          return view;
+        }
+        events.complete(
+            gameId, view.eventId(), new investorgame.event.Completion("PASS", "PASS", List.of()));
+      }
+      from = next;
+    }
+    throw new AssertionError("배우자의 월세 불만 장면이 오지 않았다");
+  }
+
   /** 보증보험 없는 빌라 만기 중 전세사기가 숨은 판을 찾는다(7%라 시드를 돌린다). */
   private EventView fraudulentLeaseEnd() {
     HousingFacts villa =
@@ -268,6 +369,7 @@ class HousingFlowTest {
             JOB_DAY,
             true,
             false,
+            null,
             null,
             0,
             List.of(),

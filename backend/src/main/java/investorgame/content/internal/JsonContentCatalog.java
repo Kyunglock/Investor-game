@@ -17,6 +17,7 @@ import investorgame.content.NoticeDefinition;
 import investorgame.content.OutingText;
 import investorgame.content.PartTimeJob;
 import investorgame.content.ShakeDefinition;
+import investorgame.content.SpouseRentText;
 import investorgame.content.SpouseText;
 import investorgame.content.StockDefinition;
 import investorgame.content.TraitDefinition;
@@ -324,6 +325,11 @@ class JsonContentCatalog implements ContentCatalog {
   @Override
   public SpouseText spouseText() {
     return life.spouse();
+  }
+
+  @Override
+  public SpouseRentText spouseRentText() {
+    return life.spouseRent();
   }
 
   @Override
@@ -704,6 +710,21 @@ class JsonContentCatalog implements ContentCatalog {
             && life.spouse().economies().stream().allMatch(e -> e.income() > 0),
         "결혼 상대 소개 재료가 비었다 (decisions.md 77번)");
     require(
+        life.spouseRent() != null
+            && !life.spouseRent().levels().isEmpty()
+            && life.spouseRent().levels().stream().allMatch(l -> l.body().contains("{job}"))
+            && life.spouseRent().moreChildren().contains("{count}")
+            && !life.spouseRent().waitTexts().isEmpty()
+            && !life.spouseRent().stayTexts().isEmpty()
+            && life.spouseRent().movedText() != null
+            && life.spouseRent().boughtText() != null,
+        "배우자의 월세 불만 문구가 비었다 (#116)");
+    require(
+        life.spouse() != null
+            && life.spouse().economies().stream()
+                .allMatch(e -> life.spouseRent().jobLines().containsKey(e.job())),
+        "배우자 직업마다 월세 불만 한 줄이 있어야 한다 (#116)");
+    require(
         life.childWedding() != null
             && life.childWedding().title().contains("{child}")
             && !life.childWedding().bodies().isEmpty()
@@ -811,6 +832,7 @@ class JsonContentCatalog implements ContentCatalog {
       ChildWeddingText childWedding,
       FamilyTripText familyTrip,
       SpouseText spouse,
+      SpouseRentText spouseRent,
       List<OutingText> outings,
       List<PartTimeJob> partTimes,
       List<NoticeDefinition> notices) {}

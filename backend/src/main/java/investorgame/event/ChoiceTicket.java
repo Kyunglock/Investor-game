@@ -50,6 +50,52 @@ public record ChoiceTicket(
 
     public static final String BUY = "buy";
     public static final String CHEONGYAK = "cheongyak";
+
+    /**
+     * 결혼한 뒤 월세에 살면 배우자가 "언제까지 월세 살 거야?" 하고 묻는다 (#116). 정의 코드는 "spouse-rent:단계:자녀 수:배우자 직업"이고 단계는 물은
+     * 횟수(1·2·3+)다. 미루거나 거스르면 행복도·가족 점수가 깎이고 다음에 더 세게 묻는다.
+     */
+    public static final String SPOUSE_RENT = "spouse-rent";
+
+    public static final String SPOUSE_RENT_PREFIX = SPOUSE_RENT + ":";
+
+    /** 배우자 요구에 "조금만 더 모으자"고 설득한다. 다음에 다시 묻는다. */
+    public static final String WAIT = "WAIT";
+
+    /** 배우자 뜻을 거스르고 그냥 월세에 산다. */
+    public static final String STAY = "STAY";
+
+    public static boolean isSpouseRent(String definition) {
+      return definition != null && definition.startsWith(SPOUSE_RENT);
+    }
+
+    /** 단계(1부터). 옛 형식이나 모르는 코드는 1. */
+    public static int spouseRentLevel(String definition) {
+      String[] parts = definition.split(":", 4);
+      return parts.length > 1 ? Integer.parseInt(parts[1]) : 1;
+    }
+
+    /** 물을 때의 자녀 수. */
+    public static int spouseRentChildren(String definition) {
+      String[] parts = definition.split(":", 4);
+      return parts.length > 2 ? Integer.parseInt(parts[2]) : 0;
+    }
+
+    /** 배우자의 직업. 모르면 빈 문자열. */
+    public static String spouseRentJob(String definition) {
+      String[] parts = definition.split(":", 4);
+      return parts.length > 3 ? parts[3] : "";
+    }
+
+    public static String spouseRentCode(int level, int children, String spouseJob) {
+      return SPOUSE_RENT_PREFIX
+          + level
+          + ":"
+          + children
+          + ":"
+          + (spouseJob == null ? "" : spouseJob);
+    }
+
     public static final String APPLY = "APPLY";
     public static final String KEEP = "KEEP";
     public static final String MONTHLY = "MONTHLY";

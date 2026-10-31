@@ -695,6 +695,7 @@ class DefaultEventService implements EventService {
     if (housing.leaseEndDay() != null) {
       due.put(ChoiceTicket.Housing.LEASE_END, housing.leaseEndDay());
     }
+    spouseRentDue(rows, context).ifPresent(d -> due.put(ChoiceTicket.Housing.SPOUSE_RENT, d));
     // 돈이 안 돼 '넘긴다'밖에 못 고를 공고는 띄우지 않는다. 영끌이 되는 순간 다음 공고가 온다 (#26, decisions.md 48번).
     if (housing.homes() == 0 && housing.cheongyakAffordable()) {
       List<EventRow> notices = housingOf(rows, ChoiceTicket.Housing.CHEONGYAK);
@@ -726,6 +727,44 @@ class DefaultEventService implements EventService {
         .min(Integer::compare)
         .ifPresent(d -> due.put(ChoiceTicket.Housing.BUY, Math.max(base, d)));
     return due;
+  }
+
+  /**
+   * 배우자의 월세 불만 (#116): 결혼했고 월세에 살면, 결혼(또는 그 뒤 독립) 1년 뒤 처음 묻는다. 그 뒤로도 월세면(미뤘거나 거슬렀거나) 1년 반마다 다시 묻고,
+   * 마지막으로 물은 뒤 아이가 태어나면 반년 뒤로 앞당긴다. 단계는 물은 횟수. 60세를 넘으면 더 묻지 않는다.
+   */
+  private Optional<Integer> spouseRentDue(List<EventRow> rows, SchedulingContext context) {
+    HousingFacts housing = context.housing();
+    if (!context.married()
+        || context.marriedDay() == null
+        || context.careerStartDay() == null
+        || !"MONTHLY".equals(housing.tenure())) {
+      return Optional.empty();
+    }
+    EventProperties.SpouseRentSettings settings = properties.housing().spouseRent();
+    List<EventRow> asked = spouseRentAsked(rows);
+    int due;
+    if (asked.isEmpty()) {
+      due = Math.max(context.marriedDay(), context.careerStartDay()) + settings.firstGapDays();
+    } else {
+      int lastAsk = last(asked).occursDay();
+      due = lastAsk + settings.retryGapDays();
+      if (housing.lastChildDay() != null && housing.lastChildDay() > lastAsk) {
+        due =
+            Math.min(
+                due,
+                Math.max(
+                    housing.lastChildDay() + settings.childGapDays(),
+                    lastAsk + settings.childGapDays()));
+      }
+    }
+    return ageAt(due, context) <= settings.lastAge() ? Optional.of(due) : Optional.empty();
+  }
+
+  private static List<EventRow> spouseRentAsked(List<EventRow> rows) {
+    return ofKind(rows, EventKind.HOUSING).stream()
+        .filter(r -> ChoiceTicket.Housing.isSpouseRent(r.definitionCode()))
+        .toList();
   }
 
   /** 가장 먼저 오는 주거 이벤트. 같은 날이면 housingDue의 순서가 먼저다. */
@@ -908,6 +947,20 @@ class DefaultEventService implements EventService {
     } else if (ChoiceTicket.Housing.CHEONGYAK.equals(definition)) {
       options.add(ChoiceTicket.Housing.APPLY);
       options.add(ChoiceTicket.Housing.PASS);
+    } else if (ChoiceTicket.Housing.SPOUSE_RENT.equals(definition)) {
+      // 배우자가 월세살이를 그만하자고 한다 (#116): 전세로 옮기거나, 집을 사거나, 설득해 미루거나, 거스른다. 월세 그대로는 선택지가 아니다.
+      definition =
+          ChoiceTicket.Housing.spouseRentCode(
+              spouseRentAsked(rows).size() + 1, context.childrenCount(), context.spouseJob());
+      options.add(ChoiceTicket.Housing.VILLA);
+      options.add(ChoiceTicket.Housing.VILLA_INSURED);
+      options.add(ChoiceTicket.Housing.APT_JEONSE);
+      if (roomForHome) {
+        options.add(ChoiceTicket.Housing.BUY_SEOUL);
+        options.add(ChoiceTicket.Housing.BUY_GYEONGGI);
+      }
+      options.add(ChoiceTicket.Housing.WAIT);
+      options.add(ChoiceTicket.Housing.STAY);
     } else if (ChoiceTicket.Housing.LEASE_END.equals(definition)) {
       // 전세사기가 아니면 운에 따라 집주인이 재계약을 거절한다. 그러면 '2년 더 살기' 없이 옮길 곳만 고른다 (#25).
       boolean refused =
