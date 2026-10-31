@@ -368,7 +368,7 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
       }
       // 배우자의 월세 불만 (#116): 미룬 건 남기지 않고, 거스른 건 한 줄, 들어준 이사는 아래 이사 줄에 부제가 붙는다.
       const spouseRent = str(p.definition).startsWith('spouse-rent')
-      if (spouseRent && p.option === 'WAIT') {
+      if ((spouseRent && p.option === 'WAIT') || p.option === 'ENDURE') {
         return null
       }
       if (spouseRent && p.option === 'STAY') {
@@ -398,9 +398,20 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
             }
           : num(p.price) > 0
             ? { text: `${age}세, ${str(p.regionName)} 매수`, sub: won(num(p.price)) }
-            : { text: `${age}세, ${str(p.label)}`, sub: `보증금 ${won(num(p.deposit))}` }
+            : {
+                text: `${age}세, ${str(p.label)}`,
+                sub: `${p.roomsName ? `${str(p.roomsName)} · ` : ''}보증금 ${won(num(p.deposit))}`,
+              }
       if (spouseRent) {
         line.sub = `${spouseWord(game.sex)}의 말에 월세를 벗어났다 · ${line.sub}`
+      }
+      // 집이 좁아 옮겼으면 누가 태어나(결혼해) 옮겼는지 (#117).
+      if (str(p.definition).startsWith('cramped')) {
+        const because =
+          p.childSeq != null && p.childSeq !== ''
+            ? `${ORDINALS[num(p.childSeq) - 1] ?? `${num(p.childSeq)}번째`}가 태어나`
+            : '결혼하고'
+        line.sub = `${because} 더 넓은 집으로 · ${line.sub}`
       }
       const vignette = HOME_VIGNETTE[str(p.option)]
       if (!vignette) {

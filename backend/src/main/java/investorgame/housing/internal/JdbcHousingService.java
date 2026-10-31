@@ -66,6 +66,7 @@ class JdbcHousingService implements HousingService {
         state.jeonseLoan(),
         state.insured(),
         state.leaseEndDay(),
+        state.rooms(),
         homes(gameId));
   }
 
@@ -79,6 +80,7 @@ class JdbcHousingService implements HousingService {
       long monthlyRent,
       long jeonseLoan,
       boolean insured,
+      Integer rooms,
       int day) {
     if (tenure == Tenure.PARENTS || tenure == Tenure.OWN) {
       throw new InvalidRequestException("세가 아니다: " + tenure);
@@ -88,7 +90,8 @@ class JdbcHousingService implements HousingService {
     jdbc.sql("UPDATE housing_home SET residence = FALSE WHERE game_id = :gameId AND residence")
         .param("gameId", gameId)
         .update();
-    setState(gameId, tenure, region, deposit, monthlyRent, jeonseLoan, insured, leaseEnd(day));
+    setState(
+        gameId, tenure, region, deposit, monthlyRent, jeonseLoan, insured, leaseEnd(day), rooms);
     return ended;
   }
 
@@ -108,7 +111,8 @@ class JdbcHousingService implements HousingService {
         monthlyRent,
         jeonseLoan,
         state.insured(),
-        leaseEnd(day));
+        leaseEnd(day),
+        state.rooms());
   }
 
   @Override
@@ -120,7 +124,7 @@ class JdbcHousingService implements HousingService {
         .param("gameId", gameId)
         .update();
     insertHome(gameId, region, price, day, mortgage, true, 0, null);
-    setState(gameId, Tenure.OWN, region, 0, 0, 0, false, null);
+    setState(gameId, Tenure.OWN, region, 0, 0, 0, false, null, null);
     return ended;
   }
 
@@ -169,7 +173,7 @@ class JdbcHousingService implements HousingService {
         .update();
     if (home.residence()) {
       // 살던 집이 팔리면 우선 보증금 없는 월세로 옮기고, 만기를 오늘로 둬서 바로 살 곳을 고르게 한다.
-      setState(gameId, Tenure.MONTHLY, null, 0, 0, 0, false, day);
+      setState(gameId, Tenure.MONTHLY, null, 0, 0, 0, false, day, null);
     }
     return new HomeSale(price, home.mortgage(), home.tenantDeposit(), home.residence());
   }
@@ -333,13 +337,15 @@ class JdbcHousingService implements HousingService {
       long monthlyRent,
       long jeonseLoan,
       boolean insured,
-      Integer leaseEndDay) {
+      Integer leaseEndDay,
+      Integer rooms) {
     create(gameId);
     jdbc.sql(
             """
             UPDATE housing_state
             SET tenure = :tenure, region = :region, deposit = :deposit, monthly_rent = :rent,
-                jeonse_loan = :loan, insured = :insured, lease_end_day = :end, updated_at = :now
+                jeonse_loan = :loan, insured = :insured, lease_end_day = :end, rooms = :rooms,
+                updated_at = :now
             WHERE game_id = :gameId
             """)
         .param("tenure", tenure.name())
@@ -349,6 +355,7 @@ class JdbcHousingService implements HousingService {
         .param("loan", jeonseLoan)
         .param("insured", insured)
         .param("end", leaseEndDay)
+        .param("rooms", rooms)
         .param("now", now())
         .param("gameId", gameId)
         .update();
@@ -369,13 +376,13 @@ class JdbcHousingService implements HousingService {
   /** 주거가 생기기 전에 시작한 판도 부모님 집에서 시작한다. 쓰기 전에 행을 만든다. */
   private State state(UUID gameId) {
     return find(gameId)
-        .orElseGet(() -> new State(Tenure.PARENTS.name(), null, 0, 0, 0, false, null));
+        .orElseGet(() -> new State(Tenure.PARENTS.name(), null, 0, 0, 0, false, null, null));
   }
 
   private Optional<State> find(UUID gameId) {
     return jdbc.sql(
             """
-            SELECT tenure, region, deposit, monthly_rent, jeonse_loan, insured, lease_end_day
+            SELECT tenure, region, deposit, monthly_rent, jeonse_loan, insured, lease_end_day, rooms
             FROM housing_state WHERE game_id = :gameId
             """)
         .param("gameId", gameId)
@@ -394,5 +401,6 @@ class JdbcHousingService implements HousingService {
       long monthlyRent,
       long jeonseLoan,
       boolean insured,
-      Integer leaseEndDay) {}
+      Integer leaseEndDay,
+      Integer rooms) {}
 }

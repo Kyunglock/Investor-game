@@ -164,7 +164,9 @@ public record GameView(
       int mortgageRateBp,
       long monthlyCost,
       List<Home> homes,
-      List<HomeQuote> quotes) {}
+      List<HomeQuote> quotes,
+      String roomsName,
+      boolean cramped) {}
 
   /** 가진 아파트. price는 지금 시세. residence가 아니면 세입자가 사는 갭투자 집이다. listed면 매수자를 기다리는 중이다. */
   public record Home(

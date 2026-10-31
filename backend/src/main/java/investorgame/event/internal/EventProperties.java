@@ -105,6 +105,8 @@ public record EventProperties(
    * @param cheongyakGapDays 집이 없으면 이 간격으로 청약 공고가 온다(처음은 독립하고 이만큼 뒤)
    * @param refuseBp 세 만기에 집주인이 재계약을 거절할 확률(만분율). 운 0이면 unlucky, 100이면 lucky, 그 사이는 직선 (#25)
    * @param spouseRent 결혼 뒤 월세에 살면 배우자가 월세살이를 그만하자고 하는 장면의 시점 (#116)
+   * @param crampedDelayDays 결혼·출산으로 세집이 좁아지면 이만큼 뒤에 "집이 좁다"가 온다 (#117)
+   * @param crampedLeaseWindowDays 그때 세 만기가 이 안에 있으면 "집이 좁다"를 따로 띄우지 않는다(만기에 옮기면 된다)
    */
   public record HousingSettings(
       int fraudBp,
@@ -112,7 +114,9 @@ public record EventProperties(
       int surgeBp,
       int cheongyakGapDays,
       Refuse refuseBp,
-      SpouseRentSettings spouseRent) {}
+      SpouseRentSettings spouseRent,
+      int crampedDelayDays,
+      int crampedLeaseWindowDays) {}
 
   /**
    * 배우자의 월세 불만 (#116).

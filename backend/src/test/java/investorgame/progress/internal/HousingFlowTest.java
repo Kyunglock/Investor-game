@@ -99,7 +99,8 @@ class HousingFlowTest {
 
   @Test
   void 전세사기를_당하면_보증금을_잃고_전세대출은_그대로_갚는다() {
-    housing.rent(gameId, Tenure.VILLA_JEONSE, null, 150_000_000, 0, 120_000_000, false, JOB_DAY);
+    housing.rent(
+        gameId, Tenure.VILLA_JEONSE, null, 150_000_000, 0, 120_000_000, false, null, JOB_DAY);
     long before = assets.totalAsset(gameId, market.prices(gameId)) + flow.equity(gameId);
     EventView leaseEnd = fraudulentLeaseEnd();
     ChoiceTicket ticket = events.prepareChoice(gameId, leaseEnd.eventId(), "MONTHLY");
@@ -135,10 +136,11 @@ class HousingFlowTest {
 
   @Test
   void 막힌_선택은_고를_수_없다() {
-    housing.rent(gameId, Tenure.MONTHLY, null, 10_000_000, 600_000, 0, false, JOB_DAY);
+    housing.rent(gameId, Tenure.MONTHLY, null, 10_000_000, 600_000, 0, false, null, JOB_DAY);
     EventView leaseEnd =
         leaseEndOf(
-            new HousingFacts("MONTHLY", JOB_DAY + YEAR, 0, false, false, null, 0, 50, true), 1L);
+            new HousingFacts("MONTHLY", JOB_DAY + YEAR, 0, false, false, null, 0, 50, true, false),
+            1L);
     ChoiceTicket ticket = events.prepareChoice(gameId, leaseEnd.eventId(), "BUY_SEOUL");
     assertThatThrownBy(
             () ->
@@ -193,12 +195,159 @@ class HousingFlowTest {
   }
 
   /**
+   * 집 크기 (#117, decisions.md 100번): 혼자 원룸, 부부 투룸, 아이 하나 쓰리룸, 둘 이상 포룸. 월세·빌라 전세가 계단처럼 오르고 아파트 전세는
+   * 그대로다.
+   */
+  @Test
+  void 식구가_늘면_더_넓은_집이_필요하고_월세와_빌라_전세가_오른다() {
+    assets.credit(gameId, "WINDFALL", 1_000_000_000, JOB_DAY);
+    HouseholdView couple = new HouseholdView(true, JOB_DAY, List.of(), null, null);
+    HouseholdView one =
+        new HouseholdView(
+            true,
+            JOB_DAY,
+            List.of(new HouseholdView.Child(1, JOB_DAY, 40 * YEAR, Sex.F)),
+            null,
+            null);
+    HouseholdView three =
+        new HouseholdView(
+            true,
+            JOB_DAY,
+            List.of(
+                new HouseholdView.Child(1, JOB_DAY, 40 * YEAR, Sex.F),
+                new HouseholdView.Child(2, JOB_DAY, 41 * YEAR, Sex.M),
+                new HouseholdView.Child(3, JOB_DAY, 42 * YEAR, Sex.M)),
+            null,
+            null);
+    assertThat(HousingFlow.neededRooms(single, JOB_DAY)).isEqualTo(1);
+    assertThat(HousingFlow.neededRooms(couple, JOB_DAY)).isEqualTo(2);
+    assertThat(HousingFlow.neededRooms(one, JOB_DAY)).isEqualTo(3);
+    assertThat(HousingFlow.neededRooms(three, JOB_DAY)).as("셋이어도 포룸까지").isEqualTo(4);
+    assertThat(HousingFlow.neededRooms(one, 41 * YEAR)).as("독립한 아이는 세지 않는다").isEqualTo(2);
+
+    List<String> codes = List.of("MONTHLY", "VILLA", "APT_JEONSE");
+    List<HousingFlow.Plan> alone = flow.plans(gameId, codes, false, single, 3_000_000, 0, JOB_DAY);
+    List<HousingFlow.Plan> withOne = flow.plans(gameId, codes, false, one, 3_000_000, 0, JOB_DAY);
+    List<HousingFlow.Plan> big = flow.plans(gameId, codes, false, three, 3_000_000, 0, JOB_DAY);
+    assertThat(alone.get(0).deposit()).isEqualTo(10_000_000);
+    assertThat(alone.get(0).monthlyRent()).isEqualTo(600_000);
+    assertThat(alone.get(0).detail()).startsWith("원룸 · ");
+    assertThat(withOne.get(0).deposit()).isEqualTo(30_000_000);
+    assertThat(withOne.get(0).monthlyRent()).isEqualTo(1_200_000);
+    assertThat(withOne.get(0).detail()).startsWith("쓰리룸 · ");
+    assertThat(withOne.get(0).rooms()).isEqualTo(3);
+    assertThat(big.get(0).deposit()).isEqualTo(40_000_000);
+    assertThat(big.get(0).monthlyRent()).isEqualTo(1_500_000);
+    long gyeonggi = market.homePrices(gameId).get("gyeonggi");
+    assertThat(alone.get(1).deposit()).isEqualTo(gyeonggi * 30 / 100);
+    assertThat(withOne.get(1).deposit()).isEqualTo(gyeonggi * 48 / 100);
+    assertThat(big.get(1).deposit()).isEqualTo(gyeonggi * 55 / 100);
+    assertThat(withOne.get(2).deposit()).as("84㎡ 아파트 전세는 식구와 무관").isEqualTo(alone.get(2).deposit());
+    assertThat(withOne.get(2).rooms()).isEqualTo(HousingFlow.MAX_ROOMS);
+  }
+
+  /** 좁은 집 (#117): 아이가 태어나 좁아지면 "집이 좁다"가 와서 넓은 집으로 옮기고, 그냥 살면 달마다 조금씩 지친다. */
+  @Test
+  void 아이가_태어나_집이_좁아지면_넓은_집으로_옮기거나_좁은_채_지친다() {
+    housing.rent(gameId, Tenure.MONTHLY, null, 20_000_000, 900_000, 0, false, 2, JOB_DAY);
+    household.marry(gameId, JOB_DAY, null);
+    household.addChild(gameId, JOB_DAY, 27, Sex.M);
+    HouseholdView family = household.get(gameId);
+    assertThat(HousingFlow.cramped(housing.get(gameId), family, JOB_DAY)).isTrue();
+    assertThat(flow.view(gameId, 15, JOB_DAY).cramped()).isTrue();
+    assertThat(flow.view(gameId, 15, JOB_DAY).roomsName()).isEqualTo("투룸");
+
+    int happiness = household.happiness(gameId);
+    flow.month(gameId, 3, JOB_DAY + 30, new HashSeededRandom(1L));
+    assertThat(household.happiness(gameId)).as("좁은 집에서는 달마다 −1").isEqualTo(happiness - 1);
+    assertThat(household.familyScore(gameId)).as("석 달마다 가족 −1").isEqualTo(49);
+
+    HousingFacts cramped =
+        new HousingFacts(
+            "MONTHLY", JOB_DAY + 30 * YEAR, 0, false, false, JOB_DAY, 0, 50, false, true);
+    EventView ask = housingOf(cramped, JOB_DAY, JOB_DAY);
+    assertThat(ask.title()).isEqualTo("집이 좁다");
+    assertThat(ask.occursDay()).isEqualTo(JOB_DAY + 60);
+    assertThat(ask.options())
+        .extracting(EventView.Option::code)
+        .containsExactly(
+            "MONTHLY",
+            "VILLA",
+            "VILLA_INSURED",
+            "APT_JEONSE",
+            "BUY_SEOUL",
+            "BUY_GYEONGGI",
+            "ENDURE");
+    ChoiceTicket ticket = events.prepareChoice(gameId, ask.eventId(), "MONTHLY");
+    assets.credit(gameId, "WINDFALL", 100_000_000, ask.occursDay());
+    var moved =
+        flow.resolve(
+            gameId,
+            ticket,
+            (ChoiceTicket.Housing) ticket.effect(),
+            family,
+            3_000_000,
+            0,
+            new HashSeededRandom(1L));
+    assertThat(moved.message()).startsWith("첫째가 태어나 더 넓은 집으로 옮겼다.").contains("쓰리룸");
+    assertThat(housing.get(gameId).rooms()).isEqualTo(3);
+    assertThat(housing.get(gameId).monthlyRent()).isEqualTo(1_200_000);
+    assertThat(HousingFlow.cramped(housing.get(gameId), family, ask.occursDay())).isFalse();
+  }
+
+  /** 결혼한 세입자에게 오는 첫 주거 이벤트. marriedDay·facts로 "집이 좁다" 같은 장면을 띄운다. */
+  private EventView housingOf(HousingFacts facts, int marriedDay, int fromDay) {
+    SchedulingContext context =
+        new SchedulingContext(
+            Phase.SAVING,
+            15,
+            "long",
+            "food",
+            JOB_DAY + 30,
+            true,
+            null,
+            55 * YEAR,
+            JOB_DAY,
+            "office",
+            JOB_DAY,
+            true,
+            true,
+            marriedDay,
+            null,
+            1,
+            List.of(),
+            List.of(),
+            false,
+            Map.of(),
+            facts,
+            0L,
+            Set.of());
+    HashSeededRandom random = new HashSeededRandom(1L);
+    int from = fromDay;
+    for (int i = 0; i < 50; i++) {
+      int next = events.peekNextEventDay(gameId, context, from, random).orElseThrow();
+      ScheduleResult result = events.schedule(gameId, context, from, next, random, HINTS);
+      if (result.pending().isPresent() && result.pending().get().kind() == EventKind.HOUSING) {
+        return result.pending().get();
+      }
+      result
+          .pending()
+          .ifPresent(
+              v ->
+                  events.complete(
+                      gameId, v.eventId(), new investorgame.event.Completion("x", "x", List.of())));
+      from = next;
+    }
+    throw new AssertionError("주거 이벤트가 오지 않았다");
+  }
+
+  /**
    * 배우자의 월세 불만 (#116, decisions.md 99번): 미루면 조금, 거스르면 많이 행복도·가족 점수가 깎이고 단계가 오르면 더. 들어주면 월세를 벗어나며
    * 가까워진다.
    */
   @Test
   void 배우자의_월세_불만을_미루거나_거스르면_멀어지고_들어주면_가까워진다() {
-    housing.rent(gameId, Tenure.MONTHLY, null, 10_000_000, 600_000, 0, false, JOB_DAY);
+    housing.rent(gameId, Tenure.MONTHLY, null, 10_000_000, 600_000, 0, false, null, JOB_DAY);
     household.marry(gameId, JOB_DAY, new Spouse("은행원", 3_800_000, "성격은 다정하다."));
     HouseholdView family = household.get(gameId);
     assertThat(household.familyScore(gameId)).isEqualTo(50);
@@ -246,7 +395,8 @@ class HousingFlowTest {
   /** 결혼한 월세 세입자에게 오는 다음 배우자 월세 불만 장면. 그 전의 다른 주거 이벤트("집 살까?")는 넘긴다. */
   private EventView spouseRentOf(int fromDay) {
     HousingFacts monthly =
-        new HousingFacts("MONTHLY", JOB_DAY + 30 * YEAR, 0, false, false, null, 0, 50, false);
+        new HousingFacts(
+            "MONTHLY", JOB_DAY + 30 * YEAR, 0, false, false, null, 0, 50, false, false);
     SchedulingContext context =
         new SchedulingContext(
             Phase.SAVING,
@@ -294,7 +444,7 @@ class HousingFlowTest {
   /** 보증보험 없는 빌라 만기 중 전세사기가 숨은 판을 찾는다(7%라 시드를 돌린다). */
   private EventView fraudulentLeaseEnd() {
     HousingFacts villa =
-        new HousingFacts("VILLA_JEONSE", JOB_DAY + YEAR, 0, false, true, null, 0, 50, true);
+        new HousingFacts("VILLA_JEONSE", JOB_DAY + YEAR, 0, false, true, null, 0, 50, true, false);
     for (long seed = 1; seed <= 300; seed++) {
       UUID probe = UUID.randomUUID();
       EventView view = leaseEndOf(probe, villa, seed);

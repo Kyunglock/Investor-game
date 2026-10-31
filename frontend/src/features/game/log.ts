@@ -284,13 +284,34 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
             : `청약에 당첨됐지만 계약금이 모자라 포기했다 (가점 ${num(p.points)}점).`
         return { ...base, tone: p.bought ? 'growth' : 'life', pill: '집', text }
       }
+      // 집이 좁다 (#117): 결혼·출산으로 좁아진 집을 옮겼거나 그냥 살기로 했다.
+      const cramped = str(p.definition).startsWith('cramped')
+      const because =
+        p.childSeq != null && p.childSeq !== ''
+          ? `${childName(num(p.childSeq))}가 태어나`
+          : '결혼하고'
+      if (cramped && option === 'ENDURE') {
+        return {
+          ...base,
+          tone: 'decline',
+          pill: '집',
+          text: `${because} 집이 좁아졌지만 그냥 살기로 했다.`,
+        }
+      }
+      const rooms = p.roomsName ? `${str(p.roomsName)} · ` : ''
       const what =
         option === 'PASS'
           ? '집은 아직 사지 않기로 했다.'
           : num(p.price) > 0
             ? `${str(p.regionName)}를 ${won(num(p.price))}에 샀다${num(p.mortgage) > 0 ? ` (주담대 ${won(num(p.mortgage))})` : ''}.`
-            : `${str(p.label)} · 보증금 ${won(num(p.deposit))}${num(p.monthlyRent) > 0 ? `, 월세 ${won(num(p.monthlyRent))}` : ''}${num(p.jeonseLoan) > 0 ? `, 전세대출 ${won(num(p.jeonseLoan))}` : ''}.`
-      return { ...base, tone: p.fraud ? 'flipped' : 'life', pill: '집', text: `${head}${what}` }
+            : `${str(p.label)} · ${rooms}보증금 ${won(num(p.deposit))}${num(p.monthlyRent) > 0 ? `, 월세 ${won(num(p.monthlyRent))}` : ''}${num(p.jeonseLoan) > 0 ? `, 전세대출 ${won(num(p.jeonseLoan))}` : ''}.`
+      const moved = cramped ? `${because} 더 넓은 집으로 옮겼다. ` : ''
+      return {
+        ...base,
+        tone: p.fraud ? 'flipped' : 'life',
+        pill: '집',
+        text: `${head}${moved}${what}`,
+      }
     }
     case 'MORTGAGE_REPAY':
       // 주담대 일시 상환 (decisions.md 58번).

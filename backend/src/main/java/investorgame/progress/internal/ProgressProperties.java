@@ -1,5 +1,6 @@
 package investorgame.progress.internal;
 
+import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -35,13 +36,11 @@ public record ProgressProperties(
    *
    * @param ltvBp 집값 대비 주담대 한도
    * @param dsrBp 월 소득 대비 월 원리금 한도(기존 주담대 포함)
-   * @param jeonseRatioBp 아파트 전세가 = 시세 × 이 비율. 갭투자 세입자 보증금도 이 값
-   * @param villaSingleBp 빌라 전세 보증금 = 경기 아파트 시세 × 이 비율(1인)
-   * @param villaFamilyBp 빌라 전세 보증금(부부·자녀)
+   * @param jeonseRatioBp 아파트 전세가 = 시세 × 이 비율. 갭투자 세입자 보증금도 이 값. 84㎡라 식구 수와 무관
+   * @param villaBp 빌라 전세 보증금 = 경기 아파트 시세 × 이 비율. 집 크기(방 수 1~4)마다 하나 (#117)
    * @param jeonseLoanBp 전세대출 한도 = 보증금 × 이 비율. 소득이 없으면 0
    * @param renewRaiseBp 연장하면 보증금·월세가 이만큼 오른다
-   * @param monthlySingle 월세(1인) 보증금·월세
-   * @param monthlyFamily 월세(부부·자녀) 보증금·월세
+   * @param monthly 월세 보증금·월세. 집 크기(방 수 1~4: 원룸·투룸·쓰리룸·포룸)마다 하나 (#117)
    * @param conversionBpPerMonth 월세 보증금을 덜 내면 모자란 보증금 × 이 비율만큼 월세가 오른다(전월세 전환). 그래서 월세는 언제나 구할 수 있다
    * @param cheongyakPriceBp 청약 분양가 = 서울 아파트 시세 × 이 비율
    * @param cheongyakDownBp 청약 계약금 = 분양가 × 이 비율. 현금(+돌려받을 보증금)으로 내야 하고, 나머지는 분양 대출(DSR 안에서)
@@ -53,12 +52,10 @@ public record ProgressProperties(
       int ltvBp,
       int dsrBp,
       int jeonseRatioBp,
-      int villaSingleBp,
-      int villaFamilyBp,
+      List<Integer> villaBp,
       int jeonseLoanBp,
       int renewRaiseBp,
-      Rent monthlySingle,
-      Rent monthlyFamily,
+      List<Rent> monthly,
       int conversionBpPerMonth,
       int saleChanceBp,
       int saleChanceFallingBp,

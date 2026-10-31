@@ -284,9 +284,16 @@ function Home({ game }: { game: Game }) {
       <h2 className="font-pen text-[28px] font-normal leading-8">사는 곳</h2>
       <p data-testid="tenure">
         <b>{TENURE_LABELS[h.tenure]}</b>
+        {h.roomsName && ` · ${h.roomsName}`}
         {h.regionName && h.tenure !== 'OWN' && ` · ${h.regionName}`}
         {h.leaseEndAge != null && ` · ${h.leaseEndAge}살 만기`}
         {h.insured && ' · 보증보험'}
+        {h.cramped && (
+          <span className="text-red-pen" data-testid="cramped">
+            {' '}
+            · 식구에 비해 좁다
+          </span>
+        )}
       </p>
       {h.tenure !== 'PARENTS' && (
         <p className="text-[13px] text-pen-soft">

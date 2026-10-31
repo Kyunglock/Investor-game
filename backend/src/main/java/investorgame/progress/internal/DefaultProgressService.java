@@ -1823,7 +1823,7 @@ class DefaultProgressService implements ProgressService {
         character.investorType() == null ? null : investorTypeView(character.investorType()),
         new GameView.Market(month, quotes.stream().map(this::quoteView).toList()),
         householdView(game, character),
-        housingFlow.view(gameId, game.startAge()),
+        housingFlow.view(gameId, game.startAge(), game.lastReportedDay()),
         pending.map(e -> pendingView(game, character, e, quoteByCode)).orElse(null),
         nextEventDay,
         ended ? results.find(gameId).map(DefaultProgressService::resultView).orElse(null) : null,

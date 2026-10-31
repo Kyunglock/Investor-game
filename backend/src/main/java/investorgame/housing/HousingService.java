@@ -13,7 +13,9 @@ public interface HousingService {
 
   HousingView get(UUID gameId);
 
-  /** 세를 든다(이사). 만기는 lease-years 뒤. 끝난 세를 돌려준다(자가였으면 보증금 0). */
+  /**
+   * 세를 든다(이사). 만기는 lease-years 뒤. 끝난 세를 돌려준다(자가였으면 보증금 0). rooms는 집의 크기(방 수, 1~4, #117)이고 모르면 null.
+   */
   Lease rent(
       UUID gameId,
       Tenure tenure,
@@ -22,6 +24,7 @@ public interface HousingService {
       long monthlyRent,
       long jeonseLoan,
       boolean insured,
+      Integer rooms,
       int day);
 
   /** 같은 집에 lease-years 더 산다. 보증금·월세·전세대출이 바뀐다. 세입자가 아니면 오류. */

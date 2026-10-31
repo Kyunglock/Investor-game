@@ -49,6 +49,8 @@ function baseGame(over: Partial<Game> = {}): Game {
       monthlyCost: 0,
       homes: [],
       quotes: [],
+      roomsName: null,
+      cramped: false,
     },
     market: { month: 660, stocks: [] },
     household: {
@@ -678,5 +680,40 @@ describe('크레딧 그림 (#23)', () => {
       sub: '아내의 말에 월세를 벗어났다 · 보증금 300,000,000원',
     })
     expect(moved?.art?.vignette).toBe('apartment')
+  })
+
+  it('집 크기: 이사 줄에 크기가 붙고, 아이가 태어나 옮긴 것도 적는다. 좁아도 그냥 산 건 남지 않는다 (#117)', () => {
+    const game = baseGame({
+      log: [
+        entry('BIRTH', 15, {}),
+        entry('HOUSING', 26, {
+          option: 'MONTHLY',
+          label: '월세로 산다',
+          roomsName: '원룸',
+          price: 0,
+          deposit: 10_000_000,
+        }),
+        entry('HOUSING', 30, { definition: 'cramped:marriage', option: 'ENDURE', price: 0 }),
+        entry('HOUSING', 33, {
+          definition: 'cramped:child:1',
+          option: 'MONTHLY',
+          childSeq: 1,
+          label: '월세로 산다',
+          roomsName: '쓰리룸',
+          price: 0,
+          deposit: 30_000_000,
+        }),
+      ],
+    })
+    const homes = buildCredits(game).filter((s) => s.key.startsWith('home-'))
+    expect(homes.map((s) => s.lines[0].sub)).toEqual([
+      '원룸 · 보증금 10,000,000원',
+      '첫째가 태어나 더 넓은 집으로 · 쓰리룸 · 보증금 30,000,000원',
+    ])
+    expect(
+      buildCredits(game)
+        .flatMap((s) => s.lines)
+        .some((l) => l.text.startsWith('30세')),
+    ).toBe(false)
   })
 })

@@ -187,6 +187,42 @@ describe('logLine', () => {
       ).text,
     ).toContain('남편이')
 
+    // 집 크기 (#117): 세집의 크기가 기록에 붙고, 좁아져 옮기거나 그냥 산 것도 남는다.
+    const sized = logLine(
+      entry('HOUSING', 30 * 360, {
+        definition: 'lease-end',
+        option: 'MONTHLY',
+        label: '월세로 산다',
+        roomsName: '투룸',
+        deposit: 20_000_000,
+        monthlyRent: 900_000,
+        price: 0,
+      }),
+      game,
+    )
+    expect(sized.text).toBe('월세로 산다 · 투룸 · 보증금 20,000,000원, 월세 900,000원.')
+    const grew = logLine(
+      entry('HOUSING', 33 * 360, {
+        definition: 'cramped:child:2',
+        option: 'VILLA_INSURED',
+        childSeq: 2,
+        label: '빌라 전세 + 전세보증보험',
+        roomsName: '포룸',
+        deposit: 300_000_000,
+        price: 0,
+      }),
+      game,
+    )
+    expect(grew.text).toBe(
+      '둘째가 태어나 더 넓은 집으로 옮겼다. 빌라 전세 + 전세보증보험 · 포룸 · 보증금 300,000,000원.',
+    )
+    const endured = logLine(
+      entry('HOUSING', 33 * 360, { definition: 'cramped:marriage', option: 'ENDURE', price: 0 }),
+      game,
+    )
+    expect(endured.text).toBe('결혼하고 집이 좁아졌지만 그냥 살기로 했다.')
+    expect(endured.tone).toBe('decline')
+
     const sold = logLine(
       entry('HOME_SOLD', 40 * 360, {
         regionName: '경기 아파트 (84㎡)',

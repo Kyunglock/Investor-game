@@ -197,6 +197,20 @@ class EventRenderer {
               null,
               options);
         }
+        if (ChoiceTicket.Housing.isCramped(row.definitionCode())) {
+          // 집이 좁다 (#117): 아이가 태어나서인지 결혼해서인지에 따라 문구가 다르다.
+          Integer child = ChoiceTicket.Housing.crampedChild(row.definitionCode());
+          ContentCatalog.TextBlock text =
+              content.housingText(child == null ? "cramped-marriage" : "cramped-child");
+          String name = child == null ? "" : ordinal(child);
+          yield view(
+              row,
+              text.title().replace("{child}", name),
+              text.body().replace("{child}", name),
+              null,
+              null,
+              options);
+        }
         ContentCatalog.TextBlock text = content.housingText(row.definitionCode());
         yield view(row, text.title(), text.body(), null, null, options);
       }
