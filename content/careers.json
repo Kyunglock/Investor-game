@@ -2,9 +2,9 @@
   {
     "code": "raise",
     "title": "연봉 협상",
-    "body": "연말 면담이 잡혔다. 올해 한 일을 정리해 보니 할 말은 있다. 문제는 어떻게 말하느냐다.",
+    "body": "연말 면담이 잡혔다. 몇 해 동안 한 일을 정리해 보니 할 말은 있다. 문제는 어떻게 말하느냐다.",
     "weight": 10,
-    "minTenureYears": 1,
+    "minTenureYears": 3,
     "jobs": [
       "designer",
       "office",
