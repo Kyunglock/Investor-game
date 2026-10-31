@@ -67,6 +67,7 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             List.of(),
+            List.of(),
             false,
             Map.of(),
             SETTLED,
@@ -222,6 +223,7 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             List.of(),
+            List.of(),
             false,
             Map.of(),
             SETTLED,
@@ -344,11 +346,12 @@ class DefaultEventServiceTest {
   }
 
   @Test
-  void 어린_아이가_집에_있으면_1에서_2년마다_나들이를_조른다() {
+  void 어린_아이가_집에_있으면_1에서_2년마다_나이에_맞는_나들이를_조른다() {
     UUID gameId = UUID.randomUUID();
     int marriedDay = (30 - START_AGE) * YEAR;
     // 첫째가 32세에 태어나 58세에 독립한다 → 33~45세 사이에는 어린 아이가 집에 있다.
     SchedulingContext family = lifeWith(marriedDay, List.of((58 - START_AGE) * YEAR), END_DAY);
+    int firstBirth = (32 - START_AGE) * YEAR;
     int from = (33 - START_AGE) * YEAR;
     List<EventView> outings = new ArrayList<>();
     for (int i = 0; i < 12 && outings.size() < 2; i++) {
@@ -356,9 +359,20 @@ class DefaultEventServiceTest {
       if (life.isEmpty()) {
         break;
       }
-      if (life.get().options().stream().anyMatch(o -> o.code().equals("luxury"))
-          && life.get().title().contains("첫째")) {
+      // 첫째가 제안한 가족 여행(outing 없음)은 나들이가 아니다.
+      ChoiceTicket.FamilyTrip trip =
+          life.get().options().stream().anyMatch(o -> o.code().equals("luxury"))
+                  && life.get().title().contains("첫째")
+              ? (ChoiceTicket.FamilyTrip)
+                  events.prepareChoice(gameId, life.get().eventId(), "normal").effect()
+              : null;
+      if (trip != null && trip.outing() != null) {
         outings.add(life.get());
+        // 나들이는 그 아이의 나이에 맞는 것만 온다 (decisions.md 106번): 두 살이 캠핑을 가자고 하지 않는다.
+        int age = (life.get().occursDay() - firstBirth) / YEAR;
+        assertThat(content.outing(trip.outing()).fits(age))
+            .as("%d세 아이에게 %s", age, trip.outing())
+            .isTrue();
       }
       events.complete(gameId, life.get().eventId(), new Completion("none", "none", List.of()));
       from = life.get().occursDay();
@@ -367,6 +381,12 @@ class DefaultEventServiceTest {
     assertThat(outings.get(0).options())
         .extracting(EventView.Option::code)
         .containsExactly("luxury", "normal", "cheap", "none");
+    // 아이가 두 살이면 맞는 나들이가 없어 아직 오지 않는다. 세 살(동물원)부터다.
+    UUID toddler = UUID.randomUUID();
+    Optional<EventView> first =
+        nextOf(toddler, family, firstBirth + YEAR, EventKind.LIFE, 13L)
+            .filter(v -> v.title().contains("첫째"));
+    first.ifPresent(v -> assertThat((v.occursDay() - firstBirth) / YEAR).isGreaterThanOrEqualTo(3));
   }
 
   private static boolean isTrip(EventView view) {
@@ -392,6 +412,7 @@ class DefaultEventServiceTest {
         marriedDay,
         null,
         leaveDays.size(),
+        leaveDays.stream().map(d -> d - 26 * YEAR).toList(),
         leaveDays,
         List.of(),
         false,
@@ -419,6 +440,7 @@ class DefaultEventServiceTest {
         marriedDay,
         null,
         children,
+        List.of(),
         List.of(),
         List.of(),
         false,
@@ -459,6 +481,7 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             List.of(),
+            List.of(),
             false,
             Map.of(),
             SETTLED,
@@ -491,6 +514,7 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             List.of(),
+            List.of(),
             false,
             Map.of(),
             SETTLED,
@@ -519,6 +543,7 @@ class DefaultEventServiceTest {
             null,
             null,
             0,
+            List.of(),
             List.of(),
             List.of(),
             true,
@@ -554,6 +579,7 @@ class DefaultEventServiceTest {
             0,
             List.of(),
             List.of(),
+            List.of(),
             false,
             Map.of(),
             SETTLED,
@@ -585,6 +611,7 @@ class DefaultEventServiceTest {
             null,
             null,
             0,
+            List.of(),
             List.of(),
             List.of(),
             false,
@@ -661,6 +688,7 @@ class DefaultEventServiceTest {
         null,
         null,
         0,
+        List.of(),
         List.of(),
         List.of(),
         false,
@@ -803,6 +831,7 @@ class DefaultEventServiceTest {
         null,
         null,
         0,
+        List.of(),
         List.of(),
         List.of(),
         fullTimeInvestor,
@@ -1146,6 +1175,7 @@ class DefaultEventServiceTest {
         c.marriedDay(),
         c.spouseJob(),
         c.childrenCount(),
+        c.childBirthDays(),
         List.of(),
         c.heldStockCodes(),
         c.fullTimeInvestor(),
@@ -1181,6 +1211,7 @@ class DefaultEventServiceTest {
         children,
         List.of(),
         List.of(),
+        List.of(),
         false,
         Map.of(),
         facts,
@@ -1206,6 +1237,7 @@ class DefaultEventServiceTest {
         null,
         null,
         0,
+        List.of(),
         List.of(),
         held,
         false,
@@ -1237,6 +1269,7 @@ class DefaultEventServiceTest {
             null,
             null,
             0,
+            List.of(),
             List.of(),
             List.of(held),
             false,

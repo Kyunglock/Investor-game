@@ -1744,6 +1744,7 @@ class DefaultProgressService implements ProgressService {
         home.marriedDay(),
         home.spouse() == null ? null : home.spouse().job(),
         home.children().size(),
+        home.childBirthDays(),
         home.children().stream().map(HouseholdView.Child::leaveDay).toList(),
         assets.get(game.id()).holdings().keySet().stream().sorted().toList(),
         character.fullTimeInvestorDay() != null,
