@@ -430,13 +430,17 @@ class HousingFlow {
             burden,
             "%s보증금 %s → %s%s · 더 낼 현금 %s · 월 %s%s"
                 .formatted(
-                    view.rooms() == null ? "" : roomName(keepRooms) + " · ",
+                    view.rooms() == null || view.tenure() == Tenure.APT_JEONSE
+                        ? ""
+                        : roomName(keepRooms) + " · ",
                     money(view.deposit()),
                     money(deposit),
                     loan > 0 ? " (전세대출 %s)".formatted(money(loan)) : "",
                     money(need),
                     money(burden),
-                    view.rooms() != null && keepRooms < rooms ? " · 식구에 비해 좁다" : ""),
+                    view.rooms() != null && view.tenure() != Tenure.APT_JEONSE && keepRooms < rooms
+                        ? " · 식구에 비해 좁다"
+                        : ""),
             need > cash ? short_(need - cash) : null,
             keepRooms);
       }
@@ -919,7 +923,11 @@ class HousingFlow {
     payload.put("fraud", effect.fraud());
     payload.put("lost", lost);
     payload.put("stockSold", sold);
-    payload.put("roomsName", plan.rooms() > 0 ? roomName(plan.rooms()) : null);
+    // 아파트 전세(84㎡)·자가는 방 수 표기를 쓰지 않는다 (decisions.md 120번).
+    boolean aptJeonse =
+        ChoiceTicket.Housing.APT_JEONSE.equals(code)
+            || (ChoiceTicket.Housing.KEEP.equals(code) && before.tenure() == Tenure.APT_JEONSE);
+    payload.put("roomsName", plan.rooms() > 0 && !aptJeonse ? roomName(plan.rooms()) : null);
     payload.putAll(payloadExtra);
     // 행복도 (decisions.md 82번): 전세사기는 크게 지치고, 내 집을 사면 기쁘고, 독립해 나가면 조금 기쁘다.
     if (effect.fraud()) {
