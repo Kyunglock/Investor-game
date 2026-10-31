@@ -52,6 +52,7 @@ class HousingFlowTest {
   @Autowired MarketService market;
   @Autowired HouseholdService household;
   @Autowired EventService events;
+  @Autowired LogRepository logs;
 
   UUID gameId;
   HouseholdView single;
@@ -153,6 +154,48 @@ class HousingFlowTest {
         .isInstanceOf(InvalidRequestException.class);
   }
 
+  /** 집을 살 때 현금이 모자라면 들고 있는 주식을 팔아 보탠다 (decisions.md 100번). 모자란 만큼만, 큰 종목부터. */
+  @Test
+  void 현금이_모자라면_주식을_팔아_집을_산다() {
+    housing.rent(gameId, Tenure.MONTHLY, null, 10_000_000, 600_000, 0, false, JOB_DAY);
+    long seoul = market.homePrices(gameId).get("seoul");
+    String code = market.prices(gameId).keySet().stream().sorted().findFirst().orElseThrow();
+    long price = market.prices(gameId).get(code);
+    long quantity = seoul / price + 1;
+    long cash = assets.get(gameId).cash();
+    assets.credit(gameId, "WINDFALL", quantity * price + 1_000_000 - cash, JOB_DAY);
+    assets.buy(gameId, code, quantity, price, JOB_DAY, null);
+    assertThat(assets.get(gameId).cash()).isEqualTo(1_000_000);
+
+    HousingFlow.Plan plan =
+        flow.plans(gameId, List.of("BUY_SEOUL"), false, single, 0, 0, JOB_DAY).getFirst();
+    assertThat(plan.blocked()).as("주식을 팔면 치를 수 있다").isNull();
+    assertThat(plan.detail()).contains("주식").contains("매도");
+
+    EventView leaseEnd =
+        leaseEndOf(
+            new HousingFacts("MONTHLY", JOB_DAY + YEAR, 0, false, false, null, 0, 50, true), 1L);
+    ChoiceTicket ticket = events.prepareChoice(gameId, leaseEnd.eventId(), "BUY_SEOUL");
+    var outcome =
+        flow.resolve(
+            gameId,
+            ticket,
+            (ChoiceTicket.Housing) ticket.effect(),
+            single,
+            0,
+            0,
+            new HashSeededRandom(1L));
+
+    assertThat(outcome.message()).contains("주식").contains("팔아");
+    assertThat(housing.get(gameId).ownsResidence()).isTrue();
+    var account = assets.get(gameId);
+    assertThat(account.debt()).as("빚 없이 치렀다").isZero();
+    assertThat(account.cash()).as("한 주 단위라 조금 남을 뿐이다").isBetween(0L, price);
+    assertThat(account.holdings().get(code).quantity()).as("모자란 만큼만 팔았다").isPositive();
+    assertThat(logs.findAll(gameId))
+        .anyMatch(e -> e.kind().equals("TRADE") && "HOUSING".equals(e.payload().get("reason")));
+  }
+
   /** 청약 가점 (decisions.md 42번): 무주택 기간·부양가족·통장 기간. 가점이 높을수록 당첨이 쉽다. */
   @Test
   void 청약_가점은_무주택_기간과_부양가족과_통장_기간으로_매긴다() {
@@ -193,7 +236,7 @@ class HousingFlowTest {
   }
 
   /**
-   * 배우자의 월세 불만 (#116, decisions.md 99번): 미루면 조금, 거스르면 많이 행복도·가족 점수가 깎이고 단계가 오르면 더. 들어주면 월세를 벗어나며
+   * 배우자의 월세 불만 (#116, decisions.md 104번): 미루면 조금, 거스르면 많이 행복도·가족 점수가 깎이고 단계가 오르면 더. 들어주면 월세를 벗어나며
    * 가까워진다.
    */
   @Test

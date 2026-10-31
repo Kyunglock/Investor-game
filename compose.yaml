@@ -1,7 +1,7 @@
-# 로컬 개발용 Postgres. 테스트(Testcontainers)와 같은 버전을 쓴다.
+# 로컬 개발용 Postgres. 테스트(Testcontainers)와 같은 이미지를 쓴다. 행동 프로필이 pgvector를 쓴다.
 services:
   postgres:
-    image: postgres:17
+    image: pgvector/pgvector:pg17
     environment:
       POSTGRES_DB: investor
       POSTGRES_USER: investor

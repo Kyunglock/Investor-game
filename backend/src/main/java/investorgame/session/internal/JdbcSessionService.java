@@ -39,20 +39,23 @@ class JdbcSessionService implements SessionService {
   @Override
   @Transactional
   public IssuedSession issue(String ip) {
-    UUID id = UUID.randomUUID();
-    String token = newToken();
-    OffsetDateTime now = now();
-    jdbc.sql(
-            """
-            INSERT INTO session_info (id, token_hash, created_at, last_seen_at, first_ip, last_ip)
-            VALUES (:id, :tokenHash, :now, :now, :ip, :ip)
-            """)
-        .param("id", id)
-        .param("tokenHash", hash(token))
-        .param("now", now)
-        .param("ip", ip)
-        .update();
-    return new IssuedSession(id, token);
+    return insert(ip, null);
+  }
+
+  @Override
+  @Transactional
+  public IssuedSession issueBot(String ip, String persona) {
+    return insert(ip, persona);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<String> botPersona(UUID sessionId) {
+    return jdbc.sql("SELECT bot_persona FROM session_info WHERE id = :id")
+        .param("id", sessionId)
+        .query((rs, rowNum) -> Optional.ofNullable(rs.getString("bot_persona")))
+        .optional()
+        .flatMap(persona -> persona);
   }
 
   @Override
@@ -86,6 +89,25 @@ class JdbcSessionService implements SessionService {
         .param("limit", limit)
         .query(SessionSummary.class)
         .list();
+  }
+
+  private IssuedSession insert(String ip, String botPersona) {
+    UUID id = UUID.randomUUID();
+    String token = newToken();
+    OffsetDateTime now = now();
+    jdbc.sql(
+            """
+            INSERT INTO session_info
+              (id, token_hash, created_at, last_seen_at, first_ip, last_ip, bot_persona)
+            VALUES (:id, :tokenHash, :now, :now, :ip, :ip, :botPersona)
+            """)
+        .param("id", id)
+        .param("tokenHash", hash(token))
+        .param("now", now)
+        .param("ip", ip)
+        .param("botPersona", botPersona)
+        .update();
+    return new IssuedSession(id, token);
   }
 
   private OffsetDateTime now() {
