@@ -959,9 +959,10 @@ class DefaultEventServiceTest {
   void 아이가_태어나_집이_좁아지면_두_달_뒤_옮길지_묻는다() {
     int marriedDay = JOB_DAY + YEAR;
     int birth = JOB_DAY + 2 * YEAR;
+    // 빌라 전세라 배우자의 월세 불만(#116)은 없고, 좁은 집만 문제다.
     HousingFacts cramped =
         new HousingFacts(
-            "MONTHLY", JOB_DAY + 30 * YEAR, 0, false, false, birth, 0, 50, false, true);
+            "VILLA_JEONSE", JOB_DAY + 30 * YEAR, 0, false, false, birth, 0, 50, false, true);
     UUID gameId = UUID.randomUUID();
     SchedulingContext family = housed(cramped, marriedDay, "공무원", 1);
     EventView ask = firstOf(gameId, family, birth, EventKind.HOUSING, 3L);
@@ -984,16 +985,21 @@ class DefaultEventServiceTest {
         .isEqualTo("cramped:child:1");
     events.complete(gameId, ask.eventId(), new Completion("ENDURE", "ENDURE", List.of()));
     // 그냥 살기로 했으면 다음 주거 이벤트는 배우자의 월세 불만이나 만기다. "집이 좁다"는 다시 오지 않는다.
-    EventView next = firstOf(gameId, family, ask.occursDay(), EventKind.HOUSING, 3L);
-    assertThat(next.title()).isNotEqualTo("집이 좁다");
+    assertThat(nextOf(gameId, family, ask.occursDay(), EventKind.HOUSING, 3L).map(EventView::title))
+        .isNotEqualTo(Optional.of("집이 좁다"));
 
     // 만기가 반년 안이면 만기에 옮기면 되니 따로 띄우지 않는다.
     HousingFacts soon =
-        new HousingFacts("MONTHLY", birth + 150, 0, false, false, birth, 0, 50, false, true);
-    EventView leaseEnd =
-        firstOf(
-            UUID.randomUUID(), housed(soon, marriedDay, "공무원", 1), birth, EventKind.HOUSING, 3L);
+        new HousingFacts("VILLA_JEONSE", birth + 150, 0, false, false, birth, 0, 50, false, true);
+    UUID soonGame = UUID.randomUUID();
+    SchedulingContext soonFamily = housed(soon, marriedDay, "공무원", 1);
+    // "집이 좁다"가 없으니 결혼·출산의 "집 살까?"는 그대로 온다. 넘기면 바로 만기다.
+    EventView buy = firstOf(soonGame, soonFamily, birth, EventKind.HOUSING, 3L);
+    assertThat(buy.title()).isEqualTo("집을 살까?");
+    events.complete(soonGame, buy.eventId(), new Completion("PASS", "PASS", List.of()));
+    EventView leaseEnd = firstOf(soonGame, soonFamily, buy.occursDay(), EventKind.HOUSING, 3L);
     assertThat(leaseEnd.title()).isEqualTo("계약 만기가 다가온다");
+    assertThat(leaseEnd.occursDay()).isEqualTo(birth + 150);
 
     // 결혼해서 좁아졌으면 결혼 두 달 뒤, 문구는 둘이 살기엔 좁다.
     HousingFacts newlywed =
