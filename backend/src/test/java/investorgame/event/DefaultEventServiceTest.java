@@ -1391,6 +1391,40 @@ class DefaultEventServiceTest {
   }
 
   /** 살 돈도 없고 든 것도 없으면 뉴스가 오지 않고, 든 종목이 있으면 그 종목의 뉴스가 온다 (decisions.md 59번). */
+  /** 뉴스는 어울리는 종목에만 붙는다 (decisions.md 113번): 요금 조정안은 한국전륵, 증설은 메모리 제조사, 보험료 조정은 삼송화재. */
+  @Test
+  void 뉴스는_어울리는_종목에만_붙는다() {
+    int seen = 0;
+    for (long seed = 1; seed <= 60; seed++) {
+      UUID gameId = UUID.randomUUID();
+      int from = JOB_DAY + 30;
+      for (int i = 0; i < 6; i++) {
+        Optional<EventView> next =
+            nextOf(gameId, investing(List.of(), Map.of()), from, EventKind.NEWS, seed);
+        if (next.isEmpty()) {
+          break;
+        }
+        EventView news = next.get();
+        if (news.title().contains("요금 조정안")) {
+          assertThat(news.stockCode()).isEqualTo("kep");
+          seen++;
+        } else if (news.title().contains("증설")) {
+          assertThat(news.stockCode()).isIn("ssj", "sqh");
+          seen++;
+        } else if (news.title().contains("보험료") || news.title().contains("보험금")) {
+          assertThat(news.stockCode()).isEqualTo("ssf");
+          seen++;
+        } else if (news.title().contains("충당금") || news.title().contains("분기 실적")) {
+          assertThat(news.stockCode()).isIn("kbf", "kkb");
+          seen++;
+        }
+        events.complete(gameId, news.eventId(), new Completion("HOLD", "HOLD", List.of()));
+        from = news.occursDay();
+      }
+    }
+    assertThat(seen).as("종목을 가리는 뉴스가 한 번은 나와야 검사가 의미 있다").isPositive();
+  }
+
   @Test
   void 살_수도_팔_수도_없으면_뉴스가_오지_않는다() {
     Set<String> all =

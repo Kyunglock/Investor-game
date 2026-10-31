@@ -1295,8 +1295,12 @@ class DefaultEventService implements EventService {
     // 이 안에서 뽑는 순서: 정의 → 종목 → 방향 → 폭 → 분위기 → 분위기 문구 (specs/event.md 5.7절, 경제 개편 설계 5.4절)
     RandomGenerator rng = random.forKey("event", "news", seq);
     NewsDefinition definition = pickNews(rows, context, rng);
-    // 그 섹터에서 사거나 팔 수 있는 종목 가운데 뽑는다. 하나도 없으면(정의를 고를 때 걸렀으니 드물다) 섹터 전부에서.
-    List<StockDefinition> sectorStocks = content.stocksOf(definition.sector());
+    // 그 뉴스가 어울리는 종목(없으면 섹터 전부) 가운데 사거나 팔 수 있는 것을 뽑는다. 하나도 없으면(정의를 고를 때 걸렀으니 드물다) 어울리는 것 전부에서
+    // (decisions.md 113번).
+    List<StockDefinition> sectorStocks =
+        content.stocksOf(definition.sector()).stream()
+            .filter(st -> definition.fits(st.code()))
+            .toList();
     List<StockDefinition> tradable =
         sectorStocks.stream().filter(st -> context.tradable(st.code())).toList();
     List<StockDefinition> stocks = tradable.isEmpty() ? sectorStocks : tradable;
@@ -1349,12 +1353,13 @@ class DefaultEventService implements EventService {
             .filter(NewsDefinition::root)
             .filter(n -> n.appearsFor(context.investmentStyle()))
             .toList();
-    // 사거나 팔 수 있는 종목이 있는 섹터의 뉴스만. 그런 섹터가 없으면 전부에서 (decisions.md 59번).
+    // 사거나 팔 수 있는 어울리는 종목이 있는 뉴스만. 그런 뉴스가 없으면 전부에서 (decisions.md 59번·113번).
     List<NewsDefinition> actionable =
         all.stream()
             .filter(
                 n ->
                     content.stocksOf(n.sector()).stream()
+                        .filter(st -> n.fits(st.code()))
                         .anyMatch(st -> context.tradable(st.code())))
             .toList();
     List<NewsDefinition> eligible = actionable.isEmpty() ? all : actionable;
