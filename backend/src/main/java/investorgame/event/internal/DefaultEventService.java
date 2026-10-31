@@ -207,7 +207,7 @@ class DefaultEventService implements EventService {
                                   spouseCode(row.definitionCode()), ACCEPT.equals(optionCode))
                               : new ChoiceTicket.Life(
                                   ChoiceTicket.LifeKind.CHILD, ACCEPT.equals(optionCode));
-          case NEWS -> new ChoiceTicket.News();
+          case NEWS -> new ChoiceTicket.News(hintDirection(row.hintCode()));
           case SHAKE -> new ChoiceTicket.Shake();
           case LEVERAGE ->
               new ChoiceTicket.Leverage(ChoiceTicket.Leverage.BORROW.equals(optionCode));
@@ -231,6 +231,18 @@ class DefaultEventService implements EventService {
         row.hiddenMagnitudeBp() == null ? 0 : row.hiddenMagnitudeBp(),
         row.swaySentiment() == null ? null : Sentiment.valueOf(row.swaySentiment()),
         effect);
+  }
+
+  /** 힌트 코드("UP.STRONG.high.0")의 앞 조각이 방향이다. 옛 판이나 모르는 형식이면 null. */
+  private static Hint.HintDirection hintDirection(String hintCode) {
+    if (hintCode == null || hintCode.isEmpty()) {
+      return null;
+    }
+    try {
+      return Hint.HintDirection.valueOf(hintCode.split("\\.", 2)[0]);
+    } catch (IllegalArgumentException e) {
+      return null;
+    }
   }
 
   @Override

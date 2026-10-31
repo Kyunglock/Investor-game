@@ -113,8 +113,18 @@ public interface ContentCatalog {
    */
   List<String> hintPhrases(String detail, String direction, String strength);
 
-  /** 뉴스 결과 뒤 안목 구간(low·mid·high·expert)별 되돌아보는 한마디. good은 내 행동이 결과와 맞았는가 (decisions.md 73번). */
+  /**
+   * 뉴스 결과 뒤 안목 구간(low·mid·high·expert)별 되돌아보는 한마디. good은 내가 고른 선택이 결과와 맞았는가 (decisions.md 73번, 기준은
+   * 108번).
+   */
   List<String> reviewPhrases(String detail, boolean good);
+
+  /**
+   * 안목 한마디의 다른 묶음 (decisions.md 108번). group "hold"는 관망을 골랐을
+   * 때(kept-good·kept-bad·watched-good·watched-bad), "extra"는 덧붙이는
+   * 말(hint-wrong-you-right·hint-wrong-followed·hint-right-ignored·deviated).
+   */
+  List<String> reviewPhrases(String group, String key);
 
   /**
    * 힘든 일(layoff·career-fail·big-loss·fraud) 뒤 누군가(spouse·child·parents·friend)의 위로 (decisions.md
