@@ -17,6 +17,8 @@ package investorgame.event;
  * @param canLeaveMonthly 월세에서 전세·매수 가운데 하나라도 감당할 수 있는가. 배우자의 월세 불만이 끝까지 가면 배우자가 계약서를 들고 오는데, 감당할 수
  *     없으면 그냥 월세로 굳어져 더 묻지 않는다 (decisions.md 111번)
  * @param cashForJeonse 아파트 전세 보증금을 대출 없이 현금으로 낼 수 있는가. 그러면 배우자에게 "조금만 더 모으자"는 말이 통하지 않는다 (111번)
+ * @param buyAffordable 서울·경기 매수·갭투자 가운데 하나라도 감당할 수 있는가. 아니면 "집 살까?"가 오지 않고 감당되는 때로 미뤄진다
+ *     (decisions.md 118번)
  */
 public record HousingFacts(
     String tenure,
@@ -30,8 +32,10 @@ public record HousingFacts(
     boolean cheongyakAffordable,
     boolean cramped,
     boolean canLeaveMonthly,
-    boolean cashForJeonse) {
+    boolean cashForJeonse,
+    boolean buyAffordable) {
 
   public static final HousingFacts PARENTS =
-      new HousingFacts("PARENTS", null, 0, false, false, null, 0, 50, false, false, false, false);
+      new HousingFacts(
+          "PARENTS", null, 0, false, false, null, 0, 50, false, false, false, false, false);
 }

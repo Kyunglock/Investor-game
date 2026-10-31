@@ -127,6 +127,19 @@ class HousingFlow {
                           && p.blocked() == null
                           && p.jeonseLoan() == 0);
     }
+    // "집 살까?"는 매수·갭투자 가운데 하나라도 감당될 때만 온다 (decisions.md 118번). 2채면 더 묻지 않으니 따지지 않는다.
+    boolean buyAffordable = false;
+    if (view.homes().size() < 2) {
+      List<String> buys = new ArrayList<>();
+      if (!view.ownsResidence()) {
+        buys.add(ChoiceTicket.Housing.BUY_SEOUL);
+        buys.add(ChoiceTicket.Housing.BUY_GYEONGGI);
+      }
+      buys.add(ChoiceTicket.Housing.GAP);
+      buyAffordable =
+          plans(gameId, buys, false, home, monthlyIncome, points, day).stream()
+              .anyMatch(p -> p.blocked() == null);
+    }
     return new HousingFacts(
         view.tenure().name(),
         view.leaseEndDay(),
@@ -139,7 +152,8 @@ class HousingFlow {
         affordable,
         cramped(view, home, day),
         canLeaveMonthly,
-        cashForJeonse);
+        cashForJeonse,
+        buyAffordable);
   }
 
   /**
