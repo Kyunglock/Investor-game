@@ -258,6 +258,8 @@ event:
     no-repeat-window: 5
     # 뉴스(매수·매도 선택)는 해마다 75% 확률로 한 번, 아니면 없다 (decisions.md 80번)
     yearly-chance-bp: 7500
+    # 전업투자자에게는 해마다 세 번. 월급 없이 뉴스 0~1번으로는 생활비를 못 벌어 28세에 파산했다 (decisions.md 121번)
+    investor-per-year: 3
   # 결혼·자녀 선택형 이벤트 시점 (경제 개편 설계 7.3절)
   life:
     marriage-age: { min: 27, max: 31 }

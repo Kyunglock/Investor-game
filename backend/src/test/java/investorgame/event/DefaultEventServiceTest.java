@@ -1536,6 +1536,57 @@ class DefaultEventServiceTest {
     assertThat(seen).as("종목을 가리는 뉴스가 한 번은 나와야 검사가 의미 있다").isPositive();
   }
 
+  /** 전업투자자에게는 뉴스가 해마다 세 번 온다 (decisions.md 121번). 직장인은 0~1번. */
+  @Test
+  void 전업투자자에게는_뉴스가_해마다_여러_번_온다() {
+    SchedulingContext worker = investing(List.of(), Map.of());
+    SchedulingContext investor =
+        new SchedulingContext(
+            worker.phase(),
+            worker.startAge(),
+            worker.investmentStyle(),
+            worker.interestSector(),
+            null,
+            true,
+            worker.investingStartDay(),
+            worker.endDay(),
+            null,
+            null,
+            JOB_DAY,
+            false,
+            false,
+            null,
+            null,
+            0,
+            List.of(),
+            List.of(),
+            List.of(),
+            true,
+            Map.of(),
+            Map.of(),
+            SETTLED,
+            0L,
+            50,
+            Set.of());
+    int investorNews = 0;
+    for (long seed = 1; seed <= 5; seed++) {
+      UUID gameId = UUID.randomUUID();
+      int from = JOB_DAY + 30;
+      int until = from + 3 * YEAR;
+      while (true) {
+        Optional<EventView> next = nextOf(gameId, investor, from, EventKind.NEWS, seed);
+        if (next.isEmpty() || next.get().occursDay() > until) {
+          break;
+        }
+        investorNews++;
+        events.complete(gameId, next.get().eventId(), new Completion("HOLD", "HOLD", List.of()));
+        from = next.get().occursDay();
+      }
+    }
+    // 5판 × 3년 × 3번 = 45번 안팎. 직장인(0~1번/년)이면 15번을 넘기 어렵다.
+    assertThat(investorNews).isGreaterThan(30);
+  }
+
   @Test
   void 살_수도_팔_수도_없으면_뉴스가_오지_않는다() {
     Set<String> all =
