@@ -54,6 +54,9 @@ export interface ProfileReport {
   nowStats: string
   grade: { code: string; name: string; description: string }
   axes: Axis[]
+  /** 네 축을 MBTI처럼 양쪽 극으로 (decisions.md 132번) */
+  poles: Pole[]
+  type: InvestorMbti
   stats: ProfileStats
   summary: string
   recommendations: string[]
@@ -276,11 +279,140 @@ function recommend(axes: Axis[]): string[] {
   return out.slice(0, 4)
 }
 
+/**
+ * MBTI처럼 가볍게 보는 유형 (decisions.md 132번). 네 축 — 위험(공격 A/안정 S), 인내(길게 L/빠르게 Q), 분산(나눔 D/집중 F), 소신(소신 O/추종 C) —
+ * 에서 글자 하나씩. 앞 세 축은 고른 행동의 점수(50 기준)로, 소신 축은 성장기에 정해진 성향(mindProfile)으로 가른다. 소신 축이 아직 없으면 '?'.
+ */
+export type PoleKey = AxisKey | 'mind'
+
+export interface Pole {
+  key: PoleKey
+  name: string
+  /** 왼쪽 극(점수가 높은 쪽) */
+  left: { letter: string; label: string }
+  right: { letter: string; label: string }
+  /** 왼쪽 극의 비율 0~100. 소신 축은 100/0이고, 아직 모르면 null */
+  score: number | null
+  /** 기운 쪽의 글자. 모르면 '?' */
+  letter: string
+  /** 기운 쪽의 비율(%). 모르면 null */
+  percent: number | null
+  /** 근거 한 줄 */
+  evidence: string
+}
+
+export interface InvestorMbti {
+  /** 네 글자, 예 "ALDO". 소신 축을 모르면 "ALD?" */
+  code: string
+  /** 별명, 예 "뚝심 있는 선장" */
+  name: string
+  tagline: string
+  /** 이 유형에 어울리는 투자 방식 */
+  fits: string[]
+}
+
+const POLE_DEFS: Record<AxisKey, { name: string; left: Pole['left']; right: Pole['right'] }> = {
+  risk: {
+    name: '위험',
+    left: { letter: 'A', label: '공격' },
+    right: { letter: 'S', label: '안정' },
+  },
+  patience: {
+    name: '인내',
+    left: { letter: 'L', label: '길게' },
+    right: { letter: 'Q', label: '빠르게' },
+  },
+  diversification: {
+    name: '분산',
+    left: { letter: 'D', label: '나눔' },
+    right: { letter: 'F', label: '집중' },
+  },
+}
+
+/** 앞 세 글자(위험·인내·분산)로 정해지는 별명과 한 줄. */
+const TYPE_NAMES: Record<string, { noun: string; tagline: string }> = {
+  ALD: { noun: '선장', tagline: '크게 걸되 여러 배에 나눠 싣고 멀리 간다.' },
+  ALF: { noun: '광부', tagline: '한 광맥을 믿고 오래 판다. 맞으면 크고, 틀리면 길다.' },
+  AQD: { noun: '사냥꾼', tagline: '여러 길목에서 빠르게 쏘고 거둔다.' },
+  AQF: { noun: '승부사', tagline: '한 판에 크게, 빨리 결판을 본다.' },
+  SLD: { noun: '농부', tagline: '여러 밭에 나눠 심고 계절을 기다린다.' },
+  SLF: { noun: '정원사', tagline: '한 그루를 조심스레 오래 키운다.' },
+  SQD: { noun: '장돌뱅이', tagline: '작게 여러 곳을 자주 오간다.' },
+  SQF: { noun: '구경꾼', tagline: '한 곳만 지켜보며 좀처럼 손을 대지 않는다.' },
+}
+
+/** 소신 축이 붙이는 수식어. */
+const MIND_ADJECTIVE: Record<string, string> = { O: '뚝심 있는', C: '귀 밝은' }
+
+/** 글자마다 어울리는 투자 방식 한 줄. */
+const FITS: Record<string, string> = {
+  A: '오를 재료가 보이면 비중을 실어 보는 적극 투자',
+  S: '지수·배당처럼 흔들림이 작은 자산을 바탕으로',
+  L: '한 번 사면 분기 단위로만 점검하는 장기 보유',
+  Q: '짧게 치고 빠지되 손절 기준을 먼저 적어 두기',
+  D: '섹터 셋 이상에 나눈 포트폴리오',
+  F: '확신 있는 소수 종목, 대신 전조를 매달 점검',
+  O: '남의 말보다 내 기준표를 먼저 보는 매매',
+  C: '흐름을 따르되 뉴스 한 줄에 바로 움직이지 않기',
+}
+
+function axisPole(axis: Axis): Pole {
+  const def = POLE_DEFS[axis.key]
+  const left = axis.score >= 50
+  return {
+    key: axis.key,
+    name: def.name,
+    left: def.left,
+    right: def.right,
+    score: axis.score,
+    letter: left ? def.left.letter : def.right.letter,
+    percent: left ? axis.score : 100 - axis.score,
+    evidence: axis.evidence.length > 0 ? axis.evidence.join(' · ') : '아직 고른 것이 없다',
+  }
+}
+
+function mindPole(game: Game): Pole {
+  const code = game.mindProfile?.code ?? null
+  const known = code === 'own' || code === 'crowd'
+  const own = code === 'own'
+  return {
+    key: 'mind',
+    name: '소신',
+    left: { letter: 'O', label: '소신' },
+    right: { letter: 'C', label: '추종' },
+    score: known ? (own ? 100 : 0) : null,
+    letter: known ? (own ? 'O' : 'C') : '?',
+    percent: known ? 100 : null,
+    evidence: known
+      ? `성장기의 선택으로 정해진 성향 · ${game.mindProfile?.name ?? ''}`
+      : '성장기가 끝나면 정해진다',
+  }
+}
+
+export function polesOf(axes: Axis[], game: Game): Pole[] {
+  return [...axes.map(axisPole), mindPole(game)]
+}
+
+export function mbtiOf(poles: Pole[]): InvestorMbti {
+  const letters = poles.map((p) => p.letter)
+  const code = letters.join('')
+  const base = TYPE_NAMES[letters.slice(0, 3).join('')]
+  const adjective = MIND_ADJECTIVE[letters[3]]
+  const fits = letters.filter((l) => FITS[l]).map((l) => FITS[l])
+  return {
+    code,
+    name: adjective ? `${adjective} ${base.noun}` : base.noun,
+    tagline: base.tagline,
+    fits,
+  }
+}
+
 export function profileReport(game: Game): ProfileReport {
   const stats = collectStats(game)
   const axes = [riskAxis(stats), patienceAxis(stats), diversificationAxis(stats)]
   const risk = axes[0].score
   const grade = GRADES.find((g) => risk < g.max) ?? GRADES[GRADES.length - 1]
+  const poles = polesOf(axes, game)
   const base = {
     name: nickname(game.initialStats).name,
     ageYears: game.startAge + Math.floor(game.day / game.daysPerYear),
@@ -289,6 +421,8 @@ export function profileReport(game: Game): ProfileReport {
     nowStats: statsLine(game.stats),
     grade: { code: grade.code, name: grade.name, description: grade.description },
     axes,
+    poles,
+    type: mbtiOf(poles),
     stats,
   }
   return { ...base, summary: summarize(base), recommendations: recommend(axes) }
