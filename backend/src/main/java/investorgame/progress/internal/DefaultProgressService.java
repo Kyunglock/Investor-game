@@ -1931,6 +1931,7 @@ class DefaultProgressService implements ProgressService {
         character.jobCode(),
         character.careerStartDay(),
         home.retiredDay() != null,
+        home.retiredDay(),
         home.married(),
         home.marriedDay(),
         home.spouse() == null ? null : home.spouse().job(),

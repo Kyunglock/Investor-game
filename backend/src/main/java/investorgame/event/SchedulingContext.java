@@ -17,6 +17,7 @@ import java.util.Set;
  * @param jobCode 지금 직업. 실직 중이면 null. 이직 제안은 이보다 월급이 많은 직업이 있을 때만 나온다
  * @param careerStartDay 처음 일을 시작한 날. 생활 이벤트(결혼·알림·일상 장면)는 이후에만 나온다. 한 번도 일한 적 없으면 null
  * @param retired 은퇴했는가. 은퇴 뒤에는 직업·직장 이벤트가 없다
+ * @param retiredDay 정년으로 은퇴한 날. 그날 "정년퇴직" 장면이 한 번 온다 (decisions.md 128번). 은퇴 전이면 null
  * @param married 결혼했는가
  * @param marriedDay 결혼한 날. 자녀 이벤트의 기준. 미혼이면 null
  * @param spouseJob 배우자의 직업(decisions.md 77번). 배우자가 월세살이를 그만하자는 장면의 문구가 이에 따라 다르다 (#116). 미혼이거나 소개
@@ -48,6 +49,7 @@ public record SchedulingContext(
     String jobCode,
     Integer careerStartDay,
     boolean retired,
+    Integer retiredDay,
     boolean married,
     Integer marriedDay,
     String spouseJob,

@@ -72,6 +72,9 @@ class DefaultEventService implements EventService {
 
   static final String JOB_REHIRE = "rehire";
 
+  /** 정년퇴직 장면의 코드 (careers.json, followUpOnly). 은퇴한 날 한 번 온다 (decisions.md 128번). */
+  static final String RETIREMENT = "retirement";
+
   /** 투자 시작 제안의 정의 코드: 첫 월급 날의 첫 제안 / 1년 뒤 다시 (decisions.md 117번). 옛 판은 null이라 첫 제안으로 본다. */
   static final String OFFER_FIRST = "first";
 
@@ -349,6 +352,11 @@ class DefaultEventService implements EventService {
       SchedulingContext context,
       SeededRandom random,
       List<Candidate> candidates) {
+    if (retirementDue(rows, context)) {
+      // 정년퇴직은 갑작스러운 일이라 그날 장면으로 보여 준다 (decisions.md 128번).
+      candidates.add(new Candidate(EventKind.CAREER, context.retiredDay()));
+      return;
+    }
     if (context.retired()) {
       return;
     }
@@ -1494,6 +1502,15 @@ class DefaultEventService implements EventService {
    * 나머지에서 가중치로 뽑는다 (decisions.md 51·52번). 이직 제안은 지금보다 월급이 많은 직업이 있을 때만 나오고, 옮길 직업을 선택지
    * 코드("move:<직업>")에 남긴다. 전업투자자는 직업 자리에 CareerDefinition.FULL_TIME_INVESTOR를 쓴다.
    */
+  /** 정년으로 은퇴했고(직업이 있었고) 아직 "정년퇴직" 장면을 보지 않았는가. 전업투자자·실직 중 은퇴에는 없다. */
+  private boolean retirementDue(List<EventRow> rows, SchedulingContext context) {
+    return context.retiredDay() != null
+        && context.jobCode() != null
+        && !context.fullTimeInvestor()
+        && ofKind(rows, EventKind.CAREER).stream()
+            .noneMatch(r -> RETIREMENT.equals(r.definitionCode()));
+  }
+
   private EventRow careerEvent(
       UUID id,
       int seq,
@@ -1503,6 +1520,16 @@ class DefaultEventService implements EventService {
       SeededRandom random) {
     RandomGenerator rng = random.forKey("event", "career", seq);
     List<EventRow> previous = ofKind(rows, EventKind.CAREER);
+    if (retirementDue(rows, context)) {
+      CareerDefinition retirement = content.career(RETIREMENT);
+      return simple(
+          id,
+          seq,
+          EventKind.CAREER,
+          retirement.code(),
+          day,
+          retirement.options().stream().map(CareerDefinition.Option::code).toList());
+    }
     Optional<FollowUp> followUp = followUp(previous);
     if (followUp.isPresent()) {
       CareerDefinition next = content.career(followUp.get().code());
