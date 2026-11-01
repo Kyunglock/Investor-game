@@ -5,6 +5,7 @@ import investorgame.content.CareerDefinition;
 import investorgame.content.ChildWeddingText;
 import investorgame.content.ContentCatalog;
 import investorgame.content.FamilyTripText;
+import investorgame.content.HousewarmingText;
 import investorgame.content.JobDefinition;
 import investorgame.content.LifeText;
 import investorgame.content.NewsDefinition;
@@ -97,6 +98,21 @@ class EventRenderer {
                   new EventView.Option(ChoiceTicket.ChildWedding.FULL, text.fullLabel()),
                   new EventView.Option(ChoiceTicket.ChildWedding.HALF, text.halfLabel()),
                   new EventView.Option(ChoiceTicket.ChildWedding.NONE, text.noneLabel())));
+        }
+        if (row.definitionCode().startsWith(DefaultEventService.HOUSEWARMING_PREFIX)) {
+          // 집들이 (decisions.md 140번): 선택지 코드는 가족 여행과 같다.
+          HousewarmingText text = content.housewarmingText();
+          yield view(
+              row,
+              text.title(),
+              text.body(),
+              null,
+              null,
+              List.of(
+                  new EventView.Option(ChoiceTicket.FamilyTrip.LUXURY, text.luxuryLabel()),
+                  new EventView.Option(ChoiceTicket.FamilyTrip.NORMAL, text.normalLabel()),
+                  new EventView.Option(ChoiceTicket.FamilyTrip.CHEAP, text.cheapLabel()),
+                  new EventView.Option(ChoiceTicket.FamilyTrip.NONE, text.noneLabel())));
         }
         if (row.definitionCode().startsWith(DefaultEventService.TRIP_PREFIX)) {
           FamilyTripText text = content.familyTripText();

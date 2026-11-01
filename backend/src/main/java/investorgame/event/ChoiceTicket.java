@@ -233,6 +233,14 @@ public record ChoiceTicket(
     public static final String NONE = "none";
   }
 
+  /**
+   * 집들이 (decisions.md 140번). 선택지 코드는 가족 여행과 같다(luxury·normal·cheap·none). costBp는 보통 비용에 곱하는
+   * 비율(만분율).
+   *
+   * @param purchaseDay 집들이를 하는 집을 산 날. 집마다 한 번이다
+   */
+  public record Housewarming(int purchaseDay, int costBp) implements Effect {}
+
   public enum LifeKind {
     CHILD
   }

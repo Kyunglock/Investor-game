@@ -67,6 +67,7 @@ public record EventProperties(
    * @param maxChildren 최대 자녀 수
    * @param childLastAge 이 나이를 넘으면 묻지 않는다
    * @param childWeddingGapYears 자녀가 독립한 뒤 결혼 선택까지 (decisions.md 68번)
+   * @param housewarmingDelayDays 내 집을 사서 들어간 뒤 이만큼 지나면 집들이를 묻는다 (decisions.md 140번)
    */
   public record LifeSettings(
       Range marriageAge,
@@ -80,7 +81,8 @@ public record EventProperties(
       Range tripGapYears,
       int tripLastAge,
       Range outingGapYears,
-      int coldFamilyBelow) {}
+      int coldFamilyBelow,
+      int housewarmingDelayDays) {}
 
   /** 알림성 이벤트 간격(일). 직업이 생긴 뒤부터. */
   public record NoticeSettings(Range gapDays) {}

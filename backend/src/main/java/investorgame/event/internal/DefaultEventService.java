@@ -64,6 +64,9 @@ class DefaultEventService implements EventService {
   /** 가족 여행 제안의 정의 코드: "trip:" + 제안한 사람(spouse·parents·child:n) (decisions.md 71번). */
   static final String TRIP_PREFIX = "trip:";
 
+  /** 집들이 정의 코드: "housewarming:" + 집을 산 날. 집마다 한 번 (decisions.md 140번). */
+  static final String HOUSEWARMING_PREFIX = "housewarming:";
+
   /** 아이의 나들이 정의 코드: "outing:" + 코드 + ":" + 아이 순번 (decisions.md 87번). */
   static final String OUTING_PREFIX = "outing:";
 
@@ -205,19 +208,22 @@ class DefaultEventService implements EventService {
               row.definitionCode().startsWith(WEDDING_PREFIX)
                   ? new ChoiceTicket.ChildWedding(
                       weddingSeq(row.definitionCode()), weddingShareBp(optionCode))
-                  : row.definitionCode().startsWith(TRIP_PREFIX)
-                      ? new ChoiceTicket.FamilyTrip(
-                          tripProposer(row.definitionCode()), tripCostBp(optionCode), null)
-                      : row.definitionCode().startsWith(OUTING_PREFIX)
+                  : row.definitionCode().startsWith(HOUSEWARMING_PREFIX)
+                      ? new ChoiceTicket.Housewarming(
+                          housewarmingDay(row.definitionCode()), tripCostBp(optionCode))
+                      : row.definitionCode().startsWith(TRIP_PREFIX)
                           ? new ChoiceTicket.FamilyTrip(
-                              "child:" + outingChild(row.definitionCode()),
-                              tripCostBp(optionCode),
-                              outingCode(row.definitionCode()))
-                          : row.definitionCode().startsWith(MARRIAGE_PREFIX)
-                              ? new ChoiceTicket.Marriage(
-                                  spouseCode(row.definitionCode()), ACCEPT.equals(optionCode))
-                              : new ChoiceTicket.Life(
-                                  ChoiceTicket.LifeKind.CHILD, ACCEPT.equals(optionCode));
+                              tripProposer(row.definitionCode()), tripCostBp(optionCode), null)
+                          : row.definitionCode().startsWith(OUTING_PREFIX)
+                              ? new ChoiceTicket.FamilyTrip(
+                                  "child:" + outingChild(row.definitionCode()),
+                                  tripCostBp(optionCode),
+                                  outingCode(row.definitionCode()))
+                              : row.definitionCode().startsWith(MARRIAGE_PREFIX)
+                                  ? new ChoiceTicket.Marriage(
+                                      spouseCode(row.definitionCode()), ACCEPT.equals(optionCode))
+                                  : new ChoiceTicket.Life(
+                                      ChoiceTicket.LifeKind.CHILD, ACCEPT.equals(optionCode));
           case NEWS -> new ChoiceTicket.News(hintDirection(row.hintCode()));
           case SHAKE -> new ChoiceTicket.Shake();
           case LEVERAGE ->
@@ -549,6 +555,17 @@ class DefaultEventService implements EventService {
         dues.add(new LifeDue(CHILD, day));
       }
     }
+    // 집들이 (decisions.md 140번): 내 집을 사서 들어간 뒤 두 달. 그 집(산 날)마다 한 번이고, 안 하기로 해도 다시 묻지 않는다.
+    Integer bought = context.housing().residencePurchaseDay();
+    if (bought != null) {
+      String code = HOUSEWARMING_PREFIX + bought;
+      boolean asked =
+          rows.stream()
+              .anyMatch(r -> r.kind() == EventKind.LIFE && code.equals(r.definitionCode()));
+      if (!asked) {
+        dues.add(new LifeDue(code, bought + life.housewarmingDelayDays()));
+      }
+    }
     // 가족 점수가 바닥이면 여행·나들이를 같이 가자는 사람이 없다 (decisions.md 111번).
     boolean warm = context.family() >= life.coldFamilyBelow();
     // 가족 여행 (decisions.md 71번): 결혼 뒤 3~6년마다 가족 가운데 누군가 여행을 가자고 한다. 자동으로 가지 않고 선택이다.
@@ -687,6 +704,10 @@ class DefaultEventService implements EventService {
 
   static String tripProposer(String definitionCode) {
     return definitionCode.substring(TRIP_PREFIX.length());
+  }
+
+  static int housewarmingDay(String definitionCode) {
+    return Integer.parseInt(definitionCode.substring(HOUSEWARMING_PREFIX.length()));
   }
 
   private static int tripCostBp(String optionCode) {
@@ -1134,7 +1155,9 @@ class DefaultEventService implements EventService {
                     ChoiceTicket.ChildWedding.FULL,
                     ChoiceTicket.ChildWedding.HALF,
                     ChoiceTicket.ChildWedding.NONE)
-                : code.startsWith(TRIP_PREFIX) || code.startsWith(OUTING_PREFIX)
+                : code.startsWith(TRIP_PREFIX)
+                        || code.startsWith(OUTING_PREFIX)
+                        || code.startsWith(HOUSEWARMING_PREFIX)
                     ? List.of(
                         ChoiceTicket.FamilyTrip.LUXURY,
                         ChoiceTicket.FamilyTrip.NORMAL,

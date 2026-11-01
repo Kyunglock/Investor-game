@@ -287,6 +287,8 @@ event:
     outing-gap-years: { min: 1, max: 2 }
     # 가족 점수가 이 아래면 남처럼 멀어진 집: 여행·나들이 제안이 끊기고 달마다 조금씩 지친다 (decisions.md 111번)
     cold-family-below: 20
+    # 내 집을 사서 들어간 뒤 두 달이 지나면 집들이를 묻는다. 집마다 한 번 (decisions.md 140번)
+    housewarming-delay-days: 60
   # 알림성 지출·수입 이벤트 간격 (직업이 생긴 뒤부터)
   notice:
     gap-days: { min: 240, max: 600 }

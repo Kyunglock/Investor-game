@@ -92,6 +92,9 @@ public interface ContentCatalog {
   /** 가족 여행 제안 문구 (decisions.md 71번). */
   FamilyTripText familyTripText();
 
+  /** 집들이 (decisions.md 140번). */
+  HousewarmingText housewarmingText();
+
   /** 결혼 상대 소개의 재료 (decisions.md 77번). */
   SpouseText spouseText();
 

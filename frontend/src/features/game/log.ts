@@ -6,6 +6,7 @@ import {
   actionLabelFor,
   childWord,
   growthText,
+  HOUSEWARMING_LABELS,
   percent,
   STAT_KEYS,
   STAT_LABELS,
@@ -212,6 +213,17 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
           ...base,
           tone: 'life',
           text: `가족 여행 (${TRIP_LABELS[p.option] ?? p.option}) · ${signedWon(num(p.amount))}`,
+        }
+      }
+      // 집들이 (decisions.md 140번).
+      if (p.noticeCode === 'housewarming' && typeof p.option === 'string') {
+        if (p.option === 'none') {
+          return { ...base, tone: 'life', text: '새집 집들이는 생략했다.' }
+        }
+        return {
+          ...base,
+          tone: 'life',
+          text: `새집 집들이 (${HOUSEWARMING_LABELS[p.option] ?? p.option}) · ${signedWon(num(p.amount))}`,
         }
       }
       // 아이의 나들이 (decisions.md 87번).

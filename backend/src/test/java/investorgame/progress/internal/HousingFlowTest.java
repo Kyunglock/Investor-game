@@ -153,7 +153,8 @@ class HousingFlowTest {
                 false,
                 false,
                 false,
-                true),
+                true,
+                null),
             1L);
     ChoiceTicket ticket = events.prepareChoice(gameId, leaseEnd.eventId(), "BUY_SEOUL");
     assertThatThrownBy(
@@ -202,7 +203,8 @@ class HousingFlowTest {
                 false,
                 false,
                 false,
-                true),
+                true,
+                null),
             1L);
     ChoiceTicket ticket = events.prepareChoice(gameId, leaseEnd.eventId(), "BUY_SEOUL");
     var outcome =
@@ -381,7 +383,8 @@ class HousingFlowTest {
             true,
             false,
             false,
-            true);
+            true,
+            null);
     EventView ask = housingOf(cramped, JOB_DAY, JOB_DAY);
     assertThat(ask.title()).isEqualTo("집이 좁다");
     assertThat(ask.occursDay()).isEqualTo(JOB_DAY + 60);
@@ -529,7 +532,8 @@ class HousingFlowTest {
             false,
             false,
             false,
-            true);
+            true,
+            null);
     SchedulingContext context =
         new SchedulingContext(
             Phase.SAVING,
@@ -594,7 +598,8 @@ class HousingFlowTest {
             false,
             false,
             false,
-            true);
+            true,
+            null);
     for (long seed = 1; seed <= 300; seed++) {
       UUID probe = UUID.randomUUID();
       EventView view = leaseEndOf(probe, villa, seed);

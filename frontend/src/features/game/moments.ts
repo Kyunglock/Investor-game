@@ -31,6 +31,22 @@ function tripArt(game: Game): CreditArt {
   }
 }
 
+/** 집들이 그림: 거실에 나(와 배우자) (decisions.md 140번). */
+function housewarmingArt(game: Game): CreditArt {
+  const stage = myStage(game)
+  const figures: Figure[] = [{ who: 'me', sex: game.sex, stage, x: 14 }]
+  if (game.household.married) {
+    figures.push({ who: 'spouse', sex: opposite(game.sex), stage, x: 28 })
+  }
+  return { vignette: 'family', figures }
+}
+
+const HOUSEWARMING_CAPTIONS: Record<string, string> = {
+  luxury: '집이 사람으로 꽉 찼다. 휴지가 베란다에 쌓였다.',
+  normal: '가까운 사람들과 집밥을 나눴다.',
+  cheap: '가족끼리 짜장면. 새집 냄새가 났다.',
+}
+
 /** 아이의 나들이 그림: 놀이동산에 나와 아이 (decisions.md 87번). 배우자는 집에서 쉬는 날이다. */
 function outingArt(game: Game): CreditArt {
   const kid = game.household.children.find((c) => !c.leftHome)
@@ -173,7 +189,7 @@ export function momentForOutcome(outcome: Outcome, game: Game): Moment | null {
         (e) =>
           e.kind === 'LIFE' &&
           e.day === game.day &&
-          ['family-trip', 'kid-outing'].includes(
+          ['family-trip', 'kid-outing', 'housewarming'].includes(
             String((e.payload as Record<string, unknown>).noticeCode),
           ),
       )
@@ -181,6 +197,13 @@ export function momentForOutcome(outcome: Outcome, game: Game): Moment | null {
       const p = trip.payload as Record<string, unknown>
       if (Number(p.amount ?? 0) >= 0) {
         return null
+      }
+      if (p.noticeCode === 'housewarming') {
+        return {
+          art: housewarmingArt(game),
+          mood: 'joy',
+          caption: HOUSEWARMING_CAPTIONS[String(p.option)] ?? '새집에 사람들을 불렀다.',
+        }
       }
       if (p.noticeCode === 'kid-outing') {
         return {
@@ -253,6 +276,13 @@ export function momentForNotice(entry: LogEntry, game: Game): Moment | null {
       art: weddingArt(game, seq),
       mood: 'joy',
       caption: `${childName(seq)}가 결혼했다. 식장에서 한참을 서 있었다.`,
+    }
+  }
+  if (entry.kind === 'LIFE' && p.noticeCode === 'housewarming' && Number(p.amount ?? 0) < 0) {
+    return {
+      art: housewarmingArt(game),
+      mood: 'joy',
+      caption: HOUSEWARMING_CAPTIONS[String(p.option)] ?? '새집에 사람들을 불렀다.',
     }
   }
   if (entry.kind === 'LIFE' && p.noticeCode === 'kid-outing' && Number(p.amount ?? 0) < 0) {

@@ -29,6 +29,7 @@ import investorgame.content.CareerDefinition;
 import investorgame.content.ChildWeddingText;
 import investorgame.content.ContentCatalog;
 import investorgame.content.CrisisDefinition;
+import investorgame.content.HousewarmingText;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
 import investorgame.content.OutingText;
@@ -560,6 +561,7 @@ class DefaultProgressService implements ProgressService {
           case ChoiceTicket.Marriage marriage -> resolveMarriage(game, ticket, marriage);
           case ChoiceTicket.ChildWedding wedding -> resolveChildWedding(game, ticket, wedding);
           case ChoiceTicket.FamilyTrip trip -> resolveFamilyTrip(game, ticket, trip);
+          case ChoiceTicket.Housewarming warming -> resolveHousewarming(game, ticket, warming);
         };
 
     GameRow updated = lock(sessionId, gameId);
@@ -982,6 +984,67 @@ class DefaultProgressService implements ProgressService {
               default -> "이번엔 가지 않기로 했다. %s의 얼굴이 조금 어두웠다.".formatted(who);
             };
     return simpleOutcome(ticket, message);
+  }
+
+  /** 집들이 보통 비용(25세 물가). 크게는 4배, 조촐하게는 1/5, 안 하면 0 (decisions.md 140번). */
+  private static final long HOUSEWARMING_BASE_COST = 500_000;
+
+  /**
+   * 집들이 (decisions.md 140번): 내 집을 사서 들어간 뒤 두 달. 돈은 보통 50만(물가 반영) × 선택 비율. 크게 열수록 기쁘고 가족이 가까워지고,
+   * 생략하면 조금 서운하다. 기록은 LIFE(`noticeCode` housewarming)라 토스트·크레딧에 거실 그림이 붙는다.
+   */
+  private ChoiceOutcome.Outcome resolveHousewarming(
+      GameRow game, ChoiceTicket ticket, ChoiceTicket.Housewarming warming) {
+    UUID gameId = game.id();
+    int day = ticket.occursDay();
+    events.complete(
+        gameId,
+        ticket.eventId(),
+        new Completion(ticket.optionCode(), ticket.optionCode(), List.of()));
+    long cost = housewarmingCost(warming, day);
+    if (cost > 0) {
+      assets.spend(gameId, LIFE_COST, cost, day, ticket.eventId());
+    }
+    household.cheer(
+        gameId,
+        switch (ticket.optionCode()) {
+          case ChoiceTicket.FamilyTrip.LUXURY -> 12;
+          case ChoiceTicket.FamilyTrip.NORMAL -> 8;
+          case ChoiceTicket.FamilyTrip.CHEAP -> 4;
+          default -> -2;
+        });
+    household.bond(
+        gameId,
+        switch (ticket.optionCode()) {
+          case ChoiceTicket.FamilyTrip.LUXURY -> 6;
+          case ChoiceTicket.FamilyTrip.NORMAL -> 4;
+          case ChoiceTicket.FamilyTrip.CHEAP -> 2;
+          default -> -2;
+        });
+    HousewarmingText text = content.housewarmingText();
+    String message =
+        switch (ticket.optionCode()) {
+          case ChoiceTicket.FamilyTrip.LUXURY -> text.luxuryText();
+          case ChoiceTicket.FamilyTrip.NORMAL -> text.normalText();
+          case ChoiceTicket.FamilyTrip.CHEAP -> text.cheapText();
+          default -> text.noneText();
+        };
+    if (cost > 0) {
+      message = message + " %,d원이 들었다.".formatted(cost);
+    }
+    Map<String, Object> payload = new LinkedHashMap<>();
+    payload.put("eventId", ticket.eventId().toString());
+    payload.put("noticeCode", "housewarming");
+    payload.put("title", "집들이");
+    payload.put("amount", -cost);
+    payload.put("option", ticket.optionCode());
+    payload.put("purchaseDay", warming.purchaseDay());
+    logs.append(gameId, day, "LIFE", payload);
+    return simpleOutcome(ticket, message);
+  }
+
+  private long housewarmingCost(ChoiceTicket.Housewarming warming, int day) {
+    return household.inflated(HOUSEWARMING_BASE_COST, day) * warming.costBp() / BP;
   }
 
   /** 나들이 결과 문구: 선택마다 콘텐츠 문구에 아이 이름을 채우고, 돈이 들었으면 금액을 붙인다 (decisions.md 87번). */
@@ -2263,6 +2326,14 @@ class DefaultProgressService implements ProgressService {
                       o.code(),
                       o.label(),
                       tripDetail(tripCost(game.id(), trip, event.occursDay())),
+                      null);
+                }
+                // 집들이 선택지에도 드는 돈을 붙인다 (decisions.md 140번).
+                if (effect instanceof ChoiceTicket.Housewarming warming) {
+                  return new GameView.Option(
+                      o.code(),
+                      o.label(),
+                      tripDetail(housewarmingCost(warming, event.occursDay())),
                       null);
                 }
                 // 결혼·출산 비용은 미리 보여 주고, 현금+주식으로도 안 되면 막는다 (decisions.md 121번).
