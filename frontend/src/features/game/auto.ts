@@ -12,8 +12,8 @@ export interface AutoChoice {
   quantity?: number
 }
 
-/** 선택 카드가 뜬 뒤 고르기까지. 무엇이 떴는지 눈으로 볼 틈이다. */
-export const AUTO_CHOOSE_DELAY_MS = 1_500
+/** 선택 카드가 뜬 뒤 고르기까지. 무엇이 떴는지 읽고 직접 고를 틈이다 (decisions.md 136번). */
+export const AUTO_CHOOSE_DELAY_MS = 3_000
 /** 결과가 드러난 뒤 넘어가기까지. */
 export const AUTO_CONTINUE_DELAY_MS = 1_800
 /** 위기 회고를 읽을 시간. */

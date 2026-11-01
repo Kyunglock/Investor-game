@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import type { Game } from '../../api/client'
 import { ageAt, secondsPerYear } from './clock'
 import { yearOf } from './labels'
@@ -14,17 +13,21 @@ interface Props {
   onPause: () => void
   onResume: () => void
   onRestart: () => void
-  /** 투자 인생을 여기서 끝낸다 (decisions.md 68번). 두 번 눌러 확인한다 */
-  onQuit: () => void
   /** 자동 진행 (decisions.md 131번). 선택 카드가 떠 있어도 켜고 끌 수 있다 */
   autoPlay: boolean
   onToggleAuto: () => void
 }
 
+// 색은 따로 붙인다. 같은 종류의 유틸리티(text-*·bg-*)를 겹쳐 쓰면 어느 쪽이 이기는지 CSS 순서에 달려 글자가 안 보일 수 있다 (decisions.md 136번).
 const buttonBase =
-  'min-h-11 min-w-11 rounded-full border-2 border-pen px-3 font-note text-sm bg-paper text-pen hover:bg-white disabled:cursor-not-allowed disabled:opacity-40'
+  'min-h-11 min-w-11 rounded-full border-2 border-pen px-3 font-note text-sm disabled:cursor-not-allowed disabled:opacity-40'
+const buttonPaper = 'bg-paper text-pen hover:bg-white'
+const buttonInk = 'bg-pen text-paper hover:opacity-90'
 
-/** 제목, 나이, 연도 (설계 5.1절). 배속은 없다: 정배속만 있다. 나이 글자는 E2E가 보는 `{n}세 {m}개월` 형식을 유지한다. */
+/**
+ * 제목, 나이, 연도 (설계 5.1절). 배속은 없다: 정배속만 있다. 나이 글자는 E2E가 보는 `{n}세 {m}개월` 형식을 유지한다. "여기서 끝내기"는
+ * 사용자 요청으로 뺐다 (decisions.md 136번, API는 남아 있다).
+ */
 export function TopBar({
   game,
   running,
@@ -33,14 +36,11 @@ export function TopBar({
   onPause,
   onResume,
   onRestart,
-  onQuit,
   autoPlay,
   onToggleAuto,
 }: Props) {
   // 0.1초마다 바뀌는 day는 여기서만 구독한다. App이 구독하면 진행 화면 전체가 틱마다 다시 그려진다.
   const day = useGameStore((s) => s.day)
-  // 끝내기는 한 번 누르면 확인을 묻고, 다시 누르면 끝낸다. 다른 버튼을 누르면 묻기를 거둔다.
-  const [confirmQuit, setConfirmQuit] = useState(false)
   const age = game ? ageAt(game.startAge, day, game.daysPerYear) : null
   const progress =
     game && age ? Math.min(1, (age.years - game.startAge) / (game.endAge - game.startAge)) : 0
@@ -65,52 +65,23 @@ export function TopBar({
             <div className="ml-auto flex gap-1">
               <button
                 type="button"
-                className={buttonBase}
+                className={`${buttonBase} ${buttonPaper}`}
                 disabled={controlsDisabled}
-                onClick={() => {
-                  setConfirmQuit(false)
-                  ;(running ? onPause : onResume)()
-                }}
+                onClick={running ? onPause : onResume}
               >
                 {running ? '❚❚ 멈춤' : '▶ 계속'}
               </button>
               <button
                 type="button"
-                className={`${buttonBase} ${autoPlay ? 'bg-pen text-paper hover:bg-pen' : ''}`}
+                className={`${buttonBase} ${autoPlay ? buttonInk : buttonPaper}`}
                 aria-pressed={autoPlay}
                 title="성향과 안목으로 선택을 대신하고 엔딩 크레딧까지 흐른다"
-                onClick={() => {
-                  setConfirmQuit(false)
-                  onToggleAuto()
-                }}
+                onClick={onToggleAuto}
                 data-testid="auto-button"
               >
                 {autoPlay ? '⟳ 자동 켬' : '⟳ 자동'}
               </button>
-              <button
-                type="button"
-                className={`${buttonBase} ${confirmQuit ? 'border-red-pen text-red-pen' : ''}`}
-                disabled={controlsDisabled}
-                onClick={() => {
-                  if (confirmQuit) {
-                    setConfirmQuit(false)
-                    onQuit()
-                  } else {
-                    setConfirmQuit(true)
-                  }
-                }}
-                data-testid="quit-button"
-              >
-                {confirmQuit ? '정말 끝낼까요?' : '여기서 끝내기'}
-              </button>
-              <button
-                type="button"
-                className={buttonBase}
-                onClick={() => {
-                  setConfirmQuit(false)
-                  onRestart()
-                }}
-              >
+              <button type="button" className={`${buttonBase} ${buttonPaper}`} onClick={onRestart}>
                 다시 태어나기
               </button>
             </div>

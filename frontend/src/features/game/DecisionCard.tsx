@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Game, NewsItem, PendingEvent } from '../../api/client'
+import { AutoBar } from './AutoBar'
+import { AUTO_CHOOSE_DELAY_MS } from './auto'
 import { won, yearOf } from './labels'
 import {
   BUY_PERCENTS,
@@ -63,7 +65,6 @@ function Body({ event, game, busy, onChoose }: Props) {
   const quote = game.market.stocks.find((s) => s.code === event.stockCode)
   const price = quote?.price ?? 0
   const age = game.startAge + Math.floor(event.occursDay / game.daysPerYear)
-  const autoPlay = useGameStore((s) => s.autoPlay)
   const [picked, setPicked] = useState<string | null>(null)
   // 뉴스에서 매수·매도를, 빚투에서 빌린다를 누르면 바로 보내지 않고 수량을 묻는다. 관망·거절은 바로 보낸다.
   const [side, setSide] = useState<Picker | null>(null)
@@ -133,14 +134,11 @@ function Body({ event, game, busy, onChoose }: Props) {
       </div>
       <h2 className="mt-2 font-serif-kr text-[22px] font-black leading-snug">{event.title}</h2>
       <p className="mt-1.5 text-[13px] leading-relaxed">{event.body}</p>
-      {autoPlay && (
-        <p
-          className="mt-2 rounded bg-bg px-2.5 py-1.5 text-[11px] text-muted"
-          data-testid="auto-choosing"
-        >
-          자동 진행 중 · 성향과 안목이 대신 고릅니다. 직접 고르면 그 선택이 우선입니다.
-        </p>
-      )}
+      <AutoBar
+        durationMs={AUTO_CHOOSE_DELAY_MS}
+        label={`${AUTO_CHOOSE_DELAY_MS / 1000}초 뒤 성향과 안목이 대신 고릅니다. 직접 고르면 그 선택이 우선입니다.`}
+        restartKey={event.eventId}
+      />
 
       {(isNews || isShake || isLeverage) && quote && (
         <div
