@@ -4,6 +4,7 @@ import investorgame.common.Stats;
 import investorgame.result.Ending;
 import investorgame.result.GameResult;
 import investorgame.result.PlayProfile;
+import investorgame.result.RankingEntry;
 import investorgame.result.ResultService;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -128,6 +129,78 @@ class JdbcResultService implements ResultService {
         .param("gameIds", gameIds)
         .query(this::map)
         .list();
+  }
+
+  @Override
+  @Transactional
+  public boolean enterRanking(RankingEntry entry) {
+    return jdbc.sql(
+                """
+            INSERT INTO result_ranking
+              (game_id, name, final_asset, final_age, ending, job_title, entered_at)
+            VALUES
+              (:gameId, :name, :finalAsset, :finalAge, :ending, :jobTitle, :enteredAt)
+            ON CONFLICT (game_id) DO NOTHING
+            """)
+            .param("gameId", entry.gameId())
+            .param("name", entry.name())
+            .param("finalAsset", entry.finalAsset())
+            .param("finalAge", entry.finalAge())
+            .param("ending", entry.ending().name())
+            .param("jobTitle", entry.jobTitle())
+            .param("enteredAt", entry.enteredAt())
+            .update()
+        == 1;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<RankingEntry> ranking(int limit) {
+    return jdbc.sql(
+            """
+            SELECT game_id, name, final_asset, final_age, ending, job_title, entered_at
+            FROM result_ranking
+            ORDER BY final_asset DESC, entered_at
+            LIMIT :limit
+            """)
+        .param("limit", limit)
+        .query(JdbcResultService::mapRanking)
+        .list();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public int rankingSize() {
+    return jdbc.sql("SELECT count(*) FROM result_ranking").query(Integer.class).single();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<Integer> rankOf(UUID gameId) {
+    // 나보다 자산이 많은 사람 수 + 자산이 같은데 먼저 올린 사람 수 + 1 = 순위표에서 내 줄의 위치.
+    return jdbc.sql(
+            """
+            SELECT 1 + count(*)
+            FROM result_ranking r, result_ranking me
+            WHERE me.game_id = :gameId
+              AND (r.final_asset > me.final_asset
+                   OR (r.final_asset = me.final_asset AND r.entered_at < me.entered_at))
+            GROUP BY me.game_id
+            """)
+        .param("gameId", gameId)
+        .query(Integer.class)
+        .optional();
+  }
+
+  private static RankingEntry mapRanking(ResultSet rs, int rowNum) throws SQLException {
+    return new RankingEntry(
+        rs.getObject("game_id", UUID.class),
+        rs.getString("name"),
+        rs.getLong("final_asset"),
+        rs.getInt("final_age"),
+        Ending.valueOf(rs.getString("ending")),
+        rs.getString("job_title"),
+        rs.getObject("entered_at", OffsetDateTime.class));
   }
 
   private GameResult map(ResultSet rs, int rowNum) throws SQLException {

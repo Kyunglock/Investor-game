@@ -116,6 +116,16 @@ class GameController {
     return game;
   }
 
+  /** 끝난 판을 이름과 함께 최종 자산 순위표에 올린다 (decisions.md 141번). 판마다 한 번. */
+  @PostMapping("/{gameId}/ranking")
+  GameView enterRanking(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @PathVariable UUID gameId,
+      @Valid @RequestBody NameRequest request) {
+    UUID sessionId = cookies.requireSession(token);
+    return progress.enterRanking(sessionId, gameId, request.name());
+  }
+
   /** 캐릭터 이름을 정한다 (decisions.md 135번). 출생 신고서에서 적고, 진행 중엔 언제든 바꿀 수 있다. */
   @PostMapping("/{gameId}/name")
   GameView rename(
