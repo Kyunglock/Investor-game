@@ -2226,7 +2226,10 @@ class DefaultEventServiceTest {
         .isEmpty();
   }
 
-  /** 미혼·자녀 없음(결혼 제안은 35세까지라 36세부터), 주거 사실만 다른 맥락. */
+  /**
+   * 32세에 결혼, 자녀 셋(더 묻지 않음), 독립한 날 없음(자녀 결혼 없음), 가족 여행은 결혼 3~6년 뒤라 33세 무렵의 생활 선택은 집들이뿐이다. 주거 사실만
+   * 다르다.
+   */
   private static SchedulingContext withHousing(HousingFacts housing) {
     return new SchedulingContext(
         Phase.INVESTING,
@@ -2242,10 +2245,10 @@ class DefaultEventServiceTest {
         JOB_DAY,
         false,
         null,
-        false,
+        true,
+        (32 - START_AGE) * YEAR,
         null,
-        null,
-        0,
+        3,
         List.of(),
         List.of(),
         List.of(),
