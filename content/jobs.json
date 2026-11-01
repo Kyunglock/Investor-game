@@ -4,14 +4,14 @@
     "title": "편의점 알바",
     "weight": 7,
     "baseMonthlySalary": 1900000,
-    "raisePercentPerYear": 1
+    "raisePercentPerYear": 0
   },
   {
     "code": "farmer",
     "title": "농부",
     "weight": 6,
     "baseMonthlySalary": 2200000,
-    "raisePercentPerYear": 2,
+    "raisePercentPerYear": 1,
     "retires": false
   },
   {
@@ -19,7 +19,7 @@
     "title": "공장 생산직",
     "weight": 7,
     "baseMonthlySalary": 2400000,
-    "raisePercentPerYear": 2,
+    "raisePercentPerYear": 1,
     "movesTo": [
       "factory"
     ]
@@ -29,14 +29,14 @@
     "title": "공무원",
     "weight": 8,
     "baseMonthlySalary": 2500000,
-    "raisePercentPerYear": 3
+    "raisePercentPerYear": 2
   },
   {
     "code": "designer",
     "title": "디자이너",
     "weight": 6,
     "baseMonthlySalary": 2700000,
-    "raisePercentPerYear": 4,
+    "raisePercentPerYear": 2,
     "movesTo": [
       "designer"
     ]
@@ -46,7 +46,7 @@
     "title": "사무직",
     "weight": 10,
     "baseMonthlySalary": 2800000,
-    "raisePercentPerYear": 3,
+    "raisePercentPerYear": 2,
     "movesTo": [
       "office",
       "bigcorp"
@@ -57,14 +57,14 @@
     "title": "교사",
     "weight": 6,
     "baseMonthlySalary": 2900000,
-    "raisePercentPerYear": 3
+    "raisePercentPerYear": 2
   },
   {
     "code": "sales",
     "title": "영업직",
     "weight": 8,
     "baseMonthlySalary": 3000000,
-    "raisePercentPerYear": 4,
+    "raisePercentPerYear": 2,
     "movesTo": [
       "sales"
     ]
@@ -74,7 +74,7 @@
     "title": "간호사",
     "weight": 5,
     "baseMonthlySalary": 3100000,
-    "raisePercentPerYear": 4,
+    "raisePercentPerYear": 2,
     "movesTo": [
       "nurse"
     ]
@@ -84,7 +84,7 @@
     "title": "개발자",
     "weight": 6,
     "baseMonthlySalary": 3500000,
-    "raisePercentPerYear": 5,
+    "raisePercentPerYear": 3,
     "movesTo": [
       "developer"
     ]
@@ -94,35 +94,35 @@
     "title": "회계사",
     "weight": 3,
     "baseMonthlySalary": 4000000,
-    "raisePercentPerYear": 5
+    "raisePercentPerYear": 3
   },
   {
     "code": "bigcorp",
     "title": "대기업 사무직",
     "weight": 3,
     "baseMonthlySalary": 4200000,
-    "raisePercentPerYear": 4
+    "raisePercentPerYear": 3
   },
   {
     "code": "pharmacist",
     "title": "약사",
     "weight": 2,
     "baseMonthlySalary": 4500000,
-    "raisePercentPerYear": 3
+    "raisePercentPerYear": 1
   },
   {
     "code": "lawyer",
     "title": "변호사",
     "weight": 1,
     "baseMonthlySalary": 5500000,
-    "raisePercentPerYear": 5
+    "raisePercentPerYear": 3
   },
   {
     "code": "securities-ceo",
     "title": "여의도 증권사 대표",
     "weight": 1,
     "baseMonthlySalary": 30000000,
-    "raisePercentPerYear": 5,
+    "raisePercentPerYear": 3,
     "offered": false,
     "retires": false
   }

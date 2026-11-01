@@ -22,7 +22,7 @@
         "baseBp": 2000,
         "perPointBp": 60,
         "success": {
-          "salaryPercent": 12,
+          "salaryPercent": 6,
           "text": "담판이 통했다. 월급이 12% 올랐다.",
           "statDeltas": {
             "courage": 2
@@ -42,7 +42,7 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 6,
+          "salaryPercent": 3,
           "text": "정리한 성과가 먹혔다. 월급이 6% 올랐다.",
           "statDeltas": {
             "insight": 2
@@ -88,7 +88,7 @@
         "baseBp": 3000,
         "perPointBp": 50,
         "success": {
-          "salaryPercent": 15,
+          "salaryPercent": 8,
           "text": "프로젝트를 끝까지 끌고 갔고, 승진했다. 월급이 15% 올랐다.",
           "statDeltas": {
             "patience": 2,
@@ -109,7 +109,7 @@
         "baseBp": 3500,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 10,
+          "salaryPercent": 5,
           "text": "눈치가 통했다. 승진과 함께 월급이 10% 올랐다.",
           "statDeltas": {
             "insight": 1
@@ -168,7 +168,7 @@
         "baseBp": 3000,
         "perPointBp": 50,
         "success": {
-          "salaryPercent": 8,
+          "salaryPercent": 4,
           "text": "회사가 붙잡았다. 월급 8% 인상으로 남기로 했다.",
           "statDeltas": {
             "conviction": 1
@@ -271,7 +271,7 @@
         "baseBp": 3000,
         "perPointBp": 50,
         "success": {
-          "salaryPercent": 4,
+          "salaryPercent": 2,
           "text": "지금 그만두면 뭘 먹고 사나. 미래가 불안해 그만둘 수 없었다. 버틴 덕에 인정받았다. 월급이 4% 올랐다.",
           "statDeltas": {
             "patience": 2
@@ -345,7 +345,7 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 3,
+          "salaryPercent": 2,
           "statDeltas": {
             "patience": 2
           },
@@ -398,7 +398,7 @@
         "baseBp": 3500,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 20,
+          "salaryPercent": 10,
           "statDeltas": {
             "patience": 1,
             "insight": 1
@@ -588,7 +588,7 @@
         "baseBp": 3500,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 10,
+          "salaryPercent": 5,
           "statDeltas": {
             "insight": 2
           },
@@ -733,7 +733,7 @@
         "baseBp": 5000,
         "perPointBp": 30,
         "success": {
-          "salaryPercent": 4,
+          "salaryPercent": 2,
           "statDeltas": {
             "courage": 1
           },
@@ -776,7 +776,7 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 7,
+          "salaryPercent": 4,
           "statDeltas": {
             "conviction": 2
           },
@@ -819,7 +819,7 @@
         "baseBp": 3500,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 12,
+          "salaryPercent": 6,
           "statDeltas": {
             "patience": 2
           },
@@ -862,7 +862,7 @@
         "baseBp": 3000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 5,
+          "salaryPercent": 3,
           "statDeltas": {
             "insight": 2
           },
@@ -947,7 +947,7 @@
         "code": "accept",
         "label": "가라면 간다",
         "success": {
-          "salaryPercent": 3,
+          "salaryPercent": 2,
           "statDeltas": {
             "patience": 2
           },
@@ -993,7 +993,7 @@
         "baseBp": 3500,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 8,
+          "salaryPercent": 4,
           "statDeltas": {
             "patience": 2
           },
@@ -1070,7 +1070,7 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 4,
+          "salaryPercent": 2,
           "statDeltas": {
             "patience": 2
           },
@@ -1122,7 +1122,7 @@
         "baseBp": 2000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 5,
+          "salaryPercent": 3,
           "amount": 5000000,
           "statDeltas": {
             "conviction": 2
@@ -1209,7 +1209,7 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 10,
+          "salaryPercent": 5,
           "statDeltas": {
             "insight": 2
           },
@@ -1350,7 +1350,7 @@
         "baseBp": 3500,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 6,
+          "salaryPercent": 3,
           "statDeltas": {
             "patience": 2
           },
@@ -1435,7 +1435,7 @@
         "baseBp": 4500,
         "perPointBp": 30,
         "success": {
-          "salaryPercent": 5,
+          "salaryPercent": 3,
           "statDeltas": {
             "patience": 2
           },
@@ -1475,7 +1475,7 @@
         "code": "go",
         "label": "간다",
         "success": {
-          "salaryPercent": 8,
+          "salaryPercent": 4,
           "statDeltas": {
             "patience": 1,
             "courage": 1
@@ -1496,7 +1496,7 @@
           "text": "사정을 봐줬다. 다른 사람이 갔다."
         },
         "fail": {
-          "salaryPercent": 8,
+          "salaryPercent": 4,
           "statDeltas": {
             "patience": 1
           },
@@ -1557,7 +1557,7 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 8,
+          "salaryPercent": 4,
           "statDeltas": {
             "courage": 2
           },
@@ -1600,7 +1600,7 @@
         "baseBp": 5000,
         "perPointBp": 30,
         "success": {
-          "salaryPercent": 10,
+          "salaryPercent": 5,
           "statDeltas": {
             "patience": 1
           },
@@ -1621,7 +1621,7 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 5,
+          "salaryPercent": 3,
           "statDeltas": {
             "insight": 2
           },
@@ -1654,7 +1654,7 @@
         "baseBp": 3500,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 18,
+          "salaryPercent": 9,
           "statDeltas": {
             "courage": 1,
             "insight": 1
@@ -1840,7 +1840,7 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 12,
+          "salaryPercent": 6,
           "statDeltas": {
             "patience": 1,
             "conviction": 1
@@ -1883,7 +1883,7 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 5,
+          "salaryPercent": 3,
           "statDeltas": {
             "insight": 2
           },
@@ -1971,7 +1971,7 @@
         "baseBp": 5000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 10,
+          "salaryPercent": 5,
           "statDeltas": {
             "insight": 2
           },
@@ -1993,7 +1993,7 @@
         "baseBp": 3500,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 6,
+          "salaryPercent": 3,
           "statDeltas": {
             "conviction": 2
           },
@@ -2026,7 +2026,7 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 12,
+          "salaryPercent": 6,
           "statDeltas": {
             "patience": 2
           },
@@ -2079,7 +2079,7 @@
         "baseBp": 4500,
         "perPointBp": 30,
         "success": {
-          "salaryPercent": 5,
+          "salaryPercent": 3,
           "statDeltas": {
             "patience": 2
           },
@@ -2122,7 +2122,7 @@
         "baseBp": 5000,
         "perPointBp": 30,
         "success": {
-          "salaryPercent": 8,
+          "salaryPercent": 4,
           "statDeltas": {
             "conviction": 2
           },
@@ -2268,7 +2268,7 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 15,
+          "salaryPercent": 8,
           "statDeltas": {
             "courage": 2
           },
@@ -2313,7 +2313,7 @@
         "baseBp": 3500,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 6,
+          "salaryPercent": 3,
           "statDeltas": {
             "patience": 2
           },
@@ -2334,7 +2334,7 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 4,
+          "salaryPercent": 2,
           "statDeltas": {
             "insight": 1
           },
@@ -2403,7 +2403,7 @@
         "perPointBp": 30,
         "perRaisePercentBp": 100,
         "success": {
-          "salaryPercent": 10,
+          "salaryPercent": 5,
           "amount": -10000000,
           "statDeltas": {
             "courage": 2
@@ -2454,7 +2454,7 @@
         "baseBp": 2500,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 20,
+          "salaryPercent": 10,
           "statDeltas": {
             "patience": 3
           },
@@ -2524,7 +2524,7 @@
         "perPointBp": 40,
         "perRaisePercentBp": 150,
         "success": {
-          "salaryPercent": 5,
+          "salaryPercent": 3,
           "statDeltas": {
             "insight": 2
           },
@@ -2628,7 +2628,7 @@
         "baseBp": 4500,
         "perPointBp": 30,
         "success": {
-          "salaryPercent": 5,
+          "salaryPercent": 3,
           "statDeltas": {
             "patience": 2
           },
@@ -2802,7 +2802,7 @@
         "baseBp": 3500,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 8,
+          "salaryPercent": 4,
           "statDeltas": {
             "conviction": 3
           },
@@ -2892,7 +2892,7 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 10,
+          "salaryPercent": 5,
           "statDeltas": {
             "insight": 2
           },
@@ -3293,7 +3293,7 @@
         "baseBp": 3500,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 10,
+          "salaryPercent": 5,
           "amount": 500000000,
           "statDeltas": {
             "courage": 2
@@ -3337,7 +3337,7 @@
         "baseBp": 5000,
         "perPointBp": 30,
         "success": {
-          "salaryPercent": 15,
+          "salaryPercent": 8,
           "amount": -300000000,
           "statDeltas": {
             "insight": 1

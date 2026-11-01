@@ -373,12 +373,14 @@ class DefaultProgressService implements ProgressService {
                       / calendar.daysPerYear();
               creditBp =
                   rehireBonusBp(
-                      definition, careerYears * properties.rehireCreditPercent() / (int) PERCENT);
+                      definition,
+                      careerYears * properties.rehireCreditPercent() / (int) PERCENT,
+                      properties.salary());
               if (creditBp > 0) {
                 characters.addSalaryBonus(gameId, creditBp);
               }
             }
-            long salary = monthlySalary(definition, 0, creditBp);
+            long salary = monthlySalary(definition, 0, creditBp, ticket.occursDay());
             logs.append(
                 gameId,
                 ticket.occursDay(),
@@ -589,7 +591,7 @@ class DefaultProgressService implements ProgressService {
     long salaryBefore =
         job == null
             ? 0
-            : monthlySalary(job, tenureYears(character, day), character.salaryBonusBp());
+            : monthlySalary(job, tenureYears(character, day), character.salaryBonusBp(), day);
     // 가족이 있으면 가족 때문에 버티고 위로받는 문구, 혼자면 불안과 친구의 문구 (decisions.md 83번).
     HouseholdView family = household.get(gameId);
     StringBuilder message =
@@ -638,12 +640,13 @@ class DefaultProgressService implements ProgressService {
       characters.changeJob(
           gameId, career.targetJobCode(), day, (int) (effect.moveSalaryPercent() * PERCENT));
       JobDefinition target = content.job(career.targetJobCode());
-      long salaryAfter = monthlySalary(target, 0, (int) (effect.moveSalaryPercent() * PERCENT));
+      long salaryAfter =
+          monthlySalary(target, 0, (int) (effect.moveSalaryPercent() * PERCENT), day);
       message.append(" 월급 %,d원 → %,d원.".formatted(salaryBefore, salaryAfter));
     } else if (effect.salaryPercent() != 0) {
       characters.addSalaryBonus(gameId, (int) (effect.salaryPercent() * PERCENT));
       CharacterView after = characters.get(gameId);
-      long salaryAfter = monthlySalary(job, tenureYears(after, day), after.salaryBonusBp());
+      long salaryAfter = monthlySalary(job, tenureYears(after, day), after.salaryBonusBp(), day);
       message.append(" 월급 %,d원 → %,d원.".formatted(salaryBefore, salaryAfter));
     }
     if (effect.amount() > 0) {
@@ -675,7 +678,7 @@ class DefaultProgressService implements ProgressService {
         after.jobCode() == null
             ? 0
             : monthlySalary(
-                content.job(after.jobCode()), tenureYears(after, day), after.salaryBonusBp()));
+                content.job(after.jobCode()), tenureYears(after, day), after.salaryBonusBp(), day));
     // 일을 잃거나 실패하면 누군가의 위로가 붙는다 (decisions.md 85번).
     String comfort =
         effect.quit() || effect.becomeInvestor() || !success
@@ -1615,7 +1618,7 @@ class DefaultProgressService implements ProgressService {
         boolean retired = home.retiredDay() != null;
         long salary =
             working
-                ? monthlySalary(job, tenureYears(character, day), character.salaryBonusBp())
+                ? monthlySalary(job, tenureYears(character, day), character.salaryBonusBp(), day)
                 : 0;
         // 정년이 없는 직업(직접 세운 회사·농부)은 60세에도 은퇴하지 않고 월급을 계속 받는다. 연금은 나이로 나온다 (decisions.md 57번).
         boolean retires = job == null || job.retires();
@@ -1679,19 +1682,21 @@ class DefaultProgressService implements ProgressService {
     return OptionalInt.empty();
   }
 
-  /** 인정 연차만큼의 연차 인상을 인상분(만분율)으로 바꾼다: (1 + 연차 인상)^인정 연차 − 1 (decisions.md 116번). */
-  static int rehireBonusBp(JobDefinition job, int creditedYears) {
-    long withCredit = monthlySalary(job, creditedYears, 0);
-    return (int) ((withCredit - job.baseMonthlySalary()) * BP / job.baseMonthlySalary());
+  /** 인정 연차만큼의 연차 인상을 인상분(만분율)으로 바꾼다: 연차 배율 − 1 (decisions.md 116번). 곡선이 꺾이는 것(133번)도 그대로 따른다. */
+  static int rehireBonusBp(JobDefinition job, int creditedYears, ProgressProperties.Salary rules) {
+    return (int) (SalaryCurve.tenureFactorBp(job, creditedYears, rules) - BP);
   }
 
-  /** 월급 = 기본 월급 × (1 + 연차 인상)^연차 × (1 + 협상·승진 인상분). */
-  private static long monthlySalary(JobDefinition job, int tenureYears, int bonusBp) {
-    long salary = job.baseMonthlySalary();
-    for (int year = 0; year < tenureYears; year++) {
-      salary = salary * (PERCENT + job.raisePercentPerYear()) / PERCENT;
-    }
-    return salary * (BP + bonusBp) / BP;
+  /**
+   * 월급 = 기본 월급 × 연차 배율 × 나이 감소(SalaryCurve) × 물가 × (1 + 협상·승진 인상분, 상한까지) (decisions.md 133번). 물가는
+   * 생활비와 같은 기준(취업 나이부터 복리)이라 월급이 물가를 따라간다.
+   */
+  private long monthlySalary(JobDefinition job, int tenureYears, int bonusBp, int day) {
+    ProgressProperties.Salary rules = properties.salary();
+    int age = properties.startAge() + day / calendar.daysPerYear();
+    long real = SalaryCurve.real(job, tenureYears, age, rules);
+    long bonus = Math.min(bonusBp, rules.maxBonusBp());
+    return household.inflated(real, day) * (BP + bonus) / BP;
   }
 
   private int tenureYears(CharacterView character, int day) {
@@ -1794,7 +1799,8 @@ class DefaultProgressService implements ProgressService {
           monthlySalary(
                   content.job(character.jobCode()),
                   tenureYears(character, notice.occursDay()),
-                  character.salaryBonusBp())
+                  character.salaryBonusBp(),
+                  notice.occursDay())
               * notice.salaryPercent()
               / PERCENT;
     }
@@ -2139,7 +2145,8 @@ class DefaultProgressService implements ProgressService {
             ? monthlySalary(
                 content.job(character.jobCode()),
                 tenureYears(character, day),
-                character.salaryBonusBp())
+                character.salaryBonusBp(),
+                day)
             : 0;
     return new GameView.Household(
         home.married(),
@@ -2176,7 +2183,7 @@ class DefaultProgressService implements ProgressService {
     return new GameView.Job(
         job.code(),
         job.title(),
-        monthlySalary(job, tenureYears(character, day), character.salaryBonusBp()),
+        monthlySalary(job, tenureYears(character, day), character.salaryBonusBp(), day),
         tenureYears(character, day));
   }
 
@@ -2313,7 +2320,8 @@ class DefaultProgressService implements ProgressService {
             : monthlySalary(
                 content.job(character.jobCode()),
                 tenureYears(character, day),
-                character.salaryBonusBp());
+                character.salaryBonusBp(),
+                day);
     return salary + household.spouseIncome(gameId, day);
   }
 
