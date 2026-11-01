@@ -1992,4 +1992,38 @@ class DefaultEventServiceTest {
       UUID gameId, SchedulingContext context, int fromDay, EventKind kind, long seed) {
     return nextOf(gameId, context, fromDay, kind, seed).orElseThrow();
   }
+
+  /** decisions.md 130번: 이직 제안은 같은 직종(jobs.json movesTo) 안에서만 오고, 알바에게는 오지 않는다. */
+  @Test
+  void 이직_제안은_같은_직종으로만_온다() {
+    for (var job : content.jobs()) {
+      for (long seed = 1; seed <= 5; seed++) {
+        UUID gameId = UUID.randomUUID();
+        SchedulingContext context = workingAs(job.code());
+        int from = JOB_DAY;
+        while (true) {
+          Optional<EventView> next = nextOf(gameId, context, from, EventKind.CAREER, seed);
+          if (next.isEmpty()) {
+            break;
+          }
+          EventView view = next.get();
+          for (EventView.Option option : view.options()) {
+            if (option.code().startsWith("move:")) {
+              String target = option.code().substring("move:".length());
+              assertThat(job.movesTo())
+                  .as("%s의 이직 제안 %s", job.code(), careerOf(view).code())
+                  .contains(target);
+            }
+          }
+          events.complete(gameId, view.eventId(), new Completion("HOLD", "HOLD", List.of()));
+          from = view.occursDay();
+        }
+      }
+    }
+    for (long seed = 1; seed <= 10; seed++) {
+      assertThat(careerLife("parttime", seed))
+          .extracting(e -> e.getValue().code())
+          .doesNotContain("headhunt");
+    }
+  }
 }
