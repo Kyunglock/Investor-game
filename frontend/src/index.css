@@ -190,5 +190,7 @@ body {
   .animate-slide-in,
   .animate-flash,
   .animate-blink,
-  .animate-drop,
+  .animate-drop {
+    animation: none;
+  }
 }
