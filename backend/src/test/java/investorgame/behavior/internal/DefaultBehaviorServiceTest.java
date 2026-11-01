@@ -131,14 +131,18 @@ class DefaultBehaviorServiceTest {
   }
 
   @Test
-  void 줏대로_바뀐_행동은_이어서_용기_판정을_받는다() {
+  void 줏대로_바뀐_행동이_용기_판정으로_제자리에_돌아오면_이탈로_치지_않는다() {
+    // 관망 → (줏대) 매수 → (용기) 관망: 결과가 고른 그대로이니 알림도 성장도 없다 (decisions.md 125번).
     Resolution r =
         resolve(Action.HOLD, stats(50, 50, 0, 0, 50), Sentiment.POS, false, HIT, HIT, HIT);
     assertThat(r.actual()).isEqualTo(Action.HOLD);
-    assertThat(r.deviations())
-        .containsExactly(
-            new Deviation("conviction", Action.HOLD, Action.BUY, "youtuber"),
-            new Deviation("courage", Action.BUY, Action.HOLD));
+    assertThat(r.deviations()).isEmpty();
+    // 줏대로 바뀌고 용기 판정은 넘기면 그 이탈만 남는다.
+    Resolution moved =
+        resolve(Action.HOLD, stats(50, 50, 100, 0, 50), Sentiment.POS, false, HIT, MISS, HIT);
+    assertThat(moved.actual()).isEqualTo(Action.BUY);
+    assertThat(moved.deviations())
+        .containsExactly(new Deviation("conviction", Action.HOLD, Action.BUY, "youtuber"));
   }
 
   @Test
