@@ -2037,7 +2037,13 @@ class DefaultEventServiceTest {
             .toList();
     assertThat(excluded).hasSizeGreaterThanOrEqualTo(3);
     assertThat(adultTraitTitles(workingAs("farmer"), 5L)).doesNotContainAnyElementsOf(excluded);
-    assertThat(adultTraitTitles(workingAs("office"), 5L)).containsAll(excluded);
+    // 사무직에게는 온다. 보유 주식이 전제인 장면(a-crash)은 든 종목이 없는 이 맥락에선 따로 걸러지므로 뺀다.
+    List<String> officeOnes =
+        content.adultTraits().stream()
+            .filter(t -> t.excludeJobs().contains("farmer") && !t.holdings())
+            .map(TraitDefinition::title)
+            .toList();
+    assertThat(adultTraitTitles(workingAs("office"), 5L)).containsAll(officeOnes);
   }
 
   /** 직장 생활 내내 나온 일상 장면 제목. 성향이 다 정해진 뒤라 성장기 장면은 없다. */
