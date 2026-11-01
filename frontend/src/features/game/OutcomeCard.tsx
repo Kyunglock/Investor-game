@@ -72,7 +72,7 @@ function Body({
       data-revealed={revealed}
     >
       {revealed && moment && game && (
-        <figure className="m-0 mb-3" data-testid="moment" data-mood={moment.mood}>
+        <figure className="m-0 mb-3" data-testid="moment" data-mood={moment.mood ?? ''}>
           <Vignette
             art={moment.art}
             me={layersFor(

@@ -241,6 +241,28 @@ function childArt(game: Game, birth: LogEntry): CreditArt {
   return { vignette: 'baby', figures }
 }
 
+/** 아이의 독립·결혼 그림: 나(와 그때 결혼했으면 배우자), 어른이 된 그 아이. xs는 세 자리 (decisions.md 139번). */
+function familyEventArt(
+  game: Game,
+  vignette: VignetteKey,
+  day: number,
+  seq: number,
+  xs: [number, number, number],
+): CreditArt {
+  const stage = stageFor(ageOf(game, day))
+  const figures: Figure[] = [{ who: 'me', sex: game.sex, stage, x: xs[0] }]
+  if (marriedBy(game, day)) {
+    figures.push({ who: 'spouse', sex: opposite(game.sex), stage, x: xs[1] })
+  }
+  figures.push({
+    who: 'kid',
+    sex: game.household.children[seq - 1]?.sex ?? 'M',
+    stage: 'adult',
+    x: xs[2],
+  })
+  return { vignette, figures }
+}
+
 /** 시간순 줄 하나. art가 있으면 거기서 새 장이 시작된다. */
 interface Moment {
   line: CreditLine
@@ -288,25 +310,36 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
             text: `${age}세, ${p.rehire ? `${withParticle(str(p.jobTitle), '으로', '로')} 다시 취직` : `${str(p.jobTitle)}에 취직`}`,
             sub: `월급 ${won(num(p.monthlySalary))}`,
           }
-      if (jobsSeen > 0) {
-        return { line }
-      }
-      // 첫 일터만 그림이 붙는다.
+      // 취직·재취직마다 그림이 붙는다. 첫 일터는 "work" 장, 그 뒤는 그 해의 장 (decisions.md 139번).
+      const stage = stageFor(age)
       const art: CreditArt = p.fullTimeInvestor
-        ? { vignette: 'studio', figures: [{ who: 'me', sex: game.sex, stage: 'adult', x: 36 }] }
-        : { vignette: 'office', figures: [{ who: 'me', sex: game.sex, stage: 'adult', x: 38 }] }
-      return { key: 'work', line, art }
+        ? { vignette: 'studio', figures: [{ who: 'me', sex: game.sex, stage, x: 36 }] }
+        : { vignette: 'office', figures: [{ who: 'me', sex: game.sex, stage, x: 38 }] }
+      return { key: jobsSeen > 0 ? `work-${e.seq}` : 'work', line, art }
     }
     case 'JOB_WAIT':
       return { line: { text: `${age}세, 더 나은 자리를 기다렸다`, tone: 'muted' } }
-    case 'CAREER':
+    case 'CAREER': {
+      const line: CreditLine = {
+        text: `${age}세 · ${str(p.eventTitle)}`,
+        sub: `${str(p.optionLabel)} → ${str(p.text)}`,
+        tone: p.success === false ? 'down' : undefined,
+      }
+      // 실직(직업이 사라지고 월급이 끊김)은 전환점이라 그림이 붙는다 (decisions.md 139번).
+      const laidOff =
+        p.jobTitle == null && p.fullTimeInvestor !== true && str(p.text).includes('월급이 끊기')
+      if (!laidOff) {
+        return { line }
+      }
       return {
-        line: {
-          text: `${age}세 · ${str(p.eventTitle)}`,
-          sub: `${str(p.optionLabel)} → ${str(p.text)}`,
-          tone: p.success === false ? 'down' : undefined,
+        key: `layoff-${e.seq}`,
+        line,
+        art: {
+          vignette: 'layoff',
+          figures: [{ who: 'me', sex: game.sex, stage: stageFor(age), x: 4 }],
         },
       }
+    }
     case 'RETIRE':
       return { line: { text: `${age}세, 은퇴`, sub: `퇴직금 ${won(num(p.severance))}` } }
     case 'MARRIAGE':
@@ -330,17 +363,21 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
     case 'CHILD_LEFT': {
       const name = ORDINALS[num(p.seq) - 1] ?? `${num(p.seq)}번째`
       return {
+        key: `left-${e.seq}`,
         line: {
           text: `${age}세, ${name}가 독립했다`,
           sub: `${num(p.childAge)}살에 집을 나갔다`,
           tone: 'muted',
         },
+        art: familyEventArt(game, 'leave-home', e.day, num(p.seq), [2, 16, 34]),
       }
     }
     case 'CHILD_WEDDING': {
       const name = ORDINALS[num(p.seq) - 1] ?? `${num(p.seq)}번째`
       const cost = num(p.cost)
       return {
+        key: `wedding-${e.seq}`,
+        art: familyEventArt(game, 'wedding', e.day, num(p.seq), [4, 18, 40]),
         line: {
           text: `${age}세, ${name}가 결혼했다`,
           sub:
@@ -421,10 +458,16 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
     }
     case 'CRISIS':
       return {
+        key: `crisis-${e.seq}`,
         line: {
           text: `${num(p.startAge)}~${num(p.endAge)}세, ${str(p.name)} (${p.severity === 'DEPRESSION' ? '대공황' : '불황'})`,
           sub: `주가 평균 ${percent(num(p.dropBp))} 하락 · ${withParticle(str(p.model), '을', '를')} 닮았다`,
           tone: 'down',
+        },
+        // 불황도 전환점 (decisions.md 139번).
+        art: {
+          vignette: 'recession',
+          figures: [{ who: 'me', sex: game.sex, stage: stageFor(age), x: 26 }],
         },
       }
     case 'LEVERAGE':
