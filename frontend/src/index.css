@@ -184,6 +184,18 @@ body {
 .animate-drop {
   animation: drop 0.5s ease-in forwards;
 }
+/* 자동 진행 막대: 카드가 뜬 뒤 저절로 넘어가기까지 차오른다. 길이는 컴포넌트가 animation-duration으로 준다 */
+@keyframes auto-fill {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+.animate-auto-fill {
+  animation: auto-fill 3s linear forwards;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .animate-reveal,
@@ -192,5 +204,9 @@ body {
   .animate-blink,
   .animate-drop {
     animation: none;
+  }
+  .animate-auto-fill {
+    animation: none;
+    width: 100%;
   }
 }

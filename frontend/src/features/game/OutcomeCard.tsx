@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Outcome, Stats } from '../../api/client'
+import { AutoBar } from './AutoBar'
+import { AUTO_CONTINUE_DELAY_MS } from './auto'
 import { ageAt } from './clock'
 import {
   actionLabel,
@@ -214,13 +216,20 @@ function Body({
           </p>
         ))}
       {revealed && (
-        <button
-          type="button"
-          className="mt-5 min-h-12 w-full rounded bg-wine font-semibold text-white hover:opacity-90"
-          onClick={onContinue}
-        >
-          계속
-        </button>
+        <>
+          <AutoBar
+            durationMs={AUTO_CONTINUE_DELAY_MS}
+            label={`${(AUTO_CONTINUE_DELAY_MS / 1000).toFixed(1)}초 뒤 저절로 넘어갑니다.`}
+            restartKey={`${outcome.kind}-${outcome.chosen}-${outcome.actual}-${outcome.message ?? ''}`}
+          />
+          <button
+            type="button"
+            className="mt-3 min-h-12 w-full rounded bg-wine font-semibold text-white hover:opacity-90"
+            onClick={onContinue}
+          >
+            계속
+          </button>
+        </>
       )}
     </section>
   )

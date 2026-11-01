@@ -52,23 +52,23 @@
   "partTimes": [
     {
       "name": "편의점",
-      "monthly": 850000
+      "monthly": 450000
     },
     {
       "name": "카페",
-      "monthly": 800000
+      "monthly": 400000
     },
     {
       "name": "과외",
-      "monthly": 1200000
+      "monthly": 600000
     },
     {
       "name": "배달",
-      "monthly": 1100000
+      "monthly": 550000
     },
     {
       "name": "물류센터",
-      "monthly": 1000000
+      "monthly": 500000
     }
   ],
   "spouse": {
