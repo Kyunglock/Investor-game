@@ -64,6 +64,10 @@ class DefaultBehaviorService implements BehaviorService {
       deviations.add(new Deviation(StatCodes.COURAGE, action, Action.HOLD));
       action = Action.HOLD;
     }
+    // 꼬드김에 넘어갔다가 용기가 없어 제자리로 돌아왔으면 결과는 고른 그대로다: 이탈로 치지 않는다 (decisions.md 125번).
+    if (action == context.choice()) {
+      return new Resolution(action, List.of());
+    }
     return new Resolution(action, List.copyOf(deviations));
   }
 
