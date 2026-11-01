@@ -1371,12 +1371,12 @@
   {
     "code": "t23-intern",
     "age": 23,
-    "title": "인턴 기간이 끝나간다, 정규직 전환 면담",
-    "body": "팀장은 \"연봉은 낮지만 배울 게 많다\"고 한다. 다른 회사 공채도 열려 있다.",
+    "title": "알바하던 가게 사장이 \"매니저 맡아 볼래?\" 한다",
+    "body": "시급은 조금 오르지만 마감과 발주까지 책임진단다. 옆 건물 새 매장은 시급을 더 준다는 공고를 붙였다.",
     "options": [
       {
         "code": "stay",
-        "label": "남겠다고 바로 답한다",
+        "label": "바로 맡겠다고 답한다",
         "traitDeltas": {
           "style.long": 2,
           "risk.safe": 1,
@@ -1391,7 +1391,7 @@
       },
       {
         "code": "raise",
-        "label": "연봉을 올려 달라고 말한다",
+        "label": "시급을 더 올려 달라고 말한다",
         "traitDeltas": {
           "style.short": 2,
           "risk.bold": 1,
@@ -1406,7 +1406,7 @@
       },
       {
         "code": "apply",
-        "label": "공채에 지원하면서 결정을 미룬다",
+        "label": "옆 매장에도 지원해 두고 미룬다",
         "traitDeltas": {
           "style.short": 2,
           "risk.safe": 1,
@@ -1421,7 +1421,7 @@
       },
       {
         "code": "compare",
-        "label": "두 회사의 5년 뒤를 비교해 본다",
+        "label": "두 가게의 1년 뒤를 비교해 본다",
         "traitDeltas": {
           "style.long": 2,
           "risk.bold": 1,
