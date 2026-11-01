@@ -134,11 +134,6 @@ function Body({ event, game, busy, onChoose }: Props) {
       </div>
       <h2 className="mt-2 font-serif-kr text-[22px] font-black leading-snug">{event.title}</h2>
       <p className="mt-1.5 text-[13px] leading-relaxed">{event.body}</p>
-      <AutoBar
-        durationMs={AUTO_CHOOSE_DELAY_MS}
-        label={`${AUTO_CHOOSE_DELAY_MS / 1000}초 뒤 성향과 안목이 대신 고릅니다. 직접 고르면 그 선택이 우선입니다.`}
-        restartKey={event.eventId}
-      />
 
       {(isNews || isShake || isLeverage) && quote && (
         <div
@@ -275,6 +270,12 @@ function Body({ event, game, busy, onChoose }: Props) {
           </button>
         </div>
       )}
+
+      <AutoBar
+        durationMs={AUTO_CHOOSE_DELAY_MS}
+        label={`${AUTO_CHOOSE_DELAY_MS / 1000}초 뒤 성향과 안목이 대신 고릅니다. 직접 고르면 그 선택이 우선입니다.`}
+        restartKey={event.eventId}
+      />
 
       <p className="mt-3 text-[11px] text-faint">
         {event.kind === 'TRAIT'
