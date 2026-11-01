@@ -187,3 +187,34 @@ describe('profileReport', () => {
     expect(rich.axes.map((a) => a.score)).toEqual(poor.axes.map((a) => a.score))
   })
 })
+
+describe('MBTI처럼 보는 유형', () => {
+  it('네 축에서 글자 하나씩, 소신 축은 성장기 성향으로', () => {
+    const log = [
+      entry('STYLE', 24, { styleName: '장기' }),
+      entry('NEWS', 30, { stockCode: 'A', chosen: 'BUY', actual: 'BUY', deviations: [] }),
+      entry('NEWS', 31, { stockCode: 'B', chosen: 'BUY', actual: 'BUY', deviations: [] }),
+      entry('SHAKE', 32, { stockCode: 'A', chosen: 'HOLD', actual: 'HOLD', deviations: [] }),
+    ]
+    const r = profileReport(game({ log, mindProfile: { code: 'own', name: '소신' } }))
+    expect(r.poles.map((p) => p.key)).toEqual(['risk', 'patience', 'diversification', 'mind'])
+    // 뉴스 2번 다 사기 → 공격(A). 흔들림 버팀·연 0.1번 매매 → 길게(L). 두 종목 두 섹터 → 40점 → 집중(F). 소신(O).
+    expect(r.type.code).toBe('ALFO')
+    expect(r.type.name).toBe('뚝심 있는 광부')
+    expect(r.type.fits).toHaveLength(4)
+    const mind = r.poles[3]
+    expect([mind.letter, mind.percent, mind.score]).toEqual(['O', 100, 100])
+    const risk = r.poles[0]
+    expect([risk.letter, risk.percent]).toEqual(['A', 100])
+  })
+
+  it('기운 쪽의 비율을 보여 주고, 소신 축을 모르면 물음표다', () => {
+    const r = profileReport(game({ log: [], mindProfile: null }))
+    // 고른 것이 없으면 세 축은 50 → 왼쪽(A·L)으로 기울고, 분산은 0 → 집중(F) 100%.
+    expect(r.type.code).toBe('ALF?')
+    expect(r.type.name).toBe('광부')
+    expect(r.poles[2]).toMatchObject({ letter: 'F', percent: 100 })
+    expect(r.poles[3]).toMatchObject({ letter: '?', percent: null, score: null })
+    expect(r.type.fits).toHaveLength(3)
+  })
+})
