@@ -4,7 +4,7 @@ import { spouseWord } from '../../api/spouseTerms'
 import { childWord, percent, shortWon, signedShortWon, signedWon, won } from './labels'
 import { signedPercent } from './market'
 import { useGameStore } from './store'
-import { curvePoints, yearDelta } from './timeline'
+import { yearDelta } from './timeline'
 
 /** 거주 형태 이름 (주거 설계 1절). */
 export const TENURE_LABELS: Record<Game['housing']['tenure'], string> = {
@@ -15,12 +15,11 @@ export const TENURE_LABELS: Record<Game['housing']['tenure'], string> = {
   OWN: '자가',
 }
 
-/** 수첩 오른쪽 쪽: 돈 (2026-10-22 시안 D). 전 재산, 그래프, 가계부, 주식과 매매, 집. 금액은 모두 서버 값이다. */
-export function LedgerPage({ game, ageYears }: { game: Game; ageYears: number }) {
+/** 수첩 오른쪽 쪽: 돈 (2026-10-22 시안 D). 전 재산과 현금·주식·빚 타일, 가계부, 주식과 매매, 집. 금액은 모두 서버 값이다. 자산 그래프는 기록부에만 (decisions.md 137번). */
+export function LedgerPage({ game }: { game: Game; ageYears: number }) {
   return (
     <section aria-label="돈" className="paper-grid min-w-0 flex-[1_1_440px] px-5 pt-6 pb-8 sm:px-8">
       <Worth game={game} />
-      <Curve game={game} ageYears={ageYears} />
       <Household game={game} />
       <Stocks game={game} />
       <Home game={game} />
@@ -52,75 +51,51 @@ function Worth({ game }: { game: Game }) {
           </p>
         )}
       </div>
-      <p className="mt-2 flex flex-wrap gap-x-4 text-[13px] text-pen-soft">
-        <span>
-          현금{' '}
-          <b className="text-pen" data-testid="cash">
-            {shortWon(game.cash)}
-          </b>
-        </span>
-        <span>
-          주식{' '}
-          <b className="text-pen" data-testid="invested">
-            {shortWon(game.invested)}
-          </b>
-        </span>
-        <span>
-          빚{' '}
-          <b className={game.debt > 0 ? 'text-red-pen' : 'text-pen'} data-testid="debt">
-            {shortWon(game.debt)}
-          </b>
-        </span>
-      </p>
+      {/* 현금·주식·빚은 한눈에 들어와야 한다 (decisions.md 137번): 작은 글씨 한 줄 대신 큼직한 타일 셋 */}
+      <div className="mt-3 grid grid-cols-3 gap-2" data-testid="money-tiles">
+        <MoneyTile label="현금" value={game.cash} testId="cash" />
+        <MoneyTile
+          label="주식"
+          value={game.invested}
+          testId="invested"
+          note={game.holdings.length > 0 ? `${game.holdings.length}종목` : undefined}
+        />
+        <MoneyTile
+          label="빚"
+          value={game.debt}
+          testId="debt"
+          tone={game.debt > 0 ? 'red' : 'pen'}
+          note={game.debt > 0 ? '연 5% 이자' : undefined}
+        />
+      </div>
     </div>
   )
 }
 
-const W = 400
-const H = 110
-const BOTTOM = 96
-const TOP = 10
-
-/** 손으로 그은 듯한 재산 그래프. 점 사이를 곡선으로 잇는다. */
-function Curve({ game, ageYears }: { game: Game; ageYears: number }) {
-  const points = curvePoints(game.yearly, game.initialAsset, game.startAge, ageYears)
-  const max = Math.max(...points.map((p) => p.totalAsset), 1)
-  const span = Math.max(ageYears - game.startAge, 1)
-  const x = (age: number) => 4 + ((age - game.startAge) / span) * (W - 40)
-  const y = (v: number) => BOTTOM - (Math.max(v, 0) / max) * (BOTTOM - TOP)
-  const xy = points.map((p) => [x(p.age), y(p.totalAsset)] as const)
-  const path = xy
-    .map(([px, py], i) => {
-      if (i === 0) {
-        return `M${px.toFixed(1)} ${py.toFixed(1)}`
-      }
-      const [qx, qy] = xy[i - 1]
-      const mid = (qx + px) / 2
-      return `C${mid.toFixed(1)} ${qy.toFixed(1)}, ${mid.toFixed(1)} ${py.toFixed(1)}, ${px.toFixed(1)} ${py.toFixed(1)}`
-    })
-    .join(' ')
-  const [lx, ly] = xy[xy.length - 1]
+function MoneyTile({
+  label,
+  value,
+  testId,
+  tone = 'pen',
+  note,
+}: {
+  label: string
+  value: number
+  testId: string
+  tone?: 'pen' | 'red'
+  note?: string
+}) {
   return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      className="my-3 block h-auto w-full font-pen"
-      role="img"
-      aria-label="나이에 따른 전 재산"
-    >
-      <path d={path} fill="none" stroke="var(--pen)" strokeWidth={2.5} strokeLinecap="round" />
-      <circle cx={lx} cy={ly} r={3.5} fill="var(--red-pen)" />
-      <text x={2} y={H - 2} fontSize={14} fill="var(--pen-soft)">
-        {game.startAge}살
-      </text>
-      <text
-        x={Math.min(lx + 6, W - 30)}
-        y={Math.max(ly + 4, 16)}
-        fontSize={16}
-        fill="var(--red-pen)"
+    <div className="min-w-0 rounded border-2 border-dashed border-[#a6acb8] px-2.5 py-1.5">
+      <p className="text-[12px] text-pen-soft">{label}</p>
+      <p
+        className={`truncate font-pen text-[24px] leading-tight sm:text-[30px] ${tone === 'red' ? 'text-red-pen' : 'text-pen'}`}
+        data-testid={testId}
       >
-        지금
-      </text>
-    </svg>
+        {value === 0 && label === '빚' ? '없음' : shortWon(value)}
+      </p>
+      {note && <p className="text-[11px] text-pen-soft">{note}</p>}
+    </div>
   )
 }
 
