@@ -9,6 +9,7 @@ import investorgame.content.ContentCatalog;
 import investorgame.content.CrisisDefinition;
 import investorgame.content.FamilyTripText;
 import investorgame.content.HomeRegion;
+import investorgame.content.HousewarmingText;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
 import investorgame.content.LifeText;
@@ -320,6 +321,11 @@ class JsonContentCatalog implements ContentCatalog {
   @Override
   public FamilyTripText familyTripText() {
     return life.familyTrip();
+  }
+
+  @Override
+  public HousewarmingText housewarmingText() {
+    return life.housewarming();
   }
 
   @Override
@@ -782,6 +788,14 @@ class JsonContentCatalog implements ContentCatalog {
         life.outings().stream().allMatch(o -> o.minAge() >= 1 && o.minAge() <= o.maxAge()),
         "나들이마다 아이 나이 구간(minAge ≤ maxAge, 1세부터)이 있어야 한다 (decisions.md 106번)");
     require(
+        life.housewarming() != null
+            && life.housewarming().title() != null
+            && life.housewarming().luxuryLabel() != null
+            && life.housewarming().noneLabel() != null
+            && life.housewarming().luxuryText() != null
+            && life.housewarming().noneText() != null,
+        "집들이 문구가 비었다 (decisions.md 140번)");
+    require(
         life.partTimes() != null
             && !life.partTimes().isEmpty()
             && life.partTimes().stream().allMatch(j -> !j.name().isBlank() && j.monthly() > 0),
@@ -928,6 +942,7 @@ class JsonContentCatalog implements ContentCatalog {
       LifeText child,
       ChildWeddingText childWedding,
       FamilyTripText familyTrip,
+      HousewarmingText housewarming,
       SpouseText spouse,
       SpouseRentText spouseRent,
       List<OutingText> outings,

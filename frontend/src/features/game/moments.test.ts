@@ -234,3 +234,28 @@ describe('인생의 전환점 (decisions.md 139번)', () => {
     expect(m.caption).toContain('불황')
   })
 })
+
+describe('집들이 (decisions.md 140번)', () => {
+  it('돈을 쓴 집들이는 거실 그림과 기쁨, 생략하면 그림 없음', () => {
+    const housewarming: LogEntry = {
+      seq: 3,
+      day: 9000,
+      kind: 'LIFE',
+      payload: { noticeCode: 'housewarming', title: '집들이', amount: -500_000, option: 'normal' },
+    }
+    const g = game({
+      log: [housewarming],
+      household: { married: true, monthlyExpense: 1 } as unknown as Game['household'],
+    })
+    const m = momentForOutcome(outcome({ kind: 'LIFE', chosen: 'normal', actual: 'normal' }), g)
+    expect(m?.art.vignette).toBe('family')
+    expect(m?.mood).toBe('joy')
+    expect(m?.art.figures.map((f) => f.who)).toEqual(['me', 'spouse'])
+    expect(momentForNotice(housewarming, g)?.caption).toContain('집밥')
+    const skipped: LogEntry = {
+      ...housewarming,
+      payload: { ...housewarming.payload, amount: 0, option: 'none' },
+    }
+    expect(momentForNotice(skipped, g)).toBeNull()
+  })
+})

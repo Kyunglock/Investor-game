@@ -4,12 +4,14 @@ import { gradeOf } from './grade'
 import {
   actionLabelFor,
   childWord,
+  HOUSEWARMING_LABELS,
   percent,
   STAT_KEYS,
   STAT_LABELS,
   sideLabel,
   signedWon,
   statLabel,
+  TRIP_LABELS,
   withParticle,
   won,
   yearOf,
@@ -180,11 +182,8 @@ function entries(game: Game, ...kinds: LogEntry['kind'][]): LogEntry[] {
 }
 
 /** 이사·매수 선택지 → 집의 겉모습. 그림이 없는 선택지(넘김·사기 등)는 null. */
+/** 집 그림은 아파트를 산 것(매수·갭투자·청약 당첨)에만 붙는다. 월세·전세 이사는 줄로만 남는다 (decisions.md 140번). */
 const HOME_VIGNETTE: Record<string, VignetteKey> = {
-  MONTHLY: 'oneroom',
-  VILLA: 'villa',
-  VILLA_INSURED: 'villa',
-  APT_JEONSE: 'apartment',
   BUY_SEOUL: 'apartment',
   BUY_GYEONGGI: 'apartment',
   GAP: 'apartment',
@@ -455,6 +454,46 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
         return { line }
       }
       return { key: `home-${e.seq}`, line, art: coupleArt(game, vignette, e.day, 0, 11) }
+    }
+    case 'LIFE': {
+      // 가족 여행·집들이는 그림과 함께 새 장, 아이의 나들이는 줄로 (decisions.md 140번). 안 간/안 한 것(금액 0)은 줄로만.
+      const spent = num(p.amount) < 0
+      const option = str(p.option)
+      if (p.noticeCode === 'family-trip') {
+        const line: CreditLine = spent
+          ? {
+              text: `${age}세, 가족 여행 (${TRIP_LABELS[option] ?? option})`,
+              sub: won(-num(p.amount)),
+            }
+          : { text: `${age}세, ${str(p.proposer)}의 여행 제안을 거절했다`, tone: 'muted' }
+        if (!spent) {
+          return { line }
+        }
+        return { key: `trip-${e.seq}`, line, art: coupleArt(game, 'trip', e.day, 14, 26) }
+      }
+      if (p.noticeCode === 'housewarming') {
+        const line: CreditLine = spent
+          ? {
+              text: `${age}세, 새집 집들이 (${HOUSEWARMING_LABELS[option] ?? option})`,
+              sub: won(-num(p.amount)),
+            }
+          : { text: `${age}세, 집들이는 생략했다`, tone: 'muted' }
+        if (!spent) {
+          return { line }
+        }
+        return { key: `housewarming-${e.seq}`, line, art: coupleArt(game, 'family', e.day, 14, 28) }
+      }
+      if (p.noticeCode === 'kid-outing') {
+        return {
+          line: spent
+            ? { text: `${age}세, ${str(p.proposer)}와 ${str(p.title)}`, sub: won(-num(p.amount)) }
+            : {
+                text: `${age}세, ${str(p.proposer)}의 ${str(p.title)}에 함께하지 못했다`,
+                tone: 'muted',
+              },
+        }
+      }
+      return null
     }
     case 'CRISIS':
       return {

@@ -159,3 +159,10 @@ export const TRIP_LABELS: Record<string, string> = {
   normal: '보통',
   cheap: '당일치기',
 }
+
+/** 집들이 선택지 (decisions.md 140번). */
+export const HOUSEWARMING_LABELS: Record<string, string> = {
+  luxury: '크게',
+  normal: '집밥',
+  cheap: '짜장면',
+}

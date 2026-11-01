@@ -153,7 +153,12 @@ class HousingFlow {
         cramped(view, home, day),
         canLeaveMonthly,
         cashForJeonse,
-        buyAffordable);
+        buyAffordable,
+        view.homes().stream()
+            .filter(HousingView.Home::residence)
+            .map(HousingView.Home::purchaseDay)
+            .findFirst()
+            .orElse(null));
   }
 
   /**

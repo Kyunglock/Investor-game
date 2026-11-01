@@ -19,6 +19,7 @@ package investorgame.event;
  * @param cashForJeonse 아파트 전세 보증금을 대출 없이 현금으로 낼 수 있는가. 그러면 배우자에게 "조금만 더 모으자"는 말이 통하지 않는다 (111번)
  * @param buyAffordable 서울·경기 매수·갭투자 가운데 하나라도 감당할 수 있는가. 아니면 "집 살까?"가 오지 않고 감당되는 때로 미뤄진다
  *     (decisions.md 118번)
+ * @param residencePurchaseDay 지금 사는 내 집을 산 날. 얼마 뒤 집들이를 묻는다 (decisions.md 140번). 내 집에 살지 않으면 null
  */
 public record HousingFacts(
     String tenure,
@@ -33,9 +34,10 @@ public record HousingFacts(
     boolean cramped,
     boolean canLeaveMonthly,
     boolean cashForJeonse,
-    boolean buyAffordable) {
+    boolean buyAffordable,
+    Integer residencePurchaseDay) {
 
   public static final HousingFacts PARENTS =
       new HousingFacts(
-          "PARENTS", null, 0, false, false, null, 0, 50, false, false, false, false, false);
+          "PARENTS", null, 0, false, false, null, 0, 50, false, false, false, false, false, null);
 }
