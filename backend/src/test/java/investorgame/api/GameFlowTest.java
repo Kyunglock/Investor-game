@@ -53,6 +53,8 @@ class GameFlowTest {
     List<String> responses = new ArrayList<>();
     DocumentContext afterJob = null;
     int newsCount = 0;
+    // 고른 직업들. 회사가 전제인 일상 장면은 직업에 따라 빠지므로(decisions.md 134번) 기대 개수를 이걸로 센다.
+    List<String> jobsChosen = new ArrayList<>();
 
     for (int step = 0; step < 2_000 && "ACTIVE".equals(game.read("$.status")); step++) {
       Map<String, Object> pending = game.read("$.pendingEvent");
@@ -66,7 +68,11 @@ class GameFlowTest {
             switch (kind) {
               case "OFFER" -> "accept";
               case "NEWS" -> NEWS_CHOICES.get(newsCount++ % NEWS_CHOICES.size());
-              case "JOB" -> richestJob(game);
+              case "JOB" -> {
+                String job = richestJob(game);
+                jobsChosen.add(job);
+                yield job;
+              }
               // 빚투를 매번 받으면 떨어지는 종목에 계속 빚을 얹다가 파산한다(그게 정상이다). 이 검사는 70세까지의 흐름이 목적이라 거절한다.
               case "LEVERAGE" -> "PASS";
               // 자녀 결혼(선택지 full·half·none, decisions.md 68번)은 절반만 보탠다. 결혼·자녀는 하나까지만.
@@ -138,8 +144,16 @@ class GameFlowTest {
     assertThat(seenKinds.getOrDefault("CAREER", 0))
         .as("35년 동안 직장 장면이 여러 번")
         .isGreaterThanOrEqualTo(3);
-    // 성장 단계 10개에서 하나씩, 취업 뒤 일상 장면(adult) 풀 13개(양가 부모 장면 6개 포함, 결혼하므로 다 나온다)를 40년 동안 다 쓴다.
-    assertThat(seenKinds.get("TRAIT")).as("성장기 10 + 취업 뒤 일상 13").isEqualTo(23);
+    // 성장 단계 10개에서 하나씩, 취업 뒤 일상 장면(adult) 풀(양가 부모 장면 포함, 결혼하므로 다 나온다)을 40년 동안 다 쓴다.
+    // 회사가 전제인 장면은 고른 직업이 알바·농부·공무원·교사면 빠진다 (decisions.md 134번).
+    long adultExpected =
+        content.adultTraits().stream()
+            .filter(t -> jobsChosen.stream().anyMatch(t::fitsJob))
+            .count();
+    assertThat(adultExpected).isBetween(9L, 13L);
+    assertThat(seenKinds.get("TRAIT"))
+        .as("성장기 10 + 취업 뒤 일상 %d (직업 %s)", adultExpected, jobsChosen)
+        .isEqualTo(10 + (int) adultExpected);
     assertThat(kindOrder.subList(0, 13))
         .as("성장기의 성향 이벤트가 모두 끝난 뒤에 직업, 독립(주거), 그다음 투자 시작 제안")
         .containsExactly(
