@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Game, LogEntry, Outcome } from '../../api/client'
-import { frugalMoment, momentForNotice, momentForOutcome } from './moments'
+import { frugalMoment, momentForNotice, momentForOutcome, recessionMoment } from './moments'
 
 const game = (over: Partial<Game> = {}): Game =>
   ({
@@ -135,5 +135,102 @@ describe('frugalMoment', () => {
     expect(
       frugalMoment(game({ cash: 0, household: { monthlyExpense: 0 } as Game['household'] })),
     ).toBeNull()
+  })
+})
+
+describe('인생의 전환점 (decisions.md 139번)', () => {
+  const today = (kind: LogEntry['kind'], payload: Record<string, unknown>): LogEntry => ({
+    seq: 1,
+    day: 9000,
+    kind,
+    payload,
+  })
+
+  it('취직·재취직은 사무실 그림과 자신감, 전업투자자는 작업실', () => {
+    const first = momentForOutcome(
+      outcome({ kind: 'JOB', chosen: 'office', actual: 'office' }),
+      game({ log: [today('JOB', { jobTitle: '사무직', rehire: false })] }),
+    )
+    expect(first?.art.vignette).toBe('office')
+    expect(first?.mood).toBe('confident')
+    expect(first?.caption).toContain('첫 출근')
+    const again = momentForOutcome(
+      outcome({ kind: 'JOB', chosen: 'sales', actual: 'sales' }),
+      game({ log: [today('JOB', { jobTitle: '영업직', rehire: true })] }),
+    )
+    expect(again?.caption).toContain('영업직으로 다시 출근')
+    const investor = momentForOutcome(
+      outcome({ kind: 'JOB', chosen: 'INVEST', actual: 'INVEST' }),
+      game({ log: [today('JOB', { fullTimeInvestor: true })] }),
+    )
+    expect(investor?.art.vignette).toBe('studio')
+  })
+
+  it('구조조정으로 실직하면 빈 책상 그림과 좌절, 월급이 남은 직장 장면은 그림 없음', () => {
+    const laidOff = momentForOutcome(
+      outcome({ kind: 'CAREER', chosen: 'volunteer', actual: 'volunteer' }),
+      game({
+        log: [
+          today('CAREER', {
+            eventTitle: '구조조정',
+            jobTitle: null,
+            text: '위로금을 받았다. 월급이 끊기고 생활비는 계속 나간다.',
+          }),
+        ],
+      }),
+    )
+    expect(laidOff?.art.vignette).toBe('layoff')
+    expect(laidOff?.mood).toBe('despair')
+    const raise = momentForOutcome(
+      outcome({ kind: 'CAREER', chosen: 'hard', actual: 'hard' }),
+      game({
+        log: [today('CAREER', { eventTitle: '연봉 협상', jobTitle: '사무직', text: '월급 ↑' })],
+      }),
+    )
+    expect(raise).toBeNull()
+    const toInvestor = momentForOutcome(
+      outcome({ kind: 'CAREER', chosen: 'invest', actual: 'invest' }),
+      game({
+        log: [today('CAREER', { jobTitle: null, fullTimeInvestor: true, text: '월급이 끊기고' })],
+      }),
+    )
+    expect(toInvestor).toBeNull()
+  })
+
+  it('아이의 독립은 집 앞 그림, 결혼은 식장 그림과 기쁨. 결혼했으면 배우자도 선다', () => {
+    // 35세(7200일): 어른 몸. 결혼했고 아이 둘.
+    const married = game({
+      day: 7200,
+      startAge: 15,
+      daysPerYear: 360,
+      household: {
+        married: true,
+        children: [{ sex: 'F' }, { sex: 'M' }],
+        monthlyExpense: 1,
+      } as unknown as Game['household'],
+    })
+    const left = momentForNotice(today('CHILD_LEFT', { seq: 2, childAge: 22 }), married)
+    expect(left?.art.vignette).toBe('leave-home')
+    expect(left?.mood).toBeNull()
+    expect(left?.art.figures.map((f) => [f.who, f.sex, f.stage])).toEqual([
+      ['me', 'F', 'adult'],
+      ['spouse', 'M', 'adult'],
+      ['kid', 'M', 'adult'],
+    ])
+    expect(left?.caption).toContain('둘째')
+    const wed = momentForNotice(today('CHILD_WEDDING', { seq: 1, cost: 1 }), game())
+    expect(wed?.art.vignette).toBe('wedding')
+    expect(wed?.mood).toBe('joy')
+    expect(wed?.art.figures.map((f) => f.who)).toEqual(['me', 'kid'])
+  })
+
+  it('불황 회고는 셔터 내린 거리 그림과 좌절', () => {
+    const m = recessionMoment(
+      game(),
+      today('CRISIS', { name: '부동산 금융 위기', severity: 'RECESSION' }),
+    )
+    expect(m.art.vignette).toBe('recession')
+    expect(m.mood).toBe('despair')
+    expect(m.caption).toContain('불황')
   })
 })

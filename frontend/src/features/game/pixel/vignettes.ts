@@ -34,6 +34,10 @@ export type VignetteKey =
   | 'frugal'
   | 'crash'
   | 'surge'
+  | 'recession'
+  | 'layoff'
+  | 'leave-home'
+  | 'wedding'
 
 /** 그림 속 한 사람. me는 플레이어(장식·약점 표시까지), spouse·kid는 옷 색만 다른 맨 몸이다. 성별로 머리·치마가 갈린다 (decisions.md 69번). x는 16칸 몸의 왼쪽 열. */
 export interface Figure {
@@ -347,5 +351,99 @@ export const VIGNETTES: Record<VignetteKey, PixelMap> = {
     }
     rect(c, 40, 8, 10, 9, 'M')
     street(c)
+  }),
+  // 불황: 잿빛 하늘, 셔터 내린 상점가와 "임대" 종이, 내리꽂히는 시세판 (decisions.md 139번).
+  recession: build((c) => {
+    rect(c, 0, 0, SCENE_WIDTH, 17, 'H')
+    rect(c, 2, 1, 18, 3, 'C')
+    rect(c, 38, 0, 22, 3, 'C')
+    // 상점 두 칸: 셔터(가로줄)와 종이.
+    rect(c, 2, 6, 22, 11, 'M')
+    rect(c, 1, 5, 24, 1, 'X')
+    for (let y = 8; y < 17; y += 2) {
+      rect(c, 4, y, 18, 1, 'N')
+    }
+    rect(c, 10, 9, 6, 4, 'W')
+    rect(c, 11, 10, 4, 1, 'R')
+    rect(c, 11, 12, 4, 1, 'N')
+    // 길 건너 시세판: 파랗게 내린다.
+    board(c, 40, false)
+    street(c)
+  }),
+  // 실직: 빈 책상 위 짐 상자, 벽의 비구름, 열린 문 (decisions.md 139번).
+  layoff: build((c) => {
+    room(c)
+    rect(c, 0, 0, SCENE_WIDTH, 2, 'C')
+    rect(c, 18, 13, 18, 1, 'T')
+    rect(c, 19, 14, 1, 3, 'T')
+    rect(c, 34, 14, 1, 3, 'T')
+    // 짐 상자: 갈색에 노란 테이프, 삐죽 나온 화분.
+    rect(c, 22, 8, 10, 5, 'd')
+    rect(c, 26, 8, 2, 5, 'y')
+    rect(c, 23, 6, 3, 2, 'g')
+    rect(c, 24, 8, 1, 1, 'P')
+    // 열린 문과 그 밖의 빛.
+    rect(c, 50, 4, 8, 13, 'V')
+    rect(c, 52, 5, 5, 12, 'L')
+    dots(c, 'B', [
+      [6, 5],
+      [9, 6],
+      [12, 5],
+      [7, 8],
+      [11, 9],
+    ])
+  }),
+  // 자녀 독립: 집 현관 앞, 짐가방과 길, 떠나는 아이 (decisions.md 139번).
+  'leave-home': build((c) => {
+    sky(c, 12)
+    rect(c, 0, 12, SCENE_WIDTH, 5, 'Q')
+    // 집: 벽, 지붕, 문, 창.
+    rect(c, 2, 4, 26, 13, 'F')
+    rect(c, 1, 3, 28, 1, 'X')
+    rect(c, 3, 2, 24, 1, 'X')
+    rect(c, 6, 9, 5, 8, 'V')
+    rect(c, 10, 12, 1, 1, 'y')
+    window(c, 16, 6, 8, 5)
+    // 길과 짐가방.
+    rect(c, 28, 15, 36, 2, 'A')
+    rect(c, 50, 13, 6, 4, 'd')
+    rect(c, 52, 12, 2, 1, 'd')
+    rect(c, 51, 14, 4, 1, 'y')
+    street(c)
+  }),
+  // 자녀 결혼: 흰 아치와 꽃, 하트 (decisions.md 139번).
+  wedding: build((c) => {
+    rect(c, 0, 0, SCENE_WIDTH, 17, 'F')
+    rect(c, 0, 0, SCENE_WIDTH, 2, 'H')
+    rect(c, 0, 17, SCENE_WIDTH, 3, 'R')
+    // 아치: 기둥 둘과 둥근 위.
+    rect(c, 38, 4, 2, 13, 'W')
+    rect(c, 56, 4, 2, 13, 'W')
+    rect(c, 40, 3, 16, 1, 'W')
+    rect(c, 42, 2, 12, 1, 'W')
+    // 꽃: 기둥에 감긴 빨강·노랑.
+    dots(c, 'R', [
+      [38, 6],
+      [57, 8],
+      [39, 10],
+      [56, 12],
+      [44, 2],
+      [51, 2],
+    ])
+    dots(c, 'y', [
+      [39, 7],
+      [56, 9],
+      [38, 12],
+      [57, 14],
+      [47, 2],
+    ])
+    dots(c, 'g', [
+      [38, 8],
+      [57, 10],
+      [39, 13],
+    ])
+    heart(c, 10, 2)
+    heart(c, 24, 4)
+    heart(c, 60, 6)
   }),
 }

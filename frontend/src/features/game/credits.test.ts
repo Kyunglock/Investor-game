@@ -320,6 +320,8 @@ describe('buildCredits (시간순, decisions.md 70번)', () => {
       'family',
       'child-1',
       `home-${game.log[6].seq}`,
+      // 자녀 독립도 전환점이라 그림과 함께 새 장이 열린다 (decisions.md 139번).
+      `left-${game.log[8].seq}`,
       'review',
       'last',
     ])
@@ -343,21 +345,20 @@ describe('buildCredits (시간순, decisions.md 70번)', () => {
       '31세, 첫째 딸이 태어났다',
       '33세, 아파트 전세',
       '35세 · 연봉 협상',
-      '58세, 첫째가 독립했다',
-      '60세, 은퇴',
     ])
+    expect(credits[6].lines.map((l) => l.text)).toEqual(['58세, 첫째가 독립했다', '60세, 은퇴'])
     expect(credits[1].lines[0].sub).toContain('통장 10,000,000원')
     expect(credits[1].lines[2]).toEqual({
       text: '24세, 투자 성향이 정해졌다',
       sub: '느긋한 농부 — 길게 본다.',
       tone: 'accent',
     })
-    expect(credits[6].lines[0].text).toBe('투자를 시작하지 않았다')
-    expect(credits[7].lines.at(-1)).toEqual({
+    expect(credits[7].lines[0].text).toBe('투자를 시작하지 않았다')
+    expect(credits[8].lines.at(-1)).toEqual({
       text: '70세. 남은 자산 80,000,000원과 매달 연금 1,990,000원으로 여생을 보냈다.',
       tone: 'accent',
     })
-    // 그림: 아기방 → 사무실 → 거실(둘) → 아기 침대 → 아파트(둘) → 창가의 노년(둘).
+    // 그림: 아기방 → 사무실 → 거실(둘) → 아기 침대 → 아파트(둘) → 집 앞(독립) → 창가의 노년(둘).
     expect(credits.map((s) => s.art?.vignette)).toEqual([
       undefined,
       'nursery',
@@ -365,8 +366,15 @@ describe('buildCredits (시간순, decisions.md 70번)', () => {
       'family',
       'baby',
       'apartment',
+      'leave-home',
       undefined,
       'home-old',
+    ])
+    // 독립 그림: 중년의 나와 배우자, 어른이 된 첫째(딸).
+    expect(credits[6].art?.figures.map((f) => [f.who, f.sex, f.stage])).toEqual([
+      ['me', 'M', 'middle'],
+      ['spouse', 'F', 'middle'],
+      ['kid', 'F', 'adult'],
     ])
     expect(credits[3].art?.figures.map((f) => [f.who, f.sex])).toEqual([
       ['me', 'M'],
@@ -375,7 +383,7 @@ describe('buildCredits (시간순, decisions.md 70번)', () => {
     expect(credits[5].art?.figures.map((f) => f.who)).toEqual(['me', 'spouse'])
   })
 
-  it('전업투자자는 첫 일터 그림이 시세판이고, 두 번째 직장부터는 그림 없이 줄만 이어진다', () => {
+  it('전업투자자는 첫 일터 그림이 시세판이고, 재취직에도 그림이 붙어 새 장이 열린다 (decisions.md 139번)', () => {
     const game = baseGame({
       fullTimeInvestor: true,
       log: [
@@ -406,11 +414,14 @@ describe('buildCredits (시간순, decisions.md 70번)', () => {
     expect(sections.filter((s) => s.key === 'work')).toHaveLength(1)
     expect(sections.find((s) => s.key === 'work')?.lines.map((l) => l.text)).toEqual([
       '25세, 회계사에 취직',
-      '40세, 세무사로 다시 취직',
     ])
+    const again = sections.find((s) => s.key === `work-${twoJobs.log[2].seq}`)
+    expect(again?.lines.map((l) => l.text)).toEqual(['40세, 세무사로 다시 취직'])
+    expect(again?.art?.vignette).toBe('office')
+    expect(again?.art?.figures[0].stage).toBe('middle')
   })
 
-  it('위기·빚투·전세사기·매도는 기록된 자리에 줄로 남는다', () => {
+  it('빚투·전세사기·매도는 기록된 자리에 줄로 남고, 위기는 그림과 함께 새 장을 연다 (decisions.md 139번)', () => {
     const game = baseGame({
       log: [
         entry('BIRTH', 15, {}),
@@ -434,10 +445,12 @@ describe('buildCredits (시간순, decisions.md 70번)', () => {
         entry('END', 70, {}),
       ],
     })
-    const born = buildCredits(game).find((s) => s.key === 'born')
-    expect(born?.lines.map((l) => l.text)).toEqual([
-      '15세, 태어났다',
-      '34세, 삼송전자에 빚투',
+    const sections = buildCredits(game)
+    const born = sections.find((s) => s.key === 'born')
+    expect(born?.lines.map((l) => l.text)).toEqual(['15세, 태어났다', '34세, 삼송전자에 빚투'])
+    const crisis = sections.find((s) => s.key === `crisis-${game.log[2].seq}`)
+    expect(crisis?.art?.vignette).toBe('recession')
+    expect(crisis?.lines.map((l) => l.text)).toEqual([
       '33~36세, 부동산 금융 위기 (불황)',
       '38세, 전세사기',
       '50세, 서울 매도',
@@ -586,7 +599,7 @@ describe('크레딧 그림 (#23)', () => {
     }
   })
 
-  it('독립·결혼은 아이 장이 아니라 그 일이 있던 자리에 줄로 남는다 (decisions.md 68·70번)', () => {
+  it('독립·결혼은 아이 장이 아니라 그 일이 있던 자리에 그림과 함께 새 장으로 (decisions.md 68·70·139번)', () => {
     const grown = buildCredits(
       baseGame({
         household: {
@@ -609,13 +622,20 @@ describe('크레딧 그림 (#23)', () => {
       }),
     )
     const first = grown.find((s) => s.key === 'child-1')
-    expect(first?.lines.map((l) => l.text)).toEqual([
-      '30세, 첫째 아들이 태어났다',
-      '57세, 첫째가 독립했다',
-      '60세, 첫째가 결혼했다',
-    ])
-    expect(first?.lines[1].sub).toBe('27살에 집을 나갔다')
-    expect(first?.lines[2].sub).toBe('결혼 비용 60,000,000원 가운데 30,000,000원을 보탰다')
+    expect(first?.lines.map((l) => l.text)).toEqual(['30세, 첫째 아들이 태어났다'])
+    const left = grown.find((s) => s.key?.startsWith('left-'))
+    expect(left?.lines[0]).toMatchObject({
+      text: '57세, 첫째가 독립했다',
+      sub: '27살에 집을 나갔다',
+    })
+    expect(left?.art?.vignette).toBe('leave-home')
+    expect(left?.art?.figures.map((f) => f.who)).toEqual(['me', 'spouse', 'kid'])
+    const wed = grown.find((s) => s.key?.startsWith('wedding-'))
+    expect(wed?.lines[0]).toMatchObject({
+      text: '60세, 첫째가 결혼했다',
+      sub: '결혼 비용 60,000,000원 가운데 30,000,000원을 보탰다',
+    })
+    expect(wed?.art?.vignette).toBe('wedding')
   })
 
   it('이사·매수마다 그때 집의 겉모습이 붙고, 결혼 전이면 혼자 선다', () => {
