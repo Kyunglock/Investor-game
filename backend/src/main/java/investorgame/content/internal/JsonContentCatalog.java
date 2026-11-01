@@ -636,6 +636,14 @@ class JsonContentCatalog implements ContentCatalog {
         List.of("hint-wrong-you-right", "hint-wrong-followed", "hint-right-ignored", "deviated")) {
       require(!reviewPhrases("extra", key).isEmpty(), "안목 덧붙임 문구가 없다: " + key);
     }
+    for (String pair :
+        List.of("HOLD-BUY", "HOLD-SELL", "BUY-HOLD", "SELL-HOLD", "BUY-SELL", "SELL-BUY")) {
+      for (String direction : List.of("UP", "DOWN")) {
+        require(
+            !reviewPhrases("swerve", pair + "-" + direction).isEmpty(),
+            "선택과 행동이 다를 때의 안목 문구가 없다: " + pair + "-" + direction);
+      }
+    }
     for (String situation : List.of("layoff", "career-fail", "big-loss", "fraud")) {
       for (String who : List.of("spouse", "child", "parents", "friend")) {
         require(
