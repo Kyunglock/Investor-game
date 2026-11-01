@@ -61,6 +61,7 @@ class DefaultEventServiceTest {
             "office",
             JOB_DAY,
             false,
+            null,
             false,
             null,
             null,
@@ -219,6 +220,7 @@ class DefaultEventServiceTest {
             null,
             JOB_DAY,
             true,
+            null,
             false,
             null,
             null,
@@ -412,6 +414,7 @@ class DefaultEventServiceTest {
         "office",
         JOB_DAY,
         false,
+        null,
         true,
         marriedDay,
         null,
@@ -442,6 +445,7 @@ class DefaultEventServiceTest {
         "office",
         JOB_DAY,
         false,
+        null,
         married,
         marriedDay,
         null,
@@ -483,6 +487,7 @@ class DefaultEventServiceTest {
             null,
             JOB_DAY,
             false,
+            null,
             false,
             null,
             null,
@@ -518,6 +523,7 @@ class DefaultEventServiceTest {
             null,
             JOB_DAY,
             false,
+            null,
             false,
             null,
             null,
@@ -551,6 +557,7 @@ class DefaultEventServiceTest {
             null,
             JOB_DAY,
             false,
+            null,
             false,
             null,
             null,
@@ -587,6 +594,7 @@ class DefaultEventServiceTest {
             null,
             JOB_DAY,
             true,
+            null,
             true,
             JOB_DAY + YEAR,
             null,
@@ -606,6 +614,50 @@ class DefaultEventServiceTest {
     assertThat(nextOf(UUID.randomUUID(), retired, from, EventKind.CAREER, 3L)).isEmpty();
   }
 
+  /** 정년퇴직 (decisions.md 128번): 은퇴한 날 "정년퇴직" 장면이 한 번 오고, 그 뒤로는 직장 장면이 없다. */
+  @Test
+  void 정년으로_은퇴한_날_정년퇴직_장면이_한_번_온다() {
+    int retiredDay = (60 - START_AGE) * YEAR;
+    SchedulingContext retired =
+        new SchedulingContext(
+            Phase.INVESTING,
+            START_AGE,
+            "long",
+            "food",
+            JOB_DAY + 30,
+            true,
+            JOB_DAY + 30,
+            END_DAY,
+            JOB_DAY,
+            "office",
+            JOB_DAY,
+            true,
+            retiredDay,
+            false,
+            null,
+            null,
+            0,
+            List.of(),
+            List.of(),
+            List.of(),
+            false,
+            Map.of(),
+            Map.of(),
+            SETTLED,
+            0L,
+            50,
+            Set.of());
+    UUID gameId = UUID.randomUUID();
+    EventView scene = firstOf(gameId, retired, retiredDay - 10, EventKind.CAREER, 3L);
+    assertThat(scene.title()).isEqualTo("정년퇴직");
+    assertThat(scene.occursDay()).isEqualTo(retiredDay);
+    assertThat(scene.options())
+        .extracting(EventView.Option::code)
+        .containsExactly("party", "quiet", "trip");
+    events.complete(gameId, scene.eventId(), new Completion("quiet", "quiet", List.of()));
+    assertThat(nextOf(gameId, retired, retiredDay, EventKind.CAREER, 3L)).isEmpty();
+  }
+
   @Test
   void 직장이_배경인_일상_장면은_직장이_없으면_나오지_않는다() {
     UUID gameId = UUID.randomUUID();
@@ -623,6 +675,7 @@ class DefaultEventServiceTest {
             "office",
             JOB_DAY,
             true,
+            null,
             false,
             null,
             null,
@@ -704,6 +757,7 @@ class DefaultEventServiceTest {
         jobCode,
         JOB_DAY,
         false,
+        null,
         false,
         null,
         null,
@@ -849,6 +903,7 @@ class DefaultEventServiceTest {
         null,
         JOB_DAY,
         false,
+        null,
         false,
         null,
         null,
@@ -1592,6 +1647,7 @@ class DefaultEventServiceTest {
             null,
             JOB_DAY,
             false,
+            null,
             false,
             null,
             null,
@@ -1652,6 +1708,7 @@ class DefaultEventServiceTest {
         c.jobCode(),
         c.careerStartDay(),
         true,
+        null,
         c.married(),
         c.marriedDay(),
         c.spouseJob(),
@@ -1682,6 +1739,7 @@ class DefaultEventServiceTest {
         c.jobCode(),
         c.careerStartDay(),
         c.retired(),
+        null,
         c.married(),
         c.marriedDay(),
         c.spouseJob(),
@@ -1712,6 +1770,7 @@ class DefaultEventServiceTest {
         c.jobCode(),
         c.careerStartDay(),
         c.retired(),
+        null,
         c.married(),
         c.marriedDay(),
         c.spouseJob(),
@@ -1748,6 +1807,7 @@ class DefaultEventServiceTest {
         "office",
         JOB_DAY,
         false,
+        null,
         marriedDay != null,
         marriedDay,
         spouseJob,
@@ -1785,6 +1845,7 @@ class DefaultEventServiceTest {
         "office",
         JOB_DAY,
         false,
+        null,
         false,
         null,
         null,
@@ -1819,6 +1880,7 @@ class DefaultEventServiceTest {
             "office",
             JOB_DAY,
             false,
+            null,
             false,
             null,
             null,
