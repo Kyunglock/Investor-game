@@ -252,7 +252,7 @@ class GameFlowTest {
     assertThat(game.<String>read("$.sex")).isIn("M", "F");
     List<String> childSexes = game.read("$.household.children[*].sex");
     assertThat(childSexes).isNotEmpty().allMatch(s -> List.of("M", "F").contains(s));
-    assertThat(kinds.stream().filter("TRAIT"::equals).count()).isEqualTo(23);
+    assertThat(kinds.stream().filter("TRAIT"::equals).count()).isEqualTo(10 + adultExpected);
     assertThat(kinds.stream().filter("NEWS"::equals).count())
         .isEqualTo((long) seenKinds.get("NEWS"));
     // 흔들림(SHAKE)도 선택 뒤 주가가 움직여 PRICE를 남긴다 (decisions.md 33번).
