@@ -21,7 +21,7 @@ import { Vignette } from './pixel/Vignette'
 import { useGameStore } from './store'
 
 /** 뉴스 선택 뒤 결과를 감추고 성격이 손을 움직이는 동안 기다리는 시간. 바로 나오면 억울할 틈이 없다. */
-const REVEAL_MS = 1_800
+export const REVEAL_MS = 1_800
 
 /** 선택 → 실제 행동과 그 원인을 보여 준다. 원인이 보여야 억울함이 동기가 된다 (prd.md F6). 결과도 선택처럼 화면을 덮는다 (decisions.md 31번). */
 export function OutcomeCard(props: {

@@ -132,3 +132,15 @@ describe('위기 회고 alert (decisions.md 60번, #71)', () => {
     expect(useGameStore.getState().running).toBe(false)
   })
 })
+
+describe('자동 진행', () => {
+  it('켜면 저장되고 서 있던 시계를 돌리며, 끄면 시계는 그대로다', () => {
+    useGameStore.setState({ game: game(), status: 'playing', running: false, autoPlay: false })
+    useGameStore.getState().setAutoPlay(true)
+    expect(useGameStore.getState().autoPlay).toBe(true)
+    expect(useGameStore.getState().running).toBe(true)
+    useGameStore.getState().setAutoPlay(false)
+    expect(useGameStore.getState().autoPlay).toBe(false)
+    expect(useGameStore.getState().running).toBe(true)
+  })
+})

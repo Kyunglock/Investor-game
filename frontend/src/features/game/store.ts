@@ -62,6 +62,8 @@ interface GameState {
   crisisAlert: LogEntry | null
   /** 투자 성향 보고서를 펼쳤는가. 펼친 동안 시계가 멈춘다 (decisions.md 61번). */
   reportOpen: boolean
+  /** 자동 진행. 켜 두면 선택·결과·회고를 성향과 능력치로 대신 넘기고 크레딧까지 흐른다 (decisions.md 131번). 브라우저에 남는다. */
+  autoPlay: boolean
   load: () => Promise<void>
   born: () => Promise<void>
   startLife: () => void
@@ -85,6 +87,7 @@ interface GameState {
   dismissCrisis: () => void
   openReport: () => void
   closeReport: () => void
+  setAutoPlay: (on: boolean) => void
   /** 가진 아파트를 매물로 내놓거나 거둔다. 팔리는 것은 매수자가 나와야 한다 (주거 설계 3절). */
   listHome: (seq: number, listed: boolean) => Promise<void>
   /** 주담대를 현금으로 일시 상환한다 (decisions.md 58번). 실패하면 이유를 돌려준다. */
@@ -94,6 +97,26 @@ interface GameState {
 }
 
 export const MACRO_TAB = 'macro'
+export const AUTO_PLAY_KEY = 'investor-game.auto-play'
+
+/** 브라우저에 남긴 자동 진행 설정. 저장소가 막혀 있으면(사생활 보호 모드 등) 꺼진 것으로 본다. */
+function storedAutoPlay(): boolean {
+  try {
+    return typeof localStorage !== 'undefined' && localStorage.getItem(AUTO_PLAY_KEY) === 'on'
+  } catch {
+    return false
+  }
+}
+
+function storeAutoPlay(on: boolean) {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(AUTO_PLAY_KEY, on ? 'on' : 'off')
+    }
+  } catch {
+    // 저장이 안 되면 이 판에서만 켜진다.
+  }
+}
 export const HELD_TAB = 'held'
 
 export const useGameStore = create<GameState>((set, get) => {
@@ -201,6 +224,7 @@ export const useGameStore = create<GameState>((set, get) => {
     notices: [],
     crisisAlert: null,
     reportOpen: false,
+    autoPlay: storedAutoPlay(),
 
     // 재접속하면 일시정지 상태로 이어한다. 상황을 보고 사용자가 계속을 누른다 (architecture.md 7절).
     load: async () => {
@@ -442,6 +466,15 @@ export const useGameStore = create<GameState>((set, get) => {
     closeReport: () => {
       set({ reportOpen: false })
       get().resume()
+    },
+
+    // 자동 진행을 켜면 서 있던 시계부터 돌린다. 선택·결과가 떠 있으면 useAutoPlay가 이어받는다.
+    setAutoPlay: (on) => {
+      storeAutoPlay(on)
+      set({ autoPlay: on })
+      if (on) {
+        get().resume()
+      }
     },
 
     repayMortgage: async (seq, amount) => {

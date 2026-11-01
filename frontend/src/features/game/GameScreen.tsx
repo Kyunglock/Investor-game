@@ -9,6 +9,7 @@ import { OutcomeCard } from './OutcomeCard'
 import { Overlay } from './Overlay'
 import { ProfileReport } from './ProfileReport'
 import { useGameStore } from './store'
+import { useAutoPlay } from './useAutoPlay'
 import { useGameClock } from './useGameClock'
 
 /**
@@ -17,6 +18,7 @@ import { useGameClock } from './useGameClock'
  */
 export function GameScreen({ game }: { game: Game }) {
   useGameClock()
+  useAutoPlay()
   // 시계는 0.1초마다 흐르지만 수첩은 나이(년)만 보므로, 해가 바뀔 때만 다시 그린다.
   const ageYears = useGameStore((s) => ageAt(game.startAge, s.day, game.daysPerYear).years)
   const outcome = useGameStore((s) => s.outcome)

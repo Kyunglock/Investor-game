@@ -16,6 +16,9 @@ interface Props {
   onRestart: () => void
   /** 투자 인생을 여기서 끝낸다 (decisions.md 68번). 두 번 눌러 확인한다 */
   onQuit: () => void
+  /** 자동 진행 (decisions.md 131번). 선택 카드가 떠 있어도 켜고 끌 수 있다 */
+  autoPlay: boolean
+  onToggleAuto: () => void
 }
 
 const buttonBase =
@@ -31,6 +34,8 @@ export function TopBar({
   onResume,
   onRestart,
   onQuit,
+  autoPlay,
+  onToggleAuto,
 }: Props) {
   // 0.1초마다 바뀌는 day는 여기서만 구독한다. App이 구독하면 진행 화면 전체가 틱마다 다시 그려진다.
   const day = useGameStore((s) => s.day)
@@ -68,6 +73,19 @@ export function TopBar({
                 }}
               >
                 {running ? '❚❚ 멈춤' : '▶ 계속'}
+              </button>
+              <button
+                type="button"
+                className={`${buttonBase} ${autoPlay ? 'bg-pen text-paper hover:bg-pen' : ''}`}
+                aria-pressed={autoPlay}
+                title="성향과 안목으로 선택을 대신하고 엔딩 크레딧까지 흐른다"
+                onClick={() => {
+                  setConfirmQuit(false)
+                  onToggleAuto()
+                }}
+                data-testid="auto-button"
+              >
+                {autoPlay ? '⟳ 자동 켬' : '⟳ 자동'}
               </button>
               <button
                 type="button"
