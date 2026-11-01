@@ -116,7 +116,25 @@ class JdbcCharacterService implements CharacterService {
         profile.riskProfile(),
         profile.mindProfile(),
         profile.interestSector(),
-        profile.investorType());
+        profile.investorType(),
+        profile.name());
+  }
+
+  @Override
+  @Transactional
+  public void rename(UUID gameId, String name) {
+    int updated =
+        jdbc.sql(
+                """
+                UPDATE character_profile SET name = :name, updated_at = :now WHERE game_id = :gameId
+                """)
+            .param("name", name)
+            .param("now", now())
+            .param("gameId", gameId)
+            .update();
+    if (updated == 0) {
+      throw new NotFoundException("캐릭터가 없다");
+    }
   }
 
   @Override
@@ -446,7 +464,7 @@ class JdbcCharacterService implements CharacterService {
     return jdbc.sql(
             """
             SELECT job_code, job_start_day, career_start_day, salary_bonus_bp, full_time_investor_day,
-                   investment_style, risk_profile, mind_profile, interest_sector, investor_type
+                   investment_style, risk_profile, mind_profile, interest_sector, investor_type, name
             FROM character_profile
             WHERE game_id = :gameId
             """)
@@ -485,7 +503,8 @@ class JdbcCharacterService implements CharacterService {
       String riskProfile,
       String mindProfile,
       String interestSector,
-      String investorType) {}
+      String investorType,
+      String name) {}
 
   private record StatRow(String statCode, int initialValue, int value, int exp) {}
 

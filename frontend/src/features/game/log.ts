@@ -17,7 +17,6 @@ import {
   won,
   yearOf,
 } from './labels'
-import { nickname } from './nickname'
 
 /**
  * 인생 기록 한 줄의 문구. 서버는 코드와 숫자만 주고(설계 6.3절) 문구는 여기서 만든다 (설계 5.5절).
@@ -76,7 +75,7 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
         ...base,
         tone: 'birth',
         pill: '탄생',
-        text: `${yearOf(base.age)}년, ${parts}을 타고났다. 별명은 '${nickname(stats).name}'.`,
+        text: `${yearOf(base.age)}년, ${parts}을 타고났다.`,
       }
     }
     case 'TRAIT':

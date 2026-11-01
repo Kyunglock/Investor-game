@@ -13,6 +13,9 @@ public interface CharacterService {
 
   CharacterView get(UUID gameId);
 
+  /** 사용자가 정한 이름을 붙인다. 다듬기(공백·길이)는 호출하는 쪽이 끝낸 값이다 (decisions.md 135번). */
+  void rename(UUID gameId, String name);
+
   /** 직업을 정한다. 직업이 없을 때(첫 취업 또는 실직 뒤)만 가능하다. 처음이면 careerStartDay도 이 날이 된다. 전업투자자면 오류. */
   void assignJob(UUID gameId, String jobCode, int startDay);
 

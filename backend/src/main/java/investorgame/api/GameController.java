@@ -116,6 +116,16 @@ class GameController {
     return game;
   }
 
+  /** 캐릭터 이름을 정한다 (decisions.md 135번). 출생 신고서에서 적고, 진행 중엔 언제든 바꿀 수 있다. */
+  @PostMapping("/{gameId}/name")
+  GameView rename(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @PathVariable UUID gameId,
+      @Valid @RequestBody NameRequest request) {
+    UUID sessionId = cookies.requireSession(token);
+    return progress.rename(sessionId, gameId, request.name());
+  }
+
   @PostMapping("/{gameId}/trades")
   ChoiceOutcome trade(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
@@ -177,6 +187,8 @@ class GameController {
   record AdvanceRequest(@Min(0) int day) {}
 
   record ListingRequest(boolean listed) {}
+
+  record NameRequest(@NotBlank String name) {}
 
   /** 한 번에 주문할 수 있는 최대 수량. 계약(TradeRequest.quantity.maximum)과 같은 값이다. */
   static final long MAX_TRADE_QUANTITY = 1_000_000_000L;

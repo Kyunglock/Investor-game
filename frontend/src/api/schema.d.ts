@@ -103,6 +103,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/games/{gameId}/name": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 캐릭터 이름을 정한다
+         * @description 출생 신고서에서 사용자가 적는 이름이다. 능력치로 짓던 별명 대신 이름 자리에 쓴다 (decisions.md 135번).
+         *     앞뒤 공백을 잘라 1~8자여야 한다 (400). 진행 중인 판이면 언제든 바꿀 수 있다.
+         */
+        post: operations["renameCharacter"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/games/{gameId}/trades": {
         parameters: {
             query?: never;
@@ -673,6 +694,10 @@ export interface components {
         ListingRequest: {
             listed: boolean;
         };
+        NameRequest: {
+            /** @description 캐릭터 이름. 앞뒤 공백은 잘린다 */
+            name: string;
+        };
         RepayRequest: {
             /**
              * Format: int64
@@ -759,12 +784,14 @@ export interface components {
             endAge: number;
             daysPerYear: number;
             sex: components["schemas"]["Sex"];
+            /** @description 사용자가 정한 이름. 아직 정하지 않았으면 null (decisions.md 135번) */
+            name?: string | null;
             /** @description 행복도 0~100. 결혼·아이·여행·내 집은 올리고 실직·전세사기·긴축·큰 손실은 내린다 (decisions.md 82번) */
             happiness: number;
             /** @description 가족 점수 0~100. 가족을 챙기는 선택은 올리고 거절·방치는 내린다 (decisions.md 88번) */
             family: number;
             stats: components["schemas"]["Stats"];
-            /** @description 태어날 때의 능력치. 별명은 이 값으로 정해서 게임 중에 바뀌지 않는다 */
+            /** @description 태어날 때의 능력치. 그림의 장식(강점)은 이 값으로 정해서 게임 중에 바뀌지 않는다 */
             initialStats: components["schemas"]["Stats"];
             /** Format: int64 */
             cash: number;
@@ -1037,6 +1064,35 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description 끝난 판 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Game"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    renameCharacter: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gameId: components["parameters"]["GameId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NameRequest"];
+            };
+        };
+        responses: {
+            /** @description 판 상태 */
             200: {
                 headers: {
                     [name: string]: unknown;

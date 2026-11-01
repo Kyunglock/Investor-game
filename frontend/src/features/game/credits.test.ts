@@ -323,7 +323,7 @@ describe('buildCredits (시간순, decisions.md 70번)', () => {
       'review',
       'last',
     ])
-    expect(credits[0].title).toBe('겁 많은 돌부처의 투자 인생')
+    expect(credits[0].title).toBe('이름 없는 투자자의 투자 인생')
     expect(credits[0].lines[1]).toEqual({ text: '70세, 은퇴 후 연금 생활', tone: 'accent' })
     // 시간순 장의 제목은 그 장이 시작된 해.
     expect(credits.slice(1, 6).map((s) => s.title)).toEqual([

@@ -10,6 +10,7 @@ import { layersFor } from './pixel/layers'
 import { Scene } from './pixel/Scene'
 import { SCENES, sceneCaption, sceneFor } from './pixel/scenes'
 import { Vignette } from './pixel/Vignette'
+import { playerName } from './playerName'
 import { useGameStore } from './store'
 
 const VISIBLE = 12
@@ -41,7 +42,6 @@ export function DiaryPage({ game, ageYears }: { game: Game; ageYears: number }) 
 }
 
 function Identity({ game }: { game: Game }) {
-  const nick = nickname(game.initialStats)
   const job = game.job
     ? game.job.title
     : game.fullTimeInvestor
@@ -52,8 +52,8 @@ function Identity({ game }: { game: Game }) {
   return (
     <div className="mt-1 mb-5 text-pen-soft" data-testid="identity-card">
       <p className="text-[15px]">
-        <b className="text-pen" data-testid="nickname">
-          {nick.name}
+        <b className="text-pen" data-testid="player-name">
+          {playerName(game)}
         </b>
         {' · '}
         <span data-testid="job">{job}</span>

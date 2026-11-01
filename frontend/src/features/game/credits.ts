@@ -14,10 +14,10 @@ import {
   won,
   yearOf,
 } from './labels'
-import { nickname } from './nickname'
 import { stageFor } from './pixel/bodies'
 import { opposite } from './pixel/sexes'
 import type { CreditArt, Figure, VignetteKey } from './pixel/vignettes'
+import { playerName } from './playerName'
 
 /**
  * 엔딩 크레딧의 재료 (엔딩 설계 3절). 서버가 이미 준 기록·보유·결과·가계만으로 만든다. 문구는 여기서, 숫자는 서버에서.
@@ -445,7 +445,7 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
  */
 export function buildCredits(game: Game): CreditSection[] {
   const result = game.result
-  const name = nickname(game.initialStats).name
+  const name = playerName(game)
   const finalAge = result?.finalAge ?? ageOf(game, game.day)
   const bankrupt = result?.ending === 'BANKRUPT'
   const quit = result?.ending === 'QUIT'

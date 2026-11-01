@@ -83,6 +83,14 @@ final class GameClient {
     return json(result);
   }
 
+  ResultActions renameRaw(String gameId, String name) throws Exception {
+    return mvc.perform(
+        post("/api/games/{gameId}/name", gameId)
+            .cookie(session)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("{\"name\":" + (name == null ? "null" : "\"" + name + "\"") + "}"));
+  }
+
   ResultActions quitRaw(String gameId) throws Exception {
     return mvc.perform(post("/api/games/{gameId}/quit", gameId).cookie(session));
   }

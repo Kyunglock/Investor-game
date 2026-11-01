@@ -6,10 +6,10 @@ import { GradeBadge } from './GradeBadge'
 import { LifeLog } from './LifeLog'
 import { LifeMap } from './LifeMap'
 import { percent, STAT_KEYS, STAT_LABELS, statLabel, won, yearOf } from './labels'
-import { nickname } from './nickname'
 import { ProfileReport } from './ProfileReport'
 import { layersFor } from './pixel/layers'
 import { Sprite } from './pixel/SpriteView'
+import { playerName } from './playerName'
 
 /** 인생 기록부 (설계 5.7절). 끝난 판의 결과를 한 장의 문서로 보여 준다. */
 export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => void }) {
@@ -36,9 +36,7 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
         />
         <div className="min-w-0">
           <p className="text-[11px] text-faint">이름</p>
-          <h2 className="font-serif-kr text-[26px] font-black leading-tight">
-            {nickname(game.initialStats).name}
-          </h2>
+          <h2 className="font-serif-kr text-[26px] font-black leading-tight">{playerName(game)}</h2>
           <p className="text-[13px] text-muted">
             {result.finalAge}세,{' '}
             {bankrupt ? '파산했습니다' : quit ? '여기서 멈췄습니다' : '투자 인생을 마쳤습니다'} ·{' '}

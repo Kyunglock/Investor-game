@@ -1,7 +1,7 @@
 import type { Game, LogEntry } from '../../api/client'
 import { gradeOf } from './grade'
 import { STAT_KEYS, STAT_LABELS, withParticle } from './labels'
-import { nickname } from './nickname'
+import { playerName } from './playerName'
 
 /**
  * 투자 성향 진단 보고서 (decisions.md 61번). 서버가 이미 준 기록만으로 만든다 — 숨은 값은 없다. 세 축(위험 감수·인내·분산)을 0~100으로
@@ -414,7 +414,7 @@ export function profileReport(game: Game): ProfileReport {
   const grade = GRADES.find((g) => risk < g.max) ?? GRADES[GRADES.length - 1]
   const poles = polesOf(axes, game)
   const base = {
-    name: nickname(game.initialStats).name,
+    name: playerName(game),
     ageYears: game.startAge + Math.floor(game.day / game.daysPerYear),
     investorType: game.investorType?.name ?? null,
     startStats: statsLine(game.initialStats),
