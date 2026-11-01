@@ -541,7 +541,7 @@
     {
       "text": "신용카드 사용액이 지난달보다 조금 줄었다는 통계가 나왔다.",
       "sentiment": "NEG",
-      "macro": true
+      "macro": false
     },
     {
       "text": "출생아 수가 또 줄었다는 기사가 신문 사회면에 실렸다.",
@@ -555,7 +555,7 @@
     {
       "text": "기름값이 몇 주째 조금씩 내린다.",
       "sentiment": "POS",
-      "macro": true
+      "macro": false
     },
     {
       "text": "중앙은행이 기준금리를 그대로 두기로 했다.",
@@ -565,7 +565,7 @@
     {
       "text": "정부가 내년 예산을 올해보다 조금 늘려 짰다.",
       "sentiment": "POS",
-      "macro": true
+      "macro": false
     },
     {
       "text": "전기요금 인상 여부를 두고 논의가 길어지고 있다.",
@@ -583,12 +583,12 @@
     {
       "text": "유럽 경기가 둔화하고 있다는 보고서가 나왔지만, 국내 영향은 제한적이라고 한다.",
       "sentiment": "NEG",
-      "macro": true
+      "macro": false
     },
     {
       "text": "중국의 공장 가동률이 지난달보다 올랐다.",
       "sentiment": "POS",
-      "macro": true
+      "macro": false
     },
     {
       "text": "국제 유가가 산유국 회의 소식에 잠깐 출렁였다.",
@@ -603,12 +603,12 @@
     {
       "text": "증권사 지점에 개인 투자자 상담이 평소보다 많다고 한다.",
       "sentiment": "NEUTRAL",
-      "macro": true
+      "macro": false
     },
     {
       "text": "서울 아파트 거래량이 지난달과 비슷했다.",
       "sentiment": "NEUTRAL",
-      "macro": true
+      "macro": false
     },
     {
       "text": "경기 신도시에 새 지하철역이 들어선다는 계획이 발표됐다.",
