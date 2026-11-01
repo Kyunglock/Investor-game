@@ -14,7 +14,8 @@ export function App() {
   const running = useGameStore((s) => s.running)
   const outcome = useGameStore((s) => s.outcome)
   const marketOpen = useGameStore((s) => s.marketOpen)
-  const { load, born, startLife, pause, resume, quit } = useGameStore.getState()
+  const autoPlay = useGameStore((s) => s.autoPlay)
+  const { load, born, startLife, pause, resume, quit, setAutoPlay } = useGameStore.getState()
   // 크레딧을 다 본(또는 건너뛴) 판. 끝난 판은 크레딧 뒤에 기록부가 나온다 (엔딩 설계 3절).
   const [creditsSeenFor, setCreditsSeenFor] = useState<string | null>(null)
 
@@ -33,10 +34,18 @@ export function App() {
         running={running}
         showControls={status === 'playing'}
         controlsDisabled={Boolean(game?.pendingEvent) || outcome !== null || marketOpen}
-        onPause={pause}
+        // 사용자가 직접 멈추면 자동 진행도 끈다. 자동이 켜진 채로는 멈춤이 바로 되살아난다.
+        onPause={() => {
+          if (autoPlay) {
+            setAutoPlay(false)
+          }
+          pause()
+        }}
         onResume={resume}
         onRestart={restart}
         onQuit={() => void quit()}
+        autoPlay={autoPlay}
+        onToggleAuto={() => setAutoPlay(!autoPlay)}
       />
 
       {status === 'playing' && <Toast />}

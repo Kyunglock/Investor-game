@@ -246,3 +246,26 @@ test('신원 카드와 능력치는 인생 기록보다 위에 있다 (모바일
   expect(identity?.y ?? 0).toBeLessThan(log?.y ?? 0)
   expect(stats?.y ?? 0).toBeLessThan(log?.y ?? 0)
 })
+
+test('자동을 켜면 손대지 않아도 선택이 되고 결과가 넘어가며 시간이 흐른다', async ({ page }) => {
+  await born(page)
+  await page.getByTestId('auto-button').click()
+  await expect(page.getByTestId('auto-button')).toHaveAttribute('aria-pressed', 'true')
+
+  // 첫 일상 장면이 뜨고, 자동으로 골라져 기록에 남을 때까지 시계만 감는다. 카드는 누르지 않는다.
+  const trait = page.locator('[data-testid="life-log-line"][data-kind="TRAIT"]')
+  for (let i = 0; i < 60 && (await trait.count()) === 0; i++) {
+    await page.clock.runFor(2_000)
+  }
+  await expect(trait).not.toHaveCount(0)
+  // 결과 카드도 저절로 넘어가 다시 시간이 흐른다.
+  for (let i = 0; i < 20 && (await outcomeCard(page).isVisible()); i++) {
+    await page.clock.runFor(2_000)
+  }
+  await expect(outcomeCard(page)).toBeHidden()
+  await expect(page.getByTestId('age')).not.toHaveText('15세 0개월')
+
+  // 끄면 다음 선택 카드는 사용자를 기다린다.
+  await page.getByTestId('auto-button').click()
+  await expect(page.getByTestId('auto-button')).toHaveAttribute('aria-pressed', 'false')
+})

@@ -63,6 +63,7 @@ function Body({ event, game, busy, onChoose }: Props) {
   const quote = game.market.stocks.find((s) => s.code === event.stockCode)
   const price = quote?.price ?? 0
   const age = game.startAge + Math.floor(event.occursDay / game.daysPerYear)
+  const autoPlay = useGameStore((s) => s.autoPlay)
   const [picked, setPicked] = useState<string | null>(null)
   // 뉴스에서 매수·매도를, 빚투에서 빌린다를 누르면 바로 보내지 않고 수량을 묻는다. 관망·거절은 바로 보낸다.
   const [side, setSide] = useState<Picker | null>(null)
@@ -132,6 +133,14 @@ function Body({ event, game, busy, onChoose }: Props) {
       </div>
       <h2 className="mt-2 font-serif-kr text-[22px] font-black leading-snug">{event.title}</h2>
       <p className="mt-1.5 text-[13px] leading-relaxed">{event.body}</p>
+      {autoPlay && (
+        <p
+          className="mt-2 rounded bg-bg px-2.5 py-1.5 text-[11px] text-muted"
+          data-testid="auto-choosing"
+        >
+          자동 진행 중 · 성향과 안목이 대신 고릅니다. 직접 고르면 그 선택이 우선입니다.
+        </p>
+      )}
 
       {(isNews || isShake || isLeverage) && quote && (
         <div
