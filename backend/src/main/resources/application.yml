@@ -32,8 +32,8 @@ progress:
   news-buy-ratio-bp: 3000
   # 빚투를 고르면 총자산의 절반을 빌려 그 종목을 산다 (decisions.md 39번)
   leverage-loan-bp: 5000
-  # 자녀가 독립해 집을 나가는 나이. 태어날 때 아이마다 굴린다 (decisions.md 68번)
-  child-leave-age: { min: 25, max: 30 }
+  # 자녀가 독립해 집을 나가는 나이. 태어날 때 아이마다 굴린다 (decisions.md 68번, 138번에서 20~25로)
+  child-leave-age: { min: 20, max: 25 }
   # 일을 시작하기 전이면 20세부터 아르바이트. 그 전엔 모이는 돈이 없다 (decisions.md 96·98번)
   part-time-from-age: 20
   # 재취업하면 그동안 일한 햇수의 60%를 연차로 인정해 월급에 얹는다. 신입 월급으로 돌아가지 않는다 (decisions.md 116번)

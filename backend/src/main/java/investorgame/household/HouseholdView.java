@@ -12,7 +12,7 @@ import java.util.List;
 public record HouseholdView(
     boolean married, Integer marriedDay, List<Child> children, Integer retiredDay, Spouse spouse) {
 
-  /** 자녀 하나. 25~30세에 집을 나간다. */
+  /** 자녀 하나. 20~25세에 집을 나간다 (decisions.md 138번). */
   public record Child(int seq, int birthDay, int leaveDay, Sex sex) {
     /** 이 날에 집을 떠난 뒤인가. */
     public boolean leftBy(int day) {
