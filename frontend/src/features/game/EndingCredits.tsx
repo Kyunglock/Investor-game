@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import type { Game } from '../../api/client'
 import { buildCredits, type CreditSection, type CreditTone } from './credits'
 import { layersFor, type SpriteSpec } from './pixel/layers'
@@ -11,19 +11,9 @@ const TONE_CLASS: Record<CreditTone, string> = {
   accent: 'text-[#e8c777]',
 }
 
-/** 한 줄이 지나가는 데 걸리는 시간. 장 제목과 여백을 더해 전체 길이를 정한다. */
-const SECONDS_PER_LINE = 1.5
-const BASE_SECONDS = 8
-
-function reducedMotion(): boolean {
-  return (
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  )
-}
-
 /**
- * 엔딩 크레딧 (엔딩 설계 3절). 어두운 화면 위로 인생의 장(章)들이 아래에서 위로 올라가고, 끝나면 기록부로 가는 버튼이 남는다.
- * 건너뛰기는 언제든 가능하다. 움직임을 줄인 설정에서는 스크롤 목록으로 보여 준다.
+ * 엔딩 크레딧 (엔딩 설계 3절, decisions.md 129번). 어두운 화면에 인생의 장(章)들이 위에서 아래로 놓이고, 플레이어가 제 손으로 스크롤해 읽는다.
+ * 저절로 올라가지 않는다. 맨 끝에 기록부로 가는 버튼이 있고, 건너뛰기는 언제든 가능하다.
  */
 export function EndingCredits({ game, onDone }: { game: Game; onDone: () => void }) {
   const sections = useMemo(() => buildCredits(game), [game])
@@ -32,56 +22,27 @@ export function EndingCredits({ game, onDone }: { game: Game; onDone: () => void
     const { sex, adornment, mark } = layersFor(game.initialStats, game.stats, game.endAge, game.sex)
     return { sex, adornment, mark }
   }, [game])
-  const [still] = useState(reducedMotion)
-  const [rolled, setRolled] = useState(false)
-  const lineCount = sections.reduce((n, s) => n + s.lines.length + 1, 0)
-  const duration = BASE_SECONDS + lineCount * SECONDS_PER_LINE
-
-  // 애니메이션 이벤트가 오지 않는 환경(테스트, 백그라운드 탭)에서도 끝 버튼이 뜬다.
-  useEffect(() => {
-    if (still) {
-      return
-    }
-    const id = setTimeout(() => setRolled(true), duration * 1000)
-    return () => clearTimeout(id)
-  }, [still, duration])
 
   return (
     <div
       className="fixed inset-0 z-50 overflow-hidden bg-[#141a1a] text-white"
       data-testid="ending-credits"
-      data-rolled={rolled}
+      data-rolled="true"
     >
       <button
         type="button"
-        className="absolute top-4 right-4 z-10 rounded border border-white/30 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10"
+        className="absolute top-4 right-4 z-10 rounded border border-white/30 bg-[#141a1a]/80 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10"
         onClick={onDone}
         data-testid="credits-skip"
       >
         건너뛰기 →
       </button>
-
-      {still ? (
-        <div className="h-full overflow-y-auto px-6 py-16">
-          <Roll sections={sections} me={me} />
+      <div className="h-full overflow-y-auto px-6 py-16" data-testid="credits-scroll">
+        <Roll sections={sections} me={me} />
+        <div className="flex justify-center pb-16">
           <DoneButton onDone={onDone} />
         </div>
-      ) : (
-        <>
-          <div
-            className="animate-credits absolute inset-x-0 top-0 px-6"
-            style={{ '--credits-duration': `${duration}s` } as React.CSSProperties}
-            onAnimationEnd={() => setRolled(true)}
-          >
-            <Roll sections={sections} me={me} />
-          </div>
-          {rolled && (
-            <div className="animate-reveal absolute inset-x-0 bottom-16 flex justify-center px-6">
-              <DoneButton onDone={onDone} />
-            </div>
-          )}
-        </>
-      )}
+      </div>
     </div>
   )
 }
@@ -116,7 +77,7 @@ function Roll({ sections, me }: { sections: CreditSection[]; me: Omit<SpriteSpec
           </ul>
         </section>
       ))}
-      <div className="h-[20vh]" />
+      <div className="h-[10vh]" />
     </div>
   )
 }
