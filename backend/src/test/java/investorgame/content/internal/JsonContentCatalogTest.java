@@ -370,4 +370,27 @@ class JsonContentCatalogTest {
     assertThat(catalog.job("developer").movesTo()).containsExactly("developer");
     assertThat(catalog.job("parttime").movesTo()).isEmpty();
   }
+
+  /** decisions.md 134번: 회사가 전제인 일상 장면·알림은 직업을, 학원·입학 알림은 아이 나이를 가린다. */
+  @Test
+  void 일상_장면과_알림은_직업과_아이_나이를_가린다() {
+    JsonContentCatalog catalog = load();
+    var byCode =
+        catalog.adultTraits().stream()
+            .collect(java.util.stream.Collectors.toMap(t -> t.code(), t -> t));
+    assertThat(byCode.get("a-bonus").excludeJobs())
+        .contains("parttime", "farmer", "securities-ceo");
+    assertThat(byCode.get("a-promotion").excludeJobs()).contains("civil-servant", "teacher");
+    assertThat(byCode.get("a-pension").fitsJob("office")).isTrue();
+    assertThat(byCode.get("a-pension").fitsJob("farmer")).isFalse();
+    assertThat(byCode.get("a-pension").fitsJob(null)).isTrue();
+    var notices =
+        catalog.notices().stream()
+            .collect(java.util.stream.Collectors.toMap(n -> n.code(), n -> n));
+    assertThat(notices.get("bonus").fitsJob("farmer")).isFalse();
+    assertThat(notices.get("academy").fitsChildAge(3)).isFalse();
+    assertThat(notices.get("academy").fitsChildAge(10)).isTrue();
+    assertThat(notices.get("school").childAgeBound()).isTrue();
+    assertThat(notices.get("condolence").childAgeBound()).isFalse();
+  }
 }

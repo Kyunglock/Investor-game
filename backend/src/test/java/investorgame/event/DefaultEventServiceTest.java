@@ -2026,4 +2026,110 @@ class DefaultEventServiceTest {
           .doesNotContain("headhunt");
     }
   }
+
+  /** decisions.md 134번: 성과급·승진·퇴직연금 같은 회사 장면은 알바·농부·대표에게 오지 않는다. 사무직에게는 온다. */
+  @Test
+  void 농부에게는_회사가_전제인_일상_장면이_오지_않는다() {
+    List<String> excluded =
+        content.adultTraits().stream()
+            .filter(t -> t.excludeJobs().contains("farmer"))
+            .map(TraitDefinition::title)
+            .toList();
+    assertThat(excluded).hasSizeGreaterThanOrEqualTo(3);
+    assertThat(adultTraitTitles(workingAs("farmer"), 5L)).doesNotContainAnyElementsOf(excluded);
+    // 사무직에게는 온다. 보유 주식이 전제인 장면(a-crash)은 든 종목이 없는 이 맥락에선 따로 걸러지므로 뺀다.
+    List<String> officeOnes =
+        content.adultTraits().stream()
+            .filter(t -> t.excludeJobs().contains("farmer") && !t.holdings())
+            .map(TraitDefinition::title)
+            .toList();
+    assertThat(adultTraitTitles(workingAs("office"), 5L)).containsAll(officeOnes);
+  }
+
+  /** 직장 생활 내내 나온 일상 장면 제목. 성향이 다 정해진 뒤라 성장기 장면은 없다. */
+  private List<String> adultTraitTitles(SchedulingContext context, long seed) {
+    UUID gameId = UUID.randomUUID();
+    List<String> seen = new ArrayList<>();
+    int from = JOB_DAY;
+    for (Optional<EventView> trait = nextOf(gameId, context, from, EventKind.TRAIT, seed);
+        trait.isPresent();
+        trait = nextOf(gameId, context, from, EventKind.TRAIT, seed)) {
+      seen.add(trait.get().title());
+      events.complete(gameId, trait.get().eventId(), new Completion("x", "x", List.of()));
+      from = trait.get().occursDay();
+    }
+    return seen;
+  }
+
+  /** decisions.md 134번: 방학 특강·입학 준비는 그 나이의 아이가 집에 있을 때만. 아기만 있으면 오지 않는다. */
+  @Test
+  void 아기만_있으면_학원_입학_알림이_오지_않고_학생이_있으면_온다() {
+    int marriedDay = (28 - START_AGE) * YEAR;
+    int babyBirth = (40 - START_AGE) * YEAR;
+    int pupilBirth = (32 - START_AGE) * YEAR;
+    // 40세에 태어난 아기와 3년: 학원·입학 알림이 없다.
+    assertThat(noticeCodes(withChild(marriedDay, babyBirth), babyBirth, babyBirth + 3 * YEAR))
+        .doesNotContain("academy", "school");
+    // 32세에 태어난 아이가 8~14세인 동안: 학원이나 입학이 한 번은 온다.
+    assertThat(
+            noticeCodes(
+                withChild(marriedDay, pupilBirth), pupilBirth + 8 * YEAR, pupilBirth + 14 * YEAR))
+        .containsAnyOf("academy", "school");
+  }
+
+  private static SchedulingContext withChild(int marriedDay, int birthDay) {
+    return new SchedulingContext(
+        Phase.INVESTING,
+        START_AGE,
+        "long",
+        "food",
+        JOB_DAY,
+        true,
+        JOB_DAY + YEAR,
+        END_DAY,
+        JOB_DAY,
+        "office",
+        JOB_DAY,
+        false,
+        null,
+        true,
+        marriedDay,
+        null,
+        1,
+        List.of(birthDay),
+        List.of(birthDay + 27 * YEAR),
+        List.of(),
+        false,
+        Map.of(),
+        Map.of(),
+        SETTLED,
+        0L,
+        50,
+        Set.of());
+  }
+
+  /** from부터 to까지 여러 시드로 돌려 나온 알림 코드. 선택형 이벤트는 넘긴다. */
+  private List<String> noticeCodes(SchedulingContext context, int fromDay, int toDay) {
+    List<String> codes = new ArrayList<>();
+    for (long seed = 1; seed <= 4; seed++) {
+      UUID gameId = UUID.randomUUID();
+      HashSeededRandom random = new HashSeededRandom(seed);
+      int from = fromDay;
+      for (int i = 0; i < 80 && from < toDay; i++) {
+        var next = events.peekNextEventDay(gameId, context, from, random);
+        if (next.isEmpty() || next.getAsInt() > toDay) {
+          break;
+        }
+        ScheduleResult result =
+            events.schedule(gameId, context, from, next.getAsInt(), random, HINTS);
+        result
+            .pending()
+            .ifPresent(
+                v -> events.complete(gameId, v.eventId(), new Completion("x", "x", List.of())));
+        result.notice().ifPresent(n -> codes.add(n.code()));
+        from = next.getAsInt();
+      }
+    }
+    return codes;
+  }
 }

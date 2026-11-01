@@ -12,6 +12,8 @@ import java.util.Map;
  * @param job true면 직장(동료·월급·회사)이 배경인 adult 장면이라 직장에 다니는 동안에만 나온다. 실직·은퇴 중에는 미뤄 두었다가 다시 취업하면 나온다
  * @param holdings true면 들고 있는 주식이 전제인 adult 장면("내 계좌도 빨갛다", "투자 계좌를 일부 판다")이라 보유 종목이 있을 때만 나온다
  *     (decisions.md 115번)
+ * @param excludeJobs 이 직업에게는 말이 안 되는 장면이라 안 나온다(성과급·승진·퇴직연금은 알바·농부·대표에게 없다). 비어 있으면 모든 직업
+ *     (decisions.md 134번)
  */
 public record TraitDefinition(
     String code,
@@ -20,6 +22,7 @@ public record TraitDefinition(
     Boolean job,
     Boolean married,
     Boolean holdings,
+    List<String> excludeJobs,
     String title,
     String body,
     List<Option> options) {
@@ -32,6 +35,12 @@ public record TraitDefinition(
     job = job != null && job;
     married = married != null && married;
     holdings = holdings != null && holdings;
+    excludeJobs = excludeJobs == null ? List.of() : List.copyOf(excludeJobs);
+  }
+
+  /** 이 직업에게 나올 수 있는 장면인가. 직업이 없으면(전업투자자·무직) 직업으로 가리지 않는다. */
+  public boolean fitsJob(String jobCode) {
+    return jobCode == null || !excludeJobs.contains(jobCode);
   }
 
   /**

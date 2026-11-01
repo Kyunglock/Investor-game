@@ -199,13 +199,13 @@
       "minAge": 7,
       "maxAge": 12,
       "title": "{child}의 운동회, 꼭 와 달라고 한다",
-      "body": "평일이다. 연차를 내야 하고, 도시락과 돗자리도 챙겨야 한다. 아이는 달리기 1등을 하겠단다.",
-      "luxuryLabel": "연차 내고 도시락 싸서 하루 종일",
-      "normalLabel": "반차 내고 달리기만 본다",
+      "body": "평일이다. 하루를 비워야 하고, 도시락과 돗자리도 챙겨야 한다. 아이는 달리기 1등을 하겠단다.",
+      "luxuryLabel": "하루 비우고 도시락 싸서 종일",
+      "normalLabel": "반나절 비우고 달리기만 본다",
       "cheapLabel": "영상으로 받아 본다",
       "noneLabel": "못 간다고 한다",
       "luxuryText": "하루 종일 운동장에 있었다. {child}는 달리기에서 2등을 했지만 돗자리로 달려와 안겼다.",
-      "normalText": "반차를 내고 달리기를 봤다. {child}가 출발선에서 나를 찾아 손을 흔들었다.",
+      "normalText": "반나절을 비우고 달리기를 봤다. {child}가 출발선에서 나를 찾아 손을 흔들었다.",
       "cheapText": "영상으로 봤다. {child}는 \"거기 아빠(엄마) 있었어?\"라고 물었다.",
       "noneText": "못 간다고 했다. {child}는 알겠다고 했다. 그 \"알겠다\"가 오래 남았다."
     },
@@ -217,12 +217,12 @@
       "maxAge": 12,
       "title": "{child}의 학예회, 맨 앞줄에 앉아 달란다",
       "body": "나무 3번 역할이다. 대사는 한 줄이지만 집에서 백 번은 연습했다. 평일 오후라 시간을 빼야 하고, 꽃다발도 하나 있어야 한다.",
-      "luxuryLabel": "연차 내고 큰 꽃다발에 외식까지",
-      "normalLabel": "반차 내고 꽃 한 송이 들고 간다",
+      "luxuryLabel": "하루 비우고 큰 꽃다발에 외식까지",
+      "normalLabel": "반나절 비우고 꽃 한 송이 들고 간다",
       "cheapLabel": "선생님이 올려 준 영상으로 본다",
       "noneLabel": "못 간다고 한다",
       "luxuryText": "맨 앞줄에서 박수를 쳤다. {child}는 한 줄 대사를 틀렸지만 꽃다발을 받고 무대에서 제일 크게 웃었다. 저녁은 {child}가 고른 식당이었다.",
-      "normalText": "반차를 내고 강당 뒷줄에 섰다. 나무 3번이 나를 찾아 가지를 흔들었다.",
+      "normalText": "반나절을 비우고 강당 뒷줄에 섰다. 나무 3번이 나를 찾아 가지를 흔들었다.",
       "cheapText": "영상으로 봤다. 화면 구석의 {child}가 객석을 자꾸 두리번거렸다.",
       "noneText": "못 간다고 했다. {child}는 그날 밤 거실에서 혼자 대사를 한 번 더 해 보였다."
     },
@@ -233,9 +233,9 @@
       "minAge": 7,
       "maxAge": 12,
       "title": "{child}네 반 공개 수업, 엄마 아빠들이 다 온단다",
-      "body": "오전 두 시간짜리다. 짧지만 회사에서 빠져나오려면 눈치가 보인다. {child}는 발표할 차례를 벌써 정해 놨다.",
-      "luxuryLabel": "연차 내고 수업 뒤 단둘이 데이트",
-      "normalLabel": "오전 반차 내고 교실 뒤에 선다",
+      "body": "오전 두 시간짜리다. 짧지만 일을 빼고 나오려면 눈치가 보인다. {child}는 발표할 차례를 벌써 정해 놨다.",
+      "luxuryLabel": "하루 비우고 수업 뒤 단둘이 데이트",
+      "normalLabel": "오전을 비우고 교실 뒤에 선다",
       "cheapLabel": "점심시간에 잠깐 들른다",
       "noneLabel": "못 간다고 한다",
       "luxuryText": "교실 뒤에서 {child}가 손을 번쩍 드는 걸 봤다. 끝나고 둘이 떡볶이를 먹었다. {child}는 \"오늘 제일 좋은 날\"이라고 했다.",
@@ -359,14 +359,18 @@
     {
       "code": "bonus",
       "title": "명절 보너스",
-      "body": "회사 실적이 좋아 보너스가 나왔다.",
+      "body": "명절 상여금이 나왔다. 올해는 실적이 좋았다고 한다.",
       "amount": 0,
       "salaryPercent": 50,
       "assetPercent": 0,
       "weight": 6,
       "requiresMarried": false,
       "requiresJob": true,
-      "requiresChildren": false
+      "requiresChildren": false,
+      "excludeJobs": [
+        "farmer",
+        "parttime"
+      ]
     },
     {
       "code": "tax-refund",
@@ -378,7 +382,10 @@
       "weight": 6,
       "requiresMarried": false,
       "requiresJob": true,
-      "requiresChildren": false
+      "requiresChildren": false,
+      "excludeJobs": [
+        "farmer"
+      ]
     },
     {
       "code": "academy",
@@ -390,7 +397,9 @@
       "weight": 6,
       "requiresMarried": false,
       "requiresJob": false,
-      "requiresChildren": true
+      "requiresChildren": true,
+      "childMinAge": 7,
+      "childMaxAge": 18
     },
     {
       "code": "school",
@@ -402,7 +411,9 @@
       "weight": 4,
       "requiresMarried": false,
       "requiresJob": false,
-      "requiresChildren": true
+      "requiresChildren": true,
+      "childMinAge": 6,
+      "childMaxAge": 16
     },
     {
       "code": "parents-70",

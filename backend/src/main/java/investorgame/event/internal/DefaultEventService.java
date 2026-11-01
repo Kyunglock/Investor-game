@@ -445,6 +445,8 @@ class DefaultEventService implements EventService {
     boolean working = context.jobStartDay() != null && !context.retired();
     return content.adultTraits().stream()
         .filter(t -> working || !t.job())
+        // 알바·농부·대표에게 성과급·승진·퇴직연금 장면은 말이 안 된다 (decisions.md 134번).
+        .filter(t -> t.fitsJob(working ? context.jobCode() : null))
         .filter(t -> !t.holdings() || !context.heldStockCodes().isEmpty())
         // 양가 부모 장면은 결혼한 뒤에만 (decisions.md 76번).
         .filter(t -> context.married() || !t.married())
@@ -617,6 +619,18 @@ class DefaultEventService implements EventService {
       }
     }
     return earliest;
+  }
+
+  /** 그날 집에 있는 아이 가운데 알림의 나이 조건에 맞는 아이가 있는가. */
+  private boolean hasChildAged(SchedulingContext context, int day, NoticeDefinition notice) {
+    for (int i = 0; i < context.childBirthDays().size(); i++) {
+      boolean atHome =
+          context.childLeaveDays().size() <= i || context.childLeaveDays().get(i) > day;
+      if (atHome && notice.fitsChildAge(childAge(context, i + 1, day))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** 그날 집에 있는 어린 아이(한 살에서 열세 살)의 순번. */
@@ -1325,6 +1339,10 @@ class DefaultEventService implements EventService {
             .filter(n -> context.married() || !n.requiresMarried())
             .filter(n -> working || !n.requiresJob())
             .filter(n -> context.childrenCount() > 0 || !n.requiresChildren())
+            // 농부에게 명절 보너스·연말정산은 없고, 학원·입학은 그 나이의 아이가 집에 있을 때만 (decisions.md 134번).
+            .filter(n -> n.fitsJob(working ? context.jobCode() : null))
+            .filter(
+                n -> !n.requiresChildren() || !n.childAgeBound() || hasChildAged(context, day, n))
             .toList();
     NoticeDefinition definition =
         weighted(eligible, NoticeDefinition::weight, random.forKey("event", "notice", seq));
