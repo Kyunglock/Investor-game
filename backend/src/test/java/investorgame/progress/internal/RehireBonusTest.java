@@ -10,7 +10,7 @@ class RehireBonusTest {
 
   @Test
   void 인정_연차의_연차_인상이_인상분이_된다() {
-    JobDefinition job = new JobDefinition("office", "사무직", 10, 4_200_000, 4, true, true);
+    JobDefinition job = new JobDefinition("office", "사무직", 10, 4_200_000, 4, true, true, null);
     assertThat(DefaultProgressService.rehireBonusBp(job, 0)).isZero();
     // 1.04^15 ≈ 1.80 → 약 +80%
     int bonus = DefaultProgressService.rehireBonusBp(job, 15);

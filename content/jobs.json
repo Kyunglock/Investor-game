@@ -19,7 +19,10 @@
     "title": "공장 생산직",
     "weight": 7,
     "baseMonthlySalary": 2400000,
-    "raisePercentPerYear": 2
+    "raisePercentPerYear": 2,
+    "movesTo": [
+      "factory"
+    ]
   },
   {
     "code": "civil-servant",
@@ -33,14 +36,21 @@
     "title": "디자이너",
     "weight": 6,
     "baseMonthlySalary": 2700000,
-    "raisePercentPerYear": 4
+    "raisePercentPerYear": 4,
+    "movesTo": [
+      "designer"
+    ]
   },
   {
     "code": "office",
     "title": "사무직",
     "weight": 10,
     "baseMonthlySalary": 2800000,
-    "raisePercentPerYear": 3
+    "raisePercentPerYear": 3,
+    "movesTo": [
+      "office",
+      "bigcorp"
+    ]
   },
   {
     "code": "teacher",
@@ -54,21 +64,30 @@
     "title": "영업직",
     "weight": 8,
     "baseMonthlySalary": 3000000,
-    "raisePercentPerYear": 4
+    "raisePercentPerYear": 4,
+    "movesTo": [
+      "sales"
+    ]
   },
   {
     "code": "nurse",
     "title": "간호사",
     "weight": 5,
     "baseMonthlySalary": 3100000,
-    "raisePercentPerYear": 4
+    "raisePercentPerYear": 4,
+    "movesTo": [
+      "nurse"
+    ]
   },
   {
     "code": "developer",
     "title": "개발자",
     "weight": 6,
     "baseMonthlySalary": 3500000,
-    "raisePercentPerYear": 5
+    "raisePercentPerYear": 5,
+    "movesTo": [
+      "developer"
+    ]
   },
   {
     "code": "accountant",

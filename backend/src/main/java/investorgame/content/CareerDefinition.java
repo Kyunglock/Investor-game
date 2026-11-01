@@ -85,7 +85,7 @@ public record CareerDefinition(
         .orElse(Effect.NONE);
   }
 
-  /** 장면 중 이직 제안(moveJob 선택지가 있는 것)은 지금보다 월급이 많은 직업이 있을 때만 나온다. */
+  /** 장면 중 이직 제안(moveJob 선택지가 있는 것)은 지금 직업에서 옮겨 갈 직업(JobDefinition.movesTo)이 있을 때만 나온다. */
   public boolean movesJob() {
     return options.stream().anyMatch(o -> o.success().moveJob());
   }
@@ -125,7 +125,7 @@ public record CareerDefinition(
    * @param salaryPercent 월급 인상(%). 직장을 옮기지 않는 한 누적된다
    * @param quit 직장을 잃는다
    * @param severanceMonths 직장을 잃을 때 받는 위로금(월급 × 달 수)
-   * @param moveJob 월급이 더 많은 다른 직업으로 옮긴다. 연차와 인상분은 초기화된다
+   * @param moveJob 같은 직종의 다른 자리(JobDefinition.movesTo)로 옮긴다. 연차와 인상분은 초기화된다
    * @param moveSalaryPercent 옮긴 직장에서 시작하는 인상분(%)
    * @param amount 현금 변화(원). 음수면 지출
    * @param statDeltas 능력치 변화 (운 제외)

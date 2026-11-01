@@ -352,4 +352,22 @@ class JsonContentCatalogTest {
                     catalog.styles(), catalog.risks(), catalog.minds(), missingOne))
         .isInstanceOf(IllegalStateException.class);
   }
+
+  /** decisions.md 130번: 이직 장면이 나오는 직업마다 옮겨 갈 같은 직종이 있고, 알바에게는 이직 제안이 없다. */
+  @Test
+  void 이직_장면이_나오는_직업은_같은_직종으로만_옮긴다() {
+    JsonContentCatalog catalog = load();
+    for (var career : catalog.careers()) {
+      if (!career.movesJob()) {
+        continue;
+      }
+      assertThat(career.jobs()).as(career.code()).isNotEmpty().doesNotContain("parttime");
+      for (String jobCode : career.jobs()) {
+        assertThat(catalog.job(jobCode).movesTo()).as("%s/%s", career.code(), jobCode).isNotEmpty();
+      }
+    }
+    assertThat(catalog.job("office").movesTo()).containsExactly("office", "bigcorp");
+    assertThat(catalog.job("developer").movesTo()).containsExactly("developer");
+    assertThat(catalog.job("parttime").movesTo()).isEmpty();
+  }
 }

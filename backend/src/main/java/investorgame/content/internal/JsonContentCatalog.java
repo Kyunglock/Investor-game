@@ -488,6 +488,12 @@ class JsonContentCatalog implements ContentCatalog {
         careers.stream().map(CareerDefinition::code).distinct().count() == careers.size(),
         "직장 장면 코드가 겹친다");
     Set<String> jobCodes = jobs.stream().map(JobDefinition::code).collect(Collectors.toSet());
+    for (JobDefinition job : jobs) {
+      for (String target : job.movesTo()) {
+        require(jobCodes.contains(target), "직업이 알 수 없는 직업으로 옮긴다: " + job.code() + " → " + target);
+        require(job(target).offered(), "직접 세운 회사로는 이직 제안이 올 수 없다: " + job.code() + " → " + target);
+      }
+    }
     Set<String> careerJobs = new java.util.HashSet<>(jobCodes);
     careerJobs.add(CareerDefinition.FULL_TIME_INVESTOR);
     Map<String, CareerDefinition> careersByCode =
@@ -495,6 +501,14 @@ class JsonContentCatalog implements ContentCatalog {
     for (CareerDefinition career : careers) {
       require(career.weight() > 0, "직장 장면의 가중치는 양수여야 한다: " + career.code());
       require(careerJobs.containsAll(career.jobs()), "직장 장면이 알 수 없는 직업을 쓴다: " + career.code());
+      if (career.movesJob()) {
+        require(!career.jobs().isEmpty(), "이직 장면은 나오는 직업을 적어야 한다: " + career.code());
+        for (String jobCode : career.jobs()) {
+          require(
+              !job(jobCode).movesTo().isEmpty(),
+              "이직 장면이 나오는 직업은 옮겨 갈 직업(movesTo)이 있어야 한다: " + career.code() + "/" + jobCode);
+        }
+      }
       boolean forInvestor = career.jobs().contains(CareerDefinition.FULL_TIME_INVESTOR);
       require(
           !forInvestor || career.jobs().size() == 1, "전업투자자의 장면은 직장인과 같이 쓸 수 없다: " + career.code());

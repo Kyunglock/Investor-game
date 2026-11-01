@@ -1547,11 +1547,12 @@ class DefaultEventService implements EventService {
     int start = investor ? context.careerStartDay() : context.jobStartDay();
     int tenure = Math.max(0, day - start) / calendar.daysPerYear();
     int age = ageAt(day, context);
-    long currentSalary = investor ? Long.MAX_VALUE : content.job(jobCode).baseMonthlySalary();
+    // 이직 제안은 같은 직종(jobs.json movesTo) 안에서만 온다. 다른 직종이 갑자기 부르면 말이 안 된다 (decisions.md 130번).
+    List<String> movesTo = investor ? List.of() : content.job(jobCode).movesTo();
     List<JobDefinition> betterJobs =
         content.jobs().stream()
             .filter(JobDefinition::offered)
-            .filter(j -> j.baseMonthlySalary() > currentSalary)
+            .filter(j -> movesTo.contains(j.code()))
             .toList();
     List<CareerDefinition> eligible =
         content.careers().stream()
