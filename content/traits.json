@@ -1353,7 +1353,7 @@
       },
       {
         "code": "later",
-        "label": "승진하면 좋은 차로 산다",
+        "label": "취업하면 좋은 차로 산다",
         "traitDeltas": {
           "style.long": 2,
           "risk.bold": 1,
@@ -1669,6 +1669,11 @@
     "age": 30,
     "adult": true,
     "job": true,
+    "excludeJobs": [
+      "parttime",
+      "farmer",
+      "securities-ceo"
+    ],
     "title": "성과급 300만 원이 들어왔다",
     "body": "동료들은 여행을 가거나 차를 바꾼다. 통장에 두면 금세 생활비에 섞인다.",
     "options": [
@@ -1845,6 +1850,10 @@
     "adult": true,
     "job": true,
     "holdings": true,
+    "excludeJobs": [
+      "parttime",
+      "farmer"
+    ],
     "title": "아침 뉴스에 \"증시 폭락\", 회사 메신저가 난리다",
     "body": "동료들은 다 판다고 한다. 내 계좌도 빨갛다.",
     "options": [
@@ -1954,6 +1963,13 @@
     "age": 30,
     "adult": true,
     "job": true,
+    "excludeJobs": [
+      "parttime",
+      "farmer",
+      "securities-ceo",
+      "civil-servant",
+      "teacher"
+    ],
     "title": "승진 제안과 다른 회사의 스카우트가 같은 주에 왔다",
     "body": "승진은 안정적이지만 연봉 인상이 작다. 이직은 연봉 30% 인상이지만 회사가 작다.",
     "options": [
@@ -2193,6 +2209,13 @@
     "age": 30,
     "adult": true,
     "job": true,
+    "excludeJobs": [
+      "parttime",
+      "farmer",
+      "securities-ceo",
+      "civil-servant",
+      "teacher"
+    ],
     "title": "회사가 퇴직연금 운용 방식을 고르라고 한다",
     "body": "원리금 보장은 연 2%. 주식형은 오르내림이 크다. 동료 대부분은 보장형이다.",
     "options": [

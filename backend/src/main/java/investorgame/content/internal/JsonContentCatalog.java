@@ -583,7 +583,14 @@ class JsonContentCatalog implements ContentCatalog {
         traits.stream().map(TraitDefinition::code).distinct().count() == traits.size(),
         "성향 장면 코드가 겹친다");
     ContentProperties.Range optionRange = properties.traitOptions();
+    Set<String> allJobs = jobs.stream().map(JobDefinition::code).collect(Collectors.toSet());
     for (TraitDefinition trait : traits) {
+      require(
+          allJobs.containsAll(trait.excludeJobs()),
+          "성향 장면이 알 수 없는 직업을 뺀다: " + trait.code() + " " + trait.excludeJobs());
+      require(
+          trait.excludeJobs().isEmpty() || trait.adult(),
+          "직업으로 가리는 것은 adult 장면만이다: " + trait.code());
       int count = trait.options().size();
       require(
           count >= optionRange.min() && count <= optionRange.max(),
@@ -823,6 +830,17 @@ class JsonContentCatalog implements ContentCatalog {
       require(
           notice.assetPercent() == 0 || notice.amount() < 0,
           "순자산 비율은 최소 지출(음수 amount)이 있는 알림에만 쓴다: " + notice.code());
+      require(
+          jobs.stream().map(JobDefinition::code).toList().containsAll(notice.excludeJobs()),
+          "알림이 알 수 없는 직업을 뺀다: " + notice.code() + " " + notice.excludeJobs());
+      require(
+          !notice.childAgeBound() || notice.requiresChildren(),
+          "아이 나이 조건은 자녀가 전제인 알림에만 쓴다: " + notice.code());
+      require(
+          notice.childMinAge() == null
+              || notice.childMaxAge() == null
+              || notice.childMinAge() <= notice.childMaxAge(),
+          "아이 나이 구간이 뒤집혔다: " + notice.code());
     }
   }
 
