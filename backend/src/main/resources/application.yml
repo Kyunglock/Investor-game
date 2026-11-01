@@ -38,6 +38,15 @@ progress:
   part-time-from-age: 20
   # 재취업하면 그동안 일한 햇수의 60%를 연차로 인정해 월급에 얹는다. 신입 월급으로 돌아가지 않는다 (decisions.md 116번)
   rehire-credit-percent: 60
+  # 월급 곡선 (decisions.md 133번): 실제 평균 임금처럼 20대 후반→40대 후반 1.6배쯤, 50대 후반부터 줄어든다.
+  # 연차 인상(jobs.json raise-percent-per-year, 물가 위의 실질)은 10년 동안 그대로, 다음 10년은 절반, 그 뒤 0.
+  # 55세부터 해마다 3% 줄고(정년 있는 직업만), 협상·승진 인상분은 합쳐 +100%까지. 월급은 물가(household.inflation-percent)를 따라 오른다
+  salary:
+    raise-full-years: 10
+    raise-half-years: 10
+    decline-age: 55
+    decline-percent: 3
+    max-bonus-bp: 10000
   # 주거 돈 계산 (주거 설계 3절). LTV 50%, DSR 40%, 아파트 전세가 = 시세의 55%(84㎡, 식구 수와 무관), 전세대출은 모자란 만큼만 최대 80%(decisions.md 107번), 연장 +5%.
   # 월세·빌라 전세는 집 크기(방 수 1~4: 원룸·투룸·쓰리룸·포룸, #117·decisions.md 105번)를 따른다. 필요한 크기 = 1 + 결혼 1 + 집에 있는 아이(최대 2).
   # 월세 1000만/60만 → 2000만/90만 → 3000만/120만 → 4000만/150만, 빌라 전세 = 경기 시세의 30 → 40 → 48 → 55%.

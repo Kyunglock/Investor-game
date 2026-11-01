@@ -18,6 +18,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param profileFullTradesPerYear 행동 프로필의 자유 매매 빈도: 투자 1년에 이만큼 사고팔면 1이다 (행동 프로필·봇 설계 3절)
  * @param rehireCreditPercent 재취업하면 그동안 일한 햇수의 이 비율만큼을 연차로 인정해 월급에 얹는다(인상분으로). 100이면 끊김 없이 이어진 것과 같다
  *     (decisions.md 116번)
+ * @param salary 월급 곡선 (decisions.md 133번)
  */
 @ConfigurationProperties("progress")
 public record ProgressProperties(
@@ -32,9 +33,18 @@ public record ProgressProperties(
     Range childLeaveAge,
     int partTimeFromAge,
     int profileFullTradesPerYear,
-    int rehireCreditPercent) {
+    int rehireCreditPercent,
+    Salary salary) {
 
   public record Range(int min, int max) {}
+
+  /**
+   * 월급 곡선 (decisions.md 133번). 연차 인상(jobs.json, 물가 위의 실질)은 raiseFullYears 동안 그대로, 다음 raiseHalfYears
+   * 동안 절반, 그 뒤 0. declineAge부터 해마다 declinePercent 줄고(정년 있는 직업), 협상·승진 인상분은 합쳐 maxBonusBp까지만 쳐 준다.
+   * 월급은 물가를 따라 오른다.
+   */
+  public record Salary(
+      int raiseFullYears, int raiseHalfYears, int declineAge, int declinePercent, int maxBonusBp) {}
 
   /**
    * 주거 돈 계산. 비율은 만분율, 금액은 25세 기준(물가가 붙는다).
