@@ -287,6 +287,26 @@ class GameApiTest {
         .isEqualTo(cash + salary - expense - rent);
   }
 
+  /** 이름은 사용자가 정한다 (decisions.md 135번). 공백을 잘라 1~8자, 아니면 400. 새 판은 이름이 없다. */
+  @Test
+  void 이름은_사용자가_정하고_공백을_잘라_1에서_8자여야_한다() throws Exception {
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.start();
+    String gameId = game.read("$.gameId");
+    assertThat(game.read("$.name", String.class)).isNull();
+
+    client
+        .renameRaw(gameId, "  김투자 ")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("김투자"));
+    assertThat(client.current().read("$.name", String.class)).isEqualTo("김투자");
+
+    client.renameRaw(gameId, "   ").andExpect(status().isBadRequest());
+    client.renameRaw(gameId, "아홉글자가넘는이름이다").andExpect(status().isBadRequest());
+    client.renameRaw(gameId, null).andExpect(status().isBadRequest());
+    assertThat(client.current().read("$.name", String.class)).isEqualTo("김투자");
+  }
+
   /** 중간에 그만두기 (decisions.md 68번): 그 나이에서 QUIT으로 끝난다. 대기 중인 선택이 있으면 먼저 선택해야 한다. */
   @Test
   void 투자_인생은_중간에_그만둘_수_있고_대기_중인_선택이_있으면_먼저_골라야_한다() throws Exception {

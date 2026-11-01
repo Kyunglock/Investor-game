@@ -82,6 +82,29 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/games/{gameId}/name:
+    post:
+      operationId: renameCharacter
+      summary: 캐릭터 이름을 정한다
+      description: |
+        출생 신고서에서 사용자가 적는 이름이다. 능력치로 짓던 별명 대신 이름 자리에 쓴다 (decisions.md 135번).
+        앞뒤 공백을 잘라 1~8자여야 한다 (400). 진행 중인 판이면 언제든 바꿀 수 있다.
+      parameters:
+        - $ref: '#/components/parameters/GameId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NameRequest' }
+      responses:
+        '200':
+          description: 판 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Game' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/games/{gameId}/trades:
     post:
       operationId: trade
@@ -616,6 +639,11 @@ components:
       required: [listed]
       properties:
         listed: { type: boolean }
+    NameRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 8, description: 캐릭터 이름. 앞뒤 공백은 잘린다 }
     RepayRequest:
       type: object
       required: [amount]
@@ -695,12 +723,15 @@ components:
         endAge: { type: integer }
         daysPerYear: { type: integer }
         sex: { $ref: '#/components/schemas/Sex' }
+        name:
+          type: [string, 'null']
+          description: 사용자가 정한 이름. 아직 정하지 않았으면 null (decisions.md 135번)
         happiness: { type: integer, description: 행복도 0~100. 결혼·아이·여행·내 집은 올리고 실직·전세사기·긴축·큰 손실은 내린다 (decisions.md 82번) }
         family: { type: integer, description: 가족 점수 0~100. 가족을 챙기는 선택은 올리고 거절·방치는 내린다 (decisions.md 88번) }
         stats: { $ref: '#/components/schemas/Stats' }
         initialStats:
           allOf: [{ $ref: '#/components/schemas/Stats' }]
-          description: 태어날 때의 능력치. 별명은 이 값으로 정해서 게임 중에 바뀌지 않는다
+          description: 태어날 때의 능력치. 그림의 장식(강점)은 이 값으로 정해서 게임 중에 바뀌지 않는다
         cash: { type: integer, format: int64 }
         totalAsset: { type: integer, format: int64, description: 현금 + 평가액 − 빚 }
         initialAsset: { type: integer, format: int64 }

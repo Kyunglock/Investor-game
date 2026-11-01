@@ -18,10 +18,10 @@ const entry = (
 })
 
 describe('logLine', () => {
-  it('탄생: 능력치와 별명', () => {
+  it('탄생: 능력치', () => {
     const line = logLine(entry('BIRTH', 0, { stats: initialStats, initialAsset: 1000000 }), game)
     expect(line.text).toBe(
-      "2025년, 안목 C 42 · 인내심 A 61 · 용기 F 19 · 줏대 D 35 · 운 B 57을 타고났다. 별명은 '겁 많은 돌부처'.",
+      '2025년, 안목 C 42 · 인내심 A 61 · 용기 F 19 · 줏대 D 35 · 운 B 57을 타고났다.',
     )
     expect(line.tone).toBe('birth')
     expect(line.pill).toBe('탄생')

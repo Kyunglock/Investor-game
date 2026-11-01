@@ -27,6 +27,7 @@ async function born(page: Page) {
   await page.getByRole('button', { name: '태어나기' }).click()
   await expect(page.getByTestId('birth-reveal')).toBeVisible()
   await page.clock.runFor(5_000)
+  await page.getByTestId('name-input').fill('김투자')
   await page.getByRole('button', { name: '삶을 시작하기' }).click()
   await expect(page.getByTestId('age')).toHaveText('15세 0개월')
 }
@@ -88,7 +89,9 @@ test('처음 방문하면 태어나기를 고를 수 있다', async ({ page }) =
   await expect(page.getByRole('button', { name: '태어나기' })).toBeVisible()
 })
 
-test('태어나면 능력치가 안목부터 하나씩 공개되고 별명이 붙는다', async ({ page }) => {
+test('태어나면 능력치가 안목부터 하나씩 공개되고 이름을 적어야 시작할 수 있다', async ({
+  page,
+}) => {
   await page.clock.install()
   await page.goto('/')
   await page.getByRole('button', { name: '태어나기' }).click()
@@ -100,12 +103,12 @@ test('태어나면 능력치가 안목부터 하나씩 공개되고 별명이 �
 
   await page.clock.runFor(5_000)
   await expect(page.getByTestId('reveal-luck')).not.toContainText('?')
-  const nickname = await page.getByTestId('reveal-nickname').textContent()
-  expect(nickname?.trim()).toBeTruthy()
-
+  // 이름을 적기 전엔 시작할 수 없다 (decisions.md 135번).
+  await expect(page.getByTestId('start-life')).toBeDisabled()
+  await page.getByTestId('name-input').fill('  박소신 ')
   await page.getByRole('button', { name: '삶을 시작하기' }).click()
   await expect(page.getByTestId('age')).toHaveText('15세 0개월')
-  await expect(page.getByTestId('nickname')).toHaveText(nickname ?? '')
+  await expect(page.getByTestId('player-name')).toHaveText('박소신')
   await expect(page.getByTestId('job')).toHaveText('학생')
 })
 
@@ -141,14 +144,14 @@ test('새로고침하면 서버의 상태에서 일시정지로 이어한다', a
   await page.getByRole('button', { name: '멈춤' }).click()
 
   const age = await page.getByTestId('age').textContent()
-  const nickname = await page.getByTestId('nickname').textContent()
+  const nickname = await page.getByTestId('player-name').textContent()
   // 멈춤은 현재 시각을 서버에 보고한다. 보고가 끝나야 새로고침 뒤 같은 나이가 나온다.
   await expect
     .poll(async () => reportedDay(page), { timeout: 10_000 })
     .toBeGreaterThanOrEqual(dayOf(age ?? ''))
   await page.reload()
 
-  await expect(page.getByTestId('nickname')).toHaveText(nickname ?? '')
+  await expect(page.getByTestId('player-name')).toHaveText(nickname ?? '')
   await expect(page.getByTestId('age')).toHaveText(age ?? '')
   await expect(page.getByRole('button', { name: '계속' }).or(eventCard(page))).toBeVisible()
 })
@@ -161,6 +164,7 @@ test('다시 태어나기를 누르면 다시 태어나 15세에서 시작한다
   await page.getByRole('button', { name: '다시 태어나기' }).click()
   await expect(page.getByTestId('birth-reveal')).toBeVisible()
   await page.clock.runFor(5_000)
+  await page.getByTestId('name-input').fill('이다시')
   await page.getByRole('button', { name: '삶을 시작하기' }).click()
   await expect(page.getByTestId('age')).toHaveText('15세 0개월')
   await expect(page.getByTestId('job')).toHaveText('학생')

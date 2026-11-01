@@ -31,6 +31,7 @@ public record GameView(
     int endAge,
     int daysPerYear,
     Sex sex,
+    String name,
     int happiness,
     int family,
     Stats stats,

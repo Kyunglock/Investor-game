@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { Game } from '../../api/client'
 import { ageAt, secondsPerYear } from './clock'
 import { yearOf } from './labels'
-import { nickname } from './nickname'
+import { playerName } from './playerName'
 import { useGameStore } from './store'
 
 interface Props {
@@ -55,7 +55,7 @@ export function TopBar({
               {age.years}세 {age.months}개월
             </p>
             <div className="font-note text-xs text-pen-soft">
-              {yearOf(age.years)}년 · {nickname(game.initialStats).name} ·{' '}
+              {yearOf(age.years)}년 · {playerName(game)} ·{' '}
               <span data-testid="happiness">행복 {game.happiness}</span> · 1년 ≈{' '}
               {secondsPerYear(game.phase)}초
               <span className="mt-1 block h-[3px] w-40 overflow-hidden rounded-full bg-[var(--ruled)]">

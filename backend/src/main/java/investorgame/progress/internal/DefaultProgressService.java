@@ -283,6 +283,21 @@ class DefaultProgressService implements ProgressService {
     return view(games.findLatest(sessionId).orElseThrow());
   }
 
+  /** 이름은 1~8자. 공백만이거나 너무 길면 400 (decisions.md 135번). */
+  static final int NAME_MAX_LENGTH = 8;
+
+  @Override
+  @Transactional
+  public GameView rename(UUID sessionId, UUID gameId, String name) {
+    GameRow game = lock(sessionId, gameId);
+    String trimmed = name == null ? "" : name.strip();
+    if (trimmed.isEmpty() || trimmed.codePointCount(0, trimmed.length()) > NAME_MAX_LENGTH) {
+      throw new InvalidRequestException("이름은 1~%d자여야 한다".formatted(NAME_MAX_LENGTH));
+    }
+    characters.rename(gameId, trimmed);
+    return view(game);
+  }
+
   private OptionalInt nextEventDay(GameRow game, int fromDay) {
     return events.peekNextEventDay(
         game.id(),
@@ -2054,6 +2069,7 @@ class DefaultProgressService implements ProgressService {
         game.endAge(),
         calendar.daysPerYear(),
         sexOf(game),
+        character.name(),
         household.happiness(game.id()),
         household.familyScore(game.id()),
         character.stats(),

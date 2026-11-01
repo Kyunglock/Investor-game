@@ -55,6 +55,9 @@ public interface ProgressService {
    */
   GameView quit(UUID sessionId, UUID gameId);
 
+  /** 캐릭터 이름을 정한다 (decisions.md 135번). 앞뒤 공백을 잘라 1~8자여야 한다(400). 진행 중인 판이면 언제든 바꿀 수 있다. */
+  GameView rename(UUID sessionId, UUID gameId, String name);
+
   /** 최근에 시작한 판부터 limit개. 버려진 판도 포함한다. 관리자 플레이 기록용이며 세션을 따지지 않는다. */
   List<GameSummary> recentGames(int limit);
 }

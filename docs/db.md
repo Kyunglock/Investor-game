@@ -106,6 +106,7 @@ content_version.version ─── progress_game.content_version
 | risk_profile | text | 위험 축 코드(bold/safe). 유형 이름에만 쓴다. 확정 전 null |
 | mind_profile | text | 소신 축 코드(own/crowd). 유형 이름에만 쓴다. 확정 전 null |
 | investor_type | text | 투자자 유형 코드 `{기간}-{위험}-{소신}`. 확정 전 null |
+| name | varchar(16) | 사용자가 정한 이름(1~8자). 정하기 전 null. 별명 대신 이름 자리에 쓴다 (decisions.md 135번) |
 | created_at / updated_at | timestamptz | |
 
 ### 3.4 `character_stat`
