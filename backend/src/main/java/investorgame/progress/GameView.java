@@ -195,7 +195,7 @@ public record GameView(
 
   /**
    * returnBp는 수익률(만분율). deviationCounts는 능력치별 이탈 횟수(뉴스 + 자유 매매). ending이 BANKRUPT면 finalAge는 파산한
-   * 나이다.
+   * 나이다. rank는 최종 자산 순위표에 올린 뒤의 순위, 올리지 않았으면 null (decisions.md 141번).
    */
   public record Result(
       long initialAsset,
@@ -203,5 +203,6 @@ public record GameView(
       int returnBp,
       int finalAge,
       Ending ending,
-      Map<String, Integer> deviationCounts) {}
+      Map<String, Integer> deviationCounts,
+      Integer rank) {}
 }
