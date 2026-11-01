@@ -1476,7 +1476,16 @@ class DefaultProgressService implements ProgressService {
       RandomGenerator rng) {
     boolean good = reviewGood(chosen, truth, holding);
     StringBuilder text = new StringBuilder();
-    if (chosen == Action.HOLD) {
+    if (actual != chosen) {
+      // 판정에 밀려 손이 다르게 움직였으면 "안 산 게 다행이다" 같은 말은 틀린다: 선택과 실제 행동을 함께 말하는 문구 (decisions.md 127번).
+      List<String> swerve =
+          content.reviewPhrases("swerve", chosen.name() + "-" + actual.name() + "-" + truth.name());
+      text.append(
+          swerve.isEmpty()
+              ? pick(content.reviewPhrases("extra", "deviated"), rng)
+                  .replace("{action}", Korean.withParticle(actionName(actual), "이", "가"))
+              : pick(swerve, rng));
+    } else if (chosen == Action.HOLD) {
       String key = (holding ? "kept-" : "watched-") + (good ? "good" : "bad");
       text.append(pick(content.reviewPhrases("hold", key), rng));
     } else {
@@ -1485,12 +1494,6 @@ class DefaultProgressService implements ProgressService {
     String hintNote = hintNoteKey(chosen, truth, hint);
     if (hintNote != null) {
       text.append(' ').append(pick(content.reviewPhrases("extra", hintNote), rng));
-    }
-    if (actual != chosen) {
-      text.append(' ')
-          .append(
-              pick(content.reviewPhrases("extra", "deviated"), rng)
-                  .replace("{action}", Korean.withParticle(actionName(actual), "이", "가")));
     }
     return text.toString();
   }
