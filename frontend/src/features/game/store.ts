@@ -60,8 +60,6 @@ interface GameState {
   notices: LogEntry[]
   /** 방금 드러난 위기 회고. 떠 있는 동안 시계가 멈추고, 확인을 누르면 닫힌다 (decisions.md 60번). */
   crisisAlert: LogEntry | null
-  /** 투자 성향 보고서를 펼쳤는가. 펼친 동안 시계가 멈춘다 (decisions.md 61번). */
-  reportOpen: boolean
   /** 자동 진행. 켜 두면 선택·결과·회고를 성향과 능력치로 대신 넘기고 크레딧까지 흐른다 (decisions.md 131번). 브라우저에 남는다. */
   autoPlay: boolean
   load: () => Promise<void>
@@ -89,8 +87,6 @@ interface GameState {
   trade: (side: TradeSide, quantity: number) => Promise<void>
   dismissNotice: () => void
   dismissCrisis: () => void
-  openReport: () => void
-  closeReport: () => void
   setAutoPlay: (on: boolean) => void
   /** 가진 아파트를 매물로 내놓거나 거둔다. 팔리는 것은 매수자가 나와야 한다 (주거 설계 3절). */
   listHome: (seq: number, listed: boolean) => Promise<void>
@@ -232,7 +228,6 @@ export const useGameStore = create<GameState>((set, get) => {
     histories: {},
     notices: [],
     crisisAlert: null,
-    reportOpen: false,
     autoPlay: storedAutoPlay(),
 
     // 재접속하면 일시정지 상태로 이어한다. 상황을 보고 사용자가 계속을 누른다 (architecture.md 7절).
@@ -498,16 +493,6 @@ export const useGameStore = create<GameState>((set, get) => {
     // 회고를 닫으면 멈췄던 시계를 다시 돌린다 (선택 카드·매매창이 없을 때).
     dismissCrisis: () => {
       set({ crisisAlert: null })
-      get().resume()
-    },
-
-    // 보고서를 읽는 동안은 시계를 멈추고, 닫으면 다시 돌린다 (선택 카드·매매창이 없을 때).
-    openReport: () => {
-      get().pause()
-      set({ reportOpen: true })
-    },
-    closeReport: () => {
-      set({ reportOpen: false })
       get().resume()
     },
 
