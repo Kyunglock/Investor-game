@@ -69,6 +69,8 @@ interface GameState {
   startLife: () => void
   /** 출생 신고서의 이름을 서버에 적고 삶을 시작한다 (decisions.md 135번). 실패하면 이유를 돌려주고 시작하지 않는다. */
   startLifeAs: (name: string) => Promise<string | null>
+  /** 끝난 판을 이름과 함께 최종 자산 순위표에 올린다 (decisions.md 141번). 실패하면 이유를 돌려준다. */
+  enterRanking: (name: string) => Promise<string | null>
   /** quantity는 뉴스의 매수·매도 수량. 없으면 서버 기본. */
   choose: (option: string, quantity?: number) => Promise<void>
   /** 결과 카드가 결과를 드러낼 때 부른다. 들고 있던 판을 화면에 반영한다. */
@@ -287,6 +289,22 @@ export const useGameStore = create<GameState>((set, get) => {
         return (error as { message?: string } | undefined)?.message ?? '이름을 저장하지 못했다'
       }
       apply(data, true)
+      return null
+    },
+
+    enterRanking: async (name) => {
+      const { game } = get()
+      if (!game) {
+        return '판이 없다'
+      }
+      const { data, error } = await api.POST('/api/games/{gameId}/ranking', {
+        params: { path: { gameId: game.gameId } },
+        body: { name: name.trim() },
+      })
+      if (!data) {
+        return (error as { message?: string } | undefined)?.message ?? '순위표에 올리지 못했다'
+      }
+      set({ game: data })
       return null
     },
 

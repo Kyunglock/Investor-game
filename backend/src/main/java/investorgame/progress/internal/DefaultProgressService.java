@@ -60,11 +60,13 @@ import investorgame.progress.GameSummary;
 import investorgame.progress.GameView;
 import investorgame.progress.MarketOverview;
 import investorgame.progress.ProgressService;
+import investorgame.progress.RankingView;
 import investorgame.progress.StockAnalysis;
 import investorgame.progress.StockHistory;
 import investorgame.result.Ending;
 import investorgame.result.GameResult;
 import investorgame.result.PlayProfile;
+import investorgame.result.RankingEntry;
 import investorgame.result.ResultService;
 import investorgame.session.SessionService;
 import java.security.SecureRandom;
@@ -284,19 +286,80 @@ class DefaultProgressService implements ProgressService {
     return view(games.findLatest(sessionId).orElseThrow());
   }
 
-  /** 이름은 1~8자. 공백만이거나 너무 길면 400 (decisions.md 135번). */
+  /** 이름은 1~8자. 공백만이거나 너무 길면 400 (decisions.md 135번). 순위표의 이름도 같은 규칙이다 (141번). */
   static final int NAME_MAX_LENGTH = 8;
+
+  /** 순위표에 보여 주는 인원. 그 아래는 total로만 센다. */
+  static final int RANKING_SIZE = 50;
+
+  /** 순위표에서 전업투자자의 직업 자리. 화면의 표기(LifeRecord)와 같은 말이다. */
+  static final String FULL_TIME_INVESTOR_TITLE = "전업투자자";
 
   @Override
   @Transactional
   public GameView rename(UUID sessionId, UUID gameId, String name) {
     GameRow game = lock(sessionId, gameId);
+    characters.rename(gameId, validName(name));
+    return view(game);
+  }
+
+  private static String validName(String name) {
     String trimmed = name == null ? "" : name.strip();
     if (trimmed.isEmpty() || trimmed.codePointCount(0, trimmed.length()) > NAME_MAX_LENGTH) {
       throw new InvalidRequestException("이름은 1~%d자여야 한다".formatted(NAME_MAX_LENGTH));
     }
-    characters.rename(gameId, trimmed);
+    return trimmed;
+  }
+
+  @Override
+  @Transactional
+  public GameView enterRanking(UUID sessionId, UUID gameId, String name) {
+    String trimmed = validName(name);
+    GameRow game =
+        games
+            .findLatest(sessionId)
+            .filter(g -> g.id().equals(gameId) && g.ended())
+            .orElseThrow(() -> new NotFoundException("끝난 판이 없다"));
+    GameResult result = results.find(gameId).orElseThrow();
+    CharacterView character = characters.get(gameId);
+    String jobTitle =
+        character.fullTimeInvestorDay() != null
+            ? FULL_TIME_INVESTOR_TITLE
+            : character.jobCode() == null ? null : content.job(character.jobCode()).title();
+    boolean entered =
+        results.enterRanking(
+            new RankingEntry(
+                gameId,
+                trimmed,
+                result.finalAsset(),
+                result.finalAge(),
+                result.ending(),
+                jobTitle,
+                OffsetDateTime.now()));
+    if (!entered) {
+      throw new InvalidRequestException("이미 순위표에 올린 판이다");
+    }
     return view(game);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public RankingView ranking() {
+    List<RankingEntry> entries = results.ranking(RANKING_SIZE);
+    List<RankingView.Entry> lines = new ArrayList<>(entries.size());
+    for (int i = 0; i < entries.size(); i++) {
+      RankingEntry e = entries.get(i);
+      lines.add(
+          new RankingView.Entry(
+              i + 1,
+              e.name(),
+              e.finalAsset(),
+              e.finalAge(),
+              e.ending(),
+              e.jobTitle(),
+              e.enteredAt()));
+    }
+    return new RankingView(lines, results.rankingSize());
   }
 
   private OptionalInt nextEventDay(GameRow game, int fromDay) {
@@ -2168,7 +2231,7 @@ class DefaultProgressService implements ProgressService {
         housingFlow.view(gameId, game.startAge(), game.lastReportedDay()),
         pending.map(e -> pendingView(game, character, e, quoteByCode)).orElse(null),
         nextEventDay,
-        ended ? results.find(gameId).map(DefaultProgressService::resultView).orElse(null) : null,
+        ended ? results.find(gameId).map(this::resultView).orElse(null) : null,
         logs.findAll(gameId),
         logs.findYears(gameId));
   }
@@ -2417,7 +2480,7 @@ class DefaultProgressService implements ProgressService {
     return assets.totalAsset(gameId, market.prices(gameId)) + housingFlow.equity(gameId);
   }
 
-  private static GameView.Result resultView(GameResult result) {
+  private GameView.Result resultView(GameResult result) {
     long initial = result.initialAsset();
     return new GameView.Result(
         initial,
@@ -2425,7 +2488,8 @@ class DefaultProgressService implements ProgressService {
         returnBp(initial, result.finalAsset()),
         result.finalAge(),
         result.ending(),
-        Map.copyOf(result.deviationCounts()));
+        Map.copyOf(result.deviationCounts()),
+        results.rankOf(result.gameId()).orElse(null));
   }
 
   private GameRow lock(UUID sessionId, UUID gameId) {

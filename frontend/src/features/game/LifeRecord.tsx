@@ -10,6 +10,7 @@ import { ProfileReport } from './ProfileReport'
 import { layersFor } from './pixel/layers'
 import { Sprite } from './pixel/SpriteView'
 import { playerName } from './playerName'
+import { RankingBoard } from './RankingBoard'
 
 /** 인생 기록부 (설계 5.7절). 끝난 판의 결과를 한 장의 문서로 보여 준다. */
 export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => void }) {
@@ -140,6 +141,7 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
         <AssetCurve game={game} ageYears={result.finalAge} full />
         <LifeMap game={game} ageYears={result.finalAge} />
         <ProfileReport game={game} />
+        <RankingBoard game={game} />
         <details>
           <summary className="cursor-pointer text-[13px] text-muted">인생 기록 전체 보기</summary>
           <div className="mt-2">

@@ -60,4 +60,13 @@ public interface ProgressService {
 
   /** 최근에 시작한 판부터 limit개. 버려진 판도 포함한다. 관리자 플레이 기록용이며 세션을 따지지 않는다. */
   List<GameSummary> recentGames(int limit);
+
+  /**
+   * 끝난 판을 이름과 함께 최종 자산 순위표에 올린다 (decisions.md 141번). 세션의 가장 최근 판이 그 판이고 끝나 있어야 하며(404), 판마다 한 번만 올릴
+   * 수 있다(400). 이름 규칙은 캐릭터 이름과 같다(1~8자). 돌려주는 판의 result.rank에 순위가 실린다.
+   */
+  GameView enterRanking(UUID sessionId, UUID gameId, String name);
+
+  /** 최종 자산 순위표의 앞쪽과 전체 인원. 세션을 따지지 않는다. */
+  RankingView ranking();
 }

@@ -314,6 +314,22 @@ content_version.version ─── progress_game.content_version
 - `vector` 열은 pgvector 확장을 쓴다. 마이그레이션이 `CREATE EXTENSION IF NOT EXISTS vector`를 하므로 DB 사용자가 확장을 만들 수 있어야 한다. 로컬·테스트는 `pgvector/pgvector:pg17` 이미지다.
 - 인덱스는 아직 없다. 행이 수천 개면 이웃 찾기를 전부 비교로 해도 충분하다. 수만 개가 넘으면 HNSW 인덱스를 검토한다.
 
+### 3.16 `result_ranking`
+
+최종 자산 순위표 (decisions.md 141번). 판이 끝난 뒤 사용자가 이름을 적어 올린 줄만 쌓인다. `result_profile`처럼 **세션 ID를 저장하지 않아** 세션이 만료돼도 남는다. 판마다 한 줄만 허용하려고 `game_id`를 PK로 쓴다 (올린 사람이 공개를 택한 기록이라 판 ID를 남겨도 익명성 결정과 어긋나지 않는다).
+
+| 컬럼 | 타입 | 비고 |
+|---|---|---|
+| game_id | uuid | PK. 판마다 한 번만 올릴 수 있다 |
+| name | varchar(16) | 올린 이름. 캐릭터 이름과 같은 1~8자 규칙(앱에서 검사) |
+| final_asset | bigint | 최종 총자산 (원). 파산이면 음수 |
+| final_age | smallint | |
+| ending | text | `NORMAL`, `BANKRUPT`, `QUIT` |
+| job_title | text | 끝날 때의 직업 이름. 전업투자자는 "전업투자자", 없으면 null |
+| entered_at | timestamptz | 올린 시각. 자산이 같으면 먼저 올린 사람이 앞 |
+
+- 인덱스: `(final_asset desc, entered_at)` — 순위표 조회와 내 순위 계산(나보다 자산이 많거나, 같은데 먼저 올린 줄 수)이 이 순서를 쓴다.
+
 ## 4. 데이터 생명주기와 정합성
 
 FK가 없으므로 정합성은 애플리케이션이 지킨다.
@@ -338,7 +354,7 @@ FK가 없으므로 정합성은 애플리케이션이 지킨다.
 - 정리는 진행이 각 도메인의 삭제 인터페이스에 `game_id`를 넘겨 호출한다. 다른 도메인의 테이블을 직접 지우지 않는다.
 - 판이 정리된 뒤에 만료된 세션 행을 지운다.
 - 진행 중이던 판이 있는 세션이 만료되면 그 판은 `ABANDONED`로 바꾼 뒤 지운다.
-- 결과 기록(`result_game`)도 같이 지운다. 개인과 연결되지 않는 집계 행(`result_stat`)만 남는다 (3.14절).
+- 결과 기록(`result_game`)도 같이 지운다. 개인과 연결되지 않는 집계 행(`result_stat`, 3.14절)과 사용자가 스스로 올린 순위표 줄(`result_ranking`, 3.16절)만 남는다.
 
 **고아 데이터 방지**
 

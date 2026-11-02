@@ -124,6 +124,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/games/{gameId}/ranking": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 끝난 판을 이름과 함께 최종 자산 순위표에 올린다
+         * @description 순위표는 올리는 사람만 공개된다 (decisions.md 141번). 세션의 가장 최근 판이 이 판이고 끝나 있어야 한다(404).
+         *     판마다 한 번만 올릴 수 있다(400). 이름 규칙은 캐릭터 이름과 같다(앞뒤 공백을 잘라 1~8자, 400).
+         *     응답의 `result.rank`에 순위가 실린다.
+         */
+        post: operations["enterRanking"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/games/{gameId}/trades": {
         parameters: {
             query?: never;
@@ -258,6 +280,27 @@ export interface paths {
          * @description 뉴스이면 선택이 능력치 판정을 거쳐 실제 행동이 되고, 매매와 주가 변동이 반영된다.
          */
         post: operations["chooseEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ranking": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 최종 자산 순위표
+         * @description 끝난 판에 이름을 적어 올린 사람만, 최종 자산이 큰 순서로 앞쪽 50명 (decisions.md 141번). 공개 값이라 세션이 없어도 본다.
+         *     세션·판 ID와 숨은 값은 없다.
+         */
+        get: operations["getRanking"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -695,8 +738,36 @@ export interface components {
             listed: boolean;
         };
         NameRequest: {
-            /** @description 캐릭터 이름. 앞뒤 공백은 잘린다 */
+            /** @description 캐릭터 이름 또는 순위표에 올릴 이름. 앞뒤 공백은 잘린다 */
             name: string;
+        };
+        /** @description 최종 자산 순위표 (decisions.md 141번) */
+        Ranking: {
+            /** @description 자산이 큰 순서. 같으면 먼저 올린 사람이 앞 */
+            entries: components["schemas"]["RankingEntry"][];
+            /** @description 순위표 전체 인원. entries는 그중 앞쪽 50명 */
+            total: number;
+        };
+        RankingEntry: {
+            /** @description 1부터 */
+            rank: number;
+            name: string;
+            /**
+             * Format: int64
+             * @description 파산이면 음수
+             */
+            finalAsset: number;
+            /** @description 끝난 나이 */
+            finalAge: number;
+            /** @enum {string} */
+            ending: "NORMAL" | "BANKRUPT" | "QUIT";
+            /** @description 끝날 때의 직업. 전업투자자였으면 "전업투자자" */
+            jobTitle?: string | null;
+            /**
+             * Format: date-time
+             * @description 순위표에 올린 시각
+             */
+            enteredAt: string;
         };
         RepayRequest: {
             /**
@@ -749,6 +820,8 @@ export interface components {
             deviationCounts: {
                 [key: string]: number;
             };
+            /** @description 최종 자산 순위표에 올린 뒤의 순위. 올리지 않았으면 null (decisions.md 141번) */
+            rank?: number | null;
         };
         /** @description 인생 기록 한 줄. 문구는 클라이언트가 만들고 서버는 코드와 숫자만 준다. 숨은 값은 없다 */
         LogEntry: {
@@ -1106,6 +1179,35 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    enterRanking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gameId: components["parameters"]["GameId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NameRequest"];
+            };
+        };
+        responses: {
+            /** @description 판 상태 (result.rank 포함) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Game"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     trade: {
         parameters: {
             query?: never;
@@ -1297,6 +1399,26 @@ export interface operations {
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    getRanking: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 순위표 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Ranking"];
+                };
+            };
         };
     };
     getPlayLog: {

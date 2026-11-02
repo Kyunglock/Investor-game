@@ -21,4 +21,15 @@ public interface ResultService {
 
   /** 주어진 판들 가운데 결과가 있는 것만. 관리자 플레이 기록용. */
   List<GameResult> findAll(Collection<UUID> gameIds);
+
+  /** 순위표에 올린다 (decisions.md 141번). 같은 판이 이미 있으면 그대로 두고 false. */
+  boolean enterRanking(RankingEntry entry);
+
+  /** 최종 자산이 큰 순서로 limit개. 같으면 먼저 올린 사람이 앞이다. */
+  List<RankingEntry> ranking(int limit);
+
+  int rankingSize();
+
+  /** 그 판이 순위표에 있으면 1부터 시작하는 순위. 올리지 않았으면 비어 있다. */
+  Optional<Integer> rankOf(UUID gameId);
 }
