@@ -1,74 +1,101 @@
-import type { Layer } from './sprite'
+import type { Layer, Put } from './sprite'
 
 /**
- * 표정 네 가지 (decisions.md 62번). 머리 윗줄(headTop)을 기준으로 얼굴 줄만 덧칠한다: 눈은 ht+4의 5·10열, 입은 ht+6의 7·8열. 장식·약점 표시 위에
- * 마지막으로 포개므로 안경 같은 장식과 겹치면 표정이 이긴다.
+ * 표정 네 가지 (decisions.md 62번). 얼굴 좌표는 bodies.ts 주석을 따른다(머리 윗줄 ht 기준).
+ * 장식·약점 표시 위에 마지막으로 포개므로 안경 같은 장식과 겹치면 표정이 이긴다.
  */
 export type MoodKey = 'joy' | 'confident' | 'despair' | 'frugal'
 
+/** 같은 글자를 여러 칸에 */
+export function fill(put: Put, y: number, xs: number[], ch: string) {
+  for (const x of xs) {
+    put(y, x, ch)
+  }
+}
+
+/** 원래 눈(3×3 눈동자와 반사)을 지운다 */
+export function clearEyes(put: Put, ht: number) {
+  for (const dy of [12, 13, 14, 15]) {
+    fill(put, ht + dy, [9, 10, 11, 12, 13, 18, 19, 20, 21, 22], 's')
+  }
+}
+
 export const MOODS: Record<MoodKey, Layer> = {
-  // 기쁨: 웃는 눈(^ ^), 활짝 벌린 입, 볼 홍조
+  // 기쁨: 웃는 눈(^ ^), 혀가 보이게 벌린 입, 진한 볼 홍조
   joy: {
     paint: (put, ht) => {
-      for (const x of [4, 6, 9, 11]) {
-        put(ht + 4, x, 'k')
-      }
-      for (const x of [5, 10]) {
-        put(ht + 3, x, 'k')
-        put(ht + 4, x, 's')
-      }
-      for (const x of [6, 7, 8, 9]) {
-        put(ht + 6, x, 'm')
-      }
-      put(ht + 5, 4, 'r')
-      put(ht + 5, 11, 'r')
+      clearEyes(put, ht)
+      fill(put, ht + 12, [10, 11, 12, 19, 20, 21], 'k')
+      fill(put, ht + 13, [9, 13, 18, 22], 'k')
+      fill(put, ht + 15, [8, 9, 22, 23], 'r')
+      fill(put, ht + 16, [8, 9, 10, 21, 22, 23], 'r')
+      fill(put, ht + 16, [14, 17], 'm')
+      fill(put, ht + 16, [15, 16], 'M')
+      fill(put, ht + 17, [14, 17], 's')
+      fill(put, ht + 17, [15, 16], 'r')
     },
   },
-  // 자신감: 선글라스, 한쪽만 올라간 입
+  // 자신감: 반짝이는 선글라스, 한쪽만 올라간 입
   confident: {
     paint: (put, ht) => {
-      for (const x of [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
-        put(ht + 4, x, 'k')
+      clearEyes(put, ht)
+      fill(
+        put,
+        ht + 12,
+        Array.from({ length: 18 }, (_, i) => 7 + i),
+        'k',
+      )
+      for (const dy of [13, 14]) {
+        fill(put, ht + dy, [9, 10, 11, 12, 13, 18, 19, 20, 21, 22], 'K')
       }
-      for (const x of [4, 5, 6, 9, 10, 11]) {
-        put(ht + 5, x, 'k')
-      }
-      put(ht + 6, 7, 's')
-      put(ht + 6, 8, 'm')
-      put(ht + 6, 9, 'm')
-      put(ht + 5, 9, 'm')
+      fill(put, ht + 15, [10, 11, 12, 19, 20, 21], 'K')
+      put(ht + 13, 10, 'W')
+      put(ht + 14, 11, 'W')
+      put(ht + 13, 19, 'W')
+      put(ht + 14, 20, 'W')
+      put(ht + 17, 15, 's')
+      fill(put, ht + 17, [16, 17], 'm')
+      put(ht + 16, 18, 'm')
     },
   },
-  // 좌절: 처진 눈썹, 눈물, 내려간 입
+  // 좌절: 반짝임이 아래로 내려간 그렁그렁한 눈, 흐르는 눈물, 처진 입
   despair: {
     paint: (put, ht) => {
-      put(ht + 3, 4, 'k')
-      put(ht + 3, 11, 'k')
-      put(ht + 2, 5, 'k')
-      put(ht + 2, 10, 'k')
-      for (const dy of [5, 6]) {
-        put(ht + dy, 5, 'B')
-        put(ht + dy, 10, 'B')
+      fill(put, ht + 13, [10, 19], 'k')
+      fill(put, ht + 14, [11, 20], 'E')
+      for (const dy of [15, 16, 17]) {
+        fill(put, ht + dy, [10, 21], 'T')
       }
-      put(ht + 6, 7, 's')
-      put(ht + 6, 8, 's')
-      put(ht + 6, 6, 'm')
-      put(ht + 6, 9, 'm')
-      put(ht + 7, 7, 'm')
-      put(ht + 7, 8, 'm')
+      fill(put, ht + 17, [14, 15, 16, 17], 'm')
+      fill(put, ht + 18, [14, 17], 'm')
     },
   },
-  // 근심(긴축): 찌푸린 눈썹, 식은땀, 꾹 다문 작은 입
+  // 근심(긴축): 반쯤 감은 눈, 관자놀이 식은땀, 꾹 다문 입
   frugal: {
     paint: (put, ht) => {
-      put(ht + 3, 5, 'k')
-      put(ht + 3, 6, 'k')
-      put(ht + 3, 9, 'k')
-      put(ht + 3, 10, 'k')
-      put(ht + 2, 12, 'B')
-      put(ht + 3, 12, 'B')
-      put(ht + 6, 7, 's')
-      put(ht + 6, 8, 'm')
+      clearEyes(put, ht)
+      fill(put, ht + 13, [9, 10, 11, 12, 19, 20, 21, 22], 'k')
+      fill(put, ht + 14, [10, 11, 12, 19, 20, 21], 'e')
+      put(ht + 14, 11, 'k')
+      put(ht + 14, 20, 'k')
+      fill(put, ht + 15, [10, 11, 12, 19, 20, 21], 'f')
+      put(ht + 11, 24, 'T')
+      put(ht + 12, 24, 'T')
+      fill(put, ht + 13, [23, 24, 25], 'T')
+      fill(put, ht + 14, [23, 24, 25], 'T')
+      put(ht + 15, 24, 'T')
+      put(ht + 13, 23, 'W')
+      fill(put, ht + 17, [14, 15, 16, 17], 'M')
     },
+  },
+}
+
+/** 감은 눈꺼풀. 평소 얼굴일 때만 잠깐 덮어 깜빡이게 한다. */
+export const EYELIDS: Layer = {
+  paint: (put, ht) => {
+    for (const dy of [12, 13, 15]) {
+      fill(put, ht + dy, [10, 11, 12, 19, 20, 21], 's')
+    }
+    fill(put, ht + 14, [10, 11, 12, 19, 20, 21], 'k')
   },
 }

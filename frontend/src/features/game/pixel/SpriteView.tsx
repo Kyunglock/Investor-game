@@ -1,45 +1,50 @@
 import { useEffect, useRef, useState } from 'react'
 import { ADORNMENTS } from './adornments'
-import { BODIES } from './bodies'
+import { bodyFor } from './bodies'
 import type { SpriteSpec } from './layers'
 import { MARKS } from './marks'
-import { MOODS } from './moods'
-import { PALETTE } from './palette'
-import { sexLayers } from './sexes'
+import { EYELIDS, MOODS } from './moods'
+import { CHARACTER_PALETTE } from './palette'
 import {
+  CHAR_HEIGHT,
+  CHAR_WIDTH,
   compose,
   diffRects,
   type Layer,
   type Rect,
-  SPRITE_HEIGHT,
-  SPRITE_WIDTH,
-  toRects,
+  toRuns,
 } from './sprite'
 
 const DROP_MS = 500
-const FACE_ROWS = 10
+/** 얼굴만 자를 때의 줄 수. 머리 윤곽부터 턱 아래까지 */
+const FACE_ROWS = 20
 
 interface Props {
   spec: SpriteSpec
   /** 화면 폭(px). 높이는 비율대로 */
   size: number
-  /** face: 머리 윗부분 10줄만 */
+  /** face: 머리만 */
   crop?: 'face' | 'full'
   className?: string
 }
 
+/** 깜빡일 수 있는 얼굴: 표정이 없고 눈을 감은 장식(돌부처)이 아닐 때 */
+export function canBlink(spec: Pick<SpriteSpec, 'mood' | 'adornment'>): boolean {
+  return !spec.mood && spec.adornment !== 'patience'
+}
+
 /** 캐릭터 한 명. 눈은 깜빡이고, 약점 표시가 바뀌면 옛 표시가 떨어지며 사라진다 (설계 4.4절). */
 export function Sprite({ spec, size, crop = 'full', className = '' }: Props) {
-  const body = BODIES[spec.stage]
-  const baseLayers: Layer[] = [
-    ...sexLayers(spec.sex, spec.stage),
-    ...(spec.adornment ? [ADORNMENTS[spec.adornment]] : []),
-  ]
+  const body = bodyFor(spec.sex, spec.stage)
+  const baseLayers: Layer[] = spec.adornment ? [ADORNMENTS[spec.adornment]] : []
   const base = compose(body, baseLayers)
   // 표정은 장식·약점 표시 위에 마지막으로 포갠다. 약점 표시가 떨어지는 연출은 표정과 무관하다.
   const mood: Layer[] = spec.mood ? [MOODS[spec.mood]] : []
   const withMark = compose(body, [...baseLayers, ...(spec.mark ? [MARKS[spec.mark]] : []), ...mood])
-  const markRects = diffRects(base, withMark, PALETTE)
+  const markRects = diffRects(base, withMark, CHARACTER_PALETTE)
+  const lids = canBlink(spec)
+    ? diffRects(withMark, compose(body, [...baseLayers, EYELIDS]), CHARACTER_PALETTE)
+    : []
 
   const [dropping, setDropping] = useState<Rect[]>([])
   // 약점이 바뀐 렌더에서만 옛 표시를 떨어뜨린다. 표시 칸 목록은 매 렌더 새로 계산되므로 ref로 들고 있는다.
@@ -61,31 +66,30 @@ export function Sprite({ spec, size, crop = 'full', className = '' }: Props) {
   }, [spec.mark])
 
   const top = crop === 'face' ? body.headTop - 1 : 0
-  const height = crop === 'face' ? FACE_ROWS : SPRITE_HEIGHT
+  const height = crop === 'face' ? FACE_ROWS : CHAR_HEIGHT
 
   return (
     <svg
-      viewBox={`0 ${top} ${SPRITE_WIDTH} ${height}`}
+      viewBox={`0 ${top} ${CHAR_WIDTH} ${height}`}
       width={size}
-      height={(size * height) / SPRITE_WIDTH}
+      height={(size * height) / CHAR_WIDTH}
       className={className}
       style={{ imageRendering: 'pixelated', shapeRendering: 'crispEdges' }}
       aria-hidden="true"
     >
-      {toRects(base, PALETTE).map((r) => (
-        <rect
-          key={`${r.x}-${r.y}`}
-          x={r.x}
-          y={r.y}
-          width={1}
-          height={1}
-          fill={r.fill}
-          className={r.code === 'e' ? 'animate-blink' : undefined}
-        />
+      {toRuns(base, CHARACTER_PALETTE).map((r) => (
+        <rect key={`${r.x}-${r.y}`} x={r.x} y={r.y} width={r.width} height={1} fill={r.fill} />
       ))}
       {markRects.map((r) => (
         <rect key={`m-${r.x}-${r.y}`} x={r.x} y={r.y} width={1} height={1} fill={r.fill} />
       ))}
+      {lids.length > 0 && (
+        <g className="animate-lid">
+          {lids.map((r) => (
+            <rect key={`l-${r.x}-${r.y}`} x={r.x} y={r.y} width={1} height={1} fill={r.fill} />
+          ))}
+        </g>
+      )}
       {dropping.length > 0 && (
         <g className="animate-drop">
           {dropping.map((r) => (
