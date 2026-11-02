@@ -144,7 +144,13 @@ vi.stubGlobal('localStorage', {
 
 describe('자동 진행', () => {
   it('켜면 저장되고 서 있던 시계를 돌리며, 끄면 시계는 그대로다', () => {
-    useGameStore.setState({ game: game(), status: 'playing', running: false, autoPlay: false })
+    useGameStore.setState({
+      game: game({ day: 36 * YEAR }),
+      day: 36 * YEAR,
+      status: 'playing',
+      running: false,
+      autoPlay: false,
+    })
     useGameStore.getState().setAutoPlay(true)
     expect(useGameStore.getState().autoPlay).toBe(true)
     expect(useGameStore.getState().running).toBe(true)
@@ -173,10 +179,47 @@ describe('자동 진행', () => {
   it('이어하기는 켜 둔 자동 진행을 그대로 둔다 (#191)', async () => {
     localStorage.setItem('investor-game.auto-play', 'on')
     useGameStore.setState({ autoPlay: true })
-    vi.mocked(api.GET).mockResolvedValue({ data: game(), response: { status: 200 } } as never)
+    vi.mocked(api.GET).mockResolvedValue({
+      data: game({ day: 36 * YEAR }),
+      response: { status: 200 },
+    } as never)
     await useGameStore.getState().load()
     expect(useGameStore.getState().autoPlay).toBe(true)
     expect(localStorage.getItem('investor-game.auto-play')).toBe('on')
+  })
+})
+
+describe('자동 진행은 50세부터 (#200)', () => {
+  it('50세 전에는 켜지지 않고, 켜 둔 설정도 그 판에서는 꺼진 채로 둔다', async () => {
+    useGameStore.setState({
+      game: game({ day: 34 * YEAR }),
+      day: 34 * YEAR,
+      status: 'playing',
+      running: false,
+      autoPlay: false,
+    })
+    useGameStore.getState().setAutoPlay(true)
+    expect(useGameStore.getState().autoPlay).toBe(false)
+
+    localStorage.setItem('investor-game.auto-play', 'on')
+    useGameStore.setState({ autoPlay: true })
+    vi.mocked(api.GET).mockResolvedValue({ data: game(), response: { status: 200 } } as never)
+    await useGameStore.getState().load()
+    expect(useGameStore.getState().autoPlay).toBe(false)
+    expect(localStorage.getItem('investor-game.auto-play')).toBe('on')
+  })
+
+  it('50세가 되면 켤 수 있다', () => {
+    useGameStore.setState({
+      game: game({ day: 35 * YEAR }),
+      day: 35 * YEAR,
+      status: 'playing',
+      running: false,
+      autoPlay: false,
+    })
+    useGameStore.getState().setAutoPlay(true)
+    expect(useGameStore.getState().autoPlay).toBe(true)
+    useGameStore.getState().setAutoPlay(false)
   })
 })
 
