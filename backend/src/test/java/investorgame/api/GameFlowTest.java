@@ -144,16 +144,10 @@ class GameFlowTest {
     assertThat(seenKinds.getOrDefault("CAREER", 0))
         .as("35년 동안 직장 장면이 여러 번")
         .isGreaterThanOrEqualTo(3);
-    // 성장 단계 10개에서 하나씩, 취업 뒤 일상 장면(adult) 풀(양가 부모 장면 포함, 결혼하므로 다 나온다)을 40년 동안 다 쓴다.
-    // 회사가 전제인 장면은 고른 직업이 알바·농부·공무원·교사면 빠진다 (decisions.md 134번).
-    long adultExpected =
-        content.adultTraits().stream()
-            .filter(t -> jobsChosen.stream().anyMatch(t::fitsJob))
-            .count();
-    assertThat(adultExpected).isBetween(9L, 13L);
-    assertThat(seenKinds.get("TRAIT"))
-        .as("성장기 10 + 취업 뒤 일상 %d (직업 %s)", adultExpected, jobsChosen)
-        .isEqualTo(10 + (int) adultExpected);
+    // 성장 단계 10개에서 하나씩, 취업 뒤 일상 장면(adult)은 1.5~2.5년 간격으로 온다. 풀이 한 판보다 넓어(#195) 다 쓰지 않는다.
+    // 간격으로 따지면 25~70세에 많아야 31번, 풀이 남아 있으니 적어도 여덟 번은 온다.
+    int adultSeen = seenKinds.get("TRAIT") - 10;
+    assertThat(adultSeen).as("취업 뒤 일상 장면 수 (직업 %s)", jobsChosen).isBetween(8, 31);
     assertThat(kindOrder.subList(0, 13))
         .as("성장기의 성향 이벤트가 모두 끝난 뒤에 직업, 독립(주거), 그다음 투자 시작 제안")
         .containsExactly(
@@ -252,7 +246,7 @@ class GameFlowTest {
     assertThat(game.<String>read("$.sex")).isIn("M", "F");
     List<String> childSexes = game.read("$.household.children[*].sex");
     assertThat(childSexes).isNotEmpty().allMatch(s -> List.of("M", "F").contains(s));
-    assertThat(kinds.stream().filter("TRAIT"::equals).count()).isEqualTo(10 + adultExpected);
+    assertThat(kinds.stream().filter("TRAIT"::equals).count()).isEqualTo(10L + adultSeen);
     assertThat(kinds.stream().filter("NEWS"::equals).count())
         .isEqualTo((long) seenKinds.get("NEWS"));
     // 흔들림(SHAKE)도 선택 뒤 주가가 움직여 PRICE를 남긴다 (decisions.md 33번).

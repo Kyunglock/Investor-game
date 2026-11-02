@@ -53,6 +53,7 @@ class JsonContentCatalog implements ContentCatalog {
           "jobs.json",
           "careers.json",
           "traits.json",
+          "daily.json",
           "news.json",
           "phrases.json",
           "stocks.json",
@@ -92,8 +93,14 @@ class JsonContentCatalog implements ContentCatalog {
         read(json, "careers.json", new TypeReference<List<CareerDefinition>>() {}).stream()
             .sorted(Comparator.comparing(CareerDefinition::code))
             .toList();
+    // 성장기 장면은 traits.json, 취업 뒤 일상 장면은 daily.json에 둔다 (#195).
+    List<TraitDefinition> daily =
+        read(json, "daily.json", new TypeReference<List<TraitDefinition>>() {});
+    require(daily.stream().allMatch(TraitDefinition::adult), "daily.json의 장면은 모두 adult여야 한다");
     this.traits =
-        read(json, "traits.json", new TypeReference<List<TraitDefinition>>() {}).stream()
+        java.util.stream.Stream.concat(
+                read(json, "traits.json", new TypeReference<List<TraitDefinition>>() {}).stream(),
+                daily.stream())
             .sorted(Comparator.comparingInt(TraitDefinition::age))
             .toList();
     this.adultTraits =
@@ -614,6 +621,7 @@ class JsonContentCatalog implements ContentCatalog {
         }
       }
     }
+    validateTraitConditions(allJobs);
     validateInvestorTypes(meta.styles(), meta.risks(), meta.minds(), meta.investorTypes());
     for (NewsDefinition definition : news) {
       require(
@@ -725,6 +733,75 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   /** 모든 선택지가 스타일과 섹터를 하나씩 이상 드러내야 한다. 그래야 판마다 어떤 장면이 뽑히고 무엇을 골라도 투자 스타일과 관심 섹터가 반드시 정해진다. */
+  /** 사는 곳 조건에 쓸 수 있는 값 (housing.Tenure와 같다). */
+  private static final Set<String> HOMES =
+      Set.of("PARENTS", "MONTHLY", "VILLA_JEONSE", "APT_JEONSE", "OWN");
+
+  /** 일상 장면의 처지 조건과 이어지는 장면(followUps·requires)이 앞뒤가 맞는지 (#195). */
+  private void validateTraitConditions(Set<String> allJobs) {
+    Map<String, TraitDefinition> byCode = new java.util.HashMap<>();
+    traits.forEach(t -> byCode.put(t.code(), t));
+    Set<String> works = new java.util.HashSet<>(allJobs);
+    works.addAll(
+        Set.of(TraitDefinition.INVESTOR, TraitDefinition.JOBLESS, TraitDefinition.RETIRED));
+    Set<String> reached = new java.util.HashSet<>();
+    for (TraitDefinition trait : traits) {
+      String code = trait.code();
+      boolean conditional =
+          trait.minAge() != null
+              || trait.maxAge() != null
+              || trait.single()
+              || trait.childless()
+              || trait.wantsChild()
+              || !trait.works().isEmpty()
+              || !trait.homes().isEmpty()
+              || trait.followUpOnly();
+      require(!conditional || trait.adult(), "처지 조건은 adult 장면만 쓴다: " + code);
+      require(
+          trait.minAge() == null || trait.maxAge() == null || trait.minAge() <= trait.maxAge(),
+          "나이 구간이 거꾸로다: " + code);
+      require(
+          trait.childMinAge() == null
+              || trait.childMaxAge() == null
+              || trait.childMinAge() <= trait.childMaxAge(),
+          "아이 나이 구간이 거꾸로다: " + code);
+      require(!(trait.childless() && trait.wantsChild()), "아이가 없는데 아이 나이를 본다: " + code);
+      require(!(trait.single() && trait.married()), "미혼과 기혼을 함께 요구한다: " + code);
+      require(works.containsAll(trait.works()), "알 수 없는 처지: " + code + " " + trait.works());
+      require(HOMES.containsAll(trait.homes()), "알 수 없는 사는 곳: " + code + " " + trait.homes());
+      for (String need : trait.requires()) {
+        String[] parts = need.split("/", 2);
+        TraitDefinition before = parts.length == 2 ? byCode.get(parts[0]) : null;
+        require(
+            before != null && before.option(parts[1]) != null,
+            "앞 선택(requires)이 없다: " + code + " " + need);
+      }
+      for (TraitDefinition.Option option : trait.options()) {
+        if (option.followUps().isEmpty()) {
+          continue;
+        }
+        String where = code + "/" + option.code();
+        require(trait.adult(), "이어지는 장면은 adult 장면만 쓴다: " + where);
+        require(
+            option.followUpDays() != null && option.followUpDays() > 0,
+            "이어지는 장면이 오는 날 수(followUpDays)가 없다: " + where);
+        for (TraitDefinition.FollowUp next : option.followUps()) {
+          TraitDefinition target = byCode.get(next.code());
+          require(
+              target != null && target.adult() && target.followUpOnly(),
+              "이어지는 장면은 있는 followUpOnly 장면이어야 한다: " + where + " → " + next.code());
+          require(next.weight() > 0, "이어지는 장면의 가중치는 양수여야 한다: " + where);
+          reached.add(next.code());
+        }
+      }
+    }
+    for (TraitDefinition trait : traits) {
+      require(
+          !trait.followUpOnly() || reached.contains(trait.code()),
+          "어디서도 이어지지 않는 followUpOnly 장면: " + trait.code());
+    }
+  }
+
   private void validateTraitDeltas(String where, Map<String, Integer> deltas) {
     boolean hasStyle = false;
     boolean hasSector = false;

@@ -114,10 +114,13 @@ class JsonContentCatalogTest {
     for (ContentCatalog.TraitStage stage : catalog.traitStages()) {
       assertThat(stage.scenes()).as("%d세 장면", stage.age()).hasSizeBetween(2, 3);
     }
-    // 취업 뒤 일상 7 + 양가 부모 장면 6 (decisions.md 76번)
-    assertThat(catalog.adultTraits()).hasSize(13).allMatch(TraitDefinition::adult);
-    assertThat(catalog.adultTraits().stream().filter(TraitDefinition::married)).hasSize(6);
-    // 동료에게 빌려준 돈은 돌려받기도, 떼이기도 한다. 떼이면 안목이 깎이고 용기는 오른다 (decisions.md 41번).
+    // 취업 뒤 일상 장면은 daily.json에 있고 모두 adult다. 양가 부모 장면은 결혼한 뒤에만 (decisions.md 76번).
+    assertThat(catalog.adultTraits())
+        .hasSizeGreaterThanOrEqualTo(13)
+        .allMatch(TraitDefinition::adult);
+    assertThat(catalog.adultTraits().stream().filter(TraitDefinition::married))
+        .hasSizeGreaterThanOrEqualTo(6);
+    // 동료에게 빌려준 돈은 1년 뒤 이어지는 장면에서 돌려받기도, 떼이기도 한다 (decisions.md 41번 → #195).
     TraitDefinition.Option lend =
         catalog.adultTraits().stream()
             .filter(t -> t.code().equals("a-loan"))
@@ -140,14 +143,10 @@ class JsonContentCatalogTest {
       assertThat(moving).as(code).isGreaterThanOrEqualTo(money.options().size() / 2L);
     }
     assertThat(lend.amount()).isEqualTo(-5_000_000);
-    assertThat(lend.outcomes()).hasSize(2);
-    assertThat(lend.outcomes())
-        .anyMatch(o -> o.amount() > 5_000_000)
-        .anyMatch(
-            o ->
-                o.amount() == 0
-                    && o.statDeltas().get("insight") < 0
-                    && o.statDeltas().get("courage") > 0);
+    assertThat(lend.followUpDays()).isEqualTo(360);
+    assertThat(lend.followUps())
+        .extracting(TraitDefinition.FollowUp::code)
+        .containsExactlyInAnyOrder("a-loan-repaid", "a-loan-slow", "a-loan-gone");
     for (TraitDefinition trait : catalog.traits()) {
       assertThat(trait.options()).as(trait.code()).hasSizeBetween(3, 4);
     }
@@ -392,5 +391,49 @@ class JsonContentCatalogTest {
     assertThat(notices.get("academy").fitsChildAge(10)).isTrue();
     assertThat(notices.get("school").childAgeBound()).isTrue();
     assertThat(notices.get("condolence").childAgeBound()).isFalse();
+  }
+
+  /** #195: 이어지는 장면은 모두 앞 선택에서 닿고, 처지 조건은 adult 장면에만 있다. */
+  @Test
+  void 이어지는_장면은_끊기지_않고_처지_조건은_일상_장면에만_있다() {
+    JsonContentCatalog catalog = load();
+    java.util.Set<String> reached = new java.util.HashSet<>();
+    for (TraitDefinition trait : catalog.traits()) {
+      for (TraitDefinition.Option option : trait.options()) {
+        option.followUps().forEach(f -> reached.add(f.code()));
+      }
+      if (!trait.adult()) {
+        assertThat(trait.followUpOnly()).as(trait.code()).isFalse();
+        assertThat(trait.works()).as(trait.code()).isEmpty();
+        assertThat(trait.homes()).as(trait.code()).isEmpty();
+      }
+    }
+    for (TraitDefinition trait : catalog.adultTraits()) {
+      if (trait.followUpOnly()) {
+        assertThat(reached).as("닿지 않는 이어지는 장면 %s", trait.code()).contains(trait.code());
+      }
+    }
+    assertThat(reached).isNotEmpty();
+  }
+
+  @Test
+  void 없는_장면으로_이어지면_로드에_실패한다(@TempDir Path dir) throws IOException {
+    Path source = Path.of("..", "content");
+    for (String file : JsonContentCatalog.FILES) {
+      Files.copy(source.resolve(file), dir.resolve(file));
+    }
+    String daily = Files.readString(dir.resolve("daily.json"), StandardCharsets.UTF_8);
+    Files.writeString(
+        dir.resolve("daily.json"),
+        daily.replaceFirst("\"code\": \"a-loan-gone\"", "\"code\": \"no-such\""),
+        StandardCharsets.UTF_8);
+    assertThatThrownBy(
+            () ->
+                new JsonContentCatalog(
+                    JsonMapper.builder().build(),
+                    new ContentProperties(
+                        8, new ContentProperties.Range(3, 4), List.of(dir.toString()))))
+        .isInstanceOf(IllegalStateException.class)
+        .hasMessageContaining("no-such");
   }
 }
