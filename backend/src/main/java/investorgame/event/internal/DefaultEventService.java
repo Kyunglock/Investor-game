@@ -4,6 +4,7 @@ import investorgame.common.Direction;
 import investorgame.common.GameProperties;
 import investorgame.common.Hint;
 import investorgame.common.Phase;
+import investorgame.common.ReadCache;
 import investorgame.common.Sentiment;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
@@ -153,6 +154,10 @@ class DefaultEventService implements EventService {
   @Override
   @Transactional(readOnly = true)
   public Optional<EventView> pending(UUID gameId) {
+    return ReadCache.get("event.pending", gameId, () -> pendingUncached(gameId));
+  }
+
+  private Optional<EventView> pendingUncached(UUID gameId) {
     return repository.findAll(gameId).stream()
         .filter(EventRow::pending)
         .findFirst()
