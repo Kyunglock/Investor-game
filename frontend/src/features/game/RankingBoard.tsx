@@ -16,7 +16,7 @@ const ENDING_LABEL: Record<Entry['ending'], string> = {
 }
 
 /**
- * 최종 자산 순위표 (decisions.md 141번). 끝난 판의 기록부 안에서, 이름을 적어 올리면 내 줄이 생기고 순위가 보인다. 올리는 사람만 공개되므로
+ * 최종 자산 순위표 (decisions.md 142번). 끝난 판의 기록부 안에서, 이름을 적어 올리면 내 줄이 생기고 순위가 보인다. 올리는 사람만 공개되므로
  * 올리기 전에는 다른 사람의 줄만 있다.
  */
 export function RankingBoard({ game }: { game: Game }) {

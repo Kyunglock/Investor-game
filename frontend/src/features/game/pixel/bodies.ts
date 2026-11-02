@@ -1,8 +1,15 @@
+import type { Sex } from '../../../api/client'
+import { BODY_MAPS } from './bodyMaps'
 import type { Body } from './sprite'
 
 /**
- * 나이 몸통 다섯. 머리는 headTop부터 8줄(머리카락 2, 이마 1, 얼굴 3, 입 1, 목 1)이고 눈은 headTop+4 줄의 5·10열(e)이다.
- * 장식과 표시는 이 좌표를 기준으로 그린다 (설계 7.1절).
+ * 나이 몸통 다섯 × 성별 둘 (32×40, decisions.md 142번). 그림은 scripts/pixel/bodies.py가 만든 bodyMaps.ts에 있다.
+ * 모든 몸통은 같은 머리를 쓰므로 얼굴 좌표가 같다. 머리 윗줄 headTop(ht) 기준으로
+ * - 머리 윤곽은 ht-1 줄, 머리는 ht~ht+18 줄, 목은 ht+19 줄, 옷은 ht+20 줄부터
+ * - 눈은 ht+12~ht+14 줄의 10~12열과 19~21열(3×3 눈동자, 반짝임은 ht+13 줄의 10·19열), 그 아래 ht+15 줄은 반사
+ * - 볼은 ht+16 줄의 8·9·22·23열, 코는 ht+16 줄 16열, 입은 ht+17 줄 15·16열
+ * - 얼굴 가장자리는 ht+12~ht+14 줄에서 6열과 25열. 몸은 4~27열(24칸) 안에 든다
+ * 장식·약점 표시·표정은 이 좌표를 기준으로 그린다.
  */
 export type AgeStage = 'baby' | 'child' | 'adult' | 'middle' | 'old'
 
@@ -24,133 +31,7 @@ export function stageFor(ageYears: number): AgeStage {
   return 'old'
 }
 
-export const BODIES: Record<AgeStage, Body> = {
-  // 작고 동글동글. 옷은 크림색.
-  baby: {
-    headTop: 5,
-    map: [
-      '................',
-      '................',
-      '................',
-      '................',
-      '................',
-      '......hhhh......',
-      '....hhhhhhhh....',
-      '....hsssssss....',
-      '....ssssssss....',
-      '....sessssse....',
-      '....ssssssss....',
-      '.....ssmmss.....',
-      '......ssss......',
-      '.....oooooo.....',
-      '....oooooooo....',
-      '....oooooooo....',
-      '.....oooooo.....',
-      '.....ss..ss.....',
-      '................',
-      '................',
-    ],
-  },
-  child: {
-    headTop: 3,
-    map: [
-      '................',
-      '................',
-      '................',
-      '.....hhhhhh.....',
-      '....hhhhhhhh....',
-      '....hsssssss....',
-      '....ssssssss....',
-      '....sessssse....',
-      '....ssssssss....',
-      '.....ssmmss.....',
-      '......ssss......',
-      '.....cccccc.....',
-      '....cccccccc....',
-      '...sccccccccs...',
-      '....cccccccc....',
-      '.....pppppp.....',
-      '.....pp..pp.....',
-      '.....bb..bb.....',
-      '................',
-      '................',
-    ],
-  },
-  adult: {
-    headTop: 1,
-    map: [
-      '................',
-      '.....hhhhhh.....',
-      '....hhhhhhhh....',
-      '....hsssssss....',
-      '....ssssssss....',
-      '....sessssse....',
-      '....ssssssss....',
-      '.....ssmmss.....',
-      '......ssss......',
-      '....cccccccc....',
-      '...cccccccccc...',
-      '..sccccccccccs..',
-      '..sccccccccccs..',
-      '...cccccccccc...',
-      '....cccccccc....',
-      '....pppppppp....',
-      '....ppp..ppp....',
-      '....ppp..ppp....',
-      '....ppp..ppp....',
-      '....bbb..bbb....',
-    ],
-  },
-  // 흰머리가 섞이고 넥타이를 맨다.
-  middle: {
-    headTop: 1,
-    map: [
-      '................',
-      '.....hhhhhh.....',
-      '....GhhhhhhG....',
-      '....Gsssssss....',
-      '....ssssssss....',
-      '....sessssse....',
-      '....ssssssss....',
-      '.....ssmmss.....',
-      '......ssss......',
-      '....cccttccc....',
-      '...ccccttcccc...',
-      '..sccccttccccs..',
-      '..sccccccccccs..',
-      '...cccccccccc...',
-      '....cccccccc....',
-      '....pppppppp....',
-      '....ppp..ppp....',
-      '....ppp..ppp....',
-      '....ppp..ppp....',
-      '....bbb..bbb....',
-    ],
-  },
-  // 흰머리, 굽은 허리, 지팡이.
-  old: {
-    headTop: 3,
-    map: [
-      '................',
-      '................',
-      '................',
-      '.....wwwwww.....',
-      '....wwwwwwww....',
-      '....wsssssss....',
-      '....ssssssss....',
-      '....sessssse....',
-      '....ssssssss....',
-      '.....ssmmss.....',
-      '......ssss......',
-      '....cccccccc....',
-      '...cccccccccc...',
-      '..sccccccccccsd.',
-      '...cccccccccc.d.',
-      '....cccccccc..d.',
-      '....pppppppp..d.',
-      '....ppp..ppp..d.',
-      '....ppp..ppp..d.',
-      '....bbb..bbb....',
-    ],
-  },
+/** 성별·나이의 몸통. 여자는 긴 머리와 치마(노년은 쪽 찐 머리), 중년 남자는 넥타이, 노년은 흰머리와 지팡이. */
+export function bodyFor(sex: Sex, stage: AgeStage): Body {
+  return BODY_MAPS[sex][stage]
 }
