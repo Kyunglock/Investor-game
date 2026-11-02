@@ -700,16 +700,25 @@ class DefaultEventServiceTest {
       events.complete(gameId, trait.get().eventId(), new Completion("x", "x", List.of()));
       from = trait.get().occursDay();
     }
-    // 보유 주식이 전제인 장면은 든 종목이 없으면 나오지 않는다 (decisions.md 115번).
-    assertThat(seen)
-        .containsExactlyInAnyOrderElementsOf(
-            content.adultTraits().stream()
-                .filter(t -> !t.job() && !t.married() && !t.holdings() && !t.followUpOnly())
-                .filter(t -> !t.wantsChild())
-                .filter(t -> t.works().isEmpty() && t.homes().isEmpty() && t.requires().isEmpty())
-                .filter(t -> t.minAge() == null && t.maxAge() == null)
-                .map(TraitDefinition::title)
-                .toList());
+    // 은퇴한 미혼·무자녀에게는 직장·결혼·아이·보유 주식이 전제인 장면이 나오지 않는다 (decisions.md 115번, #195).
+    // 풀이 한 판보다 넓어 다 보지는 않지만 간격마다 하나씩 온다.
+    assertThat(seen).hasSizeGreaterThanOrEqualTo(8);
+    for (String title : seen) {
+      TraitDefinition trait =
+          content.adultTraits().stream()
+              .filter(t -> t.title().equals(title))
+              .findFirst()
+              .orElseThrow();
+      assertThat(trait.job() || trait.married() || trait.holdings() || trait.wantsChild())
+          .as(trait.code())
+          .isFalse();
+      assertThat(trait.works().isEmpty() || trait.works().contains(TraitDefinition.RETIRED))
+          .as(trait.code())
+          .isTrue();
+      assertThat(trait.homes().isEmpty() || trait.homes().contains("OWN"))
+          .as(trait.code())
+          .isTrue();
+    }
     assertThat(content.adultTraits()).filteredOn(TraitDefinition::holdings).isNotEmpty();
   }
 
@@ -774,7 +783,13 @@ class DefaultEventServiceTest {
             .map(TraitDefinition::title)
             .toList();
     assertThat(inLaw).hasSizeGreaterThanOrEqualTo(5);
-    assertThat(seen).containsAll(inLaw);
+    // 결혼했으면 배우자가 전제인 장면도 섞여 나오고, 미혼 전용 장면(소개팅 등)은 나오지 않는다.
+    assertThat(seen).anyMatch(inLaw::contains);
+    assertThat(seen)
+        .noneMatch(
+            title ->
+                content.adultTraits().stream()
+                    .anyMatch(t -> t.single() && t.title().equals(title)));
   }
 
   private String careerCode(EventView view) {
