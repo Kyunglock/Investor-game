@@ -320,7 +320,7 @@ class DefaultEventService implements EventService {
       leverageCandidate(rows, context, candidates);
     }
     if (context.phase() != Phase.CHILDHOOD && context.careerStartDay() != null) {
-      adultTraitCandidate(rows, context, random, candidates);
+      adultTraitCandidate(rows, context, fromDay, random, candidates);
       lifeCandidates(rows, context, random, candidates);
       noticeCandidate(rows, context, random, candidates);
       careerCandidates(rows, context, random, candidates);
@@ -428,41 +428,156 @@ class DefaultEventService implements EventService {
   }
 
   /**
-   * 취업 뒤: 일상 장면(adult)이 간격을 두고 온다. 성향은 바꾸지 않고 능력치만 움직인다. 지금 고를 수 있는 장면이 없으면(풀을 다 썼거나 실직 중인데 직장 장면만
-   * 남음) 오지 않는다 (decisions.md 23번).
+   * 취업 뒤: 일상 장면(adult)이 간격을 두고 온다. 성향은 바꾸지 않고 능력치만 움직인다. 직전 일상 장면의 선택이 이어지는 장면(followUps)을 정했으면 그 날
+   * 수 뒤에 그것이 먼저 온다(#195). 지금 고를 수 있는 장면이 없으면(풀을 다 썼거나 처지가 안 맞음) 오지 않는다 (decisions.md 23번).
    */
   private void adultTraitCandidate(
       List<EventRow> rows,
       SchedulingContext context,
+      int fromDay,
       SeededRandom random,
       List<Candidate> candidates) {
-    if (adultTraitsLeft(rows, context).isEmpty()) {
+    Optional<ScheduledTrait> followUp = traitFollowUp(rows, context, random);
+    if (followUp.isPresent()) {
+      candidates.add(new Candidate(EventKind.TRAIT, followUp.get().day()));
       return;
     }
     List<EventRow> used = adultTraits(rows);
     int base = used.isEmpty() ? context.careerStartDay() : last(used).occursDay();
-    candidates.add(
-        new Candidate(
-            EventKind.TRAIT,
-            base + roll(random, properties.trait().adultGapDays(), "TRAIT", used.size())));
+    int day = base + roll(random, properties.trait().adultGapDays(), "TRAIT", used.size());
+    if (adultTraitsLeft(rows, context, Math.max(day, fromDay)).isEmpty()) {
+      return;
+    }
+    candidates.add(new Candidate(EventKind.TRAIT, day));
+  }
+
+  private record ScheduledTrait(TraitDefinition trait, int day) {}
+
+  /**
+   * 직전 일상 장면에서 고른 선택이 정한 이어지는 장면. 여럿이면 판 시드로 가중치만큼 하나를 고른다. 그 장면이 이미 나왔거나 그 날 처지가 안 맞으면(이직·은퇴 등)
+   * 이어지지 않는다.
+   */
+  private Optional<ScheduledTrait> traitFollowUp(
+      List<EventRow> rows, SchedulingContext context, SeededRandom random) {
+    List<EventRow> used = adultTraits(rows);
+    if (used.isEmpty() || !last(used).resolved()) {
+      return Optional.empty();
+    }
+    EventRow previous = last(used);
+    TraitDefinition.Option chosen =
+        repository
+            .actualAction(previous.id())
+            .map(code -> renderer.trait(previous.definitionCode()).option(code))
+            .orElse(null);
+    if (chosen == null || chosen.followUps().isEmpty()) {
+      return Optional.empty();
+    }
+    int total = chosen.followUps().stream().mapToInt(TraitDefinition.FollowUp::weight).sum();
+    int roll = random.forKey("event", "trait-follow-up", previous.seq()).nextInt(total);
+    TraitDefinition.FollowUp picked = chosen.followUps().getLast();
+    for (TraitDefinition.FollowUp next : chosen.followUps()) {
+      roll -= next.weight();
+      if (roll < 0) {
+        picked = next;
+        break;
+      }
+    }
+    TraitDefinition next = renderer.trait(picked.code());
+    int day = previous.occursDay() + chosen.followUpDays();
+    boolean seen = rows.stream().anyMatch(r -> next.code().equals(r.definitionCode()));
+    if (seen || !fits(next, rows, context, day)) {
+      return Optional.empty();
+    }
+    return Optional.of(new ScheduledTrait(next, day));
   }
 
   /**
-   * 아직 안 나온 adult 장면. 직장이 배경인 장면(job)은 직장에 다니는 동안에만, 보유 주식이 전제인 장면(holdings)은 들고 있는 종목이 있을 때만 고른다
-   * (decisions.md 115번). 전제가 안 맞으면 풀에 남겨 두었다가 맞을 때 나온다.
+   * 그 날 아직 안 나온 adult 장면 가운데 처지가 맞는 것. 이어지는 장면(followUpOnly)은 앞 선택으로만 온다. 전제가 안 맞으면 풀에 남겨 두었다가 맞을 때
+   * 나온다 (decisions.md 115번).
    */
-  private List<TraitDefinition> adultTraitsLeft(List<EventRow> rows, SchedulingContext context) {
+  private List<TraitDefinition> adultTraitsLeft(
+      List<EventRow> rows, SchedulingContext context, int day) {
     List<EventRow> used = adultTraits(rows);
-    boolean working = context.jobStartDay() != null && !context.retired();
     return content.adultTraits().stream()
-        .filter(t -> working || !t.job())
-        // 알바·농부·대표에게 성과급·승진·퇴직연금 장면은 말이 안 된다 (decisions.md 134번).
-        .filter(t -> t.fitsJob(working ? context.jobCode() : null))
-        .filter(t -> !t.holdings() || !context.heldStockCodes().isEmpty())
-        // 양가 부모 장면은 결혼한 뒤에만 (decisions.md 76번).
-        .filter(t -> context.married() || !t.married())
+        .filter(t -> !t.followUpOnly())
         .filter(t -> used.stream().noneMatch(u -> t.code().equals(u.definitionCode())))
+        .filter(t -> fits(t, rows, context, day))
         .toList();
+  }
+
+  /** 이 장면의 전제(직장·보유 주식·결혼·나이·아이·처지·사는 곳·앞 선택)가 그 날 판과 맞는가. */
+  private boolean fits(
+      TraitDefinition trait, List<EventRow> rows, SchedulingContext context, int day) {
+    boolean working = context.jobStartDay() != null && !context.retired();
+    if (trait.job() && !working) {
+      return false;
+    }
+    // 알바·농부·대표에게 성과급·승진·퇴직연금 장면은 말이 안 된다 (decisions.md 134번).
+    if (!trait.fitsJob(working ? context.jobCode() : null)) {
+      return false;
+    }
+    if (trait.holdings() && context.heldStockCodes().isEmpty()) {
+      return false;
+    }
+    // 양가 부모 장면은 결혼한 뒤에만 (decisions.md 76번).
+    if ((trait.married() && !context.married()) || (trait.single() && context.married())) {
+      return false;
+    }
+    if (!trait.fitsAge(ageAt(day, context))) {
+      return false;
+    }
+    if (trait.childless() && context.childrenCount() > 0) {
+      return false;
+    }
+    if (trait.wantsChild() && !hasChildAged(trait, context, day)) {
+      return false;
+    }
+    if (!trait.works().isEmpty() && !trait.works().contains(situation(context, working))) {
+      return false;
+    }
+    if (!trait.homes().isEmpty() && !trait.homes().contains(home(context))) {
+      return false;
+    }
+    return trait.requires().isEmpty() || trait.requires().stream().anyMatch(r -> chose(rows, r));
+  }
+
+  private boolean hasChildAged(TraitDefinition trait, SchedulingContext context, int day) {
+    for (int i = 0; i < context.childBirthDays().size(); i++) {
+      int birth = context.childBirthDays().get(i);
+      Integer leave = i < context.childLeaveDays().size() ? context.childLeaveDays().get(i) : null;
+      boolean home = birth <= day && (leave == null || leave > day);
+      if (home && trait.fitsChildAge((day - birth) / calendar.daysPerYear())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** 지금 처지: 은퇴·전업투자자·직업 코드·무직. */
+  private static String situation(SchedulingContext context, boolean working) {
+    if (context.retired()) {
+      return TraitDefinition.RETIRED;
+    }
+    if (context.fullTimeInvestor()) {
+      return TraitDefinition.INVESTOR;
+    }
+    return working ? context.jobCode() : TraitDefinition.JOBLESS;
+  }
+
+  private static String home(SchedulingContext context) {
+    if (context.housing() == null) {
+      return "PARENTS";
+    }
+    return context.housing().ownsResidence() ? "OWN" : context.housing().tenure();
+  }
+
+  /** 앞에서 이 선택("장면코드/선택지코드")을 했는가. */
+  private boolean chose(List<EventRow> rows, String need) {
+    String[] parts = need.split("/", 2);
+    return rows.stream()
+        .filter(r -> r.kind() == EventKind.TRAIT && r.resolved())
+        .filter(r -> parts[0].equals(r.definitionCode()))
+        .anyMatch(r -> repository.actualAction(r.id()).filter(parts[1]::equals).isPresent());
   }
 
   private List<EventRow> adultTraits(List<EventRow> rows) {
@@ -1123,12 +1238,18 @@ class DefaultEventService implements EventService {
           List<TraitDefinition> scenes = content.traitStages().get(stage).scenes();
           trait = scenes.get(random.forKey("event", "trait-scene", stage).nextInt(scenes.size()));
         } else {
-          List<TraitDefinition> left = adultTraitsLeft(rows, context);
-          trait =
-              left.get(
-                  random
-                      .forKey("event", "trait-scene", "adult", adultTraits(rows).size())
-                      .nextInt(left.size()));
+          // 직전 선택이 이어지는 장면을 정했으면 그것, 아니면 그 날 처지에 맞는 장면 중에서 뽑는다.
+          Optional<ScheduledTrait> followUp = traitFollowUp(rows, context, random);
+          if (followUp.isPresent()) {
+            trait = followUp.get().trait();
+          } else {
+            List<TraitDefinition> left = adultTraitsLeft(rows, context, candidate.day());
+            trait =
+                left.get(
+                    random
+                        .forKey("event", "trait-scene", "adult", adultTraits(rows).size())
+                        .nextInt(left.size()));
+          }
         }
         yield simple(
             id,

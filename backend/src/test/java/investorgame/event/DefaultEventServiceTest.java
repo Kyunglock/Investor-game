@@ -704,10 +704,55 @@ class DefaultEventServiceTest {
     assertThat(seen)
         .containsExactlyInAnyOrderElementsOf(
             content.adultTraits().stream()
-                .filter(t -> !t.job() && !t.married() && !t.holdings())
+                .filter(t -> !t.job() && !t.married() && !t.holdings() && !t.followUpOnly())
+                .filter(t -> !t.wantsChild())
+                .filter(t -> t.works().isEmpty() && t.homes().isEmpty() && t.requires().isEmpty())
+                .filter(t -> t.minAge() == null && t.maxAge() == null)
                 .map(TraitDefinition::title)
                 .toList());
     assertThat(content.adultTraits()).filteredOn(TraitDefinition::holdings).isNotEmpty();
+  }
+
+  /** #195: 동료에게 돈을 빌려주면 1년 뒤 이어지는 장면이 오고, 무작위로는 나오지 않는다. */
+  @Test
+  void 일상_장면의_선택이_1년_뒤_이어지는_장면을_부른다() {
+    TraitDefinition loan =
+        content.adultTraits().stream()
+            .filter(t -> t.code().equals("a-loan"))
+            .findFirst()
+            .orElseThrow();
+    List<String> followUps =
+        loan.option("lend").followUps().stream()
+            .map(f -> content.traits().stream().filter(t -> t.code().equals(f.code())))
+            .map(t -> t.findFirst().orElseThrow().title())
+            .toList();
+    for (long seed = 1; seed <= 3; seed++) {
+      UUID gameId = UUID.randomUUID();
+      SchedulingContext office = workingAs("office");
+      int from = JOB_DAY;
+      Integer lentDay = null;
+      for (int step = 0; step < 30; step++) {
+        Optional<EventView> trait = nextOf(gameId, office, from, EventKind.TRAIT, seed);
+        if (trait.isEmpty()) {
+          break;
+        }
+        EventView view = trait.get();
+        if (lentDay != null) {
+          assertThat(followUps).as("빌려준 다음 일상 장면").contains(view.title());
+          assertThat(view.occursDay()).isEqualTo(lentDay + 360);
+          break;
+        }
+        assertThat(followUps).as("이어지는 장면은 무작위로 나오지 않는다").doesNotContain(view.title());
+        boolean lend = view.title().equals(loan.title());
+        String option = lend ? "lend" : "x";
+        events.complete(gameId, view.eventId(), new Completion(option, option, List.of()));
+        if (lend) {
+          lentDay = view.occursDay();
+        }
+        from = view.occursDay();
+      }
+      assertThat(lentDay).as("seed %d에 동료 대출 장면이 나온다", seed).isNotNull();
+    }
   }
 
   @Test

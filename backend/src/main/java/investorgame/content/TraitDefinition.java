@@ -14,6 +14,17 @@ import java.util.Map;
  *     (decisions.md 115번)
  * @param excludeJobs 이 직업에게는 말이 안 되는 장면이라 안 나온다(성과급·승진·퇴직연금은 알바·농부·대표에게 없다). 비어 있으면 모든 직업
  *     (decisions.md 134번)
+ * @param minAge 이 나이부터 나온다(adult). null이면 제한 없음
+ * @param maxAge 이 나이까지 나온다(adult). null이면 제한 없음
+ * @param single true면 결혼하지 않았을 때만
+ * @param childless true면 아이가 없을 때만
+ * @param childMinAge 집에 이 나이 이상인 아이가 있을 때만(childMaxAge와 함께 한 아이가 둘 다 맞아야 한다). null이면 제한 없음
+ * @param childMaxAge 집에 이 나이 이하인 아이가 있을 때만. null이면 제한 없음
+ * @param works 지금 처지가 이 가운데 하나일 때만: 직업 코드, {@link #INVESTOR}(전업투자자), {@link #JOBLESS}(무직), {@link
+ *     #RETIRED}(은퇴). 비어 있으면 모든 처지
+ * @param homes 지금 사는 곳이 이 가운데 하나일 때만: PARENTS·MONTHLY·VILLA_JEONSE·APT_JEONSE·OWN. 비어 있으면 어디든
+ * @param requires 앞에서 이 선택("장면코드/선택지코드")을 한 적이 있을 때만(하나라도). 성장기 선택이 성인 장면으로 이어질 때 쓴다
+ * @param followUpOnly 앞 장면의 선택(followUps)으로만 오고 무작위로는 뽑지 않는다 (#195)
  */
 public record TraitDefinition(
     String code,
@@ -23,9 +34,28 @@ public record TraitDefinition(
     Boolean married,
     Boolean holdings,
     List<String> excludeJobs,
+    Integer minAge,
+    Integer maxAge,
+    Boolean single,
+    Boolean childless,
+    Integer childMinAge,
+    Integer childMaxAge,
+    List<String> works,
+    List<String> homes,
+    List<String> requires,
+    Boolean followUpOnly,
     String title,
     String body,
     List<Option> options) {
+
+  /** works의 전업투자자. */
+  public static final String INVESTOR = "INVESTOR";
+
+  /** works의 무직(일을 쉬는 중, 은퇴 아님). */
+  public static final String JOBLESS = "JOBLESS";
+
+  /** works의 은퇴. */
+  public static final String RETIRED = "RETIRED";
 
   /**
    * JSON에 adult가 없으면 성장기 장면이고, job이 없으면 직업과 무관한 장면, married가 없으면 결혼과 무관한 장면이다 (decisions.md 76번).
@@ -36,6 +66,32 @@ public record TraitDefinition(
     married = married != null && married;
     holdings = holdings != null && holdings;
     excludeJobs = excludeJobs == null ? List.of() : List.copyOf(excludeJobs);
+    single = single != null && single;
+    childless = childless != null && childless;
+    works = works == null ? List.of() : List.copyOf(works);
+    homes = homes == null ? List.of() : List.copyOf(homes);
+    requires = requires == null ? List.of() : List.copyOf(requires);
+    followUpOnly = followUpOnly != null && followUpOnly;
+  }
+
+  /** 이 나이에 나올 수 있는가. */
+  public boolean fitsAge(int age) {
+    return (minAge == null || age >= minAge) && (maxAge == null || age <= maxAge);
+  }
+
+  /** 아이 조건이 있는 장면인가. */
+  public boolean wantsChild() {
+    return childMinAge != null || childMaxAge != null;
+  }
+
+  /** 이 나이의 아이가 조건에 맞는가. */
+  public boolean fitsChildAge(int age) {
+    return (childMinAge == null || age >= childMinAge)
+        && (childMaxAge == null || age <= childMaxAge);
+  }
+
+  public Option option(String optionCode) {
+    return options.stream().filter(o -> o.code().equals(optionCode)).findFirst().orElse(null);
   }
 
   /** 이 직업에게 나올 수 있는 장면인가. 직업이 없으면(전업투자자·무직) 직업으로 가리지 않는다. */
@@ -51,6 +107,9 @@ public record TraitDefinition(
    * @param note 이 행동에서 무엇이 드러났는지 한 줄로 알려 주는 문구
    * @param amount 고르는 즉시 오가는 돈(원, 음수면 나간다). JSON에 없으면 0
    * @param outcomes 고른 뒤 결과가 갈리는 선택(돈을 빌려줬는데 갚을지 튈지). 가중치로 하나가 나와 그 돈·능력치·문구가 더해진다. 없으면 빈 목록
+   * @param followUps 이 선택 뒤 followUpDays가 지나 이어지는 장면(followUpOnly). 여럿이면 판 시드로 가중치만큼 하나를 고른다. 없으면 빈
+   *     목록
+   * @param followUpDays followUps가 오기까지의 날 수
    */
   public record Option(
       String code,
@@ -60,15 +119,21 @@ public record TraitDefinition(
       String note,
       Long amount,
       List<Outcome> outcomes,
-      Integer familyDelta) {
+      Integer familyDelta,
+      List<FollowUp> followUps,
+      Integer followUpDays) {
 
     public Option {
       statDeltas = statDeltas == null ? Map.of() : Map.copyOf(statDeltas);
       amount = amount == null ? 0L : amount;
       outcomes = outcomes == null ? List.of() : List.copyOf(outcomes);
       familyDelta = familyDelta == null ? 0 : familyDelta;
+      followUps = followUps == null ? List.of() : List.copyOf(followUps);
     }
   }
+
+  /** 이어지는 장면 하나와 그 가중치. */
+  public record FollowUp(String code, int weight) {}
 
   /** 갈리는 결과 하나. statDeltas는 선택지의 statDeltas에 더해진다. */
   public record Outcome(int weight, long amount, Map<String, Integer> statDeltas, String note) {
