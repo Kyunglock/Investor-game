@@ -45,12 +45,18 @@ class LogRepository {
 
   /** 한 판의 기록은 많아야 백여 줄이라 전부 읽는다. */
   List<GameView.LogEntry> findAll(UUID gameId) {
+    return findAfter(gameId, 0);
+  }
+
+  /** 번호(seq)가 {@code after}보다 큰 기록만. 보고 응답을 가볍게 한다 (#192). */
+  List<GameView.LogEntry> findAfter(UUID gameId, long after) {
     return jdbc.sql(
             """
             SELECT id, game_day, kind, payload::text AS payload
-            FROM progress_log WHERE game_id = :gameId ORDER BY id
+            FROM progress_log WHERE game_id = :gameId AND id > :after ORDER BY id
             """)
         .param("gameId", gameId)
+        .param("after", after)
         .query(
             (rs, rowNum) ->
                 new GameView.LogEntry(

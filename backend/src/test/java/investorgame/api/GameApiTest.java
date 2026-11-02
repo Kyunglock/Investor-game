@@ -390,4 +390,39 @@ class GameApiTest {
     assertThat(client.current().read("$.gameId", String.class)).isEqualTo(second);
     client.advanceRaw(first, 0).andExpect(status().isNotFound());
   }
+
+  @Test
+  void 보고에_마지막_기록_번호를_보내면_그_뒤의_기록만_돌려준다() throws Exception {
+    GameClient client = GameClient.newSession(mvc);
+    DocumentContext game = client.startInvesting();
+    String gameId = game.read("$.gameId");
+    List<Integer> seqs = game.read("$.log[*].seq");
+    assertThat(seqs).isNotEmpty();
+    long last = seqs.stream().mapToLong(Integer::longValue).max().orElseThrow();
+    int day = game.read("$.day", Integer.class);
+    Integer next = game.read("$.nextEventDay");
+    int target = Math.min(day + 30, next == null ? day + 30 : next);
+
+    String body =
+        mvc.perform(
+                post("/api/games/{gameId}/advance", gameId)
+                    .cookie(client.session())
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .content("{\"day\":" + target + ",\"logAfter\":" + last + "}"))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    List<Integer> fresh = com.jayway.jsonpath.JsonPath.read(body, "$.log[*].seq");
+    assertThat(fresh).allSatisfy(seq -> assertThat(seq.longValue()).isGreaterThan(last));
+    System.out.println(
+        "[#192] 보고 응답 크기: 새 기록만 "
+            + body.length()
+            + "자, 전체 "
+            + client.current().jsonString().length()
+            + "자");
+    // 번호를 안 보내면 예전처럼 전부 준다.
+    assertThat(client.current().read("$.log.length()", Integer.class))
+        .isGreaterThanOrEqualTo(seqs.size() + fresh.size());
+  }
 }

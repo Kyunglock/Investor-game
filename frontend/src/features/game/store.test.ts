@@ -6,7 +6,7 @@ vi.mock('../../api/client', () => ({
 }))
 
 const { api } = await import('../../api/client')
-const { useGameStore } = await import('./store')
+const { useGameStore, withEarlierLog } = await import('./store')
 
 const YEAR = 360
 
@@ -177,5 +177,35 @@ describe('자동 진행', () => {
     await useGameStore.getState().load()
     expect(useGameStore.getState().autoPlay).toBe(true)
     expect(localStorage.getItem('investor-game.auto-play')).toBe('on')
+  })
+})
+
+describe('보고 응답은 새 기록만 (#192)', () => {
+  const entry = (seq: number) => ({ seq, day: seq, kind: 'LIFE' as const, payload: {} })
+
+  it('가진 기록 앞에 새 기록을 붙여 전체로 되돌린다', () => {
+    const current = game({ log: [entry(1), entry(2)] } as Partial<Game>)
+    const fresh = game({ log: [entry(3)] } as Partial<Game>)
+    expect(withEarlierLog(fresh, current).log.map((e) => e.seq)).toEqual([1, 2, 3])
+    expect(withEarlierLog(fresh, game({ gameId: 'other' })).log.map((e) => e.seq)).toEqual([3])
+  })
+
+  it('보고에 마지막 기록 번호를 실어 보내고 받은 새 기록을 이어 붙인다', async () => {
+    vi.mocked(api.POST).mockReset()
+    useGameStore.setState({
+      game: game({ log: [entry(1), entry(2)] } as Partial<Game>),
+      day: 20 * YEAR + 30,
+      status: 'playing',
+      running: false,
+      reporting: false,
+    })
+    vi.mocked(api.POST).mockResolvedValue({
+      data: game({ day: 20 * YEAR + 30, log: [entry(3)] } as Partial<Game>),
+      response: { status: 200 },
+    } as never)
+    useGameStore.getState().pause()
+    await vi.waitFor(() => expect(useGameStore.getState().game?.log.length).toBe(3))
+    const body = vi.mocked(api.POST).mock.calls[0][1] as { body: { logAfter?: number } }
+    expect(body.body.logAfter).toBe(2)
   })
 })
