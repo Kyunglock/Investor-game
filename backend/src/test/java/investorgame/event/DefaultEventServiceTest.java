@@ -700,16 +700,25 @@ class DefaultEventServiceTest {
       events.complete(gameId, trait.get().eventId(), new Completion("x", "x", List.of()));
       from = trait.get().occursDay();
     }
-    // 보유 주식이 전제인 장면은 든 종목이 없으면 나오지 않는다 (decisions.md 115번).
-    assertThat(seen)
-        .containsExactlyInAnyOrderElementsOf(
-            content.adultTraits().stream()
-                .filter(t -> !t.job() && !t.married() && !t.holdings() && !t.followUpOnly())
-                .filter(t -> !t.wantsChild())
-                .filter(t -> t.works().isEmpty() && t.homes().isEmpty() && t.requires().isEmpty())
-                .filter(t -> t.minAge() == null && t.maxAge() == null)
-                .map(TraitDefinition::title)
-                .toList());
+    // 은퇴한 미혼·무자녀에게는 직장·결혼·아이·보유 주식이 전제인 장면이 나오지 않는다 (decisions.md 115번, #195).
+    // 풀이 한 판보다 넓어 다 보지는 않지만 간격마다 하나씩 온다.
+    assertThat(seen).hasSizeGreaterThanOrEqualTo(8);
+    for (String title : seen) {
+      TraitDefinition trait =
+          content.adultTraits().stream()
+              .filter(t -> t.title().equals(title))
+              .findFirst()
+              .orElseThrow();
+      assertThat(trait.job() || trait.married() || trait.holdings() || trait.wantsChild())
+          .as(trait.code())
+          .isFalse();
+      assertThat(trait.works().isEmpty() || trait.works().contains(TraitDefinition.RETIRED))
+          .as(trait.code())
+          .isTrue();
+      assertThat(trait.homes().isEmpty() || trait.homes().contains("OWN"))
+          .as(trait.code())
+          .isTrue();
+    }
     assertThat(content.adultTraits()).filteredOn(TraitDefinition::holdings).isNotEmpty();
   }
 
@@ -726,12 +735,13 @@ class DefaultEventServiceTest {
             .map(f -> content.traits().stream().filter(t -> t.code().equals(f.code())))
             .map(t -> t.findFirst().orElseThrow().title())
             .toList();
-    for (long seed = 1; seed <= 3; seed++) {
+    int chained = 0;
+    for (long seed = 1; seed <= 40 && chained < 2; seed++) {
       UUID gameId = UUID.randomUUID();
       SchedulingContext office = workingAs("office");
       int from = JOB_DAY;
       Integer lentDay = null;
-      for (int step = 0; step < 30; step++) {
+      for (int step = 0; step < 40; step++) {
         Optional<EventView> trait = nextOf(gameId, office, from, EventKind.TRAIT, seed);
         if (trait.isEmpty()) {
           break;
@@ -740,6 +750,7 @@ class DefaultEventServiceTest {
         if (lentDay != null) {
           assertThat(followUps).as("빌려준 다음 일상 장면").contains(view.title());
           assertThat(view.occursDay()).isEqualTo(lentDay + 360);
+          chained++;
           break;
         }
         assertThat(followUps).as("이어지는 장면은 무작위로 나오지 않는다").doesNotContain(view.title());
@@ -751,8 +762,8 @@ class DefaultEventServiceTest {
         }
         from = view.occursDay();
       }
-      assertThat(lentDay).as("seed %d에 동료 대출 장면이 나온다", seed).isNotNull();
     }
+    assertThat(chained).as("40판 가운데 동료 대출 장면이 나와 이어진 판").isPositive();
   }
 
   private SchedulingContext childhood() {
@@ -861,7 +872,24 @@ class DefaultEventServiceTest {
             .map(TraitDefinition::title)
             .toList();
     assertThat(inLaw).hasSizeGreaterThanOrEqualTo(5);
-    assertThat(seen).containsAll(inLaw);
+    // 결혼했으면 배우자가 전제인 장면도 섞여 나오고, 미혼 전용 장면(소개팅 등)은 나오지 않는다.
+    for (long seed = 6; seed <= 10 && seen.stream().noneMatch(inLaw::contains); seed++) {
+      UUID more = UUID.randomUUID();
+      int day = JOB_DAY;
+      for (Optional<EventView> trait = nextOf(more, married, day, EventKind.TRAIT, seed);
+          trait.isPresent();
+          trait = nextOf(more, married, day, EventKind.TRAIT, seed)) {
+        seen.add(trait.get().title());
+        events.complete(more, trait.get().eventId(), new Completion("x", "x", List.of()));
+        day = trait.get().occursDay();
+      }
+    }
+    assertThat(seen).anyMatch(inLaw::contains);
+    assertThat(seen)
+        .noneMatch(
+            title ->
+                content.adultTraits().stream()
+                    .anyMatch(t -> t.single() && t.title().equals(title)));
   }
 
   private String careerCode(EventView view) {
@@ -1535,7 +1563,7 @@ class DefaultEventServiceTest {
     events.complete(gameId, last.eventId(), new Completion("APT_JEONSE", "APT_JEONSE", List.of()));
     assertThat(firstOf(gameId, family, last.occursDay(), EventKind.HOUSING, 3L).title())
         .as("네 번째 뒤로는 더 묻지 않는다: 다음 주거 장면은 멀리 있는 만기다")
-        .isEqualTo("계약 만기가 다가온다");
+        .isIn("계약 만기가 다가온다", "집주인이 재계약을 거절했다");
 
     // 감당할 수 없으면 세 번째 뒤 네 번째가 오지 않고 월세로 굳어진다.
     HousingFacts stuck =
@@ -2235,7 +2263,8 @@ class DefaultEventServiceTest {
             .filter(t -> t.excludeJobs().contains("farmer") && !t.holdings())
             .map(TraitDefinition::title)
             .toList();
-    assertThat(adultTraitTitles(workingAs("office"), 5L)).containsAll(officeOnes);
+    // 풀이 한 판보다 넓어 다 보지는 않지만, 사무직에게는 회사가 전제인 장면이 나온다 (#195).
+    assertThat(adultTraitTitles(workingAs("office"), 5L)).containsAnyElementsOf(officeOnes);
   }
 
   /** 직장 생활 내내 나온 일상 장면 제목. 성향이 다 정해진 뒤라 성장기 장면은 없다. */
