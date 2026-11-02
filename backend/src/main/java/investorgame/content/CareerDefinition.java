@@ -13,6 +13,8 @@ import java.util.Map;
  * @param maxAge 이 나이 이하일 때만 나온다. null이면 제한 없음
  * @param minNetWorth 순자산이 이 이상일 때만 나온다(원). null이면 제한 없음. 전업투자자의 장면이 자산에 따라 커진다
  * @param followUpOnly 다른 장면의 결과(followUp)로만 오고 무작위로는 뽑지 않는다
+ * @param maxTenureYears 이 연차 이하일 때만 나온다(신입 장면 등). null이면 제한 없음 (#198)
+ * @param repeatable 한 판에 여러 번 나올 수 있는 장면(연봉 협상·승진 심사·이직 제안·구조조정·번아웃). 아니면 한 판에 한 번 (#198)
  */
 public record CareerDefinition(
     String code,
@@ -25,6 +27,8 @@ public record CareerDefinition(
     Integer maxAge,
     Long minNetWorth,
     Boolean followUpOnly,
+    Integer maxTenureYears,
+    Boolean repeatable,
     List<Option> options) {
 
   /** 직업 대신 전업투자자를 고른 사람의 직업 자리. 직업 선택의 INVEST 선택지와 같은 값이다 (decisions.md 35번). */
@@ -36,6 +40,12 @@ public record CareerDefinition(
   public CareerDefinition {
     jobs = jobs == null ? List.of() : List.copyOf(jobs);
     followUpOnly = followUpOnly != null && followUpOnly;
+    repeatable = repeatable != null && repeatable;
+  }
+
+  /** 이 연차에 나올 수 있는가. */
+  public boolean fitsTenure(int tenure) {
+    return minTenureYears <= tenure && (maxTenureYears == null || tenure <= maxTenureYears);
   }
 
   /** 이 직업·나이·순자산에 나올 수 있는 장면인가 (연차는 따로 본다). */
@@ -53,7 +63,11 @@ public record CareerDefinition(
 
   /** 조건(나이·순자산)이 하나도 없는 장면. 다른 조건에 다 걸렸을 때 물러설 곳이다. */
   public boolean unconditional() {
-    return minAge == null && maxAge == null && minNetWorth == null && !followUpOnly;
+    return minAge == null
+        && maxAge == null
+        && minNetWorth == null
+        && maxTenureYears == null
+        && !followUpOnly;
   }
 
   public Option option(String optionCode) {
