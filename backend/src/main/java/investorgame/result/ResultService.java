@@ -30,6 +30,12 @@ public interface ResultService {
 
   int rankingSize();
 
+  /** 결과 카드(JSON, 진행이 만든다)를 공유한다 (#197). 이미 공유한 판이면 처음 만든 공유 ID를 그대로 돌려준다(카드는 처음 것). */
+  String share(UUID gameId, String cardJson);
+
+  /** 공유 ID로 카드를 찾는다. 세션을 따지지 않는 공개 값이다. */
+  Optional<String> findShare(String shareId);
+
   /** 그 판이 순위표에 있으면 1부터 시작하는 순위. 올리지 않았으면 비어 있다. */
   Optional<Integer> rankOf(UUID gameId);
 }
