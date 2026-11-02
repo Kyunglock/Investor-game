@@ -915,6 +915,11 @@ export interface components {
         };
         AdvanceRequest: {
             day: number;
+            /**
+             * Format: int64
+             * @description 클라이언트가 가진 마지막 기록 번호(seq). 있으면 응답의 log에는 그 뒤의 기록만 싣는다(#192). 없으면 전부.
+             */
+            logAfter?: number;
         };
         ChoiceRequest: {
             option: string;

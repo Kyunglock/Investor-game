@@ -12,6 +12,7 @@ import {
 import {
   advanceDay,
   clockLimit,
+  reportEveryDays,
   type Speed,
   secondsPerYear,
   shouldReport,
@@ -124,6 +125,16 @@ function manualStart() {
 }
 export const HELD_TAB = 'held'
 
+/** 보고 응답은 새 기록만 싣는다. 지금 가진 기록 앞에 붙여 판 전체 기록으로 되돌린다 (#192). */
+export function withEarlierLog(fresh: Game, current: Game | null): Game {
+  if (!current || current.gameId !== fresh.gameId) {
+    return fresh
+  }
+  const seqs = new Set(fresh.log.map((e) => e.seq))
+  const earlier = current.log.filter((e) => !seqs.has(e.seq))
+  return { ...fresh, log: [...earlier, ...fresh.log].sort((a, b) => a.seq - b.seq) }
+}
+
 export const useGameStore = create<GameState>((set, get) => {
   /** 서버가 보낸 판으로 화면을 맞춘다. 대기 중인 선택이 있거나 끝났거나 시장 패널이 열려 있으면 시계를 멈춘다. */
   const apply = (game: Game, keepRunning: boolean) =>
@@ -157,14 +168,16 @@ export const useGameStore = create<GameState>((set, get) => {
       return
     }
     set({ reporting: true })
+    // 가진 기록 뒤의 것만 받는다. 판 전체 기록을 1초마다 다시 받지 않는다 (#192).
+    const logAfter = game.log.length > 0 ? Math.max(...game.log.map((e) => e.seq)) : undefined
     inFlight = (async () => {
       const { data } = await api.POST('/api/games/{gameId}/advance', {
         params: { path: { gameId: game.gameId } },
-        body: { day: Math.floor(day) },
+        body: { day: Math.floor(day), logAfter },
       })
       set({ reporting: false })
       if (data) {
-        apply(data, get().running)
+        apply(logAfter === undefined ? data : withEarlierLog(data, get().game), get().running)
         return
       }
       // 서버가 거부하면 서버의 상태가 기준이다. 다시 불러와 맞춘다.
@@ -368,7 +381,8 @@ export const useGameStore = create<GameState>((set, get) => {
       )
       set({ day: next })
       // 보고 간격에 닿았거나 한계(다음 이벤트, 앞서가기 상한)에 막혔으면 보고한다. 상한에 막힌 동안은 응답이 올 때까지 시계가 선다.
-      if (!reporting && (shouldReport(next, game.day) || next >= limit)) {
+      const every = reportEveryDays(game.startAge, game.day, game.daysPerYear)
+      if (!reporting && (shouldReport(next, game.day, every) || next >= limit)) {
         void report()
       }
     },

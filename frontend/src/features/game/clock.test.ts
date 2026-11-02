@@ -5,6 +5,7 @@ import {
   clockLimit,
   MAX_UNREPORTED_DAYS,
   REPORT_EVERY_DAYS,
+  reportEveryDays,
   secondsPerYear,
   shouldReport,
   totalDays,
@@ -69,6 +70,15 @@ describe('shouldReport', () => {
   it('보고 간격에 도달하면 보고한다', () => {
     expect(shouldReport(REPORT_EVERY_DAYS - 0.1, 0)).toBe(false)
     expect(shouldReport(REPORT_EVERY_DAYS, 0)).toBe(true)
+  })
+})
+
+describe('reportEveryDays (#192)', () => {
+  it('20세 전에는 앞서가기 상한까지 모아서, 20세부터는 달마다 보고한다', () => {
+    expect(reportEveryDays(15, 0, DAYS_PER_YEAR)).toBe(MAX_UNREPORTED_DAYS)
+    expect(reportEveryDays(15, 5 * DAYS_PER_YEAR - 1, DAYS_PER_YEAR)).toBe(MAX_UNREPORTED_DAYS)
+    expect(reportEveryDays(15, 5 * DAYS_PER_YEAR, DAYS_PER_YEAR)).toBe(REPORT_EVERY_DAYS)
+    expect(shouldReport(100, 0, reportEveryDays(15, 0, DAYS_PER_YEAR))).toBe(false)
   })
 })
 

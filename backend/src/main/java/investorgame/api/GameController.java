@@ -77,7 +77,7 @@ class GameController {
       @PathVariable UUID gameId,
       @Valid @RequestBody AdvanceRequest request) {
     UUID sessionId = cookies.requireSession(token);
-    GameView game = progress.advance(sessionId, gameId, request.day());
+    GameView game = progress.advance(sessionId, gameId, request.day(), request.logAfter());
     logIfEnded(sessionId, game);
     return game;
   }
@@ -194,7 +194,7 @@ class GameController {
     return progress.analysis(cookies.requireSession(token), gameId, stockCode);
   }
 
-  record AdvanceRequest(@Min(0) int day) {}
+  record AdvanceRequest(@Min(0) int day, @Min(0) Long logAfter) {}
 
   record ListingRequest(boolean listed) {}
 

@@ -20,7 +20,15 @@ public interface ProgressService {
   /**
    * 클라이언트가 보고한 게임 일수로 판을 진행한다. 그 사이의 월급을 넣고, 다음 이벤트가 생기면 만든다. 시각은 거꾸로 갈 수 없고, 대기 중인 이벤트를 지나칠 수 없다.
    */
-  GameView advance(UUID sessionId, UUID gameId, int day);
+  default GameView advance(UUID sessionId, UUID gameId, int day) {
+    return advance(sessionId, gameId, day, null);
+  }
+
+  /**
+   * {@code logAfter}가 있으면 응답의 기록(log)에는 그 번호(seq) 뒤의 것만 싣는다. 클라이언트가 이미 가진 기록을 매번 다시 받지 않게 한다
+   * (#192).
+   */
+  GameView advance(UUID sessionId, UUID gameId, int day, Long logAfter);
 
   /**
    * 대기 중인 이벤트에 선택을 제출한다. 뉴스이면 판정·매매·주가 변동·성장을 거친 결과를 돌려준다. quantity는 뉴스의 매수·매도 수량이며, 없으면(null) 매수는

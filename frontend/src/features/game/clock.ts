@@ -55,8 +55,21 @@ export function advanceDay(
   return Math.min(limit, day + elapsedMs * daysPerMs * speed)
 }
 
-export function shouldReport(day: number, reportedDay: number): boolean {
-  return Math.floor(day) - reportedDay >= REPORT_EVERY_DAYS
+/**
+ * 20세 전에는 통장이 움직이지 않는다(decisions.md 98번, 서버 progress.part-time-from-age). 그때는 달마다 보고할 까닭이 없어 앞서가기 상한까지
+ * 모아서 보고한다. 이벤트 시각에 닿으면 상한(clockLimit)에 막혀 그때 바로 보고한다 (#192).
+ */
+export const QUIET_UNTIL_AGE = 20
+
+/** 이 시각에 쓰는 보고 간격(일). 20세 전은 앞서가기 상한, 그 뒤는 한 달. */
+export function reportEveryDays(startAge: number, day: number, daysPerYear: number): number {
+  return startAge + Math.floor(day) / daysPerYear < QUIET_UNTIL_AGE
+    ? MAX_UNREPORTED_DAYS
+    : REPORT_EVERY_DAYS
+}
+
+export function shouldReport(day: number, reportedDay: number, every = REPORT_EVERY_DAYS): boolean {
+  return Math.floor(day) - reportedDay >= every
 }
 
 export function ageAt(

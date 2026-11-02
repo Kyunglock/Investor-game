@@ -241,7 +241,7 @@ class DefaultProgressService implements ProgressService {
 
   @Override
   @Transactional
-  public GameView advance(UUID sessionId, UUID gameId, int day) {
+  public GameView advance(UUID sessionId, UUID gameId, int day, Long logAfter) {
     GameRow game = lock(sessionId, gameId);
     int last = game.lastReportedDay();
     if (day < last) {
@@ -266,13 +266,13 @@ class DefaultProgressService implements ProgressService {
       GameRow bankrupt = withDay(game, bankruptDay.getAsInt());
       games.updateDay(gameId, bankruptDay.getAsInt());
       end(bankrupt, Ending.BANKRUPT);
-      return view(games.findLatest(sessionId).orElseThrow());
+      return view(games.findLatest(sessionId).orElseThrow(), logAfter);
     }
     GameRow advanced = withDay(game, stopDay);
     games.updateDay(gameId, stopDay);
     scheduleAt(advanced, last, stopDay);
     endIfFinished(advanced);
-    return view(games.findLatest(sessionId).orElseThrow());
+    return view(games.findLatest(sessionId).orElseThrow(), logAfter);
   }
 
   @Override
@@ -2148,6 +2148,11 @@ class DefaultProgressService implements ProgressService {
   // ---- 화면용 상태 ----
 
   private GameView view(GameRow game) {
+    return view(game, null);
+  }
+
+  /** {@code logAfter}가 있으면 그 번호 뒤의 기록만 싣는다 (#192). */
+  private GameView view(GameRow game, Long logAfter) {
     UUID gameId = game.id();
     CharacterView character = characters.get(gameId);
     AccountView account = assets.get(gameId);
@@ -2232,7 +2237,7 @@ class DefaultProgressService implements ProgressService {
         pending.map(e -> pendingView(game, character, e, quoteByCode)).orElse(null),
         nextEventDay,
         ended ? results.find(gameId).map(this::resultView).orElse(null) : null,
-        logs.findAll(gameId),
+        logAfter == null ? logs.findAll(gameId) : logs.findAfter(gameId, logAfter),
         logs.findYears(gameId));
   }
 
