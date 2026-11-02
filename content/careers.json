@@ -65,7 +65,8 @@
           }
         }
       }
-    ]
+    ],
+    "repeatable": true
   },
   {
     "code": "promotion",
@@ -132,7 +133,8 @@
           }
         }
       }
-    ]
+    ],
+    "repeatable": true
   },
   {
     "code": "headhunt",
@@ -191,7 +193,8 @@
           }
         }
       }
-    ]
+    ],
+    "repeatable": true
   },
   {
     "code": "layoff",
@@ -240,7 +243,8 @@
           }
         }
       }
-    ]
+    ],
+    "repeatable": true
   },
   {
     "code": "burnout",
@@ -326,7 +330,8 @@
           }
         }
       }
-    ]
+    ],
+    "repeatable": true
   },
   {
     "code": "pt-customer",
@@ -2359,7 +2364,8 @@
           "text": "고과 B-. 성과급이 줄어 월급이 3% 깎였다. 그래도 저녁은 집에서 먹는다."
         }
       }
-    ]
+    ],
+    "repeatable": true
   },
   {
     "code": "big-exit",
@@ -2434,7 +2440,8 @@
           "text": "열여덟 달치 위로금을 받고 이십여 년 다닌 회사를 나왔다."
         }
       }
-    ]
+    ],
+    "repeatable": true
   },
   {
     "code": "big-standby",

@@ -529,6 +529,9 @@ class JsonContentCatalog implements ContentCatalog {
           career.minAge() == null || career.maxAge() == null || career.minAge() <= career.maxAge(),
           "직장 장면의 나이 범위가 거꾸로다: " + career.code());
       require(
+          career.maxTenureYears() == null || career.minTenureYears() <= career.maxTenureYears(),
+          "직장 장면의 연차 범위가 거꾸로다: " + career.code());
+      require(
           career.options().size() >= 2 && career.options().size() <= 4,
           "직장 장면의 선택지는 2~4개여야 한다: " + career.code());
       for (CareerDefinition.Option option : career.options()) {

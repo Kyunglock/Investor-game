@@ -956,6 +956,28 @@ class DefaultEventServiceTest {
     }
   }
 
+  /** #198: 직장 장면은 한 판에 한 번씩이고, 연봉 협상 같은 공통 장면만 되풀이된다. 연차 상한이 있는 장면은 그 연차까지만. */
+  @Test
+  void 직장_장면은_공통_장면만_되풀이되고_연차에_맞게_나온다() {
+    for (String job : List.of("office", "developer", "nurse")) {
+      List<Map.Entry<Integer, CareerDefinition>> life = careerLife(job, 7L);
+      assertThat(life).as(job).hasSizeGreaterThanOrEqualTo(5);
+      List<String> once =
+          life.stream()
+              .map(Map.Entry::getValue)
+              .filter(c -> !c.repeatable())
+              .map(CareerDefinition::code)
+              .toList();
+      assertThat(once).as("%s의 한 번뿐인 장면", job).doesNotHaveDuplicates();
+      for (Map.Entry<Integer, CareerDefinition> e : life) {
+        CareerDefinition c = e.getValue();
+        if (c.maxTenureYears() != null) {
+          assertThat(e.getKey() - 25).as(c.code()).isLessThanOrEqualTo(c.maxTenureYears() + 1);
+        }
+      }
+    }
+  }
+
   /** decisions.md 51번: 직업마다 장면이 다르고, 나이가 차면 그 나이의 장면이 온다. */
   @Test
   void 직장_장면은_그_직업과_나이에_맞는_것만_나온다() {

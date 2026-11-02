@@ -1780,14 +1780,21 @@ class DefaultEventService implements EventService {
             .filter(JobDefinition::offered)
             .filter(j -> movesTo.contains(j.code()))
             .toList();
-    List<CareerDefinition> eligible =
+    // 한 판에 한 번만 나오는 장면은 이미 본 것을 뺀다. 연봉 협상 같은 공통 장면(repeatable)은 직전만 피한다 (#198).
+    Set<String> seen = previous.stream().map(EventRow::definitionCode).collect(Collectors.toSet());
+    List<CareerDefinition> fitting =
         content.careers().stream()
             .filter(c -> !c.followUpOnly())
             .filter(c -> c.fits(jobCode, age, context.netWorth()))
-            .filter(c -> c.minTenureYears() <= tenure)
+            .filter(c -> c.fitsTenure(tenure))
             .filter(c -> !c.code().equals(lastCode))
             .filter(c -> !c.movesJob() || !betterJobs.isEmpty())
             .toList();
+    List<CareerDefinition> eligible =
+        fitting.stream().filter(c -> c.repeatable() || !seen.contains(c.code())).toList();
+    if (eligible.isEmpty()) {
+      eligible = fitting;
+    }
     if (eligible.isEmpty()) {
       // 조건을 다 풀어도 그 직업의 장면은 지킨다. 콘텐츠 검증이 직업마다 조건 없는 장면을 하나는 보장한다.
       eligible =
