@@ -1,6 +1,7 @@
 package investorgame.housing.internal;
 
 import investorgame.common.GameProperties;
+import investorgame.common.ReadCache;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
 import investorgame.housing.HomeSale;
@@ -362,6 +363,10 @@ class JdbcHousingService implements HousingService {
   }
 
   private List<HousingView.Home> homes(UUID gameId) {
+    return ReadCache.get("housing.homes", gameId, () -> List.copyOf(homesUncached(gameId)));
+  }
+
+  private List<HousingView.Home> homesUncached(UUID gameId) {
     return jdbc.sql(
             """
             SELECT seq, region, purchase_price, purchase_day, mortgage, residence, tenant_deposit,
@@ -375,6 +380,10 @@ class JdbcHousingService implements HousingService {
 
   /** 주거가 생기기 전에 시작한 판도 부모님 집에서 시작한다. 쓰기 전에 행을 만든다. */
   private State state(UUID gameId) {
+    return ReadCache.get("housing.state", gameId, () -> stateUncached(gameId));
+  }
+
+  private State stateUncached(UUID gameId) {
     return find(gameId)
         .orElseGet(() -> new State(Tenure.PARENTS.name(), null, 0, 0, 0, false, null, null));
   }

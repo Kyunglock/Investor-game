@@ -1,6 +1,7 @@
 package investorgame.event.internal;
 
 import investorgame.common.Deviation;
+import investorgame.common.ReadCache;
 import investorgame.event.EventKind;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -39,6 +40,10 @@ class EventRepository {
 
   /** 한 판의 이벤트는 많아야 수십~백여 개라 전부 읽어 규칙을 계산한다. */
   List<EventRow> findAll(UUID gameId) {
+    return ReadCache.get("event.findAll", gameId, () -> List.copyOf(findAllUncached(gameId)));
+  }
+
+  private List<EventRow> findAllUncached(UUID gameId) {
     return jdbc.sql(
             "SELECT " + COLUMNS + " FROM event_instance WHERE game_id = :gameId ORDER BY seq")
         .param("gameId", gameId)
@@ -93,6 +98,10 @@ class EventRepository {
 
   /** 해결된 이벤트의 실제 행동. 직장 장면은 판정 결과까지 담는다(CareerDefinition.actualAction). 아직이면 비어 있다. */
   Optional<String> actualAction(UUID eventId) {
+    return ReadCache.get("event.actualAction", eventId, () -> actualActionUncached(eventId));
+  }
+
+  private Optional<String> actualActionUncached(UUID eventId) {
     return jdbc.sql("SELECT actual_action FROM event_resolution WHERE event_id = :eventId")
         .param("eventId", eventId)
         .query(String.class)

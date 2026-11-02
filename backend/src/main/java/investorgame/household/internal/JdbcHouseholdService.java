@@ -1,6 +1,7 @@
 package investorgame.household.internal;
 
 import investorgame.common.GameProperties;
+import investorgame.common.ReadCache;
 import investorgame.common.Sex;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
@@ -53,6 +54,10 @@ class JdbcHouseholdService implements HouseholdService {
   @Override
   @Transactional(readOnly = true)
   public HouseholdView get(UUID gameId) {
+    return ReadCache.get("household.get", gameId, () -> getUncached(gameId));
+  }
+
+  private HouseholdView getUncached(UUID gameId) {
     State state = state(gameId);
     List<HouseholdView.Child> children =
         jdbc.sql(
@@ -269,6 +274,10 @@ class JdbcHouseholdService implements HouseholdService {
   }
 
   private State state(UUID gameId) {
+    return ReadCache.get("household.state", gameId, () -> stateUncached(gameId));
+  }
+
+  private State stateUncached(UUID gameId) {
     return jdbc.sql(
             """
             SELECT married_day, retired_day, spouse_name, spouse_job, spouse_income, spouse_intro,

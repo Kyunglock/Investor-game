@@ -2,6 +2,7 @@ package investorgame.market.internal;
 
 import investorgame.common.Direction;
 import investorgame.common.GameProperties;
+import investorgame.common.ReadCache;
 import investorgame.common.error.NotFoundException;
 import investorgame.common.random.SeededRandom;
 import investorgame.content.ContentCatalog;
@@ -19,13 +20,18 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.random.RandomGenerator;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,6 +49,7 @@ class JdbcMarketService implements MarketService {
   private static final long INDEX_BASE = 1_000;
 
   private final JdbcClient jdbc;
+  private final NamedParameterJdbcTemplate batch;
   private final Clock clock;
   private final ContentCatalog content;
   private final MarketProperties properties;
@@ -50,11 +57,13 @@ class JdbcMarketService implements MarketService {
 
   JdbcMarketService(
       JdbcClient jdbc,
+      NamedParameterJdbcTemplate batch,
       Clock clock,
       ContentCatalog content,
       MarketProperties properties,
       GameProperties calendar) {
     this.jdbc = jdbc;
+    this.batch = batch;
     this.clock = clock;
     this.content = content;
     this.properties = properties;
@@ -81,18 +90,39 @@ class JdbcMarketService implements MarketService {
         recordHistory(gameId, stock.code(), 0, stock.basePrice());
       }
     }
-    for (HomeRegion region : content.homeRegions()) {
-      recordHome(gameId, region.code(), 0, region.basePrice(), false);
-    }
+    recordHomes(gameId, 0, baseHomePrices(), false);
     recordRate(gameId, 0, properties.mortgage().baseBp(), false);
     seedIndicators(gameId, 0);
   }
 
+  /** 아파트 시세·금리·지표가 모두 시작돼 있는지. 대부분의 판은 그렇다 — 그때는 시작 기록을 다시 쓰지 않는다 (#194). */
+  private boolean seeded(UUID gameId) {
+    return jdbc.sql(
+            """
+            SELECT EXISTS (SELECT 1 FROM market_home_history WHERE game_id = :gameId)
+               AND EXISTS (SELECT 1 FROM market_rate_history WHERE game_id = :gameId)
+               AND EXISTS (SELECT 1 FROM market_indicator_history WHERE game_id = :gameId)
+            """)
+        .param("gameId", gameId)
+        .query(Boolean.class)
+        .single();
+  }
+
   /** 거시 지표를 기준값으로 시작한다. 이미 있으면 그대로 둔다. */
   private void seedIndicators(UUID gameId, int month) {
+    Map<String, Long> base = new LinkedHashMap<>();
     for (String code : INDICATOR_CODES) {
-      recordIndicator(gameId, month, code, properties.indicators().of(code).base(), false);
+      base.put(code, (long) properties.indicators().of(code).base());
     }
+    recordIndicators(gameId, month, base, false);
+  }
+
+  private Map<String, Long> baseHomePrices() {
+    Map<String, Long> base = new LinkedHashMap<>();
+    for (HomeRegion region : content.homeRegions()) {
+      base.put(region.code(), region.basePrice());
+    }
+    return base;
   }
 
   @Override
@@ -103,16 +133,22 @@ class JdbcMarketService implements MarketService {
     MarketCycle cycle = cycle(random);
     // 아파트·금리가 생기기 전에 시작한 판은 지금 달에 기준가로 시작한다.
     int seedMonth = currentMonth(gameId);
-    for (HomeRegion region : content.homeRegions()) {
-      recordHome(gameId, region.code(), seedMonth, region.basePrice(), false);
+    if (target > seedMonth && !seeded(gameId)) {
+      recordHomes(gameId, seedMonth, baseHomePrices(), false);
+      recordRate(gameId, seedMonth, properties.mortgage().baseBp(), false);
+      seedIndicators(gameId, seedMonth);
     }
-    recordRate(gameId, seedMonth, properties.mortgage().baseBp(), false);
-    seedIndicators(gameId, seedMonth);
-    for (int month = currentMonth(gameId) + 1; month <= target; month++) {
-      prices = tick(gameId, month, prices, cycle, random.forKey("market", "month", month));
-      // 주식과 다른 키를 써서 아파트·금리·지표를 더해도 주가의 난수 순서가 바뀌지 않는다.
+    for (int month = seedMonth + 1; month <= target; month++) {
+      // 주식과 다른 키를 써서 아파트·금리·지표를 더해도 주가의 난수 순서가 바뀌지 않는다. 아파트·금리를 먼저 굴리면
+      // 앞서 읽어 둔 시세·금리를 그대로 쓴다 (#194).
       tickHomes(gameId, month, cycle, random.forKey("market", "home", month));
+      prices = tick(gameId, month, prices, cycle, random.forKey("market", "month", month));
       tickIndicators(gameId, month, cycle, random);
+    }
+    if (target > seedMonth) {
+      // 모든 종목이 이 달 가격으로 바뀌었다. 방금 쓴 값을 그대로 들고 있어 다시 읽지 않는다.
+      ReadCache.put("market.currentMonth", gameId, target);
+      ReadCache.put("market.prices", gameId, Collections.unmodifiableMap(new TreeMap<>(prices)));
     }
     return quotes(gameId);
   }
@@ -142,6 +178,7 @@ class JdbcMarketService implements MarketService {
     }
     RandomGenerator rng = random.forKey("market", "indicator", month);
     Map<String, Long> current = currentIndicators(gameId);
+    Map<String, Long> values = new LinkedHashMap<>();
     for (String code : INDICATOR_CODES) {
       MarketProperties.Indicator indicator = settings.of(code);
       long target = targetOf(indicator, mood, settings.panicMonths());
@@ -150,9 +187,9 @@ class JdbcMarketService implements MarketService {
           last
               + (target - last) * settings.revertPercent() / 100
               + rng.nextInt(-indicator.noise(), indicator.noise() + 1);
-      recordIndicator(
-          gameId, month, code, Math.clamp(next, indicator.min(), indicator.max()), true);
+      values.put(code, (long) Math.clamp(next, indicator.min(), indicator.max()));
     }
+    recordIndicators(gameId, month, values, true);
   }
 
   /**
@@ -221,19 +258,25 @@ class JdbcMarketService implements MarketService {
     return values;
   }
 
-  private void recordIndicator(UUID gameId, int month, String code, long value, boolean overwrite) {
-    jdbc.sql(
-            """
-            INSERT INTO market_indicator_history (game_id, month, code, value)
-            VALUES (:gameId, :month, :code, :value)
-            ON CONFLICT (game_id, month, code) DO
-            """
-                + (overwrite ? " UPDATE SET value = EXCLUDED.value" : " NOTHING"))
-        .param("gameId", gameId)
-        .param("month", month)
-        .param("code", code)
-        .param("value", value)
-        .update();
+  /** 한 달의 지표를 한 번에 쓴다 (#194). */
+  private void recordIndicators(
+      UUID gameId, int month, Map<String, Long> values, boolean overwrite) {
+    batch.batchUpdate(
+        """
+        INSERT INTO market_indicator_history (game_id, month, code, value)
+        VALUES (:gameId, :month, :code, :value)
+        ON CONFLICT (game_id, month, code) DO
+        """
+            + (overwrite ? " UPDATE SET value = EXCLUDED.value" : " NOTHING"),
+        values.entrySet().stream()
+            .map(
+                e ->
+                    new MapSqlParameterSource()
+                        .addValue("gameId", gameId)
+                        .addValue("month", month)
+                        .addValue("code", e.getKey())
+                        .addValue("value", e.getValue()))
+            .toArray(SqlParameterSource[]::new));
   }
 
   @Override
@@ -334,9 +377,9 @@ class JdbcMarketService implements MarketService {
               + rng.nextInt(-vol, vol + 1)
               + cycleBp(cycle, stock, month);
       long price = floor(prices.get(stock.code()) * (BP + change) / BP);
-      setPrice(gameId, stock.code(), price, month);
       next.put(stock.code(), price);
     }
+    setPrices(gameId, next, month);
     return next;
   }
 
@@ -356,16 +399,13 @@ class JdbcMarketService implements MarketService {
       }
     }
     Map<String, Long> current = homePrices(gameId);
+    Map<String, Long> homes = new LinkedHashMap<>();
     for (HomeRegion region : content.homeRegions()) {
       int change =
           region.driftBpPerYear() / MONTHS_PER_YEAR + rng.nextInt(-vol, vol + 1) + crisisBp;
-      recordHome(
-          gameId,
-          region.code(),
-          month,
-          floor(current.get(region.code()) * (BP + change) / BP),
-          true);
+      homes.put(region.code(), floor(current.get(region.code()) * (BP + change) / BP));
     }
+    recordHomes(gameId, month, homes, true);
     MarketProperties.Mortgage mortgage = properties.mortgage();
     int rate = mortgageRateBp(gameId);
     int next =
@@ -378,20 +418,33 @@ class JdbcMarketService implements MarketService {
   @Override
   @Transactional(readOnly = true)
   public List<HomeQuote> homeQuotes(UUID gameId) {
+    return ReadCache.get(
+        "market.homeQuotes", gameId, () -> List.copyOf(homeQuotesUncached(gameId)));
+  }
+
+  private List<HomeQuote> homeQuotesUncached(UUID gameId) {
+    // 지역마다 최근 13달을 한 문장으로 읽는다 (#194).
+    Map<String, List<Long>> recent = new HashMap<>();
+    jdbc.sql(
+            """
+            SELECT region, price FROM (
+              SELECT region, month, price,
+                     ROW_NUMBER() OVER (PARTITION BY region ORDER BY month DESC) AS rn
+              FROM market_home_history WHERE game_id = :gameId
+            ) h
+            WHERE rn <= 13
+            ORDER BY region, month
+            """)
+        .param("gameId", gameId)
+        .query(
+            (rs, i) ->
+                recent
+                    .computeIfAbsent(rs.getString("region"), k -> new ArrayList<>())
+                    .add(rs.getLong("price")))
+        .list();
     List<HomeQuote> quotes = new ArrayList<>();
     for (HomeRegion region : content.homeRegions()) {
-      List<Long> history =
-          jdbc.sql(
-                  """
-                  SELECT price FROM market_home_history
-                  WHERE game_id = :gameId AND region = :region
-                  ORDER BY month DESC LIMIT 13
-                  """)
-              .param("gameId", gameId)
-              .param("region", region.code())
-              .query(Long.class)
-              .list()
-              .reversed();
+      List<Long> history = recent.getOrDefault(region.code(), List.of());
       if (history.isEmpty()) {
         history = List.of(region.basePrice());
       }
@@ -411,6 +464,11 @@ class JdbcMarketService implements MarketService {
   @Override
   @Transactional(readOnly = true)
   public Map<String, Long> homePrices(UUID gameId) {
+    return ReadCache.get(
+        "market.homePrices", gameId, () -> Collections.unmodifiableMap(homePricesUncached(gameId)));
+  }
+
+  private Map<String, Long> homePricesUncached(UUID gameId) {
     Map<String, Long> prices = new LinkedHashMap<>();
     jdbc.sql(
             """
@@ -431,6 +489,10 @@ class JdbcMarketService implements MarketService {
   @Override
   @Transactional(readOnly = true)
   public int mortgageRateBp(UUID gameId) {
+    return ReadCache.get("market.mortgageRateBp", gameId, () -> mortgageRateBpUncached(gameId));
+  }
+
+  private int mortgageRateBpUncached(UUID gameId) {
     return jdbc.sql(
             "SELECT rate_bp FROM market_rate_history WHERE game_id = :gameId ORDER BY month DESC LIMIT 1")
         .param("gameId", gameId)
@@ -439,19 +501,24 @@ class JdbcMarketService implements MarketService {
         .orElse(properties.mortgage().baseBp());
   }
 
-  private void recordHome(UUID gameId, String region, int month, long price, boolean overwrite) {
-    jdbc.sql(
-            """
-            INSERT INTO market_home_history (game_id, region, month, price)
-            VALUES (:gameId, :region, :month, :price)
-            ON CONFLICT (game_id, region, month) DO
-            """
-                + (overwrite ? " UPDATE SET price = EXCLUDED.price" : " NOTHING"))
-        .param("gameId", gameId)
-        .param("region", region)
-        .param("month", month)
-        .param("price", price)
-        .update();
+  /** 한 달의 아파트 시세를 한 번에 쓴다 (#194). */
+  private void recordHomes(UUID gameId, int month, Map<String, Long> prices, boolean overwrite) {
+    batch.batchUpdate(
+        """
+        INSERT INTO market_home_history (game_id, region, month, price)
+        VALUES (:gameId, :region, :month, :price)
+        ON CONFLICT (game_id, region, month) DO
+        """
+            + (overwrite ? " UPDATE SET price = EXCLUDED.price" : " NOTHING"),
+        prices.entrySet().stream()
+            .map(
+                e ->
+                    new MapSqlParameterSource()
+                        .addValue("gameId", gameId)
+                        .addValue("region", e.getKey())
+                        .addValue("month", month)
+                        .addValue("price", e.getValue()))
+            .toArray(SqlParameterSource[]::new));
   }
 
   private void recordRate(UUID gameId, int month, int rateBp, boolean overwrite) {
@@ -699,16 +766,21 @@ class JdbcMarketService implements MarketService {
       }
       long old = prices.get(stock.code());
       long price = floor(old * (BP + sign * bp) / BP);
-      setPrice(gameId, stock.code(), price, month);
       before.put(stock.code(), old);
       after.put(stock.code(), price);
     }
+    setPrices(gameId, after, month);
     return new ShockResult(Map.copyOf(before), Map.copyOf(after));
   }
 
   @Override
   @Transactional(readOnly = true)
   public Map<String, Long> prices(UUID gameId) {
+    return ReadCache.get(
+        "market.prices", gameId, () -> Collections.unmodifiableMap(pricesUncached(gameId)));
+  }
+
+  private Map<String, Long> pricesUncached(UUID gameId) {
     Map<String, Long> prices = new LinkedHashMap<>();
     jdbc.sql(
             "SELECT stock_code, price FROM market_price WHERE game_id = :gameId ORDER BY stock_code")
@@ -725,6 +797,10 @@ class JdbcMarketService implements MarketService {
   @Override
   @Transactional(readOnly = true)
   public List<Quote> quotes(UUID gameId) {
+    return ReadCache.get("market.quotes", gameId, () -> List.copyOf(quotesUncached(gameId)));
+  }
+
+  private List<Quote> quotesUncached(UUID gameId) {
     int month = currentMonth(gameId);
     Map<String, List<PricePoint>> histories = new LinkedHashMap<>();
     jdbc.sql(
@@ -776,6 +852,10 @@ class JdbcMarketService implements MarketService {
   @Override
   @Transactional(readOnly = true)
   public int currentMonth(UUID gameId) {
+    return ReadCache.get("market.currentMonth", gameId, () -> currentMonthUncached(gameId));
+  }
+
+  private int currentMonthUncached(UUID gameId) {
     return jdbc.sql("SELECT MIN(month) FROM market_price WHERE game_id = :gameId")
         .param("gameId", gameId)
         .query(Integer.class)
@@ -787,19 +867,33 @@ class JdbcMarketService implements MarketService {
     return Math.max(properties.minPrice(), price);
   }
 
-  private void setPrice(UUID gameId, String stockCode, long price, int month) {
-    jdbc.sql(
-            """
-            UPDATE market_price SET price = :price, month = :month, updated_at = :now
-            WHERE game_id = :gameId AND stock_code = :stock
-            """)
-        .param("price", price)
-        .param("month", month)
-        .param("now", now())
-        .param("gameId", gameId)
-        .param("stock", stockCode)
-        .update();
-    recordHistory(gameId, stockCode, month, price);
+  /** 종목 가격과 이력을 한 번에 쓴다. 종목마다 문장을 보내지 않는다 (#194). */
+  private void setPrices(UUID gameId, Map<String, Long> prices, int month) {
+    OffsetDateTime now = now();
+    SqlParameterSource[] rows =
+        prices.entrySet().stream()
+            .map(
+                e ->
+                    new MapSqlParameterSource()
+                        .addValue("gameId", gameId)
+                        .addValue("stock", e.getKey())
+                        .addValue("price", e.getValue())
+                        .addValue("month", month)
+                        .addValue("now", now))
+            .toArray(SqlParameterSource[]::new);
+    batch.batchUpdate(
+        """
+        UPDATE market_price SET price = :price, month = :month, updated_at = :now
+        WHERE game_id = :gameId AND stock_code = :stock
+        """,
+        rows);
+    batch.batchUpdate(
+        """
+        INSERT INTO market_price_history (game_id, stock_code, month, price)
+        VALUES (:gameId, :stock, :month, :price)
+        ON CONFLICT (game_id, stock_code, month) DO UPDATE SET price = EXCLUDED.price
+        """,
+        rows);
   }
 
   /** 같은 달은 덮어쓴다. 뉴스 충격이 그 달의 값에 반영되고, 월 1점이 유지된다. */

@@ -7,11 +7,13 @@ import investorgame.asset.InterestResult;
 import investorgame.asset.SpendResult;
 import investorgame.asset.StockTotals;
 import investorgame.asset.TradeResult;
+import investorgame.common.ReadCache;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -73,6 +75,10 @@ class JdbcAssetService implements AssetService {
   @Override
   @Transactional(readOnly = true)
   public AccountView get(UUID gameId) {
+    return ReadCache.get("asset.get", gameId, () -> getUncached(gameId));
+  }
+
+  private AccountView getUncached(UUID gameId) {
     Account account = account(gameId);
     Map<String, AccountView.Holding> holdings = new LinkedHashMap<>();
     jdbc.sql(
@@ -232,6 +238,10 @@ class JdbcAssetService implements AssetService {
   @Override
   @Transactional(readOnly = true)
   public StockTotals stockTotals(UUID gameId) {
+    return ReadCache.get("asset.stockTotals", gameId, () -> stockTotalsUncached(gameId));
+  }
+
+  private StockTotals stockTotalsUncached(UUID gameId) {
     // 원장의 매수 금액은 현금이 나가므로 음수로 쌓인다.
     return jdbc.sql(
             """
@@ -250,6 +260,13 @@ class JdbcAssetService implements AssetService {
   @Override
   @Transactional(readOnly = true)
   public Map<String, Integer> lastBuyDays(UUID gameId) {
+    return ReadCache.get(
+        "asset.lastBuyDays",
+        gameId,
+        () -> Collections.unmodifiableMap(lastBuyDaysUncached(gameId)));
+  }
+
+  private Map<String, Integer> lastBuyDaysUncached(UUID gameId) {
     Map<String, Integer> days = new HashMap<>();
     jdbc.sql(
             """
@@ -282,6 +299,10 @@ class JdbcAssetService implements AssetService {
   }
 
   private Account account(UUID gameId) {
+    return ReadCache.get("asset.account", gameId, () -> accountUncached(gameId));
+  }
+
+  private Account accountUncached(UUID gameId) {
     return jdbc.sql("SELECT cash, initial_cash, debt FROM asset_account WHERE game_id = :gameId")
         .param("gameId", gameId)
         .query(Account.class)

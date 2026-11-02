@@ -7,6 +7,7 @@ import investorgame.character.StatChange;
 import investorgame.character.TraitAxes;
 import investorgame.character.TraitResult;
 import investorgame.common.GameProperties;
+import investorgame.common.ReadCache;
 import investorgame.common.StatCodes;
 import investorgame.common.StatGrade;
 import investorgame.common.Stats;
@@ -96,6 +97,10 @@ class JdbcCharacterService implements CharacterService {
   @Override
   @Transactional(readOnly = true)
   public CharacterView get(UUID gameId) {
+    return ReadCache.get("character.get", gameId, () -> getUncached(gameId));
+  }
+
+  private CharacterView getUncached(UUID gameId) {
     Profile profile = profile(gameId);
     Map<String, Integer> current = new HashMap<>();
     Map<String, Integer> initial = new HashMap<>();
