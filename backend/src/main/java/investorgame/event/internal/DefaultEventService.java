@@ -31,6 +31,7 @@ import investorgame.event.ScheduleResult;
 import investorgame.event.SchedulingContext;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -505,6 +506,62 @@ class DefaultEventService implements EventService {
         .toList();
   }
 
+  /**
+   * 성장 단계의 장면 (#196). 앞 단계에서 고른 선택이 이 나이로 이어지는 장면(followUps)을 정했으면 그것(가장 최근 선택 먼저, 여럿이면 판 시드로
+   * 가중치만큼). 아니면 단계의 장면 가운데 앞 선택 전제(requires)가 맞고 이미 본 주제(topic)가 아닌 것에서 판 시드로 뽑는다. 다 걸리면 주제는 겹쳐도
+   * 된다.
+   */
+  private TraitDefinition childhoodScene(List<EventRow> rows, int stage, SeededRandom random) {
+    ContentCatalog.TraitStage current = content.traitStages().get(stage);
+    List<EventRow> earlier =
+        ofKind(rows, EventKind.TRAIT).stream()
+            .filter(EventRow::resolved)
+            .sorted(Comparator.comparingInt(EventRow::occursDay).reversed())
+            .toList();
+    Set<String> seen = new HashSet<>();
+    Set<String> topics = new HashSet<>();
+    for (EventRow row : earlier) {
+      TraitDefinition before = renderer.trait(row.definitionCode());
+      seen.add(before.code());
+      if (before.topic() != null) {
+        topics.add(before.topic());
+      }
+    }
+    for (EventRow row : earlier) {
+      TraitDefinition before = renderer.trait(row.definitionCode());
+      TraitDefinition.Option chosen =
+          repository.actualAction(row.id()).map(before::option).orElse(null);
+      if (chosen == null) {
+        continue;
+      }
+      List<TraitDefinition.FollowUp> here =
+          chosen.followUps().stream()
+              .filter(f -> !seen.contains(f.code()))
+              .filter(f -> renderer.trait(f.code()).age() == current.age())
+              .toList();
+      if (!here.isEmpty()) {
+        int total = here.stream().mapToInt(TraitDefinition.FollowUp::weight).sum();
+        int roll =
+            random.forKey("event", "trait-follow-up", row.seq(), current.age()).nextInt(total);
+        for (TraitDefinition.FollowUp next : here) {
+          roll -= next.weight();
+          if (roll < 0) {
+            return renderer.trait(next.code());
+          }
+        }
+      }
+    }
+    List<TraitDefinition> open =
+        current.scenes().stream()
+            .filter(t -> !t.followUpOnly())
+            .filter(t -> choicesFit(t, rows))
+            .toList();
+    List<TraitDefinition> fresh =
+        open.stream().filter(t -> t.topic() == null || !topics.contains(t.topic())).toList();
+    List<TraitDefinition> pool = fresh.isEmpty() ? open : fresh;
+    return pool.get(random.forKey("event", "trait-scene", stage).nextInt(pool.size()));
+  }
+
   /** 이 장면의 전제(직장·보유 주식·결혼·나이·아이·처지·사는 곳·앞 선택)가 그 날 판과 맞는가. */
   private boolean fits(
       TraitDefinition trait, List<EventRow> rows, SchedulingContext context, int day) {
@@ -538,15 +595,19 @@ class DefaultEventService implements EventService {
     if (!trait.homes().isEmpty() && !trait.homes().contains(home(context))) {
       return false;
     }
-    return trait.requires().isEmpty() || trait.requires().stream().anyMatch(r -> chose(rows, r));
+    return choicesFit(trait, rows);
+  }
+
+  /** 앞 선택 전제: requires 가운데 하나는 골랐고, unless는 하나도 고르지 않았다. */
+  private boolean choicesFit(TraitDefinition trait, List<EventRow> rows) {
+    return (trait.requires().isEmpty() || trait.requires().stream().anyMatch(r -> chose(rows, r)))
+        && trait.unless().stream().noneMatch(r -> chose(rows, r));
   }
 
   private boolean hasChildAged(TraitDefinition trait, SchedulingContext context, int day) {
-    for (int i = 0; i < context.childBirthDays().size(); i++) {
-      int birth = context.childBirthDays().get(i);
-      Integer leave = i < context.childLeaveDays().size() ? context.childLeaveDays().get(i) : null;
-      boolean home = birth <= day && (leave == null || leave > day);
-      if (home && trait.fitsChildAge((day - birth) / calendar.daysPerYear())) {
+    // 독립한 성인 자녀도 자녀다(결혼 자금·증여 장면). 어린 아이는 독립하지 않으니 집에 있다.
+    for (int birth : context.childBirthDays()) {
+      if (birth <= day && trait.fitsChildAge((day - birth) / calendar.daysPerYear())) {
         return true;
       }
     }
@@ -1234,9 +1295,7 @@ class DefaultEventService implements EventService {
         // 취업 뒤(성장기가 아님)에는 아직 안 나온 adult 장면 중에서 뽑는다.
         TraitDefinition trait;
         if (context.phase() == Phase.CHILDHOOD) {
-          int stage = ofKind(rows, EventKind.TRAIT).size();
-          List<TraitDefinition> scenes = content.traitStages().get(stage).scenes();
-          trait = scenes.get(random.forKey("event", "trait-scene", stage).nextInt(scenes.size()));
+          trait = childhoodScene(rows, ofKind(rows, EventKind.TRAIT).size(), random);
         } else {
           // 직전 선택이 이어지는 장면을 정했으면 그것, 아니면 그 날 처지에 맞는 장면 중에서 뽑는다.
           Optional<ScheduledTrait> followUp = traitFollowUp(rows, context, random);

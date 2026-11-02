@@ -754,8 +754,7 @@ class JsonContentCatalog implements ContentCatalog {
               || trait.childless()
               || trait.wantsChild()
               || !trait.works().isEmpty()
-              || !trait.homes().isEmpty()
-              || trait.followUpOnly();
+              || !trait.homes().isEmpty();
       require(!conditional || trait.adult(), "처지 조건은 adult 장면만 쓴다: " + code);
       require(
           trait.minAge() == null || trait.maxAge() == null || trait.minAge() <= trait.maxAge(),
@@ -769,7 +768,9 @@ class JsonContentCatalog implements ContentCatalog {
       require(!(trait.single() && trait.married()), "미혼과 기혼을 함께 요구한다: " + code);
       require(works.containsAll(trait.works()), "알 수 없는 처지: " + code + " " + trait.works());
       require(HOMES.containsAll(trait.homes()), "알 수 없는 사는 곳: " + code + " " + trait.homes());
-      for (String need : trait.requires()) {
+      for (String need :
+          java.util.stream.Stream.concat(trait.requires().stream(), trait.unless().stream())
+              .toList()) {
         String[] parts = need.split("/", 2);
         TraitDefinition before = parts.length == 2 ? byCode.get(parts[0]) : null;
         require(
@@ -781,15 +782,18 @@ class JsonContentCatalog implements ContentCatalog {
           continue;
         }
         String where = code + "/" + option.code();
-        require(trait.adult(), "이어지는 장면은 adult 장면만 쓴다: " + where);
+        // 일상 장면은 날 수 뒤에, 성장기 장면은 받는 장면의 나이 단계에 온다 (#196).
         require(
-            option.followUpDays() != null && option.followUpDays() > 0,
+            !trait.adult() || (option.followUpDays() != null && option.followUpDays() > 0),
             "이어지는 장면이 오는 날 수(followUpDays)가 없다: " + where);
         for (TraitDefinition.FollowUp next : option.followUps()) {
           TraitDefinition target = byCode.get(next.code());
           require(
-              target != null && target.adult() && target.followUpOnly(),
-              "이어지는 장면은 있는 followUpOnly 장면이어야 한다: " + where + " → " + next.code());
+              target != null && target.adult() == trait.adult() && target.followUpOnly(),
+              "이어지는 장면은 같은 시기의 있는 followUpOnly 장면이어야 한다: " + where + " → " + next.code());
+          require(
+              trait.adult() || target.age() > trait.age(),
+              "성장기의 이어지는 장면은 뒤 나이여야 한다: " + where + " → " + next.code());
           require(next.weight() > 0, "이어지는 장면의 가중치는 양수여야 한다: " + where);
           reached.add(next.code());
         }
@@ -799,6 +803,13 @@ class JsonContentCatalog implements ContentCatalog {
       require(
           !trait.followUpOnly() || reached.contains(trait.code()),
           "어디서도 이어지지 않는 followUpOnly 장면: " + trait.code());
+    }
+    // 성장 단계마다 앞 선택과 무관하게 뽑을 수 있는 장면이 하나는 있어야 한다.
+    for (TraitStage stage : traitStages) {
+      require(
+          stage.scenes().stream()
+              .anyMatch(t -> !t.followUpOnly() && t.requires().isEmpty() && t.unless().isEmpty()),
+          "아무 전제 없이 뽑을 장면이 없는 성장 단계: " + stage.age());
     }
   }
 
