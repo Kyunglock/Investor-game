@@ -21,10 +21,9 @@ export function useAutoPlay() {
   const running = useGameStore((s) => s.running)
   const choosing = useGameStore((s) => s.choosing)
   const marketOpen = useGameStore((s) => s.marketOpen)
-  const reportOpen = useGameStore((s) => s.reportOpen)
 
   useEffect(() => {
-    if (!autoPlay || status !== 'playing' || marketOpen || reportOpen) {
+    if (!autoPlay || status !== 'playing' || marketOpen) {
       return
     }
     if (outcomeKind) {
@@ -60,7 +59,7 @@ export function useAutoPlay() {
     if (!running && !document.hidden) {
       useGameStore.getState().resume()
     }
-  }, [autoPlay, status, eventId, outcomeKind, crisis, running, choosing, marketOpen, reportOpen])
+  }, [autoPlay, status, eventId, outcomeKind, crisis, running, choosing, marketOpen])
 
   useEffect(() => {
     if (!autoPlay) {

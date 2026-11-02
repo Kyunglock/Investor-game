@@ -240,15 +240,24 @@ test('취직하면 가계부에 생활비가 보인다', async ({ page }) => {
   await expect(page.getByTestId('household-card')).toContainText('주거비')
 })
 
-test('신원 카드와 능력치는 인생 기록보다 위에 있다 (모바일 순서)', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'mobile', '1단 배치는 모바일에서만 본다')
+test('전 재산이 맨 위, 신원 카드는 인생 기록보다 위, 성격은 그 아래에 접혀 있다 (#201)', async ({
+  page,
+}) => {
   await born(page)
+  const worth = await page.getByTestId('total-asset').boundingBox()
   const identity = await page.getByTestId('identity-card').boundingBox()
-  const stats = await page.getByTestId('stat-insight').boundingBox()
   const log = await page.getByTestId('life-log').boundingBox()
-  expect(identity && stats && log).toBeTruthy()
+  const personality = await page.getByTestId('personality').boundingBox()
+  expect(worth && identity && log && personality).toBeTruthy()
+  expect(worth?.y ?? 0).toBeLessThan(identity?.y ?? 0)
   expect(identity?.y ?? 0).toBeLessThan(log?.y ?? 0)
-  expect(stats?.y ?? 0).toBeLessThan(log?.y ?? 0)
+  expect(log?.y ?? 0).toBeLessThan(personality?.y ?? 0)
+  // 접혀 있다가 펼치면 능력치가 보인다.
+  await expect(page.getByTestId('stat-insight')).toBeHidden()
+  await page.getByTestId('personality').locator('summary').click()
+  await expect(page.getByTestId('stat-insight')).toBeVisible()
+  // 진행 중에는 투자 성향 보고서 버튼이 없다. 보고서는 끝난 판의 기록부에만.
+  await expect(page.getByTestId('open-report')).toHaveCount(0)
 })
 
 test('자동을 켜면 손대지 않아도 선택이 되고 결과가 넘어가며 시간이 흐른다', async ({ page }) => {
