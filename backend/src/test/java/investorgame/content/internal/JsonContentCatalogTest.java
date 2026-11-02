@@ -438,4 +438,30 @@ class JsonContentCatalogTest {
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("no-such");
   }
+
+  /** #195: 일상 장면은 300개 안팎이고 나이대·처지마다 고르게 있다. 빈도는 그대로라 풀만 넓다. */
+  @Test
+  void 일상_장면은_나이대와_처지마다_고르게_있다() {
+    List<TraitDefinition> random =
+        load().adultTraits().stream().filter(t -> !t.followUpOnly()).toList();
+    assertThat(load().adultTraits()).hasSizeGreaterThanOrEqualTo(300);
+    assertThat(random).hasSizeGreaterThanOrEqualTo(230);
+    for (int age : List.of(27, 35, 45, 55, 65)) {
+      assertThat(random.stream().filter(t -> t.fitsAge(age)))
+          .as("%d세", age)
+          .hasSizeGreaterThan(100);
+    }
+    assertThat(random.stream().filter(TraitDefinition::married)).hasSizeGreaterThanOrEqualTo(15);
+    assertThat(random.stream().filter(TraitDefinition::single)).hasSizeGreaterThanOrEqualTo(3);
+    assertThat(random.stream().filter(TraitDefinition::wantsChild)).hasSizeGreaterThanOrEqualTo(25);
+    assertThat(random.stream().filter(t -> !t.homes().isEmpty())).hasSizeGreaterThanOrEqualTo(10);
+    for (String work :
+        List.of(TraitDefinition.RETIRED, TraitDefinition.JOBLESS, TraitDefinition.INVESTOR)) {
+      assertThat(random.stream().filter(t -> t.works().contains(work)))
+          .as(work)
+          .hasSizeGreaterThanOrEqualTo(3);
+    }
+    assertThat(load().adultTraits().stream().filter(TraitDefinition::followUpOnly))
+        .hasSizeGreaterThanOrEqualTo(60);
+  }
 }
