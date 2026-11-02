@@ -838,15 +838,14 @@ class DefaultEventServiceTest {
       long coins =
           seen.stream()
               .map(Map.Entry::getValue)
-              .filter(
+              .map(
                   code ->
-                      "coin"
-                          .equals(
-                              content.traits().stream()
-                                  .filter(t -> t.code().equals(code))
-                                  .findFirst()
-                                  .orElseThrow()
-                                  .topic()))
+                      content.traits().stream()
+                          .filter(t -> t.code().equals(code))
+                          .findFirst()
+                          .orElseThrow())
+              // 앞 코인 장면에서 이어지는 장면은 같은 이야기라 세지 않는다. 무작위로 뽑힌 코인 장면만 하나다.
+              .filter(t -> "coin".equals(t.topic()) && !t.followUpOnly())
               .count();
       assertThat(coins).as("seed %d 코인 장면", seed).isLessThanOrEqualTo(1);
     }
