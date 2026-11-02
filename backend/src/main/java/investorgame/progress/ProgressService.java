@@ -77,4 +77,10 @@ public interface ProgressService {
 
   /** 최종 자산 순위표의 앞쪽과 전체 인원. 세션을 따지지 않는다. */
   RankingView ranking();
+
+  /** 끝난 판의 결과 카드를 공유한다 (#197). 세션의 가장 최근 판이 그 판이고 끝나 있어야 한다(404). 같은 판은 같은 공유 ID를 돌려준다. */
+  SharedResult share(UUID sessionId, UUID gameId);
+
+  /** 공유 ID로 결과 카드를 찾는다. 세션 없이 보는 공개 값이다. */
+  java.util.Optional<ShareCard> sharedResult(String shareId);
 }

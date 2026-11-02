@@ -61,6 +61,8 @@ import investorgame.progress.GameView;
 import investorgame.progress.MarketOverview;
 import investorgame.progress.ProgressService;
 import investorgame.progress.RankingView;
+import investorgame.progress.ShareCard;
+import investorgame.progress.SharedResult;
 import investorgame.progress.StockAnalysis;
 import investorgame.progress.StockHistory;
 import investorgame.result.Ending;
@@ -84,6 +86,7 @@ import java.util.random.RandomGenerator;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 한 판의 조율. 다른 도메인끼리는 서로를 부르지 않으므로 필요한 값은 여기서 읽어 인자로 넘긴다 (domains.md 3절). 매월 1일마다 시장 → 수입 → 지출 → 이자
@@ -131,6 +134,7 @@ class DefaultProgressService implements ProgressService {
   private final HousingFlow housingFlow;
   private final Comforter comforter;
   private final MarketDesk desk;
+  private final JsonMapper json;
   private final SecureRandom seeds = new SecureRandom();
 
   DefaultProgressService(
@@ -150,7 +154,8 @@ class DefaultProgressService implements ProgressService {
       HousingService housing,
       HousingFlow housingFlow,
       MarketDesk desk,
-      Comforter comforter) {
+      Comforter comforter,
+      JsonMapper json) {
     this.games = games;
     this.logs = logs;
     this.properties = properties;
@@ -168,6 +173,7 @@ class DefaultProgressService implements ProgressService {
     this.housingFlow = housingFlow;
     this.comforter = comforter;
     this.desk = desk;
+    this.json = json;
   }
 
   @Override
@@ -340,6 +346,50 @@ class DefaultProgressService implements ProgressService {
       throw new InvalidRequestException("이미 순위표에 올린 판이다");
     }
     return view(game);
+  }
+
+  @Override
+  @Transactional
+  public SharedResult share(UUID sessionId, UUID gameId) {
+    GameRow game =
+        games
+            .findLatest(sessionId)
+            .filter(g -> g.id().equals(gameId) && g.ended())
+            .orElseThrow(() -> new NotFoundException("끝난 판이 없다"));
+    GameView view = view(game);
+    GameView.Result result = view.result();
+    CharacterView character = characters.get(gameId);
+    String jobTitle =
+        character.fullTimeInvestorDay() != null
+            ? FULL_TIME_INVESTOR_TITLE
+            : character.jobCode() == null ? null : content.job(character.jobCode()).title();
+    ShareCard card =
+        new ShareCard(
+            view.name(),
+            view.sex(),
+            result.finalAge(),
+            result.ending(),
+            result.initialAsset(),
+            result.finalAsset(),
+            result.returnBp(),
+            result.rank(),
+            view.initialStats(),
+            view.stats(),
+            view.investorType() == null ? null : view.investorType().code(),
+            view.investorType() == null ? null : view.investorType().name(),
+            view.investorType() == null ? null : view.investorType().description(),
+            view.interestSector() == null ? null : view.interestSector().name(),
+            jobTitle,
+            view.household().married(),
+            view.household().children().size(),
+            view.housing().tenure());
+    return new SharedResult(results.share(gameId, json.writeValueAsString(card)), card);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<ShareCard> sharedResult(String shareId) {
+    return results.findShare(shareId).map(card -> json.readValue(card, ShareCard.class));
   }
 
   @Override

@@ -6,6 +6,7 @@ import investorgame.result.GameResult;
 import investorgame.result.PlayProfile;
 import investorgame.result.RankingEntry;
 import investorgame.result.ResultService;
+import java.security.SecureRandom;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -35,6 +36,14 @@ class JdbcResultService implements ResultService {
 
   private final JdbcClient jdbc;
   private final JsonMapper json;
+  private final SecureRandom shareIds = new SecureRandom();
+
+  /** 공유 ID 글자. 헷갈리기 쉬운 0·O·1·l·I는 뺐다. */
+  private static final String SHARE_ALPHABET =
+      "23456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
+
+  /** 공유 ID 길이. 57글자 × 12자리 ≈ 70비트라 추측할 수 없다. */
+  static final int SHARE_ID_LENGTH = 12;
 
   JdbcResultService(JdbcClient jdbc, JsonMapper json) {
     this.jdbc = jdbc;
@@ -172,6 +181,53 @@ class JdbcResultService implements ResultService {
   @Transactional(readOnly = true)
   public int rankingSize() {
     return jdbc.sql("SELECT count(*) FROM result_ranking").query(Integer.class).single();
+  }
+
+  @Override
+  @Transactional
+  public String share(UUID gameId, String cardJson) {
+    Optional<String> existing = shareIdOf(gameId);
+    if (existing.isPresent()) {
+      return existing.get();
+    }
+    String shareId = newShareId();
+    jdbc.sql(
+            """
+            INSERT INTO result_share (share_id, game_id, card, created_at)
+            VALUES (:shareId, :gameId, CAST(:card AS jsonb), :now)
+            ON CONFLICT (game_id) DO NOTHING
+            """)
+        .param("shareId", shareId)
+        .param("gameId", gameId)
+        .param("card", cardJson)
+        .param("now", OffsetDateTime.now())
+        .update();
+    // 같은 판을 동시에 공유하면 먼저 들어간 줄이 남는다.
+    return shareIdOf(gameId).orElseThrow();
+  }
+
+  private Optional<String> shareIdOf(UUID gameId) {
+    return jdbc.sql("SELECT share_id FROM result_share WHERE game_id = :gameId")
+        .param("gameId", gameId)
+        .query(String.class)
+        .optional();
+  }
+
+  private String newShareId() {
+    StringBuilder id = new StringBuilder(SHARE_ID_LENGTH);
+    for (int i = 0; i < SHARE_ID_LENGTH; i++) {
+      id.append(SHARE_ALPHABET.charAt(shareIds.nextInt(SHARE_ALPHABET.length())));
+    }
+    return id.toString();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<String> findShare(String shareId) {
+    return jdbc.sql("SELECT card::text FROM result_share WHERE share_id = :shareId")
+        .param("shareId", shareId)
+        .query(String.class)
+        .optional();
   }
 
   @Override

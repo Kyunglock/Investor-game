@@ -307,6 +307,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/games/{gameId}/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 끝난 판의 결과 카드를 공유한다
+         * @description 세션의 가장 최근 판이 그 판이고 끝나 있어야 한다(404). 추측할 수 없는 공유 ID를 만들고, 같은 판은 같은 ID를 돌려준다 (#197).
+         *     공개 링크는 /r/{shareId}(링크 미리보기용 HTML, 화면의 /share/{shareId}로 넘긴다).
+         */
+        post: operations["shareGame"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shares/{shareId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 공유한 결과 카드
+         * @description 세션 없이 보는 공개 값. 판 ID·세션·IP는 없다 (#197).
+         */
+        get: operations["getShare"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/plays": {
         parameters: {
             query?: never;
@@ -768,6 +809,41 @@ export interface components {
              * @description 순위표에 올린 시각
              */
             enteredAt: string;
+        };
+        SharedResult: {
+            /** @description 공개 링크 /r/{shareId}의 ID */
+            shareId: string;
+            card: components["schemas"]["ShareCard"];
+        };
+        /** @description 공유 링크로 보이는 결과 카드 (#197). 공유를 누른 순간의 화면 값만 담는다 */
+        ShareCard: {
+            /** @description 플레이어가 지은 캐릭터 이름 */
+            name: string | null;
+            sex: components["schemas"]["Sex"];
+            finalAge: number;
+            /** @enum {string} */
+            ending: "NORMAL" | "BANKRUPT" | "QUIT";
+            /** Format: int64 */
+            initialAsset: number;
+            /** Format: int64 */
+            finalAsset: number;
+            /** @description 수익률(만분율) */
+            returnBp: number;
+            /** @description 순위표에 올렸으면 순위 */
+            rank?: number | null;
+            initialStats: components["schemas"]["Stats"];
+            finalStats: components["schemas"]["Stats"];
+            investorTypeCode?: string | null;
+            investorTypeName?: string | null;
+            investorTypeDescription?: string | null;
+            /** @description 관심 섹터 이름 */
+            sectorName?: string | null;
+            /** @description 끝날 때의 직업 */
+            jobTitle?: string | null;
+            married: boolean;
+            children: number;
+            /** @description 끝날 때 사는 곳(PARENTS·MONTHLY·VILLA_JEONSE·APT_JEONSE·OWN) */
+            home: string;
         };
         RepayRequest: {
             /**
@@ -1424,6 +1500,53 @@ export interface operations {
                     "application/json": components["schemas"]["Ranking"];
                 };
             };
+        };
+    };
+    shareGame: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gameId: components["parameters"]["GameId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 공유 ID와 카드 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SharedResult"];
+                };
+            };
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getShare: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shareId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 결과 카드 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShareCard"];
+                };
+            };
+            404: components["responses"]["NotFound"];
         };
     };
     getPlayLog: {

@@ -3,12 +3,22 @@ import { BirthCertificate } from './features/game/BirthCertificate'
 import { EndingCredits } from './features/game/EndingCredits'
 import { GameScreen } from './features/game/GameScreen'
 import { LifeRecord } from './features/game/LifeRecord'
+import { SharedPage, sharedIdFrom } from './features/game/SharedPage'
 import { StartScreen } from './features/game/StartScreen'
 import { useGameStore } from './features/game/store'
 import { Toast } from './features/game/Toast'
 import { TopBar } from './features/game/TopBar'
 
 export function App() {
+  // 공유 링크로 들어온 사람은 판 대신 공유 카드를 본다 (#197).
+  const sharedId = sharedIdFrom(window.location.pathname)
+  if (sharedId) {
+    return <SharedPage shareId={sharedId} />
+  }
+  return <Game />
+}
+
+function Game() {
   const status = useGameStore((s) => s.status)
   const game = useGameStore((s) => s.game)
   const running = useGameStore((s) => s.running)
