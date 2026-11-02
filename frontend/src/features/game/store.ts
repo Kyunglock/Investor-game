@@ -121,6 +121,11 @@ function storeAutoPlay(on: boolean) {
     // 저장이 안 되면 이 판에서만 켜진다.
   }
 }
+/** 새 판은 수동으로 시작한다. 지난 판에 켜 둔 자동 진행이 새 인생까지 흘려보내지 않게 저장값도 끈다. 이어하기(load)는 그대로 둔다. */
+function manualStart() {
+  storeAutoPlay(false)
+  useGameStore.setState({ autoPlay: false })
+}
 export const HELD_TAB = 'held'
 
 export const useGameStore = create<GameState>((set, get) => {
@@ -272,6 +277,7 @@ export const useGameStore = create<GameState>((set, get) => {
     startLife: () => {
       const { game } = get()
       if (game) {
+        manualStart()
         apply(game, true)
       }
     },
@@ -288,6 +294,7 @@ export const useGameStore = create<GameState>((set, get) => {
       if (!data) {
         return (error as { message?: string } | undefined)?.message ?? '이름을 저장하지 못했다'
       }
+      manualStart()
       apply(data, true)
       return null
     },

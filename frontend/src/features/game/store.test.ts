@@ -133,6 +133,15 @@ describe('위기 회고 alert (decisions.md 60번, #71)', () => {
   })
 })
 
+/** 테스트 환경(node)에는 localStorage가 없어 메모리로 흉내 낸다. */
+const memory = new Map<string, string>()
+vi.stubGlobal('localStorage', {
+  getItem: (k: string) => memory.get(k) ?? null,
+  setItem: (k: string, v: string) => void memory.set(k, v),
+  removeItem: (k: string) => void memory.delete(k),
+  clear: () => memory.clear(),
+})
+
 describe('자동 진행', () => {
   it('켜면 저장되고 서 있던 시계를 돌리며, 끄면 시계는 그대로다', () => {
     useGameStore.setState({ game: game(), status: 'playing', running: false, autoPlay: false })
@@ -142,5 +151,31 @@ describe('자동 진행', () => {
     useGameStore.getState().setAutoPlay(false)
     expect(useGameStore.getState().autoPlay).toBe(false)
     expect(useGameStore.getState().running).toBe(true)
+  })
+
+  it('새 판은 지난 판에 켜 둔 자동 진행을 끄고 수동으로 시작한다 (#191)', async () => {
+    localStorage.setItem('investor-game.auto-play', 'on')
+    useGameStore.setState({
+      game: game({ day: 0 }),
+      status: 'revealing',
+      running: false,
+      autoPlay: true,
+    })
+    vi.mocked(api.POST).mockResolvedValue({
+      data: game({ day: 0 }),
+      response: { status: 200 },
+    } as never)
+    expect(await useGameStore.getState().startLifeAs('경록')).toBeNull()
+    expect(useGameStore.getState().autoPlay).toBe(false)
+    expect(localStorage.getItem('investor-game.auto-play')).toBe('off')
+  })
+
+  it('이어하기는 켜 둔 자동 진행을 그대로 둔다 (#191)', async () => {
+    localStorage.setItem('investor-game.auto-play', 'on')
+    useGameStore.setState({ autoPlay: true })
+    vi.mocked(api.GET).mockResolvedValue({ data: game(), response: { status: 200 } } as never)
+    await useGameStore.getState().load()
+    expect(useGameStore.getState().autoPlay).toBe(true)
+    expect(localStorage.getItem('investor-game.auto-play')).toBe('on')
   })
 })
