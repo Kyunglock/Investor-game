@@ -755,6 +755,93 @@ class DefaultEventServiceTest {
     }
   }
 
+  private SchedulingContext childhood() {
+    return new SchedulingContext(
+        Phase.CHILDHOOD,
+        START_AGE,
+        null,
+        null,
+        null,
+        false,
+        null,
+        END_DAY,
+        null,
+        null,
+        null,
+        false,
+        null,
+        false,
+        null,
+        null,
+        0,
+        List.of(),
+        List.of(),
+        List.of(),
+        false,
+        Map.of(),
+        Map.of(),
+        HousingFacts.PARENTS,
+        0L,
+        50,
+        Set.of());
+  }
+
+  /** 성장기 장면을 단계마다 (나이, 장면 코드)로 모은다. 15세 아빠 주식 장면이 나오면 hot을 고른다. */
+  private List<Map.Entry<Integer, String>> growth(long seed) {
+    UUID gameId = UUID.randomUUID();
+    List<Map.Entry<Integer, String>> seen = new ArrayList<>();
+    int from = 0;
+    for (int stage = 0; stage < content.traitStages().size(); stage++) {
+      EventView view = nextOf(gameId, childhood(), from, EventKind.TRAIT, seed).orElseThrow();
+      TraitDefinition trait =
+          content.traits().stream()
+              .filter(t -> !t.adult() && t.title().equals(view.title()))
+              .findFirst()
+              .orElseThrow();
+      seen.add(Map.entry(START_AGE + view.occursDay() / YEAR, trait.code()));
+      String option =
+          trait.code().equals("k15-dad-stock") ? "hot" : trait.options().getFirst().code();
+      events.complete(gameId, view.eventId(), new Completion(option, option, List.of()));
+      from = view.occursDay();
+    }
+    return seen;
+  }
+
+  /** #196: 15세에 아빠 돈으로 고른 주식은 17세에 두 배 또는 반토막 장면으로 이어지고, 그 장면은 무작위로 나오지 않는다. 코인 장면은 겹치지 않는다. */
+  @Test
+  void 성장기_선택이_뒤_나이의_장면으로_이어지고_같은_주제는_겹치지_않는다() {
+    Set<String> followUps = Set.of("k17-dad-stock-up", "k17-dad-stock-down");
+    int chained = 0;
+    for (long seed = 1; seed <= 40; seed++) {
+      List<Map.Entry<Integer, String>> seen = growth(seed);
+      assertThat(seen).hasSize(content.traitStages().size());
+      boolean picked = seen.stream().anyMatch(e -> e.getValue().equals("k15-dad-stock"));
+      List<String> at17 =
+          seen.stream().filter(e -> e.getKey() == 17).map(Map.Entry::getValue).toList();
+      if (picked) {
+        assertThat(at17).as("seed %d", seed).hasSize(1).allMatch(followUps::contains);
+        chained++;
+      } else {
+        assertThat(at17).as("seed %d", seed).noneMatch(followUps::contains);
+      }
+      long coins =
+          seen.stream()
+              .map(Map.Entry::getValue)
+              .filter(
+                  code ->
+                      "coin"
+                          .equals(
+                              content.traits().stream()
+                                  .filter(t -> t.code().equals(code))
+                                  .findFirst()
+                                  .orElseThrow()
+                                  .topic()))
+              .count();
+      assertThat(coins).as("seed %d 코인 장면", seed).isLessThanOrEqualTo(1);
+    }
+    assertThat(chained).as("40판 가운데 아빠 주식 장면이 나온 판").isPositive();
+  }
+
   @Test
   void 양가_부모_장면은_결혼한_뒤에만_나온다() {
     UUID gameId = UUID.randomUUID();

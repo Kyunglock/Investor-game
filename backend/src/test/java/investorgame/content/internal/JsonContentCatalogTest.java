@@ -112,7 +112,10 @@ class JsonContentCatalogTest {
         .extracting(ContentCatalog.TraitStage::age)
         .containsExactly(15, 16, 17, 18, 19, 20, 21, 22, 23, 24);
     for (ContentCatalog.TraitStage stage : catalog.traitStages()) {
-      assertThat(stage.scenes()).as("%d세 장면", stage.age()).hasSizeBetween(2, 3);
+      // 무작위로 뽑는 장면이 단계마다 둘 이상 있다. 이어지는 장면(followUpOnly)은 따로 센다 (#196).
+      assertThat(stage.scenes().stream().filter(t -> !t.followUpOnly()))
+          .as("%d세 장면", stage.age())
+          .hasSizeGreaterThanOrEqualTo(2);
     }
     // 취업 뒤 일상 장면은 daily.json에 있고 모두 adult다. 양가 부모 장면은 결혼한 뒤에만 (decisions.md 76번).
     assertThat(catalog.adultTraits())
@@ -393,7 +396,7 @@ class JsonContentCatalogTest {
     assertThat(notices.get("condolence").childAgeBound()).isFalse();
   }
 
-  /** #195: 이어지는 장면은 모두 앞 선택에서 닿고, 처지 조건은 adult 장면에만 있다. */
+  /** #195·#196: 이어지는 장면은 모두 앞 선택에서 닿고, 처지 조건은 adult 장면에만 있다. */
   @Test
   void 이어지는_장면은_끊기지_않고_처지_조건은_일상_장면에만_있다() {
     JsonContentCatalog catalog = load();
@@ -403,12 +406,11 @@ class JsonContentCatalogTest {
         option.followUps().forEach(f -> reached.add(f.code()));
       }
       if (!trait.adult()) {
-        assertThat(trait.followUpOnly()).as(trait.code()).isFalse();
         assertThat(trait.works()).as(trait.code()).isEmpty();
         assertThat(trait.homes()).as(trait.code()).isEmpty();
       }
     }
-    for (TraitDefinition trait : catalog.adultTraits()) {
+    for (TraitDefinition trait : catalog.traits()) {
       if (trait.followUpOnly()) {
         assertThat(reached).as("닿지 않는 이어지는 장면 %s", trait.code()).contains(trait.code());
       }

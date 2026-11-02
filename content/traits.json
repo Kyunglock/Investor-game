@@ -69,7 +69,17 @@
           "mind.crowd": 2,
           "sector.semiconductor": 2
         },
-        "note": "뜨거운 곳에 돈을 두고 싶었다"
+        "note": "뜨거운 곳에 돈을 두고 싶었다",
+        "followUps": [
+          {
+            "code": "k17-dad-stock-up",
+            "weight": 1
+          },
+          {
+            "code": "k17-dad-stock-down",
+            "weight": 1
+          }
+        ]
       },
       {
         "code": "snack",
@@ -863,7 +873,8 @@
         },
         "note": "남의 수익보다 원리를 먼저 본다"
       }
-    ]
+    ],
+    "topic": "coin"
   },
   {
     "code": "t20-startup",
@@ -1075,7 +1086,8 @@
           }
         ]
       }
-    ]
+    ],
+    "topic": "coin"
   },
   {
     "code": "k21-savings",
@@ -1661,6 +1673,143 @@
           "insight": -3
         },
         "note": "남이 좋다는 것을 믿었다"
+      }
+    ]
+  },
+  {
+    "code": "k17-dad-stock-up",
+    "age": 17,
+    "followUpOnly": true,
+    "title": "열다섯 살 때 아빠 돈으로 산 주식이 두 배가 됐다",
+    "body": "아빠가 \"네가 고른 거니 네가 정해\" 한다. 친구들은 더 오를 거라며 부러워한다.",
+    "options": [
+      {
+        "code": "sell",
+        "label": "두 배면 충분하다, 판다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "patience": -3,
+          "insight": 4
+        },
+        "note": "번 것을 지키는 쪽을 골랐다"
+      },
+      {
+        "code": "hold",
+        "label": "끝까지 들고 간다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.bold": 1,
+          "mind.own": 1,
+          "sector.semiconductor": 1
+        },
+        "statDeltas": {
+          "patience": 6,
+          "courage": 2
+        },
+        "note": "오를 때도 흔들리지 않고 기다렸다"
+      },
+      {
+        "code": "half",
+        "label": "절반만 팔아 원금을 뺀다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.semiconductor": 1
+        },
+        "statDeltas": {
+          "insight": 3,
+          "patience": 3
+        },
+        "note": "원금을 빼고 나머지로 버티는 법을 알았다"
+      },
+      {
+        "code": "more",
+        "label": "용돈을 모아 더 사 달라고 한다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 1,
+          "mind.crowd": 1,
+          "sector.semiconductor": 1
+        },
+        "statDeltas": {
+          "courage": 5,
+          "insight": -4
+        },
+        "note": "오르는 것을 보고 더 담고 싶어졌다"
+      }
+    ]
+  },
+  {
+    "code": "k17-dad-stock-down",
+    "age": 17,
+    "followUpOnly": true,
+    "title": "열다섯 살 때 아빠 돈으로 산 주식이 반토막 났다",
+    "body": "아빠가 \"공부했다 치자, 어떻게 할래?\" 묻는다. 차트는 아직도 내려가는 중이다.",
+    "options": [
+      {
+        "code": "cut",
+        "label": "지금이라도 판다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.finance": 1
+        },
+        "statDeltas": {
+          "courage": 3,
+          "patience": -3
+        },
+        "note": "틀린 것을 인정하고 잘랐다"
+      },
+      {
+        "code": "wait",
+        "label": "회사를 믿고 기다린다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.bold": 1,
+          "mind.own": 1,
+          "sector.semiconductor": 1
+        },
+        "statDeltas": {
+          "patience": 6,
+          "conviction": 3
+        },
+        "note": "떨어져도 고른 이유를 붙들었다"
+      },
+      {
+        "code": "study",
+        "label": "왜 빠졌는지 찾아본다",
+        "traitDeltas": {
+          "style.long": 2,
+          "risk.safe": 1,
+          "mind.own": 1,
+          "sector.semiconductor": 1
+        },
+        "statDeltas": {
+          "insight": 6
+        },
+        "note": "값보다 이유를 먼저 봤다"
+      },
+      {
+        "code": "average",
+        "label": "더 사서 평단을 낮추자고 한다",
+        "traitDeltas": {
+          "style.short": 2,
+          "risk.bold": 1,
+          "mind.crowd": 1,
+          "sector.semiconductor": 1
+        },
+        "statDeltas": {
+          "courage": 5,
+          "insight": -3
+        },
+        "note": "떨어질수록 더 담고 싶어졌다"
       }
     ]
   }
