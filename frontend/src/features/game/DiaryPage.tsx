@@ -11,13 +11,13 @@ import { Scene } from './pixel/Scene'
 import { SCENES, sceneCaption, sceneFor } from './pixel/scenes'
 import { Vignette } from './pixel/Vignette'
 import { playerName } from './playerName'
-import { useGameStore } from './store'
 
 const VISIBLE = 12
 
 /**
- * 수첩 왼쪽 쪽: 나 (2026-10-22 시안 D). 신원, 테이프로 붙인 도트 장면, 성격과 약점 포스트잇, 요즘 있었던 일. 모바일에서는 이 쪽이 먼저 와서 신원·능력치가
- * 인생 기록보다 위에 있다.
+ * 수첩 왼쪽 쪽: 나 (2026-10-22 시안 D). 신원, 테이프로 붙인 도트 장면, 요즘 있었던 일, 접어 둔 성격. 모바일에서는 전 재산 띠 바로 다음에 와서
+ * 신원이 인생 기록보다 위에 있다. 성격은 크게 중요하지 않아 맨 아래에 접어 둔다 (#201).
+ * 약점은 캐릭터 머리의 약점 표시로도 늘 보인다.
  */
 export function DiaryPage({ game, ageYears }: { game: Game; ageYears: number }) {
   const month = Math.floor(game.market.month % 12) + 1
@@ -31,9 +31,8 @@ export function DiaryPage({ game, ageYears }: { game: Game; ageYears: number }) 
       </p>
       <Identity game={game} />
       <Photo game={game} ageYears={ageYears} />
-      <Personality game={game} />
       <Diary game={game} />
-      <ReportButton game={game} />
+      <Personality game={game} />
       <p className="mt-4 text-right text-[11px] text-pen-soft" data-testid="reported-day">
         서버 확인: {game.day}일
       </p>
@@ -128,43 +127,51 @@ function Photo({ game, ageYears }: { game: Game; ageYears: number }) {
   )
 }
 
-/** 능력치는 등급과 점수만. 지금 가장 낮은 능력치는 빨간 물결 밑줄과 포스트잇으로 짚는다. */
+/**
+ * 능력치는 등급과 점수만. 지금 가장 낮은 능력치는 빨간 물결 밑줄과 포스트잇으로 짚는다. 요즘 있었던 일 아래에 접혀 있고, 접힌 줄에 약점만 한 마디 보인다 (#201).
+ */
 function Personality({ game }: { game: Game }) {
   const current = nickname(game.stats)
   return (
-    <div className="mb-6 flex flex-wrap items-start gap-4">
-      <div className="min-w-0 flex-[1_1_220px]">
-        <h2 className="font-pen text-[28px] font-normal leading-8">내 성격</h2>
-        <ul className="m-0 flex list-none flex-col p-0">
-          {STAT_KEYS.map((key) => {
-            const weak = key === current.weakness
-            return (
-              <li
-                key={key}
-                className={`grid grid-cols-[52px_1fr_auto] items-center gap-2 leading-8 ${weak ? 'text-red-pen' : ''}`}
-                data-testid={`stat-${key}`}
-              >
-                <span className={weak ? 'underline decoration-wavy' : ''}>{STAT_LABELS[key]}</span>
-                <span className="h-[3px] rounded-full bg-[var(--ruled)]">
-                  <span
-                    className={`block h-full rounded-full transition-[width] duration-500 ${weak ? 'bg-red-pen' : 'bg-pen'}`}
-                    style={{ width: `${game.stats[key]}%` }}
-                  />
-                </span>
-                <span className="font-pen text-[22px]">
-                  {gradeOf(game.stats[key])} {game.stats[key]}
-                </span>
-              </li>
-            )
-          })}
-        </ul>
+    <details className="mt-6" data-testid="personality">
+      <summary className="cursor-pointer font-pen text-[24px] leading-8 text-pen-soft">
+        내 성격 보기 (약점: {STAT_LABELS[current.weakness]})
+      </summary>
+      <div className="mt-2 flex flex-wrap items-start gap-4">
+        <div className="min-w-0 flex-[1_1_220px]">
+          <ul className="m-0 flex list-none flex-col p-0">
+            {STAT_KEYS.map((key) => {
+              const weak = key === current.weakness
+              return (
+                <li
+                  key={key}
+                  className={`grid grid-cols-[52px_1fr_auto] items-center gap-2 leading-8 ${weak ? 'text-red-pen' : ''}`}
+                  data-testid={`stat-${key}`}
+                >
+                  <span className={weak ? 'underline decoration-wavy' : ''}>
+                    {STAT_LABELS[key]}
+                  </span>
+                  <span className="h-[3px] rounded-full bg-[var(--ruled)]">
+                    <span
+                      className={`block h-full rounded-full transition-[width] duration-500 ${weak ? 'bg-red-pen' : 'bg-pen'}`}
+                      style={{ width: `${game.stats[key]}%` }}
+                    />
+                  </span>
+                  <span className="font-pen text-[22px]">
+                    {gradeOf(game.stats[key])} {game.stats[key]}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+        <p className="m-0 w-[196px] flex-none rotate-2 bg-sticky px-3.5 py-3 font-pen text-[22px] leading-tight text-[#3b3320] shadow-[0_3px_8px_rgba(0,0,0,0.12)]">
+          약점: {STAT_LABELS[current.weakness]} {game.stats[current.weakness]}점…
+          <br />
+          {current.weaknessEffect}
+        </p>
       </div>
-      <p className="m-0 w-[196px] flex-none rotate-2 bg-sticky px-3.5 py-3 font-pen text-[22px] leading-tight text-[#3b3320] shadow-[0_3px_8px_rgba(0,0,0,0.12)]">
-        약점: {STAT_LABELS[current.weakness]} {game.stats[current.weakness]}점…
-        <br />
-        {current.weaknessEffect}
-      </p>
-    </div>
+    </details>
   )
 }
 
@@ -220,23 +227,5 @@ function DiaryLine({ line, kind }: { line: LogLine; kind?: string }) {
         {line.text}
       </span>
     </li>
-  )
-}
-
-/** 투자 성향 진단 보고서를 펼친다. 투자를 시작한 뒤부터 (decisions.md 61번). */
-function ReportButton({ game }: { game: Game }) {
-  const openReport = useGameStore((s) => s.openReport)
-  if (game.phase === 'CHILDHOOD') {
-    return null
-  }
-  return (
-    <button
-      type="button"
-      className="mt-4 min-h-11 rounded-full border-2 border-pen bg-paper px-4 font-note text-sm text-pen hover:bg-white"
-      onClick={openReport}
-      data-testid="open-report"
-    >
-      투자 성향 진단 보고서
-    </button>
   )
 }

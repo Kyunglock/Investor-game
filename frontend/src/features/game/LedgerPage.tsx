@@ -15,14 +15,28 @@ export const TENURE_LABELS: Record<Game['housing']['tenure'], string> = {
   OWN: '자가',
 }
 
-/** 수첩 오른쪽 쪽: 돈 (2026-10-22 시안 D). 전 재산과 현금·주식·빚 타일, 가계부, 주식과 매매, 집. 금액은 모두 서버 값이다. 자산 그래프는 기록부에만 (decisions.md 137번). */
+/** 수첩 오른쪽 쪽: 돈 (2026-10-22 시안 D). 가계부, 주식과 매매, 집. 금액은 모두 서버 값이다. 전 재산은 수첩 맨 위 띠(WorthBand)로 올라갔다 (#201). */
 export function LedgerPage({ game }: { game: Game; ageYears: number }) {
   return (
     <section aria-label="돈" className="paper-grid min-w-0 flex-[1_1_440px] px-5 pt-6 pb-8 sm:px-8">
-      <Worth game={game} />
       <Household game={game} />
       <Stocks game={game} />
       <Home game={game} />
+    </section>
+  )
+}
+
+/**
+ * 전 재산과 현금·주식·빚 타일. 가장 먼저 봐야 하는 숫자라 수첩 맨 위에 쪽 너비 전체로 둔다 (#201).
+ * 넓은 화면이든 좁은 화면이든 신원·장면보다 위다. 자산 그래프는 기록부에만 (decisions.md 137번).
+ */
+export function WorthBand({ game }: { game: Game }) {
+  return (
+    <section
+      aria-label="전 재산"
+      className="paper-grid w-full basis-full border-b-2 border-dashed border-[#d5d2cb] px-5 pt-6 pb-5 sm:px-8 md:pl-12"
+    >
+      <Worth game={game} />
     </section>
   )
 }
@@ -31,8 +45,9 @@ function Worth({ game }: { game: Game }) {
   // 달마다 바뀌는 "지난달보다"는 읽기도 전에 지나가서, 한 해를 마칠 때만 바뀌는 "작년 한 해"로 (decisions.md 74번).
   const year = yearDelta(game.yearly, game.initialAsset)
   return (
-    <div data-testid="portfolio-card">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    // 넓은 화면에서는 전 재산과 타일 셋을 한 줄에 나란히 둬서 띠가 낮다 (#201).
+    <div className="md:flex md:items-end md:gap-6" data-testid="portfolio-card">
+      <div className="flex flex-wrap items-end justify-between gap-3 md:flex-none">
         <div>
           <p className="text-pen-soft">전 재산</p>
           <p
@@ -52,7 +67,7 @@ function Worth({ game }: { game: Game }) {
         )}
       </div>
       {/* 현금·주식·빚은 한눈에 들어와야 한다 (decisions.md 137번): 작은 글씨 한 줄 대신 큼직한 타일 셋 */}
-      <div className="mt-3 grid grid-cols-3 gap-2" data-testid="money-tiles">
+      <div className="mt-3 grid grid-cols-3 gap-2 md:mt-0 md:flex-1" data-testid="money-tiles">
         <MoneyTile label="현금" value={game.cash} testId="cash" />
         <MoneyTile
           label="주식"
