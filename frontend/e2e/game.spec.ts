@@ -236,14 +236,15 @@ test('취직하면 가계부에 생활비가 보인다', async ({ page }) => {
   // 장부는 탭으로 나뉘고 처음에는 전 재산(구성 막대)이 열려 있다 (#210·#212).
   await expect(page.getByTestId('worth-card')).toBeVisible()
   await expect(page.getByTestId('worth-bar')).toBeVisible()
-  await page.getByTestId('ledger-tab-household').click()
+  // 투자 시작 제안 카드가 위에 떠 있어 클릭 대신 이벤트로 탭을 바꾼다.
+  await page.getByTestId('ledger-tab-household').dispatchEvent('click')
   await expect(page.getByTestId('ledger-tab-household')).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByTestId('household-card')).toContainText('생활비')
   await expect(page.getByTestId('monthly-saving')).toBeVisible()
   // 독립하면서 첫 선택지(월세)로 집을 구했고, 주거비가 생활비와 따로 나간다 (주거 설계).
   await expect(page.getByTestId('tenure')).toContainText('월세')
   await expect(page.getByTestId('household-card')).toContainText('주거비')
-  await page.getByTestId('ledger-tab-homes').click()
+  await page.getByTestId('ledger-tab-homes').dispatchEvent('click')
   await expect(page.getByTestId('tenure')).toBeVisible()
 })
 
