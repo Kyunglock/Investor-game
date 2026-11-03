@@ -800,7 +800,8 @@ class DefaultEventServiceTest {
         0L,
         50,
         Set.of(),
-        sex);
+        sex,
+        null);
   }
 
   /** 성장기 장면을 단계마다 (나이, 장면 코드)로 모은다. 15세 아빠 주식 장면이 나오면 hot을 고른다. */
@@ -1134,6 +1135,79 @@ class DefaultEventServiceTest {
         netWorth,
         50,
         Set.of());
+  }
+
+  /** #231: 직장을 다니다 전향한 투자자는 투자자가 된 날부터 연차를 센다. */
+  private SchedulingContext investorFrom(int investorAge) {
+    return new SchedulingContext(
+        Phase.INVESTING,
+        START_AGE,
+        "long",
+        "food",
+        null,
+        true,
+        JOB_DAY,
+        END_DAY,
+        null,
+        null,
+        JOB_DAY,
+        false,
+        null,
+        false,
+        null,
+        null,
+        0,
+        List.of(),
+        List.of(),
+        List.of(),
+        true,
+        Map.of(),
+        Map.of(),
+        SETTLED,
+        0L,
+        50,
+        Set.of(),
+        null,
+        (investorAge - START_AGE) * YEAR);
+  }
+
+  /** 투자자가 된 날부터 그 판의 투자자 장면을 차례로 모은다. */
+  private List<CareerDefinition> investorScenes(int investorAge, long seed, int count) {
+    UUID gameId = UUID.randomUUID();
+    SchedulingContext context = investorFrom(investorAge);
+    List<CareerDefinition> seen = new ArrayList<>();
+    int from = (investorAge - START_AGE) * YEAR;
+    for (int i = 0; i < count; i++) {
+      Optional<EventView> next = nextOf(gameId, context, from, EventKind.CAREER, seed);
+      if (next.isEmpty()) {
+        break;
+      }
+      seen.add(careerOf(next.get()));
+      events.complete(gameId, next.get().eventId(), new Completion("HOLD", "HOLD", List.of()));
+      from = next.get().occursDay();
+    }
+    return seen;
+  }
+
+  @Test
+  void 마흔다섯에_전향한_투자자의_첫_장면은_새내기_투자자_장면이다() {
+    for (long seed = 1; seed <= 10; seed++) {
+      CareerDefinition first = investorScenes(45, seed, 1).getFirst();
+      assertThat(first.jobs()).as("seed %d", seed).containsExactly("INVEST");
+      // 첫 장면은 전향하고 1년 안쪽에 온다. 20년 차 베테랑 장면이 아니다.
+      assertThat(first.minTenureYears())
+          .as("seed %d %s", seed, first.code())
+          .isLessThanOrEqualTo(1);
+    }
+  }
+
+  @Test
+  void 쉰셋에_전향하면_늦깎이_투자자_장면이_나올_수_있다() {
+    boolean late = false;
+    for (long seed = 1; seed <= 40 && !late; seed++) {
+      late = investorScenes(53, seed, 3).stream().anyMatch(c -> c.code().equals("inv-late-start"));
+    }
+    assertThat(late).as("40판 가운데 inv-late-start").isTrue();
   }
 
   @Test

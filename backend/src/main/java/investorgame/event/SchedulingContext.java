@@ -34,6 +34,7 @@ import java.util.Set;
  *     맞는 종목에만 온다 (decisions.md 109번). 모르는 종목은 빠져 있을 수 있다
  * @param family 가족 점수(0~100). 바닥이면 가족 여행·나들이 제안이 끊긴다 (decisions.md 111번)
  * @param netWorth 지금 순자산(원). 전업투자자의 장면(증권사 설립 등)은 순자산이 받쳐 줄 때만 온다
+ * @param investorStartDay 전업투자자가 된 날. 투자자의 직장 장면 연차는 이날부터 센다 (#231). null이면 투자자가 아니거나 모른다
  * @param sex 캐릭터의 성별. 남자만 겪는 장면(입대·전역)을 가른다. null이면 가리지 않는다 (#221)
  * @param unaffordableStockCodes 한 주도 못 사는(현재가 > 현금) 종목. 들고 있지도 않으면 그 종목의 뉴스는 고를 게 없어 띄우지 않는다
  *     (decisions.md 59번)
@@ -66,7 +67,8 @@ public record SchedulingContext(
     long netWorth,
     int family,
     Set<String> unaffordableStockCodes,
-    Sex sex) {
+    Sex sex,
+    Integer investorStartDay) {
 
   /** 성별을 모르는 맥락(테스트 등). 성별로 가리는 장면을 가리지 않는다. */
   public SchedulingContext(
@@ -125,6 +127,7 @@ public record SchedulingContext(
         netWorth,
         family,
         unaffordableStockCodes,
+        null,
         null);
   }
 
