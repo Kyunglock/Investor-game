@@ -233,11 +233,18 @@ test('취직하면 가계부에 생활비가 보인다', async ({ page }) => {
   await step(page)
   // 한 달 뒤 첫 월급과 생활비가 처리되고 같은 날 투자 시작 제안이 뜬다.
   await playUntil(page, 'OFFER')
+  // 장부는 탭으로 나뉘고 처음에는 전 재산(구성 막대)이 열려 있다 (#210·#212).
+  await expect(page.getByTestId('worth-card')).toBeVisible()
+  await expect(page.getByTestId('worth-bar')).toBeVisible()
+  await page.getByTestId('ledger-tab-household').click()
+  await expect(page.getByTestId('ledger-tab-household')).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByTestId('household-card')).toContainText('생활비')
   await expect(page.getByTestId('monthly-saving')).toBeVisible()
   // 독립하면서 첫 선택지(월세)로 집을 구했고, 주거비가 생활비와 따로 나간다 (주거 설계).
   await expect(page.getByTestId('tenure')).toContainText('월세')
   await expect(page.getByTestId('household-card')).toContainText('주거비')
+  await page.getByTestId('ledger-tab-homes').click()
+  await expect(page.getByTestId('tenure')).toBeVisible()
 })
 
 test('전 재산이 맨 위, 신원 카드는 인생 기록보다 위, 성격은 그 아래에 접혀 있다 (#201)', async ({
