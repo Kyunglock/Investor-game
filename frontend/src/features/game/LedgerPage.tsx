@@ -4,6 +4,7 @@ import type { Game } from '../../api/client'
 import { spouseWord } from '../../api/spouseTerms'
 import { childWord, percent, shortWon, signedShortWon, signedWon, won } from './labels'
 import { signedPercent } from './market'
+import { FAMILY_COLD, familyNote, MOOD_LOW, moodNote } from './mood'
 import { useGameStore } from './store'
 import { yearDelta } from './timeline'
 import { compactWon, stockSummary, WORTH_COLORS, worthBar, worthParts } from './worth'
@@ -286,6 +287,17 @@ function Household({ game }: { game: Game }) {
           </span>
         )}
       </p>
+      {/* 행복도·가족 점수가 지금 게임에 주는 영향 (#230, decisions.md 165번) */}
+      <ul className="m-0 mb-1 list-none p-0 text-[12px] text-pen-soft" data-testid="mood-notes">
+        <li className={game.happiness < MOOD_LOW ? 'text-red-pen' : ''}>
+          · {moodNote(game.happiness)}
+        </li>
+        {(h.married || h.children.length > 0) && (
+          <li className={game.family < FAMILY_COLD ? 'text-red-pen' : ''}>
+            · {familyNote(game.family)}
+          </li>
+        )}
+      </ul>
       {!working ? (
         <p className="text-pen-soft">
           {game.phase === 'CHILDHOOD' ? '아직 부모님 집이다.' : '직업이 생기면 가계부가 시작된다.'}

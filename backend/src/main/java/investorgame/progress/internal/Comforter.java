@@ -27,6 +27,9 @@ class Comforter {
   private static final int PARENTS_UNTIL_AGE = 55;
   private static final int HAPPY_COMFORT = 2;
 
+  /** 가족 점수가 이 이상이면 가족의 위로가 더 깊다: 행복도가 두 배로 돌아온다 (#230, decisions.md 165번). */
+  static final int WARM_FAMILY_FROM = 70;
+
   private final HouseholdService household;
   private final ContentCatalog content;
   private final GameProperties calendar;
@@ -41,8 +44,11 @@ class Comforter {
   Optional<String> comfort(
       UUID gameId, String situation, int day, Integer age, RandomGenerator rng) {
     HouseholdView home = household.get(gameId);
+    int family = household.familyScore(gameId);
+    // 남처럼 멀어진 가족(111번)은 위로하지 않는다 (decisions.md 165번).
+    boolean cold = family < HousingFlow.COLD_FAMILY_BELOW;
     List<String> who = new ArrayList<>();
-    if (home.married()) {
+    if (home.married() && !cold) {
       who.add("spouse");
     }
     boolean child =
@@ -51,18 +57,21 @@ class Comforter {
                 c ->
                     !c.leftBy(day)
                         && (day - c.birthDay()) / calendar.daysPerYear() >= CHILD_MIN_AGE);
-    if (child) {
+    if (child && !cold) {
       who.add("child");
     }
     if (age != null && age <= PARENTS_UNTIL_AGE) {
       who.add("parents");
     }
     who.add("friend");
-    List<String> lines = content.comfortPhrases(situation, who.get(rng.nextInt(who.size())));
+    String by = who.get(rng.nextInt(who.size()));
+    List<String> lines = content.comfortPhrases(situation, by);
     if (lines.isEmpty()) {
       return Optional.empty();
     }
-    household.cheer(gameId, HAPPY_COMFORT);
+    boolean byFamily = by.equals("spouse") || by.equals("child");
+    household.cheer(
+        gameId, byFamily && family >= WARM_FAMILY_FROM ? HAPPY_COMFORT * 2 : HAPPY_COMFORT);
     // 위로를 주고받으면 가족도 조금 가까워진다 (decisions.md 88번).
     household.bond(gameId, 1);
     return Optional.of(lines.get(rng.nextInt(lines.size())));

@@ -20,6 +20,7 @@ import investorgame.common.Hint;
 import investorgame.common.Korean;
 import investorgame.common.Phase;
 import investorgame.common.Sex;
+import investorgame.common.StatCodes;
 import investorgame.common.error.ConflictException;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
@@ -726,8 +727,12 @@ class DefaultProgressService implements ProgressService {
       int stat = character.stats().toCodes().get(option.stat());
       // 실적(지금 직장에서 쌓은 인상분)이 판정에 들어가는 장면도 있다: 대기업 50대 권고사직 (decisions.md 51번).
       int raisePercent = character.salaryBonusBp() / (int) PERCENT;
+      // 행복도가 판정에 조금 보탠다: 지치고 우울하면 일도 안 풀린다 (#230, decisions.md 165번).
       int chanceBp =
-          option.baseBp() + stat * option.perPointBp() + raisePercent * option.perRaisePercentBp();
+          option.baseBp()
+              + stat * option.perPointBp()
+              + raisePercent * option.perRaisePercentBp()
+              + MoodEffect.careerBonusBp(household.happiness(gameId));
       success = random.forKey("career", ticket.seq()).nextInt(BP) < chanceBp;
     }
     CareerDefinition.Effect effect = success ? option.success() : option.fail();
@@ -1243,9 +1248,15 @@ class DefaultProgressService implements ProgressService {
     Action chosen = Action.valueOf(ticket.optionCode());
     boolean holding = account.holdings().containsKey(stockCode);
 
+    // 마음이 가라앉으면 인내·줏대가 흔들리고, 편하면 조금 단단해진다 (#230, decisions.md 165번).
+    int happiness = household.happiness(gameId);
     Resolution resolution =
         behavior.resolve(
-            new ChoiceContext(chosen, character.stats(), ticket.swaySentiment(), holding),
+            new ChoiceContext(
+                chosen,
+                MoodEffect.steadied(character.stats(), happiness),
+                ticket.swaySentiment(),
+                holding),
             random.forKey("behavior", "resolve", ticket.seq()));
     ChoiceOutcome.Trade trade =
         switch (resolution.actual()) {
@@ -1335,6 +1346,16 @@ class DefaultProgressService implements ProgressService {
                 ticket.effect() instanceof ChoiceTicket.News news ? news.hintDirection() : null,
                 random.forKey("behavior", "review", ticket.seq()))
             : null;
+    // 우울한 날 인내·줏대에 밀려 손이 뒤집혔으면 그 까닭을 덧붙인다 (decisions.md 165번).
+    if (review != null
+        && MoodEffect.low(happiness)
+        && resolution.deviations().stream()
+            .anyMatch(
+                d ->
+                    StatCodes.PATIENCE.equals(d.statCode())
+                        || StatCodes.CONVICTION.equals(d.statCode()))) {
+      review += " 요즘 마음이 가라앉아 손이 더 쉽게 흔들렸다.";
+    }
 
     List<StatChange> growth =
         characters.grow(
