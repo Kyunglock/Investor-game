@@ -39,8 +39,10 @@ export function Toast() {
     <div className="mx-auto max-w-6xl px-4 md:px-6">
       <output
         key={notice.seq}
-        className="animate-reveal mt-2 ml-auto block w-fit rounded border border-line border-l-[3px] border-l-teal bg-card px-3 py-1.5 text-xs shadow-[0_4px_14px_rgba(0,0,0,0.08)]"
+        // 폭락 전조는 빨간 테두리·글씨로 (decisions.md 164번).
+        className={`animate-reveal mt-2 ml-auto block w-fit rounded border border-line border-l-[3px] bg-card px-3 py-1.5 text-xs shadow-[0_4px_14px_rgba(0,0,0,0.08)] ${notice.kind === 'OMEN' ? 'border-l-red-pen font-semibold text-red-pen' : 'border-l-teal'}`}
         data-testid="notice-toast"
+        data-kind={notice.kind}
       >
         {moment && game && (
           <span className="mb-1.5 block w-[256px]">

@@ -184,7 +184,7 @@ const SENTIMENT_MARK: Record<NewsItem['sentiment'], { text: string; className: s
   NEUTRAL: { text: '·', className: 'text-faint' },
 }
 
-/** 전조·헛소문·기사·회고를 구분 없이 최근 순으로. 종류 꼬리표는 없고, 시장에 +인지 −인지만 붙는다 (매매창 설계 3.3절, decisions.md 56번). */
+/** 전조·헛소문·기사·회고를 최근 순으로. 시장에 +인지 −인지가 붙고, 폭락 전조는 빨간 글씨다 (매매창 설계 3.3절, decisions.md 56·164번). */
 function Newspaper({ game, items }: { game: Game; items: NewsItem[] }) {
   const recent = [...items].reverse()
   const shown = recent.slice(0, NEWSPAPER_SHOWN)
@@ -203,7 +203,17 @@ function Newspaper({ game, items }: { game: Game; items: NewsItem[] }) {
       >
         {SENTIMENT_MARK[item.sentiment].text}
       </span>
-      <span className={item.kind === 'CRISIS' ? 'text-wine' : ''}>{item.text}</span>
+      <span
+        className={
+          item.kind === 'CRISIS'
+            ? 'text-wine'
+            : item.kind === 'OMEN'
+              ? 'font-semibold text-red-pen'
+              : ''
+        }
+      >
+        {item.text}
+      </span>
     </li>
   )
   return (
