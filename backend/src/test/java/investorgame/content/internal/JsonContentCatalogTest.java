@@ -377,6 +377,8 @@ class JsonContentCatalogTest {
       }
     }
     assertThat(catalog.careers()).hasSizeGreaterThanOrEqualTo(300);
+    // 화면과 기록에는 제목이 남는다. 직종이 달라도 같은 제목이면 어느 장면인지 헷갈린다.
+    assertThat(catalog.careers()).extracting(CareerDefinition::title).doesNotHaveDuplicates();
     List<String> jobCodes = new ArrayList<>();
     catalog.jobs().forEach(j -> jobCodes.add(j.code()));
     jobCodes.add(CareerDefinition.FULL_TIME_INVESTOR);
