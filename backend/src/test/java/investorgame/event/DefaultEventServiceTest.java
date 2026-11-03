@@ -1224,6 +1224,43 @@ class DefaultEventServiceTest {
     assertThat(farmerLate).as("농부가 60세 넘어 받은 장면").isTrue();
   }
 
+  /** #234: 약국을 열기 전에는 약국 주인 장면이 없고, 연 뒤에는 근무 약사 장면이 없다. */
+  @Test
+  void 개국한_약사에게는_주인_장면만_개국_전에는_근무_약사_장면만_나온다() {
+    boolean opened = false;
+    for (long seed = 1; seed <= 30 && !opened; seed++) {
+      UUID gameId = UUID.randomUUID();
+      SchedulingContext context = workingAs("pharmacist");
+      int from = JOB_DAY;
+      boolean own = false;
+      for (int i = 0; i < 40; i++) {
+        Optional<EventView> next = nextOf(gameId, context, from, EventKind.CAREER, seed);
+        if (next.isEmpty()) {
+          break;
+        }
+        CareerDefinition scene = careerOf(next.get());
+        if (own) {
+          assertThat(scene.unless())
+              .as("seed %d 개국 뒤 %s", seed, scene.code())
+              .doesNotContain("pha-open/open");
+        } else if (!scene.followUpOnly()) {
+          assertThat(scene.requires())
+              .as("seed %d 개국 전 %s", seed, scene.code())
+              .doesNotContain("pha-open/open");
+        }
+        String option = "HOLD";
+        if (scene.code().equals("pha-open") && !own) {
+          option = "open";
+          own = true;
+          opened = true;
+        }
+        events.complete(gameId, next.get().eventId(), new Completion(option, option, List.of()));
+        from = next.get().occursDay();
+      }
+    }
+    assertThat(opened).as("30판 가운데 개국한 판").isTrue();
+  }
+
   @Test
   void 공무원에게는_구조조정이_오지_않는다() {
     for (long seed = 1; seed <= 10; seed++) {

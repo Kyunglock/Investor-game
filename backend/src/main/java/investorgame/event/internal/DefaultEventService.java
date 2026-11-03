@@ -657,6 +657,30 @@ class DefaultEventService implements EventService {
   }
 
   /** 앞에서 이 선택("장면코드/선택지코드")을 했는가. */
+  /**
+   * 직장 장면의 전제(#234): 지금 직장에서(직업을 얻은 날 이후) 이 결과를 낸 적이 있는가. 개업·창업처럼 처지를 바꾼 결과는 다른 직장으로 옮기거나 다시 취업하면
+   * 사라진다.
+   */
+  private boolean careerFits(CareerDefinition career, List<EventRow> rows, int since) {
+    if (career.requires().isEmpty() && career.unless().isEmpty()) {
+      return true;
+    }
+    List<EventRow> here =
+        rows.stream()
+            .filter(r -> r.kind() == EventKind.CAREER && r.resolved() && r.occursDay() >= since)
+            .toList();
+    return (career.requires().isEmpty()
+            || career.requires().stream().anyMatch(n -> choseCareer(here, n)))
+        && career.unless().stream().noneMatch(n -> choseCareer(here, n));
+  }
+
+  private boolean choseCareer(List<EventRow> here, String need) {
+    String[] parts = need.split("/", 2);
+    return here.stream()
+        .filter(r -> parts[0].equals(r.definitionCode()))
+        .anyMatch(r -> repository.actualAction(r.id()).filter(parts[1]::equals).isPresent());
+  }
+
   private boolean chose(List<EventRow> rows, String need) {
     String[] parts = need.split("/", 2);
     return rows.stream()
@@ -1819,6 +1843,7 @@ class DefaultEventService implements EventService {
             .filter(c -> c.fitsTenure(tenure))
             .filter(c -> !c.code().equals(lastCode))
             .filter(c -> !c.movesJob() || !betterJobs.isEmpty())
+            .filter(c -> careerFits(c, previous, start))
             .toList();
     List<CareerDefinition> eligible =
         fitting.stream().filter(c -> c.repeatable() || !seen.contains(c.code())).toList();
@@ -1830,6 +1855,7 @@ class DefaultEventService implements EventService {
       eligible =
           content.careers().stream()
               .filter(c -> c.forJob(jobCode) && !c.movesJob() && c.unconditional())
+              .filter(c -> careerFits(c, previous, start))
               .toList();
     }
     CareerDefinition career = weighted(eligible, CareerDefinition::weight, rng);

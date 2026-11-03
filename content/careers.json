@@ -71,6 +71,22 @@
         }
       }
     ],
+    "unless": [
+      "des-freelance/go",
+      "des-freelance/go!fail",
+      "des-studio/found",
+      "des-studio/found!fail",
+      "des-academy/open",
+      "sal-dealer/open",
+      "sal-dealer/open!fail",
+      "sal-dealer/partner",
+      "acc-own/open",
+      "acc-own/open!fail",
+      "law-own/open",
+      "law-own/open!fail",
+      "law-own/share",
+      "law-own/share!fail"
+    ],
     "repeatable": true
   },
   {
@@ -147,6 +163,22 @@
         }
       }
     ],
+    "unless": [
+      "des-freelance/go",
+      "des-freelance/go!fail",
+      "des-studio/found",
+      "des-studio/found!fail",
+      "des-academy/open",
+      "sal-dealer/open",
+      "sal-dealer/open!fail",
+      "sal-dealer/partner",
+      "acc-own/open",
+      "acc-own/open!fail",
+      "big-spinoff/go",
+      "big-spinoff/negotiate",
+      "big-executive/aim",
+      "big-executive/push"
+    ],
     "repeatable": true
   },
   {
@@ -210,6 +242,20 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate",
+      "des-freelance/go",
+      "des-freelance/go!fail",
+      "des-studio/found",
+      "des-studio/found!fail",
+      "des-academy/open",
+      "sal-dealer/open",
+      "sal-dealer/open!fail",
+      "sal-dealer/partner",
+      "nur-homecare/found",
+      "nur-abroad-go/go"
     ],
     "repeatable": true
   },
@@ -291,6 +337,18 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate",
+      "des-freelance/go",
+      "des-freelance/go!fail",
+      "des-studio/found",
+      "des-studio/found!fail",
+      "des-academy/open",
+      "sal-dealer/open",
+      "sal-dealer/open!fail",
+      "sal-dealer/partner"
     ],
     "repeatable": true
   },
@@ -387,6 +445,33 @@
         }
       }
     ],
+    "unless": [
+      "pt-franchise/open",
+      "pt-takeover/take",
+      "pt-takeover/take!fail",
+      "pt-takeover/negotiate",
+      "fac-outsource/found",
+      "fac-outsource/negotiate",
+      "des-freelance/go",
+      "des-freelance/go!fail",
+      "des-studio/found",
+      "des-studio/found!fail",
+      "des-academy/open",
+      "sal-dealer/open",
+      "sal-dealer/open!fail",
+      "sal-dealer/partner",
+      "nur-homecare/found",
+      "acc-own/open",
+      "acc-own/open!fail",
+      "pha-open/open",
+      "pha-open/open!fail",
+      "pha-open/partner",
+      "pha-open/partner!fail",
+      "law-own/open",
+      "law-own/open!fail",
+      "law-own/share",
+      "law-own/share!fail"
+    ],
     "repeatable": true
   },
   {
@@ -468,6 +553,33 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "pt-franchise/open",
+      "pt-takeover/take",
+      "pt-takeover/take!fail",
+      "pt-takeover/negotiate",
+      "fac-outsource/found",
+      "fac-outsource/negotiate",
+      "des-freelance/go",
+      "des-freelance/go!fail",
+      "des-studio/found",
+      "des-studio/found!fail",
+      "des-academy/open",
+      "sal-dealer/open",
+      "sal-dealer/open!fail",
+      "sal-dealer/partner",
+      "nur-homecare/found",
+      "acc-own/open",
+      "acc-own/open!fail",
+      "pha-open/open",
+      "pha-open/open!fail",
+      "pha-open/partner",
+      "pha-open/partner!fail",
+      "law-own/open",
+      "law-own/open!fail",
+      "law-own/share",
+      "law-own/share!fail"
     ]
   },
   {
@@ -670,6 +782,12 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "pt-franchise/open",
+      "pt-takeover/take",
+      "pt-takeover/take!fail",
+      "pt-takeover/negotiate"
     ]
   },
   {
@@ -745,6 +863,11 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "pt-takeover/take",
+      "pt-takeover/take!fail",
+      "pt-takeover/negotiate"
     ]
   },
   {
@@ -840,6 +963,12 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "pt-franchise/open",
+      "pt-takeover/take",
+      "pt-takeover/take!fail",
+      "pt-takeover/negotiate"
     ]
   },
   {
@@ -910,6 +1039,9 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "pt-franchise/open"
     ]
   },
   {
@@ -982,6 +1114,9 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "pt-franchise/open"
     ]
   },
   {
@@ -1052,6 +1187,9 @@
           "happiness": -2
         }
       }
+    ],
+    "unless": [
+      "pt-franchise/open"
     ]
   },
   {
@@ -1192,6 +1330,12 @@
           "happiness": -1
         }
       }
+    ],
+    "unless": [
+      "pt-franchise/open",
+      "pt-takeover/take",
+      "pt-takeover/take!fail",
+      "pt-takeover/negotiate"
     ]
   },
   {
@@ -1264,6 +1408,12 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "pt-franchise/open",
+      "pt-takeover/take",
+      "pt-takeover/take!fail",
+      "pt-takeover/negotiate"
     ]
   },
   {
@@ -1334,6 +1484,12 @@
           "happiness": -5
         }
       }
+    ],
+    "unless": [
+      "pt-franchise/open",
+      "pt-takeover/take",
+      "pt-takeover/take!fail",
+      "pt-takeover/negotiate"
     ]
   },
   {
@@ -1395,6 +1551,12 @@
           "happiness": 2
         }
       }
+    ],
+    "unless": [
+      "pt-franchise/open",
+      "pt-takeover/take",
+      "pt-takeover/take!fail",
+      "pt-takeover/negotiate"
     ]
   },
   {
@@ -1465,6 +1627,14 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "pt-franchise/open",
+      "pt-takeover/take",
+      "pt-takeover/take!fail",
+      "pt-takeover/negotiate",
+      "pt-manager/take",
+      "pt-manager/negotiate"
     ]
   },
   {
@@ -1526,6 +1696,12 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "pt-franchise/open",
+      "pt-takeover/take",
+      "pt-takeover/take!fail",
+      "pt-takeover/negotiate"
     ]
   },
   {
@@ -1605,6 +1781,9 @@
           "happiness": -1
         }
       }
+    ],
+    "unless": [
+      "pt-franchise/open"
     ]
   },
   {
@@ -1676,12 +1855,18 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "pt-franchise/open",
+      "pt-takeover/take",
+      "pt-takeover/take!fail",
+      "pt-takeover/negotiate"
     ]
   },
   {
     "code": "pt-selfstore",
     "title": "무인 아이스크림 가게",
-    "body": "노후 대비로 무인 아이스크림 가게를 차려 볼까 한다. 키오스크와 냉동고까지 2천만 원이면 된다고 한다. 알바는 그대로 다닐 수 있다.",
+    "body": "노후 대비로 무인 아이스크림 가게를 차려 볼까 한다. 키오스크와 냉동고까지 2천만 원이면 된다고 한다. 지금 하는 일은 그대로 하면서 굴릴 수 있다.",
     "weight": 6,
     "minTenureYears": 0,
     "jobs": [
@@ -3925,6 +4110,11 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate",
+      "fac-foreman/take"
     ]
   },
   {
@@ -4015,6 +4205,10 @@
           "happiness": -1
         }
       }
+    ],
+    "unless": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate"
     ]
   },
   {
@@ -4074,6 +4268,10 @@
           "happiness": 2
         }
       }
+    ],
+    "unless": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate"
     ]
   },
   {
@@ -4176,6 +4374,10 @@
           "happiness": -5
         }
       }
+    ],
+    "unless": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate"
     ]
   },
   {
@@ -4449,6 +4651,11 @@
           "family": -1
         }
       }
+    ],
+    "unless": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate",
+      "fac-foreman/take"
     ]
   },
   {
@@ -4511,6 +4718,10 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate"
     ]
   },
   {
@@ -4587,6 +4798,10 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate"
     ]
   },
   {
@@ -4662,6 +4877,10 @@
           "family": 1
         }
       }
+    ],
+    "unless": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate"
     ]
   },
   {
@@ -4721,6 +4940,10 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate"
     ]
   },
   {
@@ -4746,8 +4969,6 @@
           "statDeltas": {
             "courage": 2
           },
-          "followUp": "fac-sub-squeeze",
-          "followUpDays": 730,
           "text": "5천만 원을 들여 사장이 됐다. 첫해 물량이 넉넉했다.",
           "happiness": 9
         },
@@ -4774,8 +4995,6 @@
           "statDeltas": {
             "insight": 2
           },
-          "followUp": "fac-sub-squeeze",
-          "followUpDays": 730,
           "text": "설비를 임대받아 2천만 원으로 차렸다.",
           "happiness": 8
         },
@@ -4868,6 +5087,10 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate"
     ]
   },
   {
@@ -4932,6 +5155,10 @@
           "family": 1
         }
       }
+    ],
+    "unless": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate"
     ]
   },
   {
@@ -5004,6 +5231,10 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate"
     ]
   },
   {
@@ -5505,13 +5736,12 @@
   {
     "code": "fac-sub-squeeze",
     "title": "단가 인하 압박",
-    "body": "협력업체를 차린 지 두 해. 원청 구매팀이 내년 단가를 10% 깎자고 한다. 받으면 남는 게 거의 없고, 거절하면 물량이 끊길 수 있다.",
-    "weight": 1,
+    "body": "협력업체를 차린 뒤로 해마다 이맘때면 원청 구매팀이 단가를 깎자고 한다. 올해는 10%다. 받으면 남는 게 거의 없고, 거절하면 물량이 끊길 수 있다.",
+    "weight": 6,
     "minTenureYears": 0,
     "jobs": [
       "factory"
     ],
-    "followUpOnly": true,
     "options": [
       {
         "code": "comply",
@@ -5574,7 +5804,12 @@
           "family": -2
         }
       }
-    ]
+    ],
+    "requires": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate"
+    ],
+    "repeatable": true
   },
   {
     "code": "cs-complaint",
@@ -7197,6 +7432,9 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "tea-grad-offer/try"
     ]
   },
   {
@@ -7269,6 +7507,10 @@
           "family": -1
         }
       }
+    ],
+    "unless": [
+      "tea-vp/push",
+      "tea-grad-offer/try"
     ]
   },
   {
@@ -7344,6 +7586,9 @@
           "family": -4
         }
       }
+    ],
+    "unless": [
+      "tea-grad-offer/try"
     ]
   },
   {
@@ -7373,12 +7618,12 @@
       },
       {
         "code": "stay",
-        "label": "정년까지 가르친다",
+        "label": "정년까지 남는다",
         "success": {
           "statDeltas": {
             "patience": 2
           },
-          "text": "올해 담임 반 아이들이 유난히 예쁘다.",
+          "text": "정년까지 남기로 했다. 아직 할 일이 남았다.",
           "happiness": 3
         }
       },
@@ -7477,6 +7722,9 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "tea-grad-offer/try"
     ]
   },
   {
@@ -7545,6 +7793,9 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "tea-grad-offer/try"
     ]
   },
   {
@@ -7674,6 +7925,80 @@
     ]
   },
   {
+    "code": "tea-inspector",
+    "title": "교육청의 한 해",
+    "body": "장학사 생활은 해마다 비슷하게 돌아간다. 의회 자료 요구와 학교 민원, 새 정책 공문이 한꺼번에 쏟아진다. 교실에 있을 때가 가끔 그립다.",
+    "weight": 8,
+    "minTenureYears": 0,
+    "jobs": [
+      "teacher"
+    ],
+    "options": [
+      {
+        "code": "push",
+        "label": "현장 목소리를 정책에 담는다",
+        "stat": "conviction",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": {
+          "text": "학교 의견을 모아 지침을 고쳤다. 교사들에게서 고맙다는 연락이 왔다.",
+          "salaryPercent": 2,
+          "statDeltas": {
+            "conviction": 2
+          },
+          "happiness": 5
+        },
+        "fail": {
+          "text": "윗선이 현장 얘기는 그만하라며 보고서를 돌려보냈다.",
+          "statDeltas": {
+            "conviction": 1,
+            "patience": -1
+          },
+          "happiness": -4
+        }
+      },
+      {
+        "code": "comply",
+        "label": "위에서 내려온 대로 처리한다",
+        "success": {
+          "text": "공문을 그대로 학교에 내려보냈다. 일은 빨리 끝났고 학교들의 원성은 내 몫이 됐다.",
+          "statDeltas": {
+            "patience": 1
+          },
+          "happiness": -2
+        }
+      },
+      {
+        "code": "prepare",
+        "label": "교감 승진 점수를 챙긴다",
+        "stat": "insight",
+        "baseBp": 4000,
+        "perPointBp": 30,
+        "success": {
+          "text": "전문직 경력이 점수로 인정됐다. 승진 명부 순위가 올라 월급도 조금 올랐다.",
+          "salaryPercent": 3,
+          "statDeltas": {
+            "insight": 2
+          },
+          "happiness": 5,
+          "family": -1
+        },
+        "fail": {
+          "text": "점수를 챙기느라 야근만 늘었다. 명부 순위는 그대로다.",
+          "statDeltas": {
+            "insight": 1
+          },
+          "happiness": -4,
+          "family": -1
+        }
+      }
+    ],
+    "requires": [
+      "tea-grad-offer/try"
+    ],
+    "repeatable": true
+  },
+  {
     "code": "tea-tutor",
     "title": "몰래 과외 제안",
     "body": "학부모 모임에서 주말에 아이 몇 명만 봐 달라는 제안이 왔다. 한 달에 200만 원을 주겠다고 한다. 교사 과외는 불법이다.",
@@ -7734,6 +8059,9 @@
           "family": -1
         }
       }
+    ],
+    "unless": [
+      "tea-grad-offer/try"
     ]
   },
   {
@@ -7929,6 +8257,9 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "tea-grad-offer/try"
     ]
   },
   {
@@ -8049,6 +8380,9 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "tea-grad-offer/try"
     ]
   },
   {
@@ -8314,6 +8648,10 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "tea-vp/push",
+      "tea-grad-offer/try"
     ]
   },
   {
@@ -8432,12 +8770,16 @@
           "happiness": 5
         }
       }
+    ],
+    "unless": [
+      "tea-vp/push",
+      "tea-grad-offer/try"
     ]
   },
   {
     "code": "tea-principal",
     "title": "교장 공모",
-    "body": "평교사도 지원할 수 있는 내부형 교장 공모가 났다. 학교 운영 계획서를 내고 교사와 학부모 앞에서 발표해야 한다.",
+    "body": "내부형 교장 공모가 났다. 교감이든 평교사든 경력만 채우면 지원할 수 있다. 학교 운영 계획서를 내고 교사와 학부모 앞에서 발표해야 한다.",
     "weight": 6,
     "minTenureYears": 20,
     "jobs": [
@@ -8483,7 +8825,7 @@
         "code": "back",
         "label": "후배를 밀어 준다",
         "success": {
-          "text": "후배가 교장이 됐다. 나는 교무부장으로 거들었다.",
+          "text": "후배가 교장이 됐다. 나는 곁에서 학교 살림을 거들었다.",
           "salaryPercent": 1,
           "statDeltas": {
             "insight": 1,
@@ -8570,6 +8912,10 @@
           "happiness": -6
         }
       }
+    ],
+    "unless": [
+      "nur-homecare/found",
+      "nur-abroad-go/go"
     ]
   },
   {
@@ -8644,6 +8990,9 @@
           "family": -1
         }
       }
+    ],
+    "unless": [
+      "nur-homecare/found"
     ]
   },
   {
@@ -8658,27 +9007,27 @@
     "options": [
       {
         "code": "try",
-        "label": "도전한다",
+        "label": "학원과 서류 대행을 끼고 바로 응시한다",
         "stat": "insight",
         "baseBp": 3000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 60,
+          "text": "몰아쳐 공부해 한 번에 붙었다. 학원비와 서류 대행에 500만 원이 들었다. 이제 갈지 말지를 정해야 한다.",
           "amount": -5000000,
           "statDeltas": {
-            "courage": 2,
+            "courage": 1,
             "insight": 1
           },
-          "text": "면허를 따고 미국 병원에 취업했다. 월급이 크게 뛰었다.",
-          "happiness": 10,
-          "family": -2
+          "followUp": "nur-abroad-go",
+          "followUpDays": 180,
+          "happiness": 7
         },
         "fail": {
           "amount": -5000000,
           "statDeltas": {
             "courage": 1
           },
-          "text": "시험에 떨어졌다. 500만 원만 날렸다.",
+          "text": "시험에 떨어졌다. 학원비와 대행비 500만 원만 날렸다.",
           "happiness": -6
         }
       },
@@ -8719,6 +9068,10 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "nur-homecare/found",
+      "nur-abroad-go/go"
     ]
   },
   {
@@ -8788,12 +9141,16 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "nur-homecare/found",
+      "nur-abroad-go/go"
     ]
   },
   {
     "code": "nur-abroad-go",
     "title": "합격 후 출국할까",
-    "body": "면허가 나왔다. 미국 병원이 비자를 내주겠다고 한다. 정착비만 2,000만 원이 들고, 여기 쌓은 연차는 내려놔야 한다.",
+    "body": "면허가 나왔다. 미국 병원이 비자를 내주겠다고 한다. 정착비만 2,000만 원이 들고, 그곳에서는 신규 간호사로 다시 시작해야 한다.",
     "weight": 1,
     "minTenureYears": 0,
     "jobs": [
@@ -8808,7 +9165,7 @@
         "baseBp": 6000,
         "perPointBp": 30,
         "success": {
-          "text": "미국 병원에 자리를 잡았다. 정착비 2,000만 원이 들었지만 월급이 크게 뛰었다.",
+          "text": "미국 병원에 신규 간호사로 자리를 잡았다. 한국 경력은 쳐 주지 않았지만 시급이 워낙 높아 월급이 크게 뛰었다. 정착비로 2,000만 원이 들었다.",
           "salaryPercent": 40,
           "amount": -20000000,
           "statDeltas": {
@@ -8845,12 +9202,14 @@
         "code": "wait",
         "label": "몇 년 더 경력을 쌓는다",
         "success": {
-          "text": "연차를 더 채우고 가기로 했다. 면허 유지비만 들었다.",
+          "text": "연차를 더 채우고 가기로 했다. 면허 유지비만 들었다. 미국 병원은 몇 년 뒤에 다시 보자고 했다.",
           "amount": -500000,
           "statDeltas": {
             "patience": 1
           },
-          "happiness": -1
+          "happiness": -1,
+          "followUp": "nur-abroad-go",
+          "followUpDays": 720
         }
       }
     ]
@@ -8882,15 +9241,15 @@
       },
       {
         "code": "move",
-        "label": "한국 병원으로 돌아온다",
+        "label": "한국으로 돌아와 새 병원을 찾는다",
         "success": {
-          "text": "해외 경력을 인정받아 국제진료센터 팀장으로 돌아왔다.",
-          "salaryPercent": -10,
+          "text": "미국 병원을 그만두고 짐을 쌌다. 퇴직 정산금 1,000만 원을 받아 돌아왔다. 해외 경력이 있으니 한국 병원 자리는 곧 날 것이다.",
+          "quit": true,
           "amount": 10000000,
           "statDeltas": {
             "insight": 2
           },
-          "happiness": 3,
+          "happiness": 2,
           "family": 1
         }
       },
@@ -8922,6 +9281,106 @@
         }
       }
     ]
+  },
+  {
+    "code": "nur-us-ward",
+    "title": "미국 병동의 한 해",
+    "body": "미국 병원 생활도 해마다 고비가 온다. 야간 근무에는 수당이 더 붙고, 간호사 노조는 인력 기준을 두고 병원과 맞선다. 영어 차트는 아직도 손이 느리다.",
+    "weight": 8,
+    "minTenureYears": 0,
+    "jobs": [
+      "nurse"
+    ],
+    "options": [
+      {
+        "code": "night",
+        "label": "야간 고정 근무로 수당을 챙긴다",
+        "stat": "patience",
+        "baseBp": 4500,
+        "perPointBp": 30,
+        "success": {
+          "text": "밤 근무에 몸을 맞췄다. 야간 수당이 붙어 월급이 올랐다.",
+          "salaryPercent": 4,
+          "statDeltas": {
+            "patience": 2
+          },
+          "happiness": 2,
+          "family": -2
+        },
+        "fail": {
+          "text": "몇 달 만에 잠이 무너졌다. 병원비 300만 원이 들고 낮 근무로 돌아왔다.",
+          "amount": -3000000,
+          "statDeltas": {
+            "patience": 1
+          },
+          "happiness": -6,
+          "family": -1
+        }
+      },
+      {
+        "code": "union",
+        "label": "노조 협상에 힘을 보탠다",
+        "stat": "conviction",
+        "baseBp": 4000,
+        "perPointBp": 30,
+        "success": {
+          "text": "병동마다 간호사 수가 정해졌다. 시급도 함께 올랐다.",
+          "salaryPercent": 3,
+          "statDeltas": {
+            "conviction": 2
+          },
+          "happiness": 6
+        },
+        "fail": {
+          "text": "협상이 길어졌다. 파업 기간 동안 월급이 빠져 400만 원이 줄었다.",
+          "amount": -4000000,
+          "statDeltas": {
+            "conviction": 1
+          },
+          "happiness": -4
+        }
+      },
+      {
+        "code": "study",
+        "label": "영어와 전문 자격을 더 판다",
+        "stat": "insight",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": {
+          "text": "중환자 자격을 땄다. 맡는 환자가 바뀌고 몸값이 올랐다. 수강료 300만 원이 들었다.",
+          "salaryPercent": 5,
+          "amount": -3000000,
+          "statDeltas": {
+            "insight": 2
+          },
+          "happiness": 6
+        },
+        "fail": {
+          "text": "수강료 300만 원을 들였는데 시험에 떨어졌다.",
+          "amount": -3000000,
+          "statDeltas": {
+            "insight": 1
+          },
+          "happiness": -4
+        }
+      },
+      {
+        "code": "keep",
+        "label": "주어진 근무만 한다",
+        "success": {
+          "text": "정해진 근무를 하고 집에 간다. 한국 병원보다는 숨이 쉬어진다.",
+          "statDeltas": {
+            "patience": 1
+          },
+          "happiness": 3,
+          "family": 1
+        }
+      }
+    ],
+    "requires": [
+      "nur-abroad-go/go"
+    ],
+    "repeatable": true
   },
   {
     "code": "nur-shift",
@@ -8992,6 +9451,9 @@
           "happiness": -2
         }
       }
+    ],
+    "unless": [
+      "nur-abroad-go/go"
     ]
   },
   {
@@ -9052,6 +9514,9 @@
           "happiness": -1
         }
       }
+    ],
+    "unless": [
+      "nur-abroad-go/go"
     ]
   },
   {
@@ -9112,6 +9577,9 @@
           "family": 1
         }
       }
+    ],
+    "unless": [
+      "nur-abroad-go/go"
     ]
   },
   {
@@ -9177,6 +9645,9 @@
           "happiness": -1
         }
       }
+    ],
+    "unless": [
+      "nur-abroad-go/go"
     ]
   },
   {
@@ -9358,6 +9829,9 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "nur-abroad-go/go"
     ]
   },
   {
@@ -9481,6 +9955,9 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "nur-abroad-go/go"
     ]
   },
   {
@@ -9605,6 +10082,9 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "nur-abroad-go/go"
     ]
   },
   {
@@ -9676,6 +10156,10 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "nur-homecare/found",
+      "nur-abroad-go/go"
     ]
   },
   {
@@ -9737,6 +10221,10 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "nur-homecare/found",
+      "nur-abroad-go/go"
     ]
   },
   {
@@ -9795,6 +10283,10 @@
           "happiness": -5
         }
       }
+    ],
+    "unless": [
+      "nur-homecare/found",
+      "nur-abroad-go/go"
     ]
   },
   {
@@ -9856,6 +10348,10 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "nur-homecare/found",
+      "nur-abroad-go/go"
     ]
   },
   {
@@ -9878,8 +10374,6 @@
           "statDeltas": {
             "courage": 2
           },
-          "followUp": "nur-homecare-first",
-          "followUpDays": 365,
           "happiness": 4
         }
       },
@@ -9917,18 +10411,20 @@
           "happiness": -6
         }
       }
+    ],
+    "unless": [
+      "nur-abroad-go/go"
     ]
   },
   {
     "code": "nur-homecare-first",
-    "title": "센터 첫해",
-    "body": "센터를 연 지 1년. 이용자는 늘었지만 방문 간호사를 구하기 어렵고 정산은 늘 석 달씩 밀린다.",
-    "weight": 1,
+    "title": "센터 살림",
+    "body": "방문 간호 센터 살림은 해마다 고비다. 이용자는 늘었지만 방문 간호사를 구하기 어렵고 정산은 늘 석 달씩 밀린다.",
+    "weight": 6,
     "minTenureYears": 0,
     "jobs": [
       "nurse"
     ],
-    "followUpOnly": true,
     "options": [
       {
         "code": "grow",
@@ -9937,7 +10433,7 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "text": "이용자가 두 배가 됐다. 첫 배당으로 3,000만 원을 받았다.",
+          "text": "이용자가 두 배가 됐다. 배당으로 3,000만 원을 받았다.",
           "amount": 30000000,
           "statDeltas": {
             "courage": 1,
@@ -9970,15 +10466,20 @@
         "code": "sell",
         "label": "지분을 넘기고 손 뗀다",
         "success": {
-          "text": "선배에게 지분을 넘겼다. 투자금 가운데 4,000만 원을 돌려받았다.",
+          "text": "선배에게 지분을 넘기고 손을 뗐다. 투자금 가운데 4,000만 원을 돌려받았다. 이제 다음 일을 찾는다.",
           "amount": 40000000,
           "statDeltas": {
             "insight": 1
           },
-          "happiness": -2
+          "happiness": -2,
+          "quit": true
         }
       }
-    ]
+    ],
+    "requires": [
+      "nur-homecare/found"
+    ],
+    "repeatable": true
   },
   {
     "code": "des-revision",
@@ -10209,6 +10710,11 @@
           "happiness": -1
         }
       }
+    ],
+    "unless": [
+      "des-studio/found",
+      "des-studio/found!fail",
+      "des-academy/open"
     ]
   },
   {
@@ -10309,6 +10815,13 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "des-freelance/go",
+      "des-freelance/go!fail",
+      "des-studio/found",
+      "des-studio/found!fail",
+      "des-academy/open"
     ]
   },
   {
@@ -10391,6 +10904,10 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "des-freelance/go",
+      "des-freelance/go!fail"
     ]
   },
   {
@@ -10472,6 +10989,10 @@
           "happiness": -5
         }
       }
+    ],
+    "unless": [
+      "des-freelance/go",
+      "des-freelance/go!fail"
     ]
   },
   {
@@ -10618,6 +11139,12 @@
           "happiness": -1
         }
       }
+    ],
+    "unless": [
+      "des-freelance/go",
+      "des-freelance/go!fail",
+      "des-studio/found",
+      "des-studio/found!fail"
     ]
   },
   {
@@ -10694,6 +11221,12 @@
           "happiness": -1
         }
       }
+    ],
+    "unless": [
+      "des-freelance/go",
+      "des-freelance/go!fail",
+      "des-studio/found",
+      "des-studio/found!fail"
     ]
   },
   {
@@ -10839,6 +11372,12 @@
           "happiness": -1
         }
       }
+    ],
+    "unless": [
+      "des-freelance/go",
+      "des-freelance/go!fail",
+      "des-studio/found",
+      "des-studio/found!fail"
     ]
   },
   {
@@ -10918,6 +11457,11 @@
           "happiness": -1
         }
       }
+    ],
+    "unless": [
+      "des-freelance/go",
+      "des-freelance/go!fail",
+      "des-academy/open"
     ]
   },
   {
@@ -10992,6 +11536,13 @@
           "happiness": -6
         }
       }
+    ],
+    "unless": [
+      "des-freelance/go",
+      "des-freelance/go!fail",
+      "des-studio/found",
+      "des-studio/found!fail",
+      "des-academy/open"
     ]
   },
   {
@@ -11066,6 +11617,13 @@
           "happiness": -1
         }
       }
+    ],
+    "unless": [
+      "des-freelance/go",
+      "des-freelance/go!fail",
+      "des-studio/found",
+      "des-studio/found!fail",
+      "des-academy/open"
     ]
   },
   {
@@ -11213,6 +11771,12 @@
           "family": -1
         }
       }
+    ],
+    "unless": [
+      "des-freelance/go",
+      "des-freelance/go!fail",
+      "des-studio/found",
+      "des-studio/found!fail"
     ]
   },
   {
@@ -11873,6 +12437,10 @@
           "family": 1
         }
       }
+    ],
+    "unless": [
+      "off-acting/take",
+      "off-acting/counter"
     ]
   },
   {
@@ -13241,6 +13809,11 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "sal-dealer/open",
+      "sal-dealer/open!fail",
+      "sal-dealer/partner"
     ]
   },
   {
@@ -13419,6 +13992,11 @@
           "family": 1
         }
       }
+    ],
+    "unless": [
+      "sal-dealer/open",
+      "sal-dealer/open!fail",
+      "sal-dealer/partner"
     ]
   },
   {
@@ -13948,6 +14526,11 @@
           "happiness": -2
         }
       }
+    ],
+    "unless": [
+      "sal-dealer/open",
+      "sal-dealer/open!fail",
+      "sal-dealer/partner"
     ]
   },
   {
@@ -14031,6 +14614,11 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "sal-dealer/open",
+      "sal-dealer/open!fail",
+      "sal-dealer/partner"
     ]
   },
   {
@@ -14104,6 +14692,11 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "sal-dealer/open",
+      "sal-dealer/open!fail",
+      "sal-dealer/partner"
     ]
   },
   {
@@ -14180,6 +14773,11 @@
           "happiness": -1
         }
       }
+    ],
+    "unless": [
+      "sal-dealer/open",
+      "sal-dealer/open!fail",
+      "sal-dealer/partner"
     ]
   },
   {
@@ -14251,12 +14849,17 @@
           "happiness": 2
         }
       }
+    ],
+    "unless": [
+      "sal-dealer/open",
+      "sal-dealer/open!fail",
+      "sal-dealer/partner"
     ]
   },
   {
     "code": "sal-lastdeal",
     "title": "마지막 큰 계약",
-    "body": "이십 년 넘게 공들인 공기업 입찰이 드디어 나왔다. 따내면 회사 역사에 남을 규모다. 입찰가를 얼마나 낮출지는 내 판단에 달렸다.",
+    "body": "이십 년 넘게 공들인 공기업 입찰이 드디어 나왔다. 따내면 업계에 두고두고 남을 규모다. 입찰가를 얼마나 낮출지는 내 판단에 달렸다.",
     "weight": 6,
     "minTenureYears": 20,
     "jobs": [
@@ -14276,7 +14879,7 @@
             "insight": 1,
             "courage": 1
           },
-          "text": "낙찰됐다. 특별 성과급 1,000만 원이 나왔다.",
+          "text": "낙찰됐다. 1,000만 원이 따로 손에 들어왔다.",
           "happiness": 9
         },
         "fail": {
@@ -14284,7 +14887,7 @@
           "statDeltas": {
             "courage": 1
           },
-          "text": "낙찰은 됐는데 원가가 안 맞았다. 적자 계약의 책임을 졌다.",
+          "text": "낙찰은 됐는데 원가가 안 맞았다. 적자 계약을 떠안았다.",
           "happiness": -6
         }
       },
@@ -14777,26 +15380,16 @@
     ],
     "options": [
       {
-        "code": "join",
-        "label": "합류한다",
-        "stat": "luck",
-        "baseBp": 2500,
-        "perPointBp": 40,
+        "code": "move",
+        "label": "CTO로 합류한다",
         "success": {
-          "amount": 80000000,
+          "moveJob": true,
+          "moveSalaryPercent": -15,
           "statDeltas": {
             "courage": 2
           },
-          "text": "회사가 대기업에 인수됐다. 지분이 8천만 원이 되어 돌아왔다.",
-          "happiness": 10
-        },
-        "fail": {
-          "quit": true,
-          "statDeltas": {
-            "courage": 1
-          },
-          "text": "투자가 끊겨 회사가 문을 닫았다. 지분은 휴지가 됐다.",
-          "happiness": -10
+          "text": "동기 회사의 CTO로 옮겼다. 연차는 처음부터고 월급은 줄었지만 지분이 생겼다.",
+          "happiness": 5
         }
       },
       {
@@ -15552,54 +16145,43 @@
     ],
     "options": [
       {
-        "code": "join",
+        "code": "move",
         "label": "스톡옵션을 받고 간다",
-        "stat": "insight",
-        "baseBp": 3500,
-        "perPointBp": 40,
         "success": {
-          "salaryPercent": -10,
+          "moveJob": true,
+          "moveSalaryPercent": -10,
           "statDeltas": {
             "courage": 2
           },
-          "followUp": "dev-funding",
-          "followUpDays": 720,
-          "text": "회사를 옮겼다. 월급은 줄었고, 첫해 지표는 괜찮다.",
+          "text": "시드 단계 회사로 옮겼다. 연차는 처음부터고 월급은 줄었지만 스톡옵션이 넉넉하다.",
           "happiness": 3
-        },
-        "fail": {
-          "salaryPercent": -10,
-          "statDeltas": {
-            "courage": 1
-          },
-          "followUp": "dev-sinking",
-          "followUpDays": 540,
-          "text": "회사를 옮겼다. 첫 분기부터 매출이 계획의 절반이다.",
-          "happiness": -4
         }
       },
       {
         "code": "negotiate",
-        "label": "월급을 맞춰 주면 가겠다고 한다",
-        "stat": "conviction",
-        "baseBp": 3000,
+        "label": "회사는 그대로 다니며 자문하고 스톡옵션만 받는다",
+        "stat": "insight",
+        "baseBp": 3500,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 5,
           "statDeltas": {
-            "conviction": 1
+            "insight": 1
           },
           "followUp": "dev-funding",
           "followUpDays": 720,
-          "text": "대표가 월급을 맞춰 줬다. 스톡옵션은 반으로 줄었다.",
-          "happiness": 4
+          "text": "주말 기술 자문 계약을 맺고 스톡옵션 일부를 받았다. 본업은 그대로다.",
+          "happiness": 3,
+          "family": -1
         },
         "fail": {
           "statDeltas": {
-            "conviction": 1
+            "insight": 1
           },
-          "text": "대표는 돈 보고 올 사람은 필요 없다고 했다.",
-          "happiness": -2
+          "followUp": "dev-sinking",
+          "followUpDays": 540,
+          "text": "자문을 시작하자마자 첫 분기 매출이 계획의 절반이라는 걸 알았다.",
+          "happiness": -3,
+          "family": -1
         }
       },
       {
@@ -15618,7 +16200,7 @@
   {
     "code": "dev-funding",
     "title": "시리즈 B 유치",
-    "body": "회사가 시리즈 B 투자를 받았다. 내 스톡옵션 평가액이 1억 원을 넘는다는 말이 돈다. 행사하려면 행사 대금과 세금부터 내야 한다.",
+    "body": "자문하던 회사가 시리즈 B 투자를 받았다. 자문 대가로 받은 스톡옵션 평가액이 1억 원을 넘는다는 말이 돈다. 행사하려면 행사 대금과 세금부터 내야 한다.",
     "weight": 1,
     "minTenureYears": 0,
     "jobs": [
@@ -15666,11 +16248,10 @@
         "code": "wait",
         "label": "행사하지 않고 기다린다",
         "success": {
-          "salaryPercent": 3,
           "statDeltas": {
             "patience": 1
           },
-          "text": "회사가 커 가는 걸 월급쟁이로 지켜본다. 연봉이 조금 올랐다.",
+          "text": "행사하지 않고 지켜본다. 당장은 본업 월급이 내 몫이다.",
           "happiness": 1
         }
       }
@@ -15679,7 +16260,7 @@
   {
     "code": "dev-exit",
     "title": "상장이냐 매각이냐",
-    "body": "3년이 지났다. 회사가 상장 심사를 받는다는 말과 자금이 마른다는 말이 동시에 돈다. 행사한 주식은 아직 비상장이다.",
+    "body": "3년이 지났다. 자문하던 회사가 상장 심사를 받는다는 말과 자금이 마른다는 말이 동시에 돈다. 행사한 주식은 아직 비상장이다.",
     "weight": 1,
     "minTenureYears": 0,
     "jobs": [
@@ -15702,11 +16283,10 @@
           "happiness": 11
         },
         "fail": {
-          "salaryPercent": -5,
           "statDeltas": {
             "conviction": 1
           },
-          "text": "상장이 무산되고 회사는 헐값에 팔렸다. 주식은 거의 휴지가 됐고 연봉도 깎였다.",
+          "text": "상장이 무산되고 회사는 헐값에 팔렸다. 주식은 거의 휴지가 됐다.",
           "happiness": -10
         }
       },
@@ -15735,24 +16315,24 @@
       },
       {
         "code": "take",
-        "label": "임원 자리를 받고 더 깊이 들어간다",
+        "label": "기술 고문을 맡고 지분을 더 받는다",
         "stat": "courage",
         "baseBp": 3000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 15,
+          "amount": 20000000,
           "statDeltas": {
             "courage": 2
           },
-          "text": "CTO가 됐다. 회사가 버텨 준다면 큰 자리다.",
+          "text": "고문료 대신 지분을 더 받았다. 회사가 버텨 늘린 지분이 2,000만 원어치가 됐다.",
           "happiness": 6
         },
         "fail": {
-          "salaryPercent": -10,
+          "amount": -10000000,
           "statDeltas": {
             "courage": 1
           },
-          "text": "자리만 커졌다. 회사가 구조조정에 들어가 월급이 깎였다.",
+          "text": "고문을 맡으며 1,000만 원을 더 넣었는데 회사가 구조조정에 들어갔다. 넣은 돈이 묶였다.",
           "happiness": -6
         }
       }
@@ -15761,7 +16341,7 @@
   {
     "code": "dev-sinking",
     "title": "회사가 기운다",
-    "body": "투자 유치가 연달아 무산됐다. 대표가 다음 달 월급을 절반만 주겠다고 한다. 남은 현금은 석 달 치다. 동료 몇은 벌써 이력서를 고친다.",
+    "body": "자문하던 회사의 투자 유치가 연달아 무산됐다. 대표가 자문료를 줄 돈이 없다며 차라리 돈을 넣어 지분을 늘려 달라고 한다. 남은 현금은 석 달 치다.",
     "weight": 1,
     "minTenureYears": 0,
     "jobs": [
@@ -15771,25 +16351,24 @@
     "options": [
       {
         "code": "endure",
-        "label": "남아서 함께 버틴다",
+        "label": "자문을 계속하며 함께 버틴다",
         "stat": "luck",
         "baseBp": 3000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 10,
+          "amount": 15000000,
           "statDeltas": {
             "patience": 2
           },
-          "text": "막판에 투자가 붙었다. 버틴 사람들에게 지분과 연봉이 더 돌아왔다.",
-          "happiness": 9
+          "text": "막판에 투자가 붙었다. 버틴 대가로 받은 지분이 1,500만 원어치가 됐다.",
+          "happiness": 7
         },
         "fail": {
-          "quit": true,
           "statDeltas": {
             "patience": 1
           },
-          "text": "회사가 문을 닫았다. 밀린 월급은 끝내 못 받았다.",
-          "happiness": -11
+          "text": "회사가 문을 닫았다. 밀린 자문료는 끝내 못 받았다.",
+          "happiness": -6
         }
       },
       {
@@ -15808,24 +16387,22 @@
         },
         "fail": {
           "amount": -20000000,
-          "quit": true,
           "statDeltas": {
             "courage": 1
           },
           "text": "2,000만 원을 넣은 회사가 끝내 문을 닫았다.",
-          "happiness": -12
+          "happiness": -10
         }
       },
       {
         "code": "leave",
-        "label": "사표를 내고 나온다",
+        "label": "자문을 그만둔다",
         "success": {
-          "quit": true,
           "statDeltas": {
             "insight": 1
           },
-          "text": "일찍 나왔다. 다음 자리는 처음부터 다시 찾는다.",
-          "happiness": -6
+          "text": "일찍 손을 뗐다. 본업에 집중한다.",
+          "happiness": -2
         }
       }
     ]
@@ -15905,7 +16482,7 @@
   {
     "code": "dev-side-hit",
     "title": "앱 인수 제안",
-    "body": "앱 사용자가 5만 명을 넘자 핀테크 회사가 인수를 제안했다. 앱을 넘기면 목돈이 들어온다. 직접 키우려면 회사를 그만둬야 한다.",
+    "body": "앱 사용자가 5만 명을 넘자 핀테크 회사가 인수를 제안했다. 앱을 넘기면 목돈이 들어온다. 직접 키우려면 퇴근 뒤와 주말을 다 쏟아야 한다.",
     "weight": 1,
     "minTenureYears": 0,
     "jobs": [
@@ -15950,26 +16527,24 @@
       },
       {
         "code": "found",
-        "label": "회사를 그만두고 키운다",
+        "label": "회사에 다니며 직접 키운다",
         "stat": "courage",
         "baseBp": 2500,
         "perPointBp": 40,
         "success": {
           "amount": 80000000,
-          "quit": true,
           "statDeltas": {
             "courage": 2
           },
-          "text": "회사를 나와 앱에 전념했다. 1년 만에 투자를 받아 8,000만 원을 손에 쥐었다.",
+          "text": "퇴근 뒤와 주말을 앱에 쏟았다. 1년 만에 투자를 받으며 지분 일부를 넘겨 8,000만 원을 손에 쥐었다.",
           "happiness": 10
         },
         "fail": {
           "amount": -20000000,
-          "quit": true,
           "statDeltas": {
             "courage": 1
           },
-          "text": "회사를 나와 매달렸지만 수익이 안 났다. 2,000만 원을 까먹고 접었다.",
+          "text": "밤과 주말을 다 쏟았지만 수익이 안 났다. 2,000만 원을 까먹고 접었다.",
           "happiness": -10
         }
       },
@@ -16515,8 +17090,8 @@
   },
   {
     "code": "acc-busy",
-    "title": "감사 시즌",
-    "body": "3월 결산 감사 시즌이다. 두 달째 주말이 없다. 고객사 다섯 곳 마감이 같은 주에 몰렸고, 팀원 하나는 이미 병가를 냈다.",
+    "title": "결산 시즌",
+    "body": "3월 결산 시즌이다. 두 달째 주말이 없다. 고객사 다섯 곳 마감이 같은 주에 몰렸고, 같이 일하는 사람 하나는 이미 병가를 냈다.",
     "weight": 10,
     "minTenureYears": 0,
     "jobs": [
@@ -16534,7 +17109,7 @@
           "statDeltas": {
             "patience": 2
           },
-          "text": "마감을 다 맞췄다. 시즌 보너스로 월급이 3% 올랐다.",
+          "text": "마감을 다 맞췄다. 시즌 성과로 벌이가 5% 늘었다.",
           "happiness": 2,
           "family": -2
         },
@@ -16561,7 +17136,7 @@
       },
       {
         "code": "take",
-        "label": "다른 팀 큰 건까지 떠맡는다",
+        "label": "급한 큰 건까지 더 받는다",
         "stat": "patience",
         "baseBp": 3000,
         "perPointBp": 40,
@@ -16571,7 +17146,7 @@
             "patience": 1,
             "courage": 1
           },
-          "text": "두 팀 마감을 다 맞췄다. 파트너가 내 이름을 외웠다.",
+          "text": "큰 건까지 마감을 다 맞췄다. 업계에 내 이름이 돌기 시작했다.",
           "happiness": 4,
           "family": -3
         },
@@ -16588,13 +17163,13 @@
       },
       {
         "code": "rest",
-        "label": "연차를 하루 쓴다",
+        "label": "하루 쉰다",
         "success": {
           "salaryPercent": -1,
           "statDeltas": {
             "patience": 1
           },
-          "text": "하루 쉬었다. 평가표에 '시즌 중 연차'가 적혔다.",
+          "text": "하루 쉬었다. 그사이 마감 하나가 밀려 고객이 서운해했다.",
           "happiness": 3
         }
       }
@@ -16682,6 +17257,12 @@
           "happiness": -12
         }
       }
+    ],
+    "unless": [
+      "acc-own/open",
+      "acc-own/open!fail",
+      "acc-ipo/join",
+      "acc-ipo/join!fail"
     ]
   },
   {
@@ -16828,6 +17409,12 @@
           "happiness": 2
         }
       }
+    ],
+    "unless": [
+      "acc-own/open",
+      "acc-own/open!fail",
+      "acc-ipo/join",
+      "acc-ipo/join!fail"
     ]
   },
   {
@@ -17291,6 +17878,10 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "acc-own/open",
+      "acc-own/open!fail"
     ]
   },
   {
@@ -17364,6 +17955,10 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "acc-own/open",
+      "acc-own/open!fail"
     ]
   },
   {
@@ -17435,6 +18030,10 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "acc-own/open",
+      "acc-own/open!fail"
     ]
   },
   {
@@ -17508,6 +18107,10 @@
           "happiness": -1
         }
       }
+    ],
+    "unless": [
+      "acc-own/open",
+      "acc-own/open!fail"
     ]
   },
   {
@@ -17736,6 +18339,12 @@
           "happiness": -2
         }
       }
+    ],
+    "unless": [
+      "acc-own/open",
+      "acc-own/open!fail",
+      "acc-ipo/join",
+      "acc-ipo/join!fail"
     ]
   },
   {
@@ -17809,6 +18418,12 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "acc-own/open",
+      "acc-own/open!fail",
+      "acc-ipo/join",
+      "acc-ipo/join!fail"
     ]
   },
   {
@@ -17881,6 +18496,12 @@
           "happiness": -2
         }
       }
+    ],
+    "unless": [
+      "acc-own/open",
+      "acc-own/open!fail",
+      "acc-ipo/join",
+      "acc-ipo/join!fail"
     ]
   },
   {
@@ -17954,6 +18575,12 @@
           "happiness": -4
         }
       }
+    ],
+    "unless": [
+      "acc-own/open",
+      "acc-own/open!fail",
+      "acc-ipo/join",
+      "acc-ipo/join!fail"
     ]
   },
   {
@@ -18197,9 +18824,9 @@
           "statDeltas": {
             "courage": 2
           },
-          "text": "현지 법인을 안정시키고 돌아왔다. 경력이 빛나 월급이 8% 올랐다.",
+          "text": "손을 들어 해외 법인으로 떠났다. 주재원 수당이 붙어 월급이 올랐다.",
           "followUp": "big-expat-back",
-          "followUpDays": 180,
+          "followUpDays": 1080,
           "happiness": 7,
           "family": -4
         },
@@ -18252,6 +18879,10 @@
           "family": 1
         }
       }
+    ],
+    "unless": [
+      "big-spinoff/go",
+      "big-spinoff/negotiate"
     ]
   },
   {
@@ -18399,7 +19030,13 @@
         }
       }
     ],
-    "repeatable": true
+    "repeatable": true,
+    "unless": [
+      "big-spinoff/go",
+      "big-spinoff/negotiate",
+      "big-executive/aim",
+      "big-executive/push"
+    ]
   },
   {
     "code": "big-exit",
@@ -18481,7 +19118,13 @@
         }
       }
     ],
-    "repeatable": true
+    "repeatable": true,
+    "unless": [
+      "big-spinoff/go",
+      "big-spinoff/negotiate",
+      "big-executive/aim",
+      "big-executive/push"
+    ]
   },
   {
     "code": "big-standby",
@@ -18648,7 +19291,9 @@
             "conviction": 2
           },
           "text": "상무가 됐다. 월급이 40% 뛰었다. 대신 1년 계약직이다.",
-          "happiness": 11
+          "happiness": 11,
+          "followUp": "big-exec-renew",
+          "followUpDays": 360
         },
         "fail": {
           "statDeltas": {
@@ -18671,7 +19316,9 @@
             "courage": 1
           },
           "text": "수주를 따내고 상무가 됐다. 월급이 크게 뛰었다. 대신 1년 계약직이다.",
-          "happiness": 10
+          "happiness": 10,
+          "followUp": "big-exec-renew",
+          "followUpDays": 360
         },
         "fail": {
           "salaryPercent": -5,
@@ -18691,6 +19338,91 @@
           },
           "text": "올라갈수록 떨어질 곳도 높다.",
           "happiness": 1
+        }
+      }
+    ],
+    "unless": [
+      "big-spinoff/go",
+      "big-spinoff/negotiate"
+    ]
+  },
+  {
+    "code": "big-exec-renew",
+    "title": "임원 재계약",
+    "body": "상무 계약이 끝나 간다. 연말 인사를 앞두고 재계약 명단이 돈다는 말이 들린다. 올해 실적은 목표에 조금 못 미친다.",
+    "weight": 1,
+    "minTenureYears": 0,
+    "jobs": [
+      "bigcorp"
+    ],
+    "followUpOnly": true,
+    "options": [
+      {
+        "code": "renew",
+        "label": "실적표를 들고 재계약에 나선다",
+        "stat": "insight",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": {
+          "text": "재계약했다. 한 해 더 임원 명함을 단다.",
+          "salaryPercent": 5,
+          "statDeltas": {
+            "insight": 2
+          },
+          "followUp": "big-exec-renew",
+          "followUpDays": 360,
+          "happiness": 6,
+          "family": -1
+        },
+        "fail": {
+          "text": "재계약 명단에서 빠졌다. 퇴임 위로금 여섯 달치를 받고 회사를 나왔다.",
+          "quit": true,
+          "severanceMonths": 6,
+          "statDeltas": {
+            "insight": 1
+          },
+          "happiness": -8
+        }
+      },
+      {
+        "code": "retire",
+        "label": "먼저 물러나고 고문 자리를 받는다",
+        "success": {
+          "text": "스스로 물러났다. 퇴임 위로금 열두 달치와 고문 명함을 받았다.",
+          "quit": true,
+          "severanceMonths": 12,
+          "statDeltas": {
+            "patience": 1
+          },
+          "happiness": -1,
+          "family": 2
+        }
+      },
+      {
+        "code": "push",
+        "label": "판을 키워 전무 승진을 노린다",
+        "stat": "luck",
+        "baseBp": 1000,
+        "perPointBp": 30,
+        "success": {
+          "text": "전무가 됐다. 월급이 또 뛰었다. 계약은 여전히 1년이다.",
+          "salaryPercent": 20,
+          "statDeltas": {
+            "courage": 2
+          },
+          "followUp": "big-exec-renew",
+          "followUpDays": 360,
+          "happiness": 10,
+          "family": -1
+        },
+        "fail": {
+          "text": "무리하게 판을 키우다 실적이 꺾였다. 재계약 없이 위로금 석 달치만 받고 나왔다.",
+          "quit": true,
+          "severanceMonths": 3,
+          "statDeltas": {
+            "courage": 1
+          },
+          "happiness": -10
         }
       }
     ]
@@ -18986,6 +19718,10 @@
           "happiness": -1
         }
       }
+    ],
+    "unless": [
+      "big-spinoff/go",
+      "big-spinoff/negotiate"
     ]
   },
   {
@@ -19058,6 +19794,10 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "big-spinoff/go",
+      "big-spinoff/negotiate"
     ]
   },
   {
@@ -19122,6 +19862,10 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "big-spinoff/go",
+      "big-spinoff/negotiate"
     ]
   },
   {
@@ -19268,6 +20012,10 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "big-spinoff/go",
+      "big-spinoff/negotiate"
     ]
   },
   {
@@ -19376,7 +20124,7 @@
           "statDeltas": {
             "patience": 1
           },
-          "text": "모회사로 돌아갔다. 지분 정산 1,000만 원과 함께 직급이 올랐다.",
+          "text": "모회사가 회사를 자회사로 거둬들였다. 지분 정산 1,000만 원을 받고 자회사 임원으로 남았다.",
           "happiness": 5
         }
       },
@@ -19609,6 +20357,12 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "big-spinoff/go",
+      "big-spinoff/negotiate",
+      "big-executive/aim",
+      "big-executive/push"
     ]
   },
   {
@@ -19678,6 +20432,10 @@
           "happiness": -2
         }
       }
+    ],
+    "unless": [
+      "big-spinoff/go",
+      "big-spinoff/negotiate"
     ]
   },
   {
@@ -19750,6 +20508,12 @@
           "happiness": -8
         }
       }
+    ],
+    "unless": [
+      "big-spinoff/go",
+      "big-spinoff/negotiate",
+      "big-executive/aim",
+      "big-executive/push"
     ]
   },
   {
@@ -19812,6 +20576,12 @@
           "happiness": -2
         }
       }
+    ],
+    "unless": [
+      "big-spinoff/go",
+      "big-spinoff/negotiate",
+      "big-executive/aim",
+      "big-executive/push"
     ]
   },
   {
@@ -20135,6 +20905,12 @@
           "happiness": -8
         }
       }
+    ],
+    "requires": [
+      "pha-open/open",
+      "pha-open/open!fail",
+      "pha-open/partner",
+      "pha-open/partner!fail"
     ]
   },
   {
@@ -20196,6 +20972,12 @@
           "happiness": -9
         }
       }
+    ],
+    "unless": [
+      "pha-open/open",
+      "pha-open/open!fail",
+      "pha-open/partner",
+      "pha-open/partner!fail"
     ]
   },
   {
@@ -20259,6 +21041,12 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "pha-open/open",
+      "pha-open/open!fail",
+      "pha-open/partner",
+      "pha-open/partner!fail"
     ]
   },
   {
@@ -20322,6 +21110,12 @@
           "happiness": 2
         }
       }
+    ],
+    "unless": [
+      "pha-open/open",
+      "pha-open/open!fail",
+      "pha-open/partner",
+      "pha-open/partner!fail"
     ]
   },
   {
@@ -20468,6 +21262,12 @@
           "happiness": -2
         }
       }
+    ],
+    "requires": [
+      "pha-open/open",
+      "pha-open/open!fail",
+      "pha-open/partner",
+      "pha-open/partner!fail"
     ]
   },
   {
@@ -20529,6 +21329,12 @@
           "happiness": 3
         }
       }
+    ],
+    "requires": [
+      "pha-open/open",
+      "pha-open/open!fail",
+      "pha-open/partner",
+      "pha-open/partner!fail"
     ]
   },
   {
@@ -20591,6 +21397,12 @@
           "happiness": 3
         }
       }
+    ],
+    "requires": [
+      "pha-open/open",
+      "pha-open/open!fail",
+      "pha-open/partner",
+      "pha-open/partner!fail"
     ]
   },
   {
@@ -20655,6 +21467,12 @@
           "happiness": 4
         }
       }
+    ],
+    "requires": [
+      "pha-open/open",
+      "pha-open/open!fail",
+      "pha-open/partner",
+      "pha-open/partner!fail"
     ]
   },
   {
@@ -20800,6 +21618,12 @@
           "happiness": 5
         }
       }
+    ],
+    "requires": [
+      "pha-open/open",
+      "pha-open/open!fail",
+      "pha-open/partner",
+      "pha-open/partner!fail"
     ]
   },
   {
@@ -20860,6 +21684,12 @@
           "happiness": 3
         }
       }
+    ],
+    "requires": [
+      "pha-open/open",
+      "pha-open/open!fail",
+      "pha-open/partner",
+      "pha-open/partner!fail"
     ]
   },
   {
@@ -21708,6 +22538,12 @@
           "happiness": -5
         }
       }
+    ],
+    "requires": [
+      "law-own/open",
+      "law-own/open!fail",
+      "law-own/share",
+      "law-own/share!fail"
     ]
   },
   {
@@ -21768,6 +22604,12 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "law-own/open",
+      "law-own/open!fail",
+      "law-own/share",
+      "law-own/share!fail"
     ]
   },
   {
@@ -21900,6 +22742,12 @@
           "family": -1
         }
       }
+    ],
+    "unless": [
+      "law-own/open",
+      "law-own/open!fail",
+      "law-own/share",
+      "law-own/share!fail"
     ]
   },
   {
@@ -21963,6 +22811,12 @@
           "happiness": 2
         }
       }
+    ],
+    "requires": [
+      "law-own/open",
+      "law-own/open!fail",
+      "law-own/share",
+      "law-own/share!fail"
     ]
   },
   {
@@ -22251,6 +23105,12 @@
           "happiness": -2
         }
       }
+    ],
+    "unless": [
+      "law-own/open",
+      "law-own/open!fail",
+      "law-own/share",
+      "law-own/share!fail"
     ]
   },
   {
@@ -24797,6 +25657,10 @@
           "happiness": 1
         }
       }
+    ],
+    "unless": [
+      "sec-mna/accept",
+      "sec-mna/negotiate"
     ]
   },
   {
@@ -25011,6 +25875,10 @@
           "happiness": -3
         }
       }
+    ],
+    "unless": [
+      "sec-mna/accept",
+      "sec-mna/negotiate"
     ]
   },
   {
@@ -25148,6 +26016,10 @@
           "happiness": 2
         }
       }
+    ],
+    "unless": [
+      "sec-listing/list",
+      "sec-listing/go"
     ]
   },
   {

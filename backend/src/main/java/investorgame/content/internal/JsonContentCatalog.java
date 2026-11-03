@@ -537,6 +537,17 @@ class JsonContentCatalog implements ContentCatalog {
       require(
           career.options().size() >= 2 && career.options().size() <= 4,
           "직장 장면의 선택지는 2~4개여야 한다: " + career.code());
+      // 처지 전제(#234)는 있는 장면의 있는 선택지("코드/선택지" 또는 판정에 떨어진 "코드/선택지!fail")를 가리켜야 한다.
+      for (String need :
+          java.util.stream.Stream.concat(career.requires().stream(), career.unless().stream())
+              .toList()) {
+        String[] parts = need.split("/", 2);
+        CareerDefinition target = parts.length == 2 ? careersByCode.get(parts[0]) : null;
+        String optionCode = parts.length == 2 ? parts[1].replace("!fail", "") : null;
+        require(
+            target != null && target.options().stream().anyMatch(o -> o.code().equals(optionCode)),
+            "직장 장면의 처지 전제가 없는 장면·선택지를 가리킨다: " + career.code() + " → " + need);
+      }
       for (CareerDefinition.Option option : career.options()) {
         String where = career.code() + "/" + option.code();
         require(
