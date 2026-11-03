@@ -248,40 +248,37 @@ test('취직하면 가계부에 생활비가 보인다', async ({ page }) => {
   await expect(page.getByTestId('tenure')).toBeVisible()
 })
 
-test('전 재산이 맨 위, 신원 카드는 인생 기록보다 위, 성격은 그 아래에 접혀 있다 (#201)', async ({
+test('신원 → 장부 탭 → 인생 기록 → 접힌 성격 순서이고, 맨 위에는 진행 버튼만 있다 (decisions.md 159번)', async ({
   page,
 }) => {
   await born(page)
-  const worth = await page.getByTestId('total-asset').boundingBox()
   const identity = await page.getByTestId('identity-card').boundingBox()
+  const tabs = await page.getByTestId('ledger-tabs').boundingBox()
   const log = await page.getByTestId('life-log').boundingBox()
   const personality = await page.getByTestId('personality').boundingBox()
-  expect(worth && identity && log && personality).toBeTruthy()
-  expect(worth?.y ?? 0).toBeLessThan(identity?.y ?? 0)
-  expect(identity?.y ?? 0).toBeLessThan(log?.y ?? 0)
+  expect(identity && tabs && log && personality).toBeTruthy()
+  expect(identity?.y ?? 0).toBeLessThan(tabs?.y ?? 0)
+  expect(tabs?.y ?? 0).toBeLessThan(log?.y ?? 0)
   expect(log?.y ?? 0).toBeLessThan(personality?.y ?? 0)
-  // 접혀 있다가 펼치면 능력치가 보인다.
+  // 전 재산 숫자는 전 재산 탭 안에 있다. 맨 위 띠·제목·나이 줄은 화면에 없다.
+  await expect(page.getByTestId('total-asset')).toBeVisible()
+  await expect(page.getByTestId('money-tiles')).toHaveCount(0)
+  // 제목은 화면 읽기 프로그램에만 남는다(sr-only).
+  await expect(page.getByRole('heading', { name: '투자자 시뮬레이터' })).toHaveClass(/sr-only/)
+  await expect(page.getByRole('button', { name: '다시 태어나기' })).toBeVisible()
+  // 성격은 접혀 있다가 펼치면 능력치가 보인다.
   await expect(page.getByTestId('stat-insight')).toBeHidden()
   await page.getByTestId('personality').locator('summary').click()
   await expect(page.getByTestId('stat-insight')).toBeVisible()
-  // 진행 중에는 투자 성향 보고서 버튼이 없다. 보고서는 끝난 판의 기록부에만.
   await expect(page.getByTestId('open-report')).toHaveCount(0)
-})
-
-test('자동 진행은 50세부터: 그 전에는 버튼이 잠기고 카드는 직접 고르라고 한다 (#200)', async ({
-  page,
-}) => {
-  await born(page)
-  await expect(page.getByTestId('auto-button')).toBeDisabled()
-  await expect(page.getByTestId('auto-button')).toContainText('50세부터')
-  await expect(page.getByTestId('auto-button')).toHaveAttribute('aria-pressed', 'false')
-
-  // 첫 선택 카드에는 켜는 버튼 대신 50세부터라는 안내가 있다.
-  for (let i = 0; i < 60 && (await page.getByTestId('card-auto-locked').count()) === 0; i++) {
+  // 자동 버튼은 없앴다. 선택 카드에도 자동 막대가 없다.
+  await expect(page.getByTestId('auto-button')).toHaveCount(0)
+  for (let i = 0; i < 60 && (await eventCard(page).count()) === 0; i++) {
     await page.clock.runFor(2_000)
   }
-  await expect(page.getByTestId('card-auto-locked')).toContainText('50세부터')
-  await expect(page.getByTestId('card-auto-on')).toHaveCount(0)
+  await expect(eventCard(page)).toBeVisible()
+  await expect(page.getByTestId('auto-bar')).toHaveCount(0)
+  await expect(page.getByTestId('card-auto-locked')).toHaveCount(0)
 })
 
 test('한 판은 한 창만: 두 번째 탭은 보기 전용이고, 이어하기를 누르면 넘겨받는다 (#189)', async ({

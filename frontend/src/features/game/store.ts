@@ -101,15 +101,6 @@ interface GameState {
 export const MACRO_TAB = 'macro'
 export const AUTO_PLAY_KEY = 'investor-game.auto-play'
 
-/** 브라우저에 남긴 자동 진행 설정. 저장소가 막혀 있으면(사생활 보호 모드 등) 꺼진 것으로 본다. */
-function storedAutoPlay(): boolean {
-  try {
-    return typeof localStorage !== 'undefined' && localStorage.getItem(AUTO_PLAY_KEY) === 'on'
-  } catch {
-    return false
-  }
-}
-
 function storeAutoPlay(on: boolean) {
   try {
     if (typeof localStorage !== 'undefined') {
@@ -253,7 +244,8 @@ export const useGameStore = create<GameState>((set, get) => {
     histories: {},
     notices: [],
     crisisAlert: null,
-    autoPlay: storedAutoPlay(),
+    // 자동 버튼을 없앴다(decisions.md 159번). 예전에 켜 둔 저장값이 남아 있어도 끌 길이 없으니 늘 꺼진 채로 시작한다.
+    autoPlay: false,
 
     // 재접속하면 일시정지 상태로 이어한다. 상황을 보고 사용자가 계속을 누른다 (architecture.md 7절).
     load: async () => {

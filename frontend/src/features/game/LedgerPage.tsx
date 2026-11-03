@@ -55,11 +55,11 @@ export const useLedgerTab = create<{ tab: LedgerTab; setTab: (tab: LedgerTab) =>
 }))
 
 /**
- * 수첩 오른쪽 쪽: 돈 (2026-10-22 시안 D). 가계부 · 전 재산 · 주식 · 부동산 탭 (#212). 금액은 모두 서버 값이다.
- * 전 재산 숫자는 수첩 맨 위 띠(WorthBand)에 그대로 있고, 전 재산 탭은 그 구성을 막대로 보여 준다 (#210).
+ * 돈 장부: 가계부 · 전 재산 · 주식 · 부동산 탭 (#212). 금액은 모두 서버 값이다. 수첩의 캐릭터 그림 바로 아래, 요즘 있었던 일 위에 있다.
+ * 전 재산 탭이 전 재산 숫자와 그 구성 막대를 보여 준다 (#210). 맨 위 전 재산 띠는 없앴다(decisions.md 159번).
  * 매매 버튼은 어느 탭에서든 누를 수 있게 탭 밖 아래에 둔다.
  */
-export function LedgerPage({ game }: { game: Game; ageYears: number }) {
+export function LedgerPage({ game }: { game: Game }) {
   const tab = useLedgerTab((s) => s.tab)
   const setTab = useLedgerTab((s) => s.setTab)
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
@@ -70,11 +70,7 @@ export function LedgerPage({ game }: { game: Game; ageYears: number }) {
     tabRefs.current[next]?.focus()
   }
   return (
-    <section
-      aria-label="돈"
-      className="paper-grid min-w-0 flex-[1_1_440px] px-5 pt-6 pb-8 sm:px-8"
-      id="ledger"
-    >
+    <section aria-label="돈" className="mt-6" id="ledger">
       <div
         role="tablist"
         aria-label="장부"
@@ -162,118 +158,26 @@ function tabSummaries(game: Game): Partial<Record<LedgerTab, string>> {
   }
 }
 
-/**
- * 전 재산과 현금·주식·빚 타일. 가장 먼저 봐야 하는 숫자라 수첩 맨 위에 쪽 너비 전체로 둔다 (#201).
- * 넓은 화면이든 좁은 화면이든 신원·장면보다 위다. 자산 그래프는 기록부에만 (decisions.md 137번).
- */
-export function WorthBand({ game }: { game: Game }) {
-  return (
-    <section
-      aria-label="전 재산"
-      className="paper-grid w-full basis-full border-b-2 border-dashed border-[#d5d2cb] px-5 pt-6 pb-5 sm:px-8 md:pl-12"
-    >
-      <Worth game={game} />
-    </section>
-  )
-}
-
-function Worth({ game }: { game: Game }) {
+/** 전 재산의 구성: 현금·주식·부동산·보증금을 한 줄 막대로, 빚은 그 아래 빨간 줄로 (#210). */
+function WorthPanel({ game }: { game: Game }) {
+  const bar = worthBar(worthParts(game))
   // 달마다 바뀌는 "지난달보다"는 읽기도 전에 지나가서, 한 해를 마칠 때만 바뀌는 "작년 한 해"로 (decisions.md 74번).
   const year = yearDelta(game.yearly, game.initialAsset)
   return (
-    // 넓은 화면에서는 전 재산과 타일 셋을 한 줄에 나란히 둬서 띠가 낮다 (#201).
-    <div className="md:flex md:items-end md:gap-6" data-testid="portfolio-card">
-      <div className="flex flex-wrap items-end justify-between gap-3 md:flex-none">
-        <div>
-          <p className="text-pen-soft">전 재산</p>
-          <p
-            className="pen-circle inline-block px-3.5 py-0.5 font-pen text-[46px] leading-tight text-red-pen sm:text-[54px]"
-            data-testid="total-asset"
-          >
-            {shortWon(game.totalAsset)}
-          </p>
-        </div>
+    <section data-testid="worth-card">
+      <div className="flex flex-wrap items-end justify-between gap-x-3">
+        <p className="font-pen text-[40px] leading-tight text-red-pen" data-testid="total-asset">
+          {shortWon(game.totalAsset)}
+        </p>
         {year && (
           <p
-            className={`font-pen text-[24px] ${year.delta < 0 ? 'text-blue-pen' : 'text-red-pen'}`}
+            className={`font-pen text-[22px] ${year.delta < 0 ? 'text-blue-pen' : 'text-red-pen'}`}
             data-testid="year-delta"
           >
             {year.age}세 한 해 {signedShortWon(year.delta)} ({signedPercent(year.bp)})
           </p>
         )}
       </div>
-      {/* 현금·주식·빚은 한눈에 들어와야 한다 (decisions.md 137번): 작은 글씨 한 줄 대신 큼직한 타일 셋 */}
-      <div className="mt-3 grid grid-cols-3 gap-2 md:mt-0 md:flex-1" data-testid="money-tiles">
-        <MoneyTile label="현금" value={game.cash} testId="cash" />
-        <MoneyTile
-          label="주식"
-          value={game.invested}
-          testId="invested"
-          note={game.holdings.length > 0 ? `${game.holdings.length}종목 · 보기` : undefined}
-          onOpen={() => openLedgerTab('stocks')}
-        />
-        <MoneyTile
-          label="빚"
-          value={game.debt}
-          testId="debt"
-          tone={game.debt > 0 ? 'red' : 'pen'}
-          note={game.debt > 0 ? '연 5% 이자' : undefined}
-        />
-      </div>
-    </div>
-  )
-}
-
-function MoneyTile({
-  label,
-  value,
-  testId,
-  tone = 'pen',
-  note,
-  onOpen,
-}: {
-  label: string
-  value: number
-  testId: string
-  tone?: 'pen' | 'red'
-  note?: string
-  /** 누르면 장부의 해당 탭을 연다 (#210) */
-  onOpen?: () => void
-}) {
-  const body = (
-    <>
-      <span className="block text-[12px] text-pen-soft">{label}</span>
-      <span
-        className={`block truncate font-pen text-[24px] leading-tight sm:text-[30px] ${tone === 'red' ? 'text-red-pen' : 'text-pen'}`}
-        data-testid={testId}
-      >
-        {value === 0 && label === '빚' ? '없음' : shortWon(value)}
-      </span>
-      {note && <span className="block text-[11px] text-pen-soft">{note}</span>}
-    </>
-  )
-  const box = 'min-w-0 rounded border-2 border-dashed border-[#a6acb8] px-2.5 py-1.5 text-left'
-  return onOpen ? (
-    <button type="button" className={`${box} hover:bg-white`} onClick={onOpen}>
-      {body}
-    </button>
-  ) : (
-    <div className={box}>{body}</div>
-  )
-}
-
-/** 장부 탭을 열고 그 자리로 내려간다. 좁은 화면에서는 장부가 한참 아래에 있다. */
-function openLedgerTab(tab: LedgerTab) {
-  useLedgerTab.getState().setTab(tab)
-  document.getElementById('ledger')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
-
-/** 전 재산의 구성: 현금·주식·부동산·보증금을 한 줄 막대로, 빚은 그 아래 빨간 줄로 (#210). */
-function WorthPanel({ game }: { game: Game }) {
-  const bar = worthBar(worthParts(game))
-  return (
-    <section data-testid="worth-card">
-      <h2 className="font-pen text-[28px] font-normal leading-8">무엇으로 이루어졌나</h2>
       {bar.gross <= 0 ? (
         <p className="text-pen-soft">아직 가진 것이 없다.</p>
       ) : (
@@ -345,13 +249,6 @@ function WorthPanel({ game }: { game: Game }) {
                 <span className="w-14 text-right text-[13px]">{percent(p.share)}</span>
               </li>
             ))}
-            <li className="flex items-center gap-2 pt-1">
-              <span className="flex-1 font-pen text-[22px]">전 재산</span>
-              <span className="font-pen text-[24px] text-red-pen" data-testid="worth-total">
-                {won(game.totalAsset)}
-              </span>
-              <span className="w-14" />
-            </li>
           </ul>
           <p className="mt-1 text-[12px] text-pen-soft">
             비율은 빚을 빼기 전 총자산 {shortWon(bar.gross)}에 대한 것. 부동산은 시세 − 주담대 −

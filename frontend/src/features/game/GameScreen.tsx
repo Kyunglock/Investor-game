@@ -3,7 +3,6 @@ import { CrisisCard } from './CrisisCard'
 import { ageAt } from './clock'
 import { DecisionCard } from './DecisionCard'
 import { DiaryPage } from './DiaryPage'
-import { LedgerPage, WorthBand } from './LedgerPage'
 import { MarketPanel } from './MarketPanel'
 import { OtherWindowNotice } from './OtherWindowNotice'
 import { OutcomeCard } from './OutcomeCard'
@@ -12,8 +11,8 @@ import { useAutoPlay } from './useAutoPlay'
 import { useGameClock } from './useGameClock'
 
 /**
- * 진행 화면: 펼친 가계부 수첩 (2026-10-22 시안 D, decisions.md 44번). 맨 위 띠는 전 재산(#201), 그 아래 왼쪽 쪽은 나(신원·장면·요즘 있었던 일·접어 둔
- * 성격), 오른쪽 쪽은 돈(가계부·주식·집). 좁은 화면에서는 전 재산 → 왼쪽 쪽 → 오른쪽 쪽 순으로 쌓인다. 선택·결과·매매창은 그 위에 뜬다.
+ * 진행 화면: 가계부 수첩 한 쪽 (2026-10-22 시안 D, decisions.md 44번). 위에서부터 신원 → 장면 → 돈 장부 탭 → 요즘 있었던 일 → 접어 둔 성격
+ * (decisions.md 159번). 넓은 화면에서도 한 줄로 읽히게 폭을 줄인다. 선택·결과·매매창은 그 위에 뜬다.
  * 투자 성향 보고서는 끝난 판의 기록부에서만 본다 (#201).
  */
 export function GameScreen({ game }: { game: Game }) {
@@ -45,14 +44,8 @@ export function GameScreen({ game }: { game: Game }) {
           }}
         />
       ) : null}
-      <div className="flex flex-wrap overflow-hidden rounded bg-paper font-note text-[14px] leading-relaxed text-pen shadow-[0_2px_0_#d5d2cb,0_16px_36px_rgba(34,53,92,0.14)]">
-        <WorthBand game={game} />
+      <div className="mx-auto flex w-full max-w-3xl overflow-hidden rounded bg-paper font-note text-[14px] leading-relaxed text-pen shadow-[0_2px_0_#d5d2cb,0_16px_36px_rgba(34,53,92,0.14)]">
         <DiaryPage game={game} ageYears={ageYears} />
-        <div
-          aria-hidden="true"
-          className="paper-binding hidden w-[22px] flex-none border-x border-[#e4e1da] md:block"
-        />
-        <LedgerPage game={game} ageYears={ageYears} />
       </div>
     </>
   )
