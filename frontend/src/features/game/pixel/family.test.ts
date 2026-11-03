@@ -18,6 +18,11 @@ describe('familyFigures', () => {
     ])
   })
 
+  it('아이는 5세부터 소년·소녀 몸으로 선다 (#209)', () => {
+    const figures = familyFigures(game(true, [4, 5]), 33, 36)
+    expect(figures.filter((f) => f.who === 'kid').map((f) => f.stage)).toEqual(['baby', 'child'])
+  })
+
   it('결혼하면 배우자가 옆에, 아이는 나이대로 몸이 다르고 모두 배경 안에 서로 떨어져 선다', () => {
     const figures = familyFigures(game(true, [3, 10, 16]), 42, 36)
     expect(figures.map((f) => f.who)).toEqual(['me', 'spouse', 'kid', 'kid', 'kid'])

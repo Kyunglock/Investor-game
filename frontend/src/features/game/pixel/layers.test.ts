@@ -12,10 +12,11 @@ const stats = (
 ): Stats => ({ insight, patience, courage, conviction, luck })
 
 describe('stageFor', () => {
-  it('나이 구간: 아기 1~6, 어린이 7~13, 청년 14~39, 중년 40~64, 노년 65', () => {
+  it('나이 구간: 아기 0~4, 어린이 5~13, 청년 14~39, 중년 40~64, 노년 65', () => {
     expect(stageFor(1)).toBe('baby')
-    expect(stageFor(6)).toBe('baby')
-    expect(stageFor(7)).toBe('child')
+    expect(stageFor(4)).toBe('baby')
+    expect(stageFor(5)).toBe('child')
+    expect(stageFor(6)).toBe('child')
     expect(stageFor(13)).toBe('child')
     expect(stageFor(14)).toBe('adult')
     expect(stageFor(39)).toBe('adult')
