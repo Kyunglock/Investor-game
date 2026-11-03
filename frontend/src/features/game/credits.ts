@@ -213,6 +213,42 @@ function coupleArt(
   return { vignette, figures }
 }
 
+/** 그 날 집에 있던 아이들: 태어났고 아직 독립하지 않은 아이를 순번대로, 그때 나이의 몸으로. */
+function kidsAt(game: Game, day: number): Pick<Figure, 'who' | 'sex' | 'stage'>[] {
+  const left = new Set(
+    entries(game, 'CHILD_LEFT')
+      .filter((e) => e.day <= day)
+      .map((e) => num((e.payload as Payload).seq)),
+  )
+  return entries(game, 'CHILD')
+    .filter((e) => e.day <= day && !left.has(num((e.payload as Payload).seq)))
+    .map((e) => {
+      const seq = num((e.payload as Payload).seq)
+      return {
+        who: 'kid' as const,
+        sex: game.household.children[seq - 1]?.sex ?? 'M',
+        stage: stageFor(Math.floor((day - e.day) / game.daysPerYear)),
+      }
+    })
+}
+
+/** 가족 여행 그림: 바다에 나(와 그때 결혼했으면 배우자), 그때 집에 있던 아이들. 파라솔 왼쪽 자리부터 선다 (decisions.md 163번). */
+function tripArt(game: Game, day: number): CreditArt {
+  const stage = stageFor(ageOf(game, day))
+  const people: Pick<Figure, 'who' | 'sex' | 'stage'>[] = [{ who: 'me', sex: game.sex, stage }]
+  if (marriedBy(game, day)) {
+    people.push({ who: 'spouse', sex: opposite(game.sex), stage })
+  }
+  people.push(...kidsAt(game, day))
+  return { vignette: 'trip', figures: lineUp(people) }
+}
+
+/** 장면에 왼쪽부터 12칸 간격으로 세운다(몸 폭 12칸이라 닿지 않는다). 다섯 자리를 넘는 사람은 그리지 않는다. */
+function lineUp(people: Pick<Figure, 'who' | 'sex' | 'stage'>[]): Figure[] {
+  const slots = [2, 14, 26, 38, 50]
+  return people.slice(0, slots.length).map((p, i) => ({ ...p, x: slots[i] }))
+}
+
 /**
  * 아이가 태어난 그림: 아기 침대(오른쪽) 옆에 부모가 서고, 먼저 태어난 아이들은 그 왼쪽에 어린이 몸으로 선다. 침대 왼쪽에 자리가 셋(24·12·0)뿐이라
  * 넘치는 사람은 그리지 않는다 (decisions.md 67번).
@@ -469,7 +505,7 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
         if (!spent) {
           return { line }
         }
-        return { key: `trip-${e.seq}`, line, art: coupleArt(game, 'trip', e.day, 14, 26) }
+        return { key: `trip-${e.seq}`, line, art: tripArt(game, e.day) }
       }
       if (p.noticeCode === 'housewarming') {
         const line: CreditLine = spent

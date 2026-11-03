@@ -25,7 +25,9 @@ export function Person({
   top: number
 }) {
   const layers: Layer[] = []
-  if (figure.who === 'me') {
+  // 아기는 머리가 작아 얼굴 겹(장식·약점·표정·눈꺼풀) 좌표가 맞지 않는다. 맨 몸으로 그린다 (decisions.md 163번).
+  const baby = figure.stage === 'baby'
+  if (figure.who === 'me' && !baby) {
     if (me.adornment) {
       layers.push(ADORNMENTS[me.adornment])
     }
@@ -33,14 +35,14 @@ export function Person({
       layers.push(MARKS[me.mark])
     }
   }
-  if (mood) {
+  if (mood && !baby) {
     layers.push(MOODS[mood])
   }
   const body = bodyFor(figure.sex, figure.stage)
   const palette =
     figure.who === 'me' ? CHARACTER_PALETTE : { ...CHARACTER_PALETTE, ...RECOLOR[figure.who] }
   const grid = compose(body, layers)
-  const blinks = canBlink({ mood, adornment: figure.who === 'me' ? me.adornment : null })
+  const blinks = !baby && canBlink({ mood, adornment: figure.who === 'me' ? me.adornment : null })
   const lids = blinks ? diffRects(grid, compose(body, [...layers, EYELIDS]), palette) : []
   return (
     <g transform={`translate(${figure.x} ${top}) scale(${CHAR_SCALE})`}>
