@@ -3,6 +3,7 @@ package investorgame.content.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import investorgame.common.Sex;
 import investorgame.common.StatCodes;
 import investorgame.content.AnalysisText;
 import investorgame.content.CareerDefinition;
@@ -172,6 +173,19 @@ class JsonContentCatalogTest {
             .allMatch(StatCodes.ALL::contains);
         assertThat(option.statDeltas().values()).as(where).allMatch(v -> Math.abs(v) <= 8);
         assertThat(option.label().length()).as(where).isLessThanOrEqualTo(18);
+      }
+    }
+  }
+
+  /** #221: 성별로 가린 장면(군대)이 빠져도 단계마다 남자·여자 모두 무작위로 뽑을 장면이 넉넉하다. */
+  @Test
+  void 성장_단계마다_남녀_모두_뽑을_장면이_넉넉하다() {
+    for (ContentCatalog.TraitStage stage : load().traitStages()) {
+      for (Sex sex : Sex.values()) {
+        assertThat(stage.scenes())
+            .as("%d세 %s", stage.age(), sex)
+            .filteredOn(t -> !t.followUpOnly() && t.fitsSex(sex))
+            .hasSizeGreaterThanOrEqualTo(10);
       }
     }
   }

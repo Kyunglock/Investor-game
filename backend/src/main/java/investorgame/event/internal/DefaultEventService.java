@@ -6,6 +6,7 @@ import investorgame.common.Hint;
 import investorgame.common.Phase;
 import investorgame.common.ReadCache;
 import investorgame.common.Sentiment;
+import investorgame.common.Sex;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
 import investorgame.common.random.SeededRandom;
@@ -511,7 +512,8 @@ class DefaultEventService implements EventService {
    * 가중치만큼). 아니면 단계의 장면 가운데 앞 선택 전제(requires)가 맞고 이미 본 주제(topic)가 아닌 것에서 판 시드로 뽑는다. 다 걸리면 주제는 겹쳐도
    * 된다.
    */
-  private TraitDefinition childhoodScene(List<EventRow> rows, int stage, SeededRandom random) {
+  private TraitDefinition childhoodScene(
+      List<EventRow> rows, int stage, SeededRandom random, Sex sex) {
     ContentCatalog.TraitStage current = content.traitStages().get(stage);
     List<EventRow> earlier =
         ofKind(rows, EventKind.TRAIT).stream()
@@ -537,6 +539,7 @@ class DefaultEventService implements EventService {
       List<TraitDefinition.FollowUp> here =
           chosen.followUps().stream()
               .filter(f -> !seen.contains(f.code()))
+              .filter(f -> renderer.trait(f.code()).fitsSex(sex))
               .filter(f -> renderer.trait(f.code()).age() == current.age())
               .toList();
       if (!here.isEmpty()) {
@@ -554,6 +557,7 @@ class DefaultEventService implements EventService {
     List<TraitDefinition> open =
         current.scenes().stream()
             .filter(t -> !t.followUpOnly())
+            .filter(t -> t.fitsSex(sex))
             .filter(t -> choicesFit(t, rows))
             .toList();
     List<TraitDefinition> fresh =
@@ -580,7 +584,7 @@ class DefaultEventService implements EventService {
     if ((trait.married() && !context.married()) || (trait.single() && context.married())) {
       return false;
     }
-    if (!trait.fitsAge(ageAt(day, context))) {
+    if (!trait.fitsAge(ageAt(day, context)) || !trait.fitsSex(context.sex())) {
       return false;
     }
     if (trait.childless() && context.childrenCount() > 0) {
@@ -1295,7 +1299,7 @@ class DefaultEventService implements EventService {
         // 취업 뒤(성장기가 아님)에는 아직 안 나온 adult 장면 중에서 뽑는다.
         TraitDefinition trait;
         if (context.phase() == Phase.CHILDHOOD) {
-          trait = childhoodScene(rows, ofKind(rows, EventKind.TRAIT).size(), random);
+          trait = childhoodScene(rows, ofKind(rows, EventKind.TRAIT).size(), random, context.sex());
         } else {
           // 직전 선택이 이어지는 장면을 정했으면 그것, 아니면 그 날 처지에 맞는 장면 중에서 뽑는다.
           Optional<ScheduledTrait> followUp = traitFollowUp(rows, context, random);

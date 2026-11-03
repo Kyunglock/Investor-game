@@ -11708,7 +11708,8 @@
         "note": "혼자보다 같이 가는 쪽을 골랐다"
       }
     ],
-    "topic": "military"
+    "topic": "military",
+    "sex": "M"
   },
   {
     "code": "g3-20-card",
@@ -15899,6 +15900,7 @@
       }
     ],
     "topic": "military",
+    "sex": "M",
     "followUpOnly": true
   },
   {
@@ -15988,6 +15990,7 @@
       }
     ],
     "topic": "coin",
+    "sex": "M",
     "followUpOnly": true
   },
   {

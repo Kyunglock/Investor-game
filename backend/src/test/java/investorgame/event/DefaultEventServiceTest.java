@@ -8,6 +8,7 @@ import investorgame.common.Hint;
 import investorgame.common.Hint.HintDirection;
 import investorgame.common.Hint.HintStrength;
 import investorgame.common.Phase;
+import investorgame.common.Sex;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.content.CareerDefinition;
 import investorgame.content.ContentCatalog;
@@ -767,6 +768,10 @@ class DefaultEventServiceTest {
   }
 
   private SchedulingContext childhood() {
+    return childhood(null);
+  }
+
+  private SchedulingContext childhood(Sex sex) {
     return new SchedulingContext(
         Phase.CHILDHOOD,
         START_AGE,
@@ -794,16 +799,21 @@ class DefaultEventServiceTest {
         HousingFacts.PARENTS,
         0L,
         50,
-        Set.of());
+        Set.of(),
+        sex);
   }
 
   /** 성장기 장면을 단계마다 (나이, 장면 코드)로 모은다. 15세 아빠 주식 장면이 나오면 hot을 고른다. */
   private List<Map.Entry<Integer, String>> growth(long seed) {
+    return growth(seed, null);
+  }
+
+  private List<Map.Entry<Integer, String>> growth(long seed, Sex sex) {
     UUID gameId = UUID.randomUUID();
     List<Map.Entry<Integer, String>> seen = new ArrayList<>();
     int from = 0;
     for (int stage = 0; stage < content.traitStages().size(); stage++) {
-      EventView view = nextOf(gameId, childhood(), from, EventKind.TRAIT, seed).orElseThrow();
+      EventView view = nextOf(gameId, childhood(sex), from, EventKind.TRAIT, seed).orElseThrow();
       TraitDefinition trait =
           content.traits().stream()
               .filter(t -> !t.adult() && t.title().equals(view.title()))
@@ -850,6 +860,30 @@ class DefaultEventServiceTest {
       assertThat(coins).as("seed %d 코인 장면", seed).isLessThanOrEqualTo(1);
     }
     assertThat(chained).as("40판 가운데 아빠 주식 장면이 나온 판").isPositive();
+  }
+
+  /** #221: 입대·생활관·전역 장면은 남자에게만 나온다. 여자 판에서는 한 번도 나오지 않고 그 단계도 다른 장면으로 채워진다. */
+  @Test
+  void 군대_장면은_남자에게만_나온다() {
+    Set<String> military =
+        content.traits().stream()
+            .filter(t -> t.sex() == Sex.M)
+            .map(TraitDefinition::code)
+            .collect(Collectors.toSet());
+    assertThat(military).contains("g3-20-enlist", "g3-21-army-coin", "g3-22-discharge");
+    int menEnlisted = 0;
+    for (long seed = 1; seed <= 40; seed++) {
+      List<Map.Entry<Integer, String>> woman = growth(seed, Sex.F);
+      assertThat(woman).as("seed %d", seed).hasSize(content.traitStages().size());
+      assertThat(woman)
+          .extracting(Map.Entry::getValue)
+          .as("seed %d", seed)
+          .doesNotContainAnyElementsOf(military);
+      if (growth(seed, Sex.M).stream().anyMatch(e -> e.getValue().equals("g3-20-enlist"))) {
+        menEnlisted++;
+      }
+    }
+    assertThat(menEnlisted).as("40판 가운데 남자가 입대 장면을 본 판").isPositive();
   }
 
   @Test
