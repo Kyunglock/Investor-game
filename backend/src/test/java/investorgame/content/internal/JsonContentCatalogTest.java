@@ -143,6 +143,39 @@ class JsonContentCatalogTest {
     assertThat(dailyValued * 10).as("일상 선택지의 행복도 값").isGreaterThanOrEqualTo(dailyOptions * 9);
   }
 
+  /** #232: 결과 문구가 월급·보수를 말하며 적은 %는 실제 인상분(salaryPercent·moveSalaryPercent)과 같다. */
+  @Test
+  void 직장_결과_문구의_월급_퍼센트는_실제_인상분과_같다() {
+    java.util.regex.Pattern pay = java.util.regex.Pattern.compile("월급|연봉|보수|수입|인상|급여|수당|임금");
+    java.util.regex.Pattern percent = java.util.regex.Pattern.compile("([0-9]+) *%");
+    List<String> wrong = new ArrayList<>();
+    for (var career : load().careers()) {
+      for (var option : career.options()) {
+        for (var effect : List.of(option.success(), option.fail())) {
+          for (String text : new String[] {effect.text(), effect.textFamily()}) {
+            if (text == null) {
+              continue;
+            }
+            for (String sentence : text.split("(?<=[.!?])")) {
+              if (!pay.matcher(sentence).find() || effect.salaryPercent() == 0) {
+                continue;
+              }
+              var m = percent.matcher(sentence);
+              while (m.find()) {
+                int n = Integer.parseInt(m.group(1));
+                if (n != Math.abs(effect.salaryPercent())
+                    && n != Math.abs(effect.moveSalaryPercent())) {
+                  wrong.add(career.code() + "/" + option.code() + ": " + sentence.strip());
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    assertThat(wrong).isEmpty();
+  }
+
   @Test
   void 알_수_없는_유형_코드는_오류다() {
     assertThatThrownBy(() -> load().investorType("none-none-none"))

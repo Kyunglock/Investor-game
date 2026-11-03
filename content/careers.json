@@ -23,7 +23,7 @@
         "perPointBp": 60,
         "success": {
           "salaryPercent": 6,
-          "text": "담판이 통했다. 월급이 12% 올랐다.",
+          "text": "담판이 통했다. 월급이 6% 올랐다.",
           "statDeltas": {
             "courage": 2
           },
@@ -45,7 +45,7 @@
         "perPointBp": 40,
         "success": {
           "salaryPercent": 3,
-          "text": "정리한 성과가 먹혔다. 월급이 6% 올랐다.",
+          "text": "정리한 성과가 먹혔다. 월급이 3% 올랐다.",
           "statDeltas": {
             "insight": 2
           },
@@ -95,7 +95,7 @@
         "perPointBp": 50,
         "success": {
           "salaryPercent": 8,
-          "text": "프로젝트를 끝까지 끌고 갔고, 승진했다. 월급이 15% 올랐다.",
+          "text": "프로젝트를 끝까지 끌고 갔고, 승진했다. 월급이 8% 올랐다.",
           "statDeltas": {
             "patience": 2,
             "conviction": 1
@@ -120,7 +120,7 @@
         "perPointBp": 40,
         "success": {
           "salaryPercent": 5,
-          "text": "눈치가 통했다. 승진과 함께 월급이 10% 올랐다.",
+          "text": "눈치가 통했다. 승진과 함께 월급이 5% 올랐다.",
           "statDeltas": {
             "insight": 1
           },
@@ -185,7 +185,7 @@
         "perPointBp": 50,
         "success": {
           "salaryPercent": 4,
-          "text": "회사가 붙잡았다. 월급 8% 인상으로 남기로 했다.",
+          "text": "회사가 붙잡았다. 월급 4% 인상으로 남기로 했다.",
           "statDeltas": {
             "conviction": 1
           },
@@ -324,11 +324,11 @@
         "perPointBp": 50,
         "success": {
           "salaryPercent": 2,
-          "text": "지금 그만두면 뭘 먹고 사나. 미래가 불안해 그만둘 수 없었다. 버틴 덕에 인정받았다. 월급이 4% 올랐다.",
+          "text": "지금 그만두면 뭘 먹고 사나. 미래가 불안해 그만둘 수 없었다. 버틴 덕에 인정받았다. 월급이 2% 올랐다.",
           "statDeltas": {
             "patience": 2
           },
-          "textFamily": "아이 학원비 고지서와 배우자의 잠든 얼굴을 보고 다시 출근했다. 가족을 위해 버틴 덕에 인정받았다. 월급이 4% 올랐다.",
+          "textFamily": "아이 학원비 고지서와 배우자의 잠든 얼굴을 보고 다시 출근했다. 가족을 위해 버틴 덕에 인정받았다. 월급이 2% 올랐다.",
           "happiness": 2,
           "family": -1
         },
@@ -14702,7 +14702,7 @@
           "statDeltas": {
             "insight": 2
           },
-          "text": "한 시간 만에 원인을 찾아 고쳤다. 다음 평가에서 월급이 5% 올랐다.",
+          "text": "한 시간 만에 원인을 찾아 고쳤다. 다음 평가에서 월급이 3% 올랐다.",
           "happiness": 4
         },
         "fail": {
@@ -14857,7 +14857,7 @@
           "statDeltas": {
             "insight": 2
           },
-          "text": "혼자 셋 몫을 한다는 평을 들었다. 월급이 10% 올랐다.",
+          "text": "혼자 셋 몫을 한다는 평을 들었다. 월급이 5% 올랐다.",
           "happiness": 5
         },
         "fail": {
@@ -15111,7 +15111,7 @@
           "statDeltas": {
             "patience": 2
           },
-          "text": "팀을 맡았다. 코드는 못 짜지만 월급이 12% 올랐다.",
+          "text": "팀을 맡았다. 코드는 못 짜지만 월급이 6% 올랐다.",
           "followUp": "dev-teamlead",
           "followUpDays": 365,
           "happiness": 5
@@ -16532,7 +16532,7 @@
           "statDeltas": {
             "patience": 2
           },
-          "text": "마감을 다 맞췄다. 시즌 보너스로 월급이 5% 올랐다.",
+          "text": "마감을 다 맞췄다. 시즌 보너스로 월급이 3% 올랐다.",
           "happiness": 2,
           "family": -2
         },
@@ -18195,7 +18195,7 @@
           "statDeltas": {
             "courage": 2
           },
-          "text": "현지 법인을 안정시키고 돌아왔다. 경력이 빛나 월급이 15% 올랐다.",
+          "text": "현지 법인을 안정시키고 돌아왔다. 경력이 빛나 월급이 8% 올랐다.",
           "followUp": "big-expat-back",
           "followUpDays": 180,
           "happiness": 7,
@@ -18346,7 +18346,7 @@
           "statDeltas": {
             "patience": 2
           },
-          "text": "목표를 넘겼다. 고과 S, 성과급이 붙어 월급이 6% 올랐다.",
+          "text": "목표를 넘겼다. 고과 S, 성과급이 붙어 월급이 3% 올랐다.",
           "happiness": 3,
           "family": -3
         },
@@ -18371,7 +18371,7 @@
           "statDeltas": {
             "insight": 1
           },
-          "text": "임원이 만족했다. 고과 A, 월급이 4% 올랐다.",
+          "text": "임원이 만족했다. 고과 A, 월급이 2% 올랐다.",
           "happiness": 2
         },
         "fail": {
@@ -18450,7 +18450,7 @@
           },
           "followUp": "big-return",
           "followUpDays": 1080,
-          "text": "해고는 보류됐다. 3년짜리 해외 파견이다. 파견 수당으로 월급이 10% 늘었지만 두 집 살림에 1,000만 원이 들었다.",
+          "text": "해고는 보류됐다. 3년짜리 해외 파견이다. 파견 수당으로 월급이 5% 늘었지만 두 집 살림에 1,000만 원이 들었다.",
           "happiness": -2,
           "family": -6
         },
@@ -24606,7 +24606,7 @@
           "statDeltas": {
             "insight": 1
           },
-          "text": "펀드에 돈이 몰렸다. 회사 실적이 뛰어 대표 보수도 15% 올랐다.",
+          "text": "펀드에 돈이 몰렸다. 회사 실적이 뛰어 대표 보수도 8% 올랐다.",
           "followUp": "sec-star-leave",
           "followUpDays": 730,
           "happiness": 7
@@ -25382,7 +25382,7 @@
           "statDeltas": {
             "conviction": -2
           },
-          "text": "기소됐다. 벌금과 과징금 15억 원, 보수는 반 토막.",
+          "text": "기소됐다. 벌금과 과징금 15억 원, 보수는 30% 깎였다.",
           "happiness": -12
         }
       },
