@@ -5,6 +5,7 @@ import { DecisionCard } from './DecisionCard'
 import { DiaryPage } from './DiaryPage'
 import { LedgerPage, WorthBand } from './LedgerPage'
 import { MarketPanel } from './MarketPanel'
+import { OtherWindowNotice } from './OtherWindowNotice'
 import { OutcomeCard } from './OutcomeCard'
 import { useGameStore } from './store'
 import { useAutoPlay } from './useAutoPlay'
@@ -28,6 +29,7 @@ export function GameScreen({ game }: { game: Game }) {
 
   return (
     <>
+      <OtherWindowNotice />
       {marketOpen && <MarketPanel game={game} />}
       {outcome ? (
         <OutcomeCard outcome={outcome} onReveal={revealOutcome} onContinue={dismissOutcome} />

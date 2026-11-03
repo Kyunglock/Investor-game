@@ -1,5 +1,6 @@
 package investorgame.api;
 
+import investorgame.common.error.ConflictException;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
 import org.springframework.http.HttpStatus;
@@ -25,6 +26,12 @@ class ApiExceptionHandler {
   @ExceptionHandler(NotFoundException.class)
   ResponseEntity<ErrorResponse> notFound(NotFoundException e) {
     return error(HttpStatus.NOT_FOUND, "NOT_FOUND", e.getMessage());
+  }
+
+  /** 다른 창이나 기기가 이 판을 진행 중이다 (#189). 이 창은 보기 전용이 된다. */
+  @ExceptionHandler(ConflictException.class)
+  ResponseEntity<ErrorResponse> otherWindow(ConflictException e) {
+    return error(HttpStatus.CONFLICT, "OTHER_WINDOW", e.getMessage());
   }
 
   @ExceptionHandler(InvalidRequestException.class)

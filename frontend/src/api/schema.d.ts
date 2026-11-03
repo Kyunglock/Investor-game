@@ -61,6 +61,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/games/current/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 가장 최근 판을 이 창이 이어 간다 (#189)
+         * @description X-Client-Id의 창이 이 판을 진행하는 창이 된다. 그 뒤로 다른 창(같은 브라우저의 다른 탭, 다른 기기)의 보고·선택·매매는 409로 거절된다.
+         *     창을 열거나 "이 창에서 이어하기"를 누를 때 부른다. 응답은 getCurrentGame과 같다.
+         */
+        post: operations["claimCurrentGame"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/games/{gameId}/advance": {
         parameters: {
             query?: never;
@@ -1079,6 +1100,15 @@ export interface components {
         };
     };
     responses: {
+        /** @description 다른 창이나 기기가 이 판을 진행하고 있다 (code OTHER_WINDOW). 이 창은 보기 전용이 되고, 이어 가려면 claimCurrentGame을 부른다. */
+        OtherWindow: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description 세션이 없거나 만료됨. 새로 태어나야 한다. */
         SessionRequired: {
             headers: {
@@ -1108,6 +1138,8 @@ export interface components {
         };
     };
     parameters: {
+        /** @description 창(브라우저 탭) 하나마다 만드는 무작위 ID (#189). 판을 진행하는 창과 다르면 409. 없으면 검사하지 않는다(봇·관리 도구). */
+        ClientId: string;
         GameId: string;
     };
     requestBodies: never;
@@ -1177,10 +1209,38 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    claimCurrentGame: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description 창(브라우저 탭) 하나마다 만드는 무작위 ID (#189). 판을 진행하는 창과 다르면 409. 없으면 검사하지 않는다(봇·관리 도구). */
+                "X-Client-Id"?: components["parameters"]["ClientId"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 진행 중이거나 끝난 판 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Game"];
+                };
+            };
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     advanceGame: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 창(브라우저 탭) 하나마다 만드는 무작위 ID (#189). 판을 진행하는 창과 다르면 409. 없으면 검사하지 않는다(봇·관리 도구). */
+                "X-Client-Id"?: components["parameters"]["ClientId"];
+            };
             path: {
                 gameId: components["parameters"]["GameId"];
             };
@@ -1204,12 +1264,16 @@ export interface operations {
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["OtherWindow"];
         };
     };
     quitGame: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 창(브라우저 탭) 하나마다 만드는 무작위 ID (#189). 판을 진행하는 창과 다르면 409. 없으면 검사하지 않는다(봇·관리 도구). */
+                "X-Client-Id"?: components["parameters"]["ClientId"];
+            };
             path: {
                 gameId: components["parameters"]["GameId"];
             };
@@ -1229,6 +1293,7 @@ export interface operations {
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["OtherWindow"];
         };
     };
     renameCharacter: {
@@ -1292,7 +1357,10 @@ export interface operations {
     trade: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 창(브라우저 탭) 하나마다 만드는 무작위 ID (#189). 판을 진행하는 창과 다르면 409. 없으면 검사하지 않는다(봇·관리 도구). */
+                "X-Client-Id"?: components["parameters"]["ClientId"];
+            };
             path: {
                 gameId: components["parameters"]["GameId"];
             };
@@ -1316,12 +1384,16 @@ export interface operations {
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["OtherWindow"];
         };
     };
     listHome: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 창(브라우저 탭) 하나마다 만드는 무작위 ID (#189). 판을 진행하는 창과 다르면 409. 없으면 검사하지 않는다(봇·관리 도구). */
+                "X-Client-Id"?: components["parameters"]["ClientId"];
+            };
             path: {
                 gameId: components["parameters"]["GameId"];
                 seq: number;
@@ -1346,12 +1418,16 @@ export interface operations {
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["OtherWindow"];
         };
     };
     repayMortgage: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 창(브라우저 탭) 하나마다 만드는 무작위 ID (#189). 판을 진행하는 창과 다르면 409. 없으면 검사하지 않는다(봇·관리 도구). */
+                "X-Client-Id"?: components["parameters"]["ClientId"];
+            };
             path: {
                 gameId: components["parameters"]["GameId"];
                 seq: number;
@@ -1376,6 +1452,7 @@ export interface operations {
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["OtherWindow"];
         };
     };
     stockHistory: {
@@ -1455,7 +1532,10 @@ export interface operations {
     chooseEvent: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description 창(브라우저 탭) 하나마다 만드는 무작위 ID (#189). 판을 진행하는 창과 다르면 409. 없으면 검사하지 않는다(봇·관리 도구). */
+                "X-Client-Id"?: components["parameters"]["ClientId"];
+            };
             path: {
                 gameId: components["parameters"]["GameId"];
                 eventId: string;
@@ -1480,6 +1560,7 @@ export interface operations {
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["OtherWindow"];
         };
     };
     getRanking: {

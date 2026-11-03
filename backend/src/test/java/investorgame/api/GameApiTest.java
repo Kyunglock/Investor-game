@@ -17,7 +17,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -205,6 +207,52 @@ class GameApiTest {
     String gameId = client.start().read("$.gameId");
 
     client.currentRaw().andExpect(status().isOk()).andExpect(jsonPath("$.gameId").value(gameId));
+  }
+
+  /** #189: 한 판은 한 창만. 먼저 보고한 창이 맡고, 다른 창의 보고·그만두기는 409, 이어하기(claim)로 넘겨받는다. */
+  @Test
+  void 다른_창의_보고는_409이고_이어하기로_넘겨받는다() throws Exception {
+    GameClient client = GameClient.newSession(mvc);
+    String gameId = client.start().read("$.gameId");
+    mvc.perform(advanceAs(client, gameId, "tab-a", 10)).andExpect(status().isOk());
+    mvc.perform(advanceAs(client, gameId, "tab-b", 20))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("OTHER_WINDOW"));
+    mvc.perform(
+            post("/api/games/{gameId}/quit", gameId)
+                .cookie(client.session())
+                .header("X-Client-Id", "tab-b"))
+        .andExpect(status().isConflict());
+
+    mvc.perform(
+            post("/api/games/current/claim")
+                .cookie(client.session())
+                .header("X-Client-Id", "tab-b"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.gameId").value(gameId))
+        .andExpect(jsonPath("$.day").value(10));
+    mvc.perform(advanceAs(client, gameId, "tab-b", 20)).andExpect(status().isOk());
+    mvc.perform(advanceAs(client, gameId, "tab-a", 30)).andExpect(status().isConflict());
+    // 창 ID가 없는 요청(봇·관리 도구)은 보지 않는다.
+    client.advance(gameId, 30);
+  }
+
+  private static MockHttpServletRequestBuilder advanceAs(
+      GameClient client, String gameId, String window, int day) {
+    return post("/api/games/{gameId}/advance", gameId)
+        .cookie(client.session())
+        .header("X-Client-Id", window)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content("{\"day\":" + day + "}");
+  }
+
+  @Test
+  void 판이_없으면_이어하기도_404() throws Exception {
+    mvc.perform(
+            post("/api/games/current/claim")
+                .cookie(GameClient.newSession(mvc).session())
+                .header("X-Client-Id", "tab-a"))
+        .andExpect(status().isNotFound());
   }
 
   @Test

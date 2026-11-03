@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,6 +35,9 @@ class GameController {
 
   /** 누가 어디까지 했는지 보는 플레이 로그: 시작, 첫 직업, 끝 (decisions.md 63번). */
   private static final Logger PLAY = LoggerFactory.getLogger("investorgame.play");
+
+  /** 창(브라우저 탭)마다 만드는 ID. 판을 진행하는 창과 다르면 보고·선택·매매를 409로 거절한다 (#189). */
+  static final String CLIENT_HEADER = "X-Client-Id";
 
   private final ProgressService progress;
   private final SessionCookies cookies;
@@ -71,12 +75,22 @@ class GameController {
     return ResponseEntity.of(progress.current(cookies.requireSession(token)));
   }
 
+  /** 가장 최근 판을 이 창이 이어 간다. 창을 열 때와 "이 창에서 이어하기"에서 부른다 (#189). */
+  @PostMapping("/current/claim")
+  ResponseEntity<GameView> claim(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @RequestHeader(name = CLIENT_HEADER, required = false) String clientId) {
+    return ResponseEntity.of(progress.claim(cookies.requireSession(token), clientId));
+  }
+
   @PostMapping("/{gameId}/advance")
   GameView advance(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @RequestHeader(name = CLIENT_HEADER, required = false) String clientId,
       @PathVariable UUID gameId,
       @Valid @RequestBody AdvanceRequest request) {
     UUID sessionId = cookies.requireSession(token);
+    progress.requireClient(sessionId, gameId, clientId);
     GameView game = progress.advance(sessionId, gameId, request.day(), request.logAfter());
     logIfEnded(sessionId, game);
     return game;
@@ -85,10 +99,12 @@ class GameController {
   @PostMapping("/{gameId}/events/{eventId}/choose")
   ChoiceOutcome choose(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @RequestHeader(name = CLIENT_HEADER, required = false) String clientId,
       @PathVariable UUID gameId,
       @PathVariable UUID eventId,
       @Valid @RequestBody ChoiceRequest request) {
     UUID sessionId = cookies.requireSession(token);
+    progress.requireClient(sessionId, gameId, clientId);
     ChoiceOutcome result =
         progress.choose(sessionId, gameId, eventId, request.option(), request.quantity());
     // 중간 진행도는 직업을 가진 시점: 직업 선택 결과로 직업이 생겼을 때 (decisions.md 63번).
@@ -109,8 +125,10 @@ class GameController {
   @PostMapping("/{gameId}/quit")
   GameView quit(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @RequestHeader(name = CLIENT_HEADER, required = false) String clientId,
       @PathVariable UUID gameId) {
     UUID sessionId = cookies.requireSession(token);
+    progress.requireClient(sessionId, gameId, clientId);
     GameView game = progress.quit(sessionId, gameId);
     logIfEnded(sessionId, game);
     return game;
@@ -139,34 +157,39 @@ class GameController {
   @PostMapping("/{gameId}/trades")
   ChoiceOutcome trade(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @RequestHeader(name = CLIENT_HEADER, required = false) String clientId,
       @PathVariable UUID gameId,
       @Valid @RequestBody TradeRequest request) {
+    UUID sessionId = cookies.requireSession(token);
+    progress.requireClient(sessionId, gameId, clientId);
     return progress.trade(
-        cookies.requireSession(token),
-        gameId,
-        request.stockCode(),
-        request.side(),
-        request.quantity());
+        sessionId, gameId, request.stockCode(), request.side(), request.quantity());
   }
 
   /** 가진 아파트를 매물로 내놓거나 거둔다. 내놓아도 바로 팔리지 않고 매수자가 나와야 팔린다 (주거 설계 3절). */
   @PostMapping("/{gameId}/homes/{seq}/listing")
   GameView listHome(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @RequestHeader(name = CLIENT_HEADER, required = false) String clientId,
       @PathVariable UUID gameId,
       @PathVariable int seq,
       @Valid @RequestBody ListingRequest request) {
-    return progress.listHome(cookies.requireSession(token), gameId, seq, request.listed());
+    UUID sessionId = cookies.requireSession(token);
+    progress.requireClient(sessionId, gameId, clientId);
+    return progress.listHome(sessionId, gameId, seq, request.listed());
   }
 
   /** 주담대를 현금으로 일시 상환한다 (decisions.md 58번). */
   @PostMapping("/{gameId}/homes/{seq}/repay")
   GameView repayMortgage(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @RequestHeader(name = CLIENT_HEADER, required = false) String clientId,
       @PathVariable UUID gameId,
       @PathVariable int seq,
       @Valid @RequestBody RepayRequest request) {
-    return progress.repayMortgage(cookies.requireSession(token), gameId, seq, request.amount());
+    UUID sessionId = cookies.requireSession(token);
+    progress.requireClient(sessionId, gameId, clientId);
+    return progress.repayMortgage(sessionId, gameId, seq, request.amount());
   }
 
   @GetMapping("/{gameId}/stocks/{stockCode}/history")

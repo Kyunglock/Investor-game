@@ -76,6 +76,27 @@ class GameRepository {
         .optional();
   }
 
+  /** 이 판을 진행하는 창. 세션의 판이 아니면 빈 값. */
+  Optional<ClientSlot> clientOf(UUID sessionId, UUID gameId) {
+    return jdbc.sql(
+            "SELECT client_id FROM progress_game WHERE id = :gameId AND session_id = :sessionId")
+        .param("gameId", gameId)
+        .param("sessionId", sessionId)
+        .query((rs, n) -> new ClientSlot(rs.getString("client_id")))
+        .optional();
+  }
+
+  /** 이 판을 진행하는 창을 바꾼다. 갱신 시각은 건드리지 않는다(관리 화면의 마지막 활동은 진행 기준). */
+  void setClient(UUID gameId, String clientId) {
+    jdbc.sql("UPDATE progress_game SET client_id = :clientId WHERE id = :gameId")
+        .param("gameId", gameId)
+        .param("clientId", clientId)
+        .update();
+  }
+
+  /** client_id 칸. null이면 아직 맡은 창이 없다. */
+  record ClientSlot(String clientId) {}
+
   /** 세션의 가장 최근 판. 버려진 판은 제외한다. */
   Optional<GameRow> findLatest(UUID sessionId) {
     return jdbc.sql(

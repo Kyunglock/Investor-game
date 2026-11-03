@@ -20,6 +20,7 @@ import investorgame.common.Hint;
 import investorgame.common.Korean;
 import investorgame.common.Phase;
 import investorgame.common.Sex;
+import investorgame.common.error.ConflictException;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
 import investorgame.common.random.HashSeededRandom;
@@ -214,6 +215,31 @@ class DefaultProgressService implements ProgressService {
   @Transactional(readOnly = true)
   public Optional<GameView> current(UUID sessionId) {
     return games.findLatest(sessionId).map(this::view);
+  }
+
+  @Override
+  @Transactional
+  public Optional<GameView> claim(UUID sessionId, String clientId) {
+    Optional<GameRow> latest = games.findLatest(sessionId);
+    if (clientId != null && !clientId.isBlank()) {
+      latest.ifPresent(game -> games.setClient(game.id(), clientId));
+    }
+    return latest.map(this::view);
+  }
+
+  @Override
+  @Transactional
+  public void requireClient(UUID sessionId, UUID gameId, String clientId) {
+    if (clientId == null || clientId.isBlank()) {
+      return;
+    }
+    GameRepository.ClientSlot slot =
+        games.clientOf(sessionId, gameId).orElseThrow(() -> new NotFoundException("판이 없다"));
+    if (slot.clientId() == null) {
+      games.setClient(gameId, clientId);
+    } else if (!slot.clientId().equals(clientId)) {
+      throw new ConflictException("다른 창에서 이 판을 진행하고 있다");
+    }
   }
 
   @Override

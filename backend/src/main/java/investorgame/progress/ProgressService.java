@@ -17,6 +17,16 @@ public interface ProgressService {
   /** 세션의 가장 최근 판(진행 중 또는 종료). 재접속 시 이어하기와 최종 결과 보기에 쓴다. */
   Optional<GameView> current(UUID sessionId);
 
+  /** 세션의 가장 최근 판을 이 창(clientId)이 이어 간다. 그 뒤로 다른 창의 보고·선택은 거절된다 (#189). */
+  Optional<GameView> claim(UUID sessionId, String clientId);
+
+  /**
+   * 이 창이 판을 진행해도 되는지 본다. 판을 진행하는 창이 아직 없으면 이 창이 맡는다. clientId가 없으면(봇·관리 도구) 보지 않는다.
+   *
+   * @throws investorgame.common.error.ConflictException 다른 창이 진행 중일 때
+   */
+  void requireClient(UUID sessionId, UUID gameId, String clientId);
+
   /**
    * 클라이언트가 보고한 게임 일수로 판을 진행한다. 그 사이의 월급을 넣고, 다음 이벤트가 생기면 만든다. 시각은 거꾸로 갈 수 없고, 대기 중인 이벤트를 지나칠 수 없다.
    */
