@@ -69,7 +69,7 @@ export function seededRandom(seed: string): () => number {
 type Option = PendingEvent['options'][number]
 
 /** 용기가 높은 사람이 고르는 직장 선택지. 장면에 없는 코드는 그냥 지나간다. */
-const BOLD_CAREER = new Set([
+export const BOLD_CAREER = new Set([
   'move',
   'apply',
   'accept',
@@ -90,7 +90,7 @@ const BOLD_CAREER = new Set([
   'negotiate',
 ])
 /** 용기가 낮은 사람이 고르는 직장 선택지. */
-const SAFE_CAREER = new Set([
+export const SAFE_CAREER = new Set([
   'stay',
   'pass',
   'decline',

@@ -2,7 +2,15 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import type { Game, PendingEvent } from '../../api/client'
-import { autoChoice, buyPercent, hintDirection, salaryOf, seededRandom } from './auto'
+import {
+  autoChoice,
+  BOLD_CAREER,
+  buyPercent,
+  hintDirection,
+  SAFE_CAREER,
+  salaryOf,
+  seededRandom,
+} from './auto'
 
 const STATS = { insight: 50, patience: 50, courage: 50, conviction: 50, luck: 50 }
 
@@ -230,6 +238,26 @@ describe('투자와 상관없는 장면', () => {
     })
     const brave = autoChoice(game({ pendingEvent: career, stats: { ...STATS, courage: 80 } }))
     expect(['move', 'counter']).toContain(brave?.option)
+  })
+
+  it('직장 장면은 나서는 쪽과 지키는 쪽 선택지를 거의 다 갖췄다 (#198)', () => {
+    const careers = JSON.parse(readFileSync('../content/careers.json', 'utf-8')) as {
+      code: string
+      followUpOnly?: boolean
+      options: { code: string }[]
+    }[]
+    const random = careers.filter((c) => !c.followUpOnly)
+    const both = random.filter(
+      (c) =>
+        c.options.some((o) => BOLD_CAREER.has(o.code)) &&
+        c.options.some((o) => SAFE_CAREER.has(o.code)),
+    )
+    // 성향이 갈리지 않는 몇 장면(태풍 대비 등)만 한쪽이 빠질 수 있다.
+    expect(both.length / random.length).toBeGreaterThanOrEqual(0.9)
+    const neither = random.filter(
+      (c) => !c.options.some((o) => BOLD_CAREER.has(o.code) || SAFE_CAREER.has(o.code)),
+    )
+    expect(neither.map((c) => c.code)).toEqual([])
   })
 
   it('생활: 둘째까지 받아들이고, 자녀 결혼은 절반, 나들이는 현금을 보고 보통이나 싸게', () => {
