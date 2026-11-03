@@ -2208,7 +2208,8 @@ class DefaultProgressService implements ProgressService {
         netWorth(game.id()),
         household.familyScore(game.id()),
         unaffordableStocks(game.id()),
-        sexOf(game));
+        sexOf(game),
+        character.fullTimeInvestorDay());
   }
 
   /** 현재가가 현금보다 비싸 한 주도 못 사는 종목 (decisions.md 59번). */

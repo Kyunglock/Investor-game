@@ -1775,7 +1775,13 @@ class DefaultEventService implements EventService {
     String lastCode = previous.isEmpty() ? null : last(previous).definitionCode();
     boolean investor = context.fullTimeInvestor();
     String jobCode = investor ? CareerDefinition.FULL_TIME_INVESTOR : context.jobCode();
-    int start = investor ? context.careerStartDay() : context.jobStartDay();
+    // 투자자의 연차는 투자자가 된 날부터 센다. 직장을 다니다 전향했으면 첫 취업일이 아니다 (#231).
+    int start =
+        investor
+            ? (context.investorStartDay() != null
+                ? context.investorStartDay()
+                : context.careerStartDay())
+            : context.jobStartDay();
     int tenure = Math.max(0, day - start) / calendar.daysPerYear();
     int age = ageAt(day, context);
     // 이직 제안은 같은 직종(jobs.json movesTo) 안에서만 온다. 다른 직종이 갑자기 부르면 말이 안 된다 (decisions.md 130번).
