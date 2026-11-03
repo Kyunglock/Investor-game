@@ -100,6 +100,21 @@ class JsonContentCatalogTest {
     assertThat(catalog.jobRehireText().title()).isNotBlank();
   }
 
+  /** decisions.md 162번: 선택과 반대로 움직였을 때의 한마디는 경우마다 여러 줄이라 매번 같은 말이 나오지 않는다. */
+  @Test
+  void 손이_뒤집힌_한마디는_경우마다_세_줄_이상이다() {
+    JsonContentCatalog catalog = load();
+    for (String pair :
+        List.of("HOLD-BUY", "HOLD-SELL", "BUY-HOLD", "SELL-HOLD", "BUY-SELL", "SELL-BUY")) {
+      for (String truth : List.of("UP", "DOWN")) {
+        assertThat(catalog.reviewPhrases("swerve", pair + "-" + truth))
+            .as(pair + "-" + truth)
+            .hasSizeGreaterThanOrEqualTo(3)
+            .allMatch(text -> !text.isBlank());
+      }
+    }
+  }
+
   @Test
   void 알_수_없는_유형_코드는_오류다() {
     assertThatThrownBy(() -> load().investorType("none-none-none"))
