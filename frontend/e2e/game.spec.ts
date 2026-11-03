@@ -248,25 +248,28 @@ test('취직하면 가계부에 생활비가 보인다', async ({ page }) => {
   await expect(page.getByTestId('tenure')).toBeVisible()
 })
 
-test('신원 → 장부 탭 → 인생 기록 → 접힌 성격 순서이고, 맨 위에는 진행 버튼만 있다 (decisions.md 159번)', async ({
+test('신원 → 장부 탭 → 매매 버튼 → 접힌 능력 → 인생 기록 순서이고, 맨 위에는 진행 버튼만 있다 (decisions.md 159·160번)', async ({
   page,
 }) => {
   await born(page)
   const identity = await page.getByTestId('identity-card').boundingBox()
   const tabs = await page.getByTestId('ledger-tabs').boundingBox()
+  const trade = await page.getByTestId('open-market').boundingBox()
   const log = await page.getByTestId('life-log').boundingBox()
   const personality = await page.getByTestId('personality').boundingBox()
-  expect(identity && tabs && log && personality).toBeTruthy()
+  expect(identity && tabs && trade && log && personality).toBeTruthy()
   expect(identity?.y ?? 0).toBeLessThan(tabs?.y ?? 0)
-  expect(tabs?.y ?? 0).toBeLessThan(log?.y ?? 0)
-  expect(log?.y ?? 0).toBeLessThan(personality?.y ?? 0)
+  expect(tabs?.y ?? 0).toBeLessThan(trade?.y ?? 0)
+  expect(trade?.y ?? 0).toBeLessThan(personality?.y ?? 0)
+  expect(personality?.y ?? 0).toBeLessThan(log?.y ?? 0)
+  await expect(page.getByTestId('personality').locator('summary')).toContainText('내 능력 보기')
   // 전 재산 숫자는 전 재산 탭 안에 있다. 맨 위 띠·제목·나이 줄은 화면에 없다.
   await expect(page.getByTestId('total-asset')).toBeVisible()
   await expect(page.getByTestId('money-tiles')).toHaveCount(0)
   // 제목은 화면 읽기 프로그램에만 남는다(sr-only).
   await expect(page.getByRole('heading', { name: '투자자 시뮬레이터' })).toHaveClass(/sr-only/)
   await expect(page.getByRole('button', { name: '다시 태어나기' })).toBeVisible()
-  // 성격은 접혀 있다가 펼치면 능력치가 보인다.
+  // 능력은 접혀 있다가 펼치면 능력치가 보인다.
   await expect(page.getByTestId('stat-insight')).toBeHidden()
   await page.getByTestId('personality').locator('summary').click()
   await expect(page.getByTestId('stat-insight')).toBeVisible()
