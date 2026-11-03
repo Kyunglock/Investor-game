@@ -20,6 +20,7 @@ import { stageFor } from './pixel/bodies'
 import { opposite } from './pixel/sexes'
 import type { CreditArt, Figure, VignetteKey } from './pixel/vignettes'
 import { playerName } from './playerName'
+import { lifeVerdict } from './verdict'
 
 /**
  * 엔딩 크레딧의 재료 (엔딩 설계 3절). 서버가 이미 준 기록·보유·결과·가계만으로 만든다. 문구는 여기서, 숫자는 서버에서.
@@ -695,6 +696,17 @@ export function buildCredits(game: Game): CreditSection[] {
       tone: game.family >= 60 ? 'accent' : game.family < 40 ? 'down' : 'muted',
     })
   }
+  // 돈·행복·가족을 함께 본 한 줄 평가 (#230, decisions.md 167번).
+  lastLines.push({
+    text: lifeVerdict({
+      finalAsset,
+      bankrupt,
+      happiness: game.happiness,
+      family: game.family,
+      hasFamily: game.household.married || game.household.children.length > 0,
+    }),
+    tone: 'accent',
+  })
   lastLines.push(
     bankrupt
       ? { text: `${finalAge}세. 빚 ${won(game.debt)}을 갚지 못해 파산했다.`, tone: 'down' }

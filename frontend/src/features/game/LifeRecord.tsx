@@ -12,6 +12,7 @@ import { Sprite } from './pixel/SpriteView'
 import { playerName } from './playerName'
 import { RankingBoard } from './RankingBoard'
 import { SharePanel } from './SharePanel'
+import { lifeVerdict } from './verdict'
 
 /** 인생 기록부 (설계 5.7절). 끝난 판의 결과를 한 장의 문서로 보여 준다. */
 export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => void }) {
@@ -68,6 +69,24 @@ export function LifeRecord({ game, onRestart }: { game: Game; onRestart: () => v
           : quit
             ? `${result.finalAge}세에 투자 인생을 스스로 멈췄습니다.`
             : `이후로는 매달 연금 ${won(game.household.pension)}으로 여생을 보냅니다.`}
+      </p>
+
+      {/* 돈·행복·가족을 함께 본 한 줄 평가 (#230, decisions.md 167번) */}
+      <p className="mt-2 font-serif-kr text-[17px] font-bold" data-testid="result-verdict">
+        “
+        {lifeVerdict({
+          finalAsset: result.finalAsset,
+          bankrupt,
+          happiness: game.happiness,
+          family: game.family,
+          hasFamily: game.household.married || game.household.children.length > 0,
+        })}
+        ”
+      </p>
+      <p className="mt-1 text-[12px] text-muted" data-testid="result-mood">
+        행복도 {game.happiness}점
+        {(game.household.married || game.household.children.length > 0) &&
+          ` · 가족 점수 ${game.family}점`}
       </p>
 
       <p className="mt-2 text-[13px] text-muted" data-testid="result-family">
