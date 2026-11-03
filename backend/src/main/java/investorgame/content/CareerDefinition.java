@@ -15,6 +15,9 @@ import java.util.Map;
  * @param followUpOnly 다른 장면의 결과(followUp)로만 오고 무작위로는 뽑지 않는다
  * @param maxTenureYears 이 연차 이하일 때만 나온다(신입 장면 등). null이면 제한 없음 (#198)
  * @param repeatable 한 판에 여러 번 나올 수 있는 장면(연봉 협상·승진 심사·이직 제안·구조조정·번아웃). 아니면 한 판에 한 번 (#198)
+ * @param requires 지금 직장에서 이 결과("장면코드/선택지코드", 판정에 떨어졌으면 "코드!fail")가 하나라도 있었을 때만 나온다. 개업한 사람의 사장 장면 등
+ *     (#234)
+ * @param unless 지금 직장에서 이 결과가 하나라도 있었으면 나오지 않는다. 사장이 된 사람에게 직원 장면이 안 오게 (#234)
  */
 public record CareerDefinition(
     String code,
@@ -29,7 +32,9 @@ public record CareerDefinition(
     Boolean followUpOnly,
     Integer maxTenureYears,
     Boolean repeatable,
-    List<Option> options) {
+    List<Option> options,
+    List<String> requires,
+    List<String> unless) {
 
   /** 직업 대신 전업투자자를 고른 사람의 직업 자리. 직업 선택의 INVEST 선택지와 같은 값이다 (decisions.md 35번). */
   public static final String FULL_TIME_INVESTOR = "INVEST";
@@ -41,6 +46,8 @@ public record CareerDefinition(
     jobs = jobs == null ? List.of() : List.copyOf(jobs);
     followUpOnly = followUpOnly != null && followUpOnly;
     repeatable = repeatable != null && repeatable;
+    requires = requires == null ? List.of() : List.copyOf(requires);
+    unless = unless == null ? List.of() : List.copyOf(unless);
   }
 
   /** 이 연차에 나올 수 있는가. */
