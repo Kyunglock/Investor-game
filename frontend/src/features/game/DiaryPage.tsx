@@ -1,5 +1,6 @@
 import type { Game } from '../../api/client'
 import { gradeOf } from './grade'
+import { LedgerPage } from './LedgerPage'
 import { PHASE_LABELS, STAT_KEYS, STAT_LABELS } from './labels'
 import { type LogLine, logLines } from './log'
 import { frugalMoment } from './moments'
@@ -15,22 +16,20 @@ import { playerName } from './playerName'
 const VISIBLE = 12
 
 /**
- * 수첩 왼쪽 쪽: 나 (2026-10-22 시안 D). 신원, 테이프로 붙인 도트 장면, 요즘 있었던 일, 접어 둔 성격. 모바일에서는 전 재산 띠 바로 다음에 와서
- * 신원이 인생 기록보다 위에 있다. 성격은 크게 중요하지 않아 맨 아래에 접어 둔다 (#201).
+ * 수첩 한 쪽 (2026-10-22 시안 D): 신원, 테이프로 붙인 도트 장면, 돈 장부 탭(가계부·전 재산·주식·부동산), 요즘 있었던 일, 접어 둔 성격.
+ * 장부는 캐릭터 바로 아래, 요즘 있었던 일 위에 둔다(decisions.md 159번). 성격은 크게 중요하지 않아 맨 아래에 접어 둔다 (#201).
  * 약점은 캐릭터 머리의 약점 표시로도 늘 보인다.
  */
 export function DiaryPage({ game, ageYears }: { game: Game; ageYears: number }) {
   const month = Math.floor(game.market.month % 12) + 1
   return (
-    <section
-      aria-label="나"
-      className="paper-ruled min-w-0 flex-[1_1_440px] px-5 pt-6 pb-8 pl-12 sm:pr-8"
-    >
+    <section aria-label="나" className="paper-ruled min-w-0 flex-1 px-5 pt-6 pb-8 pl-12 sm:pr-8">
       <p className="font-pen text-[40px] leading-none">
         {month}월, {ageYears}살
       </p>
       <Identity game={game} />
       <Photo game={game} ageYears={ageYears} />
+      <LedgerPage game={game} />
       <Diary game={game} />
       <Personality game={game} />
       <p className="mt-4 text-right text-[11px] text-pen-soft" data-testid="reported-day">
