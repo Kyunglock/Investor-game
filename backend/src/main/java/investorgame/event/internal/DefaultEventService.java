@@ -379,9 +379,15 @@ class DefaultEventService implements EventService {
     Optional<FollowUp> followUp = followUp(careers);
     int day;
     EventKind kind;
+    boolean retires = retires(context);
     if (followUp.isPresent() && (context.jobStartDay() != null || context.fullTimeInvestor())) {
       day = last(careers).occursDay() + followUp.get().days();
-      kind = EventKind.CAREER;
+      // 몇 년 뒤의 후속(감리·회수·귀임)은 나이 상한에 걸리지 않는다. 정년이 있으면 정년 전에 온다 (#233).
+      if (retires) {
+        day = Math.min(day, dayOfAge(properties.career().retireAge(), context) - 1);
+      }
+      candidates.add(new Candidate(EventKind.CAREER, Math.max(day, last(careers).occursDay())));
+      return;
     } else if (context.fullTimeInvestor()) {
       // 투자자가 된 날(마지막 직업 선택) 또는 마지막 장면부터 센다.
       int base =
@@ -410,9 +416,22 @@ class DefaultEventService implements EventService {
       day = base + roll(random, properties.career().gapDays(), "CAREER", careers.size());
       kind = EventKind.CAREER;
     }
-    if (ageAt(day, context) <= properties.career().lastAge()) {
+    // 다시 구직(JOB)과 정년 있는 직업의 장면은 나이 상한까지. 정년 없는 직업·전업투자자는 판 끝까지 (#233).
+    if ((kind == EventKind.CAREER && !retires)
+        || ageAt(day, context) <= properties.career().lastAge()) {
       candidates.add(new Candidate(kind, day));
     }
+  }
+
+  /** 정년이 있는 직업인가. 전업투자자·직업 없음·정년 없는 직업(농부·회사 대표)은 아니다 (#233). */
+  private boolean retires(SchedulingContext context) {
+    return !context.fullTimeInvestor()
+        && context.jobCode() != null
+        && content.jobs().stream()
+            .filter(j -> j.code().equals(context.jobCode()))
+            .findFirst()
+            .map(JobDefinition::retires)
+            .orElse(true);
   }
 
   private record FollowUp(String code, int days) {}

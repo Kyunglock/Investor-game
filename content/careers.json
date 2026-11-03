@@ -2293,7 +2293,8 @@
           "happiness": -4
         }
       }
-    ]
+    ],
+    "repeatable": true
   },
   {
     "code": "farm-price",
@@ -2386,7 +2387,8 @@
           "happiness": -3
         }
       }
-    ]
+    ],
+    "repeatable": true
   },
   {
     "code": "farm-smart",
