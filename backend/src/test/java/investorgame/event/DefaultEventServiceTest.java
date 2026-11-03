@@ -1208,6 +1208,8 @@ class DefaultEventServiceTest {
       late = investorScenes(53, seed, 3).stream().anyMatch(c -> c.code().equals("inv-late-start"));
     }
     assertThat(late).as("40판 가운데 inv-late-start").isTrue();
+  }
+
   /** #233: 정년 없는 농부는 57세 뒤에도 장면이 오고, 정년 있는 사무직은 59세에서 멈춘다. */
   @Test
   void 정년_없는_직업은_늦게까지_장면이_오고_정년_있는_직업은_59세에서_멈춘다() {
