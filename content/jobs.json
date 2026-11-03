@@ -4,7 +4,8 @@
     "title": "편의점 알바",
     "weight": 7,
     "baseMonthlySalary": 1900000,
-    "raisePercentPerYear": 0
+    "raisePercentPerYear": 0,
+    "retires": false
   },
   {
     "code": "farmer",
