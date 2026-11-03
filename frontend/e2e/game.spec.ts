@@ -260,25 +260,18 @@ test('전 재산이 맨 위, 신원 카드는 인생 기록보다 위, 성격은
   await expect(page.getByTestId('open-report')).toHaveCount(0)
 })
 
-test('자동을 켜면 손대지 않아도 선택이 되고 결과가 넘어가며 시간이 흐른다', async ({ page }) => {
+test('자동 진행은 50세부터: 그 전에는 버튼이 잠기고 카드는 직접 고르라고 한다 (#200)', async ({
+  page,
+}) => {
   await born(page)
-  await page.getByTestId('auto-button').click()
-  await expect(page.getByTestId('auto-button')).toHaveAttribute('aria-pressed', 'true')
-
-  // 첫 일상 장면이 뜨고, 자동으로 골라져 기록에 남을 때까지 시계만 감는다. 카드는 누르지 않는다.
-  const trait = page.locator('[data-testid="life-log-line"][data-kind="TRAIT"]')
-  for (let i = 0; i < 60 && (await trait.count()) === 0; i++) {
-    await page.clock.runFor(2_000)
-  }
-  await expect(trait).not.toHaveCount(0)
-  // 결과 카드도 저절로 넘어가 다시 시간이 흐른다.
-  for (let i = 0; i < 20 && (await outcomeCard(page).isVisible()); i++) {
-    await page.clock.runFor(2_000)
-  }
-  await expect(outcomeCard(page)).toBeHidden()
-  await expect(page.getByTestId('age')).not.toHaveText('15세 0개월')
-
-  // 끄면 다음 선택 카드는 사용자를 기다린다.
-  await page.getByTestId('auto-button').click()
+  await expect(page.getByTestId('auto-button')).toBeDisabled()
+  await expect(page.getByTestId('auto-button')).toContainText('50세부터')
   await expect(page.getByTestId('auto-button')).toHaveAttribute('aria-pressed', 'false')
+
+  // 첫 선택 카드에는 켜는 버튼 대신 50세부터라는 안내가 있다.
+  for (let i = 0; i < 60 && (await page.getByTestId('card-auto-locked').count()) === 0; i++) {
+    await page.clock.runFor(2_000)
+  }
+  await expect(page.getByTestId('card-auto-locked')).toContainText('50세부터')
+  await expect(page.getByTestId('card-auto-on')).toHaveCount(0)
 })
