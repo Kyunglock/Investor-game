@@ -16,7 +16,7 @@ export type AgeStage = 'baby' | 'child' | 'adult' | 'middle' | 'old'
 export const AGE_STAGES: AgeStage[] = ['baby', 'child', 'adult', 'middle', 'old']
 
 export function stageFor(ageYears: number): AgeStage {
-  if (ageYears <= 6) {
+  if (ageYears <= 4) {
     return 'baby'
   }
   if (ageYears <= 13) {
