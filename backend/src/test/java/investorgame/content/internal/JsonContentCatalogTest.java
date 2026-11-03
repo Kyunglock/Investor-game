@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -74,7 +75,7 @@ class JsonContentCatalogTest {
   }
 
   @Test
-  void 직장_장면은_선택지가_2에서_4개이고_판정_능력치와_변화가_규칙_안이다() {
+  void 직장_장면은_선택지가_3에서_4개이고_판정_능력치와_변화가_규칙_안이다() {
     JsonContentCatalog catalog = load();
     assertThat(catalog.shakes()).hasSizeGreaterThanOrEqualTo(3);
     assertThat(catalog.shakes()).allMatch(x -> (x.title() + x.body()).contains("{stock}"));
@@ -83,7 +84,7 @@ class JsonContentCatalogTest {
     assertThat(catalog.careers())
         .anyMatch(c -> c.options().stream().anyMatch(o -> o.success().quit() || o.fail().quit()));
     for (var career : catalog.careers()) {
-      assertThat(career.options()).as(career.code()).hasSizeBetween(2, 4);
+      assertThat(career.options()).as(career.code()).hasSizeBetween(3, 4);
       for (var option : career.options()) {
         if (option.rolls()) {
           assertThat(StatCodes.ALL).contains(option.stat());
@@ -353,6 +354,49 @@ class JsonContentCatalogTest {
                 JsonContentCatalog.validateInvestorTypes(
                     catalog.styles(), catalog.risks(), catalog.minds(), missingOne))
         .isInstanceOf(IllegalStateException.class);
+  }
+
+  /** decisions.md 154번(#198): 직종마다 장면이 넉넉하고, 연차 구간마다 그 직종만의 장면이 있으며, 후속 장면은 모두 어딘가에서 이어진다. */
+  @Test
+  void 직장_장면은_직종마다_넉넉하고_연차마다_있으며_후속이_끊기지_않는다() {
+    JsonContentCatalog catalog = load();
+    Set<String> reached = new HashSet<>();
+    for (var career : catalog.careers()) {
+      for (var option : career.options()) {
+        for (var effect : List.of(option.success(), option.fail())) {
+          if (effect.followUp() != null) {
+            reached.add(effect.followUp());
+          }
+        }
+      }
+    }
+    for (var career : catalog.careers()) {
+      // 정년퇴직은 진행이 직접 예약한다.
+      if (career.followUpOnly() && !career.code().equals("retirement")) {
+        assertThat(reached).as("도달할 수 없는 후속 장면").contains(career.code());
+      }
+    }
+    assertThat(catalog.careers()).hasSizeGreaterThanOrEqualTo(300);
+    // 화면과 기록에는 제목이 남는다. 직종이 달라도 같은 제목이면 어느 장면인지 헷갈린다.
+    assertThat(catalog.careers()).extracting(CareerDefinition::title).doesNotHaveDuplicates();
+    List<String> jobCodes = new ArrayList<>();
+    catalog.jobs().forEach(j -> jobCodes.add(j.code()));
+    jobCodes.add(CareerDefinition.FULL_TIME_INVESTOR);
+    for (String job : jobCodes) {
+      List<CareerDefinition> own =
+          catalog.careers().stream().filter(c -> c.jobs().equals(List.of(job))).toList();
+      assertThat(own).as(job).hasSizeGreaterThanOrEqualTo(12);
+      assertThat(own)
+          .as(job + " 후속")
+          .filteredOn(CareerDefinition::followUpOnly)
+          .hasSizeGreaterThanOrEqualTo(3);
+      // 신입·실무·관리자·은퇴 직전
+      for (int tenure : List.of(1, 6, 15, 25)) {
+        assertThat(own)
+            .as("%s %d년차", job, tenure)
+            .anyMatch(c -> !c.followUpOnly() && c.fitsTenure(tenure));
+      }
+    }
   }
 
   /** decisions.md 130번: 이직 장면이 나오는 직업마다 옮겨 갈 같은 직종이 있고, 알바에게는 이직 제안이 없다. */
