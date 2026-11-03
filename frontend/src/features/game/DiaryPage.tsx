@@ -16,8 +16,8 @@ import { playerName } from './playerName'
 const VISIBLE = 12
 
 /**
- * 수첩 한 쪽 (2026-10-22 시안 D): 신원, 테이프로 붙인 도트 장면, 돈 장부 탭(가계부·전 재산·주식·부동산), 요즘 있었던 일, 접어 둔 성격.
- * 장부는 캐릭터 바로 아래, 요즘 있었던 일 위에 둔다(decisions.md 159번). 성격은 크게 중요하지 않아 맨 아래에 접어 둔다 (#201).
+ * 수첩 한 쪽 (2026-10-22 시안 D): 신원, 테이프로 붙인 도트 장면, 돈 장부 탭(가계부·전 재산·주식·부동산)과 매매 버튼, 접어 둔 능력("내 능력 보기"),
+ * 요즘 있었던 일 (decisions.md 159·160번).
  * 약점은 캐릭터 머리의 약점 표시로도 늘 보인다.
  */
 export function DiaryPage({ game, ageYears }: { game: Game; ageYears: number }) {
@@ -30,8 +30,8 @@ export function DiaryPage({ game, ageYears }: { game: Game; ageYears: number }) 
       <Identity game={game} />
       <Photo game={game} ageYears={ageYears} />
       <LedgerPage game={game} />
-      <Diary game={game} />
       <Personality game={game} />
+      <Diary game={game} />
       <p className="mt-4 text-right text-[11px] text-pen-soft" data-testid="reported-day">
         서버 확인: {game.day}일
       </p>
@@ -127,14 +127,15 @@ function Photo({ game, ageYears }: { game: Game; ageYears: number }) {
 }
 
 /**
- * 능력치는 등급과 점수만. 지금 가장 낮은 능력치는 빨간 물결 밑줄과 포스트잇으로 짚는다. 요즘 있었던 일 아래에 접혀 있고, 접힌 줄에 약점만 한 마디 보인다 (#201).
+ * 능력치는 등급과 점수만. 지금 가장 낮은 능력치는 빨간 물결 밑줄과 포스트잇으로 짚는다. "내 능력 보기"로 접혀 매매하러 가기 버튼 바로 아래(요즘 있었던 일 위)에 있고,
+ * 접힌 줄에 약점만 한 마디 보인다 (#201, decisions.md 160번).
  */
 function Personality({ game }: { game: Game }) {
   const current = nickname(game.stats)
   return (
     <details className="mt-6" data-testid="personality">
       <summary className="cursor-pointer font-pen text-[24px] leading-8 text-pen-soft">
-        내 성격 보기 (약점: {STAT_LABELS[current.weakness]})
+        내 능력 보기 (약점: {STAT_LABELS[current.weakness]})
       </summary>
       <div className="mt-2 flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-[1_1_220px]">
