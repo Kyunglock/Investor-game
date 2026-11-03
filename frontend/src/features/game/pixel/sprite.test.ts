@@ -25,15 +25,29 @@ describe('몸통 (decisions.md 142번)', () => {
     }
   })
 
-  it('모든 몸통은 같은 얼굴 좌표를 쓴다: 눈은 ht+12~14 줄의 10~12·19~21열, 반짝임은 ht+13 줄', () => {
+  it('아기를 뺀 모든 몸통은 같은 얼굴 좌표를 쓴다: 눈은 ht+12~14 줄의 10~12·19~21열, 반짝임은 ht+13 줄', () => {
     for (const sex of SEXES) {
-      for (const stage of AGE_STAGES) {
+      for (const stage of AGE_STAGES.filter((s) => s !== 'baby')) {
         const { headTop: ht, map } = bodyFor(sex, stage)
         expect(map[ht + 12].slice(10, 13), `${sex} ${stage}`).toBe('kkk')
         expect(map[ht + 14].slice(19, 22), `${sex} ${stage}`).toBe('kkk')
         expect(map[ht + 13][10]).toBe('E')
         expect(map[ht + 13][19]).toBe('E')
       }
+    }
+  })
+
+  it('아기는 머리가 작다: 머리(눈 포함)가 몸보다 크지 않고, 키는 어린이보다 작다 (decisions.md 163번)', () => {
+    for (const sex of SEXES) {
+      const baby = bodyFor(sex, 'baby')
+      const rows = baby.map.filter((r) => r.replace(/\./g, '').length > 0)
+      const headRows = baby.map.slice(baby.headTop).findIndex((r) => /[123]/.test(r))
+      const bodyRows = baby.map.slice(baby.headTop).filter((r) => /[123]/.test(r)).length
+      expect(headRows, sex).toBeLessThanOrEqual(12)
+      expect(bodyRows, sex).toBeGreaterThanOrEqual(7)
+      const child = bodyFor(sex, 'child').map.filter((r) => r.replace(/\./g, '').length > 0)
+      expect(rows.length, sex).toBeLessThan(child.length)
+      expect(baby.map.join(''), sex).toContain('k')
     }
   })
 

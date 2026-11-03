@@ -20,14 +20,23 @@ export interface Moment {
 export const BIG_MOVE_BP = 500
 const BP = 10_000
 
-/** 가족 여행 그림: 바다에 나와 배우자. */
+/** 가족 여행 그림: 바다에 나와 배우자, 집에 있는 아이들(독립한 아이는 빼고)을 지금 나이의 몸으로 (decisions.md 163번). */
 function tripArt(game: Game): CreditArt {
+  const stage = myStage(game)
+  const people: Omit<Figure, 'x'>[] = [
+    { who: 'me', sex: game.sex, stage },
+    { who: 'spouse', sex: opposite(game.sex), stage },
+  ]
+  for (const kid of game.household?.children ?? []) {
+    if (!kid.leftHome) {
+      people.push({ who: 'kid', sex: kid.sex, stage: stageFor(kid.age) })
+    }
+  }
+  // 12칸 간격 다섯 자리. 몸 폭이 12칸이라 닿지 않고, 넘치는 사람은 그리지 않는다.
+  const slots = [2, 14, 26, 38, 50]
   return {
     vignette: 'trip',
-    figures: [
-      { who: 'me', sex: game.sex, stage: 'adult', x: 14 },
-      { who: 'spouse', sex: opposite(game.sex), stage: 'adult', x: 26 },
-    ],
+    figures: people.slice(0, slots.length).map((p, i) => ({ ...p, x: slots[i] })),
   }
 }
 

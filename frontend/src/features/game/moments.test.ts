@@ -125,6 +125,34 @@ describe('momentForNotice', () => {
     expect(momentForNotice(trip, game())?.art.figures.map((f) => f.sex)).toEqual(['F', 'M'])
     expect(momentForNotice(other, game())).toBeNull()
   })
+
+  it('가족 여행 그림에는 집에 있는 아이들도 그때 나이의 몸으로 선다. 독립한 아이는 없다 (decisions.md 163번)', () => {
+    const trip: LogEntry = {
+      seq: 1,
+      day: 1,
+      kind: 'LIFE',
+      payload: { noticeCode: 'family-trip', title: '가족 여행', amount: -2_500_000 },
+    }
+    const withKids = game({
+      startAge: 15,
+      daysPerYear: 360,
+      household: {
+        monthlyExpense: 2_000_000,
+        children: [
+          { age: 3, leftHome: false, sex: 'M' },
+          { age: 8, leftHome: false, sex: 'F' },
+          { age: 24, leftHome: true, sex: 'M' },
+        ],
+      },
+    } as unknown as Partial<Game>)
+    const figures = momentForNotice(trip, withKids)?.art.figures ?? []
+    expect(figures.map((f) => f.who)).toEqual(['me', 'spouse', 'kid', 'kid'])
+    expect(figures.slice(2).map((f) => f.stage)).toEqual(['baby', 'child'])
+    const xs = figures.map((f) => f.x)
+    for (let i = 1; i < xs.length; i++) {
+      expect(xs[i] - xs[i - 1]).toBeGreaterThanOrEqual(12)
+    }
+  })
 })
 
 describe('frugalMoment', () => {

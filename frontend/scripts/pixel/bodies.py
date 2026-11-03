@@ -6,7 +6,7 @@ import sys
 
 W, H = 32, 40
 
-# 머리(왼쪽 절반, 0~18줄)와 목(19줄). 모든 나이가 같은 머리라 얼굴 겹(표정·장식)의 좌표가 같다.
+# 머리(왼쪽 절반, 0~18줄)와 목(19줄). 아기를 뺀 모든 나이가 같은 머리라 얼굴 겹(표정·장식)의 좌표가 같다. 아기는 BABY_HEAD이고 겹을 받지 않는다.
 HEAD = [
     '...........hhhhh',  # 0
     '........hhhhhhhh',  # 1
@@ -100,14 +100,31 @@ CHILD_F = CHILD_M[:5] + [
     '..........nnnnn.',
     '..........nnnnn.',
 ]
+# 아기는 어른 머리를 쓰면 머리가 몸의 세 배라 징그럽다. 작은 머리(폭 14칸, 11줄)와 우주복 몸(9줄)을 따로 둔다 (decisions.md 163번).
+# 줄인 뒤 좌표: 옛 8·9열은 빠지고 0~7열은 2칸 오른쪽으로 간다(shrink).
+BABY_HEAD = [
+    '............hhhh',  # 0 정수리 몇 가닥
+    '.........sssssss',  # 1
+    '.......sssssssss',  # 2
+    '.......sssssssss',  # 3
+    '.......sssssssss',  # 4 눈
+    '.......sssssssss',  # 5 눈
+    '.......sssssssss',  # 6 볼
+    '........ssssssss',  # 7 입
+    '........ssssssss',  # 8
+    '...........sssss',  # 9 턱
+    '.............sss',  # 10 목
+]
 BABY = [
+    '...........BBBBB',
     '.........BBBBBBB',
-    '.......BBBBBBBBB',
-    '.....ssBBBBBBBBB',
-    '.....ssBBBBBBBBB',
-    '.......BBBBBBBBB',
-    '.........BBBBBB.',
-    '.........sssss..',
+    '......ssBBBBBBBB',
+    '......ssBBBBBBBB',
+    '.........BBBBBBB',
+    '.........BBBBBBB',
+    '..........BBBB..',
+    '..........BBBB..',
+    '..........ssss..',
 ]
 OLD_M = ADULT_M[:9] + [
     '.......ppppppppp',
@@ -170,9 +187,10 @@ def build(stage, sex):
         ('middle', 'M'): MIDDLE_M, ('middle', 'F'): MIDDLE_F,
         ('old', 'M'): OLD_M, ('old', 'F'): OLD_F,
     }[(stage, sex)]
-    ht = H - 1 - len(body) - len(HEAD)
+    head = BABY_HEAD if stage == 'baby' else HEAD
+    ht = H - 1 - len(body) - len(head)
     region = [['.'] * W for _ in range(H)]
-    for i, row in enumerate(mirror([shrink(r) for r in HEAD + body])):
+    for i, row in enumerate(mirror([shrink(r) for r in head + body])):
         region[ht + i] = row
 
     def R(y, x):
@@ -192,8 +210,7 @@ def build(stage, sex):
             side = min(x, W - 1 - x)
             if stage == 'baby':
                 # 아기: 정수리에 몇 가닥만
-                keep = rel <= 1 and 12 <= x <= 19 or rel == 2 and 14 <= x <= 16
-                region[y][x] = 'h' if keep else 's'
+                region[y][x] = 'h'
             elif stage == 'old' and sex == 'M':
                 # 할아버지: 이마가 넓어지고 옆머리만 희다
                 region[y][x] = 'A' if side <= 7 and rel >= 4 else 's'
@@ -222,7 +239,7 @@ def build(stage, sex):
                 for x in xs:
                     setr(ht + dy, x, 'A')
         if stage == 'baby':
-            for dy, xs in ((-2, (11, 12, 19, 20)), (-1, (11, 12, 13, 14, 17, 18, 19, 20)), (0, (12, 13, 14, 15, 16, 17, 18, 19))):
+            for dy, xs in ((-2, (11, 12, 19, 20)), (-1, (11, 12, 13, 14, 17, 18, 19, 20)), (0, (13, 14, 17, 18))):
                 for x in xs:
                     setr(ht + dy, x, 'R')
     # 지팡이: 오른손에서 바닥까지
@@ -299,6 +316,16 @@ def build(stage, sex):
         r = R(ht + rel, x)
         if r in HAIRS:
             put(ht + rel, x, dark[r])
+    if stage == 'baby':
+        # 아기 얼굴: 작은 머리에 맞춘 2×2 눈(왼쪽 위 반짝임), 볼, 입, 목 그늘
+        for ex in (11, 19):
+            for rel in (4, 5):
+                fill(ht + rel, [ex, ex + 1], 'k')
+            put(ht + 4, ex, 'E')
+        fill(ht + 6, [10, 21], 'r')
+        fill(ht + 7, [15, 16], 'm')
+        fill(ht + 10, range(13, 19), 'S', 's')
+        return ht, [''.join(r) for r in g]
     # 귀 안쪽 그늘
     fill(ht + 13, [7, 24], 'S', 's')
     # 눈: 3×3 까만 눈동자, 왼쪽 위 반짝임, 아래 한 줄은 갈색 반사
