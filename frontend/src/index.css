@@ -198,6 +198,63 @@ body {
   animation: auto-fill 3s linear forwards;
 }
 
+/* 안목 렌즈 (decisions.md 161번): 힌트 글이 흐릿한 데서 초점이 맞으며 나타난다. 안목이 높을수록 빠르고 또렷하다. */
+@keyframes lens-focus-low {
+  from {
+    filter: blur(5px);
+    opacity: 0.2;
+  }
+  to {
+    filter: blur(0.6px);
+    opacity: 1;
+  }
+}
+@keyframes lens-focus {
+  from {
+    filter: blur(4px);
+    opacity: 0.25;
+  }
+  to {
+    filter: none;
+    opacity: 1;
+  }
+}
+@keyframes lens-glint {
+  0% {
+    filter: blur(3px);
+    opacity: 0.3;
+    background-position: 120% 0;
+  }
+  60% {
+    filter: none;
+    opacity: 1;
+  }
+  100% {
+    background-position: -20% 0;
+  }
+}
+.animate-lens-low {
+  animation: lens-focus-low 1.8s ease-out forwards;
+}
+.animate-lens-mid {
+  animation: lens-focus 1.2s ease-out both;
+}
+.animate-lens-high {
+  animation: lens-focus 0.7s ease-out both;
+}
+/* 꿰뚫어 보는 안목은 초점이 바로 맞고 빛이 한 번 스친다 */
+.animate-lens-expert {
+  background-image: linear-gradient(
+    100deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.85) 50%,
+    transparent 60%
+  );
+  background-size: 250% 100%;
+  background-repeat: no-repeat;
+  animation: lens-glint 0.9s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-reveal,
   .animate-slide-in,
@@ -209,5 +266,15 @@ body {
   .animate-auto-fill {
     animation: none;
     width: 100%;
+  }
+  .animate-lens-mid,
+  .animate-lens-high,
+  .animate-lens-expert {
+    animation: none;
+  }
+  /* 낮은 안목은 움직이지 않아도 조금 흐린 채로 */
+  .animate-lens-low {
+    animation: none;
+    filter: blur(0.6px);
   }
 }
