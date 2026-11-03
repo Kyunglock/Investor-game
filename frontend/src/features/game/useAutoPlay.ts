@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useWindowRole } from '../../api/window'
 import {
   AUTO_CHOOSE_DELAY_MS,
   AUTO_CONTINUE_DELAY_MS,
@@ -21,9 +22,11 @@ export function useAutoPlay() {
   const running = useGameStore((s) => s.running)
   const choosing = useGameStore((s) => s.choosing)
   const marketOpen = useGameStore((s) => s.marketOpen)
+  // 보기 전용 창은 대신 고르지 않는다 (#189).
+  const primary = useWindowRole((s) => s.role === 'primary')
 
   useEffect(() => {
-    if (!autoPlay || status !== 'playing' || marketOpen) {
+    if (!autoPlay || !primary || status !== 'playing' || marketOpen) {
       return
     }
     if (outcomeKind) {
@@ -59,7 +62,7 @@ export function useAutoPlay() {
     if (!running && !document.hidden) {
       useGameStore.getState().resume()
     }
-  }, [autoPlay, status, eventId, outcomeKind, crisis, running, choosing, marketOpen])
+  }, [primary, autoPlay, status, eventId, outcomeKind, crisis, running, choosing, marketOpen])
 
   useEffect(() => {
     if (!autoPlay) {

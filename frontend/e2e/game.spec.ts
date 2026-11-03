@@ -283,3 +283,23 @@ test('자동 진행은 50세부터: 그 전에는 버튼이 잠기고 카드는 
   await expect(page.getByTestId('card-auto-locked')).toContainText('50세부터')
   await expect(page.getByTestId('card-auto-on')).toHaveCount(0)
 })
+
+test('한 판은 한 창만: 두 번째 탭은 보기 전용이고, 이어하기를 누르면 넘겨받는다 (#189)', async ({
+  page,
+  context,
+}) => {
+  await born(page)
+  await expect(page.getByTestId('other-window')).toBeHidden()
+  const second = await context.newPage()
+  await second.goto('/')
+  await expect(second.getByTestId('other-window')).toBeVisible()
+  await expect(second.getByTestId('other-window')).toContainText('다른 탭')
+  await second.getByTestId('take-over').click()
+  await expect(second.getByTestId('other-window')).toBeHidden()
+  await expect(second.getByTestId('age')).toBeVisible()
+  // 자물쇠를 빼앗긴 첫 탭은 보기 전용이 되고, 다시 넘겨받을 수 있다.
+  await expect(page.getByTestId('other-window')).toBeVisible()
+  await page.getByTestId('take-over').click()
+  await expect(page.getByTestId('other-window')).toBeHidden()
+  await expect(second.getByTestId('other-window')).toBeVisible()
+})

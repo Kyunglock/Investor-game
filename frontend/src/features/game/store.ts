@@ -9,6 +9,7 @@ import {
   type StockHistory,
   type TradeSide,
 } from '../../api/client'
+import { useWindowRole, windowReady } from '../../api/window'
 import {
   advanceDay,
   clockLimit,
@@ -256,7 +257,12 @@ export const useGameStore = create<GameState>((set, get) => {
 
     // 재접속하면 일시정지 상태로 이어한다. 상황을 보고 사용자가 계속을 누른다 (architecture.md 7절).
     load: async () => {
-      const { data, response } = await api.GET('/api/games/current')
+      // 주 창이면 판을 넘겨받으며 불러오고, 보기 전용 창이면 읽기만 한다 (#189).
+      const role = useWindowRole.getState().role === 'primary' ? await windowReady() : 'device'
+      const primary = role === 'primary' && useWindowRole.getState().role === 'primary'
+      const { data, response } = primary
+        ? await api.POST('/api/games/current/claim')
+        : await api.GET('/api/games/current')
       if (data) {
         set({ outcome: null, heldGame: null })
         apply(data, false)
@@ -400,7 +406,7 @@ export const useGameStore = create<GameState>((set, get) => {
 
     pause: () => {
       set({ running: false })
-      if (get().game?.status === 'ACTIVE') {
+      if (get().game?.status === 'ACTIVE' && useWindowRole.getState().role === 'primary') {
         void reportNow()
       }
     },
@@ -408,6 +414,7 @@ export const useGameStore = create<GameState>((set, get) => {
     resume: () => {
       const { game, outcome, marketOpen, crisisAlert } = get()
       if (
+        useWindowRole.getState().role === 'primary' &&
         game &&
         game.status === 'ACTIVE' &&
         !game.pendingEvent &&
@@ -585,5 +592,12 @@ export const useGameStore = create<GameState>((set, get) => {
         await get().load()
       }
     },
+  }
+})
+
+// 다른 창이 판을 넘겨받으면 이 창의 시계는 바로 멈춘다. 보고도 하지 않는다 (#189).
+useWindowRole.subscribe((state) => {
+  if (state.role !== 'primary') {
+    useGameStore.setState({ running: false })
   }
 })

@@ -82,6 +82,8 @@ describe('위기 회고 alert (decisions.md 60번, #71)', () => {
 
   it('회고가 오면 시계가 멈추고, 확인을 누르면 다시 흐른다', async () => {
     vi.mocked(api.GET).mockResolvedValue({ data: game(), response: { status: 200 } } as never)
+    // 주 창은 판을 넘겨받으며(claim) 불러온다 (#189).
+    vi.mocked(api.POST).mockResolvedValueOnce({ data: game(), response: { status: 200 } } as never)
     const store = useGameStore.getState()
     await store.load()
     useGameStore.getState().resume()
@@ -109,6 +111,8 @@ describe('위기 회고 alert (decisions.md 60번, #71)', () => {
 
   it('대기 중인 선택이 있으면 확인을 눌러도 시계는 선택이 끝날 때까지 서 있다', async () => {
     vi.mocked(api.GET).mockResolvedValue({ data: game(), response: { status: 200 } } as never)
+    // 주 창은 판을 넘겨받으며(claim) 불러온다 (#189).
+    vi.mocked(api.POST).mockResolvedValueOnce({ data: game(), response: { status: 200 } } as never)
     await useGameStore.getState().load()
     useGameStore.getState().resume()
     vi.mocked(api.POST).mockResolvedValue({
@@ -204,6 +208,8 @@ describe('자동 진행은 50세부터 (#200)', () => {
     localStorage.setItem('investor-game.auto-play', 'on')
     useGameStore.setState({ autoPlay: true })
     vi.mocked(api.GET).mockResolvedValue({ data: game(), response: { status: 200 } } as never)
+    // 주 창은 판을 넘겨받으며(claim) 불러온다 (#189).
+    vi.mocked(api.POST).mockResolvedValueOnce({ data: game(), response: { status: 200 } } as never)
     await useGameStore.getState().load()
     expect(useGameStore.getState().autoPlay).toBe(false)
     expect(localStorage.getItem('investor-game.auto-play')).toBe('on')
