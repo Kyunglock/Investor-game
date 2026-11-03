@@ -1210,6 +1210,20 @@ class DefaultEventServiceTest {
     assertThat(late).as("40판 가운데 inv-late-start").isTrue();
   }
 
+  /** #233: 정년 없는 농부는 57세 뒤에도 장면이 오고, 정년 있는 사무직은 59세에서 멈춘다. */
+  @Test
+  void 정년_없는_직업은_늦게까지_장면이_오고_정년_있는_직업은_59세에서_멈춘다() {
+    boolean farmerLate = false;
+    for (long seed = 1; seed <= 5; seed++) {
+      farmerLate |= careerLife("farmer", seed).stream().anyMatch(e -> e.getKey() >= 60);
+      assertThat(careerLife("office", seed))
+          .extracting(Map.Entry::getKey)
+          .as("seed %d", seed)
+          .allMatch(age -> age <= 59);
+    }
+    assertThat(farmerLate).as("농부가 60세 넘어 받은 장면").isTrue();
+  }
+
   @Test
   void 공무원에게는_구조조정이_오지_않는다() {
     for (long seed = 1; seed <= 10; seed++) {

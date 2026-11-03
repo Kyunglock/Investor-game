@@ -37,9 +37,11 @@ public record EventProperties(
 
   /**
    * @param gapDays 직장 장면 사이 간격(일). 직업이 있을 때만
-   * @param lastAge 이 나이를 넘으면 직업·직장 이벤트가 오지 않는다
+   * @param lastAge 정년이 있는 직업은 이 나이를 넘으면 직업·직장 이벤트가 오지 않는다. 정년이 없는 직업(농부·회사 대표)과 전업투자자는 판이 끝날 때까지 온다
+   *     (#233)
+   * @param retireAge 정년(household.retire-age와 같은 값). 후속 장면이 정년 뒤로 밀리면 정년 전날로 당긴다 (#233)
    */
-  public record CareerSettings(Range gapDays, int lastAge) {}
+  public record CareerSettings(Range gapDays, int lastAge, int retireAge) {}
 
   /** adultGapDays: 취업 뒤 일상 장면(adult 성향 장면) 사이 간격(일). 풀을 다 쓰면 더 오지 않는다. */
   public record TraitSettings(Range adultGapDays) {}
