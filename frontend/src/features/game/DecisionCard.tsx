@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Game, NewsItem, PendingEvent } from '../../api/client'
+import { InsightLens } from './InsightLens'
 import { won, yearOf } from './labels'
 import {
   BUY_PERCENTS,
@@ -155,17 +156,13 @@ function Body({ event, game, busy, onChoose }: Props) {
         </div>
       )}
 
+      {/* 힌트는 내 안목으로 읽은 것이다. 안목이 높을수록 또렷하게 읽힌다 (decisions.md 53·161번). 빚투 제안은 그 종목에 대한 해석이다. */}
       {(isNews || isLeverage) && event.hint && (
-        <p
-          className="mt-3 border-l-[3px] border-teal bg-teal-soft px-2.5 py-2 font-mono-num text-xs text-[#3b5a52]"
-          data-testid="hint"
-        >
-          {/* 빚투 제안의 힌트는 매매창과 같은, 그 종목에 대한 내 안목 해석이다 (decisions.md 53번) */}
-          {isLeverage && (
-            <span className="mr-1 text-[10px] text-faint">내 안목으로 본 {event.stockName}</span>
-          )}
-          {event.hint}
-        </p>
+        <InsightLens
+          insight={game.stats.insight}
+          hint={event.hint}
+          subject={isLeverage ? (event.stockName ?? undefined) : undefined}
+        />
       )}
       {isNews && event.sway && (
         <div className="mt-2.5 border-l-[3px] border-line px-2.5 py-1.5 text-xs text-muted">
