@@ -115,6 +115,34 @@ class JsonContentCatalogTest {
     }
   }
 
+  /** #230 (decisions.md 166번): 행복도는 장면마다 다르게 움직인다. 직장 결과와 일상 선택지는 거의 모두 제 값을 가진다. */
+  @Test
+  void 직장_결과와_일상_선택지는_저마다_행복도_값을_가진다() {
+    JsonContentCatalog catalog = load();
+    int careerEffects = 0;
+    int careerValued = 0;
+    for (var career : catalog.careers()) {
+      for (var option : career.options()) {
+        List<CareerDefinition.Effect> effects =
+            option.rolls() ? List.of(option.success(), option.fail()) : List.of(option.success());
+        for (var effect : effects) {
+          careerEffects++;
+          careerValued += effect.happiness() != null ? 1 : 0;
+        }
+      }
+    }
+    assertThat(careerValued * 10).as("직장 결과의 행복도 값").isGreaterThanOrEqualTo(careerEffects * 9);
+    long dailyOptions = 0;
+    long dailyValued = 0;
+    for (var trait : catalog.adultTraits()) {
+      for (var option : trait.options()) {
+        dailyOptions++;
+        dailyValued += option.happinessDelta() != 0 ? 1 : 0;
+      }
+    }
+    assertThat(dailyValued * 10).as("일상 선택지의 행복도 값").isGreaterThanOrEqualTo(dailyOptions * 9);
+  }
+
   @Test
   void 알_수_없는_유형_코드는_오류다() {
     assertThatThrownBy(() -> load().investorType("none-none-none"))

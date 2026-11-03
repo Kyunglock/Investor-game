@@ -208,7 +208,8 @@ class DefaultEventService implements EventService {
                 chosen.amount(),
                 chosen.outcomes(),
                 definition.adult(),
-                chosen.familyDelta());
+                chosen.familyDelta(),
+                chosen.happinessDelta());
           }
           case OFFER -> new ChoiceTicket.Offer(ACCEPT.equals(optionCode));
           case LIFE ->

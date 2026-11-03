@@ -198,7 +198,8 @@ public record ChoiceTicket(
       long amount,
       List<TraitDefinition.Outcome> outcomes,
       boolean adult,
-      int familyDelta)
+      int familyDelta,
+      int happinessDelta)
       implements Effect {}
 
   public record Offer(boolean accepted) implements Effect {}

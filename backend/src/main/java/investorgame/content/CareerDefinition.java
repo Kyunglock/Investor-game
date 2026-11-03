@@ -147,6 +147,8 @@ public record CareerDefinition(
    * @param followUpDays followUp이 오기까지 걸리는 날 수
    * @param becomeJob 전업투자자가 이 직업(회사 대표)이 된다. 직접 세운 회사라 직업 선택에는 나오지 않는 직업이다
    * @param text 결과 문구
+   * @param happiness 행복도 변화. null이면 옛 규칙(성공 +5·실패 −5·실직 −10) (#230, decisions.md 166번)
+   * @param family 가족 점수 변화. null이면 0
    */
   public record Effect(
       Integer salaryPercent,
@@ -161,9 +163,11 @@ public record CareerDefinition(
       String becomeJob,
       String text,
       String textFamily,
-      Boolean becomeInvestor) {
+      Boolean becomeInvestor,
+      Integer happiness,
+      Integer family) {
     public static final Effect NONE =
-        new Effect(0, false, 0, false, 0, 0L, Map.of(), null, 0, null, "", null, false);
+        new Effect(0, false, 0, false, 0, 0L, Map.of(), null, 0, null, "", null, false, null, null);
 
     public Effect {
       salaryPercent = salaryPercent == null ? 0 : salaryPercent;

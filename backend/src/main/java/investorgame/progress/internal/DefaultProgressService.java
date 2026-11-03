@@ -606,6 +606,10 @@ class DefaultProgressService implements ProgressService {
             if (trait.familyDelta() != 0) {
               household.bond(gameId, trait.familyDelta());
             }
+            // 장면마다 다른 행복도 변화 (#230, decisions.md 166번).
+            if (trait.happinessDelta() != 0) {
+              household.cheer(gameId, trait.happinessDelta());
+            }
             List<StatChange> moved =
                 characters.recordTraitChoice(
                     gameId, trait.traitDeltas(), statDeltas, ticket.occursDay());
@@ -737,7 +741,15 @@ class DefaultProgressService implements ProgressService {
     }
     CareerDefinition.Effect effect = success ? option.success() : option.fail();
     // 승진·인상은 기쁘고, 실패는 지치고, 일을 잃으면 더 지친다 (decisions.md 82번).
-    household.cheer(gameId, effect.quit() ? -HAPPY_QUIT : success ? HAPPY_CAREER : -HAPPY_CAREER);
+    // 장면에 행복·가족 값이 있으면 그것을, 없으면 옛 규칙(성공 +5·실패 −5·실직 −10)을 쓴다 (#230, decisions.md 166번).
+    household.cheer(
+        gameId,
+        effect.happiness() != null
+            ? effect.happiness()
+            : effect.quit() ? -HAPPY_QUIT : success ? HAPPY_CAREER : -HAPPY_CAREER);
+    if (effect.family() != null && effect.family() != 0) {
+      household.bond(gameId, effect.family());
+    }
     // 실제 행동에 판정 결과를 남겨 후속 장면(followUp)을 정할 수 있게 한다 (decisions.md 52번).
     events.complete(
         gameId,
