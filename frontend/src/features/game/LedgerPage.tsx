@@ -1,10 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { create } from 'zustand'
 import type { Game } from '../../api/client'
 import { spouseWord } from '../../api/spouseTerms'
 import { childWord, percent, shortWon, signedShortWon, signedWon, won } from './labels'
 import { signedPercent } from './market'
 import { useGameStore } from './store'
 import { yearDelta } from './timeline'
+import { compactWon, stockSummary, WORTH_COLORS, worthBar, worthParts } from './worth'
 
 /** 거주 형태 이름 (주거 설계 1절). */
 export const TENURE_LABELS: Record<Game['housing']['tenure'], string> = {
@@ -15,15 +17,149 @@ export const TENURE_LABELS: Record<Game['housing']['tenure'], string> = {
   OWN: '자가',
 }
 
-/** 수첩 오른쪽 쪽: 돈 (2026-10-22 시안 D). 가계부, 주식과 매매, 집. 금액은 모두 서버 값이다. 전 재산은 수첩 맨 위 띠(WorthBand)로 올라갔다 (#201). */
+/** 장부의 탭 (#212). 세로로 쭉 이어지던 가계부·주식·집을 나눠 한눈에 하나씩 본다. */
+export type LedgerTab = 'household' | 'worth' | 'stocks' | 'homes'
+
+const LEDGER_TABS: { key: LedgerTab; label: string }[] = [
+  { key: 'household', label: '가계부' },
+  { key: 'worth', label: '전 재산' },
+  { key: 'stocks', label: '주식' },
+  { key: 'homes', label: '부동산' },
+]
+
+const TAB_STORAGE = 'ledger-tab'
+
+function savedTab(): LedgerTab {
+  try {
+    const saved = window.localStorage.getItem(TAB_STORAGE)
+    if (LEDGER_TABS.some((t) => t.key === saved)) {
+      return saved as LedgerTab
+    }
+  } catch {
+    // 저장소를 못 쓰면 기본 탭
+  }
+  return 'worth'
+}
+
+/** 고른 탭. 맨 위 띠의 주식 칸을 누르면 주식 탭이 열리므로 장부 밖에서도 바꾼다. 새로고침해도 남게 브라우저에 적어 둔다. */
+export const useLedgerTab = create<{ tab: LedgerTab; setTab: (tab: LedgerTab) => void }>((set) => ({
+  tab: savedTab(),
+  setTab: (tab) => {
+    try {
+      window.localStorage.setItem(TAB_STORAGE, tab)
+    } catch {
+      // 저장 못 해도 이번 화면에서는 바뀐다
+    }
+    set({ tab })
+  },
+}))
+
+/**
+ * 수첩 오른쪽 쪽: 돈 (2026-10-22 시안 D). 가계부 · 전 재산 · 주식 · 부동산 탭 (#212). 금액은 모두 서버 값이다.
+ * 전 재산 숫자는 수첩 맨 위 띠(WorthBand)에 그대로 있고, 전 재산 탭은 그 구성을 막대로 보여 준다 (#210).
+ * 매매 버튼은 어느 탭에서든 누를 수 있게 탭 밖 아래에 둔다.
+ */
 export function LedgerPage({ game }: { game: Game; ageYears: number }) {
+  const tab = useLedgerTab((s) => s.tab)
+  const setTab = useLedgerTab((s) => s.setTab)
+  const tabRefs = useRef<(HTMLButtonElement | null)[]>([])
+  const summaries = tabSummaries(game)
+  const moveFocus = (index: number) => {
+    const next = (index + LEDGER_TABS.length) % LEDGER_TABS.length
+    setTab(LEDGER_TABS[next].key)
+    tabRefs.current[next]?.focus()
+  }
   return (
-    <section aria-label="돈" className="paper-grid min-w-0 flex-[1_1_440px] px-5 pt-6 pb-8 sm:px-8">
-      <Household game={game} />
-      <Stocks game={game} />
-      <Home game={game} />
+    <section
+      aria-label="돈"
+      className="paper-grid min-w-0 flex-[1_1_440px] px-5 pt-6 pb-8 sm:px-8"
+      id="ledger"
+    >
+      <div
+        role="tablist"
+        aria-label="장부"
+        className="grid grid-cols-4 gap-1 border-b-2 border-pen"
+        data-testid="ledger-tabs"
+      >
+        {LEDGER_TABS.map((t, i) => {
+          const selected = tab === t.key
+          return (
+            <button
+              key={t.key}
+              ref={(el) => {
+                tabRefs.current[i] = el
+              }}
+              type="button"
+              role="tab"
+              id={`ledger-tab-${t.key}`}
+              aria-selected={selected}
+              aria-controls={`ledger-panel-${t.key}`}
+              tabIndex={selected ? 0 : -1}
+              className={`-mb-0.5 min-h-[52px] min-w-0 rounded-t border-2 px-1 pt-1 text-center leading-tight ${
+                selected
+                  ? 'border-pen border-b-paper bg-paper'
+                  : 'border-transparent text-pen-soft hover:bg-white'
+              }`}
+              onClick={() => setTab(t.key)}
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowRight') {
+                  e.preventDefault()
+                  moveFocus(i + 1)
+                } else if (e.key === 'ArrowLeft') {
+                  e.preventDefault()
+                  moveFocus(i - 1)
+                }
+              }}
+              data-testid={`ledger-tab-${t.key}`}
+            >
+              <span className="block whitespace-nowrap font-pen text-[19px] leading-6 sm:text-[22px]">
+                {t.label}
+              </span>
+              <span className="block truncate text-[11px] text-pen-soft">
+                {summaries[t.key] ?? ' '}
+              </span>
+            </button>
+          )
+        })}
+      </div>
+      {LEDGER_TABS.map((t) => (
+        <div
+          key={t.key}
+          role="tabpanel"
+          id={`ledger-panel-${t.key}`}
+          aria-labelledby={`ledger-tab-${t.key}`}
+          hidden={tab !== t.key}
+          className="pt-3"
+        >
+          {t.key === 'household' && <Household game={game} />}
+          {t.key === 'worth' && <WorthPanel game={game} />}
+          {t.key === 'stocks' && <Stocks game={game} />}
+          {t.key === 'homes' && <Home game={game} />}
+        </div>
+      ))}
+      <TradeButton game={game} />
     </section>
   )
+}
+
+/** 탭을 열지 않아도 대략 보이게 탭 아래 짧은 숫자 (#212). */
+function tabSummaries(game: Game): Partial<Record<LedgerTab, string>> {
+  const h = game.household
+  const working = (game.job !== null && game.job !== undefined) || game.fullTimeInvestor
+  const saving =
+    h.monthlyIncome + h.spouseIncome + h.pension - h.monthlyExpense - game.housing.monthlyCost
+  const realEstate = worthParts(game)
+    .filter((p) => p.key === 'homes' || p.key === 'deposit')
+    .reduce((sum, p) => sum + p.value, 0)
+  return {
+    household: working ? `월 ${compactWon(saving, true)}` : undefined,
+    worth: compactWon(game.totalAsset),
+    stocks: game.holdings.length > 0 ? compactWon(game.invested) : '없음',
+    homes:
+      game.housing.homes.length > 0 || realEstate !== 0
+        ? compactWon(realEstate)
+        : TENURE_LABELS[game.housing.tenure],
+  }
 }
 
 /**
@@ -73,7 +209,8 @@ function Worth({ game }: { game: Game }) {
           label="주식"
           value={game.invested}
           testId="invested"
-          note={game.holdings.length > 0 ? `${game.holdings.length}종목` : undefined}
+          note={game.holdings.length > 0 ? `${game.holdings.length}종목 · 보기` : undefined}
+          onOpen={() => openLedgerTab('stocks')}
         />
         <MoneyTile
           label="빚"
@@ -93,24 +230,136 @@ function MoneyTile({
   testId,
   tone = 'pen',
   note,
+  onOpen,
 }: {
   label: string
   value: number
   testId: string
   tone?: 'pen' | 'red'
   note?: string
+  /** 누르면 장부의 해당 탭을 연다 (#210) */
+  onOpen?: () => void
 }) {
-  return (
-    <div className="min-w-0 rounded border-2 border-dashed border-[#a6acb8] px-2.5 py-1.5">
-      <p className="text-[12px] text-pen-soft">{label}</p>
-      <p
-        className={`truncate font-pen text-[24px] leading-tight sm:text-[30px] ${tone === 'red' ? 'text-red-pen' : 'text-pen'}`}
+  const body = (
+    <>
+      <span className="block text-[12px] text-pen-soft">{label}</span>
+      <span
+        className={`block truncate font-pen text-[24px] leading-tight sm:text-[30px] ${tone === 'red' ? 'text-red-pen' : 'text-pen'}`}
         data-testid={testId}
       >
         {value === 0 && label === '빚' ? '없음' : shortWon(value)}
-      </p>
-      {note && <p className="text-[11px] text-pen-soft">{note}</p>}
-    </div>
+      </span>
+      {note && <span className="block text-[11px] text-pen-soft">{note}</span>}
+    </>
+  )
+  const box = 'min-w-0 rounded border-2 border-dashed border-[#a6acb8] px-2.5 py-1.5 text-left'
+  return onOpen ? (
+    <button type="button" className={`${box} hover:bg-white`} onClick={onOpen}>
+      {body}
+    </button>
+  ) : (
+    <div className={box}>{body}</div>
+  )
+}
+
+/** 장부 탭을 열고 그 자리로 내려간다. 좁은 화면에서는 장부가 한참 아래에 있다. */
+function openLedgerTab(tab: LedgerTab) {
+  useLedgerTab.getState().setTab(tab)
+  document.getElementById('ledger')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
+/** 전 재산의 구성: 현금·주식·부동산·보증금을 한 줄 막대로, 빚은 그 아래 빨간 줄로 (#210). */
+function WorthPanel({ game }: { game: Game }) {
+  const bar = worthBar(worthParts(game))
+  return (
+    <section data-testid="worth-card">
+      <h2 className="font-pen text-[28px] font-normal leading-8">무엇으로 이루어졌나</h2>
+      {bar.gross <= 0 ? (
+        <p className="text-pen-soft">아직 가진 것이 없다.</p>
+      ) : (
+        <>
+          <div
+            className="mt-2 flex h-7 w-full gap-[2px] overflow-hidden rounded"
+            role="img"
+            aria-label={bar.plus
+              .map((p) => `${p.label} ${shortWon(p.value)} ${percent(p.share)}`)
+              .join(', ')}
+            data-testid="worth-bar"
+          >
+            {bar.plus.map((p) => (
+              <div
+                key={p.key}
+                className="h-full min-w-[3px] first:rounded-l last:rounded-r"
+                style={{
+                  flexGrow: p.value,
+                  flexBasis: 0,
+                  background: WORTH_COLORS[p.key as keyof typeof WORTH_COLORS],
+                }}
+                title={`${p.label} ${won(p.value)} (${percent(p.share)})`}
+                data-testid={`worth-seg-${p.key}`}
+              />
+            ))}
+          </div>
+          {bar.minus.length > 0 && (
+            <div className="mt-1 flex h-2.5 w-full" aria-hidden="true">
+              <div
+                className="h-full rounded bg-red-pen"
+                style={{
+                  width: `${Math.min(100, bar.minus.reduce((s, p) => s + p.share, 0) / 100)}%`,
+                }}
+                title={bar.minus.map((p) => `${p.label} ${won(p.value)}`).join(' · ')}
+              />
+            </div>
+          )}
+          <ul className="m-0 mt-3 list-none p-0" data-testid="worth-legend">
+            {bar.plus.map((p) => (
+              <li
+                key={p.key}
+                className="flex items-center gap-2 border-b border-[#a6acb8] py-1"
+                data-testid={`worth-row-${p.key}`}
+              >
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-3 w-3 shrink-0 rounded-sm"
+                  style={{ background: WORTH_COLORS[p.key as keyof typeof WORTH_COLORS] }}
+                />
+                <span className="flex-1">{p.label}</span>
+                <span>{won(p.value)}</span>
+                <span className="w-14 text-right text-[13px] text-pen-soft">
+                  {percent(p.share)}
+                </span>
+              </li>
+            ))}
+            {bar.minus.map((p) => (
+              <li
+                key={p.key}
+                className="flex items-center gap-2 border-b border-[#a6acb8] py-1 text-red-pen"
+                data-testid={`worth-row-${p.key}`}
+              >
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-3 w-3 shrink-0 rounded-sm bg-red-pen"
+                />
+                <span className="flex-1">{p.key === 'homes' ? '집값보다 많은 대출' : p.label}</span>
+                <span>{signedWon(p.value)}</span>
+                <span className="w-14 text-right text-[13px]">{percent(p.share)}</span>
+              </li>
+            ))}
+            <li className="flex items-center gap-2 pt-1">
+              <span className="flex-1 font-pen text-[22px]">전 재산</span>
+              <span className="font-pen text-[24px] text-red-pen" data-testid="worth-total">
+                {won(game.totalAsset)}
+              </span>
+              <span className="w-14" />
+            </li>
+          </ul>
+          <p className="mt-1 text-[12px] text-pen-soft">
+            비율은 빚을 빼기 전 총자산 {shortWon(bar.gross)}에 대한 것. 부동산은 시세 − 주담대 −
+            세입자 보증금, 보증금은 전·월세 보증금 − 전세대출.
+          </p>
+        </>
+      )}
+    </section>
   )
 }
 
@@ -213,15 +462,25 @@ function Row({ label, value }: { label: string; value: number }) {
 }
 
 function Stocks({ game }: { game: Game }) {
-  const openMarket = useGameStore((s) => s.openMarket)
-  const canTrade = game.phase === 'INVESTING' && game.status === 'ACTIVE'
+  const total = stockSummary(game)
   return (
-    <section className="mt-6">
+    <section data-testid="stocks-card">
       <h2 className="font-pen text-[28px] font-normal leading-8">갖고 있는 주식</h2>
       {game.holdings.length === 0 ? (
         <p className="text-pen-soft">아직 없다.</p>
       ) : (
-        <ul className="m-0 list-none p-0">
+        <p className="flex flex-wrap items-baseline gap-x-3" data-testid="stocks-summary">
+          <span>
+            평가액 <b className="font-pen text-[26px] font-normal">{won(total.value)}</b>
+          </span>
+          <span className={total.pnl < 0 ? 'text-blue-pen' : 'text-red-pen'}>
+            {signedWon(total.pnl)} ({signedPercent(total.pnlBp)})
+          </span>
+          <span className="text-[13px] text-pen-soft">{game.holdings.length}종목</span>
+        </p>
+      )}
+      {game.holdings.length > 0 && (
+        <ul className="m-0 mt-1 list-none border-t border-[#a6acb8] p-0">
           {game.holdings.map((h) => (
             <li
               key={h.stockCode}
@@ -246,19 +505,27 @@ function Stocks({ game }: { game: Game }) {
           ))}
         </ul>
       )}
-      <button
-        type="button"
-        className="mt-4 min-h-[52px] w-full rounded-full bg-pen text-[16px] text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
-        disabled={!canTrade}
-        onClick={openMarket}
-        data-testid="open-market"
-      >
-        매매하러 가기 · 시간 정지
-        {!canTrade && game.status === 'ACTIVE' && (
-          <span className="ml-1 text-[13px]">(투자 시작 전)</span>
-        )}
-      </button>
     </section>
+  )
+}
+
+/** 매매하러 가기. 어느 탭을 보고 있든 누를 수 있게 탭 아래에 둔다 (#212). */
+function TradeButton({ game }: { game: Game }) {
+  const openMarket = useGameStore((s) => s.openMarket)
+  const canTrade = game.phase === 'INVESTING' && game.status === 'ACTIVE'
+  return (
+    <button
+      type="button"
+      className="mt-5 min-h-[52px] w-full rounded-full bg-pen text-[16px] text-white hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
+      disabled={!canTrade}
+      onClick={openMarket}
+      data-testid="open-market"
+    >
+      매매하러 가기 · 시간 정지
+      {!canTrade && game.status === 'ACTIVE' && (
+        <span className="ml-1 text-[13px]">(투자 시작 전)</span>
+      )}
+    </button>
   )
 }
 
@@ -270,7 +537,7 @@ function Home({ game }: { game: Game }) {
   const listHome = useGameStore((s) => s.listHome)
   const busy = Boolean(game.pendingEvent) || game.status !== 'ACTIVE'
   return (
-    <section className="mt-6" data-testid="housing-card">
+    <section data-testid="housing-card">
       <h2 className="font-pen text-[28px] font-normal leading-8">사는 곳</h2>
       <p data-testid="tenure">
         <b>{TENURE_LABELS[h.tenure]}</b>
@@ -296,13 +563,34 @@ function Home({ game }: { game: Game }) {
         <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0" data-testid="homes">
           {h.homes.map((home) => {
             const gain = home.price - home.purchasePrice
+            const equity = home.price - home.mortgage - home.tenantDeposit
+            const change = h.quotes.find((q) => q.name === home.regionName)?.change12mBp
             return (
-              <li key={home.seq} className="border-b border-dashed border-[#a6acb8] pb-2">
+              <li
+                key={home.seq}
+                className="border-b border-dashed border-[#a6acb8] pb-2"
+                data-testid="home-row"
+              >
                 <p className="flex justify-between gap-2">
                   <span>
                     <b>{home.regionName}</b> {home.residence ? '내가 사는 집' : '갭투자'}
                   </span>
-                  <span>{won(home.price)}</span>
+                  <span>
+                    시세 {won(home.price)}
+                    {change !== undefined && (
+                      <span
+                        className={`ml-1 text-[13px] ${change >= 0 ? 'text-red-pen' : 'text-blue-pen'}`}
+                      >
+                        1년 {signedPercent(change)}
+                      </span>
+                    )}
+                  </span>
+                </p>
+                <p className="flex justify-between gap-2" data-testid="home-equity">
+                  <span className="text-pen-soft">내 몫(지분)</span>
+                  <span className={`font-pen text-[22px] ${equity < 0 ? 'text-red-pen' : ''}`}>
+                    {won(equity)}
+                  </span>
                 </p>
                 <p className="text-[13px] text-pen-soft">
                   산 값 {won(home.purchasePrice)} ·{' '}
