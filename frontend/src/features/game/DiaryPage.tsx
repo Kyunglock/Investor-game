@@ -207,11 +207,13 @@ function Diary({ game }: { game: Game }) {
 
 function DiaryLine({ line, kind }: { line: LogLine; kind?: string }) {
   const tone =
-    line.tone === 'flipped' || line.tone === 'decline'
-      ? 'text-red-pen'
-      : line.tone === 'growth'
-        ? 'text-blue-pen'
-        : ''
+    line.tone === 'omen'
+      ? 'font-semibold text-red-pen'
+      : line.tone === 'flipped' || line.tone === 'decline'
+        ? 'text-red-pen'
+        : line.tone === 'growth'
+          ? 'text-blue-pen'
+          : ''
   return (
     <li
       className={`animate-slide-in grid grid-cols-[48px_1fr] gap-2 py-1 leading-6 ${tone}`}

@@ -28,21 +28,22 @@ describe('logLine', () => {
     expect(line.age).toBe(1)
   })
 
-  it('전조는 무엇의 전조인지 말하지 않고, 위기는 끝난 뒤 이름과 지나간 전조를 함께 돌아본다', () => {
+  it('전조는 무엇의 전조인지 말하지 않지만 빨간 글씨(omen)로 보이고, 위기는 끝난 뒤 이름과 지나간 전조를 함께 돌아본다', () => {
     const omen = logLine(
       entry('OMEN', 30 * 360, { text: '증시 거래량이 사상 최대를 기록했다.' }),
       game,
     )
     expect(omen.text).toBe('증시 거래량이 사상 최대를 기록했다.')
     expect(omen.pill).toBe('세상')
-    // 평범한 기사도 전조와 똑같이 보인다 (매매창 설계 3.3절).
+    expect(omen.tone).toBe('omen')
+    // 평범한 기사는 보통 글씨다. 전조만 빨갛다 (decisions.md 164번).
     const article = logLine(
       entry('ARTICLE', 30 * 360, { text: '기름값이 몇 주째 조금씩 내린다.' }),
       game,
     )
     expect(article.text).toBe('기름값이 몇 주째 조금씩 내린다.')
     expect(article.pill).toBe('세상')
-    expect(article.tone).toBe(omen.tone)
+    expect(article.tone).toBe('neutral')
 
     const crisis = logLine(
       entry('CRISIS', 35 * 360, {

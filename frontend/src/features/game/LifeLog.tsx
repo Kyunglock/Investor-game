@@ -14,6 +14,7 @@ const TONE_CLASS: Record<LogTone, string> = {
   end: 'bg-wine-soft',
   life: '',
   offer: '',
+  omen: 'font-semibold text-red-pen',
 }
 
 /** 결과 화면의 인생 기록. 태어난 날부터 시간순 (#22). 30줄이 넘으면 나머지는 접는다. */

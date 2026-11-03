@@ -33,6 +33,8 @@ export type LogTone =
   | 'end'
   | 'offer'
   | 'life'
+  /** 폭락 전조: 빨간 글씨 (decisions.md 164번) */
+  | 'omen'
 
 export interface LogLine {
   seq: number
@@ -356,9 +358,9 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
       }
     }
     case 'OMEN':
+      // 폭락 전조는 빨간 글씨로 눈에 띄게 (decisions.md 164번, 38번을 뒤집음). 무엇의 전조인지, 정말 위기가 올지는 여전히 지나 봐야 안다.
+      return { ...base, tone: 'omen', pill: '세상', text: str(p.text) }
     case 'ARTICLE':
-      // 전조는 들린 대로만. 무엇의 전조인지, 정말 전조였는지는 지나 봐야 안다 (decisions.md 38번).
-      // 평범한 기사와 헛소문도 전조와 똑같이 보여 서로 구분되지 않는다 (매매창 설계 3.3절).
       return { ...base, tone: 'neutral', pill: '세상', text: str(p.text) }
     case 'CRISIS': {
       const kind = p.severity === 'DEPRESSION' ? '대공황' : '불황'
