@@ -1,0 +1,69 @@
+name: Deploy
+
+# ── 트리거 ────────────────────────────────────────────────────────────────────
+# main 에서 CI(테스트·E2E)가 성공하면 배포 job 이 만들어지고, Environment
+# `production` 의 승인 버튼(Approve and deploy)을 눌러야 실제로 돈다.
+# Actions 탭의 Run workflow 로 수동 배포도 된다. pull_request 트리거는 넣지 않는다.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # 방어 가드: 원본 저장소의 main push 로 돈 CI 가 성공했을 때만 (fork·PR 차단)
+    if: >-
+      github.repository == 'Kyunglock/Investor-game' &&
+      (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' ||
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    # 운영 맥에 설치한 self-hosted runner 에서 돈다. 서버에 직접 배포하므로
+    # SSH 키·VPN 같은 시크릿이 필요 없다.
+    runs-on: [self-hosted, investor-prod]
+    environment: production
+    timeout-minutes: 30
+    env:
+      JAVA_HOME: /opt/homebrew/opt/openjdk@21
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          # CI 가 검사한 바로 그 커밋을 배포한다.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      - name: PATH 설정
+        run: echo "/usr/local/bin:/opt/homebrew/bin" >> "$GITHUB_PATH"
+
+      - name: 프론트 빌드
+        working-directory: frontend
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
+      - name: 백엔드 빌드
+        working-directory: backend
+        run: ./gradlew bootJar --console=plain
+
+      # 실제 교체 절차(DB 백업 → jar·정적 파일 교체 → 백엔드 재기동, 실패 시 이전 jar
+      # 로 롤백 → nginx 재시작 → 검증)는 공개 저장소에 두지 않고 운영 폴더의
+      # deploy.sh 가 맡는다. 여기서는 산출물을 모아 그 스크립트를 부르기만 한다.
+      - name: 배포
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/release"
+          rm -rf "$OUT" && mkdir -p "$OUT/web"
+          cp -R frontend/dist/. "$OUT/web/"
+          cp "$(ls backend/build/libs/backend-*.jar | grep -v -- '-plain' | head -1)" "$OUT/backend.jar"
+          DEPLOY_ARTIFACTS="$OUT" "$HOME/srv/investor-game/deploy.sh"
+          rm -rf "$OUT"
