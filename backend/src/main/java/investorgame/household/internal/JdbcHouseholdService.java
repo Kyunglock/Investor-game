@@ -176,9 +176,12 @@ class JdbcHouseholdService implements HouseholdService {
   @Override
   @Transactional
   public void driftHappiness(UUID gameId) {
-    int current = state(gameId).happiness();
-    if (current != 50) {
-      cheer(gameId, current > 50 ? -1 : 1);
+    // 행복은 달마다 제자리로 1점씩 돌아온다. 그 자리는 가족이 정한다: 가족 점수 0이면 40, 50이면 50, 100이면 60 (#230, decisions.md
+    // 165번).
+    State now = state(gameId);
+    int home = 50 + (now.family() - 50) / 5;
+    if (now.happiness() != home) {
+      cheer(gameId, now.happiness() > home ? -1 : 1);
     }
   }
 
