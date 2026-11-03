@@ -266,6 +266,11 @@ test('신원 → 장부 탭 → 인생 기록 → 접힌 성격 순서이고, �
   // 제목은 화면 읽기 프로그램에만 남는다(sr-only).
   await expect(page.getByRole('heading', { name: '투자자 시뮬레이터' })).toHaveClass(/sr-only/)
   await expect(page.getByRole('button', { name: '다시 태어나기' })).toBeVisible()
+  // 성격은 접혀 있다가 펼치면 능력치가 보인다.
+  await expect(page.getByTestId('stat-insight')).toBeHidden()
+  await page.getByTestId('personality').locator('summary').click()
+  await expect(page.getByTestId('stat-insight')).toBeVisible()
+  await expect(page.getByTestId('open-report')).toHaveCount(0)
   // 자동 버튼은 없앴다. 선택 카드에도 자동 막대가 없다.
   await expect(page.getByTestId('auto-button')).toHaveCount(0)
   for (let i = 0; i < 60 && (await eventCard(page).count()) === 0; i++) {
@@ -274,11 +279,6 @@ test('신원 → 장부 탭 → 인생 기록 → 접힌 성격 순서이고, �
   await expect(eventCard(page)).toBeVisible()
   await expect(page.getByTestId('auto-bar')).toHaveCount(0)
   await expect(page.getByTestId('card-auto-locked')).toHaveCount(0)
-  // 성격은 접혀 있다가 펼치면 능력치가 보인다.
-  await expect(page.getByTestId('stat-insight')).toBeHidden()
-  await page.getByTestId('personality').locator('summary').click()
-  await expect(page.getByTestId('stat-insight')).toBeVisible()
-  await expect(page.getByTestId('open-report')).toHaveCount(0)
 })
 
 test('한 판은 한 창만: 두 번째 탭은 보기 전용이고, 이어하기를 누르면 넘겨받는다 (#189)', async ({
