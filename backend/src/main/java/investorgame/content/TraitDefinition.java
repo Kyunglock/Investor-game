@@ -123,6 +123,8 @@ public record TraitDefinition(
    * @param followUps 이 선택 뒤 followUpDays가 지나 이어지는 장면(followUpOnly). 여럿이면 판 시드로 가중치만큼 하나를 고른다. 없으면 빈
    *     목록
    * @param followUpDays followUps가 오기까지의 날 수(일상 장면). 성장기 장면은 받는 장면의 나이 단계에 오므로 쓰지 않는다
+   * @param familyDelta 가족 점수 변화. 가족을 챙기면 +, 외면하면 − (decisions.md 88번). JSON에 없으면 0
+   * @param happinessDelta 행복도 변화. 장면마다 다르다 (#230, decisions.md 166번). JSON에 없으면 0
    */
   public record Option(
       String code,
@@ -134,13 +136,15 @@ public record TraitDefinition(
       List<Outcome> outcomes,
       Integer familyDelta,
       List<FollowUp> followUps,
-      Integer followUpDays) {
+      Integer followUpDays,
+      Integer happinessDelta) {
 
     public Option {
       statDeltas = statDeltas == null ? Map.of() : Map.copyOf(statDeltas);
       amount = amount == null ? 0L : amount;
       outcomes = outcomes == null ? List.of() : List.copyOf(outcomes);
       familyDelta = familyDelta == null ? 0 : familyDelta;
+      happinessDelta = happinessDelta == null ? 0 : happinessDelta;
       followUps = followUps == null ? List.of() : List.copyOf(followUps);
     }
   }

@@ -42,6 +42,9 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 class JsonContentCatalog implements ContentCatalog {
 
+  /** 장면 하나가 움직이는 행복도·가족 점수의 상한 (#230, decisions.md 166번). */
+  private static final int MOOD_DELTA_MAX = 15;
+
   private static final String STYLE_PREFIX = "style.";
   private static final String SECTOR_PREFIX = "sector.";
   private static final String RISK_PREFIX = "risk.";
@@ -575,6 +578,10 @@ class JsonContentCatalog implements ContentCatalog {
               effect.statDeltas().keySet().stream()
                   .allMatch(k -> StatCodes.ALL.contains(k) && !StatCodes.LUCK.equals(k)),
               "직장 장면의 능력치 변화는 운을 뺀 능력치 코드여야 한다: " + where);
+          require(
+              (effect.happiness() == null || Math.abs(effect.happiness()) <= MOOD_DELTA_MAX)
+                  && (effect.family() == null || Math.abs(effect.family()) <= MOOD_DELTA_MAX),
+              "직장 장면의 행복도·가족 변화는 ±%d 안이어야 한다: %s".formatted(MOOD_DELTA_MAX, where));
         }
       }
     }
@@ -616,6 +623,11 @@ class JsonContentCatalog implements ContentCatalog {
         String where = trait.code() + "/" + option.code();
         validateTraitDeltas(where, option.traitDeltas());
         validateStatDeltas(where, option.statDeltas());
+        // 장면 하나가 행복도·가족 점수를 크게 뒤집지 않는다 (#230, decisions.md 166번).
+        require(
+            Math.abs(option.happinessDelta()) <= MOOD_DELTA_MAX
+                && Math.abs(option.familyDelta()) <= MOOD_DELTA_MAX,
+            "장면의 행복도·가족 변화는 ±%d 안이어야 한다: %s".formatted(MOOD_DELTA_MAX, where));
         for (TraitDefinition.Outcome outcome : option.outcomes()) {
           require(outcome.weight() > 0, "결과 가중치는 양수여야 한다: " + where);
           Map<String, Integer> merged = new java.util.HashMap<>(option.statDeltas());
