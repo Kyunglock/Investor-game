@@ -1,5 +1,5 @@
 import { ADORNMENTS } from './adornments'
-import { bodyFor } from './bodies'
+import { bodyFor, viewBody } from './bodies'
 import type { SpriteSpec } from './layers'
 import { babyHair, CARRY, lookFor } from './looks'
 import { MARKS } from './marks'
@@ -37,12 +37,14 @@ export function Person({
   top: number
 }) {
   const layers: Layer[] = []
+  // 옆모습·뒷모습은 얼굴 겹(장식·약점·표정·눈꺼풀)의 좌표가 정면 기준이라 얹지 않는다 (decisions.md 194번).
+  const turned = (figure.view ?? 'front') !== 'front' && figure.stage !== 'baby'
   // 아기는 머리가 작아 얼굴 겹(장식·약점·표정·눈꺼풀) 좌표가 맞지 않는다. 배냇머리만 얹는다 (decisions.md 163·178번).
   const baby = figure.stage === 'baby'
   if (baby) {
     layers.push(babyHair(figure.look ?? 0))
   }
-  if (figure.who === 'me' && !baby) {
+  if (figure.who === 'me' && !baby && !turned) {
     if (me.adornment) {
       layers.push(ADORNMENTS[me.adornment])
     }
@@ -50,20 +52,32 @@ export function Person({
       layers.push(MARKS[me.mark])
     }
   }
-  if (mood && !baby) {
+  if (mood && !baby && !turned) {
     layers.push(MOODS[mood])
   }
-  const body = bodyFor(figure.sex, figure.stage, figure.pose)
+  const body = turned
+    ? viewBody(figure.sex, figure.stage, figure.view ?? 'front')
+    : bodyFor(figure.sex, figure.stage, figure.pose)
   const palette = paletteFor(figure.who, figure.look ?? 0)
   const grid = compose(body, layers)
-  const blinks = !baby && canBlink({ mood, adornment: figure.who === 'me' ? me.adornment : null })
+  const blinks =
+    !baby && !turned && canBlink({ mood, adornment: figure.who === 'me' ? me.adornment : null })
   const lids = blinks ? diffRects(grid, compose(body, [...layers, EYELIDS]), palette) : []
   const carried = figure.carrying
+  const fromBack = turned && figure.view === 'back'
   return (
-    <g transform={`translate(${figure.x} ${top - (figure.lift ?? 0)}) scale(${CHAR_SCALE})`}>
-      {carried && <Runs runs={backOf(carried, body.headTop)} />}
+    <g
+      transform={
+        figure.facing === 'left' && turned && figure.view !== 'back'
+          ? `translate(${figure.x + CHAR_WIDTH * CHAR_SCALE} ${top - (figure.lift ?? 0)}) scale(${-CHAR_SCALE} ${CHAR_SCALE})`
+          : `translate(${figure.x} ${top - (figure.lift ?? 0)}) scale(${CHAR_SCALE})`
+      }
+    >
+      {/* 뒷모습이면 등에 업힌 아기가 몸 앞(보는 쪽)에 보이고 끈은 가려진다 (decisions.md 194번). */}
+      {carried && !fromBack && <Runs runs={backOf(carried, body.headTop)} />}
       <Runs runs={toRuns(grid, palette)} />
-      {carried && <Runs runs={strapOf(carried, body.map, body.headTop)} />}
+      {carried && fromBack && <Runs runs={backOf(carried, body.headTop, true)} />}
+      {carried && !fromBack && <Runs runs={strapOf(carried, body.map, body.headTop)} />}
       {figure.holding && figure.pose === 'hold' && (
         <Runs runs={frontOf(figure.holding, body.headTop)} />
       )}
@@ -97,7 +111,7 @@ const BLANKET = { outline: '5', shadow: '3', base: '1', light: '2' }
 const PAD = CHAR_WIDTH / 2
 
 /** 업은 사람 뒤에 그릴 것: 등의 포대기(양옆으로 비죽), 그 위로 어깨 너머 아기 머리. 업은 사람 칸 좌표의 띠로 돌려준다. */
-function backOf(carried: Carried, ht: number): Run[] {
+function backOf(carried: Carried, ht: number, seenFromBehind = false): Run[] {
   const width = CHAR_WIDTH + PAD * 2
   const grid = Array.from({ length: CHAR_HEIGHT }, () => Array<string>(width).fill('.'))
   const right = carried.side === 'right'
@@ -109,11 +123,15 @@ function backOf(carried: Carried, ht: number): Run[] {
     }
   }
   const cells: [number, number][] = []
-  for (let y = ht + 18; y <= ht + 28; y++) {
-    for (let x = 2; x <= 29; x++) {
+  // 뒤에서 보면 포대기는 등 한가운데의 작은 보따리다 (decisions.md 194번). 앞에서 보면 양옆으로 비죽 나온다.
+  const [x0, x1, y0, y1] = seenFromBehind ? [10, 21, ht + 21, ht + 29] : [2, 29, ht + 18, ht + 28]
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
       // 아기 쪽만 어깨 위(턱 아래)까지 올라온다. 모서리는 둥글게.
-      const low = y < ht + 20 && x < 20
-      const corner = (y === ht + 20 && x < 4) || (y === ht + 28 && (x < 3 || x > 28))
+      const low = !seenFromBehind && y < ht + 20 && x < 20
+      const corner = seenFromBehind
+        ? (y === y0 || y === y1) && (x === x0 || x === x1)
+        : (y === ht + 20 && x < 4) || (y === ht + 28 && (x < 3 || x > 28))
       if (!low && !corner) {
         cells.push([y, flip(x)])
       }
@@ -122,8 +140,9 @@ function backOf(carried: Carried, ht: number): Run[] {
   blob(put, cells, BLANKET)
   const baby = bodyFor(carried.sex, 'baby')
   const head = compose(baby, [babyHair(carried.look)])
-  const dy = ht + CARRY.headRow - baby.headTop
-  const dx = right ? CARRY.dx : -CARRY.dx
+  // 뒤에서 보면 아기 머리는 보따리 위, 어깨 너머로 살짝 비켜 나온다.
+  const dy = ht + (seenFromBehind ? CARRY.headRow + 3 : CARRY.headRow) - baby.headTop
+  const dx = seenFromBehind ? (right ? 4 : -4) : right ? CARRY.dx : -CARRY.dx
   head.forEach((row, y) => {
     if (y > baby.headTop + CARRY.chin) {
       return

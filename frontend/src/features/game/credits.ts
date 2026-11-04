@@ -17,7 +17,7 @@ import {
   yearOf,
 } from './labels'
 import { stageFor } from './pixel/bodies'
-import { carryBabies, lineUp, type Member } from './pixel/family'
+import { carryBabies, fromBehind, lineUp, type Member } from './pixel/family'
 import { opposite } from './pixel/sexes'
 import type { CreditArt, Figure, VignetteKey } from './pixel/vignettes'
 import { playerName } from './playerName'
@@ -185,7 +185,7 @@ function entries(game: Game, ...kinds: LogEntry['kind'][]): LogEntry[] {
 
 /** 이사·매수 선택지 → 집의 겉모습. 그림이 없는 선택지(넘김·사기 등)는 null. */
 /** 집 그림은 아파트를 산 것(매수·갭투자·청약 당첨)에만 붙는다. 월세·전세 이사는 줄로만 남는다 (decisions.md 140번). */
-/** 내가 살 집을 산 날은 새집 앞에서 만세, 세를 놓는 갭투자는 단지 앞에 선다 (decisions.md 192번). */
+/** 내가 살 집을 산 날은 새집 앞에서 손뼉, 세를 놓는 갭투자는 단지 앞에 선다 (decisions.md 192번). */
 const HOME_VIGNETTE: Record<string, VignetteKey> = {
   BUY_SEOUL: 'new-home',
   BUY_GYEONGGI: 'new-home',
@@ -245,18 +245,13 @@ function tripArt(game: Game, day: number): CreditArt {
     people.push({ who: 'spouse', sex: opposite(game.sex), stage })
   }
   people.push(...kidsAt(game, day))
-  // 나는 바다에 손을 흔들고 아이들은 만세, 아기는 업힌 채 (decisions.md 192번).
-  const figures = lineUp(carryBabies(people)).map((f): Figure => {
-    if (f.carrying || f.stage === 'baby') {
-      return f
-    }
-    return { ...f, pose: f.who === 'me' ? 'wave' : f.who === 'spouse' ? 'clap' : 'cheer' }
-  })
+  // 온 가족이 바다를 바라보는 뒷모습 (decisions.md 194번).
+  const figures = fromBehind(lineUp(carryBabies(people)))
   return { vignette: 'trip', figures }
 }
 
 /**
- * 아이가 태어난 그림: 아기 침대(오른쪽) 옆에서 배우자가 아기를 안고 내가 감싼다. 바로 위 아이 하나가 왼쪽에서 만세 (decisions.md 67·192번).
+ * 아이가 태어난 그림: 아기 침대(오른쪽) 옆에서 배우자가 아기를 안고 내가 감싼다. 바로 위 아이 하나가 왼쪽에서 손뼉 (decisions.md 67·192번).
  */
 function childArt(game: Game, birth: LogEntry): CreditArt {
   const stage = stageFor(ageOf(game, birth.day))
@@ -269,11 +264,11 @@ function childArt(game: Game, birth: LogEntry): CreditArt {
   // 배우자가 갓난아기를 안고 내가 곁에서 감싼다. 혼자면 내가 안는다 (decisions.md 192번).
   const figures: Figure[] = marriedBy(game, birth.day)
     ? [
-        { who: 'me', sex: game.sex, stage, x: 12, pose: 'reach-right' },
+        { who: 'me', sex: game.sex, stage, x: 12, view: 'side', facing: 'right' },
         { who: 'spouse', sex: opposite(game.sex), stage, x: 24, pose: 'hold', holding },
       ]
     : [{ who: 'me', sex: game.sex, stage, x: 22, pose: 'hold', holding }]
-  // 먼저 난 아이(가장 가까운 동생 하나)는 왼쪽에서 만세.
+  // 먼저 난 아이(가장 가까운 동생 하나)는 왼쪽에서 손뼉.
   if (seq > 1) {
     figures.unshift({
       who: 'kid',
@@ -281,7 +276,8 @@ function childArt(game: Game, birth: LogEntry): CreditArt {
       stage: 'child',
       look: seq - 2,
       x: 0,
-      pose: 'cheer',
+      view: 'side',
+      facing: 'right',
     })
   }
   return { vignette: 'baby', figures }
@@ -308,6 +304,8 @@ function familyEventArt(
     stage: 'adult',
     x: xs[2],
     look: seq - 1,
+    // 독립하는 아이는 걸어서 떠나는 옆모습 (decisions.md 194번).
+    ...(vignette === 'leave-home' ? { view: 'walk' as const, facing: 'right' as const } : {}),
   })
   return { vignette, figures }
 }
@@ -400,13 +398,21 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
         art: {
           vignette: 'wedding',
           figures: [
-            { who: 'me', sex: game.sex, stage: stageFor(age), x: 14, pose: 'reach-right' },
+            {
+              who: 'me',
+              sex: game.sex,
+              stage: stageFor(age),
+              x: 16,
+              view: 'side',
+              facing: 'right',
+            },
             {
               who: 'spouse',
               sex: opposite(game.sex),
               stage: stageFor(age),
               x: 28,
-              pose: 'reach-left',
+              view: 'side',
+              facing: 'left',
             },
           ],
         },
@@ -511,7 +517,14 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
       return {
         key: `home-${e.seq}`,
         line,
-        art: coupleArt(game, vignette, e.day, 0, 14, vignette === 'new-home' ? 'cheer' : undefined),
+        // 새집을 올려다보는 뒷모습 (decisions.md 194번).
+        art:
+          vignette === 'new-home'
+            ? {
+                ...coupleArt(game, vignette, e.day, 2, 16),
+                figures: fromBehind(coupleArt(game, vignette, e.day, 2, 16).figures),
+              }
+            : coupleArt(game, vignette, e.day, 0, 14),
       }
     }
     case 'LIFE': {

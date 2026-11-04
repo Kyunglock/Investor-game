@@ -159,6 +159,7 @@ RAMP = {
     'n': ('o', 'a', 'n', 'N'),  # 신발
     'R': ('7', '7', 'R', '8'),  # 리본
     'Z': ('o', '9', 'Z', 'Z'),  # 지팡이
+    'e': ('q', 'd', 'd', 'c'),  # 옆모습의 앞팔 소매 (몸통보다 어둡게)
 }
 HAIRS = ('h', 'G', 'A')
 
@@ -179,7 +180,209 @@ def mirror(rows):
     return [list(r + r[::-1]) for r in rows]
 
 
-POSES = ('stand', 'cheer', 'clap', 'hold', 'reach-left', 'reach-right', 'wave')
+
+# ---- 옆모습·뒷모습 (decisions.md 194번) ----
+# 옆모습은 오른쪽을 본다(왼쪽을 볼 때는 화면이 좌우로 뒤집는다). 거울이 아니라 32칸 전체를 그린다.
+# 머리: 뒤통수(왼쪽)와 정수리는 머리카락, 얼굴은 오른쪽. 귀는 가운데쯤.
+SIDE_HEAD = [
+    '............hhhhhhhh............',  # 0
+    '..........hhhhhhhhhhhh..........',  # 1
+    '.........hhhhhhhhhhhhhh.........',  # 2
+    '........hhhhhhhhhhhhhhhh........',  # 3
+    '.......hhhhhhhhhhhhhhhhhh.......',  # 4
+    '.......hhhhhhhhhhhhhhhhhh.......',  # 5
+    '......hhhhhhhhhhhhhhhhhhhh......',  # 6
+    '......hhhhhhhhhhhhhhhhhhhh......',  # 7
+    '......hhhhhhhhhhhhhhhhhhhh......',  # 8
+    '......hhhhhhhhhhhhhhhhhhhh......',  # 9 앞머리
+    '......hhhhhhhhssssssssssss......',  # 10
+    '......hhhhhhhsssssssssssss......',  # 11
+    '......hhhhhhhsssssssssssss......',  # 12 귀·눈
+    '......hhhhhhhsssssssssssss......',  # 13
+    '......hhhhhhhssssssssssssss.....',  # 14 코
+    '.......hhhhhhsssssssssssss......',  # 15
+    '.......hhhhhssssssssssssss......',  # 16
+    '........hhhsssssssssssss........',  # 17
+    '..........ssssssssssss..........',  # 18 턱
+    '..............sssss.............',  # 19 목
+]
+# 몸(옆모습). 글자는 앞모습과 같고 e는 앞팔 소매. 다리는 서 있으면 겹쳐 하나, 걸으면 앞뒤로 벌린다.
+SIDE_TORSO_ADULT = [
+    '............ccccwwc.............',
+    '...........cccceeecc............',
+    '...........ccceeeeccc...........',
+    '...........cccceeeccc...........',
+    '...........cccceeeccc...........',
+    '...........cccceeeccc...........',
+    '...........cccceeeccc...........',
+    '...........ccccsssccc...........',
+    '...........bbbbsssbbb...........',
+]
+SIDE_TORSO_CHILD = [
+    '.............cccwwc.............',
+    '............ccceeecc............',
+    '............ccceeecc............',
+    '............ccceeecc............',
+    '............ccceeecc............',
+    '............cccsssccc...........',
+]
+SIDE_LEGS_M = {
+    'stand': [
+        '.............pppppppp...........',
+        '.............pppppppp...........',
+        '.............ppppppp............',
+        '.............ppppppp............',
+        '.............ppppppp............',
+        '.............ppppppp............',
+        '.............ppppppp............',
+        '............nnnnnnnnnn..........',
+        '............nnnnnnnnnn..........',
+    ],
+    'walk': [
+        '............ppppppppp...........',
+        '...........pppp..pppp...........',
+        '..........pppp....pppp..........',
+        '..........pppp....pppp..........',
+        '.........pppp......pppp.........',
+        '.........pppp......pppp.........',
+        '........pppp........pppp........',
+        '.......nnnnn........nnnnnnn.....',
+        '.......nnnnn........nnnnnnn.....',
+    ],
+}
+SIDE_LEGS_F = {
+    'stand': [
+        '...........cccccccccc...........',
+        '..........cccccccccccc..........',
+        '..........cccccccccccc..........',
+        '.........cccccccccccccc.........',
+        '..............sss...............',
+        '..............sss...............',
+        '..............sss...............',
+        '.............nnnnnnn............',
+        '.............nnnnnnn............',
+    ],
+    'walk': [
+        '...........cccccccccc...........',
+        '..........cccccccccccc..........',
+        '..........cccccccccccc..........',
+        '.........cccccccccccccc.........',
+        '...........sss.....sss..........',
+        '..........sss.......sss.........',
+        '..........sss.......sss.........',
+        '.........nnnnn......nnnnnn......',
+        '.........nnnnn......nnnnnn......',
+    ],
+}
+SIDE_LEGS_CHILD_M = {
+    'stand': [
+        '.............ppppppp............',
+        '.............ppppppp............',
+        '.............ppppppp............',
+        '..............sssss.............',
+        '..............sssss.............',
+        '.............nnnnnnnn...........',
+        '.............nnnnnnnn...........',
+    ],
+    'walk': [
+        '.............ppppppp............',
+        '............ppp..ppp............',
+        '...........ppp....ppp...........',
+        '...........sss.....sss..........',
+        '..........sss.......sss.........',
+        '.........nnnnn......nnnnnn......',
+        '.........nnnnn......nnnnnn......',
+    ],
+}
+SIDE_LEGS_CHILD_F = {
+    'stand': [
+        '............ccccccccc...........',
+        '...........ccccccccccc..........',
+        '...........ccccccccccc..........',
+        '..............sssss.............',
+        '..............sssss.............',
+        '.............nnnnnnnn...........',
+        '.............nnnnnnnn...........',
+    ],
+    'walk': [
+        '............ccccccccc...........',
+        '...........ccccccccccc..........',
+        '...........ccccccccccc..........',
+        '...........sss.....sss..........',
+        '..........sss.......sss.........',
+        '.........nnnnn......nnnnnn......',
+        '.........nnnnn......nnnnnn......',
+    ],
+}
+
+
+def side_rows(stage, sex, walk):
+    """옆모습 몸통(머리 + 몸)의 줄들. 앞모습과 같은 줄 수라 발이 바닥에 닿는다."""
+    gait = 'walk' if walk else 'stand'
+    if stage == 'child':
+        legs = (SIDE_LEGS_CHILD_F if sex == 'F' else SIDE_LEGS_CHILD_M)[gait]
+        body = SIDE_TORSO_CHILD + legs
+    else:
+        legs = (SIDE_LEGS_F if sex == 'F' else SIDE_LEGS_M)[gait]
+        body = SIDE_TORSO_ADULT + legs
+        if stage == 'old':
+            # 노년은 바지가 짧은 앞모습처럼 두 줄 줄인다(신발은 남긴다)
+            body = SIDE_TORSO_ADULT + legs[:4] + legs[-2:]
+    return SIDE_HEAD + body
+
+
+
+def profile_hair(region, ht, stage, sex):
+    """옆모습의 머리 색: 노년은 흰머리(할아버지는 정수리가 비고 뒤통수만), 중년은 뒤쪽이 희끗, 여자는 긴 머리가 등 뒤로."""
+    for y in range(ht, ht + 19):
+        for x in range(W):
+            if region[y][x] != 'h':
+                continue
+            rel = y - ht
+            if stage == 'old' and sex == 'M':
+                region[y][x] = 'A' if rel >= 6 and x <= 12 else 's'
+            elif stage == 'old':
+                region[y][x] = 'A'
+            elif stage == 'middle' and x <= 7 and 8 <= rel <= 11:
+                region[y][x] = 'G'
+    if sex == 'F':
+        long_to = {'child': 23, 'adult': 26, 'middle': 26, 'old': 19}[stage]
+        hair = 'A' if stage == 'old' else 'h'
+        for y in range(ht + 15, ht + long_to + 1):
+            for x in range(6, 12):
+                if region[y][x] in ('.', 'c', 'e') or y < ht + 19:
+                    if not (y >= ht + 19 and x < 8):
+                        region[y][x] = hair
+        if stage == 'old':
+            for y, xs in ((ht - 2, range(7, 11)), (ht - 1, range(6, 12)), (ht, range(6, 12))):
+                for x in xs:
+                    if 0 <= y < H:
+                        region[y][x] = 'A'
+
+
+def side_face(put, fill, ht, stage):
+    """옆모습 얼굴: 오른쪽을 보는 눈 하나(반짝임·반사), 볼, 코 그늘, 입, 귀, 목 그늘."""
+    for rel in (12, 13, 14):
+        fill(ht + rel, [21, 22], 'k')
+    put(ht + 13, 21, 'E')
+    put(ht + 15, 21, 'f')
+    put(ht + 15, 22, 'e')
+    fill(ht + 16, [18, 19], 'r')
+    put(ht + 15, 25, 'S')
+    put(ht + 17, 22, 'm')
+    # 귀: 머리카락 바로 앞, 안쪽 그늘
+    for rel in (12, 13, 14):
+        put(ht + rel, 14, 'S')
+    put(ht + 13, 15, 'S')
+    fill(ht + 19, range(14, 19), 'S', 's')
+    if stage in ('middle', 'old'):
+        put(ht + 12, 24, 'S')
+    if stage == 'old':
+        put(ht + 17, 20, 'S')
+
+
+# 두 팔 만세(cheer)는 기괴해 보여 뺐다 (decisions.md 194번).
+POSES = ('stand', 'clap', 'hold', 'reach-left', 'reach-right', 'wave')
 
 
 def apply_pose(region, ht, pose):
@@ -192,14 +395,14 @@ def apply_pose(region, ht, pose):
     top = hy0
     while top - 1 > bt + 2 and all(region[top - 1][x] == 'c' for x in range(hx, hx + 3)):
         top -= 1
-    sides = {'cheer': 'LR', 'clap': 'LR', 'hold': 'LR', 'reach-left': 'L', 'reach-right': 'R', 'wave': 'R'}[pose]
+    sides = {'clap': 'LR', 'hold': 'LR', 'reach-left': 'L', 'reach-right': 'R', 'wave': 'R'}[pose]
     cells = []  # (y, x, ch) 왼쪽 기준. 오른쪽은 거울
 
     def arm(y, x, ch='c'):
         cells.append((y, x, ch))
 
-    if pose == 'cheer' or pose == 'wave':
-        # 만세: 어깨에서 머리 옆으로 곧게 올린 팔, 손은 머리 위 높이
+    if pose == 'wave':
+        # 한 팔 들기: 어깨에서 머리 옆으로 곧게 올린 오른팔, 손은 머리 위 높이
         for y in range(ht + 9, bt + 4):
             for x in (3, 4, 5):
                 arm(y, x, 's' if y < ht + 12 else 'c')
@@ -255,7 +458,7 @@ def apply_pose(region, ht, pose):
     return cross
 
 
-def build(stage, sex, pose='stand'):
+def build(stage, sex, pose='stand', view='front'):
     body = {
         ('baby', 'M'): BABY, ('baby', 'F'): BABY,
         ('child', 'M'): CHILD_M, ('child', 'F'): CHILD_F,
@@ -268,6 +471,19 @@ def build(stage, sex, pose='stand'):
     region = [['.'] * W for _ in range(H)]
     for i, row in enumerate(mirror([shrink(r) for r in head + body])):
         region[ht + i] = row
+    if view in ('side', 'walk'):
+        for i, row in enumerate(side_rows(stage, sex, view == 'walk')):
+            region[ht + i] = list(row)
+    elif view == 'back':
+        # 뒷모습: 얼굴 자리는 뒤통수 머리카락, 귀만 양옆에 남는다. 옷깃·넥타이는 등판 옷이다.
+        for y in range(ht, ht + 19):
+            for x in range(W):
+                if region[y][x] == 's' and not (ht + 12 <= y <= ht + 14 and (x <= 6 or x >= W - 7)):
+                    region[y][x] = 'h'
+        for y in range(ht + 19, H):
+            for x in range(W):
+                if region[y][x] in ('w', 't'):
+                    region[y][x] = 'c'
 
     def R(y, x):
         return region[y][x] if 0 <= y < H and 0 <= x < W else '.'
@@ -276,9 +492,11 @@ def build(stage, sex, pose='stand'):
         if 0 <= y < H and 0 <= x < W:
             region[y][x] = r
 
+    if view in ('side', 'walk'):
+        profile_hair(region, ht, stage, sex)
     # 머리 모양
     hair = 'A' if stage == 'old' else 'h'
-    for y in range(ht, ht + 19):
+    for y in range(ht, ht + 19) if view in ('front', 'back') else ():
         for x in range(W):
             if region[y][x] != 'h':
                 continue
@@ -288,10 +506,14 @@ def build(stage, sex, pose='stand'):
                 # 할아버지: 이마가 넓어지고 옆머리만 희다
                 region[y][x] = 'A' if side <= 7 and rel >= 4 else 's'
             elif stage == 'middle':
-                region[y][x] = 'G' if side <= 6 and rel >= 4 else 'h'
+                # 뒷모습은 귀 위 관자놀이만 희끗하다(옆머리 전체가 희면 헤드폰처럼 보인다, decisions.md 194번)
+                if view == 'back':
+                    region[y][x] = 'G' if side <= 6 and 8 <= rel <= 11 else 'h'
+                else:
+                    region[y][x] = 'G' if side <= 6 and rel >= 4 else 'h'
             else:
                 region[y][x] = hair
-    if sex == 'F':
+    if sex == 'F' and view in ('front', 'back'):
         long_to = {'baby': -1, 'child': 17, 'adult': 23, 'middle': 23, 'old': 15}[stage]
         side_hair = 'A' if stage == 'old' else 'h'
         for rel in range(6, long_to + 1):
@@ -312,7 +534,18 @@ def build(stage, sex, pose='stand'):
                 for x in xs:
                     setr(ht + dy, x, 'A')
     # 지팡이: 오른손에서 바닥까지. 팔을 쓰는 자세에서는 내려놓는다
-    if stage == 'old' and pose == 'stand':
+    if sex == 'F' and view == 'back' and stage in ('child', 'adult', 'middle'):
+        # 뒷모습의 긴 머리: 등을 덮고 내려온다
+        to = {'child': 23, 'adult': 25, 'middle': 25}[stage]
+        for y in range(ht + 18, ht + to + 1):
+            for x in range(9, W - 9):
+                setr(y, x, 'G' if stage == 'middle' and x in (9, W - 10) else 'h')
+    if stage == 'old' and view in ('side', 'walk'):
+        # 옆모습의 지팡이: 앞손에서 바닥까지
+        hand = next(y for y in range(ht + 20, H) if R(y, 16) == 's')
+        for y in range(hand, H - 1):
+            setr(y, 19, 'Z')
+    if stage == 'old' and pose == 'stand' and view == 'front':
         hand = next(y for y in range(ht + 20, H) if R(y, sx(W - 4)) == 's')
         cane = sx(W - 4) + 2
         for y in range(hand - 2, H - 1):
@@ -322,7 +555,7 @@ def build(stage, sex, pose='stand'):
 
     # 자세 (decisions.md 192번): 늘어뜨린 팔을 지우고 자세에 맞는 팔을 다시 그린다. 명암·윤곽은 아래에서 함께 입힌다.
     cross = []
-    if stage != 'baby' and pose != 'stand':
+    if stage != 'baby' and pose != 'stand' and view == 'front':
         cross = apply_pose(region, ht, pose)
 
     # 명암
@@ -394,6 +627,13 @@ def build(stage, sex, pose='stand'):
         r = R(ht + rel, x)
         if r in HAIRS:
             put(ht + rel, x, dark[r])
+    if view == 'back':
+        # 뒷모습: 목덜미 그늘만
+        fill(ht + 19, range(13, 19), 'S', 's')
+        return ht, [''.join(r) for r in g]
+    if view in ('side', 'walk'):
+        side_face(put, fill, ht, stage)
+        return ht, [''.join(r) for r in g]
     if stage == 'baby':
         # 아기 얼굴: 작은 머리에 맞춘 2×2 눈(왼쪽 위 반짝임), 볼, 입, 목 그늘
         for ex in (11, 19):
@@ -488,6 +728,26 @@ def main():
             out.append(f'    {sex}: {{')
             for stage in ('child', 'adult', 'middle', 'old'):
                 ht, rows = build(stage, sex, pose)
+                assert all(len(r) == W for r in rows) and len(rows) == H
+                used |= set(''.join(rows))
+                out.append(f'      {stage}: {{')
+                out.append(f'        headTop: {ht},')
+                out.append('        map: [')
+                out += [f"          '{r}'," for r in rows]
+                out.append('        ],')
+                out.append('      },')
+            out.append('    },')
+        out.append('  },')
+    out.append('}')
+    out.append('')
+    out.append('/** 옆모습(side: 서 있음, walk: 걷는 걸음)과 뒷모습 (decisions.md 194번). 옆모습은 오른쪽을 본다. 아기는 없다. */')
+    out.append("export const VIEW_MAPS: Record<'side' | 'walk' | 'back', Record<Sex, Partial<Record<AgeStage, Body>>>> = {")
+    for view in ('side', 'walk', 'back'):
+        out.append(f"  {view}: {{")
+        for sex in ('M', 'F'):
+            out.append(f'    {sex}: {{')
+            for stage in ('child', 'adult', 'middle', 'old'):
+                ht, rows = build(stage, sex, 'stand', view)
                 assert all(len(r) == W for r in rows) and len(rows) == H
                 used |= set(''.join(rows))
                 out.append(f'      {stage}: {{')

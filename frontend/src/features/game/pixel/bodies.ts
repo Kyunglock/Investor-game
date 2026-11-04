@@ -1,5 +1,5 @@
 import type { Sex } from '../../../api/client'
-import { BODY_MAPS, POSE_MAPS } from './bodyMaps'
+import { BODY_MAPS, POSE_MAPS, VIEW_MAPS } from './bodyMaps'
 import type { Body } from './sprite'
 
 /**
@@ -32,10 +32,10 @@ export function stageFor(ageYears: number): AgeStage {
 }
 
 /**
- * 자세 (decisions.md 192번). stand 늘어뜨린 팔(노년은 지팡이), cheer 두 팔 만세, wave 오른팔만 들기, clap 가슴 앞 손뼉,
+ * 자세 (decisions.md 192·194번). 두 팔 만세(cheer)는 기괴해 보여 뺐다. stand 늘어뜨린 팔(노년은 지팡이), wave 오른팔만 들기, clap 가슴 앞 손뼉,
  * hold 가슴 앞에 아기를 안는 팔(아기는 Person이 그린다), reach-left·reach-right 옆 사람에게 뻗은 팔(손을 잡거나 어깨를 감싼다).
  */
-export type Pose = 'stand' | 'cheer' | 'wave' | 'clap' | 'hold' | 'reach-left' | 'reach-right'
+export type Pose = 'stand' | 'wave' | 'clap' | 'hold' | 'reach-left' | 'reach-right'
 
 /** 성별·나이의 몸통. 여자는 긴 머리와 치마(노년은 쪽 찐 머리), 중년 남자는 넥타이, 노년은 흰머리와 지팡이. 아기는 자세가 없다. */
 export function bodyFor(sex: Sex, stage: AgeStage, pose: Pose = 'stand'): Body {
@@ -43,4 +43,15 @@ export function bodyFor(sex: Sex, stage: AgeStage, pose: Pose = 'stand'): Body {
     return BODY_MAPS[sex][stage]
   }
   return POSE_MAPS[pose][sex][stage] ?? BODY_MAPS[sex][stage]
+}
+
+/** 보는 방향 (decisions.md 194번). front 정면, side 옆모습(서 있음), walk 옆모습(걷는 걸음), back 뒷모습. 옆모습은 오른쪽을 보는 그림이다. */
+export type View = 'front' | 'side' | 'walk' | 'back'
+
+/** 방향까지 정한 몸통. 정면이 아니면 자세는 없고, 아기는 정면뿐이다. */
+export function viewBody(sex: Sex, stage: AgeStage, view: View, pose: Pose = 'stand'): Body {
+  if (view === 'front' || stage === 'baby') {
+    return bodyFor(sex, stage, pose)
+  }
+  return VIEW_MAPS[view][sex][stage] ?? bodyFor(sex, stage, pose)
 }
