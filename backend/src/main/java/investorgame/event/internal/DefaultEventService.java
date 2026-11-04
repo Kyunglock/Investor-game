@@ -1859,6 +1859,7 @@ class DefaultEventService implements EventService {
             .filter(c -> !c.followUpOnly())
             .filter(c -> c.fits(jobCode, age, context.netWorth()))
             .filter(c -> c.fitsTenure(tenure))
+            .filter(c -> c.fitsHoldings(context.heldDropBp().values()))
             .filter(c -> !c.code().equals(lastCode))
             .filter(c -> !c.movesJob() || !betterJobs.isEmpty())
             .filter(c -> careerFits(c, previous, start))

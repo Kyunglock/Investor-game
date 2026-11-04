@@ -260,6 +260,30 @@ class JsonContentCatalogTest {
     assertThat(wrong).isEmpty();
   }
 
+  /**
+   * #242: 전업투자자의 장면에서 1,000만 원 넘게 잃을 수 있으면 순자산 조건(minNetWorth)이 그 손실 이상이다. 가진 돈 없는 초보가 그대로 빚을 지지
+   * 않게.
+   */
+  @Test
+  void 투자자_장면의_큰_손실은_순자산이_받쳐_줄_때만_나온다() {
+    List<String> wrong = new ArrayList<>();
+    for (var career : load().careers()) {
+      if (!career.jobs().contains(CareerDefinition.FULL_TIME_INVESTOR) || career.followUpOnly()) {
+        continue;
+      }
+      long worst =
+          career.options().stream()
+              .flatMap(o -> java.util.stream.Stream.of(o.success(), o.fail()))
+              .mapToLong(CareerDefinition.Effect::amount)
+              .min()
+              .orElse(0);
+      if (worst < -10_000_000L && (career.minNetWorth() == null || career.minNetWorth() < -worst)) {
+        wrong.add(career.code() + ": " + worst + " / " + career.minNetWorth());
+      }
+    }
+    assertThat(wrong).isEmpty();
+  }
+
   @Test
   void 알_수_없는_유형_코드는_오류다() {
     assertThatThrownBy(() -> load().investorType("none-none-none"))

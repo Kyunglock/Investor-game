@@ -24718,7 +24718,7 @@
             "conviction": -1,
             "patience": 1
           },
-          "text": "하필 그날 계좌가 파랬다. 한동안 명절에 안 가기로 했다.",
+          "text": "하필 그날 장이 파랬다. 한동안 명절에 안 가기로 했다.",
           "happiness": -5,
           "family": -3
         }
@@ -24913,6 +24913,7 @@
     "jobs": [
       "INVEST"
     ],
+    "minNetWorth": 100000000,
     "options": [
       {
         "code": "join",
@@ -24935,7 +24936,7 @@
           "statDeltas": {
             "conviction": -2
           },
-          "text": "금감원 단속에 걸렸다. 자본시장법 위반 벌금 5,000만 원.",
+          "text": "금감원 조사 끝에 검찰에 넘겨졌다. 유사투자자문 위반으로 벌금과 변호사비 5,000만 원이 나갔다.",
           "happiness": -11
         }
       },
@@ -25190,13 +25191,15 @@
   {
     "code": "inv-first-loss",
     "title": "첫 반토막",
-    "body": "전업 첫해, 확신했던 종목이 반토막 났다. 생활비 통장 잔고는 석 달 치밖에 안 남았다. 아침마다 계좌를 열기가 무섭다.",
+    "body": "전업 첫해, 확신했던 종목이 고점에서 3할 넘게 빠졌다. 생활비 통장 잔고는 석 달 치밖에 안 남았다. 아침마다 계좌를 열기가 무섭다.",
     "weight": 8,
     "minTenureYears": 0,
     "maxTenureYears": 3,
     "jobs": [
       "INVEST"
     ],
+    "minNetWorth": 50000000,
+    "minHeldDropBp": 3000,
     "options": [
       {
         "code": "hold",
@@ -25260,6 +25263,67 @@
     ]
   },
   {
+    "code": "inv-living",
+    "title": "생활비 계산",
+    "body": "전업 첫해. 월급이 끊기니 생활비가 다달이 계좌에서 빠져나간다. 한 달 생활비를 벌려면 수익률이 얼마나 나와야 하는지 계산해 보다가 한숨이 나왔다.",
+    "weight": 8,
+    "minTenureYears": 0,
+    "maxTenureYears": 1,
+    "jobs": [
+      "INVEST"
+    ],
+    "options": [
+      {
+        "code": "side",
+        "label": "단기 알바로 생활비를 번다",
+        "success": {
+          "amount": 6000000,
+          "statDeltas": {
+            "patience": 1
+          },
+          "happiness": -1,
+          "text": "반년 동안 주말 물류센터에 나갔다. 생활비 600만 원을 벌어 계좌를 건드리지 않았다."
+        }
+      },
+      {
+        "code": "aim",
+        "label": "목표 수익률을 올려 공격적으로 굴린다",
+        "stat": "courage",
+        "baseBp": 3000,
+        "perPointBp": 40,
+        "success": {
+          "amount": 5000000,
+          "statDeltas": {
+            "courage": 2
+          },
+          "happiness": 5,
+          "text": "몇 번의 매매가 맞아떨어졌다. 생활비 500만 원을 시장에서 벌었다."
+        },
+        "fail": {
+          "amount": -5000000,
+          "statDeltas": {
+            "courage": 1,
+            "patience": -1
+          },
+          "happiness": -6,
+          "text": "조급한 매매가 잇달아 틀렸다. 500만 원을 잃었다."
+        }
+      },
+      {
+        "code": "save",
+        "label": "생활비를 줄이고 원칙대로 한다",
+        "success": {
+          "statDeltas": {
+            "conviction": 1,
+            "patience": 1
+          },
+          "happiness": -2,
+          "text": "외식과 구독을 끊었다. 느리지만 계좌가 덜 흔들린다."
+        }
+      }
+    ]
+  },
+  {
     "code": "inv-margin",
     "title": "신용 한도 알림",
     "body": "증권사 앱이 신용 한도를 올려 주겠다고 알림을 보낸다. 두 배로 사면 수익도 두 배라는 계산이 머리를 맴돈다.",
@@ -25269,6 +25333,7 @@
     "jobs": [
       "INVEST"
     ],
+    "minNetWorth": 100000000,
     "options": [
       {
         "code": "take",
@@ -25351,20 +25416,20 @@
         "baseBp": 3500,
         "perPointBp": 40,
         "success": {
-          "amount": 20000000,
+          "amount": 15000000,
           "statDeltas": {
             "insight": 1
           },
-          "text": "공동 투자가 잘 풀렸다. 내 몫 2,000만 원.",
+          "text": "공동 투자가 잘 풀렸다. 내 몫 1,500만 원.",
           "happiness": 6
         },
         "fail": {
-          "amount": -30000000,
+          "amount": -10000000,
           "statDeltas": {
             "conviction": -1,
             "insight": 1
           },
-          "text": "모임 회장이 고른 종목이 상장폐지됐다. 3,000만 원이 사라졌다.",
+          "text": "모임 회장이 고른 종목이 상장폐지됐다. 한몫씩 넣은 1,000만 원이 사라졌다.",
           "happiness": -8
         }
       },
@@ -25383,11 +25448,11 @@
         "code": "safe",
         "label": "배당주와 채권으로 나눈다",
         "success": {
-          "amount": 5000000,
+          "amount": 3000000,
           "statDeltas": {
             "patience": 1
           },
-          "text": "배당과 이자로 500만 원이 들어왔다.",
+          "text": "배당과 이자로 300만 원이 들어왔다.",
           "happiness": 3
         }
       }
@@ -25464,6 +25529,7 @@
     "jobs": [
       "INVEST"
     ],
+    "minNetWorth": 100000000,
     "options": [
       {
         "code": "go",
@@ -25524,6 +25590,7 @@
     "jobs": [
       "INVEST"
     ],
+    "minNetWorth": 100000000,
     "options": [
       {
         "code": "try",
@@ -25595,6 +25662,7 @@
     "jobs": [
       "INVEST"
     ],
+    "minNetWorth": 100000000,
     "options": [
       {
         "code": "join",
@@ -25664,6 +25732,7 @@
     "jobs": [
       "INVEST"
     ],
+    "minNetWorth": 60000000,
     "options": [
       {
         "code": "take",
@@ -25799,8 +25868,8 @@
   },
   {
     "code": "inv-tax",
-    "title": "대주주 양도세",
-    "body": "연말이다. 한 종목 보유액이 대주주 기준을 넘어 내년엔 양도세를 내야 한다. 다들 12월에 팔아 기준을 피한다.",
+    "title": "금융소득종합과세",
+    "body": "연말이다. 올해 배당과 이자가 2,000만 원을 넘어 금융소득종합과세 대상이 된다. 배당락 전에 팔아 배당을 줄이자는 사람이 많다.",
     "weight": 6,
     "minTenureYears": 10,
     "minAge": 52,
@@ -25820,7 +25889,7 @@
           "statDeltas": {
             "conviction": 2
           },
-          "text": "모두가 던진 날 버텼다. 연초 반등으로 5,000만 원을 더 벌었다.",
+          "text": "배당을 다 받고 들고 갔다. 세금을 내고도 연초 반등으로 5,000만 원을 더 벌었다.",
           "happiness": 8
         },
         "fail": {
@@ -25828,13 +25897,13 @@
           "statDeltas": {
             "conviction": 1
           },
-          "text": "양도세 2,000만 원을 냈다. 세금도 투자의 일부다.",
+          "text": "종합과세로 세금 2,000만 원을 더 냈다. 세금도 투자의 일부다.",
           "happiness": -4
         }
       },
       {
         "code": "move",
-        "label": "12월에 팔고 1월에 되산다",
+        "label": "배당락 전에 팔고 뒤에 되산다",
         "stat": "luck",
         "baseBp": 5000,
         "perPointBp": 30,
@@ -25843,7 +25912,7 @@
           "statDeltas": {
             "patience": 1
           },
-          "text": "팔았다 되샀다. 세금 1,000만 원을 아꼈다.",
+          "text": "배당락 전에 팔았다 되샀다. 세금 1,000만 원을 아꼈다.",
           "happiness": 4
         },
         "fail": {
@@ -25863,7 +25932,7 @@
           "statDeltas": {
             "insight": 1
           },
-          "text": "세무사비 300만 원으로 내년 세금을 줄일 방법을 찾았다.",
+          "text": "세무사비 300만 원으로 배당 시점을 나누고 연금 계좌로 옮길 방법을 찾았다.",
           "happiness": 1
         }
       }
@@ -26219,7 +26288,7 @@
           "statDeltas": {
             "conviction": 1
           },
-          "text": "불완전판매가 나왔다. 과징금 5억.",
+          "text": "불완전판매가 나왔다. 회사가 과징금을 냈고, 대표 책임으로 성과급 5억 원을 반납했다.",
           "happiness": -8
         }
       },
@@ -26243,7 +26312,7 @@
           "statDeltas": {
             "conviction": -2
           },
-          "text": "로비가 들통났다. 과징금 10억에 대표 직무 정지 3개월.",
+          "text": "로비가 들통났다. 대표 개인 벌금과 변호사비, 반납한 성과급까지 10억이 나갔고 직무 정지 3개월을 받았다.",
           "happiness": -12
         }
       },
@@ -26265,7 +26334,7 @@
           "statDeltas": {
             "patience": 1
           },
-          "text": "경미한 위반이 나왔다. 과태료 2억 원.",
+          "text": "경미한 위반이 나왔다. 회사 과태료에 대표 성과급 2억 원이 깎였다.",
           "happiness": -5
         }
       }
@@ -26293,7 +26362,7 @@
           "statDeltas": {
             "courage": 2
           },
-          "text": "주관사로 뽑혔다. 상장이 흥행해 수수료 수입 5억, 회사 위상도 올랐다.",
+          "text": "주관사로 뽑혔다. 상장이 흥행해 회사가 수수료 50억을 벌었고, 대표 성과급으로 5억이 나왔다.",
           "followUp": "sec-ipo-fraud",
           "followUpDays": 540,
           "happiness": 9
@@ -26303,7 +26372,7 @@
           "statDeltas": {
             "courage": 1
           },
-          "text": "대형사에 밀렸다. 제안서 비용만 들었다.",
+          "text": "대형사에 밀렸다. 제안서 비용으로 대표 성과급 5,000만 원이 깎였다.",
           "happiness": -5
         }
       },
@@ -26329,7 +26398,7 @@
           "statDeltas": {
             "insight": 1
           },
-          "text": "공동 주관사 몫으로 수수료 1억 원을 받았다.",
+          "text": "공동 주관사 몫으로 회사가 수수료 10억을 받았다. 대표 성과급 1억 원.",
           "happiness": 5
         },
         "fail": {
@@ -26345,7 +26414,7 @@
   {
     "code": "sec-star",
     "title": "스타 매니저 영입",
-    "body": "업계에서 수익률 1위를 찍은 펀드매니저가 이직을 고민한다는 소문이다. 연봉과 사이닝 보너스로 3억은 줘야 한다.",
+    "body": "업계에서 수익률 1위를 찍은 펀드매니저가 이직을 고민한다는 소문이다. 연봉과 사이닝 보너스로 30억은 줘야 하고, 회사 돈이 모자라 대표 지분 일부를 내놓아야 한다.",
     "weight": 7,
     "minTenureYears": 1,
     "jobs": [
@@ -26364,7 +26433,7 @@
           "statDeltas": {
             "insight": 1
           },
-          "text": "펀드에 돈이 몰렸다. 회사 실적이 뛰어 대표 보수도 8% 올랐다.",
+          "text": "대표 지분 3억 원어치를 사이닝 보너스로 내줬다. 펀드에 돈이 몰려 회사 실적이 뛰었고 대표 보수도 8% 올랐다.",
           "followUp": "sec-star-leave",
           "followUpDays": 730,
           "happiness": 7
@@ -26374,7 +26443,7 @@
           "statDeltas": {
             "insight": 1
           },
-          "text": "데려오자마자 수익률이 꺾였다. 3억이 아깝다.",
+          "text": "대표 지분 3억 원어치를 내줬는데 데려오자마자 수익률이 꺾였다.",
           "happiness": -8
         }
       },
@@ -26804,7 +26873,7 @@
           "statDeltas": {
             "courage": 1
           },
-          "text": "분양이 완판됐다. 수수료 8억 원.",
+          "text": "분양이 완판됐다. 회사가 보증 수수료 80억을 벌었고, 대표 성과급으로 8억이 나왔다.",
           "happiness": 8
         },
         "fail": {
@@ -26813,7 +26882,7 @@
             "courage": 1,
             "conviction": -1
           },
-          "text": "미분양이 터졌다. 보증 채무 15억 원을 떠안았다.",
+          "text": "미분양이 터져 회사가 보증 채무를 떠안았다. 증자에 대표 몫 15억 원을 넣어 회사를 살렸다.",
           "happiness": -12
         }
       },
@@ -26840,7 +26909,7 @@
           "statDeltas": {
             "insight": 1
           },
-          "text": "선순위 몫만 받아 2억 원을 벌었다.",
+          "text": "선순위 몫만 받아 회사가 20억을 벌었다. 대표 성과급 2억 원.",
           "happiness": 4
         },
         "fail": {
@@ -26848,7 +26917,7 @@
           "statDeltas": {
             "insight": 1
           },
-          "text": "선순위도 3억 원이 물렸다.",
+          "text": "선순위도 물렸다. 손실 책임으로 대표 성과급 3억 원을 반납했다.",
           "happiness": -5
         }
       }
@@ -26893,7 +26962,7 @@
             "courage": 2
           },
           "followUp": "sec-mna-earnout",
-          "followUpDays": 1095,
+          "followUpDays": 1825,
           "text": "버틴 끝에 경영권 5년을 받아 냈다. 지분값 20억 원.",
           "happiness": 6
         },
@@ -27047,8 +27116,69 @@
           "statDeltas": {
             "insight": 1
           },
-          "text": "영입 비용 3억 원. 회사가 한결 차분해졌다.",
-          "happiness": 2
+          "text": "영입 비용 3억 원. 대표 자리를 전문경영인에게 넘기고 이사회 의장으로 물러났다. 보수가 50% 줄었고, 회사는 한결 차분해졌다.",
+          "happiness": 2,
+          "salaryPercent": -50
+        }
+      }
+    ]
+  },
+  {
+    "code": "sec-retire",
+    "title": "은퇴 시점",
+    "body": "일흔이 가깝다. 이사회가 조심스럽게 은퇴 시점을 묻는다. 대주주로 남아도 대표 보수는 내려놓는 게 관례다.",
+    "weight": 12,
+    "minTenureYears": 5,
+    "jobs": [
+      "securities-ceo"
+    ],
+    "minAge": 66,
+    "options": [
+      {
+        "code": "retire",
+        "label": "물러나 전업투자자로 돌아간다",
+        "success": {
+          "amount": 500000000,
+          "statDeltas": {
+            "patience": 2
+          },
+          "happiness": 6,
+          "becomeInvestor": true,
+          "text": "퇴임 공로금 5억 원을 받고 물러났다. 다시 혼자 시장 앞에 앉는 전업투자자다."
+        }
+      },
+      {
+        "code": "chair",
+        "label": "명예회장으로 남는다",
+        "success": {
+          "salaryPercent": -50,
+          "statDeltas": {
+            "conviction": 1
+          },
+          "happiness": 2,
+          "text": "명예회장으로 남았다. 보수가 50% 줄었다."
+        }
+      },
+      {
+        "code": "stay",
+        "label": "아직 내가 해야 한다",
+        "stat": "conviction",
+        "baseBp": 3000,
+        "perPointBp": 40,
+        "success": {
+          "statDeltas": {
+            "conviction": 2
+          },
+          "happiness": 4,
+          "text": "이사회가 한 번 더 믿어 줬다. 대표 자리를 지킨다."
+        },
+        "fail": {
+          "salaryPercent": -30,
+          "statDeltas": {
+            "conviction": 1
+          },
+          "happiness": -8,
+          "text": "이사회가 등을 돌렸다. 대표 직함만 남고 보수가 30% 깎였다."
         }
       }
     ]
@@ -27332,7 +27462,7 @@
   {
     "code": "sec-mna-earnout",
     "title": "인수 3년 뒤",
-    "body": "인수된 지 3년. 지주 회장이 해마다 실적 목표를 올리고, 내 사람들이 하나씩 밀려난다. 계약상 남은 성과급이 걸려 있다.",
+    "body": "인수 때 보장받은 임기가 끝나 간다. 그동안 지주 회장이 해마다 실적 목표를 올리고, 내 사람들이 하나씩 밀려난다. 계약상 남은 성과급이 걸려 있다.",
     "weight": 1,
     "minTenureYears": 0,
     "jobs": [
@@ -27351,16 +27481,17 @@
           "statDeltas": {
             "patience": 2
           },
-          "text": "목표를 채워 성과급 5억 원을 받았다.",
-          "happiness": 7
+          "text": "목표를 채워 성과급 5억 원을 받았다. 보장된 임기가 끝나 대표 자리를 지주 사람에게 넘겼다. 다시 혼자 시장 앞에 앉는 전업투자자다.",
+          "happiness": 7,
+          "becomeInvestor": true
         },
         "fail": {
-          "salaryPercent": -15,
           "statDeltas": {
             "patience": 1
           },
-          "text": "목표를 놓쳤다. 보수가 15% 깎였다.",
-          "happiness": -6
+          "text": "목표를 놓쳤다. 임기가 끝나자 지주는 재계약하지 않았다. 다시 혼자 시장 앞에 앉는 전업투자자다.",
+          "happiness": -6,
+          "becomeInvestor": true
         }
       },
       {
@@ -27387,16 +27518,16 @@
           "statDeltas": {
             "courage": 2
           },
-          "text": "이사회에서 이겼다. 독립 경영을 인정받았다. 보수가 5% 올랐다.",
+          "text": "이사회에서 이겼다. 독립 경영을 인정받아 대표로 재계약했다. 보수가 5% 올랐다.",
           "happiness": 6
         },
         "fail": {
-          "salaryPercent": -25,
           "statDeltas": {
             "courage": 1
           },
-          "text": "회장 눈 밖에 났다. 보수가 25% 깎였다.",
-          "happiness": -8
+          "text": "회장 눈 밖에 났다. 임기가 끝나자 재계약 없이 밀려났다. 다시 혼자 시장 앞에 앉는 전업투자자다.",
+          "happiness": -8,
+          "becomeInvestor": true
         }
       }
     ]

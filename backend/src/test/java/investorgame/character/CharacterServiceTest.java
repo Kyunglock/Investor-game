@@ -55,6 +55,19 @@ class CharacterServiceTest {
     assertThat(characters.tenureYears(gameId, 720)).isEqualTo(2);
   }
 
+  /** #242: 감봉·보수 삭감이 쌓여도 인상분은 −50% 아래로 내려가지 않는다. */
+  @Test
+  void 인상분은_마이너스_50퍼센트_아래로_내려가지_않는다() {
+    characters.assignJob(gameId, "office", 100);
+    for (int i = 0; i < 4; i++) {
+      characters.addSalaryBonus(gameId, -2500);
+    }
+    assertThat(characters.get(gameId).salaryBonusBp())
+        .isEqualTo(CharacterService.MIN_SALARY_BONUS_BP);
+    characters.addSalaryBonus(gameId, 1000);
+    assertThat(characters.get(gameId).salaryBonusBp()).isEqualTo(-4000);
+  }
+
   /** 직장 체계 (decisions.md 26번): 인상분 누적, 이직하면 연차·인상분 초기화, 실직하면 직업이 없어지고 처음 일한 날은 남는다. */
   @Test
   void 인상분은_쌓이고_이직하면_연차와_인상분이_초기화되고_실직하면_직업이_없어진다() {
