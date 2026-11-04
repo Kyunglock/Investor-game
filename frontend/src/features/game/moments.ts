@@ -2,7 +2,7 @@ import type { Game, LogEntry, Outcome } from '../../api/client'
 import { childWord, withParticle } from './labels'
 import { childName } from './log'
 import { stageFor } from './pixel/bodies'
-import { carryBabies, lineUp, type Member } from './pixel/family'
+import { carryBabies, fromBehind, lineUp, type Member } from './pixel/family'
 import type { MoodKey } from './pixel/moods'
 import { opposite } from './pixel/sexes'
 import type { CreditArt, Figure, VignetteKey } from './pixel/vignettes'
@@ -33,18 +33,8 @@ function tripArt(game: Game): CreditArt {
       people.push({ who: 'kid', sex: kid.sex, stage: stageFor(kid.age), look: i })
     }
   })
-  // 왼쪽부터 닿지 않게 세우고, 넘치는 사람은 그리지 않는다. 나는 바다에 손을 흔들고 아이들은 만세 (decisions.md 192번).
-  return { vignette: 'trip', figures: cheerful(lineUp(carryBabies(people))) }
-}
-
-/** 신난 자세: 나는 손을 흔들고, 업지 않은 배우자는 손뼉, 서 있는 아이들은 만세 (decisions.md 192번). 아기를 업었으면 그대로 선다. */
-function cheerful(figures: Figure[]): Figure[] {
-  return figures.map((f) => {
-    if (f.carrying || f.stage === 'baby') {
-      return f
-    }
-    return { ...f, pose: f.who === 'me' ? 'wave' : f.who === 'spouse' ? 'clap' : 'cheer' }
-  })
+  // 왼쪽부터 닿지 않게 세우고, 넘치는 사람은 그리지 않는다. 온 가족이 바다를 바라보는 뒷모습 (decisions.md 196번).
+  return { vignette: 'trip', figures: fromBehind(lineUp(carryBabies(people))) }
 }
 
 /** 집들이 그림: 거실에 나(와 배우자). 손님을 맞으며 손을 흔든다 (decisions.md 140·192번). */
@@ -57,7 +47,7 @@ function housewarmingArt(game: Game): CreditArt {
   return { vignette: 'family', figures }
 }
 
-/** 집을 산 날: 새집 앞에서 온 가족 만세, 아기는 업은 채 (decisions.md 192번). */
+/** 집을 산 날: 새집 앞에서 온 가족 손뼉, 아기는 업은 채 (decisions.md 192번). */
 function newHomeArt(game: Game): CreditArt {
   const stage = myStage(game)
   const people: Member[] = [{ who: 'me', sex: game.sex, stage }]
@@ -69,33 +59,32 @@ function newHomeArt(game: Game): CreditArt {
       people.push({ who: 'kid', sex: kid.sex, stage: stageFor(kid.age), look: i })
     }
   })
-  const figures = lineUp(carryBabies(people)).map((f) =>
-    f.carrying || f.stage === 'baby' ? f : { ...f, pose: 'cheer' as const },
-  )
-  return { vignette: 'new-home', figures }
+  // 새집을 올려다보는 뒷모습 (decisions.md 196번).
+  return { vignette: 'new-home', figures: fromBehind(lineUp(carryBabies(people))) }
 }
 
-/** 결혼한 날: 꽃 아치 앞에서 둘이 손을 잡는다 (decisions.md 192번). */
+/** 결혼한 날: 꽃 아치 앞에서 둘이 마주 본다 (decisions.md 192·196번). */
 function marriageArt(game: Game): CreditArt {
   const stage = myStage(game)
   return {
     vignette: 'wedding',
     figures: [
-      { who: 'me', sex: game.sex, stage, x: 14, pose: 'reach-right' },
-      { who: 'spouse', sex: opposite(game.sex), stage, x: 28, pose: 'reach-left' },
+      { who: 'me', sex: game.sex, stage, x: 16, view: 'side', facing: 'right' },
+      { who: 'spouse', sex: opposite(game.sex), stage, x: 28, view: 'side', facing: 'left' },
     ],
   }
 }
 
 /**
- * 아이가 태어난 날: 배우자가 아기를 안고 내가 곁에서 어깨를 감싼다. 혼자면 내가 안는다. 먼저 난 아이들은 옆에서 만세 (decisions.md 192번).
+ * 아이가 태어난 날: 배우자가 아기를 안고 내가 곁에서 어깨를 감싼다. 혼자면 내가 안는다. 먼저 난 아이들은 옆에서 손뼉 (decisions.md 192번).
  */
 function birthArt(game: Game, baby: { sex: Game['sex']; look: number }): CreditArt {
   const stage = myStage(game)
   const holding = { sex: baby.sex, look: baby.look }
   const figures: Figure[] = game.household.married
     ? [
-        { who: 'me', sex: game.sex, stage, x: 12, pose: 'reach-right' },
+        // 아기를 안은 배우자 쪽으로 돌아선 옆모습 (decisions.md 196번).
+        { who: 'me', sex: game.sex, stage, x: 12, view: 'side', facing: 'right' },
         { who: 'spouse', sex: opposite(game.sex), stage, x: 24, pose: 'hold', holding },
       ]
     : [{ who: 'me', sex: game.sex, stage, x: 22, pose: 'hold', holding }]
@@ -110,7 +99,8 @@ function birthArt(game: Game, baby: { sex: Game['sex']; look: number }): CreditA
         stage: kidStage,
         x: 0,
         look: older,
-        pose: 'cheer',
+        view: 'side',
+        facing: 'right',
       })
     }
   }
@@ -135,27 +125,52 @@ const OUTING_SCENES: Record<
     kid: Omit<Figure, 'who' | 'sex' | 'stage'>
   }
 > = {
+  // 손잡고 걷는다: 둘 다 오른쪽으로 걷는 옆모습 (decisions.md 196번).
   park: {
     vignette: 'park',
-    me: { x: 14, pose: 'reach-right' },
-    kid: { x: 28, pose: 'reach-left' },
+    me: { x: 12, view: 'walk', facing: 'right' },
+    kid: { x: 24, view: 'walk', facing: 'right' },
   },
-  zoo: { vignette: 'zoo', me: { x: 2, pose: 'wave' }, kid: { x: 18, pose: 'cheer' } },
-  camp: { vignette: 'camp', me: { x: 0, pose: 'clap' }, kid: { x: 13, pose: 'cheer' } },
-  'sports-day': { vignette: 'sports', me: { x: 2, pose: 'cheer' }, kid: { x: 24, pose: 'cheer' } },
-  'school-play': {
-    vignette: 'stage',
-    me: { x: 0, pose: 'clap' },
-    kid: { x: 25, pose: 'cheer', lift: 3 },
+  // 울타리 너머 기린을 바라보는 뒷모습.
+  zoo: { vignette: 'zoo', me: { x: 10, view: 'back' }, kid: { x: 24, view: 'back' } },
+  // 모닥불을 바라보는 옆모습.
+  camp: {
+    vignette: 'camp',
+    me: { x: 0, view: 'side', facing: 'right' },
+    kid: { x: 12, view: 'side', facing: 'right' },
   },
+  // 아이는 달리고, 나는 손뼉.
+  'sports-day': {
+    vignette: 'sports',
+    me: { x: 2, pose: 'clap' },
+    kid: { x: 26, view: 'walk', facing: 'right' },
+  },
+  // 객석의 뒷모습, 무대 위 아이.
+  'school-play': { vignette: 'stage', me: { x: 4, view: 'back' }, kid: { x: 25, lift: 3 } },
+  // 칠판을 보는 아이의 뒷모습, 뒤에서 지켜보는 나.
   'open-class': {
     vignette: 'classroom',
     me: { x: 44, pose: 'clap' },
-    kid: { x: 16, pose: 'wave' },
+    kid: { x: 18, view: 'back' },
   },
-  birthday: { vignette: 'birthday', me: { x: 42, pose: 'clap' }, kid: { x: 8, pose: 'cheer' } },
-  recital: { vignette: 'recital', me: { x: 0, pose: 'clap' }, kid: { x: 25, lift: 3 } },
-  graduation: { vignette: 'graduation', me: { x: 4, pose: 'clap' }, kid: { x: 18, pose: 'cheer' } },
+  // 케이크 앞 아이를 향해 손뼉.
+  birthday: {
+    vignette: 'birthday',
+    me: { x: 42, view: 'side', facing: 'left' },
+    kid: { x: 8, pose: 'clap' },
+  },
+  // 객석의 뒷모습, 피아노를 향한 아이.
+  recital: {
+    vignette: 'recital',
+    me: { x: 2, view: 'back' },
+    kid: { x: 24, lift: 3, view: 'side', facing: 'right' },
+  },
+  // 학교 앞에서 마주 본다.
+  graduation: {
+    vignette: 'graduation',
+    me: { x: 4, view: 'side', facing: 'right' },
+    kid: { x: 17, view: 'side', facing: 'left' },
+  },
 }
 
 function outingArt(game: Game, outing?: unknown): CreditArt {
@@ -228,6 +243,9 @@ function leavingArt(game: Game, seq: number): CreditArt {
     stage: 'adult',
     x: 34,
     look: seq - 1,
+    // 짐을 들고 길을 걸어 떠난다 (decisions.md 196번).
+    view: 'walk',
+    facing: 'right',
   })
   return { vignette: 'leave-home', figures }
 }
@@ -399,7 +417,7 @@ export function momentForOutcome(outcome: Outcome, game: Game): Moment | null {
     ? {
         art: {
           vignette: 'surge',
-          figures: [{ who: 'me', sex: game.sex, stage: 'adult', x: 36, pose: 'cheer' }],
+          figures: [{ who: 'me', sex: game.sex, stage: 'adult', x: 36, pose: 'clap' }],
         },
         mood: 'confident',
         caption: '시세판이 온통 빨갛다. 내가 맞았다.',

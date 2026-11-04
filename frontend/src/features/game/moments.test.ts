@@ -320,11 +320,19 @@ describe('상황마다 다른 그림과 자세 (decisions.md 192번)', () => {
         code,
       ).toEqual(['me', 'kid'])
     }
+    // 학예회: 나는 객석에서 무대를 보는 뒷모습, 아이는 무대 위(바닥에서 띄움) (decisions.md 196번).
     const play = momentForNotice(outing('school-play'), game({ household: kids(8) }))
-    expect(play?.art.figures.map((f) => [f.pose, f.lift])).toEqual([
-      ['clap', undefined],
-      ['cheer', 3],
+    expect(play?.art.figures.map((f) => [f.view, f.lift])).toEqual([
+      ['back', undefined],
+      [undefined, 3],
     ])
+    // 놀이동산은 손잡고 걷는 옆모습, 동물원은 기린을 보는 뒷모습.
+    expect(
+      momentForNotice(outing('park'), game({ household: kids(8) }))?.art.figures.map((f) => f.view),
+    ).toEqual(['walk', 'walk'])
+    expect(
+      momentForNotice(outing('zoo'), game({ household: kids(8) }))?.art.figures.map((f) => f.view),
+    ).toEqual(['back', 'back'])
   })
 
   it('나들이에 데려간 아이가 아기면 내가 안고 간다', () => {
@@ -333,7 +341,7 @@ describe('상황마다 다른 그림과 자세 (decisions.md 192번)', () => {
     expect(m?.art.figures[0]).toMatchObject({ who: 'me', pose: 'hold', holding: { look: 0 } })
   })
 
-  it('아이가 태어나면 배우자가 아기를 안고 내가 감싼다. 혼자면 내가 안는다', () => {
+  it('아이가 태어나면 배우자가 아기를 안고 나는 그쪽을 보는 옆모습. 혼자면 내가 안는다', () => {
     const child: LogEntry = { seq: 9, day: 9000, kind: 'CHILD', payload: { seq: 1, sex: 'M' } }
     const married = momentForOutcome(
       outcome({ kind: 'LIFE' }),
@@ -342,16 +350,16 @@ describe('상황마다 다른 그림과 자세 (decisions.md 192번)', () => {
         household: { married: true, children: [] } as unknown as Game['household'],
       }),
     )
-    expect(married?.art.figures.map((f) => [f.who, f.pose])).toEqual([
-      ['me', 'reach-right'],
-      ['spouse', 'hold'],
+    expect(married?.art.figures.map((f) => [f.who, f.pose, f.view, f.facing])).toEqual([
+      ['me', undefined, 'side', 'right'],
+      ['spouse', 'hold', undefined, undefined],
     ])
     expect(married?.art.figures[1].holding).toEqual({ sex: 'M', look: 0 })
     const alone = momentForOutcome(outcome({ kind: 'LIFE' }), game({ log: [child] }))
     expect(alone?.art.figures.map((f) => [f.who, f.pose])).toEqual([['me', 'hold']])
   })
 
-  it('집을 산 날은 새집 앞에서 만세, 갭투자나 전세 이사는 그림이 없다', () => {
+  it('집을 산 날은 새집을 올려다보는 온 가족의 뒷모습, 갭투자나 전세 이사는 그림이 없다', () => {
     const housing = (payload: Record<string, unknown>): LogEntry => ({
       seq: 5,
       day: 9000,
@@ -367,10 +375,10 @@ describe('상황마다 다른 그림과 자세 (decisions.md 192번)', () => {
     )
     expect(bought?.art.vignette).toBe('new-home')
     expect(bought?.caption).toContain('서울 아파트')
-    expect(bought?.art.figures.map((f) => [f.who, f.pose])).toEqual([
-      ['me', 'cheer'],
-      ['spouse', 'cheer'],
-      ['kid', 'cheer'],
+    expect(bought?.art.figures.map((f) => [f.who, f.view])).toEqual([
+      ['me', 'back'],
+      ['spouse', 'back'],
+      ['kid', 'back'],
     ])
     for (const payload of [
       { option: 'GAP', price: 500_000_000 },
@@ -386,12 +394,15 @@ describe('상황마다 다른 그림과 자세 (decisions.md 192번)', () => {
     }
   })
 
-  it('결혼한 날은 꽃 아치 앞에서 손을 잡는다', () => {
+  it('결혼한 날은 꽃 아치 앞에서 둘이 마주 본다', () => {
     const m = momentForOutcome(
       outcome({ kind: 'LIFE' }),
       game({ log: [{ seq: 3, day: 9000, kind: 'MARRIAGE', payload: { cost: 1 } }] }),
     )
     expect(m?.art.vignette).toBe('wedding')
-    expect(m?.art.figures.map((f) => f.pose)).toEqual(['reach-right', 'reach-left'])
+    expect(m?.art.figures.map((f) => [f.view, f.facing])).toEqual([
+      ['side', 'right'],
+      ['side', 'left'],
+    ])
   })
 })
