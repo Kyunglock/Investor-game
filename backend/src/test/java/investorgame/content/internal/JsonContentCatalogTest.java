@@ -3,7 +3,6 @@ package investorgame.content.internal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import investorgame.common.Sex;
 import investorgame.common.StatCodes;
 import investorgame.content.AnalysisText;
 import investorgame.content.CareerDefinition;
@@ -361,16 +360,23 @@ class JsonContentCatalogTest {
     }
   }
 
-  /** #221: 성별로 가린 장면(군대)이 빠져도 단계마다 남자·여자 모두 무작위로 뽑을 장면이 넉넉하다. */
+  /** 성장 단계마다 무작위로 뽑을 장면이 넉넉하다. */
   @Test
-  void 성장_단계마다_남녀_모두_뽑을_장면이_넉넉하다() {
+  void 성장_단계마다_뽑을_장면이_넉넉하다() {
     for (ContentCatalog.TraitStage stage : load().traitStages()) {
-      for (Sex sex : Sex.values()) {
-        assertThat(stage.scenes())
-            .as("%d세 %s", stage.age(), sex)
-            .filteredOn(t -> !t.followUpOnly() && t.fitsSex(sex))
-            .hasSizeGreaterThanOrEqualTo(10);
-      }
+      assertThat(stage.scenes())
+          .as("%d세", stage.age())
+          .filteredOn(t -> !t.followUpOnly())
+          .hasSizeGreaterThanOrEqualTo(10);
+    }
+  }
+
+  /** 성별에 따라 갈리는 장면은 두지 않는다: 누구나 같은 장면을 겪는다 (decisions.md 180번, 158번 뒤집음). */
+  @Test
+  void 성별로_가리는_장면이_없다() throws IOException {
+    for (String file : JsonContentCatalog.FILES) {
+      String text = Files.readString(Path.of("..", "content", file), StandardCharsets.UTF_8);
+      assertThat(text).as(file).doesNotContain("\"sex\"");
     }
   }
 
