@@ -285,14 +285,22 @@ test('신원 → 장부 탭 → 매매 버튼 → 접힌 능력 → 인생 기�
   await page.getByTestId('personality').locator('summary').click()
   await expect(page.getByTestId('stat-insight')).toBeVisible()
   await expect(page.getByTestId('open-report')).toHaveCount(0)
-  // 자동 버튼은 없앴다. 선택 카드에도 자동 막대가 없다.
-  await expect(page.getByTestId('auto-button')).toHaveCount(0)
-  for (let i = 0; i < 60 && (await eventCard(page).count()) === 0; i++) {
+})
+
+test('자동 진행은 50세부터: 그 전에는 버튼이 잠기고 카드는 직접 고르라고 한다 (#200, decisions.md 185번)', async ({
+  page,
+}) => {
+  await born(page)
+  await expect(page.getByTestId('auto-button')).toBeDisabled()
+  await expect(page.getByTestId('auto-button')).toContainText('50세부터')
+  await expect(page.getByTestId('auto-button')).toHaveAttribute('aria-pressed', 'false')
+
+  // 첫 선택 카드에는 켜는 버튼 대신 50세부터라는 안내가 있다.
+  for (let i = 0; i < 60 && (await page.getByTestId('card-auto-locked').count()) === 0; i++) {
     await page.clock.runFor(2_000)
   }
-  await expect(eventCard(page)).toBeVisible()
-  await expect(page.getByTestId('auto-bar')).toHaveCount(0)
-  await expect(page.getByTestId('card-auto-locked')).toHaveCount(0)
+  await expect(page.getByTestId('card-auto-locked')).toContainText('50세부터')
+  await expect(page.getByTestId('card-auto-on')).toHaveCount(0)
 })
 
 test('한 판은 한 창만: 두 번째 탭은 보기 전용이고, 이어하기를 누르면 넘겨받는다 (#189)', async ({
