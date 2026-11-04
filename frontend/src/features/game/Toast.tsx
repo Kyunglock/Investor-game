@@ -4,6 +4,7 @@ import { momentForNotice } from './moments'
 import { toastText } from './notices'
 import { layersFor } from './pixel/layers'
 import { Vignette } from './pixel/Vignette'
+import { usePixelArt } from './pixelArt'
 import { useGameStore } from './store'
 
 const SHOW_MS = 4_000
@@ -18,6 +19,7 @@ export function Toast() {
   const notice = useGameStore((s) => s.notices[0] ?? null)
   const dismiss = useGameStore((s) => s.dismissNotice)
   const game = useGameStore((s) => s.game)
+  const pixelArt = usePixelArt((s) => s.shown)
   // 가족 여행 같은 순간은 그림이 붙고 조금 더 오래 남는다 (decisions.md 62번).
   const moment = notice && game ? momentForNotice(notice, game) : null
 
@@ -44,7 +46,7 @@ export function Toast() {
         data-testid="notice-toast"
         data-kind={notice.kind}
       >
-        {moment && game && (
+        {moment && game && pixelArt && (
           <span className="mb-1.5 block w-[256px]">
             <Vignette
               art={moment.art}

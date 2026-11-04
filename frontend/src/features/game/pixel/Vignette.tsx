@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { usePixelArt } from '../pixelArt'
 import type { SpriteSpec } from './layers'
 import type { MoodKey } from './moods'
 import { Person } from './Person'
@@ -18,6 +19,11 @@ export const Vignette = memo(function Vignette({
   /** 모두의 표정 (순간 그림). 없으면 평소 얼굴 */
   mood?: MoodKey | null
 }) {
+  // 그림을 껐으면 그리지 않는다 (decisions.md 190번).
+  const shown = usePixelArt((s) => s.shown)
+  if (!shown) {
+    return null
+  }
   const background = toRects(
     VIGNETTES[art.vignette].map((row) => [...row]),
     PALETTE,

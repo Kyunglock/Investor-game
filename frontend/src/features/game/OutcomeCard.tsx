@@ -20,6 +20,7 @@ import { layersFor } from './pixel/layers'
 import type { MoodKey } from './pixel/moods'
 import { Sprite } from './pixel/SpriteView'
 import { Vignette } from './pixel/Vignette'
+import { usePixelArt } from './pixelArt'
 import { useGameStore } from './store'
 import { TUG_DONE_MS, TugOfWar } from './TugOfWar'
 import { matchupFor } from './tug'
@@ -52,6 +53,7 @@ function Body({
   const deviated = outcome.chosen !== outcome.actual
   const price = outcome.price
   const game = useGameStore((s) => s.game)
+  const pixelArt = usePixelArt((s) => s.shown)
   // 아이가 태어났거나 큰 손익이면 그림과 표정이 붙는다 (decisions.md 62번). 결과가 드러난 뒤에만.
   const moment = game ? momentForOutcome(outcome, game) : null
   // 뉴스와 흔들림은 판정이 손을 움직이므로 잠깐 뜸을 들인다. 성장기·직업·제안은 뒤집히지 않으니 바로 보여 준다.
@@ -85,7 +87,9 @@ function Body({
             )}
             mood={moment.mood}
           />
-          <figcaption className="-mt-3 text-center font-pen text-[22px] leading-tight text-pen">
+          <figcaption
+            className={`${pixelArt ? '-mt-3' : ''} text-center font-pen text-[22px] leading-tight text-pen`}
+          >
             {moment.caption}
           </figcaption>
         </figure>

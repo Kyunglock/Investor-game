@@ -287,6 +287,23 @@ test('신원 → 장부 탭 → 매매 버튼 → 접힌 능력 → 인생 기�
   await expect(page.getByTestId('open-report')).toHaveCount(0)
 })
 
+test('그림 끄기를 누르면 도트 그림이 사라지고 글은 남으며, 새로고침해도 그대로다 (decisions.md 190번)', async ({
+  page,
+}) => {
+  await born(page)
+  const photo = page.locator('figure').filter({ has: page.getByTestId('scene-caption') })
+  await expect(photo.locator('svg')).not.toHaveCount(0)
+  await page.getByTestId('pixel-toggle').click()
+  await expect(page.getByTestId('pixel-toggle')).toHaveAttribute('aria-pressed', 'true')
+  await expect(photo.locator('svg')).toHaveCount(0)
+  await expect(page.getByTestId('scene-caption')).toBeVisible()
+  await page.reload()
+  await expect(page.getByTestId('pixel-toggle')).toHaveAttribute('aria-pressed', 'true')
+  await expect(photo.locator('svg')).toHaveCount(0)
+  await page.getByTestId('pixel-toggle').click()
+  await expect(photo.locator('svg')).not.toHaveCount(0)
+})
+
 test('배속은 1·2·4배속이고 기본은 1배속이다 (decisions.md 189번)', async ({ page }) => {
   await born(page)
   await expect(page.getByTestId('speed-1')).toHaveAttribute('aria-pressed', 'true')
