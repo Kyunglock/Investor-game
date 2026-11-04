@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Game } from '../../api/client'
 import { buildCredits, type CreditSection, type CreditTone } from './credits'
 import { layersFor, type SpriteSpec } from './pixel/layers'
@@ -12,8 +12,8 @@ const TONE_CLASS: Record<CreditTone, string> = {
 }
 
 /**
- * 엔딩 크레딧 (엔딩 설계 3절, decisions.md 129번). 어두운 화면에 인생의 장(章)들이 위에서 아래로 놓이고, 플레이어가 제 손으로 스크롤해 읽는다.
- * 저절로 올라가지 않는다. 맨 끝에 기록부로 가는 버튼이 있고, 건너뛰기는 언제든 가능하다.
+ * 엔딩 크레딧 (엔딩 설계 3절, decisions.md 129·193번). 어두운 화면에 인생의 큰 사건들이 그림과 함께 위에서 아래로 놓이고, 플레이어가 제 손으로
+ * 스크롤해 읽는다. 장은 화면에 들어올 때 천천히 떠오르고, 마지막 장은 결말을 크게 보여 준다. 맨 끝에 기록부로 가는 버튼, 건너뛰기는 언제든.
  */
 export function EndingCredits({ game, onDone }: { game: Game; onDone: () => void }) {
   const sections = useMemo(() => buildCredits(game), [game])
@@ -49,36 +49,79 @@ export function EndingCredits({ game, onDone }: { game: Game; onDone: () => void
 
 function Roll({ sections, me }: { sections: CreditSection[]; me: Omit<SpriteSpec, 'stage'> }) {
   return (
-    <div className="mx-auto flex max-w-[560px] flex-col items-center gap-14 text-center">
-      {sections.map((section, i) => (
-        <section key={section.key} data-testid={`credits-${section.key}`}>
-          {section.art && <Vignette art={section.art} me={me} />}
-          <h2
-            className={
-              i === 0
-                ? 'font-serif-kr text-3xl font-black sm:text-4xl'
-                : 'mb-4 text-[11px] font-bold tracking-[0.3em] text-white/45 uppercase'
-            }
-          >
-            {section.title}
-          </h2>
-          <ul className={`flex flex-col ${i === 0 ? 'mt-4 gap-1.5' : 'gap-3'}`}>
-            {section.lines.map((line) => (
-              <li
-                key={`${section.key}-${line.text}`}
-                className={line.tone ? TONE_CLASS[line.tone] : ''}
-              >
-                <p className={i === 0 ? 'text-base' : 'font-serif-kr text-lg leading-snug'}>
-                  {line.text}
-                </p>
-                {line.sub && <p className="mt-0.5 text-sm text-white/60">{line.sub}</p>}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
+    <div className="mx-auto flex max-w-[560px] flex-col items-center gap-20 text-center">
+      {sections.map((section, i) => {
+        const first = i === 0
+        const last = section.key === 'last'
+        return (
+          <Reveal key={section.key} testId={`credits-${section.key}`}>
+            {section.art && <Vignette art={section.art} me={me} />}
+            <h2
+              className={
+                first
+                  ? 'font-serif-kr text-3xl font-black sm:text-4xl'
+                  : 'mb-4 text-[11px] font-bold tracking-[0.3em] text-white/45 uppercase'
+              }
+            >
+              {section.title}
+            </h2>
+            <ul className={`flex flex-col ${first ? 'mt-4 gap-1.5' : last ? 'gap-4' : 'gap-5'}`}>
+              {section.lines.map((line, j) => (
+                <li
+                  key={`${section.key}-${line.text}`}
+                  className={line.tone ? TONE_CLASS[line.tone] : ''}
+                >
+                  <p
+                    className={
+                      first
+                        ? 'text-base'
+                        : last && j === 0
+                          ? 'font-serif-kr text-[28px] font-black leading-tight'
+                          : last
+                            ? 'font-serif-kr text-lg leading-snug'
+                            : 'font-serif-kr text-[22px] font-bold leading-snug'
+                    }
+                  >
+                    {line.text}
+                  </p>
+                  {line.sub && <p className="mt-1 text-sm text-white/60">{line.sub}</p>}
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+        )
+      })}
       <div className="h-[10vh]" />
     </div>
+  )
+}
+
+/** 화면에 들어오면 천천히 떠오르는 장. 움직임을 줄이는 설정이면 바로 보인다(animate-reveal이 꺼진다). */
+function Reveal({ children, testId }: { children: React.ReactNode; testId: string }) {
+  const ref = useRef<HTMLElement>(null)
+  const [shown, setShown] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setShown(true)
+      return
+    }
+    const io = new IntersectionObserver(
+      (items) => {
+        if (items.some((it) => it.isIntersecting)) {
+          setShown(true)
+          io.disconnect()
+        }
+      },
+      { threshold: 0.2 },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+  return (
+    <section ref={ref} data-testid={testId} className={shown ? 'animate-credit-in' : 'opacity-0'}>
+      {children}
+    </section>
   )
 }
 
