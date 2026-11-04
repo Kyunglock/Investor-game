@@ -2497,16 +2497,8 @@ class DefaultProgressService implements ProgressService {
         options(game, character, event));
   }
 
-  /**
-   * 뉴스 힌트가 방향을 짚었으면 그 방향이 맞을 확률. 힌트는 안목으로 정해진다 (decisions.md 28번). 빚투 제안이면 힌트로 붙인 그 종목 해석의 맞출 확률이다
-   * (decisions.md 182번).
-   */
+  /** 뉴스 힌트가 방향을 짚었으면 그 방향이 맞을 확률. 힌트는 안목으로 정해진다 (decisions.md 28번). */
   private Integer hintAccuracy(GameRow game, CharacterView character, EventView event) {
-    if (event.kind() == EventKind.LEVERAGE) {
-      return event.stockCode() == null
-          ? null
-          : desk.storedAnalysis(game.id(), event.stockCode()).map(Analysis::accuracy).orElse(null);
-    }
     if (event.kind() != EventKind.NEWS || event.hintText() == null) {
       return null;
     }

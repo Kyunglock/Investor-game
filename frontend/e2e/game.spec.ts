@@ -52,13 +52,11 @@ async function step(page: Page): Promise<string> {
           : // 주거 선택지는 돈이 모자라면 막혀 있다. 누를 수 있는 첫 버튼을 고른다.
             eventCard(page).getByRole('button', { disabled: false }).first()
     if (kind === 'NEWS') {
-      // 매매 선택지마다 판정에 걸려 뒤집힐 확률을, 힌트에는 맞출 확률(또는 방향을 못 읽었다)을 보여 준다.
-      await expect(eventCard(page).getByTestId('deviation-percent').first()).toContainText(
-        /뒤집힐 확률 \d+%/,
-      )
+      // 이벤트 카드에는 확률 숫자를 보여 주지 않는다: 힌트는 읽히는 정도만, 선택지에 뒤집힐 확률 없음 (decisions.md 182번).
+      await expect(eventCard(page).getByText(/뒤집힐 확률|맞출 확률/)).toHaveCount(0)
       if (await eventCard(page).getByTestId('insight-lens').isVisible()) {
         await expect(eventCard(page).getByTestId('insight-lens-label')).toHaveText(
-          /맞출 확률 \d+%|방향은 못 읽었다/,
+          /흐릿하게 읽힌다|대강 읽힌다|또렷하게 읽힌다|꿰뚫어 본다/,
         )
       }
     }

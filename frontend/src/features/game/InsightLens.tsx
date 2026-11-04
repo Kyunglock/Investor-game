@@ -21,33 +21,21 @@ const LENS: Record<LensTier, { level: number; label: string; text: string }> = {
 }
 
 /**
- * 뉴스·빚투 카드의 힌트를 "내 안목으로 읽은" 것처럼 보여 준다 (decisions.md 161번). 안목 등급·점수와 네 칸 눈금, 읽히는 정도를 적고,
+ * 뉴스·빚투 카드의 힌트를 "내 안목으로 읽은" 것처럼 보여 준다 (decisions.md 161번). 안목 등급·점수와 네 칸 눈금, 읽히는 정도를 적고(확률 숫자는 적지 않는다, 182번),
  * 힌트 글은 흐릿한 데서 초점이 맞으며 나타난다. 안목이 높을수록 빨리 또렷해지고, 낮으면 끝까지 조금 흐리다. 움직임을 줄이는 설정이면 바로 보인다.
  */
 export function InsightLens({
   insight,
   hint,
   subject,
-  accuracy,
 }: {
   insight: number
   hint: string
   /** 빚투처럼 종목에 대한 해석이면 그 종목 이름 */
   subject?: string
-  /**
-   * 힌트가 맞을 확률(퍼센트, 서버가 안목으로 계산). 뉴스 힌트는 방향이 맞을 확률, 빚투는 그 종목 해석이 맞을 확률이다. null이면 힌트가 방향을 못 읽었다.
-   * 없으면 읽히는 정도를 글로 적는다.
-   */
-  accuracy?: number | null
 }) {
   const tier = lensTier(insight)
   const lens = LENS[tier]
-  const reading =
-    accuracy === undefined
-      ? lens.label
-      : accuracy === null
-        ? '방향은 못 읽었다'
-        : `맞출 확률 ${accuracy}%`
   return (
     <div
       className="mt-3 border-l-[3px] border-teal bg-teal-soft px-2.5 py-2"
@@ -72,7 +60,7 @@ export function InsightLens({
           ))}
         </span>
         <span className="font-semibold" data-testid="insight-lens-label">
-          {reading}
+          {lens.label}
         </span>
       </p>
       <p
