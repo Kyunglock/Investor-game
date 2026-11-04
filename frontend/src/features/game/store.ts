@@ -14,6 +14,7 @@ import {
   advanceDay,
   clockLimit,
   reportEveryDays,
+  SPEEDS,
   type Speed,
   secondsPerYear,
   shouldReport,
@@ -90,6 +91,8 @@ interface GameState {
   dismissNotice: () => void
   dismissCrisis: () => void
   setAutoPlay: (on: boolean) => void
+  /** 배속 1·2·4 (decisions.md 189번). 브라우저에 남겨 다음에도 그대로다 */
+  setSpeed: (speed: Speed) => void
   /** 가진 아파트를 매물로 내놓거나 거둔다. 팔리는 것은 매수자가 나와야 한다 (주거 설계 3절). */
   listHome: (seq: number, listed: boolean) => Promise<void>
   /** 주담대를 현금으로 일시 상환한다 (decisions.md 58번). 실패하면 이유를 돌려준다. */
@@ -100,6 +103,18 @@ interface GameState {
 
 export const MACRO_TAB = 'macro'
 export const AUTO_PLAY_KEY = 'investor-game.auto-play'
+
+export const SPEED_KEY = 'investor-game.speed'
+
+/** 브라우저에 남긴 배속. 없거나 이상하면 1배속. */
+function storedSpeed(): Speed {
+  try {
+    const saved = Number(typeof localStorage !== 'undefined' ? localStorage.getItem(SPEED_KEY) : 1)
+    return (SPEEDS as readonly number[]).includes(saved) ? (saved as Speed) : 1
+  } catch {
+    return 1
+  }
+}
 
 /** 브라우저에 남긴 자동 진행 설정. 저장소가 막혀 있으면(사생활 보호 모드 등) 꺼진 것으로 본다. */
 function storedAutoPlay(): boolean {
@@ -229,7 +244,7 @@ export const useGameStore = create<GameState>((set, get) => {
     heldGame: null,
     day: 0,
     running: false,
-    speed: 1,
+    speed: storedSpeed(),
     reporting: false,
     choosing: false,
     marketOpen: false,
@@ -517,6 +532,15 @@ export const useGameStore = create<GameState>((set, get) => {
     dismissCrisis: () => {
       set({ crisisAlert: null })
       get().resume()
+    },
+
+    setSpeed: (speed) => {
+      try {
+        localStorage.setItem(SPEED_KEY, String(speed))
+      } catch {
+        // 저장이 안 되면 이번 화면에서만 바뀐다.
+      }
+      set({ speed })
     },
 
     // 자동 진행을 켜면 서 있던 시계부터 돌린다. 선택·결과가 떠 있으면 useAutoPlay가 이어받는다.
