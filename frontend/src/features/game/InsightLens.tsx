@@ -28,14 +28,25 @@ export function InsightLens({
   insight,
   hint,
   subject,
+  accuracy,
 }: {
   insight: number
   hint: string
   /** 빚투처럼 종목에 대한 해석이면 그 종목 이름 */
   subject?: string
+  /**
+   * 뉴스 힌트가 맞을 확률(퍼센트, 서버가 안목으로 계산). null이면 힌트가 방향을 못 읽었다. 없으면(빚투 해석) 읽히는 정도를 글로 적는다.
+   */
+  accuracy?: number | null
 }) {
   const tier = lensTier(insight)
   const lens = LENS[tier]
+  const reading =
+    accuracy === undefined
+      ? lens.label
+      : accuracy === null
+        ? '방향은 못 읽었다'
+        : `맞출 확률 ${accuracy}%`
   return (
     <div
       className="mt-3 border-l-[3px] border-teal bg-teal-soft px-2.5 py-2"
@@ -60,7 +71,7 @@ export function InsightLens({
           ))}
         </span>
         <span className="font-semibold" data-testid="insight-lens-label">
-          {lens.label}
+          {reading}
         </span>
       </p>
       <p

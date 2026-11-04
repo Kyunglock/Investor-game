@@ -104,6 +104,43 @@ class DefaultBehaviorService implements BehaviorService {
   }
 
   @Override
+  public int hintAccuracyPercent(int insight) {
+    BehaviorProperties.HintSettings settings = properties.hint();
+    int accuracyBp = settings.accuracyBaseBp() + insight * settings.accuracyPerPointBp();
+    return Math.min(PERCENT, Math.round(accuracyBp / (float) PERCENT));
+  }
+
+  /**
+   * resolve의 판정을 확률로 따라간다: 꼬드김(줏대)에 넘어갈지 → 그 행동이 관망이면 인내(보유가 있을 때 못 참고 판다), 아니면 용기(접고 관망한다). 끝 행동이
+   * 고른 것과 다를 확률을 더한다.
+   */
+  @Override
+  public int deviationPercent(ChoiceContext context) {
+    Action choice = context.choice();
+    double sway =
+        context.swaySentiment() == null
+            ? 0
+            : deviationBp(context.stats().conviction()) / (double) BP;
+    Action tempted =
+        context.swaySentiment() == null
+            ? choice
+            : tempted(context.swaySentiment(), choice, context.holding());
+    double deviated =
+        sway * differs(tempted, choice, context) + (1 - sway) * differs(choice, choice, context);
+    return (int) Math.round(deviated * PERCENT);
+  }
+
+  /** 꼬드김 뒤 행동이 action일 때, 두 번째 판정을 거친 끝 행동이 choice와 다를 확률. */
+  private double differs(Action action, Action choice, ChoiceContext context) {
+    if (action == Action.HOLD) {
+      double sell = context.holding() ? deviationBp(context.stats().patience()) / (double) BP : 0;
+      return (choice == Action.SELL ? 0 : sell) + (choice == Action.HOLD ? 0 : 1 - sell);
+    }
+    double hold = deviationBp(context.stats().courage()) / (double) BP;
+    return (choice == Action.HOLD ? 0 : hold) + (action == choice ? 0 : 1 - hold);
+  }
+
+  @Override
   public int luckFactorPercent(int luck, Direction truth, RandomGenerator rng) {
     BehaviorProperties.LuckSettings settings = properties.luck();
     if (rng.nextInt(BP) >= luck * settings.chancePerPointBp()) {

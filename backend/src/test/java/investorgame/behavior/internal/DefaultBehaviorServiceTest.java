@@ -383,4 +383,36 @@ class DefaultBehaviorServiceTest {
       throw new UnsupportedOperationException("판정은 nextInt(bound)만 쓴다");
     }
   }
+
+  /** 화면에 보여 주는 "뒤집힐 확률"은 실제 판정(resolve)을 많이 굴려 본 비율과 같다. */
+  @Test
+  void 뒤집힐_확률은_실제_판정을_굴린_비율과_같다() {
+    SplittableRandom seeds = new SplittableRandom(7);
+    for (Action choice : Action.values()) {
+      for (Sentiment sway : new Sentiment[] {Sentiment.POS, Sentiment.NEG, null}) {
+        for (boolean holding : new boolean[] {true, false}) {
+          Stats stats = stats(50, 30, 40, 20, 50);
+          ChoiceContext context = new ChoiceContext(choice, stats, sway, holding);
+          RandomGenerator rng = seeds.split();
+          int deviated = 0;
+          for (int i = 0; i < TRIALS; i++) {
+            if (service.resolve(context, rng).actual() != choice) {
+              deviated++;
+            }
+          }
+          assertThat(service.deviationPercent(context))
+              .as("%s %s 보유 %s", choice, sway, holding)
+              .isCloseTo(
+                  Math.round(deviated * 100f / TRIALS), org.assertj.core.data.Offset.offset(2));
+        }
+      }
+    }
+  }
+
+  @Test
+  void 힌트가_맞을_확률은_안목_0이면_40퍼센트_100이면_95퍼센트다() {
+    assertThat(service.hintAccuracyPercent(0)).isEqualTo(40);
+    assertThat(service.hintAccuracyPercent(50)).isEqualTo(68);
+    assertThat(service.hintAccuracyPercent(100)).isEqualTo(95);
+  }
 }

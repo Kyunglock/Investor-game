@@ -162,6 +162,7 @@ function Body({ event, game, busy, onChoose }: Props) {
           insight={game.stats.insight}
           hint={event.hint}
           subject={isLeverage ? (event.stockName ?? undefined) : undefined}
+          accuracy={isNews ? (event.hintAccuracy ?? null) : undefined}
         />
       )}
       {isNews && event.sway && (
@@ -207,6 +208,16 @@ function Body({ event, game, busy, onChoose }: Props) {
               )}
               {option.detail && (
                 <span className="block text-[11px] font-normal text-faint">{option.detail}</span>
+              )}
+              {/* 줏대·용기·인내 판정에 걸려 고른 대로 못 할 확률 (서버가 실제 판정과 같은 규칙으로 계산) */}
+              {isNews && !disabled && option.deviationPercent != null && (
+                <span
+                  className="block font-mono-num text-[11px] font-normal text-wine"
+                  data-testid="deviation-percent"
+                  title="줏대·용기·인내 판정에 걸려 고른 대로 못 할 확률"
+                >
+                  뒤집힐 확률 {option.deviationPercent}%
+                </span>
               )}
               {option.blocked && (
                 <span className="block text-[11px] font-normal text-wine">{option.blocked}</span>

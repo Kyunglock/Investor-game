@@ -732,6 +732,8 @@ export interface components {
             label: string;
             /** @description 이 선택에 드는 돈(주거 선택지만). 필요한 현금·대출·월 부담 */
             detail?: string | null;
+            /** @description 뉴스 선택지가 판정(줏대·용기·인내)에 걸려 고른 것과 다르게 될 확률(퍼센트). 뉴스가 아니면 null */
+            deviationPercent?: number | null;
             /** @description 고를 수 없는 이유(현금 부족·DSR 초과). 고를 수 있으면 null */
             blocked?: string | null;
         };
@@ -892,6 +894,8 @@ export interface components {
             body: string;
             /** @description 안목에 따른 힌트. 뉴스는 방향 힌트(안목이 높을수록 종목·섹터·폭을 짚는다) */
             hint?: string | null;
+            /** @description 뉴스 힌트가 방향을 짚었을 때 그 방향이 맞을 확률(퍼센트 */
+            hintAccuracy?: number | null;
             /** @description 줏대를 흔드는 다른 뉴스. 뉴스일 때 */
             sway?: string | null;
             options: components["schemas"]["Option"][];
