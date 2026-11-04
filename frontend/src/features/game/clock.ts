@@ -7,10 +7,11 @@ import type { Phase } from '../../api/client'
 
 /**
  * 성장기는 이벤트가 적어서 빨리 흐르고, 성인기에 시간을 더 쓴다 (decisions.md).
- * 성장기 약 23년 × 4초 + 성인기 약 41년 × 12초 ≈ 9분 40초로 한 판 10분에 맞춘다.
+ * 1배속은 성장기(15~25세) 10년 × 8초 + 성인기(25~70세) 45년 × 24초 ≈ 19분 20초로 한 판 약 20분이다. 2배속은 약 10분, 4배속은 약 5분
+ * (선택 카드로 멈춘 시간은 빼고, decisions.md 189번).
  */
-const SECONDS_PER_YEAR_CHILDHOOD = 4
-const SECONDS_PER_YEAR_ADULT = 12
+const SECONDS_PER_YEAR_CHILDHOOD = 8
+const SECONDS_PER_YEAR_ADULT = 24
 
 export function secondsPerYear(phase: Phase): number {
   return phase === 'CHILDHOOD' ? SECONDS_PER_YEAR_CHILDHOOD : SECONDS_PER_YEAR_ADULT
@@ -25,7 +26,8 @@ export const REPORT_EVERY_DAYS = 30
  */
 export const MAX_UNREPORTED_DAYS = 330
 
-export const SPEEDS = [1, 2] as const
+/** 배속 (decisions.md 189번). */
+export const SPEEDS = [1, 2, 4] as const
 export type Speed = (typeof SPEEDS)[number]
 
 export function totalDays(startAge: number, endAge: number, daysPerYear: number): number {
