@@ -25,7 +25,8 @@ function Game() {
   const outcome = useGameStore((s) => s.outcome)
   const marketOpen = useGameStore((s) => s.marketOpen)
   const autoPlay = useGameStore((s) => s.autoPlay)
-  const { load, born, startLifeAs, pause, resume, setAutoPlay } = useGameStore.getState()
+  const speed = useGameStore((s) => s.speed)
+  const { load, born, startLifeAs, pause, resume, setAutoPlay, setSpeed } = useGameStore.getState()
   // 크레딧을 다 본(또는 건너뛴) 판. 끝난 판은 크레딧 뒤에 기록부가 나온다 (엔딩 설계 3절).
   const [creditsSeenFor, setCreditsSeenFor] = useState<string | null>(null)
 
@@ -55,6 +56,8 @@ function Game() {
         onRestart={restart}
         autoPlay={autoPlay}
         onToggleAuto={() => setAutoPlay(!autoPlay)}
+        speed={speed}
+        onSpeed={setSpeed}
       />
 
       {status === 'playing' && <Toast />}

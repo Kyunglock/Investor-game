@@ -224,6 +224,16 @@ describe('자동 진행은 처음부터 켤 수 있다 (decisions.md 186번)', (
   })
 })
 
+describe('배속 (decisions.md 189번)', () => {
+  it('1·2·4배속을 고르면 브라우저에 남는다', () => {
+    useGameStore.getState().setSpeed(4)
+    expect(useGameStore.getState().speed).toBe(4)
+    expect(localStorage.getItem('investor-game.speed')).toBe('4')
+    useGameStore.getState().setSpeed(1)
+    expect(localStorage.getItem('investor-game.speed')).toBe('1')
+  })
+})
+
 describe('보고 응답은 새 기록만 (#192)', () => {
   const entry = (seq: number) => ({ seq, day: seq, kind: 'LIFE' as const, payload: {} })
 

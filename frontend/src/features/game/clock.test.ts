@@ -19,13 +19,15 @@ describe('secondsPerYear', () => {
     expect(secondsPerYear('SAVING')).toBe(secondsPerYear('INVESTING'))
   })
 
-  it('한 판은 대략 10분이다', () => {
-    const childhoodYears = 24 - 1
-    const adultYears = 65 - 24
-    const seconds =
-      childhoodYears * secondsPerYear('CHILDHOOD') + adultYears * secondsPerYear('INVESTING')
-    expect(seconds).toBeGreaterThan(9 * 60)
-    expect(seconds).toBeLessThan(11 * 60)
+  it('한 판은 1배속 약 20분, 2배속 약 10분, 4배속 약 5분이다 (decisions.md 189번)', () => {
+    // 15세에 시작해 25세에 취업, 70세에 끝난다.
+    const seconds = 10 * secondsPerYear('CHILDHOOD') + 45 * secondsPerYear('INVESTING')
+    expect(seconds / 60).toBeGreaterThan(18)
+    expect(seconds / 60).toBeLessThan(21)
+    expect(seconds / 2 / 60).toBeGreaterThan(9)
+    expect(seconds / 2 / 60).toBeLessThan(10.5)
+    expect(seconds / 4 / 60).toBeGreaterThan(4.5)
+    expect(seconds / 4 / 60).toBeLessThan(5.25)
   })
 })
 
@@ -36,6 +38,10 @@ describe('advanceDay', () => {
 
   it('2배속이면 두 배로 흐른다', () => {
     expect(advanceDay(0, 12_000, 2, DAYS_PER_YEAR, 23_040, 12)).toBeCloseTo(720)
+  })
+
+  it('4배속이면 네 배로 흐른다', () => {
+    expect(advanceDay(0, 12_000, 4, DAYS_PER_YEAR, 23_040, 12)).toBeCloseTo(1440)
   })
 
   it('한계를 넘지 않는다', () => {

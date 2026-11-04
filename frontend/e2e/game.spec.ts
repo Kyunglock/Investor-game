@@ -304,6 +304,18 @@ test('그림 끄기를 누르면 도트 그림이 사라지고 글은 남으며,
   await expect(photo.locator('svg')).not.toHaveCount(0)
 })
 
+test('배속은 1·2·4배속이고 기본은 1배속이다 (decisions.md 189번)', async ({ page }) => {
+  await born(page)
+  await expect(page.getByTestId('speed-1')).toHaveAttribute('aria-pressed', 'true')
+  await page.getByTestId('speed-4').click()
+  await expect(page.getByTestId('speed-4')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('speed-1')).toHaveAttribute('aria-pressed', 'false')
+  // 고른 배속은 새로고침해도 남는다.
+  await page.reload()
+  await expect(page.getByTestId('speed-4')).toHaveAttribute('aria-pressed', 'true')
+  await page.getByTestId('speed-1').click()
+})
+
 test('자동 진행은 처음부터 켤 수 있고 기본은 꺼져 있다 (decisions.md 186번)', async ({ page }) => {
   await born(page)
   await expect(page.getByTestId('auto-button')).toBeEnabled()

@@ -321,14 +321,14 @@ class DefaultEventServiceTest {
   }
 
   @Test
-  void 결혼하면_3에서_6년마다_가족_여행_제안이_오고_누가_제안했는지와_네_선택지가_있다() {
+  void 결혼하면_6에서_12년마다_가족_여행_제안이_오고_누가_제안했는지와_네_선택지가_있다() {
     UUID gameId = UUID.randomUUID();
     int marriedDay = (30 - START_AGE) * YEAR;
     // 자녀 셋(더 묻지 않음), 독립한 날 없음(자녀 결혼 없음) → 생활 선택은 가족 여행뿐.
     SchedulingContext married = lifeOnly(true, marriedDay, 3);
 
     EventView trip = nextOf(gameId, married, marriedDay, EventKind.LIFE, 11L).orElseThrow();
-    assertThat(trip.occursDay() - marriedDay).isBetween(3 * YEAR, 6 * YEAR);
+    assertThat(trip.occursDay() - marriedDay).isBetween(6 * YEAR, 12 * YEAR);
     assertThat(trip.title()).contains("가족 여행 제안");
     assertThat(trip.title()).containsAnyOf("배우자", "부모님");
     assertThat(trip.options())
@@ -338,7 +338,7 @@ class DefaultEventServiceTest {
 
     EventView again = nextOf(gameId, married, trip.occursDay(), EventKind.LIFE, 11L).orElseThrow();
     assertThat(isTrip(again)).isTrue();
-    assertThat(again.occursDay() - trip.occursDay()).isBetween(3 * YEAR, 6 * YEAR);
+    assertThat(again.occursDay() - trip.occursDay()).isBetween(6 * YEAR, 12 * YEAR);
 
     // 미혼이면 오지 않는다.
     assertThat(
@@ -701,8 +701,8 @@ class DefaultEventServiceTest {
       from = trait.get().occursDay();
     }
     // 은퇴한 미혼·무자녀에게는 직장·결혼·아이·보유 주식이 전제인 장면이 나오지 않는다 (decisions.md 115번, #195).
-    // 풀이 한 판보다 넓어 다 보지는 않지만 간격마다 하나씩 온다.
-    assertThat(seen).hasSizeGreaterThanOrEqualTo(8);
+    // 풀이 한 판보다 넓어 다 보지는 않지만 간격(4.5~7.5년, decisions.md 188번)마다 하나씩 온다.
+    assertThat(seen).hasSizeGreaterThanOrEqualTo(4);
     for (String title : seen) {
       TraitDefinition trait =
           content.adultTraits().stream()
@@ -1781,11 +1781,12 @@ class DefaultEventServiceTest {
     EventView next =
         firstOf(
             UUID.randomUUID(), housed(broke, marriedDay, "공무원", 0), JOB_DAY, EventKind.HOUSING, 3L);
-    assertThat(next.title()).isEqualTo("계약 만기가 다가온다");
+    // 만기에는 연장을 묻거나 집주인이 거절한다. 어느 쪽이든 "집 살까?"는 아니다.
+    assertThat(next.title()).isIn("계약 만기가 다가온다", "집주인이 재계약을 거절했다");
     assertThat(next.occursDay()).isEqualTo(JOB_DAY + 5 * YEAR);
   }
 
-  /** 분양 공고 (decisions.md 123번): 볼수록 간격이 늘고(1.5년 → 3년), "관심 없다"고 하면 더 오지 않으며, 은퇴 뒤에도 오지 않는다. */
+  /** 분양 공고 (decisions.md 123·188번): 볼수록 간격이 늘고(3년 → 6년), "관심 없다"고 하면 더 오지 않으며, 은퇴 뒤에도 오지 않는다. */
   @Test
   void 분양_공고는_볼수록_뜸해지고_관심_없다고_하면_끝난다() {
     HousingFacts eligible =
@@ -1810,10 +1811,10 @@ class DefaultEventServiceTest {
     assertThat(first.options())
         .extracting(EventView.Option::code)
         .containsExactly("APPLY", "PASS", "NEVER");
-    assertThat(first.occursDay()).isEqualTo(JOB_DAY + 540);
+    assertThat(first.occursDay()).isEqualTo(JOB_DAY + 1080);
     events.complete(gameId, first.eventId(), new Completion("PASS", "PASS", List.of()));
     EventView second = firstOf(gameId, ctx, first.occursDay(), EventKind.HOUSING, 3L);
-    assertThat(second.occursDay()).as("두 번째는 3년 뒤").isEqualTo(first.occursDay() + 1080);
+    assertThat(second.occursDay()).as("두 번째는 6년 뒤").isEqualTo(first.occursDay() + 2160);
     events.complete(gameId, second.eventId(), new Completion("NEVER", "NEVER", List.of()));
     assertThat(firstOf(gameId, ctx, second.occursDay(), EventKind.HOUSING, 3L).title())
         .as("관심 없다고 하면 다음 주거 장면은 멀리 있는 만기다")
@@ -2271,7 +2272,7 @@ class DefaultEventServiceTest {
     assertThat(shake.options())
         .extracting(EventView.Option::code, EventView.Option::label)
         .containsExactly(tuple("HOLD", "버틴다"), tuple("SELL", "판다"));
-    assertThat(shake.occursDay()).isBetween(JOB_DAY + 30 + 300, JOB_DAY + 30 + 600);
+    assertThat(shake.occursDay()).isBetween(JOB_DAY + 30 + 900, JOB_DAY + 30 + 1800);
   }
 
   /** 산 지 반년이 안 된 종목만 들고 있으면 흔들림은 그 날이 될 때까지 미뤄지고, 뉴스와 한 달 안에 붙지 않는다 (decisions.md 109번). */

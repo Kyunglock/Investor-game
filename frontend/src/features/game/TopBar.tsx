@@ -1,5 +1,5 @@
 import type { Game } from '../../api/client'
-import { ageAt } from './clock'
+import { ageAt, SPEEDS, type Speed } from './clock'
 import { usePixelArt } from './pixelArt'
 import { useGameStore } from './store'
 
@@ -15,6 +15,9 @@ interface Props {
   /** 자동 진행 (decisions.md 131·185번). 선택 카드가 떠 있어도 켜고 끌 수 있다 */
   autoPlay: boolean
   onToggleAuto: () => void
+  /** 배속 (decisions.md 189번). 1배속 약 20분, 2배속 약 10분, 4배속 약 5분 */
+  speed: Speed
+  onSpeed: (speed: Speed) => void
 }
 
 // 색은 따로 붙인다. 같은 종류의 유틸리티(text-*·bg-*)를 겹쳐 쓰면 어느 쪽이 이기는지 CSS 순서에 달려 글자가 안 보일 수 있다 (decisions.md 136번).
@@ -22,6 +25,8 @@ const buttonBase =
   'min-h-11 min-w-11 rounded-full border-2 border-pen px-3 font-note text-sm disabled:cursor-not-allowed disabled:opacity-40'
 const buttonPaper = 'bg-paper text-pen hover:bg-white'
 const buttonInk = 'bg-pen text-paper hover:opacity-90'
+/** 배속마다 한 판에 걸리는 시간(선택 카드로 멈춘 시간 빼고, clock.ts) */
+const SPEED_MINUTES: Record<Speed, number> = { 1: 20, 2: 10, 4: 5 }
 
 /**
  * 진행 버튼(계속·자동·그림 끄기·다시 태어나기). 자동 버튼은 159번에서 뺐다가 185번에서 되살렸다. 제목·나이·연도·이름은 진행 중에는 띄우지 않는다 (decisions.md 159번, 설계 5.1절). 배속은 없다: 정배속만 있다. 나이 글자는 E2E가 보는 `{n}세 {m}개월` 형식을 유지한다. "여기서 끝내기"는
@@ -37,6 +42,8 @@ export function TopBar({
   onRestart,
   autoPlay,
   onToggleAuto,
+  speed,
+  onSpeed,
 }: Props) {
   // 0.1초마다 바뀌는 day는 여기서만 구독한다. App이 구독하면 진행 화면 전체가 틱마다 다시 그려진다.
   const day = useGameStore((s) => s.day)
@@ -60,7 +67,7 @@ export function TopBar({
             <p className="sr-only" data-testid="age">
               {age.years}세 {age.months}개월
             </p>
-            <div className="ml-auto flex gap-1">
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-1">
               <button
                 type="button"
                 className={`${buttonBase} ${buttonPaper}`}
@@ -69,6 +76,25 @@ export function TopBar({
               >
                 {running ? '❚❚ 멈춤' : '▶ 계속'}
               </button>
+              <fieldset
+                className="m-0 flex overflow-hidden rounded-full border-2 border-pen p-0"
+                data-testid="speed"
+              >
+                <legend className="sr-only">배속</legend>
+                {SPEEDS.map((x) => (
+                  <button
+                    key={x}
+                    type="button"
+                    aria-pressed={speed === x}
+                    title={`${x}배속 · 한 판 약 ${SPEED_MINUTES[x]}분`}
+                    className={`min-h-10 min-w-10 px-2 font-note text-sm ${speed === x ? 'bg-pen text-paper' : 'bg-paper text-pen hover:bg-white'}`}
+                    onClick={() => onSpeed(x)}
+                    data-testid={`speed-${x}`}
+                  >
+                    {x}×
+                  </button>
+                ))}
+              </fieldset>
               <button
                 type="button"
                 className={`${buttonBase} ${autoPlay ? buttonInk : buttonPaper}`}
