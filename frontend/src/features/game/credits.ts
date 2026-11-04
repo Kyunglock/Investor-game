@@ -8,9 +8,9 @@ import {
   percent,
   STAT_KEYS,
   STAT_LABELS,
+  shortWon,
   sideLabel,
   signedWon,
-  statLabel,
   TRIP_LABELS,
   withParticle,
   won,
@@ -296,9 +296,11 @@ function familyEventArt(
   xs: [number, number, number],
 ): CreditArt {
   const stage = stageFor(ageOf(game, day))
-  const figures: Figure[] = [{ who: 'me', sex: game.sex, stage, x: xs[0] }]
+  // 떠나보낼 때는 손을 흔들고, 결혼식에서는 손뼉 (decisions.md 192·193번).
+  const pose: Figure['pose'] = vignette === 'leave-home' ? 'wave' : 'clap'
+  const figures: Figure[] = [{ who: 'me', sex: game.sex, stage, x: xs[0], pose }]
   if (marriedBy(game, day)) {
-    figures.push({ who: 'spouse', sex: opposite(game.sex), stage, x: xs[1] })
+    figures.push({ who: 'spouse', sex: opposite(game.sex), stage, x: xs[1], pose })
   }
   figures.push({
     who: 'kid',
@@ -338,8 +340,9 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
         },
         art: { vignette: 'nursery', figures: [{ who: 'me', sex: game.sex, stage: 'baby', x: 22 }] },
       }
+    // 성장기·일상의 작은 선택은 크레딧에 올리지 않는다. 큰 사건만 영화처럼 (decisions.md 193번).
     case 'TRAIT':
-      return { line: { text: `${age}세 · ${str(p.eventTitle)}`, sub: str(p.optionLabel) } }
+      return null
     case 'STYLE': {
       const type = game.investorType
       return {
@@ -365,19 +368,15 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
       return { key: jobsSeen > 0 ? `work-${e.seq}` : 'work', line, art }
     }
     case 'JOB_WAIT':
-      return { line: { text: `${age}세, 더 나은 자리를 기다렸다`, tone: 'muted' } }
+      return null
     case 'CAREER': {
-      const line: CreditLine = {
-        text: `${age}세 · ${str(p.eventTitle)}`,
-        sub: `${str(p.optionLabel)} → ${str(p.text)}`,
-        tone: p.success === false ? 'down' : undefined,
-      }
-      // 실직(직업이 사라지고 월급이 끊김)은 전환점이라 그림이 붙는다 (decisions.md 139번).
+      // 직장 장면은 실직만 남긴다. 실직(직업이 사라지고 월급이 끊김)은 전환점이라 그림이 붙는다 (decisions.md 139·193번).
       const laidOff =
         p.jobTitle == null && p.fullTimeInvestor !== true && str(p.text).includes('월급이 끊기')
       if (!laidOff) {
-        return { line }
+        return null
       }
+      const line: CreditLine = { text: `${age}세, 실직`, sub: str(p.eventTitle), tone: 'down' }
       return {
         key: `layoff-${e.seq}`,
         line,
@@ -397,7 +396,20 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
           text: `${age}세, 결혼`,
           sub: p.intro ? str(p.intro).replace(p.name ? `${str(p.name)}. ` : '', '') : undefined,
         },
-        art: coupleArt(game, 'family', e.day, 14, 28),
+        // 꽃 아치 앞에서 둘이 손을 잡는다 (decisions.md 192·193번).
+        art: {
+          vignette: 'wedding',
+          figures: [
+            { who: 'me', sex: game.sex, stage: stageFor(age), x: 14, pose: 'reach-right' },
+            {
+              who: 'spouse',
+              sex: opposite(game.sex),
+              stage: stageFor(age),
+              x: 28,
+              pose: 'reach-left',
+            },
+          ],
+        },
       }
     case 'CHILD': {
       const seq = num(p.seq)
@@ -456,13 +468,7 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
         return null
       }
       if (spouseRent && p.option === 'STAY') {
-        return {
-          line: {
-            text: `${age}세, 월세를 고집했다`,
-            sub: `${spouseWord(game.sex)}의 말을 거슬렀다`,
-            tone: 'down',
-          },
-        }
+        return null
       }
       if (p.fraud) {
         return {
@@ -497,9 +503,10 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
             : '결혼하고'
         line.sub = `${because} 더 넓은 집으로 · ${line.sub}`
       }
-      const vignette = HOME_VIGNETTE[str(p.option)]
-      if (!vignette) {
-        return { line }
+      // 집을 산 것만 남긴다. 전·월세 이사는 크레딧에 올리지 않는다 (decisions.md 193번).
+      const vignette = HOME_VIGNETTE[str(p.option)] ?? (num(p.price) > 0 ? 'new-home' : undefined)
+      if (!vignette || (p.option !== 'APPLY' && num(p.price) <= 0)) {
+        return null
       }
       return {
         key: `home-${e.seq}`,
@@ -512,39 +519,34 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
       const spent = num(p.amount) < 0
       const option = str(p.option)
       if (p.noticeCode === 'family-trip') {
-        const line: CreditLine = spent
+        const line: CreditLine | null = spent
           ? {
               text: `${age}세, 가족 여행 (${TRIP_LABELS[option] ?? option})`,
               sub: won(-num(p.amount)),
             }
-          : { text: `${age}세, ${str(p.proposer)}의 여행 제안을 거절했다`, tone: 'muted' }
-        if (!spent) {
-          return { line }
+          : null
+        if (!line) {
+          return null
         }
         return { key: `trip-${e.seq}`, line, art: tripArt(game, e.day) }
       }
       if (p.noticeCode === 'housewarming') {
-        const line: CreditLine = spent
+        const line: CreditLine | null = spent
           ? {
               text: `${age}세, 새집 집들이 (${HOUSEWARMING_LABELS[option] ?? option})`,
               sub: won(-num(p.amount)),
             }
-          : { text: `${age}세, 집들이는 생략했다`, tone: 'muted' }
-        if (!spent) {
-          return { line }
+          : null
+        if (!line) {
+          return null
         }
-        return { key: `housewarming-${e.seq}`, line, art: coupleArt(game, 'family', e.day, 14, 28) }
-      }
-      if (p.noticeCode === 'kid-outing') {
         return {
-          line: spent
-            ? { text: `${age}세, ${str(p.proposer)}와 ${str(p.title)}`, sub: won(-num(p.amount)) }
-            : {
-                text: `${age}세, ${str(p.proposer)}의 ${str(p.title)}에 함께하지 못했다`,
-                tone: 'muted',
-              },
+          key: `housewarming-${e.seq}`,
+          line,
+          art: coupleArt(game, 'family', e.day, 14, 28, 'wave'),
         }
       }
+      // 아이의 나들이·행사는 자주 있어 크레딧에 올리지 않는다 (decisions.md 193번).
       return null
     }
     case 'CRISIS':
@@ -562,11 +564,15 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
         },
       }
     case 'LEVERAGE':
-      return {
-        line: p.borrowed
-          ? { text: `${age}세, ${str(p.stockName)}에 빚투`, sub: `대출 ${won(num(p.loan))}` }
-          : { text: `${age}세, ${str(p.stockName)} 급락에도 빚은 지지 않았다`, tone: 'muted' },
-      }
+      return p.borrowed
+        ? {
+            line: {
+              text: `${age}세, ${str(p.stockName)}에 빚투`,
+              sub: `대출 ${won(num(p.loan))}`,
+              tone: 'down',
+            },
+          }
+        : null
     default:
       return null
   }
@@ -642,44 +648,26 @@ export function buildCredits(game: Game): CreditSection[] {
     }
   }
 
-  // 돌아보며: 뉴스 앞에서 어땠는가, 어떤 주식을 샀는가.
+  // 돌아보며: 뉴스 앞에서 몇 번 섰고 몇 번 뒤집혔는지, 손익이 컸던 주식 셋 (decisions.md 193번).
   const news = entries(game, 'NEWS')
   const shakes = entries(game, 'SHAKE')
   const reviewLines: CreditLine[] = []
   if (news.length === 0 && shakes.length === 0) {
     reviewLines.push({ text: '투자를 시작하지 않았다', tone: 'muted' })
   } else {
-    if (news.length > 0) {
-      const counts = { BUY: 0, SELL: 0, HOLD: 0 }
-      for (const e of news) {
-        const actual = str((e.payload as Payload).actual) as keyof typeof counts
-        if (actual in counts) {
-          counts[actual]++
-        }
-      }
-      reviewLines.push({
-        text: `뉴스 ${news.length}번 앞에 섰다`,
-        sub: `매수 ${counts.BUY} · 매도 ${counts.SELL} · 관망 ${counts.HOLD}`,
-      })
-    }
-    if (shakes.length > 0) {
-      const held = shakes.filter((e) => str((e.payload as Payload).actual) === 'HOLD').length
-      reviewLines.push({
-        text: `보유 종목이 ${shakes.length}번 흔들렸다`,
-        sub: `버팀 ${held} · 팔았음 ${shakes.length - held}`,
-      })
-    }
-    const deviations = Object.entries(result?.deviationCounts ?? {}).sort(([, a], [, b]) => b - a)
-    for (const [code, count] of deviations) {
-      reviewLines.push({ text: `${statLabel(code)} 부족으로 뒤집힌 선택 ${count}번`, tone: 'down' })
-    }
-    if (deviations.length === 0) {
-      reviewLines.push({ text: '한 번도 뒤집히지 않았다', tone: 'accent' })
-    }
-    for (const s of stockReturns(game)) {
+    const flipped = Object.values(result?.deviationCounts ?? {}).reduce((a, b) => a + b, 0)
+    reviewLines.push({
+      text: `뉴스 ${news.length}번, 흔들림 ${shakes.length}번 앞에 섰다`,
+      sub: flipped > 0 ? `성격에 뒤집힌 선택 ${flipped}번` : '한 번도 뒤집히지 않았다',
+      tone: flipped > 0 ? undefined : 'accent',
+    })
+    const top = [...stockReturns(game)]
+      .sort((a, b) => Math.abs(b.pnl) - Math.abs(a.pnl))
+      .slice(0, 3)
+    for (const s of top) {
       reviewLines.push({
         text: s.stockName,
-        sub: `${signedWon(s.pnl)} (${signedPercent(s.pnlBp)}) · 투입 ${won(s.invested)}`,
+        sub: `${signedWon(s.pnl)} (${signedPercent(s.pnlBp)})`,
         tone: s.pnl > 0 ? 'up' : s.pnl < 0 ? 'down' : 'muted',
       })
     }
@@ -688,12 +676,29 @@ export function buildCredits(game: Game): CreditSection[] {
 
   const finalAsset = result?.finalAsset ?? game.totalAsset
   const returnBp = result?.returnBp ?? 0
+  // 맨 앞은 결말을 한 줄로 크게: 남긴 자산, 파산이면 남긴 빚 (decisions.md 193번).
   const lastLines: CreditLine[] = [
-    { text: `${won(game.initialAsset)} → ${won(finalAsset)}` },
+    bankrupt
+      ? { text: `빚 ${shortWon(game.debt)}을 남기고 파산`, tone: 'down' }
+      : {
+          text: `최종 자산 ${shortWon(finalAsset)}`,
+          tone: finalAsset >= game.initialAsset ? 'up' : 'down',
+        },
     // 0원에서 시작했으면 수익률이 없다 (decisions.md 94번).
     ...(game.initialAsset > 0
       ? [{ text: signedPercent(returnBp), tone: returnBp >= 0 ? 'up' : 'down' } as const]
       : []),
+    // 돈·행복·가족을 함께 본 한 줄 평가 (#230, decisions.md 167번). 결말 바로 아래에.
+    {
+      text: lifeVerdict({
+        finalAsset,
+        bankrupt,
+        happiness: game.happiness,
+        family: game.family,
+        hasFamily: game.household.married || game.household.children.length > 0,
+      }),
+      tone: 'accent',
+    },
     // 돈만이 아니라 삶이 어땠는지 (decisions.md 82번).
     {
       text: `행복도 ${game.happiness}점`,
@@ -711,17 +716,6 @@ export function buildCredits(game: Game): CreditSection[] {
       tone: game.family >= 60 ? 'accent' : game.family < 40 ? 'down' : 'muted',
     })
   }
-  // 돈·행복·가족을 함께 본 한 줄 평가 (#230, decisions.md 167번).
-  lastLines.push({
-    text: lifeVerdict({
-      finalAsset,
-      bankrupt,
-      happiness: game.happiness,
-      family: game.family,
-      hasFamily: game.household.married || game.household.children.length > 0,
-    }),
-    tone: 'accent',
-  })
   lastLines.push(
     bankrupt
       ? { text: `${finalAge}세. 빚 ${won(game.debt)}을 갚지 못해 파산했다.`, tone: 'down' }

@@ -172,6 +172,10 @@ body {
 .animate-reveal {
   animation: reveal-in 0.45s ease-out both;
 }
+/* 엔딩 크레딧의 장: 천천히 떠오른다 (decisions.md 193번) */
+.animate-credit-in {
+  animation: reveal-in 1.1s ease-out both;
+}
 .animate-slide-in {
   animation: slide-in 0.3s ease-out both;
 }
@@ -294,6 +298,7 @@ body {
   .animate-tug-done,
   .animate-tug-win,
   .animate-reveal,
+  .animate-credit-in,
   .animate-slide-in,
   .animate-flash,
   .animate-lid,
