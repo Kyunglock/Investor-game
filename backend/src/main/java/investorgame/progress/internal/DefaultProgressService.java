@@ -422,6 +422,24 @@ class DefaultProgressService implements ProgressService {
   }
 
   @Override
+  @Transactional
+  public void shareImage(UUID sessionId, UUID gameId, byte[] png) {
+    games
+        .findLatest(sessionId)
+        .filter(g -> g.id().equals(gameId) && g.ended())
+        .orElseThrow(() -> new NotFoundException("끝난 판이 없다"));
+    if (!results.saveShareImage(gameId, png)) {
+      throw new NotFoundException("공유한 판이 아니다");
+    }
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<byte[]> sharedImage(String shareId) {
+    return results.findShareImage(shareId);
+  }
+
+  @Override
   @Transactional(readOnly = true)
   public RankingView ranking() {
     List<RankingEntry> entries = results.ranking(RANKING_SIZE);

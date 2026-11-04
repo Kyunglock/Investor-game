@@ -1,34 +1,61 @@
 import { useRef, useState } from 'react'
 import { api, type Game } from '../../api/client'
 import { Card } from './Card'
+import { kakao } from './kakao'
 import {
+  canvasPng,
   downloadCanvas,
   drawShareImage,
-  facebookShareUrl,
   type ImageShape,
+  kakaoFeed,
   type ShareCard,
   shareLink,
   shareText,
-  xShareUrl,
 } from './share'
 
 interface Shared {
   shareId: string
   card: ShareCard
+  /** 요약 그림을 서버에 올렸는가. 못 올렸으면 공통 그림을 쓴다. */
+  uploaded: boolean
 }
 
 const BUTTON =
   'min-h-10 rounded border border-line bg-card px-3 text-[13px] font-semibold text-ink hover:border-wine hover:text-wine disabled:opacity-50'
 
 /**
- * 결과 공유 (#197). 처음 누를 때 서버에 공유 ID를 만든다(공유를 누른 판만 공개된다). 모바일은 시스템 공유 시트로, 데스크톱은 X·페이스북·링크 복사로
- * 보낸다. 결과 카드는 9:16·1:1 그림으로 저장할 수 있다. focus가 type이면 투자 성향만 공유한다("나는 ○○형 투자자").
+ * 결과 공유 (#197, 카카오톡만 #275). 처음 누를 때 서버에 공유 ID를 만들고(공유를 누른 판만 공개된다) 1:1 요약 그림을 그려 올린다.
+ * 카카오 키가 있으면 카카오톡 카드로, 없으면 휴대폰 공유창(카카오톡 고르기)이나 링크 복사로 보낸다. 결과 카드는 9:16·1:1 그림으로도
+ * 저장할 수 있다. focus가 type이면 투자 성향만 공유한다("나는 ○○형 투자자").
  */
 export function SharePanel({ game, focus = 'life' }: { game: Game; focus?: 'life' | 'type' }) {
   const [shared, setShared] = useState<Shared | null>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
+
+  const upload = async (shareId: string, card: ShareCard): Promise<boolean> => {
+    if (!canvas.current) {
+      return false
+    }
+    try {
+      await document.fonts?.ready
+      drawShareImage(canvas.current, card, 'square', shareLink(shareId))
+      const png = await canvasPng(canvas.current)
+      if (!png) {
+        return false
+      }
+      const { response } = await api.PUT('/api/games/{gameId}/share/image', {
+        params: { path: { gameId: game.gameId } },
+        body: png as unknown as string,
+        bodySerializer: (body) => body as unknown as BodyInit,
+        headers: { 'Content-Type': 'image/png' },
+      })
+      return response.ok
+    } catch {
+      return false
+    }
+  }
 
   const ensure = async (): Promise<Shared | null> => {
     if (shared) {
@@ -38,28 +65,39 @@ export function SharePanel({ game, focus = 'life' }: { game: Game; focus?: 'life
     const { data } = await api.POST('/api/games/{gameId}/share', {
       params: { path: { gameId: game.gameId } },
     })
-    setBusy(false)
     if (!data) {
+      setBusy(false)
       setMessage('공유 링크를 만들지 못했습니다.')
       return null
     }
-    setShared(data)
-    return data
+    const uploaded = await upload(data.shareId, data.card)
+    setBusy(false)
+    const next = { ...data, uploaded }
+    setShared(next)
+    return next
   }
 
-  const copy = async (text: string) => {
+  const copy = async (text: string, done = '링크를 복사했습니다.') => {
     try {
       await navigator.clipboard.writeText(text)
-      setMessage('링크를 복사했습니다.')
+      setMessage(done)
     } catch {
       setMessage(text)
     }
   }
 
-  const native = async () => {
-    const s = await ensure()
+  const toKakao = async () => {
+    const [s, sdk] = await Promise.all([ensure(), kakao()])
     if (!s) {
       return
+    }
+    if (sdk) {
+      try {
+        sdk.Share.sendDefault(kakaoFeed(s.card, s.shareId, focus, s.uploaded))
+        return
+      } catch {
+        // SDK가 거절하면(도메인 미등록 등) 아래 방법으로 보낸다.
+      }
     }
     const url = shareLink(s.shareId)
     const text = shareText(s.card, focus)
@@ -71,20 +109,7 @@ export function SharePanel({ game, focus = 'life' }: { game: Game; focus?: 'life
       }
       return
     }
-    await copy(`${text} ${url}`)
-  }
-
-  const open = async (to: 'x' | 'facebook') => {
-    // 팝업 차단을 피하려고 창을 먼저 열고, 링크가 생기면 주소를 넣는다.
-    const win = window.open('', '_blank', 'noopener=no')
-    const s = await ensure()
-    if (!s || !win) {
-      win?.close()
-      return
-    }
-    const url = shareLink(s.shareId)
-    win.location.href =
-      to === 'x' ? xShareUrl(shareText(s.card, focus), url) : facebookShareUrl(url)
+    await copy(`${text} ${url}`, '링크를 복사했습니다. 카카오톡 대화창에 붙여 넣으세요.')
   }
 
   const save = async (shape: ImageShape) => {
@@ -105,23 +130,12 @@ export function SharePanel({ game, focus = 'life' }: { game: Game; focus?: 'life
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
-          className={`${BUTTON} border-wine bg-wine text-white hover:text-white`}
+          className={`${BUTTON} border-[#FEE500] bg-[#FEE500] text-[#191919] hover:border-[#191919] hover:text-[#191919]`}
           disabled={busy}
-          onClick={() => void native()}
-          data-testid="share-native"
+          onClick={() => void toKakao()}
+          data-testid="share-kakao"
         >
-          공유하기
-        </button>
-        <button type="button" className={BUTTON} disabled={busy} onClick={() => void open('x')}>
-          X
-        </button>
-        <button
-          type="button"
-          className={BUTTON}
-          disabled={busy}
-          onClick={() => void open('facebook')}
-        >
-          페이스북
+          카카오톡으로 공유
         </button>
         <button
           type="button"

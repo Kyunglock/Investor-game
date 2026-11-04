@@ -36,6 +36,12 @@ public interface ResultService {
   /** 공유 ID로 카드를 찾는다. 세션을 따지지 않는 공개 값이다. */
   Optional<String> findShare(String shareId);
 
+  /** 공유한 판의 요약 그림(PNG)을 바꿔 넣는다 (#275). 공유하지 않은 판이면 false. */
+  boolean saveShareImage(UUID gameId, byte[] png);
+
+  /** 공유 ID의 요약 그림. 올리지 않았으면 비어 있다. */
+  Optional<byte[]> findShareImage(String shareId);
+
   /** 그 판이 순위표에 있으면 1부터 시작하는 순위. 올리지 않았으면 비어 있다. */
   Optional<Integer> rankOf(UUID gameId);
 }
