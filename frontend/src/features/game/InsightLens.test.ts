@@ -37,9 +37,21 @@ describe('안목 렌즈 (decisions.md 161번)', () => {
     expect(expert).toContain('안목 4/4단계')
   })
 
-  it('이벤트 카드에는 확률 숫자를 적지 않는다 (decisions.md 182번)', () => {
+  it('뉴스 힌트는 읽히는 정도 대신 맞출 확률을 적고, 방향을 못 읽었으면 그렇게 적는다 (decisions.md 187번)', () => {
+    const news = renderToStaticMarkup(
+      createElement(InsightLens, { insight: 50, hint: '좋아 보인다', accuracy: 68 }),
+    )
+    expect(news).toContain('맞출 확률 68%')
+    expect(news).not.toContain('대강 읽힌다')
+    const neutral = renderToStaticMarkup(
+      createElement(InsightLens, { insight: 20, hint: '글쎄', accuracy: null }),
+    )
+    expect(neutral).toContain('방향은 못 읽었다')
+  })
+
+  it('빚투 해석은 확률 없이 읽히는 정도만 적는다', () => {
     const html = renderToStaticMarkup(
-      createElement(InsightLens, { insight: 50, hint: '좋아 보인다', subject: '엔씽' }),
+      createElement(InsightLens, { insight: 50, hint: '버틴다', subject: '엔씽' }),
     )
     expect(html).toContain('대강 읽힌다')
     expect(html).not.toContain('%')
