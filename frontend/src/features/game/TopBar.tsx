@@ -1,6 +1,6 @@
 import type { Game } from '../../api/client'
 import { ageAt } from './clock'
-import { AUTO_FROM_AGE, autoUnlocked, useGameStore } from './store'
+import { useGameStore } from './store'
 
 interface Props {
   game: Game | null
@@ -40,7 +40,6 @@ export function TopBar({
   // 0.1초마다 바뀌는 day는 여기서만 구독한다. App이 구독하면 진행 화면 전체가 틱마다 다시 그려진다.
   const day = useGameStore((s) => s.day)
   const age = game ? ageAt(game.startAge, day, game.daysPerYear) : null
-  const unlocked = game ? autoUnlocked(game, day) : false
 
   return (
     <header>
@@ -71,16 +70,11 @@ export function TopBar({
                 type="button"
                 className={`${buttonBase} ${autoPlay ? buttonInk : buttonPaper}`}
                 aria-pressed={autoPlay}
-                disabled={!autoPlay && !unlocked}
-                title={
-                  unlocked
-                    ? '성향과 안목으로 선택을 대신하고 엔딩 크레딧까지 흐른다'
-                    : `${AUTO_FROM_AGE}세부터 자동 진행을 켤 수 있다`
-                }
+                title="성향과 안목으로 선택을 대신하고 엔딩 크레딧까지 흐른다"
                 onClick={onToggleAuto}
                 data-testid="auto-button"
               >
-                {autoPlay ? '⟳ 자동 켬' : unlocked ? '⟳ 자동' : `⟳ 자동 ${AUTO_FROM_AGE}세부터`}
+                {autoPlay ? '⟳ 자동 켬' : '⟳ 자동'}
               </button>
               <button type="button" className={`${buttonBase} ${buttonPaper}`} onClick={onRestart}>
                 다시 태어나기

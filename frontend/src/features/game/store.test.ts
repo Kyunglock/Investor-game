@@ -193,39 +193,34 @@ describe('자동 진행', () => {
   })
 })
 
-describe('자동 진행은 50세부터 (#200)', () => {
-  it('50세 전에는 켜지지 않고, 켜 둔 설정도 그 판에서는 꺼진 채로 둔다', async () => {
+describe('자동 진행은 처음부터 켤 수 있다 (decisions.md 186번)', () => {
+  it('15세 판에서도 켜고 끌 수 있고, 켜 둔 설정은 이어하기에서 그대로다', async () => {
     useGameStore.setState({
-      game: game({ day: 34 * YEAR }),
-      day: 34 * YEAR,
-      status: 'playing',
-      running: false,
-      autoPlay: false,
-    })
-    useGameStore.getState().setAutoPlay(true)
-    expect(useGameStore.getState().autoPlay).toBe(false)
-
-    localStorage.setItem('investor-game.auto-play', 'on')
-    useGameStore.setState({ autoPlay: true })
-    vi.mocked(api.GET).mockResolvedValue({ data: game(), response: { status: 200 } } as never)
-    // 주 창은 판을 넘겨받으며(claim) 불러온다 (#189).
-    vi.mocked(api.POST).mockResolvedValueOnce({ data: game(), response: { status: 200 } } as never)
-    await useGameStore.getState().load()
-    expect(useGameStore.getState().autoPlay).toBe(false)
-    expect(localStorage.getItem('investor-game.auto-play')).toBe('on')
-  })
-
-  it('50세가 되면 켤 수 있다', () => {
-    useGameStore.setState({
-      game: game({ day: 35 * YEAR }),
-      day: 35 * YEAR,
+      game: game({ day: 0 }),
+      day: 0,
       status: 'playing',
       running: false,
       autoPlay: false,
     })
     useGameStore.getState().setAutoPlay(true)
     expect(useGameStore.getState().autoPlay).toBe(true)
+    expect(localStorage.getItem('investor-game.auto-play')).toBe('on')
+
+    vi.mocked(api.GET).mockResolvedValue({ data: game(), response: { status: 200 } } as never)
+    // 주 창은 판을 넘겨받으며(claim) 불러온다 (#189).
+    vi.mocked(api.POST).mockResolvedValueOnce({ data: game(), response: { status: 200 } } as never)
+    await useGameStore.getState().load()
+    expect(useGameStore.getState().autoPlay).toBe(true)
+
     useGameStore.getState().setAutoPlay(false)
+    expect(useGameStore.getState().autoPlay).toBe(false)
+    expect(localStorage.getItem('investor-game.auto-play')).toBe('off')
+  })
+
+  it('판이 없으면 켜지지 않는다', () => {
+    useGameStore.setState({ game: null, autoPlay: false })
+    useGameStore.getState().setAutoPlay(true)
+    expect(useGameStore.getState().autoPlay).toBe(false)
   })
 })
 

@@ -126,14 +126,6 @@ function manualStart() {
 }
 export const HELD_TAB = 'held'
 
-/** 자동 진행은 이 나이부터 켤 수 있다 (#200). 그 전 인생은 직접 고른다. */
-export const AUTO_FROM_AGE = 50
-
-/** 지금 시각에 자동 진행을 켤 수 있는가. */
-export function autoUnlocked(game: Pick<Game, 'startAge' | 'daysPerYear'>, day: number): boolean {
-  return game.startAge + Math.floor(day / game.daysPerYear) >= AUTO_FROM_AGE
-}
-
 /** 보고 응답은 새 기록만 싣는다. 지금 가진 기록 앞에 붙여 판 전체 기록으로 되돌린다 (#192). */
 export function withEarlierLog(fresh: Game, current: Game | null): Game {
   if (!current || current.gameId !== fresh.gameId) {
@@ -161,8 +153,7 @@ export const useGameStore = create<GameState>((set, get) => {
         status: game.status === 'ENDED' ? 'ended' : 'playing',
         game,
         day,
-        // 50세 전이면 저장해 둔 자동 설정이 켜져 있어도 꺼진 채로 둔다 (#200).
-        autoPlay: state.autoPlay && autoUnlocked(game, day),
+        autoPlay: state.autoPlay,
         running:
           keepRunning && game.status === 'ACTIVE' && !game.pendingEvent && !marketOpen && !crisis,
         marketOpen,
@@ -530,8 +521,8 @@ export const useGameStore = create<GameState>((set, get) => {
 
     // 자동 진행을 켜면 서 있던 시계부터 돌린다. 선택·결과가 떠 있으면 useAutoPlay가 이어받는다.
     setAutoPlay: (on) => {
-      const { game, day } = get()
-      if (on && (!game || !autoUnlocked(game, day))) {
+      // 처음부터 켤 수 있다. 50세부터였던 제한은 뺐다 (decisions.md 186번).
+      if (on && !get().game) {
         return
       }
       storeAutoPlay(on)

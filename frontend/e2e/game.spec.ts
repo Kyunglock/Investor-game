@@ -287,20 +287,20 @@ test('신원 → 장부 탭 → 매매 버튼 → 접힌 능력 → 인생 기�
   await expect(page.getByTestId('open-report')).toHaveCount(0)
 })
 
-test('자동 진행은 50세부터: 그 전에는 버튼이 잠기고 카드는 직접 고르라고 한다 (#200, decisions.md 185번)', async ({
-  page,
-}) => {
+test('자동 진행은 처음부터 켤 수 있고 기본은 꺼져 있다 (decisions.md 186번)', async ({ page }) => {
   await born(page)
-  await expect(page.getByTestId('auto-button')).toBeDisabled()
-  await expect(page.getByTestId('auto-button')).toContainText('50세부터')
+  await expect(page.getByTestId('auto-button')).toBeEnabled()
   await expect(page.getByTestId('auto-button')).toHaveAttribute('aria-pressed', 'false')
 
-  // 첫 선택 카드에는 켜는 버튼 대신 50세부터라는 안내가 있다.
-  for (let i = 0; i < 60 && (await page.getByTestId('card-auto-locked').count()) === 0; i++) {
+  // 첫 선택 카드에는 자동 켜기 버튼이 있다. 누르면 켜지고 진행 막대가 찬다.
+  for (let i = 0; i < 60 && (await page.getByTestId('card-auto-on').count()) === 0; i++) {
     await page.clock.runFor(2_000)
   }
-  await expect(page.getByTestId('card-auto-locked')).toContainText('50세부터')
-  await expect(page.getByTestId('card-auto-on')).toHaveCount(0)
+  await page.getByTestId('card-auto-on').click()
+  await expect(page.getByTestId('auto-button')).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByTestId('auto-progress')).toBeVisible()
+  await page.getByTestId('card-auto-off').click()
+  await expect(page.getByTestId('auto-button')).toHaveAttribute('aria-pressed', 'false')
 })
 
 test('한 판은 한 창만: 두 번째 탭은 보기 전용이고, 이어하기를 누르면 넘겨받는다 (#189)', async ({
