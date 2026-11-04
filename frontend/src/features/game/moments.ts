@@ -2,6 +2,7 @@ import type { Game, LogEntry, Outcome } from '../../api/client'
 import { childWord, withParticle } from './labels'
 import { childName } from './log'
 import { stageFor } from './pixel/bodies'
+import { carryBabies, lineUp, type Member } from './pixel/family'
 import type { MoodKey } from './pixel/moods'
 import { opposite } from './pixel/sexes'
 import type { CreditArt, Figure } from './pixel/vignettes'
@@ -20,24 +21,20 @@ export interface Moment {
 export const BIG_MOVE_BP = 500
 const BP = 10_000
 
-/** 가족 여행 그림: 바다에 나와 배우자, 집에 있는 아이들(독립한 아이는 빼고)을 지금 나이의 몸으로 (decisions.md 163번). */
+/** 가족 여행 그림: 바다에 나와 배우자, 집에 있는 아이들(독립한 아이는 빼고)을 지금 나이의 몸으로. 아기는 업힌다 (decisions.md 163·178번). */
 function tripArt(game: Game): CreditArt {
   const stage = myStage(game)
-  const people: Omit<Figure, 'x'>[] = [
+  const people: Member[] = [
     { who: 'me', sex: game.sex, stage },
     { who: 'spouse', sex: opposite(game.sex), stage },
   ]
-  for (const kid of game.household?.children ?? []) {
+  ;(game.household?.children ?? []).forEach((kid, i) => {
     if (!kid.leftHome) {
-      people.push({ who: 'kid', sex: kid.sex, stage: stageFor(kid.age) })
+      people.push({ who: 'kid', sex: kid.sex, stage: stageFor(kid.age), look: i })
     }
-  }
-  // 12칸 간격 다섯 자리. 몸 폭이 12칸이라 닿지 않고, 넘치는 사람은 그리지 않는다.
-  const slots = [2, 14, 26, 38, 50]
-  return {
-    vignette: 'trip',
-    figures: people.slice(0, slots.length).map((p, i) => ({ ...p, x: slots[i] })),
-  }
+  })
+  // 왼쪽부터 닿지 않게 세우고, 넘치는 사람은 그리지 않는다.
+  return { vignette: 'trip', figures: lineUp(carryBabies(people)) }
 }
 
 /** 집들이 그림: 거실에 나(와 배우자) (decisions.md 140번). */
@@ -58,12 +55,16 @@ const HOUSEWARMING_CAPTIONS: Record<string, string> = {
 
 /** 아이의 나들이 그림: 놀이동산에 나와 아이 (decisions.md 87번). 배우자는 집에서 쉬는 날이다. */
 function outingArt(game: Game): CreditArt {
-  const kid = game.household.children.find((c) => !c.leftHome)
+  const look = Math.max(
+    0,
+    game.household.children.findIndex((c) => !c.leftHome),
+  )
+  const kid = game.household.children[look]
   return {
     vignette: 'park',
     figures: [
       { who: 'me', sex: game.sex, stage: 'adult', x: 14 },
-      { who: 'kid', sex: kid?.sex ?? 'M', stage: 'child', x: 28 },
+      { who: 'kid', sex: kid?.sex ?? 'M', stage: 'child', x: 28, look },
     ],
   }
 }
@@ -104,6 +105,7 @@ function leavingArt(game: Game, seq: number): CreditArt {
     sex: game.household.children?.[seq - 1]?.sex ?? 'M',
     stage: 'adult',
     x: 34,
+    look: seq - 1,
   })
   return { vignette: 'leave-home', figures }
 }
@@ -120,6 +122,7 @@ function weddingArt(game: Game, seq: number): CreditArt {
     sex: game.household.children?.[seq - 1]?.sex ?? 'M',
     stage: 'adult',
     x: 40,
+    look: seq - 1,
   })
   return { vignette: 'wedding', figures }
 }

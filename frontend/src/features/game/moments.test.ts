@@ -146,12 +146,11 @@ describe('momentForNotice', () => {
       },
     } as unknown as Partial<Game>)
     const figures = momentForNotice(trip, withKids)?.art.figures ?? []
-    expect(figures.map((f) => f.who)).toEqual(['me', 'spouse', 'kid', 'kid'])
-    expect(figures.slice(2).map((f) => f.stage)).toEqual(['baby', 'child'])
-    const xs = figures.map((f) => f.x)
-    for (let i = 1; i < xs.length; i++) {
-      expect(xs[i] - xs[i - 1]).toBeGreaterThanOrEqual(12)
-    }
+    // 세 살 아기는 배우자 등에 업힌다 (decisions.md 178번)
+    expect(figures.map((f) => f.who)).toEqual(['me', 'spouse', 'kid'])
+    expect(figures[1].carrying).toMatchObject({ sex: 'M', look: 0 })
+    expect(figures[2]).toMatchObject({ stage: 'child', look: 1 })
+    expect(figures.map((f) => f.x)).toEqual([2, 14, 31])
   })
 })
 
