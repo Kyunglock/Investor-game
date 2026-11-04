@@ -332,6 +332,33 @@ test('자동 진행은 처음부터 켤 수 있고 기본은 꺼져 있다 (deci
   await expect(page.getByTestId('auto-button')).toHaveAttribute('aria-pressed', 'false')
 })
 
+test('선택 요청이 끊겨도(모바일에서 다른 앱에 갔다 올 때) 선택지가 잠기지 않고 다시 고를 수 있다', async ({
+  page,
+}) => {
+  await born(page)
+  for (let i = 0; i < 60 && (await eventCard(page).count()) === 0; i++) {
+    await page.clock.runFor(2_000)
+  }
+  await expect(eventCard(page)).toBeVisible()
+  const first = eventCard(page).getByRole('button', { disabled: false }).first()
+  const label = await first.textContent()
+  // 첫 선택 요청은 네트워크에서 끊긴다.
+  await page.route('**/events/*/choose', (route) => route.abort('failed'), { times: 1 })
+  await first.click()
+  // 잠긴 채로 남지 않고 같은 카드가 다시 눌린다.
+  await expect(eventCard(page)).toBeVisible()
+  await expect(
+    eventCard(page)
+      .getByRole('button', { name: label ?? '' })
+      .first(),
+  ).toBeEnabled()
+  await eventCard(page)
+    .getByRole('button', { name: label ?? '' })
+    .first()
+    .click()
+  await expect(outcomeCard(page)).toBeVisible()
+})
+
 test('한 판은 한 창만: 두 번째 탭은 보기 전용이고, 이어하기를 누르면 넘겨받는다 (#189)', async ({
   page,
   context,

@@ -101,6 +101,18 @@ interface GameState {
   quit: () => Promise<void>
 }
 
+/**
+ * 요청이 연결 오류·시간 초과로 끊기면 예외 대신 undefined. 모바일에서 다른 앱에 갔다 오면 요청이 끊기는데, 예외가 나면 선택 중·보고 중 표시가 풀리지 않아
+ * 버튼이 잠긴 채로 남았다.
+ */
+async function safely<T>(request: Promise<T>): Promise<T | undefined> {
+  try {
+    return await request
+  } catch {
+    return undefined
+  }
+}
+
 export const MACRO_TAB = 'macro'
 export const AUTO_PLAY_KEY = 'investor-game.auto-play'
 
@@ -189,11 +201,18 @@ export const useGameStore = create<GameState>((set, get) => {
     // 가진 기록 뒤의 것만 받는다. 판 전체 기록을 1초마다 다시 받지 않는다 (#192).
     const logAfter = game.log.length > 0 ? Math.max(...game.log.map((e) => e.seq)) : undefined
     inFlight = (async () => {
-      const { data } = await api.POST('/api/games/{gameId}/advance', {
-        params: { path: { gameId: game.gameId } },
-        body: { day: Math.floor(day), logAfter },
-      })
+      const result = await safely(
+        api.POST('/api/games/{gameId}/advance', {
+          params: { path: { gameId: game.gameId } },
+          body: { day: Math.floor(day), logAfter },
+        }),
+      )
       set({ reporting: false })
+      if (!result) {
+        // 연결이 끊겼다. 보고 중 표시만 풀고 다음 틱에 다시 보고한다.
+        return
+      }
+      const { data } = result
       if (data) {
         apply(logAfter === undefined ? data : withEarlierLog(data, get().game), get().running)
         return
@@ -266,9 +285,17 @@ export const useGameStore = create<GameState>((set, get) => {
       // 주 창이면 판을 넘겨받으며 불러오고, 보기 전용 창이면 읽기만 한다 (#189).
       const role = useWindowRole.getState().role === 'primary' ? await windowReady() : 'device'
       const primary = role === 'primary' && useWindowRole.getState().role === 'primary'
-      const { data, response } = primary
-        ? await api.POST('/api/games/current/claim')
-        : await api.GET('/api/games/current')
+      const result = await safely(
+        primary ? api.POST('/api/games/current/claim') : api.GET('/api/games/current'),
+      )
+      if (!result) {
+        // 연결이 끊겼다. 판을 보고 있었으면 그대로 두고(다시 누르면 된다), 처음 불러오던 중이면 연결 오류를 보인다.
+        if (!get().game) {
+          set({ status: 'error', running: false })
+        }
+        return
+      }
+      const { data, response } = result
       if (data) {
         set({ outcome: null, heldGame: null })
         apply(data, false)
@@ -352,10 +379,15 @@ export const useGameStore = create<GameState>((set, get) => {
         return
       }
       set({ choosing: true })
-      const { data } = await api.POST('/api/games/{gameId}/events/{eventId}/choose', {
-        params: { path: { gameId: game.gameId, eventId: game.pendingEvent.eventId } },
-        body: quantity == null ? { option } : { option, quantity },
-      })
+      // 연결이 끊기면(모바일에서 다른 앱에 갔다 올 때) 잠긴 채로 두지 않는다. 선택이 서버에 닿았는지 모르니 아래에서 서버 상태로 다시 맞춘다.
+      const data = (
+        await safely(
+          api.POST('/api/games/{gameId}/events/{eventId}/choose', {
+            params: { path: { gameId: game.gameId, eventId: game.pendingEvent.eventId } },
+            body: quantity == null ? { option } : { option, quantity },
+          }),
+        )
+      )?.data
       set({ choosing: false })
       if (data) {
         const kind = data.outcome.kind
@@ -513,10 +545,14 @@ export const useGameStore = create<GameState>((set, get) => {
         return
       }
       set({ trading: true })
-      const { data } = await api.POST('/api/games/{gameId}/trades', {
-        params: { path: { gameId: game.gameId } },
-        body: { stockCode: selectedStock, side, quantity },
-      })
+      const data = (
+        await safely(
+          api.POST('/api/games/{gameId}/trades', {
+            params: { path: { gameId: game.gameId } },
+            body: { stockCode: selectedStock, side, quantity },
+          }),
+        )
+      )?.data
       set({ trading: false })
       if (data) {
         set({ tradeOutcome: data.outcome })
