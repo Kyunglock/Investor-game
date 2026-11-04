@@ -176,6 +176,26 @@ class JsonContentCatalogTest {
     assertThat(wrong).isEmpty();
   }
 
+  /** #236: 신분이 보장된 공무원·교사와 알바에게는 "나가 달라"는 권고사직이 없고, 그들만의 번아웃 장면이 있다. */
+  @Test
+  void 권고사직은_공무원_교사_알바에게_없고_대신_그들만의_번아웃이_있다() {
+    JsonContentCatalog catalog = load();
+    for (String code : List.of("burnout", "burnout-layoff")) {
+      assertThat(
+              catalog.careers().stream()
+                  .filter(c -> c.code().equals(code))
+                  .findFirst()
+                  .orElseThrow()
+                  .jobs())
+          .as(code)
+          .doesNotContain("civil-servant", "teacher", "parttime");
+    }
+    assertThat(catalog.careers())
+        .extracting(CareerDefinition::code)
+        .contains("burnout-public", "burnout-shop");
+    assertThat(catalog.job("parttime").retires()).isFalse();
+  }
+
   @Test
   void 알_수_없는_유형_코드는_오류다() {
     assertThatThrownBy(() -> load().investorType("none-none-none"))

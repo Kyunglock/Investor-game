@@ -1807,13 +1807,31 @@ class DefaultEventService implements EventService {
     Optional<FollowUp> followUp = followUp(previous);
     if (followUp.isPresent()) {
       CareerDefinition next = content.career(followUp.get().code());
+      // 후속 장면의 이직 선택지도 옮겨 갈 자리를 정해 둔다. 없으면 결과의 moveJob이 무시돼 "옮겼다"인데 그대로 남았다 (#237).
+      List<JobDefinition> nextJobs =
+          context.fullTimeInvestor() || context.jobCode() == null
+              ? List.of()
+              : content.jobs().stream()
+                  .filter(JobDefinition::offered)
+                  .filter(j -> content.job(context.jobCode()).movesTo().contains(j.code()))
+                  .toList();
+      JobDefinition nextTarget =
+          next.movesJob() && !nextJobs.isEmpty()
+              ? weighted(nextJobs, JobDefinition::weight, rng)
+              : null;
       return simple(
           id,
           seq,
           EventKind.CAREER,
           next.code(),
           day,
-          next.options().stream().map(CareerDefinition.Option::code).toList());
+          next.options().stream()
+              .map(
+                  o ->
+                      o.success().moveJob() && nextTarget != null
+                          ? MOVE_PREFIX + nextTarget.code()
+                          : o.code())
+              .toList());
     }
     String lastCode = previous.isEmpty() ? null : last(previous).definitionCode();
     boolean investor = context.fullTimeInvestor();

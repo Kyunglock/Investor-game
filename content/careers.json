@@ -188,11 +188,9 @@
     "weight": 7,
     "minTenureYears": 2,
     "jobs": [
-      "factory",
       "designer",
       "office",
       "sales",
-      "nurse",
       "developer"
     ],
     "options": [
@@ -244,8 +242,6 @@
       }
     ],
     "unless": [
-      "fac-outsource/found",
-      "fac-outsource/negotiate",
       "des-freelance/go",
       "des-freelance/go!fail",
       "des-studio/found",
@@ -253,7 +249,131 @@
       "des-academy/open",
       "sal-dealer/open",
       "sal-dealer/open!fail",
-      "sal-dealer/partner",
+      "sal-dealer/partner"
+    ],
+    "repeatable": true
+  },
+  {
+    "code": "headhunt-factory",
+    "title": "옆 공장의 제안",
+    "body": "같은 공단 옆 공장 반장에게서 연락이 왔다. 같은 일인데 시급과 상여가 지금보다 낫다고 한다. 다만 옮기면 연차는 처음부터 다시 쌓고, 지금까지 올린 인상분도 사라진다.",
+    "weight": 7,
+    "minTenureYears": 2,
+    "jobs": [
+      "factory"
+    ],
+    "options": [
+      {
+        "code": "move",
+        "label": "이직한다",
+        "success": {
+          "moveJob": true,
+          "moveSalaryPercent": 10,
+          "text": "옆 공장으로 옮겼다. 첫 달부터 월급이 올랐지만 연차는 다시 1년차다.",
+          "statDeltas": {
+            "courage": 2
+          },
+          "happiness": 4
+        }
+      },
+      {
+        "code": "counter",
+        "label": "제안을 흘려 역제안을 받아 본다",
+        "stat": "conviction",
+        "baseBp": 3000,
+        "perPointBp": 50,
+        "success": {
+          "salaryPercent": 4,
+          "text": "공장장이 붙잡았다. 월급 4% 인상으로 남기로 했다.",
+          "statDeltas": {
+            "conviction": 1
+          },
+          "happiness": 5
+        },
+        "fail": {
+          "text": "공장장은 잡지 않았고 제안도 식었다. 남긴 남았는데 라인 분위기가 어색해졌다.",
+          "statDeltas": {
+            "conviction": -1
+          },
+          "happiness": -3
+        }
+      },
+      {
+        "code": "stay",
+        "label": "남는다",
+        "success": {
+          "text": "익숙한 라인을 지켰다. 연차는 계속 쌓인다.",
+          "statDeltas": {
+            "patience": 1
+          },
+          "happiness": 1
+        }
+      }
+    ],
+    "unless": [
+      "fac-outsource/found",
+      "fac-outsource/negotiate"
+    ],
+    "repeatable": true
+  },
+  {
+    "code": "headhunt-nurse",
+    "title": "다른 병원의 제안",
+    "body": "다른 병원에 있는 동기가 경력 간호사를 찾는다며 연락해 왔다. 같은 일인데 조건이 지금보다 낫다. 다만 옮기면 연차는 처음부터 다시 쌓고, 지금까지 올린 인상분도 사라진다.",
+    "weight": 7,
+    "minTenureYears": 2,
+    "jobs": [
+      "nurse"
+    ],
+    "options": [
+      {
+        "code": "move",
+        "label": "이직한다",
+        "success": {
+          "moveJob": true,
+          "moveSalaryPercent": 10,
+          "text": "새 병원으로 옮겼다. 첫 달부터 월급이 올랐지만 연차는 다시 1년차다.",
+          "statDeltas": {
+            "courage": 2
+          },
+          "happiness": 4
+        }
+      },
+      {
+        "code": "counter",
+        "label": "제안을 흘려 역제안을 받아 본다",
+        "stat": "conviction",
+        "baseBp": 3000,
+        "perPointBp": 50,
+        "success": {
+          "salaryPercent": 4,
+          "text": "병원이 붙잡았다. 월급 4% 인상으로 남기로 했다.",
+          "statDeltas": {
+            "conviction": 1
+          },
+          "happiness": 5
+        },
+        "fail": {
+          "text": "병원은 잡지 않았고 제안도 식었다. 남긴 남았는데 병동 분위기가 어색해졌다.",
+          "statDeltas": {
+            "conviction": -1
+          },
+          "happiness": -3
+        }
+      },
+      {
+        "code": "stay",
+        "label": "남는다",
+        "success": {
+          "text": "익숙한 병동을 지켰다. 연차는 계속 쌓인다.",
+          "statDeltas": {
+            "patience": 1
+          },
+          "happiness": 1
+        }
+      }
+    ],
+    "unless": [
       "nur-homecare/found",
       "nur-abroad-go/go"
     ],
@@ -359,12 +479,9 @@
     "weight": 5,
     "minTenureYears": 1,
     "jobs": [
-      "parttime",
       "factory",
-      "civil-servant",
       "designer",
       "office",
-      "teacher",
       "sales",
       "nurse",
       "developer",
@@ -392,11 +509,11 @@
         },
         "fail": {
           "amount": -2000000,
-          "text": "불안해서 버텼지만 몸이 먼저 무너졌다. 병원비 200만 원이 들었다. 회사 분위기가 달라졌다.",
+          "text": "불안해서 버텼지만 몸이 먼저 무너졌다. 병원비 200만 원이 들었다. 직장 분위기가 달라졌다.",
           "statDeltas": {
             "patience": -2
           },
-          "textFamily": "가족 생각에 버텼지만 몸이 먼저 무너졌다. 병원비 200만 원이 들었다. 회사 분위기가 달라졌다.",
+          "textFamily": "가족 생각에 버텼지만 몸이 먼저 무너졌다. 병원비 200만 원이 들었다. 직장 분위기가 달라졌다.",
           "followUp": "burnout-layoff",
           "followUpDays": 150,
           "happiness": -7,
@@ -405,10 +522,10 @@
       },
       {
         "code": "rest",
-        "label": "휴가를 길게 내고 쉰다",
+        "label": "한 달 무급 휴직을 내고 쉰다",
         "success": {
-          "amount": -1000000,
-          "text": "한 달을 쉬었다. 여행에 100만 원을 썼고, 머리가 맑아졌다.",
+          "amount": -3000000,
+          "text": "무급 휴직으로 한 달을 쉬었다. 한 달치 월급 300만 원이 비었지만 머리가 맑아졌다.",
           "statDeltas": {
             "patience": 2,
             "insight": 1
@@ -423,7 +540,7 @@
         "success": {
           "quit": true,
           "severanceMonths": 1,
-          "text": "사표를 냈다. 한 달치 월급을 받고 나왔다. 다음 직장은 천천히 찾기로 했다.",
+          "text": "사표를 냈다. 다음 직장은 퇴직금으로 버티며 천천히 찾기로 했다.",
           "statDeltas": {
             "courage": 2
           },
@@ -436,7 +553,7 @@
         "success": {
           "becomeInvestor": true,
           "severanceMonths": 1,
-          "text": "사표를 내고 모니터 앞에 앉았다. 한 달치 월급을 받고 나왔다. 이제 월급은 없고, 시세가 내 월급이다.",
+          "text": "사표를 내고 모니터 앞에 앉았다. 퇴직금이 첫 종잣돈이다. 이제 월급은 없고, 시세가 내 월급이다.",
           "statDeltas": {
             "courage": 3,
             "conviction": 2
@@ -446,10 +563,6 @@
       }
     ],
     "unless": [
-      "pt-franchise/open",
-      "pt-takeover/take",
-      "pt-takeover/take!fail",
-      "pt-takeover/negotiate",
       "fac-outsource/found",
       "fac-outsource/negotiate",
       "des-freelance/go",
@@ -476,18 +589,15 @@
   },
   {
     "code": "burnout-layoff",
-    "title": "번아웃 뒤, 회사가 먼저 말을 꺼냈다",
+    "title": "번아웃 뒤, 직장이 먼저 말을 꺼냈다",
     "body": "병가에서 돌아온 지 몇 달. 윗사람이 조용한 자리로 불렀다. \"쉬면서 다음을 생각해 보는 게 어떻겠냐\"고 한다. 사실상 나가 달라는 말이다.",
     "weight": 1,
     "minTenureYears": 0,
     "followUpOnly": true,
     "jobs": [
-      "parttime",
       "factory",
-      "civil-servant",
       "designer",
       "office",
-      "teacher",
       "sales",
       "nurse",
       "developer",
@@ -555,10 +665,6 @@
       }
     ],
     "unless": [
-      "pt-franchise/open",
-      "pt-takeover/take",
-      "pt-takeover/take!fail",
-      "pt-takeover/negotiate",
       "fac-outsource/found",
       "fac-outsource/negotiate",
       "des-freelance/go",
@@ -583,9 +689,316 @@
     ]
   },
   {
+    "code": "burnout-public",
+    "title": "몸과 마음이 바닥났다",
+    "body": "아침에 눈을 뜨는 게 무겁다. 일은 쌓이고 몸은 신호를 보낸다. 호봉은 해마다 오르는데 마음은 바닥이다.",
+    "weight": 5,
+    "minTenureYears": 1,
+    "jobs": [
+      "civil-servant",
+      "teacher"
+    ],
+    "options": [
+      {
+        "code": "push",
+        "label": "버티며 일한다",
+        "stat": "patience",
+        "baseBp": 3000,
+        "perPointBp": 50,
+        "success": {
+          "text": "지금 그만두면 뭘 먹고 사나. 미래가 불안해 그만둘 수 없었다. 버틴 끝에 한 해를 무사히 넘겼고 근무 평정도 좋게 나왔다.",
+          "statDeltas": {
+            "patience": 3
+          },
+          "textFamily": "아이 학원비 고지서와 배우자의 잠든 얼굴을 보고 다시 출근했다. 가족을 위해 버틴 끝에 한 해를 무사히 넘겼고 근무 평정도 좋게 나왔다.",
+          "happiness": 2,
+          "family": -1
+        },
+        "fail": {
+          "amount": -2000000,
+          "text": "불안해서 버텼지만 몸이 먼저 무너졌다. 병원비 200만 원이 들었고 병가를 냈다.",
+          "statDeltas": {
+            "patience": -2
+          },
+          "textFamily": "가족 생각에 버텼지만 몸이 먼저 무너졌다. 병원비 200만 원이 들었고 병가를 냈다.",
+          "followUp": "burnout-leave",
+          "followUpDays": 150,
+          "happiness": -7,
+          "family": -1
+        }
+      },
+      {
+        "code": "rest",
+        "label": "남은 연가와 방학을 몰아 쉰다",
+        "success": {
+          "amount": -1000000,
+          "text": "남은 연가와 방학을 몰아 한 달을 쉬었다. 여행에 100만 원을 썼고, 머리가 맑아졌다.",
+          "statDeltas": {
+            "patience": 2,
+            "insight": 1
+          },
+          "happiness": 6,
+          "family": 1
+        }
+      },
+      {
+        "code": "quit",
+        "label": "사직서를 낸다",
+        "success": {
+          "quit": true,
+          "text": "사직서를 냈다. 안정된 자리를 놓았지만 숨은 쉴 수 있다. 다음 일은 천천히 찾기로 했다.",
+          "statDeltas": {
+            "courage": 2
+          },
+          "happiness": -3
+        }
+      },
+      {
+        "code": "invest",
+        "label": "전업투자자로 전향한다",
+        "success": {
+          "becomeInvestor": true,
+          "text": "사직서를 내고 모니터 앞에 앉았다. 이제 월급은 없고, 시세가 내 월급이다.",
+          "statDeltas": {
+            "courage": 3,
+            "conviction": 2
+          },
+          "happiness": 2
+        }
+      }
+    ],
+    "repeatable": true
+  },
+  {
+    "code": "burnout-leave",
+    "title": "번아웃 뒤, 휴직과 전보 사이",
+    "body": "병가에서 돌아온 지 몇 달. 몸이 아직 예전 같지 않다. 인사 담당이 질병 휴직을 쓰거나 업무가 가벼운 곳으로 전보를 신청해 보라고 한다. 자리는 보장되지만 이대로는 못 버틴다.",
+    "weight": 1,
+    "minTenureYears": 0,
+    "followUpOnly": true,
+    "jobs": [
+      "civil-servant",
+      "teacher"
+    ],
+    "options": [
+      {
+        "code": "leave",
+        "label": "질병 휴직을 낸다",
+        "success": {
+          "amount": -5000000,
+          "text": "반년 동안 질병 휴직을 했다. 봉급이 열에 일곱만 나와 500만 원쯤 덜 들어왔지만 몸이 돌아왔다.",
+          "textFamily": "반년 동안 질병 휴직을 했다. 봉급이 열에 일곱만 나와 500만 원쯤 덜 들어왔지만, 가족과 저녁을 먹으며 몸이 돌아왔다.",
+          "statDeltas": {
+            "patience": 2
+          },
+          "happiness": 4,
+          "family": 2
+        }
+      },
+      {
+        "code": "transfer",
+        "label": "업무가 가벼운 곳으로 전보를 신청한다",
+        "success": {
+          "text": "업무가 가벼운 곳으로 옮겼다. 승진은 늦어지겠지만 퇴근이 빨라졌다.",
+          "statDeltas": {
+            "insight": 1
+          },
+          "happiness": 3,
+          "family": 1
+        }
+      },
+      {
+        "code": "endure",
+        "label": "그대로 버틴다",
+        "stat": "patience",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": {
+          "text": "다시 일어섰다. 동료들이 업무를 조금씩 나눠 줬다.",
+          "statDeltas": {
+            "patience": 2
+          },
+          "happiness": 2
+        },
+        "fail": {
+          "amount": -3000000,
+          "text": "다시 쓰러졌다. 병원비 300만 원이 들었고 결국 병가를 길게 썼다.",
+          "statDeltas": {
+            "patience": -1
+          },
+          "happiness": -7,
+          "family": -1
+        }
+      },
+      {
+        "code": "invest",
+        "label": "사직서를 내고 전업투자자가 된다",
+        "success": {
+          "becomeInvestor": true,
+          "text": "사직서를 내고 전업투자자가 됐다. 이제 월급은 없고, 시세가 내 월급이다.",
+          "textFamily": "사직서를 내고 전업투자자가 됐다. 배우자는 걱정스러운 얼굴이었지만 고개를 끄덕였다.",
+          "statDeltas": {
+            "courage": 3
+          },
+          "happiness": 1
+        }
+      }
+    ]
+  },
+  {
+    "code": "burnout-shop",
+    "title": "계산대 앞의 번아웃",
+    "body": "아침에 눈을 뜨는 게 무겁다. 계산대에 서 있으면 다리가 저리고, 손님 앞에서 웃음이 나오지 않는다.",
+    "weight": 5,
+    "minTenureYears": 1,
+    "jobs": [
+      "parttime"
+    ],
+    "options": [
+      {
+        "code": "push",
+        "label": "버티며 일한다",
+        "stat": "patience",
+        "baseBp": 3000,
+        "perPointBp": 50,
+        "success": {
+          "text": "그만두면 당장 생활비가 없다. 미래가 불안해 버텼다. 손이 익자 사장님이 일을 덜 몰아줬다.",
+          "statDeltas": {
+            "patience": 2
+          },
+          "textFamily": "가족 생각에 다시 가게 문을 열었다. 버티다 보니 손이 익어 사장님이 일을 덜 몰아줬다.",
+          "happiness": 2,
+          "family": -1
+        },
+        "fail": {
+          "amount": -1000000,
+          "text": "불안해서 버텼지만 몸이 먼저 무너졌다. 병원비 100만 원이 들었다. 몇 번 빠지자 사장님 눈치가 달라졌다.",
+          "statDeltas": {
+            "patience": -2
+          },
+          "textFamily": "가족 생각에 버텼지만 몸이 먼저 무너졌다. 병원비 100만 원이 들었다. 몇 번 빠지자 사장님 눈치가 달라졌다.",
+          "followUp": "burnout-shop-cut",
+          "followUpDays": 150,
+          "happiness": -7,
+          "family": -1
+        }
+      },
+      {
+        "code": "rest",
+        "label": "대타를 구하고 일주일 쉰다",
+        "success": {
+          "amount": -500000,
+          "text": "대타를 구해 일주일을 쉬었다. 일주일치 시급 50만 원을 못 받았지만 숨이 트였다.",
+          "statDeltas": {
+            "patience": 2,
+            "insight": 1
+          },
+          "happiness": 5,
+          "family": 1
+        }
+      },
+      {
+        "code": "quit",
+        "label": "일을 그만둔다",
+        "success": {
+          "quit": true,
+          "text": "그만두겠다고 말했다. 다른 가게 자리는 천천히 찾기로 했다.",
+          "statDeltas": {
+            "courage": 2
+          },
+          "happiness": -3
+        }
+      },
+      {
+        "code": "invest",
+        "label": "전업투자자로 전향한다",
+        "success": {
+          "becomeInvestor": true,
+          "text": "앞치마를 벗고 모니터 앞에 앉았다. 이제 시급은 없고, 시세가 내 월급이다.",
+          "statDeltas": {
+            "courage": 3,
+            "conviction": 2
+          },
+          "happiness": 2
+        }
+      }
+    ],
+    "unless": [
+      "pt-franchise/open",
+      "pt-takeover/take",
+      "pt-takeover/take!fail",
+      "pt-takeover/negotiate",
+      "pt-newowner/comply",
+      "pt-back/rest",
+      "pt-unmanned/wait!fail",
+      "burnout-shop-cut/accept",
+      "burnout-shop-cut/ask!fail"
+    ],
+    "repeatable": true
+  },
+  {
+    "code": "burnout-shop-cut",
+    "title": "번아웃 뒤, 줄어든 근무표",
+    "body": "몸살로 몇 번 빠진 뒤, 사장님이 근무표를 새로 짰다. \"당분간 주 3일만 나와.\" 나머지 날은 새로 뽑은 사람이 맡는다.",
+    "weight": 1,
+    "minTenureYears": 0,
+    "followUpOnly": true,
+    "jobs": [
+      "parttime"
+    ],
+    "options": [
+      {
+        "code": "accept",
+        "label": "주 3일을 받아들인다",
+        "success": {
+          "salaryPercent": -40,
+          "text": "주 3일만 나가게 됐다. 벌이가 40% 줄었지만 몸이 쉴 틈이 생겼다.",
+          "statDeltas": {
+            "patience": 2
+          },
+          "happiness": -3
+        }
+      },
+      {
+        "code": "ask",
+        "label": "원래 근무로 돌려 달라고 한다",
+        "stat": "conviction",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": {
+          "text": "한 달 동안 빠지지 않고 나가 보였다. 사장님이 원래 근무 시간을 돌려줬다.",
+          "statDeltas": {
+            "conviction": 2
+          },
+          "happiness": 4
+        },
+        "fail": {
+          "salaryPercent": -40,
+          "text": "사장님은 새 사람이 낫다고 했다. 주 3일로 굳었고 벌이가 40% 줄었다.",
+          "statDeltas": {
+            "conviction": 1
+          },
+          "happiness": -6
+        }
+      },
+      {
+        "code": "quit",
+        "label": "이참에 그만둔다",
+        "success": {
+          "quit": true,
+          "text": "미련 없이 그만뒀다. 몸부터 추스르기로 했다.",
+          "statDeltas": {
+            "courage": 1
+          },
+          "happiness": -4
+        }
+      }
+    ]
+  },
+  {
     "code": "retirement",
     "title": "정년퇴직",
-    "body": "오늘이 마지막 출근이다. 출입증을 반납하고 건물을 나서니 평일 오전인데 갈 곳이 없다. 퇴직금은 통장에 들어왔고, 이제부터는 연금과 모아 둔 돈으로 산다. 수십 년을 다닌 곳과 어떻게 헤어질까.",
+    "body": "오늘이 마지막 근무다. 일터를 나서니 평일 오전인데 갈 곳이 없다. 퇴직금은 통장에 들어왔고, 이제부터는 연금과 모아 둔 돈으로 산다. 수십 년 일한 곳과 어떻게 헤어질까.",
     "weight": 1,
     "minTenureYears": 0,
     "jobs": [],
@@ -593,11 +1006,11 @@
     "options": [
       {
         "code": "party",
-        "label": "후배들을 다 불러 송별회를 연다",
+        "label": "함께 일한 사람들을 불러 송별회를 연다",
         "success": {
           "amount": -2000000,
-          "text": "송별회에서 후배들이 돌아가며 한마디씩 했다. 200만 원이 들었지만 수십 년이 헛되지 않았다는 걸 알았다.",
-          "textFamily": "송별회에서 후배들이 돌아가며 한마디씩 했다. 200만 원이 들었지만, 집에 오니 가족이 꽃다발을 들고 있었다.",
+          "text": "송별회에서 동료와 후배들이 돌아가며 한마디씩 했다. 200만 원이 들었지만 수십 년이 헛되지 않았다는 걸 알았다.",
+          "textFamily": "송별회에서 동료와 후배들이 돌아가며 한마디씩 했다. 200만 원이 들었지만, 집에 오니 가족이 꽃다발을 들고 있었다.",
           "statDeltas": {
             "courage": 1
           },
@@ -607,9 +1020,9 @@
       },
       {
         "code": "quiet",
-        "label": "조용히 책상을 정리하고 나온다",
+        "label": "조용히 짐을 챙겨 나온다",
         "success": {
-          "text": "마지막 날 책상을 정리하고 조용히 나왔다. 엘리베이터 문이 닫히는 순간 울컥했다. 내일부터는 알람을 끄기로 했다.",
+          "text": "마지막 날 자리와 사물함을 정리하고 조용히 나왔다. 일터 문을 나서는 순간 울컥했다. 내일부터는 알람을 끄기로 했다.",
           "statDeltas": {
             "patience": 2
           },
@@ -912,7 +1325,7 @@
           "statDeltas": {
             "courage": 1
           },
-          "text": "미련 없이 나왔다. 사장님이 한 달치를 챙겨 줬다.",
+          "text": "미련 없이 나왔다. 사장님이 퇴직금을 챙겨 줬다.",
           "happiness": -4
         }
       },
@@ -955,11 +1368,11 @@
           "happiness": 2
         },
         "fail": {
-          "salaryPercent": -10,
+          "salaryPercent": -50,
           "statDeltas": {
             "patience": 1
           },
-          "text": "기다리는 사이 주간 자리는 다 찼다. 남은 건 주말 몇 시간뿐이다.",
+          "text": "기다리는 사이 주간 자리는 다 찼다. 남은 건 주말 몇 시간뿐이라 벌이가 50% 줄었다.",
           "happiness": -4
         }
       }
@@ -968,7 +1381,11 @@
       "pt-franchise/open",
       "pt-takeover/take",
       "pt-takeover/take!fail",
-      "pt-takeover/negotiate"
+      "pt-takeover/negotiate",
+      "pt-newowner/comply",
+      "pt-back/rest",
+      "burnout-shop-cut/accept",
+      "burnout-shop-cut/ask!fail"
     ]
   },
   {
@@ -1652,11 +2069,11 @@
         "code": "comply",
         "label": "줄인 시간을 받아들인다",
         "success": {
-          "salaryPercent": -5,
+          "salaryPercent": -50,
           "statDeltas": {
             "patience": 2
           },
-          "text": "벌이는 줄었지만 자리는 지켰다.",
+          "text": "근무가 절반으로 줄어 벌이도 50% 줄었다. 그래도 자리는 지켰다.",
           "happiness": -4
         }
       },
@@ -1701,7 +2118,11 @@
       "pt-franchise/open",
       "pt-takeover/take",
       "pt-takeover/take!fail",
-      "pt-takeover/negotiate"
+      "pt-takeover/negotiate",
+      "pt-back/rest",
+      "pt-unmanned/wait!fail",
+      "burnout-shop-cut/accept",
+      "burnout-shop-cut/ask!fail"
     ]
   },
   {
@@ -1802,11 +2223,11 @@
         "code": "rest",
         "label": "근무를 주 3일로 줄인다",
         "success": {
-          "salaryPercent": -10,
+          "salaryPercent": -40,
           "statDeltas": {
             "patience": 1
           },
-          "text": "벌이는 줄었지만 몸이 한결 낫다.",
+          "text": "근무를 주 3일로 줄였다. 벌이가 40% 줄었지만 몸이 한결 낫다.",
           "happiness": 2,
           "family": 1
         }
@@ -1860,7 +2281,11 @@
       "pt-franchise/open",
       "pt-takeover/take",
       "pt-takeover/take!fail",
-      "pt-takeover/negotiate"
+      "pt-takeover/negotiate",
+      "pt-newowner/comply",
+      "pt-unmanned/wait!fail",
+      "burnout-shop-cut/accept",
+      "burnout-shop-cut/ask!fail"
     ]
   },
   {
@@ -2824,12 +3249,12 @@
         "baseBp": 3500,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 25,
+          "salaryPercent": 15,
           "amount": -10000000,
           "statDeltas": {
             "courage": 2
           },
-          "text": "자부담 1천만 원을 보태 하우스를 두 배로 늘렸다. 첫 해부터 물량이 받쳐 줬다.",
+          "text": "자부담 1천만 원을 보태 하우스를 두 배로 늘렸다. 첫 해부터 물량이 받쳐 줬다. 원리금은 늘어난 벌이에서 다달이 갚아 나가니 손에 남는 건 그만큼 적다.",
           "happiness": 7
         },
         "fail": {
@@ -3252,7 +3677,7 @@
           },
           "followUp": "farm-land-later",
           "followUpDays": 1460,
-          "text": "8천만 원에 땅을 샀다. 농사 규모가 커지자 벌이도 늘었다.",
+          "text": "8천만 원에 땅을 샀다. 모자란 돈은 대출로 메웠다. 농사 규모가 커지자 벌이도 늘었다.",
           "happiness": 7
         },
         "fail": {
@@ -3261,7 +3686,7 @@
           "statDeltas": {
             "courage": 1
           },
-          "text": "8천만 원에 샀는데 도로 계획이 다른 쪽으로 났다. 이자에 허리가 휜다.",
+          "text": "8천만 원에 샀는데 도로 계획이 다른 쪽으로 났다. 모자란 돈을 대출로 메운 터라 이자에 허리가 휜다.",
           "happiness": -6
         }
       },
@@ -3957,7 +4382,7 @@
           "statDeltas": {
             "courage": 2
           },
-          "text": "1억 원을 들여 지은 카페가 드라이브 손님으로 붐빈다.",
+          "text": "1억 원을 들여(모자란 돈은 땅을 담보로 빌렸다) 지은 카페가 드라이브 손님으로 붐빈다.",
           "happiness": 9
         },
         "fail": {
@@ -3966,7 +4391,7 @@
           "statDeltas": {
             "courage": 1
           },
-          "text": "1억 원을 들였는데 손님이 주말에만 왔다. 이자가 버겁다.",
+          "text": "1억 원을 들였는데(모자란 돈은 땅을 담보로 빌렸다) 손님이 주말에만 왔다. 이자가 버겁다.",
           "happiness": -8
         }
       }
@@ -4134,14 +4559,14 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 4,
           "statDeltas": {
             "conviction": 2
           },
-          "text": "3주 만에 잠정 합의안이 나왔다. 임금이 오른다.",
+          "text": "3주 만에 잠정 합의안이 나왔다. 그동안 무노동 무임금으로 150만 원이 빠졌다. 이제 찬반 투표다.",
           "followUp": "fac-vote",
           "followUpDays": 60,
-          "happiness": 6
+          "happiness": 6,
+          "amount": -1500000
         },
         "fail": {
           "amount": -2500000,
@@ -4171,15 +4596,15 @@
         "baseBp": 3000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 6,
           "statDeltas": {
             "conviction": 2,
             "courage": 1
           },
           "followUp": "fac-vote",
           "followUpDays": 60,
-          "text": "사측이 물러섰다. 앞장선 덕에 동료들 신망도 얻었다.",
-          "happiness": 8
+          "text": "사측이 물러서 잠정 합의안이 나왔다. 무노동 무임금으로 150만 원이 빠졌지만 앞장선 덕에 동료들 신망도 얻었다.",
+          "happiness": 8,
+          "amount": -1500000
         },
         "fail": {
           "amount": -3000000,
@@ -5124,11 +5549,10 @@
         "baseBp": 3000,
         "perPointBp": 40,
         "success": {
-          "amount": 15000000,
           "statDeltas": {
             "conviction": 2
           },
-          "text": "판결로 깎인 임금 1,500만 원을 돌려받았다.",
+          "text": "임금피크제가 무효라는 판결이 났다. 월급은 깎이지 않고 정년까지 그대로 간다.",
           "happiness": 7
         },
         "fail": {
@@ -5291,8 +5715,9 @@
           "statDeltas": {
             "patience": 1
           },
-          "text": "어느 쪽이든 크게 달라지지 않는다고 봤다.",
-          "happiness": -1
+          "text": "어느 쪽이든 크게 달라지지 않는다고 봤다. 합의안은 가결돼 임금이 올랐다.",
+          "happiness": -1,
+          "salaryPercent": 3
         }
       }
     ]
@@ -5905,11 +6330,10 @@
         "code": "accept",
         "label": "가라면 간다",
         "success": {
-          "salaryPercent": 2,
           "statDeltas": {
-            "patience": 2
+            "patience": 3
           },
-          "text": "기피 부서에서 2년을 버텼다. 근무 평정에 가산점이 붙었다.",
+          "text": "기피 부서에서 2년을 버텼다. 근무 평정에 가산점이 붙어 승진 때 유리해졌다.",
           "happiness": -4,
           "family": -1
         }
@@ -6085,12 +6509,12 @@
           "happiness": 5
         },
         "fail": {
-          "text": "개혁안은 그대로 통과됐다. 연가를 쓰고 나갔다가 근무 평정만 깎였다.",
-          "salaryPercent": -1,
+          "text": "개혁안은 그대로 통과됐다. 연가를 쓰고 나갔다가 근무 평정이 깎여 그해 성과급 50만 원이 줄었다.",
           "statDeltas": {
             "courage": 1
           },
-          "happiness": -3
+          "happiness": -3,
+          "amount": -500000
         }
       }
     ]
@@ -6113,10 +6537,10 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "text": "둑 앞 주민들을 먼저 대피시켰다. 시장 표창을 받았다.",
-          "salaryPercent": 2,
+          "text": "둑 앞 주민들을 먼저 대피시켰다. 시장 표창을 받아 승진 때 가산점이 된다.",
           "statDeltas": {
-            "courage": 2
+            "courage": 2,
+            "patience": 1
           },
           "happiness": 6
         },
@@ -6168,7 +6592,7 @@
   {
     "code": "cs-mutual",
     "title": "공제회 저축 권유",
-    "body": "선배가 공무원 공제회 장기저축을 권한다. 시중 금리보다 조금 높지만, 한번 넣으면 십 년 넘게 묶인다.",
+    "body": "선배가 공무원 공제회 장기저축을 권한다. 시중 금리보다 조금 높지만, 한번 넣으면 3년 만기까지 묶인다.",
     "weight": 7,
     "minTenureYears": 0,
     "maxTenureYears": 3,
@@ -6183,21 +6607,21 @@
         "baseBp": 5500,
         "perPointBp": 30,
         "success": {
-          "text": "이자가 차곡차곡 붙어 몇 년 뒤 목돈 600만 원이 됐다. 대신 주식 살 돈은 늘 모자랐다.",
-          "amount": 6000000,
+          "text": "월급의 3분의 1을 공제회에 넣기 시작했다. 만기까지는 찾을 수 없고, 주식 살 돈은 늘 모자라다.",
           "statDeltas": {
             "patience": 2
           },
-          "happiness": 3
+          "followUp": "cs-mutual-due",
+          "followUpDays": 1095,
+          "happiness": 1
         },
         "fail": {
-          "text": "전세금이 급해 중도 해지했다. 손해 본 이자가 150만 원이다.",
-          "amount": -1500000,
+          "text": "전세금이 급해 일 년 만에 중도 해지했다. 넣은 돈은 돌려받았지만 약정 이자는 날아갔다.",
           "statDeltas": {
             "patience": -1,
             "insight": 1
           },
-          "happiness": -4
+          "happiness": -3
         }
       },
       {
@@ -6234,6 +6658,69 @@
             "courage": 1
           },
           "happiness": -5
+        }
+      }
+    ]
+  },
+  {
+    "code": "cs-mutual-due",
+    "title": "공제회 만기",
+    "body": "3년 동안 꼬박꼬박 넣은 공제회 저축이 만기가 됐다. 시중 예금보다 이자가 꽤 더 붙었다. 선배는 그대로 다시 넣으라 하고, 동기는 주식이 오를 때라고 한다.",
+    "weight": 1,
+    "minTenureYears": 0,
+    "followUpOnly": true,
+    "jobs": [
+      "civil-servant"
+    ],
+    "options": [
+      {
+        "code": "take",
+        "label": "찾아서 전세 보증금에 보탠다",
+        "success": {
+          "amount": 6000000,
+          "text": "만기금을 찾아 전세 보증금에 보탰다. 시중 예금보다 더 붙은 이자 600만 원이 덤으로 생겼다.",
+          "textFamily": "만기금을 찾아 전세 보증금에 보탰다. 시중 예금보다 더 붙은 이자 600만 원 덕에 다음 이사 걱정이 한결 줄었다.",
+          "statDeltas": {
+            "insight": 1
+          },
+          "happiness": 4,
+          "family": 2
+        }
+      },
+      {
+        "code": "renew",
+        "label": "더 붙은 이자만 찾고 다시 넣는다",
+        "success": {
+          "amount": 6000000,
+          "text": "시중 예금보다 더 붙은 이자 600만 원은 찾고, 원금은 다시 넣었다. 노후가 조금 든든해졌다.",
+          "statDeltas": {
+            "patience": 2
+          },
+          "happiness": 3
+        }
+      },
+      {
+        "code": "stock",
+        "label": "만기금으로 주식을 산다",
+        "stat": "insight",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": {
+          "amount": 10000000,
+          "text": "만기금을 주식에 넣었다. 더 붙은 이자 600만 원에 수익 400만 원까지 1,000만 원이 불었다.",
+          "statDeltas": {
+            "courage": 1,
+            "insight": 1
+          },
+          "happiness": 5
+        },
+        "fail": {
+          "amount": 3000000,
+          "text": "만기금을 주식에 넣었다가 물렸다. 더 붙은 이자 600만 원 가운데 300만 원만 남았다.",
+          "statDeltas": {
+            "courage": 1
+          },
+          "happiness": -3
         }
       }
     ]
@@ -6393,8 +6880,7 @@
           "happiness": 5
         },
         "fail": {
-          "text": "소명이 받아들여지지 않았다. 견책을 받아 성과급이 깎였다.",
-          "salaryPercent": -2,
+          "text": "소명이 받아들여지지 않았다. 견책을 받아 그해 성과급 200만 원이 깎였다.",
           "amount": -2000000,
           "statDeltas": {
             "insight": 1
@@ -6428,13 +6914,13 @@
           "happiness": 2
         },
         "fail": {
-          "text": "떠넘긴다는 인상만 줬다. 함께 징계를 받았다.",
-          "salaryPercent": -2,
+          "text": "떠넘긴다는 인상만 줬다. 함께 견책을 받아 그해 성과급 200만 원이 깎였다.",
           "statDeltas": {
             "conviction": -1,
             "insight": 1
           },
-          "happiness": -6
+          "happiness": -6,
+          "amount": -2000000
         }
       }
     ]
@@ -6516,9 +7002,8 @@
         "code": "confess",
         "label": "자진 신고하고 돌려준다",
         "success": {
-          "text": "감봉 처분을 받았다. 받은 돈과 징계부가금을 합쳐 600만 원을 냈다.",
-          "salaryPercent": -5,
-          "amount": -6000000,
+          "text": "감봉 석 달 처분을 받았다. 받은 돈과 징계부가금 600만 원에 깎인 월급 300만 원까지 900만 원이 나갔다.",
+          "amount": -9000000,
           "statDeltas": {
             "conviction": 1,
             "patience": 1
@@ -6593,8 +7078,8 @@
         "code": "go",
         "label": "세종 파견을 간다",
         "success": {
-          "text": "2년을 정책실에서 보냈다. 보는 눈이 넓어졌지만 주말 부부가 고됐다.",
-          "textFamily": "2년을 정책실에서 보냈다. 주말마다 오가는 차비와 방값으로 300만 원이 들었다.",
+          "text": "2년을 정책실에서 보냈다. 보는 눈이 넓어졌다. 세종 원룸 방값과 오가는 차비로 300만 원이 들었다.",
+          "textFamily": "2년을 정책실에서 보냈다. 보는 눈은 넓어졌지만 주말 부부가 고됐다. 주말마다 오가는 차비와 방값으로 300만 원이 들었다.",
           "amount": -3000000,
           "statDeltas": {
             "insight": 2
@@ -6805,20 +7290,20 @@
           "happiness": 4
         },
         "fail": {
-          "text": "감봉 석 달이 나왔다. 채널도 지웠다.",
-          "salaryPercent": -3,
+          "text": "감봉 석 달이 나와 월급 300만 원이 깎였다. 채널도 지웠다.",
           "statDeltas": {
             "conviction": 1,
             "patience": -1
           },
-          "happiness": -6
+          "happiness": -6,
+          "amount": -3000000
         }
       },
       {
         "code": "quit",
         "label": "사표를 내고 유튜버가 된다",
         "success": {
-          "text": "공무원증을 반납했다. 이제 구독자만 믿고 산다.",
+          "text": "공무원증을 반납했다. 채널 수익은 용돈 수준이라 일자리를 다시 알아봐야 한다.",
           "quit": true,
           "statDeltas": {
             "courage": 3
@@ -6879,11 +7364,11 @@
         "code": "give",
         "label": "과장 이름으로 올려 준다",
         "success": {
-          "text": "과장이 상을 받았다. 대신 근무 평정을 잘 받았다.",
-          "salaryPercent": 2,
+          "text": "과장이 상을 받았다. 대신 근무 평정을 잘 받아 승진 점수가 쌓였다.",
           "statDeltas": {
             "insight": 1,
-            "conviction": -1
+            "conviction": -1,
+            "patience": 1
           },
           "happiness": -2
         }
@@ -6976,13 +7461,13 @@
           "happiness": 6
         },
         "fail": {
-          "text": "감사 내내 시달렸다. 다음 인사에서 한직으로 밀렸다.",
-          "salaryPercent": -2,
+          "text": "감사 내내 시달렸다. 다음 인사에서 한직으로 밀렸고 그해 성과급 100만 원이 줄었다.",
           "statDeltas": {
             "conviction": 1,
             "patience": -1
           },
-          "happiness": -5
+          "happiness": -5,
+          "amount": -1000000
         }
       },
       {
@@ -7039,11 +7524,11 @@
         "baseBp": 5000,
         "perPointBp": 30,
         "success": {
-          "text": "예산을 다 썼다. 내년 예산이 지켜져 과장이 흡족해했다.",
-          "salaryPercent": 2,
+          "text": "예산을 다 썼다. 내년 예산이 지켜져 과장이 흡족해했고 근무 평정이 좋게 나왔다.",
           "statDeltas": {
             "courage": 1,
-            "conviction": -1
+            "conviction": -1,
+            "patience": 1
           },
           "happiness": 2
         },
@@ -7302,8 +7787,7 @@
         "baseBp": 4500,
         "perPointBp": 30,
         "success": {
-          "text": "업무 관련성이 낮다며 승인됐다. 퇴직 뒤 일자리가 생겼다.",
-          "amount": 5000000,
+          "text": "업무 관련성이 낮다며 승인됐다. 퇴직 뒤 고문 자리가 정해졌다.",
           "statDeltas": {
             "patience": 1
           },
@@ -7336,8 +7820,7 @@
         "baseBp": 3000,
         "perPointBp": 40,
         "success": {
-          "text": "오보 정정을 받아 냈다. 심사도 통과했다.",
-          "amount": 5000000,
+          "text": "오보 정정을 받아 냈다. 심사도 통과해 퇴직 뒤 고문 자리가 정해졌다.",
           "statDeltas": {
             "courage": 2
           },
@@ -7454,13 +7937,13 @@
         "baseBp": 4500,
         "perPointBp": 30,
         "success": {
-          "salaryPercent": 3,
           "statDeltas": {
             "patience": 2
           },
-          "text": "한 해를 잘 이끌었다. 부장 수당과 근무 평정 덕에 월급이 올랐다.",
+          "text": "한 해를 잘 이끌었다. 한 해 부장 수당 120만 원이 붙었고 근무 평정도 좋게 받았다.",
           "happiness": 3,
-          "family": -1
+          "family": -1,
+          "amount": 1200000
         },
         "fail": {
           "amount": -1000000,
@@ -7490,12 +7973,12 @@
         "baseBp": 4000,
         "perPointBp": 30,
         "success": {
-          "text": "시수를 줄이는 조건으로 맡았다. 일과 수업이 겨우 맞아떨어졌다.",
-          "salaryPercent": 3,
+          "text": "시수를 줄이는 조건으로 맡았다. 일과 수업이 겨우 맞아떨어졌다. 한 해 부장 수당 120만 원이 붙었다.",
           "statDeltas": {
             "insight": 2
           },
-          "happiness": 4
+          "happiness": 4,
+          "amount": 1200000
         },
         "fail": {
           "text": "조건을 거는 사람으로 찍혔다. 결국 담임에 부장까지 다 맡았다.",
@@ -7527,14 +8010,14 @@
         "code": "go",
         "label": "간다",
         "success": {
-          "salaryPercent": 4,
           "statDeltas": {
             "patience": 1,
             "courage": 1
           },
-          "text": "학생 일곱 명과 2년을 보냈다. 도서벽지 수당과 가산점이 붙었다.",
+          "text": "학생 일곱 명과 2년을 보냈다. 그동안 도서벽지 수당 300만 원이 붙었고 승진 가산점도 챙겼다.",
           "happiness": -2,
-          "family": -4
+          "family": -4,
+          "amount": 3000000
         }
       },
       {
@@ -7552,13 +8035,13 @@
           "family": 1
         },
         "fail": {
-          "salaryPercent": 4,
           "statDeltas": {
             "patience": 1
           },
-          "text": "빠지지 못했다. 마지못해 갔다.",
+          "text": "빠지지 못했다. 마지못해 갔다. 2년 동안 도서벽지 수당 300만 원이 붙었다.",
           "happiness": -5,
-          "family": -4
+          "family": -4,
+          "amount": 3000000
         }
       },
       {
@@ -7576,14 +8059,14 @@
           "family": 1
         },
         "fail": {
-          "text": "바꿔 줄 사람이 없었다. 결국 섬으로 갔다.",
-          "salaryPercent": 4,
+          "text": "바꿔 줄 사람이 없었다. 결국 섬으로 갔다. 2년 동안 붙은 도서벽지 수당 300만 원이 위안이다.",
           "statDeltas": {
             "insight": 1,
             "patience": 1
           },
           "happiness": -5,
-          "family": -4
+          "family": -4,
+          "amount": 3000000
         }
       }
     ],
@@ -7634,7 +8117,7 @@
         "baseBp": 4000,
         "perPointBp": 30,
         "success": {
-          "text": "명퇴 수당을 받고 학원에 자리를 잡았다. 첫해 강의료로 2,000만 원을 더 벌었다.",
+          "text": "명퇴 수당을 받고 교단을 내려왔다. 학원과 한 해 계약을 맺고 강의해 2,000만 원을 벌었다. 계약이 끝나니 다시 일을 찾아야 한다.",
           "amount": 20000000,
           "quit": true,
           "severanceMonths": 12,
@@ -7828,7 +8311,7 @@
           "family": -1
         },
         "fail": {
-          "text": "일과 공부를 같이 하다 한 학기를 휴학했다. 등록금 600만 원이 묶였다.",
+          "text": "일과 공부를 같이 하다 한 학기를 휴학했다. 이미 낸 등록금 600만 원은 돌려받지 못했다.",
           "amount": -6000000,
           "statDeltas": {
             "patience": 1
@@ -8079,9 +8562,8 @@
         "code": "comply",
         "label": "인정하고 처분을 받는다",
         "success": {
-          "text": "정직 석 달에 번 돈 1,200만 원을 고스란히 토해 냈다.",
-          "salaryPercent": -5,
-          "amount": -12000000,
+          "text": "정직 석 달로 월급 900만 원이 끊겼고, 과외로 번 돈 1,200만 원도 고스란히 토해 냈다.",
+          "amount": -21000000,
           "statDeltas": {
             "patience": 1
           },
@@ -8117,7 +8599,7 @@
         "code": "quit",
         "label": "사표 내고 학원으로 간다",
         "success": {
-          "text": "징계 전에 사표를 냈다. 학원가에서 새 출발을 한다.",
+          "text": "징계 전에 사표를 냈다. 학원가에서 일자리를 알아볼 생각이다.",
           "quit": true,
           "statDeltas": {
             "courage": 2
@@ -8249,12 +8731,12 @@
         "code": "pass",
         "label": "다른 교사에게 넘긴다",
         "success": {
-          "text": "업무를 내려놓았다. 대신 그 해 성과 등급이 깎였다.",
-          "salaryPercent": -1,
+          "text": "업무를 내려놓았다. 대신 그해 성과 등급이 깎여 성과급 100만 원이 줄었다.",
           "statDeltas": {
             "patience": 1
           },
-          "happiness": -3
+          "happiness": -3,
+          "amount": -1000000
         }
       }
     ],
@@ -8434,7 +8916,7 @@
         "code": "startup",
         "label": "에듀테크 회사로 옮긴다",
         "success": {
-          "text": "교사를 그만두고 에듀테크 회사로 갔다.",
+          "text": "교사를 그만뒀다. 에듀테크 회사 몇 곳에 이력서를 넣고 연락을 기다린다.",
           "quit": true,
           "statDeltas": {
             "courage": 3
@@ -9754,16 +10236,16 @@
         }
       },
       {
-        "code": "leave",
+        "code": "move",
         "label": "다른 병원으로 옮긴다",
         "success": {
-          "text": "사표를 내고 나왔다. 간호사 구인 공고는 늘 있다.",
-          "quit": true,
-          "severanceMonths": 1,
+          "moveJob": true,
+          "moveSalaryPercent": 0,
+          "text": "다른 병원으로 옮겼다. 간호사 구인 공고는 늘 있다. 연차는 처음부터다.",
           "statDeltas": {
             "courage": 2
           },
-          "happiness": -3
+          "happiness": -1
         }
       }
     ]
@@ -9797,7 +10279,7 @@
           "family": -1
         },
         "fail": {
-          "text": "근무와 수업을 같이 하다 한 학기를 휴학했다. 등록금 700만 원이 묶였다.",
+          "text": "근무와 수업을 같이 하다 한 학기를 휴학했다. 이미 낸 등록금 700만 원은 돌려받지 못했다.",
           "amount": -7000000,
           "statDeltas": {
             "patience": 1
@@ -10010,7 +10492,7 @@
         "code": "quit",
         "label": "임상을 떠난다",
         "success": {
-          "text": "사표를 냈다. 다시는 시술실에 들어가고 싶지 않다.",
+          "text": "퇴직금만 챙겨 사표를 냈다. 다시는 시술실에 들어가고 싶지 않다.",
           "quit": true,
           "severanceMonths": 2,
           "statDeltas": {
@@ -11838,16 +12320,17 @@
         }
       },
       {
-        "code": "back",
+        "code": "move",
         "label": "계약직으로 돌아간다",
         "success": {
-          "quit": true,
+          "moveJob": true,
+          "moveSalaryPercent": 0,
           "statDeltas": {
             "insight": 1,
             "conviction": -1
           },
-          "text": "프리랜서 간판을 내렸다. 다시 구직자가 됐다.",
-          "happiness": -5
+          "text": "프리랜서 간판을 내리고 옛 팀장이 말한 계약직 자리로 들어갔다. 연차는 처음부터다.",
+          "happiness": -3
         }
       }
     ]
@@ -12118,8 +12601,9 @@
           "statDeltas": {
             "insight": 1
           },
-          "text": "지분을 넘기고 손을 털었다. 매각 대금을 굴리는 전업투자자가 됐다.",
-          "happiness": 3
+          "text": "지분을 넘기고 손을 털었다. 매각 대금 1억 원을 굴리는 전업투자자가 됐다.",
+          "happiness": 3,
+          "amount": 100000000
         }
       },
       {
@@ -12204,8 +12688,9 @@
           "statDeltas": {
             "insight": 1
           },
-          "text": "더 잃기 전에 정리했다. 보증금은 돌려받았다.",
-          "happiness": -7
+          "text": "더 잃기 전에 정리했다. 사무실 보증금 1,000만 원은 돌려받았다.",
+          "happiness": -7,
+          "amount": 10000000
         }
       }
     ]
@@ -12309,9 +12794,10 @@
           "statDeltas": {
             "conviction": 1
           },
-          "text": "회사가 부도났다. 밀린 월급 두 달치는 체당금으로 겨우 일부만 받았다.",
+          "text": "회사가 부도났다. 밀린 월급 두 달치 가운데 체당금으로 300만 원만 겨우 받았다.",
           "happiness": -11,
-          "family": -1
+          "family": -1,
+          "amount": 3000000
         }
       },
       {
@@ -12427,14 +12913,14 @@
         "code": "rest",
         "label": "한 달 무급휴직을 쓴다",
         "success": {
-          "salaryPercent": -1,
           "statDeltas": {
             "patience": 1,
             "insight": 1
           },
-          "text": "한 달을 쉬며 생각을 정리했다. 돌아오니 자리는 그대로고 마음은 가벼워졌다.",
+          "text": "한 달 무급휴직으로 월급 350만 원을 포기하고 생각을 정리했다. 돌아오니 자리는 그대로고 마음은 가벼워졌다.",
           "happiness": 5,
-          "family": 1
+          "family": 1,
+          "amount": -3500000
         }
       }
     ],
@@ -12751,24 +13237,23 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 12,
           "statDeltas": {
             "courage": 1,
             "patience": 1
           },
-          "text": "현지 공장 가동률을 끌어올렸다. 해외 수당과 성과급이 붙었다.",
+          "text": "현지 공장 가동률을 끌어올렸다. 3년 동안 해외 수당과 성과급으로 1,200만 원이 더 들어왔다.",
           "followUp": "off-expat-return",
           "followUpDays": 1095,
           "happiness": 6,
-          "family": -4
+          "family": -4,
+          "amount": 12000000
         },
         "fail": {
-          "salaryPercent": 4,
-          "amount": -5000000,
+          "amount": -1000000,
           "statDeltas": {
             "patience": 1
           },
-          "text": "현지 직원 파업으로 고생만 했다. 풍토병 치료비로 500만 원이 들었다.",
+          "text": "현지 직원 파업으로 고생만 했다. 해외 수당 400만 원이 붙었지만 풍토병 치료비로 500만 원이 들었다.",
           "followUp": "off-expat-return",
           "followUpDays": 1095,
           "happiness": -6,
@@ -12782,13 +13267,13 @@
         "baseBp": 3500,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 6,
           "statDeltas": {
             "insight": 2
           },
-          "text": "2년 단축과 귀임 자리를 약속받고 다녀왔다. 수당만큼 통장이 불었다.",
+          "text": "2년 단축과 귀임 자리를 약속받고 다녀왔다. 2년 해외 수당 800만 원만큼 통장이 불었다.",
           "happiness": 5,
-          "family": 1
+          "family": 1,
+          "amount": 8000000
         },
         "fail": {
           "statDeltas": {
@@ -13064,12 +13549,23 @@
         "code": "try",
         "label": "배정분만 조금 산다",
         "success": {
-          "amount": -5000000,
+          "amount": 3000000,
           "statDeltas": {
             "insight": 1
           },
-          "text": "500만 원어치만 샀다. 손해 봐도 견딜 만큼이다.",
-          "happiness": 1
+          "text": "500만 원어치만 샀다. 몇 해 뒤 펀드가 회사를 되팔 때 같이 넘겨 800만 원을 받았다. 300만 원이 남았다.",
+          "happiness": 3
+        },
+        "stat": "luck",
+        "baseBp": 4500,
+        "perPointBp": 40,
+        "fail": {
+          "amount": -2000000,
+          "statDeltas": {
+            "insight": 1
+          },
+          "text": "500만 원어치만 샀다. 몇 해 뒤 헐값에 넘겨 300만 원만 돌아왔다. 200만 원 손해지만 견딜 만하다.",
+          "happiness": -1
         }
       },
       {
@@ -13402,11 +13898,10 @@
           "happiness": 5
         },
         "fail": {
-          "salaryPercent": -3,
           "statDeltas": {
             "insight": 1
           },
-          "text": "본사 감각을 잃었다는 평이 돌았다. 해외 수당만 사라졌다.",
+          "text": "본사 감각을 잃었다는 평이 돌았다. 해외 수당만 끊겼다.",
           "happiness": -4
         }
       },
@@ -13414,11 +13909,10 @@
         "code": "accept",
         "label": "창고 관리로 간다",
         "success": {
-          "salaryPercent": -4,
           "statDeltas": {
             "patience": 2
           },
-          "text": "조용한 자리다. 해외 수당이 빠져 월급이 확 줄었다.",
+          "text": "조용한 자리다. 해외 수당이 끊겨 통장이 확 얇아졌다.",
           "happiness": -3
         }
       },
@@ -13433,7 +13927,7 @@
           "statDeltas": {
             "courage": 2
           },
-          "text": "현지 법인장 대리로 다시 나갔다. 수당이 더 붙었다.",
+          "text": "현지 법인장 대리로 눌러앉았다. 직책이 붙어 월급이 늘었다.",
           "happiness": 5,
           "family": -3
         },
@@ -13731,12 +14225,23 @@
         "code": "half",
         "label": "절반만 판다",
         "success": {
-          "amount": 30000000,
+          "amount": 72000000,
           "statDeltas": {
             "patience": 1
           },
-          "text": "반은 팔고 반은 남겼다. 우선 3,000만 원을 손에 쥐었다.",
-          "happiness": 3
+          "text": "반은 펀드와 함께 팔아 2,700만 원을 받았고, 남긴 반은 상장 뒤 4,500만 원에 정리했다. 모두 7,200만 원이 들어왔다.",
+          "happiness": 7
+        },
+        "stat": "luck",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "fail": {
+          "amount": 31000000,
+          "statDeltas": {
+            "patience": 1
+          },
+          "text": "반은 펀드와 함께 팔아 2,700만 원을 받았다. 남긴 반은 상장이 무산돼 400만 원에 넘겼다. 모두 3,100만 원이다.",
+          "happiness": -2
         }
       }
     ]
@@ -15054,8 +15559,9 @@
           "statDeltas": {
             "insight": 1
           },
-          "text": "권리금을 두둑이 받고 넘겼다. 그 돈을 굴리는 전업투자자가 됐다.",
-          "happiness": 3
+          "text": "보증금에 권리금을 얹어 7,000만 원을 받고 넘겼다. 그 돈을 굴리는 전업투자자가 됐다.",
+          "happiness": 3,
+          "amount": 70000000
         }
       },
       {
@@ -15138,8 +15644,9 @@
           "statDeltas": {
             "insight": 1
           },
-          "text": "재고를 본사에 반품하고 보증금을 돌려받았다. 다시 구직자다.",
-          "happiness": -6
+          "text": "재고를 본사에 반품하고 보증금까지 2,500만 원을 돌려받았다. 다시 구직자다.",
+          "happiness": -6,
+          "amount": 25000000
         }
       }
     ]
@@ -17109,7 +17616,7 @@
           "statDeltas": {
             "patience": 2
           },
-          "text": "마감을 다 맞췄다. 시즌 성과로 벌이가 5% 늘었다.",
+          "text": "마감을 다 맞췄다. 시즌 성과로 벌이가 3% 늘었다.",
           "happiness": 2,
           "family": -2
         },
@@ -17165,12 +17672,12 @@
         "code": "rest",
         "label": "하루 쉰다",
         "success": {
-          "salaryPercent": -1,
           "statDeltas": {
             "patience": 1
           },
-          "text": "하루 쉬었다. 그사이 마감 하나가 밀려 고객이 서운해했다.",
-          "happiness": 3
+          "text": "하루 쉬었다. 그사이 마감 하나가 밀려 고객이 서운해했고, 수수료 50만 원을 깎아 줬다.",
+          "happiness": 3,
+          "amount": -500000
         }
       }
     ]
@@ -17248,13 +17755,13 @@
           "happiness": -3
         },
         "fail": {
-          "quit": true,
-          "amount": -20000000,
+          "amount": -32000000,
           "statDeltas": {
             "conviction": -1
           },
-          "text": "금감원 감리에 걸렸다. 과징금 2천만 원에 직무 정지까지 받았다.",
-          "happiness": -12
+          "text": "금감원 감리에 걸렸다. 과징금 2천만 원에 직무 정지 석 달을 받아, 못 번 수입 1,200만 원까지 3,200만 원이 나갔다.",
+          "happiness": -12,
+          "salaryPercent": -5
         }
       }
     ],
@@ -17292,13 +17799,13 @@
           "happiness": -4
         },
         "fail": {
-          "amount": -10000000,
-          "quit": true,
+          "amount": -22000000,
           "statDeltas": {
             "conviction": 1
           },
-          "text": "등록 정지를 받았다. 과징금 1,000만 원을 내고 법인을 나왔다.",
-          "happiness": -11
+          "text": "직무 정지 석 달을 받았다. 과징금 1,000만 원에 일을 못 한 석 달치 수입 1,200만 원까지 2,200만 원이 날아갔고, 고객 몇 곳이 떠났다.",
+          "happiness": -11,
+          "salaryPercent": -5
         }
       },
       {
@@ -17315,13 +17822,13 @@
           "happiness": 1
         },
         "fail": {
-          "amount": -30000000,
-          "quit": true,
+          "amount": -54000000,
           "statDeltas": {
             "conviction": -1
           },
-          "text": "거짓 진술까지 드러났다. 과징금 3,000만 원에 등록 취소다.",
-          "happiness": -12
+          "text": "거짓 진술까지 드러났다. 과징금 3,000만 원에 직무 정지 여섯 달을 받아, 못 번 수입 2,400만 원까지 5,400만 원이 날아갔다. 돌아와 보니 고객도 많이 떠났다.",
+          "happiness": -12,
+          "salaryPercent": -10
         }
       },
       {
@@ -17339,12 +17846,12 @@
           "happiness": -2
         },
         "fail": {
-          "salaryPercent": -15,
-          "amount": -15000000,
+          "salaryPercent": -5,
+          "amount": -27000000,
           "statDeltas": {
             "patience": 1
           },
-          "text": "변호사비 1,500만 원을 쓰고도 직무 정지를 받았다. 수입이 크게 줄었다.",
+          "text": "변호사비 1,500만 원을 쓰고도 직무 정지 석 달을 받았다. 못 번 수입 1,200만 원까지 2,700만 원이 나갔고 고객 몇 곳이 떠났다.",
           "happiness": -9
         }
       }
@@ -18234,13 +18741,13 @@
           "happiness": 2
         },
         "fail": {
-          "amount": -15000000,
-          "quit": true,
+          "amount": -27000000,
           "statDeltas": {
             "conviction": -1
           },
-          "text": "국세청 조사에 걸렸다. 과태료 1,500만 원을 물고 직무 정지를 받았다.",
-          "happiness": -12
+          "text": "국세청 조사에 걸렸다. 과태료 1,500만 원을 물고 직무 정지 석 달을 받아, 못 번 수입 1,200만 원까지 2,700만 원이 나갔다.",
+          "happiness": -12,
+          "salaryPercent": -5
         }
       },
       {
@@ -18306,14 +18813,14 @@
           "family": -2
         },
         "fail": {
-          "amount": -30000000,
-          "quit": true,
+          "amount": -54000000,
           "statDeltas": {
             "conviction": -2
           },
-          "text": "이상 거래 조사에 걸렸다. 벌금 3,000만 원에 등록이 취소됐다.",
+          "text": "이상 거래 조사에 걸렸다. 벌금 3,000만 원에 직무 정지 여섯 달을 받아, 못 번 수입 2,400만 원까지 5,400만 원이 날아갔다. 돌아와 보니 고객도 많이 떠났다.",
           "happiness": -12,
-          "family": -4
+          "family": -4,
+          "salaryPercent": -10
         }
       },
       {
@@ -19082,14 +19589,13 @@
         "perPointBp": 30,
         "perRaisePercentBp": 100,
         "success": {
-          "salaryPercent": 5,
-          "amount": -10000000,
+          "amount": 2000000,
           "statDeltas": {
             "courage": 2
           },
           "followUp": "big-return",
           "followUpDays": 1080,
-          "text": "해고는 보류됐다. 3년짜리 해외 파견이다. 파견 수당으로 월급이 5% 늘었지만 두 집 살림에 1,000만 원이 들었다.",
+          "text": "해고는 보류됐다. 3년짜리 해외 파견이다. 파견 수당 1,200만 원이 붙었지만 두 집 살림에 1,000만 원이 들었다.",
           "happiness": -2,
           "family": -6
         },
@@ -19241,13 +19747,13 @@
         "code": "extend",
         "label": "파견을 한 번 더 연장한다",
         "success": {
-          "amount": -10000000,
+          "amount": 2000000,
           "statDeltas": {
             "patience": 2
           },
           "followUp": "big-return",
           "followUpDays": 1080,
-          "text": "3년 더 남기로 했다. 해고는 또 미뤄졌다. 가족과 보낼 시간은 또 줄었다.",
+          "text": "3년 더 남기로 했다. 해고는 또 미뤄졌다. 파견 수당 1,200만 원에서 두 집 살림 1,000만 원을 빼니 200만 원이 남았다. 가족과 보낼 시간은 또 줄었다.",
           "happiness": -4,
           "family": -5
         }
@@ -20281,7 +20787,7 @@
           "statDeltas": {
             "courage": 1
           },
-          "text": "회사를 나왔다. 위로금 두 달치가 전부다.",
+          "text": "회사를 나왔다. 손에 쥔 건 퇴직금이 전부다.",
           "happiness": -8
         }
       }
@@ -20625,11 +21131,10 @@
         "baseBp": 4000,
         "perPointBp": 40,
         "success": {
-          "salaryPercent": 3,
           "statDeltas": {
             "patience": 2
           },
-          "text": "주택관리사를 땄다. 회사가 시설 관리 쪽으로 돌려 정년을 채운다.",
+          "text": "주택관리사를 땄다. 회사가 시설 관리 쪽으로 돌려 정년을 채운다. 월급은 그대로다.",
           "happiness": 5
         },
         "fail": {
@@ -21642,12 +22147,12 @@
         "label": "넘기고 물러난다",
         "success": {
           "amount": 100000000,
-          "quit": true,
           "statDeltas": {
             "patience": 1
           },
-          "text": "권리금 1억 원을 받고 약국을 넘겼다. 흰 가운을 벗었다.",
-          "happiness": 4
+          "text": "권리금 1억 원을 받고 약국을 넘겼다. 흰 가운을 벗고 그 돈을 굴리며 살기로 했다.",
+          "happiness": 4,
+          "becomeInvestor": true
         }
       },
       {
@@ -21658,12 +22163,12 @@
         "perPointBp": 40,
         "success": {
           "amount": 150000000,
-          "quit": true,
           "statDeltas": {
             "courage": 1
           },
-          "text": "1억 5,000만 원에 넘겼다. 흰 가운을 벗었다.",
-          "happiness": 7
+          "text": "1억 5,000만 원에 넘겼다. 흰 가운을 벗고 그 돈을 굴리며 살기로 했다.",
+          "happiness": 7,
+          "becomeInvestor": true
         },
         "fail": {
           "statDeltas": {
@@ -26467,13 +26972,13 @@
         "code": "leave",
         "label": "자리를 내놓는다",
         "success": {
-          "quit": true,
           "severanceMonths": 6,
           "statDeltas": {
             "conviction": 1
           },
-          "text": "성과급을 포기하고 물러났다. 다시 혼자다.",
-          "happiness": -3
+          "text": "성과급을 포기하고 물러났다. 다시 혼자 시장 앞에 앉는 전업투자자다.",
+          "happiness": -3,
+          "becomeInvestor": true
         }
       },
       {

@@ -774,7 +774,7 @@ class DefaultProgressService implements ProgressService {
       long severance = salaryBefore * effect.severanceMonths();
       if (severance > 0) {
         assets.credit(gameId, SEVERANCE, severance, day);
-        message.append(" 위로금 %,d원을 받았다.".formatted(severance));
+        message.append(" %s %,d원을 받았다.".formatted(severanceWord(effect), severance));
       }
       characters.quitJob(gameId);
       characters.becomeFullTimeInvestor(gameId, day);
@@ -799,13 +799,14 @@ class DefaultProgressService implements ProgressService {
     } else if (effect.becomeJob() != null) {
       characters.foundCompany(gameId, effect.becomeJob(), day);
       JobDefinition founded = content.job(effect.becomeJob());
+      // 안내 금액도 물가가 붙은 실제 월급이다 (#237).
       message.append(
-          " 이제 %s다. 월급 %,d원이 나온다.".formatted(founded.title(), founded.baseMonthlySalary()));
+          " 이제 %s다. 월급 %,d원이 나온다.".formatted(founded.title(), monthlySalary(founded, 0, 0, day)));
     } else if (effect.quit()) {
       long severance = salaryBefore * effect.severanceMonths();
       if (severance > 0) {
         assets.credit(gameId, SEVERANCE, severance, day);
-        message.append(" 위로금 %,d원을 받았다.".formatted(severance));
+        message.append(" %s %,d원을 받았다.".formatted(severanceWord(effect), severance));
       }
       characters.quitJob(gameId);
       message.append(" 월급이 끊기고 생활비는 계속 나간다.");
@@ -1941,6 +1942,11 @@ class DefaultProgressService implements ProgressService {
    * 월급 = 기본 월급 × 연차 배율 × 나이 감소(SalaryCurve) × 물가 × (1 + 협상·승진 인상분, 상한까지) (decisions.md 133번). 물가는
    * 생활비와 같은 기준(취업 나이부터 복리)이라 월급이 물가를 따라간다.
    */
+  /** 스스로 그만두면 퇴직금, 밀려나면 위로금 (#236). 결과 문구가 "퇴직금"이라고 하면 그대로 부른다. */
+  private static String severanceWord(CareerDefinition.Effect effect) {
+    return effect.text().contains("퇴직금") || effect.textFor(true).contains("퇴직금") ? "퇴직금" : "위로금";
+  }
+
   private long monthlySalary(JobDefinition job, int tenureYears, int bonusBp, int day) {
     ProgressProperties.Salary rules = properties.salary();
     int age = properties.startAge() + day / calendar.daysPerYear();
