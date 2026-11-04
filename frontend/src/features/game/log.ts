@@ -259,7 +259,7 @@ export function logLine(entry: LogEntry, game: GameInfo): LogLine {
     case 'HOUSING': {
       // 주거 선택 (주거 설계 4절). 전세사기는 고른 뒤에 드러난다.
       const lost = num(p.lost)
-      // 집주인이 재계약을 거절한 만기에는 2년 더 살 수 없어 옮겼다 (#25).
+      // 집주인이 재계약을 거절한 만기에는 더 살 수 없어 옮겼다 (#25).
       const refused =
         p.definition === 'lease-refused' ? '집주인이 재계약을 거절해 집을 옮겼다. ' : ''
       const head = `${refused}${p.fraud ? `전세사기를 당했다. 보증금 ${won(lost)}을 돌려받지 못했다. ` : ''}`
