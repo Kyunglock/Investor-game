@@ -1,6 +1,5 @@
 package investorgame.content;
 
-import investorgame.common.Sex;
 import java.util.List;
 import java.util.Map;
 
@@ -28,7 +27,6 @@ import java.util.Map;
  * @param unless 앞에서 이 선택을 한 적이 있으면 안 나온다(하나라도). 대학에 가지 않은 사람에게 등록금 장면이 안 나오게 할 때 쓴다 (#196)
  * @param followUpOnly 앞 장면의 선택(followUps)으로만 오고 무작위로는 뽑지 않는다 (#195). 성장기 장면이면 자기 나이(age) 단계에 온다
  * @param topic 같은 주제(코인 등)의 장면이 한 판의 성장기에 겹치지 않게 묶는 이름. null이면 묶지 않는다 (#196)
- * @param sex 이 성별의 캐릭터에게만 나온다(입대·전역은 남자만). null이면 누구에게나 (#221)
  */
 public record TraitDefinition(
     String code,
@@ -50,7 +48,6 @@ public record TraitDefinition(
     List<String> unless,
     Boolean followUpOnly,
     String topic,
-    Sex sex,
     String title,
     String body,
     List<Option> options) {
@@ -85,11 +82,6 @@ public record TraitDefinition(
   /** 이 나이에 나올 수 있는가. */
   public boolean fitsAge(int age) {
     return (minAge == null || age >= minAge) && (maxAge == null || age <= maxAge);
-  }
-
-  /** 이 성별의 캐릭터에게 나올 수 있는가. 성별을 모르면 가리지 않는다 (#221). */
-  public boolean fitsSex(Sex character) {
-    return sex == null || character == null || sex == character;
   }
 
   /** 아이 조건이 있는 장면인가. */

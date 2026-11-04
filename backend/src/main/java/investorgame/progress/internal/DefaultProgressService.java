@@ -2215,7 +2215,6 @@ class DefaultProgressService implements ProgressService {
         netWorth(game.id()),
         household.familyScore(game.id()),
         unaffordableStocks(game.id()),
-        sexOf(game),
         character.fullTimeInvestorDay());
   }
 
