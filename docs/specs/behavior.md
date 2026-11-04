@@ -80,10 +80,10 @@ public record Hint(
 능력치가 높을수록 이탈이 줄어든다 (확정).
 
 ```
-이탈 확률(bp) = (100 - 능력치) × 30        # 능력치 0이면 3000bp(30%), 100이면 0bp
+이탈 확률(bp) = (100 - 능력치) × 40        # 능력치 0이면 4000bp(40%), 100이면 0bp
 ```
 
-상한 3000bp는 `behavior.deviation-cap-bp`로 설정한다 (처음 5000이었으나 능력치에 따른 편차를 키우기로 해 8000으로 올렸다가(decisions.md 23번), 판정이 두 번 겹쳐 보통 능력치에서 고른 대로 될 확률이 30~50%에 그쳐 3000으로 낮췄다(decisions.md 179번)). 수식은 `(100 - 능력치) × cap / 100`이다.
+상한 4000bp는 `behavior.deviation-cap-bp`로 설정한다 (처음 5000이었으나 능력치에 따른 편차를 키우기로 해 8000으로 올렸다가(decisions.md 23번), 판정이 두 번 겹쳐 보통 능력치에서 고른 대로 될 확률이 30~50%에 그쳐 3000으로 낮췄고(decisions.md 179번), 너무 안 흔들려 4000으로 올렸다(decisions.md 184번)). 수식은 `(100 - 능력치) × cap / 100`이다.
 
 ### 4.2 판정 순서 (확정)
 
@@ -142,7 +142,7 @@ public record Hint(
 
 | 이름 | 초기값 | 의미 |
 |---|---|---|
-| `behavior.deviation-cap-bp` | 3000 | 능력치 0일 때 이탈 확률 |
+| `behavior.deviation-cap-bp` | 4000 | 능력치 0일 때 이탈 확률 |
 | `behavior.hint.accuracy-base-bp` | 4000 | 안목 0의 힌트 정답률 |
 | `behavior.hint.accuracy-per-point-bp` | 55 | 안목 1점당 정답률 증가 |
 | `behavior.hint.neutral-below-insight` | 40 | 이 값 미만이면 모호 판정 대상 |
