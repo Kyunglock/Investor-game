@@ -2,7 +2,7 @@ import type { Analysis } from '../../api/client'
 import { insightGauge, readingLabel } from './analysis'
 
 /**
- * 안목 해석 한 단락 (매매창 설계 4절). 안목 점수와 눈금만 보이고 확률은 없다. 지난 해석이 드러나면 맞혔을 때·틀렸을 때 한마디가 위에 붙는다.
+ * 안목 해석 한 단락 (매매창 설계 4절). 안목 점수·눈금과 맞출 확률이 보인다 (decisions.md 182번). 지난 해석이 드러나면 맞혔을 때·틀렸을 때 한마디가 위에 붙는다.
  * 말투는 안목 구간이 정하고 맞았는지는 드러나지 않는다.
  */
 export function AnalysisNote({
@@ -22,6 +22,10 @@ export function AnalysisNote({
           <span className="font-mono-num text-[11px] font-normal text-muted">
             안목 {analysis.insight}{' '}
             <span className="tracking-tight text-wine">{insightGauge(analysis.insight)}</span>
+            {' · '}
+            <span className="font-semibold text-teal" data-testid={`${testId}-accuracy`}>
+              맞출 확률 {analysis.accuracy}%
+            </span>
           </span>
         )}
       </h4>

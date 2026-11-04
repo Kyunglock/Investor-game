@@ -1,7 +1,7 @@
 import type { Game, LogEntry } from '../../api/client'
 import { actionLabelFor, percent, sideLabel } from './labels'
 
-/** 매매창의 순수 계산 (매매창 설계 2절). 해석의 확률·정답은 서버에 있고 여기에는 표시용 계산만 있다. */
+/** 매매창의 순수 계산 (매매창 설계 2절). 해석의 정답과 맞출 확률 계산은 서버에 있고 여기에는 표시용 계산만 있다. */
 
 /** 이동평균. 앞쪽은 있는 만큼으로 평균한다(서버의 ma6·ma12와 같은 방식). */
 export function movingAverage(values: number[], window: number): number[] {
@@ -17,7 +17,7 @@ export function movingAverage(values: number[], window: number): number[] {
   return out
 }
 
-/** 안목 점수를 10칸 눈금으로. 확률은 보여 주지 않는다 (매매창 설계 4.3절). */
+/** 안목 점수를 10칸 눈금으로. 맞출 확률은 서버가 준 값을 따로 적는다 (decisions.md 182번). */
 export function insightGauge(insight: number): string {
   const filled = Math.max(0, Math.min(10, Math.round(insight / 10)))
   return '●'.repeat(filled) + '○'.repeat(10 - filled)

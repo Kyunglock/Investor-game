@@ -621,12 +621,14 @@ export interface components {
                 price: number;
             }[];
         };
-        /** @description 안목 해석 (매매창 설계 4절). 확률과 정답은 내려가지 않는다 */
+        /** @description 안목 해석 (매매창 설계 4절). 맞출 확률은 내려가고 정답은 내려가지 않는다 */
         Analysis: {
             /** @description 해석한 달. 같은 달에는 다시 열어도 같다 */
             month: number;
             /** @description 해석한 때의 안목 */
             insight: number;
+            /** @description 해석한 때의 안목으로 정답을 맞힐 확률(퍼센트). 안목 0이면 찍기(33) */
+            accuracy: number;
             /** @description 읽은 결론. 추세는 UP·DOWN·FLAT */
             reading: string;
             text: string;
