@@ -258,19 +258,21 @@ event:
     rehire-days: 150
   career:
     # 직업이 있는 동안 직장 장면(연봉 협상·승진·이직 제안·구조조정·번아웃)이 이 간격으로 온다. last-age를 넘으면 직업·직장 이벤트가 없다
-    gap-days: { min: 540, max: 1080 }
+    # 선택 카드를 반으로 줄이려 540~1080에서 두 배로 (decisions.md 188번)
+    gap-days: { min: 1080, max: 2160 }
     # 정년 있는 직업의 마지막 장면 나이. 정년(60) 직전 장면(공로연수 등)이 나오도록 59 (#233). 정년 없는 직업·전업투자자는 판 끝까지
     last-age: 59
     # household.retire-age와 같은 값. 도메인이 가계 설정을 읽지 않으므로 따로 둔다. 후속 장면은 정년 전에 온다
     retire-age: 60
   trait:
     # 취업 뒤에도 일상 장면(콘텐츠의 adult 장면)이 이 간격으로 와서 능력치를 움직인다. 풀을 다 쓰면 끝
-    adult-gap-days: { min: 540, max: 900 }
+    # 선택 카드를 반으로 줄이려 540~900에서 세 배로 (decisions.md 188번)
+    adult-gap-days: { min: 1620, max: 2700 }
   news:
     interest-weight-percent: 300
     no-repeat-window: 5
-    # 뉴스(매수·매도 선택)는 해마다 75% 확률로 한 번, 아니면 없다 (decisions.md 80번)
-    yearly-chance-bp: 7500
+    # 뉴스(매수·매도 선택)는 해마다 37.5% 확률로 한 번, 아니면 없다 (decisions.md 80번). 선택 카드를 반으로 줄이려 75%에서 낮췄다 (188번)
+    yearly-chance-bp: 3750
     # 전업투자자에게는 해마다 세 번. 월급 없이 뉴스 0~1번으로는 생활비를 못 벌어 28세에 파산했다 (decisions.md 121번)
     investor-per-year: 3
   # 결혼·자녀 선택형 이벤트 시점 (경제 개편 설계 7.3절)
@@ -285,10 +287,10 @@ event:
     # 자녀가 독립한 뒤 이만큼 지나면 자녀 결혼 선택(결혼 비용을 얼마나 대줄지)이 온다 (decisions.md 68번)
     child-wedding-gap-years: { min: 2, max: 5 }
     # 결혼 뒤 이 간격마다 가족 가운데 누군가 여행을 가자고 한다. 이 나이까지 (decisions.md 71번)
-    trip-gap-years: { min: 3, max: 6 }
+    trip-gap-years: { min: 6, max: 12 }
     trip-last-age: 65
     # 아이가 어릴 때(대략 13세까지) 이 간격마다 놀이동산·운동회·학예회 같은 나들이·행사 가운데 하나가 온다 (decisions.md 87·99번)
-    outing-gap-years: { min: 1, max: 2 }
+    outing-gap-years: { min: 2, max: 4 }
     # 가족 점수가 이 아래면 남처럼 멀어진 집: 여행·나들이 제안이 끊기고 달마다 조금씩 지친다 (decisions.md 111번)
     cold-family-below: 20
     # 내 집을 사서 들어간 뒤 두 달이 지나면 집들이를 묻는다. 집마다 한 번 (decisions.md 140번)
@@ -298,7 +300,8 @@ event:
     gap-days: { min: 240, max: 600 }
   # 보유 종목 흔들림: 버틸지 팔지 묻고 인내심·용기로 뒤집힌다. 그 뒤 55%로 오르고 10~25% 움직인다 (decisions.md 33번)
   shake:
-    gap-days: { min: 300, max: 600 }
+    # 선택 카드를 반으로 줄이려 300~600에서 세 배로 (decisions.md 188번)
+    gap-days: { min: 900, max: 1800 }
     up-bp: 5500
     magnitude-bp: { min: 1000, max: 2500 }
     # 산 지 반년 안 된 종목은 흔들지 않고, 뉴스와 한 달 안에 붙지 않는다. 급락 장면은 고점 대비 15% 넘게 빠졌을 때, 제자리걸음 장면은 반년 폭 15% 아래일 때만 (decisions.md 109번)
@@ -315,11 +318,11 @@ event:
     fraud-bp: 700
     buy-gap-days: 720
     surge-bp: 1500
-    # 집이 없으면 1년 반마다 서울 분양 공고(청약). 가점으로 당첨을 굴린다 (decisions.md 42번)
-    cheongyak-gap-days: 540
-    # 공고 간격은 본 횟수에 따라 1.5년 → 3년 → 4.5년 → 6년으로 늘고, 여섯 번 뒤·은퇴 뒤·"관심 없다" 뒤에는 오지 않는다 (decisions.md 123번)
+    # 집이 없으면 3년마다 서울 분양 공고(청약). 가점으로 당첨을 굴린다 (decisions.md 42번, 188번에서 1년 반 → 3년)
+    cheongyak-gap-days: 1080
+    # 공고 간격은 본 횟수에 따라 3년 → 6년 → 9년으로 늘고, 세 번 뒤·은퇴 뒤·"관심 없다" 뒤에는 오지 않는다 (decisions.md 123·188번)
     cheongyak-gap-growth-max: 4
-    cheongyak-max-notices: 6
+    cheongyak-max-notices: 3
     # 세 만기에 집주인이 재계약을 거절할 확률. 운 0이면 35%, 운 100이면 5%, 그 사이는 직선 (#25, decisions.md 49번)
     refuse-bp: { unlucky: 3500, lucky: 500 }
     # 주거 장면은 하루에 하나, 사이는 적어도 넉 달. 전세사기·거절 뒤 배우자 월세 불만은 반년 뒤 (decisions.md 110번)
@@ -329,7 +332,7 @@ event:
     # 그사이 아이가 태어나면 반년 뒤 앞당겨. 60세까지
     spouse-rent:
       first-gap-days: 360
-      retry-gap-days: 540
+      retry-gap-days: 1080
       child-gap-days: 180
       last-age: 60
       # 네 번째면 배우자가 알아서 계약서를 들고 온다. 감당이 안 되면 월세로 굳어져 더 묻지 않는다 (decisions.md 111번)
@@ -353,7 +356,8 @@ session:
 
 housing:
   # 주거 (주거 설계 3절). 세는 2년, 아파트는 2채까지, 주담대 30년 원리금균등, 전세대출 = 주담대 − 0.5%p, 보증보험 연 0.2%
-  lease-years: 2
+  # 2년 + 갱신청구권 2년. 만기 카드가 한 판에 열 번 넘게 떠서 4년으로 늘렸다 (decisions.md 188번)
+  lease-years: 4
   max-homes: 2
   mortgage-years: 30
   jeonse-loan-spread-bp: -50

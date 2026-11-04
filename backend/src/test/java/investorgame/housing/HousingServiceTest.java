@@ -31,7 +31,7 @@ class HousingServiceTest {
   }
 
   @Test
-  void 처음에는_부모님_집이고_세를_들면_2년_만기다() {
+  void 처음에는_부모님_집이고_세를_들면_4년_만기다() {
     assertThat(housing.get(gameId).tenure()).isEqualTo(Tenure.PARENTS);
 
     Lease ended =
@@ -40,7 +40,9 @@ class HousingServiceTest {
     assertThat(ended.tenure()).isEqualTo(Tenure.PARENTS);
     HousingView view = housing.get(gameId);
     assertThat(view.tenure()).isEqualTo(Tenure.VILLA_JEONSE);
-    assertThat(view.leaseEndDay()).isEqualTo(3600 + 2 * YEAR);
+    assertThat(view.leaseEndDay())
+        .as("2년 + 갱신청구권 2년 (decisions.md 188번)")
+        .isEqualTo(3600 + 4 * YEAR);
 
     Lease moved =
         housing.rent(
@@ -100,13 +102,13 @@ class HousingServiceTest {
   }
 
   @Test
-  void 연장하면_같은_집에_2년_더_산다() {
+  void 연장하면_같은_집에_4년_더_산다() {
     housing.rent(
         gameId, Tenure.APT_JEONSE, "gyeonggi", 330_000_000, 0, 264_000_000, false, null, 3600);
-    housing.renew(gameId, 346_500_000, 0, 277_000_000, 3600 + 2 * YEAR);
+    housing.renew(gameId, 346_500_000, 0, 277_000_000, 3600 + 4 * YEAR);
     HousingView view = housing.get(gameId);
     assertThat(view.deposit()).isEqualTo(346_500_000);
-    assertThat(view.leaseEndDay()).isEqualTo(3600 + 4 * YEAR);
+    assertThat(view.leaseEndDay()).isEqualTo(3600 + 8 * YEAR);
     assertThat(view.region()).isEqualTo("gyeonggi");
   }
 }
