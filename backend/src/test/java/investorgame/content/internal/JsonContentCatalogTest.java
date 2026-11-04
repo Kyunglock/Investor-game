@@ -237,6 +237,29 @@ class JsonContentCatalogTest {
     assertThat(wrong).isEmpty();
   }
 
+  /** #241: "내년에 다시"·"1년 더" 하고 미룬 선택은 그 장면이 다시 온다(같은 장면을 followUp으로 걸거나 repeatable). */
+  @Test
+  void 다음에라고_미룬_선택은_그_장면이_다시_온다() {
+    java.util.regex.Pattern later =
+        java.util.regex.Pattern.compile("내년에 다시|내년을 기약|내년에 연다|기약한다|기약했다|1년 더|기회는 다시|다시 도전|다시 본다");
+    List<String> wrong = new ArrayList<>();
+    for (var career : load().careers()) {
+      for (var option : career.options()) {
+        for (var effect : List.of(option.success(), option.fail())) {
+          String said =
+              String.join(" ", effect.texts()) + (effect == option.success() ? option.label() : "");
+          if (later.matcher(said).find()
+              && effect.followUp() == null
+              && !career.repeatable()
+              && !career.followUpOnly()) {
+            wrong.add(career.code() + "/" + option.code());
+          }
+        }
+      }
+    }
+    assertThat(wrong).isEmpty();
+  }
+
   @Test
   void 알_수_없는_유형_코드는_오류다() {
     assertThatThrownBy(() -> load().investorType("none-none-none"))
