@@ -1286,7 +1286,7 @@
   {
     "code": "pt-unmanned",
     "title": "무인 매장 전환",
-    "body": "본사가 야간을 무인으로 돌린다고 한다. 야간 근무자는 주간 자리로 옮기거나 그만둬야 한다. 주간 자리는 몇 개 안 된다.",
+    "body": "본사가 매장을 무인으로 돌린다고 한다. 밤에는 기계만 남고, 사람이 서는 시간은 몇 개 안 된다. 그 몇 자리를 두고 알바들끼리 눈치를 본다.",
     "weight": 9,
     "minTenureYears": 1,
     "jobs": [
@@ -1296,7 +1296,7 @@
     "options": [
       {
         "code": "apply",
-        "label": "주간 자리를 신청한다",
+        "label": "남는 자리를 신청한다",
         "stat": "luck",
         "baseBp": 3500,
         "perPointBp": 40,
@@ -1304,7 +1304,7 @@
           "statDeltas": {
             "patience": 1
           },
-          "text": "주간 자리를 얻었다. 하는 일은 같고 잠은 밤에 잔다.",
+          "text": "남는 자리를 얻었다. 하는 일은 같다.",
           "happiness": 3
         },
         "fail": {
@@ -1350,7 +1350,7 @@
           "statDeltas": {
             "courage": 1
           },
-          "text": "교육은 받았지만 본사는 경력자를 뽑았다. 야간 자리와 함께 일도 사라졌다.",
+          "text": "교육은 받았지만 본사는 경력자를 뽑았다. 내 자리도 기계로 바뀌었다.",
           "happiness": -9
         }
       },
@@ -1372,7 +1372,7 @@
           "statDeltas": {
             "patience": 1
           },
-          "text": "기다리는 사이 주간 자리는 다 찼다. 남은 건 주말 몇 시간뿐이라 벌이가 50% 줄었다.",
+          "text": "기다리는 사이 남는 자리는 다 찼다. 남은 건 주말 몇 시간뿐이라 벌이가 50% 줄었다.",
           "happiness": -4
         }
       }
@@ -1464,7 +1464,7 @@
   {
     "code": "pt-weekly",
     "title": "주휴수당",
-    "body": "사장님이 주 15시간을 안 넘기려고 근무를 잘게 쪼갠다. 그래 놓고 바쁜 주에는 더 나오라고 한다. 주휴수당은 한 번도 받은 적이 없다.",
+    "body": "주 닷새를 꼬박 나오는데 통장에는 시급 곱하기 시간만 찍힌다. 사장님은 알바는 원래 그렇다고 한다. 주휴수당은 한 번도 받은 적이 없다.",
     "weight": 8,
     "minTenureYears": 0,
     "maxTenureYears": 3,
@@ -3086,6 +3086,9 @@
       "farmer"
     ],
     "minAge": 45,
+    "unless": [
+      "farm-loan/try"
+    ],
     "options": [
       {
         "code": "sell",
@@ -3130,7 +3133,7 @@
           "statDeltas": {
             "patience": 1
           },
-          "text": "평생 지은 땅이다. 소문은 소문일 뿐.",
+          "text": "손에 익은 내 땅이다. 소문은 소문일 뿐.",
           "happiness": 1
         }
       },
@@ -3156,6 +3159,95 @@
           },
           "text": "개발은 백지화됐고 대책위 활동비 300만 원만 냈다.",
           "happiness": -4
+        }
+      }
+    ]
+  },
+  {
+    "code": "farm-land-tenant",
+    "title": "빌린 땅이 팔린다",
+    "body": "마을에 신도시가 들어선다는 소문이 돈다. 빌려 짓던 땅의 주인이 보상을 노리고 땅을 내놓았다. 계약이 끝나면 농사지을 땅이 없다.",
+    "weight": 4,
+    "minTenureYears": 5,
+    "jobs": [
+      "farmer"
+    ],
+    "minAge": 45,
+    "requires": [
+      "farm-loan/try"
+    ],
+    "options": [
+      {
+        "code": "claim",
+        "label": "실경작자 영농 보상을 신청한다",
+        "stat": "insight",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": {
+          "quit": true,
+          "amount": 30000000,
+          "statDeltas": {
+            "insight": 2
+          },
+          "happiness": 2,
+          "text": "농사지은 기록을 모아 실경작자 영농 보상 3,000만 원을 받았다. 땅을 비워 주고 농사를 접었다."
+        },
+        "fail": {
+          "quit": true,
+          "statDeltas": {
+            "insight": 1
+          },
+          "happiness": -8,
+          "text": "임대차 기록이 모자라 보상을 못 받았다. 빈손으로 땅을 비워 주고 농사를 접었다."
+        }
+      },
+      {
+        "code": "move",
+        "label": "외곽에 다른 땅을 빌린다",
+        "stat": "luck",
+        "baseBp": 4500,
+        "perPointBp": 40,
+        "success": {
+          "salaryPercent": -8,
+          "amount": -3000000,
+          "statDeltas": {
+            "patience": 2
+          },
+          "happiness": -2,
+          "text": "외곽에 땅을 새로 빌렸다. 옮기는 데 300만 원이 들었고, 땅이 멀고 작아 벌이가 8% 줄었다."
+        },
+        "fail": {
+          "quit": true,
+          "statDeltas": {
+            "patience": 1
+          },
+          "happiness": -9,
+          "text": "개발 소문에 다들 땅을 쥐고 있어 빌릴 땅이 없다. 결국 농사를 접었다."
+        }
+      },
+      {
+        "code": "buy",
+        "label": "빚을 내 다른 땅을 산다",
+        "stat": "insight",
+        "baseBp": 3000,
+        "perPointBp": 40,
+        "success": {
+          "salaryPercent": 10,
+          "amount": -80000000,
+          "statDeltas": {
+            "courage": 2
+          },
+          "happiness": 6,
+          "text": "8,000만 원을 들여 작은 밭을 샀다. 모자란 돈은 대출이다. 임대료가 빠지니 벌이가 10% 늘었다."
+        },
+        "fail": {
+          "salaryPercent": -5,
+          "amount": -80000000,
+          "statDeltas": {
+            "courage": 1
+          },
+          "happiness": -7,
+          "text": "8,000만 원에 산 밭이 물 빠짐이 나빠 첫해 농사를 망쳤다. 모자란 돈은 대출이라 이자만 나간다."
         }
       }
     ]
@@ -3932,6 +4024,9 @@
       "farmer"
     ],
     "minAge": 60,
+    "unless": [
+      "farm-loan/try"
+    ],
     "options": [
       {
         "code": "join",
@@ -5594,6 +5689,7 @@
     "jobs": [
       "factory"
     ],
+    "minAge": 55,
     "options": [
       {
         "code": "accept",
@@ -5619,7 +5715,7 @@
           "statDeltas": {
             "conviction": 2
           },
-          "text": "나 없으면 라인이 안 돈다. 회사가 촉탁 재고용을 약속했다.",
+          "text": "나 없으면 라인이 안 돈다. 회사가 붙잡으려고 숙련 수당을 크게 올렸다.",
           "happiness": 4
         },
         "fail": {
@@ -6464,7 +6560,7 @@
     "title": "연금 개혁",
     "body": "공무원 연금을 손본다는 뉴스가 나왔다. 선배들이 개혁 전에 명예퇴직을 신청한다며 술렁인다.",
     "weight": 9,
-    "minTenureYears": 10,
+    "minTenureYears": 20,
     "jobs": [
       "civil-servant"
     ],
@@ -7772,7 +7868,7 @@
   {
     "code": "cs-advisor-review",
     "title": "취업 심사",
-    "body": "퇴직을 앞두고 협회 고문 취업 심사가 열렸다. 재직 중 협회 서류를 너그럽게 처리했다는 언론 보도가 났다.",
+    "body": "퇴직 뒤 갈 협회 고문 자리를 두고 미리 취업 심사가 열렸다. 그런데 재직 중 협회 서류를 너그럽게 처리했다는 언론 보도가 났다.",
     "weight": 1,
     "minTenureYears": 0,
     "jobs": [
@@ -8079,7 +8175,7 @@
     "title": "명예퇴직 신청",
     "body": "교단에 선 지 이십여 년. 아이들은 점점 낯설고 몸은 무겁다. 올해 명예퇴직 신청을 받는다고 한다.",
     "weight": 9,
-    "minTenureYears": 10,
+    "minTenureYears": 20,
     "jobs": [
       "teacher"
     ],
@@ -9561,7 +9657,7 @@
     "title": "수간호사",
     "body": "병동 수간호사가 정년퇴직한다. 경력으로 보면 내 차례지만 후보가 둘이다. 되면 환자보다 근무표와 씨름하게 된다.",
     "weight": 9,
-    "minTenureYears": 8,
+    "minTenureYears": 15,
     "jobs": [
       "nurse"
     ],
@@ -10786,7 +10882,7 @@
         "code": "move",
         "label": "요양병원으로 옮긴다",
         "success": {
-          "text": "밤 근무가 사라졌다. 정년 걱정 없이 일할 수 있다.",
+          "text": "밤 근무가 사라졌다. 남은 몇 해는 낮에만 일한다.",
           "salaryPercent": 3,
           "statDeltas": {
             "patience": 2
@@ -11316,6 +11412,7 @@
     "jobs": [
       "designer"
     ],
+    "maxAge": 33,
     "options": [
       {
         "code": "endure",
@@ -12704,6 +12801,7 @@
     "jobs": [
       "office"
     ],
+    "maxAge": 45,
     "options": [
       {
         "code": "endure",
@@ -12939,6 +13037,7 @@
     "jobs": [
       "office"
     ],
+    "maxAge": 35,
     "options": [
       {
         "code": "try",
@@ -13009,6 +13108,7 @@
     "jobs": [
       "office"
     ],
+    "maxAge": 35,
     "options": [
       {
         "code": "comply",
@@ -14514,6 +14614,7 @@
     "jobs": [
       "sales"
     ],
+    "maxAge": 33,
     "options": [
       {
         "code": "endure",
@@ -14666,6 +14767,7 @@
     "jobs": [
       "sales"
     ],
+    "maxAge": 33,
     "options": [
       {
         "code": "take",
@@ -16435,6 +16537,7 @@
     "jobs": [
       "developer"
     ],
+    "maxAge": 33,
     "options": [
       {
         "code": "comply",
@@ -17687,7 +17790,7 @@
     "title": "분식회계 정황",
     "body": "감사하던 회사 장부에서 매출을 부풀린 흔적을 찾았다. 그 회사는 우리 법인의 큰 고객이다. 담당 파트너는 일단 덮자는 눈치다.",
     "weight": 7,
-    "minTenureYears": 1,
+    "minTenureYears": 5,
     "jobs": [
       "accountant"
     ],
@@ -19239,7 +19342,7 @@
   {
     "code": "acc-succession",
     "title": "고객 장부 인수",
-    "body": "은퇴하는 선배 세무사가 단골 고객 장부를 넘기겠다고 한다. 권리금은 4,000만 원. 정년 뒤 일거리가 된다.",
+    "body": "은퇴하는 선배 세무사가 단골 고객 장부를 넘기겠다고 한다. 권리금은 4,000만 원. 고객을 법인으로 데려오면 내 실적이 되고, 실적만큼 보수가 오른다.",
     "weight": 5,
     "minTenureYears": 0,
     "jobs": [
@@ -19260,7 +19363,7 @@
             "courage": 1,
             "insight": 1
           },
-          "text": "고객 대부분이 따라왔다. 권리금 4,000만 원이 아깝지 않다.",
+          "text": "고객 대부분이 따라왔다. 법인 실적이 늘어 보수가 20% 올랐다. 권리금 4,000만 원이 아깝지 않다.",
           "happiness": 7
         },
         "fail": {
@@ -19285,7 +19388,7 @@
           "statDeltas": {
             "conviction": 1
           },
-          "text": "남은 고객만큼 2,000만 원을 냈다.",
+          "text": "남은 고객만큼 2,000만 원을 냈다. 그만큼 실적이 늘어 보수가 10% 올랐다.",
           "happiness": 4
         },
         "fail": {
@@ -19303,7 +19406,7 @@
           "statDeltas": {
             "patience": 1
           },
-          "text": "정년 뒤는 그때 생각하기로 했다.",
+          "text": "남의 장부에 큰돈을 걸지 않기로 했다.",
           "happiness": 1
         }
       }
@@ -20735,7 +20838,7 @@
   {
     "code": "big-retaliation",
     "title": "보복 인사",
-    "body": "인사 시즌, 나에게만 지방 물류센터 발령이 났다. 사유는 조직 활성화다. 제보 뒤 석 달 만이다. 동료들은 눈을 피한다.",
+    "body": "인사 시즌, 나에게만 지방 물류센터 발령이 났다. 사유는 조직 활성화다. 팀장의 뒷돈 얘기가 나온 지 반년 만이다. 동료들은 눈을 피한다.",
     "weight": 1,
     "minTenureYears": 0,
     "jobs": [
@@ -22748,7 +22851,7 @@
     "title": "대형 사건 수임",
     "body": "언론에 오르내리는 대형 사건이 들어왔다. 이기면 이름이 나고, 지면 그만큼 소문도 난다. 기자들이 벌써 사무실 앞을 서성인다.",
     "weight": 9,
-    "minTenureYears": 0,
+    "minTenureYears": 5,
     "jobs": [
       "lawyer"
     ],
@@ -24016,7 +24119,7 @@
           "statDeltas": {
             "courage": 1
           },
-          "followUp": "law-own-staff",
+          "followUp": "law-broker",
           "followUpDays": 365,
           "text": "중견기업 자문 계약을 따냈다. 수입이 15% 늘었다.",
           "happiness": 7
@@ -24114,6 +24217,76 @@
           },
           "text": "위로금 300만 원을 주고 내보냈다. 새 사람을 구한다.",
           "happiness": -2
+        }
+      }
+    ]
+  },
+  {
+    "code": "law-broker",
+    "title": "브로커의 제안",
+    "body": "기업 자문으로 이름이 나자 사건 브로커가 찾아왔다. 개인 사건을 대량으로 끌어다 줄 테니 수임료의 30%를 떼 달라고 한다. 엄연한 변호사법 위반이다.",
+    "weight": 1,
+    "minTenureYears": 0,
+    "jobs": [
+      "lawyer"
+    ],
+    "followUpOnly": true,
+    "options": [
+      {
+        "code": "refuse",
+        "label": "돌려보낸다",
+        "success": {
+          "statDeltas": {
+            "conviction": 2
+          },
+          "happiness": 2,
+          "text": "돌려보냈다. 자문 고객 앞에서 떳떳하다."
+        }
+      },
+      {
+        "code": "take",
+        "label": "손잡는다",
+        "stat": "luck",
+        "baseBp": 4000,
+        "perPointBp": 30,
+        "success": {
+          "salaryPercent": 20,
+          "statDeltas": {
+            "conviction": -2
+          },
+          "happiness": 3,
+          "text": "사건이 쏟아졌다. 수입이 20% 늘었다."
+        },
+        "fail": {
+          "salaryPercent": -20,
+          "amount": -50000000,
+          "statDeltas": {
+            "conviction": -2
+          },
+          "happiness": -12,
+          "text": "브로커가 잡혔다. 벌금과 정직으로 5,000만 원이 사라졌고, 자문 고객도 떠났다."
+        }
+      },
+      {
+        "code": "report",
+        "label": "변호사회에 알린다",
+        "stat": "courage",
+        "baseBp": 5000,
+        "perPointBp": 30,
+        "success": {
+          "statDeltas": {
+            "courage": 1,
+            "conviction": 2
+          },
+          "happiness": 4,
+          "text": "변호사회에 브로커를 알렸다. 비슷한 제안이 끊겼다."
+        },
+        "fail": {
+          "statDeltas": {
+            "courage": 1
+          },
+          "happiness": -3,
+          "text": "증거가 모자라 흐지부지됐다. 브로커는 옆 사무실로 갔다."
         }
       }
     ]
@@ -24308,6 +24481,7 @@
     "jobs": [
       "INVEST"
     ],
+    "maxAge": 45,
     "options": [
       {
         "code": "show",
@@ -24418,7 +24592,7 @@
           "statDeltas": {
             "courage": 1
           },
-          "text": "버텼다. 아직은 젊다.",
+          "text": "버텼다. 몸은 아직 버텨 준다.",
           "happiness": 1
         },
         "fail": {
