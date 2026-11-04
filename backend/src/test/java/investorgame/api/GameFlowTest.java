@@ -144,17 +144,19 @@ class GameFlowTest {
     assertThat(seenKinds.getOrDefault("CAREER", 0))
         .as("35년 동안 직장 장면이 여러 번")
         .isGreaterThanOrEqualTo(3);
-    // 성장 단계 10개에서 하나씩, 취업 뒤 일상 장면(adult)은 1.5~2.5년 간격으로 온다. 풀이 한 판보다 넓어(#195) 다 쓰지 않는다.
-    // 간격으로 따지면 25~70세에 많아야 31번, 풀이 남아 있으니 적어도 여덟 번은 온다.
+    // 성장 단계 10개에서 하나씩, 취업 뒤 일상 장면(adult)은 4.5~7.5년 간격으로 온다(decisions.md 188번). 풀이 한 판보다 넓어(#195) 다
+    // 쓰지 않는다.
+    // 간격으로 따지면 25~70세에 많아야 열 번, 직장이 배경인 장면이 빠져도 적어도 네 번은 온다.
     int adultSeen = seenKinds.get("TRAIT") - 10;
-    assertThat(adultSeen).as("취업 뒤 일상 장면 수 (직업 %s)", jobsChosen).isBetween(8, 31);
+    assertThat(adultSeen).as("취업 뒤 일상 장면 수 (직업 %s)", jobsChosen).isBetween(4, 10);
     assertThat(kindOrder.subList(0, 13))
         .as("성장기의 성향 이벤트가 모두 끝난 뒤에 직업, 독립(주거), 그다음 투자 시작 제안")
         .containsExactly(
             "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT", "TRAIT",
             "TRAIT", "JOB", "HOUSING", "OFFER");
     assertThat(seenKinds.get("OFFER")).isEqualTo(1);
-    assertThat(seenKinds.getOrDefault("NEWS", 0)).isGreaterThanOrEqualTo(20);
+    // 뉴스는 해마다 37.5% 확률(decisions.md 188번). 25~70세면 평균 17번쯤이다.
+    assertThat(seenKinds.getOrDefault("NEWS", 0)).isGreaterThanOrEqualTo(8);
     assertThat(game.read("$.investmentStyle.code", String.class)).isIn("short", "long");
     assertThat(game.read("$.interestSector.code", String.class)).isNotBlank();
 
