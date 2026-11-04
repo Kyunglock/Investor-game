@@ -768,7 +768,7 @@ class DefaultProgressService implements ProgressService {
     // 가족이 있으면 가족 때문에 버티고 위로받는 문구, 혼자면 불안과 친구의 문구 (decisions.md 83번).
     HouseholdView family = household.get(gameId);
     StringBuilder message =
-        new StringBuilder(effect.textFor(family.married() || !family.children().isEmpty()));
+        new StringBuilder(effect.textFor(family.married(), !family.children().isEmpty()));
     if (effect.becomeInvestor()) {
       // 번아웃 등에서 전업투자자로 전향: 직업 선택의 INVEST와 같다 (decisions.md 35·83번). 위로금은 받고 나온다.
       long severance = salaryBefore * effect.severanceMonths();
@@ -1944,7 +1944,7 @@ class DefaultProgressService implements ProgressService {
    */
   /** 스스로 그만두면 퇴직금, 밀려나면 위로금 (#236). 결과 문구가 "퇴직금"이라고 하면 그대로 부른다. */
   private static String severanceWord(CareerDefinition.Effect effect) {
-    return effect.text().contains("퇴직금") || effect.textFor(true).contains("퇴직금") ? "퇴직금" : "위로금";
+    return effect.texts().stream().anyMatch(t -> t.contains("퇴직금")) ? "퇴직금" : "위로금";
   }
 
   private long monthlySalary(JobDefinition job, int tenureYears, int bonusBp, int day) {
