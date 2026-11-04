@@ -37,7 +37,10 @@ public interface CharacterService {
   /** 직업을 잃는다. jobCode·jobStartDay가 null이 되고 인상분은 0이 된다. 직업이 없으면 오류. */
   void quitJob(UUID gameId);
 
-  /** 연봉 협상·승진의 인상분을 더한다(만분율, 음수 가능). 직업이 없으면 오류. */
+  /** 인상분의 하한(만분율). 감봉·삭감이 쌓여도 기본 월급의 절반 아래로는 내려가지 않는다 (#242). */
+  int MIN_SALARY_BONUS_BP = -5000;
+
+  /** 연봉 협상·승진의 인상분을 더한다(만분율, 음수 가능). 쌓인 값은 MIN_SALARY_BONUS_BP 아래로 내려가지 않는다. 직업이 없으면 오류. */
   void addSalaryBonus(UUID gameId, int bonusBp);
 
   /**

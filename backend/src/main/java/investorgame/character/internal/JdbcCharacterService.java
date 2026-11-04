@@ -252,10 +252,11 @@ class JdbcCharacterService implements CharacterService {
         jdbc.sql(
                 """
                 UPDATE character_profile
-                SET salary_bonus_bp = salary_bonus_bp + :bonus, updated_at = :now
+                SET salary_bonus_bp = GREATEST(:floor, salary_bonus_bp + :bonus), updated_at = :now
                 WHERE game_id = :gameId AND job_code IS NOT NULL
                 """)
             .param("bonus", bonusBp)
+            .param("floor", MIN_SALARY_BONUS_BP)
             .param("now", now())
             .param("gameId", gameId)
             .update();

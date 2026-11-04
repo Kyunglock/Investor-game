@@ -18,6 +18,8 @@ import java.util.Map;
  * @param requires 지금 직장에서 이 결과("장면코드/선택지코드", 판정에 떨어졌으면 "코드!fail")가 하나라도 있었을 때만 나온다. 개업한 사람의 사장 장면 등
  *     (#234)
  * @param unless 지금 직장에서 이 결과가 하나라도 있었으면 나오지 않는다. 사장이 된 사람에게 직원 장면이 안 오게 (#234)
+ * @param minHeldDropBp 보유 종목 가운데 최근 12달 고점에서 이만큼(만분율) 넘게 빠진 것이 있을 때만 나온다. "확신했던 종목이 반토막" 같은 장면이 현금만
+ *     든 사람에게 오지 않게 (#242). null이면 제한 없음
  */
 public record CareerDefinition(
     String code,
@@ -34,7 +36,8 @@ public record CareerDefinition(
     Boolean repeatable,
     List<Option> options,
     List<String> requires,
-    List<String> unless) {
+    List<String> unless,
+    Integer minHeldDropBp) {
 
   /** 직업 대신 전업투자자를 고른 사람의 직업 자리. 직업 선택의 INVEST 선택지와 같은 값이다 (decisions.md 35번). */
   public static final String FULL_TIME_INVESTOR = "INVEST";
@@ -68,12 +71,18 @@ public record CareerDefinition(
     return jobs.isEmpty() ? !FULL_TIME_INVESTOR.equals(jobCode) : jobs.contains(jobCode);
   }
 
+  /** 보유 종목의 낙폭(종목별 만분율)이 이 장면의 전제를 채우는가. */
+  public boolean fitsHoldings(java.util.Collection<Integer> heldDropBp) {
+    return minHeldDropBp == null || heldDropBp.stream().anyMatch(drop -> drop >= minHeldDropBp);
+  }
+
   /** 조건(나이·순자산)이 하나도 없는 장면. 다른 조건에 다 걸렸을 때 물러설 곳이다. */
   public boolean unconditional() {
     return minAge == null
         && maxAge == null
         && minNetWorth == null
         && maxTenureYears == null
+        && minHeldDropBp == null
         && !followUpOnly;
   }
 
