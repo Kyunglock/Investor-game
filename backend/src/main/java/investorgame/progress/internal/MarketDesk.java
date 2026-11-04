@@ -227,11 +227,11 @@ class MarketDesk {
 
   // ---- 종목 ----
 
-  /** 이 달에 이미 정해 둔 종목 해석의 문구. 없으면 비어 있다. 쓰지 않으므로 읽기 트랜잭션에서 불러도 된다. */
-  Optional<String> storedAnalysisText(UUID gameId, String stockCode) {
+  /** 이 달에 이미 정해 둔 종목 해석. 없으면 비어 있다. 쓰지 않으므로 읽기 트랜잭션에서 불러도 된다. */
+  Optional<Analysis> storedAnalysis(UUID gameId, String stockCode) {
     return analyses
         .find(gameId, stockCode, market.currentMonth(gameId))
-        .map(AnalysisRepository.AnalysisRow::text);
+        .map(row -> view(row, AnalysisText.TREND_READINGS.size()));
   }
 
   StockAnalysis analysis(UUID gameId, StockDefinition stock, SeededRandom random) {
@@ -355,7 +355,7 @@ class MarketDesk {
       SeededRandom random) {
     Optional<AnalysisRepository.AnalysisRow> existing = analyses.find(gameId, target, month);
     if (existing.isPresent()) {
-      return view(existing.get());
+      return view(existing.get(), readings.size());
     }
     int insight = characters.get(gameId).stats().insight();
     Reading reading =
@@ -397,7 +397,7 @@ class MarketDesk {
             prevCorrect,
             remark);
     analyses.insertIfAbsent(row);
-    return view(analyses.find(gameId, target, month).orElse(row));
+    return view(analyses.find(gameId, target, month).orElse(row), readings.size());
   }
 
   /** 기사 기록의 표시. 표시를 남기기 전의 옛 기록은 문구로 콘텐츠를 찾는다. */
@@ -420,10 +420,12 @@ class MarketDesk {
         .orElse("NEUTRAL");
   }
 
-  private static Analysis view(AnalysisRepository.AnalysisRow row) {
+  /** 맞출 확률은 해석한 때의 안목으로 계산한다. 그새 안목이 올라도 이 달의 해석은 그때 굴린 것이다. */
+  private Analysis view(AnalysisRepository.AnalysisRow row, int choices) {
     return new Analysis(
         row.month(),
         row.insight(),
+        behavior.analysisAccuracyPercent(row.insight(), choices),
         row.reading(),
         row.text(),
         row.prevCorrect() == null ? null : new Analysis.Remark(row.prevCorrect(), row.remark()));

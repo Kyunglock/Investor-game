@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { create } from 'zustand'
 import type { Game } from '../../api/client'
 import { spouseWord } from '../../api/spouseTerms'
+import { homeSplit, realEstateTotals } from './homes'
 import { childWord, percent, shortWon, signedShortWon, signedWon, won } from './labels'
 import { signedPercent } from './market'
 import { FAMILY_COLD, familyNote, MOOD_LOW, moodNote } from './mood'
+import { Sparkline } from './Sparkline'
 import { useGameStore } from './store'
 import { yearDelta } from './timeline'
 import { compactWon, stockSummary, WORTH_COLORS, worthBar, worthParts } from './worth'
@@ -440,114 +442,275 @@ function TradeButton({ game }: { game: Game }) {
 
 const rate = (bp: number) => `${(bp / 100).toFixed(2)}%`
 
-/** 집: 어떻게 사는지, 대출과 금리, 가진 아파트(매물로 내놓기), 아파트 시세 (주거 설계). */
+/** 집: 부동산 합계, 어떻게 사는지, 가진 집(몫 막대·매물로 내놓기·상환), 지역 시세 (주거 설계, decisions.md 183번). */
 function Home({ game }: { game: Game }) {
   const h = game.housing
-  const listHome = useGameStore((s) => s.listHome)
-  const busy = Boolean(game.pendingEvent) || game.status !== 'ACTIVE'
+  const totals = realEstateTotals(h)
+  const renting = h.tenure !== 'PARENTS' && h.tenure !== 'OWN'
   return (
     <section data-testid="housing-card">
+      {(totals.count > 0 || totals.deposit !== 0) && (
+        <div className="mb-4" data-testid="realestate-total">
+          <p className="text-[13px] text-pen-soft">부동산 내 몫</p>
+          <p
+            className={`font-pen text-[36px] leading-tight ${totals.net < 0 ? 'text-blue-pen' : 'text-red-pen'}`}
+          >
+            {shortWon(totals.net)}
+          </p>
+          <p className="text-[12px] text-pen-soft">
+            {[
+              totals.count > 0 && `집 ${totals.count}채 시세 ${compactWon(totals.price)}`,
+              totals.mortgage > 0 && `주담대 −${compactWon(totals.mortgage)}`,
+              totals.tenant > 0 && `세입자 보증금 −${compactWon(totals.tenant)}`,
+              renting && h.deposit > 0 && `보증금 ${compactWon(h.deposit)}`,
+              renting && h.jeonseLoan > 0 && `전세대출 −${compactWon(h.jeonseLoan)}`,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </p>
+        </div>
+      )}
+
       <h2 className="font-pen text-[28px] font-normal leading-8">사는 곳</h2>
-      <p data-testid="tenure">
-        <b>{TENURE_LABELS[h.tenure]}</b>
-        {h.roomsName && ` · ${h.roomsName}`}
-        {h.regionName && h.tenure !== 'OWN' && ` · ${h.regionName}`}
-        {h.leaseEndAge != null && ` · ${h.leaseEndAge}살 만기`}
-        {h.insured && ' · 보증보험'}
-        {h.cramped && (
-          <span className="text-red-pen" data-testid="cramped">
-            {' '}
-            · 식구에 비해 좁다
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1" data-testid="tenure">
+        <span className="rounded-full border-2 border-pen px-2.5 text-[14px] font-bold leading-6">
+          {TENURE_LABELS[h.tenure]}
+        </span>
+        {h.tenure === 'OWN' && h.homes.find((x) => x.residence) && (
+          <span className="text-pen-soft">{h.homes.find((x) => x.residence)?.regionName}</span>
+        )}
+        {h.regionName && h.tenure !== 'OWN' && <span>{h.regionName}</span>}
+        {h.roomsName && <span className="text-pen-soft">{h.roomsName}</span>}
+        {h.insured && (
+          <span className="rounded-full bg-teal-soft px-2 text-[11px] leading-5 text-teal">
+            보증보험
           </span>
         )}
       </p>
-      {h.tenure !== 'PARENTS' && (
-        <p className="text-[13px] text-pen-soft">
-          {h.deposit > 0 && `보증금 ${won(h.deposit)} · `}
-          {h.jeonseLoan > 0 && `전세대출 ${won(h.jeonseLoan)} · `}월 주거비 {won(h.monthlyCost)} ·
-          주담대 금리 연 {rate(h.mortgageRateBp)}
+      {h.cramped && (
+        <p className="mt-1 text-[13px] text-red-pen" data-testid="cramped">
+          ⚠ 식구에 비해 좁다 · 행복도와 가족 점수가 조금씩 깎인다
         </p>
       )}
+      {h.tenure === 'PARENTS' ? (
+        <p className="mt-1 text-pen-soft">아직 부모님 집에 산다. 주거비가 들지 않는다.</p>
+      ) : (
+        <dl
+          className="m-0 mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-[13px]"
+          data-testid="tenure-facts"
+        >
+          <Fact label="월 주거비" value={won(h.monthlyCost)} strong />
+          {h.leaseEndAge != null && <Fact label="만기" value={`${h.leaseEndAge}살`} />}
+          {h.deposit > 0 && <Fact label="보증금" value={shortWon(h.deposit)} />}
+          {h.jeonseLoan > 0 && <Fact label="전세대출" value={shortWon(h.jeonseLoan)} warn />}
+          {h.monthlyRent > 0 && <Fact label="월세" value={won(h.monthlyRent)} />}
+        </dl>
+      )}
+
       {h.homes.length > 0 && (
-        <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0" data-testid="homes">
-          {h.homes.map((home) => {
-            const gain = home.price - home.purchasePrice
-            const equity = home.price - home.mortgage - home.tenantDeposit
-            const change = h.quotes.find((q) => q.name === home.regionName)?.change12mBp
-            return (
-              <li
-                key={home.seq}
-                className="border-b border-dashed border-[#a6acb8] pb-2"
-                data-testid="home-row"
-              >
-                <p className="flex justify-between gap-2">
-                  <span>
-                    <b>{home.regionName}</b> {home.residence ? '내가 사는 집' : '갭투자'}
-                  </span>
-                  <span>
-                    시세 {won(home.price)}
-                    {change !== undefined && (
-                      <span
-                        className={`ml-1 text-[13px] ${change >= 0 ? 'text-red-pen' : 'text-blue-pen'}`}
-                      >
-                        1년 {signedPercent(change)}
+        <>
+          <h2 className="mt-5 font-pen text-[28px] font-normal leading-8">가진 집</h2>
+          <ul className="m-0 mt-1 flex list-none flex-col gap-3 p-0" data-testid="homes">
+            {h.homes.map((home) => (
+              <HomeCard key={home.seq} game={game} home={home} />
+            ))}
+          </ul>
+        </>
+      )}
+
+      {h.tenure !== 'PARENTS' && h.quotes.length > 0 && (
+        <>
+          <div className="mt-5 flex items-baseline justify-between gap-2">
+            <h2 className="font-pen text-[28px] font-normal leading-8">지역 시세</h2>
+            <span className="text-[12px] text-pen-soft" data-testid="mortgage-rate">
+              주담대 금리 연 {rate(h.mortgageRateBp)}
+            </span>
+          </div>
+          <p className="text-[11px] text-pen-soft">아파트 84㎡ 한 채 · 최근 12달</p>
+          <ul className="m-0 mt-1 list-none p-0" data-testid="home-quotes">
+            {h.quotes.map((q) => {
+              const mine = h.homes.some((x) => x.regionName === q.name)
+              const here = h.tenure !== 'OWN' && h.regionName === q.name
+              const up = q.change12mBp >= 0
+              return (
+                <li
+                  key={q.region}
+                  className="grid grid-cols-[minmax(0,1fr)_64px_auto] items-center gap-x-3 border-b border-[#a6acb8] py-1.5"
+                  data-testid="home-quote"
+                >
+                  <span className="min-w-0">
+                    <b className="font-normal">{q.name}</b>
+                    {(mine || here) && (
+                      <span className="ml-1.5 rounded-full bg-pen px-1.5 text-[10px] leading-4 text-white">
+                        {mine ? '내 집' : '사는 곳'}
                       </span>
                     )}
                   </span>
-                </p>
-                <p className="flex justify-between gap-2" data-testid="home-equity">
-                  <span className="text-pen-soft">내 몫(지분)</span>
-                  <span className={`font-pen text-[22px] ${equity < 0 ? 'text-red-pen' : ''}`}>
-                    {won(equity)}
-                  </span>
-                </p>
-                <p className="text-[13px] text-pen-soft">
-                  산 값 {won(home.purchasePrice)} ·{' '}
-                  <span className={gain >= 0 ? 'text-red-pen' : 'text-blue-pen'}>
-                    {signedWon(gain)}
-                  </span>
-                  {home.mortgage > 0 &&
-                    ` · 주담대 ${won(home.mortgage)} (30년 원리금균등 · 월 ${won(home.monthlyPayment)})`}
-                  {home.tenantDeposit > 0 && ` · 세입자 보증금 ${won(home.tenantDeposit)}`}
-                </p>
-                {home.mortgage > 0 && (
-                  <MortgageRepay
-                    seq={home.seq}
-                    mortgage={home.mortgage}
-                    cash={game.cash}
-                    busy={busy}
+                  <Sparkline
+                    values={q.last12}
+                    width={64}
+                    height={22}
+                    color={up ? 'var(--red-pen)' : 'var(--blue-pen)'}
                   />
-                )}
-                <button
-                  type="button"
-                  disabled={busy}
-                  className="mt-1 min-h-11 rounded-full border-2 border-pen px-4 text-[13px] hover:bg-white disabled:opacity-40"
-                  onClick={() => void listHome(home.seq, !home.listed)}
-                  data-testid={`list-home-${home.seq}`}
-                >
-                  {home.listed ? '매물 거두기 (매수자 기다리는 중)' : '매물로 내놓기'}
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-      {h.tenure !== 'PARENTS' && (
-        <ul className="m-0 mt-2 list-none p-0 text-[13px] text-pen-soft" data-testid="home-quotes">
-          {h.quotes.map((q) => (
-            <li key={q.region} className="flex justify-between">
-              <span>{q.name}</span>
-              <span>
-                {won(q.price)} · 1년{' '}
-                <span className={q.change12mBp >= 0 ? 'text-red-pen' : 'text-blue-pen'}>
-                  {signedPercent(q.change12mBp)}
-                </span>
-              </span>
-            </li>
-          ))}
-        </ul>
+                  <span className="text-right">
+                    <span className="block leading-5">{shortWon(q.price)}</span>
+                    <span
+                      className={`block text-[12px] leading-4 ${up ? 'text-red-pen' : 'text-blue-pen'}`}
+                    >
+                      1년 {signedPercent(q.change12mBp)}
+                    </span>
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </>
       )}
     </section>
+  )
+}
+
+function Fact({
+  label,
+  value,
+  strong,
+  warn,
+}: {
+  label: string
+  value: string
+  strong?: boolean
+  warn?: boolean
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-2 border-b border-[#a6acb8] py-0.5">
+      <dt className="text-pen-soft">{label}</dt>
+      <dd className={`m-0 ${strong ? 'font-bold' : ''} ${warn ? 'text-red-pen' : ''}`}>{value}</dd>
+    </div>
+  )
+}
+
+const SPLIT_COLORS = {
+  equity: WORTH_COLORS.homes,
+  mortgage: 'var(--red-pen)',
+  tenant: WORTH_COLORS.deposit,
+}
+
+/** 가진 집 한 채: 시세와 1년 변화, 시세 중 내 몫·주담대·세입자 보증금 막대, 산 값 대비 손익, 상환·매물 버튼. */
+function HomeCard({ game, home }: { game: Game; home: Game['housing']['homes'][number] }) {
+  const listHome = useGameStore((s) => s.listHome)
+  const busy = Boolean(game.pendingEvent) || game.status !== 'ACTIVE'
+  const split = homeSplit(home)
+  const gain = home.price - home.purchasePrice
+  const change = game.housing.quotes.find((q) => q.name === home.regionName)?.change12mBp
+  const segments = [
+    { key: 'equity', label: '내 몫', bp: split.equityBp, value: split.equity },
+    { key: 'mortgage', label: '주담대', bp: split.mortgageBp, value: home.mortgage },
+    { key: 'tenant', label: '세입자 보증금', bp: split.tenantBp, value: home.tenantDeposit },
+  ].filter((x) => x.bp > 0) as {
+    key: keyof typeof SPLIT_COLORS
+    label: string
+    bp: number
+    value: number
+  }[]
+  return (
+    <li className="rounded border-2 border-pen bg-white/70 px-3 py-2.5" data-testid="home-row">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <b className="text-[16px]">{home.regionName}</b>
+        <span
+          className={`rounded-full px-2 text-[11px] leading-5 ${home.residence ? 'bg-pen text-white' : 'border border-pen text-pen'}`}
+        >
+          {home.residence ? '내가 사는 집' : '갭투자 · 세입자'}
+        </span>
+        {home.listed && (
+          <span
+            className="rounded-full bg-red-pen px-2 text-[11px] leading-5 text-white"
+            data-testid="home-listed"
+          >
+            매물 · 매수자 기다리는 중
+          </span>
+        )}
+      </div>
+      <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-3">
+        <span>
+          시세 <b className="font-pen text-[24px] font-normal">{shortWon(home.price)}</b>
+          {change !== undefined && (
+            <span className={`ml-1 text-[12px] ${change >= 0 ? 'text-red-pen' : 'text-blue-pen'}`}>
+              1년 {signedPercent(change)}
+            </span>
+          )}
+        </span>
+        <span className="text-[13px]" data-testid="home-gain">
+          <span className="text-pen-soft">산 값 {shortWon(home.purchasePrice)} </span>
+          <span className={gain >= 0 ? 'text-red-pen' : 'text-blue-pen'}>
+            {signedShortWon(gain)} ({signedPercent(split.gainBp)})
+          </span>
+        </span>
+      </div>
+
+      <div
+        className="mt-2 flex h-4 w-full gap-[2px] overflow-hidden rounded"
+        role="img"
+        aria-label={segments.map((x) => `${x.label} ${percent(x.bp)}`).join(', ')}
+        data-testid="home-split"
+      >
+        {segments.map((x) => (
+          <div
+            key={x.key}
+            className="h-full min-w-[3px]"
+            style={{ flexGrow: x.bp, flexBasis: 0, background: SPLIT_COLORS[x.key] }}
+            title={`${x.label} ${won(x.value)} (${percent(x.bp)})`}
+          />
+        ))}
+      </div>
+      <ul className="m-0 mt-1 flex list-none flex-wrap gap-x-3 p-0 text-[12px] text-pen-soft">
+        {segments.map((x) => (
+          <li key={x.key} className="flex items-center gap-1">
+            <span
+              aria-hidden="true"
+              className="inline-block h-2.5 w-2.5 rounded-sm"
+              style={{ background: SPLIT_COLORS[x.key] }}
+            />
+            {x.label} {compactWon(x.value)}
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-1.5 flex items-baseline justify-between gap-2" data-testid="home-equity">
+        <span className="text-pen-soft">내 몫(지분)</span>
+        <span
+          className={`font-pen text-[24px] ${split.underwater ? 'text-blue-pen' : 'text-red-pen'}`}
+        >
+          {shortWon(split.equity)}
+        </span>
+      </p>
+      {split.underwater && (
+        <p className="text-[12px] text-blue-pen">
+          대출과 보증금이 시세보다 많다. 팔아도 빚이 남는다.
+        </p>
+      )}
+      {home.mortgage > 0 && (
+        <p className="text-[12px] text-pen-soft">
+          주담대 30년 원리금균등 · 매달 {won(home.monthlyPayment)}
+        </p>
+      )}
+
+      <div className="mt-2 flex flex-wrap gap-2">
+        {home.mortgage > 0 && (
+          <MortgageRepay seq={home.seq} mortgage={home.mortgage} cash={game.cash} busy={busy} />
+        )}
+        <button
+          type="button"
+          disabled={busy}
+          className={`min-h-11 rounded-full border-2 px-4 text-[13px] disabled:opacity-40 ${
+            home.listed ? 'border-red-pen text-red-pen hover:bg-white' : 'border-pen hover:bg-white'
+          }`}
+          onClick={() => void listHome(home.seq, !home.listed)}
+          data-testid={`list-home-${home.seq}`}
+        >
+          {home.listed ? '매물 거두기' : '매물로 내놓기'}
+        </button>
+      </div>
+    </li>
   )
 }
 
@@ -596,7 +759,7 @@ function MortgageRepay({
       <button
         type="button"
         disabled={busy || max < 1}
-        className="mt-1 mr-2 min-h-11 rounded-full border-2 border-pen px-4 text-[13px] hover:bg-white disabled:opacity-40"
+        className="min-h-11 rounded-full border-2 border-pen px-4 text-[13px] hover:bg-white disabled:opacity-40"
         onClick={() => setOpen(true)}
         data-testid={`repay-home-${seq}`}
       >
@@ -605,7 +768,7 @@ function MortgageRepay({
     )
   }
   return (
-    <div className="mt-1 rounded border border-line bg-card px-3 py-2.5" data-testid="repay-form">
+    <div className="w-full rounded border border-line bg-card px-3 py-2.5" data-testid="repay-form">
       <label className="flex items-center gap-2">
         <span className="shrink-0 text-xs text-muted">갚을 원금</span>
         <input

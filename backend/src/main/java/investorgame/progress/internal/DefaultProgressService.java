@@ -58,6 +58,7 @@ import investorgame.market.MarketCycle;
 import investorgame.market.MarketService;
 import investorgame.market.Quote;
 import investorgame.market.ShockResult;
+import investorgame.progress.Analysis;
 import investorgame.progress.ChoiceOutcome;
 import investorgame.progress.GameSummary;
 import investorgame.progress.GameView;
@@ -2489,7 +2490,7 @@ class DefaultProgressService implements ProgressService {
         Korean.fill(event.title(), facts),
         Korean.fill(event.body(), facts),
         event.kind() == EventKind.LEVERAGE && event.stockCode() != null
-            ? desk.storedAnalysisText(game.id(), event.stockCode()).orElse(null)
+            ? desk.storedAnalysis(game.id(), event.stockCode()).map(Analysis::text).orElse(null)
             : event.hintText(),
         hintAccuracy(game, character, event),
         event.swayText(),

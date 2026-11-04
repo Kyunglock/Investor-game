@@ -32,4 +32,9 @@ public interface BehaviorService {
    * 하나를 찍는다. 찍어서 맞으면 맞은 것이다. 말투가 확신에 찼는지는 안목과 무관하다.
    */
   Reading analyze(int insight, int truth, int choices, RandomGenerator rng);
+
+  /**
+   * analyze가 정답을 맞힐 확률(퍼센트, 반올림): 제대로 읽을 확률 + 나머지 중 찍어서 맞을 몫. 화면의 해석에 보여 준다 (decisions.md 182번).
+   */
+  int analysisAccuracyPercent(int insight, int choices);
 }
