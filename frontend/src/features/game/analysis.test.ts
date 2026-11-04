@@ -26,7 +26,7 @@ describe('movingAverage', () => {
 })
 
 describe('insightGauge', () => {
-  it('안목을 10칸으로 보여 주고 확률은 없다', () => {
+  it('안목을 10칸으로 보여 주고 눈금에는 확률을 섞지 않는다', () => {
     expect(insightGauge(0)).toBe('○○○○○○○○○○')
     expect(insightGauge(30)).toBe('●●●○○○○○○○')
     expect(insightGauge(100)).toBe('●●●●●●●●●●')

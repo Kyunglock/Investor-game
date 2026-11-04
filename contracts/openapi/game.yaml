@@ -599,11 +599,12 @@ components:
               price: { type: integer, format: int64 }
     Analysis:
       type: object
-      description: 안목 해석 (매매창 설계 4절). 확률과 정답은 내려가지 않는다
-      required: [month, insight, reading, text]
+      description: 안목 해석 (매매창 설계 4절). 맞출 확률은 내려가고 정답은 내려가지 않는다
+      required: [month, insight, accuracy, reading, text]
       properties:
         month: { type: integer, description: 해석한 달. 같은 달에는 다시 열어도 같다 }
         insight: { type: integer, description: 해석한 때의 안목 }
+        accuracy: { type: integer, description: 해석한 때의 안목으로 정답을 맞힐 확률(퍼센트). 안목 0이면 찍기(33), 100이면 65 }
         reading: { type: string, description: 읽은 결론. 추세는 UP·DOWN·FLAT, 시황은 HOT·STABLE·COLD }
         text: { type: string }
         remark:

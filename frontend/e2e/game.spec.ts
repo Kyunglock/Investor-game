@@ -52,13 +52,11 @@ async function step(page: Page): Promise<string> {
           : // 주거 선택지는 돈이 모자라면 막혀 있다. 누를 수 있는 첫 버튼을 고른다.
             eventCard(page).getByRole('button', { disabled: false }).first()
     if (kind === 'NEWS') {
-      // 매매 선택지마다 판정에 걸려 뒤집힐 확률을, 힌트에는 맞출 확률(또는 방향을 못 읽었다)을 보여 준다.
-      await expect(eventCard(page).getByTestId('deviation-percent').first()).toContainText(
-        /뒤집힐 확률 \d+%/,
-      )
+      // 이벤트 카드에는 확률 숫자를 보여 주지 않는다: 힌트는 읽히는 정도만, 선택지에 뒤집힐 확률 없음 (decisions.md 182번).
+      await expect(eventCard(page).getByText(/뒤집힐 확률|맞출 확률/)).toHaveCount(0)
       if (await eventCard(page).getByTestId('insight-lens').isVisible()) {
         await expect(eventCard(page).getByTestId('insight-lens-label')).toHaveText(
-          /맞출 확률 \d+%|방향은 못 읽었다/,
+          /흐릿하게 읽힌다|대강 읽힌다|또렷하게 읽힌다|꿰뚫어 본다/,
         )
       }
     }
@@ -209,6 +207,7 @@ test('투자를 시작하면 시장 패널에서 종목을 사고 포트폴리�
   await expect(page.getByTestId('macro-tab')).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByTestId('indicator')).toHaveCount(2)
   await expect(page.getByTestId('macro-analysis-text')).toBeVisible()
+  await expect(page.getByTestId('macro-analysis-accuracy')).toHaveText(/맞출 확률 \d+%/)
   // 섹터 탭마다 종목 3개. 에너지는 값이 싸서 첫 월급으로도 한 주는 살 수 있다.
   await page.getByRole('button', { name: '에너지' }).click()
   await expect(page.getByTestId('stock-row')).toHaveCount(3)
@@ -216,6 +215,7 @@ test('투자를 시작하면 시장 패널에서 종목을 사고 포트폴리�
   // 숫자(사실)와 안목 해석이 나란히 보인다 (매매창 설계 2.1절).
   await expect(page.getByTestId('trend-facts')).toBeVisible()
   await expect(page.getByTestId('trend-analysis-text')).toBeVisible()
+  await expect(page.getByTestId('trend-analysis-accuracy')).toHaveText(/맞출 확률 \d+%/)
   await page.getByRole('button', { name: '100%' }).click()
   await expect(page.getByTestId('trade-quantity')).not.toHaveValue('0')
   await page.getByTestId('trade-quantity').fill('1')

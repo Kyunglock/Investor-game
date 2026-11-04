@@ -158,13 +158,12 @@ function Body({ event, game, busy, onChoose }: Props) {
         </div>
       )}
 
-      {/* 힌트는 내 안목으로 읽은 것이다. 안목이 높을수록 또렷하게 읽힌다 (decisions.md 53·161번). 빚투 제안은 그 종목에 대한 해석이다. */}
+      {/* 힌트는 내 안목으로 읽은 것이다. 안목이 높을수록 또렷하게 읽힌다 (decisions.md 53·161번). 빚투 제안은 그 종목에 대한 해석이다. 확률 숫자는 카드에 보여 주지 않는다 (182번). */}
       {(isNews || isLeverage) && event.hint && (
         <InsightLens
           insight={game.stats.insight}
           hint={event.hint}
           subject={isLeverage ? (event.stockName ?? undefined) : undefined}
-          accuracy={isNews ? (event.hintAccuracy ?? null) : undefined}
         />
       )}
       {isNews && event.sway && (
@@ -210,16 +209,6 @@ function Body({ event, game, busy, onChoose }: Props) {
               )}
               {option.detail && (
                 <span className="block text-[11px] font-normal text-faint">{option.detail}</span>
-              )}
-              {/* 줏대·용기·인내 판정에 걸려 고른 대로 못 할 확률 (서버가 실제 판정과 같은 규칙으로 계산) */}
-              {isNews && !disabled && option.deviationPercent != null && (
-                <span
-                  className="block font-mono-num text-[11px] font-normal text-wine"
-                  data-testid="deviation-percent"
-                  title="줏대·용기·인내 판정에 걸려 고른 대로 못 할 확률"
-                >
-                  뒤집힐 확률 {option.deviationPercent}%
-                </span>
               )}
               {option.blocked && (
                 <span className="block text-[11px] font-normal text-wine">{option.blocked}</span>
