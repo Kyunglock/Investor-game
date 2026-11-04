@@ -13,12 +13,20 @@ import { App } from './App.tsx'
 import { AdminPage } from './features/admin/AdminPage'
 
 // 서비스워커 등록. autoUpdate 모드라 새 버전이 제어권을 잡으면 페이지를 자동으로 새로고침해,
-// 배포 뒤 캐시를 지우거나 손으로 새로고침하지 않아도 새 화면이 나온다. 오래 열어 둔 탭을 위해
-// 한 시간마다 갱신도 확인한다.
+// 배포 뒤 캐시를 지우거나 손으로 새로고침하지 않아도 새 화면이 나온다.
+// 홈 화면 앱(PWA)은 백그라운드에서 돌아올 때 페이지를 새로 열지 않으므로, 화면이 다시 보일
+// 때마다 갱신을 확인한다. 오래 열어 둔 탭을 위해 한 시간마다도 확인한다.
 registerSW({
   immediate: true,
   onRegisteredSW(_url, registration) {
-    if (registration) setInterval(() => registration.update(), 60 * 60 * 1000)
+    if (!registration) return
+    const check = () => {
+      if (navigator.onLine) registration.update().catch(() => {})
+    }
+    setInterval(check, 60 * 60 * 1000)
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') check()
+    })
   },
 })
 
