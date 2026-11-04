@@ -53,17 +53,20 @@ export function Person({
   if (mood && !baby) {
     layers.push(MOODS[mood])
   }
-  const body = bodyFor(figure.sex, figure.stage)
+  const body = bodyFor(figure.sex, figure.stage, figure.pose)
   const palette = paletteFor(figure.who, figure.look ?? 0)
   const grid = compose(body, layers)
   const blinks = !baby && canBlink({ mood, adornment: figure.who === 'me' ? me.adornment : null })
   const lids = blinks ? diffRects(grid, compose(body, [...layers, EYELIDS]), palette) : []
   const carried = figure.carrying
   return (
-    <g transform={`translate(${figure.x} ${top}) scale(${CHAR_SCALE})`}>
+    <g transform={`translate(${figure.x} ${top - (figure.lift ?? 0)}) scale(${CHAR_SCALE})`}>
       {carried && <Runs runs={backOf(carried, body.headTop)} />}
       <Runs runs={toRuns(grid, palette)} />
       {carried && <Runs runs={strapOf(carried, body.map, body.headTop)} />}
+      {figure.holding && figure.pose === 'hold' && (
+        <Runs runs={frontOf(figure.holding, body.headTop)} />
+      )}
       {lids.length > 0 && (
         <g className="animate-lid">
           {lids.map((r) => (
@@ -153,3 +156,56 @@ function strapOf(carried: Carried, map: readonly string[], ht: number): Run[] {
 }
 
 const babyPalette = (carried: Carried) => ({ ...CHARACTER_PALETTE, ...lookFor(carried.look) })
+
+/**
+ * 가슴에 안은 아기 (decisions.md 192번): 두 손 사이에 포대기, 그 왼쪽 위로 작은 아기 얼굴이 가슴에 기대 있다. 포대기는 아기 옷 색이라 아이마다 다르다.
+ */
+function frontOf(held: Omit<Carried, 'side'>, ht: number): Run[] {
+  const grid = Array.from({ length: CHAR_HEIGHT }, () => Array<string>(CHAR_WIDTH).fill('.'))
+  const put = (y: number, x: number, ch: string) => {
+    if (grid[y] && x >= 0 && x < CHAR_WIDTH) {
+      grid[y][x] = ch
+    }
+  }
+  const bt = ht + 20
+  const cells: [number, number][] = []
+  for (let y = bt + 3; y <= bt + 8; y++) {
+    for (let x = 12; x <= 19; x++) {
+      const corner = (y === bt + 3 || y === bt + 8) && (x === 12 || x === 19)
+      if (!corner) {
+        cells.push([y, x])
+      }
+    }
+  }
+  blob(put, cells, BLANKET)
+  // 아기 얼굴: 6×5 피부, 배냇머리 한 줄, 감은 눈, 볼
+  const fx = 11
+  const fy = bt
+  for (let y = fy; y < fy + 5; y++) {
+    for (let x = fx; x < fx + 6; x++) {
+      const corner = (y === fy || y === fy + 4) && (x === fx || x === fx + 5)
+      if (!corner) {
+        put(y, x, y === fy ? 'h' : 's')
+      }
+    }
+  }
+  put(fy - 1, fx + 2, 'x')
+  put(fy - 1, fx + 3, 'x')
+  for (const [y, x] of [
+    [fy + 1, fx - 1],
+    [fy + 2, fx - 1],
+    [fy + 3, fx - 1],
+    [fy + 1, fx + 6],
+    [fy + 2, fx + 6],
+    [fy + 3, fx + 6],
+    [fy + 4, fx],
+    [fy + 4, fx + 5],
+  ] as const) {
+    put(y, x, 'v')
+  }
+  put(fy + 2, fx + 1, 'k')
+  put(fy + 2, fx + 4, 'k')
+  put(fy + 3, fx + 1, 'r')
+  put(fy + 3, fx + 4, 'r')
+  return toRuns(grid, { ...CHARACTER_PALETTE, ...lookFor(held.look) })
+}

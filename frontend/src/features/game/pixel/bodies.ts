@@ -1,5 +1,5 @@
 import type { Sex } from '../../../api/client'
-import { BODY_MAPS } from './bodyMaps'
+import { BODY_MAPS, POSE_MAPS } from './bodyMaps'
 import type { Body } from './sprite'
 
 /**
@@ -31,7 +31,16 @@ export function stageFor(ageYears: number): AgeStage {
   return 'old'
 }
 
-/** 성별·나이의 몸통. 여자는 긴 머리와 치마(노년은 쪽 찐 머리), 중년 남자는 넥타이, 노년은 흰머리와 지팡이. */
-export function bodyFor(sex: Sex, stage: AgeStage): Body {
-  return BODY_MAPS[sex][stage]
+/**
+ * 자세 (decisions.md 192번). stand 늘어뜨린 팔(노년은 지팡이), cheer 두 팔 만세, wave 오른팔만 들기, clap 가슴 앞 손뼉,
+ * hold 가슴 앞에 아기를 안는 팔(아기는 Person이 그린다), reach-left·reach-right 옆 사람에게 뻗은 팔(손을 잡거나 어깨를 감싼다).
+ */
+export type Pose = 'stand' | 'cheer' | 'wave' | 'clap' | 'hold' | 'reach-left' | 'reach-right'
+
+/** 성별·나이의 몸통. 여자는 긴 머리와 치마(노년은 쪽 찐 머리), 중년 남자는 넥타이, 노년은 흰머리와 지팡이. 아기는 자세가 없다. */
+export function bodyFor(sex: Sex, stage: AgeStage, pose: Pose = 'stand'): Body {
+  if (pose === 'stand') {
+    return BODY_MAPS[sex][stage]
+  }
+  return POSE_MAPS[pose][sex][stage] ?? BODY_MAPS[sex][stage]
 }

@@ -185,11 +185,12 @@ function entries(game: Game, ...kinds: LogEntry['kind'][]): LogEntry[] {
 
 /** 이사·매수 선택지 → 집의 겉모습. 그림이 없는 선택지(넘김·사기 등)는 null. */
 /** 집 그림은 아파트를 산 것(매수·갭투자·청약 당첨)에만 붙는다. 월세·전세 이사는 줄로만 남는다 (decisions.md 140번). */
+/** 내가 살 집을 산 날은 새집 앞에서 만세, 세를 놓는 갭투자는 단지 앞에 선다 (decisions.md 192번). */
 const HOME_VIGNETTE: Record<string, VignetteKey> = {
-  BUY_SEOUL: 'apartment',
-  BUY_GYEONGGI: 'apartment',
+  BUY_SEOUL: 'new-home',
+  BUY_GYEONGGI: 'new-home',
   GAP: 'apartment',
-  APPLY: 'apartment',
+  APPLY: 'new-home',
 }
 
 const ORDINALS = ['첫째', '둘째', '셋째', '넷째', '다섯째']
@@ -206,11 +207,12 @@ function coupleArt(
   day: number,
   meX: number,
   spouseX: number,
+  pose?: Figure['pose'],
 ): CreditArt {
   const stage = stageFor(ageOf(game, day))
-  const figures: Figure[] = [{ who: 'me', sex: game.sex, stage, x: meX }]
+  const figures: Figure[] = [{ who: 'me', sex: game.sex, stage, x: meX, pose }]
   if (marriedBy(game, day)) {
-    figures.push({ who: 'spouse', sex: opposite(game.sex), stage, x: spouseX })
+    figures.push({ who: 'spouse', sex: opposite(game.sex), stage, x: spouseX, pose })
   }
   return { vignette, figures }
 }
@@ -243,37 +245,44 @@ function tripArt(game: Game, day: number): CreditArt {
     people.push({ who: 'spouse', sex: opposite(game.sex), stage })
   }
   people.push(...kidsAt(game, day))
-  return { vignette: 'trip', figures: lineUp(carryBabies(people)) }
+  // 나는 바다에 손을 흔들고 아이들은 만세, 아기는 업힌 채 (decisions.md 192번).
+  const figures = lineUp(carryBabies(people)).map((f): Figure => {
+    if (f.carrying || f.stage === 'baby') {
+      return f
+    }
+    return { ...f, pose: f.who === 'me' ? 'wave' : f.who === 'spouse' ? 'clap' : 'cheer' }
+  })
+  return { vignette: 'trip', figures }
 }
 
 /**
- * 아이가 태어난 그림: 아기 침대(오른쪽) 옆에 부모가 서고, 먼저 태어난 아이들은 그 왼쪽에 어린이 몸으로 선다. 침대 왼쪽에 자리가 셋(24·12·0)뿐이라
- * 넘치는 사람은 그리지 않는다 (decisions.md 67번).
+ * 아이가 태어난 그림: 아기 침대(오른쪽) 옆에서 배우자가 아기를 안고 내가 감싼다. 바로 위 아이 하나가 왼쪽에서 만세 (decisions.md 67·192번).
  */
 function childArt(game: Game, birth: LogEntry): CreditArt {
   const stage = stageFor(ageOf(game, birth.day))
-  const seq = num((birth.payload as Payload).seq)
-  const people: Member[] = [{ who: 'me', sex: game.sex, stage }]
-  if (marriedBy(game, birth.day)) {
-    people.push({ who: 'spouse', sex: opposite(game.sex), stage })
+  const p = birth.payload as Payload
+  const seq = num(p.seq)
+  const holding = {
+    sex: (p.sex as Game['sex']) ?? game.household.children[seq - 1]?.sex ?? 'M',
+    look: seq - 1,
   }
-  // 먼저 난 아이들은 가계의 순번대로 성별을 가진다.
-  for (let i = 1; i < seq; i++) {
-    people.push({
+  // 배우자가 갓난아기를 안고 내가 곁에서 감싼다. 혼자면 내가 안는다 (decisions.md 192번).
+  const figures: Figure[] = marriedBy(game, birth.day)
+    ? [
+        { who: 'me', sex: game.sex, stage, x: 12, pose: 'reach-right' },
+        { who: 'spouse', sex: opposite(game.sex), stage, x: 24, pose: 'hold', holding },
+      ]
+    : [{ who: 'me', sex: game.sex, stage, x: 22, pose: 'hold', holding }]
+  // 먼저 난 아이(가장 가까운 동생 하나)는 왼쪽에서 만세.
+  if (seq > 1) {
+    figures.unshift({
       who: 'kid',
-      sex: game.household.children[i - 1]?.sex ?? 'M',
+      sex: game.household.children[seq - 2]?.sex ?? 'M',
       stage: 'child',
-      look: i - 1,
+      look: seq - 2,
+      x: 0,
+      pose: 'cheer',
     })
-  }
-  const slots = [24, 12, 0]
-  const figures: Figure[] = []
-  for (const p of people) {
-    const x = slots.shift()
-    if (x == null) {
-      break
-    }
-    figures.push({ ...p, x })
   }
   return { vignette: 'baby', figures }
 }
@@ -492,7 +501,11 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
       if (!vignette) {
         return { line }
       }
-      return { key: `home-${e.seq}`, line, art: coupleArt(game, vignette, e.day, 0, 11) }
+      return {
+        key: `home-${e.seq}`,
+        line,
+        art: coupleArt(game, vignette, e.day, 0, 14, vignette === 'new-home' ? 'cheer' : undefined),
+      }
     }
     case 'LIFE': {
       // 가족 여행·집들이는 그림과 함께 새 장, 아이의 나들이는 줄로 (decisions.md 140번). 안 간/안 한 것(금액 0)은 줄로만.

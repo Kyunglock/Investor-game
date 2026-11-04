@@ -546,7 +546,7 @@ describe('중간에 그만둔 판 (decisions.md 68번)', () => {
 })
 
 describe('크레딧 그림 (#23)', () => {
-  it('아이가 태어날 때마다 아기 침대 그림이 붙고, 먼저 난 아이들이 옆에 선다 (decisions.md 67번)', () => {
+  it('아이가 태어날 때마다 아기 침대 그림이 붙고, 배우자가 안은 아기를 내가 감싸며 바로 위 아이가 옆에서 만세 (decisions.md 67·192번)', () => {
     const family = baseGame({
       household: {
         ...baseGame().household,
@@ -574,19 +574,23 @@ describe('크레딧 그림 (#23)', () => {
       '42세, 셋째 아이가 태어났다',
     ])
     expect(children.map((s) => s.art?.vignette)).toEqual(['baby', 'baby', 'baby'])
-    // 첫째: 부모 둘. 둘째: 첫째가 어린이로 옆에. 셋째: 자리가 셋뿐이라 부모와 첫째까지만.
-    expect(children[0].art?.figures.map((f) => f.who)).toEqual(['me', 'spouse'])
+    // 첫째: 부모 둘, 배우자가 아기를 안고 내가 감싼다. 둘째: 첫째가 어린이로 옆에서 만세. 셋째: 바로 위 둘째가 옆에.
+    expect(children[0].art?.figures.map((f) => [f.who, f.pose])).toEqual([
+      ['me', 'reach-right'],
+      ['spouse', 'hold'],
+    ])
+    expect(children[0].art?.figures[1].holding).toEqual({ sex: 'F', look: 0 })
     expect(children[1].art?.figures.map((f) => [f.who, f.stage])).toEqual([
+      ['kid', 'child'],
       ['me', 'adult'],
       ['spouse', 'adult'],
-      ['kid', 'child'],
     ])
     // 옆에 선 첫째는 가계에 적힌 성별(딸)로 그린다.
-    expect(children[1].art?.figures.map((f) => f.sex)).toEqual(['M', 'F', 'F'])
-    expect(children[2].art?.figures.map((f) => [f.who, f.stage])).toEqual([
-      ['me', 'middle'],
-      ['spouse', 'middle'],
-      ['kid', 'child'],
+    expect(children[1].art?.figures.map((f) => f.sex)).toEqual(['F', 'M', 'F'])
+    expect(children[2].art?.figures.map((f) => [f.who, f.stage, f.look])).toEqual([
+      ['kid', 'child', 1],
+      ['me', 'middle', undefined],
+      ['spouse', 'middle', undefined],
     ])
     // 아기 침대(40칸~)를 가리지 않고, 16칸 몸이 64칸 배경 밖으로 나가지 않는다.
     for (const s of credits) {
@@ -661,7 +665,9 @@ describe('크레딧 그림 (#23)', () => {
     })
     const sections = buildCredits(game)
     const homes = sections.filter((s) => s.key.startsWith('home-'))
-    expect(homes.map((s) => s.art?.vignette)).toEqual(['apartment'])
+    // 내가 살 집을 산 날은 새집 앞에서 만세 (decisions.md 192번).
+    expect(homes.map((s) => s.art?.vignette)).toEqual(['new-home'])
+    expect(homes[0].art?.figures.map((f) => f.pose)).toEqual(['cheer', 'cheer'])
     expect(homes.map((s) => s.art?.figures.length)).toEqual([2])
     expect(homes[0].lines[0]).toEqual({
       text: '36세, 청약 당첨 · 서울',
@@ -826,7 +832,7 @@ describe('가족 여행·집들이 그림, 집 그림은 매수만 (decisions.md
       '30세, 아파트 전세',
     ])
     const bought = sections.find((s) => s.key === `home-${game.log[3].seq}`)
-    expect(bought?.art?.vignette).toBe('apartment')
+    expect(bought?.art?.vignette).toBe('new-home')
     expect(bought?.lines[0].text).toBe('36세, 경기 매수')
   })
 })
