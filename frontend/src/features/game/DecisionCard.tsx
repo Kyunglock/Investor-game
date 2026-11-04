@@ -156,13 +156,13 @@ function Body({ event, game, busy, onChoose }: Props) {
         </div>
       )}
 
-      {/* 힌트는 내 안목으로 읽은 것이다. 안목이 높을수록 또렷하게 읽힌다 (decisions.md 53·161번). 빚투 제안은 그 종목에 대한 해석이다. */}
+      {/* 힌트는 내 안목으로 읽은 것이다. 안목이 높을수록 또렷하게 읽힌다 (decisions.md 53·161번). 빚투 제안은 그 종목에 대한 해석이고, 그 해석의 맞출 확률을 적는다 (182번). */}
       {(isNews || isLeverage) && event.hint && (
         <InsightLens
           insight={game.stats.insight}
           hint={event.hint}
           subject={isLeverage ? (event.stockName ?? undefined) : undefined}
-          accuracy={isNews ? (event.hintAccuracy ?? null) : undefined}
+          accuracy={isNews ? (event.hintAccuracy ?? null) : (event.hintAccuracy ?? undefined)}
         />
       )}
       {isNews && event.sway && (

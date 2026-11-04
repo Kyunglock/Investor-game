@@ -125,7 +125,8 @@ public record GameView(
 
   /**
    * kind: JOB, TRAIT, OFFER, LIFE, NEWS. 뉴스가 아니면 sector, stock, hint, sway, spark는 null이다.
-   * hintAccuracy는 뉴스 힌트가 방향을 짚었을 때 그 방향이 맞을 확률(퍼센트, 안목으로 정해진다). 방향을 못 읽었거나 뉴스가 아니면 null.
+   * hintAccuracy는 뉴스 힌트가 방향을 짚었을 때 그 방향이 맞을 확률(퍼센트, 안목으로 정해진다). 빚투 제안이면 힌트로 붙인 종목 해석의 맞출 확률. 방향을 못
+   * 읽었거나 해석이 없거나 둘 다 아니면 null.
    */
   public record PendingEvent(
       UUID eventId,

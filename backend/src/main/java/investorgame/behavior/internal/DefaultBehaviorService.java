@@ -162,6 +162,12 @@ class DefaultBehaviorService implements BehaviorService {
     return new Reading(index, confidentRoll < settings.confidentPercent());
   }
 
+  @Override
+  public int analysisAccuracyPercent(int insight, int choices) {
+    double read = insight * properties.analysis().readAtMaxBp() / PERCENT / (double) BP;
+    return (int) Math.round((read + (1 - read) / Math.max(1, choices)) * PERCENT);
+  }
+
   /** 능력치가 0이면 상한, 100이면 0. */
   private int deviationBp(int stat) {
     return (PERCENT - stat) * properties.deviationCapBp() / PERCENT;

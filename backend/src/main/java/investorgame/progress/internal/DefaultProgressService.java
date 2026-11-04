@@ -58,6 +58,7 @@ import investorgame.market.MarketCycle;
 import investorgame.market.MarketService;
 import investorgame.market.Quote;
 import investorgame.market.ShockResult;
+import investorgame.progress.Analysis;
 import investorgame.progress.ChoiceOutcome;
 import investorgame.progress.GameSummary;
 import investorgame.progress.GameView;
@@ -2489,15 +2490,23 @@ class DefaultProgressService implements ProgressService {
         Korean.fill(event.title(), facts),
         Korean.fill(event.body(), facts),
         event.kind() == EventKind.LEVERAGE && event.stockCode() != null
-            ? desk.storedAnalysisText(game.id(), event.stockCode()).orElse(null)
+            ? desk.storedAnalysis(game.id(), event.stockCode()).map(Analysis::text).orElse(null)
             : event.hintText(),
         hintAccuracy(game, character, event),
         event.swayText(),
         options(game, character, event));
   }
 
-  /** 뉴스 힌트가 방향을 짚었으면 그 방향이 맞을 확률. 힌트는 안목으로 정해진다 (decisions.md 28번). */
+  /**
+   * 뉴스 힌트가 방향을 짚었으면 그 방향이 맞을 확률. 힌트는 안목으로 정해진다 (decisions.md 28번). 빚투 제안이면 힌트로 붙인 그 종목 해석의 맞출 확률이다
+   * (decisions.md 182번).
+   */
   private Integer hintAccuracy(GameRow game, CharacterView character, EventView event) {
+    if (event.kind() == EventKind.LEVERAGE) {
+      return event.stockCode() == null
+          ? null
+          : desk.storedAnalysis(game.id(), event.stockCode()).map(Analysis::accuracy).orElse(null);
+    }
     if (event.kind() != EventKind.NEWS || event.hintText() == null) {
       return null;
     }

@@ -111,6 +111,9 @@ class GameApiTest {
     assertThat(overview.read("$.analysis.reading", String.class)).isIn("HOT", "STABLE", "COLD");
     assertThat(overview.read("$.analysis.text", String.class)).isNotBlank().doesNotContain("{");
     assertThat(overview.read("$.analysis.insight", Integer.class)).isBetween(10, 100);
+    assertThat(overview.read("$.analysis.accuracy", Integer.class))
+        .as("맞출 확률은 찍기(33%)와 안목 100(65%) 사이")
+        .isBetween(33, 65);
     assertThat(overview.read("$.analysis.remark", Object.class)).as("첫 해석에는 한마디가 없다").isNull();
     assertThat(overview.jsonString()).doesNotContain("truth").doesNotContain("Bp\":4750");
 
@@ -134,6 +137,7 @@ class GameApiTest {
         .isGreaterThanOrEqualTo(analysis.read("$.facts.low12", Long.class));
     assertThat(analysis.read("$.analysis.reading", String.class)).isIn("UP", "DOWN", "FLAT");
     assertThat(analysis.read("$.analysis.text", String.class)).isNotBlank().doesNotContain("{");
+    assertThat(analysis.read("$.analysis.accuracy", Integer.class)).isBetween(33, 65);
     mvc.perform(
             get("/api/games/{gameId}/stocks/{stockCode}/analysis", gameId, "nope")
                 .cookie(client.session()))

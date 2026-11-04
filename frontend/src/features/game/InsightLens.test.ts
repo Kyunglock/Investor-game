@@ -48,4 +48,18 @@ describe('안목 렌즈 (decisions.md 161번)', () => {
     )
     expect(neutral).toContain('방향은 못 읽었다')
   })
+
+  it('빚투 카드의 종목 해석도 맞출 확률을 적는다 (decisions.md 182번)', () => {
+    const leverage = renderToStaticMarkup(
+      createElement(InsightLens, {
+        insight: 50,
+        hint: '12개월선 위에서 버틴다',
+        subject: '엔씽',
+        accuracy: 49,
+      }),
+    )
+    expect(leverage).toContain('내 안목으로 본 엔씽')
+    expect(leverage).toContain('맞출 확률 49%')
+    expect(leverage).not.toContain('대강 읽힌다')
+  })
 })

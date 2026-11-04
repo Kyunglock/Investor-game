@@ -333,6 +333,18 @@ class DefaultBehaviorServiceTest {
     assertThat(rng.remaining()).isZero();
   }
 
+  @Test
+  void 해석을_맞출_확률은_안목_0이면_찍기_100이면_65퍼센트이고_실제_굴림과_같다() {
+    assertThat(service.analysisAccuracyPercent(0, 3)).isEqualTo(33);
+    assertThat(service.analysisAccuracyPercent(50, 3)).isEqualTo(49);
+    assertThat(service.analysisAccuracyPercent(100, 3)).isEqualTo(65);
+    for (int insight : List.of(0, 30, 70, 100)) {
+      assertThat(service.analysisAccuracyPercent(insight, 3) / 100.0)
+          .as("안목 %d", insight)
+          .isCloseTo(analysisAccuracy(insight), org.assertj.core.data.Offset.offset(0.02));
+    }
+  }
+
   private double analysisAccuracy(int insight) {
     SplittableRandom rng = new SplittableRandom(insight + 1);
     int correct = 0;

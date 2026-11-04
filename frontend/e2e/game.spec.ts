@@ -209,6 +209,7 @@ test('투자를 시작하면 시장 패널에서 종목을 사고 포트폴리�
   await expect(page.getByTestId('macro-tab')).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByTestId('indicator')).toHaveCount(2)
   await expect(page.getByTestId('macro-analysis-text')).toBeVisible()
+  await expect(page.getByTestId('macro-analysis-accuracy')).toHaveText(/맞출 확률 \d+%/)
   // 섹터 탭마다 종목 3개. 에너지는 값이 싸서 첫 월급으로도 한 주는 살 수 있다.
   await page.getByRole('button', { name: '에너지' }).click()
   await expect(page.getByTestId('stock-row')).toHaveCount(3)
@@ -216,6 +217,7 @@ test('투자를 시작하면 시장 패널에서 종목을 사고 포트폴리�
   // 숫자(사실)와 안목 해석이 나란히 보인다 (매매창 설계 2.1절).
   await expect(page.getByTestId('trend-facts')).toBeVisible()
   await expect(page.getByTestId('trend-analysis-text')).toBeVisible()
+  await expect(page.getByTestId('trend-analysis-accuracy')).toHaveText(/맞출 확률 \d+%/)
   await page.getByRole('button', { name: '100%' }).click()
   await expect(page.getByTestId('trade-quantity')).not.toHaveValue('0')
   await page.getByTestId('trade-quantity').fill('1')
