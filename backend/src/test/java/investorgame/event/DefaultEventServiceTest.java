@@ -2304,6 +2304,45 @@ class DefaultEventServiceTest {
     }
   }
 
+  /** 직장인에게 주식 이벤트(뉴스·흔들림·빚투)는 해마다 딱 하나 온다 (decisions.md 194번). */
+  @Test
+  void 주식_이벤트는_해마다_딱_하나_온다() {
+    String held = content.stocks().get(0).code();
+    SchedulingContext seasoned =
+        investing(List.of(held), Map.of(), Map.of(held, new SchedulingContext.HeldStock(0, 0)));
+    Set<EventKind> stockKinds = Set.of(EventKind.NEWS, EventKind.SHAKE, EventKind.LEVERAGE);
+    int seen = 0;
+    for (long seed = 1; seed <= 8; seed++) {
+      UUID gameId = UUID.randomUUID();
+      HashSeededRandom random = new HashSeededRandom(seed);
+      int from = JOB_DAY + 30;
+      int until = from + 15 * YEAR;
+      Map<Integer, EventKind> byYear = new java.util.HashMap<>();
+      while (from <= until) {
+        var next = events.peekNextEventDay(gameId, seasoned, from, random);
+        if (next.isEmpty()) {
+          break;
+        }
+        ScheduleResult result =
+            events.schedule(gameId, seasoned, from, next.getAsInt(), random, HINTS);
+        if (result.pending().isPresent()) {
+          EventView view = result.pending().get();
+          if (stockKinds.contains(view.kind())) {
+            EventKind before = byYear.put(view.occursDay() / YEAR, view.kind());
+            assertThat(before)
+                .as("%d일(%d년째)에 %s가 또 왔다", view.occursDay(), view.occursDay() / YEAR, view.kind())
+                .isNull();
+            seen++;
+          }
+          events.complete(gameId, view.eventId(), new Completion("HOLD", "HOLD", List.of()));
+        }
+        from = next.getAsInt();
+      }
+    }
+    // 15년 × 8판. 첫해·마지막 해는 걸칠 수 있어 해마다 하나에서 조금 모자랄 수 있다.
+    assertThat(seen).as("해마다 하나씩 와야 한다").isGreaterThanOrEqualTo(8 * 14);
+  }
+
   /** 급락 알림은 크게 빠진 종목에만, 제자리걸음은 반년 폭이 작은 종목에만 온다 (decisions.md 109번). */
   @Test
   void 흔들림_장면은_종목_상태에_맞는_것만_고른다() {
