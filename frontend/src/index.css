@@ -255,7 +255,26 @@ body {
   animation: lens-glint 0.9s ease-out both;
 }
 
+/* 맞대결에서 이긴 쪽 이름이 튀어 오른다 (decisions.md 181번) */
+@keyframes tug-win {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.35);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-tug-win {
+  display: inline-block;
+  animation: tug-win 0.45s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .animate-tug-win,
   .animate-reveal,
   .animate-slide-in,
   .animate-flash,
