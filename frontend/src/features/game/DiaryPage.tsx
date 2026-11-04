@@ -11,6 +11,7 @@ import { layersFor } from './pixel/layers'
 import { Scene } from './pixel/Scene'
 import { SCENES, sceneCaption, sceneFor } from './pixel/scenes'
 import { Vignette } from './pixel/Vignette'
+import { usePixelArt } from './pixelArt'
 import { playerName } from './playerName'
 
 const VISIBLE = 12
@@ -78,9 +79,11 @@ function Photo({ game, ageYears }: { game: Game; ageYears: number }) {
   const frugal = frugalMoment(game)
   // 결혼하고 아이가 생기면 사진에 같이 선다 (decisions.md 64번).
   const figures = familyFigures(game, ageYears, frugal ? 34 : SCENES[key].anchor.x)
+  // 그림을 껐으면 테이프 붙인 사진틀 없이 설명 글만 남긴다 (decisions.md 190번).
+  const shown = usePixelArt((s) => s.shown)
   return (
     <figure className="m-0 mb-6">
-      <div className="relative -rotate-1">
+      <div className={shown ? 'relative -rotate-1' : 'hidden'}>
         <span
           aria-hidden="true"
           className="absolute -top-2.5 left-6 z-10 h-[22px] w-[84px] -rotate-[4deg] bg-[var(--tape)]"

@@ -1,4 +1,5 @@
 import { memo } from 'react'
+import { usePixelArt } from '../pixelArt'
 import type { SpriteSpec } from './layers'
 import { Person } from './Person'
 import { PALETTE } from './palette'
@@ -33,6 +34,11 @@ function sameSpec(a: SpriteSpec, b: SpriteSpec): boolean {
 }
 
 function SceneView({ sceneKey, sprite, figures }: Props) {
+  // 그림을 껐으면 그리지 않는다 (decisions.md 190번).
+  const shown = usePixelArt((s) => s.shown)
+  if (!shown) {
+    return null
+  }
   const scene = SCENES[sceneKey]
   const background = toRects(
     scene.map.map((row) => [...row]),

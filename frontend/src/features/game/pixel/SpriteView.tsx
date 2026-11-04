@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { usePixelArt } from '../pixelArt'
 import { ADORNMENTS } from './adornments'
 import { bodyFor } from './bodies'
 import type { SpriteSpec } from './layers'
@@ -39,6 +40,10 @@ export function canBlink(spec: Pick<SpriteSpec, 'mood' | 'adornment'>): boolean 
  * 아기는 머리가 작아 얼굴 겹(장식·약점·표정·눈꺼풀)이 어른 좌표에 떠 버린다: 배냇머리만 얹은 맨 몸으로 그린다 (decisions.md 163·178번).
  */
 export function Sprite({ spec, size, crop = 'full', className = '' }: Props) {
+  // 그림을 껐으면 그리지 않는다 (decisions.md 190번).
+  if (!usePixelArt((s) => s.shown)) {
+    return null
+  }
   if (spec.stage === 'baby') {
     return <BabySprite spec={spec} size={size} crop={crop} className={className} />
   }
