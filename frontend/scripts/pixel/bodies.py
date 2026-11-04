@@ -179,7 +179,83 @@ def mirror(rows):
     return [list(r + r[::-1]) for r in rows]
 
 
-def build(stage, sex):
+POSES = ('stand', 'cheer', 'clap', 'hold', 'reach-left', 'reach-right', 'wave')
+
+
+def apply_pose(region, ht, pose):
+    """늘어뜨린 팔(손과 그 위 소매 세 칸 폭)을 지우고 자세의 팔을 그린다. 가슴 앞으로 모은 팔의 윤곽 칸 목록을 돌려준다."""
+    bt = ht + 20  # 옷이 시작하는 줄
+    hand = [(y, x) for y in range(bt, H) for x in range(W // 2) if region[y][x] == 's' and x < 10]
+    hy0 = min(y for y, _ in hand)
+    hx = min(x for _, x in hand)  # 왼손의 왼쪽 끝
+    # 팔: 손 줄들과, 손 바로 위로 이어지는 소매(손과 같은 세 칸)
+    top = hy0
+    while top - 1 > bt + 2 and all(region[top - 1][x] == 'c' for x in range(hx, hx + 3)):
+        top -= 1
+    sides = {'cheer': 'LR', 'clap': 'LR', 'hold': 'LR', 'reach-left': 'L', 'reach-right': 'R', 'wave': 'R'}[pose]
+    cells = []  # (y, x, ch) 왼쪽 기준. 오른쪽은 거울
+
+    def arm(y, x, ch='c'):
+        cells.append((y, x, ch))
+
+    if pose == 'cheer' or pose == 'wave':
+        # 만세: 어깨에서 머리 옆으로 곧게 올린 팔, 손은 머리 위 높이
+        for y in range(ht + 9, bt + 4):
+            for x in (3, 4, 5):
+                arm(y, x, 's' if y < ht + 12 else 'c')
+        for y in range(bt, bt + 4):
+            for x in range(5, hx + 3):
+                arm(y, x)
+    elif pose in ('reach-left', 'reach-right'):
+        # 옆 사람에게 뻗은 팔: 어깨에서 비스듬히 내려가 손이 몸 칸 바깥 끝에 닿는다
+        steps = [(top, hx - 1), (top + 1, hx - 2), (top + 2, hx - 3), (top + 3, hx - 4)]
+        for y, x0 in steps:
+            for x in range(max(0, x0), x0 + 4):
+                arm(y, x)
+        last = steps[-1]
+        for y in (last[0] + 1, last[0] + 2):
+            for x in range(max(0, last[1] - 1), last[1] + 2):
+                arm(y, x, 's')
+    else:
+        # 손뼉·안기: 위팔은 그대로 내려오고 팔뚝을 가슴 앞으로 모은다
+        fy = top + (1 if pose == 'clap' else 2)
+        for y in range(top, fy + 1):
+            for x in range(hx, hx + 3):
+                arm(y, x)
+        for x in range(hx + 3, W // 2 - (1 if pose == 'clap' else 4)):
+            arm(fy, x)
+        if pose == 'clap':
+            for y in (fy - 1, fy):
+                for x in (W // 2 - 2, W // 2 - 1):
+                    arm(y, x, 's')
+        else:
+            for y in (fy, fy + 1):
+                for x in range(W // 2 - 6, W // 2 - 3):
+                    arm(y, x, 's')
+
+    def mirror_x(x, side):
+        return x if side == 'L' else W - 1 - x
+
+    for side in sides:
+        for y in range(top, hy0 + 2):
+            for x in range(hx, hx + 3):
+                xx = mirror_x(x, side)
+                if region[y][xx] in ('c', 's'):
+                    region[y][xx] = '.'
+        for y, x, ch in cells:
+            if 0 <= y < H:
+                region[y][mirror_x(x, side)] = ch
+    # 가슴 앞 팔뚝 윤곽: 모은 팔의 바로 윗줄
+    cross = []
+    if pose in ('clap', 'hold'):
+        fy = top + (1 if pose == 'clap' else 2)
+        for side in sides:
+            for x in range(hx + 3, W // 2 - (1 if pose == 'clap' else 4)):
+                cross.append((fy - 1, mirror_x(x, side)))
+    return cross
+
+
+def build(stage, sex, pose='stand'):
     body = {
         ('baby', 'M'): BABY, ('baby', 'F'): BABY,
         ('child', 'M'): CHILD_M, ('child', 'F'): CHILD_F,
@@ -235,14 +311,19 @@ def build(stage, sex):
             for dy, xs in ((-3, range(14, 18)), (-2, range(13, 19))):
                 for x in xs:
                     setr(ht + dy, x, 'A')
-    # 지팡이: 오른손에서 바닥까지
-    if stage == 'old':
+    # 지팡이: 오른손에서 바닥까지. 팔을 쓰는 자세에서는 내려놓는다
+    if stage == 'old' and pose == 'stand':
         hand = next(y for y in range(ht + 20, H) if R(y, sx(W - 4)) == 's')
         cane = sx(W - 4) + 2
         for y in range(hand - 2, H - 1):
             setr(y, cane, 'Z')
         setr(hand - 3, cane - 1, 'Z')
         setr(hand - 3, cane, 'Z')
+
+    # 자세 (decisions.md 192번): 늘어뜨린 팔을 지우고 자세에 맞는 팔을 다시 그린다. 명암·윤곽은 아래에서 함께 입힌다.
+    cross = []
+    if stage != 'baby' and pose != 'stand':
+        cross = apply_pose(region, ht, pose)
 
     # 명암
     g = [row[:] for row in region]
@@ -291,6 +372,10 @@ def build(stage, sex):
     def fill(y, xs, ch, only=None):
         for x in xs:
             put(y, x, ch, only)
+
+    # 가슴 앞으로 모은 팔: 옷 위에 팔뚝 윤곽을 한 줄 그어 몸통과 갈라 보이게 한다
+    for y, x in cross:
+        put(y, x, 'q', ('c', 'w', 't'))
 
     # 머리카락 결과 윤기
     dark = {'h': 'j', 'G': 'J', 'A': 'U'}
@@ -349,6 +434,8 @@ def build(stage, sex):
         put(ht + 11, 9, 'S')
         put(ht + 11, 22, 'S')
     # 소매 주름과 소매 끝: 손 줄 바로 위까지 옷이면 소매다
+    if pose != 'stand':
+        return ht, [''.join(r) for r in g]
     hand_rows = [y for y in range(ht + 20, H) if R(y, W // 2 - 1) != '.' and region[y][next(x for x in range(W) if region[y][x] != '.')] == 's']
     if hand_rows:
         hy = hand_rows[0]
@@ -371,7 +458,7 @@ def build(stage, sex):
 def main():
     out = [
         "import type { Sex } from '../../../api/client'",
-        "import type { AgeStage } from './bodies'",
+        "import type { AgeStage, Pose } from './bodies'",
         "import type { Body } from './sprite'",
         '',
         '/** 생성된 파일: frontend/scripts/pixel/bodies.py가 쓴다. 손으로 고치지 말고 스크립트를 고쳐 다시 만든다 (decisions.md 142번). */',
@@ -389,6 +476,26 @@ def main():
             out.append('      map: [')
             out += [f"        '{r}'," for r in rows]
             out.append('      ],')
+            out.append('    },')
+        out.append('  },')
+    out.append('}')
+    out.append('')
+    out.append('/** 자세별 몸통 (decisions.md 192번). 서 있는 자세는 BODY_MAPS다. 아기는 자세가 없다. */')
+    out.append("export const POSE_MAPS: Record<Exclude<Pose, 'stand'>, Record<Sex, Partial<Record<AgeStage, Body>>>> = {")
+    for pose in POSES[1:]:
+        out.append(f"  '{pose}': {{")
+        for sex in ('M', 'F'):
+            out.append(f'    {sex}: {{')
+            for stage in ('child', 'adult', 'middle', 'old'):
+                ht, rows = build(stage, sex, pose)
+                assert all(len(r) == W for r in rows) and len(rows) == H
+                used |= set(''.join(rows))
+                out.append(f'      {stage}: {{')
+                out.append(f'        headTop: {ht},')
+                out.append('        map: [')
+                out += [f"          '{r}'," for r in rows]
+                out.append('        ],')
+                out.append('      },')
             out.append('    },')
         out.append('  },')
     out.append('}')

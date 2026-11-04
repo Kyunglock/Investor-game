@@ -5,7 +5,7 @@ import { stageFor } from './pixel/bodies'
 import { carryBabies, lineUp, type Member } from './pixel/family'
 import type { MoodKey } from './pixel/moods'
 import { opposite } from './pixel/sexes'
-import type { CreditArt, Figure } from './pixel/vignettes'
+import type { CreditArt, Figure, VignetteKey } from './pixel/vignettes'
 
 /**
  * 감정이 드러나는 순간 (decisions.md 62번). 결과 카드·토스트·수첩 사진이 그림과 표정을 바꾼다. 재료는 서버가 준 결과·기록·가계뿐이다.
@@ -33,18 +33,88 @@ function tripArt(game: Game): CreditArt {
       people.push({ who: 'kid', sex: kid.sex, stage: stageFor(kid.age), look: i })
     }
   })
-  // 왼쪽부터 닿지 않게 세우고, 넘치는 사람은 그리지 않는다.
-  return { vignette: 'trip', figures: lineUp(carryBabies(people)) }
+  // 왼쪽부터 닿지 않게 세우고, 넘치는 사람은 그리지 않는다. 나는 바다에 손을 흔들고 아이들은 만세 (decisions.md 192번).
+  return { vignette: 'trip', figures: cheerful(lineUp(carryBabies(people))) }
 }
 
-/** 집들이 그림: 거실에 나(와 배우자) (decisions.md 140번). */
+/** 신난 자세: 나는 손을 흔들고, 업지 않은 배우자는 손뼉, 서 있는 아이들은 만세 (decisions.md 192번). 아기를 업었으면 그대로 선다. */
+function cheerful(figures: Figure[]): Figure[] {
+  return figures.map((f) => {
+    if (f.carrying || f.stage === 'baby') {
+      return f
+    }
+    return { ...f, pose: f.who === 'me' ? 'wave' : f.who === 'spouse' ? 'clap' : 'cheer' }
+  })
+}
+
+/** 집들이 그림: 거실에 나(와 배우자). 손님을 맞으며 손을 흔든다 (decisions.md 140·192번). */
 function housewarmingArt(game: Game): CreditArt {
   const stage = myStage(game)
-  const figures: Figure[] = [{ who: 'me', sex: game.sex, stage, x: 14 }]
+  const figures: Figure[] = [{ who: 'me', sex: game.sex, stage, x: 14, pose: 'wave' }]
   if (game.household.married) {
-    figures.push({ who: 'spouse', sex: opposite(game.sex), stage, x: 28 })
+    figures.push({ who: 'spouse', sex: opposite(game.sex), stage, x: 28, pose: 'clap' })
   }
   return { vignette: 'family', figures }
+}
+
+/** 집을 산 날: 새집 앞에서 온 가족 만세, 아기는 업은 채 (decisions.md 192번). */
+function newHomeArt(game: Game): CreditArt {
+  const stage = myStage(game)
+  const people: Member[] = [{ who: 'me', sex: game.sex, stage }]
+  if (game.household.married) {
+    people.push({ who: 'spouse', sex: opposite(game.sex), stage })
+  }
+  ;(game.household?.children ?? []).forEach((kid, i) => {
+    if (!kid.leftHome) {
+      people.push({ who: 'kid', sex: kid.sex, stage: stageFor(kid.age), look: i })
+    }
+  })
+  const figures = lineUp(carryBabies(people)).map((f) =>
+    f.carrying || f.stage === 'baby' ? f : { ...f, pose: 'cheer' as const },
+  )
+  return { vignette: 'new-home', figures }
+}
+
+/** 결혼한 날: 꽃 아치 앞에서 둘이 손을 잡는다 (decisions.md 192번). */
+function marriageArt(game: Game): CreditArt {
+  const stage = myStage(game)
+  return {
+    vignette: 'wedding',
+    figures: [
+      { who: 'me', sex: game.sex, stage, x: 14, pose: 'reach-right' },
+      { who: 'spouse', sex: opposite(game.sex), stage, x: 28, pose: 'reach-left' },
+    ],
+  }
+}
+
+/**
+ * 아이가 태어난 날: 배우자가 아기를 안고 내가 곁에서 어깨를 감싼다. 혼자면 내가 안는다. 먼저 난 아이들은 옆에서 만세 (decisions.md 192번).
+ */
+function birthArt(game: Game, baby: { sex: Game['sex']; look: number }): CreditArt {
+  const stage = myStage(game)
+  const holding = { sex: baby.sex, look: baby.look }
+  const figures: Figure[] = game.household.married
+    ? [
+        { who: 'me', sex: game.sex, stage, x: 12, pose: 'reach-right' },
+        { who: 'spouse', sex: opposite(game.sex), stage, x: 24, pose: 'hold', holding },
+      ]
+    : [{ who: 'me', sex: game.sex, stage, x: 22, pose: 'hold', holding }]
+  const older = (game.household?.children ?? []).findIndex((k, i) => i < baby.look && !k.leftHome)
+  if (older >= 0 && game.household.married) {
+    const kid = game.household.children[older]
+    const kidStage = stageFor(kid.age)
+    if (kidStage !== 'baby') {
+      figures.unshift({
+        who: 'kid',
+        sex: kid.sex,
+        stage: kidStage,
+        x: 0,
+        look: older,
+        pose: 'cheer',
+      })
+    }
+  }
+  return { vignette: 'baby', figures }
 }
 
 const HOUSEWARMING_CAPTIONS: Record<string, string> = {
@@ -53,18 +123,70 @@ const HOUSEWARMING_CAPTIONS: Record<string, string> = {
   cheap: '가족끼리 짜장면. 새집 냄새가 났다.',
 }
 
-/** 아이의 나들이 그림: 놀이동산에 나와 아이 (decisions.md 87번). 배우자는 집에서 쉬는 날이다. */
-function outingArt(game: Game): CreditArt {
+/**
+ * 아이의 나들이·행사마다 다른 그림 (decisions.md 87·192번). 배우자는 집에서 쉬는 날이고 나와 그 아이만 나온다.
+ * 아이가 아직 아기면 내가 안고 간다. 무대에 선 아이는 무대 높이만큼 띄운다.
+ */
+const OUTING_SCENES: Record<
+  string,
+  {
+    vignette: VignetteKey
+    me: Omit<Figure, 'who' | 'sex' | 'stage'>
+    kid: Omit<Figure, 'who' | 'sex' | 'stage'>
+  }
+> = {
+  park: {
+    vignette: 'park',
+    me: { x: 14, pose: 'reach-right' },
+    kid: { x: 28, pose: 'reach-left' },
+  },
+  zoo: { vignette: 'zoo', me: { x: 2, pose: 'wave' }, kid: { x: 18, pose: 'cheer' } },
+  camp: { vignette: 'camp', me: { x: 0, pose: 'clap' }, kid: { x: 13, pose: 'cheer' } },
+  'sports-day': { vignette: 'sports', me: { x: 2, pose: 'cheer' }, kid: { x: 24, pose: 'cheer' } },
+  'school-play': {
+    vignette: 'stage',
+    me: { x: 0, pose: 'clap' },
+    kid: { x: 25, pose: 'cheer', lift: 3 },
+  },
+  'open-class': {
+    vignette: 'classroom',
+    me: { x: 44, pose: 'clap' },
+    kid: { x: 16, pose: 'wave' },
+  },
+  birthday: { vignette: 'birthday', me: { x: 42, pose: 'clap' }, kid: { x: 8, pose: 'cheer' } },
+  recital: { vignette: 'recital', me: { x: 0, pose: 'clap' }, kid: { x: 25, lift: 3 } },
+  graduation: { vignette: 'graduation', me: { x: 4, pose: 'clap' }, kid: { x: 18, pose: 'cheer' } },
+}
+
+function outingArt(game: Game, outing?: unknown): CreditArt {
   const look = Math.max(
     0,
     game.household.children.findIndex((c) => !c.leftHome),
   )
   const kid = game.household.children[look]
+  const scene = OUTING_SCENES[String(outing ?? 'park')] ?? OUTING_SCENES.park
+  const kidStage = kid ? stageFor(kid.age) : 'child'
+  const stage = myStage(game)
+  if (kidStage === 'baby') {
+    return {
+      vignette: scene.vignette,
+      figures: [
+        {
+          who: 'me',
+          sex: game.sex,
+          stage,
+          ...scene.me,
+          pose: 'hold',
+          holding: { sex: kid?.sex ?? 'M', look },
+        },
+      ],
+    }
+  }
   return {
-    vignette: 'park',
+    vignette: scene.vignette,
     figures: [
-      { who: 'me', sex: game.sex, stage: 'adult', x: 14 },
-      { who: 'kid', sex: kid?.sex ?? 'M', stage: 'child', x: 28, look },
+      { who: 'me', sex: game.sex, stage, ...scene.me },
+      { who: 'kid', sex: kid?.sex ?? 'M', stage: kidStage, look, ...scene.kid },
     ],
   }
 }
@@ -219,7 +341,7 @@ export function momentForOutcome(outcome: Outcome, game: Game): Moment | null {
       }
       if (p.noticeCode === 'kid-outing') {
         return {
-          art: outingArt(game),
+          art: outingArt(game, p.outing),
           mood: 'joy',
           caption: OUTING_CAPTIONS[String(p.option)] ?? '아이와 하루를 보냈다.',
         }
@@ -235,20 +357,35 @@ export function momentForOutcome(outcome: Outcome, game: Game): Moment | null {
       const p = child.payload as Record<string, unknown>
       const seq = Number(p.seq ?? 1)
       return {
-        art: {
-          vignette: 'baby',
-          figures: [
-            { who: 'me', sex: game.sex, stage: 'adult', x: 20 },
-            ...(game.household.married
-              ? [{ who: 'spouse', sex: opposite(game.sex), stage: 'adult', x: 4 } as const]
-              : []),
-          ],
-        },
+        art: birthArt(game, {
+          sex: (p.sex as Game['sex']) ?? game.household.children[seq - 1]?.sex ?? 'M',
+          look: seq - 1,
+        }),
         mood: 'joy',
         caption: `${childName(seq)} ${withParticle(childWord(p.sex), '이', '가')} 태어났다. 세상이 달라 보인다.`,
       }
     }
+    if (todays(game, 'MARRIAGE')) {
+      return { art: marriageArt(game), mood: 'joy', caption: '결혼했다. 손을 꼭 잡았다.' }
+    }
     return null
+  }
+  if (outcome.kind === 'HOUSING') {
+    // 집을 산 날 (decisions.md 192번): 매수·청약 당첨·배우자 말에 산 집. 세입자를 둔 갭투자는 내가 살 집이 아니라 그림이 없다.
+    const housing = todays(game, 'HOUSING')
+    const p = (housing?.payload ?? {}) as Payload
+    const bought =
+      housing &&
+      p.option !== 'GAP' &&
+      (p.option === 'APPLY' ? p.bought === true : Number(p.price ?? 0) > 0)
+    if (!bought) {
+      return null
+    }
+    return {
+      art: newHomeArt(game),
+      mood: 'joy',
+      caption: `${String(p.regionName ?? '')} 아파트. 우리 집이 생겼다.`.trim(),
+    }
   }
   const pnl = outcome.price?.pnl ?? 0
   if (pnl === 0 || game.totalAsset <= 0) {
@@ -260,7 +397,10 @@ export function momentForOutcome(outcome: Outcome, game: Game): Moment | null {
   }
   return pnl > 0
     ? {
-        art: { vignette: 'surge', figures: [{ who: 'me', sex: game.sex, stage: 'adult', x: 36 }] },
+        art: {
+          vignette: 'surge',
+          figures: [{ who: 'me', sex: game.sex, stage: 'adult', x: 36, pose: 'cheer' }],
+        },
         mood: 'confident',
         caption: '시세판이 온통 빨갛다. 내가 맞았다.',
       }
@@ -299,7 +439,7 @@ export function momentForNotice(entry: LogEntry, game: Game): Moment | null {
   }
   if (entry.kind === 'LIFE' && p.noticeCode === 'kid-outing' && Number(p.amount ?? 0) < 0) {
     return {
-      art: outingArt(game),
+      art: outingArt(game, p.outing),
       mood: 'joy',
       caption: OUTING_CAPTIONS[String(p.option)] ?? '아이와 하루를 보냈다.',
     }

@@ -1,5 +1,5 @@
 import type { Sex } from '../../../api/client'
-import type { AgeStage } from './bodies'
+import type { AgeStage, Pose } from './bodies'
 import {
   build,
   type Canvas,
@@ -38,6 +38,15 @@ export type VignetteKey =
   | 'layoff'
   | 'leave-home'
   | 'wedding'
+  | 'zoo'
+  | 'stage'
+  | 'recital'
+  | 'camp'
+  | 'birthday'
+  | 'sports'
+  | 'classroom'
+  | 'graduation'
+  | 'new-home'
 
 /** 그림 속 한 사람. me는 플레이어(장식·약점 표시까지), spouse·kid는 옷 색만 다른 맨 몸이다. 성별로 머리·치마가 갈린다 (decisions.md 69번). x는 16칸 몸의 왼쪽 열. */
 export interface Figure {
@@ -49,6 +58,12 @@ export interface Figure {
   look?: number
   /** 등에 업은 아기. side는 아기 머리가 보이는 어깨 쪽 (decisions.md 178번) */
   carrying?: Carried
+  /** 자세. 없으면 서 있다 (decisions.md 192번) */
+  pose?: Pose
+  /** 가슴에 안은 아기 (자세 hold) */
+  holding?: Omit<Carried, 'side'>
+  /** 바닥에서 띄우는 칸 수. 무대 위에 선 아이처럼 (decisions.md 192번) */
+  lift?: number
 }
 
 export interface Carried {
@@ -117,6 +132,13 @@ function heart(c: Canvas, x: number, y: number) {
     pts.push([x + dx, y + dy])
   }
   dots(c, 'R', pts)
+}
+
+/** 풍선: 3×3 몸, 왼쪽 위 반짝임, 아래로 늘어진 줄 */
+function balloon(c: Canvas, x: number, y: number, ch: string, string = 5) {
+  rect(c, x, y, 3, 3, ch)
+  dots(c, 'W', [[x, y]])
+  rect(c, x + 1, y + 3, 1, string, 'k')
 }
 
 /** 시세판 모니터. up이면 오르는 선, 아니면 내리는 선 */
@@ -201,7 +223,7 @@ export const VIGNETTES: Record<VignetteKey, PixelMap> = {
     rect(c, 0, 15, 22, 2, 'Q')
     street(c)
   }),
-  // 아기 탄생: 아기 침대 옆, 하트가 떠 있다.
+  // 아기 탄생: 아기 침대 옆, 하트가 떠 있다. 아기는 부모 품에 안겨 있으니 침대는 비어 있다 (decisions.md 192번).
   baby: build((c) => {
     room(c)
     window(c, 4, 4, 10, 7)
@@ -211,11 +233,7 @@ export const VIGNETTES: Record<VignetteKey, PixelMap> = {
       rect(c, x, 9, 1, 7, 'T')
     }
     rect(c, 41, 14, 16, 2, 'o')
-    rect(c, 46, 11, 4, 3, 's')
-    dots(c, 'e', [
-      [47, 12],
-      [49, 12],
-    ])
+    rect(c, 43, 13, 6, 1, 'W')
     heart(c, 18, 2)
     heart(c, 60, 3)
     heart(c, 36, 1)
@@ -462,5 +480,213 @@ export const VIGNETTES: Record<VignetteKey, PixelMap> = {
     heart(c, 10, 2)
     heart(c, 24, 4)
     heart(c, 60, 6)
+  }),
+  // 동물원: 나무 울타리 너머 기린 한 마리 (decisions.md 192번).
+  zoo: build((c) => {
+    sky(c, 17)
+    rect(c, 0, 13, SCENE_WIDTH, 4, 'Q')
+    // 기린: 몸통, 다리, 긴 목, 머리, 뿔, 무늬
+    rect(c, 44, 7, 12, 5, 'y')
+    for (const x of [45, 48, 52, 55]) {
+      rect(c, x, 12, 1, 5, 'y')
+    }
+    rect(c, 52, 1, 3, 7, 'y')
+    rect(c, 52, 0, 6, 3, 'y')
+    dots(c, 'd', [
+      [53, 0],
+      [55, 0],
+      [57, 1],
+      [46, 8],
+      [49, 9],
+      [52, 8],
+      [47, 10],
+      [54, 10],
+      [53, 3],
+      [53, 5],
+    ])
+    dots(c, 'e', [[56, 1]])
+    // 나무 울타리
+    rect(c, 0, 13, SCENE_WIDTH, 1, 'T')
+    rect(c, 0, 15, SCENE_WIDTH, 1, 'T')
+    for (let x = 1; x < SCENE_WIDTH; x += 6) {
+      rect(c, x, 12, 1, 5, 'd')
+    }
+    rect(c, 0, 17, SCENE_WIDTH, 3, 'I')
+  }),
+  // 학예회: 붉은 막, 조명이 비추는 무대 (decisions.md 192번).
+  stage: build((c) => {
+    rect(c, 0, 0, SCENE_WIDTH, 20, 'K')
+    rect(c, 0, 0, SCENE_WIDTH, 2, 'U')
+    rect(c, 0, 0, 7, 15, 'U')
+    rect(c, 57, 0, 7, 15, 'U')
+    for (const x of [2, 5, 59, 62]) {
+      rect(c, x, 2, 1, 13, 'R')
+    }
+    // 조명 빛
+    rect(c, 22, 2, 20, 12, 'N')
+    rect(c, 26, 2, 12, 12, 'H')
+    rect(c, 7, 14, 50, 3, 'T')
+    rect(c, 7, 14, 50, 1, 'J')
+    dots(c, 'L', [
+      [12, 4],
+      [50, 6],
+      [16, 9],
+      [46, 3],
+    ])
+    rect(c, 0, 17, SCENE_WIDTH, 3, 'D')
+  }),
+  // 피아노 발표회: 무대 오른쪽에 검은 피아노 (decisions.md 192번).
+  recital: build((c) => {
+    rect(c, 0, 0, SCENE_WIDTH, 20, 'K')
+    rect(c, 0, 0, SCENE_WIDTH, 2, 'U')
+    rect(c, 0, 0, 5, 15, 'U')
+    rect(c, 59, 0, 5, 15, 'U')
+    rect(c, 18, 2, 24, 12, 'N')
+    rect(c, 7, 14, 50, 3, 'T')
+    rect(c, 7, 14, 50, 1, 'J')
+    // 그랜드 피아노: 몸통, 뚜껑, 건반, 다리
+    rect(c, 40, 7, 16, 4, 'e')
+    rect(c, 42, 3, 12, 1, 'e')
+    rect(c, 44, 4, 1, 3, 'e')
+    rect(c, 40, 10, 8, 1, 'W')
+    dots(c, 'e', [
+      [41, 10],
+      [43, 10],
+      [45, 10],
+    ])
+    rect(c, 41, 11, 1, 3, 'e')
+    rect(c, 54, 11, 1, 3, 'e')
+    rect(c, 0, 17, SCENE_WIDTH, 3, 'D')
+  }),
+  // 캠핑: 밤하늘의 별, 텐트, 모닥불 (decisions.md 192번).
+  camp: build((c) => {
+    rect(c, 0, 0, SCENE_WIDTH, 17, 'p')
+    dots(c, 'W', [
+      [6, 2],
+      [15, 5],
+      [23, 1],
+      [31, 4],
+      [38, 2],
+      [44, 6],
+      [52, 1],
+      [60, 4],
+      [11, 8],
+      [35, 9],
+    ])
+    rect(c, 56, 1, 3, 3, 'L')
+    rect(c, 57, 1, 2, 2, 'p')
+    // 텐트: 노란 삼각형과 어두운 입구
+    for (let i = 0; i < 9; i++) {
+      rect(c, 46 - i, 8 + i, 2 + i * 2, 1, 'y')
+    }
+    for (let i = 0; i < 5; i++) {
+      rect(c, 46 - Math.floor(i / 2), 12 + i, 2 + Math.floor(i / 2) * 2, 1, 'K')
+    }
+    rect(c, 0, 17, SCENE_WIDTH, 3, 'Q')
+    // 모닥불: 장작과 불꽃
+    rect(c, 28, 16, 6, 1, 'd')
+    rect(c, 29, 13, 4, 3, 'R')
+    rect(c, 30, 11, 2, 3, 'L')
+    dots(c, 'L', [[31, 10]])
+  }),
+  // 생일 파티: 고깔 줄, 풍선, 촛불 켠 케이크 (decisions.md 192번).
+  birthday: build((c) => {
+    room(c)
+    for (let x = 2; x < SCENE_WIDTH; x += 6) {
+      const ch = ['R', 'B', 'y'][((x / 6) % 3) | 0]
+      rect(c, x, 1, 4, 1, ch)
+      rect(c, x + 1, 2, 2, 1, ch)
+    }
+    rect(c, 0, 0, SCENE_WIDTH, 1, 'N')
+    balloon(c, 3, 4, 'R', 6)
+    balloon(c, 7, 5, 'y', 5)
+    balloon(c, 55, 4, 'B', 6)
+    balloon(c, 59, 5, 'R', 5)
+    // 탁자와 케이크
+    rect(c, 22, 13, 20, 1, 'T')
+    rect(c, 24, 14, 1, 3, 'T')
+    rect(c, 39, 14, 1, 3, 'T')
+    rect(c, 26, 9, 12, 4, 'W')
+    rect(c, 26, 11, 12, 1, 'R')
+    for (const x of [28, 31, 34]) {
+      rect(c, x, 7, 1, 2, 'y')
+      dots(c, 'L', [[x, 6]])
+    }
+  }),
+  // 운동회: 만국기 줄, 흙 운동장의 하얀 선 (decisions.md 192번).
+  sports: build((c) => {
+    sky(c, 12)
+    rect(c, 40, 4, 22, 8, 'M')
+    windows(c, 42, 5, 5, 2)
+    rect(c, 0, 12, SCENE_WIDTH, 8, 'I')
+    rect(c, 0, 14, SCENE_WIDTH, 1, 'W')
+    rect(c, 0, 18, SCENE_WIDTH, 1, 'W')
+    for (let x = 0; x < SCENE_WIDTH; x += 4) {
+      const ch = ['R', 'B', 'y', 'g'][((x / 4) % 4) | 0]
+      const y = 2 + Math.round(Math.sin(x / 10) * 1)
+      rect(c, x, y, 3, 1, ch)
+      rect(c, x + 1, y + 1, 1, 1, ch)
+    }
+  }),
+  // 공개 수업: 칠판과 책상, 벽시계 (decisions.md 192번).
+  classroom: build((c) => {
+    room(c)
+    rect(c, 10, 2, 32, 10, 'T')
+    rect(c, 11, 3, 30, 8, 'c')
+    rect(c, 14, 5, 8, 1, 'W')
+    rect(c, 14, 7, 12, 1, 'W')
+    rect(c, 28, 5, 6, 1, 'W')
+    rect(c, 11, 11, 30, 1, 'N')
+    rect(c, 50, 3, 5, 5, 'W')
+    dots(c, 'e', [
+      [52, 4],
+      [52, 5],
+      [53, 5],
+    ])
+    rect(c, 46, 13, 14, 1, 'T')
+    rect(c, 47, 14, 1, 3, 'T')
+    rect(c, 58, 14, 1, 3, 'T')
+  }),
+  // 졸업식: 학교 앞, 꽃다발과 하얀 현수막 (decisions.md 192번).
+  graduation: build((c) => {
+    sky(c, 17)
+    rect(c, 20, 3, 44, 14, 'M')
+    rect(c, 19, 2, 46, 1, 'X')
+    windows(c, 24, 5, 9, 3)
+    rect(c, 26, 13, 30, 2, 'W')
+    rect(c, 26, 13, 30, 1, 'N')
+    rect(c, 0, 17, SCENE_WIDTH, 3, 'A')
+    // 꽃다발
+    dots(c, 'R', [
+      [6, 12],
+      [7, 11],
+      [8, 12],
+    ])
+    dots(c, 'y', [
+      [7, 12],
+      [9, 11],
+    ])
+    rect(c, 7, 13, 1, 4, 'g')
+  }),
+  // 새집 장만: 아파트 앞 리본 맨 입구와 이삿짐 상자, 풍선 (decisions.md 192번).
+  'new-home': build((c) => {
+    sky(c, 17)
+    rect(c, 30, 1, 20, 16, 'M')
+    windows(c, 32, 2, 5, 4)
+    rect(c, 37, 12, 6, 5, 'N')
+    rect(c, 38, 13, 4, 4, 'V')
+    rect(c, 35, 11, 10, 1, 'R')
+    dots(c, 'R', [
+      [39, 10],
+      [41, 10],
+      [40, 12],
+    ])
+    rect(c, 52, 13, 5, 4, 'O')
+    rect(c, 54, 10, 4, 3, 'O')
+    rect(c, 52, 14, 5, 1, 'P')
+    balloon(c, 59, 2, 'R', 8)
+    balloon(c, 55, 4, 'y', 6)
+    rect(c, 0, 15, 28, 2, 'Q')
+    street(c)
   }),
 }
