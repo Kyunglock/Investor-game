@@ -45,32 +45,29 @@ export interface Figure {
   sex: Sex
   stage: AgeStage
   x: number
+  /** 아이의 생김새: 태어난 순서(0부터). 아이마다 옷·머리 색과 배냇머리가 다르다 (looks.ts, decisions.md 178번) */
+  look?: number
+  /** 등에 업은 아기. side는 아기 머리가 보이는 어깨 쪽 (decisions.md 178번) */
+  carrying?: Carried
 }
 
-/** 배우자와 아이는 옷·머리 색만 바꿔 플레이어와 구분한다. 명암 단계(윤곽·그림자·기본·밝은 쪽)까지 함께 바꾼다 (decisions.md 142번). */
-export const RECOLOR: Record<Exclude<Figure['who'], 'me'>, Record<string, string>> = {
+export interface Carried {
+  sex: Sex
+  look: number
+  side: 'left' | 'right'
+}
+
+/** 배우자는 옷·머리 색만 바꿔 플레이어와 구분한다. 명암 단계(윤곽·그림자·기본·밝은 쪽)까지 함께 바꾼다 (decisions.md 142번). 아이는 looks.ts의 KID_LOOKS. */
+export const SPOUSE_RECOLOR: Record<string, string> = {
   // 분홍 옷, 조금 더 짙은 머리
-  spouse: {
-    q: '#5a2a38',
-    d: '#8e4a5c',
-    c: '#b5657a',
-    C: '#d0889b',
-    j: '#2e1a12',
-    h: '#4a2d22',
-    H: '#6b4434',
-    i: '#8a6048',
-  },
-  // 노란 옷, 파란 바지
-  kid: {
-    q: '#7a5a12',
-    d: '#b98d22',
-    c: '#e3b53a',
-    C: '#f2cf66',
-    z: '#24456f',
-    P: '#3a6cab',
-    p: '#4f8fd6',
-    u: '#78aee6',
-  },
+  q: '#5a2a38',
+  d: '#8e4a5c',
+  c: '#b5657a',
+  C: '#d0889b',
+  j: '#2e1a12',
+  h: '#4a2d22',
+  H: '#6b4434',
+  i: '#8a6048',
 }
 
 export interface CreditArt {
