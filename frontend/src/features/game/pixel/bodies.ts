@@ -32,7 +32,7 @@ export function stageFor(ageYears: number): AgeStage {
 }
 
 /**
- * 자세 (decisions.md 192·194번). 두 팔 만세(cheer)는 기괴해 보여 뺐다. stand 늘어뜨린 팔(노년은 지팡이), wave 오른팔만 들기, clap 가슴 앞 손뼉,
+ * 자세 (decisions.md 192·196번). 두 팔 만세(cheer)는 기괴해 보여 뺐다. stand 늘어뜨린 팔(노년은 지팡이), wave 오른팔만 들기, clap 가슴 앞 손뼉,
  * hold 가슴 앞에 아기를 안는 팔(아기는 Person이 그린다), reach-left·reach-right 옆 사람에게 뻗은 팔(손을 잡거나 어깨를 감싼다).
  */
 export type Pose = 'stand' | 'wave' | 'clap' | 'hold' | 'reach-left' | 'reach-right'
@@ -45,7 +45,7 @@ export function bodyFor(sex: Sex, stage: AgeStage, pose: Pose = 'stand'): Body {
   return POSE_MAPS[pose][sex][stage] ?? BODY_MAPS[sex][stage]
 }
 
-/** 보는 방향 (decisions.md 194번). front 정면, side 옆모습(서 있음), walk 옆모습(걷는 걸음), back 뒷모습. 옆모습은 오른쪽을 보는 그림이다. */
+/** 보는 방향 (decisions.md 196번). front 정면, side 옆모습(서 있음), walk 옆모습(걷는 걸음), back 뒷모습. 옆모습은 오른쪽을 보는 그림이다. */
 export type View = 'front' | 'side' | 'walk' | 'back'
 
 /** 방향까지 정한 몸통. 정면이 아니면 자세는 없고, 아기는 정면뿐이다. */

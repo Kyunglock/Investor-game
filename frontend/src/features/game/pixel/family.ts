@@ -121,7 +121,7 @@ function place(placed: Figure[], meX: number, m: Member): Figure | null {
   return null
 }
 
-/** 풍경을 바라보는 뒷모습. 업힌 아기는 등에서 고개를 내민다. 혼자 선 아기는 정면 그대로 (decisions.md 194번). */
+/** 풍경을 바라보는 뒷모습. 업힌 아기는 등에서 고개를 내민다. 혼자 선 아기는 정면 그대로 (decisions.md 196번). */
 export function fromBehind(figures: Figure[]): Figure[] {
   return figures.map((f) =>
     f.stage === 'baby' ? f : { ...f, view: 'back' as const, pose: undefined },

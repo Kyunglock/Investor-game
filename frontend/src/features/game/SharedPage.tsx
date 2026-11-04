@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { api } from '../../api/client'
 import { layersFor } from './pixel/layers'
 import { Sprite } from './pixel/SpriteView'
-import { displayName, headline, lifeLine, type ShareCard } from './share'
+import { displayName, headline, lifeLine, moneyLine, type ShareCard } from './share'
 
 /** 공유 링크로 들어온 사람이 보는 결과 카드 (#197). 판을 이어 하지 않고, "나도 해 보기"로 처음 화면에 간다. */
 export function SharedPage({ shareId }: { shareId: string }) {
@@ -43,6 +43,9 @@ export function SharedPage({ shareId }: { shareId: string }) {
             {headline(card)}
           </p>
           {card.rank && <p className="mt-1 text-sm font-bold text-wine">순위표 {card.rank}위</p>}
+          <p className="mt-1 text-[13px] text-muted" data-testid="shared-money">
+            {moneyLine(card)}
+          </p>
           {card.investorTypeName && (
             <div className="mt-5 rounded bg-wine-soft px-4 py-3">
               <p className="font-serif-kr text-xl font-black text-wine">

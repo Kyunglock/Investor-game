@@ -461,11 +461,8 @@ export const BODY_MAPS: Record<Sex, Record<AgeStage, Body>> = {
 }
 
 /** 자세별 몸통 (decisions.md 192번). 서 있는 자세는 BODY_MAPS다. 아기는 자세가 없다. */
-export const POSE_MAPS: Record<
-  Exclude<Pose, 'stand'>,
-  Record<Sex, Partial<Record<AgeStage, Body>>>
-> = {
-  clap: {
+export const POSE_MAPS: Record<Exclude<Pose, 'stand'>, Record<Sex, Partial<Record<AgeStage, Body>>>> = {
+  'clap': {
     M: {
       child: {
         headTop: 6,
@@ -831,7 +828,7 @@ export const POSE_MAPS: Record<
       },
     },
   },
-  hold: {
+  'hold': {
     M: {
       child: {
         headTop: 6,
@@ -1929,7 +1926,7 @@ export const POSE_MAPS: Record<
       },
     },
   },
-  wave: {
+  'wave': {
     M: {
       child: {
         headTop: 6,
@@ -2297,11 +2294,8 @@ export const POSE_MAPS: Record<
   },
 }
 
-/** 옆모습(side: 서 있음, walk: 걷는 걸음)과 뒷모습 (decisions.md 194번). 옆모습은 오른쪽을 본다. 아기는 없다. */
-export const VIEW_MAPS: Record<
-  'side' | 'walk' | 'back',
-  Record<Sex, Partial<Record<AgeStage, Body>>>
-> = {
+/** 옆모습(side: 서 있음, walk: 걷는 걸음)과 뒷모습 (decisions.md 196번). 옆모습은 오른쪽을 본다. 아기는 없다. */
+export const VIEW_MAPS: Record<'side' | 'walk' | 'back', Record<Sex, Partial<Record<AgeStage, Body>>>> = {
   side: {
     M: {
       child: {

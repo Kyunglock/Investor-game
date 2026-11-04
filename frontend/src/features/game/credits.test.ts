@@ -541,7 +541,7 @@ describe('중간에 그만둔 판 (decisions.md 68번)', () => {
 })
 
 describe('크레딧 그림 (#23)', () => {
-  it('아이가 태어날 때마다 아기 침대 그림이 붙고, 배우자가 안은 아기 쪽을 나와 바로 위 아이가 옆모습으로 바라본다 (decisions.md 67·192·194번)', () => {
+  it('아이가 태어날 때마다 아기 침대 그림이 붙고, 배우자가 안은 아기 쪽을 나와 바로 위 아이가 옆모습으로 바라본다 (decisions.md 67·192·196번)', () => {
     const family = baseGame({
       household: {
         ...baseGame().household,
@@ -662,7 +662,7 @@ describe('크레딧 그림 (#23)', () => {
     const homes = sections.filter((s) => s.key.startsWith('home-'))
     // 내가 살 집을 산 날은 새집 앞에서 손뼉 (decisions.md 192번).
     expect(homes.map((s) => s.art?.vignette)).toEqual(['new-home'])
-    // 새집을 올려다보는 뒷모습 (decisions.md 194번).
+    // 새집을 올려다보는 뒷모습 (decisions.md 196번).
     expect(homes[0].art?.figures.map((f) => f.view)).toEqual(['back', 'back'])
     expect(homes.map((s) => s.art?.figures.length)).toEqual([2])
     expect(homes[0].lines[0]).toEqual({

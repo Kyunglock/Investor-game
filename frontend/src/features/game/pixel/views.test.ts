@@ -4,7 +4,7 @@ import { bodyFor, type View, viewBody } from './bodies'
 const lastRow = (map: readonly string[]) =>
   map.reduce((last, row, y) => (/[^.]/.test(row) ? y : last), -1)
 
-describe('옆모습·뒷모습 (decisions.md 194번)', () => {
+describe('옆모습·뒷모습 (decisions.md 196번)', () => {
   const stages = ['child', 'adult', 'middle', 'old'] as const
   const views: View[] = ['side', 'walk', 'back']
 

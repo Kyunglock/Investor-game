@@ -320,7 +320,7 @@ describe('상황마다 다른 그림과 자세 (decisions.md 192번)', () => {
         code,
       ).toEqual(['me', 'kid'])
     }
-    // 학예회: 나는 객석에서 무대를 보는 뒷모습, 아이는 무대 위(바닥에서 띄움) (decisions.md 194번).
+    // 학예회: 나는 객석에서 무대를 보는 뒷모습, 아이는 무대 위(바닥에서 띄움) (decisions.md 196번).
     const play = momentForNotice(outing('school-play'), game({ household: kids(8) }))
     expect(play?.art.figures.map((f) => [f.view, f.lift])).toEqual([
       ['back', undefined],

@@ -245,7 +245,7 @@ function tripArt(game: Game, day: number): CreditArt {
     people.push({ who: 'spouse', sex: opposite(game.sex), stage })
   }
   people.push(...kidsAt(game, day))
-  // 온 가족이 바다를 바라보는 뒷모습 (decisions.md 194번).
+  // 온 가족이 바다를 바라보는 뒷모습 (decisions.md 196번).
   const figures = fromBehind(lineUp(carryBabies(people)))
   return { vignette: 'trip', figures }
 }
@@ -304,7 +304,7 @@ function familyEventArt(
     stage: 'adult',
     x: xs[2],
     look: seq - 1,
-    // 독립하는 아이는 걸어서 떠나는 옆모습 (decisions.md 194번).
+    // 독립하는 아이는 걸어서 떠나는 옆모습 (decisions.md 196번).
     ...(vignette === 'leave-home' ? { view: 'walk' as const, facing: 'right' as const } : {}),
   })
   return { vignette, figures }
@@ -517,7 +517,7 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
       return {
         key: `home-${e.seq}`,
         line,
-        // 새집을 올려다보는 뒷모습 (decisions.md 194번).
+        // 새집을 올려다보는 뒷모습 (decisions.md 196번).
         art:
           vignette === 'new-home'
             ? {

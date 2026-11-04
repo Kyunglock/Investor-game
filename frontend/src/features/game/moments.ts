@@ -33,7 +33,7 @@ function tripArt(game: Game): CreditArt {
       people.push({ who: 'kid', sex: kid.sex, stage: stageFor(kid.age), look: i })
     }
   })
-  // 왼쪽부터 닿지 않게 세우고, 넘치는 사람은 그리지 않는다. 온 가족이 바다를 바라보는 뒷모습 (decisions.md 194번).
+  // 왼쪽부터 닿지 않게 세우고, 넘치는 사람은 그리지 않는다. 온 가족이 바다를 바라보는 뒷모습 (decisions.md 196번).
   return { vignette: 'trip', figures: fromBehind(lineUp(carryBabies(people))) }
 }
 
@@ -59,11 +59,11 @@ function newHomeArt(game: Game): CreditArt {
       people.push({ who: 'kid', sex: kid.sex, stage: stageFor(kid.age), look: i })
     }
   })
-  // 새집을 올려다보는 뒷모습 (decisions.md 194번).
+  // 새집을 올려다보는 뒷모습 (decisions.md 196번).
   return { vignette: 'new-home', figures: fromBehind(lineUp(carryBabies(people))) }
 }
 
-/** 결혼한 날: 꽃 아치 앞에서 둘이 마주 본다 (decisions.md 192·194번). */
+/** 결혼한 날: 꽃 아치 앞에서 둘이 마주 본다 (decisions.md 192·196번). */
 function marriageArt(game: Game): CreditArt {
   const stage = myStage(game)
   return {
@@ -83,7 +83,7 @@ function birthArt(game: Game, baby: { sex: Game['sex']; look: number }): CreditA
   const holding = { sex: baby.sex, look: baby.look }
   const figures: Figure[] = game.household.married
     ? [
-        // 아기를 안은 배우자 쪽으로 돌아선 옆모습 (decisions.md 194번).
+        // 아기를 안은 배우자 쪽으로 돌아선 옆모습 (decisions.md 196번).
         { who: 'me', sex: game.sex, stage, x: 12, view: 'side', facing: 'right' },
         { who: 'spouse', sex: opposite(game.sex), stage, x: 24, pose: 'hold', holding },
       ]
@@ -125,7 +125,7 @@ const OUTING_SCENES: Record<
     kid: Omit<Figure, 'who' | 'sex' | 'stage'>
   }
 > = {
-  // 손잡고 걷는다: 둘 다 오른쪽으로 걷는 옆모습 (decisions.md 194번).
+  // 손잡고 걷는다: 둘 다 오른쪽으로 걷는 옆모습 (decisions.md 196번).
   park: {
     vignette: 'park',
     me: { x: 12, view: 'walk', facing: 'right' },
@@ -243,7 +243,7 @@ function leavingArt(game: Game, seq: number): CreditArt {
     stage: 'adult',
     x: 34,
     look: seq - 1,
-    // 짐을 들고 길을 걸어 떠난다 (decisions.md 194번).
+    // 짐을 들고 길을 걸어 떠난다 (decisions.md 196번).
     view: 'walk',
     facing: 'right',
   })

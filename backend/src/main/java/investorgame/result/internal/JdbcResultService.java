@@ -231,6 +231,26 @@ class JdbcResultService implements ResultService {
   }
 
   @Override
+  @Transactional
+  public boolean saveShareImage(UUID gameId, byte[] png) {
+    return jdbc.sql("UPDATE result_share SET image = :image WHERE game_id = :gameId")
+            .param("image", png)
+            .param("gameId", gameId)
+            .update()
+        > 0;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<byte[]> findShareImage(String shareId) {
+    return jdbc.sql(
+            "SELECT image FROM result_share WHERE share_id = :shareId AND image IS NOT NULL")
+        .param("shareId", shareId)
+        .query((rs, n) -> rs.getBytes(1))
+        .optional();
+  }
+
+  @Override
   @Transactional(readOnly = true)
   public Optional<Integer> rankOf(UUID gameId) {
     // 나보다 자산이 많은 사람 수 + 자산이 같은데 먼저 올린 사람 수 + 1 = 순위표에서 내 줄의 위치.

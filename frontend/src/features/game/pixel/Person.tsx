@@ -37,7 +37,7 @@ export function Person({
   top: number
 }) {
   const layers: Layer[] = []
-  // 옆모습·뒷모습은 얼굴 겹(장식·약점·표정·눈꺼풀)의 좌표가 정면 기준이라 얹지 않는다 (decisions.md 194번).
+  // 옆모습·뒷모습은 얼굴 겹(장식·약점·표정·눈꺼풀)의 좌표가 정면 기준이라 얹지 않는다 (decisions.md 196번).
   const turned = (figure.view ?? 'front') !== 'front' && figure.stage !== 'baby'
   // 아기는 머리가 작아 얼굴 겹(장식·약점·표정·눈꺼풀) 좌표가 맞지 않는다. 배냇머리만 얹는다 (decisions.md 163·178번).
   const baby = figure.stage === 'baby'
@@ -73,7 +73,7 @@ export function Person({
           : `translate(${figure.x} ${top - (figure.lift ?? 0)}) scale(${CHAR_SCALE})`
       }
     >
-      {/* 뒷모습이면 등에 업힌 아기가 몸 앞(보는 쪽)에 보이고 끈은 가려진다 (decisions.md 194번). */}
+      {/* 뒷모습이면 등에 업힌 아기가 몸 앞(보는 쪽)에 보이고 끈은 가려진다 (decisions.md 196번). */}
       {carried && !fromBack && <Runs runs={backOf(carried, body.headTop)} />}
       <Runs runs={toRuns(grid, palette)} />
       {carried && fromBack && <Runs runs={backOf(carried, body.headTop, true)} />}
@@ -123,7 +123,7 @@ function backOf(carried: Carried, ht: number, seenFromBehind = false): Run[] {
     }
   }
   const cells: [number, number][] = []
-  // 뒤에서 보면 포대기는 등 한가운데의 작은 보따리다 (decisions.md 194번). 앞에서 보면 양옆으로 비죽 나온다.
+  // 뒤에서 보면 포대기는 등 한가운데의 작은 보따리다 (decisions.md 196번). 앞에서 보면 양옆으로 비죽 나온다.
   const [x0, x1, y0, y1] = seenFromBehind ? [10, 21, ht + 21, ht + 29] : [2, 29, ht + 18, ht + 28]
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {

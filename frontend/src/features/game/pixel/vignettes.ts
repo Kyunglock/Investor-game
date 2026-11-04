@@ -64,7 +64,7 @@ export interface Figure {
   holding?: Omit<Carried, 'side'>
   /** 바닥에서 띄우는 칸 수. 무대 위에 선 아이처럼 (decisions.md 192번) */
   lift?: number
-  /** 보는 방향. 없으면 정면 (decisions.md 194번) */
+  /** 보는 방향. 없으면 정면 (decisions.md 196번) */
   view?: View
   /** 옆모습이 보는 쪽. 없으면 오른쪽 */
   facing?: 'left' | 'right'

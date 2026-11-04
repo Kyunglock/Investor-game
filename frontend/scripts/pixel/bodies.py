@@ -181,7 +181,7 @@ def mirror(rows):
 
 
 
-# ---- 옆모습·뒷모습 (decisions.md 194번) ----
+# ---- 옆모습·뒷모습 (decisions.md 196번) ----
 # 옆모습은 오른쪽을 본다(왼쪽을 볼 때는 화면이 좌우로 뒤집는다). 거울이 아니라 32칸 전체를 그린다.
 # 머리: 뒤통수(왼쪽)와 정수리는 머리카락, 얼굴은 오른쪽. 귀는 가운데쯤.
 SIDE_HEAD = [
@@ -381,7 +381,7 @@ def side_face(put, fill, ht, stage):
         put(ht + 17, 20, 'S')
 
 
-# 두 팔 만세(cheer)는 기괴해 보여 뺐다 (decisions.md 194번).
+# 두 팔 만세(cheer)는 기괴해 보여 뺐다 (decisions.md 196번).
 POSES = ('stand', 'clap', 'hold', 'reach-left', 'reach-right', 'wave')
 
 
@@ -506,7 +506,7 @@ def build(stage, sex, pose='stand', view='front'):
                 # 할아버지: 이마가 넓어지고 옆머리만 희다
                 region[y][x] = 'A' if side <= 7 and rel >= 4 else 's'
             elif stage == 'middle':
-                # 뒷모습은 귀 위 관자놀이만 희끗하다(옆머리 전체가 희면 헤드폰처럼 보인다, decisions.md 194번)
+                # 뒷모습은 귀 위 관자놀이만 희끗하다(옆머리 전체가 희면 헤드폰처럼 보인다, decisions.md 196번)
                 if view == 'back':
                     region[y][x] = 'G' if side <= 6 and 8 <= rel <= 11 else 'h'
                 else:
@@ -740,7 +740,7 @@ def main():
         out.append('  },')
     out.append('}')
     out.append('')
-    out.append('/** 옆모습(side: 서 있음, walk: 걷는 걸음)과 뒷모습 (decisions.md 194번). 옆모습은 오른쪽을 본다. 아기는 없다. */')
+    out.append('/** 옆모습(side: 서 있음, walk: 걷는 걸음)과 뒷모습 (decisions.md 196번). 옆모습은 오른쪽을 본다. 아기는 없다. */')
     out.append("export const VIEW_MAPS: Record<'side' | 'walk' | 'back', Record<Sex, Partial<Record<AgeStage, Body>>>> = {")
     for view in ('side', 'walk', 'back'):
         out.append(f"  {view}: {{")

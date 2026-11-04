@@ -1,9 +1,9 @@
 /**
- * 결과 공유 (#197): 공유 문구·링크·결과 카드 이미지. 서버가 공유 ID를 만들고(POST /share), 링크는 /r/{id}다.
+ * 결과 공유 (#197, 카카오톡 #275): 공유 문구·링크·결과 카드 이미지·카카오톡 카드. 서버가 공유 ID를 만들고(POST /share), 링크는 /r/{id}다.
  * /r/{id}는 링크 미리보기(Open Graph)를 담은 서버 HTML이고, 사람은 화면의 /share/{id}로 넘어간다.
  */
 import type { components } from '../../api/schema'
-import { shortWon } from './labels'
+import { percent, shortWon } from './labels'
 import { ADORNMENTS } from './pixel/adornments'
 import { bodyFor } from './pixel/bodies'
 import { layersFor } from './pixel/layers'
@@ -61,12 +61,56 @@ export function shareText(card: ShareCard, focus: 'life' | 'type' = 'life'): str
   return `${displayName(card)}의 인생: ${headline(card)}${rank}.${type} 나도 한 번 살아 보기`
 }
 
-export function xShareUrl(text: string, url: string): string {
-  return `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`
+/** "시작 0원 → 최종 12억 3,400만원 · 수익률 +12.3%". 시작 자산이 0이면 수익률은 뺀다. */
+export function moneyLine(card: ShareCard): string {
+  const base = `시작 ${shortWon(card.initialAsset)} → 최종 ${shortWon(card.finalAsset)}`
+  return card.initialAsset > 0
+    ? `${base} · 수익률 ${card.returnBp > 0 ? '+' : ''}${percent(card.returnBp)}`
+    : base
 }
 
-export function facebookShareUrl(url: string): string {
-  return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`
+/** 요약 그림 주소. 올리지 못했으면 공통 그림. */
+export function shareImageUrl(shareId: string, uploaded: boolean, origin = window.location.origin) {
+  return uploaded ? `${origin}/api/shares/${shareId}/card.png` : `${origin}/og-card.png`
+}
+
+/** 카카오톡 피드 카드 (#275). 그림을 누르거나 "결과 보기"는 공유 페이지로, "나도 해 보기"는 첫 화면으로. */
+export function kakaoFeed(
+  card: ShareCard,
+  shareId: string,
+  focus: 'life' | 'type',
+  uploaded: boolean,
+  origin = window.location.origin,
+) {
+  const page = `${origin}/share/${shareId}`
+  const title =
+    focus === 'type' && card.investorTypeName
+      ? `나는 '${card.investorTypeName}' 투자자`
+      : `${displayName(card)}의 인생 · ${headline(card)}`
+  const parts = [
+    card.investorTypeName && focus === 'life' ? `'${card.investorTypeName}' 투자자` : null,
+    focus === 'type' ? (card.investorTypeDescription ?? null) : lifeLine(card),
+  ].filter((p): p is string => !!p)
+  return {
+    objectType: 'feed' as const,
+    content: {
+      title,
+      description: parts.join(' · '),
+      imageUrl: shareImageUrl(shareId, uploaded, origin),
+      imageWidth: 1080,
+      imageHeight: 1080,
+      link: { mobileWebUrl: page, webUrl: page },
+    },
+    buttons: [
+      { title: '결과 보기', link: { mobileWebUrl: page, webUrl: page } },
+      { title: '나도 해 보기', link: { mobileWebUrl: origin, webUrl: origin } },
+    ],
+  }
+}
+
+/** 캔버스를 PNG 바이트로. */
+export function canvasPng(canvas: HTMLCanvasElement): Promise<Blob | null> {
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'))
 }
 
 /** 이미지 비율: 인스타 스토리(9:16)와 정사각형(1:1) */
