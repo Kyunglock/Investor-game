@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Game, NewsItem, PendingEvent } from '../../api/client'
+import { AutoBar } from './AutoBar'
+import { AUTO_CHOOSE_DELAY_MS } from './auto'
 import { InsightLens } from './InsightLens'
 import { won, yearOf } from './labels'
 import {
@@ -276,6 +278,12 @@ function Body({ event, game, busy, onChoose }: Props) {
           </button>
         </div>
       )}
+
+      <AutoBar
+        durationMs={AUTO_CHOOSE_DELAY_MS}
+        label={`${AUTO_CHOOSE_DELAY_MS / 1000}초 뒤 성향과 안목이 대신 고릅니다. 직접 고르면 그 선택이 우선입니다.`}
+        restartKey={event.eventId}
+      />
 
       <p className="mt-3 text-[11px] text-faint">
         {event.kind === 'TRAIT'
