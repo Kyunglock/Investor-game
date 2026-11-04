@@ -196,6 +196,26 @@ class JsonContentCatalogTest {
     assertThat(catalog.job("parttime").retires()).isFalse();
   }
 
+  /** #239: 본문이 신입·막내를 말하는 장면은 나이 상한이 있어, 이직·재취업으로 연차가 초기화된 베테랑에게 오지 않는다. 명예퇴직 장면은 20년차부터다. */
+  @Test
+  void 신입_장면은_나이_상한이_있고_명예퇴직은_20년차부터다() {
+    // 내가 신입·막내인 장면. 남이 신입인 장면(쉰 넘은 개발자 등)은 빼려고 표현을 좁힌다.
+    java.util.regex.Pattern rookie =
+        java.util.regex.Pattern.compile("막내인 나|신입 영업사원|신입 배치|첫 기능|포괄임금");
+    List<String> wrong = new ArrayList<>();
+    for (var career : load().careers()) {
+      if (rookie.matcher(career.body()).find() && !career.followUpOnly()) {
+        if (career.maxAge() == null || career.maxAge() > 39) {
+          wrong.add(career.code() + ": maxAge " + career.maxAge());
+        }
+      }
+      if (career.body().contains("명예퇴직") && career.minTenureYears() < 20) {
+        wrong.add(career.code() + ": minTenureYears " + career.minTenureYears());
+      }
+    }
+    assertThat(wrong).isEmpty();
+  }
+
   @Test
   void 알_수_없는_유형_코드는_오류다() {
     assertThatThrownBy(() -> load().investorType("none-none-none"))
