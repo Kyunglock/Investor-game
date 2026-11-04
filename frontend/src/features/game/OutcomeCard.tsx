@@ -19,11 +19,11 @@ import type { MoodKey } from './pixel/moods'
 import { Sprite } from './pixel/SpriteView'
 import { Vignette } from './pixel/Vignette'
 import { useGameStore } from './store'
-import { TugOfWar } from './TugOfWar'
+import { TUG_DONE_MS, TugOfWar } from './TugOfWar'
 import { matchupFor } from './tug'
 
-/** 뉴스 선택 뒤 결과를 감추고 성격이 손을 움직이는 동안 기다리는 시간. 그사이 맞대결 막대가 승부를 낸다(TugOfWar, 1.55초). */
-export const REVEAL_MS = 2_200
+/** 뉴스 선택 뒤 결과를 감추고 성격이 손을 움직이는 동안 기다리는 시간. 맞대결 막대가 승부를 내고(TugOfWar) 승패를 잠깐 본 뒤 드러난다. */
+export const REVEAL_MS = TUG_DONE_MS + 500
 
 /** 선택 → 실제 행동과 그 원인을 보여 준다. 원인이 보여야 억울함이 동기가 된다 (prd.md F6). 결과도 선택처럼 화면을 덮는다 (decisions.md 31번). */
 export function OutcomeCard(props: {
@@ -92,7 +92,7 @@ function Body({
         <>
           <p className="text-[11px] font-bold text-wine">{revealed ? '결과' : '실행 중'}</p>
           {/* 내 능력치와 반대 힘의 맞대결. 결과가 드러난 뒤에도 끝난 막대가 남는다 (decisions.md 181번) */}
-          {game && <TugOfWar matchup={matchupFor(outcome, game.stats)} />}
+          {game && <TugOfWar matchup={matchupFor(outcome, game)} />}
           {revealed ? (
             <>
               <div className="mt-2 flex items-center gap-3">
