@@ -17,6 +17,7 @@ import {
   yearOf,
 } from './labels'
 import { stageFor } from './pixel/bodies'
+import { carryBabies, lineUp, type Member } from './pixel/family'
 import { opposite } from './pixel/sexes'
 import type { CreditArt, Figure, VignetteKey } from './pixel/vignettes'
 import { playerName } from './playerName'
@@ -215,7 +216,7 @@ function coupleArt(
 }
 
 /** 그 날 집에 있던 아이들: 태어났고 아직 독립하지 않은 아이를 순번대로, 그때 나이의 몸으로. */
-function kidsAt(game: Game, day: number): Pick<Figure, 'who' | 'sex' | 'stage'>[] {
+function kidsAt(game: Game, day: number): Member[] {
   const left = new Set(
     entries(game, 'CHILD_LEFT')
       .filter((e) => e.day <= day)
@@ -229,25 +230,20 @@ function kidsAt(game: Game, day: number): Pick<Figure, 'who' | 'sex' | 'stage'>[
         who: 'kid' as const,
         sex: game.household.children[seq - 1]?.sex ?? 'M',
         stage: stageFor(Math.floor((day - e.day) / game.daysPerYear)),
+        look: seq - 1,
       }
     })
 }
 
-/** 가족 여행 그림: 바다에 나(와 그때 결혼했으면 배우자), 그때 집에 있던 아이들. 파라솔 왼쪽 자리부터 선다 (decisions.md 163번). */
+/** 가족 여행 그림: 바다에 나(와 그때 결혼했으면 배우자), 그때 집에 있던 아이들. 파라솔 왼쪽 자리부터 서고 아기는 업힌다 (decisions.md 163·178번). */
 function tripArt(game: Game, day: number): CreditArt {
   const stage = stageFor(ageOf(game, day))
-  const people: Pick<Figure, 'who' | 'sex' | 'stage'>[] = [{ who: 'me', sex: game.sex, stage }]
+  const people: Member[] = [{ who: 'me', sex: game.sex, stage }]
   if (marriedBy(game, day)) {
     people.push({ who: 'spouse', sex: opposite(game.sex), stage })
   }
   people.push(...kidsAt(game, day))
-  return { vignette: 'trip', figures: lineUp(people) }
-}
-
-/** 장면에 왼쪽부터 12칸 간격으로 세운다(몸 폭 12칸이라 닿지 않는다). 다섯 자리를 넘는 사람은 그리지 않는다. */
-function lineUp(people: Pick<Figure, 'who' | 'sex' | 'stage'>[]): Figure[] {
-  const slots = [2, 14, 26, 38, 50]
-  return people.slice(0, slots.length).map((p, i) => ({ ...p, x: slots[i] }))
+  return { vignette: 'trip', figures: lineUp(carryBabies(people)) }
 }
 
 /**
@@ -257,13 +253,18 @@ function lineUp(people: Pick<Figure, 'who' | 'sex' | 'stage'>[]): Figure[] {
 function childArt(game: Game, birth: LogEntry): CreditArt {
   const stage = stageFor(ageOf(game, birth.day))
   const seq = num((birth.payload as Payload).seq)
-  const people: Pick<Figure, 'who' | 'sex' | 'stage'>[] = [{ who: 'me', sex: game.sex, stage }]
+  const people: Member[] = [{ who: 'me', sex: game.sex, stage }]
   if (marriedBy(game, birth.day)) {
     people.push({ who: 'spouse', sex: opposite(game.sex), stage })
   }
   // 먼저 난 아이들은 가계의 순번대로 성별을 가진다.
   for (let i = 1; i < seq; i++) {
-    people.push({ who: 'kid', sex: game.household.children[i - 1]?.sex ?? 'M', stage: 'child' })
+    people.push({
+      who: 'kid',
+      sex: game.household.children[i - 1]?.sex ?? 'M',
+      stage: 'child',
+      look: i - 1,
+    })
   }
   const slots = [24, 12, 0]
   const figures: Figure[] = []
@@ -295,6 +296,7 @@ function familyEventArt(
     sex: game.household.children[seq - 1]?.sex ?? 'M',
     stage: 'adult',
     x: xs[2],
+    look: seq - 1,
   })
   return { vignette, figures }
 }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ADORNMENTS } from './adornments'
 import { bodyFor } from './bodies'
 import type { SpriteSpec } from './layers'
+import { babyHair } from './looks'
 import { MARKS } from './marks'
 import { EYELIDS, MOODS } from './moods'
 import { CHARACTER_PALETTE } from './palette'
@@ -33,8 +34,40 @@ export function canBlink(spec: Pick<SpriteSpec, 'mood' | 'adornment'>): boolean 
   return !spec.mood && spec.adornment !== 'patience'
 }
 
-/** 캐릭터 한 명. 눈은 깜빡이고, 약점 표시가 바뀌면 옛 표시가 떨어지며 사라진다 (설계 4.4절). */
+/**
+ * 캐릭터 한 명. 눈은 깜빡이고, 약점 표시가 바뀌면 옛 표시가 떨어지며 사라진다 (설계 4.4절).
+ * 아기는 머리가 작아 얼굴 겹(장식·약점·표정·눈꺼풀)이 어른 좌표에 떠 버린다: 배냇머리만 얹은 맨 몸으로 그린다 (decisions.md 163·178번).
+ */
 export function Sprite({ spec, size, crop = 'full', className = '' }: Props) {
+  if (spec.stage === 'baby') {
+    return <BabySprite spec={spec} size={size} crop={crop} className={className} />
+  }
+  return <GrownSprite spec={spec} size={size} crop={crop} className={className} />
+}
+
+function BabySprite({ spec, size, crop = 'full', className = '' }: Props) {
+  const body = bodyFor(spec.sex, 'baby')
+  const grid = compose(body, [babyHair(0)])
+  // 얼굴만 자를 때는 배냇머리(ht-3)부터
+  const top = crop === 'face' ? body.headTop - 4 : 0
+  const height = crop === 'face' ? FACE_ROWS : CHAR_HEIGHT
+  return (
+    <svg
+      viewBox={`0 ${top} ${CHAR_WIDTH} ${height}`}
+      width={size}
+      height={(size * height) / CHAR_WIDTH}
+      className={className}
+      style={{ imageRendering: 'pixelated', shapeRendering: 'crispEdges' }}
+      aria-hidden="true"
+    >
+      {toRuns(grid, CHARACTER_PALETTE).map((r) => (
+        <rect key={`${r.x}-${r.y}`} x={r.x} y={r.y} width={r.width} height={1} fill={r.fill} />
+      ))}
+    </svg>
+  )
+}
+
+function GrownSprite({ spec, size, crop = 'full', className = '' }: Props) {
   const body = bodyFor(spec.sex, spec.stage)
   const baseLayers: Layer[] = spec.adornment ? [ADORNMENTS[spec.adornment]] : []
   const base = compose(body, baseLayers)

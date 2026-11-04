@@ -103,15 +103,15 @@ CHILD_F = CHILD_M[:5] + [
 # 아기는 어른 머리를 쓰면 머리가 몸의 세 배라 징그럽다. 작은 머리(폭 14칸, 11줄)와 우주복 몸(9줄)을 따로 둔다 (decisions.md 163번).
 # 줄인 뒤 좌표: 옛 8·9열은 빠지고 0~7열은 2칸 오른쪽으로 간다(shrink).
 BABY_HEAD = [
-    '............hhhh',  # 0 정수리 몇 가닥
-    '.........sssssss',  # 1
+    '............ssss',  # 0 정수리(둥글게)
+    '..........ssssss',  # 1
     '.......sssssssss',  # 2
     '.......sssssssss',  # 3
     '.......sssssssss',  # 4 눈
     '.......sssssssss',  # 5 눈
     '.......sssssssss',  # 6 볼
-    '........ssssssss',  # 7 입
-    '........ssssssss',  # 8
+    '.......sssssssss',  # 7 입
+    '..........ssssss',  # 8
     '...........sssss',  # 9 턱
     '.............sss',  # 10 목
 ]
@@ -208,10 +208,7 @@ def build(stage, sex):
                 continue
             rel = y - ht
             side = min(x, W - 1 - x)
-            if stage == 'baby':
-                # 아기: 정수리에 몇 가닥만
-                region[y][x] = 'h'
-            elif stage == 'old' and sex == 'M':
+            if stage == 'old' and sex == 'M':
                 # 할아버지: 이마가 넓어지고 옆머리만 희다
                 region[y][x] = 'A' if side <= 7 and rel >= 4 else 's'
             elif stage == 'middle':
@@ -238,10 +235,6 @@ def build(stage, sex):
             for dy, xs in ((-3, range(14, 18)), (-2, range(13, 19))):
                 for x in xs:
                     setr(ht + dy, x, 'A')
-        if stage == 'baby':
-            for dy, xs in ((-2, (11, 12, 19, 20)), (-1, (11, 12, 13, 14, 17, 18, 19, 20)), (0, (13, 14, 17, 18))):
-                for x in xs:
-                    setr(ht + dy, x, 'R')
     # 지팡이: 오른손에서 바닥까지
     if stage == 'old':
         hand = next(y for y in range(ht + 20, H) if R(y, sx(W - 4)) == 's')
@@ -325,6 +318,11 @@ def build(stage, sex):
         fill(ht + 6, [10, 21], 'r')
         fill(ht + 7, [15, 16], 'm')
         fill(ht + 10, range(13, 19), 'S', 's')
+        # 배냇머리는 몸통에 그리지 않는다. 아이마다 다른 모양을 겹으로 얹는다(pixel/babyHair.ts, decisions.md 178번).
+        if sex == 'F':
+            # 딸: 옆머리에 작은 리본 하나(나비 두 날개와 매듭)
+            for y, x, ch in ((0, 20, '7'), (0, 21, '8'), (0, 23, '8'), (0, 24, '7'), (1, 20, '7'), (1, 21, 'R'), (1, 22, '7'), (1, 23, 'R'), (1, 24, '7'), (2, 21, '7'), (2, 23, '7')):
+                put(ht + y, x, ch)
         return ht, [''.join(r) for r in g]
     # 귀 안쪽 그늘
     fill(ht + 13, [7, 24], 'S', 's')
