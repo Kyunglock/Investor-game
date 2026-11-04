@@ -22,14 +22,14 @@ describe('옆모습·뒷모습 (decisions.md 196번)', () => {
     }
   })
 
-  it('옆모습은 오른쪽을 본다: 눈동자가 오른쪽 절반에 하나뿐이다', () => {
+  it('옆을 볼 때는 오른쪽으로 돌아선 3/4 얼굴: 가까운 오른쪽 눈이 먼 왼쪽 눈보다 넓다 (decisions.md 197번)', () => {
     const body = viewBody('M', 'adult', 'side')
-    const eyeRow = body.map[body.headTop + 13]
-    const eyes = [...eyeRow]
-      .map((ch, x) => (ch === 'k' || ch === 'E' ? x : -1))
-      .filter((x) => x >= 0)
-    expect(eyes.length).toBeGreaterThan(0)
-    expect(Math.min(...eyes)).toBeGreaterThanOrEqual(16)
+    const eyeRow = body.map[body.headTop + 12]
+    const eyes = [...eyeRow].map((ch, x) => (ch === 'k' ? x : -1)).filter((x) => x >= 0)
+    const right = eyes.filter((x) => x >= 16).length
+    const left = eyes.filter((x) => x < 16).length
+    expect(right).toBeGreaterThan(left)
+    expect(left).toBeGreaterThan(0)
   })
 
   it('뒷모습에는 얼굴(눈)이 없다', () => {
