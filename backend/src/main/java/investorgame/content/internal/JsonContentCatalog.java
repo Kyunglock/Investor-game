@@ -588,12 +588,13 @@ class JsonContentCatalog implements ContentCatalog {
           require(
               effect.followUp() == null
                   || (next != null
-                      && next.followUpOnly()
+                      // "내년에 다시"처럼 같은 장면을 다시 부르는 것은 된다 (#241)
+                      && (next.followUpOnly() || next.code().equals(career.code()))
                       && effect.followUpDays() > 0
+                      // 옮긴 직장의 이야기(스타트업의 투자 결과 등)는 이어질 수 있다. 실직·회사 세우기는 장면이 끊긴다 (#241)
                       && !effect.quit()
-                      && !effect.moveJob()
                       && effect.becomeJob() == null),
-              "후속 장면은 followUpOnly 장면이어야 하고 날 수가 있어야 하며 직장을 바꾸는 결과와 같이 둘 수 없다: " + where);
+              "후속 장면은 followUpOnly 장면(또는 같은 장면)이어야 하고 날 수가 있어야 하며 실직·회사 세우기와 같이 둘 수 없다: " + where);
           require(
               effect.statDeltas().keySet().stream()
                   .allMatch(k -> StatCodes.ALL.contains(k) && !StatCodes.LUCK.equals(k)),

@@ -1267,6 +1267,8 @@
           "statDeltas": {
             "insight": 2
           },
+          "followUp": "pt-franchise",
+          "followUpDays": 360,
           "text": "상권 자료를 뜯어보며 1년을 버텼다. 그 자리엔 결국 다른 가게가 망해 나갔고, 그사이 200만 원을 더 모았다.",
           "happiness": 3
         },
@@ -2190,8 +2192,9 @@
           "statDeltas": {
             "courage": 1
           },
-          "text": "사장님이 서운해하며 다른 사람에게 넘겼다. 새 사장 밑에서 그대로 일한다.",
-          "happiness": -2
+          "text": "사장님이 서운해하며 다른 사람에게 넘겼다. 새 사장은 흥정하던 고참이 껄끄러운지 내 근무를 줄였다. 벌이가 10% 줄었다.",
+          "happiness": -5,
+          "salaryPercent": -10
         }
       },
       {
@@ -2655,8 +2658,9 @@
           "statDeltas": {
             "patience": 1
           },
-          "text": "점주가 다른 사람에게 넘겼다. 1호점에 집중하기로 했다.",
-          "happiness": -2
+          "text": "흥정이 길어지자 점주가 판을 깼다. 걸어 둔 가계약금 300만 원은 돌려받지 못했다. 1호점에 집중하기로 했다.",
+          "happiness": -4,
+          "amount": -3000000
         }
       },
       {
@@ -2899,11 +2903,11 @@
           "happiness": 2
         },
         "fail": {
-          "amount": -2500000,
+          "amount": -6000000,
           "statDeltas": {
             "conviction": 1
           },
-          "text": "밭은 쓰러졌지만 보험금이 나와 자기부담 250만 원으로 막았다.",
+          "text": "밭이 쓰러졌다. 보험금이 나왔지만 자기부담에 보상 안 되는 하우스 시설까지 600만 원이 나갔다.",
           "happiness": -4
         }
       }
@@ -3668,11 +3672,11 @@
           "family": 1
         },
         "fail": {
-          "amount": -3000000,
+          "amount": -10000000,
           "statDeltas": {
             "patience": 1
           },
-          "text": "다 못 따고 밭에서 물러 버렸다. 300만 원어치를 버렸다.",
+          "text": "다 못 따고 밭에서 물러 버렸다. 1,000만 원어치를 버렸고 허리까지 상했다.",
           "happiness": -5,
           "family": -1
         }
@@ -3870,6 +3874,8 @@
           "statDeltas": {
             "conviction": 2
           },
+          "followUp": "farm-brand",
+          "followUpDays": 720,
           "text": "이름보다 맛이 먼저라고 믿는다. 바이어에게는 다음을 기약했다.",
           "happiness": -1
         }
@@ -4329,15 +4335,17 @@
           "statDeltas": {
             "insight": 2
           },
-          "text": "바이어가 선금을 걸었다. 위험 없이 설비를 늘렸다.",
-          "happiness": 6
+          "text": "바이어가 선금을 걸었다. 선금 덕에 분담금이 1천만 원으로 줄었고, 첫 컨테이너가 나가며 조합 배당이 늘었다.",
+          "happiness": 6,
+          "amount": -10000000
         },
         "fail": {
           "statDeltas": {
             "insight": 1
           },
-          "text": "바이어가 다른 나라 업체로 갔다.",
-          "happiness": -3
+          "text": "바이어가 다른 나라 업체로 갔다. 미리 계약한 포장 설비 위약금으로 조합원마다 300만 원을 냈다.",
+          "happiness": -4,
+          "amount": -3000000
         }
       },
       {
@@ -4789,6 +4797,8 @@
             "insight": 1,
             "patience": 1
           },
+          "followUp": "fac-foreman",
+          "followUpDays": 720,
           "text": "다음 기회를 기약했다. 그사이 다른 공정 설비를 익혔다.",
           "happiness": 2
         }
@@ -5527,8 +5537,9 @@
           "statDeltas": {
             "insight": 1
           },
-          "text": "원청은 다른 사람에게 맡겼다. 하던 대로 일한다.",
-          "happiness": -2
+          "text": "원청은 다른 사람에게 맡겼다. 조건을 따진 사람으로 찍혀 그해 성과급 200만 원이 깎였다.",
+          "happiness": -4,
+          "amount": -2000000
         }
       },
       {
@@ -6515,6 +6526,8 @@
           "statDeltas": {
             "patience": 1
           },
+          "followUp": "cs-exam",
+          "followUpDays": 360,
           "text": "아깝게 떨어졌다. 내년에 다시 보기로 했다.",
           "happiness": -4,
           "family": -1
@@ -6549,7 +6562,9 @@
           "family": -2
         },
         "fail": {
-          "text": "학원비 300만 원을 쓰고도 떨어졌다. 체력만 바닥났다.",
+          "followUp": "cs-exam",
+          "followUpDays": 720,
+          "text": "학원비 300만 원을 쓰고도 떨어졌다. 체력만 바닥났다. 두 해 뒤에 다시 본다.",
           "amount": -3000000,
           "statDeltas": {
             "patience": 1
@@ -7282,6 +7297,9 @@
       {
         "code": "wait",
         "label": "다음 인사까지 대기한다",
+        "stat": "luck",
+        "baseBp": 4000,
+        "perPointBp": 40,
         "success": {
           "text": "반년을 지원 업무로 보냈다. 그사이 파견 때 인맥이 좋은 자리를 물어 왔다.",
           "salaryPercent": 2,
@@ -7289,6 +7307,13 @@
             "patience": 2
           },
           "happiness": 2
+        },
+        "fail": {
+          "statDeltas": {
+            "patience": 1
+          },
+          "happiness": -3,
+          "text": "반년을 지원 업무로 보냈는데 다음 인사에도 자리가 없었다. 결국 남은 한직으로 갔다."
         }
       }
     ]
@@ -8112,7 +8137,7 @@
         "label": "간다",
         "success": {
           "statDeltas": {
-            "patience": 1,
+            "patience": 3,
             "courage": 1
           },
           "text": "학생 일곱 명과 2년을 보냈다. 그동안 도서벽지 수당 300만 원이 붙었고 승진 가산점도 챙겼다.",
@@ -8137,7 +8162,7 @@
         },
         "fail": {
           "statDeltas": {
-            "patience": 1
+            "patience": 3
           },
           "text": "빠지지 못했다. 마지못해 갔다. 2년 동안 도서벽지 수당 300만 원이 붙었다.",
           "happiness": -5,
@@ -8163,7 +8188,7 @@
           "text": "바꿔 줄 사람이 없었다. 결국 섬으로 갔다. 2년 동안 붙은 도서벽지 수당 300만 원이 위안이다.",
           "statDeltas": {
             "insight": 1,
-            "patience": 1
+            "patience": 3
           },
           "happiness": -5,
           "family": -4,
@@ -8228,14 +8253,15 @@
           "happiness": 4
         },
         "fail": {
-          "text": "명퇴는 했지만 학원 분위기에 적응하지 못하고 석 달 만에 나왔다.",
+          "text": "명퇴는 했지만 학원 분위기에 적응하지 못하고 석 달 만에 나왔다. 계약을 깨며 위약금 500만 원을 물었다.",
           "quit": true,
           "severanceMonths": 12,
           "statDeltas": {
             "courage": 1,
             "insight": 1
           },
-          "happiness": -8
+          "happiness": -8,
+          "amount": -5000000
         }
       }
     ]
@@ -8894,13 +8920,25 @@
       },
       {
         "code": "insure",
-        "label": "교원 배상 보험을 쓴다",
+        "label": "교육청 교원 배상 보험을 쓴다",
+        "stat": "luck",
+        "baseBp": 5000,
+        "perPointBp": 30,
         "success": {
-          "text": "보험사가 소송을 맡아 줬다. 몇 년 전 든 보험료가 아깝지 않았다.",
+          "text": "보험사가 소송을 맡아 줬다. 자기부담금 100만 원으로 끝났다.",
           "statDeltas": {
             "insight": 2
           },
-          "happiness": 2
+          "happiness": 2,
+          "amount": -1000000
+        },
+        "fail": {
+          "amount": -4000000,
+          "statDeltas": {
+            "patience": 1
+          },
+          "happiness": -4,
+          "text": "보험은 배상금만 대 주고 소송은 직접 하라고 했다. 변호사비 400만 원이 들었다."
         }
       }
     ]
@@ -9563,8 +9601,8 @@
           "family": -1
         },
         "fail": {
-          "text": "요구는 거절됐고 결국 자원 명단에 들어갔다. 수당 300만 원만 받았다.",
-          "amount": 3000000,
+          "text": "요구는 거절됐고 결국 자원 명단에 들어갔다. 수당 300만 원을 받았지만 감염돼 격리와 치료비로 500만 원이 들었다.",
+          "amount": -2000000,
           "statDeltas": {
             "conviction": 1,
             "patience": -1
@@ -11049,6 +11087,9 @@
       {
         "code": "sell",
         "label": "지분을 넘기고 손 뗀다",
+        "stat": "insight",
+        "baseBp": 4000,
+        "perPointBp": 40,
         "success": {
           "text": "선배에게 지분을 넘기고 손을 뗐다. 투자금 가운데 4,000만 원을 돌려받았다. 이제 다음 일을 찾는다.",
           "amount": 40000000,
@@ -11057,6 +11098,15 @@
           },
           "happiness": -2,
           "quit": true
+        },
+        "fail": {
+          "amount": 15000000,
+          "statDeltas": {
+            "insight": 1
+          },
+          "happiness": -6,
+          "quit": true,
+          "text": "선배가 값을 후려쳤다. 지분을 넘기고 투자금 가운데 1,500만 원만 돌려받았다. 이제 다음 일을 찾는다."
         }
       }
     ],
@@ -13764,7 +13814,7 @@
     "title": "임금피크제",
     "body": "내년부터 임금피크제가 적용돼 월급이 해마다 줄어든다. 회사는 대신 희망퇴직을 받으면 위로금을 넉넉히 주겠다고 한다.",
     "weight": 8,
-    "minTenureYears": 0,
+    "minTenureYears": 10,
     "minAge": 55,
     "jobs": [
       "office"
@@ -13840,12 +13890,12 @@
         "baseBp": 3000,
         "perPointBp": 45,
         "success": {
-          "amount": -2000000,
+          "amount": 10000000,
           "statDeltas": {
             "patience": 2,
             "insight": 1
           },
-          "text": "강의비 200만 원을 들여 합격했다. 정년 뒤 일할 길이 하나 생겼다.",
+          "text": "강의비 200만 원을 들여 합격했다. 주말마다 선배 중개사무소 일을 거들어 1,200만 원을 벌었다. 정년 뒤 일할 길도 하나 생겼다.",
           "happiness": 6
         },
         "fail": {
@@ -16770,6 +16820,8 @@
           "statDeltas": {
             "courage": 2
           },
+          "followUp": "dev-seed-b",
+          "followUpDays": 720,
           "text": "시드 단계 회사로 옮겼다. 연차는 처음부터고 월급은 줄었지만 스톡옵션이 넉넉하다.",
           "happiness": 3
         }
@@ -16870,6 +16922,78 @@
           },
           "text": "행사하지 않고 지켜본다. 당장은 본업 월급이 내 몫이다.",
           "happiness": 1
+        }
+      }
+    ]
+  },
+  {
+    "code": "dev-seed-b",
+    "title": "시리즈 B 발표",
+    "body": "리드 개발자로 옮겨 온 지 2년. 대표가 장담한 시리즈 B 결과가 이번 달 나온다. 넉넉히 받은 스톡옵션의 값은 그 결과에 달렸다.",
+    "weight": 1,
+    "minTenureYears": 0,
+    "jobs": [
+      "developer"
+    ],
+    "followUpOnly": true,
+    "options": [
+      {
+        "code": "hold",
+        "label": "끝까지 남는다",
+        "stat": "luck",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": {
+          "salaryPercent": 10,
+          "amount": 60000000,
+          "statDeltas": {
+            "courage": 2
+          },
+          "happiness": 10,
+          "text": "시리즈 B가 들어왔다. 스톡옵션 일부를 투자 라운드에 넘겨 6,000만 원을 쥐었고 연봉도 10% 올랐다."
+        },
+        "fail": {
+          "quit": true,
+          "statDeltas": {
+            "courage": 1
+          },
+          "happiness": -11,
+          "text": "투자가 무산되며 회사가 문을 닫았다. 스톡옵션은 휴지가 됐다."
+        }
+      },
+      {
+        "code": "sell",
+        "label": "발표 전에 지분 일부를 판다",
+        "stat": "insight",
+        "baseBp": 4000,
+        "perPointBp": 40,
+        "success": {
+          "amount": 20000000,
+          "statDeltas": {
+            "insight": 2
+          },
+          "happiness": 4,
+          "text": "발표 전에 구주를 넘겨 2,000만 원을 챙겼다. 나머지는 결과에 맡긴다."
+        },
+        "fail": {
+          "statDeltas": {
+            "insight": 1
+          },
+          "happiness": -4,
+          "text": "사겠다는 사람이 없었다. 결과를 그냥 기다린다."
+        }
+      },
+      {
+        "code": "move",
+        "label": "결과를 기다리지 않고 옮긴다",
+        "success": {
+          "moveJob": true,
+          "moveSalaryPercent": 10,
+          "statDeltas": {
+            "patience": 1
+          },
+          "happiness": 1,
+          "text": "큰 회사로 옮겼다. 행사하지 않은 스톡옵션은 두고 나왔다."
         }
       }
     ]
@@ -17999,8 +18123,10 @@
           "statDeltas": {
             "patience": 1
           },
-          "text": "이번엔 밀렸다. 내년을 기약한다.",
-          "happiness": -4
+          "text": "이번엔 밀렸다. 두 해 뒤 심사를 기약한다.",
+          "happiness": -4,
+          "followUp": "acc-partner",
+          "followUpDays": 720
         }
       },
       {
@@ -18012,7 +18138,9 @@
             "insight": 1
           },
           "text": "내년 심사를 위해 고객을 다졌다. 작은 성과급이 붙었다.",
-          "happiness": 1
+          "happiness": 1,
+          "followUp": "acc-partner",
+          "followUpDays": 360
         }
       },
       {
@@ -18173,7 +18301,9 @@
             "patience": 1
           },
           "text": "내년을 위해 고객 다섯 곳과 약속을 받아 뒀다.",
-          "happiness": 3
+          "happiness": 3,
+          "followUp": "acc-own",
+          "followUpDays": 360
         },
         "fail": {
           "statDeltas": {
@@ -19318,19 +19448,20 @@
         "baseBp": 3000,
         "perPointBp": 50,
         "success": {
-          "amount": 30000000,
+          "amount": 24000000,
           "statDeltas": {
             "insight": 2
           },
-          "text": "꼼꼼히 본 회사가 탄탄했다. 보수와 주식 보상으로 3,000만 원을 받았다.",
+          "text": "꼼꼼히 본 회사가 탄탄했다. 이사회에 나가며 2,400만 원을 받았다.",
           "happiness": 6
         },
         "fail": {
           "statDeltas": {
             "patience": 1
           },
-          "text": "보다 보니 숫자가 수상하다. 고사했다.",
-          "happiness": 1
+          "text": "장부를 뜯어보느라 시즌 일을 놓쳐 성과급 300만 원이 줄었다. 숫자가 수상해 고사했다.",
+          "happiness": -2,
+          "amount": -3000000
         }
       },
       {
@@ -20674,7 +20805,7 @@
           "statDeltas": {
             "conviction": 2
           },
-          "followUp": "big-spinoff-end",
+          "followUp": "big-spinoff-end-return",
           "followUpDays": 1080,
           "text": "3년 안에 돌아올 권리를 문서로 받았다. 지분은 3%로 줄었다.",
           "happiness": 3
@@ -20769,6 +20900,78 @@
           },
           "text": "투자가 끊기며 회사가 청산됐다. 지분은 휴지가 됐다.",
           "happiness": -11
+        }
+      }
+    ]
+  },
+  {
+    "code": "big-spinoff-end-return",
+    "title": "분사 3년 뒤, 복귀권",
+    "body": "분사한 회사가 갈림길에 섰다. 외부 투자사가 지분을 사겠다고 하고, 모회사는 다시 흡수하겠다고 한다. 내 지분은 3%지만 본사로 돌아갈 권리가 있다.",
+    "weight": 1,
+    "minTenureYears": 0,
+    "jobs": [
+      "bigcorp"
+    ],
+    "followUpOnly": true,
+    "options": [
+      {
+        "code": "sell",
+        "label": "투자사에 지분을 판다",
+        "stat": "luck",
+        "baseBp": 3500,
+        "perPointBp": 40,
+        "success": {
+          "amount": 72000000,
+          "statDeltas": {
+            "courage": 2
+          },
+          "text": "투자사가 후하게 쳐줬다. 지분 3%가 7,200만 원이 됐다.",
+          "happiness": 10
+        },
+        "fail": {
+          "amount": 12000000,
+          "statDeltas": {
+            "patience": 1
+          },
+          "text": "실사에서 값이 깎였다. 1,200만 원만 손에 쥐었다.",
+          "happiness": -3
+        }
+      },
+      {
+        "code": "hold",
+        "label": "모회사 흡수를 받아들인다",
+        "success": {
+          "salaryPercent": 10,
+          "amount": 6000000,
+          "statDeltas": {
+            "patience": 1
+          },
+          "text": "모회사가 회사를 자회사로 거둬들였다. 지분 정산 600만 원을 받고 자회사 임원으로 남았다.",
+          "happiness": 5
+        }
+      },
+      {
+        "code": "grow",
+        "label": "남아서 상장까지 간다",
+        "stat": "courage",
+        "baseBp": 2500,
+        "perPointBp": 40,
+        "success": {
+          "amount": 150000000,
+          "statDeltas": {
+            "conviction": 2
+          },
+          "text": "끝까지 남은 끝에 상장했다. 지분 3%가 1억 5,000만 원이 됐다.",
+          "happiness": 12
+        },
+        "fail": {
+          "statDeltas": {
+            "conviction": 1
+          },
+          "text": "투자가 끊기며 회사가 청산됐다. 지분은 휴지가 됐지만 복귀권으로 본사에 돌아왔다. 3년 공백에 자리는 한 단계 낮다.",
+          "happiness": -6,
+          "salaryPercent": -5
         }
       }
     ]
@@ -21427,7 +21630,9 @@
             "insight": 1
           },
           "text": "병원 앞 처방전 수를 1년 더 세어 보기로 했다.",
-          "happiness": -1
+          "happiness": -1,
+          "followUp": "pha-open",
+          "followUpDays": 360
         }
       }
     ]
@@ -21696,12 +21901,12 @@
           "family": -2
         },
         "fail": {
-          "amount": 2000000,
+          "amount": -1000000,
           "statDeltas": {
             "patience": -1,
             "insight": 1
           },
-          "text": "두 달 만에 지쳐 그만뒀다. 손에 쥔 건 200만 원뿐이다.",
+          "text": "두 달 만에 몸살이 나 그만뒀다. 번 돈보다 병원비가 더 들어 100만 원 손해다.",
           "happiness": -4,
           "family": -1
         }
@@ -23879,12 +24084,12 @@
         "baseBp": 4500,
         "perPointBp": 35,
         "success": {
-          "amount": 10000000,
+          "amount": 15000000,
           "statDeltas": {
             "insight": 1,
             "conviction": 1
           },
-          "text": "판정이 업계에 인용됐다. 자문 의뢰가 늘어 1,000만 원이 들어왔다.",
+          "text": "판정이 업계에 인용됐다. 자문 의뢰가 늘어 1,500만 원이 들어왔다.",
           "happiness": 6
         },
         "fail": {
@@ -23910,11 +24115,11 @@
         "code": "teach",
         "label": "로스쿨 겸임 교수로 간다",
         "success": {
-          "amount": 12000000,
+          "amount": 6000000,
           "statDeltas": {
             "patience": 1
           },
-          "text": "강의료로 1,200만 원. 학생들 질문이 날카롭다.",
+          "text": "강의료로 600만 원. 사건 수임은 그만큼 줄었지만 학생들 질문이 날카롭다.",
           "happiness": 4
         }
       }
@@ -24912,13 +25117,14 @@
   {
     "code": "inv-yeouido",
     "title": "여의도 증권사 설립",
-    "body": "여의도에서 연락이 왔다. 당신의 투자 이력을 보고 증권사를 함께 세우자는 사람들이다. 자본금 5억을 넣고 금융위원회 인가를 받아야 한다. 받으면 여의도에 내 이름의 간판이 걸린다.",
+    "body": "여의도에서 연락이 왔다. 당신의 투자 이력을 보고 증권사를 함께 세우자는 사람들이다. 자본금 8억을 넣고 금융위원회 인가를 받아야 한다. 받으면 여의도에 내 이름의 간판이 걸린다.",
     "weight": 30,
     "minTenureYears": 5,
     "jobs": [
       "INVEST"
     ],
     "minNetWorth": 1000000000,
+    "repeatable": true,
     "options": [
       {
         "code": "found",
@@ -24927,7 +25133,7 @@
         "baseBp": 5000,
         "perPointBp": 30,
         "success": {
-          "amount": -500000000,
+          "amount": -800000000,
           "statDeltas": {
             "conviction": 3,
             "courage": 2
@@ -24937,11 +25143,11 @@
           "happiness": 10
         },
         "fail": {
-          "amount": -200000000,
+          "amount": -300000000,
           "statDeltas": {
             "courage": 1
           },
-          "text": "인가 심사에서 떨어졌다. 법률·컨설팅 비용으로 2억이 사라졌다. 자산이 받쳐 주면 기회는 다시 온다.",
+          "text": "인가 심사에서 떨어졌다. 법률·컨설팅 비용과 미리 뽑은 인력의 인건비로 3억이 사라졌다. 자산이 받쳐 주면 기회는 다시 온다.",
           "happiness": -10
         }
       },
@@ -26298,8 +26504,10 @@
           "statDeltas": {
             "patience": 1
           },
-          "text": "수요 예측이 부진해 상장을 철회했다. 준비 비용 3억만 들었다.",
-          "happiness": -7
+          "text": "수요 예측이 부진해 상장을 철회했다. 준비 비용 3억만 들었다. 두 해 뒤 다시 도전한다.",
+          "happiness": -7,
+          "followUp": "sec-listing",
+          "followUpDays": 720
         }
       },
       {
@@ -26344,7 +26552,9 @@
             "patience": 1
           },
           "text": "숫자를 더 만든 뒤에 가기로 했다.",
-          "happiness": 1
+          "happiness": 1,
+          "followUp": "sec-listing",
+          "followUpDays": 360
         }
       }
     ],
