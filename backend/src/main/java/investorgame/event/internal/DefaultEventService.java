@@ -312,14 +312,19 @@ class DefaultEventService implements EventService {
     } else if (context.phase() == Phase.INVESTING && context.investingStartDay() != null) {
       // 살 돈도 없고 든 것도 없으면 뉴스에서 고를 게 관망뿐이라 띄우지 않는다. 돈이 생기면 다음 틱에 바로 온다 (decisions.md 59번).
       Optional<Integer> newsDay = Optional.empty();
+      Set<Integer> stockYears = stockEventYears(rows, context);
       if (content.stocks().stream().anyMatch(st -> context.tradable(st.code()))) {
         List<EventRow> news = ofKind(rows, EventKind.NEWS);
         int base = news.isEmpty() ? context.investingStartDay() : last(news).occursDay();
-        newsDay = nextNewsDay(base, context, random);
+        newsDay = nextNewsDay(base, context, random, stockYears);
         newsDay.ifPresent(day -> candidates.add(new Candidate(EventKind.NEWS, day)));
       }
-      shakeCandidate(rows, context, random, newsDay, candidates);
-      leverageCandidate(rows, context, candidates);
+      List<Candidate> stockCandidates = new ArrayList<>();
+      shakeCandidate(rows, context, random, newsDay, stockCandidates);
+      leverageCandidate(rows, context, stockCandidates);
+      for (Candidate c : stockCandidates) {
+        candidates.add(new Candidate(c.kind(), freeStockYearDay(c.day(), context, stockYears)));
+      }
     }
     if (context.phase() != Phase.CHILDHOOD && context.careerStartDay() != null) {
       adultTraitCandidate(rows, context, fromDay, random, candidates);
@@ -971,10 +976,46 @@ class DefaultEventService implements EventService {
   }
 
   /**
+   * 주식 이벤트(뉴스·흔들림·빚투)가 이미 온 해들. 직장인은 한 해에 주식 이벤트가 하나만 온다 (decisions.md 194번). 전업투자자는 뉴스가 해마다 여러 번
+   * 와야 살 수 있어(121번) 묶지 않는다(빈 집합).
+   */
+  private Set<Integer> stockEventYears(List<EventRow> rows, SchedulingContext context) {
+    if (context.fullTimeInvestor()) {
+      return Set.of();
+    }
+    int year = calendar.daysPerYear();
+    return rows.stream()
+        .filter(
+            r ->
+                r.kind() == EventKind.NEWS
+                    || r.kind() == EventKind.SHAKE
+                    || r.kind() == EventKind.LEVERAGE)
+        .map(r -> r.occursDay() / year)
+        .collect(Collectors.toSet());
+  }
+
+  /** 흔들림·빚투의 날이 주식 이벤트가 이미 온 해에 걸리면 다음 빈 해의 첫날로 미룬다. 그 해의 뉴스보다 먼저 오면 그 해 몫은 흔들림·빚투가 갖고 뉴스는 건너뛴다. */
+  private int freeStockYearDay(int day, SchedulingContext context, Set<Integer> stockYears) {
+    if (context.fullTimeInvestor()) {
+      return day;
+    }
+    int year = calendar.daysPerYear();
+    int y = day / year;
+    if (!stockYears.contains(y)) {
+      return day;
+    }
+    while (stockYears.contains(y)) {
+      y++;
+    }
+    return y * year;
+  }
+
+  /**
    * 뉴스는 해마다 yearly-chance-bp 확률로 한 번, 그 해 안의 한 날에 온다. 안 걸린 해는 없다 (decisions.md 80번). 해마다의 굴림과 날은 판
    * 시드와 해 번호로 정해져 같은 판이면 같다. base(마지막 뉴스나 투자 시작) 뒤의 첫 뉴스 날을 돌려준다.
    */
-  private Optional<Integer> nextNewsDay(int base, SchedulingContext context, SeededRandom random) {
+  private Optional<Integer> nextNewsDay(
+      int base, SchedulingContext context, SeededRandom random, Set<Integer> stockYears) {
     int year = calendar.daysPerYear();
     int endYear = context.endDay() / year;
     for (int y = base / year; y <= endYear; y++) {
@@ -995,7 +1036,7 @@ class DefaultEventService implements EventService {
         }
         continue;
       }
-      if (comes && day > base) {
+      if (comes && day > base && !stockYears.contains(y)) {
         return Optional.of(day);
       }
     }
