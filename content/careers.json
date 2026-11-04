@@ -25286,7 +25286,7 @@
         }
       },
       {
-        "code": "aim",
+        "code": "push",
         "label": "목표 수익률을 올려 공격적으로 굴린다",
         "stat": "courage",
         "baseBp": 3000,
@@ -25310,7 +25310,7 @@
         }
       },
       {
-        "code": "save",
+        "code": "keep",
         "label": "생활비를 줄이고 원칙대로 한다",
         "success": {
           "statDeltas": {
