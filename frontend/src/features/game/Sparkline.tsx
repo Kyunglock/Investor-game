@@ -4,11 +4,14 @@ export function Sparkline({
   width = 90,
   height = 26,
   className = '',
+  color = 'var(--teal)',
 }: {
   values: number[]
   width?: number
   height?: number
   className?: string
+  /** 선 색. 기본은 청록 */
+  color?: string
 }) {
   if (values.length === 0) {
     return null
@@ -32,7 +35,7 @@ export function Sparkline({
       role="img"
       aria-label="최근 12달 가격"
     >
-      <polyline fill="none" stroke="var(--teal)" strokeWidth={1.5} points={points} />
+      <polyline fill="none" stroke={color} strokeWidth={1.5} points={points} />
     </svg>
   )
 }
