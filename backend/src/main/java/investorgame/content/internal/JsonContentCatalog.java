@@ -68,6 +68,11 @@ class JsonContentCatalog implements ContentCatalog {
 
   private final Meta meta;
   private final List<JobDefinition> jobs;
+
+  /** 아이를 말하는 낱말. 아이디어·아이템 같은 낱말은 뺀다 (#240). */
+  private static final java.util.regex.Pattern CHILD_WORDS =
+      java.util.regex.Pattern.compile("아이(?!디어|템|콘|돌|폰|스)|자녀|학원비|아들|딸(?!기)|애들");
+
   private final List<CareerDefinition> careers;
   private final List<TraitDefinition> traits;
   private final List<TraitStage> traitStages;
@@ -574,6 +579,10 @@ class JsonContentCatalog implements ContentCatalog {
                       && jobCodes.contains(effect.becomeJob())
                       && !job(effect.becomeJob()).offered()),
               "회사 세우기(becomeJob)는 전업투자자의 장면에서 제안되지 않는 직업으로만: " + where);
+          // 결혼 문구(textFamily)는 아이 없는 부부에게도 나온다. 아이 이야기는 textChildren에만 (#240).
+          require(
+              effect.textFamily() == null || !CHILD_WORDS.matcher(effect.textFamily()).find(),
+              "결혼 문구(textFamily)에 아이 이야기가 있다. textChildren으로 옮긴다: " + where);
           CareerDefinition next =
               effect.followUp() == null ? null : careersByCode.get(effect.followUp());
           require(

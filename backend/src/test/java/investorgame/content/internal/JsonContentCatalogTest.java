@@ -152,10 +152,7 @@ class JsonContentCatalogTest {
     for (var career : load().careers()) {
       for (var option : career.options()) {
         for (var effect : List.of(option.success(), option.fail())) {
-          for (String text : new String[] {effect.text(), effect.textFamily()}) {
-            if (text == null) {
-              continue;
-            }
+          for (String text : effect.texts()) {
             for (String sentence : text.split("(?<=[.!?])")) {
               if (!pay.matcher(sentence).find() || effect.salaryPercent() == 0) {
                 continue;
@@ -211,6 +208,30 @@ class JsonContentCatalogTest {
       }
       if (career.body().contains("명예퇴직") && career.minTenureYears() < 20) {
         wrong.add(career.code() + ": minTenureYears " + career.minTenureYears());
+      }
+    }
+    assertThat(wrong).isEmpty();
+  }
+
+  /** #240: 혼자인 사람에게도 나오는 본문·선택지·결과 문구는 배우자·아이를 전제하지 않는다. 그런 이야기는 textFamily·textChildren에만. */
+  @Test
+  void 혼자에게도_나오는_문구는_배우자와_아이를_전제하지_않는다() {
+    java.util.regex.Pattern spouse =
+        java.util.regex.Pattern.compile("배우자|아내|남편|자녀|가족 동반|가족과 상의|두 집 살림");
+    List<String> wrong = new ArrayList<>();
+    for (var career : load().careers()) {
+      if (spouse.matcher(career.body()).find()) {
+        wrong.add(career.code() + " 본문");
+      }
+      for (var option : career.options()) {
+        if (spouse.matcher(option.label()).find()) {
+          wrong.add(career.code() + "/" + option.code() + " 선택지");
+        }
+        for (var effect : List.of(option.success(), option.fail())) {
+          if (spouse.matcher(effect.text()).find()) {
+            wrong.add(career.code() + "/" + option.code() + ": " + effect.text());
+          }
+        }
       }
     }
     assertThat(wrong).isEmpty();
@@ -386,8 +407,9 @@ class JsonContentCatalogTest {
             .orElseThrow();
     CareerDefinition.Option push =
         burnout.options().stream().filter(o -> o.code().equals("push")).findFirst().orElseThrow();
-    assertThat(push.success().textFor(true)).contains("가족");
-    assertThat(push.success().textFor(false)).contains("불안");
+    assertThat(push.success().textFor(true, false)).contains("가족").doesNotContain("아이");
+    assertThat(push.success().textFor(true, true)).contains("아이");
+    assertThat(push.success().textFor(false, false)).contains("불안");
     assertThat(push.fail().followUp()).isEqualTo("burnout-layoff");
     assertThat(push.fail().followUpDays()).isBetween(1, 180);
     assertThat(burnout.options()).anyMatch(o -> o.success().becomeInvestor());

@@ -154,6 +154,8 @@ public record CareerDefinition(
    * @param followUpDays followUp이 오기까지 걸리는 날 수
    * @param becomeJob 전업투자자가 이 직업(회사 대표)이 된다. 직접 세운 회사라 직업 선택에는 나오지 않는 직업이다
    * @param text 결과 문구
+   * @param textFamily 결혼했으면 쓰는 문구. 아이 이야기는 넣지 않는다(아이 없는 부부에게도 나온다)
+   * @param textChildren 아이가 있으면 쓰는 문구. 아이는 결혼 뒤에만 생기므로 배우자 이야기도 써도 된다 (#240)
    * @param happiness 행복도 변화. null이면 옛 규칙(성공 +5·실패 −5·실직 −10) (#230, decisions.md 166번)
    * @param family 가족 점수 변화. null이면 0
    */
@@ -170,11 +172,13 @@ public record CareerDefinition(
       String becomeJob,
       String text,
       String textFamily,
+      String textChildren,
       Boolean becomeInvestor,
       Integer happiness,
       Integer family) {
     public static final Effect NONE =
-        new Effect(0, false, 0, false, 0, 0L, Map.of(), null, 0, null, "", null, false, null, null);
+        new Effect(
+            0, false, 0, false, 0, 0L, Map.of(), null, 0, null, "", null, null, false, null, null);
 
     public Effect {
       salaryPercent = salaryPercent == null ? 0 : salaryPercent;
@@ -189,9 +193,24 @@ public record CareerDefinition(
       becomeInvestor = becomeInvestor != null && becomeInvestor;
     }
 
-    /** 가족(결혼·자녀)이 있으면 textFamily, 없으면 text (decisions.md 83번). */
-    public String textFor(boolean family) {
-      return family && textFamily != null && !textFamily.isBlank() ? textFamily : text;
+    /**
+     * 아이가 있으면 textChildren, 결혼(또는 아이)만 있으면 textFamily, 혼자면 text. 비어 있으면 한 단계 넓은 문구로 물러선다
+     * (decisions.md 83번, #240).
+     */
+    public String textFor(boolean married, boolean children) {
+      if (children && textChildren != null && !textChildren.isBlank()) {
+        return textChildren;
+      }
+      return (married || children) && textFamily != null && !textFamily.isBlank()
+          ? textFamily
+          : text;
+    }
+
+    /** 이 결과가 쓸 수 있는 모든 문구(혼자·결혼·아이). */
+    public List<String> texts() {
+      return java.util.stream.Stream.of(text, textFamily, textChildren)
+          .filter(t -> t != null && !t.isBlank())
+          .toList();
     }
   }
 }
