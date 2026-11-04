@@ -36,4 +36,16 @@ describe('안목 렌즈 (decisions.md 161번)', () => {
     expect(expert).toContain('내 안목으로 본 엔씽')
     expect(expert).toContain('안목 4/4단계')
   })
+
+  it('뉴스 힌트는 읽히는 정도 대신 맞출 확률을 적고, 방향을 못 읽었으면 그렇게 적는다', () => {
+    const news = renderToStaticMarkup(
+      createElement(InsightLens, { insight: 50, hint: '좋아 보인다', accuracy: 68 }),
+    )
+    expect(news).toContain('맞출 확률 68%')
+    expect(news).not.toContain('대강 읽힌다')
+    const neutral = renderToStaticMarkup(
+      createElement(InsightLens, { insight: 20, hint: '글쎄', accuracy: null }),
+    )
+    expect(neutral).toContain('방향은 못 읽었다')
+  })
 })

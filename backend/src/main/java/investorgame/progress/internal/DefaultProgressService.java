@@ -21,6 +21,7 @@ import investorgame.common.Korean;
 import investorgame.common.Phase;
 import investorgame.common.Sex;
 import investorgame.common.StatCodes;
+import investorgame.common.Stats;
 import investorgame.common.error.ConflictException;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
@@ -2491,8 +2492,40 @@ class DefaultProgressService implements ProgressService {
         event.kind() == EventKind.LEVERAGE && event.stockCode() != null
             ? desk.storedAnalysisText(game.id(), event.stockCode()).orElse(null)
             : event.hintText(),
+        hintAccuracy(game, character, event),
         event.swayText(),
         options(game, character, event));
+  }
+
+  /** 뉴스 힌트가 방향을 짚었으면 그 방향이 맞을 확률. 힌트는 안목으로 정해진다 (decisions.md 28번). */
+  private Integer hintAccuracy(GameRow game, CharacterView character, EventView event) {
+    if (event.kind() != EventKind.NEWS || event.hintText() == null) {
+      return null;
+    }
+    ChoiceTicket ticket = events.prepareChoice(game.id(), event.eventId(), Action.HOLD.name());
+    Hint.HintDirection direction =
+        ticket.effect() instanceof ChoiceTicket.News news ? news.hintDirection() : null;
+    return direction == Hint.HintDirection.UP || direction == Hint.HintDirection.DOWN
+        ? behavior.hintAccuracyPercent(character.stats().insight())
+        : null;
+  }
+
+  /** 뉴스 선택지마다 판정에 걸려 고른 대로 못 할 확률. 실제 판정(resolveNews)과 같은 능력치·기분·보유·다른 뉴스로 계산한다. */
+  private List<GameView.Option> newsOptions(
+      GameRow game, CharacterView character, EventView event) {
+    boolean holding = assets.get(game.id()).holdings().containsKey(event.stockCode());
+    Stats stats = MoodEffect.steadied(character.stats(), household.happiness(game.id()));
+    return event.options().stream()
+        .map(
+            o -> {
+              ChoiceTicket ticket = events.prepareChoice(game.id(), event.eventId(), o.code());
+              int percent =
+                  behavior.deviationPercent(
+                      new ChoiceContext(
+                          Action.valueOf(o.code()), stats, ticket.swaySentiment(), holding));
+              return new GameView.Option(o.code(), o.label(), null, null, percent);
+            })
+        .toList();
   }
 
   /**
@@ -2544,6 +2577,9 @@ class DefaultProgressService implements ProgressService {
                           : null,
                       null))
           .toList();
+    }
+    if (event.kind() == EventKind.NEWS && event.stockCode() != null) {
+      return newsOptions(game, character, event);
     }
     if (event.kind() != EventKind.HOUSING) {
       return event.options().stream()

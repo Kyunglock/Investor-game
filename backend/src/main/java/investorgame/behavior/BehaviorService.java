@@ -13,6 +13,12 @@ public interface BehaviorService {
   /** 안목에 따른 힌트의 방향과 강도를 정한다. */
   Hint hint(int insight, Direction truth, RandomGenerator rng);
 
+  /** 안목으로 방향을 짚은 힌트가 맞을 확률(퍼센트). 방향을 못 읽은(중립) 힌트에는 쓰지 않는다. 화면에 보여 준다. */
+  int hintAccuracyPercent(int insight);
+
+  /** 이 선택이 판정(줏대·용기·인내)에 걸려 고른 것과 다른 행동이 될 확률(퍼센트, 반올림). resolve와 같은 규칙으로 계산한다. 화면의 선택지에 보여 준다. */
+  int deviationPercent(ChoiceContext context);
+
   /** 운에 따라 손실을 줄일지 정한다. 손실에 곱할 비율(퍼센트)을 돌려준다. */
   /**
    * 운 (decisions.md 78번). 운 × chance-per-point-bp 확률로 '운이 따른다'. 따르면 내릴 뉴스(truth DOWN)는

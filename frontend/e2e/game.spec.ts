@@ -51,6 +51,17 @@ async function step(page: Page): Promise<string> {
           ? eventCard(page).getByRole('button', { name: '매수' })
           : // 주거 선택지는 돈이 모자라면 막혀 있다. 누를 수 있는 첫 버튼을 고른다.
             eventCard(page).getByRole('button', { disabled: false }).first()
+    if (kind === 'NEWS') {
+      // 매매 선택지마다 판정에 걸려 뒤집힐 확률을, 힌트에는 맞출 확률(또는 방향을 못 읽었다)을 보여 준다.
+      await expect(eventCard(page).getByTestId('deviation-percent').first()).toContainText(
+        /뒤집힐 확률 \d+%/,
+      )
+      if (await eventCard(page).getByTestId('insight-lens').isVisible()) {
+        await expect(eventCard(page).getByTestId('insight-lens-label')).toHaveText(
+          /맞출 확률 \d+%|방향은 못 읽었다/,
+        )
+      }
+    }
     const totalBefore = await page.getByTestId('total-asset').textContent()
     await button.click()
     if (kind === 'NEWS') {

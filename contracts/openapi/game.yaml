@@ -694,6 +694,7 @@ components:
         code: { type: string }
         label: { type: string }
         detail: { type: [string, 'null'], description: 이 선택에 드는 돈(주거 선택지만). 필요한 현금·대출·월 부담 }
+        deviationPercent: { type: [integer, 'null'], description: 뉴스 선택지가 판정(줏대·용기·인내)에 걸려 고른 것과 다르게 될 확률(퍼센트). 뉴스가 아니면 null }
         blocked: { type: [string, 'null'], description: 고를 수 없는 이유(현금 부족·DSR 초과). 고를 수 있으면 null }
     Housing:
       type: object
@@ -829,6 +830,7 @@ components:
         title: { type: string }
         body: { type: string }
         hint: { type: [string, 'null'], description: 안목에 따른 힌트. 뉴스는 방향 힌트(안목이 높을수록 종목·섹터·폭을 짚는다), 빚투 제안은 그 종목의 안목 해석 }
+        hintAccuracy: { type: [integer, 'null'], description: 뉴스 힌트가 방향을 짚었을 때 그 방향이 맞을 확률(퍼센트, 안목으로 정해진다). 방향을 못 읽었거나 뉴스가 아니면 null }
         sway: { type: [string, 'null'], description: 줏대를 흔드는 다른 뉴스. 뉴스일 때 }
         options:
           type: array

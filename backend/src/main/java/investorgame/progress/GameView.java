@@ -123,7 +123,10 @@ public record GameView(
   /** leftHome: 독립해서 집을 나갔다 (decisions.md 68번). 그 뒤로는 양육비가 들지 않고 수첩 사진에도 없다. sex는 태어날 때 정해진 성별. */
   public record Child(int age, boolean leftHome, Sex sex) {}
 
-  /** kind: JOB, TRAIT, OFFER, LIFE, NEWS. 뉴스가 아니면 sector, stock, hint, sway, spark는 null이다. */
+  /**
+   * kind: JOB, TRAIT, OFFER, LIFE, NEWS. 뉴스가 아니면 sector, stock, hint, sway, spark는 null이다.
+   * hintAccuracy는 뉴스 힌트가 방향을 짚었을 때 그 방향이 맞을 확률(퍼센트, 안목으로 정해진다). 방향을 못 읽었거나 뉴스가 아니면 null.
+   */
   public record PendingEvent(
       UUID eventId,
       String kind,
@@ -137,14 +140,21 @@ public record GameView(
       String title,
       String body,
       String hint,
+      Integer hintAccuracy,
       String sway,
       List<Option> options) {}
 
   /**
    * @param detail 이 선택에 드는 돈(주거: 필요한 현금·대출·월 부담). 없으면 null
    * @param blocked 고를 수 없는 이유(주거: 현금 부족·DSR 초과). 고를 수 있으면 null
+   * @param deviationPercent 뉴스 선택지가 판정(줏대·용기·인내)에 걸려 고른 것과 다르게 될 확률(퍼센트). 뉴스가 아니면 null
    */
-  public record Option(String code, String label, String detail, String blocked) {}
+  public record Option(
+      String code, String label, String detail, String blocked, Integer deviationPercent) {
+    public Option(String code, String label, String detail, String blocked) {
+      this(code, label, detail, blocked, null);
+    }
+  }
 
   /**
    * 주거 (주거 설계). totalAsset에는 집 시세 + 보증금 − 주담대 − 전세대출 − 세입자 보증금이 들어간다.
