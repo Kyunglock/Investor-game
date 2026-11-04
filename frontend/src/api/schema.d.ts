@@ -369,6 +369,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/games/{gameId}/share/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * 공유한 판의 요약 그림을 올린다
+         * @description 화면이 그린 결과 카드 PNG(1MB까지)를 올린다 (#275). 링크 미리보기(og:image)와 카카오톡 카드가 이 그림을 쓴다.
+         *     세션의 가장 최근 판이 끝나 있고 공유돼 있어야 한다(404). PNG가 아니면 400.
+         */
+        put: operations["uploadShareImage"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shares/{shareId}/card.png": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 공유한 결과의 요약 그림
+         * @description 세션 없이 보는 공개 값. 올리지 않았으면 404 (#275).
+         */
+        get: operations["getShareImage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/share-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * 화면이 쓰는 공유 설정
+         * @description 카카오 JavaScript 키(공개 값). 없으면 빈 문자열이고, 화면은 휴대폰 공유창·링크 복사로 보낸다 (#275).
+         */
+        get: operations["getShareConfig"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/plays": {
         parameters: {
             query?: never;
@@ -1634,6 +1695,78 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
+        };
+    };
+    uploadShareImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                gameId: components["parameters"]["GameId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "image/png": string;
+            };
+        };
+        responses: {
+            /** @description 올렸다 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getShareImage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                shareId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description PNG */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": string;
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getShareConfig: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 공유 설정 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        kakaoJsKey: string;
+                    };
+                };
+            };
         };
     };
     getPlayLog: {

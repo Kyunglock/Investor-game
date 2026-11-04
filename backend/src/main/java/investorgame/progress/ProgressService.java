@@ -93,4 +93,10 @@ public interface ProgressService {
 
   /** 공유 ID로 결과 카드를 찾는다. 세션 없이 보는 공개 값이다. */
   java.util.Optional<ShareCard> sharedResult(String shareId);
+
+  /** 공유한 판의 요약 그림(PNG)을 올린다 (#275). 세션의 가장 최근 판이 그 판이고 끝나 있고 공유돼 있어야 한다(404). */
+  void shareImage(UUID sessionId, UUID gameId, byte[] png);
+
+  /** 공유 ID의 요약 그림. 올리지 않았으면 비어 있다. 공개 값이다. */
+  java.util.Optional<byte[]> sharedImage(String shareId);
 }

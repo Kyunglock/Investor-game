@@ -3,6 +3,7 @@ package investorgame.api;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -102,6 +104,62 @@ class ShareApiTest {
     GameClient playing = GameClient.newSession(mvc);
     String active = playing.start().read("$.gameId");
     share(playing, active).andExpect(status().isNotFound());
+  }
+
+  private static final byte[] PNG = {
+    (byte) 0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a, 1, 2, 3, 4
+  };
+
+  private ResultActions upload(GameClient client, String gameId, byte[] png) throws Exception {
+    return mvc.perform(
+        put("/api/games/{gameId}/share/image", gameId)
+            .cookie(client.session())
+            .contentType(MediaType.IMAGE_PNG)
+            .content(png));
+  }
+
+  /** #275: 공유한 사람이 요약 그림을 올리면 링크 미리보기와 카카오톡 카드가 그 그림을 쓴다. */
+  @Test
+  void 요약_그림을_올리면_미리보기가_그_그림을_쓴다() throws Exception {
+    GameClient client = GameClient.newSession(mvc);
+    String gameId = endedGame(client);
+
+    // 공유하기 전에는 올릴 곳이 없다.
+    upload(client, gameId, PNG).andExpect(status().isNotFound());
+
+    String shareId =
+        JsonPath.read(
+            share(client, gameId).andReturn().getResponse().getContentAsString(), "$.shareId");
+    mvc.perform(get("/api/shares/{id}/card.png", shareId)).andExpect(status().isNotFound());
+
+    // PNG가 아니면 거절, 남의 세션이면 404.
+    upload(client, gameId, "<svg/>".getBytes()).andExpect(status().isBadRequest());
+    upload(GameClient.newSession(mvc), gameId, PNG).andExpect(status().isNotFound());
+
+    upload(client, gameId, PNG).andExpect(status().isNoContent());
+    byte[] served =
+        mvc.perform(get("/api/shares/{id}/card.png", shareId))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsByteArray();
+    assertThat(served).isEqualTo(PNG);
+
+    String html =
+        mvc.perform(get("/r/{id}", shareId).header("Host", "example.com"))
+            .andReturn()
+            .getResponse()
+            .getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+    assertThat(html)
+        .contains("example.com/api/shares/" + shareId + "/card.png")
+        .doesNotContain("/og-card.png");
+  }
+
+  @Test
+  void 공유_설정은_카카오_키를_알려_준다() throws Exception {
+    mvc.perform(get("/api/share-config"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.kakaoJsKey").isString());
   }
 
   @Test

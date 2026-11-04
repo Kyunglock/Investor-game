@@ -1,18 +1,25 @@
 package investorgame.api;
 
+import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
 import investorgame.progress.ProgressService;
 import investorgame.progress.ShareCard;
 import investorgame.progress.SharedResult;
 import jakarta.servlet.http.HttpServletRequest;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.Arrays;
+import java.util.Map;
 import java.util.UUID;
+import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.HtmlUtils;
 
@@ -26,12 +33,54 @@ class ShareController {
   /** 공유 ID에 쓰는 글자만. 다른 값은 찾아보지도 않는다. */
   private static final String SHARE_ID = "[2-9a-zA-Z]{6,16}";
 
+  /** 요약 그림의 최대 크기. 화면이 그리는 1080×1080 PNG는 100~300KB다. */
+  static final int MAX_IMAGE_BYTES = 1024 * 1024;
+
+  private static final byte[] PNG_MAGIC = {(byte) 0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a};
+
   private final ProgressService progress;
   private final SessionCookies cookies;
+  private final ShareProperties properties;
 
-  ShareController(ProgressService progress, SessionCookies cookies) {
+  ShareController(ProgressService progress, SessionCookies cookies, ShareProperties properties) {
     this.progress = progress;
     this.cookies = cookies;
+    this.properties = properties;
+  }
+
+  /** 화면이 쓰는 공유 설정. 카카오 키가 없으면 빈 문자열 (#275). */
+  @GetMapping("/api/share-config")
+  Map<String, String> config() {
+    String key = properties.kakaoJsKey();
+    return Map.of("kakaoJsKey", key == null ? "" : key.trim());
+  }
+
+  /** 공유한 판의 요약 그림을 올린다 (#275). PNG만, 1MB까지. */
+  @PutMapping(value = "/api/games/{gameId}/share/image", consumes = MediaType.IMAGE_PNG_VALUE)
+  ResponseEntity<Void> uploadImage(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @PathVariable UUID gameId,
+      @RequestBody byte[] png) {
+    if (png.length > MAX_IMAGE_BYTES
+        || png.length < PNG_MAGIC.length
+        || !Arrays.equals(Arrays.copyOf(png, PNG_MAGIC.length), PNG_MAGIC)) {
+      throw new InvalidRequestException("PNG 그림만 1MB까지 올릴 수 있다");
+    }
+    progress.shareImage(cookies.requireSession(token), gameId, png);
+    return ResponseEntity.noContent().build();
+  }
+
+  /** 공유한 결과의 요약 그림. 링크 미리보기와 카카오톡 카드가 가져간다. */
+  @GetMapping(value = "/api/shares/{shareId}/card.png", produces = MediaType.IMAGE_PNG_VALUE)
+  ResponseEntity<byte[]> image(@PathVariable String shareId) {
+    if (!shareId.matches(SHARE_ID)) {
+      throw new NotFoundException("공유한 그림이 없다");
+    }
+    byte[] png =
+        progress.sharedImage(shareId).orElseThrow(() -> new NotFoundException("공유한 그림이 없다"));
+    return ResponseEntity.ok()
+        .cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePublic())
+        .body(png);
   }
 
   @PostMapping("/api/games/{gameId}/share")
@@ -53,6 +102,10 @@ class ShareController {
     String page = "/share/" + shareId;
     String title = esc(previewTitle(card));
     String description = esc(previewDescription(card));
+    String image =
+        progress.sharedImage(shareId).isPresent()
+            ? "/api/shares/" + shareId + "/card.png"
+            : "/og-card.png";
     String html =
         """
         <!doctype html>
@@ -65,17 +118,17 @@ class ShareController {
         <meta property="og:title" content="%1$s">
         <meta property="og:description" content="%2$s">
         <meta property="og:url" content="%3$s/r/%4$s">
-        <meta property="og:image" content="%3$s/og-card.png">
+        <meta property="og:image" content="%3$s%6$s">
         <meta name="twitter:card" content="summary_large_image">
         <meta name="twitter:title" content="%1$s">
         <meta name="twitter:description" content="%2$s">
-        <meta name="twitter:image" content="%3$s/og-card.png">
+        <meta name="twitter:image" content="%3$s%6$s">
         <meta http-equiv="refresh" content="0;url=%5$s">
         </head>
         <body><a href="%5$s">결과 보기</a></body>
         </html>
         """
-            .formatted(title, description, esc(base), shareId, page);
+            .formatted(title, description, esc(base), shareId, page, image);
     return ResponseEntity.ok()
         .contentType(new MediaType(MediaType.TEXT_HTML, StandardCharsets.UTF_8))
         .body(html);
