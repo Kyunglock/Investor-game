@@ -1,4 +1,4 @@
-import { AUTO_FROM_AGE, autoUnlocked, useGameStore } from './store'
+import { useGameStore } from './store'
 
 /**
  * 선택·결과 카드 안의 자동 진행 조각 (decisions.md 131·136번). 자동이 꺼져 있으면 켜는 버튼만, 켜져 있으면 "몇 초 뒤 저절로 넘어간다"는 진행
@@ -17,15 +17,6 @@ export function AutoBar({
 }) {
   const autoPlay = useGameStore((s) => s.autoPlay)
   const setAutoPlay = useGameStore((s) => s.setAutoPlay)
-  const unlocked = useGameStore((s) => (s.game ? autoUnlocked(s.game, s.day) : false))
-  if (!autoPlay && !unlocked) {
-    // 50세 전에는 켜는 버튼 대신 언제부터인지 알린다 (#200).
-    return (
-      <p className="mt-2 text-[11px] text-faint" data-testid="card-auto-locked">
-        직접 고르는 인생입니다. 자동 진행은 {AUTO_FROM_AGE}세부터 켤 수 있습니다.
-      </p>
-    )
-  }
   if (!autoPlay) {
     return (
       <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-faint">
