@@ -234,6 +234,64 @@ describe('배속 (decisions.md 189번)', () => {
   })
 })
 
+describe('요청이 끊겨도 버튼이 잠기지 않는다 (모바일에서 다른 앱에 갔다 돌아올 때)', () => {
+  const pending = {
+    eventId: 'e-1',
+    kind: 'LIFE',
+    occursDay: 20 * YEAR,
+    title: 't',
+    body: 'b',
+    options: [{ code: 'accept', label: '응' }],
+  } as unknown as Game['pendingEvent']
+
+  beforeEach(() => {
+    vi.mocked(api.GET).mockReset()
+    vi.mocked(api.POST).mockReset()
+  })
+
+  it('선택 요청이 네트워크 오류로 끊기면 choosing을 풀고 서버 상태로 다시 맞춘다', async () => {
+    useGameStore.setState({
+      game: game({ pendingEvent: pending }),
+      status: 'playing',
+      choosing: false,
+    })
+    vi.mocked(api.POST)
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce({ data: game(), response: { status: 200 } } as never)
+    await useGameStore.getState().choose('accept')
+    expect(useGameStore.getState().choosing).toBe(false)
+    // 다시 불러와 서버가 가진 판(선택이 이미 처리됐으면 대기 중인 선택 없음)으로 맞춘다.
+    expect(useGameStore.getState().game?.pendingEvent ?? null).toBeNull()
+  })
+
+  it('다시 불러오기마저 끊기면 지금 화면을 그대로 두고 다시 고를 수 있다', async () => {
+    useGameStore.setState({
+      game: game({ pendingEvent: pending }),
+      status: 'playing',
+      choosing: false,
+    })
+    vi.mocked(api.POST).mockRejectedValue(new TypeError('Failed to fetch'))
+    await useGameStore.getState().choose('accept')
+    expect(useGameStore.getState().choosing).toBe(false)
+    expect(useGameStore.getState().status).toBe('playing')
+    expect(useGameStore.getState().game?.pendingEvent?.eventId).toBe('e-1')
+  })
+
+  it('보고 요청이 끊겨도 reporting을 풀어 시계가 다음에 다시 보고한다', async () => {
+    useGameStore.setState({
+      game: game(),
+      day: 20 * YEAR + 40,
+      status: 'playing',
+      running: true,
+      reporting: false,
+    })
+    vi.mocked(api.POST).mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    useGameStore.getState().tick(100)
+    await vi.waitFor(() => expect(vi.mocked(api.POST)).toHaveBeenCalled())
+    await vi.waitFor(() => expect(useGameStore.getState().reporting).toBe(false))
+  })
+})
+
 describe('보고 응답은 새 기록만 (#192)', () => {
   const entry = (seq: number) => ({ seq, day: seq, kind: 'LIFE' as const, payload: {} })
 
