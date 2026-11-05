@@ -13,10 +13,12 @@ import investorgame.content.HousewarmingText;
 import investorgame.content.InvestorType;
 import investorgame.content.JobDefinition;
 import investorgame.content.LifeText;
+import investorgame.content.NewsClues;
 import investorgame.content.NewsDefinition;
 import investorgame.content.NoticeDefinition;
 import investorgame.content.OutingText;
 import investorgame.content.PartTimeJob;
+import investorgame.content.RaisingContent;
 import investorgame.content.ShakeDefinition;
 import investorgame.content.SpouseRentText;
 import investorgame.content.SpouseText;
@@ -64,7 +66,9 @@ class JsonContentCatalog implements ContentCatalog {
           "shakes.json",
           "crises.json",
           "homes.json",
-          "analysis.json");
+          "analysis.json",
+          "raising.json",
+          "clues.json");
 
   private final Meta meta;
   private final List<JobDefinition> jobs;
@@ -85,6 +89,8 @@ class JsonContentCatalog implements ContentCatalog {
   private final List<HomeRegion> homeRegions;
   private final Life life;
   private final AnalysisText analysis;
+  private final RaisingContent raising;
+  private final Map<String, NewsClues> clues;
   private final Map<String, String> sectorNames;
   private final Map<String, String> styleNames;
   private final Map<String, String> riskNames;
@@ -138,6 +144,8 @@ class JsonContentCatalog implements ContentCatalog {
     this.crises = read(json, "crises.json", new TypeReference<>() {});
     this.homeRegions = read(json, "homes.json", new TypeReference<>() {});
     this.analysis = read(json, "analysis.json", new TypeReference<>() {});
+    this.raising = read(json, "raising.json", new TypeReference<>() {});
+    this.clues = read(json, "clues.json", new TypeReference<Map<String, NewsClues>>() {});
     this.sectorNames = toMap(meta.sectors());
     this.styleNames = toMap(meta.styles());
     this.riskNames = toMap(meta.risks());
@@ -473,6 +481,20 @@ class JsonContentCatalog implements ContentCatalog {
     return analysis;
   }
 
+  @Override
+  public RaisingContent raising() {
+    return raising;
+  }
+
+  @Override
+  public NewsClues clues(String newsCode) {
+    NewsClues clue = clues.get(newsCode);
+    if (clue == null) {
+      throw new IllegalArgumentException("단서 기사 문장이 없는 뉴스: " + newsCode);
+    }
+    return clue;
+  }
+
   /** 잘못된 콘텐츠는 서버 시작 단계에서 실패시킨다. 게임 중에 터지는 것보다 낫다. */
   private void validate() {
     require(!jobs.isEmpty(), "직업이 하나도 없다");
@@ -726,6 +748,45 @@ class JsonContentCatalog implements ContentCatalog {
     validateLife();
     require(!swayPhrases("POS").isEmpty() && !swayPhrases("NEG").isEmpty(), "다른 뉴스 문구가 없다");
     validateAnalysis();
+    validateRaising();
+  }
+
+  /** 육성 카드는 판마다 골라 쓰므로, 어느 카드가 뽑혀도 판이 막히지 않게 시작 때 본다 (증권사 육성 설계 3절). */
+  private void validateRaising() {
+    require(raising != null, "raising.json이 비어 있다");
+    for (String slot : List.of(RaisingContent.SLOT_STYLE, RaisingContent.SLOT_SECTOR)) {
+      require(
+          raising.traits().stream().anyMatch(card -> slot.equals(card.slot())),
+          "육성 성향 카드가 없다: " + slot);
+    }
+    require(!raising.bigs().isEmpty(), "돈이 걸린 큰일 카드가 없다");
+    for (RaisingContent.Card card :
+        java.util.stream.Stream.concat(raising.traits().stream(), raising.bigs().stream())
+            .toList()) {
+      require(card.options().size() >= 2, "육성 카드의 선택지는 둘 이상이어야 한다: " + card.code());
+      for (RaisingContent.Option option : card.options()) {
+        String where = card.code() + "/" + option.code();
+        validateTraitDeltas(where, option.traitDeltas(), false);
+        validateStatDeltas(where, option.statDeltas());
+        for (RaisingContent.CashOutcome outcome : option.outcomes()) {
+          require(outcome.weight() > 0, "결과 가중치는 양수여야 한다: " + where);
+        }
+      }
+    }
+    require(raising.tempters().size() >= 2, "단골 꼬드김 인물이 모자란다");
+    for (String stat : List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE)) {
+      require(
+          raising.devices().stream().filter(d -> stat.equals(d.statCode())).count() == 1,
+          "능력치마다 투자 원칙 장치가 하나씩 있어야 한다: " + stat);
+      require(raising.flipTips().containsKey(stat), "처음 뒤집힘 설명이 없다: " + stat);
+    }
+    for (NewsDefinition definition : news) {
+      NewsClues clue = clues.get(definition.code());
+      require(clue != null, "단서 기사 문장이 없다: " + definition.code());
+      require(
+          clue.up().size() >= 3 && clue.down().size() >= 3 && !clue.neutral().isEmpty(),
+          "단서 기사 문장이 모자란다(오름·내림 셋 이상, 중립 하나 이상): " + definition.code());
+    }
   }
 
   /** 해석은 어떤 안목·결론 조합에서도 문구를 골라야 하므로 모든 칸이 차 있어야 한다 (매매창 설계 4.4절). */
@@ -850,6 +911,11 @@ class JsonContentCatalog implements ContentCatalog {
   }
 
   private void validateTraitDeltas(String where, Map<String, Integer> deltas) {
+    validateTraitDeltas(where, deltas, true);
+  }
+
+  /** bothAxes: 성장기 장면은 한 선택지가 스타일과 섹터를 모두 드러낸다. 육성 카드는 한 장이 한 축만 맡는다. */
+  private void validateTraitDeltas(String where, Map<String, Integer> deltas, boolean bothAxes) {
     boolean hasStyle = false;
     boolean hasSector = false;
     for (String key : deltas.keySet()) {
@@ -871,7 +937,7 @@ class JsonContentCatalog implements ContentCatalog {
         require(false, "알 수 없는 성향 키: " + where + " " + key);
       }
     }
-    require(hasStyle && hasSector, "선택지가 스타일과 섹터를 모두 드러내야 한다: " + where);
+    require(!bothAxes || (hasStyle && hasSector), "선택지가 스타일과 섹터를 모두 드러내야 한다: " + where);
   }
 
   private static final Set<String> VOLATILITIES = Set.of("low", "mid", "high");

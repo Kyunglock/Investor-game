@@ -45,6 +45,7 @@ class DefaultBehaviorService implements BehaviorService {
 
     // 줏대: 누군가(유튜버·지인…)가 "다른 뉴스"를 들고 꼬드긴다. "다른 뉴스"가 없는 자유 매매는 건너뛴다. 난수는 이미 뽑았으므로 순서는 그대로다.
     if (context.swaySentiment() != null
+        && !context.guards().conviction()
         && convictionRoll < deviationBp(context.stats().conviction())) {
       Action tempted = tempted(context.swaySentiment(), action, context.holding());
       if (tempted != action) {
@@ -56,11 +57,14 @@ class DefaultBehaviorService implements BehaviorService {
 
     if (action == Action.HOLD) {
       // 인내심: 들고 있는 걸 지켜보려다 못 참고 판다. 보유가 없으면 참을 것도 없다 (관망→매수는 줏대만 만든다).
-      if (context.holding() && secondRoll < deviationBp(context.stats().patience())) {
+      if (context.holding()
+          && !context.guards().patience()
+          && secondRoll < deviationBp(context.stats().patience())) {
         deviations.add(new Deviation(StatCodes.PATIENCE, Action.HOLD, Action.SELL));
         action = Action.SELL;
       }
-    } else if (secondRoll < deviationBp(context.stats().courage())) {
+    } else if (!(action == Action.BUY && context.guards().courageBuy())
+        && secondRoll < deviationBp(context.stats().courage())) {
       deviations.add(new Deviation(StatCodes.COURAGE, action, Action.HOLD));
       action = Action.HOLD;
     }

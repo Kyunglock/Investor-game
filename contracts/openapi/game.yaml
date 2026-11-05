@@ -17,6 +17,61 @@ paths:
       responses:
         '204':
           description: 세션이 준비됨
+  /api/runs:
+    post:
+      operationId: startRun
+      summary: 3분 육성 한 판을 시작한다
+      description: |
+        진행 중인 판이 있으면 버리고 새로 시작한다. 나이도 시계도 없고 카드 수(12장 안팎)가 판의 끝이다 (증권사 육성 설계 3절).
+        세션의 첫 판은 처음 온 사람을 위한 짜인 판이다 (11.2절).
+      responses:
+        '201':
+          description: 새 판. 첫 카드가 펼쳐져 있다
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Run' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+  /api/runs/current:
+    get:
+      operationId: getCurrentRun
+      summary: 가장 최근 육성 판 (이어하기, 끝난 판의 결과 보기)
+      responses:
+        '200':
+          description: 진행 중이거나 끝난 판
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Run' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/runs/{runId}/choose:
+    post:
+      operationId: chooseRunCard
+      summary: 펼쳐진 카드에 선택을 낸다
+      description: card는 화면이 본 카드 번호다. 지금 카드와 다르거나(두 번 누름) 고를 수 없는 선택이면 400.
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [card, option]
+              properties:
+                card: { type: integer, minimum: 0 }
+                option: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: 고른 결과와 그 뒤의 판
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunChoice' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/games:
     post:
       operationId: startGame
@@ -474,6 +529,182 @@ components:
       required: true
       schema: { type: string, format: uuid }
   schemas:
+    Run:
+      type: object
+      description: |
+        육성 한 판의 화면 값. 능력치는 등급(F~SSS)만 담는다 (증권사 육성 설계 2.2절). 뉴스의 숨은 방향과 결정적 문장은 없다.
+      required: [runId, status, card, cardCount, scripted, fund, cash, debt, totalAsset, holdings, grades, overallGrade, devices, unlocked]
+      properties:
+        runId: { type: string, format: uuid }
+        status: { type: string, enum: [ACTIVE, ENDED] }
+        card: { type: integer, description: 지금 카드 번호(0부터) }
+        cardCount: { type: integer }
+        scripted: { type: boolean, description: 처음 온 사람의 짜인 첫 판인가 (11.2절) }
+        fund: { type: integer, format: int64, description: 이 판의 운용금 }
+        cash: { type: integer, format: int64 }
+        debt: { type: integer, format: int64 }
+        totalAsset: { type: integer, format: int64, description: 현금 + 보유 평가액 − 빚 }
+        holdings:
+          type: array
+          items: { $ref: '#/components/schemas/RunHolding' }
+        grades:
+          type: object
+          description: 능력치 코드(insight, patience, courage, conviction, luck) → 등급
+          additionalProperties: { $ref: '#/components/schemas/Grade' }
+        overallGrade: { $ref: '#/components/schemas/Grade' }
+        style: { oneOf: [{ $ref: '#/components/schemas/Named' }, { type: 'null' }] }
+        sector: { oneOf: [{ $ref: '#/components/schemas/Named' }, { type: 'null' }] }
+        devices:
+          type: array
+          description: 걸어 둔 투자 원칙 장치
+          items:
+            type: object
+            required: [code, statCode, name, cost]
+            properties:
+              code: { type: string }
+              statCode: { type: string }
+              name: { type: string }
+              cost: { type: string, description: 대가 한 줄. 장치를 건 동안 늘 보인다 }
+        unlocked:
+          type: array
+          description: 처음 온 사람에게 하나씩 열린 기능 (sell, highlighter, size, principle)
+          items: { type: string }
+        current: { oneOf: [{ $ref: '#/components/schemas/RunCard' }, { type: 'null' }] }
+        result: { oneOf: [{ $ref: '#/components/schemas/RunResult' }, { type: 'null' }] }
+    Grade:
+      type: string
+      enum: [F, E, D, C, B, A, S, SS, SSS, X, XX, XXX, Z, ZZ, ZZZ]
+    RunHolding:
+      type: object
+      required: [stockCode, stockName, sectorName, quantity, avgCost, price, value, pnl, pnlBp]
+      properties:
+        stockCode: { type: string }
+        stockName: { type: string }
+        sectorName: { type: string }
+        quantity: { type: integer, format: int64 }
+        avgCost: { type: integer, format: int64 }
+        price: { type: integer, format: int64 }
+        value: { type: integer, format: int64 }
+        pnl: { type: integer, format: int64 }
+        pnlBp: { type: integer }
+    RunCard:
+      type: object
+      required: [kind, title, body, sentences, options, tips]
+      properties:
+        kind: { type: string, enum: [TRAIT, NEWS, PRINCIPLE, RELEASE, BIG, LEVERAGE, EXAM] }
+        title: { type: string }
+        body: { type: [string, 'null'] }
+        stock:
+          oneOf:
+            - type: object
+              required: [code, name, sectorName, price, changeBp, held]
+              properties:
+                code: { type: string }
+                name: { type: string }
+                sectorName: { type: string }
+                price: { type: integer, format: int64 }
+                changeBp: { type: integer, description: 판 시작 가격 대비 }
+                held: { type: integer, format: int64 }
+            - type: 'null'
+        sentences:
+          type: array
+          description: 단서 기사 문장. 형광펜이 그어진 문장은 highlighted (투자 원칙 장치 설계 3.1절)
+          items:
+            type: object
+            required: [text, highlighted]
+            properties:
+              text: { type: string }
+              highlighted: { type: boolean }
+        memo: { type: [string, 'null'], description: 형광펜 옆 여백의 캐릭터 메모 }
+        sway:
+          oneOf:
+            - type: object
+              required: [who, text]
+              properties:
+                who: { type: string, description: 단골 꼬드김 인물 }
+                text: { type: string }
+            - type: 'null'
+        omen: { type: [string, 'null'], description: 폭락 조짐(빨간 글씨) }
+        options:
+          type: array
+          items:
+            type: object
+            required: [code, label]
+            properties:
+              code: { type: string }
+              label: { type: string }
+              detail: { type: [string, 'null'] }
+        tips:
+          type: array
+          description: 이 카드에서 처음 열린 기능의 한 줄 설명 (11.1절)
+          items: { type: string }
+    RunResult:
+      type: object
+      required: [overallGrade, fund, totalAsset, returnBp, flips, highlights]
+      properties:
+        overallGrade: { $ref: '#/components/schemas/Grade' }
+        fund: { type: integer, format: int64 }
+        totalAsset: { type: integer, format: int64 }
+        returnBp: { type: integer }
+        flips: { type: integer, description: 이 판에서 손이 뒤집힌 횟수 }
+        highlights: { type: array, items: { type: string } }
+    RunChoice:
+      type: object
+      required: [outcome, run]
+      properties:
+        outcome: { $ref: '#/components/schemas/RunOutcome' }
+        run: { $ref: '#/components/schemas/Run' }
+    RunOutcome:
+      type: object
+      required: [kind, chosen, actual, flips, lines, growth]
+      properties:
+        kind: { type: string, enum: [TRAIT, NEWS, PRINCIPLE, RELEASE, BIG, LEVERAGE, EXAM] }
+        chosen: { type: string }
+        actual: { type: string, description: 판정을 거친 실제 선택. chosen과 다르면 손이 뒤집혔다 }
+        flips:
+          type: array
+          items:
+            type: object
+            required: [statCode, from, to]
+            properties:
+              statCode: { type: string }
+              from: { type: string }
+              to: { type: string }
+              who: { type: [string, 'null'], description: 꼬드긴 단골 인물 이름 }
+        trade:
+          oneOf:
+            - type: object
+              required: [side, quantity, price, amount, deferred]
+              properties:
+                side: { type: string, enum: [BUY, SELL] }
+                quantity: { type: integer, format: int64 }
+                price: { type: integer, format: int64 }
+                amount: { type: integer, format: int64 }
+                deferred: { type: boolean, description: 증권 앱을 지워 다음 장 가격에 체결됐다 }
+            - type: 'null'
+        price:
+          oneOf:
+            - type: object
+              required: [changeBp, up]
+              properties:
+                changeBp: { type: integer }
+                up: { type: boolean }
+            - type: 'null'
+        ifChosen: { type: [integer, 'null'], format: int64, description: 고른 대로 했다면 이 카드에서 생겼을 손익 }
+        actualPnl: { type: [integer, 'null'], format: int64 }
+        decisive: { type: [string, 'null'], description: 복기. 결정적 문장 }
+        lines: { type: array, items: { type: string } }
+        growth:
+          type: array
+          items:
+            type: object
+            required: [statCode, delta, before, after]
+            properties:
+              statCode: { type: string }
+              delta: { type: integer }
+              before: { $ref: '#/components/schemas/Grade' }
+              after: { $ref: '#/components/schemas/Grade' }
+        tip: { type: [string, 'null'], description: 처음 손이 뒤집혔을 때 한 줄 설명 }
     BotSessionRequest:
       type: object
       required: [persona]

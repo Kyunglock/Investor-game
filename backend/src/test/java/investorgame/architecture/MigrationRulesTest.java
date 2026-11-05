@@ -30,7 +30,8 @@ class MigrationRulesTest {
           "progress",
           "session",
           "content",
-          "result");
+          "result",
+          "raising");
 
   private static final Pattern FILE_NAME = Pattern.compile("V(\\d{12})__([a-z]+)_[a-z0-9_]+\\.sql");
 

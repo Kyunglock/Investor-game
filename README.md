@@ -1,6 +1,6 @@
 # Investor Game
 
-뉴스 이벤트를 보고 매수·매도·관망을 고르며 자산을 불리는 투자자 시뮬레이터. 사용자의 선택이 캐릭터 능력치에 따라 확률로 뒤집히는 것이 핵심이다.
+증권사 사장이 되어 수습 투자자를 한 명씩 3분 동안 키운다. 단서 기사를 읽고 사기·팔기·지켜보기를 고르지만, 실행은 그 사람의 능력치가 하고 확률로 뒤집힌다. 설계는 [증권사 육성 설계](./docs/superpowers/specs/2026-11-05-brokerage-raising-design.md).
 
 설계 문서는 [`docs/`](./docs)에 있다. 처음이라면 [`docs/decisions.md`](./docs/decisions.md)와 [`docs/architecture.md`](./docs/architecture.md)부터 읽는다.
 

@@ -29,7 +29,8 @@ class DomainBoundaryTest {
           "progress",
           "session",
           "content",
-          "result");
+          "result",
+          "raising");
 
   private static final JavaClasses CLASSES =
       new ClassFileImporter()
@@ -57,7 +58,10 @@ class DomainBoundaryTest {
   /** 콘텐츠를 직접 읽을 수 있는 도메인. 이벤트 운영은 정의를, 시장은 종목을 읽는다 (경제 개편 설계 5.1절). */
   private static final Set<String> READS_CONTENT = Set.of("event", "market");
 
-  /** 진행만 다른 게임 도메인을 호출한다. 이벤트 운영과 시장은 콘텐츠만 읽을 수 있다. */
+  /**
+   * 진행만 다른 게임 도메인을 호출한다. 이벤트 운영과 시장은 콘텐츠만 읽을 수 있다. 육성은 3분 육성 한 판을 조율하며 행동 규칙과 콘텐츠만 쓴다 (증권사 육성 설계
+   * 3절).
+   */
   @ParameterizedTest
   @MethodSource("domains")
   void 진행_외의_도메인은_다른_도메인을_호출하지_않는다(String domain) {
@@ -65,7 +69,9 @@ class DomainBoundaryTest {
       return;
     }
     Set<String> allowed =
-        READS_CONTENT.contains(domain) ? Set.of(domain, "content") : Set.of(domain);
+        domain.equals("raising")
+            ? Set.of(domain, "content", "behavior")
+            : READS_CONTENT.contains(domain) ? Set.of(domain, "content") : Set.of(domain);
     String[] forbidden =
         DOMAINS.stream()
             .filter(d -> !allowed.contains(d))
@@ -114,10 +120,10 @@ class DomainBoundaryTest {
         .dependOnClassesThat()
         .resideInAnyPackage(
             DOMAINS.stream()
-                .filter(d -> !d.equals("progress") && !d.equals("session"))
+                .filter(d -> !d.equals("progress") && !d.equals("session") && !d.equals("raising"))
                 .map(d -> pkg(d) + "..")
                 .toArray(String[]::new))
-        .because("API는 규칙을 판단하지 않고 진행에 요청한다")
+        .because("API는 규칙을 판단하지 않고 진행·육성에 요청한다")
         .check(CLASSES);
   }
 

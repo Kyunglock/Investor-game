@@ -192,4 +192,10 @@ public interface ContentCatalog {
       String title, String body, String bodyAgain, String acceptLabel, String declineLabel) {}
 
   record LeverageText(String title, String body, String borrowLabel, String passLabel) {}
+
+  /** 3분 육성 한 판의 카드 문구 (증권사 육성 설계 3절). */
+  RaisingContent raising();
+
+  /** 뉴스 정의의 단서 기사 재료 문장. 모든 뉴스 정의에 있다 (투자 원칙 장치 설계 3.1절). 없는 코드면 IllegalArgumentException. */
+  NewsClues clues(String newsCode);
 }

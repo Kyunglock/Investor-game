@@ -24,6 +24,64 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 3분 육성 한 판을 시작한다
+         * @description 진행 중인 판이 있으면 버리고 새로 시작한다. 나이도 시계도 없고 카드 수(12장 안팎)가 판의 끝이다 (증권사 육성 설계 3절).
+         *     세션의 첫 판은 처음 온 사람을 위한 짜인 판이다 (11.2절).
+         */
+        post: operations["startRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 가장 최근 육성 판 (이어하기, 끝난 판의 결과 보기) */
+        get: operations["getCurrentRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/runs/{runId}/choose": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 펼쳐진 카드에 선택을 낸다
+         * @description card는 화면이 본 카드 번호다. 지금 카드와 다르거나(두 번 누름) 고를 수 없는 선택이면 400.
+         */
+        post: operations["chooseRunCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/games": {
         parameters: {
             query?: never;
@@ -476,6 +534,171 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description 육성 한 판의 화면 값. 능력치는 등급(F~SSS)만 담는다 (증권사 육성 설계 2.2절). 뉴스의 숨은 방향과 결정적 문장은 없다. */
+        Run: {
+            /** Format: uuid */
+            runId: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "ENDED";
+            /** @description 지금 카드 번호(0부터) */
+            card: number;
+            cardCount: number;
+            /** @description 처음 온 사람의 짜인 첫 판인가 (11.2절) */
+            scripted: boolean;
+            /**
+             * Format: int64
+             * @description 이 판의 운용금
+             */
+            fund: number;
+            /** Format: int64 */
+            cash: number;
+            /** Format: int64 */
+            debt: number;
+            /**
+             * Format: int64
+             * @description 현금 + 보유 평가액 − 빚
+             */
+            totalAsset: number;
+            holdings: components["schemas"]["RunHolding"][];
+            /** @description 능력치 코드(insight, patience, courage, conviction, luck) → 등급 */
+            grades: {
+                [key: string]: components["schemas"]["Grade"];
+            };
+            overallGrade: components["schemas"]["Grade"];
+            style?: components["schemas"]["Named"] | null;
+            sector?: components["schemas"]["Named"] | null;
+            /** @description 걸어 둔 투자 원칙 장치 */
+            devices: {
+                code: string;
+                statCode: string;
+                name: string;
+                /** @description 대가 한 줄. 장치를 건 동안 늘 보인다 */
+                cost: string;
+            }[];
+            /** @description 처음 온 사람에게 하나씩 열린 기능 (sell, highlighter, size, principle) */
+            unlocked: string[];
+            current?: components["schemas"]["RunCard"] | null;
+            result?: components["schemas"]["RunResult"] | null;
+        };
+        /** @enum {string} */
+        Grade: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "X" | "XX" | "XXX" | "Z" | "ZZ" | "ZZZ";
+        RunHolding: {
+            stockCode: string;
+            stockName: string;
+            sectorName: string;
+            /** Format: int64 */
+            quantity: number;
+            /** Format: int64 */
+            avgCost: number;
+            /** Format: int64 */
+            price: number;
+            /** Format: int64 */
+            value: number;
+            /** Format: int64 */
+            pnl: number;
+            pnlBp: number;
+        };
+        RunCard: {
+            /** @enum {string} */
+            kind: "TRAIT" | "NEWS" | "PRINCIPLE" | "RELEASE" | "BIG" | "LEVERAGE" | "EXAM";
+            title: string;
+            body: string | null;
+            stock?: {
+                code: string;
+                name: string;
+                sectorName: string;
+                /** Format: int64 */
+                price: number;
+                /** @description 판 시작 가격 대비 */
+                changeBp: number;
+                /** Format: int64 */
+                held: number;
+            } | null;
+            /** @description 단서 기사 문장. 형광펜이 그어진 문장은 highlighted (투자 원칙 장치 설계 3.1절) */
+            sentences: {
+                text: string;
+                highlighted: boolean;
+            }[];
+            /** @description 형광펜 옆 여백의 캐릭터 메모 */
+            memo?: string | null;
+            sway?: {
+                /** @description 단골 꼬드김 인물 */
+                who: string;
+                text: string;
+            } | null;
+            /** @description 폭락 조짐(빨간 글씨) */
+            omen?: string | null;
+            options: {
+                code: string;
+                label: string;
+                detail?: string | null;
+            }[];
+            /** @description 이 카드에서 처음 열린 기능의 한 줄 설명 (11.1절) */
+            tips: string[];
+        };
+        RunResult: {
+            overallGrade: components["schemas"]["Grade"];
+            /** Format: int64 */
+            fund: number;
+            /** Format: int64 */
+            totalAsset: number;
+            returnBp: number;
+            /** @description 이 판에서 손이 뒤집힌 횟수 */
+            flips: number;
+            highlights: string[];
+        };
+        RunChoice: {
+            outcome: components["schemas"]["RunOutcome"];
+            run: components["schemas"]["Run"];
+        };
+        RunOutcome: {
+            /** @enum {string} */
+            kind: "TRAIT" | "NEWS" | "PRINCIPLE" | "RELEASE" | "BIG" | "LEVERAGE" | "EXAM";
+            chosen: string;
+            /** @description 판정을 거친 실제 선택. chosen과 다르면 손이 뒤집혔다 */
+            actual: string;
+            flips: {
+                statCode: string;
+                from: string;
+                to: string;
+                /** @description 꼬드긴 단골 인물 이름 */
+                who?: string | null;
+            }[];
+            trade?: {
+                /** @enum {string} */
+                side: "BUY" | "SELL";
+                /** Format: int64 */
+                quantity: number;
+                /** Format: int64 */
+                price: number;
+                /** Format: int64 */
+                amount: number;
+                /** @description 증권 앱을 지워 다음 장 가격에 체결됐다 */
+                deferred: boolean;
+            } | null;
+            price?: {
+                changeBp: number;
+                up: boolean;
+            } | null;
+            /**
+             * Format: int64
+             * @description 고른 대로 했다면 이 카드에서 생겼을 손익
+             */
+            ifChosen?: number | null;
+            /** Format: int64 */
+            actualPnl?: number | null;
+            /** @description 복기. 결정적 문장 */
+            decisive?: string | null;
+            lines: string[];
+            growth: {
+                statCode: string;
+                delta: number;
+                before: components["schemas"]["Grade"];
+                after: components["schemas"]["Grade"];
+            }[];
+            /** @description 처음 손이 뒤집혔을 때 한 줄 설명 */
+            tip?: string | null;
+        };
         BotSessionRequest: {
             /** @description 봇의 페르소나 코드 (예 panic, holder). 행동 프로필의 bot_persona가 된다 */
             persona: string;
@@ -1231,6 +1454,81 @@ export interface operations {
                 };
                 content?: never;
             };
+        };
+    };
+    startRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 새 판. 첫 카드가 펼쳐져 있다 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Run"];
+                };
+            };
+            401: components["responses"]["SessionRequired"];
+        };
+    };
+    getCurrentRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 진행 중이거나 끝난 판 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Run"];
+                };
+            };
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    chooseRunCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    card: number;
+                    option: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 고른 결과와 그 뒤의 판 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunChoice"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
         };
     };
     startGame: {
