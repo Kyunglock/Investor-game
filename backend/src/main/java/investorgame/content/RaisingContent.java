@@ -1,0 +1,104 @@
+package investorgame.content;
+
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 3분 육성 한 판의 카드 문구 (content/raising.json, 증권사 육성 설계 3절). 나이·학교·가족·직장이 나오지 않는다.
+ *
+ * @param traits 성향 카드. slot이 style이면 투자 스타일·위험·소신을, sector면 관심 섹터를 정한다
+ * @param bigs 돈이 걸린 큰일 카드 (빚내서 사기는 leverage가 따로 맡는다)
+ * @param tempters 판마다 다시 나오는 단골 꼬드김 인물 (투자 원칙 장치 설계 2.1절)
+ * @param devices 투자 원칙 장치 셋 (투자 원칙 장치 설계 1.1절)
+ * @param flipTips 처음 손이 뒤집혔을 때 한 줄 설명. 능력치 코드별 (증권사 육성 설계 11.1절)
+ * @param unlockTips 처음 열리는 기능의 한 줄 설명. 기능 코드별
+ */
+public record RaisingContent(
+    List<Card> traits,
+    List<Card> bigs,
+    Leverage leverage,
+    List<Tempter> tempters,
+    List<Device> devices,
+    Map<String, String> flipTips,
+    Map<String, String> unlockTips,
+    Exam exam) {
+
+  public static final String SLOT_STYLE = "style";
+  public static final String SLOT_SECTOR = "sector";
+
+  public record Card(String code, String slot, String title, String body, List<Option> options) {}
+
+  /**
+   * @param traitDeltas 성향 점수 (style.·risk.·mind.·sector. 접두사). 없으면 비어 있다
+   * @param statDeltas 능력치 변화. 운은 움직이지 않는다
+   * @param outcomes 고른 뒤 굴리는 현금 결과. 비어 있으면 아무 일도 없다
+   */
+  public record Option(
+      String code,
+      String label,
+      String note,
+      Map<String, Integer> traitDeltas,
+      Map<String, Integer> statDeltas,
+      List<CashOutcome> outcomes) {
+
+    public Option {
+      traitDeltas = traitDeltas == null ? Map.of() : Map.copyOf(traitDeltas);
+      statDeltas = statDeltas == null ? Map.of() : Map.copyOf(statDeltas);
+      outcomes = outcomes == null ? List.of() : List.copyOf(outcomes);
+    }
+  }
+
+  /** cashPercent: 지금 현금에 더하는 비율(%). 음수면 잃는다. */
+  public record CashOutcome(int weight, int cashPercent, String note) {}
+
+  /** 빚내서 사기 카드. 제목의 {stock}·{drop}에 가장 많이 빠진 종목과 낙폭이 들어간다. */
+  public record Leverage(
+      String title,
+      String body,
+      String borrowLabel,
+      String passLabel,
+      String borrowNote,
+      String passNote) {}
+
+  /**
+   * 단골 인물. 문구의 {stock}은 종목 이름.
+   *
+   * @param first 처음 꼬드김에 넘어갔을 때
+   * @param again 두 번째
+   * @param repeat 세 번째부터
+   * @param won 꼬드김 덕에 벌었을 때
+   * @param chatLeft 단톡방을 나간 뒤 한 줄
+   */
+  public record Tempter(
+      String code,
+      String name,
+      String first,
+      String again,
+      String repeat,
+      String won,
+      String chatLeft) {}
+
+  /**
+   * @param statCode 이 장치가 막는 판정의 능력치
+   * @param cost 대가 한 줄. 장치를 건 동안 화면에 늘 보인다
+   */
+  public record Device(
+      String code,
+      String statCode,
+      String name,
+      String cost,
+      String offerTitle,
+      String offerBody,
+      String acceptLabel,
+      String declineLabel,
+      String acceptNote,
+      String declineNote,
+      String releaseTitle,
+      String releaseBody,
+      String releaseLabel,
+      String keepLabel,
+      String releaseNote) {}
+
+  /** 입사 심사 카드. */
+  public record Exam(String title, String body, String registerLabel) {}
+}
