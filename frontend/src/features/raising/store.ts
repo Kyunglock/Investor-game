@@ -24,6 +24,10 @@ interface RaisingState {
   hire: (register: boolean, replace?: number) => Promise<void>
   place: (seats: { employeeId: number; desk: string | null }[]) => Promise<void>
   settle: () => Promise<void>
+  /** 인사팀이 올해 공채를 맡아 신입을 데려온다 (증권사 육성 설계 6.3절). */
+  hrRecruit: () => Promise<void>
+  /** 인사팀이 데려온 신입을 등록하거나 돌려보낸다. */
+  decideCandidate: (register: boolean, replace?: number) => Promise<void>
   /** 회사를 팔고 공동창업자와 다음 회사를 차린다 (증권사 육성 설계 9절). */
   sell: (cofounders: number[]) => Promise<void>
 }
@@ -137,6 +141,20 @@ export const useRaisingStore = create<RaisingState>((set, get) => ({
   settle: async () => {
     set({ busy: true, error: null })
     const res = await safely(api.POST('/api/company/settle'))
+    set({ busy: false, company: res?.data ?? get().company, error: reason(res?.error) })
+  },
+
+  hrRecruit: async () => {
+    set({ busy: true, error: null })
+    const res = await safely(api.POST('/api/company/hr-recruit'))
+    set({ busy: false, company: res?.data ?? get().company, error: reason(res?.error) })
+  },
+
+  decideCandidate: async (register, replace) => {
+    set({ busy: true, error: null })
+    const res = await safely(
+      api.POST('/api/company/candidate', { body: { register, replace: replace ?? null } }),
+    )
     set({ busy: false, company: res?.data ?? get().company, error: reason(res?.error) })
   },
 

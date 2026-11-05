@@ -18,7 +18,7 @@ type Seats = Record<number, string | null>
 export function CompanyScreen({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
-  const { place, settle, start } = useRaisingStore.getState()
+  const { place, settle, start, hrRecruit } = useRaisingStore.getState()
   const [seats, setSeats] = useState<Seats>(() =>
     Object.fromEntries(company.employees.map((e) => [e.id, e.desk ?? null])),
   )
@@ -111,6 +111,7 @@ export function CompanyScreen({ company }: { company: Company }) {
                   <span className="text-[12px] text-muted" data-testid="attire">
                     · {ATTIRE_NAMES[attireOf(e.overallGrade)]}
                     {e.effects.length > 0 && ` · ${e.effects.join('·')}`}
+                    {e.salary > 0 && ` · 연봉 ${shortWon(e.salary)}`}
                     {e.experienceNeeded != null &&
                       ` · 실전 경험 ${e.experience}/${e.experienceNeeded}`}
                     {glowOf(e.overallGrade) &&
@@ -169,6 +170,16 @@ export function CompanyScreen({ company }: { company: Company }) {
                 이렇게 앉힌다
               </button>
             )}
+            {meeting.recruitOpen && meeting.hrCap && (
+              <button
+                type="button"
+                disabled={busy || changed}
+                onClick={() => void hrRecruit()}
+                className="min-h-12 rounded border border-pen font-semibold disabled:opacity-50"
+              >
+                인사팀에 공채를 맡긴다 (신입은 {meeting.hrCap}까지 · 연봉이 나간다)
+              </button>
+            )}
             {meeting.recruitOpen && (
               <button
                 type="button"
@@ -189,6 +200,7 @@ export function CompanyScreen({ company }: { company: Company }) {
             </button>
           </div>
         )}
+        {company.candidate && <CandidatePanel company={company} />}
         {company.sale && <SalePanel company={company} />}
       </div>
     </Document>
@@ -308,6 +320,63 @@ function SalePanel({ company }: { company: Company }) {
       >
         회사를 팔고 새 회사를 차린다
       </button>
+    </section>
+  )
+}
+
+/** 인사팀이 데려온 신입 (6.3절). 3분 육성 없이 들어왔다. 자리가 꽉 찼으면 기존 직원과 바꾸거나 돌려보낸다. */
+function CandidatePanel({ company }: { company: Company }) {
+  const busy = useRaisingStore((s) => s.busy)
+  const { decideCandidate } = useRaisingStore.getState()
+  const candidate = company.candidate
+  if (!candidate) {
+    return null
+  }
+  const full = company.employees.length >= company.seats
+  const button =
+    'min-h-12 w-full rounded border border-pen font-semibold disabled:opacity-50 hover:bg-pen hover:text-white'
+  return (
+    <section className="mt-5 rounded border border-teal p-4" data-testid="candidate">
+      <h3 className="font-pen text-[22px]">인사팀 공채</h3>
+      {candidate.line && <p className="text-[14px]">{candidate.line}</p>}
+      <p className="mt-1 text-[14px]">
+        신입 종합 <b className="font-mono-num">{candidate.overallGrade}</b> ·{' '}
+        {Object.entries(STAT_NAMES)
+          .map(([code, name]) => `${name} ${candidate.grades[code]}`)
+          .join(' · ')}
+      </p>
+      <div className="mt-3 grid gap-2">
+        {full ? (
+          company.employees.map((e) => (
+            <button
+              key={e.id}
+              type="button"
+              disabled={busy}
+              onClick={() => void decideCandidate(true, e.id)}
+              className={button}
+            >
+              {e.name}(종합 {e.overallGrade}) 대신 등록한다
+            </button>
+          ))
+        ) : (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void decideCandidate(true)}
+            className="min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
+          >
+            등록한다
+          </button>
+        )}
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => void decideCandidate(false)}
+          className={button}
+        >
+          돌려보낸다
+        </button>
+      </div>
     </section>
   )
 }

@@ -140,4 +140,34 @@ class CompanyApiTest {
         json(mvc.perform(post("/api/runs").cookie(session)).andExpect(status().isCreated()));
     assertThat(nextRecruit.read("$.recruit", Boolean.class)).as("새 회사의 공채").isTrue();
   }
+
+  /** 인사 직원 (6.3절): 인사팀에 앉히면 3분 육성 없이 신입이 들어온다. 등록하면 연봉을 받는다. */
+  @Test
+  void 인사팀이_공채를_맡으면_육성_없이_신입이_들어온다() throws Exception {
+    DocumentContext first = playRun();
+    hire(first.read("$.runId"), true, null);
+    postJson("/api/company/hr-recruit", "").andExpect(status().isBadRequest());
+
+    DocumentContext placed =
+        json(
+            postJson("/api/company/placement", "{\"seats\":[{\"employeeId\":1,\"desk\":\"hr\"}]}")
+                .andExpect(status().isOk()));
+    assertThat(placed.read("$.meeting.hrCap", String.class)).isNotBlank();
+
+    DocumentContext recruited =
+        json(
+            mvc.perform(post("/api/company/hr-recruit").cookie(session))
+                .andExpect(status().isOk()));
+    assertThat(recruited.read("$.candidate.overallGrade", String.class)).isNotBlank();
+    assertThat(recruited.read("$.meeting.recruitOpen", Boolean.class)).isFalse();
+    mvc.perform(post("/api/runs").cookie(session)).andExpect(status().isBadRequest());
+    mvc.perform(post("/api/company/settle").cookie(session)).andExpect(status().isBadRequest());
+
+    DocumentContext after =
+        json(postJson("/api/company/candidate", "{\"register\":true}").andExpect(status().isOk()));
+    assertThat(after.read("$.employees.length()", Integer.class)).isEqualTo(2);
+    assertThat(after.read("$.employees[1].salary", Long.class)).isPositive();
+    assertThat(after.read("$.candidate", Object.class)).isNull();
+    mvc.perform(post("/api/company/settle").cookie(session)).andExpect(status().isOk());
+  }
 }

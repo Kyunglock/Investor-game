@@ -156,6 +156,43 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/hr-recruit:
+    post:
+      operationId: hrRecruit
+      summary: 인사팀이 올해 공채를 맡아 신입을 데려온다 (6.3절)
+      description: 3분 육성 없이 신입이 들어온다. 인사팀에 아무도 없거나 올해 공채를 했으면 400.
+      responses:
+        '200':
+          description: 신입이 candidate에 실린 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/candidate:
+    post:
+      operationId: decideCandidate
+      summary: 인사팀이 데려온 신입을 등록하거나 돌려보낸다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [register]
+              properties:
+                register: { type: boolean }
+                replace: { type: [integer, 'null'], description: 자리가 꽉 찼을 때 바꿀 직원 ID }
+      responses:
+        '200':
+          description: 정한 뒤의 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/sale:
     post:
       operationId: sellCompany
@@ -727,7 +764,7 @@ components:
           type: array
           items:
             type: object
-            required: [id, name, overallGrade, grades, experience, effects]
+            required: [id, name, overallGrade, grades, experience, effects, salary]
             properties:
               id: { type: integer }
               name: { type: string }
@@ -740,6 +777,7 @@ components:
                 type: array
                 description: X 이상 등급의 효과 이름(확신·경보·역발상·리더·사수·선견). 쌓인다 (2.4절)
                 items: { type: string }
+              salary: { type: integer, format: int64, description: 연봉. 인사 직원이 뽑은 신입만 받는다 (6.3절) }
               grades: { type: object, additionalProperties: { $ref: '#/components/schemas/Grade' } }
               desk: { type: [string, 'null'] }
         desks:
@@ -759,12 +797,25 @@ components:
               required: [wanted, recruitFund, recruitOpen]
               properties:
                 omen: { type: [string, 'null'], description: 폭락 조짐. 헛조짐일 수도 있다 }
+                hrCap:
+                  description: 인사팀이 공채를 맡을 수 있으면 뽑는 신입의 종합 등급 상한. 인사팀에 아무도 없으면 null (6.3절)
+                  oneOf: [{ $ref: '#/components/schemas/Grade' }, { type: 'null' }]
                 earlyOmen: { type: [string, 'null'], description: XX 경보. 내년 폭락 조짐 한 줄 }
                 forecast: { type: [string, 'null'], description: ZZZ 선견. 내년 시장 한 줄 }
                 wanted: { type: string }
                 recruitFund: { type: integer, format: int64 }
                 recruitOpen: { type: boolean }
                 pendingRunId: { type: [string, 'null'], format: uuid }
+            - type: 'null'
+        candidate:
+          description: 인사팀이 데려와 등록을 기다리는 신입 (6.3절)
+          oneOf:
+            - type: object
+              required: [overallGrade, grades]
+              properties:
+                overallGrade: { $ref: '#/components/schemas/Grade' }
+                grades: { type: object, additionalProperties: { $ref: '#/components/schemas/Grade' } }
+                line: { type: [string, 'null'] }
             - type: 'null'
         lastSettlement:
           oneOf:

@@ -32,4 +32,10 @@ public interface CompanyService {
    * 넘으면 400. 돌려주는 값은 새 회사다.
    */
   CompanyView sell(UUID sessionId, java.util.List<Integer> cofounders);
+
+  /** 인사팀에 앉은 직원이 올해 공채를 맡아 신입을 데려온다 (6.3절). 인사 직원이 없거나 올해 공채를 했으면 400. */
+  CompanyView hrRecruit(UUID sessionId);
+
+  /** 인사팀이 데려온 신입을 등록하거나(자리가 꽉 찼으면 replace와 바꾼다) 돌려보낸다. 데려온 신입이 없으면 400. */
+  CompanyView decideCandidate(UUID sessionId, boolean register, Integer replace);
 }

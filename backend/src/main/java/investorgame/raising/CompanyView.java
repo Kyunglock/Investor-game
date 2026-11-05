@@ -12,6 +12,7 @@ import java.util.UUID;
  * @param nextGradeCapital 다음 등급의 자본. 맨 위면 null
  * @param seats 앉힐 수 있는 자리 수
  * @param meeting 연초 회의. 끝난 회사면 null
+ * @param candidate 인사팀이 데려와 등록을 기다리는 신입. 없으면 null
  * @param lastSettlement 지난 결산. 아직 없으면 null
  * @param number 사장이 차린 몇 번째 회사인가
  * @param era 이 회사의 시대 (9.4절)
@@ -36,6 +37,7 @@ public record CompanyView(
     List<Employee> employees,
     List<Desk> desks,
     Meeting meeting,
+    Candidate candidate,
     Settlement lastSettlement) {
 
   public enum Status {
@@ -49,6 +51,7 @@ public record CompanyView(
    * @param experience 실전 경험
    * @param experienceNeeded 다음 단계까지 드는 실전 경험. SSS가 아니면 null(아직 쌓이지 않는다)
    * @param effects X 이상 등급의 효과 이름(확신·경보…). 쌓인다 (2.4절)
+   * @param salary 연봉. 인사 직원이 뽑은 신입만 받는다 (6.3절)
    */
   public record Employee(
       int id,
@@ -58,13 +61,18 @@ public record CompanyView(
       String desk,
       int experience,
       Integer experienceNeeded,
-      List<String> effects) {}
+      List<String> effects,
+      long salary) {}
+
+  /** 인사팀이 데려와 등록을 기다리는 신입 (6.3절). line은 데려온 인사 직원의 한 줄. */
+  public record Candidate(String overallGrade, Map<String, String> grades, String line) {}
 
   public record Desk(
       String code, String name, String statCode, boolean trades, String description) {}
 
   /**
    * @param omen 폭락 조짐(빨간 글씨). 없으면 null. 헛조짐일 수도 있다
+   * @param hrCap 인사팀이 공채를 맡을 수 있으면 뽑는 신입의 종합 등급 상한. 인사팀에 아무도 없으면 null
    * @param earlyOmen XX 경보: 내년 폭락 조짐 한 줄. 경보 직원이 없거나 조짐이 없으면 null
    * @param forecast ZZZ 선견: 내년 시장 한 줄. 선견 직원이 없으면 null
    * @param wanted 회사가 올해 필요한 인재 한 줄 (6.1절 1번)
@@ -73,6 +81,7 @@ public record CompanyView(
    * @param pendingRunId 끝났지만 등록을 정하지 않은 공채 판. 없으면 null
    */
   public record Meeting(
+      String hrCap,
       String omen,
       String earlyOmen,
       String forecast,
