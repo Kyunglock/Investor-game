@@ -430,17 +430,20 @@ raising:
     seats: [2, 3, 4, 5, 6, 7, 8, 9, 10]
     # 등급 한 단계마다 수수료 매출과 판돈 ×1.5. 자본 띠가 ×3이라 등급이 저절로 치솟지 않는다
     multiplier-percent: 150
-    fee-bp: 200
-    stake-percent: 60
+    # 수수료 매출 자본의 3%, 판돈은 자본 전부(× 배율, 자본을 넘지 않음). 경제 맞춤 (decisions.md 226번, EconomySimulationTest)
+    fee-bp: 300
+    stake-percent: 100
     # 공채 육성의 운용금: 자본의 10%, 10억 원까지 (6.5절)
     recruit-percent: 10
     recruit-max: 1000000000
     decisions: 4
     omen-percent: 75
     false-omen-percent: 15
+    # 맞히면 +28%·틀리면 −10%·손이 뒤집히면 −14%(바이오), 단타는 +22%·−8%·−10%. C 직원 둘이면 한 시대(세 해)에 자본이 1.5~2배,
+    # A 직원이면 셋에 하나쯤 E(3억)에 닿는다 (decisions.md 226번)
     desks:
-      bio: { gain-bp: 1200, miss-bp: 800, flip-bp: 1000 }
-      day: { gain-bp: 800, miss-bp: 600, flip-bp: 700 }
+      bio: { gain-bp: 2800, miss-bp: 1000, flip-bp: 1400 }
+      day: { gain-bp: 2200, miss-bp: 800, flip-bp: 1000 }
     phase-bp: { boom: 300, normal: 0, crash: -500 }
     sway-percent: 50
     # 폭락장에 손이 뒤집히면(못 참고 팔면) 손실이 두 배
