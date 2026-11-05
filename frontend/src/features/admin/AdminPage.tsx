@@ -6,6 +6,39 @@ import { shortWon } from '../game/labels'
 
 type PlayLog = components['schemas']['PlayLog']
 type Play = PlayLog['plays'][number]
+type RunPlay = PlayLog['runs'][number]
+
+const KIND_LABEL: Record<NonNullable<RunPlay['kind']>, string> = {
+  TRAIT: '성향',
+  NEWS: '뉴스',
+  PRINCIPLE: '투자 원칙',
+  RELEASE: '원칙 풀기',
+  BIG: '큰일',
+  LEVERAGE: '빚내서 사기',
+  EXAM: '입사 심사',
+}
+
+/**
+ * 끝내지 않은 육성 판이 어느 카드에서 멈췄는지 (증권사 육성 설계 11.5절). 카드 번호 순. 짜인 첫 판은 따로 센다: 처음 온 사람이 어디서 나가는지가
+ * 가장 궁금하다.
+ */
+export function dropOff(
+  runs: RunPlay[],
+): { card: number; kind: string; all: number; first: number }[] {
+  const rows = new Map<number, { card: number; kind: string; all: number; first: number }>()
+  for (const r of runs) {
+    if (r.status === 'ENDED' || r.kind == null) {
+      continue
+    }
+    const row = rows.get(r.card) ?? { card: r.card, kind: KIND_LABEL[r.kind], all: 0, first: 0 }
+    row.all++
+    if (r.scripted) {
+      row.first++
+    }
+    rows.set(r.card, row)
+  }
+  return [...rows.values()].sort((a, b) => a.card - b.card)
+}
 
 const TOKEN_KEY = 'ig-admin-token'
 
@@ -68,6 +101,7 @@ export function AdminPage() {
   }
 
   const ended = log?.plays.filter((p) => p.status === 'ENDED').length ?? 0
+  const runsEnded = log?.runs.filter((r) => r.status === 'ENDED').length ?? 0
   const ipOf = new Map(log?.sessions.map((s) => [s.sessionId, s.lastIp ?? '—']) ?? [])
 
   return (
@@ -99,11 +133,74 @@ export function AdminPage() {
       {log && (
         <>
           <p className="text-sm" data-testid="admin-summary">
-            세션 <b>{log.sessions.length}</b> · 판 <b>{log.plays.length}</b> · 끝까지 한 판{' '}
-            <b>{ended}</b>
+            세션 <b>{log.sessions.length}</b> · 육성 판 <b>{log.runs.length}</b> · 입사 심사까지{' '}
+            <b>{runsEnded}</b> · 옛 인생 판 <b>{log.plays.length}</b> · 끝까지 한 판 <b>{ended}</b>
           </p>
 
-          <Card title="판" aside="최근에 시작한 순">
+          <Card title="육성 판이 멈춘 카드" aside="끝내지 않은 판, 카드 순">
+            <table className="w-full text-left text-[13px]" data-testid="admin-dropoff">
+              <thead className="text-[11px] text-faint">
+                <tr>
+                  <th className="py-1 font-normal">카드</th>
+                  <th className="font-normal">종류</th>
+                  <th className="font-normal">멈춘 판</th>
+                  <th className="font-normal">그중 짜인 첫 판</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dropOff(log.runs).map((row) => (
+                  <tr key={row.card} className="border-t border-line-soft">
+                    <td className="py-1.5 font-mono-num">{row.card + 1}번째</td>
+                    <td>{row.kind}</td>
+                    <td className="font-mono-num">{row.all}</td>
+                    <td className="font-mono-num">{row.first}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+
+          <Card title="육성 판" aside="최근에 시작한 순">
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px] text-left text-[13px]">
+                <thead className="text-[11px] text-faint">
+                  <tr>
+                    <th className="py-1 font-normal">시작</th>
+                    <th className="font-normal">세션</th>
+                    <th className="font-normal">IP</th>
+                    <th className="font-normal">상태</th>
+                    <th className="font-normal">카드</th>
+                    <th className="font-normal">마지막</th>
+                    <th className="font-normal">총자산</th>
+                    <th className="font-normal">종합 등급</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {log.runs.map((r) => (
+                    <tr key={r.runId} className="border-t border-line-soft" data-testid="admin-run">
+                      <td className="py-1.5 font-mono-num">{time(r.startedAt)}</td>
+                      <td className="font-mono-num">{shortId(r.sessionId)}</td>
+                      <td className="font-mono-num">{ipOf.get(r.sessionId) ?? '—'}</td>
+                      <td>
+                        {STATUS_LABEL[r.status]}
+                        {r.scripted && ' · 첫 판'}
+                        {r.recruit && ' · 공채'}
+                      </td>
+                      <td className="font-mono-num">
+                        {Math.min(r.card + 1, r.cardCount)}/{r.cardCount}
+                        {r.kind && ` ${KIND_LABEL[r.kind]}`}
+                      </td>
+                      <td className="font-mono-num">{time(r.updatedAt)}</td>
+                      <td className="font-mono-num">{shortWon(r.totalAsset)}</td>
+                      <td className="font-mono-num">{r.overallGrade ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          <Card title="옛 인생 판" aside="최근에 시작한 순">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px] text-left text-[13px]">
                 <thead className="text-[11px] text-faint">
@@ -161,7 +258,8 @@ export function AdminPage() {
                     <th className="font-normal">IP (처음 → 마지막)</th>
                     <th className="font-normal">처음 온 때</th>
                     <th className="font-normal">마지막 접속</th>
-                    <th className="font-normal">판 수</th>
+                    <th className="font-normal">육성 판</th>
+                    <th className="font-normal">옛 판</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -174,6 +272,7 @@ export function AdminPage() {
                       </td>
                       <td className="font-mono-num">{time(s.createdAt)}</td>
                       <td className="font-mono-num">{time(s.lastSeenAt)}</td>
+                      <td className="font-mono-num">{s.runs}</td>
                       <td className="font-mono-num">{s.games}</td>
                     </tr>
                   ))}

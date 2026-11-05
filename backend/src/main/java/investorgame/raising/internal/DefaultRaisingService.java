@@ -11,6 +11,7 @@ import investorgame.content.StockDefinition;
 import investorgame.raising.CardOutcome;
 import investorgame.raising.RaisingService;
 import investorgame.raising.RunChoice;
+import investorgame.raising.RunSummary;
 import investorgame.raising.RunView;
 import java.security.SecureRandom;
 import java.util.ArrayList;
@@ -133,6 +134,33 @@ class DefaultRaisingService implements RaisingService {
             row.scripted(),
             state);
     return new RunChoice(outcome, view(saved, memory));
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<RunSummary> recentRuns(int limit) {
+    return runs.recent(limit).stream()
+        .map(
+            recent -> {
+              RunState run = recent.row().state();
+              boolean ended = run.current == null;
+              return new RunSummary(
+                  recent.row().id(),
+                  recent.row().sessionId(),
+                  recent.row().status(),
+                  recent.row().scripted(),
+                  run.recruit,
+                  run.card,
+                  engine.cardCount(),
+                  ended ? null : run.current.kind,
+                  ended ? overallGrade(run) : null,
+                  run.fund,
+                  run.totalAsset(),
+                  run.totalFlips,
+                  recent.createdAt(),
+                  recent.updatedAt());
+            })
+        .toList();
   }
 
   RunView view(RunRepository.Row row, RaisingMemory memory) {

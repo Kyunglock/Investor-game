@@ -2,6 +2,8 @@ package investorgame.api;
 
 import investorgame.progress.GameSummary;
 import investorgame.progress.ProgressService;
+import investorgame.raising.RaisingService;
+import investorgame.raising.RunSummary;
 import investorgame.session.IssuedSession;
 import investorgame.session.SessionService;
 import jakarta.validation.Valid;
@@ -37,16 +39,19 @@ class AdminController {
   private final AdminProperties properties;
   private final SessionService sessions;
   private final ProgressService progress;
+  private final RaisingService raising;
   private final SessionCookies cookies;
 
   AdminController(
       AdminProperties properties,
       SessionService sessions,
       ProgressService progress,
+      RaisingService raising,
       SessionCookies cookies) {
     this.properties = properties;
     this.sessions = sessions;
     this.progress = progress;
+    this.raising = raising;
     this.cookies = cookies;
   }
 
@@ -69,6 +74,10 @@ class AdminController {
     Map<UUID, Long> gamesBySession =
         games.stream()
             .collect(Collectors.groupingBy(GameSummary::sessionId, Collectors.counting()));
+    // 육성 판 (증권사 육성 설계 11.5절): 어느 카드에서 많이 나가는지 본다.
+    List<RunSummary> runs = raising.recentRuns(LIMIT);
+    Map<UUID, Long> runsBySession =
+        runs.stream().collect(Collectors.groupingBy(RunSummary::sessionId, Collectors.counting()));
     List<SessionLine> sessionLines =
         sessions.recent(LIMIT).stream()
             .map(
@@ -78,10 +87,11 @@ class AdminController {
                         s.createdAt(),
                         s.lastSeenAt(),
                         gamesBySession.getOrDefault(s.id(), 0L),
+                        runsBySession.getOrDefault(s.id(), 0L),
                         s.firstIp(),
                         s.lastIp()))
             .toList();
-    return new PlayLog(sessionLines, games);
+    return new PlayLog(sessionLines, games, runs);
   }
 
   private void requireAdmin(String token) {
@@ -98,14 +108,16 @@ class AdminController {
 
   record BotSessionRequest(@NotNull @Pattern(regexp = "[a-z][a-z0-9-]{0,31}") String persona) {}
 
-  record PlayLog(List<SessionLine> sessions, List<GameSummary> plays) {}
+  /** plays는 옛 인생 판, runs는 3분 육성 판이다. */
+  record PlayLog(List<SessionLine> sessions, List<GameSummary> plays, List<RunSummary> runs) {}
 
-  /** games는 최근 판 목록(최대 500판) 안에서 센 수다. */
+  /** games·runs는 최근 판 목록(각각 최대 500판) 안에서 센 수다. */
   record SessionLine(
       UUID sessionId,
       OffsetDateTime createdAt,
       OffsetDateTime lastSeenAt,
       long games,
+      long runs,
       String firstIp,
       String lastIp) {}
 }

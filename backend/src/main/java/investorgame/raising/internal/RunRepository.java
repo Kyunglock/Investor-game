@@ -2,6 +2,7 @@ package investorgame.raising.internal;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -100,6 +101,23 @@ class RunRepository {
         .param("sessionId", sessionId)
         .query(this::map)
         .optional();
+  }
+
+  record Recent(Row row, OffsetDateTime createdAt, OffsetDateTime updatedAt) {}
+
+  List<Recent> recent(int limit) {
+    return jdbc.sql(
+            "SELECT "
+                + COLUMNS
+                + ", created_at, updated_at FROM raising_run ORDER BY created_at DESC LIMIT :limit")
+        .param("limit", limit)
+        .query(
+            (rs, i) ->
+                new Recent(
+                    map(rs, i),
+                    rs.getObject("created_at", OffsetDateTime.class),
+                    rs.getObject("updated_at", OffsetDateTime.class)))
+        .list();
   }
 
   void update(UUID runId, RunState state, boolean ended) {

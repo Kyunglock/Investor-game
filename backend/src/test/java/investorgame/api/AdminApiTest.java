@@ -64,6 +64,29 @@ class AdminApiTest {
         .andExpect(jsonPath("$.sessions[?(@.firstIp == '127.0.0.1')]").isNotEmpty());
   }
 
+  /** 육성 판은 어느 카드에서 멈췄는지 보인다 (증권사 육성 설계 11.5절). 숨은 값(시드·상태 JSON)은 없다. */
+  @Test
+  void 시작한_육성_판이_멈춘_카드와_함께_기록에_보인다() throws Exception {
+    GameClient client = GameClient.newSession(mvc);
+    String runId =
+        com.jayway.jsonpath.JsonPath.read(
+            mvc.perform(post("/api/runs").cookie(client.session()))
+                .andReturn()
+                .getResponse()
+                .getContentAsString(),
+            "$.runId");
+
+    mvc.perform(get("/api/admin/plays").header(AdminController.TOKEN_HEADER, "test-admin-token"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.runs[?(@.runId == '%s')].status", runId).value("ACTIVE"))
+        .andExpect(jsonPath("$.runs[?(@.runId == '%s')].card", runId).value(0))
+        .andExpect(jsonPath("$.runs[?(@.runId == '%s')].kind", runId).value("TRAIT"))
+        .andExpect(jsonPath("$.runs[?(@.runId == '%s')].scripted", runId).value(true))
+        .andExpect(jsonPath("$.runs[?(@.runId == '%s')].seed", runId).doesNotExist())
+        .andExpect(jsonPath("$.runs[?(@.runId == '%s')].state", runId).doesNotExist())
+        .andExpect(jsonPath("$.sessions[0].runs").isNumber());
+  }
+
   @Test
   void 봇_세션은_토큰과_올바른_페르소나가_있어야_발급된다() throws Exception {
     mvc.perform(
