@@ -434,7 +434,6 @@ raising:
     recruit-percent: 10
     recruit-max: 1000000000
     decisions: 4
-    phase-weights: { boom: 30, normal: 45, crash: 25 }
     omen-percent: 75
     false-omen-percent: 15
     desks:
@@ -444,3 +443,17 @@ raising:
     sway-percent: 50
     # 폭락장에 손이 뒤집히면(못 참고 팔면) 손실이 두 배
     crash-flip-percent: 200
+    # 매각과 재창업 (9절, 4단계). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다.
+    # 시대(turns 해)가 끝나면 반드시 팔고, 그 전에는 SSS 이상이면 스스로 팔 수 있다 (decisions.md 215번~)
+    sale:
+      min-grade: SSS
+      # 판 회사의 등급 단계 + 1점(F 1점 … SSS 9점), 명성 한 단계에 2점
+      fame-per-step: 2
+      voluntary-bonus: 1
+      # 공동창업자: 처음 1명, 명성 3단계마다 +1, 4명까지
+      cofounder-base: 1
+      cofounder-fame-steps: 3
+      cofounder-max: 4
+      # 새 회사 시작 자본 1억 원, 명성 한 단계마다 +10%
+      base-capital: 100000000
+      fame-capital-percent: 10

@@ -8,6 +8,7 @@ import investorgame.common.error.InvalidRequestException;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.content.internal.TestContent;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -73,6 +74,8 @@ class CompanyEngineTest {
         assertThat(s.lines).isNotEmpty();
       }
       assertThat(company.year).isEqualTo(PROPERTIES.turns() + 1);
+      assertThat(ENGINE.eraOver(company)).isTrue();
+      assertThat(ENGINE.canSell(company)).as("시대가 끝나면 판다").isTrue();
       assertThatThrownBy(() -> ENGINE.settle(company, new HashSeededRandom(9)))
           .isInstanceOf(InvalidRequestException.class);
       capitals[k] = company.capital;
@@ -112,5 +115,38 @@ class CompanyEngineTest {
       sum += s.results.getFirst().pnl * 10_000 / s.results.getFirst().stake;
     }
     return sum / (double) trials;
+  }
+
+  /** 매각과 재창업 (9절): 시대가 끝나기 전에는 SSS 이상이어야 팔 수 있고, 팔면 명성이 오르고 공동창업자와 다른 시대의 새 회사를 F에서 차린다. */
+  @Test
+  void 회사를_팔면_공동창업자와_새_시대의_F_회사를_차린다() {
+    CompanyState company = ENGINE.open(new HashSeededRandom(4), stats(80, 80, 80, 80), 100_000_000);
+    ENGINE.hire(company, stats(30, 30, 30, 30));
+    assertThat(company.era).isEqualTo("plain");
+    assertThat(ENGINE.canSell(company)).as("F는 시대가 끝나기 전에 못 판다").isFalse();
+    company.capital = 1_000_000_000_000L;
+    assertThat(ENGINE.grade(company.capital)).isEqualTo("SSS");
+    assertThat(ENGINE.canSell(company)).as("SSS면 스스로 판다").isTrue();
+    assertThat(ENGINE.fameFor(company)).as("SSS 9점 + 스스로 판 보너스").isEqualTo(10);
+
+    int fame = ENGINE.fameFor(company);
+    assertThat(ENGINE.fameGrade(fame)).as("10점 ÷ 2 = 5단계").isEqualTo("A");
+    int slots = ENGINE.cofounderSlots(fame);
+    assertThat(slots).isEqualTo(2);
+    assertThatThrownBy(
+            () -> ENGINE.refound(company, List.of(1, 2, 3), fame, new HashSeededRandom(4)))
+        .isInstanceOf(InvalidRequestException.class);
+
+    CompanyState next = ENGINE.refound(company, List.of(1), fame, new HashSeededRandom(4));
+    assertThat(next.number).isEqualTo(2);
+    assertThat(next.era).isNotEqualTo("plain");
+    assertThat(ENGINE.grade(next.capital)).isEqualTo("F");
+    assertThat(next.capital).as("명성 A(5단계)면 시작 자본 +50%").isEqualTo(150_000_000L);
+    assertThat(next.employees)
+        .singleElement()
+        .satisfies(e -> assertThat(e.stats.get("insight")).as("등급 그대로").isEqualTo(80));
+    assertThat(next.opening).contains("김대리");
+    // 새로 뽑는 직원은 지난 회사의 이름을 이어 쓴다.
+    assertThat(ENGINE.hire(next, stats(50, 50, 50, 50)).name).isEqualTo("이수습");
   }
 }

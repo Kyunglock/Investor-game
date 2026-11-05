@@ -26,4 +26,10 @@ public interface CompanyService {
 
   /** 올해 결산을 하고 다음 해 연초 회의로 간다. 마지막 해면 회사가 끝난다. 공채 판이 남아 있으면 400. */
   CompanyView settle(UUID sessionId);
+
+  /**
+   * 회사를 팔고 다음 회사를 F에서 차린다 (9절). 시대가 끝났거나 등급이 매각 조건 이상이어야 한다(400). cofounders는 데려갈 직원 ID로, 공동창업자 수를
+   * 넘으면 400. 돌려주는 값은 새 회사다.
+   */
+  CompanyView sell(UUID sessionId, java.util.List<Integer> cofounders);
 }

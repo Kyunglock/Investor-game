@@ -156,6 +156,29 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/sale:
+    post:
+      operationId: sellCompany
+      summary: 회사를 팔고 다음 회사를 F에서 차린다 (9절)
+      description: 시대가 끝났거나 등급이 매각 조건 이상이어야 한다. 공동창업자 수를 넘게 고르면 400. 응답은 새 회사다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cofounders]
+              properties:
+                cofounders: { type: array, items: { type: integer }, description: 데려갈 직원 ID }
+      responses:
+        '200':
+          description: 새 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/games:
     post:
       operationId: startGame
@@ -659,10 +682,41 @@ components:
     Company:
       type: object
       description: 회사 화면의 값. 올해 시장 갈래는 숨은 값이라 조짐만 담는다. 직원 능력치는 등급만.
-      required: [companyId, status, year, turns, capital, grade, seats, employees, desks]
+      required: [companyId, status, number, era, owner, year, turns, capital, grade, seats, employees, desks]
       properties:
         companyId: { type: string, format: uuid }
-        status: { type: string, enum: [ACTIVE, ENDED] }
+        status: { type: string, enum: [ACTIVE, ENDED], description: ENDED는 시대가 끝났거나 팔린 회사 }
+        number: { type: integer, description: 사장이 차린 몇 번째 회사인가 }
+        era:
+          type: object
+          description: 이 회사의 시대 (9.4절)
+          required: [code, name, description]
+          properties:
+            code: { type: string }
+            name: { type: string }
+            description: { type: string }
+        opening: { type: [string, 'null'], description: 회사를 차릴 때의 한 줄 }
+        owner:
+          type: object
+          description: 사장의 명성 (9.2절)
+          required: [fameGrade, famePoints, sales, cofounderSlots]
+          properties:
+            fameGrade: { $ref: '#/components/schemas/Grade' }
+            famePoints: { type: integer }
+            sales: { type: integer }
+            cofounderSlots: { type: integer, description: 다음 회사에 데려갈 수 있는 공동창업자 수 }
+        sale:
+          description: 지금 팔 수 있으면 매각 조건. 못 팔면 null (9.1절)
+          oneOf:
+            - type: object
+              required: [forced, note, price, fameAfter, cofounderSlots]
+              properties:
+                forced: { type: boolean, description: 시대가 끝나 반드시 판다 }
+                note: { type: string }
+                price: { type: integer, format: int64 }
+                fameAfter: { $ref: '#/components/schemas/Grade' }
+                cofounderSlots: { type: integer }
+            - type: 'null'
         year: { type: integer, description: 지금 해(1부터). 끝났으면 turns + 1 }
         turns: { type: integer }
         capital: { type: integer, format: int64 }

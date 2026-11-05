@@ -110,6 +110,8 @@ public record RaisingContent(
    * @param flipLines 결산 소식 줄. 뒤집힌 능력치별, {name}은 직원 이름
    * @param wanted 연초 회의의 "올해 필요한 인재". 자리 코드별
    * @param phases 결산의 한 해 시장 한 줄. boom·normal·crash
+   * @param eras 회사마다 다른 시대. 첫 회사는 맨 앞 시대다 (9.4절)
+   * @param sale 매각·재창업 문구 (9절)
    */
   public record Company(
       List<String> names,
@@ -118,7 +120,21 @@ public record RaisingContent(
       Map<String, String> wanted,
       Map<String, String> phases,
       String falseOmenNote,
-      String opening) {}
+      String opening,
+      List<Era> eras,
+      Sale sale) {}
+
+  /** 시대 (9.4절). 한 해 시장 갈래의 가중치와 자리별 손익 보너스(맞혔을 때 더하는 만분율)가 다르다. */
+  public record Era(
+      String code,
+      String name,
+      String description,
+      Map<String, Integer> phaseWeights,
+      Map<String, Integer> deskBonusBp) {}
+
+  /** {era}·{grade}·{name}·{price}·{before}·{after}·{names}·{capital} 자리표시를 쓴다. */
+  public record Sale(
+      String eraEnd, String voluntary, String sold, String opening, String openingAlone) {}
 
   public record Desk(
       String code, String name, String statCode, boolean trades, String description) {}

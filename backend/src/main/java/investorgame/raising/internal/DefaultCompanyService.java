@@ -1,8 +1,10 @@
 package investorgame.raising.internal;
 
+import investorgame.common.Korean;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.error.NotFoundException;
 import investorgame.common.random.HashSeededRandom;
+import investorgame.content.RaisingContent;
 import investorgame.raising.CompanyService;
 import investorgame.raising.CompanyView;
 import java.security.SecureRandom;
@@ -30,7 +32,8 @@ class DefaultCompanyService implements CompanyService {
   @Override
   @Transactional(readOnly = true)
   public Optional<CompanyView> current(UUID sessionId) {
-    return companies.latest(sessionId).map(this::view);
+    RaisingMemory memory = runs.memory(sessionId);
+    return companies.latest(sessionId).map(row -> view(row, memory));
   }
 
   @Override
@@ -56,7 +59,7 @@ class DefaultCompanyService implements CompanyService {
       CompanyRepository.Row row =
           new CompanyRepository.Row(UUID.randomUUID(), sessionId, "ACTIVE", seed, company);
       companies.insert(row);
-      return view(row);
+      return view(row, runs.memory(sessionId));
     }
     CompanyRepository.Row row = active.get();
     CompanyState company = row.state();
@@ -77,7 +80,7 @@ class DefaultCompanyService implements CompanyService {
       engine.hire(company, person.stats);
     }
     companies.update(row.id(), company, false);
-    return view(row);
+    return view(row, runs.memory(sessionId));
   }
 
   @Override
@@ -86,7 +89,7 @@ class DefaultCompanyService implements CompanyService {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.place(row.state(), placements);
     companies.update(row.id(), row.state(), false);
-    return view(row);
+    return view(row, runs.memory(sessionId));
   }
 
   @Override
@@ -94,19 +97,68 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView settle(UUID sessionId) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.settle(row.state(), new HashSeededRandom(row.seed()));
-    boolean ended = row.state().year > engine.turns();
+    boolean ended = engine.eraOver(row.state());
     companies.update(row.id(), row.state(), ended);
     return view(
         new CompanyRepository.Row(
-            row.id(), row.sessionId(), ended ? "ENDED" : "ACTIVE", row.seed(), row.state()));
+            row.id(), row.sessionId(), ended ? "ENDED" : "ACTIVE", row.seed(), row.state()),
+        runs.memory(sessionId));
+  }
+
+  @Override
+  @Transactional
+  public CompanyView sell(UUID sessionId, List<Integer> cofounders) {
+    RaisingMemory memory = runs.lockMemory(sessionId);
+    CompanyRepository.Row row =
+        companies.lockLatest(sessionId).orElseThrow(() -> new NotFoundException("회사가 없다"));
+    CompanyState old = row.state();
+    if (!engine.canSell(old)) {
+      throw new InvalidRequestException("아직 팔 수 없다");
+    }
+    if (old.recruitRun != null || old.pendingRun != null) {
+      throw new InvalidRequestException("공채 육성을 먼저 마친다");
+    }
+    if (cofounders.stream().distinct().count() != cofounders.size()) {
+      throw new InvalidRequestException("같은 직원을 두 번 골랐다");
+    }
+    // 매각할 때마다 명성이 오르고, 판 회사의 등급이 높을수록 많이 오른다 (9.2절).
+    memory.famePoints += engine.fameFor(old);
+    memory.sales++;
+    long seed = seeds.nextLong();
+    CompanyState next =
+        engine.refound(old, cofounders, memory.famePoints, new HashSeededRandom(seed));
+    old.sold = true;
+    companies.update(row.id(), old, true);
+    CompanyRepository.Row created =
+        new CompanyRepository.Row(UUID.randomUUID(), sessionId, "ACTIVE", seed, next);
+    companies.insert(created);
+    runs.saveMemory(sessionId, memory);
+    return view(created, memory);
   }
 
   private CompanyRepository.Row lockActive(UUID sessionId) {
     return companies.lockActive(sessionId).orElseThrow(() -> new NotFoundException("회사가 없다"));
   }
 
-  private CompanyView view(CompanyRepository.Row row) {
+  private CompanyView view(CompanyRepository.Row row, RaisingMemory memory) {
     CompanyState c = row.state();
+    RaisingContent.Era era = engine.era(c);
+    CompanyView.Sale sale = null;
+    if (engine.canSell(c)) {
+      int after = memory.famePoints + engine.fameFor(c);
+      RaisingContent.Sale texts = engine.saleTexts();
+      String note =
+          engine.eraOver(c)
+              ? Korean.fill(texts.eraEnd(), Map.of("era", era.name()))
+              : Korean.fill(texts.voluntary(), Map.of("grade", engine.grade(c.capital)));
+      sale =
+          new CompanyView.Sale(
+              engine.eraOver(c),
+              note,
+              c.capital,
+              engine.fameGrade(after),
+              engine.cofounderSlots(after));
+    }
     boolean ended = "ENDED".equals(row.status());
     String grade = engine.grade(c.capital);
     int at = CompanyEngine.LADDER.indexOf(grade);
@@ -139,6 +191,15 @@ class DefaultCompanyService implements CompanyService {
     return new CompanyView(
         row.id(),
         ended ? CompanyView.Status.ENDED : CompanyView.Status.ACTIVE,
+        c.number,
+        new CompanyView.Era(era.code(), era.name(), era.description()),
+        c.opening,
+        new CompanyView.Owner(
+            engine.fameGrade(memory.famePoints),
+            memory.famePoints,
+            memory.sales,
+            engine.cofounderSlots(memory.famePoints)),
+        sale,
         c.year,
         engine.turns(),
         c.capital,

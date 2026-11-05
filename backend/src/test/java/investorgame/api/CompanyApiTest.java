@@ -120,10 +120,24 @@ class CompanyApiTest {
     }
     mvc.perform(get("/api/company").cookie(session))
         .andExpect(jsonPath("$.status").value("ENDED"))
-        .andExpect(jsonPath("$.meeting").doesNotExist());
+        .andExpect(jsonPath("$.meeting").doesNotExist())
+        .andExpect(jsonPath("$.sale.forced").value(true))
+        .andExpect(jsonPath("$.owner.fameGrade").value("F"));
+    // 시대가 끝난 회사는 팔아야 다음 회사가 열린다.
+    mvc.perform(post("/api/runs").cookie(session)).andExpect(status().isBadRequest());
 
     DocumentContext next =
+        json(postJson("/api/company/sale", "{\"cofounders\":[1]}").andExpect(status().isOk()));
+    assertThat(next.read("$.status", String.class)).isEqualTo("ACTIVE");
+    assertThat(next.read("$.number", Integer.class)).isEqualTo(2);
+    assertThat(next.read("$.grade", String.class)).isEqualTo("F");
+    assertThat(next.read("$.employees.length()", Integer.class)).as("공동창업자").isEqualTo(1);
+    assertThat(next.read("$.owner.sales", Integer.class)).isEqualTo(1);
+    assertThat(next.read("$.era.code", String.class)).isNotEqualTo("plain");
+    postJson("/api/company/sale", "{\"cofounders\":[]}").andExpect(status().isBadRequest());
+
+    DocumentContext nextRecruit =
         json(mvc.perform(post("/api/runs").cookie(session)).andExpect(status().isCreated()));
-    assertThat(next.read("$.recruit", Boolean.class)).as("회사가 끝나면 다시 사재로").isFalse();
+    assertThat(nextRecruit.read("$.recruit", Boolean.class)).as("새 회사의 공채").isTrue();
   }
 }

@@ -54,9 +54,96 @@ class CompanyEngine {
   CompanyState open(SeededRandom random, Map<String, Integer> stats, long capital) {
     CompanyState company = new CompanyState();
     company.capital = Math.max(0, capital);
+    company.era = eras().getFirst().code();
     hire(company, stats);
+    company.opening = openingLine(company);
     startYear(company, random);
     return company;
+  }
+
+  RaisingContent.Sale saleTexts() {
+    return content.raising().company().sale();
+  }
+
+  List<RaisingContent.Era> eras() {
+    return content.raising().company().eras();
+  }
+
+  RaisingContent.Era era(CompanyState company) {
+    return eras().stream().filter(e -> e.code().equals(company.era)).findFirst().orElseThrow();
+  }
+
+  /** 시대가 끝났다: 세 해를 다 돌았다. 이제 회사를 판다 (9.4절). */
+  boolean eraOver(CompanyState company) {
+    return company.year > properties.turns();
+  }
+
+  /** 지금 팔 수 있는가. 시대가 끝났거나, 그 전이라도 등급이 매각 조건(SSS) 이상이면 (9.1절). */
+  boolean canSell(CompanyState company) {
+    return !company.sold
+        && (eraOver(company)
+            || LADDER.indexOf(grade(company.capital))
+                >= LADDER.indexOf(properties.sale().minGrade()));
+  }
+
+  /** 사장 명성 등급 (9.2절). 모든 객체가 쓰는 등급표를 쓴다. */
+  String fameGrade(int points) {
+    return LADDER.get(Math.min(LADDER.size() - 1, points / properties.sale().famePerStep()));
+  }
+
+  /** 다음 회사에 데려갈 수 있는 공동창업자 수 (9.3절). 명성이 오르면 는다. */
+  int cofounderSlots(int points) {
+    CompanyProperties.Sale sale = properties.sale();
+    int steps = points / sale.famePerStep();
+    return Math.min(sale.cofounderMax(), sale.cofounderBase() + steps / sale.cofounderFameSteps());
+  }
+
+  /** 판 회사의 등급만큼 명성이 오른다. 시대가 끝나기 전에 스스로 팔면 조금 더. */
+  int fameFor(CompanyState company) {
+    int points = LADDER.indexOf(grade(company.capital)) + 1;
+    return eraOver(company) ? points : points + properties.sale().voluntaryBonus();
+  }
+
+  /**
+   * 회사를 팔고 다음 회사를 F에서 차린다 (9.1·9.3절). 매각가는 자본 그대로다. 공동창업자는 등급 그대로 데려가고, 새 회사의 시작 자본은 명성만큼 커진다. 시대는
+   * 지난 회사와 다른 것으로 뽑는다. memory의 명성은 부르는 쪽이 먼저 올려 둔다.
+   */
+  CompanyState refound(
+      CompanyState sold, List<Integer> cofounders, int famePoints, SeededRandom random) {
+    if (cofounders.size() > cofounderSlots(famePoints)) {
+      throw new InvalidRequestException("공동창업자가 너무 많다");
+    }
+    CompanyState next = new CompanyState();
+    next.number = sold.number + 1;
+    next.hired = sold.hired;
+    CompanyProperties.Sale sale = properties.sale();
+    int steps = Math.min(LADDER.size() - 1, famePoints / sale.famePerStep());
+    next.capital = sale.baseCapital() * (PERCENT + steps * sale.fameCapitalPercent()) / PERCENT;
+    for (Integer id : cofounders) {
+      Employee from =
+          sold.employees.stream()
+              .filter(e -> e.id == id)
+              .findFirst()
+              .orElseThrow(() -> new InvalidRequestException("없는 직원"));
+      from.desk = null;
+      next.employees.add(from);
+    }
+    List<RaisingContent.Era> others =
+        eras().stream().filter(e -> !e.code().equals(sold.era)).toList();
+    next.era = others.get(random.forKey("era", next.number).nextInt(others.size())).code();
+    RaisingContent.Sale texts = content.raising().company().sale();
+    Map<String, String> values =
+        Map.of(
+            "era",
+            era(next).name(),
+            "capital",
+            RunEngine.won(next.capital),
+            "names",
+            String.join("·", next.employees.stream().map(e -> e.name).toList()));
+    next.opening =
+        Korean.fill(next.employees.isEmpty() ? texts.openingAlone() : texts.opening(), values);
+    startYear(next, random);
+    return next;
   }
 
   /** 첫 직원의 이름이 들어간 회사를 연 한 줄. */
@@ -113,7 +200,7 @@ class CompanyEngine {
     int omenRoll = rng.nextInt(PERCENT);
     int textRoll = rng.nextInt(BP);
     int wantedRoll = rng.nextInt(BP);
-    Map<String, Integer> weights = properties.phaseWeights();
+    Map<String, Integer> weights = era(company).phaseWeights();
     int total = weights.values().stream().mapToInt(Integer::intValue).sum();
     int pick = (int) ((long) phaseRoll * total / BP);
     String phase = null;
@@ -187,8 +274,8 @@ class CompanyEngine {
    * 맞힘(안목, 리서치 팀이 형광펜을 빌려준다) 순으로 굴린다. 수수료 매출은 시장과 상관없이 들어온다.
    */
   Settlement settle(CompanyState company, SeededRandom random) {
-    if (company.year > properties.turns()) {
-      throw new InvalidRequestException("끝난 회사다");
+    if (eraOver(company) || company.sold) {
+      throw new InvalidRequestException("시대가 끝났다. 회사를 판다");
     }
     if (company.recruitRun != null || company.pendingRun != null) {
       throw new InvalidRequestException("공채 육성을 먼저 마친다");
@@ -244,7 +331,10 @@ class CompanyEngine {
           bp -=
               crash ? returns.flipBp() * properties.crashFlipPercent() / PERCENT : returns.flipBp();
         } else {
-          bp += hitRoll < hitBp ? returns.gainBp() : -returns.missBp();
+          bp +=
+              hitRoll < hitBp
+                  ? returns.gainBp() + era(company).deskBonusBp().getOrDefault(employee.desk, 0)
+                  : -returns.missBp();
         }
       }
       result.pnl = stake * bp / BP;
