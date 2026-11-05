@@ -14,6 +14,7 @@ import java.util.UUID;
  * @param meeting 연초 회의. 끝난 회사면 null
  * @param applicants 올해 공채 시장의 지원자. 끝난 회사면 비어 있다 (decisions.md 228번)
  * @param refreshCost 지원자를 새로 받는 값
+ * @param invest 올해 투자 회의. 끝난 회사나 옛 회사면 null (decisions.md 229번)
  * @param lastSettlement 지난 결산. 아직 없으면 null
  * @param number 사장이 차린 몇 번째 회사인가
  * @param era 이 회사의 시대 (9.4절)
@@ -40,6 +41,7 @@ public record CompanyView(
     Meeting meeting,
     List<Applicant> applicants,
     long refreshCost,
+    Invest invest,
     Settlement lastSettlement) {
 
   public enum Status {
@@ -76,6 +78,61 @@ public record CompanyView(
       String overallGrade,
       Map<String, String> grades,
       long fee,
+      String line) {}
+
+  /**
+   * 투자 회의 (decisions.md 229번). 정하기 전에는 숨은 방향이 없다.
+   *
+   * @param ready 지금 정할 수 있다(돈을 굴리는 자리에 사람이 있다)
+   * @param highlightBy 형광펜을 그은 리서치 팀 직원. 없으면 null
+   * @param remarks 자리에 앉은 직원의 한마디
+   * @param outcome 정한 뒤의 결과. 아직이면 null
+   */
+  public record Invest(
+      String title,
+      String stockName,
+      String sectorName,
+      List<InvestSentence> sentences,
+      String highlightBy,
+      Sway sway,
+      List<Remark> remarks,
+      List<Option> options,
+      boolean ready,
+      InvestOutcome outcome) {}
+
+  public record InvestSentence(String text, boolean highlighted) {}
+
+  public record Sway(String who, String text) {}
+
+  /**
+   * @param read 기사를 읽은 쪽 UP·DOWN·NEUTRAL
+   * @param stubborn 돈을 굴리는 직원이 제멋대로 할 낌새 LOW·MID·HIGH. 돈을 굴리지 않으면 null
+   */
+  public record Remark(
+      int employeeId, String name, String desk, String read, String text, String stubborn) {}
+
+  public record Option(String code, String label) {}
+
+  /**
+   * @param decisive 결정적 문장의 번호(sentences 안)
+   * @param total 회의 손익. 이미 자본에 들어갔다
+   */
+  public record InvestOutcome(
+      String choice,
+      boolean up,
+      String reveal,
+      int decisive,
+      long total,
+      List<InvestResult> results) {}
+
+  /** follow: BOSS(사장 말대로)·OWN(제 판단대로, "제가 알아서 할게요")·SWAY(꼬드김). */
+  public record InvestResult(
+      int employeeId,
+      String name,
+      String desk,
+      String action,
+      String follow,
+      long pnl,
       String line) {}
 
   public record Desk(

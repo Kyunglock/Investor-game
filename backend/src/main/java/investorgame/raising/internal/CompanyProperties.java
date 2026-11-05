@@ -23,6 +23,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param effects X 이상 등급의 효과 수치 (2.4절)
  * @param hr 인사팀이 공채 시장을 돕는다 (6.3절)
  * @param market 공채 시장: 해마다 지원자가 오고 계약금을 내고 뽑는다 (decisions.md 228번)
+ * @param invest 투자 회의: 해마다 한 번 단서 기사를 놓고 직원들과 고민한다 (decisions.md 229번)
  * @param sale 매각과 재창업 (9절). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다
  */
 @ConfigurationProperties("raising.company")
@@ -44,7 +45,15 @@ public record CompanyProperties(
     Effects effects,
     Hr hr,
     Market market,
+    Invest invest,
     Sale sale) {
+
+  /**
+   * @param yearUpBp 올해 시장 갈래(boom·normal·crash)가 뉴스가 오를 확률에 더하는 만분율
+   * @param sideOppositePercent 곁가지 문장이 숨은 방향의 반대쪽일 확률
+   * @param stubbornBp 직원이 제멋대로 할(꼬드김 + 손 뒤집힘) 확률이 이 만분율 이상이면 "보통", 두 배 이상이면 "높음"으로 보인다
+   */
+  public record Invest(Map<String, Integer> yearUpBp, int sideOppositePercent, int stubbornBp) {}
 
   /**
    * @param applicants 해마다 오는 지원자 수

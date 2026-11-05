@@ -237,6 +237,31 @@
     "market": {
       "wanted": "올해 {desk}에 맞는 사람이다. {stat}이(가) 높다.",
       "hr": "인사팀 {name}이(가) 데려왔다."
+    },
+    "invest": {
+      "options": {
+        "BUY": "산다",
+        "SELL": "판다",
+        "HOLD": "지켜본다"
+      },
+      "reads": {
+        "UP": "오를 것 같습니다. 사시죠.",
+        "DOWN": "불안합니다. 파는 게 맞습니다.",
+        "NEUTRAL": "기사만으론 잘 모르겠네요."
+      },
+      "actions": {
+        "BUY": "샀다",
+        "SELL": "팔았다",
+        "HOLD": "지켜봤다"
+      },
+      "obey": "사장 말대로 {action}.",
+      "rogue": "\"제가 알아서 할게요.\" — 제 판단대로 {action}.",
+      "swayed": "{who} 말을 듣고 {action}.",
+      "reveal": {
+        "UP": "{stock}이(가) {percent}% 올랐다.",
+        "DOWN": "{stock}이(가) {percent}% 내렸다."
+      },
+      "settlement": "투자 회의 — {title}: {amount}"
     }
   }
 }

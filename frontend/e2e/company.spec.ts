@@ -52,7 +52,7 @@ test('처음 오면 회사를 차리고, 직원 없이 F등급 자리 두 개와
   await expect(page.getByTestId('office-art')).toBeVisible()
 })
 
-test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르고, 세 해를 결산하면 팔고 다시 차린다', async ({
+test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르고, 투자 회의와 세 해 결산을 하면 팔고 다시 차린다', async ({
   page,
 }) => {
   test.setTimeout(150_000)
@@ -78,9 +78,20 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await expect(page.getByRole('button', { name: '이렇게 앉힌다' })).toBeHidden()
   await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '2')
 
+  // 투자 회의 (229번): 직원들이 한마디씩 하고, 돈을 굴리는 직원에게는 고집이 보인다. 정해야 결산한다.
+  const invest = page.getByTestId('invest')
+  await expect(invest.getByTestId('remarks').getByRole('listitem')).toHaveCount(2)
+  await expect(invest.getByTestId('stubborn')).toHaveCount(2)
+  await expect(page.getByRole('button', { name: '투자 회의를 먼저 합니다' })).toBeDisabled()
   for (let year = 1; year <= 3; year++) {
+    await invest.getByRole('button', { name: year === 1 ? '산다' : '지켜본다' }).click()
+    await expect(invest.getByTestId('invest-outcome')).toBeVisible()
+    await expect(invest.getByTestId('invest-result')).toHaveCount(2)
     await page.getByRole('button', { name: `${year}년 차 결산 보기` }).click()
     await expect(page.getByTestId('settlement')).toContainText(`${year}년 차 결산`)
+    if (year === 1) {
+      await expect(page.getByTestId('settlement')).toContainText('투자 회의')
+    }
   }
   // 시대가 끝나면 회사를 판다. 아끼던 직원을 공동창업자로 데려가 새 시대의 F 회사를 차린다 (9절).
   await expect(page.getByTestId('sale')).toBeVisible()

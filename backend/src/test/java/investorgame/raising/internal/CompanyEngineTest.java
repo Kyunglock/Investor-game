@@ -42,6 +42,14 @@ class CompanyEngineTest {
     return company;
   }
 
+  /** 투자 회의는 지켜본다로 넘기고 한 해를 결산한다. 결산 규칙만 볼 때 쓴다. */
+  private static CompanyState.Settlement settleYear(CompanyState company, HashSeededRandom random) {
+    if (ENGINE.invest.open(company)) {
+      ENGINE.invest.decide(company, InvestEngine.HOLD, random);
+    }
+    return ENGINE.settle(company, random);
+  }
+
   @Test
   void 사장의_사재로_직원_없이_F등급_자리_두_개로_열리고_지원자가_온다() {
     CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
@@ -83,7 +91,7 @@ class CompanyEngineTest {
       CompanyState company = open(9, stats(50, 50, 50, 50), 100_000_000);
       ENGINE.place(company, Map.of(1, "bio"));
       for (int year = 1; year <= PROPERTIES.turns(); year++) {
-        CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(9));
+        CompanyState.Settlement s = settleYear(company, new HashSeededRandom(9));
         assertThat(s.year).isEqualTo(year);
         assertThat(s.fee).as("수수료는 시장과 상관없이 들어온다").isPositive();
         assertThat(s.lines).isNotEmpty();
@@ -126,7 +134,7 @@ class CompanyEngineTest {
         placements.put(2, helperDesk);
       }
       ENGINE.place(company, placements);
-      CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(seed));
+      CompanyState.Settlement s = settleYear(company, new HashSeededRandom(seed));
       sum += s.results.getFirst().pnl * 10_000 / s.results.getFirst().stake;
     }
     return sum / (double) trials;
@@ -214,7 +222,7 @@ class CompanyEngineTest {
     for (int seed = 0; seed < 300; seed++) {
       CompanyState company = open(seed, stats(10, 10, 10, 10), 1_000_000_000L);
       ENGINE.place(company, Map.of(1, "bio"));
-      CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(seed));
+      CompanyState.Settlement s = settleYear(company, new HashSeededRandom(seed));
       CompanyState.Result r = s.results.getFirst();
       boolean big = r.pnl * 100 <= -r.stake * PROPERTIES.experience().dropLossPercent();
       assertThat(!company.employees.getFirst().dropped.isEmpty()).isEqualTo(big);
@@ -274,7 +282,7 @@ class CompanyEngineTest {
         company.phase = phase;
       }
       ENGINE.place(company, Map.of(1, "bio"));
-      CompanyState.Result r = ENGINE.settle(company, new HashSeededRandom(seed)).results.getFirst();
+      CompanyState.Result r = settleYear(company, new HashSeededRandom(seed)).results.getFirst();
       sum += r.pnl * 10_000 / r.stake;
     }
     return sum / (double) trials;
@@ -288,8 +296,7 @@ class CompanyEngineTest {
       company.employees.getFirst().rank = neighborRank;
       ENGINE.hire(company, stats(10, 10, 10, 10));
       ENGINE.place(company, Map.of(1, "bio", 2, "bio"));
-      CompanyState.Result teammate =
-          ENGINE.settle(company, new HashSeededRandom(seed)).results.get(1);
+      CompanyState.Result teammate = settleYear(company, new HashSeededRandom(seed)).results.get(1);
       flips += teammate.flips.values().stream().mapToInt(Integer::intValue).sum();
     }
     return flips;
@@ -353,7 +360,7 @@ class CompanyEngineTest {
 
     CompanyState company = ENGINE.open(new HashSeededRandom(8), ENGINE.openingCapital());
     List<String> first = company.applicants.stream().map(a -> a.name).toList();
-    ENGINE.settle(company, new HashSeededRandom(8));
+    settleYear(company, new HashSeededRandom(8));
     assertThat(company.applicants).extracting(a -> a.name).doesNotContainAnyElementsOf(first);
   }
 

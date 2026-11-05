@@ -75,6 +75,15 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
+  public CompanyView invest(UUID sessionId, String choice) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.invest.decide(row.state(), choice, new HashSeededRandom(row.seed()));
+    companies.update(row.id(), row.state(), false);
+    return view(row, memories.find(sessionId));
+  }
+
+  @Override
+  @Transactional
   public CompanyView place(UUID sessionId, Map<Integer, String> placements) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.place(row.state(), placements);
@@ -243,7 +252,70 @@ class DefaultCompanyService implements CompanyService {
         meeting,
         applicants,
         engine.refreshCost(),
+        ended ? null : investView(c, new HashSeededRandom(row.seed())),
         last == null ? null : settlementView(last));
+  }
+
+  private CompanyView.Invest investView(CompanyState c, HashSeededRandom random) {
+    CompanyState.Invest invest = c.invest;
+    if (invest == null) {
+      return null;
+    }
+    InvestEngine meetings = engine.invest;
+    int highlighted = meetings.highlight(c, random).map(InvestEngine.Highlight::index).orElse(-1);
+    String highlightBy = meetings.highlight(c, random).map(InvestEngine.Highlight::by).orElse(null);
+    List<CompanyView.InvestSentence> sentences = new java.util.ArrayList<>();
+    int decisive = -1;
+    for (int i = 0; i < invest.sentences.size(); i++) {
+      CompanyState.Sentence s = invest.sentences.get(i);
+      sentences.add(new CompanyView.InvestSentence(s.text, i == highlighted));
+      if (s.decisive) {
+        decisive = i;
+      }
+    }
+    RaisingContent.Invest texts = engine.investTexts();
+    List<CompanyView.Remark> remarks =
+        meetings.remarks(c, random).stream()
+            .map(
+                r ->
+                    new CompanyView.Remark(
+                        r.employee().id,
+                        r.employee().name,
+                        r.employee().desk,
+                        r.read(),
+                        r.text(),
+                        r.stubbornBp() == null ? null : meetings.stubbornLevel(r.stubbornBp())))
+            .toList();
+    List<CompanyView.Option> options =
+        List.of(InvestEngine.BUY, InvestEngine.SELL, InvestEngine.HOLD).stream()
+            .map(code -> new CompanyView.Option(code, texts.options().get(code)))
+            .toList();
+    CompanyView.InvestOutcome outcome =
+        invest.choice == null
+            ? null
+            : new CompanyView.InvestOutcome(
+                invest.choice,
+                invest.up,
+                meetings.reveal(c),
+                decisive,
+                invest.total,
+                invest.results.stream()
+                    .map(
+                        r ->
+                            new CompanyView.InvestResult(
+                                r.employeeId, r.name, r.desk, r.action, r.follow, r.pnl, r.line))
+                    .toList());
+    return new CompanyView.Invest(
+        invest.title,
+        engine.stockName(invest.stock),
+        engine.stockSector(invest.stock),
+        sentences,
+        highlightBy,
+        new CompanyView.Sway(meetings.tempterName(invest.tempter), invest.sway),
+        remarks,
+        options,
+        meetings.open(c),
+        outcome);
   }
 
   private static CompanyView.Settlement settlementView(CompanyState.Settlement s) {

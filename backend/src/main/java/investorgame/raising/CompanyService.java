@@ -29,7 +29,13 @@ public interface CompanyService {
   /** 직원 ID → 자리 코드(쉬면 null). 자리 수를 넘으면 400. */
   CompanyView place(UUID sessionId, Map<Integer, String> placements);
 
-  /** 올해 결산을 하고 다음 해 연초 회의로 간다. 마지막 해면 회사가 끝난다. */
+  /**
+   * 올해 투자 회의에서 고른다(BUY·SELL·HOLD). 돈을 굴리는 직원마다 사장 말대로 하거나, 꼬드김에 넘어가거나, 제 판단대로 한다. 손익은 바로 자본에 들어간다.
+   * 이미 했거나 돈을 굴리는 자리에 아무도 없으면 400 (decisions.md 229번).
+   */
+  CompanyView invest(UUID sessionId, String choice);
+
+  /** 올해 결산을 하고 다음 해 연초 회의로 간다. 마지막 해면 회사가 끝난다. 투자 회의를 열 수 있는데 안 했으면 400. */
   CompanyView settle(UUID sessionId);
 
   /**

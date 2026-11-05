@@ -50,10 +50,14 @@ class CompanyEngine {
   private final BehaviorService behavior;
   private final CompanyProperties properties;
 
+  /** 투자 회의 (decisions.md 229번). 판정 확률·판돈은 이 엔진의 것을 쓴다. */
+  final InvestEngine invest;
+
   CompanyEngine(ContentCatalog content, BehaviorService behavior, CompanyProperties properties) {
     this.content = content;
     this.behavior = behavior;
     this.properties = properties;
+    this.invest = new InvestEngine(this, content, behavior, properties);
   }
 
   static final String HR_DESK = "hr";
@@ -90,6 +94,18 @@ class CompanyEngine {
   /** 첫 회사의 시작 자본(사장의 사재). */
   long openingCapital() {
     return properties.sale().baseCapital();
+  }
+
+  RaisingContent.Invest investTexts() {
+    return content.raising().company().invest();
+  }
+
+  String stockName(String code) {
+    return content.stock(code).name();
+  }
+
+  String stockSector(String code) {
+    return content.sectorName(content.stock(code).sector());
   }
 
   RaisingContent.Sale saleTexts() {
@@ -400,6 +416,7 @@ class CompanyEngine {
     company.nextOmen = next.omen();
     company.refreshes = 0;
     deal(company, random);
+    company.invest = invest.create(company, random);
   }
 
   List<Long> gradeCapital() {
@@ -444,30 +461,99 @@ class CompanyEngine {
     }
   }
 
+  /** 꼬드김에 넘어갈 확률과 손이 뒤집힐 확률(만분율). */
+  record Odds(int swayBp, int flipBp) {}
+
+  /**
+   * 돈을 굴리는 직원의 판정 확률. 꼬드김은 줏대로(리스크 관리 팀이 막는다), 손 뒤집힘은 자리가 원하는 능력치로(폭락장이면 인내심) 굴린다. Z 리더가 같은 자리에 있으면
+   * 둘 다 줄어든다 (2.4절). 결산과 투자 회의가 같이 쓴다.
+   */
+  Odds odds(CompanyState company, Employee employee) {
+    int risk = bestOf(company, RISK_DESK, StatCodes.CONVICTION);
+    int swayBp =
+        behavior.flipChanceBp(employee.stats.get(StatCodes.CONVICTION))
+            * properties.swayPercent()
+            / PERCENT
+            * (PERCENT - risk)
+            / PERCENT;
+    int flipBp = behavior.flipChanceBp(employee.stats.get(flipStat(company, employee)));
+    boolean led =
+        company.employees.stream()
+            .anyMatch(e -> e != employee && employee.desk.equals(e.desk) && e.rank >= RANK_LEADER);
+    if (led) {
+      swayBp = swayBp * properties.effects().leaderFlipPercent() / PERCENT;
+      flipBp = flipBp * properties.effects().leaderFlipPercent() / PERCENT;
+    }
+    return new Odds(swayBp, flipBp);
+  }
+
+  String flipStat(CompanyState company, Employee employee) {
+    return CRASH.equals(company.phase) ? StatCodes.PATIENCE : desk(employee.desk).statCode();
+  }
+
+  /** 리서치 팀의 가장 높은 안목. 아무도 없으면 0. 돈을 굴리는 직원에게 형광펜을 빌려준다 (4.2절). */
+  int researchInsight(CompanyState company) {
+    return bestOf(company, RESEARCH_DESK, StatCodes.INSIGHT);
+  }
+
+  /** 리서치 팀에서 안목이 가장 높은 직원. */
+  java.util.Optional<Employee> researcher(CompanyState company) {
+    return company.employees.stream()
+        .filter(e -> RESEARCH_DESK.equals(e.desk))
+        .max(
+            java.util.Comparator.comparingInt((Employee e) -> e.stats.get(StatCodes.INSIGHT))
+                .thenComparingInt(e -> -e.id));
+  }
+
+  /** 돈을 굴리는 자리에 앉은 직원들. */
+  List<Employee> traders(CompanyState company) {
+    return company.employees.stream().filter(e -> e.desk != null && desk(e.desk).trades()).toList();
+  }
+
+  /** 돈을 굴리는 직원 한 명이 맡는 판돈 = 자본 × 비율 × 배율 ÷ 사람 수 (자본을 넘지 않는다). */
+  long stakeOf(CompanyState company, int traders) {
+    if (traders == 0) {
+      return 0;
+    }
+    long pot =
+        Math.min(
+            company.capital,
+            (long)
+                (company.capital
+                    * properties.stakePercent()
+                    / (double) PERCENT
+                    * multiplier(company.capital)));
+    return pot / traders;
+  }
+
+  CompanyProperties.DeskReturn returnsOf(String desk) {
+    return properties.desks().get(desk);
+  }
+
   /**
    * 직원들이 배치대로 한 해를 굴린 결과 (6.1절 5번). 판단마다 꼬드김(리스크 관리 팀이 막는다) → 손 뒤집힘(자리가 원하는 능력치, 폭락장이면 모두 인내심) →
    * 맞힘(안목, 리서치 팀이 형광펜을 빌려준다) 순으로 굴린다. 수수료 매출은 시장과 상관없이 들어온다.
    */
   Settlement settle(CompanyState company, SeededRandom random) {
     requireOpen(company);
+    if (invest.open(company)) {
+      throw new InvalidRequestException("투자 회의를 먼저 한다");
+    }
     RandomGenerator rng = random.forKey("company-settle", company.year);
     Settlement settlement = new Settlement();
     settlement.year = company.year;
     settlement.phase = company.phase;
     settlement.omen = company.omen;
-    settlement.capitalBefore = company.capital;
+    // 투자 회의의 손익은 정할 때 이미 자본에 들어갔다. 한 해의 변화로 함께 보인다.
+    settlement.capitalBefore =
+        company.capital
+            - (company.invest != null && company.invest.choice != null ? company.invest.total : 0);
     settlement.gradeBefore = grade(company.capital);
 
     double multiplier = multiplier(company.capital);
-    int research = bestOf(company, RESEARCH_DESK, StatCodes.INSIGHT);
-    int risk = bestOf(company, RISK_DESK, StatCodes.CONVICTION);
-    List<Employee> traders =
-        company.employees.stream().filter(e -> e.desk != null && desk(e.desk).trades()).toList();
-    long pot =
-        Math.min(
-            company.capital,
-            (long) (company.capital * properties.stakePercent() / (double) PERCENT * multiplier));
-    long stake = traders.isEmpty() ? 0 : pot / traders.size();
+    int research = researchInsight(company);
+    List<Employee> traders = traders(company);
+    long stake = stakeOf(company, traders.size());
     boolean crash = CRASH.equals(company.phase);
     long totalPnl = 0;
     for (Employee employee : traders) {
@@ -477,25 +563,12 @@ class CompanyEngine {
       result.desk = employee.desk;
       result.stake = stake;
       CompanyProperties.DeskReturn returns = properties.desks().get(employee.desk);
-      String flipStat = crash ? StatCodes.PATIENCE : desk(employee.desk).statCode();
+      String flipStat = flipStat(company, employee);
       int insight = Math.max(employee.stats.get(StatCodes.INSIGHT), research);
-      int swayBp =
-          behavior.flipChanceBp(employee.stats.get(StatCodes.CONVICTION))
-              * properties.swayPercent()
-              / PERCENT
-              * (PERCENT - risk)
-              / PERCENT;
-      int flipBp = behavior.flipChanceBp(employee.stats.get(flipStat));
+      Odds odds = odds(company, employee);
+      int swayBp = odds.swayBp();
+      int flipBp = odds.flipBp();
       CompanyProperties.Effects effects = properties.effects();
-      // Z 리더: 같은 자리 팀원의 꼬드김·손 뒤집힘을 줄인다 (2.4절).
-      boolean led =
-          company.employees.stream()
-              .anyMatch(
-                  e -> e != employee && employee.desk.equals(e.desk) && e.rank >= RANK_LEADER);
-      if (led) {
-        swayBp = swayBp * effects.leaderFlipPercent() / PERCENT;
-        flipBp = flipBp * effects.leaderFlipPercent() / PERCENT;
-      }
       boolean conviction = employee.rank >= RANK_CONVICTION;
       boolean contrarian = crash && employee.rank >= RANK_CONTRARIAN;
       int hitBp = behavior.hintAccuracyPercent(insight) * PERCENT;
@@ -553,6 +626,10 @@ class CompanyEngine {
     settlement.lines.addFirst(content.raising().company().phases().get(company.phase));
     if (!crash && company.omen != null) {
       settlement.lines.add(1, content.raising().company().falseOmenNote());
+    }
+    String investLine = invest.settlementLine(company);
+    if (investLine != null) {
+      settlement.lines.add(1, investLine);
     }
     company.settlements.add(settlement);
     company.year++;

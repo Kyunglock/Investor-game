@@ -56,6 +56,12 @@ class CompanyState {
   /** 지금까지 만난 지원자 수. 지원자 이름과 번호를 이것으로 붙인다. 다음 회사로 이어진다. */
   int met;
 
+  /** 올해 투자 회의 (decisions.md 229번). 옛 회사면 null이다. */
+  Invest invest;
+
+  /** 이 회사에서 이미 나온 뉴스. 투자 회의에 같은 뉴스가 다시 나오지 않는다(다 쓰면 비운다). */
+  List<String> usedNews = new ArrayList<>();
+
   List<Settlement> settlements = new ArrayList<>();
 
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -76,6 +82,57 @@ class CompanyState {
 
     /** 큰 손실로 내려간 능력치. 위기를 버티면 맨 뒤의 것부터 되찾는다 (6.4절). */
     List<String> dropped = new ArrayList<>();
+  }
+
+  /**
+   * 투자 회의 한 번: 단서 기사를 놓고 직원들과 고민하고 사장이 정한다. 직원 몇 명은 "제가 알아서 할게요" 하고 제멋대로 한다. 숨은 방향(up)은 정하기 전에는 화면에
+   * 나가지 않는다.
+   */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Invest {
+    String news;
+    String stock;
+    String title;
+    boolean up;
+    int magnitudeBp;
+    List<Sentence> sentences = new ArrayList<>();
+
+    /** 꼬드기는 단골 인물 코드와 그 말. 분위기는 POS(사라)·NEG(팔아라). */
+    String tempter;
+
+    String sway;
+    String swaySentiment;
+
+    /** 사장이 고른 것(BUY·SELL·HOLD). 아직 안 골랐으면 null. */
+    String choice;
+
+    List<InvestResult> results = new ArrayList<>();
+    long total;
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Sentence {
+    String text;
+
+    /** UP·DOWN·NEUTRAL: 이 문장이 기운 쪽. */
+    String sign;
+
+    boolean decisive;
+  }
+
+  /** 투자 회의에서 직원 한 명이 한 일. follow: BOSS(사장 말대로)·OWN(제멋대로)·SWAY(꼬드김). */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class InvestResult {
+    int employeeId;
+    String name;
+    String desk;
+    String action;
+    String follow;
+    long pnl;
+    String line;
   }
 
   /** 공채 시장의 지원자 한 명. 계약금을 내고 뽑으면 그대로 직원이 된다. */
