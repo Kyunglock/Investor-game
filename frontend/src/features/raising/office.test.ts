@@ -51,6 +51,30 @@ describe('회사 건물과 객장 (증권사 육성 설계 8.1절)', () => {
     expect(screens(2)).toBeGreaterThan(0)
     expect(screens(4)).toBe(screens(2) * 2)
   })
+
+  it('모니터 주가 선은 그해 손익을 따르고 빈 책상은 꺼져 있다 (237번)', () => {
+    const lines = (screen: 'up' | 'down' | 'off') => {
+      const map = officeMap('F', 1, 64, [screen])
+      const at: [number, number][] = []
+      map.forEach((row, y) => {
+        row.forEach((ch, x) => {
+          if (ch === 'U' || ch === 'B') {
+            at.push([x, y])
+          }
+        })
+      })
+      at.sort((a, b) => a[0] - b[0])
+      return { color: new Set(at.map(([x, y]) => map[y][x])), at }
+    }
+    const up = lines('up')
+    const down = lines('down')
+    expect([...up.color]).toEqual(['U'])
+    expect([...down.color]).toEqual(['B'])
+    // 오르면 오른쪽이 위(작은 y), 내리면 오른쪽이 아래
+    expect(up.at.at(-1)?.[1]).toBeLessThan(up.at[0][1])
+    expect(down.at.at(-1)?.[1]).toBeGreaterThan(down.at[0][1])
+    expect(lines('off').at).toHaveLength(0)
+  })
 })
 
 describe('직원 차림새 (8.2절)', () => {

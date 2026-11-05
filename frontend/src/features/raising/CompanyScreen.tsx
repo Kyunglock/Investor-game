@@ -8,9 +8,9 @@ import { GradeLadder } from './GradeLadder'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { InvestWindow } from './InvestWindow'
 import { MoveScene } from './MoveScene'
-import { OfficeArt } from './OfficeArt'
+import { OfficeArt, type SeatFocus } from './OfficeArt'
 import { ATTIRE_NAMES, attireOf, glowOf } from './office'
-import { autoPlace } from './placement'
+import { autoPlace, seatOne } from './placement'
 import { useRaisingStore } from './store'
 
 type Employee = Company['employees'][number]
@@ -42,6 +42,8 @@ export function CompanyScreen({ company }: { company: Company }) {
   const [moved, setMoved] = useState(false)
   // 투자 회의 창 (231번): 결산을 누르면 뜨고, 고른 뒤 그대로 결산한다.
   const [investOpen, setInvestOpen] = useState(false)
+  // 건물 그림에서 누른 책상 (237번). 그림 바로 아래에서 자리를 고른다.
+  const [focus, setFocus] = useState<SeatFocus | null>(null)
   const ended = company.status === 'ENDED'
   const meeting = company.meeting
 
@@ -84,7 +86,8 @@ export function CompanyScreen({ company }: { company: Company }) {
           {company.grade}
         </p>
         <GradeLadder grade={company.grade} />
-        <OfficeArt company={company} />
+        <OfficeArt company={company} focus={focus} onSeat={ended ? undefined : setFocus} />
+        {!ended && focus && <SeatPicker company={company} focus={focus} onFocus={setFocus} />}
         <PixelToggle />
         {company.nextGradeCapital != null && (
           <p className="mt-1 text-[12px] text-muted">
@@ -179,13 +182,6 @@ function StaffTab({ company }: { company: Company }) {
   const { place } = useRaisingStore.getState()
   const placed = company.employees.filter((e) => e.desk).length
   const ended = company.status === 'ENDED'
-  const seat = (employeeId: number, desk: string | null) =>
-    place(
-      company.employees.map((e) => ({
-        employeeId: e.id,
-        desk: e.id === employeeId ? desk : (e.desk ?? null),
-      })),
-    )
   return (
     <section data-testid="staff">
       <div className="flex items-center justify-between gap-2">
@@ -232,46 +228,7 @@ function StaffTab({ company }: { company: Company }) {
             {!ended && (
               <fieldset className="mt-2">
                 <legend className="sr-only">{e.name}의 자리</legend>
-                <div className="flex flex-wrap gap-1">
-                  {company.desks.map((d) => {
-                    const on = e.desk === d.code
-                    const fit = fitOf(e, d)
-                    // 쉬던 사람은 자리가 남아 있어야 앉는다.
-                    const full = !e.desk && placed >= company.seats
-                    return (
-                      <button
-                        key={d.code}
-                        type="button"
-                        aria-pressed={on}
-                        disabled={busy || (!on && full)}
-                        onClick={() => void seat(e.id, on ? null : d.code)}
-                        className={`min-h-10 rounded border px-2 text-[13px] disabled:opacity-40 ${
-                          on ? 'border-pen bg-pen text-white' : FIT_TONE[fit]
-                        }`}
-                        data-fit={fit}
-                        title={d.description}
-                      >
-                        {d.hot && '★ '}
-                        {d.name}{' '}
-                        <span className="font-mono-num text-[11px]">
-                          {STAT_NAMES[d.statCode]} {e.grades[d.statCode]}
-                          {e.sector && d.sector === e.sector && ' · 관심'}
-                        </span>
-                      </button>
-                    )
-                  })}
-                  <button
-                    type="button"
-                    aria-pressed={!e.desk}
-                    disabled={busy || !e.desk}
-                    onClick={() => void seat(e.id, null)}
-                    className={`min-h-10 rounded border px-2 text-[13px] ${
-                      !e.desk ? 'border-pen bg-pen text-white' : 'border-line text-muted'
-                    }`}
-                  >
-                    쉰다
-                  </button>
-                </div>
+                <DeskButtons company={company} employee={e} />
               </fieldset>
             )}
           </li>
@@ -293,6 +250,160 @@ function StaffTab({ company }: { company: Company }) {
             ))}
           </ul>
         </details>
+      )}
+    </section>
+  )
+}
+
+/**
+ * 한 사람의 자리 버튼 (230번): 누르면 바로 앉는다. 버튼에는 자리가 원하는 능력치의 등급과 맞는 정도가 색으로 보인다. 배치 탭과 건물 그림의 자리 고르기(237번)가
+ * 같이 쓴다. 앉히면 onSeated를 부른다.
+ */
+function DeskButtons({
+  company,
+  employee: e,
+  onSeated,
+}: {
+  company: Company
+  employee: Employee
+  onSeated?: () => void
+}) {
+  const busy = useRaisingStore((s) => s.busy)
+  const { place } = useRaisingStore.getState()
+  const placed = company.employees.filter((x) => x.desk).length
+  // 쉬던 사람은 자리가 남아 있어야 앉는다.
+  const full = !e.desk && placed >= company.seats
+  const seat = async (desk: string | null) => {
+    await place(seatOne(company, e.id, desk))
+    onSeated?.()
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      {company.desks.map((d) => {
+        const on = e.desk === d.code
+        const fit = fitOf(e, d)
+        return (
+          <button
+            key={d.code}
+            type="button"
+            aria-pressed={on}
+            disabled={busy || (!on && full)}
+            onClick={() => void seat(on ? null : d.code)}
+            className={`min-h-10 rounded border px-2 text-[13px] disabled:opacity-40 ${
+              on ? 'border-pen bg-pen text-white' : FIT_TONE[fit]
+            }`}
+            data-fit={fit}
+            title={d.description}
+          >
+            {d.hot && '★ '}
+            {d.name}{' '}
+            <span className="font-mono-num text-[11px]">
+              {STAT_NAMES[d.statCode]} {e.grades[d.statCode]}
+              {e.sector && d.sector === e.sector && ' · 관심'}
+            </span>
+          </button>
+        )
+      })}
+      <button
+        type="button"
+        aria-pressed={!e.desk}
+        disabled={busy || !e.desk}
+        onClick={() => void seat(null)}
+        className={`min-h-10 rounded border px-2 text-[13px] ${
+          !e.desk ? 'border-pen bg-pen text-white' : 'border-line text-muted'
+        }`}
+      >
+        쉰다
+      </button>
+    </div>
+  )
+}
+
+/**
+ * 건물 그림에서 책상을 누르면 그림 바로 아래에 열린다 (237번, #298 "배치가 그림과 따로 논다"). 앉은 사람을 눌렀으면 그 사람의 자리 버튼, 빈 자리를 눌렀으면
+ * 쉬는 직원 가운데 앉힐 사람을 먼저 고른다. 쉬는 사람이 없으면 공채 탭으로 데려간다. 앉히면 닫힌다.
+ */
+function SeatPicker({
+  company,
+  focus,
+  onFocus,
+}: {
+  company: Company
+  focus: SeatFocus
+  onFocus: (focus: SeatFocus | null) => void
+}) {
+  const close = (
+    <button
+      type="button"
+      onClick={() => onFocus(null)}
+      className="min-h-9 shrink-0 rounded px-2 text-[13px] text-muted underline"
+    >
+      닫기
+    </button>
+  )
+  if ('employee' in focus) {
+    const e = company.employees.find((x) => x.id === focus.employee)
+    if (!e) {
+      return null
+    }
+    return (
+      <section
+        className="mt-2 rounded border border-pen p-3"
+        aria-label={`${e.name}의 자리 고르기`}
+        data-testid="seat-picker"
+      >
+        <div className="flex items-baseline justify-between gap-2">
+          <p className="text-[14px]">
+            <b>{e.name}</b> <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>{' '}
+            · 어디에 앉힐까요?
+          </p>
+          {close}
+        </div>
+        <div className="mt-2">
+          <DeskButtons company={company} employee={e} onSeated={() => onFocus(null)} />
+        </div>
+      </section>
+    )
+  }
+  const resting = company.employees.filter((x) => !x.desk)
+  return (
+    <section
+      className="mt-2 rounded border border-pen p-3"
+      aria-label="빈 자리에 앉힐 사람 고르기"
+      data-testid="seat-picker"
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-[14px]">빈 자리에 누구를 앉힐까요?</p>
+        {close}
+      </div>
+      {resting.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {resting.map((x) => (
+            <button
+              key={x.id}
+              type="button"
+              onClick={() => onFocus({ employee: x.id })}
+              className="min-h-10 rounded border border-pen px-2 text-[13px]"
+            >
+              {x.name} <span className="font-mono-num text-[11px]">종합 {x.overallGrade}</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <p className="text-[13px] text-muted">쉬는 직원이 없습니다.</p>
+          <button
+            type="button"
+            onClick={() => {
+              onFocus(null)
+              useRaisingStore.setState({ tab: 'market' })
+              document.querySelector('[data-testid="tabs"]')?.scrollIntoView({ block: 'start' })
+            }}
+            className="min-h-10 rounded border border-pen px-3 text-[13px] font-semibold"
+          >
+            공채에서 뽑기
+          </button>
+        </div>
       )}
     </section>
   )

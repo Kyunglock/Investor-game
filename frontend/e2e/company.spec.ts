@@ -81,6 +81,14 @@ test('처음 오면 회사를 차리고, 직원 없이 F등급 자리 두 개와
 
   // 회사 건물 단면: 책상은 자리 수, 아직 아무도 없다. 그림을 끄면 같은 내용을 글로 (8.1·8.4절).
   await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '0')
+  // 빈 책상에는 "빈 자리" 표시가 있고 모니터가 꺼져 있다. 누르면 쉬는 사람이 없으니 공채로 데려간다 (237번).
+  await expect(page.getByTestId('office-empty-tag')).toHaveCount(2)
+  await expect(page.getByTestId('office-art')).toHaveAttribute('data-screens', 'off off')
+  await page.getByRole('button', { name: '빈 자리 1에 앉힐 사람 고르기' }).click()
+  await expect(page.getByTestId('seat-picker')).toContainText('쉬는 직원이 없습니다')
+  await page.getByTestId('seat-picker').getByRole('button', { name: '공채에서 뽑기' }).click()
+  await expect(page.getByTestId('seat-picker')).toHaveCount(0)
+  await expect(page.getByRole('tab', { name: /공채/ })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('button', { name: '그림 끄기' }).click()
   await expect(page.getByTestId('office-caption')).toHaveText(
     '사무실: 반지하 원룸, 책상 2개 · 객장: 손님 없음, 길고양이 한 마리',
@@ -138,6 +146,24 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await page.getByRole('button', { name: '자동 배치' }).click()
   await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/2')
   await expect(page.getByTestId('office-tag').filter({ hasText: /데스크/ })).toHaveCount(2)
+
+  // 그림에서 바로 배치 (237번): 앉은 사람을 눌러 쉬게 하고, 빈 자리를 눌러 그 사람을 골라 다시 앉힌다.
+  const seats = page.getByTestId('office-seat')
+  await expect(seats).toHaveCount(2)
+  await seats.nth(1).click()
+  const picker = page.getByTestId('seat-picker')
+  await expect(picker).toContainText('어디에 앉힐까요?')
+  await picker.getByRole('button', { name: '쉰다' }).click()
+  await expect(picker).toHaveCount(0)
+  await expect(page.getByTestId('office-empty-tag')).toHaveCount(1)
+  await expect(page.getByTestId('office-art')).toHaveAttribute('data-screens', 'up off')
+  await page.getByTestId('office-empty').click()
+  await expect(picker).toContainText('빈 자리에 누구를 앉힐까요?')
+  await picker.getByRole('button', { name: /종합/ }).click()
+  await picker.getByRole('button', { name: /단타 데스크 용기/ }).click()
+  await expect(picker).toHaveCount(0)
+  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/2')
+  await expect(page.getByTestId('office-empty-tag')).toHaveCount(0)
 
   // 투자 회의 (229·231번): 결산을 누르면 창이 뜬다. 직원들이 한마디씩 하고 고집이 보인다. 창을 닫고 배치로 돌아갈 수도 있다.
   await page.getByRole('button', { name: '1년 차 결산 보기' }).click()

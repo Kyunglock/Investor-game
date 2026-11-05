@@ -29,6 +29,12 @@ const MONITOR_X = 13
 
 type Grid = string[][]
 
+/** 책상 모니터의 주가 선: 그해 번 사람은 오르고(빨강), 잃은 사람은 내리고(파랑), 빈 책상은 꺼져 있다 (decisions.md 237번). */
+export type Screen = 'up' | 'down' | 'off'
+
+/** 건물 그림에서 고른 것: 앉아 있는 직원, 또는 빈 자리(몇 번째). 그림 아래에 자리 고르기가 열린다. */
+export type SeatFocus = { employee: number } | { empty: number }
+
 function fill(g: Grid, x: number, y: number, w: number, h: number, ch: string) {
   for (let j = y; j < y + h; j++) {
     for (let i = x; i < x + w; i++) {
@@ -51,7 +57,12 @@ const LOOKS: Record<Tier, { roof: string; wall: string; trim: string }> = {
 }
 
 /** 사무실 단면의 배경. 사람은 따로 겹친다. */
-export function officeMap(grade: Grade, seats: number, width: number): Grid {
+export function officeMap(
+  grade: Grade,
+  seats: number,
+  width: number,
+  screens: Screen[] = [],
+): Grid {
   const tier = tierOf(grade)
   const look = LOOKS[tier]
   const g: Grid = Array.from({ length: HEIGHT }, () => Array<string>(width).fill('.'))
@@ -92,9 +103,13 @@ export function officeMap(grade: Grade, seats: number, width: number): Grid {
     const x = i * SEAT + MONITOR_X
     fill(g, x, top + 7, 10, 7, 'K')
     fill(g, x + 1, top + 8, 8, 5, 'Z')
-    fill(g, x + 2, top + 11, 2, 1, 'U')
-    fill(g, x + 4, top + 10, 2, 1, 'U')
-    fill(g, x + 6, top + 9, 2, 1, 'U')
+    const screen = screens[i] ?? 'up'
+    if (screen !== 'off') {
+      const [line, rise] = screen === 'up' ? ['U', 1] : ['B', -1]
+      for (let step = 0; step < 3; step++) {
+        fill(g, x + 2 + step * 2, top + 10 - rise * (step - 1), 2, 1, line)
+      }
+    }
     fill(g, x + 4, top + 14, 2, 1, 'K')
     fill(g, x - 2, top + 15, 14, 1, 'T')
     fill(g, x - 1, top + 16, 1, FLOOR - 19, 'T')
@@ -145,9 +160,19 @@ export function officeMap(grade: Grade, seats: number, width: number): Grid {
 
 /**
  * 회사 건물 단면 (8.1·8.2절). 책상 옆에는 직원이 모니터를 바라보는 옆모습으로 서 있고, 차림새는 종합 등급을 따른다. 객장 손님은 회사 등급만큼 선다. 그림을 끄면
- * 같은 내용을 글로 보인다 (190번).
+ * 같은 내용을 글로 보인다 (190번). 책상을 누르면 그림 아래에서 바로 자리를 고른다(237번).
  */
-export const OfficeArt = memo(function OfficeArt({ company }: { company: Company }) {
+export const OfficeArt = memo(function OfficeArt({
+  company,
+  focus = null,
+  onSeat,
+}: {
+  company: Company
+  /** 그림에서 고른 자리. 테두리로 보인다. */
+  focus?: SeatFocus | null
+  /** 있으면 책상마다 누를 수 있다: 앉은 사람을 누르면 그 사람의 자리, 빈 자리를 누르면 앉힐 사람을 고른다. */
+  onSeat?: (focus: SeatFocus) => void
+}) {
   const shown = usePixelArt((s) => s.shown)
   const caption = officeCaption(company.grade, company.seats)
   if (!shown) {
@@ -158,12 +183,25 @@ export const OfficeArt = memo(function OfficeArt({ company }: { company: Company
     )
   }
   const width = Math.max(64, 4 + company.seats * SEAT)
-  const map = officeMap(company.grade, company.seats, width)
   const seated = company.employees.filter((e) => e.desk)
   const officeTop = ROOF + FLOOR - 3 - SPRITE_HEIGHT
   const lobbyTop = ROOF + FLOOR * 2 - 3 - SPRITE_HEIGHT
   // 지난 결산을 그림 속에서 (8.3절): 직원 머리 위에 손익과 결과에 맞는 한마디, 발밑에 앉은 자리.
   const resultOf = new Map((company.lastSettlement?.results ?? []).map((r) => [r.employeeId, r]))
+  const screens: Screen[] = Array.from({ length: company.seats }, (_, i) => {
+    const e = seated[i]
+    if (!e) {
+      return 'off'
+    }
+    const r = resultOf.get(e.id)
+    return r && r.stake > 0 && r.pnl < 0 ? 'down' : 'up'
+  })
+  const map = officeMap(company.grade, company.seats, width, screens)
+  const slots = Array.from({ length: company.seats }, (_, i) => ({
+    x: i * SEAT,
+    index: i,
+    employee: seated[i] as (typeof seated)[number] | undefined,
+  }))
   const deskName = new Map(company.desks.map((d) => [d.code, d.name]))
   const tags = seated.map((e, i) => {
     const r = resultOf.get(e.id)
@@ -208,6 +246,7 @@ export const OfficeArt = memo(function OfficeArt({ company }: { company: Company
         data-testid="office-art"
         data-staff={staff.length}
         data-customers={customers.length}
+        data-screens={screens.join(' ')}
       >
         {toRuns(map, PALETTE).map((r) => (
           <rect key={`${r.x}-${r.y}`} x={r.x} y={r.y} width={r.width} height={1} fill={r.fill} />
@@ -239,13 +278,53 @@ export const OfficeArt = memo(function OfficeArt({ company }: { company: Company
           />
         ))}
       </svg>
+      {slots.map(({ x, index: i, employee: e }) => {
+        const style = {
+          left: `${(x / width) * 100}%`,
+          top: `${(ROOF / HEIGHT) * 100}%`,
+          width: `${(SEAT / width) * 100}%`,
+          height: `${(FLOOR / HEIGHT) * 100}%`,
+        }
+        const chosen = e
+          ? focus !== null && 'employee' in focus && focus.employee === e.id
+          : focus !== null && 'empty' in focus && focus.empty === i
+        return (
+          <div key={x}>
+            {onSeat && (
+              <button
+                type="button"
+                className={`absolute rounded outline-offset-[-2px] hover:bg-white/15 focus-visible:outline-2 focus-visible:outline-pen ${
+                  chosen ? 'outline-2 outline-pen outline-dashed bg-white/20' : ''
+                }`}
+                style={style}
+                aria-label={e ? `${e.name}의 자리 바꾸기` : `빈 자리 ${i + 1}에 앉힐 사람 고르기`}
+                aria-pressed={chosen}
+                onClick={() => onSeat(e ? { employee: e.id } : { empty: i })}
+                data-testid={e ? 'office-seat' : 'office-empty'}
+              />
+            )}
+            {!e && (
+              <span
+                className="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap rounded border border-dashed border-ink/50 bg-white/80 px-1 text-[10px] text-muted"
+                style={{
+                  left: `${((x + SPRITE_WIDTH / 2) / width) * 100}%`,
+                  top: `${((ROOF + FLOOR - 3) / HEIGHT) * 100}%`,
+                }}
+                data-testid="office-empty-tag"
+              >
+                빈 자리{onSeat ? ' +' : ''}
+              </span>
+            )}
+          </div>
+        )
+      })}
       {tags.map((t) => {
         const left = `${((t.x + SPRITE_WIDTH / 2) / width) * 100}%`
         return (
           <div key={t.id}>
             {(t.bubble || t.pnl !== null) && (
               <div
-                className="absolute flex -translate-x-1/2 -translate-y-full flex-col items-center gap-0.5"
+                className="pointer-events-none absolute flex -translate-x-1/2 -translate-y-full flex-col items-center gap-0.5"
                 style={{ left, top: `${((officeTop + 2) / HEIGHT) * 100}%` }}
               >
                 {t.pnl !== null && (
@@ -269,7 +348,7 @@ export const OfficeArt = memo(function OfficeArt({ company }: { company: Company
               </div>
             )}
             <span
-              className="absolute -translate-x-1/2 whitespace-nowrap rounded bg-ink/80 px-1 text-[10px] text-white"
+              className="pointer-events-none absolute -translate-x-1/2 whitespace-nowrap rounded bg-ink/80 px-1 text-[10px] text-white"
               style={{ left, top: `${((ROOF + FLOOR - 3) / HEIGHT) * 100}%` }}
               data-testid="office-tag"
             >
