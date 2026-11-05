@@ -774,6 +774,7 @@ class JsonContentCatalog implements ContentCatalog {
       }
     }
     require(raising.tempters().size() >= 2, "단골 꼬드김 인물이 모자란다");
+    require(raising.omenReview() != null, "위기 전조 돌아보기 문구가 없다");
     RaisingContent.Company company = raising.company();
     require(company != null && !company.names().isEmpty(), "회사 문구가 없다");
     require(company.desks().stream().anyMatch(RaisingContent.Desk::trades), "돈을 굴리는 자리가 없다");

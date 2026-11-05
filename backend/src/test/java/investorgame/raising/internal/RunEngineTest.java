@@ -323,4 +323,51 @@ class RunEngineTest {
     assertThat(mentored.stats.get("insight")).isEqualTo(plain.stats.get("insight"));
     assertThat(mentored.current.tips.getFirst()).isEqualTo("사수 김대리가 붙었다.");
   }
+
+  /** 위기 전조 돌아보기 (투자 원칙 장치 설계 3.3절): 위기가 터지면 조짐을 몇 번 봤고, 첫 조짐 때 팔았다면 얼마를 피했는지 한 줄 남긴다. */
+  @Test
+  void 위기가_터지면_조짐을_돌아본다() {
+    String omen = TestContent.load().crises().getFirst().omens().getFirst();
+    for (long seed = 1; seed <= 10; seed++) {
+      RaisingMemory memory = new RaisingMemory();
+      memory.unlocked.add(RunEngine.UNLOCK_SIZE);
+      RunState run =
+          ENGINE.create(
+              new HashSeededRandom(seed),
+              false,
+              memory,
+              10_000_000,
+              true,
+              new RunEngine.Year("crash", omen),
+              null);
+      List<CardOutcome> outcomes = new ArrayList<>();
+      while (run.current != null) {
+        String option =
+            run.current.kind == CardKind.NEWS
+                ? RunEngine.BUY_BIG
+                : run.current.options.getLast().code;
+        if (run.current.options.stream().noneMatch(o -> o.code.equals(option))) {
+          outcomes.add(
+              ENGINE.choose(
+                  run, memory, run.current.options.getLast().code, new HashSeededRandom(seed)));
+        } else {
+          outcomes.add(ENGINE.choose(run, memory, option, new HashSeededRandom(seed)));
+        }
+      }
+      assertThat(run.highlights).as("판 요약에도 남는다").anyMatch(h -> h.startsWith("폭락 조짐을 2번 봤다."));
+    }
+
+    RaisingMemory memory = new RaisingMemory();
+    RunState silent =
+        ENGINE.create(
+            new HashSeededRandom(3),
+            false,
+            memory,
+            10_000_000,
+            true,
+            new RunEngine.Year("crash", null),
+            null);
+    playThrough(silent, memory, 3);
+    assertThat(silent.highlights).contains("조짐 없이 왔다. 이번엔 아무도 몰랐다.");
+  }
 }
