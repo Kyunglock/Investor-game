@@ -251,6 +251,9 @@ export interface components {
                     [key: string]: components["schemas"]["Grade"];
                 };
                 desk?: string | null;
+                /** @description 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다 */
+                sector?: string | null;
+                sectorName?: string | null;
             }[];
             desks: {
                 code: string;
@@ -258,6 +261,10 @@ export interface components {
                 statCode: string;
                 /** @description 거짓이면 돈을 굴리지 않고 다른 자리를 돕는다 */
                 trades: boolean;
+                /** @description 섹터 데스크면 그 섹터 코드. 섹터를 가리지 않는 자리면 null */
+                sector?: string | null;
+                /** @description 이 시대에 뜨는 자리(시대 보너스가 붙는다 */
+                hot: boolean;
                 description: string;
             }[];
             meeting?: {
@@ -270,6 +277,8 @@ export interface components {
                 /** @description ZZZ 선견. 내년 시장 한 줄 */
                 forecast?: string | null;
                 wanted: string;
+                /** @description 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) */
+                hot?: string | null;
             } | null;
             /** @description 올해 공채 시장의 지원자 (decisions.md 228번). 끝난 회사면 비어 있다 */
             applicants: {
@@ -286,6 +295,9 @@ export interface components {
                 fee: number;
                 /** @description 올해 필요한 인재 */
                 line?: string | null;
+                /** @description 관심 섹터 코드. 뽑으면 직원이 안고 들어온다 */
+                sector?: string | null;
+                sectorName?: string | null;
             }[];
             /**
              * Format: int64

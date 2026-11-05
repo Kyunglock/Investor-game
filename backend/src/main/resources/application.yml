@@ -67,10 +67,19 @@ raising:
     omen-percent: 75
     false-omen-percent: 15
     # 맞히면 +28%·틀리면 −10%·손이 뒤집히면 −14%(바이오), 단타는 +22%·−8%·−10%. C 직원 둘이면 한 시대(세 해)에 자본이 1.5~2배,
-    # A 직원이면 셋에 하나쯤 E(3억)에 닿는다 (decisions.md 226번)
+    # A 직원이면 셋에 하나쯤 E(3억)에 닿는다 (decisions.md 226번).
+    # 섹터 데스크 (decisions.md 233번): 섹터마다 변동이 다르다. crash-percent는 폭락장의 시장 손익(−5%)에 곱한다.
+    # 게임·반도체는 크게 벌고 크게 잃고, 식품·금융은 덜 벌지만 폭락장에 덜 빠진다
     desks:
-      bio: { gain-bp: 2800, miss-bp: 1000, flip-bp: 1400 }
-      day: { gain-bp: 2200, miss-bp: 800, flip-bp: 1000 }
+      semiconductor: { gain-bp: 2700, miss-bp: 1000, flip-bp: 1300, crash-percent: 130 }
+      bio: { gain-bp: 2800, miss-bp: 1000, flip-bp: 1400, crash-percent: 100 }
+      energy: { gain-bp: 2600, miss-bp: 900, flip-bp: 1200, crash-percent: 100 }
+      game: { gain-bp: 2900, miss-bp: 1200, flip-bp: 1500, crash-percent: 100 }
+      food: { gain-bp: 1800, miss-bp: 600, flip-bp: 800, crash-percent: 30 }
+      finance: { gain-bp: 2000, miss-bp: 700, flip-bp: 900, crash-percent: 50 }
+      day: { gain-bp: 2200, miss-bp: 800, flip-bp: 1000, crash-percent: 100 }
+    # 지원자의 관심 섹터와 같은 섹터 데스크에 앉으면 맞혔을 때 +2%p
+    interest-bonus-bp: 200
     phase-bp: { boom: 300, normal: 0, crash: -500 }
     sway-percent: 50
     # 폭락장에 손이 뒤집히면(못 참고 팔면) 손실이 두 배

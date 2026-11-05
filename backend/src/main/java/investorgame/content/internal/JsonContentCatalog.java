@@ -214,9 +214,20 @@ class JsonContentCatalog implements ContentCatalog {
           era.phaseWeights().values().stream().mapToInt(Integer::intValue).sum() > 0,
           "시대의 시장 가중치가 없다: " + era.code());
     }
+    require(company.hotLine() != null, "뜨는 섹터 문구가 없다");
     for (RaisingContent.Desk desk : company.desks()) {
       require(StatCodes.ALL.contains(desk.statCode()), "자리의 능력치가 없다: " + desk.code());
       require(company.wanted().containsKey(desk.code()), "연초 회의 문구가 없다: " + desk.code());
+      require(
+          desk.sector() == null || (desk.trades() && sectorNames.containsKey(desk.sector())),
+          "섹터 데스크의 섹터가 없다: " + desk.code());
+    }
+    for (RaisingContent.Era era : company.eras()) {
+      for (String code : era.deskBonusBp().keySet()) {
+        require(
+            company.desks().stream().anyMatch(d -> d.code().equals(code) && d.trades()),
+            "시대 보너스가 돈을 굴리는 자리가 아니다: " + era.code() + " " + code);
+      }
     }
     for (String stat : List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE)) {
       require(company.flipLines().containsKey(stat), "결산 소식 줄이 없다: " + stat);

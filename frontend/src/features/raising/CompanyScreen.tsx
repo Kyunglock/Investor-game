@@ -166,6 +166,11 @@ function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
           {meeting.forecast}
         </p>
       )}
+      {meeting.hot && (
+        <p className="mt-1 text-[14px] font-semibold text-gold" data-testid="hot-sector">
+          ★ {meeting.hot}
+        </p>
+      )}
       <p className="mt-1 text-[14px]">{meeting.wanted}</p>
     </section>
   )
@@ -196,7 +201,7 @@ function StaffTab({ company }: { company: Company }) {
             disabled={busy}
             onClick={() => void place(autoPlace(company))}
             className="min-h-10 rounded border border-teal px-3 text-[13px] font-semibold text-teal hover:bg-teal hover:text-white disabled:opacity-50"
-            title="돈을 굴리는 자리(바이오·단타)부터 맞는 사람을 앉히고, 남는 자리에 리서치·리스크 관리·인사팀을 채운다"
+            title="돈을 굴리는 자리(섹터 데스크·단타)부터 맞는 사람을 앉히고, 남는 자리에 리서치·리스크 관리·인사팀을 채운다"
           >
             자동 배치
           </button>
@@ -216,6 +221,7 @@ function StaffTab({ company }: { company: Company }) {
                 {e.experienceNeeded != null && ` · 실전 경험 ${e.experience}/${e.experienceNeeded}`}
                 {glowOf(e.overallGrade) &&
                   ` · ${glowOf(e.overallGrade) === 'gold' ? '금빛' : '파란빛'}`}
+                {e.sectorName && ` · 관심 섹터 ${e.sectorName}`}
               </span>
             </p>
             <ul className="mt-1 grid grid-cols-5 gap-1 text-center text-[11px]">
@@ -248,9 +254,11 @@ function StaffTab({ company }: { company: Company }) {
                         data-fit={fit}
                         title={d.description}
                       >
+                        {d.hot && '★ '}
                         {d.name}{' '}
                         <span className="font-mono-num text-[11px]">
                           {STAT_NAMES[d.statCode]} {e.grades[d.statCode]}
+                          {e.sector && d.sector === e.sector && ' · 관심'}
                         </span>
                       </button>
                     )
@@ -276,11 +284,13 @@ function StaffTab({ company }: { company: Company }) {
         <details className="mt-2 text-[12px] text-muted">
           <summary className="cursor-pointer">
             자리 설명 · 글씨 색: <span className="text-teal">잘 맞음</span> ·{' '}
-            <span className="text-gold">보통</span> · <span className="text-wine">안 맞음</span>
+            <span className="text-gold">보통</span> · <span className="text-wine">안 맞음</span> · ★
+            이번 시대에 뜨는 자리 · 관심: 관심 섹터의 데스크
           </summary>
           <ul className="mt-1">
             {company.desks.map((d) => (
               <li key={d.code}>
+                {d.hot && '★ '}
                 {d.name}: {d.description}
               </li>
             ))}
@@ -600,6 +610,11 @@ function ApplicantCard({
         </span>
       </p>
       {a.line && <p className="mt-1 text-[13px] text-teal">{a.line}</p>}
+      {a.sectorName && (
+        <p className="mt-1 text-[12px] text-muted" data-testid="applicant-sector">
+          관심 섹터 {a.sectorName}
+        </p>
+      )}
       <ul className="mt-2 grid grid-cols-5 gap-1 text-center text-[11px]">
         {STAT_ORDER.map((code) => (
           <li key={code} className="rounded border border-line-soft py-0.5">

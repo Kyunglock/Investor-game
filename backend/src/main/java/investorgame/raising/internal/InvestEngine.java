@@ -296,9 +296,7 @@ class InvestEngine {
       int bp =
           HOLD.equals(result.action)
               ? 0
-              : result.action.equals(right)
-                  ? returns.gainBp() + company.era(c).deskBonusBp().getOrDefault(e.desk, 0)
-                  : -returns.missBp();
+              : result.action.equals(right) ? company.gainBp(c, e) : -returns.missBp();
       result.pnl = stake * bp / BP;
       total += result.pnl;
       Map<String, String> values = new HashMap<>();

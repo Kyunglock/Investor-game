@@ -199,14 +199,23 @@ class DefaultCompanyService implements CompanyService {
                         CompanyEngine.overallGrade(e.stats).equals("SSS")
                             ? engine.experienceNeeded(e)
                             : null,
-                        engine.effectsOf(e)))
+                        engine.effectsOf(e),
+                        e.sector,
+                        e.sector == null ? null : engine.sectorName(e.sector)))
             .toList();
+    List<String> hot = engine.hotDesks(c);
     List<CompanyView.Desk> desks =
         engine.desks().stream()
             .map(
                 d ->
                     new CompanyView.Desk(
-                        d.code(), d.name(), d.statCode(), d.trades(), d.description()))
+                        d.code(),
+                        d.name(),
+                        d.statCode(),
+                        d.trades(),
+                        d.sector(),
+                        hot.contains(d.code()),
+                        d.description()))
             .toList();
     List<CompanyView.Applicant> applicants =
         ended
@@ -220,14 +229,21 @@ class DefaultCompanyService implements CompanyService {
                             CompanyEngine.overallGrade(a.stats),
                             CompanyEngine.grades(a.stats),
                             a.fee,
-                            a.line))
+                            a.line,
+                            a.sector,
+                            a.sector == null ? null : engine.sectorName(a.sector)))
                 .toList();
     String hrCap = engine.hrOf(c).map(engine::hrCap).orElse(null);
     CompanyView.Meeting meeting =
         ended
             ? null
             : new CompanyView.Meeting(
-                hrCap, c.omen, engine.earlyOmen(c), engine.forecast(c), engine.wantedLine(c));
+                hrCap,
+                c.omen,
+                engine.earlyOmen(c),
+                engine.forecast(c),
+                engine.wantedLine(c),
+                engine.hotLine(c));
     CompanyState.Settlement last = c.settlements.isEmpty() ? null : c.settlements.getLast();
     return new CompanyView(
         row.id(),
