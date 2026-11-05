@@ -95,9 +95,14 @@ class CompanyApiTest {
     postJson("/api/company/hires", "{\"runId\":\"" + firstId + "\",\"register\":true}")
         .andExpect(status().isBadRequest());
 
-    postJson("/api/company/placement", "{\"seats\":[{\"employeeId\":1,\"desk\":\"bio\"}]}")
+    // 섹터 데스크 (4.2·9.4절): 첫 회사는 평범한 시대라 뜨는 섹터가 없다.
+    List<String> chipSector = company.read("$.desks[?(@.code == 'semiconductor')].sector");
+    assertThat(chipSector).containsExactly("semiconductor");
+    assertThat(company.read("$.meeting.hot", Object.class)).isNull();
+    postJson(
+            "/api/company/placement", "{\"seats\":[{\"employeeId\":1,\"desk\":\"semiconductor\"}]}")
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.employees[0].desk").value("bio"));
+        .andExpect(jsonPath("$.employees[0].desk").value("semiconductor"));
 
     long fund = company.read("$.meeting.recruitFund", Long.class);
     DocumentContext recruit = playRun();
@@ -130,6 +135,8 @@ class CompanyApiTest {
     for (int year = 1; year <= 3; year++) {
       DocumentContext settled = json(mvc.perform(post("/api/company/settle").cookie(session)));
       assertThat(settled.read("$.lastSettlement.year", Integer.class)).isEqualTo(year);
+      List<String> desks = settled.read("$.lastSettlement.results[*].desk");
+      assertThat(desks).contains("semiconductor");
     }
     mvc.perform(get("/api/company").cookie(session))
         .andExpect(jsonPath("$.status").value("ENDED"))

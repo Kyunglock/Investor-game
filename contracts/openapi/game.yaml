@@ -346,18 +346,22 @@ components:
                 description: X 이상 등급의 효과 이름(확신·경보·역발상·리더·사수·선견). 쌓인다 (2.4절)
                 items: { type: string }
               salary: { type: integer, format: int64, description: 연봉. 인사 직원이 뽑은 신입만 받는다 (6.3절) }
+              sector: { type: [string, 'null'], description: 육성의 성향 카드로 정해진 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다 }
+              sectorName: { type: [string, 'null'] }
               grades: { type: object, additionalProperties: { $ref: '#/components/schemas/Grade' } }
               desk: { type: [string, 'null'] }
         desks:
           type: array
           items:
             type: object
-            required: [code, name, statCode, trades, description]
+            required: [code, name, statCode, trades, hot, description]
             properties:
               code: { type: string }
               name: { type: string }
               statCode: { type: string }
               trades: { type: boolean, description: 거짓이면 돈을 굴리지 않고 다른 자리를 돕는다 }
+              sector: { type: [string, 'null'], description: 섹터 데스크면 그 섹터 코드. 섹터를 가리지 않는 자리면 null }
+              hot: { type: boolean, description: 이 시대에 뜨는 자리(시대 보너스가 붙는다, 9.4절) }
               description: { type: string }
         meeting:
           oneOf:
@@ -365,6 +369,7 @@ components:
               required: [wanted, wantedBonus, recruitFund, recruitOpen]
               properties:
                 omen: { type: [string, 'null'], description: 폭락 조짐. 헛조짐일 수도 있다 }
+                hot: { type: [string, 'null'], description: 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) }
                 hrCap:
                   description: 인사팀이 공채를 맡을 수 있으면 뽑는 신입의 종합 등급 상한. 인사팀에 아무도 없으면 null (6.3절)
                   oneOf: [{ $ref: '#/components/schemas/Grade' }, { type: 'null' }]

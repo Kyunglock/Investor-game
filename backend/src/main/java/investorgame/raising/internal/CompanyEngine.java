@@ -61,6 +61,11 @@ class CompanyEngine {
     this.behavior = behavior;
     this.properties = properties;
     this.raising = raising;
+    for (RaisingContent.Desk desk : desks()) {
+      if (desk.trades() && !properties.desks().containsKey(desk.code())) {
+        throw new IllegalStateException("돈을 굴리는 자리의 손익이 없다: raising.company.desks." + desk.code());
+      }
+    }
   }
 
   static final String HR_DESK = "hr";
@@ -127,6 +132,10 @@ class CompanyEngine {
     company.opening = openingLine(company);
     startYear(company, random);
     return company;
+  }
+
+  String sectorName(String code) {
+    return content.sectorName(code);
   }
 
   RaisingContent.Sale saleTexts() {
@@ -324,6 +333,26 @@ class CompanyEngine {
     return properties.gradeCapital();
   }
 
+  /** 이 시대에 뜨는 자리: 시대 보너스가 붙은 돈 굴리는 자리, 자리 순서대로 (9.4절). */
+  List<String> hotDesks(CompanyState company) {
+    Map<String, Integer> bonus = era(company).deskBonusBp();
+    return desks().stream()
+        .map(RaisingContent.Desk::code)
+        .filter(code -> bonus.getOrDefault(code, 0) > 0)
+        .toList();
+  }
+
+  /** 연초 회의의 "이번 시대에 뜨는 섹터" 한 줄. 뜨는 자리가 없는 시대면 null. */
+  String hotLine(CompanyState company) {
+    List<String> hot = hotDesks(company);
+    if (hot.isEmpty()) {
+      return null;
+    }
+    return Korean.fill(
+        content.raising().company().hotLine(),
+        Map.of("desks", String.join("·", hot.stream().map(code -> desk(code).name()).toList())));
+  }
+
   String wantedLine(CompanyState company) {
     return content.raising().company().wanted().get(company.wantedDesk);
   }
@@ -390,7 +419,7 @@ class CompanyEngine {
     return content.raising().company().desks();
   }
 
-  private RaisingContent.Desk desk(String code) {
+  RaisingContent.Desk desk(String code) {
     return desks().stream()
         .filter(d -> d.code().equals(code))
         .findFirst()
@@ -480,16 +509,24 @@ class CompanyEngine {
       boolean conviction = employee.rank >= RANK_CONVICTION;
       boolean contrarian = crash && employee.rank >= RANK_CONTRARIAN;
       int hitBp = behavior.hintAccuracyPercent(insight) * PERCENT;
+      // 맞혔을 때 더하는 몫: 이 시대에 뜨는 섹터(9.4절)와, 육성의 관심 섹터가 그 섹터 데스크와 같을 때.
+      int gainBp =
+          returns.gainBp()
+              + era(company).deskBonusBp().getOrDefault(employee.desk, 0)
+              + (interested(employee) ? properties.interestBonusBp() : 0)
+              + (conviction ? effects.convictionGainBp() : 0);
+      // 한 해 시장 손익. 폭락장에는 섹터마다 빠지는 폭이 다르다(식품·금융은 덜, 반도체는 더).
+      int phaseBp = properties.phaseBp().getOrDefault(company.phase, 0);
+      if (crash) {
+        phaseBp = phaseBp * returns.crashPercent() / PERCENT;
+      }
       long bp = 0;
       for (int i = 0; i < properties.decisions(); i++) {
         int swayRoll = rng.nextInt(BP);
         int flipRoll = rng.nextInt(BP);
         int hitRoll = rng.nextInt(BP);
         // XXX 역발상: 폭락장에 빠지는 동안 사서 회복 구간에서 번다.
-        bp +=
-            contrarian
-                ? effects.contrarianCrashBp()
-                : properties.phaseBp().getOrDefault(company.phase, 0);
+        bp += contrarian ? effects.contrarianCrashBp() : phaseBp;
         if (swayRoll < swayBp) {
           result.flips.merge(StatCodes.CONVICTION, 1, Integer::sum);
           bp -= returns.missBp();
@@ -501,9 +538,7 @@ class CompanyEngine {
           // X 확신: 형광펜이 맞으면 알아서 크게 산다. 맞히면 더 벌고 틀려도 덜 잃어 편차가 준다.
           bp +=
               hitRoll < hitBp
-                  ? returns.gainBp()
-                      + era(company).deskBonusBp().getOrDefault(employee.desk, 0)
-                      + (conviction ? effects.convictionGainBp() : 0)
+                  ? gainBp
                   : -returns.missBp()
                       * (conviction ? effects.convictionMissPercent() : PERCENT)
                       / PERCENT;
@@ -710,6 +745,13 @@ class CompanyEngine {
                     content.raising().company().effects().forecast().get(company.nextPhase),
                     Map.of("name", e.name)))
         .orElse(null);
+  }
+
+  /** 직원이 자기 관심 섹터의 섹터 데스크에 앉았는가 (4.2절, 육성의 성향 카드). */
+  boolean interested(Employee employee) {
+    return employee.sector != null
+        && employee.desk != null
+        && employee.sector.equals(desk(employee.desk).sector());
   }
 
   /** 그 자리에 앉은 직원 가운데 가장 높은 능력치. 아무도 없으면 0. */

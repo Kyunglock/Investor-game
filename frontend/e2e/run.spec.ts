@@ -131,7 +131,14 @@ test('회사: 배치하고, 공채 육성으로 신입을 등록하고, 세 해�
   await page.getByRole('button', { name: '1호 직원으로 등록하고 회사를 연다' }).click()
   await expect(page.getByTestId('meeting')).toBeVisible()
 
-  await page.getByTestId('employee').first().getByRole('combobox').selectOption('bio')
+  // 섹터 데스크 (4.2·9.4절): 종목 섹터마다 돈 굴리는 자리가 있다.
+  await expect(
+    page
+      .getByTestId('employee')
+      .first()
+      .getByRole('option', { name: /반도체 데스크/ }),
+  ).toHaveCount(1)
+  await page.getByTestId('employee').first().getByRole('combobox').selectOption('semiconductor')
   await page.getByRole('button', { name: '이렇게 앉힌다' }).click()
   await expect(page.getByRole('button', { name: '이렇게 앉힌다' })).toBeHidden()
   await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '1')
@@ -151,6 +158,7 @@ test('회사: 배치하고, 공채 육성으로 신입을 등록하고, 세 해�
     await page.getByRole('button', { name: `${year}년 차 결산 보기` }).click()
     await expect(page.getByTestId('settlement')).toContainText(`${year}년 차 결산`)
   }
+  await expect(page.getByTestId('board')).toContainText('반도체 데스크')
   // 시대가 끝나면 회사를 판다. 아끼던 직원을 공동창업자로 데려가 새 시대의 F 회사를 차린다 (9절).
   await expect(page.getByTestId('sale')).toBeVisible()
   await page.reload()

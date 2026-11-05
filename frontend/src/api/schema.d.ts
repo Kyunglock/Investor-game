@@ -350,6 +350,9 @@ export interface components {
                  * @description 연봉. 인사 직원이 뽑은 신입만 받는다 (6.3절)
                  */
                 salary: number;
+                /** @description 육성의 성향 카드로 정해진 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다 */
+                sector?: string | null;
+                sectorName?: string | null;
                 grades: {
                     [key: string]: components["schemas"]["Grade"];
                 };
@@ -361,11 +364,17 @@ export interface components {
                 statCode: string;
                 /** @description 거짓이면 돈을 굴리지 않고 다른 자리를 돕는다 */
                 trades: boolean;
+                /** @description 섹터 데스크면 그 섹터 코드. 섹터를 가리지 않는 자리면 null */
+                sector?: string | null;
+                /** @description 이 시대에 뜨는 자리(시대 보너스가 붙는다 */
+                hot: boolean;
                 description: string;
             }[];
             meeting?: {
                 /** @description 폭락 조짐. 헛조짐일 수도 있다 */
                 omen?: string | null;
+                /** @description 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) */
+                hot?: string | null;
                 /** @description 인사팀이 공채를 맡을 수 있으면 뽑는 신입의 종합 등급 상한. 인사팀에 아무도 없으면 null (6.3절) */
                 hrCap?: components["schemas"]["Grade"] | null;
                 /** @description XX 경보. 내년 폭락 조짐 한 줄 */

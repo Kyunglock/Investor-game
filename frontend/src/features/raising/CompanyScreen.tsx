@@ -4,6 +4,7 @@ import { Document } from '../game/Document'
 import { shortWon, signedWon } from '../game/labels'
 import { usePixelArt } from '../game/pixelArt'
 import { bubbleOf } from './board'
+import { deskLabel } from './desks'
 import { STAT_NAMES } from './grades'
 import { MoveScene } from './MoveScene'
 import { OfficeArt } from './OfficeArt'
@@ -97,6 +98,11 @@ export function CompanyScreen({ company }: { company: Company }) {
                 {meeting.omen}
               </p>
             )}
+            {meeting.hot && (
+              <p className="mt-1 text-[14px] font-semibold" data-testid="hot-sector">
+                {meeting.hot}
+              </p>
+            )}
             {meeting.earlyOmen && (
               <p className="mt-1 text-[14px] text-red-pen" data-testid="early-omen">
                 {meeting.earlyOmen}
@@ -127,6 +133,7 @@ export function CompanyScreen({ company }: { company: Company }) {
                     · {ATTIRE_NAMES[attireOf(e.overallGrade)]}
                     {e.effects.length > 0 && ` · ${e.effects.join('·')}`}
                     {e.salary > 0 && ` · 연봉 ${shortWon(e.salary)}`}
+                    {e.sectorName && ` · 관심 섹터 ${e.sectorName}`}
                     {e.experienceNeeded != null &&
                       ` · 실전 경험 ${e.experience}/${e.experienceNeeded}`}
                     {glowOf(e.overallGrade) &&
@@ -148,7 +155,7 @@ export function CompanyScreen({ company }: { company: Company }) {
                     <option value="">쉰다</option>
                     {company.desks.map((d) => (
                       <option key={d.code} value={d.code}>
-                        {d.name} ({STAT_NAMES[d.statCode]})
+                        {deskLabel(d, e.sector)}
                       </option>
                     ))}
                   </select>
@@ -160,7 +167,8 @@ export function CompanyScreen({ company }: { company: Company }) {
             <ul className="mt-2 text-[12px] text-muted">
               {company.desks.map((d) => (
                 <li key={d.code}>
-                  {d.name}: {d.description}
+                  {d.name}
+                  {d.hot && ' (이번 시대에 뜬다)'}: {d.description}
                 </li>
               ))}
             </ul>

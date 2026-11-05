@@ -52,6 +52,7 @@ public record CompanyView(
    * @param experienceNeeded 다음 단계까지 드는 실전 경험. SSS가 아니면 null(아직 쌓이지 않는다)
    * @param effects X 이상 등급의 효과 이름(확신·경보…). 쌓인다 (2.4절)
    * @param salary 연봉. 인사 직원이 뽑은 신입만 받는다 (6.3절)
+   * @param sector 육성의 성향 카드로 정해진 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다. 없으면 null
    */
   public record Employee(
       int id,
@@ -62,16 +63,29 @@ public record CompanyView(
       int experience,
       Integer experienceNeeded,
       List<String> effects,
-      long salary) {}
+      long salary,
+      String sector,
+      String sectorName) {}
 
   /** 인사팀이 데려와 등록을 기다리는 신입 (6.3절). line은 데려온 인사 직원의 한 줄. */
   public record Candidate(String overallGrade, Map<String, String> grades, String line) {}
 
+  /**
+   * @param sector 섹터 데스크면 그 섹터 코드. 섹터를 가리지 않는 자리면 null
+   * @param hot 이 시대에 뜨는 자리(시대 보너스가 붙는다, 9.4절)
+   */
   public record Desk(
-      String code, String name, String statCode, boolean trades, String description) {}
+      String code,
+      String name,
+      String statCode,
+      boolean trades,
+      String sector,
+      boolean hot,
+      String description) {}
 
   /**
    * @param omen 폭락 조짐(빨간 글씨). 없으면 null. 헛조짐일 수도 있다
+   * @param hot 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절)
    * @param hrCap 인사팀이 공채를 맡을 수 있으면 뽑는 신입의 종합 등급 상한. 인사팀에 아무도 없으면 null
    * @param earlyOmen XX 경보: 내년 폭락 조짐 한 줄. 경보 직원이 없거나 조짐이 없으면 null
    * @param forecast ZZZ 선견: 내년 시장 한 줄. 선견 직원이 없으면 null
@@ -84,6 +98,7 @@ public record CompanyView(
   public record Meeting(
       String hrCap,
       String omen,
+      String hot,
       String earlyOmen,
       String forecast,
       String wanted,

@@ -57,6 +57,7 @@ class DefaultCompanyService implements CompanyService {
       long seed = seeds.nextLong();
       CompanyState company = engine.open(new HashSeededRandom(seed), person.stats, money);
       company.employees.getFirst().experience = survivedCrisis(person) ? 1 : 0;
+      company.employees.getFirst().sector = RunEngine.topTrait(person, "sector.");
       CompanyRepository.Row row =
           new CompanyRepository.Row(UUID.randomUUID(), sessionId, "ACTIVE", seed, company);
       companies.insert(row);
@@ -76,7 +77,9 @@ class DefaultCompanyService implements CompanyService {
       // 연초 회의가 말한 인재에 맞춰 키웠으면 그 능력치가 한 띠 올라 입사한다 (5절 3번).
       Map<String, Integer> stats =
           engine.withWantedBonus(person.stats, person.wantedStat, person.wantedMin);
-      engine.hire(company, stats).experience = survivedCrisis(person) ? 1 : 0;
+      CompanyState.Employee employee = engine.hire(company, stats);
+      employee.experience = survivedCrisis(person) ? 1 : 0;
+      employee.sector = RunEngine.topTrait(person, "sector.");
     }
     companies.update(row.id(), company, false);
     return view(row, runs.memory(sessionId));
@@ -221,14 +224,23 @@ class DefaultCompanyService implements CompanyService {
                             ? engine.experienceNeeded(e)
                             : null,
                         engine.effectsOf(e),
-                        e.salary))
+                        e.salary,
+                        e.sector,
+                        e.sector == null ? null : engine.sectorName(e.sector)))
             .toList();
+    List<String> hot = engine.hotDesks(c);
     List<CompanyView.Desk> desks =
         engine.desks().stream()
             .map(
                 d ->
                     new CompanyView.Desk(
-                        d.code(), d.name(), d.statCode(), d.trades(), d.description()))
+                        d.code(),
+                        d.name(),
+                        d.statCode(),
+                        d.trades(),
+                        d.sector(),
+                        hot.contains(d.code()),
+                        d.description()))
             .toList();
     CompanyView.Candidate candidate =
         c.candidate == null
@@ -244,6 +256,7 @@ class DefaultCompanyService implements CompanyService {
             : new CompanyView.Meeting(
                 hrCap,
                 c.omen,
+                engine.hotLine(c),
                 engine.earlyOmen(c),
                 engine.forecast(c),
                 engine.wantedLine(c),

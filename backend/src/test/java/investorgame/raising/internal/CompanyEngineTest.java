@@ -344,4 +344,63 @@ class CompanyEngineTest {
     assertThat(ENGINE.withWantedBonus(top, stat, min).get(stat)).as("100을 넘지 않는다").isEqualTo(100);
     assertThat(ENGINE.withWantedBonus(fit, null, min)).as("공채 육성이 아니면 그대로").isEqualTo(fit);
   }
+
+  /** 섹터 데스크 (4.2·9.4절): 그 시대에 뜨는 섹터 데스크에 그 자리가 원하는 능력치가 좋은 사람을 앉히면 결과가 좋아진다. */
+  @Test
+  void 시대에_뜨는_섹터_데스크에_맞는_사람을_앉히면_결과가_좋아진다() {
+    Map<String, Integer> brave = stats(50, 30, 85, 30);
+    double chipInBoom = yearly(brave, "semiconductor", "chip-boom", null);
+    assertThat(chipInBoom)
+        .as("반도체 붐 시대엔 반도체 데스크가 뜬다")
+        .isGreaterThan(yearly(brave, "semiconductor", "plain", null))
+        .isGreaterThan(yearly(brave, "day", "chip-boom", null));
+    assertThat(chipInBoom)
+        .as("용기가 원하는 자리에 인내심 낮은 사람이 맞다")
+        .isGreaterThan(yearly(brave, "energy", "chip-boom", null));
+
+    Map<String, Integer> steady = stats(50, 30, 30, 85);
+    assertThat(yearly(steady, "food", "long-winter", null))
+        .as("긴 겨울엔 덜 빠지는 식품 데스크에 줏대 있는 사람")
+        .isGreaterThan(yearly(steady, "semiconductor", "long-winter", null))
+        .isGreaterThan(yearly(steady, "food", "plain", null));
+
+    assertThat(yearly(brave, "game", "plain", "game"))
+        .as("육성의 관심 섹터가 같은 데스크면 조금 더 번다")
+        .isGreaterThan(yearly(brave, "game", "plain", null));
+  }
+
+  @Test
+  void 연초_회의에_이번_시대에_뜨는_섹터가_보인다() {
+    CompanyState company = ENGINE.open(new HashSeededRandom(1), stats(50, 50, 50, 50), 100_000_000);
+    assertThat(ENGINE.hotLine(company)).as("평범한 시대엔 뜨는 섹터가 없다").isNull();
+    company.era = "long-winter";
+    assertThat(ENGINE.hotDesks(company)).containsExactly("food", "finance");
+    assertThat(ENGINE.hotLine(company)).isEqualTo("이번 시대에 뜨는 섹터: 식품 데스크·금융 데스크.");
+    company.era = "chip-boom";
+    assertThat(ENGINE.hotLine(company)).contains("반도체 데스크");
+
+    CompanyState.Employee employee = company.employees.getFirst();
+    employee.sector = "semiconductor";
+    employee.desk = "semiconductor";
+    assertThat(ENGINE.interested(employee)).isTrue();
+    employee.desk = "day";
+    assertThat(ENGINE.interested(employee)).as("단타 데스크는 섹터를 가리지 않는다").isFalse();
+  }
+
+  /** 시대와 관심 섹터를 정해 한 해 결산한 평균 수익(판돈 대비, 만분율). */
+  private static double yearly(
+      Map<String, Integer> trader, String desk, String era, String interest) {
+    long sum = 0;
+    int trials = 3000;
+    for (int seed = 0; seed < trials; seed++) {
+      CompanyState company = ENGINE.open(new HashSeededRandom(seed), trader, 1_000_000_000L);
+      company.era = era;
+      ENGINE.startYear(company, new HashSeededRandom(seed));
+      company.employees.getFirst().sector = interest;
+      ENGINE.place(company, Map.of(1, desk));
+      CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(seed));
+      sum += s.results.getFirst().pnl * 10_000 / s.results.getFirst().stake;
+    }
+    return sum / (double) trials;
+  }
 }

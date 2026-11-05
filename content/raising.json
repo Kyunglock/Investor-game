@@ -841,18 +841,59 @@
     ],
     "desks": [
       {
+        "code": "semiconductor",
+        "name": "반도체 데스크",
+        "statCode": "courage",
+        "trades": true,
+        "sector": "semiconductor",
+        "description": "사이클이 빠르다. 바닥에서 사는 용기가 중요하다. 폭락장엔 남보다 더 빠진다."
+      },
+      {
         "code": "bio",
         "name": "바이오 데스크",
         "statCode": "patience",
         "trades": true,
+        "sector": "bio",
         "description": "변동이 커서 못 참고 팔면 손해다. 인내심이 중요하다."
+      },
+      {
+        "code": "energy",
+        "name": "에너지 데스크",
+        "statCode": "patience",
+        "trades": true,
+        "sector": "energy",
+        "description": "유가는 몇 해를 돈다. 오를 때까지 들고 버티는 인내심이 중요하다."
+      },
+      {
+        "code": "game",
+        "name": "게임 데스크",
+        "statCode": "courage",
+        "trades": true,
+        "sector": "game",
+        "description": "흥행은 출시 날 갈린다. 크게 벌거나 크게 잃는다. 망설이면 놓친다. 용기가 중요하다."
+      },
+      {
+        "code": "food",
+        "name": "식품 데스크",
+        "statCode": "conviction",
+        "trades": true,
+        "sector": "food",
+        "description": "심심하지만 폭락장에 덜 빠진다. 뜨거운 종목으로 갈아타지 않는 줏대가 중요하다."
+      },
+      {
+        "code": "finance",
+        "name": "금융 데스크",
+        "statCode": "conviction",
+        "trades": true,
+        "sector": "finance",
+        "description": "금리와 배당을 본다. 폭락장에 덜 빠진다. 소문에 흔들리지 않는 줏대가 중요하다."
       },
       {
         "code": "day",
         "name": "단타 데스크",
         "statCode": "courage",
         "trades": true,
-        "description": "사야 할 때 못 사면 끝이다. 용기가 중요하다."
+        "description": "섹터를 가리지 않는다. 사야 할 때 못 사면 끝이다. 용기가 중요하다."
       },
       {
         "code": "research",
@@ -882,12 +923,18 @@
       "conviction": "{name}이(가) 또 단톡방 보고 샀습니다."
     },
     "wanted": {
+      "semiconductor": "올해는 반도체 데스크에 용기 있는 사람이 필요합니다.",
       "bio": "올해는 바이오 데스크에 인내심 좋은 사람이 필요합니다.",
+      "energy": "올해는 에너지 데스크에 인내심 좋은 사람이 필요합니다.",
+      "game": "올해는 게임 데스크에 용기 있는 사람이 필요합니다.",
+      "food": "올해는 식품 데스크에 줏대 있는 사람이 필요합니다.",
+      "finance": "올해는 금융 데스크에 줏대 있는 사람이 필요합니다.",
       "day": "올해는 단타 데스크에 용기 있는 사람이 필요합니다.",
       "research": "올해는 리서치 팀에 안목 있는 사람이 필요합니다.",
       "risk": "폭락 조짐이 있습니다. 리스크 관리 팀에 줏대 있는 사람을 앉히세요.",
       "hr": "인사팀에 사람 보는 눈(안목)이 좋은 사람을 앉히면 공채를 맡길 수 있습니다."
     },
+    "hotLine": "이번 시대에 뜨는 섹터: {desks}.",
     "phases": {
       "boom": "호황이었다. 웬만하면 올랐다.",
       "normal": "평범한 한 해였다.",
@@ -910,20 +957,20 @@
       {
         "code": "chip-boom",
         "name": "반도체 붐 시대",
-        "description": "단타가 잘 먹히는 뜨거운 시장. 대신 거품이 꺼지면 크게 빠진다.",
+        "description": "반도체가 뜨겁다. 반도체 데스크에 용기 있는 사람을. 대신 거품이 꺼지면 크게 빠진다.",
         "phaseWeights": {
           "boom": 45,
           "normal": 25,
           "crash": 30
         },
         "deskBonusBp": {
-          "day": 300
+          "semiconductor": 400
         }
       },
       {
         "code": "bio-bubble",
         "name": "바이오 거품 시대",
-        "description": "바이오가 들썩인다. 인내심 좋은 사람이 크게 번다.",
+        "description": "바이오가 들썩인다. 바이오 데스크에 인내심 좋은 사람이 크게 번다.",
         "phaseWeights": {
           "boom": 35,
           "normal": 35,
@@ -936,13 +983,42 @@
       {
         "code": "long-winter",
         "name": "긴 겨울 시대",
-        "description": "폭락장이 잦다. 줏대와 인내심을 앞에 세워야 버틴다.",
+        "description": "폭락장이 잦다. 덜 빠지는 식품·금융 데스크에 줏대 있는 사람을 앞에 세워야 버틴다.",
         "phaseWeights": {
           "boom": 15,
           "normal": 45,
           "crash": 40
         },
-        "deskBonusBp": {}
+        "deskBonusBp": {
+          "food": 500,
+          "finance": 500
+        }
+      },
+      {
+        "code": "oil-rally",
+        "name": "원자재 랠리 시대",
+        "description": "유가가 몇 해째 오른다. 에너지 데스크에 오래 들고 버틸 사람을.",
+        "phaseWeights": {
+          "boom": 35,
+          "normal": 40,
+          "crash": 25
+        },
+        "deskBonusBp": {
+          "energy": 400
+        }
+      },
+      {
+        "code": "game-hit",
+        "name": "게임 대박 시대",
+        "description": "신작마다 대박이다. 게임 데스크에 망설이지 않는 사람을.",
+        "phaseWeights": {
+          "boom": 40,
+          "normal": 35,
+          "crash": 25
+        },
+        "deskBonusBp": {
+          "game": 400
+        }
       }
     ],
     "sale": {
