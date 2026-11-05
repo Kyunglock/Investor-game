@@ -64,7 +64,8 @@ public record RaisingContent(
    * 투자 회의 (decisions.md 229번). 고르는 것은 BUY·SELL·HOLD.
    *
    * @param options 사장이 고르는 버튼 이름
-   * @param reads 직원의 한마디. 직원이 기사를 읽은 쪽(UP·DOWN·NEUTRAL)별
+   * @param remarks 직원의 한마디. 안목 구간(low·mid·high·expert) → 읽은 쪽(UP·DOWN·NEUTRAL) → 문구 여럿. {quote}(따온
+   *     기사 문장)·{stock}
    * @param actions 직원이 한 일(샀다·팔았다·지켜봤다)
    * @param obey 사장 말대로 했다. {action}
    * @param rogue 제멋대로 했다. {action}
@@ -74,7 +75,7 @@ public record RaisingContent(
    */
   public record Invest(
       Map<String, String> options,
-      Map<String, String> reads,
+      Map<String, Map<String, List<String>>> remarks,
       Map<String, String> actions,
       String obey,
       String rogue,

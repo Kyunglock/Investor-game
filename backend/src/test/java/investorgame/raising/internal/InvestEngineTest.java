@@ -204,4 +204,49 @@ class InvestEngineTest {
     CompanyState none = ENGINE.open(new HashSeededRandom(1), 100_000_000L);
     assertThat(ENGINE.invest.highlight(none, new HashSeededRandom(1))).isEmpty();
   }
+
+  /**
+   * 한마디는 안목에 따라 다르다 (decisions.md 239번): 안목이 낮으면 기사를 따오지 않고 감·소문으로 말하고, 높으면 결정적 문장을 따온다. 리서치 팀 형광펜은
+   * 반만 빌려, 안목이 낮은 직원은 리서치 팀만큼 맞히지 못한다.
+   */
+  @Test
+  void 한마디는_안목에_따라_말투와_근거와_맞히는_정도가_다르다() {
+    int sharpRight = 0;
+    int sharpDecisive = 0;
+    int dullRight = 0;
+    int trials = 300;
+    for (int seed = 0; seed < trials; seed++) {
+      // E(3억)라 자리가 셋: 안목 낮은 직원, 안목 높은 직원, 리서치 팀(안목 만점).
+      CompanyState c = ENGINE.open(new HashSeededRandom(seed), 300_000_000L);
+      ENGINE.hire(c, stats(0, 50, 50, 50));
+      ENGINE.hire(c, stats(90, 50, 50, 50));
+      ENGINE.hire(c, stats(100, 50, 50, 50));
+      ENGINE.place(c, Map.of(1, "day", 2, "day", 3, "research"));
+      c.phase = "normal";
+      var remarks = ENGINE.invest.remarks(c, new HashSeededRandom(seed));
+      var dull = remarks.get(0);
+      var sharp = remarks.get(1);
+      String truth = c.invest.up ? "UP" : "DOWN";
+      assertThat(dull.text()).as("안목이 낮으면 기사를 따오지 않는다").doesNotContain("‘");
+      assertThat(sharp.text()).as("안목이 높으면 기사를 따온다").contains("‘");
+      assertThat(sharp.text()).doesNotContain("{");
+      // 화면이 한마디를 큰따옴표로 감싸므로 따온 문장으로 시작하지 않는다.
+      assertThat(remarks).noneMatch(r -> r.text().startsWith("‘"));
+      if (sharp.read().equals(truth)) {
+        sharpRight++;
+        String decisive =
+            c.invest.sentences.stream().filter(x -> x.decisive).findFirst().orElseThrow().text;
+        if (sharp.text().contains(decisive.substring(0, 10))) {
+          sharpDecisive++;
+        }
+      }
+      if (dull.read().equals(truth)) {
+        dullRight++;
+      }
+    }
+    assertThat(sharpDecisive).as("맞게 읽은 높은 안목은 결정적 문장을 짚는다").isEqualTo(sharpRight);
+    assertThat(sharpRight).isGreaterThan(trials * 85 / 100);
+    // 형광펜을 반만 빌려(안목 0 → 50) 맞히는 정도가 안목 높은 직원보다 확실히 낮다.
+    assertThat(dullRight).isLessThan(sharpRight - trials / 10);
+  }
 }
