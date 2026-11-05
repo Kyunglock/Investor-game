@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { PALETTE } from '../game/pixel/palette'
-import { officeMap } from './OfficeArt'
-import { attireOf, customersOf, glowOf, lobbyOf, officeCaption, tierOf } from './office'
+import type { Company } from '../../api/client'
+import { attireOf, customersOf, glowOf, lobbyOf, officeCaption, seatTiles, tierOf } from './office'
 
 describe('회사 건물과 객장 (증권사 육성 설계 8.1절)', () => {
   it('등급마다 건물이 바뀐다: 반지하 → 상가 → 작은 빌딩 → 여의도 → 통째 → 사옥 → 랜드마크', () => {
@@ -38,42 +37,38 @@ describe('회사 건물과 객장 (증권사 육성 설계 8.1절)', () => {
     )
   })
 
-  it('책상 수는 자리 수이고, 지도의 글자는 모두 팔레트에 있다', () => {
-    for (const grade of ['F', 'C', 'S', 'XX', 'ZZZ'] as const) {
-      const map = officeMap(grade, 5, 100)
-      expect(map.flat().every((ch) => ch === '.' || ch in PALETTE)).toBe(true)
-    }
-    const screens = (seats: number) =>
-      officeMap('F', seats, 120)
-        .map((row) => row.join(''))
-        .join('\n')
-        .match(/KZ/g)?.length ?? 0
-    expect(screens(2)).toBeGreaterThan(0)
-    expect(screens(4)).toBe(screens(2) * 2)
-  })
-
-  it('모니터 주가 선은 그해 손익을 따르고 빈 책상은 꺼져 있다 (237번)', () => {
-    const lines = (screen: 'up' | 'down' | 'off') => {
-      const map = officeMap('F', 1, 64, [screen])
-      const at: [number, number][] = []
-      map.forEach((row, y) => {
-        row.forEach((ch, x) => {
-          if (ch === 'U' || ch === 'B') {
-            at.push([x, y])
-          }
-        })
-      })
-      at.sort((a, b) => a[0] - b[0])
-      return { color: new Set(at.map(([x, y]) => map[y][x])), at }
-    }
-    const up = lines('up')
-    const down = lines('down')
-    expect([...up.color]).toEqual(['U'])
-    expect([...down.color]).toEqual(['B'])
-    // 오르면 오른쪽이 위(작은 y), 내리면 오른쪽이 아래
-    expect(up.at.at(-1)?.[1]).toBeLessThan(up.at[0][1])
-    expect(down.at.at(-1)?.[1]).toBeGreaterThan(down.at[0][1])
-    expect(lines('off').at).toHaveLength(0)
+  it('미니맵 칸은 자리 수만큼이고 앉은 사람이 앞에서 채우며, 표정은 지난 결산 손익을 따른다 (237번)', () => {
+    const company = {
+      seats: 3,
+      desks: [
+        { code: 'bio', name: '바이오 데스크', trades: true },
+        { code: 'research', name: '리서치 팀', trades: false },
+      ],
+      employees: [
+        { id: 1, name: '가', desk: 'bio' },
+        { id: 2, name: '나', desk: null },
+        { id: 3, name: '다', desk: 'research' },
+        { id: 4, name: '라', desk: 'bio' },
+      ],
+      lastSettlement: {
+        results: [
+          { employeeId: 1, stake: 100, pnl: -5 },
+          { employeeId: 4, stake: 100, pnl: 7 },
+        ],
+      },
+    } as unknown as Company
+    const { tiles, resting } = seatTiles(company)
+    expect(tiles.map((t) => t.employee?.name ?? null)).toEqual(['가', '다', '라'])
+    expect(tiles.map((t) => t.desk)).toEqual(['바이오 데스크', '리서치 팀', '바이오 데스크'])
+    expect(tiles.map((t) => t.trades)).toEqual([true, false, true])
+    expect(tiles.map((t) => t.mood)).toEqual(['despair', null, 'joy'])
+    expect(tiles.map((t) => t.pnl)).toEqual([-5, null, 7])
+    expect(resting.map((e) => e.name)).toEqual(['나'])
+    const empty = seatTiles({ ...company, seats: 5 }).tiles
+    expect(empty.slice(3).map((t) => [t.index, t.employee])).toEqual([
+      [3, null],
+      [4, null],
+    ])
   })
 })
 
