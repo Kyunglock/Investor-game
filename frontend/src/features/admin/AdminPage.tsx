@@ -5,46 +5,35 @@ import { Card } from '../game/Card'
 import { shortWon } from '../game/labels'
 
 type PlayLog = components['schemas']['PlayLog']
-type RunPlay = PlayLog['runs'][number]
-
-const KIND_LABEL: Record<NonNullable<RunPlay['kind']>, string> = {
-  TRAIT: '성향',
-  NEWS: '뉴스',
-  PRINCIPLE: '투자 원칙',
-  RELEASE: '원칙 풀기',
-  BIG: '큰일',
-  LEVERAGE: '빚내서 사기',
-  EXAM: '입사 심사',
-}
+type CompanyPlay = PlayLog['companies'][number]
 
 /**
- * 끝내지 않은 육성 판이 어느 카드에서 멈췄는지 (증권사 육성 설계 11.5절). 카드 번호 순. 짜인 첫 판은 따로 센다: 처음 온 사람이 어디서 나가는지가
- * 가장 궁금하다.
+ * 돌고 있는 회사가 어느 해에서 멈췄는지 (decisions.md 228번). 해 순. 아무도 뽑지 않은 회사는 따로 센다: 처음 온 사람이 공채에서 막혔는지가 가장
+ * 궁금하다. 첫 회사만 센다(다음 회사는 이미 한 바퀴를 돈 사람이다).
  */
 export function dropOff(
-  runs: RunPlay[],
-): { card: number; kind: string; all: number; first: number }[] {
-  const rows = new Map<number, { card: number; kind: string; all: number; first: number }>()
-  for (const r of runs) {
-    if (r.status === 'ENDED' || r.kind == null) {
+  companies: CompanyPlay[],
+): { year: number; all: number; noStaff: number }[] {
+  const rows = new Map<number, { year: number; all: number; noStaff: number }>()
+  for (const c of companies) {
+    if (c.status === 'ENDED' || c.number !== 1) {
       continue
     }
-    const row = rows.get(r.card) ?? { card: r.card, kind: KIND_LABEL[r.kind], all: 0, first: 0 }
+    const row = rows.get(c.year) ?? { year: c.year, all: 0, noStaff: 0 }
     row.all++
-    if (r.scripted) {
-      row.first++
+    if (c.employees === 0) {
+      row.noStaff++
     }
-    rows.set(r.card, row)
+    rows.set(c.year, row)
   }
-  return [...rows.values()].sort((a, b) => a.card - b.card)
+  return [...rows.values()].sort((a, b) => a.year - b.year)
 }
 
 const TOKEN_KEY = 'ig-admin-token'
 
-const STATUS_LABEL: Record<RunPlay['status'], string> = {
-  ACTIVE: '진행 중',
-  ENDED: '끝남',
-  ABANDONED: '버림',
+const STATUS_LABEL: Record<CompanyPlay['status'], string> = {
+  ACTIVE: '도는 중',
+  ENDED: '시대 끝',
 }
 
 /** 세션 ID 앞 8자리. 계정이 없어 "누구"는 익명 세션이다 (decisions.md 46번). */
@@ -99,7 +88,7 @@ export function AdminPage() {
     setLog(data)
   }
 
-  const runsEnded = log?.runs.filter((r) => r.status === 'ENDED').length ?? 0
+  const sold = log?.companies.filter((c) => c.sold).length ?? 0
   const ipOf = new Map(log?.sessions.map((s) => [s.sessionId, s.lastIp ?? '—']) ?? [])
 
   return (
@@ -131,66 +120,66 @@ export function AdminPage() {
       {log && (
         <>
           <p className="text-sm" data-testid="admin-summary">
-            세션 <b>{log.sessions.length}</b> · 육성 판 <b>{log.runs.length}</b> · 입사 심사까지{' '}
-            <b>{runsEnded}</b>
+            세션 <b>{log.sessions.length}</b> · 회사 <b>{log.companies.length}</b> · 판 회사{' '}
+            <b>{sold}</b>
           </p>
 
-          <Card title="육성 판이 멈춘 카드" aside="끝내지 않은 판, 카드 순">
+          <Card title="첫 회사가 멈춘 해" aside="도는 중인 첫 회사, 해 순">
             <table className="w-full text-left text-[13px]" data-testid="admin-dropoff">
               <thead className="text-[11px] text-faint">
                 <tr>
-                  <th className="py-1 font-normal">카드</th>
-                  <th className="font-normal">종류</th>
-                  <th className="font-normal">멈춘 판</th>
-                  <th className="font-normal">그중 짜인 첫 판</th>
+                  <th className="py-1 font-normal">해</th>
+                  <th className="font-normal">멈춘 회사</th>
+                  <th className="font-normal">그중 직원 없음</th>
                 </tr>
               </thead>
               <tbody>
-                {dropOff(log.runs).map((row) => (
-                  <tr key={row.card} className="border-t border-line-soft">
-                    <td className="py-1.5 font-mono-num">{row.card + 1}번째</td>
-                    <td>{row.kind}</td>
+                {dropOff(log.companies).map((row) => (
+                  <tr key={row.year} className="border-t border-line-soft">
+                    <td className="py-1.5 font-mono-num">{row.year}년 차</td>
                     <td className="font-mono-num">{row.all}</td>
-                    <td className="font-mono-num">{row.first}</td>
+                    <td className="font-mono-num">{row.noStaff}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </Card>
 
-          <Card title="육성 판" aside="최근에 시작한 순">
+          <Card title="회사" aside="최근에 차린 순">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[640px] text-left text-[13px]">
                 <thead className="text-[11px] text-faint">
                   <tr>
-                    <th className="py-1 font-normal">시작</th>
+                    <th className="py-1 font-normal">차림</th>
                     <th className="font-normal">세션</th>
                     <th className="font-normal">IP</th>
                     <th className="font-normal">상태</th>
-                    <th className="font-normal">카드</th>
+                    <th className="font-normal">해</th>
                     <th className="font-normal">마지막</th>
-                    <th className="font-normal">총자산</th>
-                    <th className="font-normal">종합 등급</th>
+                    <th className="font-normal">자본</th>
+                    <th className="font-normal">등급</th>
+                    <th className="font-normal">직원</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {log.runs.map((r) => (
-                    <tr key={r.runId} className="border-t border-line-soft" data-testid="admin-run">
-                      <td className="py-1.5 font-mono-num">{time(r.startedAt)}</td>
-                      <td className="font-mono-num">{shortId(r.sessionId)}</td>
-                      <td className="font-mono-num">{ipOf.get(r.sessionId) ?? '—'}</td>
+                  {log.companies.map((c) => (
+                    <tr
+                      key={c.companyId}
+                      className="border-t border-line-soft"
+                      data-testid="admin-company"
+                    >
+                      <td className="py-1.5 font-mono-num">{time(c.createdAt)}</td>
+                      <td className="font-mono-num">{shortId(c.sessionId)}</td>
+                      <td className="font-mono-num">{ipOf.get(c.sessionId) ?? '—'}</td>
                       <td>
-                        {STATUS_LABEL[r.status]}
-                        {r.scripted && ' · 첫 판'}
-                        {r.recruit && ' · 공채'}
+                        {c.number}호 · {STATUS_LABEL[c.status]}
+                        {c.sold && ' · 팔림'}
                       </td>
-                      <td className="font-mono-num">
-                        {Math.min(r.card + 1, r.cardCount)}/{r.cardCount}
-                        {r.kind && ` ${KIND_LABEL[r.kind]}`}
-                      </td>
-                      <td className="font-mono-num">{time(r.updatedAt)}</td>
-                      <td className="font-mono-num">{shortWon(r.totalAsset)}</td>
-                      <td className="font-mono-num">{r.overallGrade ?? '—'}</td>
+                      <td className="font-mono-num">결산 {c.settled}번</td>
+                      <td className="font-mono-num">{time(c.updatedAt)}</td>
+                      <td className="font-mono-num">{shortWon(c.capital)}</td>
+                      <td className="font-mono-num">{c.grade}</td>
+                      <td className="font-mono-num">{c.employees}명</td>
                     </tr>
                   ))}
                 </tbody>
@@ -207,7 +196,7 @@ export function AdminPage() {
                     <th className="font-normal">IP (처음 → 마지막)</th>
                     <th className="font-normal">처음 온 때</th>
                     <th className="font-normal">마지막 접속</th>
-                    <th className="font-normal">육성 판</th>
+                    <th className="font-normal">회사</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -220,7 +209,7 @@ export function AdminPage() {
                       </td>
                       <td className="font-mono-num">{time(s.createdAt)}</td>
                       <td className="font-mono-num">{time(s.lastSeenAt)}</td>
-                      <td className="font-mono-num">{s.runs}</td>
+                      <td className="font-mono-num">{s.companies}</td>
                     </tr>
                   ))}
                 </tbody>

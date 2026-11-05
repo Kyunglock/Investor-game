@@ -1,43 +1,31 @@
 import { useEffect } from 'react'
 import { CompanyScreen } from './features/raising/CompanyScreen'
-import { RunResult } from './features/raising/RunResult'
-import { RunScreen } from './features/raising/RunScreen'
-import { RunStart } from './features/raising/RunStart'
+import { CompanyStart } from './features/raising/CompanyStart'
 import { useRaisingStore } from './features/raising/store'
 
 export function App() {
   return <Raising />
 }
 
-/**
- * 증권사 육성 (증권사 육성 설계). 육성 판이 진행 중이면 카드, 끝났는데 등록을 정하지 않았으면 입사 심사 결과, 회사가 있으면 회사, 아무것도 없으면 시작
- * 화면. 한 번에 하나의 모드만 보인다 (7.3절).
- */
+/** 증권사 (증권사 육성 설계). 회사가 있으면 회사, 없으면 사장의 사재로 회사를 차리는 시작 화면 (decisions.md 228번). */
 function Raising() {
   const status = useRaisingStore((s) => s.status)
-  const run = useRaisingStore((s) => s.run)
   const company = useRaisingStore((s) => s.company)
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
-  const { load, start, hire } = useRaisingStore.getState()
+  const { load, open } = useRaisingStore.getState()
 
   useEffect(() => {
     void load()
   }, [load])
 
   const screen = () => {
-    if (run?.status === 'ACTIVE') {
-      return <RunScreen run={run} />
-    }
-    if (run?.result && !run.result.decided) {
-      return <RunResult run={run} company={company} busy={busy} error={error} onHire={hire} />
-    }
     if (company) {
       // 직원이 들고 나거나 해가 바뀌면 배치 칸을 새로 그린다.
       const key = `${company.companyId}-${company.year}-${company.employees.map((e) => e.id).join('.')}`
       return <CompanyScreen key={key} company={company} />
     }
-    return <RunStart onStart={() => void start()} busy={busy} />
+    return <CompanyStart onOpen={() => void open()} busy={busy} error={error} />
   }
 
   return (

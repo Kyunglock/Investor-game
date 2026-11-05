@@ -37,9 +37,6 @@ function timedFetch(request: Request): Promise<Response> {
 export const api = createClient<paths>({ baseUrl: '', fetch: timedFetch })
 
 type Schemas = components['schemas']
-export type Run = Schemas['Run']
-export type RunCard = Schemas['RunCard']
-export type RunOutcome = Schemas['RunOutcome']
-export type RunResult = Schemas['RunResult']
 export type Grade = Schemas['Grade']
 export type Company = Schemas['Company']
+export type Applicant = Company['applicants'][number]

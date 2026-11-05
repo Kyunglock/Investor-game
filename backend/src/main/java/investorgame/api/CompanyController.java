@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +19,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 아주 작은 회사 (증권사 육성 설계 4·6절). 요청을 육성 도메인에 넘기기만 한다. 계약은 contracts/openapi/game.yaml. */
+/**
+ * 증권사 (증권사 육성 설계 4·6·9절, decisions.md 228번). 요청을 육성 도메인에 넘기기만 한다. 계약은 contracts/openapi/game.yaml.
+ */
 @RestController
 @RequestMapping("/api/company")
 class CompanyController {
@@ -39,21 +42,42 @@ class CompanyController {
     return ResponseEntity.of(companies.current(cookies.requireSession(token)));
   }
 
+  /** 사장의 사재로 첫 회사를 차린다 (decisions.md 228번). 회사가 이미 있으면 400. */
+  @PostMapping
+  ResponseEntity<CompanyView> open(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token) {
+    UUID sessionId = cookies.requireSession(token);
+    CompanyView company = companies.open(sessionId);
+    PLAY.info(
+        "company-open session={} company={} ip={}",
+        sessionId,
+        company.companyId(),
+        ClientIp.current());
+    return ResponseEntity.status(HttpStatus.CREATED).body(company);
+  }
+
+  /** 계약금을 내고 공채 시장의 지원자를 뽑는다. 자리가 꽉 찼으면 replace의 직원을 내보낸다. */
   @PostMapping("/hires")
   CompanyView hire(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody HireRequest request) {
     UUID sessionId = cookies.requireSession(token);
-    CompanyView company =
-        companies.hire(sessionId, request.runId(), request.register(), request.replace());
+    CompanyView company = companies.hire(sessionId, request.applicantId(), request.replace());
     PLAY.info(
-        "company-hire session={} company={} run={} register={} ip={}",
+        "company-hire session={} company={} applicant={} replace={} ip={}",
         sessionId,
         company.companyId(),
-        request.runId(),
-        request.register(),
+        request.applicantId(),
+        request.replace(),
         ClientIp.current());
     return company;
+  }
+
+  /** 값을 내고 올해 지원자를 새로 받는다. */
+  @PostMapping("/applicants/refresh")
+  CompanyView refreshApplicants(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token) {
+    return companies.refreshApplicants(cookies.requireSession(token));
   }
 
   @PostMapping("/placement")
@@ -82,23 +106,6 @@ class CompanyController {
     return company;
   }
 
-  /** 인사팀이 올해 공채를 맡아 신입을 데려온다 (증권사 육성 설계 6.3절). */
-  @PostMapping("/hr-recruit")
-  CompanyView hrRecruit(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    return companies.hrRecruit(cookies.requireSession(token));
-  }
-
-  /** 인사팀이 데려온 신입을 등록하거나 돌려보낸다. */
-  @PostMapping("/candidate")
-  CompanyView decideCandidate(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody CandidateRequest request) {
-    return companies.decideCandidate(
-        cookies.requireSession(token), request.register(), request.replace());
-  }
-
-  record CandidateRequest(boolean register, Integer replace) {}
-
   /** 회사를 팔고 다음 회사를 차린다 (증권사 육성 설계 9절). 돌려주는 값은 새 회사다. */
   @PostMapping("/sale")
   CompanyView sell(
@@ -119,8 +126,8 @@ class CompanyController {
   /** 데려갈 공동창업자 직원 ID. */
   record SaleRequest(@NotNull List<@NotNull Integer> cofounders) {}
 
-  /** register가 거짓이면 돌려보낸다. 자리가 꽉 찼으면 replace의 직원과 바꾼다. */
-  record HireRequest(@NotNull UUID runId, boolean register, Integer replace) {}
+  /** replace는 자리가 꽉 찼을 때 내보낼 직원 ID. */
+  record HireRequest(@NotNull Integer applicantId, Integer replace) {}
 
   record PlacementRequest(@NotNull List<@Valid Seat> seats) {}
 

@@ -1,26 +1,26 @@
 import { useState } from 'react'
-import type { Company } from '../../api/client'
+import type { Applicant, Company } from '../../api/client'
 import { Document } from '../game/Document'
 import { shortWon, signedWon } from '../game/labels'
 import { usePixelArt } from '../game/pixelArt'
 import { bubbleOf } from './board'
-import { STAT_NAMES } from './grades'
+import { GradeLadder } from './GradeLadder'
+import { STAT_NAMES, STAT_ORDER } from './grades'
 import { MoveScene } from './MoveScene'
 import { OfficeArt } from './OfficeArt'
 import { ATTIRE_NAMES, attireOf, glowOf } from './office'
-import { GradeLadder } from './RunResult'
 import { useRaisingStore } from './store'
 
 type Seats = Record<number, string | null>
 
 /**
- * 회사 화면 (증권사 육성 설계 4·6절). 한 해 = 연초 회의 → 배치 → (공채 육성) → 결산. 사장은 배치만 하고 직원은 능력치대로 알아서 굴린다. 배치는 작년
- * 그대로가 기본이다 (7.2절).
+ * 회사 화면 (증권사 육성 설계 4·6절). 한 해 = 연초 회의(공채 시장) → 배치 → 결산. 사장은 사람을 뽑아 앉히기만 하고 직원은 능력치대로 알아서 굴린다. 배치는
+ * 작년 그대로가 기본이다 (7.2절).
  */
 export function CompanyScreen({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
-  const { place, settle, start, hrRecruit } = useRaisingStore.getState()
+  const { place, settle } = useRaisingStore.getState()
   const [seats, setSeats] = useState<Seats>(() =>
     Object.fromEntries(company.employees.map((e) => [e.id, e.desk ?? null])),
   )
@@ -111,10 +111,15 @@ export function CompanyScreen({ company }: { company: Company }) {
           </section>
         )}
 
+        {!ended && <MarketPanel company={company} locked={changed} />}
+
         <section className="mt-4">
           <h3 className="font-pen text-[22px]">
             배치 ({placed} / {company.seats}자리)
           </h3>
+          {company.employees.length === 0 && (
+            <p className="mt-1 text-[13px] text-muted">아직 직원이 없습니다. 공채에서 뽑으세요.</p>
+          )}
           <ul className="mt-2 grid gap-2">
             {company.employees.map((e) => (
               <li key={e.id} className="rounded border border-line p-3" data-testid="employee">
@@ -123,7 +128,6 @@ export function CompanyScreen({ company }: { company: Company }) {
                   <span className="text-[12px] text-muted" data-testid="attire">
                     · {ATTIRE_NAMES[attireOf(e.overallGrade)]}
                     {e.effects.length > 0 && ` · ${e.effects.join('·')}`}
-                    {e.salary > 0 && ` · 연봉 ${shortWon(e.salary)}`}
                     {e.experienceNeeded != null &&
                       ` · 실전 경험 ${e.experience}/${e.experienceNeeded}`}
                     {glowOf(e.overallGrade) &&
@@ -182,26 +186,6 @@ export function CompanyScreen({ company }: { company: Company }) {
                 이렇게 앉힌다
               </button>
             )}
-            {meeting.recruitOpen && meeting.hrCap && (
-              <button
-                type="button"
-                disabled={busy || changed}
-                onClick={() => void hrRecruit()}
-                className="min-h-12 rounded border border-pen font-semibold disabled:opacity-50"
-              >
-                인사팀에 공채를 맡긴다 (신입은 {meeting.hrCap}까지 · 연봉이 나간다)
-              </button>
-            )}
-            {meeting.recruitOpen && (
-              <button
-                type="button"
-                disabled={busy || changed}
-                onClick={() => void start()}
-                className="min-h-12 rounded border border-pen font-semibold disabled:opacity-50"
-              >
-                공채 육성 (회사 돈 {shortWon(meeting.recruitFund)})
-              </button>
-            )}
             <button
               type="button"
               disabled={busy || changed}
@@ -212,7 +196,6 @@ export function CompanyScreen({ company }: { company: Company }) {
             </button>
           </div>
         )}
-        {company.candidate && <CandidatePanel company={company} />}
         {company.sale && <SalePanel company={company} />}
       </div>
     </Document>
@@ -363,59 +346,136 @@ function SalePanel({ company }: { company: Company }) {
   )
 }
 
-/** 인사팀이 데려온 신입 (6.3절). 3분 육성 없이 들어왔다. 자리가 꽉 찼으면 기존 직원과 바꾸거나 돌려보낸다. */
-function CandidatePanel({ company }: { company: Company }) {
+/**
+ * 연초 공채 (decisions.md 228번). 오토배틀러의 상점처럼 해마다 지원자가 오고, 계약금을 내고 뽑는다. 자리가 꽉 찼으면 내보낼 직원을 고른다. 마음에 안 들면
+ * 값을 내고 새로 받는다. 배치를 바꾸는 중에는(locked) 뽑지 않는다: 직원이 바뀌면 배치 칸을 새로 그리기 때문이다.
+ */
+function MarketPanel({ company, locked }: { company: Company; locked: boolean }) {
   const busy = useRaisingStore((s) => s.busy)
-  const { decideCandidate } = useRaisingStore.getState()
-  const candidate = company.candidate
-  if (!candidate) {
-    return null
-  }
+  const { hire, refreshApplicants } = useRaisingStore.getState()
+  const [picking, setPicking] = useState<number | null>(null)
   const full = company.employees.length >= company.seats
-  const button =
-    'min-h-12 w-full rounded border border-pen font-semibold disabled:opacity-50 hover:bg-pen hover:text-white'
+  const meeting = company.meeting
   return (
-    <section className="mt-5 rounded border border-teal p-4" data-testid="candidate">
-      <h3 className="font-pen text-[22px]">인사팀 공채</h3>
-      {candidate.line && <p className="text-[14px]">{candidate.line}</p>}
-      <p className="mt-1 text-[14px]">
-        신입 종합 <b className="font-mono-num">{candidate.overallGrade}</b> ·{' '}
-        {Object.entries(STAT_NAMES)
-          .map(([code, name]) => `${name} ${candidate.grades[code]}`)
-          .join(' · ')}
+    <section className="mt-5 border-t border-line-soft pt-4" data-testid="market">
+      <h3 className="font-pen text-[22px]">연초 공채</h3>
+      <p className="text-[12px] text-muted">
+        계약금을 내고 뽑습니다. 뽑은 사람은 쉬는 채로 들어오니 자리에 앉히세요.
+        {meeting?.hrCap && ` 인사팀 덕에 ${meeting.hrCap} 언저리까지 옵니다.`}
       </p>
-      <div className="mt-3 grid gap-2">
-        {full ? (
-          company.employees.map((e) => (
-            <button
-              key={e.id}
-              type="button"
-              disabled={busy}
-              onClick={() => void decideCandidate(true, e.id)}
-              className={button}
-            >
-              {e.name}(종합 {e.overallGrade}) 대신 등록한다
-            </button>
-          ))
+      {locked && (
+        <p className="mt-1 text-[12px] text-wine">바꾼 배치를 먼저 앉히면 뽑을 수 있습니다.</p>
+      )}
+      {company.applicants.length === 0 && (
+        <p className="mt-2 text-[13px] text-muted">올해 지원자를 다 만났습니다.</p>
+      )}
+      <ul className="mt-2 grid gap-2 md:grid-cols-3">
+        {company.applicants.map((a) => (
+          <ApplicantCard
+            key={a.id}
+            applicant={a}
+            affordable={company.capital >= a.fee}
+            disabled={busy || locked}
+            picking={picking === a.id}
+            full={full}
+            employees={company.employees}
+            onHire={(replace) => {
+              setPicking(null)
+              void hire(a.id, replace)
+            }}
+            onPick={() => setPicking(picking === a.id ? null : a.id)}
+          />
+        ))}
+      </ul>
+      <button
+        type="button"
+        disabled={busy || locked || company.capital < company.refreshCost}
+        onClick={() => {
+          setPicking(null)
+          void refreshApplicants()
+        }}
+        className="mt-2 min-h-11 w-full rounded border border-line text-[14px] disabled:opacity-50"
+      >
+        지원자 새로 받기 ({shortWon(company.refreshCost)})
+      </button>
+    </section>
+  )
+}
+
+function ApplicantCard({
+  applicant: a,
+  affordable,
+  disabled,
+  picking,
+  full,
+  employees,
+  onHire,
+  onPick,
+}: {
+  applicant: Applicant
+  affordable: boolean
+  disabled: boolean
+  picking: boolean
+  full: boolean
+  employees: Company['employees']
+  onHire: (replace?: number) => void
+  onPick: () => void
+}) {
+  const button =
+    'min-h-11 w-full rounded font-semibold disabled:opacity-50 border border-pen hover:bg-pen hover:text-white'
+  return (
+    <li className="rounded border border-line p-3" data-testid="applicant">
+      <p className="flex items-baseline justify-between">
+        <span className="font-semibold">{a.name}</span>
+        <span className="font-mono-num text-[13px]">
+          종합 <b className="text-[17px]">{a.overallGrade}</b>
+        </span>
+      </p>
+      {a.line && <p className="mt-1 text-[13px] text-teal">{a.line}</p>}
+      <ul className="mt-2 grid grid-cols-5 gap-1 text-center text-[11px]">
+        {STAT_ORDER.map((code) => (
+          <li key={code} className="rounded border border-line-soft py-0.5">
+            {STAT_NAMES[code]}
+            <b className="block font-mono-num text-[14px]">{a.grades[code]}</b>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-2 grid gap-1">
+        {!full ? (
+          <button
+            type="button"
+            disabled={disabled || !affordable}
+            onClick={() => onHire()}
+            className={button}
+          >
+            뽑는다 · 계약금 {shortWon(a.fee)}
+          </button>
         ) : (
           <button
             type="button"
-            disabled={busy}
-            onClick={() => void decideCandidate(true)}
-            className="min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
+            disabled={disabled || !affordable}
+            onClick={onPick}
+            className={button}
+            aria-expanded={picking}
           >
-            등록한다
+            {picking ? '그만둔다' : `자리가 꽉 찼다 · 계약금 ${shortWon(a.fee)}`}
           </button>
         )}
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void decideCandidate(false)}
-          className={button}
-        >
-          돌려보낸다
-        </button>
+        {full &&
+          picking &&
+          employees.map((e) => (
+            <button
+              key={e.id}
+              type="button"
+              disabled={disabled}
+              onClick={() => onHire(e.id)}
+              className="min-h-10 w-full rounded border border-wine text-[13px] text-wine disabled:opacity-50"
+            >
+              {e.name}(종합 {e.overallGrade}) 내보내고 뽑는다
+            </button>
+          ))}
+        {!affordable && <p className="text-[12px] text-muted">계약금이 모자랍니다.</p>}
       </div>
-    </section>
+    </li>
   )
 }

@@ -18,11 +18,7 @@ class EconomySimulationTest {
   private static final CompanyProperties PROPERTIES =
       TestBehavior.bind("raising.company", CompanyProperties.class);
   private static final CompanyEngine ENGINE =
-      new CompanyEngine(
-          TestContent.load(),
-          TestBehavior.create(),
-          PROPERTIES,
-          TestBehavior.bind("raising", RaisingProperties.class));
+      new CompanyEngine(TestContent.load(), TestBehavior.create(), PROPERTIES);
   private static final long START = 100_000_000L;
   private static final long GRADE_E = 300_000_000L;
   private static final int TRIALS = 2000;
@@ -37,7 +33,8 @@ class EconomySimulationTest {
     double[] ratio = new double[TRIALS];
     int reachedE = 0;
     for (int seed = 0; seed < TRIALS; seed++) {
-      CompanyState company = ENGINE.open(new HashSeededRandom(seed), stats(level), START);
+      CompanyState company = ENGINE.open(new HashSeededRandom(seed), START);
+      ENGINE.hire(company, stats(level));
       ENGINE.hire(company, stats(level));
       ENGINE.place(company, Map.of(1, "bio", 2, "day"));
       for (int year = 0; year < PROPERTIES.turns(); year++) {

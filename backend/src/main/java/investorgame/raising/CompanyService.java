@@ -1,41 +1,43 @@
 package investorgame.raising;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 /**
- * 아주 작은 회사 (증권사 육성 설계 4·6절). 첫 육성의 사람을 등록하면 회사가 열리고, 해마다 연초 회의 → 배치 → (공채 육성) → 결산을 돈다. 공채 육성은
- * RaisingService.start가 회사가 돌고 있으면 맡는다.
+ * 증권사 (증권사 육성 설계 4·6·9절). 사장의 사재로 회사를 차리고, 해마다 연초 회의(공채 시장) → 배치 → 결산을 돈다. 직원은 공채 시장에서 계약금을 내고 뽑는다
+ * (decisions.md 228번).
  */
 public interface CompanyService {
 
   /** 세션의 가장 최근 회사(돌고 있거나 끝남). */
   Optional<CompanyView> current(UUID sessionId);
 
+  /** 사장의 사재로 첫 회사를 차린다. 이미 회사가 있으면 400(다음 회사는 매각으로 차린다). */
+  CompanyView open(UUID sessionId);
+
   /**
-   * 끝난 육성 판의 사람을 등록하거나 돌려보낸다. 회사가 없으면 등록하며 회사가 열린다(돌려보낼 수 없다). 자리가 꽉 찼으면 replace의 직원과 바꾼다. 돌려보내도 그
-   * 판의 돈은 회사 자본으로 들어간다 (6.3절).
-   *
-   * @param replace 바꿀 직원 ID. 자리가 남거나 돌려보내면 null
+   * 계약금을 내고 올해 공채 시장의 지원자를 뽑는다. 자리가 꽉 찼으면 replace의 직원을 내보낸다. 없는 지원자, 모자란 돈, 꽉 찬 자리에 replace가 없으면
+   * 400.
    */
-  CompanyView hire(UUID sessionId, UUID runId, boolean register, Integer replace);
+  CompanyView hire(UUID sessionId, int applicantId, Integer replace);
+
+  /** 값을 내고 올해 지원자를 새로 받는다. 돈이 모자라면 400. */
+  CompanyView refreshApplicants(UUID sessionId);
 
   /** 직원 ID → 자리 코드(쉬면 null). 자리 수를 넘으면 400. */
   CompanyView place(UUID sessionId, Map<Integer, String> placements);
 
-  /** 올해 결산을 하고 다음 해 연초 회의로 간다. 마지막 해면 회사가 끝난다. 공채 판이 남아 있으면 400. */
+  /** 올해 결산을 하고 다음 해 연초 회의로 간다. 마지막 해면 회사가 끝난다. */
   CompanyView settle(UUID sessionId);
 
   /**
    * 회사를 팔고 다음 회사를 F에서 차린다 (9절). 시대가 끝났거나 등급이 매각 조건 이상이어야 한다(400). cofounders는 데려갈 직원 ID로, 공동창업자 수를
    * 넘으면 400. 돌려주는 값은 새 회사다.
    */
-  CompanyView sell(UUID sessionId, java.util.List<Integer> cofounders);
+  CompanyView sell(UUID sessionId, List<Integer> cofounders);
 
-  /** 인사팀에 앉은 직원이 올해 공채를 맡아 신입을 데려온다 (6.3절). 인사 직원이 없거나 올해 공채를 했으면 400. */
-  CompanyView hrRecruit(UUID sessionId);
-
-  /** 인사팀이 데려온 신입을 등록하거나(자리가 꽉 찼으면 replace와 바꾼다) 돌려보낸다. 데려온 신입이 없으면 400. */
-  CompanyView decideCandidate(UUID sessionId, boolean register, Integer replace);
+  /** 최근에 차린 회사부터 limit개. 관리자 플레이 기록용이며 세션을 따지지 않는다. */
+  List<CompanySummary> recent(int limit);
 }

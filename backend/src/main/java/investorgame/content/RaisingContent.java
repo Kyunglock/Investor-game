@@ -4,76 +4,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 3분 육성 한 판의 카드 문구 (content/raising.json, 증권사 육성 설계 3절). 나이·학교·가족·직장이 나오지 않는다.
+ * 증권사 육성의 문구 (content/raising.json, 증권사 육성 설계). 3분 육성 판은 없앴다 (decisions.md 228번).
  *
- * @param traits 성향 카드. slot이 style이면 투자 스타일·위험·소신을, sector면 관심 섹터를 정한다
- * @param bigs 돈이 걸린 큰일 카드 (빚내서 사기는 leverage가 따로 맡는다)
- * @param tempters 판마다 다시 나오는 단골 꼬드김 인물 (투자 원칙 장치 설계 2.1절)
- * @param devices 투자 원칙 장치 셋 (투자 원칙 장치 설계 1.1절)
+ * @param tempters 단골 꼬드김 인물 (투자 원칙 장치 설계 2.1절)
  * @param flipTips 처음 손이 뒤집혔을 때 한 줄 설명. 능력치 코드별 (증권사 육성 설계 11.1절)
- * @param unlockTips 처음 열리는 기능의 한 줄 설명. 기능 코드별
  * @param company 회사 화면의 문구 (증권사 육성 설계 4·6절)
  */
 public record RaisingContent(
-    List<Card> traits,
-    List<Card> bigs,
-    Leverage leverage,
-    List<Tempter> tempters,
-    List<Device> devices,
-    Map<String, String> flipTips,
-    Map<String, String> unlockTips,
-    Exam exam,
-    Company company,
-    OmenReview omenReview) {
-
-  /**
-   * 위기 전조 돌아보기 (투자 원칙 장치 설계 3.3절). {count}는 본 조짐 수, {percent}는 처음 조짐 때 팔았다면 피했을 손실(%).
-   *
-   * @param avoidable 처음 조짐 뒤로 가진 주식이 빠졌다
-   * @param held 처음 조짐 뒤로도 가진 주식이 올랐다(버틴 게 맞았다)
-   * @param noHoldings 위기 때 가진 주식이 없었다
-   * @param silent 조짐 없이 왔다
-   * @param chatLeft 단톡방을 나가 조짐을 못 봤다
-   */
-  public record OmenReview(
-      String avoidable, String held, String noHoldings, String silent, String chatLeft) {}
-
-  public static final String SLOT_STYLE = "style";
-  public static final String SLOT_SECTOR = "sector";
-
-  public record Card(String code, String slot, String title, String body, List<Option> options) {}
-
-  /**
-   * @param traitDeltas 성향 점수 (style.·risk.·mind.·sector. 접두사). 없으면 비어 있다
-   * @param statDeltas 능력치 변화. 운은 움직이지 않는다
-   * @param outcomes 고른 뒤 굴리는 현금 결과. 비어 있으면 아무 일도 없다
-   */
-  public record Option(
-      String code,
-      String label,
-      String note,
-      Map<String, Integer> traitDeltas,
-      Map<String, Integer> statDeltas,
-      List<CashOutcome> outcomes) {
-
-    public Option {
-      traitDeltas = traitDeltas == null ? Map.of() : Map.copyOf(traitDeltas);
-      statDeltas = statDeltas == null ? Map.of() : Map.copyOf(statDeltas);
-      outcomes = outcomes == null ? List.of() : List.copyOf(outcomes);
-    }
-  }
-
-  /** cashPercent: 지금 현금에 더하는 비율(%). 음수면 잃는다. */
-  public record CashOutcome(int weight, int cashPercent, String note) {}
-
-  /** 빚내서 사기 카드. 제목의 {stock}·{drop}에 가장 많이 빠진 종목과 낙폭이 들어간다. */
-  public record Leverage(
-      String title,
-      String body,
-      String borrowLabel,
-      String passLabel,
-      String borrowNote,
-      String passNote) {}
+    List<Tempter> tempters, Map<String, String> flipTips, Company company) {
 
   /**
    * 단골 인물. 문구의 {stock}은 종목 이름.
@@ -94,30 +32,6 @@ public record RaisingContent(
       String chatLeft) {}
 
   /**
-   * @param statCode 이 장치가 막는 판정의 능력치
-   * @param cost 대가 한 줄. 장치를 건 동안 화면에 늘 보인다
-   */
-  public record Device(
-      String code,
-      String statCode,
-      String name,
-      String cost,
-      String offerTitle,
-      String offerBody,
-      String acceptLabel,
-      String declineLabel,
-      String acceptNote,
-      String declineNote,
-      String releaseTitle,
-      String releaseBody,
-      String releaseLabel,
-      String keepLabel,
-      String releaseNote) {}
-
-  /** 입사 심사 카드. */
-  public record Exam(String title, String body, String registerLabel) {}
-
-  /**
    * @param names 직원 이름. 등록 순서대로 쓰고 다 쓰면 처음부터 번호를 붙인다
    * @param desks 자리 종류. trades가 거짓이면 돈을 굴리지 않고 다른 자리를 돕는다 (4.2절)
    * @param flipLines 결산 소식 줄. 뒤집힌 능력치별, {name}은 직원 이름
@@ -125,6 +39,7 @@ public record RaisingContent(
    * @param phases 결산의 한 해 시장 한 줄. boom·normal·crash
    * @param eras 회사마다 다른 시대. 첫 회사는 맨 앞 시대다 (9.4절)
    * @param sale 매각·재창업 문구 (9절)
+   * @param market 공채 시장 지원자 카드의 한 줄 (decisions.md 228번)
    */
   public record Company(
       List<String> names,
@@ -139,16 +54,16 @@ public record RaisingContent(
       Map<String, String> statNames,
       GradeLines gradeLines,
       Effects effects,
-      Hr hr) {}
+      Market market) {}
 
-  /** 인사 직원의 공채 (6.3절). candidate: {name} 인사 직원. salary: {amount} 연봉 합. */
-  public record Hr(String candidate, String salary) {}
+  /** 공채 시장 지원자 카드의 한 줄. wanted: 올해 필요한 인재({desk}·{stat}). hr: 인사팀이 데려온 지원자({name}). */
+  public record Market(String wanted, String hr) {}
 
   /**
    * X 이상 등급의 효과 (2.4절). 효과는 쌓인다: XX 직원은 X 효과도 가진다.
    *
    * @param list X·XX·XXX·Z·ZZ·ZZZ 순서
-   * @param mentorTip 공채 신입의 첫 카드에 뜨는 사수 한 줄. {name}·{stat}
+   * @param mentorTip 사수가 붙은 공채 지원자 카드의 한 줄. {name}·{stat}
    * @param earlyOmen 연초 회의의 경보 한 줄. {name}·{omen}
    * @param forecast 연초 회의의 선견 한 줄. 내년 시장 갈래(boom·normal·crash)별, {name}
    */

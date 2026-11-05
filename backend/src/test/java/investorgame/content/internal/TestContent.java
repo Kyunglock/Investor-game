@@ -15,7 +15,7 @@ public final class TestContent {
     if (catalog == null) {
       catalog =
           new JsonContentCatalog(
-              JsonMapper.builder().build(), new ContentProperties(8, List.of("../content")));
+              JsonMapper.builder().build(), new ContentProperties(List.of("../content")));
     }
     return catalog;
   }

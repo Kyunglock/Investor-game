@@ -1,7 +1,7 @@
 package investorgame.api;
 
-import investorgame.raising.RaisingService;
-import investorgame.raising.RunSummary;
+import investorgame.raising.CompanyService;
+import investorgame.raising.CompanySummary;
 import investorgame.session.SessionService;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 누가 언제 플레이했는지 보는 관리자 플레이 기록. 계정이 없으므로 "누구"는 익명 세션이다 (decisions.md 46번). 육성 판은 육성 도메인이, 세션은 세션 도메인이
+ * 누가 언제 플레이했는지 보는 관리자 플레이 기록. 계정이 없으므로 "누구"는 익명 세션이다 (decisions.md 46번). 회사는 육성 도메인이, 세션은 세션 도메인이
  * 준다. 계약은 contracts/openapi/game.yaml.
  */
 @RestController
@@ -28,21 +28,22 @@ class AdminController {
 
   private final AdminProperties properties;
   private final SessionService sessions;
-  private final RaisingService raising;
+  private final CompanyService companies;
 
-  AdminController(AdminProperties properties, SessionService sessions, RaisingService raising) {
+  AdminController(AdminProperties properties, SessionService sessions, CompanyService companies) {
     this.properties = properties;
     this.sessions = sessions;
-    this.raising = raising;
+    this.companies = companies;
   }
 
   @GetMapping("/plays")
   PlayLog plays(@RequestHeader(name = TOKEN_HEADER, required = false) String token) {
     requireAdmin(token);
-    // 육성 판 (증권사 육성 설계 11.5절): 어느 카드에서 많이 나가는지 본다.
-    List<RunSummary> runs = raising.recentRuns(LIMIT);
-    Map<UUID, Long> runsBySession =
-        runs.stream().collect(Collectors.groupingBy(RunSummary::sessionId, Collectors.counting()));
+    // 회사 (decisions.md 228번): 어느 해에서 많이 나가는지 본다.
+    List<CompanySummary> companyLines = companies.recent(LIMIT);
+    Map<UUID, Long> companiesBySession =
+        companyLines.stream()
+            .collect(Collectors.groupingBy(CompanySummary::sessionId, Collectors.counting()));
     List<SessionLine> sessionLines =
         sessions.recent(LIMIT).stream()
             .map(
@@ -51,11 +52,11 @@ class AdminController {
                         s.id(),
                         s.createdAt(),
                         s.lastSeenAt(),
-                        runsBySession.getOrDefault(s.id(), 0L),
+                        companiesBySession.getOrDefault(s.id(), 0L),
                         s.firstIp(),
                         s.lastIp()))
             .toList();
-    return new PlayLog(sessionLines, runs);
+    return new PlayLog(sessionLines, companyLines);
   }
 
   private void requireAdmin(String token) {
@@ -70,14 +71,14 @@ class AdminController {
     }
   }
 
-  record PlayLog(List<SessionLine> sessions, List<RunSummary> runs) {}
+  record PlayLog(List<SessionLine> sessions, List<CompanySummary> companies) {}
 
-  /** runs는 최근 육성 판 목록(최대 500판) 안에서 센 수다. */
+  /** companies는 최근 회사 목록(최대 500곳) 안에서 센 수다. */
   record SessionLine(
       UUID sessionId,
       OffsetDateTime createdAt,
       OffsetDateTime lastSeenAt,
-      long runs,
+      long companies,
       String firstIp,
       String lastIp) {}
 }
