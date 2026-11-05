@@ -22,6 +22,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param phaseBp 한 해 시장이 판단 하나마다 더하는 손익(만분율)
  * @param swayPercent 꼬드김 판정이 다른 판정보다 덜 일어나는 비율. 리스크 관리 팀이 없을 때
  * @param experience 실전 경험과 큰 손실의 등급 하락 (2.3·6.4절)
+ * @param effects X 이상 등급의 효과 수치 (2.4절)
  * @param sale 매각과 재창업 (9절). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다
  */
 @ConfigurationProperties("raising.company")
@@ -42,7 +43,20 @@ public record CompanyProperties(
     int swayPercent,
     int crashFlipPercent,
     Experience experience,
+    Effects effects,
     Sale sale) {
+
+  /**
+   * @param convictionGainBp X 확신: 맞히면 더 버는 몫(만분율)
+   * @param convictionMissPercent X 확신: 틀렸을 때 잃는 몫의 비율. 편차가 줄어든다
+   * @param contrarianCrashBp XXX 역발상: 폭락장에 판단마다 잃는 대신 버는 몫
+   * @param leaderFlipPercent Z 리더: 같은 자리 팀원의 꼬드김·손 뒤집힘 확률에 곱하는 비율
+   */
+  public record Effects(
+      int convictionGainBp,
+      int convictionMissPercent,
+      int contrarianCrashBp,
+      int leaderFlipPercent) {}
 
   /**
    * @param dropLossPercent 한 해 결산에서 맡은 판돈이 이만큼 빠지면 종합 등급 한 단계 하락 (6.4절 제안: 30)

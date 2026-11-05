@@ -37,6 +37,15 @@ class CompanyEngine {
   private static final int PERCENT = 100;
   private static final int MAX_STAT = 100;
 
+  /** SSS 위 단계(Employee.rank)별 효과가 열리는 자리 (2.4절). 효과는 쌓인다. */
+  static final int RANK_CONVICTION = 1;
+
+  static final int RANK_ALARM = 2;
+  static final int RANK_CONTRARIAN = 3;
+  static final int RANK_LEADER = 4;
+  static final int RANK_MENTOR = 5;
+  static final int RANK_FORESIGHT = 6;
+
   private final ContentCatalog content;
   private final BehaviorService behavior;
   private final CompanyProperties properties;
@@ -195,8 +204,15 @@ class CompanyEngine {
   }
 
   /** 올해 시장을 정하고 연초 회의를 준비한다. 조짐은 폭락장 앞에 보이고, 아무 일 없는 해에도 헛조짐이 섞인다 (4.3절). */
-  void startYear(CompanyState company, SeededRandom random) {
-    RandomGenerator rng = random.forKey("company-year", company.year);
+  /** 한 해의 시장: 갈래(숨은 값), 연초 회의의 조짐, 올해 필요한 자리. */
+  record Market(String phase, String omen, String wantedDesk) {}
+
+  /**
+   * 그해 시장. (회사 시드, 해)로만 정해서, 미리 들여다봐도(경보·선견) 그해가 오면 같은 시장이 온다. 조짐은 폭락장 앞에 보이고, 아무 일 없는 해에도 헛조짐이 섞인다
+   * (4.3절).
+   */
+  Market marketOf(CompanyState company, int year, SeededRandom random) {
+    RandomGenerator rng = random.forKey("company-year", year);
     int phaseRoll = rng.nextInt(BP);
     int omenRoll = rng.nextInt(PERCENT);
     int textRoll = rng.nextInt(BP);
@@ -212,19 +228,29 @@ class CompanyEngine {
         break;
       }
     }
-    company.phase = phase;
-    company.omen = null;
+    String omen = null;
     if (CRASH.equals(phase) && omenRoll < properties.omenPercent()) {
       List<String> omens = content.crises().stream().flatMap(c -> c.omens().stream()).toList();
-      company.omen = omens.get(textRoll % omens.size());
+      omen = omens.get(textRoll % omens.size());
     } else if (!CRASH.equals(phase) && omenRoll < properties.falseOmenPercent()) {
       List<String> omens = content.commonOmens();
-      company.omen = omens.get(textRoll % omens.size());
+      omen = omens.get(textRoll % omens.size());
     }
     List<RaisingContent.Desk> trading =
         desks().stream().filter(RaisingContent.Desk::trades).toList();
-    company.wantedDesk =
-        company.omen != null ? RISK_DESK : trading.get(wantedRoll % trading.size()).code();
+    String wanted = omen != null ? RISK_DESK : trading.get(wantedRoll % trading.size()).code();
+    return new Market(phase, omen, wanted);
+  }
+
+  /** 올해 시장을 정하고 연초 회의를 준비한다. 다음 해 시장도 미리 정해 둔다: XX(경보)·ZZZ(선견) 직원이 들여다본다 (2.4절). */
+  void startYear(CompanyState company, SeededRandom random) {
+    Market market = marketOf(company, company.year, random);
+    company.phase = market.phase();
+    company.omen = market.omen();
+    company.wantedDesk = market.wantedDesk();
+    Market next = marketOf(company, company.year + 1, random);
+    company.nextPhase = next.phase();
+    company.nextOmen = next.omen();
     company.recruited = false;
   }
 
@@ -317,13 +343,29 @@ class CompanyEngine {
               * (PERCENT - risk)
               / PERCENT;
       int flipBp = behavior.flipChanceBp(employee.stats.get(flipStat));
+      CompanyProperties.Effects effects = properties.effects();
+      // Z 리더: 같은 자리 팀원의 꼬드김·손 뒤집힘을 줄인다 (2.4절).
+      boolean led =
+          company.employees.stream()
+              .anyMatch(
+                  e -> e != employee && employee.desk.equals(e.desk) && e.rank >= RANK_LEADER);
+      if (led) {
+        swayBp = swayBp * effects.leaderFlipPercent() / PERCENT;
+        flipBp = flipBp * effects.leaderFlipPercent() / PERCENT;
+      }
+      boolean conviction = employee.rank >= RANK_CONVICTION;
+      boolean contrarian = crash && employee.rank >= RANK_CONTRARIAN;
       int hitBp = behavior.hintAccuracyPercent(insight) * PERCENT;
       long bp = 0;
       for (int i = 0; i < properties.decisions(); i++) {
         int swayRoll = rng.nextInt(BP);
         int flipRoll = rng.nextInt(BP);
         int hitRoll = rng.nextInt(BP);
-        bp += properties.phaseBp().getOrDefault(company.phase, 0);
+        // XXX 역발상: 폭락장에 빠지는 동안 사서 회복 구간에서 번다.
+        bp +=
+            contrarian
+                ? effects.contrarianCrashBp()
+                : properties.phaseBp().getOrDefault(company.phase, 0);
         if (swayRoll < swayBp) {
           result.flips.merge(StatCodes.CONVICTION, 1, Integer::sum);
           bp -= returns.missBp();
@@ -332,10 +374,15 @@ class CompanyEngine {
           bp -=
               crash ? returns.flipBp() * properties.crashFlipPercent() / PERCENT : returns.flipBp();
         } else {
+          // X 확신: 형광펜이 맞으면 알아서 크게 산다. 맞히면 더 벌고 틀려도 덜 잃어 편차가 준다.
           bp +=
               hitRoll < hitBp
-                  ? returns.gainBp() + era(company).deskBonusBp().getOrDefault(employee.desk, 0)
-                  : -returns.missBp();
+                  ? returns.gainBp()
+                      + era(company).deskBonusBp().getOrDefault(employee.desk, 0)
+                      + (conviction ? effects.convictionGainBp() : 0)
+                  : -returns.missBp()
+                      * (conviction ? effects.convictionMissPercent() : PERCENT)
+                      / PERCENT;
         }
       }
       result.pnl = stake * bp / BP;
@@ -465,6 +512,72 @@ class CompanyEngine {
       return base;
     }
     return LADDER.get(LADDER.indexOf(StatGrade.SSS.name()) + employee.rank);
+  }
+
+  /** 그 단계 이상의 직원 가운데 가장 높은 직원. 정보를 주는 효과는 한 명만 있어도 되고 여럿이어도 겹치지 않는다 (2.4절). */
+  static java.util.Optional<Employee> bestRanked(CompanyState company, int rank) {
+    return company.employees.stream()
+        .filter(e -> e.rank >= rank)
+        .max(
+            java.util.Comparator.comparingInt((Employee e) -> e.rank).thenComparingInt(e -> -e.id));
+  }
+
+  /** 공채 신입에게 붙는 사수 (ZZ): 회사에서 가장 높은 ZZ 이상 직원의 가장 높은 능력치. 없으면 null. */
+  RunEngine.Mentor mentorFor(CompanyState company) {
+    return bestRanked(company, RANK_MENTOR)
+        .map(
+            e -> {
+              String stat =
+                  StatCodes.ALL.stream()
+                      .max(java.util.Comparator.comparingInt((String code) -> e.stats.get(code)))
+                      .orElseThrow();
+              String tip =
+                  Korean.fill(
+                      content.raising().company().effects().mentorTip(),
+                      Map.of(
+                          "name",
+                          e.name,
+                          "stat",
+                          content.raising().company().statNames().get(stat)));
+              return new RunEngine.Mentor(stat, properties.experience().band(), tip);
+            })
+        .orElse(null);
+  }
+
+  /** 직원이 가진 효과 이름. 쌓인다. */
+  List<String> effectsOf(Employee employee) {
+    return content.raising().company().effects().list().stream()
+        .limit(employee.rank)
+        .map(RaisingContent.Effect::name)
+        .toList();
+  }
+
+  /** 연초 회의의 경보(XX): 내년 폭락 조짐을 한 해 일찍. 마지막 해거나 조짐이 없으면 null. */
+  String earlyOmen(CompanyState company) {
+    if (company.year >= properties.turns() || company.nextOmen == null) {
+      return null;
+    }
+    return bestRanked(company, RANK_ALARM)
+        .map(
+            e ->
+                Korean.fill(
+                    content.raising().company().effects().earlyOmen(),
+                    Map.of("name", e.name, "omen", company.nextOmen)))
+        .orElse(null);
+  }
+
+  /** 연초 회의의 선견(ZZZ): 내년 시장 갈래. 조짐 없는 위기도 보인다. 마지막 해면 null. */
+  String forecast(CompanyState company) {
+    if (company.year >= properties.turns()) {
+      return null;
+    }
+    return bestRanked(company, RANK_FORESIGHT)
+        .map(
+            e ->
+                Korean.fill(
+                    content.raising().company().effects().forecast().get(company.nextPhase),
+                    Map.of("name", e.name)))
+        .orElse(null);
   }
 
   /** 그 자리에 앉은 직원 가운데 가장 높은 능력치. 아무도 없으면 0. */

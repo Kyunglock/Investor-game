@@ -124,7 +124,21 @@ public record RaisingContent(
       List<Era> eras,
       Sale sale,
       Map<String, String> statNames,
-      GradeLines gradeLines) {}
+      GradeLines gradeLines,
+      Effects effects) {}
+
+  /**
+   * X 이상 등급의 효과 (2.4절). 효과는 쌓인다: XX 직원은 X 효과도 가진다.
+   *
+   * @param list X·XX·XXX·Z·ZZ·ZZZ 순서
+   * @param mentorTip 공채 신입의 첫 카드에 뜨는 사수 한 줄. {name}·{stat}
+   * @param earlyOmen 연초 회의의 경보 한 줄. {name}·{omen}
+   * @param forecast 연초 회의의 선견 한 줄. 내년 시장 갈래(boom·normal·crash)별, {name}
+   */
+  public record Effects(
+      List<Effect> list, String mentorTip, String earlyOmen, Map<String, String> forecast) {}
+
+  public record Effect(String grade, String name, String description) {}
 
   /**
    * 직원 등급이 바뀌는 결산 소식 (6.4·2.3절). {name}·{before}·{after}·{stat} 자리표시를 쓴다.

@@ -85,7 +85,8 @@ class DefaultRaisingService implements RaisingService {
               memory,
               fund,
               true,
-              new RunEngine.Year(c.phase, c.omen));
+              new RunEngine.Year(c.phase, c.omen),
+              companyEngine.mentorFor(c));
     } else {
       // 시대가 끝난 회사는 팔아야 다음 회사가 열린다 (9절). 회사가 없거나 팔렸으면 사재로 하는 판이다.
       boolean unsold = companies.latest(sessionId).map(r -> !r.state().sold).orElse(false);

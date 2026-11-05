@@ -235,7 +235,8 @@ class RunEngineTest {
               memory,
               10_000_000,
               true,
-              new RunEngine.Year("crash", omen));
+              new RunEngine.Year("crash", omen),
+              null);
       assertThat(crash.crisis.hits).isTrue();
       assertThat(crash.crisis.omens.getFirst()).as("연초 회의에서 본 그 조짐").isEqualTo(omen);
       List<CardOutcome> outcomes = playThrough(crash, memory, seed);
@@ -251,7 +252,8 @@ class RunEngineTest {
               memory2,
               10_000_000,
               true,
-              new RunEngine.Year("normal", omen));
+              new RunEngine.Year("normal", omen),
+              null);
       assertThat(rumor.crisis.hits).isFalse();
       assertThat(rumor.crisis.omens).containsExactly(omen);
       assertThat(playThrough(rumor, memory2, seed).stream().flatMap(o -> o.lines().stream()))
@@ -265,7 +267,8 @@ class RunEngineTest {
               new RaisingMemory(),
               10_000_000,
               true,
-              new RunEngine.Year("boom", null));
+              new RunEngine.Year("boom", null),
+              null);
       assertThat(quiet.crisis).as("조짐 없는 호황 해엔 위기가 없다").isNull();
     }
   }
@@ -288,7 +291,8 @@ class RunEngineTest {
               memory,
               10_000_000,
               true,
-              new RunEngine.Year(phase, null));
+              new RunEngine.Year(phase, null),
+              null);
       run.card = NEWS_SLOT;
       ENGINE.deal(run, memory, new HashSeededRandom(seed));
       if (run.current.up) {
@@ -296,5 +300,27 @@ class RunEngineTest {
       }
     }
     return up / (double) trials;
+  }
+
+  /** ZZ 사수가 붙은 공채 신입은 사수의 가장 높은 능력치 하나를 한 띠 높게 시작하고, 첫 카드에 그 한 줄이 뜬다 (2.4절). */
+  @Test
+  void 사수가_붙은_신입은_한_띠_높게_시작한다() {
+    RaisingMemory m1 = new RaisingMemory();
+    RaisingMemory m2 = new RaisingMemory();
+    RunState plain =
+        ENGINE.create(new HashSeededRandom(5), false, m1, 10_000_000, true, null, null);
+    RunState mentored =
+        ENGINE.create(
+            new HashSeededRandom(5),
+            false,
+            m2,
+            10_000_000,
+            true,
+            null,
+            new RunEngine.Mentor("courage", 10, "사수 김대리가 붙었다."));
+    assertThat(mentored.stats.get("courage"))
+        .isEqualTo(Math.min(100, plain.stats.get("courage") + 10));
+    assertThat(mentored.stats.get("insight")).isEqualTo(plain.stats.get("insight"));
+    assertThat(mentored.current.tips.getFirst()).isEqualTo("사수 김대리가 붙었다.");
   }
 }

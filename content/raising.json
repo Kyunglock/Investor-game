@@ -957,6 +957,47 @@
       "rise": "{name}이(가) 폭락장을 버텨 등급이 올랐다 ({before} → {after}).",
       "recover": "{name}이(가) 폭락장을 버텨 {stat}을(를) 되찾았다 ({before} → {after}).",
       "experience": "{name}이(가) 폭락장을 버텼다. 실전 경험이 쌓였다."
+    },
+    "effects": {
+      "list": [
+        {
+          "grade": "X",
+          "name": "확신",
+          "description": "형광펜이 맞으면 알아서 크게 산다. 맞히면 더 벌고, 틀려도 덜 잃는다."
+        },
+        {
+          "grade": "XX",
+          "name": "경보",
+          "description": "내년 폭락 조짐을 한 해 일찍 연초 회의에 올린다."
+        },
+        {
+          "grade": "XXX",
+          "name": "역발상",
+          "description": "폭락장에 사서 회복 구간에서 번다."
+        },
+        {
+          "grade": "Z",
+          "name": "리더",
+          "description": "같은 자리 팀원의 손 뒤집힘을 줄인다."
+        },
+        {
+          "grade": "ZZ",
+          "name": "사수",
+          "description": "공채 신입에게 사수로 붙는다. 신입은 사수의 가장 높은 능력치 하나를 한 띠 높게 시작한다."
+        },
+        {
+          "grade": "ZZZ",
+          "name": "선견",
+          "description": "내년 시장이 보인다. 조짐 없는 위기도 보인다."
+        }
+      ],
+      "mentorTip": "사수 {name}이(가) 붙었다. {stat}이(가) 한 띠 높게 시작한다.",
+      "earlyOmen": "{name}의 경보: 내년 폭락 조짐 — {omen}",
+      "forecast": {
+        "boom": "{name}의 선견: 내년엔 호황이 온다.",
+        "normal": "{name}의 선견: 내년은 평범하다.",
+        "crash": "{name}의 선견: 내년에 폭락장이 온다."
+      }
     }
   }
 }

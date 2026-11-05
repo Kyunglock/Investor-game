@@ -208,4 +208,70 @@ class CompanyEngineTest {
     }
     assertThat(dropped).as("능력치가 낮으면 크게 잃는 해가 있다").isPositive();
   }
+
+  /** X 이상 효과 (2.4절): 확신·역발상·리더는 결산에서, 경보·선견은 연초 회의에서, 사수는 공채 육성에서 보인다. */
+  @Test
+  void X_이상_효과() {
+    Map<String, Integer> ace = stats(92, 92, 92, 92);
+    assertThat(averageWithRank(ace, 1, null))
+        .as("X 확신은 더 번다")
+        .isGreaterThan(averageWithRank(ace, 0, null));
+    assertThat(averageWithRank(ace, 3, "crash"))
+        .as("XXX 역발상은 폭락장에 번다")
+        .isGreaterThan(averageWithRank(ace, 2, "crash") + 500);
+    assertThat(teammateFlips(4)).as("Z 리더의 팀원은 덜 뒤집힌다").isLessThan(teammateFlips(3));
+
+    CompanyState company = ENGINE.open(new HashSeededRandom(2), ace, 100_000_000);
+    CompanyState.Employee first = company.employees.getFirst();
+    company.nextOmen = "다음 해 조짐";
+    company.nextPhase = "crash";
+    assertThat(ENGINE.earlyOmen(company)).isNull();
+    assertThat(ENGINE.forecast(company)).isNull();
+    first.rank = 2;
+    assertThat(ENGINE.earlyOmen(company)).contains("경보").contains("다음 해 조짐");
+    assertThat(ENGINE.forecast(company)).as("선견은 ZZZ부터").isNull();
+    first.rank = 6;
+    assertThat(ENGINE.forecast(company)).contains("선견").contains("폭락장");
+    assertThat(ENGINE.effectsOf(first)).containsExactly("확신", "경보", "역발상", "리더", "사수", "선견");
+
+    first.rank = 4;
+    assertThat(ENGINE.mentorFor(company)).as("사수는 ZZ부터").isNull();
+    first.rank = 5;
+    first.stats.put("courage", 99);
+    RunEngine.Mentor mentor = ENGINE.mentorFor(company);
+    assertThat(mentor.stat()).as("가장 높은 능력치").isEqualTo("courage");
+    assertThat(mentor.tip()).contains("김대리").contains("용기");
+  }
+
+  private static double averageWithRank(Map<String, Integer> stats, int rank, String phase) {
+    long sum = 0;
+    int trials = 2000;
+    for (int seed = 0; seed < trials; seed++) {
+      CompanyState company = ENGINE.open(new HashSeededRandom(seed), stats, 1_000_000_000L);
+      company.employees.getFirst().rank = rank;
+      if (phase != null) {
+        company.phase = phase;
+      }
+      ENGINE.place(company, Map.of(1, "bio"));
+      CompanyState.Result r = ENGINE.settle(company, new HashSeededRandom(seed)).results.getFirst();
+      sum += r.pnl * 10_000 / r.stake;
+    }
+    return sum / (double) trials;
+  }
+
+  /** 같은 바이오 데스크에 앉은 팀원(능력치 낮음)이 한 해에 뒤집힌 횟수의 합. 옆자리의 단계만 바꾼다. */
+  private static int teammateFlips(int neighborRank) {
+    int flips = 0;
+    for (int seed = 0; seed < 1000; seed++) {
+      CompanyState company =
+          ENGINE.open(new HashSeededRandom(seed), stats(95, 95, 95, 95), 1_000_000_000L);
+      company.employees.getFirst().rank = neighborRank;
+      ENGINE.hire(company, stats(10, 10, 10, 10));
+      ENGINE.place(company, Map.of(1, "bio", 2, "bio"));
+      CompanyState.Result teammate =
+          ENGINE.settle(company, new HashSeededRandom(seed)).results.get(1);
+      flips += teammate.flips.values().stream().mapToInt(Integer::intValue).sum();
+    }
+    return flips;
+  }
 }
