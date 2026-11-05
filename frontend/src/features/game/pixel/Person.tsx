@@ -58,7 +58,7 @@ export function Person({
   const body = turned
     ? viewBody(figure.sex, figure.stage, figure.view ?? 'front')
     : bodyFor(figure.sex, figure.stage, figure.pose)
-  const palette = paletteFor(figure.who, figure.look ?? 0)
+  const palette = { ...paletteFor(figure.who, figure.look ?? 0), ...figure.recolor }
   const grid = compose(body, layers)
   const blinks =
     !baby && !turned && canBlink({ mood, adornment: figure.who === 'me' ? me.adornment : null })

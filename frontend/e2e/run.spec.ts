@@ -108,6 +108,18 @@ test('입사 심사의 종합 등급과 등급 사다리가 나오고, 1호 직�
   await expect(page.getByTestId('company')).toBeVisible()
   await expect(page.getByTestId('company-grade')).toHaveText('F')
   await expect(page.getByTestId('employee')).toHaveCount(1)
+  await expect(page.getByTestId('attire')).toContainText(/후드티|셔츠/)
+
+  // 회사 건물 단면: 책상은 자리 수, 아직 아무도 앉히지 않았다. 그림을 끄면 같은 내용을 글로 (8.1·8.4절).
+  await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '0')
+  await page.getByRole('button', { name: '그림 끄기' }).click()
+  await expect(page.getByTestId('office-caption')).toHaveText(
+    '사무실: 반지하 원룸, 책상 2개 · 객장: 손님 없음, 길고양이 한 마리',
+  )
+  await page.reload()
+  await expect(page.getByTestId('office-caption')).toBeVisible()
+  await page.getByRole('button', { name: '그림 켜기' }).click()
+  await expect(page.getByTestId('office-art')).toBeVisible()
 })
 
 test('회사: 배치하고, 공채 육성으로 신입을 등록하고, 세 해를 결산하면 체험이 끝난다', async ({
@@ -122,6 +134,7 @@ test('회사: 배치하고, 공채 육성으로 신입을 등록하고, 세 해�
   await page.getByTestId('employee').first().getByRole('combobox').selectOption('bio')
   await page.getByRole('button', { name: '이렇게 앉힌다' }).click()
   await expect(page.getByRole('button', { name: '이렇게 앉힌다' })).toBeHidden()
+  await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '1')
 
   await page.getByRole('button', { name: /공채 육성/ }).click()
   await expect(card(page)).toBeVisible()
