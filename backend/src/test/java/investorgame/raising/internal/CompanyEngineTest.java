@@ -149,4 +149,63 @@ class CompanyEngineTest {
     // 새로 뽑는 직원은 지난 회사의 이름을 이어 쓴다.
     assertThat(ENGINE.hire(next, stats(50, 50, 50, 50)).name).isEqualTo("이수습");
   }
+
+  /** 큰 손실을 낸 직원은 원인이 된 능력치가 한 띠 내려가고, 폭락장을 버티면 되찾는다. SSS는 버틸 때마다 실전 경험이 쌓여 X·XX로 오른다 (6.4·2.3절). */
+  @Test
+  void 큰_손실은_등급을_내리고_위기를_버티면_오른다() {
+    CompanyState.Employee weak = new CompanyState.Employee();
+    weak.name = "김대리";
+    weak.desk = "bio";
+    weak.stats.putAll(stats(50, 50, 50, 50));
+    CompanyState.Settlement settlement = new CompanyState.Settlement();
+    CompanyState.Result result = new CompanyState.Result();
+    result.stake = 100;
+    result.pnl = -40;
+    result.flips.put("patience", 3);
+    result.flips.put("conviction", 1);
+    ENGINE.drop(weak, result, settlement);
+    assertThat(weak.stats.get("patience")).as("가장 많이 뒤집은 인내심이 한 띠").isEqualTo(40);
+    assertThat(settlement.lines.getLast()).contains("김대리의 인내심이 한 띠 내려갔다 (B → C)");
+
+    ENGINE.survive(weak, settlement);
+    assertThat(weak.stats.get("patience")).as("폭락장을 버티면 되찾는다").isEqualTo(50);
+    assertThat(weak.dropped).isEmpty();
+
+    CompanyState.Employee ace = new CompanyState.Employee();
+    ace.name = "박주임";
+    ace.stats.putAll(stats(95, 95, 95, 95));
+    ace.stats.put("luck", 95);
+    assertThat(CompanyEngine.employeeGrade(ace)).isEqualTo("SSS");
+    ENGINE.survive(ace, settlement);
+    assertThat(CompanyEngine.employeeGrade(ace)).as("X까지 경험 1").isEqualTo("X");
+    ENGINE.survive(ace, settlement);
+    assertThat(CompanyEngine.employeeGrade(ace)).as("XX까지 경험 2").isEqualTo("X");
+    ENGINE.survive(ace, settlement);
+    assertThat(CompanyEngine.employeeGrade(ace)).isEqualTo("XX");
+    assertThat(settlement.lines.getLast()).contains("박주임이 폭락장을 버텨 등급이 올랐다 (X → XX)");
+
+    result.flips.clear();
+    ENGINE.drop(ace, result, settlement);
+    assertThat(CompanyEngine.employeeGrade(ace)).as("X 이상은 종합 등급이 내려간다").isEqualTo("X");
+    assertThat(ace.stats.get("insight")).isEqualTo(95);
+  }
+
+  /** 결산에서 판돈의 30% 이상을 잃은 직원만 등급이 내려간다. */
+  @Test
+  void 결산에서_크게_잃은_직원의_등급이_내려간다() {
+    int dropped = 0;
+    for (int seed = 0; seed < 300; seed++) {
+      CompanyState company =
+          ENGINE.open(new HashSeededRandom(seed), stats(10, 10, 10, 10), 1_000_000_000L);
+      ENGINE.place(company, Map.of(1, "bio"));
+      CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(seed));
+      CompanyState.Result r = s.results.getFirst();
+      boolean big = r.pnl * 100 <= -r.stake * PROPERTIES.experience().dropLossPercent();
+      assertThat(!company.employees.getFirst().dropped.isEmpty()).isEqualTo(big);
+      if (big) {
+        dropped++;
+      }
+    }
+    assertThat(dropped).as("능력치가 낮으면 크게 잃는 해가 있다").isPositive();
+  }
 }

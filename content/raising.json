@@ -943,6 +943,20 @@
       "sold": "{name}을(를) {price}에 팔았다. 사장 명성이 {before} → {after}가 됐다.",
       "opening": "{era}에 새 회사를 차렸다. 공동창업자 {names}과(와) 함께. 시작 자본 {capital}.",
       "openingAlone": "{era}에 새 회사를 혼자 차렸다. 시작 자본 {capital}. 공채로 사람을 뽑자."
+    },
+    "statNames": {
+      "insight": "안목",
+      "patience": "인내심",
+      "courage": "용기",
+      "conviction": "줏대",
+      "luck": "운"
+    },
+    "gradeLines": {
+      "drop": "{name}이(가) 이번 손실로 등급이 내려갔다 ({before} → {after}).",
+      "statDrop": "{name}의 {stat}이(가) 한 띠 내려갔다 ({before} → {after}). 크게 잃은 해였다.",
+      "rise": "{name}이(가) 폭락장을 버텨 등급이 올랐다 ({before} → {after}).",
+      "recover": "{name}이(가) 폭락장을 버텨 {stat}을(를) 되찾았다 ({before} → {after}).",
+      "experience": "{name}이(가) 폭락장을 버텼다. 실전 경험이 쌓였다."
     }
   }
 }

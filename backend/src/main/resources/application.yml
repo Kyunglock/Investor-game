@@ -445,6 +445,12 @@ raising:
     sway-percent: 50
     # 폭락장에 손이 뒤집히면(못 참고 팔면) 손실이 두 배
     crash-flip-percent: 200
+    # 실전 경험과 큰 손실 (2.3·6.4절): 한 해에 판돈의 30% 이상 잃으면 한 단계 하락(능력치는 한 띠 = 10점),
+    # 폭락장을 손실 없이 버티면 실전 경험 +1. SSS에서 X까지 1, XX까지 2 … 단계마다 1씩 더 든다
+    experience:
+      drop-loss-percent: 30
+      band: 10
+      need-base: 1
     # 매각과 재창업 (9절, 4단계). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다.
     # 시대(turns 해)가 끝나면 반드시 팔고, 그 전에는 SSS 이상이면 스스로 팔 수 있다 (decisions.md 215번~)
     sale:

@@ -43,9 +43,20 @@ public record CompanyView(
     ENDED
   }
 
-  /** desk는 앉은 자리 코드. 쉬면 null. */
+  /**
+   * @param desk 앉은 자리 코드. 쉬면 null
+   * @param overallGrade 종합 등급. SSS면 실전 경험으로 X~ZZZ까지 오른다 (2.3절)
+   * @param experience 실전 경험
+   * @param experienceNeeded 다음 단계까지 드는 실전 경험. SSS가 아니면 null(아직 쌓이지 않는다)
+   */
   public record Employee(
-      int id, String name, String overallGrade, Map<String, String> grades, String desk) {}
+      int id,
+      String name,
+      String overallGrade,
+      Map<String, String> grades,
+      String desk,
+      int experience,
+      Integer experienceNeeded) {}
 
   public record Desk(
       String code, String name, String statCode, boolean trades, String description) {}

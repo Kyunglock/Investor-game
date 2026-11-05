@@ -59,6 +59,15 @@ class CompanyState {
 
     /** 앉은 자리 코드. 아직 안 앉혔으면 null. */
     String desk;
+
+    /** SSS 위의 단계: 0이면 없음, 1 X … 6 ZZZ (2.2·2.3절). 능력치가 아니라 종합 등급에만 붙는다. */
+    int rank;
+
+    /** 실전 경험. 위기를 버틸 때 쌓이고, SSS에서 다음 단계로 오르면 0이 된다 (2.3절). */
+    int experience;
+
+    /** 큰 손실로 내려간 능력치. 위기를 버티면 맨 뒤의 것부터 되찾는다 (6.4절). */
+    List<String> dropped = new ArrayList<>();
   }
 
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)

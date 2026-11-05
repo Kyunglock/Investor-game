@@ -727,7 +727,12 @@ export interface components {
             employees: {
                 id: number;
                 name: string;
+                /** @description SSS면 실전 경험으로 X~ZZZ까지 오른다 (2.3절) */
                 overallGrade: components["schemas"]["Grade"];
+                /** @description 실전 경험. 폭락장을 손실 없이 버틸 때 쌓인다 */
+                experience: number;
+                /** @description 다음 단계까지 드는 실전 경험. SSS가 아니면 null */
+                experienceNeeded?: number | null;
                 grades: {
                     [key: string]: components["schemas"]["Grade"];
                 };
