@@ -12,7 +12,7 @@ interface Props {
 export function Document({ title, number, children, testId }: Props) {
   return (
     <section
-      className="animate-reveal mx-auto w-full max-w-[640px] overflow-hidden rounded-md border border-line bg-card shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+      className="animate-reveal mx-auto w-full max-w-[640px] overflow-clip rounded-md border border-line bg-card shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
       data-testid={testId}
     >
       <header className="flex items-center justify-between bg-wine px-5 py-2.5 text-white">

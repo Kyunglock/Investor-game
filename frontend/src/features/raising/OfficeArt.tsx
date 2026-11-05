@@ -5,7 +5,7 @@ import { Person } from '../game/pixel/Person'
 import { PALETTE } from '../game/pixel/palette'
 import { SPRITE_HEIGHT, SPRITE_WIDTH, toRuns } from '../game/pixel/sprite'
 import { usePixelArt } from '../game/pixelArt'
-import { bubbleOf } from './board'
+import { bubbleOf, pnlLabel } from './board'
 import {
   ATTIRE_COLORS,
   attireOf,
@@ -162,13 +162,20 @@ export const OfficeArt = memo(function OfficeArt({ company }: { company: Company
   const seated = company.employees.filter((e) => e.desk)
   const officeTop = ROOF + FLOOR - 3 - SPRITE_HEIGHT
   const lobbyTop = ROOF + FLOOR * 2 - 3 - SPRITE_HEIGHT
-  // 결산 전광판의 말풍선: 지난 결산에서 손이 뒤집힌 직원 자리 위에 (8.3절).
-  const flipsOf = new Map(
-    (company.lastSettlement?.results ?? []).map((r) => [r.employeeId, bubbleOf(r.flips)]),
-  )
-  const bubbles = seated
-    .map((e, i) => ({ id: e.id, x: i * SEAT, text: flipsOf.get(e.id) ?? null }))
-    .filter((b) => b.text)
+  // 지난 결산을 그림 속에서 (8.3절): 직원 머리 위에 손익과 결과에 맞는 한마디, 발밑에 앉은 자리.
+  const resultOf = new Map((company.lastSettlement?.results ?? []).map((r) => [r.employeeId, r]))
+  const deskName = new Map(company.desks.map((d) => [d.code, d.name]))
+  const tags = seated.map((e, i) => {
+    const r = resultOf.get(e.id)
+    return {
+      id: e.id,
+      name: e.name,
+      x: i * SEAT,
+      desk: deskName.get(e.desk ?? '') ?? '',
+      pnl: r && r.stake > 0 ? r.pnl : null,
+      bubble: r ? bubbleOf(r.flips, r.pnl) : null,
+    }
+  })
   const staff: (Figure & { glow: 'blue' | 'gold' | null })[] = seated.map((e, i) => ({
     who: 'me',
     sex: e.id % 2 === 0 ? 'F' : 'M',
@@ -232,19 +239,45 @@ export const OfficeArt = memo(function OfficeArt({ company }: { company: Company
           />
         ))}
       </svg>
-      {bubbles.map((b) => (
-        <span
-          key={b.id}
-          className="absolute -translate-x-1/2 -translate-y-full whitespace-nowrap rounded bg-white px-1.5 py-0.5 text-[11px] text-ink shadow"
-          style={{
-            left: `${((b.x + SPRITE_WIDTH / 2) / width) * 100}%`,
-            top: `${(officeTop / HEIGHT) * 100}%`,
-          }}
-          data-testid="office-bubble"
-        >
-          {b.text}
-        </span>
-      ))}
+      {tags.map((t) => {
+        const left = `${((t.x + SPRITE_WIDTH / 2) / width) * 100}%`
+        return (
+          <div key={t.id}>
+            {(t.bubble || t.pnl !== null) && (
+              <div
+                className="absolute flex -translate-x-1/2 -translate-y-full flex-col items-center gap-0.5"
+                style={{ left, top: `${((officeTop + 2) / HEIGHT) * 100}%` }}
+              >
+                {t.pnl !== null && (
+                  <b
+                    className={`animate-reveal rounded px-1 font-mono-num text-[11px] text-white ${
+                      t.pnl >= 0 ? 'bg-up' : 'bg-down'
+                    }`}
+                    data-testid="office-pnl"
+                  >
+                    {pnlLabel(t.pnl)}
+                  </b>
+                )}
+                {t.bubble && (
+                  <span
+                    className="w-max max-w-[38vw] rounded bg-white px-1.5 py-0.5 text-center text-[11px] leading-tight text-ink shadow md:max-w-[220px]"
+                    data-testid="office-bubble"
+                  >
+                    {t.bubble}
+                  </span>
+                )}
+              </div>
+            )}
+            <span
+              className="absolute -translate-x-1/2 whitespace-nowrap rounded bg-ink/80 px-1 text-[10px] text-white"
+              style={{ left, top: `${((ROOF + FLOOR - 3) / HEIGHT) * 100}%` }}
+              data-testid="office-tag"
+            >
+              {t.name} · {t.desk}
+            </span>
+          </div>
+        )
+      })}
       <figcaption className="sr-only">{caption}</figcaption>
     </figure>
   )

@@ -23,9 +23,9 @@ function signed(amount: number): string {
 
 /**
  * 투자 회의 (decisions.md 229번). 단서 기사를 놓고 직원들과 고민한다. 리서치 팀이 형광펜을 긋고, 자리에 앉은 직원이 한마디씩 하고(고집이 센 직원은 미리
- * 티가 난다), 사장이 고른다. 돈을 굴리는 직원 몇 명은 "제가 알아서 할게요" 하고 제 판단대로 한다. 배치를 바꾸는 중에는(locked) 고르지 않는다.
+ * 티가 난다), 사장이 고른다. 돈을 굴리는 직원 몇 명은 "제가 알아서 할게요" 하고 제 판단대로 한다.
  */
-export function InvestPanel({ invest, locked }: { invest: Invest; locked: boolean }) {
+export function InvestPanel({ invest }: { invest: Invest }) {
   const busy = useRaisingStore((s) => s.busy)
   const { decideInvest } = useRaisingStore.getState()
   const outcome = invest.outcome
@@ -86,15 +86,12 @@ export function InvestPanel({ invest, locked }: { invest: Invest; locked: boolea
               바이오·단타 데스크에 사람을 앉혀야 회의를 엽니다.
             </p>
           )}
-          {invest.ready && locked && (
-            <p className="mt-2 text-[12px] text-wine">바꾼 배치를 먼저 앉히면 고를 수 있습니다.</p>
-          )}
           <div className="mt-2 grid grid-cols-3 gap-2">
             {invest.options.map((o) => (
               <button
                 key={o.code}
                 type="button"
-                disabled={busy || locked || !invest.ready}
+                disabled={busy || !invest.ready}
                 onClick={() => void decideInvest(o.code)}
                 className="min-h-12 rounded border border-pen font-semibold hover:bg-pen hover:text-white disabled:opacity-50"
               >

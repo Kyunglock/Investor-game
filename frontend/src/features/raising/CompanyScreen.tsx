@@ -1,39 +1,61 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Applicant, Company } from '../../api/client'
 import { Document } from '../game/Document'
 import { shortWon, signedWon } from '../game/labels'
 import { usePixelArt } from '../game/pixelArt'
-import { bubbleOf } from './board'
+import { bubbleOf, pnlLabel } from './board'
 import { GradeLadder } from './GradeLadder'
-import { STAT_NAMES, STAT_ORDER } from './grades'
+import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { InvestPanel } from './InvestPanel'
 import { MoveScene } from './MoveScene'
 import { OfficeArt } from './OfficeArt'
 import { ATTIRE_NAMES, attireOf, glowOf } from './office'
 import { useRaisingStore } from './store'
 
-type Seats = Record<number, string | null>
+type Employee = Company['employees'][number]
+type Desk = Company['desks'][number]
+
+/** 직원이 그 자리에 맞는 정도: 자리가 원하는 능력치의 등급으로 (4.2절). A 이상 잘 맞음, C·B 보통, 그 아래 안 맞음. */
+export function fitOf(employee: Employee, desk: Desk): 'good' | 'fair' | 'poor' {
+  const at = LADDER.indexOf(employee.grades[desk.statCode] as (typeof LADDER)[number])
+  return at >= LADDER.indexOf('A') ? 'good' : at >= LADDER.indexOf('C') ? 'fair' : 'poor'
+}
+
+const FIT_TONE = {
+  good: 'border-teal text-teal',
+  fair: 'border-gold text-gold',
+  poor: 'border-wine/60 text-wine',
+} as const
 
 /**
- * 회사 화면 (증권사 육성 설계 4·6절). 한 해 = 연초 회의(공채 시장) → 배치 → 결산. 사장은 사람을 뽑아 앉히기만 하고 직원은 능력치대로 알아서 굴린다. 배치는
- * 작년 그대로가 기본이다 (7.2절).
+ * 회사 화면 (증권사 육성 설계 4·6절). 한 해 = 연초 회의(공채 시장) → 배치 → 투자 회의 → 결산. 사장은 사람을 뽑아 앉히기만 하고 직원은 능력치대로 알아서
+ * 굴린다. 배치는 작년 그대로가 기본이고(7.2절), 자리를 누르면 바로 앉는다. 결산 버튼은 화면 아래에 늘 붙어 있고, 결산하면 결과로 스크롤한다.
  */
 export function CompanyScreen({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
+  const justSettled = useRaisingStore((s) => s.justSettled)
   const { place, settle } = useRaisingStore.getState()
-  const [seats, setSeats] = useState<Seats>(() =>
-    Object.fromEntries(company.employees.map((e) => [e.id, e.desk ?? null])),
-  )
   // 이사 장면은 결산 뒤 한 번만 본다. 해가 바뀌면 화면이 새로 그려져 다시 볼 수 있다.
   const [moved, setMoved] = useState(false)
-  const placed = Object.values(seats).filter(Boolean).length
-  const changed = company.employees.some((e) => (e.desk ?? null) !== seats[e.id])
+  const placed = company.employees.filter((e) => e.desk).length
   const ended = company.status === 'ENDED'
   const meeting = company.meeting
 
-  const save = () =>
-    place(company.employees.map((e) => ({ employeeId: e.id, desk: seats[e.id] ?? null })))
+  useEffect(() => {
+    if (justSettled) {
+      document.querySelector('[data-testid="settlement"]')?.scrollIntoView({ block: 'start' })
+      useRaisingStore.setState({ justSettled: false })
+    }
+  }, [justSettled])
+
+  const seat = (employeeId: number, desk: string | null) =>
+    place(
+      company.employees.map((e) => ({
+        employeeId: e.id,
+        desk: e.id === employeeId ? desk : (e.desk ?? null),
+      })),
+    )
 
   return (
     <Document
@@ -112,7 +134,7 @@ export function CompanyScreen({ company }: { company: Company }) {
           </section>
         )}
 
-        {!ended && <MarketPanel company={company} locked={changed} />}
+        {!ended && <MarketPanel company={company} />}
 
         <section className="mt-4">
           <h3 className="font-pen text-[22px]">
@@ -135,69 +157,116 @@ export function CompanyScreen({ company }: { company: Company }) {
                       ` · ${glowOf(e.overallGrade) === 'gold' ? '금빛' : '파란빛'}`}
                   </span>
                 </p>
-                <p className="text-[12px] text-muted">
-                  {Object.entries(STAT_NAMES)
-                    .map(([code, name]) => `${name} ${e.grades[code]}`)
-                    .join(' · ')}
-                </p>
+                <ul className="mt-1 grid grid-cols-5 gap-1 text-center text-[11px]">
+                  {STAT_ORDER.map((code) => (
+                    <li key={code} className="rounded border border-line-soft py-0.5">
+                      {STAT_NAMES[code]}
+                      <b className="block font-mono-num text-[13px]">{e.grades[code]}</b>
+                    </li>
+                  ))}
+                </ul>
                 {!ended && (
-                  <select
-                    aria-label={`${e.name}의 자리`}
-                    className="mt-2 w-full rounded border border-line bg-card p-2"
-                    value={seats[e.id] ?? ''}
-                    onChange={(event) => setSeats({ ...seats, [e.id]: event.target.value || null })}
-                  >
-                    <option value="">쉰다</option>
-                    {company.desks.map((d) => (
-                      <option key={d.code} value={d.code}>
-                        {d.name} ({STAT_NAMES[d.statCode]})
-                      </option>
-                    ))}
-                  </select>
+                  <fieldset className="mt-2">
+                    <legend className="sr-only">{e.name}의 자리</legend>
+                    <div className="flex flex-wrap gap-1">
+                      {company.desks.map((d) => {
+                        const on = e.desk === d.code
+                        const fit = fitOf(e, d)
+                        // 쉬던 사람은 자리가 남아 있어야 앉는다.
+                        const full = !e.desk && placed >= company.seats
+                        return (
+                          <button
+                            key={d.code}
+                            type="button"
+                            aria-pressed={on}
+                            disabled={busy || (!on && full)}
+                            onClick={() => void seat(e.id, on ? null : d.code)}
+                            className={`min-h-10 rounded border px-2 text-[13px] disabled:opacity-40 ${
+                              on ? 'border-pen bg-pen text-white' : FIT_TONE[fit]
+                            }`}
+                            data-fit={fit}
+                            title={d.description}
+                          >
+                            {d.name}{' '}
+                            <span className="font-mono-num text-[11px]">
+                              {STAT_NAMES[d.statCode]} {e.grades[d.statCode]}
+                            </span>
+                          </button>
+                        )
+                      })}
+                      <button
+                        type="button"
+                        aria-pressed={!e.desk}
+                        disabled={busy || !e.desk}
+                        onClick={() => void seat(e.id, null)}
+                        className={`min-h-10 rounded border px-2 text-[13px] ${
+                          !e.desk ? 'border-pen bg-pen text-white' : 'border-line text-muted'
+                        }`}
+                      >
+                        쉰다
+                      </button>
+                    </div>
+                  </fieldset>
                 )}
               </li>
             ))}
           </ul>
           {!ended && (
-            <ul className="mt-2 text-[12px] text-muted">
-              {company.desks.map((d) => (
-                <li key={d.code}>
-                  {d.name}: {d.description}
-                </li>
-              ))}
-            </ul>
+            <details className="mt-2 text-[12px] text-muted">
+              <summary className="cursor-pointer">
+                자리 설명 · 글씨 색: <span className="text-teal">잘 맞음</span> ·{' '}
+                <span className="text-gold">보통</span> · <span className="text-wine">안 맞음</span>
+              </summary>
+              <ul className="mt-1">
+                {company.desks.map((d) => (
+                  <li key={d.code}>
+                    {d.name}: {d.description}
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
         </section>
 
-        {!ended && company.invest && <InvestPanel invest={company.invest} locked={changed} />}
+        {!ended && company.invest && <InvestPanel invest={company.invest} />}
 
-        {error && (
+        {!ended && meeting && (
+          // 결산은 한 해의 마지막 일이라 화면 아래에 늘 붙어 있다.
+          <div className="sticky bottom-0 z-10 -mx-1 mt-4 grid gap-1 bg-card/95 px-1 pt-2 pb-3 backdrop-blur">
+            {error && (
+              <p role="alert" className="text-[13px] text-wine">
+                {error}
+              </p>
+            )}
+            {company.invest?.ready ? (
+              // 회의를 해야 결산한다. 막힌 버튼 대신 회의로 데려간다.
+              <button
+                type="button"
+                onClick={() =>
+                  document
+                    .querySelector('[data-testid="invest"]')
+                    ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                }
+                className="min-h-12 rounded border-2 border-wine bg-card font-semibold text-wine"
+              >
+                투자 회의부터 · 회의로 가기
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void settle()}
+                className="min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50"
+              >
+                {company.year}년 차 결산 보기
+              </button>
+            )}
+          </div>
+        )}
+        {ended && error && (
           <p role="alert" className="mt-3 text-[13px] text-wine">
             {error}
           </p>
-        )}
-
-        {!ended && meeting && (
-          <div className="mt-4 grid gap-2">
-            {changed && (
-              <button
-                type="button"
-                disabled={busy || placed > company.seats}
-                onClick={() => void save()}
-                className="min-h-12 rounded border border-pen font-semibold disabled:opacity-50"
-              >
-                이렇게 앉힌다
-              </button>
-            )}
-            <button
-              type="button"
-              disabled={busy || changed || Boolean(company.invest?.ready)}
-              onClick={() => void settle()}
-              className="min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50"
-            >
-              {company.invest?.ready ? '투자 회의를 먼저 합니다' : `${company.year}년 차 결산 보기`}
-            </button>
-          </div>
         )}
         {company.sale && <SalePanel company={company} />}
       </div>
@@ -230,7 +299,7 @@ function SettlementView({ company }: { company: Company }) {
           data-testid="board"
         >
           {s.results.map((r, i) => {
-            const bubble = bubbleOf(r.flips)
+            const bubble = bubbleOf(r.flips, r.pnl)
             return (
               <li
                 key={r.employeeId}
@@ -242,7 +311,7 @@ function SettlementView({ company }: { company: Company }) {
                   {r.name} · {desk(r.desk)}
                 </span>
                 <b className={r.pnl >= 0 ? 'text-[#ff8a7a]' : 'text-[#8cc3ec]'}>
-                  {signedWon(r.pnl)}
+                  {pnlLabel(r.pnl)}
                 </b>
                 {bubble && (
                   <span
@@ -351,9 +420,9 @@ function SalePanel({ company }: { company: Company }) {
 
 /**
  * 연초 공채 (decisions.md 228번). 오토배틀러의 상점처럼 해마다 지원자가 오고, 계약금을 내고 뽑는다. 자리가 꽉 찼으면 내보낼 직원을 고른다. 마음에 안 들면
- * 값을 내고 새로 받는다. 배치를 바꾸는 중에는(locked) 뽑지 않는다: 직원이 바뀌면 배치 칸을 새로 그리기 때문이다.
+ * 값을 내고 새로 받는다.
  */
-function MarketPanel({ company, locked }: { company: Company; locked: boolean }) {
+function MarketPanel({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const { hire, refreshApplicants } = useRaisingStore.getState()
   const [picking, setPicking] = useState<number | null>(null)
@@ -366,9 +435,6 @@ function MarketPanel({ company, locked }: { company: Company; locked: boolean })
         계약금을 내고 뽑습니다. 뽑은 사람은 쉬는 채로 들어오니 자리에 앉히세요.
         {meeting?.hrCap && ` 인사팀 덕에 ${meeting.hrCap} 언저리까지 옵니다.`}
       </p>
-      {locked && (
-        <p className="mt-1 text-[12px] text-wine">바꾼 배치를 먼저 앉히면 뽑을 수 있습니다.</p>
-      )}
       {company.applicants.length === 0 && (
         <p className="mt-2 text-[13px] text-muted">올해 지원자를 다 만났습니다.</p>
       )}
@@ -378,7 +444,7 @@ function MarketPanel({ company, locked }: { company: Company; locked: boolean })
             key={a.id}
             applicant={a}
             affordable={company.capital >= a.fee}
-            disabled={busy || locked}
+            disabled={busy}
             picking={picking === a.id}
             full={full}
             employees={company.employees}
@@ -392,7 +458,7 @@ function MarketPanel({ company, locked }: { company: Company; locked: boolean })
       </ul>
       <button
         type="button"
-        disabled={busy || locked || company.capital < company.refreshCost}
+        disabled={busy || company.capital < company.refreshCost}
         onClick={() => {
           setPicking(null)
           void refreshApplicants()
