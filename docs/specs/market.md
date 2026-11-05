@@ -1,5 +1,8 @@
 # 스펙: 시장 (market)
 
+> **기록:** 옛 인생 시뮬레이터의 스펙이다. #292에서 코드를 지웠다 (decisions.md 227번). 테이블은 DB에 남아 있지만 코드가 쓰지 않는다 ([db.md](../db.md) 2.2절). 지금 구조는 [domains.md](../domains.md)와 [증권사 육성 설계](../superpowers/specs/2026-11-05-brokerage-raising-design.md)를 본다.
+> 이어 쓰는 것: 종목 정의(`stocks.json`)는 투자 회의의 종목으로 쓴다. 가격과 이력은 없다. 회사의 한 해 시장은 갈래(호황·보통·폭락장) 하나이고, 갈래의 비중은 회사의 시대가 정한다 (decisions.md 211·218번).
+
 > 상태: 구현됨 (2026-10-18) · 근거: [경제 개편 설계](../superpowers/specs/2026-10-18-economy-redesign-design.md) 5절, [domains.md](../domains.md)
 > 표기: **(확정)**, **(제안)**, **(초기값)** 은 [README.md](./README.md) 참고.
 

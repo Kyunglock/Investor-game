@@ -36,6 +36,7 @@ public record RaisingContent(
    * @param desks 자리 종류. trades가 거짓이면 돈을 굴리지 않고 다른 자리를 돕는다 (4.2절)
    * @param flipLines 결산 소식 줄. 뒤집힌 능력치별, {name}은 직원 이름
    * @param wanted 연초 회의의 "올해 필요한 인재". 자리 코드별
+   * @param hotLine 연초 회의의 "이번 시대에 뜨는 섹터" 한 줄. {desks}는 시대 보너스가 붙은 자리 이름
    * @param phases 결산의 한 해 시장 한 줄. boom·normal·crash
    * @param eras 회사마다 다른 시대. 첫 회사는 맨 앞 시대다 (9.4절)
    * @param sale 매각·재창업 문구 (9절)
@@ -47,6 +48,7 @@ public record RaisingContent(
       List<Desk> desks,
       Map<String, String> flipLines,
       Map<String, String> wanted,
+      String hotLine,
       Map<String, String> phases,
       String falseOmenNote,
       String opening,
@@ -120,6 +122,12 @@ public record RaisingContent(
   public record Sale(
       String eraEnd, String voluntary, String sold, String opening, String openingAlone) {}
 
+  /** 자리 (4.2절). sector가 있으면 그 섹터 종목을 굴리는 섹터 데스크다: 관심 섹터가 같은 직원이 앉으면 조금 더 번다. 없으면 섹터를 가리지 않는다. */
   public record Desk(
-      String code, String name, String statCode, boolean trades, String description) {}
+      String code,
+      String name,
+      String statCode,
+      boolean trades,
+      String sector,
+      String description) {}
 }

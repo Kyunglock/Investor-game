@@ -74,6 +74,9 @@ class CompanyState {
     /** 앉은 자리 코드. 아직 안 앉혔으면 null. */
     String desk;
 
+    /** 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다. 섹터 데스크 전에 들어온 직원은 없다(null). */
+    String sector;
+
     /** SSS 위의 단계: 0이면 없음, 1 X … 6 ZZZ (2.2·2.3절). 능력치가 아니라 종합 등급에만 붙는다. */
     int rank;
 
@@ -148,6 +151,9 @@ class CompanyState {
 
     /** 지원자 카드의 한 줄(올해 필요한 인재, 사수가 붙음). 없으면 null. */
     String line;
+
+    /** 관심 섹터 코드. 뽑으면 직원이 안고 들어온다. */
+    String sector;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)

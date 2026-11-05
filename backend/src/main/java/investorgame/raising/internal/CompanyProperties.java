@@ -16,7 +16,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param decisions 직원 한 명이 한 해에 내리는 매매 판단 수
  * @param omenPercent 폭락장 앞에 연초 회의에서 조짐이 보일 확률 (나머지는 조짐 없이 온다)
  * @param falseOmenPercent 폭락장이 아닌 해에 헛조짐이 보일 확률
- * @param desks 돈을 굴리는 자리의 손익(만분율): 맞히면 gain, 틀리면 miss, 손이 뒤집히면 flip
+ * @param desks 돈을 굴리는 자리의 손익(만분율): 맞히면 gain, 틀리면 miss, 손이 뒤집히면 flip. 폭락장의 시장 손익에는 crash-percent를
+ *     곱한다
+ * @param interestBonusBp 직원의 관심 섹터와 같은 섹터 데스크에 앉으면 맞혔을 때 더하는 몫(만분율)
  * @param phaseBp 한 해 시장이 판단 하나마다 더하는 손익(만분율)
  * @param swayPercent 꼬드김 판정이 다른 판정보다 덜 일어나는 비율. 리스크 관리 팀이 없을 때
  * @param experience 실전 경험과 큰 손실의 등급 하락 (2.3·6.4절)
@@ -38,6 +40,7 @@ public record CompanyProperties(
     int omenPercent,
     int falseOmenPercent,
     Map<String, DeskReturn> desks,
+    int interestBonusBp,
     Map<String, Integer> phaseBp,
     int swayPercent,
     int crashFlipPercent,
@@ -90,7 +93,11 @@ public record CompanyProperties(
    */
   public record Experience(int dropLossPercent, int band, int needBase) {}
 
-  public record DeskReturn(int gainBp, int missBp, int flipBp) {}
+  /**
+   * @param crashPercent 폭락장에 한 해 시장 손익(phase-bp)에 곱하는 비율. 식품·금융처럼 방어가 되는 섹터는 100보다 작고, 반도체처럼 크게 빠지는
+   *     섹터는 크다
+   */
+  public record DeskReturn(int gainBp, int missBp, int flipBp, int crashPercent) {}
 
   /**
    * @param minGrade 시대가 끝나기 전에 스스로 팔 수 있는 회사 등급 (9.1절 제안: SSS)

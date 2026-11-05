@@ -18,6 +18,8 @@ describe('자리에 맞는 정도 (증권사 육성 설계 4.2절)', () => {
     name: '바이오 데스크',
     statCode: 'patience',
     trades: true,
+    sector: 'bio',
+    hot: false,
     description: '',
   }
   const employee = (patience: string) => ({ grades: { patience } }) as never

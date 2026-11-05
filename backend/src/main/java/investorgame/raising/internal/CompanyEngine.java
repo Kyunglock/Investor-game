@@ -57,6 +57,11 @@ class CompanyEngine {
     this.content = content;
     this.behavior = behavior;
     this.properties = properties;
+    for (RaisingContent.Desk desk : desks()) {
+      if (desk.trades() && !properties.desks().containsKey(desk.code())) {
+        throw new IllegalStateException("돈을 굴리는 자리의 손익이 없다: raising.company.desks." + desk.code());
+      }
+    }
     this.invest = new InvestEngine(this, content, behavior, properties);
   }
 
@@ -236,7 +241,14 @@ class CompanyEngine {
     java.util.Optional<Employee> mentor = bestRanked(company, RANK_MENTOR);
     RaisingContent.Company texts = content.raising().company();
     company.applicants.clear();
+    // 관심 섹터는 따로 굴려 능력치 난수를 흔들지 않는다. 첫 지원자는 올해 필요한 자리가 섹터 데스크면 그 섹터에 관심이 있다.
+    RandomGenerator sectorRng = random.forKey("applicant-sectors", company.year, company.refreshes);
+    List<String> sectors = content.sectors().stream().map(s -> s.code()).toList();
     for (int i = 0; i < count; i++) {
+      String sector = sectors.get(sectorRng.nextInt(sectors.size()));
+      if (i == 0 && desk(company.wantedDesk).sector() != null) {
+        sector = desk(company.wantedDesk).sector();
+      }
       int at = Math.clamp(level + rng.nextInt(3) - 1, 0, top);
       StatGrade center = StatGrade.valueOf(LADDER.get(at));
       int middle = (center.min() + center.max()) / 2;
@@ -276,6 +288,7 @@ class CompanyEngine {
       applicant.stats.putAll(stats);
       applicant.fee = fee(stats);
       applicant.line = line;
+      applicant.sector = sector;
       company.applicants.add(applicant);
     }
   }
@@ -324,7 +337,9 @@ class CompanyEngine {
     }
     company.capital -= applicant.fee;
     company.applicants.remove(applicant);
-    return add(company, applicant.name, applicant.stats);
+    Employee employee = add(company, applicant.name, applicant.stats);
+    employee.sector = applicant.sector;
+    return employee;
   }
 
   private void requireOpen(CompanyState company) {
@@ -421,6 +436,46 @@ class CompanyEngine {
 
   List<Long> gradeCapital() {
     return properties.gradeCapital();
+  }
+
+  /** 이 시대에 뜨는 자리: 시대 보너스가 붙은 돈 굴리는 자리, 자리 순서대로 (9.4절). */
+  List<String> hotDesks(CompanyState company) {
+    Map<String, Integer> bonus = era(company).deskBonusBp();
+    return desks().stream()
+        .map(RaisingContent.Desk::code)
+        .filter(code -> bonus.getOrDefault(code, 0) > 0)
+        .toList();
+  }
+
+  /** 연초 회의의 "이번 시대에 뜨는 섹터" 한 줄. 뜨는 자리가 없는 시대면 null. */
+  String hotLine(CompanyState company) {
+    List<String> hot = hotDesks(company);
+    if (hot.isEmpty()) {
+      return null;
+    }
+    return Korean.fill(
+        content.raising().company().hotLine(),
+        Map.of("desks", String.join("·", hot.stream().map(code -> desk(code).name()).toList())));
+  }
+
+  String sectorName(String code) {
+    return content.sectorName(code);
+  }
+
+  /** 직원이 자기 관심 섹터의 섹터 데스크에 앉았는가 (4.2절). */
+  boolean interested(Employee employee) {
+    return employee.sector != null
+        && employee.desk != null
+        && employee.sector.equals(desk(employee.desk).sector());
+  }
+
+  /**
+   * 맞혔을 때 버는 몫(만분율): 자리의 몫 + 이 시대에 뜨는 섹터의 보너스(9.4절) + 관심 섹터 보너스. 결산과 투자 회의가 같이 쓴다. X 확신은 결산에서만 더한다.
+   */
+  int gainBp(CompanyState company, Employee employee) {
+    return returnsOf(employee.desk).gainBp()
+        + era(company).deskBonusBp().getOrDefault(employee.desk, 0)
+        + (interested(employee) ? properties.interestBonusBp() : 0);
   }
 
   String wantedLine(CompanyState company) {
@@ -572,16 +627,19 @@ class CompanyEngine {
       boolean conviction = employee.rank >= RANK_CONVICTION;
       boolean contrarian = crash && employee.rank >= RANK_CONTRARIAN;
       int hitBp = behavior.hintAccuracyPercent(insight) * PERCENT;
+      int gainBp = gainBp(company, employee) + (conviction ? effects.convictionGainBp() : 0);
+      // 한 해 시장 손익. 폭락장에는 섹터마다 빠지는 폭이 다르다(식품·금융은 덜, 반도체는 더).
+      int phaseBp = properties.phaseBp().getOrDefault(company.phase, 0);
+      if (crash) {
+        phaseBp = phaseBp * returns.crashPercent() / PERCENT;
+      }
       long bp = 0;
       for (int i = 0; i < properties.decisions(); i++) {
         int swayRoll = rng.nextInt(BP);
         int flipRoll = rng.nextInt(BP);
         int hitRoll = rng.nextInt(BP);
         // XXX 역발상: 폭락장에 빠지는 동안 사서 회복 구간에서 번다.
-        bp +=
-            contrarian
-                ? effects.contrarianCrashBp()
-                : properties.phaseBp().getOrDefault(company.phase, 0);
+        bp += contrarian ? effects.contrarianCrashBp() : phaseBp;
         if (swayRoll < swayBp) {
           result.flips.merge(StatCodes.CONVICTION, 1, Integer::sum);
           bp -= returns.missBp();
@@ -593,9 +651,7 @@ class CompanyEngine {
           // X 확신: 형광펜이 맞으면 알아서 크게 산다. 맞히면 더 벌고 틀려도 덜 잃어 편차가 준다.
           bp +=
               hitRoll < hitBp
-                  ? returns.gainBp()
-                      + era(company).deskBonusBp().getOrDefault(employee.desk, 0)
-                      + (conviction ? effects.convictionGainBp() : 0)
+                  ? gainBp
                   : -returns.missBp()
                       * (conviction ? effects.convictionMissPercent() : PERCENT)
                       / PERCENT;

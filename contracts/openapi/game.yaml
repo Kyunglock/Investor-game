@@ -263,16 +263,20 @@ components:
                 items: { type: string }
               grades: { type: object, additionalProperties: { $ref: '#/components/schemas/Grade' } }
               desk: { type: [string, 'null'] }
+              sector: { type: [string, 'null'], description: 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다 }
+              sectorName: { type: [string, 'null'] }
         desks:
           type: array
           items:
             type: object
-            required: [code, name, statCode, trades, description]
+            required: [code, name, statCode, trades, hot, description]
             properties:
               code: { type: string }
               name: { type: string }
               statCode: { type: string }
               trades: { type: boolean, description: 거짓이면 돈을 굴리지 않고 다른 자리를 돕는다 }
+              sector: { type: [string, 'null'], description: 섹터 데스크면 그 섹터 코드. 섹터를 가리지 않는 자리면 null }
+              hot: { type: boolean, description: 이 시대에 뜨는 자리(시대 보너스가 붙는다, 9.4절) }
               description: { type: string }
         meeting:
           oneOf:
@@ -286,6 +290,7 @@ components:
                 earlyOmen: { type: [string, 'null'], description: XX 경보. 내년 폭락 조짐 한 줄 }
                 forecast: { type: [string, 'null'], description: ZZZ 선견. 내년 시장 한 줄 }
                 wanted: { type: string }
+                hot: { type: [string, 'null'], description: 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) }
             - type: 'null'
         applicants:
           type: array
@@ -300,6 +305,8 @@ components:
               grades: { type: object, additionalProperties: { $ref: '#/components/schemas/Grade' } }
               fee: { type: integer, format: int64, description: 계약금. 뽑으면 회사 자본에서 나간다 }
               line: { type: [string, 'null'], description: 올해 필요한 인재, 사수가 붙음, 인사팀이 데려옴 }
+              sector: { type: [string, 'null'], description: 관심 섹터 코드. 뽑으면 직원이 안고 들어온다 }
+              sectorName: { type: [string, 'null'] }
         refreshCost: { type: integer, format: int64, description: 지원자를 새로 받는 값 }
         invest:
           description: 올해 투자 회의 (decisions.md 229번). 끝난 회사나 옛 회사면 null. 숨은 방향은 정한 뒤 outcome에만 있다

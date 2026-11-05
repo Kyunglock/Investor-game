@@ -77,7 +77,7 @@ investorgame/asset/
 ### 3.4 난수와 시간
 
 - 난수는 직접 만들지 않는다. 판 시드에서 유도한 `RandomGenerator`를 **인자로 받는다** (db.md 3.2절). `Math.random()`, `new Random()`, `ThreadLocalRandom`은 금지.
-- 현재 시각을 도메인 로직에서 읽지 않는다. 게임 시각은 보고된 값으로만 계산한다 (architecture.md 4절). 기록용 `created_at` 같은 값만 시스템 시각을 쓴다.
+- 현재 시각을 도메인 로직에서 읽지 않는다. 게임 시간은 회사의 해(결산 수)로만 센다 (architecture.md 4절). 기록용 `created_at` 같은 값만 시스템 시각을 쓴다.
 - 이 두 규칙 덕분에 같은 입력이면 같은 결과가 나온다. 테스트와 재현이 쉬워진다.
 
 ### 3.5 트랜잭션과 예외

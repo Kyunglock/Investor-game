@@ -57,6 +57,8 @@ test('처음 오면 회사를 차리고, 직원 없이 F등급 자리 두 개와
   await expect(page.getByTestId('ladder').first().getByRole('listitem')).toHaveCount(15)
   // 첫 지원자는 연초 회의가 말한 "올해 필요한 인재"다.
   await expect(page.getByTestId('applicant').first()).toContainText('맞는 사람이다')
+  // 지원자는 관심 섹터를 안고 온다 (233번).
+  await expect(page.getByTestId('applicant-sector')).toHaveCount(3)
   await tab(page, /배치/)
   await expect(page.getByTestId('employee')).toHaveCount(0)
   await tab(page, /연초 회의/)
@@ -97,6 +99,9 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await tab(page, /배치/)
   await expect(page.getByTestId('attire').first()).toContainText(/후드티|셔츠|정장/)
   const staff = page.getByTestId('employee')
+  // 섹터 데스크 (233번): 종목 섹터마다 돈을 굴리는 자리가 있다.
+  await expect(staff.nth(0).getByRole('button', { name: /반도체 데스크 용기/ })).toBeVisible()
+  await expect(staff.nth(0).getByRole('button', { name: /식품 데스크 줏대/ })).toBeVisible()
   await staff
     .nth(0)
     .getByRole('button', { name: /바이오 데스크 인내심/ })
@@ -112,13 +117,12 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '2')
   await expect(page.getByTestId('office-tag')).toHaveCount(2)
   await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/2')
-  // 자동 배치 (232번): 한 사람을 쉬게 해도 버튼 하나로 돈을 굴리는 두 자리가 다시 찬다.
+  // 자동 배치 (232·233번): 한 사람을 쉬게 해도 버튼 하나로 두 사람이 다시 돈을 굴리는 자리에 앉는다.
   await staff.nth(1).getByRole('button', { name: '쉰다' }).click()
   await expect(page.getByRole('tab', { name: /배치/ })).toContainText('1/2')
   await page.getByRole('button', { name: '자동 배치' }).click()
   await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/2')
-  await expect(page.getByTestId('office-tag').filter({ hasText: /바이오 데스크/ })).toHaveCount(1)
-  await expect(page.getByTestId('office-tag').filter({ hasText: /단타 데스크/ })).toHaveCount(1)
+  await expect(page.getByTestId('office-tag').filter({ hasText: /데스크/ })).toHaveCount(2)
 
   // 투자 회의 (229·231번): 결산을 누르면 창이 뜬다. 직원들이 한마디씩 하고 고집이 보인다. 창을 닫고 배치로 돌아갈 수도 있다.
   await page.getByRole('button', { name: '1년 차 결산 보기' }).click()

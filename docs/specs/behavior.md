@@ -1,5 +1,19 @@
 # 스펙: 행동 (behavior)
 
+> **기록이면서 일부는 지금도 쓰는 규칙이다.** 옛 인생 시뮬레이터 때 쓴 스펙이다. #292에서 옛 코드를 지울 때 행동 도메인은 남겼고, 지금은 육성(`raising`)의 회사가 쓴다 (decisions.md 227·229번). 이 문서에 나오는 "진행", "이벤트 운영", "자산", "캐릭터"는 지금은 육성으로 읽는다.
+>
+> 지금 회사가 쓰는 규칙 (원본은 `backend/src/main/java/investorgame/behavior/BehaviorService.java`):
+>
+> - **4.1 이탈 확률 → `flipChanceBp`.** 판정 한 번이 뒤집힐 확률(능력치 0이면 40%, 100이면 0%)이다. 결산과 투자 회의가 직원의 꼬드김(줏대)과 손 뒤집힘(자리가 원하는 능력치, 폭락장이면 인내심)을 이 확률로 굴린다 (decisions.md 211·229번).
+> - **4.4 힌트 → `hintAccuracyPercent`, `hint`.** `hintAccuracyPercent`는 안목의 정답률이고 결산에서 직원이 맞힐 확률로 쓴다 (decisions.md 211번). `hint`는 투자 회의에서 리서치 팀의 형광펜과 직원마다 기사를 읽은 쪽을 정한다. 형광펜은 정답이면 결정적 문장에, 틀리면 반대쪽 곁가지에 긋는다. 어느 문장에 긋는지는 육성이 정한다 (decisions.md 200·229번).
+>
+> 남아 있지만 지금 부르는 곳이 없는 것:
+>
+> - **4.2 판정 순서와 4.3 난수 순서 → `resolve`.** 3분 육성 판의 카드 판정에 썼다. 육성 판을 없앤 뒤(decisions.md 228번) 회사는 `resolve`를 부르지 않고 `flipChanceBp`로 직접 굴린다. `ChoiceContext`의 투자 원칙 장치 `Guards`도 그때 붙은 것이다 (decisions.md 202번).
+> - **4.5 운 → `luckFactorPercent`.** 회사 결산은 운을 쓰지 않는다. 운은 종합 등급의 평균에만 든다 (decisions.md 206번).
+>
+> 그 밖에 바뀐 것: 2절의 `lossFactorPercent`는 `luckFactorPercent`로 바뀌었다. **4.6 해석(`analyze`)과 버튼 확률(`deviationPercent`)은 #292에서 지웠다.** `Hint`에 안목 구간(`detail`: LOW·MID·HIGH·EXPERT)이 붙었다.
+
 > 담당: agent1 · 상태: 초안 v0.1 · 근거: [poc.md](../poc.md) 4~6절, [domains.md](../domains.md) 4절
 > 표기: **(확정)**, **(제안)**, **(초기값)** 은 [README.md](./README.md) 참고.
 
@@ -128,7 +142,9 @@ public record Hint(
 - 진행은 **들고 있는 종목에 충격이 닿을 때만** 이 비율을 충격 폭에 곱한다. 샀는데 내리면 덜 잃고, 샀거나 들고 있는데 오르면 더 번다. 팔고 나서는 아무 일도 없다.
 - 결과(`Price.lossSoftened`/`luckBoosted`)와 `PRICE` 기록에 남는다.
 
-### 4.6 해석 (매매창 설계 4.2절)
+### 4.6 해석 (매매창 설계 4.2절) — 기록
+
+> 기록: #292에서 지웠다 (decisions.md 227번).
 
 추세·시황 해석은 힌트와 다른 공식을 쓴다 (확정). 난수는 읽기 → 찍기 → 확신 순서로 항상 셋을 뽑는다.
 

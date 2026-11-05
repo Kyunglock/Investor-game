@@ -16,7 +16,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
-/** 어떤 버전의 콘텐츠가 로드되었는지 DB에 남긴다. 정의 자체는 DB에 넣지 않는다 (db.md 3.12절). */
+/** 어떤 버전의 콘텐츠가 로드되었는지 DB에 남긴다. 정의 자체는 DB에 넣지 않는다 (db.md 3.4절). */
 @Component
 class ContentVersionRecorder implements ApplicationRunner {
 

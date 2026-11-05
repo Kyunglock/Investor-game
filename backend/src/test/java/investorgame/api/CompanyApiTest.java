@@ -71,6 +71,11 @@ class CompanyApiTest {
     assertThat(company.read("$.employees.length()", Integer.class)).isZero();
     assertThat(company.read("$.applicants.length()", Integer.class)).isEqualTo(3);
     assertThat(company.read("$.applicants[0].line", String.class)).isNotBlank();
+    assertThat(company.read("$.applicants[0].sectorName", String.class)).isNotBlank();
+    // 섹터 데스크 (4.2·9.4절): 첫 회사는 평범한 시대라 뜨는 섹터가 없다.
+    List<String> chipSector = company.read("$.desks[?(@.code == 'semiconductor')].sector");
+    assertThat(chipSector).containsExactly("semiconductor");
+    assertThat(company.read("$.meeting.hot", Object.class)).isNull();
     assertThat(company.read("$.refreshCost", Long.class)).isPositive();
 
     int firstId = company.read("$.applicants[0].id");
@@ -93,9 +98,10 @@ class CompanyApiTest {
     int employeeId = one.read("$.employees[0].id");
     postJson(
             "/api/company/placement",
-            "{\"seats\":[{\"employeeId\":" + employeeId + ",\"desk\":\"bio\"}]}")
+            "{\"seats\":[{\"employeeId\":" + employeeId + ",\"desk\":\"semiconductor\"}]}")
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.employees[0].desk").value("bio"));
+        .andExpect(jsonPath("$.employees[0].desk").value("semiconductor"))
+        .andExpect(jsonPath("$.employees[0].sector").isNotEmpty());
 
     // 투자 회의 (229번): 돈을 굴리는 직원이 있으면 정해야 결산한다. 숨은 방향은 정한 뒤에만 보인다.
     DocumentContext meeting = json(mvc.perform(get("/api/company").cookie(session)));
