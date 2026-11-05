@@ -206,25 +206,7 @@ function StaffTab({ company }: { company: Company }) {
       <ul className="mt-2 grid gap-2">
         {company.employees.map((e) => (
           <li key={e.id} className="rounded border border-line p-3" data-testid="employee">
-            <p className="font-semibold">
-              {e.name} <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>{' '}
-              <span className="text-[12px] text-muted" data-testid="attire">
-                · {ATTIRE_NAMES[attireOf(e.overallGrade)]}
-                {e.effects.length > 0 && ` · ${e.effects.join('·')}`}
-                {e.experienceNeeded != null && ` · 실전 경험 ${e.experience}/${e.experienceNeeded}`}
-                {glowOf(e.overallGrade) &&
-                  ` · ${glowOf(e.overallGrade) === 'gold' ? '금빛' : '파란빛'}`}
-                {e.sectorName && ` · 관심 섹터 ${e.sectorName}`}
-              </span>
-            </p>
-            <ul className="mt-1 grid grid-cols-5 gap-1 text-center text-[11px]">
-              {STAT_ORDER.map((code) => (
-                <li key={code} className="rounded border border-line-soft py-0.5">
-                  {STAT_NAMES[code]}
-                  <b className="block font-mono-num text-[13px]">{e.grades[code]}</b>
-                </li>
-              ))}
-            </ul>
+            <EmployeeDetail employee={e} />
             {!ended && (
               <fieldset className="mt-2">
                 <legend className="sr-only">{e.name}의 자리</legend>
@@ -252,6 +234,32 @@ function StaffTab({ company }: { company: Company }) {
         </details>
       )}
     </section>
+  )
+}
+
+/** 직원 한 명의 상세 능력치: 종합 등급·차림새·효과·실전 경험·관심 섹터와 능력치 다섯의 등급. 배치 탭과 미니맵을 누르면 열리는 칸(237번)이 같이 쓴다. */
+function EmployeeDetail({ employee: e }: { employee: Employee }) {
+  return (
+    <div className="min-w-0 flex-1" data-testid="employee-detail">
+      <p className="font-semibold">
+        {e.name} <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>{' '}
+        <span className="text-[12px] text-muted" data-testid="attire">
+          · {ATTIRE_NAMES[attireOf(e.overallGrade)]}
+          {e.effects.length > 0 && ` · ${e.effects.join('·')}`}
+          {e.experienceNeeded != null && ` · 실전 경험 ${e.experience}/${e.experienceNeeded}`}
+          {glowOf(e.overallGrade) && ` · ${glowOf(e.overallGrade) === 'gold' ? '금빛' : '파란빛'}`}
+          {e.sectorName && ` · 관심 섹터 ${e.sectorName}`}
+        </span>
+      </p>
+      <ul className="mt-1 grid grid-cols-5 gap-1 text-center text-[11px]">
+        {STAT_ORDER.map((code) => (
+          <li key={code} className="rounded border border-line-soft py-0.5">
+            {STAT_NAMES[code]}
+            <b className="block font-mono-num text-[13px]">{e.grades[code]}</b>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -320,7 +328,7 @@ function DeskButtons({
 }
 
 /**
- * 건물 그림에서 책상을 누르면 그림 바로 아래에 열린다 (237번, #298 "배치가 그림과 따로 논다"). 앉은 사람을 눌렀으면 그 사람의 자리 버튼, 빈 자리를 눌렀으면
+ * 미니맵 칸을 누르면 미니맵 바로 아래에 열린다 (237번, #298 "배치가 그림과 따로 논다"). 사람을 눌렀으면 그 사람의 상세 능력치와 자리 버튼, 빈 자리를 눌렀으면
  * 쉬는 직원 가운데 앉힐 사람을 먼저 고른다. 쉬는 사람이 없으면 공채 탭으로 데려간다. 앉히면 닫힌다.
  */
 function SeatPicker({
@@ -352,14 +360,17 @@ function SeatPicker({
         aria-label={`${e.name}의 자리 고르기`}
         data-testid="seat-picker"
       >
-        <div className="flex items-baseline justify-between gap-2">
-          <p className="text-[14px]">
-            <b>{e.name}</b> <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>{' '}
-            · 어디에 앉힐까요?
-          </p>
+        <div className="flex items-start justify-between gap-2">
+          <EmployeeDetail employee={e} />
           {close}
         </div>
-        <div className="mt-2">
+        <p className="mt-2 text-[13px] text-muted" data-testid="seat-picker-desk">
+          {e.desk
+            ? `지금 자리: ${company.desks.find((d) => d.code === e.desk)?.name ?? e.desk}`
+            : '지금 쉬는 중'}{' '}
+          · 어디에 앉힐까요?
+        </p>
+        <div className="mt-1">
           <DeskButtons company={company} employee={e} onSeated={() => onFocus(null)} />
         </div>
       </section>

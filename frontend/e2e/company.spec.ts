@@ -152,6 +152,9 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await seats.nth(1).click()
   const picker = page.getByTestId('seat-picker')
   await expect(picker).toContainText('어디에 앉힐까요?')
+  // 누른 사람의 상세 능력치가 함께 보인다: 종합 등급과 능력치 다섯.
+  await expect(picker.getByTestId('employee-detail')).toContainText('종합')
+  await expect(picker.getByTestId('employee-detail').getByRole('listitem')).toHaveCount(5)
   await picker.getByRole('button', { name: '쉰다' }).click()
   await expect(picker).toHaveCount(0)
   await expect(page.getByTestId('office-empty')).toHaveCount(1)
