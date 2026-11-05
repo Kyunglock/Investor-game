@@ -90,6 +90,8 @@ class CompanyApiTest {
     assertThat(company.read("$.seats", Integer.class)).isEqualTo(2);
     assertThat(company.read("$.employees.length()", Integer.class)).isEqualTo(1);
     assertThat(company.read("$.meeting.recruitOpen", Boolean.class)).isTrue();
+    assertThat(company.read("$.meeting.wantedBonus", String.class)).startsWith("맞추면");
+    assertThat(first.read("$.result.wanted", Object.class)).as("첫 판은 공채가 아니다").isNull();
     postJson("/api/company/hires", "{\"runId\":\"" + firstId + "\",\"register\":true}")
         .andExpect(status().isBadRequest());
 
@@ -101,6 +103,11 @@ class CompanyApiTest {
     DocumentContext recruit = playRun();
     assertThat(recruit.read("$.recruit", Boolean.class)).isTrue();
     assertThat(recruit.read("$.fund", Long.class)).isEqualTo(fund);
+    // 연초 회의가 말한 인재에 맞췄는지 입사 심사에 보인다 (5절 3번).
+    assertThat(recruit.read("$.result.wanted.line", String.class)).isNotBlank();
+    boolean met = recruit.read("$.result.wanted.met", Boolean.class);
+    String wantedStat = recruit.read("$.result.wanted.stat", String.class);
+    String gradeBefore = recruit.read("$.grades." + wantedStat, String.class);
     assertThat(
             json(mvc.perform(get("/api/company").cookie(session)))
                 .read("$.meeting.pendingRunId", String.class))
@@ -109,6 +116,12 @@ class CompanyApiTest {
 
     DocumentContext after = hire(recruit.read("$.runId"), true, null);
     assertThat(after.read("$.employees.length()", Integer.class)).isEqualTo(2);
+    String gradeAfter = after.read("$.employees[1].grades." + wantedStat, String.class);
+    if (met && !"SSS".equals(gradeBefore)) {
+      assertThat(gradeAfter).as("맞추면 그 능력치가 한 띠 올라 입사한다").isNotEqualTo(gradeBefore);
+    } else if (!met) {
+      assertThat(gradeAfter).isEqualTo(gradeBefore);
+    }
     assertThat(after.read("$.capital", Long.class))
         .isEqualTo(money - fund + recruit.read("$.totalAsset", Long.class));
     assertThat(after.read("$.meeting.recruitOpen", Boolean.class)).isFalse();

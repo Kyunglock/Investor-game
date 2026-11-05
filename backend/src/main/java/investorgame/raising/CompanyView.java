@@ -76,6 +76,7 @@ public record CompanyView(
    * @param earlyOmen XX 경보: 내년 폭락 조짐 한 줄. 경보 직원이 없거나 조짐이 없으면 null
    * @param forecast ZZZ 선견: 내년 시장 한 줄. 선견 직원이 없으면 null
    * @param wanted 회사가 올해 필요한 인재 한 줄 (6.1절 1번)
+   * @param wantedBonus 그 인재에 맞춰 공채 신입을 키우면 받는 보너스 한 줄 (5절 3번)
    * @param recruitFund 공채 육성에 회사가 내주는 운용금 (6.5절)
    * @param recruitOpen 올해 공채 육성을 아직 안 했다
    * @param pendingRunId 끝났지만 등록을 정하지 않은 공채 판. 없으면 null
@@ -86,6 +87,7 @@ public record CompanyView(
       String earlyOmen,
       String forecast,
       String wanted,
+      String wantedBonus,
       long recruitFund,
       boolean recruitOpen,
       UUID pendingRunId) {}

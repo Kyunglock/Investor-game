@@ -362,7 +362,7 @@ components:
         meeting:
           oneOf:
             - type: object
-              required: [wanted, recruitFund, recruitOpen]
+              required: [wanted, wantedBonus, recruitFund, recruitOpen]
               properties:
                 omen: { type: [string, 'null'], description: 폭락 조짐. 헛조짐일 수도 있다 }
                 hrCap:
@@ -371,6 +371,7 @@ components:
                 earlyOmen: { type: [string, 'null'], description: XX 경보. 내년 폭락 조짐 한 줄 }
                 forecast: { type: [string, 'null'], description: ZZZ 선견. 내년 시장 한 줄 }
                 wanted: { type: string }
+                wantedBonus: { type: string, description: 그 인재에 맞춰 공채 신입을 키우면 받는 보너스 한 줄 (5절 3번) }
                 recruitFund: { type: integer, format: int64 }
                 recruitOpen: { type: boolean }
                 pendingRunId: { type: [string, 'null'], format: uuid }
@@ -490,6 +491,16 @@ components:
         returnBp: { type: integer }
         flips: { type: integer, description: 이 판에서 손이 뒤집힌 횟수 }
         highlights: { type: array, items: { type: string } }
+        wanted:
+          description: 공채 육성이면 연초 회의가 말한 인재에 맞췄는가 (5절 3번). 아니면 null
+          oneOf:
+            - type: object
+              required: [stat, met, line]
+              properties:
+                stat: { type: string, description: 올해 필요한 자리가 원하는 능력치 코드 }
+                met: { type: boolean, description: 맞췄다. 등록하면 그 능력치가 한 띠 오른다 }
+                line: { type: string }
+            - type: 'null'
     RunChoice:
       type: object
       required: [outcome, run]

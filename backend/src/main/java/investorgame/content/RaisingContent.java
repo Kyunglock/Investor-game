@@ -125,6 +125,7 @@ public record RaisingContent(
    * @param phases 결산의 한 해 시장 한 줄. boom·normal·crash
    * @param eras 회사마다 다른 시대. 첫 회사는 맨 앞 시대다 (9.4절)
    * @param sale 매각·재창업 문구 (9절)
+   * @param wantedBonus 연초 회의가 말한 인재에 맞춰 키웠을 때의 문구 (5절 3번)
    */
   public record Company(
       List<String> names,
@@ -139,7 +140,18 @@ public record RaisingContent(
       Map<String, String> statNames,
       GradeLines gradeLines,
       Effects effects,
-      Hr hr) {}
+      Hr hr,
+      WantedBonus wantedBonus) {}
+
+  /**
+   * 원하는 인재 보너스 (증권사 육성 설계 5절 3번, 6.1절 1번). {stat}·{grade}·{before}·{after} 자리표시를 쓴다.
+   *
+   * @param meeting 연초 회의의 "맞추면" 한 줄
+   * @param tip 공채 육성 첫 카드의 한 줄
+   * @param met 입사 심사: 맞췄다
+   * @param missed 입사 심사: 못 맞췄다. {before}는 지금 등급
+   */
+  public record WantedBonus(String meeting, String tip, String met, String missed) {}
 
   /** 인사 직원의 공채 (6.3절). candidate: {name} 인사 직원. salary: {amount} 연봉 합. */
   public record Hr(String candidate, String salary) {}

@@ -373,6 +373,8 @@ export interface components {
                 /** @description ZZZ 선견. 내년 시장 한 줄 */
                 forecast?: string | null;
                 wanted: string;
+                /** @description 그 인재에 맞춰 공채 신입을 키우면 받는 보너스 한 줄 (5절 3번) */
+                wantedBonus: string;
                 /** Format: int64 */
                 recruitFund: number;
                 recruitOpen: boolean;
@@ -483,6 +485,14 @@ export interface components {
             /** @description 이 판에서 손이 뒤집힌 횟수 */
             flips: number;
             highlights: string[];
+            /** @description 공채 육성이면 연초 회의가 말한 인재에 맞췄는가 (5절 3번). 아니면 null */
+            wanted?: {
+                /** @description 올해 필요한 자리가 원하는 능력치 코드 */
+                stat: string;
+                /** @description 맞췄다. 등록하면 그 능력치가 한 띠 오른다 */
+                met: boolean;
+                line: string;
+            } | null;
         };
         RunChoice: {
             outcome: components["schemas"]["RunOutcome"];

@@ -136,9 +136,13 @@ test('회사: 배치하고, 공채 육성으로 신입을 등록하고, 세 해�
   await expect(page.getByRole('button', { name: '이렇게 앉힌다' })).toBeHidden()
   await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '1')
 
+  // 연초 회의가 말한 인재에 맞춰 키우면 보너스 (5절 3번): 회의·첫 카드·입사 심사에 보인다.
+  await expect(page.getByTestId('wanted-bonus')).toContainText('맞추면')
   await page.getByRole('button', { name: /공채 육성/ }).click()
   await expect(card(page)).toBeVisible()
+  await expect(page.getByText(/회사가 원하는 인재: /)).toBeVisible()
   await playToResult(page)
+  await expect(page.getByTestId('wanted-result')).toHaveText(/맞췄다|못 미쳤다/)
   await page.getByRole('button', { name: '등록한다' }).click()
   await expect(page.getByTestId('employee')).toHaveCount(2)
   await expect(page.getByRole('button', { name: /공채 육성/ })).toBeHidden()

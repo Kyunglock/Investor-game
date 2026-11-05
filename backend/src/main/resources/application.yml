@@ -159,3 +159,6 @@ raising:
       # 새 회사 시작 자본 1억 원, 명성 한 단계마다 +10%
       base-capital: 100000000
       fame-capital-percent: 10
+    # 원하는 인재 보너스 (5절 3번): 공채 신입이 올해 필요한 자리의 능력치를 B 이상으로 가지고 입사하면 그 능력치가 한 띠 오른다
+    wanted:
+      min-grade: B

@@ -73,7 +73,10 @@ class DefaultCompanyService implements CompanyService {
     company.capital += money;
     if (register) {
       makeRoom(company, replace);
-      engine.hire(company, person.stats).experience = survivedCrisis(person) ? 1 : 0;
+      // 연초 회의가 말한 인재에 맞춰 키웠으면 그 능력치가 한 띠 올라 입사한다 (5절 3번).
+      Map<String, Integer> stats =
+          engine.withWantedBonus(person.stats, person.wantedStat, person.wantedMin);
+      engine.hire(company, stats).experience = survivedCrisis(person) ? 1 : 0;
     }
     companies.update(row.id(), company, false);
     return view(row, runs.memory(sessionId));
@@ -244,6 +247,7 @@ class DefaultCompanyService implements CompanyService {
                 engine.earlyOmen(c),
                 engine.forecast(c),
                 engine.wantedLine(c),
+                engine.wantedBonusLine(c),
                 engine.recruitFund(c),
                 !c.recruited,
                 c.pendingRun);

@@ -39,6 +39,11 @@ class RunState {
   /** 공채 육성이면 회사의 올해 시장 갈래(boom·normal·crash), 아니면 null (6.2절). */
   String marketPhase;
 
+  /** 공채 육성이면 연초 회의가 말한 올해 필요한 능력치와 맞춤 기준 점수, 아니면 null (5절 3번). */
+  String wantedStat;
+
+  int wantedMin;
+
   /** 끝난 뒤 등록할지 정했는가. */
   boolean decided;
 

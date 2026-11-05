@@ -1010,6 +1010,12 @@
     "hr": {
       "candidate": "인사팀 {name}이(가) 신입을 데려왔다. 3분 육성 없이 뽑았다.",
       "salary": "인사팀이 뽑은 직원 연봉 {amount}"
+    },
+    "wantedBonus": {
+      "meeting": "맞추면: 공채 신입의 {stat}이(가) {grade} 이상이면 입사할 때 한 띠 더 오른다.",
+      "tip": "회사가 원하는 인재: {stat} {grade} 이상. 맞추면 입사할 때 {stat}이(가) 한 띠 오른다.",
+      "met": "회사가 원하는 인재를 맞췄다. 등록하면 {stat}이(가) 한 띠 오른다 ({before} → {after}).",
+      "missed": "회사가 원하는 인재({stat} {grade} 이상)에는 못 미쳤다. 지금 {stat} {before}."
     }
   },
   "omenReview": {

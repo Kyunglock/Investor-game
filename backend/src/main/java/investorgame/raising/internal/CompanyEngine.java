@@ -328,6 +328,64 @@ class CompanyEngine {
     return content.raising().company().wanted().get(company.wantedDesk);
   }
 
+  /** 올해 필요한 자리가 원하는 능력치 (6.1절 1번). */
+  String wantedStat(CompanyState company) {
+    return desk(company.wantedDesk).statCode();
+  }
+
+  /** 원하는 인재로 치는 가장 낮은 점수: 그 능력치가 이 등급 이상이면 맞춘 것이다 (5절 3번). */
+  int wantedMin() {
+    return StatGrade.valueOf(properties.wanted().minGrade()).min();
+  }
+
+  /** 연초 회의의 "맞추면" 한 줄. */
+  String wantedBonusLine(CompanyState company) {
+    return Korean.fill(content.raising().company().wantedBonus().meeting(), wantedValues(company));
+  }
+
+  /** 공채 육성에 건네는 원하는 인재: 첫 카드에 한 줄이 뜨고, 입사 심사에서 맞췄는지 본다. */
+  RunEngine.Wanted wantedFor(CompanyState company) {
+    return new RunEngine.Wanted(
+        wantedStat(company),
+        wantedMin(),
+        Korean.fill(content.raising().company().wantedBonus().tip(), wantedValues(company)));
+  }
+
+  private Map<String, String> wantedValues(CompanyState company) {
+    return Map.of(
+        "stat",
+        content.raising().company().statNames().get(wantedStat(company)),
+        "grade",
+        properties.wanted().minGrade());
+  }
+
+  /** 원하는 인재를 맞췄으면 그 능력치를 한 띠 올린 능력치, 못 맞췄으면 그대로 (5절 3번). 공채 육성으로 직접 키운 신입만 받는다. */
+  Map<String, Integer> withWantedBonus(Map<String, Integer> stats, String stat, int min) {
+    Map<String, Integer> result = new java.util.LinkedHashMap<>(stats);
+    if (stat != null && stats.get(stat) >= min) {
+      result.put(stat, Math.min(MAX_STAT, stats.get(stat) + properties.experience().band()));
+    }
+    return result;
+  }
+
+  /** 입사 심사 결과의 원하는 인재 한 줄. */
+  String wantedResultLine(Map<String, Integer> stats, String stat, int min) {
+    RaisingContent.WantedBonus texts = content.raising().company().wantedBonus();
+    int value = stats.get(stat);
+    boolean met = value >= min;
+    return Korean.fill(
+        met ? texts.met() : texts.missed(),
+        Map.of(
+            "stat",
+            content.raising().company().statNames().get(stat),
+            "grade",
+            StatGrade.of(min).name(),
+            "before",
+            StatGrade.of(value).name(),
+            "after",
+            StatGrade.of(withWantedBonus(stats, stat, min).get(stat)).name()));
+  }
+
   List<RaisingContent.Desk> desks() {
     return content.raising().company().desks();
   }

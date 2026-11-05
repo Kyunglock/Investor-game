@@ -108,8 +108,20 @@ class RunEngine {
    *
    * @param phase boom·normal·crash
    * @param omen 연초 회의에 뜬 폭락 조짐. 없으면 null. 폭락장이 아닌 해의 헛조짐일 수도 있다
+   * @param wanted 올해 필요한 인재. 없으면 null
    */
-  record Year(String phase, String omen) {}
+  record Year(String phase, String omen, Wanted wanted) {
+    Year(String phase, String omen) {
+      this(phase, omen, null);
+    }
+  }
+
+  /**
+   * 연초 회의가 말한 올해 필요한 인재 (5절 3번, 6.1절 1번). 신입이 stat을 min 이상으로 가지고 입사하면 그 능력치가 한 띠 오른다.
+   *
+   * @param tip 첫 카드에 뜨는 한 줄
+   */
+  record Wanted(String stat, int min, String tip) {}
 
   /**
    * 공채 신입에게 붙는 사수 (ZZ, 2.4절). 신입은 사수의 가장 높은 능력치 하나를 band만큼(한 띠) 높게 시작한다.
@@ -133,6 +145,10 @@ class RunEngine {
     run.cash = fund;
     run.recruit = recruit;
     run.marketPhase = year == null ? null : year.phase();
+    if (year != null && year.wanted() != null) {
+      run.wantedStat = year.wanted().stat();
+      run.wantedMin = year.wanted().min();
+    }
     if (scripted) {
       run.stats.putAll(properties.scripted().stats());
     } else {
@@ -151,6 +167,9 @@ class RunEngine {
     }
     planCrisis(run, random.forKey("crisis"), scripted, year);
     deal(run, memory, random);
+    if (year != null && year.wanted() != null) {
+      run.current.tips.addFirst(year.wanted().tip());
+    }
     if (mentor != null) {
       run.current.tips.addFirst(mentor.tip());
     }

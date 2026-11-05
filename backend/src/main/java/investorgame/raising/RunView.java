@@ -96,6 +96,7 @@ public record RunView(
    * @param flips 이 판에서 손이 뒤집힌 횟수
    * @param highlights 결과 화면의 한 판 요약 줄
    * @param decided 회사에 등록할지 정했는가
+   * @param wanted 공채 육성이면 연초 회의가 말한 인재에 맞췄는가. 아니면 null
    */
   public record Result(
       boolean decided,
@@ -104,5 +105,15 @@ public record RunView(
       long totalAsset,
       int returnBp,
       int flips,
-      List<String> highlights) {}
+      List<String> highlights,
+      Wanted wanted) {}
+
+  /**
+   * 원하는 인재 보너스 (증권사 육성 설계 5절 3번).
+   *
+   * @param stat 올해 필요한 자리가 원하는 능력치 코드
+   * @param met 맞췄다: 등록하면 그 능력치가 한 띠 오른다
+   * @param line 입사 심사 결과의 한 줄
+   */
+  public record Wanted(String stat, boolean met, String line) {}
 }

@@ -314,4 +314,34 @@ class CompanyEngineTest {
     assertThat(s.lines).anyMatch(line -> line.startsWith("인사팀이 뽑은 직원 연봉"));
     assertThat(company.capital).isEqualTo(before + s.fee - PROPERTIES.hr().salary());
   }
+
+  /** 연초 회의가 말한 인재에 맞춰 키우면 그 능력치가 한 띠 올라 입사한다 (5절 3번). 못 맞추면 그대로다. */
+  @Test
+  void 원하는_인재에_맞추면_보너스를_받는다() {
+    CompanyState company =
+        ENGINE.open(new HashSeededRandom(1), stats(50, 50, 50, 50), 1_000_000_000L);
+    String stat = ENGINE.wantedStat(company);
+    int min = ENGINE.wantedMin();
+    assertThat(min).as("B 이상").isEqualTo(50);
+    assertThat(ENGINE.wantedBonusLine(company)).contains("B 이상");
+    RunEngine.Wanted wanted = ENGINE.wantedFor(company);
+    assertThat(wanted.stat()).isEqualTo(stat);
+    assertThat(wanted.tip()).startsWith("회사가 원하는 인재");
+
+    Map<String, Integer> fit = new HashMap<>(stats(40, 40, 40, 40));
+    fit.put(stat, 55);
+    Map<String, Integer> bonus = ENGINE.withWantedBonus(fit, stat, min);
+    assertThat(bonus.get(stat)).as("한 띠 오른다").isEqualTo(55 + PROPERTIES.experience().band());
+    assertThat(ENGINE.wantedResultLine(fit, stat, min)).contains("맞췄다").contains("B → A");
+
+    Map<String, Integer> miss = new HashMap<>(stats(40, 40, 40, 40));
+    miss.put(stat, 49);
+    assertThat(ENGINE.withWantedBonus(miss, stat, min)).as("못 맞추면 그대로").isEqualTo(miss);
+    assertThat(ENGINE.wantedResultLine(miss, stat, min)).contains("못 미쳤다");
+
+    Map<String, Integer> top = new HashMap<>(stats(40, 40, 40, 40));
+    top.put(stat, 95);
+    assertThat(ENGINE.withWantedBonus(top, stat, min).get(stat)).as("100을 넘지 않는다").isEqualTo(100);
+    assertThat(ENGINE.withWantedBonus(fit, null, min)).as("공채 육성이 아니면 그대로").isEqualTo(fit);
+  }
 }

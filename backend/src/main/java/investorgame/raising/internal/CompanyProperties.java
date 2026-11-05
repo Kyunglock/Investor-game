@@ -25,6 +25,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param effects X 이상 등급의 효과 수치 (2.4절)
  * @param hr 인사 직원의 공채 (6.3절)
  * @param sale 매각과 재창업 (9절). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다
+ * @param wanted 연초 회의가 말한 인재에 맞춰 키우면 주는 보너스 (5절 3번)
  */
 @ConfigurationProperties("raising.company")
 public record CompanyProperties(
@@ -46,7 +47,14 @@ public record CompanyProperties(
     Experience experience,
     Effects effects,
     Hr hr,
-    Sale sale) {
+    Sale sale,
+    Wanted wanted) {
+
+  /**
+   * @param minGrade 공채 신입이 올해 필요한 자리의 능력치를 이 등급 이상으로 가지고 입사하면 맞춘 것이다. 맞추면 그 능력치가 한 띠
+   *     (experience.band) 오른다
+   */
+  public record Wanted(String minGrade) {}
 
   /**
    * @param capSteps 인사 직원이 뽑는 신입의 종합 등급 상한 = 인사 직원 종합 등급보다 이만큼 아래 (제안: 두 단계)

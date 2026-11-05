@@ -85,7 +85,7 @@ class DefaultRaisingService implements RaisingService {
               memory,
               fund,
               true,
-              new RunEngine.Year(c.phase, c.omen),
+              new RunEngine.Year(c.phase, c.omen, companyEngine.wantedFor(c)),
               companyEngine.mentorFor(c));
     } else {
       // 시대가 끝난 회사는 팔아야 다음 회사가 열린다 (9절). 회사가 없거나 팔렸으면 사재로 하는 판이다.
@@ -233,7 +233,13 @@ class DefaultRaisingService implements RaisingService {
                 total,
                 (int) ((total - run.fund) * BP / run.fund),
                 run.totalFlips,
-                List.copyOf(run.highlights))
+                List.copyOf(run.highlights),
+                run.wantedStat == null
+                    ? null
+                    : new RunView.Wanted(
+                        run.wantedStat,
+                        run.stats.get(run.wantedStat) >= run.wantedMin,
+                        companyEngine.wantedResultLine(run.stats, run.wantedStat, run.wantedMin)))
             : null);
   }
 

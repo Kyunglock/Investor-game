@@ -364,4 +364,22 @@ class RunEngineTest {
     playThrough(silent, memory, 3);
     assertThat(silent.highlights).contains("조짐 없이 왔다. 이번엔 아무도 몰랐다.");
   }
+
+  /** 공채 육성의 첫 카드에 회사가 원하는 인재 한 줄이 뜬다 (5절 3번). */
+  @Test
+  void 공채_육성의_첫_카드에_원하는_인재가_보인다() {
+    RunState run =
+        ENGINE.create(
+            new HashSeededRandom(1),
+            false,
+            new RaisingMemory(),
+            10_000_000,
+            true,
+            new RunEngine.Year(
+                "normal", null, new RunEngine.Wanted("patience", 50, "회사가 원하는 인재: 인내심")),
+            null);
+    assertThat(run.wantedStat).isEqualTo("patience");
+    assertThat(run.wantedMin).isEqualTo(50);
+    assertThat(run.current.tips).contains("회사가 원하는 인재: 인내심");
+  }
 }

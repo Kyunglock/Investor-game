@@ -79,6 +79,14 @@ export function RunResult({
             ))}
           </ul>
         )}
+        {result.wanted && (
+          <p
+            className={`mt-3 rounded border p-2 text-[13px] ${result.wanted.met ? 'border-teal' : 'border-line text-muted'}`}
+            data-testid="wanted-result"
+          >
+            {result.wanted.line}
+          </p>
+        )}
         <HirePanel run={run} company={company} busy={busy} onHire={onHire} />
         {error && (
           <p role="alert" className="mt-3 text-[13px] text-wine">

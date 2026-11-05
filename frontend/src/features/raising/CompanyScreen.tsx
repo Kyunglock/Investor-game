@@ -108,6 +108,9 @@ export function CompanyScreen({ company }: { company: Company }) {
               </p>
             )}
             <p className="mt-1 text-[14px]">{meeting.wanted}</p>
+            <p className="text-[13px] text-muted" data-testid="wanted-bonus">
+              {meeting.wantedBonus}
+            </p>
           </section>
         )}
 
