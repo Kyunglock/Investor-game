@@ -12,6 +12,8 @@ interface RaisingState {
   error: string | null
   /** 방금 결산했다. 회사 화면이 결과로 스크롤하고 지운다. */
   justSettled: boolean
+  /** 회사 화면에서 고른 탭. null이면 화면이 정한다 (231번). */
+  tab: 'meeting' | 'market' | 'staff' | 'settlement' | null
   load: () => Promise<void>
   /** 사장의 사재로 첫 회사를 차린다 (decisions.md 228번). */
   open: () => Promise<void>
@@ -55,6 +57,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     busy: false,
     error: null,
     justSettled: false,
+    tab: null,
 
     load: async () => {
       const company = await safely(api.GET('/api/company'))
@@ -75,7 +78,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       await safely(api.POST('/api/sessions'))
       const res = await safely(api.POST('/api/company'))
       if (res?.data) {
-        set({ company: res.data, busy: false })
+        set({ company: res.data, busy: false, tab: null })
         return
       }
       set({ busy: false, error: reason(res?.error) })
@@ -98,9 +101,14 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
 
     settle: async () => {
       await change(api.POST('/api/company/settle'))
-      set({ justSettled: !get().error })
+      if (!get().error) {
+        set({ justSettled: true, tab: 'settlement' })
+      }
     },
 
-    sell: (cofounders) => change(api.POST('/api/company/sale', { body: { cofounders } })),
+    sell: async (cofounders) => {
+      await change(api.POST('/api/company/sale', { body: { cofounders } }))
+      set({ tab: null })
+    },
   }
 })
