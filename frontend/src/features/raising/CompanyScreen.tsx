@@ -3,7 +3,9 @@ import type { Company } from '../../api/client'
 import { Document } from '../game/Document'
 import { shortWon, signedWon } from '../game/labels'
 import { usePixelArt } from '../game/pixelArt'
+import { bubbleOf } from './board'
 import { STAT_NAMES } from './grades'
+import { MoveScene } from './MoveScene'
 import { OfficeArt } from './OfficeArt'
 import { ATTIRE_NAMES, attireOf, glowOf } from './office'
 import { GradeLadder } from './RunResult'
@@ -22,6 +24,8 @@ export function CompanyScreen({ company }: { company: Company }) {
   const [seats, setSeats] = useState<Seats>(() =>
     Object.fromEntries(company.employees.map((e) => [e.id, e.desk ?? null])),
   )
+  // 이사 장면은 결산 뒤 한 번만 본다. 해가 바뀌면 화면이 새로 그려져 다시 볼 수 있다.
+  const [moved, setMoved] = useState(false)
   const placed = Object.values(seats).filter(Boolean).length
   const changed = company.employees.some((e) => (e.desk ?? null) !== seats[e.id])
   const ended = company.status === 'ENDED'
@@ -72,6 +76,14 @@ export function CompanyScreen({ company }: { company: Company }) {
           </p>
         )}
 
+        {company.lastSettlement && !moved && (
+          <MoveScene
+            before={company.lastSettlement.gradeBefore}
+            after={company.lastSettlement.gradeAfter}
+            year={company.lastSettlement.year}
+            onDone={() => setMoved(true)}
+          />
+        )}
         {company.lastSettlement && <SettlementView company={company} />}
 
         {meeting && (
@@ -225,13 +237,40 @@ function SettlementView({ company }: { company: Company }) {
         {s.gradeBefore !== s.gradeAfter && ` · 등급 ${s.gradeBefore} → ${s.gradeAfter}`}
       </p>
       <p className="text-[12px] text-muted">수수료 매출 {signedWon(s.fee)}</p>
-      <ul className="mt-2 text-[13px]">
-        {s.results.map((r) => (
-          <li key={r.employeeId}>
-            {r.name} ({desk(r.desk)}): {signedWon(r.pnl)}
-          </li>
-        ))}
-      </ul>
+      {s.results.length > 0 && (
+        <ol
+          className="mt-2 rounded bg-ink p-3 font-mono-num text-[13px] text-white"
+          aria-label="결산 전광판"
+          data-testid="board"
+        >
+          {s.results.map((r, i) => {
+            const bubble = bubbleOf(r.flips)
+            return (
+              <li
+                key={r.employeeId}
+                className="animate-reveal flex flex-wrap items-baseline justify-between gap-x-2 py-0.5"
+                // 직원별 수익이 차례로 오른다 (8.3절).
+                style={{ animationDelay: `${i * 400}ms`, animationFillMode: 'both' }}
+              >
+                <span>
+                  {r.name} · {desk(r.desk)}
+                </span>
+                <b className={r.pnl >= 0 ? 'text-[#ff8a7a]' : 'text-[#8cc3ec]'}>
+                  {signedWon(r.pnl)}
+                </b>
+                {bubble && (
+                  <span
+                    className="w-full rounded bg-white px-2 text-[12px] text-ink"
+                    data-testid="bubble"
+                  >
+                    💬 {bubble}
+                  </span>
+                )}
+              </li>
+            )
+          })}
+        </ol>
+      )}
       <ul className="mt-2 text-[13px]">
         {s.lines.map((line) => (
           <li key={line}>{line}</li>

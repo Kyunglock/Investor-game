@@ -5,6 +5,7 @@ import { PALETTE } from '../game/pixel/palette'
 import { SPRITE_HEIGHT, SPRITE_WIDTH, toRuns } from '../game/pixel/sprite'
 import type { Figure } from '../game/pixel/vignettes'
 import { usePixelArt } from '../game/pixelArt'
+import { bubbleOf } from './board'
 import {
   ATTIRE_COLORS,
   attireOf,
@@ -161,6 +162,13 @@ export const OfficeArt = memo(function OfficeArt({ company }: { company: Company
   const seated = company.employees.filter((e) => e.desk)
   const officeTop = ROOF + FLOOR - 3 - SPRITE_HEIGHT
   const lobbyTop = ROOF + FLOOR * 2 - 3 - SPRITE_HEIGHT
+  // 결산 전광판의 말풍선: 지난 결산에서 손이 뒤집힌 직원 자리 위에 (8.3절).
+  const flipsOf = new Map(
+    (company.lastSettlement?.results ?? []).map((r) => [r.employeeId, bubbleOf(r.flips)]),
+  )
+  const bubbles = seated
+    .map((e, i) => ({ id: e.id, x: i * SEAT, text: flipsOf.get(e.id) ?? null }))
+    .filter((b) => b.text)
   const staff: (Figure & { glow: 'blue' | 'gold' | null })[] = seated.map((e, i) => ({
     who: 'me',
     sex: e.id % 2 === 0 ? 'F' : 'M',
@@ -183,7 +191,7 @@ export const OfficeArt = memo(function OfficeArt({ company }: { company: Company
     facing: 'left',
   }))
   return (
-    <figure className="mt-3">
+    <figure className="relative mt-3">
       <svg
         viewBox={`0 0 ${width} ${HEIGHT}`}
         className="block h-auto w-full rounded"
@@ -224,6 +232,19 @@ export const OfficeArt = memo(function OfficeArt({ company }: { company: Company
           />
         ))}
       </svg>
+      {bubbles.map((b) => (
+        <span
+          key={b.id}
+          className="absolute -translate-x-1/2 -translate-y-full whitespace-nowrap rounded bg-white px-1.5 py-0.5 text-[11px] text-ink shadow"
+          style={{
+            left: `${((b.x + SPRITE_WIDTH / 2) / width) * 100}%`,
+            top: `${(officeTop / HEIGHT) * 100}%`,
+          }}
+          data-testid="office-bubble"
+        >
+          {b.text}
+        </span>
+      ))}
       <figcaption className="sr-only">{caption}</figcaption>
     </figure>
   )
