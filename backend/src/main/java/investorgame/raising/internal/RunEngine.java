@@ -100,7 +100,7 @@ class RunEngine {
 
   /** 새 판. 첫 카드까지 펼쳐 둔다. */
   RunState create(SeededRandom random, boolean scripted, RaisingMemory memory) {
-    return create(random, scripted, memory, properties.fund(), false, null);
+    return create(random, scripted, memory, properties.fund(), false, null, null);
   }
 
   /**
@@ -111,6 +111,13 @@ class RunEngine {
    */
   record Year(String phase, String omen) {}
 
+  /**
+   * 공채 신입에게 붙는 사수 (ZZ, 2.4절). 신입은 사수의 가장 높은 능력치 하나를 band만큼(한 띠) 높게 시작한다.
+   *
+   * @param tip 첫 카드에 뜨는 한 줄
+   */
+  record Mentor(String stat, int band, String tip) {}
+
   /** fund: 운용금. 첫 육성은 사장의 사재, 공채 육성은 회사가 내준 돈 (6.5절). year: 공채 육성이면 회사의 올해 시장, 아니면 null. */
   RunState create(
       SeededRandom random,
@@ -118,7 +125,8 @@ class RunEngine {
       RaisingMemory memory,
       long fund,
       boolean recruit,
-      Year year) {
+      Year year,
+      Mentor mentor) {
     RunState run = new RunState();
     run.scripted = scripted;
     run.fund = fund;
@@ -137,8 +145,15 @@ class RunEngine {
       run.startPrices.put(stock.code(), stock.basePrice());
       run.prices.put(stock.code(), stock.basePrice());
     }
+    if (mentor != null) {
+      run.stats.merge(
+          mentor.stat(), mentor.band(), (v, d) -> Math.min(properties.maxStat(), v + d));
+    }
     planCrisis(run, random.forKey("crisis"), scripted, year);
     deal(run, memory, random);
+    if (mentor != null) {
+      run.current.tips.addFirst(mentor.tip());
+    }
     return run;
   }
 

@@ -39,6 +39,11 @@ class CompanyState {
 
   String omen;
   String wantedDesk;
+
+  /** 다음 해 시장 갈래와 조짐(숨은 값). XX 경보·ZZZ 선견 직원이 있을 때만 화면에 나간다 (2.4절). */
+  String nextPhase;
+
+  String nextOmen;
   boolean recruited;
 
   /** 공채 육성 중인 판과 회사가 내준 운용금. 판이 끝나 등록을 정하면 비운다. */

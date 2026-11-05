@@ -183,7 +183,8 @@ class DefaultCompanyService implements CompanyService {
                         e.experience,
                         CompanyEngine.overallGrade(e.stats).equals("SSS")
                             ? engine.experienceNeeded(e)
-                            : null))
+                            : null,
+                        engine.effectsOf(e)))
             .toList();
     List<CompanyView.Desk> desks =
         engine.desks().stream()
@@ -196,7 +197,13 @@ class DefaultCompanyService implements CompanyService {
         ended
             ? null
             : new CompanyView.Meeting(
-                c.omen, engine.wantedLine(c), engine.recruitFund(c), !c.recruited, c.pendingRun);
+                c.omen,
+                engine.earlyOmen(c),
+                engine.forecast(c),
+                engine.wantedLine(c),
+                engine.recruitFund(c),
+                !c.recruited,
+                c.pendingRun);
     CompanyState.Settlement last = c.settlements.isEmpty() ? null : c.settlements.getLast();
     return new CompanyView(
         row.id(),

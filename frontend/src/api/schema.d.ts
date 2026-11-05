@@ -733,6 +733,8 @@ export interface components {
                 experience: number;
                 /** @description 다음 단계까지 드는 실전 경험. SSS가 아니면 null */
                 experienceNeeded?: number | null;
+                /** @description X 이상 등급의 효과 이름(확신·경보·역발상·리더·사수·선견). 쌓인다 (2.4절) */
+                effects: string[];
                 grades: {
                     [key: string]: components["schemas"]["Grade"];
                 };
@@ -749,6 +751,10 @@ export interface components {
             meeting?: {
                 /** @description 폭락 조짐. 헛조짐일 수도 있다 */
                 omen?: string | null;
+                /** @description XX 경보. 내년 폭락 조짐 한 줄 */
+                earlyOmen?: string | null;
+                /** @description ZZZ 선견. 내년 시장 한 줄 */
+                forecast?: string | null;
                 wanted: string;
                 /** Format: int64 */
                 recruitFund: number;

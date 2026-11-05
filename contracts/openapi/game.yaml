@@ -727,7 +727,7 @@ components:
           type: array
           items:
             type: object
-            required: [id, name, overallGrade, grades, experience]
+            required: [id, name, overallGrade, grades, experience, effects]
             properties:
               id: { type: integer }
               name: { type: string }
@@ -736,6 +736,10 @@ components:
                 description: SSS면 실전 경험으로 X~ZZZ까지 오른다 (2.3절)
               experience: { type: integer, description: 실전 경험. 폭락장을 손실 없이 버틸 때 쌓인다 }
               experienceNeeded: { type: [integer, 'null'], description: 다음 단계까지 드는 실전 경험. SSS가 아니면 null }
+              effects:
+                type: array
+                description: X 이상 등급의 효과 이름(확신·경보·역발상·리더·사수·선견). 쌓인다 (2.4절)
+                items: { type: string }
               grades: { type: object, additionalProperties: { $ref: '#/components/schemas/Grade' } }
               desk: { type: [string, 'null'] }
         desks:
@@ -755,6 +759,8 @@ components:
               required: [wanted, recruitFund, recruitOpen]
               properties:
                 omen: { type: [string, 'null'], description: 폭락 조짐. 헛조짐일 수도 있다 }
+                earlyOmen: { type: [string, 'null'], description: XX 경보. 내년 폭락 조짐 한 줄 }
+                forecast: { type: [string, 'null'], description: ZZZ 선견. 내년 시장 한 줄 }
                 wanted: { type: string }
                 recruitFund: { type: integer, format: int64 }
                 recruitOpen: { type: boolean }

@@ -48,6 +48,7 @@ public record CompanyView(
    * @param overallGrade 종합 등급. SSS면 실전 경험으로 X~ZZZ까지 오른다 (2.3절)
    * @param experience 실전 경험
    * @param experienceNeeded 다음 단계까지 드는 실전 경험. SSS가 아니면 null(아직 쌓이지 않는다)
+   * @param effects X 이상 등급의 효과 이름(확신·경보…). 쌓인다 (2.4절)
    */
   public record Employee(
       int id,
@@ -56,20 +57,29 @@ public record CompanyView(
       Map<String, String> grades,
       String desk,
       int experience,
-      Integer experienceNeeded) {}
+      Integer experienceNeeded,
+      List<String> effects) {}
 
   public record Desk(
       String code, String name, String statCode, boolean trades, String description) {}
 
   /**
    * @param omen 폭락 조짐(빨간 글씨). 없으면 null. 헛조짐일 수도 있다
+   * @param earlyOmen XX 경보: 내년 폭락 조짐 한 줄. 경보 직원이 없거나 조짐이 없으면 null
+   * @param forecast ZZZ 선견: 내년 시장 한 줄. 선견 직원이 없으면 null
    * @param wanted 회사가 올해 필요한 인재 한 줄 (6.1절 1번)
    * @param recruitFund 공채 육성에 회사가 내주는 운용금 (6.5절)
    * @param recruitOpen 올해 공채 육성을 아직 안 했다
    * @param pendingRunId 끝났지만 등록을 정하지 않은 공채 판. 없으면 null
    */
   public record Meeting(
-      String omen, String wanted, long recruitFund, boolean recruitOpen, UUID pendingRunId) {}
+      String omen,
+      String earlyOmen,
+      String forecast,
+      String wanted,
+      long recruitFund,
+      boolean recruitOpen,
+      UUID pendingRunId) {}
 
   public record Settlement(
       int year,

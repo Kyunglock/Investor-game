@@ -85,6 +85,16 @@ export function CompanyScreen({ company }: { company: Company }) {
                 {meeting.omen}
               </p>
             )}
+            {meeting.earlyOmen && (
+              <p className="mt-1 text-[14px] text-red-pen" data-testid="early-omen">
+                {meeting.earlyOmen}
+              </p>
+            )}
+            {meeting.forecast && (
+              <p className="mt-1 text-[14px] text-gold" data-testid="forecast">
+                {meeting.forecast}
+              </p>
+            )}
             <p className="mt-1 text-[14px]">{meeting.wanted}</p>
           </section>
         )}
@@ -100,6 +110,7 @@ export function CompanyScreen({ company }: { company: Company }) {
                   {e.name} <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>{' '}
                   <span className="text-[12px] text-muted" data-testid="attire">
                     · {ATTIRE_NAMES[attireOf(e.overallGrade)]}
+                    {e.effects.length > 0 && ` · ${e.effects.join('·')}`}
                     {e.experienceNeeded != null &&
                       ` · 실전 경험 ${e.experience}/${e.experienceNeeded}`}
                     {glowOf(e.overallGrade) &&

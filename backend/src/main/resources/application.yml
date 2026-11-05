@@ -451,6 +451,13 @@ raising:
       drop-loss-percent: 30
       band: 10
       need-base: 1
+    # X 이상 효과 (2.4절): X 확신은 맞히면 +4%p·틀리면 손실 절반, XXX 역발상은 폭락장에 판단마다 +5%,
+    # Z 리더는 같은 자리 팀원의 뒤집힘 확률 절반. XX 경보·ZZ 사수·ZZZ 선견은 수치가 없다
+    effects:
+      conviction-gain-bp: 400
+      conviction-miss-percent: 50
+      contrarian-crash-bp: 500
+      leader-flip-percent: 50
     # 매각과 재창업 (9절, 4단계). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다.
     # 시대(turns 해)가 끝나면 반드시 팔고, 그 전에는 SSS 이상이면 스스로 팔 수 있다 (decisions.md 215번~)
     sale:
