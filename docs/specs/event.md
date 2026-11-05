@@ -1,5 +1,8 @@
 # 스펙: 이벤트 운영 (event)
 
+> **기록:** 옛 인생 시뮬레이터의 스펙이다. #292에서 코드를 지웠다 (decisions.md 227번). 테이블은 DB에 남아 있지만 코드가 쓰지 않는다 ([db.md](../db.md) 2.2절). 지금 구조는 [domains.md](../domains.md)와 [증권사 육성 설계](../superpowers/specs/2026-11-05-brokerage-raising-design.md)를 본다.
+> 이어 쓰는 것: 뉴스 정의(`news.json`, 6절의 형식)와 단서 기사 문장(`clues.json`)은 지금도 콘텐츠가 읽는다. 투자 회의가 해마다 뉴스 하나를 뽑아 단서 기사를 짓는다 (decisions.md 200·229번). 숨은 방향을 클라이언트에 내려보내지 않는 원칙은 그대로다. 이벤트 발생 시점·종류·연결은 없다.
+
 > 담당: agent2 · 상태: 2026-10-18 경제 개편 반영 (종목 뉴스, LIFE, NOTICE) · 근거: [domains.md](../domains.md) 4절, [decisions.md](../decisions.md), [db.md](../db.md) 3.9~3.11절, [prd.md](../prd.md) 3절
 > 표기: **(확정)**, **(제안)**, **(초기값)** 은 [README.md](./README.md) 참고.
 

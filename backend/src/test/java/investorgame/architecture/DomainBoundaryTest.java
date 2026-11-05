@@ -42,7 +42,7 @@ class DomainBoundaryTest {
         .check(CLASSES);
   }
 
-  /** 육성만 다른 도메인(행동 규칙과 콘텐츠)을 쓴다. 3분 육성 한 판과 회사를 조율한다 (증권사 육성 설계 3절). 나머지는 혼자 선다. */
+  /** 육성만 다른 도메인(행동 규칙과 콘텐츠)을 쓴다. 회사(공채 시장·배치·투자 회의·결산)를 조율한다 (증권사 육성 설계 4·6절). 나머지는 혼자 선다. */
   @ParameterizedTest
   @MethodSource("domains")
   void 육성_외의_도메인은_다른_도메인을_호출하지_않는다(String domain) {

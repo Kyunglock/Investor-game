@@ -2,16 +2,16 @@
 
 증권사 사장이 되어 사재 1억 원으로 회사를 차린다. 해마다 공채 시장에서 지원자를 계약금을 주고 뽑아 자리에 앉히면, 직원들이 성격(능력치)대로 굴리고 확률로 손이 뒤집힌다. 세 해(한 시대)가 끝나면 회사를 팔고 아끼던 직원을 데려가 다시 차린다. 설계는 [증권사 육성 설계](./docs/superpowers/specs/2026-11-05-brokerage-raising-design.md).
 
-설계 문서는 [`docs/`](./docs)에 있다. 처음이라면 [`docs/decisions.md`](./docs/decisions.md)와 [`docs/architecture.md`](./docs/architecture.md)부터 읽는다.
+설계 문서는 [`docs/`](./docs)에 있다. 처음이라면 [`docs/architecture.md`](./docs/architecture.md)(구조와 API), [`docs/domains.md`](./docs/domains.md)(도메인과 용어), [`docs/db.md`](./docs/db.md)(테이블), [`docs/decisions.md`](./docs/decisions.md)(결정, 228번부터가 지금 흐름) 순으로 읽는다. 옛 "투자자 인생 시뮬레이터"(#292)와 3분 육성 판(decisions.md 228번)의 코드는 지웠고, 그때의 문서는 기록으로 남아 있다.
 
 ## 구성
 
 | 폴더 | 내용 |
 |---|---|
-| `backend/` | Spring Boot (Java 21, Gradle). 게임 규칙 계산과 저장 |
-| `frontend/` | React + Vite (TypeScript, pnpm). 화면과 게임 시계. `frontend/e2e/`에 Playwright 테스트 |
+| `backend/` | Spring Boot (Java 21, Gradle). 게임 규칙 계산과 저장. 도메인은 육성(`raising`, 회사)·행동(`behavior`)·콘텐츠(`content`)·세션(`session`) |
+| `frontend/` | React + Vite (TypeScript, pnpm). 화면과 그림. 규칙은 모른다. `frontend/e2e/`에 Playwright 테스트 |
 | `contracts/openapi/` | 클라이언트와 서버의 API 계약 |
-| `content/` | 직접 작성한 이벤트 데이터 (JSON) |
+| `content/` | 직접 작성한 콘텐츠 (JSON): 회사 문구·자리·시대·단골 인물(`raising.json`), 뉴스와 단서 기사 문장, 종목, 위기와 조짐, 꼬드김 문구 |
 | `docs/` | 설계 문서와 도메인 스펙 |
 
 ## 필요한 것
