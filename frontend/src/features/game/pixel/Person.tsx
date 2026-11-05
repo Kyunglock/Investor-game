@@ -37,7 +37,7 @@ export function Person({
   top: number
 }) {
   const layers: Layer[] = []
-  // 옆모습·뒷모습은 얼굴 겹(장식·약점·표정·눈꺼풀)의 좌표가 정면 기준이라 얹지 않는다 (decisions.md 196번).
+  // 뒷모습은 얼굴 겹(장식·약점·표정·눈꺼풀)을 얹지 않는다 (decisions.md 196번).
   const turned = (figure.view ?? 'front') !== 'front' && figure.stage !== 'baby'
   // 아기는 머리가 작아 얼굴 겹(장식·약점·표정·눈꺼풀) 좌표가 맞지 않는다. 배냇머리만 얹는다 (decisions.md 163·178번).
   const baby = figure.stage === 'baby'
@@ -66,13 +66,7 @@ export function Person({
   const carried = figure.carrying
   const fromBack = turned && figure.view === 'back'
   return (
-    <g
-      transform={
-        figure.facing === 'left' && turned && figure.view !== 'back'
-          ? `translate(${figure.x + CHAR_WIDTH * CHAR_SCALE} ${top - (figure.lift ?? 0)}) scale(${-CHAR_SCALE} ${CHAR_SCALE})`
-          : `translate(${figure.x} ${top - (figure.lift ?? 0)}) scale(${CHAR_SCALE})`
-      }
-    >
+    <g transform={`translate(${figure.x} ${top - (figure.lift ?? 0)}) scale(${CHAR_SCALE})`}>
       {/* 뒷모습이면 등에 업힌 아기가 몸 앞(보는 쪽)에 보이고 끈은 가려진다 (decisions.md 196번). */}
       {carried && !fromBack && <Runs runs={backOf(carried, body.headTop)} />}
       <Runs runs={toRuns(grid, palette)} />

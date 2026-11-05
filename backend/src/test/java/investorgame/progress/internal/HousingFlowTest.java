@@ -35,10 +35,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.TestPropertySource;
 
 /** 주거 설계 3절의 돈 계산: 계약금·LTV·DSR로 막고, 전세사기면 보증금을 잃고, 집은 총자산에 들어간다. */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
+// 이벤트마다의 시점 규칙만 본다. 한 해 상한(decisions.md 199번)은 YearlyChoiceCapTest가 따로 본다.
+@TestPropertySource(properties = "event.yearly-max-choices=99")
 class HousingFlowTest {
 
   private static final int YEAR = 360;

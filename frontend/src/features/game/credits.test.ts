@@ -541,7 +541,7 @@ describe('중간에 그만둔 판 (decisions.md 68번)', () => {
 })
 
 describe('크레딧 그림 (#23)', () => {
-  it('아이가 태어날 때마다 아기 침대 그림이 붙고, 배우자가 안은 아기 쪽을 나와 바로 위 아이가 옆모습으로 바라본다 (decisions.md 67·192·196번)', () => {
+  it('아이가 태어날 때마다 아기 침대 그림이 붙고, 배우자가 안은 아기를 내가 감싸고 바로 위 아이가 손뼉 (decisions.md 67·192·199번)', () => {
     const family = baseGame({
       household: {
         ...baseGame().household,
@@ -570,9 +570,9 @@ describe('크레딧 그림 (#23)', () => {
     ])
     expect(children.map((s) => s.art?.vignette)).toEqual(['baby', 'baby', 'baby'])
     // 첫째: 부모 둘, 배우자가 아기를 안고 내가 감싼다. 둘째: 첫째가 어린이로 옆에서 손뼉. 셋째: 바로 위 둘째가 옆에.
-    expect(children[0].art?.figures.map((f) => [f.who, f.pose, f.view])).toEqual([
-      ['me', undefined, 'side'],
-      ['spouse', 'hold', undefined],
+    expect(children[0].art?.figures.map((f) => [f.who, f.pose])).toEqual([
+      ['me', 'reach-right'],
+      ['spouse', 'hold'],
     ])
     expect(children[0].art?.figures[1].holding).toEqual({ sex: 'F', look: 0 })
     expect(children[1].art?.figures.map((f) => [f.who, f.stage])).toEqual([

@@ -63,14 +63,14 @@ function newHomeArt(game: Game): CreditArt {
   return { vignette: 'new-home', figures: fromBehind(lineUp(carryBabies(people))) }
 }
 
-/** 결혼한 날: 꽃 아치 앞에서 둘이 마주 본다 (decisions.md 192·196번). */
+/** 결혼한 날: 꽃 아치 앞에서 둘이 손을 잡는다 (decisions.md 192·199번). */
 function marriageArt(game: Game): CreditArt {
   const stage = myStage(game)
   return {
     vignette: 'wedding',
     figures: [
-      { who: 'me', sex: game.sex, stage, x: 16, view: 'side', facing: 'right' },
-      { who: 'spouse', sex: opposite(game.sex), stage, x: 28, view: 'side', facing: 'left' },
+      { who: 'me', sex: game.sex, stage, x: 14, pose: 'reach-right' },
+      { who: 'spouse', sex: opposite(game.sex), stage, x: 28, pose: 'reach-left' },
     ],
   }
 }
@@ -83,8 +83,8 @@ function birthArt(game: Game, baby: { sex: Game['sex']; look: number }): CreditA
   const holding = { sex: baby.sex, look: baby.look }
   const figures: Figure[] = game.household.married
     ? [
-        // 아기를 안은 배우자 쪽으로 돌아선 옆모습 (decisions.md 196번).
-        { who: 'me', sex: game.sex, stage, x: 12, view: 'side', facing: 'right' },
+        // 아기를 안은 배우자의 어깨를 감싼다 (decisions.md 192·199번).
+        { who: 'me', sex: game.sex, stage, x: 12, pose: 'reach-right' },
         { who: 'spouse', sex: opposite(game.sex), stage, x: 24, pose: 'hold', holding },
       ]
     : [{ who: 'me', sex: game.sex, stage, x: 22, pose: 'hold', holding }]
@@ -99,8 +99,7 @@ function birthArt(game: Game, baby: { sex: Game['sex']; look: number }): CreditA
         stage: kidStage,
         x: 0,
         look: older,
-        view: 'side',
-        facing: 'right',
+        pose: 'clap',
       })
     }
   }
@@ -125,26 +124,18 @@ const OUTING_SCENES: Record<
     kid: Omit<Figure, 'who' | 'sex' | 'stage'>
   }
 > = {
-  // 손잡고 걷는다: 둘 다 오른쪽으로 걷는 옆모습 (decisions.md 196번).
+  // 손을 잡는다 (decisions.md 199번).
   park: {
     vignette: 'park',
-    me: { x: 12, view: 'walk', facing: 'right' },
-    kid: { x: 24, view: 'walk', facing: 'right' },
+    me: { x: 14, pose: 'reach-right' },
+    kid: { x: 28, pose: 'reach-left' },
   },
   // 울타리 너머 기린을 바라보는 뒷모습.
   zoo: { vignette: 'zoo', me: { x: 10, view: 'back' }, kid: { x: 24, view: 'back' } },
-  // 모닥불을 바라보는 옆모습.
-  camp: {
-    vignette: 'camp',
-    me: { x: 0, view: 'side', facing: 'right' },
-    kid: { x: 12, view: 'side', facing: 'right' },
-  },
-  // 아이는 달리고, 나는 손뼉.
-  'sports-day': {
-    vignette: 'sports',
-    me: { x: 2, pose: 'clap' },
-    kid: { x: 26, view: 'walk', facing: 'right' },
-  },
+  // 모닥불과 텐트를 바라보는 뒷모습.
+  camp: { vignette: 'camp', me: { x: 2, view: 'back' }, kid: { x: 14, view: 'back' } },
+  // 아이는 손을 흔들고, 나는 손뼉.
+  'sports-day': { vignette: 'sports', me: { x: 2, pose: 'clap' }, kid: { x: 26, pose: 'wave' } },
   // 객석의 뒷모습, 무대 위 아이.
   'school-play': { vignette: 'stage', me: { x: 4, view: 'back' }, kid: { x: 25, lift: 3 } },
   // 칠판을 보는 아이의 뒷모습, 뒤에서 지켜보는 나.
@@ -153,24 +144,12 @@ const OUTING_SCENES: Record<
     me: { x: 44, pose: 'clap' },
     kid: { x: 18, view: 'back' },
   },
-  // 케이크 앞 아이를 향해 손뼉.
-  birthday: {
-    vignette: 'birthday',
-    me: { x: 42, view: 'side', facing: 'left' },
-    kid: { x: 8, pose: 'clap' },
-  },
-  // 객석의 뒷모습, 피아노를 향한 아이.
-  recital: {
-    vignette: 'recital',
-    me: { x: 2, view: 'back' },
-    kid: { x: 24, lift: 3, view: 'side', facing: 'right' },
-  },
-  // 학교 앞에서 마주 본다.
-  graduation: {
-    vignette: 'graduation',
-    me: { x: 4, view: 'side', facing: 'right' },
-    kid: { x: 17, view: 'side', facing: 'left' },
-  },
+  // 케이크 앞에서 함께 손뼉.
+  birthday: { vignette: 'birthday', me: { x: 42, pose: 'clap' }, kid: { x: 8, pose: 'clap' } },
+  // 객석의 뒷모습, 피아노 옆 무대 위 아이.
+  recital: { vignette: 'recital', me: { x: 2, view: 'back' }, kid: { x: 24, lift: 3 } },
+  // 학교 앞에서 손뼉 치는 나, 손을 흔드는 아이.
+  graduation: { vignette: 'graduation', me: { x: 4, pose: 'clap' }, kid: { x: 18, pose: 'wave' } },
 }
 
 function outingArt(game: Game, outing?: unknown): CreditArt {
@@ -243,9 +222,8 @@ function leavingArt(game: Game, seq: number): CreditArt {
     stage: 'adult',
     x: 34,
     look: seq - 1,
-    // 짐을 들고 길을 걸어 떠난다 (decisions.md 196번).
-    view: 'walk',
-    facing: 'right',
+    // 짐을 들고 길을 떠나는 뒷모습 (decisions.md 199번).
+    view: 'back',
   })
   return { vignette: 'leave-home', figures }
 }

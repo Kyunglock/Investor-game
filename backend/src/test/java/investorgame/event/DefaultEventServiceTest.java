@@ -24,10 +24,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.TestPropertySource;
 
 /** 경제 개편 설계 5.4절(종목 뉴스)과 7.3절(결혼·자녀·알림)의 시점 규칙을 실제 콘텐츠·Postgres로 확인한다. */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
+// 이벤트마다의 시점 규칙만 본다. 한 해 상한(decisions.md 199번)은 YearlyChoiceCapTest가 따로 본다.
+@TestPropertySource(properties = "event.yearly-max-choices=99")
 class DefaultEventServiceTest {
 
   private static final int YEAR = 360;

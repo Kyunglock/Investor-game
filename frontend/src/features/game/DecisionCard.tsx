@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import type { Game, NewsItem, PendingEvent } from '../../api/client'
+import { useState } from 'react'
+import type { Game, PendingEvent } from '../../api/client'
 import { AutoBar } from './AutoBar'
 import { AUTO_CHOOSE_DELAY_MS } from './auto'
 import { InsightLens } from './InsightLens'
@@ -13,7 +13,6 @@ import {
 } from './market'
 import { Overlay } from './Overlay'
 import { Sparkline } from './Sparkline'
-import { useGameStore } from './store'
 
 const KIND_LABELS: Record<PendingEvent['kind'], string> = {
   JOB: '직업',
@@ -174,7 +173,6 @@ function Body({ event, game, busy, onChoose }: Props) {
           <p>{event.sway}</p>
         </div>
       )}
-      {isNews && <WorldBrief />}
 
       <div
         className={`mt-3 grid gap-2 ${isNews ? 'grid-cols-3' : isShake || isLeverage ? 'grid-cols-2' : 'grid-cols-1'}`}
@@ -291,52 +289,4 @@ function Body({ event, game, busy, onChoose }: Props) {
 
 function tone(bp: number): string {
   return bp > 0 ? 'text-up' : bp < 0 ? 'text-down' : ''
-}
-
-/** 세상사에 보이는 소식 수 (decisions.md 92번). */
-const WORLD_SHOWN = 5
-
-/**
- * 뉴스 카드의 세상사 (decisions.md 79·92·97번): 매매창 경제 신문과 같은 재료에서 거시경제를 판단할 소식(전조·거시 기사)만 최근 순으로 다섯. 지표·
- * 나이·위기 회고는 보이지 않는다. 접고 펼칠 수 있다(접으면 다음 카드에서도 접힌 채). 카드가 열릴 때 이 달 시황을 받는다.
- */
-function WorldBrief() {
-  const overview = useGameStore((s) => s.overview)
-  const open = useGameStore((s) => s.worldOpen)
-  const { loadOverview, setWorldOpen } = useGameStore.getState()
-  useEffect(() => {
-    void loadOverview()
-  }, [loadOverview])
-  const news: NewsItem[] = overview
-    ? overview.newspaper
-        .filter((n) => n.macro && n.kind !== 'CRISIS')
-        .reverse()
-        .slice(0, WORLD_SHOWN)
-    : []
-  return (
-    <details
-      className="mt-2.5 border-l-[3px] border-line px-2.5 py-1.5 text-xs"
-      open={open}
-      onToggle={(e) => setWorldOpen(e.currentTarget.open)}
-      data-testid="world-brief"
-      data-loaded={overview != null}
-    >
-      <summary className="cursor-pointer text-[11px] text-faint" data-testid="world-toggle">
-        세상사{overview ? ` ${news.length}` : ''}
-      </summary>
-      {overview == null ? (
-        <p className="mt-1 text-faint">소식을 받는 중…</p>
-      ) : news.length === 0 ? (
-        <p className="mt-1 text-faint">아직 들린 소식이 없다.</p>
-      ) : (
-        <ul className="mt-1 text-muted">
-          {news.map((h) => (
-            <li key={`${h.day}-${h.text}`} data-testid="brief-headline">
-              {h.text}
-            </li>
-          ))}
-        </ul>
-      )}
-    </details>
-  )
 }

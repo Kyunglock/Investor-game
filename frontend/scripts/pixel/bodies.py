@@ -181,59 +181,8 @@ def mirror(rows):
 
 
 
-# ---- 돌아선 모습·뒷모습 (decisions.md 196·197번) ----
-# 옆을 볼 때는 완전한 옆얼굴 대신 3/4으로 돌아선 얼굴을 그린다(옆얼굴은 각지고 눈이 작아 징그러웠다). 정면 몸통에서 얼굴을 오른쪽으로
-# 옮기고, 왼쪽(뒤통수 쪽)을 머리카락으로 덮고 귀를 하나 낸다. 왼쪽을 볼 때는 화면이 좌우로 뒤집는다.
-
-
-def three_quarter(region, ht, stage):
-    """정면 머리를 오른쪽으로 돌아선 3/4 머리로: 얼굴 왼쪽 세 칸을 뒤통수 머리카락으로, 그 경계에 귀."""
-    hair = 'A' if stage == 'old' else 'h'
-    for rel in range(10, 18):
-        y = ht + rel
-        left = next((x for x in range(W // 2) if region[y][x] == 's'), None)
-        if left is None:
-            continue
-        for x in range(left, left + 3):
-            if region[y][x] == 's':
-                region[y][x] = hair
-    # 귀: 뒤통수와 얼굴 경계 바로 바깥
-    for rel in (12, 13, 14):
-        y = ht + rel
-        left = next((x for x in range(W // 2) if region[y][x] == 's'), None)
-        if left is not None:
-            region[y][left - 1] = 's'
-
-
-def stride(region, ht):
-    """걷는 걸음: 뒷발(왼쪽) 뒤꿈치를 한 줄 들어 올린다."""
-    bottom = max(y for y in range(H) if any(region[y][x] != '.' for x in range(W)))
-    for x in range(W // 2):
-        if region[bottom][x] != '.':
-            region[bottom][x] = '.'
-
-
-def face_three_quarter(put, fill, ht, stage):
-    """3/4 얼굴: 가까운 눈(오른쪽)은 3칸, 먼 눈(왼쪽)은 2칸. 반짝임·반사, 볼, 코 그늘, 입, 귀 그늘, 목 그늘."""
-    for rel in (12, 13, 14):
-        fill(ht + rel, [20, 21, 22], 'k')
-        fill(ht + rel, [14, 15], 'k')
-    put(ht + 13, 20, 'E')
-    put(ht + 13, 14, 'E')
-    fill(ht + 15, [20, 22], 'f')
-    put(ht + 15, 21, 'e')
-    put(ht + 15, 14, 'f')
-    put(ht + 15, 15, 'e')
-    fill(ht + 16, [23, 24], 'r')
-    put(ht + 16, 12, 'r')
-    put(ht + 16, 18, 'S')
-    fill(ht + 17, [18, 19], 'm')
-    fill(ht + 19, range(13, 20), 'S', 's')
-    if stage in ('middle', 'old'):
-        put(ht + 12, 24, 'S')
-    if stage == 'old':
-        put(ht + 17, 16, 'S')
-        put(ht + 17, 21, 'S')
+# ---- 뒷모습 (decisions.md 196·197·199번) ----
+# 옆모습(옆얼굴·3/4 얼굴)은 징그러워 뺐다. 뒷모습만 만든다.
 
 
 # 두 팔 만세(cheer)는 기괴해 보여 뺐다 (decisions.md 196번).
@@ -394,11 +343,7 @@ def build(stage, sex, pose='stand', view='front'):
             inset = 1 if y == ht + to else 0
             for x in range(9 + inset, W - 9 - inset):
                 setr(y, x, 'h')
-    if view in ('side', 'walk'):
-        three_quarter(region, ht, stage)
-    if view == 'walk':
-        stride(region, ht)
-    if stage == 'old' and pose == 'stand' and view in ('front', 'side', 'walk'):
+    if stage == 'old' and pose == 'stand' and view == 'front':
         hand = next(y for y in range(ht + 20, H) if R(y, sx(W - 4)) == 's')
         cane = sx(W - 4) + 2
         for y in range(hand - 2, H - 1):
@@ -484,9 +429,6 @@ def build(stage, sex, pose='stand', view='front'):
     if view == 'back':
         # 뒷모습: 목덜미 그늘만
         fill(ht + 19, range(13, 19), 'S', 's')
-        return ht, [''.join(r) for r in g]
-    if view in ('side', 'walk'):
-        face_three_quarter(put, fill, ht, stage)
         return ht, [''.join(r) for r in g]
     if stage == 'baby':
         # 아기 얼굴: 작은 머리에 맞춘 2×2 눈(왼쪽 위 반짝임), 볼, 입, 목 그늘
@@ -594,9 +536,9 @@ def main():
         out.append('  },')
     out.append('}')
     out.append('')
-    out.append('/** 옆모습(side: 서 있음, walk: 걷는 걸음)과 뒷모습 (decisions.md 196번). 옆모습은 오른쪽을 본다. 아기는 없다. */')
-    out.append("export const VIEW_MAPS: Record<'side' | 'walk' | 'back', Record<Sex, Partial<Record<AgeStage, Body>>>> = {")
-    for view in ('side', 'walk', 'back'):
+    out.append('/** 뒷모습 (decisions.md 196·199번). 아기는 없다. */')
+    out.append("export const VIEW_MAPS: Record<'back', Record<Sex, Partial<Record<AgeStage, Body>>>> = {")
+    for view in ('back',):
         out.append(f"  {view}: {{")
         for sex in ('M', 'F'):
             out.append(f'    {sex}: {{')

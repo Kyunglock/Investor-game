@@ -264,7 +264,7 @@ function childArt(game: Game, birth: LogEntry): CreditArt {
   // 배우자가 갓난아기를 안고 내가 곁에서 감싼다. 혼자면 내가 안는다 (decisions.md 192번).
   const figures: Figure[] = marriedBy(game, birth.day)
     ? [
-        { who: 'me', sex: game.sex, stage, x: 12, view: 'side', facing: 'right' },
+        { who: 'me', sex: game.sex, stage, x: 12, pose: 'reach-right' },
         { who: 'spouse', sex: opposite(game.sex), stage, x: 24, pose: 'hold', holding },
       ]
     : [{ who: 'me', sex: game.sex, stage, x: 22, pose: 'hold', holding }]
@@ -276,8 +276,7 @@ function childArt(game: Game, birth: LogEntry): CreditArt {
       stage: 'child',
       look: seq - 2,
       x: 0,
-      view: 'side',
-      facing: 'right',
+      pose: 'clap',
     })
   }
   return { vignette: 'baby', figures }
@@ -304,8 +303,8 @@ function familyEventArt(
     stage: 'adult',
     x: xs[2],
     look: seq - 1,
-    // 독립하는 아이는 걸어서 떠나는 옆모습 (decisions.md 196번).
-    ...(vignette === 'leave-home' ? { view: 'walk' as const, facing: 'right' as const } : {}),
+    // 독립하는 아이는 길을 떠나는 뒷모습 (decisions.md 199번).
+    ...(vignette === 'leave-home' ? { view: 'back' as const } : {}),
   })
   return { vignette, figures }
 }
@@ -398,21 +397,13 @@ function momentFor(game: Game, e: LogEntry, jobsSeen: number): Moment | null {
         art: {
           vignette: 'wedding',
           figures: [
-            {
-              who: 'me',
-              sex: game.sex,
-              stage: stageFor(age),
-              x: 16,
-              view: 'side',
-              facing: 'right',
-            },
+            { who: 'me', sex: game.sex, stage: stageFor(age), x: 14, pose: 'reach-right' },
             {
               who: 'spouse',
               sex: opposite(game.sex),
               stage: stageFor(age),
               x: 28,
-              view: 'side',
-              facing: 'left',
+              pose: 'reach-left',
             },
           ],
         },

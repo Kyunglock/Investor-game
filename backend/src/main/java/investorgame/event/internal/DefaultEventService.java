@@ -31,6 +31,7 @@ import investorgame.event.ScheduleResult;
 import investorgame.event.SchedulingContext;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -333,10 +334,103 @@ class DefaultEventService implements EventService {
       careerCandidates(rows, context, random, candidates);
       housingCandidates(rows, context, candidates);
     }
+    // 선택 카드는 모두 합쳐 한 해에 yearly-max-choices장까지 (decisions.md 199번). 그중 한 장은 주식 이벤트 몫이라 다른 카드는 한 해에
+    // yearly-max-choices − 1장까지다. 다 찬 해의 카드는 다음 빈 해의 첫날로 미룬다. 전업투자자도 같다.
+    // 다가올 세 만기는 미룰 수 없으니 그해 몫 한 장으로 미리 잡아 둔다.
+    Integer leaseEnd = context.housing() == null ? null : context.housing().leaseEndDay();
+    Integer reserved =
+        leaseEnd != null
+                && rows.stream()
+                    .noneMatch(r -> r.kind() == EventKind.HOUSING && r.occursDay() == leaseEnd)
+            ? leaseEnd / calendar.daysPerYear()
+            : null;
+    Set<Integer> fullYears = choiceYears(rows, false, properties.yearlyMaxChoices(), reserved);
+    Set<Integer> blockedForOthers = new HashSet<>(fullYears);
+    blockedForOthers.addAll(choiceYears(rows, true, properties.yearlyMaxChoices() - 1, reserved));
+    // 미룬 카드끼리 같은 날에 걸리면 먼저 기다린 카드가 먼저다. 그래야 늘 있는 일상 장면에 주거 카드가 해마다 밀려 굶지 않는다.
     return candidates.stream()
-        .min(Comparator.comparingInt(Candidate::day).thenComparing(Candidate::kind))
         .map(c -> new Candidate(c.kind(), Math.max(c.day(), fromDay)))
+        .map(c -> new Deferred(capped(c, context, fullYears, blockedForOthers), c.day()))
+        .min(
+            Comparator.comparingInt((Deferred d) -> d.candidate().day())
+                .thenComparingInt(Deferred::wanted)
+                .thenComparing(d -> d.candidate().kind()))
+        .map(Deferred::candidate)
         .filter(c -> c.day() <= context.endDay());
+  }
+
+  /** 한 해 상한에 맞춘 후보와, 원래 오려던 날. */
+  private record Deferred(Candidate candidate, int wanted) {}
+
+  private static final Set<EventKind> STOCK_KINDS =
+      Set.of(EventKind.NEWS, EventKind.SHAKE, EventKind.LEVERAGE);
+
+  /** 한 해 상한에 맞춘 날. 날짜가 정해진 카드는 그대로 둔다. */
+  private Candidate capped(
+      Candidate c,
+      SchedulingContext context,
+      Set<Integer> fullYears,
+      Set<Integer> blockedForOthers) {
+    if (fixedDay(c, context)) {
+      return c;
+    }
+    if (STOCK_KINDS.contains(c.kind())) {
+      // 전업투자자도 묶는다: 뉴스는 해마다 최대 두 번이 된다 (decisions.md 121·199번).
+      return new Candidate(c.kind(), freeYearDay(c.day(), fullYears));
+    }
+    return new Candidate(c.kind(), freeYearDay(c.day(), blockedForOthers));
+  }
+
+  /** 선택 카드(알림 빼고, otherOnly면 주식 이벤트도 빼고)가 이미 limit장 온 해들. reservedYear는 다가올 세 만기의 해(한 장으로 센다). */
+  private Set<Integer> choiceYears(
+      List<EventRow> rows, boolean otherOnly, int limit, Integer reservedYear) {
+    int year = calendar.daysPerYear();
+    Map<Integer, Long> perYear =
+        new HashMap<>(
+            rows.stream()
+                .filter(r -> r.kind() != EventKind.NOTICE)
+                .filter(r -> !otherOnly || !STOCK_KINDS.contains(r.kind()))
+                .collect(Collectors.groupingBy(r -> r.occursDay() / year, Collectors.counting())));
+    if (reservedYear != null) {
+      perYear.merge(reservedYear, 1L, Long::sum);
+    }
+    return perYear.entrySet().stream()
+        .filter(e -> e.getValue() >= limit)
+        .map(Map.Entry::getKey)
+        .collect(Collectors.toSet());
+  }
+
+  /**
+   * 날짜를 미룰 수 없는 카드: 알림, 성장기 장면, 첫 직업·재취업, 정년퇴직 장면(은퇴한 뒤의 직장 장면은 이것뿐), 독립, 세 만기. 이것들은 한 해 상한을 세는 데는
+   * 들어가지만 미루지 않는다.
+   */
+  private boolean fixedDay(Candidate c, SchedulingContext context) {
+    if (c.kind() == EventKind.NOTICE
+        || c.kind() == EventKind.JOB
+        || context.phase() == Phase.CHILDHOOD
+        || (c.kind() == EventKind.CAREER && context.retired())) {
+      return true;
+    }
+    if (c.kind() != EventKind.HOUSING || context.housing() == null) {
+      return false;
+    }
+    // 첫 직업 바로 뒤의 독립(부모님 집을 나올 때)과 세 만기는 날이 정해져 있다.
+    Integer leaseEnd = context.housing().leaseEndDay();
+    return "PARENTS".equals(context.housing().tenure())
+        || (leaseEnd != null && c.day() == leaseEnd);
+  }
+
+  /** 다 찬 해에 걸리면 다음 빈 해의 첫날. */
+  private int freeYearDay(int day, Set<Integer> fullYears) {
+    int year = calendar.daysPerYear();
+    int y = day / year;
+    if (!fullYears.contains(y)) {
+      return day;
+    }
+    while (fullYears.contains(y)) {
+      y++;
+    }
+    return y * year;
   }
 
   /** 성장기: 콘텐츠가 정한 나이마다 일상의 성향 이벤트가 오고, 성향이 다 정해지면 직업 선택이 온다. */

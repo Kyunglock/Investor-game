@@ -45,8 +45,8 @@ export function bodyFor(sex: Sex, stage: AgeStage, pose: Pose = 'stand'): Body {
   return POSE_MAPS[pose][sex][stage] ?? BODY_MAPS[sex][stage]
 }
 
-/** 보는 방향 (decisions.md 196번). front 정면, side 옆모습(서 있음), walk 옆모습(걷는 걸음), back 뒷모습. 옆모습은 오른쪽을 보는 그림이다. */
-export type View = 'front' | 'side' | 'walk' | 'back'
+/** 보는 방향: front 정면, back 뒷모습 (decisions.md 196·199번). 옆모습은 징그러워 뺐다. */
+export type View = 'front' | 'back'
 
 /** 방향까지 정한 몸통. 정면이 아니면 자세는 없고, 아기는 정면뿐이다. */
 export function viewBody(sex: Sex, stage: AgeStage, view: View, pose: Pose = 'stand'): Body {

@@ -252,6 +252,8 @@ behavior:
     confident-percent: 50
 
 event:
+  # 선택 카드(알림 빼고)는 모두 합쳐 한 해에 이만큼까지. 넘치면 다음 해로 미룬다. 알림·성장기 장면·첫 직업·독립·세 만기·정년퇴직 장면은 미루지 않는다 (decisions.md 199번)
+  yearly-max-choices: 2
   job:
     # 성향이 다 정해진 뒤, 이 나이에 첫 직장을 고른다. "더 나은 자리를 기다린다"는 wait-days 뒤 다시 오고 max-waits번까지 (decisions.md 26번)
     age: 25

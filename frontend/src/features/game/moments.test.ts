@@ -326,10 +326,10 @@ describe('상황마다 다른 그림과 자세 (decisions.md 192번)', () => {
       ['back', undefined],
       [undefined, 3],
     ])
-    // 놀이동산은 손잡고 걷는 옆모습, 동물원은 기린을 보는 뒷모습.
+    // 놀이동산은 손을 잡고, 동물원은 기린을 보는 뒷모습.
     expect(
-      momentForNotice(outing('park'), game({ household: kids(8) }))?.art.figures.map((f) => f.view),
-    ).toEqual(['walk', 'walk'])
+      momentForNotice(outing('park'), game({ household: kids(8) }))?.art.figures.map((f) => f.pose),
+    ).toEqual(['reach-right', 'reach-left'])
     expect(
       momentForNotice(outing('zoo'), game({ household: kids(8) }))?.art.figures.map((f) => f.view),
     ).toEqual(['back', 'back'])
@@ -341,7 +341,7 @@ describe('상황마다 다른 그림과 자세 (decisions.md 192번)', () => {
     expect(m?.art.figures[0]).toMatchObject({ who: 'me', pose: 'hold', holding: { look: 0 } })
   })
 
-  it('아이가 태어나면 배우자가 아기를 안고 나는 그쪽을 보는 옆모습. 혼자면 내가 안는다', () => {
+  it('아이가 태어나면 배우자가 아기를 안고 내가 감싼다. 혼자면 내가 안는다', () => {
     const child: LogEntry = { seq: 9, day: 9000, kind: 'CHILD', payload: { seq: 1, sex: 'M' } }
     const married = momentForOutcome(
       outcome({ kind: 'LIFE' }),
@@ -350,9 +350,9 @@ describe('상황마다 다른 그림과 자세 (decisions.md 192번)', () => {
         household: { married: true, children: [] } as unknown as Game['household'],
       }),
     )
-    expect(married?.art.figures.map((f) => [f.who, f.pose, f.view, f.facing])).toEqual([
-      ['me', undefined, 'side', 'right'],
-      ['spouse', 'hold', undefined, undefined],
+    expect(married?.art.figures.map((f) => [f.who, f.pose])).toEqual([
+      ['me', 'reach-right'],
+      ['spouse', 'hold'],
     ])
     expect(married?.art.figures[1].holding).toEqual({ sex: 'M', look: 0 })
     const alone = momentForOutcome(outcome({ kind: 'LIFE' }), game({ log: [child] }))
@@ -394,15 +394,12 @@ describe('상황마다 다른 그림과 자세 (decisions.md 192번)', () => {
     }
   })
 
-  it('결혼한 날은 꽃 아치 앞에서 둘이 마주 본다', () => {
+  it('결혼한 날은 꽃 아치 앞에서 손을 잡는다', () => {
     const m = momentForOutcome(
       outcome({ kind: 'LIFE' }),
       game({ log: [{ seq: 3, day: 9000, kind: 'MARRIAGE', payload: { cost: 1 } }] }),
     )
     expect(m?.art.vignette).toBe('wedding')
-    expect(m?.art.figures.map((f) => [f.view, f.facing])).toEqual([
-      ['side', 'right'],
-      ['side', 'left'],
-    ])
+    expect(m?.art.figures.map((f) => f.pose)).toEqual(['reach-right', 'reach-left'])
   })
 })

@@ -6,6 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /** 모든 수치는 체감 테스트 후 조정할 초기값이다 (specs/event.md 7절). 성향 이벤트의 나이는 콘텐츠가 정한다. */
 @ConfigurationProperties("event")
 public record EventProperties(
+    int yearlyMaxChoices,
     JobSettings job,
     CareerSettings career,
     TraitSettings trait,

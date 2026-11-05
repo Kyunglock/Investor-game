@@ -468,7 +468,10 @@ class GameFlowTest {
     DocumentContext game = JsonPath.parse(started);
     String gameId = game.read("$.gameId");
     int day = game.read("$.day", Integer.class);
-    game = client.advance(gameId, game.read("$.nextEventDay", Integer.class));
+    // 투자 제안은 한 해 상한(decisions.md 199번)에 걸려 다음 해로 밀릴 수 있다. 그 사이 알림(대기 이벤트 없음)은 넘긴다.
+    do {
+      game = client.advance(gameId, game.read("$.nextEventDay", Integer.class));
+    } while (game.read("$.pendingEvent") == null);
     assertThat(game.read("$.pendingEvent.kind", String.class)).isEqualTo("OFFER");
     Object declined =
         client.choose(gameId, game.read("$.pendingEvent.eventId"), "decline").read("$.game");

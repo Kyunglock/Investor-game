@@ -66,8 +66,6 @@ export interface Figure {
   lift?: number
   /** 보는 방향. 없으면 정면 (decisions.md 196번) */
   view?: View
-  /** 옆모습이 보는 쪽. 없으면 오른쪽 */
-  facing?: 'left' | 'right'
 }
 
 export interface Carried {
