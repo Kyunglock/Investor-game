@@ -23,6 +23,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param swayPercent 꼬드김 판정이 다른 판정보다 덜 일어나는 비율. 리스크 관리 팀이 없을 때
  * @param experience 실전 경험과 큰 손실의 등급 하락 (2.3·6.4절)
  * @param effects X 이상 등급의 효과 수치 (2.4절)
+ * @param hr 인사 직원의 공채 (6.3절)
  * @param sale 매각과 재창업 (9절). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다
  */
 @ConfigurationProperties("raising.company")
@@ -44,7 +45,14 @@ public record CompanyProperties(
     int crashFlipPercent,
     Experience experience,
     Effects effects,
+    Hr hr,
     Sale sale) {
+
+  /**
+   * @param capSteps 인사 직원이 뽑는 신입의 종합 등급 상한 = 인사 직원 종합 등급보다 이만큼 아래 (제안: 두 단계)
+   * @param salary 인사 직원이 뽑은 신입 한 명의 연봉. 결산마다 회사 자본에서 나간다
+   */
+  public record Hr(int capSteps, long salary) {}
 
   /**
    * @param convictionGainBp X 확신: 맞히면 더 버는 몫(만분율)

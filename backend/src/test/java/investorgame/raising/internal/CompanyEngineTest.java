@@ -18,7 +18,11 @@ class CompanyEngineTest {
   private static final CompanyProperties PROPERTIES =
       TestBehavior.bind("raising.company", CompanyProperties.class);
   private static final CompanyEngine ENGINE =
-      new CompanyEngine(TestContent.load(), TestBehavior.create(), PROPERTIES);
+      new CompanyEngine(
+          TestContent.load(),
+          TestBehavior.create(),
+          PROPERTIES,
+          TestBehavior.bind("raising", RaisingProperties.class));
 
   private static Map<String, Integer> stats(
       int insight, int patience, int courage, int conviction) {
@@ -273,5 +277,41 @@ class CompanyEngineTest {
       flips += teammate.flips.values().stream().mapToInt(Integer::intValue).sum();
     }
     return flips;
+  }
+
+  /** 인사 직원 (6.3절): 인사팀에 앉으면 공채를 맡는다. 신입은 인사 직원보다 두 단계 아래까지이고, 등록하면 연봉이 결산마다 나간다. */
+  @Test
+  void 인사_직원이_공채를_맡는다() {
+    CompanyState company =
+        ENGINE.open(new HashSeededRandom(3), stats(60, 60, 60, 60), 1_000_000_000L);
+    assertThatThrownBy(() -> ENGINE.hrRecruit(company, new HashSeededRandom(3)))
+        .as("인사팀에 아무도 없다")
+        .isInstanceOf(InvalidRequestException.class);
+    ENGINE.place(company, Map.of(1, "hr"));
+    assertThat(ENGINE.hrCap(company.employees.getFirst())).as("평균 58(B)의 두 단계 아래").isEqualTo("D");
+
+    for (int seed = 0; seed < 200; seed++) {
+      CompanyState trial =
+          ENGINE.open(new HashSeededRandom(seed), stats(60, 60, 60, 60), 1_000_000_000L);
+      ENGINE.place(trial, Map.of(1, "hr"));
+      ENGINE.hrRecruit(trial, new HashSeededRandom(seed));
+      assertThat(CompanyEngine.LADDER.indexOf(CompanyEngine.overallGrade(trial.candidate)))
+          .as("상한을 넘지 않는다")
+          .isLessThanOrEqualTo(CompanyEngine.LADDER.indexOf("D"));
+    }
+
+    ENGINE.hrRecruit(company, new HashSeededRandom(3));
+    assertThat(company.recruited).as("올해 공채를 쓴다").isTrue();
+    assertThatThrownBy(() -> ENGINE.settle(company, new HashSeededRandom(3)))
+        .as("데려온 신입을 먼저 정한다")
+        .isInstanceOf(InvalidRequestException.class);
+    CompanyState.Employee rookie = ENGINE.hireCandidate(company);
+    assertThat(rookie.salary).isEqualTo(PROPERTIES.hr().salary());
+    assertThat(company.candidate).isNull();
+
+    long before = company.capital;
+    CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(3));
+    assertThat(s.lines).anyMatch(line -> line.startsWith("인사팀이 뽑은 직원 연봉"));
+    assertThat(company.capital).isEqualTo(before + s.fee - PROPERTIES.hr().salary());
   }
 }

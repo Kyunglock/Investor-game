@@ -158,6 +158,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/hr-recruit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 인사팀이 올해 공채를 맡아 신입을 데려온다 (6.3절)
+         * @description 3분 육성 없이 신입이 들어온다. 인사팀에 아무도 없거나 올해 공채를 했으면 400.
+         */
+        post: operations["hrRecruit"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/candidate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 인사팀이 데려온 신입을 등록하거나 돌려보낸다 */
+        post: operations["decideCandidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/sale": {
         parameters: {
             query?: never;
@@ -735,6 +772,11 @@ export interface components {
                 experienceNeeded?: number | null;
                 /** @description X 이상 등급의 효과 이름(확신·경보·역발상·리더·사수·선견). 쌓인다 (2.4절) */
                 effects: string[];
+                /**
+                 * Format: int64
+                 * @description 연봉. 인사 직원이 뽑은 신입만 받는다 (6.3절)
+                 */
+                salary: number;
                 grades: {
                     [key: string]: components["schemas"]["Grade"];
                 };
@@ -751,6 +793,8 @@ export interface components {
             meeting?: {
                 /** @description 폭락 조짐. 헛조짐일 수도 있다 */
                 omen?: string | null;
+                /** @description 인사팀이 공채를 맡을 수 있으면 뽑는 신입의 종합 등급 상한. 인사팀에 아무도 없으면 null (6.3절) */
+                hrCap?: components["schemas"]["Grade"] | null;
                 /** @description XX 경보. 내년 폭락 조짐 한 줄 */
                 earlyOmen?: string | null;
                 /** @description ZZZ 선견. 내년 시장 한 줄 */
@@ -761,6 +805,14 @@ export interface components {
                 recruitOpen: boolean;
                 /** Format: uuid */
                 pendingRunId?: string | null;
+            } | null;
+            /** @description 인사팀이 데려와 등록을 기다리는 신입 (6.3절) */
+            candidate?: {
+                overallGrade: components["schemas"]["Grade"];
+                grades: {
+                    [key: string]: components["schemas"]["Grade"];
+                };
+                line?: string | null;
             } | null;
             lastSettlement?: {
                 year: number;
@@ -1875,6 +1927,60 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description 결산한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    hrRecruit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 신입이 candidate에 실린 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    decideCandidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    register: boolean;
+                    /** @description 자리가 꽉 찼을 때 바꿀 직원 ID */
+                    replace?: number | null;
+                };
+            };
+        };
+        responses: {
+            /** @description 정한 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

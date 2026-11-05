@@ -157,14 +157,18 @@ class RunEngine {
     return run;
   }
 
-  /** 능력치마다 등급을 먼저 뽑고 그 띠 안에서 점수를 뽑는다 (decisions.md 24번, character.initial-stat과 같은 규칙). */
   private int rollStat(RandomGenerator rng) {
+    return rollStat(rng, properties.initialStat());
+  }
+
+  /** 능력치마다 등급을 먼저 뽑고 그 띠 안에서 점수를 뽑는다 (decisions.md 24번, character.initial-stat과 같은 규칙). */
+  static int rollStat(RandomGenerator rng, RaisingProperties.InitialStat initial) {
     int roll = rng.nextInt(PERCENT);
     int acc = 0;
     for (StatGrade grade : StatGrade.values()) {
-      acc += properties.initialStat().gradePercent().getOrDefault(grade.name(), 0);
+      acc += initial.gradePercent().getOrDefault(grade.name(), 0);
       if (roll < acc) {
-        int min = Math.max(grade.min(), properties.initialStat().floor());
+        int min = Math.max(grade.min(), initial.floor());
         return min + rng.nextInt(grade.max() - min + 1);
       }
     }

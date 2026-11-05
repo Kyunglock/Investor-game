@@ -458,6 +458,11 @@ raising:
       conviction-miss-percent: 50
       contrarian-crash-bp: 500
       leader-flip-percent: 50
+    # 인사 직원 (6.3절): 인사팀에 앉으면 공채를 맡는다. 신입은 인사 직원 종합 등급보다 두 단계 아래까지,
+    # 회사 자본을 가져오지 않는 대신 연봉 3천만 원이 결산마다 나간다
+    hr:
+      cap-steps: 2
+      salary: 30000000
     # 매각과 재창업 (9절, 4단계). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다.
     # 시대(turns 해)가 끝나면 반드시 팔고, 그 전에는 SSS 이상이면 스스로 팔 수 있다 (decisions.md 215번~)
     sale:

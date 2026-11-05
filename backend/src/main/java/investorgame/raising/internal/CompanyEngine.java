@@ -50,10 +50,68 @@ class CompanyEngine {
   private final BehaviorService behavior;
   private final CompanyProperties properties;
 
-  CompanyEngine(ContentCatalog content, BehaviorService behavior, CompanyProperties properties) {
+  private final RaisingProperties raising;
+
+  CompanyEngine(
+      ContentCatalog content,
+      BehaviorService behavior,
+      CompanyProperties properties,
+      RaisingProperties raising) {
     this.content = content;
     this.behavior = behavior;
     this.properties = properties;
+    this.raising = raising;
+  }
+
+  static final String HR_DESK = "hr";
+
+  /** 인사팀에 앉은 직원 가운데 종합 등급이 가장 높은 직원 (6.3절). 없으면 공채를 맡길 수 없다. */
+  java.util.Optional<Employee> hrOf(CompanyState company) {
+    return company.employees.stream()
+        .filter(e -> HR_DESK.equals(e.desk))
+        .max(
+            java.util.Comparator.comparingInt((Employee e) -> LADDER.indexOf(employeeGrade(e)))
+                .thenComparingInt(e -> -e.id));
+  }
+
+  /** 인사 직원이 뽑는 신입의 종합 등급 상한: 인사 직원보다 두 단계 아래, 바닥 F (6.3절). */
+  String hrCap(Employee hr) {
+    return LADDER.get(Math.max(0, LADDER.indexOf(employeeGrade(hr)) - properties.hr().capSteps()));
+  }
+
+  /**
+   * 인사 직원이 공채를 맡는다 (6.3절). 3분 육성 없이 신입이 들어온다: 능력치를 태어날 때 규칙으로 뽑고, 종합 등급이 상한을 넘으면 가장 높은 능력치부터 깎는다. 손
+   * 육성이 에이스를 만드는 길로 남게 하려는 상한이다. 공채는 한 해에 한 번이라 이것으로 올해 공채를 쓴다.
+   */
+  void hrRecruit(CompanyState company, SeededRandom random) {
+    Employee hr = hrOf(company).orElseThrow(() -> new InvalidRequestException("인사팀에 앉은 직원이 없다"));
+    if (company.recruited || company.candidate != null || company.pendingRun != null) {
+      throw new InvalidRequestException("올해 공채는 이미 했다");
+    }
+    RandomGenerator rng = random.forKey("hr", company.year);
+    Map<String, Integer> stats = new java.util.LinkedHashMap<>();
+    for (String code : StatCodes.ALL) {
+      stats.put(code, RunEngine.rollStat(rng, raising.initialStat()));
+    }
+    int cap = LADDER.indexOf(hrCap(hr));
+    if (cap < LADDER.indexOf(StatGrade.SSS.name())) {
+      int capMax = StatGrade.valueOf(LADDER.get(cap)).max();
+      while (Math.round(
+              stats.values().stream().mapToInt(Integer::intValue).sum() / (float) stats.size())
+          > capMax) {
+        String top =
+            StatCodes.ALL.stream()
+                .max(java.util.Comparator.comparingInt((String code) -> stats.get(code)))
+                .orElseThrow();
+        stats.put(top, stats.get(top) - 1);
+      }
+    }
+    company.candidate = stats;
+    company.recruited = true;
+  }
+
+  String hrLine(Employee hr) {
+    return Korean.fill(content.raising().company().hr().candidate(), Map.of("name", hr.name));
   }
 
   int turns() {
@@ -162,6 +220,14 @@ class CompanyEngine {
         content.raising().company().opening(),
         Map.of(
             "name", company.employees.getFirst().name, "capital", RunEngine.won(company.capital)));
+  }
+
+  /** 인사 직원이 데려온 신입을 등록한다. 연봉을 받는다. */
+  Employee hireCandidate(CompanyState company) {
+    Employee employee = hire(company, company.candidate);
+    employee.salary = properties.hr().salary();
+    company.candidate = null;
+    return employee;
   }
 
   Employee hire(CompanyState company, Map<String, Integer> stats) {
@@ -304,7 +370,7 @@ class CompanyEngine {
     if (eraOver(company) || company.sold) {
       throw new InvalidRequestException("시대가 끝났다. 회사를 판다");
     }
-    if (company.recruitRun != null || company.pendingRun != null) {
+    if (company.recruitRun != null || company.pendingRun != null || company.candidate != null) {
       throw new InvalidRequestException("공채 육성을 먼저 마친다");
     }
     RandomGenerator rng = random.forKey("company-settle", company.year);
@@ -404,7 +470,15 @@ class CompanyEngine {
     }
     long fee = (long) (company.capital * properties.feeBp() / (double) BP * multiplier);
     settlement.fee = fee;
-    company.capital = Math.max(0, company.capital + fee + totalPnl);
+    // 인사 직원이 뽑은 신입은 회사 자본을 가져오지 않은 대신 연봉이 나간다 (6.3절).
+    long salaries = company.employees.stream().mapToLong(e -> e.salary).sum();
+    if (salaries > 0) {
+      settlement.lines.add(
+          Korean.fill(
+              content.raising().company().hr().salary(),
+              Map.of("amount", "−" + RunEngine.won(salaries))));
+    }
+    company.capital = Math.max(0, company.capital + fee + totalPnl - salaries);
     settlement.capitalAfter = company.capital;
     settlement.gradeAfter = grade(company.capital);
     settlement.lines.addFirst(content.raising().company().phases().get(company.phase));

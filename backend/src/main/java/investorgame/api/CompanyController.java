@@ -82,6 +82,23 @@ class CompanyController {
     return company;
   }
 
+  /** 인사팀이 올해 공채를 맡아 신입을 데려온다 (증권사 육성 설계 6.3절). */
+  @PostMapping("/hr-recruit")
+  CompanyView hrRecruit(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
+    return companies.hrRecruit(cookies.requireSession(token));
+  }
+
+  /** 인사팀이 데려온 신입을 등록하거나 돌려보낸다. */
+  @PostMapping("/candidate")
+  CompanyView decideCandidate(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody CandidateRequest request) {
+    return companies.decideCandidate(
+        cookies.requireSession(token), request.register(), request.replace());
+  }
+
+  record CandidateRequest(boolean register, Integer replace) {}
+
   /** 회사를 팔고 다음 회사를 차린다 (증권사 육성 설계 9절). 돌려주는 값은 새 회사다. */
   @PostMapping("/sale")
   CompanyView sell(

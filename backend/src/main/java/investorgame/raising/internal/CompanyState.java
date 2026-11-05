@@ -54,6 +54,9 @@ class CompanyState {
   /** 끝났지만 등록을 아직 정하지 않은 판. */
   UUID pendingRun;
 
+  /** 인사 직원이 데려와 등록을 기다리는 신입의 능력치. 없으면 null (6.3절). */
+  Map<String, Integer> candidate;
+
   List<Settlement> settlements = new ArrayList<>();
 
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
@@ -70,6 +73,9 @@ class CompanyState {
 
     /** 실전 경험. 위기를 버틸 때 쌓이고, SSS에서 다음 단계로 오르면 0이 된다 (2.3절). */
     int experience;
+
+    /** 연봉. 인사 직원이 뽑은 신입만 받는다: 회사 자본을 가져오지 않은 대신이다 (6.3절). */
+    long salary;
 
     /** 큰 손실로 내려간 능력치. 위기를 버티면 맨 뒤의 것부터 되찾는다 (6.4절). */
     List<String> dropped = new ArrayList<>();

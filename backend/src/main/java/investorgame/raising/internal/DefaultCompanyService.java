@@ -72,13 +72,46 @@ class DefaultCompanyService implements CompanyService {
     // 돌려보내도 육성에서 번 돈(운용금과 손익)은 회사로 돌아온다 (6.3·6.5절).
     company.capital += money;
     if (register) {
-      if (company.employees.size() >= engine.seats(company.capital)) {
-        if (replace == null || company.employees.stream().noneMatch(e -> e.id == replace)) {
-          throw new InvalidRequestException("자리가 꽉 찼다. 바꿀 직원을 고른다");
-        }
-        company.employees.removeIf(e -> e.id == replace);
-      }
+      makeRoom(company, replace);
       engine.hire(company, person.stats).experience = survivedCrisis(person) ? 1 : 0;
+    }
+    companies.update(row.id(), company, false);
+    return view(row, runs.memory(sessionId));
+  }
+
+  /** 자리가 꽉 찼으면 replace의 직원을 내보낸다 (6.3절). 바꿀 직원이 없으면 400. */
+  private void makeRoom(CompanyState company, Integer replace) {
+    if (company.employees.size() < engine.seats(company.capital)) {
+      return;
+    }
+    if (replace == null || company.employees.stream().noneMatch(e -> e.id == replace)) {
+      throw new InvalidRequestException("자리가 꽉 찼다. 바꿀 직원을 고른다");
+    }
+    company.employees.removeIf(e -> e.id == replace);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView hrRecruit(UUID sessionId) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.hrRecruit(row.state(), new HashSeededRandom(row.seed()));
+    companies.update(row.id(), row.state(), false);
+    return view(row, runs.memory(sessionId));
+  }
+
+  @Override
+  @Transactional
+  public CompanyView decideCandidate(UUID sessionId, boolean register, Integer replace) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    CompanyState company = row.state();
+    if (company.candidate == null) {
+      throw new InvalidRequestException("인사팀이 데려온 신입이 없다");
+    }
+    if (register) {
+      makeRoom(company, replace);
+      engine.hireCandidate(company);
+    } else {
+      company.candidate = null;
     }
     companies.update(row.id(), company, false);
     return view(row, runs.memory(sessionId));
@@ -121,7 +154,7 @@ class DefaultCompanyService implements CompanyService {
     if (!engine.canSell(old)) {
       throw new InvalidRequestException("아직 팔 수 없다");
     }
-    if (old.recruitRun != null || old.pendingRun != null) {
+    if (old.recruitRun != null || old.pendingRun != null || old.candidate != null) {
       throw new InvalidRequestException("공채 육성을 먼저 마친다");
     }
     if (cofounders.stream().distinct().count() != cofounders.size()) {
@@ -184,7 +217,8 @@ class DefaultCompanyService implements CompanyService {
                         CompanyEngine.overallGrade(e.stats).equals("SSS")
                             ? engine.experienceNeeded(e)
                             : null,
-                        engine.effectsOf(e)))
+                        engine.effectsOf(e),
+                        e.salary))
             .toList();
     List<CompanyView.Desk> desks =
         engine.desks().stream()
@@ -193,10 +227,19 @@ class DefaultCompanyService implements CompanyService {
                     new CompanyView.Desk(
                         d.code(), d.name(), d.statCode(), d.trades(), d.description()))
             .toList();
+    CompanyView.Candidate candidate =
+        c.candidate == null
+            ? null
+            : new CompanyView.Candidate(
+                CompanyEngine.overallGrade(c.candidate),
+                CompanyEngine.grades(c.candidate),
+                engine.hrOf(c).map(engine::hrLine).orElse(null));
+    String hrCap = engine.hrOf(c).map(engine::hrCap).orElse(null);
     CompanyView.Meeting meeting =
         ended
             ? null
             : new CompanyView.Meeting(
+                hrCap,
                 c.omen,
                 engine.earlyOmen(c),
                 engine.forecast(c),
@@ -226,6 +269,7 @@ class DefaultCompanyService implements CompanyService {
         employees,
         desks,
         meeting,
+        candidate,
         last == null ? null : settlementView(last));
   }
 

@@ -125,7 +125,11 @@ public record RaisingContent(
       Sale sale,
       Map<String, String> statNames,
       GradeLines gradeLines,
-      Effects effects) {}
+      Effects effects,
+      Hr hr) {}
+
+  /** 인사 직원의 공채 (6.3절). candidate: {name} 인사 직원. salary: {amount} 연봉 합. */
+  public record Hr(String candidate, String salary) {}
 
   /**
    * X 이상 등급의 효과 (2.4절). 효과는 쌓인다: XX 직원은 X 효과도 가진다.
