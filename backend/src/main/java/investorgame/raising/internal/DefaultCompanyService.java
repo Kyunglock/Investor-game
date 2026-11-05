@@ -93,8 +93,16 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView settle(UUID sessionId) {
-    CompanyRepository.Row row = lockActive(sessionId);
+  public CompanyView settle(UUID sessionId, int year) {
+    // 끝난 회사도 잠근다: 마지막 해의 결산이 두 번 오면 두 번째는 끝난 회사를 그대로 돌려준다.
+    CompanyRepository.Row row =
+        companies.lockLatest(sessionId).orElseThrow(() -> new NotFoundException("회사가 없다"));
+    if (year < row.state().year) {
+      return view(row, memories.find(sessionId));
+    }
+    if (year > row.state().year || !"ACTIVE".equals(row.status())) {
+      throw new InvalidRequestException("아직 오지 않은 해다: " + year);
+    }
     engine.settle(row.state(), new HashSeededRandom(row.seed()));
     boolean ended = engine.eraOver(row.state());
     companies.update(row.id(), row.state(), ended);
@@ -319,7 +327,16 @@ class DefaultCompanyService implements CompanyService {
                     .map(
                         r ->
                             new CompanyView.InvestResult(
-                                r.employeeId, r.name, r.desk, r.action, r.follow, r.pnl, r.line))
+                                r.employeeId,
+                                r.name,
+                                r.desk,
+                                r.action,
+                                r.follow,
+                                r.pnl,
+                                r.line,
+                                r.rival == null
+                                    ? null
+                                    : new CompanyView.Rival(r.rivalKind, r.rival, r.guard)))
                     .toList());
     return new CompanyView.Invest(
         invest.title,

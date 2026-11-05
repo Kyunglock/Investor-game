@@ -131,7 +131,11 @@ public record CompanyView(
       long total,
       List<InvestResult> results) {}
 
-  /** follow: BOSS(사장 말대로)·OWN(제 판단대로, "제가 알아서 할게요")·SWAY(꼬드김). */
+  /**
+   * follow: BOSS(사장 말대로)·OWN(제 판단대로, "제가 알아서 할게요")·SWAY(꼬드김).
+   *
+   * @param rival 사장 말과 맞붙은 행동(꼬드김 또는 제 판단). 맞붙을 것이 없었으면 null (decisions.md 235번)
+   */
   public record InvestResult(
       int employeeId,
       String name,
@@ -139,7 +143,15 @@ public record CompanyView(
       String action,
       String follow,
       long pnl,
-      String line) {}
+      String line,
+      Rival rival) {}
+
+  /**
+   * @param kind SWAY(꼬드김)·OWN(제 판단)
+   * @param action 맞붙은 행동 BUY·SELL·HOLD
+   * @param stat 사장 쪽을 지킨 능력치 코드
+   */
+  public record Rival(String kind, String action, String stat) {}
 
   /**
    * @param sector 섹터 데스크면 그 섹터 코드. 섹터를 가리지 않는 자리면 null

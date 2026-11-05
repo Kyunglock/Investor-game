@@ -142,7 +142,7 @@ api ─→ 세션 (확인, 관리자 세션 목록)
 | 지원자 새로 받기 | `POST /api/company/applicants/refresh` | 값을 내고 올해 지원자를 새로 받는다 |
 | 배치 | `POST /api/company/placement` | 직원 ID → 자리 코드(쉬면 null). 자리 수를 넘으면 400 |
 | 투자 회의 | `POST /api/company/invest` | 본문 `{choice}`: `BUY`·`SELL`·`HOLD`. 이미 했거나 돈을 굴리는 직원이 없으면 400 (decisions.md 229번) |
-| 결산 | `POST /api/company/settle` | 올해를 굴리고 다음 해 연초 회의로 간다. 열 수 있는 투자 회의를 안 했으면 400 |
+| 결산 | `POST /api/company/settle` `{year}` | 올해를 굴리고 다음 해 연초 회의로 간다. 열 수 있는 투자 회의를 안 했으면 400. 이미 결산한 해면 지금 회사를 그대로 돌려준다(234번) |
 | 매각과 재창업 | `POST /api/company/sale` | 데려갈 공동창업자를 고른다. 응답은 새 회사다 (decisions.md 215~217번) |
 | 관리자 플레이 기록 | `GET /api/admin/plays` | `X-Admin-Token` 헤더. 토큰 설정이 비어 있으면 꺼진다. 세션과 회사 목록 (decisions.md 46·228번) |
 

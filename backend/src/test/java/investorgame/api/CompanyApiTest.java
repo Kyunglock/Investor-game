@@ -57,6 +57,30 @@ class CompanyApiTest {
             .andExpect(status().isOk()));
   }
 
+  private ResultActions settle(int year) throws Exception {
+    return postJson("/api/company/settle", "{\"year\":%d}".formatted(year));
+  }
+
+  /**
+   * 같은 결산이 두 번 와도(버튼 두 번, 끊긴 요청 다시 보내기) 한 해만 넘어간다 (#305, decisions.md 234번). 돈을 굴리는 직원이 없으면 투자 회의가
+   * 결산을 막지 않아서 예전에는 두 해가 넘어갔다.
+   */
+  @Test
+  void 같은_해의_결산을_두_번_보내도_한_해만_넘어간다() throws Exception {
+    json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    postJson("/api/company/settle", "{}").andExpect(status().isBadRequest());
+    settle(2).andExpect(status().isBadRequest());
+
+    DocumentContext first = json(settle(1).andExpect(status().isOk()));
+    assertThat(first.read("$.year", Integer.class)).isEqualTo(2);
+    assertThat(first.read("$.lastSettlement.year", Integer.class)).isEqualTo(1);
+
+    DocumentContext again = json(settle(1).andExpect(status().isOk()));
+    assertThat(again.read("$.year", Integer.class)).as("두 번째 요청은 아무것도 하지 않는다").isEqualTo(2);
+    assertThat(again.read("$.capital", Long.class)).isEqualTo(first.read("$.capital", Long.class));
+    assertThat(again.read("$.lastSettlement.year", Integer.class)).isEqualTo(1);
+  }
+
   @Test
   void 사재로_회사를_차리고_공채_시장에서_뽑아_세_해를_돌면_팔고_다시_차린다() throws Exception {
     mvc.perform(get("/api/company").cookie(session)).andExpect(status().isNotFound());
@@ -110,7 +134,7 @@ class CompanyApiTest {
     assertThat(meeting.read("$.invest.remarks[0].stubborn", String.class)).isNotBlank();
     assertThat(meeting.read("$.invest.options.length()", Integer.class)).isEqualTo(3);
     assertThat(meeting.read("$.invest.outcome", Object.class)).isNull();
-    mvc.perform(post("/api/company/settle").cookie(session)).andExpect(status().isBadRequest());
+    settle(1).andExpect(status().isBadRequest());
     postJson("/api/company/invest", "{\"choice\":\"SHORT\"}").andExpect(status().isBadRequest());
     for (int year = 1; year <= 3; year++) {
       DocumentContext decided =
@@ -119,9 +143,11 @@ class CompanyApiTest {
       assertThat(decided.read("$.invest.outcome.results.length()", Integer.class)).isEqualTo(1);
       assertThat(decided.read("$.invest.outcome.reveal", String.class)).isNotBlank();
       postJson("/api/company/invest", "{\"choice\":\"BUY\"}").andExpect(status().isBadRequest());
-      DocumentContext settled = json(mvc.perform(post("/api/company/settle").cookie(session)));
+      DocumentContext settled = json(settle(year).andExpect(status().isOk()));
       assertThat(settled.read("$.lastSettlement.year", Integer.class)).isEqualTo(year);
     }
+    // 마지막 해의 결산이 한 번 더 와도 끝난 회사를 그대로 돌려준다 (234번).
+    settle(3).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ENDED"));
     mvc.perform(get("/api/company").cookie(session))
         .andExpect(jsonPath("$.status").value("ENDED"))
         .andExpect(jsonPath("$.meeting").doesNotExist())

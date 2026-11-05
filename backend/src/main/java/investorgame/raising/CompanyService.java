@@ -35,8 +35,11 @@ public interface CompanyService {
    */
   CompanyView invest(UUID sessionId, String choice);
 
-  /** 올해 결산을 하고 다음 해 연초 회의로 간다. 마지막 해면 회사가 끝난다. 투자 회의를 열 수 있는데 안 했으면 400. */
-  CompanyView settle(UUID sessionId);
+  /**
+   * year 해의 결산을 하고 다음 해 연초 회의로 간다. 마지막 해면 회사가 끝난다. 투자 회의를 열 수 있는데 안 했으면 400. 이미 결산한 해면 아무것도 하지 않고
+   * 지금 회사를 돌려주고(같은 요청이 두 번 와도 한 해만 넘어간다), 아직 오지 않은 해면 400 (decisions.md 234번).
+   */
+  CompanyView settle(UUID sessionId, int year);
 
   /**
    * 회사를 팔고 다음 회사를 F에서 차린다 (9절). 시대가 끝났거나 등급이 매각 조건 이상이어야 한다(400). cofounders는 데려갈 직원 ID로, 공동창업자 수를

@@ -1,6 +1,9 @@
+import { useEffect, useState } from 'react'
 import type { Company } from '../../api/client'
 import { shortWon } from '../game/labels'
 import { Overlay } from '../game/Overlay'
+import { TUG_DONE_MS, TugOfWar } from '../game/TugOfWar'
+import { investTimeline, matchupOf } from './investShow'
 import { useRaisingStore } from './store'
 
 type Invest = NonNullable<Company['invest']>
@@ -22,39 +25,69 @@ function signed(amount: number): string {
   return `${amount > 0 ? '+' : ''}${shortWon(amount)}`
 }
 
+const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+
 /**
- * 투자 회의 (decisions.md 229·231번). 한 해의 중대 결정이라 예전 매매 이벤트 창처럼 화면 가운데에 뜬다: 결산을 누르면 열리고, 고르면 결과를 보고 그대로
+ * 투자 회의 (decisions.md 229·231·235번). 한 해의 중대 결정이라 예전 매매 이벤트 창처럼 화면 가운데에 뜬다: 결산을 누르면 열리고, 고르면 결과를 보고 그대로
  * 그해 결산으로 넘어간다. 단서 기사를 놓고 직원들과 고민한다. 리서치 팀이 형광펜을 긋고, 자리에 앉은 직원이 한마디씩 하고(고집이 센 직원은 미리 티가
- * 난다), 사장이 고른다. 돈을 굴리는 직원 몇 명은 "제가 알아서 할게요" 하고 제 판단대로 한다.
+ * 난다), 사장이 고른다. 고르면 사장 결정에 도장이 찍히고, 돈을 굴리는 직원마다 **맞대결 막대**에서 사장 말과 꼬드김·제 판단이 엎치락뒤치락하다 이긴 쪽으로
+ * 쭉 찬다(181번의 막대를 되살림). 다 끝나면 종목이 오르내린 것이 드러나고 직원마다 손익이 뜬다.
  */
 export function InvestWindow({
   invest,
   year,
+  employees,
   onClose,
   onSettle,
 }: {
   invest: Invest
   year: number
+  employees: Company['employees']
   onClose: () => void
   onSettle: () => void
 }) {
   const busy = useRaisingStore((s) => s.busy)
   const { decideInvest } = useRaisingStore.getState()
   const outcome = invest.outcome
+  // 창을 열 때 이미 정한 회의면(다시 그림) 연출 없이 끝난 모습을 보인다.
+  const [skipped, setSkipped] = useState(() => Boolean(outcome) || reducedMotion())
+  const show = investTimeline(outcome?.results.length ?? 0, TUG_DONE_MS, skipped)
+  const [finished, setFinished] = useState(skipped)
+  useEffect(() => {
+    if (!outcome || finished) {
+      return
+    }
+    const id = setTimeout(() => setFinished(true), show.end)
+    return () => clearTimeout(id)
+  }, [outcome, finished, show.end])
+  const skip = () => {
+    setSkipped(true)
+    setFinished(true)
+  }
+  const label = (code: string) => invest.options.find((o) => o.code === code)?.label ?? code
+  const loss = Boolean(outcome && outcome.total < 0)
   return (
     <Overlay>
       <section
-        className="rounded bg-card p-5 shadow-xl"
+        className={`animate-pop rounded bg-card p-5 shadow-xl ${
+          finished && outcome && !skipped ? (loss ? 'animate-shake' : 'animate-glow') : ''
+        }`}
         role="dialog"
         aria-modal="true"
         aria-label="투자 회의"
         data-testid="invest"
+        data-finished={finished}
       >
         <header className="flex items-baseline justify-between">
           <h3 className="font-pen text-[24px]">{year}년 차 투자 회의</h3>
           {!outcome && (
             <button type="button" onClick={onClose} className="text-[12px] text-muted underline">
               배치 다시 보기
+            </button>
+          )}
+          {outcome && !finished && (
+            <button type="button" onClick={skip} className="text-[12px] text-muted underline">
+              빨리 보기
             </button>
           )}
         </header>
@@ -69,9 +102,14 @@ export function InvestWindow({
                 // 문장 순서는 회의 내내 그대로다.
                 // biome-ignore lint/suspicious/noArrayIndexKey: 같은 문장이 두 번 나오지 않지만 순서가 곧 정체다
                 key={i}
-                className={`${s.highlighted ? 'bg-sticky' : ''} ${
-                  outcome && outcome.decisive === i ? 'underline decoration-wine decoration-2' : ''
+                className={`${s.highlighted ? 'highlighter' : ''} ${
+                  outcome && outcome.decisive === i ? 'decisive' : ''
                 }`}
+                style={
+                  outcome && outcome.decisive === i
+                    ? { animationDelay: `${show.reveal}ms` }
+                    : undefined
+                }
                 data-highlighted={s.highlighted}
               >
                 {s.text}{' '}
@@ -86,10 +124,15 @@ export function InvestWindow({
           </p>
         </article>
 
-        {invest.remarks.length > 0 && (
+        {invest.remarks.length > 0 && !outcome && (
           <ul className="mt-2 grid gap-1" data-testid="remarks">
-            {invest.remarks.map((r) => (
-              <li key={r.employeeId} className="flex flex-wrap items-baseline gap-x-2 text-[14px]">
+            {invest.remarks.map((r, i) => (
+              <li
+                key={r.employeeId}
+                className="animate-reveal flex flex-wrap items-baseline gap-x-2 text-[14px]"
+                // 직원들이 차례로 한마디씩 한다.
+                style={{ animationDelay: `${250 + i * 180}ms` }}
+              >
                 <b>{r.name}</b>
                 <span>“{r.text}”</span>
                 {r.stubborn && (
@@ -106,14 +149,14 @@ export function InvestWindow({
         )}
 
         {!outcome && (
-          <div className="mt-2 grid grid-cols-3 gap-2">
+          <div className="mt-3 grid grid-cols-3 gap-2">
             {invest.options.map((o) => (
               <button
                 key={o.code}
                 type="button"
                 disabled={busy || !invest.ready}
                 onClick={() => void decideInvest(o.code)}
-                className="min-h-12 rounded border border-pen font-semibold hover:bg-pen hover:text-white disabled:opacity-50"
+                className="min-h-12 rounded border border-pen font-semibold transition-transform hover:bg-pen hover:text-white active:scale-95 disabled:opacity-50"
               >
                 {o.label}
               </button>
@@ -123,45 +166,113 @@ export function InvestWindow({
 
         {outcome && (
           <div className="mt-3" data-testid="invest-outcome">
-            <p className="font-semibold text-[15px]">
-              {outcome.reveal}{' '}
-              <span className={outcome.total >= 0 ? 'text-up' : 'text-down'}>
-                회의 손익 {signed(outcome.total)}
+            <p className="flex items-center gap-2 text-[14px]">
+              사장 결정
+              <span
+                className="animate-stamp pen-circle inline-block px-3 py-0.5 font-pen text-[22px] text-red-pen"
+                data-testid="invest-choice"
+              >
+                {label(outcome.choice)}
               </span>
             </p>
-            <ul className="mt-2 grid gap-1">
-              {outcome.results.map((r, i) => (
-                <li
-                  key={r.employeeId}
-                  className="animate-reveal flex flex-wrap items-baseline justify-between gap-x-2 rounded border border-line-soft px-2 py-1 text-[14px]"
-                  // 직원마다 차례로 드러난다. 제멋대로 한 사람이 있으면 그 줄에서 멈칫한다.
-                  style={{ animationDelay: `${300 + i * 500}ms`, animationFillMode: 'both' }}
-                  data-follow={r.follow}
-                  data-testid="invest-result"
-                >
-                  <span>
-                    {r.follow !== 'BOSS' && (
-                      <span className={`mr-1 rounded px-1 text-[11px] ${FOLLOW[r.follow].tone}`}>
-                        {FOLLOW[r.follow].label}
-                      </span>
+            <ul className="mt-2 grid gap-2">
+              {outcome.results.map((r, i) => {
+                const matchup = matchupOf(r, outcome.choice, label, employees, invest.sway.who)
+                return (
+                  <li
+                    key={r.employeeId}
+                    className="animate-reveal rounded border border-line-soft px-2 py-1.5 text-[14px]"
+                    style={{ animationDelay: `${show.tugAt(i)}ms` }}
+                    data-follow={r.follow}
+                    data-testid="invest-result"
+                  >
+                    <p className="font-semibold">{r.name}</p>
+                    {matchup ? (
+                      <TugOfWar
+                        // 빨리 보기를 누르면 끝난 막대로 다시 그린다.
+                        key={String(skipped)}
+                        matchup={matchup}
+                        delay={show.tugAt(i)}
+                        instant={skipped}
+                      />
+                    ) : (
+                      <OneVoice action={label(r.action)} delay={show.tugAt(i)} />
                     )}
-                    <b>{r.name}</b> {r.line}
-                  </span>
-                  <b className={r.pnl >= 0 ? 'text-up' : 'text-down'}>{signed(r.pnl)}</b>
-                </li>
-              ))}
+                    <p
+                      className="animate-reveal mt-1 flex flex-wrap items-baseline justify-between gap-x-2"
+                      style={{ animationDelay: `${show.pnlAt(i)}ms` }}
+                    >
+                      <span>
+                        {r.follow !== 'BOSS' && (
+                          <span
+                            className={`mr-1 rounded px-1 text-[11px] ${FOLLOW[r.follow].tone}`}
+                          >
+                            {FOLLOW[r.follow].label}
+                          </span>
+                        )}
+                        {r.line}
+                      </span>
+                      <b className={`text-[16px] ${r.pnl >= 0 ? 'text-up' : 'text-down'}`}>
+                        {signed(r.pnl)}
+                      </b>
+                    </p>
+                  </li>
+                )
+              })}
             </ul>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={onSettle}
-              className="mt-4 min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
+            <p
+              className="animate-stamp mt-3 text-center font-semibold text-[16px]"
+              style={{ animationDelay: `${show.reveal}ms` }}
+              data-testid="invest-reveal"
             >
-              {year}년 차 결산 보기
-            </button>
+              <span className={outcome.up ? 'text-up' : 'text-down'}>
+                {outcome.up ? '▲' : '▼'} {outcome.reveal}
+              </span>
+            </p>
+            <p
+              className="animate-reveal mt-1 text-center text-[15px]"
+              style={{ animationDelay: `${show.total}ms` }}
+            >
+              회의 손익{' '}
+              <b
+                className={`animate-flash text-[20px] ${outcome.total >= 0 ? 'text-up' : 'text-down'}`}
+                style={{ animationDelay: `${show.total}ms` }}
+              >
+                {signed(outcome.total)}
+              </b>
+            </p>
+            {finished && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onSettle}
+                className="animate-reveal mt-4 min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
+              >
+                {year}년 차 결산 보기
+              </button>
+            )}
           </div>
         )}
       </section>
     </Overlay>
+  )
+}
+
+/** 사장 말과 맞붙을 것이 없었던 직원: 막대가 한쪽으로 곧장 찬다. */
+function OneVoice({ action, delay }: { action: string; delay: number }) {
+  return (
+    <div
+      className="mt-1 relative h-11 overflow-hidden rounded-md bg-teal-soft"
+      data-testid="one-voice"
+    >
+      <div
+        className="animate-fill absolute inset-y-0 left-0 bg-teal"
+        style={{ animationDelay: `${delay}ms` }}
+      />
+      <div className="absolute inset-y-0 left-0 flex flex-col justify-center px-3 leading-tight text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
+        <span className="text-[14px] font-black">{action}</span>
+        <span className="text-[10px] font-bold opacity-85">한마음</span>
+      </div>
+    </div>
   )
 }

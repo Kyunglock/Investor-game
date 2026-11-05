@@ -7,6 +7,7 @@ import investorgame.behavior.internal.TestBehavior;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.content.internal.TestContent;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -143,6 +144,32 @@ class InvestEngineTest {
       }
     }
     assertThat(swayed).isGreaterThan(30);
+  }
+
+  /**
+   * 맞대결 막대(235번): 일어난 쪽이 상대다. 꼬드김이면 줏대가, 제 판단이면 자리 능력치(단타 = 용기)가 사장 쪽을 지킨다. 사장 말대로 했으면 사장과 다른 것이
+   * 상대고, 상대 행동은 사장이 고른 것과 늘 다르다.
+   */
+  @Test
+  void 결과마다_사장_말과_맞붙은_행동과_지킨_능력치가_있다() {
+    for (int seed = 0; seed < 200; seed++) {
+      CompanyState company = company(seed, stats(60, 50, 10, 10));
+      String choice = List.of(InvestEngine.BUY, InvestEngine.SELL, InvestEngine.HOLD).get(seed % 3);
+      ENGINE.invest.decide(company, choice, new HashSeededRandom(seed));
+      CompanyState.InvestResult r = company.invest.results.getFirst();
+      if (r.rival == null) {
+        assertThat(r.follow).isEqualTo(InvestEngine.BOSS);
+        assertThat(r.guard).isNull();
+        continue;
+      }
+      assertThat(r.rival).isNotEqualTo(choice);
+      if (!InvestEngine.BOSS.equals(r.follow)) {
+        assertThat(r.rivalKind).isEqualTo(r.follow);
+        assertThat(r.rival).isEqualTo(r.action);
+      }
+      assertThat(r.guard)
+          .isEqualTo(InvestEngine.SWAY.equals(r.rivalKind) ? "conviction" : "courage");
+    }
   }
 
   /** 고르기 전에 낌새가 보인다: 고집 센 직원은 HIGH, 만점이면 LOW. 리서치 팀은 형광펜을 긋고 돈을 굴리지 않아 고집이 없다. */

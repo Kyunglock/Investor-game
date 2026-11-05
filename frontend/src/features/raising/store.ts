@@ -100,7 +100,12 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     place: (seats) => change(api.POST('/api/company/placement', { body: { seats } })),
 
     settle: async () => {
-      await change(api.POST('/api/company/settle'))
+      const year = get().company?.year
+      if (year === undefined || get().busy) {
+        return
+      }
+      // 결산할 해를 함께 보낸다: 두 번 눌리거나 끊긴 요청을 다시 보내도 서버가 한 해만 넘긴다 (234번).
+      await change(api.POST('/api/company/settle', { body: { year } }))
       if (!get().error) {
         set({ justSettled: true, tab: 'settlement' })
       }

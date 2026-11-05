@@ -292,6 +292,17 @@ class InvestEngine {
         result.action = choice;
         result.follow = BOSS;
       }
+      // 맞대결 막대(235번): 사장 말과 맞붙은 것. 일어난 쪽이 있으면 그것, 없으면 먼저 굴린 꼬드김부터 사장과 다른 것.
+      if (SWAY.equals(result.follow)
+          || (BOSS.equals(result.follow) && !swayAction.equals(choice))) {
+        result.rivalKind = SWAY;
+        result.rival = swayAction;
+        result.guard = StatCodes.CONVICTION;
+      } else if (OWN.equals(result.follow) || !own.equals(choice)) {
+        result.rivalKind = OWN;
+        result.rival = own;
+        result.guard = company.flipStat(c, e);
+      }
       CompanyProperties.DeskReturn returns = company.returnsOf(e.desk);
       int bp =
           HOLD.equals(result.action)

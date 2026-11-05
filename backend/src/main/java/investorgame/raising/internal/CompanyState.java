@@ -136,6 +136,18 @@ class CompanyState {
     String follow;
     long pnl;
     String line;
+
+    /**
+     * 사장이 고른 것과 맞붙은 행동: 꼬드김(단골 인물 말) 또는 제 판단 중 사장과 다른 것. 둘 다 사장과 같으면 null. 화면의 맞대결 막대가
+     * 쓴다(decisions.md 235번). 그 전에 정한 회의에는 없다.
+     */
+    String rival;
+
+    /** rival이 어디서 왔나: SWAY(꼬드김)·OWN(제 판단). rival이 없으면 null. */
+    String rivalKind;
+
+    /** 사장 쪽을 지킨 능력치: 꼬드김이면 줏대, 제 판단이면 자리가 원하는 능력치(폭락장이면 인내심). rival이 없으면 null. */
+    String guard;
   }
 
   /** 공채 시장의 지원자 한 명. 계약금을 내고 뽑으면 그대로 직원이 된다. */

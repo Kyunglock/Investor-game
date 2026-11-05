@@ -1,5 +1,3 @@
-type StatKey = 'courage' | 'patience' | 'conviction'
-
 /** 막대 한쪽: 행동과 그 행동을 미는 성질 */
 export interface Side {
   action: string
@@ -7,8 +5,8 @@ export interface Side {
 }
 
 export interface Matchup {
-  /** 내 쪽(고른 행동)을 지키는 능력치 */
-  stat: StatKey
+  /** 내 쪽(고른 행동)을 지키는 능력치 코드 */
+  stat: string
   mine: Side
   rival: Side
   /** 맞붙기 시작할 때 내 쪽이 차지한 몫(%). 능력치가 높을수록 크다 */

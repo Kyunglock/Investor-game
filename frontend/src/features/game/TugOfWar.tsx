@@ -12,11 +12,22 @@ export const TUG_DONE_MS =
 
 /**
  * 결과 앞의 맞대결 (decisions.md 181번). 막대 하나 안에서 고른 행동(청록, 왼쪽)과 뒤집힐 수 있던 행동(와인, 오른쪽)이 맞닿아
- * 엎치락뒤치락하다, 이긴 쪽이 막대를 쭉 채운다. 움직임을 줄이는 설정이면 끝난 모습만 보인다.
+ * 엎치락뒤치락하다, 이긴 쪽이 막대를 쭉 채운다. 움직임을 줄이는 설정이면 끝난 모습만 보인다. 투자 회의 창에서 직원마다 사장 말과 꼬드김·제 판단이 맞붙는다
+ * (235번).
  */
-export function TugOfWar({ matchup }: { matchup: Matchup }) {
+export function TugOfWar({
+  matchup,
+  delay = 0,
+  instant: skip = false,
+}: {
+  matchup: Matchup
+  /** 막대가 움직이기 시작하기까지(ms). 투자 회의 창은 직원마다 차례로 돌린다 (235번) */
+  delay?: number
+  /** 연출 없이 끝난 모습만 (빨리 보기) */
+  instant?: boolean
+}) {
   const steps = tugSteps(matchup)
-  const [instant] = useState(reducedMotion)
+  const [instant] = useState(() => skip || reducedMotion())
   const [step, setStep] = useState(instant ? steps.length - 1 : 0)
   const [done, setDone] = useState(instant)
   // 같은 결과 카드 안에서 승부는 한 번만 벌어진다: 처음 그릴 때의 걸음으로 충분하다.
@@ -25,8 +36,8 @@ export function TugOfWar({ matchup }: { matchup: Matchup }) {
     if (instant) {
       return
     }
-    const ids = steps.slice(1).map((s, i) => setTimeout(() => setStep(i + 1), s.at))
-    ids.push(setTimeout(() => setDone(true), TUG_DONE_MS))
+    const ids = steps.slice(1).map((s, i) => setTimeout(() => setStep(i + 1), delay + s.at))
+    ids.push(setTimeout(() => setDone(true), delay + TUG_DONE_MS))
     return () => ids.forEach(clearTimeout)
   }, [])
   const share = steps[step].share

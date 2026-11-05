@@ -96,6 +96,8 @@ export interface paths {
          * 올해 결산을 하고 다음 해 연초 회의로 간다
          * @description 직원들이 배치대로 1년을 굴린 결과가 lastSettlement에 실린다. 다음 해 지원자와 투자 회의가 새로 온다. 마지막 해면 회사가 끝난다.
          *     투자 회의를 열 수 있는데(invest.ready) 안 했으면 400.
+         *     결산할 해(year)를 싣는다. 이미 결산한 해면 아무것도 하지 않고 지금 회사를 200으로 돌려준다(같은 요청이 두 번 와도 한 해만 넘어간다).
+         *     아직 오지 않은 해면 400 (decisions.md 234번).
          */
         post: operations["settleYear"];
         delete?: never;
@@ -368,6 +370,21 @@ export interface components {
                         /** Format: int64 */
                         pnl: number;
                         line: string;
+                        /**
+                         * @description 사장 말과 맞붙은 행동: 일어난 쪽(꼬드김·제 판단), 사장 말대로 했으면 먼저 굴린 꼬드김부터 사장과 다른 것.
+                         *     맞붙을 것이 없었으면 null. 회의 창의 맞대결 막대가 쓴다 (decisions.md 235번)
+                         */
+                        rival?: {
+                            /**
+                             * @description 꼬드김·제 판단
+                             * @enum {string}
+                             */
+                            kind: "SWAY" | "OWN";
+                            /** @enum {string} */
+                            action: "BUY" | "SELL" | "HOLD";
+                            /** @description 사장 쪽을 지킨 능력치 코드(꼬드김이면 conviction) */
+                            stat: string;
+                        } | null;
                     }[];
                 } | null;
             } | null;
@@ -631,7 +648,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description 결산할 해. 보통 지금 해(Company.year) */
+                    year: number;
+                };
+            };
+        };
         responses: {
             /** @description 결산한 뒤의 회사 */
             200: {

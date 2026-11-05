@@ -110,6 +110,7 @@ export function CompanyScreen({ company }: { company: Company }) {
           <InvestWindow
             invest={company.invest}
             year={company.year}
+            employees={company.employees}
             onClose={() => setInvestOpen(false)}
             onSettle={() => void settle()}
           />
