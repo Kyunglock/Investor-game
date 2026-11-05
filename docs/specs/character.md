@@ -1,5 +1,8 @@
 # 스펙: 캐릭터 (character)
 
+> **기록:** 옛 인생 시뮬레이터의 스펙이다. #292에서 코드를 지웠다 (decisions.md 227번). 테이블은 DB에 남아 있지만 코드가 쓰지 않는다 ([db.md](../db.md) 2.2절). 지금 구조는 [domains.md](../domains.md)와 [증권사 육성 설계](../superpowers/specs/2026-11-05-brokerage-raising-design.md)를 본다.
+> 이어 쓰는 것: 능력치를 등급부터 뽑고 그 띠 안에서 점수를 뽑는 규칙(4.1절, decisions.md 24번)과 손이 뒤집히면 경험치가 쌓여 오르는 성장(4.4절), 성향 점수의 접두사(`style.`·`risk.`·`mind.`·`sector.`, 4.3절)는 육성 판이 자기 설정(`raising.initial-stat`, `raising.deviation-exp`)으로 이어 쓴다. 수치는 `application.yml`이 원본이다. 직업·이름·자기계발은 없다.
+
 > 담당: agent1 · 상태: 초안 v0.1 · 근거: [poc.md](../poc.md) 3·7절, [decisions.md](../decisions.md), [db.md](../db.md) 3.3~3.5절
 > 표기: **(확정)**, **(제안)**, **(초기값)** 은 [README.md](./README.md) 참고.
 

@@ -1,5 +1,8 @@
 # 스펙: 자산 (asset)
 
+> **기록:** 옛 인생 시뮬레이터의 스펙이다. #292에서 코드를 지웠다 (decisions.md 227번). 테이블은 DB에 남아 있지만 코드가 쓰지 않는다 ([db.md](../db.md) 2.2절). 지금 구조는 [domains.md](../domains.md)와 [증권사 육성 설계](../superpowers/specs/2026-11-05-brokerage-raising-design.md)를 본다.
+> 이어 쓰는 것: 없다. 육성 판의 현금·보유·빚은 판 상태(JSON) 안에 있고 규칙은 decisions.md 199·201·205번이다.
+
 > 담당: agent2 · 상태: 2026-10-18 경제 개편 반영 (종목 수량 보유, 빚) · 근거: [poc.md](../poc.md) 5절, [decisions.md](../decisions.md), [db.md](../db.md) 3.6~3.8절, [경제 개편 설계](../superpowers/specs/2026-10-18-economy-redesign-design.md) 6절
 > 표기: **(확정)**, **(제안)**, **(초기값)** 은 [README.md](./README.md) 참고.
 

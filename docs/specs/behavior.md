@@ -1,5 +1,18 @@
 # 스펙: 행동 (behavior)
 
+> **지금도 쓰는 규칙이다.** 옛 인생 시뮬레이터 때 쓴 스펙이지만, 행동 도메인은 #292에서 지우지 않고 남겨 육성(`raising`)이 쓴다 (decisions.md 198·227번). **4.1 이탈 확률, 4.2 판정 순서, 4.3 난수 순서, 4.4 힌트, 4.5 운은 지금도 유효하다.** 3분 육성의 판정과 형광펜, 회사 결산의 직원 판단이 이 규칙을 쓴다. 이 문서에 나오는 "진행", "이벤트 운영", "자산", "캐릭터"는 지금은 육성으로 읽는다.
+>
+> 그 뒤로 바뀐 것 (원본은 `backend/src/main/java/investorgame/behavior/BehaviorService.java`):
+>
+> - 공개 인터페이스는 `resolve`, `hint`, `hintAccuracyPercent`, `flipChanceBp`, `luckFactorPercent` 다섯이다. 2절의 `lossFactorPercent`는 `luckFactorPercent`(4.5절)로 바뀌었다.
+> - **4.6 해석(`analyze`)과 버튼 확률(`deviationPercent`)은 #292에서 지웠다.** 4.6절은 기록이다.
+> - `ChoiceContext`에 투자 원칙 장치가 막은 판정 `Guards`(꼬드김, 못 참고 팔기, 매수 쪽 용기)가 붙었다. 막힌 판정도 난수는 그대로 뽑는다 (decisions.md 198·202번).
+> - 힌트는 형광펜이 된다. 정답이면 결정적 문장에, 틀리면 반대쪽 곁가지에 긋는다. 어느 문장에 긋는지는 육성이 정한다 (decisions.md 200번). `Hint`에 안목 구간(`detail`: LOW·MID·HIGH·EXPERT)이 붙어 여백 메모 문구를 고른다.
+> - `hintAccuracyPercent`는 안목의 정답률(4.4절 공식)이다. 회사 결산에서 직원이 맞힐 확률로 쓴다 (decisions.md 211번).
+> - `flipChanceBp`는 판정 한 번의 뒤집힘 확률(4.1절 공식)이다. 회사 결산이 직원의 판단을 굴릴 때 쓴다 (decisions.md 211번).
+> - 행동은 조금/크게를 모르고 `BUY`만 판정한다. 용기 이탈(`BUY → HOLD`)을 육성이 한 단계 내림(크게 → 조금, 조금 → 지켜본다)으로 읽는다 (decisions.md 201번).
+> - 줏대 이탈의 꼬드김 출처 코드(4.2절)는 지금도 만들지만, 육성은 카드를 펼칠 때 정한 단골 인물(김대리 등, decisions.md 203번)을 보인다.
+
 > 담당: agent1 · 상태: 초안 v0.1 · 근거: [poc.md](../poc.md) 4~6절, [domains.md](../domains.md) 4절
 > 표기: **(확정)**, **(제안)**, **(초기값)** 은 [README.md](./README.md) 참고.
 
@@ -128,7 +141,9 @@ public record Hint(
 - 진행은 **들고 있는 종목에 충격이 닿을 때만** 이 비율을 충격 폭에 곱한다. 샀는데 내리면 덜 잃고, 샀거나 들고 있는데 오르면 더 번다. 팔고 나서는 아무 일도 없다.
 - 결과(`Price.lossSoftened`/`luckBoosted`)와 `PRICE` 기록에 남는다.
 
-### 4.6 해석 (매매창 설계 4.2절)
+### 4.6 해석 (매매창 설계 4.2절) — 기록
+
+> 기록: #292에서 지웠다 (decisions.md 227번).
 
 추세·시황 해석은 힌트와 다른 공식을 쓴다 (확정). 난수는 읽기 → 찍기 → 확신 순서로 항상 셋을 뽑는다.
 
