@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { SharedPage, sharedIdFrom } from './features/game/SharedPage'
+import { CompanyScreen } from './features/raising/CompanyScreen'
 import { RunResult } from './features/raising/RunResult'
 import { RunScreen } from './features/raising/RunScreen'
 import { RunStart } from './features/raising/RunStart'
@@ -14,16 +15,36 @@ export function App() {
   return <Raising />
 }
 
-/** 3분 육성 한 판 (증권사 육성 설계 3절). 나이와 시계가 없어 화면은 시작 → 카드 → 입사 심사 결과뿐이다. */
+/**
+ * 증권사 육성 (증권사 육성 설계). 육성 판이 진행 중이면 카드, 끝났는데 등록을 정하지 않았으면 입사 심사 결과, 회사가 있으면 회사, 아무것도 없으면 시작
+ * 화면. 한 번에 하나의 모드만 보인다 (7.3절).
+ */
 function Raising() {
   const status = useRaisingStore((s) => s.status)
   const run = useRaisingStore((s) => s.run)
+  const company = useRaisingStore((s) => s.company)
   const busy = useRaisingStore((s) => s.busy)
-  const { load, start } = useRaisingStore.getState()
+  const error = useRaisingStore((s) => s.error)
+  const { load, start, hire } = useRaisingStore.getState()
 
   useEffect(() => {
     void load()
   }, [load])
+
+  const screen = () => {
+    if (run?.status === 'ACTIVE') {
+      return <RunScreen run={run} />
+    }
+    if (run?.result && !run.result.decided) {
+      return <RunResult run={run} company={company} busy={busy} error={error} onHire={hire} />
+    }
+    if (company) {
+      // 직원이 들고 나거나 해가 바뀌면 배치 칸을 새로 그린다.
+      const key = `${company.companyId}-${company.year}-${company.employees.map((e) => e.id).join('.')}`
+      return <CompanyScreen key={key} company={company} />
+    }
+    return <RunStart onStart={() => void start()} busy={busy} />
+  }
 
   return (
     <div className="min-h-screen">
@@ -34,9 +55,7 @@ function Raising() {
             서버에 연결할 수 없습니다.
           </p>
         )}
-        {status === 'none' && <RunStart onStart={() => void start()} busy={busy} />}
-        {status === 'playing' && run && <RunScreen run={run} />}
-        {status === 'ended' && run && <RunResult run={run} onRestart={() => void start()} />}
+        {status === 'ready' && screen()}
       </main>
     </div>
   )

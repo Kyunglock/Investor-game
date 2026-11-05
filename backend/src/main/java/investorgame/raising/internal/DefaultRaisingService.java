@@ -28,13 +28,22 @@ class DefaultRaisingService implements RaisingService {
   private static final int BP = 10_000;
 
   private final RunRepository runs;
+  private final CompanyRepository companies;
   private final RunEngine engine;
+  private final CompanyEngine companyEngine;
   private final ContentCatalog content;
   private final SecureRandom seeds = new SecureRandom();
 
-  DefaultRaisingService(RunRepository runs, RunEngine engine, ContentCatalog content) {
+  DefaultRaisingService(
+      RunRepository runs,
+      CompanyRepository companies,
+      RunEngine engine,
+      CompanyEngine companyEngine,
+      ContentCatalog content) {
     this.runs = runs;
+    this.companies = companies;
     this.engine = engine;
+    this.companyEngine = companyEngine;
     this.content = content;
   }
 
@@ -47,9 +56,33 @@ class DefaultRaisingService implements RaisingService {
     boolean scripted = memory.runsStarted == 0;
     memory.runsStarted++;
     long seed = seeds.nextLong();
-    RunState state = engine.create(new HashSeededRandom(seed), scripted, memory);
+    UUID runId = UUID.randomUUID();
+    Optional<CompanyRepository.Row> company = companies.lockActive(sessionId);
+    RunState state;
+    if (company.isPresent()) {
+      // 회사가 돌고 있으면 공채 육성이다: 회사가 자본의 일부를 운용금으로 내준다 (6.3·6.5절).
+      CompanyState c = company.get().state();
+      if (c.pendingRun != null) {
+        throw new InvalidRequestException("지난 공채 판의 등록을 먼저 정한다");
+      }
+      if (c.recruitRun != null) {
+        // 끝내지 않고 버린 공채 판의 운용금은 돌려받고 다시 내준다.
+        c.capital += c.recruitFund;
+      } else if (c.recruited) {
+        throw new InvalidRequestException("올해 공채는 이미 했다");
+      }
+      long fund = companyEngine.recruitFund(c);
+      c.capital -= fund;
+      c.recruitFund = fund;
+      c.recruitRun = runId;
+      c.recruited = true;
+      companies.update(company.get().id(), c, false);
+      state = engine.create(new HashSeededRandom(seed), scripted, memory, fund, true);
+    } else {
+      state = engine.create(new HashSeededRandom(seed), scripted, memory);
+    }
     RunRepository.Row row =
-        new RunRepository.Row(UUID.randomUUID(), sessionId, "ACTIVE", seed, scripted, state);
+        new RunRepository.Row(runId, sessionId, "ACTIVE", seed, scripted, state);
     runs.insert(row, content.version());
     runs.saveMemory(sessionId, memory);
     return view(row, memory);
@@ -66,6 +99,7 @@ class DefaultRaisingService implements RaisingService {
   @Transactional
   public RunChoice choose(UUID sessionId, UUID runId, int card, String option) {
     RaisingMemory memory = runs.lockMemory(sessionId);
+    Optional<CompanyRepository.Row> company = companies.lockActive(sessionId);
     RunRepository.Row row =
         runs.lockActive(sessionId, runId).orElseThrow(() -> new NotFoundException("진행 중인 판이 없다"));
     RunState state = row.state();
@@ -75,6 +109,15 @@ class DefaultRaisingService implements RaisingService {
     CardOutcome outcome = engine.choose(state, memory, option, new HashSeededRandom(row.seed()));
     boolean ended = state.current == null;
     runs.update(runId, state, ended);
+    if (ended
+        && state.recruit
+        && company.isPresent()
+        && runId.equals(company.get().state().recruitRun)) {
+      CompanyState c = company.get().state();
+      c.recruitRun = null;
+      c.pendingRun = runId;
+      companies.update(company.get().id(), c, false);
+    }
     runs.saveMemory(sessionId, memory);
     RunRepository.Row saved =
         new RunRepository.Row(
@@ -87,7 +130,7 @@ class DefaultRaisingService implements RaisingService {
     return new RunChoice(outcome, view(saved, memory));
   }
 
-  private RunView view(RunRepository.Row row, RaisingMemory memory) {
+  RunView view(RunRepository.Row row, RaisingMemory memory) {
     RunState run = row.state();
     Map<String, String> grades = new LinkedHashMap<>();
     for (String code : StatCodes.ALL) {
@@ -128,6 +171,7 @@ class DefaultRaisingService implements RaisingService {
         run.card,
         engine.cardCount(),
         row.scripted(),
+        run.recruit,
         run.fund,
         run.cash,
         run.debt,
@@ -142,6 +186,7 @@ class DefaultRaisingService implements RaisingService {
         ended ? null : cardView(run),
         ended
             ? new RunView.Result(
+                run.decided,
                 overall,
                 run.fund,
                 total,

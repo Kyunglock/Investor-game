@@ -71,6 +71,22 @@ class RunRepository {
         .optional();
   }
 
+  /** 끝난 판을 잠근다. 등록을 정할 때 쓴다. */
+  Optional<Row> lockEnded(UUID sessionId, UUID runId) {
+    return jdbc.sql(
+            "SELECT "
+                + COLUMNS
+                + """
+                 FROM raising_run
+                WHERE id = :id AND session_id = :sessionId AND status = 'ENDED'
+                FOR UPDATE
+                """)
+        .param("id", runId)
+        .param("sessionId", sessionId)
+        .query(this::map)
+        .optional();
+  }
+
   Optional<Row> latest(UUID sessionId) {
     return jdbc.sql(
             "SELECT "
@@ -92,7 +108,7 @@ class RunRepository {
             UPDATE raising_run
             SET state = CAST(:state AS jsonb), updated_at = :now,
                 status = CASE WHEN :ended THEN 'ENDED' ELSE status END,
-                ended_at = CASE WHEN :ended THEN :now ELSE ended_at END
+                ended_at = CASE WHEN :ended AND ended_at IS NULL THEN :now ELSE ended_at END
             WHERE id = :id
             """)
         .param("id", runId)

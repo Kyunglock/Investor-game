@@ -823,5 +823,69 @@
     "title": "입사 심사",
     "body": "수습 기간이 끝났다. 심사위원이 수습 기간의 매매 기록을 넘겨 본다. 다섯 능력치로 종합 등급을 매긴다.",
     "registerLabel": "심사를 받는다"
+  },
+  "company": {
+    "names": [
+      "김대리",
+      "박주임",
+      "이수습",
+      "최사원",
+      "정대리",
+      "한주임",
+      "오사원",
+      "윤수습",
+      "장대리",
+      "임주임",
+      "강사원",
+      "서수습"
+    ],
+    "desks": [
+      {
+        "code": "bio",
+        "name": "바이오 데스크",
+        "statCode": "patience",
+        "trades": true,
+        "description": "변동이 커서 못 참고 팔면 손해다. 인내심이 중요하다."
+      },
+      {
+        "code": "day",
+        "name": "단타 데스크",
+        "statCode": "courage",
+        "trades": true,
+        "description": "사야 할 때 못 사면 끝이다. 용기가 중요하다."
+      },
+      {
+        "code": "research",
+        "name": "리서치 팀",
+        "statCode": "insight",
+        "trades": false,
+        "description": "돈을 굴리지 않는다. 다른 데스크에 형광펜을 빌려준다. 안목이 중요하다."
+      },
+      {
+        "code": "risk",
+        "name": "리스크 관리 팀",
+        "statCode": "conviction",
+        "trades": false,
+        "description": "돈을 굴리지 않는다. 회사 전체의 꼬드김을 막는다. 줏대가 중요하다."
+      }
+    ],
+    "flipLines": {
+      "courage": "{name}이(가) 손이 떨려 사야 할 때 못 샀습니다.",
+      "patience": "{name}이(가) 못 참고 바닥에서 팔았습니다.",
+      "conviction": "{name}이(가) 또 단톡방 보고 샀습니다."
+    },
+    "wanted": {
+      "bio": "올해는 바이오 데스크에 인내심 좋은 사람이 필요합니다.",
+      "day": "올해는 단타 데스크에 용기 있는 사람이 필요합니다.",
+      "research": "올해는 리서치 팀에 안목 있는 사람이 필요합니다.",
+      "risk": "폭락 조짐이 있습니다. 리스크 관리 팀에 줏대 있는 사람을 앉히세요."
+    },
+    "phases": {
+      "boom": "호황이었다. 웬만하면 올랐다.",
+      "normal": "평범한 한 해였다.",
+      "crash": "폭락장이었다. 못 참고 판 사람이 가장 크게 잃었다."
+    },
+    "falseOmenNote": "조짐은 있었지만 아무 일도 없었다.",
+    "opening": "1호 직원 {name}과(와) 함께 회사를 열었다. 시작 자본은 {capital}."
   }
 }

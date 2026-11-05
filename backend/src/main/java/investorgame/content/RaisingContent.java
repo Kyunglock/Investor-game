@@ -12,6 +12,7 @@ import java.util.Map;
  * @param devices 투자 원칙 장치 셋 (투자 원칙 장치 설계 1.1절)
  * @param flipTips 처음 손이 뒤집혔을 때 한 줄 설명. 능력치 코드별 (증권사 육성 설계 11.1절)
  * @param unlockTips 처음 열리는 기능의 한 줄 설명. 기능 코드별
+ * @param company 회사 화면의 문구 (증권사 육성 설계 4·6절)
  */
 public record RaisingContent(
     List<Card> traits,
@@ -21,7 +22,8 @@ public record RaisingContent(
     List<Device> devices,
     Map<String, String> flipTips,
     Map<String, String> unlockTips,
-    Exam exam) {
+    Exam exam,
+    Company company) {
 
   public static final String SLOT_STYLE = "style";
   public static final String SLOT_SECTOR = "sector";
@@ -101,4 +103,23 @@ public record RaisingContent(
 
   /** 입사 심사 카드. */
   public record Exam(String title, String body, String registerLabel) {}
+
+  /**
+   * @param names 직원 이름. 등록 순서대로 쓰고 다 쓰면 처음부터 번호를 붙인다
+   * @param desks 자리 종류. trades가 거짓이면 돈을 굴리지 않고 다른 자리를 돕는다 (4.2절)
+   * @param flipLines 결산 소식 줄. 뒤집힌 능력치별, {name}은 직원 이름
+   * @param wanted 연초 회의의 "올해 필요한 인재". 자리 코드별
+   * @param phases 결산의 한 해 시장 한 줄. boom·normal·crash
+   */
+  public record Company(
+      List<String> names,
+      List<Desk> desks,
+      Map<String, String> flipLines,
+      Map<String, String> wanted,
+      Map<String, String> phases,
+      String falseOmenNote,
+      String opening) {}
+
+  public record Desk(
+      String code, String name, String statCode, boolean trades, String description) {}
 }

@@ -100,10 +100,17 @@ class RunEngine {
 
   /** 새 판. 첫 카드까지 펼쳐 둔다. */
   RunState create(SeededRandom random, boolean scripted, RaisingMemory memory) {
+    return create(random, scripted, memory, properties.fund(), false);
+  }
+
+  /** fund: 운용금. 첫 육성은 사장의 사재, 공채 육성은 회사가 내준 돈 (6.5절). */
+  RunState create(
+      SeededRandom random, boolean scripted, RaisingMemory memory, long fund, boolean recruit) {
     RunState run = new RunState();
     run.scripted = scripted;
-    run.fund = properties.fund();
-    run.cash = properties.fund();
+    run.fund = fund;
+    run.cash = fund;
+    run.recruit = recruit;
     if (scripted) {
       run.stats.putAll(properties.scripted().stats());
     } else {

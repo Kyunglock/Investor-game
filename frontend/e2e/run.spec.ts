@@ -81,25 +81,62 @@ test('짜인 첫 판: 사기·지켜보기만 → 손이 뒤집히고 가정 손
   await expect(card(page).getByTestId('option-BUY_BIG')).toBeVisible()
 })
 
-test('끝까지 하면 입사 심사의 종합 등급과 등급 사다리가 나오고, 다음 사람을 키울 수 있다', async ({
-  page,
-}) => {
-  await startRun(page)
+/** 매 카드의 마지막 선택지(뉴스면 지켜본다)로 입사 심사 결과까지 간다. */
+async function playToResult(page: Page) {
   for (let i = 0; i < 30; i++) {
     await dismiss(page)
     if (await page.getByTestId('run-result').isVisible()) {
-      break
+      return
     }
     await pick(page, card(page).getByRole('button').last())
   }
+  throw new Error('입사 심사에 닿지 않았다')
+}
+
+test('입사 심사의 종합 등급과 등급 사다리가 나오고, 1호 직원으로 등록하면 회사가 열린다', async ({
+  page,
+}) => {
+  await startRun(page)
+  await playToResult(page)
   await expect(page.getByTestId('overall-grade')).toHaveText(/^(F|E|D|C|B|A|S|SS|SSS)$/)
-  await expect(page.getByTestId('ladder').getByRole('listitem')).toHaveCount(15)
+  await expect(page.getByTestId('ladder').first().getByRole('listitem')).toHaveCount(15)
 
   await page.reload()
   await expect(page.getByTestId('run-result')).toBeVisible()
 
-  await page.getByRole('button', { name: '다음 사람 키우기' }).click()
-  await expect(page.getByTestId('run-header')).toContainText('수습 기간 1 / 12')
+  await page.getByRole('button', { name: '1호 직원으로 등록하고 회사를 연다' }).click()
+  await expect(page.getByTestId('company')).toBeVisible()
+  await expect(page.getByTestId('company-grade')).toHaveText('F')
+  await expect(page.getByTestId('employee')).toHaveCount(1)
+})
+
+test('회사: 배치하고, 공채 육성으로 신입을 등록하고, 세 해를 결산하면 체험이 끝난다', async ({
+  page,
+}) => {
+  test.setTimeout(150_000)
+  await startRun(page)
+  await playToResult(page)
+  await page.getByRole('button', { name: '1호 직원으로 등록하고 회사를 연다' }).click()
+  await expect(page.getByTestId('meeting')).toBeVisible()
+
+  await page.getByTestId('employee').first().getByRole('combobox').selectOption('bio')
+  await page.getByRole('button', { name: '이렇게 앉힌다' }).click()
+  await expect(page.getByRole('button', { name: '이렇게 앉힌다' })).toBeHidden()
+
+  await page.getByRole('button', { name: /공채 육성/ }).click()
+  await expect(card(page)).toBeVisible()
+  await playToResult(page)
+  await page.getByRole('button', { name: '등록한다' }).click()
+  await expect(page.getByTestId('employee')).toHaveCount(2)
+  await expect(page.getByRole('button', { name: /공채 육성/ })).toBeHidden()
+
+  for (let year = 1; year <= 3; year++) {
+    await page.getByRole('button', { name: `${year}년 차 결산 보기` }).click()
+    await expect(page.getByTestId('settlement')).toContainText(`${year}년 차 결산`)
+  }
+  await expect(page.getByRole('button', { name: /새 회사 차리기/ })).toBeVisible()
+  await page.reload()
+  await expect(page.getByRole('button', { name: /새 회사 차리기/ })).toBeVisible()
 })
 
 test('새로고침하면 같은 카드에서 이어한다', async ({ page }) => {

@@ -415,3 +415,32 @@ raising:
     per-run: 1
     max-devices: 2
     release-at: 70
+  # 아주 작은 회사 (증권사 육성 설계 4·6절, 2단계). (제안) 수치를 구현하며 정한 초기값 (decisions.md 208번~)
+  company:
+    # 2단계는 세 해로 끝나는 체험판
+    turns: 3
+    # 회사 등급의 자본 띠: F 0, E 3억, D 10억 … ZZZ 1천조 (4.5절 표 그대로)
+    grade-capital:
+      [0, 300000000, 1000000000, 3000000000, 10000000000, 30000000000, 100000000000, 300000000000,
+       1000000000000, 3000000000000, 10000000000000, 30000000000000, 100000000000000,
+       300000000000000, 1000000000000000]
+    # 자리 수: F 2 … SSS 10, 그 위는 한 단계마다 +1 (4.5절 표 그대로)
+    seats: [2, 3, 4, 5, 6, 7, 8, 9, 10]
+    # 등급 한 단계마다 수수료 매출과 판돈 ×1.5. 자본 띠가 ×3이라 등급이 저절로 치솟지 않는다
+    multiplier-percent: 150
+    fee-bp: 200
+    stake-percent: 60
+    # 공채 육성의 운용금: 자본의 10%, 10억 원까지 (6.5절)
+    recruit-percent: 10
+    recruit-max: 1000000000
+    decisions: 4
+    phase-weights: { boom: 30, normal: 45, crash: 25 }
+    omen-percent: 75
+    false-omen-percent: 15
+    desks:
+      bio: { gain-bp: 1200, miss-bp: 800, flip-bp: 1000 }
+      day: { gain-bp: 800, miss-bp: 600, flip-bp: 700 }
+    phase-bp: { boom: 300, normal: 0, crash: -500 }
+    sway-percent: 50
+    # 폭락장에 손이 뒤집히면(못 참고 팔면) 손실이 두 배
+    crash-flip-percent: 200

@@ -774,6 +774,16 @@ class JsonContentCatalog implements ContentCatalog {
       }
     }
     require(raising.tempters().size() >= 2, "단골 꼬드김 인물이 모자란다");
+    RaisingContent.Company company = raising.company();
+    require(company != null && !company.names().isEmpty(), "회사 문구가 없다");
+    require(company.desks().stream().anyMatch(RaisingContent.Desk::trades), "돈을 굴리는 자리가 없다");
+    for (RaisingContent.Desk desk : company.desks()) {
+      require(StatCodes.ALL.contains(desk.statCode()), "자리의 능력치가 없다: " + desk.code());
+      require(company.wanted().containsKey(desk.code()), "연초 회의 문구가 없다: " + desk.code());
+    }
+    for (String stat : List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE)) {
+      require(company.flipLines().containsKey(stat), "결산 소식 줄이 없다: " + stat);
+    }
     for (String stat : List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE)) {
       require(
           raising.devices().stream().filter(d -> stat.equals(d.statCode())).count() == 1,

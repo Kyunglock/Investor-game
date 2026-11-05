@@ -32,6 +32,13 @@ class RunState {
   Map<String, Integer> traitScores = new HashMap<>();
 
   long fund;
+
+  /** 회사가 공채로 내준 판인가 (6.3·6.5절). 아니면 사장의 사재로 하는 판이다. */
+  boolean recruit;
+
+  /** 끝난 뒤 등록할지 정했는가. */
+  boolean decided;
+
   long cash;
   long debt;
 
