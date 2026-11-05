@@ -112,6 +112,13 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '2')
   await expect(page.getByTestId('office-tag')).toHaveCount(2)
   await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/2')
+  // 자동 배치 (232번): 한 사람을 쉬게 해도 버튼 하나로 돈을 굴리는 두 자리가 다시 찬다.
+  await staff.nth(1).getByRole('button', { name: '쉰다' }).click()
+  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('1/2')
+  await page.getByRole('button', { name: '자동 배치' }).click()
+  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/2')
+  await expect(page.getByTestId('office-tag').filter({ hasText: /바이오 데스크/ })).toHaveCount(1)
+  await expect(page.getByTestId('office-tag').filter({ hasText: /단타 데스크/ })).toHaveCount(1)
 
   // 투자 회의 (229·231번): 결산을 누르면 창이 뜬다. 직원들이 한마디씩 하고 고집이 보인다. 창을 닫고 배치로 돌아갈 수도 있다.
   await page.getByRole('button', { name: '1년 차 결산 보기' }).click()

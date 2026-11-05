@@ -10,6 +10,7 @@ import { InvestWindow } from './InvestWindow'
 import { MoveScene } from './MoveScene'
 import { OfficeArt } from './OfficeArt'
 import { ATTIRE_NAMES, attireOf, glowOf } from './office'
+import { autoPlace } from './placement'
 import { useRaisingStore } from './store'
 
 type Employee = Company['employees'][number]
@@ -185,9 +186,22 @@ function StaffTab({ company }: { company: Company }) {
     )
   return (
     <section data-testid="staff">
-      <h3 className="font-pen text-[22px]">
-        배치 ({placed} / {company.seats}자리)
-      </h3>
+      <div className="flex items-center justify-between gap-2">
+        <h3 className="font-pen text-[22px]">
+          배치 ({placed} / {company.seats}자리)
+        </h3>
+        {!ended && company.employees.length > 0 && (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void place(autoPlace(company))}
+            className="min-h-10 rounded border border-teal px-3 text-[13px] font-semibold text-teal hover:bg-teal hover:text-white disabled:opacity-50"
+            title="돈을 굴리는 자리(바이오·단타)부터 맞는 사람을 앉히고, 남는 자리에 리서치·리스크 관리·인사팀을 채운다"
+          >
+            자동 배치
+          </button>
+        )}
+      </div>
       {company.employees.length === 0 && (
         <p className="mt-1 text-[13px] text-muted">아직 직원이 없습니다. 공채에서 뽑으세요.</p>
       )}
