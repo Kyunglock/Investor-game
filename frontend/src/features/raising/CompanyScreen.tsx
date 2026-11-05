@@ -100,6 +100,8 @@ export function CompanyScreen({ company }: { company: Company }) {
                   {e.name} <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>{' '}
                   <span className="text-[12px] text-muted" data-testid="attire">
                     · {ATTIRE_NAMES[attireOf(e.overallGrade)]}
+                    {e.experienceNeeded != null &&
+                      ` · 실전 경험 ${e.experience}/${e.experienceNeeded}`}
                     {glowOf(e.overallGrade) &&
                       ` · ${glowOf(e.overallGrade) === 'gold' ? '금빛' : '파란빛'}`}
                   </span>

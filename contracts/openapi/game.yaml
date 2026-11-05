@@ -727,11 +727,15 @@ components:
           type: array
           items:
             type: object
-            required: [id, name, overallGrade, grades]
+            required: [id, name, overallGrade, grades, experience]
             properties:
               id: { type: integer }
               name: { type: string }
-              overallGrade: { $ref: '#/components/schemas/Grade' }
+              overallGrade:
+                $ref: '#/components/schemas/Grade'
+                description: SSS면 실전 경험으로 X~ZZZ까지 오른다 (2.3절)
+              experience: { type: integer, description: 실전 경험. 폭락장을 손실 없이 버틸 때 쌓인다 }
+              experienceNeeded: { type: [integer, 'null'], description: 다음 단계까지 드는 실전 경험. SSS가 아니면 null }
               grades: { type: object, additionalProperties: { $ref: '#/components/schemas/Grade' } }
               desk: { type: [string, 'null'] }
         desks:

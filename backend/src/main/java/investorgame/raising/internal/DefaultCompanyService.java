@@ -56,6 +56,7 @@ class DefaultCompanyService implements CompanyService {
       }
       long seed = seeds.nextLong();
       CompanyState company = engine.open(new HashSeededRandom(seed), person.stats, money);
+      company.employees.getFirst().experience = survivedCrisis(person) ? 1 : 0;
       CompanyRepository.Row row =
           new CompanyRepository.Row(UUID.randomUUID(), sessionId, "ACTIVE", seed, company);
       companies.insert(row);
@@ -77,10 +78,15 @@ class DefaultCompanyService implements CompanyService {
         }
         company.employees.removeIf(e -> e.id == replace);
       }
-      engine.hire(company, person.stats);
+      engine.hire(company, person.stats).experience = survivedCrisis(person) ? 1 : 0;
     }
     companies.update(row.id(), company, false);
     return view(row, runs.memory(sessionId));
+  }
+
+  /** 육성 중에 위기를 겪고도 원금을 지킨 신입은 실전 경험을 조금 안고 입사한다 (6.2절). */
+  private static boolean survivedCrisis(RunState person) {
+    return person.crisis != null && person.crisis.hits && person.totalAsset() >= person.fund;
   }
 
   @Override
@@ -171,9 +177,13 @@ class DefaultCompanyService implements CompanyService {
                     new CompanyView.Employee(
                         e.id,
                         e.name,
-                        CompanyEngine.overallGrade(e.stats),
+                        CompanyEngine.employeeGrade(e),
                         CompanyEngine.grades(e.stats),
-                        e.desk))
+                        e.desk,
+                        e.experience,
+                        CompanyEngine.overallGrade(e.stats).equals("SSS")
+                            ? engine.experienceNeeded(e)
+                            : null))
             .toList();
     List<CompanyView.Desk> desks =
         engine.desks().stream()

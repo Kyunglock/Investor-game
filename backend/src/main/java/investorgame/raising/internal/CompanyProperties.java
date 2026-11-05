@@ -21,6 +21,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param desks 돈을 굴리는 자리의 손익(만분율): 맞히면 gain, 틀리면 miss, 손이 뒤집히면 flip
  * @param phaseBp 한 해 시장이 판단 하나마다 더하는 손익(만분율)
  * @param swayPercent 꼬드김 판정이 다른 판정보다 덜 일어나는 비율. 리스크 관리 팀이 없을 때
+ * @param experience 실전 경험과 큰 손실의 등급 하락 (2.3·6.4절)
  * @param sale 매각과 재창업 (9절). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다
  */
 @ConfigurationProperties("raising.company")
@@ -40,7 +41,15 @@ public record CompanyProperties(
     Map<String, Integer> phaseBp,
     int swayPercent,
     int crashFlipPercent,
+    Experience experience,
     Sale sale) {
+
+  /**
+   * @param dropLossPercent 한 해 결산에서 맡은 판돈이 이만큼 빠지면 종합 등급 한 단계 하락 (6.4절 제안: 30)
+   * @param band 능력치 한 띠의 점수. 떨어지거나 되찾을 때 이만큼 움직인다
+   * @param needBase SSS에서 X로 오르는 데 드는 실전 경험. 단계마다 1씩 더 든다 (2.3절: 단계마다 커진다)
+   */
+  public record Experience(int dropLossPercent, int band, int needBase) {}
 
   public record DeskReturn(int gainBp, int missBp, int flipBp) {}
 

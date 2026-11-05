@@ -35,6 +35,7 @@ class CompanyEngine {
   private static final String RESEARCH_DESK = "research";
   private static final int BP = 10_000;
   private static final int PERCENT = 100;
+  private static final int MAX_STAT = 100;
 
   private final ContentCatalog content;
   private final BehaviorService behavior;
@@ -340,6 +341,12 @@ class CompanyEngine {
       result.pnl = stake * bp / BP;
       totalPnl += result.pnl;
       settlement.results.add(result);
+      CompanyProperties.Experience rules = properties.experience();
+      if (stake > 0 && result.pnl * PERCENT <= -stake * rules.dropLossPercent()) {
+        drop(employee, result, settlement);
+      } else if (crash && result.pnl >= 0) {
+        survive(employee, settlement);
+      }
       result.flips.forEach(
           (stat, count) ->
               settlement.lines.add(
@@ -363,6 +370,101 @@ class CompanyEngine {
       startYear(company, random);
     }
     return settlement;
+  }
+
+  /**
+   * 큰 손실을 낸 직원은 종합 등급이 한 단계 떨어진다 (6.4절). 떠나지 않는다. X 이상이면 종합 등급이, 그 아래면 그해 손을 가장 많이 뒤집은 능력치(뒤집힘이
+   * 없었으면 자리가 원하는 능력치)가 한 띠 내려간다. 종합 등급만 내리면 실제 성적이 그대로라 판정에 쓰는 능력치를 내린다.
+   */
+  void drop(Employee employee, Result result, Settlement settlement) {
+    RaisingContent.GradeLines lines = content.raising().company().gradeLines();
+    String before = employeeGrade(employee);
+    if (employee.rank > 0) {
+      employee.rank--;
+      employee.experience = 0;
+      settlement.lines.add(
+          gradeLine(lines.drop(), employee, before, employeeGrade(employee), null));
+      return;
+    }
+    String stat =
+        result.flips.entrySet().stream()
+            .max(
+                Map.Entry.<String, Integer>comparingByValue()
+                    .thenComparing(Map.Entry.comparingByKey()))
+            .map(Map.Entry::getKey)
+            .orElse(desk(employee.desk).statCode());
+    int value = employee.stats.get(stat);
+    int lowered = Math.max(1, value - properties.experience().band());
+    employee.stats.put(stat, lowered);
+    employee.dropped.add(stat);
+    settlement.lines.add(
+        gradeLine(
+            lines.statDrop(),
+            employee,
+            StatGrade.of(value).name(),
+            StatGrade.of(lowered).name(),
+            stat));
+  }
+
+  /**
+   * 폭락장을 손실 없이 버티면 실전 경험이 쌓인다 (2.3·6.4절). 큰 손실로 내려갔던 능력치가 있으면 그것부터 되찾고, SSS에서는 경험이 쌓여 X·XX…로 오른다.
+   */
+  void survive(Employee employee, Settlement settlement) {
+    RaisingContent.GradeLines lines = content.raising().company().gradeLines();
+    if (!employee.dropped.isEmpty()) {
+      String stat = employee.dropped.removeLast();
+      int value = employee.stats.get(stat);
+      int raised = Math.min(MAX_STAT, value + properties.experience().band());
+      employee.stats.put(stat, raised);
+      settlement.lines.add(
+          gradeLine(
+              lines.recover(),
+              employee,
+              StatGrade.of(value).name(),
+              StatGrade.of(raised).name(),
+              stat));
+      return;
+    }
+    if (!StatGrade.SSS.name().equals(overallGrade(employee.stats))
+        || employee.rank >= LADDER.size() - 1 - LADDER.indexOf(StatGrade.SSS.name())) {
+      return;
+    }
+    String before = employeeGrade(employee);
+    employee.experience++;
+    if (employee.experience >= experienceNeeded(employee)) {
+      employee.rank++;
+      employee.experience = 0;
+      settlement.lines.add(
+          gradeLine(lines.rise(), employee, before, employeeGrade(employee), null));
+    } else {
+      settlement.lines.add(gradeLine(lines.experience(), employee, before, before, null));
+    }
+  }
+
+  /** 다음 단계로 오르는 데 드는 실전 경험. 단계마다 하나씩 더 든다 (2.3절). */
+  int experienceNeeded(Employee employee) {
+    return properties.experience().needBase() + employee.rank;
+  }
+
+  private String gradeLine(
+      String template, Employee employee, String before, String after, String stat) {
+    Map<String, String> values = new HashMap<>();
+    values.put("name", employee.name);
+    values.put("before", before);
+    values.put("after", after);
+    if (stat != null) {
+      values.put("stat", content.raising().company().statNames().get(stat));
+    }
+    return Korean.fill(template, values);
+  }
+
+  /** 직원의 종합 등급: 다섯 능력치 평균의 F~SSS, SSS면 실전 경험으로 오른 X~ZZZ (2.2·2.3절). */
+  static String employeeGrade(Employee employee) {
+    String base = overallGrade(employee.stats);
+    if (employee.rank == 0 || !StatGrade.SSS.name().equals(base)) {
+      return base;
+    }
+    return LADDER.get(LADDER.indexOf(StatGrade.SSS.name()) + employee.rank);
   }
 
   /** 그 자리에 앉은 직원 가운데 가장 높은 능력치. 아무도 없으면 0. */

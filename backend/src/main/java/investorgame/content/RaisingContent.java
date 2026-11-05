@@ -122,7 +122,21 @@ public record RaisingContent(
       String falseOmenNote,
       String opening,
       List<Era> eras,
-      Sale sale) {}
+      Sale sale,
+      Map<String, String> statNames,
+      GradeLines gradeLines) {}
+
+  /**
+   * 직원 등급이 바뀌는 결산 소식 (6.4·2.3절). {name}·{before}·{after}·{stat} 자리표시를 쓴다.
+   *
+   * @param drop X 이상 직원의 종합 등급이 내려갔다
+   * @param statDrop 원인이 된 능력치가 한 띠 내려갔다
+   * @param rise 실전 경험으로 종합 등급이 X 이상으로 올랐다
+   * @param recover 위기를 버텨 내려갔던 능력치를 되찾았다
+   * @param experience 위기를 버텨 실전 경험이 쌓였다(아직 오르지는 않음)
+   */
+  public record GradeLines(
+      String drop, String statDrop, String rise, String recover, String experience) {}
 
   /** 시대 (9.4절). 한 해 시장 갈래의 가중치와 자리별 손익 보너스(맞혔을 때 더하는 만분율)가 다르다. */
   public record Era(
