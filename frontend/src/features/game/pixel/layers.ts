@@ -1,5 +1,5 @@
-import type { Sex, Stats } from '../../../api/client'
 import { nickname } from '../nickname'
+import type { Sex, Stats } from '../types'
 import type { AdornmentKey } from './adornments'
 import { type AgeStage, stageFor } from './bodies'
 import type { MoodKey } from './moods'

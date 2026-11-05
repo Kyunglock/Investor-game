@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Stats } from '../../../api/client'
+import type { Stats } from '../types'
 import { stageFor } from './bodies'
 import { layersFor } from './layers'
 

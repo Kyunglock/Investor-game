@@ -1,5 +1,5 @@
-import type { Stats } from '../../api/client'
 import { STAT_KEYS } from './labels'
+import type { Stats } from './types'
 
 /**
  * 태어날 때의 능력치로 별명을 짓는다. 가장 높은 능력치가 정체성, 가장 낮은 능력치가 약점이다.

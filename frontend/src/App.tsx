@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { SharedPage, sharedIdFrom } from './features/game/SharedPage'
 import { CompanyScreen } from './features/raising/CompanyScreen'
 import { RunResult } from './features/raising/RunResult'
 import { RunScreen } from './features/raising/RunScreen'
@@ -7,11 +6,6 @@ import { RunStart } from './features/raising/RunStart'
 import { useRaisingStore } from './features/raising/store'
 
 export function App() {
-  // 공유 링크로 들어온 사람은 판 대신 공유 카드를 본다 (#197).
-  const sharedId = sharedIdFrom(window.location.pathname)
-  if (sharedId) {
-    return <SharedPage shareId={sharedId} />
-  }
   return <Raising />
 }
 

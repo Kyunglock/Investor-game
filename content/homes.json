@@ -1,4 +1,0 @@
-[
-  { "code": "seoul", "name": "서울 아파트 (84㎡)", "basePrice": 610000000, "driftBpPerYear": 500 },
-  { "code": "gyeonggi", "name": "경기 아파트 (84㎡)", "basePrice": 400000000, "driftBpPerYear": 400 }
-]

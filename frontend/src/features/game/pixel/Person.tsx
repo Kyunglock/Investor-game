@@ -1,5 +1,6 @@
 import { ADORNMENTS } from './adornments'
 import { bodyFor, viewBody } from './bodies'
+import { type Carried, type Figure, SPOUSE_RECOLOR } from './figure'
 import type { SpriteSpec } from './layers'
 import { babyHair, CARRY, lookFor } from './looks'
 import { MARKS } from './marks'
@@ -17,7 +18,6 @@ import {
   type Run,
   toRuns,
 } from './sprite'
-import { type Carried, type Figure, SPOUSE_RECOLOR } from './vignettes'
 
 /**
  * 장면·크레딧 그림 속 사람 하나. 캐릭터는 32×40이고 장면은 64×20 칸이라 반 칸 크기로 그린다 (decisions.md 142번).

@@ -1,9 +1,9 @@
 import { memo } from 'react'
 import type { Company, Grade } from '../../api/client'
+import type { Figure } from '../game/pixel/figure'
 import { Person } from '../game/pixel/Person'
 import { PALETTE } from '../game/pixel/palette'
 import { SPRITE_HEIGHT, SPRITE_WIDTH, toRuns } from '../game/pixel/sprite'
-import type { Figure } from '../game/pixel/vignettes'
 import { usePixelArt } from '../game/pixelArt'
 import { bubbleOf } from './board'
 import {

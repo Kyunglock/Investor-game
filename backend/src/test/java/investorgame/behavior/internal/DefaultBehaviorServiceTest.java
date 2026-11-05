@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import investorgame.behavior.ChoiceContext;
-import investorgame.behavior.Reading;
 import investorgame.behavior.Resolution;
 import investorgame.common.Action;
 import investorgame.common.Deviation;
@@ -34,8 +33,7 @@ class DefaultBehaviorServiceTest {
           new BehaviorProperties(
               5000,
               new BehaviorProperties.HintSettings(4000, 55, 35, 50, 50),
-              new BehaviorProperties.LuckSettings(30, 30, 150),
-              new BehaviorProperties.AnalysisSettings(4750, 50)));
+              new BehaviorProperties.LuckSettings(30, 30, 150)));
 
   @Test
   void 인내심과_줏대가_100이면_관망은_그대로다() {
@@ -293,70 +291,6 @@ class DefaultBehaviorServiceTest {
     return (double) correct / pointed;
   }
 
-  /** 매매창 설계 4.2절: 안목 0은 찍기(약 1/3), 안목 100은 65%. 뒤집어 읽어도 이득이 없다. */
-  @Test
-  void 해석은_안목_0이면_찍기이고_100이면_65퍼센트를_맞힌다() {
-    assertThat(analysisAccuracy(0)).isBetween(0.30, 0.37);
-    assertThat(analysisAccuracy(50)).isBetween(0.45, 0.53);
-    assertThat(analysisAccuracy(100)).isBetween(0.62, 0.68);
-
-    // 틀린 해석이 정답의 반대로 몰리지 않는다: 안목 0에서 세 갈래가 고르게 나온다.
-    SplittableRandom rng = new SplittableRandom(5);
-    int[] counts = new int[3];
-    for (int i = 0; i < TRIALS; i++) {
-      counts[service.analyze(0, 1, 3, rng).index()]++;
-    }
-    for (int count : counts) {
-      assertThat(count).isBetween(TRIALS / 3 - 700, TRIALS / 3 + 700);
-    }
-  }
-
-  @Test
-  void 확신_말투는_안목과_무관하게_절반이다() {
-    for (int insight : List.of(0, 100)) {
-      SplittableRandom rng = new SplittableRandom(3);
-      int confident = 0;
-      for (int i = 0; i < TRIALS; i++) {
-        if (service.analyze(insight, 0, 3, rng).confident()) {
-          confident++;
-        }
-      }
-      assertThat(confident).isBetween(TRIALS * 47 / 100, TRIALS * 53 / 100);
-    }
-  }
-
-  @Test
-  void 해석의_난수_순서는_읽기_찍기_확신_순으로_고정이다() {
-    Scripted rng = new Scripted(MISS, 2, HIT);
-    Reading reading = service.analyze(100, 0, 3, rng);
-    assertThat(reading).isEqualTo(new Reading(2, true));
-    assertThat(rng.remaining()).isZero();
-  }
-
-  @Test
-  void 해석을_맞출_확률은_안목_0이면_찍기_100이면_65퍼센트이고_실제_굴림과_같다() {
-    assertThat(service.analysisAccuracyPercent(0, 3)).isEqualTo(33);
-    assertThat(service.analysisAccuracyPercent(50, 3)).isEqualTo(49);
-    assertThat(service.analysisAccuracyPercent(100, 3)).isEqualTo(65);
-    for (int insight : List.of(0, 30, 70, 100)) {
-      assertThat(service.analysisAccuracyPercent(insight, 3) / 100.0)
-          .as("안목 %d", insight)
-          .isCloseTo(analysisAccuracy(insight), org.assertj.core.data.Offset.offset(0.02));
-    }
-  }
-
-  private double analysisAccuracy(int insight) {
-    SplittableRandom rng = new SplittableRandom(insight + 1);
-    int correct = 0;
-    for (int i = 0; i < TRIALS; i++) {
-      int truth = i % 3;
-      if (service.analyze(insight, truth, 3, rng).index() == truth) {
-        correct++;
-      }
-    }
-    return (double) correct / TRIALS;
-  }
-
   private boolean anyHint(int insight, Predicate<Hint> condition) {
     SplittableRandom rng = new SplittableRandom(11);
     for (int i = 0; i < 2_000; i++) {
@@ -393,31 +327,6 @@ class DefaultBehaviorServiceTest {
     @Override
     public long nextLong() {
       throw new UnsupportedOperationException("판정은 nextInt(bound)만 쓴다");
-    }
-  }
-
-  /** 화면에 보여 주는 "뒤집힐 확률"은 실제 판정(resolve)을 많이 굴려 본 비율과 같다. */
-  @Test
-  void 뒤집힐_확률은_실제_판정을_굴린_비율과_같다() {
-    SplittableRandom seeds = new SplittableRandom(7);
-    for (Action choice : Action.values()) {
-      for (Sentiment sway : new Sentiment[] {Sentiment.POS, Sentiment.NEG, null}) {
-        for (boolean holding : new boolean[] {true, false}) {
-          Stats stats = stats(50, 30, 40, 20, 50);
-          ChoiceContext context = new ChoiceContext(choice, stats, sway, holding);
-          RandomGenerator rng = seeds.split();
-          int deviated = 0;
-          for (int i = 0; i < TRIALS; i++) {
-            if (service.resolve(context, rng).actual() != choice) {
-              deviated++;
-            }
-          }
-          assertThat(service.deviationPercent(context))
-              .as("%s %s 보유 %s", choice, sway, holding)
-              .isCloseTo(
-                  Math.round(deviated * 100f / TRIALS), org.assertj.core.data.Offset.offset(2));
-        }
-      }
     }
   }
 
