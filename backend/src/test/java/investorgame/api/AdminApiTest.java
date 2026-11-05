@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -53,7 +54,12 @@ class AdminApiTest {
                 .getResponse()
                 .getContentAsString(),
             "$.companyId");
-    mvc.perform(post("/api/company/settle").cookie(session)).andExpect(status().isOk());
+    mvc.perform(
+            post("/api/company/settle")
+                .cookie(session)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"year\":1}"))
+        .andExpect(status().isOk());
 
     String at = "$.companies[?(@.companyId == '%s')]";
     mvc.perform(get("/api/admin/plays").header(AdminController.TOKEN_HEADER, "test-admin-token"))

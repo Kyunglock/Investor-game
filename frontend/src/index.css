@@ -294,7 +294,137 @@ body {
   animation: tug-done 0.35s ease-out both;
 }
 
+/* 투자 회의 창 (decisions.md 235번) */
+/* 창이 튀어나오듯 뜬다 */
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(10px);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    transform: none;
+  }
+}
+.animate-pop {
+  animation: pop-in 0.4s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+/* 리서치 팀이 형광펜을 왼쪽부터 긋는다 */
+@keyframes highlight-sweep {
+  from {
+    background-size: 0% 100%;
+  }
+  to {
+    background-size: 100% 100%;
+  }
+}
+.highlighter {
+  background-image: linear-gradient(var(--sticky), var(--sticky));
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  animation: highlight-sweep 0.7s ease-out 0.45s both;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* 종목이 드러날 때 결정적 문장에 와인색 밑줄이 그어진다 */
+@keyframes decisive-in {
+  from {
+    text-decoration-color: transparent;
+  }
+  to {
+    text-decoration-color: var(--wine);
+  }
+}
+.decisive {
+  text-decoration-line: underline;
+  text-decoration-thickness: 2px;
+  text-decoration-color: var(--wine);
+  animation: decisive-in 0.5s ease-out both;
+}
+
+/* 사장 결정·종목 공개가 도장처럼 쿵 찍힌다 */
+@keyframes stamp {
+  0% {
+    opacity: 0;
+    transform: scale(2.2) rotate(-8deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.94) rotate(-3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-3deg);
+  }
+}
+.animate-stamp {
+  display: inline-block;
+  animation: stamp 0.45s ease-out both;
+}
+p.animate-stamp {
+  display: block;
+}
+
+/* 맞설 것이 없던 직원의 막대가 곧장 찬다 */
+@keyframes fill-up {
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
+}
+.animate-fill {
+  animation: fill-up 0.7s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+/* 회의 손익이 잃었으면 창이 한 번 흔들리고, 벌었으면 빛난다 */
+@keyframes shake {
+  0%,
+  100% {
+    transform: none;
+  }
+  20% {
+    transform: translateX(-6px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(2px);
+  }
+}
+.animate-shake {
+  animation: shake 0.45s ease-out 1;
+}
+@keyframes glow {
+  0% {
+    box-shadow: 0 0 0 0 rgba(192, 57, 43, 0.55);
+  }
+  100% {
+    box-shadow: 0 0 0 14px rgba(192, 57, 43, 0);
+  }
+}
+.animate-glow {
+  animation: glow 0.8s ease-out 1;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .animate-pop,
+  .highlighter,
+  .decisive,
+  .animate-stamp,
+  .animate-fill,
+  .animate-shake,
+  .animate-glow,
   .animate-tug-done,
   .animate-tug-win,
   .animate-reveal,

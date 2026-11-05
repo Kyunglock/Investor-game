@@ -5,6 +5,7 @@ import investorgame.raising.CompanyView;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -100,6 +101,8 @@ class CompanyController {
 
   record InvestRequest(@NotBlank String choice) {}
 
+  record SettleRequest(@NotNull @Positive Integer year) {}
+
   @PostMapping("/placement")
   CompanyView place(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
@@ -111,40 +114,23 @@ class CompanyController {
     return companies.place(cookies.requireSession(token), placements);
   }
 
+  /** 올해 결산. 요청에 결산할 해를 싣는다: 같은 결산이 두 번 와도 한 해만 넘어간다 (decisions.md 234번). */
   @PostMapping("/settle")
-  CompanyView settle(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
+  CompanyView settle(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody SettleRequest request) {
     UUID sessionId = cookies.requireSession(token);
-    CompanyView company = companies.settle(sessionId);
+    CompanyView company = companies.settle(sessionId, request.year());
     PLAY.info(
         "company-settle session={} company={} year={} capital={} grade={} ip={}",
         sessionId,
         company.companyId(),
-        company.year() - 1,
+        request.year(),
         company.capital(),
         company.grade(),
         ClientIp.current());
     return company;
   }
-
-  /** 회사를 팔고 다음 회사를 차린다 (증권사 육성 설계 9절). 돌려주는 값은 새 회사다. */
-  @PostMapping("/sale")
-  CompanyView sell(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody SaleRequest request) {
-    UUID sessionId = cookies.requireSession(token);
-    CompanyView company = companies.sell(sessionId, request.cofounders());
-    PLAY.info(
-        "company-sale session={} next={} number={} fame={} ip={}",
-        sessionId,
-        company.companyId(),
-        company.number(),
-        company.owner().fameGrade(),
-        ClientIp.current());
-    return company;
-  }
-
-  /** 데려갈 공동창업자 직원 ID. */
-  record SaleRequest(@NotNull List<@NotNull Integer> cofounders) {}
 
   /** replace는 자리가 꽉 찼을 때 내보낼 직원 ID. */
   record HireRequest(@NotNull Integer applicantId, Integer replace) {}

@@ -25,8 +25,6 @@ interface RaisingState {
   decideInvest: (choice: string) => Promise<void>
   place: (seats: { employeeId: number; desk: string | null }[]) => Promise<void>
   settle: () => Promise<void>
-  /** 회사를 팔고 공동창업자와 다음 회사를 차린다 (증권사 육성 설계 9절). */
-  sell: (cofounders: number[]) => Promise<void>
 }
 
 /** 요청이 끊기면(모바일에서 다른 앱에 다녀옴 등) 예외 대신 undefined. 버튼이 잠긴 채로 남지 않게 한다. */
@@ -100,15 +98,15 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     place: (seats) => change(api.POST('/api/company/placement', { body: { seats } })),
 
     settle: async () => {
-      await change(api.POST('/api/company/settle'))
+      const year = get().company?.year
+      if (year === undefined || get().busy) {
+        return
+      }
+      // 결산할 해를 함께 보낸다: 두 번 눌리거나 끊긴 요청을 다시 보내도 서버가 한 해만 넘긴다 (234번).
+      await change(api.POST('/api/company/settle', { body: { year } }))
       if (!get().error) {
         set({ justSettled: true, tab: 'settlement' })
       }
-    },
-
-    sell: async (cofounders) => {
-      await change(api.POST('/api/company/sale', { body: { cofounders } }))
-      set({ tab: null })
     },
   }
 })

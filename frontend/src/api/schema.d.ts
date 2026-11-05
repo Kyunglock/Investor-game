@@ -36,7 +36,7 @@ export interface paths {
         put?: never;
         /**
          * 사장의 사재로 첫 회사를 차린다 (decisions.md 228번)
-         * @description 직원 없이 열리고 첫 해 공채 시장에 지원자가 와 있다. 이미 회사가 있으면 400(다음 회사는 매각으로 차린다).
+         * @description 직원 없이 열리고 첫 해 공채 시장에 지원자가 와 있다. 이미 회사가 있으면 400(회사는 세션마다 하나).
          */
         post: operations["openCompany"];
         delete?: never;
@@ -94,8 +94,10 @@ export interface paths {
         put?: never;
         /**
          * 올해 결산을 하고 다음 해 연초 회의로 간다
-         * @description 직원들이 배치대로 1년을 굴린 결과가 lastSettlement에 실린다. 다음 해 지원자와 투자 회의가 새로 온다. 마지막 해면 회사가 끝난다.
+         * @description 직원들이 배치대로 1년을 굴린 결과가 lastSettlement에 실린다. 다음 해 지원자와 투자 회의가 새로 온다. 회사는 끝나지 않는다(236번).
          *     투자 회의를 열 수 있는데(invest.ready) 안 했으면 400.
+         *     결산할 해(year)를 싣는다. 이미 결산한 해면 아무것도 하지 않고 지금 회사를 200으로 돌려준다(같은 요청이 두 번 와도 한 해만 넘어간다).
+         *     아직 오지 않은 해면 400 (decisions.md 234번).
          */
         post: operations["settleYear"];
         delete?: never;
@@ -145,26 +147,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/company/sale": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 회사를 팔고 다음 회사를 F에서 차린다 (9절)
-         * @description 시대가 끝났거나 등급이 매각 조건 이상이어야 한다. 공동창업자 수를 넘게 고르면 400. 응답은 새 회사다.
-         */
-        post: operations["sellCompany"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/admin/plays": {
         parameters: {
             query?: never;
@@ -195,7 +177,7 @@ export interface components {
             /** Format: uuid */
             companyId: string;
             /**
-             * @description ENDED는 시대가 끝났거나 팔린 회사
+             * @description ENDED는 매각을 빼기 전(236번)에 팔린 회사. 시대가 끝나 멈췄던 회사는 다시 열면 ACTIVE로 이어진다
              * @enum {string}
              */
             status: "ACTIVE" | "ENDED";
@@ -209,27 +191,8 @@ export interface components {
             };
             /** @description 회사를 차릴 때의 한 줄 */
             opening?: string | null;
-            /** @description 사장의 명성 (9.2절) */
-            owner: {
-                fameGrade: components["schemas"]["Grade"];
-                famePoints: number;
-                sales: number;
-                /** @description 다음 회사에 데려갈 수 있는 공동창업자 수 */
-                cofounderSlots: number;
-            };
-            /** @description 지금 팔 수 있으면 매각 조건. 못 팔면 null (9.1절) */
-            sale?: {
-                /** @description 시대가 끝나 반드시 판다 */
-                forced: boolean;
-                note: string;
-                /** Format: int64 */
-                price: number;
-                fameAfter: components["schemas"]["Grade"];
-                cofounderSlots: number;
-            } | null;
-            /** @description 지금 해(1부터). 끝났으면 turns + 1 */
+            /** @description 지금 해(1부터). 회사는 끝나지 않고 해마다 이어진다 (decisions.md 236번) */
             year: number;
-            turns: number;
             /** Format: int64 */
             capital: number;
             grade: components["schemas"]["Grade"];
@@ -368,6 +331,21 @@ export interface components {
                         /** Format: int64 */
                         pnl: number;
                         line: string;
+                        /**
+                         * @description 사장 말과 맞붙은 행동: 일어난 쪽(꼬드김·제 판단), 사장 말대로 했으면 먼저 굴린 꼬드김부터 사장과 다른 것.
+                         *     맞붙을 것이 없었으면 null. 회의 창의 맞대결 막대가 쓴다 (decisions.md 235번)
+                         */
+                        rival?: {
+                            /**
+                             * @description 꼬드김·제 판단
+                             * @enum {string}
+                             */
+                            kind: "SWAY" | "OWN";
+                            /** @enum {string} */
+                            action: "BUY" | "SELL" | "HOLD";
+                            /** @description 사장 쪽을 지킨 능력치 코드(꼬드김이면 conviction) */
+                            stat: string;
+                        } | null;
                     }[];
                 } | null;
             } | null;
@@ -631,7 +609,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description 결산할 해. 보통 지금 해(Company.year) */
+                    year: number;
+                };
+            };
+        };
         responses: {
             /** @description 결산한 뒤의 회사 */
             200: {
@@ -687,36 +672,6 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description 새 지원자가 온 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    sellCompany: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description 데려갈 직원 ID */
-                    cofounders: number[];
-                };
-            };
-        };
-        responses: {
-            /** @description 새 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

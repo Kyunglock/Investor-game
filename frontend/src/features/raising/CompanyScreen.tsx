@@ -56,18 +56,15 @@ export function CompanyScreen({ company }: { company: Company }) {
   return (
     <Document
       title={
+        // 회사는 끝나지 않고 해마다 이어진다 (236번: 매각을 뺐다).
         ended
-          ? `${company.number}호 회사 · 시대가 끝났다`
-          : `${company.number}호 회사 · ${company.year}년 차 / ${company.turns}년`
+          ? `${company.number}호 회사 · 끝난 회사`
+          : `${company.number}호 회사 · ${company.year}년 차`
       }
     >
       <div data-testid="company">
         <p className="text-[13px]" data-testid="era">
           <b>{company.era.name}</b> — {company.era.description}
-        </p>
-        <p className="mt-1 text-[12px] text-muted" data-testid="owner">
-          사장 명성 <b className="font-mono-num">{company.owner.fameGrade}</b> · 판 회사{' '}
-          {company.owner.sales}곳
         </p>
         {company.opening && !company.lastSettlement && (
           <p className="mt-2 text-[13px]" data-testid="opening">
@@ -110,6 +107,7 @@ export function CompanyScreen({ company }: { company: Company }) {
           <InvestWindow
             invest={company.invest}
             year={company.year}
+            employees={company.employees}
             onClose={() => setInvestOpen(false)}
             onSettle={() => void settle()}
           />
@@ -139,7 +137,6 @@ export function CompanyScreen({ company }: { company: Company }) {
             {error}
           </p>
         )}
-        {company.sale && <SalePanel company={company} />}
       </div>
     </Document>
   )
@@ -457,73 +454,6 @@ function PixelToggle() {
     >
       {shown ? '그림 끄기' : '그림 켜기'}
     </button>
-  )
-}
-
-/**
- * 매각과 재창업 (9절). 시대가 끝나면 반드시 팔고, 그 전에는 등급이 매각 조건 이상일 때 스스로 판다. 아끼던 직원을 공동창업자로 데려가 다음 회사를 F에서
- * 차린다.
- */
-function SalePanel({ company }: { company: Company }) {
-  const busy = useRaisingStore((s) => s.busy)
-  const { sell } = useRaisingStore.getState()
-  const sale = company.sale
-  const [open, setOpen] = useState(sale?.forced ?? false)
-  const [picked, setPicked] = useState<number[]>([])
-  if (!sale) {
-    return null
-  }
-  if (!open) {
-    return (
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="mt-4 min-h-12 w-full rounded border border-gold font-semibold"
-      >
-        회사 팔기 ({sale.note})
-      </button>
-    )
-  }
-  const toggle = (id: number) =>
-    setPicked(picked.includes(id) ? picked.filter((p) => p !== id) : [...picked, id])
-  return (
-    <section className="mt-5 rounded border border-gold p-4" data-testid="sale">
-      <h3 className="font-pen text-[22px]">매각</h3>
-      <p className="text-[14px]">{sale.note}</p>
-      <p className="mt-1 text-[13px]">
-        매각가 <b>{shortWon(sale.price)}</b> · 사장 명성 {company.owner.fameGrade} →{' '}
-        {sale.fameAfter}
-      </p>
-      <p className="mt-2 text-[13px] text-muted">
-        공동창업자로 {sale.cofounderSlots}명까지 데려갑니다. 등급은 그대로입니다.
-      </p>
-      <ul className="mt-2 grid gap-1">
-        {company.employees.map((e) => {
-          const checked = picked.includes(e.id)
-          return (
-            <li key={e.id}>
-              <label className="flex items-center gap-2 text-[14px]">
-                <input
-                  type="checkbox"
-                  checked={checked}
-                  disabled={!checked && picked.length >= sale.cofounderSlots}
-                  onChange={() => toggle(e.id)}
-                />
-                {e.name} (종합 {e.overallGrade})
-              </label>
-            </li>
-          )
-        })}
-      </ul>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() => void sell(picked)}
-        className="mt-3 min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
-      >
-        회사를 팔고 새 회사를 차린다
-      </button>
-    </section>
   )
 }
 
