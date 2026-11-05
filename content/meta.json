@@ -55,47 +55,5 @@
       "code": "crowd",
       "name": "추종"
     }
-  ],
-  "investorTypes": [
-    {
-      "code": "short-bold-own",
-      "name": "불꽃 승부사",
-      "description": "빠르게 판단하고 크게 베팅한다. 남의 말은 참고만 한다."
-    },
-    {
-      "code": "short-bold-crowd",
-      "name": "소문 따라 단타족",
-      "description": "뜨는 곳에 먼저 가 있고 싶다. 분위기가 바뀌면 손도 빠르다."
-    },
-    {
-      "code": "short-safe-own",
-      "name": "계산기 트레이더",
-      "description": "짧게 보되 잃지 않는 선을 지킨다. 숫자가 맞아야 움직인다."
-    },
-    {
-      "code": "short-safe-crowd",
-      "name": "눈치 빠른 메뚜기",
-      "description": "남들이 안전하다고 하는 곳으로 가볍게 옮겨 다닌다."
-    },
-    {
-      "code": "long-bold-own",
-      "name": "역발상 농사꾼",
-      "description": "남들이 외면할 때 씨를 뿌리고 오래 기다린다."
-    },
-    {
-      "code": "long-bold-crowd",
-      "name": "밀물 타는 선장",
-      "description": "큰 흐름에 올라타 멀리 간다. 파도가 높아도 내리지 않는다."
-    },
-    {
-      "code": "long-safe-own",
-      "name": "느긋한 농부",
-      "description": "서두르지 않고, 남 말보다 제 눈을 믿는다."
-    },
-    {
-      "code": "long-safe-crowd",
-      "name": "안전 제일 적립왕",
-      "description": "다들 좋다는 것을 조금씩, 오래 모은다."
-    }
   ]
 }

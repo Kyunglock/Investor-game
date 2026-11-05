@@ -1,4 +1,4 @@
-import type { Stats } from '../../../api/client'
+import type { Stats } from '../types'
 import { fill } from './moods'
 import { area, blob, type Layer, type Ramp } from './sprite'
 

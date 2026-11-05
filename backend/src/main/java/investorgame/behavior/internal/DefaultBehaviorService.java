@@ -2,7 +2,6 @@ package investorgame.behavior.internal;
 
 import investorgame.behavior.BehaviorService;
 import investorgame.behavior.ChoiceContext;
-import investorgame.behavior.Reading;
 import investorgame.behavior.Resolution;
 import investorgame.common.Action;
 import investorgame.common.Deviation;
@@ -114,36 +113,6 @@ class DefaultBehaviorService implements BehaviorService {
     return Math.min(PERCENT, Math.round(accuracyBp / (float) PERCENT));
   }
 
-  /**
-   * resolve의 판정을 확률로 따라간다: 꼬드김(줏대)에 넘어갈지 → 그 행동이 관망이면 인내(보유가 있을 때 못 참고 판다), 아니면 용기(접고 관망한다). 끝 행동이
-   * 고른 것과 다를 확률을 더한다.
-   */
-  @Override
-  public int deviationPercent(ChoiceContext context) {
-    Action choice = context.choice();
-    double sway =
-        context.swaySentiment() == null
-            ? 0
-            : deviationBp(context.stats().conviction()) / (double) BP;
-    Action tempted =
-        context.swaySentiment() == null
-            ? choice
-            : tempted(context.swaySentiment(), choice, context.holding());
-    double deviated =
-        sway * differs(tempted, choice, context) + (1 - sway) * differs(choice, choice, context);
-    return (int) Math.round(deviated * PERCENT);
-  }
-
-  /** 꼬드김 뒤 행동이 action일 때, 두 번째 판정을 거친 끝 행동이 choice와 다를 확률. */
-  private double differs(Action action, Action choice, ChoiceContext context) {
-    if (action == Action.HOLD) {
-      double sell = context.holding() ? deviationBp(context.stats().patience()) / (double) BP : 0;
-      return (choice == Action.SELL ? 0 : sell) + (choice == Action.HOLD ? 0 : 1 - sell);
-    }
-    double hold = deviationBp(context.stats().courage()) / (double) BP;
-    return (choice == Action.HOLD ? 0 : hold) + (action == choice ? 0 : 1 - hold);
-  }
-
   @Override
   public int luckFactorPercent(int luck, Direction truth, RandomGenerator rng) {
     BehaviorProperties.LuckSettings settings = properties.luck();
@@ -151,25 +120,6 @@ class DefaultBehaviorService implements BehaviorService {
       return PERCENT;
     }
     return truth == Direction.DOWN ? settings.lossFactorPercent() : settings.gainBonusPercent();
-  }
-
-  @Override
-  public Reading analyze(int insight, int truth, int choices, RandomGenerator rng) {
-    int readRoll = rng.nextInt(BP);
-    int guessRoll = rng.nextInt(Math.max(1, choices));
-    int confidentRoll = rng.nextInt(PERCENT);
-    BehaviorProperties.AnalysisSettings settings = properties.analysis();
-
-    // 틀릴 때 정답의 반대가 아니라 찍기를 쓴다. 반대로 하면 안목이 낮을수록 뒤집어 읽는 게 정답이 된다 (매매창 설계 4.2절).
-    boolean read = readRoll < insight * settings.readAtMaxBp() / PERCENT;
-    int index = read ? truth : guessRoll;
-    return new Reading(index, confidentRoll < settings.confidentPercent());
-  }
-
-  @Override
-  public int analysisAccuracyPercent(int insight, int choices) {
-    double read = insight * properties.analysis().readAtMaxBp() / PERCENT / (double) BP;
-    return (int) Math.round((read + (1 - read) / Math.max(1, choices)) * PERCENT);
   }
 
   @Override

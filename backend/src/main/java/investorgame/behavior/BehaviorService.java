@@ -16,9 +16,6 @@ public interface BehaviorService {
   /** 안목으로 방향을 짚은 힌트가 맞을 확률(퍼센트). 방향을 못 읽은(중립) 힌트에는 쓰지 않는다. 화면에 보여 준다. */
   int hintAccuracyPercent(int insight);
 
-  /** 이 선택이 판정(줏대·용기·인내)에 걸려 고른 것과 다른 행동이 될 확률(퍼센트, 반올림). resolve와 같은 규칙으로 계산한다. 화면의 선택지에 보여 준다. */
-  int deviationPercent(ChoiceContext context);
-
   /** 능력치 하나로 하는 판정 한 번이 뒤집힐 확률(만분율). 0이면 상한, 100이면 0. 회사 결산이 직원의 판단을 굴릴 때 쓴다 (증권사 육성 설계 4.2절). */
   int flipChanceBp(int stat);
 
@@ -29,15 +26,4 @@ public interface BehaviorService {
    * 들고 있는 종목에 충격이 닿을 때만 쓴다.
    */
   int luckFactorPercent(int luck, Direction truth, RandomGenerator rng);
-
-  /**
-   * 안목에 따라 차트·지표를 읽는다 (매매창 설계 4.2절). truth는 정답의 번호(0부터), choices는 갈래 수. 안목만큼의 확률로 제대로 읽고 나머지는 갈래 중
-   * 하나를 찍는다. 찍어서 맞으면 맞은 것이다. 말투가 확신에 찼는지는 안목과 무관하다.
-   */
-  Reading analyze(int insight, int truth, int choices, RandomGenerator rng);
-
-  /**
-   * analyze가 정답을 맞힐 확률(퍼센트, 반올림): 제대로 읽을 확률 + 나머지 중 찍어서 맞을 몫. 화면의 해석에 보여 준다 (decisions.md 182번).
-   */
-  int analysisAccuracyPercent(int insight, int choices);
 }

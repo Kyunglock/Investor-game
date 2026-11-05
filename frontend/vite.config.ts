@@ -26,9 +26,9 @@ export default defineConfig({
   ],
   server: {
     // 쿠키가 같은 사이트에서 오가도록 API를 같은 출처로 프록시한다 (decisions.md 12번).
-    proxy: { '/api': 'http://localhost:8080', '/r/': 'http://localhost:8080' },
+    proxy: { '/api': 'http://localhost:8080' },
   },
   test: {
-    include: ['src/**/*.test.ts', 'scripts/**/*.test.ts'],
+    include: ['src/**/*.test.ts'],
   },
 })

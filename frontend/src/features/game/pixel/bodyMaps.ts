@@ -1,4 +1,4 @@
-import type { Sex } from '../../../api/client'
+import type { Sex } from '../types'
 import type { AgeStage, Pose } from './bodies'
 import type { Body } from './sprite'
 

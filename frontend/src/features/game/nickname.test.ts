@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { Stats } from '../../api/client'
 import { nickname } from './nickname'
+import type { Stats } from './types'
 
 const stats = (s: Partial<Stats>): Stats => ({
   insight: 50,
