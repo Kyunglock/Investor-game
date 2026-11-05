@@ -400,6 +400,8 @@ raising:
   # 카드 한 장(한 분기) 동안 저절로 흔들리는 폭(±). 뉴스 충격(6~30%)보다 작게
   noise-bp: { low: 200, mid: 400, high: 600 }
   spillover-percent: 30
+  # 공채 육성은 회사의 올해 시장에서 한다 (6.2절): 호황이면 뉴스가 오를 확률 +15%p, 폭락장이면 −10%p
+  year-up-bp: { boom: 1500, normal: 0, crash: -1000 }
   crisis:
     chance-percent: 35
     silent-percent: 25

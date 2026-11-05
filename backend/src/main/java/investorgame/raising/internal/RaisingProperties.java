@@ -20,6 +20,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param sideOppositePercent 단서 기사의 곁가지 문장이 숨은 방향의 반대쪽일 확률
  * @param noiseBp 카드 한 장(한 분기) 동안 종목이 저절로 흔들리는 폭(±). 변동성 등급별
  * @param spilloverPercent 종목 뉴스가 같은 섹터의 다른 종목에 번지는 몫
+ * @param yearUpBp 공채 육성에서 회사의 올해 시장 갈래(boom·normal·crash)가 뉴스의 오를 확률에 더하는 만분율 (6.2절)
  */
 @ConfigurationProperties("raising")
 public record RaisingProperties(
@@ -38,6 +39,7 @@ public record RaisingProperties(
     int sideOppositePercent,
     Map<String, Integer> noiseBp,
     int spilloverPercent,
+    Map<String, Integer> yearUpBp,
     Crisis crisis,
     Leverage leverage,
     Principle principle) {

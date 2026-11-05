@@ -78,7 +78,14 @@ class DefaultRaisingService implements RaisingService {
       c.recruitRun = runId;
       c.recruited = true;
       companies.update(company.get().id(), c, false);
-      state = engine.create(new HashSeededRandom(seed), scripted, memory, fund, true);
+      state =
+          engine.create(
+              new HashSeededRandom(seed),
+              scripted,
+              memory,
+              fund,
+              true,
+              new RunEngine.Year(c.phase, c.omen));
     } else {
       // 시대가 끝난 회사는 팔아야 다음 회사가 열린다 (9절). 회사가 없거나 팔렸으면 사재로 하는 판이다.
       boolean unsold = companies.latest(sessionId).map(r -> !r.state().sold).orElse(false);
