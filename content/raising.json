@@ -404,8 +404,7 @@
       "reveal": {
         "UP": "{stock}이(가) {percent}% 올랐다.",
         "DOWN": "{stock}이(가) {percent}% 내렸다."
-      },
-      "settlement": "투자 회의 — {title}: {amount}"
+      }
     }
   }
 }

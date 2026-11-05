@@ -145,8 +145,19 @@ class CompanyApiTest {
       assertThat(decided.read("$.invest.outcome.results.length()", Integer.class)).isEqualTo(1);
       assertThat(decided.read("$.invest.outcome.reveal", String.class)).isNotBlank();
       postJson("/api/company/invest", "{\"choice\":\"BUY\"}").andExpect(status().isBadRequest());
+      long meetingTotal = decided.read("$.invest.outcome.total", Long.class);
       DocumentContext settled = json(settle(year).andExpect(status().isOk()));
       assertThat(settled.read("$.lastSettlement.year", Integer.class)).isEqualTo(year);
+      // 연말 결산서(240번): 회의 몫이 따로 실리고, 시작 자본 + 회의 + 직원들 몫 + 수수료 = 끝 자본.
+      assertThat(settled.read("$.lastSettlement.invest.total", Long.class)).isEqualTo(meetingTotal);
+      assertThat(settled.read("$.lastSettlement.invest.title", String.class)).isNotBlank();
+      long staff = settled.read("$.lastSettlement.results[0].pnl", Long.class);
+      long before = settled.read("$.lastSettlement.capitalBefore", Long.class);
+      long fee = settled.read("$.lastSettlement.fee", Long.class);
+      long after = settled.read("$.lastSettlement.capitalAfter", Long.class);
+      if (after > 0) {
+        assertThat(before + meetingTotal + staff + fee).isEqualTo(after);
+      }
     }
     // 매각을 뺐다(236번): 세 해가 지나도 회사는 끝나지 않고 4년 차 연초 회의가 온다.
     DocumentContext fourth = json(mvc.perform(get("/api/company").cookie(session)));

@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { Applicant, Company } from '../../api/client'
 import { Document } from '../game/Document'
-import { shortWon, signedWon } from '../game/labels'
+import { shortWon } from '../game/labels'
 import { usePixelArt } from '../game/pixelArt'
 import { BuildingArt } from './BuildingArt'
-import { bubbleOf, pnlLabel } from './board'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { InvestWindow } from './InvestWindow'
 import { MoveScene } from './MoveScene'
@@ -12,6 +11,7 @@ import { OfficeArt, type SeatFocus } from './OfficeArt'
 import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName } from './office'
 import { autoPlace, seatOne } from './placement'
 import { useRaisingStore } from './store'
+import { Ledger, PHASES, YearEndSheet } from './YearEnd'
 
 type Employee = Company['employees'][number]
 type Desk = Company['desks'][number]
@@ -47,13 +47,11 @@ export function CompanyScreen({ company }: { company: Company }) {
   const ended = company.status === 'ENDED'
   const meeting = company.meeting
 
-  useEffect(() => {
-    if (justSettled) {
-      // 결산하면 지난 결산 탭이 열린다(스토어). 탭 머리로 올려 결과부터 보이게 한다.
-      document.querySelector('[data-testid="tabs"]')?.scrollIntoView({ block: 'start' })
-      useRaisingStore.setState({ justSettled: false })
-    }
-  }, [justSettled])
+  // 결산하면 연말 결산서가 따로 뜬다(240번). 닫으면 지난 결산 탭(스토어가 열어 둠)의 머리로 올린다.
+  const closeYearEnd = () => {
+    useRaisingStore.setState({ justSettled: false })
+    document.querySelector('[data-testid="tabs"]')?.scrollIntoView({ block: 'start' })
+  }
 
   return (
     <Document
@@ -101,6 +99,8 @@ export function CompanyScreen({ company }: { company: Company }) {
         )}
 
         <CompanyTabs company={company} />
+
+        {justSettled && <YearEndSheet company={company} onClose={closeYearEnd} />}
 
         {!ended && company.invest && investOpen && (
           <InvestWindow
@@ -512,63 +512,20 @@ function CompanyTabs({ company }: { company: Company }) {
   )
 }
 
-const PHASES: Record<string, string> = { boom: '호황', normal: '보통', crash: '폭락장' }
-
+/** 지난 결산 탭: 연말 결산서와 같은 장부(240번)와 그해 소식 줄. */
 function SettlementView({ company }: { company: Company }) {
   const s = company.lastSettlement
   if (!s) {
     return null
   }
-  const desk = (code: string) => company.desks.find((d) => d.code === code)?.name ?? code
   return (
     <section data-testid="settlement">
       <h3 className="font-pen text-[22px]">
         {s.year}년 차 결산 · {PHASES[s.phase]}
       </h3>
-      <p className="text-[14px]">
-        자본 {shortWon(s.capitalBefore)} → <b>{shortWon(s.capitalAfter)}</b>
-        {officeName(s.gradeBefore) !== officeName(s.gradeAfter)
-          ? ` · 이사 ${officeName(s.gradeBefore)} → ${officeName(s.gradeAfter)}`
-          : s.gradeBefore !== s.gradeAfter &&
-            (LADDER.indexOf(s.gradeAfter) > LADDER.indexOf(s.gradeBefore)
-              ? ' · 사무실을 넓혔다'
-              : ' · 사무실을 줄였다')}
-      </p>
-      <p className="text-[12px] text-muted">수수료 매출 {signedWon(s.fee)}</p>
-      {s.results.length > 0 && (
-        <ol
-          className="mt-2 rounded bg-ink p-3 font-mono-num text-[13px] text-white"
-          aria-label="결산 전광판"
-          data-testid="board"
-        >
-          {s.results.map((r, i) => {
-            const bubble = bubbleOf(r.flips, r.pnl)
-            return (
-              <li
-                key={r.employeeId}
-                className="animate-reveal flex flex-wrap items-baseline justify-between gap-x-2 py-0.5"
-                // 직원별 수익이 차례로 오른다 (8.3절).
-                style={{ animationDelay: `${i * 400}ms`, animationFillMode: 'both' }}
-              >
-                <span>
-                  {r.name} · {desk(r.desk)}
-                </span>
-                <b className={r.pnl >= 0 ? 'text-[#ff8a7a]' : 'text-[#8cc3ec]'}>
-                  {pnlLabel(r.pnl)}
-                </b>
-                {bubble && (
-                  <span
-                    className="w-full rounded bg-white px-2 text-[12px] text-ink"
-                    data-testid="bubble"
-                  >
-                    💬 {bubble}
-                  </span>
-                )}
-              </li>
-            )
-          })}
-        </ol>
-      )}
+      <div className="mt-1">
+        <Ledger company={company} settlement={s} />
+      </div>
       <ul className="mt-2 text-[13px]">
         {s.lines.map((line) => (
           <li key={line}>{line}</li>

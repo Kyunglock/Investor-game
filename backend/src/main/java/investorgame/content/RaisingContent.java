@@ -71,7 +71,6 @@ public record RaisingContent(
    * @param rogue 제멋대로 했다. {action}
    * @param swayed 꼬드김에 넘어갔다. {who}·{action}
    * @param reveal 정한 뒤 드러난 결과. UP·DOWN별, {stock}·{percent}
-   * @param settlement 결산의 한 줄. {title}·{amount}
    */
   public record Invest(
       Map<String, String> options,
@@ -80,8 +79,7 @@ public record RaisingContent(
       String obey,
       String rogue,
       String swayed,
-      Map<String, String> reveal,
-      String settlement) {}
+      Map<String, String> reveal) {}
 
   /** 공채 시장 지원자 카드의 한 줄. wanted: 올해 필요한 인재({desk}·{stat}). hr: 인사팀이 데려온 지원자({name}). */
   public record Market(String wanted, String hr) {}

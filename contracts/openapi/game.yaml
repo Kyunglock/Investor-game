@@ -376,6 +376,15 @@ components:
                 capitalBefore: { type: integer, format: int64 }
                 capitalAfter: { type: integer, format: int64 }
                 fee: { type: integer, format: int64 }
+                invest:
+                  description: 그해 투자 회의(기사 제목과 손익, 이미 자본에 들어갔다). 회의를 안 했거나 옛 결산이면 null (decisions.md 240번)
+                  oneOf:
+                    - type: object
+                      required: [title, total]
+                      properties:
+                        title: { type: string }
+                        total: { type: integer, format: int64 }
+                    - type: 'null'
                 gradeBefore: { $ref: '#/components/schemas/Grade' }
                 gradeAfter: { $ref: '#/components/schemas/Grade' }
                 results:

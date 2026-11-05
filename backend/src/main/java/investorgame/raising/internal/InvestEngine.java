@@ -385,18 +385,4 @@ class InvestEngine {
             "percent",
             String.valueOf(Math.round(c.invest.magnitudeBp / (float) PERCENT))));
   }
-
-  /** 결산에 남기는 한 줄. 회의를 하지 않았으면 null. */
-  String settlementLine(CompanyState c) {
-    if (c.invest == null || c.invest.choice == null) {
-      return null;
-    }
-    return Korean.fill(
-        content.raising().company().invest().settlement(),
-        Map.of(
-            "title",
-            c.invest.title,
-            "amount",
-            (c.invest.total >= 0 ? "+" : "") + CompanyEngine.won(c.invest.total)));
-  }
 }

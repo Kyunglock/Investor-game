@@ -242,14 +242,23 @@ export function InvestWindow({
               </b>
             </p>
             {finished && (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onSettle}
-                className="animate-reveal mt-4 min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
-              >
-                {year}년 차 결산 보기
-              </button>
+              <>
+                <p
+                  className="animate-reveal mt-3 rounded bg-line-soft px-3 py-2 text-center text-[13px]"
+                  data-testid="invest-next"
+                >
+                  회의는 이 <b>한 건</b>으로 끝났습니다. 이제 직원들이 <b>1년 동안</b> 배치대로 굴린
+                  결과를 봅니다.
+                </p>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={onSettle}
+                  className="animate-reveal mt-2 min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
+                >
+                  {year}년 차 결산 보기 →
+                </button>
+              </>
             )}
           </div>
         )}

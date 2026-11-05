@@ -177,6 +177,12 @@ class CompanyState {
     long capitalBefore;
     long capitalAfter;
     long fee;
+
+    /** 그해 투자 회의의 기사 제목과 손익. 회의를 안 했거나 이 칸을 더하기 전(240번)의 결산이면 null. */
+    String investTitle;
+
+    Long investTotal;
+
     String gradeBefore;
     String gradeAfter;
     List<Result> results = new ArrayList<>();

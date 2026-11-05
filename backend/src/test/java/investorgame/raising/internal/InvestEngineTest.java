@@ -85,8 +85,12 @@ class InvestEngineTest {
             () -> ENGINE.invest.decide(company, InvestEngine.BUY, new HashSeededRandom(2)))
         .as("한 해에 한 번")
         .isInstanceOf(InvalidRequestException.class);
+    String title = company.invest.title;
     CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(2));
-    assertThat(s.lines).anyMatch(l -> l.startsWith("투자 회의"));
+    // 연말 결산서(240번): 회의는 소식 줄이 아니라 따로 실린다(지켜봤으니 0).
+    assertThat(s.investTitle).isEqualTo(title);
+    assertThat(s.investTotal).isZero();
+    assertThat(s.lines).noneMatch(l -> l.startsWith("투자 회의"));
   }
 
   /** 줏대·용기가 만점이면 사장 말대로 하고, 맞히면 벌고 틀리면 잃고, 지켜보면 0. 손익은 바로 자본에 들어간다. */

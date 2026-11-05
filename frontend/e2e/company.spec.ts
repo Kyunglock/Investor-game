@@ -60,7 +60,20 @@ async function settleYear(page: Page, year: number, choice: string, watch = fals
   }
   await settle.click()
   await expect(meeting).toBeHidden()
+  await closeYearEnd(page, year)
   await expect(page.getByTestId('settlement')).toContainText(`${year}년 차 결산`)
+}
+
+/**
+ * 결산하면 연말 결산서가 따로 뜬다 (240번): 투자 회의 한 건과 직원들이 1년 동안 굴린 몫이 나뉘어 있고, 확인하면 닫힌다.
+ */
+async function closeYearEnd(page: Page, year: number) {
+  const sheet = page.getByRole('dialog', { name: '연말 결산서' })
+  await expect(sheet).toContainText(`${year}년 차 연말 결산서`)
+  await expect(sheet.getByTestId('ledger-staff')).toContainText('직원들의 1년 운용')
+  await expect(sheet.getByTestId('ledger-after')).toBeVisible()
+  await sheet.getByRole('button', { name: '확인' }).click()
+  await expect(sheet).toBeHidden()
 }
 
 test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자리 두 개와 지원자 셋이 있다', async ({
@@ -188,7 +201,9 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
         'aria-selected',
         'true',
       )
-      await expect(page.getByTestId('settlement')).toContainText('투자 회의')
+      // 장부에 회의 한 건이 직원들의 1년 운용과 따로 있다 (240번).
+      await expect(page.getByTestId('ledger-invest')).toContainText('투자 회의')
+      await expect(page.getByTestId('ledger-staff')).toBeVisible()
       await expect(page.getByTestId('office-pnl')).toHaveCount(2)
     }
   }
@@ -235,6 +250,9 @@ test('결산 버튼을 빠르게 두 번 눌러도 한 해만 넘어간다 (#305
     }
   })
   await page.getByRole('button', { name: '1년 차 결산 보기' }).dblclick()
+  // 회의를 안 했으니 결산서에 회의 줄이 없다.
+  await expect(page.getByTestId('year-end').getByTestId('ledger-invest')).toHaveCount(0)
+  await closeYearEnd(page, 1)
   await expect(page.getByTestId('settlement')).toContainText('1년 차 결산')
   await expect(page.getByText(/1호 회사 · 2년 차/)).toBeVisible()
   // 서버에도 같은 해를 두 번 보내 본다: 한 해만 넘어간다.
