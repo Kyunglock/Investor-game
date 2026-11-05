@@ -34,7 +34,7 @@ export function hasProp(grade: Grade): boolean {
   return ['E', 'C', 'A', 'SS', 'XX', 'XXX', 'ZZ', 'ZZZ'].includes(grade)
 }
 
-const OFFICE_NAMES: Record<Tier, string> = {
+export const OFFICE_NAMES: Record<Tier, string> = {
   basement: '반지하 원룸',
   shop: '상가 2층',
   small: '작은 빌딩 한 층',
@@ -42,6 +42,45 @@ const OFFICE_NAMES: Record<Tier, string> = {
   whole: '여의도 빌딩 통째로',
   hq: '우리 이름이 붙은 사옥',
   landmark: '랜드마크 타워',
+}
+
+/** 건물 단계 순서. 회사 화면은 회사 등급 글자 대신 건물로 보인다 (decisions.md 238번). */
+export const TIER_ORDER: Tier[] = [
+  'basement',
+  'shop',
+  'small',
+  'yeouido',
+  'whole',
+  'hq',
+  'landmark',
+]
+
+/** 건물 사다리의 짧은 이름 */
+export const TIER_SHORT: Record<Tier, string> = {
+  basement: '반지하',
+  shop: '상가',
+  small: '작은 빌딩',
+  yeouido: '여의도',
+  whole: '빌딩 통째',
+  hq: '사옥',
+  landmark: '랜드마크',
+}
+
+export function officeName(grade: Grade): string {
+  return OFFICE_NAMES[tierOf(grade)]
+}
+
+/**
+ * 다음 단계 한 줄: 다음 등급이 다른 건물이면 이사, 같은 건물이면 사무실을 넓혀 책상을 들인다. 자본 띠는 서버가 준다(nextGradeCapital). 끝 등급이면 null.
+ */
+export function nextStep(grade: Grade): { kind: 'move'; to: string } | { kind: 'expand' } | null {
+  const next = LADDER[LADDER.indexOf(grade) + 1]
+  if (!next) {
+    return null
+  }
+  return tierOf(next) === tierOf(grade)
+    ? { kind: 'expand' }
+    : { kind: 'move', to: OFFICE_NAMES[tierOf(next)] }
 }
 
 /** 객장 손님 수: 고객이 돈을 더 맡긴다를 사람으로 그린다. F는 손님 대신 길고양이 한 마리. */

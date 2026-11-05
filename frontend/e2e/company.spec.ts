@@ -63,13 +63,17 @@ async function settleYear(page: Page, year: number, choice: string, watch = fals
   await expect(page.getByTestId('settlement')).toContainText(`${year}년 차 결산`)
 }
 
-test('처음 오면 회사를 차리고, 직원 없이 F등급 자리 두 개와 지원자 셋이 있다', async ({ page }) => {
+test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자리 두 개와 지원자 셋이 있다', async ({
+  page,
+}) => {
   await openCompany(page)
-  await expect(page.getByTestId('company-grade')).toHaveText('F')
+  // 회사 등급 글자 대신 건물로 보인다 (238번): 반지하 원룸에서 시작하고 건물 사다리는 일곱 칸이다.
+  await expect(page.getByTestId('company-building')).toHaveText('반지하 원룸')
   // 직원이 없으면 공채 탭이 먼저 열린다.
   await expect(page.getByRole('tab', { name: /공채/ })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByTestId('applicant')).toHaveCount(3)
-  await expect(page.getByTestId('ladder').first().getByRole('listitem')).toHaveCount(15)
+  await expect(page.getByTestId('building-ladder').getByRole('listitem')).toHaveCount(7)
+  await expect(page.getByTestId('next-step')).toContainText('사무실 넓히기')
   // 첫 지원자는 연초 회의가 말한 "올해 필요한 인재"다.
   await expect(page.getByTestId('applicant').first()).toContainText('맞는 사람이다')
   // 지원자는 관심 섹터를 안고 온다 (233번).

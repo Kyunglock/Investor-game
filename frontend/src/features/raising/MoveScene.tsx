@@ -1,9 +1,10 @@
 import type { Grade } from '../../api/client'
 import { usePixelArt } from '../game/pixelArt'
 import { moveOf, wreathsFor } from './board'
+import { officeName } from './office'
 
 /**
- * 이사 장면 (증권사 육성 설계 8.3절). 결산 뒤 회사 등급이 바뀌었을 때 한 번 보인다. 오르면 이삿짐 트럭·새 간판·개업 떡과 단골 인물이 보낸 축하 화환,
+ * 이사 장면 (증권사 육성 설계 8.3절). 결산 뒤 회사 등급이 바뀌었을 때 한 번 보인다. 글은 등급 대신 건물로 말한다 (238번). 오르면 이삿짐 트럭·새 간판·개업 떡과 단골 인물이 보낸 축하 화환,
  * 떨어지면 짐을 줄여 작은 사무실로 옮긴다. 그림을 끄면 글만 보인다 (190번).
  */
 export function MoveScene({
@@ -23,6 +24,17 @@ export function MoveScene({
     return null
   }
   const up = move === 'up'
+  const from = officeName(before)
+  const to = officeName(after)
+  // 회사 등급 대신 건물로 말한다 (238번): 건물이 바뀌면 이사, 같은 건물이면 사무실을 넓히거나 줄인다.
+  const line =
+    from !== to
+      ? up
+        ? `이사했다: ${from} → ${to}. 이삿짐 트럭이 왔다. 새 간판을 달고 개업 떡을 돌렸다.`
+        : `짐을 줄여 작은 사무실로 옮겼다: ${from} → ${to}.`
+      : up
+        ? `사무실을 넓혔다(${to}). 새 책상이 들어오고 떡을 돌렸다.`
+        : `사무실을 줄였다(${to}). 책상 몇 개를 내놓았다.`
   return (
     <section
       className="mt-4 animate-reveal rounded border border-gold p-4"
@@ -65,15 +77,11 @@ export function MoveScene({
           {up && <rect x={40} y={15} width={4} height={2} fill="#f4f1ea" />}
         </svg>
       )}
-      <p className="mt-2 text-[14px] font-semibold">
-        {up
-          ? `회사 등급이 올랐다 (${before} → ${after}). 이삿짐 트럭이 왔다. 새 간판을 달고 개업 떡을 돌렸다.`
-          : `회사 등급이 떨어졌다 (${before} → ${after}). 짐을 줄여 작은 사무실로 옮겼다.`}
-      </p>
+      <p className="mt-2 text-[14px] font-semibold">{line}</p>
       {up && (
         <ul className="mt-1 text-[13px]" data-testid="wreaths">
           {wreathsFor(year).map((sender) => (
-            <li key={sender}>축 승급 — {sender} 올림</li>
+            <li key={sender}>축 발전 — {sender} 올림</li>
           ))}
         </ul>
       )}

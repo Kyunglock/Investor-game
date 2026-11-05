@@ -3,13 +3,13 @@ import type { Applicant, Company } from '../../api/client'
 import { Document } from '../game/Document'
 import { shortWon, signedWon } from '../game/labels'
 import { usePixelArt } from '../game/pixelArt'
+import { BuildingArt } from './BuildingArt'
 import { bubbleOf, pnlLabel } from './board'
-import { GradeLadder } from './GradeLadder'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { InvestWindow } from './InvestWindow'
 import { MoveScene } from './MoveScene'
 import { OfficeArt, type SeatFocus } from './OfficeArt'
-import { ATTIRE_NAMES, attireOf, glowOf } from './office'
+import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName } from './office'
 import { autoPlace, seatOne } from './placement'
 import { useRaisingStore } from './store'
 
@@ -73,27 +73,23 @@ export function CompanyScreen({ company }: { company: Company }) {
             {company.opening}
           </p>
         )}
-        <div className="flex items-baseline justify-between">
-          <p className="text-[13px] text-muted">회사 등급</p>
-          <p className="font-mono-num text-[15px]" data-testid="company-capital">
+        {/* 회사 등급 글자 대신 건물로 보인다 (238번). */}
+        <div className="mt-2 flex items-baseline justify-between gap-2">
+          <p
+            className="font-serif-kr text-[24px] font-black leading-tight"
+            data-testid="company-building"
+          >
+            {officeName(company.grade)}
+          </p>
+          <p className="shrink-0 font-mono-num text-[15px]" data-testid="company-capital">
             자본 {shortWon(company.capital)}
           </p>
         </div>
-        <p
-          className="font-serif-kr text-[40px] font-black leading-none"
-          data-testid="company-grade"
-        >
-          {company.grade}
-        </p>
-        <GradeLadder grade={company.grade} />
+        <BuildingArt grade={company.grade} />
+        <NextStep company={company} />
         <OfficeArt company={company} focus={focus} onSeat={ended ? undefined : setFocus} />
         {!ended && focus && <SeatPicker company={company} focus={focus} onFocus={setFocus} />}
         <PixelToggle />
-        {company.nextGradeCapital != null && (
-          <p className="mt-1 text-[12px] text-muted">
-            다음 등급까지 자본 {shortWon(company.nextGradeCapital)} · 자리 {company.seats}개
-          </p>
-        )}
 
         {company.lastSettlement && !moved && (
           <MoveScene
@@ -142,6 +138,20 @@ export function CompanyScreen({ company }: { company: Company }) {
         )}
       </div>
     </Document>
+  )
+}
+
+/** 다음 단계: 자본이 얼마가 되면 다음 건물로 이사하는지, 같은 건물에서 책상을 늘리는지 (238번). */
+function NextStep({ company }: { company: Company }) {
+  const step = nextStep(company.grade)
+  if (!step || company.nextGradeCapital == null) {
+    return null
+  }
+  return (
+    <p className="mt-1 text-[12px] text-muted" data-testid="next-step">
+      {step.kind === 'move' ? `다음 건물 ${step.to}` : '사무실 넓히기(책상 추가)'} · 자본{' '}
+      {shortWon(company.nextGradeCapital)}부터 · 지금 책상 {company.seats}개
+    </p>
   )
 }
 
@@ -517,7 +527,12 @@ function SettlementView({ company }: { company: Company }) {
       </h3>
       <p className="text-[14px]">
         자본 {shortWon(s.capitalBefore)} → <b>{shortWon(s.capitalAfter)}</b>
-        {s.gradeBefore !== s.gradeAfter && ` · 등급 ${s.gradeBefore} → ${s.gradeAfter}`}
+        {officeName(s.gradeBefore) !== officeName(s.gradeAfter)
+          ? ` · 이사 ${officeName(s.gradeBefore)} → ${officeName(s.gradeAfter)}`
+          : s.gradeBefore !== s.gradeAfter &&
+            (LADDER.indexOf(s.gradeAfter) > LADDER.indexOf(s.gradeBefore)
+              ? ' · 사무실을 넓혔다'
+              : ' · 사무실을 줄였다')}
       </p>
       <p className="text-[12px] text-muted">수수료 매출 {signedWon(s.fee)}</p>
       {s.results.length > 0 && (

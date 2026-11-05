@@ -19,20 +19,6 @@ export const LADDER: readonly Grade[] = [
   'ZZZ',
 ]
 
-/**
- * 사다리 색 (11.3절): F~SSS는 흰색 계열, X·XX·XXX는 파란색, Z·ZZ·ZZZ는 금색. X와 Z가 SSS 위라는 것이 눈으로 보인다. 직원 차림새의 빛과
- * 같은 색이다 (8.2절).
- */
-export function ladderTone(grade: Grade): string {
-  if (grade.startsWith('Z')) {
-    return 'bg-gold text-white'
-  }
-  if (grade.startsWith('X')) {
-    return 'bg-down text-white'
-  }
-  return 'bg-card text-ink border border-line'
-}
-
 /** 화면에 숫자를 보이지 않으므로, 맞대결 막대의 처음 몫은 등급 띠의 가운데로 잡는다. */
 const BAND_MIDDLE: Partial<Record<Grade, number>> = {
   F: 10,

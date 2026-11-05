@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import type { Company } from '../../api/client'
-import { attireOf, customersOf, glowOf, lobbyOf, officeCaption, seatTiles, tierOf } from './office'
+import { PALETTE } from '../game/pixel/palette'
+import { buildingMap } from './BuildingArt'
+import { LADDER } from './grades'
+import {
+  attireOf,
+  customersOf,
+  glowOf,
+  lobbyOf,
+  nextStep,
+  officeCaption,
+  officeName,
+  seatTiles,
+  tierOf,
+} from './office'
 
 describe('회사 건물과 객장 (증권사 육성 설계 8.1절)', () => {
   it('등급마다 건물이 바뀐다: 반지하 → 상가 → 작은 빌딩 → 여의도 → 통째 → 사옥 → 랜드마크', () => {
@@ -86,5 +99,30 @@ describe('직원 차림새 (8.2절)', () => {
     expect(glowOf('SSS')).toBeNull()
     expect(glowOf('XXX')).toBe('blue')
     expect(glowOf('Z')).toBe('gold')
+  })
+})
+
+describe('건물로 보이는 회사 (decisions.md 238번)', () => {
+  it('다음 등급이 다른 건물이면 이사, 같은 건물이면 사무실을 넓히고, 끝이면 없다', () => {
+    expect(officeName('F')).toBe('반지하 원룸')
+    expect(nextStep('F')).toEqual({ kind: 'expand' })
+    expect(nextStep('E')).toEqual({ kind: 'move', to: '상가 2층' })
+    expect(nextStep('SS')).toEqual({ kind: 'move', to: '여의도 빌딩 통째로' })
+    expect(nextStep('ZZZ')).toBeNull()
+  })
+
+  it('모든 등급의 건물 그림은 팔레트 글자만 쓰고, 우리 층은 불이 켜져 있다', () => {
+    for (const grade of LADDER) {
+      const map = buildingMap(grade)
+      expect(map.flat().every((ch) => ch in PALETTE)).toBe(true)
+      expect(map.flat()).toContain('L')
+    }
+    // 건물이 클수록 불 켜진 창이 많다.
+    const lit = (g: (typeof LADDER)[number]) =>
+      buildingMap(g)
+        .flat()
+        .filter((c) => c === 'L').length
+    expect(lit('F')).toBeLessThan(lit('D'))
+    expect(lit('S')).toBeLessThan(lit('SSS'))
   })
 })
