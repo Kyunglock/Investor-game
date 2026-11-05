@@ -18,8 +18,7 @@ import tools.jackson.databind.json.JsonMapper;
 /** 저장소의 실제 콘텐츠(content/*.json)가 규칙을 지키는지 서버 없이 확인한다. 어긋나면 서버가 시작 단계에서 실패해야 한다. */
 class JsonContentCatalogTest {
 
-  private static final ContentProperties PROPERTIES =
-      new ContentProperties(8, List.of("no-such-dir"));
+  private static final ContentProperties PROPERTIES = new ContentProperties(List.of("no-such-dir"));
 
   private static JsonContentCatalog load() {
     return new JsonContentCatalog(JsonMapper.builder().build(), PROPERTIES);
@@ -43,7 +42,7 @@ class JsonContentCatalogTest {
     JsonContentCatalog fromDir =
         new JsonContentCatalog(
             JsonMapper.builder().build(),
-            new ContentProperties(8, List.of("no-such-dir", dir.toString())));
+            new ContentProperties(List.of("no-such-dir", dir.toString())));
 
     assertThat(fromDir.version()).isEqualTo("dir-9.9.9");
     assertThat(load().version()).as("디렉터리가 없으면 클래스 경로").isEqualTo("0.1.0");
@@ -61,9 +60,8 @@ class JsonContentCatalogTest {
       assertThat(clues.down()).as(news.code()).hasSizeGreaterThanOrEqualTo(3);
     }
     RaisingContent raising = catalog.raising();
-    assertThat(raising.traits())
-        .extracting(RaisingContent.Card::slot)
-        .contains(RaisingContent.SLOT_STYLE, RaisingContent.SLOT_SECTOR);
+    assertThat(raising.tempters()).hasSizeGreaterThanOrEqualTo(2);
+    assertThat(raising.company().market().wanted()).contains("{desk}").contains("{stat}");
     assertThat(raising.company().desks())
         .extracting(RaisingContent.Desk::code)
         .contains("bio", "day", "research", "risk", "hr");

@@ -2,6 +2,7 @@ package investorgame.raising.internal;
 
 import java.time.Clock;
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -77,6 +78,26 @@ class CompanyRepository {
         .param("sessionId", sessionId)
         .query(this::map)
         .optional();
+  }
+
+  record Recent(Row row, OffsetDateTime createdAt, OffsetDateTime updatedAt) {}
+
+  /** 최근에 차린 회사부터 limit개. 관리자 플레이 기록용. */
+  List<Recent> recent(int limit) {
+    return jdbc.sql(
+            """
+            SELECT id, session_id, status, seed, state, created_at, updated_at FROM raising_company
+            ORDER BY created_at DESC
+            LIMIT :limit
+            """)
+        .param("limit", limit)
+        .query(
+            (rs, i) ->
+                new Recent(
+                    map(rs, i),
+                    rs.getObject("created_at", OffsetDateTime.class),
+                    rs.getObject("updated_at", OffsetDateTime.class)))
+        .list();
   }
 
   void update(UUID id, CompanyState state, boolean ended) {

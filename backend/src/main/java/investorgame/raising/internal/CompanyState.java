@@ -2,13 +2,15 @@ package investorgame.raising.internal;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 /** 회사 하나의 모든 상태. raising_company.state에 JSON으로 둔다. 올해 시장 갈래는 숨은 값이라 화면에는 조짐만 나간다. */
+// 3분 육성 시절의 칸(공채 판, 연봉, 열린 기능…)이 남은 옛 상태도 읽는다 (decisions.md 228번).
+@JsonIgnoreProperties(ignoreUnknown = true)
 @JsonAutoDetect(
     fieldVisibility = Visibility.ANY,
     getterVisibility = Visibility.NONE,
@@ -44,21 +46,19 @@ class CompanyState {
   String nextPhase;
 
   String nextOmen;
-  boolean recruited;
 
-  /** 공채 육성 중인 판과 회사가 내준 운용금. 판이 끝나 등록을 정하면 비운다. */
-  UUID recruitRun;
+  /** 올해 공채 시장의 지원자 (오토배틀러의 상점). 해가 바뀌면 새로 온다. 뽑으면 빠진다. */
+  List<Applicant> applicants = new ArrayList<>();
 
-  long recruitFund;
+  /** 올해 지원자를 새로 받은 횟수. 같은 해에 새로 받을 때마다 다른 지원자가 온다. */
+  int refreshes;
 
-  /** 끝났지만 등록을 아직 정하지 않은 판. */
-  UUID pendingRun;
-
-  /** 인사 직원이 데려와 등록을 기다리는 신입의 능력치. 없으면 null (6.3절). */
-  Map<String, Integer> candidate;
+  /** 지금까지 만난 지원자 수. 지원자 이름과 번호를 이것으로 붙인다. 다음 회사로 이어진다. */
+  int met;
 
   List<Settlement> settlements = new ArrayList<>();
 
+  @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
   static class Employee {
     int id;
@@ -74,13 +74,26 @@ class CompanyState {
     /** 실전 경험. 위기를 버틸 때 쌓이고, SSS에서 다음 단계로 오르면 0이 된다 (2.3절). */
     int experience;
 
-    /** 연봉. 인사 직원이 뽑은 신입만 받는다: 회사 자본을 가져오지 않은 대신이다 (6.3절). */
-    long salary;
-
     /** 큰 손실로 내려간 능력치. 위기를 버티면 맨 뒤의 것부터 되찾는다 (6.4절). */
     List<String> dropped = new ArrayList<>();
   }
 
+  /** 공채 시장의 지원자 한 명. 계약금을 내고 뽑으면 그대로 직원이 된다. */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Applicant {
+    /** 회사 안에서 지원자를 가리키는 번호(만난 순서). */
+    int id;
+
+    String name;
+    Map<String, Integer> stats = new LinkedHashMap<>();
+    long fee;
+
+    /** 지원자 카드의 한 줄(올해 필요한 인재, 사수가 붙음). 없으면 null. */
+    String line;
+  }
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
   static class Settlement {
     int year;
@@ -95,6 +108,7 @@ class CompanyState {
     List<String> lines = new ArrayList<>();
   }
 
+  @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
   static class Result {
     int employeeId;

@@ -22,8 +22,6 @@ admin:
 content:
   # 콘텐츠 JSON 디렉터리 후보(작업 디렉터리 기준). 있으면 클래스 경로보다 먼저 읽어 IDE 실행에서도 콘텐츠가 보인다. 운영은 클래스 경로만 쓴다
   dirs: ../content, content
-  # 육성 카드의 선택지가 능력치를 움직이는 최대 폭 (decisions.md 23번)
-  trait-stat-max-delta: 8
 
 behavior:
   # 능력치 0이면 판정마다 이탈 40%, 100이면 0%. 줏대 판정 뒤 용기·인내 판정이 한 번 더 붙어 겹치므로 80%에서 30%로 낮췄다가
@@ -47,55 +45,8 @@ session:
   ttl: 1d
   cookie-secure: true
 
-# 3분 육성 한 판 (증권사 육성 설계 3절, 투자 원칙 장치 설계). (제안)으로 적힌 값을 구현하며 정한 초기값 (decisions.md 197번~)
+# 증권사 육성 (증권사 육성 설계). 3분 육성 판은 없앴다: 직원은 회사의 공채 시장에서 뽑는다 (decisions.md 228번)
 raising:
-  # 운용금. 회사가 열리기 전에는 판마다 사장의 사재 1억 원 (6.5절)
-  fund: 100000000
-  # 성향 2 → 실전 매매 7(원칙·풀기 카드는 뉴스 자리를 대신한다) + 돈이 걸린 큰일 2 → 입사 심사 1 = 12장 (3.1절)
-  deck: [TRAIT_STYLE, TRAIT_SECTOR, NEWS, NEWS, NEWS, BIG, NEWS, NEWS, LEVERAGE, NEWS, NEWS, EXAM]
-  # 조금/크게가 열리기 전의 "산다"는 지금처럼 30%. 열린 뒤 조금 15%, 크게 50% (3.2절)
-  buy-ratio-bp: 3000
-  small-ratio-bp: 1500
-  big-ratio-bp: 5000
-  # 뉴스 한 장을 복기할 때마다 안목 경험치 3. 두 장이면 안목 +1이라 첫 판 세 번째 뉴스에 형광펜이 열린다 (11.1·11.2절)
-  review-insight-exp: 3
-  # 손이 뒤집히면 그 능력치에 경험치 5 = +1 (character.growth와 같다)
-  deviation-exp: 5
-  exp-per-point: 5
-  max-stat: 100
-  min-stat: 1
-  initial-stat:
-    floor: 10
-    grade-percent: { SSS: 1, SS: 3, S: 5, A: 10, B: 16, C: 25, D: 20, E: 12, F: 8 }
-  # 처음 온 사람의 짜인 첫 판 (11.2절): 쉬운 기사 → 손이 뒤집힘 → 형광펜이 틀리고 기사가 맞음
-  scripted:
-    stats: { insight: 28, patience: 45, courage: 22, conviction: 50, luck: 40 }
-    news:
-      - { news: semi-contract, stock: ssj, up: true, mode: EASY }
-      - { news: food-launch, stock: nsm, up: true, mode: FLIP }
-      - { news: bio-trial, stock: ctl, up: false, mode: MISLEAD }
-  # 곁가지 문장이 숨은 방향의 반대쪽일 확률. 기사만 읽고 다수결하면 약 64% 맞는다 (3.1절)
-  side-opposite-percent: 60
-  # 카드 한 장(한 분기) 동안 저절로 흔들리는 폭(±). 뉴스 충격(6~30%)보다 작게
-  noise-bp: { low: 200, mid: 400, high: 600 }
-  spillover-percent: 30
-  # 공채 육성은 회사의 올해 시장에서 한다 (6.2절): 호황이면 뉴스가 오를 확률 +15%p, 폭락장이면 −10%p
-  year-up-bp: { boom: 1500, normal: 0, crash: -1000 }
-  crisis:
-    chance-percent: 35
-    silent-percent: 25
-    from-card: 6
-    omen-cards: 2
-    fall-bp: { min: 2000, max: 3500 }
-  leverage:
-    min-drop-bp: 500
-    loan-bp: 5000
-    interest-bp: 500
-  principle:
-    flips: 2
-    per-run: 1
-    max-devices: 2
-    release-at: 70
   # 아주 작은 회사 (증권사 육성 설계 4·6절, 2단계). (제안) 수치를 구현하며 정한 초기값 (decisions.md 208번~)
   company:
     # 2단계는 세 해로 끝나는 체험판
@@ -112,9 +63,6 @@ raising:
     # 수수료 매출 자본의 3%, 판돈은 자본 전부(× 배율, 자본을 넘지 않음). 경제 맞춤 (decisions.md 226번, EconomySimulationTest)
     fee-bp: 300
     stake-percent: 100
-    # 공채 육성의 운용금: 자본의 10%, 10억 원까지 (6.5절)
-    recruit-percent: 10
-    recruit-max: 1000000000
     decisions: 4
     omen-percent: 75
     false-omen-percent: 15
@@ -140,11 +88,19 @@ raising:
       conviction-miss-percent: 50
       contrarian-crash-bp: 500
       leader-flip-percent: 50
-    # 인사 직원 (6.3절): 인사팀에 앉으면 공채를 맡는다. 신입은 인사 직원 종합 등급보다 두 단계 아래까지,
-    # 회사 자본을 가져오지 않는 대신 연봉 3천만 원이 결산마다 나간다
+    # 인사 직원 (6.3절): 인사팀에 사람이 있으면 지원자가 한 명 더 오고, 지원자 등급의 중심이 인사 직원보다 두 단계 아래까지 오른다
     hr:
       cap-steps: 2
-      salary: 30000000
+      extra-applicants: 1
+    # 공채 시장 (decisions.md 228번): 해마다 지원자 셋이 온다. 등급의 중심은 회사 등급보다 두 단계 위(F 회사면 D)이고
+    # 한 단계 아래·위로 흩어진다. 계약금을 내고 뽑는다. 새로 받는 값 300만 원
+    market:
+      applicants: 3
+      level-steps: 2
+      spread: 15
+      # 계약금 F 200만 · E 400만 · D 700만 · C 1,000만 · B 1,500만 · A 2,500만 · S 4,000만 · SS 7,000만 · SSS 1.2억
+      fees: [2000000, 4000000, 7000000, 10000000, 15000000, 25000000, 40000000, 70000000, 120000000]
+      refresh-cost: 3000000
     # 매각과 재창업 (9절, 4단계). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다.
     # 시대(turns 해)가 끝나면 반드시 팔고, 그 전에는 SSS 이상이면 스스로 팔 수 있다 (decisions.md 215번~)
     sale:
@@ -156,6 +112,6 @@ raising:
       cofounder-base: 1
       cofounder-fame-steps: 3
       cofounder-max: 4
-      # 새 회사 시작 자본 1억 원, 명성 한 단계마다 +10%
+      # 회사 시작 자본 1억 원(첫 회사는 사장의 사재), 명성 한 단계마다 +10%
       base-capital: 100000000
       fame-capital-percent: 10

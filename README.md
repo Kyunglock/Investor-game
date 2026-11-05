@@ -1,6 +1,6 @@
 # Investor Game
 
-증권사 사장이 되어 수습 투자자를 한 명씩 3분 동안 키운다. 단서 기사를 읽고 사기·팔기·지켜보기를 고르지만, 실행은 그 사람의 능력치가 하고 확률로 뒤집힌다. 설계는 [증권사 육성 설계](./docs/superpowers/specs/2026-11-05-brokerage-raising-design.md).
+증권사 사장이 되어 사재 1억 원으로 회사를 차린다. 해마다 공채 시장에서 지원자를 계약금을 주고 뽑아 자리에 앉히면, 직원들이 성격(능력치)대로 굴리고 확률로 손이 뒤집힌다. 세 해(한 시대)가 끝나면 회사를 팔고 아끼던 직원을 데려가 다시 차린다. 설계는 [증권사 육성 설계](./docs/superpowers/specs/2026-11-05-brokerage-raising-design.md).
 
 설계 문서는 [`docs/`](./docs)에 있다. 처음이라면 [`docs/decisions.md`](./docs/decisions.md)와 [`docs/architecture.md`](./docs/architecture.md)부터 읽는다.
 
@@ -38,7 +38,7 @@ pnpm dev
 
 ### 플레이 기록 보기 (관리자)
 
-서버를 `ADMIN_TOKEN` 환경 변수와 함께 띄우고 `http://localhost:5173/admin`에서 그 토큰을 넣으면, 누가(익명 세션 + 접속 IP) 언제 몇 판을 했고 육성 판이 몇 번째 카드에서 멈췄는지 볼 수 있다. 토큰을 비워 두면 관리자 API는 꺼진다. 서버 로그에도 `investorgame.play` 로거로 육성 판의 시작·카드마다의 선택·끝과 회사의 등록·결산·매각이 IP와 함께 남는다.
+서버를 `ADMIN_TOKEN` 환경 변수와 함께 띄우고 `http://localhost:5173/admin`에서 그 토큰을 넣으면, 누가(익명 세션 + 접속 IP) 언제 회사를 차렸고 첫 회사가 몇 년 차에서 멈췄는지 볼 수 있다. 토큰을 비워 두면 관리자 API는 꺼진다. 서버 로그에도 `investorgame.play` 로거로 회사의 차림·뽑기·결산·매각이 IP와 함께 남는다.
 
 ```bash
 cd backend

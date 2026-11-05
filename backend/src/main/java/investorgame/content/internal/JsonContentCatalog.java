@@ -27,11 +27,6 @@ import tools.jackson.databind.json.JsonMapper;
 @Component
 class JsonContentCatalog implements ContentCatalog {
 
-  private static final String STYLE_PREFIX = "style.";
-  private static final String SECTOR_PREFIX = "sector.";
-  private static final String RISK_PREFIX = "risk.";
-  private static final String MIND_PREFIX = "mind.";
-
   static final List<String> FILES =
       List.of(
           "meta.json",
@@ -52,8 +47,6 @@ class JsonContentCatalog implements ContentCatalog {
   private final Map<String, NewsClues> clues;
   private final Map<String, String> sectorNames;
   private final Map<String, String> styleNames;
-  private final Map<String, String> riskNames;
-  private final Map<String, String> mindNames;
 
   JsonContentCatalog(JsonMapper json, ContentProperties properties) {
     this.properties = properties;
@@ -69,8 +62,6 @@ class JsonContentCatalog implements ContentCatalog {
     this.clues = read(json, "clues.json", new TypeReference<Map<String, NewsClues>>() {});
     this.sectorNames = toMap(meta.sectors());
     this.styleNames = toMap(meta.styles());
-    this.riskNames = toMap(meta.risks());
-    this.mindNames = toMap(meta.minds());
     validate();
   }
 
@@ -208,27 +199,7 @@ class JsonContentCatalog implements ContentCatalog {
 
   private void validateRaising() {
     require(raising != null, "raising.json이 비어 있다");
-    for (String slot : List.of(RaisingContent.SLOT_STYLE, RaisingContent.SLOT_SECTOR)) {
-      require(
-          raising.traits().stream().anyMatch(card -> slot.equals(card.slot())),
-          "육성 성향 카드가 없다: " + slot);
-    }
-    require(!raising.bigs().isEmpty(), "돈이 걸린 큰일 카드가 없다");
-    for (RaisingContent.Card card :
-        java.util.stream.Stream.concat(raising.traits().stream(), raising.bigs().stream())
-            .toList()) {
-      require(card.options().size() >= 2, "육성 카드의 선택지는 둘 이상이어야 한다: " + card.code());
-      for (RaisingContent.Option option : card.options()) {
-        String where = card.code() + "/" + option.code();
-        validateTraitDeltas(where, option.traitDeltas());
-        validateStatDeltas(where, option.statDeltas());
-        for (RaisingContent.CashOutcome outcome : option.outcomes()) {
-          require(outcome.weight() > 0, "결과 가중치는 양수여야 한다: " + where);
-        }
-      }
-    }
     require(raising.tempters().size() >= 2, "단골 꼬드김 인물이 모자란다");
-    require(raising.omenReview() != null, "위기 전조 돌아보기 문구가 없다");
     RaisingContent.Company company = raising.company();
     require(company != null && !company.names().isEmpty(), "회사 문구가 없다");
     require(company.desks().stream().anyMatch(RaisingContent.Desk::trades), "돈을 굴리는 자리가 없다");
@@ -250,10 +221,8 @@ class JsonContentCatalog implements ContentCatalog {
     for (String stat : List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE)) {
       require(company.flipLines().containsKey(stat), "결산 소식 줄이 없다: " + stat);
     }
+    require(company.market() != null, "공채 시장 문구가 없다");
     for (String stat : List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE)) {
-      require(
-          raising.devices().stream().filter(d -> stat.equals(d.statCode())).count() == 1,
-          "능력치마다 투자 원칙 장치가 하나씩 있어야 한다: " + stat);
       require(raising.flipTips().containsKey(stat), "처음 뒤집힘 설명이 없다: " + stat);
     }
     for (NewsDefinition definition : news) {
@@ -262,41 +231,6 @@ class JsonContentCatalog implements ContentCatalog {
       require(
           clue.up().size() >= 3 && clue.down().size() >= 3 && !clue.neutral().isEmpty(),
           "단서 기사 문장이 모자란다(오름·내림 셋 이상, 중립 하나 이상): " + definition.code());
-    }
-  }
-
-  private void validateTraitDeltas(String where, Map<String, Integer> deltas) {
-    boolean hasStyle = false;
-    boolean hasSector = false;
-    for (String key : deltas.keySet()) {
-      if (key.startsWith(STYLE_PREFIX)) {
-        require(
-            styleNames.containsKey(key.substring(STYLE_PREFIX.length())), "알 수 없는 스타일: " + where);
-        hasStyle = true;
-      } else if (key.startsWith(SECTOR_PREFIX)) {
-        require(
-            sectorNames.containsKey(key.substring(SECTOR_PREFIX.length())), "알 수 없는 섹터: " + where);
-        hasSector = true;
-      } else if (key.startsWith(RISK_PREFIX)) {
-        require(
-            riskNames.containsKey(key.substring(RISK_PREFIX.length())), "알 수 없는 위험 축: " + where);
-      } else if (key.startsWith(MIND_PREFIX)) {
-        require(
-            mindNames.containsKey(key.substring(MIND_PREFIX.length())), "알 수 없는 소신 축: " + where);
-      } else {
-        require(false, "알 수 없는 성향 키: " + where + " " + key);
-      }
-    }
-  }
-
-  private void validateStatDeltas(String where, Map<String, Integer> deltas) {
-    for (Map.Entry<String, Integer> entry : deltas.entrySet()) {
-      require(
-          StatCodes.ALL.contains(entry.getKey()) && !StatCodes.LUCK.equals(entry.getKey()),
-          "성향 선택이 움직일 수 없는 능력치: " + where + " " + entry.getKey());
-      require(
-          Math.abs(entry.getValue()) <= properties.traitStatMaxDelta(),
-          "능력치 변화 폭이 너무 크다: " + where + " " + entry.getKey());
     }
   }
 

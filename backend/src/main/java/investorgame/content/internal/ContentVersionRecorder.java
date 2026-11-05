@@ -45,11 +45,7 @@ class ContentVersionRecorder implements ApplicationRunner {
         .param("loadedAt", OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC))
         .param(
             "summary",
-            "{\"news\":%d,\"raisingTraits\":%d,\"raisingBigs\":%d}"
-                .formatted(
-                    catalog.news().size(),
-                    catalog.raising().traits().size(),
-                    catalog.raising().bigs().size()))
+            "{\"news\":%d,\"stocks\":%d}".formatted(catalog.news().size(), catalog.stocks().size()))
         .update();
   }
 

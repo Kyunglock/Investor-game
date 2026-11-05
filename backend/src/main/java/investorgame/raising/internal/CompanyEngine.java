@@ -20,8 +20,8 @@ import java.util.random.RandomGenerator;
 import org.springframework.stereotype.Component;
 
 /**
- * 아주 작은 회사의 규칙 (증권사 육성 설계 4·6절): 사장은 배치만 하고 직원은 능력치대로 알아서 굴린다. 한 해 = 연초 회의 → 배치 → (공채 육성) → 결산. DB와
- * 시각을 모르고 상태와 난수만 받는다.
+ * 아주 작은 회사의 규칙 (증권사 육성 설계 4·6절): 사장은 사람을 뽑아 배치만 하고 직원은 능력치대로 알아서 굴린다. 한 해 = 연초 회의(공채 시장) → 배치 → 결산.
+ * DB와 시각을 모르고 상태와 난수만 받는다.
  */
 @Component
 class CompanyEngine {
@@ -50,17 +50,10 @@ class CompanyEngine {
   private final BehaviorService behavior;
   private final CompanyProperties properties;
 
-  private final RaisingProperties raising;
-
-  CompanyEngine(
-      ContentCatalog content,
-      BehaviorService behavior,
-      CompanyProperties properties,
-      RaisingProperties raising) {
+  CompanyEngine(ContentCatalog content, BehaviorService behavior, CompanyProperties properties) {
     this.content = content;
     this.behavior = behavior;
     this.properties = properties;
-    this.raising = raising;
   }
 
   static final String HR_DESK = "hr";
@@ -74,59 +67,29 @@ class CompanyEngine {
                 .thenComparingInt(e -> -e.id));
   }
 
-  /** 인사 직원이 뽑는 신입의 종합 등급 상한: 인사 직원보다 두 단계 아래, 바닥 F (6.3절). */
+  /** 인사 직원이 데려오는 지원자의 중심 등급: 인사 직원보다 두 단계 아래, 바닥 F (6.3절). */
   String hrCap(Employee hr) {
     return LADDER.get(Math.max(0, LADDER.indexOf(employeeGrade(hr)) - properties.hr().capSteps()));
-  }
-
-  /**
-   * 인사 직원이 공채를 맡는다 (6.3절). 3분 육성 없이 신입이 들어온다: 능력치를 태어날 때 규칙으로 뽑고, 종합 등급이 상한을 넘으면 가장 높은 능력치부터 깎는다. 손
-   * 육성이 에이스를 만드는 길로 남게 하려는 상한이다. 공채는 한 해에 한 번이라 이것으로 올해 공채를 쓴다.
-   */
-  void hrRecruit(CompanyState company, SeededRandom random) {
-    Employee hr = hrOf(company).orElseThrow(() -> new InvalidRequestException("인사팀에 앉은 직원이 없다"));
-    if (company.recruited || company.candidate != null || company.pendingRun != null) {
-      throw new InvalidRequestException("올해 공채는 이미 했다");
-    }
-    RandomGenerator rng = random.forKey("hr", company.year);
-    Map<String, Integer> stats = new java.util.LinkedHashMap<>();
-    for (String code : StatCodes.ALL) {
-      stats.put(code, RunEngine.rollStat(rng, raising.initialStat()));
-    }
-    int cap = LADDER.indexOf(hrCap(hr));
-    if (cap < LADDER.indexOf(StatGrade.SSS.name())) {
-      int capMax = StatGrade.valueOf(LADDER.get(cap)).max();
-      while (Math.round(
-              stats.values().stream().mapToInt(Integer::intValue).sum() / (float) stats.size())
-          > capMax) {
-        String top =
-            StatCodes.ALL.stream()
-                .max(java.util.Comparator.comparingInt((String code) -> stats.get(code)))
-                .orElseThrow();
-        stats.put(top, stats.get(top) - 1);
-      }
-    }
-    company.candidate = stats;
-    company.recruited = true;
-  }
-
-  String hrLine(Employee hr) {
-    return Korean.fill(content.raising().company().hr().candidate(), Map.of("name", hr.name));
   }
 
   int turns() {
     return properties.turns();
   }
 
-  /** 첫 육성의 사람이 1호 직원이 되며 회사가 열린다. 그 판에서 번 돈이 시작 자본이다 (6.0절). */
-  CompanyState open(SeededRandom random, Map<String, Integer> stats, long capital) {
+  /** 사장의 사재로 첫 회사를 차린다. 직원은 없고, 첫 해 공채 시장에서 뽑는다 (decisions.md 228번). */
+  CompanyState open(SeededRandom random, long capital) {
     CompanyState company = new CompanyState();
     company.capital = Math.max(0, capital);
     company.era = eras().getFirst().code();
-    hire(company, stats);
-    company.opening = openingLine(company);
+    company.opening =
+        Korean.fill(content.raising().company().opening(), Map.of("capital", won(company.capital)));
     startYear(company, random);
     return company;
+  }
+
+  /** 첫 회사의 시작 자본(사장의 사재). */
+  long openingCapital() {
+    return properties.sale().baseCapital();
   }
 
   RaisingContent.Sale saleTexts() {
@@ -184,6 +147,7 @@ class CompanyEngine {
     CompanyState next = new CompanyState();
     next.number = sold.number + 1;
     next.hired = sold.hired;
+    next.met = sold.met;
     CompanyProperties.Sale sale = properties.sale();
     int steps = Math.min(LADDER.size() - 1, famePoints / sale.famePerStep());
     next.capital = sale.baseCapital() * (PERCENT + steps * sale.fameCapitalPercent()) / PERCENT;
@@ -205,7 +169,7 @@ class CompanyEngine {
             "era",
             era(next).name(),
             "capital",
-            RunEngine.won(next.capital),
+            won(next.capital),
             "names",
             String.join("·", next.employees.stream().map(e -> e.name).toList()));
     next.opening =
@@ -214,32 +178,154 @@ class CompanyEngine {
     return next;
   }
 
-  /** 첫 직원의 이름이 들어간 회사를 연 한 줄. */
-  String openingLine(CompanyState company) {
-    return Korean.fill(
-        content.raising().company().opening(),
-        Map.of(
-            "name", company.employees.getFirst().name, "capital", RunEngine.won(company.capital)));
-  }
-
-  /** 인사 직원이 데려온 신입을 등록한다. 연봉을 받는다. */
-  Employee hireCandidate(CompanyState company) {
-    Employee employee = hire(company, company.candidate);
-    employee.salary = properties.hr().salary();
-    company.candidate = null;
-    return employee;
-  }
-
+  /** 능력치만 주고 직원을 들인다. 이름은 다음 지원자 이름이다. 공동창업자·시험용. */
   Employee hire(CompanyState company, Map<String, Integer> stats) {
-    List<String> names = content.raising().company().names();
+    return add(company, nextName(company), stats);
+  }
+
+  private Employee add(CompanyState company, String name, Map<String, Integer> stats) {
     Employee employee = new Employee();
     employee.id = ++company.hired;
-    int round = (company.hired - 1) / names.size();
-    String name = names.get((company.hired - 1) % names.size());
-    employee.name = round == 0 ? name : name + (round + 1);
+    employee.name = name;
     employee.stats.putAll(stats);
     company.employees.add(employee);
     return employee;
+  }
+
+  /** 이름 풀을 차례로 쓰고, 다 쓰면 처음부터 번호를 붙인다. 지난 회사에서 만난 사람 수를 이어 센다. */
+  private String nextName(CompanyState company) {
+    List<String> names = content.raising().company().names();
+    int at = company.met++;
+    int round = at / names.size();
+    String name = names.get(at % names.size());
+    return round == 0 ? name : name + (round + 1);
+  }
+
+  /**
+   * 올해 공채 시장의 지원자를 받는다 (decisions.md 228번). 종합 등급의 중심은 회사 등급보다 두 단계 위이고(인사팀이 있으면 인사 직원보다 두 단계 아래까지
+   * 오른다), 지원자마다 한 단계 아래·위로 흩어진다. 첫 지원자는 올해 필요한 자리에 맞는 사람이라 그 능력치가 뾰족하다. ZZ 사수가 있으면 한 지원자에게 붙어 사수의
+   * 가장 높은 능력치가 한 띠 높다. 인사팀이 있으면 한 명 더 온다.
+   */
+  void deal(CompanyState company, SeededRandom random) {
+    CompanyProperties.Market market = properties.market();
+    RandomGenerator rng = random.forKey("applicants", company.year, company.refreshes);
+    int level = LADDER.indexOf(grade(company.capital)) + market.levelSteps();
+    java.util.Optional<Employee> hr = hrOf(company);
+    if (hr.isPresent()) {
+      level = Math.max(level, LADDER.indexOf(hrCap(hr.get())));
+    }
+    int top = LADDER.indexOf(StatGrade.SSS.name());
+    int count = market.applicants() + (hr.isPresent() ? properties.hr().extraApplicants() : 0);
+    String wantedStat = desk(company.wantedDesk).statCode();
+    java.util.Optional<Employee> mentor = bestRanked(company, RANK_MENTOR);
+    RaisingContent.Company texts = content.raising().company();
+    company.applicants.clear();
+    for (int i = 0; i < count; i++) {
+      int at = Math.clamp(level + rng.nextInt(3) - 1, 0, top);
+      StatGrade center = StatGrade.valueOf(LADDER.get(at));
+      int middle = (center.min() + center.max()) / 2;
+      Map<String, Integer> stats = new java.util.LinkedHashMap<>();
+      for (String code : StatCodes.ALL) {
+        int spread = market.spread();
+        stats.put(code, Math.clamp(middle + rng.nextInt(2 * spread + 1) - spread, 1, MAX_STAT));
+      }
+      String line = null;
+      if (i == 0) {
+        // 연초 회의가 말한 "올해 필요한 인재"가 꼭 한 명은 온다.
+        int spike = Math.min(MAX_STAT, middle + market.spread() + properties.experience().band());
+        stats.merge(wantedStat, spike, Math::max);
+        line =
+            Korean.fill(
+                texts.market().wanted(),
+                Map.of(
+                    "desk", desk(company.wantedDesk).name(),
+                    "stat", texts.statNames().get(wantedStat)));
+      } else if (i == 1 && mentor.isPresent()) {
+        Employee e = mentor.get();
+        String stat =
+            StatCodes.ALL.stream()
+                .max(java.util.Comparator.comparingInt((String code) -> e.stats.get(code)))
+                .orElseThrow();
+        stats.merge(stat, properties.experience().band(), (v, d) -> Math.min(MAX_STAT, v + d));
+        line =
+            Korean.fill(
+                texts.effects().mentorTip(),
+                Map.of("name", e.name, "stat", texts.statNames().get(stat)));
+      } else if (i == count - 1 && hr.isPresent()) {
+        line = Korean.fill(texts.market().hr(), Map.of("name", hr.get().name));
+      }
+      CompanyState.Applicant applicant = new CompanyState.Applicant();
+      applicant.id = company.met + 1;
+      applicant.name = nextName(company);
+      applicant.stats.putAll(stats);
+      applicant.fee = fee(stats);
+      applicant.line = line;
+      company.applicants.add(applicant);
+    }
+  }
+
+  /** 종합 등급으로 정하는 계약금. */
+  long fee(Map<String, Integer> stats) {
+    List<Long> fees = properties.market().fees();
+    return fees.get(Math.min(fees.size() - 1, LADDER.indexOf(overallGrade(stats))));
+  }
+
+  long refreshCost() {
+    return properties.market().refreshCost();
+  }
+
+  /** 값을 내고 올해 지원자를 새로 받는다. 돈이 모자라면 400. */
+  void refresh(CompanyState company, SeededRandom random) {
+    requireOpen(company);
+    long cost = refreshCost();
+    if (company.capital < cost) {
+      throw new InvalidRequestException("지원자를 새로 받을 돈이 모자란다");
+    }
+    company.capital -= cost;
+    company.refreshes++;
+    deal(company, random);
+  }
+
+  /**
+   * 계약금을 내고 지원자를 뽑는다. 자리가 꽉 찼으면 replace의 직원을 내보낸다. 뽑은 직원은 쉬는 채로 들어오고, 사장이 자리에 앉힌다. 돈이 모자라거나 없는 지원자면
+   * 400.
+   */
+  Employee hireApplicant(CompanyState company, int applicantId, Integer replace) {
+    requireOpen(company);
+    CompanyState.Applicant applicant =
+        company.applicants.stream()
+            .filter(a -> a.id == applicantId)
+            .findFirst()
+            .orElseThrow(() -> new InvalidRequestException("없는 지원자"));
+    if (company.capital < applicant.fee) {
+      throw new InvalidRequestException("계약금이 모자란다");
+    }
+    if (company.employees.size() >= seats(company.capital - applicant.fee)) {
+      if (replace == null || company.employees.stream().noneMatch(e -> e.id == replace)) {
+        throw new InvalidRequestException("자리가 꽉 찼다. 내보낼 직원을 고른다");
+      }
+      company.employees.removeIf(e -> e.id == replace);
+    }
+    company.capital -= applicant.fee;
+    company.applicants.remove(applicant);
+    return add(company, applicant.name, applicant.stats);
+  }
+
+  private void requireOpen(CompanyState company) {
+    if (eraOver(company) || company.sold) {
+      throw new InvalidRequestException("시대가 끝났다. 회사를 판다");
+    }
+  }
+
+  static String won(long amount) {
+    long abs = Math.abs(amount);
+    String sign = amount < 0 ? "−" : "";
+    if (abs >= 100_000_000L) {
+      long eok = abs / 100_000_000L;
+      long man = abs % 100_000_000L / 10_000L;
+      return sign + (man == 0 ? "%,d억 원".formatted(eok) : "%,d억 %,d만 원".formatted(eok, man));
+    }
+    return sign + "%,d만 원".formatted(abs / 10_000L);
   }
 
   String grade(long capital) {
@@ -256,11 +342,6 @@ class CompanyEngine {
     int at = LADDER.indexOf(grade(capital));
     List<Integer> seats = properties.seats();
     return at < seats.size() ? seats.get(at) : seats.getLast() + (at - seats.size() + 1);
-  }
-
-  long recruitFund(CompanyState company) {
-    return Math.min(
-        properties.recruitMax(), company.capital * properties.recruitPercent() / PERCENT);
   }
 
   /** 등급이 오를수록 고객이 돈을 더 맡겨 수수료와 판돈이 커진다 (4.5절). */
@@ -317,7 +398,8 @@ class CompanyEngine {
     Market next = marketOf(company, company.year + 1, random);
     company.nextPhase = next.phase();
     company.nextOmen = next.omen();
-    company.recruited = false;
+    company.refreshes = 0;
+    deal(company, random);
   }
 
   List<Long> gradeCapital() {
@@ -367,12 +449,7 @@ class CompanyEngine {
    * 맞힘(안목, 리서치 팀이 형광펜을 빌려준다) 순으로 굴린다. 수수료 매출은 시장과 상관없이 들어온다.
    */
   Settlement settle(CompanyState company, SeededRandom random) {
-    if (eraOver(company) || company.sold) {
-      throw new InvalidRequestException("시대가 끝났다. 회사를 판다");
-    }
-    if (company.recruitRun != null || company.pendingRun != null || company.candidate != null) {
-      throw new InvalidRequestException("공채 육성을 먼저 마친다");
-    }
+    requireOpen(company);
     RandomGenerator rng = random.forKey("company-settle", company.year);
     Settlement settlement = new Settlement();
     settlement.year = company.year;
@@ -470,15 +547,7 @@ class CompanyEngine {
     }
     long fee = (long) (company.capital * properties.feeBp() / (double) BP * multiplier);
     settlement.fee = fee;
-    // 인사 직원이 뽑은 신입은 회사 자본을 가져오지 않은 대신 연봉이 나간다 (6.3절).
-    long salaries = company.employees.stream().mapToLong(e -> e.salary).sum();
-    if (salaries > 0) {
-      settlement.lines.add(
-          Korean.fill(
-              content.raising().company().hr().salary(),
-              Map.of("amount", "−" + RunEngine.won(salaries))));
-    }
-    company.capital = Math.max(0, company.capital + fee + totalPnl - salaries);
+    company.capital = Math.max(0, company.capital + fee + totalPnl);
     settlement.capitalAfter = company.capital;
     settlement.gradeAfter = grade(company.capital);
     settlement.lines.addFirst(content.raising().company().phases().get(company.phase));
@@ -594,28 +663,6 @@ class CompanyEngine {
         .filter(e -> e.rank >= rank)
         .max(
             java.util.Comparator.comparingInt((Employee e) -> e.rank).thenComparingInt(e -> -e.id));
-  }
-
-  /** 공채 신입에게 붙는 사수 (ZZ): 회사에서 가장 높은 ZZ 이상 직원의 가장 높은 능력치. 없으면 null. */
-  RunEngine.Mentor mentorFor(CompanyState company) {
-    return bestRanked(company, RANK_MENTOR)
-        .map(
-            e -> {
-              String stat =
-                  StatCodes.ALL.stream()
-                      .max(java.util.Comparator.comparingInt((String code) -> e.stats.get(code)))
-                      .orElseThrow();
-              String tip =
-                  Korean.fill(
-                      content.raising().company().effects().mentorTip(),
-                      Map.of(
-                          "name",
-                          e.name,
-                          "stat",
-                          content.raising().company().statNames().get(stat)));
-              return new RunEngine.Mentor(stat, properties.experience().band(), tip);
-            })
-        .orElse(null);
   }
 
   /** 직원이 가진 효과 이름. 쌓인다. */

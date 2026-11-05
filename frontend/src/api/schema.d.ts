@@ -24,65 +24,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/runs": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 3분 육성 한 판을 시작한다
-         * @description 진행 중인 판이 있으면 버리고 새로 시작한다. 나이도 시계도 없고 카드 수(12장 안팎)가 판의 끝이다 (증권사 육성 설계 3절).
-         *     세션의 첫 판은 처음 온 사람을 위한 짜인 판이다 (11.2절). 회사가 돌고 있으면 공채 육성이다: 회사가 자본의 10%를 운용금으로 내준다.
-         *     공채는 한 해에 한 번이고, 지난 공채 판의 등록을 정하지 않았으면 400.
-         */
-        post: operations["startRun"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/runs/current": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** 가장 최근 육성 판 (이어하기, 끝난 판의 결과 보기) */
-        get: operations["getCurrentRun"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/runs/{runId}/choose": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 펼쳐진 카드에 선택을 낸다
-         * @description card는 화면이 본 카드 번호다. 지금 카드와 다르거나(두 번 누름) 고를 수 없는 선택이면 400.
-         */
-        post: operations["chooseRunCard"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/company": {
         parameters: {
             query?: never;
@@ -93,7 +34,11 @@ export interface paths {
         /** 세션의 가장 최근 회사 (증권사 육성 설계 4·6절) */
         get: operations["getCompany"];
         put?: never;
-        post?: never;
+        /**
+         * 사장의 사재로 첫 회사를 차린다 (decisions.md 228번)
+         * @description 직원 없이 열리고 첫 해 공채 시장에 지원자가 와 있다. 이미 회사가 있으면 400(다음 회사는 매각으로 차린다).
+         */
+        post: operations["openCompany"];
         delete?: never;
         options?: never;
         head?: never;
@@ -110,11 +55,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 끝난 육성 판의 사람을 등록하거나 돌려보낸다
-         * @description 회사가 없으면 등록하며 회사가 열린다(1호 직원, 그 판의 돈이 시작 자본). 자리가 꽉 찼으면 replace의 직원과 바꾼다.
-         *     돌려보내도 그 판의 돈은 회사 자본으로 들어간다.
+         * 계약금을 내고 공채 시장의 지원자를 뽑는다
+         * @description 뽑은 직원은 쉬는 채로 들어온다. 자리가 꽉 찼으면 replace의 직원을 내보낸다.
+         *     없는 지원자, 모자란 계약금, 꽉 찬 자리에 replace가 없으면 400.
          */
-        post: operations["hireFromRun"];
+        post: operations["hireApplicant"];
         delete?: never;
         options?: never;
         head?: never;
@@ -149,7 +94,7 @@ export interface paths {
         put?: never;
         /**
          * 올해 결산을 하고 다음 해 연초 회의로 간다
-         * @description 직원들이 배치대로 1년을 굴린 결과가 lastSettlement에 실린다. 마지막 해면 회사가 끝난다. 공채 판이 남아 있으면 400.
+         * @description 직원들이 배치대로 1년을 굴린 결과가 lastSettlement에 실린다. 다음 해 지원자가 새로 온다. 마지막 해면 회사가 끝난다.
          */
         post: operations["settleYear"];
         delete?: never;
@@ -158,7 +103,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/company/hr-recruit": {
+    "/api/company/applicants/refresh": {
         parameters: {
             query?: never;
             header?: never;
@@ -168,27 +113,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 인사팀이 올해 공채를 맡아 신입을 데려온다 (6.3절)
-         * @description 3분 육성 없이 신입이 들어온다. 인사팀에 아무도 없거나 올해 공채를 했으면 400.
+         * 값(refreshCost)을 내고 올해 지원자를 새로 받는다
+         * @description 돈이 모자라면 400.
          */
-        post: operations["hrRecruit"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/company/candidate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** 인사팀이 데려온 신입을 등록하거나 돌려보낸다 */
-        post: operations["decideCandidate"];
+        post: operations["refreshApplicants"];
         delete?: never;
         options?: never;
         head?: never;
@@ -223,9 +151,9 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * 관리자 플레이 기록 — 누가(익명 세션) 언제 몇 판을 했는지
+         * 관리자 플레이 기록 — 누가(익명 세션) 언제 회사를 차려 어디까지 갔는지
          * @description 서버에 `ADMIN_TOKEN`이 설정되어 있고 `X-Admin-Token` 헤더가 같을 때만 연다 (decisions.md 46번).
-         *     최근 접속 세션 500개와 최근에 시작한 판 500개. 숨은 값(시드, 능력치)은 없다.
+         *     최근 접속 세션 500개와 최근에 차린 회사 500곳. 숨은 값(시드, 능력치)은 없다.
          */
         get: operations["getPlayLog"];
         put?: never;
@@ -240,54 +168,6 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description 육성 한 판의 화면 값. 능력치는 등급(F~SSS)만 담는다 (증권사 육성 설계 2.2절). 뉴스의 숨은 방향과 결정적 문장은 없다. */
-        Run: {
-            /** Format: uuid */
-            runId: string;
-            /** @enum {string} */
-            status: "ACTIVE" | "ENDED";
-            /** @description 지금 카드 번호(0부터) */
-            card: number;
-            cardCount: number;
-            /** @description 처음 온 사람의 짜인 첫 판인가 (11.2절) */
-            scripted: boolean;
-            /** @description 회사가 공채로 내준 판인가. 아니면 사장의 사재로 하는 판 (6.5절) */
-            recruit: boolean;
-            /**
-             * Format: int64
-             * @description 이 판의 운용금
-             */
-            fund: number;
-            /** Format: int64 */
-            cash: number;
-            /** Format: int64 */
-            debt: number;
-            /**
-             * Format: int64
-             * @description 현금 + 보유 평가액 − 빚
-             */
-            totalAsset: number;
-            holdings: components["schemas"]["RunHolding"][];
-            /** @description 능력치 코드(insight, patience, courage, conviction, luck) → 등급 */
-            grades: {
-                [key: string]: components["schemas"]["Grade"];
-            };
-            overallGrade: components["schemas"]["Grade"];
-            style?: components["schemas"]["Named"] | null;
-            sector?: components["schemas"]["Named"] | null;
-            /** @description 걸어 둔 투자 원칙 장치 */
-            devices: {
-                code: string;
-                statCode: string;
-                name: string;
-                /** @description 대가 한 줄. 장치를 건 동안 늘 보인다 */
-                cost: string;
-            }[];
-            /** @description 처음 온 사람에게 하나씩 열린 기능 (sell, highlighter, size, principle) */
-            unlocked: string[];
-            current?: components["schemas"]["RunCard"] | null;
-            result?: components["schemas"]["RunResult"] | null;
-        };
         /** @description 회사 화면의 값. 올해 시장 갈래는 숨은 값이라 조짐만 담는다. 직원 능력치는 등급만. */
         Company: {
             /** Format: uuid */
@@ -345,11 +225,6 @@ export interface components {
                 experienceNeeded?: number | null;
                 /** @description X 이상 등급의 효과 이름(확신·경보·역발상·리더·사수·선견). 쌓인다 (2.4절) */
                 effects: string[];
-                /**
-                 * Format: int64
-                 * @description 연봉. 인사 직원이 뽑은 신입만 받는다 (6.3절)
-                 */
-                salary: number;
                 grades: {
                     [key: string]: components["schemas"]["Grade"];
                 };
@@ -366,27 +241,35 @@ export interface components {
             meeting?: {
                 /** @description 폭락 조짐. 헛조짐일 수도 있다 */
                 omen?: string | null;
-                /** @description 인사팀이 공채를 맡을 수 있으면 뽑는 신입의 종합 등급 상한. 인사팀에 아무도 없으면 null (6.3절) */
+                /** @description 인사팀에 사람이 있으면 지원자 등급의 중심이 오를 수 있는 곳(인사 직원보다 두 단계 아래). 없으면 null (6.3절) */
                 hrCap?: components["schemas"]["Grade"] | null;
                 /** @description XX 경보. 내년 폭락 조짐 한 줄 */
                 earlyOmen?: string | null;
                 /** @description ZZZ 선견. 내년 시장 한 줄 */
                 forecast?: string | null;
                 wanted: string;
-                /** Format: int64 */
-                recruitFund: number;
-                recruitOpen: boolean;
-                /** Format: uuid */
-                pendingRunId?: string | null;
             } | null;
-            /** @description 인사팀이 데려와 등록을 기다리는 신입 (6.3절) */
-            candidate?: {
+            /** @description 올해 공채 시장의 지원자 (decisions.md 228번). 끝난 회사면 비어 있다 */
+            applicants: {
+                id: number;
+                name: string;
                 overallGrade: components["schemas"]["Grade"];
                 grades: {
                     [key: string]: components["schemas"]["Grade"];
                 };
+                /**
+                 * Format: int64
+                 * @description 계약금. 뽑으면 회사 자본에서 나간다
+                 */
+                fee: number;
+                /** @description 올해 필요한 인재 */
                 line?: string | null;
-            } | null;
+            }[];
+            /**
+             * Format: int64
+             * @description 지원자를 새로 받는 값
+             */
+            refreshCost: number;
             lastSettlement?: {
                 year: number;
                 /** @enum {string} */
@@ -417,128 +300,9 @@ export interface components {
         };
         /** @enum {string} */
         Grade: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "X" | "XX" | "XXX" | "Z" | "ZZ" | "ZZZ";
-        RunHolding: {
-            stockCode: string;
-            stockName: string;
-            sectorName: string;
-            /** Format: int64 */
-            quantity: number;
-            /** Format: int64 */
-            avgCost: number;
-            /** Format: int64 */
-            price: number;
-            /** Format: int64 */
-            value: number;
-            /** Format: int64 */
-            pnl: number;
-            pnlBp: number;
-        };
-        RunCard: {
-            /** @enum {string} */
-            kind: "TRAIT" | "NEWS" | "PRINCIPLE" | "RELEASE" | "BIG" | "LEVERAGE" | "EXAM";
-            title: string;
-            body: string | null;
-            stock?: {
-                code: string;
-                name: string;
-                sectorName: string;
-                /** Format: int64 */
-                price: number;
-                /** @description 판 시작 가격 대비 */
-                changeBp: number;
-                /** Format: int64 */
-                held: number;
-            } | null;
-            /** @description 단서 기사 문장. 형광펜이 그어진 문장은 highlighted (투자 원칙 장치 설계 3.1절) */
-            sentences: {
-                text: string;
-                highlighted: boolean;
-            }[];
-            /** @description 형광펜 옆 여백의 캐릭터 메모 */
-            memo?: string | null;
-            sway?: {
-                /** @description 단골 꼬드김 인물 */
-                who: string;
-                text: string;
-            } | null;
-            /** @description 폭락 조짐(빨간 글씨) */
-            omen?: string | null;
-            options: {
-                code: string;
-                label: string;
-                detail?: string | null;
-            }[];
-            /** @description 이 카드에서 처음 열린 기능의 한 줄 설명 (11.1절) */
-            tips: string[];
-        };
-        RunResult: {
-            /** @description 회사에 등록할지 정했는가 */
-            decided: boolean;
-            overallGrade: components["schemas"]["Grade"];
-            /** Format: int64 */
-            fund: number;
-            /** Format: int64 */
-            totalAsset: number;
-            returnBp: number;
-            /** @description 이 판에서 손이 뒤집힌 횟수 */
-            flips: number;
-            highlights: string[];
-        };
-        RunChoice: {
-            outcome: components["schemas"]["RunOutcome"];
-            run: components["schemas"]["Run"];
-        };
-        RunOutcome: {
-            /** @enum {string} */
-            kind: "TRAIT" | "NEWS" | "PRINCIPLE" | "RELEASE" | "BIG" | "LEVERAGE" | "EXAM";
-            chosen: string;
-            /** @description 판정을 거친 실제 선택. chosen과 다르면 손이 뒤집혔다 */
-            actual: string;
-            flips: {
-                statCode: string;
-                from: string;
-                to: string;
-                /** @description 꼬드긴 단골 인물 이름 */
-                who?: string | null;
-            }[];
-            trade?: {
-                /** @enum {string} */
-                side: "BUY" | "SELL";
-                /** Format: int64 */
-                quantity: number;
-                /** Format: int64 */
-                price: number;
-                /** Format: int64 */
-                amount: number;
-                /** @description 증권 앱을 지워 다음 장 가격에 체결됐다 */
-                deferred: boolean;
-            } | null;
-            price?: {
-                changeBp: number;
-                up: boolean;
-            } | null;
-            /**
-             * Format: int64
-             * @description 고른 대로 했다면 이 카드에서 생겼을 손익
-             */
-            ifChosen?: number | null;
-            /** Format: int64 */
-            actualPnl?: number | null;
-            /** @description 복기. 결정적 문장 */
-            decisive?: string | null;
-            lines: string[];
-            growth: {
-                statCode: string;
-                delta: number;
-                before: components["schemas"]["Grade"];
-                after: components["schemas"]["Grade"];
-            }[];
-            /** @description 처음 손이 뒤집혔을 때 한 줄 설명 */
-            tip?: string | null;
-        };
         PlayLog: {
-            /** @description 3분 육성 판. 최근에 시작한 순 (증권사 육성 설계 11.5절) */
-            runs: components["schemas"]["RunPlay"][];
+            /** @description 회사. 최근에 차린 순 (decisions.md 228번) */
+            companies: components["schemas"]["CompanyPlay"][];
             /** @description 마지막 접속이 최근인 순 */
             sessions: components["schemas"]["PlaySession"][];
         };
@@ -555,38 +319,35 @@ export interface components {
              * @description 마지막 접속 시각
              */
             lastSeenAt: string;
-            /** @description 최근 육성 판 목록(runs) 안에서 센 판 수 */
-            runs: number;
+            /** @description 최근 회사 목록(companies) 안에서 센 회사 수 */
+            companies: number;
             /** @description 처음 접속한 IP (프록시 뒤면 X-Forwarded-For의 첫 주소) */
             firstIp?: string | null;
             /** @description 마지막 접속 IP */
             lastIp?: string | null;
         };
-        RunPlay: {
+        CompanyPlay: {
             /** Format: uuid */
-            runId: string;
+            companyId: string;
             /** Format: uuid */
             sessionId: string;
             /** @enum {string} */
-            status: "ACTIVE" | "ENDED" | "ABANDONED";
-            scripted: boolean;
-            recruit: boolean;
-            /** @description 닿은 카드 번호(0부터). 끝난 판이면 카드 수 */
-            card: number;
-            cardCount: number;
-            /**
-             * @description 멈춘 카드의 종류. 끝난 판이면 null
-             * @enum {string|null}
-             */
-            kind?: "TRAIT" | "NEWS" | "PRINCIPLE" | "RELEASE" | "BIG" | "LEVERAGE" | "EXAM" | null;
-            overallGrade?: components["schemas"]["Grade"] | null;
+            status: "ACTIVE" | "ENDED";
+            /** @description 사장이 차린 몇 번째 회사인가 */
+            number: number;
+            /** @description 시대 코드 */
+            era: string;
+            /** @description 지금 해. 시대가 끝났으면 turns + 1 */
+            year: number;
+            /** @description 결산한 해의 수 */
+            settled: number;
             /** Format: int64 */
-            fund: number;
-            /** Format: int64 */
-            totalAsset: number;
-            flips: number;
+            capital: number;
+            grade: components["schemas"]["Grade"];
+            employees: number;
+            sold: boolean;
             /** Format: date-time */
-            startedAt: string;
+            createdAt: string;
             /** Format: date-time */
             updatedAt: string;
         };
@@ -654,82 +415,6 @@ export interface operations {
             };
         };
     };
-    startRun: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 새 판. 첫 카드가 펼쳐져 있다 */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Run"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-        };
-    };
-    getCurrentRun: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 진행 중이거나 끝난 판 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Run"];
-                };
-            };
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    chooseRunCard: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                runId: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    card: number;
-                    option: string;
-                };
-            };
-        };
-        responses: {
-            /** @description 고른 결과와 그 뒤의 판 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RunChoice"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
     getCompany: {
         parameters: {
             query?: never;
@@ -752,7 +437,29 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    hireFromRun: {
+    openCompany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 새 회사 */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+        };
+    };
+    hireApplicant: {
         parameters: {
             query?: never;
             header?: never;
@@ -762,17 +469,14 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** Format: uuid */
-                    runId: string;
-                    /** @description 거짓이면 돌려보낸다 */
-                    register: boolean;
-                    /** @description 자리가 꽉 찼을 때 바꿀 직원 ID */
+                    applicantId: number;
+                    /** @description 자리가 꽉 찼을 때 내보낼 직원 ID */
                     replace?: number | null;
                 };
             };
         };
         responses: {
-            /** @description 정한 뒤의 회사 */
+            /** @description 뽑은 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -842,7 +546,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    hrRecruit: {
+    refreshApplicants: {
         parameters: {
             query?: never;
             header?: never;
@@ -851,38 +555,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 신입이 candidate에 실린 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    decideCandidate: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    register: boolean;
-                    /** @description 자리가 꽉 찼을 때 바꿀 직원 ID */
-                    replace?: number | null;
-                };
-            };
-        };
-        responses: {
-            /** @description 정한 뒤의 회사 */
+            /** @description 새 지원자가 온 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

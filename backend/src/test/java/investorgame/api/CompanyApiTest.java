@@ -11,7 +11,6 @@ import com.jayway.jsonpath.JsonPath;
 import investorgame.TestcontainersConfiguration;
 import jakarta.servlet.http.Cookie;
 import java.util.List;
-import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +22,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
-/** 아주 작은 회사의 API (증권사 육성 설계 4·6절). 규칙 자체는 CompanyEngineTest에서 본다. */
+/** 증권사의 API (증권사 육성 설계 4·6·9절, decisions.md 228번). 규칙 자체는 CompanyEngineTest에서 본다. */
 @SpringBootTest
 @Import(TestcontainersConfiguration.class)
 class CompanyApiTest {
@@ -50,69 +49,53 @@ class CompanyApiTest {
         post(path).cookie(session).contentType(MediaType.APPLICATION_JSON).content(body));
   }
 
-  /** 판을 시작해 매 카드의 마지막 선택지(뉴스면 지켜본다)로 끝까지 간다. 끝난 판을 돌려준다. */
-  private DocumentContext playRun() throws Exception {
-    DocumentContext run =
-        json(mvc.perform(post("/api/runs").cookie(session)).andExpect(status().isCreated()));
-    String runId = run.read("$.runId");
-    while ("ACTIVE".equals(run.read("$.status"))) {
-      List<String> options = run.read("$.current.options[*].code");
-      String body =
-          "{\"card\":" + run.read("$.card") + ",\"option\":\"" + options.getLast() + "\"}";
-      DocumentContext choice =
-          json(postJson("/api/runs/" + runId + "/choose", body).andExpect(status().isOk()));
-      run = JsonPath.parse(choice.read("$.run", Map.class));
-    }
-    return run;
-  }
-
-  private DocumentContext hire(String runId, boolean register, Integer replace) throws Exception {
+  private DocumentContext hire(int applicantId, Integer replace) throws Exception {
     return json(
         postJson(
                 "/api/company/hires",
-                "{\"runId\":\"%s\",\"register\":%s,\"replace\":%s}"
-                    .formatted(runId, register, replace))
+                "{\"applicantId\":%d,\"replace\":%s}".formatted(applicantId, replace))
             .andExpect(status().isOk()));
   }
 
   @Test
-  void 첫_사람을_등록하면_회사가_열리고_공채_육성은_회사_돈으로_한다() throws Exception {
+  void 사재로_회사를_차리고_공채_시장에서_뽑아_세_해를_돌면_팔고_다시_차린다() throws Exception {
     mvc.perform(get("/api/company").cookie(session)).andExpect(status().isNotFound());
 
-    DocumentContext first = playRun();
-    long money = first.read("$.totalAsset", Long.class);
-    String firstId = first.read("$.runId");
-    postJson("/api/company/hires", "{\"runId\":\"" + firstId + "\",\"register\":false}")
-        .andExpect(status().isBadRequest());
-    DocumentContext company = hire(firstId, true, null);
-    assertThat(company.read("$.capital", Long.class)).isEqualTo(money);
+    DocumentContext company =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    mvc.perform(post("/api/company").cookie(session)).andExpect(status().isBadRequest());
+    long capital = company.read("$.capital", Long.class);
+    assertThat(capital).isEqualTo(100_000_000L);
     assertThat(company.read("$.grade", String.class)).isEqualTo("F");
     assertThat(company.read("$.seats", Integer.class)).isEqualTo(2);
-    assertThat(company.read("$.employees.length()", Integer.class)).isEqualTo(1);
-    assertThat(company.read("$.meeting.recruitOpen", Boolean.class)).isTrue();
-    postJson("/api/company/hires", "{\"runId\":\"" + firstId + "\",\"register\":true}")
+    assertThat(company.read("$.employees.length()", Integer.class)).isZero();
+    assertThat(company.read("$.applicants.length()", Integer.class)).isEqualTo(3);
+    assertThat(company.read("$.applicants[0].line", String.class)).isNotBlank();
+    assertThat(company.read("$.refreshCost", Long.class)).isPositive();
+
+    int firstId = company.read("$.applicants[0].id");
+    long firstFee = company.read("$.applicants[0].fee", Long.class);
+    DocumentContext one = hire(firstId, null);
+    assertThat(one.read("$.employees.length()", Integer.class)).isEqualTo(1);
+    assertThat(one.read("$.capital", Long.class)).isEqualTo(capital - firstFee);
+    assertThat(one.read("$.applicants.length()", Integer.class)).isEqualTo(2);
+    postJson("/api/company/hires", "{\"applicantId\":" + firstId + "}")
         .andExpect(status().isBadRequest());
 
-    postJson("/api/company/placement", "{\"seats\":[{\"employeeId\":1,\"desk\":\"bio\"}]}")
+    DocumentContext refreshed =
+        json(
+            mvc.perform(post("/api/company/applicants/refresh").cookie(session))
+                .andExpect(status().isOk()));
+    assertThat(refreshed.read("$.applicants.length()", Integer.class)).isEqualTo(3);
+    assertThat(refreshed.read("$.capital", Long.class))
+        .isEqualTo(one.read("$.capital", Long.class) - one.read("$.refreshCost", Long.class));
+
+    int employeeId = one.read("$.employees[0].id");
+    postJson(
+            "/api/company/placement",
+            "{\"seats\":[{\"employeeId\":" + employeeId + ",\"desk\":\"bio\"}]}")
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.employees[0].desk").value("bio"));
-
-    long fund = company.read("$.meeting.recruitFund", Long.class);
-    DocumentContext recruit = playRun();
-    assertThat(recruit.read("$.recruit", Boolean.class)).isTrue();
-    assertThat(recruit.read("$.fund", Long.class)).isEqualTo(fund);
-    assertThat(
-            json(mvc.perform(get("/api/company").cookie(session)))
-                .read("$.meeting.pendingRunId", String.class))
-        .isEqualTo(recruit.read("$.runId"));
-    mvc.perform(post("/api/runs").cookie(session)).andExpect(status().isBadRequest());
-
-    DocumentContext after = hire(recruit.read("$.runId"), true, null);
-    assertThat(after.read("$.employees.length()", Integer.class)).isEqualTo(2);
-    assertThat(after.read("$.capital", Long.class))
-        .isEqualTo(money - fund + recruit.read("$.totalAsset", Long.class));
-    assertThat(after.read("$.meeting.recruitOpen", Boolean.class)).isFalse();
-    mvc.perform(post("/api/runs").cookie(session)).andExpect(status().isBadRequest());
 
     for (int year = 1; year <= 3; year++) {
       DocumentContext settled = json(mvc.perform(post("/api/company/settle").cookie(session)));
@@ -121,53 +104,67 @@ class CompanyApiTest {
     mvc.perform(get("/api/company").cookie(session))
         .andExpect(jsonPath("$.status").value("ENDED"))
         .andExpect(jsonPath("$.meeting").doesNotExist())
+        .andExpect(jsonPath("$.applicants.length()").value(0))
         .andExpect(jsonPath("$.sale.forced").value(true))
         .andExpect(jsonPath("$.owner.fameGrade").value("F"));
     // 시대가 끝난 회사는 팔아야 다음 회사가 열린다.
-    mvc.perform(post("/api/runs").cookie(session)).andExpect(status().isBadRequest());
+    mvc.perform(post("/api/company/applicants/refresh").cookie(session))
+        .andExpect(status().isNotFound());
+    mvc.perform(post("/api/company").cookie(session)).andExpect(status().isBadRequest());
 
     DocumentContext next =
-        json(postJson("/api/company/sale", "{\"cofounders\":[1]}").andExpect(status().isOk()));
+        json(
+            postJson("/api/company/sale", "{\"cofounders\":[" + employeeId + "]}")
+                .andExpect(status().isOk()));
     assertThat(next.read("$.status", String.class)).isEqualTo("ACTIVE");
     assertThat(next.read("$.number", Integer.class)).isEqualTo(2);
     assertThat(next.read("$.grade", String.class)).isEqualTo("F");
     assertThat(next.read("$.employees.length()", Integer.class)).as("공동창업자").isEqualTo(1);
+    assertThat(next.read("$.applicants.length()", Integer.class)).as("새 회사의 공채").isEqualTo(3);
     assertThat(next.read("$.owner.sales", Integer.class)).isEqualTo(1);
     assertThat(next.read("$.era.code", String.class)).isNotEqualTo("plain");
     postJson("/api/company/sale", "{\"cofounders\":[]}").andExpect(status().isBadRequest());
-
-    DocumentContext nextRecruit =
-        json(mvc.perform(post("/api/runs").cookie(session)).andExpect(status().isCreated()));
-    assertThat(nextRecruit.read("$.recruit", Boolean.class)).as("새 회사의 공채").isTrue();
   }
 
-  /** 인사 직원 (6.3절): 인사팀에 앉히면 3분 육성 없이 신입이 들어온다. 등록하면 연봉을 받는다. */
+  /** 자리가 꽉 차면 내보낼 직원을 골라야 뽑는다. 인사팀에 사람이 있으면 지원자가 한 명 더 온다. */
   @Test
-  void 인사팀이_공채를_맡으면_육성_없이_신입이_들어온다() throws Exception {
-    DocumentContext first = playRun();
-    hire(first.read("$.runId"), true, null);
-    postJson("/api/company/hr-recruit", "").andExpect(status().isBadRequest());
+  void 자리가_꽉_차면_내보낼_사람을_고르고_인사팀이_공채를_돕는다() throws Exception {
+    DocumentContext company =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    // 계약금이 싼 지원자부터 둘을 뽑는다.
+    List<Integer> ids = company.read("$.applicants[*].id");
+    List<Number> fees = company.read("$.applicants[*].fee");
+    List<Integer> order =
+        java.util.stream.IntStream.range(0, ids.size())
+            .boxed()
+            .sorted(java.util.Comparator.comparingLong(i -> fees.get(i).longValue()))
+            .toList();
+    hire(ids.get(order.get(0)), null);
+    DocumentContext two = hire(ids.get(order.get(1)), null);
+    int keep = two.read("$.employees[0].id");
+    int leave = two.read("$.employees[1].id");
+    int last = ids.get(order.get(2));
+    postJson("/api/company/hires", "{\"applicantId\":" + last + "}")
+        .andExpect(status().isBadRequest());
 
     DocumentContext placed =
         json(
-            postJson("/api/company/placement", "{\"seats\":[{\"employeeId\":1,\"desk\":\"hr\"}]}")
+            postJson(
+                    "/api/company/placement",
+                    "{\"seats\":[{\"employeeId\":" + keep + ",\"desk\":\"hr\"}]}")
                 .andExpect(status().isOk()));
     assertThat(placed.read("$.meeting.hrCap", String.class)).isNotBlank();
 
-    DocumentContext recruited =
-        json(
-            mvc.perform(post("/api/company/hr-recruit").cookie(session))
-                .andExpect(status().isOk()));
-    assertThat(recruited.read("$.candidate.overallGrade", String.class)).isNotBlank();
-    assertThat(recruited.read("$.meeting.recruitOpen", Boolean.class)).isFalse();
-    mvc.perform(post("/api/runs").cookie(session)).andExpect(status().isBadRequest());
-    mvc.perform(post("/api/company/settle").cookie(session)).andExpect(status().isBadRequest());
+    DocumentContext swapped = hire(last, leave);
+    List<Integer> staff = swapped.read("$.employees[*].id");
+    assertThat(staff).hasSize(2).contains(keep).doesNotContain(leave);
 
-    DocumentContext after =
-        json(postJson("/api/company/candidate", "{\"register\":true}").andExpect(status().isOk()));
-    assertThat(after.read("$.employees.length()", Integer.class)).isEqualTo(2);
-    assertThat(after.read("$.employees[1].salary", Long.class)).isPositive();
-    assertThat(after.read("$.candidate", Object.class)).isNull();
-    mvc.perform(post("/api/company/settle").cookie(session)).andExpect(status().isOk());
+    DocumentContext refreshed =
+        json(
+            mvc.perform(post("/api/company/applicants/refresh").cookie(session))
+                .andExpect(status().isOk()));
+    assertThat(refreshed.read("$.applicants.length()", Integer.class))
+        .as("인사팀이 한 명 더 데려온다")
+        .isEqualTo(4);
   }
 }

@@ -13,8 +13,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param multiplierPercent 등급이 한 단계 오를 때마다 수수료 매출과 판돈에 곱하는 비율 (F = 100%)
  * @param feeBp 수수료 매출 = 자본 × 이 비율 × 배율. 시장이 나빠도 들어오는 바닥 수입
  * @param stakePercent 돈을 굴리는 자리가 나눠 맡는 판돈 = 자본 × 이 비율 × 배율 (자본을 넘지 않는다)
- * @param recruitPercent 공채 육성의 운용금 = 자본 × 이 비율 (6.5절)
- * @param recruitMax 공채 육성 운용금의 상한
  * @param decisions 직원 한 명이 한 해에 내리는 매매 판단 수
  * @param omenPercent 폭락장 앞에 연초 회의에서 조짐이 보일 확률 (나머지는 조짐 없이 온다)
  * @param falseOmenPercent 폭락장이 아닌 해에 헛조짐이 보일 확률
@@ -23,7 +21,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param swayPercent 꼬드김 판정이 다른 판정보다 덜 일어나는 비율. 리스크 관리 팀이 없을 때
  * @param experience 실전 경험과 큰 손실의 등급 하락 (2.3·6.4절)
  * @param effects X 이상 등급의 효과 수치 (2.4절)
- * @param hr 인사 직원의 공채 (6.3절)
+ * @param hr 인사팀이 공채 시장을 돕는다 (6.3절)
+ * @param market 공채 시장: 해마다 지원자가 오고 계약금을 내고 뽑는다 (decisions.md 228번)
  * @param sale 매각과 재창업 (9절). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다
  */
 @ConfigurationProperties("raising.company")
@@ -34,8 +33,6 @@ public record CompanyProperties(
     int multiplierPercent,
     int feeBp,
     int stakePercent,
-    int recruitPercent,
-    long recruitMax,
     int decisions,
     int omenPercent,
     int falseOmenPercent,
@@ -46,13 +43,24 @@ public record CompanyProperties(
     Experience experience,
     Effects effects,
     Hr hr,
+    Market market,
     Sale sale) {
 
   /**
-   * @param capSteps 인사 직원이 뽑는 신입의 종합 등급 상한 = 인사 직원 종합 등급보다 이만큼 아래 (제안: 두 단계)
-   * @param salary 인사 직원이 뽑은 신입 한 명의 연봉. 결산마다 회사 자본에서 나간다
+   * @param applicants 해마다 오는 지원자 수
+   * @param levelSteps 지원자 종합 등급의 중심 = 회사 등급보다 이만큼 위 (F 회사면 D)
+   * @param spread 지원자 능력치가 중심 띠에서 흩어지는 폭(±점수). 성격이 뾰족해진다
+   * @param fees 종합 등급별 계약금(원). F부터 SSS까지
+   * @param refreshCost 지원자를 새로 받는 값(원)
    */
-  public record Hr(int capSteps, long salary) {}
+  public record Market(
+      int applicants, int levelSteps, int spread, List<Long> fees, long refreshCost) {}
+
+  /**
+   * @param capSteps 인사 직원이 데려오는 지원자의 중심 등급 = 인사 직원 종합 등급보다 이만큼 아래. 회사 등급으로 정한 중심보다 높을 때만 쓴다
+   * @param extraApplicants 인사팀에 사람이 있으면 더 오는 지원자 수
+   */
+  public record Hr(int capSteps, int extraApplicants) {}
 
   /**
    * @param convictionGainBp X 확신: 맞히면 더 버는 몫(만분율)
@@ -82,7 +90,7 @@ public record CompanyProperties(
    * @param cofounderBase 다음 회사에 데려갈 수 있는 공동창업자 수의 바닥 (9.3절: 한두 명)
    * @param cofounderFameSteps 명성이 이만큼 오를 때마다 공동창업자 +1
    * @param cofounderMax 공동창업자 수의 상한
-   * @param baseCapital 새 회사의 시작 자본 (명성 0)
+   * @param baseCapital 회사의 시작 자본 (명성 0). 첫 회사는 사장의 사재다
    * @param fameCapitalPercent 명성 한 단계마다 시작 자본에 더하는 비율 (명성 혜택)
    */
   public record Sale(
