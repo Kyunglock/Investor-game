@@ -886,6 +886,63 @@
       "crash": "폭락장이었다. 못 참고 판 사람이 가장 크게 잃었다."
     },
     "falseOmenNote": "조짐은 있었지만 아무 일도 없었다.",
-    "opening": "1호 직원 {name}과(와) 함께 회사를 열었다. 시작 자본은 {capital}."
+    "opening": "1호 직원 {name}과(와) 함께 회사를 열었다. 시작 자본은 {capital}.",
+    "eras": [
+      {
+        "code": "plain",
+        "name": "평범한 시대",
+        "description": "특별할 것 없는 시장. 배치의 기본기를 익히기 좋다.",
+        "phaseWeights": {
+          "boom": 30,
+          "normal": 45,
+          "crash": 25
+        },
+        "deskBonusBp": {}
+      },
+      {
+        "code": "chip-boom",
+        "name": "반도체 붐 시대",
+        "description": "단타가 잘 먹히는 뜨거운 시장. 대신 거품이 꺼지면 크게 빠진다.",
+        "phaseWeights": {
+          "boom": 45,
+          "normal": 25,
+          "crash": 30
+        },
+        "deskBonusBp": {
+          "day": 300
+        }
+      },
+      {
+        "code": "bio-bubble",
+        "name": "바이오 거품 시대",
+        "description": "바이오가 들썩인다. 인내심 좋은 사람이 크게 번다.",
+        "phaseWeights": {
+          "boom": 35,
+          "normal": 35,
+          "crash": 30
+        },
+        "deskBonusBp": {
+          "bio": 400
+        }
+      },
+      {
+        "code": "long-winter",
+        "name": "긴 겨울 시대",
+        "description": "폭락장이 잦다. 줏대와 인내심을 앞에 세워야 버틴다.",
+        "phaseWeights": {
+          "boom": 15,
+          "normal": 45,
+          "crash": 40
+        },
+        "deskBonusBp": {}
+      }
+    ],
+    "sale": {
+      "eraEnd": "{era}이(가) 저물었다. 회사를 판다.",
+      "voluntary": "회사가 {grade} 등급이 되어 팔 수 있다. 일찍 팔면 다음 바퀴로 빨리 가고, 늦게 팔면 크게 받는다.",
+      "sold": "{name}을(를) {price}에 팔았다. 사장 명성이 {before} → {after}가 됐다.",
+      "opening": "{era}에 새 회사를 차렸다. 공동창업자 {names}과(와) 함께. 시작 자본 {capital}.",
+      "openingAlone": "{era}에 새 회사를 혼자 차렸다. 시작 자본 {capital}. 공채로 사람을 뽑자."
+    }
   }
 }

@@ -15,8 +15,20 @@ import java.util.UUID;
     isGetterVisibility = Visibility.NONE)
 class CompanyState {
 
-  /** 지금 해(1부터). 결산할 때마다 하나 늘고 turns를 넘으면 회사가 끝난다. */
+  /** 지금 해(1부터). 결산할 때마다 하나 늘고 turns를 넘으면 시대가 끝나 회사를 판다. */
   int year = 1;
+
+  /** 사장이 차린 몇 번째 회사인가(1부터). */
+  int number = 1;
+
+  /** 이 회사의 시대 코드 (9.4절). */
+  String era;
+
+  /** 팔렸는가. 팔린 회사는 끝난 채로 남는다. */
+  boolean sold;
+
+  /** 차릴 때의 한 줄(1호 직원·공동창업자). */
+  String opening;
 
   long capital;
   List<Employee> employees = new ArrayList<>();

@@ -51,6 +51,21 @@ class CompanyRepository {
         .optional();
   }
 
+  /** 가장 최근 회사를 잠근다(돌고 있든 시대가 끝났든). 매각할 때 쓴다. */
+  Optional<Row> lockLatest(UUID sessionId) {
+    return jdbc.sql(
+            """
+            SELECT id, session_id, status, seed, state FROM raising_company
+            WHERE session_id = :sessionId
+            ORDER BY created_at DESC
+            LIMIT 1
+            FOR UPDATE
+            """)
+        .param("sessionId", sessionId)
+        .query(this::map)
+        .optional();
+  }
+
   Optional<Row> latest(UUID sessionId) {
     return jdbc.sql(
             """

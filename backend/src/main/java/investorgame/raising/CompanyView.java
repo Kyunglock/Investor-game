@@ -13,10 +13,20 @@ import java.util.UUID;
  * @param seats 앉힐 수 있는 자리 수
  * @param meeting 연초 회의. 끝난 회사면 null
  * @param lastSettlement 지난 결산. 아직 없으면 null
+ * @param number 사장이 차린 몇 번째 회사인가
+ * @param era 이 회사의 시대 (9.4절)
+ * @param opening 회사를 차릴 때의 한 줄
+ * @param owner 사장의 명성 (9.2절)
+ * @param sale 지금 팔 수 있으면 매각 조건. 못 팔면 null (9.1절)
  */
 public record CompanyView(
     UUID companyId,
     Status status,
+    int number,
+    Era era,
+    String opening,
+    Owner owner,
+    Sale sale,
     int year,
     int turns,
     long capital,
@@ -65,4 +75,22 @@ public record CompanyView(
   /** flips는 능력치 코드 → 그해 뒤집힌 횟수. */
   public record Result(
       int employeeId, String name, String desk, long stake, long pnl, Map<String, Integer> flips) {}
+
+  public record Era(String code, String name, String description) {}
+
+  /**
+   * @param fameGrade 사장 명성 등급 F~ZZZ
+   * @param sales 판 회사 수
+   * @param cofounderSlots 다음 회사에 데려갈 수 있는 공동창업자 수
+   */
+  public record Owner(String fameGrade, int famePoints, int sales, int cofounderSlots) {}
+
+  /**
+   * @param forced 시대가 끝나 반드시 판다. 거짓이면 시대가 끝나기 전에 스스로 파는 것이다
+   * @param price 매각가(지금 자본)
+   * @param fameAfter 팔면 오를 사장 명성 등급
+   * @param cofounderSlots 이번에 데려갈 수 있는 공동창업자 수 (판 뒤의 명성으로)
+   */
+  public record Sale(
+      boolean forced, String note, long price, String fameAfter, int cofounderSlots) {}
 }

@@ -25,4 +25,10 @@ class RaisingMemory {
   Map<String, Integer> tempterCounts = new HashMap<>();
   int runsStarted;
   int runsFinished;
+
+  /** 사장 명성 점수 (9.2절). 회사를 팔 때마다 오른다. */
+  int famePoints;
+
+  /** 판 회사 수. */
+  int sales;
 }

@@ -158,6 +158,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/sale": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 회사를 팔고 다음 회사를 F에서 차린다 (9절)
+         * @description 시대가 끝났거나 등급이 매각 조건 이상이어야 한다. 공동창업자 수를 넘게 고르면 400. 응답은 새 회사다.
+         */
+        post: operations["sellCompany"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/games": {
         parameters: {
             query?: never;
@@ -662,8 +682,39 @@ export interface components {
         Company: {
             /** Format: uuid */
             companyId: string;
-            /** @enum {string} */
+            /**
+             * @description ENDED는 시대가 끝났거나 팔린 회사
+             * @enum {string}
+             */
             status: "ACTIVE" | "ENDED";
+            /** @description 사장이 차린 몇 번째 회사인가 */
+            number: number;
+            /** @description 이 회사의 시대 (9.4절) */
+            era: {
+                code: string;
+                name: string;
+                description: string;
+            };
+            /** @description 회사를 차릴 때의 한 줄 */
+            opening?: string | null;
+            /** @description 사장의 명성 (9.2절) */
+            owner: {
+                fameGrade: components["schemas"]["Grade"];
+                famePoints: number;
+                sales: number;
+                /** @description 다음 회사에 데려갈 수 있는 공동창업자 수 */
+                cofounderSlots: number;
+            };
+            /** @description 지금 팔 수 있으면 매각 조건. 못 팔면 null (9.1절) */
+            sale?: {
+                /** @description 시대가 끝나 반드시 판다 */
+                forced: boolean;
+                note: string;
+                /** Format: int64 */
+                price: number;
+                fameAfter: components["schemas"]["Grade"];
+                cofounderSlots: number;
+            } | null;
             /** @description 지금 해(1부터). 끝났으면 turns + 1 */
             year: number;
             turns: number;
@@ -1781,6 +1832,36 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description 결산한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    sellCompany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description 데려갈 직원 ID */
+                    cofounders: number[];
+                };
+            };
+        };
+        responses: {
+            /** @description 새 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

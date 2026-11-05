@@ -122,7 +122,7 @@ test('입사 심사의 종합 등급과 등급 사다리가 나오고, 1호 직�
   await expect(page.getByTestId('office-art')).toBeVisible()
 })
 
-test('회사: 배치하고, 공채 육성으로 신입을 등록하고, 세 해를 결산하면 체험이 끝난다', async ({
+test('회사: 배치하고, 공채 육성으로 신입을 등록하고, 세 해를 결산하면 시대가 끝나 팔고 다시 차린다', async ({
   page,
 }) => {
   test.setTimeout(150_000)
@@ -147,9 +147,18 @@ test('회사: 배치하고, 공채 육성으로 신입을 등록하고, 세 해�
     await page.getByRole('button', { name: `${year}년 차 결산 보기` }).click()
     await expect(page.getByTestId('settlement')).toContainText(`${year}년 차 결산`)
   }
-  await expect(page.getByRole('button', { name: /새 회사 차리기/ })).toBeVisible()
+  // 시대가 끝나면 회사를 판다. 아끼던 직원을 공동창업자로 데려가 새 시대의 F 회사를 차린다 (9절).
+  await expect(page.getByTestId('sale')).toBeVisible()
   await page.reload()
-  await expect(page.getByRole('button', { name: /새 회사 차리기/ })).toBeVisible()
+  await expect(page.getByTestId('sale')).toBeVisible()
+  await page.getByTestId('sale').getByRole('checkbox').first().check()
+  await page.getByRole('button', { name: '회사를 팔고 새 회사를 차린다' }).click()
+  await expect(page.getByText(/2호 회사 · 1년 차/)).toBeVisible()
+  await expect(page.getByTestId('company-grade')).toHaveText('F')
+  await expect(page.getByTestId('employee')).toHaveCount(1)
+  await expect(page.getByTestId('owner')).toContainText('판 회사 1곳')
+  await expect(page.getByTestId('opening')).toContainText('공동창업자')
+  await expect(page.getByRole('button', { name: /공채 육성/ })).toBeVisible()
 })
 
 test('새로고침하면 같은 카드에서 이어한다', async ({ page }) => {
