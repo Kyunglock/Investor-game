@@ -340,19 +340,13 @@ class RunEngineTest {
               true,
               new RunEngine.Year("crash", omen),
               null);
-      List<CardOutcome> outcomes = new ArrayList<>();
       while (run.current != null) {
+        // 뉴스마다 크게 사서 위기 때 주식을 들고 있게 한다. 크게 사기가 없는 카드는 마지막 선택지.
         String option =
-            run.current.kind == CardKind.NEWS
+            run.current.options.stream().anyMatch(o -> o.code.equals(RunEngine.BUY_BIG))
                 ? RunEngine.BUY_BIG
                 : run.current.options.getLast().code;
-        if (run.current.options.stream().noneMatch(o -> o.code.equals(option))) {
-          outcomes.add(
-              ENGINE.choose(
-                  run, memory, run.current.options.getLast().code, new HashSeededRandom(seed)));
-        } else {
-          outcomes.add(ENGINE.choose(run, memory, option, new HashSeededRandom(seed)));
-        }
+        ENGINE.choose(run, memory, option, new HashSeededRandom(seed));
       }
       assertThat(run.highlights).as("판 요약에도 남는다").anyMatch(h -> h.startsWith("폭락 조짐을 2번 봤다."));
     }
