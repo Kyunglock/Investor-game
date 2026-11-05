@@ -21,4 +21,7 @@ public interface RaisingService {
    * @throws investorgame.common.error.NotFoundException 세션의 진행 중인 판이 아닐 때
    */
   RunChoice choose(UUID sessionId, UUID runId, int card, String option);
+
+  /** 최근에 시작한 판부터 limit개. 버려진 판도 포함한다. 관리자 플레이 기록용이며 세션을 따지지 않는다. */
+  java.util.List<RunSummary> recentRuns(int limit);
 }

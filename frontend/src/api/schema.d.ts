@@ -905,6 +905,8 @@ export interface components {
             persona: string;
         };
         PlayLog: {
+            /** @description 3분 육성 판. 최근에 시작한 순 (증권사 육성 설계 11.5절) */
+            runs: components["schemas"]["RunPlay"][];
             /** @description 마지막 접속이 최근인 순 */
             sessions: components["schemas"]["PlaySession"][];
             /** @description 최근에 시작한 판 순 */
@@ -925,10 +927,40 @@ export interface components {
             lastSeenAt: string;
             /** @description 최근 판 목록(plays) 안에서 센 판 수 */
             games: number;
+            /** @description 최근 육성 판 목록(runs) 안에서 센 판 수 */
+            runs: number;
             /** @description 처음 접속한 IP (프록시 뒤면 X-Forwarded-For의 첫 주소) */
             firstIp?: string | null;
             /** @description 마지막 접속 IP */
             lastIp?: string | null;
+        };
+        RunPlay: {
+            /** Format: uuid */
+            runId: string;
+            /** Format: uuid */
+            sessionId: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "ENDED" | "ABANDONED";
+            scripted: boolean;
+            recruit: boolean;
+            /** @description 닿은 카드 번호(0부터). 끝난 판이면 카드 수 */
+            card: number;
+            cardCount: number;
+            /**
+             * @description 멈춘 카드의 종류. 끝난 판이면 null
+             * @enum {string|null}
+             */
+            kind?: "TRAIT" | "NEWS" | "PRINCIPLE" | "RELEASE" | "BIG" | "LEVERAGE" | "EXAM" | null;
+            overallGrade?: components["schemas"]["Grade"] | null;
+            /** Format: int64 */
+            fund: number;
+            /** Format: int64 */
+            totalAsset: number;
+            flips: number;
+            /** Format: date-time */
+            startedAt: string;
+            /** Format: date-time */
+            updatedAt: string;
         };
         Play: {
             /** Format: uuid */

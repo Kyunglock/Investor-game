@@ -928,8 +928,12 @@ components:
           description: 봇의 페르소나 코드 (예 panic, holder). 행동 프로필의 bot_persona가 된다
     PlayLog:
       type: object
-      required: [sessions, plays]
+      required: [sessions, plays, runs]
       properties:
+        runs:
+          type: array
+          description: 3분 육성 판. 최근에 시작한 순 (증권사 육성 설계 11.5절)
+          items: { $ref: '#/components/schemas/RunPlay' }
         sessions:
           type: array
           description: 마지막 접속이 최근인 순
@@ -940,14 +944,36 @@ components:
           items: { $ref: '#/components/schemas/Play' }
     PlaySession:
       type: object
-      required: [sessionId, createdAt, lastSeenAt, games]
+      required: [sessionId, createdAt, lastSeenAt, games, runs]
       properties:
         sessionId: { type: string, format: uuid }
         createdAt: { type: string, format: date-time, description: 처음 온 시각 }
         lastSeenAt: { type: string, format: date-time, description: 마지막 접속 시각 }
         games: { type: integer, description: 최근 판 목록(plays) 안에서 센 판 수 }
+        runs: { type: integer, description: 최근 육성 판 목록(runs) 안에서 센 판 수 }
         firstIp: { type: [string, 'null'], description: 처음 접속한 IP (프록시 뒤면 X-Forwarded-For의 첫 주소) }
         lastIp: { type: [string, 'null'], description: 마지막 접속 IP }
+    RunPlay:
+      type: object
+      required: [runId, sessionId, status, scripted, recruit, card, cardCount, fund, totalAsset, flips, startedAt, updatedAt]
+      properties:
+        runId: { type: string, format: uuid }
+        sessionId: { type: string, format: uuid }
+        status: { type: string, enum: [ACTIVE, ENDED, ABANDONED] }
+        scripted: { type: boolean }
+        recruit: { type: boolean }
+        card: { type: integer, description: 닿은 카드 번호(0부터). 끝난 판이면 카드 수 }
+        cardCount: { type: integer }
+        kind:
+          type: [string, 'null']
+          enum: [TRAIT, NEWS, PRINCIPLE, RELEASE, BIG, LEVERAGE, EXAM, null]
+          description: 멈춘 카드의 종류. 끝난 판이면 null
+        overallGrade: { oneOf: [{ $ref: '#/components/schemas/Grade' }, { type: 'null' }] }
+        fund: { type: integer, format: int64 }
+        totalAsset: { type: integer, format: int64 }
+        flips: { type: integer }
+        startedAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
     Play:
       type: object
       required: [gameId, sessionId, status, startAge, age, startedAt, updatedAt]
