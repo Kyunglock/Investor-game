@@ -168,12 +168,7 @@ function Body({ event, game, busy, onChoose }: Props) {
           accuracy={isNews ? (event.hintAccuracy ?? null) : undefined}
         />
       )}
-      {isNews && event.sway && (
-        <div className="mt-2.5 border-l-[3px] border-line px-2.5 py-1.5 text-xs text-muted">
-          <p className="text-[10px] text-faint">다른 뉴스</p>
-          <p>{event.sway}</p>
-        </div>
-      )}
+      {/* '다른 뉴스' 칸은 보이지 않는다. 줏대 판정은 그대로 그 소식에 흔들린다 (decisions.md 198번). */}
       {isNews && <WorldBrief />}
 
       <div

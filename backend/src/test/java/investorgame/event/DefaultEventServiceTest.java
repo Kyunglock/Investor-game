@@ -321,14 +321,14 @@ class DefaultEventServiceTest {
   }
 
   @Test
-  void 결혼하면_6에서_12년마다_가족_여행_제안이_오고_누가_제안했는지와_네_선택지가_있다() {
+  void 결혼하면_12에서_18년마다_가족_여행_제안이_오고_누가_제안했는지와_네_선택지가_있다() {
     UUID gameId = UUID.randomUUID();
     int marriedDay = (30 - START_AGE) * YEAR;
     // 자녀 셋(더 묻지 않음), 독립한 날 없음(자녀 결혼 없음) → 생활 선택은 가족 여행뿐.
     SchedulingContext married = lifeOnly(true, marriedDay, 3);
 
     EventView trip = nextOf(gameId, married, marriedDay, EventKind.LIFE, 11L).orElseThrow();
-    assertThat(trip.occursDay() - marriedDay).isBetween(6 * YEAR, 12 * YEAR);
+    assertThat(trip.occursDay() - marriedDay).isBetween(12 * YEAR, 18 * YEAR);
     assertThat(trip.title()).contains("가족 여행 제안");
     assertThat(trip.title()).containsAnyOf("배우자", "부모님");
     assertThat(trip.options())
@@ -338,7 +338,7 @@ class DefaultEventServiceTest {
 
     EventView again = nextOf(gameId, married, trip.occursDay(), EventKind.LIFE, 11L).orElseThrow();
     assertThat(isTrip(again)).isTrue();
-    assertThat(again.occursDay() - trip.occursDay()).isBetween(6 * YEAR, 12 * YEAR);
+    assertThat(again.occursDay() - trip.occursDay()).isBetween(12 * YEAR, 18 * YEAR);
 
     // 미혼이면 오지 않는다.
     assertThat(
@@ -1344,7 +1344,8 @@ class DefaultEventServiceTest {
     events.complete(gameId, buy.eventId(), new Completion("PASS", "PASS", List.of()));
 
     EventView ask = firstOf(gameId, family, marriedDay, EventKind.HOUSING, 3L);
-    assertThat(ask.occursDay()).isEqualTo(marriedDay + YEAR);
+    // 결혼 3년 뒤 처음 묻는다 (decisions.md 198번).
+    assertThat(ask.occursDay()).isEqualTo(marriedDay + 3 * YEAR);
     assertThat(ask.title()).isEqualTo("언제까지 월세 살 거야?");
     assertThat(ask.body()).as("은행원 배우자는 금리표를 들고 온다").contains("금리표").doesNotContain("아이");
     assertThat(ask.options())
@@ -1380,6 +1381,17 @@ class DefaultEventServiceTest {
             ask.occursDay(),
             EventKind.HOUSING,
             3L);
+    // 아이가 태어나면 '집 살까?'가 먼저 올 수 있다(결혼 3년 뒤라 그 간격이 이미 지났다, decisions.md 198번). 넘기고 다음을 본다.
+    if (again.title().equals("집을 살까?")) {
+      events.complete(gameId, again.eventId(), new Completion("PASS", "PASS", List.of()));
+      again =
+          firstOf(
+              gameId,
+              housed(withChild, marriedDay, "은행원", 1),
+              again.occursDay(),
+              EventKind.HOUSING,
+              3L);
+    }
     assertThat(again.occursDay()).as("아이가 태어나면 반년 뒤로 앞당긴다").isEqualTo(ask.occursDay() + 100 + 180);
     assertThat(again.title()).isEqualTo("배우자가 다시 집 이야기를 꺼냈다");
     assertThat(again.body()).contains("아이까지 있는데");
@@ -1608,7 +1620,7 @@ class DefaultEventServiceTest {
     HousingFacts renewed =
         new HousingFacts(
             "MONTHLY",
-            marriedDay + 2 * YEAR,
+            marriedDay + 4 * YEAR,
             0,
             false,
             false,
@@ -1624,7 +1636,8 @@ class DefaultEventServiceTest {
     EventView next =
         firstOf(gameId, housed(renewed, marriedDay, "은행원", 0), marriedDay, EventKind.HOUSING, 3L);
     assertThat(next.title()).as("같은 날 '집 살까?'가 따라붙지 않는다").isEqualTo("언제까지 월세 살 거야?");
-    assertThat(next.occursDay()).isEqualTo(marriedDay + YEAR);
+    // 배우자는 결혼 3년 뒤 처음 묻는다(decisions.md 198번). 갱신한 세의 만기는 그보다 뒤다.
+    assertThat(next.occursDay()).isEqualTo(marriedDay + 3 * YEAR);
 
     // 운이 나쁜 세입자: 집주인이 거절한 뒤 월세로 밀리면 배우자의 불만은 반년 뒤에 온다.
     for (long seed = 1; seed <= 30; seed++) {
@@ -1651,10 +1664,11 @@ class DefaultEventServiceTest {
         continue;
       }
       events.complete(unlucky, end.eventId(), new Completion("MONTHLY", "MONTHLY", List.of()));
+      // 옮긴 월세의 만기는 배우자의 첫 불만(결혼 3년 뒤, decisions.md 198번)보다 뒤다.
       HousingFacts pushed =
           new HousingFacts(
               "MONTHLY",
-              marriedDay + 2 * YEAR,
+              marriedDay + 4 * YEAR,
               0,
               false,
               false,
