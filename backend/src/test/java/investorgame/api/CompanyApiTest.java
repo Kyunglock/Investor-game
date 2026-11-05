@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -28,6 +29,7 @@ import org.springframework.web.context.WebApplicationContext;
 class CompanyApiTest {
 
   @Autowired WebApplicationContext context;
+  @Autowired JdbcClient jdbc;
 
   MockMvc mvc;
   Cookie session;
@@ -82,7 +84,7 @@ class CompanyApiTest {
   }
 
   @Test
-  void 사재로_회사를_차리고_공채_시장에서_뽑아_세_해를_돌면_팔고_다시_차린다() throws Exception {
+  void 사재로_회사를_차리고_공채_시장에서_뽑아_세_해를_넘겨도_이어진다() throws Exception {
     mvc.perform(get("/api/company").cookie(session)).andExpect(status().isNotFound());
 
     DocumentContext company =
@@ -146,32 +148,38 @@ class CompanyApiTest {
       DocumentContext settled = json(settle(year).andExpect(status().isOk()));
       assertThat(settled.read("$.lastSettlement.year", Integer.class)).isEqualTo(year);
     }
-    // 마지막 해의 결산이 한 번 더 와도 끝난 회사를 그대로 돌려준다 (234번).
-    settle(3).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ENDED"));
-    mvc.perform(get("/api/company").cookie(session))
-        .andExpect(jsonPath("$.status").value("ENDED"))
-        .andExpect(jsonPath("$.meeting").doesNotExist())
-        .andExpect(jsonPath("$.applicants.length()").value(0))
-        .andExpect(jsonPath("$.invest").doesNotExist())
-        .andExpect(jsonPath("$.sale.forced").value(true))
-        .andExpect(jsonPath("$.owner.fameGrade").value("F"));
-    // 시대가 끝난 회사는 팔아야 다음 회사가 열린다.
-    mvc.perform(post("/api/company/applicants/refresh").cookie(session))
-        .andExpect(status().isNotFound());
+    // 매각을 뺐다(236번): 세 해가 지나도 회사는 끝나지 않고 4년 차 연초 회의가 온다.
+    DocumentContext fourth = json(mvc.perform(get("/api/company").cookie(session)));
+    assertThat(fourth.read("$.status", String.class)).isEqualTo("ACTIVE");
+    assertThat(fourth.read("$.year", Integer.class)).isEqualTo(4);
+    assertThat(fourth.read("$.invest.ready", Boolean.class)).isTrue();
+    assertThat(fourth.read("$.applicants.length()", Integer.class)).isEqualTo(3);
+    assertThat(fourth.read("$.meeting", Object.class)).isNotNull();
+    java.util.Map<String, Object> fields = fourth.read("$");
+    assertThat(fields).doesNotContainKeys("sale", "owner", "turns");
+    // 지난 해의 결산이 한 번 더 와도 아무것도 하지 않는다 (234번).
+    settle(3).andExpect(status().isOk()).andExpect(jsonPath("$.year").value(4));
     mvc.perform(post("/api/company").cookie(session)).andExpect(status().isBadRequest());
+    postJson("/api/company/sale", "{\"cofounders\":[" + employeeId + "]}")
+        .andExpect(status().is4xxClientError());
+    json(postJson("/api/company/invest", "{\"choice\":\"HOLD\"}").andExpect(status().isOk()));
+    settle(4).andExpect(status().isOk()).andExpect(jsonPath("$.lastSettlement.year").value(4));
+  }
 
-    DocumentContext next =
-        json(
-            postJson("/api/company/sale", "{\"cofounders\":[" + employeeId + "]}")
-                .andExpect(status().isOk()));
-    assertThat(next.read("$.status", String.class)).isEqualTo("ACTIVE");
-    assertThat(next.read("$.number", Integer.class)).isEqualTo(2);
-    assertThat(next.read("$.grade", String.class)).isEqualTo("F");
-    assertThat(next.read("$.employees.length()", Integer.class)).as("공동창업자").isEqualTo(1);
-    assertThat(next.read("$.applicants.length()", Integer.class)).as("새 회사의 공채").isEqualTo(3);
-    assertThat(next.read("$.owner.sales", Integer.class)).isEqualTo(1);
-    assertThat(next.read("$.era.code", String.class)).isNotEqualTo("plain");
-    postJson("/api/company/sale", "{\"cofounders\":[]}").andExpect(status().isBadRequest());
+  /** 매각을 빼기 전에 시대가 끝나 멈춘 회사는 다시 열면 다음 해 연초 회의부터 이어진다 (236번). */
+  @Test
+  void 시대가_끝나_멈췄던_옛_회사는_다시_이어진다() throws Exception {
+    String id =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()))
+            .read("$.companyId");
+    jdbc.sql("UPDATE raising_company SET status = 'ENDED' WHERE id = CAST(:id AS uuid)")
+        .param("id", id)
+        .update();
+    DocumentContext resumed = json(mvc.perform(get("/api/company").cookie(session)));
+    assertThat(resumed.read("$.status", String.class)).isEqualTo("ACTIVE");
+    assertThat(resumed.read("$.companyId", String.class)).isEqualTo(id);
+    assertThat(resumed.read("$.applicants.length()", Integer.class)).isEqualTo(3);
+    settle(1).andExpect(status().isOk()).andExpect(jsonPath("$.year").value(2));
   }
 
   /** 자리가 꽉 차면 내보낼 직원을 골라야 뽑는다. 인사팀에 사람이 있으면 지원자가 한 명 더 온다. */

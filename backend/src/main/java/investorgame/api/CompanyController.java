@@ -132,26 +132,6 @@ class CompanyController {
     return company;
   }
 
-  /** 회사를 팔고 다음 회사를 차린다 (증권사 육성 설계 9절). 돌려주는 값은 새 회사다. */
-  @PostMapping("/sale")
-  CompanyView sell(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody SaleRequest request) {
-    UUID sessionId = cookies.requireSession(token);
-    CompanyView company = companies.sell(sessionId, request.cofounders());
-    PLAY.info(
-        "company-sale session={} next={} number={} fame={} ip={}",
-        sessionId,
-        company.companyId(),
-        company.number(),
-        company.owner().fameGrade(),
-        ClientIp.current());
-    return company;
-  }
-
-  /** 데려갈 공동창업자 직원 ID. */
-  record SaleRequest(@NotNull List<@NotNull Integer> cofounders) {}
-
   /** replace는 자리가 꽉 찼을 때 내보낼 직원 ID. */
   record HireRequest(@NotNull Integer applicantId, Integer replace) {}
 

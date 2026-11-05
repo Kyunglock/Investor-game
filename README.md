@@ -1,6 +1,6 @@
 # Investor Game
 
-증권사 사장이 되어 사재 1억 원으로 회사를 차린다. 해마다 공채 시장에서 지원자를 계약금을 주고 뽑아 자리에 앉히면, 직원들이 성격(능력치)대로 굴리고 확률로 손이 뒤집힌다. 세 해(한 시대)가 끝나면 회사를 팔고 아끼던 직원을 데려가 다시 차린다. 설계는 [증권사 육성 설계](./docs/superpowers/specs/2026-11-05-brokerage-raising-design.md).
+증권사 사장이 되어 사재 1억 원으로 회사를 차린다. 해마다 공채 시장에서 지원자를 계약금을 주고 뽑아 자리에 앉히면, 직원들이 성격(능력치)대로 굴리고 확률로 손이 뒤집힌다. 회사는 해마다 이어진다(회사 매각은 지금 뺐다, decisions.md 236번). 설계는 [증권사 육성 설계](./docs/superpowers/specs/2026-11-05-brokerage-raising-design.md).
 
 설계 문서는 [`docs/`](./docs)에 있다. 처음이라면 [`docs/architecture.md`](./docs/architecture.md)(구조와 API), [`docs/domains.md`](./docs/domains.md)(도메인과 용어), [`docs/db.md`](./docs/db.md)(테이블), [`docs/decisions.md`](./docs/decisions.md)(결정, 228번부터가 지금 흐름) 순으로 읽는다. 옛 "투자자 인생 시뮬레이터"(#292)와 3분 육성 판(decisions.md 228번)의 코드는 지웠고, 그때의 문서는 기록으로 남아 있다.
 
@@ -38,7 +38,7 @@ pnpm dev
 
 ### 플레이 기록 보기 (관리자)
 
-서버를 `ADMIN_TOKEN` 환경 변수와 함께 띄우고 `http://localhost:5173/admin`에서 그 토큰을 넣으면, 누가(익명 세션 + 접속 IP) 언제 회사를 차렸고 첫 회사가 몇 년 차에서 멈췄는지 볼 수 있다. 토큰을 비워 두면 관리자 API는 꺼진다. 서버 로그에도 `investorgame.play` 로거로 회사의 차림·뽑기·결산·매각이 IP와 함께 남는다.
+서버를 `ADMIN_TOKEN` 환경 변수와 함께 띄우고 `http://localhost:5173/admin`에서 그 토큰을 넣으면, 누가(익명 세션 + 접속 IP) 언제 회사를 차렸고 첫 회사가 몇 년 차에서 멈췄는지 볼 수 있다. 토큰을 비워 두면 관리자 API는 꺼진다. 서버 로그에도 `investorgame.play` 로거로 회사의 차림·뽑기·투자 회의·결산이 IP와 함께 남는다.
 
 ```bash
 cd backend

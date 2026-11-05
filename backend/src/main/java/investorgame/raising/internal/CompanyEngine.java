@@ -125,7 +125,10 @@ class CompanyEngine {
     return eras().stream().filter(e -> e.code().equals(company.era)).findFirst().orElseThrow();
   }
 
-  /** 시대가 끝났다: 세 해를 다 돌았다. 이제 회사를 판다 (9.4절). */
+  /**
+   * 시대가 끝났다: 세 해를 다 돌았다 (9.4절). 매각을 뺀 뒤(236번)로는 회사가 멈추지 않는다. 매각 규칙(canSell·fameFor·refound)은 다시 붙일
+   * 때를 위해 남겨 두었고 지금은 API가 부르지 않는다.
+   */
   boolean eraOver(CompanyState company) {
     return company.year > properties.turns();
   }
@@ -343,9 +346,14 @@ class CompanyEngine {
   }
 
   private void requireOpen(CompanyState company) {
-    if (eraOver(company) || company.sold) {
-      throw new InvalidRequestException("시대가 끝났다. 회사를 판다");
+    if (company.sold) {
+      throw new InvalidRequestException("팔린 회사다");
     }
+  }
+
+  /** 매각을 빼기 전에 시대가 끝나 멈췄던 회사를 지금 해(turns + 1)의 연초 회의부터 다시 돌린다 (236번). */
+  void resume(CompanyState company, SeededRandom random) {
+    startYear(company, random);
   }
 
   static String won(long amount) {
@@ -689,9 +697,8 @@ class CompanyEngine {
     }
     company.settlements.add(settlement);
     company.year++;
-    if (company.year <= properties.turns()) {
-      startYear(company, random);
-    }
+    // 회사는 끝나지 않고 해마다 이어진다 (decisions.md 236번: 매각을 뺐다).
+    startYear(company, random);
     return settlement;
   }
 
@@ -806,9 +813,9 @@ class CompanyEngine {
         .toList();
   }
 
-  /** 연초 회의의 경보(XX): 내년 폭락 조짐을 한 해 일찍. 마지막 해거나 조짐이 없으면 null. */
+  /** 연초 회의의 경보(XX): 내년 폭락 조짐을 한 해 일찍. 조짐이 없으면 null. */
   String earlyOmen(CompanyState company) {
-    if (company.year >= properties.turns() || company.nextOmen == null) {
+    if (company.nextOmen == null) {
       return null;
     }
     return bestRanked(company, RANK_ALARM)
@@ -820,11 +827,8 @@ class CompanyEngine {
         .orElse(null);
   }
 
-  /** 연초 회의의 선견(ZZZ): 내년 시장 갈래. 조짐 없는 위기도 보인다. 마지막 해면 null. */
+  /** 연초 회의의 선견(ZZZ): 내년 시장 갈래. 조짐 없는 위기도 보인다. */
   String forecast(CompanyState company) {
-    if (company.year >= properties.turns()) {
-      return null;
-    }
     return bestRanked(company, RANK_FORESIGHT)
         .map(
             e ->

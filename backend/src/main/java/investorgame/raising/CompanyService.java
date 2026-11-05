@@ -41,12 +41,6 @@ public interface CompanyService {
    */
   CompanyView settle(UUID sessionId, int year);
 
-  /**
-   * 회사를 팔고 다음 회사를 F에서 차린다 (9절). 시대가 끝났거나 등급이 매각 조건 이상이어야 한다(400). cofounders는 데려갈 직원 ID로, 공동창업자 수를
-   * 넘으면 400. 돌려주는 값은 새 회사다.
-   */
-  CompanyView sell(UUID sessionId, List<Integer> cofounders);
-
   /** 최근에 차린 회사부터 limit개. 관리자 플레이 기록용이며 세션을 따지지 않는다. */
   List<CompanySummary> recent(int limit);
 }

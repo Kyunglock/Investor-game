@@ -115,6 +115,20 @@ class CompanyRepository {
         .update();
   }
 
+  /** 시대가 끝나 멈췄던 옛 회사를 다시 돌린다 (decisions.md 236번: 매각을 뺐다). */
+  void reopen(UUID id, CompanyState state) {
+    jdbc.sql(
+            """
+            UPDATE raising_company
+            SET state = CAST(:state AS jsonb), updated_at = :now, status = 'ACTIVE'
+            WHERE id = :id
+            """)
+        .param("id", id)
+        .param("state", json.writeValueAsString(state))
+        .param("now", now())
+        .update();
+  }
+
   private Row map(java.sql.ResultSet rs, int rowNum) throws java.sql.SQLException {
     return new Row(
         rs.getObject("id", UUID.class),

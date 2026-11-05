@@ -1,7 +1,7 @@
 import { expect, type Page, test } from '@playwright/test'
 
 // 실제 브라우저·서버·DB로 회사 한 바퀴를 확인한다 (증권사 육성 설계 4·6·9절, decisions.md 228번).
-// 새 브라우저 문맥은 새 세션이라 회사가 없다: 사장의 사재로 차리고, 공채 시장에서 뽑아 앉히고, 세 해를 결산하고, 팔고 다시 차린다.
+// 새 브라우저 문맥은 새 세션이라 회사가 없다: 사장의 사재로 차리고, 공채 시장에서 뽑아 앉히고, 해마다 결산한다. 회사는 끝나지 않는다(236번).
 
 test.setTimeout(90_000)
 
@@ -91,7 +91,7 @@ test('처음 오면 회사를 차리고, 직원 없이 F등급 자리 두 개와
   await expect(page.getByTestId('office-art')).toBeVisible()
 })
 
-test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르고, 투자 회의와 세 해 결산을 하면 팔고 다시 차린다', async ({
+test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르고, 투자 회의와 결산을 하면 세 해가 지나도 이어진다', async ({
   page,
 }) => {
   test.setTimeout(150_000)
@@ -159,21 +159,16 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
       await expect(page.getByTestId('office-pnl')).toHaveCount(2)
     }
   }
-  // 시대가 끝나면 회사를 판다. 아끼던 직원을 공동창업자로 데려가 새 시대의 F 회사를 차린다 (9절).
-  await expect(page.getByTestId('sale')).toBeVisible()
-  await expect(page.getByRole('tab', { name: /공채/ })).toHaveCount(0)
+  // 매각을 뺐다(236번): 세 해가 지나도 회사는 이어지고 4년 차 공채·연초 회의가 온다. 팔 곳은 없다.
+  await expect(page.getByText(/1호 회사 · 4년 차/)).toBeVisible()
+  await expect(page.getByTestId('sale')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: /회사 팔기/ })).toHaveCount(0)
   await page.reload()
-  await expect(page.getByTestId('sale')).toBeVisible()
-  await page.getByTestId('sale').getByRole('checkbox').first().check()
-  await page.getByRole('button', { name: '회사를 팔고 새 회사를 차린다' }).click()
-  await expect(page.getByText(/2호 회사 · 1년 차/)).toBeVisible()
-  await expect(page.getByTestId('company-grade')).toHaveText('F')
-  await expect(page.getByTestId('owner')).toContainText('판 회사 1곳')
-  await expect(page.getByTestId('opening')).toContainText('공동창업자')
-  await tab(page, /배치/)
-  await expect(page.getByTestId('employee')).toHaveCount(1)
+  await expect(page.getByText(/1호 회사 · 4년 차/)).toBeVisible()
   await tab(page, /공채/)
   await expect(page.getByTestId('applicant')).toHaveCount(3)
+  await settleYear(page, 4, '판다')
+  await expect(page.getByText(/1호 회사 · 5년 차/)).toBeVisible()
 })
 
 test('뽑기 요청이 끊겨도 버튼이 잠기지 않고 다시 뽑을 수 있다', async ({ page }) => {

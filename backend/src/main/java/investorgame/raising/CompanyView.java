@@ -7,7 +7,7 @@ import java.util.UUID;
 /**
  * 회사 화면의 값 (증권사 육성 설계 4·6절). 올해 시장 갈래는 숨은 값이라 조짐만 담는다. 직원 능력치는 등급만.
  *
- * @param year 지금 해(1부터). 끝났으면 turns + 1
+ * @param year 지금 해(1부터). 회사는 끝나지 않고 해마다 이어진다 (decisions.md 236번)
  * @param grade 자본으로 매기는 회사 등급 (4.5절)
  * @param nextGradeCapital 다음 등급의 자본. 맨 위면 null
  * @param seats 앉힐 수 있는 자리 수
@@ -19,8 +19,6 @@ import java.util.UUID;
  * @param number 사장이 차린 몇 번째 회사인가
  * @param era 이 회사의 시대 (9.4절)
  * @param opening 회사를 차릴 때의 한 줄
- * @param owner 사장의 명성 (9.2절)
- * @param sale 지금 팔 수 있으면 매각 조건. 못 팔면 null (9.1절)
  */
 public record CompanyView(
     UUID companyId,
@@ -28,10 +26,7 @@ public record CompanyView(
     int number,
     Era era,
     String opening,
-    Owner owner,
-    Sale sale,
     int year,
-    int turns,
     long capital,
     String grade,
     Long nextGradeCapital,
@@ -194,20 +189,4 @@ public record CompanyView(
       int employeeId, String name, String desk, long stake, long pnl, Map<String, Integer> flips) {}
 
   public record Era(String code, String name, String description) {}
-
-  /**
-   * @param fameGrade 사장 명성 등급 F~ZZZ
-   * @param sales 판 회사 수
-   * @param cofounderSlots 다음 회사에 데려갈 수 있는 공동창업자 수
-   */
-  public record Owner(String fameGrade, int famePoints, int sales, int cofounderSlots) {}
-
-  /**
-   * @param forced 시대가 끝나 반드시 판다. 거짓이면 시대가 끝나기 전에 스스로 파는 것이다
-   * @param price 매각가(지금 자본)
-   * @param fameAfter 팔면 오를 사장 명성 등급
-   * @param cofounderSlots 이번에 데려갈 수 있는 공동창업자 수 (판 뒤의 명성으로)
-   */
-  public record Sale(
-      boolean forced, String note, long price, String fameAfter, int cofounderSlots) {}
 }

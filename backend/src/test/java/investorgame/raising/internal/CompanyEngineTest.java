@@ -85,22 +85,21 @@ class CompanyEngineTest {
   }
 
   @Test
-  void 세_해를_결산하면_회사가_끝나고_같은_시드면_같은_결과다() {
+  /** 매각을 뺐다(236번): 세 해가 지나도 회사는 끝나지 않고 다음 해 연초 회의가 온다. */
+  void 세_해를_넘겨도_회사가_이어지고_같은_시드면_같은_결과다() {
     long[] capitals = new long[2];
     for (int k = 0; k < 2; k++) {
       CompanyState company = open(9, stats(50, 50, 50, 50), 100_000_000);
       ENGINE.place(company, Map.of(1, "bio"));
-      for (int year = 1; year <= PROPERTIES.turns(); year++) {
+      for (int year = 1; year <= PROPERTIES.turns() + 2; year++) {
         CompanyState.Settlement s = settleYear(company, new HashSeededRandom(9));
         assertThat(s.year).isEqualTo(year);
         assertThat(s.fee).as("수수료는 시장과 상관없이 들어온다").isPositive();
         assertThat(s.lines).isNotEmpty();
       }
-      assertThat(company.year).isEqualTo(PROPERTIES.turns() + 1);
-      assertThat(ENGINE.eraOver(company)).isTrue();
-      assertThat(ENGINE.canSell(company)).as("시대가 끝나면 판다").isTrue();
-      assertThatThrownBy(() -> ENGINE.settle(company, new HashSeededRandom(9)))
-          .isInstanceOf(InvalidRequestException.class);
+      assertThat(company.year).isEqualTo(PROPERTIES.turns() + 3);
+      assertThat(company.invest).as("다음 해 투자 회의가 온다").isNotNull();
+      assertThat(company.applicants).as("다음 해 공채").isNotEmpty();
       capitals[k] = company.capital;
     }
     assertThat(capitals[0]).isEqualTo(capitals[1]);
