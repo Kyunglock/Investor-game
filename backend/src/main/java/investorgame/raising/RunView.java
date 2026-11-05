@@ -10,6 +10,7 @@ import java.util.UUID;
  *
  * @param card 지금 카드 번호(0부터)
  * @param scripted 처음 온 사람의 짜인 첫 판인가 (11.2절)
+ * @param recruit 회사가 공채로 내준 판인가. 아니면 사장의 사재로 하는 판 (6.5절)
  * @param fund 이 판의 운용금
  * @param grades 능력치 코드 → 등급(F~SSS)
  * @param overallGrade 다섯 능력치 평균의 등급. 입사 심사가 매기는 종합 등급이다 (2.3절)
@@ -23,6 +24,7 @@ public record RunView(
     int card,
     int cardCount,
     boolean scripted,
+    boolean recruit,
     long fund,
     long cash,
     long debt,
@@ -93,8 +95,10 @@ public record RunView(
    * @param returnBp 운용금 대비 수익률(만분율)
    * @param flips 이 판에서 손이 뒤집힌 횟수
    * @param highlights 결과 화면의 한 판 요약 줄
+   * @param decided 회사에 등록할지 정했는가
    */
   public record Result(
+      boolean decided,
       String overallGrade,
       long fund,
       long totalAsset,

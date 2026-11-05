@@ -19,6 +19,9 @@ public interface BehaviorService {
   /** 이 선택이 판정(줏대·용기·인내)에 걸려 고른 것과 다른 행동이 될 확률(퍼센트, 반올림). resolve와 같은 규칙으로 계산한다. 화면의 선택지에 보여 준다. */
   int deviationPercent(ChoiceContext context);
 
+  /** 능력치 하나로 하는 판정 한 번이 뒤집힐 확률(만분율). 0이면 상한, 100이면 0. 회사 결산이 직원의 판단을 굴릴 때 쓴다 (증권사 육성 설계 4.2절). */
+  int flipChanceBp(int stat);
+
   /** 운에 따라 손실을 줄일지 정한다. 손실에 곱할 비율(퍼센트)을 돌려준다. */
   /**
    * 운 (decisions.md 78번). 운 × chance-per-point-bp 확률로 '운이 따른다'. 따르면 내릴 뉴스(truth DOWN)는

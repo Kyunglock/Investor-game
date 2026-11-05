@@ -36,7 +36,8 @@ export interface paths {
         /**
          * 3분 육성 한 판을 시작한다
          * @description 진행 중인 판이 있으면 버리고 새로 시작한다. 나이도 시계도 없고 카드 수(12장 안팎)가 판의 끝이다 (증권사 육성 설계 3절).
-         *     세션의 첫 판은 처음 온 사람을 위한 짜인 판이다 (11.2절).
+         *     세션의 첫 판은 처음 온 사람을 위한 짜인 판이다 (11.2절). 회사가 돌고 있으면 공채 육성이다: 회사가 자본의 10%를 운용금으로 내준다.
+         *     공채는 한 해에 한 번이고, 지난 공채 판의 등록을 정하지 않았으면 400.
          */
         post: operations["startRun"];
         delete?: never;
@@ -76,6 +77,81 @@ export interface paths {
          * @description card는 화면이 본 카드 번호다. 지금 카드와 다르거나(두 번 누름) 고를 수 없는 선택이면 400.
          */
         post: operations["chooseRunCard"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** 세션의 가장 최근 회사 (증권사 육성 설계 4·6절) */
+        get: operations["getCompany"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/hires": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 끝난 육성 판의 사람을 등록하거나 돌려보낸다
+         * @description 회사가 없으면 등록하며 회사가 열린다(1호 직원, 그 판의 돈이 시작 자본). 자리가 꽉 찼으면 replace의 직원과 바꾼다.
+         *     돌려보내도 그 판의 돈은 회사 자본으로 들어간다.
+         */
+        post: operations["hireFromRun"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/placement": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 직원을 자리에 앉힌다. 사장은 배치만 한다 */
+        post: operations["placeEmployees"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/settle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 올해 결산을 하고 다음 해 연초 회의로 간다
+         * @description 직원들이 배치대로 1년을 굴린 결과가 lastSettlement에 실린다. 마지막 해면 회사가 끝난다. 공채 판이 남아 있으면 400.
+         */
+        post: operations["settleYear"];
         delete?: never;
         options?: never;
         head?: never;
@@ -545,6 +621,8 @@ export interface components {
             cardCount: number;
             /** @description 처음 온 사람의 짜인 첫 판인가 (11.2절) */
             scripted: boolean;
+            /** @description 회사가 공채로 내준 판인가. 아니면 사장의 사재로 하는 판 (6.5절) */
+            recruit: boolean;
             /**
              * Format: int64
              * @description 이 판의 운용금
@@ -579,6 +657,76 @@ export interface components {
             unlocked: string[];
             current?: components["schemas"]["RunCard"] | null;
             result?: components["schemas"]["RunResult"] | null;
+        };
+        /** @description 회사 화면의 값. 올해 시장 갈래는 숨은 값이라 조짐만 담는다. 직원 능력치는 등급만. */
+        Company: {
+            /** Format: uuid */
+            companyId: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "ENDED";
+            /** @description 지금 해(1부터). 끝났으면 turns + 1 */
+            year: number;
+            turns: number;
+            /** Format: int64 */
+            capital: number;
+            grade: components["schemas"]["Grade"];
+            /** Format: int64 */
+            nextGradeCapital?: number | null;
+            seats: number;
+            employees: {
+                id: number;
+                name: string;
+                overallGrade: components["schemas"]["Grade"];
+                grades: {
+                    [key: string]: components["schemas"]["Grade"];
+                };
+                desk?: string | null;
+            }[];
+            desks: {
+                code: string;
+                name: string;
+                statCode: string;
+                /** @description 거짓이면 돈을 굴리지 않고 다른 자리를 돕는다 */
+                trades: boolean;
+                description: string;
+            }[];
+            meeting?: {
+                /** @description 폭락 조짐. 헛조짐일 수도 있다 */
+                omen?: string | null;
+                wanted: string;
+                /** Format: int64 */
+                recruitFund: number;
+                recruitOpen: boolean;
+                /** Format: uuid */
+                pendingRunId?: string | null;
+            } | null;
+            lastSettlement?: {
+                year: number;
+                /** @enum {string} */
+                phase: "boom" | "normal" | "crash";
+                omen?: string | null;
+                /** Format: int64 */
+                capitalBefore: number;
+                /** Format: int64 */
+                capitalAfter: number;
+                /** Format: int64 */
+                fee: number;
+                gradeBefore: components["schemas"]["Grade"];
+                gradeAfter: components["schemas"]["Grade"];
+                results: {
+                    employeeId: number;
+                    name: string;
+                    desk: string;
+                    /** Format: int64 */
+                    stake: number;
+                    /** Format: int64 */
+                    pnl: number;
+                    flips: {
+                        [key: string]: number;
+                    };
+                }[];
+                lines: string[];
+            } | null;
         };
         /** @enum {string} */
         Grade: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "X" | "XX" | "XXX" | "Z" | "ZZ" | "ZZZ";
@@ -637,6 +785,8 @@ export interface components {
             tips: string[];
         };
         RunResult: {
+            /** @description 회사에 등록할지 정했는가 */
+            decided: boolean;
             overallGrade: components["schemas"]["Grade"];
             /** Format: int64 */
             fund: number;
@@ -1474,6 +1624,7 @@ export interface operations {
                     "application/json": components["schemas"]["Run"];
                 };
             };
+            400: components["responses"]["InvalidRequest"];
             401: components["responses"]["SessionRequired"];
         };
     };
@@ -1524,6 +1675,118 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RunChoice"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getCompany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 돌고 있거나 끝난 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    hireFromRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    runId: string;
+                    /** @description 거짓이면 돌려보낸다 */
+                    register: boolean;
+                    /** @description 자리가 꽉 찼을 때 바꿀 직원 ID */
+                    replace?: number | null;
+                };
+            };
+        };
+        responses: {
+            /** @description 정한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    placeEmployees: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    seats: {
+                        employeeId: number;
+                        /** @description 자리 코드. null이면 쉰다 */
+                        desk?: string | null;
+                    }[];
+                };
+            };
+        };
+        responses: {
+            /** @description 배치한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    settleYear: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 결산한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
                 };
             };
             400: components["responses"]["InvalidRequest"];

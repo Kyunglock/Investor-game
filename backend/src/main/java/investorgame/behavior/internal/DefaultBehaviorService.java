@@ -172,6 +172,11 @@ class DefaultBehaviorService implements BehaviorService {
     return (int) Math.round((read + (1 - read) / Math.max(1, choices)) * PERCENT);
   }
 
+  @Override
+  public int flipChanceBp(int stat) {
+    return deviationBp(stat);
+  }
+
   /** 능력치가 0이면 상한, 100이면 0. */
   private int deviationBp(int stat) {
     return (PERCENT - stat) * properties.deviationCapBp() / PERCENT;
