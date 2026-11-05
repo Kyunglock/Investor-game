@@ -222,6 +222,14 @@ class JsonContentCatalog implements ContentCatalog {
       require(company.flipLines().containsKey(stat), "결산 소식 줄이 없다: " + stat);
     }
     require(company.market() != null, "공채 시장 문구가 없다");
+    RaisingContent.Invest invest = company.invest();
+    require(
+        invest != null
+            && invest.options().keySet().containsAll(List.of("BUY", "SELL", "HOLD"))
+            && invest.actions().keySet().containsAll(List.of("BUY", "SELL", "HOLD"))
+            && invest.reads().keySet().containsAll(List.of("UP", "DOWN", "NEUTRAL"))
+            && invest.reveal().keySet().containsAll(List.of("UP", "DOWN")),
+        "투자 회의 문구가 없다");
     for (String stat : List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE)) {
       require(raising.flipTips().containsKey(stat), "처음 뒤집힘 설명이 없다: " + stat);
     }

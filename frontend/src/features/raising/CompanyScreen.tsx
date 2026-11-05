@@ -6,6 +6,7 @@ import { usePixelArt } from '../game/pixelArt'
 import { bubbleOf } from './board'
 import { GradeLadder } from './GradeLadder'
 import { STAT_NAMES, STAT_ORDER } from './grades'
+import { InvestPanel } from './InvestPanel'
 import { MoveScene } from './MoveScene'
 import { OfficeArt } from './OfficeArt'
 import { ATTIRE_NAMES, attireOf, glowOf } from './office'
@@ -168,6 +169,8 @@ export function CompanyScreen({ company }: { company: Company }) {
           )}
         </section>
 
+        {!ended && company.invest && <InvestPanel invest={company.invest} locked={changed} />}
+
         {error && (
           <p role="alert" className="mt-3 text-[13px] text-wine">
             {error}
@@ -188,11 +191,11 @@ export function CompanyScreen({ company }: { company: Company }) {
             )}
             <button
               type="button"
-              disabled={busy || changed}
+              disabled={busy || changed || Boolean(company.invest?.ready)}
               onClick={() => void settle()}
               className="min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50"
             >
-              {company.year}년 차 결산 보기
+              {company.invest?.ready ? '투자 회의를 먼저 합니다' : `${company.year}년 차 결산 보기`}
             </button>
           </div>
         )}

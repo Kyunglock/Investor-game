@@ -94,9 +94,31 @@ export interface paths {
         put?: never;
         /**
          * 올해 결산을 하고 다음 해 연초 회의로 간다
-         * @description 직원들이 배치대로 1년을 굴린 결과가 lastSettlement에 실린다. 다음 해 지원자가 새로 온다. 마지막 해면 회사가 끝난다.
+         * @description 직원들이 배치대로 1년을 굴린 결과가 lastSettlement에 실린다. 다음 해 지원자와 투자 회의가 새로 온다. 마지막 해면 회사가 끝난다.
+         *     투자 회의를 열 수 있는데(invest.ready) 안 했으면 400.
          */
         post: operations["settleYear"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/invest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 올해 투자 회의에서 고른다 (decisions.md 229번)
+         * @description 돈을 굴리는 직원마다 사장 말대로 하거나, 꼬드김에 넘어가거나, "제가 알아서 할게요" 하고 제 판단대로 한다.
+         *     손익은 바로 자본에 들어가고 invest.outcome에 실린다. 이미 했거나 돈을 굴리는 자리에 아무도 없거나 고를 수 없는 것이면 400.
+         */
+        post: operations["holdInvestMeeting"];
         delete?: never;
         options?: never;
         head?: never;
@@ -270,6 +292,73 @@ export interface components {
              * @description 지원자를 새로 받는 값
              */
             refreshCost: number;
+            /** @description 올해 투자 회의 (decisions.md 229번). 끝난 회사나 옛 회사면 null. 숨은 방향은 정한 뒤 outcome에만 있다 */
+            invest?: {
+                title: string;
+                stockName: string;
+                sectorName: string;
+                /** @description 단서 기사 문장. 리서치 팀이 형광펜을 그은 문장은 highlighted */
+                sentences: {
+                    text: string;
+                    highlighted: boolean;
+                }[];
+                /** @description 형광펜을 그은 리서치 팀 직원 */
+                highlightBy?: string | null;
+                sway: {
+                    /** @description 꼬드기는 단골 인물 */
+                    who: string;
+                    text: string;
+                };
+                /** @description 자리에 앉은 직원의 한마디 */
+                remarks: {
+                    employeeId: number;
+                    name: string;
+                    desk: string;
+                    /** @enum {string} */
+                    read: "UP" | "DOWN" | "NEUTRAL";
+                    text: string;
+                    /**
+                     * @description 돈을 굴리는 직원이 제멋대로 할 낌새. 돈을 굴리지 않으면 null
+                     * @enum {string|null}
+                     */
+                    stubborn?: "LOW" | "MID" | "HIGH" | null;
+                }[];
+                options: {
+                    /** @enum {string} */
+                    code: "BUY" | "SELL" | "HOLD";
+                    label: string;
+                }[];
+                /** @description 지금 정할 수 있다(정하지 않았고 돈을 굴리는 자리에 사람이 있다) */
+                ready: boolean;
+                outcome?: {
+                    /** @enum {string} */
+                    choice: "BUY" | "SELL" | "HOLD";
+                    up: boolean;
+                    reveal: string;
+                    /** @description 결정적 문장의 번호(sentences 안) */
+                    decisive: number;
+                    /**
+                     * Format: int64
+                     * @description 회의 손익. 이미 자본에 들어갔다
+                     */
+                    total: number;
+                    results: {
+                        employeeId: number;
+                        name: string;
+                        desk: string;
+                        /** @enum {string} */
+                        action: "BUY" | "SELL" | "HOLD";
+                        /**
+                         * @description 사장 말대로·제 판단대로("제가 알아서 할게요")·꼬드김
+                         * @enum {string}
+                         */
+                        follow: "BOSS" | "OWN" | "SWAY";
+                        /** Format: int64 */
+                        pnl: number;
+                        line: string;
+                    }[];
+                } | null;
+            } | null;
             lastSettlement?: {
                 year: number;
                 /** @enum {string} */
@@ -533,6 +622,36 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description 결산한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    holdInvestMeeting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    choice: "BUY" | "SELL" | "HOLD";
+                };
+            };
+        };
+        responses: {
+            /** @description 정한 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

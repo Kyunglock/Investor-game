@@ -101,10 +101,37 @@ paths:
     post:
       operationId: settleYear
       summary: 올해 결산을 하고 다음 해 연초 회의로 간다
-      description: 직원들이 배치대로 1년을 굴린 결과가 lastSettlement에 실린다. 다음 해 지원자가 새로 온다. 마지막 해면 회사가 끝난다.
+      description: |
+        직원들이 배치대로 1년을 굴린 결과가 lastSettlement에 실린다. 다음 해 지원자와 투자 회의가 새로 온다. 마지막 해면 회사가 끝난다.
+        투자 회의를 열 수 있는데(invest.ready) 안 했으면 400.
       responses:
         '200':
           description: 결산한 뒤의 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/invest:
+    post:
+      operationId: holdInvestMeeting
+      summary: 올해 투자 회의에서 고른다 (decisions.md 229번)
+      description: |
+        돈을 굴리는 직원마다 사장 말대로 하거나, 꼬드김에 넘어가거나, "제가 알아서 할게요" 하고 제 판단대로 한다.
+        손익은 바로 자본에 들어가고 invest.outcome에 실린다. 이미 했거나 돈을 굴리는 자리에 아무도 없거나 고를 수 없는 것이면 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [choice]
+              properties:
+                choice: { type: string, enum: [BUY, SELL, HOLD] }
+      responses:
+        '200':
+          description: 정한 뒤의 회사
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Company' }
@@ -274,6 +301,84 @@ components:
               fee: { type: integer, format: int64, description: 계약금. 뽑으면 회사 자본에서 나간다 }
               line: { type: [string, 'null'], description: 올해 필요한 인재, 사수가 붙음, 인사팀이 데려옴 }
         refreshCost: { type: integer, format: int64, description: 지원자를 새로 받는 값 }
+        invest:
+          description: 올해 투자 회의 (decisions.md 229번). 끝난 회사나 옛 회사면 null. 숨은 방향은 정한 뒤 outcome에만 있다
+          oneOf:
+            - type: object
+              required: [title, stockName, sectorName, sentences, sway, remarks, options, ready]
+              properties:
+                title: { type: string }
+                stockName: { type: string }
+                sectorName: { type: string }
+                sentences:
+                  type: array
+                  description: 단서 기사 문장. 리서치 팀이 형광펜을 그은 문장은 highlighted
+                  items:
+                    type: object
+                    required: [text, highlighted]
+                    properties:
+                      text: { type: string }
+                      highlighted: { type: boolean }
+                highlightBy: { type: [string, 'null'], description: 형광펜을 그은 리서치 팀 직원 }
+                sway:
+                  type: object
+                  required: [who, text]
+                  properties:
+                    who: { type: string, description: 꼬드기는 단골 인물 }
+                    text: { type: string }
+                remarks:
+                  type: array
+                  description: 자리에 앉은 직원의 한마디
+                  items:
+                    type: object
+                    required: [employeeId, name, desk, read, text]
+                    properties:
+                      employeeId: { type: integer }
+                      name: { type: string }
+                      desk: { type: string }
+                      read: { type: string, enum: [UP, DOWN, NEUTRAL] }
+                      text: { type: string }
+                      stubborn:
+                        type: [string, 'null']
+                        enum: [LOW, MID, HIGH, null]
+                        description: 돈을 굴리는 직원이 제멋대로 할 낌새. 돈을 굴리지 않으면 null
+                options:
+                  type: array
+                  items:
+                    type: object
+                    required: [code, label]
+                    properties:
+                      code: { type: string, enum: [BUY, SELL, HOLD] }
+                      label: { type: string }
+                ready: { type: boolean, description: 지금 정할 수 있다(정하지 않았고 돈을 굴리는 자리에 사람이 있다) }
+                outcome:
+                  oneOf:
+                    - type: object
+                      required: [choice, up, reveal, decisive, total, results]
+                      properties:
+                        choice: { type: string, enum: [BUY, SELL, HOLD] }
+                        up: { type: boolean }
+                        reveal: { type: string }
+                        decisive: { type: integer, description: 결정적 문장의 번호(sentences 안) }
+                        total: { type: integer, format: int64, description: 회의 손익. 이미 자본에 들어갔다 }
+                        results:
+                          type: array
+                          items:
+                            type: object
+                            required: [employeeId, name, desk, action, follow, pnl, line]
+                            properties:
+                              employeeId: { type: integer }
+                              name: { type: string }
+                              desk: { type: string }
+                              action: { type: string, enum: [BUY, SELL, HOLD] }
+                              follow:
+                                type: string
+                                enum: [BOSS, OWN, SWAY]
+                                description: 사장 말대로·제 판단대로("제가 알아서 할게요")·꼬드김
+                              pnl: { type: integer, format: int64 }
+                              line: { type: string }
+                    - type: 'null'
+            - type: 'null'
         lastSettlement:
           oneOf:
             - type: object

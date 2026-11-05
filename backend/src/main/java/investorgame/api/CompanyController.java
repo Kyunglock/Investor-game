@@ -3,6 +3,7 @@ package investorgame.api;
 import investorgame.raising.CompanyService;
 import investorgame.raising.CompanyView;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.util.HashMap;
 import java.util.List;
@@ -79,6 +80,25 @@ class CompanyController {
       @CookieValue(name = SessionCookies.NAME, required = false) String token) {
     return companies.refreshApplicants(cookies.requireSession(token));
   }
+
+  /** 올해 투자 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). */
+  @PostMapping("/invest")
+  CompanyView invest(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody InvestRequest request) {
+    UUID sessionId = cookies.requireSession(token);
+    CompanyView company = companies.invest(sessionId, request.choice());
+    PLAY.info(
+        "company-invest session={} company={} year={} choice={} ip={}",
+        sessionId,
+        company.companyId(),
+        company.year(),
+        request.choice(),
+        ClientIp.current());
+    return company;
+  }
+
+  record InvestRequest(@NotBlank String choice) {}
 
   @PostMapping("/placement")
   CompanyView place(

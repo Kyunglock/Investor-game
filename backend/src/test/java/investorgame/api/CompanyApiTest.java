@@ -97,7 +97,22 @@ class CompanyApiTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.employees[0].desk").value("bio"));
 
+    // 투자 회의 (229번): 돈을 굴리는 직원이 있으면 정해야 결산한다. 숨은 방향은 정한 뒤에만 보인다.
+    DocumentContext meeting = json(mvc.perform(get("/api/company").cookie(session)));
+    assertThat(meeting.read("$.invest.ready", Boolean.class)).isTrue();
+    assertThat(meeting.read("$.invest.sentences.length()", Integer.class)).isEqualTo(4);
+    assertThat(meeting.read("$.invest.remarks[0].stubborn", String.class)).isNotBlank();
+    assertThat(meeting.read("$.invest.options.length()", Integer.class)).isEqualTo(3);
+    assertThat(meeting.read("$.invest.outcome", Object.class)).isNull();
+    mvc.perform(post("/api/company/settle").cookie(session)).andExpect(status().isBadRequest());
+    postJson("/api/company/invest", "{\"choice\":\"SHORT\"}").andExpect(status().isBadRequest());
     for (int year = 1; year <= 3; year++) {
+      DocumentContext decided =
+          json(postJson("/api/company/invest", "{\"choice\":\"BUY\"}").andExpect(status().isOk()));
+      assertThat(decided.read("$.invest.ready", Boolean.class)).isFalse();
+      assertThat(decided.read("$.invest.outcome.results.length()", Integer.class)).isEqualTo(1);
+      assertThat(decided.read("$.invest.outcome.reveal", String.class)).isNotBlank();
+      postJson("/api/company/invest", "{\"choice\":\"BUY\"}").andExpect(status().isBadRequest());
       DocumentContext settled = json(mvc.perform(post("/api/company/settle").cookie(session)));
       assertThat(settled.read("$.lastSettlement.year", Integer.class)).isEqualTo(year);
     }
@@ -105,6 +120,7 @@ class CompanyApiTest {
         .andExpect(jsonPath("$.status").value("ENDED"))
         .andExpect(jsonPath("$.meeting").doesNotExist())
         .andExpect(jsonPath("$.applicants.length()").value(0))
+        .andExpect(jsonPath("$.invest").doesNotExist())
         .andExpect(jsonPath("$.sale.forced").value(true))
         .andExpect(jsonPath("$.owner.fameGrade").value("F"));
     // 시대가 끝난 회사는 팔아야 다음 회사가 열린다.
