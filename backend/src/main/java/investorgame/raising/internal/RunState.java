@@ -99,6 +99,12 @@ class RunState {
     /** 거짓이면 헛조짐이다: 조짐만 나오고 위기는 오지 않는다 (6.2절, 회사의 헛조짐). */
     boolean hits = true;
 
+    /** 판에서 실제로 본 조짐 수. 단톡방을 나가면 조짐이 보이지 않아 세지 않는다. */
+    int seenOmens;
+
+    /** 처음 조짐을 본 카드의 종목 가격. 아직 못 봤으면 null. */
+    Map<String, Long> pricesAtFirstOmen;
+
     List<Integer> omenCards = new ArrayList<>();
     List<String> omens = new ArrayList<>();
   }

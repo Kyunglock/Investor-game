@@ -430,6 +430,11 @@ class RunEngine {
       int at = run.crisis.omenCards.indexOf(run.card);
       if (at >= 0) {
         card.omen = run.crisis.omens.get(at);
+        // 위기 회고에 쓴다: 처음 조짐을 본 때의 가격 (투자 원칙 장치 설계 3.3절).
+        if (run.crisis.seenOmens == 0) {
+          run.crisis.pricesAtFirstOmen = new HashMap<>(run.prices);
+        }
+        run.crisis.seenOmens++;
       }
     }
     newsOptions(card, run, memory);
@@ -1171,7 +1176,40 @@ class RunEngine {
       int bp = Math.max(-BP + 100, moveBp.get(code));
       run.prices.put(code, Math.max(100, price + price * bp / BP));
     }
+    if (run.crisis != null && run.crisis.hits && run.crisis.atCard == run.card) {
+      String review = omenReview(run);
+      lines.add(review);
+      run.highlights.add(review);
+    }
     return lines;
+  }
+
+  /**
+   * 위기 전조 돌아보기 (투자 원칙 장치 설계 3.3절): 조짐을 몇 번 봤고, 처음 조짐 때 들고 있던 것을 다 팔았다면 지금 가진 주식의 손실을 얼마나 피했는지. 실력이
+   * 가장 잘 드러나는 자리라 위기 결과와 판 요약에 남긴다.
+   */
+  private String omenReview(RunState run) {
+    RaisingContent.OmenReview texts = content.raising().omenReview();
+    int seen = run.crisis.seenOmens;
+    if (seen == 0) {
+      return run.devices.contains(StatCodes.CONVICTION) && !run.crisis.omenCards.isEmpty()
+          ? texts.chatLeft()
+          : texts.silent();
+    }
+    long then = 0;
+    long now = 0;
+    for (Map.Entry<String, Holding> entry : run.holdings.entrySet()) {
+      then += entry.getValue().quantity * run.crisis.pricesAtFirstOmen.get(entry.getKey());
+      now += entry.getValue().quantity * run.prices.get(entry.getKey());
+    }
+    Map<String, String> values = new HashMap<>();
+    values.put("count", String.valueOf(seen));
+    if (then == 0) {
+      return Korean.fill(texts.noHoldings(), values);
+    }
+    int bp = (int) ((now - then) * BP / then);
+    values.put("percent", "%.1f".formatted(Math.abs(bp) / (double) PERCENT));
+    return Korean.fill(bp < 0 ? texts.avoidable() : texts.held(), values);
   }
 
   // ---------------------------------------------------------------- 성향

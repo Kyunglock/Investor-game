@@ -23,7 +23,20 @@ public record RaisingContent(
     Map<String, String> flipTips,
     Map<String, String> unlockTips,
     Exam exam,
-    Company company) {
+    Company company,
+    OmenReview omenReview) {
+
+  /**
+   * 위기 전조 돌아보기 (투자 원칙 장치 설계 3.3절). {count}는 본 조짐 수, {percent}는 처음 조짐 때 팔았다면 피했을 손실(%).
+   *
+   * @param avoidable 처음 조짐 뒤로 가진 주식이 빠졌다
+   * @param held 처음 조짐 뒤로도 가진 주식이 올랐다(버틴 게 맞았다)
+   * @param noHoldings 위기 때 가진 주식이 없었다
+   * @param silent 조짐 없이 왔다
+   * @param chatLeft 단톡방을 나가 조짐을 못 봤다
+   */
+  public record OmenReview(
+      String avoidable, String held, String noHoldings, String silent, String chatLeft) {}
 
   public static final String SLOT_STYLE = "style";
   public static final String SLOT_SECTOR = "sector";
