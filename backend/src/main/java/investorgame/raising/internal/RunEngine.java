@@ -100,17 +100,31 @@ class RunEngine {
 
   /** 새 판. 첫 카드까지 펼쳐 둔다. */
   RunState create(SeededRandom random, boolean scripted, RaisingMemory memory) {
-    return create(random, scripted, memory, properties.fund(), false);
+    return create(random, scripted, memory, properties.fund(), false, null);
   }
 
-  /** fund: 운용금. 첫 육성은 사장의 사재, 공채 육성은 회사가 내준 돈 (6.5절). */
+  /**
+   * 회사의 올해 시장 (증권사 육성 설계 6.2절). 공채 육성은 그해 회사가 겪는 시장과 같은 시장에서 한다.
+   *
+   * @param phase boom·normal·crash
+   * @param omen 연초 회의에 뜬 폭락 조짐. 없으면 null. 폭락장이 아닌 해의 헛조짐일 수도 있다
+   */
+  record Year(String phase, String omen) {}
+
+  /** fund: 운용금. 첫 육성은 사장의 사재, 공채 육성은 회사가 내준 돈 (6.5절). year: 공채 육성이면 회사의 올해 시장, 아니면 null. */
   RunState create(
-      SeededRandom random, boolean scripted, RaisingMemory memory, long fund, boolean recruit) {
+      SeededRandom random,
+      boolean scripted,
+      RaisingMemory memory,
+      long fund,
+      boolean recruit,
+      Year year) {
     RunState run = new RunState();
     run.scripted = scripted;
     run.fund = fund;
     run.cash = fund;
     run.recruit = recruit;
+    run.marketPhase = year == null ? null : year.phase();
     if (scripted) {
       run.stats.putAll(properties.scripted().stats());
     } else {
@@ -123,7 +137,7 @@ class RunEngine {
       run.startPrices.put(stock.code(), stock.basePrice());
       run.prices.put(stock.code(), stock.basePrice());
     }
-    planCrisis(run, random.forKey("crisis"), scripted);
+    planCrisis(run, random.forKey("crisis"), scripted, year);
     deal(run, memory, random);
     return run;
   }
@@ -142,8 +156,11 @@ class RunEngine {
     throw new IllegalStateException("initial-stat.grade-percent의 합이 100이 아니다");
   }
 
-  /** 육성에서도 경기 흐름의 전조와 위기가 온다 (3.1절). 짜인 첫 판에는 위기가 없다: 가르칠 것에만 집중한다. */
-  private void planCrisis(RunState run, RandomGenerator rng, boolean scripted) {
+  /**
+   * 육성에서도 경기 흐름의 전조와 위기가 온다 (3.1절). 짜인 첫 판에는 위기가 없다: 가르칠 것에만 집중한다. 공채 육성은 회사의 올해 시장을 따른다 (6.2절):
+   * 폭락장이면 반드시 위기가 오고 연초 회의의 조짐이 신입의 뉴스에도 나온다. 폭락장이 아닌 해의 헛조짐도 뉴스에 한 번 나오지만 아무 일도 없다.
+   */
+  private void planCrisis(RunState run, RandomGenerator rng, boolean scripted, Year year) {
     RaisingProperties.Crisis settings = properties.crisis();
     int chanceRoll = rng.nextInt(PERCENT);
     int silentRoll = rng.nextInt(PERCENT);
@@ -161,6 +178,10 @@ class RunEngine {
     int atRoll = rng.nextInt(Math.max(1, candidates.size()));
     List<CrisisDefinition> crises = content.crises();
     int which = rng.nextInt(crises.size());
+    if (year != null && !candidates.isEmpty()) {
+      planYear(run, rng, year, newsSlots, candidates.get(atRoll), crises.get(which));
+      return;
+    }
     if (scripted || candidates.isEmpty() || chanceRoll >= settings.chancePercent()) {
       return;
     }
@@ -173,6 +194,48 @@ class RunEngine {
       for (int k = settings.omenCards(); k >= 1; k--) {
         crisis.omenCards.add(newsSlots.get(at - k));
         crisis.omens.add(omens.remove(rng.nextInt(omens.size())));
+      }
+    }
+    run.crisis = crisis;
+  }
+
+  private void planYear(
+      RunState run,
+      RandomGenerator rng,
+      Year year,
+      List<Integer> newsSlots,
+      int atCard,
+      CrisisDefinition fallback) {
+    boolean crash = CompanyEngine.CRASH.equals(year.phase());
+    if (!crash && year.omen() == null) {
+      return;
+    }
+    RunState.Crisis crisis = new RunState.Crisis();
+    crisis.atCard = atCard;
+    crisis.hits = crash;
+    int at = newsSlots.indexOf(atCard);
+    if (!crash) {
+      // 헛조짐: 위기 자리 바로 앞 뉴스에 한 번 나오고 아무 일도 없다.
+      crisis.code = fallback.code();
+      crisis.omenCards.add(newsSlots.get(at - 1));
+      crisis.omens.add(year.omen());
+      run.crisis = crisis;
+      return;
+    }
+    CrisisDefinition definition =
+        content.crises().stream()
+            .filter(c -> year.omen() != null && c.omens().contains(year.omen()))
+            .findFirst()
+            .orElse(fallback);
+    crisis.code = definition.code();
+    if (year.omen() != null) {
+      // 첫 조짐은 연초 회의에서 본 그 문장이다. 나머지는 같은 갈래의 조짐.
+      List<String> omens = new ArrayList<>(definition.omens());
+      omens.remove(year.omen());
+      for (int k = properties.crisis().omenCards(); k >= 1; k--) {
+        crisis.omenCards.add(newsSlots.get(at - k));
+        crisis.omens.add(
+            crisis.omens.isEmpty() ? year.omen() : omens.remove(rng.nextInt(omens.size())));
       }
     }
     run.crisis = crisis;
@@ -309,7 +372,13 @@ class RunEngine {
     run.usedNews.add(news.code());
     String stockCode = script != null ? script.stock() : pickStock(news, stockRoll);
     StockDefinition stock = content.stock(stockCode);
-    boolean up = script != null ? script.up() : upRoll < news.directionRule().upBp();
+    // 공채 육성은 회사의 올해 시장을 따른다: 호황이면 오르는 뉴스가, 폭락장이면 내리는 뉴스가 많다 (6.2절).
+    int upBp =
+        news.directionRule().upBp()
+            + (run.marketPhase == null
+                ? 0
+                : properties.yearUpBp().getOrDefault(run.marketPhase, 0));
+    boolean up = script != null ? script.up() : upRoll < upBp;
     int magnitude =
         news.magnitude().minBp()
             + magnitudeRoll % (news.magnitude().maxBp() - news.magnitude().minBp() + 1);
@@ -1060,7 +1129,7 @@ class RunEngine {
         moveBp.merge(stock.code(), part, Integer::sum);
       }
     }
-    if (run.crisis != null && run.crisis.atCard == run.card) {
+    if (run.crisis != null && run.crisis.hits && run.crisis.atCard == run.card) {
       CrisisDefinition crisis =
           content.crises().stream()
               .filter(c -> c.code().equals(run.crisis.code))

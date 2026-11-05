@@ -218,4 +218,83 @@ class RunEngineTest {
     }
     return right / (double) marked;
   }
+
+  /**
+   * 공채 육성은 회사의 올해 시장에서 한다 (증권사 육성 설계 6.2절): 폭락장이면 반드시 위기가 오고 연초 회의의 조짐이 신입의 뉴스에도 나온다. 헛조짐은 뉴스에 한 번
+   * 나오고 아무 일도 없다.
+   */
+  @Test
+  void 공채_육성은_회사의_올해_시장과_같다() {
+    String omen = TestContent.load().crises().getFirst().omens().getFirst();
+    for (long seed = 1; seed <= 20; seed++) {
+      RaisingMemory memory = new RaisingMemory();
+      RunState crash =
+          ENGINE.create(
+              new HashSeededRandom(seed),
+              false,
+              memory,
+              10_000_000,
+              true,
+              new RunEngine.Year("crash", omen));
+      assertThat(crash.crisis.hits).isTrue();
+      assertThat(crash.crisis.omens.getFirst()).as("연초 회의에서 본 그 조짐").isEqualTo(omen);
+      List<CardOutcome> outcomes = playThrough(crash, memory, seed);
+      assertThat(outcomes.stream().flatMap(o -> o.lines().stream()))
+          .as("위기가 터진다")
+          .anyMatch(line -> line.contains("시장 전체가 무너졌다"));
+
+      RaisingMemory memory2 = new RaisingMemory();
+      RunState rumor =
+          ENGINE.create(
+              new HashSeededRandom(seed),
+              false,
+              memory2,
+              10_000_000,
+              true,
+              new RunEngine.Year("normal", omen));
+      assertThat(rumor.crisis.hits).isFalse();
+      assertThat(rumor.crisis.omens).containsExactly(omen);
+      assertThat(playThrough(rumor, memory2, seed).stream().flatMap(o -> o.lines().stream()))
+          .as("헛조짐은 아무 일도 없다")
+          .noneMatch(line -> line.contains("시장 전체가 무너졌다"));
+
+      RunState quiet =
+          ENGINE.create(
+              new HashSeededRandom(seed),
+              false,
+              new RaisingMemory(),
+              10_000_000,
+              true,
+              new RunEngine.Year("boom", null));
+      assertThat(quiet.crisis).as("조짐 없는 호황 해엔 위기가 없다").isNull();
+    }
+  }
+
+  @Test
+  void 호황인_해의_공채_육성은_오르는_뉴스가_많다() {
+    assertThat(upRate("boom")).isGreaterThan(upRate("normal") + 0.08);
+    assertThat(upRate("crash")).isLessThan(upRate("normal") - 0.05);
+  }
+
+  private static double upRate(String phase) {
+    int up = 0;
+    int trials = 2000;
+    for (int seed = 0; seed < trials; seed++) {
+      RaisingMemory memory = new RaisingMemory();
+      RunState run =
+          ENGINE.create(
+              new HashSeededRandom(seed),
+              false,
+              memory,
+              10_000_000,
+              true,
+              new RunEngine.Year(phase, null));
+      run.card = NEWS_SLOT;
+      ENGINE.deal(run, memory, new HashSeededRandom(seed));
+      if (run.current.up) {
+        up++;
+      }
+    }
+    return up / (double) trials;
+  }
 }

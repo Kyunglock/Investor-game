@@ -36,6 +36,9 @@ class RunState {
   /** 회사가 공채로 내준 판인가 (6.3·6.5절). 아니면 사장의 사재로 하는 판이다. */
   boolean recruit;
 
+  /** 공채 육성이면 회사의 올해 시장 갈래(boom·normal·crash), 아니면 null (6.2절). */
+  String marketPhase;
+
   /** 끝난 뒤 등록할지 정했는가. */
   boolean decided;
 
@@ -92,6 +95,10 @@ class RunState {
   static class Crisis {
     String code;
     int atCard;
+
+    /** 거짓이면 헛조짐이다: 조짐만 나오고 위기는 오지 않는다 (6.2절, 회사의 헛조짐). */
+    boolean hits = true;
+
     List<Integer> omenCards = new ArrayList<>();
     List<String> omens = new ArrayList<>();
   }
