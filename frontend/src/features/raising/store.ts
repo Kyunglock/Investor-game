@@ -10,6 +10,8 @@ interface RaisingState {
   busy: boolean
   /** 서버가 거절한 이유(400). 다음 요청에서 지운다. */
   error: string | null
+  /** 방금 결산했다. 회사 화면이 결과로 스크롤하고 지운다. */
+  justSettled: boolean
   load: () => Promise<void>
   /** 사장의 사재로 첫 회사를 차린다 (decisions.md 228번). */
   open: () => Promise<void>
@@ -52,6 +54,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     company: null,
     busy: false,
     error: null,
+    justSettled: false,
 
     load: async () => {
       const company = await safely(api.GET('/api/company'))
@@ -93,7 +96,10 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
 
     place: (seats) => change(api.POST('/api/company/placement', { body: { seats } })),
 
-    settle: () => change(api.POST('/api/company/settle')),
+    settle: async () => {
+      await change(api.POST('/api/company/settle'))
+      set({ justSettled: !get().error })
+    },
 
     sell: (cofounders) => change(api.POST('/api/company/sale', { body: { cofounders } })),
   }

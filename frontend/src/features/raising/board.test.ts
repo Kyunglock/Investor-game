@@ -1,11 +1,22 @@
 import { describe, expect, it } from 'vitest'
-import { bubbleOf, moveOf, wreathsFor } from './board'
+import { bubbleOf, moveOf, pnlLabel, wreathsFor } from './board'
 
 describe('결산 전광판과 이사 장면 (증권사 육성 설계 8.3절)', () => {
-  it('말풍선은 그해 가장 많이 뒤집힌 능력치의 한마디이고, 뒤집히지 않았으면 없다', () => {
-    expect(bubbleOf({})).toBeNull()
-    expect(bubbleOf({ patience: 2, conviction: 1 })).toBe('못 참고 팔았습니다…')
-    expect(bubbleOf({ patience: 1, conviction: 1 })).toBe('단톡방 보고 샀습니다…')
+  it('말풍선은 그해 가장 많이 뒤집힌 능력치의 한마디이고, 손익과 어긋나지 않는다', () => {
+    expect(bubbleOf({ patience: 2, conviction: 1 }, -100)).toBe('못 참고 팔았습니다…')
+    expect(bubbleOf({ patience: 1, conviction: 1 }, -100)).toBe('단톡방 보고 샀습니다…')
+    // 손이 떨렸어도 그해 벌었으면 "못 샀다"로 끝내지 않는다.
+    expect(bubbleOf({ courage: 1 }, 30_677_668)).toBe('한 번 손이 떨렸지만 그래도 벌었어요')
+    expect(bubbleOf({}, 5)).toBe('맞혔습니다!')
+    expect(bubbleOf({}, -5)).toBe('이번엔 틀렸네요…')
+    expect(bubbleOf({}, 0)).toBeNull()
+  })
+
+  it('손익은 만 원 아래를 버리고 부호를 붙인다', () => {
+    expect(pnlLabel(30_677_668)).toBe('+3,067만원')
+    expect(pnlLabel(-5_478_155)).toBe('−547만원')
+    expect(pnlLabel(123_450_000)).toBe('+1억 2,345만원')
+    expect(pnlLabel(0)).toBe('0원')
   })
 
   it('등급이 오르면 이사, 떨어지면 작은 사무실로, 그대로면 없다', () => {

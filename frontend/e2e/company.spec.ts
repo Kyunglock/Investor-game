@@ -71,18 +71,32 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await expect(third.getByRole('button', { name: /내보내고 뽑는다/ })).toHaveCount(2)
   await third.getByRole('button', { name: '그만둔다' }).click()
 
-  const combos = page.getByTestId('employee').getByRole('combobox')
-  await combos.nth(0).selectOption('bio')
-  await combos.nth(1).selectOption('day')
-  await page.getByRole('button', { name: '이렇게 앉힌다' }).click()
-  await expect(page.getByRole('button', { name: '이렇게 앉힌다' })).toBeHidden()
+  // 자리를 누르면 바로 앉는다. 버튼에는 그 자리가 원하는 능력치의 등급이 보인다.
+  const staff = page.getByTestId('employee')
+  await staff
+    .nth(0)
+    .getByRole('button', { name: /바이오 데스크 인내심/ })
+    .click()
+  await expect(staff.nth(0).getByRole('button', { name: /바이오 데스크/ })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  )
+  await staff
+    .nth(1)
+    .getByRole('button', { name: /단타 데스크 용기/ })
+    .click()
   await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '2')
+  await expect(page.getByTestId('office-tag')).toHaveCount(2)
+  // 자리 두 개가 찼다: 쉬던 사람은 더 못 앉는다(여기서는 둘 다 앉아 있다).
+  await expect(staff.nth(0).getByRole('button', { name: /리서치 팀/ })).toBeEnabled()
 
   // 투자 회의 (229번): 직원들이 한마디씩 하고, 돈을 굴리는 직원에게는 고집이 보인다. 정해야 결산한다.
   const invest = page.getByTestId('invest')
   await expect(invest.getByTestId('remarks').getByRole('listitem')).toHaveCount(2)
   await expect(invest.getByTestId('stubborn')).toHaveCount(2)
-  await expect(page.getByRole('button', { name: '투자 회의를 먼저 합니다' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: /년 차 결산 보기/ })).toHaveCount(0)
+  await page.getByRole('button', { name: /회의로 가기/ }).click()
+  await expect(invest).toBeInViewport()
   for (let year = 1; year <= 3; year++) {
     await invest.getByRole('button', { name: year === 1 ? '산다' : '지켜본다' }).click()
     await expect(invest.getByTestId('invest-outcome')).toBeVisible()
@@ -91,6 +105,8 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
     await expect(page.getByTestId('settlement')).toContainText(`${year}년 차 결산`)
     if (year === 1) {
       await expect(page.getByTestId('settlement')).toContainText('투자 회의')
+      // 결산 결과가 그림 속 직원 머리 위에도 뜬다.
+      await expect(page.getByTestId('office-pnl')).toHaveCount(2)
     }
   }
   // 시대가 끝나면 회사를 판다. 아끼던 직원을 공동창업자로 데려가 새 시대의 F 회사를 차린다 (9절).
