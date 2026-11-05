@@ -2,7 +2,10 @@ import { useState } from 'react'
 import type { Company } from '../../api/client'
 import { Document } from '../game/Document'
 import { shortWon, signedWon } from '../game/labels'
+import { usePixelArt } from '../game/pixelArt'
 import { STAT_NAMES } from './grades'
+import { OfficeArt } from './OfficeArt'
+import { ATTIRE_NAMES, attireOf, glowOf } from './office'
 import { GradeLadder } from './RunResult'
 import { useRaisingStore } from './store'
 
@@ -43,6 +46,8 @@ export function CompanyScreen({ company }: { company: Company }) {
           {company.grade}
         </p>
         <GradeLadder grade={company.grade} />
+        <OfficeArt company={company} />
+        <PixelToggle />
         {company.nextGradeCapital != null && (
           <p className="mt-1 text-[12px] text-muted">
             다음 등급까지 자본 {shortWon(company.nextGradeCapital)} · 자리 {company.seats}개
@@ -74,7 +79,12 @@ export function CompanyScreen({ company }: { company: Company }) {
             {company.employees.map((e) => (
               <li key={e.id} className="rounded border border-line p-3" data-testid="employee">
                 <p className="font-semibold">
-                  {e.name} <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>
+                  {e.name} <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>{' '}
+                  <span className="text-[12px] text-muted" data-testid="attire">
+                    · {ATTIRE_NAMES[attireOf(e.overallGrade)]}
+                    {glowOf(e.overallGrade) &&
+                      ` · ${glowOf(e.overallGrade) === 'gold' ? '금빛' : '파란빛'}`}
+                  </span>
                 </p>
                 <p className="text-[12px] text-muted">
                   {Object.entries(STAT_NAMES)
@@ -194,5 +204,21 @@ function SettlementView({ company }: { company: Company }) {
         ))}
       </ul>
     </section>
+  )
+}
+
+/** 도트 그림 끄기 (decisions.md 190번). 끄면 건물 그림 대신 같은 내용을 글로 보인다. */
+function PixelToggle() {
+  const shown = usePixelArt((s) => s.shown)
+  const setShown = usePixelArt((s) => s.setShown)
+  return (
+    <button
+      type="button"
+      onClick={() => setShown(!shown)}
+      className="mt-1 text-[12px] text-muted underline"
+      aria-pressed={!shown}
+    >
+      {shown ? '그림 끄기' : '그림 켜기'}
+    </button>
   )
 }

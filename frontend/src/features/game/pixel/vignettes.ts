@@ -64,6 +64,8 @@ export interface Figure {
   holding?: Omit<Carried, 'side'>
   /** 바닥에서 띄우는 칸 수. 무대 위에 선 아이처럼 (decisions.md 192번) */
   lift?: number
+  /** 옷·머리 색 바꾸기. 회사 직원의 차림새처럼 (decisions.md 213번). 가족의 색 위에 덮는다 */
+  recolor?: Record<string, string>
   /** 보는 방향. 없으면 정면 (decisions.md 196번) */
   view?: View
   /** 옆모습이 보는 쪽. 없으면 오른쪽 */
