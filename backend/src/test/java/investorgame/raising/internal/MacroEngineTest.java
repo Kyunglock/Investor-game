@@ -133,6 +133,37 @@ class MacroEngineTest {
     assertThat(said).doesNotContain("{");
   }
 
+  /**
+   * 직원은 기사 문장을 따오지 않고 요지를 엮어 자기 말로 판단한다 (decisions.md 272번). 안목이 높으면 읽은 쪽의 요지(폭락 조짐이면 조짐의 요지)를 근거로
+   * 들고, 분기 회의라 "올해"라고 하지 않는다(#342).
+   */
+  @Test
+  void 거시경제_한마디는_기사를_따오지_않고_요지로_말한다() {
+    String omenPoint = TestContent.load().raising().company().macro().omenPoint();
+    int grounded = 0;
+    for (int seed = 0; seed < 200; seed++) {
+      CompanyState c = second(seed);
+      ENGINE.hire(c, stats(90));
+      ENGINE.place(c, Map.of(1, "bio"));
+      ENGINE.macro.convene(c, new HashSeededRandom(seed));
+      CompanyState.Remark remark = c.macro.remarks.getFirst();
+      assertThat(remark.text).doesNotContain("{").doesNotContain("‘").doesNotContain("올해");
+      for (CompanyState.Sentence sentence : c.macro.sentences) {
+        assertThat(remark.text).doesNotContain(sentence.text);
+      }
+      if (!"NEUTRAL".equals(remark.read)) {
+        var points =
+            c.macro.sentences.stream()
+                .map(x -> x.omen ? omenPoint : x.point)
+                .filter(p -> p != null)
+                .toList();
+        assertThat(points).as(remark.text).anyMatch(remark.text::contains);
+        grounded++;
+      }
+    }
+    assertThat(grounded).isPositive();
+  }
+
   @Test
   void 순풍_자리는_더_벌고_역풍_자리는_덜_번다() {
     CompanyState c = second(5);

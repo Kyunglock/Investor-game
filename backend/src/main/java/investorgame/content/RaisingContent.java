@@ -98,9 +98,11 @@ public record RaisingContent(
    * @param stances 태도 버튼 이름
    * @param notes 태도마다 한 줄 설명
    * @param topics 주제. 해마다 하나를 뽑는다
-   * @param remarks 직원 한마디. 투자 회의와 같은 꼴: 안목 구간 → 읽은 쪽(UP·DOWN·NEUTRAL) → 문구 여럿, {quote}
+   * @param remarks 직원 한마디. 투자 회의와 같은 꼴: 안목 구간 → 읽은 쪽(UP·DOWN·NEUTRAL) → 문구 여럿, {point}·{against}
+   *     (272번)
    * @param sway 꼬드기는 단골 인물의 말. POS(공격하라)·NEG(숨어라)
    * @param scout 종목 발굴 (decisions.md 267번)
+   * @param omenPoint 기사에 실린 폭락 조짐(266번) 문장의 요지. 조짐 문장은 위기 콘텐츠에서 와서 요지를 한 줄로 둔다
    */
   public record Macro(
       Map<String, String> stances,
@@ -108,18 +110,19 @@ public record RaisingContent(
       List<MacroTopic> topics,
       Map<String, Map<String, List<String>>> remarks,
       Map<String, List<String>> sway,
-      Scout scout) {}
+      Scout scout,
+      String omenPoint) {}
 
   /**
-   * 거시경제 회의의 주제 하나. up·down·neutral은 기사 문장(오름은 시장에 좋은 쪽). winds는 숨은 방향(UP·DOWN)마다 그해 순풍·역풍을 받는 자리와
-   * 결산 한 줄.
+   * 거시경제 회의의 주제 하나. up·down·neutral은 기사 문장(오름은 시장에 좋은 쪽, 오름·내림에는 요지가 붙는다). winds는 숨은 방향(UP·DOWN)마다
+   * 그해 순풍·역풍을 받는 자리와 결산 한 줄.
    */
   public record MacroTopic(
       String code,
       String name,
       String title,
-      List<String> up,
-      List<String> down,
+      List<Clue> up,
+      List<Clue> down,
       List<String> neutral,
       Map<String, Wind> winds) {}
 
@@ -136,8 +139,10 @@ public record RaisingContent(
    * 투자 회의 (decisions.md 229번). 고르는 것은 BUY·SELL·HOLD.
    *
    * @param options 사장이 고르는 버튼 이름
-   * @param remarks 직원의 한마디. 안목 구간(low·mid·high·expert) → 읽은 쪽(UP·DOWN·NEUTRAL) → 문구 여럿. {quote}(따온
-   *     기사 문장)·{stock}. foggy는 가장 흐린 기사에서 안목 높은 직원이 하는 말(UP·DOWN)
+   * @param remarks 직원의 한마디. 안목 구간(low·mid·high·expert) → 읽은 쪽(UP·DOWN·NEUTRAL) → 문구 여럿. 기사 문장을 따오지
+   *     않고 요지를 엮는다(272번): {point}(제 판단의 근거), {against}(반대쪽 근거, 모르겠다면 사자 쪽과 팔자 쪽)·{stock}. foggy는 가장
+   *     흐린 기사에서 안목 높은 직원이 하는 말(UP·DOWN)
+   * @param points 요지가 없는 문장(이 규칙 전에 지은 기사)일 때 대신 쓰는 요지. UP·DOWN
    * @param actions 직원이 한 일(샀다·팔았다·지켜봤다)
    * @param obey 사장 말대로 했다. {action}
    * @param rogue 제멋대로 했다. {action}
@@ -147,6 +152,7 @@ public record RaisingContent(
   public record Invest(
       Map<String, String> options,
       Map<String, Map<String, List<String>>> remarks,
+      Map<String, String> points,
       Map<String, String> actions,
       String obey,
       String rogue,
