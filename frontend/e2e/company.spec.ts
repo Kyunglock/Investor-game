@@ -513,7 +513,7 @@ test('정하고 나면 누군가 막판에 반대로 하자고 하고, 따랐으
   await hireCheapest(page)
   await tab(page, /배치/)
   await page.getByRole('button', { name: '자동 배치' }).click()
-  // 35%를 기다리기 어렵다: 고른 뒤 응답에 막판 제안을 넣어 본다. 서버는 실제로 산다로 정하고(서버도 제안을 냈으면 원래대로 답한다), 따르면 상벌 차례를 붙인다.
+  // S 이상 직원이 없으면 제안이 오지 않는다(300번): 고른 뒤 응답에 막판 제안을 넣어 본다. 서버는 실제로 산다로 정하고(서버도 제안을 냈으면 원래대로 답한다), 따르면 상벌 차례를 붙인다.
   await page.route('**/api/company/invest', async (route) => {
     const response = await route.fetch()
     let company = await response.json()

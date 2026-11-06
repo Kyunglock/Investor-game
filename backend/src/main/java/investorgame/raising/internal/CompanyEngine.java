@@ -206,19 +206,26 @@ class CompanyEngine {
     return properties.perks().gainPercent().getOrDefault(overallGrade(employee.stats), 0);
   }
 
-  /** 등급 효과 한 줄 (289번): "새내기 · 맞히면 2% 더 번다 · 한 해 일하면 50% 확률로 자란다". */
+  /**
+   * 등급 효과 한 줄 (289·300번): "새내기 · 맞히면 2% 더 번다 · 한 해 일하면 50% 확률로 자란다". S부터는 "잠깐만요, 사장님!! 60%"가 붙는다.
+   */
   String perkLine(Map<String, Integer> stats, int rank) {
     RaisingContent.Perks texts = content.raising().company().perks();
     String grade = overallGrade(stats);
     int gain = properties.perks().gainPercent().getOrDefault(grade, 0);
     int growth = properties.perks().growthPercent().getOrDefault(grade, 0);
-    String name = rank > 0 ? gradeOf(stats, rank) : texts.names().get(grade);
+    String full = gradeOf(stats, rank);
+    String name = rank > 0 ? full : texts.names().get(grade);
     String line =
         growth > 0
             ? Korean.fill(
                 texts.line(),
                 Map.of("gain", String.valueOf(gain), "growth", String.valueOf(growth)))
             : Korean.fill(texts.lineTop(), Map.of("gain", String.valueOf(gain)));
+    int proposal = invest.proposalPercent(full);
+    if (proposal > 0) {
+      line += " · " + Korean.fill(texts.proposal(), Map.of("percent", String.valueOf(proposal)));
+    }
     return name + " · " + line;
   }
 
