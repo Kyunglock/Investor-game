@@ -49,6 +49,8 @@ session:
 raising:
   # 아주 작은 회사 (증권사 육성 설계 4·6절, 2단계). (제안) 수치를 구현하며 정한 초기값 (decisions.md 208번~)
   company:
+    # 사장의 사재: 회사를 차릴 때(망해서 다시 차릴 때도) 시작 자본 1억 원 (decisions.md 228·246번)
+    base-capital: 100000000
     # 한 시대의 길이(해). 세 해마다 다른 시대가 온다 (decisions.md 249번). 회사는 끝나지 않는다(236번)
     turns: 3
     # 회사 등급의 자본 띠: F 0, E 2억, D 6억, C 20억, B 100억 … ZZZ 1천조. 처음 세 띠는 4.5절 표(3억·10억·30억)보다 좁혔다:
@@ -71,8 +73,8 @@ raising:
     decisions: 4
     omen-percent: 75
     false-omen-percent: 15
-    # 맞히면 +28%·틀리면 −10%·손이 뒤집히면 −14%(바이오), 단타는 +22%·−8%·−10%. C 직원 둘이면 한 시대(세 해)에 자본이 1.5~2배,
-    # A 직원이면 셋에 하나쯤 E(3억)에 닿는다 (decisions.md 226번).
+    # 맞히면 +28%·틀리면 −10%·손이 뒤집히면 −14%(바이오), 단타는 +22%·−8%·−10%. 첫 시대(세 해)에 E(2억)에 닿는 몫은
+    # E 직원 31% · C 62% · A 88% · S 98% (decisions.md 226·256번, EconomySimulationTest).
     # 섹터 데스크 (decisions.md 233번): 섹터마다 변동이 다르다. crash-percent는 폭락장의 시장 손익(−5%)에 곱한다.
     # 게임·반도체는 크게 벌고 크게 잃고, 식품·금융은 덜 벌지만 폭락장에 덜 빠진다
     desks:
@@ -149,8 +151,8 @@ raising:
         - { code: clear, weight: 35, penalty: 0 }
         - { code: murky, weight: 40, penalty: 25 }
         - { code: foggy, weight: 25, penalty: 55 }
-    # 매각과 재창업 (9절, 4단계). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다.
-    # 시대(turns 해)가 끝나면 반드시 팔고, 그 전에는 SSS 이상이면 스스로 팔 수 있다 (decisions.md 215번~)
+    # 매각과 재창업 (9절, decisions.md 215번~). 매각을 뺀 뒤(236번)로는 API가 부르지 않는다: 다시 붙일 때를 위해 엔진 규칙과 수치만 남겼다 (263번).
+    # 시작 자본은 raising.company.base-capital로 옮겼다
     sale:
       min-grade: SSS
       # 판 회사의 등급 단계 + 1점(F 1점 … SSS 9점), 명성 한 단계에 2점
@@ -160,6 +162,5 @@ raising:
       cofounder-base: 1
       cofounder-fame-steps: 3
       cofounder-max: 4
-      # 회사 시작 자본 1억 원(첫 회사는 사장의 사재), 명성 한 단계마다 +10%
-      base-capital: 100000000
+      # 재창업한 회사의 시작 자본: base-capital에 명성 한 단계마다 +10%
       fame-capital-percent: 10

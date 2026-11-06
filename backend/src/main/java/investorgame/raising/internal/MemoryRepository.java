@@ -43,14 +43,6 @@ class MemoryRepository {
         .orElseGet(RaisingMemory::new);
   }
 
-  RaisingMemory find(UUID sessionId) {
-    return jdbc.sql("SELECT state FROM raising_memory WHERE session_id = :sessionId")
-        .param("sessionId", sessionId)
-        .query((rs, i) -> json.readValue(rs.getString("state"), RaisingMemory.class))
-        .optional()
-        .orElseGet(RaisingMemory::new);
-  }
-
   void save(UUID sessionId, RaisingMemory memory) {
     jdbc.sql(
             """

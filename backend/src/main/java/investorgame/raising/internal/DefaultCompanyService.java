@@ -208,7 +208,8 @@ class DefaultCompanyService implements CompanyService {
                         CompanyEngine.grades(e.stats),
                         e.desk,
                         e.experience,
-                        CompanyEngine.overallGrade(e.stats).equals("SSS")
+                        // ZZZ(맨 위)면 더 오를 데가 없다: "실전 경험 0/7"을 보이지 않는다 (263번).
+                        CompanyEngine.overallGrade(e.stats).equals("SSS") && !engine.topRank(e)
                             ? engine.experienceNeeded(e)
                             : null,
                         engine.effectsOf(e),

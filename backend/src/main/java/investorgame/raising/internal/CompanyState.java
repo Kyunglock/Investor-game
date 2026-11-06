@@ -17,7 +17,7 @@ import java.util.Map;
     isGetterVisibility = Visibility.NONE)
 class CompanyState {
 
-  /** 지금 해(1부터). 결산할 때마다 하나 늘고 turns를 넘으면 시대가 끝나 회사를 판다. */
+  /** 지금 해(1부터). 결산할 때마다 하나 늘고 회사는 끝나지 않는다 (decisions.md 236번). turns 해마다 시대가 바뀐다 (249번). */
   int year = 1;
 
   /** 사장이 차린 몇 번째 회사인가(1부터). */

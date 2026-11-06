@@ -52,7 +52,7 @@ class CompanyRepository {
         .optional();
   }
 
-  /** 가장 최근 회사를 잠근다(돌고 있든 시대가 끝났든). 매각할 때 쓴다. */
+  /** 가장 최근 회사를 잠근다(돌고 있든 끝났든). 결산(234번)·옛 회사 되살리기(236번)·망한 회사 다시 차리기(246번)가 쓴다. */
   Optional<Row> lockLatest(UUID sessionId) {
     return jdbc.sql(
             """

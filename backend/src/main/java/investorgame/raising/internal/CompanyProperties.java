@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 아주 작은 회사의 수치 (증권사 육성 설계 4·6절, 2단계). (제안)으로 적힌 값을 구현하며 정한 초기값이다.
  *
+ * @param baseCapital 사장의 사재: 회사를 차릴 때의 시작 자본 (decisions.md 228·246번)
  * @param turns 한 시대의 길이(해). 이만큼 지나면 다른 시대가 온다 (decisions.md 249번). 회사는 끝나지 않는다(236번)
  * @param gradeCapital 회사 등급의 자본 띠(원). F부터 차례로, 자본만 본다 (4.5절)
  * @param seats 등급별 자리 수. F부터 차례로 (4.5절)
@@ -28,10 +29,11 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param invest 투자 회의: 해마다 한 번 단서 기사를 놓고 직원들과 고민한다 (decisions.md 229번)
  * @param rivals 라이벌 증권사가 해마다 자라는 폭 (decisions.md 260번)
  * @param people 이직 제안과 근속 (decisions.md 261번)
- * @param sale 매각과 재창업 (9절). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다
+ * @param sale 매각과 재창업 (9절). 매각을 뺀 뒤(236번)로는 API가 부르지 않는다. 다시 붙일 때를 위해 남겼다 (263번)
  */
 @ConfigurationProperties("raising.company")
 public record CompanyProperties(
+    long baseCapital,
     int turns,
     List<Long> gradeCapital,
     List<Integer> seats,
@@ -179,7 +181,6 @@ public record CompanyProperties(
    * @param cofounderBase 다음 회사에 데려갈 수 있는 공동창업자 수의 바닥 (9.3절: 한두 명)
    * @param cofounderFameSteps 명성이 이만큼 오를 때마다 공동창업자 +1
    * @param cofounderMax 공동창업자 수의 상한
-   * @param baseCapital 회사의 시작 자본 (명성 0). 첫 회사는 사장의 사재다
    * @param fameCapitalPercent 명성 한 단계마다 시작 자본에 더하는 비율 (명성 혜택)
    */
   public record Sale(
@@ -189,6 +190,5 @@ public record CompanyProperties(
       int cofounderBase,
       int cofounderFameSteps,
       int cofounderMax,
-      long baseCapital,
       int fameCapitalPercent) {}
 }

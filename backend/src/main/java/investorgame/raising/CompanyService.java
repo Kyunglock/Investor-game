@@ -11,7 +11,7 @@ import java.util.UUID;
  */
 public interface CompanyService {
 
-  /** 세션의 가장 최근 회사(돌고 있거나 끝남). */
+  /** 세션의 가장 최근 회사. 매각을 빼기 전에 시대가 끝나 멈췄던 회사면 다음 해부터 다시 돌린다 (decisions.md 236번). */
   Optional<CompanyView> current(UUID sessionId);
 
   /**
@@ -51,8 +51,8 @@ public interface CompanyService {
   CompanyView invest(UUID sessionId, String choice, boolean big);
 
   /**
-   * year 해의 결산을 하고 다음 해 연초 회의로 간다. 마지막 해면 회사가 끝난다. 투자 회의를 열 수 있는데 안 했으면 400. 이미 결산한 해면 아무것도 하지 않고
-   * 지금 회사를 돌려주고(같은 요청이 두 번 와도 한 해만 넘어간다), 아직 오지 않은 해면 400 (decisions.md 234번).
+   * year 해의 결산을 하고 다음 해 연초 회의로 간다. 회사는 끝나지 않는다(236번). 투자 회의를 열 수 있는데 안 했으면 400. 이미 결산한 해면 아무것도 하지
+   * 않고 지금 회사를 돌려주고(같은 요청이 두 번 와도 한 해만 넘어간다), 아직 오지 않은 해면 400 (decisions.md 234번).
    */
   CompanyView settle(UUID sessionId, int year);
 

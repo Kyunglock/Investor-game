@@ -331,7 +331,7 @@ class CompanyEngine {
 
   /** 첫 회사의 시작 자본(사장의 사재). */
   long openingCapital() {
-    return properties.sale().baseCapital();
+    return properties.baseCapital();
   }
 
   RaisingContent.Invest investTexts() {
@@ -344,10 +344,6 @@ class CompanyEngine {
 
   String stockSector(String code) {
     return content.sectorName(content.stock(code).sector());
-  }
-
-  RaisingContent.Sale saleTexts() {
-    return content.raising().company().sale();
   }
 
   List<RaisingContent.Era> eras() {
@@ -453,7 +449,8 @@ class CompanyEngine {
     next.met = sold.met;
     CompanyProperties.Sale sale = properties.sale();
     int steps = Math.min(LADDER.size() - 1, famePoints / sale.famePerStep());
-    next.capital = sale.baseCapital() * (PERCENT + steps * sale.fameCapitalPercent()) / PERCENT;
+    next.capital =
+        properties.baseCapital() * (PERCENT + steps * sale.fameCapitalPercent()) / PERCENT;
     for (Integer id : cofounders) {
       Employee from =
           sold.employees.stream()
@@ -759,7 +756,6 @@ class CompanyEngine {
     return at < seats.size() ? seats.get(at) : seats.getLast() + (at - seats.size() + 1);
   }
 
-  /** 등급이 오를수록 고객이 돈을 더 맡겨 수수료와 판돈이 커진다 (4.5절). */
   /** 규모의 벽 (decisions.md 244번): 등급 단계만큼 거듭제곱한 비율을 곱한다. F는 그대로. */
   private int scaled(CompanyState company, int bp, int percent) {
     double factor = Math.pow(percent / (double) PERCENT, LADDER.indexOf(grade(company.capital)));
@@ -776,7 +772,6 @@ class CompanyEngine {
     return scaled(company, bp, properties.scale().missPercent());
   }
 
-  /** 올해 시장을 정하고 연초 회의를 준비한다. 조짐은 폭락장 앞에 보이고, 아무 일 없는 해에도 헛조짐이 섞인다 (4.3절). */
   /** 한 해의 시장: 갈래(숨은 값), 연초 회의의 조짐, 올해 필요한 자리. */
   record Market(String phase, String omen, String wantedDesk) {}
 
@@ -1000,7 +995,7 @@ class CompanyEngine {
     return company.employees.stream().filter(e -> e.desk != null && desk(e.desk).trades()).toList();
   }
 
-  /** 돈을 굴리는 직원 한 명이 맡는 판돈 = 자본 × 비율 × 배율 ÷ 사람 수 (자본을 넘지 않는다). */
+  /** 돈을 굴리는 직원 한 명이 맡는 판돈 = 자본 × 비율 ÷ 사람 수 (자본을 넘지 않는다). 규모의 벽(244번)은 판돈이 아니라 손익 비율에 붙는다. */
   long stakeOf(CompanyState company, int traders) {
     if (traders == 0) {
       return 0;
@@ -1268,6 +1263,11 @@ class CompanyEngine {
     } else {
       settlement.lines.add(gradeLine(lines.experience(), employee, before, before, null));
     }
+  }
+
+  /** SSS 위 단계의 맨 위(ZZZ)인가. */
+  boolean topRank(Employee employee) {
+    return employee.rank >= LADDER.size() - 1 - LADDER.indexOf(StatGrade.SSS.name());
   }
 
   /** 다음 단계로 오르는 데 드는 실전 경험. 단계마다 하나씩 더 든다 (2.3절). */
