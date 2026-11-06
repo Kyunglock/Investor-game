@@ -72,7 +72,21 @@ public record RaisingContent(
       Market market,
       Invest invest,
       Macro macro,
-      Quarters quarters) {}
+      Quarters quarters,
+      Teams teams) {}
+
+  /**
+   * 팀장 보고 (decisions.md 269번). trading: 돈을 굴리는 팀의 손익(up·down·flat별 문구 여럿, {period}·{pnl}). flips:
+   * 팀원이 손을 뒤집었을 때 덧붙이는 한 줄(능력치별, {name}), selfFlips는 팀장 자신. support: 돕는 자리의 보고(자리 코드별,
+   * {period}·{swayed}). head: 보고자({desk}·{name}). appointed: 팀장을 바꿨을 때 소식 줄({name}·{desk}).
+   */
+  public record Teams(
+      Map<String, List<String>> trading,
+      Map<String, String> flips,
+      Map<String, String> selfFlips,
+      Map<String, String> support,
+      String head,
+      String appointed) {}
 
   /** 분기 결산 (decisions.md 268번). crash: 폭락이 터진 분기의 실적 줄. crashAt: 연말 결산서의 한 줄({quarter}). */
   public record Quarters(String crash, String crashAt) {}

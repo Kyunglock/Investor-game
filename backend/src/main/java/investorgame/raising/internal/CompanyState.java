@@ -47,6 +47,12 @@ class CompanyState {
   /** 이번 분기를 시작할 때의 자본. 분기 실적의 앞 숫자다. */
   Long quarterStartCapital;
 
+  /**
+   * 자리마다 사장이 정한 팀장: 자리 코드 → 직원 번호 (decisions.md 269번). 정하지 않았거나 그 사람이 자리를 떠났으면 그 자리에서 종합 등급이 가장 높은
+   * 사람이 팀장이다.
+   */
+  Map<String, Integer> leaders = new LinkedHashMap<>();
+
   /** 올해 넘긴 분기의 실적. 연말 결산에 모여 들어가고 해가 바뀌면 비운다 (268번). */
   List<Quarter> quarters = new ArrayList<>();
 
@@ -356,6 +362,20 @@ class CompanyState {
 
     List<Result> results = new ArrayList<>();
     List<String> lines = new ArrayList<>();
+
+    /** 팀장 보고: 사람이 앉은 자리마다 한 줄 (269번). */
+    List<Report> reports = new ArrayList<>();
+  }
+
+  /** 팀장 보고 한 줄 (decisions.md 269번). pnl은 돈을 굴리는 자리의 팀 손익, 돕는 자리면 null. */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Report {
+    String desk;
+    int leaderId;
+    String leader;
+    Long pnl;
+    String text;
   }
 
   /** 회사를 떠난 직원 (263번). */
@@ -419,6 +439,9 @@ class CompanyState {
 
     /** 그해 네 분기의 실적 (268번). 분기 결산이 생기기 전의 결산이면 비어 있다. */
     List<Quarter> quarters = new ArrayList<>();
+
+    /** 팀장들의 한 해 보고 (269번). */
+    List<Report> reports = new ArrayList<>();
 
     String gradeBefore;
     String gradeAfter;

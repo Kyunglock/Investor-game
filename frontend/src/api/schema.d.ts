@@ -219,6 +219,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/leader": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 그 자리의 팀장을 정한다 (decisions.md 269번)
+         * @description 사람이 앉은 자리마다 팀장이 한 명 있다. 정하지 않았으면 그 자리에서 종합 등급이 가장 높은 사람이다.
+         *     정한 팀장이 자리를 떠나면 지정이 풀린다. 그 자리에 앉은 직원이 아니면 400.
+         */
+        post: operations["appointLeader"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/applicants/refresh": {
         parameters: {
             query?: never;
@@ -321,6 +342,8 @@ export interface components {
                 deskYears: number;
                 /** @description 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다 */
                 settled: boolean;
+                /** @description 앉은 자리의 팀장이다 (decisions.md 269번) */
+                leader: boolean;
                 /** @description 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번) */
                 role?: string | null;
             }[];
@@ -629,6 +652,8 @@ export interface components {
                     };
                 }[];
                 lines: string[];
+                /** @description 팀장들의 한 해 보고 (decisions.md 269번) */
+                reports: components["schemas"]["Report"][];
             } | null;
         };
         /** @description 분기 하나의 실적 (decisions.md 268번) */
@@ -667,6 +692,23 @@ export interface components {
             /** @description 이 분기에 폭락이 터졌다 */
             crash: boolean;
             lines: string[];
+            /** @description 팀장 보고. 사람이 앉은 자리마다 한 줄 (decisions.md 269번) */
+            reports: components["schemas"]["Report"][];
+        };
+        /** @description 팀장 보고 한 줄 (decisions.md 269번) */
+        Report: {
+            desk: string;
+            deskName: string;
+            leaderId: number;
+            leader: string;
+            /** @description 보고자: "반도체 데스크 팀장 박한결" */
+            head: string;
+            /**
+             * Format: int64
+             * @description 돈을 굴리는 팀의 손익. 돕는 팀이면 null
+             */
+            pnl?: number | null;
+            text: string;
         };
         /** @description 종목을 물어 온 직원 (decisions.md 267번) */
         Finder: {
@@ -1059,6 +1101,36 @@ export interface operations {
         };
         responses: {
             /** @description 고른 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    appointLeader: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    desk: string;
+                    employeeId: number;
+                };
+            };
+        };
+        responses: {
+            /** @description 팀장을 정한 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

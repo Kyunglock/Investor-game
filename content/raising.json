@@ -906,6 +906,39 @@
     "quarters": {
       "crash": "폭락이 터졌다! 시장이 한꺼번에 무너졌다.",
       "crashAt": "{quarter}분기에 폭락이 터졌다."
+    },
+    "teams": {
+      "trading": {
+        "up": [
+          "{period} 우리 팀은 {pnl} 벌었습니다.",
+          "{period} 우리 팀 성적은 +{pnl}입니다. 다들 잘해 줬습니다."
+        ],
+        "down": [
+          "{period} 우리 팀은 {pnl} 잃었습니다. 면목 없습니다.",
+          "{period}은(는) −{pnl}입니다. 다음엔 꼭 만회하겠습니다."
+        ],
+        "flat": [
+          "{period}은(는) 본전입니다. 크게 움직이지 않았습니다."
+        ]
+      },
+      "flips": {
+        "conviction": "{name}이(가) 단톡방 말에 한 번 흔들렸습니다.",
+        "patience": "{name}이(가) 못 참고 한 번 던졌습니다.",
+        "courage": "{name}이(가) 손이 떨려 한 번 놓쳤습니다."
+      },
+      "support": {
+        "research": "{period}도 다른 데스크에 형광펜을 빌려줬습니다.",
+        "risk": "{period} 꼬드김에 넘어간 사람은 {swayed}명입니다.",
+        "hr": "공채 지원자를 한 명 더 데려오고 있습니다.",
+        "scout": "{period}도 종목을 찾아다녔습니다."
+      },
+      "head": "{desk} 팀장 {name}",
+      "appointed": "{name}을(를) {desk} 팀장으로 앉혔다.",
+      "selfFlips": {
+        "conviction": "저도 단톡방 말에 한 번 흔들렸습니다.",
+        "patience": "저도 못 참고 한 번 던졌습니다.",
+        "courage": "저도 손이 떨려 한 번 놓쳤습니다."
+      }
     }
   }
 }

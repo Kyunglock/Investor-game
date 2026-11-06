@@ -241,6 +241,32 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/leader:
+    post:
+      operationId: appointLeader
+      summary: 그 자리의 팀장을 정한다 (decisions.md 269번)
+      description: |
+        사람이 앉은 자리마다 팀장이 한 명 있다. 정하지 않았으면 그 자리에서 종합 등급이 가장 높은 사람이다.
+        정한 팀장이 자리를 떠나면 지정이 풀린다. 그 자리에 앉은 직원이 아니면 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [desk, employeeId]
+              properties:
+                desk: { type: string }
+                employeeId: { type: integer }
+      responses:
+        '200':
+          description: 팀장을 정한 뒤의 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/applicants/refresh:
     post:
       operationId: refreshApplicants
@@ -326,7 +352,7 @@ components:
           type: array
           items:
             type: object
-            required: [id, name, overallGrade, grades, experience, effects, deskYears, settled]
+            required: [id, name, overallGrade, grades, experience, effects, deskYears, settled, leader]
             properties:
               id: { type: integer }
               name: { type: string }
@@ -345,6 +371,7 @@ components:
               sectorName: { type: [string, 'null'] }
               deskYears: { type: integer, description: 지금 자리에서 결산을 맞은 해 수 (decisions.md 262번) }
               settled: { type: boolean, description: 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다 }
+              leader: { type: boolean, description: 앉은 자리의 팀장이다 (decisions.md 269번) }
               role: { type: [string, 'null'], description: 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번) }
         desks:
           type: array
@@ -626,7 +653,7 @@ components:
         lastSettlement:
           oneOf:
             - type: object
-              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, quarters, gradeBefore, gradeAfter, overtook, achieved, results, lines]
+              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, quarters, gradeBefore, gradeAfter, overtook, achieved, results, lines, reports]
               properties:
                 year: { type: integer }
                 phase: { type: string, enum: [boom, normal, crash] }
@@ -671,11 +698,15 @@ components:
                       pnl: { type: integer, format: int64 }
                       flips: { type: object, additionalProperties: { type: integer } }
                 lines: { type: array, items: { type: string } }
+                reports:
+                  type: array
+                  description: 팀장들의 한 해 보고 (decisions.md 269번)
+                  items: { $ref: '#/components/schemas/Report' }
             - type: 'null'
     Quarter:
       type: object
       description: 분기 하나의 실적 (decisions.md 268번)
-      required: [year, quarter, capitalBefore, capitalAfter, fee, staff, hiring, crash, lines]
+      required: [year, quarter, capitalBefore, capitalAfter, fee, staff, hiring, crash, lines, reports]
       properties:
         year: { type: integer }
         quarter: { type: integer }
@@ -697,6 +728,22 @@ components:
         stance: { type: [string, 'null'], enum: [AGGRESSIVE, NEUTRAL, DEFENSIVE, null] }
         crash: { type: boolean, description: 이 분기에 폭락이 터졌다 }
         lines: { type: array, items: { type: string } }
+        reports:
+          type: array
+          description: 팀장 보고. 사람이 앉은 자리마다 한 줄 (decisions.md 269번)
+          items: { $ref: '#/components/schemas/Report' }
+    Report:
+      type: object
+      description: 팀장 보고 한 줄 (decisions.md 269번)
+      required: [desk, deskName, leaderId, leader, head, text]
+      properties:
+        desk: { type: string }
+        deskName: { type: string }
+        leaderId: { type: integer }
+        leader: { type: string }
+        head: { type: string, description: '보고자: "반도체 데스크 팀장 박한결"' }
+        pnl: { type: [integer, 'null'], format: int64, description: 돈을 굴리는 팀의 손익. 돕는 팀이면 null }
+        text: { type: string }
     Finder:
       type: object
       description: 종목을 물어 온 직원 (decisions.md 267번)
