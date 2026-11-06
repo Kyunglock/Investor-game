@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useState } from 'react'
+import { type CSSProperties, useEffect, useRef, useState } from 'react'
 import type { Company } from '../../api/client'
 import { withParticle } from '../game/labels'
 import type { Figure } from '../game/pixel/figure'
@@ -25,6 +25,7 @@ function Character({
   mood,
   talking,
   fallback,
+  size = CHARACTER_PX,
 }: {
   employee: Employee | undefined
   look: number
@@ -32,6 +33,8 @@ function Character({
   mood: MoodKey | null
   talking: boolean
   fallback: string
+  /** 그림 너비(px). 단톡방 프로필은 작게. */
+  size?: number
 }) {
   const shown = usePixelArt((s) => s.shown)
   if (!shown) {
@@ -57,8 +60,8 @@ function Character({
   return (
     <svg
       viewBox={`0 0 ${SPRITE_WIDTH} ${SPRITE_HEIGHT}`}
-      width={CHARACTER_PX}
-      height={(CHARACTER_PX * SPRITE_HEIGHT) / SPRITE_WIDTH}
+      width={size}
+      height={(size * SPRITE_HEIGHT) / SPRITE_WIDTH}
       className={`block drop-shadow ${talking ? 'drop-shadow-[0_0_4px_var(--gold)]' : ''}`}
       style={PIXELATED}
       data-testid="room-character"
@@ -88,6 +91,8 @@ export function lineMs(text: string): number {
 }
 /** 한쪽에 세우는 사람 수. 넘치면 "외 N명". */
 const SEATS = 3
+/** 단톡방에서 다음 말이 뜨기 전 "입력 중…"이 보이는 시간(ms) (305번). */
+const TYPING_MS = 700
 
 export type DebateLine = {
   name: string
@@ -271,6 +276,7 @@ export function TeamClash({
   debate,
   staff = [],
   instant,
+  stock,
 }: {
   buyNames: string[]
   sellNames: string[]
@@ -281,6 +287,8 @@ export function TeamClash({
   /** 회사 직원: 이름으로 캐릭터를 찾는다 (286번). */
   staff?: Employee[]
   instant: boolean
+  /** 단톡방 이름에 붙는 종목 이름 (305번). */
+  stock?: string
 }) {
   const buyWins = choice === 'BUY'
   const clash = clashMs(debate)
@@ -289,6 +297,8 @@ export function TeamClash({
   const [said, setSaid] = useState(instant ? debate.length : 0)
   // 띄울 때를 처음 그릴 때 굳힌다: 회사 상태를 다시 받아 배열이 새로 와도 토론이 처음부터 다시 돌지 않게.
   const [times] = useState(() => debateTimes(debate))
+  // 단톡방의 "입력 중…" (305번): 다음 말이 뜨기 0.7초 전부터 그 사람 이름으로 보인다.
+  const [typing, setTyping] = useState<string | null>(null)
   useEffect(() => {
     if (instant) {
       setPhase('done')
@@ -297,12 +307,27 @@ export function TeamClash({
     }
     const timers: ReturnType<typeof setTimeout>[] = []
     times.forEach((at, i) => {
-      timers.push(setTimeout(() => setSaid(i + 1), at))
+      timers.push(setTimeout(() => setTyping(debate[i].name), Math.max(0, at - TYPING_MS)))
+      timers.push(
+        setTimeout(() => {
+          setTyping(null)
+          setSaid(i + 1)
+        }, at),
+      )
     })
     timers.push(setTimeout(() => setPhase('push'), clash))
     timers.push(setTimeout(() => setPhase('done'), finish))
     return () => timers.forEach(clearTimeout)
-  }, [instant, times, clash, finish])
+  }, [instant, times, clash, finish, debate])
+  // 새 말이나 "입력 중"이 생기면 단톡방을 아래로 내린다.
+  const chatRef = useRef<HTMLOListElement>(null)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 말이 늘거나 "입력 중"이 바뀔 때마다 내린다
+  useEffect(() => {
+    const el = chatRef.current
+    if (el) {
+      el.scrollTop = el.scrollHeight
+    }
+  }, [said, typing])
   // 말이 꽂힌 직후 0.65초: 번개가 굵어지고 불꽃이 튀고 막대가 흔들린다.
   const [surge, setSurge] = useState(false)
   useEffect(() => {
@@ -450,40 +475,6 @@ export function TeamClash({
               </span>
             )}
           </div>
-          {declared && (
-            // 선언 도장: 이긴 쪽 막대 아래(말풍선 자리)에 찍힌다.
-            <span
-              className={`animate-stamp pen-circle absolute -bottom-14 z-10 px-3 py-0.5 font-pen text-[26px] leading-tight ${
-                buyWins ? 'left-[10%] text-up' : 'right-[10%] text-down'
-              }`}
-              data-testid="clash-stamp"
-              aria-hidden="true"
-            >
-              {buyWins ? '매수' : '매도'}
-            </span>
-          )}
-        </div>
-        {/* 지금 말: 말한 쪽에 붙은 큰 말풍선. */}
-        <div className="mt-2 min-h-[64px]">
-          {current && (
-            <div
-              key={said}
-              className={`animate-debate-in max-w-[88%] rounded-lg border-2 bg-card px-2.5 py-1.5 text-[13px] leading-snug shadow ${
-                current.side === 'BUY'
-                  ? 'mr-auto rounded-tl-none border-up'
-                  : 'ml-auto rounded-tr-none border-down'
-              }`}
-              data-testid="clash-bubble"
-              data-kind={kindOf(current)}
-            >
-              <b
-                className={`block text-[11px] ${current.side === 'BUY' ? 'text-up' : 'text-right text-down'}`}
-              >
-                {kindOf(current) === 'TALLY' ? `${current.name} (사회)` : current.name}
-              </b>
-              {current.text}
-            </div>
-          )}
         </div>
       </div>
       <div className="mt-1 flex justify-between gap-2 whitespace-nowrap text-[12px]">
@@ -494,46 +485,140 @@ export function TeamClash({
           매도파 {sellNames.length || sellers.length}명 · 무게 {sell}
         </span>
       </div>
+      {/* 단톡방 (305번): 말이 메신저처럼 쌓인다. 매수파는 왼쪽(빨강), 매도파는 오른쪽(파랑). 표결은 투표 카드, 선언은 공지로 고정. */}
       {debate.length > 0 && (
-        <details className="mt-1" open>
-          <summary className="cursor-pointer text-[12px] text-muted">토론 기록</summary>
+        <div
+          className="mt-2 overflow-hidden rounded border border-line bg-line-soft/40"
+          data-testid="clash-chat"
+        >
+          <div className="flex items-center justify-between border-b border-line bg-card px-2.5 py-1.5 text-[12px]">
+            <b className="text-[13px]">
+              종목회의{stock ? ` · ${stock}` : ''}{' '}
+              <span className="font-mono-num font-normal text-muted">
+                {new Set([...buyers, ...sellers]).size}
+              </span>
+            </b>
+            <span className="text-muted">단톡방</span>
+          </div>
           <ol
-            className="mt-1 max-h-52 space-y-1.5 overflow-y-auto rounded bg-paper/60 p-1.5"
+            ref={chatRef}
+            className="flex max-h-64 flex-col gap-1.5 overflow-y-auto p-2"
             data-testid="clash-debate"
             aria-label="토론 기록"
           >
             {debate.slice(0, said).map((d, i) => {
               const buySide = d.side === 'BUY'
               const kind = kindOf(d)
+              if (kind === 'TALLY') {
+                const total = buy + sell
+                const buyPct = total === 0 ? 50 : Math.round((100 * buy) / total)
+                return (
+                  <li
+                    // biome-ignore lint/suspicious/noArrayIndexKey: 순서가 곧 자리다
+                    key={i}
+                    className="animate-debate-in mx-auto w-[94%] rounded-lg border border-line bg-card px-2.5 py-2 text-[12.5px]"
+                    data-testid="debate-line"
+                    data-side={d.side}
+                    data-kind={kind}
+                  >
+                    <b className="block text-[11px] text-muted">
+                      📊 표결 · {d.name} (사회) — 안목 무게로 단다
+                    </b>
+                    <p className="mt-0.5 leading-snug">{d.text}</p>
+                    <div className="mt-1.5 grid grid-cols-[32px_1fr_40px] items-center gap-2 font-mono-num text-[12px]">
+                      <span className="text-up">매수</span>
+                      <span className="h-2.5 overflow-hidden rounded-full bg-line-soft">
+                        <i
+                          className="block h-full rounded-full bg-up transition-[width] duration-700 ease-out"
+                          style={{ width: `${buyPct}%` }}
+                        />
+                      </span>
+                      <span className="text-right">{buy}</span>
+                      <span className="text-down">매도</span>
+                      <span className="h-2.5 overflow-hidden rounded-full bg-line-soft">
+                        <i
+                          className="block h-full rounded-full bg-down transition-[width] duration-700 ease-out"
+                          style={{ width: `${100 - buyPct}%` }}
+                        />
+                      </span>
+                      <span className="text-right">{sell}</span>
+                    </div>
+                  </li>
+                )
+              }
+              const who = staffOf(d.name)
               return (
                 <li
                   // 토론은 정해진 순서대로만 늘어난다.
                   // biome-ignore lint/suspicious/noArrayIndexKey: 순서가 곧 자리다
                   key={i}
-                  className={`flex ${buySide ? 'justify-start' : 'justify-end'}`}
+                  className={`animate-debate-in flex max-w-[88%] items-end gap-1.5 ${
+                    buySide ? 'self-start' : 'flex-row-reverse self-end'
+                  }`}
                   data-testid="debate-line"
                   data-side={d.side}
                   data-kind={kind}
                 >
-                  <div
-                    className={`max-w-[82%] rounded-lg border px-2 py-1 text-[12.5px] leading-snug ${
-                      buySide
-                        ? 'rounded-bl-none border-up bg-up/10'
-                        : 'rounded-br-none border-down bg-down/10'
-                    } ${kind === 'WIN' ? 'font-bold' : ''} ${kind === 'LOSE' ? 'italic opacity-80' : ''}`}
-                  >
+                  <span className="shrink-0" aria-hidden="true">
+                    <Character
+                      employee={who}
+                      look={d.name.length}
+                      side={d.side}
+                      mood={kind === 'WIN' ? 'joy' : kind === 'LOSE' ? 'despair' : null}
+                      talking={false}
+                      fallback={d.name.slice(0, 1)}
+                      size={26}
+                    />
+                  </span>
+                  <div className="min-w-0">
                     <span
-                      className={`block text-[11px] font-semibold ${buySide ? 'text-up' : 'text-right text-down'}`}
+                      className={`block text-[11px] ${buySide ? 'text-up' : 'text-right text-down'}`}
                     >
-                      {kind === 'TALLY' ? `${d.name} (사회)` : d.name}
+                      {who?.leader && <span className="text-gold">★</span>}
+                      {d.name}
+                      {who?.leader ? ' · 팀장' : ''}
                     </span>
-                    {d.text}
+                    <div
+                      className={`rounded-xl px-2.5 py-1.5 text-[12.5px] leading-snug shadow-sm ${
+                        buySide
+                          ? 'rounded-bl-sm bg-up/12 text-ink'
+                          : 'rounded-br-sm bg-down/12 text-ink'
+                      } ${kind === 'WIN' ? 'font-bold' : ''} ${kind === 'LOSE' ? 'italic opacity-80' : ''}`}
+                    >
+                      {d.text}
+                    </div>
                   </div>
                 </li>
               )
             })}
+            {declared && (
+              // 공지 고정: 이긴 쪽 선언이 뜨면 팀 결정을 핀으로 박는다.
+              <li
+                className="animate-stamp mx-auto rounded-lg bg-gold/20 px-3 py-1 text-[13px] font-bold"
+                data-testid="clash-stamp"
+              >
+                📌 팀 결정:{' '}
+                <span
+                  className={`pen-circle px-2 font-pen text-[20px] ${buyWins ? 'text-up' : 'text-down'}`}
+                >
+                  {buyWins ? '매수!' : '매도!'}
+                </span>{' '}
+                <span className="font-normal text-muted">공지 고정</span>
+              </li>
+            )}
+            {typing && !done && (
+              <li
+                className="flex items-center gap-1 text-[11px] text-muted"
+                data-testid="clash-typing"
+              >
+                <i className="typing-dot" />
+                <i className="typing-dot" />
+                <i className="typing-dot" />
+                <span className="ml-1">{typing} 입력 중</span>
+              </li>
+            )}
           </ol>
-        </details>
+        </div>
       )}
       {done && (
         <p

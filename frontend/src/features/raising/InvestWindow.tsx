@@ -241,6 +241,7 @@ export function InvestWindow({
                 choice={proposal.choice}
                 debate={proposal.debate}
                 staff={employees}
+                stock={invest.stockName}
                 instant={skipped}
               />
             )}
@@ -360,6 +361,7 @@ export function InvestWindow({
                 choice={outcome.choice}
                 debate={outcome.debate}
                 staff={employees}
+                stock={invest.stockName}
                 instant={skipped || preplayed}
               />
             )}
