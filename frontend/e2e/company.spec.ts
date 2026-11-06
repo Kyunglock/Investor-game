@@ -112,7 +112,8 @@ async function passQuarter(
 
 /** 막판 뒤집기(283번)가 끼어들면 원래대로 한다: 시험이 고른 결정 그대로 간다. */
 async function declineProposal(meeting: Locator) {
-  const proposal = meeting.getByTestId('invest-proposal')
+  // 막판 제안은 회의 창 위에 알림 창으로 뜬다 (292번): 회의 창 밖(body)에 그려진다.
+  const proposal = meeting.page().getByTestId('invest-proposal')
   const outcome = meeting.getByTestId('invest-outcome')
   const decided = meeting.getByTestId('invest-decided')
   await expect(proposal.or(outcome).or(decided).first()).toBeVisible()
@@ -575,9 +576,11 @@ test('정하고 나면 누군가 막판에 반대로 하자고 하고, 따랐으
   await meeting.getByRole('button', { name: '산다', exact: true }).click()
   // 회의가 정해진 뒤에 막판 제안이 온다 (290번): 사장 결정 도장이 먼저 찍힌다.
   await expect(meeting.getByTestId('decided-choice')).toHaveText('산다')
-  const proposal = meeting.getByTestId('invest-proposal')
+  // 알림 창 (292번): "잠깐만요, 사장님!!"이 회의 창 위에 뜬다.
+  const proposal = page.getByTestId('invest-proposal')
   await expect(proposal).toHaveCount(0)
   await expect(proposal).toBeVisible()
+  await expect(proposal.getByTestId('proposal-shout')).toHaveText('잠깐만요, 사장님!!')
   await expect(proposal.getByTestId('proposal-line')).toContainText('잠깐만요')
   await expect(meeting.getByTestId('invest-outcome')).toHaveCount(0)
   await proposal.getByRole('button', { name: /그래, 네 말대로 해/ }).click()
