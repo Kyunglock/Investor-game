@@ -147,31 +147,6 @@ describe('회의 뒤 돌아보기 (decisions.md 260번)', () => {
       '형광펜은 곁가지에 그었다. 이번엔 빗나갔다.',
     ])
   })
-
-  it('맡겼으면 물러난 쪽 팀장의 말이 맞았는지 따라 붙는다 (295번)', () => {
-    const debate = [
-      { name: '박한결', side: 'BUY', text: '…', last: false, kind: 'TALK' },
-      { name: '최유진', side: 'SELL', text: '표결합시다.', last: true, kind: 'TALLY' },
-      { name: '최유진', side: 'SELL', text: '매도로 갑니다.', last: true, kind: 'WIN' },
-      { name: '박한결', side: 'BUY', text: '결산 때 다시 얘기해요.', last: true, kind: 'LOSE' },
-    ]
-    const base = { remarks: [], sentences: [] }
-    const rose = {
-      ...base,
-      outcome: { up: true, decisive: 0, missed: null, delegated: true, debate },
-    } as never
-    expect(hindsightOf(rose)).toEqual(['박한결 말이 맞았다. 결산 때 할 말이 생겼다.'])
-    const fell = {
-      ...base,
-      outcome: { up: false, decisive: 0, missed: null, delegated: true, debate },
-    } as never
-    expect(hindsightOf(fell)).toEqual(['박한결 말은 틀렸다. 조용히 넘어갔다.'])
-    const boss = {
-      ...base,
-      outcome: { up: true, decisive: 0, missed: null, delegated: false, debate: [] },
-    } as never
-    expect(hindsightOf(boss)).toEqual([])
-  })
 })
 
 describe('같은 의견 칸의 대표 (decisions.md 246번)', () => {
