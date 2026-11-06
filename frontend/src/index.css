@@ -919,6 +919,31 @@ p.animate-stamp {
   box-shadow: 0 0 6px 1px rgba(255, 220, 120, 0.9);
   animation: push-spark 0.6s ease-out both;
 }
+/* 단톡방의 "입력 중…" 점 셋 (decisions.md 305번). */
+@keyframes typing-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+.typing-dot {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: typing-dot 1s infinite;
+}
+.typing-dot:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.typing-dot:nth-child(3) {
+  animation-delay: 0.4s;
+}
 /* 토론 한 줄이 아래에서 툭 튀어 오른다 (decisions.md 285번). */
 @keyframes debate-in {
   0% {
@@ -942,6 +967,7 @@ p.animate-stamp {
   .animate-clash-win,
   .animate-push-hit,
   .push-spark,
+  .typing-dot,
   .grade-card,
   .animate-pop,
   .highlighter,
