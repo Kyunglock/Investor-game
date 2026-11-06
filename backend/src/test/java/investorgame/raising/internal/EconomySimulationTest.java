@@ -46,16 +46,22 @@ class EconomySimulationTest {
         : down > up ? MacroEngine.DEFENSIVE : MacroEngine.NEUTRAL;
   }
 
-  /** 한 해를 사람처럼 돈다: 거시경제 회의(기사 다수결) → 직원이 종목을 물어 왔으면 종목 회의(기사 다수결) → 결산 (decisions.md 266·267번). */
+  /**
+   * 한 해를 사람처럼 돈다: 분기마다 거시경제 회의(기사 다수결) → 직원이 종목을 물어 왔으면 종목 회의(기사 다수결) → 분기 결산, 네 분기를 넘기면 연말 결산
+   * (decisions.md 266·267·268번).
+   */
   private static void year(CompanyState company, long seed) {
     HashSeededRandom random = new HashSeededRandom(seed);
-    if (ENGINE.macro.open(company)) {
-      ENGINE.macro.decide(company, stance(company.macro), random);
+    int year = company.year;
+    while (company.year == year) {
+      if (ENGINE.macro.open(company)) {
+        ENGINE.macro.decide(company, stance(company.macro), random);
+      }
+      if (ENGINE.invest.open(company)) {
+        ENGINE.invest.decide(company, majority(company.invest), random);
+      }
+      ENGINE.settleQuarter(company, random);
     }
-    if (ENGINE.invest.open(company)) {
-      ENGINE.invest.decide(company, majority(company.invest), random);
-    }
-    ENGINE.settle(company, random);
   }
 
   /** 한 시대 뒤 자본 배수의 중앙값과 E(2억, 257번) 이상에 닿은 몫. */
@@ -89,7 +95,8 @@ class EconomySimulationTest {
     // 투자 회의가 한 해에 판단 하나만큼 더해 226번 목표(E 1.14배·C 1.71배·A 34%·S 77%)보다 3할쯤 커졌다 (229번).
     // E 띠를 2억으로 낮추고 첫 회사의 첫해에 폭락장을 뺐다(257번): 첫 시대에 E(첫 책상 추가)에 닿는 몫이 커졌다.
     // 종목 회의가 물어 올 때만 열리고(267번) 해마다 거시경제 회의를 연다(266번): 조금 줄었다.
-    // 2,000판: E 직원 26% · C 직원 56% · A 직원 86% · S 직원 99%, 세 해 자본 중앙값 1.46 · 2.15 · 3.07 · 4.47배.
+    // 턴이 분기가 되어(268번) 분기마다 판단 하나·수수료 4분의 1, 판돈은 1분기 자본으로 한 해 내내 같다.
+    // 2,000판: E 직원 21% · C 직원 54% · A 직원 84% · S 직원 98%, 세 해 자본 중앙값 1.41 · 2.07 · 2.98 · 4.39배.
     assertThat(weak[0]).as("E 직원: 조금 자란다").isBetween(1.2, 1.8);
     assertThat(weak[1]).as("E 직원은 가끔 오른다").isBetween(0.15, 0.45);
     assertThat(average[0]).as("C 직원: 세 해에 2배 남짓").isBetween(1.9, 2.7);

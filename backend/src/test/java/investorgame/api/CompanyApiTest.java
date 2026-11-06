@@ -65,28 +65,55 @@ class CompanyApiTest {
         "{\"year\":%d,\"refreshes\":%d}".formatted(year, refreshes));
   }
 
-  private ResultActions settle(int year) throws Exception {
-    return postJson("/api/company/settle", "{\"year\":%d}".formatted(year));
+  private ResultActions settle(int year, int quarter) throws Exception {
+    return postJson("/api/company/settle", "{\"year\":%d,\"quarter\":%d}".formatted(year, quarter));
+  }
+
+  /** 한 해의 남은 분기를 모두 넘긴다 (decisions.md 268번). 마지막 응답(연말 결산)을 돌려준다. */
+  private ResultActions settleYear(int year) throws Exception {
+    int quarter =
+        json(mvc.perform(get("/api/company").cookie(session))).read("$.quarter", Integer.class);
+    ResultActions last = null;
+    for (int q = quarter; q <= 4; q++) {
+      last = settle(year, q).andExpect(status().isOk());
+    }
+    return last;
   }
 
   /**
-   * 같은 결산이 두 번 와도(버튼 두 번, 끊긴 요청 다시 보내기) 한 해만 넘어간다 (#305, decisions.md 234번). 돈을 굴리는 직원이 없으면 투자 회의가
-   * 결산을 막지 않아서 예전에는 두 해가 넘어갔다.
+   * 같은 분기 결산이 두 번 와도(버튼 두 번, 끊긴 요청 다시 보내기) 한 분기만 넘어간다 (#305, decisions.md 234·268번). 돈을 굴리는 직원이 없으면
+   * 회의가 결산을 막지 않아서 예전에는 두 해가 넘어갔다.
    */
   @Test
-  void 같은_해의_결산을_두_번_보내도_한_해만_넘어간다() throws Exception {
+  void 같은_분기의_결산을_두_번_보내도_한_분기만_넘어간다() throws Exception {
     json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
     postJson("/api/company/settle", "{}").andExpect(status().isBadRequest());
-    settle(2).andExpect(status().isBadRequest());
+    postJson("/api/company/settle", "{\"year\":1}").andExpect(status().isBadRequest());
+    settle(1, 5).andExpect(status().isBadRequest());
+    settle(1, 2).andExpect(status().isBadRequest());
+    settle(2, 1).andExpect(status().isBadRequest());
 
-    DocumentContext first = json(settle(1).andExpect(status().isOk()));
-    assertThat(first.read("$.year", Integer.class)).isEqualTo(2);
-    assertThat(first.read("$.lastSettlement.year", Integer.class)).isEqualTo(1);
+    DocumentContext first = json(settle(1, 1).andExpect(status().isOk()));
+    assertThat(first.read("$.year", Integer.class)).isEqualTo(1);
+    assertThat(first.read("$.quarter", Integer.class)).isEqualTo(2);
+    assertThat(first.read("$.lastQuarter.quarter", Integer.class)).isEqualTo(1);
+    assertThat(first.read("$.lastSettlement", Object.class)).isNull();
 
-    DocumentContext again = json(settle(1).andExpect(status().isOk()));
-    assertThat(again.read("$.year", Integer.class)).as("두 번째 요청은 아무것도 하지 않는다").isEqualTo(2);
+    DocumentContext again = json(settle(1, 1).andExpect(status().isOk()));
+    assertThat(again.read("$.quarter", Integer.class)).as("두 번째 요청은 아무것도 하지 않는다").isEqualTo(2);
     assertThat(again.read("$.capital", Long.class)).isEqualTo(first.read("$.capital", Long.class));
-    assertThat(again.read("$.lastSettlement.year", Integer.class)).isEqualTo(1);
+
+    settle(1, 2).andExpect(status().isOk());
+    settle(1, 3).andExpect(status().isOk());
+    DocumentContext year = json(settle(1, 4).andExpect(status().isOk()));
+    assertThat(year.read("$.year", Integer.class)).isEqualTo(2);
+    assertThat(year.read("$.quarter", Integer.class)).isEqualTo(1);
+    assertThat(year.read("$.lastQuarter", Object.class)).as("새해에는 넘긴 분기가 없다").isNull();
+    assertThat(year.read("$.lastSettlement.year", Integer.class)).isEqualTo(1);
+    assertThat(year.read("$.lastSettlement.quarters.length()", Integer.class)).isEqualTo(4);
+    DocumentContext twice = json(settle(1, 4).andExpect(status().isOk()));
+    assertThat(twice.read("$.year", Integer.class)).isEqualTo(2);
+    assertThat(twice.read("$.capital", Long.class)).isEqualTo(year.read("$.capital", Long.class));
   }
 
   @Test
@@ -197,7 +224,7 @@ class CompanyApiTest {
     assertThat(again.read("$.invest.remarks[0].text", String.class)).isEqualTo(said);
     assertThat(meeting.read("$.invest.options.length()", Integer.class)).isEqualTo(3);
     assertThat(meeting.read("$.invest.outcome", Object.class)).isNull();
-    settle(1).andExpect(status().isBadRequest());
+    settle(1, 1).andExpect(status().isBadRequest());
     postJson("/api/company/invest", "{\"choice\":\"SHORT\"}").andExpect(status().isBadRequest());
     for (int year = 1; year <= 3; year++) {
       if (year > 1) {
@@ -220,13 +247,16 @@ class CompanyApiTest {
         postJson("/api/company/invest", "{\"choice\":\"BUY\"}").andExpect(status().isBadRequest());
         meetingTotal = decided.read("$.invest.outcome.total", Long.class);
       }
-      DocumentContext settled = json(settle(year).andExpect(status().isOk()));
+      DocumentContext settled = json(settleYear(year));
       assertThat(settled.read("$.lastSettlement.year", Integer.class)).isEqualTo(year);
       // 연말 결산서(240·251·266번): 거시경제 회의의 태도, 회의 몫과 채용비가 따로 실리고, 연초 자본 + 회의 + 직원들 몫 + 수수료 − 채용비 = 연말
       // 자본.
-      assertThat(settled.read("$.lastSettlement.macro.stance", String.class))
+      // 분기마다 태도를 고른다 (268번): 1분기만 고르고 나머지는 고르지 않아 중립이다.
+      assertThat(settled.read("$.lastSettlement.quarters.length()", Integer.class)).isEqualTo(4);
+      assertThat(settled.read("$.lastSettlement.quarters[0].stance", String.class))
           .isEqualTo(year == 1 ? "AGGRESSIVE" : "NEUTRAL");
-      assertThat(settled.read("$.lastSettlement.macro.lines.length()", Integer.class)).isEqualTo(3);
+      assertThat(settled.read("$.lastSettlement.quarters[3].stance", String.class))
+          .isEqualTo("NEUTRAL");
       if (held) {
         assertThat(settled.read("$.lastSettlement.invest.total", Long.class))
             .isEqualTo(meetingTotal);
@@ -256,7 +286,7 @@ class CompanyApiTest {
     java.util.Map<String, Object> fields = fourth.read("$");
     assertThat(fields).doesNotContainKeys("sale", "owner", "turns");
     // 지난 해의 결산이 한 번 더 와도 아무것도 하지 않는다 (234번).
-    settle(3).andExpect(status().isOk()).andExpect(jsonPath("$.year").value(4));
+    settle(3, 4).andExpect(status().isOk()).andExpect(jsonPath("$.year").value(4));
     mvc.perform(post("/api/company").cookie(session)).andExpect(status().isBadRequest());
     postJson("/api/company/sale", "{\"cofounders\":[" + employeeId + "]}")
         .andExpect(status().is4xxClientError());
@@ -265,10 +295,9 @@ class CompanyApiTest {
         .read("$.invest.ready", Boolean.class)) {
       json(postJson("/api/company/invest", "{\"choice\":\"HOLD\"}").andExpect(status().isOk()));
     }
-    settle(4)
-        .andExpect(status().isOk())
+    settleYear(4)
         .andExpect(jsonPath("$.lastSettlement.year").value(4))
-        .andExpect(jsonPath("$.lastSettlement.macro.stance").value("NEUTRAL"));
+        .andExpect(jsonPath("$.lastSettlement.quarters[0].stance").value("NEUTRAL"));
   }
 
   /** 매각을 빼기 전에 시대가 끝나 멈춘 회사는 다시 열면 다음 해 연초 회의부터 이어진다 (236번). */
@@ -284,7 +313,7 @@ class CompanyApiTest {
     assertThat(resumed.read("$.status", String.class)).isEqualTo("ACTIVE");
     assertThat(resumed.read("$.companyId", String.class)).isEqualTo(id);
     assertThat(resumed.read("$.applicants.length()", Integer.class)).isEqualTo(3);
-    settle(1).andExpect(status().isOk()).andExpect(jsonPath("$.year").value(2));
+    settleYear(1).andExpect(jsonPath("$.year").value(2));
   }
 
   /** 자리가 꽉 차면 내보낼 직원을 골라야 뽑는다. 인사팀에 사람이 있으면 지원자가 한 명 더 온다. */

@@ -44,12 +44,14 @@ const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce
 export function InvestWindow({
   invest,
   year,
+  quarter,
   employees,
   onClose,
   onSettle,
 }: {
   invest: Invest
   year: number
+  quarter: number
   employees: Company['employees']
   onClose: () => void
   onSettle: () => void
@@ -87,7 +89,9 @@ export function InvestWindow({
         data-finished={finished}
       >
         <header className="flex items-baseline justify-between">
-          <h3 className="font-pen text-[24px]">{year}년 차 종목 회의</h3>
+          <h3 className="font-pen text-[24px]">
+            {year}년 차 {quarter}분기 종목 회의
+          </h3>
           {!outcome && (
             <button type="button" onClick={onClose} className="text-[12px] text-muted underline">
               배치 다시 보기
@@ -333,8 +337,8 @@ export function InvestWindow({
                   className="animate-reveal mt-3 rounded bg-line-soft px-3 py-2 text-center text-[13px]"
                   data-testid="invest-next"
                 >
-                  회의는 이 <b>한 건</b>으로 끝났습니다. 이제 직원들이 <b>1년 동안</b> 배치대로 굴린
-                  결과를 봅니다.
+                  회의는 이 <b>한 건</b>으로 끝났습니다. 이제 직원들이 <b>이번 분기</b>에 배치대로
+                  굴린 결과를 봅니다.
                 </p>
                 <button
                   type="button"
@@ -342,7 +346,7 @@ export function InvestWindow({
                   onClick={onSettle}
                   className="animate-reveal mt-2 min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
                 >
-                  {year}년 차 결산 보기 →
+                  {year}년 차 {quarter}분기 넘기기 →
                 </button>
               </>
             )}

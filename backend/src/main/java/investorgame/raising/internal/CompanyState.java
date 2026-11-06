@@ -23,6 +23,38 @@ class CompanyState {
   /** 사장이 차린 몇 번째 회사인가(1부터). */
   int number = 1;
 
+  /** 지금 분기(1~4). 턴 하나가 한 분기이고 4분기를 넘기면 연말 결산이다 (decisions.md 268번). 이 칸이 없던 회사는 1분기. */
+  int quarter = 1;
+
+  /** 폭락장인 해에 폭락이 터지는 분기(2~4). 숨은 값. 폭락장이 아니거나 이 칸이 없던 해면 null(옛 해는 네 분기에 고르게 빠진다). */
+  Integer crashQuarter;
+
+  /** 폭락 조짐(헛조짐 포함)을 거시경제 기사에 싣는 분기: 폭락이 터지기 바로 앞 분기. 조짐이 없으면 null. */
+  Integer omenQuarter;
+
+  /**
+   * 올해 회사 등급과 자리 수를 정한 자본(연초 자본). 분기마다 자본이 바뀌어도 등급·건물·자리 수는 연말에만 바뀐다 (268번). 이 칸이 없던 회사면 null(지금
+   * 자본으로 정한다).
+   */
+  Long gradedCapital;
+
+  /**
+   * 올해 판돈과 수수료를 정하는 자본: 1분기를 넘길 때의 자본 (268번). 분기마다 자본을 다시 걸면 이긴 분기가 겹겹이 불어나 한 해 합계가 예전 규칙과 달라진다.
+   * 자본이 그 아래로 줄면 지금 자본만큼만 건다. 아직 1분기를 안 넘겼으면 null.
+   */
+  Long yearStake;
+
+  /** 이번 분기를 시작할 때의 자본. 분기 실적의 앞 숫자다. */
+  Long quarterStartCapital;
+
+  /** 올해 넘긴 분기의 실적. 연말 결산에 모여 들어가고 해가 바뀌면 비운다 (268번). */
+  List<Quarter> quarters = new ArrayList<>();
+
+  /** 분기마다 다른 난수 열쇠: 같은 해의 분기끼리 기사·한마디·판정이 겹치지 않게. */
+  int turn() {
+    return year * 10 + quarter;
+  }
+
   /** 이 회사의 시대 코드 (9.4절). */
   String era;
 
@@ -293,6 +325,39 @@ class CompanyState {
     String grade;
   }
 
+  /** 분기 하나의 실적 (decisions.md 268번). 분기 실적 창과 연말 결산서의 분기별 막대가 쓴다. */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Quarter {
+    int year;
+    int quarter;
+    long capitalBefore;
+    long capitalAfter;
+    long fee;
+
+    /** 직원들이 이 분기에 굴린 몫. */
+    long staff;
+
+    /** 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). */
+    long hiring;
+
+    /** 이 분기 종목 회의의 기사 제목과 손익. 안 열렸으면 null. */
+    String investTitle;
+
+    Long investTotal;
+
+    /** 이 분기 거시경제 회의의 주제 이름과 태도. 회의가 없던 분기면 null. */
+    String macroTopic;
+
+    String macroStance;
+
+    /** 이 분기에 폭락이 터졌다. */
+    boolean crash;
+
+    List<Result> results = new ArrayList<>();
+    List<String> lines = new ArrayList<>();
+  }
+
   /** 회사를 떠난 직원 (263번). */
   @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
@@ -352,11 +417,8 @@ class CompanyState {
 
     Long investTotal;
 
-    /** 그해 거시경제 회의: 주제 이름과 태도, 드러난 한 해 시장과 섹터 바람 줄. 회의가 없던 해면 null (266번). */
-    String macroTopic;
-
-    String macroStance;
-    List<String> macroLines = new ArrayList<>();
+    /** 그해 네 분기의 실적 (268번). 분기 결산이 생기기 전의 결산이면 비어 있다. */
+    List<Quarter> quarters = new ArrayList<>();
 
     String gradeBefore;
     String gradeAfter;

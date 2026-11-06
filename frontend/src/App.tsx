@@ -24,8 +24,8 @@ function Raising() {
 
   const screen = () => {
     if (company) {
-      // 직원이 들고 나거나 해가 바뀌면 배치 칸을 새로 그린다.
-      const key = `${company.companyId}-${company.year}-${company.employees.map((e) => e.id).join('.')}`
+      // 직원이 들고 나거나 분기가 바뀌면(268번) 배치 칸과 회의 창을 새로 그린다.
+      const key = `${company.companyId}-${company.year}-${company.quarter}-${company.employees.map((e) => e.id).join('.')}`
       return <CompanyScreen key={key} company={company} />
     }
     return <CompanyStart onOpen={() => void open()} busy={busy} error={error} />

@@ -54,12 +54,15 @@ class AdminApiTest {
                 .getResponse()
                 .getContentAsString(),
             "$.companyId");
-    mvc.perform(
-            post("/api/company/settle")
-                .cookie(session)
-                .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"year\":1}"))
-        .andExpect(status().isOk());
+    // 한 해는 네 분기다 (decisions.md 268번).
+    for (int quarter = 1; quarter <= 4; quarter++) {
+      mvc.perform(
+              post("/api/company/settle")
+                  .cookie(session)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content("{\"year\":1,\"quarter\":%d}".formatted(quarter)))
+          .andExpect(status().isOk());
+    }
 
     String at = "$.companies[?(@.companyId == '%s')]";
     mvc.perform(get("/api/admin/plays").header(AdminController.TOKEN_HEADER, "test-admin-token"))

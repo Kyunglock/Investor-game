@@ -60,10 +60,10 @@ public interface CompanyService {
   CompanyView macro(UUID sessionId, String stance);
 
   /**
-   * year 해의 결산을 하고 다음 해 연초 회의로 간다. 회사는 끝나지 않는다(236번). 투자 회의를 열 수 있는데 안 했으면 400. 이미 결산한 해면 아무것도 하지
-   * 않고 지금 회사를 돌려주고(같은 요청이 두 번 와도 한 해만 넘어간다), 아직 오지 않은 해면 400 (decisions.md 234번).
+   * 한 분기를 넘긴다 (decisions.md 268번). 4분기면 연말 결산을 하고 다음 해 1분기로 간다. 넘길 해와 분기를 싣는다: 이미 넘긴 분기면 아무것도 하지 않고
+   * 지금 회사를 돌려준다(버튼 두 번, 끊긴 요청 다시 보내기, 234번). 아직 오지 않은 분기거나, 이번 분기에 열 수 있는 종목 회의를 안 했으면 400.
    */
-  CompanyView settle(UUID sessionId, int year);
+  CompanyView settle(UUID sessionId, int year, int quarter);
 
   /** 최근에 차린 회사부터 limit개. 관리자 플레이 기록용이며 세션을 따지지 않는다. */
   List<CompanySummary> recent(int limit);

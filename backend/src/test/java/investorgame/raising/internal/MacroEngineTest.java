@@ -45,10 +45,11 @@ class MacroEngineTest {
         assertThat(macro.up).isTrue();
       }
       if (CompanyEngine.CRASH.equals(c.phase)) {
-        assertThat(macro.up).isFalse();
+        // 폭락은 2~4분기 가운데 한 분기에 터진다 (268번).
+        assertThat(c.crashQuarter).isBetween(2, 4);
       }
-      // 연초 회의의 폭락 조짐은 거시경제 기사로도 옮긴다.
-      if (c.omen != null) {
+      // 연초 회의의 폭락 조짐은 폭락이 터지기 바로 앞 분기의 거시경제 기사로 옮긴다.
+      if (c.omen != null && c.omenQuarter == 1) {
         omens++;
         assertThat(macro.sentences).anyMatch(s -> s.omen && s.text.equals(c.omen));
       } else {
@@ -74,10 +75,10 @@ class MacroEngineTest {
         if (ENGINE.invest.open(c)) {
           ENGINE.invest.decide(c, InvestEngine.HOLD, new HashSeededRandom(seed));
         }
-        CompanyState.Settlement s = ENGINE.settle(c, new HashSeededRandom(seed));
-        stakes[i++] = s.results.getFirst().stake;
-        assertThat(s.macroStance).isEqualTo(stance);
-        assertThat(s.macroLines).hasSize(3);
+        CompanyState.Quarter q = ENGINE.settleQuarter(c, new HashSeededRandom(seed));
+        stakes[i++] = q.results.getFirst().stake;
+        assertThat(q.macroStance).isEqualTo(stance);
+        assertThat(q.lines).as("섹터 바람 줄").isNotEmpty();
       }
       assertThat(stakes[0]).isEqualTo(stakes[1] * 130 / 100);
       assertThat(stakes[2]).isEqualTo(stakes[1] * 80 / 100);
@@ -92,9 +93,9 @@ class MacroEngineTest {
     assertThat(ENGINE.invest.open(c)).as("물어 오기 전에는 종목 회의가 없다").isFalse();
     assertThatThrownBy(() -> ENGINE.invest.decide(c, InvestEngine.BUY, new HashSeededRandom(3)))
         .isInstanceOf(InvalidRequestException.class);
-    CompanyState.Settlement s = ENGINE.settle(c, new HashSeededRandom(3));
-    assertThat(s.macroStance).isEqualTo(MacroEngine.NEUTRAL);
-    assertThat(s.investTitle).isNull();
+    CompanyState.Quarter q = ENGINE.settleQuarter(c, new HashSeededRandom(3));
+    assertThat(q.macroStance).isEqualTo(MacroEngine.NEUTRAL);
+    assertThat(q.investTitle).isNull();
   }
 
   @Test
@@ -163,11 +164,15 @@ class MacroEngineTest {
         ENGINE.hire(
             c, Map.of("insight", 20, "patience", 20, "courage", 20, "conviction", 20, "luck", 20));
         ENGINE.place(c, Map.of(1, "bio"));
+        // 폭락이 터지는 분기까지 넘기고 그 분기에 태도를 고른다 (268번).
+        while (c.quarter < c.crashQuarter) {
+          ENGINE.settleQuarter(c, new HashSeededRandom(seed));
+        }
         ENGINE.macro.decide(c, stance, new HashSeededRandom(seed));
         if (ENGINE.invest.open(c)) {
           ENGINE.invest.decide(c, InvestEngine.HOLD, new HashSeededRandom(seed));
         }
-        long pnl = ENGINE.settle(c, new HashSeededRandom(seed)).results.getFirst().pnl;
+        long pnl = ENGINE.settleQuarter(c, new HashSeededRandom(seed)).results.getFirst().pnl;
         if (stance.equals(MacroEngine.NEUTRAL)) {
           neutral += pnl;
         } else {
@@ -218,7 +223,7 @@ class MacroEngineTest {
   }
 
   @Test
-  void 첫_회사의_첫해에는_돈을_굴리는_직원이_꼭_하나_물어_온다() {
+  void 첫_회사의_첫_분기에는_돈을_굴리는_직원이_꼭_하나_물어_온다() {
     for (int seed = 0; seed < 50; seed++) {
       CompanyState c = ENGINE.open(new HashSeededRandom(seed), 100_000_000L);
       ENGINE.hire(c, stats(50));

@@ -4,6 +4,8 @@ import investorgame.common.error.InvalidRequestException;
 import investorgame.raising.CompanyService;
 import investorgame.raising.CompanyView;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -153,7 +155,8 @@ class CompanyController {
 
   record MacroRequest(@NotBlank String stance) {}
 
-  record SettleRequest(@NotNull @Positive Integer year) {}
+  /** 넘길 해와 분기 (decisions.md 234·268번). 이미 넘긴 분기면 아무것도 하지 않는다. */
+  record SettleRequest(@NotNull @Positive Integer year, @NotNull @Min(1) @Max(4) Integer quarter) {}
 
   @PostMapping("/placement")
   CompanyView place(
@@ -176,12 +179,13 @@ class CompanyController {
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody SettleRequest request) {
     UUID sessionId = cookies.requireSession(token);
-    CompanyView company = companies.settle(sessionId, request.year());
+    CompanyView company = companies.settle(sessionId, request.year(), request.quarter());
     PLAY.info(
-        "company-settle session={} company={} year={} capital={} grade={} ip={}",
+        "company-settle session={} company={} year={} quarter={} capital={} grade={} ip={}",
         sessionId,
         company.companyId(),
         request.year(),
+        request.quarter(),
         company.capital(),
         company.grade(),
         ClientIp.current());

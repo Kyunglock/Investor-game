@@ -163,17 +163,20 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView settle(UUID sessionId, int year) {
+  public CompanyView settle(UUID sessionId, int year, int quarter) {
     CompanyRepository.Row row =
         companies.lockLatest(sessionId).orElseThrow(() -> new NotFoundException("회사가 없다"));
-    if (year < row.state().year) {
+    CompanyState c = row.state();
+    int asked = year * CompanyEngine.QUARTERS + quarter;
+    int now = c.year * CompanyEngine.QUARTERS + c.quarter;
+    if (asked < now) {
       return view(row);
     }
-    if (year > row.state().year || !"ACTIVE".equals(row.status())) {
-      throw new InvalidRequestException("아직 오지 않은 해다: " + year);
+    if (asked > now || !"ACTIVE".equals(row.status())) {
+      throw new InvalidRequestException("아직 오지 않은 분기다: " + year + "년 " + quarter + "분기");
     }
-    // 회사는 끝나지 않고 해마다 이어진다 (236번).
-    engine.settle(row.state(), new HashSeededRandom(row.seed()));
+    // 회사는 끝나지 않고 분기마다, 해마다 이어진다 (236·268번).
+    engine.settleQuarter(c, new HashSeededRandom(row.seed()));
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -211,7 +214,7 @@ class DefaultCompanyService implements CompanyService {
     CompanyState c = row.state();
     RaisingContent.Era era = engine.era(c);
     boolean ended = "ENDED".equals(row.status());
-    String grade = engine.grade(c.capital);
+    String grade = engine.grade(c);
     int at = CompanyEngine.LADDER.indexOf(grade);
     List<Long> bands = engine.gradeCapital();
     Long next = at + 1 < bands.size() ? bands.get(at + 1) : null;
@@ -291,10 +294,11 @@ class DefaultCompanyService implements CompanyService {
         new CompanyView.Era(era.code(), era.name(), era.description()),
         c.opening,
         c.year,
+        c.quarter,
         c.capital,
         grade,
         next,
-        engine.seats(c.capital),
+        engine.seats(c),
         employees,
         desks,
         meeting,
@@ -306,6 +310,7 @@ class DefaultCompanyService implements CompanyService {
         ended ? null : engine.brokeNotice(c),
         ended ? null : investView(c, new HashSeededRandom(row.seed())),
         ended ? null : macroView(c),
+        c.quarters.isEmpty() ? null : quarterView(c.quarters.getLast()),
         last == null ? null : settlementView(last));
   }
 
@@ -501,6 +506,24 @@ class DefaultCompanyService implements CompanyService {
         above < 0 ? null : c.rivals.get(above));
   }
 
+  private CompanyView.Quarter quarterView(CompanyState.Quarter q) {
+    return new CompanyView.Quarter(
+        q.year,
+        q.quarter,
+        q.capitalBefore,
+        q.capitalAfter,
+        q.fee,
+        q.staff,
+        q.hiring,
+        q.investTotal == null
+            ? null
+            : new CompanyView.SettlementInvest(q.investTitle, q.investTotal),
+        q.macroTopic,
+        q.macroStance,
+        q.crash,
+        List.copyOf(q.lines));
+  }
+
   private CompanyView.Settlement settlementView(CompanyState.Settlement s) {
     return new CompanyView.Settlement(
         s.year,
@@ -513,10 +536,7 @@ class DefaultCompanyService implements CompanyService {
         s.investTotal == null
             ? null
             : new CompanyView.SettlementInvest(s.investTitle, s.investTotal),
-        s.macroTopic == null
-            ? null
-            : new CompanyView.SettlementMacro(
-                s.macroTopic, s.macroStance, List.copyOf(s.macroLines)),
+        s.quarters.stream().map(this::quarterView).toList(),
         s.gradeBefore,
         s.gradeAfter,
         List.copyOf(s.overtook),

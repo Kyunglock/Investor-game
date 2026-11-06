@@ -103,22 +103,24 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /api/company/settle:
     post:
-      operationId: settleYear
-      summary: 올해 결산을 하고 다음 해 연초 회의로 간다
+      operationId: settleQuarter
+      summary: 한 분기를 넘긴다. 4분기면 연말 결산을 하고 다음 해 연초 회의로 간다 (decisions.md 268번)
       description: |
-        직원들이 배치대로 1년을 굴린 결과가 lastSettlement에 실린다. 다음 해 지원자와 투자 회의가 새로 온다. 회사는 끝나지 않는다(236번).
-        투자 회의를 열 수 있는데(invest.ready) 안 했으면 400.
-        결산할 해(year)를 싣는다. 이미 결산한 해면 아무것도 하지 않고 지금 회사를 200으로 돌려준다(같은 요청이 두 번 와도 한 해만 넘어간다).
-        아직 오지 않은 해면 400 (decisions.md 234번).
+        직원들이 배치대로 한 분기를 굴린 결과가 lastQuarter에 실리고, 다음 분기의 거시경제 회의가 새로 온다.
+        4분기를 넘기면 네 분기를 모은 연말 결산서가 lastSettlement에 실리고 다음 해 지원자가 온다. 회사는 끝나지 않는다(236번).
+        종목 회의를 열 수 있는데(invest.ready) 안 했으면 400.
+        넘길 해와 분기를 싣는다. 이미 넘긴 분기면 아무것도 하지 않고 지금 회사를 200으로 돌려준다(같은 요청이 두 번 와도 한 분기만 넘어간다).
+        아직 오지 않은 분기면 400 (decisions.md 234번).
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [year]
+              required: [year, quarter]
               properties:
-                year: { type: integer, minimum: 1, description: 결산할 해. 보통 지금 해(Company.year) }
+                year: { type: integer, minimum: 1, description: 넘길 해. 보통 지금 해(Company.year) }
+                quarter: { type: integer, minimum: 1, maximum: 4, description: 넘길 분기. 보통 지금 분기(Company.quarter) }
       responses:
         '200':
           description: 결산한 뒤의 회사
@@ -294,7 +296,7 @@ components:
     Company:
       type: object
       description: 회사 화면의 값. 올해 시장 갈래는 숨은 값이라 조짐만 담는다. 직원 능력치는 등급만.
-      required: [companyId, status, number, era, year, capital, grade, seats, employees, desks, applicants, refreshCost, refreshes, history]
+      required: [companyId, status, number, era, year, quarter, capital, grade, seats, employees, desks, applicants, refreshCost, refreshes, history]
       properties:
         companyId: { type: string, format: uuid }
         status: { type: string, enum: [ACTIVE, ENDED], description: ENDED는 매각을 빼기 전(236번)에 팔린 회사. 시대가 끝나 멈췄던 회사는 다시 열면 ACTIVE로 이어진다 }
@@ -309,6 +311,12 @@ components:
             description: { type: string }
         opening: { type: [string, 'null'], description: 회사를 차릴 때의 한 줄 }
         year: { type: integer, description: 지금 해(1부터). 회사는 끝나지 않고 해마다 이어진다 (decisions.md 236번) }
+        quarter: { type: integer, minimum: 1, maximum: 4, description: 지금 분기. 턴 하나가 한 분기다 (decisions.md 268번) }
+        lastQuarter:
+          description: 올해 마지막으로 넘긴 분기의 실적. 1분기를 넘기기 전이면 null (268번)
+          oneOf:
+            - $ref: '#/components/schemas/Quarter'
+            - type: 'null'
         capital: { type: integer, format: int64 }
         grade: { $ref: '#/components/schemas/Grade' }
         nextGradeCapital: { type: [integer, 'null'], format: int64 }
@@ -552,7 +560,7 @@ components:
                     - type: 'null'
             - type: 'null'
         macro:
-          description: 올해 거시경제 회의 (decisions.md 266번). 끝난 회사나 이 회의가 생기기 전의 해면 null. 숨은 방향은 결산에서 드러난다
+          description: 이번 분기의 거시경제 회의 (decisions.md 266·268번). 끝난 회사나 이 회의가 생기기 전의 해면 null. 숨은 방향은 분기 실적의 섹터 바람으로 드러난다
           oneOf:
             - type: object
               required: [topic, title, sentences, sway, remarks, stances, ready, convened]
@@ -618,7 +626,7 @@ components:
         lastSettlement:
           oneOf:
             - type: object
-              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, gradeBefore, gradeAfter, overtook, achieved, results, lines]
+              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, quarters, gradeBefore, gradeAfter, overtook, achieved, results, lines]
               properties:
                 year: { type: integer }
                 phase: { type: string, enum: [boom, normal, crash] }
@@ -636,16 +644,10 @@ components:
                         title: { type: string }
                         total: { type: integer, format: int64 }
                     - type: 'null'
-                macro:
-                  description: 그해 거시경제 회의(주제·태도·드러난 시장과 섹터 바람). 회의가 없던 해면 null (decisions.md 266번)
-                  oneOf:
-                    - type: object
-                      required: [topic, stance, lines]
-                      properties:
-                        topic: { type: string }
-                        stance: { type: string, enum: [AGGRESSIVE, NEUTRAL, DEFENSIVE] }
-                        lines: { type: array, items: { type: string } }
-                    - type: 'null'
+                quarters:
+                  type: array
+                  description: 그해 네 분기의 실적 (decisions.md 268번). 분기 결산 전의 옛 결산이면 비어 있다
+                  items: { $ref: '#/components/schemas/Quarter' }
                 gradeBefore: { $ref: '#/components/schemas/Grade' }
                 gradeAfter: { $ref: '#/components/schemas/Grade' }
                 overtook:
@@ -670,6 +672,31 @@ components:
                       flips: { type: object, additionalProperties: { type: integer } }
                 lines: { type: array, items: { type: string } }
             - type: 'null'
+    Quarter:
+      type: object
+      description: 분기 하나의 실적 (decisions.md 268번)
+      required: [year, quarter, capitalBefore, capitalAfter, fee, staff, hiring, crash, lines]
+      properties:
+        year: { type: integer }
+        quarter: { type: integer }
+        capitalBefore: { type: integer, format: int64 }
+        capitalAfter: { type: integer, format: int64 }
+        fee: { type: integer, format: int64, description: 수수료 매출(한 해 몫의 4분의 1) }
+        staff: { type: integer, format: int64, description: 직원들이 이 분기에 굴린 몫 }
+        hiring: { type: integer, format: int64, description: 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 = 끝 자본 }
+        invest:
+          description: 이 분기 종목 회의(기사 제목과 손익). 안 열렸으면 null
+          oneOf:
+            - type: object
+              required: [title, total]
+              properties:
+                title: { type: string }
+                total: { type: integer, format: int64 }
+            - type: 'null'
+        topic: { type: [string, 'null'], description: 이 분기 거시경제 회의의 주제 }
+        stance: { type: [string, 'null'], enum: [AGGRESSIVE, NEUTRAL, DEFENSIVE, null] }
+        crash: { type: boolean, description: 이 분기에 폭락이 터졌다 }
+        lines: { type: array, items: { type: string } }
     Finder:
       type: object
       description: 종목을 물어 온 직원 (decisions.md 267번)
