@@ -76,3 +76,27 @@ export function matchupOf(
     won: r.follow === 'BOSS',
   }
 }
+
+type Remark = NonNullable<Company['invest']>['remarks'][number]
+
+/** 한마디가 말하는 쪽. 같은 쪽끼리 묶는다 (decisions.md 242번). */
+export const OPINIONS: Record<Remark['read'], { label: string; tone: string }> = {
+  UP: { label: '사자', tone: 'border-up text-up' },
+  DOWN: { label: '팔자', tone: 'border-down text-down' },
+  NEUTRAL: { label: '모르겠다', tone: 'border-line text-muted' },
+}
+
+/**
+ * 투자 회의 한마디를 같은 의견(사자·팔자·모르겠다)끼리 모은다 (242번). 사람이 많은 쪽이 먼저, 같으면 사자 → 팔자 → 모르겠다. 아무도 없는 의견은 뺀다.
+ * 묶음 안의 순서는 자리 순서 그대로다.
+ */
+export function groupRemarks(remarks: Remark[]): { read: Remark['read']; remarks: Remark[] }[] {
+  const order: Remark['read'][] = ['UP', 'DOWN', 'NEUTRAL']
+  return order
+    .map((read) => ({ read, remarks: remarks.filter((r) => r.read === read) }))
+    .filter((g) => g.remarks.length > 0)
+    .sort(
+      (a, b) =>
+        b.remarks.length - a.remarks.length || order.indexOf(a.read) - order.indexOf(b.read),
+    )
+}

@@ -3,7 +3,7 @@ import type { Company } from '../../api/client'
 import { shortWon } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { TUG_DONE_MS, TugOfWar } from '../game/TugOfWar'
-import { investTimeline, matchupOf } from './investShow'
+import { groupRemarks, investTimeline, matchupOf, OPINIONS } from './investShow'
 import { useRaisingStore } from './store'
 
 type Invest = NonNullable<Company['invest']>
@@ -125,27 +125,47 @@ export function InvestWindow({
         </article>
 
         {invest.remarks.length > 0 && !outcome && (
-          <ul className="mt-2 grid gap-1" data-testid="remarks">
-            {invest.remarks.map((r, i) => (
-              <li
-                key={r.employeeId}
-                className="animate-reveal flex flex-wrap items-baseline gap-x-2 text-[14px]"
-                // 직원들이 차례로 한마디씩 한다.
-                style={{ animationDelay: `${250 + i * 180}ms` }}
-              >
-                <b>{r.name}</b>
-                <span>“{r.text}”</span>
-                {r.stubborn && (
-                  <span
-                    className={`rounded border px-1 text-[11px] ${STUBBORN[r.stubborn].tone}`}
-                    data-testid="stubborn"
-                  >
-                    {STUBBORN[r.stubborn].label}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
+          // 같은 의견끼리 모은다 (242번): 사람이 많은 의견이 먼저, 칸마다 몇 명인지.
+          <div className="mt-2 grid gap-2" data-testid="remarks">
+            {(() => {
+              let at = 0
+              return groupRemarks(invest.remarks).map((g) => (
+                <section
+                  key={g.read}
+                  className={`rounded border-l-4 bg-line-soft/40 py-1.5 pr-2 pl-2.5 ${OPINIONS[g.read].tone}`}
+                  aria-label={`${OPINIONS[g.read].label} ${g.remarks.length}명`}
+                  data-testid="opinion"
+                  data-read={g.read}
+                >
+                  <h4 className="font-bold text-[14px]">
+                    {OPINIONS[g.read].label}{' '}
+                    <span className="font-mono-num text-[13px]">· {g.remarks.length}명</span>
+                  </h4>
+                  <ul className="mt-0.5 grid gap-1 text-ink">
+                    {g.remarks.map((r) => (
+                      <li
+                        key={r.employeeId}
+                        className="animate-reveal flex flex-wrap items-baseline gap-x-2 text-[14px]"
+                        // 직원들이 차례로 한마디씩 한다.
+                        style={{ animationDelay: `${250 + at++ * 180}ms` }}
+                      >
+                        <b>{r.name}</b>
+                        <span>“{r.text}”</span>
+                        {r.stubborn && (
+                          <span
+                            className={`rounded border px-1 text-[11px] ${STUBBORN[r.stubborn].tone}`}
+                            data-testid="stubborn"
+                          >
+                            {STUBBORN[r.stubborn].label}
+                          </span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))
+            })()}
+          </div>
         )}
 
         {!outcome && (

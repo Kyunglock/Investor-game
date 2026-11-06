@@ -189,6 +189,10 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await page.getByRole('button', { name: '1년 차 결산 보기' }).click()
   const meeting = page.getByRole('dialog', { name: '투자 회의' })
   await expect(meeting.getByTestId('remarks').getByRole('listitem')).toHaveCount(2)
+  // 같은 의견끼리 모인다 (242번): 칸마다 몇 명인지 적혀 있고, 칸의 사람을 다 더하면 두 명이다.
+  const opinions = meeting.getByTestId('opinion')
+  const heads = await opinions.getByRole('heading').allInnerTexts()
+  expect(heads.map((h) => Number(/(\d+)명/.exec(h)?.[1] ?? 0)).reduce((a, b) => a + b, 0)).toBe(2)
   await expect(meeting.getByTestId('stubborn')).toHaveCount(2)
   await meeting.getByRole('button', { name: '배치 다시 보기' }).click()
   await expect(meeting).toBeHidden()

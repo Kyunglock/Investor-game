@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Company } from '../../api/client'
-import { investTimeline, matchupOf } from './investShow'
+import { groupRemarks, investTimeline, matchupOf } from './investShow'
 
 type Result = NonNullable<NonNullable<Company['invest']>['outcome']>['results'][number]
 
@@ -85,5 +85,30 @@ describe('matchupOf', () => {
       won: true,
       start: 20,
     })
+  })
+})
+
+describe('같은 의견끼리 모은 한마디 (decisions.md 242번)', () => {
+  type Remark = NonNullable<Company['invest']>['remarks'][number]
+  const remark = (employeeId: number, read: Remark['read']) =>
+    ({ employeeId, name: `직원${employeeId}`, desk: 'day', read, text: '' }) as Remark
+
+  it('사람이 많은 의견이 먼저이고, 같으면 사자 → 팔자 → 모르겠다, 아무도 없는 의견은 없다', () => {
+    const groups = groupRemarks([
+      remark(1, 'UP'),
+      remark(2, 'DOWN'),
+      remark(3, 'DOWN'),
+      remark(4, 'UP'),
+      remark(5, 'DOWN'),
+    ])
+    expect(groups.map((g) => [g.read, g.remarks.map((r) => r.employeeId)])).toEqual([
+      ['DOWN', [2, 3, 5]],
+      ['UP', [1, 4]],
+    ])
+    expect(groupRemarks([remark(1, 'NEUTRAL'), remark(2, 'DOWN')]).map((g) => g.read)).toEqual([
+      'DOWN',
+      'NEUTRAL',
+    ])
+    expect(groupRemarks([])).toEqual([])
   })
 })
