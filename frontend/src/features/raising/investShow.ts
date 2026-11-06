@@ -1,6 +1,6 @@
 import type { Company } from '../../api/client'
 import type { Matchup } from '../game/tug'
-import { STAT_NAMES, shareOf } from './grades'
+import { LADDER, STAT_NAMES, shareOf } from './grades'
 
 type Result = NonNullable<NonNullable<Company['invest']>['outcome']>['results'][number]
 
@@ -99,4 +99,16 @@ export function groupRemarks(remarks: Remark[]): { read: Remark['read']; remarks
       (a, b) =>
         b.remarks.length - a.remarks.length || order.indexOf(a.read) - order.indexOf(b.read),
     )
+}
+
+/**
+ * 같은 의견 칸의 대표 (decisions.md 246번): 한마디는 칸마다 한 번만, 그 칸에서 안목이 가장 높은 직원이 한다(같으면 자리 순서가 앞인 사람). 나머지는
+ * 이름만 함께 선다.
+ */
+export function spokesperson(remarks: Remark[], employees: Company['employees']): Remark {
+  const insight = (r: Remark) => {
+    const grade = employees.find((e) => e.id === r.employeeId)?.grades.insight
+    return grade ? LADDER.indexOf(grade as (typeof LADDER)[number]) : -1
+  }
+  return remarks.reduce((best, r) => (insight(r) > insight(best) ? r : best))
 }
