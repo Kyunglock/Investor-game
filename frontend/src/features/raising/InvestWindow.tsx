@@ -85,7 +85,8 @@ export function InvestWindow({
         data-testid="invest"
         data-finished={finished}
       >
-        <header className="flex items-baseline justify-between">
+        {/* 맡긴 회의는 토론(285번)으로 창이 길어진다: 머리줄(빨리 보기)은 내려도 위에 붙어 있다. */}
+        <header className="sticky top-0 z-20 -mx-5 -mt-5 flex items-baseline justify-between rounded-t bg-card px-5 pt-5 pb-1">
           <h3 className="font-pen text-[24px]">
             {year}년 차 {quarter}분기 종목 회의
           </h3>
