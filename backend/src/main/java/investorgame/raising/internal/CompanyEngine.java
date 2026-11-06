@@ -32,6 +32,9 @@ class CompanyEngine {
 
   static final String CRASH = "crash";
 
+  /** 폭락장인데 아무도 바닥에서 던지지 않은 해의 머리줄 (254번). */
+  private static final String CRASH_HELD = "crashHeld";
+
   /** 큰 손실 때 같은 횟수로 뒤집힌 능력치를 탓하는 순서. 결산 말풍선(224번)과 같다. */
   private static final List<String> FLIP_BLAME_ORDER =
       List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE);
@@ -850,7 +853,15 @@ class CompanyEngine {
               Map.of("names", String.join("·", stood.stream().map(e -> e.name).toList()))));
     }
     settlement.gradeAfter = grade(company.capital);
-    settlement.lines.addFirst(content.raising().company().phases().get(company.phase));
+    // 폭락장에 아무도 바닥에서 던지지 않았으면 "못 참고 판 사람이 가장 크게 잃었다"를 쓰지 않는다 (decisions.md 254번).
+    boolean anyPanic =
+        settlement.results.stream().anyMatch(r -> r.flips.containsKey(StatCodes.PATIENCE));
+    Map<String, String> phases = content.raising().company().phases();
+    String phaseLine =
+        crash && !anyPanic && phases.containsKey(CRASH_HELD)
+            ? phases.get(CRASH_HELD)
+            : phases.get(company.phase);
+    settlement.lines.addFirst(phaseLine);
     if (!crash && company.omen != null) {
       settlement.lines.add(1, content.raising().company().falseOmenNote());
     }

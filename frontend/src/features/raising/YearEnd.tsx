@@ -87,7 +87,8 @@ export function Ledger({
             >
               {s.results.map((x) => {
                 const row = reveal(ROW_MS)
-                const bubble = bubbleOf(x.flips, x.pnl)
+                // 직원과 해로 문구를 돌린다 (254번).
+                const bubble = bubbleOf(x.flips, x.pnl, x.stake, x.employeeId * 7 + s.year)
                 return (
                   <li
                     key={x.employeeId}

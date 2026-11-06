@@ -722,4 +722,30 @@ class CompanyEngineTest {
     assertThat(CompanyEngine.won(56_361_512_345_678L)).isEqualTo("56조 3,615억 원");
     assertThat(CompanyEngine.won(1_000_000_000_000_000L)).isEqualTo("1,000조 원");
   }
+
+  /** 폭락장에 아무도 바닥에서 던지지 않았으면 머리줄이 "못 참고 판 사람이 가장 크게 잃었다"가 아니다 (#318, decisions.md 254번). */
+  @Test
+  void 폭락장에_아무도_못_참지_않았으면_머리줄이_다르다() {
+    Map<String, String> phases = TestContent.load().raising().company().phases();
+    CompanyState calm = open(1, stats(50, 100, 50, 100), 100_000_000);
+    calm.employees.getFirst().desk = "day";
+    calm.phase = CompanyEngine.CRASH;
+    calm.invest = null;
+    CompanyState.Settlement held = ENGINE.settle(calm, new HashSeededRandom(1));
+    assertThat(held.results.getFirst().flips).doesNotContainKey("patience");
+    assertThat(held.lines.getFirst()).isEqualTo(phases.get("crashHeld"));
+
+    for (long seed = 1; seed <= 30; seed++) {
+      CompanyState panicky = open(seed, stats(50, 1, 50, 100), 100_000_000);
+      panicky.employees.getFirst().desk = "day";
+      panicky.phase = CompanyEngine.CRASH;
+      panicky.invest = null;
+      CompanyState.Settlement s = ENGINE.settle(panicky, new HashSeededRandom(seed));
+      if (s.results.getFirst().flips.containsKey("patience")) {
+        assertThat(s.lines.getFirst()).isEqualTo(phases.get("crash"));
+        return;
+      }
+    }
+    throw new AssertionError("인내심 1인데 한 번도 못 참지 않았다");
+  }
 }
