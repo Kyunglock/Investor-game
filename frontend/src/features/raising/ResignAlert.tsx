@@ -1,5 +1,5 @@
 import type { Company } from '../../api/client'
-import { shortWon } from '../game/labels'
+import { shortWon, withParticle } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { useRaisingStore } from './store'
 
@@ -27,7 +27,8 @@ export function ResignAlert({ resign }: { resign: NonNullable<Company['resign']>
           {resign.line}
         </p>
         <p className="mt-2 text-[12px] text-muted">
-          답하지 않고 다음 분기를 넘기면 {resign.name}은(는) 떠납니다. 마지막 기회입니다.
+          답하지 않고 다음 분기를 넘기면 {withParticle(resign.name, '은', '는')} 떠납니다. 마지막
+          기회입니다.
         </p>
         <div className="mt-3 grid gap-2">
           <button

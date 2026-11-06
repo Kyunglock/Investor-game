@@ -146,9 +146,9 @@ export function hindsightOf(invest: NonNullable<Company['invest']>): string[] {
     return []
   }
   const lines: string[] = []
-  const right = outcome.up ? '산다' : '판다'
+  const right = outcome.up ? '샀으면' : '팔았으면'
   if (outcome.missed != null && outcome.missed > 0) {
-    lines.push(`지켜봤다. ${right}로 갔으면 +${shortWon(outcome.missed)}이었다.`)
+    lines.push(`지켜봤다. ${right} +${shortWon(outcome.missed)}이었다.`)
   }
   const up = invest.remarks.filter((r) => r.read === 'UP').length
   const down = invest.remarks.filter((r) => r.read === 'DOWN').length

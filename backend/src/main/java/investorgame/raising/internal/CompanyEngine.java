@@ -746,7 +746,7 @@ class CompanyEngine {
     }
     if (company.employees.size() >= seats(company)) {
       if (replace == null || company.employees.stream().noneMatch(e -> e.id == replace)) {
-        throw new InvalidRequestException("자리가 꽉 찼다. 내보낼 직원을 고른다");
+        throw new InvalidRequestException("자리가 꽉 찼다. 내보낼 직원을 골라야 한다");
       }
       company.employees.stream()
           .filter(e -> e.id == replace)
@@ -798,7 +798,7 @@ class CompanyEngine {
       throw new InvalidRequestException("팔린 회사다");
     }
     if (company.finished) {
-      throw new InvalidRequestException("엔딩을 본 회사다. 새 회사를 차린다");
+      throw new InvalidRequestException("엔딩을 본 회사다. 새 회사를 차려야 한다");
     }
   }
 
@@ -1182,7 +1182,7 @@ class CompanyEngine {
   CompanyState.Quarter settleQuarter(CompanyState company, SeededRandom random) {
     requireOpen(company);
     if (invest.open(company)) {
-      throw new InvalidRequestException("종목 회의를 먼저 한다");
+      throw new InvalidRequestException("종목 회의를 먼저 해야 한다");
     }
     RandomGenerator rng = random.forKey("company-settle", company.year, company.quarter);
     if (company.quarter == 1 || company.yearStake == null) {

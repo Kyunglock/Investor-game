@@ -538,7 +538,7 @@ class InvestEngine {
     // 창을 거치지 않고 바로 정해도(옛 화면, 시험) 지금 배치로 회의를 연 셈 친다.
     convene(c, random);
     if (c.invest.proposalId != null) {
-      throw new InvalidRequestException("막판 제안에 먼저 답한다");
+      throw new InvalidRequestException("막판 제안에 먼저 답해야 한다");
     }
     boolean delegated = TEAM.equals(choice);
     if (delegated) {

@@ -9,9 +9,7 @@ export function PrivacyPage() {
     <main className="mx-auto max-w-[640px] px-4 py-6">
       <Document title="개인정보처리방침" testId="privacy">
         <div className="grid gap-4 text-[14px] leading-relaxed">
-          <p className="text-[12px] text-muted">
-            시행일 2026년 11월 6일 · 고친 날 2026년 11월 6일(다른 사장에게 보이는 것)
-          </p>
+          <p className="text-[12px] text-muted">시행일 2026년 11월 6일</p>
           <section>
             <h2 className="font-semibold">1. 모으는 것</h2>
             <ul className="mt-1 list-disc pl-5">

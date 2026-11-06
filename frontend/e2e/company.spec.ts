@@ -226,7 +226,7 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   const fifth = page.getByTestId('applicant').first()
   await fifth.getByRole('button', { name: /자리가 꽉 찼다/ }).click()
   await expect(fifth.getByRole('button', { name: /내보내고 뽑는다/ })).toHaveCount(4)
-  await fifth.getByRole('button', { name: '그만둔다' }).click()
+  await fifth.getByRole('button', { name: '접는다' }).click()
 
   // 배치 (269번): 직무 자리를 먼저 누르고 그 자리에 앉힐 직원을 고른다. 후보에는 그 자리가 원하는 능력치의 등급이 보인다.
   await tab(page, /배치/)
