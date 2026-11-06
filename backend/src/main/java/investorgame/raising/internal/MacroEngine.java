@@ -63,9 +63,9 @@ class MacroEngine {
   }
 
   /**
-   * 이번 분기의 거시경제 회의를 준비한다 (268번: 분기마다 주제 하나). 숨은 방향: 호황인 해면 오름, 폭락이 터지는 분기면 내림, 그 밖에는
-   * normal-up-percent로 오름. 기사는 종목 회의와 같은 꼴(결정적 문장 하나 + 곁가지 둘 + 중립 하나)이고, 폭락이 터지기 바로 앞 분기에는 연초 회의의
-   * 폭락 조짐(헛조짐일 수도)이 기사에 실린다.
+   * 올해의 거시경제 회의를 준비한다 (281번: 한 해에 한 번, 주제 하나). 숨은 방향: 호황인 해면 오름, 폭락장인 해면 내림, 그 밖에는
+   * normal-up-percent로 오름. 기사는 종목 회의와 같은 꼴(결정적 문장 하나 + 곁가지 둘 + 중립 하나)이고, 올해 폭락 조짐(헛조짐일 수도)이 있으면 기사에
+   * 실린다.
    */
   Macro create(CompanyState c, SeededRandom random) {
     RandomGenerator rng = random.forKey("macro", c.turn());
@@ -79,14 +79,12 @@ class MacroEngine {
     RaisingContent.MacroTopic topic = topics.get(topicRoll % topics.size());
     Macro macro = new Macro();
     macro.topic = topic.code();
-    boolean burst =
-        CompanyEngine.CRASH.equals(c.phase)
-            && (c.crashQuarter == null || c.crashQuarter == c.quarter);
-    macro.up = !burst && ("boom".equals(c.phase) || upRoll < properties.macro().normalUpPercent());
+    boolean crashYear = CompanyEngine.CRASH.equals(c.phase);
+    macro.up =
+        !crashYear && ("boom".equals(c.phase) || upRoll < properties.macro().normalUpPercent());
     macro.sentences =
         invest.article(topic.up(), topic.down(), topic.neutral(), macro.up, rng, Map.of());
-    boolean omenHere = c.omenQuarter == null ? c.quarter == 1 : c.omenQuarter == c.quarter;
-    if (c.omen != null && omenHere) {
+    if (c.omen != null) {
       Sentence omen = new Sentence();
       omen.text = c.omen;
       omen.sign = DOWN;
@@ -216,7 +214,7 @@ class MacroEngine {
       throw new InvalidRequestException("고를 수 없는 태도: " + stance);
     }
     if (c.macro == null || c.macro.stance != null) {
-      throw new InvalidRequestException("이번 분기 거시경제 회의는 이미 했다");
+      throw new InvalidRequestException("올해 거시경제 회의는 이미 했다");
     }
     convene(c, random);
     c.macro.stance = stance;

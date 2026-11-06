@@ -8,6 +8,7 @@ import investorgame.common.random.SeededRandom;
 import investorgame.content.ContentCatalog;
 import investorgame.content.RaisingContent;
 import investorgame.raising.internal.CompanyState.Employee;
+import investorgame.raising.internal.CompanyState.Resign;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -190,15 +191,31 @@ class PayEngine {
    */
   void quarterPassed(CompanyState c, SeededRandom random, List<String> lines) {
     CompanyProperties.Pay rules = rules();
+    // 사표를 들고 왔는데 붙잡지도 보내지도 않고 한 분기를 넘겼다 (282번): 이제 떠난다.
+    if (c.resign != null) {
+      Resign r = c.resign;
+      c.resign = null;
+      c.employees.stream()
+          .filter(e -> e.id == r.employeeId)
+          .findFirst()
+          .ifPresent(
+              e ->
+                  quit(
+                      c,
+                      e,
+                      FROZEN.equals(r.reason) ? texts().frozenQuit() : texts().raiseQuit(),
+                      lines));
+    }
     if (c.raise != null) {
       c.raise.quarters++;
       Employee e = raiser(c);
       if (e != null
+          && c.resign == null
           && c.raise.quarters >= rules.ignoreQuarters()
           && random.forKey("raise-quit", c.year, c.quarter, e.id).nextInt(PERCENT)
               < rules.ignoreLeavePercent()) {
         c.raise = null;
-        quit(c, e, texts().raiseQuit(), lines);
+        resign(c, e, IGNORED, lines);
       }
     }
     for (Employee e : List.copyOf(c.employees)) {
@@ -206,11 +223,72 @@ class PayEngine {
         continue;
       }
       e.frozenPending = false;
-      if (random.forKey("frozen-quit", c.year, c.quarter, e.id).nextInt(PERCENT)
-          < rules.freezeLeavePercent()) {
-        quit(c, e, texts().frozenQuit(), lines);
+      if (c.resign == null
+          && random.forKey("frozen-quit", c.year, c.quarter, e.id).nextInt(PERCENT)
+              < rules.freezeLeavePercent()) {
+        resign(c, e, FROZEN, lines);
       }
     }
+  }
+
+  static final String IGNORED = "IGNORED";
+  static final String FROZEN = "FROZEN";
+
+  /** 바로 떠나지 않고 사표를 들고 온다 (282번): 마지막으로 붙잡을 기회. */
+  private void resign(CompanyState c, Employee e, String reason, List<String> lines) {
+    Resign r = new Resign();
+    r.employeeId = e.id;
+    r.reason = reason;
+    r.year = c.year;
+    r.quarter = c.quarter;
+    c.resign = r;
+    lines.add(
+        Korean.fill(
+            FROZEN.equals(reason) ? texts().resignFrozen() : texts().resignIgnored(),
+            Map.of("name", e.name)));
+  }
+
+  /** 사표에 답한다 (282번). 붙잡으면 연봉을 두 번 올려 준 만큼(약 +21%) 올려 주고 사기 +1, 남는다. 보내면 지금 떠난다. 사표가 없으면 400. */
+  void answerResign(CompanyState c, boolean keep) {
+    Resign r = c.resign;
+    if (r == null) {
+      throw new InvalidRequestException("사표를 들고 온 직원이 없다");
+    }
+    c.resign = null;
+    Employee e = c.employees.stream().filter(x -> x.id == r.employeeId).findFirst().orElse(null);
+    if (e == null) {
+      return;
+    }
+    if (keep) {
+      e.raises += KEEP_RAISES;
+      shift(e, 1);
+      c.yearLines.add(Korean.fill(texts().resignKept(), Map.of("name", e.name)));
+    } else {
+      quit(c, e, texts().resignLet(), c.yearLines);
+    }
+  }
+
+  /** 붙잡을 때 올려 주는 횟수. */
+  private static final int KEEP_RAISES = 2;
+
+  /** 붙잡으면 오를 연봉. */
+  long keepSalary(CompanyState c, Employee e) {
+    return salary(c, e, e.raises + KEEP_RAISES);
+  }
+
+  /** 사표를 들고 온 직원과 한 줄 (282번). 없으면 null. */
+  Employee resigner(CompanyState c) {
+    if (c.resign == null) {
+      return null;
+    }
+    return c.employees.stream().filter(e -> e.id == c.resign.employeeId).findFirst().orElse(null);
+  }
+
+  String resignLine(CompanyState c) {
+    Employee e = resigner(c);
+    return Korean.fill(
+        FROZEN.equals(c.resign.reason) ? texts().resignFrozen() : texts().resignIgnored(),
+        Map.of("name", e == null ? "" : e.name));
   }
 
   private void quit(CompanyState c, Employee e, String template, List<String> lines) {

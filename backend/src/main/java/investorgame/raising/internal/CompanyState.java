@@ -90,6 +90,9 @@ class CompanyState {
   /** 올해의 연봉 협상 (decisions.md 270번). 없으면 null. */
   Raise raise;
 
+  /** 연봉 때문에 사표를 들고 온 직원 (decisions.md 282번). 붙잡거나 보내기 전이면 다음 분기를 넘길 때 떠난다. 없으면 null. */
+  Resign resign;
+
   /** 올해의 이직 제안 (decisions.md 262번). 없으면 null. 답하지 않은 채 결산하면 그 직원이 떠난다. */
   Poach poach;
 
@@ -444,6 +447,21 @@ class CompanyState {
     int to;
     long totalPnl;
     String grade;
+  }
+
+  /** 연봉 때문에 사표를 들고 온 직원 (decisions.md 282번). */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Resign {
+    int employeeId;
+
+    /** IGNORED(연봉 답을 기다리다 지쳤다)·FROZEN(동결에 실망했다) */
+    String reason;
+
+    /** 사표를 들고 온 해·분기. 그다음 분기를 넘기면 떠난다. */
+    int year;
+
+    int quarter;
   }
 
   /** 올해의 연봉 협상 (decisions.md 270번). 답하지 않고 연말이 오면 흐지부지되고 사기가 조금 내린다. */

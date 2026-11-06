@@ -379,7 +379,32 @@ class DefaultCompanyService implements CompanyService {
         c.finished
             ? new CompanyView.Ending(
                 c.finishedYear == null ? c.year : c.finishedYear, c.capital, grade)
-            : null);
+            : null,
+        resignView(c));
+  }
+
+  /** 사표를 들고 온 직원 (282번). 없으면 null. */
+  private CompanyView.Resign resignView(CompanyState c) {
+    CompanyState.Employee e = engine.pay.resigner(c);
+    if (e == null) {
+      return null;
+    }
+    return new CompanyView.Resign(
+        e.id,
+        e.name,
+        c.resign.reason,
+        engine.pay.resignLine(c),
+        engine.pay.salary(c, e),
+        engine.pay.keepSalary(c, e));
+  }
+
+  @Override
+  @Transactional
+  public CompanyView answerResign(UUID sessionId, boolean keep) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.pay.answerResign(row.state(), keep);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
   }
 
   /** 올해의 라이벌 고르기 (275번). 후보도 고른 라이벌도 없으면 null. */

@@ -265,6 +265,7 @@ class JsonContentCatalog implements ContentCatalog {
             "researchNone",
             "researchIdle",
             "risk",
+            "riskNone",
             "hr",
             "scoutUp",
             "scoutDown",

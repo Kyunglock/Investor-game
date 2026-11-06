@@ -9,9 +9,11 @@ export type AutoStep =
   | { kind: 'closeYearEnd' }
   | { kind: 'closeQuarter' }
   | { kind: 'closeOvertake' }
+  | { kind: 'closeMove' }
   | { kind: 'hire'; applicantId: number }
   | { kind: 'poach'; keep: boolean }
   | { kind: 'raise'; accept: boolean }
+  | { kind: 'resign'; keep: boolean }
   | { kind: 'target'; difficulty: 'EASY' | 'MEDIUM' | 'HARD' }
   | { kind: 'place'; seats: Seat[] }
   | { kind: 'conveneMacro' }
@@ -62,6 +64,7 @@ export function nextAutoStep(
   justSettled: boolean,
   justQuartered = false,
   overtakeAlert = false,
+  moveAlert = false,
 ): AutoStep {
   // 끝났거나 망한 회사(247번)면 멈춘다: 다시 차리기는 사장이 직접 한다.
   if (company.status === 'ENDED' || company.broke) {
@@ -74,6 +77,10 @@ export function nextAutoStep(
   if (overtakeAlert) {
     return { kind: 'closeOvertake' }
   }
+  // 건물 알림 (281번): 라이벌 알림 다음에 보여 주고 닫는다.
+  if (moveAlert) {
+    return { kind: 'closeMove' }
+  }
   // 랜드마크 타워 엔딩 (276번): 엔딩을 보면 멈춘다. 다음 회사는 사장이 직접 차린다.
   if (company.ending) {
     return { kind: 'stop' }
@@ -84,6 +91,10 @@ export function nextAutoStep(
   // 이직 제안 (262·265번): 자동 진행은 직원을 보내지 않는다. 늘 남긴다.
   if (company.meeting?.poach) {
     return { kind: 'poach', keep: true }
+  }
+  // 사표 (282번): 자동 진행은 연봉을 올려 붙잡는다.
+  if (company.resign) {
+    return { kind: 'resign', keep: true }
   }
   // 연봉 협상 (270번): 자동 진행은 올려 준다. 사기가 꺾이면 손이 더 뒤집힌다.
   if (company.meeting?.raise) {
@@ -133,7 +144,10 @@ export const WINDOW_MS = 20_000
 /** 자동 진행이 닫는 창인가: 분기 실적·연말 결산서·라이벌 알림. */
 export function isWindowStep(step: AutoStep): boolean {
   return (
-    step.kind === 'closeQuarter' || step.kind === 'closeYearEnd' || step.kind === 'closeOvertake'
+    step.kind === 'closeQuarter' ||
+    step.kind === 'closeYearEnd' ||
+    step.kind === 'closeOvertake' ||
+    step.kind === 'closeMove'
   )
 }
 
@@ -152,6 +166,7 @@ export function useCompanyAutoPlay() {
   const justSettled = useRaisingStore((s) => s.justSettled)
   const justQuartered = useRaisingStore((s) => s.justQuartered)
   const overtakeAlert = useRaisingStore((s) => s.overtakeAlert)
+  const moveAlert = useRaisingStore((s) => s.moveAlert)
   const error = useRaisingStore((s) => s.error)
   useEffect(() => {
     if (!auto || busy || !company) {
@@ -161,7 +176,7 @@ export function useCompanyAutoPlay() {
       useRaisingStore.setState({ autoPlay: false, autoNextAt: null })
       return
     }
-    const step = nextAutoStep(company, justSettled, justQuartered, overtakeAlert)
+    const step = nextAutoStep(company, justSettled, justQuartered, overtakeAlert, moveAlert)
     if (step.kind === 'stop') {
       useRaisingStore.setState({ autoPlay: false, autoNextAt: null })
       return
@@ -181,6 +196,7 @@ export function useCompanyAutoPlay() {
       settle,
       answerPoach,
       answerRaise,
+      answerResign,
       pickTarget,
       conveneMacro,
       decideMacro,
@@ -196,6 +212,9 @@ export function useCompanyAutoPlay() {
         case 'closeOvertake':
           useRaisingStore.setState({ overtakeAlert: false, autoNextAt: null })
           return
+        case 'closeMove':
+          useRaisingStore.setState({ moveAlert: false, autoNextAt: null })
+          return
         case 'hire':
           void hire(step.applicantId)
           return
@@ -204,6 +223,9 @@ export function useCompanyAutoPlay() {
           return
         case 'raise':
           void answerRaise(step.accept)
+          return
+        case 'resign':
+          void answerResign(step.keep)
           return
         case 'target':
           void pickTarget(step.difficulty)
@@ -228,5 +250,5 @@ export function useCompanyAutoPlay() {
       }
     }, delay)
     return () => clearTimeout(id)
-  }, [auto, busy, company, justSettled, justQuartered, overtakeAlert, error])
+  }, [auto, busy, company, justSettled, justQuartered, overtakeAlert, moveAlert, error])
 }

@@ -48,8 +48,8 @@ class MacroEngineTest {
         // 폭락은 2~4분기 가운데 한 분기에 터진다 (268번).
         assertThat(c.crashQuarter).isBetween(2, 4);
       }
-      // 연초 회의의 폭락 조짐은 폭락이 터지기 바로 앞 분기의 거시경제 기사로 옮긴다.
-      if (c.omen != null && c.omenQuarter == 1) {
+      // 연초 회의의 폭락 조짐은 올해 거시경제 기사로 옮긴다 (281번: 회의는 한 해에 한 번).
+      if (c.omen != null) {
         omens++;
         assertThat(macro.sentences).anyMatch(s -> s.omen && s.text.equals(c.omen));
       } else {
@@ -135,7 +135,7 @@ class MacroEngineTest {
 
   /**
    * 직원은 기사 문장을 따오지 않고 요지를 엮어 자기 말로 판단한다 (decisions.md 272번). 안목이 높으면 읽은 쪽의 요지(폭락 조짐이면 조짐의 요지)를 근거로
-   * 들고, 분기 회의라 "올해"라고 하지 않는다(#342).
+   * 들고, 한 해에 한 번 여는 회의라 "이번 분기"라고 하지 않는다(281번).
    */
   @Test
   void 거시경제_한마디는_기사를_따오지_않고_요지로_말한다() {
@@ -147,7 +147,7 @@ class MacroEngineTest {
       ENGINE.place(c, Map.of(1, "bio"));
       ENGINE.macro.convene(c, new HashSeededRandom(seed));
       CompanyState.Remark remark = c.macro.remarks.getFirst();
-      assertThat(remark.text).doesNotContain("{").doesNotContain("‘").doesNotContain("올해");
+      assertThat(remark.text).doesNotContain("{").doesNotContain("‘").doesNotContain("이번 분기");
       for (CompanyState.Sentence sentence : c.macro.sentences) {
         assertThat(remark.text).doesNotContain(sentence.text);
       }

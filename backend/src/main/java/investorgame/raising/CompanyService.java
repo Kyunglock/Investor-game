@@ -41,6 +41,9 @@ public interface CompanyService {
   /** 연초 회의에서 올해의 라이벌을 고른다: EASY·MEDIUM·HARD (decisions.md 275번). 후보가 아니거나 1분기를 넘겼으면 400. */
   CompanyView pickTarget(UUID sessionId, String difficulty);
 
+  /** 연봉 때문에 사표를 들고 온 직원에게 답한다: 붙잡거나 보낸다 (decisions.md 282번). 사표가 없으면 400. */
+  CompanyView answerResign(UUID sessionId, boolean keep);
+
   /** 그 자리의 팀장을 정한다 (decisions.md 269번). 그 자리에 앉은 직원이 아니면 400. */
   CompanyView leader(UUID sessionId, String desk, int employeeId);
 

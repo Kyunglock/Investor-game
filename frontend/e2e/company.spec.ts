@@ -52,30 +52,41 @@ async function passQuarter(
   const label = `${year}년 차 ${quarter}분기 넘기기`
   await page.getByRole('button', { name: label, exact: true }).click()
   const macro = page.getByRole('dialog', { name: '거시경제 회의' })
-  await expect(macro).toBeVisible()
-  await macro.getByRole('button', { name: new RegExp(`^${stance}`) }).click()
-  await expect(macro.getByTestId('macro-stance')).toHaveText(stance)
-  const next = macro.getByRole('button', { name: /종목 회의 열기|분기 넘기기/ })
-  await expect(next).toBeVisible()
+  const meeting = page.getByRole('dialog', { name: '종목 회의' })
   let held = false
-  if (!(await macro.getByTestId('macro-finder').isVisible())) {
-    await expect(macro.getByTestId('macro-none')).toBeVisible()
-    await macro.getByRole('button', { name: `${label} →` }).click()
-    await expect(macro).toBeHidden()
+  // 거시경제 회의는 한 해에 한 번, 1분기에만 열린다 (281번). 2~4분기에는 직원이 물어 왔으면 종목 회의가 바로 뜬다.
+  if (quarter === 1) {
+    await expect(macro).toBeVisible()
+    await macro.getByRole('button', { name: new RegExp(`^${stance}`) }).click()
+    await expect(macro.getByTestId('macro-stance')).toHaveText(stance)
+    const next = macro.getByRole('button', { name: /종목 회의 열기|분기 넘기기/ })
+    await expect(next).toBeVisible()
+    if (!(await macro.getByTestId('macro-finder').isVisible())) {
+      await expect(macro.getByTestId('macro-none')).toBeVisible()
+      await macro.getByRole('button', { name: `${label} →` }).click()
+      await expect(macro).toBeHidden()
+    } else {
+      await macro.getByRole('button', { name: '종목 회의 열기 →' }).click()
+      await expect(macro).toBeHidden()
+      held = true
+    }
   } else {
-    held = true
-    await macro.getByRole('button', { name: '종목 회의 열기 →' }).click()
-    await expect(macro).toBeHidden()
-    const meeting = page.getByRole('dialog', { name: '종목 회의' })
+    await expect(macro).toHaveCount(0)
+    const sheet = page.getByRole('dialog', { name: quarter < 4 ? '분기 실적' : '연말 결산서' })
+    await expect(meeting.or(sheet)).toBeVisible()
+    held = await meeting.isVisible()
+  }
+  if (held) {
     await expect(meeting).toBeVisible()
     // 누가 이 종목을 물어 왔는지 창 머리에 보인다 (267번).
     await expect(meeting.getByTestId('invest-finder')).toContainText('가져온 종목')
+    const pick = quarter === 1 ? choice : '지켜본다'
     // 버튼 이름을 그대로 맞춘다.
-    await meeting.getByRole('button', { name: choice, exact: true }).click()
+    await meeting.getByRole('button', { name: pick, exact: true }).click()
     await expect(meeting.getByTestId('invest-outcome')).toBeVisible()
-    await expect(meeting.getByTestId('invest-choice')).toHaveText(choice)
+    await expect(meeting.getByTestId('invest-choice')).toHaveText(pick)
     const settle = meeting.getByRole('button', { name: label })
-    if (watch) {
+    if (watch && quarter === 1) {
       // 돈을 굴리는 직원마다 막대 하나: 맞붙을 것이 있으면 맞대결, 없으면 한쪽으로 곧장 찬다.
       const bars = meeting.locator('[data-testid="tug"], [data-testid="one-voice"]')
       await expect(bars).toHaveCount(await meeting.getByTestId('invest-result').count())
@@ -141,6 +152,11 @@ async function closeYearEnd(page: Page, year: number) {
   const alert = page.getByRole('alertdialog', { name: '라이벌 결과' })
   if (await alert.isVisible()) {
     await alert.getByRole('button', { name: '확인' }).click()
+  }
+  // 건물이 바뀌었으면 건물 알림이 뜬다 (281번).
+  const move = page.getByTestId('move-scene')
+  if (await move.isVisible()) {
+    await move.getByRole('button', { name: /짐 정리 끝/ }).click()
   }
 }
 
@@ -446,6 +462,41 @@ test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 �
   }
   await meeting.getByRole('button', { name: '1년 차 1분기 넘기기' }).click()
   await closeQuarter(page, 1, 1)
+})
+
+test('연봉 때문에 사표를 들고 오면 붙잡을 마지막 기회가 뜬다 (282번)', async ({ page }) => {
+  await openCompany(page)
+  // 동결 뒤 25%를 기다리기 어렵다: 회사 응답에 사표를 넣어 본다.
+  let plain: unknown = null
+  await page.route('**/api/company', async (route) => {
+    if (route.request().method() !== 'GET') {
+      await route.continue()
+      return
+    }
+    const response = await route.fetch()
+    const company = await response.json()
+    plain = structuredClone(company)
+    company.resign = {
+      employeeId: 1,
+      name: '이도담',
+      reason: 'FROZEN',
+      line: '이도담이 사표를 들고 왔다. "동결이라니요. 저 이만 가 보겠습니다."',
+      before: 12_000_000,
+      after: 14_520_000,
+    }
+    await route.fulfill({ response, json: company })
+  })
+  await page.route('**/api/company/resign', async (route) => {
+    expect(route.request().postDataJSON()).toEqual({ keep: true })
+    await route.fulfill({ json: plain })
+  })
+  await page.reload()
+  const resign = page.getByRole('alertdialog', { name: '사표' })
+  await expect(resign).toBeVisible()
+  await expect(resign.getByTestId('resign-line')).toContainText('동결이라니요')
+  await expect(resign).toContainText('마지막 기회')
+  await resign.getByRole('button', { name: /연봉 올려 주고 붙잡는다/ }).click()
+  await expect(resign).toBeHidden()
 })
 
 test('연초 회의에서 올해의 라이벌을 고르면 연말에 견준 결과가 알림으로 뜬다 (275번)', async ({

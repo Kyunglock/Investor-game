@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { api, type Company } from '../../api/client'
+import { moveOf } from './board'
 
 type Status = 'loading' | 'ready' | 'error'
 
@@ -21,6 +22,8 @@ interface RaisingState {
    * 방금 연말 결산에서 라이벌을 앞질렀거나 올해의 라이벌과 견줬다. 연말 결산서를 닫으면 알림이 뜨고, 닫으면 지운다 (decisions.md 274·275번).
    */
   overtakeAlert: boolean
+  /** 방금 연말 결산으로 건물이 바뀌었다(오르거나 줄었다). 라이벌 알림 뒤에 건물 알림이 뜨고, 닫으면 지운다 (decisions.md 281번). */
+  moveAlert: boolean
   /** 자동 진행을 켰다 (245번). 새로 고치면 꺼진다: 모르는 사이에 돈을 쓰지 않게. */
   autoPlay: boolean
   /** 자동 진행이 띄운 창(분기 실적·연말 결산서·라이벌 알림)을 닫을 때(ms). 화면이 남은 초를 센다. 창이 없으면 null (decisions.md 277번). */
@@ -42,6 +45,8 @@ interface RaisingState {
   answerRaise: (accept: boolean) => Promise<void>
   /** 연초 회의에서 올해의 라이벌을 고른다: EASY·MEDIUM·HARD (decisions.md 275번). */
   pickTarget: (difficulty: 'EASY' | 'MEDIUM' | 'HARD') => Promise<void>
+  /** 사표를 들고 온 직원에게 답한다: 연봉을 올려 붙잡거나 보낸다 (decisions.md 282번). */
+  answerResign: (keep: boolean) => Promise<void>
   /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 249번). 됐으면 true. */
   convene: () => Promise<boolean>
   /** 올해 종목 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). big이면 크게 한다 (260번). */
@@ -86,6 +91,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     justSettled: false,
     justQuartered: false,
     overtakeAlert: false,
+    moveAlert: false,
     autoPlay: false,
     autoNextAt: null,
     tab: null,
@@ -148,6 +154,8 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
 
     pickTarget: (difficulty) => change(api.POST('/api/company/target', { body: { difficulty } })),
 
+    answerResign: (keep) => change(api.POST('/api/company/resign', { body: { keep } })),
+
     convene: async () => {
       if (get().company?.invest?.convened) {
         return true
@@ -202,6 +210,10 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
           overtakeAlert:
             (after.lastSettlement?.overtook.length ?? 0) > 0 ||
             Boolean(after.lastSettlement?.target),
+          moveAlert: Boolean(
+            after.lastSettlement &&
+              moveOf(after.lastSettlement.gradeBefore, after.lastSettlement.gradeAfter),
+          ),
         })
       } else if (after.quarter > before.quarter) {
         set({ justQuartered: true })

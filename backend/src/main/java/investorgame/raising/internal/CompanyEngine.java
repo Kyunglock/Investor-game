@@ -847,7 +847,7 @@ class CompanyEngine {
   int seats(long capital) {
     int at = LADDER.indexOf(grade(capital));
     List<Integer> seats = properties.seats();
-    return at < seats.size() ? seats.get(at) : seats.getLast() + (at - seats.size() + 1);
+    return at < seats.size() ? seats.get(at) : seats.getLast() + 2 * (at - seats.size() + 1);
   }
 
   /** 규모의 벽 (decisions.md 244번): 등급 단계만큼 거듭제곱한 비율을 곱한다. F는 그대로. */
@@ -944,11 +944,19 @@ class CompanyEngine {
     startQuarter(company, random);
   }
 
-  /** 분기를 연다: 이번 분기의 거시경제 회의와, 직원이 물어 오면 열릴 종목 회의를 준비한다 (268번). */
+  /**
+   * 분기를 연다: 직원이 물어 오면 열릴 종목 회의를 준비한다 (268번). 거시경제 회의는 한 해에 한 번, 1분기에만 연다(decisions.md 281번): 고른 태도는
+   * 한 해 내내 판돈에 걸린다. 2~4분기에는 분기를 열 때 직원이 종목을 물어 온다(1분기에는 거시경제 회의가 끝나고 물어 온다, 267번).
+   */
   void startQuarter(CompanyState company, SeededRandom random) {
     company.quarterStartCapital = company.capital;
     company.invest = invest.create(company, random);
-    company.macro = macro.create(company, random);
+    if (company.quarter == 1 || company.macro == null) {
+      company.macro = macro.create(company, random);
+    }
+    if (company.macro.stance != null) {
+      macro.discover(company, random);
+    }
   }
 
   List<Long> gradeCapital() {
