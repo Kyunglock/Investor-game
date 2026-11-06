@@ -154,6 +154,15 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
+  public CompanyView leader(UUID sessionId, String desk, int employeeId) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.teams.appoint(row.state(), desk, employeeId);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
   public CompanyView place(UUID sessionId, Map<Integer, String> placements) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.place(row.state(), placements);
@@ -238,7 +247,8 @@ class DefaultCompanyService implements CompanyService {
                         e.sector == null ? null : engine.sectorName(e.sector),
                         e.desk != null && e.desk.equals(e.lastDesk) ? e.deskYears : 0,
                         engine.settled(e),
-                        engine.macro.roleOf(e)))
+                        engine.macro.roleOf(e),
+                        engine.teams.leads(c, e)))
             .toList();
     List<String> hot = engine.hotDesks(c);
     List<CompanyView.Desk> desks =
@@ -506,6 +516,28 @@ class DefaultCompanyService implements CompanyService {
         above < 0 ? null : c.rivals.get(above));
   }
 
+  private List<CompanyView.Report> reportViews(List<CompanyState.Report> reports) {
+    return reports.stream()
+        .map(
+            r -> {
+              String deskName =
+                  engine.desks().stream()
+                      .filter(d -> d.code().equals(r.desk))
+                      .findFirst()
+                      .map(RaisingContent.Desk::name)
+                      .orElse(r.desk);
+              return new CompanyView.Report(
+                  r.desk,
+                  deskName,
+                  r.leaderId,
+                  r.leader,
+                  engine.teams.head(deskName, r.leader),
+                  r.pnl,
+                  r.text);
+            })
+        .toList();
+  }
+
   private CompanyView.Quarter quarterView(CompanyState.Quarter q) {
     return new CompanyView.Quarter(
         q.year,
@@ -521,7 +553,8 @@ class DefaultCompanyService implements CompanyService {
         q.macroTopic,
         q.macroStance,
         q.crash,
-        List.copyOf(q.lines));
+        List.copyOf(q.lines),
+        reportViews(q.reports));
   }
 
   private CompanyView.Settlement settlementView(CompanyState.Settlement s) {
@@ -547,6 +580,7 @@ class DefaultCompanyService implements CompanyService {
                     new CompanyView.Result(
                         r.employeeId, r.name, r.desk, r.stake, r.pnl, Map.copyOf(r.flips)))
             .toList(),
-        List.copyOf(s.lines));
+        List.copyOf(s.lines),
+        reportViews(s.reports));
   }
 }

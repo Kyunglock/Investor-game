@@ -4,6 +4,7 @@ import { shortWon } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { bubbleOf, pnlLabel } from './board'
 import { officeName } from './office'
+import { TeamReports } from './TeamReports'
 
 type Settlement = NonNullable<Company['lastSettlement']>
 
@@ -274,6 +275,12 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
         </p>
         <div className="mt-3">
           <Ledger company={company} settlement={s} staged />
+        </div>
+        <div
+          className="animate-reveal"
+          style={{ animationDelay: `${done}ms`, animationFillMode: 'both' }}
+        >
+          <TeamReports reports={s.reports} />
         </div>
         {s.achieved.length > 0 && (
           // 그해 연 업적 (263번).

@@ -69,6 +69,7 @@ public record CompanyView(
    * @param deskYears 지금 자리에서 결산을 맞은 해 수 (decisions.md 262번)
    * @param settled 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다
    * @param role 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번)
+   * @param leader 앉은 자리의 팀장이다 (decisions.md 269번)
    */
   public record Employee(
       int id,
@@ -83,7 +84,8 @@ public record CompanyView(
       String sectorName,
       int deskYears,
       boolean settled,
-      String role) {}
+      String role,
+      boolean leader) {}
 
   /**
    * 공채 시장의 지원자 한 명.
@@ -289,7 +291,8 @@ public record CompanyView(
       List<String> overtook,
       List<String> achieved,
       List<Result> results,
-      List<String> lines) {}
+      List<String> lines,
+      List<Report> reports) {}
 
   /** 결산한 해의 투자 회의: 기사 제목과 회의 손익(이미 자본에 들어갔다). 회의를 안 했으면 결산의 invest가 null (decisions.md 240번). */
   public record SettlementInvest(String title, long total) {}
@@ -317,7 +320,23 @@ public record CompanyView(
       String topic,
       String stance,
       boolean crash,
-      List<String> lines) {}
+      List<String> lines,
+      List<Report> reports) {}
+
+  /**
+   * 팀장 보고 한 줄 (decisions.md 269번).
+   *
+   * @param head 보고자: "반도체 데스크 팀장 박한결"
+   * @param pnl 돈을 굴리는 팀의 손익. 돕는 팀이면 null
+   */
+  public record Report(
+      String desk,
+      String deskName,
+      int leaderId,
+      String leader,
+      String head,
+      Long pnl,
+      String text) {}
 
   /** flips는 능력치 코드 → 그해 뒤집힌 횟수. */
   public record Result(

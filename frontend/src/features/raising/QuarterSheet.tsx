@@ -2,6 +2,7 @@ import type { Company } from '../../api/client'
 import { shortWon } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { pnlLabel } from './board'
+import { TeamReports } from './TeamReports'
 import { STANCES } from './YearEnd'
 
 type Quarter = NonNullable<Company['lastQuarter']>
@@ -56,11 +57,12 @@ export function QuarterSheet({ quarter: q, onClose }: { quarter: Quarter; onClos
         </ul>
         {q.lines.length > 0 && (
           <ul className="mt-2 grid gap-0.5 text-[13px]" data-testid="quarter-lines">
-            {q.lines.slice(0, 3).map((line) => (
+            {q.lines.map((line) => (
               <li key={line}>· {line}</li>
             ))}
           </ul>
         )}
+        <TeamReports reports={q.reports} />
         <button
           type="button"
           onClick={onClose}

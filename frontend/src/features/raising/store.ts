@@ -41,6 +41,8 @@ interface RaisingState {
   /** 올해 거시경제 회의에서 회사의 태도를 고른다. 고르면 직원이 종목을 물어 올 수 있다 (266·267번). */
   decideMacro: (stance: Stance) => Promise<void>
   place: (seats: { employeeId: number; desk: string | null }[]) => Promise<void>
+  /** 그 자리의 팀장을 정한다 (decisions.md 269번). */
+  appointLeader: (desk: string, employeeId: number) => Promise<void>
   settle: () => Promise<void>
 }
 
@@ -156,6 +158,9 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     decideMacro: (stance) => change(api.POST('/api/company/macro', { body: { stance } })),
 
     place: (seats) => change(api.POST('/api/company/placement', { body: { seats } })),
+
+    appointLeader: (desk, employeeId) =>
+      change(api.POST('/api/company/leader', { body: { desk, employeeId } })),
 
     settle: async () => {
       const before = get().company

@@ -77,6 +77,7 @@ class CompanyEngine {
     }
     this.invest = new InvestEngine(this, content, behavior, properties);
     this.macro = new MacroEngine(this, invest, content, behavior, properties);
+    this.teams = new TeamEngine(this, content);
     this.history = new CompanyHistory(content);
   }
 
@@ -85,6 +86,9 @@ class CompanyEngine {
 
   /** 거시경제 회의와 종목 발굴 (decisions.md 266·267번). */
   final MacroEngine macro;
+
+  /** 팀장과 팀장 보고 (decisions.md 269번). */
+  final TeamEngine teams;
 
   static final String HR_DESK = "hr";
 
@@ -263,6 +267,7 @@ class CompanyEngine {
         .findFirst()
         .ifPresent(e -> history.retire(company, e));
     company.employees.removeIf(e -> e.id == poach.employeeId);
+    teams.tidy(company);
     company.capital += poach.transferFee;
     company.yearHiring -= poach.transferFee;
     company.yearLines.add(
@@ -683,6 +688,7 @@ class CompanyEngine {
           .findFirst()
           .ifPresent(e -> history.retire(company, e));
       company.employees.removeIf(e -> e.id == replace);
+      teams.tidy(company);
     }
     company.capital -= applicant.fee;
     company.yearHiring += applicant.fee;
@@ -718,6 +724,7 @@ class CompanyEngine {
             .thenComparingInt(e -> -e.id));
     List<Employee> stood = seated.subList(0, over);
     stood.forEach(e -> e.desk = null);
+    teams.tidy(company);
     return stood.stream().sorted(java.util.Comparator.comparingInt(e -> e.id)).toList();
   }
 
@@ -988,6 +995,7 @@ class CompanyEngine {
     for (Employee employee : company.employees) {
       employee.desk = placements.get(employee.id);
     }
+    teams.tidy(company);
   }
 
   /** 꼬드김에 넘어갈 확률과 손이 뒤집힐 확률(만분율). */
@@ -1171,17 +1179,14 @@ class CompanyEngine {
       result.pnl = stake * bp / BP;
       totalPnl += result.pnl;
       employee.totalPnl += result.pnl;
+      // 손을 뒤집은 일은 팀장 보고(269번)가 전한다.
       q.results.add(result);
-      result.flips.forEach(
-          (stat, count) ->
-              q.lines.add(
-                  Korean.fill(
-                      content.raising().company().flipLines().get(stat),
-                      Map.of("name", employee.name))));
     }
     long fee = (long) (stakeBase(company) * properties.feeBp() / (double) BP / QUARTERS);
     q.fee = fee;
     q.staff = totalPnl;
+    // 팀장 보고 (269번): 분기를 넘기면 자리마다 팀장이 보고한다.
+    q.reports.addAll(teams.reports(company, q.results, "이번 분기", company.turn()));
     company.capital = Math.max(0, company.capital + fee + totalPnl);
     q.capitalAfter = company.capital;
     if (company.invest != null && company.invest.choice != null) {
@@ -1274,6 +1279,8 @@ class CompanyEngine {
       }
     }
     settlement.fee = fee;
+    settlement.reports.addAll(
+        teams.reports(company, new java.util.ArrayList<>(yearly.values()), "올해", company.year));
     if (!titles.isEmpty()) {
       // 연말 결산서(240번)가 종목 회의 몫과 직원들이 한 해 굴린 몫을 나눠 보인다.
       settlement.investTitle = String.join(" · ", titles);

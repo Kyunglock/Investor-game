@@ -155,6 +155,16 @@ class CompanyController {
 
   record MacroRequest(@NotBlank String stance) {}
 
+  /** 그 자리의 팀장을 정한다 (decisions.md 269번). */
+  @PostMapping("/leader")
+  CompanyView leader(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody LeaderRequest request) {
+    return companies.leader(cookies.requireSession(token), request.desk(), request.employeeId());
+  }
+
+  record LeaderRequest(@NotBlank String desk, @NotNull Integer employeeId) {}
+
   /** 넘길 해와 분기 (decisions.md 234·268번). 이미 넘긴 분기면 아무것도 하지 않는다. */
   record SettleRequest(@NotNull @Positive Integer year, @NotNull @Min(1) @Max(4) Integer quarter) {}
 

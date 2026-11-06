@@ -242,6 +242,24 @@ class JsonContentCatalog implements ContentCatalog {
             && company.quarters().crash() != null
             && company.quarters().crashAt() != null,
         "분기 결산 문구가 없다");
+    RaisingContent.Teams teams = company.teams();
+    require(
+        teams != null
+            && teams.head() != null
+            && teams.appointed() != null
+            && List.of("up", "down", "flat").stream()
+                .allMatch(k -> !teams.trading().getOrDefault(k, List.of()).isEmpty())
+            && teams
+                .flips()
+                .keySet()
+                .containsAll(List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE))
+            && teams.selfFlips().keySet().containsAll(teams.flips().keySet()),
+        "팀장 보고 문구가 없다");
+    for (RaisingContent.Desk desk : company.desks()) {
+      require(
+          desk.trades() || teams.support().containsKey(desk.code()),
+          "돕는 자리의 팀장 보고가 없다: " + desk.code());
+    }
     RaisingContent.Scout scout = macro.scout();
     require(
         scout != null

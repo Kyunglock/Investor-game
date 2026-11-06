@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Applicant, Company } from '../../api/client'
 import { Document } from '../game/Document'
-import { shortWon } from '../game/labels'
+import { shortWon, withParticle } from '../game/labels'
 import { usePixelArt } from '../game/pixelArt'
 import { BuildingArt } from './BuildingArt'
 import { pnlLabel } from './board'
@@ -333,13 +333,14 @@ function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
 }
 
 /**
- * 배치 탭: 자리 버튼을 누르면 바로 앉는다. 버튼에는 자리가 원하는 능력치의 등급과 맞는 정도가 보인다 (230번). 사람별로 보면 직원마다 맞는 자리 셋만 먼저
- * 보이고 나머지는 펼친다. 자리별로 보면 자리마다 앉은 사람과 앉힐 만한 사람이 맞는 순서로 늘어선다 (259번, #322: 직원마다 버튼 열둘이 벽이었다).
+ * 배치 탭 (decisions.md 269번): 직무 자리를 먼저 누르고 그 자리에 앉힐 직원을 고른다. 사람마다 자리 버튼이 늘어선 화면이 헷갈려서 바꿨다. 자리 카드에는 원하는
+ * 능력치·예상 효과·앉은 사람과 팀장이 보이고, 누르면 그 자리에 맞는 순서로 직원이 늘어선다(잘 맞음·보통·안 맞음 색). 앉은 사람은 빼거나 팀장으로 정할 수
+ * 있다. 직원의 상세 능력치는 아래에 접어 둔다.
  */
 function StaffTab({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const { place } = useRaisingStore.getState()
-  const [view, setView] = useState<'people' | 'desks'>('people')
+  const [open, setOpen] = useState<string | null>(null)
   const placed = company.employees.filter((e) => e.desk).length
   const ended = company.status === 'ENDED'
   return (
@@ -354,57 +355,57 @@ function StaffTab({ company }: { company: Company }) {
             disabled={busy}
             onClick={() => void place(autoPlace(company))}
             className="min-h-10 rounded border border-teal px-3 text-[13px] font-semibold text-teal hover:bg-teal hover:text-white disabled:opacity-50"
-            title="돈을 굴리는 자리(섹터 데스크·단타)부터 맞는 사람을 앉히고, 남는 자리에 리서치·리스크 관리·인사팀을 채운다"
+            title="돈을 굴리는 자리(섹터 데스크·단타)부터 맞는 사람을 앉히고, 남는 자리에 종목 발굴·리서치·리스크 관리·인사팀을 채운다"
           >
             자동 배치
           </button>
         )}
       </div>
-      {company.employees.length === 0 && (
+      {company.employees.length === 0 ? (
         <p className="mt-1 text-[13px] text-muted">아직 직원이 없습니다. 공채에서 뽑으세요.</p>
+      ) : (
+        !ended && (
+          <p className="mt-1 text-[13px] text-muted">
+            직무 자리를 누르고, 그 자리에 앉힐 직원을 고르세요. 자리마다 팀장이 보고합니다.
+          </p>
+        )
       )}
       {!ended && company.employees.length > 0 && (
-        <fieldset className="mt-2 inline-flex rounded border border-line p-0.5 text-[13px]">
-          <legend className="sr-only">배치 보기</legend>
-          {(
-            [
-              ['people', '사람별로 보기'],
-              ['desks', '자리별로 보기'],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={view === id}
-              onClick={() => setView(id)}
-              className={`min-h-9 rounded px-3 ${view === id ? 'bg-pen text-white' : 'text-muted'}`}
-            >
-              {label}
-            </button>
-          ))}
-        </fieldset>
-      )}
-      {view === 'desks' && !ended ? (
-        <DeskBoard company={company} />
-      ) : (
-        <ul className="mt-2 grid gap-2">
-          {company.employees.map((e) => (
-            <li key={e.id} className="rounded border border-line p-3" data-testid="employee">
-              <EmployeeDetail employee={e} />
-              {!ended && (
-                <fieldset className="mt-2">
-                  <legend className="sr-only">{e.name}의 자리</legend>
-                  <DeskButtons company={company} employee={e} limit={3} />
-                </fieldset>
-              )}
-            </li>
+        <ul className="mt-2 grid gap-2" data-testid="desk-board">
+          {company.desks.map((d) => (
+            <DeskCard
+              key={d.code}
+              company={company}
+              desk={d}
+              open={open === d.code}
+              onToggle={() => setOpen(open === d.code ? null : d.code)}
+            />
           ))}
         </ul>
+      )}
+      {company.employees.length > 0 && (
+        <details className="mt-3" open={ended}>
+          <summary className="cursor-pointer text-[13px] text-muted">
+            직원 상세 능력치 ({company.employees.length}명)
+          </summary>
+          <ul className="mt-2 grid gap-2">
+            {company.employees.map((e) => (
+              <li key={e.id} className="rounded border border-line p-3" data-testid="employee">
+                <EmployeeDetail employee={e} />
+                <p className="mt-1 text-[12px] text-muted">
+                  {e.desk
+                    ? `${company.desks.find((d) => d.code === e.desk)?.name ?? e.desk}${e.leader ? ' 팀장' : ''}`
+                    : '쉬는 중'}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
       {!ended && (
         <details className="mt-2 text-[12px] text-muted">
           <summary className="cursor-pointer">
-            자리 설명 · 글씨 색: <span className="text-teal">잘 맞음</span> ·{' '}
+            글씨 색: <span className="text-teal">잘 맞음</span> ·{' '}
             <span className="text-gold">보통</span> · <span className="text-wine">안 맞음</span> · ★
             이번 시대에 뜨는 자리 · 관심: 관심 섹터의 데스크
           </summary>
@@ -423,70 +424,135 @@ function StaffTab({ company }: { company: Company }) {
 }
 
 /**
- * 자리별로 보기 (259번): 자리마다 예상 효과와, 앉은 사람(누르면 쉰다)·앉힐 만한 사람(그 자리가 원하는 능력치가 높은 순, 누르면 앉는다)을 보인다. "이 자리에
- * 누가 가장 맞나"를 카드마다 찾지 않고 한눈에 본다.
+ * 직무 자리 카드 하나 (269번). 접혀 있으면 자리 이름·원하는 능력치·예상 효과·앉은 사람(팀장 먼저)을, 펼치면 앉은 사람(빼기·팀장으로)과 앉힐 후보를 보인다.
+ * 후보는 그 자리가 원하는 능력치가 높은 순이고, 다른 자리에 앉은 사람은 옮겨 앉는다. 쉬던 사람은 자리가 남아 있어야 앉는다.
  */
-function DeskBoard({ company }: { company: Company }) {
+function DeskCard({
+  company,
+  desk: d,
+  open,
+  onToggle,
+}: {
+  company: Company
+  desk: Desk
+  open: boolean
+  onToggle: () => void
+}) {
   const busy = useRaisingStore((s) => s.busy)
-  const { place } = useRaisingStore.getState()
+  const { place, appointLeader } = useRaisingStore.getState()
   const placed = company.employees.filter((e) => e.desk).length
   const full = placed >= company.seats
-  const rank = (e: Employee, d: Desk) =>
-    LADDER.indexOf(e.grades[d.statCode] as (typeof LADDER)[number])
+  const rank = (e: Employee) => LADDER.indexOf(e.grades[d.statCode] as (typeof LADDER)[number])
+  const seated = company.employees
+    .filter((e) => e.desk === d.code)
+    .sort((a, b) => Number(b.leader) - Number(a.leader) || a.id - b.id)
+  const others = company.employees
+    .filter((e) => e.desk !== d.code)
+    .sort((a, b) => rank(b) - rank(a) || a.id - b.id)
+  const deskName = (code: string | null | undefined) =>
+    company.desks.find((x) => x.code === code)?.name ?? code
   return (
-    <ul className="mt-2 grid gap-2" data-testid="desk-board">
-      {company.desks.map((d) => {
-        const seated = company.employees.filter((e) => e.desk === d.code)
-        const others = company.employees
-          .filter((e) => e.desk !== d.code)
-          .sort((a, b) => rank(b, d) - rank(a, d) || a.id - b.id)
-        return (
-          <li key={d.code} className="rounded border border-line p-2" data-testid="desk-row">
-            <p className="text-[14px] font-semibold">
-              {d.hot && '★ '}
-              {d.name}{' '}
-              <span className="text-[12px] font-normal text-muted">
-                {STAT_NAMES[d.statCode]} · {deskEffect(d)}
-              </span>
-            </p>
-            <div className="mt-1 flex flex-wrap gap-1">
+    <li
+      className={`rounded border ${open ? 'border-pen' : 'border-line'}`}
+      data-testid="desk-row"
+      data-desk={d.code}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        onClick={onToggle}
+        className="flex w-full items-start justify-between gap-2 p-2 text-left"
+      >
+        <span className="min-w-0">
+          <span className="block text-[14px] font-semibold">
+            {d.hot && '★ '}
+            {d.name}{' '}
+            <span className="text-[12px] font-normal text-muted">
+              {STAT_NAMES[d.statCode]} · {deskEffect(d)}
+            </span>
+          </span>
+          <span className="block text-[13px]" data-testid="desk-members">
+            {seated.length === 0
+              ? '비어 있음'
+              : seated.map((e) => `${e.name}${e.leader ? '(팀장)' : ''}`).join(' · ')}
+          </span>
+        </span>
+        <span className="shrink-0 text-[13px] text-teal">{open ? '접기' : '사람 고르기'}</span>
+      </button>
+      {open && (
+        <div className="border-t border-line-soft p-2" data-testid="desk-picker">
+          {seated.length > 0 && (
+            <ul className="grid gap-1">
               {seated.map((e) => (
+                <li key={e.id} className="flex flex-wrap items-center gap-1 text-[13px]">
+                  <b>{e.name}</b>
+                  <span className="font-mono-num text-[12px]">
+                    {STAT_NAMES[d.statCode]} {e.grades[d.statCode]} · 종합 {e.overallGrade}
+                  </span>
+                  {e.leader ? (
+                    <span
+                      className="rounded bg-gold px-1.5 text-[11px] text-white"
+                      data-testid="leader-badge"
+                    >
+                      팀장
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => void appointLeader(d.code, e.id)}
+                      className="min-h-8 rounded border border-gold px-2 text-[12px] text-gold disabled:opacity-50"
+                    >
+                      팀장으로
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void place(seatOne(company, e.id, null))}
+                    className="ml-auto min-h-8 rounded border border-line px-2 text-[12px] text-muted"
+                  >
+                    빼기
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <p className="mt-2 text-[12px] text-muted">
+            {d.name}에 앉힐 사람 · {withParticle(STAT_NAMES[d.statCode], '이', '가')} 높은 순
+            {full &&
+              ' · 자리가 꽉 차서 쉬는 사람은 앉힐 수 없습니다(다른 자리에서 옮기는 것은 됩니다)'}
+          </p>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {others.map((e) => {
+              const fit = fitOf(e, d)
+              const blocked = !e.desk && full
+              return (
                 <button
                   key={e.id}
                   type="button"
-                  aria-pressed={true}
-                  disabled={busy}
-                  onClick={() => void place(seatOne(company, e.id, null))}
-                  className="min-h-9 rounded border border-pen bg-pen px-2 text-[13px] text-white"
-                  title="누르면 쉰다"
+                  disabled={busy || blocked}
+                  onClick={() => void place(seatOne(company, e.id, d.code))}
+                  className={`min-h-10 rounded border px-2 text-left text-[13px] disabled:opacity-40 ${FIT_TONE[fit]}`}
+                  data-fit={fit}
+                  data-testid="desk-candidate"
                 >
-                  {e.name} {e.grades[d.statCode]}
+                  {e.name}{' '}
+                  <span className="font-mono-num text-[11px]">
+                    {STAT_NAMES[d.statCode]} {e.grades[d.statCode]}
+                    {e.sector && d.sector === e.sector && ' · 관심'}
+                  </span>
+                  <span className="block text-[11px] text-muted">
+                    {e.desk ? `${deskName(e.desk)}에서 옮김` : '쉬는 중'}
+                  </span>
                 </button>
-              ))}
-              {others.map((e) => {
-                const fit = fitOf(e, d)
-                // 쉬던 사람은 자리가 남아 있어야 앉는다. 다른 자리에 앉은 사람은 옮긴다.
-                const blocked = !e.desk && full
-                return (
-                  <button
-                    key={e.id}
-                    type="button"
-                    aria-pressed={false}
-                    disabled={busy || blocked}
-                    onClick={() => void place(seatOne(company, e.id, d.code))}
-                    className={`min-h-9 rounded border px-2 text-[13px] disabled:opacity-40 ${FIT_TONE[fit]}`}
-                    data-fit={fit}
-                  >
-                    {e.name} {e.grades[d.statCode]}
-                    {e.desk ? ' ↔' : ''}
-                  </button>
-                )
-              })}
-            </div>
-          </li>
-        )
-      })}
-    </ul>
+              )
+            })}
+            {others.length === 0 && <p className="text-[13px] text-muted">다른 직원이 없습니다.</p>}
+          </div>
+        </div>
+      )}
+    </li>
   )
 }
 
