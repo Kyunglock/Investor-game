@@ -21,6 +21,7 @@ const MACRO_OPINIONS: Record<string, { label: string; tone: string }> = {
 export function MacroWindow({
   macro,
   year,
+  quarter,
   employees,
   stockMeeting,
   onClose,
@@ -28,6 +29,7 @@ export function MacroWindow({
 }: {
   macro: Macro
   year: number
+  quarter: number
   employees: Company['employees']
   /** 물어 온 종목이 있어 종목 회의가 열린다. */
   stockMeeting: boolean
@@ -49,7 +51,9 @@ export function MacroWindow({
         data-testid="macro"
       >
         <header className="flex items-baseline justify-between">
-          <h3 className="font-pen text-[24px]">{year}년 차 거시경제 회의</h3>
+          <h3 className="font-pen text-[24px]">
+            {year}년 차 {quarter}분기 거시경제 회의
+          </h3>
           {!outcome && (
             <button type="button" onClick={onClose} className="text-[12px] text-muted underline">
               배치 다시 보기
@@ -57,7 +61,7 @@ export function MacroWindow({
           )}
         </header>
         <article className="mt-2 rounded border border-line bg-card p-3">
-          <p className="text-[12px] text-muted">올해의 큰 흐름 · {macro.topic}</p>
+          <p className="text-[12px] text-muted">이번 분기의 큰 흐름 · {macro.topic}</p>
           <h4 className="mt-0.5 font-semibold text-[16px]">{macro.title}</h4>
           <p className="mt-2 text-[14px] leading-relaxed" data-testid="macro-article">
             {macro.sentences.map((s, i) => (
@@ -140,7 +144,7 @@ export function MacroWindow({
         {outcome && (
           <div className="mt-3" data-testid="macro-outcome">
             <p className="flex items-center gap-2 text-[14px]">
-              올해 회사의 태도
+              이번 분기 회사의 태도
               <span
                 className="animate-stamp pen-circle inline-block px-3 py-0.5 font-pen text-[22px] text-red-pen"
                 data-testid="macro-stance"
@@ -149,8 +153,8 @@ export function MacroWindow({
               </span>
             </p>
             <p className="mt-1 text-[12px] text-muted">
-              그해 결산의 판돈 ×{(chosen?.stakePercent ?? 100) / 100}. 시장이 어땠는지는 연말
-              결산서에서 드러납니다.
+              이번 분기 판돈 ×{(chosen?.stakePercent ?? 100) / 100}. 시장이 어땠는지는 분기 실적에서
+              드러납니다.
             </p>
             {outcome.finder ? (
               // 종목 발굴 (267번): 회의가 끝나자 누가 종목을 들고 찾아왔다.
@@ -187,7 +191,7 @@ export function MacroWindow({
               onClick={onNext}
               className="animate-reveal mt-3 min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
             >
-              {stockMeeting ? '종목 회의 열기 →' : `${year}년 차 결산 보기 →`}
+              {stockMeeting ? '종목 회의 열기 →' : `${year}년 차 ${quarter}분기 넘기기 →`}
             </button>
           </div>
         )}

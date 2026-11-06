@@ -97,13 +97,14 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 올해 결산을 하고 다음 해 연초 회의로 간다
-         * @description 직원들이 배치대로 1년을 굴린 결과가 lastSettlement에 실린다. 다음 해 지원자와 투자 회의가 새로 온다. 회사는 끝나지 않는다(236번).
-         *     투자 회의를 열 수 있는데(invest.ready) 안 했으면 400.
-         *     결산할 해(year)를 싣는다. 이미 결산한 해면 아무것도 하지 않고 지금 회사를 200으로 돌려준다(같은 요청이 두 번 와도 한 해만 넘어간다).
-         *     아직 오지 않은 해면 400 (decisions.md 234번).
+         * 한 분기를 넘긴다. 4분기면 연말 결산을 하고 다음 해 연초 회의로 간다 (decisions.md 268번)
+         * @description 직원들이 배치대로 한 분기를 굴린 결과가 lastQuarter에 실리고, 다음 분기의 거시경제 회의가 새로 온다.
+         *     4분기를 넘기면 네 분기를 모은 연말 결산서가 lastSettlement에 실리고 다음 해 지원자가 온다. 회사는 끝나지 않는다(236번).
+         *     종목 회의를 열 수 있는데(invest.ready) 안 했으면 400.
+         *     넘길 해와 분기를 싣는다. 이미 넘긴 분기면 아무것도 하지 않고 지금 회사를 200으로 돌려준다(같은 요청이 두 번 와도 한 분기만 넘어간다).
+         *     아직 오지 않은 분기면 400 (decisions.md 234번).
          */
-        post: operations["settleYear"];
+        post: operations["settleQuarter"];
         delete?: never;
         options?: never;
         head?: never;
@@ -286,6 +287,10 @@ export interface components {
             opening?: string | null;
             /** @description 지금 해(1부터). 회사는 끝나지 않고 해마다 이어진다 (decisions.md 236번) */
             year: number;
+            /** @description 지금 분기. 턴 하나가 한 분기다 (decisions.md 268번) */
+            quarter: number;
+            /** @description 올해 마지막으로 넘긴 분기의 실적. 1분기를 넘기기 전이면 null (268번) */
+            lastQuarter?: components["schemas"]["Quarter"] | null;
             /** Format: int64 */
             capital: number;
             grade: components["schemas"]["Grade"];
@@ -529,7 +534,7 @@ export interface components {
                     }[];
                 } | null;
             } | null;
-            /** @description 올해 거시경제 회의 (decisions.md 266번). 끝난 회사나 이 회의가 생기기 전의 해면 null. 숨은 방향은 결산에서 드러난다 */
+            /** @description 이번 분기의 거시경제 회의 (decisions.md 266·268번). 끝난 회사나 이 회의가 생기기 전의 해면 null. 숨은 방향은 분기 실적의 섹터 바람으로 드러난다 */
             macro?: {
                 /** @description 주제 이름(기준금리·환율·유가·물가·경기) */
                 topic: string;
@@ -603,13 +608,8 @@ export interface components {
                     /** Format: int64 */
                     total: number;
                 } | null;
-                /** @description 그해 거시경제 회의(주제·태도·드러난 시장과 섹터 바람). 회의가 없던 해면 null (decisions.md 266번) */
-                macro?: {
-                    topic: string;
-                    /** @enum {string} */
-                    stance: "AGGRESSIVE" | "NEUTRAL" | "DEFENSIVE";
-                    lines: string[];
-                } | null;
+                /** @description 그해 네 분기의 실적 (decisions.md 268번). 분기 결산 전의 옛 결산이면 비어 있다 */
+                quarters: components["schemas"]["Quarter"][];
                 gradeBefore: components["schemas"]["Grade"];
                 gradeAfter: components["schemas"]["Grade"];
                 /** @description 그해 앞지른 라이벌 증권사 (decisions.md 261번) */
@@ -630,6 +630,43 @@ export interface components {
                 }[];
                 lines: string[];
             } | null;
+        };
+        /** @description 분기 하나의 실적 (decisions.md 268번) */
+        Quarter: {
+            year: number;
+            quarter: number;
+            /** Format: int64 */
+            capitalBefore: number;
+            /** Format: int64 */
+            capitalAfter: number;
+            /**
+             * Format: int64
+             * @description 수수료 매출(한 해 몫의 4분의 1)
+             */
+            fee: number;
+            /**
+             * Format: int64
+             * @description 직원들이 이 분기에 굴린 몫
+             */
+            staff: number;
+            /**
+             * Format: int64
+             * @description 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 = 끝 자본
+             */
+            hiring: number;
+            /** @description 이 분기 종목 회의(기사 제목과 손익). 안 열렸으면 null */
+            invest?: {
+                title: string;
+                /** Format: int64 */
+                total: number;
+            } | null;
+            /** @description 이 분기 거시경제 회의의 주제 */
+            topic?: string | null;
+            /** @enum {string|null} */
+            stance?: "AGGRESSIVE" | "NEUTRAL" | "DEFENSIVE" | null;
+            /** @description 이 분기에 폭락이 터졌다 */
+            crash: boolean;
+            lines: string[];
         };
         /** @description 종목을 물어 온 직원 (decisions.md 267번) */
         Finder: {
@@ -866,7 +903,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    settleYear: {
+    settleQuarter: {
         parameters: {
             query?: never;
             header?: never;
@@ -876,8 +913,10 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description 결산할 해. 보통 지금 해(Company.year) */
+                    /** @description 넘길 해. 보통 지금 해(Company.year) */
                     year: number;
+                    /** @description 넘길 분기. 보통 지금 분기(Company.quarter) */
+                    quarter: number;
                 };
             };
         };

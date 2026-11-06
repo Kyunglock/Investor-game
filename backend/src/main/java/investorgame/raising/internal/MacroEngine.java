@@ -63,11 +63,12 @@ class MacroEngine {
   }
 
   /**
-   * 올해 거시경제 회의를 준비한다. 숨은 방향: 호황이면 오름, 폭락장이면 내림, 보통 해면 normal-up-percent로 오름. 기사는 종목 회의와 같은 꼴(결정적 문장
-   * 하나 + 곁가지 둘 + 중립 하나)이고, 연초 회의에 폭락 조짐(헛조짐일 수도)이 떴으면 그 문장도 기사에 실린다.
+   * 이번 분기의 거시경제 회의를 준비한다 (268번: 분기마다 주제 하나). 숨은 방향: 호황인 해면 오름, 폭락이 터지는 분기면 내림, 그 밖에는
+   * normal-up-percent로 오름. 기사는 종목 회의와 같은 꼴(결정적 문장 하나 + 곁가지 둘 + 중립 하나)이고, 폭락이 터지기 바로 앞 분기에는 연초 회의의
+   * 폭락 조짐(헛조짐일 수도)이 기사에 실린다.
    */
   Macro create(CompanyState c, SeededRandom random) {
-    RandomGenerator rng = random.forKey("macro", c.year);
+    RandomGenerator rng = random.forKey("macro", c.turn());
     int topicRoll = rng.nextInt(BP);
     int upRoll = rng.nextInt(PERCENT);
     int swayRoll = rng.nextInt(2);
@@ -77,15 +78,14 @@ class MacroEngine {
     RaisingContent.MacroTopic topic = topics.get(topicRoll % topics.size());
     Macro macro = new Macro();
     macro.topic = topic.code();
-    macro.up =
-        switch (c.phase) {
-          case CompanyEngine.CRASH -> false;
-          case "boom" -> true;
-          default -> upRoll < properties.macro().normalUpPercent();
-        };
+    boolean burst =
+        CompanyEngine.CRASH.equals(c.phase)
+            && (c.crashQuarter == null || c.crashQuarter == c.quarter);
+    macro.up = !burst && ("boom".equals(c.phase) || upRoll < properties.macro().normalUpPercent());
     macro.sentences =
         invest.article(topic.up(), topic.down(), topic.neutral(), macro.up, rng, Map.of());
-    if (c.omen != null) {
+    boolean omenHere = c.omenQuarter == null ? c.quarter == 1 : c.omenQuarter == c.quarter;
+    if (c.omen != null && omenHere) {
       Sentence omen = new Sentence();
       omen.text = c.omen;
       omen.sign = DOWN;
@@ -97,7 +97,7 @@ class MacroEngine {
     macro.swaySentiment = sentiment;
     macro.sway = phrases.get(swayPhraseRoll % phrases.size());
     macro.tempter = invest.tempterCode(c, tempterRoll);
-    macro.clarity = invest.pickClarity(random.forKey("macro-clarity", c.year).nextInt(BP));
+    macro.clarity = invest.pickClarity(random.forKey("macro-clarity", c.turn()).nextInt(BP));
     return macro;
   }
 
@@ -165,7 +165,7 @@ class MacroEngine {
       }
       int own = e.stats.get(StatCodes.INSIGHT);
       int insight = Math.max(0, own + Math.max(0, company.researchInsight(c) - own) / 2 - penalty);
-      String read = read(macro, insight, random.forKey("macro-read", c.year, e.id));
+      String read = read(macro, insight, random.forKey("macro-read", c.turn(), e.id));
       Hint.Detail voice = Hint.Detail.of(own);
       boolean sharp = voice == Hint.Detail.HIGH || voice == Hint.Detail.EXPERT;
       String tier =
@@ -173,7 +173,7 @@ class MacroEngine {
               ? "foggy"
               : voice.key();
       List<String> lines = texts.remarks().get(tier).get(read);
-      String line = lines.get(random.forKey("macro-remark", c.year, e.id).nextInt(lines.size()));
+      String line = lines.get(random.forKey("macro-remark", c.turn(), e.id).nextInt(lines.size()));
       String quote = InvestEngine.quote(macro.sentences, topic(macro).title(), read, voice);
       CompanyState.Remark r = new CompanyState.Remark();
       r.employeeId = e.id;
@@ -188,7 +188,7 @@ class MacroEngine {
     if (researcher.isPresent()) {
       Employee r = researcher.get();
       int insight = Math.max(0, r.stats.get(StatCodes.INSIGHT) - penalty);
-      String pointed = read(macro, insight, random.forKey("macro-hint", c.year, r.id));
+      String pointed = read(macro, insight, random.forKey("macro-hint", c.turn(), r.id));
       boolean right = pointed.equals(macro.up ? UP : DOWN);
       for (int i = 0; i < macro.sentences.size() && !NEUTRAL_READ.equals(pointed); i++) {
         Sentence s = macro.sentences.get(i);
@@ -214,7 +214,7 @@ class MacroEngine {
       throw new InvalidRequestException("고를 수 없는 태도: " + stance);
     }
     if (c.macro == null || c.macro.stance != null) {
-      throw new InvalidRequestException("올해 거시경제 회의는 이미 했다");
+      throw new InvalidRequestException("이번 분기 거시경제 회의는 이미 했다");
     }
     convene(c, random);
     c.macro.stance = stance;
@@ -238,8 +238,8 @@ class MacroEngine {
 
   /**
    * 종목을 물어 온다 (267번). 종목 발굴팀 직원부터(안목이 높은 사람부터) base + 안목 × insight-percent / 100 확률로, 그다음 섹터 데스크
-   * 직원이 desk-percent 확률로. 먼저 가져온 한 사람의 종목으로 종목 회의가 열린다. 첫 회사의 첫해에는 회의를 배우게 돈을 굴리는 직원이 꼭 하나 가져온다. 돈을
-   * 굴리는 사람이 없으면 가져와도 굴릴 수 없어 아무도 오지 않는다.
+   * 직원이 desk-percent 확률로. 먼저 가져온 한 사람의 종목으로 종목 회의가 열린다. 첫 회사의 첫 분기에는 회의를 배우게 돈을 굴리는 직원이 꼭 하나 가져온다.
+   * 돈을 굴리는 사람이 없으면 가져와도 굴릴 수 없어 아무도 오지 않는다.
    */
   void discover(CompanyState c, SeededRandom random) {
     if (c.invest == null || !Boolean.FALSE.equals(c.invest.found)) {
@@ -261,7 +261,7 @@ class MacroEngine {
     for (Employee e : scouts) {
       int chance =
           rules.basePercent() + e.stats.get(StatCodes.INSIGHT) * rules.insightPercent() / PERCENT;
-      if (random.forKey("scout", c.year, e.id).nextInt(PERCENT) < chance) {
+      if (random.forKey("scout", c.turn(), e.id).nextInt(PERCENT) < chance) {
         finder = e;
         break;
       }
@@ -269,13 +269,13 @@ class MacroEngine {
     if (finder == null) {
       for (Employee e : traders) {
         if (company.deskSector(e.desk) != null
-            && random.forKey("scout-desk", c.year, e.id).nextInt(PERCENT) < rules.deskPercent()) {
+            && random.forKey("scout-desk", c.turn(), e.id).nextInt(PERCENT) < rules.deskPercent()) {
           finder = e;
           break;
         }
       }
     }
-    if (finder == null && c.number == 1 && c.year == 1) {
+    if (finder == null && c.number == 1 && c.year == 1 && c.quarter == 1) {
       finder = traders.getFirst();
     }
     if (finder == null) {
@@ -285,16 +285,9 @@ class MacroEngine {
     c.invest = invest.found(c, finder, roleOf(finder), random);
   }
 
-  /** 결산서의 줄: 드러난 한 해 시장과 섹터 바람 (266번). 회의가 없던 해면 빈 목록. */
-  List<String> settledLines(CompanyState c) {
-    if (c.macro == null) {
-      return List.of();
-    }
-    RaisingContent.MacroTopic topic = topic(c.macro);
-    RaisingContent.Macro texts = texts();
-    return List.of(
-        Korean.fill(texts.reveal().get(c.phase), Map.of("topic", topic.name())),
-        topic.winds().get(c.macro.up ? UP : DOWN).line());
+  /** 분기 실적의 한 줄: 그 분기 주제가 분 섹터 바람 (266·268번). */
+  String windLine(CompanyState c) {
+    return topic(c.macro).winds().get(c.macro.up ? UP : DOWN).line();
   }
 
   String stanceLabel(String stance) {
@@ -312,12 +305,5 @@ class MacroEngine {
   /** 회의가 끝났는데 아무도 종목을 물어 오지 않은 해의 한 줄. */
   String noneLine() {
     return texts().scout().none();
-  }
-
-  /** 결산서 머리의 한 줄: 주제와 그해 태도. */
-  String settledHead(CompanyState c) {
-    return Korean.fill(
-        texts().settled(),
-        Map.of("topic", topic(c.macro).name(), "stance", stanceLabel(stance(c))));
   }
 }

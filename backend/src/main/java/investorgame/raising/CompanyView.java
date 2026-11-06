@@ -8,6 +8,8 @@ import java.util.UUID;
  * 회사 화면의 값 (증권사 육성 설계 4·6절). 올해 시장 갈래는 숨은 값이라 조짐만 담는다. 직원 능력치는 등급만.
  *
  * @param year 지금 해(1부터). 회사는 끝나지 않고 해마다 이어진다 (decisions.md 236번)
+ * @param quarter 지금 분기(1~4). 턴 하나가 한 분기다 (decisions.md 268번)
+ * @param lastQuarter 올해 마지막으로 넘긴 분기의 실적. 1분기 전이면 null (268번)
  * @param grade 자본으로 매기는 회사 등급 (4.5절)
  * @param nextGradeCapital 다음 등급의 자본. 맨 위면 null
  * @param seats 앉힐 수 있는 자리 수
@@ -33,6 +35,7 @@ public record CompanyView(
     Era era,
     String opening,
     int year,
+    int quarter,
     long capital,
     String grade,
     Long nextGradeCapital,
@@ -48,6 +51,7 @@ public record CompanyView(
     String broke,
     Invest invest,
     Macro macro,
+    Quarter lastQuarter,
     Settlement lastSettlement) {
 
   public enum Status {
@@ -279,7 +283,7 @@ public record CompanyView(
       long fee,
       long hiring,
       SettlementInvest invest,
-      SettlementMacro macro,
+      List<Quarter> quarters,
       String gradeBefore,
       String gradeAfter,
       List<String> overtook,
@@ -290,8 +294,30 @@ public record CompanyView(
   /** 결산한 해의 투자 회의: 기사 제목과 회의 손익(이미 자본에 들어갔다). 회의를 안 했으면 결산의 invest가 null (decisions.md 240번). */
   public record SettlementInvest(String title, long total) {}
 
-  /** 결산한 해의 거시경제 회의: 주제, 태도, 드러난 시장과 섹터 바람 (decisions.md 266번). 회의가 없던 해면 null. */
-  public record SettlementMacro(String topic, String stance, List<String> lines) {}
+  /**
+   * 분기 하나의 실적 (decisions.md 268번).
+   *
+   * @param staff 직원들이 이 분기에 굴린 몫
+   * @param hiring 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료)
+   * @param invest 이 분기 종목 회의. 안 열렸으면 null
+   * @param topic 이 분기 거시경제 회의의 주제. 회의가 없던 분기면 null
+   * @param stance 이 분기 태도. 회의가 없던 분기면 null
+   * @param crash 이 분기에 폭락이 터졌다
+   * @param lines 분기 소식 줄(직원 소식·섹터 바람)
+   */
+  public record Quarter(
+      int year,
+      int quarter,
+      long capitalBefore,
+      long capitalAfter,
+      long fee,
+      long staff,
+      long hiring,
+      SettlementInvest invest,
+      String topic,
+      String stance,
+      boolean crash,
+      List<String> lines) {}
 
   /** flips는 능력치 코드 → 그해 뒤집힌 횟수. */
   public record Result(

@@ -64,7 +64,7 @@ export function Ledger({
           >
             <Row
               label={`${num()} 종목 회의`}
-              note={`직원이 물어 온 한 건 · ${s.invest.title}`}
+              note={`직원이 물어 온 종목 · ${s.invest.title}`}
               amount={s.invest.total}
             />
           </li>
@@ -159,25 +159,7 @@ export function Ledger({
   const end = reveal()
   return (
     <div data-testid="ledger">
-      {s.macro && (
-        // 거시경제 회의 (266번): 그해 태도가 직원들의 1년 운용 전체에 걸렸다. 결산에서 그해 시장과 섹터 바람이 드러난다.
-        <div
-          className="mb-2 rounded border border-line-soft px-2 py-1.5"
-          data-testid="ledger-macro"
-        >
-          <p className="text-[14px] font-semibold">
-            거시경제 회의 · {s.macro.topic}{' '}
-            <span className="rounded bg-ink px-1.5 text-[12px] text-white">
-              {STANCES[s.macro.stance]}
-            </span>
-          </p>
-          <ul className="mt-0.5 grid gap-0.5 text-[12px] text-muted">
-            {s.macro.lines.slice(1).map((line) => (
-              <li key={line}>· {line}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {s.quarters.length > 0 && <QuarterBars quarters={s.quarters} />}
       <p className="flex items-baseline justify-between text-[14px]">
         <span className="text-muted">연초 자본</span>
         <span className="font-mono-num">{shortWon(s.capitalBefore)}</span>
@@ -203,6 +185,46 @@ export function Ledger({
         )}
       </div>
     </div>
+  )
+}
+
+/**
+ * 분기별 막대 (decisions.md 268번): 분기마다 자본이 얼마나 움직였는지와 그 분기 태도. "2분기에 크게 잃고 4분기에 되찾았다"가 한눈에 보인다. 폭락이 터진
+ * 분기에는 번개 표시.
+ */
+function QuarterBars({ quarters }: { quarters: Settlement['quarters'] }) {
+  const moves = quarters.map((q) => q.capitalAfter - q.capitalBefore)
+  const most = Math.max(1, ...moves.map((m) => Math.abs(m)))
+  return (
+    <ol
+      className="mb-2 grid grid-cols-4 gap-1 rounded border border-line-soft p-2"
+      aria-label="분기별 실적"
+      data-testid="quarter-bars"
+    >
+      {quarters.map((q, i) => {
+        const m = moves[i]
+        const height = Math.max(4, Math.round((Math.abs(m) / most) * 40))
+        return (
+          <li key={q.quarter} className="flex flex-col items-center text-center">
+            <div className="flex h-[84px] w-full flex-col justify-center">
+              <div className="flex h-10 items-end justify-center">
+                {m >= 0 && <span className="w-5 rounded-t bg-up" style={{ height }} />}
+              </div>
+              <div className="h-px w-full bg-line" />
+              <div className="flex h-10 items-start justify-center">
+                {m < 0 && <span className="w-5 rounded-b bg-down" style={{ height }} />}
+              </div>
+            </div>
+            <p className="text-[12px] font-semibold">
+              {q.crash && '⚡'}
+              {q.quarter}분기
+            </p>
+            <p className={`font-mono-num text-[11px] ${tone(m)}`}>{pnlLabel(m)}</p>
+            {q.stance && <p className="text-[11px] text-muted">{STANCES[q.stance]}</p>}
+          </li>
+        )
+      })}
+    </ol>
   )
 }
 
@@ -247,8 +269,8 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
           <span className="text-[18px] text-muted">· {PHASES[s.phase]}</span>
         </h2>
         <p className="mt-1 text-[13px] text-muted">
-          거시경제 회의에서 정한 태도로 직원들이 1년 동안 배치대로 알아서 굴렸습니다. 종목 회의는
-          직원이 물어 온 <b className="text-ink">한 건</b>입니다.
+          네 분기 동안 거시경제 회의에서 정한 태도로 직원들이 배치대로 알아서 굴렸습니다. 종목
+          회의는 직원이 물어 온 건만 따로 셉니다.
         </p>
         <div className="mt-3">
           <Ledger company={company} settlement={s} staged />

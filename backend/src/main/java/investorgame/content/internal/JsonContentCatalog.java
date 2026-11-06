@@ -208,8 +208,6 @@ class JsonContentCatalog implements ContentCatalog {
         macro != null
             && macro.stances().keySet().containsAll(stances)
             && macro.notes().keySet().containsAll(stances)
-            && macro.reveal().keySet().containsAll(List.of("boom", "normal", "crash"))
-            && macro.settled() != null
             && !macro.sway().getOrDefault("POS", List.of()).isEmpty()
             && !macro.sway().getOrDefault("NEG", List.of()).isEmpty(),
         "거시경제 회의 문구가 없다");
@@ -239,6 +237,11 @@ class JsonContentCatalog implements ContentCatalog {
       List<String> lines = macro.remarks().getOrDefault("foggy", Map.of()).get(read);
       require(lines != null && !lines.isEmpty(), "흐린 거시경제 기사의 한마디가 없다: " + read);
     }
+    require(
+        company.quarters() != null
+            && company.quarters().crash() != null
+            && company.quarters().crashAt() != null,
+        "분기 결산 문구가 없다");
     RaisingContent.Scout scout = macro.scout();
     require(
         scout != null

@@ -13,8 +13,10 @@ interface RaisingState {
   busy: boolean
   /** 서버가 거절한 이유(400). 다음 요청에서 지운다. */
   error: string | null
-  /** 방금 결산했다. 회사 화면이 결과로 스크롤하고 지운다. */
+  /** 방금 4분기를 넘겨 연말 결산을 했다. 연말 결산서를 띄우고 닫으면 지운다. */
   justSettled: boolean
+  /** 방금 한 분기를 넘겼다(4분기가 아니다). 분기 실적을 띄우고 닫으면 지운다 (decisions.md 268번). */
+  justQuartered: boolean
   /** 자동 진행을 켰다 (245번). 새로 고치면 꺼진다: 모르는 사이에 돈을 쓰지 않게. */
   autoPlay: boolean
   /** 회사 화면에서 고른 탭. null이면 화면이 정한다 (231번). */
@@ -70,6 +72,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     busy: false,
     error: null,
     justSettled: false,
+    justQuartered: false,
     autoPlay: false,
     tab: null,
 
@@ -155,14 +158,24 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     place: (seats) => change(api.POST('/api/company/placement', { body: { seats } })),
 
     settle: async () => {
-      const year = get().company?.year
-      if (year === undefined || get().busy) {
+      const before = get().company
+      if (!before || get().busy) {
         return
       }
-      // 결산할 해를 함께 보낸다: 두 번 눌리거나 끊긴 요청을 다시 보내도 서버가 한 해만 넘긴다 (234번).
-      await change(api.POST('/api/company/settle', { body: { year } }))
-      if (!get().error) {
-        set({ justSettled: true, tab: 'settlement' })
+      // 넘길 해와 분기를 함께 보낸다: 두 번 눌리거나 끊긴 요청을 다시 보내도 서버가 한 분기만 넘긴다 (234·268번).
+      await change(
+        api.POST('/api/company/settle', {
+          body: { year: before.year, quarter: before.quarter },
+        }),
+      )
+      const after = get().company
+      if (get().error || !after) {
+        return
+      }
+      if (after.year > before.year) {
+        set({ justSettled: true, justQuartered: false, tab: 'settlement' })
+      } else if (after.quarter > before.quarter) {
+        set({ justQuartered: true })
       }
     },
   }

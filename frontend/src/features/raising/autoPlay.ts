@@ -7,6 +7,7 @@ import { type Stance, useRaisingStore } from './store'
 /** 자동 진행이 한 번에 하는 일 (decisions.md 245번). */
 export type AutoStep =
   | { kind: 'closeYearEnd' }
+  | { kind: 'closeQuarter' }
   | { kind: 'hire'; applicantId: number }
   | { kind: 'poach'; keep: boolean }
   | { kind: 'place'; seats: Seat[] }
@@ -56,15 +57,23 @@ export function autoHire(company: Company): number | null {
 
 /**
  * 자동 진행의 다음 일 (245번). 한 해를 사람이 하는 순서 그대로 돈다: 연말 결산서를 닫고 → 빈 자리에 뽑고 → 자동 배치(232·233번)와 다르면 앉히고 →
- * 거시경제 회의(직원 다수결, 266번) → 직원이 종목을 물어 왔으면 종목 회의(직원 다수결) → 결산. 끝난 회사면 멈춘다.
+ * 거시경제 회의(직원 다수결, 266번) → 직원이 종목을 물어 왔으면 종목 회의(직원 다수결) → 분기 넘기기를 분기마다 되풀이한다(268번). 분기 실적은 짧게,
+ * 연말 결산서는 길게 보여 주고 닫는다. 끝난 회사면 멈춘다.
  */
-export function nextAutoStep(company: Company, justSettled: boolean): AutoStep {
+export function nextAutoStep(
+  company: Company,
+  justSettled: boolean,
+  justQuartered = false,
+): AutoStep {
   // 끝났거나 망한 회사(247번)면 멈춘다: 다시 차리기는 사장이 직접 한다.
   if (company.status === 'ENDED' || company.broke) {
     return { kind: 'stop' }
   }
   if (justSettled) {
     return { kind: 'closeYearEnd' }
+  }
+  if (justQuartered) {
+    return { kind: 'closeQuarter' }
   }
   // 이직 제안 (262·265번): 자동 진행은 직원을 보내지 않는다. 늘 남긴다.
   if (company.meeting?.poach) {
@@ -99,6 +108,7 @@ export function nextAutoStep(company: Company, justSettled: boolean): AutoStep {
 
 /** 한 일 사이의 쉼(ms). 연말 결산서는 장부가 다 드러날 때까지 둔다. */
 const STEP_MS = 700
+const QUARTER_MS = 1500
 const YEAR_END_MS = 4000
 
 /**
@@ -109,6 +119,7 @@ export function useCompanyAutoPlay() {
   const busy = useRaisingStore((s) => s.busy)
   const company = useRaisingStore((s) => s.company)
   const justSettled = useRaisingStore((s) => s.justSettled)
+  const justQuartered = useRaisingStore((s) => s.justQuartered)
   const error = useRaisingStore((s) => s.error)
   useEffect(() => {
     if (!auto || busy || !company) {
@@ -118,7 +129,7 @@ export function useCompanyAutoPlay() {
       useRaisingStore.setState({ autoPlay: false })
       return
     }
-    const step = nextAutoStep(company, justSettled)
+    const step = nextAutoStep(company, justSettled, justQuartered)
     if (step.kind === 'stop') {
       useRaisingStore.setState({ autoPlay: false })
       return
@@ -130,6 +141,9 @@ export function useCompanyAutoPlay() {
         switch (step.kind) {
           case 'closeYearEnd':
             useRaisingStore.setState({ justSettled: false })
+            return
+          case 'closeQuarter':
+            useRaisingStore.setState({ justQuartered: false })
             return
           case 'hire':
             void hire(step.applicantId)
@@ -156,8 +170,12 @@ export function useCompanyAutoPlay() {
             void settle()
         }
       },
-      step.kind === 'closeYearEnd' ? YEAR_END_MS : STEP_MS,
+      step.kind === 'closeYearEnd'
+        ? YEAR_END_MS
+        : step.kind === 'closeQuarter'
+          ? QUARTER_MS
+          : STEP_MS,
     )
     return () => clearTimeout(id)
-  }, [auto, busy, company, justSettled, error])
+  }, [auto, busy, company, justSettled, justQuartered, error])
 }

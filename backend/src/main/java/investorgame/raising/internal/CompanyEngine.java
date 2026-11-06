@@ -538,7 +538,7 @@ class CompanyEngine {
   void deal(CompanyState company, SeededRandom random) {
     CompanyProperties.Market market = properties.market();
     RandomGenerator rng = random.forKey("applicants", company.year, company.refreshes);
-    int level = LADDER.indexOf(grade(company.capital)) + market.levelSteps();
+    int level = LADDER.indexOf(grade(company)) + market.levelSteps();
     java.util.Optional<Employee> hr = hrOf(company);
     if (hr.isPresent()) {
       level = Math.max(level, LADDER.indexOf(hrCap(hr.get())));
@@ -547,7 +547,7 @@ class CompanyEngine {
     int count = market.applicants() + (hr.isPresent() ? properties.hr().extraApplicants() : 0);
     String wantedStat = desk(company.wantedDesk).statCode();
     // SSS 회사부터 경력직이 하나 온다: SSS면 X, X면 XX, 그 위는 XXX (258번).
-    int companyAt = LADDER.indexOf(grade(company.capital));
+    int companyAt = LADDER.indexOf(grade(company));
     int sssAt = LADDER.indexOf(StatGrade.SSS.name());
     int veteranRank = companyAt >= sssAt ? Math.min(3, companyAt - sssAt + 1) : 0;
     java.util.Optional<Employee> mentor = bestRanked(company, RANK_MENTOR);
@@ -674,7 +674,7 @@ class CompanyEngine {
     if (company.capital < applicant.fee) {
       throw new InvalidRequestException("계약금이 모자란다");
     }
-    if (company.employees.size() >= seats(company.capital - applicant.fee)) {
+    if (company.employees.size() >= seats(company)) {
       if (replace == null || company.employees.stream().noneMatch(e -> e.id == replace)) {
         throw new InvalidRequestException("자리가 꽉 찼다. 내보낼 직원을 고른다");
       }
@@ -705,7 +705,7 @@ class CompanyEngine {
   List<Employee> fitSeats(CompanyState company) {
     List<Employee> seated =
         new java.util.ArrayList<>(company.employees.stream().filter(e -> e.desk != null).toList());
-    int over = seated.size() - seats(company.capital);
+    int over = seated.size() - seats(company);
     if (over <= 0) {
       return List.of();
     }
@@ -759,6 +759,19 @@ class CompanyEngine {
     return LADDER.get(at);
   }
 
+  /** 회사 등급을 정하는 자본: 연초 자본. 분기 결산으로 자본이 바뀌어도 등급·건물·자리 수는 연말에만 바뀐다 (268번). */
+  long gradedCapital(CompanyState company) {
+    return company.gradedCapital != null ? company.gradedCapital : company.capital;
+  }
+
+  String grade(CompanyState company) {
+    return grade(gradedCapital(company));
+  }
+
+  int seats(CompanyState company) {
+    return seats(gradedCapital(company));
+  }
+
   int seats(long capital) {
     int at = LADDER.indexOf(grade(capital));
     List<Integer> seats = properties.seats();
@@ -767,7 +780,7 @@ class CompanyEngine {
 
   /** 규모의 벽 (decisions.md 244번): 등급 단계만큼 거듭제곱한 비율을 곱한다. F는 그대로. */
   private int scaled(CompanyState company, int bp, int percent) {
-    double factor = Math.pow(percent / (double) PERCENT, LADDER.indexOf(grade(company.capital)));
+    double factor = Math.pow(percent / (double) PERCENT, LADDER.indexOf(grade(company)));
     return (int) Math.round(bp * factor);
   }
 
@@ -842,12 +855,27 @@ class CompanyEngine {
     company.nextOmen = next.omen();
     company.refreshes = 0;
     company.yearStartCapital = company.capital;
+    company.gradedCapital = company.capital;
     company.yearHiring = 0;
+    company.quarter = 1;
+    company.yearStake = null;
+    company.quarters.clear();
+    // 폭락은 2~4분기 가운데 한 분기에 터지고, 조짐은 그 바로 앞 분기의 거시경제 기사에 실린다 (268번). 헛조짐은 1~3분기 가운데 하나.
+    RandomGenerator when = random.forKey("crash-quarter", company.year);
+    int burst = 2 + when.nextInt(QUARTERS - 1);
+    company.crashQuarter = CRASH.equals(company.phase) ? burst : null;
+    company.omenQuarter = company.omen == null ? null : burst - 1;
     deal(company, random);
-    company.invest = invest.create(company, random);
-    company.macro = macro.create(company, random);
     company.yearLines.clear();
     company.poach = poachOf(company, random);
+    startQuarter(company, random);
+  }
+
+  /** 분기를 연다: 이번 분기의 거시경제 회의와, 직원이 물어 오면 열릴 종목 회의를 준비한다 (268번). */
+  void startQuarter(CompanyState company, SeededRandom random) {
+    company.quarterStartCapital = company.capital;
+    company.invest = invest.create(company, random);
+    company.macro = macro.create(company, random);
   }
 
   List<Long> gradeCapital() {
@@ -901,7 +929,7 @@ class CompanyEngine {
   String wantedLine(CompanyState company) {
     Map<String, String> wanted = content.raising().company().wanted();
     if (RISK_DESK.equals(company.wantedDesk)
-        && seats(company.capital) <= FEW_SEATS
+        && seats(company) <= FEW_SEATS
         && wanted.containsKey(RISK_FEW)) {
       return wanted.get(RISK_FEW);
     }
@@ -942,7 +970,7 @@ class CompanyEngine {
   /** 직원을 자리에 앉힌다. 자리 수를 넘게 앉힐 수 없다. 빠진 직원은 쉬고, 같은 자리에 여럿 앉아도 된다. */
   void place(CompanyState company, Map<Integer, String> placements) {
     int placed = (int) placements.values().stream().filter(d -> d != null).count();
-    if (placed > seats(company.capital)) {
+    if (placed > seats(company)) {
       throw new InvalidRequestException("자리가 모자란다");
     }
     Set<Integer> ids = new HashSet<>();
@@ -1020,59 +1048,68 @@ class CompanyEngine {
     if (traders == 0) {
       return 0;
     }
-    long pot =
-        Math.min(
-            company.capital,
-            (long) (company.capital * properties.stakePercent() / (double) PERCENT));
+    long base = stakeBase(company);
+    long pot = Math.min(base, (long) (base * properties.stakePercent() / (double) PERCENT));
     return pot / traders;
+  }
+
+  /** 판돈과 수수료를 정하는 자본 (268번): 올해 1분기를 넘길 때의 자본, 자본이 그 아래로 줄었으면 지금 자본. */
+  long stakeBase(CompanyState company) {
+    return company.yearStake == null
+        ? company.capital
+        : Math.min(company.capital, company.yearStake);
   }
 
   CompanyProperties.DeskReturn returnsOf(String desk) {
     return properties.desks().get(desk);
   }
 
+  /** 한 해의 분기 수 (decisions.md 268번). */
+  static final int QUARTERS = 4;
+
   /**
-   * 직원들이 배치대로 한 해를 굴린 결과 (6.1절 5번). 판단마다 꼬드김(리스크 관리 팀이 막는다) → 손 뒤집힘(자리가 원하는 능력치, 폭락장이면 모두 인내심) →
-   * 맞힘(안목, 리서치 팀이 형광펜을 빌려준다) 순으로 굴린다. 수수료 매출은 시장과 상관없이 들어온다.
+   * 남은 분기를 모두 넘겨 올해를 결산한다. 분기마다 회의를 정하지 않은 채로 넘기므로(거시경제 회의는 중립, 아무도 종목을 물어 오지 않는다) 결산 규칙만 볼 때와 옛
+   * 화면이 쓴다. 이번 분기에 열 수 있는 종목 회의가 있으면 400.
    */
   Settlement settle(CompanyState company, SeededRandom random) {
+    int year = company.year;
+    while (company.year == year) {
+      settleQuarter(company, random);
+    }
+    return company.settlements.getLast();
+  }
+
+  /**
+   * 한 분기를 넘긴다 (decisions.md 268번, #330). 돈을 굴리는 직원마다 판단 하나: 꼬드김(리스크 관리 팀이 막는다) → 손 뒤집힘(자리가 원하는 능력치,
+   * 폭락장인 해면 모두 인내심) → 맞힘(안목, 리서치 팀이 형광펜을 빌려준다). 수수료 매출은 한 해 몫의 4분의 1이 시장과 상관없이 들어온다. 폭락장인 해에는 폭락이
+   * 정해진 분기에 한꺼번에 터진다. 자본은 분기마다 바뀌지만 회사 등급·건물·자리 수는 연말에만 바뀐다. 4분기를 넘기면 연말 결산을 하고 다음 해 연초 회의로 간다.
+   */
+  CompanyState.Quarter settleQuarter(CompanyState company, SeededRandom random) {
     requireOpen(company);
     if (invest.open(company)) {
-      throw new InvalidRequestException("투자 회의를 먼저 한다");
+      throw new InvalidRequestException("종목 회의를 먼저 한다");
     }
-    RandomGenerator rng = random.forKey("company-settle", company.year);
-    // 이직 제안에 답하지 않았으면 제안은 흐지부지되고 직원은 남는다 (265번): 사장이 고르지 않으면 아무도 잃지 않는다.
-    if (company.poach != null) {
-      company.yearLines.add(
-          Korean.fill(
-              content.raising().company().people().ignored(),
-              Map.of("name", poachedName(company), "rival", rivalName(company.poach.rival))));
-      company.poach = null;
+    RandomGenerator rng = random.forKey("company-settle", company.year, company.quarter);
+    if (company.quarter == 1 || company.yearStake == null) {
+      company.yearStake = company.capital;
     }
-    Settlement settlement = new Settlement();
-    settlement.year = company.year;
-    settlement.phase = company.phase;
-    settlement.omen = company.omen;
-    // 연초 자본은 연초 회의 때의 자본이다(251번): 그 뒤에 낸 계약금·새로 받기 값은 채용비 줄로, 회의 손익은 회의 줄로 보인다.
-    // 이 칸을 더하기 전의 해면 지금 자본에서 회의 손익을 뺀다(예전 방식).
-    settlement.hiring = company.yearHiring;
-    settlement.capitalBefore =
-        company.yearStartCapital != null
-            ? company.yearStartCapital
-            : company.capital
-                - (company.invest != null && company.invest.choice != null
-                    ? company.invest.total
-                    : 0);
-    settlement.gradeBefore = grade(company.capital);
-
-    // 결산 전 SSS 위 단계: 연표가 폭락장을 버텨 오른 사람을 가린다 (263번).
-    Map<Integer, Integer> ranksBefore = new HashMap<>();
-    company.employees.forEach(e -> ranksBefore.put(e.id, e.rank));
+    CompanyState.Quarter q = new CompanyState.Quarter();
+    q.year = company.year;
+    q.quarter = company.quarter;
+    q.capitalBefore =
+        company.quarterStartCapital != null ? company.quarterStartCapital : company.capital;
     int research = researchInsight(company);
     List<Employee> traders = traders(company);
-    // 거시경제 회의의 태도가 그해 판돈 전체에 걸린다 (decisions.md 266번).
+    // 거시경제 회의의 태도가 그 분기 판돈 전체에 걸린다 (decisions.md 266번).
     long stake = stakeOf(company, traders.size()) * macro.stakePercent(company) / PERCENT;
     boolean crash = CRASH.equals(company.phase);
+    // 폭락은 정해진 분기에 한 해 몫이 한꺼번에 터진다. 그 칸이 없던 해면 네 분기에 고르게 빠진다.
+    boolean burst =
+        crash && company.crashQuarter != null && company.crashQuarter == company.quarter;
+    int phaseShare =
+        crash && company.crashQuarter != null ? (burst ? properties.decisions() : 0) : 1;
+    int decisions = Math.max(1, properties.decisions() / QUARTERS);
+    q.crash = burst;
     long totalPnl = 0;
     for (Employee employee : traders) {
       Result result = new Result();
@@ -1090,8 +1127,7 @@ class CompanyEngine {
       boolean conviction = employee.rank >= RANK_CONVICTION;
       boolean contrarian = crash && employee.rank >= RANK_CONTRARIAN;
       int hitBp = behavior.hintAccuracyPercent(insight) * PERCENT;
-      // 규모의 벽(244번): 결산을 시작할 때의 등급으로 정한다.
-      // 섹터 바람(266번): 그해 거시경제 회의의 주제가 순풍 자리는 더, 역풍 자리는 덜 벌게 한다.
+      // 규모의 벽(244번): 올해 회사 등급으로 정한다. 섹터 바람(266번): 그 분기 거시경제 회의의 주제가 순풍 자리는 더, 역풍 자리는 덜 벌게 한다.
       int gainBp =
           scaledGain(
               company,
@@ -1102,10 +1138,9 @@ class CompanyEngine {
                       + macro.windBp(company, employee.desk)));
       int missBp = scaledMiss(company, returns.missBp());
       int flipLossBp = scaledMiss(company, returns.flipBp());
-      // 한 해 시장 손익. 폭락장에는 섹터마다 빠지는 폭이 다르다(식품·금융은 덜, 반도체는 더).
+      // 시장 손익. 폭락장에는 섹터마다 빠지는 폭이 다르다(식품·금융은 덜, 반도체는 더). 방어로 돌렸으면 덜 빠진다 (266번).
       int phaseBp = properties.phaseBp().getOrDefault(company.phase, 0);
       if (crash) {
-        // 방어로 돌렸으면 폭락장에 덜 빠진다 (266번).
         phaseBp =
             scaled(
                 company,
@@ -1113,12 +1148,12 @@ class CompanyEngine {
                 properties.scale().crashPercent());
       }
       long bp = 0;
-      for (int i = 0; i < properties.decisions(); i++) {
+      for (int i = 0; i < decisions; i++) {
         int swayRoll = rng.nextInt(BP);
         int flipRoll = rng.nextInt(BP);
         int hitRoll = rng.nextInt(BP);
-        // XXX 역발상: 폭락장에 빠지는 동안 사서 회복 구간에서 번다.
-        bp += contrarian ? effects.contrarianCrashBp() : phaseBp;
+        // XXX 역발상: 폭락장인 해에 빠지는 동안 사서 회복 구간에서 번다.
+        bp += contrarian ? effects.contrarianCrashBp() : phaseBp * phaseShare;
         if (swayRoll < swayBp) {
           result.flips.merge(StatCodes.CONVICTION, 1, Integer::sum);
           bp -= missBp;
@@ -1136,25 +1171,136 @@ class CompanyEngine {
       result.pnl = stake * bp / BP;
       totalPnl += result.pnl;
       employee.totalPnl += result.pnl;
-      settlement.results.add(result);
-      CompanyProperties.Experience rules = properties.experience();
-      if (stake > 0 && result.pnl * PERCENT <= -stake * rules.dropLossPercent()) {
-        drop(employee, result, settlement);
-      } else if (crash && stake > 0 && result.pnl >= 0) {
+      q.results.add(result);
+      result.flips.forEach(
+          (stat, count) ->
+              q.lines.add(
+                  Korean.fill(
+                      content.raising().company().flipLines().get(stat),
+                      Map.of("name", employee.name))));
+    }
+    long fee = (long) (stakeBase(company) * properties.feeBp() / (double) BP / QUARTERS);
+    q.fee = fee;
+    q.staff = totalPnl;
+    company.capital = Math.max(0, company.capital + fee + totalPnl);
+    q.capitalAfter = company.capital;
+    if (company.invest != null && company.invest.choice != null) {
+      q.investTitle = company.invest.title;
+      q.investTotal = company.invest.total;
+    }
+    // 분기 실적이 맞아떨어지게 이 분기에 낸 인사 비용을 따로 둔다: 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 = 끝 자본.
+    if (q.capitalAfter > 0) {
+      q.hiring =
+          q.capitalBefore
+              + (q.investTotal == null ? 0 : q.investTotal)
+              + q.staff
+              + q.fee
+              - q.capitalAfter;
+    }
+    RaisingContent.Quarters texts = content.raising().company().quarters();
+    if (burst) {
+      q.lines.addFirst(texts.crash());
+    }
+    if (company.macro != null) {
+      q.macroTopic = macro.topic(company.macro).name();
+      q.macroStance = macro.stance(company);
+      q.lines.add(macro.windLine(company));
+    }
+    company.quarters.add(q);
+    if (company.quarter < QUARTERS) {
+      company.quarter++;
+      startQuarter(company, random);
+      return q;
+    }
+    yearEnd(company, random);
+    return q;
+  }
+
+  /**
+   * 연말 결산 (decisions.md 240·268번). 네 분기를 모아 연말 결산서를 짓는다: 직원마다 한 해 손익의 합과 분기 판돈의 평균, 손이 뒤집힌 횟수. 큰
+   * 손실과 실전 경험은 한 해 합계로 정한다. 회사 등급·건물·자리 수가 여기서 바뀌고, 라이벌이 움직이고, 시대가 바뀌고, 다음 해 연초 회의로 간다.
+   */
+  private void yearEnd(CompanyState company, SeededRandom random) {
+    // 이직 제안에 답하지 않았으면 제안은 흐지부지되고 직원은 남는다 (265번): 사장이 고르지 않으면 아무도 잃지 않는다.
+    if (company.poach != null) {
+      company.yearLines.add(
+          Korean.fill(
+              content.raising().company().people().ignored(),
+              Map.of("name", poachedName(company), "rival", rivalName(company.poach.rival))));
+      company.poach = null;
+    }
+    Settlement settlement = new Settlement();
+    settlement.year = company.year;
+    settlement.phase = company.phase;
+    settlement.omen = company.omen;
+    settlement.hiring = company.yearHiring;
+    settlement.capitalBefore =
+        company.yearStartCapital != null
+            ? company.yearStartCapital
+            : company.quarters.getFirst().capitalBefore;
+    settlement.gradeBefore = grade(company);
+    settlement.quarters.addAll(company.quarters);
+
+    Map<Integer, Integer> ranksBefore = new HashMap<>();
+    company.employees.forEach(e -> ranksBefore.put(e.id, e.rank));
+    boolean crash = CRASH.equals(company.phase);
+    // 직원마다 네 분기를 모은다: 손익은 합, 판돈은 굴린 분기의 평균, 뒤집힘은 횟수를 더한다.
+    Map<Integer, Result> yearly = new java.util.LinkedHashMap<>();
+    Map<Integer, Integer> traded = new HashMap<>();
+    long fee = 0;
+    long meetings = 0;
+    List<String> titles = new java.util.ArrayList<>();
+    for (CompanyState.Quarter q : company.quarters) {
+      fee += q.fee;
+      if (q.investTotal != null) {
+        meetings += q.investTotal;
+        titles.add(q.investTitle);
+      }
+      for (Result r : q.results) {
+        Result y =
+            yearly.computeIfAbsent(
+                r.employeeId,
+                id -> {
+                  Result x = new Result();
+                  x.employeeId = r.employeeId;
+                  x.name = r.name;
+                  return x;
+                });
+        y.desk = r.desk;
+        y.pnl += r.pnl;
+        y.stake += r.stake;
+        traded.merge(r.employeeId, 1, Integer::sum);
+        r.flips.forEach((stat, count) -> y.flips.merge(stat, count, Integer::sum));
+      }
+    }
+    settlement.fee = fee;
+    if (!titles.isEmpty()) {
+      // 연말 결산서(240번)가 종목 회의 몫과 직원들이 한 해 굴린 몫을 나눠 보인다.
+      settlement.investTitle = String.join(" · ", titles);
+      settlement.investTotal = meetings;
+    }
+    CompanyProperties.Experience rules = properties.experience();
+    for (Result y : yearly.values()) {
+      y.stake = y.stake / traded.get(y.employeeId);
+      settlement.results.add(y);
+      Employee employee =
+          company.employees.stream().filter(e -> e.id == y.employeeId).findFirst().orElse(null);
+      if (employee == null) {
+        continue;
+      }
+      if (y.stake > 0 && y.pnl * PERCENT <= -y.stake * rules.dropLossPercent()) {
+        drop(employee, y, settlement);
+      } else if (crash && y.stake > 0 && y.pnl >= 0) {
         // 판돈이 없었으면 버틴 것이 아니다 (252번).
         survive(employee, settlement);
       }
-      result.flips.forEach(
+      y.flips.forEach(
           (stat, count) ->
               settlement.lines.add(
                   Korean.fill(
-                          content.raising().company().flipLines().get(stat),
-                          Map.of("name", employee.name))
+                          content.raising().company().flipLines().get(stat), Map.of("name", y.name))
                       + (count > 1 ? " (" + count + "번)" : "")));
     }
-    long fee = (long) (company.capital * properties.feeBp() / (double) BP);
-    settlement.fee = fee;
-    company.capital = Math.max(0, company.capital + fee + totalPnl);
     settlement.capitalAfter = company.capital;
     if (company.capital == 0) {
       settlement.lines.add(content.raising().company().bankrupt().emptied());
@@ -1162,6 +1308,8 @@ class CompanyEngine {
     moveRivals(company, settlement, random);
     settlement.lines.addAll(company.yearLines);
     countTenure(company, settlement);
+    // 등급·건물·자리 수는 연말에만 바뀐다 (268번).
+    company.gradedCapital = company.capital;
     List<Employee> stood = fitSeats(company);
     if (!stood.isEmpty()) {
       settlement.lines.add(
@@ -1169,7 +1317,7 @@ class CompanyEngine {
               content.raising().company().seatsCut(),
               Map.of("names", String.join("·", stood.stream().map(e -> e.name).toList()))));
     }
-    settlement.gradeAfter = grade(company.capital);
+    settlement.gradeAfter = grade(company);
     // 폭락장에 아무도 바닥에서 던지지 않았으면 "못 참고 판 사람이 가장 크게 잃었다"를 쓰지 않는다 (decisions.md 255번).
     boolean anyPanic =
         settlement.results.stream().anyMatch(r -> r.flips.containsKey(StatCodes.PATIENCE));
@@ -1179,22 +1327,15 @@ class CompanyEngine {
             ? phases.get(CRASH_HELD)
             : phases.get(company.phase);
     settlement.lines.addFirst(phaseLine);
+    if (crash && company.crashQuarter != null) {
+      settlement.lines.add(
+          1,
+          Korean.fill(
+              content.raising().company().quarters().crashAt(),
+              Map.of("quarter", String.valueOf(company.crashQuarter))));
+    }
     if (!crash && company.omen != null) {
       settlement.lines.add(1, content.raising().company().falseOmenNote());
-    }
-    if (company.macro != null) {
-      // 연말 결산서가 그해 거시경제 회의의 태도와 드러난 시장을 보인다 (266번). 섹터 바람은 소식 줄에도 남긴다.
-      List<String> macroLines = macro.settledLines(company);
-      settlement.macroTopic = macro.topic(company.macro).name();
-      settlement.macroStance = macro.stance(company);
-      settlement.macroLines.add(macro.settledHead(company));
-      settlement.macroLines.addAll(macroLines);
-      settlement.lines.add(1, macroLines.getLast());
-    }
-    if (company.invest != null && company.invest.choice != null) {
-      // 연말 결산서(240번)가 회의 몫과 직원들이 한 해 굴린 몫을 나눠 보인다. 전에는 소식 줄 한 줄이었다.
-      settlement.investTitle = company.invest.title;
-      settlement.investTotal = company.invest.total;
     }
     company.settlements.add(settlement);
     String eraBefore = company.era;
@@ -1220,7 +1361,6 @@ class CompanyEngine {
         LADDER.indexOf(settlement.gradeAfter) <= LADDER.indexOf("E"));
     // 회사는 끝나지 않고 해마다 이어진다 (decisions.md 236번: 매각을 뺐다).
     startYear(company, random);
-    return settlement;
   }
 
   /**
@@ -1244,7 +1384,7 @@ class CompanyEngine {
                 Map.Entry.<String, Integer>comparingByValue()
                     .thenComparing(e -> -FLIP_BLAME_ORDER.indexOf(e.getKey())))
             .map(Map.Entry::getKey)
-            .orElse(desk(employee.desk).statCode());
+            .orElse(desk(employee.desk != null ? employee.desk : result.desk).statCode());
     int value = employee.stats.get(stat);
     StatGrade from = StatGrade.of(value);
     if (from == StatGrade.F) {

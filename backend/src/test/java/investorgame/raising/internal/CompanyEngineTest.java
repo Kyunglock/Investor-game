@@ -513,6 +513,8 @@ class CompanyEngineTest {
       CompanyState company = open(seed, stats(1, 1, 1, 1), 10_000_000_000_000L);
       company.employees.getFirst().desk = "game";
       company.phase = CompanyEngine.CRASH;
+      // 폭락은 한 분기에 한 해 몫이 한꺼번에 터진다 (268번).
+      company.crashQuarter = 2;
       company.invest = null;
       CompanyState.Settlement settlement = ENGINE.settle(company, new HashSeededRandom(seed));
       if (company.capital == 0) {
@@ -526,10 +528,13 @@ class CompanyEngineTest {
     assertThat(emptiedYears).as("자본이 바닥나는 해가 있다").isPositive();
   }
 
-  /** 자리가 줄면 넘친 사람이 쉰다 (#311, decisions.md 248번): 돕는 자리부터, 그다음 나중에 들어온 사람부터. */
+  /**
+   * 자리가 줄면 넘친 사람이 쉰다 (#311, decisions.md 248번): 돕는 자리부터, 그다음 나중에 들어온 사람부터. 자리 수는 연말에만 바뀐다 (268번): 해
+   * 가운데 자본이 띠 아래로 내려가도 그해에는 그대로다.
+   */
   @Test
   void 자본이_줄어_자리가_줄면_돕는_자리부터_일어나_쉰다() {
-    // E 회사(자리 3)에 셋을 앉힌다. 새로 받기 값을 내면 2억 아래로 떨어져 F(자리 2)가 된다.
+    // E 회사(자리 3)에 셋을 앉힌다. 새로 받기 값을 내면 2억 아래로 떨어지지만 그해에는 자리 셋 그대로다.
     CompanyState company = open(5, stats(50, 50, 50, 50), 200_000_000 + 1_000_000);
     ENGINE.hire(company, stats(50, 50, 50, 50));
     ENGINE.hire(company, stats(50, 50, 50, 50));
@@ -537,10 +542,17 @@ class CompanyEngineTest {
     ENGINE.place(
         company,
         Map.of(staff.get(0).id, "research", staff.get(1).id, "bio", staff.get(2).id, "day"));
-    assertThat(ENGINE.seats(company.capital)).isEqualTo(3);
+    assertThat(ENGINE.seats(company)).isEqualTo(3);
 
     ENGINE.refresh(company, new HashSeededRandom(5));
-    assertThat(ENGINE.seats(company.capital)).isEqualTo(2);
+    assertThat(company.capital).isLessThan(200_000_000);
+    assertThat(ENGINE.seats(company)).as("자리 수는 연말에만 바뀐다").isEqualTo(3);
+    assertThat(staff.get(0).desk).isEqualTo("research");
+
+    // 연말에 등급을 다시 매기면(F, 자리 2) 넘친 사람이 일어난다.
+    company.gradedCapital = company.capital;
+    ENGINE.fitSeats(company);
+    assertThat(ENGINE.seats(company)).isEqualTo(2);
     assertThat(staff.get(0).desk).as("돕는 자리가 먼저 일어난다").isNull();
     assertThat(staff.get(1).desk).isEqualTo("bio");
     assertThat(staff.get(2).desk).isEqualTo("day");
@@ -548,6 +560,7 @@ class CompanyEngineTest {
     // 돕는 자리가 없으면 나중에 들어온 사람부터 일어난다.
     ENGINE.place(company, Map.of(staff.get(1).id, "bio", staff.get(2).id, "day"));
     company.capital = 1_000_000;
+    company.gradedCapital = company.capital;
     staff.get(0).desk = "bio";
     List<CompanyState.Employee> stood = ENGINE.fitSeats(company);
     assertThat(stood).extracting(e -> e.id).containsExactly(staff.get(2).id);
@@ -829,7 +842,7 @@ class CompanyEngineTest {
     CompanyState small = ENGINE.open(new HashSeededRandom(1), 100_000_000);
     small.wantedDesk = "risk";
     assertThat(ENGINE.wantedLine(small)).isEqualTo(wanted.get("riskFew"));
-    small.capital = 300_000_000;
+    small.gradedCapital = 300_000_000L;
     assertThat(ENGINE.wantedLine(small)).as("자리가 셋이면 리스크 관리 팀").isEqualTo(wanted.get("risk"));
     assertThat(ENGINE.deskGainBp(small, "food")).isEqualTo(PROPERTIES.desks().get("food").gainBp());
   }

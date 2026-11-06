@@ -12,6 +12,7 @@ import { MoveScene } from './MoveScene'
 import { OfficeArt, type SeatFocus } from './OfficeArt'
 import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName, titleOf } from './office'
 import { autoPlace, deskEffect, rankDesks, seatOne } from './placement'
+import { QuarterSheet } from './QuarterSheet'
 import { useRaisingStore } from './store'
 import { Ledger, PHASES, YearEndSheet } from './YearEnd'
 
@@ -39,6 +40,7 @@ export function CompanyScreen({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   const justSettled = useRaisingStore((s) => s.justSettled)
+  const justQuartered = useRaisingStore((s) => s.justQuartered)
   const autoPlay = useRaisingStore((s) => s.autoPlay)
   const { settle, restart, convene, conveneMacro } = useRaisingStore.getState()
   // 이사 장면은 결산 뒤 한 번만 본다. 해가 바뀌면 화면이 새로 그려져 다시 볼 수 있다.
@@ -75,7 +77,7 @@ export function CompanyScreen({ company }: { company: Company }) {
         // 회사는 끝나지 않고 해마다 이어진다 (236번: 매각을 뺐다).
         ended
           ? `${company.number}호 회사 · 끝난 회사`
-          : `${company.number}호 회사 · ${company.year}년 차`
+          : `${company.number}호 회사 · ${company.year}년 차 ${company.quarter}분기`
       }
     >
       <div data-testid="company">
@@ -120,10 +122,19 @@ export function CompanyScreen({ company }: { company: Company }) {
 
         {justSettled && <YearEndSheet company={company} onClose={closeYearEnd} />}
 
+        {justQuartered && company.lastQuarter && (
+          // 분기 실적 (268번): 1~3분기를 넘기면 짧게 뜬다.
+          <QuarterSheet
+            quarter={company.lastQuarter}
+            onClose={() => useRaisingStore.setState({ justQuartered: false })}
+          />
+        )}
+
         {!ended && company.macro && macroOpen && (
           <MacroWindow
             macro={company.macro}
             year={company.year}
+            quarter={company.quarter}
             employees={company.employees}
             stockMeeting={Boolean(company.invest?.ready)}
             onClose={() => setMacroOpen(false)}
@@ -138,6 +149,7 @@ export function CompanyScreen({ company }: { company: Company }) {
           <InvestWindow
             invest={company.invest}
             year={company.year}
+            quarter={company.quarter}
             employees={company.employees}
             onClose={() => setInvestOpen(false)}
             onSettle={() => void settle()}
@@ -177,7 +189,7 @@ export function CompanyScreen({ company }: { company: Company }) {
             )}
             {autoPlay && (
               <p className="text-center text-[12px] text-teal" data-testid="auto-status">
-                자동 진행 중 · 공채 → 배치 → 거시경제 회의·종목 회의(직원 다수결) → 결산을 해마다
+                자동 진행 중 · 공채 → 배치 → 거시경제 회의·종목 회의(직원 다수결) → 분기 넘기기를
                 되풀이합니다
               </p>
             )}
@@ -208,7 +220,7 @@ export function CompanyScreen({ company }: { company: Company }) {
                 }}
                 className="min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50"
               >
-                {company.year}년 차 결산 보기
+                {company.year}년 차 {company.quarter}분기 넘기기
               </button>
             </div>
           </div>

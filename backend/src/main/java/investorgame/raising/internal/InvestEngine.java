@@ -69,10 +69,10 @@ class InvestEngine {
    * 꼬드기는 단골 인물을 붙인다 (투자 원칙 장치 설계 2·3절).
    */
   Invest create(CompanyState c, SeededRandom random) {
-    RandomGenerator rng = random.forKey("invest", c.year);
+    RandomGenerator rng = random.forKey("invest", c.turn());
     Invest invest = build(c, rng, null, 0);
     // 따로 굴린다: 기사·꼬드김 난수 차례를 바꾸지 않는다.
-    invest.clarity = pickClarity(random.forKey("invest-clarity", c.year).nextInt(BP));
+    invest.clarity = pickClarity(random.forKey("invest-clarity", c.turn()).nextInt(BP));
     // 연초에 준비만 해 두고, 직원이 물어 와야 열린다 (decisions.md 267번).
     invest.found = false;
     return invest;
@@ -83,14 +83,14 @@ class InvestEngine {
    * 안목이 높을수록 오르는 종목일 때가 많고 기사가 또렷하다. 낮으면 소문이라 흐리다.
    */
   Invest found(CompanyState c, Employee finder, String role, SeededRandom random) {
-    RandomGenerator rng = random.forKey("invest-found", c.year);
+    RandomGenerator rng = random.forKey("invest-found", c.turn());
     String sector = company.deskSector(finder.desk);
     if (sector == null) {
       sector = finder.sector;
     }
     if (sector == null) {
       List<String> sectors = content.sectors().stream().map(x -> x.code()).toList();
-      sector = sectors.get(random.forKey("invest-found-sector", c.year).nextInt(sectors.size()));
+      sector = sectors.get(random.forKey("invest-found-sector", c.turn()).nextInt(sectors.size()));
     }
     int insight = finder.stats.get(StatCodes.INSIGHT);
     CompanyProperties.Scout rules = properties.scout();
@@ -106,7 +106,7 @@ class InvestEngine {
         content.raising().company().macro().scout().pitch().get(pitchTier(insight));
     invest.pitch =
         Korean.fill(
-            pitches.get(random.forKey("invest-pitch", c.year).nextInt(pitches.size())), names);
+            pitches.get(random.forKey("invest-pitch", c.turn()).nextInt(pitches.size())), names);
     return invest;
   }
 
@@ -360,7 +360,7 @@ class InvestEngine {
     }
     Employee r = researcher.get();
     int insight = Math.max(0, r.stats.get(StatCodes.INSIGHT) - penalty(c.invest));
-    Hint hint = read(c, insight, random.forKey("invest-hint", c.year, r.id));
+    Hint hint = read(c, insight, random.forKey("invest-hint", c.turn(), r.id));
     if (hint.direction() == Hint.HintDirection.NEUTRAL) {
       return Optional.empty();
     }
@@ -412,7 +412,7 @@ class InvestEngine {
       // 흐린 기사(241번): 안목 높은 직원은 애매하다는 것을 알아채고 그렇게 말한다.
       String tier = sharp && foggiest(c.invest) && !NEUTRAL.equals(read) ? "foggy" : voice.key();
       List<String> lines = texts.remarks().get(tier).get(read);
-      String line = lines.get(random.forKey("invest-remark", c.year, e.id).nextInt(lines.size()));
+      String line = lines.get(random.forKey("invest-remark", c.turn(), e.id).nextInt(lines.size()));
       String quote = quote(c.invest, read, voice);
       remarks.add(
           new Remark(e, read, Korean.fill(line, Map.of("quote", quote, "stock", stock)), stubborn));
@@ -452,7 +452,7 @@ class InvestEngine {
     int own = e.stats.get(StatCodes.INSIGHT);
     int insight =
         Math.max(0, own + Math.max(0, company.researchInsight(c) - own) / 2 - penalty(c.invest));
-    Hint hint = read(c, insight, random.forKey("invest-read", c.year, e.id));
+    Hint hint = read(c, insight, random.forKey("invest-read", c.turn(), e.id));
     return hint.direction().name();
   }
 
@@ -477,10 +477,10 @@ class InvestEngine {
       throw new InvalidRequestException("지켜보기는 크게 할 수 없다");
     }
     if (c.invest == null || c.invest.choice != null) {
-      throw new InvalidRequestException("올해 투자 회의는 이미 했다");
+      throw new InvalidRequestException("이번 분기 종목 회의는 이미 했다");
     }
     if (Boolean.FALSE.equals(c.invest.found)) {
-      throw new InvalidRequestException("올해는 아직 아무도 종목을 물어 오지 않았다");
+      throw new InvalidRequestException("이번 분기에는 아직 아무도 종목을 물어 오지 않았다");
     }
     if (!List.of(BUY, SELL, HOLD).contains(choice)) {
       throw new InvalidRequestException("고를 수 없는 것: " + choice);
@@ -494,10 +494,12 @@ class InvestEngine {
     Map<Integer, String> reads = new HashMap<>();
     c.invest.remarks.forEach(r -> reads.put(r.employeeId, r.read));
     RaisingContent.Invest texts = content.raising().company().invest();
+    // 한 분기의 회의라 판돈도 한 분기 몫이다 (decisions.md 268번): 한 해 몫을 걸면 분기마다 열리는 회의가 한 해 경제를 뒤집는다.
     long stake =
         company.stakeOf(c, traders.size())
             * (big ? properties.invest().bigStakePercent() : PERCENT)
-            / PERCENT;
+            / PERCENT
+            / CompanyEngine.QUARTERS;
     int stubborn = big ? properties.invest().bigStubbornPercent() : PERCENT;
     long missed = 0;
     String right = c.invest.up ? BUY : SELL;
@@ -505,7 +507,7 @@ class InvestEngine {
     String who = tempterName(c.invest.tempter);
     long total = 0;
     for (Employee e : traders) {
-      RandomGenerator rng = random.forKey("invest-decide", c.year, e.id);
+      RandomGenerator rng = random.forKey("invest-decide", c.turn(), e.id);
       int swayRoll = rng.nextInt(BP);
       int flipRoll = rng.nextInt(BP);
       CompanyEngine.Odds base = company.odds(c, e);

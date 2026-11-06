@@ -71,7 +71,11 @@ public record RaisingContent(
       Effects effects,
       Market market,
       Invest invest,
-      Macro macro) {}
+      Macro macro,
+      Quarters quarters) {}
+
+  /** 분기 결산 (decisions.md 268번). crash: 폭락이 터진 분기의 실적 줄. crashAt: 연말 결산서의 한 줄({quarter}). */
+  public record Quarters(String crash, String crashAt) {}
 
   /**
    * 거시경제 회의 (decisions.md 266번). 해마다 연다: 기준금리·환율 같은 큰 흐름 하나를 놓고 사장이 올해 회사의 태도(AGGRESSIVE·NEUTRAL·
@@ -82,8 +86,6 @@ public record RaisingContent(
    * @param topics 주제. 해마다 하나를 뽑는다
    * @param remarks 직원 한마디. 투자 회의와 같은 꼴: 안목 구간 → 읽은 쪽(UP·DOWN·NEUTRAL) → 문구 여럿, {quote}
    * @param sway 꼬드기는 단골 인물의 말. POS(공격하라)·NEG(숨어라)
-   * @param reveal 결산에서 드러나는 한 해 시장. boom·normal·crash별, {topic}
-   * @param settled 결산서의 한 줄: {topic}·{stance}
    * @param scout 종목 발굴 (decisions.md 267번)
    */
   public record Macro(
@@ -92,8 +94,6 @@ public record RaisingContent(
       List<MacroTopic> topics,
       Map<String, Map<String, List<String>>> remarks,
       Map<String, List<String>> sway,
-      Map<String, String> reveal,
-      String settled,
       Scout scout) {}
 
   /**
