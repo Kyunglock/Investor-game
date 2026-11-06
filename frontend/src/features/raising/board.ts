@@ -71,6 +71,62 @@ export function bubbleOf(
   return pick(big ? CLEAN.bigLoss : CLEAN.loss, seed)
 }
 
+type TeamResult = {
+  employeeId: number
+  name: string
+  desk: string
+  pnl: number
+  stake: number
+  flips: Record<string, number>
+}
+type TeamReport = { desk: string; leaderId: number; leader: string }
+
+/** 결산 전광판의 한 줄 (decisions.md 291번): 자리 하나, 팀장 이름, 팀 손익·판돈, 팀의 뒤집힘 합, 사람 수. */
+export type TeamRow = {
+  desk: string
+  leader: string
+  leaderId: number
+  pnl: number
+  stake: number
+  flips: Record<string, number>
+  members: number
+}
+
+/**
+ * 직원별 결과를 자리마다 묶는다 (decisions.md 291번): 이름은 그 자리 팀장(팀장 보고의 보고자)만 보인다. 보고가 없는 자리면 가장 많이 번 사람을
+ * 팀장으로 친다. 자리 순서는 결과에 처음 나온 순서다.
+ */
+export function teamRows(results: TeamResult[], reports: TeamReport[]): TeamRow[] {
+  const rows = new Map<string, TeamRow>()
+  for (const r of results) {
+    const row = rows.get(r.desk) ?? {
+      desk: r.desk,
+      leader: '',
+      leaderId: -1,
+      pnl: 0,
+      stake: 0,
+      flips: {},
+      members: 0,
+    }
+    row.pnl += r.pnl
+    row.stake += r.stake
+    row.members += 1
+    for (const [stat, count] of Object.entries(r.flips)) {
+      row.flips[stat] = (row.flips[stat] ?? 0) + count
+    }
+    rows.set(r.desk, row)
+  }
+  for (const row of rows.values()) {
+    const report = reports.find((x) => x.desk === row.desk)
+    const top = results
+      .filter((r) => r.desk === row.desk)
+      .reduce((best, r) => (r.pnl > best.pnl ? r : best))
+    row.leader = report?.leader ?? top.name
+    row.leaderId = report?.leaderId ?? top.employeeId
+  }
+  return [...rows.values()]
+}
+
 /** 전광판·그림의 손익: 만 원 아래는 버리고 부호를 붙인다. +3,068만원, −455만원, +1조 2,000억원. */
 export function pnlLabel(pnl: number): string {
   const sign = pnl > 0 ? '+' : pnl < 0 ? '−' : ''

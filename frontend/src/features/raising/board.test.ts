@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bubbleOf, moveOf, pnlLabel, wreathsFor } from './board'
+import { bubbleOf, moveOf, pnlLabel, teamRows, wreathsFor } from './board'
 
 describe('결산 전광판과 이사 장면 (증권사 육성 설계 8.3절)', () => {
   it('말풍선은 그해 가장 많이 뒤집힌 능력치의 한마디이고, 손익과 어긋나지 않는다', () => {
@@ -42,5 +42,41 @@ describe('결산 전광판과 이사 장면 (증권사 육성 설계 8.3절)', (
   it('축하 화환은 단골 인물 셋이 보내고 해마다 앞사람이 바뀐다', () => {
     expect(wreathsFor(0)).toEqual(['경쟁사 김대리', '리딩방 방장', '사촌 형'])
     expect(wreathsFor(1)[0]).toBe('리딩방 방장')
+  })
+})
+
+describe('결산 전광판은 자리마다 한 줄, 이름은 팀장만 (decisions.md 291번)', () => {
+  const result = (employeeId: number, name: string, desk: string, pnl: number, flips = {}) => ({
+    employeeId,
+    name,
+    desk,
+    pnl,
+    stake: 100,
+    flips,
+  })
+
+  it('같은 자리의 손익·판돈·뒤집힘을 합치고 팀장 보고의 보고자를 이름으로 쓴다', () => {
+    const rows = teamRows(
+      [
+        result(1, '박한결', 'semiconductor', 30, { courage: 1 }),
+        result(2, '이지우', 'bio', -5),
+        result(3, '최유진', 'semiconductor', -10, { courage: 1, patience: 2 }),
+      ],
+      [{ desk: 'semiconductor', leaderId: 3, leader: '최유진' }],
+    )
+    expect(rows).toEqual([
+      {
+        desk: 'semiconductor',
+        leader: '최유진',
+        leaderId: 3,
+        pnl: 20,
+        stake: 200,
+        flips: { courage: 2, patience: 2 },
+        members: 2,
+      },
+      // 보고가 없는 자리는 가장 많이 번 사람이 팀장이다.
+      { desk: 'bio', leader: '이지우', leaderId: 2, pnl: -5, stake: 100, flips: {}, members: 1 },
+    ])
+    expect(teamRows([], [])).toEqual([])
   })
 })

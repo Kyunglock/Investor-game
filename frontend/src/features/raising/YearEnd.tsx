@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import type { Company } from '../../api/client'
 import { shortWon } from '../game/labels'
 import { Overlay } from '../game/Overlay'
-import { bubbleOf, pnlLabel } from './board'
+import { bubbleOf, pnlLabel, teamRows } from './board'
 import { officeName } from './office'
 import { TeamReports } from './TeamReports'
 
@@ -25,7 +25,8 @@ const tone = (amount: number) => (amount > 0 ? 'text-up' : amount < 0 ? 'text-do
 
 /**
  * 한 해의 장부 (decisions.md 240번). 투자 회의 한 건과 직원들이 1년 동안 배치대로 굴린 몫을 나눠, 연초 자본 + 회의 + 직원들 + 수수료 = 연말 자본으로 보인다.
- * 전에는 회의 창 바로 뒤에 직원별 손익이 떠서 회의 결과로 읽혔다. staged면 줄이 차례로 드러난다.
+ * 전에는 회의 창 바로 뒤에 직원별 손익이 떠서 회의 결과로 읽혔다. 직원들의 몫은 자리마다 한 줄로 묶고 이름은 팀장만 적는다 (291번). staged면 줄이 차례로
+ * 드러난다.
  */
 export function Ledger({
   company,
@@ -38,6 +39,8 @@ export function Ledger({
 }) {
   const desk = (code: string) => company.desks.find((d) => d.code === code)?.name ?? code
   const staff = s.results.reduce((sum, r) => sum + r.pnl, 0)
+  // 전광판은 자리마다 한 줄, 이름은 팀장만 (291번).
+  const teams = teamRows(s.results, s.reports)
   let at = 0
   // 줄마다 드러나는 시각. 직원 줄은 그 사이를 짧게 잇는다.
   const reveal = (ms = STEP_MS): { className: string; style?: CSSProperties } => {
@@ -93,18 +96,22 @@ export function Ledger({
               aria-label="결산 전광판"
               data-testid="board"
             >
-              {s.results.map((x) => {
+              {teams.map((x) => {
                 const row = reveal(ROW_MS)
-                // 직원과 해로 문구를 돌린다 (255번).
-                const bubble = bubbleOf(x.flips, x.pnl, x.stake, x.employeeId * 7 + s.year)
+                // 팀장과 해로 문구를 돌린다 (255번).
+                const bubble = bubbleOf(x.flips, x.pnl, x.stake, x.leaderId * 7 + s.year)
                 return (
                   <li
-                    key={x.employeeId}
+                    key={x.desk}
                     className={`flex flex-wrap items-baseline justify-between gap-x-2 py-0.5 ${row.className}`}
                     style={row.style}
+                    data-testid="board-team"
                   >
                     <span>
-                      {x.name} · {desk(x.desk)}
+                      {desk(x.desk)} · 팀장 {x.leader}
+                      {x.members > 1 && (
+                        <span className="ml-1 text-[11px] opacity-70">외 {x.members - 1}명</span>
+                      )}
                     </span>
                     <b className={x.pnl >= 0 ? 'text-[#ff8a7a]' : 'text-[#8cc3ec]'}>
                       {pnlLabel(x.pnl)}
@@ -274,7 +281,7 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
     (s.invest ? STEP_MS : 0) +
     (s.hiring !== 0 ? STEP_MS : 0) +
     (s.salary !== 0 ? STEP_MS : 0) +
-    ROW_MS * (1 + s.results.length) +
+    ROW_MS * (1 + teamRows(s.results, s.reports).length) +
     STEP_MS * 2
   return (
     <Overlay>
