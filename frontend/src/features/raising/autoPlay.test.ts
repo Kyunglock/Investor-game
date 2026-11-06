@@ -51,6 +51,11 @@ describe('자동 진행 (decisions.md 245번)', () => {
     expect(nextAutoStep(company({ status: 'ENDED' }), false).kind).toBe('stop')
     expect(nextAutoStep(company({ broke: '금고가 비었다.' }), false).kind).toBe('stop')
     expect(nextAutoStep(company(), true).kind).toBe('closeYearEnd')
+    // 이직 제안 (261번): 붙잡는 값이 자본의 25% 이하면 붙잡는다.
+    const poached = (keepCost: number) =>
+      company({ meeting: { wanted: '', poach: { keepCost, transferFee: 1 } } } as never)
+    expect(nextAutoStep(poached(10_000_000), false)).toEqual({ kind: 'poach', keep: true })
+    expect(nextAutoStep(poached(90_000_000), false)).toEqual({ kind: 'poach', keep: false })
     const hiring = company({ applicants: [{ id: 1, overallGrade: 'C', fee: 1 }] } as never)
     expect(nextAutoStep(hiring, false)).toEqual({ kind: 'hire', applicantId: 1 })
     const resting = company({

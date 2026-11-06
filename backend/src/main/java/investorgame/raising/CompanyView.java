@@ -58,6 +58,8 @@ public record CompanyView(
    * @param experienceNeeded 다음 단계까지 드는 실전 경험. SSS가 아니면 null(아직 쌓이지 않는다)
    * @param effects X 이상 등급의 효과 이름(확신·경보…). 쌓인다 (2.4절)
    * @param sector 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다. 없으면 null
+   * @param deskYears 지금 자리에서 결산을 맞은 해 수 (decisions.md 261번)
+   * @param settled 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다
    */
   public record Employee(
       int id,
@@ -69,7 +71,9 @@ public record CompanyView(
       Integer experienceNeeded,
       List<String> effects,
       String sector,
-      String sectorName) {}
+      String sectorName,
+      int deskYears,
+      boolean settled) {}
 
   /**
    * 공채 시장의 지원자 한 명.
@@ -204,7 +208,18 @@ public record CompanyView(
       String forecast,
       String wanted,
       String hot,
-      String eraEnding) {}
+      String eraEnding,
+      Poach poach) {}
+
+  /**
+   * 라이벌이 우리 직원에게 손을 뻗었다 (decisions.md 261번).
+   *
+   * @param keepCost 붙잡는 값
+   * @param transferFee 보내면 받는 이적료
+   * @param line 연초 회의 한 줄
+   */
+  public record Poach(
+      int employeeId, String name, String rival, long keepCost, long transferFee, String line) {}
 
   public record Settlement(
       int year,

@@ -247,6 +247,14 @@ class JsonContentCatalog implements ContentCatalog {
             && company.rivals().fell() != null,
         "라이벌 증권사가 없다");
     require(
+        company.people() != null
+            && company.people().poach() != null
+            && company.people().kept() != null
+            && company.people().left() != null
+            && company.people().ignored() != null
+            && company.people().settled() != null,
+        "사람 이야기 문구가 없다");
+    require(
         company.surnames() != null
             && !company.surnames().isEmpty()
             && company.names() != null

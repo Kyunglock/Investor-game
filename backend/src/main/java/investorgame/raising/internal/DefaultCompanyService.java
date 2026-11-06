@@ -109,6 +109,15 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
+  public CompanyView answerPoach(UUID sessionId, boolean keep) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.answerPoach(row.state(), keep);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
   public CompanyView convene(UUID sessionId) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.invest.convene(row.state(), new HashSeededRandom(row.seed()));
@@ -204,7 +213,9 @@ class DefaultCompanyService implements CompanyService {
                             : null,
                         engine.effectsOf(e),
                         e.sector,
-                        e.sector == null ? null : engine.sectorName(e.sector)))
+                        e.sector == null ? null : engine.sectorName(e.sector),
+                        e.desk != null && e.desk.equals(e.lastDesk) ? e.deskYears : 0,
+                        engine.settled(e)))
             .toList();
     List<String> hot = engine.hotDesks(c);
     List<CompanyView.Desk> desks =
@@ -250,7 +261,8 @@ class DefaultCompanyService implements CompanyService {
                 engine.forecast(c),
                 engine.wantedLine(c),
                 engine.hotLine(c),
-                engine.eraEndingLine(c));
+                engine.eraEndingLine(c),
+                poachView(c));
     CompanyState.Settlement last = c.settlements.isEmpty() ? null : c.settlements.getLast();
     return new CompanyView(
         row.id(),
@@ -348,6 +360,26 @@ class DefaultCompanyService implements CompanyService {
         meetings.open(c),
         meetings.convened(c),
         outcome);
+  }
+
+  private CompanyView.Poach poachView(CompanyState c) {
+    CompanyState.Poach p = c.poach;
+    if (p == null) {
+      return null;
+    }
+    String name =
+        c.employees.stream()
+            .filter(e -> e.id == p.employeeId)
+            .findFirst()
+            .map(e -> e.name)
+            .orElse("");
+    return new CompanyView.Poach(
+        p.employeeId,
+        name,
+        engine.rivalName(p.rival),
+        p.keepCost,
+        p.transferFee,
+        engine.poachLine(c));
   }
 
   private CompanyView.Industry industryView(CompanyState c) {

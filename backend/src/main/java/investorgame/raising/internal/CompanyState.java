@@ -29,6 +29,12 @@ class CompanyState {
   /** 팔렸는가. 팔린 회사는 끝난 채로 남는다. */
   boolean sold;
 
+  /** 올해 결산 전에 일어난 사람 이야기(붙잡음·보냄). 결산 소식 줄에 붙고 해가 바뀌면 비운다 (261번). */
+  List<String> yearLines = new ArrayList<>();
+
+  /** 올해의 이직 제안 (decisions.md 261번). 없으면 null. 답하지 않은 채 결산하면 그 직원이 떠난다. */
+  Poach poach;
+
   /** 라이벌 증권사의 자본. 콘텐츠의 라이벌 순서다 (decisions.md 260번). 이 칸을 더하기 전의 회사면 비어 있다가 다음 해에 채운다. */
   List<Long> rivals = new ArrayList<>();
 
@@ -103,6 +109,12 @@ class CompanyState {
      * 본다).
      */
     List<Integer> droppedBy = new ArrayList<>();
+
+    /** 같은 자리에서 결산을 맞은 해 수 (decisions.md 261번). 자리가 바뀌면 1부터 다시 센다. */
+    int deskYears;
+
+    /** 지난 결산 때 앉아 있던 자리. 근속을 세는 데 쓴다. */
+    String lastDesk;
   }
 
   /**
@@ -198,6 +210,16 @@ class CompanyState {
 
     /** 사장 쪽을 지킨 능력치: 꼬드김이면 줏대, 제 판단이면 자리가 원하는 능력치(폭락장이면 인내심). rival이 없으면 null. */
     String guard;
+  }
+
+  /** 라이벌이 우리 직원에게 손을 뻗었다 (261번). */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Poach {
+    int employeeId;
+    int rival;
+    long keepCost;
+    long transferFee;
   }
 
   /** 공채 시장의 지원자 한 명. 계약금을 내고 뽑으면 그대로 직원이 된다. */

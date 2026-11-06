@@ -650,6 +650,8 @@ class CompanyEngineTest {
             }
           }
         }
+        // 이직 제안(261번)은 따로 본다: 이적료가 인사 비용에 섞이지 않게 없앤다.
+        company.poach = null;
         CompanyState.Settlement s = settleYear(company, random);
         assertThat(s.capitalBefore).isEqualTo(start);
         assertThat(s.hiring).isEqualTo(spent);
@@ -859,5 +861,70 @@ class CompanyEngineTest {
       }
     }
     assertThat(overtaken).isPositive();
+  }
+
+  /**
+   * 이직 제안 (#325, decisions.md 261번): 셋째 해부터 바로 위 라이벌이 가장 높은 직원에게 손을 뻗는다. 붙잡으면 값을 내고, 보내면 이적료를 받고,
+   * 답하지 않으면 결산 때 떠난다. 같은 자리 세 해째부터 손에 익는다.
+   */
+  @Test
+  void 이직_제안을_붙잡거나_보내고_같은_자리_세_해째면_손에_익는다() {
+    var rules = PROPERTIES.people();
+    CompanyState.Poach found = null;
+    CompanyState company = null;
+    for (long seed = 1; seed <= 60 && found == null; seed++) {
+      company = open(seed, stats(50, 50, 50, 50), 100_000_000);
+      ENGINE.hire(company, stats(80, 80, 80, 80));
+      company.year = rules.poachFromYear();
+      found = ENGINE.poachOf(company, new HashSeededRandom(seed));
+    }
+    assertThat(found).as("이직 제안이 오는 해가 있다").isNotNull();
+    assertThat(found.employeeId).as("가장 높은 직원").isEqualTo(company.employees.get(1).id);
+    assertThat(found.keepCost).isPositive();
+
+    company.poach = found;
+    long cash = company.capital;
+    ENGINE.answerPoach(company, true);
+    assertThat(company.capital).isEqualTo(cash - found.keepCost);
+    assertThat(company.employees).hasSize(2);
+    assertThat(company.poach).isNull();
+    CompanyState answered = company;
+    assertThatThrownBy(() -> ENGINE.answerPoach(answered, true))
+        .as("이미 답한 제안")
+        .isInstanceOf(InvalidRequestException.class);
+
+    company.poach = found;
+    cash = company.capital;
+    ENGINE.answerPoach(company, false);
+    assertThat(company.capital).isEqualTo(cash + found.transferFee);
+    assertThat(company.employees).hasSize(1);
+    assertThat(company.yearLines).anyMatch(line -> line.contains("떠났다"));
+
+    // 답하지 않으면 결산 때 떠난다.
+    CompanyState ignored = open(9, stats(50, 50, 50, 50), 100_000_000);
+    ENGINE.hire(ignored, stats(80, 80, 80, 80));
+    ignored.poach = new CompanyState.Poach();
+    ignored.poach.employeeId = ignored.employees.get(1).id;
+    ignored.poach.rival = 0;
+    ignored.invest = null;
+    CompanyState.Settlement s = ENGINE.settle(ignored, new HashSeededRandom(9));
+    assertThat(ignored.employees).hasSize(1);
+    assertThat(s.lines).anyMatch(line -> line.contains("답을 미루는 사이"));
+
+    // 같은 자리 세 해째부터 손에 익는다.
+    CompanyState tenure = open(4, stats(50, 50, 50, 50), 100_000_000);
+    CompanyState.Employee e = tenure.employees.getFirst();
+    e.desk = "day";
+    for (int year = 1; year <= rules.settleYears(); year++) {
+      assertThat(ENGINE.settled(e)).as("%d년째", year).isEqualTo(year >= rules.settleYears());
+      tenure.invest = null;
+      tenure.poach = null;
+      CompanyState.Settlement st = ENGINE.settle(tenure, new HashSeededRandom(4));
+      if (year == rules.settleYears()) {
+        assertThat(st.lines).anyMatch(line -> line.contains("손에 익었다"));
+      }
+    }
+    e.desk = "bio";
+    assertThat(ENGINE.settled(e)).as("자리를 바꾸면 다시 센다").isFalse();
   }
 }

@@ -27,6 +27,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param market 공채 시장: 해마다 지원자가 오고 계약금을 내고 뽑는다 (decisions.md 228번)
  * @param invest 투자 회의: 해마다 한 번 단서 기사를 놓고 직원들과 고민한다 (decisions.md 229번)
  * @param rivals 라이벌 증권사가 해마다 자라는 폭 (decisions.md 260번)
+ * @param people 이직 제안과 근속 (decisions.md 261번)
  * @param sale 매각과 재창업 (9절). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다
  */
 @ConfigurationProperties("raising.company")
@@ -51,6 +52,7 @@ public record CompanyProperties(
     Market market,
     Invest invest,
     Rivals rivals,
+    People people,
     Sale sale) {
 
   /**
@@ -109,6 +111,24 @@ public record CompanyProperties(
    * @param spread 회사마다 해마다 더하고 빼는 폭(%p)
    */
   public record Rivals(Map<String, Integer> phasePercent, int spread) {}
+
+  /**
+   * 이직 제안과 근속 (decisions.md 261번).
+   *
+   * @param poachFromYear 이 해부터 이직 제안이 온다
+   * @param poachPercent 해마다 이직 제안이 올 확률
+   * @param keepPercent 붙잡는 값 = 그 직원 계약금 × 이 비율
+   * @param transferPercent 보낼 때 받는 이적료 = 그 직원 계약금 × 이 비율
+   * @param settleYears 같은 자리에서 이 해째부터 손에 익는다
+   * @param settledFlipPercent 손에 익으면 손이 뒤집힐 확률에 곱한다
+   */
+  public record People(
+      int poachFromYear,
+      int poachPercent,
+      int keepPercent,
+      int transferPercent,
+      int settleYears,
+      int settledFlipPercent) {}
 
   public record Market(
       int applicants,

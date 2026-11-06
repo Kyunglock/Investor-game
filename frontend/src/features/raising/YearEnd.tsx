@@ -130,7 +130,7 @@ export function Ledger({
       )
     })(),
     // 그해 공채에 쓴 돈 (decisions.md 250번): 연초 자본에서 계약금이 소리 없이 빠져 보이지 않게.
-    s.hiring > 0 &&
+    s.hiring !== 0 &&
       (() => {
         const r = reveal()
         return (
@@ -141,8 +141,8 @@ export function Ledger({
             data-testid="ledger-hiring"
           >
             <Row
-              label={`${num()} 채용비`}
-              note="공채 계약금과 지원자 새로 받기 값"
+              label={`${num()} 인사 비용`}
+              note="공채 계약금·새로 받기·붙잡는 값, 받은 이적료는 뺀다"
               amount={-s.hiring}
             />
           </li>
@@ -204,7 +204,7 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
   // 확인 버튼은 장부의 마지막 줄(연말 자본)과 함께 나온다.
   const done =
     (s.invest ? STEP_MS : 0) +
-    (s.hiring > 0 ? STEP_MS : 0) +
+    (s.hiring !== 0 ? STEP_MS : 0) +
     ROW_MS * (1 + s.results.length) +
     STEP_MS * 2
   return (

@@ -251,6 +251,13 @@
       "overtook": "{name}을(를) 앞질렀다! 업계 {rank}위가 됐다.",
       "fell": "{name}에게 밀려 업계 {rank}위로 내려갔다."
     },
+    "people": {
+      "poach": "{rival}이(가) {name}에게 손을 뻗었다. 연봉을 두 배로 주겠다고 한다.",
+      "kept": "{name}을(를) 붙잡았다. 회사에 남는다.",
+      "left": "{name}이(가) {rival}(으)로 떠났다. 이적료를 받았다.",
+      "ignored": "답을 미루는 사이 {name}이(가) {rival}(으)로 떠났다. 이적료를 받았다.",
+      "settled": "{name}이(가) {desk}에서 세 해째다. 손에 익었다."
+    },
     "eras": [
       {
         "code": "plain",

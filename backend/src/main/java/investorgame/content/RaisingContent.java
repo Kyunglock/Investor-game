@@ -62,6 +62,7 @@ public record RaisingContent(
       String opening,
       Bankrupt bankrupt,
       Rivals rivals,
+      People people,
       List<Era> eras,
       Sale sale,
       Map<String, String> statNames,
@@ -104,6 +105,12 @@ public record RaisingContent(
   public record Rivals(List<Rival> companies, String overtook, String fell) {}
 
   public record Rival(String name, long capital) {}
+
+  /**
+   * 사람 이야기 (decisions.md 261번). poach: 라이벌이 손을 뻗었다({rival}·{name}). kept·left·ignored: 붙잡음·보냄·답 없이
+   * 떠남. settled: 같은 자리 세 해째({name}·{desk}).
+   */
+  public record People(String poach, String kept, String left, String ignored, String settled) {}
 
   /**
    * 망한 회사 (decisions.md 246번). notice: 회사 화면에 뜨는 한 줄. emptied: 결산에서 자본이 0이 된 해의 소식 줄. opening: 다시

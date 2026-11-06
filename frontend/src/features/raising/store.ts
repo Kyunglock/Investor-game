@@ -25,6 +25,8 @@ interface RaisingState {
   hire: (applicantId: number, replace?: number) => Promise<void>
   /** 값을 내고 올해 지원자를 새로 받는다. */
   refreshApplicants: () => Promise<void>
+  /** 올해 이직 제안에 답한다: 붙잡거나 보낸다 (decisions.md 261번). */
+  answerPoach: (keep: boolean) => Promise<void>
   /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 248번). 됐으면 true. */
   convene: () => Promise<boolean>
   /** 올해 투자 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). big이면 크게 한다 (259번). */
@@ -115,6 +117,8 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
         }),
       )
     },
+
+    answerPoach: (keep) => change(api.POST('/api/company/poach', { body: { keep } })),
 
     convene: async () => {
       if (get().company?.invest?.convened) {

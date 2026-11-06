@@ -149,6 +149,109 @@ class CompanyEngine {
     return next;
   }
 
+  /** 이번 결산이 같은 자리 settle-years 해째 이상인가: 손이 덜 뒤집힌다 (261번). */
+  boolean settled(Employee employee) {
+    return employee.desk != null
+        && employee.desk.equals(employee.lastDesk)
+        && employee.deskYears + 1 >= properties.people().settleYears();
+  }
+
+  /** 결산마다 같은 자리 해 수를 센다. 막 손에 익은 해면 소식 줄을 남긴다 (261번). */
+  private void countTenure(CompanyState company, Settlement settlement) {
+    for (Employee e : company.employees) {
+      if (e.desk == null) {
+        e.deskYears = 0;
+        e.lastDesk = null;
+        continue;
+      }
+      e.deskYears = e.desk.equals(e.lastDesk) ? e.deskYears + 1 : 1;
+      e.lastDesk = e.desk;
+      if (e.deskYears == properties.people().settleYears()) {
+        settlement.lines.add(
+            Korean.fill(
+                content.raising().company().people().settled(),
+                Map.of("name", e.name, "desk", desk(e.desk).name())));
+      }
+    }
+  }
+
+  /**
+   * 올해의 이직 제안 (decisions.md 261번): poach-from-year 해부터 해마다 poach-percent 확률로, 바로 위 라이벌이 우리의 가장 높은
+   * 직원(같으면 오래 앉은 사람)에게 손을 뻗는다. 직원이 둘 이상이어야 오고, 우리가 업계 1위면 손을 뻗을 라이벌이 없다. 붙잡는 값과 이적료는 그 직원 계약금의
+   * 비율이다.
+   */
+  CompanyState.Poach poachOf(CompanyState company, SeededRandom random) {
+    CompanyProperties.People rules = properties.people();
+    int above = rivalAbove(company);
+    if (company.year < rules.poachFromYear() || company.employees.size() < 2 || above < 0) {
+      return null;
+    }
+    if (random.forKey("poach", company.year).nextInt(PERCENT) >= rules.poachPercent()) {
+      return null;
+    }
+    Employee target =
+        company.employees.stream()
+            .max(
+                java.util.Comparator.comparingInt((Employee e) -> LADDER.indexOf(employeeGrade(e)))
+                    .thenComparingInt(e -> e.deskYears)
+                    .thenComparingInt(e -> -e.id))
+            .orElseThrow();
+    long fee = fee(company.capital, target.stats, target.rank);
+    CompanyState.Poach poach = new CompanyState.Poach();
+    poach.employeeId = target.id;
+    poach.rival = above;
+    poach.keepCost = fee * rules.keepPercent() / PERCENT;
+    poach.transferFee = fee * rules.transferPercent() / PERCENT;
+    return poach;
+  }
+
+  /** 이직 제안에 답한다 (261번): 붙잡으면 값을 내고 남고, 보내면 이적료를 받고 떠난다. 제안이 없거나 붙잡을 돈이 모자라면 400. */
+  void answerPoach(CompanyState company, boolean keep) {
+    CompanyState.Poach poach = company.poach;
+    if (poach == null) {
+      throw new InvalidRequestException("올해 이직 제안이 없다");
+    }
+    RaisingContent.People texts = content.raising().company().people();
+    if (!keep) {
+      letGo(company, texts.left());
+      return;
+    }
+    if (company.capital < poach.keepCost) {
+      throw new InvalidRequestException("붙잡을 돈이 모자란다");
+    }
+    company.capital -= poach.keepCost;
+    company.yearHiring += poach.keepCost;
+    company.yearLines.add(Korean.fill(texts.kept(), Map.of("name", poachedName(company))));
+    company.poach = null;
+  }
+
+  /** 연초 회의의 이직 제안 한 줄. */
+  String poachLine(CompanyState company) {
+    return Korean.fill(
+        content.raising().company().people().poach(),
+        Map.of("rival", rivalName(company.poach.rival), "name", poachedName(company)));
+  }
+
+  private String poachedName(CompanyState company) {
+    return company.employees.stream()
+        .filter(e -> e.id == company.poach.employeeId)
+        .findFirst()
+        .map(e -> e.name)
+        .orElse("");
+  }
+
+  /** 이직 제안의 직원을 보낸다: 이적료를 받는다. 받은 이적료는 그해 인사 비용에서 뺀다 (261번). */
+  private void letGo(CompanyState company, String template) {
+    CompanyState.Poach poach = company.poach;
+    String name = poachedName(company);
+    company.employees.removeIf(e -> e.id == poach.employeeId);
+    company.capital += poach.transferFee;
+    company.yearHiring -= poach.transferFee;
+    company.yearLines.add(
+        Korean.fill(template, Map.of("name", name, "rival", rivalName(poach.rival))));
+    company.poach = null;
+  }
+
   /** 업계 순위(1부터): 우리보다 자본이 큰 라이벌 수 + 1 (decisions.md 260번). */
   int industryRank(CompanyState company) {
     return (int) company.rivals.stream().filter(r -> r > company.capital).count() + 1;
@@ -723,6 +826,8 @@ class CompanyEngine {
     company.yearHiring = 0;
     deal(company, random);
     company.invest = invest.create(company, random);
+    company.yearLines.clear();
+    company.poach = poachOf(company, random);
   }
 
   List<Long> gradeCapital() {
@@ -843,6 +948,10 @@ class CompanyEngine {
             * (PERCENT - risk)
             / PERCENT;
     int flipBp = behavior.flipChanceBp(employee.stats.get(flipStat(company, employee)));
+    if (settled(employee)) {
+      // 같은 자리 세 해째부터 손에 익는다 (261번).
+      flipBp = flipBp * properties.people().settledFlipPercent() / PERCENT;
+    }
     boolean led =
         company.employees.stream()
             .anyMatch(e -> e != employee && employee.desk.equals(e.desk) && e.rank >= RANK_LEADER);
@@ -902,6 +1011,10 @@ class CompanyEngine {
       throw new InvalidRequestException("투자 회의를 먼저 한다");
     }
     RandomGenerator rng = random.forKey("company-settle", company.year);
+    // 이직 제안에 답하지 않았으면 그 직원은 이적료를 남기고 떠난다 (261번). 돈을 굴리기 전에 떠난다.
+    if (company.poach != null) {
+      letGo(company, content.raising().company().people().ignored());
+    }
     Settlement settlement = new Settlement();
     settlement.year = company.year;
     settlement.phase = company.phase;
@@ -1001,6 +1114,8 @@ class CompanyEngine {
       settlement.lines.add(content.raising().company().bankrupt().emptied());
     }
     moveRivals(company, settlement, random);
+    settlement.lines.addAll(company.yearLines);
+    countTenure(company, settlement);
     List<Employee> stood = fitSeats(company);
     if (!stood.isEmpty()) {
       settlement.lines.add(

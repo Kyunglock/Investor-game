@@ -32,6 +32,9 @@ public interface CompanyService {
    */
   CompanyView refreshApplicants(UUID sessionId, int year, int refreshes);
 
+  /** 올해 이직 제안에 답한다: 붙잡거나(값을 낸다) 보낸다(이적료를 받는다). 제안이 없거나 돈이 모자라면 400 (decisions.md 261번). */
+  CompanyView answerPoach(UUID sessionId, boolean keep);
+
   /** 직원 ID → 자리 코드(쉬면 null). 자리 수를 넘으면 400. */
   CompanyView place(UUID sessionId, Map<Integer, String> placements);
 

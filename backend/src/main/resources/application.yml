@@ -93,6 +93,15 @@ raising:
     rivals:
       phase-percent: { boom: 130, normal: 116, crash: 86 }
       spread: 12
+    # 사람 이야기 (decisions.md 261번): 이직 제안은 poach-from-year 해부터 해마다 poach-percent 확률로 온다.
+    # 붙잡는 값과 이적료는 그 직원 계약금의 keep-percent·transfer-percent. 같은 자리 settle-years 해째부터 손 뒤집힘 settled-flip-percent배
+    people:
+      poach-from-year: 3
+      poach-percent: 25
+      keep-percent: 50
+      transfer-percent: 50
+      settle-years: 3
+      settled-flip-percent: 80
     # 실전 경험과 큰 손실 (2.3·6.4절): 한 해에 판돈의 30% 이상 잃으면 한 단계 하락(능력치는 한 띠 = 10점),
     # 폭락장을 손실 없이 버티면 실전 경험 +1. SSS에서 X까지 1, XX까지 2 … 단계마다 1씩 더 든다
     experience:
