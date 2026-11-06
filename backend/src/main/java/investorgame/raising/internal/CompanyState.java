@@ -94,6 +94,12 @@ class CompanyState {
 
     /** 큰 손실로 내려간 능력치. 위기를 버티면 맨 뒤의 것부터 되찾는다 (6.4절). */
     List<String> dropped = new ArrayList<>();
+
+    /**
+     * dropped와 같은 순서로, 그때 내려간 점수 (decisions.md 251번). 되찾을 때 이만큼만 돌려준다. 이 칸을 더하기 전에 내려간 것은 없다(한 띠로
+     * 본다).
+     */
+    List<Integer> droppedBy = new ArrayList<>();
   }
 
   /**

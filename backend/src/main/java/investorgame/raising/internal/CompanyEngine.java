@@ -31,6 +31,11 @@ class CompanyEngine {
       List.of("F", "E", "D", "C", "B", "A", "S", "SS", "SSS", "X", "XX", "XXX", "Z", "ZZ", "ZZZ");
 
   static final String CRASH = "crash";
+
+  /** 큰 손실 때 같은 횟수로 뒤집힌 능력치를 탓하는 순서. 결산 말풍선(224번)과 같다. */
+  private static final List<String> FLIP_BLAME_ORDER =
+      List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE);
+
   private static final String RISK_DESK = "risk";
   private static final String RESEARCH_DESK = "research";
   private static final int BP = 10_000;
@@ -812,7 +817,8 @@ class CompanyEngine {
       CompanyProperties.Experience rules = properties.experience();
       if (stake > 0 && result.pnl * PERCENT <= -stake * rules.dropLossPercent()) {
         drop(employee, result, settlement);
-      } else if (crash && result.pnl >= 0) {
+      } else if (crash && stake > 0 && result.pnl >= 0) {
+        // 판돈이 없었으면 버틴 것이 아니다 (251번).
         survive(employee, settlement);
       }
       result.flips.forEach(
@@ -879,17 +885,25 @@ class CompanyEngine {
           gradeLine(lines.drop(), employee, before, employeeGrade(employee), null));
       return;
     }
+    // 같은 횟수면 결산 말풍선(224번)과 같은 순서로 탓한다: 줏대 → 인내심 → 용기 (251번).
     String stat =
         result.flips.entrySet().stream()
             .max(
                 Map.Entry.<String, Integer>comparingByValue()
-                    .thenComparing(Map.Entry.comparingByKey()))
+                    .thenComparing(e -> -FLIP_BLAME_ORDER.indexOf(e.getKey())))
             .map(Map.Entry::getKey)
             .orElse(desk(employee.desk).statCode());
     int value = employee.stats.get(stat);
-    int lowered = Math.max(1, value - properties.experience().band());
+    StatGrade from = StatGrade.of(value);
+    if (from == StatGrade.F) {
+      // 이미 바닥 띠면 더 내려갈 등급이 없다: 글자가 그대로인 하락 소식을 띄우지 않는다.
+      return;
+    }
+    // 한 띠(10점)를 내리되 적어도 한 등급은 내려가게 띠 경계 아래까지 (251번). 전에는 SSS 100이 90이 되어 "SSS → SSS"가 떴다.
+    int lowered = Math.max(1, Math.min(value - properties.experience().band(), from.min() - 1));
     employee.stats.put(stat, lowered);
     employee.dropped.add(stat);
+    employee.droppedBy.add(value - lowered);
     settlement.lines.add(
         gradeLine(
             lines.statDrop(),
@@ -906,8 +920,14 @@ class CompanyEngine {
     RaisingContent.GradeLines lines = content.raising().company().gradeLines();
     if (!employee.dropped.isEmpty()) {
       String stat = employee.dropped.removeLast();
+      // 내려간 만큼만 되찾는다 (251번). 옛 하락은 늘 새 하락보다 앞에 있으니, droppedBy가 남아 있으면 맨 뒤끼리 짝이다. 이 칸을 더하기 전에
+      // 내려간 것은 한 띠로 본다.
+      int by =
+          employee.droppedBy.isEmpty()
+              ? properties.experience().band()
+              : employee.droppedBy.removeLast();
       int value = employee.stats.get(stat);
-      int raised = Math.min(MAX_STAT, value + properties.experience().band());
+      int raised = Math.min(MAX_STAT, value + by);
       employee.stats.put(stat, raised);
       settlement.lines.add(
           gradeLine(

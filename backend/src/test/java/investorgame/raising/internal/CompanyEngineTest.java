@@ -219,7 +219,8 @@ class CompanyEngineTest {
   void 결산에서_크게_잃은_직원의_등급이_내려간다() {
     int dropped = 0;
     for (int seed = 0; seed < 300; seed++) {
-      CompanyState company = open(seed, stats(10, 10, 10, 10), 1_000_000_000L);
+      // F 띠(0~19)는 더 내려갈 등급이 없으니(251번) D 띠로 본다.
+      CompanyState company = open(seed, stats(30, 30, 30, 30), 1_000_000_000L);
       ENGINE.place(company, Map.of(1, "bio"));
       CompanyState.Settlement s = settleYear(company, new HashSeededRandom(seed));
       CompanyState.Result r = s.results.getFirst();
@@ -653,5 +654,64 @@ class CompanyEngineTest {
         }
       }
     }
+  }
+
+  /**
+   * 하락은 글자가 바뀐다 (#315, decisions.md 251번): SSS 100이 90이 되어 "SSS → SSS"가 뜨던 것을 띠 경계 아래까지 내린다. 되찾을 때는
+   * 내린 만큼만 돌려주고, 바닥 띠(F)에서는 더 내리지 않는다. 같은 횟수면 줏대 → 인내심 → 용기 순으로 탓한다.
+   */
+  @Test
+  void 하락은_한_등급_아래로_내리고_되찾을_때는_내린_만큼만_돌려준다() {
+    CompanyState.Employee e = new CompanyState.Employee();
+    e.name = "최사원";
+    e.desk = "day";
+    e.stats.putAll(stats(50, 50, 100, 50));
+    CompanyState.Settlement settlement = new CompanyState.Settlement();
+    CompanyState.Result result = new CompanyState.Result();
+    result.flips.put("courage", 2);
+    ENGINE.drop(e, result, settlement);
+    assertThat(e.stats.get("courage")).as("SSS 100 → SS 띠").isEqualTo(89);
+    assertThat(settlement.lines.getLast()).contains("(SSS → SS)");
+    ENGINE.survive(e, settlement);
+    assertThat(e.stats.get("courage")).as("내린 만큼(11점)만 되찾는다").isEqualTo(100);
+
+    e.stats.put("patience", 25);
+    result.flips.clear();
+    result.flips.put("patience", 1);
+    ENGINE.drop(e, result, settlement);
+    assertThat(e.stats.get("patience")).as("E 25 → F 15").isEqualTo(15);
+    ENGINE.survive(e, settlement);
+    assertThat(e.stats.get("patience")).as("되찾아도 원래 점수를 넘지 않는다").isEqualTo(25);
+
+    e.stats.put("patience", 5);
+    int lines = settlement.lines.size();
+    ENGINE.drop(e, result, settlement);
+    assertThat(e.stats.get("patience")).as("F 띠에서는 더 내리지 않는다").isEqualTo(5);
+    assertThat(e.dropped).isEmpty();
+    assertThat(settlement.lines).hasSize(lines);
+
+    // 같은 횟수면 말풍선과 같은 순서: 줏대가 먼저다.
+    e.stats.putAll(stats(50, 50, 50, 50));
+    result.flips.clear();
+    result.flips.put("patience", 2);
+    result.flips.put("courage", 2);
+    result.flips.put("conviction", 2);
+    ENGINE.drop(e, result, settlement);
+    assertThat(e.stats.get("conviction")).isEqualTo(40);
+    result.flips.remove("conviction");
+    ENGINE.drop(e, result, settlement);
+    assertThat(e.stats.get("patience")).as("그다음 인내심").isEqualTo(40);
+  }
+
+  @Test
+  void 판돈이_없던_직원은_폭락장을_버틴_것으로_치지_않는다() {
+    CompanyState company = open(1, stats(95, 95, 95, 95), 0);
+    company.employees.getFirst().stats.put("luck", 95);
+    company.employees.getFirst().desk = "day";
+    company.phase = CompanyEngine.CRASH;
+    company.invest = null;
+    ENGINE.settle(company, new HashSeededRandom(1));
+    assertThat(company.employees.getFirst().experience).isZero();
+    assertThat(company.employees.getFirst().rank).isZero();
   }
 }
