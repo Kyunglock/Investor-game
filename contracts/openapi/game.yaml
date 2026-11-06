@@ -732,13 +732,24 @@ components:
                 outcome:
                   oneOf:
                     - type: object
-                      required: [choice, big, delegated, teamBuy, teamSell, up, reveal, decisive, total, results]
+                      required: [choice, big, delegated, teamBuy, teamSell, debate, up, reveal, decisive, total, results]
                       properties:
                         choice: { type: string, enum: [BUY, SELL, HOLD], description: 정한 것. 맡겼으면 직원들이 정한 쪽 }
                         big: { type: boolean, description: 크게 했다 (decisions.md 260번) }
                         delegated: { type: boolean, description: 사장이 "너희가 알아서 해" 하고 맡겼다 (decisions.md 279번) }
                         teamBuy: { type: integer, description: 맡겼을 때 매수 쪽에 얹힌 무게(직원 안목). 맡기지 않았으면 0 }
                         teamSell: { type: integer, description: 매도 쪽 무게 }
+                        debate:
+                          type: array
+                          description: 맡겼을 때 매수파·매도파가 주고받은 말 (decisions.md 285번). 맡기지 않았으면 비었다
+                          items:
+                            type: object
+                            required: [name, side, text, last]
+                            properties:
+                              name: { type: string }
+                              side: { type: string, enum: [BUY, SELL] }
+                              text: { type: string }
+                              last: { type: boolean, description: 결판을 내는 마지막 두 줄(이긴 쪽·진 쪽) }
                         missed: { type: [integer, 'null'], format: int64, description: 지켜봤을 때 맞는 쪽으로 했으면 벌었을 돈(뒤집힘 없이). 지켜보지 않았으면 null }
                         up: { type: boolean }
                         reveal: { type: string }

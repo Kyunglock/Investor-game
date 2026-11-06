@@ -789,7 +789,120 @@ class InvestEngine {
     c.invest.teamSell = sell;
     RandomGenerator rng = random.forKey("invest-team", c.turn());
     boolean buys = buy + sell == 0 ? rng.nextBoolean() : rng.nextInt(buy + sell) < buy;
+    c.invest.debate = debate(c, buys, random);
     return buys ? BUY : SELL;
+  }
+
+  /** 토론에서 오가는 말의 차례 수: 매수파·매도파가 이만큼씩 번갈아 말한 뒤 결판을 낸다. */
+  private static final int DEBATE_ROUNDS = 3;
+
+  /**
+   * 맡긴 회의의 토론 (decisions.md 285번). 사자고 한 직원은 매수파, 팔자고 한 직원은 매도파가 되어 번갈아 목소리를 높인다. 말에는 기사의 요지를 제 말로
+   * 엮는다(따오지 않는다). 한쪽이 비었으면 모르겠다던 직원이, 그도 없으면 옆자리 사람이 끌려 나와 그쪽을 든다. 마지막에 이긴 쪽(안목이 가장 높은 사람)이 결판을 내고
+   * 진 쪽이 투덜댄다. 승패는 저울이 이미 정했다.
+   */
+  private List<CompanyState.DebateLine> debate(CompanyState c, boolean buys, SeededRandom random) {
+    RaisingContent.Debate texts = content.raising().company().invest().debate();
+    Map<String, String> fallback = content.raising().company().invest().points();
+    String stock = content.stock(c.invest.stock).name();
+    Map<String, List<String>> sides = new HashMap<>();
+    sides.put(BUY, new ArrayList<>());
+    sides.put(SELL, new ArrayList<>());
+    List<String> undecided = new ArrayList<>();
+    // 안목이 높은 사람부터: 결판은 그 쪽의 첫 사람이 낸다.
+    List<CompanyState.Remark> remarks = new ArrayList<>(c.invest.remarks);
+    remarks.sort(
+        java.util.Comparator.comparingInt(
+                (CompanyState.Remark r) ->
+                    c.employees.stream()
+                        .filter(x -> x.id == r.employeeId)
+                        .findFirst()
+                        .map(e -> e.stats.get(StatCodes.INSIGHT))
+                        .orElse(0))
+            .reversed());
+    for (CompanyState.Remark r : remarks) {
+      if (UP.equals(r.read)) {
+        sides.get(BUY).add(r.name);
+      } else if (DOWN.equals(r.read)) {
+        sides.get(SELL).add(r.name);
+      } else {
+        undecided.add(r.name);
+      }
+    }
+    int bystander = 0;
+    for (String side : List.of(BUY, SELL)) {
+      if (sides.get(side).isEmpty()) {
+        sides
+            .get(side)
+            .add(
+                undecided.isEmpty()
+                    ? texts.bystanders().get(bystander++)
+                    : undecided.removeFirst());
+      }
+    }
+    Map<String, List<String>> points = new HashMap<>();
+    points.put(UP, sidePoints(c.invest.sentences, UP, fallback));
+    points.put(DOWN, sidePoints(c.invest.sentences, DOWN, fallback));
+    RandomGenerator rng = random.forKey("invest-debate", c.turn());
+    Map<String, List<String>> lines = new HashMap<>();
+    for (String side : List.of(BUY, SELL)) {
+      List<String> shuffled = new ArrayList<>(texts.lines().get(side));
+      java.util.Collections.shuffle(shuffled, rng);
+      lines.put(side, shuffled);
+    }
+    List<CompanyState.DebateLine> out = new ArrayList<>();
+    for (int i = 0; i < DEBATE_ROUNDS; i++) {
+      for (String side : List.of(BUY, SELL)) {
+        List<String> mine = points.get(BUY.equals(side) ? UP : DOWN);
+        List<String> theirs = points.get(BUY.equals(side) ? DOWN : UP);
+        String text =
+            Korean.fill(
+                lines.get(side).get(i % lines.get(side).size()),
+                Map.of(
+                    "point", mine.get(i % mine.size()),
+                    "against", theirs.get(i % theirs.size()),
+                    "stock", stock));
+        List<String> names = sides.get(side);
+        out.add(debateLine(names.get(i % names.size()), side, text, false));
+      }
+    }
+    String winner = buys ? BUY : SELL;
+    String loser = buys ? SELL : BUY;
+    List<String> win = texts.win().get(winner);
+    out.add(
+        debateLine(sides.get(winner).getFirst(), winner, win.get(rng.nextInt(win.size())), true));
+    out.add(
+        debateLine(
+            sides.get(loser).getFirst(),
+            loser,
+            texts.lose().get(rng.nextInt(texts.lose().size())),
+            true));
+    return out;
+  }
+
+  /** 한쪽으로 기운 문장의 요지들(겹치지 않게). 요지가 하나도 없으면(옛 기사) 대신 쓰는 요지 하나. */
+  private static List<String> sidePoints(
+      List<Sentence> sentences, String sign, Map<String, String> fallback) {
+    List<String> out = new ArrayList<>();
+    for (Sentence s : sentences) {
+      if (sign.equals(s.sign) && s.point != null && !s.omen && !out.contains(s.point)) {
+        out.add(s.point);
+      }
+    }
+    if (out.isEmpty()) {
+      out.add(fallback.get(sign));
+    }
+    return out;
+  }
+
+  private static CompanyState.DebateLine debateLine(
+      String name, String side, String text, boolean last) {
+    CompanyState.DebateLine line = new CompanyState.DebateLine();
+    line.name = name;
+    line.side = side;
+    line.text = text;
+    line.last = last;
+    return line;
   }
 
   /** 맡길 때 한마디 하나의 무게 바닥: 안목이 0이어도 목소리는 있다. */

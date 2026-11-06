@@ -269,6 +269,14 @@ public record CompanyView(
   public record Option(String code, String label) {}
 
   /**
+   * 맡긴 회의의 토론 한 줄 (decisions.md 285번).
+   *
+   * @param side BUY(매수파)·SELL(매도파)
+   * @param last 결판을 내는 마지막 두 줄(이긴 쪽·진 쪽)
+   */
+  public record DebateLine(String name, String side, String text, boolean last) {}
+
+  /**
    * @param decisive 결정적 문장의 번호(sentences 안)
    * @param total 회의 손익. 이미 자본에 들어갔다
    */
@@ -280,6 +288,7 @@ public record CompanyView(
    * @param delegated 사장이 "너희가 알아서 해" 하고 맡겼다(decisions.md 279번). choice는 직원들이 정한 쪽
    * @param teamBuy 맡겼을 때 매수 쪽에 얹힌 무게(직원 안목). 맡기지 않았으면 0
    * @param teamSell 매도 쪽 무게
+   * @param debate 맡겼을 때 매수파·매도파가 주고받은 말(decisions.md 285번). 맡기지 않았으면 비었다
    */
   public record InvestOutcome(
       String choice,
@@ -287,6 +296,7 @@ public record CompanyView(
       boolean delegated,
       int teamBuy,
       int teamSell,
+      List<DebateLine> debate,
       Long missed,
       boolean up,
       String reveal,

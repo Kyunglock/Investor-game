@@ -490,6 +490,9 @@ class DefaultCompanyService implements CompanyService {
                 invest.delegated,
                 invest.teamBuy,
                 invest.teamSell,
+                invest.debate.stream()
+                    .map(d -> new CompanyView.DebateLine(d.name, d.side, d.text, d.last))
+                    .toList(),
                 invest.missed,
                 invest.up,
                 meetings.reveal(c),

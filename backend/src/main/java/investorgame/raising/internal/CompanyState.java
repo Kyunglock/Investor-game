@@ -276,6 +276,9 @@ class CompanyState {
 
     int teamSell;
 
+    /** 맡겼을 때 직원들이 매수파·매도파로 갈려 주고받은 말 (decisions.md 285번). 화면이 한 줄씩 띄운다. 맡기지 않았으면 비었다. */
+    List<DebateLine> debate = new ArrayList<>();
+
     List<InvestResult> results = new ArrayList<>();
     long total;
 
@@ -328,6 +331,16 @@ class CompanyState {
 
     /** 사장이 고른 태도(AGGRESSIVE·NEUTRAL·DEFENSIVE). 아직이면 null이고, 고르지 않고 결산하면 중립으로 본다. */
     String stance;
+  }
+
+  /** 맡긴 회의의 토론 한 줄 (285번). side는 BUY·SELL, last면 결판을 내는 마지막 두 줄(이긴 쪽·진 쪽)이다. */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class DebateLine {
+    String name;
+    String side;
+    String text;
+    boolean last;
   }
 
   /** 투자 회의를 연 때 굳힌 직원 한마디 한 줄. read는 정할 때 "제 판단"으로도 쓴다. */
