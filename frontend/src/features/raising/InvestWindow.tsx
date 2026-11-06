@@ -7,9 +7,9 @@ import {
   chartTimeline,
   groupRemarks,
   hindsightOf,
+  leadersOf,
   OPINIONS,
   percentOf,
-  spokesperson,
 } from './investShow'
 import { useRaisingStore } from './store'
 import { TeamClash, teamClashMs } from './TeamClash'
@@ -182,8 +182,8 @@ export function InvestWindow({
           // 안목이 가장 높은 사람이 대표로 한 번만 한다. 사람이 많은 의견이 먼저.
           <div className="mt-2 grid gap-2" data-testid="remarks">
             {groupRemarks(invest.remarks).map((g, i) => {
-              const voice = spokesperson(g.remarks, employees)
-              const others = g.remarks.length - 1
+              // 팀장만 이름을 보이고 나머지는 "외 N명" (293번).
+              const { shown, voice, others } = leadersOf(g.remarks, employees)
               return (
                 <section
                   key={g.read}
@@ -199,23 +199,22 @@ export function InvestWindow({
                       {OPINIONS[g.read].label}{' '}
                       <span className="font-mono-num text-[13px]">· {g.remarks.length}명</span>
                     </h4>
-                    <ul className="flex flex-wrap gap-1 text-ink">
-                      {g.remarks.map((r) => (
+                    <ul className="flex flex-wrap items-baseline gap-1 text-ink">
+                      {shown.map((r) => (
                         <li
                           key={r.employeeId}
                           className="flex items-baseline gap-1 rounded bg-card px-1.5 text-[13px]"
                         >
+                          <span className="text-[11px] text-muted">팀장</span>
                           <b>{r.name}</b>
                         </li>
                       ))}
+                      {others > 0 && <li className="text-[12px] text-muted">외 {others}명</li>}
                     </ul>
                   </div>
                   <p className="mt-1 text-[14px] text-ink" data-testid="opinion-voice">
                     “{voice.text}”{' '}
-                    <span className="whitespace-nowrap text-[12px] text-muted">
-                      — {voice.name}
-                      {others > 0 && ` 외 ${others}명`}
-                    </span>
+                    <span className="whitespace-nowrap text-[12px] text-muted">— {voice.name}</span>
                   </p>
                 </section>
               )
@@ -263,34 +262,53 @@ export function InvestWindow({
         )}
 
         {proposal && proposalShown && invest.proposal && (
-          // 막판 뒤집기 (283번): 결정이 다 끝났는데 누군가 반대로 하자고 나섰다.
-          <div
-            className="animate-pop mt-3 rounded border-2 border-gold bg-card p-3"
-            data-testid="invest-proposal"
-          >
-            <p className="text-[12px] font-semibold text-gold">잠깐! 막판 제안</p>
-            <p className="mt-1 text-[15px]" data-testid="proposal-line">
-              {invest.proposal.line}
-            </p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void answerProposal(true)}
-                className="min-h-12 rounded bg-gold font-semibold text-white disabled:opacity-50"
-              >
-                그래, 네 말대로 해 · {label(invest.proposal.action)}
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void answerProposal(false)}
-                className="min-h-12 rounded border border-pen font-semibold disabled:opacity-50"
-              >
-                됐어, 원래대로 해
-              </button>
-            </div>
-          </div>
+          // 막판 뒤집기 (283·292번): 결정이 다 끝났는데 누군가 "잠깐만요!" 하고 끼어든다. 회의 창 위에 알림으로 뜬다.
+          <Overlay>
+            <section
+              className="animate-pop rounded border-4 border-gold bg-card p-5 text-center shadow-xl"
+              role="alertdialog"
+              aria-modal="true"
+              aria-label="막판 제안"
+              data-testid="invest-proposal"
+            >
+              <div className="animate-shake">
+                <p className="text-[40px] leading-none" aria-hidden="true">
+                  ✋
+                </p>
+                <h3
+                  className="mt-1 font-pen text-[34px] leading-tight text-red-pen"
+                  data-testid="proposal-shout"
+                >
+                  잠깐만요, 사장님!!
+                </h3>
+              </div>
+              <p className="mt-1 text-[12px] text-muted">
+                결정이 끝난 줄 알았는데 {withParticle(invest.proposal.name, '이', '가')} 손을
+                들었다.
+              </p>
+              <p className="mt-3 text-left text-[15px]" data-testid="proposal-line">
+                {invest.proposal.line}
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void answerProposal(true)}
+                  className="min-h-12 rounded bg-gold font-semibold text-white disabled:opacity-50"
+                >
+                  그래, 네 말대로 해 · {label(invest.proposal.action)}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void answerProposal(false)}
+                  className="min-h-12 rounded border border-pen font-semibold disabled:opacity-50"
+                >
+                  됐어, 원래대로 해
+                </button>
+              </div>
+            </section>
+          </Overlay>
         )}
 
         {!outcome && !invest.proposal && (

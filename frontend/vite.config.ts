@@ -34,8 +34,8 @@ export default defineConfig(({ mode }) => ({
       // 광고 요청(다른 출처)은 캐시하지 않고, ads.txt는 앱 화면으로 바꿔치지 않는다 (271번).
       workbox: { navigateFallbackDenylist: [/^\/api\//, /^\/r\//, /^\/ads\.txt$/] },
       manifest: {
-        name: '투자자 시뮬레이터',
-        short_name: '투자자',
+        name: '증권사 사장',
+        short_name: '증권사 사장',
         lang: 'ko',
         display: 'standalone',
         orientation: 'portrait',

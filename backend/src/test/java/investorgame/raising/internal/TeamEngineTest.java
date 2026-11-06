@@ -7,6 +7,7 @@ import investorgame.behavior.internal.TestBehavior;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.content.internal.TestContent;
+import investorgame.raising.internal.CompanyState.Employee;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -95,9 +96,14 @@ class TeamEngineTest {
       String text = q.reports.get(1).text;
       assertThat(q.highlights).isEqualTo(at == null ? 0 : 1);
       if (q.highlights == 0) {
-        assertThat(text).isEqualTo("이번 분기에는 기사 방향을 못 읽어 형광펜을 긋지 못했습니다.");
+        assertThat(text).startsWith("이번 분기에는 기사 방향을 못 읽어 형광펜을 긋지 못했습니다.");
       } else {
-        assertThat(text).isEqualTo("이번 분기 형광펜을 1번 그었고, " + q.highlightHits + "번이 결정적 문장을 짚었습니다.");
+        // 다 맞았으면 뿌듯하게, 하나도 못 맞혔으면 면목 없게 (291번).
+        assertThat(text)
+            .startsWith(
+                q.highlightHits == 1
+                    ? "이번 분기 형광펜을 1번 그었고, 1번 모두 결정적 문장을 짚었습니다."
+                    : "이번 분기 형광펜을 1번 그었는데, 한 번도 결정적 문장을 짚지 못했습니다.");
         assertThat(q.highlightHits).isEqualTo(expected);
       }
       assertThat(text).doesNotContain("빌려줬");
@@ -125,13 +131,90 @@ class TeamEngineTest {
     CompanyState.Quarter quiet = new CompanyState.Quarter();
 
     assertThat(scoutLine(c, java.util.List.of(up), "이번 분기"))
-        .isEqualTo("이번 분기 삼송바이오를 가져왔고, 24% 올랐습니다.");
+        .startsWith("이번 분기 삼송바이오를 물어 왔고, 회의 뒤 24% 올랐습니다.");
     assertThat(scoutLine(c, java.util.List.of(down), "이번 분기"))
-        .isEqualTo("이번 분기 넥손게임즈를 가져왔는데, 35% 빠졌습니다. 면목 없습니다.");
+        .startsWith("이번 분기 넥손게임즈를 물어 왔는데, 35% 빠졌습니다.");
     assertThat(scoutLine(c, java.util.List.of(quiet), "이번 분기"))
-        .isEqualTo("이번 분기에는 우리 팀이 가져온 종목이 없습니다.");
+        .startsWith("이번 분기에는 물어 올 만한 종목이 없었습니다.");
     assertThat(scoutLine(c, java.util.List.of(up, quiet, down), "올해"))
-        .isEqualTo("올해 종목 2개를 가져와 1개가 올랐습니다.");
+        .isEqualTo("올해 종목 2개를 물어 와 1개가 올랐습니다.");
+  }
+
+  /** 돈을 굴리는 팀의 보고 (291번): 손익 크기·폭락·태도로 고른 머리줄, 팀원 성적, 뒤집힘 횟수, 조언. */
+  @Test
+  void 돈을_굴리는_팀장은_크기와_폭락과_태도와_팀원과_뒤집힘_횟수까지_보고한다() {
+    CompanyState c = company(1);
+    Employee weak = c.employees.get(0);
+    Employee head = c.employees.get(1);
+    CompanyState.Result a = result(weak, 100_000_000L, -30_000_000L);
+    a.flips.put("patience", 2);
+    CompanyState.Result b = result(head, 100_000_000L, -10_000_000L);
+    b.flips.put("courage", 1);
+    CompanyState.Quarter crashed = new CompanyState.Quarter();
+    crashed.crash = true;
+    crashed.macroStance = "DEFENSIVE";
+
+    String text = trading(c, java.util.List.of(a, b), java.util.List.of(crashed), "올해");
+    assertThat(text)
+        .as("폭락장에서 잃은 머리줄")
+        .containsAnyOf("폭락이 터져 올해 4,000만 원 잃었습니다.", "올해 폭락장에서 −4,000만 원입니다.")
+        .as("방어 태도의 한마디")
+        .contains("판돈을 줄여 둔 덕에 이 정도로 막았습니다.")
+        .as("가장 크게 잃은 팀원")
+        .contains(weak.name + "은 3,000만 원 잃었습니다. 제가 옆에서 더 챙기겠습니다.")
+        .as("뒤집힘 횟수")
+        .contains(weak.name + "이 못 참고 두 번 바닥에서 던졌습니다.")
+        .contains("저도 손이 떨려 한 번 놓쳤습니다.")
+        .as("가장 잦았던 뒤집힘의 조언")
+        .contains("폭락장에서 버티는 건 인내심입니다.")
+        .doesNotContain("{");
+
+    // 크게 벌고 공격했으면: 판돈 15% 이상이 크게다. 팀장 자신이 가장 많이 벌었다.
+    CompanyState.Result big = result(head, 100_000_000L, 20_000_000L);
+    CompanyState.Result small = result(weak, 100_000_000L, 5_000_000L);
+    CompanyState.Quarter boom = new CompanyState.Quarter();
+    boom.macroStance = "AGGRESSIVE";
+    String won = trading(c, java.util.List.of(small, big), java.util.List.of(boom), "이번 분기");
+    assertThat(won)
+        .contains("2,500만 원")
+        .contains("판돈을 키운 게 맞았습니다.")
+        .contains("제가 2,000만 원으로 팀을 끌었습니다.")
+        .doesNotContain("잃었습니다");
+    assertThat(texts().trading().get("bigUp").stream().map(l -> l.split("\\{")[0]))
+        .anyMatch(won::startsWith);
+
+    // 중립·본전이면 태도와 팀원 줄이 없다. 다섯 번 넘게 뒤집히면 숫자로 읽는다.
+    CompanyState.Result even = result(head, 100_000_000L, 0);
+    even.flips.put("conviction", 5);
+    String flat =
+        trading(c, java.util.List.of(even), java.util.List.of(new CompanyState.Quarter()), "올해");
+    assertThat(flat).startsWith("올해는 ").contains("저도 단톡방 말에 5번 흔들렸습니다.").doesNotContain("판돈");
+  }
+
+  private static investorgame.content.RaisingContent.Teams texts() {
+    return TestContent.load().raising().company().teams();
+  }
+
+  private static CompanyState.Result result(Employee e, long stake, long pnl) {
+    CompanyState.Result r = new CompanyState.Result();
+    r.employeeId = e.id;
+    r.name = e.name;
+    r.desk = "semiconductor";
+    r.stake = stake;
+    r.pnl = pnl;
+    return r;
+  }
+
+  private static String trading(
+      CompanyState c,
+      java.util.List<CompanyState.Result> results,
+      java.util.List<CompanyState.Quarter> quarters,
+      String period) {
+    return ENGINE.teams.reports(c, results, quarters, period, 1).stream()
+        .filter(r -> "semiconductor".equals(r.desk))
+        .findFirst()
+        .orElseThrow()
+        .text;
   }
 
   private static String scoutLine(

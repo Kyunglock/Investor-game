@@ -250,18 +250,38 @@ class JsonContentCatalog implements ContentCatalog {
         teams != null
             && teams.head() != null
             && teams.appointed() != null
-            && List.of("up", "down", "flat").stream()
+            && List.of("bigUp", "up", "flat", "down", "bigDown", "crashHeld", "crashHit").stream()
                 .allMatch(k -> !teams.trading().getOrDefault(k, List.of()).isEmpty())
             && teams
                 .flips()
                 .keySet()
                 .containsAll(List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE))
-            && teams.selfFlips().keySet().containsAll(teams.flips().keySet()),
+            && teams.selfFlips().keySet().containsAll(teams.flips().keySet())
+            && teams.flipTips().keySet().containsAll(teams.flips().keySet())
+            && teams.times() != null
+            && !teams.times().isEmpty()
+            && teams.timesMany() != null
+            && teams.members() != null
+            && teams
+                .members()
+                .keySet()
+                .containsAll(List.of("best", "bestSelf", "worst", "worstSelf"))
+            && teams.stance() != null
+            && List.of("AGGRESSIVE", "DEFENSIVE").stream()
+                .allMatch(
+                    k ->
+                        teams
+                            .stance()
+                            .getOrDefault(k, Map.of())
+                            .keySet()
+                            .containsAll(List.of("up", "down"))),
         "팀장 보고 문구가 없다");
     // 돕는 자리의 보고는 그 기간에 한 일을 말한다 (decisions.md 278번).
     for (String key :
         List.of(
             "research",
+            "researchAll",
+            "researchMiss",
             "researchNone",
             "researchIdle",
             "risk",

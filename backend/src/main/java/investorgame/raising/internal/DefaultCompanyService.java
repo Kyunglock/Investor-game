@@ -247,7 +247,7 @@ class DefaultCompanyService implements CompanyService {
     CompanyRepository.Row row =
         companies.lockActive(sessionId).orElseThrow(() -> new NotFoundException("회사가 없다"));
     if (row.state().finished) {
-      throw new InvalidRequestException("엔딩을 본 회사다. 새 회사를 차린다");
+      throw new InvalidRequestException("엔딩을 본 회사다. 새 회사를 차려야 한다");
     }
     return row;
   }

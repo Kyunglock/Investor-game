@@ -5,6 +5,7 @@ import {
   groupRemarks,
   hindsightOf,
   investTimeline,
+  leadersOf,
   matchupOf,
   percentOf,
   spokesperson,
@@ -132,7 +133,7 @@ describe('회의 뒤 돌아보기 (decisions.md 260번)', () => {
       outcome: { up: true, decisive: 1, missed: 12_000_000 },
     } as never
     expect(hindsightOf(invest)).toEqual([
-      '지켜봤다. 산다로 갔으면 +1,200만원이었다.',
+      '지켜봤다. 샀으면 +1,200만원이었다.',
       '직원 다수결(사자)은 맞았다.',
       '형광펜은 결정적 문장에 그었다.',
     ])
@@ -167,6 +168,21 @@ describe('같은 의견 칸의 대표 (decisions.md 246번)', () => {
   it('칸에서 안목이 가장 높은 사람이 대표로 말하고, 같으면 앞사람이다', () => {
     expect(spokesperson([remark(1), remark(2), remark(3)], staff).employeeId).toBe(2)
     expect(spokesperson([remark(1)], staff).employeeId).toBe(1)
+  })
+
+  it('팀장만 이름을 보이고 나머지는 "외 N명"이며, 팀장이 없는 칸은 대표 하나만 선다 (293번)', () => {
+    const led = [
+      { id: 1, leader: true, grades: { insight: 'C' } },
+      { id: 2, leader: false, grades: { insight: 'S' } },
+      { id: 3, leader: true, grades: { insight: 'A' } },
+    ] as unknown as Company['employees']
+    const all = leadersOf([remark(1), remark(2), remark(3)], led)
+    expect(all.shown.map((r) => r.employeeId)).toEqual([1, 3])
+    expect(all.voice.employeeId).toBe(3)
+    expect(all.others).toBe(1)
+    const none = leadersOf([remark(2)], led)
+    expect(none.shown.map((r) => r.employeeId)).toEqual([2])
+    expect(none.others).toBe(0)
   })
 })
 

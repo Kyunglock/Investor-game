@@ -498,6 +498,22 @@ class InvestEngineTest {
     assertThat(boss.invest.debate).isEmpty();
   }
 
+  /** 맡기면 직원들이 정한 것이라 막판 뒤집기가 없다 (decisions.md 291번). */
+  @Test
+  void 너희가_알아서_해면_막판_제안이_없다() {
+    for (int seed = 0; seed < 60; seed++) {
+      CompanyState c = opened(new HashSeededRandom(seed), 300_000_000L);
+      ENGINE.hire(c, stats(60, 50, 50, 50));
+      ENGINE.hire(c, stats(60, 50, 50, 50));
+      ENGINE.place(c, Map.of(1, "day", 2, "bio"));
+      c.phase = "normal";
+      ENGINE.invest.decide(c, InvestEngine.TEAM, false, new HashSeededRandom(seed), true);
+      assertThat(c.invest.proposalId).isNull();
+      assertThat(c.invest.delegated).isTrue();
+      assertThat(c.invest.choice).isIn(InvestEngine.BUY, InvestEngine.SELL);
+    }
+  }
+
   /**
    * 막판 뒤집기 (decisions.md 283번): 실제 플레이에서는 정하면 proposal-percent(35%)로 누군가 반대로 하자고 나선다. 답할 때까지 회의는
    * 정해지지 않고 결산도 못 한다. 따르면 반대쪽으로, 거절하면 원래대로 한다. 따랐으면 결과를 보고 상이나 벌을 준다.

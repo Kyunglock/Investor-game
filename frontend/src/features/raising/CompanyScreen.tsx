@@ -433,7 +433,7 @@ function StaffTab({ company }: { company: Company }) {
           <summary className="cursor-pointer">
             글씨 색: <span className="text-teal">잘 맞음</span> ·{' '}
             <span className="text-gold">보통</span> · <span className="text-wine">안 맞음</span> · ★
-            이번 시대에 뜨는 자리 · 관심: 관심 섹터의 데스크
+            이번 시대에 뜨는 자리 · 관심: 그 직원의 관심 섹터
           </summary>
           <ul className="mt-1">
             {company.desks.map((d) => (
@@ -1016,7 +1016,7 @@ function MarketPanel({ company }: { company: Company }) {
       <h3 className="sr-only">연초 공채</h3>
       <p className="text-[12px] text-muted">
         계약금을 내고 뽑습니다. 뽑은 사람은 쉬는 채로 들어오니 자리에 앉히세요.
-        {meeting?.hrCap && ` 인사팀 덕에 ${meeting.hrCap} 언저리까지 옵니다.`}
+        {meeting?.hrCap && ` 인사팀 덕에 지원자 등급이 ${meeting.hrCap} 언저리까지 올라옵니다.`}
       </p>
       {company.applicants.length === 0 && (
         <p className="mt-2 text-[13px] text-muted">올해 지원자를 다 만났습니다.</p>
@@ -1140,7 +1140,7 @@ function ApplicantCard({
             className={button}
             aria-expanded={picking}
           >
-            {picking ? '그만둔다' : `자리가 꽉 찼다 · 계약금 ${shortWon(a.fee)}`}
+            {picking ? '접는다' : `자리가 꽉 찼다 · 계약금 ${shortWon(a.fee)}`}
           </button>
         )}
         {full &&

@@ -538,14 +538,15 @@ class InvestEngine {
     // 창을 거치지 않고 바로 정해도(옛 화면, 시험) 지금 배치로 회의를 연 셈 친다.
     convene(c, random);
     if (c.invest.proposalId != null) {
-      throw new InvalidRequestException("막판 제안에 먼저 답한다");
+      throw new InvalidRequestException("막판 제안에 먼저 답해야 한다");
     }
     boolean delegated = TEAM.equals(choice);
     if (delegated) {
       choice = teamCall(c, random);
     }
-    // 막판 뒤집기 (decisions.md 283번): 결정이 다 끝났는데 누군가 손을 들고 반대로 하자고 한다.
-    if (proposals && propose(c, choice, big, delegated, random)) {
+    // 막판 뒤집기 (decisions.md 283번): 결정이 다 끝났는데 누군가 손을 들고 반대로 하자고 한다. 맡겼으면 직원들이 정한 것이라 아무도 나서지 않는다
+    // (291번).
+    if (proposals && !delegated && propose(c, choice, big, delegated, random)) {
       return;
     }
     execute(c, choice, big, delegated, random);

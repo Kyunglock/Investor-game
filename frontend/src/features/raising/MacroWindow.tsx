@@ -1,7 +1,7 @@
 import type { Company } from '../../api/client'
 import { withParticle } from '../game/labels'
 import { Overlay } from '../game/Overlay'
-import { groupRemarks, spokesperson } from './investShow'
+import { groupRemarks, leadersOf } from './investShow'
 import { type Stance, useRaisingStore } from './store'
 
 type Macro = NonNullable<Company['macro']>
@@ -82,8 +82,8 @@ export function MacroWindow({
         {macro.remarks.length > 0 && !outcome && (
           <div className="mt-2 grid gap-2" data-testid="macro-remarks">
             {groupRemarks(macro.remarks).map((g) => {
-              const voice = spokesperson(g.remarks, employees)
-              const others = g.remarks.length - 1
+              // 팀장만 이름을 보이고 나머지는 "외 N명" (293번).
+              const { shown, voice, others } = leadersOf(g.remarks, employees)
               return (
                 <section
                   key={g.read}
@@ -96,15 +96,13 @@ export function MacroWindow({
                     {MACRO_OPINIONS[g.read].label}{' '}
                     <span className="font-mono-num text-[13px]">· {g.remarks.length}명</span>{' '}
                     <span className="font-normal text-[13px] text-ink">
-                      {g.remarks.map((r) => r.name).join(' · ')}
+                      {shown.map((r) => `팀장 ${r.name}`).join(' · ')}
+                      {others > 0 && <span className="text-muted"> 외 {others}명</span>}
                     </span>
                   </h4>
                   <p className="mt-1 text-[14px] text-ink">
                     “{voice.text}”{' '}
-                    <span className="whitespace-nowrap text-[12px] text-muted">
-                      — {voice.name}
-                      {others > 0 && ` 외 ${others}명`}
-                    </span>
+                    <span className="whitespace-nowrap text-[12px] text-muted">— {voice.name}</span>
                   </p>
                 </section>
               )

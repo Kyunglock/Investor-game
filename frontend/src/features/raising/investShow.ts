@@ -146,9 +146,9 @@ export function hindsightOf(invest: NonNullable<Company['invest']>): string[] {
     return []
   }
   const lines: string[] = []
-  const right = outcome.up ? '산다' : '판다'
+  const right = outcome.up ? '샀으면' : '팔았으면'
   if (outcome.missed != null && outcome.missed > 0) {
-    lines.push(`지켜봤다. ${right}로 갔으면 +${shortWon(outcome.missed)}이었다.`)
+    lines.push(`지켜봤다. ${right} +${shortWon(outcome.missed)}이었다.`)
   }
   const up = invest.remarks.filter((r) => r.read === 'UP').length
   const down = invest.remarks.filter((r) => r.read === 'DOWN').length
@@ -168,6 +168,19 @@ export function hindsightOf(invest: NonNullable<Company['invest']>): string[] {
     )
   }
   return lines
+}
+
+/**
+ * 의견 칸에 세우는 사람 (decisions.md 293번): 사람이 많아지면 이름이 칸을 꽉 채워서 **팀장만** 이름을 보이고 나머지는 "외 N명"이다. 대표 한마디도 팀장
+ * 가운데 안목이 가장 높은 사람이 한다. 그 칸에 팀장이 없으면(팀장이 다른 의견이다) 칸에서 안목이 가장 높은 사람 하나만 세운다.
+ */
+export function leadersOf(
+  remarks: Remark[],
+  employees: Company['employees'],
+): { shown: Remark[]; voice: Remark; others: number } {
+  const leaders = remarks.filter((r) => employees.find((e) => e.id === r.employeeId)?.leader)
+  const shown = leaders.length > 0 ? leaders : [spokesperson(remarks, employees)]
+  return { shown, voice: spokesperson(shown, employees), others: remarks.length - shown.length }
 }
 
 /**
