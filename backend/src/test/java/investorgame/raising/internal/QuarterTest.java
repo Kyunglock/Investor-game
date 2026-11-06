@@ -88,11 +88,10 @@ class QuarterTest {
       int burst = c.crashQuarter;
       assertThat(burst).isBetween(2, 4);
       for (int quarter = 1; quarter <= 4; quarter++) {
-        if (quarter == burst) {
-          assertThat(c.macro.up).as("폭락 분기의 숨은 방향은 내림").isFalse();
-        }
+        // 거시경제 회의는 한 해에 한 번이다 (281번): 폭락장인 해의 숨은 방향은 내림이고, 조짐은 그 회의 기사에 실린다.
+        assertThat(c.macro.up).as("폭락장인 해의 숨은 방향은 내림").isFalse();
         boolean omen = c.macro.sentences.stream().anyMatch(s -> s.omen);
-        assertThat(omen).isEqualTo(c.omen != null && quarter == burst - 1);
+        assertThat(omen).isEqualTo(c.omen != null);
         CompanyState.Quarter q = ENGINE.settleQuarter(c, new HashSeededRandom(seed));
         assertThat(q.crash).isEqualTo(quarter == burst);
       }

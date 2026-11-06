@@ -75,6 +75,13 @@ class CompanyApiTest {
         json(mvc.perform(get("/api/company").cookie(session))).read("$.quarter", Integer.class);
     ResultActions last = null;
     for (int q = quarter; q <= 4; q++) {
+      // 2~4분기에는 분기를 열 때 직원이 종목을 물어 올 수 있다 (281번): 회의가 열렸으면 지켜보고 넘긴다.
+      Boolean ready =
+          json(mvc.perform(get("/api/company").cookie(session)))
+              .read("$.invest.ready", Boolean.class);
+      if (Boolean.TRUE.equals(ready)) {
+        postJson("/api/company/invest", "{\"choice\":\"HOLD\"}").andExpect(status().isOk());
+      }
       last = settle(year, q).andExpect(status().isOk());
     }
     return last;
@@ -252,18 +259,19 @@ class CompanyApiTest {
       assertThat(settled.read("$.lastSettlement.year", Integer.class)).isEqualTo(year);
       // 연말 결산서(240·251·266번): 거시경제 회의의 태도, 회의 몫과 채용비가 따로 실리고, 연초 자본 + 회의 + 직원들 몫 + 수수료 − 채용비 = 연말
       // 자본.
-      // 분기마다 태도를 고른다 (268번): 1분기만 고르고 나머지는 고르지 않아 중립이다.
+      // 거시경제 회의는 한 해에 한 번이다 (281번): 1분기에 고른 태도가 네 분기 내내 걸린다.
       assertThat(settled.read("$.lastSettlement.quarters.length()", Integer.class)).isEqualTo(4);
       assertThat(settled.read("$.lastSettlement.quarters[0].stance", String.class))
           .isEqualTo(year == 1 ? "AGGRESSIVE" : "NEUTRAL");
       assertThat(settled.read("$.lastSettlement.quarters[3].stance", String.class))
-          .isEqualTo("NEUTRAL");
+          .isEqualTo(year == 1 ? "AGGRESSIVE" : "NEUTRAL");
       if (held) {
-        assertThat(settled.read("$.lastSettlement.invest.total", Long.class))
-            .isEqualTo(meetingTotal);
+        // 2~4분기에도 종목을 물어 올 수 있어 한 해 회의 몫은 1분기 몫과 다를 수 있다 (281번).
         assertThat(settled.read("$.lastSettlement.invest.title", String.class)).isNotBlank();
-      } else {
-        assertThat(settled.read("$.lastSettlement.invest", Object.class)).isNull();
+      }
+      Object yearInvest = settled.read("$.lastSettlement.invest", Object.class);
+      if (yearInvest != null) {
+        meetingTotal = settled.read("$.lastSettlement.invest.total", Long.class);
       }
       long staff = settled.read("$.lastSettlement.results[0].pnl", Long.class);
       long before = settled.read("$.lastSettlement.capitalBefore", Long.class);

@@ -185,7 +185,8 @@ class TeamEngine {
       }
       default -> {
         values.put("swayed", String.valueOf(swayed));
-        return Korean.fill(s.get(desk), values);
+        // 리스크 관리 팀 (278·281번): "꼬드김에 넘어간 사람" 대신 "헛소문에 휩쓸린 사람".
+        return Korean.fill(s.get(swayed == 0 && "risk".equals(desk) ? "riskNone" : desk), values);
       }
     }
   }

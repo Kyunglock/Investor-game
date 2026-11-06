@@ -153,10 +153,10 @@ class PayEngineTest {
     assertThat(grew).isBetween(trials * 34 / 100, trials * 46 / 100);
   }
 
-  /** 동결하면 다음 분기를 넘길 때 freeze-leave-percent(25%)로 떠난다 (280번). */
+  /** 동결하면 다음 분기를 넘길 때 freeze-leave-percent(25%)로 사표를 들고 오고, 그대로 두면 그다음 분기에 떠난다 (280·282번). */
   @Test
-  void 연봉을_동결하면_다음_분기에_확률로_떠난다() {
-    int left = 0;
+  void 연봉을_동결하면_다음_분기에_확률로_사표를_내고_두면_떠난다() {
+    int resigned = 0;
     int trials = 1000;
     for (int seed = 0; seed < trials; seed++) {
       CompanyState c = company(seed, 3_000_000_000L, 2);
@@ -168,18 +168,55 @@ class PayEngineTest {
       assertThat(e.frozenPending).isTrue();
       CompanyState.Quarter q = ENGINE.settleQuarter(c, new HashSeededRandom(seed));
       assertThat(e.frozenPending).as("한 번만 굴린다").isFalse();
-      if (c.employees.isEmpty()) {
-        left++;
-        assertThat(q.lines).anyMatch(l -> l.contains("연봉 동결에 실망해 회사를 떠났다"));
+      assertThat(c.employees).as("바로 떠나지 않는다: 마지막 기회").hasSize(1);
+      if (c.resign != null) {
+        resigned++;
+        assertThat(c.resign.reason).isEqualTo("FROZEN");
+        assertThat(q.lines).anyMatch(l -> l.contains("사표를 들고 왔다"));
+        CompanyState.Quarter next = ENGINE.settleQuarter(c, new HashSeededRandom(seed));
+        assertThat(c.employees).as("답하지 않고 넘기면 떠난다").isEmpty();
+        assertThat(c.resign).isNull();
+        assertThat(next.lines).anyMatch(l -> l.contains("연봉 동결에 실망해 회사를 떠났다"));
         assertThat(c.timeline).anyMatch(x -> "left".equals(x.kind));
       }
     }
-    assertThat(left).isBetween(trials * 20 / 100, trials * 30 / 100);
+    assertThat(resigned).isBetween(trials * 20 / 100, trials * 30 / 100);
   }
 
-  /** 답하지 않으면 ignore-quarters(2) 분기부터 분기마다 ignore-leave-percent(30%)로 떠난다 (280번). */
+  /** 사표를 들고 오면 마지막 기회가 있다 (282번): 붙잡으면 연봉을 두 번 올려 준 만큼 올리고 남고, 보내면 지금 떠난다. */
   @Test
-  void 연봉_협상에_답하지_않고_버티면_두_분기째부터_떠날_수_있다() {
+  void 사표를_들고_오면_연봉을_올려_붙잡거나_보낼_수_있다() {
+    CompanyState c = company(1, 3_000_000_000L, 2);
+    CompanyState.Employee e = ENGINE.hire(c, stats(40));
+    ENGINE.place(c, Map.of(e.id, "bio"));
+    c.resign = new CompanyState.Resign();
+    c.resign.employeeId = e.id;
+    c.resign.reason = "IGNORED";
+    assertThat(ENGINE.pay.resignLine(c)).contains(e.name).contains("기다리다 지쳤습니다");
+    long before = ENGINE.pay.salary(c, e);
+    long kept = ENGINE.pay.keepSalary(c, e);
+    assertThat(kept).isGreaterThan(before);
+    ENGINE.pay.answerResign(c, true);
+    assertThat(c.resign).isNull();
+    assertThat(c.employees).hasSize(1);
+    assertThat(ENGINE.pay.salary(c, e)).isEqualTo(kept);
+    assertThat(c.yearLines).anyMatch(l -> l.contains("사표를 찢었다"));
+    ENGINE.settleQuarter(c, new HashSeededRandom(1));
+    assertThat(c.employees).as("붙잡았으면 다음 분기에도 남는다").hasSize(1);
+
+    c.resign = new CompanyState.Resign();
+    c.resign.employeeId = e.id;
+    c.resign.reason = "FROZEN";
+    ENGINE.pay.answerResign(c, false);
+    assertThat(c.employees).isEmpty();
+    assertThat(c.yearLines).anyMatch(l -> l.contains("짐을 싸서 나갔다"));
+    assertThatThrownBy(() -> ENGINE.pay.answerResign(c, true))
+        .isInstanceOf(InvalidRequestException.class);
+  }
+
+  /** 답하지 않으면 ignore-quarters(2) 분기부터 분기마다 ignore-leave-percent(30%)로 사표를 들고 온다 (280·282번). */
+  @Test
+  void 연봉_협상에_답하지_않고_버티면_두_분기째부터_사표를_낸다() {
     int left = 0;
     int trials = 1000;
     for (int seed = 0; seed < trials; seed++) {
@@ -189,13 +226,17 @@ class PayEngineTest {
       c.raise = new CompanyState.Raise();
       c.raise.employeeId = e.id;
       ENGINE.settleQuarter(c, new HashSeededRandom(seed));
-      assertThat(c.employees).as("첫 분기에는 떠나지 않는다").hasSize(1);
+      assertThat(c.resign).as("첫 분기에는 사표를 내지 않는다").isNull();
       assertThat(c.raise.quarters).isEqualTo(1);
       CompanyState.Quarter q = ENGINE.settleQuarter(c, new HashSeededRandom(seed));
-      if (c.employees.isEmpty()) {
+      if (c.resign != null) {
         left++;
         assertThat(c.raise).isNull();
-        assertThat(q.lines).anyMatch(l -> l.contains("기다리다 지쳐 회사를 떠났다"));
+        assertThat(c.resign.reason).isEqualTo("IGNORED");
+        assertThat(q.lines).anyMatch(l -> l.contains("기다리다 지쳤습니다"));
+        CompanyState.Quarter next = ENGINE.settleQuarter(c, new HashSeededRandom(seed));
+        assertThat(c.employees).isEmpty();
+        assertThat(next.lines).anyMatch(l -> l.contains("기다리다 지쳐 회사를 떠났다"));
       }
     }
     assertThat(left).isBetween(trials * 25 / 100, trials * 36 / 100);

@@ -53,7 +53,18 @@ public record CompanyView(
     Macro macro,
     Quarter lastQuarter,
     Settlement lastSettlement,
-    Ending ending) {
+    Ending ending,
+    Resign resign) {
+
+  /**
+   * 연봉 때문에 사표를 들고 온 직원 (decisions.md 282번). 붙잡거나 보내지 않고 다음 분기를 넘기면 떠난다. 없으면 null.
+   *
+   * @param reason IGNORED(연봉 답을 기다리다 지쳤다)·FROZEN(동결에 실망했다)
+   * @param before 지금 연봉
+   * @param after 붙잡으면 오를 연봉
+   */
+  public record Resign(
+      int employeeId, String name, String reason, String line, long before, long after) {}
 
   /**
    * 엔딩 (decisions.md 276번): 랜드마크 타워에 올랐다. 엔딩을 본 회사는 멈추고 사장이 다음 회사를 차린다. 아직이면 null.

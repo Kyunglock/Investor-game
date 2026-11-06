@@ -17,6 +17,7 @@ import { OvertakeAlert } from './OvertakeAlert'
 import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName, titleOf } from './office'
 import { autoPlace, deskEffect, rankDesks, seatOne } from './placement'
 import { QuarterSheet } from './QuarterSheet'
+import { ResignAlert } from './ResignAlert'
 import { useRaisingStore } from './store'
 import { Ledger, PHASES, YearEndSheet } from './YearEnd'
 
@@ -45,11 +46,11 @@ export function CompanyScreen({ company }: { company: Company }) {
   const error = useRaisingStore((s) => s.error)
   const justSettled = useRaisingStore((s) => s.justSettled)
   const overtakeAlert = useRaisingStore((s) => s.overtakeAlert)
+  const moveAlert = useRaisingStore((s) => s.moveAlert)
   const justQuartered = useRaisingStore((s) => s.justQuartered)
   const autoPlay = useRaisingStore((s) => s.autoPlay)
   const { settle, restart, convene, conveneMacro } = useRaisingStore.getState()
   // 이사 장면은 결산 뒤 한 번만 본다. 해가 바뀌면 화면이 새로 그려져 다시 볼 수 있다.
-  const [moved, setMoved] = useState(false)
   // 종목 회의 창 (231번): 직원이 종목을 물어 왔으면 거시경제 회의 다음에 뜨고, 고른 뒤 그대로 결산한다 (267번).
   const [investOpen, setInvestOpen] = useState(false)
   // 거시경제 회의 창 (266번): 결산을 누르면 먼저 뜬다.
@@ -113,22 +114,33 @@ export function CompanyScreen({ company }: { company: Company }) {
         {!ended && focus && <SeatPicker company={company} focus={focus} onFocus={setFocus} />}
         <PixelToggle />
 
-        {company.lastSettlement && !moved && (
-          <MoveScene
-            before={company.lastSettlement.gradeBefore}
-            after={company.lastSettlement.gradeAfter}
-            year={company.lastSettlement.year}
-            overtook={company.lastSettlement.overtook}
-            onDone={() => setMoved(true)}
-          />
-        )}
-
         <CompanyTabs company={company} />
         <AutoCountdown />
 
         {justSettled && <YearEndSheet company={company} onClose={closeYearEnd} />}
 
-        {company.ending && !justSettled && !overtakeAlert && (
+        {company.lastSettlement && moveAlert && !justSettled && !overtakeAlert && (
+          // 건물이 바뀌면 라이벌 알림 뒤에 알림 창으로 뜬다 (281번): 오르면 박치기, 줄면 이삿짐 트럭.
+          <MoveScene
+            before={company.lastSettlement.gradeBefore}
+            after={company.lastSettlement.gradeAfter}
+            year={company.lastSettlement.year}
+            overtook={company.lastSettlement.overtook}
+            onDone={() => useRaisingStore.setState({ moveAlert: false })}
+          />
+        )}
+
+        {company.resign &&
+          !company.ending &&
+          !justSettled &&
+          !justQuartered &&
+          !overtakeAlert &&
+          !moveAlert && (
+            // 연봉 때문에 사표를 들고 왔다 (282번): 다른 창을 다 닫은 뒤 마지막 기회로 뜬다.
+            <ResignAlert resign={company.resign} />
+          )}
+
+        {company.ending && !justSettled && !overtakeAlert && !moveAlert && (
           // 랜드마크 타워 엔딩 (276번): 결산서와 라이벌 알림 뒤에 뜨고, 다음 회사를 차린다.
           <EndingScreen company={company} />
         )}

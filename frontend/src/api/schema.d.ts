@@ -174,6 +174,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/resign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 연봉 때문에 사표를 들고 온 직원에게 답한다 (decisions.md 282번)
+         * @description keep이 참이면 연봉을 두 번 올려 준 만큼(약 +21%) 올려 주고 붙잡는다(사기 +1). 거짓이면 지금 떠난다.
+         *     답하지 않고 다음 분기를 넘기면 떠난다. 사표가 없으면 400.
+         */
+        post: operations["answerResign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/invest/open": {
         parameters: {
             query?: never;
@@ -761,6 +782,27 @@ export interface components {
                 /** @description 이 결산으로 랜드마크 타워에 올라 엔딩을 봤다 (decisions.md 276번) */
                 finished?: boolean;
             } | null;
+            /** @description 연봉 때문에 사표를 들고 온 직원 (decisions.md 282번). 붙잡거나 보내지 않고 다음 분기를 넘기면 떠난다. 없으면 null */
+            resign?: {
+                employeeId: number;
+                name: string;
+                /**
+                 * @description IGNORED: 연봉 답을 기다리다 지쳤다, FROZEN: 동결에 실망했다
+                 * @enum {string}
+                 */
+                reason: "IGNORED" | "FROZEN";
+                line: string;
+                /**
+                 * Format: int64
+                 * @description 지금 연봉
+                 */
+                before: number;
+                /**
+                 * Format: int64
+                 * @description 붙잡으면 오를 연봉
+                 */
+                after: number;
+            } | null;
             /** @description 엔딩 (decisions.md 276번). 랜드마크 타워에 오르면 회사가 멈추고 사장이 다음 회사를 차린다. 아직이면 null */
             ending?: {
                 /** @description 엔딩을 본 해 */
@@ -1188,6 +1230,35 @@ export interface operations {
         };
         responses: {
             /** @description 고른 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    answerResign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    keep: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description 답한 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

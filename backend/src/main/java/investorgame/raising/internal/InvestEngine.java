@@ -540,9 +540,12 @@ class InvestEngine {
     c.invest.remarks.forEach(r -> reads.put(r.employeeId, r.read));
     RaisingContent.Invest texts = content.raising().company().invest();
     // 한 분기의 회의라 판돈도 한 분기 몫이다 (decisions.md 268번): 한 해 몫을 걸면 분기마다 열리는 회의가 한 해 경제를 뒤집는다.
+    // 회의 손익 배율 (decisions.md 281번): 분기 몫에 meeting-stake-percent를 곱해 회의 한 번의 무게를 키운다.
     long stake =
         company.stakeOf(c, traders.size())
             * (big ? properties.invest().bigStakePercent() : PERCENT)
+            / PERCENT
+            * properties.invest().meetingStakePercent()
             / PERCENT
             / CompanyEngine.QUARTERS;
     int stubborn = big ? properties.invest().bigStubbornPercent() : PERCENT;

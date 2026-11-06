@@ -175,6 +175,16 @@ class CompanyController {
 
   record TargetRequest(@NotBlank String difficulty) {}
 
+  /** 사표를 들고 온 직원에게 답한다: 연봉을 올려 붙잡거나 보낸다 (decisions.md 282번). */
+  @PostMapping("/resign")
+  CompanyView answerResign(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody ResignRequest request) {
+    return companies.answerResign(cookies.requireSession(token), request.keep());
+  }
+
+  record ResignRequest(@NotNull Boolean keep) {}
+
   /** 그 자리의 팀장을 정한다 (decisions.md 269번). */
   @PostMapping("/leader")
   CompanyView leader(
