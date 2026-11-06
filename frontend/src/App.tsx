@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useCompanyAutoPlay } from './features/raising/autoPlay'
 import { CompanyScreen } from './features/raising/CompanyScreen'
 import { CompanyStart } from './features/raising/CompanyStart'
 import { useRaisingStore } from './features/raising/store'
@@ -14,6 +15,8 @@ function Raising() {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   const { load, open } = useRaisingStore.getState()
+  // 자동 진행은 회사 화면이 다시 그려져도 이어지도록 여기서 돈다 (245번).
+  useCompanyAutoPlay()
 
   useEffect(() => {
     void load()

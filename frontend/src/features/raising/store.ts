@@ -12,6 +12,8 @@ interface RaisingState {
   error: string | null
   /** 방금 결산했다. 회사 화면이 결과로 스크롤하고 지운다. */
   justSettled: boolean
+  /** 자동 진행을 켰다 (245번). 새로 고치면 꺼진다: 모르는 사이에 돈을 쓰지 않게. */
+  autoPlay: boolean
   /** 회사 화면에서 고른 탭. null이면 화면이 정한다 (231번). */
   tab: 'meeting' | 'market' | 'staff' | 'settlement' | null
   load: () => Promise<void>
@@ -55,6 +57,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     busy: false,
     error: null,
     justSettled: false,
+    autoPlay: false,
     tab: null,
 
     load: async () => {

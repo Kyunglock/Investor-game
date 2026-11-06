@@ -267,3 +267,28 @@ test('결산 버튼을 빠르게 두 번 눌러도 한 해만 넘어간다 (#305
   await expect(page.getByText(/1호 회사 · 2년 차/)).toBeVisible()
   expect(settles).toBeGreaterThanOrEqual(1)
 })
+
+test('자동 진행을 켜면 공채·배치·투자 회의·결산을 해마다 하고, 멈추면 선다 (245번)', async ({
+  page,
+}) => {
+  test.setTimeout(120_000)
+  await openCompany(page)
+  await page.getByRole('button', { name: '⟳ 자동 진행' }).click()
+  await expect(page.getByTestId('auto-status')).toBeVisible()
+  // 사람이 하던 결산 버튼은 자동 진행 동안 잠긴다.
+  await expect(page.getByRole('button', { name: '1년 차 결산 보기' })).toBeDisabled()
+  // 빈 자리 둘에 사람을 뽑아 앉히고, 회의를 직원 다수결로 정하고, 결산서를 보여 준 뒤 다음 해로 간다.
+  await expect(page.getByTestId('office-seat')).toHaveCount(2, { timeout: 20_000 })
+  await expect(page.getByRole('dialog', { name: '연말 결산서' })).toBeVisible({ timeout: 20_000 })
+  await expect(page.getByText(/1호 회사 · 3년 차/)).toBeVisible({ timeout: 40_000 })
+  await page.getByRole('button', { name: '■ 자동 멈춤' }).click()
+  await expect(page.getByTestId('auto-status')).toHaveCount(0)
+  // 멈추면 결산서를 닫은 뒤 그 해에 머문다.
+  const sheet = page.getByRole('dialog', { name: '연말 결산서' })
+  if (await sheet.isVisible()) {
+    await sheet.getByRole('button', { name: '확인' }).click()
+  }
+  const year = await page.getByText(/1호 회사 · \d+년 차/).innerText()
+  await page.waitForTimeout(3_000)
+  await expect(page.getByText(/1호 회사 · \d+년 차/)).toHaveText(year)
+})
