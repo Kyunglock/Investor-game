@@ -3,6 +3,7 @@ import {
   clashMs,
   type DebateLine,
   debateTimes,
+  doneAt,
   gaugeDone,
   gaugeDuring,
   roomShare,
@@ -53,14 +54,15 @@ describe('"너희가 알아서 해" 회의실 (decisions.md 286번)', () => {
     expect(roomShare(0, 0)).toBe(50)
   })
 
-  it('의견을 낸 사람이 없는 쪽에는 토론에 끌려 나온 사람이 앉는다', () => {
+  it('원탁에는 토론에서 말한 사람(팀장)만 앉고, 의견을 낸 사람이 없는 쪽에는 끌려 나온 사람이 앉는다 (295번)', () => {
     const debate: DebateLine[] = [
       { name: '김매수', side: 'BUY', text: '…', last: false },
       { name: '옆자리 신입', side: 'SELL', text: '…', last: false },
       { name: '옆자리 신입', side: 'SELL', text: '…', last: true },
     ]
-    expect(sidePeople(['김매수', '이매수'], 'BUY', debate)).toEqual(['김매수', '이매수'])
+    expect(sidePeople(['김매수', '이매수'], 'BUY', debate)).toEqual(['김매수'])
     expect(sidePeople([], 'SELL', debate)).toEqual(['옆자리 신입'])
+    expect(sidePeople(['박매도'], 'SELL', [])).toEqual(['박매도'])
     expect(sidePeople([], 'SELL', [])).toEqual([])
   })
 })
@@ -86,12 +88,26 @@ describe('"너희가 알아서 해" 토론 (decisions.md 285번)', () => {
   it('말이 한 줄씩 차례로 올라오고, 결판은 말이 다 오간 뒤에 난다', () => {
     const times = debateTimes(debate)
     expect(times.slice(0, 6)).toEqual([0, 1000, 2000, 3000, 4000, 5000])
-    // 이긴 쪽 결판은 맞붙기가 끝날 때, 진 쪽 투덜거림은 그 뒤에.
+    // 이긴 쪽 결판은 토론이 끝날 때, 진 쪽 투덜거림은 그 뒤에.
     expect(times[6]).toBe(clashMs(debate))
     expect(times[7]).toBeGreaterThan(times[6])
     expect(clashMs(debate)).toBeGreaterThan(times[5])
     // 회의 연출은 투덜거림까지 다 본 뒤에 시작한다.
     expect(teamClashMs(debate)).toBeGreaterThan(times[7])
+    expect(doneAt(debate)).toBe(times[7])
+  })
+
+  it('결판 세 박자(표결·선언·승복)는 한 박자씩 띄어 뜨고, 승복이 뜰 때 끝난다 (295번)', () => {
+    const three = [
+      ...debate.slice(0, 6),
+      { ...talk('SELL', true), kind: 'TALLY' as const },
+      { ...talk('SELL', true), kind: 'WIN' as const },
+      { ...talk('BUY', true), kind: 'LOSE' as const },
+    ]
+    const times = debateTimes(three)
+    expect(times.slice(6)).toEqual([6000, 6800, 7600])
+    expect(doneAt(three)).toBe(7600)
+    expect(teamClashMs(three)).toBeGreaterThan(doneAt(three))
   })
 
   it('토론이 없으면(옛 회의) 짧게 맞붙기만 한다', () => {

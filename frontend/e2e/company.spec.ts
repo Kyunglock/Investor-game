@@ -482,10 +482,13 @@ test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 �
   await expect(clash).toHaveAttribute('data-phase', 'clash')
   await expect(clash).toHaveAttribute('data-phase', 'done', { timeout: 15_000 })
   await expect(clash.getByTestId('clash-result')).toHaveText(/팀 결정: (매수|매도)!/)
-  await expect(lines).toHaveCount(8)
+  // 결판 세 박자 (295번): 사회가 표결을 부르고, 이긴 쪽이 선언하고, 진 쪽이 물러난다.
+  await expect(lines).toHaveCount(9)
   const result = await clash.getByTestId('clash-result').innerText()
-  // 결판은 이긴 쪽이 낸다.
-  await expect(lines.nth(6)).toHaveAttribute('data-side', result.includes('매수') ? 'BUY' : 'SELL')
+  await expect(lines.nth(6)).toHaveAttribute('data-kind', 'TALLY')
+  await expect(lines.nth(7)).toHaveAttribute('data-kind', 'WIN')
+  await expect(lines.nth(7)).toHaveAttribute('data-side', result.includes('매수') ? 'BUY' : 'SELL')
+  await expect(lines.nth(8)).toHaveAttribute('data-kind', 'LOSE')
   await declineProposal(meeting)
   await expect(meeting.getByTestId('invest-choice')).toHaveText(
     result.includes('매수') ? '산다' : '판다',

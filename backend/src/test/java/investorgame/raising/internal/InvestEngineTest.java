@@ -462,16 +462,23 @@ class InvestEngineTest {
       ENGINE.invest.convene(c, new HashSeededRandom(seed));
       ENGINE.invest.decide(c, InvestEngine.TEAM, new HashSeededRandom(seed));
       List<CompanyState.DebateLine> debate = c.invest.debate;
-      assertThat(debate).hasSize(8);
+      assertThat(debate).hasSize(9);
       for (int i = 0; i < 6; i++) {
         assertThat(debate.get(i).side).isEqualTo(i % 2 == 0 ? "BUY" : "SELL");
         assertThat(debate.get(i).last).isFalse();
+        assertThat(debate.get(i).kind).isEqualTo(InvestEngine.TALK);
         assertThat(debate.get(i).text).doesNotContain("{").doesNotContain("‘");
       }
+      // 결판 세 박자 (295번): 사회가 무게를 읽으며 표결을 부르고, 이긴 쪽이 선언하고, 진 쪽이 토를 달고 물러난다.
+      assertThat(debate.get(6).kind).isEqualTo(InvestEngine.TALLY);
       assertThat(debate.get(6).last).isTrue();
-      assertThat(debate.get(6).side).isEqualTo(c.invest.choice);
-      assertThat(debate.get(7).last).isTrue();
-      assertThat(debate.get(7).side).isNotEqualTo(c.invest.choice);
+      assertThat(debate.get(6).text)
+          .contains("매수 " + c.invest.teamBuy)
+          .contains("매도 " + c.invest.teamSell);
+      assertThat(debate.get(7).kind).isEqualTo(InvestEngine.WIN);
+      assertThat(debate.get(7).side).isEqualTo(c.invest.choice);
+      assertThat(debate.get(8).kind).isEqualTo(InvestEngine.LOSE);
+      assertThat(debate.get(8).side).isNotEqualTo(c.invest.choice);
       for (CompanyState.Remark r : c.invest.remarks) {
         if ("UP".equals(r.read)) {
           assertThat(debate)
@@ -496,6 +503,37 @@ class InvestEngineTest {
     ENGINE.invest.convene(boss, new HashSeededRandom(1));
     ENGINE.invest.decide(boss, InvestEngine.BUY, new HashSeededRandom(1));
     assertThat(boss.invest.debate).isEmpty();
+  }
+
+  /** 토론은 팀장만 한다 (decisions.md 295번): 같은 자리에 셋이면 팀장만 말하고, 팀장과 다른 의견 쪽은 그쪽 안목 1위 하나만 말한다. */
+  @Test
+  void 토론은_팀장만_한다() {
+    int leaderOnly = 0;
+    for (int seed = 0; seed < 40; seed++) {
+      CompanyState c = opened(new HashSeededRandom(seed), 300_000_000L);
+      ENGINE.hire(c, stats(80, 50, 50, 50));
+      ENGINE.hire(c, stats(30, 50, 50, 50));
+      ENGINE.hire(c, stats(30, 50, 50, 50));
+      ENGINE.place(c, Map.of(1, "day", 2, "day", 3, "day"));
+      c.phase = "normal";
+      ENGINE.invest.convene(c, new HashSeededRandom(seed));
+      ENGINE.invest.decide(c, InvestEngine.TEAM, new HashSeededRandom(seed));
+      String leader = ENGINE.teams.leaderOf(c, "day").orElseThrow().name;
+      List<CompanyState.DebateLine> debate = c.invest.debate;
+      String leaderSide =
+          debate.stream()
+              .filter(d -> d.name.equals(leader))
+              .map(d -> d.side)
+              .findFirst()
+              .orElse(null);
+      if (leaderSide != null) {
+        leaderOnly++;
+        assertThat(debate.stream().filter(d -> d.side.equals(leaderSide)).map(d -> d.name))
+            .containsOnly(leader);
+      }
+      assertThat(debate.stream().map(d -> d.name).distinct()).hasSizeLessThanOrEqualTo(2);
+    }
+    assertThat(leaderOnly).as("팀장이 의견을 낸 판이 있다").isPositive();
   }
 
   /** 맡기면 직원들이 정한 것이라 막판 뒤집기가 없다 (decisions.md 291번). */

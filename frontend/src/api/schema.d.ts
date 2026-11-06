@@ -671,8 +671,13 @@ export interface components {
                         /** @enum {string} */
                         side: "BUY" | "SELL";
                         text: string;
-                        /** @description 결판을 내는 마지막 두 줄(이긴 쪽·진 쪽) */
+                        /** @description 결판의 세 박자(표결·선언·승복)면 참 (295번) */
                         last: boolean;
+                        /**
+                         * @description TALK: 토론, TALLY: 사회가 무게를 읽으며 표결을 부른다, WIN: 이긴 쪽 선언, LOSE: 진 쪽이 토를 달고 물러난다 (295번)
+                         * @enum {string}
+                         */
+                        kind: "TALK" | "TALLY" | "WIN" | "LOSE";
                     }[];
                     /**
                      * Format: int64

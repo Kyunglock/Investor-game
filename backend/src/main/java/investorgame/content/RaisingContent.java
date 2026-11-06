@@ -178,12 +178,13 @@ public record RaisingContent(
       Map<String, String> reveal) {}
 
   /**
-   * "너희가 알아서 해"의 토론 (decisions.md 285번). lines: 매수파(BUY)·매도파(SELL)가 번갈아 하는 말({point}: 제 쪽 요지,
-   * {against}: 상대 쪽 요지, {stock}). win: 이긴 쪽이 결판내는 말. lose: 진 쪽이 투덜대는 말. bystanders: 한쪽이 비었을 때 끌려
-   * 나오는 사람.
+   * "너희가 알아서 해"의 토론 (decisions.md 285·295번). lines: 매수파(BUY)·매도파(SELL)가 번갈아 하는 말({point}: 제 쪽 요지,
+   * {against}: 상대 쪽 요지, {stock}). tally: 사회(안목이 가장 높은 팀장)가 표결을 부르는 말({buy}·{sell} 무게). win: 이긴 쪽이
+   * 선언하는 말. lose: 진 쪽이 토를 달고 물러나는 말. bystanders: 한쪽이 비었을 때 끌려 나오는 사람.
    */
   public record Debate(
       Map<String, List<String>> lines,
+      List<String> tally,
       Map<String, List<String>> win,
       List<String> lose,
       List<String> bystanders) {}
