@@ -103,6 +103,17 @@ raising:
       transfer-percent: 50
       settle-years: 3
       settled-flip-percent: 80
+      # 연봉과 사기 (decisions.md 270번): 한 해 연봉은 그 직원 계약금의 자본 비율 몫 × salary-percent(분기마다 4분의 1). 상가(D) 아래 작은 회사의
+      # 직원은 지분으로 받아 연봉이 없다(초반 경제를 흔들지 않게). 둘째 해부터 해마다 raise-percent 확률로 한 사람이 연봉을 올려 달라고 한다
+      # (올려 주면 +10%·사기 +1 / 동결하면 사기 −2). 사기 한 칸마다 손 뒤집힘 ±moraleFlipPercent%. 꼭대기(XX, 12명)면 연봉이 한 해 자본의 약 10%
+      pay:
+        salary-percent: 10
+        salary-from-grade: D
+        raise-step-percent: 10
+        raise-from-year: 2
+        raise-percent: 50
+        raise-every-years: 2
+        morale-flip-percent: 15
     # 실전 경험과 큰 손실 (2.3·6.4절): 한 해에 판돈의 30% 이상 잃으면 한 단계 하락(능력치는 한 띠 = 10점),
     # 폭락장을 손실 없이 버티면 실전 경험 +1. SSS에서 X까지 1, XX까지 2 … 단계마다 1씩 더 든다
     experience:

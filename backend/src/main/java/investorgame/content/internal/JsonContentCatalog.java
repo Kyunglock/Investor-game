@@ -327,7 +327,14 @@ class JsonContentCatalog implements ContentCatalog {
             && company.people().kept() != null
             && company.people().left() != null
             && company.people().ignored() != null
-            && company.people().settled() != null,
+            && company.people().settled() != null
+            && company.people().raiseAsk() != null
+            && company.people().raised() != null
+            && company.people().frozen() != null
+            && company.people().raiseIgnored() != null
+            && company.people().meetingIgnored() != null
+            && company.people().heard() != null
+            && company.people().rested() != null,
         "사람 이야기 문구가 없다");
     require(
         company.history() != null

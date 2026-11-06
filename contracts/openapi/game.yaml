@@ -155,6 +155,31 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/raise:
+    post:
+      operationId: answerRaise
+      summary: 올해 연봉 협상에 답한다 (decisions.md 270번)
+      description: |
+        accept가 참이면 연봉을 올려 준다(사기 +1), 거짓이면 동결한다(사기 −2). 답하지 않은 채 연말이 오면 흐지부지되고 사기가 조금 내린다.
+        협상이 없으면 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accept]
+              properties:
+                accept: { type: boolean }
+      responses:
+        '200':
+          description: 답한 뒤의 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/invest/open:
     post:
       operationId: conveneInvestMeeting
@@ -352,7 +377,7 @@ components:
           type: array
           items:
             type: object
-            required: [id, name, overallGrade, grades, experience, effects, deskYears, settled, leader]
+            required: [id, name, overallGrade, grades, experience, effects, deskYears, settled, leader, salary, morale]
             properties:
               id: { type: integer }
               name: { type: string }
@@ -372,6 +397,8 @@ components:
               deskYears: { type: integer, description: 지금 자리에서 결산을 맞은 해 수 (decisions.md 262번) }
               settled: { type: boolean, description: 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다 }
               leader: { type: boolean, description: 앉은 자리의 팀장이다 (decisions.md 269번) }
+              salary: { type: integer, format: int64, description: 한 해 연봉. 상가 아래 작은 회사면 0 (decisions.md 270번) }
+              morale: { type: integer, minimum: -2, maximum: 2, description: 사기. 낮으면 손이 더 뒤집힌다 (270번) }
               role: { type: [string, 'null'], description: 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번) }
         desks:
           type: array
@@ -413,6 +440,18 @@ components:
                         name: { type: string }
                         rival: { type: string }
                         transferFee: { type: integer, format: int64, description: 보내면 받는 이적료 }
+                        line: { type: string }
+                    - type: 'null'
+                raise:
+                  description: 올해의 연봉 협상 (decisions.md 270번). 없으면 null
+                  oneOf:
+                    - type: object
+                      required: [employeeId, name, before, after, line]
+                      properties:
+                        employeeId: { type: integer }
+                        name: { type: string }
+                        before: { type: integer, format: int64, description: 지금 연봉 }
+                        after: { type: integer, format: int64, description: 올려 주면 연봉 }
                         line: { type: string }
                     - type: 'null'
             - type: 'null'
@@ -653,7 +692,7 @@ components:
         lastSettlement:
           oneOf:
             - type: object
-              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, quarters, gradeBefore, gradeAfter, overtook, achieved, results, lines, reports]
+              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, salary, quarters, gradeBefore, gradeAfter, overtook, achieved, results, lines, reports]
               properties:
                 year: { type: integer }
                 phase: { type: string, enum: [boom, normal, crash] }
@@ -661,7 +700,8 @@ components:
                 capitalBefore: { type: integer, format: int64, description: 연초 회의 때의 자본 (decisions.md 251번) }
                 capitalAfter: { type: integer, format: int64 }
                 fee: { type: integer, format: int64, description: 수수료 매출 }
-                hiring: { type: integer, format: int64, description: 그해 인사 비용(계약금·새로 받기·붙잡는 값 − 받은 이적료, 음수일 수 있다). 연초 자본 + 회의 + 직원들 + 수수료 − 인사 비용 = 연말 자본 (251·262번) }
+                hiring: { type: integer, format: int64, description: 그해 인사 비용(계약금·새로 받기·붙잡는 값 − 받은 이적료, 음수일 수 있다). 연초 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 = 연말 자본 (251·262번) }
+                salary: { type: integer, format: int64, description: 그해 나간 연봉의 합(인건비, decisions.md 270번) }
                 invest:
                   description: 그해 투자 회의(기사 제목과 손익, 이미 자본에 들어갔다). 회의를 안 했거나 옛 결산이면 null (decisions.md 240번)
                   oneOf:
@@ -706,7 +746,7 @@ components:
     Quarter:
       type: object
       description: 분기 하나의 실적 (decisions.md 268번)
-      required: [year, quarter, capitalBefore, capitalAfter, fee, staff, hiring, crash, lines, reports]
+      required: [year, quarter, capitalBefore, capitalAfter, fee, staff, hiring, salary, crash, lines, reports]
       properties:
         year: { type: integer }
         quarter: { type: integer }
@@ -714,7 +754,8 @@ components:
         capitalAfter: { type: integer, format: int64 }
         fee: { type: integer, format: int64, description: 수수료 매출(한 해 몫의 4분의 1) }
         staff: { type: integer, format: int64, description: 직원들이 이 분기에 굴린 몫 }
-        hiring: { type: integer, format: int64, description: 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 = 끝 자본 }
+        hiring: { type: integer, format: int64, description: 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 = 끝 자본 }
+        salary: { type: integer, format: int64, description: 이 분기에 나간 연봉(인건비, decisions.md 270번) }
         invest:
           description: 이 분기 종목 회의(기사 제목과 손익). 안 열렸으면 null
           oneOf:

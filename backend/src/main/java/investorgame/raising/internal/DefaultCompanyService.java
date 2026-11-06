@@ -154,6 +154,15 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
+  public CompanyView answerRaise(UUID sessionId, boolean accept) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.pay.answer(row.state(), accept);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
   public CompanyView leader(UUID sessionId, String desk, int employeeId) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.teams.appoint(row.state(), desk, employeeId);
@@ -248,7 +257,9 @@ class DefaultCompanyService implements CompanyService {
                         e.desk != null && e.desk.equals(e.lastDesk) ? e.deskYears : 0,
                         engine.settled(e),
                         engine.macro.roleOf(e),
-                        engine.teams.leads(c, e)))
+                        engine.teams.leads(c, e),
+                        engine.pay.salary(c, e),
+                        e.morale))
             .toList();
     List<String> hot = engine.hotDesks(c);
     List<CompanyView.Desk> desks =
@@ -295,7 +306,8 @@ class DefaultCompanyService implements CompanyService {
                 engine.wantedLine(c),
                 engine.hotLine(c),
                 engine.eraEndingLine(c),
-                poachView(c));
+                poachView(c),
+                raiseView(c));
     CompanyState.Settlement last = c.settlements.isEmpty() ? null : c.settlements.getLast();
     return new CompanyView(
         row.id(),
@@ -462,6 +474,20 @@ class DefaultCompanyService implements CompanyService {
         outcome);
   }
 
+  private CompanyView.Raise raiseView(CompanyState c) {
+    CompanyState.Raise r = c.raise;
+    if (r == null) {
+      return null;
+    }
+    String name =
+        c.employees.stream()
+            .filter(e -> e.id == r.employeeId)
+            .findFirst()
+            .map(e -> e.name)
+            .orElse("");
+    return new CompanyView.Raise(r.employeeId, name, r.before, r.after, engine.pay.raiseLine(c));
+  }
+
   private CompanyView.Poach poachView(CompanyState c) {
     CompanyState.Poach p = c.poach;
     if (p == null) {
@@ -547,6 +573,7 @@ class DefaultCompanyService implements CompanyService {
         q.fee,
         q.staff,
         q.hiring,
+        q.salary,
         q.investTotal == null
             ? null
             : new CompanyView.SettlementInvest(q.investTitle, q.investTotal),
@@ -566,6 +593,7 @@ class DefaultCompanyService implements CompanyService {
         s.capitalAfter,
         s.fee,
         s.hiring,
+        s.salary,
         s.investTotal == null
             ? null
             : new CompanyView.SettlementInvest(s.investTitle, s.investTotal),

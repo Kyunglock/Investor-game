@@ -132,6 +132,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/raise": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 올해 연봉 협상에 답한다 (decisions.md 270번)
+         * @description accept가 참이면 연봉을 올려 준다(사기 +1), 거짓이면 동결한다(사기 −2). 답하지 않은 채 연말이 오면 흐지부지되고 사기가 조금 내린다.
+         *     협상이 없으면 400.
+         */
+        post: operations["answerRaise"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/invest/open": {
         parameters: {
             query?: never;
@@ -344,6 +365,13 @@ export interface components {
                 settled: boolean;
                 /** @description 앉은 자리의 팀장이다 (decisions.md 269번) */
                 leader: boolean;
+                /**
+                 * Format: int64
+                 * @description 한 해 연봉. 상가 아래 작은 회사면 0 (decisions.md 270번)
+                 */
+                salary: number;
+                /** @description 사기. 낮으면 손이 더 뒤집힌다 (270번) */
+                morale: number;
                 /** @description 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번) */
                 role?: string | null;
             }[];
@@ -389,6 +417,22 @@ export interface components {
                      * @description 보내면 받는 이적료
                      */
                     transferFee: number;
+                    line: string;
+                } | null;
+                /** @description 올해의 연봉 협상 (decisions.md 270번). 없으면 null */
+                raise?: {
+                    employeeId: number;
+                    name: string;
+                    /**
+                     * Format: int64
+                     * @description 지금 연봉
+                     */
+                    before: number;
+                    /**
+                     * Format: int64
+                     * @description 올려 주면 연봉
+                     */
+                    after: number;
                     line: string;
                 } | null;
             } | null;
@@ -625,6 +669,11 @@ export interface components {
                  * @description 그해 인사 비용(계약금·새로 받기·붙잡는 값 − 받은 이적료
                  */
                 hiring: number;
+                /**
+                 * Format: int64
+                 * @description 그해 나간 연봉의 합(인건비
+                 */
+                salary: number;
                 /** @description 그해 투자 회의(기사 제목과 손익, 이미 자본에 들어갔다). 회의를 안 했거나 옛 결산이면 null (decisions.md 240번) */
                 invest?: {
                     title: string;
@@ -676,9 +725,14 @@ export interface components {
             staff: number;
             /**
              * Format: int64
-             * @description 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 = 끝 자본
+             * @description 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 = 끝 자본
              */
             hiring: number;
+            /**
+             * Format: int64
+             * @description 이 분기에 나간 연봉(인건비
+             */
+            salary: number;
             /** @description 이 분기 종목 회의(기사 제목과 손익). 안 열렸으면 null */
             invest?: {
                 title: string;
@@ -988,6 +1042,35 @@ export interface operations {
             content: {
                 "application/json": {
                     keep: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description 답한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    answerRaise: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    accept: boolean;
                 };
             };
         };

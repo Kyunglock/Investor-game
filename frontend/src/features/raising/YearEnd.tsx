@@ -49,7 +49,7 @@ export function Ledger({
     return { className: 'animate-reveal', style }
   }
   let n = 0
-  const num = () => '①②③④'[n++]
+  const num = () => '①②③④⑤'[n++]
   const before = officeName(s.gradeBefore)
   const after = officeName(s.gradeAfter)
   const rows = [
@@ -137,6 +137,25 @@ export function Ledger({
         </li>
       )
     })(),
+    // 연봉 (decisions.md 270번): 상가부터 직원들에게 나간다.
+    s.salary !== 0 &&
+      (() => {
+        const r = reveal()
+        return (
+          <li
+            key="salary"
+            className={`py-2 ${r.className}`}
+            style={r.style}
+            data-testid="ledger-salary"
+          >
+            <Row
+              label={`${num()} 인건비`}
+              note="직원들의 연봉, 분기마다 나갔다"
+              amount={-s.salary}
+            />
+          </li>
+        )
+      })(),
     // 그해 공채에 쓴 돈 (decisions.md 251번): 연초 자본에서 계약금이 소리 없이 빠져 보이지 않게.
     s.hiring !== 0 &&
       (() => {
@@ -254,6 +273,7 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
   const done =
     (s.invest ? STEP_MS : 0) +
     (s.hiring !== 0 ? STEP_MS : 0) +
+    (s.salary !== 0 ? STEP_MS : 0) +
     ROW_MS * (1 + s.results.length) +
     STEP_MS * 2
   return (

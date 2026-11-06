@@ -54,6 +54,7 @@ export function QuarterSheet({ quarter: q, onClose }: { quarter: Quarter; onClos
           )}
           <li>수수료 {pnlLabel(q.fee)}</li>
           {q.hiring !== 0 && <li>인사 비용 {pnlLabel(-q.hiring)}</li>}
+          {q.salary !== 0 && <li>인건비 {pnlLabel(-q.salary)}</li>}
         </ul>
         {q.lines.length > 0 && (
           <ul className="mt-2 grid gap-0.5 text-[13px]" data-testid="quarter-lines">

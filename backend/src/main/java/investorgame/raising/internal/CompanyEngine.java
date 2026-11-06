@@ -78,6 +78,7 @@ class CompanyEngine {
     this.invest = new InvestEngine(this, content, behavior, properties);
     this.macro = new MacroEngine(this, invest, content, behavior, properties);
     this.teams = new TeamEngine(this, content);
+    this.pay = new PayEngine(this, content, properties);
     this.history = new CompanyHistory(content);
   }
 
@@ -89,6 +90,9 @@ class CompanyEngine {
 
   /** 팀장과 팀장 보고 (decisions.md 269번). */
   final TeamEngine teams;
+
+  /** 연봉과 사기 (decisions.md 270번). */
+  final PayEngine pay;
 
   static final String HR_DESK = "hr";
 
@@ -642,6 +646,17 @@ class CompanyEngine {
     return Math.max(fixed, (long) (capital * (bp / (double) BP)));
   }
 
+  /** 계약금의 자본 비율 몫(정해진 값을 뺀 것). 연봉이 쓴다 (decisions.md 270번): 작은 회사에는 가볍고 큰 회사에는 무겁다. */
+  long feeShare(long capital, Map<String, Integer> stats, int rank) {
+    CompanyProperties.Market market = properties.market();
+    int at = Math.min(market.fees().size() - 1, LADDER.indexOf(overallGrade(stats)));
+    int bp =
+        rank > 0
+            ? market.veteranFeeBp() + (rank - 1) * market.veteranFeeStepBp()
+            : market.feeBp().get(Math.min(market.feeBp().size() - 1, at));
+    return (long) (capital * (bp / (double) BP));
+  }
+
   /** 지원자를 새로 받는 값: 정해진 값과 자본 × 비율 가운데 큰 쪽에, 올해 새로 받은 횟수 + 1을 곱한다 (258번). */
   long refreshCost(CompanyState company) {
     CompanyProperties.Market market = properties.market();
@@ -875,6 +890,7 @@ class CompanyEngine {
     deal(company, random);
     company.yearLines.clear();
     company.poach = poachOf(company, random);
+    company.raise = pay.raiseOf(company, random);
     startQuarter(company, random);
   }
 
@@ -1018,6 +1034,9 @@ class CompanyEngine {
       // 같은 자리 세 해째부터 손에 익는다 (262번).
       flipBp = flipBp * properties.people().settledFlipPercent() / PERCENT;
     }
+    // 사기 (270번): 낮으면 손이 더 뒤집히고 높으면 덜 뒤집힌다.
+    flipBp = flipBp * pay.moralePercent(employee) / PERCENT;
+    swayBp = swayBp * pay.moralePercent(employee) / PERCENT;
     boolean led =
         company.employees.stream()
             .anyMatch(e -> e != employee && employee.desk.equals(e.desk) && e.rank >= RANK_LEADER);
@@ -1185,9 +1204,12 @@ class CompanyEngine {
     long fee = (long) (stakeBase(company) * properties.feeBp() / (double) BP / QUARTERS);
     q.fee = fee;
     q.staff = totalPnl;
+    // 연봉 (270번): 분기마다 한 해 몫의 4분의 1이 나간다. 쉬는 사람도 받는다.
+    q.salary = pay.quarterSalary(company);
+    pay.markWorked(company);
     // 팀장 보고 (269번): 분기를 넘기면 자리마다 팀장이 보고한다.
     q.reports.addAll(teams.reports(company, q.results, "이번 분기", company.turn()));
-    company.capital = Math.max(0, company.capital + fee + totalPnl);
+    company.capital = Math.max(0, company.capital + fee + totalPnl - q.salary);
     q.capitalAfter = company.capital;
     if (company.invest != null && company.invest.choice != null) {
       q.investTitle = company.invest.title;
@@ -1200,6 +1222,7 @@ class CompanyEngine {
               + (q.investTotal == null ? 0 : q.investTotal)
               + q.staff
               + q.fee
+              - q.salary
               - q.capitalAfter;
     }
     RaisingContent.Quarters texts = content.raising().company().quarters();
@@ -1308,6 +1331,8 @@ class CompanyEngine {
                           content.raising().company().flipLines().get(stat), Map.of("name", y.name))
                       + (count > 1 ? " (" + count + "번)" : "")));
     }
+    settlement.salary = company.quarters.stream().mapToLong(q -> q.salary).sum();
+    pay.yearEnd(company, company.yearLines);
     settlement.capitalAfter = company.capital;
     if (company.capital == 0) {
       settlement.lines.add(content.raising().company().bankrupt().emptied());

@@ -171,7 +171,21 @@ public record RaisingContent(
    * 사람 이야기 (decisions.md 262번). poach: 라이벌이 손을 뻗었다({rival}·{name}). kept·left·ignored: 붙잡음·보냄·답 없이
    * 떠남. settled: 같은 자리 세 해째({name}·{desk}).
    */
-  public record People(String poach, String kept, String left, String ignored, String settled) {}
+  public record People(
+      String poach,
+      String kept,
+      String left,
+      String ignored,
+      String settled,
+      String raiseAsk,
+      String raised,
+      String frozen,
+      String raiseIgnored,
+      String moraleUp,
+      String moraleDown,
+      String meetingIgnored,
+      String heard,
+      String rested) {}
 
   /**
    * 회사 연표와 업적 (decisions.md 263번). events: 연표 한 줄(open {number} · rise {name}·{grade} · left {name}
