@@ -617,6 +617,43 @@ p.animate-stamp {
   animation: chart-draw 2.6s ease-in-out both;
 }
 
+/* 캐릭터 카드 (decisions.md 294번): 금부터는 테두리에 빛이 흐르고, 등급표에 윤이 지나간다. */
+@keyframes card-shine {
+  0% {
+    background-position:
+      0 0,
+      0% 50%;
+  }
+  100% {
+    background-position:
+      0 0,
+      100% 50%;
+  }
+}
+.card-shine {
+  animation: card-shine 3.2s ease-in-out infinite alternate;
+}
+@keyframes badge-shine {
+  0%,
+  70% {
+    transform: translateX(-130%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(230%) skewX(-20deg);
+  }
+}
+.badge-shine {
+  overflow: hidden;
+}
+.badge-shine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  animation: badge-shine 2.8s ease-in-out infinite;
+}
+
 /* "너희가 알아서 해" (decisions.md 291번): 결판이 나면 이긴 쪽이 한 번 들썩인다. 저울과 일어서는 사람은 transition으로 움직인다. */
 @keyframes clash-win {
   0% {
@@ -654,6 +691,8 @@ p.animate-stamp {
 @media (prefers-reduced-motion: reduce) {
   .chart-draw,
   .animate-clash-win,
+  .card-shine,
+  .badge-shine::after,
   .animate-pop,
   .highlighter,
   .decisive,
