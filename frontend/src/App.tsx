@@ -3,6 +3,7 @@ import { useCompanyAutoPlay } from './features/raising/autoPlay'
 import { CompanyScreen } from './features/raising/CompanyScreen'
 import { CompanyStart } from './features/raising/CompanyStart'
 import { useRaisingStore } from './features/raising/store'
+import { useTutorial } from './features/raising/tutorial'
 
 export function App() {
   return <Raising />
@@ -28,7 +29,19 @@ function Raising() {
       const key = `${company.companyId}-${company.year}-${company.quarter}-${company.employees.map((e) => e.id).join('.')}`
       return <CompanyScreen key={key} company={company} />
     }
-    return <CompanyStart onOpen={() => void open()} busy={busy} error={error} />
+    // 튜토리얼과 함께 시작하면 켜고 차린다 (302번). 바로 시작은 켜지 않고, 전에 보던 중이었으면 그대로 이어진다.
+    return (
+      <CompanyStart
+        onOpen={(tutorial) => {
+          if (tutorial) {
+            useTutorial.getState().start()
+          }
+          void open()
+        }}
+        busy={busy}
+        error={error}
+      />
+    )
   }
 
   return (
