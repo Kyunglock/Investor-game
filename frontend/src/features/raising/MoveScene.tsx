@@ -1,5 +1,4 @@
 import type { Grade } from '../../api/client'
-import { withParticle } from '../game/labels'
 import { usePixelArt } from '../game/pixelArt'
 import { moveOf, rivalFor, wreathsFor } from './board'
 import { officeName } from './office'
@@ -25,7 +24,8 @@ export function MoveScene({
   onDone: () => void
 }) {
   const shown = usePixelArt((s) => s.shown)
-  const move = moveOf(before, after) ?? (overtook.length > 0 ? 'up' : null)
+  // 등급이 그대로인데 라이벌만 앞지른 해는 연말 라이벌 알림이 박치기 장면을 보인다 (274·275번): 여기서 겹쳐 보이지 않는다.
+  const move = moveOf(before, after)
   if (!move) {
     return null
   }
@@ -37,15 +37,13 @@ export function MoveScene({
   const rival = overtook[0] ?? rivalFor(year)
   // 오르면 라이벌 건물을 박치기로 무너뜨리고 그 자리에서 커진다 (243번).
   const line =
-    before === after
-      ? `라이벌 ${withParticle(rival, '을', '를')} 앞질렀다! 건물을 들이받아 무너뜨렸다.`
-      : from !== to
-        ? up
-          ? `라이벌 ${rival} 건물을 들이받아 무너뜨리고 그 자리로 이사했다: ${from} → ${to}. 새 간판을 달고 개업 떡을 돌렸다.`
-          : `짐을 줄여 작은 사무실로 옮겼다: ${from} → ${to}.`
-        : up
-          ? `라이벌 ${rival} 건물을 들이받아 무너뜨리고 사무실을 넓혔다(${to}). 새 책상이 들어오고 떡을 돌렸다.`
-          : `사무실을 줄였다(${to}). 책상 몇 개를 내놓았다.`
+    from !== to
+      ? up
+        ? `라이벌 ${rival} 건물을 들이받아 무너뜨리고 그 자리로 이사했다: ${from} → ${to}. 새 간판을 달고 개업 떡을 돌렸다.`
+        : `짐을 줄여 작은 사무실로 옮겼다: ${from} → ${to}.`
+      : up
+        ? `라이벌 ${rival} 건물을 들이받아 무너뜨리고 사무실을 넓혔다(${to}). 새 책상이 들어오고 떡을 돌렸다.`
+        : `사무실을 줄였다(${to}). 책상 몇 개를 내놓았다.`
   return (
     <section
       className="mt-4 animate-reveal rounded border border-gold p-4"

@@ -9,7 +9,9 @@ export function PrivacyPage() {
     <main className="mx-auto max-w-[640px] px-4 py-6">
       <Document title="개인정보처리방침" testId="privacy">
         <div className="grid gap-4 text-[14px] leading-relaxed">
-          <p className="text-[12px] text-muted">시행일 2026년 11월 6일</p>
+          <p className="text-[12px] text-muted">
+            시행일 2026년 11월 6일 · 고친 날 2026년 11월 6일(다른 사장에게 보이는 것)
+          </p>
           <section>
             <h2 className="font-semibold">1. 모으는 것</h2>
             <ul className="mt-1 list-disc pl-5">
@@ -27,6 +29,11 @@ export function PrivacyPage() {
               </li>
             </ul>
             <p className="mt-1">이름·이메일·전화번호 같은 개인 식별 정보는 받지 않습니다.</p>
+            <p className="mt-1">
+              <b>다른 사장에게 보이는 것</b>: 다른 사장의 연초 회의에 &quot;올해의 라이벌&quot;
+              후보로 내 회사가 뽑힐 수 있습니다. 이때 회사 ID로 지어낸 이름(예: 영끌캐피탈)과 그때의
+              자본·건물만 보이고, 세션·IP·직원은 보이지 않습니다.
+            </p>
           </section>
           <section>
             <h2 className="font-semibold">2. 광고와 쿠키</h2>

@@ -12,6 +12,7 @@ export type AutoStep =
   | { kind: 'hire'; applicantId: number }
   | { kind: 'poach'; keep: boolean }
   | { kind: 'raise'; accept: boolean }
+  | { kind: 'target'; difficulty: 'EASY' | 'MEDIUM' | 'HARD' }
   | { kind: 'place'; seats: Seat[] }
   | { kind: 'conveneMacro' }
   | { kind: 'macro'; stance: Stance }
@@ -75,9 +76,13 @@ export function nextAutoStep(
   if (justSettled) {
     return { kind: 'closeYearEnd' }
   }
-  // 라이벌을 앞질렀다는 알림 (274번): 연말 결산서 다음에 잠깐 보여 주고 닫는다.
+  // 라이벌 알림 (274·275번): 연말 결산서 다음에 잠깐 보여 주고 닫는다.
   if (overtakeAlert) {
     return { kind: 'closeOvertake' }
+  }
+  // 랜드마크 타워 엔딩 (276번): 엔딩을 보면 멈춘다. 다음 회사는 사장이 직접 차린다.
+  if (company.ending) {
+    return { kind: 'stop' }
   }
   if (justQuartered) {
     return { kind: 'closeQuarter' }
@@ -89,6 +94,10 @@ export function nextAutoStep(
   // 연봉 협상 (270번): 자동 진행은 올려 준다. 사기가 꺾이면 손이 더 뒤집힌다.
   if (company.meeting?.raise) {
     return { kind: 'raise', accept: true }
+  }
+  // 올해의 라이벌 (275번): 자동 진행은 보통을 고른다.
+  if ((company.meeting?.rivalry?.options.length ?? 0) > 0) {
+    return { kind: 'target', difficulty: 'MEDIUM' }
   }
   const applicantId = autoHire(company)
   if (applicantId !== null) {
@@ -191,6 +200,7 @@ export function useCompanyAutoPlay() {
       settle,
       answerPoach,
       answerRaise,
+      pickTarget,
       conveneMacro,
       decideMacro,
     } = useRaisingStore.getState()
@@ -213,6 +223,9 @@ export function useCompanyAutoPlay() {
           return
         case 'raise':
           void answerRaise(step.accept)
+          return
+        case 'target':
+          void pickTarget(step.difficulty)
           return
         case 'place':
           void place(step.seats)

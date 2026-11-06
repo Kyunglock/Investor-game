@@ -80,6 +80,7 @@ class CompanyEngine {
     this.teams = new TeamEngine(this, content);
     this.pay = new PayEngine(this, content, properties);
     this.history = new CompanyHistory(content);
+    this.targets = new TargetEngine(content, properties);
   }
 
   /** 회사 연표·업적·명예의 전당 (decisions.md 263번). */
@@ -93,6 +94,9 @@ class CompanyEngine {
 
   /** 연봉과 사기 (decisions.md 270번). */
   final PayEngine pay;
+
+  /** 올해의 라이벌 (decisions.md 275번). */
+  final TargetEngine targets;
 
   static final String HR_DESK = "hr";
 
@@ -130,6 +134,11 @@ class CompanyEngine {
    * 회사가 망했다 (decisions.md 247번): 자본이 0이거나, 직원이 없는데 가장 싼 계약금도 낼 수 없다. 수수료도 판돈도 자본에 비례해서 이대로는 다시 일어설
    * 수 없다. 매각이 빠진 뒤(236번)로는 이것이 회사를 닫고 새로 차리는 유일한 길이다.
    */
+  /** 다음 회사를 차릴 수 있는가: 망했거나(247번) 랜드마크 타워에 올라 엔딩을 봤다(276번). */
+  boolean canRestart(CompanyState company) {
+    return company.finished || broke(company);
+  }
+
   boolean broke(CompanyState company) {
     if (company.closed || company.capital <= 0) {
       return true;
@@ -143,7 +152,7 @@ class CompanyEngine {
    * 265번). 회사 번호와 만난 지원자 수(이름)는 이어 센다. 망하지 않은 회사면 400.
    */
   CompanyState restart(CompanyState broke, SeededRandom random, long capital) {
-    if (!broke(broke)) {
+    if (!canRestart(broke)) {
       throw new InvalidRequestException("아직 망하지 않은 회사다");
     }
     broke.closed = true;
@@ -747,6 +756,9 @@ class CompanyEngine {
     if (company.sold) {
       throw new InvalidRequestException("팔린 회사다");
     }
+    if (company.finished) {
+      throw new InvalidRequestException("엔딩을 본 회사다. 새 회사를 차린다");
+    }
   }
 
   /** 매각을 빼기 전에 시대가 끝나 멈췄던 회사를 지금 해(turns + 1)의 연초 회의부터 다시 돌린다 (236번). */
@@ -1116,6 +1128,10 @@ class CompanyEngine {
     if (invest.open(company)) {
       throw new InvalidRequestException("종목 회의를 먼저 한다");
     }
+    // 올해의 라이벌은 연초에만 고른다 (275번): 1분기를 넘기면 고르지 않은 후보는 사라진다.
+    if (company.quarter == 1) {
+      targets.quarterPassed(company);
+    }
     RandomGenerator rng = random.forKey("company-settle", company.year, company.quarter);
     if (company.quarter == 1 || company.yearStake == null) {
       company.yearStake = company.capital;
@@ -1333,6 +1349,8 @@ class CompanyEngine {
     }
     settlement.salary = company.quarters.stream().mapToLong(q -> q.salary).sum();
     pay.yearEnd(company, company.yearLines);
+    // 올해의 라이벌과 한 번 견준다 (275번). 이기면 넘어온 고객 몫이 자본에 든다.
+    targets.yearEnd(company, settlement, random);
     settlement.capitalAfter = company.capital;
     if (company.capital == 0) {
       settlement.lines.add(content.raising().company().bankrupt().emptied());
@@ -1350,6 +1368,17 @@ class CompanyEngine {
               Map.of("names", String.join("·", stood.stream().map(e -> e.name).toList()))));
     }
     settlement.gradeAfter = grade(company);
+    // 랜드마크 타워에 오르면 엔딩이다 (276번). 엔딩을 본 회사는 멈추고, 사장이 다음 회사를 차린다.
+    if (!company.finished
+        && LADDER.indexOf(settlement.gradeAfter) >= LADDER.indexOf(properties.endingGrade())) {
+      company.finished = true;
+      company.finishedYear = company.year;
+      settlement.finished = true;
+      settlement.lines.add(
+          Korean.fill(
+              content.raising().company().ending().line(),
+              Map.of("years", String.valueOf(company.year))));
+    }
     // 폭락장에 아무도 바닥에서 던지지 않았으면 "못 참고 판 사람이 가장 크게 잃었다"를 쓰지 않는다 (decisions.md 255번).
     boolean anyPanic =
         settlement.results.stream().anyMatch(r -> r.flips.containsKey(StatCodes.PATIENCE));

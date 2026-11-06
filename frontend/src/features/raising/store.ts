@@ -17,7 +17,9 @@ interface RaisingState {
   justSettled: boolean
   /** 방금 한 분기를 넘겼다(4분기가 아니다). 분기 실적을 띄우고 닫으면 지운다 (decisions.md 268번). */
   justQuartered: boolean
-  /** 방금 연말 결산에서 라이벌을 앞질렀다. 연말 결산서를 닫으면 알림이 뜨고, 닫으면 지운다 (decisions.md 274번). */
+  /**
+   * 방금 연말 결산에서 라이벌을 앞질렀거나 올해의 라이벌과 견줬다. 연말 결산서를 닫으면 알림이 뜨고, 닫으면 지운다 (decisions.md 274·275번).
+   */
   overtakeAlert: boolean
   /** 자동 진행을 켰다 (245번). 새로 고치면 꺼진다: 모르는 사이에 돈을 쓰지 않게. */
   autoPlay: boolean
@@ -42,6 +44,8 @@ interface RaisingState {
   answerPoach: (keep: boolean) => Promise<void>
   /** 올해 연봉 협상에 답한다: 올려 주거나 동결한다 (decisions.md 270번). */
   answerRaise: (accept: boolean) => Promise<void>
+  /** 연초 회의에서 올해의 라이벌을 고른다: EASY·MEDIUM·HARD (decisions.md 275번). */
+  pickTarget: (difficulty: 'EASY' | 'MEDIUM' | 'HARD') => Promise<void>
   /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 249번). 됐으면 true. */
   convene: () => Promise<boolean>
   /** 올해 종목 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). big이면 크게 한다 (260번). */
@@ -147,6 +151,8 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
 
     answerRaise: (accept) => change(api.POST('/api/company/raise', { body: { accept } })),
 
+    pickTarget: (difficulty) => change(api.POST('/api/company/target', { body: { difficulty } })),
+
     convene: async () => {
       if (get().company?.invest?.convened) {
         return true
@@ -197,7 +203,10 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
           justSettled: true,
           justQuartered: false,
           tab: 'settlement',
-          overtakeAlert: (after.lastSettlement?.overtook.length ?? 0) > 0,
+          // 라이벌을 앞질렀거나 올해의 라이벌과 견줬으면 결산서 뒤에 알림이 뜬다 (274·275번).
+          overtakeAlert:
+            (after.lastSettlement?.overtook.length ?? 0) > 0 ||
+            Boolean(after.lastSettlement?.target),
         })
       } else if (after.quarter > before.quarter) {
         set({ justQuartered: true })

@@ -153,6 +153,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/target": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 연초 회의에서 올해의 라이벌을 고른다 (decisions.md 275번)
+         * @description difficulty는 EASY·MEDIUM·HARD. 후보는 실제 다른 사장의 회사(없으면 지어낸 회사)이고, 연말 결산에서 한 번 견준다.
+         *     이기면 자본이 bonusBp만큼 는다. 이미 골랐거나 후보가 아니거나 1분기를 넘겼으면 400.
+         */
+        post: operations["pickTarget"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/invest/open": {
         parameters: {
             query?: never;
@@ -435,6 +456,13 @@ export interface components {
                     after: number;
                     line: string;
                 } | null;
+                /** @description 올해의 라이벌 고르기 (decisions.md 275번). 후보도 고른 라이벌도 없으면 null */
+                rivalry?: {
+                    /** @description 고를 후보(쉬움·보통·어려움). 골랐거나 1분기를 넘겼으면 비었다 */
+                    options: components["schemas"]["Target"][];
+                    /** @description 고른 라이벌. 아직이면 null */
+                    chosen?: components["schemas"]["Target"] | null;
+                } | null;
             } | null;
             /** @description 올해 공채 시장의 지원자 (decisions.md 228번). 끝난 회사면 비어 있다 */
             applicants: {
@@ -468,7 +496,7 @@ export interface components {
                 timeline: {
                     year: number;
                     /** @enum {string} */
-                    kind: "open" | "grow" | "shrink" | "era" | "overtake" | "rise" | "left" | "best" | "worst";
+                    kind: "open" | "grow" | "shrink" | "era" | "overtake" | "rise" | "left" | "best" | "worst" | "target" | "ending";
                     text?: string | null;
                     /** @description grow·shrink의 새 등급. 화면이 건물 이름으로 바꾼다 */
                     grade?: components["schemas"]["Grade"] | null;
@@ -703,7 +731,54 @@ export interface components {
                 lines: string[];
                 /** @description 팀장들의 한 해 보고 (decisions.md 269번) */
                 reports: components["schemas"]["Report"][];
+                /** @description 올해의 라이벌과 견준 결과 (decisions.md 275번). 고르지 않았으면 null */
+                target?: {
+                    /** @enum {string} */
+                    difficulty: "EASY" | "MEDIUM" | "HARD";
+                    difficultyName: string;
+                    name: string;
+                    /** @description 실제 다른 사장의 회사면 true */
+                    real: boolean;
+                    /** Format: int64 */
+                    theirCapital: number;
+                    /** Format: int64 */
+                    ourCapital: number;
+                    won: boolean;
+                    /**
+                     * Format: int64
+                     * @description 이겨서 넘어온 고객 몫(이미 자본에 들어갔다)
+                     */
+                    bonus: number;
+                    theirGrade: components["schemas"]["Grade"];
+                } | null;
+                /** @description 이 결산으로 랜드마크 타워에 올라 엔딩을 봤다 (decisions.md 276번) */
+                finished?: boolean;
             } | null;
+            /** @description 엔딩 (decisions.md 276번). 랜드마크 타워에 오르면 회사가 멈추고 사장이 다음 회사를 차린다. 아직이면 null */
+            ending?: {
+                /** @description 엔딩을 본 해 */
+                year: number;
+                /** Format: int64 */
+                capital: number;
+                grade: components["schemas"]["Grade"];
+            } | null;
+        };
+        /** @description 올해의 라이벌 한 곳 (decisions.md 275번) */
+        Target: {
+            /** @enum {string} */
+            difficulty: "EASY" | "MEDIUM" | "HARD";
+            difficultyName: string;
+            name: string;
+            /** @description 실제 다른 사장의 회사면 true */
+            real: boolean;
+            /**
+             * Format: int64
+             * @description 뽑을 때의 자본
+             */
+            capital: number;
+            grade: components["schemas"]["Grade"];
+            /** @description 이기면 우리 자본이 느는 몫(만분율) */
+            bonusBp: number;
         };
         /** @description 분기 하나의 실적 (decisions.md 268번) */
         Quarter: {
@@ -1076,6 +1151,36 @@ export interface operations {
         };
         responses: {
             /** @description 답한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    pickTarget: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    difficulty: "EASY" | "MEDIUM" | "HARD";
+                };
+            };
+        };
+        responses: {
+            /** @description 고른 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

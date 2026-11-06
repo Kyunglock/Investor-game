@@ -441,4 +441,82 @@ class CompanyApiTest {
                 .single())
         .isEqualTo(1);
   }
+
+  /**
+   * 올해의 라이벌 (decisions.md 275번): 연초 회의에 쉬움·보통·어려움 후보가 오고, 띠에 실제 다른 사장의 회사가 있으면 그 회사다. 고르면 연말 결산에서 한
+   * 번 견준다. 이미 골랐으면 400.
+   */
+  @Test
+  void 연초_회의에서_실제_다른_사장의_회사를_올해의_라이벌로_고르고_연말에_견준다() throws Exception {
+    // 다른 사장이 먼저 1억 원으로 회사를 차렸다: 우리(1억 원)의 쉬움 띠 [1억, 1.15억)에 든다.
+    Cookie other =
+        mvc.perform(post("/api/sessions")).andReturn().getResponse().getCookie(SessionCookies.NAME);
+    mvc.perform(post("/api/company").cookie(new Cookie(other.getName(), other.getValue())))
+        .andExpect(status().isCreated());
+
+    DocumentContext opened =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    assertThat(opened.read("$.meeting.rivalry.options.length()", Integer.class)).isEqualTo(3);
+    assertThat(opened.read("$.meeting.rivalry.options[0].difficulty", String.class))
+        .isEqualTo("EASY");
+    assertThat(opened.read("$.meeting.rivalry.options[0].difficultyName", String.class))
+        .isEqualTo("쉬움");
+    assertThat(opened.read("$.meeting.rivalry.options[0].real", Boolean.class)).isTrue();
+    assertThat(opened.read("$.meeting.rivalry.chosen", Object.class)).isNull();
+
+    postJson("/api/company/target", "{\"difficulty\":\"NOPE\"}").andExpect(status().isBadRequest());
+    DocumentContext picked =
+        json(
+            postJson("/api/company/target", "{\"difficulty\":\"EASY\"}")
+                .andExpect(status().isOk()));
+    assertThat(picked.read("$.meeting.rivalry.chosen.difficulty", String.class)).isEqualTo("EASY");
+    assertThat(picked.read("$.meeting.rivalry.options.length()", Integer.class)).isZero();
+    postJson("/api/company/target", "{\"difficulty\":\"HARD\"}").andExpect(status().isBadRequest());
+
+    DocumentContext year = json(settleYear(1));
+    assertThat(year.read("$.lastSettlement.target.real", Boolean.class)).isTrue();
+    long ours = year.read("$.lastSettlement.target.ourCapital", Long.class);
+    long bonus = year.read("$.lastSettlement.target.bonus", Long.class);
+    long theirs = year.read("$.lastSettlement.target.theirCapital", Long.class);
+    boolean won = year.read("$.lastSettlement.target.won", Boolean.class);
+    assertThat(won).isEqualTo(ours - bonus > theirs);
+    assertThat(year.read("$.capital", Long.class)).isEqualTo(ours);
+    // 다음 해 연초 회의에 새 후보가 온다.
+    assertThat(year.read("$.meeting.rivalry.options.length()", Integer.class)).isEqualTo(3);
+  }
+
+  /**
+   * 랜드마크 타워 엔딩 (decisions.md 276번): 연말 결산에서 회사 등급이 Z(자본 100조 원)에 오르면 엔딩을 보고 회사가 멈춘다. 그 뒤로는 뽑기·결산이
+   * 400이고, 사장의 사재로 다음 회사를 차릴 수 있다.
+   */
+  @Test
+  void 랜드마크_타워에_오르면_엔딩을_보고_다음_회사를_차린다() throws Exception {
+    String id =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()))
+            .read("$.companyId", String.class);
+    jdbc.sql(
+            "UPDATE raising_company SET state = jsonb_set(state, '{capital}', '100000000000000')"
+                + " WHERE id = CAST(:id AS uuid)")
+        .param("id", id)
+        .update();
+    DocumentContext end = json(settleYear(1));
+    assertThat(end.read("$.lastSettlement.finished", Boolean.class)).isTrue();
+    assertThat(end.read("$.ending.year", Integer.class)).isEqualTo(1);
+    assertThat(end.read("$.ending.grade", String.class)).isEqualTo("Z");
+    hireFails();
+    settle(2, 1).andExpect(status().isBadRequest());
+
+    DocumentContext next =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    assertThat(next.read("$.number", Integer.class)).isEqualTo(2);
+    assertThat(next.read("$.capital", Long.class)).isEqualTo(100_000_000L);
+    assertThat(next.read("$.ending", Object.class)).isNull();
+  }
+
+  private void hireFails() throws Exception {
+    DocumentContext company = json(mvc.perform(get("/api/company").cookie(session)));
+    int applicant = company.read("$.applicants[0].id", Integer.class);
+    postJson("/api/company/hires", "{\"applicantId\":%d,\"replace\":null}".formatted(applicant))
+        .andExpect(status().isBadRequest());
+  }
 }

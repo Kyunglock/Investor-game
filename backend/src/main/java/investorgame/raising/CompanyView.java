@@ -52,7 +52,58 @@ public record CompanyView(
     Invest invest,
     Macro macro,
     Quarter lastQuarter,
-    Settlement lastSettlement) {
+    Settlement lastSettlement,
+    Ending ending) {
+
+  /**
+   * 엔딩 (decisions.md 276번): 랜드마크 타워에 올랐다. 엔딩을 본 회사는 멈추고 사장이 다음 회사를 차린다. 아직이면 null.
+   *
+   * @param year 엔딩을 본 해(몇 년 만에 올랐나)
+   */
+  public record Ending(int year, long capital, String grade) {}
+
+  /**
+   * 올해의 라이벌 한 곳 (decisions.md 275번).
+   *
+   * @param difficulty EASY·MEDIUM·HARD
+   * @param real 실제 다른 사장의 회사면 true, 모자라 지어낸 회사면 false
+   * @param capital 뽑을 때의 자본
+   * @param grade 그 자본의 회사 등급(화면은 건물로 보인다)
+   * @param bonusBp 이기면 우리 자본이 느는 몫(만분율)
+   */
+  public record Target(
+      String difficulty,
+      String difficultyName,
+      String name,
+      boolean real,
+      long capital,
+      String grade,
+      int bonusBp) {}
+
+  /**
+   * 연초 회의의 올해의 라이벌 고르기 (275번).
+   *
+   * @param options 고를 후보(쉬움·보통·어려움). 골랐거나 1분기를 넘겼으면 비었다
+   * @param chosen 고른 라이벌. 아직이면 null
+   */
+  public record Rivalry(List<Target> options, Target chosen) {}
+
+  /**
+   * 연말에 올해의 라이벌과 견준 결과 (275번).
+   *
+   * @param bonus 이겨서 넘어온 고객 몫(이미 자본에 들어갔다)
+   * @param theirGrade 상대 자본의 회사 등급(박치기 장면에서 무너지는 건물)
+   */
+  public record TargetResult(
+      String difficulty,
+      String difficultyName,
+      String name,
+      boolean real,
+      long theirCapital,
+      long ourCapital,
+      boolean won,
+      long bonus,
+      String theirGrade) {}
 
   public enum Status {
     ACTIVE,
@@ -271,7 +322,8 @@ public record CompanyView(
       String hot,
       String eraEnding,
       Poach poach,
-      Raise raise) {}
+      Raise raise,
+      Rivalry rivalry) {}
 
   /**
    * 올해의 연봉 협상 (decisions.md 270번).
@@ -307,7 +359,9 @@ public record CompanyView(
       List<String> achieved,
       List<Result> results,
       List<String> lines,
-      List<Report> reports) {}
+      List<Report> reports,
+      TargetResult target,
+      boolean finished) {}
 
   /** 결산한 해의 투자 회의: 기사 제목과 회의 손익(이미 자본에 들어갔다). 회의를 안 했으면 결산의 invest가 null (decisions.md 240번). */
   public record SettlementInvest(String title, long total) {}

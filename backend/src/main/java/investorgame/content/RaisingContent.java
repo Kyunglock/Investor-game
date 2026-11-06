@@ -73,7 +73,24 @@ public record RaisingContent(
       Invest invest,
       Macro macro,
       Quarters quarters,
-      Teams teams) {}
+      Teams teams,
+      Targets targets,
+      Ending ending) {}
+
+  /**
+   * 올해의 라이벌 (decisions.md 275번). difficulties: EASY·MEDIUM·HARD의 이름. prefixes·suffixes: 라이벌 회사 이름을
+   * 짓는 앞말·뒷말(실제 사장의 회사는 이름이 없어 회사 ID로 늘 같은 이름을 짓는다). won·lost: 연말 결산 소식
+   * 줄({name}·{difficulty}·{bonus}·{gap}).
+   */
+  public record Targets(
+      Map<String, String> difficulties,
+      List<String> prefixes,
+      List<String> suffixes,
+      String won,
+      String lost) {}
+
+  /** 엔딩 (decisions.md 276번). line: 엔딩을 본 해의 결산 소식 줄({years}). */
+  public record Ending(String line) {}
 
   /**
    * 팀장 보고 (decisions.md 269번). trading: 돈을 굴리는 팀의 손익(up·down·flat별 문구 여럿, {period}·{pnl}). flips:
