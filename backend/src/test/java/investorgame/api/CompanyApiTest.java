@@ -269,11 +269,12 @@ class CompanyApiTest {
       long fee = settled.read("$.lastSettlement.fee", Long.class);
       long after = settled.read("$.lastSettlement.capitalAfter", Long.class);
       long hiring = settled.read("$.lastSettlement.hiring", Long.class);
+      long salary = settled.read("$.lastSettlement.salary", Long.class);
       if (year == 1) {
         assertThat(hiring).as("첫 해에 뽑고 새로 받은 값").isPositive();
       }
       if (after > 0) {
-        assertThat(before + meetingTotal + staff + fee - hiring).isEqualTo(after);
+        assertThat(before + meetingTotal + staff + fee - hiring - salary).isEqualTo(after);
       }
     }
     // 매각을 뺐다(236번): 세 해가 지나도 회사는 끝나지 않고 4년 차 연초 회의가 온다.

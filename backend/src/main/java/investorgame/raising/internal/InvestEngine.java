@@ -570,6 +570,8 @@ class InvestEngine {
     c.invest.missed = HOLD.equals(choice) ? missed : null;
     c.invest.total = total;
     c.capital = Math.max(0, c.capital + total);
+    // 자기 말을 들어 줬는지에 따라 사기가 움직인다 (270번).
+    company.pay.afterMeeting(c);
   }
 
   String tempterName(String code) {

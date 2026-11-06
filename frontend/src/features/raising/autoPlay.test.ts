@@ -64,6 +64,9 @@ describe('자동 진행 (decisions.md 245번)', () => {
     // 이직 제안 (262·265번): 자동 진행은 직원을 보내지 않고 늘 남긴다.
     const poached = company({ meeting: { wanted: '', poach: { transferFee: 1 } } } as never)
     expect(nextAutoStep(poached, false)).toEqual({ kind: 'poach', keep: true })
+    // 연봉 협상 (270번): 자동 진행은 올려 준다.
+    const asked = company({ meeting: { wanted: '', raise: { after: 1 } } } as never)
+    expect(nextAutoStep(asked, false)).toEqual({ kind: 'raise', accept: true })
     const hiring = company({ applicants: [{ id: 1, overallGrade: 'C', fee: 1 }] } as never)
     expect(nextAutoStep(hiring, false)).toEqual({ kind: 'hire', applicantId: 1 })
     const resting = company({

@@ -87,6 +87,9 @@ class CompanyState {
   /** 올해 결산 전에 일어난 사람 이야기(붙잡음·보냄). 결산 소식 줄에 붙고 해가 바뀌면 비운다 (262번). */
   List<String> yearLines = new ArrayList<>();
 
+  /** 올해의 연봉 협상 (decisions.md 270번). 없으면 null. */
+  Raise raise;
+
   /** 올해의 이직 제안 (decisions.md 262번). 없으면 null. 답하지 않은 채 결산하면 그 직원이 떠난다. */
   Poach poach;
 
@@ -179,6 +182,18 @@ class CompanyState {
 
     /** 이 회사에서 번 돈의 합(결산과 투자 회의). 명예의 전당이 쓴다 (263번). */
     long totalPnl;
+
+    /** 연봉을 올려 준 횟수 (decisions.md 270번). 한 번마다 연봉이 raise-step-percent만큼 오른다. */
+    int raises;
+
+    /** 마지막으로 연봉을 올려 달라고 한 해. 아직 없으면 0. */
+    int askedYear;
+
+    /** 사기(−2~+2, 270번). 낮으면 손이 더 뒤집히고 높으면 덜 뒤집힌다. 해마다 0 쪽으로 한 칸 돌아온다. */
+    int morale;
+
+    /** 올해 한 번도 자리에 앉지 않았나: 연말에 쉬어서 사기가 오른다. 분기를 넘길 때마다 앉아 있었으면 거짓. */
+    boolean restedAllYear = true;
   }
 
   /**
@@ -347,6 +362,9 @@ class CompanyState {
     /** 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). */
     long hiring;
 
+    /** 이 분기에 나간 연봉(인건비, 270번). */
+    long salary;
+
     /** 이 분기 종목 회의의 기사 제목과 손익. 안 열렸으면 null. */
     String investTitle;
 
@@ -387,6 +405,15 @@ class CompanyState {
     int to;
     long totalPnl;
     String grade;
+  }
+
+  /** 올해의 연봉 협상 (decisions.md 270번). 답하지 않고 연말이 오면 흐지부지되고 사기가 조금 내린다. */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Raise {
+    int employeeId;
+    long before;
+    long after;
   }
 
   /** 라이벌이 우리 직원에게 손을 뻗었다 (262번). */
@@ -431,6 +458,9 @@ class CompanyState {
 
     /** 그해 채용에 쓴 돈(계약금·새로 받기 값, 251번). 이 칸을 더하기 전의 결산이면 0. */
     long hiring;
+
+    /** 그해 나간 연봉의 합(인건비, 270번). */
+    long salary;
 
     /** 그해 투자 회의의 기사 제목과 손익. 회의를 안 했거나 이 칸을 더하기 전(240번)의 결산이면 null. */
     String investTitle;

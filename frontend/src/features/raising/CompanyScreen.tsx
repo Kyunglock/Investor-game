@@ -268,8 +268,9 @@ function IndustryLine({ company }: { company: Company }) {
 /** 연초 회의 탭: 올해 폭락 조짐, 경보·선견, 올해 필요한 인재 (6.1절). */
 function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
   const busy = useRaisingStore((s) => s.busy)
-  const { answerPoach } = useRaisingStore.getState()
+  const { answerPoach, answerRaise } = useRaisingStore.getState()
   const poach = meeting.poach
+  const raise = meeting.raise
   return (
     <section data-testid="meeting">
       <h3 className="font-pen text-[22px]">연초 회의</h3>
@@ -296,6 +297,33 @@ function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
               className="min-h-11 rounded border border-line text-[14px]"
             >
               보낸다 · 이적료 +{shortWon(poach.transferFee)}
+            </button>
+          </div>
+        </div>
+      )}
+      {raise && (
+        // 연봉 협상 (270번): 올려 주면 사기가 오르고, 동결하면 꺾인다. 답하지 않으면 연말에 흐지부지되고 서운해한다.
+        <div className="mt-1 rounded border border-gold p-2" data-testid="raise">
+          <p className="text-[14px] font-semibold">{raise.line}</p>
+          <p className="text-[12px] text-muted">
+            올려 주면 의욕이 오르고, 동결하면 사기가 꺾여 손이 더 뒤집힙니다. 떠나지는 않습니다.
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void answerRaise(true)}
+              className="min-h-11 rounded border border-pen text-[14px] font-semibold disabled:opacity-50"
+            >
+              올려 준다 · 연 {shortWon(raise.after)}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void answerRaise(false)}
+              className="min-h-11 rounded border border-line text-[14px]"
+            >
+              동결한다
             </button>
           </div>
         </div>
@@ -556,6 +584,14 @@ function DeskCard({
   )
 }
 
+/** 사기 (decisions.md 270번). 0(보통)은 적지 않는다. */
+const MORALE: Record<number, string> = {
+  [-2]: '사기 바닥',
+  [-1]: '사기 낮음',
+  1: '사기 높음',
+  2: '의욕 넘침',
+}
+
 /** 직원 한 명의 상세 능력치: 종합 등급·차림새·효과·실전 경험·관심 섹터와 능력치 다섯의 등급. 배치 탭과 미니맵을 누르면 열리는 칸(237번)이 같이 쓴다. */
 function EmployeeDetail({ employee: e }: { employee: Employee }) {
   return (
@@ -571,6 +607,8 @@ function EmployeeDetail({ employee: e }: { employee: Employee }) {
           {e.sectorName && ` · 관심 섹터 ${e.sectorName}`}
           {e.deskYears > 0 && ` · 같은 자리 ${e.deskYears}년`}
           {e.settled && ' · 손에 익음'}
+          {e.salary > 0 && ` · 연봉 ${shortWon(e.salary)}`}
+          {e.morale !== 0 && ` · ${MORALE[e.morale]}`}
         </span>
       </p>
       <ul className="mt-1 grid grid-cols-5 gap-1 text-center text-[11px]">
@@ -773,7 +811,10 @@ function CompanyTabs({ company }: { company: Company }) {
       id: 'meeting',
       label: '연초 회의',
       badge:
-        company.meeting?.omen || company.meeting?.eraEnding || company.meeting?.poach
+        company.meeting?.omen ||
+        company.meeting?.eraEnding ||
+        company.meeting?.poach ||
+        company.meeting?.raise
           ? '!'
           : undefined,
       show: Boolean(company.meeting),

@@ -10,6 +10,7 @@ export type AutoStep =
   | { kind: 'closeQuarter' }
   | { kind: 'hire'; applicantId: number }
   | { kind: 'poach'; keep: boolean }
+  | { kind: 'raise'; accept: boolean }
   | { kind: 'place'; seats: Seat[] }
   | { kind: 'conveneMacro' }
   | { kind: 'macro'; stance: Stance }
@@ -79,6 +80,10 @@ export function nextAutoStep(
   if (company.meeting?.poach) {
     return { kind: 'poach', keep: true }
   }
+  // 연봉 협상 (270번): 자동 진행은 올려 준다. 사기가 꺾이면 손이 더 뒤집힌다.
+  if (company.meeting?.raise) {
+    return { kind: 'raise', accept: true }
+  }
   const applicantId = autoHire(company)
   if (applicantId !== null) {
     return { kind: 'hire', applicantId }
@@ -134,8 +139,17 @@ export function useCompanyAutoPlay() {
       useRaisingStore.setState({ autoPlay: false })
       return
     }
-    const { hire, place, convene, decideInvest, settle, answerPoach, conveneMacro, decideMacro } =
-      useRaisingStore.getState()
+    const {
+      hire,
+      place,
+      convene,
+      decideInvest,
+      settle,
+      answerPoach,
+      answerRaise,
+      conveneMacro,
+      decideMacro,
+    } = useRaisingStore.getState()
     const id = setTimeout(
       () => {
         switch (step.kind) {
@@ -150,6 +164,9 @@ export function useCompanyAutoPlay() {
             return
           case 'poach':
             void answerPoach(step.keep)
+            return
+          case 'raise':
+            void answerRaise(step.accept)
             return
           case 'place':
             void place(step.seats)

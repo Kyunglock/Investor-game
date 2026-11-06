@@ -155,6 +155,16 @@ class CompanyController {
 
   record MacroRequest(@NotBlank String stance) {}
 
+  /** 올해 연봉 협상에 답한다 (decisions.md 270번). */
+  @PostMapping("/raise")
+  CompanyView answerRaise(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody RaiseRequest request) {
+    return companies.answerRaise(cookies.requireSession(token), request.accept());
+  }
+
+  record RaiseRequest(@NotNull Boolean accept) {}
+
   /** 그 자리의 팀장을 정한다 (decisions.md 269번). */
   @PostMapping("/leader")
   CompanyView leader(
