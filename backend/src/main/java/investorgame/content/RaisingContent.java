@@ -232,7 +232,9 @@ public record RaisingContent(
    * 공채 시장 지원자 카드의 한 줄. wanted: 올해 필요한 인재({desk}·{stat}). hr: 인사팀이 데려온 지원자({name}). veteran:
    * 경력직({grade}, decisions.md 258번).
    */
-  public record Market(String wanted, String hr, String veteran) {}
+  /** 공채 시장 문구. star: 특급 인재 카드 한 줄(290번). starArrived·starLeft: 분기 실적 소식 줄({name}·{grade}·{fee}). */
+  public record Market(
+      String wanted, String hr, String veteran, String star, String starArrived, String starLeft) {}
 
   /**
    * X 이상 등급의 효과 (2.4절). 효과는 쌓인다: XX 직원은 X 효과도 가진다.

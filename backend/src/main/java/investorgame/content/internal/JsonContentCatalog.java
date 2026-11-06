@@ -332,7 +332,13 @@ class JsonContentCatalog implements ContentCatalog {
     for (String stat : List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE)) {
       require(company.flipLines().containsKey(stat), "결산 소식 줄이 없다: " + stat);
     }
-    require(company.market() != null && company.market().veteran() != null, "공채 시장 문구가 없다");
+    require(
+        company.market() != null
+            && company.market().veteran() != null
+            && company.market().star() != null
+            && company.market().starArrived() != null
+            && company.market().starLeft() != null,
+        "공채 시장 문구가 없다");
     require(
         company.bankrupt() != null
             && company.bankrupt().notice() != null

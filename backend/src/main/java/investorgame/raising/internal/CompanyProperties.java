@@ -193,7 +193,14 @@ public record CompanyProperties(
       int veteranFeeBp,
       int veteranFeeStepBp,
       long refreshCost,
-      int refreshBp) {}
+      int refreshBp,
+      Star star) {}
+
+  /**
+   * 특급 인재 (decisions.md 290번): 분기마다 percent 확률로 회사 등급보다 steps 단계 높은 지원자가 온다(SSS를 넘으면 경력직 단계로). 계약금은
+   * 보통의 feePercent%이고 quarters 분기가 지나면 떠난다.
+   */
+  public record Star(int percent, int steps, int feePercent, int quarters) {}
 
   /**
    * @param capSteps 인사 직원이 데려오는 지원자의 중심 등급 = 인사 직원 종합 등급보다 이만큼 아래. 회사 등급으로 정한 중심보다 높을 때만 쓴다
