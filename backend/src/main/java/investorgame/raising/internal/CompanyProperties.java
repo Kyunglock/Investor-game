@@ -7,7 +7,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 아주 작은 회사의 수치 (증권사 육성 설계 4·6절, 2단계). (제안)으로 적힌 값을 구현하며 정한 초기값이다.
  *
- * @param turns 회사가 도는 해의 수. 2단계는 세 해로 끝나는 체험판이다
+ * @param turns 한 시대의 길이(해). 이만큼 지나면 다른 시대가 온다 (decisions.md 249번). 회사는 끝나지 않는다(236번)
  * @param gradeCapital 회사 등급의 자본 띠(원). F부터 차례로, 자본만 본다 (4.5절)
  * @param seats 등급별 자리 수. F부터 차례로 (4.5절)
  * @param scale 규모의 벽: 회사 등급이 오를수록 맞혀서 버는 몫은 줄고 틀리거나 폭락장에 잃는 몫은 커진다 (decisions.md 244번)

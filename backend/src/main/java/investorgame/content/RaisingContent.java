@@ -49,6 +49,7 @@ public record RaisingContent(
       Map<String, String> flipLines,
       Map<String, String> wanted,
       String hotLine,
+      EraTurn eraTurn,
       Map<String, String> phases,
       String falseOmenNote,
       String seatsCut,
@@ -82,6 +83,12 @@ public record RaisingContent(
       String rogue,
       String swayed,
       Map<String, String> reveal) {}
+
+  /**
+   * 시대가 바뀐다 (decisions.md 249번). ending: 시대의 마지막 해 연초 회의 한 줄({era}). changed: 시대가 바뀐 해의 결산 소식
+   * 줄({from}·{to}· {description}).
+   */
+  public record EraTurn(String ending, String changed) {}
 
   /**
    * 망한 회사 (decisions.md 246번). notice: 회사 화면에 뜨는 한 줄. emptied: 결산에서 자본이 0이 된 해의 소식 줄. opening: 다시

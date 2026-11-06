@@ -231,6 +231,12 @@ function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
           ★ {meeting.hot}
         </p>
       )}
+      {meeting.eraEnding && (
+        // 시대가 바뀌기 한 해 전 (249번): 다음 시대에 맞을 사람을 미리 생각하게 한다.
+        <p className="mt-1 text-[14px] font-semibold text-teal" data-testid="era-ending">
+          {meeting.eraEnding}
+        </p>
+      )}
       <p className="mt-1 text-[14px]">{meeting.wanted}</p>
     </section>
   )
@@ -494,7 +500,7 @@ function CompanyTabs({ company }: { company: Company }) {
     {
       id: 'meeting',
       label: '연초 회의',
-      badge: company.meeting?.omen ? '!' : undefined,
+      badge: company.meeting?.omen || company.meeting?.eraEnding ? '!' : undefined,
       show: Boolean(company.meeting),
     },
     {

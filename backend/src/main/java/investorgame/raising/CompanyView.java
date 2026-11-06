@@ -174,8 +174,17 @@ public record CompanyView(
    * @param wanted 회사가 올해 필요한 인재 한 줄 (6.1절 1번)
    * @param hot 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절)
    */
+  /**
+   * @param eraEnding 지금 시대의 마지막 해면 "내년에는 시대가 바뀐다" 한 줄. 아니면 null (decisions.md 249번)
+   */
   public record Meeting(
-      String hrCap, String omen, String earlyOmen, String forecast, String wanted, String hot) {}
+      String hrCap,
+      String omen,
+      String earlyOmen,
+      String forecast,
+      String wanted,
+      String hot,
+      String eraEnding) {}
 
   public record Settlement(
       int year,

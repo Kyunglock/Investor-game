@@ -121,7 +121,7 @@ class CompanyEngine {
     next.hired = broke.hired;
     next.met = broke.met;
     next.capital = Math.max(0, capital);
-    next.era = eras().getFirst().code();
+    next.era = pickEra(broke.era, random.forKey("era-restart", next.number));
     next.opening =
         Korean.fill(
             content.raising().company().bankrupt().opening(),
@@ -167,7 +167,53 @@ class CompanyEngine {
   }
 
   RaisingContent.Era era(CompanyState company) {
-    return eras().stream().filter(e -> e.code().equals(company.era)).findFirst().orElseThrow();
+    return era(company.era);
+  }
+
+  private RaisingContent.Era era(String code) {
+    return eras().stream().filter(e -> e.code().equals(code)).findFirst().orElseThrow();
+  }
+
+  /** 한 시대의 길이(해). 시대마다 이만큼 지나면 다른 시대가 온다 (decisions.md 249번). */
+  int eraYears() {
+    return properties.turns();
+  }
+
+  /** 그 해가 이 회사의 몇 번째 시대인가(0부터). */
+  private int eraIndex(int year) {
+    return (year - 1) / eraYears();
+  }
+
+  /** 지금 해가 지금 시대의 마지막 해인가. */
+  boolean lastYearOfEra(CompanyState company) {
+    return eraIndex(company.year + 1) != eraIndex(company.year);
+  }
+
+  /** 지난 시대와 다른 시대를 하나 뽑는다. */
+  private String pickEra(String previous, RandomGenerator rng) {
+    List<RaisingContent.Era> others =
+        eras().stream().filter(e -> !e.code().equals(previous)).toList();
+    return others.get(rng.nextInt(others.size())).code();
+  }
+
+  /**
+   * 그 해의 시대 (249번). 지금 시대 안이면 지금 시대, 다음 시대의 첫해면 다음 시대를 (회사 시드와 시대 번호로만) 정해 돌려준다. 그래서 다음 해 시장을 미리
+   * 봐도(경보·선견) 그해가 오면 같은 시대·같은 시장이다.
+   */
+  private String eraOf(CompanyState company, int year, SeededRandom random) {
+    if (eraIndex(year) == eraIndex(company.year)) {
+      return company.era;
+    }
+    return pickEra(company.era, random.forKey("era-turn", eraIndex(year)));
+  }
+
+  /** 마지막 해의 연초 회의 한 줄: "올해가 ○○ 시대의 마지막 해다". 아니면 null. */
+  String eraEndingLine(CompanyState company) {
+    if (!lastYearOfEra(company)) {
+      return null;
+    }
+    return Korean.fill(
+        content.raising().company().eraTurn().ending(), Map.of("era", era(company).name()));
   }
 
   /**
@@ -487,7 +533,7 @@ class CompanyEngine {
     int omenRoll = rng.nextInt(PERCENT);
     int textRoll = rng.nextInt(BP);
     int wantedRoll = rng.nextInt(BP);
-    Map<String, Integer> weights = era(company).phaseWeights();
+    Map<String, Integer> weights = era(eraOf(company, year, random)).phaseWeights();
     int total = weights.values().stream().mapToInt(Integer::intValue).sum();
     int pick = (int) ((long) phaseRoll * total / BP);
     String phase = null;
@@ -792,7 +838,18 @@ class CompanyEngine {
       settlement.investTotal = company.invest.total;
     }
     company.settlements.add(settlement);
+    String eraBefore = company.era;
+    String eraAfter = eraOf(company, company.year + 1, random);
     company.year++;
+    if (!eraAfter.equals(eraBefore)) {
+      company.era = eraAfter;
+      RaisingContent.Era from = era(eraBefore);
+      RaisingContent.Era to = era(eraAfter);
+      settlement.lines.add(
+          Korean.fill(
+              content.raising().company().eraTurn().changed(),
+              Map.of("from", from.name(), "to", to.name(), "description", to.description())));
+    }
     // 회사는 끝나지 않고 해마다 이어진다 (decisions.md 236번: 매각을 뺐다).
     startYear(company, random);
     return settlement;

@@ -567,4 +567,46 @@ class CompanyEngineTest {
     }
     throw new AssertionError("폭락장에 자리가 줄어드는 해가 없었다");
   }
+
+  /**
+   * 시대가 바뀐다 (#313, decisions.md 249번): 첫 회사는 평범한 시대로 열고, 세 해마다 다른 시대가 온다. 마지막 해에는 연초 회의가 알려 주고, 바뀐
+   * 해의 결산 소식에 남는다. 다음 해 시장을 미리 정해 둔 것(경보·선견)이 그해가 와도 같다.
+   */
+  @Test
+  void 세_해마다_다른_시대가_오고_마지막_해에는_연초_회의가_알려_준다() {
+    int years = PROPERTIES.turns();
+    java.util.Set<String> seen = new java.util.HashSet<>();
+    for (long seed = 1; seed <= 10; seed++) {
+      CompanyState company = ENGINE.open(new HashSeededRandom(seed), ENGINE.openingCapital());
+      HashSeededRandom random = new HashSeededRandom(seed);
+      assertThat(company.era).isEqualTo("plain");
+      String era = company.era;
+      for (int year = 1; year <= years * 3; year++) {
+        assertThat(ENGINE.eraEndingLine(company) != null)
+            .as("%d년 차가 시대의 마지막 해인가", year)
+            .isEqualTo(year % years == 0);
+        String nextPhase = company.nextPhase;
+        CompanyState.Settlement settlement = settleYear(company, random);
+        assertThat(company.phase).as("미리 본 내년 시장이 그해가 와도 같다").isEqualTo(nextPhase);
+        if (year % years == 0) {
+          assertThat(company.era).as("%d년 차가 끝나면 시대가 바뀐다", year).isNotEqualTo(era);
+          assertThat(settlement.lines)
+              .anyMatch(
+                  line -> line.contains("끝나고") && line.endsWith(ENGINE.era(company).description()));
+          era = company.era;
+        } else {
+          assertThat(company.era).isEqualTo(era);
+        }
+        seen.add(company.era);
+      }
+    }
+    assertThat(seen.size()).as("여러 시대가 나온다").isGreaterThan(3);
+  }
+
+  @Test
+  void 망해서_다시_차린_회사는_지난_회사와_다른_시대로_연다() {
+    CompanyState broke = ENGINE.open(new HashSeededRandom(1), 0);
+    CompanyState next = ENGINE.restart(broke, new HashSeededRandom(2), ENGINE.openingCapital());
+    assertThat(next.era).isNotEqualTo(broke.era);
+  }
 }

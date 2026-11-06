@@ -240,6 +240,12 @@ class JsonContentCatalog implements ContentCatalog {
             && company.bankrupt().opening() != null,
         "망한 회사 문구가 없다");
     require(company.seatsCut() != null, "자리가 줄 때의 소식 줄이 없다");
+    require(
+        company.eraTurn() != null
+            && company.eraTurn().ending() != null
+            && company.eraTurn().changed() != null,
+        "시대가 바뀌는 문구가 없다");
+    require(company.eras().size() >= 2, "시대가 둘 이상이어야 바뀐다");
     RaisingContent.Invest invest = company.invest();
     require(
         invest != null

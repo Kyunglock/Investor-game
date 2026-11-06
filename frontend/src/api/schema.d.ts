@@ -207,7 +207,7 @@ export interface components {
             status: "ACTIVE" | "ENDED";
             /** @description 사장이 차린 몇 번째 회사인가 */
             number: number;
-            /** @description 이 회사의 시대 (9.4절) */
+            /** @description 지금 시대 (9.4절). 시대는 세 해마다 다른 시대로 바뀐다 (decisions.md 249번) */
             era: {
                 code: string;
                 name: string;
@@ -268,6 +268,8 @@ export interface components {
                 wanted: string;
                 /** @description 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) */
                 hot?: string | null;
+                /** @description 지금 시대의 마지막 해면 "내년에는 시대가 바뀐다" 한 줄. 아니면 null (decisions.md 249번) */
+                eraEnding?: string | null;
             } | null;
             /** @description 올해 공채 시장의 지원자 (decisions.md 228번). 끝난 회사면 비어 있다 */
             applicants: {

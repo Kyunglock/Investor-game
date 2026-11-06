@@ -238,7 +238,8 @@ class DefaultCompanyService implements CompanyService {
                 engine.earlyOmen(c),
                 engine.forecast(c),
                 engine.wantedLine(c),
-                engine.hotLine(c));
+                engine.hotLine(c),
+                engine.eraEndingLine(c));
     CompanyState.Settlement last = c.settlements.isEmpty() ? null : c.settlements.getLast();
     return new CompanyView(
         row.id(),
