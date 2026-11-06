@@ -71,9 +71,10 @@ class MacroEngine {
     RandomGenerator rng = random.forKey("macro", c.turn());
     int topicRoll = rng.nextInt(BP);
     int upRoll = rng.nextInt(PERCENT);
-    int swayRoll = rng.nextInt(2);
-    int swayPhraseRoll = rng.nextInt(BP);
-    int tempterRoll = rng.nextInt(BP);
+    // 예전 꼬드김 한마디(decisions.md 278번에서 뺐다)의 몫을 뽑아만 둔다: 같은 시드면 기사가 전과 같게.
+    rng.nextInt(2);
+    rng.nextInt(BP);
+    rng.nextInt(BP);
     List<RaisingContent.MacroTopic> topics = texts().topics();
     RaisingContent.MacroTopic topic = topics.get(topicRoll % topics.size());
     Macro macro = new Macro();
@@ -92,11 +93,6 @@ class MacroEngine {
       omen.omen = true;
       macro.sentences.add(rng.nextInt(macro.sentences.size() + 1), omen);
     }
-    String sentiment = swayRoll == 0 ? "POS" : "NEG";
-    List<String> phrases = texts().sway().get(sentiment);
-    macro.swaySentiment = sentiment;
-    macro.sway = phrases.get(swayPhraseRoll % phrases.size());
-    macro.tempter = invest.tempterCode(c, tempterRoll);
     macro.clarity = invest.pickClarity(random.forKey("macro-clarity", c.turn()).nextInt(BP));
     return macro;
   }

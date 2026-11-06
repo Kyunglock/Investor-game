@@ -117,7 +117,6 @@ public record RaisingContent(
    * @param topics 주제. 해마다 하나를 뽑는다
    * @param remarks 직원 한마디. 투자 회의와 같은 꼴: 안목 구간 → 읽은 쪽(UP·DOWN·NEUTRAL) → 문구 여럿, {point}·{against}
    *     (272번)
-   * @param sway 꼬드기는 단골 인물의 말. POS(공격하라)·NEG(숨어라)
    * @param scout 종목 발굴 (decisions.md 267번)
    * @param omenPoint 기사에 실린 폭락 조짐(266번) 문장의 요지. 조짐 문장은 위기 콘텐츠에서 와서 요지를 한 줄로 둔다
    */
@@ -126,7 +125,6 @@ public record RaisingContent(
       Map<String, String> notes,
       List<MacroTopic> topics,
       Map<String, Map<String, List<String>>> remarks,
-      Map<String, List<String>> sway,
       Scout scout,
       String omenPoint) {}
 

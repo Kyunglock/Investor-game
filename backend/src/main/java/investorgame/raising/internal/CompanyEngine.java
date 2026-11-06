@@ -110,6 +110,11 @@ class CompanyEngine {
   }
 
   /** 인사 직원이 데려오는 지원자의 중심 등급: 인사 직원보다 두 단계 아래, 바닥 F (6.3절). */
+  /** 인사팀이 있으면 해마다 더 오는 지원자 수 (6.3절). */
+  int hrExtraApplicants() {
+    return properties.hr().extraApplicants();
+  }
+
   String hrCap(Employee hr) {
     return LADDER.get(Math.max(0, LADDER.indexOf(employeeGrade(hr)) - properties.hr().capSteps()));
   }
@@ -362,6 +367,39 @@ class CompanyEngine {
 
   RaisingContent.Invest investTexts() {
     return content.raising().company().invest();
+  }
+
+  /**
+   * 돕는 자리가 이 분기에 한 일 (decisions.md 278번). 리서치 팀: 거시경제 회의·종목 회의에서 형광펜을 그을 수 있었던 회의 수, 그은 수, 결정적 문장을
+   * 짚은 수. 종목 발굴팀: 그 팀 사람이 가져와 회의한 종목과 오르내림.
+   */
+  private void recordSupport(CompanyState company, CompanyState.Quarter q) {
+    if (company.macro != null && company.macro.remarks != null) {
+      countHighlight(q, company.macro.highlightIndex, company.macro.sentences);
+    }
+    CompanyState.Invest i = company.invest;
+    if (i != null && i.choice != null) {
+      if (i.remarks != null) {
+        countHighlight(q, i.highlightIndex, i.sentences);
+      }
+      if (MacroEngine.SCOUT_DESK.equals(i.finderDesk)) {
+        q.scoutStock = stockName(i.stock);
+        q.scoutUp = i.up;
+        q.scoutPercent = Math.round(i.magnitudeBp / (float) PERCENT);
+      }
+    }
+  }
+
+  private static void countHighlight(
+      CompanyState.Quarter q, Integer index, List<CompanyState.Sentence> sentences) {
+    q.highlightChances++;
+    if (index == null || index < 0 || index >= sentences.size()) {
+      return;
+    }
+    q.highlights++;
+    if (sentences.get(index).decisive) {
+      q.highlightHits++;
+    }
   }
 
   String stockName(String code) {
@@ -1223,8 +1261,9 @@ class CompanyEngine {
     // 연봉 (270번): 분기마다 한 해 몫의 4분의 1이 나간다. 쉬는 사람도 받는다.
     q.salary = pay.quarterSalary(company);
     pay.markWorked(company);
-    // 팀장 보고 (269번): 분기를 넘기면 자리마다 팀장이 보고한다.
-    q.reports.addAll(teams.reports(company, q.results, "이번 분기", company.turn()));
+    // 팀장 보고 (269번): 분기를 넘기면 자리마다 팀장이 보고한다. 돕는 자리는 이 분기에 한 일을 센다 (278번).
+    recordSupport(company, q);
+    q.reports.addAll(teams.reports(company, q.results, List.of(q), "이번 분기", company.turn()));
     company.capital = Math.max(0, company.capital + fee + totalPnl - q.salary);
     q.capitalAfter = company.capital;
     if (company.invest != null && company.invest.choice != null) {
@@ -1319,7 +1358,12 @@ class CompanyEngine {
     }
     settlement.fee = fee;
     settlement.reports.addAll(
-        teams.reports(company, new java.util.ArrayList<>(yearly.values()), "올해", company.year));
+        teams.reports(
+            company,
+            new java.util.ArrayList<>(yearly.values()),
+            company.quarters,
+            "올해",
+            company.year));
     if (!titles.isEmpty()) {
       // 연말 결산서(240번)가 종목 회의 몫과 직원들이 한 해 굴린 몫을 나눠 보인다.
       settlement.investTitle = String.join(" · ", titles);

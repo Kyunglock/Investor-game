@@ -205,7 +205,6 @@ public record CompanyView(
       String title,
       List<MacroSentence> sentences,
       String highlightBy,
-      Sway sway,
       List<Remark> remarks,
       List<Stance> stances,
       boolean ready,

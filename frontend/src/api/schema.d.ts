@@ -641,10 +641,6 @@ export interface components {
                     omen: boolean;
                 }[];
                 highlightBy?: string | null;
-                sway: {
-                    who: string;
-                    text: string;
-                };
                 /** @description 자리에 앉은 직원의 한마디. 회의를 열기 전에는 비어 있다. read UP은 공격, DOWN은 방어 쪽 */
                 remarks: {
                     employeeId: number;

@@ -533,7 +533,6 @@ class DefaultCompanyService implements CompanyService {
         topic.title(),
         sentences,
         meetings.convened(c) ? macro.highlightBy : null,
-        new CompanyView.Sway(engine.invest.tempterName(macro.tempter), macro.sway),
         remarks,
         stances,
         meetings.open(c),
