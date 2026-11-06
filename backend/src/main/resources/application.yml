@@ -58,9 +58,13 @@ raising:
        300000000000000, 1000000000000000]
     # 자리 수: F 2 … SSS 10, 그 위는 한 단계마다 +1 (4.5절 표 그대로)
     seats: [2, 3, 4, 5, 6, 7, 8, 9, 10]
-    # 등급 한 단계마다 수수료 매출과 판돈 ×1.5. 자본 띠가 ×3이라 등급이 저절로 치솟지 않는다
-    multiplier-percent: 150
-    # 수수료 매출 자본의 3%, 판돈은 자본 전부(× 배율, 자본을 넘지 않음). 경제 맞춤 (decisions.md 226번, EconomySimulationTest)
+    # 규모의 벽 (decisions.md 244번): 등급 단계(F = 0)마다 맞혀서 버는 몫 ×gain, 잃는 몫 ×miss, 폭락장 손익 ×crash.
+    # 전에는 등급마다 수수료·판돈 ×1.5라 B부터 잃는 해가 없고 SSS면 수수료만으로 자본이 두 배가 됐다
+    scale:
+      gain-percent: 92
+      miss-percent: 108
+      crash-percent: 118
+    # 수수료 매출 자본의 3%, 판돈은 자본 전부(자본을 넘지 않음). 경제 맞춤 (decisions.md 226·244번, EconomySimulationTest)
     fee-bp: 300
     stake-percent: 100
     decisions: 4

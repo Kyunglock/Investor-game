@@ -37,6 +37,7 @@ export function CompanyScreen({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   const justSettled = useRaisingStore((s) => s.justSettled)
+  const autoPlay = useRaisingStore((s) => s.autoPlay)
   const { settle } = useRaisingStore.getState()
   // 이사 장면은 결산 뒤 한 번만 본다. 해가 바뀌면 화면이 새로 그려져 다시 볼 수 있다.
   const [moved, setMoved] = useState(false)
@@ -120,15 +121,33 @@ export function CompanyScreen({ company }: { company: Company }) {
                 {error}
               </p>
             )}
-            <button
-              type="button"
-              disabled={busy}
-              // 돈을 굴리는 직원이 있으면 먼저 투자 회의 창이 뜨고, 고르면 그대로 결산한다.
-              onClick={() => (company.invest?.ready ? setInvestOpen(true) : void settle())}
-              className="min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50"
-            >
-              {company.year}년 차 결산 보기
-            </button>
+            {autoPlay && (
+              <p className="text-center text-[12px] text-teal" data-testid="auto-status">
+                자동 진행 중 · 공채 → 배치 → 투자 회의(직원 다수결) → 결산을 해마다 되풀이합니다
+              </p>
+            )}
+            <div className="grid grid-cols-[auto_1fr] gap-2">
+              <button
+                type="button"
+                aria-pressed={autoPlay}
+                onClick={() => useRaisingStore.setState({ autoPlay: !autoPlay })}
+                className={`min-h-12 rounded border px-3 text-[14px] font-semibold ${
+                  autoPlay ? 'border-teal bg-teal text-white' : 'border-teal text-teal'
+                }`}
+                title="빈 자리에 뽑고, 자동 배치하고, 투자 회의는 직원 다수결로 정하고, 결산을 해마다 되풀이한다"
+              >
+                {autoPlay ? '■ 자동 멈춤' : '⟳ 자동 진행'}
+              </button>
+              <button
+                type="button"
+                disabled={busy || autoPlay}
+                // 돈을 굴리는 직원이 있으면 먼저 투자 회의 창이 뜨고, 고르면 그대로 결산한다.
+                onClick={() => (company.invest?.ready ? setInvestOpen(true) : void settle())}
+                className="min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50"
+              >
+                {company.year}년 차 결산 보기
+              </button>
+            </div>
           </div>
         )}
         {ended && error && (

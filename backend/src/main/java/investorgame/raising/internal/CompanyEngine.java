@@ -384,9 +384,20 @@ class CompanyEngine {
   }
 
   /** 등급이 오를수록 고객이 돈을 더 맡겨 수수료와 판돈이 커진다 (4.5절). */
-  private double multiplier(long capital) {
-    return Math.pow(
-        properties.multiplierPercent() / (double) PERCENT, LADDER.indexOf(grade(capital)));
+  /** 규모의 벽 (decisions.md 244번): 등급 단계만큼 거듭제곱한 비율을 곱한다. F는 그대로. */
+  private int scaled(CompanyState company, int bp, int percent) {
+    double factor = Math.pow(percent / (double) PERCENT, LADDER.indexOf(grade(company.capital)));
+    return (int) Math.round(bp * factor);
+  }
+
+  /** 맞혔을 때 버는 몫. 큰 회사일수록 줄어든다. */
+  int scaledGain(CompanyState company, int bp) {
+    return scaled(company, bp, properties.scale().gainPercent());
+  }
+
+  /** 틀리거나 손이 뒤집혀 잃는 몫. 큰 회사일수록 커진다. */
+  int scaledMiss(CompanyState company, int bp) {
+    return scaled(company, bp, properties.scale().missPercent());
   }
 
   /** 올해 시장을 정하고 연초 회의를 준비한다. 조짐은 폭락장 앞에 보이고, 아무 일 없는 해에도 헛조짐이 섞인다 (4.3절). */
@@ -581,11 +592,7 @@ class CompanyEngine {
     long pot =
         Math.min(
             company.capital,
-            (long)
-                (company.capital
-                    * properties.stakePercent()
-                    / (double) PERCENT
-                    * multiplier(company.capital)));
+            (long) (company.capital * properties.stakePercent() / (double) PERCENT));
     return pot / traders;
   }
 
@@ -613,7 +620,6 @@ class CompanyEngine {
             - (company.invest != null && company.invest.choice != null ? company.invest.total : 0);
     settlement.gradeBefore = grade(company.capital);
 
-    double multiplier = multiplier(company.capital);
     int research = researchInsight(company);
     List<Employee> traders = traders(company);
     long stake = stakeOf(company, traders.size());
@@ -635,11 +641,20 @@ class CompanyEngine {
       boolean conviction = employee.rank >= RANK_CONVICTION;
       boolean contrarian = crash && employee.rank >= RANK_CONTRARIAN;
       int hitBp = behavior.hintAccuracyPercent(insight) * PERCENT;
-      int gainBp = gainBp(company, employee) + (conviction ? effects.convictionGainBp() : 0);
+      // 규모의 벽(244번): 결산을 시작할 때의 등급으로 정한다.
+      int gainBp =
+          scaledGain(
+              company, gainBp(company, employee) + (conviction ? effects.convictionGainBp() : 0));
+      int missBp = scaledMiss(company, returns.missBp());
+      int flipLossBp = scaledMiss(company, returns.flipBp());
       // 한 해 시장 손익. 폭락장에는 섹터마다 빠지는 폭이 다르다(식품·금융은 덜, 반도체는 더).
       int phaseBp = properties.phaseBp().getOrDefault(company.phase, 0);
       if (crash) {
-        phaseBp = phaseBp * returns.crashPercent() / PERCENT;
+        phaseBp =
+            scaled(
+                company,
+                phaseBp * returns.crashPercent() / PERCENT,
+                properties.scale().crashPercent());
       }
       long bp = 0;
       for (int i = 0; i < properties.decisions(); i++) {
@@ -650,19 +665,16 @@ class CompanyEngine {
         bp += contrarian ? effects.contrarianCrashBp() : phaseBp;
         if (swayRoll < swayBp) {
           result.flips.merge(StatCodes.CONVICTION, 1, Integer::sum);
-          bp -= returns.missBp();
+          bp -= missBp;
         } else if (flipRoll < flipBp) {
           result.flips.merge(flipStat, 1, Integer::sum);
-          bp -=
-              crash ? returns.flipBp() * properties.crashFlipPercent() / PERCENT : returns.flipBp();
+          bp -= crash ? flipLossBp * properties.crashFlipPercent() / PERCENT : flipLossBp;
         } else {
           // X 확신: 형광펜이 맞으면 알아서 크게 산다. 맞히면 더 벌고 틀려도 덜 잃어 편차가 준다.
           bp +=
               hitRoll < hitBp
                   ? gainBp
-                  : -returns.missBp()
-                      * (conviction ? effects.convictionMissPercent() : PERCENT)
-                      / PERCENT;
+                  : -missBp * (conviction ? effects.convictionMissPercent() : PERCENT) / PERCENT;
         }
       }
       result.pnl = stake * bp / BP;
@@ -682,7 +694,7 @@ class CompanyEngine {
                           Map.of("name", employee.name))
                       + (count > 1 ? " (" + count + "번)" : "")));
     }
-    long fee = (long) (company.capital * properties.feeBp() / (double) BP * multiplier);
+    long fee = (long) (company.capital * properties.feeBp() / (double) BP);
     settlement.fee = fee;
     company.capital = Math.max(0, company.capital + fee + totalPnl);
     settlement.capitalAfter = company.capital;
