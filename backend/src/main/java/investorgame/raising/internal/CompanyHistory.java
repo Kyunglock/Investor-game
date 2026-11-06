@@ -114,7 +114,7 @@ class CompanyHistory {
       }
     }
     if (s.capitalBefore > 0) {
-      int ratioBp = (int) Math.min(Integer.MAX_VALUE, s.capitalAfter * BP / s.capitalBefore);
+      int ratioBp = (int) Math.min(Integer.MAX_VALUE, operated(s) * BP / s.capitalBefore);
       if (ratioBp >= BEST_BP && ratioBp > company.bestYearBp) {
         company.bestYearBp = ratioBp;
         add(
@@ -146,8 +146,8 @@ class CompanyHistory {
 
   private void achieve(CompanyState company, Settlement s, int industryRank, boolean basement) {
     long staff = s.results.stream().mapToLong(r -> r.pnl).sum();
-    boolean crashProof = CompanyEngine.CRASH.equals(s.phase) && s.capitalAfter >= s.capitalBefore;
-    boolean doubled = s.capitalBefore > 0 && s.capitalAfter >= s.capitalBefore * 2;
+    boolean crashProof = CompanyEngine.CRASH.equals(s.phase) && operated(s) >= s.capitalBefore;
+    boolean doubled = s.capitalBefore > 0 && operated(s) >= s.capitalBefore * 2;
     boolean allSss =
         company.employees.size() >= DREAM_TEAM
             && company.employees.stream()
@@ -175,6 +175,14 @@ class CompanyHistory {
         s.achieved.add(a.name());
       }
     }
+  }
+
+  /**
+   * 인사 비용(계약금·새로 받기·붙잡는 값 − 이적료)을 빼기 전의 연말 자본: 한 해를 굴린 결과만 본다. 전에는 첫해에 두 사람을 뽑은 것만으로 "가장 아팠던 해다.
+   * 자본이 27% 줄었다"가 떴다.
+   */
+  private static long operated(Settlement s) {
+    return s.capitalAfter + s.hiring;
   }
 
   List<RaisingContent.Achievement> all() {

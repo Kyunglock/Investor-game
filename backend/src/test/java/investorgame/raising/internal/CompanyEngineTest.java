@@ -962,4 +962,21 @@ class CompanyEngineTest {
     assertThat(company.alumni).extracting(x -> x.name).containsExactly(a.name);
     assertThat(company.timeline).extracting(e -> e.kind).contains("left");
   }
+
+  /** 공채에 쓴 돈만으로는 "가장 아팠던 해"가 아니다: 연표와 업적은 인사 비용을 빼기 전의 운용 결과로 본다 (262번). */
+  @Test
+  void 공채에_쓴_돈만으로는_가장_아팠던_해가_아니다() {
+    CompanyState company = ENGINE.open(new HashSeededRandom(2), ENGINE.openingCapital());
+    company.applicants.sort(
+        java.util.Comparator.comparingLong((CompanyState.Applicant a) -> -a.fee));
+    CompanyState.Applicant dear = company.applicants.getFirst();
+    company.capital = 100_000_000L;
+    ENGINE.hireApplicant(company, dear.id, null);
+    company.capital -= 25_000_000L;
+    company.yearHiring += 25_000_000L;
+    company.invest = null;
+    company.poach = null;
+    ENGINE.settle(company, new HashSeededRandom(2));
+    assertThat(company.timeline).extracting(e -> e.kind).doesNotContain("worst");
+  }
 }
