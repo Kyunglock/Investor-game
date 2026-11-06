@@ -107,10 +107,44 @@ class InvestEngine {
     if (tempters.isEmpty()) {
       tempters = content.raising().tempters();
     }
+    // 따로 굴린다: 기사·꼬드김 난수 차례를 바꾸지 않는다.
+    invest.clarity = pickClarity(random.forKey("invest-clarity", c.year).nextInt(BP));
     invest.swaySentiment = sentiment.name();
     invest.sway = phrases.get(swayPhraseRoll % phrases.size());
     invest.tempter = tempters.get(tempterRoll % tempters.size()).code();
     return invest;
+  }
+
+  private String pickClarity(int roll) {
+    List<CompanyProperties.Clarity> all = properties.invest().clarity();
+    int total = all.stream().mapToInt(CompanyProperties.Clarity::weight).sum();
+    int pick = (int) ((long) roll * total / BP);
+    for (CompanyProperties.Clarity x : all) {
+      pick -= x.weight();
+      if (pick < 0) {
+        return x.code();
+      }
+    }
+    return all.getLast().code();
+  }
+
+  /** 흐린 기사면 읽을 때 안목에서 빼는 점수. 옛 회의(clarity 없음)는 0. */
+  private int penalty(Invest invest) {
+    return properties.invest().clarity().stream()
+        .filter(x -> x.code().equals(invest.clarity))
+        .mapToInt(CompanyProperties.Clarity::penalty)
+        .findFirst()
+        .orElse(0);
+  }
+
+  /** 가장 흐린 기사(가장 크게 깎는)인가. 안목 높은 직원이 "이번 건 애매하다"고 말한다. */
+  private boolean foggiest(Invest invest) {
+    int most =
+        properties.invest().clarity().stream()
+            .mapToInt(CompanyProperties.Clarity::penalty)
+            .max()
+            .orElse(0);
+    return most > 0 && penalty(invest) == most;
   }
 
   /** 이 회사에 아직 안 나온 뉴스를 가중치대로 뽑는다. 다 나왔으면 처음부터. */
@@ -196,7 +230,8 @@ class InvestEngine {
       return Optional.empty();
     }
     Employee r = researcher.get();
-    Hint hint = read(c, r.stats.get(StatCodes.INSIGHT), random.forKey("invest-hint", c.year, r.id));
+    int insight = Math.max(0, r.stats.get(StatCodes.INSIGHT) - penalty(c.invest));
+    Hint hint = read(c, insight, random.forKey("invest-hint", c.year, r.id));
     if (hint.direction() == Hint.HintDirection.NEUTRAL) {
       return Optional.empty();
     }
@@ -238,7 +273,10 @@ class InvestEngine {
         stubborn = odds.swayBp() + (BP - odds.swayBp()) * odds.flipBp() / BP;
       }
       Hint.Detail voice = Hint.Detail.of(e.stats.get(StatCodes.INSIGHT));
-      List<String> lines = texts.remarks().get(voice.key()).get(read);
+      boolean sharp = voice == Hint.Detail.HIGH || voice == Hint.Detail.EXPERT;
+      // 흐린 기사(241번): 안목 높은 직원은 애매하다는 것을 알아채고 그렇게 말한다.
+      String tier = sharp && foggiest(c.invest) && !NEUTRAL.equals(read) ? "foggy" : voice.key();
+      List<String> lines = texts.remarks().get(tier).get(read);
       String line = lines.get(random.forKey("invest-remark", c.year, e.id).nextInt(lines.size()));
       String quote = quote(c.invest, read, voice);
       remarks.add(
@@ -273,7 +311,8 @@ class InvestEngine {
    */
   private String ownRead(CompanyState c, Employee e, SeededRandom random) {
     int own = e.stats.get(StatCodes.INSIGHT);
-    int insight = own + Math.max(0, company.researchInsight(c) - own) / 2;
+    int insight =
+        Math.max(0, own + Math.max(0, company.researchInsight(c) - own) / 2 - penalty(c.invest));
     Hint hint = read(c, insight, random.forKey("invest-read", c.year, e.id));
     return hint.direction().name();
   }

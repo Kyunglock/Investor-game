@@ -112,6 +112,9 @@ class CompanyState {
 
     List<InvestResult> results = new ArrayList<>();
     long total;
+
+    /** 기사가 얼마나 또렷한가(clear·murky·foggy, 241번). 이 칸을 더하기 전의 회의면 null(깎지 않는다). */
+    String clarity;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)

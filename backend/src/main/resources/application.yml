@@ -116,6 +116,11 @@ raising:
       year-up-bp: { boom: 1500, normal: 0, crash: -1000 }
       side-opposite-percent: 60
       stubborn-bp: 2000
+      # 기사가 얼마나 또렷한가 (decisions.md 241번): 흐릴수록 읽을 때 안목을 깎아 안목 높은 직원끼리도 의견이 갈린다
+      clarity:
+        - { code: clear, weight: 35, penalty: 0 }
+        - { code: murky, weight: 40, penalty: 25 }
+        - { code: foggy, weight: 25, penalty: 55 }
     # 매각과 재창업 (9절, 4단계). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다.
     # 시대(turns 해)가 끝나면 반드시 팔고, 그 전에는 SSS 이상이면 스스로 팔 수 있다 (decisions.md 215번~)
     sale:

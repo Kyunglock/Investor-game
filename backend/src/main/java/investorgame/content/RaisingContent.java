@@ -65,7 +65,7 @@ public record RaisingContent(
    *
    * @param options 사장이 고르는 버튼 이름
    * @param remarks 직원의 한마디. 안목 구간(low·mid·high·expert) → 읽은 쪽(UP·DOWN·NEUTRAL) → 문구 여럿. {quote}(따온
-   *     기사 문장)·{stock}
+   *     기사 문장)·{stock}. foggy는 가장 흐린 기사에서 안목 높은 직원이 하는 말(UP·DOWN)
    * @param actions 직원이 한 일(샀다·팔았다·지켜봤다)
    * @param obey 사장 말대로 했다. {action}
    * @param rogue 제멋대로 했다. {action}

@@ -247,6 +247,10 @@ class JsonContentCatalog implements ContentCatalog {
         require(lines != null && !lines.isEmpty(), "직원 한마디가 없다: " + voice + " " + read);
       }
     }
+    for (String read : List.of("UP", "DOWN")) {
+      List<String> lines = invest.remarks().getOrDefault("foggy", Map.of()).get(read);
+      require(lines != null && !lines.isEmpty(), "흐린 기사의 한마디가 없다: " + read);
+    }
     for (String stat : List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE)) {
       require(raising.flipTips().containsKey(stat), "처음 뒤집힘 설명이 없다: " + stat);
     }
