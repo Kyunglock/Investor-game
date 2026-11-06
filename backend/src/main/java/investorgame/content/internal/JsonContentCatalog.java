@@ -239,6 +239,7 @@ class JsonContentCatalog implements ContentCatalog {
             && company.bankrupt().emptied() != null
             && company.bankrupt().opening() != null,
         "망한 회사 문구가 없다");
+    require(company.seatsCut() != null, "자리가 줄 때의 소식 줄이 없다");
     RaisingContent.Invest invest = company.invest();
     require(
         invest != null

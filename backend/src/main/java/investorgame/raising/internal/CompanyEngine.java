@@ -360,6 +360,7 @@ class CompanyEngine {
     }
     company.capital -= cost;
     company.refreshes++;
+    fitSeats(company);
     deal(company, random);
   }
 
@@ -385,9 +386,36 @@ class CompanyEngine {
     }
     company.capital -= applicant.fee;
     company.applicants.remove(applicant);
+    fitSeats(company);
     Employee employee = add(company, applicant.name, applicant.stats);
     employee.sector = applicant.sector;
     return employee;
+  }
+
+  /** 자리가 줄었을 때 먼저 일어나는 자리: 인사팀 → 리서치 팀 → 리스크 관리 팀 → 돈을 굴리는 자리 (decisions.md 247번). */
+  private static final List<String> STAND_UP_ORDER = List.of(HR_DESK, RESEARCH_DESK, RISK_DESK);
+
+  /**
+   * 앉은 사람이 자리 수보다 많으면 넘친 사람을 쉬게 한다 (247번). 결산·계약금·새로 받기로 자본이 줄어 회사 등급과 자리 수가 내려갔을 때다. 돈을 굴리는 자리를
+   * 지키려고 돕는 자리(인사팀 → 리서치 팀 → 리스크 관리 팀)부터, 그다음 돈을 굴리는 자리에서 나중에 들어온 사람부터 일어난다. 쉬게 된 사람을 들어온 순서로 돌려준다.
+   */
+  List<Employee> fitSeats(CompanyState company) {
+    List<Employee> seated =
+        new java.util.ArrayList<>(company.employees.stream().filter(e -> e.desk != null).toList());
+    int over = seated.size() - seats(company.capital);
+    if (over <= 0) {
+      return List.of();
+    }
+    seated.sort(
+        java.util.Comparator.comparingInt(
+                (Employee e) -> {
+                  int at = STAND_UP_ORDER.indexOf(e.desk);
+                  return at < 0 ? STAND_UP_ORDER.size() : at;
+                })
+            .thenComparingInt(e -> -e.id));
+    List<Employee> stood = seated.subList(0, over);
+    stood.forEach(e -> e.desk = null);
+    return stood.stream().sorted(java.util.Comparator.comparingInt(e -> e.id)).toList();
   }
 
   private void requireOpen(CompanyState company) {
@@ -745,6 +773,13 @@ class CompanyEngine {
     settlement.capitalAfter = company.capital;
     if (company.capital == 0) {
       settlement.lines.add(content.raising().company().bankrupt().emptied());
+    }
+    List<Employee> stood = fitSeats(company);
+    if (!stood.isEmpty()) {
+      settlement.lines.add(
+          Korean.fill(
+              content.raising().company().seatsCut(),
+              Map.of("names", String.join("·", stood.stream().map(e -> e.name).toList()))));
     }
     settlement.gradeAfter = grade(company.capital);
     settlement.lines.addFirst(content.raising().company().phases().get(company.phase));

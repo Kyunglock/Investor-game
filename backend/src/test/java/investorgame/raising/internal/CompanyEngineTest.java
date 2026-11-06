@@ -514,4 +514,57 @@ class CompanyEngineTest {
     }
     assertThat(emptiedYears).as("자본이 바닥나는 해가 있다").isPositive();
   }
+
+  /** 자리가 줄면 넘친 사람이 쉰다 (#311, decisions.md 247번): 돕는 자리부터, 그다음 나중에 들어온 사람부터. */
+  @Test
+  void 자본이_줄어_자리가_줄면_돕는_자리부터_일어나_쉰다() {
+    // E 회사(자리 3)에 셋을 앉힌다. 새로 받기 값을 내면 3억 아래로 떨어져 F(자리 2)가 된다.
+    CompanyState company = open(5, stats(50, 50, 50, 50), 300_000_000 + 1_000_000);
+    ENGINE.hire(company, stats(50, 50, 50, 50));
+    ENGINE.hire(company, stats(50, 50, 50, 50));
+    List<CompanyState.Employee> staff = company.employees;
+    ENGINE.place(
+        company,
+        Map.of(staff.get(0).id, "research", staff.get(1).id, "bio", staff.get(2).id, "day"));
+    assertThat(ENGINE.seats(company.capital)).isEqualTo(3);
+
+    ENGINE.refresh(company, new HashSeededRandom(5));
+    assertThat(ENGINE.seats(company.capital)).isEqualTo(2);
+    assertThat(staff.get(0).desk).as("돕는 자리가 먼저 일어난다").isNull();
+    assertThat(staff.get(1).desk).isEqualTo("bio");
+    assertThat(staff.get(2).desk).isEqualTo("day");
+
+    // 돕는 자리가 없으면 나중에 들어온 사람부터 일어난다.
+    ENGINE.place(company, Map.of(staff.get(1).id, "bio", staff.get(2).id, "day"));
+    company.capital = 1_000_000;
+    staff.get(0).desk = "bio";
+    List<CompanyState.Employee> stood = ENGINE.fitSeats(company);
+    assertThat(stood).extracting(e -> e.id).containsExactly(staff.get(2).id);
+    assertThat(staff.get(0).desk).isEqualTo("bio");
+    assertThat(staff.get(1).desk).isEqualTo("bio");
+  }
+
+  @Test
+  void 결산으로_자리가_줄면_넘친_사람이_쉬고_소식_줄에_남는다() {
+    for (long seed = 1; seed <= 40; seed++) {
+      CompanyState company = open(seed, stats(1, 1, 1, 1), 300_000_000);
+      ENGINE.hire(company, stats(1, 1, 1, 1));
+      ENGINE.hire(company, stats(90, 90, 90, 90));
+      List<CompanyState.Employee> staff = company.employees;
+      ENGINE.place(
+          company,
+          Map.of(staff.get(0).id, "game", staff.get(1).id, "game", staff.get(2).id, "research"));
+      company.phase = CompanyEngine.CRASH;
+      company.invest = null;
+      CompanyState.Settlement settlement = ENGINE.settle(company, new HashSeededRandom(seed));
+      long seated = company.employees.stream().filter(e -> e.desk != null).count();
+      assertThat(seated).isLessThanOrEqualTo(ENGINE.seats(company.capital));
+      if (ENGINE.seats(company.capital) < 3) {
+        assertThat(staff.get(2).desk).as("리서치 팀이 먼저 일어난다").isNull();
+        assertThat(settlement.lines).anyMatch(line -> line.contains("자리에서 일어나 쉰다"));
+        return;
+      }
+    }
+    throw new AssertionError("폭락장에 자리가 줄어드는 해가 없었다");
+  }
 }

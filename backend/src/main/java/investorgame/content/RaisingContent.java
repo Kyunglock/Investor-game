@@ -51,6 +51,7 @@ public record RaisingContent(
       String hotLine,
       Map<String, String> phases,
       String falseOmenNote,
+      String seatsCut,
       String opening,
       Bankrupt bankrupt,
       List<Era> eras,
