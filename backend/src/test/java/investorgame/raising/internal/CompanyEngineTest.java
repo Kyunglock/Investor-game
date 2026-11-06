@@ -209,7 +209,7 @@ class CompanyEngineTest {
     assertThat(CompanyEngine.employeeGrade(ace)).as("XX까지 경험 2").isEqualTo("X");
     ENGINE.survive(ace, settlement);
     assertThat(CompanyEngine.employeeGrade(ace)).isEqualTo("XX");
-    assertThat(settlement.lines.getLast()).contains("박주임이 폭락장을 버텨 등급이 올랐다 (X → XX)");
+    assertThat(settlement.lines.getLast()).contains("박주임이 폭락장을 버텨 등급이 올랐다 (EX → EX+)");
 
     result.flips.clear();
     ENGINE.drop(ace, result, settlement);

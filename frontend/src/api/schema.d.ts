@@ -971,7 +971,10 @@ export interface components {
             /** @description 가져올 때 한마디 */
             pitch: string;
         };
-        /** @enum {string} */
+        /**
+         * @description 등급 코드. 화면과 글에는 X·XX·XXX를 EX·EX+·EX++, Z·ZZ·ZZZ를 ★·★★·★★★로 보인다 (decisions.md 286번)
+         * @enum {string}
+         */
         Grade: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "X" | "XX" | "XXX" | "Z" | "ZZ" | "ZZZ";
         PlayLog: {
             /** @description 회사. 최근에 차린 순 (decisions.md 228번) */

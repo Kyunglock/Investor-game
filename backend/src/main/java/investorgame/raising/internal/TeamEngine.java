@@ -180,7 +180,7 @@ class TeamEngine {
       }
       case "hr" -> {
         values.put("extra", String.valueOf(company.hrExtraApplicants()));
-        values.put("cap", company.hrOf(c).map(company::hrCap).orElse("F"));
+        values.put("cap", CompanyEngine.shown(company.hrOf(c).map(company::hrCap).orElse("F")));
         return Korean.fill(s.get("hr"), values);
       }
       default -> {

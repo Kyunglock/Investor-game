@@ -8,7 +8,8 @@ import { toggleAutoPlay } from './autoPlay'
 import { BuildingArt } from './BuildingArt'
 import { pnlLabel } from './board'
 import { EndingScreen } from './EndingScreen'
-import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
+import { GradeBadge } from './GradeBadge'
+import { gradeLabel, LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { InvestWindow } from './InvestWindow'
 import { MacroWindow } from './MacroWindow'
 import { MoveScene } from './MoveScene'
@@ -547,7 +548,8 @@ function DeskCard({
                 <li key={e.id} className="flex flex-wrap items-center gap-1 text-[13px]">
                   <b>{e.name}</b>
                   <span className="font-mono-num text-[12px]">
-                    {STAT_NAMES[d.statCode]} {e.grades[d.statCode]} · 종합 {e.overallGrade}
+                    {STAT_NAMES[d.statCode]} <GradeBadge grade={e.grades[d.statCode]} size="sm" /> ·
+                    종합 <GradeBadge grade={e.overallGrade} size="sm" />
                   </span>
                   {e.leader ? (
                     <span
@@ -599,7 +601,7 @@ function DeskCard({
                 >
                   {e.name}{' '}
                   <span className="font-mono-num text-[11px]">
-                    {STAT_NAMES[d.statCode]} {e.grades[d.statCode]}
+                    {STAT_NAMES[d.statCode]} <GradeBadge grade={e.grades[d.statCode]} size="sm" />
                     {e.sector && d.sector === e.sector && ' · 관심'}
                   </span>
                   <span className="block text-[11px] text-muted">
@@ -630,7 +632,9 @@ function EmployeeDetail({ employee: e }: { employee: Employee }) {
     <div className="min-w-0 flex-1" data-testid="employee-detail">
       <p className="font-semibold">
         {e.name} <span data-testid="title">{titleOf(e.overallGrade)}</span>{' '}
-        <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>{' '}
+        <span className="font-mono-num text-[13px]">
+          종합 <GradeBadge grade={e.overallGrade} />
+        </span>{' '}
         <span className="text-[12px] text-muted" data-testid="attire">
           · {ATTIRE_NAMES[attireOf(e.overallGrade)]}
           {e.effects.length > 0 && ` · ${e.effects.join('·')}`}
@@ -647,7 +651,9 @@ function EmployeeDetail({ employee: e }: { employee: Employee }) {
         {STAT_ORDER.map((code) => (
           <li key={code} className="rounded border border-line-soft py-0.5">
             {STAT_NAMES[code]}
-            <b className="block font-mono-num text-[13px]">{e.grades[code]}</b>
+            <span className="mt-0.5 block">
+              <GradeBadge grade={e.grades[code]} />
+            </span>
           </li>
         ))}
       </ul>
@@ -705,7 +711,7 @@ function DeskButtons({
             {d.hot && '★ '}
             {d.name}{' '}
             <span className="font-mono-num text-[11px]">
-              {STAT_NAMES[d.statCode]} {e.grades[d.statCode]}
+              {STAT_NAMES[d.statCode]} <GradeBadge grade={e.grades[d.statCode]} size="sm" />
               {e.sector && d.sector === e.sector && ' · 관심'}
             </span>
           </button>
@@ -804,7 +810,10 @@ function SeatPicker({
               onClick={() => onFocus({ employee: x.id })}
               className="min-h-10 rounded border border-pen px-2 text-[13px]"
             >
-              {x.name} <span className="font-mono-num text-[11px]">종합 {x.overallGrade}</span>
+              {x.name}{' '}
+              <span className="font-mono-num text-[11px]">
+                종합 <GradeBadge grade={x.overallGrade} size="sm" />
+              </span>
             </button>
           ))}
         </div>
@@ -1047,7 +1056,7 @@ function MarketPanel({ company }: { company: Company }) {
       <h3 className="sr-only">연초 공채</h3>
       <p className="text-[12px] text-muted">
         계약금을 내고 뽑습니다. 뽑은 사람은 쉬는 채로 들어오니 자리에 앉히세요.
-        {meeting?.hrCap && ` 인사팀 덕에 ${meeting.hrCap} 언저리까지 옵니다.`}
+        {meeting?.hrCap && ` 인사팀 덕에 ${gradeLabel(meeting.hrCap)} 언저리까지 옵니다.`}
       </p>
       {company.applicants.length === 0 && (
         <p className="mt-2 text-[13px] text-muted">올해 지원자를 다 만났습니다.</p>
@@ -1114,7 +1123,7 @@ function ApplicantCard({
           <span className="text-[13px] font-normal text-muted">{titleOf(a.overallGrade)}</span>
         </span>
         <span className="font-mono-num text-[13px]">
-          종합 <b className="text-[17px]">{a.overallGrade}</b>
+          종합 <GradeBadge grade={a.overallGrade} size="lg" />
         </span>
       </p>
       {a.line && <p className="mt-1 text-[13px] text-teal">{a.line}</p>}
@@ -1127,7 +1136,9 @@ function ApplicantCard({
         {STAT_ORDER.map((code) => (
           <li key={code} className="rounded border border-line-soft py-0.5">
             {STAT_NAMES[code]}
-            <b className="block font-mono-num text-[14px]">{a.grades[code]}</b>
+            <span className="mt-0.5 block">
+              <GradeBadge grade={a.grades[code]} />
+            </span>
           </li>
         ))}
       </ul>
@@ -1162,7 +1173,7 @@ function ApplicantCard({
               onClick={() => onHire(e.id)}
               className="min-h-10 w-full rounded border border-wine text-[13px] text-wine disabled:opacity-50"
             >
-              {e.name}(종합 {e.overallGrade}) 내보내고 뽑는다
+              {e.name}(종합 {gradeLabel(e.overallGrade)}) 내보내고 뽑는다
             </button>
           ))}
         {!affordable && <p className="text-[12px] text-muted">계약금이 모자랍니다.</p>}

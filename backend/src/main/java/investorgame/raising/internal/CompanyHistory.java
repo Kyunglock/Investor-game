@@ -121,7 +121,7 @@ class CompanyHistory {
             "rise",
             Korean.fill(
                 texts().events().get("rise"),
-                Map.of("name", e.name, "grade", CompanyEngine.employeeGrade(e))),
+                Map.of("name", e.name, "grade", CompanyEngine.shown(CompanyEngine.employeeGrade(e)))),
             null);
       }
     }

@@ -3,6 +3,7 @@ import { api } from '../../api/client'
 import type { components } from '../../api/schema'
 import { Card } from '../game/Card'
 import { shortWon } from '../game/labels'
+import { gradeLabel } from '../raising/grades'
 
 type PlayLog = components['schemas']['PlayLog']
 type CompanyPlay = PlayLog['companies'][number]
@@ -179,7 +180,7 @@ export function AdminPage() {
                       <td className="font-mono-num">결산 {c.settled}번</td>
                       <td className="font-mono-num">{time(c.updatedAt)}</td>
                       <td className="font-mono-num">{shortWon(c.capital)}</td>
-                      <td className="font-mono-num">{c.grade}</td>
+                      <td className="font-mono-num">{gradeLabel(c.grade)}</td>
                       <td className="font-mono-num">{c.employees}명</td>
                     </tr>
                   ))}

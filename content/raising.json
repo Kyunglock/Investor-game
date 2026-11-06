@@ -296,7 +296,7 @@
     "history": {
       "events": {
         "open": "{number}호 회사를 차렸다.",
-        "rise": "{name}이(가) 폭락장을 버텨 {grade}이(가) 됐다.",
+        "rise": "{name}이(가) 폭락장을 버텨 {grade} 등급이 됐다.",
         "left": "{name}이(가) 회사를 떠났다.",
         "best": "가장 크게 번 해다. 자본이 {ratio}배가 됐다.",
         "worst": "가장 아팠던 해다. 자본이 {percent}% 줄었다.",

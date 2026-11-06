@@ -30,6 +30,13 @@ class CompanyEngine {
   static final List<String> LADDER =
       List.of("F", "E", "D", "C", "B", "A", "S", "SS", "SSS", "X", "XX", "XXX", "Z", "ZZ", "ZZZ");
 
+  /**
+   * 글에 보이는 SSS 위 등급 (decisions.md 286번). 코드(X~ZZZ)는 저장·API에 그대로 두고 사람이 읽는 글자만 EX·EX+·EX++ ·
+   * ★·★★·★★★로 바꾼다. 프론트의 grades.ts GRADE_LABEL과 같다.
+   */
+  private static final Map<String, String> SHOWN =
+      Map.of("X", "EX", "XX", "EX+", "XXX", "EX++", "Z", "★", "ZZ", "★★", "ZZZ", "★★★");
+
   static final String CRASH = "crash";
 
   /** 경력직이 오는 지원자 자리: 첫째는 올해 필요한 인재, 둘째는 사수가 붙는 자리라 셋째 (258번). */
@@ -664,7 +671,7 @@ class CompanyEngine {
         line =
             Korean.fill(
                 texts.market().veteran(),
-                Map.of("grade", LADDER.get(LADDER.indexOf(StatGrade.SSS.name()) + rank)));
+                Map.of("grade", shown(LADDER.get(LADDER.indexOf(StatGrade.SSS.name()) + rank))));
       }
       CompanyState.Applicant applicant = new CompanyState.Applicant();
       applicant.id = company.met + 1;
@@ -1588,12 +1595,17 @@ class CompanyEngine {
       String template, Employee employee, String before, String after, String stat) {
     Map<String, String> values = new HashMap<>();
     values.put("name", employee.name);
-    values.put("before", before);
-    values.put("after", after);
+    values.put("before", shown(before));
+    values.put("after", shown(after));
     if (stat != null) {
       values.put("stat", content.raising().company().statNames().get(stat));
     }
     return Korean.fill(template, values);
+  }
+
+  /** 글에 보이는 등급 글자. F~SSS는 그대로, X~ZZZ는 EX·EX+·EX++·★·★★·★★★ (286번). */
+  static String shown(String grade) {
+    return SHOWN.getOrDefault(grade, grade);
   }
 
   /** 직원의 종합 등급: 다섯 능력치 평균의 F~SSS, SSS면 실전 경험으로 오른 X~ZZZ (2.2·2.3절). */
