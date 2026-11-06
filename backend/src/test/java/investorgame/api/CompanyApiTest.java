@@ -298,7 +298,8 @@ class CompanyApiTest {
         assertThat(hiring).as("첫 해에 뽑고 새로 받은 값").isPositive();
       }
       if (after > 0) {
-        assertThat(before + meetingTotal + staff + fee - hiring - salary).isEqualTo(after);
+        long moving = settled.read("$.lastSettlement.moving", Long.class);
+        assertThat(before + meetingTotal + staff + fee - hiring - salary - moving).isEqualTo(after);
       }
     }
     // 매각을 뺐다(236번): 세 해가 지나도 회사는 끝나지 않고 4년 차 연초 회의가 온다.

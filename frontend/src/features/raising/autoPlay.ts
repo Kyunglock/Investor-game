@@ -10,6 +10,7 @@ export type AutoStep =
   | { kind: 'closeQuarter' }
   | { kind: 'closeMove' }
   | { kind: 'hire'; applicantId: number }
+  | { kind: 'upgrade' }
   | { kind: 'poach'; keep: boolean }
   | { kind: 'raise'; accept: boolean }
   | { kind: 'resign'; keep: boolean }
@@ -95,6 +96,10 @@ export function nextAutoStep(
   if (company.meeting?.raise) {
     return { kind: 'raise', accept: true }
   }
+  // 건물 이사 (296번): 갈 수 있으면 먼저 간다. 돈을 쓰는 순서는 건물이 먼저다.
+  if (company.upgrade?.affordable) {
+    return { kind: 'upgrade' }
+  }
   const applicantId = autoHire(company)
   if (applicantId !== null) {
     return { kind: 'hire', applicantId }
@@ -159,6 +164,7 @@ export function useCompanyAutoPlay() {
   const justSettled = useRaisingStore((s) => s.justSettled)
   const justQuartered = useRaisingStore((s) => s.justQuartered)
   const moveAlert = useRaisingStore((s) => s.moveAlert)
+  const upgradeMove = useRaisingStore((s) => s.upgradeMove)
   const error = useRaisingStore((s) => s.error)
   useEffect(() => {
     if (!auto || busy || !company) {
@@ -168,7 +174,12 @@ export function useCompanyAutoPlay() {
       useRaisingStore.setState({ autoPlay: false, autoNextAt: null })
       return
     }
-    const step = nextAutoStep(company, justSettled, justQuartered, moveAlert)
+    const step = nextAutoStep(
+      company,
+      justSettled,
+      justQuartered,
+      moveAlert || upgradeMove !== null,
+    )
     if (step.kind === 'stop') {
       useRaisingStore.setState({ autoPlay: false, autoNextAt: null })
       return
@@ -182,6 +193,7 @@ export function useCompanyAutoPlay() {
     }
     const {
       hire,
+      upgrade,
       place,
       convene,
       decideInvest,
@@ -203,7 +215,10 @@ export function useCompanyAutoPlay() {
           useRaisingStore.setState({ justQuartered: false, autoNextAt: null })
           return
         case 'closeMove':
-          useRaisingStore.setState({ moveAlert: false, autoNextAt: null })
+          useRaisingStore.setState({ moveAlert: false, upgradeMove: null, autoNextAt: null })
+          return
+        case 'upgrade':
+          void upgrade()
           return
         case 'hire':
           void hire(step.applicantId)
@@ -243,5 +258,5 @@ export function useCompanyAutoPlay() {
       }
     }, delay)
     return () => clearTimeout(id)
-  }, [auto, busy, company, justSettled, justQuartered, moveAlert, error])
+  }, [auto, busy, company, justSettled, justQuartered, moveAlert, upgradeMove, error])
 }

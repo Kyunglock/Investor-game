@@ -143,6 +143,21 @@ describe('엔딩 (decisions.md 276번)', () => {
   })
 })
 
+describe('건물 이사 (decisions.md 296번)', () => {
+  it('갈 수 있으면 사람을 뽑기 전에 먼저 이사한다', () => {
+    const can = company({
+      upgrade: { to: 'E', cost: 50_000_000, needed: 250_000_000, affordable: true },
+      applicants: [{ id: 1, overallGrade: 'C', fee: 10_000_000 }],
+    } as never)
+    expect(nextAutoStep(can, false)).toEqual({ kind: 'upgrade' })
+    const cannot = company({
+      upgrade: { to: 'E', cost: 50_000_000, needed: 250_000_000, affordable: false },
+      applicants: [{ id: 1, overallGrade: 'C', fee: 10_000_000 }],
+    } as never)
+    expect(nextAutoStep(cannot, false)).toEqual({ kind: 'hire', applicantId: 1 })
+  })
+})
+
 describe('건물 알림 (decisions.md 281번)', () => {
   it('연말 결산서 다음에 건물 알림을 20초 띄우고 닫는다', () => {
     expect(nextAutoStep(company(), true, false, true).kind).toBe('closeYearEnd')

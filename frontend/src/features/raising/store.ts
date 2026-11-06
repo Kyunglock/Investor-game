@@ -20,6 +20,8 @@ interface RaisingState {
   justQuartered: boolean
   /** 방금 연말 결산으로 건물이 바뀌었다(오르거나 줄었다). 연말 결산서를 닫으면 건물 알림이 뜨고, 닫으면 지운다 (decisions.md 281번). */
   moveAlert: boolean
+  /** 방금 이사 비용을 내고 건물을 올렸다 (decisions.md 296번). 건물 알림을 띄우고 닫으면 지운다. */
+  upgradeMove: { before: Company['grade']; after: Company['grade']; year: number } | null
   /** 자동 진행을 켰다 (245번). 새로 고치면 꺼진다: 모르는 사이에 돈을 쓰지 않게. */
   autoPlay: boolean
   /** 자동 진행이 띄운 창(분기 실적·연말 결산서·건물 알림)을 닫을 때(ms). 화면이 남은 초를 센다. 창이 없으면 null (decisions.md 277번). */
@@ -33,6 +35,8 @@ interface RaisingState {
   restart: () => Promise<void>
   /** 계약금을 내고 공채 시장의 지원자를 뽑는다. 자리가 꽉 찼으면 replace의 직원을 내보낸다. */
   hire: (applicantId: number, replace?: number) => Promise<void>
+  /** 이사 비용을 내고 다음 건물로 간다 (decisions.md 296번). */
+  upgrade: () => Promise<void>
   /** 값을 내고 올해 지원자를 새로 받는다. */
   refreshApplicants: () => Promise<void>
   /** 올해 이직 제안에 답한다: 붙잡거나 보낸다 (decisions.md 262번). */
@@ -89,6 +93,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     justSettled: false,
     justQuartered: false,
     moveAlert: false,
+    upgradeMove: null,
     autoPlay: false,
     autoNextAt: null,
     tab: null,
@@ -148,6 +153,18 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     answerPoach: (keep) => change(api.POST('/api/company/poach', { body: { keep } })),
 
     answerRaise: (accept) => change(api.POST('/api/company/raise', { body: { accept } })),
+
+    upgrade: async () => {
+      const before = get().company
+      if (!before || get().busy) {
+        return
+      }
+      await change(api.POST('/api/company/upgrade'))
+      const after = get().company
+      if (!get().error && after && after.grade !== before.grade) {
+        set({ upgradeMove: { before: before.grade, after: after.grade, year: after.year } })
+      }
+    },
 
     answerResign: (keep) => change(api.POST('/api/company/resign', { body: { keep } })),
 

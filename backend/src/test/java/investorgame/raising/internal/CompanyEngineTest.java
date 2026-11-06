@@ -689,8 +689,9 @@ class CompanyEngineTest {
     assertThat(ENGINE.seats(company)).as("자리 수는 연말에만 바뀐다").isEqualTo(6);
     assertThat(staff.get(0).desk).isEqualTo("research");
 
-    // 연말에 등급을 다시 매기면(F, 자리 4) 넘친 둘이 일어난다: 돕는 자리가 먼저, 그다음 나중에 들어온 사람.
+    // 연말에 건물이 줄어들면(F, 자리 4, 296번) 넘친 둘이 일어난다: 돕는 자리가 먼저, 그다음 나중에 들어온 사람.
     company.gradedCapital = company.capital;
+    company.building = ENGINE.grade(company.capital);
     ENGINE.fitSeats(company);
     assertThat(ENGINE.seats(company)).isEqualTo(4);
     assertThat(staff.get(0).desk).as("돕는 자리가 먼저 일어난다").isNull();
@@ -1069,6 +1070,64 @@ class CompanyEngineTest {
    * 회사 연표·업적·명예의 전당 (#326, decisions.md 263번): 차린 해와 등급이 바뀐 해가 연표에 남고, 한 해에 자본이 두 배면 업적이 열리며, 내보낸
    * 직원은 떠난 사람으로 남는다.
    */
+  /**
+   * 건물 이사 (decisions.md 296번): 등급은 저절로 오르지 않는다. 자본이 다음 띠 + 이사 비용(다음 띠의 25%) 이상이면 비용을 내고 올라가고, 자리 수가
+   * 바로 바뀐다. 자본이 띠 아래로 떨어지면 연말에 저절로 줄어든다. 랜드마크 타워(Z)에 오르면 엔딩이다.
+   */
+  @Test
+  void 건물은_이사_비용을_내야_올라가고_자본이_띠_아래로_떨어지면_연말에_줄어든다() {
+    CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
+    assertThat(company.building).isEqualTo("F");
+    assertThat(ENGINE.nextGrade(company)).isEqualTo("E");
+    assertThat(ENGINE.upgradeCost(company)).as("E 2억의 25%").isEqualTo(50_000_000L);
+    assertThat(ENGINE.upgradeNeeded(company)).isEqualTo(250_000_000L);
+    assertThat(ENGINE.canUpgrade(company)).isFalse();
+    assertThatThrownBy(() -> ENGINE.upgrade(company)).isInstanceOf(InvalidRequestException.class);
+
+    // 자본이 넉넉해도 결산으로는 안 오른다.
+    company.capital = 900_000_000L;
+    company.invest = null;
+    company.poach = null;
+    ENGINE.settle(company, new HashSeededRandom(1));
+    assertThat(ENGINE.grade(company)).isEqualTo("F");
+    assertThat(ENGINE.seats(company)).isEqualTo(4);
+
+    // 이사: 비용이 빠지고 자리가 늘고 연표에 남는다. 그해 이사 비용은 결산에 따로 적힌다.
+    long before = company.capital;
+    ENGINE.upgrade(company);
+    assertThat(ENGINE.grade(company)).isEqualTo("E");
+    assertThat(company.capital).isEqualTo(before - 50_000_000L);
+    assertThat(company.yearMoving).isEqualTo(50_000_000L);
+    assertThat(ENGINE.seats(company)).isEqualTo(6);
+    assertThat(company.timeline).extracting(e -> e.kind).contains("grow");
+    // 한 번에 한 단계씩: D(6억)로 가려면 7억 5천만이 있어야 하고 지금 8억 남짓이니 간다.
+    ENGINE.upgrade(company);
+    assertThat(ENGINE.grade(company)).isEqualTo("D");
+    assertThat(company.capital).isEqualTo(before - 200_000_000L);
+    assertThat(ENGINE.canUpgrade(company)).as("C 20억은 아직").isFalse();
+    CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(2));
+    assertThat(s.moving).isEqualTo(200_000_000L);
+    assertThat(s.quarters.stream().mapToLong(q -> q.moving).sum()).isEqualTo(200_000_000L);
+
+    // 자본이 띠 아래로 떨어지면 연말에 줄어든다.
+    company.capital = 150_000_000L;
+    company.invest = null;
+    company.poach = null;
+    CompanyState.Settlement fell = ENGINE.settle(company, new HashSeededRandom(3));
+    assertThat(fell.gradeBefore).isEqualTo("D");
+    assertThat(fell.gradeAfter).isEqualTo("F");
+    assertThat(ENGINE.grade(company)).isEqualTo("F");
+
+    // 랜드마크 타워(Z)에 오르면 엔딩이다.
+    company.capital = 200_000_000_000_000L;
+    while (ENGINE.canUpgrade(company) && !company.finished) {
+      ENGINE.upgrade(company);
+    }
+    assertThat(ENGINE.grade(company)).isEqualTo("Z");
+    assertThat(company.finished).isTrue();
+    assertThat(company.finishedYear).isEqualTo(company.year);
+  }
+
   @Test
   void 연표와_업적과_떠난_직원이_남는다() {
     CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
@@ -1081,6 +1140,8 @@ class CompanyEngineTest {
     company.poach = null;
     company.capital = 450_000_000L;
     company.yearStartCapital = 100_000_000L;
+    // 건물은 저절로 오르지 않는다(296번): 이사 비용을 내고 올라가야 연표에 남는다.
+    ENGINE.upgrade(company);
     CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(1));
     assertThat(s.achieved).contains("곱빼기");
     assertThat(company.achievements).containsKey("doubled");

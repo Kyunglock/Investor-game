@@ -131,6 +131,7 @@ class CompanyEngine {
   CompanyState open(SeededRandom random, long capital) {
     CompanyState company = new CompanyState();
     company.capital = Math.max(0, capital);
+    company.building = grade(company.capital);
     company.era = eras().getFirst().code();
     company.opening =
         Korean.fill(content.raising().company().opening(), Map.of("capital", won(company.capital)));
@@ -889,18 +890,91 @@ class CompanyEngine {
     return company.gradedCapital != null ? company.gradedCapital : company.capital;
   }
 
+  /** 회사 등급 = 산 건물 (decisions.md 296번). 이 칸이 없던 회사는 연초 자본으로 정한다(296번 전처럼). */
   String grade(CompanyState company) {
-    return grade(gradedCapital(company));
+    return company.building != null ? company.building : grade(gradedCapital(company));
   }
 
   int seats(CompanyState company) {
-    return seats(gradedCapital(company));
+    return seatsOf(grade(company));
   }
 
   int seats(long capital) {
-    int at = LADDER.indexOf(grade(capital));
+    return seatsOf(grade(capital));
+  }
+
+  int seatsOf(String grade) {
+    int at = LADDER.indexOf(grade);
     List<Integer> seats = properties.seats();
     return at < seats.size() ? seats.get(at) : seats.getLast() + 2 * (at - seats.size() + 1);
+  }
+
+  /** 다음 건물 (296번): 지금 등급의 다음 띠. 끝 등급이면 null. */
+  String nextGrade(CompanyState company) {
+    int at = LADDER.indexOf(grade(company)) + 1;
+    return at < properties.gradeCapital().size() ? LADDER.get(at) : null;
+  }
+
+  /** 다음 건물로 가는 이사 비용 (296번): 다음 띠 자본의 upgrade.percent%. 끝 등급이면 0. */
+  long upgradeCost(CompanyState company) {
+    String next = nextGrade(company);
+    if (next == null) {
+      return 0;
+    }
+    long floor = properties.gradeCapital().get(LADDER.indexOf(next));
+    return floor * properties.upgrade().percent() / PERCENT;
+  }
+
+  /** 이사하려면 있어야 하는 자본 (296번): 다음 띠 + 이사 비용. 비용을 내고도 그 띠에 남게. 끝 등급이면 null. */
+  Long upgradeNeeded(CompanyState company) {
+    String next = nextGrade(company);
+    if (next == null) {
+      return null;
+    }
+    return properties.gradeCapital().get(LADDER.indexOf(next)) + upgradeCost(company);
+  }
+
+  boolean canUpgrade(CompanyState company) {
+    Long needed = upgradeNeeded(company);
+    return needed != null && !company.finished && !company.closed && company.capital >= needed;
+  }
+
+  /**
+   * 건물 이사 (decisions.md 296번): 이사 비용을 내고 다음 건물로 올라간다. 자리 수·규모의 벽은 바로 새 건물로 바뀐다. 랜드마크 타워에 오르면 엔딩이다
+   * (276번). 돈이 모자라거나 끝 등급이면 400.
+   */
+  void upgrade(CompanyState company) {
+    String next = nextGrade(company);
+    if (next == null) {
+      throw new InvalidRequestException("더 올라갈 건물이 없다");
+    }
+    if (company.finished || company.closed) {
+      throw new InvalidRequestException("끝난 회사다");
+    }
+    if (!canUpgrade(company)) {
+      throw new InvalidRequestException("이사하려면 자본이 " + won(upgradeNeeded(company)) + " 있어야 한다");
+    }
+    long cost = upgradeCost(company);
+    company.capital -= cost;
+    company.yearMoving += cost;
+    company.building = next;
+    company.gradedCapital = company.capital;
+    history.add(company, company.year, "grow", null, next);
+    if (LADDER.indexOf(next) >= LADDER.indexOf(properties.endingGrade())) {
+      company.finished = true;
+      company.finishedYear = company.year;
+      String line =
+          Korean.fill(
+              content.raising().company().ending().line(),
+              Map.of("years", String.valueOf(company.year)));
+      company.yearLines.add(line);
+      history.add(
+          company,
+          company.year,
+          "ending",
+          content.raising().company().history().events().get("ending"),
+          next);
+    }
   }
 
   /** 규모의 벽 (decisions.md 244번): 등급 단계만큼 거듭제곱한 비율을 곱한다. F는 그대로. */
@@ -974,6 +1048,7 @@ class CompanyEngine {
     company.yearStartCapital = company.capital;
     company.gradedCapital = company.capital;
     company.yearHiring = 0;
+    company.yearMoving = 0;
     company.quarter = 1;
     company.yearStake = null;
     company.quarters.clear();
@@ -1348,7 +1423,9 @@ class CompanyEngine {
       q.investTitle = company.invest.title;
       q.investTotal = company.invest.total;
     }
-    // 분기 실적이 맞아떨어지게 이 분기에 낸 인사 비용을 따로 둔다: 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 = 끝 자본.
+    // 분기 실적이 맞아떨어지게 이 분기에 낸 이사 비용(296번)과 인사 비용을 따로 둔다: 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 − 이사 비용
+    // = 끝 자본.
+    q.moving = company.yearMoving - company.quarters.stream().mapToLong(x -> x.moving).sum();
     if (q.capitalAfter > 0) {
       q.hiring =
           q.capitalBefore
@@ -1356,6 +1433,7 @@ class CompanyEngine {
               + q.staff
               + q.fee
               - q.salary
+              - q.moving
               - q.capitalAfter;
     }
     RaisingContent.Quarters texts = content.raising().company().quarters();
@@ -1397,6 +1475,7 @@ class CompanyEngine {
     settlement.phase = company.phase;
     settlement.omen = company.omen;
     settlement.hiring = company.yearHiring;
+    settlement.moving = company.yearMoving;
     settlement.capitalBefore =
         company.yearStartCapital != null
             ? company.yearStartCapital
@@ -1480,8 +1559,11 @@ class CompanyEngine {
     settlement.lines.addAll(company.yearLines);
     countTenure(company, settlement);
     grow(company, settlement, random);
-    // 등급·건물·자리 수는 연말에만 바뀐다 (268번).
+    // 등급·건물·자리 수는 연말에만 바뀐다 (268번). 건물은 저절로 오르지 않고(296번: 이사 비용을 내야 한다), 자본이 지금 띠 아래로 떨어지면 줄어든다.
+    String kept = grade(company);
     company.gradedCapital = company.capital;
+    String byCapital = grade(company.capital);
+    company.building = LADDER.indexOf(byCapital) < LADDER.indexOf(kept) ? byCapital : kept;
     List<Employee> stood = fitSeats(company);
     if (!stood.isEmpty()) {
       settlement.lines.add(

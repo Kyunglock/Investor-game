@@ -301,6 +301,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/upgrade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 이사 비용을 내고 다음 건물로 간다 (decisions.md 296번)
+         * @description 건물(회사 등급)은 저절로 오르지 않는다. 자본이 다음 띠 + 이사 비용(다음 띠 자본의 25%) 이상이면 비용을 내고 올라간다. 자리 수와 규모의 벽은 바로
+         *     새 건물로 바뀐다. 랜드마크 타워에 오르면 엔딩이다. 돈이 모자라거나 끝 등급이면 400.
+         */
+        post: operations["upgradeBuilding"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/leader": {
         parameters: {
             query?: never;
@@ -397,8 +418,26 @@ export interface components {
             /** Format: int64 */
             capital: number;
             grade: components["schemas"]["Grade"];
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description 다음 띠의 자본. 끝 등급이면 null
+             */
             nextGradeCapital?: number | null;
+            /** @description 건물 이사 (decisions.md 296번). 다음 건물로 가는 데 드는 돈. 끝 등급이거나 끝난 회사면 null */
+            upgrade?: {
+                to: components["schemas"]["Grade"];
+                /**
+                 * Format: int64
+                 * @description 이사 비용(다음 띠 자본의 25%)
+                 */
+                cost: number;
+                /**
+                 * Format: int64
+                 * @description 이사하려면 있어야 하는 자본(다음 띠 + 이사 비용)
+                 */
+                needed: number;
+                affordable: boolean;
+            } | null;
             /** @description 망한 회사의 한 줄. 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 있고 */
             broke?: string | null;
             seats: number;
@@ -793,6 +832,11 @@ export interface components {
                 hiring: number;
                 /**
                  * Format: int64
+                 * @description 그해 낸 이사 비용 (296번)
+                 */
+                moving: number;
+                /**
+                 * Format: int64
                  * @description 그해 나간 연봉의 합(인건비
                  */
                 salary: number;
@@ -876,9 +920,14 @@ export interface components {
             staff: number;
             /**
              * Format: int64
-             * @description 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 = 끝 자본
+             * @description 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 − 이사 비용 = 끝 자본
              */
             hiring: number;
+            /**
+             * Format: int64
+             * @description 이 분기에 낸 이사 비용 (296번)
+             */
+            moving: number;
             /**
              * Format: int64
              * @description 이 분기에 나간 연봉(인건비
@@ -1440,6 +1489,44 @@ export interface operations {
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    upgradeBuilding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 이사한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            /** @description 돈이 모자라거나 끝 등급 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description 세션 없음 */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     appointLeader: {

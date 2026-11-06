@@ -45,6 +45,7 @@ export function CompanyScreen({ company }: { company: Company }) {
   const error = useRaisingStore((s) => s.error)
   const justSettled = useRaisingStore((s) => s.justSettled)
   const moveAlert = useRaisingStore((s) => s.moveAlert)
+  const upgradeMove = useRaisingStore((s) => s.upgradeMove)
   const justQuartered = useRaisingStore((s) => s.justQuartered)
   const autoPlay = useRaisingStore((s) => s.autoPlay)
   const { settle, restart, convene, conveneMacro } = useRaisingStore.getState()
@@ -126,12 +127,27 @@ export function CompanyScreen({ company }: { company: Company }) {
           />
         )}
 
-        {company.resign && !company.ending && !justSettled && !justQuartered && !moveAlert && (
-          // 연봉 때문에 사표를 들고 왔다 (282번): 다른 창을 다 닫은 뒤 마지막 기회로 뜬다.
-          <ResignAlert resign={company.resign} />
+        {upgradeMove && !justSettled && (
+          // 이사 비용을 내고 올라갔다 (296번): 바로 박치기 장면이 뜬다.
+          <MoveScene
+            before={upgradeMove.before}
+            after={upgradeMove.after}
+            year={upgradeMove.year}
+            onDone={() => useRaisingStore.setState({ upgradeMove: null })}
+          />
         )}
 
-        {company.ending && !justSettled && !moveAlert && (
+        {company.resign &&
+          !company.ending &&
+          !justSettled &&
+          !justQuartered &&
+          !moveAlert &&
+          !upgradeMove && (
+            // 연봉 때문에 사표를 들고 왔다 (282번): 다른 창을 다 닫은 뒤 마지막 기회로 뜬다.
+            <ResignAlert resign={company.resign} />
+          )}
+
+        {company.ending && !justSettled && !moveAlert && !upgradeMove && (
           // 랜드마크 타워 엔딩 (276번): 결산서와 건물 알림 뒤에 뜨고, 다음 회사를 차린다.
           <EndingScreen company={company} />
         )}
@@ -249,17 +265,45 @@ export function CompanyScreen({ company }: { company: Company }) {
   )
 }
 
-/** 다음 단계: 자본이 얼마가 되면 다음 건물로 이사하는지, 같은 건물에서 책상을 늘리는지 (238번). */
+/**
+ * 다음 단계 (238·296번): 다음 건물로 이사하거나 같은 건물에서 책상을 늘리는 데 드는 이사 비용과 필요한 자본. 건물은 저절로 오르지 않는다: 자본이 다음 띠 +
+ * 이사 비용 이상이면 버튼이 켜지고, 누르면 비용을 내고 올라간다.
+ */
 function NextStep({ company }: { company: Company }) {
+  const busy = useRaisingStore((s) => s.busy)
+  const { upgrade } = useRaisingStore.getState()
   const step = nextStep(company.grade)
-  if (!step || company.nextGradeCapital == null) {
+  const plan = company.upgrade
+  if (!step || !plan || company.status === 'ENDED') {
     return null
   }
+  const label = step.kind === 'move' ? `다음 건물 ${step.to}` : '사무실 넓히기(책상 추가)'
+  const short = (company.capital - plan.needed) * -1
   return (
-    <p className="mt-1 text-[12px] text-muted" data-testid="next-step">
-      {step.kind === 'move' ? `다음 건물 ${step.to}` : '사무실 넓히기(책상 추가)'} · 자본{' '}
-      {shortWon(company.nextGradeCapital)}부터 · 지금 책상 {company.seats}개
-    </p>
+    <div
+      className={`mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded border px-2 py-1.5 ${
+        plan.affordable ? 'border-gold bg-gold/10' : 'border-line-soft'
+      }`}
+      data-testid="next-step"
+      data-affordable={plan.affordable}
+    >
+      <p className="text-[12px] text-muted">
+        <b className={plan.affordable ? 'text-gold' : 'text-ink'}>{label}</b> · 이사 비용{' '}
+        {shortWon(plan.cost)} · 자본 {shortWon(plan.needed)}부터
+        {!plan.affordable && ` (${shortWon(short)} 더)`} · 지금 책상 {company.seats}개
+      </p>
+      <button
+        type="button"
+        disabled={busy || !plan.affordable}
+        onClick={() => void upgrade()}
+        className={`min-h-9 rounded px-3 text-[13px] font-semibold disabled:opacity-40 ${
+          plan.affordable ? 'animate-glow bg-gold text-white' : 'border border-line text-muted'
+        }`}
+        data-testid="upgrade"
+      >
+        {step.kind === 'move' ? '이사하기' : '넓히기'} · {shortWon(plan.cost)}
+      </button>
+    </div>
   )
 }
 

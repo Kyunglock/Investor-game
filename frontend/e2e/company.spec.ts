@@ -182,6 +182,9 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await expect(page.getByTestId('applicant')).toHaveCount(5)
   await expect(page.getByTestId('building-ladder').getByRole('listitem')).toHaveCount(7)
   await expect(page.getByTestId('next-step')).toContainText('사무실 넓히기')
+  // 건물은 저절로 오르지 않는다 (296번): 이사 비용과 필요한 자본이 보이고, 자본이 모자라면 버튼이 잠긴다.
+  await expect(page.getByTestId('next-step')).toContainText('이사 비용 5,000만원')
+  await expect(page.getByTestId('upgrade')).toBeDisabled()
   // 라이벌 회사를 걷어냈다 (288번): 업계 순위가 없다.
   await expect(page.getByTestId('industry')).toHaveCount(0)
   // 첫 지원자는 이슈가 말한 "올해 필요한 인재"다.

@@ -182,6 +182,25 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
+  public CompanyView upgrade(UUID sessionId) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.upgrade(row.state());
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  /** 다음 건물로 가는 데 드는 돈 (296번). 끝 등급이거나 끝난 회사면 null. */
+  private CompanyView.Upgrade upgradeView(CompanyState c) {
+    String to = engine.nextGrade(c);
+    Long needed = engine.upgradeNeeded(c);
+    if (to == null || needed == null || c.finished) {
+      return null;
+    }
+    return new CompanyView.Upgrade(to, engine.upgradeCost(c), needed, engine.canUpgrade(c));
+  }
+
+  @Override
+  @Transactional
   public CompanyView leader(UUID sessionId, String desk, int employeeId) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.teams.appoint(row.state(), desk, employeeId);
@@ -348,6 +367,7 @@ class DefaultCompanyService implements CompanyService {
         c.capital,
         grade,
         next,
+        upgradeView(c),
         engine.seats(c),
         employees,
         desks,
@@ -671,6 +691,7 @@ class DefaultCompanyService implements CompanyService {
         q.fee,
         q.staff,
         q.hiring,
+        q.moving,
         q.salary,
         q.investTotal == null
             ? null
@@ -691,6 +712,7 @@ class DefaultCompanyService implements CompanyService {
         s.capitalAfter,
         s.fee,
         s.hiring,
+        s.moving,
         s.salary,
         s.investTotal == null
             ? null

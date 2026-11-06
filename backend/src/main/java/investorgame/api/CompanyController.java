@@ -196,6 +196,12 @@ class CompanyController {
   record VerdictRequest(@NotBlank String choice) {}
 
   /** 그 자리의 팀장을 정한다 (decisions.md 269번). */
+  /** 이사 비용을 내고 다음 건물로 간다 (decisions.md 296번). */
+  @PostMapping("/upgrade")
+  CompanyView upgrade(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
+    return companies.upgrade(cookies.requireSession(token));
+  }
+
   @PostMapping("/leader")
   CompanyView leader(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
