@@ -58,7 +58,7 @@ export function InvestWindow({
   const [skipped, setSkipped] = useState(() => Boolean(outcome) || reducedMotion())
   // 맡겼으면(279번) 매수파·매도파가 먼저 맞붙고, 그 뒤에 직원마다 막대가 돈다.
   const lead = outcome?.delegated ? TEAM_CLASH_MS : 0
-  const show = chartTimeline(outcome?.results.length ?? 0, CHART_MS, skipped, lead)
+  const show = chartTimeline(1, CHART_MS, skipped, lead)
   const [finished, setFinished] = useState(skipped)
   useEffect(() => {
     if (!outcome || finished) {
@@ -303,32 +303,25 @@ export function InvestWindow({
               delay={show.chartAt}
               instant={skipped}
             />
-            <ul className="mt-2 grid gap-2">
-              {outcome.results.map((r, i) => (
-                <li
-                  key={r.employeeId}
-                  className="animate-reveal rounded border border-line-soft px-2 py-1.5 text-[14px]"
-                  style={{ animationDelay: `${show.pnlAt(i)}ms` }}
-                  data-follow={r.follow}
-                  data-testid="invest-result"
-                >
-                  <p className="flex flex-wrap items-baseline justify-between gap-x-2">
-                    <span>
-                      <b className="mr-1">{r.name}</b>
-                      {r.follow !== 'BOSS' && (
-                        <span className={`mr-1 rounded px-1 text-[11px] ${FOLLOW[r.follow].tone}`}>
-                          {FOLLOW[r.follow].label}
-                        </span>
-                      )}
-                      {r.line}
+            {/* 직원마다 한 줄씩 돌던 결과는 뺐다 (decisions.md 284번): 회의 손익 하나만 본다. 사장 말을 안 따른 사람만 한 줄로 알린다. */}
+            {outcome.results.some((r) => r.follow !== 'BOSS') && (
+              <p
+                className="animate-reveal mt-2 rounded bg-line-soft/60 px-2 py-1 text-[13px]"
+                style={{ animationDelay: `${show.pnlAt(0)}ms` }}
+                data-testid="invest-strays"
+              >
+                {outcome.results
+                  .filter((r) => r.follow !== 'BOSS')
+                  .map((r) => (
+                    <span key={r.employeeId} className="mr-2 inline-block">
+                      <span className={`mr-1 rounded px-1 text-[11px] ${FOLLOW[r.follow].tone}`}>
+                        {FOLLOW[r.follow].label}
+                      </span>
+                      <b>{r.name}</b> {r.line}
                     </span>
-                    <b className={`text-[16px] ${r.pnl >= 0 ? 'text-up' : 'text-down'}`}>
-                      {signed(r.pnl)}
-                    </b>
-                  </p>
-                </li>
-              ))}
-            </ul>
+                  ))}
+              </p>
+            )}
             <p
               className="animate-stamp mt-3 text-center font-semibold text-[16px]"
               style={{ animationDelay: `${show.reveal}ms` }}
