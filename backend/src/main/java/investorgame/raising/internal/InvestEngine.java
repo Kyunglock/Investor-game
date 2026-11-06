@@ -553,20 +553,23 @@ class InvestEngine {
   }
 
   /**
-   * 막판 뒤집기 (283번): proposal-percent 확률로 자리에 앉은 직원 하나가 사장의 결정과 반대로 하자고 한다(사자면 팔자, 팔자면 사자, 지켜보면 자기
-   * 생각대로 사거나 팔자). 반대 의견을 낸 사람이 있으면 그 사람이 먼저 나선다. 사장이 답할 때까지 회의는 정해지지 않는다. 나섰으면 true.
+   * 막판 뒤집기 "잠깐만요, 사장님!!" (283·300번): 종합 등급 S 이상인 직원의 스킬이다. 자리에 앉은 그런 직원 가운데 가장 높은 등급의 확률(S 60%, 한
+   * 단계마다 +5%p, 90%까지)로 하나가 사장의 결정과 반대로 하자고 한다(사자면 팔자, 팔자면 사자, 지켜보면 자기 생각대로 사거나 팔자). 반대 의견을 낸 사람이
+   * 있으면 그 사람이 먼저 나선다. 사장이 답할 때까지 회의는 정해지지 않는다. 나섰으면 true.
    */
   private boolean propose(
       CompanyState c, String choice, boolean big, boolean delegated, SeededRandom random) {
     RandomGenerator rng = random.forKey("invest-proposal", c.turn());
-    if (rng.nextInt(PERCENT) >= properties.invest().proposalPercent()) {
-      return false;
-    }
     List<Employee> seated =
         c.employees.stream()
             .filter(e -> e.desk != null && !CompanyEngine.HR_DESK.equals(e.desk))
+            .filter(e -> proposalPercent(e) > 0)
             .toList();
     if (seated.isEmpty()) {
+      return false;
+    }
+    int chance = seated.stream().mapToInt(this::proposalPercent).max().orElse(0);
+    if (rng.nextInt(PERCENT) >= chance) {
       return false;
     }
     Map<Integer, String> reads = new HashMap<>();
@@ -595,6 +598,27 @@ class InvestEngine {
     c.invest.pendingBig = big;
     c.invest.pendingDelegated = delegated;
     return true;
+  }
+
+  /**
+   * 직원이 "잠깐만요, 사장님!!"을 쓸 확률(%, 300번): 종합 등급이 S 아래면 0, S면 60, 한 단계 높을 때마다 +5%p, 90까지. 직원 상세의 등급 효과
+   * 줄에도 보인다.
+   */
+  int proposalPercent(Employee employee) {
+    return proposalPercent(CompanyEngine.employeeGrade(employee));
+  }
+
+  int proposalPercent(String grade) {
+    CompanyProperties.Invest invest = properties.invest();
+    int steps =
+        CompanyEngine.LADDER.indexOf(grade)
+            - CompanyEngine.LADDER.indexOf(invest.proposalMinGrade());
+    if (steps < 0) {
+      return 0;
+    }
+    return Math.min(
+        invest.proposalMaxPercent(),
+        invest.proposalPercent() + steps * invest.proposalStepPercent());
   }
 
   /**

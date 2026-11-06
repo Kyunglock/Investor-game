@@ -8,7 +8,7 @@ import { toggleAutoPlay } from './autoPlay'
 import { BuildingArt } from './BuildingArt'
 import { pnlLabel } from './board'
 import { EndingScreen } from './EndingScreen'
-import { GradeCard } from './GradeCard'
+import { GradeBadge, GradeCard } from './GradeCard'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { InvestWindow } from './InvestWindow'
 import { MacroWindow } from './MacroWindow'
@@ -552,7 +552,14 @@ function DeskCard({
           <span className="block text-[13px]" data-testid="desk-members">
             {seated.length === 0
               ? '비어 있음'
-              : seated.map((e) => `${e.name}${e.leader ? '(팀장)' : ''}`).join(' · ')}
+              : seated.map((e, i) => (
+                  <span key={e.id} className="whitespace-nowrap">
+                    {i > 0 && ' · '}
+                    <GradeBadge grade={e.overallGrade} size="inline" />
+                    {e.name}
+                    {e.leader ? '(팀장)' : ''}
+                  </span>
+                ))}
           </span>
         </span>
         <span className="shrink-0 text-[13px] text-teal">{open ? '접기' : '사람 고르기'}</span>
@@ -563,6 +570,7 @@ function DeskCard({
             <ul className="grid gap-1">
               {seated.map((e) => (
                 <li key={e.id} className="flex flex-wrap items-center gap-1 text-[13px]">
+                  <GradeBadge grade={e.overallGrade} size="inline" />
                   <b>{e.name}</b>
                   <span className="font-mono-num text-[12px]">
                     {STAT_NAMES[d.statCode]} {e.grades[d.statCode]} · 종합 {e.overallGrade}
@@ -615,6 +623,7 @@ function DeskCard({
                   data-fit={fit}
                   data-testid="desk-candidate"
                 >
+                  <GradeBadge grade={e.overallGrade} size="inline" />
                   {e.name}{' '}
                   <span className="font-mono-num text-[11px]">
                     {STAT_NAMES[d.statCode]} {e.grades[d.statCode]}
@@ -829,6 +838,7 @@ function SeatPicker({
               onClick={() => onFocus({ employee: x.id })}
               className="min-h-10 rounded border border-pen px-2 text-[13px]"
             >
+              <GradeBadge grade={x.overallGrade} size="inline" />
               {x.name} <span className="font-mono-num text-[11px]">종합 {x.overallGrade}</span>
             </button>
           ))}

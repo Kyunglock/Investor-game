@@ -327,6 +327,7 @@ class JsonContentCatalog implements ContentCatalog {
                 .containsAll(List.of("F", "E", "D", "C", "B", "A", "S", "SS", "SSS"))
             && company.perks().line() != null
             && company.perks().lineTop() != null
+            && company.perks().proposal() != null
             && company.perks().grown() != null,
         "등급 효과 문구가 없다");
     for (RaisingContent.Era era : company.eras()) {

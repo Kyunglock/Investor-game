@@ -475,7 +475,7 @@
         "SSS": "레전드"
       },
       "line": "맞히면 {gain}% 더 번다 · 한 해 일하면 {growth}% 확률로 자란다",
-      "lineTop": "맞히면 {gain}% 더 번다 · 실전 경험으로 오른다",
+      "lineTop": "맞히면 {gain}% 더 번다 · 실전 경험으로 오른다", "proposal": "잠깐만요, 사장님!! {percent}%",
       "grown": "{name}이(가) 한 해 일하며 자랐다: {stat} {before} → {after}."
     },
     "market": {
