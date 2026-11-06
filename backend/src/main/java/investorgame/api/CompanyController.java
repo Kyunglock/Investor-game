@@ -1,11 +1,13 @@
 package investorgame.api;
 
+import investorgame.common.error.InvalidRequestException;
 import investorgame.raising.CompanyService;
 import investorgame.raising.CompanyView;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,12 +77,17 @@ class CompanyController {
     return company;
   }
 
-  /** 값을 내고 올해 지원자를 새로 받는다. */
+  /** 값을 내고 올해 지원자를 새로 받는다. 요청에 해와 지금까지 새로 받은 횟수를 싣는다: 두 번 와도 한 번만 낸다 (decisions.md 253번). */
   @PostMapping("/applicants/refresh")
   CompanyView refreshApplicants(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    return companies.refreshApplicants(cookies.requireSession(token));
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody RefreshRequest request) {
+    return companies.refreshApplicants(
+        cookies.requireSession(token), request.year(), request.refreshes());
   }
+
+  record RefreshRequest(
+      @NotNull @Positive Integer year, @NotNull @PositiveOrZero Integer refreshes) {}
 
   /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 248번). */
   @PostMapping("/invest/open")
@@ -115,6 +122,10 @@ class CompanyController {
       @Valid @RequestBody PlacementRequest request) {
     Map<Integer, String> placements = new HashMap<>();
     for (Seat seat : request.seats()) {
+      // 같은 직원이 두 번 오면 어느 쪽인지 모르니 400 (253번). 전에는 뒤의 것이 조용히 덮었다.
+      if (placements.containsKey(seat.employeeId())) {
+        throw new InvalidRequestException("같은 직원이 두 번 왔다: " + seat.employeeId());
+      }
       placements.put(seat.employeeId(), seat.desk());
     }
     return companies.place(cookies.requireSession(token), placements);

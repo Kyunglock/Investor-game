@@ -92,9 +92,17 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView refreshApplicants(UUID sessionId) {
+  public CompanyView refreshApplicants(UUID sessionId, int year, int refreshes) {
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.refresh(row.state(), new HashSeededRandom(row.seed()));
+    CompanyState c = row.state();
+    // 이미 한 새로 받기면 아무것도 하지 않는다(버튼 두 번, 끊긴 요청 다시 보내기, 253번). 아직 오지 않은 것이면 400.
+    if (year < c.year || (year == c.year && refreshes < c.refreshes)) {
+      return view(row);
+    }
+    if (year > c.year || refreshes > c.refreshes) {
+      throw new InvalidRequestException("아직 오지 않은 새로 받기다: " + year + "년 " + refreshes + "번");
+    }
+    engine.refresh(c, new HashSeededRandom(row.seed()));
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -257,6 +265,7 @@ class DefaultCompanyService implements CompanyService {
         meeting,
         applicants,
         engine.refreshCost(),
+        c.refreshes,
         ended ? null : engine.brokeNotice(c),
         ended ? null : investView(c, new HashSeededRandom(row.seed())),
         last == null ? null : settlementView(last));

@@ -76,7 +76,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 직원을 자리에 앉힌다. 사장은 배치만 한다 */
+        /**
+         * 직원을 자리에 앉힌다. 사장은 배치만 한다
+         * @description 자리 수를 넘거나, 없는 직원·자리이거나, 같은 직원이 두 번 오면 400 (decisions.md 253번).
+         */
         post: operations["placeEmployees"];
         delete?: never;
         options?: never;
@@ -162,7 +165,9 @@ export interface paths {
         put?: never;
         /**
          * 값(refreshCost)을 내고 올해 지원자를 새로 받는다
-         * @description 돈이 모자라면 400.
+         * @description 지금 해(year)와 올해 지금까지 새로 받은 횟수(Company.refreshes)를 싣는다.
+         *     이미 한 새로 받기면 아무것도 하지 않고 지금 회사를 200으로 돌려준다(같은 요청이 두 번 와도 한 번만 낸다).
+         *     아직 오지 않은 것이면 400. 돈이 모자라면 400 (decisions.md 253번).
          */
         post: operations["refreshApplicants"];
         delete?: never;
@@ -295,6 +300,8 @@ export interface components {
              * @description 지원자를 새로 받는 값
              */
             refreshCost: number;
+            /** @description 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 253번) */
+            refreshes: number;
             /** @description 올해 투자 회의 (decisions.md 229번). 끝난 회사나 옛 회사면 null. 숨은 방향은 정한 뒤 outcome에만 있다 */
             invest?: {
                 title: string;
@@ -739,7 +746,15 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    year: number;
+                    /** @description 올해 지금까지 새로 받은 횟수(Company.refreshes) */
+                    refreshes: number;
+                };
+            };
+        };
         responses: {
             /** @description 새 지원자가 온 회사 */
             200: {

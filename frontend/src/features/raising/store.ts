@@ -103,7 +103,18 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     hire: (applicantId, replace) =>
       change(api.POST('/api/company/hires', { body: { applicantId, replace: replace ?? null } })),
 
-    refreshApplicants: () => change(api.POST('/api/company/applicants/refresh')),
+    refreshApplicants: async () => {
+      const company = get().company
+      if (!company || get().busy) {
+        return
+      }
+      // 해와 지금까지 새로 받은 횟수를 함께 보낸다: 두 번 눌리거나 끊긴 요청을 다시 보내도 한 번만 낸다 (253번).
+      await change(
+        api.POST('/api/company/applicants/refresh', {
+          body: { year: company.year, refreshes: company.refreshes },
+        }),
+      )
+    },
 
     convene: async () => {
       if (get().company?.invest?.convened) {

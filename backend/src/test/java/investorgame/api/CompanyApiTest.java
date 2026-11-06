@@ -59,6 +59,12 @@ class CompanyApiTest {
             .andExpect(status().isOk()));
   }
 
+  private ResultActions refresh(int year, int refreshes) throws Exception {
+    return postJson(
+        "/api/company/applicants/refresh",
+        "{\"year\":%d,\"refreshes\":%d}".formatted(year, refreshes));
+  }
+
   private ResultActions settle(int year) throws Exception {
     return postJson("/api/company/settle", "{\"year\":%d}".formatted(year));
   }
@@ -113,13 +119,20 @@ class CompanyApiTest {
     postJson("/api/company/hires", "{\"applicantId\":" + firstId + "}")
         .andExpect(status().isBadRequest());
 
-    DocumentContext refreshed =
-        json(
-            mvc.perform(post("/api/company/applicants/refresh").cookie(session))
-                .andExpect(status().isOk()));
+    DocumentContext refreshed = json(refresh(1, 0).andExpect(status().isOk()));
     assertThat(refreshed.read("$.applicants.length()", Integer.class)).isEqualTo(3);
+    assertThat(refreshed.read("$.refreshes", Integer.class)).isEqualTo(1);
     assertThat(refreshed.read("$.capital", Long.class))
         .isEqualTo(one.read("$.capital", Long.class) - one.read("$.refreshCost", Long.class));
+    // 같은 새로 받기가 두 번 와도 한 번만 낸다 (253번). 아직 오지 않은 것은 400.
+    DocumentContext twice = json(refresh(1, 0).andExpect(status().isOk()));
+    assertThat(twice.read("$.capital", Long.class))
+        .isEqualTo(refreshed.read("$.capital", Long.class));
+    assertThat(twice.read("$.applicants[0].id", Integer.class))
+        .isEqualTo(refreshed.read("$.applicants[0].id", Integer.class));
+    refresh(1, 5).andExpect(status().isBadRequest());
+    refresh(2, 0).andExpect(status().isBadRequest());
+    postJson("/api/company/applicants/refresh", "{}").andExpect(status().isBadRequest());
 
     int employeeId = one.read("$.employees[0].id");
     postJson(
@@ -244,10 +257,7 @@ class CompanyApiTest {
     List<Integer> staff = swapped.read("$.employees[*].id");
     assertThat(staff).hasSize(2).contains(keep).doesNotContain(leave);
 
-    DocumentContext refreshed =
-        json(
-            mvc.perform(post("/api/company/applicants/refresh").cookie(session))
-                .andExpect(status().isOk()));
+    DocumentContext refreshed = json(refresh(1, 0).andExpect(status().isOk()));
     assertThat(refreshed.read("$.applicants.length()", Integer.class))
         .as("인사팀이 한 명 더 데려온다")
         .isEqualTo(4);
@@ -283,5 +293,59 @@ class CompanyApiTest {
         .isEqualTo("ENDED");
     DocumentContext current = json(mvc.perform(get("/api/company").cookie(session)));
     assertThat(current.read("$.number", Integer.class)).as("닫은 회사는 다시 열리지 않는다").isEqualTo(2);
+  }
+
+  /** 배치에 같은 직원이 두 번 오면 400이다 (#317, decisions.md 253번). 전에는 뒤의 것이 조용히 덮었다. */
+  @Test
+  void 배치에_같은_직원이_두_번_오면_400이다() throws Exception {
+    DocumentContext company =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    int applicant = company.read("$.applicants[2].id");
+    int id = hire(applicant, null).read("$.employees[0].id");
+    postJson(
+            "/api/company/placement",
+            "{\"seats\":[{\"employeeId\":%d,\"desk\":\"bio\"},{\"employeeId\":%d,\"desk\":null}]}"
+                .formatted(id, id))
+        .andExpect(status().isBadRequest());
+  }
+
+  /** 같은 세션이 동시에 회사를 두 번 차려도 하나만 생기고 500이 나지 않는다 (#317, 253번). */
+  @Test
+  void 동시에_두_번_차려도_회사는_하나고_500이_나지_않는다() throws Exception {
+    java.util.concurrent.ExecutorService pool =
+        java.util.concurrent.Executors.newFixedThreadPool(2);
+    java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+    try {
+      List<java.util.concurrent.Future<Integer>> calls = new java.util.ArrayList<>();
+      for (int i = 0; i < 2; i++) {
+        calls.add(
+            pool.submit(
+                () -> {
+                  start.await();
+                  return mvc.perform(post("/api/company").cookie(session))
+                      .andReturn()
+                      .getResponse()
+                      .getStatus();
+                }));
+      }
+      start.countDown();
+      List<Integer> codes = new java.util.ArrayList<>();
+      for (java.util.concurrent.Future<Integer> call : calls) {
+        codes.add(call.get());
+      }
+      assertThat(codes).containsExactlyInAnyOrder(201, 400);
+    } finally {
+      pool.shutdownNow();
+    }
+    String sessionId =
+        jdbc.sql("SELECT session_id FROM raising_company ORDER BY created_at DESC LIMIT 1")
+            .query(String.class)
+            .single();
+    assertThat(
+            jdbc.sql("SELECT count(*) FROM raising_company WHERE session_id = CAST(:id AS uuid)")
+                .param("id", sessionId)
+                .query(Integer.class)
+                .single())
+        .isEqualTo(1);
   }
 }

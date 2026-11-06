@@ -75,6 +75,7 @@ paths:
     post:
       operationId: placeEmployees
       summary: 직원을 자리에 앉힌다. 사장은 배치만 한다
+      description: 자리 수를 넘거나, 없는 직원·자리이거나, 같은 직원이 두 번 오면 400 (decisions.md 253번).
       requestBody:
         required: true
         content:
@@ -174,7 +175,20 @@ paths:
     post:
       operationId: refreshApplicants
       summary: 값(refreshCost)을 내고 올해 지원자를 새로 받는다
-      description: 돈이 모자라면 400.
+      description: |
+        지금 해(year)와 올해 지금까지 새로 받은 횟수(Company.refreshes)를 싣는다.
+        이미 한 새로 받기면 아무것도 하지 않고 지금 회사를 200으로 돌려준다(같은 요청이 두 번 와도 한 번만 낸다).
+        아직 오지 않은 것이면 400. 돈이 모자라면 400 (decisions.md 253번).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [year, refreshes]
+              properties:
+                year: { type: integer, minimum: 1 }
+                refreshes: { type: integer, minimum: 0, description: 올해 지금까지 새로 받은 횟수(Company.refreshes) }
       responses:
         '200':
           description: 새 지원자가 온 회사
@@ -212,7 +226,7 @@ components:
     Company:
       type: object
       description: 회사 화면의 값. 올해 시장 갈래는 숨은 값이라 조짐만 담는다. 직원 능력치는 등급만.
-      required: [companyId, status, number, era, year, capital, grade, seats, employees, desks, applicants, refreshCost]
+      required: [companyId, status, number, era, year, capital, grade, seats, employees, desks, applicants, refreshCost, refreshes]
       properties:
         companyId: { type: string, format: uuid }
         status: { type: string, enum: [ACTIVE, ENDED], description: ENDED는 매각을 빼기 전(236번)에 팔린 회사. 시대가 끝나 멈췄던 회사는 다시 열면 ACTIVE로 이어진다 }
@@ -297,6 +311,7 @@ components:
               sector: { type: [string, 'null'], description: 관심 섹터 코드. 뽑으면 직원이 안고 들어온다 }
               sectorName: { type: [string, 'null'] }
         refreshCost: { type: integer, format: int64, description: 지원자를 새로 받는 값 }
+        refreshes: { type: integer, description: 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 253번) }
         invest:
           description: 올해 투자 회의 (decisions.md 229번). 끝난 회사나 옛 회사면 null. 숨은 방향은 정한 뒤 outcome에만 있다
           oneOf:

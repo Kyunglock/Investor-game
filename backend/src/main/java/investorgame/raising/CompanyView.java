@@ -14,6 +14,7 @@ import java.util.UUID;
  * @param meeting 연초 회의. 끝난 회사면 null
  * @param applicants 올해 공채 시장의 지원자. 끝난 회사면 비어 있다 (decisions.md 228번)
  * @param refreshCost 지원자를 새로 받는 값
+ * @param refreshes 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 253번)
  * @param broke 망한 회사의 한 줄. 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 있고, 그때 사재로 다음 회사를 차릴 수 있다. 아니면 null
  *     (decisions.md 246번)
  * @param invest 올해 투자 회의. 끝난 회사나 옛 회사면 null (decisions.md 229번)
@@ -38,6 +39,7 @@ public record CompanyView(
     Meeting meeting,
     List<Applicant> applicants,
     long refreshCost,
+    int refreshes,
     String broke,
     Invest invest,
     Settlement lastSettlement) {

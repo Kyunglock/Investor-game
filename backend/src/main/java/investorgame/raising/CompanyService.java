@@ -26,8 +26,11 @@ public interface CompanyService {
    */
   CompanyView hire(UUID sessionId, int applicantId, Integer replace);
 
-  /** 값을 내고 올해 지원자를 새로 받는다. 돈이 모자라면 400. */
-  CompanyView refreshApplicants(UUID sessionId);
+  /**
+   * 값을 내고 올해 지원자를 새로 받는다. year 해에 이미 refreshes번 새로 받았다는 요청이다: 이미 한 것이면 아무것도 하지 않고 지금 회사를 돌려주고(같은
+   * 요청이 두 번 와도 한 번만 낸다), 아직 오지 않은 것이면 400. 돈이 모자라면 400 (decisions.md 253번).
+   */
+  CompanyView refreshApplicants(UUID sessionId, int year, int refreshes);
 
   /** 직원 ID → 자리 코드(쉬면 null). 자리 수를 넘으면 400. */
   CompanyView place(UUID sessionId, Map<Integer, String> placements);
