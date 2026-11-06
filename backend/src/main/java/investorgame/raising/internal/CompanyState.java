@@ -209,6 +209,9 @@ class CompanyState {
 
     /** 올해 한 번도 자리에 앉지 않았나: 연말에 쉬어서 사기가 오른다. 분기를 넘길 때마다 앉아 있었으면 거짓. */
     boolean restedAllYear = true;
+
+    /** 연봉을 동결당해 다음 분기를 넘길 때 떠날지 굴린다 (decisions.md 280번). */
+    boolean frozenPending;
   }
 
   /**
@@ -450,6 +453,9 @@ class CompanyState {
     int employeeId;
     long before;
     long after;
+
+    /** 답하지 않은 채 넘긴 분기 수 (decisions.md 280번). */
+    int quarters;
   }
 
   /** 라이벌이 우리 직원에게 손을 뻗었다 (262번). */

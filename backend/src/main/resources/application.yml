@@ -122,6 +122,12 @@ raising:
         raise-percent: 50
         raise-every-years: 2
         morale-flip-percent: 15
+        # 연봉 협상의 결과 (decisions.md 280번): 답하지 않고 ignore-quarters 분기가 지나면 그 뒤 분기를 넘길 때마다 ignore-leave-percent%로 떠난다.
+        # 동결하면 다음 분기를 넘길 때 freeze-leave-percent%로 떠난다. 올려 주면 raise-grow-percent%로 능력치 하나가 한 띠 오른다
+        ignore-quarters: 2
+        ignore-leave-percent: 30
+        freeze-leave-percent: 25
+        raise-grow-percent: 40
     # 실전 경험과 큰 손실 (2.3·6.4절): 한 해에 판돈의 30% 이상 잃으면 한 단계 하락(능력치는 한 띠 = 10점),
     # 폭락장을 손실 없이 버티면 실전 경험 +1. SSS에서 X까지 1, XX까지 2 … 단계마다 1씩 더 든다
     experience:

@@ -322,11 +322,11 @@ function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
         </div>
       )}
       {raise && (
-        // 연봉 협상 (270번): 올려 주면 사기가 오르고, 동결하면 꺾인다. 답하지 않으면 연말에 흐지부지되고 서운해한다.
+        // 연봉 협상 (270·280번): 올려 주면 사기가 오르고 능력치가 오를 수 있다. 동결하거나 답하지 않고 버티면 떠날 수 있다.
         <div className="mt-1 rounded border border-gold p-2" data-testid="raise">
           <p className="text-[14px] font-semibold">{raise.line}</p>
-          <p className="text-[12px] text-muted">
-            올려 주면 의욕이 오르고, 동결하면 사기가 꺾여 손이 더 뒤집힙니다. 떠나지는 않습니다.
+          <p className="text-[12px] text-muted" data-testid="raise-odds">
+            {raise.odds}
           </p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <button

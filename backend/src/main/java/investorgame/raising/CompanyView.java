@@ -338,8 +338,10 @@ public record CompanyView(
    * @param before 지금 연봉
    * @param after 올려 주면 연봉
    * @param line 연초 회의 한 줄
+   * @param odds 답에 따른 확률 한 줄: 올리면 능력치 상승, 동결·무응답이면 떠남 (decisions.md 280번)
    */
-  public record Raise(int employeeId, String name, long before, long after, String line) {}
+  public record Raise(
+      int employeeId, String name, long before, long after, String line, String odds) {}
 
   /**
    * 라이벌이 우리 직원에게 손을 뻗었다 (decisions.md 262번).

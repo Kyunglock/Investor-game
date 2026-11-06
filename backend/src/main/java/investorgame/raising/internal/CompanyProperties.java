@@ -197,7 +197,11 @@ public record CompanyProperties(
       int raiseFromYear,
       int raisePercent,
       int raiseEveryYears,
-      int moraleFlipPercent) {}
+      int moraleFlipPercent,
+      int ignoreQuarters,
+      int ignoreLeavePercent,
+      int freezeLeavePercent,
+      int raiseGrowPercent) {}
 
   public record Market(
       int applicants,
