@@ -12,9 +12,9 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
- * 회사 경제의 맞춤 (증권사 육성 설계 5절 1번, decisions.md 226·229번). 첫 회사(1억 원, F)에 같은 능력치의 직원 둘을 맞는 자리(바이오·단타)에
- * 앉히고 해마다 투자 회의(기사 다수결)와 결산을 하며 한 시대(세 해)를 2,000번 돌려, 능력치에 따라 회사가 자라는 폭이 목표 안에 드는지 본다. 수치를 바꾸면 이
- * 목표부터 다시 맞춘다.
+ * 회사 경제의 맞춤 (증권사 육성 설계 5절 1번, decisions.md 226·229·266번). 첫 회사(1억 원, F)에 같은 능력치의 직원 둘을 맞는
+ * 자리(바이오·단타)에 앉히고 해마다 거시경제 회의(기사 다수결), 직원이 종목을 물어 왔으면 종목 회의(기사 다수결), 결산을 하며 한 시대(세 해)를 2,000번 돌려,
+ * 능력치에 따라 회사가 자라는 폭이 목표 안에 드는지 본다. 수치를 바꾸면 이 목표부터 다시 맞춘다.
  */
 class EconomySimulationTest {
 
@@ -37,6 +37,27 @@ class EconomySimulationTest {
     return up > down ? InvestEngine.BUY : down > up ? InvestEngine.SELL : InvestEngine.HOLD;
   }
 
+  /** 거시경제 회의(266번): 기사 문장(조짐 포함)의 다수결. 좋은 말이 많으면 공격, 나쁜 말이 많으면 방어, 같으면 중립. */
+  private static String stance(CompanyState.Macro macro) {
+    long up = macro.sentences.stream().filter(s -> s.sign.equals("UP")).count();
+    long down = macro.sentences.stream().filter(s -> s.sign.equals("DOWN")).count();
+    return up > down
+        ? MacroEngine.AGGRESSIVE
+        : down > up ? MacroEngine.DEFENSIVE : MacroEngine.NEUTRAL;
+  }
+
+  /** 한 해를 사람처럼 돈다: 거시경제 회의(기사 다수결) → 직원이 종목을 물어 왔으면 종목 회의(기사 다수결) → 결산 (decisions.md 266·267번). */
+  private static void year(CompanyState company, long seed) {
+    HashSeededRandom random = new HashSeededRandom(seed);
+    if (ENGINE.macro.open(company)) {
+      ENGINE.macro.decide(company, stance(company.macro), random);
+    }
+    if (ENGINE.invest.open(company)) {
+      ENGINE.invest.decide(company, majority(company.invest), random);
+    }
+    ENGINE.settle(company, random);
+  }
+
   /** 한 시대 뒤 자본 배수의 중앙값과 E(2억, 257번) 이상에 닿은 몫. */
   private static double[] era(int level) {
     double[] ratio = new double[TRIALS];
@@ -46,10 +67,9 @@ class EconomySimulationTest {
       ENGINE.hire(company, stats(level));
       ENGINE.hire(company, stats(level));
       ENGINE.place(company, Map.of(1, "bio", 2, "day"));
-      for (int year = 0; year < PROPERTIES.turns(); year++) {
-        // 투자 회의: 사장은 기사 문장의 다수결로 고른다(형광펜 없이 약 64% 맞는다).
-        ENGINE.invest.decide(company, majority(company.invest), new HashSeededRandom(seed));
-        ENGINE.settle(company, new HashSeededRandom(seed));
+      for (int y = 0; y < PROPERTIES.turns(); y++) {
+        // 사장은 기사 문장의 다수결로 고른다(형광펜 없이 약 64% 맞는다).
+        year(company, seed);
       }
       ratio[seed] = company.capital / (double) START;
       if (company.capital >= GRADE_E) {
@@ -68,7 +88,8 @@ class EconomySimulationTest {
     double[] great = era(75);
     // 투자 회의가 한 해에 판단 하나만큼 더해 226번 목표(E 1.14배·C 1.71배·A 34%·S 77%)보다 3할쯤 커졌다 (229번).
     // E 띠를 2억으로 낮추고 첫 회사의 첫해에 폭락장을 뺐다(257번): 첫 시대에 E(첫 책상 추가)에 닿는 몫이 커졌다.
-    // 2,000판: E 직원 31% · C 직원 62% · A 직원 88% · S 직원 98%, 세 해 자본 중앙값 1.57 · 2.30 · 3.37 · 4.98배.
+    // 종목 회의가 물어 올 때만 열리고(267번) 해마다 거시경제 회의를 연다(266번): 조금 줄었다.
+    // 2,000판: E 직원 26% · C 직원 56% · A 직원 86% · S 직원 99%, 세 해 자본 중앙값 1.46 · 2.15 · 3.07 · 4.47배.
     assertThat(weak[0]).as("E 직원: 조금 자란다").isBetween(1.2, 1.8);
     assertThat(weak[1]).as("E 직원은 가끔 오른다").isBetween(0.15, 0.45);
     assertThat(average[0]).as("C 직원: 세 해에 2배 남짓").isBetween(1.9, 2.7);
@@ -77,31 +98,37 @@ class EconomySimulationTest {
     assertThat(great[1]).as("S 직원: 거의 다 E에 닿는다").isGreaterThan(0.9);
   }
 
-  /**
-   * 첫 이사까지 몇 해 (#320, decisions.md 257번). 첫 회사에 C 직원 둘을 앉히고 해마다 회의(기사 다수결)와 결산을 하며, 반지하를 떠나 상가(D)에
-   * 닿는 해의 중앙값을 본다. 전에는 API로 굴려 보면 반지하에서 10년, 상가까지 16년쯤 걸렸다.
-   */
-  @Test
-  void C_직원_둘이면_여덟_해_안에_첫_이사를_한다() {
+  /** 첫 회사에 C 직원 둘을 그 자리에 앉히고 반지하를 떠나 상가(D)에 닿는 해의 중앙값. */
+  private static int firstMove(Map<Integer, String> placements) {
     int trials = 600;
     int[] years = new int[trials];
     for (int seed = 0; seed < trials; seed++) {
       CompanyState company = ENGINE.open(new HashSeededRandom(seed), START);
       ENGINE.hire(company, stats(45));
       ENGINE.hire(company, stats(45));
-      ENGINE.place(company, Map.of(1, "bio", 2, "day"));
+      ENGINE.place(company, placements);
       int year = 1;
       while (year <= 30 && LADDER.indexOf(ENGINE.grade(company.capital)) < 2) {
-        if (ENGINE.invest.open(company)) {
-          ENGINE.invest.decide(company, majority(company.invest), new HashSeededRandom(seed));
-        }
-        ENGINE.settle(company, new HashSeededRandom(seed));
+        year(company, seed);
         year++;
       }
       years[seed] = year - 1;
     }
     Arrays.sort(years);
-    assertThat(years[trials / 2]).as("첫 이사까지 해의 중앙값").isBetween(4, 8);
+    return years[trials / 2];
+  }
+
+  /**
+   * 첫 이사까지 몇 해 (#320, decisions.md 257번). 전에는 API로 굴려 보면 반지하에서 10년, 상가까지 16년쯤 걸렸다. 종목 회의가 물어 올 때만
+   * 열리면서 (267번) 한 사람을 종목 발굴팀에 앉혀 해마다 종목 회의를 여는 쪽이 빠르고(중앙값 7년), 둘 다 돈을 굴리면 회의가 드물어 한 해쯤 늦다(9년). 배치에서
+   * 고민이 생긴다.
+   */
+  @Test
+  void C_직원_둘이면_여덟_해_안에_첫_이사를_한다() {
+    assertThat(firstMove(Map.of(1, "bio", 2, "scout")))
+        .as("한 사람은 바이오, 한 사람은 종목 발굴팀")
+        .isBetween(4, 8);
+    assertThat(firstMove(Map.of(1, "bio", 2, "day"))).as("둘 다 돈을 굴리면 종목 회의가 드물다").isBetween(5, 9);
   }
 
   /** 돈을 굴리는 자리 일곱(섹터 데스크 여섯과 단타). 규모의 벽 측정은 자리 수만큼 직원을 고르게 앉힌다. */
@@ -138,8 +165,7 @@ class EconomySimulationTest {
           placements.put(i + 1, TRADING.get(i % TRADING.size()));
         }
         ENGINE.place(company, placements);
-        ENGINE.invest.decide(company, majority(company.invest), new HashSeededRandom(seed));
-        ENGINE.settle(company, new HashSeededRandom(seed));
+        year(company, seed);
         ratio[seed] = company.capital / (double) capital;
         losses += company.capital < capital ? 1 : 0;
         dropped += LADDER.indexOf(ENGINE.grade(company.capital)) < k ? 1 : 0;

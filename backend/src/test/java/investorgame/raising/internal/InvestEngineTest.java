@@ -35,9 +35,16 @@ class InvestEngineTest {
         50);
   }
 
+  /** 회사를 차리고 올해 종목을 누가 물어 온 셈 친다: 이 시험은 종목 회의 자체를 본다 (발굴은 MacroEngineTest, decisions.md 267번). */
+  private static CompanyState opened(HashSeededRandom random, long capital) {
+    CompanyState company = ENGINE.open(random, capital);
+    company.invest.found = true;
+    return company;
+  }
+
   /** 단타 데스크에 직원 한 명을 앉힌 회사. 폭락장이면 손 뒤집힘이 인내심으로 바뀌므로 보통 해로 둔다. */
   private static CompanyState company(long seed, Map<String, Integer> trader) {
-    CompanyState company = ENGINE.open(new HashSeededRandom(seed), 100_000_000L);
+    CompanyState company = opened(new HashSeededRandom(seed), 100_000_000L);
     ENGINE.hire(company, trader);
     ENGINE.place(company, Map.of(1, "day"));
     company.phase = "normal";
@@ -55,8 +62,8 @@ class InvestEngineTest {
   @Test
   void 해마다_단서_기사가_결정적_문장_하나와_반대쪽_곁가지를_갖고_같은_시드면_같다() {
     for (int seed = 0; seed < 100; seed++) {
-      CompanyState.Invest a = ENGINE.open(new HashSeededRandom(seed), 100_000_000L).invest;
-      CompanyState.Invest b = ENGINE.open(new HashSeededRandom(seed), 100_000_000L).invest;
+      CompanyState.Invest a = opened(new HashSeededRandom(seed), 100_000_000L).invest;
+      CompanyState.Invest b = opened(new HashSeededRandom(seed), 100_000_000L).invest;
       assertThat(a.sentences).hasSize(4);
       assertThat(a.sentences.stream().filter(s -> s.decisive)).hasSize(1);
       String other = a.up ? "DOWN" : "UP";
@@ -70,7 +77,7 @@ class InvestEngineTest {
 
   @Test
   void 돈을_굴리는_직원이_있으면_회의를_해야_결산한다() {
-    CompanyState empty = ENGINE.open(new HashSeededRandom(1), 100_000_000L);
+    CompanyState empty = opened(new HashSeededRandom(1), 100_000_000L);
     assertThat(ENGINE.invest.open(empty)).as("돈을 굴리는 사람이 없으면 건너뛴다").isFalse();
     ENGINE.settle(empty, new HashSeededRandom(1));
     assertThat(empty.invest).as("다음 해 회의가 온다").isNotNull();
@@ -180,7 +187,7 @@ class InvestEngineTest {
   @Test
   void 고르기_전에_한마디와_고집과_형광펜이_보인다() {
     // E(3억)라 자리가 셋이다.
-    CompanyState company = ENGINE.open(new HashSeededRandom(5), 300_000_000L);
+    CompanyState company = opened(new HashSeededRandom(5), 300_000_000L);
     ENGINE.hire(company, stats(50, 50, 0, 50));
     ENGINE.hire(company, stats(50, 100, 100, 100));
     ENGINE.hire(company, stats(100, 50, 50, 50));
@@ -195,7 +202,7 @@ class InvestEngineTest {
 
     int decisive = 0;
     for (int seed = 0; seed < 100; seed++) {
-      CompanyState trial = ENGINE.open(new HashSeededRandom(seed), 100_000_000L);
+      CompanyState trial = opened(new HashSeededRandom(seed), 100_000_000L);
       ENGINE.hire(trial, stats(100, 50, 50, 50));
       ENGINE.place(trial, Map.of(1, "research"));
       var highlight = ENGINE.invest.liveHighlight(trial, new HashSeededRandom(seed));
@@ -205,7 +212,7 @@ class InvestEngineTest {
       }
     }
     assertThat(decisive).as("안목 100이면 대개 결정적 문장에 긋는다").isGreaterThan(80);
-    CompanyState none = ENGINE.open(new HashSeededRandom(1), 100_000_000L);
+    CompanyState none = opened(new HashSeededRandom(1), 100_000_000L);
     assertThat(ENGINE.invest.liveHighlight(none, new HashSeededRandom(1))).isEmpty();
   }
 
@@ -222,7 +229,7 @@ class InvestEngineTest {
     int clear = 0;
     for (int seed = 0; seed < trials; seed++) {
       // E(3억)라 자리가 셋: 안목 낮은 직원, 안목 높은 직원, 리서치 팀(안목 만점).
-      CompanyState c = ENGINE.open(new HashSeededRandom(seed), 300_000_000L);
+      CompanyState c = opened(new HashSeededRandom(seed), 300_000_000L);
       ENGINE.hire(c, stats(0, 50, 50, 50));
       ENGINE.hire(c, stats(90, 50, 50, 50));
       ENGINE.hire(c, stats(100, 50, 50, 50));
@@ -271,7 +278,7 @@ class InvestEngineTest {
   void 흐린_기사에서는_안목_높은_직원끼리도_의견이_갈린다() {
     Map<String, int[]> splits = new java.util.HashMap<>();
     for (int seed = 0; seed < 600; seed++) {
-      CompanyState c = ENGINE.open(new HashSeededRandom(seed), 100_000_000L);
+      CompanyState c = opened(new HashSeededRandom(seed), 100_000_000L);
       ENGINE.hire(c, stats(90, 50, 50, 50));
       ENGINE.hire(c, stats(90, 50, 50, 50));
       ENGINE.place(c, Map.of(1, "day", 2, "bio"));
@@ -302,7 +309,7 @@ class InvestEngineTest {
   @Test
   void 회의를_열면_한마디와_형광펜이_굳어_배치를_바꿔도_그대로다() {
     for (long seed = 0; seed < 40; seed++) {
-      CompanyState c = ENGINE.open(new HashSeededRandom(seed), 300_000_000L);
+      CompanyState c = opened(new HashSeededRandom(seed), 300_000_000L);
       ENGINE.hire(c, stats(10, 50, 50, 50));
       ENGINE.hire(c, stats(10, 50, 50, 50));
       ENGINE.hire(c, stats(100, 50, 50, 50));
@@ -348,7 +355,7 @@ class InvestEngineTest {
 
   @Test
   void 열_수_없는_회의는_열지_못하고_바로_정하면_연_셈_친다() {
-    CompanyState empty = ENGINE.open(new HashSeededRandom(1), 100_000_000L);
+    CompanyState empty = opened(new HashSeededRandom(1), 100_000_000L);
     assertThatThrownBy(() -> ENGINE.invest.convene(empty, new HashSeededRandom(1)))
         .isInstanceOf(InvalidRequestException.class);
     CompanyState c = company(3, stats(50, 50, 50, 50));

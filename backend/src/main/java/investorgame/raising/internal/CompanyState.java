@@ -91,8 +91,11 @@ class CompanyState {
   /** 지금까지 만난 지원자 수. 지원자 이름과 번호를 이것으로 붙인다. 다음 회사로 이어진다. */
   int met;
 
-  /** 올해 투자 회의 (decisions.md 229번). 옛 회사면 null이다. */
+  /** 올해 종목 회의 (decisions.md 229번). 연초에 준비해 두지만 직원이 종목을 물어 와야(found) 열린다 (267번). 옛 회사면 null이다. */
   Invest invest;
+
+  /** 올해 거시경제 회의 (decisions.md 266번). 이 칸을 더하기 전의 해면 null이다. */
+  Macro macro;
 
   /** 이 회사에서 이미 나온 뉴스. 투자 회의에 같은 뉴스가 다시 나오지 않는다(다 쓰면 비운다). */
   List<String> usedNews = new ArrayList<>();
@@ -185,6 +188,45 @@ class CompanyState {
     Integer highlightIndex;
 
     String highlightBy;
+
+    /**
+     * 직원이 이 종목을 물어 왔는가 (decisions.md 267번). 거짓이면 아직 아무도 가져오지 않아 회의를 열 수 없다. 이 칸을 더하기 전의 회의면 null(늘
+     * 열린다).
+     */
+    Boolean found;
+
+    /** 물어 온 직원의 번호·이름·직함과 가져올 때 한마디. 아무도 안 가져왔거나 옛 회의면 null. */
+    Integer finderId;
+
+    String finderName;
+    String finderRole;
+    String finderDesk;
+    String pitch;
+  }
+
+  /**
+   * 거시경제 회의 한 번 (decisions.md 266번): 큰 흐름 하나(기준금리·환율…)를 놓고 사장이 올해 회사의 태도를 고른다. 숨은 방향 up은 시장에 좋은 쪽이고
+   * 결산 전에는 화면에 나가지 않는다.
+   */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Macro {
+    String topic;
+    boolean up;
+    List<Sentence> sentences = new ArrayList<>();
+    String clarity;
+    String tempter;
+    String sway;
+    String swaySentiment;
+
+    /** 회의를 연 때 굳힌 한마디와 형광펜 (249번과 같다). 아직 안 열었으면 remarks가 null. */
+    List<Remark> remarks;
+
+    Integer highlightIndex;
+    String highlightBy;
+
+    /** 사장이 고른 태도(AGGRESSIVE·NEUTRAL·DEFENSIVE). 아직이면 null이고, 고르지 않고 결산하면 중립으로 본다. */
+    String stance;
   }
 
   /** 투자 회의를 연 때 굳힌 직원 한마디 한 줄. read는 정할 때 "제 판단"으로도 쓴다. */
@@ -208,6 +250,9 @@ class CompanyState {
     String sign;
 
     boolean decisive;
+
+    /** 연초 회의의 폭락 조짐을 거시경제 기사로 옮긴 문장 (266번). 헛조짐일 수도 있다. */
+    boolean omen;
   }
 
   /** 투자 회의에서 직원 한 명이 한 일. follow: BOSS(사장 말대로)·OWN(제멋대로)·SWAY(꼬드김). */
@@ -306,6 +351,12 @@ class CompanyState {
     String investTitle;
 
     Long investTotal;
+
+    /** 그해 거시경제 회의: 주제 이름과 태도, 드러난 한 해 시장과 섹터 바람 줄. 회의가 없던 해면 null (266번). */
+    String macroTopic;
+
+    String macroStance;
+    List<String> macroLines = new ArrayList<>();
 
     String gradeBefore;
     String gradeAfter;

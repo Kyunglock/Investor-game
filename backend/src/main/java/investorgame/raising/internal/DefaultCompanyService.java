@@ -136,6 +136,24 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
+  public CompanyView conveneMacro(UUID sessionId) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.macro.convene(row.state(), new HashSeededRandom(row.seed()));
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView macro(UUID sessionId, String stance) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.macro.decide(row.state(), stance, new HashSeededRandom(row.seed()));
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
   public CompanyView place(UUID sessionId, Map<Integer, String> placements) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.place(row.state(), placements);
@@ -216,7 +234,8 @@ class DefaultCompanyService implements CompanyService {
                         e.sector,
                         e.sector == null ? null : engine.sectorName(e.sector),
                         e.desk != null && e.desk.equals(e.lastDesk) ? e.deskYears : 0,
-                        engine.settled(e)))
+                        engine.settled(e),
+                        engine.macro.roleOf(e)))
             .toList();
     List<String> hot = engine.hotDesks(c);
     List<CompanyView.Desk> desks =
@@ -286,6 +305,7 @@ class DefaultCompanyService implements CompanyService {
         historyView(c),
         ended ? null : engine.brokeNotice(c),
         ended ? null : investView(c, new HashSeededRandom(row.seed())),
+        ended ? null : macroView(c),
         last == null ? null : settlementView(last));
   }
 
@@ -349,7 +369,8 @@ class DefaultCompanyService implements CompanyService {
                                 r.rival == null
                                     ? null
                                     : new CompanyView.Rival(r.rivalKind, r.rival, r.guard)))
-                    .toList());
+                    .toList(),
+                meetings.credit(c));
     return new CompanyView.Invest(
         invest.title,
         engine.stockName(invest.stock),
@@ -359,6 +380,68 @@ class DefaultCompanyService implements CompanyService {
         new CompanyView.Sway(meetings.tempterName(invest.tempter), invest.sway),
         remarks,
         options,
+        meetings.open(c),
+        meetings.convened(c),
+        finderView(invest),
+        outcome);
+  }
+
+  private static CompanyView.Finder finderView(CompanyState.Invest invest) {
+    if (invest.finderId == null) {
+      return null;
+    }
+    return new CompanyView.Finder(
+        invest.finderId, invest.finderName, invest.finderRole, invest.finderDesk, invest.pitch);
+  }
+
+  /** 거시경제 회의 (decisions.md 266번). 한마디와 형광펜은 회의를 연 때 굳힌 것만 보인다. */
+  private CompanyView.Macro macroView(CompanyState c) {
+    CompanyState.Macro macro = c.macro;
+    if (macro == null) {
+      return null;
+    }
+    MacroEngine meetings = engine.macro;
+    List<CompanyView.MacroSentence> sentences = new java.util.ArrayList<>();
+    for (int i = 0; i < macro.sentences.size(); i++) {
+      CompanyState.Sentence s = macro.sentences.get(i);
+      boolean highlighted =
+          meetings.convened(c) && macro.highlightIndex != null && macro.highlightIndex == i;
+      sentences.add(new CompanyView.MacroSentence(s.text, highlighted, s.omen));
+    }
+    List<CompanyView.Remark> remarks =
+        meetings.convened(c)
+            ? macro.remarks.stream()
+                .map(
+                    r -> new CompanyView.Remark(r.employeeId, r.name, r.desk, r.read, r.text, null))
+                .toList()
+            : List.of();
+    List<CompanyView.Stance> stances =
+        MacroEngine.STANCES.stream()
+            .map(
+                code ->
+                    new CompanyView.Stance(
+                        code,
+                        meetings.stanceLabel(code),
+                        meetings.stanceNote(code),
+                        meetings.stakePercentOf(code)))
+            .toList();
+    CompanyView.MacroOutcome outcome = null;
+    if (macro.stance != null) {
+      CompanyView.Finder finder =
+          c.invest != null && Boolean.TRUE.equals(c.invest.found) ? finderView(c.invest) : null;
+      outcome =
+          new CompanyView.MacroOutcome(
+              macro.stance, finder, finder == null ? meetings.noneLine() : null);
+    }
+    RaisingContent.MacroTopic topic = meetings.topic(macro);
+    return new CompanyView.Macro(
+        topic.name(),
+        topic.title(),
+        sentences,
+        meetings.convened(c) ? macro.highlightBy : null,
+        new CompanyView.Sway(engine.invest.tempterName(macro.tempter), macro.sway),
+        remarks,
+        stances,
         meetings.open(c),
         meetings.convened(c),
         outcome);
@@ -418,7 +501,7 @@ class DefaultCompanyService implements CompanyService {
         above < 0 ? null : c.rivals.get(above));
   }
 
-  private static CompanyView.Settlement settlementView(CompanyState.Settlement s) {
+  private CompanyView.Settlement settlementView(CompanyState.Settlement s) {
     return new CompanyView.Settlement(
         s.year,
         s.phase,
@@ -430,6 +513,10 @@ class DefaultCompanyService implements CompanyService {
         s.investTotal == null
             ? null
             : new CompanyView.SettlementInvest(s.investTitle, s.investTotal),
+        s.macroTopic == null
+            ? null
+            : new CompanyView.SettlementMacro(
+                s.macroTopic, s.macroStance, List.copyOf(s.macroLines)),
         s.gradeBefore,
         s.gradeAfter,
         List.copyOf(s.overtook),

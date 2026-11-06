@@ -70,6 +70,64 @@ class InvestEngine {
    */
   Invest create(CompanyState c, SeededRandom random) {
     RandomGenerator rng = random.forKey("invest", c.year);
+    Invest invest = build(c, rng, null, 0);
+    // 따로 굴린다: 기사·꼬드김 난수 차례를 바꾸지 않는다.
+    invest.clarity = pickClarity(random.forKey("invest-clarity", c.year).nextInt(BP));
+    // 연초에 준비만 해 두고, 직원이 물어 와야 열린다 (decisions.md 267번).
+    invest.found = false;
+    return invest;
+  }
+
+  /**
+   * 직원이 종목을 물어 왔다 (decisions.md 267번): 그 사람의 섹터(섹터 데스크면 그 섹터, 아니면 관심 섹터)에서 뉴스와 종목을 새로 뽑는다. 가져온 사람의
+   * 안목이 높을수록 오르는 종목일 때가 많고 기사가 또렷하다. 낮으면 소문이라 흐리다.
+   */
+  Invest found(CompanyState c, Employee finder, String role, SeededRandom random) {
+    RandomGenerator rng = random.forKey("invest-found", c.year);
+    String sector = company.deskSector(finder.desk);
+    if (sector == null) {
+      sector = finder.sector;
+    }
+    if (sector == null) {
+      List<String> sectors = content.sectors().stream().map(x -> x.code()).toList();
+      sector = sectors.get(random.forKey("invest-found-sector", c.year).nextInt(sectors.size()));
+    }
+    int insight = finder.stats.get(StatCodes.INSIGHT);
+    CompanyProperties.Scout rules = properties.scout();
+    Invest invest = build(c, rng, sector, (insight - 50) * rules.upPerInsightBp());
+    invest.clarity = clarityOf(insight);
+    invest.found = true;
+    invest.finderId = finder.id;
+    invest.finderName = finder.name;
+    invest.finderRole = role;
+    invest.finderDesk = finder.desk;
+    Map<String, String> names = names(content.stock(invest.stock));
+    List<String> pitches =
+        content.raising().company().macro().scout().pitch().get(pitchTier(insight));
+    invest.pitch =
+        Korean.fill(
+            pitches.get(random.forKey("invest-pitch", c.year).nextInt(pitches.size())), names);
+    return invest;
+  }
+
+  /** 가져온 사람의 안목으로 정하는 기사의 또렷함. */
+  private String clarityOf(int insight) {
+    CompanyProperties.Scout rules = properties.scout();
+    List<CompanyProperties.Clarity> all = properties.invest().clarity();
+    int at = insight >= rules.clearInsight() ? 0 : insight >= rules.murkyInsight() ? 1 : 2;
+    return all.get(Math.min(at, all.size() - 1)).code();
+  }
+
+  /** 가져올 때 한마디의 말투: 소문(low)·기사(mid)·보고서(high). */
+  private String pitchTier(int insight) {
+    CompanyProperties.Scout rules = properties.scout();
+    return insight >= rules.clearInsight()
+        ? "high"
+        : insight >= rules.murkyInsight() ? "mid" : "low";
+  }
+
+  /** 뉴스·종목·숨은 방향·기사·꼬드김을 짓는다. sector가 있으면 그 섹터의 뉴스만 뽑는다(없으면 모든 섹터). upBonusBp는 오를 확률에 더한다. */
+  private Invest build(CompanyState c, RandomGenerator rng, String sector, int upBonusBp) {
     int pickRoll = rng.nextInt(BP);
     int stockRoll = rng.nextInt(BP);
     int upRoll = rng.nextInt(BP);
@@ -78,7 +136,7 @@ class InvestEngine {
     int swayPhraseRoll = rng.nextInt(BP);
     int tempterRoll = rng.nextInt(BP);
 
-    NewsDefinition news = pickNews(c, pickRoll);
+    NewsDefinition news = pickNews(c, pickRoll, sector);
     c.usedNews.add(news.code());
     List<StockDefinition> stocks =
         content.stocksOf(news.sector()).stream().filter(s -> news.fits(s.code())).toList();
@@ -88,7 +146,9 @@ class InvestEngine {
     invest.stock = stock.code();
     invest.up =
         upRoll
-            < news.directionRule().upBp() + properties.invest().yearUpBp().getOrDefault(c.phase, 0);
+            < news.directionRule().upBp()
+                + properties.invest().yearUpBp().getOrDefault(c.phase, 0)
+                + upBonusBp;
     invest.magnitudeBp =
         news.magnitude().minBp()
             + magnitudeRoll % (news.magnitude().maxBp() - news.magnitude().minBp() + 1);
@@ -98,7 +158,14 @@ class InvestEngine {
 
     Sentiment sentiment = swayRoll == 0 ? Sentiment.POS : Sentiment.NEG;
     List<String> phrases = content.swayPhrases(sentiment.name());
-    // 직원과 이름이 같은 단골 인물(김대리)은 회의에 끼지 않는다: 누가 누구 말을 들었는지 헷갈린다.
+    invest.swaySentiment = sentiment.name();
+    invest.sway = phrases.get(swayPhraseRoll % phrases.size());
+    invest.tempter = tempterCode(c, tempterRoll);
+    return invest;
+  }
+
+  /** 꼬드기는 단골 인물. 직원·지원자와 이름이 같은 인물(김대리)은 회의에 끼지 않는다: 누가 누구 말을 들었는지 헷갈린다. */
+  String tempterCode(CompanyState c, int roll) {
     List<RaisingContent.Tempter> tempters =
         content.raising().tempters().stream()
             .filter(t -> c.employees.stream().noneMatch(e -> e.name.equals(t.name())))
@@ -107,15 +174,10 @@ class InvestEngine {
     if (tempters.isEmpty()) {
       tempters = content.raising().tempters();
     }
-    // 따로 굴린다: 기사·꼬드김 난수 차례를 바꾸지 않는다.
-    invest.clarity = pickClarity(random.forKey("invest-clarity", c.year).nextInt(BP));
-    invest.swaySentiment = sentiment.name();
-    invest.sway = phrases.get(swayPhraseRoll % phrases.size());
-    invest.tempter = tempters.get(tempterRoll % tempters.size()).code();
-    return invest;
+    return tempters.get(roll % tempters.size()).code();
   }
 
-  private String pickClarity(int roll) {
+  String pickClarity(int roll) {
     List<CompanyProperties.Clarity> all = properties.invest().clarity();
     int total = all.stream().mapToInt(CompanyProperties.Clarity::weight).sum();
     int pick = (int) ((long) roll * total / BP);
@@ -130,8 +192,12 @@ class InvestEngine {
 
   /** 흐린 기사면 읽을 때 안목에서 빼는 점수. 옛 회의(clarity 없음)는 0. */
   private int penalty(Invest invest) {
+    return penalty(invest.clarity);
+  }
+
+  int penalty(String clarity) {
     return properties.invest().clarity().stream()
-        .filter(x -> x.code().equals(invest.clarity))
+        .filter(x -> x.code().equals(clarity))
         .mapToInt(CompanyProperties.Clarity::penalty)
         .findFirst()
         .orElse(0);
@@ -139,20 +205,27 @@ class InvestEngine {
 
   /** 가장 흐린 기사(가장 크게 깎는)인가. 안목 높은 직원이 "이번 건 애매하다"고 말한다. */
   private boolean foggiest(Invest invest) {
+    return foggiest(invest.clarity);
+  }
+
+  boolean foggiest(String clarity) {
     int most =
         properties.invest().clarity().stream()
             .mapToInt(CompanyProperties.Clarity::penalty)
             .max()
             .orElse(0);
-    return most > 0 && penalty(invest) == most;
+    return most > 0 && penalty(clarity) == most;
   }
 
-  /** 이 회사에 아직 안 나온 뉴스를 가중치대로 뽑는다. 다 나왔으면 처음부터. */
-  private NewsDefinition pickNews(CompanyState c, int roll) {
-    List<NewsDefinition> roots = content.news().stream().filter(NewsDefinition::root).toList();
+  /** 이 회사에 아직 안 나온 뉴스를 가중치대로 뽑는다. 다 나왔으면 처음부터. sector가 있으면 그 섹터만(그 섹터에 뉴스가 없으면 모두). */
+  private NewsDefinition pickNews(CompanyState c, int roll, String sector) {
+    List<NewsDefinition> all = content.news().stream().filter(NewsDefinition::root).toList();
+    List<NewsDefinition> inSector =
+        sector == null ? all : all.stream().filter(n -> n.sector().equals(sector)).toList();
+    List<NewsDefinition> roots = inSector.isEmpty() ? all : inSector;
     List<NewsDefinition> pool = roots.stream().filter(n -> !c.usedNews.contains(n.code())).toList();
     if (pool.isEmpty()) {
-      c.usedNews.clear();
+      c.usedNews.removeAll(roots.stream().map(NewsDefinition::code).toList());
       pool = roots;
     }
     int total = pool.stream().mapToInt(NewsDefinition::weight).sum();
@@ -176,11 +249,22 @@ class InvestEngine {
    */
   private List<Sentence> article(
       NewsClues clues, boolean up, RandomGenerator rng, Map<String, String> names) {
+    return article(clues.up(), clues.down(), clues.neutral(), up, rng, names);
+  }
+
+  /** 단서 기사를 짓는다. 거시경제 회의(266번)도 같은 꼴로 짓는다. */
+  List<Sentence> article(
+      List<String> ups,
+      List<String> downs,
+      List<String> neutrals,
+      boolean up,
+      RandomGenerator rng,
+      Map<String, String> names) {
     String truth = up ? UP : DOWN;
     String other = up ? DOWN : UP;
-    List<String> truthPool = new ArrayList<>(up ? clues.up() : clues.down());
-    List<String> otherPool = new ArrayList<>(up ? clues.down() : clues.up());
-    List<String> neutralPool = new ArrayList<>(clues.neutral());
+    List<String> truthPool = new ArrayList<>(up ? ups : downs);
+    List<String> otherPool = new ArrayList<>(up ? downs : ups);
+    List<String> neutralPool = new ArrayList<>(neutrals);
     List<Sentence> sentences = new ArrayList<>();
     sentences.add(sentence(draw(truthPool, rng, names), truth, true));
     boolean anyOther = false;
@@ -216,9 +300,12 @@ class InvestEngine {
     return Korean.fill(pool.remove(rng.nextInt(pool.size())), names);
   }
 
-  /** 투자 회의를 열 수 있는가: 정하지 않은 회의가 있고 돈을 굴리는 직원이 있다. */
+  /** 종목 회의를 열 수 있는가: 직원이 물어 온(267번) 정하지 않은 회의가 있고 돈을 굴리는 직원이 있다. */
   boolean open(CompanyState c) {
-    return c.invest != null && c.invest.choice == null && !company.traders(c).isEmpty();
+    return c.invest != null
+        && !Boolean.FALSE.equals(c.invest.found)
+        && c.invest.choice == null
+        && !company.traders(c).isEmpty();
   }
 
   /** 회의를 열어 한마디와 형광펜을 굳혔는가 (249번). */
@@ -335,14 +422,18 @@ class InvestEngine {
 
   /** 한마디에 따올 문장: 읽은 쪽으로 기운 문장. 안목이 높으면(HIGH 이상) 그 가운데 결정적 문장을 먼저 고른다. 길면 자른다. */
   private static String quote(Invest invest, String read, Hint.Detail voice) {
+    return quote(invest.sentences, invest.title, read, voice);
+  }
+
+  static String quote(List<Sentence> sentences, String title, String read, Hint.Detail voice) {
     boolean sharp = voice == Hint.Detail.HIGH || voice == Hint.Detail.EXPERT;
     Sentence pick = null;
-    for (Sentence s : invest.sentences) {
+    for (Sentence s : sentences) {
       if (s.sign.equals(read) && (pick == null || (sharp && s.decisive))) {
         pick = s;
       }
     }
-    String text = pick == null ? invest.title : pick.text;
+    String text = pick == null ? title : pick.text;
     text = text.endsWith(".") ? text.substring(0, text.length() - 1) : text;
     return text.length() > QUOTE_CHARS ? text.substring(0, QUOTE_CHARS).strip() + "…" : text;
   }
@@ -387,6 +478,9 @@ class InvestEngine {
     }
     if (c.invest == null || c.invest.choice != null) {
       throw new InvalidRequestException("올해 투자 회의는 이미 했다");
+    }
+    if (Boolean.FALSE.equals(c.invest.found)) {
+      throw new InvalidRequestException("올해는 아직 아무도 종목을 물어 오지 않았다");
     }
     if (!List.of(BUY, SELL, HOLD).contains(choice)) {
       throw new InvalidRequestException("고를 수 없는 것: " + choice);
@@ -490,6 +584,25 @@ class InvestEngine {
       case DOWN -> SELL;
       default -> HOLD;
     };
+  }
+
+  /** 정한 뒤 물어 온 직원을 칭찬하거나 탓하는 한 줄 (decisions.md 267번). 물어 온 사람이 없는 옛 회의면 null. */
+  String credit(CompanyState c) {
+    Invest invest = c.invest;
+    if (invest.finderName == null || invest.choice == null) {
+      return null;
+    }
+    String who =
+        invest.finderRole == null ? invest.finderName : invest.finderName + " " + invest.finderRole;
+    return Korean.fill(
+        content.raising().company().macro().scout().credit().get(invest.up ? UP : DOWN),
+        Map.of(
+            "name",
+            who,
+            "stock",
+            content.stock(invest.stock).name(),
+            "percent",
+            String.valueOf(Math.round(invest.magnitudeBp / (float) PERCENT))));
   }
 
   /** 정한 뒤 드러나는 한 줄: 종목이 몇 % 올랐는지 내렸는지. */

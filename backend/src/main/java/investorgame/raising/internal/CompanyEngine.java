@@ -76,11 +76,15 @@ class CompanyEngine {
       }
     }
     this.invest = new InvestEngine(this, content, behavior, properties);
+    this.macro = new MacroEngine(this, invest, content, behavior, properties);
     this.history = new CompanyHistory(content);
   }
 
   /** 회사 연표·업적·명예의 전당 (decisions.md 263번). */
   final CompanyHistory history;
+
+  /** 거시경제 회의와 종목 발굴 (decisions.md 266·267번). */
+  final MacroEngine macro;
 
   static final String HR_DESK = "hr";
 
@@ -690,8 +694,9 @@ class CompanyEngine {
     return employee;
   }
 
-  /** 자리가 줄었을 때 먼저 일어나는 자리: 인사팀 → 리서치 팀 → 리스크 관리 팀 → 돈을 굴리는 자리 (decisions.md 248번). */
-  private static final List<String> STAND_UP_ORDER = List.of(HR_DESK, RESEARCH_DESK, RISK_DESK);
+  /** 자리가 줄었을 때 먼저 일어나는 자리: 인사팀 → 종목 발굴팀 → 리서치 팀 → 리스크 관리 팀 → 돈을 굴리는 자리 (decisions.md 248·267번). */
+  private static final List<String> STAND_UP_ORDER =
+      List.of(HR_DESK, MacroEngine.SCOUT_DESK, RESEARCH_DESK, RISK_DESK);
 
   /**
    * 앉은 사람이 자리 수보다 많으면 넘친 사람을 쉬게 한다 (248번). 결산·계약금·새로 받기로 자본이 줄어 회사 등급과 자리 수가 내려갔을 때다. 돈을 굴리는 자리를
@@ -840,6 +845,7 @@ class CompanyEngine {
     company.yearHiring = 0;
     deal(company, random);
     company.invest = invest.create(company, random);
+    company.macro = macro.create(company, random);
     company.yearLines.clear();
     company.poach = poachOf(company, random);
   }
@@ -914,6 +920,16 @@ class CompanyEngine {
 
   List<RaisingContent.Desk> desks() {
     return content.raising().company().desks();
+  }
+
+  /** 섹터 데스크면 그 섹터 코드, 아니면 null. */
+  String deskSector(String code) {
+    return code == null ? null : desk(code).sector();
+  }
+
+  /** 그 자리에 앉은 사람의 직함(종합 등급 C 아래·S 아래·S 이상). 직함이 없는 자리면 null (decisions.md 267번). */
+  List<String> deskRoles(String code) {
+    return desk(code).roles();
   }
 
   private RaisingContent.Desk desk(String code) {
@@ -1054,7 +1070,8 @@ class CompanyEngine {
     company.employees.forEach(e -> ranksBefore.put(e.id, e.rank));
     int research = researchInsight(company);
     List<Employee> traders = traders(company);
-    long stake = stakeOf(company, traders.size());
+    // 거시경제 회의의 태도가 그해 판돈 전체에 걸린다 (decisions.md 266번).
+    long stake = stakeOf(company, traders.size()) * macro.stakePercent(company) / PERCENT;
     boolean crash = CRASH.equals(company.phase);
     long totalPnl = 0;
     for (Employee employee : traders) {
@@ -1074,18 +1091,25 @@ class CompanyEngine {
       boolean contrarian = crash && employee.rank >= RANK_CONTRARIAN;
       int hitBp = behavior.hintAccuracyPercent(insight) * PERCENT;
       // 규모의 벽(244번): 결산을 시작할 때의 등급으로 정한다.
+      // 섹터 바람(266번): 그해 거시경제 회의의 주제가 순풍 자리는 더, 역풍 자리는 덜 벌게 한다.
       int gainBp =
           scaledGain(
-              company, gainBp(company, employee) + (conviction ? effects.convictionGainBp() : 0));
+              company,
+              Math.max(
+                  0,
+                  gainBp(company, employee)
+                      + (conviction ? effects.convictionGainBp() : 0)
+                      + macro.windBp(company, employee.desk)));
       int missBp = scaledMiss(company, returns.missBp());
       int flipLossBp = scaledMiss(company, returns.flipBp());
       // 한 해 시장 손익. 폭락장에는 섹터마다 빠지는 폭이 다르다(식품·금융은 덜, 반도체는 더).
       int phaseBp = properties.phaseBp().getOrDefault(company.phase, 0);
       if (crash) {
+        // 방어로 돌렸으면 폭락장에 덜 빠진다 (266번).
         phaseBp =
             scaled(
                 company,
-                phaseBp * returns.crashPercent() / PERCENT,
+                phaseBp * returns.crashPercent() / PERCENT * macro.crashPercent(company) / PERCENT,
                 properties.scale().crashPercent());
       }
       long bp = 0;
@@ -1157,6 +1181,15 @@ class CompanyEngine {
     settlement.lines.addFirst(phaseLine);
     if (!crash && company.omen != null) {
       settlement.lines.add(1, content.raising().company().falseOmenNote());
+    }
+    if (company.macro != null) {
+      // 연말 결산서가 그해 거시경제 회의의 태도와 드러난 시장을 보인다 (266번). 섹터 바람은 소식 줄에도 남긴다.
+      List<String> macroLines = macro.settledLines(company);
+      settlement.macroTopic = macro.topic(company.macro).name();
+      settlement.macroStance = macro.stance(company);
+      settlement.macroLines.add(macro.settledHead(company));
+      settlement.macroLines.addAll(macroLines);
+      settlement.lines.add(1, macroLines.getLast());
     }
     if (company.invest != null && company.invest.choice != null) {
       // 연말 결산서(240번)가 회의 몫과 직원들이 한 해 굴린 몫을 나눠 보인다. 전에는 소식 줄 한 줄이었다.
