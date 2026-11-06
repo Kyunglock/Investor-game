@@ -1,7 +1,19 @@
 import { describe, expect, it } from 'vitest'
+import type { Company } from '../../api/client'
 import { PALETTE } from '../game/pixel/palette'
-import { officeMap } from './OfficeArt'
-import { attireOf, customersOf, glowOf, lobbyOf, officeCaption, tierOf } from './office'
+import { buildingMap } from './BuildingArt'
+import { LADDER } from './grades'
+import {
+  attireOf,
+  customersOf,
+  glowOf,
+  lobbyOf,
+  nextStep,
+  officeCaption,
+  officeName,
+  seatTiles,
+  tierOf,
+} from './office'
 
 describe('회사 건물과 객장 (증권사 육성 설계 8.1절)', () => {
   it('등급마다 건물이 바뀐다: 반지하 → 상가 → 작은 빌딩 → 여의도 → 통째 → 사옥 → 랜드마크', () => {
@@ -38,18 +50,38 @@ describe('회사 건물과 객장 (증권사 육성 설계 8.1절)', () => {
     )
   })
 
-  it('책상 수는 자리 수이고, 지도의 글자는 모두 팔레트에 있다', () => {
-    for (const grade of ['F', 'C', 'S', 'XX', 'ZZZ'] as const) {
-      const map = officeMap(grade, 5, 100)
-      expect(map.flat().every((ch) => ch === '.' || ch in PALETTE)).toBe(true)
-    }
-    const screens = (seats: number) =>
-      officeMap('F', seats, 120)
-        .map((row) => row.join(''))
-        .join('\n')
-        .match(/KZ/g)?.length ?? 0
-    expect(screens(2)).toBeGreaterThan(0)
-    expect(screens(4)).toBe(screens(2) * 2)
+  it('미니맵 칸은 자리 수만큼이고 앉은 사람이 앞에서 채우며, 표정은 지난 결산 손익을 따른다 (237번)', () => {
+    const company = {
+      seats: 3,
+      desks: [
+        { code: 'bio', name: '바이오 데스크', trades: true },
+        { code: 'research', name: '리서치 팀', trades: false },
+      ],
+      employees: [
+        { id: 1, name: '가', desk: 'bio' },
+        { id: 2, name: '나', desk: null },
+        { id: 3, name: '다', desk: 'research' },
+        { id: 4, name: '라', desk: 'bio' },
+      ],
+      lastSettlement: {
+        results: [
+          { employeeId: 1, stake: 100, pnl: -5 },
+          { employeeId: 4, stake: 100, pnl: 7 },
+        ],
+      },
+    } as unknown as Company
+    const { tiles, resting } = seatTiles(company)
+    expect(tiles.map((t) => t.employee?.name ?? null)).toEqual(['가', '다', '라'])
+    expect(tiles.map((t) => t.desk)).toEqual(['바이오 데스크', '리서치 팀', '바이오 데스크'])
+    expect(tiles.map((t) => t.trades)).toEqual([true, false, true])
+    expect(tiles.map((t) => t.mood)).toEqual(['despair', null, 'joy'])
+    expect(tiles.map((t) => t.pnl)).toEqual([-5, null, 7])
+    expect(resting.map((e) => e.name)).toEqual(['나'])
+    const empty = seatTiles({ ...company, seats: 5 }).tiles
+    expect(empty.slice(3).map((t) => [t.index, t.employee])).toEqual([
+      [3, null],
+      [4, null],
+    ])
   })
 })
 
@@ -67,5 +99,30 @@ describe('직원 차림새 (8.2절)', () => {
     expect(glowOf('SSS')).toBeNull()
     expect(glowOf('XXX')).toBe('blue')
     expect(glowOf('Z')).toBe('gold')
+  })
+})
+
+describe('건물로 보이는 회사 (decisions.md 238번)', () => {
+  it('다음 등급이 다른 건물이면 이사, 같은 건물이면 사무실을 넓히고, 끝이면 없다', () => {
+    expect(officeName('F')).toBe('반지하 원룸')
+    expect(nextStep('F')).toEqual({ kind: 'expand' })
+    expect(nextStep('E')).toEqual({ kind: 'move', to: '상가 2층' })
+    expect(nextStep('SS')).toEqual({ kind: 'move', to: '여의도 빌딩 통째로' })
+    expect(nextStep('ZZZ')).toBeNull()
+  })
+
+  it('모든 등급의 건물 그림은 팔레트 글자만 쓰고, 우리 층은 불이 켜져 있다', () => {
+    for (const grade of LADDER) {
+      const map = buildingMap(grade)
+      expect(map.flat().every((ch) => ch in PALETTE)).toBe(true)
+      expect(map.flat()).toContain('L')
+    }
+    // 건물이 클수록 불 켜진 창이 많다.
+    const lit = (g: (typeof LADDER)[number]) =>
+      buildingMap(g)
+        .flat()
+        .filter((c) => c === 'L').length
+    expect(lit('F')).toBeLessThan(lit('D'))
+    expect(lit('S')).toBeLessThan(lit('SSS'))
   })
 })

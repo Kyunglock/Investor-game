@@ -70,3 +70,11 @@ export function autoPlace(company: Company): Seat[] {
   }
   return company.employees.map((e) => ({ employeeId: e.id, desk: placed.get(e.id) ?? null }))
 }
+
+/** 한 사람만 자리를 바꾼 배치. 나머지는 그대로 둔다. 배치 탭의 자리 버튼과 건물 그림의 자리 고르기가 같이 쓴다 (decisions.md 237번). */
+export function seatOne(company: Company, employeeId: number, desk: string | null): Seat[] {
+  return company.employees.map((e) => ({
+    employeeId: e.id,
+    desk: e.id === employeeId ? desk : (e.desk ?? null),
+  }))
+}

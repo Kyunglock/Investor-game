@@ -85,8 +85,12 @@ class InvestEngineTest {
             () -> ENGINE.invest.decide(company, InvestEngine.BUY, new HashSeededRandom(2)))
         .as("한 해에 한 번")
         .isInstanceOf(InvalidRequestException.class);
+    String title = company.invest.title;
     CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(2));
-    assertThat(s.lines).anyMatch(l -> l.startsWith("투자 회의"));
+    // 연말 결산서(240번): 회의는 소식 줄이 아니라 따로 실린다(지켜봤으니 0).
+    assertThat(s.investTitle).isEqualTo(title);
+    assertThat(s.investTotal).isZero();
+    assertThat(s.lines).noneMatch(l -> l.startsWith("투자 회의"));
   }
 
   /** 줏대·용기가 만점이면 사장 말대로 하고, 맞히면 벌고 틀리면 잃고, 지켜보면 0. 손익은 바로 자본에 들어간다. */
@@ -203,5 +207,91 @@ class InvestEngineTest {
     assertThat(decisive).as("안목 100이면 대개 결정적 문장에 긋는다").isGreaterThan(80);
     CompanyState none = ENGINE.open(new HashSeededRandom(1), 100_000_000L);
     assertThat(ENGINE.invest.highlight(none, new HashSeededRandom(1))).isEmpty();
+  }
+
+  /**
+   * 한마디는 안목에 따라 다르다 (decisions.md 239번): 안목이 낮으면 기사를 따오지 않고 감·소문으로 말하고, 높으면 결정적 문장을 따온다. 리서치 팀 형광펜은
+   * 반만 빌려, 안목이 낮은 직원은 리서치 팀만큼 맞히지 못한다.
+   */
+  @Test
+  void 한마디는_안목에_따라_말투와_근거와_맞히는_정도가_다르다() {
+    int sharpRight = 0;
+    int missedDecisive = 0;
+    int dullRight = 0;
+    int trials = 300;
+    int clear = 0;
+    for (int seed = 0; seed < trials; seed++) {
+      // E(3억)라 자리가 셋: 안목 낮은 직원, 안목 높은 직원, 리서치 팀(안목 만점).
+      CompanyState c = ENGINE.open(new HashSeededRandom(seed), 300_000_000L);
+      ENGINE.hire(c, stats(0, 50, 50, 50));
+      ENGINE.hire(c, stats(90, 50, 50, 50));
+      ENGINE.hire(c, stats(100, 50, 50, 50));
+      ENGINE.place(c, Map.of(1, "day", 2, "day", 3, "research"));
+      c.phase = "normal";
+      var remarks = ENGINE.invest.remarks(c, new HashSeededRandom(seed));
+      var dull = remarks.get(0);
+      var sharp = remarks.get(1);
+      String truth = c.invest.up ? "UP" : "DOWN";
+      assertThat(dull.text()).as("안목이 낮으면 기사를 따오지 않는다").doesNotContain("‘");
+      assertThat(sharp.text()).as("안목이 높으면 기사를 따온다").contains("‘");
+      assertThat(sharp.text()).doesNotContain("{");
+      // 화면이 한마디를 큰따옴표로 감싸므로 따온 문장으로 시작하지 않는다.
+      assertThat(remarks).noneMatch(r -> r.text().startsWith("‘"));
+      if (sharp.read().equals(truth)) {
+        String decisive =
+            c.invest.sentences.stream().filter(x -> x.decisive).findFirst().orElseThrow().text;
+        if (!sharp.text().contains(decisive.substring(0, 10))) {
+          missedDecisive++;
+        }
+      }
+      // 맞히는 정도는 또렷한 기사에서 견준다(241번: 흐린 기사는 모두 덜 맞힌다).
+      if (!"clear".equals(c.invest.clarity)) {
+        continue;
+      }
+      clear++;
+      if (sharp.read().equals(truth)) {
+        sharpRight++;
+      }
+      if (dull.read().equals(truth)) {
+        dullRight++;
+      }
+    }
+    assertThat(missedDecisive).as("맞게 읽은 높은 안목은 결정적 문장을 짚는다").isZero();
+    assertThat(clear).isGreaterThan(trials / 5);
+    assertThat(sharpRight).isGreaterThan(clear * 85 / 100);
+    // 형광펜을 반만 빌려(안목 0 → 50) 맞히는 정도가 안목 높은 직원보다 확실히 낮다.
+    assertThat(dullRight).isLessThan(sharpRight - clear / 10);
+  }
+
+  /**
+   * 기사가 흐리면 안목 높은 직원끼리도 의견이 갈린다 (decisions.md 241번). 전에는 모두 안목이 높으면 늘 같은 쪽을 말했다. 가장 흐린 기사에서는
+   * "애매하다"고 말한다.
+   */
+  @Test
+  void 흐린_기사에서는_안목_높은_직원끼리도_의견이_갈린다() {
+    Map<String, int[]> splits = new java.util.HashMap<>();
+    for (int seed = 0; seed < 600; seed++) {
+      CompanyState c = ENGINE.open(new HashSeededRandom(seed), 100_000_000L);
+      ENGINE.hire(c, stats(90, 50, 50, 50));
+      ENGINE.hire(c, stats(90, 50, 50, 50));
+      ENGINE.place(c, Map.of(1, "day", 2, "bio"));
+      c.phase = "normal";
+      var remarks = ENGINE.invest.remarks(c, new HashSeededRandom(seed));
+      int[] count = splits.computeIfAbsent(c.invest.clarity, k -> new int[2]);
+      count[0]++;
+      if (!remarks.get(0).read().equals(remarks.get(1).read())) {
+        count[1]++;
+      }
+      if ("foggy".equals(c.invest.clarity)) {
+        assertThat(remarks)
+            .filteredOn(r -> !r.read().equals("NEUTRAL"))
+            .allMatch(r -> r.text().matches(".*(애매|반반|갈릴).*"));
+      }
+    }
+    assertThat(splits).containsOnlyKeys("clear", "murky", "foggy");
+    double clear = splits.get("clear")[1] / (double) splits.get("clear")[0];
+    double foggy = splits.get("foggy")[1] / (double) splits.get("foggy")[0];
+    assertThat(clear).as("또렷한 기사는 대개 한목소리").isLessThan(0.3);
+    assertThat(foggy).as("가장 흐린 기사는 절반 넘게 갈린다").isGreaterThan(0.45);
   }
 }

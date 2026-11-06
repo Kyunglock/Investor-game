@@ -64,23 +64,22 @@ public record RaisingContent(
    * 투자 회의 (decisions.md 229번). 고르는 것은 BUY·SELL·HOLD.
    *
    * @param options 사장이 고르는 버튼 이름
-   * @param reads 직원의 한마디. 직원이 기사를 읽은 쪽(UP·DOWN·NEUTRAL)별
+   * @param remarks 직원의 한마디. 안목 구간(low·mid·high·expert) → 읽은 쪽(UP·DOWN·NEUTRAL) → 문구 여럿. {quote}(따온
+   *     기사 문장)·{stock}. foggy는 가장 흐린 기사에서 안목 높은 직원이 하는 말(UP·DOWN)
    * @param actions 직원이 한 일(샀다·팔았다·지켜봤다)
    * @param obey 사장 말대로 했다. {action}
    * @param rogue 제멋대로 했다. {action}
    * @param swayed 꼬드김에 넘어갔다. {who}·{action}
    * @param reveal 정한 뒤 드러난 결과. UP·DOWN별, {stock}·{percent}
-   * @param settlement 결산의 한 줄. {title}·{amount}
    */
   public record Invest(
       Map<String, String> options,
-      Map<String, String> reads,
+      Map<String, Map<String, List<String>>> remarks,
       Map<String, String> actions,
       String obey,
       String rogue,
       String swayed,
-      Map<String, String> reveal,
-      String settlement) {}
+      Map<String, String> reveal) {}
 
   /** 공채 시장 지원자 카드의 한 줄. wanted: 올해 필요한 인재({desk}·{stat}). hr: 인사팀이 데려온 지원자({name}). */
   public record Market(String wanted, String hr) {}

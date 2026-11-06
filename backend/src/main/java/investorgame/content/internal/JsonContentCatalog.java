@@ -238,9 +238,19 @@ class JsonContentCatalog implements ContentCatalog {
         invest != null
             && invest.options().keySet().containsAll(List.of("BUY", "SELL", "HOLD"))
             && invest.actions().keySet().containsAll(List.of("BUY", "SELL", "HOLD"))
-            && invest.reads().keySet().containsAll(List.of("UP", "DOWN", "NEUTRAL"))
+            && invest.remarks() != null
             && invest.reveal().keySet().containsAll(List.of("UP", "DOWN")),
         "투자 회의 문구가 없다");
+    for (String voice : List.of("low", "mid", "high", "expert")) {
+      for (String read : List.of("UP", "DOWN", "NEUTRAL")) {
+        List<String> lines = invest.remarks().getOrDefault(voice, Map.of()).get(read);
+        require(lines != null && !lines.isEmpty(), "직원 한마디가 없다: " + voice + " " + read);
+      }
+    }
+    for (String read : List.of("UP", "DOWN")) {
+      List<String> lines = invest.remarks().getOrDefault("foggy", Map.of()).get(read);
+      require(lines != null && !lines.isEmpty(), "흐린 기사의 한마디가 없다: " + read);
+    }
     for (String stat : List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE)) {
       require(raising.flipTips().containsKey(stat), "처음 뒤집힘 설명이 없다: " + stat);
     }

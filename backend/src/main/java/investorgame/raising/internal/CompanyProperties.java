@@ -56,7 +56,21 @@ public record CompanyProperties(
    * @param sideOppositePercent 곁가지 문장이 숨은 방향의 반대쪽일 확률
    * @param stubbornBp 직원이 제멋대로 할(꼬드김 + 손 뒤집힘) 확률이 이 만분율 이상이면 "보통", 두 배 이상이면 "높음"으로 보인다
    */
-  public record Invest(Map<String, Integer> yearUpBp, int sideOppositePercent, int stubbornBp) {}
+  public record Invest(
+      Map<String, Integer> yearUpBp,
+      int sideOppositePercent,
+      int stubbornBp,
+      List<Clarity> clarity) {}
+
+  /**
+   * 투자 회의 기사가 얼마나 또렷한가 (decisions.md 241번). 회의마다 가중치로 하나를 뽑고, 기사를 읽는 모든 직원(리서치 팀 형광펜 포함)의 안목에서
+   * penalty를 뺀다. 흐린 기사에서는 안목 높은 직원끼리도 의견이 갈린다.
+   *
+   * @param code clear·murky·foggy
+   * @param weight 뽑힐 가중치
+   * @param penalty 읽을 때 안목에서 빼는 점수
+   */
+  public record Clarity(String code, int weight, int penalty) {}
 
   /**
    * @param applicants 해마다 오는 지원자 수

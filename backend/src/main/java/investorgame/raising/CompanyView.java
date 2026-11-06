@@ -179,10 +179,14 @@ public record CompanyView(
       long capitalBefore,
       long capitalAfter,
       long fee,
+      SettlementInvest invest,
       String gradeBefore,
       String gradeAfter,
       List<Result> results,
       List<String> lines) {}
+
+  /** 결산한 해의 투자 회의: 기사 제목과 회의 손익(이미 자본에 들어갔다). 회의를 안 했으면 결산의 invest가 null (decisions.md 240번). */
+  public record SettlementInvest(String title, long total) {}
 
   /** flips는 능력치 코드 → 그해 뒤집힌 횟수. */
   public record Result(

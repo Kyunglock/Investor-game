@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Company } from '../../api/client'
-import { autoPlace } from './placement'
+import { autoPlace, seatOne } from './placement'
 
 function desk(code: string, statCode: string, sector: string | null = null, trades = true) {
   return { code, name: code, statCode, trades, sector, hot: false, description: '' }
@@ -91,6 +91,23 @@ describe('자동 배치 (decisions.md 232·233번)', () => {
     expect(seats.filter((s) => s.desk)).toHaveLength(2)
     expect(autoPlace(company(2, [employee(1, 'C', 'D', 'C', 'A')]))).toEqual([
       { employeeId: 1, desk: 'food' },
+    ])
+  })
+})
+
+describe('한 사람만 옮기기 (decisions.md 237번)', () => {
+  it('고른 사람의 자리만 바꾸고 나머지는 그대로 둔다', () => {
+    const c = company(2, [
+      { ...employee(1, 'C', 'C', 'C', 'C'), desk: 'bio' },
+      { ...employee(2, 'C', 'C', 'C', 'C'), desk: null },
+    ])
+    expect(seatOne(c, 2, 'day')).toEqual([
+      { employeeId: 1, desk: 'bio' },
+      { employeeId: 2, desk: 'day' },
+    ])
+    expect(seatOne(c, 1, null)).toEqual([
+      { employeeId: 1, desk: null },
+      { employeeId: 2, desk: null },
     ])
   })
 })

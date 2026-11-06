@@ -360,6 +360,12 @@ export interface components {
                 capitalAfter: number;
                 /** Format: int64 */
                 fee: number;
+                /** @description 그해 투자 회의(기사 제목과 손익, 이미 자본에 들어갔다). 회의를 안 했거나 옛 결산이면 null (decisions.md 240번) */
+                invest?: {
+                    title: string;
+                    /** Format: int64 */
+                    total: number;
+                } | null;
                 gradeBefore: components["schemas"]["Grade"];
                 gradeAfter: components["schemas"]["Grade"];
                 results: {

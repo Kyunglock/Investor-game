@@ -60,16 +60,33 @@ async function settleYear(page: Page, year: number, choice: string, watch = fals
   }
   await settle.click()
   await expect(meeting).toBeHidden()
+  await closeYearEnd(page, year)
   await expect(page.getByTestId('settlement')).toContainText(`${year}년 차 결산`)
 }
 
-test('처음 오면 회사를 차리고, 직원 없이 F등급 자리 두 개와 지원자 셋이 있다', async ({ page }) => {
+/**
+ * 결산하면 연말 결산서가 따로 뜬다 (240번): 투자 회의 한 건과 직원들이 1년 동안 굴린 몫이 나뉘어 있고, 확인하면 닫힌다.
+ */
+async function closeYearEnd(page: Page, year: number) {
+  const sheet = page.getByRole('dialog', { name: '연말 결산서' })
+  await expect(sheet).toContainText(`${year}년 차 연말 결산서`)
+  await expect(sheet.getByTestId('ledger-staff')).toContainText('직원들의 1년 운용')
+  await expect(sheet.getByTestId('ledger-after')).toBeVisible()
+  await sheet.getByRole('button', { name: '확인' }).click()
+  await expect(sheet).toBeHidden()
+}
+
+test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자리 두 개와 지원자 셋이 있다', async ({
+  page,
+}) => {
   await openCompany(page)
-  await expect(page.getByTestId('company-grade')).toHaveText('F')
+  // 회사 등급 글자 대신 건물로 보인다 (238번): 반지하 원룸에서 시작하고 건물 사다리는 일곱 칸이다.
+  await expect(page.getByTestId('company-building')).toHaveText('반지하 원룸')
   // 직원이 없으면 공채 탭이 먼저 열린다.
   await expect(page.getByRole('tab', { name: /공채/ })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByTestId('applicant')).toHaveCount(3)
-  await expect(page.getByTestId('ladder').first().getByRole('listitem')).toHaveCount(15)
+  await expect(page.getByTestId('building-ladder').getByRole('listitem')).toHaveCount(7)
+  await expect(page.getByTestId('next-step')).toContainText('사무실 넓히기')
   // 첫 지원자는 연초 회의가 말한 "올해 필요한 인재"다.
   await expect(page.getByTestId('applicant').first()).toContainText('맞는 사람이다')
   // 지원자는 관심 섹터를 안고 온다 (233번).
@@ -81,6 +98,13 @@ test('처음 오면 회사를 차리고, 직원 없이 F등급 자리 두 개와
 
   // 회사 건물 단면: 책상은 자리 수, 아직 아무도 없다. 그림을 끄면 같은 내용을 글로 (8.1·8.4절).
   await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '0')
+  // 사무실 미니맵 (237번): 자리마다 칸이 있고 아직 다 빈 자리다. 누르면 쉬는 사람이 없으니 공채로 데려간다.
+  await expect(page.getByTestId('office-empty')).toHaveCount(2)
+  await page.getByRole('button', { name: '빈 자리 1에 앉힐 사람 고르기' }).click()
+  await expect(page.getByTestId('seat-picker')).toContainText('쉬는 직원이 없습니다')
+  await page.getByTestId('seat-picker').getByRole('button', { name: '공채에서 뽑기' }).click()
+  await expect(page.getByTestId('seat-picker')).toHaveCount(0)
+  await expect(page.getByRole('tab', { name: /공채/ })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('button', { name: '그림 끄기' }).click()
   await expect(page.getByTestId('office-caption')).toHaveText(
     '사무실: 반지하 원룸, 책상 2개 · 객장: 손님 없음, 길고양이 한 마리',
@@ -139,6 +163,28 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/2')
   await expect(page.getByTestId('office-tag').filter({ hasText: /데스크/ })).toHaveCount(2)
 
+  // 미니맵에서 바로 배치 (237번): 앉은 사람을 눌러 쉬게 하면 휴게실로 가고, 빈 자리를 눌러 그 사람을 골라 다시 앉힌다.
+  const seats = page.getByTestId('office-seat')
+  await expect(seats).toHaveCount(2)
+  await seats.nth(1).click()
+  const picker = page.getByTestId('seat-picker')
+  await expect(picker).toContainText('어디에 앉힐까요?')
+  // 누른 사람의 상세 능력치가 함께 보인다: 종합 등급과 능력치 다섯.
+  await expect(picker.getByTestId('employee-detail')).toContainText('종합')
+  await expect(picker.getByTestId('employee-detail').getByRole('listitem')).toHaveCount(5)
+  await picker.getByRole('button', { name: '쉰다' }).click()
+  await expect(picker).toHaveCount(0)
+  await expect(page.getByTestId('office-empty')).toHaveCount(1)
+  await expect(page.getByTestId('office-resting')).toBeVisible()
+  await page.getByTestId('office-empty').click()
+  await expect(picker).toContainText('빈 자리에 누구를 앉힐까요?')
+  await picker.getByRole('button', { name: /종합/ }).click()
+  await picker.getByRole('button', { name: /단타 데스크 용기/ }).click()
+  await expect(picker).toHaveCount(0)
+  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/2')
+  await expect(page.getByTestId('office-empty')).toHaveCount(0)
+  await expect(page.getByTestId('office-resting')).toHaveCount(0)
+
   // 투자 회의 (229·231번): 결산을 누르면 창이 뜬다. 직원들이 한마디씩 하고 고집이 보인다. 창을 닫고 배치로 돌아갈 수도 있다.
   await page.getByRole('button', { name: '1년 차 결산 보기' }).click()
   const meeting = page.getByRole('dialog', { name: '투자 회의' })
@@ -155,7 +201,9 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
         'aria-selected',
         'true',
       )
-      await expect(page.getByTestId('settlement')).toContainText('투자 회의')
+      // 장부에 회의 한 건이 직원들의 1년 운용과 따로 있다 (240번).
+      await expect(page.getByTestId('ledger-invest')).toContainText('투자 회의')
+      await expect(page.getByTestId('ledger-staff')).toBeVisible()
       await expect(page.getByTestId('office-pnl')).toHaveCount(2)
     }
   }
@@ -202,6 +250,9 @@ test('결산 버튼을 빠르게 두 번 눌러도 한 해만 넘어간다 (#305
     }
   })
   await page.getByRole('button', { name: '1년 차 결산 보기' }).dblclick()
+  // 회의를 안 했으니 결산서에 회의 줄이 없다.
+  await expect(page.getByTestId('year-end').getByTestId('ledger-invest')).toHaveCount(0)
+  await closeYearEnd(page, 1)
   await expect(page.getByTestId('settlement')).toContainText('1년 차 결산')
   await expect(page.getByText(/1호 회사 · 2년 차/)).toBeVisible()
   // 서버에도 같은 해를 두 번 보내 본다: 한 해만 넘어간다.

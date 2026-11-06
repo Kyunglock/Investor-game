@@ -691,9 +691,10 @@ class CompanyEngine {
     if (!crash && company.omen != null) {
       settlement.lines.add(1, content.raising().company().falseOmenNote());
     }
-    String investLine = invest.settlementLine(company);
-    if (investLine != null) {
-      settlement.lines.add(1, investLine);
+    if (company.invest != null && company.invest.choice != null) {
+      // 연말 결산서(240번)가 회의 몫과 직원들이 한 해 굴린 몫을 나눠 보인다. 전에는 소식 줄 한 줄이었다.
+      settlement.investTitle = company.invest.title;
+      settlement.investTotal = company.invest.total;
     }
     company.settlements.add(settlement);
     company.year++;

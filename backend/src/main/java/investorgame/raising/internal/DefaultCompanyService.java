@@ -321,6 +321,9 @@ class DefaultCompanyService implements CompanyService {
         s.capitalBefore,
         s.capitalAfter,
         s.fee,
+        s.investTotal == null
+            ? null
+            : new CompanyView.SettlementInvest(s.investTitle, s.investTotal),
         s.gradeBefore,
         s.gradeAfter,
         s.results.stream()

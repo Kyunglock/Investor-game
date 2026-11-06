@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react'
 import type { Applicant, Company } from '../../api/client'
 import { Document } from '../game/Document'
-import { shortWon, signedWon } from '../game/labels'
+import { shortWon } from '../game/labels'
 import { usePixelArt } from '../game/pixelArt'
-import { bubbleOf, pnlLabel } from './board'
-import { GradeLadder } from './GradeLadder'
+import { BuildingArt } from './BuildingArt'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { InvestWindow } from './InvestWindow'
 import { MoveScene } from './MoveScene'
-import { OfficeArt } from './OfficeArt'
-import { ATTIRE_NAMES, attireOf, glowOf } from './office'
-import { autoPlace } from './placement'
+import { OfficeArt, type SeatFocus } from './OfficeArt'
+import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName } from './office'
+import { autoPlace, seatOne } from './placement'
 import { useRaisingStore } from './store'
+import { Ledger, PHASES, YearEndSheet } from './YearEnd'
 
 type Employee = Company['employees'][number]
 type Desk = Company['desks'][number]
@@ -42,16 +42,16 @@ export function CompanyScreen({ company }: { company: Company }) {
   const [moved, setMoved] = useState(false)
   // 투자 회의 창 (231번): 결산을 누르면 뜨고, 고른 뒤 그대로 결산한다.
   const [investOpen, setInvestOpen] = useState(false)
+  // 건물 그림에서 누른 책상 (237번). 그림 바로 아래에서 자리를 고른다.
+  const [focus, setFocus] = useState<SeatFocus | null>(null)
   const ended = company.status === 'ENDED'
   const meeting = company.meeting
 
-  useEffect(() => {
-    if (justSettled) {
-      // 결산하면 지난 결산 탭이 열린다(스토어). 탭 머리로 올려 결과부터 보이게 한다.
-      document.querySelector('[data-testid="tabs"]')?.scrollIntoView({ block: 'start' })
-      useRaisingStore.setState({ justSettled: false })
-    }
-  }, [justSettled])
+  // 결산하면 연말 결산서가 따로 뜬다(240번). 닫으면 지난 결산 탭(스토어가 열어 둠)의 머리로 올린다.
+  const closeYearEnd = () => {
+    useRaisingStore.setState({ justSettled: false })
+    document.querySelector('[data-testid="tabs"]')?.scrollIntoView({ block: 'start' })
+  }
 
   return (
     <Document
@@ -71,26 +71,23 @@ export function CompanyScreen({ company }: { company: Company }) {
             {company.opening}
           </p>
         )}
-        <div className="flex items-baseline justify-between">
-          <p className="text-[13px] text-muted">회사 등급</p>
-          <p className="font-mono-num text-[15px]" data-testid="company-capital">
+        {/* 회사 등급 글자 대신 건물로 보인다 (238번). */}
+        <div className="mt-2 flex items-baseline justify-between gap-2">
+          <p
+            className="font-serif-kr text-[24px] font-black leading-tight"
+            data-testid="company-building"
+          >
+            {officeName(company.grade)}
+          </p>
+          <p className="shrink-0 font-mono-num text-[15px]" data-testid="company-capital">
             자본 {shortWon(company.capital)}
           </p>
         </div>
-        <p
-          className="font-serif-kr text-[40px] font-black leading-none"
-          data-testid="company-grade"
-        >
-          {company.grade}
-        </p>
-        <GradeLadder grade={company.grade} />
-        <OfficeArt company={company} />
+        <BuildingArt grade={company.grade} />
+        <NextStep company={company} />
+        <OfficeArt company={company} focus={focus} onSeat={ended ? undefined : setFocus} />
+        {!ended && focus && <SeatPicker company={company} focus={focus} onFocus={setFocus} />}
         <PixelToggle />
-        {company.nextGradeCapital != null && (
-          <p className="mt-1 text-[12px] text-muted">
-            다음 등급까지 자본 {shortWon(company.nextGradeCapital)} · 자리 {company.seats}개
-          </p>
-        )}
 
         {company.lastSettlement && !moved && (
           <MoveScene
@@ -102,6 +99,8 @@ export function CompanyScreen({ company }: { company: Company }) {
         )}
 
         <CompanyTabs company={company} />
+
+        {justSettled && <YearEndSheet company={company} onClose={closeYearEnd} />}
 
         {!ended && company.invest && investOpen && (
           <InvestWindow
@@ -142,6 +141,20 @@ export function CompanyScreen({ company }: { company: Company }) {
   )
 }
 
+/** 다음 단계: 자본이 얼마가 되면 다음 건물로 이사하는지, 같은 건물에서 책상을 늘리는지 (238번). */
+function NextStep({ company }: { company: Company }) {
+  const step = nextStep(company.grade)
+  if (!step || company.nextGradeCapital == null) {
+    return null
+  }
+  return (
+    <p className="mt-1 text-[12px] text-muted" data-testid="next-step">
+      {step.kind === 'move' ? `다음 건물 ${step.to}` : '사무실 넓히기(책상 추가)'} · 자본{' '}
+      {shortWon(company.nextGradeCapital)}부터 · 지금 책상 {company.seats}개
+    </p>
+  )
+}
+
 /** 연초 회의 탭: 올해 폭락 조짐, 경보·선견, 올해 필요한 인재 (6.1절). */
 function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
   return (
@@ -179,13 +192,6 @@ function StaffTab({ company }: { company: Company }) {
   const { place } = useRaisingStore.getState()
   const placed = company.employees.filter((e) => e.desk).length
   const ended = company.status === 'ENDED'
-  const seat = (employeeId: number, desk: string | null) =>
-    place(
-      company.employees.map((e) => ({
-        employeeId: e.id,
-        desk: e.id === employeeId ? desk : (e.desk ?? null),
-      })),
-    )
   return (
     <section data-testid="staff">
       <div className="flex items-center justify-between gap-2">
@@ -210,68 +216,11 @@ function StaffTab({ company }: { company: Company }) {
       <ul className="mt-2 grid gap-2">
         {company.employees.map((e) => (
           <li key={e.id} className="rounded border border-line p-3" data-testid="employee">
-            <p className="font-semibold">
-              {e.name} <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>{' '}
-              <span className="text-[12px] text-muted" data-testid="attire">
-                · {ATTIRE_NAMES[attireOf(e.overallGrade)]}
-                {e.effects.length > 0 && ` · ${e.effects.join('·')}`}
-                {e.experienceNeeded != null && ` · 실전 경험 ${e.experience}/${e.experienceNeeded}`}
-                {glowOf(e.overallGrade) &&
-                  ` · ${glowOf(e.overallGrade) === 'gold' ? '금빛' : '파란빛'}`}
-                {e.sectorName && ` · 관심 섹터 ${e.sectorName}`}
-              </span>
-            </p>
-            <ul className="mt-1 grid grid-cols-5 gap-1 text-center text-[11px]">
-              {STAT_ORDER.map((code) => (
-                <li key={code} className="rounded border border-line-soft py-0.5">
-                  {STAT_NAMES[code]}
-                  <b className="block font-mono-num text-[13px]">{e.grades[code]}</b>
-                </li>
-              ))}
-            </ul>
+            <EmployeeDetail employee={e} />
             {!ended && (
               <fieldset className="mt-2">
                 <legend className="sr-only">{e.name}의 자리</legend>
-                <div className="flex flex-wrap gap-1">
-                  {company.desks.map((d) => {
-                    const on = e.desk === d.code
-                    const fit = fitOf(e, d)
-                    // 쉬던 사람은 자리가 남아 있어야 앉는다.
-                    const full = !e.desk && placed >= company.seats
-                    return (
-                      <button
-                        key={d.code}
-                        type="button"
-                        aria-pressed={on}
-                        disabled={busy || (!on && full)}
-                        onClick={() => void seat(e.id, on ? null : d.code)}
-                        className={`min-h-10 rounded border px-2 text-[13px] disabled:opacity-40 ${
-                          on ? 'border-pen bg-pen text-white' : FIT_TONE[fit]
-                        }`}
-                        data-fit={fit}
-                        title={d.description}
-                      >
-                        {d.hot && '★ '}
-                        {d.name}{' '}
-                        <span className="font-mono-num text-[11px]">
-                          {STAT_NAMES[d.statCode]} {e.grades[d.statCode]}
-                          {e.sector && d.sector === e.sector && ' · 관심'}
-                        </span>
-                      </button>
-                    )
-                  })}
-                  <button
-                    type="button"
-                    aria-pressed={!e.desk}
-                    disabled={busy || !e.desk}
-                    onClick={() => void seat(e.id, null)}
-                    className={`min-h-10 rounded border px-2 text-[13px] ${
-                      !e.desk ? 'border-pen bg-pen text-white' : 'border-line text-muted'
-                    }`}
-                  >
-                    쉰다
-                  </button>
-                </div>
+                <DeskButtons company={company} employee={e} />
               </fieldset>
             )}
           </li>
@@ -293,6 +242,189 @@ function StaffTab({ company }: { company: Company }) {
             ))}
           </ul>
         </details>
+      )}
+    </section>
+  )
+}
+
+/** 직원 한 명의 상세 능력치: 종합 등급·차림새·효과·실전 경험·관심 섹터와 능력치 다섯의 등급. 배치 탭과 미니맵을 누르면 열리는 칸(237번)이 같이 쓴다. */
+function EmployeeDetail({ employee: e }: { employee: Employee }) {
+  return (
+    <div className="min-w-0 flex-1" data-testid="employee-detail">
+      <p className="font-semibold">
+        {e.name} <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>{' '}
+        <span className="text-[12px] text-muted" data-testid="attire">
+          · {ATTIRE_NAMES[attireOf(e.overallGrade)]}
+          {e.effects.length > 0 && ` · ${e.effects.join('·')}`}
+          {e.experienceNeeded != null && ` · 실전 경험 ${e.experience}/${e.experienceNeeded}`}
+          {glowOf(e.overallGrade) && ` · ${glowOf(e.overallGrade) === 'gold' ? '금빛' : '파란빛'}`}
+          {e.sectorName && ` · 관심 섹터 ${e.sectorName}`}
+        </span>
+      </p>
+      <ul className="mt-1 grid grid-cols-5 gap-1 text-center text-[11px]">
+        {STAT_ORDER.map((code) => (
+          <li key={code} className="rounded border border-line-soft py-0.5">
+            {STAT_NAMES[code]}
+            <b className="block font-mono-num text-[13px]">{e.grades[code]}</b>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/**
+ * 한 사람의 자리 버튼 (230번): 누르면 바로 앉는다. 버튼에는 자리가 원하는 능력치의 등급과 맞는 정도가 색으로 보인다. 배치 탭과 건물 그림의 자리 고르기(237번)가
+ * 같이 쓴다. 앉히면 onSeated를 부른다.
+ */
+function DeskButtons({
+  company,
+  employee: e,
+  onSeated,
+}: {
+  company: Company
+  employee: Employee
+  onSeated?: () => void
+}) {
+  const busy = useRaisingStore((s) => s.busy)
+  const { place } = useRaisingStore.getState()
+  const placed = company.employees.filter((x) => x.desk).length
+  // 쉬던 사람은 자리가 남아 있어야 앉는다.
+  const full = !e.desk && placed >= company.seats
+  const seat = async (desk: string | null) => {
+    await place(seatOne(company, e.id, desk))
+    onSeated?.()
+  }
+  return (
+    <div className="flex flex-wrap gap-1">
+      {company.desks.map((d) => {
+        const on = e.desk === d.code
+        const fit = fitOf(e, d)
+        return (
+          <button
+            key={d.code}
+            type="button"
+            aria-pressed={on}
+            disabled={busy || (!on && full)}
+            onClick={() => void seat(on ? null : d.code)}
+            className={`min-h-10 rounded border px-2 text-[13px] disabled:opacity-40 ${
+              on ? 'border-pen bg-pen text-white' : FIT_TONE[fit]
+            }`}
+            data-fit={fit}
+            title={d.description}
+          >
+            {d.hot && '★ '}
+            {d.name}{' '}
+            <span className="font-mono-num text-[11px]">
+              {STAT_NAMES[d.statCode]} {e.grades[d.statCode]}
+              {e.sector && d.sector === e.sector && ' · 관심'}
+            </span>
+          </button>
+        )
+      })}
+      <button
+        type="button"
+        aria-pressed={!e.desk}
+        disabled={busy || !e.desk}
+        onClick={() => void seat(null)}
+        className={`min-h-10 rounded border px-2 text-[13px] ${
+          !e.desk ? 'border-pen bg-pen text-white' : 'border-line text-muted'
+        }`}
+      >
+        쉰다
+      </button>
+    </div>
+  )
+}
+
+/**
+ * 미니맵 칸을 누르면 미니맵 바로 아래에 열린다 (237번, #298 "배치가 그림과 따로 논다"). 사람을 눌렀으면 그 사람의 상세 능력치와 자리 버튼, 빈 자리를 눌렀으면
+ * 쉬는 직원 가운데 앉힐 사람을 먼저 고른다. 쉬는 사람이 없으면 공채 탭으로 데려간다. 앉히면 닫힌다.
+ */
+function SeatPicker({
+  company,
+  focus,
+  onFocus,
+}: {
+  company: Company
+  focus: SeatFocus
+  onFocus: (focus: SeatFocus | null) => void
+}) {
+  const close = (
+    <button
+      type="button"
+      onClick={() => onFocus(null)}
+      className="min-h-9 shrink-0 rounded px-2 text-[13px] text-muted underline"
+    >
+      닫기
+    </button>
+  )
+  if ('employee' in focus) {
+    const e = company.employees.find((x) => x.id === focus.employee)
+    if (!e) {
+      return null
+    }
+    return (
+      <section
+        className="mt-2 rounded border border-pen p-3"
+        aria-label={`${e.name}의 자리 고르기`}
+        data-testid="seat-picker"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <EmployeeDetail employee={e} />
+          {close}
+        </div>
+        <p className="mt-2 text-[13px] text-muted" data-testid="seat-picker-desk">
+          {e.desk
+            ? `지금 자리: ${company.desks.find((d) => d.code === e.desk)?.name ?? e.desk}`
+            : '지금 쉬는 중'}{' '}
+          · 어디에 앉힐까요?
+        </p>
+        <div className="mt-1">
+          <DeskButtons company={company} employee={e} onSeated={() => onFocus(null)} />
+        </div>
+      </section>
+    )
+  }
+  const resting = company.employees.filter((x) => !x.desk)
+  return (
+    <section
+      className="mt-2 rounded border border-pen p-3"
+      aria-label="빈 자리에 앉힐 사람 고르기"
+      data-testid="seat-picker"
+    >
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="text-[14px]">빈 자리에 누구를 앉힐까요?</p>
+        {close}
+      </div>
+      {resting.length > 0 ? (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {resting.map((x) => (
+            <button
+              key={x.id}
+              type="button"
+              onClick={() => onFocus({ employee: x.id })}
+              className="min-h-10 rounded border border-pen px-2 text-[13px]"
+            >
+              {x.name} <span className="font-mono-num text-[11px]">종합 {x.overallGrade}</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <p className="text-[13px] text-muted">쉬는 직원이 없습니다.</p>
+          <button
+            type="button"
+            onClick={() => {
+              onFocus(null)
+              useRaisingStore.setState({ tab: 'market' })
+              document.querySelector('[data-testid="tabs"]')?.scrollIntoView({ block: 'start' })
+            }}
+            className="min-h-10 rounded border border-pen px-3 text-[13px] font-semibold"
+          >
+            공채에서 뽑기
+          </button>
+        </div>
       )}
     </section>
   )
@@ -380,58 +512,20 @@ function CompanyTabs({ company }: { company: Company }) {
   )
 }
 
-const PHASES: Record<string, string> = { boom: '호황', normal: '보통', crash: '폭락장' }
-
+/** 지난 결산 탭: 연말 결산서와 같은 장부(240번)와 그해 소식 줄. */
 function SettlementView({ company }: { company: Company }) {
   const s = company.lastSettlement
   if (!s) {
     return null
   }
-  const desk = (code: string) => company.desks.find((d) => d.code === code)?.name ?? code
   return (
     <section data-testid="settlement">
       <h3 className="font-pen text-[22px]">
         {s.year}년 차 결산 · {PHASES[s.phase]}
       </h3>
-      <p className="text-[14px]">
-        자본 {shortWon(s.capitalBefore)} → <b>{shortWon(s.capitalAfter)}</b>
-        {s.gradeBefore !== s.gradeAfter && ` · 등급 ${s.gradeBefore} → ${s.gradeAfter}`}
-      </p>
-      <p className="text-[12px] text-muted">수수료 매출 {signedWon(s.fee)}</p>
-      {s.results.length > 0 && (
-        <ol
-          className="mt-2 rounded bg-ink p-3 font-mono-num text-[13px] text-white"
-          aria-label="결산 전광판"
-          data-testid="board"
-        >
-          {s.results.map((r, i) => {
-            const bubble = bubbleOf(r.flips, r.pnl)
-            return (
-              <li
-                key={r.employeeId}
-                className="animate-reveal flex flex-wrap items-baseline justify-between gap-x-2 py-0.5"
-                // 직원별 수익이 차례로 오른다 (8.3절).
-                style={{ animationDelay: `${i * 400}ms`, animationFillMode: 'both' }}
-              >
-                <span>
-                  {r.name} · {desk(r.desk)}
-                </span>
-                <b className={r.pnl >= 0 ? 'text-[#ff8a7a]' : 'text-[#8cc3ec]'}>
-                  {pnlLabel(r.pnl)}
-                </b>
-                {bubble && (
-                  <span
-                    className="w-full rounded bg-white px-2 text-[12px] text-ink"
-                    data-testid="bubble"
-                  >
-                    💬 {bubble}
-                  </span>
-                )}
-              </li>
-            )
-          })}
-        </ol>
-      )}
+      <div className="mt-1">
+        <Ledger company={company} settlement={s} />
+      </div>
       <ul className="mt-2 text-[13px]">
         {s.lines.map((line) => (
           <li key={line}>{line}</li>
