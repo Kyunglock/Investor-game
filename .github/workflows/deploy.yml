@@ -47,6 +47,10 @@ jobs:
 
       - name: 프론트 빌드
         working-directory: frontend
+        # 구글 애드센스 (decisions.md 271번): 저장소 변수가 비어 있으면 광고 없이 빌드한다.
+        env:
+          VITE_ADSENSE_CLIENT: ${{ vars.ADSENSE_CLIENT }}
+          VITE_ADSENSE_SLOT_START: ${{ vars.ADSENSE_SLOT_START }}
         run: |
           pnpm install --frozen-lockfile
           pnpm build
