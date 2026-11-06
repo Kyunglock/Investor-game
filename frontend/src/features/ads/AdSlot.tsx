@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { isNativeApp } from '../../app/native'
 import { ADSENSE_CLIENT, loadAdsense, validClient, validSlot } from './adsense'
 
 declare global {
@@ -13,7 +14,8 @@ declare global {
  */
 export function AdSlot({ slot, client = ADSENSE_CLIENT }: { slot: string; client?: string }) {
   const pushed = useRef(false)
-  const enabled = validClient(client) && validSlot(slot)
+  // 안드로이드 앱 안에서는 그리지 않는다: 웹 광고를 앱에 넣는 것은 애드센스 정책에 어긋난다 (decisions.md 306번).
+  const enabled = !isNativeApp && validClient(client) && validSlot(slot)
   useEffect(() => {
     if (!enabled || pushed.current) {
       return

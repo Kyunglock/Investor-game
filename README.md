@@ -9,7 +9,7 @@
 | 폴더 | 내용 |
 |---|---|
 | `backend/` | Spring Boot (Java 21, Gradle). 게임 규칙 계산과 저장. 도메인은 육성(`raising`, 회사)·행동(`behavior`)·콘텐츠(`content`)·세션(`session`) |
-| `frontend/` | React + Vite (TypeScript, pnpm). 화면과 그림. 규칙은 모른다. `frontend/e2e/`에 Playwright 테스트 |
+| `frontend/` | React + Vite (TypeScript, pnpm). 화면과 그림. 규칙은 모른다. `frontend/e2e/`에 Playwright 테스트. `frontend/android/`는 이 화면을 담은 안드로이드 앱(Capacitor, [`docs/app.md`](./docs/app.md)) |
 | `contracts/openapi/` | 클라이언트와 서버의 API 계약 |
 | `content/` | 직접 작성한 콘텐츠 (JSON): 회사 문구·자리·시대·단골 인물(`raising.json`), 뉴스와 단서 기사 문장, 종목, 위기와 조짐, 꼬드김 문구 |
 | `docs/` | 설계 문서와 도메인 스펙 |
@@ -43,6 +43,15 @@ pnpm dev
 ```bash
 cd backend
 ADMIN_TOKEN=아무-비밀값 ./gradlew bootTestRun
+```
+
+### 안드로이드 앱 (APK)
+
+웹을 WebView에 담은 앱이다 ([`docs/app.md`](./docs/app.md)). GitHub Actions의 **Android** 워크플로를 돌리면(저장소 변수 `APP_SERVER_URL`에 운영 웹 주소) Artifacts에 `app-debug.apk`가 생긴다. 내 컴퓨터에 Android Studio가 있으면:
+
+```bash
+cd frontend
+CAP_SERVER_URL=https://운영-주소 pnpm app:apk   # → android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ### 광고 켜기 (구글 애드센스)

@@ -33,8 +33,19 @@ function timedFetch(request: Request): Promise<Response> {
   })
 }
 
+/**
+ * API 주소. 웹은 비워 두어 같은 출처로 간다(Vite가 프록시하고, 배포는 nginx가 /api를 서버로 보낸다). 안드로이드 앱이 화면을 앱 안에 담아
+ * 다른 출처에서 부를 때만 빌드 변수 `VITE_API_BASE`(예: https://example.com)를 채운다 (decisions.md 306번, docs/app.md).
+ * 다른 출처면 세션 쿠키가 오가도록 credentials를 include로 한다: 서버는 그 출처를 `api.cors.origins`에 두고 쿠키를 SameSite=None으로 낸다.
+ */
+export const API_BASE: string = (import.meta.env.VITE_API_BASE ?? '').trim().replace(/\/+$/, '')
+
 /** 계약은 contracts/openapi/game.yaml. 타입은 `pnpm gen:api`로 생성한다. */
-export const api = createClient<paths>({ baseUrl: '', fetch: timedFetch })
+export const api = createClient<paths>({
+  baseUrl: API_BASE,
+  fetch: timedFetch,
+  credentials: API_BASE ? 'include' : 'same-origin',
+})
 
 type Schemas = components['schemas']
 export type Grade = Schemas['Grade']
