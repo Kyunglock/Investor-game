@@ -57,12 +57,22 @@ function tower(
   }
 }
 
-/** 등급마다 건물 겉모습 (증권사 육성 설계 8.1절, decisions.md 238번). 우리 회사가 쓰는 층은 창에 불이 켜져 있다. */
-export function buildingMap(grade: Grade): Grid {
-  const g: Grid = Array.from({ length: H }, () => Array<string>(W).fill('S'))
+/**
+ * 등급마다 건물 겉모습 (증권사 육성 설계 8.1절, decisions.md 238번). 우리 회사가 쓰는 층은 창에 불이 켜져 있다. bare면 하늘·이웃 건물·길바닥 없이 건물만
+ * 그린다(빈 칸은 '.', 투명): 라이벌 박치기 장면(243번)이 건물만 따로 움직인다.
+ */
+export function buildingMap(grade: Grade, bare = false): Grid {
+  const g: Grid = Array.from({ length: H }, () => Array<string>(W).fill(bare ? '.' : 'S'))
   const tier: Tier = tierOf(grade)
-  rect(g, 0, GROUND, W, H - GROUND, 'A')
-  rect(g, 0, GROUND, W, 1, 'N')
+  if (!bare) {
+    rect(g, 0, GROUND, W, H - GROUND, 'A')
+    rect(g, 0, GROUND, W, 1, 'N')
+  }
+  const city = (heights: [number, number, number][]) => {
+    if (!bare) {
+      skyline(g, heights)
+    }
+  }
   switch (tier) {
     case 'basement': {
       // 3층 빌라. 우리 회사는 길바닥 높이에 반쯤 묻힌 반지하 창 하나.
@@ -77,13 +87,15 @@ export function buildingMap(grade: Grade): Grid {
       rect(g, 30, 29, 4, 7, 'D')
       rect(g, 21, 35, 8, 3, 'N')
       rect(g, 22, 35, 6, 2, 'L')
-      rect(g, 4, 30, 1, 6, 'V')
-      rect(g, 2, 28, 5, 2, 'g')
+      if (!bare) {
+        rect(g, 4, 30, 1, 6, 'V')
+        rect(g, 2, 28, 5, 2, 'g')
+      }
       break
     }
     case 'shop': {
       // 2층 상가. 1층은 가게 유리, 2층이 우리 사무실(불 켜짐)과 노란 간판.
-      skyline(g, [
+      city([
         [2, 10, 20],
         [52, 10, 18],
       ])
@@ -97,7 +109,7 @@ export function buildingMap(grade: Grade): Grid {
       break
     }
     case 'small': {
-      skyline(g, [
+      city([
         [2, 12, 14],
         [50, 12, 18],
       ])
@@ -107,7 +119,7 @@ export function buildingMap(grade: Grade): Grid {
       break
     }
     case 'yeouido': {
-      skyline(g, [
+      city([
         [1, 12, 10],
         [51, 12, 6],
       ])
@@ -115,7 +127,7 @@ export function buildingMap(grade: Grade): Grid {
       break
     }
     case 'whole': {
-      skyline(g, [
+      city([
         [1, 12, 10],
         [51, 12, 6],
       ])
@@ -125,7 +137,7 @@ export function buildingMap(grade: Grade): Grid {
     }
     case 'hq': {
       // 우리 이름이 붙은 사옥: 넓고 꼭대기에 금빛 로고.
-      skyline(g, [
+      city([
         [0, 10, 12],
         [54, 10, 8],
       ])
@@ -137,7 +149,7 @@ export function buildingMap(grade: Grade): Grid {
     }
     case 'landmark': {
       // 랜드마크 타워: 가늘고 높이 솟아 꼭대기에 금빛 왕관과 첨탑.
-      skyline(g, [
+      city([
         [0, 12, 18],
         [52, 12, 14],
         [12, 8, 24],
