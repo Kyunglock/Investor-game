@@ -29,6 +29,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param invest 투자 회의: 해마다 한 번 단서 기사를 놓고 직원들과 고민한다 (decisions.md 229번)
  * @param rivals 라이벌 증권사가 해마다 자라는 폭 (decisions.md 261번)
  * @param people 이직 제안과 근속 (decisions.md 262번)
+ * @param macro 거시경제 회의: 올해 회사의 태도가 그해 결산 전체에 걸린다 (decisions.md 266번)
+ * @param scout 종목 발굴: 종목 회의는 직원이 종목을 물어 올 때만 열린다 (decisions.md 267번)
  * @param sale 매각과 재창업 (9절). 매각을 뺀 뒤(236번)로는 API가 부르지 않는다. 다시 붙일 때를 위해 남겼다 (264번)
  */
 @ConfigurationProperties("raising.company")
@@ -55,7 +57,39 @@ public record CompanyProperties(
     Invest invest,
     Rivals rivals,
     People people,
+    Macro macro,
+    Scout scout,
     Sale sale) {
+
+  /**
+   * 거시경제 회의 (decisions.md 266번).
+   *
+   * @param normalUpPercent 보통 해에 숨은 방향이 오름(시장에 좋은 쪽)일 확률. 호황은 늘 오름, 폭락장은 늘 내림
+   * @param stakePercent 태도별 그해 결산 판돈 비율(%)
+   * @param defensiveCrashPercent 방어면 폭락장의 시장 손익에 곱하는 비율(%)
+   * @param windBp 섹터 바람: 순풍 자리는 맞혔을 때 이만큼 더 벌고, 역풍 자리는 덜 번다(만분율)
+   */
+  public record Macro(
+      int normalUpPercent,
+      Map<String, Integer> stakePercent,
+      int defensiveCrashPercent,
+      int windBp) {}
+
+  /**
+   * 종목 발굴 (decisions.md 267번). 거시경제 회의가 끝나면 종목 발굴팀 직원이 basePercent + 안목 × insightPercent / 100 확률로,
+   * 섹터 데스크 직원이 deskPercent 확률로 종목을 물어 온다. 가져온 사람의 안목이 높을수록 종목이 오를 때가 많고 기사가 또렷하다.
+   *
+   * @param upPerInsightBp 가져온 사람의 안목이 50보다 1 높을 때마다 종목이 오를 확률에 더하는 만분율(낮으면 뺀다)
+   * @param clearInsight 가져온 사람의 안목이 이 이상이면 또렷한 기사
+   * @param murkyInsight 이 이상이면 조금 흐린 기사, 아래면 가장 흐린 기사(소문)
+   */
+  public record Scout(
+      int basePercent,
+      int insightPercent,
+      int deskPercent,
+      int upPerInsightBp,
+      int clearInsight,
+      int murkyInsight) {}
 
   /**
    * 규모의 벽 (decisions.md 244번). 회사 등급 단계(F = 0)만큼 거듭제곱해 곱한다. 큰 돈은 시장이 받아 주지 않아 맞혀도 덜 벌고, 틀리면 빠져나오기

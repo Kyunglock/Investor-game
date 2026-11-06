@@ -19,7 +19,8 @@ import java.util.UUID;
  * @param refreshes 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 254번)
  * @param broke 망한 회사의 한 줄. 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 있고, 그때 사재로 다음 회사를 차릴 수 있다. 아니면 null
  *     (decisions.md 247번)
- * @param invest 올해 투자 회의. 끝난 회사나 옛 회사면 null (decisions.md 229번)
+ * @param invest 올해 종목 회의. 끝난 회사나 옛 회사면 null (decisions.md 229번). 직원이 물어 오기 전에는 ready가 거짓이다 (267번)
+ * @param macro 올해 거시경제 회의. 끝난 회사나 이 회의가 생기기 전의 해면 null (decisions.md 266번)
  * @param lastSettlement 지난 결산. 아직 없으면 null
  * @param number 사장이 차린 몇 번째 회사인가
  * @param era 이 회사의 시대 (9.4절)
@@ -46,6 +47,7 @@ public record CompanyView(
     History history,
     String broke,
     Invest invest,
+    Macro macro,
     Settlement lastSettlement) {
 
   public enum Status {
@@ -62,6 +64,7 @@ public record CompanyView(
    * @param sector 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다. 없으면 null
    * @param deskYears 지금 자리에서 결산을 맞은 해 수 (decisions.md 262번)
    * @param settled 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다
+   * @param role 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번)
    */
   public record Employee(
       int id,
@@ -75,7 +78,8 @@ public record CompanyView(
       String sector,
       String sectorName,
       int deskYears,
-      boolean settled) {}
+      boolean settled,
+      String role) {}
 
   /**
    * 공채 시장의 지원자 한 명.
@@ -101,6 +105,7 @@ public record CompanyView(
    * @param highlightBy 형광펜을 그은 리서치 팀 직원. 없으면 null
    * @param remarks 자리에 앉은 직원의 한마디. 회의를 열기 전에는 비어 있다
    * @param convened 회의를 열어 한마디와 형광펜을 굳혔다. 그 뒤로 배치를 바꿔도 그대로다 (decisions.md 249번)
+   * @param finder 이 종목을 물어 온 직원 (267번). 아직 아무도 안 가져왔거나 옛 회의면 null
    * @param outcome 정한 뒤의 결과. 아직이면 null
    */
   public record Invest(
@@ -114,7 +119,50 @@ public record CompanyView(
       List<Option> options,
       boolean ready,
       boolean convened,
+      Finder finder,
       InvestOutcome outcome) {}
+
+  /**
+   * 종목을 물어 온 직원 (decisions.md 267번).
+   *
+   * @param role 직함. 직함이 없는 자리면 null
+   * @param pitch 가져올 때 한마디
+   */
+  public record Finder(int employeeId, String name, String role, String desk, String pitch) {}
+
+  /**
+   * 거시경제 회의 (decisions.md 266번). 고르기 전에는 숨은 방향이 없다.
+   *
+   * @param topic 주제 이름(기준금리·환율…)
+   * @param remarks 자리에 앉은 직원의 한마디. 회의를 열기 전에는 비어 있다. read UP은 공격, DOWN은 방어 쪽
+   * @param stances 고를 수 있는 태도와 그해 판돈 비율
+   * @param ready 지금 고를 수 있다(돈을 굴리는 자리에 사람이 있고 아직 안 골랐다)
+   * @param outcome 고른 뒤. 아직이면 null
+   */
+  public record Macro(
+      String topic,
+      String title,
+      List<MacroSentence> sentences,
+      String highlightBy,
+      Sway sway,
+      List<Remark> remarks,
+      List<Stance> stances,
+      boolean ready,
+      boolean convened,
+      MacroOutcome outcome) {}
+
+  /** omen: 연초 회의의 폭락 조짐을 옮긴 문장(헛조짐일 수도 있다). */
+  public record MacroSentence(String text, boolean highlighted, boolean omen) {}
+
+  /** stakePercent: 그해 결산 판돈 비율(%). */
+  public record Stance(String code, String label, String note, int stakePercent) {}
+
+  /**
+   * @param stance 고른 태도
+   * @param finder 회의가 끝나고 종목을 물어 온 직원. 아무도 안 왔으면 null
+   * @param none 아무도 안 왔을 때 한 줄. 왔으면 null
+   */
+  public record MacroOutcome(String stance, Finder finder, String none) {}
 
   public record InvestSentence(String text, boolean highlighted) {}
 
@@ -145,7 +193,8 @@ public record CompanyView(
       String reveal,
       int decisive,
       long total,
-      List<InvestResult> results) {}
+      List<InvestResult> results,
+      String credit) {}
 
   /**
    * follow: BOSS(사장 말대로)·OWN(제 판단대로, "제가 알아서 할게요")·SWAY(꼬드김).
@@ -230,6 +279,7 @@ public record CompanyView(
       long fee,
       long hiring,
       SettlementInvest invest,
+      SettlementMacro macro,
       String gradeBefore,
       String gradeAfter,
       List<String> overtook,
@@ -239,6 +289,9 @@ public record CompanyView(
 
   /** 결산한 해의 투자 회의: 기사 제목과 회의 손익(이미 자본에 들어갔다). 회의를 안 했으면 결산의 invest가 null (decisions.md 240번). */
   public record SettlementInvest(String title, long total) {}
+
+  /** 결산한 해의 거시경제 회의: 주제, 태도, 드러난 시장과 섹터 바람 (decisions.md 266번). 회의가 없던 해면 null. */
+  public record SettlementMacro(String topic, String stance, List<String> lines) {}
 
   /** flips는 능력치 코드 → 그해 뒤집힌 횟수. */
   public record Result(

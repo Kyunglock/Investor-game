@@ -7,6 +7,7 @@ import { BuildingArt } from './BuildingArt'
 import { pnlLabel } from './board'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { InvestWindow } from './InvestWindow'
+import { MacroWindow } from './MacroWindow'
 import { MoveScene } from './MoveScene'
 import { OfficeArt, type SeatFocus } from './OfficeArt'
 import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName, titleOf } from './office'
@@ -30,7 +31,7 @@ const FIT_TONE = {
 } as const
 
 /**
- * 회사 화면 (증권사 육성 설계 4·6절). 한 해 = 연초 회의(공채 시장) → 배치 → (결산을 누르면 뜨는) 투자 회의 → 결산. 사장은 사람을 뽑아 앉히기만 하고 직원은 능력치대로 알아서
+ * 회사 화면 (증권사 육성 설계 4·6절). 한 해 = 연초 회의(공채 시장) → 배치 → (결산을 누르면 뜨는) 거시경제 회의 → (직원이 물어 오면) 종목 회의 → 결산. 사장은 사람을 뽑아 앉히기만 하고 직원은 능력치대로 알아서
  * 굴린다. 연초 회의·공채·배치·지난 결산은 탭으로 나뉘고(231번), 결산 버튼은 화면 아래에 늘 붙어 있다. 배치는 작년 그대로가 기본이고(7.2절), 자리를 누르면 바로
  * 앉는다.
  */
@@ -39,15 +40,28 @@ export function CompanyScreen({ company }: { company: Company }) {
   const error = useRaisingStore((s) => s.error)
   const justSettled = useRaisingStore((s) => s.justSettled)
   const autoPlay = useRaisingStore((s) => s.autoPlay)
-  const { settle, restart, convene } = useRaisingStore.getState()
+  const { settle, restart, convene, conveneMacro } = useRaisingStore.getState()
   // 이사 장면은 결산 뒤 한 번만 본다. 해가 바뀌면 화면이 새로 그려져 다시 볼 수 있다.
   const [moved, setMoved] = useState(false)
-  // 투자 회의 창 (231번): 결산을 누르면 뜨고, 고른 뒤 그대로 결산한다.
+  // 종목 회의 창 (231번): 직원이 종목을 물어 왔으면 거시경제 회의 다음에 뜨고, 고른 뒤 그대로 결산한다 (267번).
   const [investOpen, setInvestOpen] = useState(false)
+  // 거시경제 회의 창 (266번): 결산을 누르면 먼저 뜬다.
+  const [macroOpen, setMacroOpen] = useState(false)
   // 건물 그림에서 누른 책상 (237번). 그림 바로 아래에서 자리를 고른다.
   const [focus, setFocus] = useState<SeatFocus | null>(null)
   const ended = company.status === 'ENDED'
   const meeting = company.meeting
+
+  // 거시경제 회의를 마친 뒤: 물어 온 종목이 있으면 종목 회의를 열고(한마디를 굳힌다, 249번) 창을 띄운다. 없으면 바로 결산한다.
+  const stockOrSettle = async () => {
+    if (!useRaisingStore.getState().company?.invest?.ready) {
+      void settle()
+      return
+    }
+    if (await convene()) {
+      setInvestOpen(true)
+    }
+  }
 
   // 결산하면 연말 결산서가 따로 뜬다(240번). 닫으면 지난 결산 탭(스토어가 열어 둠)의 머리로 올린다.
   const closeYearEnd = () => {
@@ -106,6 +120,20 @@ export function CompanyScreen({ company }: { company: Company }) {
 
         {justSettled && <YearEndSheet company={company} onClose={closeYearEnd} />}
 
+        {!ended && company.macro && macroOpen && (
+          <MacroWindow
+            macro={company.macro}
+            year={company.year}
+            employees={company.employees}
+            stockMeeting={Boolean(company.invest?.ready)}
+            onClose={() => setMacroOpen(false)}
+            onNext={() => {
+              setMacroOpen(false)
+              void stockOrSettle()
+            }}
+          />
+        )}
+
         {!ended && company.invest && investOpen && (
           <InvestWindow
             invest={company.invest}
@@ -149,7 +177,8 @@ export function CompanyScreen({ company }: { company: Company }) {
             )}
             {autoPlay && (
               <p className="text-center text-[12px] text-teal" data-testid="auto-status">
-                자동 진행 중 · 공채 → 배치 → 투자 회의(직원 다수결) → 결산을 해마다 되풀이합니다
+                자동 진행 중 · 공채 → 배치 → 거시경제 회의·종목 회의(직원 다수결) → 결산을 해마다
+                되풀이합니다
               </p>
             )}
             <div className="grid grid-cols-[auto_1fr] gap-2">
@@ -160,21 +189,21 @@ export function CompanyScreen({ company }: { company: Company }) {
                 className={`min-h-12 rounded border px-3 text-[14px] font-semibold ${
                   autoPlay ? 'border-teal bg-teal text-white' : 'border-teal text-teal'
                 }`}
-                title="빈 자리에 뽑고, 자동 배치하고, 투자 회의는 직원 다수결로 정하고, 결산을 해마다 되풀이한다"
+                title="빈 자리에 뽑고, 자동 배치하고, 회의는 직원 다수결로 정하고, 결산을 해마다 되풀이한다"
               >
                 {autoPlay ? '■ 자동 멈춤' : '⟳ 자동 진행'}
               </button>
               <button
                 type="button"
                 disabled={busy || autoPlay}
-                // 돈을 굴리는 직원이 있으면 먼저 투자 회의를 열고(한마디를 굳힌다, 249번) 창을 띄운다. 고르면 그대로 결산한다.
+                // 돈을 굴리는 직원이 있으면 먼저 거시경제 회의를 열고(한마디를 굳힌다, 266번) 창을 띄운다. 이미 골랐으면 종목 회의나 결산으로.
                 onClick={async () => {
-                  if (!company.invest?.ready) {
-                    void settle()
+                  if (!company.macro?.ready) {
+                    await stockOrSettle()
                     return
                   }
-                  if (await convene()) {
-                    setInvestOpen(true)
+                  if (await conveneMacro()) {
+                    setMacroOpen(true)
                   }
                 }}
                 className="min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50"

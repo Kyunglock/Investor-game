@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Company } from '../../api/client'
-import { autoChoice, autoHire, nextAutoStep } from './autoPlay'
+import { autoChoice, autoHire, autoStance, nextAutoStep } from './autoPlay'
 
 function desk(code: string, statCode: string, trades = true) {
   return { code, name: code, statCode, trades, sector: null, hot: false, description: '' }
@@ -31,6 +31,14 @@ describe('자동 진행 (decisions.md 245번)', () => {
     expect(autoChoice(invest(['UP', 'UP', 'DOWN']))).toBe('BUY')
     expect(autoChoice(invest(['DOWN', 'NEUTRAL']))).toBe('SELL')
     expect(autoChoice(invest(['UP', 'DOWN', 'NEUTRAL']))).toBe('HOLD')
+  })
+
+  it('거시경제 회의는 직원 다수결: 공격하자가 많으면 공격, 지키자가 많으면 방어, 같으면 중립 (266번)', () => {
+    const macro = (reads: ('UP' | 'DOWN' | 'NEUTRAL')[]) =>
+      ({ remarks: reads.map(remark) }) as unknown as NonNullable<Company['macro']>
+    expect(autoStance(macro(['UP', 'UP', 'DOWN']))).toBe('AGGRESSIVE')
+    expect(autoStance(macro(['DOWN', 'NEUTRAL']))).toBe('DEFENSIVE')
+    expect(autoStance(macro(['UP', 'DOWN']))).toBe('NEUTRAL')
   })
 
   it('빈 자리에는 계약금이 자본의 25% 이하인 사람 가운데 종합 등급이 가장 높은 사람을 뽑는다', () => {
@@ -79,5 +87,15 @@ describe('자동 진행 (decisions.md 245번)', () => {
     const closed = { ...seated, invest: { ...seated.invest, convened: false, remarks: [] } }
     expect(nextAutoStep(closed as never, false).kind).toBe('convene')
     expect(nextAutoStep({ ...seated, invest: null }, false).kind).toBe('settle')
+    // 거시경제 회의가 종목 회의보다 먼저다 (266·267번): 열고, 다수결로 고른다.
+    const macro = { ready: true, convened: false, remarks: [] }
+    expect(nextAutoStep({ ...seated, macro } as never, false).kind).toBe('conveneMacro')
+    const opened = { ...macro, convened: true, remarks: [remark('UP')] }
+    expect(nextAutoStep({ ...seated, macro: opened } as never, false)).toEqual({
+      kind: 'macro',
+      stance: 'AGGRESSIVE',
+    })
+    const decided = { ...opened, ready: false }
+    expect(nextAutoStep({ ...seated, macro: decided } as never, false).kind).toBe('invest')
   })
 })

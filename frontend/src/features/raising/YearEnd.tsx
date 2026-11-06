@@ -9,6 +9,13 @@ type Settlement = NonNullable<Company['lastSettlement']>
 
 export const PHASES: Record<string, string> = { boom: '호황', normal: '보통', crash: '폭락장' }
 
+/** 거시경제 회의의 태도 이름 (decisions.md 266번). */
+export const STANCES: Record<string, string> = {
+  AGGRESSIVE: '공격',
+  NEUTRAL: '중립',
+  DEFENSIVE: '방어',
+}
+
 /** 결산서 줄이 차례로 드러나는 간격 (연말 결산서만). */
 const STEP_MS = 700
 const ROW_MS = 400
@@ -56,8 +63,8 @@ export function Ledger({
             data-testid="ledger-invest"
           >
             <Row
-              label={`${num()} 투자 회의`}
-              note={`사장과 함께 정한 한 건 · ${s.invest.title}`}
+              label={`${num()} 종목 회의`}
+              note={`직원이 물어 온 한 건 · ${s.invest.title}`}
               amount={s.invest.total}
             />
           </li>
@@ -152,6 +159,25 @@ export function Ledger({
   const end = reveal()
   return (
     <div data-testid="ledger">
+      {s.macro && (
+        // 거시경제 회의 (266번): 그해 태도가 직원들의 1년 운용 전체에 걸렸다. 결산에서 그해 시장과 섹터 바람이 드러난다.
+        <div
+          className="mb-2 rounded border border-line-soft px-2 py-1.5"
+          data-testid="ledger-macro"
+        >
+          <p className="text-[14px] font-semibold">
+            거시경제 회의 · {s.macro.topic}{' '}
+            <span className="rounded bg-ink px-1.5 text-[12px] text-white">
+              {STANCES[s.macro.stance]}
+            </span>
+          </p>
+          <ul className="mt-0.5 grid gap-0.5 text-[12px] text-muted">
+            {s.macro.lines.slice(1).map((line) => (
+              <li key={line}>· {line}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       <p className="flex items-baseline justify-between text-[14px]">
         <span className="text-muted">연초 자본</span>
         <span className="font-mono-num">{shortWon(s.capitalBefore)}</span>
@@ -221,8 +247,8 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
           <span className="text-[18px] text-muted">· {PHASES[s.phase]}</span>
         </h2>
         <p className="mt-1 text-[13px] text-muted">
-          투자 회의는 한 해의 일 가운데 <b className="text-ink">한 건</b>입니다. 나머지 1년 동안
-          직원들은 배치대로 알아서 굴렸습니다.
+          거시경제 회의에서 정한 태도로 직원들이 1년 동안 배치대로 알아서 굴렸습니다. 종목 회의는
+          직원이 물어 온 <b className="text-ink">한 건</b>입니다.
         </p>
         <div className="mt-3">
           <Ledger company={company} settlement={s} staged />

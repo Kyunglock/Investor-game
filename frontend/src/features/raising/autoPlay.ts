@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import type { Company } from '../../api/client'
 import { LADDER } from './grades'
 import { autoPlace, type Seat } from './placement'
-import { useRaisingStore } from './store'
+import { type Stance, useRaisingStore } from './store'
 
 /** 자동 진행이 한 번에 하는 일 (decisions.md 245번). */
 export type AutoStep =
@@ -10,6 +10,8 @@ export type AutoStep =
   | { kind: 'hire'; applicantId: number }
   | { kind: 'poach'; keep: boolean }
   | { kind: 'place'; seats: Seat[] }
+  | { kind: 'conveneMacro' }
+  | { kind: 'macro'; stance: Stance }
   | { kind: 'convene' }
   | { kind: 'invest'; choice: 'BUY' | 'SELL' | 'HOLD'; big: boolean }
   | { kind: 'settle' }
@@ -24,7 +26,14 @@ export function autoBig(invest: NonNullable<Company['invest']>): boolean {
   return reads.length >= 2 && reads.every((r) => r !== 'NEUTRAL' && r === reads[0])
 }
 
-/** 투자 회의: 직원 한마디의 다수결. 사자가 많으면 산다, 팔자가 많으면 판다, 같거나 모르겠다뿐이면 지켜본다. */
+/** 거시경제 회의 (decisions.md 266번): 직원 한마디의 다수결. 공격하자가 많으면 공격, 지키자가 많으면 방어, 같으면 중립. */
+export function autoStance(macro: NonNullable<Company['macro']>): Stance {
+  const up = macro.remarks.filter((r) => r.read === 'UP').length
+  const down = macro.remarks.filter((r) => r.read === 'DOWN').length
+  return up > down ? 'AGGRESSIVE' : down > up ? 'DEFENSIVE' : 'NEUTRAL'
+}
+
+/** 종목 회의: 직원 한마디의 다수결. 사자가 많으면 산다, 팔자가 많으면 판다, 같거나 모르겠다뿐이면 지켜본다. */
 export function autoChoice(invest: NonNullable<Company['invest']>): 'BUY' | 'SELL' | 'HOLD' {
   const up = invest.remarks.filter((r) => r.read === 'UP').length
   const down = invest.remarks.filter((r) => r.read === 'DOWN').length
@@ -47,7 +56,7 @@ export function autoHire(company: Company): number | null {
 
 /**
  * 자동 진행의 다음 일 (245번). 한 해를 사람이 하는 순서 그대로 돈다: 연말 결산서를 닫고 → 빈 자리에 뽑고 → 자동 배치(232·233번)와 다르면 앉히고 →
- * 투자 회의(직원 다수결) → 결산. 끝난 회사면 멈춘다.
+ * 거시경제 회의(직원 다수결, 266번) → 직원이 종목을 물어 왔으면 종목 회의(직원 다수결) → 결산. 끝난 회사면 멈춘다.
  */
 export function nextAutoStep(company: Company, justSettled: boolean): AutoStep {
   // 끝났거나 망한 회사(247번)면 멈춘다: 다시 차리기는 사장이 직접 한다.
@@ -69,6 +78,13 @@ export function nextAutoStep(company: Company, justSettled: boolean): AutoStep {
   const desk = new Map(company.employees.map((e) => [e.id, e.desk ?? null]))
   if (seats.some((s) => desk.get(s.employeeId) !== s.desk)) {
     return { kind: 'place', seats }
+  }
+  if (company.macro?.ready) {
+    // 거시경제 회의도 한마디는 열어야 나온다 (249·266번).
+    if (!company.macro.convened) {
+      return { kind: 'conveneMacro' }
+    }
+    return { kind: 'macro', stance: autoStance(company.macro) }
   }
   if (company.invest?.ready) {
     // 한마디는 회의를 열어야 나온다 (249번). 연 뒤에 다수결로 정한다.
@@ -107,7 +123,8 @@ export function useCompanyAutoPlay() {
       useRaisingStore.setState({ autoPlay: false })
       return
     }
-    const { hire, place, convene, decideInvest, settle, answerPoach } = useRaisingStore.getState()
+    const { hire, place, convene, decideInvest, settle, answerPoach, conveneMacro, decideMacro } =
+      useRaisingStore.getState()
     const id = setTimeout(
       () => {
         switch (step.kind) {
@@ -122,6 +139,12 @@ export function useCompanyAutoPlay() {
             return
           case 'place':
             void place(step.seats)
+            return
+          case 'conveneMacro':
+            void conveneMacro()
+            return
+          case 'macro':
+            void decideMacro(step.stance)
             return
           case 'convene':
             void convene()

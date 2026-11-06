@@ -3,6 +3,9 @@ import { api, type Company } from '../../api/client'
 
 type Status = 'loading' | 'ready' | 'error'
 
+/** 거시경제 회의의 태도 (decisions.md 266번). */
+export type Stance = 'AGGRESSIVE' | 'NEUTRAL' | 'DEFENSIVE'
+
 interface RaisingState {
   status: Status
   /** 가장 최근 회사. 아직 차리지 않았으면 null. */
@@ -29,8 +32,12 @@ interface RaisingState {
   answerPoach: (keep: boolean) => Promise<void>
   /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 249번). 됐으면 true. */
   convene: () => Promise<boolean>
-  /** 올해 투자 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). big이면 크게 한다 (260번). */
+  /** 올해 종목 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). big이면 크게 한다 (260번). */
   decideInvest: (choice: string, big?: boolean) => Promise<void>
+  /** 올해 거시경제 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 266번). 됐으면 true. */
+  conveneMacro: () => Promise<boolean>
+  /** 올해 거시경제 회의에서 회사의 태도를 고른다. 고르면 직원이 종목을 물어 올 수 있다 (266·267번). */
+  decideMacro: (stance: Stance) => Promise<void>
   place: (seats: { employeeId: number; desk: string | null }[]) => Promise<void>
   settle: () => Promise<void>
 }
@@ -134,6 +141,16 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
           body: { choice: choice as 'BUY' | 'SELL' | 'HOLD', big },
         }),
       ),
+
+    conveneMacro: async () => {
+      if (get().company?.macro?.convened) {
+        return true
+      }
+      await change(api.POST('/api/company/macro/open'))
+      return Boolean(get().company?.macro?.convened)
+    },
+
+    decideMacro: (stance) => change(api.POST('/api/company/macro', { body: { stance } })),
 
     place: (seats) => change(api.POST('/api/company/placement', { body: { seats } })),
 

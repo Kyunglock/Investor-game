@@ -70,7 +70,53 @@ public record RaisingContent(
       GradeLines gradeLines,
       Effects effects,
       Market market,
-      Invest invest) {}
+      Invest invest,
+      Macro macro) {}
+
+  /**
+   * 거시경제 회의 (decisions.md 266번). 해마다 연다: 기준금리·환율 같은 큰 흐름 하나를 놓고 사장이 올해 회사의 태도(AGGRESSIVE·NEUTRAL·
+   * DEFENSIVE)를 고른다. 숨은 답은 올해 시장 갈래와 섹터 바람이다.
+   *
+   * @param stances 태도 버튼 이름
+   * @param notes 태도마다 한 줄 설명
+   * @param topics 주제. 해마다 하나를 뽑는다
+   * @param remarks 직원 한마디. 투자 회의와 같은 꼴: 안목 구간 → 읽은 쪽(UP·DOWN·NEUTRAL) → 문구 여럿, {quote}
+   * @param sway 꼬드기는 단골 인물의 말. POS(공격하라)·NEG(숨어라)
+   * @param reveal 결산에서 드러나는 한 해 시장. boom·normal·crash별, {topic}
+   * @param settled 결산서의 한 줄: {topic}·{stance}
+   * @param scout 종목 발굴 (decisions.md 267번)
+   */
+  public record Macro(
+      Map<String, String> stances,
+      Map<String, String> notes,
+      List<MacroTopic> topics,
+      Map<String, Map<String, List<String>>> remarks,
+      Map<String, List<String>> sway,
+      Map<String, String> reveal,
+      String settled,
+      Scout scout) {}
+
+  /**
+   * 거시경제 회의의 주제 하나. up·down·neutral은 기사 문장(오름은 시장에 좋은 쪽). winds는 숨은 방향(UP·DOWN)마다 그해 순풍·역풍을 받는 자리와
+   * 결산 한 줄.
+   */
+  public record MacroTopic(
+      String code,
+      String name,
+      String title,
+      List<String> up,
+      List<String> down,
+      List<String> neutral,
+      Map<String, Wind> winds) {}
+
+  /** 섹터 바람: tail 자리는 맞혔을 때 더 벌고, head 자리는 덜 번다. line은 결산 소식 줄. */
+  public record Wind(List<String> tail, List<String> head, String line) {}
+
+  /**
+   * 종목 발굴 (decisions.md 267번). pitch: 가져올 때 한마디, 안목 구간(low·mid·high)별 {stock}. none: 아무도 안 가져온 해.
+   * credit: 종목 회의 뒤 가져온 사람을 칭찬하거나 탓하는 한 줄, UP·DOWN별 {name}·{stock}·{percent}.
+   */
+  public record Scout(Map<String, List<String>> pitch, String none, Map<String, String> credit) {}
 
   /**
    * 투자 회의 (decisions.md 229번). 고르는 것은 BUY·SELL·HOLD.
@@ -170,12 +216,16 @@ public record RaisingContent(
   public record Sale(
       String eraEnd, String voluntary, String sold, String opening, String openingAlone) {}
 
-  /** 자리 (4.2절). sector가 있으면 그 섹터 종목을 굴리는 섹터 데스크다: 관심 섹터가 같은 직원이 앉으면 조금 더 번다. 없으면 섹터를 가리지 않는다. */
+  /**
+   * 자리 (4.2절). sector가 있으면 그 섹터 종목을 굴리는 섹터 데스크다: 관심 섹터가 같은 직원이 앉으면 조금 더 번다. 없으면 섹터를 가리지 않는다. roles가
+   * 있으면 앉은 직원을 그 직함으로 부른다: 종합 등급이 C 아래·S 아래·S 이상 순서 (decisions.md 267번). 없으면 null.
+   */
   public record Desk(
       String code,
       String name,
       String statCode,
       boolean trades,
       String sector,
+      List<String> roles,
       String description) {}
 }

@@ -49,9 +49,9 @@ function bestTrading(e: Employee, trading: Desk[], omen = false): { desk: Desk; 
 
 /**
  * 자동 배치 (decisions.md 232·233번). 돈을 굴리는 자리부터 채운다: 가장 맞는 돈 굴리는 자리가 가장 잘 맞는 두 사람을 그 자리에 앉힌다(섹터 데스크 여섯과
- * 단타 데스크 가운데, 같은 자리에 둘이 앉아도 된다). 판돈은 돈을 굴리는 사람끼리 나누므로 셋째부터는 돕는 자리가 낫다: 폭락 조짐이 있으면 리스크 관리 팀(줏대),
- * 아니면 리서치 팀(안목)을 먼저, 그다음 다른 하나, 그다음 인사팀(안목). 그래도 사람과 자리가 남으면 돈을 굴리는 자리에 더 앉힌다. 자리가 모자라면 남은 사람은
- * 쉰다.
+ * 단타 데스크 가운데, 같은 자리에 둘이 앉아도 된다). 판돈은 돈을 굴리는 사람끼리 나누므로 셋째부터는 돕는 자리가 낫다: 종목 발굴팀(안목, 종목 회의를 연다,
+ * 267번), 폭락 조짐이 있으면 리스크 관리 팀(줏대)을 리서치 팀(안목)보다 먼저, 그다음 인사팀(안목). 그래도 사람과 자리가 남으면 돈을 굴리는 자리에 더 앉힌다.
+ * 자리가 모자라면 남은 사람은 쉰다.
  */
 export function autoPlace(company: Company): Seat[] {
   const desks = new Map(company.desks.map((d) => [d.code, d]))
@@ -81,7 +81,9 @@ export function autoPlace(company: Company): Seat[] {
   if (trading.length > 0) {
     trade(2)
   }
-  const support = company.meeting?.omen ? ['risk', 'research', 'hr'] : ['research', 'risk', 'hr']
+  const support = company.meeting?.omen
+    ? ['scout', 'risk', 'research', 'hr']
+    : ['scout', 'research', 'risk', 'hr']
   for (const code of support) {
     const desk = desks.get(code)
     const e = desk && best(desk.statCode)

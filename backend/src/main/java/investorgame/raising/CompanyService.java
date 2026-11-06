@@ -50,6 +50,15 @@ public interface CompanyService {
    */
   CompanyView invest(UUID sessionId, String choice, boolean big);
 
+  /** 올해 거시경제 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 266번). 열 수 없으면 400. */
+  CompanyView conveneMacro(UUID sessionId);
+
+  /**
+   * 올해 거시경제 회의에서 회사의 태도를 고른다: AGGRESSIVE·NEUTRAL·DEFENSIVE (266번). 고르면 직원이 종목을 물어 올 수 있다(267번). 이미
+   * 골랐으면 400.
+   */
+  CompanyView macro(UUID sessionId, String stance);
+
   /**
    * year 해의 결산을 하고 다음 해 연초 회의로 간다. 회사는 끝나지 않는다(236번). 투자 회의를 열 수 있는데 안 했으면 400. 이미 결산한 해면 아무것도 하지
    * 않고 지금 회사를 돌려주고(같은 요청이 두 번 와도 한 해만 넘어간다), 아직 오지 않은 해면 400 (decisions.md 234번).

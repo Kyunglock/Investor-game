@@ -175,6 +175,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/macro/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 올해 거시경제 회의를 연다 (decisions.md 266번)
+         * @description 지금 배치로 직원 한마디(macro.remarks)와 리서치 팀 형광펜을 굳힌다(249번과 같다). 이미 열었으면 지금 회사를 그대로 돌려준다.
+         *     열 수 없는 회의(골랐거나 돈을 굴리는 자리에 아무도 없다)면 400.
+         */
+        post: operations["conveneMacroMeeting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/macro": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 올해 거시경제 회의에서 회사의 태도를 고른다 (decisions.md 266·267번)
+         * @description 공격은 그해 결산 판돈을 키우고 방어는 줄인다(폭락장에 덜 빠진다). 고르지 않고 결산하면 중립이다.
+         *     고르면 회의가 끝나고 종목 발굴팀(낮은 확률로 섹터 데스크) 직원이 종목을 물어 올 수 있다: 물어 오면 invest.ready가 참이 되고 종목 회의가 열린다.
+         *     아직 회의를 열지 않았으면 지금 배치로 연 셈 친다. 이미 골랐거나 없는 태도면 400.
+         */
+        post: operations["holdMacroMeeting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/applicants/refresh": {
         parameters: {
             query?: never;
@@ -273,6 +316,8 @@ export interface components {
                 deskYears: number;
                 /** @description 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다 */
                 settled: boolean;
+                /** @description 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번) */
+                role?: string | null;
             }[];
             desks: {
                 code: string;
@@ -386,7 +431,10 @@ export interface components {
                 /** Format: int64 */
                 aboveCapital?: number | null;
             } | null;
-            /** @description 올해 투자 회의 (decisions.md 229번). 끝난 회사나 옛 회사면 null. 숨은 방향은 정한 뒤 outcome에만 있다 */
+            /**
+             * @description 올해 종목 회의 (decisions.md 229번). 끝난 회사나 옛 회사면 null. 숨은 방향은 정한 뒤 outcome에만 있다.
+             *     직원이 종목을 물어 와야(finder) 열린다: 그 전에는 ready가 거짓이다 (267번)
+             */
             invest?: {
                 title: string;
                 stockName: string;
@@ -426,6 +474,8 @@ export interface components {
                 ready: boolean;
                 /** @description 회의를 열어 한마디와 형광펜을 굳혔다. 그 뒤로 배치를 바꿔도 그대로다 (decisions.md 249번) */
                 convened: boolean;
+                /** @description 이 종목을 물어 온 직원 (267번). 아직 아무도 안 가져왔거나 옛 회의면 null */
+                finder?: components["schemas"]["Finder"] | null;
                 outcome?: {
                     /** @enum {string} */
                     choice: "BUY" | "SELL" | "HOLD";
@@ -445,6 +495,8 @@ export interface components {
                      * @description 회의 손익. 이미 자본에 들어갔다
                      */
                     total: number;
+                    /** @description 물어 온 직원을 칭찬하거나 탓하는 한 줄 (267번). 옛 회의면 null */
+                    credit?: string | null;
                     results: {
                         employeeId: number;
                         name: string;
@@ -477,6 +529,52 @@ export interface components {
                     }[];
                 } | null;
             } | null;
+            /** @description 올해 거시경제 회의 (decisions.md 266번). 끝난 회사나 이 회의가 생기기 전의 해면 null. 숨은 방향은 결산에서 드러난다 */
+            macro?: {
+                /** @description 주제 이름(기준금리·환율·유가·물가·경기) */
+                topic: string;
+                title: string;
+                /** @description 기사 문장. 리서치 팀이 형광펜을 그은 문장은 highlighted, 연초 회의의 폭락 조짐을 옮긴 문장은 omen(헛조짐일 수도 있다) */
+                sentences: {
+                    text: string;
+                    highlighted: boolean;
+                    omen: boolean;
+                }[];
+                highlightBy?: string | null;
+                sway: {
+                    who: string;
+                    text: string;
+                };
+                /** @description 자리에 앉은 직원의 한마디. 회의를 열기 전에는 비어 있다. read UP은 공격, DOWN은 방어 쪽 */
+                remarks: {
+                    employeeId: number;
+                    name: string;
+                    desk: string;
+                    /** @enum {string} */
+                    read: "UP" | "DOWN" | "NEUTRAL";
+                    text: string;
+                    stubborn?: null;
+                }[];
+                stances: {
+                    /** @enum {string} */
+                    code: "AGGRESSIVE" | "NEUTRAL" | "DEFENSIVE";
+                    label: string;
+                    note: string;
+                    /** @description 그해 결산 판돈 비율(%) */
+                    stakePercent: number;
+                }[];
+                /** @description 지금 고를 수 있다(안 골랐고 돈을 굴리는 자리에 사람이 있다) */
+                ready: boolean;
+                convened: boolean;
+                outcome?: {
+                    /** @enum {string} */
+                    stance: "AGGRESSIVE" | "NEUTRAL" | "DEFENSIVE";
+                    /** @description 회의가 끝나고 종목을 물어 온 직원. 아무도 안 왔으면 null */
+                    finder?: components["schemas"]["Finder"] | null;
+                    /** @description 아무도 안 왔을 때 한 줄 */
+                    none?: string | null;
+                } | null;
+            } | null;
             lastSettlement?: {
                 year: number;
                 /** @enum {string} */
@@ -505,6 +603,13 @@ export interface components {
                     /** Format: int64 */
                     total: number;
                 } | null;
+                /** @description 그해 거시경제 회의(주제·태도·드러난 시장과 섹터 바람). 회의가 없던 해면 null (decisions.md 266번) */
+                macro?: {
+                    topic: string;
+                    /** @enum {string} */
+                    stance: "AGGRESSIVE" | "NEUTRAL" | "DEFENSIVE";
+                    lines: string[];
+                } | null;
                 gradeBefore: components["schemas"]["Grade"];
                 gradeAfter: components["schemas"]["Grade"];
                 /** @description 그해 앞지른 라이벌 증권사 (decisions.md 261번) */
@@ -525,6 +630,16 @@ export interface components {
                 }[];
                 lines: string[];
             } | null;
+        };
+        /** @description 종목을 물어 온 직원 (decisions.md 267번) */
+        Finder: {
+            employeeId: number;
+            name: string;
+            /** @description 직함. 직함이 없는 자리면 null */
+            role?: string | null;
+            desk: string;
+            /** @description 가져올 때 한마디 */
+            pitch: string;
         };
         /** @enum {string} */
         Grade: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "X" | "XX" | "XXX" | "Z" | "ZZ" | "ZZZ";
@@ -852,6 +967,59 @@ export interface operations {
         };
         responses: {
             /** @description 정한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    conveneMacroMeeting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 회의를 연 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    holdMacroMeeting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    stance: "AGGRESSIVE" | "NEUTRAL" | "DEFENSIVE";
+                };
+            };
+        };
+        responses: {
+            /** @description 고른 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;
