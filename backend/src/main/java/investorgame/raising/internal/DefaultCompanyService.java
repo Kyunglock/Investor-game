@@ -376,12 +376,7 @@ class DefaultCompanyService implements CompanyService {
             .map(e -> e.name)
             .orElse("");
     return new CompanyView.Poach(
-        p.employeeId,
-        name,
-        engine.rivalName(p.rival),
-        p.keepCost,
-        p.transferFee,
-        engine.poachLine(c));
+        p.employeeId, name, engine.rivalName(p.rival), p.transferFee, engine.poachLine(c));
   }
 
   private static final int HALL_SIZE = 5;

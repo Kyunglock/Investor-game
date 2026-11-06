@@ -494,7 +494,11 @@ class CompanyEngineTest {
     assertThat(next.number).isEqualTo(2);
     assertThat(next.year).isEqualTo(1);
     assertThat(next.capital).isEqualTo(100_000_000);
-    assertThat(next.employees).as("직원은 따라오지 않는다").isEmpty();
+    // 직원은 잃지 않는다 (265번): 쉬는 채로 모두 따라온다.
+    assertThat(next.employees).as("직원은 모두 따라온다").hasSize(1);
+    assertThat(next.employees.getFirst().desk).as("쉬는 채로").isNull();
+    assertThat(poor.employees).isEmpty();
+    assertThat(next.opening).contains("직원들은 모두 따라왔다");
     assertThat(next.applicants).isNotEmpty();
     assertThat(next.applicants.getFirst().name).as("이름은 이어 센다").isNotEqualTo("박한결");
     assertThat(next.opening).contains("1호 회사는 문을 닫았다").contains("2호 회사");
@@ -864,11 +868,11 @@ class CompanyEngineTest {
   }
 
   /**
-   * 이직 제안 (#325, decisions.md 262번): 셋째 해부터 바로 위 라이벌이 가장 높은 직원에게 손을 뻗는다. 붙잡으면 값을 내고, 보내면 이적료를 받고,
-   * 답하지 않으면 결산 때 떠난다. 같은 자리 세 해째부터 손에 익는다.
+   * 이직 제안 (#325, decisions.md 262·265번): 셋째 해부터 바로 위 라이벌이 가장 높은 직원에게 손을 뻗는다. 남기는 데는 돈이 들지 않고, 보내면 이적료를
+   * 받는다. 답하지 않아도 직원은 남는다: 사장이 보낸다고 고를 때만 떠난다. 같은 자리 세 해째부터 손에 익는다.
    */
   @Test
-  void 이직_제안을_붙잡거나_보내고_같은_자리_세_해째면_손에_익는다() {
+  void 이직_제안은_남기거나_보낼_수_있고_답하지_않아도_직원은_남는다() {
     var rules = PROPERTIES.people();
     CompanyState.Poach found = null;
     CompanyState company = null;
@@ -880,13 +884,15 @@ class CompanyEngineTest {
     }
     assertThat(found).as("이직 제안이 오는 해가 있다").isNotNull();
     assertThat(found.employeeId).as("가장 높은 직원").isEqualTo(company.employees.get(1).id);
-    assertThat(found.keepCost).isPositive();
+    assertThat(found.transferFee).isPositive();
 
+    // 남기는 데는 돈이 들지 않는다 (265번).
     company.poach = found;
     long cash = company.capital;
     ENGINE.answerPoach(company, true);
-    assertThat(company.capital).isEqualTo(cash - found.keepCost);
+    assertThat(company.capital).isEqualTo(cash);
     assertThat(company.employees).hasSize(2);
+    assertThat(company.yearLines).anyMatch(line -> line.contains("거절하고 회사에 남았다"));
     assertThat(company.poach).isNull();
     CompanyState answered = company;
     assertThatThrownBy(() -> ENGINE.answerPoach(answered, true))
@@ -900,7 +906,7 @@ class CompanyEngineTest {
     assertThat(company.employees).hasSize(1);
     assertThat(company.yearLines).anyMatch(line -> line.contains("떠났다"));
 
-    // 답하지 않으면 결산 때 떠난다.
+    // 답하지 않아도 직원은 남는다 (265번): 사장이 보낸다고 고를 때만 떠난다.
     CompanyState ignored = open(9, stats(50, 50, 50, 50), 100_000_000);
     ENGINE.hire(ignored, stats(80, 80, 80, 80));
     ignored.poach = new CompanyState.Poach();
@@ -908,8 +914,10 @@ class CompanyEngineTest {
     ignored.poach.rival = 0;
     ignored.invest = null;
     CompanyState.Settlement s = ENGINE.settle(ignored, new HashSeededRandom(9));
-    assertThat(ignored.employees).hasSize(1);
-    assertThat(s.lines).anyMatch(line -> line.contains("답을 미루는 사이"));
+    assertThat(ignored.employees).hasSize(2);
+    assertThat(ignored.poach).isNull();
+    assertThat(s.lines).anyMatch(line -> line.contains("흐지부지"));
+    assertThat(ignored.alumni).isEmpty();
 
     // 같은 자리 세 해째부터 손에 익는다.
     CompanyState tenure = open(4, stats(50, 50, 50, 50), 100_000_000);

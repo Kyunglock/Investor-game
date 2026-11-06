@@ -216,12 +216,10 @@ public record CompanyView(
   /**
    * 라이벌이 우리 직원에게 손을 뻗었다 (decisions.md 262번).
    *
-   * @param keepCost 붙잡는 값
    * @param transferFee 보내면 받는 이적료
    * @param line 연초 회의 한 줄
    */
-  public record Poach(
-      int employeeId, String name, String rival, long keepCost, long transferFee, String line) {}
+  public record Poach(int employeeId, String name, String rival, long transferFee, String line) {}
 
   public record Settlement(
       int year,

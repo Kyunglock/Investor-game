@@ -57,10 +57,9 @@ export function nextAutoStep(company: Company, justSettled: boolean): AutoStep {
   if (justSettled) {
     return { kind: 'closeYearEnd' }
   }
-  // 이직 제안 (262번): 붙잡는 값이 자본의 25% 이하면 붙잡고, 아니면 이적료를 받고 보낸다.
-  const poach = company.meeting?.poach
-  if (poach) {
-    return { kind: 'poach', keep: poach.keepCost <= company.capital * FEE_SHARE }
+  // 이직 제안 (262·265번): 자동 진행은 직원을 보내지 않는다. 늘 남긴다.
+  if (company.meeting?.poach) {
+    return { kind: 'poach', keep: true }
   }
   const applicantId = autoHire(company)
   if (applicantId !== null) {

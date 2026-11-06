@@ -89,7 +89,7 @@ class CompanyController {
   record RefreshRequest(
       @NotNull @Positive Integer year, @NotNull @PositiveOrZero Integer refreshes) {}
 
-  /** 올해 이직 제안에 답한다: keep이 참이면 붙잡고, 거짓이면 보낸다 (decisions.md 262번). */
+  /** 올해 이직 제안에 답한다: keep이 참이면 남기고, 거짓이면 이적료를 받고 보낸다 (decisions.md 262·265번). */
   @PostMapping("/poach")
   CompanyView answerPoach(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,

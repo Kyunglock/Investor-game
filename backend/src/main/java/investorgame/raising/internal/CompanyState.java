@@ -265,7 +265,6 @@ class CompanyState {
   static class Poach {
     int employeeId;
     int rival;
-    long keepCost;
     long transferFee;
   }
 

@@ -225,13 +225,7 @@ function IndustryLine({ company }: { company: Company }) {
 }
 
 /** 연초 회의 탭: 올해 폭락 조짐, 경보·선견, 올해 필요한 인재 (6.1절). */
-function MeetingTab({
-  meeting,
-  capital,
-}: {
-  meeting: NonNullable<Company['meeting']>
-  capital: number
-}) {
+function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
   const busy = useRaisingStore((s) => s.busy)
   const { answerPoach } = useRaisingStore.getState()
   const poach = meeting.poach
@@ -242,15 +236,17 @@ function MeetingTab({
         // 이직 제안 (262번): 답하지 않고 결산하면 이적료를 남기고 떠난다.
         <div className="mt-1 rounded border border-wine p-2" data-testid="poach">
           <p className="text-[14px] font-semibold text-wine">{poach.line}</p>
-          <p className="text-[12px] text-muted">답하지 않고 결산하면 이적료를 남기고 떠납니다.</p>
+          <p className="text-[12px] text-muted">
+            답하지 않아도 회사에 남습니다. 보낼 때만 떠납니다.
+          </p>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <button
               type="button"
-              disabled={busy || capital < poach.keepCost}
+              disabled={busy}
               onClick={() => void answerPoach(true)}
               className="min-h-11 rounded border border-pen text-[14px] font-semibold disabled:opacity-50"
             >
-              붙잡는다 · {shortWon(poach.keepCost)}
+              남긴다
             </button>
             <button
               type="button"
@@ -737,9 +733,7 @@ function CompanyTabs({ company }: { company: Company }) {
         ))}
       </div>
       <div role="tabpanel" className="pt-3">
-        {tab === 'meeting' && company.meeting && (
-          <MeetingTab meeting={company.meeting} capital={company.capital} />
-        )}
+        {tab === 'meeting' && company.meeting && <MeetingTab meeting={company.meeting} />}
         {tab === 'market' && <MarketPanel company={company} />}
         {tab === 'staff' && <StaffTab company={company} />}
         {tab === 'settlement' && <SettlementView company={company} />}

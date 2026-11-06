@@ -37,7 +37,7 @@ export interface paths {
         /**
          * 사장의 사재로 회사를 차린다 (decisions.md 228·247번)
          * @description 직원 없이 열리고 첫 해 공채 시장에 지원자가 와 있다. 이미 회사가 있으면 400(회사는 세션마다 하나).
-         *     가장 최근 회사가 망했으면(broke가 있으면) 그 회사를 닫고 다음 번호의 회사를 새로 차린다.
+         *     가장 최근 회사가 망했으면(broke가 있으면) 그 회사를 닫고 다음 번호의 회사를 새로 차린다. 직원은 쉬는 채로 모두 따라온다 (decisions.md 265번).
          */
         post: operations["openCompany"];
         delete?: never;
@@ -121,8 +121,8 @@ export interface paths {
         put?: never;
         /**
          * 올해 이직 제안에 답한다 (decisions.md 262번)
-         * @description keep이 참이면 붙잡는 값(meeting.poach.keepCost)을 내고 남긴다. 거짓이면 이적료(transferFee)를 받고 보낸다.
-         *     답하지 않은 채 결산하면 그 직원은 이적료를 남기고 떠난다. 제안이 없거나 붙잡을 돈이 모자라면 400.
+         * @description keep이 참이면 남긴다(돈이 들지 않는다). 거짓이면 이적료(transferFee)를 받고 보낸다.
+         *     답하지 않은 채 결산해도 직원은 남는다: 직원은 사장이 보낼 때만 떠난다 (decisions.md 265번). 제안이 없으면 400.
          */
         post: operations["answerPoach"];
         delete?: never;
@@ -311,11 +311,6 @@ export interface components {
                     employeeId: number;
                     name: string;
                     rival: string;
-                    /**
-                     * Format: int64
-                     * @description 붙잡는 값
-                     */
-                    keepCost: number;
                     /**
                      * Format: int64
                      * @description 보내면 받는 이적료

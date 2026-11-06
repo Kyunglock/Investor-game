@@ -127,7 +127,8 @@ class CompanyEngine {
   }
 
   /**
-   * 망한 회사를 닫고 사장의 사재로 다음 회사를 차린다 (247번). 직원은 따라오지 않는다. 회사 번호와 만난 지원자 수(이름)는 이어 센다. 망하지 않은 회사면 400.
+   * 망한 회사를 닫고 사장의 사재로 다음 회사를 차린다 (247번). 직원은 모두 쉬는 채로 따라온다: 회사가 망해도 키운 사람은 잃지 않는다 (decisions.md
+   * 265번). 회사 번호와 만난 지원자 수(이름)는 이어 센다. 망하지 않은 회사면 400.
    */
   CompanyState restart(CompanyState broke, SeededRandom random, long capital) {
     if (!broke(broke)) {
@@ -139,6 +140,13 @@ class CompanyEngine {
     next.hired = broke.hired;
     next.met = broke.met;
     next.capital = Math.max(0, capital);
+    for (Employee e : broke.employees) {
+      e.desk = null;
+      e.lastDesk = null;
+      e.deskYears = 0;
+      next.employees.add(e);
+    }
+    broke.employees.clear();
     next.era = pickEra(broke.era, random.forKey("era-restart", next.number));
     next.opening =
         Korean.fill(
@@ -206,12 +214,11 @@ class CompanyEngine {
     CompanyState.Poach poach = new CompanyState.Poach();
     poach.employeeId = target.id;
     poach.rival = above;
-    poach.keepCost = fee * rules.keepPercent() / PERCENT;
     poach.transferFee = fee * rules.transferPercent() / PERCENT;
     return poach;
   }
 
-  /** 이직 제안에 답한다 (262번): 붙잡으면 값을 내고 남고, 보내면 이적료를 받고 떠난다. 제안이 없거나 붙잡을 돈이 모자라면 400. */
+  /** 이직 제안에 답한다 (262·265번): 남기면 그대로 남고, 보내면 이적료를 받고 떠난다. 직원은 사장이 보낸다고 고를 때만 떠난다. 제안이 없으면 400. */
   void answerPoach(CompanyState company, boolean keep) {
     CompanyState.Poach poach = company.poach;
     if (poach == null) {
@@ -222,12 +229,9 @@ class CompanyEngine {
       letGo(company, texts.left());
       return;
     }
-    if (company.capital < poach.keepCost) {
-      throw new InvalidRequestException("붙잡을 돈이 모자란다");
-    }
-    company.capital -= poach.keepCost;
-    company.yearHiring += poach.keepCost;
-    company.yearLines.add(Korean.fill(texts.kept(), Map.of("name", poachedName(company))));
+    company.yearLines.add(
+        Korean.fill(
+            texts.kept(), Map.of("name", poachedName(company), "rival", rivalName(poach.rival))));
     company.poach = null;
   }
 
@@ -1021,9 +1025,13 @@ class CompanyEngine {
       throw new InvalidRequestException("투자 회의를 먼저 한다");
     }
     RandomGenerator rng = random.forKey("company-settle", company.year);
-    // 이직 제안에 답하지 않았으면 그 직원은 이적료를 남기고 떠난다 (262번). 돈을 굴리기 전에 떠난다.
+    // 이직 제안에 답하지 않았으면 제안은 흐지부지되고 직원은 남는다 (265번): 사장이 고르지 않으면 아무도 잃지 않는다.
     if (company.poach != null) {
-      letGo(company, content.raising().company().people().ignored());
+      company.yearLines.add(
+          Korean.fill(
+              content.raising().company().people().ignored(),
+              Map.of("name", poachedName(company), "rival", rivalName(company.poach.rival))));
+      company.poach = null;
     }
     Settlement settlement = new Settlement();
     settlement.year = company.year;

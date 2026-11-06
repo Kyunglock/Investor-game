@@ -119,7 +119,6 @@ public record CompanyProperties(
    *
    * @param poachFromYear 이 해부터 이직 제안이 온다
    * @param poachPercent 해마다 이직 제안이 올 확률
-   * @param keepPercent 붙잡는 값 = 그 직원 계약금 × 이 비율
    * @param transferPercent 보낼 때 받는 이적료 = 그 직원 계약금 × 이 비율
    * @param settleYears 같은 자리에서 이 해째부터 손에 익는다
    * @param settledFlipPercent 손에 익으면 손이 뒤집힐 확률에 곱한다
@@ -127,7 +126,6 @@ public record CompanyProperties(
   public record People(
       int poachFromYear,
       int poachPercent,
-      int keepPercent,
       int transferPercent,
       int settleYears,
       int settledFlipPercent) {}
