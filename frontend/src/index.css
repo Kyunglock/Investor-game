@@ -755,6 +755,16 @@ p.animate-stamp {
     grade-glow 2.4s ease-in-out infinite;
 }
 
+/* 작은 카드 (301번): 사무실 미니맵 칸. 테두리가 얇고 둥글기가 작다. */
+.grade-card-sm {
+  border-width: 2px;
+  border-radius: 8px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.14),
+    0 0 0 1px color-mix(in srgb, var(--g-dark) 35%, transparent),
+    0 0 10px var(--g-glow);
+}
 /* 방패 보석 등급표: 카드 왼쪽 위 모서리에 걸린다. */
 .grade-gem {
   position: absolute;
@@ -767,6 +777,21 @@ p.animate-stamp {
   width: 56px;
   pointer-events: none;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+}
+.grade-gem-sm {
+  top: -5px;
+  left: -5px;
+  width: 30px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+}
+/* 글줄 안의 작은 방패 (301번): 배치 탭의 이름 앞. */
+.grade-gem-inline {
+  position: static;
+  display: inline-flex;
+  width: 18px;
+  margin-right: 2px;
+  vertical-align: -3px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
 }
 .grade-gem .gem-stop-light {
   stop-color: var(--g-light);
