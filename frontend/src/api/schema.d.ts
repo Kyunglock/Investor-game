@@ -455,6 +455,8 @@ export interface components {
                      */
                     after: number;
                     line: string;
+                    /** @description 답에 따른 확률 한 줄: 올리면 능력치 상승, 동결하거나 답하지 않으면 떠남 (decisions.md 280번) */
+                    odds: string;
                 } | null;
                 /** @description 올해의 라이벌 고르기 (decisions.md 275번). 후보도 고른 라이벌도 없으면 null */
                 rivalry?: {

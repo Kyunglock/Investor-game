@@ -1,6 +1,8 @@
 package investorgame.raising.internal;
 
 import investorgame.common.Korean;
+import investorgame.common.StatCodes;
+import investorgame.common.StatGrade;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.random.SeededRandom;
 import investorgame.content.ContentCatalog;
@@ -20,6 +22,7 @@ class PayEngine {
   static final int MORALE_MIN = -2;
   static final int MORALE_MAX = 2;
   private static final int PERCENT = 100;
+  private static final int MAX_STAT = 100;
 
   private final CompanyEngine company;
   private final ContentCatalog content;
@@ -78,6 +81,10 @@ class PayEngine {
    */
   CompanyState.Raise raiseOf(CompanyState c, SeededRandom random) {
     CompanyProperties.Pay rules = rules();
+    // 연봉이 없는 작은 회사(지분으로 받는다)에서는 올려 달라고 하지 않는다 (#337: "0만 원 → 0만 원").
+    if (!paysSalary(c)) {
+      return null;
+    }
     if (c.year < rules.raiseFromYear()
         || random.forKey("raise", c.year).nextInt(PERCENT) >= rules.raisePercent()) {
       return null;
@@ -120,8 +127,11 @@ class PayEngine {
             CompanyEngine.won(c.raise.after)));
   }
 
-  /** 연봉 협상에 답한다: 올려 주면 연봉이 오르고 사기 +1, 동결하면 사기 −2. 협상이 없으면 400. */
-  void answer(CompanyState c, boolean accept) {
+  /**
+   * 연봉 협상에 답한다: 올려 주면 연봉이 오르고 사기 +1, raise-grow-percent%로 능력치 하나가 한 띠 오른다(280번). 동결하면 사기 −2, 다음 분기를
+   * 넘길 때 freeze-leave-percent%로 떠난다. 협상이 없으면 400.
+   */
+  void answer(CompanyState c, boolean accept, SeededRandom random) {
     if (c.raise == null) {
       throw new InvalidRequestException("올해 연봉 협상이 없다");
     }
@@ -134,10 +144,92 @@ class PayEngine {
       e.raises++;
       shift(e, 1);
       c.yearLines.add(Korean.fill(texts().raised(), Map.of("name", e.name)));
+      if (random.forKey("raise-grow", c.year, e.id).nextInt(PERCENT) < rules().raiseGrowPercent()) {
+        grow(c, e);
+      }
     } else {
       shift(e, -2);
+      e.frozenPending = true;
       c.yearLines.add(Korean.fill(texts().frozen(), Map.of("name", e.name)));
     }
+  }
+
+  /** 올려 준 보람 (280번): 앉은 자리가 원하는 능력치(쉬면 가장 낮은 능력치)가 한 띠 오른다. SSS 끝(100)이면 그대로다. */
+  private void grow(CompanyState c, Employee e) {
+    String stat =
+        e.desk != null
+            ? company.deskStat(e.desk)
+            : e.stats.entrySet().stream()
+                .filter(x -> !StatCodes.LUCK.equals(x.getKey()))
+                .min(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse(StatCodes.INSIGHT);
+    int value = e.stats.getOrDefault(stat, 0);
+    int raised = Math.min(MAX_STAT, value + company.band());
+    if (raised == value) {
+      return;
+    }
+    e.stats.put(stat, raised);
+    c.yearLines.add(
+        Korean.fill(
+            texts().raiseGrew(),
+            Map.of(
+                "name",
+                e.name,
+                "stat",
+                content.raising().company().statNames().get(stat),
+                "before",
+                StatGrade.of(value).name(),
+                "after",
+                StatGrade.of(raised).name())));
+  }
+
+  /**
+   * 분기를 넘길 때 (280번): 답하지 않은 연봉 협상은 ignore-quarters 분기부터 분기마다 ignore-leave-percent%로, 동결당한 사람은 그다음
+   * 분기에 freeze-leave-percent%로 떠난다. 떠나면 소식 줄을 lines에 남긴다.
+   */
+  void quarterPassed(CompanyState c, SeededRandom random, List<String> lines) {
+    CompanyProperties.Pay rules = rules();
+    if (c.raise != null) {
+      c.raise.quarters++;
+      Employee e = raiser(c);
+      if (e != null
+          && c.raise.quarters >= rules.ignoreQuarters()
+          && random.forKey("raise-quit", c.year, c.quarter, e.id).nextInt(PERCENT)
+              < rules.ignoreLeavePercent()) {
+        c.raise = null;
+        quit(c, e, texts().raiseQuit(), lines);
+      }
+    }
+    for (Employee e : List.copyOf(c.employees)) {
+      if (!e.frozenPending) {
+        continue;
+      }
+      e.frozenPending = false;
+      if (random.forKey("frozen-quit", c.year, c.quarter, e.id).nextInt(PERCENT)
+          < rules.freezeLeavePercent()) {
+        quit(c, e, texts().frozenQuit(), lines);
+      }
+    }
+  }
+
+  private void quit(CompanyState c, Employee e, String template, List<String> lines) {
+    company.history.retire(c, e);
+    c.employees.removeIf(x -> x.id == e.id);
+    company.teams.tidy(c);
+    lines.add(Korean.fill(template, Map.of("name", e.name)));
+  }
+
+  /** 연초 회의에 보이는 협상 결과의 확률 한 줄 (280번). */
+  String raiseOdds() {
+    CompanyProperties.Pay rules = rules();
+    return Korean.fill(
+        texts().raiseOdds(),
+        Map.of(
+            "grow", String.valueOf(rules.raiseGrowPercent()),
+            "freeze", String.valueOf(rules.freezeLeavePercent()),
+            "quarters", String.valueOf(rules.ignoreQuarters()),
+            "ignore", String.valueOf(rules.ignoreLeavePercent())));
   }
 
   private static void shift(Employee e, int by) {

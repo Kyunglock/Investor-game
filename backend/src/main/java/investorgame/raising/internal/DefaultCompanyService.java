@@ -158,7 +158,7 @@ class DefaultCompanyService implements CompanyService {
   @Transactional
   public CompanyView answerRaise(UUID sessionId, boolean accept) {
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.pay.answer(row.state(), accept);
+    engine.pay.answer(row.state(), accept, new HashSeededRandom(row.seed()));
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -554,7 +554,8 @@ class DefaultCompanyService implements CompanyService {
             .findFirst()
             .map(e -> e.name)
             .orElse("");
-    return new CompanyView.Raise(r.employeeId, name, r.before, r.after, engine.pay.raiseLine(c));
+    return new CompanyView.Raise(
+        r.employeeId, name, r.before, r.after, engine.pay.raiseLine(c), engine.pay.raiseOdds());
   }
 
   private CompanyView.Poach poachView(CompanyState c) {

@@ -1033,6 +1033,16 @@ class CompanyEngine {
     return desk(code).roles();
   }
 
+  /** 그 자리가 원하는 능력치 코드. */
+  String deskStat(String code) {
+    return desk(code).statCode();
+  }
+
+  /** 능력치 한 띠(점수). */
+  int band() {
+    return properties.experience().band();
+  }
+
   private RaisingContent.Desk desk(String code) {
     return desks().stream()
         .filter(d -> d.code().equals(code))
@@ -1266,6 +1276,11 @@ class CompanyEngine {
     q.reports.addAll(teams.reports(company, q.results, List.of(q), "이번 분기", company.turn()));
     company.capital = Math.max(0, company.capital + fee + totalPnl - q.salary);
     q.capitalAfter = company.capital;
+    // 연봉 협상의 뒤끝 (280번): 답하지 않고 버티거나 동결하면 떠날 수 있다. 분기 실적과 연말 소식에 남긴다.
+    List<String> quits = new java.util.ArrayList<>();
+    pay.quarterPassed(company, random, quits);
+    q.lines.addAll(quits);
+    company.yearLines.addAll(quits);
     if (company.invest != null && company.invest.choice != null) {
       q.investTitle = company.invest.title;
       q.investTotal = company.invest.total;

@@ -471,13 +471,14 @@ components:
                   description: 올해의 연봉 협상 (decisions.md 270번). 없으면 null
                   oneOf:
                     - type: object
-                      required: [employeeId, name, before, after, line]
+                      required: [employeeId, name, before, after, line, odds]
                       properties:
                         employeeId: { type: integer }
                         name: { type: string }
                         before: { type: integer, format: int64, description: 지금 연봉 }
                         after: { type: integer, format: int64, description: 올려 주면 연봉 }
                         line: { type: string }
+                        odds: { type: string, description: '답에 따른 확률 한 줄: 올리면 능력치 상승, 동결하거나 답하지 않으면 떠남 (decisions.md 280번)' }
                     - type: 'null'
                 rivalry:
                   description: 올해의 라이벌 고르기 (decisions.md 275번). 후보도 고른 라이벌도 없으면 null
