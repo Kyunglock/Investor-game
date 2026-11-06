@@ -170,7 +170,7 @@ async function closeYearEnd(page: Page, year: number) {
   }
 }
 
-test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자리 두 개와 지원자 셋이 있다', async ({
+test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자리 네 개와 지원자 다섯이 있다', async ({
   page,
 }) => {
   await openCompany(page)
@@ -178,7 +178,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await expect(page.getByTestId('company-building')).toHaveText('반지하 원룸')
   // 직원이 없으면 공채 탭이 먼저 열린다.
   await expect(page.getByRole('tab', { name: /공채/ })).toHaveAttribute('aria-selected', 'true')
-  await expect(page.getByTestId('applicant')).toHaveCount(3)
+  await expect(page.getByTestId('applicant')).toHaveCount(5)
   await expect(page.getByTestId('building-ladder').getByRole('listitem')).toHaveCount(7)
   await expect(page.getByTestId('next-step')).toContainText('사무실 넓히기')
   // 업계 순위 (261번): 라이벌 증권사 여섯 가운데 꼴찌에서 시작하고 바로 위가 목표다.
@@ -187,7 +187,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   // 첫 지원자는 연초 회의가 말한 "올해 필요한 인재"다.
   await expect(page.getByTestId('applicant').first()).toContainText('맞는 사람이다')
   // 지원자는 관심 섹터를 안고 온다 (233번).
-  await expect(page.getByTestId('applicant-sector')).toHaveCount(3)
+  await expect(page.getByTestId('applicant-sector')).toHaveCount(5)
   await tab(page, /배치/)
   await expect(page.getByTestId('employee')).toHaveCount(0)
   await expect(page.getByTestId('desk-board')).toHaveCount(0)
@@ -197,7 +197,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   // 회사 건물 단면: 책상은 자리 수, 아직 아무도 없다. 그림을 끄면 같은 내용을 글로 (8.1·8.4절).
   await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '0')
   // 사무실 미니맵 (237번): 자리마다 칸이 있고 아직 다 빈 자리다. 누르면 쉬는 사람이 없으니 공채로 데려간다.
-  await expect(page.getByTestId('office-empty')).toHaveCount(2)
+  await expect(page.getByTestId('office-empty')).toHaveCount(4)
   await page.getByRole('button', { name: '빈 자리 1에 앉힐 사람 고르기' }).click()
   await expect(page.getByTestId('seat-picker')).toContainText('쉬는 직원이 없습니다')
   await page.getByTestId('seat-picker').getByRole('button', { name: '공채에서 뽑기' }).click()
@@ -205,7 +205,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await expect(page.getByRole('tab', { name: /공채/ })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('button', { name: '그림 끄기' }).click()
   await expect(page.getByTestId('office-caption')).toHaveText(
-    '사무실: 반지하 원룸, 책상 2개 · 객장: 손님 없음, 길고양이 한 마리',
+    '사무실: 반지하 원룸, 책상 4개 · 객장: 손님 없음, 길고양이 한 마리',
   )
   await page.reload()
   await expect(page.getByTestId('office-caption')).toBeVisible()
@@ -221,16 +221,18 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
 
   await hireCheapest(page)
   await page.getByRole('button', { name: /지원자 새로 받기/ }).click()
-  await expect(page.getByTestId('applicant')).toHaveCount(3)
+  await expect(page.getByTestId('applicant')).toHaveCount(5)
+  await hireCheapest(page)
+  await hireCheapest(page)
   await hireCheapest(page)
   // 직원이 바뀌어 화면을 새로 그려도 공채 탭에 그대로 있다.
   await expect(page.getByRole('tab', { name: /공채/ })).toHaveAttribute('aria-selected', 'true')
 
-  // 자리 두 개가 찼다: 내보낼 사람을 골라야 뽑는다.
-  const third = page.getByTestId('applicant').first()
-  await third.getByRole('button', { name: /자리가 꽉 찼다/ }).click()
-  await expect(third.getByRole('button', { name: /내보내고 뽑는다/ })).toHaveCount(2)
-  await third.getByRole('button', { name: '그만둔다' }).click()
+  // 자리 네 개가 찼다 (287번): 내보낼 사람을 골라야 뽑는다.
+  const fifth = page.getByTestId('applicant').first()
+  await fifth.getByRole('button', { name: /자리가 꽉 찼다/ }).click()
+  await expect(fifth.getByRole('button', { name: /내보내고 뽑는다/ })).toHaveCount(4)
+  await fifth.getByRole('button', { name: '그만둔다' }).click()
 
   // 배치 (269번): 직무 자리를 먼저 누르고 그 자리에 앉힐 직원을 고른다. 후보에는 그 자리가 원하는 능력치의 등급이 보인다.
   await tab(page, /배치/)
@@ -243,7 +245,7 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   const bio = board.locator('[data-desk="bio"]')
   await expect(bio.getByTestId('desk-members')).toHaveText('비어 있음')
   await bio.getByRole('button', { name: /사람 고르기/ }).click()
-  await expect(bio.getByTestId('desk-candidate')).toHaveCount(2)
+  await expect(bio.getByTestId('desk-candidate')).toHaveCount(4)
   await expect(bio.getByTestId('desk-candidate').first()).toContainText('인내심')
   await bio.getByTestId('desk-candidate').first().click()
   // 앉으면 그 사람이 팀장이다.
@@ -251,10 +253,10 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await expect(bio.getByTestId('desk-members')).toContainText('(팀장)')
   const day = board.locator('[data-desk="day"]')
   await day.getByRole('button', { name: /사람 고르기/ }).click()
-  await day.getByTestId('desk-candidate').filter({ hasText: '쉬는 중' }).click()
+  await day.getByTestId('desk-candidate').filter({ hasText: '쉬는 중' }).first().click()
   await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '2')
   await expect(page.getByTestId('office-tag')).toHaveCount(2)
-  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/2')
+  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/4')
   // 같은 자리에 둘이면 팀장을 바꿀 수 있다: 단타 데스크 사람을 바이오로 옮겨 팀장으로 정한다.
   await bio.getByRole('button', { name: /사람 고르기/ }).click()
   await bio.getByTestId('desk-candidate').filter({ hasText: '단타 데스크에서 옮김' }).click()
@@ -264,16 +266,23 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await expect(bio.getByTestId('leader-badge')).toHaveCount(1)
   // 빼면 쉰다. 자동 배치 (232·233번): 버튼 하나로 두 사람이 다시 돈을 굴리는 자리에 앉는다.
   await bio.getByRole('button', { name: '빼기' }).first().click()
-  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('1/2')
+  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('1/4')
   await page.getByRole('button', { name: '자동 배치' }).click()
-  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/2')
-  await expect(page.getByTestId('office-tag').filter({ hasText: /데스크/ })).toHaveCount(2)
+  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('4/4')
+  // 자리가 넷이면 돕는 자리(리서치 팀 등)에도 앉힌다.
+  await expect(page.getByTestId('office-tag')).toHaveCount(4)
+  await expect(
+    page
+      .getByTestId('office-tag')
+      .filter({ hasText: /데스크/ })
+      .first(),
+  ).toBeVisible()
   // 자리 카드에는 예상 효과가 보인다 (259번).
   await expect(bio).toContainText('맞히면 +')
 
   // 미니맵에서 바로 배치 (237번): 앉은 사람을 눌러 쉬게 하면 휴게실로 가고, 빈 자리를 눌러 그 사람을 골라 다시 앉힌다.
   const seats = page.getByTestId('office-seat')
-  await expect(seats).toHaveCount(2)
+  await expect(seats).toHaveCount(4)
   await seats.nth(1).click()
   const picker = page.getByTestId('seat-picker')
   await expect(picker).toContainText('어디에 앉힐까요?')
@@ -289,7 +298,7 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await picker.getByRole('button', { name: /종합/ }).click()
   await picker.getByRole('button', { name: /단타 데스크 용기/ }).click()
   await expect(picker).toHaveCount(0)
-  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/2')
+  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('4/4')
   await expect(page.getByTestId('office-empty')).toHaveCount(0)
   await expect(page.getByTestId('office-resting')).toHaveCount(0)
 
@@ -299,7 +308,7 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   const macro = page.getByRole('dialog', { name: '거시경제 회의' })
   await expect(macro.getByTestId('macro-article')).toBeVisible()
   const heads = await macro.getByTestId('macro-opinion').getByRole('heading').allInnerTexts()
-  expect(heads.map((h) => Number(/(\d+)명/.exec(h)?.[1] ?? 0)).reduce((a, b) => a + b, 0)).toBe(2)
+  expect(heads.map((h) => Number(/(\d+)명/.exec(h)?.[1] ?? 0)).reduce((a, b) => a + b, 0)).toBe(4)
   await expect(macro.getByRole('button', { name: /판돈 ×/ })).toHaveCount(3)
   await macro.getByRole('button', { name: '배치 다시 보기' }).click()
   await expect(macro).toBeHidden()
@@ -330,14 +339,19 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
       await expect(page.getByTestId('ledger-staff')).toBeVisible()
       // 그해 계약금·새로 받기 값은 인사 비용 줄로 따로 나온다 (251·262번).
       await expect(page.getByTestId('ledger-hiring')).toContainText('인사 비용')
-      await expect(page.getByTestId('office-pnl')).toHaveCount(2)
+      // 손익은 돈을 굴리는 자리(데스크)에 앉은 사람 머리 위에만 뜬다.
+      const traders = await page
+        .getByTestId('office-tag')
+        .filter({ hasText: /데스크/ })
+        .count()
+      await expect(page.getByTestId('office-pnl')).toHaveCount(traders)
     }
   }
   // 연표 탭 (263번): 차린 해부터 큰 일이 쌓이고 업적과 명예의 전당이 보인다.
   await tab(page, /연표/)
   await expect(page.getByTestId('timeline')).toContainText('1호 회사를 차렸다')
   await expect(page.getByTestId('achievement')).toHaveCount(7)
-  await expect(page.getByTestId('hall').getByRole('listitem')).toHaveCount(2)
+  await expect(page.getByTestId('hall').getByRole('listitem')).toHaveCount(4)
   // 매각을 뺐다(236번): 세 해가 지나도 회사는 이어지고 4년 차 공채·연초 회의가 온다. 팔 곳은 없다.
   await expect(page.getByText(/1호 회사 · 4년 차/)).toBeVisible()
   await expect(page.getByTestId('sale')).toHaveCount(0)
@@ -345,7 +359,7 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await page.reload()
   await expect(page.getByText(/1호 회사 · 4년 차/)).toBeVisible()
   await tab(page, /공채/)
-  await expect(page.getByTestId('applicant')).toHaveCount(3)
+  await expect(page.getByTestId('applicant')).toHaveCount(5)
   await passYear(page, 4, '판다')
   await expect(page.getByText(/1호 회사 · 5년 차 1분기/)).toBeVisible()
 })
@@ -368,7 +382,7 @@ test('뽑기 요청이 끊겨도 버튼이 잠기지 않고 다시 뽑을 수 �
   await hire.click()
   await expect(hire).toBeEnabled()
   await hire.click()
-  await expect(page.getByTestId('applicant')).toHaveCount(2)
+  await expect(page.getByTestId('applicant')).toHaveCount(4)
 })
 
 test('분기 넘기기 버튼을 빠르게 두 번 눌러도 한 분기만 넘어간다 (#305)', async ({ page }) => {
@@ -726,8 +740,8 @@ test('자동 진행을 켜면 공채·배치·회의·결산을 해마다 하고
   await expect(page.getByTestId('auto-status')).toBeVisible()
   // 사람이 하던 결산 버튼은 자동 진행 동안 잠긴다.
   await expect(page.getByRole('button', { name: '1년 차 1분기 넘기기' })).toBeDisabled()
-  // 빈 자리 둘에 사람을 뽑아 앉히고, 회의를 직원 다수결로 정하고, 결산서를 보여 준 뒤 다음 해로 간다.
-  await expect(page.getByTestId('office-seat')).toHaveCount(2, { timeout: 20_000 })
+  // 빈 자리 넷에 사람을 뽑아 앉히고(287번), 회의를 직원 다수결로 정하고, 결산서를 보여 준 뒤 다음 해로 간다.
+  await expect(page.getByTestId('office-seat')).toHaveCount(4, { timeout: 30_000 })
   // 분기마다 분기 실적을 보여 주고, 네 분기를 넘기면 연말 결산서를 보여 준다 (268번).
   const quarterSheet = page.getByRole('dialog', { name: '분기 실적' })
   await expect(quarterSheet).toBeVisible({ timeout: 20_000 })
