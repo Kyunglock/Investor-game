@@ -1,10 +1,11 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import type { Grade } from '../../api/client'
 import { EMPLOYEE_LADDER } from './grades'
 
 /**
- * 캐릭터 카드의 등급 티어 (decisions.md 294번): 수집 카드처럼 등급마다 테두리와 등급표가 다르다. F·E 회색 → D·C 구리 → B·A 은 → S·SS·SSS 금 → X·XX·XXX
- * 파란빛 → Z·ZZ·ZZZ 금빛 → XS·XSS·GOD 무지개빛(홀로그램). 금부터는 빛이 흐른다.
+ * 캐릭터 카드의 등급 티어 (decisions.md 294번): 게임 아이템 등급처럼 등급마다 테두리와 등급표가 다르다. F·E 무쇠 → D·C 구리 → B·A 은 → S·SS·SSS 금 →
+ * X·XX·XXX 사파이어 → Z·ZZ·ZZZ 황금빛 → XS·XSS·GOD 무지개빛(홀로그램). 금부터는 빛이 흐르고, 사파이어부터는 빛이 번진다. 모양은 index.css의
+ * `.grade-card`·`.grade-gem`과 티어 클래스가 그린다.
  */
 export type Tier = 'common' | 'bronze' | 'silver' | 'gold' | 'blue' | 'royal' | 'holo'
 
@@ -30,70 +31,39 @@ export function tierOf(grade: Grade): Tier {
 }
 
 export const TIER_NAMES: Record<Tier, string> = {
-  common: '회색',
+  common: '무쇠',
   bronze: '구리',
   silver: '은',
   gold: '금',
-  blue: '파란빛',
-  royal: '금빛',
+  blue: '사파이어',
+  royal: '황금빛',
   holo: '무지개빛',
 }
 
-/** 테두리에 흐르는 색. 두 색 이상이면 비스듬한 그라데이션이다. */
-const EDGE: Record<Tier, string[]> = {
-  common: ['#b9c2bf', '#d7dcd8'],
-  bronze: ['#b87333', '#e0a46b', '#8f5a25'],
-  silver: ['#8c97a3', '#dfe6ec', '#7b8692'],
-  gold: ['#b2862b', '#f1d27a', '#9a7120'],
-  blue: ['#2d5da8', '#9cc3ff', '#22355c'],
-  royal: ['#d4a017', '#fff1b8', '#b2862b', '#ffe08a'],
-  holo: ['#ff6b6b', '#ffd93d', '#6bcB77', '#4d96ff', '#c77dff', '#ff6b6b'],
+/** 티어마다 보석 수: 무쇠 1 … 무지개빛 7. 등급표 아래에 작은 보석으로 찍힌다. */
+export const TIER_RANK: Record<Tier, number> = {
+  common: 1,
+  bronze: 2,
+  silver: 3,
+  gold: 4,
+  blue: 5,
+  royal: 6,
+  holo: 7,
 }
 
-/** 등급표 글자색과 바탕. */
-const BADGE: Record<Tier, { bg: string; fg: string }> = {
-  common: { bg: 'linear-gradient(135deg, #c8cfcc, #a9b2ae)', fg: '#ffffff' },
-  bronze: { bg: 'linear-gradient(135deg, #d08a4a, #8f5a25)', fg: '#ffffff' },
-  silver: { bg: 'linear-gradient(135deg, #e6ecf1, #8c97a3)', fg: '#2a3238' },
-  gold: { bg: 'linear-gradient(135deg, #f1d27a, #b2862b)', fg: '#3a2a08' },
-  blue: { bg: 'linear-gradient(135deg, #6f9fe6, #22355c)', fg: '#ffffff' },
-  royal: { bg: 'linear-gradient(135deg, #fff1b8, #d4a017 55%, #b2862b)', fg: '#3a2a08' },
-  holo: {
-    bg: 'linear-gradient(135deg, #ff6b6b, #ffd93d, #6bcb77, #4d96ff, #c77dff)',
-    fg: '#ffffff',
-  },
+/** 금부터는 테두리에 빛이 흐르고 등급표에 윤이 지나간다. */
+export function shines(tier: Tier): boolean {
+  return TIER_RANK[tier] >= TIER_RANK.gold
 }
 
-/** 금부터는 테두리에 빛이 흐르고, 금빛·무지개빛은 은은한 그림자가 번진다. */
-const SHINE: Record<Tier, boolean> = {
-  common: false,
-  bronze: false,
-  silver: false,
-  gold: true,
-  blue: true,
-  royal: true,
-  holo: true,
-}
-
-const GLOW: Partial<Record<Tier, string>> = {
-  blue: '0 0 0 1px rgba(45, 93, 168, 0.15), 0 4px 14px rgba(45, 93, 168, 0.25)',
-  royal: '0 0 0 1px rgba(212, 160, 23, 0.2), 0 4px 16px rgba(212, 160, 23, 0.35)',
-  holo: '0 0 0 1px rgba(199, 125, 255, 0.2), 0 4px 18px rgba(77, 150, 255, 0.3)',
-}
-
-/** 테두리를 그라데이션으로 그리는 스타일: 안쪽은 카드색, 테두리 띠만 색이 흐른다. */
-export function frameStyle(tier: Tier): CSSProperties {
-  const edge = EDGE[tier]
-  return {
-    border: '3px solid transparent',
-    background: `linear-gradient(var(--card), var(--card)) padding-box, linear-gradient(135deg, ${edge.join(', ')}) border-box`,
-    backgroundSize: SHINE[tier] ? 'auto, 300% 300%' : undefined,
-    boxShadow: GLOW[tier],
-  }
+/** 카드와 등급표가 쓰는 클래스: 티어 클래스는 index.css에서 색·질감·빛을 정한다. */
+export function tierClass(tier: Tier): string {
+  return `tier-${tier}${shines(tier) ? ' tier-shine' : ''}`
 }
 
 /**
- * 캐릭터 카드 (decisions.md 294번): 등급 티어의 테두리와 오른쪽 위 등급표. 공채 지원자 카드와 직원 상세 카드가 같이 쓴다. as로 li·section 등을 고른다.
+ * 캐릭터 카드 (decisions.md 294번): 티어의 금속 테두리(베벨·안쪽 빛)와 티어 색이 번진 바탕, 왼쪽 위 방패 등급표. 공채 지원자 카드와 직원 상세 카드가 같이
+ * 쓴다. as로 li·section 등을 고른다.
  */
 export function GradeCard({
   grade,
@@ -112,41 +82,100 @@ export function GradeCard({
 } & Partial<Record<`data-${string}` | 'aria-label', string | undefined>>) {
   const tier = tierOf(grade)
   return (
-    <Tag
-      className={`relative rounded-lg ${SHINE[tier] ? 'card-shine' : ''} ${className}`}
-      style={frameStyle(tier)}
-      data-tier={tier}
-      {...rest}
-    >
+    <Tag className={`grade-card ${tierClass(tier)} ${className}`} data-tier={tier} {...rest}>
       <GradeBadge grade={grade} label={badgeLabel} />
       {children}
     </Tag>
   )
 }
 
-/** 왼쪽 위 등급표: 티어 색의 큼직한 꼬리표에 등급 글자와 티어 이름. 카드 모서리를 덮어 한눈에 띈다 (294번). */
+/** 방패 보석 안에 등급 글자: 위가 밝게 비치고 아래가 어두운 보석 질감, 글자는 새긴 듯 그림자. 그 아래 티어 이름과 보석 수. */
 export function GradeBadge({ grade, label }: { grade: Grade; label?: string }) {
   const tier = tierOf(grade)
-  const badge = BADGE[tier]
+  const rank = TIER_RANK[tier]
+  const id = `gem-${tier}`
   return (
     <span
-      className={`pointer-events-none absolute -top-px -left-px z-10 flex w-[58px] flex-col items-center rounded-tl-md rounded-br-xl px-1 pt-1 pb-1.5 font-mono-num leading-none shadow-md ${
-        SHINE[tier] ? 'badge-shine' : ''
-      }`}
-      style={{ background: badge.bg, color: badge.fg }}
+      className={`grade-gem ${tierClass(tier)}`}
       data-testid="grade-badge"
       data-grade={grade}
       data-tier={tier}
       aria-hidden="true"
     >
-      <b
-        className={`${grade.length > 2 ? 'text-[20px]' : 'text-[26px]'} tracking-tight drop-shadow-[0_1px_0_rgba(0,0,0,0.25)]`}
-      >
-        {grade}
-      </b>
-      <span className="mt-0.5 text-[9px] font-semibold tracking-wide opacity-90">
+      <svg viewBox="0 0 56 60" width={56} height={60} className="block" aria-hidden="true">
+        <defs>
+          <linearGradient id={`${id}-body`} x1="0" y1="0" x2="0.4" y2="1">
+            <stop offset="0" className="gem-stop-light" />
+            <stop offset="0.5" className="gem-stop-base" />
+            <stop offset="1" className="gem-stop-dark" />
+          </linearGradient>
+          <clipPath id={`${id}-clip`}>
+            <path d="M28 6 L48 12 V30 C48 41 39 50 28 54 C17 50 8 41 8 30 V12 Z" />
+          </clipPath>
+          <linearGradient id={`${id}-gloss`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stopColor="#fff" stopOpacity="0.55" />
+            <stop offset="0.48" stopColor="#fff" stopOpacity="0.08" />
+            <stop offset="0.5" stopColor="#fff" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* 방패: 바깥 어두운 테, 보석 몸통, 위쪽 광택 */}
+        <path
+          d="M28 2 L52 9 V30 C52 44 41 54 28 58 C15 54 4 44 4 30 V9 Z"
+          className="gem-rim"
+          strokeWidth={2.2}
+          strokeLinejoin="round"
+          fill={`url(#${id}-body)`}
+        />
+        <path
+          d="M28 6 L48 12 V30 C48 41 39 50 28 54 C17 50 8 41 8 30 V12 Z"
+          fill={`url(#${id}-gloss)`}
+        />
+        <path
+          d="M28 6 L48 12 V30 C48 41 39 50 28 54 C17 50 8 41 8 30 V12 Z"
+          fill="none"
+          className="gem-inner"
+          strokeWidth={0.8}
+          opacity={0.6}
+        />
+        {shines(tier) && (
+          <rect
+            x={-20}
+            y={4}
+            width={10}
+            height={52}
+            fill="#fff"
+            opacity={0.55}
+            transform="skewX(-18)"
+            clipPath={`url(#${id}-clip)`}
+          >
+            <animate
+              attributeName="x"
+              values="-20;80;80"
+              keyTimes="0;0.35;1"
+              dur="3s"
+              repeatCount="indefinite"
+            />
+          </rect>
+        )}
+        <text
+          x="28"
+          y={grade.length > 2 ? 36 : 38}
+          textAnchor="middle"
+          className={`gem-text font-mono-num ${grade.length > 2 ? 'text-[17px]' : 'text-[24px]'}`}
+          fontWeight={700}
+        >
+          {grade}
+        </text>
+      </svg>
+      <span className="grade-gem-name">
         {label === '특급' ? '특급 · ' : ''}
         {TIER_NAMES[tier]}
+      </span>
+      <span className="grade-gem-rank">
+        {Array.from({ length: rank }, (_, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: 보석 수만 센다
+          <i key={i} />
+        ))}
       </span>
     </span>
   )

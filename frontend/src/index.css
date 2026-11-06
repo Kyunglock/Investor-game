@@ -617,8 +617,100 @@ p.animate-stamp {
   animation: chart-draw 2.6s ease-in-out both;
 }
 
-/* 캐릭터 카드 (decisions.md 294번): 금부터는 테두리에 빛이 흐르고, 등급표에 윤이 지나간다. */
-@keyframes card-shine {
+/* 캐릭터 카드 (decisions.md 294번): 게임 아이템 등급처럼. 티어마다 세 색(밝음·기본·어두움)과 빛 색을 두고, 테두리는 금속 베벨(밝음→어두움→밝음),
+   바탕은 티어 색이 위에서 번지고, 등급표는 방패 보석이다. 금부터 테두리에 빛이 흐르고 사파이어부터 빛이 번진다. */
+.grade-card {
+  --g-light: #d9dfe5;
+  --g-base: #9aa5b1;
+  --g-dark: #5c6672;
+  --g-glow: transparent;
+  position: relative;
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background:
+    linear-gradient(165deg, color-mix(in srgb, var(--g-base) 14%, var(--card)) 0%, var(--card) 42%)
+    padding-box,
+    linear-gradient(
+      135deg,
+      var(--g-light) 0%,
+      var(--g-base) 22%,
+      var(--g-dark) 46%,
+      var(--g-light) 62%,
+      var(--g-base) 82%,
+      var(--g-dark) 100%
+    )
+    border-box;
+  background-size:
+    auto,
+    260% 260%;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+    inset 0 1px 0 1px rgba(255, 255, 255, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.12),
+    0 0 0 1px color-mix(in srgb, var(--g-dark) 35%, transparent),
+    0 0 18px var(--g-glow);
+}
+.tier-common {
+  --g-light: #d9dfe5;
+  --g-base: #98a3ae;
+  --g-dark: #58626d;
+}
+.tier-bronze {
+  --g-light: #f3c296;
+  --g-base: #c57a3a;
+  --g-dark: #6f3d14;
+}
+.tier-silver {
+  --g-light: #ffffff;
+  --g-base: #b7c3cf;
+  --g-dark: #66727f;
+}
+.tier-gold {
+  --g-light: #fff3b0;
+  --g-base: #e8b93a;
+  --g-dark: #9a6b14;
+}
+.tier-blue {
+  --g-light: #b9dcff;
+  --g-base: #3b7ff0;
+  --g-dark: #16306f;
+  --g-glow: rgba(59, 127, 240, 0.38);
+}
+.tier-royal {
+  --g-light: #fff7c8;
+  --g-base: #f1b81d;
+  --g-dark: #8d5b0c;
+  --g-glow: rgba(241, 184, 29, 0.45);
+}
+.tier-holo {
+  --g-light: #ffffff;
+  --g-base: #c77dff;
+  --g-dark: #4d3a8a;
+  --g-glow: rgba(123, 160, 255, 0.5);
+}
+.grade-card.tier-holo {
+  background:
+    linear-gradient(
+      165deg,
+      color-mix(in srgb, #ff6b6b 12%, var(--card)),
+      color-mix(in srgb, #4d96ff 12%, var(--card)) 40%,
+      var(--card) 60%
+    )
+    padding-box,
+    conic-gradient(
+      from var(--holo-angle, 0deg),
+      #ff6b6b,
+      #ffd93d,
+      #6bcb77,
+      #4d96ff,
+      #c77dff,
+      #ff6b6b
+    )
+    border-box;
+  background-size: auto, auto;
+}
+/* 빛이 흐른다: 베벨 그라데이션이 천천히 오간다. 무지개빛은 테두리가 돈다. */
+@keyframes grade-sheen {
   0% {
     background-position:
       0 0,
@@ -630,30 +722,129 @@ p.animate-stamp {
       100% 50%;
   }
 }
-.card-shine {
-  animation: card-shine 3.2s ease-in-out infinite alternate;
+@property --holo-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
 }
-@keyframes badge-shine {
+@keyframes holo-spin {
+  to {
+    --holo-angle: 360deg;
+  }
+}
+.grade-card.tier-shine {
+  animation: grade-sheen 3.6s ease-in-out infinite alternate;
+}
+.grade-card.tier-holo {
+  animation: holo-spin 6s linear infinite;
+}
+@keyframes grade-glow {
   0%,
-  70% {
-    transform: translateX(-130%) skewX(-20deg);
-  }
   100% {
-    transform: translateX(230%) skewX(-20deg);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+      inset 0 1px 0 1px rgba(255, 255, 255, 0.35),
+      0 2px 6px rgba(0, 0, 0, 0.12),
+      0 0 0 1px color-mix(in srgb, var(--g-dark) 35%, transparent),
+      0 0 12px var(--g-glow);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.55),
+      inset 0 1px 0 1px rgba(255, 255, 255, 0.35),
+      0 2px 6px rgba(0, 0, 0, 0.12),
+      0 0 0 1px color-mix(in srgb, var(--g-dark) 35%, transparent),
+      0 0 26px var(--g-glow);
   }
 }
-.badge-shine {
-  overflow: hidden;
+.grade-card.tier-blue,
+.grade-card.tier-royal {
+  animation:
+    grade-sheen 3.6s ease-in-out infinite alternate,
+    grade-glow 2.4s ease-in-out infinite;
 }
-.badge-shine::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  width: 40%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.55), transparent);
-  animation: badge-shine 2.8s ease-in-out infinite;
+.grade-card.tier-holo {
+  animation:
+    holo-spin 6s linear infinite,
+    grade-glow 2.4s ease-in-out infinite;
 }
 
+/* 방패 보석 등급표: 카드 왼쪽 위 모서리에 걸린다. */
+.grade-gem {
+  position: absolute;
+  top: -6px;
+  left: 6px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 56px;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+}
+.grade-gem .gem-stop-light {
+  stop-color: var(--g-light);
+}
+.grade-gem .gem-stop-base {
+  stop-color: var(--g-base);
+}
+.grade-gem .gem-stop-dark {
+  stop-color: var(--g-dark);
+}
+.grade-gem .gem-rim {
+  stroke: var(--g-dark);
+}
+.grade-gem .gem-inner {
+  stroke: var(--g-light);
+}
+.grade-gem .gem-text {
+  fill: #fff;
+  paint-order: stroke fill;
+  stroke: color-mix(in srgb, var(--g-dark) 80%, #000);
+  stroke-width: 2.4px;
+  letter-spacing: -0.02em;
+}
+.grade-gem.tier-silver .gem-text,
+.grade-gem.tier-gold .gem-text,
+.grade-gem.tier-royal .gem-text {
+  fill: #fffdf3;
+}
+.grade-gem.tier-holo .gem-stop-light {
+  stop-color: #ffd1dc;
+}
+.grade-gem.tier-holo .gem-stop-base {
+  stop-color: #8fb8ff;
+}
+.grade-gem.tier-holo .gem-stop-dark {
+  stop-color: #7b4bd6;
+}
+.grade-gem-name {
+  margin-top: -4px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--g-dark);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.grade-gem.tier-holo .grade-gem-name {
+  background: linear-gradient(90deg, #ff6b6b, #4d96ff, #c77dff);
+}
+.grade-gem-rank {
+  display: flex;
+  gap: 2px;
+  margin-top: 3px;
+}
+.grade-gem-rank i {
+  display: block;
+  width: 5px;
+  height: 5px;
+  transform: rotate(45deg);
+  background: var(--g-base);
+  box-shadow: inset 0 0 0 1px var(--g-light);
+}
 /* "너희가 알아서 해" (decisions.md 291번): 결판이 나면 이긴 쪽이 한 번 들썩인다. 저울과 일어서는 사람은 transition으로 움직인다. */
 @keyframes clash-win {
   0% {
@@ -691,8 +882,7 @@ p.animate-stamp {
 @media (prefers-reduced-motion: reduce) {
   .chart-draw,
   .animate-clash-win,
-  .card-shine,
-  .badge-shine::after,
+  .grade-card,
   .animate-pop,
   .highlighter,
   .decisive,

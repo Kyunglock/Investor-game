@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { frameStyle, tierOf } from './GradeCard'
+import { shines, TIER_RANK, tierClass, tierOf } from './GradeCard'
 import { EMPLOYEE_LADDER } from './grades'
 
 describe('캐릭터 카드의 등급 티어 (decisions.md 294번)', () => {
-  it('등급 사다리를 회색 → 구리 → 은 → 금 → 파란빛 → 금빛 → 무지개빛으로 나눈다', () => {
+  it('등급 사다리를 무쇠 → 구리 → 은 → 금 → 사파이어 → 황금빛 → 무지개빛으로 나눈다', () => {
     expect(EMPLOYEE_LADDER.map(tierOf)).toEqual([
       'common',
       'common',
@@ -26,11 +26,12 @@ describe('캐릭터 카드의 등급 티어 (decisions.md 294번)', () => {
     ])
   })
 
-  it('금부터 테두리에 빛이 흐르고, 파란빛부터 그림자가 번진다', () => {
-    expect(frameStyle('silver').backgroundSize).toBeUndefined()
-    expect(frameStyle('gold').backgroundSize).toBe('auto, 300% 300%')
-    expect(frameStyle('gold').boxShadow).toBeUndefined()
-    expect(frameStyle('blue').boxShadow).toContain('rgba(45, 93, 168')
-    expect(frameStyle('holo').background).toContain('#c77dff')
+  it('금부터 빛이 흐르고, 보석 수는 티어 순서대로 하나씩 는다', () => {
+    expect(shines('silver')).toBe(false)
+    expect(shines('gold')).toBe(true)
+    expect(tierClass('silver')).toBe('tier-silver')
+    expect(tierClass('holo')).toBe('tier-holo tier-shine')
+    expect(TIER_RANK.common).toBe(1)
+    expect(TIER_RANK.holo).toBe(7)
   })
 })
