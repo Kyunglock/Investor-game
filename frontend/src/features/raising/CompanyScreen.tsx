@@ -19,6 +19,7 @@ import { autoPlace, deskEffect, rankDesks, seatOne } from './placement'
 import { QuarterSheet } from './QuarterSheet'
 import { ResignAlert } from './ResignAlert'
 import { useRaisingStore } from './store'
+import { TutorialBanner, useTutorialSpot } from './Tutorial'
 import { Ledger, PHASES, YearEndSheet } from './YearEnd'
 
 type Employee = Company['employees'][number]
@@ -59,6 +60,7 @@ export function CompanyScreen({ company }: { company: Company }) {
   const [focus, setFocus] = useState<SeatFocus | null>(null)
   const ended = company.status === 'ENDED'
   const meeting = company.meeting
+  const settleSpot = useTutorialSpot(company, 'settle')
 
   // 거시경제 회의를 마친 뒤: 물어 온 종목이 있으면 종목 회의를 열고(한마디를 굳힌다, 249번) 창을 띄운다. 없으면 바로 결산한다.
   const stockOrSettle = async () => {
@@ -95,6 +97,8 @@ export function CompanyScreen({ company }: { company: Company }) {
             {company.opening}
           </p>
         )}
+        {/* 튜토리얼 띠 (302번): 켜져 있으면 지금 걸음과 할 일. */}
+        <TutorialBanner company={company} />
         {/* 회사 등급 글자 대신 건물로 보인다 (238번). */}
         <div className="mt-2 flex items-baseline justify-between gap-2">
           <p
@@ -249,7 +253,7 @@ export function CompanyScreen({ company }: { company: Company }) {
                     setMacroOpen(true)
                   }
                 }}
-                className="min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50"
+                className={`min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50 ${settleSpot}`}
               >
                 {company.year}년 차 {company.quarter}분기 넘기기
               </button>
@@ -275,6 +279,7 @@ function NextStep({ company }: { company: Company }) {
   const { upgrade } = useRaisingStore.getState()
   const step = nextStep(company.grade)
   const plan = company.upgrade
+  const spot = useTutorialSpot(company, 'upgrade')
   if (!step || !plan || company.status === 'ENDED') {
     return null
   }
@@ -284,7 +289,7 @@ function NextStep({ company }: { company: Company }) {
     <div
       className={`mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded border px-2 py-1.5 ${
         plan.affordable ? 'border-gold bg-gold/10' : 'border-line-soft'
-      }`}
+      } ${spot}`}
       data-testid="next-step"
       data-affordable={plan.affordable}
     >
@@ -900,6 +905,8 @@ function CompanyTabs({ company }: { company: Company }) {
       ? 'market'
       : 'meeting'
   const tab = shown.some((t) => t.id === stored) && stored ? stored : fallback
+  const marketSpot = useTutorialSpot(company, 'market')
+  const staffSpot = useTutorialSpot(company, 'staff')
   // 처음 정한 탭을 붙잡아 둔다: 공채에서 사람을 뽑아 직원이 생겨도 공채 탭에 그대로 있게.
   useEffect(() => {
     if (stored !== tab) {
@@ -922,7 +929,7 @@ function CompanyTabs({ company }: { company: Company }) {
             onClick={() => useRaisingStore.setState({ tab: t.id })}
             className={`min-h-11 shrink-0 rounded-t px-3 text-[14px] ${
               tab === t.id ? 'border-b-2 border-wine font-bold text-wine' : 'text-muted'
-            }`}
+            } ${t.id === 'market' ? marketSpot : t.id === 'staff' ? staffSpot : ''}`}
           >
             {t.label}
             {t.badge && (

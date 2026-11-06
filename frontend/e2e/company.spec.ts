@@ -7,7 +7,7 @@ test.setTimeout(90_000)
 
 async function openCompany(page: Page) {
   await page.goto('/')
-  await page.getByRole('button', { name: '회사 차리기' }).click()
+  await page.getByRole('button', { name: '바로 시작' }).click()
   await expect(page.getByTestId('company')).toBeVisible()
 }
 
@@ -744,11 +744,34 @@ test('개인정보처리방침이 있고, 게시자 ID가 없으면 광고 자�
   page,
 }) => {
   await page.goto('/')
-  await expect(page.getByRole('button', { name: '회사 차리기' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '바로 시작' })).toBeVisible()
   await expect(page.getByTestId('ad-slot')).toHaveCount(0)
   await page.getByRole('link', { name: '개인정보처리방침' }).click()
   await expect(page.getByTestId('privacy')).toContainText('광고와 쿠키')
   await expect(page.getByTestId('privacy')).toContainText('익명 세션 쿠키')
   await page.getByRole('link', { name: /게임으로 돌아가기/ }).click()
-  await expect(page.getByRole('button', { name: '회사 차리기' })).toBeVisible()
+  await expect(page.getByRole('button', { name: '바로 시작' })).toBeVisible()
+})
+
+test('튜토리얼과 함께 시작하면 걸음이 회사 상태를 따라가고, 건너뛰면 다시 보이지 않는다 (302번)', async ({
+  page,
+}) => {
+  await page.goto('/')
+  // 처음 온 사람에게는 튜토리얼 쪽이 먼저다.
+  await expect(page.getByRole('button', { name: '튜토리얼과 함께 시작' })).toBeVisible()
+  await page.getByRole('button', { name: '튜토리얼과 함께 시작' }).click()
+  await expect(page.getByTestId('company')).toBeVisible()
+  const tutorial = page.getByTestId('tutorial')
+  await expect(tutorial).toContainText('튜토리얼 1/5 · 직원 뽑기')
+  await expect(page.getByRole('tab', { name: /공채/ })).toHaveAttribute('aria-selected', 'true')
+  await hireCheapest(page)
+  await expect(tutorial).toContainText('2/5 · 자리에 앉히기')
+  await expect(page.getByRole('tab', { name: /배치/ })).toHaveAttribute('aria-selected', 'true')
+  await page.getByRole('button', { name: '자동 배치' }).click()
+  await expect(tutorial).toContainText('3/5 · 분기 넘기기')
+  await tutorial.getByRole('button', { name: '건너뛰기' }).click()
+  await expect(tutorial).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByTestId('company')).toBeVisible()
+  await expect(tutorial).toHaveCount(0)
 })

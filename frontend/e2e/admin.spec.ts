@@ -11,7 +11,7 @@ test('토큰이 틀리면 기록을 보여 주지 않는다', async ({ page }) =
 
 test('회사를 차리면 플레이 기록에 멈춘 해와 함께 보인다', async ({ page }) => {
   await page.goto('/')
-  await page.getByRole('button', { name: '회사 차리기' }).click()
+  await page.getByRole('button', { name: '바로 시작' }).click()
   await expect(page.getByTestId('company')).toBeVisible()
 
   await page.goto('/admin')
