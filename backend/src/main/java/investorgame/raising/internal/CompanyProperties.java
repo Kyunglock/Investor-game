@@ -7,8 +7,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 아주 작은 회사의 수치 (증권사 육성 설계 4·6절, 2단계). (제안)으로 적힌 값을 구현하며 정한 초기값이다.
  *
- * @param baseCapital 사장의 사재: 회사를 차릴 때의 시작 자본 (decisions.md 228·246번)
- * @param turns 한 시대의 길이(해). 이만큼 지나면 다른 시대가 온다 (decisions.md 249번). 회사는 끝나지 않는다(236번)
+ * @param baseCapital 사장의 사재: 회사를 차릴 때의 시작 자본 (decisions.md 228·247번)
+ * @param turns 한 시대의 길이(해). 이만큼 지나면 다른 시대가 온다 (decisions.md 250번). 회사는 끝나지 않는다(236번)
  * @param gradeCapital 회사 등급의 자본 띠(원). F부터 차례로, 자본만 본다 (4.5절)
  * @param seats 등급별 자리 수. F부터 차례로 (4.5절)
  * @param scale 규모의 벽: 회사 등급이 오를수록 맞혀서 버는 몫은 줄고 틀리거나 폭락장에 잃는 몫은 커진다 (decisions.md 244번)
@@ -27,9 +27,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param hr 인사팀이 공채 시장을 돕는다 (6.3절)
  * @param market 공채 시장: 해마다 지원자가 오고 계약금을 내고 뽑는다 (decisions.md 228번)
  * @param invest 투자 회의: 해마다 한 번 단서 기사를 놓고 직원들과 고민한다 (decisions.md 229번)
- * @param rivals 라이벌 증권사가 해마다 자라는 폭 (decisions.md 260번)
- * @param people 이직 제안과 근속 (decisions.md 261번)
- * @param sale 매각과 재창업 (9절). 매각을 뺀 뒤(236번)로는 API가 부르지 않는다. 다시 붙일 때를 위해 남겼다 (263번)
+ * @param rivals 라이벌 증권사가 해마다 자라는 폭 (decisions.md 261번)
+ * @param people 이직 제안과 근속 (decisions.md 262번)
+ * @param sale 매각과 재창업 (9절). 매각을 뺀 뒤(236번)로는 API가 부르지 않는다. 다시 붙일 때를 위해 남겼다 (264번)
  */
 @ConfigurationProperties("raising.company")
 public record CompanyProperties(
@@ -98,7 +98,7 @@ public record CompanyProperties(
    * @param refreshCost 지원자를 새로 받는 값(원)
    */
   /**
-   * 공채 시장 (decisions.md 228·257번).
+   * 공채 시장 (decisions.md 228·258번).
    *
    * @param fees 종합 등급(F~SSS)별 정해진 계약금
    * @param feeBp 종합 등급별 자본 비율 계약금(만분율). 정해진 계약금과 이것 가운데 큰 쪽을 낸다
@@ -107,7 +107,7 @@ public record CompanyProperties(
    * @param refreshBp 새로 받기의 자본 비율 값(만분율). 둘 가운데 큰 쪽에 (올해 새로 받은 횟수 + 1)을 곱한다
    */
   /**
-   * 라이벌 증권사 (decisions.md 260번).
+   * 라이벌 증권사 (decisions.md 261번).
    *
    * @param phasePercent 그해 시장 갈래별 한 해 자본 비율(%)
    * @param spread 회사마다 해마다 더하고 빼는 폭(%p)
@@ -115,7 +115,7 @@ public record CompanyProperties(
   public record Rivals(Map<String, Integer> phasePercent, int spread) {}
 
   /**
-   * 이직 제안과 근속 (decisions.md 261번).
+   * 이직 제안과 근속 (decisions.md 262번).
    *
    * @param poachFromYear 이 해부터 이직 제안이 온다
    * @param poachPercent 해마다 이직 제안이 올 확률

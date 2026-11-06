@@ -255,7 +255,7 @@ export function seatTiles(company: Company): { tiles: SeatTile[]; resting: Emplo
 }
 
 /**
- * 직함 (decisions.md 255번): 이름에서 떼어 종합 등급으로 붙인다. 차림새(8.2절)처럼 등급이 오르면 직함도 오른다. 전에는 이름에 직함이 붙어 있어("이수습") SSS
+ * 직함 (decisions.md 256번): 이름에서 떼어 종합 등급으로 붙인다. 차림새(8.2절)처럼 등급이 오르면 직함도 오른다. 전에는 이름에 직함이 붙어 있어("이수습") SSS
  * 에이스도 수습이었다.
  */
 const TITLES: [Grade, string][] = [

@@ -143,7 +143,7 @@ describe('라이벌 박치기 장면의 건물 (decisions.md 243번)', () => {
   })
 })
 
-describe('직함 (decisions.md 255번)', () => {
+describe('직함 (decisions.md 256번)', () => {
   it('종합 등급이 오르면 직함도 오른다', () => {
     expect(titleOf('F')).toBe('사원')
     expect(titleOf('D')).toBe('사원')

@@ -77,7 +77,7 @@ class CompanyController {
     return company;
   }
 
-  /** 값을 내고 올해 지원자를 새로 받는다. 요청에 해와 지금까지 새로 받은 횟수를 싣는다: 두 번 와도 한 번만 낸다 (decisions.md 253번). */
+  /** 값을 내고 올해 지원자를 새로 받는다. 요청에 해와 지금까지 새로 받은 횟수를 싣는다: 두 번 와도 한 번만 낸다 (decisions.md 254번). */
   @PostMapping("/applicants/refresh")
   CompanyView refreshApplicants(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
@@ -89,7 +89,7 @@ class CompanyController {
   record RefreshRequest(
       @NotNull @Positive Integer year, @NotNull @PositiveOrZero Integer refreshes) {}
 
-  /** 올해 이직 제안에 답한다: keep이 참이면 붙잡고, 거짓이면 보낸다 (decisions.md 261번). */
+  /** 올해 이직 제안에 답한다: keep이 참이면 붙잡고, 거짓이면 보낸다 (decisions.md 262번). */
   @PostMapping("/poach")
   CompanyView answerPoach(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
@@ -99,7 +99,7 @@ class CompanyController {
 
   record PoachRequest(@NotNull Boolean keep) {}
 
-  /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 248번). */
+  /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 249번). */
   @PostMapping("/invest/open")
   CompanyView convene(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
     return companies.convene(cookies.requireSession(token));
@@ -124,7 +124,7 @@ class CompanyController {
     return company;
   }
 
-  /** big이 참이면 크게 한다: 판돈 두 배, 고집 1.5배 (decisions.md 259번). 없으면 거짓. */
+  /** big이 참이면 크게 한다: 판돈 두 배, 고집 1.5배 (decisions.md 260번). 없으면 거짓. */
   record InvestRequest(@NotBlank String choice, Boolean big) {}
 
   record SettleRequest(@NotNull @Positive Integer year) {}
@@ -135,7 +135,7 @@ class CompanyController {
       @Valid @RequestBody PlacementRequest request) {
     Map<Integer, String> placements = new HashMap<>();
     for (Seat seat : request.seats()) {
-      // 같은 직원이 두 번 오면 어느 쪽인지 모르니 400 (253번). 전에는 뒤의 것이 조용히 덮었다.
+      // 같은 직원이 두 번 오면 어느 쪽인지 모르니 400 (254번). 전에는 뒤의 것이 조용히 덮었다.
       if (placements.containsKey(seat.employeeId())) {
         throw new InvalidRequestException("같은 직원이 두 번 왔다: " + seat.employeeId());
       }

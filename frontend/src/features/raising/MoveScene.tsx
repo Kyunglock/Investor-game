@@ -20,7 +20,7 @@ export function MoveScene({
   before: Grade
   after: Grade
   year: number
-  /** 그해 앞지른 라이벌 (decisions.md 260번). 등급이 그대로여도 앞질렀으면 박치기 장면을 보인다. */
+  /** 그해 앞지른 라이벌 (decisions.md 261번). 등급이 그대로여도 앞질렀으면 박치기 장면을 보인다. */
   overtook?: string[]
   onDone: () => void
 }) {
@@ -33,7 +33,7 @@ export function MoveScene({
   const from = officeName(before)
   const to = officeName(after)
   // 회사 등급 대신 건물로 말한다 (238번): 건물이 바뀌면 이사, 같은 건물이면 사무실을 넓히거나 줄인다.
-  // 실제로 앞지른 라이벌이 있으면 그 회사를 들이받는다 (260번).
+  // 실제로 앞지른 라이벌이 있으면 그 회사를 들이받는다 (261번).
   const rival = overtook[0] ?? rivalFor(year)
   // 오르면 라이벌 건물을 박치기로 무너뜨리고 그 자리에서 커진다 (243번).
   const line =

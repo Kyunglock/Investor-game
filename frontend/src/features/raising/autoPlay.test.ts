@@ -51,7 +51,7 @@ describe('자동 진행 (decisions.md 245번)', () => {
     expect(nextAutoStep(company({ status: 'ENDED' }), false).kind).toBe('stop')
     expect(nextAutoStep(company({ broke: '금고가 비었다.' }), false).kind).toBe('stop')
     expect(nextAutoStep(company(), true).kind).toBe('closeYearEnd')
-    // 이직 제안 (261번): 붙잡는 값이 자본의 25% 이하면 붙잡는다.
+    // 이직 제안 (262번): 붙잡는 값이 자본의 25% 이하면 붙잡는다.
     const poached = (keepCost: number) =>
       company({ meeting: { wanted: '', poach: { keepCost, transferFee: 1 } } } as never)
     expect(nextAutoStep(poached(10_000_000), false)).toEqual({ kind: 'poach', keep: true })
@@ -67,7 +67,7 @@ describe('자동 진행 (decisions.md 245번)', () => {
       invest: { ready: true, convened: true, remarks: [remark('DOWN')] },
     } as never)
     expect(nextAutoStep(seated, false)).toEqual({ kind: 'invest', choice: 'SELL', big: false })
-    // 둘 이상이 모두 같은 쪽이면 크게 한다 (259번).
+    // 둘 이상이 모두 같은 쪽이면 크게 한다 (260번).
     const agreed = {
       ...seated,
       invest: { ready: true, convened: true, remarks: [remark('UP'), remark('UP')] },
@@ -77,7 +77,7 @@ describe('자동 진행 (decisions.md 245번)', () => {
       choice: 'BUY',
       big: true,
     })
-    // 한마디는 회의를 열어야 나온다 (248번): 열지 않았으면 먼저 연다.
+    // 한마디는 회의를 열어야 나온다 (249번): 열지 않았으면 먼저 연다.
     const closed = { ...seated, invest: { ...seated.invest, convened: false, remarks: [] } }
     expect(nextAutoStep(closed as never, false).kind).toBe('convene')
     expect(nextAutoStep({ ...seated, invest: null }, false).kind).toBe('settle')

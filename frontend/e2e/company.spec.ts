@@ -44,7 +44,7 @@ async function settleYear(page: Page, year: number, choice: string, watch = fals
   await page.getByRole('button', { name: `${year}년 차 결산 보기` }).click()
   const meeting = page.getByRole('dialog', { name: '투자 회의' })
   await expect(meeting).toBeVisible()
-  // "산다"는 "크게 산다"(259번)와 겹치므로 이름을 그대로 맞춘다.
+  // "산다"는 "크게 산다"(260번)와 겹치므로 이름을 그대로 맞춘다.
   await meeting.getByRole('button', { name: choice, exact: true }).click()
   await expect(meeting.getByTestId('invest-outcome')).toBeVisible()
   await expect(meeting.getByTestId('invest-choice')).toHaveText(choice)
@@ -88,7 +88,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await expect(page.getByTestId('applicant')).toHaveCount(3)
   await expect(page.getByTestId('building-ladder').getByRole('listitem')).toHaveCount(7)
   await expect(page.getByTestId('next-step')).toContainText('사무실 넓히기')
-  // 업계 순위 (260번): 라이벌 증권사 여섯 가운데 꼴찌에서 시작하고 바로 위가 목표다.
+  // 업계 순위 (261번): 라이벌 증권사 여섯 가운데 꼴찌에서 시작하고 바로 위가 목표다.
   await expect(page.getByTestId('industry')).toContainText('업계 7위')
   await expect(page.getByTestId('industry')).toContainText('바로 위 한탕증권')
   // 첫 지원자는 연초 회의가 말한 "올해 필요한 인재"다.
@@ -142,7 +142,7 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await tab(page, /배치/)
   await expect(page.getByTestId('attire').first()).toContainText(/후드티|셔츠|정장/)
   const staff = page.getByTestId('employee')
-  // 사람마다 맞는 자리 셋만 먼저 보이고 나머지는 펼친다 (258번).
+  // 사람마다 맞는 자리 셋만 먼저 보이고 나머지는 펼친다 (259번).
   await expect(staff.nth(0).getByRole('button', { name: /데스크|팀/ })).toHaveCount(3)
   await staff
     .nth(0)
@@ -176,7 +176,7 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await page.getByRole('button', { name: '자동 배치' }).click()
   await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/2')
   await expect(page.getByTestId('office-tag').filter({ hasText: /데스크/ })).toHaveCount(2)
-  // 자리별로 보기 (258번): 자리마다 예상 효과와 앉힐 만한 사람이 보인다.
+  // 자리별로 보기 (259번): 자리마다 예상 효과와 앉힐 만한 사람이 보인다.
   await page.getByRole('button', { name: '자리별로 보기' }).click()
   await expect(page.getByTestId('desk-row').first()).toContainText('맞히면 +')
   await page.getByRole('button', { name: '사람별로 보기' }).click()
@@ -207,10 +207,11 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await page.getByRole('button', { name: '1년 차 결산 보기' }).click()
   const meeting = page.getByRole('dialog', { name: '투자 회의' })
   await expect(meeting.getByTestId('remarks').getByRole('listitem')).toHaveCount(2)
-  // 같은 의견끼리 모인다 (242번): 칸마다 몇 명인지 적혀 있고, 칸의 사람을 다 더하면 두 명이다.
+  // 같은 의견끼리 뭉친다 (242·246번): 칸마다 몇 명인지 적혀 있고, 칸의 사람을 다 더하면 두 명이다. 한마디는 칸마다 하나.
   const opinions = meeting.getByTestId('opinion')
   const heads = await opinions.getByRole('heading').allInnerTexts()
   expect(heads.map((h) => Number(/(\d+)명/.exec(h)?.[1] ?? 0)).reduce((a, b) => a + b, 0)).toBe(2)
+  await expect(meeting.getByTestId('opinion-voice')).toHaveCount(heads.length)
   await expect(meeting.getByTestId('stubborn')).toHaveCount(2)
   await meeting.getByRole('button', { name: '배치 다시 보기' }).click()
   await expect(meeting).toBeHidden()
@@ -226,12 +227,12 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
       // 장부에 회의 한 건이 직원들의 1년 운용과 따로 있다 (240번).
       await expect(page.getByTestId('ledger-invest')).toContainText('투자 회의')
       await expect(page.getByTestId('ledger-staff')).toBeVisible()
-      // 그해 계약금·새로 받기 값은 인사 비용 줄로 따로 나온다 (250·261번).
+      // 그해 계약금·새로 받기 값은 인사 비용 줄로 따로 나온다 (251·262번).
       await expect(page.getByTestId('ledger-hiring')).toContainText('인사 비용')
       await expect(page.getByTestId('office-pnl')).toHaveCount(2)
     }
   }
-  // 연표 탭 (262번): 차린 해부터 큰 일이 쌓이고 업적과 명예의 전당이 보인다.
+  // 연표 탭 (263번): 차린 해부터 큰 일이 쌓이고 업적과 명예의 전당이 보인다.
   await tab(page, /연표/)
   await expect(page.getByTestId('timeline')).toContainText('1호 회사를 차렸다')
   await expect(page.getByTestId('achievement')).toHaveCount(7)

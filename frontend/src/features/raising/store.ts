@@ -19,17 +19,17 @@ interface RaisingState {
   load: () => Promise<void>
   /** 사장의 사재로 첫 회사를 차린다 (decisions.md 228번). */
   open: () => Promise<void>
-  /** 망한 회사를 닫고 사장의 사재로 다음 회사를 차린다 (decisions.md 246번). 세션은 그대로다. */
+  /** 망한 회사를 닫고 사장의 사재로 다음 회사를 차린다 (decisions.md 247번). 세션은 그대로다. */
   restart: () => Promise<void>
   /** 계약금을 내고 공채 시장의 지원자를 뽑는다. 자리가 꽉 찼으면 replace의 직원을 내보낸다. */
   hire: (applicantId: number, replace?: number) => Promise<void>
   /** 값을 내고 올해 지원자를 새로 받는다. */
   refreshApplicants: () => Promise<void>
-  /** 올해 이직 제안에 답한다: 붙잡거나 보낸다 (decisions.md 261번). */
+  /** 올해 이직 제안에 답한다: 붙잡거나 보낸다 (decisions.md 262번). */
   answerPoach: (keep: boolean) => Promise<void>
-  /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 248번). 됐으면 true. */
+  /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 249번). 됐으면 true. */
   convene: () => Promise<boolean>
-  /** 올해 투자 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). big이면 크게 한다 (259번). */
+  /** 올해 투자 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). big이면 크게 한다 (260번). */
   decideInvest: (choice: string, big?: boolean) => Promise<void>
   place: (seats: { employeeId: number; desk: string | null }[]) => Promise<void>
   settle: () => Promise<void>
@@ -110,7 +110,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       if (!company || get().busy) {
         return
       }
-      // 해와 지금까지 새로 받은 횟수를 함께 보낸다: 두 번 눌리거나 끊긴 요청을 다시 보내도 한 번만 낸다 (253번).
+      // 해와 지금까지 새로 받은 횟수를 함께 보낸다: 두 번 눌리거나 끊긴 요청을 다시 보내도 한 번만 낸다 (254번).
       await change(
         api.POST('/api/company/applicants/refresh', {
           body: { year: company.year, refreshes: company.refreshes },

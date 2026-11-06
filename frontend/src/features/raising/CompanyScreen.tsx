@@ -117,7 +117,7 @@ export function CompanyScreen({ company }: { company: Company }) {
         )}
 
         {!ended && company.broke && (
-          // 망한 회사 (246번): 결산 대신 사재로 다음 회사를 차린다.
+          // 망한 회사 (247번): 결산 대신 사재로 다음 회사를 차린다.
           <section
             className="sticky bottom-0 z-10 -mx-1 mt-4 grid gap-2 border-t-2 border-wine bg-card/95 px-1 pt-3 pb-3 backdrop-blur"
             data-testid="broke"
@@ -167,7 +167,7 @@ export function CompanyScreen({ company }: { company: Company }) {
               <button
                 type="button"
                 disabled={busy || autoPlay}
-                // 돈을 굴리는 직원이 있으면 먼저 투자 회의를 열고(한마디를 굳힌다, 248번) 창을 띄운다. 고르면 그대로 결산한다.
+                // 돈을 굴리는 직원이 있으면 먼저 투자 회의를 열고(한마디를 굳힌다, 249번) 창을 띄운다. 고르면 그대로 결산한다.
                 onClick={async () => {
                   if (!company.invest?.ready) {
                     void settle()
@@ -208,7 +208,7 @@ function NextStep({ company }: { company: Company }) {
   )
 }
 
-/** 업계 순위 한 줄 (decisions.md 260번): 바로 위 라이벌이 목표가 된다. */
+/** 업계 순위 한 줄 (decisions.md 261번): 바로 위 라이벌이 목표가 된다. */
 function IndustryLine({ company }: { company: Company }) {
   const i = company.industry
   if (!i) {
@@ -239,7 +239,7 @@ function MeetingTab({
     <section data-testid="meeting">
       <h3 className="font-pen text-[22px]">연초 회의</h3>
       {poach && (
-        // 이직 제안 (261번): 답하지 않고 결산하면 이적료를 남기고 떠난다.
+        // 이직 제안 (262번): 답하지 않고 결산하면 이적료를 남기고 떠난다.
         <div className="mt-1 rounded border border-wine p-2" data-testid="poach">
           <p className="text-[14px] font-semibold text-wine">{poach.line}</p>
           <p className="text-[12px] text-muted">답하지 않고 결산하면 이적료를 남기고 떠납니다.</p>
@@ -285,7 +285,7 @@ function MeetingTab({
         </p>
       )}
       {meeting.eraEnding && (
-        // 시대가 바뀌기 한 해 전 (249번): 다음 시대에 맞을 사람을 미리 생각하게 한다.
+        // 시대가 바뀌기 한 해 전 (250번): 다음 시대에 맞을 사람을 미리 생각하게 한다.
         <p className="mt-1 text-[14px] font-semibold text-teal" data-testid="era-ending">
           {meeting.eraEnding}
         </p>
@@ -297,7 +297,7 @@ function MeetingTab({
 
 /**
  * 배치 탭: 자리 버튼을 누르면 바로 앉는다. 버튼에는 자리가 원하는 능력치의 등급과 맞는 정도가 보인다 (230번). 사람별로 보면 직원마다 맞는 자리 셋만 먼저
- * 보이고 나머지는 펼친다. 자리별로 보면 자리마다 앉은 사람과 앉힐 만한 사람이 맞는 순서로 늘어선다 (258번, #322: 직원마다 버튼 열둘이 벽이었다).
+ * 보이고 나머지는 펼친다. 자리별로 보면 자리마다 앉은 사람과 앉힐 만한 사람이 맞는 순서로 늘어선다 (259번, #322: 직원마다 버튼 열둘이 벽이었다).
  */
 function StaffTab({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
@@ -386,7 +386,7 @@ function StaffTab({ company }: { company: Company }) {
 }
 
 /**
- * 자리별로 보기 (258번): 자리마다 예상 효과와, 앉은 사람(누르면 쉰다)·앉힐 만한 사람(그 자리가 원하는 능력치가 높은 순, 누르면 앉는다)을 보인다. "이 자리에
+ * 자리별로 보기 (259번): 자리마다 예상 효과와, 앉은 사람(누르면 쉰다)·앉힐 만한 사람(그 자리가 원하는 능력치가 높은 순, 누르면 앉는다)을 보인다. "이 자리에
  * 누가 가장 맞나"를 카드마다 찾지 않고 한눈에 본다.
  */
 function DeskBoard({ company }: { company: Company }) {
@@ -495,7 +495,7 @@ function DeskButtons({
   company: Company
   employee: Employee
   onSeated?: () => void
-  /** 있으면 맞는 자리부터 이만큼만 먼저 보이고(지금 자리는 늘 보인다) 나머지는 펼친다 (258번). */
+  /** 있으면 맞는 자리부터 이만큼만 먼저 보이고(지금 자리는 늘 보인다) 나머지는 펼친다 (259번). */
   limit?: number
 }) {
   const busy = useRaisingStore((s) => s.busy)
@@ -783,7 +783,7 @@ function eventText(e: Company['history']['timeline'][number]): string {
 }
 
 /**
- * 연표 탭 (decisions.md 262번, #326): 회사의 큰 일(최근 것부터), 업적, 명예의 전당. 매각이 빠져 끝없는 회사에 중간 목표와 기록을 준다.
+ * 연표 탭 (decisions.md 263번, #326): 회사의 큰 일(최근 것부터), 업적, 명예의 전당. 매각이 빠져 끝없는 회사에 중간 목표와 기록을 준다.
  */
 function HistoryTab({ company }: { company: Company }) {
   const h = company.history

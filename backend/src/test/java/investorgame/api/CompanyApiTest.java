@@ -124,7 +124,7 @@ class CompanyApiTest {
     assertThat(refreshed.read("$.refreshes", Integer.class)).isEqualTo(1);
     assertThat(refreshed.read("$.capital", Long.class))
         .isEqualTo(one.read("$.capital", Long.class) - one.read("$.refreshCost", Long.class));
-    // 같은 새로 받기가 두 번 와도 한 번만 낸다 (253번). 아직 오지 않은 것은 400.
+    // 같은 새로 받기가 두 번 와도 한 번만 낸다 (254번). 아직 오지 않은 것은 400.
     DocumentContext twice = json(refresh(1, 0).andExpect(status().isOk()));
     assertThat(twice.read("$.capital", Long.class))
         .isEqualTo(refreshed.read("$.capital", Long.class));
@@ -146,7 +146,7 @@ class CompanyApiTest {
     DocumentContext meeting = json(mvc.perform(get("/api/company").cookie(session)));
     assertThat(meeting.read("$.invest.ready", Boolean.class)).isTrue();
     assertThat(meeting.read("$.invest.sentences.length()", Integer.class)).isEqualTo(4);
-    // 한마디는 회의를 연 때 굳힌다 (248번): 열기 전에는 없고, 두 번 열어도 같다.
+    // 한마디는 회의를 연 때 굳힌다 (249번): 열기 전에는 없고, 두 번 열어도 같다.
     assertThat(meeting.read("$.invest.convened", Boolean.class)).isFalse();
     assertThat(meeting.read("$.invest.remarks.length()", Integer.class)).isZero();
     DocumentContext convened =
@@ -175,7 +175,7 @@ class CompanyApiTest {
       long meetingTotal = decided.read("$.invest.outcome.total", Long.class);
       DocumentContext settled = json(settle(year).andExpect(status().isOk()));
       assertThat(settled.read("$.lastSettlement.year", Integer.class)).isEqualTo(year);
-      // 연말 결산서(240·250번): 회의 몫과 채용비가 따로 실리고, 연초 자본 + 회의 + 직원들 몫 + 수수료 − 채용비 = 연말 자본.
+      // 연말 결산서(240·251번): 회의 몫과 채용비가 따로 실리고, 연초 자본 + 회의 + 직원들 몫 + 수수료 − 채용비 = 연말 자본.
       assertThat(settled.read("$.lastSettlement.invest.total", Long.class)).isEqualTo(meetingTotal);
       assertThat(settled.read("$.lastSettlement.invest.title", String.class)).isNotBlank();
       long staff = settled.read("$.lastSettlement.results[0].pnl", Long.class);
@@ -263,7 +263,7 @@ class CompanyApiTest {
         .isEqualTo(4);
   }
 
-  /** 망한 회사는 닫고 사장의 사재로 다음 회사를 차린다 (decisions.md 246번). 망하지 않았으면 400이다. */
+  /** 망한 회사는 닫고 사장의 사재로 다음 회사를 차린다 (decisions.md 247번). 망하지 않았으면 400이다. */
   @Test
   void 자본이_바닥난_회사를_닫고_사재로_다음_회사를_차린다() throws Exception {
     String id =
@@ -295,7 +295,7 @@ class CompanyApiTest {
     assertThat(current.read("$.number", Integer.class)).as("닫은 회사는 다시 열리지 않는다").isEqualTo(2);
   }
 
-  /** 배치에 같은 직원이 두 번 오면 400이다 (#317, decisions.md 253번). 전에는 뒤의 것이 조용히 덮었다. */
+  /** 배치에 같은 직원이 두 번 오면 400이다 (#317, decisions.md 254번). 전에는 뒤의 것이 조용히 덮었다. */
   @Test
   void 배치에_같은_직원이_두_번_오면_400이다() throws Exception {
     DocumentContext company =
@@ -309,7 +309,7 @@ class CompanyApiTest {
         .andExpect(status().isBadRequest());
   }
 
-  /** 같은 세션이 동시에 회사를 두 번 차려도 하나만 생기고 500이 나지 않는다 (#317, 253번). */
+  /** 같은 세션이 동시에 회사를 두 번 차려도 하나만 생기고 500이 나지 않는다 (#317, 254번). */
   @Test
   void 동시에_두_번_차려도_회사는_하나고_500이_나지_않는다() throws Exception {
     java.util.concurrent.ExecutorService pool =

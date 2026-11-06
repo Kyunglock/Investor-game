@@ -221,13 +221,13 @@ class InvestEngine {
     return c.invest != null && c.invest.choice == null && !company.traders(c).isEmpty();
   }
 
-  /** 회의를 열어 한마디와 형광펜을 굳혔는가 (248번). */
+  /** 회의를 열어 한마디와 형광펜을 굳혔는가 (249번). */
   boolean convened(CompanyState c) {
     return c.invest != null && c.invest.remarks != null;
   }
 
   /**
-   * 회의를 연다 (decisions.md 248번): 지금 배치로 직원 한마디와 리서치 팀 형광펜을 굳힌다. 그 뒤로 배치를 바꿔도 회의에서 본 말과 직원의 제 판단은
+   * 회의를 연다 (decisions.md 249번): 지금 배치로 직원 한마디와 리서치 팀 형광펜을 굳힌다. 그 뒤로 배치를 바꿔도 회의에서 본 말과 직원의 제 판단은
    * 그대로다. 이미 열었으면 아무것도 하지 않는다. 열 수 없는 회의(정했거나 돈을 굴리는 사람이 없다)면 400.
    */
   void convene(CompanyState c, SeededRandom random) {
@@ -257,7 +257,7 @@ class InvestEngine {
   /** 형광펜: 리서치 팀이 있으면 그 안목으로 결정적 문장에, 빗나가면 반대쪽 곁가지에 긋는다. 리서치 팀이 없거나 방향을 못 읽으면 없다. */
   record Highlight(int index, String by) {}
 
-  /** 회의에서 보이는 형광펜. 회의를 열기 전에는 없다: 배치를 바꿔 가며 미리 들여다볼 수 없다 (248번). */
+  /** 회의에서 보이는 형광펜. 회의를 열기 전에는 없다: 배치를 바꿔 가며 미리 들여다볼 수 없다 (249번). */
   Optional<Highlight> highlight(CompanyState c) {
     if (!convened(c) || c.invest.highlightIndex == null) {
       return Optional.empty();
@@ -295,7 +295,7 @@ class InvestEngine {
    */
   record Remark(Employee employee, String read, String text, Integer stubbornBp) {}
 
-  /** 회의에서 보이는 한마디. 회의를 열기 전에는 비어 있다 (248번). */
+  /** 회의에서 보이는 한마디. 회의를 열기 전에는 비어 있다 (249번). */
   List<CompanyState.Remark> remarks(CompanyState c) {
     return convened(c) ? c.invest.remarks : List.of();
   }
@@ -378,7 +378,7 @@ class InvestEngine {
   }
 
   /**
-   * 크게 정할 수도 있다 (decisions.md 259번): 판돈이 두 배고, 직원이 사장 말을 안 들을 확률(꼬드김·제 판단)이 1.5배다("사장님이 너무 세게
+   * 크게 정할 수도 있다 (decisions.md 260번): 판돈이 두 배고, 직원이 사장 말을 안 들을 확률(꼬드김·제 판단)이 1.5배다("사장님이 너무 세게
    * 가시는데요"). 지켜보기는 크게 할 수 없다. 지켜봤으면 맞는 쪽으로 했을 때 벌었을 돈을 남겨 결과에 보인다.
    */
   void decide(CompanyState c, String choice, boolean big, SeededRandom random) {

@@ -46,7 +46,7 @@ public record RaisingContent(
   /**
    * @param surnames 직원 이름의 성
    * @param names 직원 이름(성 뒤에 붙는다). 성 × 이름 조합을 겹치지 않게 돌려 쓴다. 직함은 이름에 넣지 않는다: 종합 등급으로 화면이 붙인다
-   *     (decisions.md 255번)
+   *     (decisions.md 256번)
    */
   public record Company(
       List<String> surnames,
@@ -94,13 +94,13 @@ public record RaisingContent(
       Map<String, String> reveal) {}
 
   /**
-   * 시대가 바뀐다 (decisions.md 249번). ending: 시대의 마지막 해 연초 회의 한 줄({era}). changed: 시대가 바뀐 해의 결산 소식
+   * 시대가 바뀐다 (decisions.md 250번). ending: 시대의 마지막 해 연초 회의 한 줄({era}). changed: 시대가 바뀐 해의 결산 소식
    * 줄({from}·{to}· {description}).
    */
   public record EraTurn(String ending, String changed) {}
 
   /**
-   * 라이벌 증권사 (decisions.md 260번). companies: 이름과 시작 자본(작은 곳부터). overtook·fell: 결산에서 순위가 바뀐 해의 소식
+   * 라이벌 증권사 (decisions.md 261번). companies: 이름과 시작 자본(작은 곳부터). overtook·fell: 결산에서 순위가 바뀐 해의 소식
    * 줄({name}·{rank}).
    */
   public record Rivals(List<Rival> companies, String overtook, String fell) {}
@@ -108,13 +108,13 @@ public record RaisingContent(
   public record Rival(String name, long capital) {}
 
   /**
-   * 사람 이야기 (decisions.md 261번). poach: 라이벌이 손을 뻗었다({rival}·{name}). kept·left·ignored: 붙잡음·보냄·답 없이
+   * 사람 이야기 (decisions.md 262번). poach: 라이벌이 손을 뻗었다({rival}·{name}). kept·left·ignored: 붙잡음·보냄·답 없이
    * 떠남. settled: 같은 자리 세 해째({name}·{desk}).
    */
   public record People(String poach, String kept, String left, String ignored, String settled) {}
 
   /**
-   * 회사 연표와 업적 (decisions.md 262번). events: 연표 한 줄(open {number} · rise {name}·{grade} · left {name}
+   * 회사 연표와 업적 (decisions.md 263번). events: 연표 한 줄(open {number} · rise {name}·{grade} · left {name}
    * · best {ratio} · worst {percent} · overtake {name}). achievements: 업적 코드·이름·설명.
    */
   public record History(Map<String, String> events, List<Achievement> achievements) {}
@@ -122,14 +122,14 @@ public record RaisingContent(
   public record Achievement(String code, String name, String description) {}
 
   /**
-   * 망한 회사 (decisions.md 246번). notice: 회사 화면에 뜨는 한 줄. emptied: 결산에서 자본이 0이 된 해의 소식 줄. opening: 다시
+   * 망한 회사 (decisions.md 247번). notice: 회사 화면에 뜨는 한 줄. emptied: 결산에서 자본이 0이 된 해의 소식 줄. opening: 다시
    * 차린 회사의 한 줄({number}·{next}·{capital}).
    */
   public record Bankrupt(String notice, String emptied, String opening) {}
 
   /**
    * 공채 시장 지원자 카드의 한 줄. wanted: 올해 필요한 인재({desk}·{stat}). hr: 인사팀이 데려온 지원자({name}). veteran:
-   * 경력직({grade}, decisions.md 257번).
+   * 경력직({grade}, decisions.md 258번).
    */
   public record Market(String wanted, String hr, String veteran) {}
 

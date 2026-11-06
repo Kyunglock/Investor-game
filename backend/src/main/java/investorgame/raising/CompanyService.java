@@ -16,7 +16,7 @@ public interface CompanyService {
 
   /**
    * 사장의 사재로 회사를 차린다. 이미 회사가 있으면 400. 가장 최근 회사가 망했으면(자본 0, 또는 직원 없이 가장 싼 계약금도 못 냄) 그 회사를 닫고 다음 번호로
-   * 새로 차린다 (decisions.md 246번).
+   * 새로 차린다 (decisions.md 247번).
    */
   CompanyView open(UUID sessionId);
 
@@ -28,11 +28,11 @@ public interface CompanyService {
 
   /**
    * 값을 내고 올해 지원자를 새로 받는다. year 해에 이미 refreshes번 새로 받았다는 요청이다: 이미 한 것이면 아무것도 하지 않고 지금 회사를 돌려주고(같은
-   * 요청이 두 번 와도 한 번만 낸다), 아직 오지 않은 것이면 400. 돈이 모자라면 400 (decisions.md 253번).
+   * 요청이 두 번 와도 한 번만 낸다), 아직 오지 않은 것이면 400. 돈이 모자라면 400 (decisions.md 254번).
    */
   CompanyView refreshApplicants(UUID sessionId, int year, int refreshes);
 
-  /** 올해 이직 제안에 답한다: 붙잡거나(값을 낸다) 보낸다(이적료를 받는다). 제안이 없거나 돈이 모자라면 400 (decisions.md 261번). */
+  /** 올해 이직 제안에 답한다: 붙잡거나(값을 낸다) 보낸다(이적료를 받는다). 제안이 없거나 돈이 모자라면 400 (decisions.md 262번). */
   CompanyView answerPoach(UUID sessionId, boolean keep);
 
   /** 직원 ID → 자리 코드(쉬면 null). 자리 수를 넘으면 400. */
@@ -40,7 +40,7 @@ public interface CompanyService {
 
   /**
    * 올해 투자 회의를 연다: 지금 배치로 직원 한마디와 형광펜을 굳힌다. 그 뒤로 배치를 바꿔도 그대로다. 이미 열었으면 지금 회사를 그대로 돌려준다. 열 수 없으면(정했거나
-   * 돈을 굴리는 자리에 아무도 없다) 400 (decisions.md 248번).
+   * 돈을 굴리는 자리에 아무도 없다) 400 (decisions.md 249번).
    */
   CompanyView convene(UUID sessionId);
 

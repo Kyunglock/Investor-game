@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 회사 연표·업적·명예의 전당 (decisions.md 262번, #326). 매각이 빠져 끝없는 회사에 중간 목표와 기록을 준다. 결산마다 큰 일만 연표에 쌓고, 업적을
+ * 회사 연표·업적·명예의 전당 (decisions.md 263번, #326). 매각이 빠져 끝없는 회사에 중간 목표와 기록을 준다. 결산마다 큰 일만 연표에 쌓고, 업적을
  * 열고, 떠난 직원을 남긴다. DB와 시각을 모른다.
  */
 class CompanyHistory {

@@ -1,7 +1,7 @@
 import type { Company } from '../../api/client'
 import { shortWon } from '../game/labels'
 import type { Matchup } from '../game/tug'
-import { STAT_NAMES, shareOf } from './grades'
+import { LADDER, STAT_NAMES, shareOf } from './grades'
 
 type Result = NonNullable<NonNullable<Company['invest']>['outcome']>['results'][number]
 
@@ -103,7 +103,7 @@ export function groupRemarks(remarks: Remark[]): { read: Remark['read']; remarks
 }
 
 /**
- * 회의 뒤 돌아보기 (decisions.md 259번). 지켜봤으면 맞는 쪽으로 했을 때 벌었을 돈, 직원 다수결이 맞았는지, 리서치 팀 형광펜이 결정적 문장에 그었는지.
+ * 회의 뒤 돌아보기 (decisions.md 260번). 지켜봤으면 맞는 쪽으로 했을 때 벌었을 돈, 직원 다수결이 맞았는지, 리서치 팀 형광펜이 결정적 문장에 그었는지.
  */
 export function hindsightOf(invest: NonNullable<Company['invest']>): string[] {
   const outcome = invest.outcome
@@ -133,4 +133,16 @@ export function hindsightOf(invest: NonNullable<Company['invest']>): string[] {
     )
   }
   return lines
+}
+
+/**
+ * 같은 의견 칸의 대표 (decisions.md 246번): 한마디는 칸마다 한 번만, 그 칸에서 안목이 가장 높은 직원이 한다(같으면 자리 순서가 앞인 사람). 나머지는
+ * 이름만 함께 선다.
+ */
+export function spokesperson(remarks: Remark[], employees: Company['employees']): Remark {
+  const insight = (r: Remark) => {
+    const grade = employees.find((e) => e.id === r.employeeId)?.grades.insight
+    return grade ? LADDER.indexOf(grade as (typeof LADDER)[number]) : -1
+  }
+  return remarks.reduce((best, r) => (insight(r) > insight(best) ? r : best))
 }

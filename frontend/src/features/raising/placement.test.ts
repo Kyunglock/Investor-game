@@ -112,7 +112,7 @@ describe('한 사람만 옮기기 (decisions.md 237번)', () => {
   })
 })
 
-describe('배치를 돕는 것 (decisions.md 258번)', () => {
+describe('배치를 돕는 것 (decisions.md 259번)', () => {
   it('한 사람에게 맞는 자리부터 늘어놓는다', () => {
     const c = company(2, [employee(1, 'C', 'S', 'D', 'D')])
     const ranked = rankDesks(c, c.employees[0])

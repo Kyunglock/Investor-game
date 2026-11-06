@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Company } from '../../api/client'
-import { groupRemarks, hindsightOf, investTimeline, matchupOf } from './investShow'
+import { groupRemarks, hindsightOf, investTimeline, matchupOf, spokesperson } from './investShow'
 
 type Result = NonNullable<NonNullable<Company['invest']>['outcome']>['results'][number]
 
@@ -113,7 +113,7 @@ describe('같은 의견끼리 모은 한마디 (decisions.md 242번)', () => {
   })
 })
 
-describe('회의 뒤 돌아보기 (decisions.md 259번)', () => {
+describe('회의 뒤 돌아보기 (decisions.md 260번)', () => {
   it('지켜봤으면 놓친 돈, 다수결과 형광펜이 맞았는지 말한다', () => {
     const invest = {
       remarks: [{ read: 'UP' }, { read: 'UP' }, { read: 'DOWN' }],
@@ -137,5 +137,27 @@ describe('회의 뒤 돌아보기 (decisions.md 259번)', () => {
       '직원 다수결(팔자)은 틀렸다.',
       '형광펜은 곁가지에 그었다. 이번엔 빗나갔다.',
     ])
+  })
+})
+
+describe('같은 의견 칸의 대표 (decisions.md 246번)', () => {
+  type Remark = NonNullable<Company['invest']>['remarks'][number]
+  const remark = (employeeId: number) =>
+    ({
+      employeeId,
+      name: `직원${employeeId}`,
+      desk: 'day',
+      read: 'UP',
+      text: `말${employeeId}`,
+    }) as Remark
+  const staff = [
+    { id: 1, grades: { insight: 'C' } },
+    { id: 2, grades: { insight: 'S' } },
+    { id: 3, grades: { insight: 'S' } },
+  ] as unknown as Company['employees']
+
+  it('칸에서 안목이 가장 높은 사람이 대표로 말하고, 같으면 앞사람이다', () => {
+    expect(spokesperson([remark(1), remark(2), remark(3)], staff).employeeId).toBe(2)
+    expect(spokesperson([remark(1)], staff).employeeId).toBe(1)
   })
 })

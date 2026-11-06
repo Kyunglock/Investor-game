@@ -32,12 +32,12 @@ class CompanyEngine {
 
   static final String CRASH = "crash";
 
-  /** 경력직이 오는 지원자 자리: 첫째는 올해 필요한 인재, 둘째는 사수가 붙는 자리라 셋째 (257번). */
+  /** 경력직이 오는 지원자 자리: 첫째는 올해 필요한 인재, 둘째는 사수가 붙는 자리라 셋째 (258번). */
   private static final int VETERAN_SLOT = 2;
 
   private static final String NORMAL = "normal";
 
-  /** 폭락장인데 아무도 바닥에서 던지지 않은 해의 머리줄 (254번). */
+  /** 폭락장인데 아무도 바닥에서 던지지 않은 해의 머리줄 (255번). */
   private static final String CRASH_HELD = "crashHeld";
 
   /** 큰 손실 때 같은 횟수로 뒤집힌 능력치를 탓하는 순서. 결산 말풍선(224번)과 같다. */
@@ -79,7 +79,7 @@ class CompanyEngine {
     this.history = new CompanyHistory(content);
   }
 
-  /** 회사 연표·업적·명예의 전당 (decisions.md 262번). */
+  /** 회사 연표·업적·명예의 전당 (decisions.md 263번). */
   final CompanyHistory history;
 
   static final String HR_DESK = "hr";
@@ -115,7 +115,7 @@ class CompanyEngine {
   }
 
   /**
-   * 회사가 망했다 (decisions.md 246번): 자본이 0이거나, 직원이 없는데 가장 싼 계약금도 낼 수 없다. 수수료도 판돈도 자본에 비례해서 이대로는 다시 일어설
+   * 회사가 망했다 (decisions.md 247번): 자본이 0이거나, 직원이 없는데 가장 싼 계약금도 낼 수 없다. 수수료도 판돈도 자본에 비례해서 이대로는 다시 일어설
    * 수 없다. 매각이 빠진 뒤(236번)로는 이것이 회사를 닫고 새로 차리는 유일한 길이다.
    */
   boolean broke(CompanyState company) {
@@ -127,7 +127,7 @@ class CompanyEngine {
   }
 
   /**
-   * 망한 회사를 닫고 사장의 사재로 다음 회사를 차린다 (246번). 직원은 따라오지 않는다. 회사 번호와 만난 지원자 수(이름)는 이어 센다. 망하지 않은 회사면 400.
+   * 망한 회사를 닫고 사장의 사재로 다음 회사를 차린다 (247번). 직원은 따라오지 않는다. 회사 번호와 만난 지원자 수(이름)는 이어 센다. 망하지 않은 회사면 400.
    */
   CompanyState restart(CompanyState broke, SeededRandom random, long capital) {
     if (!broke(broke)) {
@@ -155,14 +155,14 @@ class CompanyEngine {
     return next;
   }
 
-  /** 이번 결산이 같은 자리 settle-years 해째 이상인가: 손이 덜 뒤집힌다 (261번). */
+  /** 이번 결산이 같은 자리 settle-years 해째 이상인가: 손이 덜 뒤집힌다 (262번). */
   boolean settled(Employee employee) {
     return employee.desk != null
         && employee.desk.equals(employee.lastDesk)
         && employee.deskYears + 1 >= properties.people().settleYears();
   }
 
-  /** 결산마다 같은 자리 해 수를 센다. 막 손에 익은 해면 소식 줄을 남긴다 (261번). */
+  /** 결산마다 같은 자리 해 수를 센다. 막 손에 익은 해면 소식 줄을 남긴다 (262번). */
   private void countTenure(CompanyState company, Settlement settlement) {
     for (Employee e : company.employees) {
       if (e.desk == null) {
@@ -182,7 +182,7 @@ class CompanyEngine {
   }
 
   /**
-   * 올해의 이직 제안 (decisions.md 261번): poach-from-year 해부터 해마다 poach-percent 확률로, 바로 위 라이벌이 우리의 가장 높은
+   * 올해의 이직 제안 (decisions.md 262번): poach-from-year 해부터 해마다 poach-percent 확률로, 바로 위 라이벌이 우리의 가장 높은
    * 직원(같으면 오래 앉은 사람)에게 손을 뻗는다. 직원이 둘 이상이어야 오고, 우리가 업계 1위면 손을 뻗을 라이벌이 없다. 붙잡는 값과 이적료는 그 직원 계약금의
    * 비율이다.
    */
@@ -211,7 +211,7 @@ class CompanyEngine {
     return poach;
   }
 
-  /** 이직 제안에 답한다 (261번): 붙잡으면 값을 내고 남고, 보내면 이적료를 받고 떠난다. 제안이 없거나 붙잡을 돈이 모자라면 400. */
+  /** 이직 제안에 답한다 (262번): 붙잡으면 값을 내고 남고, 보내면 이적료를 받고 떠난다. 제안이 없거나 붙잡을 돈이 모자라면 400. */
   void answerPoach(CompanyState company, boolean keep) {
     CompanyState.Poach poach = company.poach;
     if (poach == null) {
@@ -246,7 +246,7 @@ class CompanyEngine {
         .orElse("");
   }
 
-  /** 이직 제안의 직원을 보낸다: 이적료를 받는다. 받은 이적료는 그해 인사 비용에서 뺀다 (261번). */
+  /** 이직 제안의 직원을 보낸다: 이적료를 받는다. 받은 이적료는 그해 인사 비용에서 뺀다 (262번). */
   private void letGo(CompanyState company, String template) {
     CompanyState.Poach poach = company.poach;
     String name = poachedName(company);
@@ -262,7 +262,7 @@ class CompanyEngine {
     company.poach = null;
   }
 
-  /** 업계 순위(1부터): 우리보다 자본이 큰 라이벌 수 + 1 (decisions.md 260번). */
+  /** 업계 순위(1부터): 우리보다 자본이 큰 라이벌 수 + 1 (decisions.md 261번). */
   int industryRank(CompanyState company) {
     return (int) company.rivals.stream().filter(r -> r > company.capital).count() + 1;
   }
@@ -284,7 +284,7 @@ class CompanyEngine {
   }
 
   /**
-   * 라이벌 증권사가 그해 시장으로 움직인다 (260번): 시장 갈래의 비율에 회사마다 ±spread를 더한다(회사 시드와 해로만 정한다). 결산 전후로 우리보다 컸다가 작아진
+   * 라이벌 증권사가 그해 시장으로 움직인다 (261번): 시장 갈래의 비율에 회사마다 ±spread를 더한다(회사 시드와 해로만 정한다). 결산 전후로 우리보다 컸다가 작아진
    * 라이벌은 앞지른 것이고, 작았다가 커진 라이벌에게는 밀린 것이다.
    */
   private void moveRivals(CompanyState company, Settlement settlement, SeededRandom random) {
@@ -358,7 +358,7 @@ class CompanyEngine {
     return eras().stream().filter(e -> e.code().equals(code)).findFirst().orElseThrow();
   }
 
-  /** 한 시대의 길이(해). 시대마다 이만큼 지나면 다른 시대가 온다 (decisions.md 249번). */
+  /** 한 시대의 길이(해). 시대마다 이만큼 지나면 다른 시대가 온다 (decisions.md 250번). */
   int eraYears() {
     return properties.turns();
   }
@@ -381,7 +381,7 @@ class CompanyEngine {
   }
 
   /**
-   * 그 해의 시대 (249번). 지금 시대 안이면 지금 시대, 다음 시대의 첫해면 다음 시대를 (회사 시드와 시대 번호로만) 정해 돌려준다. 그래서 다음 해 시장을 미리
+   * 그 해의 시대 (250번). 지금 시대 안이면 지금 시대, 다음 시대의 첫해면 다음 시대를 (회사 시드와 시대 번호로만) 정해 돌려준다. 그래서 다음 해 시장을 미리
    * 봐도(경보·선견) 그해가 오면 같은 시대·같은 시장이다.
    */
   private String eraOf(CompanyState company, int year, SeededRandom random) {
@@ -494,7 +494,7 @@ class CompanyEngine {
   }
 
   /**
-   * 다음 지원자 이름 (decisions.md 255번): 성 × 이름 조합을 겹치지 않게 돌려 쓴다. 만난 순서에 서로소인 보폭을 곱해 섞어서 이웃한 지원자의 성이 다르다.
+   * 다음 지원자 이름 (decisions.md 256번): 성 × 이름 조합을 겹치지 않게 돌려 쓴다. 만난 순서에 서로소인 보폭을 곱해 섞어서 이웃한 지원자의 성이 다르다.
    * 조합을 다 쓰면 처음부터 번호를 붙인다. 지난 회사에서 만난 사람 수를 이어 센다. 전에는 이름 열둘("김대리"·"이수습")에 직함이 붙어 있어 금세 "김대리5"가 되고,
    * SSS 에이스도 "수습"이었다.
    */
@@ -538,7 +538,7 @@ class CompanyEngine {
     int top = LADDER.indexOf(StatGrade.SSS.name());
     int count = market.applicants() + (hr.isPresent() ? properties.hr().extraApplicants() : 0);
     String wantedStat = desk(company.wantedDesk).statCode();
-    // SSS 회사부터 경력직이 하나 온다: SSS면 X, X면 XX, 그 위는 XXX (257번).
+    // SSS 회사부터 경력직이 하나 온다: SSS면 X, X면 XX, 그 위는 XXX (258번).
     int companyAt = LADDER.indexOf(grade(company.capital));
     int sssAt = LADDER.indexOf(StatGrade.SSS.name());
     int veteranRank = companyAt >= sssAt ? Math.min(3, companyAt - sssAt + 1) : 0;
@@ -588,7 +588,7 @@ class CompanyEngine {
       }
       int rank = 0;
       if (i == VETERAN_SLOT && veteranRank > 0) {
-        // 경력직 (257번): 능력치가 모두 SSS 띠이고 실전 경험으로 X 이상까지 올랐다. 큰 회사의 공채에 새 목표를 준다.
+        // 경력직 (258번): 능력치가 모두 SSS 띠이고 실전 경험으로 X 이상까지 올랐다. 큰 회사의 공채에 새 목표를 준다.
         rank = veteranRank;
         for (String code : StatCodes.ALL) {
           stats.put(
@@ -615,7 +615,7 @@ class CompanyEngine {
   }
 
   /**
-   * 계약금 (decisions.md 257번): 종합 등급으로 정한 값과 자본 × 등급별 비율 가운데 큰 쪽. 초반(1억 회사)은 정해진 값 그대로이고, 회사가 커지면 자본에
+   * 계약금 (decisions.md 258번): 종합 등급으로 정한 값과 자본 × 등급별 비율 가운데 큰 쪽. 초반(1억 회사)은 정해진 값 그대로이고, 회사가 커지면 자본에
    * 비례해 무거워진다. 경력직(rank > 0)은 자본 비율이 더 크다. 전에는 정해진 값뿐이라 SSS 회사에 SSS 계약금 1.2억이 자본의 0.01%였다.
    */
   long fee(long capital, Map<String, Integer> stats, int rank) {
@@ -629,7 +629,7 @@ class CompanyEngine {
     return Math.max(fixed, (long) (capital * (bp / (double) BP)));
   }
 
-  /** 지원자를 새로 받는 값: 정해진 값과 자본 × 비율 가운데 큰 쪽에, 올해 새로 받은 횟수 + 1을 곱한다 (257번). */
+  /** 지원자를 새로 받는 값: 정해진 값과 자본 × 비율 가운데 큰 쪽에, 올해 새로 받은 횟수 + 1을 곱한다 (258번). */
   long refreshCost(CompanyState company) {
     CompanyProperties.Market market = properties.market();
     long base =
@@ -686,11 +686,11 @@ class CompanyEngine {
     return employee;
   }
 
-  /** 자리가 줄었을 때 먼저 일어나는 자리: 인사팀 → 리서치 팀 → 리스크 관리 팀 → 돈을 굴리는 자리 (decisions.md 247번). */
+  /** 자리가 줄었을 때 먼저 일어나는 자리: 인사팀 → 리서치 팀 → 리스크 관리 팀 → 돈을 굴리는 자리 (decisions.md 248번). */
   private static final List<String> STAND_UP_ORDER = List.of(HR_DESK, RESEARCH_DESK, RISK_DESK);
 
   /**
-   * 앉은 사람이 자리 수보다 많으면 넘친 사람을 쉬게 한다 (247번). 결산·계약금·새로 받기로 자본이 줄어 회사 등급과 자리 수가 내려갔을 때다. 돈을 굴리는 자리를
+   * 앉은 사람이 자리 수보다 많으면 넘친 사람을 쉬게 한다 (248번). 결산·계약금·새로 받기로 자본이 줄어 회사 등급과 자리 수가 내려갔을 때다. 돈을 굴리는 자리를
    * 지키려고 돕는 자리(인사팀 → 리서치 팀 → 리스크 관리 팀)부터, 그다음 돈을 굴리는 자리에서 나중에 들어온 사람부터 일어난다. 쉬게 된 사람을 들어온 순서로 돌려준다.
    */
   List<Employee> fitSeats(CompanyState company) {
@@ -723,7 +723,7 @@ class CompanyEngine {
     startYear(company, random);
   }
 
-  /** 소식 줄·한 줄의 금액. 1조가 넘으면 조와 억까지만 쓴다 (decisions.md 252번): 56조 3,615억 원, 1억 원, 312만 원. */
+  /** 소식 줄·한 줄의 금액. 1조가 넘으면 조와 억까지만 쓴다 (decisions.md 253번): 56조 3,615억 원, 1억 원, 312만 원. */
   static String won(long amount) {
     long abs = Math.abs(amount);
     String sign = amount < 0 ? "−" : "";
@@ -796,7 +796,7 @@ class CompanyEngine {
         break;
       }
     }
-    // 첫 회사의 첫해는 폭락장이 아니다 (decisions.md 256번): 1억으로 차려 두 사람을 뽑자마자 깎이면 시작부터 지친다.
+    // 첫 회사의 첫해는 폭락장이 아니다 (decisions.md 257번): 1억으로 차려 두 사람을 뽑자마자 깎이면 시작부터 지친다.
     if (company.number == 1 && year == 1 && CRASH.equals(phase)) {
       phase = NORMAL;
     }
@@ -886,7 +886,7 @@ class CompanyEngine {
 
   /**
    * 연초 회의의 "올해 필요한 인재". 폭락 조짐이 있어도 자리가 둘뿐이면 리스크 관리 팀에 한 사람을 빼면 돈을 굴리는 사람이 하나뿐이라, 폭락장에 덜 빠지는 자리를 권한다
-   * (decisions.md 258번).
+   * (decisions.md 259번).
    */
   String wantedLine(CompanyState company) {
     Map<String, String> wanted = content.raising().company().wanted();
@@ -903,7 +903,7 @@ class CompanyEngine {
 
   private static final String RISK_FEW = "riskFew";
 
-  /** 그 자리에서 맞혔을 때 버는 몫(만분율): 자리의 몫 + 시대 보너스. 화면의 예상 효과용 (258번). */
+  /** 그 자리에서 맞혔을 때 버는 몫(만분율): 자리의 몫 + 시대 보너스. 화면의 예상 효과용 (259번). */
   int deskGainBp(CompanyState company, String desk) {
     return returnsOf(desk).gainBp() + era(company).deskBonusBp().getOrDefault(desk, 0);
   }
@@ -959,7 +959,7 @@ class CompanyEngine {
             / PERCENT;
     int flipBp = behavior.flipChanceBp(employee.stats.get(flipStat(company, employee)));
     if (settled(employee)) {
-      // 같은 자리 세 해째부터 손에 익는다 (261번).
+      // 같은 자리 세 해째부터 손에 익는다 (262번).
       flipBp = flipBp * properties.people().settledFlipPercent() / PERCENT;
     }
     boolean led =
@@ -1021,7 +1021,7 @@ class CompanyEngine {
       throw new InvalidRequestException("투자 회의를 먼저 한다");
     }
     RandomGenerator rng = random.forKey("company-settle", company.year);
-    // 이직 제안에 답하지 않았으면 그 직원은 이적료를 남기고 떠난다 (261번). 돈을 굴리기 전에 떠난다.
+    // 이직 제안에 답하지 않았으면 그 직원은 이적료를 남기고 떠난다 (262번). 돈을 굴리기 전에 떠난다.
     if (company.poach != null) {
       letGo(company, content.raising().company().people().ignored());
     }
@@ -1029,7 +1029,7 @@ class CompanyEngine {
     settlement.year = company.year;
     settlement.phase = company.phase;
     settlement.omen = company.omen;
-    // 연초 자본은 연초 회의 때의 자본이다(250번): 그 뒤에 낸 계약금·새로 받기 값은 채용비 줄로, 회의 손익은 회의 줄로 보인다.
+    // 연초 자본은 연초 회의 때의 자본이다(251번): 그 뒤에 낸 계약금·새로 받기 값은 채용비 줄로, 회의 손익은 회의 줄로 보인다.
     // 이 칸을 더하기 전의 해면 지금 자본에서 회의 손익을 뺀다(예전 방식).
     settlement.hiring = company.yearHiring;
     settlement.capitalBefore =
@@ -1041,7 +1041,7 @@ class CompanyEngine {
                     : 0);
     settlement.gradeBefore = grade(company.capital);
 
-    // 결산 전 SSS 위 단계: 연표가 폭락장을 버텨 오른 사람을 가린다 (262번).
+    // 결산 전 SSS 위 단계: 연표가 폭락장을 버텨 오른 사람을 가린다 (263번).
     Map<Integer, Integer> ranksBefore = new HashMap<>();
     company.employees.forEach(e -> ranksBefore.put(e.id, e.rank));
     int research = researchInsight(company);
@@ -1109,7 +1109,7 @@ class CompanyEngine {
       if (stake > 0 && result.pnl * PERCENT <= -stake * rules.dropLossPercent()) {
         drop(employee, result, settlement);
       } else if (crash && stake > 0 && result.pnl >= 0) {
-        // 판돈이 없었으면 버틴 것이 아니다 (251번).
+        // 판돈이 없었으면 버틴 것이 아니다 (252번).
         survive(employee, settlement);
       }
       result.flips.forEach(
@@ -1138,7 +1138,7 @@ class CompanyEngine {
               Map.of("names", String.join("·", stood.stream().map(e -> e.name).toList()))));
     }
     settlement.gradeAfter = grade(company.capital);
-    // 폭락장에 아무도 바닥에서 던지지 않았으면 "못 참고 판 사람이 가장 크게 잃었다"를 쓰지 않는다 (decisions.md 254번).
+    // 폭락장에 아무도 바닥에서 던지지 않았으면 "못 참고 판 사람이 가장 크게 잃었다"를 쓰지 않는다 (decisions.md 255번).
     boolean anyPanic =
         settlement.results.stream().anyMatch(r -> r.flips.containsKey(StatCodes.PATIENCE));
     Map<String, String> phases = content.raising().company().phases();
@@ -1196,7 +1196,7 @@ class CompanyEngine {
           gradeLine(lines.drop(), employee, before, employeeGrade(employee), null));
       return;
     }
-    // 같은 횟수면 결산 말풍선(224번)과 같은 순서로 탓한다: 줏대 → 인내심 → 용기 (251번).
+    // 같은 횟수면 결산 말풍선(224번)과 같은 순서로 탓한다: 줏대 → 인내심 → 용기 (252번).
     String stat =
         result.flips.entrySet().stream()
             .max(
@@ -1210,7 +1210,7 @@ class CompanyEngine {
       // 이미 바닥 띠면 더 내려갈 등급이 없다: 글자가 그대로인 하락 소식을 띄우지 않는다.
       return;
     }
-    // 한 띠(10점)를 내리되 적어도 한 등급은 내려가게 띠 경계 아래까지 (251번). 전에는 SSS 100이 90이 되어 "SSS → SSS"가 떴다.
+    // 한 띠(10점)를 내리되 적어도 한 등급은 내려가게 띠 경계 아래까지 (252번). 전에는 SSS 100이 90이 되어 "SSS → SSS"가 떴다.
     int lowered = Math.max(1, Math.min(value - properties.experience().band(), from.min() - 1));
     employee.stats.put(stat, lowered);
     employee.dropped.add(stat);
@@ -1231,7 +1231,7 @@ class CompanyEngine {
     RaisingContent.GradeLines lines = content.raising().company().gradeLines();
     if (!employee.dropped.isEmpty()) {
       String stat = employee.dropped.removeLast();
-      // 내려간 만큼만 되찾는다 (251번). 옛 하락은 늘 새 하락보다 앞에 있으니, droppedBy가 남아 있으면 맨 뒤끼리 짝이다. 이 칸을 더하기 전에
+      // 내려간 만큼만 되찾는다 (252번). 옛 하락은 늘 새 하락보다 앞에 있으니, droppedBy가 남아 있으면 맨 뒤끼리 짝이다. 이 칸을 더하기 전에
       // 내려간 것은 한 띠로 본다.
       int by =
           employee.droppedBy.isEmpty()

@@ -137,13 +137,13 @@ api ─→ 세션 (확인, 관리자 세션 목록)
 |---|---|---|
 | 세션 확보 (없으면 발급) | `POST /api/sessions` | |
 | 가장 최근 회사 | `GET /api/company` | 돌고 있거나 끝난 회사. 없으면 404 |
-| 회사 차리기 | `POST /api/company` | 사장의 사재로 회사를 연다. 이미 회사가 있으면 400(회사는 세션마다 하나). 가장 최근 회사가 망했으면(`broke`) 닫고 다음 번호로 연다 (246번) |
+| 회사 차리기 | `POST /api/company` | 사장의 사재로 회사를 연다. 이미 회사가 있으면 400(회사는 세션마다 하나). 가장 최근 회사가 망했으면(`broke`) 닫고 다음 번호로 연다 (247번) |
 | 지원자 뽑기 | `POST /api/company/hires` | 본문 `{applicantId, replace}`. 계약금을 낸다. 자리가 꽉 찼으면 `replace`의 직원을 내보낸다. 없는 지원자, 모자란 돈이면 400 |
-| 지원자 새로 받기 | `POST /api/company/applicants/refresh` `{year, refreshes}` | 값을 내고 올해 지원자를 새로 받는다. 이미 한 것이면 지금 회사를 그대로 돌려준다 (253번) |
+| 지원자 새로 받기 | `POST /api/company/applicants/refresh` `{year, refreshes}` | 값을 내고 올해 지원자를 새로 받는다. 이미 한 것이면 지금 회사를 그대로 돌려준다 (254번) |
 | 배치 | `POST /api/company/placement` | 직원 ID → 자리 코드(쉬면 null). 자리 수를 넘거나 같은 직원이 두 번 오면 400 |
-| 이직 제안 | `POST /api/company/poach` `{keep}` | 붙잡거나(값을 낸다) 보낸다(이적료). 제안이 없으면 400 (261번) |
-| 투자 회의 열기 | `POST /api/company/invest/open` | 지금 배치로 직원 한마디와 형광펜을 굳힌다. 이미 열었으면 그대로 (248번) |
-| 투자 회의 | `POST /api/company/invest` | 본문 `{choice, big}`: `BUY`·`SELL`·`HOLD`, 크게(259번). 이미 했거나 돈을 굴리는 직원이 없으면 400 (decisions.md 229번) |
+| 이직 제안 | `POST /api/company/poach` `{keep}` | 붙잡거나(값을 낸다) 보낸다(이적료). 제안이 없으면 400 (262번) |
+| 투자 회의 열기 | `POST /api/company/invest/open` | 지금 배치로 직원 한마디와 형광펜을 굳힌다. 이미 열었으면 그대로 (249번) |
+| 투자 회의 | `POST /api/company/invest` | 본문 `{choice, big}`: `BUY`·`SELL`·`HOLD`, 크게(260번). 이미 했거나 돈을 굴리는 직원이 없으면 400 (decisions.md 229번) |
 | 결산 | `POST /api/company/settle` `{year}` | 올해를 굴리고 다음 해 연초 회의로 간다. 열 수 있는 투자 회의를 안 했으면 400. 이미 결산한 해면 지금 회사를 그대로 돌려준다(234번) |
 | 관리자 플레이 기록 | `GET /api/admin/plays` | `X-Admin-Token` 헤더. 토큰 설정이 비어 있으면 꺼진다. 세션과 회사 목록 (decisions.md 46·228번) |
 

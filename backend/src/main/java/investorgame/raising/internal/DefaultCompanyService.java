@@ -64,7 +64,7 @@ class DefaultCompanyService implements CompanyService {
     long seed = seeds.nextLong();
     CompanyState company;
     if (latest.isPresent()) {
-      // 망한 회사만 닫고 사장의 사재로 다음 회사를 차릴 수 있다 (246번).
+      // 망한 회사만 닫고 사장의 사재로 다음 회사를 차릴 수 있다 (247번).
       CompanyRepository.Row old = latest.get();
       if (!"ACTIVE".equals(old.status()) || !engine.broke(old.state())) {
         throw new InvalidRequestException("이미 회사가 있다");
@@ -95,7 +95,7 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView refreshApplicants(UUID sessionId, int year, int refreshes) {
     CompanyRepository.Row row = lockActive(sessionId);
     CompanyState c = row.state();
-    // 이미 한 새로 받기면 아무것도 하지 않는다(버튼 두 번, 끊긴 요청 다시 보내기, 253번). 아직 오지 않은 것이면 400.
+    // 이미 한 새로 받기면 아무것도 하지 않는다(버튼 두 번, 끊긴 요청 다시 보내기, 254번). 아직 오지 않은 것이면 400.
     if (year < c.year || (year == c.year && refreshes < c.refreshes)) {
       return view(row);
     }
@@ -208,7 +208,7 @@ class DefaultCompanyService implements CompanyService {
                         CompanyEngine.grades(e.stats),
                         e.desk,
                         e.experience,
-                        // ZZZ(맨 위)면 더 오를 데가 없다: "실전 경험 0/7"을 보이지 않는다 (263번).
+                        // ZZZ(맨 위)면 더 오를 데가 없다: "실전 경험 0/7"을 보이지 않는다 (264번).
                         CompanyEngine.overallGrade(e.stats).equals("SSS") && !engine.topRank(e)
                             ? engine.experienceNeeded(e)
                             : null,
@@ -295,7 +295,7 @@ class DefaultCompanyService implements CompanyService {
       return null;
     }
     InvestEngine meetings = engine.invest;
-    // 한마디와 형광펜은 회의를 연 때 굳힌 것만 보인다 (248번).
+    // 한마디와 형광펜은 회의를 연 때 굳힌 것만 보인다 (249번).
     int highlighted = meetings.highlight(c).map(InvestEngine.Highlight::index).orElse(-1);
     String highlightBy = meetings.highlight(c).map(InvestEngine.Highlight::by).orElse(null);
     List<CompanyView.InvestSentence> sentences = new java.util.ArrayList<>();

@@ -37,7 +37,7 @@ class EconomySimulationTest {
     return up > down ? InvestEngine.BUY : down > up ? InvestEngine.SELL : InvestEngine.HOLD;
   }
 
-  /** 한 시대 뒤 자본 배수의 중앙값과 E(2억, 256번) 이상에 닿은 몫. */
+  /** 한 시대 뒤 자본 배수의 중앙값과 E(2억, 257번) 이상에 닿은 몫. */
   private static double[] era(int level) {
     double[] ratio = new double[TRIALS];
     int reachedE = 0;
@@ -67,7 +67,7 @@ class EconomySimulationTest {
     double[] good = era(60);
     double[] great = era(75);
     // 투자 회의가 한 해에 판단 하나만큼 더해 226번 목표(E 1.14배·C 1.71배·A 34%·S 77%)보다 3할쯤 커졌다 (229번).
-    // E 띠를 2억으로 낮추고 첫 회사의 첫해에 폭락장을 뺐다(256번): 첫 시대에 E(첫 책상 추가)에 닿는 몫이 커졌다.
+    // E 띠를 2억으로 낮추고 첫 회사의 첫해에 폭락장을 뺐다(257번): 첫 시대에 E(첫 책상 추가)에 닿는 몫이 커졌다.
     // 2,000판: E 직원 31% · C 직원 62% · A 직원 88% · S 직원 98%, 세 해 자본 중앙값 1.57 · 2.30 · 3.37 · 4.98배.
     assertThat(weak[0]).as("E 직원: 조금 자란다").isBetween(1.2, 1.8);
     assertThat(weak[1]).as("E 직원은 가끔 오른다").isBetween(0.15, 0.45);
@@ -78,7 +78,7 @@ class EconomySimulationTest {
   }
 
   /**
-   * 첫 이사까지 몇 해 (#320, decisions.md 256번). 첫 회사에 C 직원 둘을 앉히고 해마다 회의(기사 다수결)와 결산을 하며, 반지하를 떠나 상가(D)에
+   * 첫 이사까지 몇 해 (#320, decisions.md 257번). 첫 회사에 C 직원 둘을 앉히고 해마다 회의(기사 다수결)와 결산을 하며, 반지하를 떠나 상가(D)에
    * 닿는 해의 중앙값을 본다. 전에는 API로 굴려 보면 반지하에서 10년, 상가까지 16년쯤 걸렸다.
    */
   @Test
@@ -126,7 +126,7 @@ class EconomySimulationTest {
       int losses = 0;
       int dropped = 0;
       for (int seed = 0; seed < trials; seed++) {
-        // 아무 해나 대표하도록 2호 회사로 연다: 첫 회사의 첫해는 폭락장이 아니다(256번).
+        // 아무 해나 대표하도록 2호 회사로 연다: 첫 회사의 첫해는 폭락장이 아니다(257번).
         CompanyState company = new CompanyState();
         company.number = 2;
         company.capital = capital;

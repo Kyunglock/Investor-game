@@ -29,7 +29,7 @@ export function crashSafe(d: Desk): boolean {
 }
 
 /**
- * 한 사람에게 맞는 자리 순서 (decisions.md 258번): 돈을 굴리는 자리는 자동 배치와 같은 점수로, 돕는 자리는 원하는 능력치로 견준다. 배치 탭이 맞는 자리 셋만
+ * 한 사람에게 맞는 자리 순서 (decisions.md 259번): 돈을 굴리는 자리는 자동 배치와 같은 점수로, 돕는 자리는 원하는 능력치로 견준다. 배치 탭이 맞는 자리 셋만
  * 먼저 보이는 데 쓴다. 같으면 자리 순서대로.
  */
 export function rankDesks(company: Company, e: Employee): Desk[] {
@@ -56,7 +56,7 @@ function bestTrading(e: Employee, trading: Desk[], omen = false): { desk: Desk; 
 export function autoPlace(company: Company): Seat[] {
   const desks = new Map(company.desks.map((d) => [d.code, d]))
   const trading = company.desks.filter((d) => d.trades)
-  // 폭락 조짐이 있으면 폭락장에 덜 빠지는 자리를 한 칸 더 쳐준다: 자리가 둘뿐이면 리스크 관리 팀에 사람을 뺄 여유가 없다 (258번).
+  // 폭락 조짐이 있으면 폭락장에 덜 빠지는 자리를 한 칸 더 쳐준다: 자리가 둘뿐이면 리스크 관리 팀에 사람을 뺄 여유가 없다 (259번).
   const omen = Boolean(company.meeting?.omen)
   const left = [...company.employees]
   const placed = new Map<number, string>()
@@ -103,7 +103,7 @@ export function seatOne(company: Company, employeeId: number, desk: string | nul
   }))
 }
 
-/** 자리의 예상 효과 한 줄 (decisions.md 258번): 맞히면 몇 %, 틀리면 몇 %, 폭락장에 덜 빠지는가. 돕는 자리면 설명. */
+/** 자리의 예상 효과 한 줄 (decisions.md 259번): 맞히면 몇 %, 틀리면 몇 %, 폭락장에 덜 빠지는가. 돕는 자리면 설명. */
 export function deskEffect(d: Desk): string {
   if (!d.trades || d.gainBp == null || d.missBp == null) {
     return d.description

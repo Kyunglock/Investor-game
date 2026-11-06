@@ -35,7 +35,7 @@ export interface paths {
         get: operations["getCompany"];
         put?: never;
         /**
-         * 사장의 사재로 회사를 차린다 (decisions.md 228·246번)
+         * 사장의 사재로 회사를 차린다 (decisions.md 228·247번)
          * @description 직원 없이 열리고 첫 해 공채 시장에 지원자가 와 있다. 이미 회사가 있으면 400(회사는 세션마다 하나).
          *     가장 최근 회사가 망했으면(broke가 있으면) 그 회사를 닫고 다음 번호의 회사를 새로 차린다.
          */
@@ -78,7 +78,7 @@ export interface paths {
         put?: never;
         /**
          * 직원을 자리에 앉힌다. 사장은 배치만 한다
-         * @description 자리 수를 넘거나, 없는 직원·자리이거나, 같은 직원이 두 번 오면 400 (decisions.md 253번).
+         * @description 자리 수를 넘거나, 없는 직원·자리이거나, 같은 직원이 두 번 오면 400 (decisions.md 254번).
          */
         post: operations["placeEmployees"];
         delete?: never;
@@ -120,7 +120,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 올해 이직 제안에 답한다 (decisions.md 261번)
+         * 올해 이직 제안에 답한다 (decisions.md 262번)
          * @description keep이 참이면 붙잡는 값(meeting.poach.keepCost)을 내고 남긴다. 거짓이면 이적료(transferFee)를 받고 보낸다.
          *     답하지 않은 채 결산하면 그 직원은 이적료를 남기고 떠난다. 제안이 없거나 붙잡을 돈이 모자라면 400.
          */
@@ -141,7 +141,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 올해 투자 회의를 연다 (decisions.md 248번)
+         * 올해 투자 회의를 연다 (decisions.md 249번)
          * @description 지금 배치로 직원 한마디(invest.remarks)와 리서치 팀 형광펜을 굳힌다. 그 뒤로 배치를 바꿔도 그대로라 배치를 바꿔 가며 정답을 알아낼 수 없다.
          *     열기 전에는 remarks가 비어 있고 형광펜도 없다. 이미 열었으면 지금 회사를 그대로 돌려준다.
          *     열 수 없는 회의(정했거나 돈을 굴리는 자리에 아무도 없다)면 400.
@@ -188,7 +188,7 @@ export interface paths {
          * 값(refreshCost)을 내고 올해 지원자를 새로 받는다
          * @description 지금 해(year)와 올해 지금까지 새로 받은 횟수(Company.refreshes)를 싣는다.
          *     이미 한 새로 받기면 아무것도 하지 않고 지금 회사를 200으로 돌려준다(같은 요청이 두 번 와도 한 번만 낸다).
-         *     아직 오지 않은 것이면 400. 돈이 모자라면 400 (decisions.md 253번).
+         *     아직 오지 않은 것이면 400. 돈이 모자라면 400 (decisions.md 254번).
          */
         post: operations["refreshApplicants"];
         delete?: never;
@@ -233,7 +233,7 @@ export interface components {
             status: "ACTIVE" | "ENDED";
             /** @description 사장이 차린 몇 번째 회사인가 */
             number: number;
-            /** @description 지금 시대 (9.4절). 시대는 세 해마다 다른 시대로 바뀐다 (decisions.md 249번) */
+            /** @description 지금 시대 (9.4절). 시대는 세 해마다 다른 시대로 바뀐다 (decisions.md 250번) */
             era: {
                 code: string;
                 name: string;
@@ -269,7 +269,7 @@ export interface components {
                 /** @description 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다 */
                 sector?: string | null;
                 sectorName?: string | null;
-                /** @description 지금 자리에서 결산을 맞은 해 수 (decisions.md 261번) */
+                /** @description 지금 자리에서 결산을 맞은 해 수 (decisions.md 262번) */
                 deskYears: number;
                 /** @description 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다 */
                 settled: boolean;
@@ -304,9 +304,9 @@ export interface components {
                 wanted: string;
                 /** @description 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) */
                 hot?: string | null;
-                /** @description 지금 시대의 마지막 해면 "내년에는 시대가 바뀐다" 한 줄. 아니면 null (decisions.md 249번) */
+                /** @description 지금 시대의 마지막 해면 "내년에는 시대가 바뀐다" 한 줄. 아니면 null (decisions.md 250번) */
                 eraEnding?: string | null;
-                /** @description 라이벌이 우리 직원에게 손을 뻗었다 (decisions.md 261번). 없으면 null */
+                /** @description 라이벌이 우리 직원에게 손을 뻗었다 (decisions.md 262번). 없으면 null */
                 poach?: {
                     employeeId: number;
                     name: string;
@@ -348,9 +348,9 @@ export interface components {
              * @description 지원자를 새로 받는 값
              */
             refreshCost: number;
-            /** @description 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 253번) */
+            /** @description 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 254번) */
             refreshes: number;
-            /** @description 회사 연표·업적·명예의 전당 (decisions.md 262번) */
+            /** @description 회사 연표·업적·명예의 전당 (decisions.md 263번) */
             history: {
                 /** @description 큰 일, 오래된 것부터 */
                 timeline: {
@@ -380,7 +380,7 @@ export interface components {
                     grade: components["schemas"]["Grade"];
                 }[];
             };
-            /** @description 업계 순위와 바로 위 라이벌 증권사 (decisions.md 260번). 라이벌이 없는 옛 회사면 null */
+            /** @description 업계 순위와 바로 위 라이벌 증권사 (decisions.md 261번). 라이벌이 없는 옛 회사면 null */
             industry?: {
                 /** @description 우리 순위(1부터) */
                 rank: number;
@@ -429,12 +429,12 @@ export interface components {
                 }[];
                 /** @description 지금 정할 수 있다(정하지 않았고 돈을 굴리는 자리에 사람이 있다) */
                 ready: boolean;
-                /** @description 회의를 열어 한마디와 형광펜을 굳혔다. 그 뒤로 배치를 바꿔도 그대로다 (decisions.md 248번) */
+                /** @description 회의를 열어 한마디와 형광펜을 굳혔다. 그 뒤로 배치를 바꿔도 그대로다 (decisions.md 249번) */
                 convened: boolean;
                 outcome?: {
                     /** @enum {string} */
                     choice: "BUY" | "SELL" | "HOLD";
-                    /** @description 크게 했다 (decisions.md 259번) */
+                    /** @description 크게 했다 (decisions.md 260번) */
                     big: boolean;
                     /**
                      * Format: int64
@@ -489,7 +489,7 @@ export interface components {
                 omen?: string | null;
                 /**
                  * Format: int64
-                 * @description 연초 회의 때의 자본 (decisions.md 250번)
+                 * @description 연초 회의 때의 자본 (decisions.md 251번)
                  */
                 capitalBefore: number;
                 /** Format: int64 */
@@ -512,9 +512,9 @@ export interface components {
                 } | null;
                 gradeBefore: components["schemas"]["Grade"];
                 gradeAfter: components["schemas"]["Grade"];
-                /** @description 그해 앞지른 라이벌 증권사 (decisions.md 260번) */
+                /** @description 그해 앞지른 라이벌 증권사 (decisions.md 261번) */
                 overtook: string[];
-                /** @description 그해 연 업적 이름 (decisions.md 262번) */
+                /** @description 그해 연 업적 이름 (decisions.md 263번) */
                 achieved: string[];
                 results: {
                     employeeId: number;

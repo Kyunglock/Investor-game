@@ -87,7 +87,7 @@ export function Ledger({
             >
               {s.results.map((x) => {
                 const row = reveal(ROW_MS)
-                // 직원과 해로 문구를 돌린다 (254번).
+                // 직원과 해로 문구를 돌린다 (255번).
                 const bubble = bubbleOf(x.flips, x.pnl, x.stake, x.employeeId * 7 + s.year)
                 return (
                   <li
@@ -129,7 +129,7 @@ export function Ledger({
         </li>
       )
     })(),
-    // 그해 공채에 쓴 돈 (decisions.md 250번): 연초 자본에서 계약금이 소리 없이 빠져 보이지 않게.
+    // 그해 공채에 쓴 돈 (decisions.md 251번): 연초 자본에서 계약금이 소리 없이 빠져 보이지 않게.
     s.hiring !== 0 &&
       (() => {
         const r = reveal()
@@ -228,7 +228,7 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
           <Ledger company={company} settlement={s} staged />
         </div>
         {s.achieved.length > 0 && (
-          // 그해 연 업적 (262번).
+          // 그해 연 업적 (263번).
           <p
             className="animate-stamp mt-3 rounded border border-gold px-3 py-2 text-center text-[14px] font-semibold text-gold"
             style={{ animationDelay: `${done}ms`, animationFillMode: 'both' }}

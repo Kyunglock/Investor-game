@@ -12,7 +12,7 @@ describe('shortWon', () => {
     expect(shortWon(-5_200_000)).toBe('−520만원')
   })
 
-  it('1조가 넘으면 조와 억까지만 쓴다 (decisions.md 252번)', () => {
+  it('1조가 넘으면 조와 억까지만 쓴다 (decisions.md 253번)', () => {
     expect(shortWon(56_361_500_000_000)).toBe('56조 3,615억원')
     expect(shortWon(1_000_000_000_000)).toBe('1조원')
     expect(shortWon(1_000_000_000_000_000)).toBe('1,000조원')

@@ -18,7 +18,7 @@ export type AutoStep =
 /** 계약금이 자본의 이만큼을 넘는 지원자는 뽑지 않는다. 한 해에 자본을 다 써 버리지 않게. */
 const FEE_SHARE = 0.25
 
-/** 크게 할까 (decisions.md 259번): 둘 이상이 한마디를 했고 모두 같은 쪽(사자 또는 팔자)이면 크게 한다. */
+/** 크게 할까 (decisions.md 260번): 둘 이상이 한마디를 했고 모두 같은 쪽(사자 또는 팔자)이면 크게 한다. */
 export function autoBig(invest: NonNullable<Company['invest']>): boolean {
   const reads = invest.remarks.map((r) => r.read)
   return reads.length >= 2 && reads.every((r) => r !== 'NEUTRAL' && r === reads[0])
@@ -50,14 +50,14 @@ export function autoHire(company: Company): number | null {
  * 투자 회의(직원 다수결) → 결산. 끝난 회사면 멈춘다.
  */
 export function nextAutoStep(company: Company, justSettled: boolean): AutoStep {
-  // 끝났거나 망한 회사(246번)면 멈춘다: 다시 차리기는 사장이 직접 한다.
+  // 끝났거나 망한 회사(247번)면 멈춘다: 다시 차리기는 사장이 직접 한다.
   if (company.status === 'ENDED' || company.broke) {
     return { kind: 'stop' }
   }
   if (justSettled) {
     return { kind: 'closeYearEnd' }
   }
-  // 이직 제안 (261번): 붙잡는 값이 자본의 25% 이하면 붙잡고, 아니면 이적료를 받고 보낸다.
+  // 이직 제안 (262번): 붙잡는 값이 자본의 25% 이하면 붙잡고, 아니면 이적료를 받고 보낸다.
   const poach = company.meeting?.poach
   if (poach) {
     return { kind: 'poach', keep: poach.keepCost <= company.capital * FEE_SHARE }
@@ -72,7 +72,7 @@ export function nextAutoStep(company: Company, justSettled: boolean): AutoStep {
     return { kind: 'place', seats }
   }
   if (company.invest?.ready) {
-    // 한마디는 회의를 열어야 나온다 (248번). 연 뒤에 다수결로 정한다.
+    // 한마디는 회의를 열어야 나온다 (249번). 연 뒤에 다수결로 정한다.
     if (!company.invest.convened) {
       return { kind: 'convene' }
     }

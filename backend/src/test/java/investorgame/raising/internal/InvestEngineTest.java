@@ -296,7 +296,7 @@ class InvestEngineTest {
   }
 
   /**
-   * 회의를 열면 한마디와 형광펜을 굳힌다 (#312, decisions.md 248번). 열기 전에는 보이지 않고, 연 뒤에는 리서치 팀을 바꿔도 그대로라 한마디가 뒤집히는
+   * 회의를 열면 한마디와 형광펜을 굳힌다 (#312, decisions.md 249번). 열기 전에는 보이지 않고, 연 뒤에는 리서치 팀을 바꿔도 그대로라 한마디가 뒤집히는
    * 것으로 정답을 알아낼 수 없다.
    */
   @Test
@@ -357,7 +357,7 @@ class InvestEngineTest {
     assertThat(ENGINE.invest.remarks(c)).hasSize(1);
   }
 
-  /** 크게 하면 판돈이 두 배고 직원이 사장 말을 덜 듣는다. 지켜보면 놓친 돈이 남는다 (#323, decisions.md 259번). */
+  /** 크게 하면 판돈이 두 배고 직원이 사장 말을 덜 듣는다. 지켜보면 놓친 돈이 남는다 (#323, decisions.md 260번). */
   @Test
   void 크게_하면_판돈이_두_배고_지켜보면_놓친_돈이_남는다() {
     int bossSmall = 0;

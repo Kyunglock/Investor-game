@@ -68,7 +68,7 @@ class CompanyEngineTest {
                 .name());
     assertThat(ENGINE.grade(company.capital)).isEqualTo("F");
     assertThat(ENGINE.seats(company.capital)).isEqualTo(2);
-    assertThat(ENGINE.grade(200_000_000)).as("E는 2억부터 (256번)").isEqualTo("E");
+    assertThat(ENGINE.grade(200_000_000)).as("E는 2억부터 (257번)").isEqualTo("E");
     assertThat(ENGINE.grade(199_999_999)).isEqualTo("F");
     assertThat(ENGINE.grade(600_000_000)).isEqualTo("D");
     assertThat(ENGINE.grade(300_000_000)).isEqualTo("E");
@@ -222,7 +222,7 @@ class CompanyEngineTest {
   void 결산에서_크게_잃은_직원의_등급이_내려간다() {
     int dropped = 0;
     for (int seed = 0; seed < 300; seed++) {
-      // F 띠(0~19)는 더 내려갈 등급이 없으니(251번) D 띠로 본다.
+      // F 띠(0~19)는 더 내려갈 등급이 없으니(252번) D 띠로 본다.
       CompanyState company = open(seed, stats(30, 30, 30, 30), 1_000_000_000L);
       ENGINE.place(company, Map.of(1, "bio"));
       CompanyState.Settlement s = settleYear(company, new HashSeededRandom(seed));
@@ -470,7 +470,7 @@ class CompanyEngineTest {
     assertThat(seen).as("필요한 인재가 섹터 데스크인 해가 있다").isPositive();
   }
 
-  /** 망한 회사 (decisions.md 246번): 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 닫고 사재로 다음 회사를 차린다. */
+  /** 망한 회사 (decisions.md 247번): 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 닫고 사재로 다음 회사를 차린다. */
   @Test
   void 자본이_바닥나면_망한_회사가_되고_사재로_다음_회사를_차린다() {
     CompanyState fresh = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
@@ -522,7 +522,7 @@ class CompanyEngineTest {
     assertThat(emptiedYears).as("자본이 바닥나는 해가 있다").isPositive();
   }
 
-  /** 자리가 줄면 넘친 사람이 쉰다 (#311, decisions.md 247번): 돕는 자리부터, 그다음 나중에 들어온 사람부터. */
+  /** 자리가 줄면 넘친 사람이 쉰다 (#311, decisions.md 248번): 돕는 자리부터, 그다음 나중에 들어온 사람부터. */
   @Test
   void 자본이_줄어_자리가_줄면_돕는_자리부터_일어나_쉰다() {
     // E 회사(자리 3)에 셋을 앉힌다. 새로 받기 값을 내면 2억 아래로 떨어져 F(자리 2)가 된다.
@@ -576,7 +576,7 @@ class CompanyEngineTest {
   }
 
   /**
-   * 시대가 바뀐다 (#313, decisions.md 249번): 첫 회사는 평범한 시대로 열고, 세 해마다 다른 시대가 온다. 마지막 해에는 연초 회의가 알려 주고, 바뀐
+   * 시대가 바뀐다 (#313, decisions.md 250번): 첫 회사는 평범한 시대로 열고, 세 해마다 다른 시대가 온다. 마지막 해에는 연초 회의가 알려 주고, 바뀐
    * 해의 결산 소식에 남는다. 다음 해 시장을 미리 정해 둔 것(경보·선견)이 그해가 와도 같다.
    */
   @Test
@@ -618,7 +618,7 @@ class CompanyEngineTest {
   }
 
   /**
-   * 연말 결산서의 장부가 맞는다 (#314, decisions.md 250번): 연초 자본은 연초 회의 때의 자본이고, 그해 계약금·새로 받기 값은 채용비 줄로 나온다. 연초
+   * 연말 결산서의 장부가 맞는다 (#314, decisions.md 251번): 연초 자본은 연초 회의 때의 자본이고, 그해 계약금·새로 받기 값은 채용비 줄로 나온다. 연초
    * 자본 + 회의 + 직원들 + 수수료 − 채용비 = 연말 자본.
    */
   @Test
@@ -650,7 +650,7 @@ class CompanyEngineTest {
             }
           }
         }
-        // 이직 제안(261번)은 따로 본다: 이적료가 인사 비용에 섞이지 않게 없앤다.
+        // 이직 제안(262번)은 따로 본다: 이적료가 인사 비용에 섞이지 않게 없앤다.
         company.poach = null;
         CompanyState.Settlement s = settleYear(company, random);
         assertThat(s.capitalBefore).isEqualTo(start);
@@ -667,7 +667,7 @@ class CompanyEngineTest {
   }
 
   /**
-   * 하락은 글자가 바뀐다 (#315, decisions.md 251번): SSS 100이 90이 되어 "SSS → SSS"가 뜨던 것을 띠 경계 아래까지 내린다. 되찾을 때는
+   * 하락은 글자가 바뀐다 (#315, decisions.md 252번): SSS 100이 90이 되어 "SSS → SSS"가 뜨던 것을 띠 경계 아래까지 내린다. 되찾을 때는
    * 내린 만큼만 돌려주고, 바닥 띠(F)에서는 더 내리지 않는다. 같은 횟수면 줏대 → 인내심 → 용기 순으로 탓한다.
    */
   @Test
@@ -733,7 +733,7 @@ class CompanyEngineTest {
     assertThat(CompanyEngine.won(1_000_000_000_000_000L)).isEqualTo("1,000조 원");
   }
 
-  /** 폭락장에 아무도 바닥에서 던지지 않았으면 머리줄이 "못 참고 판 사람이 가장 크게 잃었다"가 아니다 (#318, decisions.md 254번). */
+  /** 폭락장에 아무도 바닥에서 던지지 않았으면 머리줄이 "못 참고 판 사람이 가장 크게 잃었다"가 아니다 (#318, decisions.md 255번). */
   @Test
   void 폭락장에_아무도_못_참지_않았으면_머리줄이_다르다() {
     Map<String, String> phases = TestContent.load().raising().company().phases();
@@ -759,7 +759,7 @@ class CompanyEngineTest {
     throw new AssertionError("인내심 1인데 한 번도 못 참지 않았다");
   }
 
-  /** 지원자 이름은 성 × 이름 조합을 겹치지 않게 돌리고 직함을 붙이지 않는다 (#319, decisions.md 255번). */
+  /** 지원자 이름은 성 × 이름 조합을 겹치지 않게 돌리고 직함을 붙이지 않는다 (#319, decisions.md 256번). */
   @Test
   void 지원자_이름은_겹치지_않고_직함이_없다() {
     var texts = TestContent.load().raising().company();
@@ -779,7 +779,7 @@ class CompanyEngineTest {
           break;
         }
       }
-      // 새로 받을수록 비싸지므로(257번) 횟수를 되돌린다. 이름은 만난 수로 붙으니 그래도 이어진다.
+      // 새로 받을수록 비싸지므로(258번) 횟수를 되돌린다. 이름은 만난 수로 붙으니 그래도 이어진다.
       company.refreshes = 0;
       ENGINE.refresh(company, new HashSeededRandom(1));
     }
@@ -787,7 +787,7 @@ class CompanyEngineTest {
   }
 
   /**
-   * 큰 회사에도 공채가 무겁다 (#321, decisions.md 257번): 계약금은 정해진 값과 자본 비율 가운데 큰 쪽, 새로 받기 값은 자본에 비례하고 한 해에
+   * 큰 회사에도 공채가 무겁다 (#321, decisions.md 258번): 계약금은 정해진 값과 자본 비율 가운데 큰 쪽, 새로 받기 값은 자본에 비례하고 한 해에
    * 받을수록 비싸지며, SSS 회사부터 경력직(X 이상)이 온다.
    */
   @Test
@@ -818,7 +818,7 @@ class CompanyEngineTest {
     assertThat(small2.applicants).allMatch(a -> a.rank == 0);
   }
 
-  /** 자리가 둘뿐인 해의 폭락 조짐은 리스크 관리 팀 대신 폭락장에 덜 빠지는 자리를 권한다 (#322, decisions.md 258번). */
+  /** 자리가 둘뿐인 해의 폭락 조짐은 리스크 관리 팀 대신 폭락장에 덜 빠지는 자리를 권한다 (#322, decisions.md 259번). */
   @Test
   void 자리가_둘뿐이면_폭락_조짐에_리스크_관리_팀_대신_덜_빠지는_자리를_권한다() {
     var wanted = TestContent.load().raising().company().wanted();
@@ -830,7 +830,7 @@ class CompanyEngineTest {
     assertThat(ENGINE.deskGainBp(small, "food")).isEqualTo(PROPERTIES.desks().get("food").gainBp());
   }
 
-  /** 라이벌 증권사가 같은 시장으로 자라고, 앞지르면 소식 줄과 박치기 상대가 남는다 (#324, decisions.md 260번). */
+  /** 라이벌 증권사가 같은 시장으로 자라고, 앞지르면 소식 줄과 박치기 상대가 남는다 (#324, decisions.md 261번). */
   @Test
   void 라이벌_증권사가_자라고_앞지르면_소식에_남는다() {
     var rivals = TestContent.load().raising().company().rivals();
@@ -864,7 +864,7 @@ class CompanyEngineTest {
   }
 
   /**
-   * 이직 제안 (#325, decisions.md 261번): 셋째 해부터 바로 위 라이벌이 가장 높은 직원에게 손을 뻗는다. 붙잡으면 값을 내고, 보내면 이적료를 받고,
+   * 이직 제안 (#325, decisions.md 262번): 셋째 해부터 바로 위 라이벌이 가장 높은 직원에게 손을 뻗는다. 붙잡으면 값을 내고, 보내면 이적료를 받고,
    * 답하지 않으면 결산 때 떠난다. 같은 자리 세 해째부터 손에 익는다.
    */
   @Test
@@ -929,7 +929,7 @@ class CompanyEngineTest {
   }
 
   /**
-   * 회사 연표·업적·명예의 전당 (#326, decisions.md 262번): 차린 해와 등급이 바뀐 해가 연표에 남고, 한 해에 자본이 두 배면 업적이 열리며, 내보낸
+   * 회사 연표·업적·명예의 전당 (#326, decisions.md 263번): 차린 해와 등급이 바뀐 해가 연표에 남고, 한 해에 자본이 두 배면 업적이 열리며, 내보낸
    * 직원은 떠난 사람으로 남는다.
    */
   @Test
@@ -963,7 +963,7 @@ class CompanyEngineTest {
     assertThat(company.timeline).extracting(e -> e.kind).contains("left");
   }
 
-  /** 공채에 쓴 돈만으로는 "가장 아팠던 해"가 아니다: 연표와 업적은 인사 비용을 빼기 전의 운용 결과로 본다 (262번). */
+  /** 공채에 쓴 돈만으로는 "가장 아팠던 해"가 아니다: 연표와 업적은 인사 비용을 빼기 전의 운용 결과로 본다 (263번). */
   @Test
   void 공채에_쓴_돈만으로는_가장_아팠던_해가_아니다() {
     CompanyState company = ENGINE.open(new HashSeededRandom(2), ENGINE.openingCapital());
