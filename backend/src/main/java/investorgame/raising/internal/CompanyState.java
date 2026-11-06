@@ -240,6 +240,14 @@ class CompanyState {
     /** 지켜봤을 때, 맞는 쪽으로 했으면 벌었을 돈(뒤집힘 없이). 지켜보지 않았으면 null (260번). */
     Long missed;
 
+    /** 사장이 "너희가 알아서 해" 하고 맡겼다 (decisions.md 279번). choice는 직원들이 정한 쪽(BUY·SELL)이다. */
+    boolean delegated;
+
+    /** 맡겼을 때 매수 쪽·매도 쪽에 얹힌 무게(직원 안목). 불꽃 장면이 쓴다. */
+    int teamBuy;
+
+    int teamSell;
+
     List<InvestResult> results = new ArrayList<>();
     long total;
 

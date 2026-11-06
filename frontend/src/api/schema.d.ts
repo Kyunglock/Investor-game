@@ -567,7 +567,7 @@ export interface components {
                 }[];
                 options: {
                     /** @enum {string} */
-                    code: "BUY" | "SELL" | "HOLD";
+                    code: "BUY" | "SELL" | "HOLD" | "TEAM";
                     label: string;
                 }[];
                 /** @description 지금 정할 수 있다(정하지 않았고 돈을 굴리는 자리에 사람이 있다) */
@@ -577,10 +577,19 @@ export interface components {
                 /** @description 이 종목을 물어 온 직원 (267번). 아직 아무도 안 가져왔거나 옛 회의면 null */
                 finder?: components["schemas"]["Finder"] | null;
                 outcome?: {
-                    /** @enum {string} */
+                    /**
+                     * @description 정한 것. 맡겼으면 직원들이 정한 쪽
+                     * @enum {string}
+                     */
                     choice: "BUY" | "SELL" | "HOLD";
                     /** @description 크게 했다 (decisions.md 260번) */
                     big: boolean;
+                    /** @description 사장이 "너희가 알아서 해" 하고 맡겼다 (decisions.md 279번) */
+                    delegated: boolean;
+                    /** @description 맡겼을 때 매수 쪽에 얹힌 무게(직원 안목). 맡기지 않았으면 0 */
+                    teamBuy: number;
+                    /** @description 매도 쪽 무게 */
+                    teamSell: number;
                     /**
                      * Format: int64
                      * @description 지켜봤을 때 맞는 쪽으로 했으면 벌었을 돈(뒤집힘 없이). 지켜보지 않았으면 null
@@ -1223,9 +1232,12 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @enum {string} */
-                    choice: "BUY" | "SELL" | "HOLD";
-                    /** @description 크게 한다. 판돈 두 배 */
+                    /**
+                     * @description TEAM은 "너희가 알아서 해": 직원 한마디를 안목만큼 저울질해 사거나 판다 (decisions.md 279번)
+                     * @enum {string}
+                     */
+                    choice: "BUY" | "SELL" | "HOLD" | "TEAM";
+                    /** @description 크게 한다(화면에서는 뺐다 */
                     big?: boolean | null;
                 };
             };

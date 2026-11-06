@@ -170,6 +170,7 @@ public record RaisingContent(
       Map<String, String> points,
       Map<String, String> actions,
       String obey,
+      String team,
       String rogue,
       String swayed,
       Map<String, String> reveal) {}

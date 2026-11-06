@@ -35,6 +35,10 @@ class InvestEngine {
   static final String BUY = "BUY";
   static final String SELL = "SELL";
   static final String HOLD = "HOLD";
+
+  /** 사장이 "너희가 알아서 해" 하고 맡긴다 (decisions.md 279번). 직원들 의견을 저울질해 사거나 판다. */
+  static final String TEAM = "TEAM";
+
   static final String BOSS = "BOSS";
   static final String OWN = "OWN";
   static final String SWAY = "SWAY";
@@ -516,8 +520,11 @@ class InvestEngine {
     if (Boolean.FALSE.equals(c.invest.found)) {
       throw new InvalidRequestException("이번 분기에는 아직 아무도 종목을 물어 오지 않았다");
     }
-    if (!List.of(BUY, SELL, HOLD).contains(choice)) {
+    if (!List.of(BUY, SELL, HOLD, TEAM).contains(choice)) {
       throw new InvalidRequestException("고를 수 없는 것: " + choice);
+    }
+    if (big && TEAM.equals(choice)) {
+      throw new InvalidRequestException("맡기면서 크게 할 수는 없다");
     }
     List<Employee> traders = company.traders(c);
     if (traders.isEmpty()) {
@@ -525,6 +532,10 @@ class InvestEngine {
     }
     // 창을 거치지 않고 바로 정해도(옛 화면, 시험) 지금 배치로 회의를 연 셈 친다.
     convene(c, random);
+    boolean delegated = TEAM.equals(choice);
+    if (delegated) {
+      choice = teamCall(c, random);
+    }
     Map<Integer, String> reads = new HashMap<>();
     c.invest.remarks.forEach(r -> reads.put(r.employeeId, r.read));
     RaisingContent.Invest texts = content.raising().company().invest();
@@ -594,19 +605,48 @@ class InvestEngine {
           switch (result.follow) {
             case SWAY -> texts.swayed();
             case OWN -> texts.rogue();
-            default -> texts.obey();
+            default -> delegated ? texts.team() : texts.obey();
           };
       result.line = Korean.fill(template, values);
       c.invest.results.add(result);
     }
     c.invest.choice = choice;
     c.invest.big = big;
+    c.invest.delegated = delegated;
     c.invest.missed = HOLD.equals(choice) ? missed : null;
     c.invest.total = total;
     c.capital = Math.max(0, c.capital + total);
-    // 자기 말을 들어 줬는지에 따라 사기가 움직인다 (270번).
-    company.pay.afterMeeting(c);
+    // 자기 말을 들어 줬는지에 따라 사기가 움직인다 (270번). 맡겼으면 사장이 들어 주고 말고가 없다.
+    if (!delegated) {
+      company.pay.afterMeeting(c);
+    }
   }
+
+  /**
+   * "너희가 알아서 해" (decisions.md 279번): 회의에서 나온 한마디를 저울에 단다. 사자는 매수 쪽, 팔자는 매도 쪽에 그 직원의 안목 + 10만큼
+   * 얹고(모르겠다는 얹지 않는다), 무게만큼의 확률로 한쪽이 이긴다. 양쪽 다 비었으면 반반. 맞붙은 무게는 화면의 불꽃 장면이 쓴다. 사거나 팔 뿐 지켜보지는 않는다.
+   */
+  private String teamCall(CompanyState c, SeededRandom random) {
+    int buy = 0;
+    int sell = 0;
+    for (CompanyState.Remark r : c.invest.remarks) {
+      Employee e = c.employees.stream().filter(x -> x.id == r.employeeId).findFirst().orElse(null);
+      int weight = (e == null ? 0 : e.stats.get(StatCodes.INSIGHT)) + TEAM_WEIGHT_BASE;
+      if (UP.equals(r.read)) {
+        buy += weight;
+      } else if (DOWN.equals(r.read)) {
+        sell += weight;
+      }
+    }
+    c.invest.teamBuy = buy;
+    c.invest.teamSell = sell;
+    RandomGenerator rng = random.forKey("invest-team", c.turn());
+    boolean buys = buy + sell == 0 ? rng.nextBoolean() : rng.nextInt(buy + sell) < buy;
+    return buys ? BUY : SELL;
+  }
+
+  /** 맡길 때 한마디 하나의 무게 바닥: 안목이 0이어도 목소리는 있다. */
+  private static final int TEAM_WEIGHT_BASE = 10;
 
   String tempterName(String code) {
     return content.raising().tempters().stream()
