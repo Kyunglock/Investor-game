@@ -96,6 +96,51 @@ class CompanyEngine {
     return company;
   }
 
+  /**
+   * 회사가 망했다 (decisions.md 246번): 자본이 0이거나, 직원이 없는데 가장 싼 계약금도 낼 수 없다. 수수료도 판돈도 자본에 비례해서 이대로는 다시 일어설
+   * 수 없다. 매각이 빠진 뒤(236번)로는 이것이 회사를 닫고 새로 차리는 유일한 길이다.
+   */
+  boolean broke(CompanyState company) {
+    if (company.closed || company.capital <= 0) {
+      return true;
+    }
+    long cheapest = properties.market().fees().getFirst();
+    return company.employees.isEmpty() && company.capital < cheapest;
+  }
+
+  /**
+   * 망한 회사를 닫고 사장의 사재로 다음 회사를 차린다 (246번). 직원은 따라오지 않는다. 회사 번호와 만난 지원자 수(이름)는 이어 센다. 망하지 않은 회사면 400.
+   */
+  CompanyState restart(CompanyState broke, SeededRandom random, long capital) {
+    if (!broke(broke)) {
+      throw new InvalidRequestException("아직 망하지 않은 회사다");
+    }
+    broke.closed = true;
+    CompanyState next = new CompanyState();
+    next.number = broke.number + 1;
+    next.hired = broke.hired;
+    next.met = broke.met;
+    next.capital = Math.max(0, capital);
+    next.era = eras().getFirst().code();
+    next.opening =
+        Korean.fill(
+            content.raising().company().bankrupt().opening(),
+            Map.of(
+                "number",
+                String.valueOf(broke.number),
+                "next",
+                String.valueOf(next.number),
+                "capital",
+                won(next.capital)));
+    startYear(next, random);
+    return next;
+  }
+
+  /** 망한 회사의 한 줄. 망하지 않았으면 null. */
+  String brokeNotice(CompanyState company) {
+    return broke(company) ? content.raising().company().bankrupt().notice() : null;
+  }
+
   /** 첫 회사의 시작 자본(사장의 사재). */
   long openingCapital() {
     return properties.sale().baseCapital();
@@ -698,6 +743,9 @@ class CompanyEngine {
     settlement.fee = fee;
     company.capital = Math.max(0, company.capital + fee + totalPnl);
     settlement.capitalAfter = company.capital;
+    if (company.capital == 0) {
+      settlement.lines.add(content.raising().company().bankrupt().emptied());
+    }
     settlement.gradeAfter = grade(company.capital);
     settlement.lines.addFirst(content.raising().company().phases().get(company.phase));
     if (!crash && company.omen != null) {

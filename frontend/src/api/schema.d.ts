@@ -35,8 +35,9 @@ export interface paths {
         get: operations["getCompany"];
         put?: never;
         /**
-         * 사장의 사재로 첫 회사를 차린다 (decisions.md 228번)
+         * 사장의 사재로 회사를 차린다 (decisions.md 228·246번)
          * @description 직원 없이 열리고 첫 해 공채 시장에 지원자가 와 있다. 이미 회사가 있으면 400(회사는 세션마다 하나).
+         *     가장 최근 회사가 망했으면(broke가 있으면) 그 회사를 닫고 다음 번호의 회사를 새로 차린다.
          */
         post: operations["openCompany"];
         delete?: never;
@@ -198,6 +199,8 @@ export interface components {
             grade: components["schemas"]["Grade"];
             /** Format: int64 */
             nextGradeCapital?: number | null;
+            /** @description 망한 회사의 한 줄. 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 있고 */
+            broke?: string | null;
             seats: number;
             employees: {
                 id: number;

@@ -234,4 +234,36 @@ class CompanyApiTest {
         .as("인사팀이 한 명 더 데려온다")
         .isEqualTo(4);
   }
+
+  /** 망한 회사는 닫고 사장의 사재로 다음 회사를 차린다 (decisions.md 246번). 망하지 않았으면 400이다. */
+  @Test
+  void 자본이_바닥난_회사를_닫고_사재로_다음_회사를_차린다() throws Exception {
+    String id =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()))
+            .read("$.companyId");
+    mvc.perform(post("/api/company").cookie(session)).andExpect(status().isBadRequest());
+
+    jdbc.sql(
+            "UPDATE raising_company SET state = jsonb_set(state, '{capital}', '0') WHERE id = CAST(:id AS uuid)")
+        .param("id", id)
+        .update();
+    DocumentContext broke = json(mvc.perform(get("/api/company").cookie(session)));
+    assertThat(broke.read("$.broke", String.class)).isNotBlank();
+
+    DocumentContext next =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    assertThat(next.read("$.companyId", String.class)).isNotEqualTo(id);
+    assertThat(next.read("$.number", Integer.class)).isEqualTo(2);
+    assertThat(next.read("$.capital", Long.class)).isEqualTo(100_000_000L);
+    assertThat(next.read("$.opening", String.class)).contains("1호 회사는 문을 닫았다");
+    assertThat(next.read("$.broke", String.class)).isNull();
+    assertThat(
+            jdbc.sql("SELECT status FROM raising_company WHERE id = CAST(:id AS uuid)")
+                .param("id", id)
+                .query(String.class)
+                .single())
+        .isEqualTo("ENDED");
+    DocumentContext current = json(mvc.perform(get("/api/company").cookie(session)));
+    assertThat(current.read("$.number", Integer.class)).as("닫은 회사는 다시 열리지 않는다").isEqualTo(2);
+  }
 }

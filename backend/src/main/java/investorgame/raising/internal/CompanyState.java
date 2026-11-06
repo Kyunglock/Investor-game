@@ -29,6 +29,9 @@ class CompanyState {
   /** 팔렸는가. 팔린 회사는 끝난 채로 남는다. */
   boolean sold;
 
+  /** 망해서 문을 닫았는가 (decisions.md 246번). 닫은 회사는 끝난 채로 남고 사장이 다음 회사를 차린다. */
+  boolean closed;
+
   /** 차릴 때의 한 줄(1호 직원·공동창업자). */
   String opening;
 

@@ -19,6 +19,8 @@ interface RaisingState {
   load: () => Promise<void>
   /** 사장의 사재로 첫 회사를 차린다 (decisions.md 228번). */
   open: () => Promise<void>
+  /** 망한 회사를 닫고 사장의 사재로 다음 회사를 차린다 (decisions.md 246번). 세션은 그대로다. */
+  restart: () => Promise<void>
   /** 계약금을 내고 공채 시장의 지원자를 뽑는다. 자리가 꽉 찼으면 replace의 직원을 내보낸다. */
   hire: (applicantId: number, replace?: number) => Promise<void>
   /** 값을 내고 올해 지원자를 새로 받는다. */
@@ -84,6 +86,16 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       }
       set({ busy: false, error: reason(res?.error) })
       await get().load()
+    },
+
+    restart: async () => {
+      set({ busy: true, error: null, autoPlay: false })
+      const res = await safely(api.POST('/api/company'))
+      if (res?.data) {
+        set({ company: res.data, busy: false, tab: null, justSettled: false })
+        return
+      }
+      set({ busy: false, error: reason(res?.error) })
     },
 
     hire: (applicantId, replace) =>

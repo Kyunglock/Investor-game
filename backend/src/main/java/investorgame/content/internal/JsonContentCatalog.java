@@ -233,6 +233,12 @@ class JsonContentCatalog implements ContentCatalog {
       require(company.flipLines().containsKey(stat), "결산 소식 줄이 없다: " + stat);
     }
     require(company.market() != null, "공채 시장 문구가 없다");
+    require(
+        company.bankrupt() != null
+            && company.bankrupt().notice() != null
+            && company.bankrupt().emptied() != null
+            && company.bankrupt().opening() != null,
+        "망한 회사 문구가 없다");
     RaisingContent.Invest invest = company.invest();
     require(
         invest != null

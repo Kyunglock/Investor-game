@@ -49,6 +49,7 @@ describe('자동 진행 (decisions.md 245번)', () => {
 
   it('한 해를 결산서 닫기 → 공채 → 배치 → 투자 회의 → 결산 순으로 돈다', () => {
     expect(nextAutoStep(company({ status: 'ENDED' }), false).kind).toBe('stop')
+    expect(nextAutoStep(company({ broke: '금고가 비었다.' }), false).kind).toBe('stop')
     expect(nextAutoStep(company(), true).kind).toBe('closeYearEnd')
     const hiring = company({ applicants: [{ id: 1, overallGrade: 'C', fee: 1 }] } as never)
     expect(nextAutoStep(hiring, false)).toEqual({ kind: 'hire', applicantId: 1 })

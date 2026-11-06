@@ -52,6 +52,7 @@ public record RaisingContent(
       Map<String, String> phases,
       String falseOmenNote,
       String opening,
+      Bankrupt bankrupt,
       List<Era> eras,
       Sale sale,
       Map<String, String> statNames,
@@ -80,6 +81,12 @@ public record RaisingContent(
       String rogue,
       String swayed,
       Map<String, String> reveal) {}
+
+  /**
+   * 망한 회사 (decisions.md 246번). notice: 회사 화면에 뜨는 한 줄. emptied: 결산에서 자본이 0이 된 해의 소식 줄. opening: 다시
+   * 차린 회사의 한 줄({number}·{next}·{capital}).
+   */
+  public record Bankrupt(String notice, String emptied, String opening) {}
 
   /** 공채 시장 지원자 카드의 한 줄. wanted: 올해 필요한 인재({desk}·{stat}). hr: 인사팀이 데려온 지원자({name}). */
   public record Market(String wanted, String hr) {}

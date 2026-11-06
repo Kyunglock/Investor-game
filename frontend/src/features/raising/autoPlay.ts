@@ -42,7 +42,8 @@ export function autoHire(company: Company): number | null {
  * 투자 회의(직원 다수결) → 결산. 끝난 회사면 멈춘다.
  */
 export function nextAutoStep(company: Company, justSettled: boolean): AutoStep {
-  if (company.status === 'ENDED') {
+  // 끝났거나 망한 회사(246번)면 멈춘다: 다시 차리기는 사장이 직접 한다.
+  if (company.status === 'ENDED' || company.broke) {
     return { kind: 'stop' }
   }
   if (justSettled) {

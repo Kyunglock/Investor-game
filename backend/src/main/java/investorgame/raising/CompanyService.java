@@ -14,7 +14,10 @@ public interface CompanyService {
   /** 세션의 가장 최근 회사(돌고 있거나 끝남). */
   Optional<CompanyView> current(UUID sessionId);
 
-  /** 사장의 사재로 첫 회사를 차린다. 이미 회사가 있으면 400(다음 회사는 매각으로 차린다). */
+  /**
+   * 사장의 사재로 회사를 차린다. 이미 회사가 있으면 400. 가장 최근 회사가 망했으면(자본 0, 또는 직원 없이 가장 싼 계약금도 못 냄) 그 회사를 닫고 다음 번호로
+   * 새로 차린다 (decisions.md 246번).
+   */
   CompanyView open(UUID sessionId);
 
   /**

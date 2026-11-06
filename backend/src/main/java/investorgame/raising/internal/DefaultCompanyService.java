@@ -41,12 +41,12 @@ class DefaultCompanyService implements CompanyService {
    * 최근이다).
    */
   private CompanyRepository.Row resume(CompanyRepository.Row row) {
-    if (!"ENDED".equals(row.status()) || row.state().sold) {
+    if (!"ENDED".equals(row.status()) || row.state().sold || row.state().closed) {
       return row;
     }
     CompanyRepository.Row locked =
         companies.lockLatest(row.sessionId()).orElseThrow(() -> new NotFoundException("회사가 없다"));
-    if (!"ENDED".equals(locked.status()) || locked.state().sold) {
+    if (!"ENDED".equals(locked.status()) || locked.state().sold || locked.state().closed) {
       return locked;
     }
     engine.resume(locked.state(), new HashSeededRandom(locked.seed()));
@@ -60,11 +60,20 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView open(UUID sessionId) {
     // 같은 세션의 동시 요청을 기억 줄로 줄 세운다. 회사는 세션마다 하나다(매각을 뺐다, 236번).
     RaisingMemory memory = memories.lock(sessionId);
-    if (companies.latest(sessionId).isPresent()) {
-      throw new InvalidRequestException("이미 회사가 있다");
-    }
+    Optional<CompanyRepository.Row> latest = companies.lockLatest(sessionId);
     long seed = seeds.nextLong();
-    CompanyState company = engine.open(new HashSeededRandom(seed), engine.openingCapital());
+    CompanyState company;
+    if (latest.isPresent()) {
+      // 망한 회사만 닫고 사장의 사재로 다음 회사를 차릴 수 있다 (246번).
+      CompanyRepository.Row old = latest.get();
+      if (!"ACTIVE".equals(old.status()) || !engine.broke(old.state())) {
+        throw new InvalidRequestException("이미 회사가 있다");
+      }
+      company = engine.restart(old.state(), new HashSeededRandom(seed), engine.openingCapital());
+      companies.update(old.id(), old.state(), true);
+    } else {
+      company = engine.open(new HashSeededRandom(seed), engine.openingCapital());
+    }
     CompanyRepository.Row row =
         new CompanyRepository.Row(UUID.randomUUID(), sessionId, "ACTIVE", seed, company);
     companies.insert(row);
@@ -238,6 +247,7 @@ class DefaultCompanyService implements CompanyService {
         meeting,
         applicants,
         engine.refreshCost(),
+        ended ? null : engine.brokeNotice(c),
         ended ? null : investView(c, new HashSeededRandom(row.seed())),
         last == null ? null : settlementView(last));
   }

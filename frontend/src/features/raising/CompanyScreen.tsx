@@ -38,7 +38,7 @@ export function CompanyScreen({ company }: { company: Company }) {
   const error = useRaisingStore((s) => s.error)
   const justSettled = useRaisingStore((s) => s.justSettled)
   const autoPlay = useRaisingStore((s) => s.autoPlay)
-  const { settle } = useRaisingStore.getState()
+  const { settle, restart } = useRaisingStore.getState()
   // 이사 장면은 결산 뒤 한 번만 본다. 해가 바뀌면 화면이 새로 그려져 다시 볼 수 있다.
   const [moved, setMoved] = useState(false)
   // 투자 회의 창 (231번): 결산을 누르면 뜨고, 고른 뒤 그대로 결산한다.
@@ -113,7 +113,30 @@ export function CompanyScreen({ company }: { company: Company }) {
           />
         )}
 
-        {!ended && meeting && (
+        {!ended && company.broke && (
+          // 망한 회사 (246번): 결산 대신 사재로 다음 회사를 차린다.
+          <section
+            className="sticky bottom-0 z-10 -mx-1 mt-4 grid gap-2 border-t-2 border-wine bg-card/95 px-1 pt-3 pb-3 backdrop-blur"
+            data-testid="broke"
+          >
+            <p className="text-[14px] font-semibold text-wine">{company.broke}</p>
+            {error && (
+              <p role="alert" className="text-[13px] text-wine">
+                {error}
+              </p>
+            )}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void restart()}
+              className="min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50"
+            >
+              문을 닫고 사재로 {company.number + 1}호 회사 차리기
+            </button>
+          </section>
+        )}
+
+        {!ended && !company.broke && meeting && (
           // 결산은 한 해의 마지막 일이라 화면 아래에 늘 붙어 있다.
           <div className="sticky bottom-0 z-10 -mx-1 mt-4 grid gap-1 bg-card/95 px-1 pt-2 pb-3 backdrop-blur">
             {error && (

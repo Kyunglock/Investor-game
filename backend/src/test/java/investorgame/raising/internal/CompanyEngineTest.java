@@ -462,4 +462,56 @@ class CompanyEngineTest {
     }
     assertThat(seen).as("필요한 인재가 섹터 데스크인 해가 있다").isPositive();
   }
+
+  /** 망한 회사 (decisions.md 246번): 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 닫고 사재로 다음 회사를 차린다. */
+  @Test
+  void 자본이_바닥나면_망한_회사가_되고_사재로_다음_회사를_차린다() {
+    CompanyState fresh = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
+    assertThat(ENGINE.broke(fresh)).isFalse();
+    assertThat(ENGINE.brokeNotice(fresh)).isNull();
+    assertThatThrownBy(() -> ENGINE.restart(fresh, new HashSeededRandom(2), 100_000_000))
+        .isInstanceOf(InvalidRequestException.class);
+
+    long cheapest = PROPERTIES.market().fees().getFirst();
+    CompanyState poor = ENGINE.open(new HashSeededRandom(1), cheapest - 1);
+    assertThat(ENGINE.broke(poor)).as("직원 없이 가장 싼 계약금도 못 낸다").isTrue();
+    ENGINE.hire(poor, stats(50, 50, 50, 50));
+    assertThat(ENGINE.broke(poor)).as("직원이 있으면 적은 돈으로도 굴려 다시 일어설 수 있다").isFalse();
+    poor.capital = 0;
+    assertThat(ENGINE.broke(poor)).as("자본 0은 수수료도 판돈도 0이다").isTrue();
+    assertThat(ENGINE.brokeNotice(poor)).isNotBlank();
+
+    poor.met = 7;
+    CompanyState next = ENGINE.restart(poor, new HashSeededRandom(2), ENGINE.openingCapital());
+    assertThat(poor.closed).isTrue();
+    assertThat(next.number).isEqualTo(2);
+    assertThat(next.year).isEqualTo(1);
+    assertThat(next.capital).isEqualTo(100_000_000);
+    assertThat(next.employees).as("직원은 따라오지 않는다").isEmpty();
+    assertThat(next.applicants).isNotEmpty();
+    assertThat(next.applicants.getFirst().name).as("이름은 이어 센다").isNotEqualTo("김대리");
+    assertThat(next.opening).contains("1호 회사는 문을 닫았다").contains("2호 회사");
+  }
+
+  @Test
+  void 큰_회사가_폭락장에_판돈을_넘게_잃으면_자본이_0이_되고_소식_줄에_남는다() {
+    String emptied = TestContent.load().raising().company().bankrupt().emptied();
+    int emptiedYears = 0;
+    for (long seed = 1; seed <= 30; seed++) {
+      // XX 회사(10조)의 게임 데스크: 폭락장 손익과 잃는 몫이 등급 배율로 커져 한 해에 판돈을 넘게 잃을 수 있다 (244번).
+      CompanyState company = open(seed, stats(1, 1, 1, 1), 10_000_000_000_000L);
+      company.employees.getFirst().desk = "game";
+      company.phase = CompanyEngine.CRASH;
+      company.invest = null;
+      CompanyState.Settlement settlement = ENGINE.settle(company, new HashSeededRandom(seed));
+      if (company.capital == 0) {
+        emptiedYears++;
+        assertThat(settlement.lines).contains(emptied);
+        assertThat(ENGINE.broke(company)).isTrue();
+      } else {
+        assertThat(settlement.lines).doesNotContain(emptied);
+      }
+    }
+    assertThat(emptiedYears).as("자본이 바닥나는 해가 있다").isPositive();
+  }
 }

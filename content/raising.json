@@ -169,6 +169,11 @@
     },
     "falseOmenNote": "조짐은 있었지만 아무 일도 없었다.",
     "opening": "사장의 사재 {capital}으로 회사를 차렸다. 연초 공채에서 첫 직원을 뽑자.",
+    "bankrupt": {
+      "notice": "금고가 비었다. 이 돈으로는 아무도 뽑을 수 없고, 굴릴 돈도 없다.",
+      "emptied": "자본이 바닥났다. 회사 금고가 텅 비었다.",
+      "opening": "{number}호 회사는 문을 닫았다. 사장의 사재 {capital}으로 {next}호 회사를 다시 차렸다."
+    },
     "eras": [
       {
         "code": "plain",

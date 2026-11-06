@@ -33,8 +33,10 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
     post:
       operationId: openCompany
-      summary: 사장의 사재로 첫 회사를 차린다 (decisions.md 228번)
-      description: 직원 없이 열리고 첫 해 공채 시장에 지원자가 와 있다. 이미 회사가 있으면 400(회사는 세션마다 하나).
+      summary: 사장의 사재로 회사를 차린다 (decisions.md 228·246번)
+      description: |
+        직원 없이 열리고 첫 해 공채 시장에 지원자가 와 있다. 이미 회사가 있으면 400(회사는 세션마다 하나).
+        가장 최근 회사가 망했으면(broke가 있으면) 그 회사를 닫고 다음 번호의 회사를 새로 차린다.
       responses:
         '201':
           description: 새 회사
@@ -210,6 +212,7 @@ components:
         capital: { type: integer, format: int64 }
         grade: { $ref: '#/components/schemas/Grade' }
         nextGradeCapital: { type: [integer, 'null'], format: int64 }
+        broke: { type: [string, 'null'], description: 망한 회사의 한 줄. 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 있고, 그때 사재로 다음 회사를 차릴 수 있다 (decisions.md 246번) }
         seats: { type: integer }
         employees:
           type: array
