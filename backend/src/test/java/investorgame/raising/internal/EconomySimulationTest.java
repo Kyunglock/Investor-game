@@ -146,16 +146,16 @@ class EconomySimulationTest {
       List.of("F", "E", "D", "C", "B", "A", "S", "SS", "SSS", "X", "XX", "XXX");
 
   /**
-   * 규모의 벽 (decisions.md 244번). 회사 등급마다(자본 = 그 등급 띠 바닥의 1.7배) 그 등급의 공채에서 뽑을 만한 직원(능력치 = 회사 등급보다 두 단계
-   * 위의 띠 가운데)을 자리 수만큼 앉히고 한 해를 돌린다. 전에는 B부터 잃는 해가 없고 SSS면 한 해에 자본이 세 배였다. 이제 어느 등급에서도 잃는 해가 있고,
-   * 꼭대기에서는 폭락장 한 번에 등급이 떨어질 수 있다.
+   * 규모의 벽 (decisions.md 244번). 회사 등급마다(자본 = 그 등급 띠 바닥의 1.7배) 그 등급의 공채에서 뽑을 만한 직원(능력치 = 회사 등급 띠의
+   * 가운데, 289번: 전에는 두 단계 위)을 자리 수만큼 앉히고 한 해를 돌린다. 전에는 B부터 잃는 해가 없고 SSS면 한 해에 자본이 세 배였다. 이제 어느 등급에서도
+   * 잃는 해가 있고, 꼭대기에서는 폭락장 한 번에 등급이 떨어질 수 있다.
    */
   @Test
   void 어느_등급에서도_잃는_해가_있고_한_해에_치솟지_않는다() {
     int trials = 800;
     for (int k = 2; k <= 10; k++) {
       long capital = (long) (PROPERTIES.gradeCapital().get(k) * 1.7);
-      int stat = Math.min(100, (k + 2) * 10 + 5);
+      int stat = Math.min(100, k * 10 + 5);
       double[] ratio = new double[trials];
       int losses = 0;
       int dropped = 0;
@@ -180,7 +180,8 @@ class EconomySimulationTest {
       Arrays.sort(ratio);
       String grade = LADDER.get(k);
       assertThat(losses / (double) trials).as(grade + " 회사도 잃는 해가 있다").isBetween(0.12, 0.4);
-      assertThat(ratio[trials / 2]).as(grade + " 회사의 한 해 중앙값").isBetween(1.15, 1.6);
+      // 지원자가 회사 등급을 따라 오면서(289번) 한 해 중앙값이 1.12(D)~1.30(X)배로 낮아졌다: 등급이 바로 높아지지 않는다.
+      assertThat(ratio[trials / 2]).as(grade + " 회사의 한 해 중앙값").isBetween(1.05, 1.45);
       assertThat(ratio[trials * 9 / 10]).as(grade + " 회사가 한 해에 등급 띠(3배)를 넘지 않는다").isLessThan(1.9);
       if (k >= 10) {
         assertThat(dropped / (double) trials).as(grade + " 꼭대기는 폭락장에 떨어질 수 있다").isGreaterThan(0.1);

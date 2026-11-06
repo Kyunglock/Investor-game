@@ -51,6 +51,7 @@ public record CompanyProperties(
     int crashFlipPercent,
     Experience experience,
     Effects effects,
+    Perks perks,
     Hr hr,
     Market market,
     Invest invest,
@@ -210,7 +211,18 @@ public record CompanyProperties(
       int convictionGainBp,
       int convictionMissPercent,
       int contrarianCrashBp,
-      int leaderFlipPercent) {}
+      int leaderFlipPercent,
+      int bigGainPercent,
+      int wallMissPercent,
+      int godFlipPercent) {}
+
+  /**
+   * 등급 효과 (decisions.md 289번): 종합 등급(F~SSS)마다.
+   *
+   * @param gainPercent 맞혔을 때 버는 몫에 더 얹는 비율(%). SSS 위(X~GOD)는 SSS 값
+   * @param growthPercent 한 해 자리에서 일하면 가장 낮은 능력치(운 빼고)가 한 띠 오를 확률(%). SSS는 0: 그 위는 실전 경험으로 오른다
+   */
+  public record Perks(Map<String, Integer> gainPercent, Map<String, Integer> growthPercent) {}
 
   /**
    * @param dropLossPercent 한 해 결산에서 맡은 판돈이 이만큼 빠지면 종합 등급 한 단계 하락 (6.4절 제안: 30)

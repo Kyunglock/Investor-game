@@ -97,7 +97,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 한 분기를 넘긴다. 4분기면 연말 결산을 하고 다음 해 이슈로 간다 (decisions.md 268번)
+         * 한 분기를 넘긴다. 4분기면 연말 결산을 하고 다음 해 연초 회의로 간다 (decisions.md 268번)
          * @description 직원들이 배치대로 한 분기를 굴린 결과가 lastQuarter에 실리고, 다음 분기의 거시경제 회의가 새로 온다.
          *     4분기를 넘기면 네 분기를 모은 연말 결산서가 lastSettlement에 실리고 다음 해 지원자가 온다. 회사는 끝나지 않는다(236번).
          *     종목 회의를 열 수 있는데(invest.ready) 안 했으면 400.
@@ -405,14 +405,16 @@ export interface components {
             employees: {
                 id: number;
                 name: string;
-                /** @description SSS면 실전 경험으로 X~ZZZ까지 오른다 (2.3절) */
+                /** @description SSS면 실전 경험으로 X~ZZZ, 그 위 XS·XSS·GOD까지 오른다 (2.3절, decisions.md 289번) */
                 overallGrade: components["schemas"]["Grade"];
                 /** @description 실전 경험. 폭락장을 손실 없이 버틸 때 쌓인다 */
                 experience: number;
                 /** @description 다음 단계까지 드는 실전 경험. SSS가 아니면 null */
                 experienceNeeded?: number | null;
-                /** @description X 이상 등급의 효과 이름(확신·경보·역발상·리더·사수·선견). 쌓인다 (2.4절) */
+                /** @description X 이상 등급의 효과 이름(확신·경보·역발상·리더·사수·선견·큰손·철벽·신의 손). 쌓인다 (2.4절) */
                 effects: string[];
+                /** @description 등급 효과 한 줄: 이름·맞혔을 때 더 버는 몫·자랄 확률 (decisions.md 289번) */
+                perk: string;
                 grades: {
                     [key: string]: components["schemas"]["Grade"];
                 };
@@ -518,6 +520,8 @@ export interface components {
                 /** @description 관심 섹터 코드. 뽑으면 직원이 안고 들어온다 */
                 sector?: string | null;
                 sectorName?: string | null;
+                /** @description 등급 효과 한 줄 (decisions.md 289번) */
+                perk: string;
             }[];
             /**
              * Format: int64
@@ -701,7 +705,7 @@ export interface components {
                 /** @description 주제 이름(기준금리·환율·유가·물가·경기) */
                 topic: string;
                 title: string;
-                /** @description 기사 문장. 리서치 팀이 형광펜을 그은 문장은 highlighted, 이슈의 폭락 조짐을 옮긴 문장은 omen(헛조짐일 수도 있다) */
+                /** @description 기사 문장. 리서치 팀이 형광펜을 그은 문장은 highlighted, 연초 회의의 폭락 조짐을 옮긴 문장은 omen(헛조짐일 수도 있다) */
                 sentences: {
                     text: string;
                     highlighted: boolean;
@@ -745,7 +749,7 @@ export interface components {
                 omen?: string | null;
                 /**
                  * Format: int64
-                 * @description 이슈 때의 자본 (decisions.md 251번)
+                 * @description 연초 회의 때의 자본 (decisions.md 251번)
                  */
                 capitalBefore: number;
                 /** Format: int64 */
@@ -894,8 +898,11 @@ export interface components {
             /** @description 가져올 때 한마디 */
             pitch: string;
         };
-        /** @enum {string} */
-        Grade: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "X" | "XX" | "XXX" | "Z" | "ZZ" | "ZZZ";
+        /**
+         * @description 회사 등급은 F~ZZZ, 직원 등급은 그 위로 XS·XSS·GOD까지 (decisions.md 289번)
+         * @enum {string}
+         */
+        Grade: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "X" | "XX" | "XXX" | "Z" | "ZZ" | "ZZZ" | "XS" | "XSS" | "GOD";
         PlayLog: {
             /** @description 회사. 최근에 차린 순 (decisions.md 228번) */
             companies: components["schemas"]["CompanyPlay"][];

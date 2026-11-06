@@ -1,7 +1,7 @@
 import type { Company } from '../../api/client'
 import { shortWon } from '../game/labels'
 import type { Matchup } from '../game/tug'
-import { LADDER, STAT_NAMES, shareOf } from './grades'
+import { EMPLOYEE_LADDER, STAT_NAMES, shareOf } from './grades'
 
 type Result = NonNullable<NonNullable<Company['invest']>['outcome']>['results'][number]
 
@@ -177,7 +177,7 @@ export function hindsightOf(invest: NonNullable<Company['invest']>): string[] {
 export function spokesperson(remarks: Remark[], employees: Company['employees']): Remark {
   const insight = (r: Remark) => {
     const grade = employees.find((e) => e.id === r.employeeId)?.grades.insight
-    return grade ? LADDER.indexOf(grade as (typeof LADDER)[number]) : -1
+    return grade ? EMPLOYEE_LADDER.indexOf(grade as (typeof EMPLOYEE_LADDER)[number]) : -1
   }
   return remarks.reduce((best, r) => (insight(r) > insight(best) ? r : best))
 }

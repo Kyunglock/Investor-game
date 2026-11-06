@@ -609,6 +609,10 @@ function EmployeeDetail({ employee: e }: { employee: Employee }) {
           {e.morale !== 0 && ` · ${MORALE[e.morale]}`}
         </span>
       </p>
+      {/* 등급 효과 (289번): 등급마다 더 버는 몫과 자랄 확률. */}
+      <p className="mt-0.5 text-[12px] text-teal" data-testid="perk">
+        등급 효과 · {e.perk}
+      </p>
       <ul className="mt-1 grid grid-cols-5 gap-1 text-center text-[11px]">
         {STAT_ORDER.map((code) => (
           <li key={code} className="rounded border border-line-soft py-0.5">
@@ -1083,6 +1087,9 @@ function ApplicantCard({
         </span>
       </p>
       {a.line && <p className="mt-1 text-[13px] text-teal">{a.line}</p>}
+      <p className="mt-1 text-[12px] text-muted" data-testid="applicant-perk">
+        등급 효과 · {a.perk}
+      </p>
       {a.sectorName && (
         <p className="mt-1 text-[12px] text-muted" data-testid="applicant-sector">
           관심 섹터 {a.sectorName}

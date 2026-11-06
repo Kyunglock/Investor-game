@@ -450,19 +450,20 @@ components:
           type: array
           items:
             type: object
-            required: [id, name, overallGrade, grades, experience, effects, deskYears, settled, leader, salary, morale]
+            required: [id, name, overallGrade, grades, experience, effects, perk, deskYears, settled, leader, salary, morale]
             properties:
               id: { type: integer }
               name: { type: string }
               overallGrade:
                 $ref: '#/components/schemas/Grade'
-                description: SSS면 실전 경험으로 X~ZZZ까지 오른다 (2.3절)
+                description: SSS면 실전 경험으로 X~ZZZ, 그 위 XS·XSS·GOD까지 오른다 (2.3절, decisions.md 289번)
               experience: { type: integer, description: 실전 경험. 폭락장을 손실 없이 버틸 때 쌓인다 }
               experienceNeeded: { type: [integer, 'null'], description: 다음 단계까지 드는 실전 경험. SSS가 아니면 null }
               effects:
                 type: array
-                description: X 이상 등급의 효과 이름(확신·경보·역발상·리더·사수·선견). 쌓인다 (2.4절)
+                description: X 이상 등급의 효과 이름(확신·경보·역발상·리더·사수·선견·큰손·철벽·신의 손). 쌓인다 (2.4절)
                 items: { type: string }
+              perk: { type: string, description: '등급 효과 한 줄: 이름·맞혔을 때 더 버는 몫·자랄 확률 (decisions.md 289번)' }
               grades: { type: object, additionalProperties: { $ref: '#/components/schemas/Grade' } }
               desk: { type: [string, 'null'] }
               sector: { type: [string, 'null'], description: 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다 }
@@ -534,7 +535,7 @@ components:
           description: 올해 공채 시장의 지원자 (decisions.md 228번). 끝난 회사면 비어 있다
           items:
             type: object
-            required: [id, name, overallGrade, grades, fee]
+            required: [id, name, overallGrade, grades, fee, perk]
             properties:
               id: { type: integer }
               name: { type: string }
@@ -544,6 +545,7 @@ components:
               line: { type: [string, 'null'], description: 올해 필요한 인재, 사수가 붙음, 인사팀이 데려옴 }
               sector: { type: [string, 'null'], description: 관심 섹터 코드. 뽑으면 직원이 안고 들어온다 }
               sectorName: { type: [string, 'null'] }
+              perk: { type: string, description: 등급 효과 한 줄 (decisions.md 289번) }
         refreshCost: { type: integer, format: int64, description: 지원자를 새로 받는 값 }
         refreshes: { type: integer, description: 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 254번) }
         history:
@@ -920,7 +922,8 @@ components:
         pitch: { type: string, description: 가져올 때 한마디 }
     Grade:
       type: string
-      enum: [F, E, D, C, B, A, S, SS, SSS, X, XX, XXX, Z, ZZ, ZZZ]
+      description: 회사 등급은 F~ZZZ, 직원 등급은 그 위로 XS·XSS·GOD까지 (decisions.md 289번)
+      enum: [F, E, D, C, B, A, S, SS, SSS, X, XX, XXX, Z, ZZ, ZZZ, XS, XSS, GOD]
     PlayLog:
       type: object
       required: [sessions, companies]

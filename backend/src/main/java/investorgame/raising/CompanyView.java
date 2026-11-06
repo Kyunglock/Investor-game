@@ -82,6 +82,7 @@ public record CompanyView(
    * @param experience 실전 경험
    * @param experienceNeeded 다음 단계까지 드는 실전 경험. SSS가 아니면 null(아직 쌓이지 않는다)
    * @param effects X 이상 등급의 효과 이름(확신·경보…). 쌓인다 (2.4절)
+   * @param perk 등급 효과 한 줄: 이름·맞혔을 때 더 버는 몫·자랄 확률 (decisions.md 289번)
    * @param sector 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다. 없으면 null
    * @param deskYears 지금 자리에서 결산을 맞은 해 수 (decisions.md 262번)
    * @param settled 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다
@@ -99,6 +100,7 @@ public record CompanyView(
       int experience,
       Integer experienceNeeded,
       List<String> effects,
+      String perk,
       String sector,
       String sectorName,
       int deskYears,
@@ -123,7 +125,8 @@ public record CompanyView(
       long fee,
       String line,
       String sector,
-      String sectorName) {}
+      String sectorName,
+      String perk) {}
 
   /**
    * 투자 회의 (decisions.md 229번). 정하기 전에는 숨은 방향이 없다.

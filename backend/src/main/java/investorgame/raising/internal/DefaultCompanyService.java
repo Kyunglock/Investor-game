@@ -276,6 +276,7 @@ class DefaultCompanyService implements CompanyService {
                             ? engine.experienceNeeded(e)
                             : null,
                         engine.effectsOf(e),
+                        engine.perkLine(e.stats, e.rank),
                         e.sector,
                         e.sector == null ? null : engine.sectorName(e.sector),
                         e.desk != null && e.desk.equals(e.lastDesk) ? e.deskYears : 0,
@@ -316,7 +317,8 @@ class DefaultCompanyService implements CompanyService {
                             a.fee,
                             a.line,
                             a.sector,
-                            a.sector == null ? null : engine.sectorName(a.sector)))
+                            a.sector == null ? null : engine.sectorName(a.sector),
+                            engine.perkLine(a.stats, a.rank)))
                 .toList();
     String hrCap = engine.hrOf(c).map(engine::hrCap).orElse(null);
     CompanyView.Meeting meeting =

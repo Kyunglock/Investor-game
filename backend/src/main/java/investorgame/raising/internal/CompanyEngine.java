@@ -28,7 +28,9 @@ class CompanyEngine {
 
   /** 모든 객체가 쓰는 등급표 15단계 (2.1절). */
   static final List<String> LADDER =
-      List.of("F", "E", "D", "C", "B", "A", "S", "SS", "SSS", "X", "XX", "XXX", "Z", "ZZ", "ZZZ");
+      List.of(
+          "F", "E", "D", "C", "B", "A", "S", "SS", "SSS", "X", "XX", "XXX", "Z", "ZZ", "ZZZ", "XS",
+          "XSS", "GOD");
 
   static final String CRASH = "crash";
 
@@ -58,6 +60,12 @@ class CompanyEngine {
   static final int RANK_LEADER = 4;
   static final int RANK_MENTOR = 5;
   static final int RANK_FORESIGHT = 6;
+
+  /** XS 큰손·XSS 철벽·GOD 신의 손 (decisions.md 289번): 직원 등급에만 있다. 회사 등급은 ZZZ까지다. */
+  static final int RANK_BIG = 7;
+
+  static final int RANK_WALL = 8;
+  static final int RANK_GOD = 9;
 
   private final ContentCatalog content;
   private final BehaviorService behavior;
@@ -190,6 +198,66 @@ class CompanyEngine {
     return employee.desk != null
         && employee.desk.equals(employee.lastDesk)
         && employee.deskYears + 1 >= properties.people().settleYears();
+  }
+
+  /** 등급 효과의 "더 버는 몫"(%, 289번). SSS 위는 SSS 값. */
+  int perkGainPercent(Employee employee) {
+    return properties.perks().gainPercent().getOrDefault(overallGrade(employee.stats), 0);
+  }
+
+  /** 등급 효과 한 줄 (289번): "새내기 · 맞히면 2% 더 번다 · 한 해 일하면 50% 확률로 자란다". */
+  String perkLine(Map<String, Integer> stats, int rank) {
+    RaisingContent.Perks texts = content.raising().company().perks();
+    String grade = overallGrade(stats);
+    int gain = properties.perks().gainPercent().getOrDefault(grade, 0);
+    int growth = properties.perks().growthPercent().getOrDefault(grade, 0);
+    String name = rank > 0 ? gradeOf(stats, rank) : texts.names().get(grade);
+    String line =
+        growth > 0
+            ? Korean.fill(
+                texts.line(),
+                Map.of("gain", String.valueOf(gain), "growth", String.valueOf(growth)))
+            : Korean.fill(texts.lineTop(), Map.of("gain", String.valueOf(gain)));
+    return name + " · " + line;
+  }
+
+  /** 등급 효과의 성장 확률(%, 289번). SSS와 그 위는 0: 실전 경험으로 오른다. */
+  int perkGrowthPercent(Employee employee) {
+    return properties.perks().growthPercent().getOrDefault(overallGrade(employee.stats), 0);
+  }
+
+  /**
+   * 한 해 자리에서 일한 직원이 자란다 (decisions.md 289번): 종합 등급마다 정한 확률로 가장 낮은 능력치(운 빼고, 같으면 앞의 것)가 한 띠 오른다. 낮은
+   * 등급일수록 잘 크고 높을수록 더디다. 쉬는 사람은 자라지 않는다.
+   */
+  private void grow(CompanyState company, Settlement settlement, SeededRandom random) {
+    for (Employee e : company.employees) {
+      int chance = perkGrowthPercent(e);
+      if (e.desk == null || chance <= 0) {
+        continue;
+      }
+      if (random.forKey("grow", company.year, e.id).nextInt(PERCENT) >= chance) {
+        continue;
+      }
+      String stat =
+          StatCodes.ALL.stream()
+              .filter(code -> !StatCodes.LUCK.equals(code))
+              .min(java.util.Comparator.comparingInt((String code) -> e.stats.get(code)))
+              .orElseThrow();
+      int before = e.stats.get(stat);
+      if (before >= MAX_STAT) {
+        continue;
+      }
+      int after = Math.min(MAX_STAT, before + properties.experience().band());
+      e.stats.put(stat, after);
+      settlement.lines.add(
+          gradeLine(
+              content.raising().company().perks().grown(),
+              e,
+              StatGrade.of(before).name(),
+              StatGrade.of(after).name(),
+              stat));
+    }
   }
 
   /** 결산마다 같은 자리 해 수를 센다. 막 손에 익은 해면 소식 줄을 남긴다 (262번). */
@@ -1039,6 +1107,11 @@ class CompanyEngine {
       swayBp = swayBp * properties.effects().leaderFlipPercent() / PERCENT;
       flipBp = flipBp * properties.effects().leaderFlipPercent() / PERCENT;
     }
+    // GOD 신의 손 (289번): 회사에 한 명만 있어도 모든 직원이 덜 흔들린다.
+    if (company.employees.stream().anyMatch(e -> e.rank >= RANK_GOD)) {
+      swayBp = swayBp * properties.effects().godFlipPercent() / PERCENT;
+      flipBp = flipBp * properties.effects().godFlipPercent() / PERCENT;
+    }
     return new Odds(swayBp, flipBp);
   }
 
@@ -1158,7 +1231,16 @@ class CompanyEngine {
                   gainBp(company, employee)
                       + (conviction ? effects.convictionGainBp() : 0)
                       + macro.windBp(company, employee.desk)));
+      // 등급 효과 (289번): 종합 등급이 높을수록 맞혔을 때 더 번다. XS 큰손은 그 위에 1.5배.
+      gainBp = gainBp * (PERCENT + perkGainPercent(employee)) / PERCENT;
+      if (employee.rank >= RANK_BIG) {
+        gainBp = gainBp * effects.bigGainPercent() / PERCENT;
+      }
       int missBp = scaledMiss(company, returns.missBp());
+      // XSS 철벽: 틀려도 잃는 몫이 절반이다.
+      if (employee.rank >= RANK_WALL) {
+        missBp = missBp * effects.wallMissPercent() / PERCENT;
+      }
       int flipLossBp = scaledMiss(company, returns.flipBp());
       // 시장 손익. 폭락장에는 섹터마다 빠지는 폭이 다르다(식품·금융은 덜, 반도체는 더). 방어로 돌렸으면 덜 빠진다 (266번).
       int phaseBp = properties.phaseBp().getOrDefault(company.phase, 0);
@@ -1345,6 +1427,7 @@ class CompanyEngine {
     }
     settlement.lines.addAll(company.yearLines);
     countTenure(company, settlement);
+    grow(company, settlement, random);
     // 등급·건물·자리 수는 연말에만 바뀐다 (268번).
     company.gradedCapital = company.capital;
     List<Employee> stood = fitSeats(company);
@@ -1412,11 +1495,16 @@ class CompanyEngine {
 
   /**
    * 큰 손실을 낸 직원은 종합 등급이 한 단계 떨어진다 (6.4절). 떠나지 않는다. X 이상이면 종합 등급이, 그 아래면 그해 손을 가장 많이 뒤집은 능력치(뒤집힘이
-   * 없었으면 자리가 원하는 능력치)가 한 띠 내려간다. 종합 등급만 내리면 실제 성적이 그대로라 판정에 쓰는 능력치를 내린다.
+   * 없었으면 자리가 원하는 능력치)가 한 띠 내려간다. 종합 등급만 내리면 실제 성적이 그대로라 판정에 쓰는 능력치를 내린다. 종합 등급이 F·E면 내려가지 않는다
+   * (289번).
    */
   void drop(Employee employee, Result result, Settlement settlement) {
     RaisingContent.GradeLines lines = content.raising().company().gradeLines();
     String before = employeeGrade(employee);
+    // 새내기·견습(F·E)은 배우는 중이라 큰 손실로 깎이지 않는다 (289번): 깎이면 자라는 만큼 도로 내려가 F를 벗어나지 못했다.
+    if (employee.rank == 0 && LADDER.indexOf(before) < LADDER.indexOf(StatGrade.D.name())) {
+      return;
+    }
     if (employee.rank > 0) {
       employee.rank--;
       employee.experience = 0;
