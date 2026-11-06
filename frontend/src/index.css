@@ -771,7 +771,7 @@ p.animate-stamp {
   animation: clash-flash 0.7s ease-out 2;
 }
 
-/* 등급 배지 (decisions.md 286번): 층마다 생김새가 다르고, 층 안에서는 단계(data-step 1~3)가 오를수록 진해진다 */
+/* 등급 배지 (decisions.md 287번): 층마다 생김새가 다르고, 층 안에서는 단계(data-step 1~3)가 오를수록 진해진다 */
 .grade-badge {
   --badge-glow: 0px;
   display: inline-flex;

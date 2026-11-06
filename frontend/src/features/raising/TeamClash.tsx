@@ -1,12 +1,88 @@
 import { type CSSProperties, useEffect, useRef, useState } from 'react'
+import type { Company } from '../../api/client'
+import type { Figure } from '../game/pixel/figure'
+import type { MoodKey } from '../game/pixel/moods'
+import { Person } from '../game/pixel/Person'
+import { SPRITE_HEIGHT, SPRITE_WIDTH } from '../game/pixel/sprite'
+import { usePixelArt } from '../game/pixelArt'
+import { ATTIRE_COLORS, attireOf } from './office'
+
+type Employee = Company['employees'][number]
+
+const PIXELATED = { imageRendering: 'pixelated', shapeRendering: 'crispEdges' } as const
+/** 회의실 캐릭터 너비(px). */
+const CHARACTER_PX = 40
+
+/**
+ * 회의실에 앉은 사람 하나 (286번). 직원은 사무실 미니맵(237번)과 같은 모습(성별·차림새는 종합 등급)이고, 끌려 나온 옆자리 사람은 손님 모습이다. 표정: 말할
+ * 때 결의, 이기면 기쁨, 지면 절망. 그림을 끄면(190번) 동그라미 글자로 그린다.
+ */
+function Character({
+  employee,
+  look,
+  side,
+  mood,
+  talking,
+  fallback,
+}: {
+  employee: Employee | undefined
+  look: number
+  side: 'BUY' | 'SELL'
+  mood: MoodKey | null
+  talking: boolean
+  fallback: string
+}) {
+  const shown = usePixelArt((s) => s.shown)
+  if (!shown) {
+    return (
+      <span
+        className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-card text-[13px] font-bold text-white shadow ${
+          side === 'BUY' ? 'bg-up' : 'bg-down'
+        } ${talking ? 'ring-2 ring-gold' : ''}`}
+      >
+        {fallback}
+      </span>
+    )
+  }
+  const figure: Figure = employee
+    ? {
+        who: 'me',
+        sex: employee.id % 2 === 0 ? 'F' : 'M',
+        stage: 'adult',
+        x: 0,
+        recolor: ATTIRE_COLORS[attireOf(employee.overallGrade)],
+      }
+    : { who: 'kid', look, sex: look % 2 ? 'F' : 'M', stage: 'adult', x: 0 }
+  return (
+    <svg
+      viewBox={`0 0 ${SPRITE_WIDTH} ${SPRITE_HEIGHT}`}
+      width={CHARACTER_PX}
+      height={(CHARACTER_PX * SPRITE_HEIGHT) / SPRITE_WIDTH}
+      className={`block drop-shadow ${talking ? 'drop-shadow-[0_0_4px_var(--gold)]' : ''}`}
+      style={PIXELATED}
+      data-testid="room-character"
+      aria-hidden="true"
+    >
+      <ellipse
+        cx={SPRITE_WIDTH / 2}
+        cy={SPRITE_HEIGHT - 0.6}
+        rx={5}
+        ry={0.9}
+        fill={side === 'BUY' ? 'var(--up)' : 'var(--down)'}
+        opacity={0.35}
+      />
+      <Person figure={figure} me={{ adornment: null, mark: null }} mood={mood} top={0} />
+    </svg>
+  )
+}
 
 /** 맞붙는 가장 짧은 시간, 한쪽으로 밀어붙이는 시간(ms) (decisions.md 279·284번). */
 const CLASH_MS = 2900
 const PUSH_MS = 800
 /** 토론 한 줄이 떠오르는 간격(ms) (285번). 말이 오가는 동안 계속 맞붙는다. */
 export const DEBATE_LINE_MS = 1000
-/** 경계선이 한 번 밀고 밀리는 간격(ms). */
-const SWING_MS = 290
+/** 회의실에 한쪽마다 그리는 사람 수. 넘치면 "+N". */
+const SEATS = 10
 
 export type DebateLine = { name: string; side: 'BUY' | 'SELL'; text: string; last: boolean }
 
@@ -31,21 +107,21 @@ export function debateTimes(debate: DebateLine[]): number[] {
 }
 
 /**
- * 맞붙는 동안 경계선이 갈 자리(매수 쪽 몫, %). 처음엔 크게 엎치락뒤치락하고, 갈수록 이길 쪽으로 쏠린다. 무게가 팽팽할수록 오래 흔들린다.
+ * 회의실에서 매수파가 차지하는 몫(%, 왼쪽) (decisions.md 286번): 양쪽 사람 수의 비율. 한 사람뿐인 쪽도 앉을 자리가 있게 22~78%로 자른다.
  */
-export function clashSwings(buy: number, sell: number, buyWins: boolean, ms = CLASH_MS): number[] {
-  const steps = Math.floor(ms / SWING_MS)
-  const total = buy + sell
-  const lean = total === 0 ? 0 : Math.abs(buy - sell) / total
-  const out: number[] = []
-  for (let i = 0; i < steps; i++) {
-    const t = i / (steps - 1)
-    const amp = 22 * (1 - t * 0.55)
-    const side = i % 2 === 0 ? 1 : -1
-    const drift = (buyWins ? 1 : -1) * (4 + 14 * t * (0.6 + lean))
-    out.push(Math.max(12, Math.min(88, 50 + side * amp + drift)))
+export function roomShare(buyers: number, sellers: number): number {
+  if (buyers + sellers === 0) {
+    return 50
   }
-  return out
+  return Math.max(22, Math.min(78, Math.round((100 * buyers) / (buyers + sellers))))
+}
+
+/** 한쪽에 앉는 사람: 그쪽 의견을 낸 직원, 없으면 토론에 끌려 나온 사람(285번). */
+export function sidePeople(names: string[], side: 'BUY' | 'SELL', debate: DebateLine[]): string[] {
+  if (names.length > 0) {
+    return names
+  }
+  return [...new Set(debate.filter((d) => d.side === side).map((d) => d.name))]
 }
 
 /** 불꽃: 튀는 방향(px), 크기, 색, 늦춤(ms). */
@@ -100,6 +176,7 @@ export function TeamClash({
   sell,
   choice,
   debate,
+  staff = [],
   instant,
 }: {
   buyNames: string[]
@@ -108,13 +185,13 @@ export function TeamClash({
   sell: number
   choice: 'BUY' | 'SELL' | 'HOLD'
   debate: DebateLine[]
+  /** 회사 직원: 이름으로 캐릭터를 찾는다 (286번). */
+  staff?: Employee[]
   instant: boolean
 }) {
   const buyWins = choice === 'BUY'
   const clash = clashMs(debate)
-  const swings = clashSwings(buy, sell, buyWins, clash)
   const bangs = bangsFor(clash)
-  const [step, setStep] = useState(instant ? -1 : 0)
   const [phase, setPhase] = useState<'clash' | 'push' | 'done'>(instant ? 'done' : 'clash')
   const [said, setSaid] = useState(instant ? debate.length : 0)
   const log = useRef<HTMLOListElement>(null)
@@ -123,21 +200,17 @@ export function TeamClash({
   useEffect(() => {
     if (instant) {
       setPhase('done')
-      setStep(-1)
       setSaid(times.length)
       return
     }
     const timers: ReturnType<typeof setTimeout>[] = []
-    for (let i = 1; i < swings.length; i++) {
-      timers.push(setTimeout(() => setStep(i), i * SWING_MS))
-    }
     times.forEach((at, i) => {
       timers.push(setTimeout(() => setSaid(i + 1), at))
     })
     timers.push(setTimeout(() => setPhase('push'), clash))
     timers.push(setTimeout(() => setPhase('done'), clash + PUSH_MS))
     return () => timers.forEach(clearTimeout)
-  }, [instant, swings.length, times, clash])
+  }, [instant, times, clash])
   // 새 말이 올라오면 대화창을 맨 아래로 내린다.
   useEffect(() => {
     const el = log.current
@@ -145,16 +218,83 @@ export function TeamClash({
       el.scrollTop = el.scrollHeight
     }
   }, [said])
-  const final = buyWins ? 90 : 10
-  const share = phase === 'clash' && step >= 0 ? swings[step] : final
   const fighting = phase === 'clash'
-  // 한쪽이 비었으면 토론에 끌려 나온 사람(모르겠다던 직원이나 옆자리 사람)이 그쪽을 든다 (285번).
-  const who = (names: string[], side: 'BUY' | 'SELL') => {
-    if (names.length > 0) {
-      return names.join('·')
-    }
-    const drafted = debate.find((d) => d.side === side)?.name
-    return drafted ? `${drafted}(끌려 나옴)` : '아무도 없음'
+  const done = phase === 'done'
+  const buyers = sidePeople(buyNames, 'BUY', debate)
+  const sellers = sidePeople(sellNames, 'SELL', debate)
+  const share = roomShare(buyers.length, sellers.length)
+  // 지금 말하는 사람: 방금 올라온 말의 주인.
+  const speaking = said > 0 ? debate[said - 1] : null
+  const drafted = (names: string[]) => (names.length > 0 ? '' : '(끌려옴)')
+  // 한쪽에 한 명뿐이면 한 줄로 앉아 방을 낮춘다: 탁자 앞에 선다.
+  const twoRows = Math.max(buyers.length, sellers.length) > 1
+  // 회의에 온 직원은 사무실 미니맵과 같은 캐릭터로, 끌려 나온 옆자리 사람은 손님 캐릭터로 그린다.
+  const staffOf = (name: string) => staff.find((e) => e.name === name)
+  const zone = (side: 'BUY' | 'SELL', people: string[]) => {
+    const buySide = side === 'BUY'
+    const wins = buySide === buyWins
+    const shown = people.slice(0, SEATS)
+    const rows = twoRows
+      ? [shown.filter((_, i) => i % 2 === 0), shown.filter((_, i) => i % 2 === 1)]
+      : [shown]
+    return (
+      <div
+        className={`relative flex h-full flex-col justify-between py-2.5 ${
+          buySide ? 'bg-up/15' : 'bg-down/15'
+        } ${done && wins ? 'animate-clash-flash' : ''}`}
+        style={{ width: buySide ? `${share}%` : `${100 - share}%` }}
+        data-testid={buySide ? 'room-buy' : 'room-sell'}
+        data-seats={people.length}
+      >
+        {rows.map((row, r) => (
+          <div
+            // 위 줄과 아래 줄: 탁자를 사이에 두고 앉는다.
+            // biome-ignore lint/suspicious/noArrayIndexKey: 줄은 둘뿐이다
+            key={r}
+            className={`flex flex-wrap justify-center gap-x-1 ${r === 1 ? 'items-end' : ''}`}
+          >
+            {row.map((name) => {
+              const talking = !done && speaking?.name === name && speaking.side === side
+              return (
+                <div
+                  key={name}
+                  className={`relative flex w-12 flex-col items-center transition-transform duration-300 ${talking ? 'z-10' : ''} ${fighting ? 'animate-clash-bob' : ''} ${
+                    phase === 'push' && wins ? (buySide ? 'translate-x-2' : '-translate-x-2') : ''
+                  } ${done && !wins ? 'opacity-45 grayscale' : ''} ${done && wins ? 'animate-clash-win' : ''}`}
+                  style={{ animationDelay: `${(name.length * 97) % 360}ms` }}
+                  data-testid="room-seat"
+                  data-talking={talking}
+                >
+                  {talking && (
+                    <span className="absolute -top-3 -right-1 text-[13px]" aria-hidden="true">
+                      💬
+                    </span>
+                  )}
+                  <span
+                    className={`block transition-transform duration-200 ${talking ? 'scale-115' : ''}`}
+                  >
+                    <Character
+                      employee={staffOf(name)}
+                      look={name.length}
+                      side={side}
+                      mood={done ? (wins ? 'joy' : 'despair') : talking ? 'confident' : null}
+                      talking={talking}
+                      fallback={done ? (wins ? '🙌' : '😩') : name.slice(0, 1)}
+                    />
+                  </span>
+                  <span className="w-full truncate text-center text-[10px] leading-tight">
+                    {name}
+                  </span>
+                </div>
+              )
+            })}
+            {r === 1 && people.length > SEATS && (
+              <span className="self-center text-[11px] text-muted">+{people.length - SEATS}</span>
+            )}
+          </div>
+        ))}
+      </div>
+    )
   }
   return (
     <section
@@ -185,39 +325,31 @@ export function TeamClash({
           매도파 👊
         </span>
       </div>
-      <div className="relative mt-1 h-16 rounded">
-        <div className="absolute inset-0 flex overflow-hidden rounded">
-          <div
-            className={`flex items-center justify-start bg-up pl-2 text-white ${
-              phase === 'done' && buyWins ? 'animate-clash-flash' : ''
-            }`}
-            style={{
-              width: `${share}%`,
-              transition: `width ${phase === 'clash' ? 240 : 700}ms cubic-bezier(.34,1.56,.64,1)`,
-            }}
-          >
-            <span className="text-[16px] font-black">매수</span>
-          </div>
-          <div
-            className={`flex flex-1 items-center justify-end bg-down pr-2 text-white ${
-              phase === 'done' && !buyWins ? 'animate-clash-flash' : ''
-            }`}
-          >
-            <span className="text-[16px] font-black">매도</span>
-          </div>
+      {/* 회의실 (286번): 매수파는 왼쪽, 매도파는 오른쪽에 탁자를 사이에 두고 앉는다. 방은 사람 수 비율대로 나뉜다. */}
+      <div
+        className={`relative mt-1 overflow-hidden rounded border border-line bg-paper ${twoRows ? 'h-52' : 'h-[118px]'}`}
+        data-testid="meeting-room"
+        role="img"
+        aria-label={`회의실: 매수파 ${buyers.length}명, 매도파 ${sellers.length}명`}
+      >
+        <div
+          className={`absolute right-3 left-3 h-6 rounded-full border-2 border-pen/40 bg-desk shadow-inner ${twoRows ? 'top-1/2 -translate-y-1/2' : 'bottom-2.5'}`}
+          aria-hidden="true"
+        />
+        <div className="relative flex h-full">
+          {zone('BUY', buyers)}
+          {zone('SELL', sellers)}
         </div>
-        {/* 맞붙는 자리: 경계선을 따라 ⚡가 맥박 치고, 불꽃과 "쾅!"이 터진다. */}
+        {/* 맞붙는 자리: 두 편이 갈리는 선을 따라 ⚡가 맥박 치고, 불꽃과 "쾅!"이 터진다. */}
         <div
           className="pointer-events-none absolute top-0 bottom-0"
-          style={{
-            left: `${share}%`,
-            transition: `left ${phase === 'clash' ? 240 : 700}ms cubic-bezier(.34,1.56,.64,1)`,
-          }}
+          style={{ left: `${share}%` }}
           aria-hidden="true"
         >
+          <div className="absolute top-0 bottom-0 left-0 border-l-2 border-dashed border-pen/50" />
           <div
-            className={`absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 text-[34px] leading-none drop-shadow ${
-              fighting ? 'animate-clash-bolt' : ''
+            className={`absolute top-1/2 left-0 -translate-x-1/2 -translate-y-1/2 text-[30px] leading-none drop-shadow ${
+              fighting ? 'animate-clash-bolt' : done ? 'opacity-0' : ''
             }`}
           >
             ⚡
@@ -259,12 +391,12 @@ export function TeamClash({
             ))}
         </div>
       </div>
-      <div className="mt-1 flex justify-between gap-2 text-[12px]">
+      <div className="mt-1 flex justify-between gap-2 whitespace-nowrap text-[12px]">
         <span className="text-up" data-testid="clash-buy">
-          {who(buyNames, 'BUY')} · 무게 {buy}
+          매수파 {buyers.length}명{drafted(buyNames)} · 무게 {buy}
         </span>
         <span className="text-right text-down" data-testid="clash-sell">
-          {who(sellNames, 'SELL')} · 무게 {sell}
+          매도파 {sellers.length}명{drafted(sellNames)} · 무게 {sell}
         </span>
       </div>
       {debate.length > 0 && (

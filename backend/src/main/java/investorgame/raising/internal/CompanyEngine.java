@@ -31,7 +31,7 @@ class CompanyEngine {
       List.of("F", "E", "D", "C", "B", "A", "S", "SS", "SSS", "X", "XX", "XXX", "Z", "ZZ", "ZZZ");
 
   /**
-   * 글에 보이는 SSS 위 등급 (decisions.md 286번). 코드(X~ZZZ)는 저장·API에 그대로 두고 사람이 읽는 글자만 EX·EX+·EX++ ·
+   * 글에 보이는 SSS 위 등급 (decisions.md 287번). 코드(X~ZZZ)는 저장·API에 그대로 두고 사람이 읽는 글자만 EX·EX+·EX++ ·
    * ★·★★·★★★로 바꾼다. 프론트의 grades.ts GRADE_LABEL과 같다.
    */
   private static final Map<String, String> SHOWN =
@@ -1603,7 +1603,7 @@ class CompanyEngine {
     return Korean.fill(template, values);
   }
 
-  /** 글에 보이는 등급 글자. F~SSS는 그대로, X~ZZZ는 EX·EX+·EX++·★·★★·★★★ (286번). */
+  /** 글에 보이는 등급 글자. F~SSS는 그대로, X~ZZZ는 EX·EX+·EX++·★·★★·★★★ (287번). */
   static String shown(String grade) {
     return SHOWN.getOrDefault(grade, grade);
   }

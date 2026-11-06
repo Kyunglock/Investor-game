@@ -8,7 +8,7 @@ describe('등급 사다리', () => {
     expect(LADDER.indexOf('X')).toBe(LADDER.indexOf('SSS') + 1)
   })
 
-  it('SSS 위는 EX·EX+·EX++, 그 위는 별 하나·둘·셋으로 보인다 (286번)', () => {
+  it('SSS 위는 EX·EX+·EX++, 그 위는 별 하나·둘·셋으로 보인다 (287번)', () => {
     expect(LADDER.map(gradeLabel)).toEqual([
       'F',
       'E',

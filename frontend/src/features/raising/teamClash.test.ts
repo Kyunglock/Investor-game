@@ -1,22 +1,32 @@
 import { describe, expect, it } from 'vitest'
-import { clashMs, clashSwings, type DebateLine, debateTimes, teamClashMs } from './TeamClash'
+import {
+  clashMs,
+  type DebateLine,
+  debateTimes,
+  roomShare,
+  sidePeople,
+  teamClashMs,
+} from './TeamClash'
 
-describe('"너희가 알아서 해" 맞붙는 장면 (decisions.md 284번)', () => {
-  it('경계선이 좌우로 크게 엎치락뒤치락하다가 이길 쪽으로 쏠린다', () => {
-    const swings = clashSwings(45, 65, false)
-    expect(swings.length).toBeGreaterThanOrEqual(8)
-    for (const s of swings) {
-      expect(s).toBeGreaterThanOrEqual(12)
-      expect(s).toBeLessThanOrEqual(88)
-    }
-    // 처음 두 번은 서로 반대쪽으로 크게 밀린다.
-    expect(Math.sign(swings[0] - 50)).not.toBe(Math.sign(swings[1] - 50))
-    expect(Math.abs(swings[0] - swings[1])).toBeGreaterThan(25)
-    // 끝 무렵에는 매도(이긴 쪽, 매수 몫이 작다)로 기운다.
-    const tail = swings.slice(-2)
-    expect((tail[0] + tail[1]) / 2).toBeLessThan(50)
-    const buyWin = clashSwings(80, 20, true).slice(-2)
-    expect((buyWin[0] + buyWin[1]) / 2).toBeGreaterThan(50)
+describe('"너희가 알아서 해" 회의실 (decisions.md 286번)', () => {
+  it('방은 양쪽 사람 수 비율대로 나뉘고, 한 사람뿐인 쪽도 앉을 자리가 있다', () => {
+    expect(roomShare(2, 2)).toBe(50)
+    expect(roomShare(3, 1)).toBe(75)
+    expect(roomShare(1, 2)).toBe(33)
+    expect(roomShare(9, 1)).toBe(78)
+    expect(roomShare(1, 9)).toBe(22)
+    expect(roomShare(0, 0)).toBe(50)
+  })
+
+  it('의견을 낸 사람이 없는 쪽에는 토론에 끌려 나온 사람이 앉는다', () => {
+    const debate: DebateLine[] = [
+      { name: '김매수', side: 'BUY', text: '…', last: false },
+      { name: '옆자리 신입', side: 'SELL', text: '…', last: false },
+      { name: '옆자리 신입', side: 'SELL', text: '…', last: true },
+    ]
+    expect(sidePeople(['김매수', '이매수'], 'BUY', debate)).toEqual(['김매수', '이매수'])
+    expect(sidePeople([], 'SELL', debate)).toEqual(['옆자리 신입'])
+    expect(sidePeople([], 'SELL', [])).toEqual([])
   })
 })
 
@@ -52,8 +62,6 @@ describe('"너희가 알아서 해" 토론 (decisions.md 285번)', () => {
   it('토론이 없으면(옛 회의) 짧게 맞붙기만 한다', () => {
     expect(debateTimes([])).toEqual([])
     expect(teamClashMs([])).toBe(clashMs([]) + 800)
-    expect(clashSwings(50, 50, true, clashMs(debate)).length).toBeGreaterThan(
-      clashSwings(50, 50, true).length,
-    )
+    expect(clashMs(debate)).toBeGreaterThan(clashMs([]))
   })
 })
