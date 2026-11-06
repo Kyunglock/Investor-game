@@ -149,9 +149,9 @@ class CompanyApiTest {
     long capital = company.read("$.capital", Long.class);
     assertThat(capital).isEqualTo(100_000_000L);
     assertThat(company.read("$.grade", String.class)).isEqualTo("F");
-    assertThat(company.read("$.seats", Integer.class)).isEqualTo(2);
+    assertThat(company.read("$.seats", Integer.class)).isEqualTo(4);
     assertThat(company.read("$.employees.length()", Integer.class)).isZero();
-    assertThat(company.read("$.applicants.length()", Integer.class)).isEqualTo(3);
+    assertThat(company.read("$.applicants.length()", Integer.class)).isEqualTo(5);
     assertThat(company.read("$.applicants[0].line", String.class)).isNotBlank();
     assertThat(company.read("$.applicants[0].sectorName", String.class)).isNotBlank();
     // 섹터 데스크 (4.2·9.4절): 첫 회사는 평범한 시대라 뜨는 섹터가 없다.
@@ -165,12 +165,12 @@ class CompanyApiTest {
     DocumentContext one = hire(firstId, null);
     assertThat(one.read("$.employees.length()", Integer.class)).isEqualTo(1);
     assertThat(one.read("$.capital", Long.class)).isEqualTo(capital - firstFee);
-    assertThat(one.read("$.applicants.length()", Integer.class)).isEqualTo(2);
+    assertThat(one.read("$.applicants.length()", Integer.class)).isEqualTo(4);
     postJson("/api/company/hires", "{\"applicantId\":" + firstId + "}")
         .andExpect(status().isBadRequest());
 
     DocumentContext refreshed = json(refresh(1, 0).andExpect(status().isOk()));
-    assertThat(refreshed.read("$.applicants.length()", Integer.class)).isEqualTo(3);
+    assertThat(refreshed.read("$.applicants.length()", Integer.class)).isEqualTo(5);
     assertThat(refreshed.read("$.refreshes", Integer.class)).isEqualTo(1);
     assertThat(refreshed.read("$.capital", Long.class))
         .isEqualTo(one.read("$.capital", Long.class) - one.read("$.refreshCost", Long.class));
@@ -305,7 +305,7 @@ class CompanyApiTest {
     assertThat(fourth.read("$.status", String.class)).isEqualTo("ACTIVE");
     assertThat(fourth.read("$.year", Integer.class)).isEqualTo(4);
     assertThat(fourth.read("$.macro.ready", Boolean.class)).isTrue();
-    assertThat(fourth.read("$.applicants.length()", Integer.class)).isEqualTo(3);
+    assertThat(fourth.read("$.applicants.length()", Integer.class)).isEqualTo(5);
     assertThat(fourth.read("$.meeting", Object.class)).isNotNull();
     java.util.Map<String, Object> fields = fourth.read("$");
     assertThat(fields).doesNotContainKeys("sale", "owner", "turns");
@@ -336,7 +336,7 @@ class CompanyApiTest {
     DocumentContext resumed = json(mvc.perform(get("/api/company").cookie(session)));
     assertThat(resumed.read("$.status", String.class)).isEqualTo("ACTIVE");
     assertThat(resumed.read("$.companyId", String.class)).isEqualTo(id);
-    assertThat(resumed.read("$.applicants.length()", Integer.class)).isEqualTo(3);
+    assertThat(resumed.read("$.applicants.length()", Integer.class)).isEqualTo(5);
     settleYear(1).andExpect(jsonPath("$.year").value(2));
   }
 
@@ -345,7 +345,7 @@ class CompanyApiTest {
   void 자리가_꽉_차면_내보낼_사람을_고르고_인사팀이_공채를_돕는다() throws Exception {
     DocumentContext company =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
-    // 계약금이 싼 지원자부터 둘을 뽑는다.
+    // 계약금이 싼 지원자부터 넷을 뽑아 F 회사 자리 넷을 채운다 (287번).
     List<Integer> ids = company.read("$.applicants[*].id");
     List<Number> fees = company.read("$.applicants[*].fee");
     List<Integer> order =
@@ -353,11 +353,13 @@ class CompanyApiTest {
             .boxed()
             .sorted(java.util.Comparator.comparingLong(i -> fees.get(i).longValue()))
             .toList();
-    hire(ids.get(order.get(0)), null);
-    DocumentContext two = hire(ids.get(order.get(1)), null);
-    int keep = two.read("$.employees[0].id");
-    int leave = two.read("$.employees[1].id");
-    int last = ids.get(order.get(2));
+    DocumentContext full = null;
+    for (int i = 0; i < 4; i++) {
+      full = hire(ids.get(order.get(i)), null);
+    }
+    int keep = full.read("$.employees[0].id");
+    int leave = full.read("$.employees[1].id");
+    int last = ids.get(order.get(4));
     postJson("/api/company/hires", "{\"applicantId\":" + last + "}")
         .andExpect(status().isBadRequest());
 
@@ -371,12 +373,12 @@ class CompanyApiTest {
 
     DocumentContext swapped = hire(last, leave);
     List<Integer> staff = swapped.read("$.employees[*].id");
-    assertThat(staff).hasSize(2).contains(keep).doesNotContain(leave);
+    assertThat(staff).hasSize(4).contains(keep).doesNotContain(leave);
 
     DocumentContext refreshed = json(refresh(1, 0).andExpect(status().isOk()));
     assertThat(refreshed.read("$.applicants.length()", Integer.class))
         .as("인사팀이 한 명 더 데려온다")
-        .isEqualTo(4);
+        .isEqualTo(6);
   }
 
   /** 망한 회사는 닫고 사장의 사재로 다음 회사를 차린다 (decisions.md 247번). 망하지 않았으면 400이다. */
