@@ -82,6 +82,12 @@ class CompanyController {
     return companies.refreshApplicants(cookies.requireSession(token));
   }
 
+  /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 248번). */
+  @PostMapping("/invest/open")
+  CompanyView convene(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
+    return companies.convene(cookies.requireSession(token));
+  }
+
   /** 올해 투자 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). */
   @PostMapping("/invest")
   CompanyView invest(

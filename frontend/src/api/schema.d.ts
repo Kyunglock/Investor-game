@@ -107,6 +107,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/invest/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 올해 투자 회의를 연다 (decisions.md 248번)
+         * @description 지금 배치로 직원 한마디(invest.remarks)와 리서치 팀 형광펜을 굳힌다. 그 뒤로 배치를 바꿔도 그대로라 배치를 바꿔 가며 정답을 알아낼 수 없다.
+         *     열기 전에는 remarks가 비어 있고 형광펜도 없다. 이미 열었으면 지금 회사를 그대로 돌려준다.
+         *     열 수 없는 회의(정했거나 돈을 굴리는 자리에 아무도 없다)면 400.
+         */
+        post: operations["conveneInvestMeeting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/invest": {
         parameters: {
             query?: never;
@@ -119,6 +141,7 @@ export interface paths {
         /**
          * 올해 투자 회의에서 고른다 (decisions.md 229번)
          * @description 돈을 굴리는 직원마다 사장 말대로 하거나, 꼬드김에 넘어가거나, "제가 알아서 할게요" 하고 제 판단대로 한다.
+         *     아직 회의를 열지 않았으면 지금 배치로 연 셈 친다(/api/company/invest/open).
          *     손익은 바로 자본에 들어가고 invest.outcome에 실린다. 이미 했거나 돈을 굴리는 자리에 아무도 없거나 고를 수 없는 것이면 400.
          */
         post: operations["holdInvestMeeting"];
@@ -287,7 +310,7 @@ export interface components {
                     who: string;
                     text: string;
                 };
-                /** @description 자리에 앉은 직원의 한마디 */
+                /** @description 자리에 앉은 직원의 한마디. 회의를 열기 전에는 비어 있다 */
                 remarks: {
                     employeeId: number;
                     name: string;
@@ -308,6 +331,8 @@ export interface components {
                 }[];
                 /** @description 지금 정할 수 있다(정하지 않았고 돈을 굴리는 자리에 사람이 있다) */
                 ready: boolean;
+                /** @description 회의를 열어 한마디와 형광펜을 굳혔다. 그 뒤로 배치를 바꿔도 그대로다 (decisions.md 248번) */
+                convened: boolean;
                 outcome?: {
                     /** @enum {string} */
                     choice: "BUY" | "SELL" | "HOLD";
@@ -628,6 +653,29 @@ export interface operations {
         };
         responses: {
             /** @description 결산한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    conveneInvestMeeting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 회의를 연 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

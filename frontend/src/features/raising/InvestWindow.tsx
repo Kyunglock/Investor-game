@@ -169,6 +169,12 @@ export function InvestWindow({
         )}
 
         {!outcome && (
+          <p className="mt-2 text-[12px] text-muted" data-testid="invest-frozen">
+            회의에서 나온 말은 배치를 다시 바꿔도 그대로입니다.
+          </p>
+        )}
+
+        {!outcome && (
           <div className="mt-3 grid grid-cols-3 gap-2">
             {invest.options.map((o) => (
               <button

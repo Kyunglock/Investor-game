@@ -9,6 +9,7 @@ export type AutoStep =
   | { kind: 'closeYearEnd' }
   | { kind: 'hire'; applicantId: number }
   | { kind: 'place'; seats: Seat[] }
+  | { kind: 'convene' }
   | { kind: 'invest'; choice: 'BUY' | 'SELL' | 'HOLD' }
   | { kind: 'settle' }
   | { kind: 'stop' }
@@ -59,6 +60,10 @@ export function nextAutoStep(company: Company, justSettled: boolean): AutoStep {
     return { kind: 'place', seats }
   }
   if (company.invest?.ready) {
+    // 한마디는 회의를 열어야 나온다 (248번). 연 뒤에 다수결로 정한다.
+    if (!company.invest.convened) {
+      return { kind: 'convene' }
+    }
     return { kind: 'invest', choice: autoChoice(company.invest) }
   }
   return { kind: 'settle' }
@@ -90,7 +95,7 @@ export function useCompanyAutoPlay() {
       useRaisingStore.setState({ autoPlay: false })
       return
     }
-    const { hire, place, decideInvest, settle } = useRaisingStore.getState()
+    const { hire, place, convene, decideInvest, settle } = useRaisingStore.getState()
     const id = setTimeout(
       () => {
         switch (step.kind) {
@@ -102,6 +107,9 @@ export function useCompanyAutoPlay() {
             return
           case 'place':
             void place(step.seats)
+            return
+          case 'convene':
+            void convene()
             return
           case 'invest':
             void decideInvest(step.choice)

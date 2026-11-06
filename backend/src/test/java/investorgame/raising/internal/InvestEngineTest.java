@@ -186,7 +186,7 @@ class InvestEngineTest {
     ENGINE.hire(company, stats(100, 50, 50, 50));
     ENGINE.place(company, Map.of(1, "day", 2, "day", 3, "research"));
     company.phase = "normal";
-    var remarks = ENGINE.invest.remarks(company, new HashSeededRandom(5));
+    var remarks = ENGINE.invest.liveRemarks(company, new HashSeededRandom(5));
     assertThat(remarks).hasSize(3);
     assertThat(ENGINE.invest.stubbornLevel(remarks.get(0).stubbornBp())).isEqualTo("HIGH");
     assertThat(ENGINE.invest.stubbornLevel(remarks.get(1).stubbornBp())).isEqualTo("LOW");
@@ -198,7 +198,7 @@ class InvestEngineTest {
       CompanyState trial = ENGINE.open(new HashSeededRandom(seed), 100_000_000L);
       ENGINE.hire(trial, stats(100, 50, 50, 50));
       ENGINE.place(trial, Map.of(1, "research"));
-      var highlight = ENGINE.invest.highlight(trial, new HashSeededRandom(seed));
+      var highlight = ENGINE.invest.liveHighlight(trial, new HashSeededRandom(seed));
       assertThat(highlight).isPresent();
       if (trial.invest.sentences.get(highlight.get().index()).decisive) {
         decisive++;
@@ -206,7 +206,7 @@ class InvestEngineTest {
     }
     assertThat(decisive).as("안목 100이면 대개 결정적 문장에 긋는다").isGreaterThan(80);
     CompanyState none = ENGINE.open(new HashSeededRandom(1), 100_000_000L);
-    assertThat(ENGINE.invest.highlight(none, new HashSeededRandom(1))).isEmpty();
+    assertThat(ENGINE.invest.liveHighlight(none, new HashSeededRandom(1))).isEmpty();
   }
 
   /**
@@ -228,7 +228,7 @@ class InvestEngineTest {
       ENGINE.hire(c, stats(100, 50, 50, 50));
       ENGINE.place(c, Map.of(1, "day", 2, "day", 3, "research"));
       c.phase = "normal";
-      var remarks = ENGINE.invest.remarks(c, new HashSeededRandom(seed));
+      var remarks = ENGINE.invest.liveRemarks(c, new HashSeededRandom(seed));
       var dull = remarks.get(0);
       var sharp = remarks.get(1);
       String truth = c.invest.up ? "UP" : "DOWN";
@@ -276,7 +276,7 @@ class InvestEngineTest {
       ENGINE.hire(c, stats(90, 50, 50, 50));
       ENGINE.place(c, Map.of(1, "day", 2, "bio"));
       c.phase = "normal";
-      var remarks = ENGINE.invest.remarks(c, new HashSeededRandom(seed));
+      var remarks = ENGINE.invest.liveRemarks(c, new HashSeededRandom(seed));
       int[] count = splits.computeIfAbsent(c.invest.clarity, k -> new int[2]);
       count[0]++;
       if (!remarks.get(0).read().equals(remarks.get(1).read())) {
@@ -293,5 +293,67 @@ class InvestEngineTest {
     double foggy = splits.get("foggy")[1] / (double) splits.get("foggy")[0];
     assertThat(clear).as("또렷한 기사는 대개 한목소리").isLessThan(0.3);
     assertThat(foggy).as("가장 흐린 기사는 절반 넘게 갈린다").isGreaterThan(0.45);
+  }
+
+  /**
+   * 회의를 열면 한마디와 형광펜을 굳힌다 (#312, decisions.md 248번). 열기 전에는 보이지 않고, 연 뒤에는 리서치 팀을 바꿔도 그대로라 한마디가 뒤집히는
+   * 것으로 정답을 알아낼 수 없다.
+   */
+  @Test
+  void 회의를_열면_한마디와_형광펜이_굳어_배치를_바꿔도_그대로다() {
+    for (long seed = 0; seed < 40; seed++) {
+      CompanyState c = ENGINE.open(new HashSeededRandom(seed), 300_000_000L);
+      ENGINE.hire(c, stats(10, 50, 50, 50));
+      ENGINE.hire(c, stats(10, 50, 50, 50));
+      ENGINE.hire(c, stats(100, 50, 50, 50));
+      c.phase = "normal";
+      ENGINE.place(c, Map.of(1, "day", 2, "bio"));
+      HashSeededRandom random = new HashSeededRandom(seed);
+      assertThat(ENGINE.invest.remarks(c)).as("열기 전에는 한마디가 없다").isEmpty();
+      assertThat(ENGINE.invest.highlight(c)).isEmpty();
+
+      ENGINE.invest.convene(c, random);
+      assertThat(ENGINE.invest.convened(c)).isTrue();
+      List<String> reads = ENGINE.invest.remarks(c).stream().map(r -> r.read).toList();
+      assertThat(reads).hasSize(2);
+      assertThat(ENGINE.invest.highlight(c)).as("리서치 팀이 없을 때 열었다").isEmpty();
+
+      // 안목 100인 사람을 리서치 팀에 앉혀도 한마디와 형광펜은 연 때 그대로다.
+      ENGINE.place(c, Map.of(1, "day", 2, "bio", 3, "research"));
+      ENGINE.invest.convene(c, random);
+      assertThat(ENGINE.invest.remarks(c).stream().map(r -> r.read).toList()).isEqualTo(reads);
+      assertThat(ENGINE.invest.highlight(c)).isEmpty();
+
+      // 정할 때의 제 판단도 회의에서 한 말 그대로다.
+      ENGINE.invest.decide(c, InvestEngine.HOLD, random);
+      for (CompanyState.InvestResult r : c.invest.results) {
+        if (InvestEngine.OWN.equals(r.follow)) {
+          String said =
+              ENGINE.invest.remarks(c).stream()
+                  .filter(x -> x.employeeId == r.employeeId)
+                  .findFirst()
+                  .orElseThrow()
+                  .read;
+          assertThat(r.action)
+              .isEqualTo(
+                  switch (said) {
+                    case "UP" -> InvestEngine.BUY;
+                    case "DOWN" -> InvestEngine.SELL;
+                    default -> InvestEngine.HOLD;
+                  });
+        }
+      }
+    }
+  }
+
+  @Test
+  void 열_수_없는_회의는_열지_못하고_바로_정하면_연_셈_친다() {
+    CompanyState empty = ENGINE.open(new HashSeededRandom(1), 100_000_000L);
+    assertThatThrownBy(() -> ENGINE.invest.convene(empty, new HashSeededRandom(1)))
+        .isInstanceOf(InvalidRequestException.class);
+    CompanyState c = company(3, stats(50, 50, 50, 50));
+    ENGINE.invest.decide(c, InvestEngine.BUY, new HashSeededRandom(3));
+    assertThat(ENGINE.invest.convened(c)).isTrue();
+    assertThat(ENGINE.invest.remarks(c)).hasSize(1);
   }
 }

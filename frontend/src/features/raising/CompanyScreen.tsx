@@ -38,7 +38,7 @@ export function CompanyScreen({ company }: { company: Company }) {
   const error = useRaisingStore((s) => s.error)
   const justSettled = useRaisingStore((s) => s.justSettled)
   const autoPlay = useRaisingStore((s) => s.autoPlay)
-  const { settle, restart } = useRaisingStore.getState()
+  const { settle, restart, convene } = useRaisingStore.getState()
   // 이사 장면은 결산 뒤 한 번만 본다. 해가 바뀌면 화면이 새로 그려져 다시 볼 수 있다.
   const [moved, setMoved] = useState(false)
   // 투자 회의 창 (231번): 결산을 누르면 뜨고, 고른 뒤 그대로 결산한다.
@@ -164,8 +164,16 @@ export function CompanyScreen({ company }: { company: Company }) {
               <button
                 type="button"
                 disabled={busy || autoPlay}
-                // 돈을 굴리는 직원이 있으면 먼저 투자 회의 창이 뜨고, 고르면 그대로 결산한다.
-                onClick={() => (company.invest?.ready ? setInvestOpen(true) : void settle())}
+                // 돈을 굴리는 직원이 있으면 먼저 투자 회의를 열고(한마디를 굳힌다, 248번) 창을 띄운다. 고르면 그대로 결산한다.
+                onClick={async () => {
+                  if (!company.invest?.ready) {
+                    void settle()
+                    return
+                  }
+                  if (await convene()) {
+                    setInvestOpen(true)
+                  }
+                }}
                 className="min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50"
               >
                 {company.year}년 차 결산 보기

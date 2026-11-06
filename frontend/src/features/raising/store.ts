@@ -25,6 +25,8 @@ interface RaisingState {
   hire: (applicantId: number, replace?: number) => Promise<void>
   /** 값을 내고 올해 지원자를 새로 받는다. */
   refreshApplicants: () => Promise<void>
+  /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 248번). 됐으면 true. */
+  convene: () => Promise<boolean>
   /** 올해 투자 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). */
   decideInvest: (choice: string) => Promise<void>
   place: (seats: { employeeId: number; desk: string | null }[]) => Promise<void>
@@ -102,6 +104,14 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       change(api.POST('/api/company/hires', { body: { applicantId, replace: replace ?? null } })),
 
     refreshApplicants: () => change(api.POST('/api/company/applicants/refresh')),
+
+    convene: async () => {
+      if (get().company?.invest?.convened) {
+        return true
+      }
+      await change(api.POST('/api/company/invest/open'))
+      return Boolean(get().company?.invest?.convened)
+    },
 
     decideInvest: (choice) =>
       change(

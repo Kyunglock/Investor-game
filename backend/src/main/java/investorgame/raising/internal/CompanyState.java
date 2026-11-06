@@ -118,6 +118,29 @@ class CompanyState {
 
     /** 기사가 얼마나 또렷한가(clear·murky·foggy, 241번). 이 칸을 더하기 전의 회의면 null(깎지 않는다). */
     String clarity;
+
+    /**
+     * 회의를 연 때 굳힌 직원 한마디 (decisions.md 248번). 아직 안 열었으면 null. 연 뒤에는 배치를 바꿔도 그대로라, 리서치 팀을 바꿔 가며 한마디가
+     * 뒤집히는 것으로 정답을 알아낼 수 없다.
+     */
+    List<Remark> remarks;
+
+    /** 회의를 연 때 굳힌 형광펜: 그은 문장 번호와 그은 사람. 긋지 않았으면 null. */
+    Integer highlightIndex;
+
+    String highlightBy;
+  }
+
+  /** 투자 회의를 연 때 굳힌 직원 한마디 한 줄. read는 정할 때 "제 판단"으로도 쓴다. */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Remark {
+    int employeeId;
+    String name;
+    String desk;
+    String read;
+    String text;
+    Integer stubbornBp;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)

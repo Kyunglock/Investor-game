@@ -101,6 +101,15 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
+  public CompanyView convene(UUID sessionId) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.invest.convene(row.state(), new HashSeededRandom(row.seed()));
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
   public CompanyView invest(UUID sessionId, String choice) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.invest.decide(row.state(), choice, new HashSeededRandom(row.seed()));
@@ -258,8 +267,9 @@ class DefaultCompanyService implements CompanyService {
       return null;
     }
     InvestEngine meetings = engine.invest;
-    int highlighted = meetings.highlight(c, random).map(InvestEngine.Highlight::index).orElse(-1);
-    String highlightBy = meetings.highlight(c, random).map(InvestEngine.Highlight::by).orElse(null);
+    // 한마디와 형광펜은 회의를 연 때 굳힌 것만 보인다 (248번).
+    int highlighted = meetings.highlight(c).map(InvestEngine.Highlight::index).orElse(-1);
+    String highlightBy = meetings.highlight(c).map(InvestEngine.Highlight::by).orElse(null);
     List<CompanyView.InvestSentence> sentences = new java.util.ArrayList<>();
     int decisive = -1;
     for (int i = 0; i < invest.sentences.size(); i++) {
@@ -271,16 +281,16 @@ class DefaultCompanyService implements CompanyService {
     }
     RaisingContent.Invest texts = engine.investTexts();
     List<CompanyView.Remark> remarks =
-        meetings.remarks(c, random).stream()
+        meetings.remarks(c).stream()
             .map(
                 r ->
                     new CompanyView.Remark(
-                        r.employee().id,
-                        r.employee().name,
-                        r.employee().desk,
-                        r.read(),
-                        r.text(),
-                        r.stubbornBp() == null ? null : meetings.stubbornLevel(r.stubbornBp())))
+                        r.employeeId,
+                        r.name,
+                        r.desk,
+                        r.read,
+                        r.text,
+                        r.stubbornBp == null ? null : meetings.stubbornLevel(r.stubbornBp)))
             .toList();
     List<CompanyView.Option> options =
         List.of(InvestEngine.BUY, InvestEngine.SELL, InvestEngine.HOLD).stream()
@@ -320,6 +330,7 @@ class DefaultCompanyService implements CompanyService {
         remarks,
         options,
         meetings.open(c),
+        meetings.convened(c),
         outcome);
   }
 

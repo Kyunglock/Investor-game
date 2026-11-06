@@ -133,7 +133,21 @@ class CompanyApiTest {
     DocumentContext meeting = json(mvc.perform(get("/api/company").cookie(session)));
     assertThat(meeting.read("$.invest.ready", Boolean.class)).isTrue();
     assertThat(meeting.read("$.invest.sentences.length()", Integer.class)).isEqualTo(4);
-    assertThat(meeting.read("$.invest.remarks[0].stubborn", String.class)).isNotBlank();
+    // 한마디는 회의를 연 때 굳힌다 (248번): 열기 전에는 없고, 두 번 열어도 같다.
+    assertThat(meeting.read("$.invest.convened", Boolean.class)).isFalse();
+    assertThat(meeting.read("$.invest.remarks.length()", Integer.class)).isZero();
+    DocumentContext convened =
+        json(
+            mvc.perform(post("/api/company/invest/open").cookie(session))
+                .andExpect(status().isOk()));
+    assertThat(convened.read("$.invest.convened", Boolean.class)).isTrue();
+    assertThat(convened.read("$.invest.remarks[0].stubborn", String.class)).isNotBlank();
+    String said = convened.read("$.invest.remarks[0].text");
+    DocumentContext again =
+        json(
+            mvc.perform(post("/api/company/invest/open").cookie(session))
+                .andExpect(status().isOk()));
+    assertThat(again.read("$.invest.remarks[0].text", String.class)).isEqualTo(said);
     assertThat(meeting.read("$.invest.options.length()", Integer.class)).isEqualTo(3);
     assertThat(meeting.read("$.invest.outcome", Object.class)).isNull();
     settle(1).andExpect(status().isBadRequest());

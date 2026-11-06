@@ -33,6 +33,12 @@ public interface CompanyService {
   CompanyView place(UUID sessionId, Map<Integer, String> placements);
 
   /**
+   * 올해 투자 회의를 연다: 지금 배치로 직원 한마디와 형광펜을 굳힌다. 그 뒤로 배치를 바꿔도 그대로다. 이미 열었으면 지금 회사를 그대로 돌려준다. 열 수 없으면(정했거나
+   * 돈을 굴리는 자리에 아무도 없다) 400 (decisions.md 248번).
+   */
+  CompanyView convene(UUID sessionId);
+
+  /**
    * 올해 투자 회의에서 고른다(BUY·SELL·HOLD). 돈을 굴리는 직원마다 사장 말대로 하거나, 꼬드김에 넘어가거나, 제 판단대로 한다. 손익은 바로 자본에 들어간다.
    * 이미 했거나 돈을 굴리는 자리에 아무도 없으면 400 (decisions.md 229번).
    */

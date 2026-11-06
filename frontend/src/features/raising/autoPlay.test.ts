@@ -59,9 +59,12 @@ describe('자동 진행 (decisions.md 245번)', () => {
     expect(nextAutoStep(resting, false).kind).toBe('place')
     const seated = company({
       employees: [{ id: 1, grades: grades('B'), desk: 'bio' }],
-      invest: { ready: true, remarks: [remark('DOWN')] },
+      invest: { ready: true, convened: true, remarks: [remark('DOWN')] },
     } as never)
     expect(nextAutoStep(seated, false)).toEqual({ kind: 'invest', choice: 'SELL' })
+    // 한마디는 회의를 열어야 나온다 (248번): 열지 않았으면 먼저 연다.
+    const closed = { ...seated, invest: { ...seated.invest, convened: false, remarks: [] } }
+    expect(nextAutoStep(closed as never, false).kind).toBe('convene')
     expect(nextAutoStep({ ...seated, invest: null }, false).kind).toBe('settle')
   })
 })

@@ -221,10 +221,52 @@ class InvestEngine {
     return c.invest != null && c.invest.choice == null && !company.traders(c).isEmpty();
   }
 
+  /** 회의를 열어 한마디와 형광펜을 굳혔는가 (248번). */
+  boolean convened(CompanyState c) {
+    return c.invest != null && c.invest.remarks != null;
+  }
+
+  /**
+   * 회의를 연다 (decisions.md 248번): 지금 배치로 직원 한마디와 리서치 팀 형광펜을 굳힌다. 그 뒤로 배치를 바꿔도 회의에서 본 말과 직원의 제 판단은
+   * 그대로다. 이미 열었으면 아무것도 하지 않는다. 열 수 없는 회의(정했거나 돈을 굴리는 사람이 없다)면 400.
+   */
+  void convene(CompanyState c, SeededRandom random) {
+    if (convened(c)) {
+      return;
+    }
+    if (!open(c)) {
+      throw new InvalidRequestException("지금 열 수 있는 투자 회의가 없다");
+    }
+    List<CompanyState.Remark> frozen = new ArrayList<>();
+    for (Remark r : liveRemarks(c, random)) {
+      CompanyState.Remark x = new CompanyState.Remark();
+      x.employeeId = r.employee().id;
+      x.name = r.employee().name;
+      x.desk = r.employee().desk;
+      x.read = r.read();
+      x.text = r.text();
+      x.stubbornBp = r.stubbornBp();
+      frozen.add(x);
+    }
+    Optional<Highlight> highlight = liveHighlight(c, random);
+    c.invest.remarks = frozen;
+    c.invest.highlightIndex = highlight.map(Highlight::index).orElse(null);
+    c.invest.highlightBy = highlight.map(Highlight::by).orElse(null);
+  }
+
   /** 형광펜: 리서치 팀이 있으면 그 안목으로 결정적 문장에, 빗나가면 반대쪽 곁가지에 긋는다. 리서치 팀이 없거나 방향을 못 읽으면 없다. */
   record Highlight(int index, String by) {}
 
-  Optional<Highlight> highlight(CompanyState c, SeededRandom random) {
+  /** 회의에서 보이는 형광펜. 회의를 열기 전에는 없다: 배치를 바꿔 가며 미리 들여다볼 수 없다 (248번). */
+  Optional<Highlight> highlight(CompanyState c) {
+    if (!convened(c) || c.invest.highlightIndex == null) {
+      return Optional.empty();
+    }
+    return Optional.of(new Highlight(c.invest.highlightIndex, c.invest.highlightBy));
+  }
+
+  /** 지금 배치로 긋는 형광펜. 회의를 열 때와 시험에서만 부른다. */
+  Optional<Highlight> liveHighlight(CompanyState c, SeededRandom random) {
     Optional<Employee> researcher = company.researcher(c);
     if (researcher.isEmpty() || c.invest == null) {
       return Optional.empty();
@@ -253,7 +295,13 @@ class InvestEngine {
    */
   record Remark(Employee employee, String read, String text, Integer stubbornBp) {}
 
-  List<Remark> remarks(CompanyState c, SeededRandom random) {
+  /** 회의에서 보이는 한마디. 회의를 열기 전에는 비어 있다 (248번). */
+  List<CompanyState.Remark> remarks(CompanyState c) {
+    return convened(c) ? c.invest.remarks : List.of();
+  }
+
+  /** 지금 배치로 하는 한마디. 회의를 열 때와 시험에서만 부른다. */
+  List<Remark> liveRemarks(CompanyState c, SeededRandom random) {
     if (c.invest == null) {
       return List.of();
     }
@@ -336,6 +384,10 @@ class InvestEngine {
     if (traders.isEmpty()) {
       throw new InvalidRequestException("돈을 굴리는 자리에 아무도 없다");
     }
+    // 창을 거치지 않고 바로 정해도(옛 화면, 시험) 지금 배치로 회의를 연 셈 친다.
+    convene(c, random);
+    Map<Integer, String> reads = new HashMap<>();
+    c.invest.remarks.forEach(r -> reads.put(r.employeeId, r.read));
     RaisingContent.Invest texts = content.raising().company().invest();
     long stake = company.stakeOf(c, traders.size());
     String right = c.invest.up ? BUY : SELL;
@@ -347,7 +399,8 @@ class InvestEngine {
       int swayRoll = rng.nextInt(BP);
       int flipRoll = rng.nextInt(BP);
       CompanyEngine.Odds odds = company.odds(c, e);
-      String own = actionOf(ownRead(c, e, random));
+      // 제 판단은 회의에서 한 말 그대로다. 회의를 연 뒤에 앉힌 사람은 지금 읽는다.
+      String own = actionOf(reads.computeIfAbsent(e.id, id -> ownRead(c, e, random)));
       InvestResult result = new InvestResult();
       result.employeeId = e.id;
       result.name = e.name;

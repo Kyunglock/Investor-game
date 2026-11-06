@@ -89,7 +89,8 @@ public record CompanyView(
    *
    * @param ready 지금 정할 수 있다(돈을 굴리는 자리에 사람이 있다)
    * @param highlightBy 형광펜을 그은 리서치 팀 직원. 없으면 null
-   * @param remarks 자리에 앉은 직원의 한마디
+   * @param remarks 자리에 앉은 직원의 한마디. 회의를 열기 전에는 비어 있다
+   * @param convened 회의를 열어 한마디와 형광펜을 굳혔다. 그 뒤로 배치를 바꿔도 그대로다 (decisions.md 248번)
    * @param outcome 정한 뒤의 결과. 아직이면 null
    */
   public record Invest(
@@ -102,6 +103,7 @@ public record CompanyView(
       List<Remark> remarks,
       List<Option> options,
       boolean ready,
+      boolean convened,
       InvestOutcome outcome) {}
 
   public record InvestSentence(String text, boolean highlighted) {}
