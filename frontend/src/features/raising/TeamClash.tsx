@@ -77,11 +77,15 @@ function Character({
   )
 }
 
-/** 토론하는 가장 짧은 시간, 결판 한 박자(표결·선언·승복)의 간격(ms) (decisions.md 279·284·295번). */
+/** 토론하는 가장 짧은 시간(ms) (decisions.md 279·284·295번). */
 const CLASH_MS = 2900
-const PUSH_MS = 800
-/** 토론 한 줄이 떠오르는 간격(ms) (285번). */
-export const DEBATE_LINE_MS = 1000
+/**
+ * 말 한 줄이 머무는 시간(ms) (285·303번): 읽을 만큼. 글자 수에 따라 길어진다(기본 1.2초 + 글자마다 45ms, 1.6~4초). 전에는 길이와 상관없이 1초라
+ * 읽기 전에 지나갔다. 결판의 박자(표결·선언·승복)도 같은 셈이다.
+ */
+export function lineMs(text: string): number {
+  return Math.max(1600, Math.min(4000, 1200 + text.length * 45))
+}
 /** 원탁 한쪽에 앉히는 사람 수. 넘치면 "외 N명". */
 const SEATS = 4
 
@@ -94,35 +98,48 @@ export type DebateLine = {
   kind?: 'TALK' | 'TALLY' | 'WIN' | 'LOSE'
 }
 
-/** 토론 시간: 결판 전 말이 다 오갈 때까지, 짧아도 CLASH_MS. */
+/** 토론 시간: 결판 전 말이 저마다 머무는 시간을 다 더한 만큼, 짧아도 CLASH_MS. */
 export function clashMs(debate: DebateLine[]): number {
-  return Math.max(CLASH_MS, debate.filter((d) => !d.last).length * DEBATE_LINE_MS)
+  const talk = debate.filter((d) => !d.last).reduce((sum, d) => sum + lineMs(d.text), 0)
+  return Math.max(CLASH_MS, talk)
 }
 
-/** 결판의 박자 수: 표결·선언·승복 (옛 회의는 둘). */
-function finaleCount(debate: DebateLine[]): number {
-  return debate.filter((d) => d.last).length
-}
-
-/** 투자 회의 연출이 이만큼 늦게 시작한다: 토론하고, 결판 세 박자가 지나고, 한 박자 더 머문 뒤. */
-export function teamClashMs(debate: DebateLine[]): number {
-  const finale = finaleCount(debate)
-  return clashMs(debate) + PUSH_MS * Math.max(1, finale) + (finale > 0 ? DEBATE_LINE_MS : 0)
+/** 결판의 박자(표결·선언·승복). 옛 회의는 둘. */
+function finale(debate: DebateLine[]): DebateLine[] {
+  return debate.filter((d) => d.last)
 }
 
 /**
- * 토론 한 줄마다 떠오르는 때(ms). 결판 전 말은 DEBATE_LINE_MS 간격으로, 결판의 박자(표결 → 선언 → 승복)는 토론이 끝난 뒤 PUSH_MS 간격으로.
+ * 토론 한 줄마다 떠오르는 때(ms). 결판 전 말은 앞말이 머문 만큼 뒤에, 결판의 박자(표결 → 선언 → 승복)는 토론이 끝난 뒤 역시 앞 박자가 머문 만큼 뒤에.
  */
 export function debateTimes(debate: DebateLine[]): number[] {
   const clash = clashMs(debate)
-  let finale = 0
-  let talk = 0
-  return debate.map((d) => (d.last ? clash + PUSH_MS * finale++ : DEBATE_LINE_MS * talk++))
+  let talkAt = 0
+  let finaleAt = clash
+  return debate.map((d) => {
+    if (d.last) {
+      const at = finaleAt
+      finaleAt += lineMs(d.text)
+      return at
+    }
+    const at = talkAt
+    talkAt += lineMs(d.text)
+    return at
+  })
 }
 
-/** 결판이 다 난 때(ms): 마지막 박자가 뜰 때. */
+/** 결판이 다 난 때(ms): 마지막 박자가 뜰 때. 박자가 없으면 토론이 끝난 때. */
 export function doneAt(debate: DebateLine[]): number {
-  return clashMs(debate) + PUSH_MS * Math.max(1, finaleCount(debate) - 1)
+  const times = debateTimes(debate)
+  const beats = finale(debate)
+  return beats.length === 0 ? clashMs(debate) : times[times.length - 1]
+}
+
+/** 투자 회의 연출이 이만큼 늦게 시작한다: 결판이 다 나고, 마지막 말을 읽을 만큼 더 머문 뒤. */
+export function teamClashMs(debate: DebateLine[]): number {
+  const beats = finale(debate)
+  const stay = beats.length === 0 ? 800 : lineMs(beats[beats.length - 1].text)
+  return doneAt(debate) + stay
 }
 
 /** 회의실에서 매수파가 차지하는 몫(%, 왼쪽) (286번): 양쪽 사람 수의 비율. 한 사람뿐인 쪽도 앉을 자리가 있게 22~78%로 자른다. */
@@ -419,7 +436,7 @@ export function TeamClash({
         </span>
       </div>
       {debate.length > 0 && (
-        <details className="mt-1">
+        <details className="mt-1" open>
           <summary className="cursor-pointer text-[12px] text-muted">토론 기록</summary>
           <ol
             className="mt-1 max-h-52 space-y-1.5 overflow-y-auto rounded bg-paper/60 p-1.5"

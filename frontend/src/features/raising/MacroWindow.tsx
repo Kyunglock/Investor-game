@@ -8,8 +8,8 @@ type Macro = NonNullable<Company['macro']>
 
 /** 거시경제 회의의 의견 칸: 공격 쪽·방어 쪽·모르겠다 (decisions.md 266번). */
 const MACRO_OPINIONS: Record<string, { label: string; tone: string }> = {
-  UP: { label: '공격하자', tone: 'border-up text-up' },
-  DOWN: { label: '지키자', tone: 'border-down text-down' },
+  UP: { label: '공격적으로 하자', tone: 'border-up text-up' },
+  DOWN: { label: '방어적으로 하자', tone: 'border-down text-down' },
   NEUTRAL: { label: '모르겠다', tone: 'border-line text-muted' },
 }
 

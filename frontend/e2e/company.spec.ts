@@ -483,7 +483,8 @@ test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 �
   await expect(lines.first()).toHaveAttribute('data-side', 'BUY')
   await expect(lines.nth(1)).toHaveAttribute('data-side', 'SELL')
   await expect(clash).toHaveAttribute('data-phase', 'clash')
-  await expect(clash).toHaveAttribute('data-phase', 'done', { timeout: 15_000 })
+  // 말 한 줄이 글자 수만큼 머문다 (303번): 아홉 줄이면 30초 안팎.
+  await expect(clash).toHaveAttribute('data-phase', 'done', { timeout: 45_000 })
   await expect(clash.getByTestId('clash-result')).toHaveText(/팀 결정: (매수|매도)!/)
   // 결판 세 박자 (295번): 사회가 표결을 부르고, 이긴 쪽이 선언하고, 진 쪽이 물러난다.
   await expect(lines).toHaveCount(9)

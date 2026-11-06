@@ -6,6 +6,7 @@ import {
   doneAt,
   gaugeDone,
   gaugeDuring,
+  lineMs,
   roomShare,
   sidePeople,
   teamClashMs,
@@ -85,9 +86,16 @@ describe('"너희가 알아서 해" 토론 (decisions.md 285번)', () => {
     talk('BUY', true),
   ]
 
+  it('말 한 줄은 글자 수만큼 머문다: 짧아도 1.6초, 길어도 4초 (303번)', () => {
+    expect(lineMs('…')).toBe(1600)
+    expect(lineMs('고객사 주문이 30%나 늘어난다잖아요! 이건 무조건 사야죠!')).toBe(1200 + 33 * 45)
+    expect(lineMs('가'.repeat(100))).toBe(4000)
+  })
+
   it('말이 한 줄씩 차례로 올라오고, 결판은 말이 다 오간 뒤에 난다', () => {
     const times = debateTimes(debate)
-    expect(times.slice(0, 6)).toEqual([0, 1000, 2000, 3000, 4000, 5000])
+    const one = lineMs('…')
+    expect(times.slice(0, 6)).toEqual([0, one, one * 2, one * 3, one * 4, one * 5])
     // 이긴 쪽 결판은 토론이 끝날 때, 진 쪽 투덜거림은 그 뒤에.
     expect(times[6]).toBe(clashMs(debate))
     expect(times[7]).toBeGreaterThan(times[6])
@@ -105,9 +113,10 @@ describe('"너희가 알아서 해" 토론 (decisions.md 285번)', () => {
       { ...talk('BUY', true), kind: 'LOSE' as const },
     ]
     const times = debateTimes(three)
-    expect(times.slice(6)).toEqual([6000, 6800, 7600])
-    expect(doneAt(three)).toBe(7600)
-    expect(teamClashMs(three)).toBeGreaterThan(doneAt(three))
+    const one = lineMs('…')
+    expect(times.slice(6)).toEqual([one * 6, one * 7, one * 8])
+    expect(doneAt(three)).toBe(one * 8)
+    expect(teamClashMs(three)).toBe(one * 9)
   })
 
   it('토론이 없으면(옛 회의) 짧게 맞붙기만 한다', () => {

@@ -42,7 +42,7 @@ describe('자동 진행 (decisions.md 245번)', () => {
     expect(autoChoice(invest(['UP', 'DOWN', 'NEUTRAL']))).toBe('HOLD')
   })
 
-  it('거시경제 회의는 직원 다수결: 공격하자가 많으면 공격, 지키자가 많으면 방어, 같으면 중립 (266번)', () => {
+  it('거시경제 회의는 직원 다수결: 공격적으로 하자가 많으면 공격, 방어적으로 하자가 많으면 방어, 같으면 중립 (266번)', () => {
     const macro = (reads: ('UP' | 'DOWN' | 'NEUTRAL')[]) =>
       ({ remarks: reads.map(remark) }) as unknown as NonNullable<Company['macro']>
     expect(autoStance(macro(['UP', 'UP', 'DOWN']))).toBe('AGGRESSIVE')
