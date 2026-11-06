@@ -452,7 +452,7 @@ export interface components {
                 experienceNeeded?: number | null;
                 /** @description X 이상 등급의 효과 이름(확신·경보·역발상·리더·사수·선견·큰손·철벽·신의 손). 쌓인다 (2.4절) */
                 effects: string[];
-                /** @description 등급 효과 한 줄: 이름·맞혔을 때 더 버는 몫·자랄 확률 (decisions.md 289번) */
+                /** @description 등급 효과 한 줄: 이름·맞혔을 때 더 버는 몫·자랄 확률, S부터 "잠깐만요, 사장님!!" 확률 (decisions.md 289·300번) */
                 perk: string;
                 grades: {
                     [key: string]: components["schemas"]["Grade"];
