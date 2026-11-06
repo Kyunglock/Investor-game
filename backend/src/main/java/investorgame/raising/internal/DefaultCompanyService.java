@@ -282,6 +282,7 @@ class DefaultCompanyService implements CompanyService {
         engine.refreshCost(c),
         c.refreshes,
         industryView(c),
+        historyView(c),
         ended ? null : engine.brokeNotice(c),
         ended ? null : investView(c, new HashSeededRandom(row.seed())),
         last == null ? null : settlementView(last));
@@ -382,6 +383,33 @@ class DefaultCompanyService implements CompanyService {
         engine.poachLine(c));
   }
 
+  private static final int HALL_SIZE = 5;
+
+  private CompanyView.History historyView(CompanyState c) {
+    List<CompanyView.Event> timeline =
+        c.timeline.stream()
+            .map(e -> new CompanyView.Event(e.year, e.kind, e.text, e.grade))
+            .toList();
+    List<CompanyView.Achievement> achievements =
+        engine.history.all().stream()
+            .map(
+                a ->
+                    new CompanyView.Achievement(
+                        a.code(), a.name(), a.description(), c.achievements.get(a.code())))
+            .toList();
+    List<CompanyView.Hall> hall = new java.util.ArrayList<>();
+    c.employees.forEach(
+        e ->
+            hall.add(
+                new CompanyView.Hall(
+                    e.name, e.joinedYear, null, e.totalPnl, CompanyEngine.employeeGrade(e))));
+    c.alumni.forEach(
+        a -> hall.add(new CompanyView.Hall(a.name, a.from, a.to, a.totalPnl, a.grade)));
+    hall.sort(java.util.Comparator.comparingLong(CompanyView.Hall::totalPnl).reversed());
+    return new CompanyView.History(
+        timeline, achievements, List.copyOf(hall.subList(0, Math.min(HALL_SIZE, hall.size()))));
+  }
+
   private CompanyView.Industry industryView(CompanyState c) {
     if (c.rivals.isEmpty()) {
       return null;
@@ -409,6 +437,7 @@ class DefaultCompanyService implements CompanyService {
         s.gradeBefore,
         s.gradeAfter,
         List.copyOf(s.overtook),
+        List.copyOf(s.achieved),
         s.results.stream()
             .map(
                 r ->

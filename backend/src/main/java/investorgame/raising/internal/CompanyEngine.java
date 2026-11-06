@@ -76,7 +76,11 @@ class CompanyEngine {
       }
     }
     this.invest = new InvestEngine(this, content, behavior, properties);
+    this.history = new CompanyHistory(content);
   }
+
+  /** 회사 연표·업적·명예의 전당 (decisions.md 262번). */
+  final CompanyHistory history;
 
   static final String HR_DESK = "hr";
 
@@ -106,6 +110,7 @@ class CompanyEngine {
     company.opening =
         Korean.fill(content.raising().company().opening(), Map.of("capital", won(company.capital)));
     startYear(company, random);
+    history.opened(company);
     return company;
   }
 
@@ -146,6 +151,7 @@ class CompanyEngine {
                 "capital",
                 won(next.capital)));
     startYear(next, random);
+    history.opened(next);
     return next;
   }
 
@@ -244,6 +250,10 @@ class CompanyEngine {
   private void letGo(CompanyState company, String template) {
     CompanyState.Poach poach = company.poach;
     String name = poachedName(company);
+    company.employees.stream()
+        .filter(e -> e.id == poach.employeeId)
+        .findFirst()
+        .ifPresent(e -> history.retire(company, e));
     company.employees.removeIf(e -> e.id == poach.employeeId);
     company.capital += poach.transferFee;
     company.yearHiring -= poach.transferFee;
@@ -480,6 +490,7 @@ class CompanyEngine {
     Employee employee = new Employee();
     employee.id = ++company.hired;
     employee.name = name;
+    employee.joinedYear = company.year;
     employee.stats.putAll(stats);
     company.employees.add(employee);
     return employee;
@@ -662,6 +673,10 @@ class CompanyEngine {
       if (replace == null || company.employees.stream().noneMatch(e -> e.id == replace)) {
         throw new InvalidRequestException("자리가 꽉 찼다. 내보낼 직원을 고른다");
       }
+      company.employees.stream()
+          .filter(e -> e.id == replace)
+          .findFirst()
+          .ifPresent(e -> history.retire(company, e));
       company.employees.removeIf(e -> e.id == replace);
     }
     company.capital -= applicant.fee;
@@ -1031,6 +1046,9 @@ class CompanyEngine {
                     : 0);
     settlement.gradeBefore = grade(company.capital);
 
+    // 결산 전 SSS 위 단계: 연표가 폭락장을 버텨 오른 사람을 가린다 (262번).
+    Map<Integer, Integer> ranksBefore = new HashMap<>();
+    company.employees.forEach(e -> ranksBefore.put(e.id, e.rank));
     int research = researchInsight(company);
     List<Employee> traders = traders(company);
     long stake = stakeOf(company, traders.size());
@@ -1090,6 +1108,7 @@ class CompanyEngine {
       }
       result.pnl = stake * bp / BP;
       totalPnl += result.pnl;
+      employee.totalPnl += result.pnl;
       settlement.results.add(result);
       CompanyProperties.Experience rules = properties.experience();
       if (stake > 0 && result.pnl * PERCENT <= -stake * rules.dropLossPercent()) {
@@ -1145,15 +1164,24 @@ class CompanyEngine {
     String eraBefore = company.era;
     String eraAfter = eraOf(company, company.year + 1, random);
     company.year++;
+    String eraLine = null;
     if (!eraAfter.equals(eraBefore)) {
       company.era = eraAfter;
       RaisingContent.Era from = era(eraBefore);
       RaisingContent.Era to = era(eraAfter);
-      settlement.lines.add(
+      eraLine =
           Korean.fill(
               content.raising().company().eraTurn().changed(),
-              Map.of("from", from.name(), "to", to.name(), "description", to.description())));
+              Map.of("from", from.name(), "to", to.name(), "description", to.description()));
+      settlement.lines.add(eraLine);
     }
+    history.settled(
+        company,
+        settlement,
+        ranksBefore,
+        eraLine,
+        industryRank(company),
+        LADDER.indexOf(settlement.gradeAfter) <= LADDER.indexOf("E"));
     // 회사는 끝나지 않고 해마다 이어진다 (decisions.md 236번: 매각을 뺐다).
     startYear(company, random);
     return settlement;

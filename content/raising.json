@@ -258,6 +258,53 @@
       "ignored": "답을 미루는 사이 {name}이(가) {rival}(으)로 떠났다. 이적료를 받았다.",
       "settled": "{name}이(가) {desk}에서 세 해째다. 손에 익었다."
     },
+    "history": {
+      "events": {
+        "open": "{number}호 회사를 차렸다.",
+        "rise": "{name}이(가) 폭락장을 버텨 {grade}이(가) 됐다.",
+        "left": "{name}이(가) 회사를 떠났다.",
+        "best": "가장 크게 번 해다. 자본이 {ratio}배가 됐다.",
+        "worst": "가장 아팠던 해다. 자본이 {percent}% 줄었다.",
+        "overtake": "{name}을(를) 앞질렀다."
+      },
+      "achievements": [
+        {
+          "code": "crash-proof",
+          "name": "폭락장 생존자",
+          "description": "폭락장인 해를 자본을 잃지 않고 넘겼다."
+        },
+        {
+          "code": "doubled",
+          "name": "곱빼기",
+          "description": "한 해에 자본이 두 배가 됐다."
+        },
+        {
+          "code": "all-sss",
+          "name": "드림팀",
+          "description": "직원 셋 이상이 모두 SSS 이상이다."
+        },
+        {
+          "code": "meeting-streak",
+          "name": "촉이 좋다",
+          "description": "투자 회의를 다섯 해 연속 벌었다."
+        },
+        {
+          "code": "day-only",
+          "name": "단타의 신",
+          "description": "돈을 굴린 사람이 모두 단타 데스크였는데 벌었다."
+        },
+        {
+          "code": "basement-ten",
+          "name": "반지하 10년",
+          "description": "반지하 원룸에서 열 해를 버텼다."
+        },
+        {
+          "code": "top",
+          "name": "업계 1위",
+          "description": "라이벌 증권사를 모두 앞질렀다."
+        }
+      ]
+    },
     "eras": [
       {
         "code": "plain",

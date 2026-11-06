@@ -350,6 +350,36 @@ export interface components {
             refreshCost: number;
             /** @description 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 253번) */
             refreshes: number;
+            /** @description 회사 연표·업적·명예의 전당 (decisions.md 262번) */
+            history: {
+                /** @description 큰 일, 오래된 것부터 */
+                timeline: {
+                    year: number;
+                    /** @enum {string} */
+                    kind: "open" | "grow" | "shrink" | "era" | "overtake" | "rise" | "left" | "best" | "worst";
+                    text?: string | null;
+                    /** @description grow·shrink의 새 등급. 화면이 건물 이름으로 바꾼다 */
+                    grade?: components["schemas"]["Grade"] | null;
+                }[];
+                /** @description 모든 업적. year가 없으면 아직 못 열었다 */
+                achievements: {
+                    code: string;
+                    name: string;
+                    description: string;
+                    year?: number | null;
+                }[];
+                /** @description 이 회사에서 가장 많이 번 사람부터(지금 직원과 떠난 직원), 다섯까지 */
+                hall: {
+                    name: string;
+                    /** @description 들어온 해. 이 기록 전에 들어왔으면 0 */
+                    from: number;
+                    /** @description 떠난 해. 아직 일하면 null */
+                    to?: number | null;
+                    /** Format: int64 */
+                    totalPnl: number;
+                    grade: components["schemas"]["Grade"];
+                }[];
+            };
             /** @description 업계 순위와 바로 위 라이벌 증권사 (decisions.md 260번). 라이벌이 없는 옛 회사면 null */
             industry?: {
                 /** @description 우리 순위(1부터) */
@@ -483,7 +513,9 @@ export interface components {
                 gradeBefore: components["schemas"]["Grade"];
                 gradeAfter: components["schemas"]["Grade"];
                 /** @description 그해 앞지른 라이벌 증권사 (decisions.md 260번) */
-                overtook?: string[];
+                overtook: string[];
+                /** @description 그해 연 업적 이름 (decisions.md 262번) */
+                achieved: string[];
                 results: {
                     employeeId: number;
                     name: string;

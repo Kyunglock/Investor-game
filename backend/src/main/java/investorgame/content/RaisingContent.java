@@ -63,6 +63,7 @@ public record RaisingContent(
       Bankrupt bankrupt,
       Rivals rivals,
       People people,
+      History history,
       List<Era> eras,
       Sale sale,
       Map<String, String> statNames,
@@ -111,6 +112,14 @@ public record RaisingContent(
    * 떠남. settled: 같은 자리 세 해째({name}·{desk}).
    */
   public record People(String poach, String kept, String left, String ignored, String settled) {}
+
+  /**
+   * 회사 연표와 업적 (decisions.md 262번). events: 연표 한 줄(open {number} · rise {name}·{grade} · left {name}
+   * · best {ratio} · worst {percent} · overtake {name}). achievements: 업적 코드·이름·설명.
+   */
+  public record History(Map<String, String> events, List<Achievement> achievements) {}
+
+  public record Achievement(String code, String name, String description) {}
 
   /**
    * 망한 회사 (decisions.md 246번). notice: 회사 화면에 뜨는 한 줄. emptied: 결산에서 자본이 0이 된 해의 소식 줄. opening: 다시

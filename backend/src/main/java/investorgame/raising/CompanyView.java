@@ -14,6 +14,7 @@ import java.util.UUID;
  * @param meeting 연초 회의. 끝난 회사면 null
  * @param applicants 올해 공채 시장의 지원자. 끝난 회사면 비어 있다 (decisions.md 228번)
  * @param refreshCost 지원자를 새로 받는 값
+ * @param history 회사 연표·업적·명예의 전당 (decisions.md 262번)
  * @param industry 업계 순위와 바로 위 라이벌 (decisions.md 260번). 라이벌이 없는 옛 회사면 null
  * @param refreshes 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 253번)
  * @param broke 망한 회사의 한 줄. 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 있고, 그때 사재로 다음 회사를 차릴 수 있다. 아니면 null
@@ -42,6 +43,7 @@ public record CompanyView(
     long refreshCost,
     int refreshes,
     Industry industry,
+    History history,
     String broke,
     Invest invest,
     Settlement lastSettlement) {
@@ -233,6 +235,7 @@ public record CompanyView(
       String gradeBefore,
       String gradeAfter,
       List<String> overtook,
+      List<String> achieved,
       List<Result> results,
       List<String> lines) {}
 
@@ -254,4 +257,29 @@ public record CompanyView(
    * @param aboveCapital 바로 위 라이벌 자본. 1위면 null
    */
   public record Industry(int rank, int total, String aboveName, Long aboveCapital) {}
+
+  /**
+   * 회사 연표·업적·명예의 전당 (decisions.md 262번).
+   *
+   * @param timeline 큰 일, 오래된 것부터
+   * @param achievements 모든 업적. 연 해가 없으면 아직 못 열었다
+   * @param hall 이 회사에서 가장 많이 번 사람부터(지금 직원과 떠난 직원), 다섯까지
+   */
+  public record History(List<Event> timeline, List<Achievement> achievements, List<Hall> hall) {}
+
+  /**
+   * @param kind open·grow·shrink·era·overtake·rise·left·best·worst. grade는 grow·shrink의 새 등급(화면이 건물
+   *     이름으로 바꾼다)
+   */
+  public record Event(int year, String kind, String text, String grade) {}
+
+  /**
+   * @param year 연 해. 아직이면 null
+   */
+  public record Achievement(String code, String name, String description, Integer year) {}
+
+  /**
+   * @param to 떠난 해. 아직 일하면 null
+   */
+  public record Hall(String name, int from, Integer to, long totalPnl, String grade) {}
 }

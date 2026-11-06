@@ -29,6 +29,23 @@ class CompanyState {
   /** 팔렸는가. 팔린 회사는 끝난 채로 남는다. */
   boolean sold;
 
+  /** 회사 연표: 큰 일만 해 번호와 함께 쌓는다 (decisions.md 262번). */
+  List<Event> timeline = new ArrayList<>();
+
+  /** 연 업적: 코드 → 연 해 (262번). */
+  Map<String, Integer> achievements = new LinkedHashMap<>();
+
+  /** 회사를 떠난 직원 (262번). */
+  List<Alumnus> alumni = new ArrayList<>();
+
+  /** 투자 회의를 연달아 번 해 수 (262번). */
+  int meetingStreak;
+
+  /** 지금까지 한 해 자본 배수의 최고·최저(만분율). 연표의 "가장 크게 번 해"·"가장 아팠던 해"를 가린다 (262번). */
+  int bestYearBp;
+
+  int worstYearBp;
+
   /** 올해 결산 전에 일어난 사람 이야기(붙잡음·보냄). 결산 소식 줄에 붙고 해가 바뀌면 비운다 (261번). */
   List<String> yearLines = new ArrayList<>();
 
@@ -115,6 +132,12 @@ class CompanyState {
 
     /** 지난 결산 때 앉아 있던 자리. 근속을 세는 데 쓴다. */
     String lastDesk;
+
+    /** 들어온 해 (decisions.md 262번). 이 칸을 더하기 전에 들어온 직원은 0. */
+    int joinedYear;
+
+    /** 이 회사에서 번 돈의 합(결산과 투자 회의). 명예의 전당이 쓴다 (262번). */
+    long totalPnl;
   }
 
   /**
@@ -212,6 +235,30 @@ class CompanyState {
     String guard;
   }
 
+  /**
+   * 연표 한 줄 (262번). kind: open·grow·shrink·era·overtake·rise·left·best·worst. grade는 grow·shrink의 새
+   * 등급.
+   */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Event {
+    int year;
+    String kind;
+    String text;
+    String grade;
+  }
+
+  /** 회사를 떠난 직원 (262번). */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Alumnus {
+    String name;
+    int from;
+    int to;
+    long totalPnl;
+    String grade;
+  }
+
   /** 라이벌이 우리 직원에게 손을 뻗었다 (261번). */
   @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
@@ -266,6 +313,9 @@ class CompanyState {
 
     /** 그해 앞지른 라이벌 이름. 박치기 장면이 쓴다 (260번). */
     List<String> overtook = new ArrayList<>();
+
+    /** 그해 연 업적 이름 (262번). */
+    List<String> achieved = new ArrayList<>();
 
     List<Result> results = new ArrayList<>();
     List<String> lines = new ArrayList<>();

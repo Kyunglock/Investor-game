@@ -252,7 +252,7 @@ components:
     Company:
       type: object
       description: 회사 화면의 값. 올해 시장 갈래는 숨은 값이라 조짐만 담는다. 직원 능력치는 등급만.
-      required: [companyId, status, number, era, year, capital, grade, seats, employees, desks, applicants, refreshCost, refreshes]
+      required: [companyId, status, number, era, year, capital, grade, seats, employees, desks, applicants, refreshCost, refreshes, history]
       properties:
         companyId: { type: string, format: uuid }
         status: { type: string, enum: [ACTIVE, ENDED], description: ENDED는 매각을 빼기 전(236번)에 팔린 회사. 시대가 끝나 멈췄던 회사는 다시 열면 ACTIVE로 이어진다 }
@@ -356,6 +356,47 @@ components:
               sectorName: { type: [string, 'null'] }
         refreshCost: { type: integer, format: int64, description: 지원자를 새로 받는 값 }
         refreshes: { type: integer, description: 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 253번) }
+        history:
+          type: object
+          description: 회사 연표·업적·명예의 전당 (decisions.md 262번)
+          required: [timeline, achievements, hall]
+          properties:
+            timeline:
+              type: array
+              description: 큰 일, 오래된 것부터
+              items:
+                type: object
+                required: [year, kind]
+                properties:
+                  year: { type: integer }
+                  kind: { type: string, enum: [open, grow, shrink, era, overtake, rise, left, best, worst] }
+                  text: { type: [string, 'null'] }
+                  grade:
+                    description: grow·shrink의 새 등급. 화면이 건물 이름으로 바꾼다
+                    oneOf: [{ $ref: '#/components/schemas/Grade' }, { type: 'null' }]
+            achievements:
+              type: array
+              description: 모든 업적. year가 없으면 아직 못 열었다
+              items:
+                type: object
+                required: [code, name, description]
+                properties:
+                  code: { type: string }
+                  name: { type: string }
+                  description: { type: string }
+                  year: { type: [integer, 'null'] }
+            hall:
+              type: array
+              description: 이 회사에서 가장 많이 번 사람부터(지금 직원과 떠난 직원), 다섯까지
+              items:
+                type: object
+                required: [name, from, totalPnl, grade]
+                properties:
+                  name: { type: string }
+                  from: { type: integer, description: 들어온 해. 이 기록 전에 들어왔으면 0 }
+                  to: { type: [integer, 'null'], description: 떠난 해. 아직 일하면 null }
+                  totalPnl: { type: integer, format: int64 }
+                  grade: { $ref: '#/components/schemas/Grade' }
         industry:
           description: 업계 순위와 바로 위 라이벌 증권사 (decisions.md 260번). 라이벌이 없는 옛 회사면 null
           oneOf:
@@ -463,7 +504,7 @@ components:
         lastSettlement:
           oneOf:
             - type: object
-              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, gradeBefore, gradeAfter, results, lines]
+              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, gradeBefore, gradeAfter, overtook, achieved, results, lines]
               properties:
                 year: { type: integer }
                 phase: { type: string, enum: [boom, normal, crash] }
@@ -486,6 +527,10 @@ components:
                 overtook:
                   type: array
                   description: 그해 앞지른 라이벌 증권사 (decisions.md 260번)
+                  items: { type: string }
+                achieved:
+                  type: array
+                  description: 그해 연 업적 이름 (decisions.md 262번)
                   items: { type: string }
                 results:
                   type: array

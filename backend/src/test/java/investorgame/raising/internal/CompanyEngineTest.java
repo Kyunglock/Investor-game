@@ -927,4 +927,39 @@ class CompanyEngineTest {
     e.desk = "bio";
     assertThat(ENGINE.settled(e)).as("자리를 바꾸면 다시 센다").isFalse();
   }
+
+  /**
+   * 회사 연표·업적·명예의 전당 (#326, decisions.md 262번): 차린 해와 등급이 바뀐 해가 연표에 남고, 한 해에 자본이 두 배면 업적이 열리며, 내보낸
+   * 직원은 떠난 사람으로 남는다.
+   */
+  @Test
+  void 연표와_업적과_떠난_직원이_남는다() {
+    CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
+    assertThat(company.timeline).extracting(e -> e.kind).containsExactly("open");
+
+    // 자본이 두 배가 되는 해를 만든다: 결산 직전 자본을 띠 바로 위로 올려 등급도 바뀌게.
+    CompanyState.Employee a = ENGINE.hire(company, stats(60, 60, 60, 60));
+    a.desk = "day";
+    company.invest = null;
+    company.poach = null;
+    company.capital = 450_000_000L;
+    company.yearStartCapital = 100_000_000L;
+    CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(1));
+    assertThat(s.achieved).contains("곱빼기");
+    assertThat(company.achievements).containsKey("doubled");
+    assertThat(company.timeline).extracting(e -> e.kind).contains("grow", "best");
+    assertThat(a.totalPnl).isEqualTo(s.results.getFirst().pnl);
+
+    // 자리가 꽉 찬 회사에서 바꿔 뽑으면 내보낸 사람이 떠난 직원으로 남는다.
+    ENGINE.hire(company, stats(50, 50, 50, 50));
+    ENGINE.hire(company, stats(50, 50, 50, 50));
+    while (company.employees.size() < ENGINE.seats(company.capital)) {
+      ENGINE.hire(company, stats(50, 50, 50, 50));
+    }
+    CompanyState.Applicant next = company.applicants.getFirst();
+    company.capital = Math.max(company.capital, next.fee * 2);
+    ENGINE.hireApplicant(company, next.id, a.id);
+    assertThat(company.alumni).extracting(x -> x.name).containsExactly(a.name);
+    assertThat(company.timeline).extracting(e -> e.kind).contains("left");
+  }
 }

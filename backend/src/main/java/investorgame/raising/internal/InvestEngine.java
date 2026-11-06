@@ -455,6 +455,7 @@ class InvestEngine {
                   : -company.scaledMiss(c, returns.missBp());
       result.pnl = stake * bp / BP;
       total += result.pnl;
+      e.totalPnl += result.pnl;
       missed += stake * company.scaledGain(c, company.gainBp(c, e)) / BP;
       Map<String, String> values = new HashMap<>();
       values.put("action", texts.actions().get(result.action));

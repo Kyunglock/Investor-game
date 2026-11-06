@@ -227,6 +227,16 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
         <div className="mt-3">
           <Ledger company={company} settlement={s} staged />
         </div>
+        {s.achieved.length > 0 && (
+          // 그해 연 업적 (262번).
+          <p
+            className="animate-stamp mt-3 rounded border border-gold px-3 py-2 text-center text-[14px] font-semibold text-gold"
+            style={{ animationDelay: `${done}ms`, animationFillMode: 'both' }}
+            data-testid="achieved"
+          >
+            🏆 업적: {s.achieved.join(' · ')}
+          </p>
+        )}
         <button
           type="button"
           onClick={onClose}

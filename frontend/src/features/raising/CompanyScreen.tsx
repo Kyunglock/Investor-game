@@ -4,6 +4,7 @@ import { Document } from '../game/Document'
 import { shortWon } from '../game/labels'
 import { usePixelArt } from '../game/pixelArt'
 import { BuildingArt } from './BuildingArt'
+import { pnlLabel } from './board'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { InvestWindow } from './InvestWindow'
 import { MoveScene } from './MoveScene'
@@ -654,7 +655,7 @@ function SeatPicker({
   )
 }
 
-type Tab = 'meeting' | 'market' | 'staff' | 'settlement'
+type Tab = 'meeting' | 'market' | 'staff' | 'settlement' | 'history'
 
 /**
  * 연초 회의 · 공채 · 배치 · 지난 결산을 탭으로 나눈다. 한 장에 길게 늘어놓으면 위아래로 오가야 했다. 고른 탭은 스토어에 둔다: 직원이 들고 나면 회사 화면을
@@ -682,6 +683,12 @@ function CompanyTabs({ company }: { company: Company }) {
     },
     { id: 'staff', label: '배치', badge: `${placed}/${company.seats}`, show: true },
     { id: 'settlement', label: '지난 결산', show: Boolean(company.lastSettlement) },
+    {
+      id: 'history',
+      label: '연표',
+      badge: `${company.history.achievements.filter((a) => a.year != null).length}/${company.history.achievements.length}`,
+      show: true,
+    },
   ]
   const shown = tabs.filter((t) => t.show)
   const fallback: Tab = ended
@@ -736,6 +743,7 @@ function CompanyTabs({ company }: { company: Company }) {
         {tab === 'market' && <MarketPanel company={company} />}
         {tab === 'staff' && <StaffTab company={company} />}
         {tab === 'settlement' && <SettlementView company={company} />}
+        {tab === 'history' && <HistoryTab company={company} />}
       </div>
     </div>
   )
@@ -760,6 +768,75 @@ function SettlementView({ company }: { company: Company }) {
           <li key={line}>{line}</li>
         ))}
       </ul>
+    </section>
+  )
+}
+
+/** 연표의 한 줄: 등급이 바뀐 해는 건물로 말한다 (238번). */
+function eventText(e: Company['history']['timeline'][number]): string {
+  if ((e.kind === 'grow' || e.kind === 'shrink') && e.grade) {
+    return e.kind === 'grow'
+      ? `회사가 커졌다 · ${officeName(e.grade)}`
+      : `회사가 줄었다 · ${officeName(e.grade)}`
+  }
+  return e.text ?? ''
+}
+
+/**
+ * 연표 탭 (decisions.md 262번, #326): 회사의 큰 일(최근 것부터), 업적, 명예의 전당. 매각이 빠져 끝없는 회사에 중간 목표와 기록을 준다.
+ */
+function HistoryTab({ company }: { company: Company }) {
+  const h = company.history
+  return (
+    <section data-testid="history">
+      <h3 className="font-pen text-[22px]">업적</h3>
+      <ul className="mt-1 grid grid-cols-2 gap-1 md:grid-cols-4">
+        {h.achievements.map((a) => (
+          <li
+            key={a.code}
+            className={`rounded border p-2 text-[12px] ${
+              a.year != null ? 'border-gold' : 'border-line-soft text-muted opacity-70'
+            }`}
+            data-testid="achievement"
+            data-open={a.year != null}
+          >
+            <b className="block text-[13px]">
+              {a.year != null ? '🏆 ' : ''}
+              {a.name}
+            </b>
+            {a.description}
+            {a.year != null && <span className="block text-gold">{a.year}년 차</span>}
+          </li>
+        ))}
+      </ul>
+      <h3 className="mt-3 font-pen text-[22px]">명예의 전당</h3>
+      {h.hall.length === 0 ? (
+        <p className="text-[13px] text-muted">아직 아무도 없습니다.</p>
+      ) : (
+        <ol className="mt-1 grid gap-0.5 text-[13px]" data-testid="hall">
+          {h.hall.map((x, i) => (
+            <li key={`${x.name}-${x.from}`} className="flex justify-between gap-2">
+              <span>
+                {i + 1}. {x.name} {titleOf(x.grade)}{' '}
+                <span className="text-muted">
+                  {x.from > 0 ? `${x.from}년 차` : ''}
+                  {x.to != null ? ` ~ ${x.to}년 차 · 퇴사` : ' ~ 지금'}
+                </span>
+              </span>
+              <b className={x.totalPnl >= 0 ? 'text-up' : 'text-down'}>{pnlLabel(x.totalPnl)}</b>
+            </li>
+          ))}
+        </ol>
+      )}
+      <h3 className="mt-3 font-pen text-[22px]">연표</h3>
+      <ol className="mt-1 grid gap-0.5 text-[13px]" data-testid="timeline">
+        {[...h.timeline].reverse().map((e, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: 같은 해에 같은 일이 여럿일 수 있고 연표는 쌓이기만 한다
+          <li key={`${e.year}-${e.kind}-${i}`}>
+            <span className="font-mono-num text-muted">{e.year}년 차</span> {eventText(e)}
+          </li>
+        ))}
+      </ol>
     </section>
   )
 }

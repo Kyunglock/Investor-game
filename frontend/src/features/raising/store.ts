@@ -15,7 +15,7 @@ interface RaisingState {
   /** 자동 진행을 켰다 (245번). 새로 고치면 꺼진다: 모르는 사이에 돈을 쓰지 않게. */
   autoPlay: boolean
   /** 회사 화면에서 고른 탭. null이면 화면이 정한다 (231번). */
-  tab: 'meeting' | 'market' | 'staff' | 'settlement' | null
+  tab: 'meeting' | 'market' | 'staff' | 'settlement' | 'history' | null
   load: () => Promise<void>
   /** 사장의 사재로 첫 회사를 차린다 (decisions.md 228번). */
   open: () => Promise<void>
