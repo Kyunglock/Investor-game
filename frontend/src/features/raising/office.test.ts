@@ -126,3 +126,18 @@ describe('건물로 보이는 회사 (decisions.md 238번)', () => {
     expect(lit('S')).toBeLessThan(lit('SSS'))
   })
 })
+
+describe('라이벌 박치기 장면의 건물 (decisions.md 243번)', () => {
+  it('건물만 그리면 하늘·이웃 건물·길바닥 없이 건물 칸은 그대로다', () => {
+    for (const grade of ['F', 'D', 'B', 'S', 'SSS', 'X', 'Z'] as const) {
+      const full = buildingMap(grade)
+      const bare = buildingMap(grade, true)
+      expect(bare[0][0]).toBe('.')
+      expect(bare.at(-1)?.[0]).toBe('.')
+      // 불 켜진 창(우리 층)은 둘 다 같다.
+      const lit = (g: string[][]) => g.flat().filter((c) => c === 'L').length
+      expect(lit(bare)).toBe(lit(full))
+      expect(bare.flat().every((ch) => ch === '.' || ch in PALETTE)).toBe(true)
+    }
+  })
+})
