@@ -11,6 +11,7 @@ import { InvestWindow } from './InvestWindow'
 import { MacroWindow } from './MacroWindow'
 import { MoveScene } from './MoveScene'
 import { OfficeArt, type SeatFocus } from './OfficeArt'
+import { OvertakeAlert } from './OvertakeAlert'
 import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName, titleOf } from './office'
 import { autoPlace, deskEffect, rankDesks, seatOne } from './placement'
 import { QuarterSheet } from './QuarterSheet'
@@ -41,6 +42,7 @@ export function CompanyScreen({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   const justSettled = useRaisingStore((s) => s.justSettled)
+  const overtakeAlert = useRaisingStore((s) => s.overtakeAlert)
   const justQuartered = useRaisingStore((s) => s.justQuartered)
   const autoPlay = useRaisingStore((s) => s.autoPlay)
   const { settle, restart, convene, conveneMacro } = useRaisingStore.getState()
@@ -122,6 +124,14 @@ export function CompanyScreen({ company }: { company: Company }) {
         <CompanyTabs company={company} />
 
         {justSettled && <YearEndSheet company={company} onClose={closeYearEnd} />}
+
+        {!justSettled && overtakeAlert && (
+          // 라이벌을 앞지르면 연말 결산서를 닫은 뒤 알림이 뜬다 (274번).
+          <OvertakeAlert
+            company={company}
+            onClose={() => useRaisingStore.setState({ overtakeAlert: false })}
+          />
+        )}
 
         {justQuartered && company.lastQuarter && (
           // 분기 실적 (268번): 1~3분기를 넘기면 짧게 뜬다.

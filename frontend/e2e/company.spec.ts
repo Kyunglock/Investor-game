@@ -137,6 +137,11 @@ async function closeYearEnd(page: Page, year: number) {
   await expect(sheet.getByTestId('ledger-after')).toBeVisible()
   await sheet.getByRole('button', { name: '확인' }).click()
   await expect(sheet).toBeHidden()
+  // 그해 라이벌을 앞질렀으면 알림이 뜬다 (274번). 실제 시장이라 어느 해에 앞지를지 몰라 떠 있으면 닫는다.
+  const alert = page.getByRole('alertdialog', { name: '라이벌을 앞질렀다' })
+  if (await alert.isVisible()) {
+    await alert.getByRole('button', { name: '확인' }).click()
+  }
 }
 
 test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자리 두 개와 지원자 셋이 있다', async ({
@@ -369,6 +374,41 @@ test('분기 넘기기 버튼을 빠르게 두 번 눌러도 한 분기만 넘�
   await closeYearEnd(page, 1)
   await expect(page.getByText(/1호 회사 · 2년 차 1분기/)).toBeVisible()
   expect(settles).toBeGreaterThanOrEqual(1)
+})
+
+test('라이벌을 앞지르면 연말 결산서를 닫은 뒤 알림이 뜬다 (274번)', async ({ page }) => {
+  await openCompany(page)
+  // 사재 1억으로 1.5억 라이벌을 앞지르려면 여러 해가 걸린다: 연말 결산 응답에 앞지른 라이벌을 넣어 본다.
+  await page.route('**/api/company/settle', async (route) => {
+    const response = await route.fetch()
+    const company = await response.json()
+    if (company.quarter === 1 && company.lastSettlement) {
+      company.lastSettlement.overtook = ['한탕증권']
+      company.industry = { rank: 6, total: 7, aboveName: '불개미투자', aboveCapital: 500_000_000 }
+    }
+    await route.fulfill({ response, json: company })
+  })
+  // 돈을 굴리는 직원이 없으면 회의 없이 바로 넘긴다.
+  for (let quarter = 1; quarter <= 4; quarter++) {
+    await page.getByRole('button', { name: `1년 차 ${quarter}분기 넘기기` }).click()
+    if (quarter < 4) {
+      await closeQuarter(page, 1, quarter)
+    }
+  }
+  const alert = page.getByRole('alertdialog', { name: '라이벌을 앞질렀다' })
+  // 연말 결산서가 먼저다.
+  const sheet = page.getByRole('dialog', { name: '연말 결산서' })
+  await expect(sheet).toBeVisible()
+  await expect(alert).toHaveCount(0)
+  await sheet.getByRole('button', { name: '확인' }).click()
+  await expect(sheet).toBeHidden()
+  await expect(alert).toBeVisible()
+  await expect(alert.getByTestId('overtake-names')).toHaveText('한탕증권을 앞질렀다!')
+  await expect(alert.getByTestId('overtake-rank')).toHaveText('업계 6위 / 7곳')
+  await expect(alert).toContainText('다음 목표: 불개미투자')
+  await alert.getByRole('button', { name: '확인' }).click()
+  await expect(alert).toBeHidden()
+  await expect(page.getByText(/1호 회사 · 2년 차 1분기/)).toBeVisible()
 })
 
 test('자동 진행을 켜면 공채·배치·회의·결산을 해마다 하고, 멈추면 선다 (245번)', async ({

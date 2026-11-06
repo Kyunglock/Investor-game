@@ -132,3 +132,11 @@ describe('자동 진행의 분기 사이 시간 (decisions.md 273번)', () => {
     expect(useRaisingStore.getState()).toMatchObject({ autoPlay: false, autoNextAt: null })
   })
 })
+
+describe('라이벌을 앞지른 알림 (decisions.md 274번)', () => {
+  it('연말 결산서를 닫은 뒤 알림을 닫고 나서 다음 일을 한다', () => {
+    expect(nextAutoStep(company(), true, false, true).kind).toBe('closeYearEnd')
+    expect(nextAutoStep(company(), false, false, true).kind).toBe('closeOvertake')
+    expect(nextAutoStep(company(), false, false, false).kind).not.toBe('closeOvertake')
+  })
+})

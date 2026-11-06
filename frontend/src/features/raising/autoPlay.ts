@@ -8,6 +8,7 @@ import { type Stance, useRaisingStore } from './store'
 export type AutoStep =
   | { kind: 'closeYearEnd' }
   | { kind: 'closeQuarter' }
+  | { kind: 'closeOvertake' }
   | { kind: 'hire'; applicantId: number }
   | { kind: 'poach'; keep: boolean }
   | { kind: 'raise'; accept: boolean }
@@ -57,7 +58,7 @@ export function autoHire(company: Company): number | null {
 }
 
 /**
- * 자동 진행의 다음 일 (245번). 한 해를 사람이 하는 순서 그대로 돈다: 연말 결산서를 닫고 → 빈 자리에 뽑고 → 자동 배치(232·233번)와 다르면 앉히고 →
+ * 자동 진행의 다음 일 (245번). 한 해를 사람이 하는 순서 그대로 돈다: 연말 결산서를 닫고(라이벌을 앞질렀으면 알림도, 274번) → 빈 자리에 뽑고 → 자동 배치(232·233번)와 다르면 앉히고 →
  * 거시경제 회의(직원 다수결, 266번) → 직원이 종목을 물어 왔으면 종목 회의(직원 다수결) → 분기 넘기기를 분기마다 되풀이한다(268번). 분기 실적은 짧게,
  * 연말 결산서는 길게 보여 주고 닫는다. 끝난 회사면 멈춘다.
  */
@@ -65,6 +66,7 @@ export function nextAutoStep(
   company: Company,
   justSettled: boolean,
   justQuartered = false,
+  overtakeAlert = false,
 ): AutoStep {
   // 끝났거나 망한 회사(247번)면 멈춘다: 다시 차리기는 사장이 직접 한다.
   if (company.status === 'ENDED' || company.broke) {
@@ -72,6 +74,10 @@ export function nextAutoStep(
   }
   if (justSettled) {
     return { kind: 'closeYearEnd' }
+  }
+  // 라이벌을 앞질렀다는 알림 (274번): 연말 결산서 다음에 잠깐 보여 주고 닫는다.
+  if (overtakeAlert) {
+    return { kind: 'closeOvertake' }
   }
   if (justQuartered) {
     return { kind: 'closeQuarter' }
@@ -115,6 +121,7 @@ export function nextAutoStep(
 const STEP_MS = 700
 const QUARTER_MS = 1500
 const YEAR_END_MS = 4000
+const OVERTAKE_MS = 3000
 
 /**
  * 자동 진행에서 분기와 분기 사이에 두는 시간(ms) (decisions.md 273번). 사용자: "자동버튼 누르면 20초는 텀두게해줘". 전에는 한 분기가 5초 남짓에 지나가
@@ -148,6 +155,7 @@ export function useCompanyAutoPlay() {
   const company = useRaisingStore((s) => s.company)
   const justSettled = useRaisingStore((s) => s.justSettled)
   const justQuartered = useRaisingStore((s) => s.justQuartered)
+  const overtakeAlert = useRaisingStore((s) => s.overtakeAlert)
   const error = useRaisingStore((s) => s.error)
   useEffect(() => {
     if (!auto || busy || !company) {
@@ -157,7 +165,7 @@ export function useCompanyAutoPlay() {
       useRaisingStore.setState({ autoPlay: false, autoNextAt: null })
       return
     }
-    const step = nextAutoStep(company, justSettled, justQuartered)
+    const step = nextAutoStep(company, justSettled, justQuartered, overtakeAlert)
     if (step.kind === 'stop') {
       useRaisingStore.setState({ autoPlay: false, autoNextAt: null })
       return
@@ -169,7 +177,9 @@ export function useCompanyAutoPlay() {
           ? YEAR_END_MS
           : step.kind === 'closeQuarter'
             ? QUARTER_MS
-            : STEP_MS
+            : step.kind === 'closeOvertake'
+              ? OVERTAKE_MS
+              : STEP_MS
     if (step.kind === 'settle') {
       useRaisingStore.setState({ autoNextAt: Date.now() + delay })
     }
@@ -191,6 +201,9 @@ export function useCompanyAutoPlay() {
           return
         case 'closeQuarter':
           useRaisingStore.setState({ justQuartered: false })
+          return
+        case 'closeOvertake':
+          useRaisingStore.setState({ overtakeAlert: false })
           return
         case 'hire':
           void hire(step.applicantId)
@@ -222,5 +235,5 @@ export function useCompanyAutoPlay() {
       }
     }, delay)
     return () => clearTimeout(id)
-  }, [auto, busy, company, justSettled, justQuartered, error])
+  }, [auto, busy, company, justSettled, justQuartered, overtakeAlert, error])
 }

@@ -17,6 +17,8 @@ interface RaisingState {
   justSettled: boolean
   /** 방금 한 분기를 넘겼다(4분기가 아니다). 분기 실적을 띄우고 닫으면 지운다 (decisions.md 268번). */
   justQuartered: boolean
+  /** 방금 연말 결산에서 라이벌을 앞질렀다. 연말 결산서를 닫으면 알림이 뜨고, 닫으면 지운다 (decisions.md 274번). */
+  overtakeAlert: boolean
   /** 자동 진행을 켰다 (245번). 새로 고치면 꺼진다: 모르는 사이에 돈을 쓰지 않게. */
   autoPlay: boolean
   /**
@@ -83,6 +85,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     error: null,
     justSettled: false,
     justQuartered: false,
+    overtakeAlert: false,
     autoPlay: false,
     autoLastSettleAt: null,
     autoNextAt: null,
@@ -190,7 +193,12 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
         return
       }
       if (after.year > before.year) {
-        set({ justSettled: true, justQuartered: false, tab: 'settlement' })
+        set({
+          justSettled: true,
+          justQuartered: false,
+          tab: 'settlement',
+          overtakeAlert: (after.lastSettlement?.overtook.length ?? 0) > 0,
+        })
       } else if (after.quarter > before.quarter) {
         set({ justQuartered: true })
       }
