@@ -1,3 +1,5 @@
+import { AdSlot } from '../ads/AdSlot'
+import { ADSENSE_SLOT_START } from '../ads/adsense'
 import { Document } from '../game/Document'
 
 /** 시작 화면. 사장의 사재 1억 원으로 증권사를 차리고, 공채 시장에서 직원을 뽑아 앉힌다 (decisions.md 228번). */
@@ -31,6 +33,13 @@ export function CompanyStart({
           {error}
         </p>
       )}
+      {/* 광고는 결정하는 순간이 아닌 첫 화면에만 둔다 (decisions.md 271번). 게시자 ID가 없으면 그리지 않는다. */}
+      <AdSlot slot={ADSENSE_SLOT_START} />
+      <p className="mt-4 text-center text-[12px] text-muted">
+        <a href="/privacy" className="underline">
+          개인정보처리방침
+        </a>
+      </p>
     </Document>
   )
 }

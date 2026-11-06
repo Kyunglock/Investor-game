@@ -45,6 +45,10 @@ cd backend
 ADMIN_TOKEN=아무-비밀값 ./gradlew bootTestRun
 ```
 
+### 광고 켜기 (구글 애드센스)
+
+게시자 ID가 없으면 광고는 꺼져 있다. 애드센스 승인 뒤 GitHub 저장소 Settings → Secrets and variables → Actions → Variables에 `ADSENSE_CLIENT`(ca-pub-…)와 `ADSENSE_SLOT_START`(광고 단위 번호)를 넣고 배포하면 첫 화면에 광고가 뜨고 `ads.txt`가 배포 루트에 생긴다. 로컬에서는 `VITE_ADSENSE_CLIENT=… VITE_ADSENSE_SLOT_START=… pnpm dev`. 개인정보처리방침은 `/privacy` (decisions.md 271번).
+
 ## 검사
 
 ```bash

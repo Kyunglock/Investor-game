@@ -399,3 +399,16 @@ test('자동 진행을 켜면 공채·배치·회의·결산을 해마다 하고
   await page.waitForTimeout(3_000)
   await expect(page.getByText(/1호 회사 · \d+년 차/)).toHaveText(year)
 })
+
+test('개인정보처리방침이 있고, 게시자 ID가 없으면 광고 자리를 그리지 않는다 (271번)', async ({
+  page,
+}) => {
+  await page.goto('/')
+  await expect(page.getByRole('button', { name: '회사 차리기' })).toBeVisible()
+  await expect(page.getByTestId('ad-slot')).toHaveCount(0)
+  await page.getByRole('link', { name: '개인정보처리방침' }).click()
+  await expect(page.getByTestId('privacy')).toContainText('광고와 쿠키')
+  await expect(page.getByTestId('privacy')).toContainText('익명 세션 쿠키')
+  await page.getByRole('link', { name: /게임으로 돌아가기/ }).click()
+  await expect(page.getByRole('button', { name: '회사 차리기' })).toBeVisible()
+})
