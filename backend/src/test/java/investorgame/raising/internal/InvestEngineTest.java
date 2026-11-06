@@ -446,4 +446,64 @@ class InvestEngineTest {
             () -> ENGINE.invest.decide(big, InvestEngine.TEAM, true, new HashSeededRandom(1)))
         .isInstanceOf(InvalidRequestException.class);
   }
+
+  /**
+   * 막판 뒤집기 (decisions.md 283번): 실제 플레이에서는 정하면 proposal-percent(35%)로 누군가 반대로 하자고 나선다. 답할 때까지 회의는
+   * 정해지지 않고 결산도 못 한다. 따르면 반대쪽으로, 거절하면 원래대로 한다. 따랐으면 결과를 보고 상이나 벌을 준다.
+   */
+  @Test
+  void 결정이_끝나면_누군가_막판에_반대로_하자고_하고_따르면_상이나_벌을_준다() {
+    int proposed = 0;
+    int trials = 400;
+    for (int seed = 0; seed < trials; seed++) {
+      CompanyState c = opened(new HashSeededRandom(seed), 300_000_000L);
+      ENGINE.hire(c, stats(60, 50, 50, 50));
+      ENGINE.hire(c, stats(60, 50, 50, 50));
+      ENGINE.place(c, Map.of(1, "day", 2, "bio"));
+      c.phase = "normal";
+      ENGINE.invest.decide(c, InvestEngine.BUY, false, new HashSeededRandom(seed), true);
+      if (c.invest.proposalId == null) {
+        assertThat(c.invest.choice).isEqualTo(InvestEngine.BUY);
+        continue;
+      }
+      proposed++;
+      assertThat(c.invest.choice).as("답할 때까지 정해지지 않는다").isNull();
+      assertThat(c.invest.proposalAction).as("사자면 팔자고 한다").isEqualTo(InvestEngine.SELL);
+      assertThat(c.invest.proposalLine).contains(c.invest.proposalName).doesNotContain("{");
+      assertThat(ENGINE.invest.open(c)).as("결산을 막는다").isTrue();
+      boolean accept = seed % 2 == 0;
+      ENGINE.invest.answerProposal(c, accept, new HashSeededRandom(seed));
+      assertThat(c.invest.choice).isEqualTo(accept ? InvestEngine.SELL : InvestEngine.BUY);
+      assertThat(c.invest.proposalId).isNull();
+      if (!accept) {
+        assertThat(c.invest.verdictPending).isFalse();
+        assertThat(c.yearLines).anyMatch(l -> l.contains("시무룩하게"));
+        continue;
+      }
+      assertThat(c.invest.verdictPending).isTrue();
+      boolean good = c.invest.total > 0;
+      CompanyState.Employee who =
+          c.employees.stream().filter(e -> e.id == c.invest.followedId).findFirst().orElseThrow();
+      int morale = who.morale;
+      int raises = who.raises;
+      long capital = c.capital;
+      assertThatThrownBy(() -> ENGINE.invest.verdict(c, good ? "CUT" : "BONUS"))
+          .isInstanceOf(InvalidRequestException.class);
+      if (good) {
+        ENGINE.invest.verdict(c, "BONUS");
+        assertThat(c.capital).isLessThan(capital);
+        assertThat(who.morale).isEqualTo(Math.min(2, morale + 2));
+        assertThat(c.invest.verdictLine).contains("성과금");
+      } else {
+        ENGINE.invest.verdict(c, "CUT");
+        assertThat(who.raises).isEqualTo(raises - 1);
+        assertThat(who.morale).isEqualTo(Math.max(-2, morale - 2));
+        assertThat(c.invest.verdictLine).contains("연봉을 깎았다");
+      }
+      assertThat(c.invest.verdictPending).isFalse();
+      assertThatThrownBy(() -> ENGINE.invest.verdict(c, "NOTHING"))
+          .isInstanceOf(InvalidRequestException.class);
+    }
+    assertThat(proposed).isBetween(trials * 25 / 100, trials * 45 / 100);
+  }
 }

@@ -54,6 +54,32 @@ export function investTimeline(
   return { tugAt, pnlAt, reveal, total, end: total + END_PAUSE_MS }
 }
 
+/**
+ * 차트로 보는 결정 장면의 순서 (decisions.md 283번): (맡겼으면 맞붙는 장면) → 결정 도장 → 차트가 그려진다 → 종목 공개 → 직원마다 손익 → 회의 손익 →
+ * 결산 버튼. 빨리 보기면 모두 0이다.
+ */
+export function chartTimeline(
+  people: number,
+  chartMs: number,
+  skipped: boolean,
+  lead = 0,
+): InvestTimeline & { chartAt: number } {
+  if (skipped) {
+    return { chartAt: 0, tugAt: () => 0, pnlAt: () => 0, reveal: 0, total: 0, end: 0 }
+  }
+  const chartAt = lead + STAMP_MS
+  const reveal = chartAt + chartMs + REVEAL_PAUSE_MS
+  const pnlAt = (i: number) => reveal + PNL_PAUSE_MS + i * PNL_STEP_MS
+  const total = pnlAt(Math.max(0, people - 1)) + TOTAL_PAUSE_MS
+  return { chartAt, tugAt: () => chartAt, pnlAt, reveal, total, end: total + END_PAUSE_MS }
+}
+
+/** 공개 문장의 몇 %("넥손게임즈가 35% 내렸다."). 못 찾으면 0. */
+export function percentOf(reveal: string): number {
+  const m = /(\d+)%/.exec(reveal)
+  return m ? Number(m[1]) : 0
+}
+
 /** 처음 몫은 등급 띠 가운데를 20~80%로 묶는다(181번): 처음부터 한쪽이 거의 다 차 있으면 엎치락뒤치락이 안 보인다. */
 const clampStart = (v: number) => Math.min(80, Math.max(20, v))
 

@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import type { Company } from '../../api/client'
 import { shortWon, withParticle } from '../game/labels'
 import { Overlay } from '../game/Overlay'
-import { TUG_DONE_MS, TugOfWar } from '../game/TugOfWar'
+import { CHART_MS, InvestChart } from './InvestChart'
 import {
+  chartTimeline,
   groupRemarks,
   hindsightOf,
-  investTimeline,
-  matchupOf,
   OPINIONS,
+  percentOf,
   spokesperson,
 } from './investShow'
 import { useRaisingStore } from './store'
@@ -52,13 +52,13 @@ export function InvestWindow({
   onSettle: () => void
 }) {
   const busy = useRaisingStore((s) => s.busy)
-  const { decideInvest } = useRaisingStore.getState()
+  const { decideInvest, answerProposal, giveVerdict } = useRaisingStore.getState()
   const outcome = invest.outcome
   // 창을 열 때 이미 정한 회의면(다시 그림) 연출 없이 끝난 모습을 보인다.
   const [skipped, setSkipped] = useState(() => Boolean(outcome) || reducedMotion())
   // 맡겼으면(279번) 매수파·매도파가 먼저 맞붙고, 그 뒤에 직원마다 막대가 돈다.
   const lead = outcome?.delegated ? TEAM_CLASH_MS : 0
-  const show = investTimeline(outcome?.results.length ?? 0, TUG_DONE_MS, skipped, lead)
+  const show = chartTimeline(outcome?.results.length ?? 0, CHART_MS, skipped, lead)
   const [finished, setFinished] = useState(skipped)
   useEffect(() => {
     if (!outcome || finished) {
@@ -199,7 +199,38 @@ export function InvestWindow({
           </p>
         )}
 
-        {!outcome && (
+        {!outcome && invest.proposal && (
+          // 막판 뒤집기 (283번): 결정이 다 끝났는데 누군가 반대로 하자고 나섰다.
+          <div
+            className="animate-pop mt-3 rounded border-2 border-gold bg-card p-3"
+            data-testid="invest-proposal"
+          >
+            <p className="text-[12px] font-semibold text-gold">잠깐! 막판 제안</p>
+            <p className="mt-1 text-[15px]" data-testid="proposal-line">
+              {invest.proposal.line}
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void answerProposal(true)}
+                className="min-h-12 rounded bg-gold font-semibold text-white disabled:opacity-50"
+              >
+                그래, 네 말대로 해 · {label(invest.proposal.action)}
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void answerProposal(false)}
+                className="min-h-12 rounded border border-pen font-semibold disabled:opacity-50"
+              >
+                됐어, 원래대로 해
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!outcome && !invest.proposal && (
           <div className="mt-3 grid grid-cols-3 gap-2">
             {invest.options
               .filter((o) => o.code !== 'TEAM')
@@ -262,57 +293,41 @@ export function InvestWindow({
                 {outcome.big ? `크게 ${label(outcome.choice)}` : label(outcome.choice)}
               </span>
             </p>
+            {/* 결정 장면 (283번): 직원마다 막대 대신 종목 차트가 그려지며 오르거나 빠진다. */}
+            <InvestChart
+              // 빨리 보기를 누르면 다 그린 차트로 다시 그린다.
+              key={String(skipped)}
+              stock={invest.stockName}
+              up={outcome.up}
+              percent={percentOf(outcome.reveal)}
+              delay={show.chartAt}
+              instant={skipped}
+            />
             <ul className="mt-2 grid gap-2">
-              {outcome.results.map((r, i) => {
-                const matchup = matchupOf(
-                  r,
-                  outcome.choice,
-                  label,
-                  employees,
-                  invest.sway.who,
-                  outcome.delegated ? '팀 결정' : '사장 말',
-                )
-                return (
-                  <li
-                    key={r.employeeId}
-                    className="animate-reveal rounded border border-line-soft px-2 py-1.5 text-[14px]"
-                    style={{ animationDelay: `${show.tugAt(i)}ms` }}
-                    data-follow={r.follow}
-                    data-testid="invest-result"
-                  >
-                    <p className="font-semibold">{r.name}</p>
-                    {matchup ? (
-                      <TugOfWar
-                        // 빨리 보기를 누르면 끝난 막대로 다시 그린다.
-                        key={String(skipped)}
-                        matchup={matchup}
-                        delay={show.tugAt(i)}
-                        instant={skipped}
-                      />
-                    ) : (
-                      <OneVoice action={label(r.action)} delay={show.tugAt(i)} />
-                    )}
-                    <p
-                      className="animate-reveal mt-1 flex flex-wrap items-baseline justify-between gap-x-2"
-                      style={{ animationDelay: `${show.pnlAt(i)}ms` }}
-                    >
-                      <span>
-                        {r.follow !== 'BOSS' && (
-                          <span
-                            className={`mr-1 rounded px-1 text-[11px] ${FOLLOW[r.follow].tone}`}
-                          >
-                            {FOLLOW[r.follow].label}
-                          </span>
-                        )}
-                        {r.line}
-                      </span>
-                      <b className={`text-[16px] ${r.pnl >= 0 ? 'text-up' : 'text-down'}`}>
-                        {signed(r.pnl)}
-                      </b>
-                    </p>
-                  </li>
-                )
-              })}
+              {outcome.results.map((r, i) => (
+                <li
+                  key={r.employeeId}
+                  className="animate-reveal rounded border border-line-soft px-2 py-1.5 text-[14px]"
+                  style={{ animationDelay: `${show.pnlAt(i)}ms` }}
+                  data-follow={r.follow}
+                  data-testid="invest-result"
+                >
+                  <p className="flex flex-wrap items-baseline justify-between gap-x-2">
+                    <span>
+                      <b className="mr-1">{r.name}</b>
+                      {r.follow !== 'BOSS' && (
+                        <span className={`mr-1 rounded px-1 text-[11px] ${FOLLOW[r.follow].tone}`}>
+                          {FOLLOW[r.follow].label}
+                        </span>
+                      )}
+                      {r.line}
+                    </span>
+                    <b className={`text-[16px] ${r.pnl >= 0 ? 'text-up' : 'text-down'}`}>
+                      {signed(r.pnl)}
+                    </b>
+                  </p>
+                </li>
+              ))}
             </ul>
             <p
               className="animate-stamp mt-3 text-center font-semibold text-[16px]"
@@ -346,6 +361,36 @@ export function InvestWindow({
                   </p>
                 )}
                 <Hindsight invest={invest} />
+                {invest.verdict && (
+                  // 막판 제안을 따랐다 (283번): 결과를 보고 상이나 벌을 준다.
+                  <div
+                    className="animate-pop mt-3 rounded border-2 border-gold p-3"
+                    data-testid="invest-verdict"
+                  >
+                    <p className="text-[15px] font-semibold">{invest.verdict.ask}</p>
+                    {invest.verdict.options.length > 0 ? (
+                      <div className="mt-2 grid gap-2">
+                        {invest.verdict.options.map((o) => (
+                          <button
+                            key={o.code}
+                            type="button"
+                            disabled={busy}
+                            onClick={() => void giveVerdict(o.code)}
+                            className={`min-h-11 rounded border text-[14px] font-semibold disabled:opacity-50 ${
+                              invest.verdict?.good ? 'border-up text-up' : 'border-down text-down'
+                            }`}
+                          >
+                            {o.label}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-[14px]" data-testid="verdict-result">
+                        {invest.verdict.result}
+                      </p>
+                    )}
+                  </div>
+                )}
                 <p
                   className="animate-reveal mt-3 rounded bg-line-soft px-3 py-2 text-center text-[13px]"
                   data-testid="invest-next"
@@ -355,7 +400,8 @@ export function InvestWindow({
                 </p>
                 <button
                   type="button"
-                  disabled={busy}
+                  // 상이나 벌을 고르기 전에는 넘기지 않는다 (283번).
+                  disabled={busy || (invest.verdict?.options.length ?? 0) > 0}
                   onClick={onSettle}
                   className="animate-reveal mt-2 min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
                 >
@@ -367,25 +413,6 @@ export function InvestWindow({
         )}
       </section>
     </Overlay>
-  )
-}
-
-/** 사장 말과 맞붙을 것이 없었던 직원: 막대가 한쪽으로 곧장 찬다. */
-function OneVoice({ action, delay }: { action: string; delay: number }) {
-  return (
-    <div
-      className="mt-1 relative h-11 overflow-hidden rounded-md bg-teal-soft"
-      data-testid="one-voice"
-    >
-      <div
-        className="animate-fill absolute inset-y-0 left-0 bg-teal"
-        style={{ animationDelay: `${delay}ms` }}
-      />
-      <div className="absolute inset-y-0 left-0 flex flex-col justify-center px-3 leading-tight text-white [text-shadow:0_1px_2px_rgba(0,0,0,0.35)]">
-        <span className="text-[14px] font-black">{action}</span>
-        <span className="text-[10px] font-bold opacity-85">한마음</span>
-      </div>
-    </div>
   )
 }
 

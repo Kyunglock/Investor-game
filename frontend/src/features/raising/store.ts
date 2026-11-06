@@ -47,6 +47,10 @@ interface RaisingState {
   pickTarget: (difficulty: 'EASY' | 'MEDIUM' | 'HARD') => Promise<void>
   /** 사표를 들고 온 직원에게 답한다: 연봉을 올려 붙잡거나 보낸다 (decisions.md 282번). */
   answerResign: (keep: boolean) => Promise<void>
+  /** 종목 회의의 막판 제안에 답한다 (decisions.md 283번). */
+  answerProposal: (accept: boolean) => Promise<void>
+  /** 막판 제안을 따른 직원에게 상이나 벌을 준다 (283번). */
+  giveVerdict: (choice: string) => Promise<void>
   /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 249번). 됐으면 true. */
   convene: () => Promise<boolean>
   /** 올해 종목 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). big이면 크게 한다 (260번). */
@@ -155,6 +159,16 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     pickTarget: (difficulty) => change(api.POST('/api/company/target', { body: { difficulty } })),
 
     answerResign: (keep) => change(api.POST('/api/company/resign', { body: { keep } })),
+
+    answerProposal: (accept) =>
+      change(api.POST('/api/company/invest/proposal', { body: { accept } })),
+
+    giveVerdict: (choice) =>
+      change(
+        api.POST('/api/company/invest/verdict', {
+          body: { choice: choice as 'BONUS' | 'RAISE' | 'NOTHING' | 'CUT' | 'FORGIVE' },
+        }),
+      ),
 
     convene: async () => {
       if (get().company?.invest?.convened) {

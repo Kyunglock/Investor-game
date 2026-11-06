@@ -44,6 +44,12 @@ public interface CompanyService {
   /** 연봉 때문에 사표를 들고 온 직원에게 답한다: 붙잡거나 보낸다 (decisions.md 282번). 사표가 없으면 400. */
   CompanyView answerResign(UUID sessionId, boolean keep);
 
+  /** 종목 회의의 막판 제안에 답한다: 따르거나 원래대로 한다 (decisions.md 283번). 제안이 없으면 400. */
+  CompanyView answerProposal(UUID sessionId, boolean accept);
+
+  /** 막판 제안을 따른 직원에게 상이나 벌을 준다 (283번). 차례가 아니거나 고를 수 없는 것이면 400. */
+  CompanyView verdict(UUID sessionId, String choice);
+
   /** 그 자리의 팀장을 정한다 (decisions.md 269번). 그 자리에 앉은 직원이 아니면 400. */
   CompanyView leader(UUID sessionId, String desk, int employeeId);
 

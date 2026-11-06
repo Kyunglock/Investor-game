@@ -511,6 +511,11 @@ class InvestEngine {
    * 가시는데요"). 지켜보기는 크게 할 수 없다. 지켜봤으면 맞는 쪽으로 했을 때 벌었을 돈을 남겨 결과에 보인다.
    */
   void decide(CompanyState c, String choice, boolean big, SeededRandom random) {
+    decide(c, choice, big, random, false);
+  }
+
+  /** proposals가 참이면(실제 플레이, 서비스) 막판 뒤집기(283번)가 끼어들 수 있다. 규칙만 보는 시험과 경제 시험은 거짓으로 바로 정한다. */
+  void decide(CompanyState c, String choice, boolean big, SeededRandom random, boolean proposals) {
     if (big && HOLD.equals(choice)) {
       throw new InvalidRequestException("지켜보기는 크게 할 수 없다");
     }
@@ -532,10 +537,149 @@ class InvestEngine {
     }
     // 창을 거치지 않고 바로 정해도(옛 화면, 시험) 지금 배치로 회의를 연 셈 친다.
     convene(c, random);
+    if (c.invest.proposalId != null) {
+      throw new InvalidRequestException("막판 제안에 먼저 답한다");
+    }
     boolean delegated = TEAM.equals(choice);
     if (delegated) {
       choice = teamCall(c, random);
     }
+    // 막판 뒤집기 (decisions.md 283번): 결정이 다 끝났는데 누군가 손을 들고 반대로 하자고 한다.
+    if (proposals && propose(c, choice, big, delegated, random)) {
+      return;
+    }
+    execute(c, choice, big, delegated, random);
+  }
+
+  /**
+   * 막판 뒤집기 (283번): proposal-percent 확률로 자리에 앉은 직원 하나가 사장의 결정과 반대로 하자고 한다(사자면 팔자, 팔자면 사자, 지켜보면 자기
+   * 생각대로 사거나 팔자). 반대 의견을 낸 사람이 있으면 그 사람이 먼저 나선다. 사장이 답할 때까지 회의는 정해지지 않는다. 나섰으면 true.
+   */
+  private boolean propose(
+      CompanyState c, String choice, boolean big, boolean delegated, SeededRandom random) {
+    RandomGenerator rng = random.forKey("invest-proposal", c.turn());
+    if (rng.nextInt(PERCENT) >= properties.invest().proposalPercent()) {
+      return false;
+    }
+    List<Employee> seated =
+        c.employees.stream()
+            .filter(e -> e.desk != null && !CompanyEngine.HR_DESK.equals(e.desk))
+            .toList();
+    if (seated.isEmpty()) {
+      return false;
+    }
+    Map<Integer, String> reads = new HashMap<>();
+    c.invest.remarks.forEach(r -> reads.put(r.employeeId, actionOf(r.read)));
+    String opposite =
+        BUY.equals(choice) ? SELL : SELL.equals(choice) ? BUY : rng.nextBoolean() ? BUY : SELL;
+    final String against = opposite;
+    List<Employee> dissenters =
+        seated.stream().filter(e -> against.equals(reads.get(e.id))).toList();
+    List<Employee> pool = dissenters.isEmpty() ? seated : dissenters;
+    Employee who = pool.get(rng.nextInt(pool.size()));
+    String own = reads.get(who.id);
+    if (HOLD.equals(choice) && (BUY.equals(own) || SELL.equals(own))) {
+      opposite = own;
+    }
+    RaisingContent.Invest texts = content.raising().company().invest();
+    List<String> lines = texts.proposals();
+    c.invest.proposalId = who.id;
+    c.invest.proposalName = who.name;
+    c.invest.proposalAction = opposite;
+    c.invest.proposalLine =
+        Korean.fill(
+            lines.get(rng.nextInt(lines.size())),
+            Map.of("name", who.name, "action", texts.options().get(opposite)));
+    c.invest.pendingChoice = choice;
+    c.invest.pendingBig = big;
+    c.invest.pendingDelegated = delegated;
+    return true;
+  }
+
+  /**
+   * 막판 제안에 답한다 (283번). 따르면 제안한 쪽으로, 아니면 원래 결정대로 회의를 정한다. 따랐으면 결과를 보고 그 직원에게 상을 주거나 벌을 줄 차례가 온다. 제안이
+   * 없으면 400.
+   */
+  void answerProposal(CompanyState c, boolean accept, SeededRandom random) {
+    Invest i = c.invest;
+    if (i == null || i.proposalId == null || i.choice != null) {
+      throw new InvalidRequestException("막판 제안이 없다");
+    }
+    String choice = accept ? i.proposalAction : i.pendingChoice;
+    int who = i.proposalId;
+    String name = i.proposalName;
+    boolean big = i.pendingBig;
+    boolean delegated = i.pendingDelegated;
+    i.proposalId = null;
+    i.pendingChoice = null;
+    RaisingContent.Invest texts = content.raising().company().invest();
+    if (!accept) {
+      c.yearLines.add(Korean.fill(texts.rejected(), Map.of("name", name)));
+      execute(c, choice, big, delegated, random);
+      return;
+    }
+    i.followedId = who;
+    i.followedName = name;
+    execute(c, choice, big, delegated, random);
+    i.verdictPending = true;
+  }
+
+  /** 따랐더니 결과가 좋았는가: 회의 손익이 0보다 크다 (283번). */
+  boolean verdictGood(CompanyState c) {
+    return c.invest.total > 0;
+  }
+
+  static final List<String> GOOD_VERDICTS = List.of("BONUS", "RAISE", "NOTHING");
+  static final List<String> BAD_VERDICTS = List.of("CUT", "FORGIVE");
+
+  /**
+   * 막판 제안을 따른 뒤 (283번): 결과가 좋으면 성과금(회의 수익의 bonus-percent, 사기 +2)·연봉 인상(사기 +1)·아무것도 안 함(사기 −1), 나쁘면
+   * 연봉 삭감(사기 −2)·봐주기(사기 +1). 고를 차례가 아니거나 고를 수 없는 것이면 400.
+   */
+  void verdict(CompanyState c, String choice) {
+    Invest i = c.invest;
+    if (i == null || !i.verdictPending || i.followedId == null) {
+      throw new InvalidRequestException("상이나 벌을 줄 차례가 아니다");
+    }
+    boolean good = verdictGood(c);
+    if (!(good ? GOOD_VERDICTS : BAD_VERDICTS).contains(choice)) {
+      throw new InvalidRequestException("고를 수 없는 것: " + choice);
+    }
+    i.verdictPending = false;
+    Employee e = c.employees.stream().filter(x -> x.id == i.followedId).findFirst().orElse(null);
+    if (e == null) {
+      return;
+    }
+    Map<String, String> values = new HashMap<>();
+    values.put("name", e.name);
+    switch (choice) {
+      case "BONUS" -> {
+        long bonus = i.total * properties.invest().proposalBonusPercent() / PERCENT;
+        c.capital = Math.max(0, c.capital - bonus);
+        c.yearHiring += bonus;
+        values.put("bonus", CompanyEngine.won(bonus));
+        company.pay.shiftMorale(e, 2);
+      }
+      case "RAISE" -> {
+        e.raises++;
+        company.pay.shiftMorale(e, 1);
+      }
+      case "NOTHING" -> company.pay.shiftMorale(e, -1);
+      case "CUT" -> {
+        e.raises--;
+        company.pay.shiftMorale(e, -2);
+      }
+      default -> company.pay.shiftMorale(e, 1);
+    }
+    i.verdictLine =
+        Korean.fill(content.raising().company().invest().verdicts().get(choice), values);
+    c.yearLines.add(i.verdictLine);
+  }
+
+  /** 정한 쪽으로 직원마다 굴린다. */
+  private void execute(
+      CompanyState c, String choice, boolean big, boolean delegated, SeededRandom random) {
+    List<Employee> traders = company.traders(c);
     Map<Integer, String> reads = new HashMap<>();
     c.invest.remarks.forEach(r -> reads.put(r.employeeId, r.read));
     RaisingContent.Invest texts = content.raising().company().invest();
