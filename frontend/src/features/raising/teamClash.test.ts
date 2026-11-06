@@ -3,10 +3,45 @@ import {
   clashMs,
   type DebateLine,
   debateTimes,
+  gaugeDone,
+  gaugeDuring,
   roomShare,
   sidePeople,
   teamClashMs,
 } from './TeamClash'
+
+describe('"너희가 알아서 해" 저울 (decisions.md 290번)', () => {
+  const line = (side: 'BUY' | 'SELL', last = false): DebateLine => ({
+    name: side,
+    side,
+    text: '…',
+    last,
+  })
+
+  it('토론 중에는 말 한마디마다 말한 쪽으로 조금씩 기울고 크게 기울지는 않는다', () => {
+    const debate = [line('BUY'), line('BUY'), line('SELL'), line('BUY'), line('BUY', true)]
+    expect(gaugeDuring(debate, 0)).toBe(50)
+    expect(gaugeDuring(debate, 1)).toBe(54)
+    expect(gaugeDuring(debate, 2)).toBe(58)
+    expect(gaugeDuring(debate, 3)).toBe(54)
+    // 결판 말은 세지 않는다.
+    expect(gaugeDuring(debate, 5)).toBe(gaugeDuring(debate, 4))
+    expect(gaugeDuring(Array(10).fill(line('BUY')), 10)).toBe(64)
+    expect(gaugeDuring(Array(10).fill(line('SELL')), 10)).toBe(36)
+  })
+
+  it('결판이 나면 무게 비율대로, 다만 이긴 쪽이 68~88%를 차지한다', () => {
+    expect(gaugeDone(80, 20, true)).toBe(80)
+    expect(gaugeDone(20, 80, false)).toBe(20)
+    expect(gaugeDone(51, 49, true)).toBe(68)
+    expect(gaugeDone(49, 51, false)).toBe(32)
+    expect(gaugeDone(99, 1, true)).toBe(88)
+    expect(gaugeDone(0, 0, true)).toBe(70)
+    expect(gaugeDone(0, 0, false)).toBe(30)
+    // 무게는 매수가 큰데 서버가 매도로 정했어도(확률) 이긴 쪽으로 기운다.
+    expect(gaugeDone(70, 30, false)).toBe(32)
+  })
+})
 
 describe('"너희가 알아서 해" 회의실 (decisions.md 286번)', () => {
   it('방은 양쪽 사람 수 비율대로 나뉘고, 한 사람뿐인 쪽도 앉을 자리가 있다', () => {

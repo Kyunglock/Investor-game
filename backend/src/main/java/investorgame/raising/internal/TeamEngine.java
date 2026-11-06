@@ -18,7 +18,7 @@ import java.util.Optional;
 /**
  * 팀장과 팀장 보고 (decisions.md 269번). 사람이 앉은 자리마다 팀장이 한 명 있다: 사장이 정했으면 그 사람, 아니면 그 자리에서 종합 등급이 가장 높은
  * 사람(같으면 오래 앉은 사람, 먼저 들어온 사람). 분기와 연말마다 팀장이 자기 팀 일을 사장에게 보고한다: 돈을 굴리는 팀은 팀 손익과 손을 뒤집은 팀원, 돕는 팀은 한
- * 일. 팀장은 보고만 하고 수치에는 손대지 않는다. DB와 시각을 모른다.
+ * 일(290번: 손익의 크기·폭락·태도·팀원 성적·뒤집힘 횟수·조언까지). 팀장은 보고만 하고 수치에는 손대지 않는다. DB와 시각을 모른다.
  */
 class TeamEngine {
 
@@ -81,8 +81,12 @@ class TeamEngine {
   }
 
   /**
-   * 팀장 보고 (269번). 자리 순서대로 사람이 앉은 자리마다 한 줄. results는 그 기간에 돈을 굴린 결과(분기 또는 한 해), quarters는 그 기간의
+   * 팀장 보고 (269·290번). 자리 순서대로 사람이 앉은 자리마다 한 줄. results는 그 기간에 돈을 굴린 결과(분기 또는 한 해), quarters는 그 기간의
    * 분기들(돕는 자리가 한 일, 278번), period는 "이번 분기"·"올해". 결과가 있는 사람은 지금 자리가 아니라 그 결과의 자리로 묶는다.
+   *
+   * <p>돈을 굴리는 팀의 보고는 네 토막이다 (290번): ① 머리줄 — 손익의 크기(판돈의 {@value #BIG_PERCENT}% 이상이면 크게)와 그 기간에 폭락이
+   * 터졌는지로 고른다. ② 그 기간의 태도(공격·방어)가 손익에 미친 한마디. ③ 팀이 둘 이상이면 벌었을 때 가장 많이 번 사람, 잃었을 때 가장 크게 잃은 사람. ④ 손을
+   * 뒤집은 팀원(횟수까지)과, 가장 잦았던 뒤집힘에 대한 조언. 팀장은 보고만 하고 수치에는 손대지 않는다.
    */
   List<Report> reports(
       CompanyState c,
@@ -90,7 +94,6 @@ class TeamEngine {
       List<CompanyState.Quarter> quarters,
       String period,
       int seed) {
-    RaisingContent.Teams texts = texts();
     Map<String, List<Result>> byDesk = new HashMap<>();
     results.forEach(r -> byDesk.computeIfAbsent(r.desk, d -> new ArrayList<>()).add(r));
     int swayed =
@@ -108,36 +111,102 @@ class TeamEngine {
       report.desk = desk.code();
       report.leaderId = head.id;
       report.leader = head.name;
-      String text;
       if (desk.trades()) {
         long pnl = team.stream().mapToLong(r -> r.pnl).sum();
         report.pnl = pnl;
-        String mood = pnl > 0 ? "up" : pnl < 0 ? "down" : "flat";
-        List<String> lines = texts.trading().get(mood);
-        text =
-            Korean.fill(
-                lines.get(Math.floorMod(seed + head.id, lines.size())),
-                Map.of("period", period, "pnl", CompanyEngine.won(Math.abs(pnl))));
-        StringBuilder more = new StringBuilder(text);
-        for (Result r : team) {
-          r.flips.keySet().stream()
-              .findFirst()
-              .ifPresent(
-                  stat ->
-                      more.append(' ')
-                          .append(
-                              r.employeeId == head.id
-                                  ? texts.selfFlips().get(stat)
-                                  : Korean.fill(texts.flips().get(stat), Map.of("name", r.name))));
-        }
-        text = more.toString();
+        report.text = tradingLine(head, team, quarters, period, seed);
       } else {
-        text = supportLine(c, desk.code(), quarters, period, swayed);
+        report.text = supportLine(c, desk.code(), quarters, period, swayed);
       }
-      report.text = text;
       reports.add(report);
     }
     return reports;
+  }
+
+  /** 판돈의 이만큼 이상 벌거나 잃으면 "크게"다. */
+  static final int BIG_PERCENT = 15;
+
+  private String tradingLine(
+      Employee head,
+      List<Result> team,
+      List<CompanyState.Quarter> quarters,
+      String period,
+      int seed) {
+    RaisingContent.Teams texts = texts();
+    long pnl = team.stream().mapToLong(r -> r.pnl).sum();
+    long stake = team.stream().mapToLong(r -> r.stake).sum();
+    boolean crash = quarters.stream().anyMatch(q -> q.crash);
+    boolean big = stake > 0 && Math.abs(pnl) * 100 >= stake * BIG_PERCENT;
+    String mood =
+        pnl == 0
+            ? "flat"
+            : crash
+                ? (pnl > 0 ? "crashHeld" : "crashHit")
+                : pnl > 0 ? (big ? "bigUp" : "up") : big ? "bigDown" : "down";
+    List<String> lines = texts.trading().get(mood);
+    Map<String, String> values = Map.of("period", period, "pnl", CompanyEngine.won(Math.abs(pnl)));
+    StringBuilder text =
+        new StringBuilder(
+            Korean.fill(lines.get(Math.floorMod(seed + head.id, lines.size())), values));
+    // ② 태도: 공격·방어가 손익에 미친 한마디. 중립이거나 본전이면 없다.
+    String stance =
+        quarters.stream()
+            .map(q -> q.macroStance)
+            .filter(x -> x != null)
+            .reduce((first, second) -> second)
+            .orElse(null);
+    if (pnl != 0 && stance != null) {
+      String line = texts.stance().getOrDefault(stance, Map.of()).get(pnl > 0 ? "up" : "down");
+      if (line != null) {
+        text.append(' ').append(line);
+      }
+    }
+    // ③ 팀원: 둘 이상이면 벌었을 때 가장 많이 번 사람, 잃었을 때 가장 크게 잃은 사람.
+    if (team.size() >= 2) {
+      Result marked =
+          pnl > 0
+              ? team.stream().max(Comparator.comparingLong((Result r) -> r.pnl)).orElseThrow()
+              : team.stream().min(Comparator.comparingLong((Result r) -> r.pnl)).orElseThrow();
+      if ((pnl > 0 && marked.pnl > 0) || (pnl < 0 && marked.pnl < 0)) {
+        boolean self = marked.employeeId == head.id;
+        String key = (pnl > 0 ? "best" : "worst") + (self ? "Self" : "");
+        text.append(' ')
+            .append(
+                Korean.fill(
+                    texts.members().get(key),
+                    Map.of("name", marked.name, "pnl", CompanyEngine.won(Math.abs(marked.pnl)))));
+      }
+    }
+    // ④ 손을 뒤집은 팀원과 횟수, 가장 잦았던 뒤집힘의 조언.
+    Map<String, Integer> totals = new HashMap<>();
+    for (Result r : team) {
+      for (Map.Entry<String, Integer> flip : r.flips.entrySet()) {
+        if (flip.getValue() <= 0) {
+          continue;
+        }
+        totals.merge(flip.getKey(), flip.getValue(), Integer::sum);
+        String template =
+            r.employeeId == head.id
+                ? texts.selfFlips().get(flip.getKey())
+                : texts.flips().get(flip.getKey());
+        text.append(' ')
+            .append(Korean.fill(template, Map.of("name", r.name, "times", times(flip.getValue()))));
+      }
+    }
+    totals.entrySet().stream()
+        .max(
+            Map.Entry.<String, Integer>comparingByValue().thenComparing(Map.Entry.comparingByKey()))
+        .map(x -> texts.flipTips().get(x.getKey()))
+        .ifPresent(tip -> text.append(' ').append(tip));
+    return text.toString();
+  }
+
+  /** 횟수를 읽는 말: 한 번, 두 번, … 그보다 많으면 "5번". */
+  private String times(int count) {
+    List<String> words = texts().times();
+    return count >= 1 && count <= words.size()
+        ? words.get(count - 1)
+        : Korean.fill(texts().timesMany(), Map.of("count", String.valueOf(count)));
   }
 
   /**
@@ -156,7 +225,13 @@ class TeamEngine {
         int hits = quarters.stream().mapToInt(q -> q.highlightHits).sum();
         values.put("count", String.valueOf(drawn));
         values.put("hits", String.valueOf(hits));
-        String key = chances == 0 ? "researchIdle" : drawn == 0 ? "researchNone" : "research";
+        // 다 맞았으면 뿌듯하게, 하나도 못 맞혔으면 면목 없게 (290번).
+        String key =
+            chances == 0
+                ? "researchIdle"
+                : drawn == 0
+                    ? "researchNone"
+                    : hits == drawn ? "researchAll" : hits == 0 ? "researchMiss" : "research";
         return Korean.fill(s.get(key), values);
       }
       case "scout" -> {

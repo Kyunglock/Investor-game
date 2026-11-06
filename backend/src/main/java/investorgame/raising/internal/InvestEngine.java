@@ -544,8 +544,9 @@ class InvestEngine {
     if (delegated) {
       choice = teamCall(c, random);
     }
-    // 막판 뒤집기 (decisions.md 283번): 결정이 다 끝났는데 누군가 손을 들고 반대로 하자고 한다.
-    if (proposals && propose(c, choice, big, delegated, random)) {
+    // 막판 뒤집기 (decisions.md 283번): 결정이 다 끝났는데 누군가 손을 들고 반대로 하자고 한다. 맡겼으면 직원들이 정한 것이라 아무도 나서지 않는다
+    // (290번).
+    if (proposals && !delegated && propose(c, choice, big, delegated, random)) {
       return;
     }
     execute(c, choice, big, delegated, random);

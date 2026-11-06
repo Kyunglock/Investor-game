@@ -80,14 +80,23 @@ public record RaisingContent(
   public record Ending(String line) {}
 
   /**
-   * 팀장 보고 (decisions.md 269번). trading: 돈을 굴리는 팀의 손익(up·down·flat별 문구 여럿, {period}·{pnl}). flips:
-   * 팀원이 손을 뒤집었을 때 덧붙이는 한 줄(능력치별, {name}), selfFlips는 팀장 자신. support: 돕는 자리의 보고(자리 코드별,
-   * {period}·{swayed}). head: 보고자({desk}·{name}). appointed: 팀장을 바꿨을 때 소식 줄({name}·{desk}).
+   * 팀장 보고 (decisions.md 269·290번). trading: 돈을 굴리는 팀의
+   * 머리줄(bigUp·up·flat·down·bigDown·crashHeld·crashHit별 문구 여럿, {period}·{pnl}). stance: 그 기간
+   * 태도(AGGRESSIVE·DEFENSIVE)가 손익(up·down)에 미친 한 줄. members: 팀이 둘 이상일 때 가장 많이 번 사람(best, 팀장 자신이면
+   * bestSelf)이나 가장 크게 잃은 사람(worst·worstSelf, {name}·{pnl}). flips: 팀원이 손을 뒤집었을 때 덧붙이는 한 줄(능력치별,
+   * {name}·{times}), selfFlips는 팀장 자신. flipTips: 가장 잦았던 뒤집힘의 능력치별 조언 한 줄. times: 횟수를 읽는 말(한 번·두
+   * 번…), 그보다 많으면 timesMany({count}). support: 돕는 자리의 보고(자리 코드별, {period}·{swayed}). head:
+   * 보고자({desk}·{name}). appointed: 팀장을 바꿨을 때 소식 줄({name}·{desk}).
    */
   public record Teams(
       Map<String, List<String>> trading,
+      Map<String, Map<String, String>> stance,
+      Map<String, String> members,
       Map<String, String> flips,
       Map<String, String> selfFlips,
+      Map<String, String> flipTips,
+      List<String> times,
+      String timesMany,
       Map<String, String> support,
       String head,
       String appointed) {}

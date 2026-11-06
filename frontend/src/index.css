@@ -617,44 +617,7 @@ p.animate-stamp {
   animation: chart-draw 2.6s ease-in-out both;
 }
 
-/* "너희가 알아서 해" (decisions.md 279번): 매수파와 매도파가 가운데서 맞붙어 불꽃이 튄다. 경계선이 엎치락뒤치락하다 한쪽으로 밀린다. */
-@keyframes clash-jitter {
-  0% {
-    transform: translateX(-7px);
-  }
-  25% {
-    transform: translateX(6px);
-  }
-  50% {
-    transform: translateX(-4px);
-  }
-  75% {
-    transform: translateX(8px);
-  }
-  100% {
-    transform: translateX(0);
-  }
-}
-.animate-clash-jitter {
-  animation: clash-jitter 0.42s ease-in-out infinite;
-}
-@keyframes clash-spark {
-  0% {
-    opacity: 0;
-    transform: translate(0, 0) scale(0.3) rotate(0deg);
-  }
-  25% {
-    opacity: 1;
-    transform: translate(calc(var(--sx) * 0.4), calc(var(--sy) * 0.4)) scale(1.25) rotate(25deg);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(var(--sx), var(--sy)) scale(0.4) rotate(70deg);
-  }
-}
-.clash-spark {
-  animation: clash-spark 0.55s ease-out infinite;
-}
+/* "너희가 알아서 해" (decisions.md 290번): 결판이 나면 이긴 쪽이 한 번 들썩인다. 저울과 일어서는 사람은 transition으로 움직인다. */
 @keyframes clash-win {
   0% {
     transform: scale(1);
@@ -668,74 +631,6 @@ p.animate-stamp {
 }
 .animate-clash-win {
   animation: clash-win 0.5s ease-out both;
-}
-@keyframes clash-shake {
-  0%,
-  100% {
-    transform: translate(0, 0) rotate(0deg);
-  }
-  20% {
-    transform: translate(-3px, 1px) rotate(-0.6deg);
-  }
-  40% {
-    transform: translate(3px, -1px) rotate(0.6deg);
-  }
-  60% {
-    transform: translate(-2px, -1px) rotate(-0.4deg);
-  }
-  80% {
-    transform: translate(2px, 1px) rotate(0.4deg);
-  }
-}
-.animate-clash-shake {
-  animation: clash-shake 0.22s linear infinite;
-}
-@keyframes clash-bolt {
-  0%,
-  100% {
-    transform: translate(-50%, -50%) scale(0.85) rotate(-12deg);
-  }
-  50% {
-    transform: translate(-50%, -50%) scale(1.45) rotate(14deg);
-  }
-}
-.animate-clash-bolt {
-  animation: clash-bolt 0.3s ease-in-out infinite;
-}
-@keyframes clash-bob {
-  0%,
-  100% {
-    transform: translateY(0) scale(1);
-  }
-  50% {
-    transform: translateY(-4px) scale(1.12);
-  }
-}
-.animate-clash-bob {
-  display: inline-block;
-  animation: clash-bob 0.36s ease-in-out infinite;
-}
-@keyframes clash-bang {
-  0% {
-    opacity: 0;
-    transform: translate(calc(var(--bx) - 50%), calc(var(--by) - 50%)) scale(0.2) rotate(-20deg);
-  }
-  20% {
-    opacity: 1;
-    transform: translate(calc(var(--bx) - 50%), calc(var(--by) - 50%)) scale(1.3) rotate(8deg);
-  }
-  60% {
-    opacity: 1;
-    transform: translate(calc(var(--bx) - 50%), calc(var(--by) - 50%)) scale(1) rotate(0deg);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(calc(var(--bx) - 50%), calc(var(--by) - 50% - 10px)) scale(0.9);
-  }
-}
-.clash-bang {
-  opacity: 0;
-  animation: clash-bang 0.6s ease-out both;
 }
 /* 토론 한 줄이 아래에서 툭 튀어 오른다 (decisions.md 285번). */
 @keyframes debate-in {
@@ -755,31 +650,9 @@ p.animate-stamp {
 .animate-debate-in {
   animation: debate-in 0.32s ease-out both;
 }
-@keyframes clash-flash {
-  0%,
-  100% {
-    filter: brightness(1);
-  }
-  30% {
-    filter: brightness(1.7);
-  }
-  60% {
-    filter: brightness(1.15);
-  }
-}
-.animate-clash-flash {
-  animation: clash-flash 0.7s ease-out 2;
-}
 
 @media (prefers-reduced-motion: reduce) {
   .chart-draw,
-  .animate-clash-shake,
-  .animate-clash-bolt,
-  .animate-clash-bob,
-  .clash-bang,
-  .animate-clash-flash,
-  .animate-clash-jitter,
-  .clash-spark,
   .animate-clash-win,
   .animate-pop,
   .highlighter,
