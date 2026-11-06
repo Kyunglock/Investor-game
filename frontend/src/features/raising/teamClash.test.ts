@@ -7,7 +7,6 @@ import {
   gaugeDone,
   gaugeDuring,
   lineMs,
-  roomShare,
   sidePeople,
   teamClashMs,
 } from './TeamClash'
@@ -20,16 +19,16 @@ describe('"너희가 알아서 해" 저울 (decisions.md 291번)', () => {
     last,
   })
 
-  it('토론 중에는 말 한마디마다 말한 쪽으로 조금씩 기울고 크게 기울지는 않는다', () => {
+  it('토론 중에는 말 한마디마다 말한 쪽이 반대쪽을 12%p 밀어내고, 22~78% 안에 머문다 (304번)', () => {
     const debate = [line('BUY'), line('BUY'), line('SELL'), line('BUY'), line('BUY', true)]
     expect(gaugeDuring(debate, 0)).toBe(50)
-    expect(gaugeDuring(debate, 1)).toBe(54)
-    expect(gaugeDuring(debate, 2)).toBe(58)
-    expect(gaugeDuring(debate, 3)).toBe(54)
+    expect(gaugeDuring(debate, 1)).toBe(62)
+    expect(gaugeDuring(debate, 2)).toBe(74)
+    expect(gaugeDuring(debate, 3)).toBe(62)
     // 결판 말은 세지 않는다.
     expect(gaugeDuring(debate, 5)).toBe(gaugeDuring(debate, 4))
-    expect(gaugeDuring(Array(10).fill(line('BUY')), 10)).toBe(64)
-    expect(gaugeDuring(Array(10).fill(line('SELL')), 10)).toBe(36)
+    expect(gaugeDuring(Array(10).fill(line('BUY')), 10)).toBe(78)
+    expect(gaugeDuring(Array(10).fill(line('SELL')), 10)).toBe(22)
   })
 
   it('결판이 나면 무게 비율대로, 다만 이긴 쪽이 68~88%를 차지한다', () => {
@@ -45,17 +44,8 @@ describe('"너희가 알아서 해" 저울 (decisions.md 291번)', () => {
   })
 })
 
-describe('"너희가 알아서 해" 회의실 (decisions.md 286번)', () => {
-  it('방은 양쪽 사람 수 비율대로 나뉘고, 한 사람뿐인 쪽도 앉을 자리가 있다', () => {
-    expect(roomShare(2, 2)).toBe(50)
-    expect(roomShare(3, 1)).toBe(75)
-    expect(roomShare(1, 2)).toBe(33)
-    expect(roomShare(9, 1)).toBe(78)
-    expect(roomShare(1, 9)).toBe(22)
-    expect(roomShare(0, 0)).toBe(50)
-  })
-
-  it('원탁에는 토론에서 말한 사람(팀장)만 앉고, 의견을 낸 사람이 없는 쪽에는 끌려 나온 사람이 앉는다 (295번)', () => {
+describe('"너희가 알아서 해" 양쪽 사람 (decisions.md 295·304번)', () => {
+  it('토론에서 말한 사람(팀장)만 서고, 의견을 낸 사람이 없는 쪽에는 끌려 나온 사람이 선다', () => {
     const debate: DebateLine[] = [
       { name: '김매수', side: 'BUY', text: '…', last: false },
       { name: '옆자리 신입', side: 'SELL', text: '…', last: false },

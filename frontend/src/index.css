@@ -846,6 +846,54 @@ p.animate-stamp {
 .animate-clash-win {
   animation: clash-win 0.5s ease-out both;
 }
+/* 밀어내기 막대 (decisions.md 304번): 말이 꽂히면 경계가 튕기며 넘어갔다 돌아오고(overshoot), 막대가 말한 쪽에서 반대쪽으로 쿵 흔들리고, 경계에서 불꽃이
+   흩어진다. */
+.push-fill {
+  transition: width 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.push-fill-left {
+  transition: left 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes push-hit {
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(calc(var(--push-dir, 1) * 7px));
+  }
+  55% {
+    transform: translateX(calc(var(--push-dir, 1) * -4px));
+  }
+  80% {
+    transform: translateX(calc(var(--push-dir, 1) * 2px));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+.animate-push-hit {
+  animation: push-hit 0.45s ease-out both;
+}
+@keyframes push-spark {
+  0% {
+    transform: rotate(var(--a)) translateX(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--a)) translateX(var(--d)) scale(0.2);
+    opacity: 0;
+  }
+}
+.push-spark {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  box-shadow: 0 0 6px 1px rgba(255, 220, 120, 0.9);
+  animation: push-spark 0.6s ease-out both;
+}
 /* 토론 한 줄이 아래에서 툭 튀어 오른다 (decisions.md 285번). */
 @keyframes debate-in {
   0% {
@@ -867,6 +915,8 @@ p.animate-stamp {
 
 @media (prefers-reduced-motion: reduce) {
   .animate-clash-win,
+  .animate-push-hit,
+  .push-spark,
   .grade-card,
   .animate-pop,
   .highlighter,

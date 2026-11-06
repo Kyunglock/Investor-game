@@ -448,7 +448,7 @@ class InvestEngineTest {
   }
 
   /**
-   * 맡기면 토론한다 (decisions.md 285번): 사자던 직원은 매수파, 팔자던 직원은 매도파로 세 번씩 번갈아 말하고, 이긴 쪽이 결판을 내고 진 쪽이 투덜댄다.
+   * 맡기면 토론한다 (decisions.md 285번): 사자던 직원은 매수파, 팔자던 직원은 매도파로 두 번씩 번갈아 말하고, 이긴 쪽이 결판을 내고 진 쪽이 투덜댄다.
    * 말에는 기사의 요지가 들어가고 기사를 따오지 않는다. 한쪽이 비면 모르겠다던 직원이나 옆자리 사람이 그쪽을 든다.
    */
   @Test
@@ -462,23 +462,23 @@ class InvestEngineTest {
       ENGINE.invest.convene(c, new HashSeededRandom(seed));
       ENGINE.invest.decide(c, InvestEngine.TEAM, new HashSeededRandom(seed));
       List<CompanyState.DebateLine> debate = c.invest.debate;
-      assertThat(debate).hasSize(9);
-      for (int i = 0; i < 6; i++) {
+      assertThat(debate).hasSize(7);
+      for (int i = 0; i < 4; i++) {
         assertThat(debate.get(i).side).isEqualTo(i % 2 == 0 ? "BUY" : "SELL");
         assertThat(debate.get(i).last).isFalse();
         assertThat(debate.get(i).kind).isEqualTo(InvestEngine.TALK);
         assertThat(debate.get(i).text).doesNotContain("{").doesNotContain("‘");
       }
       // 결판 세 박자 (295번): 사회가 무게를 읽으며 표결을 부르고, 이긴 쪽이 선언하고, 진 쪽이 토를 달고 물러난다.
-      assertThat(debate.get(6).kind).isEqualTo(InvestEngine.TALLY);
-      assertThat(debate.get(6).last).isTrue();
-      assertThat(debate.get(6).text)
+      assertThat(debate.get(4).kind).isEqualTo(InvestEngine.TALLY);
+      assertThat(debate.get(4).last).isTrue();
+      assertThat(debate.get(4).text)
           .contains("매수 " + c.invest.teamBuy)
           .contains("매도 " + c.invest.teamSell);
-      assertThat(debate.get(7).kind).isEqualTo(InvestEngine.WIN);
-      assertThat(debate.get(7).side).isEqualTo(c.invest.choice);
-      assertThat(debate.get(8).kind).isEqualTo(InvestEngine.LOSE);
-      assertThat(debate.get(8).side).isNotEqualTo(c.invest.choice);
+      assertThat(debate.get(5).kind).isEqualTo(InvestEngine.WIN);
+      assertThat(debate.get(5).side).isEqualTo(c.invest.choice);
+      assertThat(debate.get(6).kind).isEqualTo(InvestEngine.LOSE);
+      assertThat(debate.get(6).side).isNotEqualTo(c.invest.choice);
       for (CompanyState.Remark r : c.invest.remarks) {
         if ("UP".equals(r.read)) {
           assertThat(debate)
