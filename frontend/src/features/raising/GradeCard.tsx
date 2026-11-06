@@ -107,7 +107,7 @@ export function GradeCard({
   as?: 'div' | 'li' | 'section'
   className?: string
   children: ReactNode
-  /** 등급표 위에 작게 붙는 말: "종합", "지원자". 없으면 등급만. */
+  /** 등급표 아래 작은 글자에 붙는 말. "특급"만 적고 나머지는 티어 이름만 보인다. */
   badgeLabel?: string
 } & Partial<Record<`data-${string}` | 'aria-label', string | undefined>>) {
   const tier = tierOf(grade)
@@ -124,22 +124,30 @@ export function GradeCard({
   )
 }
 
-/** 오른쪽 위 등급표: 티어 색의 방패 모양 띠에 등급 글자. */
+/** 왼쪽 위 등급표: 티어 색의 큼직한 꼬리표에 등급 글자와 티어 이름. 카드 모서리를 덮어 한눈에 띈다 (294번). */
 export function GradeBadge({ grade, label }: { grade: Grade; label?: string }) {
   const tier = tierOf(grade)
   const badge = BADGE[tier]
   return (
     <span
-      className={`pointer-events-none absolute -top-px -right-px z-10 flex min-w-11 flex-col items-center rounded-tr-md rounded-bl-lg px-2 pt-0.5 pb-1 font-mono-num leading-none shadow-sm ${
+      className={`pointer-events-none absolute -top-px -left-px z-10 flex w-[58px] flex-col items-center rounded-tl-md rounded-br-xl px-1 pt-1 pb-1.5 font-mono-num leading-none shadow-md ${
         SHINE[tier] ? 'badge-shine' : ''
       }`}
       style={{ background: badge.bg, color: badge.fg }}
       data-testid="grade-badge"
       data-grade={grade}
+      data-tier={tier}
       aria-hidden="true"
     >
-      {label && <span className="text-[9px] font-semibold tracking-wide opacity-85">{label}</span>}
-      <b className={grade.length > 2 ? 'text-[15px]' : 'text-[18px]'}>{grade}</b>
+      <b
+        className={`${grade.length > 2 ? 'text-[20px]' : 'text-[26px]'} tracking-tight drop-shadow-[0_1px_0_rgba(0,0,0,0.25)]`}
+      >
+        {grade}
+      </b>
+      <span className="mt-0.5 text-[9px] font-semibold tracking-wide opacity-90">
+        {label === '특급' ? '특급 · ' : ''}
+        {TIER_NAMES[tier]}
+      </span>
     </span>
   )
 }

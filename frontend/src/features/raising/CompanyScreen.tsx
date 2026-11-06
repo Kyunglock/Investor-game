@@ -422,7 +422,7 @@ function StaffTab({ company }: { company: Company }) {
                 key={e.id}
                 grade={e.overallGrade}
                 badgeLabel="종합"
-                className="p-3 pr-14"
+                className="p-3 pl-[68px]"
                 data-testid="employee"
               >
                 <EmployeeDetail employee={e} />
@@ -749,7 +749,7 @@ function SeatPicker({
         aria-label={`${e.name}의 자리 고르기`}
         data-testid="seat-picker"
       >
-        <div className="flex items-start justify-between gap-2 pr-12">
+        <div className="flex items-start justify-between gap-2 pl-[56px]">
           <EmployeeDetail employee={e} />
           {close}
         </div>
@@ -1101,7 +1101,7 @@ function ApplicantCard({
       {a.star && (
         // 특급 인재 (290번): 아주 좋은 등급, 아주 비싼 계약금, 곧 떠난다.
         <p
-          className="mb-1 flex items-center gap-2 pr-12 text-[12px] font-bold text-gold"
+          className="mb-1 flex items-center gap-2 pl-[66px] text-[12px] font-bold text-gold"
           data-testid="applicant-star"
         >
           <span>★ 특급 인재</span>
@@ -1110,12 +1110,15 @@ function ApplicantCard({
           </span>
         </p>
       )}
-      <p className="pr-12 font-semibold">
+      <p className="pl-[66px] font-semibold">
         {a.name}{' '}
         <span className="text-[13px] font-normal text-muted">{titleOf(a.overallGrade)}</span>
       </p>
-      {a.line && <p className="mt-1 text-[13px] text-teal">{a.line}</p>}
-      <p className="mt-1 text-[12px] text-muted" data-testid="applicant-perk">
+      {a.line && <p className="mt-1 pl-[66px] text-[13px] text-teal">{a.line}</p>}
+      <p
+        className={`mt-1 text-[12px] text-muted ${a.line ? '' : 'pl-[66px]'}`}
+        data-testid="applicant-perk"
+      >
         등급 효과 · {a.perk}
       </p>
       {a.sectorName && (
