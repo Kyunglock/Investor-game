@@ -4,10 +4,10 @@ import {
   autoChoice,
   autoHire,
   autoStance,
+  isWindowStep,
   nextAutoStep,
-  QUARTER_GAP_MS,
-  settleDelay,
   toggleAutoPlay,
+  WINDOW_MS,
 } from './autoPlay'
 import { useRaisingStore } from './store'
 
@@ -114,19 +114,20 @@ describe('자동 진행 (decisions.md 245번)', () => {
   })
 })
 
-describe('자동 진행의 분기 사이 시간 (decisions.md 273번)', () => {
-  it('켠 때나 지난 분기를 넘긴 때부터 20초가 지나야 다음 분기를 넘긴다', () => {
-    expect(QUARTER_GAP_MS).toBe(20_000)
-    expect(settleDelay(1_000, 1_000)).toBe(20_000)
-    expect(settleDelay(1_000, 6_000)).toBe(15_000)
-    // 회의·분기 실적에 20초를 넘게 썼으면 짧게만 쉬고 넘긴다.
-    expect(settleDelay(1_000, 30_000)).toBe(700)
-    expect(settleDelay(null, 30_000)).toBe(700)
+describe('자동 진행의 창마다 시간 (decisions.md 277번)', () => {
+  it('분기 실적·연말 결산서·라이벌 알림은 20초 띄워 두고, 분기 넘기기는 기다리지 않는다', () => {
+    expect(WINDOW_MS).toBe(20_000)
+    expect(isWindowStep(nextAutoStep(company(), false, true))).toBe(true)
+    expect(isWindowStep(nextAutoStep(company(), true))).toBe(true)
+    expect(isWindowStep(nextAutoStep(company(), false, false, true))).toBe(true)
+    expect(isWindowStep({ kind: 'settle' })).toBe(false)
+    expect(isWindowStep({ kind: 'hire', applicantId: 1 })).toBe(false)
   })
 
-  it('켜면 시계를 지금부터 재고, 끄면 남은 시간을 지운다', () => {
-    toggleAutoPlay(true, 5_000)
-    expect(useRaisingStore.getState()).toMatchObject({ autoPlay: true, autoLastSettleAt: 5_000 })
+  it('켜고 끄면 남은 시간을 지운다', () => {
+    useRaisingStore.setState({ autoNextAt: 25_000 })
+    toggleAutoPlay(true)
+    expect(useRaisingStore.getState()).toMatchObject({ autoPlay: true, autoNextAt: null })
     useRaisingStore.setState({ autoNextAt: 25_000 })
     toggleAutoPlay(false)
     expect(useRaisingStore.getState()).toMatchObject({ autoPlay: false, autoNextAt: null })

@@ -126,33 +126,25 @@ export function nextAutoStep(
   return { kind: 'settle' }
 }
 
-/** 한 일 사이의 쉼(ms). 연말 결산서는 장부가 다 드러날 때까지 둔다. */
+/** 한 일 사이의 쉼(ms). */
 const STEP_MS = 700
-const QUARTER_MS = 1500
-const YEAR_END_MS = 4000
-const OVERTAKE_MS = 3000
 
 /**
- * 자동 진행에서 분기와 분기 사이에 두는 시간(ms) (decisions.md 273번). 사용자: "자동버튼 누르면 20초는 텀두게해줘". 전에는 한 분기가 5초 남짓에 지나가
- * 회의 한마디·분기 실적을 읽을 틈이 없었다. 켠 때나 지난 분기를 넘긴 때부터 이만큼 지나야 다음 분기를 넘긴다. 뽑기·배치·회의는 그 사이에 하던 대로 한다.
+ * 자동 진행에서 창 하나를 띄워 두는 시간(ms) (decisions.md 277번). 사용자: "20초의 텀은 분기마다의 턴이 아니라 alert창마다의 시간이야". 분기 실적·연말
+ * 결산서·라이벌 알림이 뜨면 이만큼 보여 준 뒤 닫는다. 그 전에 확인을 누르면 바로 넘어간다. 분기 넘기기·뽑기·배치·회의는 짧게만 쉰다.
  */
-export const QUARTER_GAP_MS = 20_000
+export const WINDOW_MS = 20_000
 
-/** 분기 넘기기까지 기다릴 시간(ms): 켠 때·지난 분기를 넘긴 때부터 QUARTER_GAP_MS가 지나야 하고, 적어도 한 일 사이의 쉼은 둔다. */
-export function settleDelay(lastSettleAt: number | null, now: number): number {
-  if (lastSettleAt === null) {
-    return STEP_MS
-  }
-  return Math.max(STEP_MS, lastSettleAt + QUARTER_GAP_MS - now)
+/** 자동 진행이 닫는 창인가: 분기 실적·연말 결산서·라이벌 알림. */
+export function isWindowStep(step: AutoStep): boolean {
+  return (
+    step.kind === 'closeQuarter' || step.kind === 'closeYearEnd' || step.kind === 'closeOvertake'
+  )
 }
 
-/** 자동 진행을 켜고 끈다. 켤 때 분기 사이 시계를 지금부터 잰다 (273번). */
-export function toggleAutoPlay(on: boolean, now = Date.now()) {
-  useRaisingStore.setState(
-    on
-      ? { autoPlay: true, autoLastSettleAt: now, autoNextAt: null }
-      : { autoPlay: false, autoNextAt: null },
-  )
+/** 자동 진행을 켜고 끈다. */
+export function toggleAutoPlay(on: boolean) {
+  useRaisingStore.setState({ autoPlay: on, autoNextAt: null })
 }
 
 /**
@@ -179,18 +171,12 @@ export function useCompanyAutoPlay() {
       useRaisingStore.setState({ autoPlay: false, autoNextAt: null })
       return
     }
-    const delay =
-      step.kind === 'settle'
-        ? settleDelay(useRaisingStore.getState().autoLastSettleAt, Date.now())
-        : step.kind === 'closeYearEnd'
-          ? YEAR_END_MS
-          : step.kind === 'closeQuarter'
-            ? QUARTER_MS
-            : step.kind === 'closeOvertake'
-              ? OVERTAKE_MS
-              : STEP_MS
-    if (step.kind === 'settle') {
-      useRaisingStore.setState({ autoNextAt: Date.now() + delay })
+    // 창은 20초 띄워 두고 닫는다 (277번). 화면이 남은 초를 센다.
+    const shown = isWindowStep(step)
+    const delay = shown ? WINDOW_MS : STEP_MS
+    const nextAt = shown ? Date.now() + delay : null
+    if (useRaisingStore.getState().autoNextAt !== nextAt) {
+      useRaisingStore.setState({ autoNextAt: nextAt })
     }
     const {
       hire,
@@ -207,13 +193,13 @@ export function useCompanyAutoPlay() {
     const id = setTimeout(() => {
       switch (step.kind) {
         case 'closeYearEnd':
-          useRaisingStore.setState({ justSettled: false })
+          useRaisingStore.setState({ justSettled: false, autoNextAt: null })
           return
         case 'closeQuarter':
-          useRaisingStore.setState({ justQuartered: false })
+          useRaisingStore.setState({ justQuartered: false, autoNextAt: null })
           return
         case 'closeOvertake':
-          useRaisingStore.setState({ overtakeAlert: false })
+          useRaisingStore.setState({ overtakeAlert: false, autoNextAt: null })
           return
         case 'hire':
           void hire(step.applicantId)
@@ -243,7 +229,6 @@ export function useCompanyAutoPlay() {
           void decideInvest(step.choice, step.big)
           return
         case 'settle':
-          useRaisingStore.setState({ autoLastSettleAt: Date.now(), autoNextAt: null })
           void settle()
       }
     }, delay)

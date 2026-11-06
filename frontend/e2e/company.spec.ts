@@ -532,12 +532,14 @@ test('자동 진행을 켜면 공채·배치·회의·결산을 해마다 하고
   await expect(page.getByRole('button', { name: '1년 차 1분기 넘기기' })).toBeDisabled()
   // 빈 자리 둘에 사람을 뽑아 앉히고, 회의를 직원 다수결로 정하고, 결산서를 보여 준 뒤 다음 해로 간다.
   await expect(page.getByTestId('office-seat')).toHaveCount(2, { timeout: 20_000 })
-  // 분기와 분기 사이는 20초를 둔다 (273번): 켠 뒤 첫 분기도 기다리며 남은 초를 센다.
-  await expect(page.getByTestId('auto-countdown')).toContainText('다음 분기까지')
-  await expect(page.getByRole('button', { name: '1년 차 1분기 넘기기' })).toBeVisible()
-  // 분기마다 분기 실적을 짧게 보여 주고, 네 분기를 넘기면 연말 결산서를 보여 준다 (268번).
-  await expect(page.getByRole('dialog', { name: '분기 실적' })).toBeVisible({ timeout: 30_000 })
-  await expect(page.getByRole('dialog', { name: '연말 결산서' })).toBeVisible({ timeout: 75_000 })
+  // 분기마다 분기 실적을 보여 주고, 네 분기를 넘기면 연말 결산서를 보여 준다 (268번).
+  const quarterSheet = page.getByRole('dialog', { name: '분기 실적' })
+  await expect(quarterSheet).toBeVisible({ timeout: 20_000 })
+  // 창마다 20초 띄워 두고 남은 초를 창 위에 센다 (277번).
+  await expect(page.getByTestId('auto-countdown')).toContainText('초 뒤 닫힘')
+  await page.waitForTimeout(5_000)
+  await expect(quarterSheet).toBeVisible()
+  await expect(page.getByRole('dialog', { name: '연말 결산서' })).toBeVisible({ timeout: 90_000 })
   await expect(page.getByText(/1호 회사 · 2년 차/)).toBeVisible({ timeout: 30_000 })
   await page.getByRole('button', { name: '■ 자동 멈춤' }).click()
   await expect(page.getByTestId('auto-status')).toHaveCount(0)

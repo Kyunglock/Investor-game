@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { Applicant, Company } from '../../api/client'
 import { Document } from '../game/Document'
 import { shortWon, withParticle } from '../game/labels'
@@ -123,6 +124,7 @@ export function CompanyScreen({ company }: { company: Company }) {
         )}
 
         <CompanyTabs company={company} />
+        <AutoCountdown />
 
         {justSettled && <YearEndSheet company={company} onClose={closeYearEnd} />}
 
@@ -208,7 +210,6 @@ export function CompanyScreen({ company }: { company: Company }) {
               <p className="text-center text-[12px] text-teal" data-testid="auto-status">
                 자동 진행 중 · 공채 → 배치 → 거시경제 회의·종목 회의(직원 다수결) → 분기 넘기기를
                 되풀이합니다
-                <AutoCountdown />
               </p>
             )}
             <div className="grid grid-cols-[auto_1fr] gap-2">
@@ -1158,25 +1159,34 @@ function ApplicantCard({
   )
 }
 
-/** 자동 진행이 다음 분기를 넘기기까지 남은 초 (decisions.md 273번). 회의·뽑기 중이거나 기다리는 중이 아니면 아무것도 그리지 않는다. */
+/**
+ * 자동 진행이 띄운 창을 닫기까지 남은 초 (decisions.md 277번). 창(오버레이) 위에 떠야 보여서 화면 맨 위에 따로 붙인다(아래는 자동 멈춤 버튼이 있다). 창이 없으면 그리지 않는다.
+ */
 function AutoCountdown() {
   const nextAt = useRaisingStore((s) => s.autoNextAt)
+  const auto = useRaisingStore((s) => s.autoPlay)
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     if (nextAt === null) {
       return
     }
+    setNow(Date.now())
     const id = setInterval(() => setNow(Date.now()), 250)
     return () => clearInterval(id)
   }, [nextAt])
-  if (nextAt === null) {
+  if (!auto || nextAt === null) {
     return null
   }
   const left = Math.max(0, Math.ceil((nextAt - now) / 1000))
-  return (
-    <span className="block font-semibold" data-testid="auto-countdown">
-      다음 분기까지 {left}초
-    </span>
+  return createPortal(
+    <p
+      className="fixed top-3 left-1/2 z-40 -translate-x-1/2 rounded-full bg-teal px-4 py-2 text-[13px] font-semibold text-white shadow-lg"
+      data-testid="auto-countdown"
+      aria-live="polite"
+    >
+      자동 진행 · {left}초 뒤 닫힘
+    </p>,
+    document.body,
   )
 }
 

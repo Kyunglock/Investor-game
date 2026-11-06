@@ -23,11 +23,7 @@ interface RaisingState {
   overtakeAlert: boolean
   /** 자동 진행을 켰다 (245번). 새로 고치면 꺼진다: 모르는 사이에 돈을 쓰지 않게. */
   autoPlay: boolean
-  /**
-   * 자동 진행이 마지막으로 분기를 넘긴 때(ms). 켤 때도 지금으로 맞춘다: 켠 뒤 첫 분기도, 그 뒤 분기마다도 20초는 둔다 (decisions.md 273번).
-   */
-  autoLastSettleAt: number | null
-  /** 자동 진행이 다음 분기를 넘길 때(ms). 화면이 남은 초를 센다. 기다리는 중이 아니면 null. */
+  /** 자동 진행이 띄운 창(분기 실적·연말 결산서·라이벌 알림)을 닫을 때(ms). 화면이 남은 초를 센다. 창이 없으면 null (decisions.md 277번). */
   autoNextAt: number | null
   /** 회사 화면에서 고른 탭. null이면 화면이 정한다 (231번). */
   tab: 'meeting' | 'market' | 'staff' | 'settlement' | 'history' | null
@@ -91,7 +87,6 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     justQuartered: false,
     overtakeAlert: false,
     autoPlay: false,
-    autoLastSettleAt: null,
     autoNextAt: null,
     tab: null,
 
