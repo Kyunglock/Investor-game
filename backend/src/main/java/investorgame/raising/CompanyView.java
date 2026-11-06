@@ -116,6 +116,8 @@ public record CompanyView(
    * @param fee 계약금. 뽑으면 회사 자본에서 나간다
    * @param line 카드의 한 줄(올해 필요한 인재, 사수가 붙음, 인사팀이 데려옴). 없으면 null
    * @param sector 관심 섹터 코드. 뽑으면 직원이 안고 들어온다
+   * @param star 특급 인재: 아주 좋은 등급에 계약금이 아주 비싸고 곧 떠난다 (decisions.md 290번)
+   * @param leavesIn 특급 인재가 머무는 남은 분기(이번 분기 포함). 보통 지원자는 0
    */
   public record Applicant(
       int id,
@@ -126,7 +128,9 @@ public record CompanyView(
       String line,
       String sector,
       String sectorName,
-      String perk) {}
+      String perk,
+      boolean star,
+      int leavesIn) {}
 
   /**
    * 투자 회의 (decisions.md 229번). 정하기 전에는 숨은 방향이 없다.
@@ -155,11 +159,25 @@ public record CompanyView(
       Verdict verdict) {}
 
   /**
-   * 막판 뒤집기 (decisions.md 283번): 결정이 다 끝났는데 누군가 반대로 하자고 나섰다. 답할 때까지 회의는 정해지지 않는다.
+   * 막판 뒤집기 (decisions.md 283·290번): 결정이 다 끝났는데 누군가 반대로 하자고 나섰다. 답할 때까지 회의는 정해지지 않는다. 화면은 먼저 정해진
+   * 결정(사장 결정 도장, 맡겼으면 토론과 결판)을 보이고 그 뒤에 이 제안을 띄운다.
    *
    * @param action 제안한 행동(BUY·SELL)
+   * @param choice 막판 제안 전에 정해진 결정(BUY·SELL·HOLD). 맡겼으면 직원들이 정한 쪽
+   * @param delegated 사장이 "너희가 알아서 해" 하고 맡겼다
+   * @param debate 맡겼을 때의 토론(285번). 맡기지 않았으면 비었다
    */
-  public record Proposal(int employeeId, String name, String action, String line) {}
+  public record Proposal(
+      int employeeId,
+      String name,
+      String action,
+      String line,
+      String choice,
+      boolean big,
+      boolean delegated,
+      int teamBuy,
+      int teamSell,
+      List<DebateLine> debate) {}
 
   /**
    * 막판 제안을 따른 뒤의 상과 벌 (283번).

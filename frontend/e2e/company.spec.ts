@@ -114,7 +114,12 @@ async function passQuarter(
 async function declineProposal(meeting: Locator) {
   const proposal = meeting.getByTestId('invest-proposal')
   const outcome = meeting.getByTestId('invest-outcome')
-  await expect(proposal.or(outcome)).toBeVisible()
+  const decided = meeting.getByTestId('invest-decided')
+  await expect(proposal.or(outcome).or(decided).first()).toBeVisible()
+  // 막판 제안은 정해진 결정(도장·토론)을 보인 뒤에 뜬다 (290번).
+  if (await decided.isVisible()) {
+    await expect(proposal).toBeVisible({ timeout: 15_000 })
+  }
   if (await proposal.isVisible()) {
     await proposal.getByRole('button', { name: '됐어, 원래대로 해' }).click()
   }
@@ -353,9 +358,41 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await page.reload()
   await expect(page.getByText(/1호 회사 · 4년 차/)).toBeVisible()
   await tab(page, /공채/)
-  await expect(page.getByTestId('applicant')).toHaveCount(5)
+  // 특급 인재(290번)가 와 있을 수 있다: 보통 지원자만 센다.
+  await expect(page.locator('[data-testid="applicant"][data-star="false"]')).toHaveCount(5)
   await passYear(page, 4, '판다')
   await expect(page.getByText(/1호 회사 · 5년 차 1분기/)).toBeVisible()
+})
+
+test('가끔 오는 특급 인재는 맨 위에 빛나고, 계약금이 아주 비싸며 곧 떠난다고 알린다 (290번)', async ({
+  page,
+}) => {
+  // 15%를 기다리기 어렵다: 회사 응답에 특급 인재를 넣어 본다.
+  await page.route('**/api/company', async (route) => {
+    const response = await route.fetch()
+    if (!response.ok()) {
+      await route.fulfill({ response })
+      return
+    }
+    const company = await response.json()
+    company.applicants.push({
+      ...company.applicants[0],
+      id: 999,
+      name: '한별',
+      overallGrade: 'B',
+      fee: 24_000_000,
+      line: '특급 인재! 계약금이 아주 비싸다. 다른 증권사도 노리고 있어 오래 기다리지 않는다.',
+      star: true,
+      leavesIn: 1,
+    })
+    await route.fulfill({ response, json: company })
+  })
+  await openCompany(page)
+  const first = page.getByTestId('applicant').first()
+  await expect(first).toHaveAttribute('data-star', 'true')
+  await expect(first.getByTestId('applicant-star')).toContainText('특급 인재')
+  await expect(first.getByTestId('applicant-star')).toContainText('이번 분기만')
+  await expect(first).toContainText('2,400만')
 })
 
 test('뽑기 요청이 끊겨도 버튼이 잠기지 않고 다시 뽑을 수 있다', async ({ page }) => {
@@ -429,8 +466,8 @@ test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 �
   await expect(meeting.getByTestId('stubborn')).toHaveCount(0)
   await expect(meeting.getByRole('button', { name: /크게/ })).toHaveCount(0)
   await meeting.getByTestId('invest-team').click()
-  await declineProposal(meeting)
-  const clash = meeting.getByTestId('team-clash')
+  // 막판 제안이 와도 토론이 먼저 오간다 (290번): 처음 뜨는 맞붙는 장면을 본다.
+  const clash = meeting.getByTestId('team-clash').first()
   await expect(clash).toBeVisible()
   await expect(clash).toHaveAttribute('data-phase', 'clash')
   // 막대 대신 회의실 (286번): 매수파는 왼쪽, 매도파는 오른쪽에 앉는다. 양쪽 다 누군가 앉는다.
@@ -448,6 +485,7 @@ test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 �
   const result = await clash.getByTestId('clash-result').innerText()
   // 결판은 이긴 쪽이 낸다.
   await expect(lines.nth(6)).toHaveAttribute('data-side', result.includes('매수') ? 'BUY' : 'SELL')
+  await declineProposal(meeting)
   await expect(meeting.getByTestId('invest-choice')).toHaveText(
     result.includes('매수') ? '산다' : '판다',
   )
@@ -484,6 +522,12 @@ test('정하고 나면 누군가 막판에 반대로 하자고 하고, 따랐으
       name: '이도담',
       action: 'SELL',
       line: '"사장님! 잠깐만요!" 이도담이 손을 번쩍 들었다. "저… 아무래도 판다입니다."',
+      choice: 'BUY',
+      big: false,
+      delegated: false,
+      teamBuy: 0,
+      teamSell: 0,
+      debate: [],
     }
     await route.fulfill({ response, json: company })
   })
@@ -529,7 +573,10 @@ test('정하고 나면 누군가 막판에 반대로 하자고 하고, 따랐으
   await macro.getByRole('button', { name: '종목 회의 열기 →' }).click()
   const meeting = page.getByRole('dialog', { name: '종목 회의' })
   await meeting.getByRole('button', { name: '산다', exact: true }).click()
+  // 회의가 정해진 뒤에 막판 제안이 온다 (290번): 사장 결정 도장이 먼저 찍힌다.
+  await expect(meeting.getByTestId('decided-choice')).toHaveText('산다')
   const proposal = meeting.getByTestId('invest-proposal')
+  await expect(proposal).toHaveCount(0)
   await expect(proposal).toBeVisible()
   await expect(proposal.getByTestId('proposal-line')).toContainText('잠깐만요')
   await expect(meeting.getByTestId('invest-outcome')).toHaveCount(0)

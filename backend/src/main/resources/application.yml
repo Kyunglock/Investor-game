@@ -160,6 +160,13 @@ raising:
       # 새로 받기 값: 정해진 값과 자본 × refresh-bp 가운데 큰 쪽. 한 해에 받을수록 (횟수 + 1)배
       refresh-cost: 3000000
       refresh-bp: 50
+      # 특급 인재 (decisions.md 290번): 분기마다 percent% 확률로 회사 등급보다 steps 단계 높은 지원자가 온다.
+      # 계약금은 보통의 fee-percent%, quarters 분기가 지나면 다른 증권사로 간다
+      star:
+        percent: 15
+        steps: 4
+        fee-percent: 600
+        quarters: 2
     # 투자 회의 (decisions.md 229번): 해마다 한 번 단서 기사를 놓고 직원들과 고민한다. 호황이면 오르는 뉴스가 +15%p, 폭락장이면 −10%p.
     # 곁가지 문장은 60% 반대쪽(기사만 읽고 다수결하면 약 64% 맞는다). 제멋대로 할 확률이 20% 이상이면 고집 "보통", 40% 이상이면 "높음"(D 직원이 보통, E 직원이 높음)
     invest:
