@@ -522,6 +522,10 @@ export interface components {
                 sectorName?: string | null;
                 /** @description 등급 효과 한 줄 (decisions.md 289번) */
                 perk: string;
+                /** @description 특급 인재: 아주 좋은 등급에 계약금이 아주 비싸고 곧 떠난다 (decisions.md 290번) */
+                star: boolean;
+                /** @description 특급 인재가 머무는 남은 분기(이번 분기 포함). 보통 지원자는 0 */
+                leavesIn: number;
             }[];
             /**
              * Format: int64
@@ -605,13 +609,31 @@ export interface components {
                 convened: boolean;
                 /** @description 이 종목을 물어 온 직원 (267번). 아직 아무도 안 가져왔거나 옛 회의면 null */
                 finder?: components["schemas"]["Finder"] | null;
-                /** @description 막판 뒤집기 (decisions.md 283번). 결정이 끝났는데 누군가 반대로 하자고 나섰다. 답할 때까지 outcome이 없다. 없으면 null */
+                /** @description 막판 뒤집기 (decisions.md 283·290번). 결정이 끝났는데 누군가 반대로 하자고 나섰다. 답할 때까지 outcome이 없다. 화면은 정해진 결정(도장·토론)을 먼저 보이고 제안을 띄운다. 없으면 null */
                 proposal?: {
                     employeeId: number;
                     name: string;
                     /** @enum {string} */
                     action: "BUY" | "SELL";
                     line: string;
+                    /**
+                     * @description 막판 제안 전에 정해진 결정. 맡겼으면 직원들이 정한 쪽
+                     * @enum {string}
+                     */
+                    choice: "BUY" | "SELL" | "HOLD";
+                    big: boolean;
+                    /** @description 사장이 "너희가 알아서 해" 하고 맡겼다 */
+                    delegated: boolean;
+                    teamBuy: number;
+                    teamSell: number;
+                    /** @description 맡겼을 때의 토론 (285번). 맡기지 않았으면 비었다 */
+                    debate: {
+                        name: string;
+                        /** @enum {string} */
+                        side: "BUY" | "SELL";
+                        text: string;
+                        last: boolean;
+                    }[];
                 } | null;
                 /** @description 막판 제안을 따른 뒤의 상과 벌 (283번). 따르지 않았으면 null */
                 verdict?: {

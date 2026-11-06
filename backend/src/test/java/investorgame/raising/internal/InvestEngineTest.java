@@ -498,7 +498,7 @@ class InvestEngineTest {
     assertThat(boss.invest.debate).isEmpty();
   }
 
-  /** 맡기면 직원들이 정한 것이라 막판 뒤집기가 없다 (decisions.md 290번). */
+  /** 맡기면 직원들이 정한 것이라 막판 뒤집기가 없다 (decisions.md 291번). */
   @Test
   void 너희가_알아서_해면_막판_제안이_없다() {
     for (int seed = 0; seed < 60; seed++) {

@@ -98,7 +98,7 @@ class TeamEngineTest {
       if (q.highlights == 0) {
         assertThat(text).startsWith("이번 분기에는 기사 방향을 못 읽어 형광펜을 긋지 못했습니다.");
       } else {
-        // 다 맞았으면 뿌듯하게, 하나도 못 맞혔으면 면목 없게 (290번).
+        // 다 맞았으면 뿌듯하게, 하나도 못 맞혔으면 면목 없게 (291번).
         assertThat(text)
             .startsWith(
                 q.highlightHits == 1
@@ -140,7 +140,7 @@ class TeamEngineTest {
         .isEqualTo("올해 종목 2개를 물어 와 1개가 올랐습니다.");
   }
 
-  /** 돈을 굴리는 팀의 보고 (290번): 손익 크기·폭락·태도로 고른 머리줄, 팀원 성적, 뒤집힘 횟수, 조언. */
+  /** 돈을 굴리는 팀의 보고 (291번): 손익 크기·폭락·태도로 고른 머리줄, 팀원 성적, 뒤집힘 횟수, 조언. */
   @Test
   void 돈을_굴리는_팀장은_크기와_폭락과_태도와_팀원과_뒤집힘_횟수까지_보고한다() {
     CompanyState c = company(1);

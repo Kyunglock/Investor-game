@@ -81,7 +81,7 @@ type TeamResult = {
 }
 type TeamReport = { desk: string; leaderId: number; leader: string }
 
-/** 결산 전광판의 한 줄 (decisions.md 291번): 자리 하나, 팀장 이름, 팀 손익·판돈, 팀의 뒤집힘 합, 사람 수. */
+/** 결산 전광판의 한 줄 (decisions.md 292번): 자리 하나, 팀장 이름, 팀 손익·판돈, 팀의 뒤집힘 합, 사람 수. */
 export type TeamRow = {
   desk: string
   leader: string
@@ -93,7 +93,7 @@ export type TeamRow = {
 }
 
 /**
- * 직원별 결과를 자리마다 묶는다 (decisions.md 291번): 이름은 그 자리 팀장(팀장 보고의 보고자)만 보인다. 보고가 없는 자리면 가장 많이 번 사람을
+ * 직원별 결과를 자리마다 묶는다 (decisions.md 292번): 이름은 그 자리 팀장(팀장 보고의 보고자)만 보인다. 보고가 없는 자리면 가장 많이 번 사람을
  * 팀장으로 친다. 자리 순서는 결과에 처음 나온 순서다.
  */
 export function teamRows(results: TeamResult[], reports: TeamReport[]): TeamRow[] {

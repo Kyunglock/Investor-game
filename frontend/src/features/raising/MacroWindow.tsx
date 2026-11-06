@@ -82,7 +82,7 @@ export function MacroWindow({
         {macro.remarks.length > 0 && !outcome && (
           <div className="mt-2 grid gap-2" data-testid="macro-remarks">
             {groupRemarks(macro.remarks).map((g) => {
-              // 팀장만 이름을 보이고 나머지는 "외 N명" (292번).
+              // 팀장만 이름을 보이고 나머지는 "외 N명" (293번).
               const { shown, voice, others } = leadersOf(g.remarks, employees)
               return (
                 <section

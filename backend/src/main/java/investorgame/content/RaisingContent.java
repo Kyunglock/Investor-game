@@ -80,7 +80,7 @@ public record RaisingContent(
   public record Ending(String line) {}
 
   /**
-   * 팀장 보고 (decisions.md 269·290번). trading: 돈을 굴리는 팀의
+   * 팀장 보고 (decisions.md 269·291번). trading: 돈을 굴리는 팀의
    * 머리줄(bigUp·up·flat·down·bigDown·crashHeld·crashHit별 문구 여럿, {period}·{pnl}). stance: 그 기간
    * 태도(AGGRESSIVE·DEFENSIVE)가 손익(up·down)에 미친 한 줄. members: 팀이 둘 이상일 때 가장 많이 번 사람(best, 팀장 자신이면
    * bestSelf)이나 가장 크게 잃은 사람(worst·worstSelf, {name}·{pnl}). flips: 팀원이 손을 뒤집었을 때 덧붙이는 한 줄(능력치별,
@@ -241,7 +241,9 @@ public record RaisingContent(
    * 공채 시장 지원자 카드의 한 줄. wanted: 올해 필요한 인재({desk}·{stat}). hr: 인사팀이 데려온 지원자({name}). veteran:
    * 경력직({grade}, decisions.md 258번).
    */
-  public record Market(String wanted, String hr, String veteran) {}
+  /** 공채 시장 문구. star: 특급 인재 카드 한 줄(290번). starArrived·starLeft: 분기 실적 소식 줄({name}·{grade}·{fee}). */
+  public record Market(
+      String wanted, String hr, String veteran, String star, String starArrived, String starLeft) {}
 
   /**
    * X 이상 등급의 효과 (2.4절). 효과는 쌓인다: XX 직원은 X 효과도 가진다.

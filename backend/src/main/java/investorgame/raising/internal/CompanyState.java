@@ -56,6 +56,11 @@ class CompanyState {
   /** 올해 넘긴 분기의 실적. 연말 결산에 모여 들어가고 해가 바뀌면 비운다 (268번). */
   List<Quarter> quarters = new ArrayList<>();
 
+  /** 1년 차 1분기를 1로 센 분기 번호. 해를 건너도 이어진다(특급 인재가 떠나는 때, 290번). */
+  int quarterIndex() {
+    return (year - 1) * 4 + quarter;
+  }
+
   /** 분기마다 다른 난수 열쇠: 같은 해의 분기끼리 기사·한마디·판정이 겹치지 않게. */
   int turn() {
     return year * 10 + quarter;
@@ -525,6 +530,12 @@ class CompanyState {
 
     /** 경력직이면 SSS 위의 단계(1 X …). 다른 회사에서 위기를 버텨 올랐다 (decisions.md 258번). 보통 지원자는 0. */
     int rank;
+
+    /** 특급 인재 (decisions.md 290번): 가끔 오는 아주 좋은 지원자. 계약금이 아주 비싸고 leavesAt 분기가 지나면 떠난다. */
+    boolean star;
+
+    /** 특급 인재가 머무는 마지막 분기(CompanyState.quarterIndex()). 보통 지원자는 0. */
+    int leavesAt;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)

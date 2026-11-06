@@ -171,7 +171,7 @@ export function hindsightOf(invest: NonNullable<Company['invest']>): string[] {
 }
 
 /**
- * 의견 칸에 세우는 사람 (decisions.md 292번): 사람이 많아지면 이름이 칸을 꽉 채워서 **팀장만** 이름을 보이고 나머지는 "외 N명"이다. 대표 한마디도 팀장
+ * 의견 칸에 세우는 사람 (decisions.md 293번): 사람이 많아지면 이름이 칸을 꽉 채워서 **팀장만** 이름을 보이고 나머지는 "외 N명"이다. 대표 한마디도 팀장
  * 가운데 안목이 가장 높은 사람이 한다. 그 칸에 팀장이 없으면(팀장이 다른 의견이다) 칸에서 안목이 가장 높은 사람 하나만 세운다.
  */
 export function leadersOf(

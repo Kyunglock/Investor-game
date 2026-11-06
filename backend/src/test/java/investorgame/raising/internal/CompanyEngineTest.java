@@ -446,6 +446,63 @@ class CompanyEngineTest {
     assertThat(company.applicants).extracting(a -> a.name).doesNotContainAnyElementsOf(first);
   }
 
+  /**
+   * 특급 인재 (decisions.md 290번): 분기를 넘길 때 가끔 회사 등급보다 네 단계 높은 지원자가 온다. 계약금은 보통의 여섯 배이고, 두 분기가 지나면 다른
+   * 증권사로 간다. 새로 받거나 해가 바뀌어도 떠날 때까지 남는다.
+   */
+  @Test
+  void 특급_인재는_가끔_오고_비싸며_곧_떠난다() {
+    var rules = PROPERTIES.market().star();
+    int arrived = 0;
+    CompanyState found = null;
+    for (int seed = 0; seed < 200; seed++) {
+      CompanyState company = ENGINE.open(new HashSeededRandom(seed), ENGINE.openingCapital());
+      HashSeededRandom random = new HashSeededRandom(seed);
+      for (int q = 0; q < 4 && found == null; q++) {
+        CompanyState.Quarter quarter = ENGINE.settleQuarter(company, random);
+        if (company.applicants.stream().anyMatch(a -> a.star)) {
+          arrived++;
+          found = company;
+          if (company.quarter > 1) {
+            assertThat(quarter.lines).anyMatch(l -> l.contains("특급 인재") && l.contains("공채에 왔다"));
+          }
+        }
+      }
+      if (found != null) {
+        break;
+      }
+    }
+    assertThat(arrived).as("특급 인재가 오는 회사가 있다").isPositive();
+    CompanyState.Applicant star =
+        found.applicants.stream().filter(a -> a.star).findFirst().orElseThrow();
+    assertThat(CompanyEngine.LADDER.indexOf(CompanyEngine.gradeOf(star.stats, star.rank)))
+        .as("F 회사에 B 인재")
+        .isEqualTo(CompanyEngine.LADDER.indexOf("B"));
+    assertThat(star.fee)
+        .as("계약금은 보통의 여섯 배")
+        .isEqualTo(ENGINE.fee(found.capital, star.stats, 0) * rules.feePercent() / 100);
+    assertThat(star.leavesAt).isEqualTo(found.quarterIndex() + rules.quarters() - 1);
+    ENGINE.refresh(found, new HashSeededRandom(1));
+    assertThat(found.applicants).as("새로 받아도 남는다").contains(star);
+    // 머무는 기한이 지나면 떠난다.
+    HashSeededRandom random = new HashSeededRandom(99);
+    for (int q = 0; q < rules.quarters() && found.applicants.contains(star); q++) {
+      ENGINE.settleQuarter(found, random);
+    }
+    assertThat(found.applicants).as("기한이 지나면 다른 증권사로 간다").doesNotContain(star);
+
+    // 분기마다 15% 남짓으로 온다.
+    int companies = 0;
+    int withStar = 0;
+    for (int seed = 0; seed < 300; seed++) {
+      CompanyState c = ENGINE.open(new HashSeededRandom(seed), ENGINE.openingCapital());
+      ENGINE.settleQuarter(c, new HashSeededRandom(seed));
+      companies++;
+      withStar += c.applicants.stream().anyMatch(a -> a.star) ? 1 : 0;
+    }
+    assertThat(withStar / (double) companies).isBetween(0.08, 0.25);
+  }
+
   /** 인사 직원 (6.3절): 인사팀에 사람이 있으면 지원자가 한 명 더 오고, 지원자 등급의 중심이 인사 직원보다 두 단계 아래까지 오른다. */
   @Test
   void 인사팀이_공채를_돕는다() {

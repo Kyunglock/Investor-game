@@ -318,7 +318,9 @@ class DefaultCompanyService implements CompanyService {
                             a.line,
                             a.sector,
                             a.sector == null ? null : engine.sectorName(a.sector),
-                            engine.perkLine(a.stats, a.rank)))
+                            engine.perkLine(a.stats, a.rank),
+                            a.star,
+                            a.star ? a.leavesAt - c.quarterIndex() + 1 : 0))
                 .toList();
     String hrCap = engine.hrOf(c).map(engine::hrCap).orElse(null);
     CompanyView.Meeting meeting =
@@ -474,7 +476,20 @@ class DefaultCompanyService implements CompanyService {
         invest.proposalId == null || invest.choice != null
             ? null
             : new CompanyView.Proposal(
-                invest.proposalId, invest.proposalName, invest.proposalAction, invest.proposalLine),
+                invest.proposalId,
+                invest.proposalName,
+                invest.proposalAction,
+                invest.proposalLine,
+                invest.pendingChoice,
+                invest.pendingBig,
+                invest.pendingDelegated,
+                invest.teamBuy,
+                invest.teamSell,
+                invest.pendingDelegated
+                    ? invest.debate.stream()
+                        .map(d -> new CompanyView.DebateLine(d.name, d.side, d.text, d.last))
+                        .toList()
+                    : List.of()),
         verdictView(c));
   }
 

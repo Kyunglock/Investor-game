@@ -45,7 +45,7 @@ describe('결산 전광판과 이사 장면 (증권사 육성 설계 8.3절)', (
   })
 })
 
-describe('결산 전광판은 자리마다 한 줄, 이름은 팀장만 (decisions.md 291번)', () => {
+describe('결산 전광판은 자리마다 한 줄, 이름은 팀장만 (decisions.md 292번)', () => {
   const result = (employeeId: number, name: string, desk: string, pnl: number, flips = {}) => ({
     employeeId,
     name,

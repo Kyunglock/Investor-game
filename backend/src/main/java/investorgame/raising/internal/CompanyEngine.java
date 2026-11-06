@@ -611,6 +611,8 @@ class CompanyEngine {
     int veteranRank = companyAt >= sssAt ? Math.min(3, companyAt - sssAt + 1) : 0;
     java.util.Optional<Employee> mentor = bestRanked(company, RANK_MENTOR);
     RaisingContent.Company texts = content.raising().company();
+    // 특급 인재(290번)는 새로 받아도, 해가 바뀌어도 떠날 때까지 남는다.
+    List<CompanyState.Applicant> stars = company.applicants.stream().filter(a -> a.star).toList();
     company.applicants.clear();
     // 관심 섹터는 따로 굴려 능력치 난수를 흔들지 않는다. 첫 지원자는 올해 필요한 자리가 섹터 데스크면 그 섹터에 관심이 있다.
     RandomGenerator sectorRng = random.forKey("applicant-sectors", company.year, company.refreshes);
@@ -679,6 +681,54 @@ class CompanyEngine {
       applicant.sector = sector;
       company.applicants.add(applicant);
     }
+    company.applicants.addAll(stars);
+  }
+
+  /**
+   * 특급 인재 (decisions.md 290번). 분기를 넘길 때마다 머물 기한이 지난 특급 인재는 다른 증권사로 가고, 특급 인재가 없으면 star.percent% 확률로
+   * 새로 온다: 회사 등급보다 star.steps 단계 높고(SSS를 넘으면 경력직 단계), 계약금은 보통의 star.fee-percent%, star.quarters 분기
+   * 동안만 기다린다. 오고 가는 일은 lines(분기 실적이나 연말 결산서의 소식 줄)에 남긴다.
+   */
+  void stars(CompanyState company, SeededRandom random, List<String> lines) {
+    RaisingContent.Market texts = content.raising().company().market();
+    int now = company.quarterIndex();
+    List<CompanyState.Applicant> gone =
+        company.applicants.stream().filter(a -> a.star && a.leavesAt < now).toList();
+    for (CompanyState.Applicant a : gone) {
+      lines.add(Korean.fill(texts.starLeft(), Map.of("name", a.name)));
+    }
+    company.applicants.removeAll(gone);
+    if (company.finished || company.closed || company.applicants.stream().anyMatch(a -> a.star)) {
+      return;
+    }
+    CompanyProperties.Star rules = properties.market().star();
+    RandomGenerator rng = random.forKey("star", company.year, company.quarter);
+    if (rng.nextInt(PERCENT) >= rules.percent()) {
+      return;
+    }
+    int sssAt = LADDER.indexOf(StatGrade.SSS.name());
+    int at = LADDER.indexOf(grade(company)) + rules.steps();
+    StatGrade band = StatGrade.valueOf(LADDER.get(Math.min(at, sssAt)));
+    Map<String, Integer> stats = new java.util.LinkedHashMap<>();
+    for (String code : StatCodes.ALL) {
+      stats.put(code, band.min() + rng.nextInt(band.max() - band.min() + 1));
+    }
+    CompanyState.Applicant star = new CompanyState.Applicant();
+    star.id = company.met + 1;
+    star.name = nextName(company);
+    star.stats.putAll(stats);
+    star.rank = at > sssAt ? Math.min(RANK_FORESIGHT, at - sssAt) : 0;
+    star.fee = fee(company.capital, stats, star.rank) * rules.feePercent() / PERCENT;
+    star.line = texts.star();
+    List<String> sectors = content.sectors().stream().map(s -> s.code()).toList();
+    star.sector = sectors.get(rng.nextInt(sectors.size()));
+    star.star = true;
+    star.leavesAt = now + rules.quarters() - 1;
+    company.applicants.add(star);
+    lines.add(
+        Korean.fill(
+            texts.starArrived(),
+            Map.of("name", star.name, "grade", gradeOf(stats, star.rank), "fee", won(star.fee))));
   }
 
   /**
@@ -1321,9 +1371,11 @@ class CompanyEngine {
     if (company.quarter < QUARTERS) {
       company.quarter++;
       startQuarter(company, random);
+      stars(company, random, q.lines);
       return q;
     }
     yearEnd(company, random);
+    stars(company, random, company.settlements.getLast().lines);
     return q;
   }
 

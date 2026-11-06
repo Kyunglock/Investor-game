@@ -1022,22 +1022,25 @@ function MarketPanel({ company }: { company: Company }) {
         <p className="mt-2 text-[13px] text-muted">올해 지원자를 다 만났습니다.</p>
       )}
       <ul className="mt-2 grid gap-2 md:grid-cols-3">
-        {company.applicants.map((a) => (
-          <ApplicantCard
-            key={a.id}
-            applicant={a}
-            affordable={company.capital >= a.fee}
-            disabled={busy}
-            picking={picking === a.id}
-            full={full}
-            employees={company.employees}
-            onHire={(replace) => {
-              setPicking(null)
-              void hire(a.id, replace)
-            }}
-            onPick={() => setPicking(picking === a.id ? null : a.id)}
-          />
-        ))}
+        {[...company.applicants]
+          // 특급 인재(290번)는 맨 위에.
+          .sort((x, y) => Number(y.star) - Number(x.star))
+          .map((a) => (
+            <ApplicantCard
+              key={a.id}
+              applicant={a}
+              affordable={company.capital >= a.fee}
+              disabled={busy}
+              picking={picking === a.id}
+              full={full}
+              employees={company.employees}
+              onHire={(replace) => {
+                setPicking(null)
+                void hire(a.id, replace)
+              }}
+              onPick={() => setPicking(picking === a.id ? null : a.id)}
+            />
+          ))}
       </ul>
       <button
         type="button"
@@ -1076,7 +1079,23 @@ function ApplicantCard({
   const button =
     'min-h-11 w-full rounded font-semibold disabled:opacity-50 border border-pen hover:bg-pen hover:text-white'
   return (
-    <li className="rounded border border-line p-3" data-testid="applicant">
+    <li
+      className={`rounded p-3 ${a.star ? 'animate-glow border-2 border-gold bg-gold/10' : 'border border-line'}`}
+      data-testid="applicant"
+      data-star={a.star}
+    >
+      {a.star && (
+        // 특급 인재 (290번): 아주 좋은 등급, 아주 비싼 계약금, 곧 떠난다.
+        <p
+          className="mb-1 flex items-center justify-between text-[12px] font-bold text-gold"
+          data-testid="applicant-star"
+        >
+          <span>★ 특급 인재</span>
+          <span className="rounded bg-gold px-1.5 text-white">
+            {a.leavesIn <= 1 ? '이번 분기만' : `${a.leavesIn}분기 남음`}
+          </span>
+        </p>
+      )}
       <p className="flex items-baseline justify-between">
         <span className="font-semibold">
           {a.name}{' '}

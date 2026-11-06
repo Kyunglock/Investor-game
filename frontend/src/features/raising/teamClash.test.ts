@@ -10,7 +10,7 @@ import {
   teamClashMs,
 } from './TeamClash'
 
-describe('"너희가 알아서 해" 저울 (decisions.md 290번)', () => {
+describe('"너희가 알아서 해" 저울 (decisions.md 291번)', () => {
   const line = (side: 'BUY' | 'SELL', last = false): DebateLine => ({
     name: side,
     side,

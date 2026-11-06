@@ -170,7 +170,7 @@ describe('같은 의견 칸의 대표 (decisions.md 246번)', () => {
     expect(spokesperson([remark(1)], staff).employeeId).toBe(1)
   })
 
-  it('팀장만 이름을 보이고 나머지는 "외 N명"이며, 팀장이 없는 칸은 대표 하나만 선다 (292번)', () => {
+  it('팀장만 이름을 보이고 나머지는 "외 N명"이며, 팀장이 없는 칸은 대표 하나만 선다 (293번)', () => {
     const led = [
       { id: 1, leader: true, grades: { insight: 'C' } },
       { id: 2, leader: false, grades: { insight: 'S' } },

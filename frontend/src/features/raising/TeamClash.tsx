@@ -133,7 +133,7 @@ const WIN_MIN = 68
 const WIN_MAX = 88
 
 /**
- * 토론 중 저울의 매수 쪽 눈금(%) (decisions.md 290번): 반반에서 시작해 말 한마디마다 말한 쪽으로 조금씩 기운다. 결판 전 말만 센다. 크게 기울지는
+ * 토론 중 저울의 매수 쪽 눈금(%) (decisions.md 291번): 반반에서 시작해 말 한마디마다 말한 쪽으로 조금씩 기운다. 결판 전 말만 센다. 크게 기울지는
  * 않는다: 승패는 서버가 무게로 정했고 결판 때 드러난다.
  */
 export function gaugeDuring(debate: DebateLine[], said: number): number {
@@ -158,7 +158,7 @@ export function gaugeDone(buy: number, sell: number, buyWins: boolean): number {
 }
 
 /**
- * "너희가 알아서 해" (decisions.md 279·285·286·290번). 사장이 맡기면 직원들이 회의실에 모여 매수파(왼쪽)와 매도파(오른쪽)로 갈려 토론한다. 위에는
+ * "너희가 알아서 해" (decisions.md 279·285·286·291번). 사장이 맡기면 직원들이 회의실에 모여 매수파(왼쪽)와 매도파(오른쪽)로 갈려 토론한다. 위에는
  * 저울이 있어 말 한마디마다 말한 쪽으로 조금씩 기울고, 토론이 끝나면 무게(직원 안목)가 정한 쪽으로 쭉 기운다. 지금 말하는 사람은 자리에서 일어나 금빛으로
  * 빛나고, 결판이 나면 이긴 쪽이 웃고 진 쪽이 풀이 죽으며 회의실에 "매수"·"매도" 도장이 찍힌다. 승패는 서버가 정한 그대로다. 움직임 줄이기·빨리 보기면
  * 끝난 모습만. 토론은 아래 대화창에 한 줄씩 올라온다.
@@ -313,7 +313,7 @@ export function TeamClash({
           {done ? '결판이 났다' : phase === 'push' ? '저울이 기운다…' : '직원들이 모였다'}
         </span>
       </p>
-      {/* 저울 (290번): 매수(빨강)와 매도(파랑)가 나눠 차지한다. 말 한마디마다 조금씩, 결판이 나면 이긴 쪽으로 쭉 기운다. */}
+      {/* 저울 (291번): 매수(빨강)와 매도(파랑)가 나눠 차지한다. 말 한마디마다 조금씩, 결판이 나면 이긴 쪽으로 쭉 기운다. */}
       <div className="mt-1.5 flex items-center justify-between gap-2 text-[12px] font-bold">
         <span className={`text-up ${done && !buyWins ? 'opacity-40' : ''}`}>매수파</span>
         <div

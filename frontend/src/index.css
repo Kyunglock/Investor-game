@@ -617,7 +617,7 @@ p.animate-stamp {
   animation: chart-draw 2.6s ease-in-out both;
 }
 
-/* "너희가 알아서 해" (decisions.md 290번): 결판이 나면 이긴 쪽이 한 번 들썩인다. 저울과 일어서는 사람은 transition으로 움직인다. */
+/* "너희가 알아서 해" (decisions.md 291번): 결판이 나면 이긴 쪽이 한 번 들썩인다. 저울과 일어서는 사람은 transition으로 움직인다. */
 @keyframes clash-win {
   0% {
     transform: scale(1);
