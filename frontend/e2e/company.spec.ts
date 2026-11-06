@@ -437,7 +437,7 @@ test('라이벌을 앞지르면 연말 결산서를 닫은 뒤 알림이 뜬다 
   await expect(page.getByText(/1호 회사 · 2년 차 1분기/)).toBeVisible()
 })
 
-test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 매도파가 맞붙어 한쪽으로 정한다 (279번)', async ({
+test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 매도파가 토론하며 맞붙어 한쪽으로 정한다 (279·285번)', async ({
   page,
 }) => {
   await openCompany(page)
@@ -460,9 +460,17 @@ test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 �
   const clash = meeting.getByTestId('team-clash')
   await expect(clash).toBeVisible()
   await expect(clash).toHaveAttribute('data-phase', 'clash')
-  await expect(clash).toHaveAttribute('data-phase', 'done', { timeout: 10_000 })
+  // 맞붙는 동안 매수파·매도파의 말이 한 줄씩 쭉쭉 올라온다 (285번).
+  const lines = clash.getByTestId('debate-line')
+  await expect(lines.first()).toHaveAttribute('data-side', 'BUY')
+  await expect(lines.nth(1)).toHaveAttribute('data-side', 'SELL')
+  await expect(clash).toHaveAttribute('data-phase', 'clash')
+  await expect(clash).toHaveAttribute('data-phase', 'done', { timeout: 15_000 })
   await expect(clash.getByTestId('clash-result')).toHaveText(/팀 결정: (매수|매도)!/)
+  await expect(lines).toHaveCount(8)
   const result = await clash.getByTestId('clash-result').innerText()
+  // 결판은 이긴 쪽이 낸다.
+  await expect(lines.nth(6)).toHaveAttribute('data-side', result.includes('매수') ? 'BUY' : 'SELL')
   await expect(meeting.getByTestId('invest-choice')).toHaveText(
     result.includes('매수') ? '산다' : '판다',
   )

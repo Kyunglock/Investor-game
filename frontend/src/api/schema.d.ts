@@ -677,6 +677,15 @@ export interface components {
                     teamBuy: number;
                     /** @description 매도 쪽 무게 */
                     teamSell: number;
+                    /** @description 맡겼을 때 매수파·매도파가 주고받은 말 (decisions.md 285번). 맡기지 않았으면 비었다 */
+                    debate: {
+                        name: string;
+                        /** @enum {string} */
+                        side: "BUY" | "SELL";
+                        text: string;
+                        /** @description 결판을 내는 마지막 두 줄(이긴 쪽·진 쪽) */
+                        last: boolean;
+                    }[];
                     /**
                      * Format: int64
                      * @description 지켜봤을 때 맞는 쪽으로 했으면 벌었을 돈(뒤집힘 없이). 지켜보지 않았으면 null

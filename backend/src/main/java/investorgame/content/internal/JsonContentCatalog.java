@@ -395,6 +395,17 @@ class JsonContentCatalog implements ContentCatalog {
       requirePoint(invest.points().get(read), "투자 회의 대신 쓰는 요지 " + read);
     }
     requireNoQuote(invest.remarks(), "투자 회의");
+    RaisingContent.Debate debate = invest.debate();
+    require(debate != null, "맡긴 회의의 토론 문구가 없다");
+    for (String side : List.of("BUY", "SELL")) {
+      List<String> lines = debate.lines().get(side);
+      require(lines != null && lines.size() >= 3, "토론 말이 모자란다(셋 이상): " + side);
+      List<String> win = debate.win().get(side);
+      require(win != null && !win.isEmpty(), "토론 결판 말이 없다: " + side);
+    }
+    require(!debate.lose().isEmpty(), "토론에서 진 쪽의 말이 없다");
+    require(debate.bystanders().size() >= 2, "토론에 끌려 나올 사람이 둘 있어야 한다");
+    requireNoQuote(Map.of("debate", debate.lines()), "토론");
     for (String stat : List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE)) {
       require(raising.flipTips().containsKey(stat), "처음 뒤집힘 설명이 없다: " + stat);
     }

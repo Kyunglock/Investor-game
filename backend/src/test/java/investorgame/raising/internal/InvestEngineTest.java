@@ -448,6 +448,57 @@ class InvestEngineTest {
   }
 
   /**
+   * 맡기면 토론한다 (decisions.md 285번): 사자던 직원은 매수파, 팔자던 직원은 매도파로 세 번씩 번갈아 말하고, 이긴 쪽이 결판을 내고 진 쪽이 투덜댄다.
+   * 말에는 기사의 요지가 들어가고 기사를 따오지 않는다. 한쪽이 비면 모르겠다던 직원이나 옆자리 사람이 그쪽을 든다.
+   */
+  @Test
+  void 맡기면_매수파와_매도파가_번갈아_토론하고_이긴_쪽이_결판낸다() {
+    for (int seed = 0; seed < 60; seed++) {
+      CompanyState c = opened(new HashSeededRandom(seed), 300_000_000L);
+      ENGINE.hire(c, stats(90, 50, 50, 50));
+      ENGINE.hire(c, stats(20, 50, 50, 50));
+      ENGINE.place(c, Map.of(1, "day", 2, "bio"));
+      c.phase = "normal";
+      ENGINE.invest.convene(c, new HashSeededRandom(seed));
+      ENGINE.invest.decide(c, InvestEngine.TEAM, new HashSeededRandom(seed));
+      List<CompanyState.DebateLine> debate = c.invest.debate;
+      assertThat(debate).hasSize(8);
+      for (int i = 0; i < 6; i++) {
+        assertThat(debate.get(i).side).isEqualTo(i % 2 == 0 ? "BUY" : "SELL");
+        assertThat(debate.get(i).last).isFalse();
+        assertThat(debate.get(i).text).doesNotContain("{").doesNotContain("‘");
+      }
+      assertThat(debate.get(6).last).isTrue();
+      assertThat(debate.get(6).side).isEqualTo(c.invest.choice);
+      assertThat(debate.get(7).last).isTrue();
+      assertThat(debate.get(7).side).isNotEqualTo(c.invest.choice);
+      for (CompanyState.Remark r : c.invest.remarks) {
+        if ("UP".equals(r.read)) {
+          assertThat(debate)
+              .filteredOn(d -> d.name.equals(r.name))
+              .allMatch(d -> "BUY".equals(d.side));
+        } else if ("DOWN".equals(r.read)) {
+          assertThat(debate)
+              .filteredOn(d -> d.name.equals(r.name))
+              .allMatch(d -> "SELL".equals(d.side));
+        }
+      }
+      // 두 사람뿐이라 양쪽이 다 차려면 누군가는 끌려 나온다: 이름은 늘 회의에 온 직원이거나 옆자리 사람이다.
+      List<String> names =
+          new java.util.ArrayList<>(c.invest.remarks.stream().map(r -> r.name).toList());
+      names.addAll(List.of("옆자리 신입", "지나가던 인턴"));
+      assertThat(debate).allMatch(d -> names.contains(d.name));
+    }
+    // 정하지 않은 회의(사장이 고름)는 토론이 없다.
+    CompanyState boss = opened(new HashSeededRandom(1), 100_000_000L);
+    ENGINE.hire(boss, stats(50, 50, 50, 50));
+    ENGINE.place(boss, Map.of(1, "day"));
+    ENGINE.invest.convene(boss, new HashSeededRandom(1));
+    ENGINE.invest.decide(boss, InvestEngine.BUY, new HashSeededRandom(1));
+    assertThat(boss.invest.debate).isEmpty();
+  }
+
+  /**
    * 막판 뒤집기 (decisions.md 283번): 실제 플레이에서는 정하면 proposal-percent(35%)로 누군가 반대로 하자고 나선다. 답할 때까지 회의는
    * 정해지지 않고 결산도 못 한다. 따르면 반대쪽으로, 거절하면 원래대로 한다. 따랐으면 결과를 보고 상이나 벌을 준다.
    */

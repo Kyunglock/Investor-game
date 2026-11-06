@@ -12,7 +12,7 @@ import {
   spokesperson,
 } from './investShow'
 import { useRaisingStore } from './store'
-import { TEAM_CLASH_MS, TeamClash } from './TeamClash'
+import { TeamClash, teamClashMs } from './TeamClash'
 
 type Invest = NonNullable<Company['invest']>
 
@@ -56,8 +56,8 @@ export function InvestWindow({
   const outcome = invest.outcome
   // 창을 열 때 이미 정한 회의면(다시 그림) 연출 없이 끝난 모습을 보인다.
   const [skipped, setSkipped] = useState(() => Boolean(outcome) || reducedMotion())
-  // 맡겼으면(279번) 매수파·매도파가 먼저 맞붙고, 그 뒤에 직원마다 막대가 돈다.
-  const lead = outcome?.delegated ? TEAM_CLASH_MS : 0
+  // 맡겼으면(279·285번) 매수파·매도파가 먼저 토론하며 맞붙고, 그 뒤에 차트가 그려진다.
+  const lead = outcome?.delegated ? teamClashMs(outcome.debate) : 0
   const show = chartTimeline(1, CHART_MS, skipped, lead)
   const [finished, setFinished] = useState(skipped)
   useEffect(() => {
@@ -85,7 +85,8 @@ export function InvestWindow({
         data-testid="invest"
         data-finished={finished}
       >
-        <header className="flex items-baseline justify-between">
+        {/* 맡긴 회의는 토론(285번)으로 창이 길어진다: 머리줄(빨리 보기)은 내려도 위에 붙어 있다. */}
+        <header className="sticky top-0 z-20 -mx-5 -mt-5 flex items-baseline justify-between rounded-t bg-card px-5 pt-5 pb-1">
           <h3 className="font-pen text-[24px]">
             {year}년 차 {quarter}분기 종목 회의
           </h3>
@@ -271,12 +272,13 @@ export function InvestWindow({
             {outcome.delegated && (
               <TeamClash
                 // 빨리 보기를 누르면 끝난 모습으로 다시 그린다.
-                key={String(skipped)}
+                key={`clash-${skipped}`}
                 buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
                 sellNames={invest.remarks.filter((r) => r.read === 'DOWN').map((r) => r.name)}
                 buy={outcome.teamBuy}
                 sell={outcome.teamSell}
                 choice={outcome.choice}
+                debate={outcome.debate}
                 instant={skipped}
               />
             )}
@@ -296,7 +298,7 @@ export function InvestWindow({
             {/* 결정 장면 (283번): 직원마다 막대 대신 종목 차트가 그려지며 오르거나 빠진다. */}
             <InvestChart
               // 빨리 보기를 누르면 다 그린 차트로 다시 그린다.
-              key={String(skipped)}
+              key={`chart-${skipped}`}
               stock={invest.stockName}
               up={outcome.up}
               percent={percentOf(outcome.reveal)}

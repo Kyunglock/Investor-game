@@ -173,12 +173,24 @@ public record RaisingContent(
       String team,
       List<String> proposals,
       String rejected,
+      Debate debate,
       Map<String, String> verdictAsk,
       Map<String, String> verdictOptions,
       Map<String, String> verdicts,
       String rogue,
       String swayed,
       Map<String, String> reveal) {}
+
+  /**
+   * "너희가 알아서 해"의 토론 (decisions.md 285번). lines: 매수파(BUY)·매도파(SELL)가 번갈아 하는 말({point}: 제 쪽 요지,
+   * {against}: 상대 쪽 요지, {stock}). win: 이긴 쪽이 결판내는 말. lose: 진 쪽이 투덜대는 말. bystanders: 한쪽이 비었을 때 끌려
+   * 나오는 사람.
+   */
+  public record Debate(
+      Map<String, List<String>> lines,
+      Map<String, List<String>> win,
+      List<String> lose,
+      List<String> bystanders) {}
 
   /**
    * 시대가 바뀐다 (decisions.md 250번). ending: 시대의 마지막 해 연초 회의 한 줄({era}). changed: 시대가 바뀐 해의 결산 소식
