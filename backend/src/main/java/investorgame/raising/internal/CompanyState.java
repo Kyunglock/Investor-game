@@ -283,9 +283,6 @@ class CompanyState {
     boolean up;
     List<Sentence> sentences = new ArrayList<>();
     String clarity;
-    String tempter;
-    String sway;
-    String swaySentiment;
 
     /** 회의를 연 때 굳힌 한마디와 형광펜 (249번과 같다). 아직 안 열었으면 remarks가 null. */
     List<Remark> remarks;
@@ -396,6 +393,18 @@ class CompanyState {
 
     /** 이 분기에 폭락이 터졌다. */
     boolean crash;
+
+    /** 리서치 팀 보고 (decisions.md 278번): 형광펜을 그을 회의 수, 그은 수, 결정적 문장을 짚은 수. */
+    int highlightChances;
+
+    int highlights;
+    int highlightHits;
+
+    /** 종목 발굴팀이 가져와 회의한 종목(278번). 없으면 null. */
+    String scoutStock;
+
+    Boolean scoutUp;
+    Integer scoutPercent;
 
     List<Result> results = new ArrayList<>();
     List<String> lines = new ArrayList<>();

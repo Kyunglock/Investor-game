@@ -1004,18 +1004,6 @@
           ]
         }
       },
-      "sway": {
-        "POS": [
-          "금리 내린대요! 전부 사세요, 전부!",
-          "올해는 무조건 불장이에요. 대출받아서라도 들어가세요!",
-          "지금 안 들어가면 평생 후회합니다!"
-        ],
-        "NEG": [
-          "곧 대폭락 온대요. 다 파세요!",
-          "제 친구 펀드매니저가 현금만 들고 있으래요.",
-          "이번엔 진짜 위기예요. 전부 현금으로!"
-        ]
-      },
       "scout": {
         "pitch": {
           "low": [
@@ -1063,10 +1051,15 @@
         "courage": "{name}이(가) 손이 떨려 한 번 놓쳤습니다."
       },
       "support": {
-        "research": "{period}도 다른 데스크에 형광펜을 빌려줬습니다.",
+        "research": "{period} 형광펜을 {count}번 그었고, {hits}번이 결정적 문장을 짚었습니다.",
+        "researchNone": "{period}에는 기사 방향을 못 읽어 형광펜을 긋지 못했습니다.",
+        "researchIdle": "{period}에는 형광펜을 그을 회의가 없었습니다.",
         "risk": "{period} 꼬드김에 넘어간 사람은 {swayed}명입니다.",
-        "hr": "공채 지원자를 한 명 더 데려오고 있습니다.",
-        "scout": "{period}도 종목을 찾아다녔습니다."
+        "hr": "올해 공채에 지원자를 {extra}명 더 데려왔습니다. 지원자 등급은 {cap}까지 올라옵니다.",
+        "scoutUp": "{period} {stock}을(를) 가져왔고, {percent}% 올랐습니다.",
+        "scoutDown": "{period} {stock}을(를) 가져왔는데, {percent}% 빠졌습니다. 면목 없습니다.",
+        "scoutMany": "{period} 종목 {count}개를 가져와 {up}개가 올랐습니다.",
+        "scoutNone": "{period}에는 우리 팀이 가져온 종목이 없습니다."
       },
       "head": "{desk} 팀장 {name}",
       "appointed": "{name}을(를) {desk} 팀장으로 앉혔다.",

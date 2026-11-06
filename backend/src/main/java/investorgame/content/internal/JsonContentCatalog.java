@@ -208,9 +208,7 @@ class JsonContentCatalog implements ContentCatalog {
     require(
         macro != null
             && macro.stances().keySet().containsAll(stances)
-            && macro.notes().keySet().containsAll(stances)
-            && !macro.sway().getOrDefault("POS", List.of()).isEmpty()
-            && !macro.sway().getOrDefault("NEG", List.of()).isEmpty(),
+            && macro.notes().keySet().containsAll(stances),
         "거시경제 회의 문구가 없다");
     require(macro.topics().size() >= 3, "거시경제 회의 주제가 셋 이상이어야 한다");
     for (RaisingContent.MacroTopic topic : macro.topics()) {
@@ -260,10 +258,19 @@ class JsonContentCatalog implements ContentCatalog {
                 .containsAll(List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE))
             && teams.selfFlips().keySet().containsAll(teams.flips().keySet()),
         "팀장 보고 문구가 없다");
-    for (RaisingContent.Desk desk : company.desks()) {
-      require(
-          desk.trades() || teams.support().containsKey(desk.code()),
-          "돕는 자리의 팀장 보고가 없다: " + desk.code());
+    // 돕는 자리의 보고는 그 기간에 한 일을 말한다 (decisions.md 278번).
+    for (String key :
+        List.of(
+            "research",
+            "researchNone",
+            "researchIdle",
+            "risk",
+            "hr",
+            "scoutUp",
+            "scoutDown",
+            "scoutMany",
+            "scoutNone")) {
+      require(teams.support().containsKey(key), "돕는 자리의 팀장 보고가 없다: " + key);
     }
     RaisingContent.Scout scout = macro.scout();
     require(

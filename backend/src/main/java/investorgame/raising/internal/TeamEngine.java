@@ -81,10 +81,15 @@ class TeamEngine {
   }
 
   /**
-   * 팀장 보고 (269번). 자리 순서대로 사람이 앉은 자리마다 한 줄. results는 그 기간에 돈을 굴린 결과(분기 또는 한 해), period는 "이번
-   * 분기"·"올해". 결과가 있는 사람은 지금 자리가 아니라 그 결과의 자리로 묶는다.
+   * 팀장 보고 (269번). 자리 순서대로 사람이 앉은 자리마다 한 줄. results는 그 기간에 돈을 굴린 결과(분기 또는 한 해), quarters는 그 기간의
+   * 분기들(돕는 자리가 한 일, 278번), period는 "이번 분기"·"올해". 결과가 있는 사람은 지금 자리가 아니라 그 결과의 자리로 묶는다.
    */
-  List<Report> reports(CompanyState c, List<Result> results, String period, int seed) {
+  List<Report> reports(
+      CompanyState c,
+      List<Result> results,
+      List<CompanyState.Quarter> quarters,
+      String period,
+      int seed) {
     RaisingContent.Teams texts = texts();
     Map<String, List<Result>> byDesk = new HashMap<>();
     results.forEach(r -> byDesk.computeIfAbsent(r.desk, d -> new ArrayList<>()).add(r));
@@ -127,15 +132,62 @@ class TeamEngine {
         }
         text = more.toString();
       } else {
-        text =
-            Korean.fill(
-                texts.support().get(desk.code()),
-                Map.of("period", period, "swayed", String.valueOf(swayed)));
+        text = supportLine(c, desk.code(), quarters, period, swayed);
       }
       report.text = text;
       reports.add(report);
     }
     return reports;
+  }
+
+  /**
+   * 돕는 자리의 보고 (decisions.md 278번): 그 기간에 실제로 한 일과 결과. 리서치 팀은 형광펜이 결정적 문장을 짚은 횟수, 종목 발굴팀은 가져온 종목의
+   * 오르내림, 인사팀은 더 데려온 지원자와 등급의 중심, 리스크 관리 팀은 꼬드김에 넘어간 사람 수.
+   */
+  private String supportLine(
+      CompanyState c, String desk, List<CompanyState.Quarter> quarters, String period, int swayed) {
+    Map<String, String> s = texts().support();
+    Map<String, String> values = new HashMap<>();
+    values.put("period", period);
+    switch (desk) {
+      case "research" -> {
+        int chances = quarters.stream().mapToInt(q -> q.highlightChances).sum();
+        int drawn = quarters.stream().mapToInt(q -> q.highlights).sum();
+        int hits = quarters.stream().mapToInt(q -> q.highlightHits).sum();
+        values.put("count", String.valueOf(drawn));
+        values.put("hits", String.valueOf(hits));
+        String key = chances == 0 ? "researchIdle" : drawn == 0 ? "researchNone" : "research";
+        return Korean.fill(s.get(key), values);
+      }
+      case "scout" -> {
+        List<CompanyState.Quarter> found =
+            quarters.stream().filter(q -> q.scoutStock != null).toList();
+        if (found.isEmpty()) {
+          return Korean.fill(s.get("scoutNone"), values);
+        }
+        if (found.size() == 1) {
+          CompanyState.Quarter q = found.getFirst();
+          values.put("stock", q.scoutStock);
+          values.put("percent", String.valueOf(q.scoutPercent));
+          return Korean.fill(
+              s.get(Boolean.TRUE.equals(q.scoutUp) ? "scoutUp" : "scoutDown"), values);
+        }
+        values.put("count", String.valueOf(found.size()));
+        values.put(
+            "up",
+            String.valueOf(found.stream().filter(q -> Boolean.TRUE.equals(q.scoutUp)).count()));
+        return Korean.fill(s.get("scoutMany"), values);
+      }
+      case "hr" -> {
+        values.put("extra", String.valueOf(company.hrExtraApplicants()));
+        values.put("cap", company.hrOf(c).map(company::hrCap).orElse("F"));
+        return Korean.fill(s.get("hr"), values);
+      }
+      default -> {
+        values.put("swayed", String.valueOf(swayed));
+        return Korean.fill(s.get(desk), values);
+      }
+    }
   }
 
   /** 보고자 한 줄: "반도체 데스크 팀장 박한결". */

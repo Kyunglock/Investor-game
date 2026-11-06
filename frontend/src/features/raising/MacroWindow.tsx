@@ -79,9 +79,6 @@ export function MacroWindow({
           {macro.highlightBy && (
             <p className="mt-1 text-[12px] text-muted">형광펜: 리서치 팀 {macro.highlightBy}</p>
           )}
-          <p className="mt-2 rounded border border-line-soft px-2 py-1 text-[13px]">
-            <b>{macro.sway.who}</b>: “{macro.sway.text}”
-          </p>
         </article>
 
         {macro.remarks.length > 0 && !outcome && (

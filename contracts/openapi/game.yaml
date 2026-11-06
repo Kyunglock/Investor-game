@@ -670,7 +670,7 @@ components:
           description: 이번 분기의 거시경제 회의 (decisions.md 266·268번). 끝난 회사나 이 회의가 생기기 전의 해면 null. 숨은 방향은 분기 실적의 섹터 바람으로 드러난다
           oneOf:
             - type: object
-              required: [topic, title, sentences, sway, remarks, stances, ready, convened]
+              required: [topic, title, sentences, remarks, stances, ready, convened]
               properties:
                 topic: { type: string, description: 주제 이름(기준금리·환율·유가·물가·경기) }
                 title: { type: string }
@@ -685,12 +685,6 @@ components:
                       highlighted: { type: boolean }
                       omen: { type: boolean }
                 highlightBy: { type: [string, 'null'] }
-                sway:
-                  type: object
-                  required: [who, text]
-                  properties:
-                    who: { type: string }
-                    text: { type: string }
                 remarks:
                   type: array
                   description: 자리에 앉은 직원의 한마디. 회의를 열기 전에는 비어 있다. read UP은 공격, DOWN은 방어 쪽
