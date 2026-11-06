@@ -10,9 +10,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param turns 회사가 도는 해의 수. 2단계는 세 해로 끝나는 체험판이다
  * @param gradeCapital 회사 등급의 자본 띠(원). F부터 차례로, 자본만 본다 (4.5절)
  * @param seats 등급별 자리 수. F부터 차례로 (4.5절)
- * @param multiplierPercent 등급이 한 단계 오를 때마다 수수료 매출과 판돈에 곱하는 비율 (F = 100%)
- * @param feeBp 수수료 매출 = 자본 × 이 비율 × 배율. 시장이 나빠도 들어오는 바닥 수입
- * @param stakePercent 돈을 굴리는 자리가 나눠 맡는 판돈 = 자본 × 이 비율 × 배율 (자본을 넘지 않는다)
+ * @param scale 규모의 벽: 회사 등급이 오를수록 맞혀서 버는 몫은 줄고 틀리거나 폭락장에 잃는 몫은 커진다 (decisions.md 244번)
+ * @param feeBp 수수료 매출 = 자본 × 이 비율. 시장이 나빠도 들어오는 바닥 수입
+ * @param stakePercent 돈을 굴리는 자리가 나눠 맡는 판돈 = 자본 × 이 비율 (자본을 넘지 않는다)
  * @param decisions 직원 한 명이 한 해에 내리는 매매 판단 수
  * @param omenPercent 폭락장 앞에 연초 회의에서 조짐이 보일 확률 (나머지는 조짐 없이 온다)
  * @param falseOmenPercent 폭락장이 아닌 해에 헛조짐이 보일 확률
@@ -33,7 +33,7 @@ public record CompanyProperties(
     int turns,
     List<Long> gradeCapital,
     List<Integer> seats,
-    int multiplierPercent,
+    Scale scale,
     int feeBp,
     int stakePercent,
     int decisions,
@@ -50,6 +50,16 @@ public record CompanyProperties(
     Market market,
     Invest invest,
     Sale sale) {
+
+  /**
+   * 규모의 벽 (decisions.md 244번). 회사 등급 단계(F = 0)만큼 거듭제곱해 곱한다. 큰 돈은 시장이 받아 주지 않아 맞혀도 덜 벌고, 틀리면 빠져나오기
+   * 어려워 더 잃고, 폭락장에는 덩치만큼 크게 맞는다. 그래서 어느 등급에서도 잃는 해가 있다.
+   *
+   * @param gainPercent 맞혔을 때 버는 몫(투자 회의 포함)에 등급 단계마다 곱하는 비율
+   * @param missPercent 틀리거나 꼬드김·손 뒤집힘으로 잃는 몫(투자 회의 포함)에 등급 단계마다 곱하는 비율
+   * @param crashPercent 폭락장의 시장 손익에 등급 단계마다 곱하는 비율
+   */
+  public record Scale(int gainPercent, int missPercent, int crashPercent) {}
 
   /**
    * @param yearUpBp 올해 시장 갈래(boom·normal·crash)가 뉴스가 오를 확률에 더하는 만분율
