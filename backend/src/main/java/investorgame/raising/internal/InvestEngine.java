@@ -8,6 +8,7 @@ import investorgame.common.Sentiment;
 import investorgame.common.StatCodes;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.random.SeededRandom;
+import investorgame.content.Clue;
 import investorgame.content.ContentCatalog;
 import investorgame.content.NewsClues;
 import investorgame.content.NewsDefinition;
@@ -44,9 +45,6 @@ class InvestEngine {
   private static final int SIDE_SENTENCES = 2;
   private static final int BP = 10_000;
   private static final int PERCENT = 100;
-
-  /** 한마디에 따오는 기사 문장의 길이. 넘으면 줄임표로 자른다. */
-  private static final int QUOTE_CHARS = 20;
 
   private final CompanyEngine company;
   private final ContentCatalog content;
@@ -254,17 +252,18 @@ class InvestEngine {
 
   /** 단서 기사를 짓는다. 거시경제 회의(266번)도 같은 꼴로 짓는다. */
   List<Sentence> article(
-      List<String> ups,
-      List<String> downs,
+      List<Clue> ups,
+      List<Clue> downs,
       List<String> neutrals,
       boolean up,
       RandomGenerator rng,
       Map<String, String> names) {
     String truth = up ? UP : DOWN;
     String other = up ? DOWN : UP;
-    List<String> truthPool = new ArrayList<>(up ? ups : downs);
-    List<String> otherPool = new ArrayList<>(up ? downs : ups);
-    List<String> neutralPool = new ArrayList<>(neutrals);
+    List<Clue> truthPool = new ArrayList<>(up ? ups : downs);
+    List<Clue> otherPool = new ArrayList<>(up ? downs : ups);
+    List<Clue> neutralPool =
+        new ArrayList<>(neutrals.stream().map(t -> new Clue(t, null)).toList());
     List<Sentence> sentences = new ArrayList<>();
     sentences.add(sentence(draw(truthPool, rng, names), truth, true));
     boolean anyOther = false;
@@ -288,16 +287,20 @@ class InvestEngine {
     return sentences;
   }
 
-  private static Sentence sentence(String text, String sign, boolean decisive) {
+  private static Sentence sentence(Clue clue, String sign, boolean decisive) {
     Sentence s = new Sentence();
-    s.text = text;
+    s.text = clue.text();
+    s.point = clue.point();
     s.sign = sign;
     s.decisive = decisive;
     return s;
   }
 
-  private static String draw(List<String> pool, RandomGenerator rng, Map<String, String> names) {
-    return Korean.fill(pool.remove(rng.nextInt(pool.size())), names);
+  private static Clue draw(List<Clue> pool, RandomGenerator rng, Map<String, String> names) {
+    Clue clue = pool.remove(rng.nextInt(pool.size()));
+    return new Clue(
+        Korean.fill(clue.text(), names),
+        clue.point() == null ? null : Korean.fill(clue.point(), names));
   }
 
   /** 종목 회의를 열 수 있는가: 직원이 물어 온(267번) 정하지 않은 회의가 있고 돈을 굴리는 직원이 있다. */
@@ -377,8 +380,8 @@ class InvestEngine {
 
   /**
    * 자리에 앉은 직원의 한마디 (decisions.md 239번). 기사를 읽은 쪽은 자기 안목(리서치 팀 형광펜으로 반쯤 올린)이 정하고, 말투는 자기 안목의 구간이
-   * 정한다: 낮으면 감·소문·차트 모양으로 큰소리치거나 갈팡질팡하고, 보통이면 기사 한 줄을 대충 근거로 망설이고, 높으면 결정적 문장을 짚고, 최고면 확신한다. 읽은 쪽의
-   * 문장을 따온다(안목이 높고 맞게 읽었으면 결정적 문장).
+   * 정한다: 낮으면 감·소문·차트 모양으로 큰소리치거나 갈팡질팡하고, 보통이면 기사 한 대목을 대충 근거로 망설이고, 높으면 결정적 대목을 짚고, 최고면 확신한다. 기사
+   * 문장을 따오지 않고 요지를 엮어 자기 말로 한다(272번): 읽은 쪽의 요지를 근거로(안목이 높고 맞게 읽었으면 결정적 문장의 요지), 반대쪽 요지와 견준다.
    */
   record Remark(Employee employee, String read, String text, Integer stubbornBp) {}
 
@@ -413,29 +416,60 @@ class InvestEngine {
       String tier = sharp && foggiest(c.invest) && !NEUTRAL.equals(read) ? "foggy" : voice.key();
       List<String> lines = texts.remarks().get(tier).get(read);
       String line = lines.get(random.forKey("invest-remark", c.turn(), e.id).nextInt(lines.size()));
-      String quote = quote(c.invest, read, voice);
+      Points points = points(c.invest.sentences, read, voice, texts.points(), null);
       remarks.add(
-          new Remark(e, read, Korean.fill(line, Map.of("quote", quote, "stock", stock)), stubborn));
+          new Remark(
+              e,
+              read,
+              Korean.fill(
+                  line,
+                  Map.of("point", points.point(), "against", points.against(), "stock", stock)),
+              stubborn));
     }
     return remarks;
   }
 
-  /** 한마디에 따올 문장: 읽은 쪽으로 기운 문장. 안목이 높으면(HIGH 이상) 그 가운데 결정적 문장을 먼저 고른다. 길면 자른다. */
-  private static String quote(Invest invest, String read, Hint.Detail voice) {
-    return quote(invest.sentences, invest.title, read, voice);
+  /**
+   * 한마디에 엮는 요지 둘 (decisions.md 272번). point는 제 판단의 근거, against는 견주어 본 반대쪽 근거다.
+   *
+   * @param point 읽은 쪽(모르겠다면 오름 쪽)으로 기운 문장의 요지. 안목이 높으면(HIGH 이상) 그 가운데 결정적 문장을 먼저 고른다
+   * @param against 반대쪽(모르겠다면 내림 쪽)으로 기운 문장의 요지
+   */
+  record Points(String point, String against) {}
+
+  /**
+   * 기사에서 한마디에 엮을 요지를 고른다. 요지가 없는 문장(이 규칙 전에 지은 기사)이면 fallback(UP·DOWN)을, 폭락 조짐 문장이면 omenPoint를 쓴다.
+   */
+  static Points points(
+      List<Sentence> sentences,
+      String read,
+      Hint.Detail voice,
+      Map<String, String> fallback,
+      String omenPoint) {
+    boolean sharp = voice == Hint.Detail.HIGH || voice == Hint.Detail.EXPERT;
+    String mine = NEUTRAL.equals(read) ? UP : read;
+    String theirs = UP.equals(mine) ? DOWN : UP;
+    return new Points(
+        pointOf(pick(sentences, mine, sharp), mine, fallback, omenPoint),
+        pointOf(pick(sentences, theirs, false), theirs, fallback, omenPoint));
   }
 
-  static String quote(List<Sentence> sentences, String title, String read, Hint.Detail voice) {
-    boolean sharp = voice == Hint.Detail.HIGH || voice == Hint.Detail.EXPERT;
+  private static Sentence pick(List<Sentence> sentences, String sign, boolean sharp) {
     Sentence pick = null;
     for (Sentence s : sentences) {
-      if (s.sign.equals(read) && (pick == null || (sharp && s.decisive))) {
+      if (s.sign.equals(sign) && (pick == null || (sharp && s.decisive))) {
         pick = s;
       }
     }
-    String text = pick == null ? title : pick.text;
-    text = text.endsWith(".") ? text.substring(0, text.length() - 1) : text;
-    return text.length() > QUOTE_CHARS ? text.substring(0, QUOTE_CHARS).strip() + "…" : text;
+    return pick;
+  }
+
+  private static String pointOf(
+      Sentence s, String sign, Map<String, String> fallback, String omenPoint) {
+    if (s != null && s.omen && omenPoint != null) {
+      return omenPoint;
+    }
+    return s != null && s.point != null ? s.point : fallback.get(sign);
   }
 
   /** 고집이 보이는 정도: 없음·보통·높음 (제멋대로 할 확률이 stubbornBp 이상이면 보통, 두 배 이상이면 높음). */

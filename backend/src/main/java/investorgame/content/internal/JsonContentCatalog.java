@@ -2,6 +2,7 @@ package investorgame.content.internal;
 
 import investorgame.common.Hint;
 import investorgame.common.StatCodes;
+import investorgame.content.Clue;
 import investorgame.content.ContentCatalog;
 import investorgame.content.CrisisDefinition;
 import investorgame.content.NewsClues;
@@ -216,6 +217,8 @@ class JsonContentCatalog implements ContentCatalog {
       require(
           topic.up().size() >= 3 && topic.down().size() >= 3 && !topic.neutral().isEmpty(),
           "거시경제 기사 문장이 모자란다(오름·내림 셋 이상, 중립 하나 이상): " + topic.code());
+      requirePoints(topic.up(), "거시경제 " + topic.code());
+      requirePoints(topic.down(), "거시경제 " + topic.code());
       for (String side : List.of("UP", "DOWN")) {
         RaisingContent.Wind wind = topic.winds().get(side);
         require(wind != null && wind.line() != null, "섹터 바람이 없다: " + topic.code() + " " + side);
@@ -237,6 +240,8 @@ class JsonContentCatalog implements ContentCatalog {
       List<String> lines = macro.remarks().getOrDefault("foggy", Map.of()).get(read);
       require(lines != null && !lines.isEmpty(), "흐린 거시경제 기사의 한마디가 없다: " + read);
     }
+    requireNoQuote(macro.remarks(), "거시경제");
+    requirePoint(macro.omenPoint(), "거시경제 폭락 조짐");
     require(
         company.quarters() != null
             && company.quarters().crash() != null
@@ -367,6 +372,7 @@ class JsonContentCatalog implements ContentCatalog {
             && invest.options().keySet().containsAll(List.of("BUY", "SELL", "HOLD"))
             && invest.actions().keySet().containsAll(List.of("BUY", "SELL", "HOLD"))
             && invest.remarks() != null
+            && invest.points() != null
             && invest.reveal().keySet().containsAll(List.of("UP", "DOWN")),
         "투자 회의 문구가 없다");
     for (String voice : List.of("low", "mid", "high", "expert")) {
@@ -378,7 +384,9 @@ class JsonContentCatalog implements ContentCatalog {
     for (String read : List.of("UP", "DOWN")) {
       List<String> lines = invest.remarks().getOrDefault("foggy", Map.of()).get(read);
       require(lines != null && !lines.isEmpty(), "흐린 기사의 한마디가 없다: " + read);
+      requirePoint(invest.points().get(read), "투자 회의 대신 쓰는 요지 " + read);
     }
+    requireNoQuote(invest.remarks(), "투자 회의");
     for (String stat : List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE)) {
       require(raising.flipTips().containsKey(stat), "처음 뒤집힘 설명이 없다: " + stat);
     }
@@ -389,6 +397,8 @@ class JsonContentCatalog implements ContentCatalog {
       require(
           clue.up().size() >= 3 && clue.down().size() >= 3 && !clue.neutral().isEmpty(),
           "단서 기사 문장이 모자란다(오름·내림 셋 이상, 중립 하나 이상): " + definition.code());
+      requirePoints(clue.up(), "단서 기사 " + definition.code());
+      requirePoints(clue.down(), "단서 기사 " + definition.code());
     }
   }
 
@@ -411,6 +421,40 @@ class JsonContentCatalog implements ContentCatalog {
     for (NamedCode sector : meta.sectors()) {
       require(!stocksOf(sector.code()).isEmpty(), "종목이 없는 섹터: " + sector.code());
     }
+  }
+
+  /** 요지가 가장 길 수 있는 글자 수 (decisions.md 272번). 한마디에 둘을 엮어도 모바일에서 두 줄 안팎이 되게. */
+  private static final int POINT_CHARS = 30;
+
+  /** 오름·내림 문장마다 요지가 있어야 한다 (272번). */
+  private static void requirePoints(List<Clue> clues, String where) {
+    for (Clue clue : clues) {
+      require(clue.text() != null && !clue.text().isBlank(), where + " 문장이 비었다");
+      requirePoint(clue.point(), where + " 「" + clue.text() + "」");
+    }
+  }
+
+  /**
+   * 요지는 한마디 틀에 "{point}는 점", "{point}면"처럼 이어 붙는다 (272번). 그래서 "~다"로 끝나야 하고, "빚이다"처럼 "이다"로 끝나면 "빚이다는
+   * 점"이 되어 안 된다(그럴 땐 "빚으로 댄다"처럼 쓴다). 기사 문장을 그대로 옮기지 않게 짧아야 한다.
+   */
+  private static void requirePoint(String point, String where) {
+    require(point != null && !point.isBlank(), "요지가 없다: " + where);
+    require(point.endsWith("다") && !point.endsWith("이다"), "요지는 '~다'로 끝나야 한다(이다는 안 된다): " + where);
+    require(point.length() <= POINT_CHARS, "요지가 너무 길다(" + POINT_CHARS + "자 이하): " + where);
+  }
+
+  /** 한마디 틀은 기사 문장을 따오지 않는다 (272번). 옛 {quote} 자리표시가 남으면 안 된다. */
+  private static void requireNoQuote(Map<String, Map<String, List<String>>> remarks, String where) {
+    remarks.forEach(
+        (voice, byRead) ->
+            byRead.forEach(
+                (read, lines) ->
+                    lines.forEach(
+                        line ->
+                            require(
+                                !line.contains("{quote}") && !line.contains("‘"),
+                                where + " 한마디가 기사를 따온다: " + voice + " " + read))));
   }
 
   private static void require(boolean condition, String message) {

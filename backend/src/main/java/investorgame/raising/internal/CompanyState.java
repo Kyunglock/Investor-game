@@ -299,6 +299,9 @@ class CompanyState {
   static class Sentence {
     String text;
 
+    /** 직원이 줄여 말하는 요지 (decisions.md 272번). 중립 문장과 이 규칙 전에 지은 기사의 문장에는 없다. */
+    String point;
+
     /** UP·DOWN·NEUTRAL: 이 문장이 기운 쪽. */
     String sign;
 

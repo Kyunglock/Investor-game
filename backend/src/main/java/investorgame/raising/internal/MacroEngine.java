@@ -174,13 +174,19 @@ class MacroEngine {
               : voice.key();
       List<String> lines = texts.remarks().get(tier).get(read);
       String line = lines.get(random.forKey("macro-remark", c.turn(), e.id).nextInt(lines.size()));
-      String quote = InvestEngine.quote(macro.sentences, topic(macro).title(), read, voice);
+      InvestEngine.Points points =
+          InvestEngine.points(
+              macro.sentences,
+              read,
+              voice,
+              content.raising().company().invest().points(),
+              texts.omenPoint());
       CompanyState.Remark r = new CompanyState.Remark();
       r.employeeId = e.id;
       r.name = e.name;
       r.desk = e.desk;
       r.read = read;
-      r.text = Korean.fill(line, Map.of("quote", quote));
+      r.text = Korean.fill(line, Map.of("point", points.point(), "against", points.against()));
       remarks.add(r);
     }
     macro.remarks = remarks;

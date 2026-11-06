@@ -217,8 +217,8 @@ class InvestEngineTest {
   }
 
   /**
-   * 한마디는 안목에 따라 다르다 (decisions.md 239번): 안목이 낮으면 기사를 따오지 않고 감·소문으로 말하고, 높으면 결정적 문장을 따온다. 리서치 팀 형광펜은
-   * 반만 빌려, 안목이 낮은 직원은 리서치 팀만큼 맞히지 못한다.
+   * 한마디는 안목에 따라 다르다 (decisions.md 239번): 안목이 낮으면 기사를 근거로 들지 않고 감·소문으로 말하고, 높으면 결정적 문장의 요지를 근거로 든다.
+   * 누구도 기사 문장을 따오지 않는다(272번). 리서치 팀 형광펜은 반만 빌려, 안목이 낮은 직원은 리서치 팀만큼 맞히지 못한다.
    */
   @Test
   void 한마디는_안목에_따라_말투와_근거와_맞히는_정도가_다르다() {
@@ -239,15 +239,22 @@ class InvestEngineTest {
       var dull = remarks.get(0);
       var sharp = remarks.get(1);
       String truth = c.invest.up ? "UP" : "DOWN";
-      assertThat(dull.text()).as("안목이 낮으면 기사를 따오지 않는다").doesNotContain("‘");
-      assertThat(sharp.text()).as("안목이 높으면 기사를 따온다").contains("‘");
-      assertThat(sharp.text()).doesNotContain("{");
-      // 화면이 한마디를 큰따옴표로 감싸므로 따온 문장으로 시작하지 않는다.
-      assertThat(remarks).noneMatch(r -> r.text().startsWith("‘"));
+      var points = c.invest.sentences.stream().map(x -> x.point).filter(p -> p != null).toList();
+      assertThat(points).as("오름·내림 문장에는 요지가 있다").hasSize(3);
+      assertThat(points).noneMatch(dull.text()::contains).as("안목이 낮으면 기사를 근거로 들지 않는다");
+      if (!"NEUTRAL".equals(sharp.read())) {
+        assertThat(points).as("안목이 높으면 요지를 근거로 든다").anyMatch(sharp.text()::contains);
+      }
+      for (var r : remarks) {
+        assertThat(r.text()).doesNotContain("{").doesNotContain("‘");
+        for (var x : c.invest.sentences) {
+          assertThat(r.text()).as("기사 문장을 따오지 않는다").doesNotContain(x.text.substring(0, 12));
+        }
+      }
       if (sharp.read().equals(truth)) {
         String decisive =
-            c.invest.sentences.stream().filter(x -> x.decisive).findFirst().orElseThrow().text;
-        if (!sharp.text().contains(decisive.substring(0, 10))) {
+            c.invest.sentences.stream().filter(x -> x.decisive).findFirst().orElseThrow().point;
+        if (!sharp.text().contains(decisive)) {
           missedDecisive++;
         }
       }
@@ -263,7 +270,7 @@ class InvestEngineTest {
         dullRight++;
       }
     }
-    assertThat(missedDecisive).as("맞게 읽은 높은 안목은 결정적 문장을 짚는다").isZero();
+    assertThat(missedDecisive).as("맞게 읽은 높은 안목은 결정적 문장의 요지를 근거로 든다").isZero();
     assertThat(clear).isGreaterThan(trials / 5);
     assertThat(sharpRight).isGreaterThan(clear * 85 / 100);
     // 형광펜을 반만 빌려(안목 0 → 50) 맞히는 정도가 안목 높은 직원보다 확실히 낮다.
