@@ -460,6 +460,10 @@ test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 �
   const clash = meeting.getByTestId('team-clash')
   await expect(clash).toBeVisible()
   await expect(clash).toHaveAttribute('data-phase', 'clash')
+  // 막대 대신 회의실 (286번): 매수파는 왼쪽, 매도파는 오른쪽에 앉는다. 양쪽 다 누군가 앉는다.
+  await expect(clash.getByTestId('meeting-room')).toBeVisible()
+  await expect(clash.getByTestId('room-buy').getByTestId('room-seat').first()).toBeVisible()
+  await expect(clash.getByTestId('room-sell').getByTestId('room-seat').first()).toBeVisible()
   // 맞붙는 동안 매수파·매도파의 말이 한 줄씩 쭉쭉 올라온다 (285번).
   const lines = clash.getByTestId('debate-line')
   await expect(lines.first()).toHaveAttribute('data-side', 'BUY')
