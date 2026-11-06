@@ -27,7 +27,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param hr 인사팀이 공채 시장을 돕는다 (6.3절)
  * @param market 공채 시장: 해마다 지원자가 오고 계약금을 내고 뽑는다 (decisions.md 228번)
  * @param invest 투자 회의: 해마다 한 번 단서 기사를 놓고 직원들과 고민한다 (decisions.md 229번)
- * @param rivals 라이벌 증권사가 해마다 자라는 폭 (decisions.md 261번)
  * @param people 이직 제안과 근속 (decisions.md 262번)
  * @param macro 거시경제 회의: 올해 회사의 태도가 그해 결산 전체에 걸린다 (decisions.md 266번)
  * @param scout 종목 발굴: 종목 회의는 직원이 종목을 물어 올 때만 열린다 (decisions.md 267번)
@@ -52,28 +51,15 @@ public record CompanyProperties(
     int crashFlipPercent,
     Experience experience,
     Effects effects,
+    Perks perks,
     Hr hr,
     Market market,
     Invest invest,
-    Rivals rivals,
     People people,
     Macro macro,
     Scout scout,
     Sale sale,
-    Targets targets,
     String endingGrade) {
-
-  /**
-   * 올해의 라이벌 (decisions.md 275번). 연초 회의에서 쉬움·보통·어려움 후보를 하나씩 보인다.
-   *
-   * @param bandPercent 난이도마다 후보의 자본 띠: 연초 우리 자본의 [아래, 위)%. 이 띠의 실제 다른 사장 회사 가운데 하나를 뽑는다
-   * @param fictionalPercent 띠에 실제 회사가 없으면 지어낸 회사를 우리 자본의 이만큼(%)으로 세운다. 지어낸 회사는 그해 시장대로 자란다
-   * @param bonusBp 이기면 라이벌의 고객이 넘어와 우리 자본이 이만큼(만분율) 는다
-   */
-  public record Targets(
-      Map<String, List<Integer>> bandPercent,
-      Map<String, Integer> fictionalPercent,
-      Map<String, Integer> bonusBp) {}
 
   /**
    * 거시경제 회의 (decisions.md 266번).
@@ -158,14 +144,6 @@ public record CompanyProperties(
    * @param refreshBp 새로 받기의 자본 비율 값(만분율). 둘 가운데 큰 쪽에 (올해 새로 받은 횟수 + 1)을 곱한다
    */
   /**
-   * 라이벌 증권사 (decisions.md 261번).
-   *
-   * @param phasePercent 그해 시장 갈래별 한 해 자본 비율(%)
-   * @param spread 회사마다 해마다 더하고 빼는 폭(%p)
-   */
-  public record Rivals(Map<String, Integer> phasePercent, int spread) {}
-
-  /**
    * 이직 제안과 근속 (decisions.md 262번).
    *
    * @param poachFromYear 이 해부터 이직 제안이 온다
@@ -233,7 +211,18 @@ public record CompanyProperties(
       int convictionGainBp,
       int convictionMissPercent,
       int contrarianCrashBp,
-      int leaderFlipPercent) {}
+      int leaderFlipPercent,
+      int bigGainPercent,
+      int wallMissPercent,
+      int godFlipPercent) {}
+
+  /**
+   * 등급 효과 (decisions.md 289번): 종합 등급(F~SSS)마다.
+   *
+   * @param gainPercent 맞혔을 때 버는 몫에 더 얹는 비율(%). SSS 위(X~GOD)는 SSS 값
+   * @param growthPercent 한 해 자리에서 일하면 가장 낮은 능력치(운 빼고)가 한 띠 오를 확률(%). SSS는 0: 그 위는 실전 경험으로 오른다
+   */
+  public record Perks(Map<String, Integer> gainPercent, Map<String, Integer> growthPercent) {}
 
   /**
    * @param dropLossPercent 한 해 결산에서 맡은 판돈이 이만큼 빠지면 종합 등급 한 단계 하락 (6.4절 제안: 30)

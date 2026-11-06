@@ -279,6 +279,76 @@ class CompanyEngineTest {
         .contains("용기");
   }
 
+  /** XS 큰손·XSS 철벽·GOD 신의 손 (decisions.md 289번): ZZZ 위 직원 등급. 회사 등급은 ZZZ까지다. */
+  @Test
+  void XS_XSS_GOD_효과() {
+    Map<String, Integer> ace = stats(95, 95, 95, 95);
+    assertThat(averageWithRank(ace, 7, null))
+        .as("XS 큰손은 더 번다")
+        .isGreaterThan(averageWithRank(ace, 6, null));
+    assertThat(averageWithRank(ace, 8, null))
+        .as("XSS 철벽은 틀려도 덜 잃는다")
+        .isGreaterThan(averageWithRank(ace, 7, null));
+    assertThat(teammateFlips(9)).as("GOD 신의 손이면 모두 덜 흔들린다").isLessThan(teammateFlips(8));
+
+    Map<String, Integer> top = new HashMap<>(ace);
+    top.put("luck", 95);
+    assertThat(CompanyEngine.gradeOf(top, 7)).isEqualTo("XS");
+    assertThat(CompanyEngine.gradeOf(top, 8)).isEqualTo("XSS");
+    assertThat(CompanyEngine.gradeOf(top, 9)).isEqualTo("GOD");
+    CompanyState company = open(1, top, 100_000_000);
+    CompanyState.Employee god = company.employees.getFirst();
+    god.rank = 9;
+    assertThat(ENGINE.topRank(god)).as("GOD가 맨 위").isTrue();
+    assertThat(ENGINE.effectsOf(god)).endsWith("큰손", "철벽", "신의 손");
+    god.rank = 6;
+    assertThat(ENGINE.topRank(god)).as("ZZZ 위로 더 오를 수 있다").isFalse();
+    assertThat(ENGINE.grade(Long.MAX_VALUE)).as("회사 등급은 ZZZ까지").isEqualTo("ZZZ");
+  }
+
+  /**
+   * 등급 효과 (decisions.md 289번): 종합 등급이 높을수록 맞혔을 때 더 벌고, 낮을수록 잘 자란다. F 직원은 몇 해 일해야 E가 된다: 등급이 바로 높아지지
+   * 않는다.
+   */
+  @Test
+  void 등급마다_더_버는_몫과_자라는_빠르기가_다르다() {
+    Map<String, Integer> rookie =
+        new HashMap<>(
+            Map.of("insight", 10, "patience", 10, "courage", 10, "conviction", 10, "luck", 10));
+    CompanyState probe = open(1, rookie, 100_000_000);
+    CompanyState.Employee f = probe.employees.getFirst();
+    assertThat(ENGINE.perkGainPercent(f)).isZero();
+    assertThat(ENGINE.perkGrowthPercent(f)).isEqualTo(60);
+    assertThat(ENGINE.perkLine(f.stats, 0)).startsWith("새내기 · 맞히면 0% 더 번다").contains("60% 확률로 자란다");
+    Map<String, Integer> legend = stats(95, 95, 95, 95);
+    legend = new HashMap<>(legend);
+    legend.put("luck", 95);
+    assertThat(ENGINE.perkLine(legend, 0)).startsWith("레전드 · 맞히면 16% 더 번다").contains("실전 경험");
+    assertThat(averageWithRank(stats(55, 55, 55, 55), 0, null))
+        .as("같은 능력치라도 등급이 같으니 같다: 효과는 등급을 따라간다")
+        .isEqualTo(averageWithRank(stats(55, 55, 55, 55), 0, null));
+
+    int trials = 200;
+    int[] years = new int[trials];
+    int grownLines = 0;
+    for (int seed = 0; seed < trials; seed++) {
+      // 연봉이 없는 작은 회사(270번)라 연봉 때문에 떠나지 않는다.
+      CompanyState company = open(seed, rookie, 100_000_000L);
+      CompanyState.Employee e = company.employees.getFirst();
+      ENGINE.place(company, Map.of(e.id, "day"));
+      int year = 0;
+      while (year < 40 && CompanyEngine.overallGrade(e.stats).equals("F")) {
+        CompanyState.Settlement s = settleYear(company, new HashSeededRandom(seed));
+        grownLines += s.lines.stream().anyMatch(l -> l.contains("자랐다")) ? 1 : 0;
+        year++;
+      }
+      years[seed] = year;
+    }
+    java.util.Arrays.sort(years);
+    assertThat(years[trials / 2]).as("F 직원이 E가 되기까지 해 수의 중앙값").isBetween(6, 12);
+    assertThat(grownLines).as("자란 해는 소식 줄에 남는다").isPositive();
+  }
+
   private static double averageWithRank(Map<String, Integer> stats, int rank, String phase) {
     long sum = 0;
     int trials = 2000;
@@ -352,7 +422,7 @@ class CompanyEngineTest {
         .isInstanceOf(InvalidRequestException.class);
   }
 
-  /** 지원자 등급의 중심은 회사 등급보다 두 단계 위(F 회사면 D)이고, 등급이 높을수록 계약금이 비싸다. 해가 바뀌면 새 지원자가 온다. */
+  /** 지원자 등급의 중심은 회사 등급(F 회사면 F, 289번)이고, 등급이 높을수록 계약금이 비싸다. 해가 바뀌면 새 지원자가 온다. */
   @Test
   void 지원자는_회사_등급을_따라_오고_해마다_바뀐다() {
     int sum = 0;
@@ -361,12 +431,12 @@ class CompanyEngineTest {
       CompanyState company = ENGINE.open(new HashSeededRandom(seed), ENGINE.openingCapital());
       for (CompanyState.Applicant a : company.applicants) {
         int at = CompanyEngine.LADDER.indexOf(CompanyEngine.overallGrade(a.stats));
-        assertThat(at).as("F 회사에는 F~B가 온다").isBetween(0, 4);
+        assertThat(at).as("F 회사에는 F~D가 온다").isBetween(0, 2);
         sum += at;
         count++;
       }
     }
-    assertThat(sum / (double) count).as("중심은 D 언저리").isBetween(1.6, 2.6);
+    assertThat(sum / (double) count).as("중심은 F 언저리: F부터 시작한다").isBetween(0.1, 0.8);
     assertThat(ENGINE.fee(100_000_000, stats(90, 90, 90, 90), 0))
         .isGreaterThan(ENGINE.fee(100_000_000, stats(30, 30, 30, 30), 0));
 
@@ -384,8 +454,10 @@ class CompanyEngineTest {
     ENGINE.place(company, Map.of(1, "hr"));
     assertThat(ENGINE.hrCap(company.employees.getFirst())).as("평균 84(SS)의 두 단계 아래").isEqualTo("A");
     int sum = 0;
+    int count = 0;
     for (int seed = 0; seed < 100; seed++) {
       ENGINE.deal(company, new HashSeededRandom(seed));
+      count += company.applicants.size();
       assertThat(company.applicants).hasSize(PROPERTIES.market().applicants() + 1);
       assertThat(company.applicants.getLast().line).contains("인사팀");
       sum +=
@@ -393,7 +465,7 @@ class CompanyEngineTest {
               .mapToInt(a -> CompanyEngine.LADDER.indexOf(CompanyEngine.overallGrade(a.stats)))
               .sum();
     }
-    assertThat(sum / (100.0 * 4)).as("중심이 A 언저리로 오른다").isGreaterThan(4.3);
+    assertThat(sum / (double) count).as("중심이 A 언저리로 오른다").isGreaterThan(4.3);
   }
 
   /** 섹터 데스크 (4.2·9.4절): 그 시대에 뜨는 섹터 데스크에 그 자리가 원하는 능력치가 좋은 사람을 앉히면 결과가 좋아진다. */
@@ -867,41 +939,8 @@ class CompanyEngineTest {
     assertThat(ENGINE.deskGainBp(small, "food")).isEqualTo(PROPERTIES.desks().get("food").gainBp());
   }
 
-  /** 라이벌 증권사가 같은 시장으로 자라고, 앞지르면 소식 줄과 박치기 상대가 남는다 (#324, decisions.md 261번). */
-  @Test
-  void 라이벌_증권사가_자라고_앞지르면_소식에_남는다() {
-    var rivals = TestContent.load().raising().company().rivals();
-    CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
-    assertThat(company.rivals).hasSize(rivals.companies().size());
-    assertThat(ENGINE.industryRank(company))
-        .as("1억 회사는 꼴찌에서 시작")
-        .isEqualTo(rivals.companies().size() + 1);
-    assertThat(ENGINE.rivalName(ENGINE.rivalAbove(company)))
-        .isEqualTo(rivals.companies().getFirst().name());
-
-    // 바로 위 라이벌보다 자본을 조금 적게 두고 좋은 직원으로 한 해를 굴리면 앞지르는 해가 있다.
-    int overtaken = 0;
-    for (long seed = 1; seed <= 30; seed++) {
-      CompanyState c = open(seed, stats(90, 90, 90, 90), 140_000_000);
-      c.employees.getFirst().desk = "day";
-      c.phase = "boom";
-      c.invest = null;
-      c.yearStartCapital = c.capital;
-      long rivalBefore = c.rivals.getFirst();
-      CompanyState.Settlement s = ENGINE.settle(c, new HashSeededRandom(seed));
-      assertThat(c.rivals.getFirst()).as("라이벌도 움직인다").isNotEqualTo(rivalBefore);
-      if (!s.overtook.isEmpty()) {
-        overtaken++;
-        assertThat(s.overtook).contains(rivals.companies().getFirst().name());
-        assertThat(s.lines).anyMatch(line -> line.contains("앞질렀다"));
-        assertThat(ENGINE.industryRank(c)).isLessThanOrEqualTo(rivals.companies().size());
-      }
-    }
-    assertThat(overtaken).isPositive();
-  }
-
   /**
-   * 이직 제안 (#325, decisions.md 262·265번): 셋째 해부터 바로 위 라이벌이 가장 높은 직원에게 손을 뻗는다. 남기는 데는 돈이 들지 않고, 보내면
+   * 이직 제안 (#325, decisions.md 262·265·288번): 셋째 해부터 다른 증권사가 가장 높은 직원에게 손을 뻗는다. 남기는 데는 돈이 들지 않고, 보내면
    * 이적료를 받는다. 답하지 않아도 직원은 남는다: 사장이 보낸다고 고를 때만 떠난다. 같은 자리 세 해째부터 손에 익는다.
    */
   @Test
@@ -925,7 +964,8 @@ class CompanyEngineTest {
     ENGINE.answerPoach(company, true);
     assertThat(company.capital).isEqualTo(cash);
     assertThat(company.employees).hasSize(2);
-    assertThat(company.yearLines).anyMatch(line -> line.contains("거절하고 회사에 남았다"));
+    assertThat(company.yearLines)
+        .anyMatch(line -> line.contains("옆 동네 증권사") && line.contains("거절하고 회사에 남았다"));
     assertThat(company.poach).isNull();
     CompanyState answered = company;
     assertThatThrownBy(() -> ENGINE.answerPoach(answered, true))
@@ -944,7 +984,6 @@ class CompanyEngineTest {
     ENGINE.hire(ignored, stats(80, 80, 80, 80));
     ignored.poach = new CompanyState.Poach();
     ignored.poach.employeeId = ignored.employees.get(1).id;
-    ignored.poach.rival = 0;
     ignored.invest = null;
     CompanyState.Settlement s = ENGINE.settle(ignored, new HashSeededRandom(9));
     assertThat(ignored.employees).hasSize(2);

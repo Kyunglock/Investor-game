@@ -17,7 +17,6 @@ import java.util.UUID;
  * @param applicants 올해 공채 시장의 지원자. 끝난 회사면 비어 있다 (decisions.md 228번)
  * @param refreshCost 지원자를 새로 받는 값
  * @param history 회사 연표·업적·명예의 전당 (decisions.md 263번)
- * @param industry 업계 순위와 바로 위 라이벌 (decisions.md 261번). 라이벌이 없는 옛 회사면 null
  * @param refreshes 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 254번)
  * @param broke 망한 회사의 한 줄. 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 있고, 그때 사재로 다음 회사를 차릴 수 있다. 아니면 null
  *     (decisions.md 247번)
@@ -46,7 +45,6 @@ public record CompanyView(
     List<Applicant> applicants,
     long refreshCost,
     int refreshes,
-    Industry industry,
     History history,
     String broke,
     Invest invest,
@@ -73,49 +71,6 @@ public record CompanyView(
    */
   public record Ending(int year, long capital, String grade) {}
 
-  /**
-   * 올해의 라이벌 한 곳 (decisions.md 275번).
-   *
-   * @param difficulty EASY·MEDIUM·HARD
-   * @param real 실제 다른 사장의 회사면 true, 모자라 지어낸 회사면 false
-   * @param capital 뽑을 때의 자본
-   * @param grade 그 자본의 회사 등급(화면은 건물로 보인다)
-   * @param bonusBp 이기면 우리 자본이 느는 몫(만분율)
-   */
-  public record Target(
-      String difficulty,
-      String difficultyName,
-      String name,
-      boolean real,
-      long capital,
-      String grade,
-      int bonusBp) {}
-
-  /**
-   * 연초 회의의 올해의 라이벌 고르기 (275번).
-   *
-   * @param options 고를 후보(쉬움·보통·어려움). 골랐거나 1분기를 넘겼으면 비었다
-   * @param chosen 고른 라이벌. 아직이면 null
-   */
-  public record Rivalry(List<Target> options, Target chosen) {}
-
-  /**
-   * 연말에 올해의 라이벌과 견준 결과 (275번).
-   *
-   * @param bonus 이겨서 넘어온 고객 몫(이미 자본에 들어갔다)
-   * @param theirGrade 상대 자본의 회사 등급(박치기 장면에서 무너지는 건물)
-   */
-  public record TargetResult(
-      String difficulty,
-      String difficultyName,
-      String name,
-      boolean real,
-      long theirCapital,
-      long ourCapital,
-      boolean won,
-      long bonus,
-      String theirGrade) {}
-
   public enum Status {
     ACTIVE,
     ENDED
@@ -127,6 +82,7 @@ public record CompanyView(
    * @param experience 실전 경험
    * @param experienceNeeded 다음 단계까지 드는 실전 경험. SSS가 아니면 null(아직 쌓이지 않는다)
    * @param effects X 이상 등급의 효과 이름(확신·경보…). 쌓인다 (2.4절)
+   * @param perk 등급 효과 한 줄: 이름·맞혔을 때 더 버는 몫·자랄 확률 (decisions.md 289번)
    * @param sector 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다. 없으면 null
    * @param deskYears 지금 자리에서 결산을 맞은 해 수 (decisions.md 262번)
    * @param settled 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다
@@ -144,6 +100,7 @@ public record CompanyView(
       int experience,
       Integer experienceNeeded,
       List<String> effects,
+      String perk,
       String sector,
       String sectorName,
       int deskYears,
@@ -168,7 +125,8 @@ public record CompanyView(
       long fee,
       String line,
       String sector,
-      String sectorName) {}
+      String sectorName,
+      String perk) {}
 
   /**
    * 투자 회의 (decisions.md 229번). 정하기 전에는 숨은 방향이 없다.
@@ -370,8 +328,7 @@ public record CompanyView(
       String hot,
       String eraEnding,
       Poach poach,
-      Raise raise,
-      Rivalry rivalry) {}
+      Raise raise) {}
 
   /**
    * 올해의 연봉 협상 (decisions.md 270번).
@@ -385,8 +342,9 @@ public record CompanyView(
       int employeeId, String name, long before, long after, String line, String odds) {}
 
   /**
-   * 라이벌이 우리 직원에게 손을 뻗었다 (decisions.md 262번).
+   * 다른 증권사가 우리 직원에게 손을 뻗었다 (decisions.md 262번).
    *
+   * @param rival 손을 뻗은 곳(이름 없는 다른 증권사, 288번)
    * @param transferFee 보내면 받는 이적료
    * @param line 연초 회의 한 줄
    */
@@ -405,12 +363,10 @@ public record CompanyView(
       List<Quarter> quarters,
       String gradeBefore,
       String gradeAfter,
-      List<String> overtook,
       List<String> achieved,
       List<Result> results,
       List<String> lines,
       List<Report> reports,
-      TargetResult target,
       boolean finished) {}
 
   /** 결산한 해의 투자 회의: 기사 제목과 회의 손익(이미 자본에 들어갔다). 회의를 안 했으면 결산의 invest가 null (decisions.md 240번). */
@@ -463,16 +419,6 @@ public record CompanyView(
       int employeeId, String name, String desk, long stake, long pnl, Map<String, Integer> flips) {}
 
   public record Era(String code, String name, String description) {}
-
-  /**
-   * 업계 순위 (decisions.md 261번).
-   *
-   * @param rank 우리 순위(1부터)
-   * @param total 우리를 넣은 회사 수
-   * @param aboveName 바로 위 라이벌 이름. 1위면 null
-   * @param aboveCapital 바로 위 라이벌 자본. 1위면 null
-   */
-  public record Industry(int rank, int total, String aboveName, Long aboveCapital) {}
 
   /**
    * 회사 연표·업적·명예의 전당 (decisions.md 263번).

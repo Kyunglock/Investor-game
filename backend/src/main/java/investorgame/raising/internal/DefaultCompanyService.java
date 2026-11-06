@@ -77,7 +77,6 @@ class DefaultCompanyService implements CompanyService {
     }
     CompanyRepository.Row row =
         new CompanyRepository.Row(UUID.randomUUID(), sessionId, "ACTIVE", seed, company);
-    offerTargets(row);
     companies.insert(row);
     memories.save(sessionId, memory);
     return view(row);
@@ -213,15 +212,8 @@ class DefaultCompanyService implements CompanyService {
     if (asked > now || !"ACTIVE".equals(row.status())) {
       throw new InvalidRequestException("아직 오지 않은 분기다: " + year + "년 " + quarter + "분기");
     }
-    // 올해의 라이벌이 실제 회사면 연말 결산 직전에 그 회사의 지금 자본을 한 번 읽는다 (275번). 실시간으로 매기지 않는다.
-    if (c.quarter == CompanyEngine.QUARTERS && c.target != null && c.target.companyId != null) {
-      companies
-          .capitalOf(UUID.fromString(c.target.companyId))
-          .ifPresent(capital -> c.target.capitalNow = capital);
-    }
     // 회사는 분기마다, 해마다 이어진다 (236·268번). 랜드마크 타워에 오르면 엔딩이다 (276번).
     engine.settleQuarter(c, new HashSeededRandom(row.seed()));
-    offerTargets(row);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -260,33 +252,6 @@ class DefaultCompanyService implements CompanyService {
     return row;
   }
 
-  /** 연초면 올해의 라이벌 후보를 뽑는다 (275번): 난이도마다 실제 다른 사장의 회사 하나, 없으면 지어낸 회사. 해마다 한 번. */
-  private void offerTargets(CompanyRepository.Row row) {
-    CompanyState c = row.state();
-    if (!engine.targets.needsOptions(c)) {
-      return;
-    }
-    Map<String, Optional<TargetEngine.Candidate>> found = new java.util.LinkedHashMap<>();
-    engine
-        .targets
-        .bands(c)
-        .forEach(
-            (difficulty, band) ->
-                found.put(
-                    difficulty,
-                    companies.targetCandidate(row.sessionId(), band.low(), band.high())));
-    engine.targets.offer(c, found, new HashSeededRandom(row.seed()));
-  }
-
-  @Override
-  @Transactional
-  public CompanyView pickTarget(UUID sessionId, String difficulty) {
-    CompanyRepository.Row row = lockActive(sessionId);
-    engine.targets.pick(row.state(), difficulty);
-    companies.update(row.id(), row.state(), false);
-    return view(row);
-  }
-
   private CompanyView view(CompanyRepository.Row row) {
     CompanyState c = row.state();
     RaisingContent.Era era = engine.era(c);
@@ -311,6 +276,7 @@ class DefaultCompanyService implements CompanyService {
                             ? engine.experienceNeeded(e)
                             : null,
                         engine.effectsOf(e),
+                        engine.perkLine(e.stats, e.rank),
                         e.sector,
                         e.sector == null ? null : engine.sectorName(e.sector),
                         e.desk != null && e.desk.equals(e.lastDesk) ? e.deskYears : 0,
@@ -351,7 +317,8 @@ class DefaultCompanyService implements CompanyService {
                             a.fee,
                             a.line,
                             a.sector,
-                            a.sector == null ? null : engine.sectorName(a.sector)))
+                            a.sector == null ? null : engine.sectorName(a.sector),
+                            engine.perkLine(a.stats, a.rank)))
                 .toList();
     String hrCap = engine.hrOf(c).map(engine::hrCap).orElse(null);
     CompanyView.Meeting meeting =
@@ -366,8 +333,7 @@ class DefaultCompanyService implements CompanyService {
                 engine.hotLine(c),
                 engine.eraEndingLine(c),
                 poachView(c),
-                raiseView(c),
-                rivalryView(c));
+                raiseView(c));
     CompanyState.Settlement last = c.settlements.isEmpty() ? null : c.settlements.getLast();
     return new CompanyView(
         row.id(),
@@ -387,7 +353,6 @@ class DefaultCompanyService implements CompanyService {
         applicants,
         engine.refreshCost(c),
         c.refreshes,
-        industryView(c),
         historyView(c),
         ended ? null : engine.brokeNotice(c),
         ended ? null : investView(c, new HashSeededRandom(row.seed())),
@@ -423,27 +388,6 @@ class DefaultCompanyService implements CompanyService {
     engine.pay.answerResign(row.state(), keep);
     companies.update(row.id(), row.state(), false);
     return view(row);
-  }
-
-  /** 올해의 라이벌 고르기 (275번). 후보도 고른 라이벌도 없으면 null. */
-  private CompanyView.Rivalry rivalryView(CompanyState c) {
-    if (c.targetOptions.isEmpty() && c.target == null) {
-      return null;
-    }
-    return new CompanyView.Rivalry(
-        c.targetOptions.stream().map(this::targetView).toList(),
-        c.target == null ? null : targetView(c.target));
-  }
-
-  private CompanyView.Target targetView(CompanyState.Target t) {
-    return new CompanyView.Target(
-        t.difficulty,
-        engine.targets.difficultyName(t.difficulty),
-        t.name,
-        t.companyId != null,
-        t.capital,
-        engine.grade(t.capital),
-        engine.targets.bonusBp(t.difficulty));
   }
 
   private CompanyView.Invest investView(CompanyState c, HashSeededRandom random) {
@@ -643,7 +587,7 @@ class DefaultCompanyService implements CompanyService {
             .map(e -> e.name)
             .orElse("");
     return new CompanyView.Poach(
-        p.employeeId, name, engine.rivalName(p.rival), p.transferFee, engine.poachLine(c));
+        p.employeeId, name, engine.poacher(), p.transferFee, engine.poachLine(c));
   }
 
   private static final int HALL_SIZE = 5;
@@ -671,18 +615,6 @@ class DefaultCompanyService implements CompanyService {
     hall.sort(java.util.Comparator.comparingLong(CompanyView.Hall::totalPnl).reversed());
     return new CompanyView.History(
         timeline, achievements, List.copyOf(hall.subList(0, Math.min(HALL_SIZE, hall.size()))));
-  }
-
-  private CompanyView.Industry industryView(CompanyState c) {
-    if (c.rivals.isEmpty()) {
-      return null;
-    }
-    int above = engine.rivalAbove(c);
-    return new CompanyView.Industry(
-        engine.industryRank(c),
-        c.rivals.size() + 1,
-        above < 0 ? null : engine.rivalName(above),
-        above < 0 ? null : c.rivals.get(above));
   }
 
   private List<CompanyView.Report> reportViews(List<CompanyState.Report> reports) {
@@ -743,7 +675,6 @@ class DefaultCompanyService implements CompanyService {
         s.quarters.stream().map(this::quarterView).toList(),
         s.gradeBefore,
         s.gradeAfter,
-        List.copyOf(s.overtook),
         List.copyOf(s.achieved),
         s.results.stream()
             .map(
@@ -753,18 +684,6 @@ class DefaultCompanyService implements CompanyService {
             .toList(),
         List.copyOf(s.lines),
         reportViews(s.reports),
-        s.target == null
-            ? null
-            : new CompanyView.TargetResult(
-                s.target.difficulty,
-                engine.targets.difficultyName(s.target.difficulty),
-                s.target.name,
-                s.target.real,
-                s.target.theirCapital,
-                s.target.ourCapital,
-                s.target.won,
-                s.target.bonus,
-                engine.grade(s.target.theirCapital)),
         s.finished);
   }
 }

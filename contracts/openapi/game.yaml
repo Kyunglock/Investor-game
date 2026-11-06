@@ -180,31 +180,6 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
-  /api/company/target:
-    post:
-      operationId: pickTarget
-      summary: 연초 회의에서 올해의 라이벌을 고른다 (decisions.md 275번)
-      description: |
-        difficulty는 EASY·MEDIUM·HARD. 후보는 실제 다른 사장의 회사(없으면 지어낸 회사)이고, 연말 결산에서 한 번 견준다.
-        이기면 자본이 bonusBp만큼 는다. 이미 골랐거나 후보가 아니거나 1분기를 넘겼으면 400.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [difficulty]
-              properties:
-                difficulty: { type: string, enum: [EASY, MEDIUM, HARD] }
-      responses:
-        '200':
-          description: 고른 뒤의 회사
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Company' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/SessionRequired' }
-        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/resign:
     post:
       operationId: answerResign
@@ -475,19 +450,20 @@ components:
           type: array
           items:
             type: object
-            required: [id, name, overallGrade, grades, experience, effects, deskYears, settled, leader, salary, morale]
+            required: [id, name, overallGrade, grades, experience, effects, perk, deskYears, settled, leader, salary, morale]
             properties:
               id: { type: integer }
               name: { type: string }
               overallGrade:
                 $ref: '#/components/schemas/Grade'
-                description: SSS면 실전 경험으로 X~ZZZ까지 오른다 (2.3절)
+                description: SSS면 실전 경험으로 X~ZZZ, 그 위 XS·XSS·GOD까지 오른다 (2.3절, decisions.md 289번)
               experience: { type: integer, description: 실전 경험. 폭락장을 손실 없이 버틸 때 쌓인다 }
               experienceNeeded: { type: [integer, 'null'], description: 다음 단계까지 드는 실전 경험. SSS가 아니면 null }
               effects:
                 type: array
-                description: X 이상 등급의 효과 이름(확신·경보·역발상·리더·사수·선견). 쌓인다 (2.4절)
+                description: X 이상 등급의 효과 이름(확신·경보·역발상·리더·사수·선견·큰손·철벽·신의 손). 쌓인다 (2.4절)
                 items: { type: string }
+              perk: { type: string, description: '등급 효과 한 줄: 이름·맞혔을 때 더 버는 몫·자랄 확률 (decisions.md 289번)' }
               grades: { type: object, additionalProperties: { $ref: '#/components/schemas/Grade' } }
               desk: { type: [string, 'null'] }
               sector: { type: [string, 'null'], description: 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다 }
@@ -529,14 +505,14 @@ components:
                 hot: { type: [string, 'null'], description: 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) }
                 eraEnding: { type: [string, 'null'], description: 지금 시대의 마지막 해면 "내년에는 시대가 바뀐다" 한 줄. 아니면 null (decisions.md 250번) }
                 poach:
-                  description: 라이벌이 우리 직원에게 손을 뻗었다 (decisions.md 262번). 없으면 null
+                  description: 다른 증권사가 우리 직원에게 손을 뻗었다 (decisions.md 262·288번). 없으면 null
                   oneOf:
                     - type: object
                       required: [employeeId, name, rival, transferFee, line]
                       properties:
                         employeeId: { type: integer }
                         name: { type: string }
-                        rival: { type: string }
+                        rival: { type: string, description: 손을 뻗은 곳(이름 없는 다른 증권사) }
                         transferFee: { type: integer, format: int64, description: 보내면 받는 이적료 }
                         line: { type: string }
                     - type: 'null'
@@ -553,29 +529,13 @@ components:
                         line: { type: string }
                         odds: { type: string, description: '답에 따른 확률 한 줄: 올리면 능력치 상승, 동결하거나 답하지 않으면 떠남 (decisions.md 280번)' }
                     - type: 'null'
-                rivalry:
-                  description: 올해의 라이벌 고르기 (decisions.md 275번). 후보도 고른 라이벌도 없으면 null
-                  oneOf:
-                    - type: object
-                      required: [options]
-                      properties:
-                        options:
-                          type: array
-                          description: 고를 후보(쉬움·보통·어려움). 골랐거나 1분기를 넘겼으면 비었다
-                          items: { $ref: '#/components/schemas/Target' }
-                        chosen:
-                          description: 고른 라이벌. 아직이면 null
-                          oneOf:
-                            - $ref: '#/components/schemas/Target'
-                            - type: 'null'
-                    - type: 'null'
             - type: 'null'
         applicants:
           type: array
           description: 올해 공채 시장의 지원자 (decisions.md 228번). 끝난 회사면 비어 있다
           items:
             type: object
-            required: [id, name, overallGrade, grades, fee]
+            required: [id, name, overallGrade, grades, fee, perk]
             properties:
               id: { type: integer }
               name: { type: string }
@@ -585,6 +545,7 @@ components:
               line: { type: [string, 'null'], description: 올해 필요한 인재, 사수가 붙음, 인사팀이 데려옴 }
               sector: { type: [string, 'null'], description: 관심 섹터 코드. 뽑으면 직원이 안고 들어온다 }
               sectorName: { type: [string, 'null'] }
+              perk: { type: string, description: 등급 효과 한 줄 (decisions.md 289번) }
         refreshCost: { type: integer, format: int64, description: 지원자를 새로 받는 값 }
         refreshes: { type: integer, description: 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 254번) }
         history:
@@ -628,17 +589,6 @@ components:
                   to: { type: [integer, 'null'], description: 떠난 해. 아직 일하면 null }
                   totalPnl: { type: integer, format: int64 }
                   grade: { $ref: '#/components/schemas/Grade' }
-        industry:
-          description: 업계 순위와 바로 위 라이벌 증권사 (decisions.md 261번). 라이벌이 없는 옛 회사면 null
-          oneOf:
-            - type: object
-              required: [rank, total]
-              properties:
-                rank: { type: integer, description: 우리 순위(1부터) }
-                total: { type: integer, description: 우리를 넣은 회사 수 }
-                aboveName: { type: [string, 'null'], description: 바로 위 라이벌. 1위면 null }
-                aboveCapital: { type: [integer, 'null'], format: int64 }
-            - type: 'null'
         invest:
           description: |
             올해 종목 회의 (decisions.md 229번). 끝난 회사나 옛 회사면 null. 숨은 방향은 정한 뒤 outcome에만 있다.
@@ -847,7 +797,7 @@ components:
         lastSettlement:
           oneOf:
             - type: object
-              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, salary, quarters, gradeBefore, gradeAfter, overtook, achieved, results, lines, reports]
+              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, salary, quarters, gradeBefore, gradeAfter, achieved, results, lines, reports]
               properties:
                 year: { type: integer }
                 phase: { type: string, enum: [boom, normal, crash] }
@@ -872,10 +822,6 @@ components:
                   items: { $ref: '#/components/schemas/Quarter' }
                 gradeBefore: { $ref: '#/components/schemas/Grade' }
                 gradeAfter: { $ref: '#/components/schemas/Grade' }
-                overtook:
-                  type: array
-                  description: 그해 앞지른 라이벌 증권사 (decisions.md 261번)
-                  items: { type: string }
                 achieved:
                   type: array
                   description: 그해 연 업적 이름 (decisions.md 263번)
@@ -897,22 +843,6 @@ components:
                   type: array
                   description: 팀장들의 한 해 보고 (decisions.md 269번)
                   items: { $ref: '#/components/schemas/Report' }
-                target:
-                  description: 올해의 라이벌과 견준 결과 (decisions.md 275번). 고르지 않았으면 null
-                  oneOf:
-                    - type: object
-                      required: [difficulty, difficultyName, name, real, theirCapital, ourCapital, won, bonus, theirGrade]
-                      properties:
-                        difficulty: { type: string, enum: [EASY, MEDIUM, HARD] }
-                        difficultyName: { type: string }
-                        name: { type: string }
-                        real: { type: boolean, description: 실제 다른 사장의 회사면 true }
-                        theirCapital: { type: integer, format: int64 }
-                        ourCapital: { type: integer, format: int64 }
-                        won: { type: boolean }
-                        bonus: { type: integer, format: int64, description: 이겨서 넘어온 고객 몫(이미 자본에 들어갔다) }
-                        theirGrade: { $ref: '#/components/schemas/Grade' }
-                    - type: 'null'
                 finished: { type: boolean, description: 이 결산으로 랜드마크 타워에 올라 엔딩을 봤다 (decisions.md 276번) }
             - type: 'null'
         resign:
@@ -938,18 +868,6 @@ components:
                 capital: { type: integer, format: int64 }
                 grade: { $ref: '#/components/schemas/Grade' }
             - type: 'null'
-    Target:
-      type: object
-      description: 올해의 라이벌 한 곳 (decisions.md 275번)
-      required: [difficulty, difficultyName, name, real, capital, grade, bonusBp]
-      properties:
-        difficulty: { type: string, enum: [EASY, MEDIUM, HARD] }
-        difficultyName: { type: string }
-        name: { type: string }
-        real: { type: boolean, description: 실제 다른 사장의 회사면 true, 모자라 지어낸 회사면 false }
-        capital: { type: integer, format: int64, description: 뽑을 때의 자본 }
-        grade: { $ref: '#/components/schemas/Grade' }
-        bonusBp: { type: integer, description: 이기면 우리 자본이 느는 몫(만분율) }
     Quarter:
       type: object
       description: 분기 하나의 실적 (decisions.md 268번)
@@ -1004,7 +922,8 @@ components:
         pitch: { type: string, description: 가져올 때 한마디 }
     Grade:
       type: string
-      enum: [F, E, D, C, B, A, S, SS, SSS, X, XX, XXX, Z, ZZ, ZZZ]
+      description: 회사 등급은 F~ZZZ, 직원 등급은 그 위로 XS·XSS·GOD까지 (decisions.md 289번)
+      enum: [F, E, D, C, B, A, S, SS, SSS, X, XX, XXX, Z, ZZ, ZZZ, XS, XSS, GOD]
     PlayLog:
       type: object
       required: [sessions, companies]

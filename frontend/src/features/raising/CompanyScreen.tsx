@@ -13,7 +13,6 @@ import { InvestWindow } from './InvestWindow'
 import { MacroWindow } from './MacroWindow'
 import { MoveScene } from './MoveScene'
 import { OfficeArt, type SeatFocus } from './OfficeArt'
-import { OvertakeAlert } from './OvertakeAlert'
 import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName, titleOf } from './office'
 import { autoPlace, deskEffect, rankDesks, seatOne } from './placement'
 import { QuarterSheet } from './QuarterSheet'
@@ -37,15 +36,14 @@ const FIT_TONE = {
 } as const
 
 /**
- * 회사 화면 (증권사 육성 설계 4·6절). 한 해 = 연초 회의(공채 시장) → 배치 → (결산을 누르면 뜨는) 거시경제 회의 → (직원이 물어 오면) 종목 회의 → 결산. 사장은 사람을 뽑아 앉히기만 하고 직원은 능력치대로 알아서
- * 굴린다. 연초 회의·공채·배치·지난 결산은 탭으로 나뉘고(231번), 결산 버튼은 화면 아래에 늘 붙어 있다. 배치는 작년 그대로가 기본이고(7.2절), 자리를 누르면 바로
+ * 회사 화면 (증권사 육성 설계 4·6절). 한 해 = 이슈(공채 시장) → 배치 → (결산을 누르면 뜨는) 거시경제 회의 → (직원이 물어 오면) 종목 회의 → 결산. 사장은 사람을 뽑아 앉히기만 하고 직원은 능력치대로 알아서
+ * 굴린다. 이슈·공채·배치·지난 결산은 탭으로 나뉘고(231번), 결산 버튼은 화면 아래에 늘 붙어 있다. 배치는 작년 그대로가 기본이고(7.2절), 자리를 누르면 바로
  * 앉는다.
  */
 export function CompanyScreen({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   const justSettled = useRaisingStore((s) => s.justSettled)
-  const overtakeAlert = useRaisingStore((s) => s.overtakeAlert)
   const moveAlert = useRaisingStore((s) => s.moveAlert)
   const justQuartered = useRaisingStore((s) => s.justQuartered)
   const autoPlay = useRaisingStore((s) => s.autoPlay)
@@ -109,7 +107,6 @@ export function CompanyScreen({ company }: { company: Company }) {
         </div>
         <BuildingArt grade={company.grade} />
         <NextStep company={company} />
-        <IndustryLine company={company} />
         <OfficeArt company={company} focus={focus} onSeat={ended ? undefined : setFocus} />
         {!ended && focus && <SeatPicker company={company} focus={focus} onFocus={setFocus} />}
         <PixelToggle />
@@ -119,38 +116,24 @@ export function CompanyScreen({ company }: { company: Company }) {
 
         {justSettled && <YearEndSheet company={company} onClose={closeYearEnd} />}
 
-        {company.lastSettlement && moveAlert && !justSettled && !overtakeAlert && (
-          // 건물이 바뀌면 라이벌 알림 뒤에 알림 창으로 뜬다 (281번): 오르면 박치기, 줄면 이삿짐 트럭.
+        {company.lastSettlement && moveAlert && !justSettled && (
+          // 건물이 바뀌면 연말 결산서 뒤에 알림 창으로 뜬다 (281번): 오르면 박치기, 줄면 이삿짐 트럭.
           <MoveScene
             before={company.lastSettlement.gradeBefore}
             after={company.lastSettlement.gradeAfter}
             year={company.lastSettlement.year}
-            overtook={company.lastSettlement.overtook}
             onDone={() => useRaisingStore.setState({ moveAlert: false })}
           />
         )}
 
-        {company.resign &&
-          !company.ending &&
-          !justSettled &&
-          !justQuartered &&
-          !overtakeAlert &&
-          !moveAlert && (
-            // 연봉 때문에 사표를 들고 왔다 (282번): 다른 창을 다 닫은 뒤 마지막 기회로 뜬다.
-            <ResignAlert resign={company.resign} />
-          )}
-
-        {company.ending && !justSettled && !overtakeAlert && !moveAlert && (
-          // 랜드마크 타워 엔딩 (276번): 결산서와 라이벌 알림 뒤에 뜨고, 다음 회사를 차린다.
-          <EndingScreen company={company} />
+        {company.resign && !company.ending && !justSettled && !justQuartered && !moveAlert && (
+          // 연봉 때문에 사표를 들고 왔다 (282번): 다른 창을 다 닫은 뒤 마지막 기회로 뜬다.
+          <ResignAlert resign={company.resign} />
         )}
 
-        {!justSettled && overtakeAlert && (
-          // 라이벌을 앞지르면 연말 결산서를 닫은 뒤 알림이 뜬다 (274번).
-          <OvertakeAlert
-            company={company}
-            onClose={() => useRaisingStore.setState({ overtakeAlert: false })}
-          />
+        {company.ending && !justSettled && !moveAlert && (
+          // 랜드마크 타워 엔딩 (276번): 결산서와 건물 알림 뒤에 뜨고, 다음 회사를 차린다.
+          <EndingScreen company={company} />
         )}
 
         {justQuartered && company.lastQuarter && (
@@ -280,23 +263,7 @@ function NextStep({ company }: { company: Company }) {
   )
 }
 
-/** 업계 순위 한 줄 (decisions.md 261번): 바로 위 라이벌이 목표가 된다. */
-function IndustryLine({ company }: { company: Company }) {
-  const i = company.industry
-  if (!i) {
-    return null
-  }
-  return (
-    <p className="mt-0.5 text-[12px] text-muted" data-testid="industry">
-      업계 <b className="text-ink">{i.rank}위</b> / {i.total}곳
-      {i.aboveName && i.aboveCapital != null
-        ? ` · 바로 위 ${i.aboveName} (자본 ${shortWon(i.aboveCapital)})`
-        : ' · 업계 1위!'}
-    </p>
-  )
-}
-
-/** 연초 회의 탭: 올해 폭락 조짐, 경보·선견, 올해 필요한 인재 (6.1절). */
+/** 이슈 탭: 올해 폭락 조짐, 경보·선견, 올해 필요한 인재 (6.1절). */
 function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
   const busy = useRaisingStore((s) => s.busy)
   const { answerPoach, answerRaise } = useRaisingStore.getState()
@@ -304,8 +271,7 @@ function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
   const raise = meeting.raise
   return (
     <section data-testid="meeting">
-      <h3 className="font-pen text-[22px]">연초 회의</h3>
-      {meeting.rivalry && <RivalryPicker rivalry={meeting.rivalry} />}
+      <h3 className="font-pen text-[22px]">이슈</h3>
       {poach && (
         // 이직 제안 (262번): 답하지 않고 결산하면 이적료를 남기고 떠난다.
         <div className="mt-1 rounded border border-wine p-2" data-testid="poach">
@@ -643,6 +609,10 @@ function EmployeeDetail({ employee: e }: { employee: Employee }) {
           {e.morale !== 0 && ` · ${MORALE[e.morale]}`}
         </span>
       </p>
+      {/* 등급 효과 (289번): 등급마다 더 버는 몫과 자랄 확률. */}
+      <p className="mt-0.5 text-[12px] text-teal" data-testid="perk">
+        등급 효과 · {e.perk}
+      </p>
       <ul className="mt-1 grid grid-cols-5 gap-1 text-center text-[11px]">
         {STAT_ORDER.map((code) => (
           <li key={code} className="rounded border border-line-soft py-0.5">
@@ -831,8 +801,8 @@ function SeatPicker({
 type Tab = 'meeting' | 'market' | 'staff' | 'settlement' | 'history'
 
 /**
- * 연초 회의 · 공채 · 배치 · 지난 결산을 탭으로 나눈다. 한 장에 길게 늘어놓으면 위아래로 오가야 했다. 고른 탭은 스토어에 둔다: 직원이 들고 나면 회사 화면을
- * 새로 그리기 때문이다. 아무것도 안 골랐으면 직원이 없을 때 공채, 그 밖에는 연초 회의. 결산하면 지난 결산으로 간다.
+ * 이슈 · 공채 · 배치 · 지난 결산을 탭으로 나눈다. 한 장에 길게 늘어놓으면 위아래로 오가야 했다. 고른 탭은 스토어에 둔다: 직원이 들고 나면 회사 화면을
+ * 새로 그리기 때문이다. 아무것도 안 골랐으면 직원이 없을 때 공채, 그 밖에는 이슈. 결산하면 지난 결산으로 간다.
  */
 function CompanyTabs({ company }: { company: Company }) {
   const stored = useRaisingStore((s) => s.tab) as Tab | null
@@ -841,13 +811,12 @@ function CompanyTabs({ company }: { company: Company }) {
   const tabs: { id: Tab; label: string; badge?: string; show: boolean }[] = [
     {
       id: 'meeting',
-      label: '연초 회의',
+      label: '이슈',
       badge:
         company.meeting?.omen ||
         company.meeting?.eraEnding ||
         company.meeting?.poach ||
-        company.meeting?.raise ||
-        (company.meeting?.rivalry?.options.length ?? 0) > 0
+        company.meeting?.raise
           ? '!'
           : undefined,
       show: Boolean(company.meeting),
@@ -1118,6 +1087,9 @@ function ApplicantCard({
         </span>
       </p>
       {a.line && <p className="mt-1 text-[13px] text-teal">{a.line}</p>}
+      <p className="mt-1 text-[12px] text-muted" data-testid="applicant-perk">
+        등급 효과 · {a.perk}
+      </p>
       {a.sectorName && (
         <p className="mt-1 text-[12px] text-muted" data-testid="applicant-sector">
           관심 섹터 {a.sectorName}
@@ -1199,66 +1171,5 @@ function AutoCountdown() {
       자동 진행 · {left}초 뒤 닫힘
     </p>,
     document.body,
-  )
-}
-
-type Rivalry = NonNullable<NonNullable<Company['meeting']>['rivalry']>
-
-/**
- * 올해의 라이벌 고르기 (decisions.md 275번). 연초 회의에 실제 다른 사장의 회사(모자라면 지어낸 회사) 셋이 쉬움·보통·어려움으로 온다. 하나를 고르면 연말
- * 결산에서 한 번 견줘, 이기면 라이벌의 고객이 넘어와 자본이 는다. 1분기를 넘기면 올해는 라이벌 없이 간다.
- */
-function RivalryPicker({ rivalry }: { rivalry: Rivalry }) {
-  const busy = useRaisingStore((s) => s.busy)
-  const { pickTarget } = useRaisingStore.getState()
-  const percent = (bp: number) => `${bp / 100}%`
-  if (rivalry.chosen) {
-    const t = rivalry.chosen
-    return (
-      <div className="mt-1 rounded border border-wine p-2" data-testid="rivalry-chosen">
-        <p className="text-[14px] font-semibold text-wine">
-          올해의 라이벌: {t.name} ({t.difficultyName})
-        </p>
-        <p className="text-[12px] text-muted">
-          {t.real ? '실제 사장의 회사' : '지어낸 회사'} · {officeName(t.grade)} · 자본{' '}
-          {shortWon(t.capital)} · 연말에 이 회사보다 크면 이기고, 자본이 {percent(t.bonusBp)} 는다
-        </p>
-      </div>
-    )
-  }
-  return (
-    <div className="mt-1 rounded border border-wine p-2" data-testid="rivalry">
-      <p className="text-[14px] font-semibold text-wine">올해의 라이벌을 고르세요</p>
-      <p className="text-[12px] text-muted">
-        연말 결산에서 한 번 견줍니다. 이기면 라이벌의 고객이 넘어와 자본이 늡니다. 1분기를 넘기면
-        올해는 라이벌 없이 갑니다.
-      </p>
-      <ul className="mt-2 grid gap-2 sm:grid-cols-3">
-        {rivalry.options.map((t) => (
-          <li
-            key={t.difficulty}
-            className="grid gap-1 rounded border border-line p-2"
-            data-testid="rivalry-option"
-            data-difficulty={t.difficulty}
-          >
-            <p className="text-[12px] font-semibold text-muted">{t.difficultyName}</p>
-            <p className="text-[15px] font-bold">{t.name}</p>
-            <p className="text-[12px] text-muted">
-              {t.real ? '실제 사장의 회사' : '지어낸 회사'} · {officeName(t.grade)}
-            </p>
-            <p className="font-mono-num text-[13px]">자본 {shortWon(t.capital)}</p>
-            <p className="text-[12px]">이기면 자본 +{percent(t.bonusBp)}</p>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void pickTarget(t.difficulty)}
-              className="mt-1 min-h-10 rounded border border-wine text-[14px] font-semibold text-wine disabled:opacity-50"
-            >
-              이 회사로 정한다
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
   )
 }

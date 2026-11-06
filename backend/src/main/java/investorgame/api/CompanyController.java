@@ -165,16 +165,6 @@ class CompanyController {
 
   record RaiseRequest(@NotNull Boolean accept) {}
 
-  /** 연초 회의에서 올해의 라이벌을 고른다: EASY·MEDIUM·HARD (decisions.md 275번). */
-  @PostMapping("/target")
-  CompanyView pickTarget(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody TargetRequest request) {
-    return companies.pickTarget(cookies.requireSession(token), request.difficulty());
-  }
-
-  record TargetRequest(@NotBlank String difficulty) {}
-
   /** 사표를 들고 온 직원에게 답한다: 연봉을 올려 붙잡거나 보낸다 (decisions.md 282번). */
   @PostMapping("/resign")
   CompanyView answerResign(

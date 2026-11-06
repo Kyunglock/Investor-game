@@ -76,14 +76,13 @@ class CompanyHistory {
 
   /**
    * 결산 한 해를 적는다. ranksBefore는 결산 전 직원별 SSS 위 단계(실전 경험으로 오른 사람을 가린다). eraLine은 시대가 바뀐 해의 소식 줄(없으면
-   * null). rank는 결산 뒤 업계 순위.
+   * null).
    */
   void settled(
       CompanyState company,
       Settlement s,
       Map<Integer, Integer> ranksBefore,
       String eraLine,
-      int industryRank,
       boolean basement) {
     int before = CompanyEngine.LADDER.indexOf(s.gradeBefore);
     int after = CompanyEngine.LADDER.indexOf(s.gradeAfter);
@@ -93,23 +92,7 @@ class CompanyHistory {
     if (eraLine != null) {
       add(company, s.year, "era", eraLine, null);
     }
-    for (String name : s.overtook) {
-      add(
-          company,
-          s.year,
-          "overtake",
-          Korean.fill(texts().events().get("overtake"), Map.of("name", name)),
-          null);
-    }
-    // 올해의 라이벌을 이겼다 (275번), 랜드마크 타워에 올라 엔딩을 봤다 (276번).
-    if (s.target != null && s.target.won) {
-      add(
-          company,
-          s.year,
-          "target",
-          Korean.fill(texts().events().get("target"), Map.of("name", s.target.name)),
-          null);
-    }
+    // 랜드마크 타워에 올라 엔딩을 봤다 (276번).
     if (s.finished) {
       add(company, s.year, "ending", texts().events().get("ending"), s.gradeAfter);
     }
@@ -153,10 +136,10 @@ class CompanyHistory {
     if (s.investTotal != null) {
       company.meetingStreak = s.investTotal > 0 ? company.meetingStreak + 1 : 0;
     }
-    achieve(company, s, industryRank, basement);
+    achieve(company, s, basement);
   }
 
-  private void achieve(CompanyState company, Settlement s, int industryRank, boolean basement) {
+  private void achieve(CompanyState company, Settlement s, boolean basement) {
     long staff = s.results.stream().mapToLong(r -> r.pnl).sum();
     boolean crashProof = CompanyEngine.CRASH.equals(s.phase) && operated(s) >= s.capitalBefore;
     boolean doubled = s.capitalBefore > 0 && operated(s) >= s.capitalBefore * 2;
@@ -178,8 +161,7 @@ class CompanyHistory {
             "all-sss", allSss,
             "meeting-streak", company.meetingStreak >= STREAK,
             "day-only", dayOnly,
-            "basement-ten", basement && s.year >= BASEMENT_YEARS,
-            "top", industryRank == 1 && !company.rivals.isEmpty());
+            "basement-ten", basement && s.year >= BASEMENT_YEARS);
     for (RaisingContent.Achievement a : texts().achievements()) {
       if (Boolean.TRUE.equals(checks.get(a.code()))
           && !company.achievements.containsKey(a.code())) {

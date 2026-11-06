@@ -28,7 +28,9 @@ class CompanyEngine {
 
   /** 모든 객체가 쓰는 등급표 15단계 (2.1절). */
   static final List<String> LADDER =
-      List.of("F", "E", "D", "C", "B", "A", "S", "SS", "SSS", "X", "XX", "XXX", "Z", "ZZ", "ZZZ");
+      List.of(
+          "F", "E", "D", "C", "B", "A", "S", "SS", "SSS", "X", "XX", "XXX", "Z", "ZZ", "ZZZ", "XS",
+          "XSS", "GOD");
 
   static final String CRASH = "crash";
 
@@ -59,6 +61,12 @@ class CompanyEngine {
   static final int RANK_MENTOR = 5;
   static final int RANK_FORESIGHT = 6;
 
+  /** XS 큰손·XSS 철벽·GOD 신의 손 (decisions.md 289번): 직원 등급에만 있다. 회사 등급은 ZZZ까지다. */
+  static final int RANK_BIG = 7;
+
+  static final int RANK_WALL = 8;
+  static final int RANK_GOD = 9;
+
   private final ContentCatalog content;
   private final BehaviorService behavior;
   private final CompanyProperties properties;
@@ -80,7 +88,6 @@ class CompanyEngine {
     this.teams = new TeamEngine(this, content);
     this.pay = new PayEngine(this, content, properties);
     this.history = new CompanyHistory(content);
-    this.targets = new TargetEngine(content, properties);
   }
 
   /** 회사 연표·업적·명예의 전당 (decisions.md 263번). */
@@ -94,9 +101,6 @@ class CompanyEngine {
 
   /** 연봉과 사기 (decisions.md 270번). */
   final PayEngine pay;
-
-  /** 올해의 라이벌 (decisions.md 275번). */
-  final TargetEngine targets;
 
   static final String HR_DESK = "hr";
 
@@ -196,6 +200,66 @@ class CompanyEngine {
         && employee.deskYears + 1 >= properties.people().settleYears();
   }
 
+  /** 등급 효과의 "더 버는 몫"(%, 289번). SSS 위는 SSS 값. */
+  int perkGainPercent(Employee employee) {
+    return properties.perks().gainPercent().getOrDefault(overallGrade(employee.stats), 0);
+  }
+
+  /** 등급 효과 한 줄 (289번): "새내기 · 맞히면 2% 더 번다 · 한 해 일하면 50% 확률로 자란다". */
+  String perkLine(Map<String, Integer> stats, int rank) {
+    RaisingContent.Perks texts = content.raising().company().perks();
+    String grade = overallGrade(stats);
+    int gain = properties.perks().gainPercent().getOrDefault(grade, 0);
+    int growth = properties.perks().growthPercent().getOrDefault(grade, 0);
+    String name = rank > 0 ? gradeOf(stats, rank) : texts.names().get(grade);
+    String line =
+        growth > 0
+            ? Korean.fill(
+                texts.line(),
+                Map.of("gain", String.valueOf(gain), "growth", String.valueOf(growth)))
+            : Korean.fill(texts.lineTop(), Map.of("gain", String.valueOf(gain)));
+    return name + " · " + line;
+  }
+
+  /** 등급 효과의 성장 확률(%, 289번). SSS와 그 위는 0: 실전 경험으로 오른다. */
+  int perkGrowthPercent(Employee employee) {
+    return properties.perks().growthPercent().getOrDefault(overallGrade(employee.stats), 0);
+  }
+
+  /**
+   * 한 해 자리에서 일한 직원이 자란다 (decisions.md 289번): 종합 등급마다 정한 확률로 가장 낮은 능력치(운 빼고, 같으면 앞의 것)가 한 띠 오른다. 낮은
+   * 등급일수록 잘 크고 높을수록 더디다. 쉬는 사람은 자라지 않는다.
+   */
+  private void grow(CompanyState company, Settlement settlement, SeededRandom random) {
+    for (Employee e : company.employees) {
+      int chance = perkGrowthPercent(e);
+      if (e.desk == null || chance <= 0) {
+        continue;
+      }
+      if (random.forKey("grow", company.year, e.id).nextInt(PERCENT) >= chance) {
+        continue;
+      }
+      String stat =
+          StatCodes.ALL.stream()
+              .filter(code -> !StatCodes.LUCK.equals(code))
+              .min(java.util.Comparator.comparingInt((String code) -> e.stats.get(code)))
+              .orElseThrow();
+      int before = e.stats.get(stat);
+      if (before >= MAX_STAT) {
+        continue;
+      }
+      int after = Math.min(MAX_STAT, before + properties.experience().band());
+      e.stats.put(stat, after);
+      settlement.lines.add(
+          gradeLine(
+              content.raising().company().perks().grown(),
+              e,
+              StatGrade.of(before).name(),
+              StatGrade.of(after).name(),
+              stat));
+    }
+  }
+
   /** 결산마다 같은 자리 해 수를 센다. 막 손에 익은 해면 소식 줄을 남긴다 (262번). */
   private void countTenure(CompanyState company, Settlement settlement) {
     for (Employee e : company.employees) {
@@ -216,14 +280,13 @@ class CompanyEngine {
   }
 
   /**
-   * 올해의 이직 제안 (decisions.md 262번): poach-from-year 해부터 해마다 poach-percent 확률로, 바로 위 라이벌이 우리의 가장 높은
-   * 직원(같으면 오래 앉은 사람)에게 손을 뻗는다. 직원이 둘 이상이어야 오고, 우리가 업계 1위면 손을 뻗을 라이벌이 없다. 붙잡는 값과 이적료는 그 직원 계약금의
-   * 비율이다.
+   * 올해의 이직 제안 (decisions.md 262번): poach-from-year 해부터 해마다 poach-percent 확률로, 다른 증권사가 우리의 가장 높은
+   * 직원(같으면 오래 앉은 사람)에게 손을 뻗는다. 직원이 둘 이상이어야 온다. 붙잡는 값과 이적료는 그 직원 계약금의 비율이다. 라이벌 증권사를 걷어낸 뒤(288번)에는
+   * 이름 없는 "다른 증권사"다.
    */
   CompanyState.Poach poachOf(CompanyState company, SeededRandom random) {
     CompanyProperties.People rules = properties.people();
-    int above = rivalAbove(company);
-    if (company.year < rules.poachFromYear() || company.employees.size() < 2 || above < 0) {
+    if (company.year < rules.poachFromYear() || company.employees.size() < 2) {
       return null;
     }
     if (random.forKey("poach", company.year).nextInt(PERCENT) >= rules.poachPercent()) {
@@ -239,7 +302,6 @@ class CompanyEngine {
     long fee = fee(company.capital, target.stats, target.rank);
     CompanyState.Poach poach = new CompanyState.Poach();
     poach.employeeId = target.id;
-    poach.rival = above;
     poach.transferFee = fee * rules.transferPercent() / PERCENT;
     return poach;
   }
@@ -256,8 +318,7 @@ class CompanyEngine {
       return;
     }
     company.yearLines.add(
-        Korean.fill(
-            texts.kept(), Map.of("name", poachedName(company), "rival", rivalName(poach.rival))));
+        Korean.fill(texts.kept(), Map.of("name", poachedName(company), "rival", poacher())));
     company.poach = null;
   }
 
@@ -265,7 +326,7 @@ class CompanyEngine {
   String poachLine(CompanyState company) {
     return Korean.fill(
         content.raising().company().people().poach(),
-        Map.of("rival", rivalName(company.poach.rival), "name", poachedName(company)));
+        Map.of("rival", poacher(), "name", poachedName(company)));
   }
 
   private String poachedName(CompanyState company) {
@@ -288,71 +349,13 @@ class CompanyEngine {
     teams.tidy(company);
     company.capital += poach.transferFee;
     company.yearHiring -= poach.transferFee;
-    company.yearLines.add(
-        Korean.fill(template, Map.of("name", name, "rival", rivalName(poach.rival))));
+    company.yearLines.add(Korean.fill(template, Map.of("name", name, "rival", poacher())));
     company.poach = null;
   }
 
-  /** 업계 순위(1부터): 우리보다 자본이 큰 라이벌 수 + 1 (decisions.md 261번). */
-  int industryRank(CompanyState company) {
-    return (int) company.rivals.stream().filter(r -> r > company.capital).count() + 1;
-  }
-
-  /** 우리 바로 위의 라이벌 번호(콘텐츠 순서). 우리가 1위면 -1. */
-  int rivalAbove(CompanyState company) {
-    int at = -1;
-    for (int i = 0; i < company.rivals.size(); i++) {
-      long r = company.rivals.get(i);
-      if (r > company.capital && (at < 0 || r < company.rivals.get(at))) {
-        at = i;
-      }
-    }
-    return at;
-  }
-
-  String rivalName(int index) {
-    return content.raising().company().rivals().companies().get(index).name();
-  }
-
-  /**
-   * 라이벌 증권사가 그해 시장으로 움직인다 (261번): 시장 갈래의 비율에 회사마다 ±spread를 더한다(회사 시드와 해로만 정한다). 결산 전후로 우리보다 컸다가 작아진
-   * 라이벌은 앞지른 것이고, 작았다가 커진 라이벌에게는 밀린 것이다.
-   */
-  private void moveRivals(CompanyState company, Settlement settlement, SeededRandom random) {
-    if (company.rivals.isEmpty()) {
-      return;
-    }
-    CompanyProperties.Rivals rules = properties.rivals();
-    int base = rules.phasePercent().getOrDefault(company.phase, PERCENT);
-    RaisingContent.Rivals texts = content.raising().company().rivals();
-    long before = settlement.capitalBefore;
-    List<Integer> passed = new java.util.ArrayList<>();
-    List<Integer> lost = new java.util.ArrayList<>();
-    for (int i = 0; i < company.rivals.size(); i++) {
-      long was = company.rivals.get(i);
-      int percent =
-          base
-              + random.forKey("rival", company.year, i).nextInt(2 * rules.spread() + 1)
-              - rules.spread();
-      long now = Math.max(1, was * percent / PERCENT);
-      company.rivals.set(i, now);
-      if (was > before && now <= company.capital) {
-        passed.add(i);
-      } else if (was <= before && now > company.capital) {
-        lost.add(i);
-      }
-    }
-    int rank = industryRank(company);
-    for (int i : passed) {
-      settlement.overtook.add(rivalName(i));
-      settlement.lines.add(
-          Korean.fill(
-              texts.overtook(), Map.of("name", rivalName(i), "rank", String.valueOf(rank))));
-    }
-    for (int i : lost) {
-      settlement.lines.add(
-          Korean.fill(texts.fell(), Map.of("name", rivalName(i), "rank", String.valueOf(rank))));
-    }
+  /** 이직 제안을 한 곳 (262·288번): 이름 없는 다른 증권사. */
+  String poacher() {
+    return content.raising().company().people().poacher();
   }
 
   /** 망한 회사의 한 줄. 망하지 않았으면 null. */
@@ -910,14 +913,6 @@ class CompanyEngine {
 
   /** 올해 시장을 정하고 연초 회의를 준비한다. 다음 해 시장도 미리 정해 둔다: XX(경보)·ZZZ(선견) 직원이 들여다본다 (2.4절). */
   void startYear(CompanyState company, SeededRandom random) {
-    if (company.rivals.isEmpty()) {
-      content
-          .raising()
-          .company()
-          .rivals()
-          .companies()
-          .forEach(r -> company.rivals.add(r.capital()));
-    }
     Market market = marketOf(company, company.year, random);
     company.phase = market.phase();
     company.omen = market.omen();
@@ -1112,6 +1107,11 @@ class CompanyEngine {
       swayBp = swayBp * properties.effects().leaderFlipPercent() / PERCENT;
       flipBp = flipBp * properties.effects().leaderFlipPercent() / PERCENT;
     }
+    // GOD 신의 손 (289번): 회사에 한 명만 있어도 모든 직원이 덜 흔들린다.
+    if (company.employees.stream().anyMatch(e -> e.rank >= RANK_GOD)) {
+      swayBp = swayBp * properties.effects().godFlipPercent() / PERCENT;
+      flipBp = flipBp * properties.effects().godFlipPercent() / PERCENT;
+    }
     return new Odds(swayBp, flipBp);
   }
 
@@ -1184,10 +1184,6 @@ class CompanyEngine {
     if (invest.open(company)) {
       throw new InvalidRequestException("종목 회의를 먼저 한다");
     }
-    // 올해의 라이벌은 연초에만 고른다 (275번): 1분기를 넘기면 고르지 않은 후보는 사라진다.
-    if (company.quarter == 1) {
-      targets.quarterPassed(company);
-    }
     RandomGenerator rng = random.forKey("company-settle", company.year, company.quarter);
     if (company.quarter == 1 || company.yearStake == null) {
       company.yearStake = company.capital;
@@ -1235,7 +1231,16 @@ class CompanyEngine {
                   gainBp(company, employee)
                       + (conviction ? effects.convictionGainBp() : 0)
                       + macro.windBp(company, employee.desk)));
+      // 등급 효과 (289번): 종합 등급이 높을수록 맞혔을 때 더 번다. XS 큰손은 그 위에 1.5배.
+      gainBp = gainBp * (PERCENT + perkGainPercent(employee)) / PERCENT;
+      if (employee.rank >= RANK_BIG) {
+        gainBp = gainBp * effects.bigGainPercent() / PERCENT;
+      }
       int missBp = scaledMiss(company, returns.missBp());
+      // XSS 철벽: 틀려도 잃는 몫이 절반이다.
+      if (employee.rank >= RANK_WALL) {
+        missBp = missBp * effects.wallMissPercent() / PERCENT;
+      }
       int flipLossBp = scaledMiss(company, returns.flipBp());
       // 시장 손익. 폭락장에는 섹터마다 빠지는 폭이 다르다(식품·금융은 덜, 반도체는 더). 방어로 돌렸으면 덜 빠진다 (266번).
       int phaseBp = properties.phaseBp().getOrDefault(company.phase, 0);
@@ -1324,7 +1329,7 @@ class CompanyEngine {
 
   /**
    * 연말 결산 (decisions.md 240·268번). 네 분기를 모아 연말 결산서를 짓는다: 직원마다 한 해 손익의 합과 분기 판돈의 평균, 손이 뒤집힌 횟수. 큰
-   * 손실과 실전 경험은 한 해 합계로 정한다. 회사 등급·건물·자리 수가 여기서 바뀌고, 라이벌이 움직이고, 시대가 바뀌고, 다음 해 연초 회의로 간다.
+   * 손실과 실전 경험은 한 해 합계로 정한다. 회사 등급·건물·자리 수가 여기서 바뀌고, 시대가 바뀌고, 다음 해 연초 회의로 간다.
    */
   private void yearEnd(CompanyState company, SeededRandom random) {
     // 이직 제안에 답하지 않았으면 제안은 흐지부지되고 직원은 남는다 (265번): 사장이 고르지 않으면 아무도 잃지 않는다.
@@ -1332,7 +1337,7 @@ class CompanyEngine {
       company.yearLines.add(
           Korean.fill(
               content.raising().company().people().ignored(),
-              Map.of("name", poachedName(company), "rival", rivalName(company.poach.rival))));
+              Map.of("name", poachedName(company), "rival", poacher())));
       company.poach = null;
     }
     Settlement settlement = new Settlement();
@@ -1416,15 +1421,13 @@ class CompanyEngine {
     }
     settlement.salary = company.quarters.stream().mapToLong(q -> q.salary).sum();
     pay.yearEnd(company, company.yearLines);
-    // 올해의 라이벌과 한 번 견준다 (275번). 이기면 넘어온 고객 몫이 자본에 든다.
-    targets.yearEnd(company, settlement, random);
     settlement.capitalAfter = company.capital;
     if (company.capital == 0) {
       settlement.lines.add(content.raising().company().bankrupt().emptied());
     }
-    moveRivals(company, settlement, random);
     settlement.lines.addAll(company.yearLines);
     countTenure(company, settlement);
+    grow(company, settlement, random);
     // 등급·건물·자리 수는 연말에만 바뀐다 (268번).
     company.gradedCapital = company.capital;
     List<Employee> stood = fitSeats(company);
@@ -1485,7 +1488,6 @@ class CompanyEngine {
         settlement,
         ranksBefore,
         eraLine,
-        industryRank(company),
         LADDER.indexOf(settlement.gradeAfter) <= LADDER.indexOf("E"));
     // 회사는 끝나지 않고 해마다 이어진다 (decisions.md 236번: 매각을 뺐다).
     startYear(company, random);
@@ -1493,11 +1495,16 @@ class CompanyEngine {
 
   /**
    * 큰 손실을 낸 직원은 종합 등급이 한 단계 떨어진다 (6.4절). 떠나지 않는다. X 이상이면 종합 등급이, 그 아래면 그해 손을 가장 많이 뒤집은 능력치(뒤집힘이
-   * 없었으면 자리가 원하는 능력치)가 한 띠 내려간다. 종합 등급만 내리면 실제 성적이 그대로라 판정에 쓰는 능력치를 내린다.
+   * 없었으면 자리가 원하는 능력치)가 한 띠 내려간다. 종합 등급만 내리면 실제 성적이 그대로라 판정에 쓰는 능력치를 내린다. 종합 등급이 F·E면 내려가지 않는다
+   * (289번).
    */
   void drop(Employee employee, Result result, Settlement settlement) {
     RaisingContent.GradeLines lines = content.raising().company().gradeLines();
     String before = employeeGrade(employee);
+    // 새내기·견습(F·E)은 배우는 중이라 큰 손실로 깎이지 않는다 (289번): 깎이면 자라는 만큼 도로 내려가 F를 벗어나지 못했다.
+    if (employee.rank == 0 && LADDER.indexOf(before) < LADDER.indexOf(StatGrade.D.name())) {
+      return;
+    }
     if (employee.rank > 0) {
       employee.rank--;
       employee.experience = 0;

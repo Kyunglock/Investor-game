@@ -18,15 +18,11 @@ interface RaisingState {
   justSettled: boolean
   /** 방금 한 분기를 넘겼다(4분기가 아니다). 분기 실적을 띄우고 닫으면 지운다 (decisions.md 268번). */
   justQuartered: boolean
-  /**
-   * 방금 연말 결산에서 라이벌을 앞질렀거나 올해의 라이벌과 견줬다. 연말 결산서를 닫으면 알림이 뜨고, 닫으면 지운다 (decisions.md 274·275번).
-   */
-  overtakeAlert: boolean
-  /** 방금 연말 결산으로 건물이 바뀌었다(오르거나 줄었다). 라이벌 알림 뒤에 건물 알림이 뜨고, 닫으면 지운다 (decisions.md 281번). */
+  /** 방금 연말 결산으로 건물이 바뀌었다(오르거나 줄었다). 연말 결산서를 닫으면 건물 알림이 뜨고, 닫으면 지운다 (decisions.md 281번). */
   moveAlert: boolean
   /** 자동 진행을 켰다 (245번). 새로 고치면 꺼진다: 모르는 사이에 돈을 쓰지 않게. */
   autoPlay: boolean
-  /** 자동 진행이 띄운 창(분기 실적·연말 결산서·라이벌 알림)을 닫을 때(ms). 화면이 남은 초를 센다. 창이 없으면 null (decisions.md 277번). */
+  /** 자동 진행이 띄운 창(분기 실적·연말 결산서·건물 알림)을 닫을 때(ms). 화면이 남은 초를 센다. 창이 없으면 null (decisions.md 277번). */
   autoNextAt: number | null
   /** 회사 화면에서 고른 탭. null이면 화면이 정한다 (231번). */
   tab: 'meeting' | 'market' | 'staff' | 'settlement' | 'history' | null
@@ -43,8 +39,6 @@ interface RaisingState {
   answerPoach: (keep: boolean) => Promise<void>
   /** 올해 연봉 협상에 답한다: 올려 주거나 동결한다 (decisions.md 270번). */
   answerRaise: (accept: boolean) => Promise<void>
-  /** 연초 회의에서 올해의 라이벌을 고른다: EASY·MEDIUM·HARD (decisions.md 275번). */
-  pickTarget: (difficulty: 'EASY' | 'MEDIUM' | 'HARD') => Promise<void>
   /** 사표를 들고 온 직원에게 답한다: 연봉을 올려 붙잡거나 보낸다 (decisions.md 282번). */
   answerResign: (keep: boolean) => Promise<void>
   /** 종목 회의의 막판 제안에 답한다 (decisions.md 283번). */
@@ -94,7 +88,6 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     error: null,
     justSettled: false,
     justQuartered: false,
-    overtakeAlert: false,
     moveAlert: false,
     autoPlay: false,
     autoNextAt: null,
@@ -155,8 +148,6 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     answerPoach: (keep) => change(api.POST('/api/company/poach', { body: { keep } })),
 
     answerRaise: (accept) => change(api.POST('/api/company/raise', { body: { accept } })),
-
-    pickTarget: (difficulty) => change(api.POST('/api/company/target', { body: { difficulty } })),
 
     answerResign: (keep) => change(api.POST('/api/company/resign', { body: { keep } })),
 
@@ -220,10 +211,6 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
           justSettled: true,
           justQuartered: false,
           tab: 'settlement',
-          // 라이벌을 앞질렀거나 올해의 라이벌과 견줬으면 결산서 뒤에 알림이 뜬다 (274·275번).
-          overtakeAlert:
-            (after.lastSettlement?.overtook.length ?? 0) > 0 ||
-            Boolean(after.lastSettlement?.target),
           moveAlert: Boolean(
             after.lastSettlement &&
               moveOf(after.lastSettlement.gradeBefore, after.lastSettlement.gradeAfter),

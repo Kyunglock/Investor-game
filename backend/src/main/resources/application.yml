@@ -91,16 +91,6 @@ raising:
     sway-percent: 50
     # 폭락장에 손이 뒤집히면(못 참고 팔면) 손실이 두 배
     crash-flip-percent: 200
-    # 라이벌 증권사 (decisions.md 261번): 해마다 그해 시장 갈래의 비율(%)에 ±spread를 더해 자본이 움직인다
-    rivals:
-      phase-percent: { boom: 130, normal: 116, crash: 86 }
-      spread: 12
-    # 올해의 라이벌 (decisions.md 275번): 연초 회의에서 고른다. 후보는 연초 우리 자본의 band-percent [아래, 위)% 띠에 있는 실제 다른 사장의 회사.
-    # 그 띠에 없으면 우리 자본의 fictional-percent%인 지어낸 회사(그해 시장대로 자란다). 연말에 한 번 견줘 이기면 자본 bonus-bp(만분율)가 는다
-    targets:
-      band-percent: { EASY: [100, 115], MEDIUM: [115, 140], HARD: [140, 200] }
-      fictional-percent: { EASY: 105, MEDIUM: 125, HARD: 160 }
-      bonus-bp: { EASY: 200, MEDIUM: 500, HARD: 1000 }
     # 엔딩 (decisions.md 276번): 연말 결산에서 회사 등급이 이 등급(랜드마크 타워, 자본 100조 원)에 오르면 엔딩을 보고 회사가 멈춘다
     ending-grade: Z
     # 사람 이야기 (decisions.md 262번): 이직 제안은 poach-from-year 해부터 해마다 poach-percent 확률로 온다.
@@ -141,15 +131,24 @@ raising:
       conviction-miss-percent: 50
       contrarian-crash-bp: 500
       leader-flip-percent: 50
+      # XS 큰손은 맞히면 1.5배, XSS 철벽은 틀려도 절반만 잃고, GOD 신의 손은 회사 모두의 뒤집힘·꼬드김이 절반 (decisions.md 289번)
+      big-gain-percent: 150
+      wall-miss-percent: 50
+      god-flip-percent: 50
+    # 등급 효과 (decisions.md 289번): 종합 등급마다 맞혔을 때 버는 몫에 gain-percent%를 더 얹고, 한 해 자리에서 일하면
+    # growth-percent% 확률로 가장 낮은 능력치(운 빼고)가 한 띠 오른다. 낮은 등급일수록 잘 크고 높을수록 더디다. SSS 위는 실전 경험으로 오른다
+    perks:
+      gain-percent: { F: 0, E: 2, D: 4, C: 6, B: 8, A: 10, S: 12, SS: 14, SSS: 16 }
+      growth-percent: { F: 60, E: 50, D: 40, C: 35, B: 30, A: 25, S: 20, SS: 15, SSS: 0 }
     # 인사 직원 (6.3절): 인사팀에 사람이 있으면 지원자가 한 명 더 오고, 지원자 등급의 중심이 인사 직원보다 두 단계 아래까지 오른다
     hr:
       cap-steps: 2
       extra-applicants: 1
-    # 공채 시장 (decisions.md 228·287번): 해마다 지원자 다섯이 온다(자리가 늘어 셋에서 늘렸다). 등급의 중심은 회사 등급보다 두 단계 위(F 회사면 D)이고
+    # 공채 시장 (decisions.md 228·287번): 해마다 지원자 다섯이 온다(자리가 늘어 셋에서 늘렸다). 등급의 중심은 회사 등급(F 회사면 F, 289번: 전에는 두 단계 위)이고
     # 한 단계 아래·위로 흩어진다. 계약금을 내고 뽑는다. 새로 받는 값 300만 원
     market:
       applicants: 5
-      level-steps: 2
+      level-steps: 0
       spread: 15
       # 계약금 F 50만 · E 100만 · D 200만 · C 250만 · B 400만 · A 600만 · S 1,000만 · SS 1,800만 · SSS 3,000만 (287번: 전의 4분의 1)
       fees: [500000, 1000000, 2000000, 2500000, 4000000, 6000000, 10000000, 18000000, 30000000]

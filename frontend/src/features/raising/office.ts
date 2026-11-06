@@ -1,5 +1,5 @@
 import type { Company, Grade } from '../../api/client'
-import { LADDER } from './grades'
+import { EMPLOYEE_LADDER, LADDER } from './grades'
 
 /**
  * 회사 건물과 객장 (증권사 육성 설계 8.1절). 위층은 사무실(책상 수 = 자리 수), 아래층은 객장(손님 = 매출). 회사 등급이 오르면 건물이 바뀐다. 표에 없는
@@ -23,6 +23,10 @@ const TIERS: Record<Grade, Tier> = {
   Z: 'landmark',
   ZZ: 'landmark',
   ZZZ: 'landmark',
+  // 직원에게만 있는 등급 (289번). 회사는 ZZZ까지다.
+  XS: 'landmark',
+  XSS: 'landmark',
+  GOD: 'landmark',
 }
 
 export function tierOf(grade: Grade): Tier {
@@ -127,14 +131,14 @@ export function officeCaption(grade: Grade, seats: number): string {
 export type Attire = 'hoodie' | 'shirt' | 'suit' | 'tailored'
 
 export function attireOf(grade: Grade): Attire {
-  const at = LADDER.indexOf(grade)
-  if (at >= LADDER.indexOf('SSS')) {
+  const at = EMPLOYEE_LADDER.indexOf(grade)
+  if (at >= EMPLOYEE_LADDER.indexOf('SSS')) {
     return 'tailored'
   }
-  if (at >= LADDER.indexOf('S')) {
+  if (at >= EMPLOYEE_LADDER.indexOf('S')) {
     return 'suit'
   }
-  return at >= LADDER.indexOf('B') ? 'shirt' : 'hoodie'
+  return at >= EMPLOYEE_LADDER.indexOf('B') ? 'shirt' : 'hoodie'
 }
 
 export const ATTIRE_NAMES: Record<Attire, string> = {
@@ -144,9 +148,9 @@ export const ATTIRE_NAMES: Record<Attire, string> = {
   tailored: '맞춤 정장',
 }
 
-/** X·XX·XXX는 파란빛, Z·ZZ·ZZZ는 금빛. 사무실만 봐도 금빛이 몇 명인지 보인다 (8.2절). */
+/** X·XX·XXX는 파란빛, Z·ZZ·ZZZ와 그 위(XS·XSS·GOD, 289번)는 금빛. 사무실만 봐도 금빛이 몇 명인지 보인다 (8.2절). */
 export function glowOf(grade: Grade): 'blue' | 'gold' | null {
-  if (grade.startsWith('Z')) {
+  if (EMPLOYEE_LADDER.indexOf(grade) >= EMPLOYEE_LADDER.indexOf('Z')) {
     return 'gold'
   }
   return grade.startsWith('X') ? 'blue' : null
@@ -259,6 +263,9 @@ export function seatTiles(company: Company): { tiles: SeatTile[]; resting: Emplo
  * 에이스도 수습이었다.
  */
 const TITLES: [Grade, string][] = [
+  ['GOD', '신'],
+  ['XSS', '고문'],
+  ['XS', '부사장'],
   ['Z', '전무'],
   ['X', '이사'],
   ['SSS', '부장'],
@@ -270,9 +277,9 @@ const TITLES: [Grade, string][] = [
 ]
 
 export function titleOf(grade: Grade): string {
-  const at = LADDER.indexOf(grade)
+  const at = EMPLOYEE_LADDER.indexOf(grade)
   for (const [from, title] of TITLES) {
-    if (at >= LADDER.indexOf(from)) {
+    if (at >= EMPLOYEE_LADDER.indexOf(from)) {
       return title
     }
   }

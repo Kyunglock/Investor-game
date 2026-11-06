@@ -296,7 +296,19 @@ class JsonContentCatalog implements ContentCatalog {
         company.gradeLines() != null && company.statNames().keySet().containsAll(StatCodes.ALL),
         "직원 등급 소식 문구가 없다");
     require(
-        company.effects() != null && company.effects().list().size() == 6, "X 이상 효과는 여섯 개여야 한다");
+        company.effects() != null && company.effects().list().size() == 9,
+        "X 이상 효과는 아홉 개여야 한다(X~ZZZ, XS·XSS·GOD)");
+    require(
+        company.perks() != null
+            && company
+                .perks()
+                .names()
+                .keySet()
+                .containsAll(List.of("F", "E", "D", "C", "B", "A", "S", "SS", "SSS"))
+            && company.perks().line() != null
+            && company.perks().lineTop() != null
+            && company.perks().grown() != null,
+        "등급 효과 문구가 없다");
     for (RaisingContent.Era era : company.eras()) {
       require(
           era.phaseWeights().values().stream().mapToInt(Integer::intValue).sum() > 0,
@@ -329,13 +341,8 @@ class JsonContentCatalog implements ContentCatalog {
         "망한 회사 문구가 없다");
     require(company.seatsCut() != null, "자리가 줄 때의 소식 줄이 없다");
     require(
-        company.rivals() != null
-            && !company.rivals().companies().isEmpty()
-            && company.rivals().overtook() != null
-            && company.rivals().fell() != null,
-        "라이벌 증권사가 없다");
-    require(
         company.people() != null
+            && company.people().poacher() != null
             && company.people().poach() != null
             && company.people().kept() != null
             && company.people().left() != null
@@ -355,7 +362,7 @@ class JsonContentCatalog implements ContentCatalog {
                 .history()
                 .events()
                 .keySet()
-                .containsAll(List.of("open", "rise", "left", "best", "worst", "overtake"))
+                .containsAll(List.of("open", "rise", "left", "best", "worst"))
             && !company.history().achievements().isEmpty(),
         "회사 연표·업적 문구가 없다");
     require(

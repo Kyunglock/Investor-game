@@ -61,7 +61,6 @@ public record RaisingContent(
       String seatsCut,
       String opening,
       Bankrupt bankrupt,
-      Rivals rivals,
       People people,
       History history,
       List<Era> eras,
@@ -69,25 +68,13 @@ public record RaisingContent(
       Map<String, String> statNames,
       GradeLines gradeLines,
       Effects effects,
+      Perks perks,
       Market market,
       Invest invest,
       Macro macro,
       Quarters quarters,
       Teams teams,
-      Targets targets,
       Ending ending) {}
-
-  /**
-   * 올해의 라이벌 (decisions.md 275번). difficulties: EASY·MEDIUM·HARD의 이름. prefixes·suffixes: 라이벌 회사 이름을
-   * 짓는 앞말·뒷말(실제 사장의 회사는 이름이 없어 회사 ID로 늘 같은 이름을 짓는다). won·lost: 연말 결산 소식
-   * 줄({name}·{difficulty}·{bonus}·{gap}).
-   */
-  public record Targets(
-      Map<String, String> difficulties,
-      List<String> prefixes,
-      List<String> suffixes,
-      String won,
-      String lost) {}
 
   /** 엔딩 (decisions.md 276번). line: 엔딩을 본 해의 결산 소식 줄({years}). */
   public record Ending(String line) {}
@@ -199,18 +186,11 @@ public record RaisingContent(
   public record EraTurn(String ending, String changed) {}
 
   /**
-   * 라이벌 증권사 (decisions.md 261번). companies: 이름과 시작 자본(작은 곳부터). overtook·fell: 결산에서 순위가 바뀐 해의 소식
-   * 줄({name}·{rank}).
-   */
-  public record Rivals(List<Rival> companies, String overtook, String fell) {}
-
-  public record Rival(String name, long capital) {}
-
-  /**
-   * 사람 이야기 (decisions.md 262번). poach: 라이벌이 손을 뻗었다({rival}·{name}). kept·left·ignored: 붙잡음·보냄·답 없이
-   * 떠남. settled: 같은 자리 세 해째({name}·{desk}).
+   * 사람 이야기 (decisions.md 262번). poacher: 손을 뻗는 곳(이름 없는 다른 증권사, 288번). poach: 그곳이 손을
+   * 뻗었다({rival}·{name}). kept·left·ignored: 붙잡음·보냄·답 없이 떠남. settled: 같은 자리 세 해째({name}·{desk}).
    */
   public record People(
+      String poacher,
       String poach,
       String kept,
       String left,
@@ -266,6 +246,12 @@ public record RaisingContent(
       List<Effect> list, String mentorTip, String earlyOmen, Map<String, String> forecast) {}
 
   public record Effect(String grade, String name, String description) {}
+
+  /**
+   * 등급 효과 (decisions.md 289번). names: 종합 등급(F~SSS)마다 이름. line: 효과 한 줄({gain}·{growth}). lineTop:
+   * SSS 위(실전 경험으로 오른다, {gain}). grown: 한 해 일하며 자란 소식 줄({name}·{stat}·{before}·{after}).
+   */
+  public record Perks(Map<String, String> names, String line, String lineTop, String grown) {}
 
   /**
    * 직원 등급이 바뀌는 결산 소식 (6.4·2.3절). {name}·{before}·{after}·{stat} 자리표시를 쓴다.

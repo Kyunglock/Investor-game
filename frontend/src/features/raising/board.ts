@@ -90,10 +90,3 @@ const SENDERS = ['경쟁사 김대리', '리딩방 방장', '사촌 형', '경�
 export function wreathsFor(year: number): string[] {
   return [0, 1, 2].map((i) => SENDERS[(year + i) % SENDERS.length])
 }
-
-/** 박치기로 무너뜨리는 라이벌 증권사 (decisions.md 243번). 지어낸 이름이고 해마다 바뀐다. */
-const RIVALS = ['한탕증권', '불개미투자', '떡상자산운용', '물타기증권', '존버캐피탈']
-
-export function rivalFor(year: number): string {
-  return RIVALS[year % RIVALS.length]
-}
