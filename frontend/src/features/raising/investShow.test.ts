@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import type { Company } from '../../api/client'
-import { groupRemarks, hindsightOf, investTimeline, matchupOf, spokesperson } from './investShow'
+import {
+  chartTimeline,
+  groupRemarks,
+  hindsightOf,
+  investTimeline,
+  matchupOf,
+  percentOf,
+  spokesperson,
+} from './investShow'
 
 type Result = NonNullable<NonNullable<Company['invest']>['outcome']>['results'][number]
 
@@ -159,5 +167,22 @@ describe('같은 의견 칸의 대표 (decisions.md 246번)', () => {
   it('칸에서 안목이 가장 높은 사람이 대표로 말하고, 같으면 앞사람이다', () => {
     expect(spokesperson([remark(1), remark(2), remark(3)], staff).employeeId).toBe(2)
     expect(spokesperson([remark(1)], staff).employeeId).toBe(1)
+  })
+})
+
+describe('차트 결정 장면 (decisions.md 283번)', () => {
+  it('차트가 다 그려진 뒤 종목이 드러나고 손익이 차례로 뜬다', () => {
+    const t = chartTimeline(2, 2600, false, 0)
+    expect(t.chartAt).toBe(500)
+    expect(t.reveal).toBe(500 + 2600 + 200)
+    expect(t.pnlAt(1)).toBeGreaterThan(t.pnlAt(0))
+    expect(t.end).toBeGreaterThan(t.total)
+    expect(chartTimeline(2, 2600, true).end).toBe(0)
+    // 맡겼으면 맞붙는 장면만큼 늦게 시작한다.
+    expect(chartTimeline(1, 2600, false, 2900).chartAt).toBe(3400)
+  })
+  it('공개 문장에서 몇 %를 읽는다', () => {
+    expect(percentOf('넥손게임즈가 35% 내렸다.')).toBe(35)
+    expect(percentOf('없음')).toBe(0)
   })
 })

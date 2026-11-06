@@ -65,6 +65,22 @@ class CompanyApiTest {
         "{\"year\":%d,\"refreshes\":%d}".formatted(year, refreshes));
   }
 
+  /** 종목 회의에서 고른다. 막판 뒤집기(decisions.md 283번)가 끼어들면 원래대로 한다고 답한다: 시험이 고른 결정 그대로 굴린다. */
+  private DocumentContext decide(String choice) throws Exception {
+    DocumentContext decided =
+        json(
+            postJson("/api/company/invest", "{\"choice\":\"" + choice + "\"}")
+                .andExpect(status().isOk()));
+    if (decided.read("$.invest.proposal", Object.class) != null) {
+      assertThat(decided.read("$.invest.outcome", Object.class)).as("답할 때까지 정해지지 않는다").isNull();
+      decided =
+          json(
+              postJson("/api/company/invest/proposal", "{\"accept\":false}")
+                  .andExpect(status().isOk()));
+    }
+    return decided;
+  }
+
   private ResultActions settle(int year, int quarter) throws Exception {
     return postJson("/api/company/settle", "{\"year\":%d,\"quarter\":%d}".formatted(year, quarter));
   }
@@ -80,7 +96,7 @@ class CompanyApiTest {
           json(mvc.perform(get("/api/company").cookie(session)))
               .read("$.invest.ready", Boolean.class);
       if (Boolean.TRUE.equals(ready)) {
-        postJson("/api/company/invest", "{\"choice\":\"HOLD\"}").andExpect(status().isOk());
+        decide("HOLD");
       }
       last = settle(year, q).andExpect(status().isOk());
     }
@@ -245,9 +261,7 @@ class CompanyApiTest {
       long meetingTotal = 0;
       boolean held = json(mvc.perform(get("/api/company").cookie(session))).read("$.invest.ready");
       if (held) {
-        DocumentContext decided =
-            json(
-                postJson("/api/company/invest", "{\"choice\":\"BUY\"}").andExpect(status().isOk()));
+        DocumentContext decided = decide("BUY");
         assertThat(decided.read("$.invest.ready", Boolean.class)).isFalse();
         assertThat(decided.read("$.invest.outcome.results.length()", Integer.class)).isEqualTo(1);
         assertThat(decided.read("$.invest.outcome.reveal", String.class)).isNotBlank();
@@ -303,7 +317,7 @@ class CompanyApiTest {
     // 거시경제 회의를 건너뛰고 결산하면 중립이다. 물어 온 종목이 있으면 그 회의는 정해야 한다.
     if (json(mvc.perform(get("/api/company").cookie(session)))
         .read("$.invest.ready", Boolean.class)) {
-      json(postJson("/api/company/invest", "{\"choice\":\"HOLD\"}").andExpect(status().isOk()));
+      decide("HOLD");
     }
     settleYear(4)
         .andExpect(jsonPath("$.lastSettlement.year").value(4))

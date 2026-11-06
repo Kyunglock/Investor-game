@@ -249,6 +249,28 @@ class CompanyState {
     /** 사장이 "너희가 알아서 해" 하고 맡겼다 (decisions.md 279번). choice는 직원들이 정한 쪽(BUY·SELL)이다. */
     boolean delegated;
 
+    /** 막판 뒤집기 (decisions.md 283번): 반대로 하자고 나선 직원과 그 행동·한마디. 답할 때까지 회의는 정해지지 않는다. 없으면 null. */
+    Integer proposalId;
+
+    String proposalName;
+    String proposalAction;
+    String proposalLine;
+
+    /** 제안이 나오기 전 사장의 결정. 제안을 거절하면 이대로 한다. */
+    String pendingChoice;
+
+    boolean pendingBig;
+    boolean pendingDelegated;
+
+    /** 제안을 따랐으면 그 직원. 결과를 보고 상이나 벌을 줄 차례가 온다(verdictPending). */
+    Integer followedId;
+
+    String followedName;
+    boolean verdictPending;
+
+    /** 상이나 벌을 준 한 줄. */
+    String verdictLine;
+
     /** 맡겼을 때 매수 쪽·매도 쪽에 얹힌 무게(직원 안목). 불꽃 장면이 쓴다. */
     int teamBuy;
 

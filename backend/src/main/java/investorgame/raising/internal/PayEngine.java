@@ -310,6 +310,11 @@ class PayEngine {
             "ignore", String.valueOf(rules.ignoreLeavePercent())));
   }
 
+  /** 사기를 움직인다(−2~+2). 막판 뒤집기의 상과 벌이 쓴다 (283번). */
+  void shiftMorale(Employee e, int by) {
+    shift(e, by);
+  }
+
   private static void shift(Employee e, int by) {
     e.morale = Math.clamp(e.morale + by, MORALE_MIN, MORALE_MAX);
   }

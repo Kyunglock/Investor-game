@@ -171,6 +171,11 @@ public record RaisingContent(
       Map<String, String> actions,
       String obey,
       String team,
+      List<String> proposals,
+      String rejected,
+      Map<String, String> verdictAsk,
+      Map<String, String> verdictOptions,
+      Map<String, String> verdicts,
       String rogue,
       String swayed,
       Map<String, String> reveal) {}

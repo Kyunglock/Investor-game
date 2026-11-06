@@ -192,7 +192,27 @@ public record CompanyView(
       boolean ready,
       boolean convened,
       Finder finder,
-      InvestOutcome outcome) {}
+      InvestOutcome outcome,
+      Proposal proposal,
+      Verdict verdict) {}
+
+  /**
+   * 막판 뒤집기 (decisions.md 283번): 결정이 다 끝났는데 누군가 반대로 하자고 나섰다. 답할 때까지 회의는 정해지지 않는다.
+   *
+   * @param action 제안한 행동(BUY·SELL)
+   */
+  public record Proposal(int employeeId, String name, String action, String line) {}
+
+  /**
+   * 막판 제안을 따른 뒤의 상과 벌 (283번).
+   *
+   * @param good 따랐더니 벌었다
+   * @param ask 결과 한 줄("○○의 말대로 해서 1,200만 원 벌었다!")
+   * @param options 고를 것: 벌었으면 BONUS·RAISE·NOTHING, 잃었으면 CUT·FORGIVE. 이미 골랐으면 비었다
+   * @param result 고른 뒤의 한 줄. 아직이면 null
+   */
+  public record Verdict(
+      int employeeId, String name, boolean good, String ask, List<Option> options, String result) {}
 
   /**
    * 종목을 물어 온 직원 (decisions.md 267번).

@@ -127,6 +127,8 @@ public record CompanyProperties(
       int bigStakePercent,
       int bigStubbornPercent,
       int meetingStakePercent,
+      int proposalPercent,
+      int proposalBonusPercent,
       List<Clarity> clarity) {}
 
   /**

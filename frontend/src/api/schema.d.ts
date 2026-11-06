@@ -195,6 +195,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/invest/proposal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 종목 회의의 막판 제안에 답한다 (decisions.md 283번)
+         * @description accept가 참이면 제안한 쪽으로, 거짓이면 원래 결정대로 회의를 정한다. 따랐으면 invest.verdict로 상이나 벌을 줄 차례가 온다. 제안이 없으면 400.
+         */
+        post: operations["answerProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/invest/verdict": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 막판 제안을 따른 직원에게 상이나 벌을 준다 (decisions.md 283번)
+         * @description 벌었으면 BONUS(성과금)·RAISE(연봉 인상)·NOTHING(아무것도 안 함), 잃었으면 CUT(연봉 삭감)·FORGIVE(봐준다). 차례가 아니거나 고를 수 없는 것이면 400.
+         */
+        post: operations["giveVerdict"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/invest/open": {
         parameters: {
             query?: never;
@@ -599,6 +639,30 @@ export interface components {
                 convened: boolean;
                 /** @description 이 종목을 물어 온 직원 (267번). 아직 아무도 안 가져왔거나 옛 회의면 null */
                 finder?: components["schemas"]["Finder"] | null;
+                /** @description 막판 뒤집기 (decisions.md 283번). 결정이 끝났는데 누군가 반대로 하자고 나섰다. 답할 때까지 outcome이 없다. 없으면 null */
+                proposal?: {
+                    employeeId: number;
+                    name: string;
+                    /** @enum {string} */
+                    action: "BUY" | "SELL";
+                    line: string;
+                } | null;
+                /** @description 막판 제안을 따른 뒤의 상과 벌 (283번). 따르지 않았으면 null */
+                verdict?: {
+                    employeeId: number;
+                    name: string;
+                    /** @description 따랐더니 벌었다 */
+                    good: boolean;
+                    ask: string;
+                    /** @description 고를 것. 이미 골랐으면 비었다 */
+                    options: {
+                        /** @enum {string} */
+                        code: "BONUS" | "RAISE" | "NOTHING" | "CUT" | "FORGIVE";
+                        label: string;
+                    }[];
+                    /** @description 고른 뒤의 한 줄 */
+                    result?: string | null;
+                } | null;
                 outcome?: {
                     /**
                      * @description 정한 것. 맡겼으면 직원들이 정한 쪽
@@ -1259,6 +1323,65 @@ export interface operations {
         };
         responses: {
             /** @description 답한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    answerProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    accept: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description 답한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    giveVerdict: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    choice: "BONUS" | "RAISE" | "NOTHING" | "CUT" | "FORGIVE";
+                };
+            };
+        };
+        responses: {
+            /** @description 고른 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -1,4 +1,4 @@
-import { expect, type Page, test } from '@playwright/test'
+import { expect, type Locator, type Page, test } from '@playwright/test'
 
 // 실제 브라우저·서버·DB로 회사 한 바퀴를 확인한다 (증권사 육성 설계 4·6·9절, decisions.md 228번).
 // 새 브라우저 문맥은 새 세션이라 회사가 없다: 사장의 사재로 차리고, 공채 시장에서 뽑아 앉히고, 해마다 결산한다. 회사는 끝나지 않는다(236번).
@@ -83,16 +83,16 @@ async function passQuarter(
     const pick = quarter === 1 ? choice : '지켜본다'
     // 버튼 이름을 그대로 맞춘다.
     await meeting.getByRole('button', { name: pick, exact: true }).click()
+    await declineProposal(meeting)
     await expect(meeting.getByTestId('invest-outcome')).toBeVisible()
     await expect(meeting.getByTestId('invest-choice')).toHaveText(pick)
     const settle = meeting.getByRole('button', { name: label })
     if (watch && quarter === 1) {
-      // 돈을 굴리는 직원마다 막대 하나: 맞붙을 것이 있으면 맞대결, 없으면 한쪽으로 곧장 찬다.
-      const bars = meeting.locator('[data-testid="tug"], [data-testid="one-voice"]')
-      await expect(bars).toHaveCount(await meeting.getByTestId('invest-result').count())
+      // 결정 장면은 종목 차트가 그려지며 오르거나 빠지는 것이다 (283번).
+      await expect(meeting.getByTestId('invest-chart')).toBeVisible()
+      await expect(meeting.getByTestId('chart-change')).toHaveText(/[▲▼] [+−]\d+%/)
       await expect(settle).toHaveCount(0)
       await expect(settle).toBeVisible({ timeout: 15_000 })
-      await expect(meeting.locator('[data-testid="tug"][data-done="false"]')).toHaveCount(0)
       // 가져온 직원을 칭찬하거나 탓하는 한 줄이 붙는다.
       await expect(meeting.getByTestId('invest-credit')).toBeVisible()
     } else {
@@ -108,6 +108,16 @@ async function passQuarter(
     await expect(page.getByTestId('settlement')).toContainText(`${year}년 차 결산`)
   }
   return held
+}
+
+/** 막판 뒤집기(283번)가 끼어들면 원래대로 한다: 시험이 고른 결정 그대로 간다. */
+async function declineProposal(meeting: Locator) {
+  const proposal = meeting.getByTestId('invest-proposal')
+  const outcome = meeting.getByTestId('invest-outcome')
+  await expect(proposal.or(outcome)).toBeVisible()
+  if (await proposal.isVisible()) {
+    await proposal.getByRole('button', { name: '됐어, 원래대로 해' }).click()
+  }
 }
 
 /** 한 해를 네 분기 넘긴다. 1분기는 고른 태도·결정으로, 나머지는 중립으로 지켜본다. 1분기에 종목 회의를 했으면 true. */
@@ -446,6 +456,7 @@ test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 �
   await expect(meeting.getByTestId('stubborn')).toHaveCount(0)
   await expect(meeting.getByRole('button', { name: /크게/ })).toHaveCount(0)
   await meeting.getByTestId('invest-team').click()
+  await declineProposal(meeting)
   const clash = meeting.getByTestId('team-clash')
   await expect(clash).toBeVisible()
   await expect(clash).toHaveAttribute('data-phase', 'clash')
@@ -462,6 +473,91 @@ test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 �
   }
   await meeting.getByRole('button', { name: '1년 차 1분기 넘기기' }).click()
   await closeQuarter(page, 1, 1)
+})
+
+test('정하고 나면 누군가 막판에 반대로 하자고 하고, 따랐으면 결과를 보고 상이나 벌을 준다 (283번)', async ({
+  page,
+}) => {
+  await openCompany(page)
+  await hireCheapest(page)
+  await hireCheapest(page)
+  await tab(page, /배치/)
+  await page.getByRole('button', { name: '자동 배치' }).click()
+  // 35%를 기다리기 어렵다: 고른 뒤 응답에 막판 제안을 넣어 본다. 서버는 실제로 산다로 정하고(서버도 제안을 냈으면 원래대로 답한다), 따르면 상벌 차례를 붙인다.
+  await page.route('**/api/company/invest', async (route) => {
+    const response = await route.fetch()
+    let company = await response.json()
+    if (company.invest.proposal) {
+      company = await (
+        await page.request.post('/api/company/invest/proposal', { data: { accept: false } })
+      ).json()
+    }
+    company.invest.outcome = null
+    company.invest.ready = true
+    company.invest.proposal = {
+      employeeId: 1,
+      name: '이도담',
+      action: 'SELL',
+      line: '"사장님! 잠깐만요!" 이도담이 손을 번쩍 들었다. "저… 아무래도 판다입니다."',
+    }
+    await route.fulfill({ response, json: company })
+  })
+  let verdictLabel = ''
+  await page.route('**/api/company/invest/proposal', async (route) => {
+    expect(route.request().postDataJSON()).toEqual({ accept: true })
+    const company = await (await page.request.get('/api/company')).json()
+    const good = company.invest.outcome.total > 0
+    verdictLabel = good ? '성과금을 준다' : '이번 한 번은 봐준다'
+    company.invest.verdict = {
+      employeeId: 1,
+      name: '이도담',
+      good,
+      ask: good ? '이도담의 말대로 해서 벌었다!' : '이도담의 말대로 해서 잃었다.',
+      options: good
+        ? [
+            { code: 'BONUS', label: '성과금을 준다' },
+            { code: 'RAISE', label: '연봉을 올려 준다' },
+            { code: 'NOTHING', label: '"잘했다" 한마디만' },
+          ]
+        : [
+            { code: 'CUT', label: '연봉을 깎는다' },
+            { code: 'FORGIVE', label: '이번 한 번은 봐준다' },
+          ],
+    }
+    await route.fulfill({ json: company })
+  })
+  await page.route('**/api/company/invest/verdict', async (route) => {
+    const company = await (await page.request.get('/api/company')).json()
+    company.invest.verdict = {
+      employeeId: 1,
+      name: '이도담',
+      good: true,
+      ask: '',
+      options: [],
+      result: '이도담: "사장님 만세!"',
+    }
+    await route.fulfill({ json: company })
+  })
+  await page.getByRole('button', { name: '1년 차 1분기 넘기기', exact: true }).click()
+  const macro = page.getByRole('dialog', { name: '거시경제 회의' })
+  await macro.getByRole('button', { name: /^중립/ }).click()
+  await macro.getByRole('button', { name: '종목 회의 열기 →' }).click()
+  const meeting = page.getByRole('dialog', { name: '종목 회의' })
+  await meeting.getByRole('button', { name: '산다', exact: true }).click()
+  const proposal = meeting.getByTestId('invest-proposal')
+  await expect(proposal).toBeVisible()
+  await expect(proposal.getByTestId('proposal-line')).toContainText('잠깐만요')
+  await expect(meeting.getByTestId('invest-outcome')).toHaveCount(0)
+  await proposal.getByRole('button', { name: /그래, 네 말대로 해/ }).click()
+  await expect(meeting.getByTestId('invest-chart')).toBeVisible()
+  await meeting.getByRole('button', { name: '빨리 보기' }).click()
+  const verdict = meeting.getByTestId('invest-verdict')
+  await expect(verdict).toBeVisible()
+  // 상벌을 고르기 전에는 넘기지 않는다.
+  await expect(meeting.getByRole('button', { name: '1년 차 1분기 넘기기 →' })).toBeDisabled()
+  await verdict.getByRole('button', { name: verdictLabel }).click()
+  await expect(verdict.getByTestId('verdict-result')).toContainText('만세')
+  await expect(meeting.getByRole('button', { name: '1년 차 1분기 넘기기 →' })).toBeEnabled()
 })
 
 test('연봉 때문에 사표를 들고 오면 붙잡을 마지막 기회가 뜬다 (282번)', async ({ page }) => {
