@@ -7,9 +7,9 @@ import {
   chartTimeline,
   groupRemarks,
   hindsightOf,
+  leadersOf,
   OPINIONS,
   percentOf,
-  spokesperson,
 } from './investShow'
 import { useRaisingStore } from './store'
 import { TeamClash, teamClashMs } from './TeamClash'
@@ -153,8 +153,8 @@ export function InvestWindow({
           // 안목이 가장 높은 사람이 대표로 한 번만 한다. 사람이 많은 의견이 먼저.
           <div className="mt-2 grid gap-2" data-testid="remarks">
             {groupRemarks(invest.remarks).map((g, i) => {
-              const voice = spokesperson(g.remarks, employees)
-              const others = g.remarks.length - 1
+              // 팀장만 이름을 보이고 나머지는 "외 N명" (292번).
+              const { shown, voice, others } = leadersOf(g.remarks, employees)
               return (
                 <section
                   key={g.read}
@@ -170,23 +170,22 @@ export function InvestWindow({
                       {OPINIONS[g.read].label}{' '}
                       <span className="font-mono-num text-[13px]">· {g.remarks.length}명</span>
                     </h4>
-                    <ul className="flex flex-wrap gap-1 text-ink">
-                      {g.remarks.map((r) => (
+                    <ul className="flex flex-wrap items-baseline gap-1 text-ink">
+                      {shown.map((r) => (
                         <li
                           key={r.employeeId}
                           className="flex items-baseline gap-1 rounded bg-card px-1.5 text-[13px]"
                         >
+                          <span className="text-[11px] text-muted">팀장</span>
                           <b>{r.name}</b>
                         </li>
                       ))}
+                      {others > 0 && <li className="text-[12px] text-muted">외 {others}명</li>}
                     </ul>
                   </div>
                   <p className="mt-1 text-[14px] text-ink" data-testid="opinion-voice">
                     “{voice.text}”{' '}
-                    <span className="whitespace-nowrap text-[12px] text-muted">
-                      — {voice.name}
-                      {others > 0 && ` 외 ${others}명`}
-                    </span>
+                    <span className="whitespace-nowrap text-[12px] text-muted">— {voice.name}</span>
                   </p>
                 </section>
               )

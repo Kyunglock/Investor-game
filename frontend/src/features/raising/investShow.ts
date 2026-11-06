@@ -171,6 +171,19 @@ export function hindsightOf(invest: NonNullable<Company['invest']>): string[] {
 }
 
 /**
+ * 의견 칸에 세우는 사람 (decisions.md 292번): 사람이 많아지면 이름이 칸을 꽉 채워서 **팀장만** 이름을 보이고 나머지는 "외 N명"이다. 대표 한마디도 팀장
+ * 가운데 안목이 가장 높은 사람이 한다. 그 칸에 팀장이 없으면(팀장이 다른 의견이다) 칸에서 안목이 가장 높은 사람 하나만 세운다.
+ */
+export function leadersOf(
+  remarks: Remark[],
+  employees: Company['employees'],
+): { shown: Remark[]; voice: Remark; others: number } {
+  const leaders = remarks.filter((r) => employees.find((e) => e.id === r.employeeId)?.leader)
+  const shown = leaders.length > 0 ? leaders : [spokesperson(remarks, employees)]
+  return { shown, voice: spokesperson(shown, employees), others: remarks.length - shown.length }
+}
+
+/**
  * 같은 의견 칸의 대표 (decisions.md 246번): 한마디는 칸마다 한 번만, 그 칸에서 안목이 가장 높은 직원이 한다(같으면 자리 순서가 앞인 사람). 나머지는
  * 이름만 함께 선다.
  */
