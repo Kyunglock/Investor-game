@@ -405,6 +405,7 @@ class CompanyEngine {
       throw new InvalidRequestException("지원자를 새로 받을 돈이 모자란다");
     }
     company.capital -= cost;
+    company.yearHiring += cost;
     company.refreshes++;
     fitSeats(company);
     deal(company, random);
@@ -431,6 +432,7 @@ class CompanyEngine {
       company.employees.removeIf(e -> e.id == replace);
     }
     company.capital -= applicant.fee;
+    company.yearHiring += applicant.fee;
     company.applicants.remove(applicant);
     fitSeats(company);
     Employee employee = add(company, applicant.name, applicant.stats);
@@ -568,6 +570,8 @@ class CompanyEngine {
     company.nextPhase = next.phase();
     company.nextOmen = next.omen();
     company.refreshes = 0;
+    company.yearStartCapital = company.capital;
+    company.yearHiring = 0;
     deal(company, random);
     company.invest = invest.create(company, random);
   }
@@ -733,10 +737,16 @@ class CompanyEngine {
     settlement.year = company.year;
     settlement.phase = company.phase;
     settlement.omen = company.omen;
-    // 투자 회의의 손익은 정할 때 이미 자본에 들어갔다. 한 해의 변화로 함께 보인다.
+    // 연초 자본은 연초 회의 때의 자본이다(250번): 그 뒤에 낸 계약금·새로 받기 값은 채용비 줄로, 회의 손익은 회의 줄로 보인다.
+    // 이 칸을 더하기 전의 해면 지금 자본에서 회의 손익을 뺀다(예전 방식).
+    settlement.hiring = company.yearHiring;
     settlement.capitalBefore =
-        company.capital
-            - (company.invest != null && company.invest.choice != null ? company.invest.total : 0);
+        company.yearStartCapital != null
+            ? company.yearStartCapital
+            : company.capital
+                - (company.invest != null && company.invest.choice != null
+                    ? company.invest.total
+                    : 0);
     settlement.gradeBefore = grade(company.capital);
 
     int research = researchInsight(company);

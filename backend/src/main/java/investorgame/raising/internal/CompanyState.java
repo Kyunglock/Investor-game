@@ -53,6 +53,12 @@ class CompanyState {
   /** 올해 공채 시장의 지원자 (오토배틀러의 상점). 해가 바뀌면 새로 온다. 뽑으면 빠진다. */
   List<Applicant> applicants = new ArrayList<>();
 
+  /** 올해 연초 회의 때의 자본. 연말 결산서의 연초 자본이다 (decisions.md 250번). 이 칸을 더하기 전의 해면 null. */
+  Long yearStartCapital;
+
+  /** 올해 채용에 쓴 돈: 계약금과 새로 받기 값 (250번). */
+  long yearHiring;
+
   /** 올해 지원자를 새로 받은 횟수. 같은 해에 새로 받을 때마다 다른 지원자가 온다. */
   int refreshes;
 
@@ -206,6 +212,9 @@ class CompanyState {
     long capitalBefore;
     long capitalAfter;
     long fee;
+
+    /** 그해 채용에 쓴 돈(계약금·새로 받기 값, 250번). 이 칸을 더하기 전의 결산이면 0. */
+    long hiring;
 
     /** 그해 투자 회의의 기사 제목과 손익. 회의를 안 했거나 이 칸을 더하기 전(240번)의 결산이면 null. */
     String investTitle;

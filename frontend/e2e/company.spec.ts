@@ -208,6 +208,8 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
       // 장부에 회의 한 건이 직원들의 1년 운용과 따로 있다 (240번).
       await expect(page.getByTestId('ledger-invest')).toContainText('투자 회의')
       await expect(page.getByTestId('ledger-staff')).toBeVisible()
+      // 그해 계약금·새로 받기 값은 채용비 줄로 따로 나온다 (250번).
+      await expect(page.getByTestId('ledger-hiring')).toContainText('채용비')
       await expect(page.getByTestId('office-pnl')).toHaveCount(2)
     }
   }

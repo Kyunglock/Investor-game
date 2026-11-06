@@ -609,4 +609,49 @@ class CompanyEngineTest {
     CompanyState next = ENGINE.restart(broke, new HashSeededRandom(2), ENGINE.openingCapital());
     assertThat(next.era).isNotEqualTo(broke.era);
   }
+
+  /**
+   * 연말 결산서의 장부가 맞는다 (#314, decisions.md 250번): 연초 자본은 연초 회의 때의 자본이고, 그해 계약금·새로 받기 값은 채용비 줄로 나온다. 연초
+   * 자본 + 회의 + 직원들 + 수수료 − 채용비 = 연말 자본.
+   */
+  @Test
+  void 연말_결산서의_연초_자본은_연초_회의_때의_자본이고_채용비가_따로_나온다() {
+    for (long seed = 1; seed <= 20; seed++) {
+      CompanyState company = ENGINE.open(new HashSeededRandom(seed), ENGINE.openingCapital());
+      HashSeededRandom random = new HashSeededRandom(seed);
+      for (int year = 1; year <= 4; year++) {
+        long start = company.capital;
+        long spent = 0;
+        if (company.employees.size() < ENGINE.seats(company.capital)) {
+          ENGINE.refresh(company, random);
+          spent += ENGINE.refreshCost();
+          CompanyState.Applicant cheapest =
+              company.applicants.stream()
+                  .min(java.util.Comparator.comparingLong(a -> a.fee))
+                  .orElseThrow();
+          if (company.capital >= cheapest.fee) {
+            CompanyState.Employee hired = ENGINE.hireApplicant(company, cheapest.id, null);
+            spent += cheapest.fee;
+            Map<Integer, String> seats = new HashMap<>();
+            company.employees.forEach(e -> seats.put(e.id, e.desk));
+            seats.put(hired.id, "day");
+            if (seats.values().stream().filter(d -> d != null).count()
+                <= ENGINE.seats(company.capital)) {
+              ENGINE.place(company, seats);
+            }
+          }
+        }
+        CompanyState.Settlement s = settleYear(company, random);
+        assertThat(s.capitalBefore).isEqualTo(start);
+        assertThat(s.hiring).isEqualTo(spent);
+        long staff = s.results.stream().mapToLong(r -> r.pnl).sum();
+        long invest = s.investTotal == null ? 0 : s.investTotal;
+        if (s.capitalAfter > 0) {
+          assertThat(s.capitalBefore + invest + staff + s.fee - s.hiring)
+              .as("%d번 시드 %d년 차 장부", seed, year)
+              .isEqualTo(s.capitalAfter);
+        }
+      }
+    }
+  }
 }

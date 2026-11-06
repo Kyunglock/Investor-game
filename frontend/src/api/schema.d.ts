@@ -384,12 +384,23 @@ export interface components {
                 /** @enum {string} */
                 phase: "boom" | "normal" | "crash";
                 omen?: string | null;
-                /** Format: int64 */
+                /**
+                 * Format: int64
+                 * @description 연초 회의 때의 자본 (decisions.md 250번)
+                 */
                 capitalBefore: number;
                 /** Format: int64 */
                 capitalAfter: number;
-                /** Format: int64 */
+                /**
+                 * Format: int64
+                 * @description 수수료 매출
+                 */
                 fee: number;
+                /**
+                 * Format: int64
+                 * @description 그해 채용에 쓴 돈(계약금·새로 받기 값). 연초 자본 + 회의 + 직원들 + 수수료 − 채용비 = 연말 자본 (250번)
+                 */
+                hiring: number;
                 /** @description 그해 투자 회의(기사 제목과 손익, 이미 자본에 들어갔다). 회의를 안 했거나 옛 결산이면 null (decisions.md 240번) */
                 invest?: {
                     title: string;

@@ -193,6 +193,7 @@ public record CompanyView(
       long capitalBefore,
       long capitalAfter,
       long fee,
+      long hiring,
       SettlementInvest invest,
       String gradeBefore,
       String gradeAfter,
