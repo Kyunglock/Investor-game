@@ -310,7 +310,7 @@ class CompanyEngineTest {
   void 공채_시장에서_계약금을_내고_뽑는다() {
     CompanyState company = ENGINE.open(new HashSeededRandom(5), ENGINE.openingCapital());
     CompanyState.Applicant first = company.applicants.getFirst();
-    assertThat(first.fee).isEqualTo(ENGINE.fee(first.stats));
+    assertThat(first.fee).isEqualTo(ENGINE.fee(company.capital, first.stats, 0));
     long before = company.capital;
     CompanyState.Employee hired = ENGINE.hireApplicant(company, first.id, null);
     assertThat(hired.name).isEqualTo(first.name);
@@ -333,7 +333,9 @@ class CompanyEngineTest {
 
     long cash = company.capital;
     ENGINE.refresh(company, new HashSeededRandom(5));
-    assertThat(company.capital).isEqualTo(cash - PROPERTIES.market().refreshCost());
+    assertThat(company.capital)
+        .as("1억 회사는 정해진 값")
+        .isEqualTo(cash - PROPERTIES.market().refreshCost());
     assertThat(company.applicants).hasSize(PROPERTIES.market().applicants());
     company.capital = 0;
     assertThatThrownBy(() -> ENGINE.refresh(company, new HashSeededRandom(5)))
@@ -359,7 +361,8 @@ class CompanyEngineTest {
       }
     }
     assertThat(sum / (double) count).as("중심은 D 언저리").isBetween(1.6, 2.6);
-    assertThat(ENGINE.fee(stats(90, 90, 90, 90))).isGreaterThan(ENGINE.fee(stats(30, 30, 30, 30)));
+    assertThat(ENGINE.fee(100_000_000, stats(90, 90, 90, 90), 0))
+        .isGreaterThan(ENGINE.fee(100_000_000, stats(30, 30, 30, 30), 0));
 
     CompanyState company = ENGINE.open(new HashSeededRandom(8), ENGINE.openingCapital());
     List<String> first = company.applicants.stream().map(a -> a.name).toList();
@@ -626,9 +629,10 @@ class CompanyEngineTest {
       for (int year = 1; year <= 4; year++) {
         long start = company.capital;
         long spent = 0;
-        if (company.employees.size() < ENGINE.seats(company.capital - ENGINE.refreshCost())) {
+        long refreshCost = ENGINE.refreshCost(company);
+        if (company.employees.size() < ENGINE.seats(company.capital - refreshCost)) {
           ENGINE.refresh(company, random);
-          spent += ENGINE.refreshCost();
+          spent += refreshCost;
           CompanyState.Applicant cheapest =
               company.applicants.stream()
                   .min(java.util.Comparator.comparingLong(a -> a.fee))
@@ -773,8 +777,42 @@ class CompanyEngineTest {
           break;
         }
       }
+      // 새로 받을수록 비싸지므로(257번) 횟수를 되돌린다. 이름은 만난 수로 붙으니 그래도 이어진다.
+      company.refreshes = 0;
       ENGINE.refresh(company, new HashSeededRandom(1));
     }
     assertThat(names).hasSize(total);
+  }
+
+  /**
+   * 큰 회사에도 공채가 무겁다 (#321, decisions.md 257번): 계약금은 정해진 값과 자본 비율 가운데 큰 쪽, 새로 받기 값은 자본에 비례하고 한 해에
+   * 받을수록 비싸지며, SSS 회사부터 경력직(X 이상)이 온다.
+   */
+  @Test
+  void 큰_회사의_계약금과_새로_받기_값은_자본에_비례하고_경력직이_온다() {
+    Map<String, Integer> sss = new HashMap<>(stats(95, 95, 95, 95));
+    sss.put("luck", 95);
+    long small = ENGINE.fee(100_000_000, sss, 0);
+    assertThat(small).as("1억 회사의 SSS 계약금은 정해진 값").isEqualTo(120_000_000);
+    long big = ENGINE.fee(1_000_000_000_000L, sss, 0);
+    assertThat(big).as("1조 회사의 SSS 계약금은 자본의 8%").isEqualTo(80_000_000_000L);
+    assertThat(ENGINE.fee(1_000_000_000_000L, sss, 1)).as("경력직은 더 비싸다").isGreaterThan(big);
+
+    // 새로 받기 값을 내고도 SSS(1조 이상)에 머물게 넉넉히 연다.
+    CompanyState company = ENGINE.open(new HashSeededRandom(3), 1_200_000_000_000L);
+    long first = ENGINE.refreshCost(company);
+    assertThat(first).as("1.2조 회사의 새로 받기는 자본의 0.5%").isEqualTo(6_000_000_000L);
+    ENGINE.refresh(company, new HashSeededRandom(3));
+    assertThat(ENGINE.refreshCost(company)).as("두 번째는 두 배쯤").isGreaterThan(first * 19 / 10);
+
+    CompanyState.Applicant veteran = company.applicants.get(2);
+    assertThat(veteran.rank).as("SSS 회사에는 X 경력직이 온다").isEqualTo(1);
+    assertThat(CompanyEngine.gradeOf(veteran.stats, veteran.rank)).isEqualTo("X");
+    assertThat(veteran.line).contains("경력직");
+    CompanyState.Employee hired = ENGINE.hireApplicant(company, veteran.id, null);
+    assertThat(CompanyEngine.employeeGrade(hired)).isEqualTo("X");
+
+    CompanyState small2 = ENGINE.open(new HashSeededRandom(3), 100_000_000);
+    assertThat(small2.applicants).allMatch(a -> a.rank == 0);
   }
 }

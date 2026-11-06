@@ -229,7 +229,7 @@ class DefaultCompanyService implements CompanyService {
                         new CompanyView.Applicant(
                             a.id,
                             a.name,
-                            CompanyEngine.overallGrade(a.stats),
+                            CompanyEngine.gradeOf(a.stats, a.rank),
                             CompanyEngine.grades(a.stats),
                             a.fee,
                             a.line,
@@ -264,7 +264,7 @@ class DefaultCompanyService implements CompanyService {
         desks,
         meeting,
         applicants,
-        engine.refreshCost(),
+        engine.refreshCost(c),
         c.refreshes,
         ended ? null : engine.brokeNotice(c),
         ended ? null : investView(c, new HashSeededRandom(row.seed())),

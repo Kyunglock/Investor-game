@@ -102,8 +102,11 @@ public record RaisingContent(
    */
   public record Bankrupt(String notice, String emptied, String opening) {}
 
-  /** 공채 시장 지원자 카드의 한 줄. wanted: 올해 필요한 인재({desk}·{stat}). hr: 인사팀이 데려온 지원자({name}). */
-  public record Market(String wanted, String hr) {}
+  /**
+   * 공채 시장 지원자 카드의 한 줄. wanted: 올해 필요한 인재({desk}·{stat}). hr: 인사팀이 데려온 지원자({name}). veteran:
+   * 경력직({grade}, decisions.md 257번).
+   */
+  public record Market(String wanted, String hr, String veteran) {}
 
   /**
    * X 이상 등급의 효과 (2.4절). 효과는 쌓인다: XX 직원은 X 효과도 가진다.

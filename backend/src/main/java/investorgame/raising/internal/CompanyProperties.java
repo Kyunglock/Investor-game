@@ -89,8 +89,25 @@ public record CompanyProperties(
    * @param fees 종합 등급별 계약금(원). F부터 SSS까지
    * @param refreshCost 지원자를 새로 받는 값(원)
    */
+  /**
+   * 공채 시장 (decisions.md 228·257번).
+   *
+   * @param fees 종합 등급(F~SSS)별 정해진 계약금
+   * @param feeBp 종합 등급별 자본 비율 계약금(만분율). 정해진 계약금과 이것 가운데 큰 쪽을 낸다
+   * @param veteranFeeBp 경력직(X 이상)의 계약금(자본의 만분율). 단계마다 veteranFeeStepBp만큼 더
+   * @param refreshCost 새로 받기의 정해진 값
+   * @param refreshBp 새로 받기의 자본 비율 값(만분율). 둘 가운데 큰 쪽에 (올해 새로 받은 횟수 + 1)을 곱한다
+   */
   public record Market(
-      int applicants, int levelSteps, int spread, List<Long> fees, long refreshCost) {}
+      int applicants,
+      int levelSteps,
+      int spread,
+      List<Long> fees,
+      List<Integer> feeBp,
+      int veteranFeeBp,
+      int veteranFeeStepBp,
+      long refreshCost,
+      int refreshBp) {}
 
   /**
    * @param capSteps 인사 직원이 데려오는 지원자의 중심 등급 = 인사 직원 종합 등급보다 이만큼 아래. 회사 등급으로 정한 중심보다 높을 때만 쓴다

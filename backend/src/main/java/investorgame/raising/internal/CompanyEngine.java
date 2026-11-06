@@ -31,6 +31,10 @@ class CompanyEngine {
       List.of("F", "E", "D", "C", "B", "A", "S", "SS", "SSS", "X", "XX", "XXX", "Z", "ZZ", "ZZZ");
 
   static final String CRASH = "crash";
+
+  /** 경력직이 오는 지원자 자리: 첫째는 올해 필요한 인재, 둘째는 사수가 붙는 자리라 셋째 (257번). */
+  private static final int VETERAN_SLOT = 2;
+
   private static final String NORMAL = "normal";
 
   /** 폭락장인데 아무도 바닥에서 던지지 않은 해의 머리줄 (254번). */
@@ -361,6 +365,10 @@ class CompanyEngine {
     int top = LADDER.indexOf(StatGrade.SSS.name());
     int count = market.applicants() + (hr.isPresent() ? properties.hr().extraApplicants() : 0);
     String wantedStat = desk(company.wantedDesk).statCode();
+    // SSS 회사부터 경력직이 하나 온다: SSS면 X, X면 XX, 그 위는 XXX (257번).
+    int companyAt = LADDER.indexOf(grade(company.capital));
+    int sssAt = LADDER.indexOf(StatGrade.SSS.name());
+    int veteranRank = companyAt >= sssAt ? Math.min(3, companyAt - sssAt + 1) : 0;
     java.util.Optional<Employee> mentor = bestRanked(company, RANK_MENTOR);
     RaisingContent.Company texts = content.raising().company();
     company.applicants.clear();
@@ -405,31 +413,62 @@ class CompanyEngine {
       } else if (i == count - 1 && hr.isPresent()) {
         line = Korean.fill(texts.market().hr(), Map.of("name", hr.get().name));
       }
+      int rank = 0;
+      if (i == VETERAN_SLOT && veteranRank > 0) {
+        // 경력직 (257번): 능력치가 모두 SSS 띠이고 실전 경험으로 X 이상까지 올랐다. 큰 회사의 공채에 새 목표를 준다.
+        rank = veteranRank;
+        for (String code : StatCodes.ALL) {
+          stats.put(
+              code,
+              Math.max(
+                  stats.get(code),
+                  StatGrade.SSS.min() + rng.nextInt(MAX_STAT - StatGrade.SSS.min() + 1)));
+        }
+        line =
+            Korean.fill(
+                texts.market().veteran(),
+                Map.of("grade", LADDER.get(LADDER.indexOf(StatGrade.SSS.name()) + rank)));
+      }
       CompanyState.Applicant applicant = new CompanyState.Applicant();
       applicant.id = company.met + 1;
       applicant.name = nextName(company);
       applicant.stats.putAll(stats);
-      applicant.fee = fee(stats);
+      applicant.rank = rank;
+      applicant.fee = fee(company.capital, stats, rank);
       applicant.line = line;
       applicant.sector = sector;
       company.applicants.add(applicant);
     }
   }
 
-  /** 종합 등급으로 정하는 계약금. */
-  long fee(Map<String, Integer> stats) {
-    List<Long> fees = properties.market().fees();
-    return fees.get(Math.min(fees.size() - 1, LADDER.indexOf(overallGrade(stats))));
+  /**
+   * 계약금 (decisions.md 257번): 종합 등급으로 정한 값과 자본 × 등급별 비율 가운데 큰 쪽. 초반(1억 회사)은 정해진 값 그대로이고, 회사가 커지면 자본에
+   * 비례해 무거워진다. 경력직(rank > 0)은 자본 비율이 더 크다. 전에는 정해진 값뿐이라 SSS 회사에 SSS 계약금 1.2억이 자본의 0.01%였다.
+   */
+  long fee(long capital, Map<String, Integer> stats, int rank) {
+    CompanyProperties.Market market = properties.market();
+    int at = Math.min(market.fees().size() - 1, LADDER.indexOf(overallGrade(stats)));
+    long fixed = market.fees().get(at);
+    int bp =
+        rank > 0
+            ? market.veteranFeeBp() + (rank - 1) * market.veteranFeeStepBp()
+            : market.feeBp().get(Math.min(market.feeBp().size() - 1, at));
+    return Math.max(fixed, (long) (capital * (bp / (double) BP)));
   }
 
-  long refreshCost() {
-    return properties.market().refreshCost();
+  /** 지원자를 새로 받는 값: 정해진 값과 자본 × 비율 가운데 큰 쪽에, 올해 새로 받은 횟수 + 1을 곱한다 (257번). */
+  long refreshCost(CompanyState company) {
+    CompanyProperties.Market market = properties.market();
+    long base =
+        Math.max(
+            market.refreshCost(), (long) (company.capital * (market.refreshBp() / (double) BP)));
+    return base * (company.refreshes + 1);
   }
 
   /** 값을 내고 올해 지원자를 새로 받는다. 돈이 모자라면 400. */
   void refresh(CompanyState company, SeededRandom random) {
     requireOpen(company);
-    long cost = refreshCost();
+    long cost = refreshCost(company);
     if (company.capital < cost) {
       throw new InvalidRequestException("지원자를 새로 받을 돈이 모자란다");
     }
@@ -466,6 +505,7 @@ class CompanyEngine {
     fitSeats(company);
     Employee employee = add(company, applicant.name, applicant.stats);
     employee.sector = applicant.sector;
+    employee.rank = applicant.rank;
     return employee;
   }
 
@@ -1015,11 +1055,16 @@ class CompanyEngine {
 
   /** 직원의 종합 등급: 다섯 능력치 평균의 F~SSS, SSS면 실전 경험으로 오른 X~ZZZ (2.2·2.3절). */
   static String employeeGrade(Employee employee) {
-    String base = overallGrade(employee.stats);
-    if (employee.rank == 0 || !StatGrade.SSS.name().equals(base)) {
+    return gradeOf(employee.stats, employee.rank);
+  }
+
+  /** 능력치와 SSS 위의 단계로 매기는 종합 등급. 지원자(경력직)도 같이 쓴다. */
+  static String gradeOf(Map<String, Integer> stats, int rank) {
+    String base = overallGrade(stats);
+    if (rank == 0 || !StatGrade.SSS.name().equals(base)) {
       return base;
     }
-    return LADDER.get(LADDER.indexOf(StatGrade.SSS.name()) + employee.rank);
+    return LADDER.get(LADDER.indexOf(StatGrade.SSS.name()) + rank);
   }
 
   /** 그 단계 이상의 직원 가운데 가장 높은 직원. 정보를 주는 효과는 한 명만 있어도 되고 여럿이어도 겹치지 않는다 (2.4절). */

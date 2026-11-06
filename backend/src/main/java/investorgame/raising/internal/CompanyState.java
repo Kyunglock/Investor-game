@@ -207,6 +207,9 @@ class CompanyState {
 
     /** 관심 섹터 코드. 뽑으면 직원이 안고 들어온다. */
     String sector;
+
+    /** 경력직이면 SSS 위의 단계(1 X …). 다른 회사에서 위기를 버텨 올랐다 (decisions.md 257번). 보통 지원자는 0. */
+    int rank;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
