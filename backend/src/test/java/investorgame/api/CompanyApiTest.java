@@ -519,7 +519,7 @@ class CompanyApiTest {
     assertThat(moved.read("$.ending.year", Integer.class)).isEqualTo(2);
     assertThat(moved.read("$.ending.grade", String.class)).isEqualTo("Z");
     List<?> kinds = moved.read("$.history.timeline[*].kind");
-    assertThat(kinds).contains("grow", "ending");
+    assertThat(kinds.stream().map(String::valueOf)).contains("grow", "ending");
     hireFails();
     settle(2, 1).andExpect(status().isBadRequest());
     postJson("/api/company/upgrade", "{}").andExpect(status().isBadRequest());
