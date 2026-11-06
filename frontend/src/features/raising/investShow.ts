@@ -167,18 +167,6 @@ export function hindsightOf(invest: NonNullable<Company['invest']>): string[] {
         : '형광펜은 곁가지에 그었다. 이번엔 빗나갔다.',
     )
   }
-  // 맡겼으면(295번) "결산 때 다시 얘기해요" 하고 물러난 사람의 말이 맞았는지 따라 붙는다.
-  const debate = outcome.debate ?? []
-  const loser =
-    debate.find((d) => d.kind === 'LOSE') ?? (debate.length > 0 ? debate[debate.length - 1] : null)
-  if (outcome.delegated && loser?.last) {
-    const right = (loser.side === 'BUY') === outcome.up
-    lines.push(
-      right
-        ? `${loser.name} 말이 맞았다. 결산 때 할 말이 생겼다.`
-        : `${loser.name} 말은 틀렸다. 조용히 넘어갔다.`,
-    )
-  }
   return lines
 }
 

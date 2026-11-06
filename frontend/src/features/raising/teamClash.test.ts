@@ -4,7 +4,6 @@ import {
   type DebateLine,
   debateTimes,
   doneAt,
-  flagAt,
   gaugeDone,
   gaugeDuring,
   roomShare,
@@ -55,20 +54,16 @@ describe('"너희가 알아서 해" 회의실 (decisions.md 286번)', () => {
     expect(roomShare(0, 0)).toBe(50)
   })
 
-  it('줄은 토론에서 말한 사람(팀장)이 맨 앞에서 잡고, 의견을 낸 사람이 없는 쪽은 끌려 나온 사람이 잡는다 (295번)', () => {
+  it('원탁에는 토론에서 말한 사람(팀장)만 앉고, 의견을 낸 사람이 없는 쪽에는 끌려 나온 사람이 앉는다 (295번)', () => {
     const debate: DebateLine[] = [
       { name: '김매수', side: 'BUY', text: '…', last: false },
       { name: '옆자리 신입', side: 'SELL', text: '…', last: false },
       { name: '옆자리 신입', side: 'SELL', text: '…', last: true },
     ]
-    // 말한 사람(팀장)이 맨 앞에서 잡고, 나머지 팀원이 뒤에 붙는다.
-    expect(sidePeople(['이매수', '김매수'], 'BUY', debate)).toEqual(['김매수', '이매수'])
+    expect(sidePeople(['김매수', '이매수'], 'BUY', debate)).toEqual(['김매수'])
     expect(sidePeople([], 'SELL', debate)).toEqual(['옆자리 신입'])
     expect(sidePeople(['박매도'], 'SELL', [])).toEqual(['박매도'])
     expect(sidePeople([], 'SELL', [])).toEqual([])
-    // 깃발: 매수파가 왼쪽에서 당기니 매수 쪽 눈금이 클수록 왼쪽이다.
-    expect(flagAt(80)).toBe(20)
-    expect(flagAt(50)).toBe(50)
   })
 })
 
