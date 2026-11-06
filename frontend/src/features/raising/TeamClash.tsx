@@ -1,4 +1,80 @@
 import { type CSSProperties, useEffect, useRef, useState } from 'react'
+import type { Company } from '../../api/client'
+import type { Figure } from '../game/pixel/figure'
+import type { MoodKey } from '../game/pixel/moods'
+import { Person } from '../game/pixel/Person'
+import { SPRITE_HEIGHT, SPRITE_WIDTH } from '../game/pixel/sprite'
+import { usePixelArt } from '../game/pixelArt'
+import { ATTIRE_COLORS, attireOf } from './office'
+
+type Employee = Company['employees'][number]
+
+const PIXELATED = { imageRendering: 'pixelated', shapeRendering: 'crispEdges' } as const
+/** 회의실 캐릭터 너비(px). */
+const CHARACTER_PX = 40
+
+/**
+ * 회의실에 앉은 사람 하나 (286번). 직원은 사무실 미니맵(237번)과 같은 모습(성별·차림새는 종합 등급)이고, 끌려 나온 옆자리 사람은 손님 모습이다. 표정: 말할
+ * 때 결의, 이기면 기쁨, 지면 절망. 그림을 끄면(190번) 동그라미 글자로 그린다.
+ */
+function Character({
+  employee,
+  look,
+  side,
+  mood,
+  talking,
+  fallback,
+}: {
+  employee: Employee | undefined
+  look: number
+  side: 'BUY' | 'SELL'
+  mood: MoodKey | null
+  talking: boolean
+  fallback: string
+}) {
+  const shown = usePixelArt((s) => s.shown)
+  if (!shown) {
+    return (
+      <span
+        className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-card text-[13px] font-bold text-white shadow ${
+          side === 'BUY' ? 'bg-up' : 'bg-down'
+        } ${talking ? 'ring-2 ring-gold' : ''}`}
+      >
+        {fallback}
+      </span>
+    )
+  }
+  const figure: Figure = employee
+    ? {
+        who: 'me',
+        sex: employee.id % 2 === 0 ? 'F' : 'M',
+        stage: 'adult',
+        x: 0,
+        recolor: ATTIRE_COLORS[attireOf(employee.overallGrade)],
+      }
+    : { who: 'kid', look, sex: look % 2 ? 'F' : 'M', stage: 'adult', x: 0 }
+  return (
+    <svg
+      viewBox={`0 0 ${SPRITE_WIDTH} ${SPRITE_HEIGHT}`}
+      width={CHARACTER_PX}
+      height={(CHARACTER_PX * SPRITE_HEIGHT) / SPRITE_WIDTH}
+      className={`block drop-shadow ${talking ? 'drop-shadow-[0_0_4px_var(--gold)]' : ''}`}
+      style={PIXELATED}
+      data-testid="room-character"
+      aria-hidden="true"
+    >
+      <ellipse
+        cx={SPRITE_WIDTH / 2}
+        cy={SPRITE_HEIGHT - 0.6}
+        rx={5}
+        ry={0.9}
+        fill={side === 'BUY' ? 'var(--up)' : 'var(--down)'}
+        opacity={0.35}
+      />
+      <Person figure={figure} me={{ adornment: null, mark: null }} mood={mood} top={0} />
+    </svg>
+  )
+}
 
 /** 맞붙는 가장 짧은 시간, 한쪽으로 밀어붙이는 시간(ms) (decisions.md 279·284번). */
 const CLASH_MS = 2900
@@ -100,6 +176,7 @@ export function TeamClash({
   sell,
   choice,
   debate,
+  staff = [],
   instant,
 }: {
   buyNames: string[]
@@ -108,6 +185,8 @@ export function TeamClash({
   sell: number
   choice: 'BUY' | 'SELL' | 'HOLD'
   debate: DebateLine[]
+  /** 회사 직원: 이름으로 캐릭터를 찾는다 (286번). */
+  staff?: Employee[]
   instant: boolean
 }) {
   const buyWins = choice === 'BUY'
@@ -146,12 +225,18 @@ export function TeamClash({
   const share = roomShare(buyers.length, sellers.length)
   // 지금 말하는 사람: 방금 올라온 말의 주인.
   const speaking = said > 0 ? debate[said - 1] : null
-  const drafted = (names: string[]) => (names.length > 0 ? '' : ' (끌려 나옴)')
+  const drafted = (names: string[]) => (names.length > 0 ? '' : '(끌려옴)')
+  // 한쪽에 한 명뿐이면 한 줄로 앉아 방을 낮춘다: 탁자 앞에 선다.
+  const twoRows = Math.max(buyers.length, sellers.length) > 1
+  // 회의에 온 직원은 사무실 미니맵과 같은 캐릭터로, 끌려 나온 옆자리 사람은 손님 캐릭터로 그린다.
+  const staffOf = (name: string) => staff.find((e) => e.name === name)
   const zone = (side: 'BUY' | 'SELL', people: string[]) => {
     const buySide = side === 'BUY'
     const wins = buySide === buyWins
     const shown = people.slice(0, SEATS)
-    const rows = [shown.filter((_, i) => i % 2 === 0), shown.filter((_, i) => i % 2 === 1)]
+    const rows = twoRows
+      ? [shown.filter((_, i) => i % 2 === 0), shown.filter((_, i) => i % 2 === 1)]
+      : [shown]
     return (
       <div
         className={`relative flex h-full flex-col justify-between py-2.5 ${
@@ -173,7 +258,7 @@ export function TeamClash({
               return (
                 <div
                   key={name}
-                  className={`relative flex w-11 flex-col items-center transition-transform duration-300 ${talking ? 'z-10' : ''} ${fighting ? 'animate-clash-bob' : ''} ${
+                  className={`relative flex w-12 flex-col items-center transition-transform duration-300 ${talking ? 'z-10' : ''} ${fighting ? 'animate-clash-bob' : ''} ${
                     phase === 'push' && wins ? (buySide ? 'translate-x-2' : '-translate-x-2') : ''
                   } ${done && !wins ? 'opacity-45 grayscale' : ''} ${done && wins ? 'animate-clash-win' : ''}`}
                   style={{ animationDelay: `${(name.length * 97) % 360}ms` }}
@@ -186,11 +271,16 @@ export function TeamClash({
                     </span>
                   )}
                   <span
-                    className={`flex h-7 w-7 items-center justify-center rounded-full transition-transform duration-200 border-2 border-card text-[13px] font-bold text-white shadow ${
-                      buySide ? 'bg-up' : 'bg-down'
-                    } ${talking ? 'scale-125 ring-2 ring-gold' : ''}`}
+                    className={`block transition-transform duration-200 ${talking ? 'scale-115' : ''}`}
                   >
-                    {done ? (wins ? '🙌' : '😩') : name.slice(0, 1)}
+                    <Character
+                      employee={staffOf(name)}
+                      look={name.length}
+                      side={side}
+                      mood={done ? (wins ? 'joy' : 'despair') : talking ? 'confident' : null}
+                      talking={talking}
+                      fallback={done ? (wins ? '🙌' : '😩') : name.slice(0, 1)}
+                    />
                   </span>
                   <span className="w-full truncate text-center text-[10px] leading-tight">
                     {name}
@@ -237,13 +327,13 @@ export function TeamClash({
       </div>
       {/* 회의실 (286번): 매수파는 왼쪽, 매도파는 오른쪽에 탁자를 사이에 두고 앉는다. 방은 사람 수 비율대로 나뉜다. */}
       <div
-        className="relative mt-1 h-40 overflow-hidden rounded border border-line bg-paper"
+        className={`relative mt-1 overflow-hidden rounded border border-line bg-paper ${twoRows ? 'h-52' : 'h-[118px]'}`}
         data-testid="meeting-room"
         role="img"
         aria-label={`회의실: 매수파 ${buyers.length}명, 매도파 ${sellers.length}명`}
       >
         <div
-          className="absolute top-1/2 right-3 left-3 h-6 -translate-y-1/2 rounded-full border-2 border-pen/40 bg-desk shadow-inner"
+          className={`absolute right-3 left-3 h-6 rounded-full border-2 border-pen/40 bg-desk shadow-inner ${twoRows ? 'top-1/2 -translate-y-1/2' : 'bottom-2.5'}`}
           aria-hidden="true"
         />
         <div className="relative flex h-full">
@@ -301,7 +391,7 @@ export function TeamClash({
             ))}
         </div>
       </div>
-      <div className="mt-1 flex justify-between gap-2 text-[12px]">
+      <div className="mt-1 flex justify-between gap-2 whitespace-nowrap text-[12px]">
         <span className="text-up" data-testid="clash-buy">
           매수파 {buyers.length}명{drafted(buyNames)} · 무게 {buy}
         </span>

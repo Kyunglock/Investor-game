@@ -279,6 +279,7 @@ export function InvestWindow({
                 sell={outcome.teamSell}
                 choice={outcome.choice}
                 debate={outcome.debate}
+                staff={employees}
                 instant={skipped}
               />
             )}
