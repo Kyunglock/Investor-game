@@ -218,7 +218,10 @@ class DefaultCompanyService implements CompanyService {
                         d.trades(),
                         d.sector(),
                         hot.contains(d.code()),
-                        d.description()))
+                        d.description(),
+                        d.trades() ? engine.deskGainBp(c, d.code()) : null,
+                        d.trades() ? engine.returnsOf(d.code()).missBp() : null,
+                        d.trades() ? engine.returnsOf(d.code()).crashPercent() : null))
             .toList();
     List<CompanyView.Applicant> applicants =
         ended

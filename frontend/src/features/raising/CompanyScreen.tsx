@@ -9,7 +9,7 @@ import { InvestWindow } from './InvestWindow'
 import { MoveScene } from './MoveScene'
 import { OfficeArt, type SeatFocus } from './OfficeArt'
 import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName, titleOf } from './office'
-import { autoPlace, seatOne } from './placement'
+import { autoPlace, deskEffect, rankDesks, seatOne } from './placement'
 import { useRaisingStore } from './store'
 import { Ledger, PHASES, YearEndSheet } from './YearEnd'
 
@@ -242,10 +242,14 @@ function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
   )
 }
 
-/** 배치 탭: 자리 버튼을 누르면 바로 앉는다. 버튼에는 자리가 원하는 능력치의 등급과 맞는 정도가 보인다 (230번). */
+/**
+ * 배치 탭: 자리 버튼을 누르면 바로 앉는다. 버튼에는 자리가 원하는 능력치의 등급과 맞는 정도가 보인다 (230번). 사람별로 보면 직원마다 맞는 자리 셋만 먼저
+ * 보이고 나머지는 펼친다. 자리별로 보면 자리마다 앉은 사람과 앉힐 만한 사람이 맞는 순서로 늘어선다 (258번, #322: 직원마다 버튼 열둘이 벽이었다).
+ */
 function StaffTab({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const { place } = useRaisingStore.getState()
+  const [view, setView] = useState<'people' | 'desks'>('people')
   const placed = company.employees.filter((e) => e.desk).length
   const ended = company.status === 'ENDED'
   return (
@@ -269,19 +273,44 @@ function StaffTab({ company }: { company: Company }) {
       {company.employees.length === 0 && (
         <p className="mt-1 text-[13px] text-muted">아직 직원이 없습니다. 공채에서 뽑으세요.</p>
       )}
-      <ul className="mt-2 grid gap-2">
-        {company.employees.map((e) => (
-          <li key={e.id} className="rounded border border-line p-3" data-testid="employee">
-            <EmployeeDetail employee={e} />
-            {!ended && (
-              <fieldset className="mt-2">
-                <legend className="sr-only">{e.name}의 자리</legend>
-                <DeskButtons company={company} employee={e} />
-              </fieldset>
-            )}
-          </li>
-        ))}
-      </ul>
+      {!ended && company.employees.length > 0 && (
+        <fieldset className="mt-2 inline-flex rounded border border-line p-0.5 text-[13px]">
+          <legend className="sr-only">배치 보기</legend>
+          {(
+            [
+              ['people', '사람별로 보기'],
+              ['desks', '자리별로 보기'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={view === id}
+              onClick={() => setView(id)}
+              className={`min-h-9 rounded px-3 ${view === id ? 'bg-pen text-white' : 'text-muted'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </fieldset>
+      )}
+      {view === 'desks' && !ended ? (
+        <DeskBoard company={company} />
+      ) : (
+        <ul className="mt-2 grid gap-2">
+          {company.employees.map((e) => (
+            <li key={e.id} className="rounded border border-line p-3" data-testid="employee">
+              <EmployeeDetail employee={e} />
+              {!ended && (
+                <fieldset className="mt-2">
+                  <legend className="sr-only">{e.name}의 자리</legend>
+                  <DeskButtons company={company} employee={e} limit={3} />
+                </fieldset>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
       {!ended && (
         <details className="mt-2 text-[12px] text-muted">
           <summary className="cursor-pointer">
@@ -293,13 +322,81 @@ function StaffTab({ company }: { company: Company }) {
             {company.desks.map((d) => (
               <li key={d.code}>
                 {d.hot && '★ '}
-                {d.name}: {d.description}
+                {d.name}: {d.description} {d.trades && `(${deskEffect(d)})`}
               </li>
             ))}
           </ul>
         </details>
       )}
     </section>
+  )
+}
+
+/**
+ * 자리별로 보기 (258번): 자리마다 예상 효과와, 앉은 사람(누르면 쉰다)·앉힐 만한 사람(그 자리가 원하는 능력치가 높은 순, 누르면 앉는다)을 보인다. "이 자리에
+ * 누가 가장 맞나"를 카드마다 찾지 않고 한눈에 본다.
+ */
+function DeskBoard({ company }: { company: Company }) {
+  const busy = useRaisingStore((s) => s.busy)
+  const { place } = useRaisingStore.getState()
+  const placed = company.employees.filter((e) => e.desk).length
+  const full = placed >= company.seats
+  const rank = (e: Employee, d: Desk) =>
+    LADDER.indexOf(e.grades[d.statCode] as (typeof LADDER)[number])
+  return (
+    <ul className="mt-2 grid gap-2" data-testid="desk-board">
+      {company.desks.map((d) => {
+        const seated = company.employees.filter((e) => e.desk === d.code)
+        const others = company.employees
+          .filter((e) => e.desk !== d.code)
+          .sort((a, b) => rank(b, d) - rank(a, d) || a.id - b.id)
+        return (
+          <li key={d.code} className="rounded border border-line p-2" data-testid="desk-row">
+            <p className="text-[14px] font-semibold">
+              {d.hot && '★ '}
+              {d.name}{' '}
+              <span className="text-[12px] font-normal text-muted">
+                {STAT_NAMES[d.statCode]} · {deskEffect(d)}
+              </span>
+            </p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {seated.map((e) => (
+                <button
+                  key={e.id}
+                  type="button"
+                  aria-pressed={true}
+                  disabled={busy}
+                  onClick={() => void place(seatOne(company, e.id, null))}
+                  className="min-h-9 rounded border border-pen bg-pen px-2 text-[13px] text-white"
+                  title="누르면 쉰다"
+                >
+                  {e.name} {e.grades[d.statCode]}
+                </button>
+              ))}
+              {others.map((e) => {
+                const fit = fitOf(e, d)
+                // 쉬던 사람은 자리가 남아 있어야 앉는다. 다른 자리에 앉은 사람은 옮긴다.
+                const blocked = !e.desk && full
+                return (
+                  <button
+                    key={e.id}
+                    type="button"
+                    aria-pressed={false}
+                    disabled={busy || blocked}
+                    onClick={() => void place(seatOne(company, e.id, d.code))}
+                    className={`min-h-9 rounded border px-2 text-[13px] disabled:opacity-40 ${FIT_TONE[fit]}`}
+                    data-fit={fit}
+                  >
+                    {e.name} {e.grades[d.statCode]}
+                    {e.desk ? ' ↔' : ''}
+                  </button>
+                )
+              })}
+            </div>
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 
@@ -338,13 +435,20 @@ function DeskButtons({
   company,
   employee: e,
   onSeated,
+  limit,
 }: {
   company: Company
   employee: Employee
   onSeated?: () => void
+  /** 있으면 맞는 자리부터 이만큼만 먼저 보이고(지금 자리는 늘 보인다) 나머지는 펼친다 (258번). */
+  limit?: number
 }) {
   const busy = useRaisingStore((s) => s.busy)
   const { place } = useRaisingStore.getState()
+  const [all, setAll] = useState(false)
+  const ranked = limit ? rankDesks(company, e) : company.desks
+  const shown =
+    limit && !all ? ranked.filter((d, i) => i < limit || d.code === e.desk) : company.desks
   const placed = company.employees.filter((x) => x.desk).length
   // 쉬던 사람은 자리가 남아 있어야 앉는다.
   const full = !e.desk && placed >= company.seats
@@ -354,7 +458,7 @@ function DeskButtons({
   }
   return (
     <div className="flex flex-wrap gap-1">
-      {company.desks.map((d) => {
+      {shown.map((d) => {
         const on = e.desk === d.code
         const fit = fitOf(e, d)
         return (
@@ -368,7 +472,7 @@ function DeskButtons({
               on ? 'border-pen bg-pen text-white' : FIT_TONE[fit]
             }`}
             data-fit={fit}
-            title={d.description}
+            title={deskEffect(d)}
           >
             {d.hot && '★ '}
             {d.name}{' '}
@@ -390,6 +494,15 @@ function DeskButtons({
       >
         쉰다
       </button>
+      {limit && shown.length < company.desks.length && (
+        <button
+          type="button"
+          onClick={() => setAll(true)}
+          className="min-h-10 rounded px-2 text-[13px] text-muted underline"
+        >
+          자리 모두 보기 ({company.desks.length})
+        </button>
+      )}
     </div>
   )
 }

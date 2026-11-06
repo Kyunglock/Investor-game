@@ -260,6 +260,12 @@ export interface components {
                 /** @description 이 시대에 뜨는 자리(시대 보너스가 붙는다 */
                 hot: boolean;
                 description: string;
+                /** @description 맞혔을 때 버는 몫(만분율 */
+                gainBp?: number | null;
+                /** @description 틀렸을 때 잃는 몫(만분율). 돈을 굴리지 않으면 null */
+                missBp?: number | null;
+                /** @description 폭락장의 시장 손익에 곱하는 비율. 100보다 작으면 폭락장에 덜 빠진다. 돈을 굴리지 않으면 null */
+                crashPercent?: number | null;
             }[];
             meeting?: {
                 /** @description 폭락 조짐. 헛조짐일 수도 있다 */

@@ -159,6 +159,13 @@ public record CompanyView(
    * @param sector 섹터 데스크면 그 섹터 코드. 섹터를 가리지 않는 자리면 null
    * @param hot 이 시대에 뜨는 자리(시대 보너스가 붙는다, 9.4절)
    */
+  /**
+   * 자리 하나 (4.2절). 돈을 굴리는 자리면 예상 효과가 실린다 (decisions.md 258번).
+   *
+   * @param gainBp 맞혔을 때 버는 몫(만분율, 시대 보너스 포함, 규모의 벽 전). 돈을 굴리지 않으면 null
+   * @param missBp 틀렸을 때 잃는 몫(만분율). 돈을 굴리지 않으면 null
+   * @param crashPercent 폭락장의 시장 손익에 곱하는 비율. 100보다 작으면 폭락장에 덜 빠진다. 돈을 굴리지 않으면 null
+   */
   public record Desk(
       String code,
       String name,
@@ -166,7 +173,10 @@ public record CompanyView(
       boolean trades,
       String sector,
       boolean hot,
-      String description) {}
+      String description,
+      Integer gainBp,
+      Integer missBp,
+      Integer crashPercent) {}
 
   /**
    * @param omen 폭락 조짐(빨간 글씨). 없으면 null. 헛조짐일 수도 있다

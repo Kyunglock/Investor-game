@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Company } from '../../api/client'
-import { autoPlace, seatOne } from './placement'
+import { autoPlace, deskEffect, rankDesks, seatOne } from './placement'
 
 function desk(code: string, statCode: string, sector: string | null = null, trades = true) {
   return { code, name: code, statCode, trades, sector, hot: false, description: '' }
@@ -109,5 +109,28 @@ describe('한 사람만 옮기기 (decisions.md 237번)', () => {
       { employeeId: 1, desk: null },
       { employeeId: 2, desk: null },
     ])
+  })
+})
+
+describe('배치를 돕는 것 (decisions.md 258번)', () => {
+  it('한 사람에게 맞는 자리부터 늘어놓는다', () => {
+    const c = company(2, [employee(1, 'C', 'S', 'D', 'D')])
+    const ranked = rankDesks(c, c.employees[0])
+    expect(['bio', 'energy']).toContain(ranked[0].code)
+    expect(ranked).toHaveLength(desks.length)
+  })
+
+  it('폭락 조짐이 있으면 자동 배치가 폭락장에 덜 빠지는 자리를 더 쳐준다', () => {
+    const safe = { ...company(1, [employee(1, 'C', 'B', 'B', 'B')], { omen: '조짐' }) }
+    safe.desks = safe.desks.map((d) => ({ ...d, crashPercent: d.code === 'food' ? 30 : 100 }))
+    expect(autoPlace(safe)).toEqual([{ employeeId: 1, desk: 'food' }])
+    const calm = { ...safe, meeting: { wanted: '' } } as Company
+    expect(autoPlace(calm)[0].desk).not.toBe('food')
+  })
+
+  it('자리의 예상 효과를 짧게 말한다', () => {
+    const d = { ...desks[4], gainBp: 1800, missBp: 600, crashPercent: 30 }
+    expect(deskEffect(d)).toBe('맞히면 +18% · 틀리면 −6% · 폭락장에 덜 빠짐')
+    expect(deskEffect({ ...desks[7], description: '형광펜을 빌려준다' })).toBe('형광펜을 빌려준다')
   })
 })

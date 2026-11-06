@@ -815,4 +815,16 @@ class CompanyEngineTest {
     CompanyState small2 = ENGINE.open(new HashSeededRandom(3), 100_000_000);
     assertThat(small2.applicants).allMatch(a -> a.rank == 0);
   }
+
+  /** 자리가 둘뿐인 해의 폭락 조짐은 리스크 관리 팀 대신 폭락장에 덜 빠지는 자리를 권한다 (#322, decisions.md 258번). */
+  @Test
+  void 자리가_둘뿐이면_폭락_조짐에_리스크_관리_팀_대신_덜_빠지는_자리를_권한다() {
+    var wanted = TestContent.load().raising().company().wanted();
+    CompanyState small = ENGINE.open(new HashSeededRandom(1), 100_000_000);
+    small.wantedDesk = "risk";
+    assertThat(ENGINE.wantedLine(small)).isEqualTo(wanted.get("riskFew"));
+    small.capital = 300_000_000;
+    assertThat(ENGINE.wantedLine(small)).as("자리가 셋이면 리스크 관리 팀").isEqualTo(wanted.get("risk"));
+    assertThat(ENGINE.deskGainBp(small, "food")).isEqualTo(PROPERTIES.desks().get("food").gainBp());
+  }
 }

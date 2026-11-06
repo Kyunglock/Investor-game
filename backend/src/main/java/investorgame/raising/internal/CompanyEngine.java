@@ -699,8 +699,28 @@ class CompanyEngine {
         + (interested(employee) ? properties.interestBonusBp() : 0);
   }
 
+  /**
+   * 연초 회의의 "올해 필요한 인재". 폭락 조짐이 있어도 자리가 둘뿐이면 리스크 관리 팀에 한 사람을 빼면 돈을 굴리는 사람이 하나뿐이라, 폭락장에 덜 빠지는 자리를 권한다
+   * (decisions.md 258번).
+   */
   String wantedLine(CompanyState company) {
-    return content.raising().company().wanted().get(company.wantedDesk);
+    Map<String, String> wanted = content.raising().company().wanted();
+    if (RISK_DESK.equals(company.wantedDesk)
+        && seats(company.capital) <= FEW_SEATS
+        && wanted.containsKey(RISK_FEW)) {
+      return wanted.get(RISK_FEW);
+    }
+    return wanted.get(company.wantedDesk);
+  }
+
+  /** 자리가 이만큼 이하면 돕는 자리에 사람을 뺄 여유가 없다. */
+  static final int FEW_SEATS = 2;
+
+  private static final String RISK_FEW = "riskFew";
+
+  /** 그 자리에서 맞혔을 때 버는 몫(만분율): 자리의 몫 + 시대 보너스. 화면의 예상 효과용 (258번). */
+  int deskGainBp(CompanyState company, String desk) {
+    return returnsOf(desk).gainBp() + era(company).deskBonusBp().getOrDefault(desk, 0);
   }
 
   List<RaisingContent.Desk> desks() {

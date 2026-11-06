@@ -280,6 +280,9 @@ components:
               sector: { type: [string, 'null'], description: 섹터 데스크면 그 섹터 코드. 섹터를 가리지 않는 자리면 null }
               hot: { type: boolean, description: 이 시대에 뜨는 자리(시대 보너스가 붙는다, 9.4절) }
               description: { type: string }
+              gainBp: { type: [integer, 'null'], description: 맞혔을 때 버는 몫(만분율, 시대 보너스 포함). 돈을 굴리지 않으면 null (decisions.md 258번) }
+              missBp: { type: [integer, 'null'], description: 틀렸을 때 잃는 몫(만분율). 돈을 굴리지 않으면 null }
+              crashPercent: { type: [integer, 'null'], description: 폭락장의 시장 손익에 곱하는 비율. 100보다 작으면 폭락장에 덜 빠진다. 돈을 굴리지 않으면 null }
         meeting:
           oneOf:
             - type: object
