@@ -8,7 +8,7 @@ import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { InvestWindow } from './InvestWindow'
 import { MoveScene } from './MoveScene'
 import { OfficeArt, type SeatFocus } from './OfficeArt'
-import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName } from './office'
+import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName, titleOf } from './office'
 import { autoPlace, seatOne } from './placement'
 import { useRaisingStore } from './store'
 import { Ledger, PHASES, YearEndSheet } from './YearEnd'
@@ -308,7 +308,8 @@ function EmployeeDetail({ employee: e }: { employee: Employee }) {
   return (
     <div className="min-w-0 flex-1" data-testid="employee-detail">
       <p className="font-semibold">
-        {e.name} <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>{' '}
+        {e.name} <span data-testid="title">{titleOf(e.overallGrade)}</span>{' '}
+        <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>{' '}
         <span className="text-[12px] text-muted" data-testid="attire">
           · {ATTIRE_NAMES[attireOf(e.overallGrade)]}
           {e.effects.length > 0 && ` · ${e.effects.join('·')}`}
@@ -684,7 +685,10 @@ function ApplicantCard({
   return (
     <li className="rounded border border-line p-3" data-testid="applicant">
       <p className="flex items-baseline justify-between">
-        <span className="font-semibold">{a.name}</span>
+        <span className="font-semibold">
+          {a.name}{' '}
+          <span className="text-[13px] font-normal text-muted">{titleOf(a.overallGrade)}</span>
+        </span>
         <span className="font-mono-num text-[13px]">
           종합 <b className="text-[17px]">{a.overallGrade}</b>
         </span>

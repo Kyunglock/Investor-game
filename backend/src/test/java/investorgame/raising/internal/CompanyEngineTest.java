@@ -57,7 +57,7 @@ class CompanyEngineTest {
     assertThat(company.employees).isEmpty();
     assertThat(company.opening).contains("1억 원");
     assertThat(company.applicants).hasSize(PROPERTIES.market().applicants());
-    assertThat(company.applicants.getFirst().name).isEqualTo("김대리");
+    assertThat(company.applicants.getFirst().name).isEqualTo("박한결");
     assertThat(company.applicants.getFirst().line)
         .as("첫 지원자는 올해 필요한 인재")
         .contains(
@@ -490,7 +490,7 @@ class CompanyEngineTest {
     assertThat(next.capital).isEqualTo(100_000_000);
     assertThat(next.employees).as("직원은 따라오지 않는다").isEmpty();
     assertThat(next.applicants).isNotEmpty();
-    assertThat(next.applicants.getFirst().name).as("이름은 이어 센다").isNotEqualTo("김대리");
+    assertThat(next.applicants.getFirst().name).as("이름은 이어 센다").isNotEqualTo("박한결");
     assertThat(next.opening).contains("1호 회사는 문을 닫았다").contains("2호 회사");
   }
 
@@ -747,5 +747,30 @@ class CompanyEngineTest {
       }
     }
     throw new AssertionError("인내심 1인데 한 번도 못 참지 않았다");
+  }
+
+  /** 지원자 이름은 성 × 이름 조합을 겹치지 않게 돌리고 직함을 붙이지 않는다 (#319, decisions.md 255번). */
+  @Test
+  void 지원자_이름은_겹치지_않고_직함이_없다() {
+    var texts = TestContent.load().raising().company();
+    int total = texts.surnames().size() * texts.names().size();
+    CompanyState company = ENGINE.open(new HashSeededRandom(1), 100_000_000_000L);
+    java.util.Set<String> names = new java.util.HashSet<>();
+    String previous = null;
+    while (names.size() < total) {
+      for (CompanyState.Applicant a : company.applicants) {
+        assertThat(names.add(a.name)).as("겹친 이름: %s", a.name).isTrue();
+        assertThat(a.name).doesNotContain("대리").doesNotContain("수습").doesNotContain("주임");
+        if (previous != null) {
+          assertThat(a.name.charAt(0)).as("이웃한 지원자의 성이 다르다").isNotEqualTo(previous.charAt(0));
+        }
+        previous = a.name;
+        if (names.size() == total) {
+          break;
+        }
+      }
+      ENGINE.refresh(company, new HashSeededRandom(1));
+    }
+    assertThat(names).hasSize(total);
   }
 }

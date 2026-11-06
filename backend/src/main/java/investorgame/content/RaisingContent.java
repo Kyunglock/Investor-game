@@ -43,7 +43,13 @@ public record RaisingContent(
    * @param market 공채 시장 지원자 카드의 한 줄 (decisions.md 228번)
    * @param invest 투자 회의 문구 (decisions.md 229번)
    */
+  /**
+   * @param surnames 직원 이름의 성
+   * @param names 직원 이름(성 뒤에 붙는다). 성 × 이름 조합을 겹치지 않게 돌려 쓴다. 직함은 이름에 넣지 않는다: 종합 등급으로 화면이 붙인다
+   *     (decisions.md 255번)
+   */
   public record Company(
+      List<String> surnames,
       List<String> names,
       List<Desk> desks,
       Map<String, String> flipLines,

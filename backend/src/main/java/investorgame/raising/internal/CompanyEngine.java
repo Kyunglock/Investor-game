@@ -315,13 +315,33 @@ class CompanyEngine {
     return employee;
   }
 
-  /** 이름 풀을 차례로 쓰고, 다 쓰면 처음부터 번호를 붙인다. 지난 회사에서 만난 사람 수를 이어 센다. */
+  /**
+   * 다음 지원자 이름 (decisions.md 255번): 성 × 이름 조합을 겹치지 않게 돌려 쓴다. 만난 순서에 서로소인 보폭을 곱해 섞어서 이웃한 지원자의 성이 다르다.
+   * 조합을 다 쓰면 처음부터 번호를 붙인다. 지난 회사에서 만난 사람 수를 이어 센다. 전에는 이름 열둘("김대리"·"이수습")에 직함이 붙어 있어 금세 "김대리5"가 되고,
+   * SSS 에이스도 "수습"이었다.
+   */
   private String nextName(CompanyState company) {
+    List<String> surnames = content.raising().company().surnames();
     List<String> names = content.raising().company().names();
+    int total = surnames.size() * names.size();
     int at = company.met++;
-    int round = at / names.size();
-    String name = names.get(at % names.size());
+    int round = at / total;
+    int k = (int) ((long) (at % total) * nameStride(total) % total);
+    String name = surnames.get(k % surnames.size()) + names.get(k / surnames.size());
     return round == 0 ? name : name + (round + 1);
+  }
+
+  /** 조합 수와 서로소인 보폭: 0..total-1을 한 번씩 돈다. */
+  private static int nameStride(int total) {
+    int stride = Math.max(1, total * 2 / 5 + 1);
+    while (gcd(stride, total) != 1) {
+      stride++;
+    }
+    return stride;
+  }
+
+  private static int gcd(int a, int b) {
+    return b == 0 ? a : gcd(b, a % b);
   }
 
   /**
