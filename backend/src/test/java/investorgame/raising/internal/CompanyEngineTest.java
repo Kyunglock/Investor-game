@@ -827,4 +827,37 @@ class CompanyEngineTest {
     assertThat(ENGINE.wantedLine(small)).as("자리가 셋이면 리스크 관리 팀").isEqualTo(wanted.get("risk"));
     assertThat(ENGINE.deskGainBp(small, "food")).isEqualTo(PROPERTIES.desks().get("food").gainBp());
   }
+
+  /** 라이벌 증권사가 같은 시장으로 자라고, 앞지르면 소식 줄과 박치기 상대가 남는다 (#324, decisions.md 260번). */
+  @Test
+  void 라이벌_증권사가_자라고_앞지르면_소식에_남는다() {
+    var rivals = TestContent.load().raising().company().rivals();
+    CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
+    assertThat(company.rivals).hasSize(rivals.companies().size());
+    assertThat(ENGINE.industryRank(company))
+        .as("1억 회사는 꼴찌에서 시작")
+        .isEqualTo(rivals.companies().size() + 1);
+    assertThat(ENGINE.rivalName(ENGINE.rivalAbove(company)))
+        .isEqualTo(rivals.companies().getFirst().name());
+
+    // 바로 위 라이벌보다 자본을 조금 적게 두고 좋은 직원으로 한 해를 굴리면 앞지르는 해가 있다.
+    int overtaken = 0;
+    for (long seed = 1; seed <= 30; seed++) {
+      CompanyState c = open(seed, stats(90, 90, 90, 90), 140_000_000);
+      c.employees.getFirst().desk = "day";
+      c.phase = "boom";
+      c.invest = null;
+      c.yearStartCapital = c.capital;
+      long rivalBefore = c.rivals.getFirst();
+      CompanyState.Settlement s = ENGINE.settle(c, new HashSeededRandom(seed));
+      assertThat(c.rivals.getFirst()).as("라이벌도 움직인다").isNotEqualTo(rivalBefore);
+      if (!s.overtook.isEmpty()) {
+        overtaken++;
+        assertThat(s.overtook).contains(rivals.companies().getFirst().name());
+        assertThat(s.lines).anyMatch(line -> line.contains("앞질렀다"));
+        assertThat(ENGINE.industryRank(c)).isLessThanOrEqualTo(rivals.companies().size());
+      }
+    }
+    assertThat(overtaken).isPositive();
+  }
 }

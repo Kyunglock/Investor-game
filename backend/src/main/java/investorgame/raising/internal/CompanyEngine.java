@@ -149,6 +149,68 @@ class CompanyEngine {
     return next;
   }
 
+  /** 업계 순위(1부터): 우리보다 자본이 큰 라이벌 수 + 1 (decisions.md 260번). */
+  int industryRank(CompanyState company) {
+    return (int) company.rivals.stream().filter(r -> r > company.capital).count() + 1;
+  }
+
+  /** 우리 바로 위의 라이벌 번호(콘텐츠 순서). 우리가 1위면 -1. */
+  int rivalAbove(CompanyState company) {
+    int at = -1;
+    for (int i = 0; i < company.rivals.size(); i++) {
+      long r = company.rivals.get(i);
+      if (r > company.capital && (at < 0 || r < company.rivals.get(at))) {
+        at = i;
+      }
+    }
+    return at;
+  }
+
+  String rivalName(int index) {
+    return content.raising().company().rivals().companies().get(index).name();
+  }
+
+  /**
+   * 라이벌 증권사가 그해 시장으로 움직인다 (260번): 시장 갈래의 비율에 회사마다 ±spread를 더한다(회사 시드와 해로만 정한다). 결산 전후로 우리보다 컸다가 작아진
+   * 라이벌은 앞지른 것이고, 작았다가 커진 라이벌에게는 밀린 것이다.
+   */
+  private void moveRivals(CompanyState company, Settlement settlement, SeededRandom random) {
+    if (company.rivals.isEmpty()) {
+      return;
+    }
+    CompanyProperties.Rivals rules = properties.rivals();
+    int base = rules.phasePercent().getOrDefault(company.phase, PERCENT);
+    RaisingContent.Rivals texts = content.raising().company().rivals();
+    long before = settlement.capitalBefore;
+    List<Integer> passed = new java.util.ArrayList<>();
+    List<Integer> lost = new java.util.ArrayList<>();
+    for (int i = 0; i < company.rivals.size(); i++) {
+      long was = company.rivals.get(i);
+      int percent =
+          base
+              + random.forKey("rival", company.year, i).nextInt(2 * rules.spread() + 1)
+              - rules.spread();
+      long now = Math.max(1, was * percent / PERCENT);
+      company.rivals.set(i, now);
+      if (was > before && now <= company.capital) {
+        passed.add(i);
+      } else if (was <= before && now > company.capital) {
+        lost.add(i);
+      }
+    }
+    int rank = industryRank(company);
+    for (int i : passed) {
+      settlement.overtook.add(rivalName(i));
+      settlement.lines.add(
+          Korean.fill(
+              texts.overtook(), Map.of("name", rivalName(i), "rank", String.valueOf(rank))));
+    }
+    for (int i : lost) {
+      settlement.lines.add(
+          Korean.fill(texts.fell(), Map.of("name", rivalName(i), "rank", String.valueOf(rank))));
+    }
+  }
+
   /** 망한 회사의 한 줄. 망하지 않았으면 null. */
   String brokeNotice(CompanyState company) {
     return broke(company) ? content.raising().company().bankrupt().notice() : null;
@@ -641,6 +703,14 @@ class CompanyEngine {
 
   /** 올해 시장을 정하고 연초 회의를 준비한다. 다음 해 시장도 미리 정해 둔다: XX(경보)·ZZZ(선견) 직원이 들여다본다 (2.4절). */
   void startYear(CompanyState company, SeededRandom random) {
+    if (company.rivals.isEmpty()) {
+      content
+          .raising()
+          .company()
+          .rivals()
+          .companies()
+          .forEach(r -> company.rivals.add(r.capital()));
+    }
     Market market = marketOf(company, company.year, random);
     company.phase = market.phase();
     company.omen = market.omen();
@@ -930,6 +1000,7 @@ class CompanyEngine {
     if (company.capital == 0) {
       settlement.lines.add(content.raising().company().bankrupt().emptied());
     }
+    moveRivals(company, settlement, random);
     List<Employee> stood = fitSeats(company);
     if (!stood.isEmpty()) {
       settlement.lines.add(

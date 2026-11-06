@@ -89,6 +89,10 @@ raising:
     sway-percent: 50
     # 폭락장에 손이 뒤집히면(못 참고 팔면) 손실이 두 배
     crash-flip-percent: 200
+    # 라이벌 증권사 (decisions.md 260번): 해마다 그해 시장 갈래의 비율(%)에 ±spread를 더해 자본이 움직인다
+    rivals:
+      phase-percent: { boom: 130, normal: 116, crash: 86 }
+      spread: 12
     # 실전 경험과 큰 손실 (2.3·6.4절): 한 해에 판돈의 30% 이상 잃으면 한 단계 하락(능력치는 한 띠 = 10점),
     # 폭락장을 손실 없이 버티면 실전 경험 +1. SSS에서 X까지 1, XX까지 2 … 단계마다 1씩 더 든다
     experience:

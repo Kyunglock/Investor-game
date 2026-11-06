@@ -308,6 +308,17 @@ export interface components {
             refreshCost: number;
             /** @description 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 253번) */
             refreshes: number;
+            /** @description 업계 순위와 바로 위 라이벌 증권사 (decisions.md 260번). 라이벌이 없는 옛 회사면 null */
+            industry?: {
+                /** @description 우리 순위(1부터) */
+                rank: number;
+                /** @description 우리를 넣은 회사 수 */
+                total: number;
+                /** @description 바로 위 라이벌. 1위면 null */
+                aboveName?: string | null;
+                /** Format: int64 */
+                aboveCapital?: number | null;
+            } | null;
             /** @description 올해 투자 회의 (decisions.md 229번). 끝난 회사나 옛 회사면 null. 숨은 방향은 정한 뒤 outcome에만 있다 */
             invest?: {
                 title: string;
@@ -429,6 +440,8 @@ export interface components {
                 } | null;
                 gradeBefore: components["schemas"]["Grade"];
                 gradeAfter: components["schemas"]["Grade"];
+                /** @description 그해 앞지른 라이벌 증권사 (decisions.md 260번) */
+                overtook?: string[];
                 results: {
                     employeeId: number;
                     name: string;

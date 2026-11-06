@@ -221,6 +221,36 @@
       "emptied": "자본이 바닥났다. 회사 금고가 텅 비었다.",
       "opening": "{number}호 회사는 문을 닫았다. 사장의 사재 {capital}으로 {next}호 회사를 다시 차렸다."
     },
+    "rivals": {
+      "companies": [
+        {
+          "name": "한탕증권",
+          "capital": 150000000
+        },
+        {
+          "name": "불개미투자",
+          "capital": 500000000
+        },
+        {
+          "name": "떡상자산운용",
+          "capital": 2500000000
+        },
+        {
+          "name": "물타기증권",
+          "capital": 15000000000
+        },
+        {
+          "name": "존버캐피탈",
+          "capital": 120000000000
+        },
+        {
+          "name": "여의도제일증권",
+          "capital": 1500000000000
+        }
+      ],
+      "overtook": "{name}을(를) 앞질렀다! 업계 {rank}위가 됐다.",
+      "fell": "{name}에게 밀려 업계 {rank}위로 내려갔다."
+    },
     "eras": [
       {
         "code": "plain",

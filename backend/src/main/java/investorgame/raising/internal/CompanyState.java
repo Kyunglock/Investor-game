@@ -29,6 +29,9 @@ class CompanyState {
   /** 팔렸는가. 팔린 회사는 끝난 채로 남는다. */
   boolean sold;
 
+  /** 라이벌 증권사의 자본. 콘텐츠의 라이벌 순서다 (decisions.md 260번). 이 칸을 더하기 전의 회사면 비어 있다가 다음 해에 채운다. */
+  List<Long> rivals = new ArrayList<>();
+
   /** 망해서 문을 닫았는가 (decisions.md 246번). 닫은 회사는 끝난 채로 남고 사장이 다음 회사를 차린다. */
   boolean closed;
 
@@ -238,6 +241,10 @@ class CompanyState {
 
     String gradeBefore;
     String gradeAfter;
+
+    /** 그해 앞지른 라이벌 이름. 박치기 장면이 쓴다 (260번). */
+    List<String> overtook = new ArrayList<>();
+
     List<Result> results = new ArrayList<>();
     List<String> lines = new ArrayList<>();
   }

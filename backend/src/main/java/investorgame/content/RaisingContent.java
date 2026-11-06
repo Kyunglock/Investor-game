@@ -61,6 +61,7 @@ public record RaisingContent(
       String seatsCut,
       String opening,
       Bankrupt bankrupt,
+      Rivals rivals,
       List<Era> eras,
       Sale sale,
       Map<String, String> statNames,
@@ -95,6 +96,14 @@ public record RaisingContent(
    * 줄({from}·{to}· {description}).
    */
   public record EraTurn(String ending, String changed) {}
+
+  /**
+   * 라이벌 증권사 (decisions.md 260번). companies: 이름과 시작 자본(작은 곳부터). overtook·fell: 결산에서 순위가 바뀐 해의 소식
+   * 줄({name}·{rank}).
+   */
+  public record Rivals(List<Rival> companies, String overtook, String fell) {}
+
+  public record Rival(String name, long capital) {}
 
   /**
    * 망한 회사 (decisions.md 246번). notice: 회사 화면에 뜨는 한 줄. emptied: 결산에서 자본이 0이 된 해의 소식 줄. opening: 다시

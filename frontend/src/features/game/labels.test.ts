@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { shortWon } from './labels'
+import { shortWon, withParticle } from './labels'
 
 describe('shortWon', () => {
   it('억·만 단위로 줄이고 만원 아래는 버린다', () => {
@@ -17,5 +17,12 @@ describe('shortWon', () => {
     expect(shortWon(1_000_000_000_000)).toBe('1조원')
     expect(shortWon(1_000_000_000_000_000)).toBe('1,000조원')
     expect(shortWon(-2_500_012_340_000)).toBe('−2조 5,000억원')
+  })
+})
+
+describe('withParticle', () => {
+  it('받침에 맞는 조사를 붙인다', () => {
+    expect(withParticle('한탕증권', '을', '를')).toBe('한탕증권을')
+    expect(withParticle('불개미투자', '을', '를')).toBe('불개미투자를')
   })
 })

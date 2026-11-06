@@ -53,3 +53,14 @@ export function shortWon(amount: number): string {
   }
   return `${sign}${bigUnits(abs)}원`
 }
+
+/** 마지막 글자에 받침이 있는가. 한글이 아니면(숫자·영문) 받침이 없다고 본다. */
+function hasBatchim(word: string): boolean {
+  const code = word.charCodeAt(word.length - 1) - 0xac00
+  return code >= 0 && code <= 11171 && code % 28 !== 0
+}
+
+/** 낱말에 받침에 맞는 조사를 붙인다: withParticle('한탕증권', '을', '를') → '한탕증권을'. */
+export function withParticle(word: string, withFinal: string, withoutFinal: string): string {
+  return word + (hasBatchim(word) ? withFinal : withoutFinal)
+}

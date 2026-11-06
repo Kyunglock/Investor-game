@@ -241,6 +241,12 @@ class JsonContentCatalog implements ContentCatalog {
         "망한 회사 문구가 없다");
     require(company.seatsCut() != null, "자리가 줄 때의 소식 줄이 없다");
     require(
+        company.rivals() != null
+            && !company.rivals().companies().isEmpty()
+            && company.rivals().overtook() != null
+            && company.rivals().fell() != null,
+        "라이벌 증권사가 없다");
+    require(
         company.surnames() != null
             && !company.surnames().isEmpty()
             && company.names() != null

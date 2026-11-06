@@ -88,6 +88,9 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await expect(page.getByTestId('applicant')).toHaveCount(3)
   await expect(page.getByTestId('building-ladder').getByRole('listitem')).toHaveCount(7)
   await expect(page.getByTestId('next-step')).toContainText('사무실 넓히기')
+  // 업계 순위 (260번): 라이벌 증권사 여섯 가운데 꼴찌에서 시작하고 바로 위가 목표다.
+  await expect(page.getByTestId('industry')).toContainText('업계 7위')
+  await expect(page.getByTestId('industry')).toContainText('바로 위 한탕증권')
   // 첫 지원자는 연초 회의가 말한 "올해 필요한 인재"다.
   await expect(page.getByTestId('applicant').first()).toContainText('맞는 사람이다')
   // 지원자는 관심 섹터를 안고 온다 (233번).

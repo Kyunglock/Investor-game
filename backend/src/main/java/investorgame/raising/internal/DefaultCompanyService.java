@@ -269,6 +269,7 @@ class DefaultCompanyService implements CompanyService {
         applicants,
         engine.refreshCost(c),
         c.refreshes,
+        industryView(c),
         ended ? null : engine.brokeNotice(c),
         ended ? null : investView(c, new HashSeededRandom(row.seed())),
         last == null ? null : settlementView(last));
@@ -349,6 +350,18 @@ class DefaultCompanyService implements CompanyService {
         outcome);
   }
 
+  private CompanyView.Industry industryView(CompanyState c) {
+    if (c.rivals.isEmpty()) {
+      return null;
+    }
+    int above = engine.rivalAbove(c);
+    return new CompanyView.Industry(
+        engine.industryRank(c),
+        c.rivals.size() + 1,
+        above < 0 ? null : engine.rivalName(above),
+        above < 0 ? null : c.rivals.get(above));
+  }
+
   private static CompanyView.Settlement settlementView(CompanyState.Settlement s) {
     return new CompanyView.Settlement(
         s.year,
@@ -363,6 +376,7 @@ class DefaultCompanyService implements CompanyService {
             : new CompanyView.SettlementInvest(s.investTitle, s.investTotal),
         s.gradeBefore,
         s.gradeAfter,
+        List.copyOf(s.overtook),
         s.results.stream()
             .map(
                 r ->

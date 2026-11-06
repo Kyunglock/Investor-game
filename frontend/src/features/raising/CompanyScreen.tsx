@@ -86,6 +86,7 @@ export function CompanyScreen({ company }: { company: Company }) {
         </div>
         <BuildingArt grade={company.grade} />
         <NextStep company={company} />
+        <IndustryLine company={company} />
         <OfficeArt company={company} focus={focus} onSeat={ended ? undefined : setFocus} />
         {!ended && focus && <SeatPicker company={company} focus={focus} onFocus={setFocus} />}
         <PixelToggle />
@@ -95,6 +96,7 @@ export function CompanyScreen({ company }: { company: Company }) {
             before={company.lastSettlement.gradeBefore}
             after={company.lastSettlement.gradeAfter}
             year={company.lastSettlement.year}
+            overtook={company.lastSettlement.overtook}
             onDone={() => setMoved(true)}
           />
         )}
@@ -201,6 +203,22 @@ function NextStep({ company }: { company: Company }) {
     <p className="mt-1 text-[12px] text-muted" data-testid="next-step">
       {step.kind === 'move' ? `다음 건물 ${step.to}` : '사무실 넓히기(책상 추가)'} · 자본{' '}
       {shortWon(company.nextGradeCapital)}부터 · 지금 책상 {company.seats}개
+    </p>
+  )
+}
+
+/** 업계 순위 한 줄 (decisions.md 260번): 바로 위 라이벌이 목표가 된다. */
+function IndustryLine({ company }: { company: Company }) {
+  const i = company.industry
+  if (!i) {
+    return null
+  }
+  return (
+    <p className="mt-0.5 text-[12px] text-muted" data-testid="industry">
+      업계 <b className="text-ink">{i.rank}위</b> / {i.total}곳
+      {i.aboveName && i.aboveCapital != null
+        ? ` · 바로 위 ${i.aboveName} (자본 ${shortWon(i.aboveCapital)})`
+        : ' · 업계 1위!'}
     </p>
   )
 }

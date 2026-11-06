@@ -26,6 +26,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param hr 인사팀이 공채 시장을 돕는다 (6.3절)
  * @param market 공채 시장: 해마다 지원자가 오고 계약금을 내고 뽑는다 (decisions.md 228번)
  * @param invest 투자 회의: 해마다 한 번 단서 기사를 놓고 직원들과 고민한다 (decisions.md 229번)
+ * @param rivals 라이벌 증권사가 해마다 자라는 폭 (decisions.md 260번)
  * @param sale 매각과 재창업 (9절). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다
  */
 @ConfigurationProperties("raising.company")
@@ -49,6 +50,7 @@ public record CompanyProperties(
     Hr hr,
     Market market,
     Invest invest,
+    Rivals rivals,
     Sale sale) {
 
   /**
@@ -100,6 +102,14 @@ public record CompanyProperties(
    * @param refreshCost 새로 받기의 정해진 값
    * @param refreshBp 새로 받기의 자본 비율 값(만분율). 둘 가운데 큰 쪽에 (올해 새로 받은 횟수 + 1)을 곱한다
    */
+  /**
+   * 라이벌 증권사 (decisions.md 260번).
+   *
+   * @param phasePercent 그해 시장 갈래별 한 해 자본 비율(%)
+   * @param spread 회사마다 해마다 더하고 빼는 폭(%p)
+   */
+  public record Rivals(Map<String, Integer> phasePercent, int spread) {}
+
   public record Market(
       int applicants,
       int levelSteps,

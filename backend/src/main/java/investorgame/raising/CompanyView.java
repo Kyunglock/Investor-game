@@ -14,6 +14,7 @@ import java.util.UUID;
  * @param meeting 연초 회의. 끝난 회사면 null
  * @param applicants 올해 공채 시장의 지원자. 끝난 회사면 비어 있다 (decisions.md 228번)
  * @param refreshCost 지원자를 새로 받는 값
+ * @param industry 업계 순위와 바로 위 라이벌 (decisions.md 260번). 라이벌이 없는 옛 회사면 null
  * @param refreshes 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 253번)
  * @param broke 망한 회사의 한 줄. 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 있고, 그때 사재로 다음 회사를 차릴 수 있다. 아니면 null
  *     (decisions.md 246번)
@@ -40,6 +41,7 @@ public record CompanyView(
     List<Applicant> applicants,
     long refreshCost,
     int refreshes,
+    Industry industry,
     String broke,
     Invest invest,
     Settlement lastSettlement) {
@@ -215,6 +217,7 @@ public record CompanyView(
       SettlementInvest invest,
       String gradeBefore,
       String gradeAfter,
+      List<String> overtook,
       List<Result> results,
       List<String> lines) {}
 
@@ -226,4 +229,14 @@ public record CompanyView(
       int employeeId, String name, String desk, long stake, long pnl, Map<String, Integer> flips) {}
 
   public record Era(String code, String name, String description) {}
+
+  /**
+   * 업계 순위 (decisions.md 260번).
+   *
+   * @param rank 우리 순위(1부터)
+   * @param total 우리를 넣은 회사 수
+   * @param aboveName 바로 위 라이벌 이름. 1위면 null
+   * @param aboveCapital 바로 위 라이벌 자본. 1위면 null
+   */
+  public record Industry(int rank, int total, String aboveName, Long aboveCapital) {}
 }
