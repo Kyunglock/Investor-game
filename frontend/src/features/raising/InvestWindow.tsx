@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Company } from '../../api/client'
-import { shortWon } from '../game/labels'
+import { shortWon, withParticle } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { TUG_DONE_MS, TugOfWar } from '../game/TugOfWar'
 import {
@@ -35,7 +35,8 @@ function signed(amount: number): string {
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
 /**
- * 투자 회의 (decisions.md 229·231·235번). 한 해의 중대 결정이라 예전 매매 이벤트 창처럼 화면 가운데에 뜬다: 결산을 누르면 열리고, 고르면 결과를 보고 그대로
+ * 종목 회의 (decisions.md 229·231·235·267번). 직원이 종목을 물어 온 해에만 거시경제 회의 다음에 열린다: 창 머리에 누가 가져왔는지 보이고, 끝나면 그 사람을
+ * 칭찬하거나 탓하는 한 줄이 붙는다. 한 해의 중대 결정이라 예전 매매 이벤트 창처럼 화면 가운데에 뜬다: 결산을 누르면 열리고, 고르면 결과를 보고 그대로
  * 그해 결산으로 넘어간다. 단서 기사를 놓고 직원들과 고민한다. 리서치 팀이 형광펜을 긋고, 자리에 앉은 직원이 한마디씩 하고(고집이 센 직원은 미리 티가
  * 난다), 사장이 고른다. 고르면 사장 결정에 도장이 찍히고, 돈을 굴리는 직원마다 **맞대결 막대**에서 사장 말과 꼬드김·제 판단이 엎치락뒤치락하다 이긴 쪽으로
  * 쭉 찬다(181번의 막대를 되살림). 다 끝나면 종목이 오르내린 것이 드러나고 직원마다 손익이 뜬다.
@@ -81,12 +82,12 @@ export function InvestWindow({
         }`}
         role="dialog"
         aria-modal="true"
-        aria-label="투자 회의"
+        aria-label="종목 회의"
         data-testid="invest"
         data-finished={finished}
       >
         <header className="flex items-baseline justify-between">
-          <h3 className="font-pen text-[24px]">{year}년 차 투자 회의</h3>
+          <h3 className="font-pen text-[24px]">{year}년 차 종목 회의</h3>
           {!outcome && (
             <button type="button" onClick={onClose} className="text-[12px] text-muted underline">
               배치 다시 보기
@@ -98,6 +99,20 @@ export function InvestWindow({
             </button>
           )}
         </header>
+        {invest.finder && (
+          <p className="mt-1 text-[13px]" data-testid="invest-finder">
+            <b>
+              {withParticle(
+                invest.finder.role
+                  ? `${invest.finder.name} ${invest.finder.role}`
+                  : invest.finder.name,
+                '이',
+                '가',
+              )}
+            </b>{' '}
+            가져온 종목 · <span className="text-muted">“{invest.finder.pitch}”</span>
+          </p>
+        )}
         <article className="mt-2 rounded border border-line bg-card p-3">
           <p className="text-[12px] text-muted">
             {invest.sectorName} · {invest.stockName}
@@ -305,6 +320,14 @@ export function InvestWindow({
             </p>
             {finished && (
               <>
+                {outcome.credit && (
+                  <p
+                    className="animate-reveal mt-2 text-center text-[14px] font-semibold"
+                    data-testid="invest-credit"
+                  >
+                    {outcome.credit}
+                  </p>
+                )}
                 <Hindsight invest={invest} />
                 <p
                   className="animate-reveal mt-3 rounded bg-line-soft px-3 py-2 text-center text-[13px]"

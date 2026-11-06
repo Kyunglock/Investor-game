@@ -37,13 +37,38 @@ async function hireCheapest(page: Page) {
 }
 
 /**
- * 결산을 누르면 투자 회의 창이 뜬다. 고르면 직원마다 맞대결 막대가 돌고(235번) 끝나면 창에서 그대로 결산한다 (231번). watch면 연출을 끝까지 보고, 아니면
- * 빨리 보기로 넘긴다.
+ * 결산을 누르면 거시경제 회의 창이 먼저 뜬다 (266번): 올해 회사의 태도를 고르면 직원이 종목을 물어 올 수 있다 (267번). 물어 왔으면 종목 회의 창으로
+ * 넘어가 고르고, 직원마다 맞대결 막대가 돌고(235번) 끝나면 창에서 그대로 결산한다 (231번). 아무도 안 왔으면 거시경제 회의 창에서 바로 결산한다. watch면
+ * 연출을 끝까지 보고, 아니면 빨리 보기로 넘긴다. 종목 회의를 했으면 true.
  */
-async function settleYear(page: Page, year: number, choice: string, watch = false) {
+async function settleYear(
+  page: Page,
+  year: number,
+  choice: string,
+  watch = false,
+  stance = '중립',
+): Promise<boolean> {
   await page.getByRole('button', { name: `${year}년 차 결산 보기` }).click()
-  const meeting = page.getByRole('dialog', { name: '투자 회의' })
+  const macro = page.getByRole('dialog', { name: '거시경제 회의' })
+  await expect(macro).toBeVisible()
+  await macro.getByRole('button', { name: new RegExp(`^${stance}`) }).click()
+  await expect(macro.getByTestId('macro-stance')).toHaveText(stance)
+  const next = macro.getByRole('button', { name: /종목 회의 열기|결산 보기/ })
+  await expect(next).toBeVisible()
+  if (!(await macro.getByTestId('macro-finder').isVisible())) {
+    await expect(macro.getByTestId('macro-none')).toBeVisible()
+    await macro.getByRole('button', { name: `${year}년 차 결산 보기 →` }).click()
+    await expect(macro).toBeHidden()
+    await closeYearEnd(page, year)
+    await expect(page.getByTestId('settlement')).toContainText(`${year}년 차 결산`)
+    return false
+  }
+  await macro.getByRole('button', { name: '종목 회의 열기 →' }).click()
+  await expect(macro).toBeHidden()
+  const meeting = page.getByRole('dialog', { name: '종목 회의' })
   await expect(meeting).toBeVisible()
+  // 누가 이 종목을 물어 왔는지 창 머리에 보인다 (267번).
+  await expect(meeting.getByTestId('invest-finder')).toContainText('가져온 종목')
   // "산다"는 "크게 산다"(260번)와 겹치므로 이름을 그대로 맞춘다.
   await meeting.getByRole('button', { name: choice, exact: true }).click()
   await expect(meeting.getByTestId('invest-outcome')).toBeVisible()
@@ -56,6 +81,8 @@ async function settleYear(page: Page, year: number, choice: string, watch = fals
     await expect(settle).toHaveCount(0)
     await expect(settle).toBeVisible({ timeout: 15_000 })
     await expect(meeting.locator('[data-testid="tug"][data-done="false"]')).toHaveCount(0)
+    // 가져온 직원을 칭찬하거나 탓하는 한 줄이 붙는다.
+    await expect(meeting.getByTestId('invest-credit')).toBeVisible()
   } else {
     await meeting.getByRole('button', { name: '빨리 보기' }).click()
   }
@@ -63,10 +90,11 @@ async function settleYear(page: Page, year: number, choice: string, watch = fals
   await expect(meeting).toBeHidden()
   await closeYearEnd(page, year)
   await expect(page.getByTestId('settlement')).toContainText(`${year}년 차 결산`)
+  return true
 }
 
 /**
- * 결산하면 연말 결산서가 따로 뜬다 (240번): 투자 회의 한 건과 직원들이 1년 동안 굴린 몫이 나뉘어 있고, 확인하면 닫힌다.
+ * 결산하면 연말 결산서가 따로 뜬다 (240번): 종목 회의 한 건과 직원들이 1년 동안 굴린 몫이 나뉘어 있고, 확인하면 닫힌다.
  */
 async function closeYearEnd(page: Page, year: number) {
   const sheet = page.getByRole('dialog', { name: '연말 결산서' })
@@ -119,7 +147,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await expect(page.getByTestId('office-art')).toBeVisible()
 })
 
-test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르고, 투자 회의와 결산을 하면 세 해가 지나도 이어진다', async ({
+test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르고, 회의와 결산을 하면 세 해가 지나도 이어진다', async ({
   page,
 }) => {
   test.setTimeout(150_000)
@@ -203,29 +231,36 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   await expect(page.getByTestId('office-empty')).toHaveCount(0)
   await expect(page.getByTestId('office-resting')).toHaveCount(0)
 
-  // 투자 회의 (229·231번): 결산을 누르면 창이 뜬다. 직원들이 한마디씩 하고 고집이 보인다. 창을 닫고 배치로 돌아갈 수도 있다.
+  // 거시경제 회의 (266번): 결산을 누르면 창이 뜬다. 큰 흐름 하나를 놓고 직원들이 한마디씩 하고, 같은 의견끼리 뭉친다(242·246번).
+  // 태도는 공격·중립·방어 셋이다. 창을 닫고 배치로 돌아갈 수도 있다.
   await page.getByRole('button', { name: '1년 차 결산 보기' }).click()
-  const meeting = page.getByRole('dialog', { name: '투자 회의' })
-  await expect(meeting.getByTestId('remarks').getByRole('listitem')).toHaveCount(2)
-  // 같은 의견끼리 뭉친다 (242·246번): 칸마다 몇 명인지 적혀 있고, 칸의 사람을 다 더하면 두 명이다. 한마디는 칸마다 하나.
-  const opinions = meeting.getByTestId('opinion')
-  const heads = await opinions.getByRole('heading').allInnerTexts()
+  const macro = page.getByRole('dialog', { name: '거시경제 회의' })
+  await expect(macro.getByTestId('macro-article')).toBeVisible()
+  const heads = await macro.getByTestId('macro-opinion').getByRole('heading').allInnerTexts()
   expect(heads.map((h) => Number(/(\d+)명/.exec(h)?.[1] ?? 0)).reduce((a, b) => a + b, 0)).toBe(2)
-  await expect(meeting.getByTestId('opinion-voice')).toHaveCount(heads.length)
-  await expect(meeting.getByTestId('stubborn')).toHaveCount(2)
-  await meeting.getByRole('button', { name: '배치 다시 보기' }).click()
-  await expect(meeting).toBeHidden()
+  await expect(macro.getByRole('button', { name: /판돈 ×/ })).toHaveCount(3)
+  await macro.getByRole('button', { name: '배치 다시 보기' }).click()
+  await expect(macro).toBeHidden()
 
   for (let year = 1; year <= 3; year++) {
-    await settleYear(page, year, year === 1 ? '산다' : '지켜본다', year === 1)
+    const held = await settleYear(
+      page,
+      year,
+      year === 1 ? '산다' : '지켜본다',
+      year === 1,
+      year === 1 ? '공격' : '중립',
+    )
+    // 첫 회사의 첫해에는 돈을 굴리는 직원이 꼭 종목을 물어 온다 (267번): 종목 회의를 배운다.
     if (year === 1) {
+      expect(held).toBe(true)
       // 결산하면 지난 결산 탭이 열리고, 결과가 그림 속 직원 머리 위에도 뜬다.
       await expect(page.getByRole('tab', { name: /지난 결산/ })).toHaveAttribute(
         'aria-selected',
         'true',
       )
-      // 장부에 회의 한 건이 직원들의 1년 운용과 따로 있다 (240번).
-      await expect(page.getByTestId('ledger-invest')).toContainText('투자 회의')
+      // 장부에 종목 회의 한 건이 직원들의 1년 운용과 따로 있고, 거시경제 회의의 태도가 위에 붙는다 (240·266번).
+      await expect(page.getByTestId('ledger-invest')).toContainText('종목 회의')
+      await expect(page.getByTestId('ledger-macro')).toContainText('공격')
       await expect(page.getByTestId('ledger-staff')).toBeVisible()
       // 그해 계약금·새로 받기 값은 인사 비용 줄로 따로 나온다 (251·262번).
       await expect(page.getByTestId('ledger-hiring')).toContainText('인사 비용')
@@ -271,7 +306,7 @@ test('뽑기 요청이 끊겨도 버튼이 잠기지 않고 다시 뽑을 수 �
 })
 
 test('결산 버튼을 빠르게 두 번 눌러도 한 해만 넘어간다 (#305)', async ({ page }) => {
-  // 돈을 굴리는 직원이 없으면 투자 회의 없이 바로 결산한다. 예전에는 두 번째 요청이 다음 해를 결산했다.
+  // 돈을 굴리는 직원이 없으면 회의 없이 바로 결산한다. 예전에는 두 번째 요청이 다음 해를 결산했다.
   await openCompany(page)
   let settles = 0
   page.on('request', (r) => {
@@ -294,7 +329,7 @@ test('결산 버튼을 빠르게 두 번 눌러도 한 해만 넘어간다 (#305
   expect(settles).toBeGreaterThanOrEqual(1)
 })
 
-test('자동 진행을 켜면 공채·배치·투자 회의·결산을 해마다 하고, 멈추면 선다 (245번)', async ({
+test('자동 진행을 켜면 공채·배치·회의·결산을 해마다 하고, 멈추면 선다 (245번)', async ({
   page,
 }) => {
   test.setTimeout(120_000)
