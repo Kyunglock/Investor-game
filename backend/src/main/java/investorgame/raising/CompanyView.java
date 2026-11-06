@@ -38,6 +38,7 @@ public record CompanyView(
     long capital,
     String grade,
     Long nextGradeCapital,
+    Upgrade upgrade,
     int seats,
     List<Employee> employees,
     List<Desk> desks,
@@ -377,6 +378,7 @@ public record CompanyView(
       long capitalAfter,
       long fee,
       long hiring,
+      long moving,
       long salary,
       SettlementInvest invest,
       List<Quarter> quarters,
@@ -388,6 +390,16 @@ public record CompanyView(
       List<Report> reports,
       boolean finished) {}
 
+  /**
+   * 건물 이사 (decisions.md 296번): 다음 건물로 가는 데 드는 돈. 끝 등급이면 null.
+   *
+   * @param to 다음 등급(건물)
+   * @param cost 이사 비용(다음 띠 자본의 일부)
+   * @param needed 이사하려면 있어야 하는 자본(다음 띠 + 이사 비용)
+   * @param affordable 지금 자본으로 갈 수 있다
+   */
+  public record Upgrade(String to, long cost, long needed, boolean affordable) {}
+
   /** 결산한 해의 투자 회의: 기사 제목과 회의 손익(이미 자본에 들어갔다). 회의를 안 했으면 결산의 invest가 null (decisions.md 240번). */
   public record SettlementInvest(String title, long total) {}
 
@@ -396,6 +408,7 @@ public record CompanyView(
    *
    * @param staff 직원들이 이 분기에 굴린 몫
    * @param hiring 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료)
+   * @param moving 이 분기에 낸 이사 비용 (296번)
    * @param invest 이 분기 종목 회의. 안 열렸으면 null
    * @param topic 이 분기 거시경제 회의의 주제. 회의가 없던 분기면 null
    * @param stance 이 분기 태도. 회의가 없던 분기면 null
@@ -410,6 +423,7 @@ public record CompanyView(
       long fee,
       long staff,
       long hiring,
+      long moving,
       long salary,
       SettlementInvest invest,
       String topic,

@@ -50,6 +50,9 @@ public interface CompanyService {
   /** 그 자리의 팀장을 정한다 (decisions.md 269번). 그 자리에 앉은 직원이 아니면 400. */
   CompanyView leader(UUID sessionId, String desk, int employeeId);
 
+  /** 이사 비용을 내고 다음 건물로 간다 (decisions.md 296번). 자본이 모자라거나 끝 등급이면 400. */
+  CompanyView upgrade(UUID sessionId);
+
   /** 직원 ID → 자리 코드(쉬면 null). 자리 수를 넘으면 400. */
   CompanyView place(UUID sessionId, Map<Integer, String> placements);
 

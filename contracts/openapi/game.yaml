@@ -339,6 +339,30 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/upgrade:
+    post:
+      operationId: upgradeBuilding
+      summary: 이사 비용을 내고 다음 건물로 간다 (decisions.md 296번)
+      description: |
+        건물(회사 등급)은 저절로 오르지 않는다. 자본이 다음 띠 + 이사 비용(다음 띠 자본의 25%) 이상이면 비용을 내고 올라간다. 자리 수와 규모의 벽은 바로
+        새 건물로 바뀐다. 랜드마크 타워에 오르면 엔딩이다. 돈이 모자라거나 끝 등급이면 400.
+      responses:
+        '200':
+          description: 이사한 뒤의 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400':
+          description: 돈이 모자라거나 끝 등급
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+        '401':
+          description: 세션 없음
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
   /api/company/leader:
     post:
       operationId: appointLeader
@@ -443,7 +467,18 @@ components:
             - type: 'null'
         capital: { type: integer, format: int64 }
         grade: { $ref: '#/components/schemas/Grade' }
-        nextGradeCapital: { type: [integer, 'null'], format: int64 }
+        nextGradeCapital: { type: [integer, 'null'], format: int64, description: 다음 띠의 자본. 끝 등급이면 null }
+        upgrade:
+          description: 건물 이사 (decisions.md 296번). 다음 건물로 가는 데 드는 돈. 끝 등급이거나 끝난 회사면 null
+          oneOf:
+            - type: object
+              required: [to, cost, needed, affordable]
+              properties:
+                to: { $ref: '#/components/schemas/Grade' }
+                cost: { type: integer, format: int64, description: 이사 비용(다음 띠 자본의 25%) }
+                needed: { type: integer, format: int64, description: 이사하려면 있어야 하는 자본(다음 띠 + 이사 비용) }
+                affordable: { type: boolean }
+            - type: 'null'
         broke: { type: [string, 'null'], description: 망한 회사의 한 줄. 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 있고, 그때 사재로 다음 회사를 차릴 수 있다 (decisions.md 247번) }
         seats: { type: integer }
         employees:
@@ -816,7 +851,7 @@ components:
         lastSettlement:
           oneOf:
             - type: object
-              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, salary, quarters, gradeBefore, gradeAfter, achieved, results, lines, reports]
+              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, moving, salary, quarters, gradeBefore, gradeAfter, achieved, results, lines, reports]
               properties:
                 year: { type: integer }
                 phase: { type: string, enum: [boom, normal, crash] }
@@ -824,7 +859,8 @@ components:
                 capitalBefore: { type: integer, format: int64, description: 연초 회의 때의 자본 (decisions.md 251번) }
                 capitalAfter: { type: integer, format: int64 }
                 fee: { type: integer, format: int64, description: 수수료 매출 }
-                hiring: { type: integer, format: int64, description: 그해 인사 비용(계약금·새로 받기·붙잡는 값 − 받은 이적료, 음수일 수 있다). 연초 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 = 연말 자본 (251·262번) }
+                hiring: { type: integer, format: int64, description: 그해 인사 비용(계약금·새로 받기·붙잡는 값 − 받은 이적료, 음수일 수 있다). 연초 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 − 이사 비용 = 연말 자본 (251·262·296번) }
+                moving: { type: integer, format: int64, description: 그해 낸 이사 비용 (296번) }
                 salary: { type: integer, format: int64, description: 그해 나간 연봉의 합(인건비, decisions.md 270번) }
                 invest:
                   description: 그해 투자 회의(기사 제목과 손익, 이미 자본에 들어갔다). 회의를 안 했거나 옛 결산이면 null (decisions.md 240번)
@@ -890,7 +926,7 @@ components:
     Quarter:
       type: object
       description: 분기 하나의 실적 (decisions.md 268번)
-      required: [year, quarter, capitalBefore, capitalAfter, fee, staff, hiring, salary, crash, lines, reports]
+      required: [year, quarter, capitalBefore, capitalAfter, fee, staff, hiring, moving, salary, crash, lines, reports]
       properties:
         year: { type: integer }
         quarter: { type: integer }
@@ -898,7 +934,8 @@ components:
         capitalAfter: { type: integer, format: int64 }
         fee: { type: integer, format: int64, description: 수수료 매출(한 해 몫의 4분의 1) }
         staff: { type: integer, format: int64, description: 직원들이 이 분기에 굴린 몫 }
-        hiring: { type: integer, format: int64, description: 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 = 끝 자본 }
+        hiring: { type: integer, format: int64, description: 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 − 이사 비용 = 끝 자본 }
+        moving: { type: integer, format: int64, description: 이 분기에 낸 이사 비용 (296번) }
         salary: { type: integer, format: int64, description: 이 분기에 나간 연봉(인건비, decisions.md 270번) }
         invest:
           description: 이 분기 종목 회의(기사 제목과 손익). 안 열렸으면 null

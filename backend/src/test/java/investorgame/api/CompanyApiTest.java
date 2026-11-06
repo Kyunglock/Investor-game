@@ -298,7 +298,8 @@ class CompanyApiTest {
         assertThat(hiring).as("첫 해에 뽑고 새로 받은 값").isPositive();
       }
       if (after > 0) {
-        assertThat(before + meetingTotal + staff + fee - hiring - salary).isEqualTo(after);
+        long moving = settled.read("$.lastSettlement.moving", Long.class);
+        assertThat(before + meetingTotal + staff + fee - hiring - salary - moving).isEqualTo(after);
       }
     }
     // 매각을 뺐다(236번): 세 해가 지나도 회사는 끝나지 않고 4년 차 연초 회의가 온다.
@@ -485,31 +486,50 @@ class CompanyApiTest {
   }
 
   /**
-   * 랜드마크 타워 엔딩 (decisions.md 276번): 연말 결산에서 회사 등급이 Z(자본 100조 원)에 오르면 엔딩을 보고 회사가 멈춘다. 그 뒤로는 뽑기·결산이
-   * 400이고, 사장의 사재로 다음 회사를 차릴 수 있다.
+   * 랜드마크 타워 엔딩 (decisions.md 276·296번): 건물은 결산으로 오르지 않고 이사 비용을 내고 올라간다. Z(자본 100조 원)로 이사하면 그 자리에서
+   * 엔딩을 보고 회사가 멈춘다. 그 뒤로는 뽑기·결산이 400이고, 사장의 사재로 다음 회사를 차릴 수 있다.
    */
   @Test
   void 랜드마크_타워에_오르면_엔딩을_보고_다음_회사를_차린다() throws Exception {
     String id =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()))
             .read("$.companyId", String.class);
+    // 돈이 모자라면 못 간다: 반지하(F)에서 상가(E)로 가려면 2억 5천만이 있어야 한다.
+    postJson("/api/company/upgrade", "{}").andExpect(status().isBadRequest());
     jdbc.sql(
-            "UPDATE raising_company SET state = jsonb_set(state, '{capital}', '100000000000000')"
+            "UPDATE raising_company SET state = jsonb_set(state, '{capital}', '200000000000000')"
                 + " WHERE id = CAST(:id AS uuid)")
         .param("id", id)
         .update();
-    DocumentContext end = json(settleYear(1));
-    assertThat(end.read("$.lastSettlement.finished", Boolean.class)).isTrue();
-    assertThat(end.read("$.ending.year", Integer.class)).isEqualTo(1);
-    assertThat(end.read("$.ending.grade", String.class)).isEqualTo("Z");
+    // 자본이 넉넉해도 결산으로는 건물이 오르지 않는다 (296번).
+    DocumentContext rich = json(settleYear(1));
+    assertThat(rich.read("$.lastSettlement.finished", Boolean.class)).isFalse();
+    assertThat(rich.read("$.grade", String.class)).isEqualTo("F");
+    assertThat(rich.read("$.upgrade.affordable", Boolean.class)).isTrue();
+    assertThat(rich.read("$.upgrade.to", String.class)).isEqualTo("E");
+    assertThat(rich.read("$.upgrade.cost", Long.class)).isEqualTo(50_000_000L);
+    // 이사 비용을 내며 한 단계씩 Z까지 올라간다. 비용이 분기 실적의 이사 비용 줄에 남는다.
+    DocumentContext moved = null;
+    for (int i = 0; i < 12; i++) {
+      moved = json(postJson("/api/company/upgrade", "{}").andExpect(status().isOk()));
+    }
+    assertThat(moved).isNotNull();
+    assertThat(moved.read("$.grade", String.class)).isEqualTo("Z");
+    assertThat(moved.read("$.upgrade", Object.class)).isNull();
+    assertThat(moved.read("$.ending.year", Integer.class)).isEqualTo(2);
+    assertThat(moved.read("$.ending.grade", String.class)).isEqualTo("Z");
+    List<?> kinds = moved.read("$.history.timeline[*].kind");
+    assertThat(kinds.stream().map(String::valueOf)).contains("grow", "ending");
     hireFails();
     settle(2, 1).andExpect(status().isBadRequest());
+    postJson("/api/company/upgrade", "{}").andExpect(status().isBadRequest());
 
     DocumentContext next =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
     assertThat(next.read("$.number", Integer.class)).isEqualTo(2);
     assertThat(next.read("$.capital", Long.class)).isEqualTo(100_000_000L);
     assertThat(next.read("$.ending", Object.class)).isNull();
+    assertThat(next.read("$.grade", String.class)).isEqualTo("F");
   }
 
   private void hireFails() throws Exception {

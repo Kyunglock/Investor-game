@@ -163,6 +163,25 @@ export function Ledger({
           </li>
         )
       })(),
+    // 이사 비용 (decisions.md 296번): 건물을 올리는 데 낸 돈.
+    s.moving !== 0 &&
+      (() => {
+        const r = reveal()
+        return (
+          <li
+            key="moving"
+            className={`py-2 ${r.className}`}
+            style={r.style}
+            data-testid="ledger-moving"
+          >
+            <Row
+              label={`${num()} 이사 비용`}
+              note="건물을 올리는 데 낸 돈 · 번 돈의 보람"
+              amount={-s.moving}
+            />
+          </li>
+        )
+      })(),
     // 그해 공채에 쓴 돈 (decisions.md 251번): 연초 자본에서 계약금이 소리 없이 빠져 보이지 않게.
     s.hiring !== 0 &&
       (() => {
@@ -280,6 +299,7 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
   const done =
     (s.invest ? STEP_MS : 0) +
     (s.hiring !== 0 ? STEP_MS : 0) +
+    (s.moving !== 0 ? STEP_MS : 0) +
     (s.salary !== 0 ? STEP_MS : 0) +
     ROW_MS * (1 + teamRows(s.results, s.reports).length) +
     STEP_MS * 2

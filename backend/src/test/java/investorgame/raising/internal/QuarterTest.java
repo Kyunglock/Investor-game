@@ -70,7 +70,12 @@ class QuarterTest {
       assertThat(s.results.stream().mapToLong(r -> r.pnl).sum()).isEqualTo(staff);
       assertThat(s.fee).isEqualTo(s.quarters.stream().mapToLong(q -> q.fee).sum());
       assertThat(s.capitalAfter).isEqualTo(s.quarters.getLast().capitalAfter);
-      assertThat(s.gradeAfter).isEqualTo(ENGINE.grade(c.capital));
+      // 건물은 저절로 오르지 않고(296번), 자본이 띠 아래로 떨어지면 줄어든다.
+      assertThat(CompanyEngine.LADDER.indexOf(s.gradeAfter))
+          .isEqualTo(
+              Math.min(
+                  CompanyEngine.LADDER.indexOf(s.gradeBefore),
+                  CompanyEngine.LADDER.indexOf(ENGINE.grade(c.capital))));
       assertThat(c.quarters).as("해가 바뀌면 비운다").isEmpty();
       assertThat(topic).isNotNull();
     }

@@ -37,6 +37,7 @@ public record CompanyProperties(
     long baseCapital,
     int turns,
     List<Long> gradeCapital,
+    Upgrade upgrade,
     List<Integer> seats,
     Scale scale,
     int feeBp,
@@ -60,6 +61,9 @@ public record CompanyProperties(
     Scout scout,
     Sale sale,
     String endingGrade) {
+
+  /** 건물 이사 (decisions.md 296번): 이사 비용은 다음 띠 자본의 percent%. 자본이 다음 띠 + 비용 이상일 때만 간다. */
+  public record Upgrade(int percent) {}
 
   /**
    * 거시경제 회의 (decisions.md 266번).
