@@ -17,8 +17,16 @@ interface RaisingState {
   justSettled: boolean
   /** 방금 한 분기를 넘겼다(4분기가 아니다). 분기 실적을 띄우고 닫으면 지운다 (decisions.md 268번). */
   justQuartered: boolean
+  /** 방금 연말 결산에서 라이벌을 앞질렀다. 연말 결산서를 닫으면 알림이 뜨고, 닫으면 지운다 (decisions.md 274번). */
+  overtakeAlert: boolean
   /** 자동 진행을 켰다 (245번). 새로 고치면 꺼진다: 모르는 사이에 돈을 쓰지 않게. */
   autoPlay: boolean
+  /**
+   * 자동 진행이 마지막으로 분기를 넘긴 때(ms). 켤 때도 지금으로 맞춘다: 켠 뒤 첫 분기도, 그 뒤 분기마다도 20초는 둔다 (decisions.md 273번).
+   */
+  autoLastSettleAt: number | null
+  /** 자동 진행이 다음 분기를 넘길 때(ms). 화면이 남은 초를 센다. 기다리는 중이 아니면 null. */
+  autoNextAt: number | null
   /** 회사 화면에서 고른 탭. null이면 화면이 정한다 (231번). */
   tab: 'meeting' | 'market' | 'staff' | 'settlement' | 'history' | null
   load: () => Promise<void>
@@ -77,7 +85,10 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     error: null,
     justSettled: false,
     justQuartered: false,
+    overtakeAlert: false,
     autoPlay: false,
+    autoLastSettleAt: null,
+    autoNextAt: null,
     tab: null,
 
     load: async () => {
@@ -182,7 +193,12 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
         return
       }
       if (after.year > before.year) {
-        set({ justSettled: true, justQuartered: false, tab: 'settlement' })
+        set({
+          justSettled: true,
+          justQuartered: false,
+          tab: 'settlement',
+          overtakeAlert: (after.lastSettlement?.overtook.length ?? 0) > 0,
+        })
       } else if (after.quarter > before.quarter) {
         set({ justQuartered: true })
       }

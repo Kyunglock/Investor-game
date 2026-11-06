@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { Company } from '../../api/client'
-import { autoChoice, autoHire, autoStance, nextAutoStep } from './autoPlay'
+import {
+  autoChoice,
+  autoHire,
+  autoStance,
+  nextAutoStep,
+  QUARTER_GAP_MS,
+  settleDelay,
+  toggleAutoPlay,
+} from './autoPlay'
+import { useRaisingStore } from './store'
 
 function desk(code: string, statCode: string, trades = true) {
   return { code, name: code, statCode, trades, sector: null, hot: false, description: '' }
@@ -102,5 +111,32 @@ describe('자동 진행 (decisions.md 245번)', () => {
     })
     const decided = { ...opened, ready: false }
     expect(nextAutoStep({ ...seated, macro: decided } as never, false).kind).toBe('invest')
+  })
+})
+
+describe('자동 진행의 분기 사이 시간 (decisions.md 273번)', () => {
+  it('켠 때나 지난 분기를 넘긴 때부터 20초가 지나야 다음 분기를 넘긴다', () => {
+    expect(QUARTER_GAP_MS).toBe(20_000)
+    expect(settleDelay(1_000, 1_000)).toBe(20_000)
+    expect(settleDelay(1_000, 6_000)).toBe(15_000)
+    // 회의·분기 실적에 20초를 넘게 썼으면 짧게만 쉬고 넘긴다.
+    expect(settleDelay(1_000, 30_000)).toBe(700)
+    expect(settleDelay(null, 30_000)).toBe(700)
+  })
+
+  it('켜면 시계를 지금부터 재고, 끄면 남은 시간을 지운다', () => {
+    toggleAutoPlay(true, 5_000)
+    expect(useRaisingStore.getState()).toMatchObject({ autoPlay: true, autoLastSettleAt: 5_000 })
+    useRaisingStore.setState({ autoNextAt: 25_000 })
+    toggleAutoPlay(false)
+    expect(useRaisingStore.getState()).toMatchObject({ autoPlay: false, autoNextAt: null })
+  })
+})
+
+describe('라이벌을 앞지른 알림 (decisions.md 274번)', () => {
+  it('연말 결산서를 닫은 뒤 알림을 닫고 나서 다음 일을 한다', () => {
+    expect(nextAutoStep(company(), true, false, true).kind).toBe('closeYearEnd')
+    expect(nextAutoStep(company(), false, false, true).kind).toBe('closeOvertake')
+    expect(nextAutoStep(company(), false, false, false).kind).not.toBe('closeOvertake')
   })
 })

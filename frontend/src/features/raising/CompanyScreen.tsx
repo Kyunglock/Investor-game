@@ -3,6 +3,7 @@ import type { Applicant, Company } from '../../api/client'
 import { Document } from '../game/Document'
 import { shortWon, withParticle } from '../game/labels'
 import { usePixelArt } from '../game/pixelArt'
+import { toggleAutoPlay } from './autoPlay'
 import { BuildingArt } from './BuildingArt'
 import { pnlLabel } from './board'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
@@ -10,6 +11,7 @@ import { InvestWindow } from './InvestWindow'
 import { MacroWindow } from './MacroWindow'
 import { MoveScene } from './MoveScene'
 import { OfficeArt, type SeatFocus } from './OfficeArt'
+import { OvertakeAlert } from './OvertakeAlert'
 import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName, titleOf } from './office'
 import { autoPlace, deskEffect, rankDesks, seatOne } from './placement'
 import { QuarterSheet } from './QuarterSheet'
@@ -40,6 +42,7 @@ export function CompanyScreen({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   const justSettled = useRaisingStore((s) => s.justSettled)
+  const overtakeAlert = useRaisingStore((s) => s.overtakeAlert)
   const justQuartered = useRaisingStore((s) => s.justQuartered)
   const autoPlay = useRaisingStore((s) => s.autoPlay)
   const { settle, restart, convene, conveneMacro } = useRaisingStore.getState()
@@ -122,6 +125,14 @@ export function CompanyScreen({ company }: { company: Company }) {
 
         {justSettled && <YearEndSheet company={company} onClose={closeYearEnd} />}
 
+        {!justSettled && overtakeAlert && (
+          // 라이벌을 앞지르면 연말 결산서를 닫은 뒤 알림이 뜬다 (274번).
+          <OvertakeAlert
+            company={company}
+            onClose={() => useRaisingStore.setState({ overtakeAlert: false })}
+          />
+        )}
+
         {justQuartered && company.lastQuarter && (
           // 분기 실적 (268번): 1~3분기를 넘기면 짧게 뜬다.
           <QuarterSheet
@@ -191,13 +202,14 @@ export function CompanyScreen({ company }: { company: Company }) {
               <p className="text-center text-[12px] text-teal" data-testid="auto-status">
                 자동 진행 중 · 공채 → 배치 → 거시경제 회의·종목 회의(직원 다수결) → 분기 넘기기를
                 되풀이합니다
+                <AutoCountdown />
               </p>
             )}
             <div className="grid grid-cols-[auto_1fr] gap-2">
               <button
                 type="button"
                 aria-pressed={autoPlay}
-                onClick={() => useRaisingStore.setState({ autoPlay: !autoPlay })}
+                onClick={() => toggleAutoPlay(!autoPlay)}
                 className={`min-h-12 rounded border px-3 text-[14px] font-semibold ${
                   autoPlay ? 'border-teal bg-teal text-white' : 'border-teal text-teal'
                 }`}
@@ -1135,5 +1147,27 @@ function ApplicantCard({
         {!affordable && <p className="text-[12px] text-muted">계약금이 모자랍니다.</p>}
       </div>
     </li>
+  )
+}
+
+/** 자동 진행이 다음 분기를 넘기기까지 남은 초 (decisions.md 273번). 회의·뽑기 중이거나 기다리는 중이 아니면 아무것도 그리지 않는다. */
+function AutoCountdown() {
+  const nextAt = useRaisingStore((s) => s.autoNextAt)
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    if (nextAt === null) {
+      return
+    }
+    const id = setInterval(() => setNow(Date.now()), 250)
+    return () => clearInterval(id)
+  }, [nextAt])
+  if (nextAt === null) {
+    return null
+  }
+  const left = Math.max(0, Math.ceil((nextAt - now) / 1000))
+  return (
+    <span className="block font-semibold" data-testid="auto-countdown">
+      다음 분기까지 {left}초
+    </span>
   )
 }
