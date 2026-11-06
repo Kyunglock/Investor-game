@@ -31,6 +31,7 @@ class CompanyEngine {
       List.of("F", "E", "D", "C", "B", "A", "S", "SS", "SSS", "X", "XX", "XXX", "Z", "ZZ", "ZZZ");
 
   static final String CRASH = "crash";
+  private static final String NORMAL = "normal";
 
   /** 폭락장인데 아무도 바닥에서 던지지 않은 해의 머리줄 (254번). */
   private static final String CRASH_HELD = "crashHeld";
@@ -579,6 +580,10 @@ class CompanyEngine {
         phase = key;
         break;
       }
+    }
+    // 첫 회사의 첫해는 폭락장이 아니다 (decisions.md 256번): 1억으로 차려 두 사람을 뽑자마자 깎이면 시작부터 지친다.
+    if (company.number == 1 && year == 1 && CRASH.equals(phase)) {
+      phase = NORMAL;
     }
     String omen = null;
     if (CRASH.equals(phase) && omenRoll < properties.omenPercent()) {

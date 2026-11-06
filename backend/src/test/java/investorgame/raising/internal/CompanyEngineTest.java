@@ -68,6 +68,9 @@ class CompanyEngineTest {
                 .name());
     assertThat(ENGINE.grade(company.capital)).isEqualTo("F");
     assertThat(ENGINE.seats(company.capital)).isEqualTo(2);
+    assertThat(ENGINE.grade(200_000_000)).as("E는 2억부터 (256번)").isEqualTo("E");
+    assertThat(ENGINE.grade(199_999_999)).isEqualTo("F");
+    assertThat(ENGINE.grade(600_000_000)).isEqualTo("D");
     assertThat(ENGINE.grade(300_000_000)).isEqualTo("E");
     assertThat(ENGINE.seats(300_000_000)).isEqualTo(3);
     assertThat(company.wantedDesk).isNotNull();
@@ -519,8 +522,8 @@ class CompanyEngineTest {
   /** 자리가 줄면 넘친 사람이 쉰다 (#311, decisions.md 247번): 돕는 자리부터, 그다음 나중에 들어온 사람부터. */
   @Test
   void 자본이_줄어_자리가_줄면_돕는_자리부터_일어나_쉰다() {
-    // E 회사(자리 3)에 셋을 앉힌다. 새로 받기 값을 내면 3억 아래로 떨어져 F(자리 2)가 된다.
-    CompanyState company = open(5, stats(50, 50, 50, 50), 300_000_000 + 1_000_000);
+    // E 회사(자리 3)에 셋을 앉힌다. 새로 받기 값을 내면 2억 아래로 떨어져 F(자리 2)가 된다.
+    CompanyState company = open(5, stats(50, 50, 50, 50), 200_000_000 + 1_000_000);
     ENGINE.hire(company, stats(50, 50, 50, 50));
     ENGINE.hire(company, stats(50, 50, 50, 50));
     List<CompanyState.Employee> staff = company.employees;
@@ -548,7 +551,7 @@ class CompanyEngineTest {
   @Test
   void 결산으로_자리가_줄면_넘친_사람이_쉬고_소식_줄에_남는다() {
     for (long seed = 1; seed <= 40; seed++) {
-      CompanyState company = open(seed, stats(1, 1, 1, 1), 300_000_000);
+      CompanyState company = open(seed, stats(1, 1, 1, 1), 200_000_000);
       ENGINE.hire(company, stats(1, 1, 1, 1));
       ENGINE.hire(company, stats(90, 90, 90, 90));
       List<CompanyState.Employee> staff = company.employees;
@@ -623,14 +626,15 @@ class CompanyEngineTest {
       for (int year = 1; year <= 4; year++) {
         long start = company.capital;
         long spent = 0;
-        if (company.employees.size() < ENGINE.seats(company.capital)) {
+        if (company.employees.size() < ENGINE.seats(company.capital - ENGINE.refreshCost())) {
           ENGINE.refresh(company, random);
           spent += ENGINE.refreshCost();
           CompanyState.Applicant cheapest =
               company.applicants.stream()
                   .min(java.util.Comparator.comparingLong(a -> a.fee))
                   .orElseThrow();
-          if (company.capital >= cheapest.fee) {
+          if (company.capital >= cheapest.fee
+              && company.employees.size() < ENGINE.seats(company.capital - cheapest.fee)) {
             CompanyState.Employee hired = ENGINE.hireApplicant(company, cheapest.id, null);
             spent += cheapest.fee;
             Map<Integer, String> seats = new HashMap<>();
