@@ -712,12 +712,13 @@ components:
                           description: 맡겼을 때 매수파·매도파가 주고받은 말 (decisions.md 285번). 맡기지 않았으면 비었다
                           items:
                             type: object
-                            required: [name, side, text, last]
+                            required: [name, side, text, last, kind]
                             properties:
                               name: { type: string }
                               side: { type: string, enum: [BUY, SELL] }
                               text: { type: string }
-                              last: { type: boolean, description: 결판을 내는 마지막 두 줄(이긴 쪽·진 쪽) }
+                              last: { type: boolean, description: 결판의 세 박자(표결·선언·승복)면 참 (295번) }
+                              kind: { type: string, enum: [TALK, TALLY, WIN, LOSE], description: 'TALK: 토론, TALLY: 사회가 무게를 읽으며 표결을 부른다, WIN: 이긴 쪽 선언, LOSE: 진 쪽이 토를 달고 물러난다 (295번)' }
                         missed: { type: [integer, 'null'], format: int64, description: 지켜봤을 때 맞는 쪽으로 했으면 벌었을 돈(뒤집힘 없이). 지켜보지 않았으면 null }
                         up: { type: boolean }
                         reveal: { type: string }

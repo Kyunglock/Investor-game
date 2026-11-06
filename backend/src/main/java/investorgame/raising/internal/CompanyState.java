@@ -333,7 +333,12 @@ class CompanyState {
     String name;
     String side;
     String text;
+
+    /** 결판의 세 박자(표결·선언·승복)면 참 (295번). */
     boolean last;
+
+    /** TALK(토론) · TALLY(사회가 표결을 부름) · WIN(이긴 쪽 선언) · LOSE(진 쪽 승복). 옛 저장은 null이라 last로 읽는다. */
+    String kind;
   }
 
   /** 투자 회의를 연 때 굳힌 직원 한마디 한 줄. read는 정할 때 "제 판단"으로도 쓴다. */

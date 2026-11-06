@@ -437,6 +437,10 @@ class JsonContentCatalog implements ContentCatalog {
       require(win != null && !win.isEmpty(), "토론 결판 말이 없다: " + side);
     }
     require(!debate.lose().isEmpty(), "토론에서 진 쪽의 말이 없다");
+    require(debate.tally() != null && !debate.tally().isEmpty(), "토론의 표결 말이 없다");
+    require(
+        debate.tally().stream().allMatch(t -> t.contains("{buy}") && t.contains("{sell}")),
+        "표결 말에는 {buy}·{sell} 무게가 들어가야 한다");
     require(debate.bystanders().size() >= 2, "토론에 끌려 나올 사람이 둘 있어야 한다");
     requireNoQuote(Map.of("debate", debate.lines()), "토론");
     for (String stat : List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE)) {

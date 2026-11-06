@@ -248,9 +248,10 @@ public record CompanyView(
    * 맡긴 회의의 토론 한 줄 (decisions.md 285번).
    *
    * @param side BUY(매수파)·SELL(매도파)
-   * @param last 결판을 내는 마지막 두 줄(이긴 쪽·진 쪽)
+   * @param last 결판의 세 박자(표결·선언·승복)면 참 (295번)
+   * @param kind TALK(토론) · TALLY(사회가 표결을 부름) · WIN(이긴 쪽 선언) · LOSE(진 쪽 승복)
    */
-  public record DebateLine(String name, String side, String text, boolean last) {}
+  public record DebateLine(String name, String side, String text, boolean last, String kind) {}
 
   /**
    * @param decisive 결정적 문장의 번호(sentences 안)
