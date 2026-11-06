@@ -8,6 +8,7 @@ import { toggleAutoPlay } from './autoPlay'
 import { BuildingArt } from './BuildingArt'
 import { pnlLabel } from './board'
 import { EndingScreen } from './EndingScreen'
+import { GradeCard } from './GradeCard'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { InvestWindow } from './InvestWindow'
 import { MacroWindow } from './MacroWindow'
@@ -416,14 +417,21 @@ function StaffTab({ company }: { company: Company }) {
           </summary>
           <ul className="mt-2 grid gap-2">
             {company.employees.map((e) => (
-              <li key={e.id} className="rounded border border-line p-3" data-testid="employee">
+              <GradeCard
+                as="li"
+                key={e.id}
+                grade={e.overallGrade}
+                badgeLabel="종합"
+                className="p-3 pl-[72px]"
+                data-testid="employee"
+              >
                 <EmployeeDetail employee={e} />
                 <p className="mt-1 text-[12px] text-muted">
                   {e.desk
                     ? `${company.desks.find((d) => d.code === e.desk)?.name ?? e.desk}${e.leader ? ' 팀장' : ''}`
                     : '쉬는 중'}
                 </p>
-              </li>
+              </GradeCard>
             ))}
           </ul>
         </details>
@@ -733,12 +741,15 @@ function SeatPicker({
       return null
     }
     return (
-      <section
-        className="mt-2 rounded border border-pen p-3"
+      <GradeCard
+        as="section"
+        grade={e.overallGrade}
+        badgeLabel="종합"
+        className="mt-2 p-3"
         aria-label={`${e.name}의 자리 고르기`}
         data-testid="seat-picker"
       >
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start justify-between gap-2 pl-[64px]">
           <EmployeeDetail employee={e} />
           {close}
         </div>
@@ -751,7 +762,7 @@ function SeatPicker({
         <div className="mt-1">
           <DeskButtons company={company} employee={e} onSeated={() => onFocus(null)} />
         </div>
-      </section>
+      </GradeCard>
     )
   }
   const resting = company.employees.filter((x) => !x.desk)
@@ -1079,15 +1090,18 @@ function ApplicantCard({
   const button =
     'min-h-11 w-full rounded font-semibold disabled:opacity-50 border border-pen hover:bg-pen hover:text-white'
   return (
-    <li
-      className={`rounded p-3 ${a.star ? 'animate-glow border-2 border-gold bg-gold/10' : 'border border-line'}`}
+    <GradeCard
+      as="li"
+      grade={a.overallGrade}
+      badgeLabel={a.star ? '특급' : '지원자'}
+      className={`p-3 ${a.star ? 'animate-glow' : ''}`}
       data-testid="applicant"
-      data-star={a.star}
+      data-star={String(a.star)}
     >
       {a.star && (
         // 특급 인재 (290번): 아주 좋은 등급, 아주 비싼 계약금, 곧 떠난다.
         <p
-          className="mb-1 flex items-center justify-between text-[12px] font-bold text-gold"
+          className="mb-1 flex items-center gap-2 pl-[70px] text-[12px] font-bold text-gold"
           data-testid="applicant-star"
         >
           <span>★ 특급 인재</span>
@@ -1096,17 +1110,12 @@ function ApplicantCard({
           </span>
         </p>
       )}
-      <p className="flex items-baseline justify-between">
-        <span className="font-semibold">
-          {a.name}{' '}
-          <span className="text-[13px] font-normal text-muted">{titleOf(a.overallGrade)}</span>
-        </span>
-        <span className="font-mono-num text-[13px]">
-          종합 <b className="text-[17px]">{a.overallGrade}</b>
-        </span>
+      <p className="pl-[70px] font-semibold">
+        {a.name}{' '}
+        <span className="text-[13px] font-normal text-muted">{titleOf(a.overallGrade)}</span>
       </p>
-      {a.line && <p className="mt-1 text-[13px] text-teal">{a.line}</p>}
-      <p className="mt-1 text-[12px] text-muted" data-testid="applicant-perk">
+      {a.line && <p className="mt-1 pl-[70px] text-[13px] text-teal">{a.line}</p>}
+      <p className="mt-1 pl-[70px] text-[12px] text-muted" data-testid="applicant-perk">
         등급 효과 · {a.perk}
       </p>
       {a.sectorName && (
@@ -1158,7 +1167,7 @@ function ApplicantCard({
           ))}
         {!affordable && <p className="text-[12px] text-muted">계약금이 모자랍니다.</p>}
       </div>
-    </li>
+    </GradeCard>
   )
 }
 
