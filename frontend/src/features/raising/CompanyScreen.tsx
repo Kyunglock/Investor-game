@@ -6,6 +6,7 @@ import { usePixelArt } from '../game/pixelArt'
 import { toggleAutoPlay } from './autoPlay'
 import { BuildingArt } from './BuildingArt'
 import { pnlLabel } from './board'
+import { EndingScreen } from './EndingScreen'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { InvestWindow } from './InvestWindow'
 import { MacroWindow } from './MacroWindow'
@@ -125,6 +126,11 @@ export function CompanyScreen({ company }: { company: Company }) {
 
         {justSettled && <YearEndSheet company={company} onClose={closeYearEnd} />}
 
+        {company.ending && !justSettled && !overtakeAlert && (
+          // 랜드마크 타워 엔딩 (276번): 결산서와 라이벌 알림 뒤에 뜨고, 다음 회사를 차린다.
+          <EndingScreen company={company} />
+        )}
+
         {!justSettled && overtakeAlert && (
           // 라이벌을 앞지르면 연말 결산서를 닫은 뒤 알림이 뜬다 (274번).
           <OvertakeAlert
@@ -190,7 +196,7 @@ export function CompanyScreen({ company }: { company: Company }) {
           </section>
         )}
 
-        {!ended && !company.broke && meeting && (
+        {!ended && !company.broke && !company.ending && meeting && (
           // 결산은 한 해의 마지막 일이라 화면 아래에 늘 붙어 있다.
           <div className="sticky bottom-0 z-10 -mx-1 mt-4 grid gap-1 bg-card/95 px-1 pt-2 pb-3 backdrop-blur">
             {error && (
@@ -286,6 +292,7 @@ function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
   return (
     <section data-testid="meeting">
       <h3 className="font-pen text-[22px]">연초 회의</h3>
+      {meeting.rivalry && <RivalryPicker rivalry={meeting.rivalry} />}
       {poach && (
         // 이직 제안 (262번): 답하지 않고 결산하면 이적료를 남기고 떠난다.
         <div className="mt-1 rounded border border-wine p-2" data-testid="poach">
@@ -826,7 +833,8 @@ function CompanyTabs({ company }: { company: Company }) {
         company.meeting?.omen ||
         company.meeting?.eraEnding ||
         company.meeting?.poach ||
-        company.meeting?.raise
+        company.meeting?.raise ||
+        (company.meeting?.rivalry?.options.length ?? 0) > 0
           ? '!'
           : undefined,
       show: Boolean(company.meeting),
@@ -1169,5 +1177,66 @@ function AutoCountdown() {
     <span className="block font-semibold" data-testid="auto-countdown">
       다음 분기까지 {left}초
     </span>
+  )
+}
+
+type Rivalry = NonNullable<NonNullable<Company['meeting']>['rivalry']>
+
+/**
+ * 올해의 라이벌 고르기 (decisions.md 275번). 연초 회의에 실제 다른 사장의 회사(모자라면 지어낸 회사) 셋이 쉬움·보통·어려움으로 온다. 하나를 고르면 연말
+ * 결산에서 한 번 견줘, 이기면 라이벌의 고객이 넘어와 자본이 는다. 1분기를 넘기면 올해는 라이벌 없이 간다.
+ */
+function RivalryPicker({ rivalry }: { rivalry: Rivalry }) {
+  const busy = useRaisingStore((s) => s.busy)
+  const { pickTarget } = useRaisingStore.getState()
+  const percent = (bp: number) => `${bp / 100}%`
+  if (rivalry.chosen) {
+    const t = rivalry.chosen
+    return (
+      <div className="mt-1 rounded border border-wine p-2" data-testid="rivalry-chosen">
+        <p className="text-[14px] font-semibold text-wine">
+          올해의 라이벌: {t.name} ({t.difficultyName})
+        </p>
+        <p className="text-[12px] text-muted">
+          {t.real ? '실제 사장의 회사' : '지어낸 회사'} · {officeName(t.grade)} · 자본{' '}
+          {shortWon(t.capital)} · 연말에 이 회사보다 크면 이기고, 자본이 {percent(t.bonusBp)} 는다
+        </p>
+      </div>
+    )
+  }
+  return (
+    <div className="mt-1 rounded border border-wine p-2" data-testid="rivalry">
+      <p className="text-[14px] font-semibold text-wine">올해의 라이벌을 고르세요</p>
+      <p className="text-[12px] text-muted">
+        연말 결산에서 한 번 견줍니다. 이기면 라이벌의 고객이 넘어와 자본이 늡니다. 1분기를 넘기면
+        올해는 라이벌 없이 갑니다.
+      </p>
+      <ul className="mt-2 grid gap-2 sm:grid-cols-3">
+        {rivalry.options.map((t) => (
+          <li
+            key={t.difficulty}
+            className="grid gap-1 rounded border border-line p-2"
+            data-testid="rivalry-option"
+            data-difficulty={t.difficulty}
+          >
+            <p className="text-[12px] font-semibold text-muted">{t.difficultyName}</p>
+            <p className="text-[15px] font-bold">{t.name}</p>
+            <p className="text-[12px] text-muted">
+              {t.real ? '실제 사장의 회사' : '지어낸 회사'} · {officeName(t.grade)}
+            </p>
+            <p className="font-mono-num text-[13px]">자본 {shortWon(t.capital)}</p>
+            <p className="text-[12px]">이기면 자본 +{percent(t.bonusBp)}</p>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void pickTarget(t.difficulty)}
+              className="mt-1 min-h-10 rounded border border-wine text-[14px] font-semibold text-wine disabled:opacity-50"
+            >
+              이 회사로 정한다
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }

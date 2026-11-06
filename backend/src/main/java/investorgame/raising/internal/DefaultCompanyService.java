@@ -66,7 +66,8 @@ class DefaultCompanyService implements CompanyService {
     if (latest.isPresent()) {
       // 망한 회사만 닫고 사장의 사재로 다음 회사를 차릴 수 있다 (247번).
       CompanyRepository.Row old = latest.get();
-      if (!"ACTIVE".equals(old.status()) || !engine.broke(old.state())) {
+      // 망했거나(247번) 랜드마크 타워에 올라 엔딩을 본(276번) 회사만 닫고 다음 회사를 차린다.
+      if (!"ACTIVE".equals(old.status()) || !engine.canRestart(old.state())) {
         throw new InvalidRequestException("이미 회사가 있다");
       }
       company = engine.restart(old.state(), new HashSeededRandom(seed), engine.openingCapital());
@@ -76,6 +77,7 @@ class DefaultCompanyService implements CompanyService {
     }
     CompanyRepository.Row row =
         new CompanyRepository.Row(UUID.randomUUID(), sessionId, "ACTIVE", seed, company);
+    offerTargets(row);
     companies.insert(row);
     memories.save(sessionId, memory);
     return view(row);
@@ -193,8 +195,15 @@ class DefaultCompanyService implements CompanyService {
     if (asked > now || !"ACTIVE".equals(row.status())) {
       throw new InvalidRequestException("아직 오지 않은 분기다: " + year + "년 " + quarter + "분기");
     }
-    // 회사는 끝나지 않고 분기마다, 해마다 이어진다 (236·268번).
+    // 올해의 라이벌이 실제 회사면 연말 결산 직전에 그 회사의 지금 자본을 한 번 읽는다 (275번). 실시간으로 매기지 않는다.
+    if (c.quarter == CompanyEngine.QUARTERS && c.target != null && c.target.companyId != null) {
+      companies
+          .capitalOf(UUID.fromString(c.target.companyId))
+          .ifPresent(capital -> c.target.capitalNow = capital);
+    }
+    // 회사는 분기마다, 해마다 이어진다 (236·268번). 랜드마크 타워에 오르면 엔딩이다 (276번).
     engine.settleQuarter(c, new HashSeededRandom(row.seed()));
+    offerTargets(row);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -225,7 +234,39 @@ class DefaultCompanyService implements CompanyService {
   }
 
   private CompanyRepository.Row lockActive(UUID sessionId) {
-    return companies.lockActive(sessionId).orElseThrow(() -> new NotFoundException("회사가 없다"));
+    CompanyRepository.Row row =
+        companies.lockActive(sessionId).orElseThrow(() -> new NotFoundException("회사가 없다"));
+    if (row.state().finished) {
+      throw new InvalidRequestException("엔딩을 본 회사다. 새 회사를 차린다");
+    }
+    return row;
+  }
+
+  /** 연초면 올해의 라이벌 후보를 뽑는다 (275번): 난이도마다 실제 다른 사장의 회사 하나, 없으면 지어낸 회사. 해마다 한 번. */
+  private void offerTargets(CompanyRepository.Row row) {
+    CompanyState c = row.state();
+    if (!engine.targets.needsOptions(c)) {
+      return;
+    }
+    Map<String, Optional<TargetEngine.Candidate>> found = new java.util.LinkedHashMap<>();
+    engine
+        .targets
+        .bands(c)
+        .forEach(
+            (difficulty, band) ->
+                found.put(
+                    difficulty,
+                    companies.targetCandidate(row.sessionId(), band.low(), band.high())));
+    engine.targets.offer(c, found, new HashSeededRandom(row.seed()));
+  }
+
+  @Override
+  @Transactional
+  public CompanyView pickTarget(UUID sessionId, String difficulty) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.targets.pick(row.state(), difficulty);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
   }
 
   private CompanyView view(CompanyRepository.Row row) {
@@ -307,7 +348,8 @@ class DefaultCompanyService implements CompanyService {
                 engine.hotLine(c),
                 engine.eraEndingLine(c),
                 poachView(c),
-                raiseView(c));
+                raiseView(c),
+                rivalryView(c));
     CompanyState.Settlement last = c.settlements.isEmpty() ? null : c.settlements.getLast();
     return new CompanyView(
         row.id(),
@@ -333,7 +375,32 @@ class DefaultCompanyService implements CompanyService {
         ended ? null : investView(c, new HashSeededRandom(row.seed())),
         ended ? null : macroView(c),
         c.quarters.isEmpty() ? null : quarterView(c.quarters.getLast()),
-        last == null ? null : settlementView(last));
+        last == null ? null : settlementView(last),
+        c.finished
+            ? new CompanyView.Ending(
+                c.finishedYear == null ? c.year : c.finishedYear, c.capital, grade)
+            : null);
+  }
+
+  /** 올해의 라이벌 고르기 (275번). 후보도 고른 라이벌도 없으면 null. */
+  private CompanyView.Rivalry rivalryView(CompanyState c) {
+    if (c.targetOptions.isEmpty() && c.target == null) {
+      return null;
+    }
+    return new CompanyView.Rivalry(
+        c.targetOptions.stream().map(this::targetView).toList(),
+        c.target == null ? null : targetView(c.target));
+  }
+
+  private CompanyView.Target targetView(CompanyState.Target t) {
+    return new CompanyView.Target(
+        t.difficulty,
+        engine.targets.difficultyName(t.difficulty),
+        t.name,
+        t.companyId != null,
+        t.capital,
+        engine.grade(t.capital),
+        engine.targets.bonusBp(t.difficulty));
   }
 
   private CompanyView.Invest investView(CompanyState c, HashSeededRandom random) {
@@ -609,6 +676,19 @@ class DefaultCompanyService implements CompanyService {
                         r.employeeId, r.name, r.desk, r.stake, r.pnl, Map.copyOf(r.flips)))
             .toList(),
         List.copyOf(s.lines),
-        reportViews(s.reports));
+        reportViews(s.reports),
+        s.target == null
+            ? null
+            : new CompanyView.TargetResult(
+                s.target.difficulty,
+                engine.targets.difficultyName(s.target.difficulty),
+                s.target.name,
+                s.target.real,
+                s.target.theirCapital,
+                s.target.ourCapital,
+                s.target.won,
+                s.target.bonus,
+                engine.grade(s.target.theirCapital)),
+        s.finished);
   }
 }

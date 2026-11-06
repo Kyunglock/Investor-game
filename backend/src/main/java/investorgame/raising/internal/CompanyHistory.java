@@ -101,6 +101,18 @@ class CompanyHistory {
           Korean.fill(texts().events().get("overtake"), Map.of("name", name)),
           null);
     }
+    // 올해의 라이벌을 이겼다 (275번), 랜드마크 타워에 올라 엔딩을 봤다 (276번).
+    if (s.target != null && s.target.won) {
+      add(
+          company,
+          s.year,
+          "target",
+          Korean.fill(texts().events().get("target"), Map.of("name", s.target.name)),
+          null);
+    }
+    if (s.finished) {
+      add(company, s.year, "ending", texts().events().get("ending"), s.gradeAfter);
+    }
     for (Employee e : company.employees) {
       if (e.rank > ranksBefore.getOrDefault(e.id, e.rank)) {
         add(

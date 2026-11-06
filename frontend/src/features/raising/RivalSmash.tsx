@@ -57,10 +57,13 @@ export function RivalSmash({
   before,
   after,
   rival,
+  rivalGrade,
 }: {
   before: Grade
   after: Grade
   rival: string
+  /** 무너지는 라이벌 건물의 등급. 없으면 오른 뒤 우리 건물(그 자리를 빼앗는다). 올해의 라이벌은 그 회사의 건물이다 (275번). */
+  rivalGrade?: Grade
 }) {
   const [run, setRun] = useState(0)
   const still = reducedMotion()
@@ -102,7 +105,7 @@ export function RivalSmash({
                 }
                 data-testid="rival-piece"
               >
-                <Sprite grade={after} palette={RIVAL_PALETTE} />
+                <Sprite grade={rivalGrade ?? after} palette={RIVAL_PALETTE} />
               </g>
             ))}
           </g>

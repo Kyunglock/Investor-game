@@ -99,6 +99,21 @@ class CompanyState {
   /** 망해서 문을 닫았는가 (decisions.md 247번). 닫은 회사는 끝난 채로 남고 사장이 다음 회사를 차린다. */
   boolean closed;
 
+  /** 랜드마크 타워에 올라 엔딩을 봤는가 (decisions.md 276번). 엔딩을 본 회사는 멈추고, 사장이 다음 회사를 차린다. */
+  boolean finished;
+
+  /** 엔딩을 본 해. */
+  Integer finishedYear;
+
+  /** 올해의 라이벌 후보 (decisions.md 275번). 연초 회의에서 쉬움·보통·어려움 하나씩. 고르거나 1분기를 넘기면 비운다. */
+  List<Target> targetOptions = new ArrayList<>();
+
+  /** 올해 고른 라이벌. 연말 결산에서 한 번 견준다. 고르지 않았으면 null. */
+  Target target;
+
+  /** 라이벌 후보를 마지막으로 뽑은 해. 같은 해에 두 번 뽑지 않는다. */
+  int targetsYear;
+
   /** 차릴 때의 한 줄(1호 직원·공동창업자). */
   String opening;
 
@@ -337,8 +352,9 @@ class CompanyState {
   }
 
   /**
-   * 연표 한 줄 (263번). kind: open·grow·shrink·era·overtake·rise·left·best·worst. grade는 grow·shrink의 새
-   * 등급.
+   * 연표 한 줄 (263번). kind:
+   * open·grow·shrink·era·overtake·rise·left·best·worst·target(275번)·ending(276번). grade는
+   * grow·shrink의 새 등급.
    */
   @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
@@ -449,6 +465,43 @@ class CompanyState {
     int rank;
   }
 
+  /**
+   * 올해의 라이벌 하나 (decisions.md 275번). 실제 다른 사장의 회사면 companyId가 있고, 연말에 그 회사의 그때 자본과 견준다. 모자라면 지어낸 회사로
+   * 채우고, 지어낸 회사는 그해 시장대로 자란다.
+   */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Target {
+    /** EASY·MEDIUM·HARD */
+    String difficulty;
+
+    String name;
+
+    /** 실제 다른 사장의 회사 ID. 지어낸 회사면 null. */
+    String companyId;
+
+    /** 뽑을 때의 자본. */
+    long capital;
+
+    /** 연말에 견줄 상대 자본. 실제 회사면 결산 직전에 서비스가 채운다. */
+    Long capitalNow;
+  }
+
+  /** 올해의 라이벌과 견준 결과 (275번). */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class TargetResult {
+    String difficulty;
+    String name;
+    boolean real;
+    long theirCapital;
+    long ourCapital;
+    boolean won;
+
+    /** 이겨서 넘어온 고객 몫(이미 자본에 들어갔다). */
+    long bonus;
+  }
+
   @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
   static class Settlement {
@@ -481,6 +534,12 @@ class CompanyState {
 
     /** 그해 앞지른 라이벌 이름. 박치기 장면이 쓴다 (261번). */
     List<String> overtook = new ArrayList<>();
+
+    /** 올해의 라이벌과 견준 결과 (275번). 고르지 않았으면 null. */
+    TargetResult target;
+
+    /** 이 결산으로 랜드마크 타워에 올라 엔딩을 봤다 (276번). */
+    boolean finished;
 
     /** 그해 연 업적 이름 (263번). */
     List<String> achieved = new ArrayList<>();

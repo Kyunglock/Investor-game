@@ -140,3 +140,41 @@ describe('라이벌을 앞지른 알림 (decisions.md 274번)', () => {
     expect(nextAutoStep(company(), false, false, false).kind).not.toBe('closeOvertake')
   })
 })
+
+describe('올해의 라이벌과 엔딩 (decisions.md 275·276번)', () => {
+  const option = (difficulty: string) => ({
+    difficulty,
+    difficultyName: difficulty,
+    name: `${difficulty}증권`,
+    real: true,
+    capital: 110_000_000,
+    grade: 'F',
+    bonusBp: 500,
+  })
+  it('연초 회의에 후보가 있으면 자동 진행은 보통을 고른다', () => {
+    const c = company()
+    const withOptions = {
+      ...c,
+      meeting: {
+        ...c.meeting,
+        rivalry: { options: ['EASY', 'MEDIUM', 'HARD'].map(option), chosen: null },
+      },
+    }
+    expect(nextAutoStep(withOptions as never, false)).toEqual({
+      kind: 'target',
+      difficulty: 'MEDIUM',
+    })
+    const chosen = {
+      ...c,
+      meeting: { ...c.meeting, rivalry: { options: [], chosen: option('MEDIUM') } },
+    }
+    expect(nextAutoStep(chosen as never, false).kind).not.toBe('target')
+  })
+
+  it('엔딩을 보면 멈춘다: 다음 회사는 사장이 직접 차린다', () => {
+    const ended = { ...company(), ending: { year: 30, capital: 100_000_000_000_000, grade: 'Z' } }
+    expect(nextAutoStep(ended as never, true).kind).toBe('closeYearEnd')
+    expect(nextAutoStep(ended as never, false, false, true).kind).toBe('closeOvertake')
+    expect(nextAutoStep(ended as never, false).kind).toBe('stop')
+  })
+})
