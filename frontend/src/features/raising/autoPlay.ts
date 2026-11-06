@@ -10,12 +10,18 @@ export type AutoStep =
   | { kind: 'hire'; applicantId: number }
   | { kind: 'place'; seats: Seat[] }
   | { kind: 'convene' }
-  | { kind: 'invest'; choice: 'BUY' | 'SELL' | 'HOLD' }
+  | { kind: 'invest'; choice: 'BUY' | 'SELL' | 'HOLD'; big: boolean }
   | { kind: 'settle' }
   | { kind: 'stop' }
 
 /** 계약금이 자본의 이만큼을 넘는 지원자는 뽑지 않는다. 한 해에 자본을 다 써 버리지 않게. */
 const FEE_SHARE = 0.25
+
+/** 크게 할까 (decisions.md 259번): 둘 이상이 한마디를 했고 모두 같은 쪽(사자 또는 팔자)이면 크게 한다. */
+export function autoBig(invest: NonNullable<Company['invest']>): boolean {
+  const reads = invest.remarks.map((r) => r.read)
+  return reads.length >= 2 && reads.every((r) => r !== 'NEUTRAL' && r === reads[0])
+}
 
 /** 투자 회의: 직원 한마디의 다수결. 사자가 많으면 산다, 팔자가 많으면 판다, 같거나 모르겠다뿐이면 지켜본다. */
 export function autoChoice(invest: NonNullable<Company['invest']>): 'BUY' | 'SELL' | 'HOLD' {
@@ -64,7 +70,8 @@ export function nextAutoStep(company: Company, justSettled: boolean): AutoStep {
     if (!company.invest.convened) {
       return { kind: 'convene' }
     }
-    return { kind: 'invest', choice: autoChoice(company.invest) }
+    const choice = autoChoice(company.invest)
+    return { kind: 'invest', choice, big: choice !== 'HOLD' && autoBig(company.invest) }
   }
   return { kind: 'settle' }
 }
@@ -112,7 +119,7 @@ export function useCompanyAutoPlay() {
             void convene()
             return
           case 'invest':
-            void decideInvest(step.choice)
+            void decideInvest(step.choice, step.big)
             return
           case 'settle':
             void settle()

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Company } from '../../api/client'
-import { groupRemarks, investTimeline, matchupOf } from './investShow'
+import { groupRemarks, hindsightOf, investTimeline, matchupOf } from './investShow'
 
 type Result = NonNullable<NonNullable<Company['invest']>['outcome']>['results'][number]
 
@@ -110,5 +110,32 @@ describe('같은 의견끼리 모은 한마디 (decisions.md 242번)', () => {
       'NEUTRAL',
     ])
     expect(groupRemarks([])).toEqual([])
+  })
+})
+
+describe('회의 뒤 돌아보기 (decisions.md 259번)', () => {
+  it('지켜봤으면 놓친 돈, 다수결과 형광펜이 맞았는지 말한다', () => {
+    const invest = {
+      remarks: [{ read: 'UP' }, { read: 'UP' }, { read: 'DOWN' }],
+      sentences: [
+        { text: 'a', highlighted: false },
+        { text: 'b', highlighted: true },
+      ],
+      outcome: { up: true, decisive: 1, missed: 12_000_000 },
+    } as never
+    expect(hindsightOf(invest)).toEqual([
+      '지켜봤다. 산다로 갔으면 +1,200만원이었다.',
+      '직원 다수결(사자)은 맞았다.',
+      '형광펜은 결정적 문장에 그었다.',
+    ])
+    const wrong = {
+      remarks: [{ read: 'DOWN' }],
+      sentences: [{ text: 'a', highlighted: true }],
+      outcome: { up: true, decisive: 1, missed: null },
+    } as never
+    expect(hindsightOf(wrong)).toEqual([
+      '직원 다수결(팔자)은 틀렸다.',
+      '형광펜은 곁가지에 그었다. 이번엔 빗나갔다.',
+    ])
   })
 })

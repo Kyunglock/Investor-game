@@ -162,6 +162,7 @@ paths:
               required: [choice]
               properties:
                 choice: { type: string, enum: [BUY, SELL, HOLD] }
+                big: { type: [boolean, 'null'], description: 크게 한다. 판돈 두 배, 직원이 사장 말을 안 들을 확률 1.5배. 지켜보기는 크게 할 수 없다(400) (decisions.md 259번) }
       responses:
         '200':
           description: 정한 뒤의 회사
@@ -369,9 +370,11 @@ components:
                 outcome:
                   oneOf:
                     - type: object
-                      required: [choice, up, reveal, decisive, total, results]
+                      required: [choice, big, up, reveal, decisive, total, results]
                       properties:
                         choice: { type: string, enum: [BUY, SELL, HOLD] }
+                        big: { type: boolean, description: 크게 했다 (decisions.md 259번) }
+                        missed: { type: [integer, 'null'], format: int64, description: 지켜봤을 때 맞는 쪽으로 했으면 벌었을 돈(뒤집힘 없이). 지켜보지 않았으면 null }
                         up: { type: boolean }
                         reveal: { type: string }
                         decisive: { type: integer, description: 결정적 문장의 번호(sentences 안) }

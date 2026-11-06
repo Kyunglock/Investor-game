@@ -101,18 +101,21 @@ class CompanyController {
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody InvestRequest request) {
     UUID sessionId = cookies.requireSession(token);
-    CompanyView company = companies.invest(sessionId, request.choice());
+    CompanyView company =
+        companies.invest(sessionId, request.choice(), Boolean.TRUE.equals(request.big()));
     PLAY.info(
-        "company-invest session={} company={} year={} choice={} ip={}",
+        "company-invest session={} company={} year={} choice={} big={} ip={}",
         sessionId,
         company.companyId(),
         company.year(),
         request.choice(),
+        request.big(),
         ClientIp.current());
     return company;
   }
 
-  record InvestRequest(@NotBlank String choice) {}
+  /** big이 참이면 크게 한다: 판돈 두 배, 고집 1.5배 (decisions.md 259번). 없으면 거짓. */
+  record InvestRequest(@NotBlank String choice, Boolean big) {}
 
   record SettleRequest(@NotNull @Positive Integer year) {}
 

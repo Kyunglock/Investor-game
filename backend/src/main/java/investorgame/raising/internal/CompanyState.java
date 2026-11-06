@@ -125,6 +125,12 @@ class CompanyState {
     /** 사장이 고른 것(BUY·SELL·HOLD). 아직 안 골랐으면 null. */
     String choice;
 
+    /** 크게 했는가: 판돈 두 배, 고집 1.5배 (decisions.md 259번). */
+    boolean big;
+
+    /** 지켜봤을 때, 맞는 쪽으로 했으면 벌었을 돈(뒤집힘 없이). 지켜보지 않았으면 null (259번). */
+    Long missed;
+
     List<InvestResult> results = new ArrayList<>();
     long total;
 

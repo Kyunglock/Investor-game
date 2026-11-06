@@ -27,8 +27,8 @@ interface RaisingState {
   refreshApplicants: () => Promise<void>
   /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 248번). 됐으면 true. */
   convene: () => Promise<boolean>
-  /** 올해 투자 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). */
-  decideInvest: (choice: string) => Promise<void>
+  /** 올해 투자 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). big이면 크게 한다 (259번). */
+  decideInvest: (choice: string, big?: boolean) => Promise<void>
   place: (seats: { employeeId: number; desk: string | null }[]) => Promise<void>
   settle: () => Promise<void>
 }
@@ -124,10 +124,10 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       return Boolean(get().company?.invest?.convened)
     },
 
-    decideInvest: (choice) =>
+    decideInvest: (choice, big = false) =>
       change(
         api.POST('/api/company/invest', {
-          body: { choice: choice as 'BUY' | 'SELL' | 'HOLD' },
+          body: { choice: choice as 'BUY' | 'SELL' | 'HOLD', big },
         }),
       ),
 

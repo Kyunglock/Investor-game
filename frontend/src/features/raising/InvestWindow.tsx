@@ -3,7 +3,7 @@ import type { Company } from '../../api/client'
 import { shortWon } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { TUG_DONE_MS, TugOfWar } from '../game/TugOfWar'
-import { groupRemarks, investTimeline, matchupOf, OPINIONS } from './investShow'
+import { groupRemarks, hindsightOf, investTimeline, matchupOf, OPINIONS } from './investShow'
 import { useRaisingStore } from './store'
 
 type Invest = NonNullable<Company['invest']>
@@ -187,6 +187,25 @@ export function InvestWindow({
                 {o.label}
               </button>
             ))}
+            {/* 크게 (259번): 판돈 두 배, 대신 직원이 사장 말을 덜 듣는다. 지켜보기는 크게 할 수 없다. */}
+            {invest.options
+              .filter((o) => o.code !== 'HOLD')
+              .map((o) => (
+                <button
+                  key={`big-${o.code}`}
+                  type="button"
+                  disabled={busy || !invest.ready}
+                  onClick={() => void decideInvest(o.code, true)}
+                  className={`min-h-11 rounded border border-wine text-[14px] font-semibold text-wine transition-transform hover:bg-wine hover:text-white active:scale-95 disabled:opacity-50 ${
+                    o.code === 'BUY' ? 'col-start-1' : 'col-start-3'
+                  }`}
+                >
+                  크게 {o.label}
+                </button>
+              ))}
+            <p className="col-span-3 text-center text-[12px] text-muted">
+              크게 하면 판돈이 두 배, 직원이 사장 말을 안 들을 확률이 1.5배입니다.
+            </p>
           </div>
         )}
 
@@ -198,7 +217,7 @@ export function InvestWindow({
                 className="animate-stamp pen-circle inline-block px-3 py-0.5 font-pen text-[22px] text-red-pen"
                 data-testid="invest-choice"
               >
-                {label(outcome.choice)}
+                {outcome.big ? `크게 ${label(outcome.choice)}` : label(outcome.choice)}
               </span>
             </p>
             <ul className="mt-2 grid gap-2">
@@ -269,6 +288,7 @@ export function InvestWindow({
             </p>
             {finished && (
               <>
+                <Hindsight invest={invest} />
                 <p
                   className="animate-reveal mt-3 rounded bg-line-soft px-3 py-2 text-center text-[13px]"
                   data-testid="invest-next"
@@ -309,5 +329,23 @@ function OneVoice({ action, delay }: { action: string; delay: number }) {
         <span className="text-[10px] font-bold opacity-85">한마음</span>
       </div>
     </div>
+  )
+}
+
+/**
+ * 회의 뒤 돌아보기 (decisions.md 259번): 지켜봤으면 놓친 돈, 직원 다수결과 형광펜이 맞았는지. 사장 실력이 숫자로 보인다.
+ */
+function Hindsight({ invest }: { invest: Invest }) {
+  const outcome = invest.outcome
+  if (!outcome) {
+    return null
+  }
+  const lines = hindsightOf(invest)
+  return (
+    <ul className="animate-reveal mt-3 grid gap-0.5 text-[13px]" data-testid="hindsight">
+      {lines.map((line) => (
+        <li key={line}>· {line}</li>
+      ))}
+    </ul>
   )
 }

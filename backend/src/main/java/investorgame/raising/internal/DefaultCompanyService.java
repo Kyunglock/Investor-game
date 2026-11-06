@@ -118,9 +118,9 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView invest(UUID sessionId, String choice) {
+  public CompanyView invest(UUID sessionId, String choice, boolean big) {
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.invest.decide(row.state(), choice, new HashSeededRandom(row.seed()));
+    engine.invest.decide(row.state(), choice, big, new HashSeededRandom(row.seed()));
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -314,6 +314,8 @@ class DefaultCompanyService implements CompanyService {
             ? null
             : new CompanyView.InvestOutcome(
                 invest.choice,
+                invest.big,
+                invest.missed,
                 invest.up,
                 meetings.reveal(c),
                 decisive,

@@ -374,6 +374,17 @@ class InvestEngine {
    * "제가 알아서 할게요" 하고 제 판단대로 한다(제 판단이 사장과 같으면 그대로다). 맞으면 자리의 맞힘 몫, 틀리면 틀림 몫, 지켜보면 0. 손익은 바로 자본에 들어간다.
    */
   void decide(CompanyState c, String choice, SeededRandom random) {
+    decide(c, choice, false, random);
+  }
+
+  /**
+   * 크게 정할 수도 있다 (decisions.md 259번): 판돈이 두 배고, 직원이 사장 말을 안 들을 확률(꼬드김·제 판단)이 1.5배다("사장님이 너무 세게
+   * 가시는데요"). 지켜보기는 크게 할 수 없다. 지켜봤으면 맞는 쪽으로 했을 때 벌었을 돈을 남겨 결과에 보인다.
+   */
+  void decide(CompanyState c, String choice, boolean big, SeededRandom random) {
+    if (big && HOLD.equals(choice)) {
+      throw new InvalidRequestException("지켜보기는 크게 할 수 없다");
+    }
     if (c.invest == null || c.invest.choice != null) {
       throw new InvalidRequestException("올해 투자 회의는 이미 했다");
     }
@@ -389,7 +400,12 @@ class InvestEngine {
     Map<Integer, String> reads = new HashMap<>();
     c.invest.remarks.forEach(r -> reads.put(r.employeeId, r.read));
     RaisingContent.Invest texts = content.raising().company().invest();
-    long stake = company.stakeOf(c, traders.size());
+    long stake =
+        company.stakeOf(c, traders.size())
+            * (big ? properties.invest().bigStakePercent() : PERCENT)
+            / PERCENT;
+    int stubborn = big ? properties.invest().bigStubbornPercent() : PERCENT;
+    long missed = 0;
     String right = c.invest.up ? BUY : SELL;
     String swayAction = Sentiment.POS.name().equals(c.invest.swaySentiment) ? BUY : SELL;
     String who = tempterName(c.invest.tempter);
@@ -398,7 +414,11 @@ class InvestEngine {
       RandomGenerator rng = random.forKey("invest-decide", c.year, e.id);
       int swayRoll = rng.nextInt(BP);
       int flipRoll = rng.nextInt(BP);
-      CompanyEngine.Odds odds = company.odds(c, e);
+      CompanyEngine.Odds base = company.odds(c, e);
+      CompanyEngine.Odds odds =
+          new CompanyEngine.Odds(
+              Math.min(BP, base.swayBp() * stubborn / PERCENT),
+              Math.min(BP, base.flipBp() * stubborn / PERCENT));
       // 제 판단은 회의에서 한 말 그대로다. 회의를 연 뒤에 앉힌 사람은 지금 읽는다.
       String own = actionOf(reads.computeIfAbsent(e.id, id -> ownRead(c, e, random)));
       InvestResult result = new InvestResult();
@@ -435,6 +455,7 @@ class InvestEngine {
                   : -company.scaledMiss(c, returns.missBp());
       result.pnl = stake * bp / BP;
       total += result.pnl;
+      missed += stake * company.scaledGain(c, company.gainBp(c, e)) / BP;
       Map<String, String> values = new HashMap<>();
       values.put("action", texts.actions().get(result.action));
       values.put("who", who);
@@ -448,6 +469,8 @@ class InvestEngine {
       c.invest.results.add(result);
     }
     c.invest.choice = choice;
+    c.invest.big = big;
+    c.invest.missed = HOLD.equals(choice) ? missed : null;
     c.invest.total = total;
     c.capital = Math.max(0, c.capital + total);
   }

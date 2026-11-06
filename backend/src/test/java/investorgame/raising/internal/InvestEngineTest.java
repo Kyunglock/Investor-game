@@ -356,4 +356,37 @@ class InvestEngineTest {
     assertThat(ENGINE.invest.convened(c)).isTrue();
     assertThat(ENGINE.invest.remarks(c)).hasSize(1);
   }
+
+  /** 크게 하면 판돈이 두 배고 직원이 사장 말을 덜 듣는다. 지켜보면 놓친 돈이 남는다 (#323, decisions.md 259번). */
+  @Test
+  void 크게_하면_판돈이_두_배고_지켜보면_놓친_돈이_남는다() {
+    int bossSmall = 0;
+    int bossBig = 0;
+    for (long seed = 0; seed < 300; seed++) {
+      CompanyState small = company(seed, stats(50, 50, 30, 30));
+      CompanyState big = company(seed, stats(50, 50, 30, 30));
+      String right = right(small);
+      ENGINE.invest.decide(small, right, false, new HashSeededRandom(seed));
+      ENGINE.invest.decide(big, right, true, new HashSeededRandom(seed));
+      assertThat(big.invest.big).isTrue();
+      CompanyState.InvestResult a = small.invest.results.getFirst();
+      CompanyState.InvestResult b = big.invest.results.getFirst();
+      if (InvestEngine.BOSS.equals(a.follow) && InvestEngine.BOSS.equals(b.follow)) {
+        assertThat(b.pnl).as("같은 판단이면 손익이 두 배").isEqualTo(a.pnl * 2);
+      }
+      bossSmall += InvestEngine.BOSS.equals(a.follow) ? 1 : 0;
+      bossBig += InvestEngine.BOSS.equals(b.follow) ? 1 : 0;
+    }
+    assertThat(bossBig).as("크게 하면 사장 말을 덜 듣는다").isLessThan(bossSmall);
+
+    CompanyState hold = company(1, stats(50, 50, 50, 50));
+    assertThatThrownBy(
+            () -> ENGINE.invest.decide(hold, InvestEngine.HOLD, true, new HashSeededRandom(1)))
+        .isInstanceOf(InvalidRequestException.class);
+    ENGINE.invest.decide(hold, InvestEngine.HOLD, false, new HashSeededRandom(1));
+    assertThat(hold.invest.missed).as("지켜봤으면 놓친 돈").isPositive();
+    CompanyState bought = company(1, stats(50, 50, 50, 50));
+    ENGINE.invest.decide(bought, InvestEngine.BUY, new HashSeededRandom(1));
+    assertThat(bought.invest.missed).isNull();
+  }
 }

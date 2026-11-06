@@ -351,6 +351,13 @@ export interface components {
                 outcome?: {
                     /** @enum {string} */
                     choice: "BUY" | "SELL" | "HOLD";
+                    /** @description 크게 했다 (decisions.md 259번) */
+                    big: boolean;
+                    /**
+                     * Format: int64
+                     * @description 지켜봤을 때 맞는 쪽으로 했으면 벌었을 돈(뒤집힘 없이). 지켜보지 않았으면 null
+                     */
+                    missed?: number | null;
                     up: boolean;
                     reveal: string;
                     /** @description 결정적 문장의 번호(sentences 안) */
@@ -727,6 +734,8 @@ export interface operations {
                 "application/json": {
                     /** @enum {string} */
                     choice: "BUY" | "SELL" | "HOLD";
+                    /** @description 크게 한다. 판돈 두 배 */
+                    big?: boolean | null;
                 };
             };
         };

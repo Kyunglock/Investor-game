@@ -70,6 +70,8 @@ public record CompanyProperties(
       Map<String, Integer> yearUpBp,
       int sideOppositePercent,
       int stubbornBp,
+      int bigStakePercent,
+      int bigStubbornPercent,
       List<Clarity> clarity) {}
 
   /**

@@ -44,7 +44,8 @@ async function settleYear(page: Page, year: number, choice: string, watch = fals
   await page.getByRole('button', { name: `${year}년 차 결산 보기` }).click()
   const meeting = page.getByRole('dialog', { name: '투자 회의' })
   await expect(meeting).toBeVisible()
-  await meeting.getByRole('button', { name: choice }).click()
+  // "산다"는 "크게 산다"(259번)와 겹치므로 이름을 그대로 맞춘다.
+  await meeting.getByRole('button', { name: choice, exact: true }).click()
   await expect(meeting.getByTestId('invest-outcome')).toBeVisible()
   await expect(meeting.getByTestId('invest-choice')).toHaveText(choice)
   const settle = meeting.getByRole('button', { name: `${year}년 차 결산 보기` })
@@ -140,8 +141,14 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   const staff = page.getByTestId('employee')
   // 사람마다 맞는 자리 셋만 먼저 보이고 나머지는 펼친다 (258번).
   await expect(staff.nth(0).getByRole('button', { name: /데스크|팀/ })).toHaveCount(3)
-  await staff.nth(0).getByRole('button', { name: /자리 모두 보기/ }).click()
-  await staff.nth(1).getByRole('button', { name: /자리 모두 보기/ }).click()
+  await staff
+    .nth(0)
+    .getByRole('button', { name: /자리 모두 보기/ })
+    .click()
+  await staff
+    .nth(1)
+    .getByRole('button', { name: /자리 모두 보기/ })
+    .click()
   // 섹터 데스크 (233번): 종목 섹터마다 돈을 굴리는 자리가 있다.
   await expect(staff.nth(0).getByRole('button', { name: /반도체 데스크 용기/ })).toBeVisible()
   await expect(staff.nth(0).getByRole('button', { name: /식품 데스크 줏대/ })).toBeVisible()

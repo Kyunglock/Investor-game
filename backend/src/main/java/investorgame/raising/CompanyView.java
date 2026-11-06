@@ -125,8 +125,14 @@ public record CompanyView(
    * @param decisive 결정적 문장의 번호(sentences 안)
    * @param total 회의 손익. 이미 자본에 들어갔다
    */
+  /**
+   * @param big 크게 했다: 판돈 두 배, 고집 1.5배 (decisions.md 259번)
+   * @param missed 지켜봤을 때 맞는 쪽으로 했으면 벌었을 돈. 지켜보지 않았으면 null
+   */
   public record InvestOutcome(
       String choice,
+      boolean big,
+      Long missed,
       boolean up,
       String reveal,
       int decisive,
