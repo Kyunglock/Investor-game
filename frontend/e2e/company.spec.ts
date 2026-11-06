@@ -16,8 +16,16 @@ async function tab(page: Page, name: RegExp) {
   await page.getByRole('tab', { name }).click()
 }
 
-/** 계약금이 가장 싼 지원자를 뽑는다. 공채 탭에 있어야 한다. */
+/** 계약금이 가장 싼 지원자를 뽑는다. 공채 탭에 있어야 한다. 뽑힌 뒤 카드가 하나 줄어든 것까지 본다. */
 async function hireCheapest(page: Page) {
+  const cards = page.getByTestId('applicant')
+  const before = await cards.count()
+  await clickCheapest(page)
+  await expect(cards).toHaveCount(before - 1)
+}
+
+/** 계약금이 가장 싼 지원자의 뽑기 버튼을 누른다. 뽑은 뒤 탭이 바뀌어도(튜토리얼, 302번) 되는 쪽. */
+async function clickCheapest(page: Page) {
   const cards = page.getByTestId('applicant')
   const fees = await cards.getByRole('button', { name: /계약금/ }).evaluateAll((buttons) =>
     buttons.map((b) => {
@@ -28,12 +36,10 @@ async function hireCheapest(page: Page) {
     }),
   )
   const at = fees.indexOf(Math.min(...fees))
-  const before = await cards.count()
   await cards
     .nth(at)
     .getByRole('button', { name: /계약금/ })
     .click()
-  await expect(cards).toHaveCount(before - 1)
 }
 
 /**
@@ -764,7 +770,8 @@ test('튜토리얼과 함께 시작하면 걸음이 회사 상태를 따라가�
   const tutorial = page.getByTestId('tutorial')
   await expect(tutorial).toContainText('튜토리얼 1/5 · 직원 뽑기')
   await expect(page.getByRole('tab', { name: /공채/ })).toHaveAttribute('aria-selected', 'true')
-  await hireCheapest(page)
+  // 뽑으면 걸음이 넘어가며 배치 탭으로 옮겨 간다: 공채 카드 수는 세지 않는다.
+  await clickCheapest(page)
   await expect(tutorial).toContainText('2/5 · 자리에 앉히기')
   await expect(page.getByRole('tab', { name: /배치/ })).toHaveAttribute('aria-selected', 'true')
   await page.getByRole('button', { name: '자동 배치' }).click()
