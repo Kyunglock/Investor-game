@@ -482,9 +482,15 @@ class CompanyEngine {
     startYear(company, random);
   }
 
+  /** 소식 줄·한 줄의 금액. 1조가 넘으면 조와 억까지만 쓴다 (decisions.md 252번): 56조 3,615억 원, 1억 원, 312만 원. */
   static String won(long amount) {
     long abs = Math.abs(amount);
     String sign = amount < 0 ? "−" : "";
+    if (abs >= 1_000_000_000_000L) {
+      long jo = abs / 1_000_000_000_000L;
+      long eok = abs % 1_000_000_000_000L / 100_000_000L;
+      return sign + (eok == 0 ? "%,d조 원".formatted(jo) : "%,d조 %,d억 원".formatted(jo, eok));
+    }
     if (abs >= 100_000_000L) {
       long eok = abs / 100_000_000L;
       long man = abs % 100_000_000L / 10_000L;

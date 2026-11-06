@@ -714,4 +714,12 @@ class CompanyEngineTest {
     assertThat(company.employees.getFirst().experience).isZero();
     assertThat(company.employees.getFirst().rank).isZero();
   }
+
+  @Test
+  void 큰돈은_조와_억으로_쓴다() {
+    assertThat(CompanyEngine.won(100_000_000)).isEqualTo("1억 원");
+    assertThat(CompanyEngine.won(248_580_000)).isEqualTo("2억 4,858만 원");
+    assertThat(CompanyEngine.won(56_361_512_345_678L)).isEqualTo("56조 3,615억 원");
+    assertThat(CompanyEngine.won(1_000_000_000_000_000L)).isEqualTo("1,000조 원");
+  }
 }

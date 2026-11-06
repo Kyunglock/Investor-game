@@ -17,6 +17,7 @@ describe('결산 전광판과 이사 장면 (증권사 육성 설계 8.3절)', (
     expect(pnlLabel(-5_478_155)).toBe('−547만원')
     expect(pnlLabel(123_450_000)).toBe('+1억 2,345만원')
     expect(pnlLabel(0)).toBe('0원')
+    expect(pnlLabel(1_500_000_000_000)).toBe('+1조 5,000억원')
   })
 
   it('등급이 오르면 이사, 떨어지면 작은 사무실로, 그대로면 없다', () => {

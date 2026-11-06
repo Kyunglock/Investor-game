@@ -24,19 +24,32 @@ export function signedWon(amount: number): string {
 
 const MAN = 10_000
 const EOK = 100_000_000
+const JO = 1_000_000_000_000
 
-/** 수첩에 손으로 적는 금액: 만원 아래는 버린다. 2억 4,858만원, 312만원, 0원. 1만원이 안 되면 원 그대로. */
+/**
+ * 큰돈을 조·억·만으로 읽는다(원은 붙이지 않는다). 1조가 넘으면 조와 억까지만(만은 버린다): 56조 3,615억, 2억 4,858만, 312만. 만원이 안 되면 빈 글이다
+ * (decisions.md 252번: 회사 등급 띠가 1천조까지 가는데 억까지만 써서 "563,615억원"이 됐다).
+ */
+export function bigUnits(abs: number): string {
+  const jo = Math.floor(abs / JO)
+  const eok = Math.floor((abs % JO) / EOK)
+  const man = Math.floor((abs % EOK) / MAN)
+  const parts =
+    jo > 0
+      ? [`${numberFormat.format(jo)}조`, eok > 0 ? `${numberFormat.format(eok)}억` : '']
+      : [
+          eok > 0 ? `${numberFormat.format(eok)}억` : '',
+          man > 0 ? `${numberFormat.format(man)}만` : '',
+        ]
+  return parts.filter(Boolean).join(' ')
+}
+
+/** 수첩에 손으로 적는 금액: 만원 아래는 버린다. 56조 3,615억원, 2억 4,858만원, 312만원, 0원. 1만원이 안 되면 원 그대로. */
 export function shortWon(amount: number): string {
   const sign = amount < 0 ? '−' : ''
   const abs = Math.abs(amount)
   if (abs < MAN) {
     return `${sign}${won(abs)}`
   }
-  const eok = Math.floor(abs / EOK)
-  const man = Math.floor((abs % EOK) / MAN)
-  const parts = [
-    eok > 0 ? `${numberFormat.format(eok)}억` : '',
-    man > 0 ? `${numberFormat.format(man)}만` : '',
-  ]
-  return `${sign}${parts.filter(Boolean).join(' ')}원`
+  return `${sign}${bigUnits(abs)}원`
 }

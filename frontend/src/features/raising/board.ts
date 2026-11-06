@@ -1,4 +1,5 @@
 import type { Grade } from '../../api/client'
+import { bigUnits } from '../game/labels'
 import { LADDER } from './grades'
 
 /**
@@ -30,15 +31,10 @@ export function bubbleOf(flips: Record<string, number>, pnl = -1): string | null
   return pnl < 0 ? '이번엔 틀렸네요…' : null
 }
 
-/** 전광판·그림의 손익: 만 원 아래는 버리고 부호를 붙인다. +3,068만원, −455만원. */
+/** 전광판·그림의 손익: 만 원 아래는 버리고 부호를 붙인다. +3,068만원, −455만원, +1조 2,000억원. */
 export function pnlLabel(pnl: number): string {
-  const abs = Math.abs(pnl)
   const sign = pnl > 0 ? '+' : pnl < 0 ? '−' : ''
-  const eok = Math.floor(abs / 100_000_000)
-  const man = Math.floor((abs % 100_000_000) / 10_000)
-  const format = new Intl.NumberFormat('ko-KR')
-  const parts = [eok > 0 ? `${format.format(eok)}억` : '', man > 0 ? `${format.format(man)}만` : '']
-  const text = parts.filter(Boolean).join(' ')
+  const text = bigUnits(Math.abs(pnl))
   return text ? `${sign}${text}원` : '0원'
 }
 
