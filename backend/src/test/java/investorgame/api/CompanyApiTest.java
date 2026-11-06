@@ -306,7 +306,9 @@ class CompanyApiTest {
     assertThat(fourth.read("$.status", String.class)).isEqualTo("ACTIVE");
     assertThat(fourth.read("$.year", Integer.class)).isEqualTo(4);
     assertThat(fourth.read("$.macro.ready", Boolean.class)).isTrue();
-    assertThat(fourth.read("$.applicants.length()", Integer.class)).isEqualTo(5);
+    // 특급 인재(290번)가 분기마다 15%로 끼어들 수 있어 보통 지원자만 센다.
+    List<?> plain = fourth.read("$.applicants[?(@.star == false)]");
+    assertThat(plain).hasSize(5);
     assertThat(fourth.read("$.meeting", Object.class)).isNotNull();
     java.util.Map<String, Object> fields = fourth.read("$");
     assertThat(fields).doesNotContainKeys("sale", "owner", "turns");

@@ -437,7 +437,7 @@ class DefaultCompanyService implements CompanyService {
                 invest.teamBuy,
                 invest.teamSell,
                 invest.debate.stream()
-                    .map(d -> new CompanyView.DebateLine(d.name, d.side, d.text, d.last))
+                    .map(d -> new CompanyView.DebateLine(d.name, d.side, d.text, d.last, kindOf(d)))
                     .toList(),
                 invest.missed,
                 invest.up,
@@ -487,10 +487,18 @@ class DefaultCompanyService implements CompanyService {
                 invest.teamSell,
                 invest.pendingDelegated
                     ? invest.debate.stream()
-                        .map(d -> new CompanyView.DebateLine(d.name, d.side, d.text, d.last))
+                        .map(
+                            d ->
+                                new CompanyView.DebateLine(
+                                    d.name, d.side, d.text, d.last, kindOf(d)))
                         .toList()
                     : List.of()),
         verdictView(c));
+  }
+
+  /** 옛 저장(295번 전)은 kind가 없다: last면 두 줄 가운데 앞이 WIN, 뒤가 LOSE였지만 구분할 수 없어 WIN으로 읽는다. */
+  private static String kindOf(CompanyState.DebateLine d) {
+    return d.kind != null ? d.kind : d.last ? InvestEngine.WIN : InvestEngine.TALK;
   }
 
   /** 막판 제안을 따른 뒤의 상과 벌 (283번). 따르지 않았으면 null. */

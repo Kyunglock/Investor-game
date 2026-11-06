@@ -798,9 +798,10 @@ class InvestEngine {
   private static final int DEBATE_ROUNDS = 3;
 
   /**
-   * 맡긴 회의의 토론 (decisions.md 285번). 사자고 한 직원은 매수파, 팔자고 한 직원은 매도파가 되어 번갈아 목소리를 높인다. 말에는 기사의 요지를 제 말로
-   * 엮는다(따오지 않는다). 한쪽이 비었으면 모르겠다던 직원이, 그도 없으면 옆자리 사람이 끌려 나와 그쪽을 든다. 마지막에 이긴 쪽(안목이 가장 높은 사람)이 결판을 내고
-   * 진 쪽이 투덜댄다. 승패는 저울이 이미 정했다.
+   * 맡긴 회의의 토론 (decisions.md 285·295번). 사자고 한 직원은 매수파, 팔자고 한 직원은 매도파다. 말은 **팀장만** 한다(295번: 사람이 늘어
+   * 회의실이 꽉 찼다): 그쪽에 팀장이 없으면 안목이 가장 높은 사람이, 한쪽이 아예 비었으면 모르겠다던 직원이, 그도 없으면 옆자리 사람이 끌려 나와 그쪽을 든다. 말에는
+   * 기사의 요지를 제 말로 엮는다(따오지 않는다). 세 바퀴 뒤 결판은 세 박자다: 사회(말한 사람 가운데 안목이 가장 높은 사람)가 양쪽 무게를 읽으며 표결을 부르고, 이긴
+   * 쪽 첫 사람이 선언하고, 진 쪽 첫 사람이 토를 달고 물러난다. 승패는 저울이 이미 정했다.
    */
   private List<CompanyState.DebateLine> debate(CompanyState c, boolean buys, SeededRandom random) {
     RaisingContent.Debate texts = content.raising().company().invest().debate();
@@ -810,26 +811,31 @@ class InvestEngine {
     sides.put(BUY, new ArrayList<>());
     sides.put(SELL, new ArrayList<>());
     List<String> undecided = new ArrayList<>();
-    // 안목이 높은 사람부터: 결판은 그 쪽의 첫 사람이 낸다.
+    // 안목이 높은 사람부터: 선언과 승복은 그 쪽의 첫 사람이 한다.
     List<CompanyState.Remark> remarks = new ArrayList<>(c.invest.remarks);
-    remarks.sort(
-        java.util.Comparator.comparingInt(
-                (CompanyState.Remark r) ->
-                    c.employees.stream()
-                        .filter(x -> x.id == r.employeeId)
-                        .findFirst()
-                        .map(e -> e.stats.get(StatCodes.INSIGHT))
-                        .orElse(0))
-            .reversed());
+    Map<Integer, Integer> insight = new HashMap<>();
+    Map<Integer, Boolean> leads = new HashMap<>();
     for (CompanyState.Remark r : remarks) {
-      if (UP.equals(r.read)) {
-        sides.get(BUY).add(r.name);
-      } else if (DOWN.equals(r.read)) {
-        sides.get(SELL).add(r.name);
-      } else {
-        undecided.add(r.name);
-      }
+      Employee e = c.employees.stream().filter(x -> x.id == r.employeeId).findFirst().orElse(null);
+      insight.put(r.employeeId, e == null ? 0 : e.stats.get(StatCodes.INSIGHT));
+      leads.put(r.employeeId, e != null && company.teams.leads(c, e));
     }
+    remarks.sort(
+        java.util.Comparator.comparingInt((CompanyState.Remark r) -> insight.get(r.employeeId))
+            .reversed());
+    for (String side : List.of(BUY, SELL)) {
+      String read = BUY.equals(side) ? UP : DOWN;
+      List<CompanyState.Remark> mine = remarks.stream().filter(r -> read.equals(r.read)).toList();
+      List<String> speakers =
+          mine.stream().filter(r -> leads.get(r.employeeId)).map(r -> r.name).toList();
+      if (speakers.isEmpty() && !mine.isEmpty()) {
+        speakers = List.of(mine.getFirst().name);
+      }
+      sides.get(side).addAll(speakers);
+    }
+    remarks.stream()
+        .filter(r -> !UP.equals(r.read) && !DOWN.equals(r.read))
+        .forEach(r -> undecided.add(r.name));
     int bystander = 0;
     for (String side : List.of(BUY, SELL)) {
       if (sides.get(side).isEmpty()) {
@@ -864,22 +870,46 @@ class InvestEngine {
                     "against", theirs.get(i % theirs.size()),
                     "stock", stock));
         List<String> names = sides.get(side);
-        out.add(debateLine(names.get(i % names.size()), side, text, false));
+        out.add(debateLine(names.get(i % names.size()), side, text, TALK));
       }
     }
     String winner = buys ? BUY : SELL;
     String loser = buys ? SELL : BUY;
+    // 사회: 말한 사람 가운데 안목이 가장 높은 사람(remarks는 안목 순이라 양쪽 첫 사람 가운데 먼저 나오는 쪽). 끌려 나온 사람은 사회를 못 본다.
+    String chairSide =
+        remarks.stream()
+            .filter(r -> sides.get(BUY).contains(r.name) || sides.get(SELL).contains(r.name))
+            .findFirst()
+            .map(r -> sides.get(BUY).contains(r.name) ? BUY : SELL)
+            .orElse(winner);
+    out.add(
+        debateLine(
+            sides.get(chairSide).getFirst(),
+            chairSide,
+            Korean.fill(
+                texts.tally().get(rng.nextInt(texts.tally().size())),
+                Map.of(
+                    "buy", String.valueOf(c.invest.teamBuy),
+                    "sell", String.valueOf(c.invest.teamSell))),
+            TALLY));
     List<String> win = texts.win().get(winner);
     out.add(
-        debateLine(sides.get(winner).getFirst(), winner, win.get(rng.nextInt(win.size())), true));
+        debateLine(sides.get(winner).getFirst(), winner, win.get(rng.nextInt(win.size())), WIN));
     out.add(
         debateLine(
             sides.get(loser).getFirst(),
             loser,
             texts.lose().get(rng.nextInt(texts.lose().size())),
-            true));
+            LOSE));
     return out;
   }
+
+  /** 토론 줄의 종류 (295번). */
+  static final String TALK = "TALK";
+
+  static final String TALLY = "TALLY";
+  static final String WIN = "WIN";
+  static final String LOSE = "LOSE";
 
   /** 한쪽으로 기운 문장의 요지들(겹치지 않게). 요지가 하나도 없으면(옛 기사) 대신 쓰는 요지 하나. */
   private static List<String> sidePoints(
@@ -897,12 +927,13 @@ class InvestEngine {
   }
 
   private static CompanyState.DebateLine debateLine(
-      String name, String side, String text, boolean last) {
+      String name, String side, String text, String kind) {
     CompanyState.DebateLine line = new CompanyState.DebateLine();
     line.name = name;
     line.side = side;
     line.text = text;
-    line.last = last;
+    line.kind = kind;
+    line.last = !TALK.equals(kind);
     return line;
   }
 
