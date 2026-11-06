@@ -5,6 +5,7 @@ import { Person } from '../game/pixel/Person'
 import { SPRITE_HEIGHT, SPRITE_WIDTH } from '../game/pixel/sprite'
 import { usePixelArt } from '../game/pixelArt'
 import { pnlLabel } from './board'
+import { tierOf as cardTierOf, GradeBadge, tierClass } from './GradeCard'
 import {
   ATTIRE_COLORS,
   attireOf,
@@ -163,15 +164,18 @@ export const OfficeArt = memo(function OfficeArt({
                     ? `${e.name} · ${t.desk}, 자리 바꾸기`
                     : `빈 자리 ${t.index + 1}에 앉힐 사람 고르기`,
                 })}
-                className={`flex h-full min-h-[104px] w-full flex-col items-center justify-end rounded px-1 pt-3 pb-1 ${
+                className={`flex h-full min-h-[104px] w-full flex-col items-center justify-end px-1 pt-3 pb-1 ${
                   e
-                    ? `border-2 bg-white/85 shadow-sm ${t.trades ? 'border-teal' : 'border-gold'}`
-                    : 'border-2 border-dashed border-ink/40 bg-white/40'
-                } ${on ? 'ring-2 ring-pen ring-offset-1' : ''} ${onSeat ? 'hover:bg-white' : ''}`}
+                    ? `grade-card grade-card-sm ${tierClass(cardTierOf(e.overallGrade))}`
+                    : 'rounded border-2 border-dashed border-ink/40 bg-white/40'
+                } ${on ? 'ring-2 ring-pen ring-offset-1' : ''} ${onSeat && !e ? 'hover:bg-white' : ''}`}
                 data-testid={e ? 'office-seat' : 'office-empty'}
+                data-tier={e ? cardTierOf(e.overallGrade) : undefined}
               >
                 {e ? (
                   <>
+                    {/* 캐릭터 카드 (294·301번): 미니맵 칸도 티어 테두리와 왼쪽 위 등급표를 단다. */}
+                    <GradeBadge grade={e.overallGrade} size="sm" />
                     <Face employee={e} mood={t.mood} size={44} />
                     <span className="mt-0.5 text-[12px] font-semibold leading-tight">
                       {e.name} {titleOf(e.overallGrade)}
@@ -223,6 +227,7 @@ export const OfficeArt = memo(function OfficeArt({
                   }`}
                 >
                   <Face employee={e} mood={null} size={24} />
+                  <GradeBadge grade={e.overallGrade} size="inline" />
                   <span className="text-[11px]">{e.name}</span>
                 </Tile>
               </li>

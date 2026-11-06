@@ -62,8 +62,8 @@ export function tierClass(tier: Tier): string {
 }
 
 /**
- * 캐릭터 카드 (decisions.md 294번): 티어의 금속 테두리(베벨·안쪽 빛)와 티어 색이 번진 바탕, 왼쪽 위 방패 등급표. 공채 지원자 카드와 직원 상세 카드가 같이
- * 쓴다. as로 li·section 등을 고른다.
+ * 캐릭터 카드 (decisions.md 294·301번): 티어의 금속 테두리(베벨·안쪽 빛)와 티어 색이 번진 바탕, 왼쪽 위 방패 등급표. 공채 지원자 카드와 직원 상세 카드가
+ * 같이 쓴다. as로 li·section 등을 고른다. compact면 테두리가 얇고 등급표가 작다(사무실 미니맵 칸).
  */
 export function GradeCard({
   grade,
@@ -71,6 +71,7 @@ export function GradeCard({
   className = '',
   children,
   badgeLabel,
+  compact = false,
   ...rest
 }: {
   grade: Grade
@@ -79,30 +80,59 @@ export function GradeCard({
   children: ReactNode
   /** 등급표 아래 작은 글자에 붙는 말. "특급"만 적고 나머지는 티어 이름만 보인다. */
   badgeLabel?: string
+  compact?: boolean
 } & Partial<Record<`data-${string}` | 'aria-label', string | undefined>>) {
   const tier = tierOf(grade)
   return (
-    <Tag className={`grade-card ${tierClass(tier)} ${className}`} data-tier={tier} {...rest}>
-      <GradeBadge grade={grade} label={badgeLabel} />
+    <Tag
+      className={`grade-card ${compact ? 'grade-card-sm' : ''} ${tierClass(tier)} ${className}`}
+      data-tier={tier}
+      {...rest}
+    >
+      <GradeBadge grade={grade} label={badgeLabel} size={compact ? 'sm' : 'full'} />
       {children}
     </Tag>
   )
 }
 
-/** 방패 보석 안에 등급 글자: 위가 밝게 비치고 아래가 어두운 보석 질감, 글자는 새긴 듯 그림자. 그 아래 티어 이름과 보석 수. */
-export function GradeBadge({ grade, label }: { grade: Grade; label?: string }) {
+/** 등급표 크기: full은 카드 모서리의 방패와 티어 이름·보석 수, sm은 작은 방패만(미니맵 칸), inline은 글줄 안에 끼우는 작은 방패(이름 앞). */
+export type BadgeSize = 'full' | 'sm' | 'inline'
+
+const BADGE_WIDTH: Record<BadgeSize, number> = { full: 56, sm: 30, inline: 18 }
+
+/**
+ * 방패 보석 안에 등급 글자: 위가 밝게 비치고 아래가 어두운 보석 질감, 글자는 새긴 듯 그림자. full이면 그 아래 티어 이름과 보석 수. 모양은 viewBox로 그려
+ * 크기가 달라도 같은 비율이다.
+ */
+export function GradeBadge({
+  grade,
+  label,
+  size = 'full',
+}: {
+  grade: Grade
+  label?: string
+  size?: BadgeSize
+}) {
   const tier = tierOf(grade)
   const rank = TIER_RANK[tier]
   const id = `gem-${tier}`
+  const width = BADGE_WIDTH[size]
   return (
     <span
-      className={`grade-gem ${tierClass(tier)}`}
+      className={`grade-gem ${size === 'full' ? '' : `grade-gem-${size}`} ${tierClass(tier)}`}
       data-testid="grade-badge"
       data-grade={grade}
       data-tier={tier}
+      data-size={size}
       aria-hidden="true"
     >
-      <svg viewBox="0 0 56 60" width={56} height={60} className="block" aria-hidden="true">
+      <svg
+        viewBox="0 0 56 60"
+        width={width}
+        height={Math.round((width * 60) / 56)}
+        className="block"
+        aria-hidden="true"
+      >
         <defs>
           <linearGradient id={`${id}-body`} x1="0" y1="0" x2="0.4" y2="1">
             <stop offset="0" className="gem-stop-light" />
@@ -137,7 +167,7 @@ export function GradeBadge({ grade, label }: { grade: Grade; label?: string }) {
           strokeWidth={0.8}
           opacity={0.6}
         />
-        {shines(tier) && (
+        {shines(tier) && size !== 'inline' && (
           <rect
             x={-20}
             y={4}
@@ -167,16 +197,20 @@ export function GradeBadge({ grade, label }: { grade: Grade; label?: string }) {
           {grade}
         </text>
       </svg>
-      <span className="grade-gem-name">
-        {label === '특급' ? '특급 · ' : ''}
-        {TIER_NAMES[tier]}
-      </span>
-      <span className="grade-gem-rank">
-        {Array.from({ length: rank }, (_, i) => (
-          // biome-ignore lint/suspicious/noArrayIndexKey: 보석 수만 센다
-          <i key={i} />
-        ))}
-      </span>
+      {size === 'full' && (
+        <>
+          <span className="grade-gem-name">
+            {label === '특급' ? '특급 · ' : ''}
+            {TIER_NAMES[tier]}
+          </span>
+          <span className="grade-gem-rank">
+            {Array.from({ length: rank }, (_, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: 보석 수만 센다
+              <i key={i} />
+            ))}
+          </span>
+        </>
+      )}
     </span>
   )
 }
