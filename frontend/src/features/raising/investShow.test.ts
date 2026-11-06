@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Company } from '../../api/client'
-import { groupRemarks, investTimeline, matchupOf } from './investShow'
+import { groupRemarks, investTimeline, matchupOf, spokesperson } from './investShow'
 
 type Result = NonNullable<NonNullable<Company['invest']>['outcome']>['results'][number]
 
@@ -110,5 +110,27 @@ describe('같은 의견끼리 모은 한마디 (decisions.md 242번)', () => {
       'NEUTRAL',
     ])
     expect(groupRemarks([])).toEqual([])
+  })
+})
+
+describe('같은 의견 칸의 대표 (decisions.md 246번)', () => {
+  type Remark = NonNullable<Company['invest']>['remarks'][number]
+  const remark = (employeeId: number) =>
+    ({
+      employeeId,
+      name: `직원${employeeId}`,
+      desk: 'day',
+      read: 'UP',
+      text: `말${employeeId}`,
+    }) as Remark
+  const staff = [
+    { id: 1, grades: { insight: 'C' } },
+    { id: 2, grades: { insight: 'S' } },
+    { id: 3, grades: { insight: 'S' } },
+  ] as unknown as Company['employees']
+
+  it('칸에서 안목이 가장 높은 사람이 대표로 말하고, 같으면 앞사람이다', () => {
+    expect(spokesperson([remark(1), remark(2), remark(3)], staff).employeeId).toBe(2)
+    expect(spokesperson([remark(1)], staff).employeeId).toBe(1)
   })
 })

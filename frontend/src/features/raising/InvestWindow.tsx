@@ -3,7 +3,7 @@ import type { Company } from '../../api/client'
 import { shortWon } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { TUG_DONE_MS, TugOfWar } from '../game/TugOfWar'
-import { groupRemarks, investTimeline, matchupOf, OPINIONS } from './investShow'
+import { groupRemarks, investTimeline, matchupOf, OPINIONS, spokesperson } from './investShow'
 import { useRaisingStore } from './store'
 
 type Invest = NonNullable<Company['invest']>
@@ -125,46 +125,56 @@ export function InvestWindow({
         </article>
 
         {invest.remarks.length > 0 && !outcome && (
-          // 같은 의견끼리 모은다 (242번): 사람이 많은 의견이 먼저, 칸마다 몇 명인지.
+          // 같은 의견끼리 뭉친다 (242·246번): 의견마다 칸 하나, 그 의견을 낸 사람들의 이름(고집 표시)을 한 줄로 묶고, 한마디는 그 칸에서
+          // 안목이 가장 높은 사람이 대표로 한 번만 한다. 사람이 많은 의견이 먼저.
           <div className="mt-2 grid gap-2" data-testid="remarks">
-            {(() => {
-              let at = 0
-              return groupRemarks(invest.remarks).map((g) => (
+            {groupRemarks(invest.remarks).map((g, i) => {
+              const voice = spokesperson(g.remarks, employees)
+              const others = g.remarks.length - 1
+              return (
                 <section
                   key={g.read}
-                  className={`rounded border-l-4 bg-line-soft/40 py-1.5 pr-2 pl-2.5 ${OPINIONS[g.read].tone}`}
+                  className={`animate-reveal rounded border-l-4 bg-line-soft/40 py-1.5 pr-2 pl-2.5 ${OPINIONS[g.read].tone}`}
+                  // 의견 칸이 차례로 나온다.
+                  style={{ animationDelay: `${250 + i * 300}ms` }}
                   aria-label={`${OPINIONS[g.read].label} ${g.remarks.length}명`}
                   data-testid="opinion"
                   data-read={g.read}
                 >
-                  <h4 className="font-bold text-[14px]">
-                    {OPINIONS[g.read].label}{' '}
-                    <span className="font-mono-num text-[13px]">· {g.remarks.length}명</span>
-                  </h4>
-                  <ul className="mt-0.5 grid gap-1 text-ink">
-                    {g.remarks.map((r) => (
-                      <li
-                        key={r.employeeId}
-                        className="animate-reveal flex flex-wrap items-baseline gap-x-2 text-[14px]"
-                        // 직원들이 차례로 한마디씩 한다.
-                        style={{ animationDelay: `${250 + at++ * 180}ms` }}
-                      >
-                        <b>{r.name}</b>
-                        <span>“{r.text}”</span>
-                        {r.stubborn && (
-                          <span
-                            className={`rounded border px-1 text-[11px] ${STUBBORN[r.stubborn].tone}`}
-                            data-testid="stubborn"
-                          >
-                            {STUBBORN[r.stubborn].label}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <h4 className="font-bold text-[14px]">
+                      {OPINIONS[g.read].label}{' '}
+                      <span className="font-mono-num text-[13px]">· {g.remarks.length}명</span>
+                    </h4>
+                    <ul className="flex flex-wrap gap-1 text-ink">
+                      {g.remarks.map((r) => (
+                        <li
+                          key={r.employeeId}
+                          className="flex items-baseline gap-1 rounded bg-card px-1.5 text-[13px]"
+                        >
+                          <b>{r.name}</b>
+                          {r.stubborn && (
+                            <span
+                              className={`rounded border px-1 text-[10px] ${STUBBORN[r.stubborn].tone}`}
+                              data-testid="stubborn"
+                            >
+                              {STUBBORN[r.stubborn].label}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <p className="mt-1 text-[14px] text-ink" data-testid="opinion-voice">
+                    “{voice.text}”{' '}
+                    <span className="whitespace-nowrap text-[12px] text-muted">
+                      — {voice.name}
+                      {others > 0 && ` 외 ${others}명`}
+                    </span>
+                  </p>
                 </section>
-              ))
-            })()}
+              )
+            })}
           </div>
         )}
 
