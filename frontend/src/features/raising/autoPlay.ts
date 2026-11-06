@@ -117,6 +117,29 @@ const QUARTER_MS = 1500
 const YEAR_END_MS = 4000
 
 /**
+ * 자동 진행에서 분기와 분기 사이에 두는 시간(ms) (decisions.md 273번). 사용자: "자동버튼 누르면 20초는 텀두게해줘". 전에는 한 분기가 5초 남짓에 지나가
+ * 회의 한마디·분기 실적을 읽을 틈이 없었다. 켠 때나 지난 분기를 넘긴 때부터 이만큼 지나야 다음 분기를 넘긴다. 뽑기·배치·회의는 그 사이에 하던 대로 한다.
+ */
+export const QUARTER_GAP_MS = 20_000
+
+/** 분기 넘기기까지 기다릴 시간(ms): 켠 때·지난 분기를 넘긴 때부터 QUARTER_GAP_MS가 지나야 하고, 적어도 한 일 사이의 쉼은 둔다. */
+export function settleDelay(lastSettleAt: number | null, now: number): number {
+  if (lastSettleAt === null) {
+    return STEP_MS
+  }
+  return Math.max(STEP_MS, lastSettleAt + QUARTER_GAP_MS - now)
+}
+
+/** 자동 진행을 켜고 끈다. 켤 때 분기 사이 시계를 지금부터 잰다 (273번). */
+export function toggleAutoPlay(on: boolean, now = Date.now()) {
+  useRaisingStore.setState(
+    on
+      ? { autoPlay: true, autoLastSettleAt: now, autoNextAt: null }
+      : { autoPlay: false, autoNextAt: null },
+  )
+}
+
+/**
  * 자동 진행 (245번). 켜 두면 회사 화면이 다시 그려져도(사람을 뽑거나 해가 바뀌어도) 이어지도록 앱 맨 위에서 돈다. 요청이 거절되면(오류) 멈춘다.
  */
 export function useCompanyAutoPlay() {
@@ -131,13 +154,24 @@ export function useCompanyAutoPlay() {
       return
     }
     if (error) {
-      useRaisingStore.setState({ autoPlay: false })
+      useRaisingStore.setState({ autoPlay: false, autoNextAt: null })
       return
     }
     const step = nextAutoStep(company, justSettled, justQuartered)
     if (step.kind === 'stop') {
-      useRaisingStore.setState({ autoPlay: false })
+      useRaisingStore.setState({ autoPlay: false, autoNextAt: null })
       return
+    }
+    const delay =
+      step.kind === 'settle'
+        ? settleDelay(useRaisingStore.getState().autoLastSettleAt, Date.now())
+        : step.kind === 'closeYearEnd'
+          ? YEAR_END_MS
+          : step.kind === 'closeQuarter'
+            ? QUARTER_MS
+            : STEP_MS
+    if (step.kind === 'settle') {
+      useRaisingStore.setState({ autoNextAt: Date.now() + delay })
     }
     const {
       hire,
@@ -150,49 +184,43 @@ export function useCompanyAutoPlay() {
       conveneMacro,
       decideMacro,
     } = useRaisingStore.getState()
-    const id = setTimeout(
-      () => {
-        switch (step.kind) {
-          case 'closeYearEnd':
-            useRaisingStore.setState({ justSettled: false })
-            return
-          case 'closeQuarter':
-            useRaisingStore.setState({ justQuartered: false })
-            return
-          case 'hire':
-            void hire(step.applicantId)
-            return
-          case 'poach':
-            void answerPoach(step.keep)
-            return
-          case 'raise':
-            void answerRaise(step.accept)
-            return
-          case 'place':
-            void place(step.seats)
-            return
-          case 'conveneMacro':
-            void conveneMacro()
-            return
-          case 'macro':
-            void decideMacro(step.stance)
-            return
-          case 'convene':
-            void convene()
-            return
-          case 'invest':
-            void decideInvest(step.choice, step.big)
-            return
-          case 'settle':
-            void settle()
-        }
-      },
-      step.kind === 'closeYearEnd'
-        ? YEAR_END_MS
-        : step.kind === 'closeQuarter'
-          ? QUARTER_MS
-          : STEP_MS,
-    )
+    const id = setTimeout(() => {
+      switch (step.kind) {
+        case 'closeYearEnd':
+          useRaisingStore.setState({ justSettled: false })
+          return
+        case 'closeQuarter':
+          useRaisingStore.setState({ justQuartered: false })
+          return
+        case 'hire':
+          void hire(step.applicantId)
+          return
+        case 'poach':
+          void answerPoach(step.keep)
+          return
+        case 'raise':
+          void answerRaise(step.accept)
+          return
+        case 'place':
+          void place(step.seats)
+          return
+        case 'conveneMacro':
+          void conveneMacro()
+          return
+        case 'macro':
+          void decideMacro(step.stance)
+          return
+        case 'convene':
+          void convene()
+          return
+        case 'invest':
+          void decideInvest(step.choice, step.big)
+          return
+        case 'settle':
+          useRaisingStore.setState({ autoLastSettleAt: Date.now(), autoNextAt: null })
+          void settle()
+      }
+    }, delay)
     return () => clearTimeout(id)
   }, [auto, busy, company, justSettled, justQuartered, error])
 }
