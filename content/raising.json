@@ -484,7 +484,8 @@
       "options": {
         "BUY": "산다",
         "SELL": "판다",
-        "HOLD": "지켜본다"
+        "HOLD": "지켜본다",
+        "TEAM": "너희가 알아서 해"
       },
       "remarks": {
         "low": {
@@ -581,6 +582,7 @@
         "HOLD": "지켜봤다"
       },
       "obey": "사장 말대로 {action}.",
+      "team": "팀 결정대로 {action}.",
       "rogue": "\"제가 알아서 할게요.\" — 제 판단대로 {action}.",
       "swayed": "{who} 말을 듣고 {action}.",
       "reveal": {

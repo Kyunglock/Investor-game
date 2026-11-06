@@ -12,14 +12,9 @@ import {
   spokesperson,
 } from './investShow'
 import { useRaisingStore } from './store'
+import { TEAM_CLASH_MS, TeamClash } from './TeamClash'
 
 type Invest = NonNullable<Company['invest']>
-
-const STUBBORN: Record<string, { label: string; tone: string }> = {
-  LOW: { label: '고집 낮음', tone: 'border-line text-muted' },
-  MID: { label: '고집 보통', tone: 'border-gold text-gold' },
-  HIGH: { label: '고집 높음 · 제멋대로 할지도', tone: 'border-wine text-wine' },
-}
 
 /** 사장 말대로 한 직원은 문장이 이미 말하므로 표를 붙이지 않는다. */
 const FOLLOW: Record<string, { label: string; tone: string }> = {
@@ -37,8 +32,8 @@ const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce
 /**
  * 종목 회의 (decisions.md 229·231·235·267번). 직원이 종목을 물어 온 해에만 거시경제 회의 다음에 열린다: 창 머리에 누가 가져왔는지 보이고, 끝나면 그 사람을
  * 칭찬하거나 탓하는 한 줄이 붙는다. 한 해의 중대 결정이라 예전 매매 이벤트 창처럼 화면 가운데에 뜬다: 결산을 누르면 열리고, 고르면 결과를 보고 그대로
- * 그해 결산으로 넘어간다. 단서 기사를 놓고 직원들과 고민한다. 리서치 팀이 형광펜을 긋고, 자리에 앉은 직원이 한마디씩 하고(고집이 센 직원은 미리 티가
- * 난다), 사장이 고른다. 고르면 사장 결정에 도장이 찍히고, 돈을 굴리는 직원마다 **맞대결 막대**에서 사장 말과 꼬드김·제 판단이 엎치락뒤치락하다 이긴 쪽으로
+ * 그해 결산으로 넘어간다. 단서 기사를 놓고 직원들과 고민한다. 리서치 팀이 형광펜을 긋고, 자리에 앉은 직원이 한마디씩 하고, 사장이 고른다(산다·판다·지켜본다,
+ * 또는 "너희가 알아서 해" 하고 맡기면 매수파와 매도파가 불꽃을 튀기며 맞붙어 한쪽으로 정한다, 279번). 고르면 사장 결정에 도장이 찍히고, 돈을 굴리는 직원마다 **맞대결 막대**에서 사장 말과 꼬드김·제 판단이 엎치락뒤치락하다 이긴 쪽으로
  * 쭉 찬다(181번의 막대를 되살림). 다 끝나면 종목이 오르내린 것이 드러나고 직원마다 손익이 뜬다.
  */
 export function InvestWindow({
@@ -61,7 +56,9 @@ export function InvestWindow({
   const outcome = invest.outcome
   // 창을 열 때 이미 정한 회의면(다시 그림) 연출 없이 끝난 모습을 보인다.
   const [skipped, setSkipped] = useState(() => Boolean(outcome) || reducedMotion())
-  const show = investTimeline(outcome?.results.length ?? 0, TUG_DONE_MS, skipped)
+  // 맡겼으면(279번) 매수파·매도파가 먼저 맞붙고, 그 뒤에 직원마다 막대가 돈다.
+  const lead = outcome?.delegated ? TEAM_CLASH_MS : 0
+  const show = investTimeline(outcome?.results.length ?? 0, TUG_DONE_MS, skipped, lead)
   const [finished, setFinished] = useState(skipped)
   useEffect(() => {
     if (!outcome || finished) {
@@ -179,14 +176,6 @@ export function InvestWindow({
                           className="flex items-baseline gap-1 rounded bg-card px-1.5 text-[13px]"
                         >
                           <b>{r.name}</b>
-                          {r.stubborn && (
-                            <span
-                              className={`rounded border px-1 text-[10px] ${STUBBORN[r.stubborn].tone}`}
-                              data-testid="stubborn"
-                            >
-                              {STUBBORN[r.stubborn].label}
-                            </span>
-                          )}
                         </li>
                       ))}
                     </ul>
@@ -212,45 +201,62 @@ export function InvestWindow({
 
         {!outcome && (
           <div className="mt-3 grid grid-cols-3 gap-2">
-            {invest.options.map((o) => (
-              <button
-                key={o.code}
-                type="button"
-                disabled={busy || !invest.ready}
-                onClick={() => void decideInvest(o.code)}
-                className="min-h-12 rounded border border-pen font-semibold transition-transform hover:bg-pen hover:text-white active:scale-95 disabled:opacity-50"
-              >
-                {o.label}
-              </button>
-            ))}
-            {/* 크게 (260번): 판돈 두 배, 대신 직원이 사장 말을 덜 듣는다. 지켜보기는 크게 할 수 없다. */}
             {invest.options
-              .filter((o) => o.code !== 'HOLD')
+              .filter((o) => o.code !== 'TEAM')
               .map((o) => (
                 <button
-                  key={`big-${o.code}`}
+                  key={o.code}
                   type="button"
                   disabled={busy || !invest.ready}
-                  onClick={() => void decideInvest(o.code, true)}
-                  className={`min-h-11 rounded border border-wine text-[14px] font-semibold text-wine transition-transform hover:bg-wine hover:text-white active:scale-95 disabled:opacity-50 ${
-                    o.code === 'BUY' ? 'col-start-1' : 'col-start-3'
-                  }`}
+                  onClick={() => void decideInvest(o.code)}
+                  className="min-h-12 rounded border border-pen font-semibold transition-transform hover:bg-pen hover:text-white active:scale-95 disabled:opacity-50"
                 >
-                  크게 {o.label}
+                  {o.label}
+                </button>
+              ))}
+            {/* 너희가 알아서 해 (279번): 직원들끼리 맞붙어 사거나 판다. */}
+            {invest.options
+              .filter((o) => o.code === 'TEAM')
+              .map((o) => (
+                <button
+                  key={o.code}
+                  type="button"
+                  disabled={busy || !invest.ready}
+                  onClick={() => void decideInvest(o.code)}
+                  className="col-span-3 min-h-12 rounded border border-wine font-semibold text-wine transition-transform hover:bg-wine hover:text-white active:scale-95 disabled:opacity-50"
+                  data-testid="invest-team"
+                >
+                  “{o.label}”
                 </button>
               ))}
             <p className="col-span-3 text-center text-[12px] text-muted">
-              크게 하면 판돈이 두 배, 직원이 사장 말을 안 들을 확률이 1.5배입니다.
+              맡기면 직원들끼리 의견을 맞붙여 사거나 팝니다. 안목이 높은 사람 말이 더 무겁습니다.
             </p>
           </div>
         )}
 
         {outcome && (
           <div className="mt-3" data-testid="invest-outcome">
-            <p className="flex items-center gap-2 text-[14px]">
-              사장 결정
+            {outcome.delegated && (
+              <TeamClash
+                // 빨리 보기를 누르면 끝난 모습으로 다시 그린다.
+                key={String(skipped)}
+                buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
+                sellNames={invest.remarks.filter((r) => r.read === 'DOWN').map((r) => r.name)}
+                buy={outcome.teamBuy}
+                sell={outcome.teamSell}
+                choice={outcome.choice}
+                instant={skipped}
+              />
+            )}
+            <p
+              className="animate-reveal mt-2 flex items-center gap-2 text-[14px]"
+              style={{ animationDelay: `${lead}ms` }}
+            >
+              {outcome.delegated ? '팀 결정' : '사장 결정'}
               <span
                 className="animate-stamp pen-circle inline-block px-3 py-0.5 font-pen text-[22px] text-red-pen"
+                style={{ animationDelay: `${lead}ms` }}
                 data-testid="invest-choice"
               >
                 {outcome.big ? `크게 ${label(outcome.choice)}` : label(outcome.choice)}
@@ -258,7 +264,14 @@ export function InvestWindow({
             </p>
             <ul className="mt-2 grid gap-2">
               {outcome.results.map((r, i) => {
-                const matchup = matchupOf(r, outcome.choice, label, employees, invest.sway.who)
+                const matchup = matchupOf(
+                  r,
+                  outcome.choice,
+                  label,
+                  employees,
+                  invest.sway.who,
+                  outcome.delegated ? '팀 결정' : '사장 말',
+                )
                 return (
                   <li
                     key={r.employeeId}

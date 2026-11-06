@@ -34,13 +34,20 @@ export interface InvestTimeline {
  * 투자 회의 결과의 순서 (decisions.md 235번): 사장 결정 도장 → 직원마다 맞대결 막대 → 종목 공개 → 직원마다 손익 → 회의 손익 → 결산 버튼. 빨리 보기면
  * 모두 0이다.
  */
-export function investTimeline(traders: number, tugMs: number, skipped: boolean): InvestTimeline {
+export function investTimeline(
+  traders: number,
+  tugMs: number,
+  skipped: boolean,
+  /** 막대보다 먼저 보이는 장면의 길이(ms). "너희가 알아서 해"의 맞붙는 장면 (decisions.md 279번) */
+  lead = 0,
+): InvestTimeline {
   if (skipped) {
     return { tugAt: () => 0, pnlAt: () => 0, reveal: 0, total: 0, end: 0 }
   }
   const gap = traders <= 2 ? tugMs + BETWEEN_MS : OVERLAP_MS
-  const tugAt = (i: number) => STAMP_MS + i * gap
-  const tugsEnd = traders === 0 ? STAMP_MS : tugAt(traders - 1) + tugMs
+  const start = lead + STAMP_MS
+  const tugAt = (i: number) => start + i * gap
+  const tugsEnd = traders === 0 ? start : tugAt(traders - 1) + tugMs
   const reveal = tugsEnd + REVEAL_PAUSE_MS
   const pnlAt = (i: number) => reveal + PNL_PAUSE_MS + i * PNL_STEP_MS
   const total = pnlAt(Math.max(0, traders - 1)) + TOTAL_PAUSE_MS
@@ -60,6 +67,8 @@ export function matchupOf(
   label: (code: string) => string,
   employees: Company['employees'],
   tempter: string,
+  /** 왼쪽(지킨 쪽)의 이름: 사장이 골랐으면 "사장 말", 맡겼으면 "팀 결정" (279번) */
+  boss = '사장 말',
 ): Matchup | null {
   if (!r.rival) {
     return null
@@ -68,7 +77,7 @@ export function matchupOf(
   const grade = employees.find((e) => e.id === r.employeeId)?.grades[stat]
   return {
     stat,
-    mine: { action: label(choice), trait: `사장 말 · ${STAT_NAMES[stat] ?? stat}` },
+    mine: { action: label(choice), trait: `${boss} · ${STAT_NAMES[stat] ?? stat}` },
     rival: {
       action: label(r.rival.action),
       trait: r.rival.kind === 'SWAY' ? `${tempter}의 꼬드김` : '제 판단',

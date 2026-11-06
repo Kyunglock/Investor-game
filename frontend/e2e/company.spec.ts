@@ -70,7 +70,7 @@ async function passQuarter(
     await expect(meeting).toBeVisible()
     // 누가 이 종목을 물어 왔는지 창 머리에 보인다 (267번).
     await expect(meeting.getByTestId('invest-finder')).toContainText('가져온 종목')
-    // "산다"는 "크게 산다"(260번)와 겹치므로 이름을 그대로 맞춘다.
+    // 버튼 이름을 그대로 맞춘다.
     await meeting.getByRole('button', { name: choice, exact: true }).click()
     await expect(meeting.getByTestId('invest-outcome')).toBeVisible()
     await expect(meeting.getByTestId('invest-choice')).toHaveText(choice)
@@ -409,6 +409,43 @@ test('라이벌을 앞지르면 연말 결산서를 닫은 뒤 알림이 뜬다 
   await alert.getByRole('button', { name: '확인' }).click()
   await expect(alert).toBeHidden()
   await expect(page.getByText(/1호 회사 · 2년 차 1분기/)).toBeVisible()
+})
+
+test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 매도파가 맞붙어 한쪽으로 정한다 (279번)', async ({
+  page,
+}) => {
+  await openCompany(page)
+  await hireCheapest(page)
+  await hireCheapest(page)
+  await tab(page, /배치/)
+  await page.getByRole('button', { name: '자동 배치' }).click()
+  await page.getByRole('button', { name: '1년 차 1분기 넘기기', exact: true }).click()
+  const macro = page.getByRole('dialog', { name: '거시경제 회의' })
+  await macro.getByRole('button', { name: /^중립/ }).click()
+  // 첫 회사의 첫 분기에는 꼭 누가 종목을 물어 온다 (267번).
+  await macro.getByRole('button', { name: '종목 회의 열기 →' }).click()
+  const meeting = page.getByRole('dialog', { name: '종목 회의' })
+  await expect(meeting).toBeVisible()
+  // 고집 표시와 크게 산다·판다는 뺐다.
+  await expect(meeting.getByTestId('stubborn')).toHaveCount(0)
+  await expect(meeting.getByRole('button', { name: /크게/ })).toHaveCount(0)
+  await meeting.getByTestId('invest-team').click()
+  const clash = meeting.getByTestId('team-clash')
+  await expect(clash).toBeVisible()
+  await expect(clash).toHaveAttribute('data-phase', 'clash')
+  await expect(clash).toHaveAttribute('data-phase', 'done', { timeout: 10_000 })
+  await expect(clash.getByTestId('clash-result')).toHaveText(/팀 결정: (매수|매도)!/)
+  const result = await clash.getByTestId('clash-result').innerText()
+  await expect(meeting.getByTestId('invest-choice')).toHaveText(
+    result.includes('매수') ? '산다' : '판다',
+  )
+  await expect(meeting.getByTestId('invest-outcome')).toContainText('팀 결정')
+  const fast = meeting.getByRole('button', { name: '빨리 보기' })
+  if (await fast.isVisible()) {
+    await fast.click()
+  }
+  await meeting.getByRole('button', { name: '1년 차 1분기 넘기기' }).click()
+  await closeQuarter(page, 1, 1)
 })
 
 test('연초 회의에서 올해의 라이벌을 고르면 연말에 견준 결과가 알림으로 뜬다 (275번)', async ({

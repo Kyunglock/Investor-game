@@ -87,7 +87,7 @@ describe('자동 진행 (decisions.md 245번)', () => {
       invest: { ready: true, convened: true, remarks: [remark('DOWN')] },
     } as never)
     expect(nextAutoStep(seated, false)).toEqual({ kind: 'invest', choice: 'SELL', big: false })
-    // 둘 이상이 모두 같은 쪽이면 크게 한다 (260번).
+    // 크게 산다·판다는 뺐다 (279번): 모두 같은 쪽이어도 크게 하지 않는다.
     const agreed = {
       ...seated,
       invest: { ready: true, convened: true, remarks: [remark('UP'), remark('UP')] },
@@ -95,7 +95,7 @@ describe('자동 진행 (decisions.md 245번)', () => {
     expect(nextAutoStep(agreed as never, false)).toEqual({
       kind: 'invest',
       choice: 'BUY',
-      big: true,
+      big: false,
     })
     // 한마디는 회의를 열어야 나온다 (249번): 열지 않았으면 먼저 연다.
     const closed = { ...seated, invest: { ...seated.invest, convened: false, remarks: [] } }

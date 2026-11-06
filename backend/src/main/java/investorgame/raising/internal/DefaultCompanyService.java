@@ -435,7 +435,7 @@ class DefaultCompanyService implements CompanyService {
                         r.stubbornBp == null ? null : meetings.stubbornLevel(r.stubbornBp)))
             .toList();
     List<CompanyView.Option> options =
-        List.of(InvestEngine.BUY, InvestEngine.SELL, InvestEngine.HOLD).stream()
+        List.of(InvestEngine.BUY, InvestEngine.SELL, InvestEngine.HOLD, InvestEngine.TEAM).stream()
             .map(code -> new CompanyView.Option(code, texts.options().get(code)))
             .toList();
     CompanyView.InvestOutcome outcome =
@@ -444,6 +444,9 @@ class DefaultCompanyService implements CompanyService {
             : new CompanyView.InvestOutcome(
                 invest.choice,
                 invest.big,
+                invest.delegated,
+                invest.teamBuy,
+                invest.teamSell,
                 invest.missed,
                 invest.up,
                 meetings.reveal(c),

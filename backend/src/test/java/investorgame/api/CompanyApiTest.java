@@ -222,7 +222,8 @@ class CompanyApiTest {
             mvc.perform(post("/api/company/invest/open").cookie(session))
                 .andExpect(status().isOk()));
     assertThat(again.read("$.invest.remarks[0].text", String.class)).isEqualTo(said);
-    assertThat(meeting.read("$.invest.options.length()", Integer.class)).isEqualTo(3);
+    // 산다·판다·지켜본다·너희가 알아서 해 (decisions.md 279번)
+    assertThat(meeting.read("$.invest.options.length()", Integer.class)).isEqualTo(4);
     assertThat(meeting.read("$.invest.outcome", Object.class)).isNull();
     settle(1, 1).andExpect(status().isBadRequest());
     postJson("/api/company/invest", "{\"choice\":\"SHORT\"}").andExpect(status().isBadRequest());

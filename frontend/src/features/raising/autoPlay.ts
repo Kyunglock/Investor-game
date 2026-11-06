@@ -24,12 +24,6 @@ export type AutoStep =
 /** 계약금이 자본의 이만큼을 넘는 지원자는 뽑지 않는다. 한 해에 자본을 다 써 버리지 않게. */
 const FEE_SHARE = 0.25
 
-/** 크게 할까 (decisions.md 260번): 둘 이상이 한마디를 했고 모두 같은 쪽(사자 또는 팔자)이면 크게 한다. */
-export function autoBig(invest: NonNullable<Company['invest']>): boolean {
-  const reads = invest.remarks.map((r) => r.read)
-  return reads.length >= 2 && reads.every((r) => r !== 'NEUTRAL' && r === reads[0])
-}
-
 /** 거시경제 회의 (decisions.md 266번): 직원 한마디의 다수결. 공격하자가 많으면 공격, 지키자가 많으면 방어, 같으면 중립. */
 export function autoStance(macro: NonNullable<Company['macro']>): Stance {
   const up = macro.remarks.filter((r) => r.read === 'UP').length
@@ -121,7 +115,8 @@ export function nextAutoStep(
       return { kind: 'convene' }
     }
     const choice = autoChoice(company.invest)
-    return { kind: 'invest', choice, big: choice !== 'HOLD' && autoBig(company.invest) }
+    // 크게 산다·판다는 화면에서 뺐다 (decisions.md 279번).
+    return { kind: 'invest', choice, big: false }
   }
   return { kind: 'settle' }
 }

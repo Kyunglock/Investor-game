@@ -403,4 +403,47 @@ class InvestEngineTest {
     ENGINE.invest.decide(bought, InvestEngine.BUY, new HashSeededRandom(1));
     assertThat(bought.invest.missed).isNull();
   }
+
+  /**
+   * "너희가 알아서 해" (decisions.md 279번): 사장이 맡기면 회의 한마디를 안목만큼 저울질해 사거나 판다. 지켜보지 않는다. 직원은 팀 결정대로 하고, 맞붙은
+   * 무게가 남는다. 크게 맡길 수는 없다.
+   */
+  @Test
+  void 맡기면_직원_한마디를_안목만큼_저울질해_한쪽으로_정한다() {
+    int agreed = 0;
+    int decided = 0;
+    for (int seed = 0; seed < 200; seed++) {
+      CompanyState c = opened(new HashSeededRandom(seed), 300_000_000L);
+      ENGINE.hire(c, stats(90, 50, 50, 50));
+      ENGINE.hire(c, stats(90, 50, 50, 50));
+      ENGINE.place(c, Map.of(1, "day", 2, "bio"));
+      c.phase = "normal";
+      ENGINE.invest.convene(c, new HashSeededRandom(seed));
+      long ups = c.invest.remarks.stream().filter(r -> "UP".equals(r.read)).count();
+      long downs = c.invest.remarks.stream().filter(r -> "DOWN".equals(r.read)).count();
+      ENGINE.invest.decide(c, InvestEngine.TEAM, new HashSeededRandom(seed));
+      assertThat(c.invest.delegated).isTrue();
+      assertThat(c.invest.choice).isIn(InvestEngine.BUY, InvestEngine.SELL);
+      assertThat(c.invest.teamBuy).isEqualTo(ups * 100);
+      assertThat(c.invest.teamSell).isEqualTo(downs * 100);
+      assertThat(c.invest.results)
+          .filteredOn(r -> "BOSS".equals(r.follow))
+          .allMatch(r -> r.line.startsWith("팀 결정대로"));
+      if (ups != downs) {
+        decided++;
+        if (c.invest.choice.equals(ups > downs ? InvestEngine.BUY : InvestEngine.SELL)) {
+          agreed++;
+        }
+      }
+    }
+    // 둘 다 같은 쪽이면 늘 그쪽, 갈리면 무게대로 반반이라 다수 쪽이 대개 이긴다.
+    assertThat(agreed).isGreaterThan(decided * 7 / 10);
+
+    CompanyState big = opened(new HashSeededRandom(1), 100_000_000L);
+    ENGINE.hire(big, stats(50, 50, 50, 50));
+    ENGINE.place(big, Map.of(1, "day"));
+    assertThatThrownBy(
+            () -> ENGINE.invest.decide(big, InvestEngine.TEAM, true, new HashSeededRandom(1)))
+        .isInstanceOf(InvalidRequestException.class);
+  }
 }
