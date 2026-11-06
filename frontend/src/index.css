@@ -603,20 +603,6 @@ p.animate-stamp {
   }
 }
 
-/* 종목 회의 차트 (decisions.md 283번): 선이 왼쪽부터 그려진다. pathLength=1이라 dashoffset 1 → 0. */
-@keyframes chart-draw {
-  from {
-    stroke-dashoffset: 1;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-.chart-draw {
-  stroke-dashoffset: 1;
-  animation: chart-draw 2.6s ease-in-out both;
-}
-
 /* "너희가 알아서 해" (decisions.md 291번): 결판이 나면 이긴 쪽이 한 번 들썩인다. 저울과 일어서는 사람은 transition으로 움직인다. */
 @keyframes clash-win {
   0% {
@@ -652,7 +638,6 @@ p.animate-stamp {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .chart-draw,
   .animate-clash-win,
   .animate-pop,
   .highlighter,
