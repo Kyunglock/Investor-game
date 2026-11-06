@@ -553,20 +553,23 @@ class InvestEngine {
   }
 
   /**
-   * 막판 뒤집기 (283번): proposal-percent 확률로 자리에 앉은 직원 하나가 사장의 결정과 반대로 하자고 한다(사자면 팔자, 팔자면 사자, 지켜보면 자기
-   * 생각대로 사거나 팔자). 반대 의견을 낸 사람이 있으면 그 사람이 먼저 나선다. 사장이 답할 때까지 회의는 정해지지 않는다. 나섰으면 true.
+   * 막판 뒤집기 "잠깐만요, 사장님!!" (283·300번): 종합 등급 S 이상인 직원의 스킬이다. 자리에 앉은 그런 직원 가운데 가장 높은 등급의 확률(S 60%, 한
+   * 단계마다 +5%p, 90%까지)로 하나가 사장의 결정과 반대로 하자고 한다(사자면 팔자, 팔자면 사자, 지켜보면 자기 생각대로 사거나 팔자). 반대 의견을 낸 사람이
+   * 있으면 그 사람이 먼저 나선다. 사장이 답할 때까지 회의는 정해지지 않는다. 나섰으면 true.
    */
   private boolean propose(
       CompanyState c, String choice, boolean big, boolean delegated, SeededRandom random) {
     RandomGenerator rng = random.forKey("invest-proposal", c.turn());
-    if (rng.nextInt(PERCENT) >= properties.invest().proposalPercent()) {
-      return false;
-    }
     List<Employee> seated =
         c.employees.stream()
             .filter(e -> e.desk != null && !CompanyEngine.HR_DESK.equals(e.desk))
+            .filter(e -> proposalPercent(e) > 0)
             .toList();
     if (seated.isEmpty()) {
+      return false;
+    }
+    int chance = seated.stream().mapToInt(this::proposalPercent).max().orElse(0);
+    if (rng.nextInt(PERCENT) >= chance) {
       return false;
     }
     Map<Integer, String> reads = new HashMap<>();
@@ -595,6 +598,27 @@ class InvestEngine {
     c.invest.pendingBig = big;
     c.invest.pendingDelegated = delegated;
     return true;
+  }
+
+  /**
+   * 직원이 "잠깐만요, 사장님!!"을 쓸 확률(%, 300번): 종합 등급이 S 아래면 0, S면 60, 한 단계 높을 때마다 +5%p, 90까지. 직원 상세의 등급 효과
+   * 줄에도 보인다.
+   */
+  int proposalPercent(Employee employee) {
+    return proposalPercent(CompanyEngine.employeeGrade(employee));
+  }
+
+  int proposalPercent(String grade) {
+    CompanyProperties.Invest invest = properties.invest();
+    int steps =
+        CompanyEngine.LADDER.indexOf(grade)
+            - CompanyEngine.LADDER.indexOf(invest.proposalMinGrade());
+    if (steps < 0) {
+      return 0;
+    }
+    return Math.min(
+        invest.proposalMaxPercent(),
+        invest.proposalPercent() + steps * invest.proposalStepPercent());
   }
 
   /**
@@ -794,13 +818,13 @@ class InvestEngine {
     return buys ? BUY : SELL;
   }
 
-  /** 토론에서 오가는 말의 차례 수: 매수파·매도파가 이만큼씩 번갈아 말한 뒤 결판을 낸다. */
-  private static final int DEBATE_ROUNDS = 3;
+  /** 토론에서 오가는 말의 차례 수: 매수파·매도파가 이만큼씩 번갈아 말한 뒤 결판을 낸다 (304번: 셋에서 둘로, 대신 한마디가 길다). */
+  private static final int DEBATE_ROUNDS = 2;
 
   /**
    * 맡긴 회의의 토론 (decisions.md 285·295번). 사자고 한 직원은 매수파, 팔자고 한 직원은 매도파다. 말은 **팀장만** 한다(295번: 사람이 늘어
    * 회의실이 꽉 찼다): 그쪽에 팀장이 없으면 안목이 가장 높은 사람이, 한쪽이 아예 비었으면 모르겠다던 직원이, 그도 없으면 옆자리 사람이 끌려 나와 그쪽을 든다. 말에는
-   * 기사의 요지를 제 말로 엮는다(따오지 않는다). 세 바퀴 뒤 결판은 세 박자다: 사회(말한 사람 가운데 안목이 가장 높은 사람)가 양쪽 무게를 읽으며 표결을 부르고, 이긴
+   * 기사의 요지를 제 말로 엮는다(따오지 않는다). 두 바퀴 뒤 결판은 세 박자다: 사회(말한 사람 가운데 안목이 가장 높은 사람)가 양쪽 무게를 읽으며 표결을 부르고, 이긴
    * 쪽 첫 사람이 선언하고, 진 쪽 첫 사람이 토를 달고 물러난다. 승패는 저울이 이미 정했다.
    */
   private List<CompanyState.DebateLine> debate(CompanyState c, boolean buys, SeededRandom random) {

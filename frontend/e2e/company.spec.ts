@@ -474,24 +474,26 @@ test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 �
   const clash = meeting.getByTestId('team-clash').first()
   await expect(clash).toBeVisible()
   await expect(clash).toHaveAttribute('data-phase', 'clash')
-  // 막대 대신 회의실 (286번): 매수파는 왼쪽, 매도파는 오른쪽에 앉는다. 양쪽 다 누군가 앉는다.
-  await expect(clash.getByTestId('meeting-room')).toBeVisible()
-  await expect(clash.getByTestId('room-buy').getByTestId('room-seat').first()).toBeVisible()
-  await expect(clash.getByTestId('room-sell').getByTestId('room-seat').first()).toBeVisible()
+  // 밀어내기 막대 (304번): 매수파는 왼쪽, 매도파는 오른쪽에 선다. 양쪽 다 누군가 선다. 경계에서 번개가 튄다.
+  await expect(clash.getByTestId('clash-gauge')).toBeVisible()
+  await expect(clash.getByTestId('side-buy').getByTestId('speaker').first()).toBeVisible()
+  await expect(clash.getByTestId('side-sell').getByTestId('speaker').first()).toBeVisible()
+  await expect(clash.getByTestId('clash-bolt')).toBeVisible()
   // 맞붙는 동안 매수파·매도파의 말이 한 줄씩 쭉쭉 올라온다 (285번).
   const lines = clash.getByTestId('debate-line')
   await expect(lines.first()).toHaveAttribute('data-side', 'BUY')
   await expect(lines.nth(1)).toHaveAttribute('data-side', 'SELL')
   await expect(clash).toHaveAttribute('data-phase', 'clash')
-  await expect(clash).toHaveAttribute('data-phase', 'done', { timeout: 15_000 })
+  // 말 한 줄이 글자 수만큼 머문다 (303번): 일곱 줄이면 30초 안팎.
+  await expect(clash).toHaveAttribute('data-phase', 'done', { timeout: 45_000 })
   await expect(clash.getByTestId('clash-result')).toHaveText(/팀 결정: (매수|매도)!/)
-  // 결판 세 박자 (295번): 사회가 표결을 부르고, 이긴 쪽이 선언하고, 진 쪽이 물러난다.
-  await expect(lines).toHaveCount(9)
+  // 두 바퀴 뒤 결판 세 박자 (295·304번): 사회가 표결을 부르고, 이긴 쪽이 선언하고, 진 쪽이 물러난다.
+  await expect(lines).toHaveCount(7)
   const result = await clash.getByTestId('clash-result').innerText()
-  await expect(lines.nth(6)).toHaveAttribute('data-kind', 'TALLY')
-  await expect(lines.nth(7)).toHaveAttribute('data-kind', 'WIN')
-  await expect(lines.nth(7)).toHaveAttribute('data-side', result.includes('매수') ? 'BUY' : 'SELL')
-  await expect(lines.nth(8)).toHaveAttribute('data-kind', 'LOSE')
+  await expect(lines.nth(4)).toHaveAttribute('data-kind', 'TALLY')
+  await expect(lines.nth(5)).toHaveAttribute('data-kind', 'WIN')
+  await expect(lines.nth(5)).toHaveAttribute('data-side', result.includes('매수') ? 'BUY' : 'SELL')
+  await expect(lines.nth(6)).toHaveAttribute('data-kind', 'LOSE')
   await declineProposal(meeting)
   await expect(meeting.getByTestId('invest-choice')).toHaveText(
     result.includes('매수') ? '산다' : '판다',
@@ -513,7 +515,7 @@ test('정하고 나면 누군가 막판에 반대로 하자고 하고, 따랐으
   await hireCheapest(page)
   await tab(page, /배치/)
   await page.getByRole('button', { name: '자동 배치' }).click()
-  // 35%를 기다리기 어렵다: 고른 뒤 응답에 막판 제안을 넣어 본다. 서버는 실제로 산다로 정하고(서버도 제안을 냈으면 원래대로 답한다), 따르면 상벌 차례를 붙인다.
+  // S 이상 직원이 없으면 제안이 오지 않는다(300번): 고른 뒤 응답에 막판 제안을 넣어 본다. 서버는 실제로 산다로 정하고(서버도 제안을 냈으면 원래대로 답한다), 따르면 상벌 차례를 붙인다.
   await page.route('**/api/company/invest', async (route) => {
     const response = await route.fetch()
     let company = await response.json()

@@ -755,6 +755,16 @@ p.animate-stamp {
     grade-glow 2.4s ease-in-out infinite;
 }
 
+/* 작은 카드 (301번): 사무실 미니맵 칸. 테두리가 얇고 둥글기가 작다. */
+.grade-card-sm {
+  border-width: 2px;
+  border-radius: 8px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.14),
+    0 0 0 1px color-mix(in srgb, var(--g-dark) 35%, transparent),
+    0 0 10px var(--g-glow);
+}
 /* 방패 보석 등급표: 카드 왼쪽 위 모서리에 걸린다. */
 .grade-gem {
   position: absolute;
@@ -767,6 +777,21 @@ p.animate-stamp {
   width: 56px;
   pointer-events: none;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.3));
+}
+.grade-gem-sm {
+  top: -5px;
+  left: -5px;
+  width: 30px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+}
+/* 글줄 안의 작은 방패 (301번): 배치 탭의 이름 앞. */
+.grade-gem-inline {
+  position: static;
+  display: inline-flex;
+  width: 18px;
+  margin-right: 2px;
+  vertical-align: -3px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.25));
 }
 .grade-gem .gem-stop-light {
   stop-color: var(--g-light);
@@ -846,6 +871,54 @@ p.animate-stamp {
 .animate-clash-win {
   animation: clash-win 0.5s ease-out both;
 }
+/* 밀어내기 막대 (decisions.md 304번): 말이 꽂히면 경계가 튕기며 넘어갔다 돌아오고(overshoot), 막대가 말한 쪽에서 반대쪽으로 쿵 흔들리고, 경계에서 불꽃이
+   흩어진다. */
+.push-fill {
+  transition: width 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.push-fill-left {
+  transition: left 0.55s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes push-hit {
+  0% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(calc(var(--push-dir, 1) * 7px));
+  }
+  55% {
+    transform: translateX(calc(var(--push-dir, 1) * -4px));
+  }
+  80% {
+    transform: translateX(calc(var(--push-dir, 1) * 2px));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+.animate-push-hit {
+  animation: push-hit 0.45s ease-out both;
+}
+@keyframes push-spark {
+  0% {
+    transform: rotate(var(--a)) translateX(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(var(--a)) translateX(var(--d)) scale(0.2);
+    opacity: 0;
+  }
+}
+.push-spark {
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  box-shadow: 0 0 6px 1px rgba(255, 220, 120, 0.9);
+  animation: push-spark 0.6s ease-out both;
+}
 /* 토론 한 줄이 아래에서 툭 튀어 오른다 (decisions.md 285번). */
 @keyframes debate-in {
   0% {
@@ -867,6 +940,8 @@ p.animate-stamp {
 
 @media (prefers-reduced-motion: reduce) {
   .animate-clash-win,
+  .animate-push-hit,
+  .push-spark,
   .grade-card,
   .animate-pop,
   .highlighter,

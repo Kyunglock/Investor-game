@@ -27,7 +27,7 @@ export type AutoStep =
 /** 계약금이 자본의 이만큼을 넘는 지원자는 뽑지 않는다. 한 해에 자본을 다 써 버리지 않게. */
 const FEE_SHARE = 0.25
 
-/** 거시경제 회의 (decisions.md 266번): 직원 한마디의 다수결. 공격하자가 많으면 공격, 지키자가 많으면 방어, 같으면 중립. */
+/** 거시경제 회의 (decisions.md 266번): 직원 한마디의 다수결. 공격적으로 하자가 많으면 공격, 방어적으로 하자가 많으면 방어, 같으면 중립. */
 export function autoStance(macro: NonNullable<Company['macro']>): Stance {
   const up = macro.remarks.filter((r) => r.read === 'UP').length
   const down = macro.remarks.filter((r) => r.read === 'DOWN').length
