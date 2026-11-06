@@ -15,6 +15,7 @@ import {
   type SeatTile,
   seatTiles,
   tierOf,
+  titleOf,
 } from './office'
 
 type Employee = Company['employees'][number]
@@ -172,7 +173,9 @@ export const OfficeArt = memo(function OfficeArt({
                 {e ? (
                   <>
                     <Face employee={e} mood={t.mood} size={44} />
-                    <span className="mt-0.5 text-[12px] font-semibold leading-tight">{e.name}</span>
+                    <span className="mt-0.5 text-[12px] font-semibold leading-tight">
+                      {e.name} {titleOf(e.overallGrade)}
+                    </span>
                     <span
                       className={`text-center text-[10px] leading-tight ${
                         t.trades ? 'text-teal' : 'text-gold'

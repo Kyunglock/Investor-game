@@ -23,7 +23,7 @@ class EconomySimulationTest {
   private static final CompanyEngine ENGINE =
       new CompanyEngine(TestContent.load(), TestBehavior.create(), PROPERTIES);
   private static final long START = 100_000_000L;
-  private static final long GRADE_E = 300_000_000L;
+  private static final long GRADE_E = PROPERTIES.gradeCapital().get(1);
   private static final int TRIALS = 2000;
 
   private static Map<String, Integer> stats(int value) {
@@ -37,7 +37,7 @@ class EconomySimulationTest {
     return up > down ? InvestEngine.BUY : down > up ? InvestEngine.SELL : InvestEngine.HOLD;
   }
 
-  /** 한 시대 뒤 자본 배수의 중앙값과 E(3억) 이상에 닿은 몫. */
+  /** 한 시대 뒤 자본 배수의 중앙값과 E(2억, 257번) 이상에 닿은 몫. */
   private static double[] era(int level) {
     double[] ratio = new double[TRIALS];
     int reachedE = 0;
@@ -67,11 +67,41 @@ class EconomySimulationTest {
     double[] good = era(60);
     double[] great = era(75);
     // 투자 회의가 한 해에 판단 하나만큼 더해 226번 목표(E 1.14배·C 1.71배·A 34%·S 77%)보다 3할쯤 커졌다 (229번).
+    // E 띠를 2억으로 낮추고 첫 회사의 첫해에 폭락장을 뺐다(257번): 첫 시대에 E(첫 책상 추가)에 닿는 몫이 커졌다.
+    // 2,000판: E 직원 31% · C 직원 62% · A 직원 88% · S 직원 98%, 세 해 자본 중앙값 1.57 · 2.30 · 3.37 · 4.98배.
     assertThat(weak[0]).as("E 직원: 조금 자란다").isBetween(1.2, 1.8);
-    assertThat(weak[1]).as("E 직원은 거의 못 오른다").isLessThan(0.15);
+    assertThat(weak[1]).as("E 직원은 가끔 오른다").isBetween(0.15, 0.45);
     assertThat(average[0]).as("C 직원: 세 해에 2배 남짓").isBetween(1.9, 2.7);
-    assertThat(good[1]).as("A 직원: 절반 넘게 E에 닿는다").isBetween(0.45, 0.8);
-    assertThat(great[1]).as("S 직원: 거의 다 E에 닿는다").isGreaterThan(0.8);
+    assertThat(average[1]).as("C 직원: 절반 넘게 E에 닿는다").isBetween(0.5, 0.8);
+    assertThat(good[1]).as("A 직원: 대부분 E에 닿는다").isBetween(0.75, 0.95);
+    assertThat(great[1]).as("S 직원: 거의 다 E에 닿는다").isGreaterThan(0.9);
+  }
+
+  /**
+   * 첫 이사까지 몇 해 (#320, decisions.md 257번). 첫 회사에 C 직원 둘을 앉히고 해마다 회의(기사 다수결)와 결산을 하며, 반지하를 떠나 상가(D)에
+   * 닿는 해의 중앙값을 본다. 전에는 API로 굴려 보면 반지하에서 10년, 상가까지 16년쯤 걸렸다.
+   */
+  @Test
+  void C_직원_둘이면_여덟_해_안에_첫_이사를_한다() {
+    int trials = 600;
+    int[] years = new int[trials];
+    for (int seed = 0; seed < trials; seed++) {
+      CompanyState company = ENGINE.open(new HashSeededRandom(seed), START);
+      ENGINE.hire(company, stats(45));
+      ENGINE.hire(company, stats(45));
+      ENGINE.place(company, Map.of(1, "bio", 2, "day"));
+      int year = 1;
+      while (year <= 30 && LADDER.indexOf(ENGINE.grade(company.capital)) < 2) {
+        if (ENGINE.invest.open(company)) {
+          ENGINE.invest.decide(company, majority(company.invest), new HashSeededRandom(seed));
+        }
+        ENGINE.settle(company, new HashSeededRandom(seed));
+        year++;
+      }
+      years[seed] = year - 1;
+    }
+    Arrays.sort(years);
+    assertThat(years[trials / 2]).as("첫 이사까지 해의 중앙값").isBetween(4, 8);
   }
 
   /** 돈을 굴리는 자리 일곱(섹터 데스크 여섯과 단타). 규모의 벽 측정은 자리 수만큼 직원을 고르게 앉힌다. */
@@ -96,7 +126,12 @@ class EconomySimulationTest {
       int losses = 0;
       int dropped = 0;
       for (int seed = 0; seed < trials; seed++) {
-        CompanyState company = ENGINE.open(new HashSeededRandom(seed), capital);
+        // 아무 해나 대표하도록 2호 회사로 연다: 첫 회사의 첫해는 폭락장이 아니다(257번).
+        CompanyState company = new CompanyState();
+        company.number = 2;
+        company.capital = capital;
+        company.era = "plain";
+        ENGINE.startYear(company, new HashSeededRandom(seed));
         Map<Integer, String> placements = new HashMap<>();
         for (int i = 0; i < ENGINE.seats(capital); i++) {
           ENGINE.hire(company, stats(stat));

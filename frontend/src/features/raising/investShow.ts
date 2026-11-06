@@ -1,4 +1,5 @@
 import type { Company } from '../../api/client'
+import { shortWon } from '../game/labels'
 import type { Matchup } from '../game/tug'
 import { LADDER, STAT_NAMES, shareOf } from './grades'
 
@@ -99,6 +100,39 @@ export function groupRemarks(remarks: Remark[]): { read: Remark['read']; remarks
       (a, b) =>
         b.remarks.length - a.remarks.length || order.indexOf(a.read) - order.indexOf(b.read),
     )
+}
+
+/**
+ * 회의 뒤 돌아보기 (decisions.md 260번). 지켜봤으면 맞는 쪽으로 했을 때 벌었을 돈, 직원 다수결이 맞았는지, 리서치 팀 형광펜이 결정적 문장에 그었는지.
+ */
+export function hindsightOf(invest: NonNullable<Company['invest']>): string[] {
+  const outcome = invest.outcome
+  if (!outcome) {
+    return []
+  }
+  const lines: string[] = []
+  const right = outcome.up ? '산다' : '판다'
+  if (outcome.missed != null && outcome.missed > 0) {
+    lines.push(`지켜봤다. ${right}로 갔으면 +${shortWon(outcome.missed)}이었다.`)
+  }
+  const up = invest.remarks.filter((r) => r.read === 'UP').length
+  const down = invest.remarks.filter((r) => r.read === 'DOWN').length
+  if (up !== down) {
+    const said = up > down ? 'UP' : 'DOWN'
+    const ok = (said === 'UP') === outcome.up
+    lines.push(`직원 다수결(${said === 'UP' ? '사자' : '팔자'})은 ${ok ? '맞았다' : '틀렸다'}.`)
+  } else if (invest.remarks.length > 0) {
+    lines.push('직원 의견은 반반이었다.')
+  }
+  const marked = invest.sentences.findIndex((s) => s.highlighted)
+  if (marked >= 0) {
+    lines.push(
+      marked === outcome.decisive
+        ? '형광펜은 결정적 문장에 그었다.'
+        : '형광펜은 곁가지에 그었다. 이번엔 빗나갔다.',
+    )
+  }
+  return lines
 }
 
 /**

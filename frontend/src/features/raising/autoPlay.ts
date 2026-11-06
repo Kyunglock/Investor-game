@@ -8,13 +8,21 @@ import { useRaisingStore } from './store'
 export type AutoStep =
   | { kind: 'closeYearEnd' }
   | { kind: 'hire'; applicantId: number }
+  | { kind: 'poach'; keep: boolean }
   | { kind: 'place'; seats: Seat[] }
-  | { kind: 'invest'; choice: 'BUY' | 'SELL' | 'HOLD' }
+  | { kind: 'convene' }
+  | { kind: 'invest'; choice: 'BUY' | 'SELL' | 'HOLD'; big: boolean }
   | { kind: 'settle' }
   | { kind: 'stop' }
 
 /** 계약금이 자본의 이만큼을 넘는 지원자는 뽑지 않는다. 한 해에 자본을 다 써 버리지 않게. */
 const FEE_SHARE = 0.25
+
+/** 크게 할까 (decisions.md 260번): 둘 이상이 한마디를 했고 모두 같은 쪽(사자 또는 팔자)이면 크게 한다. */
+export function autoBig(invest: NonNullable<Company['invest']>): boolean {
+  const reads = invest.remarks.map((r) => r.read)
+  return reads.length >= 2 && reads.every((r) => r !== 'NEUTRAL' && r === reads[0])
+}
 
 /** 투자 회의: 직원 한마디의 다수결. 사자가 많으면 산다, 팔자가 많으면 판다, 같거나 모르겠다뿐이면 지켜본다. */
 export function autoChoice(invest: NonNullable<Company['invest']>): 'BUY' | 'SELL' | 'HOLD' {
@@ -42,11 +50,16 @@ export function autoHire(company: Company): number | null {
  * 투자 회의(직원 다수결) → 결산. 끝난 회사면 멈춘다.
  */
 export function nextAutoStep(company: Company, justSettled: boolean): AutoStep {
-  if (company.status === 'ENDED') {
+  // 끝났거나 망한 회사(247번)면 멈춘다: 다시 차리기는 사장이 직접 한다.
+  if (company.status === 'ENDED' || company.broke) {
     return { kind: 'stop' }
   }
   if (justSettled) {
     return { kind: 'closeYearEnd' }
+  }
+  // 이직 제안 (262·265번): 자동 진행은 직원을 보내지 않는다. 늘 남긴다.
+  if (company.meeting?.poach) {
+    return { kind: 'poach', keep: true }
   }
   const applicantId = autoHire(company)
   if (applicantId !== null) {
@@ -58,7 +71,12 @@ export function nextAutoStep(company: Company, justSettled: boolean): AutoStep {
     return { kind: 'place', seats }
   }
   if (company.invest?.ready) {
-    return { kind: 'invest', choice: autoChoice(company.invest) }
+    // 한마디는 회의를 열어야 나온다 (249번). 연 뒤에 다수결로 정한다.
+    if (!company.invest.convened) {
+      return { kind: 'convene' }
+    }
+    const choice = autoChoice(company.invest)
+    return { kind: 'invest', choice, big: choice !== 'HOLD' && autoBig(company.invest) }
   }
   return { kind: 'settle' }
 }
@@ -89,7 +107,7 @@ export function useCompanyAutoPlay() {
       useRaisingStore.setState({ autoPlay: false })
       return
     }
-    const { hire, place, decideInvest, settle } = useRaisingStore.getState()
+    const { hire, place, convene, decideInvest, settle, answerPoach } = useRaisingStore.getState()
     const id = setTimeout(
       () => {
         switch (step.kind) {
@@ -99,11 +117,17 @@ export function useCompanyAutoPlay() {
           case 'hire':
             void hire(step.applicantId)
             return
+          case 'poach':
+            void answerPoach(step.keep)
+            return
           case 'place':
             void place(step.seats)
             return
+          case 'convene':
+            void convene()
+            return
           case 'invest':
-            void decideInvest(step.choice)
+            void decideInvest(step.choice, step.big)
             return
           case 'settle':
             void settle()

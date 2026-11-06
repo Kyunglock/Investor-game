@@ -59,6 +59,12 @@ class CompanyApiTest {
             .andExpect(status().isOk()));
   }
 
+  private ResultActions refresh(int year, int refreshes) throws Exception {
+    return postJson(
+        "/api/company/applicants/refresh",
+        "{\"year\":%d,\"refreshes\":%d}".formatted(year, refreshes));
+  }
+
   private ResultActions settle(int year) throws Exception {
     return postJson("/api/company/settle", "{\"year\":%d}".formatted(year));
   }
@@ -113,13 +119,20 @@ class CompanyApiTest {
     postJson("/api/company/hires", "{\"applicantId\":" + firstId + "}")
         .andExpect(status().isBadRequest());
 
-    DocumentContext refreshed =
-        json(
-            mvc.perform(post("/api/company/applicants/refresh").cookie(session))
-                .andExpect(status().isOk()));
+    DocumentContext refreshed = json(refresh(1, 0).andExpect(status().isOk()));
     assertThat(refreshed.read("$.applicants.length()", Integer.class)).isEqualTo(3);
+    assertThat(refreshed.read("$.refreshes", Integer.class)).isEqualTo(1);
     assertThat(refreshed.read("$.capital", Long.class))
         .isEqualTo(one.read("$.capital", Long.class) - one.read("$.refreshCost", Long.class));
+    // 같은 새로 받기가 두 번 와도 한 번만 낸다 (254번). 아직 오지 않은 것은 400.
+    DocumentContext twice = json(refresh(1, 0).andExpect(status().isOk()));
+    assertThat(twice.read("$.capital", Long.class))
+        .isEqualTo(refreshed.read("$.capital", Long.class));
+    assertThat(twice.read("$.applicants[0].id", Integer.class))
+        .isEqualTo(refreshed.read("$.applicants[0].id", Integer.class));
+    refresh(1, 5).andExpect(status().isBadRequest());
+    refresh(2, 0).andExpect(status().isBadRequest());
+    postJson("/api/company/applicants/refresh", "{}").andExpect(status().isBadRequest());
 
     int employeeId = one.read("$.employees[0].id");
     postJson(
@@ -133,7 +146,21 @@ class CompanyApiTest {
     DocumentContext meeting = json(mvc.perform(get("/api/company").cookie(session)));
     assertThat(meeting.read("$.invest.ready", Boolean.class)).isTrue();
     assertThat(meeting.read("$.invest.sentences.length()", Integer.class)).isEqualTo(4);
-    assertThat(meeting.read("$.invest.remarks[0].stubborn", String.class)).isNotBlank();
+    // 한마디는 회의를 연 때 굳힌다 (249번): 열기 전에는 없고, 두 번 열어도 같다.
+    assertThat(meeting.read("$.invest.convened", Boolean.class)).isFalse();
+    assertThat(meeting.read("$.invest.remarks.length()", Integer.class)).isZero();
+    DocumentContext convened =
+        json(
+            mvc.perform(post("/api/company/invest/open").cookie(session))
+                .andExpect(status().isOk()));
+    assertThat(convened.read("$.invest.convened", Boolean.class)).isTrue();
+    assertThat(convened.read("$.invest.remarks[0].stubborn", String.class)).isNotBlank();
+    String said = convened.read("$.invest.remarks[0].text");
+    DocumentContext again =
+        json(
+            mvc.perform(post("/api/company/invest/open").cookie(session))
+                .andExpect(status().isOk()));
+    assertThat(again.read("$.invest.remarks[0].text", String.class)).isEqualTo(said);
     assertThat(meeting.read("$.invest.options.length()", Integer.class)).isEqualTo(3);
     assertThat(meeting.read("$.invest.outcome", Object.class)).isNull();
     settle(1).andExpect(status().isBadRequest());
@@ -148,15 +175,19 @@ class CompanyApiTest {
       long meetingTotal = decided.read("$.invest.outcome.total", Long.class);
       DocumentContext settled = json(settle(year).andExpect(status().isOk()));
       assertThat(settled.read("$.lastSettlement.year", Integer.class)).isEqualTo(year);
-      // 연말 결산서(240번): 회의 몫이 따로 실리고, 시작 자본 + 회의 + 직원들 몫 + 수수료 = 끝 자본.
+      // 연말 결산서(240·251번): 회의 몫과 채용비가 따로 실리고, 연초 자본 + 회의 + 직원들 몫 + 수수료 − 채용비 = 연말 자본.
       assertThat(settled.read("$.lastSettlement.invest.total", Long.class)).isEqualTo(meetingTotal);
       assertThat(settled.read("$.lastSettlement.invest.title", String.class)).isNotBlank();
       long staff = settled.read("$.lastSettlement.results[0].pnl", Long.class);
       long before = settled.read("$.lastSettlement.capitalBefore", Long.class);
       long fee = settled.read("$.lastSettlement.fee", Long.class);
       long after = settled.read("$.lastSettlement.capitalAfter", Long.class);
+      long hiring = settled.read("$.lastSettlement.hiring", Long.class);
+      if (year == 1) {
+        assertThat(hiring).as("첫 해에 뽑고 새로 받은 값").isPositive();
+      }
       if (after > 0) {
-        assertThat(before + meetingTotal + staff + fee).isEqualTo(after);
+        assertThat(before + meetingTotal + staff + fee - hiring).isEqualTo(after);
       }
     }
     // 매각을 뺐다(236번): 세 해가 지나도 회사는 끝나지 않고 4년 차 연초 회의가 온다.
@@ -226,12 +257,95 @@ class CompanyApiTest {
     List<Integer> staff = swapped.read("$.employees[*].id");
     assertThat(staff).hasSize(2).contains(keep).doesNotContain(leave);
 
-    DocumentContext refreshed =
-        json(
-            mvc.perform(post("/api/company/applicants/refresh").cookie(session))
-                .andExpect(status().isOk()));
+    DocumentContext refreshed = json(refresh(1, 0).andExpect(status().isOk()));
     assertThat(refreshed.read("$.applicants.length()", Integer.class))
         .as("인사팀이 한 명 더 데려온다")
         .isEqualTo(4);
+  }
+
+  /** 망한 회사는 닫고 사장의 사재로 다음 회사를 차린다 (decisions.md 247번). 망하지 않았으면 400이다. */
+  @Test
+  void 자본이_바닥난_회사를_닫고_사재로_다음_회사를_차린다() throws Exception {
+    String id =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()))
+            .read("$.companyId");
+    mvc.perform(post("/api/company").cookie(session)).andExpect(status().isBadRequest());
+
+    jdbc.sql(
+            "UPDATE raising_company SET state = jsonb_set(state, '{capital}', '0') WHERE id = CAST(:id AS uuid)")
+        .param("id", id)
+        .update();
+    DocumentContext broke = json(mvc.perform(get("/api/company").cookie(session)));
+    assertThat(broke.read("$.broke", String.class)).isNotBlank();
+
+    DocumentContext next =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    assertThat(next.read("$.companyId", String.class)).isNotEqualTo(id);
+    assertThat(next.read("$.number", Integer.class)).isEqualTo(2);
+    assertThat(next.read("$.capital", Long.class)).isEqualTo(100_000_000L);
+    assertThat(next.read("$.opening", String.class)).contains("1호 회사는 문을 닫았다");
+    assertThat(next.read("$.broke", String.class)).isNull();
+    assertThat(
+            jdbc.sql("SELECT status FROM raising_company WHERE id = CAST(:id AS uuid)")
+                .param("id", id)
+                .query(String.class)
+                .single())
+        .isEqualTo("ENDED");
+    DocumentContext current = json(mvc.perform(get("/api/company").cookie(session)));
+    assertThat(current.read("$.number", Integer.class)).as("닫은 회사는 다시 열리지 않는다").isEqualTo(2);
+  }
+
+  /** 배치에 같은 직원이 두 번 오면 400이다 (#317, decisions.md 254번). 전에는 뒤의 것이 조용히 덮었다. */
+  @Test
+  void 배치에_같은_직원이_두_번_오면_400이다() throws Exception {
+    DocumentContext company =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    int applicant = company.read("$.applicants[2].id");
+    int id = hire(applicant, null).read("$.employees[0].id");
+    postJson(
+            "/api/company/placement",
+            "{\"seats\":[{\"employeeId\":%d,\"desk\":\"bio\"},{\"employeeId\":%d,\"desk\":null}]}"
+                .formatted(id, id))
+        .andExpect(status().isBadRequest());
+  }
+
+  /** 같은 세션이 동시에 회사를 두 번 차려도 하나만 생기고 500이 나지 않는다 (#317, 254번). */
+  @Test
+  void 동시에_두_번_차려도_회사는_하나고_500이_나지_않는다() throws Exception {
+    java.util.concurrent.ExecutorService pool =
+        java.util.concurrent.Executors.newFixedThreadPool(2);
+    java.util.concurrent.CountDownLatch start = new java.util.concurrent.CountDownLatch(1);
+    try {
+      List<java.util.concurrent.Future<Integer>> calls = new java.util.ArrayList<>();
+      for (int i = 0; i < 2; i++) {
+        calls.add(
+            pool.submit(
+                () -> {
+                  start.await();
+                  return mvc.perform(post("/api/company").cookie(session))
+                      .andReturn()
+                      .getResponse()
+                      .getStatus();
+                }));
+      }
+      start.countDown();
+      List<Integer> codes = new java.util.ArrayList<>();
+      for (java.util.concurrent.Future<Integer> call : calls) {
+        codes.add(call.get());
+      }
+      assertThat(codes).containsExactlyInAnyOrder(201, 400);
+    } finally {
+      pool.shutdownNow();
+    }
+    String sessionId =
+        jdbc.sql("SELECT session_id FROM raising_company ORDER BY created_at DESC LIMIT 1")
+            .query(String.class)
+            .single();
+    assertThat(
+            jdbc.sql("SELECT count(*) FROM raising_company WHERE session_id = CAST(:id AS uuid)")
+                .param("id", sessionId)
+                .query(Integer.class)
+                .single())
+        .isEqualTo(1);
   }
 }

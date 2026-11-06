@@ -49,11 +49,14 @@ session:
 raising:
   # 아주 작은 회사 (증권사 육성 설계 4·6절, 2단계). (제안) 수치를 구현하며 정한 초기값 (decisions.md 208번~)
   company:
-    # 2단계는 세 해로 끝나는 체험판
+    # 사장의 사재: 회사를 차릴 때(망해서 다시 차릴 때도) 시작 자본 1억 원 (decisions.md 228·247번)
+    base-capital: 100000000
+    # 한 시대의 길이(해). 세 해마다 다른 시대가 온다 (decisions.md 250번). 회사는 끝나지 않는다(236번)
     turns: 3
-    # 회사 등급의 자본 띠: F 0, E 3억, D 10억 … ZZZ 1천조 (4.5절 표 그대로)
+    # 회사 등급의 자본 띠: F 0, E 2억, D 6억, C 20억, B 100억 … ZZZ 1천조. 처음 세 띠는 4.5절 표(3억·10억·30억)보다 좁혔다:
+    # 첫 이사까지 16년쯤 걸려 초반이 지루했다 (decisions.md 257번)
     grade-capital:
-      [0, 300000000, 1000000000, 3000000000, 10000000000, 30000000000, 100000000000, 300000000000,
+      [0, 200000000, 600000000, 2000000000, 10000000000, 30000000000, 100000000000, 300000000000,
        1000000000000, 3000000000000, 10000000000000, 30000000000000, 100000000000000,
        300000000000000, 1000000000000000]
     # 자리 수: F 2 … SSS 10, 그 위는 한 단계마다 +1 (4.5절 표 그대로)
@@ -70,8 +73,8 @@ raising:
     decisions: 4
     omen-percent: 75
     false-omen-percent: 15
-    # 맞히면 +28%·틀리면 −10%·손이 뒤집히면 −14%(바이오), 단타는 +22%·−8%·−10%. C 직원 둘이면 한 시대(세 해)에 자본이 1.5~2배,
-    # A 직원이면 셋에 하나쯤 E(3억)에 닿는다 (decisions.md 226번).
+    # 맞히면 +28%·틀리면 −10%·손이 뒤집히면 −14%(바이오), 단타는 +22%·−8%·−10%. 첫 시대(세 해)에 E(2억)에 닿는 몫은
+    # E 직원 31% · C 62% · A 88% · S 98% (decisions.md 226·257번, EconomySimulationTest).
     # 섹터 데스크 (decisions.md 233번): 섹터마다 변동이 다르다. crash-percent는 폭락장의 시장 손익(−5%)에 곱한다.
     # 게임·반도체는 크게 벌고 크게 잃고, 식품·금융은 덜 벌지만 폭락장에 덜 빠진다
     desks:
@@ -88,6 +91,18 @@ raising:
     sway-percent: 50
     # 폭락장에 손이 뒤집히면(못 참고 팔면) 손실이 두 배
     crash-flip-percent: 200
+    # 라이벌 증권사 (decisions.md 261번): 해마다 그해 시장 갈래의 비율(%)에 ±spread를 더해 자본이 움직인다
+    rivals:
+      phase-percent: { boom: 130, normal: 116, crash: 86 }
+      spread: 12
+    # 사람 이야기 (decisions.md 262번): 이직 제안은 poach-from-year 해부터 해마다 poach-percent 확률로 온다.
+    # 보내면 받는 이적료는 그 직원 계약금의 transfer-percent. 남기는 데는 돈이 들지 않고, 답하지 않아도 남는다(265번). 같은 자리 settle-years 해째부터 손 뒤집힘 settled-flip-percent배
+    people:
+      poach-from-year: 3
+      poach-percent: 25
+      transfer-percent: 50
+      settle-years: 3
+      settled-flip-percent: 80
     # 실전 경험과 큰 손실 (2.3·6.4절): 한 해에 판돈의 30% 이상 잃으면 한 단계 하락(능력치는 한 띠 = 10점),
     # 폭락장을 손실 없이 버티면 실전 경험 +1. SSS에서 X까지 1, XX까지 2 … 단계마다 1씩 더 든다
     experience:
@@ -113,20 +128,30 @@ raising:
       spread: 15
       # 계약금 F 200만 · E 400만 · D 700만 · C 1,000만 · B 1,500만 · A 2,500만 · S 4,000만 · SS 7,000만 · SSS 1.2억
       fees: [2000000, 4000000, 7000000, 10000000, 15000000, 25000000, 40000000, 70000000, 120000000]
+      # 큰 회사에도 계약금이 무겁게 (decisions.md 258번): 정해진 계약금과 자본 × 이 만분율(F~SSS) 가운데 큰 쪽. 1억 회사는 정해진 값 그대로다
+      fee-bp: [50, 100, 150, 200, 300, 400, 500, 650, 800]
+      # SSS 회사부터 오는 경력직(X 이상)의 계약금: 자본 × 이 만분율, 단계마다 step만큼 더
+      veteran-fee-bp: 1200
+      veteran-fee-step-bp: 300
+      # 새로 받기 값: 정해진 값과 자본 × refresh-bp 가운데 큰 쪽. 한 해에 받을수록 (횟수 + 1)배
       refresh-cost: 3000000
+      refresh-bp: 50
     # 투자 회의 (decisions.md 229번): 해마다 한 번 단서 기사를 놓고 직원들과 고민한다. 호황이면 오르는 뉴스가 +15%p, 폭락장이면 −10%p.
     # 곁가지 문장은 60% 반대쪽(기사만 읽고 다수결하면 약 64% 맞는다). 제멋대로 할 확률이 20% 이상이면 고집 "보통", 40% 이상이면 "높음"(D 직원이 보통, E 직원이 높음)
     invest:
       year-up-bp: { boom: 1500, normal: 0, crash: -1000 }
       side-opposite-percent: 60
       stubborn-bp: 2000
+      # 크게 (decisions.md 260번): 판돈이 두 배, 대신 직원이 사장 말을 안 들을 확률(꼬드김·제 판단)이 1.5배
+      big-stake-percent: 200
+      big-stubborn-percent: 150
       # 기사가 얼마나 또렷한가 (decisions.md 241번): 흐릴수록 읽을 때 안목을 깎아 안목 높은 직원끼리도 의견이 갈린다
       clarity:
         - { code: clear, weight: 35, penalty: 0 }
         - { code: murky, weight: 40, penalty: 25 }
         - { code: foggy, weight: 25, penalty: 55 }
-    # 매각과 재창업 (9절, 4단계). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다.
-    # 시대(turns 해)가 끝나면 반드시 팔고, 그 전에는 SSS 이상이면 스스로 팔 수 있다 (decisions.md 215번~)
+    # 매각과 재창업 (9절, decisions.md 215번~). 매각을 뺀 뒤(236번)로는 API가 부르지 않는다: 다시 붙일 때를 위해 엔진 규칙과 수치만 남겼다 (264번).
+    # 시작 자본은 raising.company.base-capital로 옮겼다
     sale:
       min-grade: SSS
       # 판 회사의 등급 단계 + 1점(F 1점 … SSS 9점), 명성 한 단계에 2점
@@ -136,6 +161,5 @@ raising:
       cofounder-base: 1
       cofounder-fame-steps: 3
       cofounder-max: 4
-      # 회사 시작 자본 1억 원(첫 회사는 사장의 사재), 명성 한 단계마다 +10%
-      base-capital: 100000000
+      # 재창업한 회사의 시작 자본: base-capital에 명성 한 단계마다 +10%
       fame-capital-percent: 10

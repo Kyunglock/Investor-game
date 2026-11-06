@@ -4,12 +4,13 @@ import { Document } from '../game/Document'
 import { shortWon } from '../game/labels'
 import { usePixelArt } from '../game/pixelArt'
 import { BuildingArt } from './BuildingArt'
+import { pnlLabel } from './board'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { InvestWindow } from './InvestWindow'
 import { MoveScene } from './MoveScene'
 import { OfficeArt, type SeatFocus } from './OfficeArt'
-import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName } from './office'
-import { autoPlace, seatOne } from './placement'
+import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName, titleOf } from './office'
+import { autoPlace, deskEffect, rankDesks, seatOne } from './placement'
 import { useRaisingStore } from './store'
 import { Ledger, PHASES, YearEndSheet } from './YearEnd'
 
@@ -38,7 +39,7 @@ export function CompanyScreen({ company }: { company: Company }) {
   const error = useRaisingStore((s) => s.error)
   const justSettled = useRaisingStore((s) => s.justSettled)
   const autoPlay = useRaisingStore((s) => s.autoPlay)
-  const { settle } = useRaisingStore.getState()
+  const { settle, restart, convene } = useRaisingStore.getState()
   // 이사 장면은 결산 뒤 한 번만 본다. 해가 바뀌면 화면이 새로 그려져 다시 볼 수 있다.
   const [moved, setMoved] = useState(false)
   // 투자 회의 창 (231번): 결산을 누르면 뜨고, 고른 뒤 그대로 결산한다.
@@ -86,6 +87,7 @@ export function CompanyScreen({ company }: { company: Company }) {
         </div>
         <BuildingArt grade={company.grade} />
         <NextStep company={company} />
+        <IndustryLine company={company} />
         <OfficeArt company={company} focus={focus} onSeat={ended ? undefined : setFocus} />
         {!ended && focus && <SeatPicker company={company} focus={focus} onFocus={setFocus} />}
         <PixelToggle />
@@ -95,6 +97,7 @@ export function CompanyScreen({ company }: { company: Company }) {
             before={company.lastSettlement.gradeBefore}
             after={company.lastSettlement.gradeAfter}
             year={company.lastSettlement.year}
+            overtook={company.lastSettlement.overtook}
             onDone={() => setMoved(true)}
           />
         )}
@@ -113,7 +116,30 @@ export function CompanyScreen({ company }: { company: Company }) {
           />
         )}
 
-        {!ended && meeting && (
+        {!ended && company.broke && (
+          // 망한 회사 (247번): 결산 대신 사재로 다음 회사를 차린다.
+          <section
+            className="sticky bottom-0 z-10 -mx-1 mt-4 grid gap-2 border-t-2 border-wine bg-card/95 px-1 pt-3 pb-3 backdrop-blur"
+            data-testid="broke"
+          >
+            <p className="text-[14px] font-semibold text-wine">{company.broke}</p>
+            {error && (
+              <p role="alert" className="text-[13px] text-wine">
+                {error}
+              </p>
+            )}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void restart()}
+              className="min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50"
+            >
+              문을 닫고 사재로 {company.number + 1}호 회사 차리기
+            </button>
+          </section>
+        )}
+
+        {!ended && !company.broke && meeting && (
           // 결산은 한 해의 마지막 일이라 화면 아래에 늘 붙어 있다.
           <div className="sticky bottom-0 z-10 -mx-1 mt-4 grid gap-1 bg-card/95 px-1 pt-2 pb-3 backdrop-blur">
             {error && (
@@ -141,8 +167,16 @@ export function CompanyScreen({ company }: { company: Company }) {
               <button
                 type="button"
                 disabled={busy || autoPlay}
-                // 돈을 굴리는 직원이 있으면 먼저 투자 회의 창이 뜨고, 고르면 그대로 결산한다.
-                onClick={() => (company.invest?.ready ? setInvestOpen(true) : void settle())}
+                // 돈을 굴리는 직원이 있으면 먼저 투자 회의를 열고(한마디를 굳힌다, 249번) 창을 띄운다. 고르면 그대로 결산한다.
+                onClick={async () => {
+                  if (!company.invest?.ready) {
+                    void settle()
+                    return
+                  }
+                  if (await convene()) {
+                    setInvestOpen(true)
+                  }
+                }}
                 className="min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50"
               >
                 {company.year}년 차 결산 보기
@@ -174,11 +208,57 @@ function NextStep({ company }: { company: Company }) {
   )
 }
 
+/** 업계 순위 한 줄 (decisions.md 261번): 바로 위 라이벌이 목표가 된다. */
+function IndustryLine({ company }: { company: Company }) {
+  const i = company.industry
+  if (!i) {
+    return null
+  }
+  return (
+    <p className="mt-0.5 text-[12px] text-muted" data-testid="industry">
+      업계 <b className="text-ink">{i.rank}위</b> / {i.total}곳
+      {i.aboveName && i.aboveCapital != null
+        ? ` · 바로 위 ${i.aboveName} (자본 ${shortWon(i.aboveCapital)})`
+        : ' · 업계 1위!'}
+    </p>
+  )
+}
+
 /** 연초 회의 탭: 올해 폭락 조짐, 경보·선견, 올해 필요한 인재 (6.1절). */
 function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
+  const busy = useRaisingStore((s) => s.busy)
+  const { answerPoach } = useRaisingStore.getState()
+  const poach = meeting.poach
   return (
     <section data-testid="meeting">
       <h3 className="font-pen text-[22px]">연초 회의</h3>
+      {poach && (
+        // 이직 제안 (262번): 답하지 않고 결산하면 이적료를 남기고 떠난다.
+        <div className="mt-1 rounded border border-wine p-2" data-testid="poach">
+          <p className="text-[14px] font-semibold text-wine">{poach.line}</p>
+          <p className="text-[12px] text-muted">
+            답하지 않아도 회사에 남습니다. 보낼 때만 떠납니다.
+          </p>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void answerPoach(true)}
+              className="min-h-11 rounded border border-pen text-[14px] font-semibold disabled:opacity-50"
+            >
+              남긴다
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void answerPoach(false)}
+              className="min-h-11 rounded border border-line text-[14px]"
+            >
+              보낸다 · 이적료 +{shortWon(poach.transferFee)}
+            </button>
+          </div>
+        </div>
+      )}
       {meeting.omen && (
         <p className="mt-1 text-[14px] font-bold text-red-pen" data-testid="company-omen">
           <span className="mr-1 rounded bg-red-pen px-1 text-[11px] text-white">폭락 조짐</span>
@@ -200,15 +280,25 @@ function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
           ★ {meeting.hot}
         </p>
       )}
+      {meeting.eraEnding && (
+        // 시대가 바뀌기 한 해 전 (250번): 다음 시대에 맞을 사람을 미리 생각하게 한다.
+        <p className="mt-1 text-[14px] font-semibold text-teal" data-testid="era-ending">
+          {meeting.eraEnding}
+        </p>
+      )}
       <p className="mt-1 text-[14px]">{meeting.wanted}</p>
     </section>
   )
 }
 
-/** 배치 탭: 자리 버튼을 누르면 바로 앉는다. 버튼에는 자리가 원하는 능력치의 등급과 맞는 정도가 보인다 (230번). */
+/**
+ * 배치 탭: 자리 버튼을 누르면 바로 앉는다. 버튼에는 자리가 원하는 능력치의 등급과 맞는 정도가 보인다 (230번). 사람별로 보면 직원마다 맞는 자리 셋만 먼저
+ * 보이고 나머지는 펼친다. 자리별로 보면 자리마다 앉은 사람과 앉힐 만한 사람이 맞는 순서로 늘어선다 (259번, #322: 직원마다 버튼 열둘이 벽이었다).
+ */
 function StaffTab({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const { place } = useRaisingStore.getState()
+  const [view, setView] = useState<'people' | 'desks'>('people')
   const placed = company.employees.filter((e) => e.desk).length
   const ended = company.status === 'ENDED'
   return (
@@ -232,19 +322,44 @@ function StaffTab({ company }: { company: Company }) {
       {company.employees.length === 0 && (
         <p className="mt-1 text-[13px] text-muted">아직 직원이 없습니다. 공채에서 뽑으세요.</p>
       )}
-      <ul className="mt-2 grid gap-2">
-        {company.employees.map((e) => (
-          <li key={e.id} className="rounded border border-line p-3" data-testid="employee">
-            <EmployeeDetail employee={e} />
-            {!ended && (
-              <fieldset className="mt-2">
-                <legend className="sr-only">{e.name}의 자리</legend>
-                <DeskButtons company={company} employee={e} />
-              </fieldset>
-            )}
-          </li>
-        ))}
-      </ul>
+      {!ended && company.employees.length > 0 && (
+        <fieldset className="mt-2 inline-flex rounded border border-line p-0.5 text-[13px]">
+          <legend className="sr-only">배치 보기</legend>
+          {(
+            [
+              ['people', '사람별로 보기'],
+              ['desks', '자리별로 보기'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={view === id}
+              onClick={() => setView(id)}
+              className={`min-h-9 rounded px-3 ${view === id ? 'bg-pen text-white' : 'text-muted'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </fieldset>
+      )}
+      {view === 'desks' && !ended ? (
+        <DeskBoard company={company} />
+      ) : (
+        <ul className="mt-2 grid gap-2">
+          {company.employees.map((e) => (
+            <li key={e.id} className="rounded border border-line p-3" data-testid="employee">
+              <EmployeeDetail employee={e} />
+              {!ended && (
+                <fieldset className="mt-2">
+                  <legend className="sr-only">{e.name}의 자리</legend>
+                  <DeskButtons company={company} employee={e} limit={3} />
+                </fieldset>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
       {!ended && (
         <details className="mt-2 text-[12px] text-muted">
           <summary className="cursor-pointer">
@@ -256,7 +371,7 @@ function StaffTab({ company }: { company: Company }) {
             {company.desks.map((d) => (
               <li key={d.code}>
                 {d.hot && '★ '}
-                {d.name}: {d.description}
+                {d.name}: {d.description} {d.trades && `(${deskEffect(d)})`}
               </li>
             ))}
           </ul>
@@ -266,18 +381,89 @@ function StaffTab({ company }: { company: Company }) {
   )
 }
 
+/**
+ * 자리별로 보기 (259번): 자리마다 예상 효과와, 앉은 사람(누르면 쉰다)·앉힐 만한 사람(그 자리가 원하는 능력치가 높은 순, 누르면 앉는다)을 보인다. "이 자리에
+ * 누가 가장 맞나"를 카드마다 찾지 않고 한눈에 본다.
+ */
+function DeskBoard({ company }: { company: Company }) {
+  const busy = useRaisingStore((s) => s.busy)
+  const { place } = useRaisingStore.getState()
+  const placed = company.employees.filter((e) => e.desk).length
+  const full = placed >= company.seats
+  const rank = (e: Employee, d: Desk) =>
+    LADDER.indexOf(e.grades[d.statCode] as (typeof LADDER)[number])
+  return (
+    <ul className="mt-2 grid gap-2" data-testid="desk-board">
+      {company.desks.map((d) => {
+        const seated = company.employees.filter((e) => e.desk === d.code)
+        const others = company.employees
+          .filter((e) => e.desk !== d.code)
+          .sort((a, b) => rank(b, d) - rank(a, d) || a.id - b.id)
+        return (
+          <li key={d.code} className="rounded border border-line p-2" data-testid="desk-row">
+            <p className="text-[14px] font-semibold">
+              {d.hot && '★ '}
+              {d.name}{' '}
+              <span className="text-[12px] font-normal text-muted">
+                {STAT_NAMES[d.statCode]} · {deskEffect(d)}
+              </span>
+            </p>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {seated.map((e) => (
+                <button
+                  key={e.id}
+                  type="button"
+                  aria-pressed={true}
+                  disabled={busy}
+                  onClick={() => void place(seatOne(company, e.id, null))}
+                  className="min-h-9 rounded border border-pen bg-pen px-2 text-[13px] text-white"
+                  title="누르면 쉰다"
+                >
+                  {e.name} {e.grades[d.statCode]}
+                </button>
+              ))}
+              {others.map((e) => {
+                const fit = fitOf(e, d)
+                // 쉬던 사람은 자리가 남아 있어야 앉는다. 다른 자리에 앉은 사람은 옮긴다.
+                const blocked = !e.desk && full
+                return (
+                  <button
+                    key={e.id}
+                    type="button"
+                    aria-pressed={false}
+                    disabled={busy || blocked}
+                    onClick={() => void place(seatOne(company, e.id, d.code))}
+                    className={`min-h-9 rounded border px-2 text-[13px] disabled:opacity-40 ${FIT_TONE[fit]}`}
+                    data-fit={fit}
+                  >
+                    {e.name} {e.grades[d.statCode]}
+                    {e.desk ? ' ↔' : ''}
+                  </button>
+                )
+              })}
+            </div>
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
 /** 직원 한 명의 상세 능력치: 종합 등급·차림새·효과·실전 경험·관심 섹터와 능력치 다섯의 등급. 배치 탭과 미니맵을 누르면 열리는 칸(237번)이 같이 쓴다. */
 function EmployeeDetail({ employee: e }: { employee: Employee }) {
   return (
     <div className="min-w-0 flex-1" data-testid="employee-detail">
       <p className="font-semibold">
-        {e.name} <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>{' '}
+        {e.name} <span data-testid="title">{titleOf(e.overallGrade)}</span>{' '}
+        <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>{' '}
         <span className="text-[12px] text-muted" data-testid="attire">
           · {ATTIRE_NAMES[attireOf(e.overallGrade)]}
           {e.effects.length > 0 && ` · ${e.effects.join('·')}`}
           {e.experienceNeeded != null && ` · 실전 경험 ${e.experience}/${e.experienceNeeded}`}
           {glowOf(e.overallGrade) && ` · ${glowOf(e.overallGrade) === 'gold' ? '금빛' : '파란빛'}`}
           {e.sectorName && ` · 관심 섹터 ${e.sectorName}`}
+          {e.deskYears > 0 && ` · 같은 자리 ${e.deskYears}년`}
+          {e.settled && ' · 손에 익음'}
         </span>
       </p>
       <ul className="mt-1 grid grid-cols-5 gap-1 text-center text-[11px]">
@@ -300,13 +486,20 @@ function DeskButtons({
   company,
   employee: e,
   onSeated,
+  limit,
 }: {
   company: Company
   employee: Employee
   onSeated?: () => void
+  /** 있으면 맞는 자리부터 이만큼만 먼저 보이고(지금 자리는 늘 보인다) 나머지는 펼친다 (259번). */
+  limit?: number
 }) {
   const busy = useRaisingStore((s) => s.busy)
   const { place } = useRaisingStore.getState()
+  const [all, setAll] = useState(false)
+  const ranked = limit ? rankDesks(company, e) : company.desks
+  const shown =
+    limit && !all ? ranked.filter((d, i) => i < limit || d.code === e.desk) : company.desks
   const placed = company.employees.filter((x) => x.desk).length
   // 쉬던 사람은 자리가 남아 있어야 앉는다.
   const full = !e.desk && placed >= company.seats
@@ -316,7 +509,7 @@ function DeskButtons({
   }
   return (
     <div className="flex flex-wrap gap-1">
-      {company.desks.map((d) => {
+      {shown.map((d) => {
         const on = e.desk === d.code
         const fit = fitOf(e, d)
         return (
@@ -330,7 +523,7 @@ function DeskButtons({
               on ? 'border-pen bg-pen text-white' : FIT_TONE[fit]
             }`}
             data-fit={fit}
-            title={d.description}
+            title={deskEffect(d)}
           >
             {d.hot && '★ '}
             {d.name}{' '}
@@ -352,6 +545,15 @@ function DeskButtons({
       >
         쉰다
       </button>
+      {limit && shown.length < company.desks.length && (
+        <button
+          type="button"
+          onClick={() => setAll(true)}
+          className="min-h-10 rounded px-2 text-[13px] text-muted underline"
+        >
+          자리 모두 보기 ({company.desks.length})
+        </button>
+      )}
     </div>
   )
 }
@@ -449,7 +651,7 @@ function SeatPicker({
   )
 }
 
-type Tab = 'meeting' | 'market' | 'staff' | 'settlement'
+type Tab = 'meeting' | 'market' | 'staff' | 'settlement' | 'history'
 
 /**
  * 연초 회의 · 공채 · 배치 · 지난 결산을 탭으로 나눈다. 한 장에 길게 늘어놓으면 위아래로 오가야 했다. 고른 탭은 스토어에 둔다: 직원이 들고 나면 회사 화면을
@@ -463,7 +665,10 @@ function CompanyTabs({ company }: { company: Company }) {
     {
       id: 'meeting',
       label: '연초 회의',
-      badge: company.meeting?.omen ? '!' : undefined,
+      badge:
+        company.meeting?.omen || company.meeting?.eraEnding || company.meeting?.poach
+          ? '!'
+          : undefined,
       show: Boolean(company.meeting),
     },
     {
@@ -474,6 +679,12 @@ function CompanyTabs({ company }: { company: Company }) {
     },
     { id: 'staff', label: '배치', badge: `${placed}/${company.seats}`, show: true },
     { id: 'settlement', label: '지난 결산', show: Boolean(company.lastSettlement) },
+    {
+      id: 'history',
+      label: '연표',
+      badge: `${company.history.achievements.filter((a) => a.year != null).length}/${company.history.achievements.length}`,
+      show: true,
+    },
   ]
   const shown = tabs.filter((t) => t.show)
   const fallback: Tab = ended
@@ -526,6 +737,7 @@ function CompanyTabs({ company }: { company: Company }) {
         {tab === 'market' && <MarketPanel company={company} />}
         {tab === 'staff' && <StaffTab company={company} />}
         {tab === 'settlement' && <SettlementView company={company} />}
+        {tab === 'history' && <HistoryTab company={company} />}
       </div>
     </div>
   )
@@ -550,6 +762,75 @@ function SettlementView({ company }: { company: Company }) {
           <li key={line}>{line}</li>
         ))}
       </ul>
+    </section>
+  )
+}
+
+/** 연표의 한 줄: 등급이 바뀐 해는 건물로 말한다 (238번). */
+function eventText(e: Company['history']['timeline'][number]): string {
+  if ((e.kind === 'grow' || e.kind === 'shrink') && e.grade) {
+    return e.kind === 'grow'
+      ? `회사가 커졌다 · ${officeName(e.grade)}`
+      : `회사가 줄었다 · ${officeName(e.grade)}`
+  }
+  return e.text ?? ''
+}
+
+/**
+ * 연표 탭 (decisions.md 263번, #326): 회사의 큰 일(최근 것부터), 업적, 명예의 전당. 매각이 빠져 끝없는 회사에 중간 목표와 기록을 준다.
+ */
+function HistoryTab({ company }: { company: Company }) {
+  const h = company.history
+  return (
+    <section data-testid="history">
+      <h3 className="font-pen text-[22px]">업적</h3>
+      <ul className="mt-1 grid grid-cols-2 gap-1 md:grid-cols-4">
+        {h.achievements.map((a) => (
+          <li
+            key={a.code}
+            className={`rounded border p-2 text-[12px] ${
+              a.year != null ? 'border-gold' : 'border-line-soft text-muted opacity-70'
+            }`}
+            data-testid="achievement"
+            data-open={a.year != null}
+          >
+            <b className="block text-[13px]">
+              {a.year != null ? '🏆 ' : ''}
+              {a.name}
+            </b>
+            {a.description}
+            {a.year != null && <span className="block text-gold">{a.year}년 차</span>}
+          </li>
+        ))}
+      </ul>
+      <h3 className="mt-3 font-pen text-[22px]">명예의 전당</h3>
+      {h.hall.length === 0 ? (
+        <p className="text-[13px] text-muted">아직 아무도 없습니다.</p>
+      ) : (
+        <ol className="mt-1 grid gap-0.5 text-[13px]" data-testid="hall">
+          {h.hall.map((x, i) => (
+            <li key={`${x.name}-${x.from}`} className="flex justify-between gap-2">
+              <span>
+                {i + 1}. {x.name} {titleOf(x.grade)}{' '}
+                <span className="text-muted">
+                  {x.from > 0 ? `${x.from}년 차` : ''}
+                  {x.to != null ? ` ~ ${x.to}년 차 · 퇴사` : ' ~ 지금'}
+                </span>
+              </span>
+              <b className={x.totalPnl >= 0 ? 'text-up' : 'text-down'}>{pnlLabel(x.totalPnl)}</b>
+            </li>
+          ))}
+        </ol>
+      )}
+      <h3 className="mt-3 font-pen text-[22px]">연표</h3>
+      <ol className="mt-1 grid gap-0.5 text-[13px]" data-testid="timeline">
+        {[...h.timeline].reverse().map((e, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: 같은 해에 같은 일이 여럿일 수 있고 연표는 쌓이기만 한다
+          <li key={`${e.year}-${e.kind}-${i}`}>
+            <span className="font-mono-num text-muted">{e.year}년 차</span> {eventText(e)}
+          </li>
+        ))}
+      </ol>
     </section>
   )
 }
@@ -647,7 +928,10 @@ function ApplicantCard({
   return (
     <li className="rounded border border-line p-3" data-testid="applicant">
       <p className="flex items-baseline justify-between">
-        <span className="font-semibold">{a.name}</span>
+        <span className="font-semibold">
+          {a.name}{' '}
+          <span className="text-[13px] font-normal text-muted">{titleOf(a.overallGrade)}</span>
+        </span>
         <span className="font-mono-num text-[13px]">
           종합 <b className="text-[17px]">{a.overallGrade}</b>
         </span>

@@ -253,3 +253,28 @@ export function seatTiles(company: Company): { tiles: SeatTile[]; resting: Emplo
   })
   return { tiles, resting: company.employees.filter((e) => !e.desk) }
 }
+
+/**
+ * 직함 (decisions.md 256번): 이름에서 떼어 종합 등급으로 붙인다. 차림새(8.2절)처럼 등급이 오르면 직함도 오른다. 전에는 이름에 직함이 붙어 있어("이수습") SSS
+ * 에이스도 수습이었다.
+ */
+const TITLES: [Grade, string][] = [
+  ['Z', '전무'],
+  ['X', '이사'],
+  ['SSS', '부장'],
+  ['SS', '차장'],
+  ['S', '과장'],
+  ['A', '대리'],
+  ['C', '주임'],
+  ['F', '사원'],
+]
+
+export function titleOf(grade: Grade): string {
+  const at = LADDER.indexOf(grade)
+  for (const [from, title] of TITLES) {
+    if (at >= LADDER.indexOf(from)) {
+      return title
+    }
+  }
+  return '사원'
+}

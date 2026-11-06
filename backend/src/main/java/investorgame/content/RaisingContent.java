@@ -43,15 +43,27 @@ public record RaisingContent(
    * @param market 공채 시장 지원자 카드의 한 줄 (decisions.md 228번)
    * @param invest 투자 회의 문구 (decisions.md 229번)
    */
+  /**
+   * @param surnames 직원 이름의 성
+   * @param names 직원 이름(성 뒤에 붙는다). 성 × 이름 조합을 겹치지 않게 돌려 쓴다. 직함은 이름에 넣지 않는다: 종합 등급으로 화면이 붙인다
+   *     (decisions.md 256번)
+   */
   public record Company(
+      List<String> surnames,
       List<String> names,
       List<Desk> desks,
       Map<String, String> flipLines,
       Map<String, String> wanted,
       String hotLine,
+      EraTurn eraTurn,
       Map<String, String> phases,
       String falseOmenNote,
+      String seatsCut,
       String opening,
+      Bankrupt bankrupt,
+      Rivals rivals,
+      People people,
+      History history,
       List<Era> eras,
       Sale sale,
       Map<String, String> statNames,
@@ -81,8 +93,45 @@ public record RaisingContent(
       String swayed,
       Map<String, String> reveal) {}
 
-  /** 공채 시장 지원자 카드의 한 줄. wanted: 올해 필요한 인재({desk}·{stat}). hr: 인사팀이 데려온 지원자({name}). */
-  public record Market(String wanted, String hr) {}
+  /**
+   * 시대가 바뀐다 (decisions.md 250번). ending: 시대의 마지막 해 연초 회의 한 줄({era}). changed: 시대가 바뀐 해의 결산 소식
+   * 줄({from}·{to}· {description}).
+   */
+  public record EraTurn(String ending, String changed) {}
+
+  /**
+   * 라이벌 증권사 (decisions.md 261번). companies: 이름과 시작 자본(작은 곳부터). overtook·fell: 결산에서 순위가 바뀐 해의 소식
+   * 줄({name}·{rank}).
+   */
+  public record Rivals(List<Rival> companies, String overtook, String fell) {}
+
+  public record Rival(String name, long capital) {}
+
+  /**
+   * 사람 이야기 (decisions.md 262번). poach: 라이벌이 손을 뻗었다({rival}·{name}). kept·left·ignored: 붙잡음·보냄·답 없이
+   * 떠남. settled: 같은 자리 세 해째({name}·{desk}).
+   */
+  public record People(String poach, String kept, String left, String ignored, String settled) {}
+
+  /**
+   * 회사 연표와 업적 (decisions.md 263번). events: 연표 한 줄(open {number} · rise {name}·{grade} · left {name}
+   * · best {ratio} · worst {percent} · overtake {name}). achievements: 업적 코드·이름·설명.
+   */
+  public record History(Map<String, String> events, List<Achievement> achievements) {}
+
+  public record Achievement(String code, String name, String description) {}
+
+  /**
+   * 망한 회사 (decisions.md 247번). notice: 회사 화면에 뜨는 한 줄. emptied: 결산에서 자본이 0이 된 해의 소식 줄. opening: 다시
+   * 차린 회사의 한 줄({number}·{next}·{capital}).
+   */
+  public record Bankrupt(String notice, String emptied, String opening) {}
+
+  /**
+   * 공채 시장 지원자 카드의 한 줄. wanted: 올해 필요한 인재({desk}·{stat}). hr: 인사팀이 데려온 지원자({name}). veteran:
+   * 경력직({grade}, decisions.md 258번).
+   */
+  public record Market(String wanted, String hr, String veteran) {}
 
   /**
    * X 이상 등급의 효과 (2.4절). 효과는 쌓인다: XX 직원은 X 효과도 가진다.

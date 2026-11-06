@@ -21,17 +21,22 @@ class MemoryRepository {
     this.clock = clock;
   }
 
-  /** 세션의 기억. 없으면 빈 기억. 같은 세션의 동시 요청을 막으려고 있으면 잠근다. */
+  /**
+   * 세션의 기억을 잠근다. 같은 세션의 동시 요청(회사 차리기 두 번)을 줄 세운다. 줄이 없으면 먼저 빈 기억을 넣고 잠근다 (decisions.md 254번): 전에는 새
+   * 세션에 줄이 없어 아무것도 잠기지 않았고, 동시에 차린 두 번째 요청이 유일 색인에 걸려 500이 났다. 먼저 넣은 쪽이 끝날 때까지 다른 쪽의 넣기가 기다린다.
+   */
   RaisingMemory lock(UUID sessionId) {
-    return jdbc.sql("SELECT state FROM raising_memory WHERE session_id = :sessionId FOR UPDATE")
+    jdbc.sql(
+            """
+            INSERT INTO raising_memory (session_id, state, updated_at)
+            VALUES (:sessionId, CAST(:state AS jsonb), :now)
+            ON CONFLICT (session_id) DO NOTHING
+            """)
         .param("sessionId", sessionId)
-        .query((rs, i) -> json.readValue(rs.getString("state"), RaisingMemory.class))
-        .optional()
-        .orElseGet(RaisingMemory::new);
-  }
-
-  RaisingMemory find(UUID sessionId) {
-    return jdbc.sql("SELECT state FROM raising_memory WHERE session_id = :sessionId")
+        .param("state", json.writeValueAsString(new RaisingMemory()))
+        .param("now", OffsetDateTime.now(clock))
+        .update();
+    return jdbc.sql("SELECT state FROM raising_memory WHERE session_id = :sessionId FOR UPDATE")
         .param("sessionId", sessionId)
         .query((rs, i) -> json.readValue(rs.getString("state"), RaisingMemory.class))
         .optional()

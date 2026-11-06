@@ -15,16 +15,22 @@ interface RaisingState {
   /** 자동 진행을 켰다 (245번). 새로 고치면 꺼진다: 모르는 사이에 돈을 쓰지 않게. */
   autoPlay: boolean
   /** 회사 화면에서 고른 탭. null이면 화면이 정한다 (231번). */
-  tab: 'meeting' | 'market' | 'staff' | 'settlement' | null
+  tab: 'meeting' | 'market' | 'staff' | 'settlement' | 'history' | null
   load: () => Promise<void>
   /** 사장의 사재로 첫 회사를 차린다 (decisions.md 228번). */
   open: () => Promise<void>
+  /** 망한 회사를 닫고 사장의 사재로 다음 회사를 차린다 (decisions.md 247번). 세션은 그대로다. */
+  restart: () => Promise<void>
   /** 계약금을 내고 공채 시장의 지원자를 뽑는다. 자리가 꽉 찼으면 replace의 직원을 내보낸다. */
   hire: (applicantId: number, replace?: number) => Promise<void>
   /** 값을 내고 올해 지원자를 새로 받는다. */
   refreshApplicants: () => Promise<void>
-  /** 올해 투자 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). */
-  decideInvest: (choice: string) => Promise<void>
+  /** 올해 이직 제안에 답한다: 붙잡거나 보낸다 (decisions.md 262번). */
+  answerPoach: (keep: boolean) => Promise<void>
+  /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 249번). 됐으면 true. */
+  convene: () => Promise<boolean>
+  /** 올해 투자 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). big이면 크게 한다 (260번). */
+  decideInvest: (choice: string, big?: boolean) => Promise<void>
   place: (seats: { employeeId: number; desk: string | null }[]) => Promise<void>
   settle: () => Promise<void>
 }
@@ -86,15 +92,46 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       await get().load()
     },
 
+    restart: async () => {
+      set({ busy: true, error: null, autoPlay: false })
+      const res = await safely(api.POST('/api/company'))
+      if (res?.data) {
+        set({ company: res.data, busy: false, tab: null, justSettled: false })
+        return
+      }
+      set({ busy: false, error: reason(res?.error) })
+    },
+
     hire: (applicantId, replace) =>
       change(api.POST('/api/company/hires', { body: { applicantId, replace: replace ?? null } })),
 
-    refreshApplicants: () => change(api.POST('/api/company/applicants/refresh')),
+    refreshApplicants: async () => {
+      const company = get().company
+      if (!company || get().busy) {
+        return
+      }
+      // 해와 지금까지 새로 받은 횟수를 함께 보낸다: 두 번 눌리거나 끊긴 요청을 다시 보내도 한 번만 낸다 (254번).
+      await change(
+        api.POST('/api/company/applicants/refresh', {
+          body: { year: company.year, refreshes: company.refreshes },
+        }),
+      )
+    },
 
-    decideInvest: (choice) =>
+    answerPoach: (keep) => change(api.POST('/api/company/poach', { body: { keep } })),
+
+    convene: async () => {
+      if (get().company?.invest?.convened) {
+        return true
+      }
+      await change(api.POST('/api/company/invest/open'))
+      return Boolean(get().company?.invest?.convened)
+    },
+
+    decideInvest: (choice, big = false) =>
       change(
         api.POST('/api/company/invest', {
-          body: { choice: choice as 'BUY' | 'SELL' | 'HOLD' },
+          body: { choice: choice as 'BUY' | 'SELL' | 'HOLD', big },
         }),
       ),
 

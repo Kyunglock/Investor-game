@@ -1,4 +1,5 @@
 import type { Grade } from '../../api/client'
+import { withParticle } from '../game/labels'
 import { usePixelArt } from '../game/pixelArt'
 import { moveOf, rivalFor, wreathsFor } from './board'
 import { officeName } from './office'
@@ -13,15 +14,18 @@ export function MoveScene({
   before,
   after,
   year,
+  overtook = [],
   onDone,
 }: {
   before: Grade
   after: Grade
   year: number
+  /** 그해 앞지른 라이벌 (decisions.md 261번). 등급이 그대로여도 앞질렀으면 박치기 장면을 보인다. */
+  overtook?: string[]
   onDone: () => void
 }) {
   const shown = usePixelArt((s) => s.shown)
-  const move = moveOf(before, after)
+  const move = moveOf(before, after) ?? (overtook.length > 0 ? 'up' : null)
   if (!move) {
     return null
   }
@@ -29,16 +33,19 @@ export function MoveScene({
   const from = officeName(before)
   const to = officeName(after)
   // 회사 등급 대신 건물로 말한다 (238번): 건물이 바뀌면 이사, 같은 건물이면 사무실을 넓히거나 줄인다.
-  const rival = rivalFor(year)
+  // 실제로 앞지른 라이벌이 있으면 그 회사를 들이받는다 (261번).
+  const rival = overtook[0] ?? rivalFor(year)
   // 오르면 라이벌 건물을 박치기로 무너뜨리고 그 자리에서 커진다 (243번).
   const line =
-    from !== to
-      ? up
-        ? `라이벌 ${rival} 건물을 들이받아 무너뜨리고 그 자리로 이사했다: ${from} → ${to}. 새 간판을 달고 개업 떡을 돌렸다.`
-        : `짐을 줄여 작은 사무실로 옮겼다: ${from} → ${to}.`
-      : up
-        ? `라이벌 ${rival} 건물을 들이받아 무너뜨리고 사무실을 넓혔다(${to}). 새 책상이 들어오고 떡을 돌렸다.`
-        : `사무실을 줄였다(${to}). 책상 몇 개를 내놓았다.`
+    before === after
+      ? `라이벌 ${withParticle(rival, '을', '를')} 앞질렀다! 건물을 들이받아 무너뜨렸다.`
+      : from !== to
+        ? up
+          ? `라이벌 ${rival} 건물을 들이받아 무너뜨리고 그 자리로 이사했다: ${from} → ${to}. 새 간판을 달고 개업 떡을 돌렸다.`
+          : `짐을 줄여 작은 사무실로 옮겼다: ${from} → ${to}.`
+        : up
+          ? `라이벌 ${rival} 건물을 들이받아 무너뜨리고 사무실을 넓혔다(${to}). 새 책상이 들어오고 떡을 돌렸다.`
+          : `사무실을 줄였다(${to}). 책상 몇 개를 내놓았다.`
   return (
     <section
       className="mt-4 animate-reveal rounded border border-gold p-4"

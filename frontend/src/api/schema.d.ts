@@ -35,8 +35,9 @@ export interface paths {
         get: operations["getCompany"];
         put?: never;
         /**
-         * 사장의 사재로 첫 회사를 차린다 (decisions.md 228번)
+         * 사장의 사재로 회사를 차린다 (decisions.md 228·247번)
          * @description 직원 없이 열리고 첫 해 공채 시장에 지원자가 와 있다. 이미 회사가 있으면 400(회사는 세션마다 하나).
+         *     가장 최근 회사가 망했으면(broke가 있으면) 그 회사를 닫고 다음 번호의 회사를 새로 차린다. 직원은 쉬는 채로 모두 따라온다 (decisions.md 265번).
          */
         post: operations["openCompany"];
         delete?: never;
@@ -75,7 +76,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 직원을 자리에 앉힌다. 사장은 배치만 한다 */
+        /**
+         * 직원을 자리에 앉힌다. 사장은 배치만 한다
+         * @description 자리 수를 넘거나, 없는 직원·자리이거나, 같은 직원이 두 번 오면 400 (decisions.md 254번).
+         */
         post: operations["placeEmployees"];
         delete?: never;
         options?: never;
@@ -106,6 +110,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/poach": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 올해 이직 제안에 답한다 (decisions.md 262번)
+         * @description keep이 참이면 남긴다(돈이 들지 않는다). 거짓이면 이적료(transferFee)를 받고 보낸다.
+         *     답하지 않은 채 결산해도 직원은 남는다: 직원은 사장이 보낼 때만 떠난다 (decisions.md 265번). 제안이 없으면 400.
+         */
+        post: operations["answerPoach"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/invest/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 올해 투자 회의를 연다 (decisions.md 249번)
+         * @description 지금 배치로 직원 한마디(invest.remarks)와 리서치 팀 형광펜을 굳힌다. 그 뒤로 배치를 바꿔도 그대로라 배치를 바꿔 가며 정답을 알아낼 수 없다.
+         *     열기 전에는 remarks가 비어 있고 형광펜도 없다. 이미 열었으면 지금 회사를 그대로 돌려준다.
+         *     열 수 없는 회의(정했거나 돈을 굴리는 자리에 아무도 없다)면 400.
+         */
+        post: operations["conveneInvestMeeting"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/invest": {
         parameters: {
             query?: never;
@@ -118,6 +165,7 @@ export interface paths {
         /**
          * 올해 투자 회의에서 고른다 (decisions.md 229번)
          * @description 돈을 굴리는 직원마다 사장 말대로 하거나, 꼬드김에 넘어가거나, "제가 알아서 할게요" 하고 제 판단대로 한다.
+         *     아직 회의를 열지 않았으면 지금 배치로 연 셈 친다(/api/company/invest/open).
          *     손익은 바로 자본에 들어가고 invest.outcome에 실린다. 이미 했거나 돈을 굴리는 자리에 아무도 없거나 고를 수 없는 것이면 400.
          */
         post: operations["holdInvestMeeting"];
@@ -138,7 +186,9 @@ export interface paths {
         put?: never;
         /**
          * 값(refreshCost)을 내고 올해 지원자를 새로 받는다
-         * @description 돈이 모자라면 400.
+         * @description 지금 해(year)와 올해 지금까지 새로 받은 횟수(Company.refreshes)를 싣는다.
+         *     이미 한 새로 받기면 아무것도 하지 않고 지금 회사를 200으로 돌려준다(같은 요청이 두 번 와도 한 번만 낸다).
+         *     아직 오지 않은 것이면 400. 돈이 모자라면 400 (decisions.md 254번).
          */
         post: operations["refreshApplicants"];
         delete?: never;
@@ -183,7 +233,7 @@ export interface components {
             status: "ACTIVE" | "ENDED";
             /** @description 사장이 차린 몇 번째 회사인가 */
             number: number;
-            /** @description 이 회사의 시대 (9.4절) */
+            /** @description 지금 시대 (9.4절). 시대는 세 해마다 다른 시대로 바뀐다 (decisions.md 250번) */
             era: {
                 code: string;
                 name: string;
@@ -198,6 +248,8 @@ export interface components {
             grade: components["schemas"]["Grade"];
             /** Format: int64 */
             nextGradeCapital?: number | null;
+            /** @description 망한 회사의 한 줄. 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 있고 */
+            broke?: string | null;
             seats: number;
             employees: {
                 id: number;
@@ -217,6 +269,10 @@ export interface components {
                 /** @description 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다 */
                 sector?: string | null;
                 sectorName?: string | null;
+                /** @description 지금 자리에서 결산을 맞은 해 수 (decisions.md 262번) */
+                deskYears: number;
+                /** @description 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다 */
+                settled: boolean;
             }[];
             desks: {
                 code: string;
@@ -229,6 +285,12 @@ export interface components {
                 /** @description 이 시대에 뜨는 자리(시대 보너스가 붙는다 */
                 hot: boolean;
                 description: string;
+                /** @description 맞혔을 때 버는 몫(만분율 */
+                gainBp?: number | null;
+                /** @description 틀렸을 때 잃는 몫(만분율). 돈을 굴리지 않으면 null */
+                missBp?: number | null;
+                /** @description 폭락장의 시장 손익에 곱하는 비율. 100보다 작으면 폭락장에 덜 빠진다. 돈을 굴리지 않으면 null */
+                crashPercent?: number | null;
             }[];
             meeting?: {
                 /** @description 폭락 조짐. 헛조짐일 수도 있다 */
@@ -242,6 +304,20 @@ export interface components {
                 wanted: string;
                 /** @description 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) */
                 hot?: string | null;
+                /** @description 지금 시대의 마지막 해면 "내년에는 시대가 바뀐다" 한 줄. 아니면 null (decisions.md 250번) */
+                eraEnding?: string | null;
+                /** @description 라이벌이 우리 직원에게 손을 뻗었다 (decisions.md 262번). 없으면 null */
+                poach?: {
+                    employeeId: number;
+                    name: string;
+                    rival: string;
+                    /**
+                     * Format: int64
+                     * @description 보내면 받는 이적료
+                     */
+                    transferFee: number;
+                    line: string;
+                } | null;
             } | null;
             /** @description 올해 공채 시장의 지원자 (decisions.md 228번). 끝난 회사면 비어 있다 */
             applicants: {
@@ -267,6 +343,49 @@ export interface components {
              * @description 지원자를 새로 받는 값
              */
             refreshCost: number;
+            /** @description 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 254번) */
+            refreshes: number;
+            /** @description 회사 연표·업적·명예의 전당 (decisions.md 263번) */
+            history: {
+                /** @description 큰 일, 오래된 것부터 */
+                timeline: {
+                    year: number;
+                    /** @enum {string} */
+                    kind: "open" | "grow" | "shrink" | "era" | "overtake" | "rise" | "left" | "best" | "worst";
+                    text?: string | null;
+                    /** @description grow·shrink의 새 등급. 화면이 건물 이름으로 바꾼다 */
+                    grade?: components["schemas"]["Grade"] | null;
+                }[];
+                /** @description 모든 업적. year가 없으면 아직 못 열었다 */
+                achievements: {
+                    code: string;
+                    name: string;
+                    description: string;
+                    year?: number | null;
+                }[];
+                /** @description 이 회사에서 가장 많이 번 사람부터(지금 직원과 떠난 직원), 다섯까지 */
+                hall: {
+                    name: string;
+                    /** @description 들어온 해. 이 기록 전에 들어왔으면 0 */
+                    from: number;
+                    /** @description 떠난 해. 아직 일하면 null */
+                    to?: number | null;
+                    /** Format: int64 */
+                    totalPnl: number;
+                    grade: components["schemas"]["Grade"];
+                }[];
+            };
+            /** @description 업계 순위와 바로 위 라이벌 증권사 (decisions.md 261번). 라이벌이 없는 옛 회사면 null */
+            industry?: {
+                /** @description 우리 순위(1부터) */
+                rank: number;
+                /** @description 우리를 넣은 회사 수 */
+                total: number;
+                /** @description 바로 위 라이벌. 1위면 null */
+                aboveName?: string | null;
+                /** Format: int64 */
+                aboveCapital?: number | null;
+            } | null;
             /** @description 올해 투자 회의 (decisions.md 229번). 끝난 회사나 옛 회사면 null. 숨은 방향은 정한 뒤 outcome에만 있다 */
             invest?: {
                 title: string;
@@ -284,7 +403,7 @@ export interface components {
                     who: string;
                     text: string;
                 };
-                /** @description 자리에 앉은 직원의 한마디 */
+                /** @description 자리에 앉은 직원의 한마디. 회의를 열기 전에는 비어 있다 */
                 remarks: {
                     employeeId: number;
                     name: string;
@@ -305,9 +424,18 @@ export interface components {
                 }[];
                 /** @description 지금 정할 수 있다(정하지 않았고 돈을 굴리는 자리에 사람이 있다) */
                 ready: boolean;
+                /** @description 회의를 열어 한마디와 형광펜을 굳혔다. 그 뒤로 배치를 바꿔도 그대로다 (decisions.md 249번) */
+                convened: boolean;
                 outcome?: {
                     /** @enum {string} */
                     choice: "BUY" | "SELL" | "HOLD";
+                    /** @description 크게 했다 (decisions.md 260번) */
+                    big: boolean;
+                    /**
+                     * Format: int64
+                     * @description 지켜봤을 때 맞는 쪽으로 했으면 벌었을 돈(뒤집힘 없이). 지켜보지 않았으면 null
+                     */
+                    missed?: number | null;
                     up: boolean;
                     reveal: string;
                     /** @description 결정적 문장의 번호(sentences 안) */
@@ -354,12 +482,23 @@ export interface components {
                 /** @enum {string} */
                 phase: "boom" | "normal" | "crash";
                 omen?: string | null;
-                /** Format: int64 */
+                /**
+                 * Format: int64
+                 * @description 연초 회의 때의 자본 (decisions.md 251번)
+                 */
                 capitalBefore: number;
                 /** Format: int64 */
                 capitalAfter: number;
-                /** Format: int64 */
+                /**
+                 * Format: int64
+                 * @description 수수료 매출
+                 */
                 fee: number;
+                /**
+                 * Format: int64
+                 * @description 그해 인사 비용(계약금·새로 받기·붙잡는 값 − 받은 이적료
+                 */
+                hiring: number;
                 /** @description 그해 투자 회의(기사 제목과 손익, 이미 자본에 들어갔다). 회의를 안 했거나 옛 결산이면 null (decisions.md 240번) */
                 invest?: {
                     title: string;
@@ -368,6 +507,10 @@ export interface components {
                 } | null;
                 gradeBefore: components["schemas"]["Grade"];
                 gradeAfter: components["schemas"]["Grade"];
+                /** @description 그해 앞지른 라이벌 증권사 (decisions.md 261번) */
+                overtook: string[];
+                /** @description 그해 연 업적 이름 (decisions.md 263번) */
+                achieved: string[];
                 results: {
                     employeeId: number;
                     name: string;
@@ -638,6 +781,58 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    answerPoach: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    keep: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description 답한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    conveneInvestMeeting: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 회의를 연 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
     holdInvestMeeting: {
         parameters: {
             query?: never;
@@ -650,6 +845,8 @@ export interface operations {
                 "application/json": {
                     /** @enum {string} */
                     choice: "BUY" | "SELL" | "HOLD";
+                    /** @description 크게 한다. 판돈 두 배 */
+                    big?: boolean | null;
                 };
             };
         };
@@ -675,7 +872,15 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": {
+                    year: number;
+                    /** @description 올해 지금까지 새로 받은 횟수(Company.refreshes) */
+                    refreshes: number;
+                };
+            };
+        };
         responses: {
             /** @description 새 지원자가 온 회사 */
             200: {

@@ -232,7 +232,53 @@ class JsonContentCatalog implements ContentCatalog {
     for (String stat : List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE)) {
       require(company.flipLines().containsKey(stat), "결산 소식 줄이 없다: " + stat);
     }
-    require(company.market() != null, "공채 시장 문구가 없다");
+    require(company.market() != null && company.market().veteran() != null, "공채 시장 문구가 없다");
+    require(
+        company.bankrupt() != null
+            && company.bankrupt().notice() != null
+            && company.bankrupt().emptied() != null
+            && company.bankrupt().opening() != null,
+        "망한 회사 문구가 없다");
+    require(company.seatsCut() != null, "자리가 줄 때의 소식 줄이 없다");
+    require(
+        company.rivals() != null
+            && !company.rivals().companies().isEmpty()
+            && company.rivals().overtook() != null
+            && company.rivals().fell() != null,
+        "라이벌 증권사가 없다");
+    require(
+        company.people() != null
+            && company.people().poach() != null
+            && company.people().kept() != null
+            && company.people().left() != null
+            && company.people().ignored() != null
+            && company.people().settled() != null,
+        "사람 이야기 문구가 없다");
+    require(
+        company.history() != null
+            && company
+                .history()
+                .events()
+                .keySet()
+                .containsAll(List.of("open", "rise", "left", "best", "worst", "overtake"))
+            && !company.history().achievements().isEmpty(),
+        "회사 연표·업적 문구가 없다");
+    require(
+        company.surnames() != null
+            && !company.surnames().isEmpty()
+            && company.names() != null
+            && !company.names().isEmpty(),
+        "직원 이름(성·이름)이 없다");
+    require(
+        company.surnames().stream().distinct().count() == company.surnames().size()
+            && company.names().stream().distinct().count() == company.names().size(),
+        "직원 성·이름이 겹친다");
+    require(
+        company.eraTurn() != null
+            && company.eraTurn().ending() != null
+            && company.eraTurn().changed() != null,
+        "시대가 바뀌는 문구가 없다");
+    require(company.eras().size() >= 2, "시대가 둘 이상이어야 바뀐다");
     RaisingContent.Invest invest = company.invest();
     require(
         invest != null

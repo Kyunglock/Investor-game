@@ -8,7 +8,8 @@ type PlayLog = components['schemas']['PlayLog']
 type CompanyPlay = PlayLog['companies'][number]
 
 /**
- * 돌고 있는 회사가 어느 해에서 멈췄는지 (decisions.md 228번). 해 순. 아무도 뽑지 않은 회사는 따로 센다: 처음 온 사람이 공채에서 막혔는지가 가장
+ * 첫 회사가 어느 해에서 멈췄는지 (decisions.md 228·264번). 해 순. 돌고 있는 회사는 지금 해에, 망해서 닫은 회사(247번)는 닫은 해에 멈춘 것으로
+ * 센다. 매각을 빼기 전에 팔린 회사는 한 바퀴를 다 돈 것이라 세지 않는다. 아무도 뽑지 않은 회사는 따로 센다: 처음 온 사람이 공채에서 막혔는지가 가장
  * 궁금하다. 첫 회사만 센다(다음 회사는 이미 한 바퀴를 돈 사람이다).
  */
 export function dropOff(
@@ -16,7 +17,7 @@ export function dropOff(
 ): { year: number; all: number; noStaff: number }[] {
   const rows = new Map<number, { year: number; all: number; noStaff: number }>()
   for (const c of companies) {
-    if (c.status === 'ENDED' || c.number !== 1) {
+    if (c.sold || c.number !== 1) {
       continue
     }
     const row = rows.get(c.year) ?? { year: c.year, all: 0, noStaff: 0 }
@@ -33,7 +34,7 @@ const TOKEN_KEY = 'ig-admin-token'
 
 const STATUS_LABEL: Record<CompanyPlay['status'], string> = {
   ACTIVE: '도는 중',
-  ENDED: '시대 끝',
+  ENDED: '닫음',
 }
 
 /** 세션 ID 앞 8자리. 계정이 없어 "누구"는 익명 세션이다 (decisions.md 46번). */
@@ -124,7 +125,7 @@ export function AdminPage() {
             <b>{sold}</b>
           </p>
 
-          <Card title="첫 회사가 멈춘 해" aside="도는 중인 첫 회사, 해 순">
+          <Card title="첫 회사가 멈춘 해" aside="도는 중이거나 망해서 닫은 첫 회사, 해 순">
             <table className="w-full text-left text-[13px]" data-testid="admin-dropoff">
               <thead className="text-[11px] text-faint">
                 <tr>

@@ -41,12 +41,12 @@ class DefaultCompanyService implements CompanyService {
    * 최근이다).
    */
   private CompanyRepository.Row resume(CompanyRepository.Row row) {
-    if (!"ENDED".equals(row.status()) || row.state().sold) {
+    if (!"ENDED".equals(row.status()) || row.state().sold || row.state().closed) {
       return row;
     }
     CompanyRepository.Row locked =
         companies.lockLatest(row.sessionId()).orElseThrow(() -> new NotFoundException("회사가 없다"));
-    if (!"ENDED".equals(locked.status()) || locked.state().sold) {
+    if (!"ENDED".equals(locked.status()) || locked.state().sold || locked.state().closed) {
       return locked;
     }
     engine.resume(locked.state(), new HashSeededRandom(locked.seed()));
@@ -60,11 +60,20 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView open(UUID sessionId) {
     // 같은 세션의 동시 요청을 기억 줄로 줄 세운다. 회사는 세션마다 하나다(매각을 뺐다, 236번).
     RaisingMemory memory = memories.lock(sessionId);
-    if (companies.latest(sessionId).isPresent()) {
-      throw new InvalidRequestException("이미 회사가 있다");
-    }
+    Optional<CompanyRepository.Row> latest = companies.lockLatest(sessionId);
     long seed = seeds.nextLong();
-    CompanyState company = engine.open(new HashSeededRandom(seed), engine.openingCapital());
+    CompanyState company;
+    if (latest.isPresent()) {
+      // 망한 회사만 닫고 사장의 사재로 다음 회사를 차릴 수 있다 (247번).
+      CompanyRepository.Row old = latest.get();
+      if (!"ACTIVE".equals(old.status()) || !engine.broke(old.state())) {
+        throw new InvalidRequestException("이미 회사가 있다");
+      }
+      company = engine.restart(old.state(), new HashSeededRandom(seed), engine.openingCapital());
+      companies.update(old.id(), old.state(), true);
+    } else {
+      company = engine.open(new HashSeededRandom(seed), engine.openingCapital());
+    }
     CompanyRepository.Row row =
         new CompanyRepository.Row(UUID.randomUUID(), sessionId, "ACTIVE", seed, company);
     companies.insert(row);
@@ -83,18 +92,44 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView refreshApplicants(UUID sessionId) {
+  public CompanyView refreshApplicants(UUID sessionId, int year, int refreshes) {
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.refresh(row.state(), new HashSeededRandom(row.seed()));
+    CompanyState c = row.state();
+    // 이미 한 새로 받기면 아무것도 하지 않는다(버튼 두 번, 끊긴 요청 다시 보내기, 254번). 아직 오지 않은 것이면 400.
+    if (year < c.year || (year == c.year && refreshes < c.refreshes)) {
+      return view(row);
+    }
+    if (year > c.year || refreshes > c.refreshes) {
+      throw new InvalidRequestException("아직 오지 않은 새로 받기다: " + year + "년 " + refreshes + "번");
+    }
+    engine.refresh(c, new HashSeededRandom(row.seed()));
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
 
   @Override
   @Transactional
-  public CompanyView invest(UUID sessionId, String choice) {
+  public CompanyView answerPoach(UUID sessionId, boolean keep) {
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.invest.decide(row.state(), choice, new HashSeededRandom(row.seed()));
+    engine.answerPoach(row.state(), keep);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView convene(UUID sessionId) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.invest.convene(row.state(), new HashSeededRandom(row.seed()));
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView invest(UUID sessionId, String choice, boolean big) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.invest.decide(row.state(), choice, big, new HashSeededRandom(row.seed()));
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -173,12 +208,15 @@ class DefaultCompanyService implements CompanyService {
                         CompanyEngine.grades(e.stats),
                         e.desk,
                         e.experience,
-                        CompanyEngine.overallGrade(e.stats).equals("SSS")
+                        // ZZZ(맨 위)면 더 오를 데가 없다: "실전 경험 0/7"을 보이지 않는다 (264번).
+                        CompanyEngine.overallGrade(e.stats).equals("SSS") && !engine.topRank(e)
                             ? engine.experienceNeeded(e)
                             : null,
                         engine.effectsOf(e),
                         e.sector,
-                        e.sector == null ? null : engine.sectorName(e.sector)))
+                        e.sector == null ? null : engine.sectorName(e.sector),
+                        e.desk != null && e.desk.equals(e.lastDesk) ? e.deskYears : 0,
+                        engine.settled(e)))
             .toList();
     List<String> hot = engine.hotDesks(c);
     List<CompanyView.Desk> desks =
@@ -192,7 +230,10 @@ class DefaultCompanyService implements CompanyService {
                         d.trades(),
                         d.sector(),
                         hot.contains(d.code()),
-                        d.description()))
+                        d.description(),
+                        d.trades() ? engine.deskGainBp(c, d.code()) : null,
+                        d.trades() ? engine.returnsOf(d.code()).missBp() : null,
+                        d.trades() ? engine.returnsOf(d.code()).crashPercent() : null))
             .toList();
     List<CompanyView.Applicant> applicants =
         ended
@@ -203,7 +244,7 @@ class DefaultCompanyService implements CompanyService {
                         new CompanyView.Applicant(
                             a.id,
                             a.name,
-                            CompanyEngine.overallGrade(a.stats),
+                            CompanyEngine.gradeOf(a.stats, a.rank),
                             CompanyEngine.grades(a.stats),
                             a.fee,
                             a.line,
@@ -220,7 +261,9 @@ class DefaultCompanyService implements CompanyService {
                 engine.earlyOmen(c),
                 engine.forecast(c),
                 engine.wantedLine(c),
-                engine.hotLine(c));
+                engine.hotLine(c),
+                engine.eraEndingLine(c),
+                poachView(c));
     CompanyState.Settlement last = c.settlements.isEmpty() ? null : c.settlements.getLast();
     return new CompanyView(
         row.id(),
@@ -237,7 +280,11 @@ class DefaultCompanyService implements CompanyService {
         desks,
         meeting,
         applicants,
-        engine.refreshCost(),
+        engine.refreshCost(c),
+        c.refreshes,
+        industryView(c),
+        historyView(c),
+        ended ? null : engine.brokeNotice(c),
         ended ? null : investView(c, new HashSeededRandom(row.seed())),
         last == null ? null : settlementView(last));
   }
@@ -248,8 +295,9 @@ class DefaultCompanyService implements CompanyService {
       return null;
     }
     InvestEngine meetings = engine.invest;
-    int highlighted = meetings.highlight(c, random).map(InvestEngine.Highlight::index).orElse(-1);
-    String highlightBy = meetings.highlight(c, random).map(InvestEngine.Highlight::by).orElse(null);
+    // 한마디와 형광펜은 회의를 연 때 굳힌 것만 보인다 (249번).
+    int highlighted = meetings.highlight(c).map(InvestEngine.Highlight::index).orElse(-1);
+    String highlightBy = meetings.highlight(c).map(InvestEngine.Highlight::by).orElse(null);
     List<CompanyView.InvestSentence> sentences = new java.util.ArrayList<>();
     int decisive = -1;
     for (int i = 0; i < invest.sentences.size(); i++) {
@@ -261,16 +309,16 @@ class DefaultCompanyService implements CompanyService {
     }
     RaisingContent.Invest texts = engine.investTexts();
     List<CompanyView.Remark> remarks =
-        meetings.remarks(c, random).stream()
+        meetings.remarks(c).stream()
             .map(
                 r ->
                     new CompanyView.Remark(
-                        r.employee().id,
-                        r.employee().name,
-                        r.employee().desk,
-                        r.read(),
-                        r.text(),
-                        r.stubbornBp() == null ? null : meetings.stubbornLevel(r.stubbornBp())))
+                        r.employeeId,
+                        r.name,
+                        r.desk,
+                        r.read,
+                        r.text,
+                        r.stubbornBp == null ? null : meetings.stubbornLevel(r.stubbornBp)))
             .toList();
     List<CompanyView.Option> options =
         List.of(InvestEngine.BUY, InvestEngine.SELL, InvestEngine.HOLD).stream()
@@ -281,6 +329,8 @@ class DefaultCompanyService implements CompanyService {
             ? null
             : new CompanyView.InvestOutcome(
                 invest.choice,
+                invest.big,
+                invest.missed,
                 invest.up,
                 meetings.reveal(c),
                 decisive,
@@ -310,7 +360,62 @@ class DefaultCompanyService implements CompanyService {
         remarks,
         options,
         meetings.open(c),
+        meetings.convened(c),
         outcome);
+  }
+
+  private CompanyView.Poach poachView(CompanyState c) {
+    CompanyState.Poach p = c.poach;
+    if (p == null) {
+      return null;
+    }
+    String name =
+        c.employees.stream()
+            .filter(e -> e.id == p.employeeId)
+            .findFirst()
+            .map(e -> e.name)
+            .orElse("");
+    return new CompanyView.Poach(
+        p.employeeId, name, engine.rivalName(p.rival), p.transferFee, engine.poachLine(c));
+  }
+
+  private static final int HALL_SIZE = 5;
+
+  private CompanyView.History historyView(CompanyState c) {
+    List<CompanyView.Event> timeline =
+        c.timeline.stream()
+            .map(e -> new CompanyView.Event(e.year, e.kind, e.text, e.grade))
+            .toList();
+    List<CompanyView.Achievement> achievements =
+        engine.history.all().stream()
+            .map(
+                a ->
+                    new CompanyView.Achievement(
+                        a.code(), a.name(), a.description(), c.achievements.get(a.code())))
+            .toList();
+    List<CompanyView.Hall> hall = new java.util.ArrayList<>();
+    c.employees.forEach(
+        e ->
+            hall.add(
+                new CompanyView.Hall(
+                    e.name, e.joinedYear, null, e.totalPnl, CompanyEngine.employeeGrade(e))));
+    c.alumni.forEach(
+        a -> hall.add(new CompanyView.Hall(a.name, a.from, a.to, a.totalPnl, a.grade)));
+    hall.sort(java.util.Comparator.comparingLong(CompanyView.Hall::totalPnl).reversed());
+    return new CompanyView.History(
+        timeline, achievements, List.copyOf(hall.subList(0, Math.min(HALL_SIZE, hall.size()))));
+  }
+
+  private CompanyView.Industry industryView(CompanyState c) {
+    if (c.rivals.isEmpty()) {
+      return null;
+    }
+    int above = engine.rivalAbove(c);
+    return new CompanyView.Industry(
+        engine.industryRank(c),
+        c.rivals.size() + 1,
+        above < 0 ? null : engine.rivalName(above),
+        above < 0 ? null : c.rivals.get(above));
   }
 
   private static CompanyView.Settlement settlementView(CompanyState.Settlement s) {
@@ -321,11 +426,14 @@ class DefaultCompanyService implements CompanyService {
         s.capitalBefore,
         s.capitalAfter,
         s.fee,
+        s.hiring,
         s.investTotal == null
             ? null
             : new CompanyView.SettlementInvest(s.investTitle, s.investTotal),
         s.gradeBefore,
         s.gradeAfter,
+        List.copyOf(s.overtook),
+        List.copyOf(s.achieved),
         s.results.stream()
             .map(
                 r ->

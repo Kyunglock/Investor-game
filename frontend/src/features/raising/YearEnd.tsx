@@ -41,7 +41,7 @@ export function Ledger({
     return { className: 'animate-reveal', style }
   }
   let n = 0
-  const num = () => '①②③'[n++]
+  const num = () => '①②③④'[n++]
   const before = officeName(s.gradeBefore)
   const after = officeName(s.gradeAfter)
   const rows = [
@@ -87,7 +87,8 @@ export function Ledger({
             >
               {s.results.map((x) => {
                 const row = reveal(ROW_MS)
-                const bubble = bubbleOf(x.flips, x.pnl)
+                // 직원과 해로 문구를 돌린다 (255번).
+                const bubble = bubbleOf(x.flips, x.pnl, x.stake, x.employeeId * 7 + s.year)
                 return (
                   <li
                     key={x.employeeId}
@@ -128,6 +129,25 @@ export function Ledger({
         </li>
       )
     })(),
+    // 그해 공채에 쓴 돈 (decisions.md 251번): 연초 자본에서 계약금이 소리 없이 빠져 보이지 않게.
+    s.hiring !== 0 &&
+      (() => {
+        const r = reveal()
+        return (
+          <li
+            key="hiring"
+            className={`py-2 ${r.className}`}
+            style={r.style}
+            data-testid="ledger-hiring"
+          >
+            <Row
+              label={`${num()} 인사 비용`}
+              note="공채 계약금·새로 받기·붙잡는 값, 받은 이적료는 뺀다"
+              amount={-s.hiring}
+            />
+          </li>
+        )
+      })(),
   ]
   const end = reveal()
   return (
@@ -182,7 +202,11 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
     return null
   }
   // 확인 버튼은 장부의 마지막 줄(연말 자본)과 함께 나온다.
-  const done = (s.invest ? STEP_MS : 0) + ROW_MS * (1 + s.results.length) + STEP_MS * 2
+  const done =
+    (s.invest ? STEP_MS : 0) +
+    (s.hiring !== 0 ? STEP_MS : 0) +
+    ROW_MS * (1 + s.results.length) +
+    STEP_MS * 2
   return (
     <Overlay>
       <section
@@ -203,6 +227,16 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
         <div className="mt-3">
           <Ledger company={company} settlement={s} staged />
         </div>
+        {s.achieved.length > 0 && (
+          // 그해 연 업적 (263번).
+          <p
+            className="animate-stamp mt-3 rounded border border-gold px-3 py-2 text-center text-[14px] font-semibold text-gold"
+            style={{ animationDelay: `${done}ms`, animationFillMode: 'both' }}
+            data-testid="achieved"
+          >
+            🏆 업적: {s.achieved.join(' · ')}
+          </p>
+        )}
         <button
           type="button"
           onClick={onClose}

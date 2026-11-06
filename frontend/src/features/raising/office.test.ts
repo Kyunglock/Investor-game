@@ -13,6 +13,7 @@ import {
   officeName,
   seatTiles,
   tierOf,
+  titleOf,
 } from './office'
 
 describe('회사 건물과 객장 (증권사 육성 설계 8.1절)', () => {
@@ -139,5 +140,19 @@ describe('라이벌 박치기 장면의 건물 (decisions.md 243번)', () => {
       expect(lit(bare)).toBe(lit(full))
       expect(bare.flat().every((ch) => ch === '.' || ch in PALETTE)).toBe(true)
     }
+  })
+})
+
+describe('직함 (decisions.md 256번)', () => {
+  it('종합 등급이 오르면 직함도 오른다', () => {
+    expect(titleOf('F')).toBe('사원')
+    expect(titleOf('D')).toBe('사원')
+    expect(titleOf('C')).toBe('주임')
+    expect(titleOf('A')).toBe('대리')
+    expect(titleOf('S')).toBe('과장')
+    expect(titleOf('SS')).toBe('차장')
+    expect(titleOf('SSS')).toBe('부장')
+    expect(titleOf('XX')).toBe('이사')
+    expect(titleOf('ZZZ')).toBe('전무')
   })
 })

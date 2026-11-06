@@ -14,6 +14,11 @@ import java.util.UUID;
  * @param meeting 연초 회의. 끝난 회사면 null
  * @param applicants 올해 공채 시장의 지원자. 끝난 회사면 비어 있다 (decisions.md 228번)
  * @param refreshCost 지원자를 새로 받는 값
+ * @param history 회사 연표·업적·명예의 전당 (decisions.md 263번)
+ * @param industry 업계 순위와 바로 위 라이벌 (decisions.md 261번). 라이벌이 없는 옛 회사면 null
+ * @param refreshes 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 254번)
+ * @param broke 망한 회사의 한 줄. 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 있고, 그때 사재로 다음 회사를 차릴 수 있다. 아니면 null
+ *     (decisions.md 247번)
  * @param invest 올해 투자 회의. 끝난 회사나 옛 회사면 null (decisions.md 229번)
  * @param lastSettlement 지난 결산. 아직 없으면 null
  * @param number 사장이 차린 몇 번째 회사인가
@@ -36,6 +41,10 @@ public record CompanyView(
     Meeting meeting,
     List<Applicant> applicants,
     long refreshCost,
+    int refreshes,
+    Industry industry,
+    History history,
+    String broke,
     Invest invest,
     Settlement lastSettlement) {
 
@@ -51,6 +60,8 @@ public record CompanyView(
    * @param experienceNeeded 다음 단계까지 드는 실전 경험. SSS가 아니면 null(아직 쌓이지 않는다)
    * @param effects X 이상 등급의 효과 이름(확신·경보…). 쌓인다 (2.4절)
    * @param sector 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다. 없으면 null
+   * @param deskYears 지금 자리에서 결산을 맞은 해 수 (decisions.md 262번)
+   * @param settled 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다
    */
   public record Employee(
       int id,
@@ -62,7 +73,9 @@ public record CompanyView(
       Integer experienceNeeded,
       List<String> effects,
       String sector,
-      String sectorName) {}
+      String sectorName,
+      int deskYears,
+      boolean settled) {}
 
   /**
    * 공채 시장의 지원자 한 명.
@@ -86,7 +99,8 @@ public record CompanyView(
    *
    * @param ready 지금 정할 수 있다(돈을 굴리는 자리에 사람이 있다)
    * @param highlightBy 형광펜을 그은 리서치 팀 직원. 없으면 null
-   * @param remarks 자리에 앉은 직원의 한마디
+   * @param remarks 자리에 앉은 직원의 한마디. 회의를 열기 전에는 비어 있다
+   * @param convened 회의를 열어 한마디와 형광펜을 굳혔다. 그 뒤로 배치를 바꿔도 그대로다 (decisions.md 249번)
    * @param outcome 정한 뒤의 결과. 아직이면 null
    */
   public record Invest(
@@ -99,6 +113,7 @@ public record CompanyView(
       List<Remark> remarks,
       List<Option> options,
       boolean ready,
+      boolean convened,
       InvestOutcome outcome) {}
 
   public record InvestSentence(String text, boolean highlighted) {}
@@ -118,8 +133,14 @@ public record CompanyView(
    * @param decisive 결정적 문장의 번호(sentences 안)
    * @param total 회의 손익. 이미 자본에 들어갔다
    */
+  /**
+   * @param big 크게 했다: 판돈 두 배, 고집 1.5배 (decisions.md 260번)
+   * @param missed 지켜봤을 때 맞는 쪽으로 했으면 벌었을 돈. 지켜보지 않았으면 null
+   */
   public record InvestOutcome(
       String choice,
+      boolean big,
+      Long missed,
       boolean up,
       String reveal,
       int decisive,
@@ -152,6 +173,13 @@ public record CompanyView(
    * @param sector 섹터 데스크면 그 섹터 코드. 섹터를 가리지 않는 자리면 null
    * @param hot 이 시대에 뜨는 자리(시대 보너스가 붙는다, 9.4절)
    */
+  /**
+   * 자리 하나 (4.2절). 돈을 굴리는 자리면 예상 효과가 실린다 (decisions.md 259번).
+   *
+   * @param gainBp 맞혔을 때 버는 몫(만분율, 시대 보너스 포함, 규모의 벽 전). 돈을 굴리지 않으면 null
+   * @param missBp 틀렸을 때 잃는 몫(만분율). 돈을 굴리지 않으면 null
+   * @param crashPercent 폭락장의 시장 손익에 곱하는 비율. 100보다 작으면 폭락장에 덜 빠진다. 돈을 굴리지 않으면 null
+   */
   public record Desk(
       String code,
       String name,
@@ -159,7 +187,10 @@ public record CompanyView(
       boolean trades,
       String sector,
       boolean hot,
-      String description) {}
+      String description,
+      Integer gainBp,
+      Integer missBp,
+      Integer crashPercent) {}
 
   /**
    * @param omen 폭락 조짐(빨간 글씨). 없으면 null. 헛조짐일 수도 있다
@@ -169,8 +200,26 @@ public record CompanyView(
    * @param wanted 회사가 올해 필요한 인재 한 줄 (6.1절 1번)
    * @param hot 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절)
    */
+  /**
+   * @param eraEnding 지금 시대의 마지막 해면 "내년에는 시대가 바뀐다" 한 줄. 아니면 null (decisions.md 250번)
+   */
   public record Meeting(
-      String hrCap, String omen, String earlyOmen, String forecast, String wanted, String hot) {}
+      String hrCap,
+      String omen,
+      String earlyOmen,
+      String forecast,
+      String wanted,
+      String hot,
+      String eraEnding,
+      Poach poach) {}
+
+  /**
+   * 라이벌이 우리 직원에게 손을 뻗었다 (decisions.md 262번).
+   *
+   * @param transferFee 보내면 받는 이적료
+   * @param line 연초 회의 한 줄
+   */
+  public record Poach(int employeeId, String name, String rival, long transferFee, String line) {}
 
   public record Settlement(
       int year,
@@ -179,9 +228,12 @@ public record CompanyView(
       long capitalBefore,
       long capitalAfter,
       long fee,
+      long hiring,
       SettlementInvest invest,
       String gradeBefore,
       String gradeAfter,
+      List<String> overtook,
+      List<String> achieved,
       List<Result> results,
       List<String> lines) {}
 
@@ -193,4 +245,39 @@ public record CompanyView(
       int employeeId, String name, String desk, long stake, long pnl, Map<String, Integer> flips) {}
 
   public record Era(String code, String name, String description) {}
+
+  /**
+   * 업계 순위 (decisions.md 261번).
+   *
+   * @param rank 우리 순위(1부터)
+   * @param total 우리를 넣은 회사 수
+   * @param aboveName 바로 위 라이벌 이름. 1위면 null
+   * @param aboveCapital 바로 위 라이벌 자본. 1위면 null
+   */
+  public record Industry(int rank, int total, String aboveName, Long aboveCapital) {}
+
+  /**
+   * 회사 연표·업적·명예의 전당 (decisions.md 263번).
+   *
+   * @param timeline 큰 일, 오래된 것부터
+   * @param achievements 모든 업적. 연 해가 없으면 아직 못 열었다
+   * @param hall 이 회사에서 가장 많이 번 사람부터(지금 직원과 떠난 직원), 다섯까지
+   */
+  public record History(List<Event> timeline, List<Achievement> achievements, List<Hall> hall) {}
+
+  /**
+   * @param kind open·grow·shrink·era·overtake·rise·left·best·worst. grade는 grow·shrink의 새 등급(화면이 건물
+   *     이름으로 바꾼다)
+   */
+  public record Event(int year, String kind, String text, String grade) {}
+
+  /**
+   * @param year 연 해. 아직이면 null
+   */
+  public record Achievement(String code, String name, String description, Integer year) {}
+
+  /**
+   * @param to 떠난 해. 아직 일하면 null
+   */
+  public record Hall(String name, int from, Integer to, long totalPnl, String grade) {}
 }

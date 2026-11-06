@@ -7,7 +7,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 /**
  * 아주 작은 회사의 수치 (증권사 육성 설계 4·6절, 2단계). (제안)으로 적힌 값을 구현하며 정한 초기값이다.
  *
- * @param turns 회사가 도는 해의 수. 2단계는 세 해로 끝나는 체험판이다
+ * @param baseCapital 사장의 사재: 회사를 차릴 때의 시작 자본 (decisions.md 228·247번)
+ * @param turns 한 시대의 길이(해). 이만큼 지나면 다른 시대가 온다 (decisions.md 250번). 회사는 끝나지 않는다(236번)
  * @param gradeCapital 회사 등급의 자본 띠(원). F부터 차례로, 자본만 본다 (4.5절)
  * @param seats 등급별 자리 수. F부터 차례로 (4.5절)
  * @param scale 규모의 벽: 회사 등급이 오를수록 맞혀서 버는 몫은 줄고 틀리거나 폭락장에 잃는 몫은 커진다 (decisions.md 244번)
@@ -26,10 +27,13 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param hr 인사팀이 공채 시장을 돕는다 (6.3절)
  * @param market 공채 시장: 해마다 지원자가 오고 계약금을 내고 뽑는다 (decisions.md 228번)
  * @param invest 투자 회의: 해마다 한 번 단서 기사를 놓고 직원들과 고민한다 (decisions.md 229번)
- * @param sale 매각과 재창업 (9절). 한 해 시장 갈래의 가중치는 시대(content/raising.json의 eras)가 정한다
+ * @param rivals 라이벌 증권사가 해마다 자라는 폭 (decisions.md 261번)
+ * @param people 이직 제안과 근속 (decisions.md 262번)
+ * @param sale 매각과 재창업 (9절). 매각을 뺀 뒤(236번)로는 API가 부르지 않는다. 다시 붙일 때를 위해 남겼다 (264번)
  */
 @ConfigurationProperties("raising.company")
 public record CompanyProperties(
+    long baseCapital,
     int turns,
     List<Long> gradeCapital,
     List<Integer> seats,
@@ -49,6 +53,8 @@ public record CompanyProperties(
     Hr hr,
     Market market,
     Invest invest,
+    Rivals rivals,
+    People people,
     Sale sale) {
 
   /**
@@ -70,6 +76,8 @@ public record CompanyProperties(
       Map<String, Integer> yearUpBp,
       int sideOppositePercent,
       int stubbornBp,
+      int bigStakePercent,
+      int bigStubbornPercent,
       List<Clarity> clarity) {}
 
   /**
@@ -89,8 +97,49 @@ public record CompanyProperties(
    * @param fees 종합 등급별 계약금(원). F부터 SSS까지
    * @param refreshCost 지원자를 새로 받는 값(원)
    */
+  /**
+   * 공채 시장 (decisions.md 228·258번).
+   *
+   * @param fees 종합 등급(F~SSS)별 정해진 계약금
+   * @param feeBp 종합 등급별 자본 비율 계약금(만분율). 정해진 계약금과 이것 가운데 큰 쪽을 낸다
+   * @param veteranFeeBp 경력직(X 이상)의 계약금(자본의 만분율). 단계마다 veteranFeeStepBp만큼 더
+   * @param refreshCost 새로 받기의 정해진 값
+   * @param refreshBp 새로 받기의 자본 비율 값(만분율). 둘 가운데 큰 쪽에 (올해 새로 받은 횟수 + 1)을 곱한다
+   */
+  /**
+   * 라이벌 증권사 (decisions.md 261번).
+   *
+   * @param phasePercent 그해 시장 갈래별 한 해 자본 비율(%)
+   * @param spread 회사마다 해마다 더하고 빼는 폭(%p)
+   */
+  public record Rivals(Map<String, Integer> phasePercent, int spread) {}
+
+  /**
+   * 이직 제안과 근속 (decisions.md 262번).
+   *
+   * @param poachFromYear 이 해부터 이직 제안이 온다
+   * @param poachPercent 해마다 이직 제안이 올 확률
+   * @param transferPercent 보낼 때 받는 이적료 = 그 직원 계약금 × 이 비율
+   * @param settleYears 같은 자리에서 이 해째부터 손에 익는다
+   * @param settledFlipPercent 손에 익으면 손이 뒤집힐 확률에 곱한다
+   */
+  public record People(
+      int poachFromYear,
+      int poachPercent,
+      int transferPercent,
+      int settleYears,
+      int settledFlipPercent) {}
+
   public record Market(
-      int applicants, int levelSteps, int spread, List<Long> fees, long refreshCost) {}
+      int applicants,
+      int levelSteps,
+      int spread,
+      List<Long> fees,
+      List<Integer> feeBp,
+      int veteranFeeBp,
+      int veteranFeeStepBp,
+      long refreshCost,
+      int refreshBp) {}
 
   /**
    * @param capSteps 인사 직원이 데려오는 지원자의 중심 등급 = 인사 직원 종합 등급보다 이만큼 아래. 회사 등급으로 정한 중심보다 높을 때만 쓴다
@@ -130,7 +179,6 @@ public record CompanyProperties(
    * @param cofounderBase 다음 회사에 데려갈 수 있는 공동창업자 수의 바닥 (9.3절: 한두 명)
    * @param cofounderFameSteps 명성이 이만큼 오를 때마다 공동창업자 +1
    * @param cofounderMax 공동창업자 수의 상한
-   * @param baseCapital 회사의 시작 자본 (명성 0). 첫 회사는 사장의 사재다
    * @param fameCapitalPercent 명성 한 단계마다 시작 자본에 더하는 비율 (명성 혜택)
    */
   public record Sale(
@@ -140,6 +188,5 @@ public record CompanyProperties(
       int cofounderBase,
       int cofounderFameSteps,
       int cofounderMax,
-      long baseCapital,
       int fameCapitalPercent) {}
 }

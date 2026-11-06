@@ -17,7 +17,7 @@ import java.util.Map;
     isGetterVisibility = Visibility.NONE)
 class CompanyState {
 
-  /** 지금 해(1부터). 결산할 때마다 하나 늘고 turns를 넘으면 시대가 끝나 회사를 판다. */
+  /** 지금 해(1부터). 결산할 때마다 하나 늘고 회사는 끝나지 않는다 (decisions.md 236번). turns 해마다 시대가 바뀐다 (250번). */
   int year = 1;
 
   /** 사장이 차린 몇 번째 회사인가(1부터). */
@@ -28,6 +28,35 @@ class CompanyState {
 
   /** 팔렸는가. 팔린 회사는 끝난 채로 남는다. */
   boolean sold;
+
+  /** 회사 연표: 큰 일만 해 번호와 함께 쌓는다 (decisions.md 263번). */
+  List<Event> timeline = new ArrayList<>();
+
+  /** 연 업적: 코드 → 연 해 (263번). */
+  Map<String, Integer> achievements = new LinkedHashMap<>();
+
+  /** 회사를 떠난 직원 (263번). */
+  List<Alumnus> alumni = new ArrayList<>();
+
+  /** 투자 회의를 연달아 번 해 수 (263번). */
+  int meetingStreak;
+
+  /** 지금까지 한 해 자본 배수의 최고·최저(만분율). 연표의 "가장 크게 번 해"·"가장 아팠던 해"를 가린다 (263번). */
+  int bestYearBp;
+
+  int worstYearBp;
+
+  /** 올해 결산 전에 일어난 사람 이야기(붙잡음·보냄). 결산 소식 줄에 붙고 해가 바뀌면 비운다 (262번). */
+  List<String> yearLines = new ArrayList<>();
+
+  /** 올해의 이직 제안 (decisions.md 262번). 없으면 null. 답하지 않은 채 결산하면 그 직원이 떠난다. */
+  Poach poach;
+
+  /** 라이벌 증권사의 자본. 콘텐츠의 라이벌 순서다 (decisions.md 261번). 이 칸을 더하기 전의 회사면 비어 있다가 다음 해에 채운다. */
+  List<Long> rivals = new ArrayList<>();
+
+  /** 망해서 문을 닫았는가 (decisions.md 247번). 닫은 회사는 끝난 채로 남고 사장이 다음 회사를 차린다. */
+  boolean closed;
 
   /** 차릴 때의 한 줄(1호 직원·공동창업자). */
   String opening;
@@ -49,6 +78,12 @@ class CompanyState {
 
   /** 올해 공채 시장의 지원자 (오토배틀러의 상점). 해가 바뀌면 새로 온다. 뽑으면 빠진다. */
   List<Applicant> applicants = new ArrayList<>();
+
+  /** 올해 연초 회의 때의 자본. 연말 결산서의 연초 자본이다 (decisions.md 251번). 이 칸을 더하기 전의 해면 null. */
+  Long yearStartCapital;
+
+  /** 올해 채용에 쓴 돈: 계약금과 새로 받기 값 (251번). */
+  long yearHiring;
 
   /** 올해 지원자를 새로 받은 횟수. 같은 해에 새로 받을 때마다 다른 지원자가 온다. */
   int refreshes;
@@ -85,6 +120,24 @@ class CompanyState {
 
     /** 큰 손실로 내려간 능력치. 위기를 버티면 맨 뒤의 것부터 되찾는다 (6.4절). */
     List<String> dropped = new ArrayList<>();
+
+    /**
+     * dropped와 같은 순서로, 그때 내려간 점수 (decisions.md 252번). 되찾을 때 이만큼만 돌려준다. 이 칸을 더하기 전에 내려간 것은 없다(한 띠로
+     * 본다).
+     */
+    List<Integer> droppedBy = new ArrayList<>();
+
+    /** 같은 자리에서 결산을 맞은 해 수 (decisions.md 262번). 자리가 바뀌면 1부터 다시 센다. */
+    int deskYears;
+
+    /** 지난 결산 때 앉아 있던 자리. 근속을 세는 데 쓴다. */
+    String lastDesk;
+
+    /** 들어온 해 (decisions.md 263번). 이 칸을 더하기 전에 들어온 직원은 0. */
+    int joinedYear;
+
+    /** 이 회사에서 번 돈의 합(결산과 투자 회의). 명예의 전당이 쓴다 (263번). */
+    long totalPnl;
   }
 
   /**
@@ -110,11 +163,40 @@ class CompanyState {
     /** 사장이 고른 것(BUY·SELL·HOLD). 아직 안 골랐으면 null. */
     String choice;
 
+    /** 크게 했는가: 판돈 두 배, 고집 1.5배 (decisions.md 260번). */
+    boolean big;
+
+    /** 지켜봤을 때, 맞는 쪽으로 했으면 벌었을 돈(뒤집힘 없이). 지켜보지 않았으면 null (260번). */
+    Long missed;
+
     List<InvestResult> results = new ArrayList<>();
     long total;
 
     /** 기사가 얼마나 또렷한가(clear·murky·foggy, 241번). 이 칸을 더하기 전의 회의면 null(깎지 않는다). */
     String clarity;
+
+    /**
+     * 회의를 연 때 굳힌 직원 한마디 (decisions.md 249번). 아직 안 열었으면 null. 연 뒤에는 배치를 바꿔도 그대로라, 리서치 팀을 바꿔 가며 한마디가
+     * 뒤집히는 것으로 정답을 알아낼 수 없다.
+     */
+    List<Remark> remarks;
+
+    /** 회의를 연 때 굳힌 형광펜: 그은 문장 번호와 그은 사람. 긋지 않았으면 null. */
+    Integer highlightIndex;
+
+    String highlightBy;
+  }
+
+  /** 투자 회의를 연 때 굳힌 직원 한마디 한 줄. read는 정할 때 "제 판단"으로도 쓴다. */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Remark {
+    int employeeId;
+    String name;
+    String desk;
+    String read;
+    String text;
+    Integer stubbornBp;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -153,6 +235,39 @@ class CompanyState {
     String guard;
   }
 
+  /**
+   * 연표 한 줄 (263번). kind: open·grow·shrink·era·overtake·rise·left·best·worst. grade는 grow·shrink의 새
+   * 등급.
+   */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Event {
+    int year;
+    String kind;
+    String text;
+    String grade;
+  }
+
+  /** 회사를 떠난 직원 (263번). */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Alumnus {
+    String name;
+    int from;
+    int to;
+    long totalPnl;
+    String grade;
+  }
+
+  /** 라이벌이 우리 직원에게 손을 뻗었다 (262번). */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Poach {
+    int employeeId;
+    int rival;
+    long transferFee;
+  }
+
   /** 공채 시장의 지원자 한 명. 계약금을 내고 뽑으면 그대로 직원이 된다. */
   @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
@@ -169,6 +284,9 @@ class CompanyState {
 
     /** 관심 섹터 코드. 뽑으면 직원이 안고 들어온다. */
     String sector;
+
+    /** 경력직이면 SSS 위의 단계(1 X …). 다른 회사에서 위기를 버텨 올랐다 (decisions.md 258번). 보통 지원자는 0. */
+    int rank;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -181,6 +299,9 @@ class CompanyState {
     long capitalAfter;
     long fee;
 
+    /** 그해 채용에 쓴 돈(계약금·새로 받기 값, 251번). 이 칸을 더하기 전의 결산이면 0. */
+    long hiring;
+
     /** 그해 투자 회의의 기사 제목과 손익. 회의를 안 했거나 이 칸을 더하기 전(240번)의 결산이면 null. */
     String investTitle;
 
@@ -188,6 +309,13 @@ class CompanyState {
 
     String gradeBefore;
     String gradeAfter;
+
+    /** 그해 앞지른 라이벌 이름. 박치기 장면이 쓴다 (261번). */
+    List<String> overtook = new ArrayList<>();
+
+    /** 그해 연 업적 이름 (263번). */
+    List<String> achieved = new ArrayList<>();
+
     List<Result> results = new ArrayList<>();
     List<String> lines = new ArrayList<>();
   }
