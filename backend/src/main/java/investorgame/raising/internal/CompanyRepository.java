@@ -80,36 +80,6 @@ class CompanyRepository {
         .optional();
   }
 
-  /**
-   * 올해의 라이벌 후보 하나 (decisions.md 275번): 다른 세션에서 돌고 있는 회사 가운데 자본이 [low, high)인 곳을 무작위로 하나. 엔딩을 본 회사는
-   * 뺀다. 연초에 한 번만 부른다.
-   */
-  Optional<TargetEngine.Candidate> targetCandidate(UUID sessionId, long low, long high) {
-    return jdbc.sql(
-            """
-            SELECT id, (state->>'capital')::bigint AS capital FROM raising_company
-            WHERE status = 'ACTIVE' AND session_id <> :sessionId
-              AND (state->>'capital')::bigint >= :low AND (state->>'capital')::bigint < :high
-              AND COALESCE((state->>'finished')::boolean, false) = false
-            ORDER BY random()
-            LIMIT 1
-            """)
-        .param("sessionId", sessionId)
-        .param("low", low)
-        .param("high", high)
-        .query((rs, i) -> new TargetEngine.Candidate(rs.getString("id"), rs.getLong("capital")))
-        .optional();
-  }
-
-  /** 올해의 라이벌로 고른 실제 회사의 지금 자본. 연말 결산 직전에 한 번 읽는다(275번). 회사가 없어졌으면 빈 값. */
-  Optional<Long> capitalOf(UUID companyId) {
-    return jdbc.sql(
-            "SELECT (state->>'capital')::bigint AS capital FROM raising_company WHERE id = :id")
-        .param("id", companyId)
-        .query((rs, i) -> rs.getLong("capital"))
-        .optional();
-  }
-
   record Recent(Row row, OffsetDateTime createdAt, OffsetDateTime updatedAt) {}
 
   /** 최근에 차린 회사부터 limit개. 관리자 플레이 기록용. */

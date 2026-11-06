@@ -5,7 +5,7 @@ import { BuildingArt } from './BuildingArt'
 import { useRaisingStore } from './store'
 
 /**
- * 엔딩 (decisions.md 276번). 랜드마크 타워에 오르면 연말 결산서와 라이벌 알림 뒤에 뜬다. 몇 년 만에 올랐는지, 마지막 자본, 업적, 명예의 전당. 회사는 여기서
+ * 엔딩 (decisions.md 276번). 랜드마크 타워에 오르면 연말 결산서와 건물 알림 뒤에 뜬다. 몇 년 만에 올랐는지, 마지막 자본, 업적, 명예의 전당. 회사는 여기서
  * 멈추고, 사장의 사재로 다음 회사를 차린다(직원은 쉬는 채로 따라온다, 265번).
  */
 export function EndingScreen({ company }: { company: Company }) {

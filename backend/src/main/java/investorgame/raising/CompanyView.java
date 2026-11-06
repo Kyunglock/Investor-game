@@ -17,7 +17,6 @@ import java.util.UUID;
  * @param applicants 올해 공채 시장의 지원자. 끝난 회사면 비어 있다 (decisions.md 228번)
  * @param refreshCost 지원자를 새로 받는 값
  * @param history 회사 연표·업적·명예의 전당 (decisions.md 263번)
- * @param industry 업계 순위와 바로 위 라이벌 (decisions.md 261번). 라이벌이 없는 옛 회사면 null
  * @param refreshes 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 254번)
  * @param broke 망한 회사의 한 줄. 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 있고, 그때 사재로 다음 회사를 차릴 수 있다. 아니면 null
  *     (decisions.md 247번)
@@ -46,7 +45,6 @@ public record CompanyView(
     List<Applicant> applicants,
     long refreshCost,
     int refreshes,
-    Industry industry,
     History history,
     String broke,
     Invest invest,
@@ -72,49 +70,6 @@ public record CompanyView(
    * @param year 엔딩을 본 해(몇 년 만에 올랐나)
    */
   public record Ending(int year, long capital, String grade) {}
-
-  /**
-   * 올해의 라이벌 한 곳 (decisions.md 275번).
-   *
-   * @param difficulty EASY·MEDIUM·HARD
-   * @param real 실제 다른 사장의 회사면 true, 모자라 지어낸 회사면 false
-   * @param capital 뽑을 때의 자본
-   * @param grade 그 자본의 회사 등급(화면은 건물로 보인다)
-   * @param bonusBp 이기면 우리 자본이 느는 몫(만분율)
-   */
-  public record Target(
-      String difficulty,
-      String difficultyName,
-      String name,
-      boolean real,
-      long capital,
-      String grade,
-      int bonusBp) {}
-
-  /**
-   * 연초 회의의 올해의 라이벌 고르기 (275번).
-   *
-   * @param options 고를 후보(쉬움·보통·어려움). 골랐거나 1분기를 넘겼으면 비었다
-   * @param chosen 고른 라이벌. 아직이면 null
-   */
-  public record Rivalry(List<Target> options, Target chosen) {}
-
-  /**
-   * 연말에 올해의 라이벌과 견준 결과 (275번).
-   *
-   * @param bonus 이겨서 넘어온 고객 몫(이미 자본에 들어갔다)
-   * @param theirGrade 상대 자본의 회사 등급(박치기 장면에서 무너지는 건물)
-   */
-  public record TargetResult(
-      String difficulty,
-      String difficultyName,
-      String name,
-      boolean real,
-      long theirCapital,
-      long ourCapital,
-      boolean won,
-      long bonus,
-      String theirGrade) {}
 
   public enum Status {
     ACTIVE,
@@ -370,8 +325,7 @@ public record CompanyView(
       String hot,
       String eraEnding,
       Poach poach,
-      Raise raise,
-      Rivalry rivalry) {}
+      Raise raise) {}
 
   /**
    * 올해의 연봉 협상 (decisions.md 270번).
@@ -385,8 +339,9 @@ public record CompanyView(
       int employeeId, String name, long before, long after, String line, String odds) {}
 
   /**
-   * 라이벌이 우리 직원에게 손을 뻗었다 (decisions.md 262번).
+   * 다른 증권사가 우리 직원에게 손을 뻗었다 (decisions.md 262번).
    *
+   * @param rival 손을 뻗은 곳(이름 없는 다른 증권사, 288번)
    * @param transferFee 보내면 받는 이적료
    * @param line 연초 회의 한 줄
    */
@@ -405,12 +360,10 @@ public record CompanyView(
       List<Quarter> quarters,
       String gradeBefore,
       String gradeAfter,
-      List<String> overtook,
       List<String> achieved,
       List<Result> results,
       List<String> lines,
       List<Report> reports,
-      TargetResult target,
       boolean finished) {}
 
   /** 결산한 해의 투자 회의: 기사 제목과 회의 손익(이미 자본에 들어갔다). 회의를 안 했으면 결산의 invest가 null (decisions.md 240번). */
@@ -463,16 +416,6 @@ public record CompanyView(
       int employeeId, String name, String desk, long stake, long pnl, Map<String, Integer> flips) {}
 
   public record Era(String code, String name, String description) {}
-
-  /**
-   * 업계 순위 (decisions.md 261번).
-   *
-   * @param rank 우리 순위(1부터)
-   * @param total 우리를 넣은 회사 수
-   * @param aboveName 바로 위 라이벌 이름. 1위면 null
-   * @param aboveCapital 바로 위 라이벌 자본. 1위면 null
-   */
-  public record Industry(int rank, int total, String aboveName, Long aboveCapital) {}
 
   /**
    * 회사 연표·업적·명예의 전당 (decisions.md 263번).

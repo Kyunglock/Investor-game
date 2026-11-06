@@ -1,31 +1,27 @@
 import type { Grade } from '../../api/client'
 import { Overlay } from '../game/Overlay'
 import { usePixelArt } from '../game/pixelArt'
-import { moveOf, rivalFor, wreathsFor } from './board'
+import { moveOf, wreathsFor } from './board'
 import { officeName } from './office'
 import { RivalSmash } from './RivalSmash'
 
 /**
- * 이사 장면 (증권사 육성 설계 8.3절). 결산 뒤 회사 등급이 바뀌었을 때 한 번 보인다. 글은 등급 대신 건물로 말한다 (238번). 오르면 우리 건물이 라이벌 증권사
- * 건물을 박치기로 무너뜨리고 그 자리에서 커지는 장면(243번)과 단골 인물이 보낸 축하 화환,
+ * 이사 장면 (증권사 육성 설계 8.3절). 결산 뒤 회사 등급이 바뀌었을 때 한 번 보인다. 글은 등급 대신 건물로 말한다 (238번). 오르면 우리 건물이 옆 건물을
+ * 박치기로 무너뜨리고 그 자리에서 커지는 장면(243번)과 단골 인물이 보낸 축하 화환,
  * 떨어지면 짐을 줄여 작은 사무실로 옮긴다. 그림을 끄면 글만 보인다 (190번).
  */
 export function MoveScene({
   before,
   after,
   year,
-  overtook = [],
   onDone,
 }: {
   before: Grade
   after: Grade
   year: number
-  /** 그해 앞지른 라이벌 (decisions.md 261번). 등급이 그대로여도 앞질렀으면 박치기 장면을 보인다. */
-  overtook?: string[]
   onDone: () => void
 }) {
   const shown = usePixelArt((s) => s.shown)
-  // 등급이 그대로인데 라이벌만 앞지른 해는 연말 라이벌 알림이 박치기 장면을 보인다 (274·275번): 여기서 겹쳐 보이지 않는다.
   const move = moveOf(before, after)
   if (!move) {
     return null
@@ -34,16 +30,15 @@ export function MoveScene({
   const from = officeName(before)
   const to = officeName(after)
   // 회사 등급 대신 건물로 말한다 (238번): 건물이 바뀌면 이사, 같은 건물이면 사무실을 넓히거나 줄인다.
-  // 실제로 앞지른 라이벌이 있으면 그 회사를 들이받는다 (261번).
-  const rival = overtook[0] ?? rivalFor(year)
-  // 오르면 라이벌 건물을 박치기로 무너뜨리고 그 자리에서 커진다 (243번).
+  // 오르면 옆 건물을 박치기로 무너뜨리고 그 자리에서 커진다 (243번). 라이벌 회사를 걷어낸 뒤(288번)로는 이름 없는 옆 건물이다.
+  const rival = '옆 건물'
   const line =
     from !== to
       ? up
-        ? `라이벌 ${rival} 건물을 들이받아 무너뜨리고 그 자리로 이사했다: ${from} → ${to}. 새 간판을 달고 개업 떡을 돌렸다.`
+        ? `옆 건물을 들이받아 무너뜨리고 그 자리로 이사했다: ${from} → ${to}. 새 간판을 달고 개업 떡을 돌렸다.`
         : `짐을 줄여 작은 사무실로 옮겼다: ${from} → ${to}.`
       : up
-        ? `라이벌 ${rival} 건물을 들이받아 무너뜨리고 사무실을 넓혔다(${to}). 새 책상이 들어오고 떡을 돌렸다.`
+        ? `옆 건물을 들이받아 무너뜨리고 사무실을 넓혔다(${to}). 새 책상이 들어오고 떡을 돌렸다.`
         : `사무실을 줄였다(${to}). 책상 몇 개를 내놓았다.`
   return (
     <Overlay>

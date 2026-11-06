@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bubbleOf, moveOf, pnlLabel, rivalFor, wreathsFor } from './board'
+import { bubbleOf, moveOf, pnlLabel, wreathsFor } from './board'
 
 describe('결산 전광판과 이사 장면 (증권사 육성 설계 8.3절)', () => {
   it('말풍선은 그해 가장 많이 뒤집힌 능력치의 한마디이고, 손익과 어긋나지 않는다', () => {
@@ -42,12 +42,5 @@ describe('결산 전광판과 이사 장면 (증권사 육성 설계 8.3절)', (
   it('축하 화환은 단골 인물 셋이 보내고 해마다 앞사람이 바뀐다', () => {
     expect(wreathsFor(0)).toEqual(['경쟁사 김대리', '리딩방 방장', '사촌 형'])
     expect(wreathsFor(1)[0]).toBe('리딩방 방장')
-  })
-})
-
-describe('라이벌 증권사 (decisions.md 243번)', () => {
-  it('해마다 다른 라이벌이 나온다', () => {
-    expect(rivalFor(1)).not.toBe(rivalFor(2))
-    expect(rivalFor(1)).toBe(rivalFor(6))
   })
 })

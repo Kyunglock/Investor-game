@@ -8,7 +8,6 @@ import { type Stance, useRaisingStore } from './store'
 export type AutoStep =
   | { kind: 'closeYearEnd' }
   | { kind: 'closeQuarter' }
-  | { kind: 'closeOvertake' }
   | { kind: 'closeMove' }
   | { kind: 'hire'; applicantId: number }
   | { kind: 'poach'; keep: boolean }
@@ -16,7 +15,6 @@ export type AutoStep =
   | { kind: 'resign'; keep: boolean }
   | { kind: 'proposal'; accept: boolean }
   | { kind: 'verdict'; choice: string }
-  | { kind: 'target'; difficulty: 'EASY' | 'MEDIUM' | 'HARD' }
   | { kind: 'place'; seats: Seat[] }
   | { kind: 'conveneMacro' }
   | { kind: 'macro'; stance: Stance }
@@ -57,7 +55,7 @@ export function autoHire(company: Company): number | null {
 }
 
 /**
- * 자동 진행의 다음 일 (245번). 한 해를 사람이 하는 순서 그대로 돈다: 연말 결산서를 닫고(라이벌을 앞질렀으면 알림도, 274번) → 빈 자리에 뽑고 → 자동 배치(232·233번)와 다르면 앉히고 →
+ * 자동 진행의 다음 일 (245번). 한 해를 사람이 하는 순서 그대로 돈다: 연말 결산서를 닫고(건물이 바뀌었으면 건물 알림도, 281번) → 빈 자리에 뽑고 → 자동 배치(232·233번)와 다르면 앉히고 →
  * 거시경제 회의(직원 다수결, 266번) → 직원이 종목을 물어 왔으면 종목 회의(직원 다수결) → 분기 넘기기를 분기마다 되풀이한다(268번). 분기 실적은 짧게,
  * 연말 결산서는 길게 보여 주고 닫는다. 끝난 회사면 멈춘다.
  */
@@ -65,7 +63,6 @@ export function nextAutoStep(
   company: Company,
   justSettled: boolean,
   justQuartered = false,
-  overtakeAlert = false,
   moveAlert = false,
 ): AutoStep {
   // 끝났거나 망한 회사(247번)면 멈춘다: 다시 차리기는 사장이 직접 한다.
@@ -75,11 +72,7 @@ export function nextAutoStep(
   if (justSettled) {
     return { kind: 'closeYearEnd' }
   }
-  // 라이벌 알림 (274·275번): 연말 결산서 다음에 잠깐 보여 주고 닫는다.
-  if (overtakeAlert) {
-    return { kind: 'closeOvertake' }
-  }
-  // 건물 알림 (281번): 라이벌 알림 다음에 보여 주고 닫는다.
+  // 건물 알림 (281번): 연말 결산서 다음에 보여 주고 닫는다.
   if (moveAlert) {
     return { kind: 'closeMove' }
   }
@@ -101,10 +94,6 @@ export function nextAutoStep(
   // 연봉 협상 (270번): 자동 진행은 올려 준다. 사기가 꺾이면 손이 더 뒤집힌다.
   if (company.meeting?.raise) {
     return { kind: 'raise', accept: true }
-  }
-  // 올해의 라이벌 (275번): 자동 진행은 보통을 고른다.
-  if ((company.meeting?.rivalry?.options.length ?? 0) > 0) {
-    return { kind: 'target', difficulty: 'MEDIUM' }
   }
   const applicantId = autoHire(company)
   if (applicantId !== null) {
@@ -146,18 +135,13 @@ const STEP_MS = 700
 
 /**
  * 자동 진행에서 창 하나를 띄워 두는 시간(ms) (decisions.md 277번). 사용자: "20초의 텀은 분기마다의 턴이 아니라 alert창마다의 시간이야". 분기 실적·연말
- * 결산서·라이벌 알림이 뜨면 이만큼 보여 준 뒤 닫는다. 그 전에 확인을 누르면 바로 넘어간다. 분기 넘기기·뽑기·배치·회의는 짧게만 쉰다.
+ * 결산서·건물 알림이 뜨면 이만큼 보여 준 뒤 닫는다. 그 전에 확인을 누르면 바로 넘어간다. 분기 넘기기·뽑기·배치·회의는 짧게만 쉰다.
  */
 export const WINDOW_MS = 20_000
 
-/** 자동 진행이 닫는 창인가: 분기 실적·연말 결산서·라이벌 알림. */
+/** 자동 진행이 닫는 창인가: 분기 실적·연말 결산서·건물 알림. */
 export function isWindowStep(step: AutoStep): boolean {
-  return (
-    step.kind === 'closeQuarter' ||
-    step.kind === 'closeYearEnd' ||
-    step.kind === 'closeOvertake' ||
-    step.kind === 'closeMove'
-  )
+  return step.kind === 'closeQuarter' || step.kind === 'closeYearEnd' || step.kind === 'closeMove'
 }
 
 /** 자동 진행을 켜고 끈다. */
@@ -174,7 +158,6 @@ export function useCompanyAutoPlay() {
   const company = useRaisingStore((s) => s.company)
   const justSettled = useRaisingStore((s) => s.justSettled)
   const justQuartered = useRaisingStore((s) => s.justQuartered)
-  const overtakeAlert = useRaisingStore((s) => s.overtakeAlert)
   const moveAlert = useRaisingStore((s) => s.moveAlert)
   const error = useRaisingStore((s) => s.error)
   useEffect(() => {
@@ -185,7 +168,7 @@ export function useCompanyAutoPlay() {
       useRaisingStore.setState({ autoPlay: false, autoNextAt: null })
       return
     }
-    const step = nextAutoStep(company, justSettled, justQuartered, overtakeAlert, moveAlert)
+    const step = nextAutoStep(company, justSettled, justQuartered, moveAlert)
     if (step.kind === 'stop') {
       useRaisingStore.setState({ autoPlay: false, autoNextAt: null })
       return
@@ -208,7 +191,6 @@ export function useCompanyAutoPlay() {
       answerResign,
       answerProposal,
       giveVerdict,
-      pickTarget,
       conveneMacro,
       decideMacro,
     } = useRaisingStore.getState()
@@ -219,9 +201,6 @@ export function useCompanyAutoPlay() {
           return
         case 'closeQuarter':
           useRaisingStore.setState({ justQuartered: false, autoNextAt: null })
-          return
-        case 'closeOvertake':
-          useRaisingStore.setState({ overtakeAlert: false, autoNextAt: null })
           return
         case 'closeMove':
           useRaisingStore.setState({ moveAlert: false, autoNextAt: null })
@@ -244,9 +223,6 @@ export function useCompanyAutoPlay() {
         case 'verdict':
           void giveVerdict(step.choice)
           return
-        case 'target':
-          void pickTarget(step.difficulty)
-          return
         case 'place':
           void place(step.seats)
           return
@@ -267,5 +243,5 @@ export function useCompanyAutoPlay() {
       }
     }, delay)
     return () => clearTimeout(id)
-  }, [auto, busy, company, justSettled, justQuartered, overtakeAlert, moveAlert, error])
+  }, [auto, busy, company, justSettled, justQuartered, moveAlert, error])
 }

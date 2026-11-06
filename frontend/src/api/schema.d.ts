@@ -97,7 +97,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 한 분기를 넘긴다. 4분기면 연말 결산을 하고 다음 해 연초 회의로 간다 (decisions.md 268번)
+         * 한 분기를 넘긴다. 4분기면 연말 결산을 하고 다음 해 이슈로 간다 (decisions.md 268번)
          * @description 직원들이 배치대로 한 분기를 굴린 결과가 lastQuarter에 실리고, 다음 분기의 거시경제 회의가 새로 온다.
          *     4분기를 넘기면 네 분기를 모은 연말 결산서가 lastSettlement에 실리고 다음 해 지원자가 온다. 회사는 끝나지 않는다(236번).
          *     종목 회의를 열 수 있는데(invest.ready) 안 했으면 400.
@@ -147,27 +147,6 @@ export interface paths {
          *     협상이 없으면 400.
          */
         post: operations["answerRaise"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/company/target": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 연초 회의에서 올해의 라이벌을 고른다 (decisions.md 275번)
-         * @description difficulty는 EASY·MEDIUM·HARD. 후보는 실제 다른 사장의 회사(없으면 지어낸 회사)이고, 연말 결산에서 한 번 견준다.
-         *     이기면 자본이 bonusBp만큼 는다. 이미 골랐거나 후보가 아니거나 1분기를 넘겼으면 400.
-         */
-        post: operations["pickTarget"];
         delete?: never;
         options?: never;
         head?: never;
@@ -489,10 +468,11 @@ export interface components {
                 hot?: string | null;
                 /** @description 지금 시대의 마지막 해면 "내년에는 시대가 바뀐다" 한 줄. 아니면 null (decisions.md 250번) */
                 eraEnding?: string | null;
-                /** @description 라이벌이 우리 직원에게 손을 뻗었다 (decisions.md 262번). 없으면 null */
+                /** @description 다른 증권사가 우리 직원에게 손을 뻗었다 (decisions.md 262·288번). 없으면 null */
                 poach?: {
                     employeeId: number;
                     name: string;
+                    /** @description 손을 뻗은 곳(이름 없는 다른 증권사) */
                     rival: string;
                     /**
                      * Format: int64
@@ -518,13 +498,6 @@ export interface components {
                     line: string;
                     /** @description 답에 따른 확률 한 줄: 올리면 능력치 상승, 동결하거나 답하지 않으면 떠남 (decisions.md 280번) */
                     odds: string;
-                } | null;
-                /** @description 올해의 라이벌 고르기 (decisions.md 275번). 후보도 고른 라이벌도 없으면 null */
-                rivalry?: {
-                    /** @description 고를 후보(쉬움·보통·어려움). 골랐거나 1분기를 넘겼으면 비었다 */
-                    options: components["schemas"]["Target"][];
-                    /** @description 고른 라이벌. 아직이면 null */
-                    chosen?: components["schemas"]["Target"] | null;
                 } | null;
             } | null;
             /** @description 올해 공채 시장의 지원자 (decisions.md 228번). 끝난 회사면 비어 있다 */
@@ -583,17 +556,6 @@ export interface components {
                     grade: components["schemas"]["Grade"];
                 }[];
             };
-            /** @description 업계 순위와 바로 위 라이벌 증권사 (decisions.md 261번). 라이벌이 없는 옛 회사면 null */
-            industry?: {
-                /** @description 우리 순위(1부터) */
-                rank: number;
-                /** @description 우리를 넣은 회사 수 */
-                total: number;
-                /** @description 바로 위 라이벌. 1위면 null */
-                aboveName?: string | null;
-                /** Format: int64 */
-                aboveCapital?: number | null;
-            } | null;
             /**
              * @description 올해 종목 회의 (decisions.md 229번). 끝난 회사나 옛 회사면 null. 숨은 방향은 정한 뒤 outcome에만 있다.
              *     직원이 종목을 물어 와야(finder) 열린다: 그 전에는 ready가 거짓이다 (267번)
@@ -739,7 +701,7 @@ export interface components {
                 /** @description 주제 이름(기준금리·환율·유가·물가·경기) */
                 topic: string;
                 title: string;
-                /** @description 기사 문장. 리서치 팀이 형광펜을 그은 문장은 highlighted, 연초 회의의 폭락 조짐을 옮긴 문장은 omen(헛조짐일 수도 있다) */
+                /** @description 기사 문장. 리서치 팀이 형광펜을 그은 문장은 highlighted, 이슈의 폭락 조짐을 옮긴 문장은 omen(헛조짐일 수도 있다) */
                 sentences: {
                     text: string;
                     highlighted: boolean;
@@ -783,7 +745,7 @@ export interface components {
                 omen?: string | null;
                 /**
                  * Format: int64
-                 * @description 연초 회의 때의 자본 (decisions.md 251번)
+                 * @description 이슈 때의 자본 (decisions.md 251번)
                  */
                 capitalBefore: number;
                 /** Format: int64 */
@@ -813,8 +775,6 @@ export interface components {
                 quarters: components["schemas"]["Quarter"][];
                 gradeBefore: components["schemas"]["Grade"];
                 gradeAfter: components["schemas"]["Grade"];
-                /** @description 그해 앞지른 라이벌 증권사 (decisions.md 261번) */
-                overtook: string[];
                 /** @description 그해 연 업적 이름 (decisions.md 263번) */
                 achieved: string[];
                 results: {
@@ -832,26 +792,6 @@ export interface components {
                 lines: string[];
                 /** @description 팀장들의 한 해 보고 (decisions.md 269번) */
                 reports: components["schemas"]["Report"][];
-                /** @description 올해의 라이벌과 견준 결과 (decisions.md 275번). 고르지 않았으면 null */
-                target?: {
-                    /** @enum {string} */
-                    difficulty: "EASY" | "MEDIUM" | "HARD";
-                    difficultyName: string;
-                    name: string;
-                    /** @description 실제 다른 사장의 회사면 true */
-                    real: boolean;
-                    /** Format: int64 */
-                    theirCapital: number;
-                    /** Format: int64 */
-                    ourCapital: number;
-                    won: boolean;
-                    /**
-                     * Format: int64
-                     * @description 이겨서 넘어온 고객 몫(이미 자본에 들어갔다)
-                     */
-                    bonus: number;
-                    theirGrade: components["schemas"]["Grade"];
-                } | null;
                 /** @description 이 결산으로 랜드마크 타워에 올라 엔딩을 봤다 (decisions.md 276번) */
                 finished?: boolean;
             } | null;
@@ -884,23 +824,6 @@ export interface components {
                 capital: number;
                 grade: components["schemas"]["Grade"];
             } | null;
-        };
-        /** @description 올해의 라이벌 한 곳 (decisions.md 275번) */
-        Target: {
-            /** @enum {string} */
-            difficulty: "EASY" | "MEDIUM" | "HARD";
-            difficultyName: string;
-            name: string;
-            /** @description 실제 다른 사장의 회사면 true */
-            real: boolean;
-            /**
-             * Format: int64
-             * @description 뽑을 때의 자본
-             */
-            capital: number;
-            grade: components["schemas"]["Grade"];
-            /** @description 이기면 우리 자본이 느는 몫(만분율) */
-            bonusBp: number;
         };
         /** @description 분기 하나의 실적 (decisions.md 268번) */
         Quarter: {
@@ -1273,36 +1196,6 @@ export interface operations {
         };
         responses: {
             /** @description 답한 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    pickTarget: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @enum {string} */
-                    difficulty: "EASY" | "MEDIUM" | "HARD";
-                };
-            };
-        };
-        responses: {
-            /** @description 고른 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

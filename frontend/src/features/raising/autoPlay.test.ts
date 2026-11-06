@@ -115,7 +115,7 @@ describe('자동 진행 (decisions.md 245번)', () => {
 })
 
 describe('자동 진행의 창마다 시간 (decisions.md 277번)', () => {
-  it('분기 실적·연말 결산서·라이벌 알림은 20초 띄워 두고, 분기 넘기기는 기다리지 않는다', () => {
+  it('분기 실적·연말 결산서·건물 알림은 20초 띄워 두고, 분기 넘기기는 기다리지 않는다', () => {
     expect(WINDOW_MS).toBe(20_000)
     expect(isWindowStep(nextAutoStep(company(), false, true))).toBe(true)
     expect(isWindowStep(nextAutoStep(company(), true))).toBe(true)
@@ -134,56 +134,19 @@ describe('자동 진행의 창마다 시간 (decisions.md 277번)', () => {
   })
 })
 
-describe('라이벌을 앞지른 알림 (decisions.md 274번)', () => {
-  it('연말 결산서를 닫은 뒤 알림을 닫고 나서 다음 일을 한다', () => {
-    expect(nextAutoStep(company(), true, false, true).kind).toBe('closeYearEnd')
-    expect(nextAutoStep(company(), false, false, true).kind).toBe('closeOvertake')
-    expect(nextAutoStep(company(), false, false, false).kind).not.toBe('closeOvertake')
-  })
-})
-
-describe('올해의 라이벌과 엔딩 (decisions.md 275·276번)', () => {
-  const option = (difficulty: string) => ({
-    difficulty,
-    difficultyName: difficulty,
-    name: `${difficulty}증권`,
-    real: true,
-    capital: 110_000_000,
-    grade: 'F',
-    bonusBp: 500,
-  })
-  it('연초 회의에 후보가 있으면 자동 진행은 보통을 고른다', () => {
-    const c = company()
-    const withOptions = {
-      ...c,
-      meeting: {
-        ...c.meeting,
-        rivalry: { options: ['EASY', 'MEDIUM', 'HARD'].map(option), chosen: null },
-      },
-    }
-    expect(nextAutoStep(withOptions as never, false)).toEqual({
-      kind: 'target',
-      difficulty: 'MEDIUM',
-    })
-    const chosen = {
-      ...c,
-      meeting: { ...c.meeting, rivalry: { options: [], chosen: option('MEDIUM') } },
-    }
-    expect(nextAutoStep(chosen as never, false).kind).not.toBe('target')
-  })
-
+describe('엔딩 (decisions.md 276번)', () => {
   it('엔딩을 보면 멈춘다: 다음 회사는 사장이 직접 차린다', () => {
     const ended = { ...company(), ending: { year: 30, capital: 100_000_000_000_000, grade: 'Z' } }
     expect(nextAutoStep(ended as never, true).kind).toBe('closeYearEnd')
-    expect(nextAutoStep(ended as never, false, false, true).kind).toBe('closeOvertake')
+    expect(nextAutoStep(ended as never, false, false, true).kind).toBe('closeMove')
     expect(nextAutoStep(ended as never, false).kind).toBe('stop')
   })
 })
 
 describe('건물 알림 (decisions.md 281번)', () => {
-  it('라이벌 알림 다음에 건물 알림을 20초 띄우고 닫는다', () => {
-    expect(nextAutoStep(company(), false, false, true, true).kind).toBe('closeOvertake')
-    const step = nextAutoStep(company(), false, false, false, true)
+  it('연말 결산서 다음에 건물 알림을 20초 띄우고 닫는다', () => {
+    expect(nextAutoStep(company(), true, false, true).kind).toBe('closeYearEnd')
+    const step = nextAutoStep(company(), false, false, true)
     expect(step.kind).toBe('closeMove')
     expect(isWindowStep(step)).toBe(true)
   })

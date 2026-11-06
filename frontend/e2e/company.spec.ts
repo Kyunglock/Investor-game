@@ -158,11 +158,6 @@ async function closeYearEnd(page: Page, year: number) {
   await expect(sheet.getByTestId('ledger-after')).toBeVisible()
   await sheet.getByRole('button', { name: '확인' }).click()
   await expect(sheet).toBeHidden()
-  // 그해 라이벌을 앞질렀거나 올해의 라이벌과 견줬으면 알림이 뜬다 (274·275번). 실제 시장이라 어느 해에 뜰지 몰라 떠 있으면 닫는다.
-  const alert = page.getByRole('alertdialog', { name: '라이벌 결과' })
-  if (await alert.isVisible()) {
-    await alert.getByRole('button', { name: '확인' }).click()
-  }
   // 건물이 바뀌었으면 건물 알림이 뜬다 (281번).
   const move = page.getByTestId('move-scene')
   if (await move.isVisible()) {
@@ -181,17 +176,16 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await expect(page.getByTestId('applicant')).toHaveCount(5)
   await expect(page.getByTestId('building-ladder').getByRole('listitem')).toHaveCount(7)
   await expect(page.getByTestId('next-step')).toContainText('사무실 넓히기')
-  // 업계 순위 (261번): 라이벌 증권사 여섯 가운데 꼴찌에서 시작하고 바로 위가 목표다.
-  await expect(page.getByTestId('industry')).toContainText('업계 7위')
-  await expect(page.getByTestId('industry')).toContainText('바로 위 한탕증권')
-  // 첫 지원자는 연초 회의가 말한 "올해 필요한 인재"다.
+  // 라이벌 회사를 걷어냈다 (288번): 업계 순위가 없다.
+  await expect(page.getByTestId('industry')).toHaveCount(0)
+  // 첫 지원자는 이슈가 말한 "올해 필요한 인재"다.
   await expect(page.getByTestId('applicant').first()).toContainText('맞는 사람이다')
   // 지원자는 관심 섹터를 안고 온다 (233번).
   await expect(page.getByTestId('applicant-sector')).toHaveCount(5)
   await tab(page, /배치/)
   await expect(page.getByTestId('employee')).toHaveCount(0)
   await expect(page.getByTestId('desk-board')).toHaveCount(0)
-  await tab(page, /연초 회의/)
+  await tab(page, /이슈/)
   await expect(page.getByTestId('meeting')).toBeVisible()
 
   // 회사 건물 단면: 책상은 자리 수, 아직 아무도 없다. 그림을 끄면 같은 내용을 글로 (8.1·8.4절).
@@ -350,9 +344,9 @@ test('공채에서 뽑아 앉히고, 자리가 차면 내보낼 사람을 고르
   // 연표 탭 (263번): 차린 해부터 큰 일이 쌓이고 업적과 명예의 전당이 보인다.
   await tab(page, /연표/)
   await expect(page.getByTestId('timeline')).toContainText('1호 회사를 차렸다')
-  await expect(page.getByTestId('achievement')).toHaveCount(7)
+  await expect(page.getByTestId('achievement')).toHaveCount(6)
   await expect(page.getByTestId('hall').getByRole('listitem')).toHaveCount(4)
-  // 매각을 뺐다(236번): 세 해가 지나도 회사는 이어지고 4년 차 공채·연초 회의가 온다. 팔 곳은 없다.
+  // 매각을 뺐다(236번): 세 해가 지나도 회사는 이어지고 4년 차 공채·이슈가 온다. 팔 곳은 없다.
   await expect(page.getByText(/1호 회사 · 4년 차/)).toBeVisible()
   await expect(page.getByTestId('sale')).toHaveCount(0)
   await expect(page.getByRole('button', { name: /회사 팔기/ })).toHaveCount(0)
@@ -414,41 +408,6 @@ test('분기 넘기기 버튼을 빠르게 두 번 눌러도 한 분기만 넘�
   await closeYearEnd(page, 1)
   await expect(page.getByText(/1호 회사 · 2년 차 1분기/)).toBeVisible()
   expect(settles).toBeGreaterThanOrEqual(1)
-})
-
-test('라이벌을 앞지르면 연말 결산서를 닫은 뒤 알림이 뜬다 (274번)', async ({ page }) => {
-  await openCompany(page)
-  // 사재 1억으로 1.5억 라이벌을 앞지르려면 여러 해가 걸린다: 연말 결산 응답에 앞지른 라이벌을 넣어 본다.
-  await page.route('**/api/company/settle', async (route) => {
-    const response = await route.fetch()
-    const company = await response.json()
-    if (company.quarter === 1 && company.lastSettlement) {
-      company.lastSettlement.overtook = ['한탕증권']
-      company.industry = { rank: 6, total: 7, aboveName: '불개미투자', aboveCapital: 500_000_000 }
-    }
-    await route.fulfill({ response, json: company })
-  })
-  // 돈을 굴리는 직원이 없으면 회의 없이 바로 넘긴다.
-  for (let quarter = 1; quarter <= 4; quarter++) {
-    await page.getByRole('button', { name: `1년 차 ${quarter}분기 넘기기` }).click()
-    if (quarter < 4) {
-      await closeQuarter(page, 1, quarter)
-    }
-  }
-  const alert = page.getByRole('alertdialog', { name: '라이벌 결과' })
-  // 연말 결산서가 먼저다.
-  const sheet = page.getByRole('dialog', { name: '연말 결산서' })
-  await expect(sheet).toBeVisible()
-  await expect(alert).toHaveCount(0)
-  await sheet.getByRole('button', { name: '확인' }).click()
-  await expect(sheet).toBeHidden()
-  await expect(alert).toBeVisible()
-  await expect(alert.getByTestId('overtake-names')).toHaveText('한탕증권을 앞질렀다!')
-  await expect(alert.getByTestId('overtake-rank')).toHaveText('업계 6위 / 7곳')
-  await expect(alert).toContainText('다음 목표: 불개미투자')
-  await alert.getByRole('button', { name: '확인' }).click()
-  await expect(alert).toBeHidden()
-  await expect(page.getByText(/1호 회사 · 2년 차 1분기/)).toBeVisible()
 })
 
 test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 매도파가 토론하며 맞붙어 한쪽으로 정한다 (279·285번)', async ({
@@ -621,58 +580,17 @@ test('연봉 때문에 사표를 들고 오면 붙잡을 마지막 기회가 뜬
   await expect(resign).toBeHidden()
 })
 
-test('연초 회의에서 올해의 라이벌을 고르면 연말에 견준 결과가 알림으로 뜬다 (275번)', async ({
+test('건물이 커지면 연말 결산서 뒤 알림 창에서 옆 건물을 들이받아 무너뜨린다 (243·281·288번)', async ({
   page,
 }) => {
   await openCompany(page)
-  await tab(page, /연초 회의/)
-  const options = page.getByTestId('rivalry-option')
-  await expect(options).toHaveCount(3)
-  await expect(options.nth(0)).toContainText('쉬움')
-  await expect(options.nth(1)).toContainText('보통')
-  await expect(options.nth(2)).toContainText('어려움')
-  await expect(options.nth(1)).toContainText(/실제 사장의 회사|지어낸 회사/)
-  await options.nth(1).getByRole('button', { name: '이 회사로 정한다' }).click()
-  await expect(page.getByTestId('rivalry-chosen')).toContainText('올해의 라이벌')
-  await expect(page.getByTestId('rivalry-chosen')).toContainText('보통')
-  // 돈을 굴리는 직원이 없으면 회의 없이 바로 넘긴다.
-  for (let quarter = 1; quarter <= 4; quarter++) {
-    await page.getByRole('button', { name: `1년 차 ${quarter}분기 넘기기` }).click()
-    if (quarter < 4) {
-      await closeQuarter(page, 1, quarter)
-    }
-  }
-  const sheet = page.getByRole('dialog', { name: '연말 결산서' })
-  await sheet.getByRole('button', { name: '확인' }).click()
-  const alert = page.getByRole('alertdialog', { name: '라이벌 결과' })
-  await expect(alert).toBeVisible()
-  await expect(alert.getByTestId('overtake-names')).toContainText('올해의 라이벌')
-  await expect(alert.getByTestId('target-result')).toContainText('보통')
-  await alert.getByRole('button', { name: '확인' }).click()
-  // 다음 해 연초 회의에 새 후보가 온다.
-  await tab(page, /연초 회의/)
-  await expect(page.getByTestId('rivalry-option')).toHaveCount(3)
-})
-
-test('라이벌을 이기면 알림 안에서 상대 건물을 들이받아 무너뜨린다 (274·275번)', async ({
-  page,
-}) => {
-  await openCompany(page)
+  // 사재 1억으로 첫해에 건물을 키우기는 어렵다: 연말 결산 응답의 등급을 올려 본다.
   await page.route('**/api/company/settle', async (route) => {
     const response = await route.fetch()
     const company = await response.json()
     if (company.quarter === 1 && company.lastSettlement) {
-      company.lastSettlement.target = {
-        difficulty: 'HARD',
-        difficultyName: '어려움',
-        name: '영끌캐피탈',
-        real: true,
-        theirCapital: 90_000_000,
-        ourCapital: 113_000_000,
-        won: true,
-        bonus: 10_300_000,
-        theirGrade: 'F',
-      }
+      company.lastSettlement.gradeBefore = 'F'
+      company.lastSettlement.gradeAfter = 'E'
     }
     await route.fulfill({ response, json: company })
   })
@@ -686,12 +604,13 @@ test('라이벌을 이기면 알림 안에서 상대 건물을 들이받아 무�
     .getByRole('dialog', { name: '연말 결산서' })
     .getByRole('button', { name: '확인' })
     .click()
-  const alert = page.getByRole('alertdialog', { name: '라이벌 결과' })
-  await expect(alert).toHaveAttribute('data-won', 'true')
-  await expect(alert.getByTestId('rival-smash')).toBeVisible()
-  await expect(alert.getByTestId('overtake-names')).toHaveText('올해의 라이벌 영끌캐피탈을 이겼다!')
-  await expect(alert.getByTestId('target-result')).toContainText('실제 사장의 회사')
-  await expect(alert.getByTestId('target-result')).toContainText('1,030만원 늘었다')
+  const move = page.getByTestId('move-scene')
+  await expect(move).toHaveAttribute('data-move', 'up')
+  await expect(move.getByTestId('rival-smash')).toBeVisible()
+  await expect(move).toContainText('옆 건물을 들이받아 무너뜨리고')
+  // 라이벌 회사 이름은 나오지 않는다.
+  await expect(move).not.toContainText('라이벌')
+  await expect(page.getByRole('alertdialog', { name: '라이벌 결과' })).toHaveCount(0)
 })
 
 test('랜드마크 타워에 오르면 결산서 뒤에 엔딩이 뜨고 다음 회사를 차리게 한다 (276번)', async ({
