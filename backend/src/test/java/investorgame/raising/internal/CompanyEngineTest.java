@@ -370,8 +370,8 @@ class CompanyEngineTest {
   }
 
   /**
-   * 채용 뽑기 (decisions.md 312번): 채용권 한 장에 한 명이 쉬는 채로 온다. 돈은 들지 않는다. 데리고 있을 수 있는 사람은 자리 수의 두 배이고, 넘으면
-   * 합치거나 내보내야 더 뽑는다.
+   * 채용 뽑기 (decisions.md 312번): 채용권 한 장에 한 명이 쉬는 채로 온다. 돈은 들지 않는다. 데리고 있을 수 있는 사람은 100명이고, 넘으면 합치거나
+   * 내보내야 더 뽑는다.
    */
   @Test
   void 채용권으로_뽑고_데리고_있을_자리가_모자라면_내보낸다() {
@@ -397,17 +397,20 @@ class CompanyEngineTest {
             () -> ENGINE.draw(company, PROPERTIES.gacha().maxDraws() + 1, new HashSeededRandom(5)))
         .isInstanceOf(InvalidRequestException.class);
 
-    // F 회사는 자리 넷이라 여덟까지 데리고 있는다.
-    company.tickets = 20;
-    assertThat(ENGINE.rosterMax(company)).isEqualTo(8);
-    ENGINE.draw(company, 6, new HashSeededRandom(5));
-    assertThat(company.employees).hasSize(8);
+    // 자리 수와 상관없이 백 명까지 데리고 있는다 (337번).
+    assertThat(ENGINE.rosterMax(company)).isEqualTo(100);
+    company.tickets = 200;
+    while (company.employees.size() < 100) {
+      int room = 100 - company.employees.size();
+      ENGINE.draw(company, Math.min(PROPERTIES.gacha().maxDraws(), room), new HashSeededRandom(5));
+    }
+    assertThat(company.employees).hasSize(100);
     assertThatThrownBy(() -> ENGINE.draw(company, 1, new HashSeededRandom(5)))
         .as("데리고 있을 자리가 꽉 찼다")
         .isInstanceOf(InvalidRequestException.class);
     CompanyState.Employee gone = company.employees.getFirst();
     ENGINE.release(company, gone.id);
-    assertThat(company.employees).hasSize(7).doesNotContain(gone);
+    assertThat(company.employees).hasSize(99).doesNotContain(gone);
     assertThat(company.alumni).extracting(a -> a.name).containsExactly(gone.name);
     ENGINE.draw(company, 1, new HashSeededRandom(5));
 

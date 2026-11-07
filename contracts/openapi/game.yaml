@@ -51,7 +51,7 @@ paths:
       description: |
         채용권 한 장에 한 명이 쉬는 채로 온다. 돈은 들지 않는다. 등급은 회사 등급(인사팀이 있으면 더 높게)을 중심으로 한 확률표대로다.
         요청에 지금까지 뽑은 횟수(draws)를 싣는다: 이미 한 뽑기면 아무것도 하지 않고 지금 회사를 돌려주고, 아직 오지 않은 것이면 400.
-        채용권이나 데리고 있을 자리(자리 수의 두 배)가 모자라거나 한 번에 maxDraws를 넘으면 400.
+        채용권이나 데리고 있을 자리(100명)가 모자라거나 한 번에 maxDraws를 넘으면 400.
       requestBody:
         required: true
         content:
@@ -643,7 +643,7 @@ components:
           properties:
             tickets: { type: integer, description: 가진 채용권. 한 장에 한 명. 회사를 차릴 때·분기·연말·업적·이사로 받고 다음 회사로 이어진다 }
             roster: { type: integer, description: 데리고 있는 사람 수(쉬는 사람 포함) }
-            rosterMax: { type: integer, description: 데리고 있을 수 있는 사람 수(자리 수의 두 배). 넘으면 합치거나 내보내야 더 뽑는다 }
+            rosterMax: { type: integer, description: 데리고 있을 수 있는 사람 수(100명). 넘으면 합쳐야 더 뽑는다 }
             draws: { type: integer, description: 지금까지 뽑은 횟수. 뽑기 요청에 싣는다 }
             maxDraws: { type: integer, description: 한 번에 뽑을 수 있는 최대 수 }
             mergeCount: { type: integer, description: 합성에 드는 같은 등급 사람 수(바탕 포함) }

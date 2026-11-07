@@ -138,7 +138,7 @@ api ─→ 세션 (확인, 관리자 세션 목록)
 | 세션 확보 (없으면 발급) | `POST /api/sessions` | |
 | 가장 최근 회사 | `GET /api/company` | 돌고 있거나 끝난 회사. 없으면 404 |
 | 회사 차리기 | `POST /api/company` | 사장의 사재로 회사를 연다. 이미 회사가 있으면 400(회사는 세션마다 하나). 가장 최근 회사가 망했으면(`broke`) 닫고 다음 번호로 연다 (247번) |
-| 채용 뽑기 | `POST /api/company/draws` `{count, draws}` | 채용권 count장으로 count명이 쉬는 채로 온다. 돈은 들지 않는다. 지금까지 뽑은 횟수를 실어 이미 한 뽑기면 그대로 돌려준다. 채용권·데리고 있을 자리(자리 수의 두 배)가 모자라면 400 (decisions.md 312번) |
+| 채용 뽑기 | `POST /api/company/draws` `{count, draws}` | 채용권 count장으로 count명이 쉬는 채로 온다. 돈은 들지 않는다. 지금까지 뽑은 횟수를 실어 이미 한 뽑기면 그대로 돌려준다. 채용권·데리고 있을 자리(100명, 337번)가 모자라면 400 (decisions.md 312번) |
 | 합성 | `POST /api/company/merge` `{baseId, materialIds}` | 같은 종합 등급 셋을 합쳐 바탕 한 명을 한 단계 올린다. 재료는 떠난다 (312번) |
 | 내보내기 | `POST /api/company/release` `{employeeId}` | 직원을 내보낸다. 명예의 전당에 남는다 (312번) |
 | 배치 | `POST /api/company/placement` | 직원 ID → 자리 코드(쉬면 null). 자리 수를 넘거나 같은 직원이 두 번 오면 400 |

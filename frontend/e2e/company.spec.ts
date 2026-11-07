@@ -186,7 +186,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   // 직원이 없으면 채용 탭이 먼저 열린다 (312번).
   await expect(page.getByRole('tab', { name: /채용/ })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByTestId('tickets')).toHaveText('10')
-  await expect(page.getByTestId('roster')).toContainText('0 / 8')
+  await expect(page.getByTestId('roster')).toContainText('0 / 100')
   await expect(page.getByTestId('collection-entry')).toHaveCount(18)
   await page.getByText('확률표').click()
   await expect(page.getByTestId('gacha-rates').getByRole('listitem')).toHaveCount(5)
@@ -237,7 +237,7 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   await reveal.getByTestId('gacha-close').click()
   await drawPeople(page, 3)
   await expect(page.getByTestId('tickets')).toHaveText('6')
-  await expect(page.getByTestId('roster')).toContainText('4 / 8')
+  await expect(page.getByTestId('roster')).toContainText('4 / 100')
   // 직원이 바뀌어 화면을 새로 그려도 채용 탭에 그대로 있다.
   await expect(page.getByRole('tab', { name: /채용/ })).toHaveAttribute('aria-selected', 'true')
   // 쉬는 사람은 내보낼 수 있다(지금은 내보내지 않는다).
@@ -410,7 +410,7 @@ test('뽑기 요청이 끊겨도 버튼이 잠기지 않고 다시 뽑을 수 �
   await expect(draw).toBeEnabled()
   await draw.click()
   await closeReveal(page)
-  await expect(page.getByTestId('roster')).toContainText('1 / 8')
+  await expect(page.getByTestId('roster')).toContainText('1 / 100')
 })
 
 test('분기 넘기기 버튼을 빠르게 두 번 눌러도 한 분기만 넘어간다 (#305)', async ({ page }) => {

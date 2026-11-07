@@ -132,7 +132,7 @@ public record CompanyView(
    *
    * @param tickets 가진 채용권. 한 장에 한 명
    * @param roster 데리고 있는 사람 수(쉬는 사람 포함)
-   * @param rosterMax 데리고 있을 수 있는 사람 수. 넘으면 합치거나 내보내야 더 뽑는다
+   * @param rosterMax 데리고 있을 수 있는 사람 수(100명, 337번). 넘으면 합쳐야 더 뽑는다
    * @param draws 지금까지 뽑은 횟수. 뽑기 요청에 싣는다
    * @param maxDraws 한 번에 뽑을 수 있는 최대 수
    * @param mergeCount 합성에 드는 같은 등급 사람 수(바탕 포함)

@@ -59,7 +59,7 @@ export interface paths {
          * 채용권으로 count명을 뽑는다 (decisions.md 312번)
          * @description 채용권 한 장에 한 명이 쉬는 채로 온다. 돈은 들지 않는다. 등급은 회사 등급(인사팀이 있으면 더 높게)을 중심으로 한 확률표대로다.
          *     요청에 지금까지 뽑은 횟수(draws)를 싣는다: 이미 한 뽑기면 아무것도 하지 않고 지금 회사를 돌려주고, 아직 오지 않은 것이면 400.
-         *     채용권이나 데리고 있을 자리(자리 수의 두 배)가 모자라거나 한 번에 maxDraws를 넘으면 400.
+         *     채용권이나 데리고 있을 자리(100명)가 모자라거나 한 번에 maxDraws를 넘으면 400.
          */
         post: operations["drawEmployees"];
         delete?: never;
@@ -603,7 +603,7 @@ export interface components {
                 tickets: number;
                 /** @description 데리고 있는 사람 수(쉬는 사람 포함) */
                 roster: number;
-                /** @description 데리고 있을 수 있는 사람 수(자리 수의 두 배). 넘으면 합치거나 내보내야 더 뽑는다 */
+                /** @description 데리고 있을 수 있는 사람 수(100명). 넘으면 합쳐야 더 뽑는다 */
                 rosterMax: number;
                 /** @description 지금까지 뽑은 횟수. 뽑기 요청에 싣는다 */
                 draws: number;

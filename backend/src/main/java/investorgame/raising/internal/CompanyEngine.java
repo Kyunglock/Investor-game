@@ -739,9 +739,9 @@ class CompanyEngine {
     return (long) (capital * (bp / (double) BP));
   }
 
-  /** 데리고 있을 수 있는 사람 수: 자리 수 × roster-percent (decisions.md 312번). 넘으면 합치거나 내보내야 더 뽑는다. */
+  /** 데리고 있을 수 있는 사람 수: 자리 수와 상관없이 roster-max (decisions.md 337번, 312번을 바꿈). 넘으면 합쳐야 더 뽑는다. */
   int rosterMax(CompanyState company) {
-    return seats(company) * properties.gacha().rosterPercent() / PERCENT;
+    return properties.gacha().rosterMax();
   }
 
   /** 지금 회사의 뽑기 중심 등급(LADDER 자리): 회사 등급 + level-steps, 인사팀이 있으면 인사 직원보다 cap-steps 아래까지 (6.3절). */
@@ -789,7 +789,7 @@ class CompanyEngine {
       throw new InvalidRequestException("채용권이 모자란다");
     }
     if (company.employees.size() + count > rosterMax(company)) {
-      throw new InvalidRequestException("데리고 있을 자리가 모자란다. 합치거나 내보내야 한다");
+      throw new InvalidRequestException("데리고 있을 자리가 모자란다. 합쳐야 더 뽑는다");
     }
     int total = rates().stream().mapToInt(CompanyProperties.Rate::percent).sum();
     int sssAt = LADDER.indexOf(StatGrade.SSS.name());

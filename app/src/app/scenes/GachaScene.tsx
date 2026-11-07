@@ -136,7 +136,7 @@ function DrawPart({ company }: { company: Company }) {
       </div>
       {full ? (
         <p className="text-[12px] text-red-pen" data-testid="roster-full">
-          데리고 있을 자리가 꽉 찼습니다. 합성하거나 쉬는 사람을 내보내세요.
+          데리고 있을 자리(100명)가 꽉 찼습니다. 합성해서 자리를 비우세요.
         </p>
       ) : (
         <p className="text-[12px] text-ink/60">
