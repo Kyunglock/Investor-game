@@ -151,9 +151,12 @@ class BalanceSimulationTest {
     first[0] = 0;
     for (int y = 1; y <= years && !c.finished; y++) {
       yearStart(c, random, boss);
+      // 한 해에 여러 단계를 지나면(공사가 끝난 다음 해 바로 책상을 늘리면) 지난 단계도 그해로 친다.
       int at = LADDER.indexOf(ENGINE.grade(c));
-      if (at >= 0 && first[at] < 0) {
-        first[at] = y;
+      for (int k = 0; k <= at; k++) {
+        if (first[k] < 0) {
+          first[k] = y;
+        }
       }
       int year = c.year;
       while (c.year == year && !c.finished) {
@@ -190,8 +193,8 @@ class BalanceSimulationTest {
 
   /**
    * 25년 일생 120판 (#344·#388·#389). 기사를 다수결로 읽는 사장이 늘 공격·크게 하는 사장보다, 그 사장이 이사 안 하고 중립·보류만 하는 사장보다 낫다.
-   * 기사 읽는 사장은 첫 이사(E)를 3년 안에 하고, 등급 하나에 5년 넘게 걸리지 않는다. 맞춘 때(2026-11-07, 200판): 기사 1조 1,940억 · 공격
-   * 1,913억 · 이사 안 함 194억, 기사 사장의 등급 첫 해 E 2 · D 6 · C 10 · B 14 · A 18 · S 21 · SS 24.
+   * 기사 읽는 사장은 첫 이사(E)를 3년 안에 하고, 등급 하나에 5년 넘게 걸리지 않는다. 새 건물을 몇 해에 걸쳐 짓게 한 뒤(#347, 120판): 기사 9,687억
+   * · 공격 1,925억 · 이사 안 함 220억, 기사 사장의 등급 첫 해 E 3 · D 7 · C 11 · B 16 · A 19 · S 24 · SS 25.
    */
   @Test
   void 기사를_읽는_사장이_이기고_등급이_고르게_오른다() {
@@ -200,6 +203,16 @@ class BalanceSimulationTest {
     Summary reader = run(Boss.READER, trials, years);
     Summary greedy = run(Boss.GREEDY, trials, years);
     Summary lazy = run(Boss.LAZY, trials, years);
+    System.out.println(
+        "BALANCE 기사 "
+            + reader.capital() / 100_000_000
+            + "억 "
+            + Arrays.toString(reader.firstYear())
+            + " | 공격 "
+            + greedy.capital() / 100_000_000
+            + "억 | 이사 안 함 "
+            + lazy.capital() / 100_000_000
+            + "억");
     org.assertj.core.api.Assertions.assertThat(reader.capital())
         .as("기사 읽는 사장이 늘 공격·크게 하는 사장의 세 배 넘게 번다")
         .isGreaterThan(greedy.capital() * 3);

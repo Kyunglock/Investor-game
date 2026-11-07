@@ -494,12 +494,14 @@ components:
           description: 건물 이사 (decisions.md 296번). 다음 건물로 가는 데 드는 돈. 끝 등급이거나 끝난 회사면 null
           oneOf:
             - type: object
-              required: [to, cost, needed, affordable]
+              required: [to, cost, needed, affordable, years, left]
               properties:
                 to: { $ref: '#/components/schemas/Grade' }
-                cost: { type: integer, format: int64, description: 이사 비용(다음 띠 자본의 25%) }
-                needed: { type: integer, format: int64, description: 이사하려면 있어야 하는 자본(다음 띠 + 이사 비용) }
+                cost: { type: integer, format: int64, description: 이사 비용(다음 띠 자본의 15%). 공사 중이면 0 }
+                needed: { type: integer, format: int64, description: 이사하려면 있어야 하는 자본(다음 띠 + 이사 비용). 공사 중이면 0 }
                 affordable: { type: boolean }
+                years: { type: integer, description: 그 건물을 짓는 데 걸리는 해 (#347). 같은 건물 안에서 책상만 늘면 0(바로 된다) }
+                left: { type: [integer, 'null'], description: 공사 중이면 남은 해, 아니면 null (#347) }
             - type: 'null'
         broke: { type: [string, 'null'], description: 망한 회사의 한 줄. 자본이 0이면 있고, 그때 사재로 다음 회사를 차릴 수 있다 (decisions.md 247번) }
         seats: { type: integer }

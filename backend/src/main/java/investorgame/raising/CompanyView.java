@@ -409,7 +409,14 @@ public record CompanyView(
    * @param needed 이사하려면 있어야 하는 자본(다음 띠 + 이사 비용)
    * @param affordable 지금 자본으로 갈 수 있다
    */
-  public record Upgrade(String to, long cost, long needed, boolean affordable) {}
+  /**
+   * 다음 건물 (296번). 공사 중이면(#347) to가 짓고 있는 건물이고 left가 남은 해다.
+   *
+   * @param years 그 건물을 짓는 데 걸리는 해. 같은 건물 안에서 책상만 늘면 0(바로 된다)
+   * @param left 공사 중이면 남은 해, 아니면 null
+   */
+  public record Upgrade(
+      String to, long cost, long needed, boolean affordable, int years, Integer left) {}
 
   /** 결산한 해의 투자 회의: 기사 제목과 회의 손익(이미 자본에 들어갔다). 회의를 안 했으면 결산의 invest가 null (decisions.md 240번). */
   public record SettlementInvest(String title, long total) {}

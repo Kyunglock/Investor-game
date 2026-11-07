@@ -747,34 +747,27 @@ class CompanyEngineTest {
     assertThat(staff.get(1).desk).isEqualTo("bio");
   }
 
+  /** 지은 건물은 폭락장에 자본이 띠 아래로 떨어져도 줄지 않는다 (#347): 전에는 연말에 저절로 줄어 앉아 있던 사람이 휴게실로 밀려났다. */
   @Test
-  void 결산으로_자리가_줄면_넘친_사람이_쉬고_소식_줄에_남는다() {
+  void 지은_건물은_폭락장에도_줄지_않는다() {
     for (long seed = 1; seed <= 40; seed++) {
-      // E 회사(자리 6)에 여섯을 앉히고 폭락장을 맞는다. F로 떨어지면 자리가 넷이 된다.
-      CompanyState company = open(seed, stats(1, 1, 1, 1), 200_000_000);
-      for (int i = 0; i < 4; i++) {
+      CompanyState company = open(seed, stats(1, 1, 1, 1), 130_000_000);
+      company.building = "E";
+      for (int i = 0; i < 5; i++) {
         ENGINE.hire(company, stats(1, 1, 1, 1));
       }
-      ENGINE.hire(company, stats(90, 90, 90, 90));
-      List<CompanyState.Employee> staff = company.employees;
       Map<Integer, String> seats = new HashMap<>();
-      for (int i = 0; i < 5; i++) {
-        seats.put(staff.get(i).id, "game");
+      for (CompanyState.Employee e : company.employees) {
+        seats.put(e.id, "game");
       }
-      seats.put(staff.get(5).id, "research");
       ENGINE.place(company, seats);
       company.phase = CompanyEngine.CRASH;
       company.invest = null;
-      CompanyState.Settlement settlement = ENGINE.settle(company, new HashSeededRandom(seed));
-      long seated = company.employees.stream().filter(e -> e.desk != null).count();
-      assertThat(seated).isLessThanOrEqualTo(ENGINE.seats(company.capital));
-      if (ENGINE.seats(company.capital) < 6) {
-        assertThat(staff.get(5).desk).as("리서치 팀이 먼저 일어난다").isNull();
-        assertThat(settlement.lines).anyMatch(line -> line.contains("자리에서 일어나 쉰다"));
-        return;
-      }
+      ENGINE.settle(company, new HashSeededRandom(seed));
+      assertThat(ENGINE.grade(company)).isEqualTo("E");
+      assertThat(ENGINE.seats(company)).isEqualTo(6);
+      assertThat(company.employees.stream().filter(e -> e.desk != null).count()).isEqualTo(6);
     }
-    throw new AssertionError("폭락장에 자리가 줄어드는 해가 없었다");
   }
 
   /**
@@ -1136,32 +1129,50 @@ class CompanyEngineTest {
     assertThat(company.yearMoving).isEqualTo(18_000_000L);
     assertThat(ENGINE.seats(company)).isEqualTo(6);
     assertThat(company.timeline).extracting(e -> e.kind).contains("grow");
-    // 한 번에 한 단계씩: D(3억)로 가려면 3억 4,500만이 있어야 하고 지금 8억 남짓이니 간다.
+    // 한 번에 한 단계씩: D(3억)는 새 건물(상가)이라 한 해 동안 짓는다 (#347). 비용은 지금 다 내고, 연말 결산에서 옮긴다.
     ENGINE.upgrade(company);
-    assertThat(ENGINE.grade(company)).isEqualTo("D");
+    assertThat(ENGINE.grade(company)).as("공사 중에는 지금 건물 그대로").isEqualTo("E");
+    assertThat(company.buildingTo).isEqualTo("D");
+    assertThat(company.buildLeft).isEqualTo(1);
     assertThat(company.capital).isEqualTo(before - 63_000_000L);
-    assertThat(ENGINE.canUpgrade(company)).as("C 10억은 아직").isFalse();
+    assertThat(ENGINE.canUpgrade(company)).as("공사 중에는 다음 건물을 못 짓는다").isFalse();
+    company.invest = null;
+    company.poach = null;
     CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(2));
+    assertThat(ENGINE.grade(company)).as("한 해 지어 옮겼다").isEqualTo("D");
+    assertThat(company.buildingTo).isNull();
+    assertThat(s.gradeAfter).isEqualTo("D");
+    assertThat(s.lines).anyMatch(line -> line.contains("다 지어졌다"));
     assertThat(s.moving).isEqualTo(63_000_000L);
-    assertThat(s.quarters.stream().mapToLong(q -> q.moving).sum()).isEqualTo(63_000_000L);
+    assertThat(ENGINE.canUpgrade(company)).as("C 10억은 아직").isFalse();
 
-    // 자본이 띠 아래로 떨어지면 연말에 줄어든다.
+    // 지은 건물은 자본이 띠 아래로 떨어져도 그대로다 (#347).
     company.capital = 100_000_000L;
     company.invest = null;
     company.poach = null;
     CompanyState.Settlement fell = ENGINE.settle(company, new HashSeededRandom(3));
     assertThat(fell.gradeBefore).isEqualTo("D");
-    assertThat(fell.gradeAfter).isEqualTo("F");
-    assertThat(ENGINE.grade(company)).isEqualTo("F");
+    assertThat(fell.gradeAfter).isEqualTo("D");
+    assertThat(ENGINE.grade(company)).isEqualTo("D");
 
     // 랜드마크 타워(Z)에 오르면 엔딩이다.
     company.capital = 200_000_000_000_000L;
-    while (ENGINE.canUpgrade(company) && !company.finished) {
-      ENGINE.upgrade(company);
+    for (int seed = 10; !company.finished && seed < 60; seed++) {
+      if (ENGINE.canUpgrade(company)) {
+        ENGINE.upgrade(company);
+      } else {
+        // 공사 중이면 한 해 짓는다.
+        company.invest = null;
+        company.poach = null;
+        company.raise = null;
+        ENGINE.settle(company, new HashSeededRandom(seed));
+        company.capital = Math.max(company.capital, 200_000_000_000_000L);
+      }
     }
     assertThat(ENGINE.grade(company)).isEqualTo("Z");
     assertThat(company.finished).isTrue();
-    assertThat(company.finishedYear).isEqualTo(company.year);
+    // 연말 결산에서 완공되면 결산 뒤로 해가 넘어간다.
+    assertThat(company.finishedYear).isBetween(company.year - 1, company.year);
   }
 
   @Test

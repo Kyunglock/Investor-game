@@ -662,6 +662,35 @@ test('건물이 커지면 연말 결산서 뒤 알림 창에서 옆 건물을 �
   await expect(page.getByRole('alertdialog', { name: '라이벌 결과' })).toHaveCount(0)
 })
 
+test('새 건물 공사가 끝나면 가림막이 걷히며 새 건물이 솟아오른다 (#347)', async ({ page }) => {
+  await openCompany(page)
+  // 새 건물(상가)은 한 해 걸려 짓는다: 연말 결산 응답을 완공(E → D)으로 바꿔 본다.
+  await page.route('**/api/company/settle', async (route) => {
+    const response = await route.fetch()
+    const company = await response.json()
+    if (company.quarter === 1 && company.lastSettlement) {
+      company.lastSettlement.gradeBefore = 'E'
+      company.lastSettlement.gradeAfter = 'D'
+    }
+    await route.fulfill({ response, json: company })
+  })
+  for (let quarter = 1; quarter <= 4; quarter++) {
+    await page.getByRole('button', { name: `1년 차 ${quarter}분기 넘기기` }).click()
+    if (quarter < 4) {
+      await closeQuarter(page, 1, quarter)
+    }
+  }
+  await page
+    .getByRole('dialog', { name: '연말 결산서' })
+    .getByRole('button', { name: '확인' })
+    .click()
+  const move = page.getByTestId('move-scene')
+  await expect(move.getByTestId('build-complete')).toBeVisible()
+  await expect(move.getByTestId('rival-smash')).toHaveCount(0)
+  await expect(move).toContainText('공사가 끝났다!')
+  await expect(move).toContainText('반지하 원룸 → 상가 2층')
+})
+
 test('랜드마크 타워에 오르면 결산서 뒤에 엔딩이 뜨고 다음 회사를 차리게 한다 (276번)', async ({
   page,
 }) => {

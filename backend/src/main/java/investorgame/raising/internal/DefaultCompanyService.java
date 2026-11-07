@@ -212,12 +212,16 @@ class DefaultCompanyService implements CompanyService {
 
   /** 다음 건물로 가는 데 드는 돈 (296번). 끝 등급이거나 끝난 회사면 null. */
   private CompanyView.Upgrade upgradeView(CompanyState c) {
+    if (c.buildingTo != null && !c.finished) {
+      return new CompanyView.Upgrade(c.buildingTo, 0, 0, false, c.buildYears, c.buildLeft);
+    }
     String to = engine.nextGrade(c);
     Long needed = engine.upgradeNeeded(c);
     if (to == null || needed == null || c.finished) {
       return null;
     }
-    return new CompanyView.Upgrade(to, engine.upgradeCost(c), needed, engine.canUpgrade(c));
+    return new CompanyView.Upgrade(
+        to, engine.upgradeCost(c), needed, engine.canUpgrade(c), engine.buildYears(to), null);
   }
 
   @Override

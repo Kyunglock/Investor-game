@@ -448,15 +448,19 @@ export interface components {
                 to: components["schemas"]["Grade"];
                 /**
                  * Format: int64
-                 * @description 이사 비용(다음 띠 자본의 25%)
+                 * @description 이사 비용(다음 띠 자본의 15%). 공사 중이면 0
                  */
                 cost: number;
                 /**
                  * Format: int64
-                 * @description 이사하려면 있어야 하는 자본(다음 띠 + 이사 비용)
+                 * @description 이사하려면 있어야 하는 자본(다음 띠 + 이사 비용). 공사 중이면 0
                  */
                 needed: number;
                 affordable: boolean;
+                /** @description 그 건물을 짓는 데 걸리는 해 (#347). 같은 건물 안에서 책상만 늘면 0(바로 된다) */
+                years: number;
+                /** @description 공사 중이면 남은 해 */
+                left: number | null;
             } | null;
             /** @description 망한 회사의 한 줄. 자본이 0이면 있고 */
             broke?: string | null;
