@@ -327,7 +327,7 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
           className="animate-reveal"
           style={{ animationDelay: `${done}ms`, animationFillMode: 'both' }}
         >
-          <TeamReports reports={s.reports} />
+          <TeamReports reports={s.reports} employees={company.employees} />
         </div>
         {s.achieved.length > 0 && (
           // 그해 연 업적 (263번).
