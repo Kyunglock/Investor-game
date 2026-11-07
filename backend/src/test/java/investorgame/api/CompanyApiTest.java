@@ -297,8 +297,8 @@ class CompanyApiTest {
     assertThat(fourth.read("$.status", String.class)).isEqualTo("ACTIVE");
     assertThat(fourth.read("$.year", Integer.class)).isEqualTo(4);
     assertThat(fourth.read("$.macro.ready", Boolean.class)).isTrue();
-    // 채용권은 분기·연말마다 쌓인다 (312번).
-    assertThat(fourth.read("$.gacha.tickets", Integer.class)).isGreaterThan(4);
+    // 채용권은 연말마다 한 장 (357번).
+    assertThat(fourth.read("$.gacha.tickets", Integer.class)).isPositive();
     assertThat(fourth.read("$.meeting", Object.class)).isNotNull();
     java.util.Map<String, Object> fields = fourth.read("$");
     assertThat(fields).doesNotContainKeys("sale", "owner", "turns");
