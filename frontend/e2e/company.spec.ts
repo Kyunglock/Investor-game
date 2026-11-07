@@ -203,7 +203,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await tab(page, /이슈/)
   await expect(page.getByTestId('meeting')).toBeVisible()
 
-  // 회사 건물 단면: 책상은 자리 수, 아직 아무도 없다. 그림을 끄면 같은 내용을 글로 (8.1·8.4절).
+  // 회사 건물 단면: 책상은 자리 수, 아직 아무도 없다 (8.1·8.4절).
   await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '0')
   // 사무실 미니맵 (237번): 자리마다 칸이 있고 아직 다 빈 자리다. 누르면 쉬는 사람이 없으니 채용으로 데려간다.
   await expect(page.getByTestId('office-empty')).toHaveCount(4)
@@ -212,14 +212,10 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await page.getByTestId('seat-picker').getByRole('button', { name: '채용에서 뽑기' }).click()
   await expect(page.getByTestId('seat-picker')).toHaveCount(0)
   await expect(page.getByRole('tab', { name: /채용/ })).toHaveAttribute('aria-selected', 'true')
-  await page.getByRole('button', { name: '그림 끄기' }).click()
-  await expect(page.getByTestId('office-caption')).toHaveText(
+  // 그림 끄기는 없다(343번): 설명글은 그림 아래에 늘 있다.
+  await expect(page.getByTestId('office-art')).toContainText(
     '사무실: 반지하 원룸, 책상 4개 · 객장: 손님 없음, 길고양이 한 마리',
   )
-  await page.reload()
-  await expect(page.getByTestId('office-caption')).toBeVisible()
-  await page.getByRole('button', { name: '그림 켜기' }).click()
-  await expect(page.getByTestId('office-art')).toBeVisible()
 })
 
 test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, 회의와 결산을 하면 세 해가 지나도 이어진다', async ({

@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">증권사 사장</string>
-    <string name="title_activity_main">증권사 사장</string>
+    <string name="app_name">흔들리지 않는 고양이</string>
+    <string name="title_activity_main">흔들리지 않는 고양이</string>
     <string name="package_name">com.kyunglock.investorgame</string>
     <string name="custom_url_scheme">com.kyunglock.investorgame</string>
 </resources>

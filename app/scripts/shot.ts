@@ -39,10 +39,9 @@ const shot = async (name: string) => {
 
 await page.goto(base)
 if (process.env.EMPTY) {
-  await page.getByTestId('touch-to-start').waitFor()
-  await shot('title')
-  await page.getByTestId('touch-to-start').click()
-  await shot('title-start')
+  // 제목 화면이 없다(343번): 회사를 차리는 POST도 가짜 회사로 받으니 바로 사무실이 뜬다.
+  await page.getByTestId('shell').waitFor()
+  await shot('first-open')
 } else {
   await page.getByTestId('shell').waitFor()
   await shot('office')

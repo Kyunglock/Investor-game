@@ -48,6 +48,8 @@ export interface CatLook {
 /** 상자 크기. */
 export const CAT_W = 100
 export const CAT_H = 110
+/** 눈의 자리(상자 좌표): 머리 중심 50에서 좌우 dx, 높이 y. 바깥에서 눈을 덮어 깜빡임을 그릴 때 쓴다. */
+export const EYE = { cx: 50, dx: 8.5, y: 42 }
 
 type Ctx = CanvasRenderingContext2D
 

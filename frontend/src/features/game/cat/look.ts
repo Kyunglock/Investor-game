@@ -1,7 +1,7 @@
 import type { Grade } from '../../../api/client'
 import type { Attire } from '../../raising/office'
 import { attireOf } from '../../raising/office'
-import type { MoodKey } from '../pixel/moods'
+import type { MoodKey } from '../moods'
 import type { Acc, CatLook, Face, Outfit } from './draw'
 
 /**
