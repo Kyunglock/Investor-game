@@ -32,7 +32,7 @@ class SessionCookies {
     return ResponseCookie.from(NAME, token)
         .httpOnly(true)
         .secure(properties.cookieSecure())
-        .sameSite("Lax")
+        .sameSite(properties.cookieSameSite())
         .path("/")
         .maxAge(properties.ttl())
         .build();

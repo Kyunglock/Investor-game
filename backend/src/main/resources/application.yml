@@ -44,6 +44,14 @@ behavior:
 session:
   ttl: 1d
   cookie-secure: true
+  # 안드로이드 앱이 화면을 앱 안에 담아 다른 출처(https://localhost)에서 부르면 None으로 바꾼다 (decisions.md 306번, docs/app.md)
+  cookie-same-site: ${SESSION_COOKIE_SAME_SITE:Lax}
+
+api:
+  cors:
+    # 다른 출처에서 /api를 부르도록 허용할 출처(쉼표로 여럿). 비우면 CORS를 열지 않는다(웹은 같은 출처라 필요 없다).
+    # 안드로이드 앱이 화면을 앱 안에 담으면 https://localhost 를 둔다 (decisions.md 306번, docs/app.md)
+    origins: ${API_CORS_ORIGINS:}
 
 # 증권사 육성 (증권사 육성 설계). 3분 육성 판은 없앴다: 직원은 회사의 공채 시장에서 뽑는다 (decisions.md 228번)
 raising:
