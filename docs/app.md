@@ -25,12 +25,12 @@
 
 ### GitHub Actions (권장)
 
-`.github/workflows/android.yml`. Actions 탭 → **Android** → Run workflow. `server_url`을 비우면 저장소 변수를 쓴다.
+`.github/workflows/android.yml`. Actions 탭 → **Android** → Run workflow. 아무것도 넣지 않으면 **운영 웹 `https://game.kwaklabs.com`을 띄우는 APK**가 나온다. `server_url`을 적으면 그 주소(내 컴퓨터의 개발 서버 등), 저장소 변수 `APP_SERVER_URL`이 있으면 그 주소가 먼저다.
 
 | 저장소 설정 | 뜻 |
 |---|---|
-| 변수 `APP_SERVER_URL` | 앱이 띄울 운영 웹 주소 (운영 웹 띄우기) |
-| 변수 `APP_API_BASE` | 화면 담기일 때 API 주소. `APP_SERVER_URL`이 있으면 쓰지 않는다 |
+| 변수 `APP_SERVER_URL` | 앱이 띄울 웹 주소를 운영 웹이 아닌 곳으로 바꿀 때 |
+| 변수 `APP_API_BASE` | 화면 담기일 때 API 주소. 화면 담기는 Run workflow의 `server_url`에 `none`을 넣는다 |
 | 시크릿 `ANDROID_KEYSTORE_BASE64` `ANDROID_KEYSTORE_PASSWORD` `ANDROID_KEY_ALIAS` `ANDROID_KEY_PASSWORD` | 있으면 서명한 배포용 APK도 만든다. 없으면 디버그 APK만 |
 
 결과는 실행 결과의 Artifacts에서 `app-debug`(기기에 바로 설치해 보는 용도), `app-release`(서명 키가 있을 때)를 받는다. main에 `frontend/`의 변경이 들어와도 돈다.
