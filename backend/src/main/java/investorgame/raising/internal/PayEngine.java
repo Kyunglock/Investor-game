@@ -123,9 +123,9 @@ class PayEngine {
             "name",
             e == null ? "" : e.name,
             "before",
-            CompanyEngine.won(c.raise.before),
+            CompanyEngine.money(c.raise.before),
             "after",
-            CompanyEngine.won(c.raise.after)));
+            CompanyEngine.money(c.raise.after)));
   }
 
   /**

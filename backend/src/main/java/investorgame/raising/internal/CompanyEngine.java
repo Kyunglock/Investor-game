@@ -133,7 +133,8 @@ class CompanyEngine {
     company.building = grade(company.capital);
     company.era = eras().getFirst().code();
     company.opening =
-        Korean.fill(content.raising().company().opening(), Map.of("capital", won(company.capital)));
+        Korean.fill(
+            content.raising().company().opening(), Map.of("capital", money(company.capital)));
     startYear(company, random);
     history.opened(company);
     return company;
@@ -189,7 +190,7 @@ class CompanyEngine {
                 "next",
                 String.valueOf(next.number),
                 "capital",
-                won(next.capital)));
+                money(next.capital)));
     startYear(next, random);
     history.opened(next);
     return next;
@@ -545,7 +546,7 @@ class CompanyEngine {
             "era",
             era(next).name(),
             "capital",
-            won(next.capital),
+            money(next.capital),
             "names",
             String.join("·", next.employees.stream().map(e -> e.name).toList()));
     next.opening =
@@ -924,22 +925,38 @@ class CompanyEngine {
     startYear(company, random);
   }
 
-  /** 소식 줄·한 줄의 금액. 1조가 넘으면 조와 억까지만 쓴다 (decisions.md 253번): 56조 3,615억 원, 1억 원, 312만 원. */
-  static String won(long amount) {
-    long abs = Math.abs(amount);
+  /**
+   * 게임 금액 (decisions.md 313번): 1,000마다 a·b·c·d… 로 올라간다(1a 1천 · 1b 100만 · 1c 10억 · 1d 1조 · 1e 1천조).
+   * 앞자리는 세 자리까지. 원화(억·조)를 쓰지 않는다. 화면의 labels.ts money()와 같은 꼴이다. 예: 950 · 3.5a · 100b · 41.3b ·
+   * −5.2b.
+   */
+  static String money(long amount) {
     String sign = amount < 0 ? "−" : "";
-    if (abs >= 1_000_000_000_000L) {
-      long jo = abs / 1_000_000_000_000L;
-      long eok = abs % 1_000_000_000_000L / 100_000_000L;
-      return sign + (eok == 0 ? "%,d조 원".formatted(jo) : "%,d조 %,d억 원".formatted(jo, eok));
+    double abs = Math.abs((double) amount);
+    if (abs < 1000) {
+      return sign + (long) abs;
     }
-    if (abs >= 100_000_000L) {
-      long eok = abs / 100_000_000L;
-      long man = abs % 100_000_000L / 10_000L;
-      return sign + (man == 0 ? "%,d억 원".formatted(eok) : "%,d억 %,d만 원".formatted(eok, man));
+    int unit = 0;
+    while (abs >= 1000 && unit < MONEY_UNITS.length()) {
+      abs /= 1000;
+      unit++;
     }
-    return sign + "%,d만 원".formatted(abs / 10_000L);
+    int digits = abs < 10 ? 2 : abs < 100 ? 1 : 0;
+    java.math.BigDecimal value =
+        java.math.BigDecimal.valueOf(abs).setScale(digits, java.math.RoundingMode.HALF_UP);
+    if (value.compareTo(java.math.BigDecimal.valueOf(1000)) >= 0 && unit < MONEY_UNITS.length()) {
+      unit++;
+      value =
+          value
+              .divide(java.math.BigDecimal.valueOf(1000))
+              .setScale(2, java.math.RoundingMode.HALF_UP);
+    }
+    String text = value.stripTrailingZeros().toPlainString();
+    return sign + text + MONEY_UNITS.charAt(unit - 1);
   }
+
+  /** 게임 금액 단위. 등급 글자(F~S)와 헷갈리지 않게 소문자다. */
+  static final String MONEY_UNITS = "abcdefghijklmnopqrstuvwxyz";
 
   String grade(long capital) {
     int at = 0;
@@ -1018,7 +1035,7 @@ class CompanyEngine {
       throw new InvalidRequestException("끝난 회사다");
     }
     if (!canUpgrade(company)) {
-      throw new InvalidRequestException("이사하려면 자본이 " + won(upgradeNeeded(company)) + " 있어야 한다");
+      throw new InvalidRequestException("이사하려면 자본이 " + money(upgradeNeeded(company)) + " 있어야 한다");
     }
     long cost = upgradeCost(company);
     company.capital -= cost;

@@ -681,7 +681,7 @@ class InvestEngine {
         long bonus = i.total * properties.invest().proposalBonusPercent() / PERCENT;
         c.capital = Math.max(0, c.capital - bonus);
         c.yearHiring += bonus;
-        values.put("bonus", CompanyEngine.won(bonus));
+        values.put("bonus", CompanyEngine.money(bonus));
         company.pay.shiftMorale(e, 2);
       }
       case "RAISE" -> {

@@ -1,5 +1,5 @@
 import type { Company } from '../../api/client'
-import { shortWon } from '../game/labels'
+import { money } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { BuildingArt } from './BuildingArt'
 import { useRaisingStore } from './store'
@@ -32,7 +32,7 @@ export function EndingScreen({ company }: { company: Company }) {
           반지하 원룸에서 <b>{ending.year}년</b> 만에
         </p>
         <p className="mt-1 font-mono-num text-[18px] font-bold" data-testid="ending-capital">
-          자본 {shortWon(ending.capital)}
+          자본 {money(ending.capital)}
         </p>
         <p className="mt-2 text-[13px] text-muted">
           업적 {achieved.length} / {company.history.achievements.length}
@@ -43,7 +43,7 @@ export function EndingScreen({ company }: { company: Company }) {
             <ol className="mt-1 list-decimal pl-5 text-[13px]">
               {company.history.hall.slice(0, 3).map((h) => (
                 <li key={`${h.name}-${h.from}`}>
-                  {h.name} · {shortWon(h.totalPnl)}
+                  {h.name} · {money(h.totalPnl)}
                 </li>
               ))}
             </ol>
@@ -63,7 +63,7 @@ export function EndingScreen({ company }: { company: Company }) {
           onClick={() => void restart()}
           className="mt-2 min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
         >
-          사재 1억 원으로 {company.number + 1}호 회사 차리기
+          사재 100b로 {company.number + 1}호 회사 차리기
         </button>
       </section>
     </Overlay>

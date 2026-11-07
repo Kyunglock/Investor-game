@@ -55,7 +55,7 @@ class CompanyEngineTest {
     CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
     assertThat(company.capital).isEqualTo(100_000_000);
     assertThat(company.employees).isEmpty();
-    assertThat(company.opening).contains("1억 원");
+    assertThat(company.opening).contains("100b로");
     assertThat(company.tickets).isEqualTo(PROPERTIES.gacha().startTickets());
     assertThat(ENGINE.draw(company, 1, new HashSeededRandom(1)).getFirst().name).isEqualTo("박한결");
     assertThat(ENGINE.grade(company.capital)).isEqualTo("F");
@@ -915,11 +915,17 @@ class CompanyEngineTest {
   }
 
   @Test
-  void 큰돈은_조와_억으로_쓴다() {
-    assertThat(CompanyEngine.won(100_000_000)).isEqualTo("1억 원");
-    assertThat(CompanyEngine.won(248_580_000)).isEqualTo("2억 4,858만 원");
-    assertThat(CompanyEngine.won(56_361_512_345_678L)).isEqualTo("56조 3,615억 원");
-    assertThat(CompanyEngine.won(1_000_000_000_000_000L)).isEqualTo("1,000조 원");
+  /** 게임 금액 (decisions.md 313번): 1,000마다 a·b·c·d로 올라가고 앞자리는 세 자리까지. 화면의 money()와 같다. */
+  void 돈은_게임_금액_단위로_쓴다() {
+    assertThat(CompanyEngine.money(950)).isEqualTo("950");
+    assertThat(CompanyEngine.money(3_500)).isEqualTo("3.5a");
+    assertThat(CompanyEngine.money(100_000_000)).isEqualTo("100b");
+    assertThat(CompanyEngine.money(248_580_000)).isEqualTo("249b");
+    assertThat(CompanyEngine.money(41_250_000)).isEqualTo("41.3b");
+    assertThat(CompanyEngine.money(56_361_512_345_678L)).isEqualTo("56.4d");
+    assertThat(CompanyEngine.money(1_000_000_000_000_000L)).isEqualTo("1e");
+    assertThat(CompanyEngine.money(999_960_000)).isEqualTo("1c");
+    assertThat(CompanyEngine.money(-5_200_000)).isEqualTo("−5.2b");
   }
 
   /** 폭락장에 아무도 바닥에서 던지지 않았으면 머리줄이 "못 참고 판 사람이 가장 크게 잃었다"가 아니다 (#318, decisions.md 255번). */

@@ -133,7 +133,7 @@ describe('회의 뒤 돌아보기 (decisions.md 260번)', () => {
       outcome: { up: true, decisive: 1, missed: 12_000_000 },
     } as never
     expect(hindsightOf(invest)).toEqual([
-      '지켜봤다. 샀으면 +1,200만원이었다.',
+      '지켜봤다. 샀으면 벌었을 돈 +12b.',
       '직원 다수결(사자)은 맞았다.',
       '형광펜은 결정적 문장에 그었다.',
     ])

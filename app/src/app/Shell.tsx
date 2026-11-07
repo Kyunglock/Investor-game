@@ -1,5 +1,5 @@
 import type { Company } from '@web/api/client'
-import { shortWon } from '@web/features/game/labels'
+import { money } from '@web/features/game/labels'
 import { officeName } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useTutorialSpot } from '@web/features/raising/TutorialBanner'
@@ -167,7 +167,7 @@ function Hud({ company }: { company: Company }) {
             className="animate-num-pop font-mono-num text-[18px] font-bold leading-tight text-(--gold-bright)"
             data-testid="company-capital"
           >
-            {shortWon(capital)}
+            {money(capital)}
           </p>
         </div>
         <button

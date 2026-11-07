@@ -1,5 +1,5 @@
 import type { Company } from '../../api/client'
-import { shortWon } from '../game/labels'
+import { money } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { pnlLabel } from './board'
 import { TeamReports } from './TeamReports'
@@ -39,7 +39,7 @@ export function QuarterSheet({ quarter: q, onClose }: { quarter: Quarter; onClos
         )}
         <p className="mt-2 flex items-baseline justify-between font-mono-num text-[16px]">
           <span>
-            {shortWon(q.capitalBefore)} → <b>{shortWon(q.capitalAfter)}</b>
+            {money(q.capitalBefore)} → <b>{money(q.capitalAfter)}</b>
           </span>
           <b className={tone(change)} data-testid="quarter-change">
             {pnlLabel(change)}

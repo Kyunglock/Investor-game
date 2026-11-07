@@ -567,7 +567,7 @@ class DefaultCompanyService implements CompanyService {
     String ask =
         investorgame.common.Korean.fill(
             texts.verdictAsk().get(good ? "GOOD" : "BAD"),
-            Map.of("name", i.followedName, "pnl", CompanyEngine.won(Math.abs(i.total))));
+            Map.of("name", i.followedName, "pnl", CompanyEngine.money(Math.abs(i.total))));
     return new CompanyView.Verdict(i.followedId, i.followedName, good, ask, options, i.verdictLine);
   }
 

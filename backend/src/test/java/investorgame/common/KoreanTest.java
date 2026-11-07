@@ -51,4 +51,17 @@ class KoreanTest {
         .isEqualTo("아이가 2인데 {x}은(는)");
     assertThat(Korean.fill("{stock}의 이익", Map.of("stock", "삼송전자"))).isEqualTo("삼송전자의 이익");
   }
+
+  /** 로마자는 읽는 소리로 (decisions.md 313번): 게임 금액 100b(백비)·등급 SSS(에스)는 받침이 없고, M(엠)은 있고, L(엘)은 ㄹ 받침이다. */
+  @Test
+  void 로마자는_읽는_소리로_받침을_본다() {
+    assertThat(Korean.fill("사재 {capital}으로 차렸다", Map.of("capital", "100b")))
+        .isEqualTo("사재 100b로 차렸다");
+    assertThat(Korean.fill("{name}이(가) {grade}이(가) 됐다", Map.of("name", "김대리", "grade", "SSS")))
+        .isEqualTo("김대리가 SSS가 됐다");
+    assertThat(Korean.fill("{pnl}을(를) 벌었다", Map.of("pnl", "3.5a"))).isEqualTo("3.5a를 벌었다");
+    assertThat(Korean.fill("{x}이(가)", Map.of("x", "M"))).isEqualTo("M이");
+    assertThat(Korean.fill("{x}(으)로", Map.of("x", "L"))).isEqualTo("L로");
+    assertThat(Korean.fill("{x}이(가)", Map.of("x", "950"))).isEqualTo("950이");
+  }
 }

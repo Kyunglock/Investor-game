@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { Company } from '../../api/client'
-import { shortWon } from '../game/labels'
+import { money } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { bubbleOf, pnlLabel, teamRows } from './board'
 import { officeName } from './office'
@@ -208,14 +208,14 @@ export function Ledger({
       {s.quarters.length > 0 && <QuarterBars quarters={s.quarters} />}
       <p className="flex items-baseline justify-between text-[14px]">
         <span className="text-muted">연초 자본</span>
-        <span className="font-mono-num">{shortWon(s.capitalBefore)}</span>
+        <span className="font-mono-num">{money(s.capitalBefore)}</span>
       </p>
       <ol className="mt-1 divide-y divide-line-soft border-y border-line">{rows}</ol>
       <div className={`pt-2 ${end.className}`} style={end.style}>
         <p className="flex items-baseline justify-between text-[15px]">
           <b>연말 자본</b>
           <b className="font-mono-num text-[18px]" data-testid="ledger-after">
-            {shortWon(s.capitalAfter)}
+            {money(s.capitalAfter)}
           </b>
         </p>
         {before !== after ? (

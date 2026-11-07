@@ -193,7 +193,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await expect(page.getByTestId('building-ladder').getByRole('listitem')).toHaveCount(7)
   await expect(page.getByTestId('next-step')).toContainText('사무실 넓히기')
   // 건물은 저절로 오르지 않는다 (296번): 이사 비용과 필요한 자본이 보이고, 자본이 모자라면 버튼이 잠긴다.
-  await expect(page.getByTestId('next-step')).toContainText('이사 비용 5,000만원')
+  await expect(page.getByTestId('next-step')).toContainText('이사 비용 50b')
   await expect(page.getByTestId('upgrade')).toBeDisabled()
   // 라이벌 회사를 걷어냈다 (288번): 업계 순위가 없다.
   await expect(page.getByTestId('industry')).toHaveCount(0)
@@ -633,7 +633,7 @@ test('건물이 커지면 연말 결산서 뒤 알림 창에서 옆 건물을 �
   page,
 }) => {
   await openCompany(page)
-  // 사재 1억으로 첫해에 건물을 키우기는 어렵다: 연말 결산 응답의 등급을 올려 본다.
+  // 사재 100b로 첫해에 건물을 키우기는 어렵다: 연말 결산 응답의 등급을 올려 본다.
   await page.route('**/api/company/settle', async (route) => {
     const response = await route.fetch()
     const company = await response.json()
@@ -692,9 +692,7 @@ test('랜드마크 타워에 오르면 결산서 뒤에 엔딩이 뜨고 다음 
   await expect(ending).toBeVisible()
   await expect(ending).toContainText('랜드마크 타워에 올랐다!')
   await expect(ending.getByTestId('ending-years')).toHaveText('반지하 원룸에서 1년 만에')
-  await expect(
-    ending.getByRole('button', { name: '사재 1억 원으로 2호 회사 차리기' }),
-  ).toBeVisible()
+  await expect(ending.getByRole('button', { name: '사재 100b로 2호 회사 차리기' })).toBeVisible()
   // 엔딩을 본 회사는 분기를 넘기지 않는다.
   await expect(page.getByRole('button', { name: '2년 차 1분기 넘기기' })).toHaveCount(0)
 })
