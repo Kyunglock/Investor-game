@@ -1087,6 +1087,28 @@ p.animate-stamp {
     filter 0.22s ease,
     box-shadow 0.22s ease;
 }
+/* 합성 인벤토리 (336번): 한 판에 다섯 칸씩 */
+.merge-inventory {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+.merge-inventory > li {
+  min-width: 0;
+}
+.merge-inventory .merge-card {
+  width: 100%;
+}
+.merge-slot {
+  aspect-ratio: 3 / 4;
+  border-radius: 10px;
+  border: 1.5px dashed var(--line);
+  background: rgba(0, 0, 0, 0.03);
+}
+.merge-card.is-alone {
+  cursor: default;
+  opacity: 0.55;
+}
 .merge-card.is-dragged {
   opacity: 0.3;
 }
@@ -1108,7 +1130,7 @@ p.animate-stamp {
 .merge-ghost {
   position: fixed;
   z-index: 60;
-  width: 84px;
+  width: 64px;
   aspect-ratio: 3 / 4;
   pointer-events: none;
   transform: translate(-50%, -55%) scale(1.04);
