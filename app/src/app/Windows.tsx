@@ -8,7 +8,7 @@ import { MoveScene } from '@web/features/raising/MoveScene'
 import { QuarterSheet } from '@web/features/raising/QuarterSheet'
 import { ResignAlert } from '@web/features/raising/ResignAlert'
 import { useRaisingStore } from '@web/features/raising/store'
-import { useTutorialSpot } from '@web/features/raising/TutorialBanner'
+import { useLocked, useTutorialSpot } from '@web/features/raising/TutorialBanner'
 import { YearEndSheet } from '@web/features/raising/YearEnd'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
@@ -192,6 +192,9 @@ export function ActionBar({ company }: { company: Company }) {
   const autoPlay = useRaisingStore((s) => s.autoPlay)
   const { restart } = useRaisingStore.getState()
   const settleSpot = useTutorialSpot(company, 'settle')
+  // 튜토리얼 잠금 (347번): 분기 넘기기는 앉힌 뒤, 자동 진행은 마지막 걸음에 열린다.
+  const settleLocked = useLocked(company, 'settle')
+  const autoLocked = useLocked(company, 'auto')
   const ended = company.status === 'ENDED'
   if (ended || company.ending) {
     return null
@@ -239,28 +242,34 @@ export function ActionBar({ company }: { company: Company }) {
         <button
           type="button"
           aria-pressed={autoPlay}
+          disabled={autoLocked}
           onClick={() => {
             sfx.tap()
             toggleAutoPlay(!autoPlay)
           }}
-          className={`btn min-h-14 px-3 text-[13px] ${autoPlay ? 'btn-teal' : 'btn-ghost'}`}
+          className={`btn min-h-14 px-3 text-[13px] ${autoPlay ? 'btn-teal' : 'btn-ghost'} ${autoLocked ? 'opacity-40' : ''}`}
           title="빈 자리에 뽑고, 자동 배치하고, 회의는 직원 다수결로 정하고, 분기를 넘긴다"
+          data-testid="auto"
+          data-locked={autoLocked || undefined}
         >
-          {autoPlay ? '■ 자동 멈춤' : '⟳ 자동'}
+          {autoLocked ? '🔒' : autoPlay ? '■ 자동 멈춤' : '⟳ 자동'}
         </button>
         <button
           type="button"
-          disabled={busy || autoPlay}
+          disabled={busy || autoPlay || settleLocked}
           onClick={(ev) => {
             sfx.stamp()
             haptic.medium()
             useFx.getState().burstAt(ev.currentTarget, 'sparks')
             useAppUi.getState().requestSettle()
           }}
-          className={`btn btn-primary animate-breathe min-h-14 text-[17px] ${settleSpot}`}
+          className={`btn min-h-14 text-[17px] ${settleLocked ? 'btn-line opacity-50' : `btn-primary animate-breathe ${settleSpot}`}`}
           data-testid="settle"
+          data-locked={settleLocked || undefined}
         >
-          {company.year}년 차 {company.quarter}분기 넘기기 ▶
+          {settleLocked
+            ? '🔒 직원을 앉히면 열린다'
+            : `${company.year}년 차 ${company.quarter}분기 넘기기 ▶`}
         </button>
       </div>
     </div>
