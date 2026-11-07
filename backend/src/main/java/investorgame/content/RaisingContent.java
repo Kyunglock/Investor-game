@@ -74,7 +74,11 @@ public record RaisingContent(
       Macro macro,
       Quarters quarters,
       Teams teams,
-      Ending ending) {}
+      Ending ending,
+      Construction construction) {}
+
+  /** 건물 공사 (#347). started: 공사를 시작한 해의 소식({years}), done: 다 지어 옮긴 해의 소식. */
+  public record Construction(String started, String done) {}
 
   /** 엔딩 (decisions.md 276번). line: 엔딩을 본 해의 결산 소식 줄({years}). */
   public record Ending(String line) {}

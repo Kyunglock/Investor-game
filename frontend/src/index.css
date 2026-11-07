@@ -1174,3 +1174,83 @@ p.animate-stamp {
     animation: none;
   }
 }
+
+/* 공사 중 (#347): 크레인 팔이 천천히 흔들리고 매단 짐이 오르내린다. 새 층의 뼈대는 처음 보일 때 아래에서 올라온다. */
+.crane-arm {
+  animation: crane-swing 6s ease-in-out infinite alternate;
+}
+@keyframes crane-swing {
+  from {
+    transform: rotate(-4deg);
+  }
+  to {
+    transform: rotate(4deg);
+  }
+}
+.crane-load {
+  animation: crane-load 3s ease-in-out infinite alternate;
+}
+@keyframes crane-load {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(10px);
+  }
+}
+.build-frame {
+  animation: build-rise 1.2s ease-out both;
+}
+@keyframes build-rise {
+  from {
+    transform: translateY(14px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+/* 완공 (#347): 새 건물이 아래에서 한 층씩 솟아오르듯 펴지고, 가림막이 걷힌다. */
+.build-complete {
+  animation: build-complete 1.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transform-origin: 50% 100%;
+}
+@keyframes build-complete {
+  0% {
+    clip-path: inset(100% 0 0 0);
+    transform: scaleX(0.82);
+  }
+  60% {
+    clip-path: inset(0 0 0 0);
+    transform: scaleX(0.82);
+  }
+  85% {
+    transform: scaleX(1.04);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+    transform: none;
+  }
+}
+.curtain-off {
+  animation: curtain-off 1s ease-in 0.2s both;
+}
+@keyframes curtain-off {
+  to {
+    transform: translateY(110%);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .crane-arm,
+  .crane-load,
+  .build-frame,
+  .build-complete,
+  .curtain-off {
+    animation: none;
+  }
+  .curtain-off {
+    display: none;
+  }
+}

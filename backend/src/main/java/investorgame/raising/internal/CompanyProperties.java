@@ -65,7 +65,11 @@ public record CompanyProperties(
     String endingGrade) {
 
   /** 건물 이사 (decisions.md 296번): 이사 비용은 다음 띠 자본의 percent%. 자본이 다음 띠 + 비용 이상일 때만 간다. */
-  public record Upgrade(int percent) {}
+  /**
+   * @param percent 이사 비용: 다음 띠 자본의 이 비율(%)
+   * @param buildYears 새 건물로 가는 등급의 공사 기간(해, #347). 없으면 바로 된다
+   */
+  public record Upgrade(int percent, Map<String, Integer> buildYears) {}
 
   /**
    * 거시경제 회의 (decisions.md 266번).

@@ -486,20 +486,26 @@ class CompanyApiTest {
     assertThat(rich.read("$.upgrade.affordable", Boolean.class)).isTrue();
     assertThat(rich.read("$.upgrade.to", String.class)).isEqualTo("E");
     assertThat(rich.read("$.upgrade.cost", Long.class)).isEqualTo(18_000_000L);
-    // 이사 비용을 내며 한 단계씩 Z까지 올라간다. 비용이 분기 실적의 이사 비용 줄에 남는다.
-    DocumentContext moved = null;
-    for (int i = 0; i < 12; i++) {
-      moved = json(postJson("/api/company/upgrade", "{}").andExpect(status().isOk()));
+    // 이사 비용을 내며 한 단계씩 Z까지 올라간다. 새 건물은 몇 해에 걸쳐 짓는다(#347): 공사 중이면 한 해를 넘긴다.
+    DocumentContext moved = json(mvc.perform(get("/api/company").cookie(session)));
+    for (int i = 0; i < 60 && moved.read("$.ending", Object.class) == null; i++) {
+      if (moved.read("$.upgrade.left", Integer.class) != null) {
+        assertThat(moved.read("$.upgrade.affordable", Boolean.class)).isFalse();
+        settleYear(moved.read("$.year", Integer.class));
+        moved = json(mvc.perform(get("/api/company").cookie(session)));
+      } else {
+        moved = json(postJson("/api/company/upgrade", "{}").andExpect(status().isOk()));
+      }
     }
-    assertThat(moved).isNotNull();
     assertThat(moved.read("$.grade", String.class)).isEqualTo("Z");
     assertThat(moved.read("$.upgrade", Object.class)).isNull();
-    assertThat(moved.read("$.ending.year", Integer.class)).isEqualTo(2);
+    assertThat(moved.read("$.ending.year", Integer.class)).isGreaterThan(2);
     assertThat(moved.read("$.ending.grade", String.class)).isEqualTo("Z");
     List<?> kinds = moved.read("$.history.timeline[*].kind");
     assertThat(kinds.stream().map(String::valueOf)).contains("grow", "ending");
     drawFails();
-    settle(2, 1).andExpect(status().isBadRequest());
+    settle(moved.read("$.year", Integer.class), moved.read("$.quarter", Integer.class))
+        .andExpect(status().isBadRequest());
     postJson("/api/company/upgrade", "{}").andExpect(status().isBadRequest());
 
     DocumentContext next =

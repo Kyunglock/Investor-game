@@ -1058,7 +1058,18 @@ class CompanyEngine {
 
   boolean canUpgrade(CompanyState company) {
     Long needed = upgradeNeeded(company);
-    return needed != null && !company.finished && !company.closed && company.capital >= needed;
+    return needed != null
+        && !company.finished
+        && !company.closed
+        && company.buildingTo == null
+        && company.capital >= needed;
+  }
+
+  /** 그 등급으로 올라갈 때 공사 기간(해, #347). 같은 건물 안에서 책상만 느는 등급이면 0. */
+  int buildYears(String grade) {
+    return properties.upgrade().buildYears() == null
+        ? 0
+        : properties.upgrade().buildYears().getOrDefault(grade, 0);
   }
 
   /**
@@ -1079,8 +1090,20 @@ class CompanyEngine {
     long cost = upgradeCost(company);
     company.capital -= cost;
     company.yearMoving += cost;
-    company.building = next;
     company.gradedCapital = company.capital;
+    int years = buildYears(next);
+    if (years > 0) {
+      // 새 건물은 몇 해에 걸쳐 짓는다 (#347): 비용은 지금 다 내고, 연말마다 한 해씩 지어 다 지은 해에 옮긴다.
+      company.buildingTo = next;
+      company.buildYears = years;
+      company.buildLeft = years;
+      company.yearLines.add(
+          Korean.fill(
+              content.raising().company().construction().started(),
+              Map.of("years", String.valueOf(years))));
+      return;
+    }
+    company.building = next;
     history.add(company, company.year, "grow", null, next);
     giveTickets(company, properties.gacha().moveTickets(), "move", company.yearLines);
     if (LADDER.indexOf(next) >= LADDER.indexOf(properties.endingGrade())) {
@@ -1685,11 +1708,21 @@ class CompanyEngine {
     settlement.lines.addAll(grouped(company.yearLines));
     countTenure(company, settlement);
     grow(company, settlement, random);
-    // 등급·건물·자리 수는 연말에만 바뀐다 (268번). 건물은 저절로 오르지 않고(296번: 이사 비용을 내야 한다), 자본이 지금 띠 아래로 떨어지면 줄어든다.
+    // 등급·건물·자리 수는 연말에만 바뀐다 (268번). 건물은 저절로 오르지 않고(296번: 이사 비용을 내야 한다), 지은 건물은 자본이 줄어도 그대로다(#347).
     String kept = grade(company);
     company.gradedCapital = company.capital;
-    String byCapital = grade(company.capital);
-    company.building = LADDER.indexOf(byCapital) < LADDER.indexOf(kept) ? byCapital : kept;
+    company.building = kept;
+    if (company.buildingTo != null && --company.buildLeft <= 0) {
+      // 공사가 끝났다 (#347): 새 건물로 옮긴다. 엔딩(랜드마크)은 아래에서 등급으로 본다.
+      String to = company.buildingTo;
+      company.building = to;
+      company.buildingTo = null;
+      company.buildYears = 0;
+      company.buildLeft = 0;
+      settlement.lines.add(content.raising().company().construction().done());
+      history.add(company, company.year, "grow", null, to);
+      giveTickets(company, properties.gacha().moveTickets(), "move", settlement.lines);
+    }
     List<Employee> stood = fitSeats(company);
     if (!stood.isEmpty()) {
       settlement.lines.add(

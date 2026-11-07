@@ -44,6 +44,14 @@ class CompanyState {
    */
   String building;
 
+  /** 짓고 있는 건물의 회사 등급 (#347). 짓지 않으면 null. */
+  String buildingTo;
+
+  /** 공사 기간(해)과 남은 해 (#347). 연말 결산마다 한 해씩 줄고 0이 되면 옮긴다. */
+  int buildYears;
+
+  int buildLeft;
+
   /** 올해 낸 이사 비용 (296번). */
   long yearMoving;
 
