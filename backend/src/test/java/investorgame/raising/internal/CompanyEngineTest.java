@@ -60,11 +60,11 @@ class CompanyEngineTest {
     assertThat(ENGINE.draw(company, 1, new HashSeededRandom(1)).getFirst().name).isEqualTo("박한결");
     assertThat(ENGINE.grade(company.capital)).isEqualTo("F");
     assertThat(ENGINE.seats(company.capital)).isEqualTo(4);
-    assertThat(ENGINE.grade(200_000_000)).as("E는 2억부터 (257번)").isEqualTo("E");
-    assertThat(ENGINE.grade(199_999_999)).isEqualTo("F");
-    assertThat(ENGINE.grade(600_000_000)).isEqualTo("D");
-    assertThat(ENGINE.grade(300_000_000)).isEqualTo("E");
-    assertThat(ENGINE.seats(300_000_000)).isEqualTo(6);
+    assertThat(ENGINE.grade(120_000_000)).as("E는 1.2억부터 (#344)").isEqualTo("E");
+    assertThat(ENGINE.grade(119_999_999)).isEqualTo("F");
+    assertThat(ENGINE.grade(300_000_000)).isEqualTo("D");
+    assertThat(ENGINE.grade(200_000_000)).isEqualTo("E");
+    assertThat(ENGINE.seats(200_000_000)).isEqualTo(6);
     assertThat(company.wantedDesk).isNotNull();
   }
 
@@ -163,7 +163,6 @@ class CompanyEngineTest {
     CompanyState next = ENGINE.refound(company, List.of(1), fame, new HashSeededRandom(4));
     assertThat(next.number).isEqualTo(2);
     assertThat(next.era).isNotEqualTo("plain");
-    assertThat(ENGINE.grade(next.capital)).isEqualTo("F");
     assertThat(next.capital).as("명성 A(5단계)면 시작 자본 +50%").isEqualTo(150_000_000L);
     assertThat(next.employees)
         .singleElement()
@@ -388,7 +387,10 @@ class CompanyEngineTest {
     assertThat(company.capital).as("뽑기는 돈이 들지 않는다").isEqualTo(capital);
     assertThat(company.draws).isEqualTo(2);
     assertThat(company.collection.values().stream().mapToInt(Integer::intValue).sum()).isEqualTo(2);
-    assertThatThrownBy(() -> ENGINE.draw(company, 4, new HashSeededRandom(5)))
+    assertThatThrownBy(
+            () ->
+                ENGINE.draw(
+                    company, PROPERTIES.gacha().startTickets() - 1, new HashSeededRandom(5)))
         .as("채용권이 모자란다")
         .isInstanceOf(InvalidRequestException.class);
     assertThatThrownBy(
@@ -704,8 +706,8 @@ class CompanyEngineTest {
    */
   @Test
   void 자본이_줄어_자리가_줄면_돕는_자리부터_일어나_쉰다() {
-    // E 회사(자리 6)에 여섯을 앉힌다. 해 가운데 자본이 2억 아래로 떨어져도 그해에는 자리 여섯 그대로다.
-    CompanyState company = open(5, stats(50, 50, 50, 50), 200_000_000 + 1_000_000);
+    // E 회사(자리 6)에 여섯을 앉힌다. 해 가운데 자본이 1.2억 아래로 떨어져도 그해에는 자리 여섯 그대로다.
+    CompanyState company = open(5, stats(50, 50, 50, 50), 120_000_000 + 1_000_000);
     for (int i = 0; i < 5; i++) {
       ENGINE.hire(company, stats(50, 50, 50, 50));
     }
@@ -720,7 +722,7 @@ class CompanyEngineTest {
     assertThat(ENGINE.seats(company)).isEqualTo(6);
 
     company.capital -= 2_000_000;
-    assertThat(company.capital).isLessThan(200_000_000);
+    assertThat(company.capital).isLessThan(120_000_000);
     assertThat(ENGINE.seats(company)).as("자리 수는 연말에만 바뀐다").isEqualTo(6);
     assertThat(staff.get(0).desk).isEqualTo("research");
 
@@ -745,34 +747,27 @@ class CompanyEngineTest {
     assertThat(staff.get(1).desk).isEqualTo("bio");
   }
 
+  /** 지은 건물은 폭락장에 자본이 띠 아래로 떨어져도 줄지 않는다 (#347): 전에는 연말에 저절로 줄어 앉아 있던 사람이 휴게실로 밀려났다. */
   @Test
-  void 결산으로_자리가_줄면_넘친_사람이_쉬고_소식_줄에_남는다() {
+  void 지은_건물은_폭락장에도_줄지_않는다() {
     for (long seed = 1; seed <= 40; seed++) {
-      // E 회사(자리 6)에 여섯을 앉히고 폭락장을 맞는다. F로 떨어지면 자리가 넷이 된다.
-      CompanyState company = open(seed, stats(1, 1, 1, 1), 200_000_000);
-      for (int i = 0; i < 4; i++) {
+      CompanyState company = open(seed, stats(1, 1, 1, 1), 130_000_000);
+      company.building = "E";
+      for (int i = 0; i < 5; i++) {
         ENGINE.hire(company, stats(1, 1, 1, 1));
       }
-      ENGINE.hire(company, stats(90, 90, 90, 90));
-      List<CompanyState.Employee> staff = company.employees;
       Map<Integer, String> seats = new HashMap<>();
-      for (int i = 0; i < 5; i++) {
-        seats.put(staff.get(i).id, "game");
+      for (CompanyState.Employee e : company.employees) {
+        seats.put(e.id, "game");
       }
-      seats.put(staff.get(5).id, "research");
       ENGINE.place(company, seats);
       company.phase = CompanyEngine.CRASH;
       company.invest = null;
-      CompanyState.Settlement settlement = ENGINE.settle(company, new HashSeededRandom(seed));
-      long seated = company.employees.stream().filter(e -> e.desk != null).count();
-      assertThat(seated).isLessThanOrEqualTo(ENGINE.seats(company.capital));
-      if (ENGINE.seats(company.capital) < 6) {
-        assertThat(staff.get(5).desk).as("리서치 팀이 먼저 일어난다").isNull();
-        assertThat(settlement.lines).anyMatch(line -> line.contains("자리에서 일어나 쉰다"));
-        return;
-      }
+      ENGINE.settle(company, new HashSeededRandom(seed));
+      assertThat(ENGINE.grade(company)).isEqualTo("E");
+      assertThat(ENGINE.seats(company)).isEqualTo(6);
+      assertThat(company.employees.stream().filter(e -> e.desk != null).count()).isEqualTo(6);
     }
-    throw new AssertionError("폭락장에 자리가 줄어드는 해가 없었다");
   }
 
   /**
@@ -1032,6 +1027,69 @@ class CompanyEngineTest {
   }
 
   /**
+   * 이직 제안을 고민거리로 (#390): 이적료는 몸값(계약금과 지난해 번 돈 가운데 큰 쪽)의 150%다. 단골 라이벌이 다시 오면 몇 번째인지 말한다. 연봉이 나가는
+   * 회사에서 붙잡으면 연봉을 맞춰 준다. 이직으로 떠난 사람의 소식은 한 해 뒤에 들린다.
+   */
+  @Test
+  void 이적료는_몸값을_따르고_단골_라이벌이_다시_오고_떠난_사람_소식이_들린다() {
+    var rules = PROPERTIES.people();
+    // 지난해 많이 번 직원은 이적료도 크다.
+    CompanyState company = null;
+    CompanyState.Poach found = null;
+    for (long seed = 1; seed <= 80 && found == null; seed++) {
+      company = open(seed, stats(50, 50, 50, 50), 5_000_000_000L);
+      CompanyState.Employee star = ENGINE.hire(company, stats(80, 80, 80, 80));
+      CompanyState.Settlement last = new CompanyState.Settlement();
+      CompanyState.Result r = new CompanyState.Result();
+      r.employeeId = star.id;
+      r.pnl = 900_000_000L;
+      last.results.add(r);
+      company.settlements.add(last);
+      company.year = rules.poachFromYear();
+      found = ENGINE.poachOf(company, new HashSeededRandom(seed));
+    }
+    assertThat(found).isNotNull();
+    assertThat(found.transferFee).as("지난해 번 돈의 150%").isEqualTo(1_350_000_000L);
+
+    // 같은 라이벌이 두 번째로 오면 "또"라고 말한다.
+    company.poach = found;
+    company.poach.count = 2;
+    assertThat(ENGINE.poachLine(company)).startsWith("또 " + found.rival).contains("2번째");
+
+    // 연봉이 나가는 회사(D 이상)에서 붙잡으면 연봉을 맞춰 주고 사기가 오른다.
+    company.building = "D";
+    int keptId = found.employeeId;
+    CompanyState.Employee kept =
+        company.employees.stream().filter(e -> e.id == keptId).findFirst().orElseThrow();
+    int raises = kept.raises;
+    int morale = kept.morale;
+    ENGINE.answerPoach(company, true);
+    assertThat(kept.raises).isEqualTo(raises + 1);
+    assertThat(kept.morale).isEqualTo(morale + 1);
+    assertThat(company.yearLines).anyMatch(line -> line.contains("연봉을 올려 줬다"));
+
+    // 이직으로 떠난 사람의 소식은 한 해 뒤에 들린다(절반 확률이라 여러 해를 본다).
+    CompanyState.Alumnus gone = new CompanyState.Alumnus();
+    gone.name = "류소울";
+    gone.from = 1;
+    gone.to = 2;
+    gone.grade = "S";
+    gone.rival = "존버캐피탈";
+    company.alumni.add(gone);
+    boolean heard = false;
+    for (int year = 3; year < 15 && !heard; year++) {
+      company.year = year;
+      company.invest = null;
+      company.poach = null;
+      company.raise = null;
+      CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(year));
+      heard = s.lines.stream().anyMatch(line -> line.contains("간 류소울"));
+    }
+    assertThat(heard).as("떠난 사람 소식").isTrue();
+    assertThat(gone.reported).isTrue();
+  }
+
+  /**
    * 이직 제안 (#325, decisions.md 262·265·288번): 셋째 해부터 다른 증권사가 가장 높은 직원에게 손을 뻗는다. 남기는 데는 돈이 들지 않고, 보내면
    * 이적료를 받는다. 답하지 않아도 직원은 남는다: 사장이 보낸다고 고를 때만 떠난다. 같은 자리 세 해째부터 손에 익는다.
    */
@@ -1049,15 +1107,17 @@ class CompanyEngineTest {
     assertThat(found).as("이직 제안이 오는 해가 있다").isNotNull();
     assertThat(found.employeeId).as("가장 높은 직원").isEqualTo(company.employees.get(1).id);
     assertThat(found.transferFee).isPositive();
+    assertThat(TestContent.load().raising().company().people().poachers()).contains(found.rival);
 
-    // 남기는 데는 돈이 들지 않는다 (265번).
+    // 작은 회사(연봉 없음)에서는 남기는 데 돈이 들지 않는다 (265번).
+    String rival = found.rival;
     company.poach = found;
     long cash = company.capital;
     ENGINE.answerPoach(company, true);
     assertThat(company.capital).isEqualTo(cash);
     assertThat(company.employees).hasSize(2);
     assertThat(company.yearLines)
-        .anyMatch(line -> line.contains("옆 동네 증권사") && line.contains("거절하고 회사에 남았다"));
+        .anyMatch(line -> line.contains(rival) && line.contains("거절하고 회사에 남았다"));
     assertThat(company.poach).isNull();
     CompanyState answered = company;
     assertThatThrownBy(() -> ENGINE.answerPoach(answered, true))
@@ -1070,6 +1130,7 @@ class CompanyEngineTest {
     assertThat(company.capital).isEqualTo(cash + found.transferFee);
     assertThat(company.employees).hasSize(1);
     assertThat(company.yearLines).anyMatch(line -> line.contains("떠났다"));
+    assertThat(company.alumni.getLast().rival).as("데려간 증권사를 기억한다 (#390)").isEqualTo(found.rival);
 
     // 답하지 않아도 직원은 남는다 (265번): 사장이 보낸다고 고를 때만 떠난다.
     CompanyState ignored = open(9, stats(50, 50, 50, 50), 100_000_000);
@@ -1113,8 +1174,8 @@ class CompanyEngineTest {
     CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
     assertThat(company.building).isEqualTo("F");
     assertThat(ENGINE.nextGrade(company)).isEqualTo("E");
-    assertThat(ENGINE.upgradeCost(company)).as("E 2억의 25%").isEqualTo(50_000_000L);
-    assertThat(ENGINE.upgradeNeeded(company)).isEqualTo(250_000_000L);
+    assertThat(ENGINE.upgradeCost(company)).as("E 1.2억의 15% (#344)").isEqualTo(18_000_000L);
+    assertThat(ENGINE.upgradeNeeded(company)).isEqualTo(138_000_000L);
     assertThat(ENGINE.canUpgrade(company)).isFalse();
     assertThatThrownBy(() -> ENGINE.upgrade(company)).isInstanceOf(InvalidRequestException.class);
 
@@ -1130,36 +1191,54 @@ class CompanyEngineTest {
     long before = company.capital;
     ENGINE.upgrade(company);
     assertThat(ENGINE.grade(company)).isEqualTo("E");
-    assertThat(company.capital).isEqualTo(before - 50_000_000L);
-    assertThat(company.yearMoving).isEqualTo(50_000_000L);
+    assertThat(company.capital).isEqualTo(before - 18_000_000L);
+    assertThat(company.yearMoving).isEqualTo(18_000_000L);
     assertThat(ENGINE.seats(company)).isEqualTo(6);
     assertThat(company.timeline).extracting(e -> e.kind).contains("grow");
-    // 한 번에 한 단계씩: D(6억)로 가려면 7억 5천만이 있어야 하고 지금 8억 남짓이니 간다.
+    // 한 번에 한 단계씩: D(3억)는 새 건물(상가)이라 한 해 동안 짓는다 (#347). 비용은 지금 다 내고, 연말 결산에서 옮긴다.
     ENGINE.upgrade(company);
-    assertThat(ENGINE.grade(company)).isEqualTo("D");
-    assertThat(company.capital).isEqualTo(before - 200_000_000L);
-    assertThat(ENGINE.canUpgrade(company)).as("C 20억은 아직").isFalse();
+    assertThat(ENGINE.grade(company)).as("공사 중에는 지금 건물 그대로").isEqualTo("E");
+    assertThat(company.buildingTo).isEqualTo("D");
+    assertThat(company.buildLeft).isEqualTo(1);
+    assertThat(company.capital).isEqualTo(before - 63_000_000L);
+    assertThat(ENGINE.canUpgrade(company)).as("공사 중에는 다음 건물을 못 짓는다").isFalse();
+    company.invest = null;
+    company.poach = null;
     CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(2));
-    assertThat(s.moving).isEqualTo(200_000_000L);
-    assertThat(s.quarters.stream().mapToLong(q -> q.moving).sum()).isEqualTo(200_000_000L);
+    assertThat(ENGINE.grade(company)).as("한 해 지어 옮겼다").isEqualTo("D");
+    assertThat(company.buildingTo).isNull();
+    assertThat(s.gradeAfter).isEqualTo("D");
+    assertThat(s.lines).anyMatch(line -> line.contains("다 지어졌다"));
+    assertThat(s.moving).isEqualTo(63_000_000L);
+    assertThat(ENGINE.canUpgrade(company)).as("C 10억은 아직").isFalse();
 
-    // 자본이 띠 아래로 떨어지면 연말에 줄어든다.
-    company.capital = 150_000_000L;
+    // 지은 건물은 자본이 띠 아래로 떨어져도 그대로다 (#347).
+    company.capital = 100_000_000L;
     company.invest = null;
     company.poach = null;
     CompanyState.Settlement fell = ENGINE.settle(company, new HashSeededRandom(3));
     assertThat(fell.gradeBefore).isEqualTo("D");
-    assertThat(fell.gradeAfter).isEqualTo("F");
-    assertThat(ENGINE.grade(company)).isEqualTo("F");
+    assertThat(fell.gradeAfter).isEqualTo("D");
+    assertThat(ENGINE.grade(company)).isEqualTo("D");
 
     // 랜드마크 타워(Z)에 오르면 엔딩이다.
     company.capital = 200_000_000_000_000L;
-    while (ENGINE.canUpgrade(company) && !company.finished) {
-      ENGINE.upgrade(company);
+    for (int seed = 10; !company.finished && seed < 60; seed++) {
+      if (ENGINE.canUpgrade(company)) {
+        ENGINE.upgrade(company);
+      } else {
+        // 공사 중이면 한 해 짓는다.
+        company.invest = null;
+        company.poach = null;
+        company.raise = null;
+        ENGINE.settle(company, new HashSeededRandom(seed));
+        company.capital = Math.max(company.capital, 200_000_000_000_000L);
+      }
     }
     assertThat(ENGINE.grade(company)).isEqualTo("Z");
     assertThat(company.finished).isTrue();
-    assertThat(company.finishedYear).isEqualTo(company.year);
+    // 연말 결산에서 완공되면 결산 뒤로 해가 넘어간다.
+    assertThat(company.finishedYear).isBetween(company.year - 1, company.year);
   }
 
   @Test
@@ -1245,5 +1324,70 @@ class CompanyEngineTest {
       assertThat(e.stats.get("courage")).isGreaterThanOrEqualTo(e.stats.get("insight"));
     }
     assertThat(promoted).as("종합 등급이 오르면 올라섰다는 소식").isPositive();
+  }
+
+  /** #392: 최근에 쓴 문구와 이번에 이미 쓴 문구는 건너뛰고, 다 썼으면 굴린 것을 쓴다. 기억은 60개까지. */
+  @Test
+  void 같은_문구는_이어_나오지_않게_고른다() {
+    CompanyState c = new CompanyState();
+    List<String> lines = List.of("가", "나", "다");
+    java.util.Set<String> now = new java.util.HashSet<>();
+    ENGINE.remember(c, List.of("가"));
+    assertThat(ENGINE.fresh(c, lines, 0, now)).as("최근에 쓴 가는 건너뛴다").isEqualTo("나");
+    assertThat(ENGINE.fresh(c, lines, 0, now)).as("이번에 쓴 나도 건너뛴다").isEqualTo("다");
+    assertThat(ENGINE.fresh(c, lines, 0, now)).as("다 썼으면 굴린 것").isEqualTo("가");
+    for (int i = 0; i < 100; i++) {
+      ENGINE.remember(c, List.of("x" + i));
+    }
+    assertThat(c.recentLines).hasSize(CompanyEngine.RECENT_LINES).doesNotContain("가");
+  }
+
+  /** 한 해를 분기마다 같은 태도로 넘긴다. */
+  private static CompanyState.Settlement yearWith(CompanyState c, String stance, long seed) {
+    HashSeededRandom random = new HashSeededRandom(seed);
+    int year = c.year;
+    while (c.year == year) {
+      if (ENGINE.macro.open(c)) {
+        ENGINE.macro.decide(c, stance, random);
+      }
+      if (ENGINE.invest.open(c)) {
+        ENGINE.invest.decide(c, InvestEngine.HOLD, random);
+      }
+      ENGINE.settleQuarter(c, random);
+    }
+    return c.settlements.getLast();
+  }
+
+  /** #394: 연말에 조짐이 맞았나 헛소문이었나, 사장은 어떻게 읽었나를 밝히고, 잘 읽었으면 업적이 열린다. */
+  @Test
+  void 연말에_조짐이_맞았는지_밝히고_잘_읽었으면_업적이_열린다() {
+    // 헛조짐: 보통 해인데 조짐이 떴다. 방어로 돌리지 않고 버텼다.
+    CompanyState calm = open(3, stats(60, 60, 60, 60), 100_000_000);
+    ENGINE.place(calm, Map.of(calm.employees.getFirst().id, "day"));
+    calm.phase = "normal";
+    calm.omen = "경제 유튜브 채널마다 '곧 폭락이 온다'는 영상이 올라온다.";
+    CompanyState.Settlement kept = yearWith(calm, MacroEngine.NEUTRAL, 3);
+    assertThat(kept.omenCall).isEqualTo("falseKept");
+    assertThat(kept.lines).anyMatch(line -> line.startsWith("헛소문이었다"));
+    assertThat(kept.achieved).contains("헛소문 감별사");
+
+    // 진짜 조짐: 폭락장인데 미리 방어로 돌렸다.
+    CompanyState storm = open(4, stats(60, 60, 60, 60), 100_000_000);
+    ENGINE.place(storm, Map.of(storm.employees.getFirst().id, "day"));
+    storm.phase = CompanyEngine.CRASH;
+    storm.crashQuarter = 3;
+    storm.omen = "신용 대출이 늘었다.";
+    CompanyState.Settlement saw = yearWith(storm, MacroEngine.DEFENSIVE, 4);
+    assertThat(saw.omenCall).isEqualTo("trueDefended");
+    assertThat(saw.lines).anyMatch(line -> line.startsWith("조짐이 맞았다") && line.contains("덜 맞았다"));
+    assertThat(saw.achieved).contains("선견지명");
+
+    // 진짜 조짐을 보고도 공격했다.
+    CompanyState bold = open(5, stats(60, 60, 60, 60), 100_000_000);
+    ENGINE.place(bold, Map.of(bold.employees.getFirst().id, "day"));
+    bold.phase = CompanyEngine.CRASH;
+    bold.crashQuarter = 2;
+    bold.omen = "신용 대출이 늘었다.";
+    assertThat(yearWith(bold, MacroEngine.AGGRESSIVE, 5).omenCall).isEqualTo("trueIgnored");
   }
 }

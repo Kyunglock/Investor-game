@@ -5,7 +5,7 @@ import { ENEMIES, type EnemyKind } from './enemies'
 import { BATTLE_SECONDS, GENRES, type Genre } from './genres'
 
 /**
- * 멘탈 전투 한 판 (decisions.md 320번). Phaser 3 Arcade로 돈다: 탄·적은 풀에서 재사용하고, 캐릭터 그림은 캔버스에 한 번 그려 둔다. 규칙은 화면 규칙일
+ * 멘탈 전투 한 판 (decisions.md 328번). Phaser 3 Arcade로 돈다: 탄·적은 풀에서 재사용하고, 캐릭터 그림은 캔버스에 한 번 그려 둔다. 규칙은 화면 규칙일
  * 뿐이고(얼마나 세지는지는 서버가 정한다), 손맛(번쩍임·밀림·숫자·파편·흔들림·멈칫)이 이 파일의 절반이다. 이 모듈은 Phaser를 담고 있어 import()로 늦게 부른다.
  */
 

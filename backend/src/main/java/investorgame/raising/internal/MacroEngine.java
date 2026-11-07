@@ -121,6 +121,21 @@ class MacroEngine {
     return stakePercentOf(stance(c));
   }
 
+  /**
+   * 태도가 숨은 방향과 맞았는가에 따라 판단마다 더하거나 빼는 만분율 (#388). 공격은 오를 때, 방어는 내릴 때 맞다. 중립은 0. 전에는 공격이 판돈만 키워 기사를 안
+   * 읽고 늘 공격해도 이겼다.
+   */
+  int stanceBp(CompanyState c) {
+    String stance = stance(c);
+    if (c.macro == null || NEUTRAL.equals(stance)) {
+      return 0;
+    }
+    boolean right = AGGRESSIVE.equals(stance) == c.macro.up;
+    return right
+        ? properties.macro().rightBp().getOrDefault(stance, 0)
+        : -properties.macro().wrongBp().getOrDefault(stance, 0);
+  }
+
   /** 폭락장의 시장 손익에 곱하는 비율(%): 방어면 줄어든다. */
   int crashPercent(CompanyState c) {
     return DEFENSIVE.equals(stance(c)) ? properties.macro().defensiveCrashPercent() : PERCENT;
@@ -152,6 +167,7 @@ class MacroEngine {
     RaisingContent.Macro texts = texts();
     Macro macro = c.macro;
     List<CompanyState.Remark> remarks = new ArrayList<>();
+    java.util.Set<String> used = new java.util.HashSet<>();
     int penalty = invest.penalty(macro.clarity);
     for (Employee e : c.employees) {
       if (e.desk == null || CompanyEngine.HR_DESK.equals(e.desk)) {
@@ -167,7 +183,9 @@ class MacroEngine {
               ? "foggy"
               : voice.key();
       List<String> lines = texts.remarks().get(tier).get(read);
-      String line = lines.get(random.forKey("macro-remark", c.turn(), e.id).nextInt(lines.size()));
+      String line =
+          company.fresh(
+              c, lines, random.forKey("macro-remark", c.turn(), e.id).nextInt(lines.size()), used);
       InvestEngine.Points points =
           InvestEngine.points(
               macro.sentences,
@@ -184,6 +202,7 @@ class MacroEngine {
       remarks.add(r);
     }
     macro.remarks = remarks;
+    company.remember(c, used);
     Optional<Employee> researcher = company.researcher(c);
     if (researcher.isPresent()) {
       Employee r = researcher.get();
@@ -219,6 +238,17 @@ class MacroEngine {
     convene(c, random);
     c.macro.stance = stance;
     discover(c, random);
+  }
+
+  /**
+   * 종목을 물어 온 사람의 호칭 (#346): 그 자리의 팀장이면 분기 실적의 팀장 보고와 같이 "종목 발굴팀 팀장", 아니면 직함. 전에는 같은 사람이 회의에서는 "종목
+   * 발굴 담당", 실적에서는 "종목 발굴팀 팀장"이었다.
+   */
+  String finderTitle(CompanyState c, Employee e) {
+    if (e.desk != null && company.teams.leads(c, e)) {
+      return company.desk(e.desk).name() + " 팀장";
+    }
+    return roleOf(e);
   }
 
   /** 종목 발굴팀에 앉은 사람의 직함 (decisions.md 267번). 직함이 없는 자리면 null. */
@@ -282,7 +312,7 @@ class MacroEngine {
       return;
     }
     c.usedNews.remove(c.invest.news);
-    c.invest = invest.found(c, finder, roleOf(finder), random);
+    c.invest = invest.found(c, finder, finderTitle(c, finder), random);
   }
 
   /** 분기 실적의 한 줄: 그 분기 주제가 분 섹터 바람 (266·268번). */

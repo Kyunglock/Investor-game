@@ -2,7 +2,7 @@ import type { Company } from '@web/api/client'
 
 export type Genre = NonNullable<Company['mental']>['genre']
 
-/** 장르 셋 (decisions.md 320번): 그 분기 이벤트가 정한다. 플레이어는 고르지 않는다. */
+/** 장르 셋 (decisions.md 328번): 그 분기 이벤트가 정한다. 플레이어는 고르지 않는다. */
 export interface GenreSpec {
   name: string
   hint: string
@@ -38,5 +38,5 @@ export const GENRES: Record<Genre, GenreSpec> = {
   },
 }
 
-/** 한 판의 길이(초). 분기마다 한 판이라 짧게 (320번). */
+/** 한 판의 길이(초). 분기마다 한 판이라 짧게 (328번). */
 export const BATTLE_SECONDS = 45

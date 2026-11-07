@@ -139,6 +139,8 @@ class CompanyApiTest {
   @Test
   void 사재로_회사를_차리고_채용권으로_뽑아_세_해를_넘겨도_이어진다() throws Exception {
     mvc.perform(get("/api/company").cookie(session)).andExpect(status().isNotFound());
+    // 세션 쿠키가 없는 첫 방문도 401이 아니라 "회사가 없다" (#346).
+    mvc.perform(get("/api/company")).andExpect(status().isNotFound());
 
     DocumentContext company =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
@@ -148,8 +150,8 @@ class CompanyApiTest {
     assertThat(company.read("$.grade", String.class)).isEqualTo("F");
     assertThat(company.read("$.seats", Integer.class)).isEqualTo(4);
     assertThat(company.read("$.employees.length()", Integer.class)).isZero();
-    // 채용 뽑기 (decisions.md 312번): 채용권 다섯 장으로 시작하고, 확률표와 도감(F~GOD)이 보인다.
-    assertThat(company.read("$.gacha.tickets", Integer.class)).isEqualTo(5);
+    // 채용 뽑기 (decisions.md 312번): 채용권 열 장으로 시작하고(#344), 확률표와 도감(F~GOD)이 보인다.
+    assertThat(company.read("$.gacha.tickets", Integer.class)).isEqualTo(10);
     assertThat(company.read("$.gacha.rosterMax", Integer.class)).isEqualTo(8);
     assertThat(company.read("$.gacha.rates.length()", Integer.class)).isEqualTo(5);
     assertThat(company.read("$.gacha.collection.length()", Integer.class)).isEqualTo(18);
@@ -161,16 +163,16 @@ class CompanyApiTest {
     DocumentContext one = draw(1);
     assertThat(one.read("$.employees.length()", Integer.class)).isEqualTo(1);
     assertThat(one.read("$.capital", Long.class)).as("뽑기는 돈이 들지 않는다").isEqualTo(capital);
-    assertThat(one.read("$.gacha.tickets", Integer.class)).isEqualTo(4);
+    assertThat(one.read("$.gacha.tickets", Integer.class)).isEqualTo(9);
     assertThat(one.read("$.gacha.drawn.length()", Integer.class)).isEqualTo(1);
     assertThat(one.read("$.gacha.drawn[0].fresh", Boolean.class)).as("처음 본 등급").isTrue();
     assertThat(one.read("$.employees[0].sectorName", String.class)).isNotBlank();
     // 같은 뽑기가 두 번 와도 한 번만 뽑는다. 아직 오지 않은 것과 모자란 채용권은 400.
     DocumentContext twice = json(drawRequest(1, 0).andExpect(status().isOk()));
-    assertThat(twice.read("$.gacha.tickets", Integer.class)).isEqualTo(4);
+    assertThat(twice.read("$.gacha.tickets", Integer.class)).isEqualTo(9);
     assertThat(twice.read("$.employees.length()", Integer.class)).isEqualTo(1);
     drawRequest(1, 5).andExpect(status().isBadRequest());
-    drawRequest(5, 1).andExpect(status().isBadRequest());
+    drawRequest(10, 1).andExpect(status().isBadRequest());
     postJson("/api/company/draws", "{}").andExpect(status().isBadRequest());
 
     int employeeId = one.read("$.employees[0].id");
@@ -324,7 +326,7 @@ class CompanyApiTest {
     DocumentContext resumed = json(mvc.perform(get("/api/company").cookie(session)));
     assertThat(resumed.read("$.status", String.class)).isEqualTo("ACTIVE");
     assertThat(resumed.read("$.companyId", String.class)).isEqualTo(id);
-    assertThat(resumed.read("$.gacha.tickets", Integer.class)).isEqualTo(5);
+    assertThat(resumed.read("$.gacha.tickets", Integer.class)).isEqualTo(10);
     settleYear(1).andExpect(jsonPath("$.year").value(2));
   }
 
@@ -336,7 +338,7 @@ class CompanyApiTest {
     List<Integer> ids = five.read("$.employees[*].id");
     assertThat(ids).hasSize(5);
     assertThat(five.read("$.gacha.roster", Integer.class)).isEqualTo(5);
-    assertThat(five.read("$.gacha.tickets", Integer.class)).isZero();
+    assertThat(five.read("$.gacha.tickets", Integer.class)).isEqualTo(5);
 
     DocumentContext released =
         json(
@@ -447,13 +449,16 @@ class CompanyApiTest {
         .isEqualTo(1);
   }
 
-  /** 라이벌 회사를 걷어냈다 (decisions.md 288번): 업계 순위도, 올해의 라이벌 고르기도, 결산의 앞지른 라이벌도 없다. */
+  /**
+   * 라이벌 회사를 걷어냈다 (decisions.md 288번): 지어낸 라이벌의 올해 고르기도, 결산의 앞지른 라이벌도 없다. 업계 순위는 실제 유저 회사끼리(#351)라 한
+   * 해를 마치기 전에는 비어 있다.
+   */
   @Test
   void 라이벌_회사가_없다() throws Exception {
     DocumentContext opened =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
     Map<String, Object> company = opened.read("$");
-    assertThat(company).doesNotContainKey("industry");
+    assertThat(company.get("industry")).isNull();
     Map<String, Object> meeting = opened.read("$.meeting");
     assertThat(meeting).doesNotContainKey("rivalry");
     DocumentContext year = json(settleYear(1));
@@ -483,21 +488,27 @@ class CompanyApiTest {
     assertThat(rich.read("$.grade", String.class)).isEqualTo("F");
     assertThat(rich.read("$.upgrade.affordable", Boolean.class)).isTrue();
     assertThat(rich.read("$.upgrade.to", String.class)).isEqualTo("E");
-    assertThat(rich.read("$.upgrade.cost", Long.class)).isEqualTo(50_000_000L);
-    // 이사 비용을 내며 한 단계씩 Z까지 올라간다. 비용이 분기 실적의 이사 비용 줄에 남는다.
-    DocumentContext moved = null;
-    for (int i = 0; i < 12; i++) {
-      moved = json(postJson("/api/company/upgrade", "{}").andExpect(status().isOk()));
+    assertThat(rich.read("$.upgrade.cost", Long.class)).isEqualTo(18_000_000L);
+    // 이사 비용을 내며 한 단계씩 Z까지 올라간다. 새 건물은 몇 해에 걸쳐 짓는다(#347): 공사 중이면 한 해를 넘긴다.
+    DocumentContext moved = json(mvc.perform(get("/api/company").cookie(session)));
+    for (int i = 0; i < 60 && moved.read("$.ending", Object.class) == null; i++) {
+      if (moved.read("$.upgrade.left", Integer.class) != null) {
+        assertThat(moved.read("$.upgrade.affordable", Boolean.class)).isFalse();
+        settleYear(moved.read("$.year", Integer.class));
+        moved = json(mvc.perform(get("/api/company").cookie(session)));
+      } else {
+        moved = json(postJson("/api/company/upgrade", "{}").andExpect(status().isOk()));
+      }
     }
-    assertThat(moved).isNotNull();
     assertThat(moved.read("$.grade", String.class)).isEqualTo("Z");
     assertThat(moved.read("$.upgrade", Object.class)).isNull();
-    assertThat(moved.read("$.ending.year", Integer.class)).isEqualTo(2);
+    assertThat(moved.read("$.ending.year", Integer.class)).isGreaterThan(2);
     assertThat(moved.read("$.ending.grade", String.class)).isEqualTo("Z");
     List<?> kinds = moved.read("$.history.timeline[*].kind");
     assertThat(kinds.stream().map(String::valueOf)).contains("grow", "ending");
     drawFails();
-    settle(2, 1).andExpect(status().isBadRequest());
+    settle(moved.read("$.year", Integer.class), moved.read("$.quarter", Integer.class))
+        .andExpect(status().isBadRequest());
     postJson("/api/company/upgrade", "{}").andExpect(status().isBadRequest());
 
     DocumentContext next =
@@ -506,6 +517,42 @@ class CompanyApiTest {
     assertThat(next.read("$.capital", Long.class)).isEqualTo(100_000_000L);
     assertThat(next.read("$.ending", Object.class)).isNull();
     assertThat(next.read("$.grade", String.class)).isEqualTo("F");
+  }
+
+  /** 업계 순위 (#351): 한 해를 마치면 같은 연차 회사들 가운데 자리가 보이고 결산 소식에 남는다. 다른 회사가 같은 연차를 마치면 함께 센다. */
+  @Test
+  void 한_해를_마치면_같은_연차_회사들_가운데_순위가_보인다() throws Exception {
+    DocumentContext opened =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    assertThat(opened.read("$.industry", Object.class)).as("한 해도 안 마쳤다").isNull();
+    DocumentContext first = json(settleYear(1));
+    int total = first.read("$.industry.total", Integer.class);
+    assertThat(first.read("$.industry.year", Integer.class)).isEqualTo(1);
+    assertThat(first.read("$.industry.rank", Integer.class)).isBetween(1, total);
+    List<String> lines = first.read("$.lastSettlement.lines");
+    assertThat(lines).anyMatch(line -> line.contains("같은 1년 차 회사"));
+
+    // 다른 유저가 같은 연차를 마치면 함께 센다.
+    Cookie mine = session;
+    setUp();
+    json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    DocumentContext other = json(settleYear(1));
+    assertThat(other.read("$.industry.total", Integer.class)).isEqualTo(total + 1);
+    DocumentContext again = json(mvc.perform(get("/api/company").cookie(mine)));
+    assertThat(again.read("$.industry.total", Integer.class)).isEqualTo(total + 1);
+  }
+
+  /** 돕는 자리는 회사가 커 가며 열린다 (#393): 반지하(F)에는 돈을 굴리는 자리만 있고, 닫힌 자리는 열리는 등급과 함께 따로 보인다. */
+  @Test
+  void 돕는_자리는_회사가_커_가며_열린다() throws Exception {
+    DocumentContext opened =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    List<String> desks = opened.read("$.desks[*].code");
+    assertThat(desks).contains("bio", "day").doesNotContain("research", "scout", "risk", "hr");
+    List<String> locked = opened.read("$.lockedDesks[*].code");
+    assertThat(locked).containsExactlyInAnyOrder("research", "scout", "risk", "hr");
+    List<String> researchAt = opened.read("$.lockedDesks[?(@.code == 'research')].unlockGrade");
+    assertThat(researchAt).containsExactly("E");
   }
 
   /** 엔딩을 본 회사는 더 뽑지 않는다. */

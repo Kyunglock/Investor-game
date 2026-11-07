@@ -285,7 +285,7 @@ body {
 .animate-shake-screen {
   animation: shake-screen 0.5s ease-out 1;
 }
-/* 멘탈 전투의 큰 알림 (decisions.md 320번): 튀어나와 잠깐 머물다 떠오르며 사라진다 */
+/* 멘탈 전투의 큰 알림 (decisions.md 328번): 튀어나와 잠깐 머물다 떠오르며 사라진다 */
 @keyframes mental-banner {
   0% {
     opacity: 0;

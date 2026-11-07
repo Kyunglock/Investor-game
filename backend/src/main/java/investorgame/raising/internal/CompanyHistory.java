@@ -156,12 +156,22 @@ class CompanyHistory {
             && staff > 0;
     Map<String, Boolean> checks =
         Map.of(
-            "crash-proof", crashProof,
-            "doubled", doubled,
-            "all-sss", allSss,
-            "meeting-streak", company.meetingStreak >= STREAK,
-            "day-only", dayOnly,
-            "basement-ten", basement && s.year >= BASEMENT_YEARS);
+            "crash-proof",
+            crashProof,
+            "doubled",
+            doubled,
+            "all-sss",
+            allSss,
+            "meeting-streak",
+            company.meetingStreak >= STREAK,
+            "day-only",
+            dayOnly,
+            "basement-ten",
+            basement && s.year >= BASEMENT_YEARS,
+            "rumor-proof",
+            "falseKept".equals(s.omenCall),
+            "foresight",
+            "trueDefended".equals(s.omenCall));
     for (RaisingContent.Achievement a : texts().achievements()) {
       if (Boolean.TRUE.equals(checks.get(a.code()))
           && !company.achievements.containsKey(a.code())) {

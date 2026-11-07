@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CARDS, loadoutOf, pickCards } from './cards'
 
-describe('멘탈 카드 (decisions.md 320번)', () => {
+describe('멘탈 카드 (decisions.md 328번)', () => {
   it('석 장은 서로 다르고 다섯 가운데서 나온다', () => {
     for (let seed = 0; seed < 50; seed++) {
       let x = seed + 1

@@ -90,7 +90,7 @@ class CompanyEngine {
     this.mental = new MentalEngine(content, properties);
   }
 
-  /** 멘탈 전투 (decisions.md 320번). */
+  /** 멘탈 전투 (decisions.md 328번). */
   final MentalEngine mental;
 
   /** 회사 연표·업적·명예의 전당 (decisions.md 263번). */
@@ -352,10 +352,24 @@ class CompanyEngine {
                     .thenComparingInt(e -> e.deskYears)
                     .thenComparingInt(e -> -e.id))
             .orElseThrow();
-    long fee = fee(company.capital, target.stats, target.rank);
+    // 몸값 (#390): 계약금과 지난해 그 직원이 번 돈 가운데 큰 쪽. 잘 버는 직원일수록 이적료가 커서 보낼지 고민이 된다.
+    long worth = fee(company.capital, target.stats, target.rank);
+    if (!company.settlements.isEmpty()) {
+      for (CompanyState.Result r : company.settlements.getLast().results) {
+        if (r.employeeId == target.id) {
+          worth = Math.max(worth, r.pnl);
+        }
+      }
+    }
     CompanyState.Poach poach = new CompanyState.Poach();
     poach.employeeId = target.id;
-    poach.transferFee = fee * rules.transferPercent() / PERCENT;
+    poach.transferFee = worth * rules.transferPercent() / PERCENT;
+    // 손을 뻗는 증권사 (#390): 회사마다 단골 라이벌 하나가 셋에 둘꼴로 오고, 가끔 다른 곳이 온다.
+    List<String> rivals = content.raising().company().people().poachers();
+    int nemesis = random.forKey("poach-nemesis", 0).nextInt(rivals.size());
+    int pick = random.forKey("poach-rival", company.year).nextInt(3 * rivals.size());
+    poach.rival = rivals.get(pick < 2 * rivals.size() ? nemesis : pick % rivals.size());
+    poach.count = company.poachCounts.merge(poach.rival, 1, Integer::sum);
     return poach;
   }
 
@@ -371,15 +385,68 @@ class CompanyEngine {
       return;
     }
     company.yearLines.add(
-        Korean.fill(texts.kept(), Map.of("name", poachedName(company), "rival", poacher())));
+        Korean.fill(texts.kept(), Map.of("name", poachedName(company), "rival", rivalOf(company))));
+    // 붙잡는 데는 값이 든다 (#390): 연봉이 나가는 회사면 제안에 맞춰 연봉을 한 번 올려 주고, 붙잡힌 직원은 사기가 오른다.
+    company.employees.stream()
+        .filter(e -> e.id == poach.employeeId)
+        .findFirst()
+        .ifPresent(
+            e -> {
+              long before = pay.salary(company, e);
+              if (before > 0) {
+                e.raises++;
+                company.yearLines.add(
+                    Korean.fill(
+                        texts.keptRaise(),
+                        Map.of(
+                            "name", e.name,
+                            "rival", rivalOf(company),
+                            "before", money(before),
+                            "after", money(pay.salary(company, e)))));
+              }
+              pay.shiftMorale(e, 1);
+            });
     company.poach = null;
+  }
+
+  /** 이번 제안을 한 증권사. 옛 제안이면 이름 없는 다른 증권사. */
+  private String rivalOf(CompanyState company) {
+    return company.poach != null && company.poach.rival != null ? company.poach.rival : poacher();
+  }
+
+  /** 이직 제안으로 떠난 사람의 그 뒤 소식 (#390): 떠나고 한 해가 지나면 절반 확률로 한 번 들린다. 등급이 높았던 사람일수록 잘됐다는 소식이 많다. */
+  private void alumniNews(CompanyState company, SeededRandom random, List<String> lines) {
+    RaisingContent.People texts = content.raising().company().people();
+    for (CompanyState.Alumnus a : company.alumni) {
+      if (a.rival == null || a.reported || company.year - a.to < 1) {
+        continue;
+      }
+      RandomGenerator rng = random.forKey("alumni-news", company.year, a.from, a.to);
+      if (rng.nextInt(PERCENT) >= 50) {
+        continue;
+      }
+      a.reported = true;
+      boolean good = rng.nextInt(PERCENT) < 30 + LADDER.indexOf(a.grade) * 5;
+      lines.add(
+          Korean.fill(
+              good ? texts.alumniGood() : texts.alumniBad(),
+              Map.of("name", a.name, "rival", a.rival)));
+    }
   }
 
   /** 연초 회의의 이직 제안 한 줄. */
   String poachLine(CompanyState company) {
+    RaisingContent.People texts = content.raising().company().people();
+    boolean again = company.poach.count > 1;
     return Korean.fill(
-        content.raising().company().people().poach(),
-        Map.of("rival", poacher(), "name", poachedName(company)));
+        again ? texts.poachAgain() : texts.poach(),
+        Map.of(
+            "rival",
+            rivalOf(company),
+            "name",
+            poachedName(company),
+            "count",
+            String.valueOf(company.poach.count)));
   }
 
   private String poachedName(CompanyState company) {
@@ -397,12 +464,16 @@ class CompanyEngine {
     company.employees.stream()
         .filter(e -> e.id == poach.employeeId)
         .findFirst()
-        .ifPresent(e -> history.retire(company, e));
+        .ifPresent(
+            e -> {
+              history.retire(company, e);
+              company.alumni.getLast().rival = rivalOf(company);
+            });
     company.employees.removeIf(e -> e.id == poach.employeeId);
     teams.tidy(company);
     company.capital += poach.transferFee;
     company.yearHiring -= poach.transferFee;
-    company.yearLines.add(Korean.fill(template, Map.of("name", name, "rival", poacher())));
+    company.yearLines.add(Korean.fill(template, Map.of("name", name, "rival", rivalOf(company))));
     company.poach = null;
   }
 
@@ -1041,6 +1112,40 @@ class CompanyEngine {
     return at < properties.gradeCapital().size() ? LADDER.get(at) : null;
   }
 
+  /** 최근에 쓴 문구 틀을 몇 개까지 기억하나 (#392). */
+  static final int RECENT_LINES = 60;
+
+  /**
+   * 같은 문구가 이어 나오지 않게 고른다 (#392): 굴린 자리에서부터 최근에 쓴 것과 이번에 이미 쓴 것을 건너뛴다. 다 썼으면 굴린 것. 고른 틀은 now에 담는다.
+   * 굴린 값만으로 정하므로 같은 상태면 같은 줄이 나온다.
+   */
+  String fresh(CompanyState company, List<String> lines, int roll, java.util.Set<String> now) {
+    int start = Math.floorMod(roll, lines.size());
+    for (int i = 0; i < lines.size(); i++) {
+      String line = lines.get((start + i) % lines.size());
+      if (!company.recentLines.contains(line) && !now.contains(line)) {
+        now.add(line);
+        return line;
+      }
+    }
+    String line = lines.get(start);
+    now.add(line);
+    return line;
+  }
+
+  /** 쓴 문구 틀을 기억한다 (#392). */
+  void remember(CompanyState company, java.util.Collection<String> used) {
+    company.recentLines.addAll(used);
+    while (company.recentLines.size() > RECENT_LINES) {
+      company.recentLines.removeFirst();
+    }
+  }
+
+  /** 업계 순위 소식 문구 (#351). */
+  RaisingContent.Industry industryTexts() {
+    return content.raising().company().industry();
+  }
+
   /** 다음 건물로 가는 이사 비용 (296번): 다음 띠 자본의 upgrade.percent%. 끝 등급이면 0. */
   long upgradeCost(CompanyState company) {
     String next = nextGrade(company);
@@ -1062,7 +1167,30 @@ class CompanyEngine {
 
   boolean canUpgrade(CompanyState company) {
     Long needed = upgradeNeeded(company);
-    return needed != null && !company.finished && !company.closed && company.capital >= needed;
+    return needed != null
+        && !company.finished
+        && !company.closed
+        && company.buildingTo == null
+        && company.capital >= needed;
+  }
+
+  /** 그 자리가 열리는 회사 등급 (#393). 처음부터 열려 있으면 null. */
+  String unlockGrade(String desk) {
+    Map<String, String> unlock = properties.upgrade().deskUnlock();
+    return unlock == null ? null : unlock.get(desk);
+  }
+
+  /** 그 자리가 지금 회사에 열려 있나 (#393). */
+  boolean deskOpen(CompanyState company, String desk) {
+    String at = unlockGrade(desk);
+    return at == null || LADDER.indexOf(grade(company)) >= LADDER.indexOf(at);
+  }
+
+  /** 그 등급으로 올라갈 때 공사 기간(해, #347). 같은 건물 안에서 책상만 느는 등급이면 0. */
+  int buildYears(String grade) {
+    return properties.upgrade().buildYears() == null
+        ? 0
+        : properties.upgrade().buildYears().getOrDefault(grade, 0);
   }
 
   /**
@@ -1083,8 +1211,20 @@ class CompanyEngine {
     long cost = upgradeCost(company);
     company.capital -= cost;
     company.yearMoving += cost;
-    company.building = next;
     company.gradedCapital = company.capital;
+    int years = buildYears(next);
+    if (years > 0) {
+      // 새 건물은 몇 해에 걸쳐 짓는다 (#347): 비용은 지금 다 내고, 연말마다 한 해씩 지어 다 지은 해에 옮긴다.
+      company.buildingTo = next;
+      company.buildYears = years;
+      company.buildLeft = years;
+      company.yearLines.add(
+          Korean.fill(
+              content.raising().company().construction().started(),
+              Map.of("years", String.valueOf(years))));
+      return;
+    }
+    company.building = next;
     history.add(company, company.year, "grow", null, next);
     giveTickets(company, properties.gacha().moveTickets(), "move", company.yearLines);
     if (LADDER.indexOf(next) >= LADDER.indexOf(properties.endingGrade())) {
@@ -1106,7 +1246,9 @@ class CompanyEngine {
 
   /** 규모의 벽 (decisions.md 244번): 등급 단계만큼 거듭제곱한 비율을 곱한다. F는 그대로. */
   private int scaled(CompanyState company, int bp, int percent) {
-    double factor = Math.pow(percent / (double) PERCENT, LADDER.indexOf(grade(company)));
+    // 건물이 아니라 자본의 띠로 정한다 (#344): 건물로 정하면 이사를 안 하고 반지하에 머물러 벽을 피할 수 있었다.
+    long capital = company.yearStake != null ? company.yearStake : company.capital;
+    double factor = Math.pow(percent / (double) PERCENT, LADDER.indexOf(grade(capital)));
     return (int) Math.round(bp * factor);
   }
 
@@ -1297,7 +1439,7 @@ class CompanyEngine {
     return properties.experience().band();
   }
 
-  private RaisingContent.Desk desk(String code) {
+  RaisingContent.Desk desk(String code) {
     return desks().stream()
         .filter(d -> d.code().equals(code))
         .findFirst()
@@ -1455,8 +1597,9 @@ class CompanyEngine {
     int phaseShare =
         crash && company.crashQuarter != null ? (burst ? properties.decisions() : 0) : 1;
     int decisions = Math.max(1, properties.decisions() / QUARTERS);
+    int stanceBp = macro.stanceBp(company);
     q.crash = burst;
-    // 멘탈 전투 (320번): 잘 치렀으면 이 분기 돈을 굴리는 직원 모두 더 벌고 손이 덜 뒤집힌다.
+    // 멘탈 전투 (328번): 잘 치렀으면 이 분기 돈을 굴리는 직원 모두 더 벌고 손이 덜 뒤집힌다.
     int mentalBonus = mental.bonusPercent(company);
     if (mentalBonus > 0) {
       q.mentalCard = company.mental.card;
@@ -1517,6 +1660,7 @@ class CompanyEngine {
         int hitRoll = rng.nextInt(BP);
         // XXX 역발상: 폭락장인 해에 빠지는 동안 사서 회복 구간에서 번다.
         bp += contrarian ? effects.contrarianCrashBp() : phaseBp * phaseShare;
+        bp += stanceBp;
         if (swayRoll < swayBp) {
           result.flips.merge(StatCodes.CONVICTION, 1, Integer::sum);
           bp -= missBp;
@@ -1602,9 +1746,10 @@ class CompanyEngine {
       company.yearLines.add(
           Korean.fill(
               content.raising().company().people().ignored(),
-              Map.of("name", poachedName(company), "rival", poacher())));
+              Map.of("name", poachedName(company), "rival", rivalOf(company))));
       company.poach = null;
     }
+    alumniNews(company, random, company.yearLines);
     Settlement settlement = new Settlement();
     settlement.year = company.year;
     settlement.phase = company.phase;
@@ -1694,11 +1839,21 @@ class CompanyEngine {
     settlement.lines.addAll(grouped(company.yearLines));
     countTenure(company, settlement);
     grow(company, settlement, random);
-    // 등급·건물·자리 수는 연말에만 바뀐다 (268번). 건물은 저절로 오르지 않고(296번: 이사 비용을 내야 한다), 자본이 지금 띠 아래로 떨어지면 줄어든다.
+    // 등급·건물·자리 수는 연말에만 바뀐다 (268번). 건물은 저절로 오르지 않고(296번: 이사 비용을 내야 한다), 지은 건물은 자본이 줄어도 그대로다(#347).
     String kept = grade(company);
     company.gradedCapital = company.capital;
-    String byCapital = grade(company.capital);
-    company.building = LADDER.indexOf(byCapital) < LADDER.indexOf(kept) ? byCapital : kept;
+    company.building = kept;
+    if (company.buildingTo != null && --company.buildLeft <= 0) {
+      // 공사가 끝났다 (#347): 새 건물로 옮긴다. 엔딩(랜드마크)은 아래에서 등급으로 본다.
+      String to = company.buildingTo;
+      company.building = to;
+      company.buildingTo = null;
+      company.buildYears = 0;
+      company.buildLeft = 0;
+      settlement.lines.add(content.raising().company().construction().done());
+      history.add(company, company.year, "grow", null, to);
+      giveTickets(company, properties.gacha().moveTickets(), "move", settlement.lines);
+    }
     List<Employee> stood = fitSeats(company);
     if (!stood.isEmpty()) {
       settlement.lines.add(
@@ -1736,6 +1891,28 @@ class CompanyEngine {
     }
     if (!crash && company.omen != null) {
       settlement.lines.add(1, content.raising().company().falseOmenNote());
+    }
+    // 조짐이 맞았나 헛소문이었나, 사장은 어떻게 읽었나를 밝힌다 (#394). 조짐 읽는 법을 배울 수 있게 한 줄 덧붙인다.
+    if (company.omen != null) {
+      long defended =
+          settlement.quarters.stream()
+              .filter(q -> MacroEngine.DEFENSIVE.equals(q.macroStance))
+              .count();
+      // 폭락이 한 분기에 터졌으면 그 분기에 방어였나, 고르게 빠졌으면 두 분기 이상 방어였나.
+      boolean burst = settlement.quarters.stream().anyMatch(q -> q.crash);
+      boolean defendedCrash =
+          burst
+              ? settlement.quarters.stream()
+                  .anyMatch(q -> q.crash && MacroEngine.DEFENSIVE.equals(q.macroStance))
+              : defended >= 2;
+      settlement.omenCall =
+          crash
+              ? (defendedCrash ? "trueDefended" : "trueIgnored")
+              : (defended == 0 ? "falseKept" : "falseDefended");
+      settlement.lines.add(
+          Korean.fill(
+              content.raising().company().omenReveal().get(settlement.omenCall),
+              Map.of("omen", company.omen, "count", String.valueOf(defended))));
     }
     company.settlements.add(settlement);
     String eraBefore = company.era;

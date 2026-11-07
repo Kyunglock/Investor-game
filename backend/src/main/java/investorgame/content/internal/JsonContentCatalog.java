@@ -342,6 +342,25 @@ class JsonContentCatalog implements ContentCatalog {
             && company.perks().grown() != null
             && company.perks().promoted() != null,
         "등급 효과 문구가 없다");
+    require(
+        company.construction() != null
+            && company.construction().started() != null
+            && company.construction().done() != null,
+        "건물 공사 문구가 없다");
+    require(
+        company.industry() != null
+            && company.industry().first() != null
+            && company.industry().up() != null
+            && company.industry().down() != null
+            && company.industry().same() != null,
+        "업계 순위 문구가 없다");
+    require(
+        company.omenReveal() != null
+            && company
+                .omenReveal()
+                .keySet()
+                .containsAll(List.of("falseKept", "falseDefended", "trueDefended", "trueIgnored")),
+        "조짐 밝히기 문구가 없다");
     for (RaisingContent.Era era : company.eras()) {
       require(
           era.phaseWeights().values().stream().mapToInt(Integer::intValue).sum() > 0,
@@ -387,6 +406,12 @@ class JsonContentCatalog implements ContentCatalog {
     require(
         company.people() != null
             && company.people().poacher() != null
+            && company.people().poachers() != null
+            && !company.people().poachers().isEmpty()
+            && company.people().poachAgain() != null
+            && company.people().keptRaise() != null
+            && company.people().alumniGood() != null
+            && company.people().alumniBad() != null
             && company.people().poach() != null
             && company.people().kept() != null
             && company.people().left() != null

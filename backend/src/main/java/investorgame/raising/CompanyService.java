@@ -84,7 +84,7 @@ public interface CompanyService {
   CompanyView settle(UUID sessionId, int year, int quarter);
 
   /**
-   * 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 320번). 서버가 상한으로 자르고 강화율을 매겨 그 분기 결산에 건다. 이미 보냈으면 그대로 돌려준다.
+   * 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 328번). 서버가 상한으로 자르고 강화율을 매겨 그 분기 결산에 건다. 이미 보냈으면 그대로 돌려준다.
    * 이번 분기가 아니거나 없는 카드면 400.
    */
   CompanyView mental(UUID sessionId, int year, int quarter, String card, int kills, int mentalLeft);

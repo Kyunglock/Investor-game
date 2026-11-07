@@ -31,6 +31,7 @@
 | 세션 | `session_info` | 익명 세션 |
 | 콘텐츠 | `content_version` | 로드된 콘텐츠 버전 |
 | 육성 | `raising_company` | 회사. 상태는 JSON |
+| 육성 | `raising_company_year` | 회사의 해마다 연말 자본. 업계 순위(#351)용 |
 | 육성 | `raising_memory` | 세션이 회사를 넘어 기억하는 것(사장 명성). 상태는 JSON |
 
 행동은 상태가 없어서 테이블이 없다.
@@ -38,6 +39,7 @@
 ```
 session_info.id ─┬───────── raising_company.session_id
                  └───────── raising_memory.session_id (PK)
+raising_company.id ──────── raising_company_year.company_id (참조만, FK 없음)
 content_version            다른 테이블과 연결되지 않는다
 ```
 
@@ -98,6 +100,20 @@ content_version            다른 테이블과 연결되지 않는다
 - 올해 시장 갈래, 투자 회의의 숨은 방향, 능력치 점수 같은 숨은 값은 `state`에만 있고 API 응답에 내려가지 않는다.
 - **다른 세션의 회사를 읽는 곳은 둘뿐이다** (decisions.md 275번): 연초에 올해의 라이벌 후보를 뽑을 때(돌고 있는 다른 세션 회사 가운데 `state->>'capital'`이 띠 안인 곳 하나를 무작위로, 난이도마다 한 번)와, 연말 결산 직전에 고른 라이벌 회사의 지금 자본을 한 번 읽을 때다. 실시간으로 순위를 매기지 않는다. 화면에는 회사 ID로 지은 이름과 자본만 보인다.
 - 엔딩(276번)을 본 회사는 `state.finished`가 참이고 `ACTIVE`로 남는다. 사장이 다음 회사를 차리면 망한 회사처럼 `ENDED`가 된다.
+
+### 3.2.1 `raising_company_year`
+
+업계 순위 (#351). 실제 유저 회사끼리 **같은 연차의 연말 자본**으로 견준다. 연말 결산(4분기)을 넘길 때 한 줄을 남긴다. 같은 해가 두 번 오면 처음 것을 둔다.
+
+| 컬럼 | 타입 | 비고 |
+|---|---|---|
+| company_id | uuid | 회사 ID (참조만, FK 없음). PK 앞 칸 |
+| year | int | 몇 년 차의 연말인가. PK 뒤 칸 |
+| capital | bigint | 그해 연말 자본 |
+| recorded_at | timestamptz | |
+
+- 인덱스: `(year, capital desc)`. 순위는 같은 `year`에서 자본이 더 큰 줄 수 + 1, 모수는 같은 `year`의 줄 수다. 화면을 그릴 때마다 두 번 센다.
+- 이름·세션은 담지 않는다. 화면에는 "같은 N년 차 회사 M곳 가운데 K위"만 보인다.
 
 ### 3.3 `raising_memory`
 

@@ -7,7 +7,7 @@ type Status = 'loading' | 'ready' | 'error'
 /** 거시경제 회의의 태도 (decisions.md 266번). */
 export type Stance = 'AGGRESSIVE' | 'NEUTRAL' | 'DEFENSIVE'
 
-/** 멘탈 전투의 카드 코드 (decisions.md 320번). 이름·효과는 앱이 가진다. */
+/** 멘탈 전투의 카드 코드 (decisions.md 328번). 이름·효과는 앱이 가진다. */
 export type MentalCard = 'hold' | 'split' | 'rule' | 'steel' | 'calm'
 
 interface RaisingState {
@@ -52,7 +52,7 @@ interface RaisingState {
   answerRaise: (accept: boolean) => Promise<void>
   /** 사표를 들고 온 직원에게 답한다: 연봉을 올려 붙잡거나 보낸다 (decisions.md 282번). */
   answerResign: (keep: boolean) => Promise<void>
-  /** 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 320번). 강화율은 서버가 매긴다. */
+  /** 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 328번). 강화율은 서버가 매긴다. */
   reportMental: (card: MentalCard, kills: number, mentalLeft: number) => Promise<void>
   /** 종목 회의의 막판 제안에 답한다 (decisions.md 283번). */
   answerProposal: (accept: boolean) => Promise<void>

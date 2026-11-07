@@ -212,12 +212,16 @@ class DefaultCompanyService implements CompanyService {
 
   /** 다음 건물로 가는 데 드는 돈 (296번). 끝 등급이거나 끝난 회사면 null. */
   private CompanyView.Upgrade upgradeView(CompanyState c) {
+    if (c.buildingTo != null && !c.finished) {
+      return new CompanyView.Upgrade(c.buildingTo, 0, 0, false, c.buildYears, c.buildLeft);
+    }
     String to = engine.nextGrade(c);
     Long needed = engine.upgradeNeeded(c);
     if (to == null || needed == null || c.finished) {
       return null;
     }
-    return new CompanyView.Upgrade(to, engine.upgradeCost(c), needed, engine.canUpgrade(c));
+    return new CompanyView.Upgrade(
+        to, engine.upgradeCost(c), needed, engine.canUpgrade(c), engine.buildYears(to), null);
   }
 
   @Override
@@ -254,6 +258,9 @@ class DefaultCompanyService implements CompanyService {
     }
     // 회사는 분기마다, 해마다 이어진다 (236·268번). 랜드마크 타워에 오르면 엔딩이다 (276번).
     engine.settleQuarter(c, new HashSeededRandom(row.seed()));
+    if (c.year > year) {
+      recordYear(row, year);
+    }
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -329,8 +336,12 @@ class DefaultCompanyService implements CompanyService {
                         e.morale))
             .toList();
     List<String> hot = engine.hotDesks(c);
+    // 돕는 자리는 회사가 커 가며 하나씩 열린다 (#393). 이미 누가 앉아 있으면(열기 전에 앉힌 옛 회사) 보인다.
+    java.util.Set<String> seated = new java.util.HashSet<>();
+    c.employees.forEach(e -> seated.add(e.desk));
     List<CompanyView.Desk> desks =
         engine.desks().stream()
+            .filter(d -> engine.deskOpen(c, d.code()) || seated.contains(d.code()))
             .map(
                 d ->
                     new CompanyView.Desk(
@@ -343,7 +354,16 @@ class DefaultCompanyService implements CompanyService {
                         d.description(),
                         d.trades() ? engine.deskGainBp(c, d.code()) : null,
                         d.trades() ? engine.returnsOf(d.code()).missBp() : null,
-                        d.trades() ? engine.returnsOf(d.code()).crashPercent() : null))
+                        d.trades() ? engine.returnsOf(d.code()).crashPercent() : null,
+                        engine.unlockGrade(d.code())))
+            .toList();
+    List<CompanyView.LockedDesk> lockedDesks =
+        engine.desks().stream()
+            .filter(d -> !engine.deskOpen(c, d.code()) && !seated.contains(d.code()))
+            .map(
+                d ->
+                    new CompanyView.LockedDesk(
+                        d.code(), d.name(), d.description(), engine.unlockGrade(d.code())))
             .toList();
     String hrCap = engine.hrOf(c).map(engine::hrCap).orElse(null);
     CompanyView.Meeting meeting =
@@ -388,6 +408,8 @@ class DefaultCompanyService implements CompanyService {
                 c.finishedYear == null ? c.year : c.finishedYear, c.capital, grade)
             : null,
         resignView(c),
+        industryView(row),
+        lockedDesks,
         ended || c.mental == null
             ? null
             : new CompanyView.Mental(c.mental.genre, c.mental.headline, c.mental.card != null));
@@ -401,6 +423,49 @@ class DefaultCompanyService implements CompanyService {
     engine.mental.report(row.state(), year, quarter, card, kills, mentalLeft);
     companies.update(row.id(), row.state(), false);
     return view(row);
+  }
+
+  /** 연말 자본을 남기고 같은 연차 회사들 가운데 자리를 결산 소식에 적는다 (#351). 지난해보다 상위 몇 %가 5%p 넘게 오르거나 내렸으면 그렇게 말한다. */
+  private void recordYear(CompanyRepository.Row row, int year) {
+    CompanyState c = row.state();
+    companies.recordYear(row.id(), year, c.capital);
+    companies
+        .rankAt(row.id(), year)
+        .ifPresent(
+            r -> {
+              int top = (int) Math.max(1, Math.ceil(r[0] * 100.0 / r[1]));
+              RaisingContent.Industry texts = engine.industryTexts();
+              String template =
+                  c.industryTop == null
+                      ? texts.first()
+                      : top < c.industryTop - 5
+                          ? texts.up()
+                          : top > c.industryTop + 5 ? texts.down() : texts.same();
+              String line =
+                  investorgame.common.Korean.fill(
+                      template,
+                      java.util.Map.of(
+                          "year", String.valueOf(year),
+                          "rank", String.valueOf(r[0]),
+                          "total", String.valueOf(r[1]),
+                          "top", String.valueOf(top)));
+              c.industryTop = top;
+              if (!c.settlements.isEmpty()) {
+                c.settlements.getLast().lines.add(line);
+              }
+            });
+  }
+
+  /** 업계 순위 (#351): 지난 연말의 같은 연차 회사들 가운데 자리. */
+  private CompanyView.Industry industryView(CompanyRepository.Row row) {
+    int year = row.state().settlements.isEmpty() ? 0 : row.state().settlements.getLast().year;
+    if (year < 1) {
+      return null;
+    }
+    return companies
+        .rankAt(row.id(), year)
+        .map(r -> new CompanyView.Industry(year, r[0], r[1]))
+        .orElse(null);
   }
 
   /** 채용 뽑기 (decisions.md 312번): 채용권, 데리고 있는 사람, 확률표, 마지막 뽑기, 도감. */
@@ -671,7 +736,11 @@ class DefaultCompanyService implements CompanyService {
             .map(e -> e.name)
             .orElse("");
     return new CompanyView.Poach(
-        p.employeeId, name, engine.poacher(), p.transferFee, engine.poachLine(c));
+        p.employeeId,
+        name,
+        p.rival != null ? p.rival : engine.poacher(),
+        p.transferFee,
+        engine.poachLine(c));
   }
 
   private static final int HALL_SIZE = 5;

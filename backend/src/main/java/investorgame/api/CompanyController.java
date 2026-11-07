@@ -45,7 +45,8 @@ class CompanyController {
   @GetMapping
   ResponseEntity<CompanyView> current(
       @CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    return ResponseEntity.of(companies.current(cookies.requireSession(token)));
+    // 세션이 없거나 만료된 첫 방문도 "회사가 없다"(404)다 (#346): 전에는 401이 콘솔과 운영 로그에 찍혔다.
+    return ResponseEntity.of(cookies.session(token).flatMap(companies::current));
   }
 
   /** 사장의 사재로 첫 회사를 차린다 (decisions.md 228번). 회사가 이미 있으면 400. */
@@ -167,7 +168,7 @@ class CompanyController {
 
   record MacroRequest(@NotBlank String stance) {}
 
-  /** 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 320번). */
+  /** 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 328번). */
   @PostMapping("/mental")
   CompanyView mental(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,

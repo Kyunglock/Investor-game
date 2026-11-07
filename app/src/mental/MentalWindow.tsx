@@ -12,7 +12,7 @@ import { GENRES } from './genres'
 type Mental = NonNullable<Company['mental']>
 
 /**
- * 멘탈 전투 창 (decisions.md 320번): 이벤트 머리글과 장르 → 카드 석 장 가운데 하나 → 한 판(Phaser, 늦게 불러온다) → 결과 → 서버에 보고 → onDone(결산).
+ * 멘탈 전투 창 (decisions.md 328번): 이벤트 머리글과 장르 → 카드 석 장 가운데 하나 → 한 판(Phaser, 늦게 불러온다) → 결과 → 서버에 보고 → onDone(결산).
  * 건너뛰면 보고 없이 바로 onDone이다. 화면 전체를 쓴다.
  */
 export function MentalWindow({ mental, onDone }: { mental: Mental; onDone: () => void }) {

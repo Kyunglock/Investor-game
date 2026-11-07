@@ -1,6 +1,6 @@
 import type { MentalCard } from '@web/features/raising/store'
 
-/** 멘탈 카드 한 장 (decisions.md 320번). 효과는 한 판 안의 화면 규칙이라 앱이 가진다. 이름은 서버 콘텐츠(company.mental.cards)와 같다. */
+/** 멘탈 카드 한 장 (decisions.md 328번). 효과는 한 판 안의 화면 규칙이라 앱이 가진다. 이름은 서버 콘텐츠(company.mental.cards)와 같다. */
 export interface Card {
   code: MentalCard
   name: string

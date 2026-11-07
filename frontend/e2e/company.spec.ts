@@ -177,7 +177,7 @@ async function closeYearEnd(page: Page, year: number) {
   }
 }
 
-test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자리 네 개와 채용권 다섯 장이 있다', async ({
+test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자리 네 개와 채용권 열 장이 있다', async ({
   page,
 }) => {
   await openCompany(page)
@@ -185,7 +185,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await expect(page.getByTestId('company-building')).toHaveText('반지하 원룸')
   // 직원이 없으면 채용 탭이 먼저 열린다 (312번).
   await expect(page.getByRole('tab', { name: /채용/ })).toHaveAttribute('aria-selected', 'true')
-  await expect(page.getByTestId('tickets')).toHaveText('5')
+  await expect(page.getByTestId('tickets')).toHaveText('10')
   await expect(page.getByTestId('roster')).toContainText('0 / 8')
   await expect(page.getByTestId('collection-entry')).toHaveCount(18)
   await page.getByText('확률표').click()
@@ -193,7 +193,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await expect(page.getByTestId('building-ladder').getByRole('listitem')).toHaveCount(7)
   await expect(page.getByTestId('next-step')).toContainText('사무실 넓히기')
   // 건물은 저절로 오르지 않는다 (296번): 이사 비용과 필요한 자본이 보이고, 자본이 모자라면 버튼이 잠긴다.
-  await expect(page.getByTestId('next-step')).toContainText('이사 비용 50b')
+  await expect(page.getByTestId('next-step')).toContainText('이사 비용 18b')
   await expect(page.getByTestId('upgrade')).toBeDisabled()
   // 라이벌 회사를 걷어냈다 (288번): 업계 순위가 없다.
   await expect(page.getByTestId('industry')).toHaveCount(0)
@@ -236,7 +236,7 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   await expect(reveal).toContainText('NEW')
   await reveal.getByTestId('gacha-close').click()
   await drawPeople(page, 3)
-  await expect(page.getByTestId('tickets')).toHaveText('1')
+  await expect(page.getByTestId('tickets')).toHaveText('6')
   await expect(page.getByTestId('roster')).toContainText('4 / 8')
   // 직원이 바뀌어 화면을 새로 그려도 채용 탭에 그대로 있다.
   await expect(page.getByRole('tab', { name: /채용/ })).toHaveAttribute('aria-selected', 'true')
@@ -278,7 +278,7 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   await expect(page.getByRole('tab', { name: /배치/ })).toContainText('1/4')
   await page.getByRole('button', { name: '자동 배치' }).click()
   await expect(page.getByRole('tab', { name: /배치/ })).toContainText('4/4')
-  // 자리가 넷이면 돕는 자리(리서치 팀 등)에도 앉힌다.
+  // 반지하(F)에는 돕는 자리가 아직 닫혀 있어(#393) 넷 다 돈을 굴리는 자리에 앉는다.
   await expect(page.getByTestId('office-tag')).toHaveCount(4)
   await expect(
     page
@@ -361,7 +361,7 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   // 연표 탭 (263번): 차린 해부터 큰 일이 쌓이고 업적과 명예의 전당이 보인다.
   await tab(page, /연표/)
   await expect(page.getByTestId('timeline')).toContainText('1호 회사를 차렸다')
-  await expect(page.getByTestId('achievement')).toHaveCount(6)
+  await expect(page.getByTestId('achievement')).toHaveCount(8)
   await expect(page.getByTestId('hall').getByRole('listitem')).toHaveCount(4)
   // 매각을 뺐다(236번): 세 해가 지나도 회사는 이어지고 4년 차 이슈가 온다. 팔 곳은 없다.
   await expect(page.getByText(/1호 회사 · 4년 차/)).toBeVisible()
@@ -660,6 +660,35 @@ test('건물이 커지면 연말 결산서 뒤 알림 창에서 옆 건물을 �
   // 라이벌 회사 이름은 나오지 않는다.
   await expect(move).not.toContainText('라이벌')
   await expect(page.getByRole('alertdialog', { name: '라이벌 결과' })).toHaveCount(0)
+})
+
+test('새 건물 공사가 끝나면 가림막이 걷히며 새 건물이 솟아오른다 (#347)', async ({ page }) => {
+  await openCompany(page)
+  // 새 건물(상가)은 한 해 걸려 짓는다: 연말 결산 응답을 완공(E → D)으로 바꿔 본다.
+  await page.route('**/api/company/settle', async (route) => {
+    const response = await route.fetch()
+    const company = await response.json()
+    if (company.quarter === 1 && company.lastSettlement) {
+      company.lastSettlement.gradeBefore = 'E'
+      company.lastSettlement.gradeAfter = 'D'
+    }
+    await route.fulfill({ response, json: company })
+  })
+  for (let quarter = 1; quarter <= 4; quarter++) {
+    await page.getByRole('button', { name: `1년 차 ${quarter}분기 넘기기` }).click()
+    if (quarter < 4) {
+      await closeQuarter(page, 1, quarter)
+    }
+  }
+  await page
+    .getByRole('dialog', { name: '연말 결산서' })
+    .getByRole('button', { name: '확인' })
+    .click()
+  const move = page.getByTestId('move-scene')
+  await expect(move.getByTestId('build-complete')).toBeVisible()
+  await expect(move.getByTestId('rival-smash')).toHaveCount(0)
+  await expect(move).toContainText('공사가 끝났다!')
+  await expect(move).toContainText('반지하 원룸 → 상가 2층')
 })
 
 test('랜드마크 타워에 오르면 결산서 뒤에 엔딩이 뜨고 다음 회사를 차리게 한다 (276번)', async ({

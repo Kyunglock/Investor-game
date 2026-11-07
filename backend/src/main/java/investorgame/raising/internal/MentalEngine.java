@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.random.RandomGenerator;
 
 /**
- * 멘탈 전투 (decisions.md 320번). 분기마다 결산 직전에 멘탈 카드를 고르고 나쁜 투자 습관(패닉셀·투매·투기·손절매)을 쏘아 물리치는 한 판. 한 판은
+ * 멘탈 전투 (decisions.md 328번). 분기마다 결산 직전에 멘탈 카드를 고르고 나쁜 투자 습관(패닉셀·투매·투기·손절매)을 쏘아 물리치는 한 판. 한 판은
  * 클라이언트가 돌리고, 서버는 장르·머리글을 정하고 결과를 한 번 받아 그 분기 강화율을 매긴다. 설계는
  * docs/superpowers/specs/2026-11-07-mental-battle-design.md.
  */

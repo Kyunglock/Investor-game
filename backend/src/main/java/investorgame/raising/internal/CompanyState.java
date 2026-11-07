@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -43,6 +44,17 @@ class CompanyState {
    * null(자본으로 정한다, 296번 전처럼).
    */
   String building;
+
+  /** 지난 연말 업계 순위의 상위 몇 % (#351). 아직 매기지 않았으면 null. */
+  Integer industryTop;
+
+  /** 짓고 있는 건물의 회사 등급 (#347). 짓지 않으면 null. */
+  String buildingTo;
+
+  /** 공사 기간(해)과 남은 해 (#347). 연말 결산마다 한 해씩 줄고 0이 되면 옮긴다. */
+  int buildYears;
+
+  int buildLeft;
 
   /** 올해 낸 이사 비용 (296번). */
   long yearMoving;
@@ -89,6 +101,12 @@ class CompanyState {
 
   /** 회사를 떠난 직원 (263번). */
   List<Alumnus> alumni = new ArrayList<>();
+
+  /** 최근에 쓴 문구 틀 (#392): 회의 한마디·팀장 보고가 같은 줄로 이어 나오지 않게 고를 때 건너뛴다. 오래된 것부터 빠진다. */
+  List<String> recentLines = new ArrayList<>();
+
+  /** 증권사마다 우리에게 손을 뻗은 횟수 (#390). */
+  Map<String, Integer> poachCounts = new HashMap<>();
 
   /** 투자 회의를 연달아 번 해 수 (263번). */
   int meetingStreak;
@@ -172,7 +190,7 @@ class CompanyState {
   /** 올해 거시경제 회의 (decisions.md 266번). 이 칸을 더하기 전의 해면 null이다. */
   Macro macro;
 
-  /** 이번 분기의 멘탈 전투 (decisions.md 320번). 분기를 열 때 새로 만든다. 이 칸을 더하기 전의 분기면 null이다. */
+  /** 이번 분기의 멘탈 전투 (decisions.md 328번). 분기를 열 때 새로 만든다. 이 칸을 더하기 전의 분기면 null이다. */
   Mental mental;
 
   /** 이 회사에서 이미 나온 뉴스. 투자 회의에 같은 뉴스가 다시 나오지 않는다(다 쓰면 비운다). */
@@ -469,7 +487,7 @@ class CompanyState {
     /** 이 분기에 폭락이 터졌다. */
     boolean crash;
 
-    /** 이 분기 멘탈 전투 (320번): 고른 카드와 강화율. 치르지 않았으면 null. */
+    /** 이 분기 멘탈 전투 (328번): 고른 카드와 강화율. 치르지 않았으면 null. */
     String mentalCard;
 
     Integer mentalBonusPercent;
@@ -494,7 +512,7 @@ class CompanyState {
   }
 
   /**
-   * 이번 분기의 멘탈 전투 (decisions.md 320번). 서버가 장르와 머리글을 정하고, 치른 결과(카드·물리친 적·남은 멘탈)는 한 번만 받아 강화율을 매긴다.
+   * 이번 분기의 멘탈 전투 (decisions.md 328번). 서버가 장르와 머리글을 정하고, 치른 결과(카드·물리친 적·남은 멘탈)는 한 번만 받아 강화율을 매긴다.
    * 치르기 전에는 card가 null.
    */
   @JsonIgnoreProperties(ignoreUnknown = true)
@@ -530,6 +548,12 @@ class CompanyState {
     int to;
     long totalPnl;
     String grade;
+
+    /** 데려간 증권사 (#390). 이직 제안으로 떠난 사람만 있다. */
+    String rival;
+
+    /** 그 뒤 소식을 전했나 (#390). */
+    boolean reported;
   }
 
   /** 연봉 때문에 사표를 들고 온 직원 (decisions.md 282번). */
@@ -565,6 +589,12 @@ class CompanyState {
   static class Poach {
     int employeeId;
     long transferFee;
+
+    /** 손을 뻗은 증권사 (#390). 옛 제안이면 null(이름 없는 다른 증권사). */
+    String rival;
+
+    /** 그 증권사가 우리에게 손을 뻗은 몇 번째인가 (#390). */
+    int count;
   }
 
   /** 채용 뽑기로 온 사람 한 명 (decisions.md 312번). 화면이 카드를 뒤집어 보인다. */
@@ -614,6 +644,12 @@ class CompanyState {
 
     String gradeBefore;
     String gradeAfter;
+
+    /**
+     * 올해 조짐을 사장이 어떻게 읽었나 (#394): falseKept(헛조짐에 안 속음)·falseDefended(헛조짐에 방어)·trueDefended(진짜 조짐에
+     * 방어)·trueIgnored(진짜 조짐을 보고도 버팀). 조짐이 없었으면 null.
+     */
+    String omenCall;
 
     /** 이 결산으로 랜드마크 타워에 올라 엔딩을 봤다 (276번). */
     boolean finished;

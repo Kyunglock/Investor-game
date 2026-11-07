@@ -34,7 +34,7 @@ export function Windows({ company }: { company: Company }) {
   const ended = company.status === 'ENDED'
   const drawn = useDrawReveal(company)
 
-  // 결산 직전: 이번 분기 멘탈 전투를 아직 안 치렀으면 창을 띄운다 (decisions.md 320번). 자동 진행은 건너뛴다.
+  // 결산 직전: 이번 분기 멘탈 전투를 아직 안 치렀으면 창을 띄운다 (decisions.md 328번). 자동 진행은 건너뛴다.
   const battleOrSettle = () => {
     const s = useRaisingStore.getState()
     if (s.company?.mental && !s.company.mental.done && !s.autoPlay) {

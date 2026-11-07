@@ -7,11 +7,14 @@ import { usePixelArt } from '../game/pixelArt'
 import { toggleAutoPlay } from './autoPlay'
 import { BuildingArt } from './BuildingArt'
 import { pnlLabel } from './board'
+import { ConstructionArt } from './ConstructionArt'
 import { EndingScreen } from './EndingScreen'
 import { GachaPanel, GachaReveal, useDrawReveal } from './Gacha'
 import { GradeBadge, GradeCard } from './GradeCard'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
+import { IndustryLine } from './IndustryLine'
 import { InvestWindow } from './InvestWindow'
+import { LockedDesks } from './LockedDesks'
 import { MacroWindow } from './MacroWindow'
 import { MoveScene } from './MoveScene'
 import { OfficeArt, type SeatFocus } from './OfficeArt'
@@ -113,7 +116,16 @@ export function CompanyScreen({ company }: { company: Company }) {
             자본 {money(company.capital)}
           </p>
         </div>
-        <BuildingArt grade={company.grade} />
+        <IndustryLine company={company} className="mb-1 text-muted" />
+        <div className="relative">
+          <BuildingArt grade={company.grade} />
+          {company.upgrade?.left != null && (
+            <ConstructionArt
+              done={company.upgrade.years - company.upgrade.left}
+              years={company.upgrade.years}
+            />
+          )}
+        </div>
         <NextStep company={company} />
         <OfficeArt company={company} focus={focus} onSeat={ended ? undefined : setFocus} />
         {!ended && focus && <SeatPicker company={company} focus={focus} onFocus={setFocus} />}
@@ -295,6 +307,27 @@ function NextStep({ company }: { company: Company }) {
   }
   const label = step.kind === 'move' ? `다음 건물 ${step.to}` : '사무실 넓히기(책상 추가)'
   const short = (company.capital - plan.needed) * -1
+  // 공사 중 (#347): 새 건물은 몇 해에 걸쳐 짓는다. 그동안 지금 건물에서 일한다.
+  if (plan.left != null) {
+    const done = plan.years - plan.left
+    return (
+      <div
+        className="mt-1 rounded border border-gold bg-gold/10 px-2 py-1.5"
+        data-testid="construction"
+      >
+        <p className="text-[12px] text-muted">
+          <b className="text-gold">공사 중 · {step.kind === 'move' ? step.to : label}</b> ·{' '}
+          {plan.years}년 중 {done + 1}년째 · 연말 결산마다 한 해씩 짓는다
+        </p>
+        <div className="mt-1 h-2 overflow-hidden rounded bg-line-soft">
+          <div
+            className="h-full bg-gold transition-[width] duration-700"
+            style={{ width: `${Math.round(((done + 0.5) / plan.years) * 100)}%` }}
+          />
+        </div>
+      </div>
+    )
+  }
   return (
     <div
       className={`mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 rounded border px-2 py-1.5 ${
@@ -307,6 +340,7 @@ function NextStep({ company }: { company: Company }) {
         <b className={plan.affordable ? 'text-gold' : 'text-ink'}>{label}</b> · 이사 비용{' '}
         {money(plan.cost)} · 자본 {money(plan.needed)}부터
         {!plan.affordable && ` (${money(short)} 더)`} · 지금 책상 {company.seats}개
+        {plan.years > 0 && ` · 공사 ${plan.years}년`}
       </p>
       <button
         type="button"
@@ -317,7 +351,8 @@ function NextStep({ company }: { company: Company }) {
         }`}
         data-testid="upgrade"
       >
-        {step.kind === 'move' ? '이사하기' : '넓히기'} · {money(plan.cost)}
+        {plan.years > 0 ? '공사 시작' : step.kind === 'move' ? '이사하기' : '넓히기'} ·{' '}
+        {money(plan.cost)}
       </button>
     </div>
   )
@@ -469,6 +504,7 @@ function StaffTab({ company }: { company: Company }) {
           ))}
         </ul>
       )}
+      {!ended && <LockedDesks company={company} className="text-muted" />}
       {company.employees.length > 0 && (
         <details className="mt-3" open={ended}>
           <summary className="cursor-pointer text-[13px] text-muted">
@@ -911,7 +947,7 @@ function CompanyTabs({ company }: { company: Company }) {
     { id: 'settlement', label: '지난 결산', show: Boolean(company.lastSettlement) },
     {
       id: 'history',
-      label: '연표',
+      label: '업적·연표',
       badge: `${company.history.achievements.filter((a) => a.year != null).length}/${company.history.achievements.length}`,
       show: true,
     },
@@ -1037,6 +1073,7 @@ function HistoryTab({ company }: { company: Company }) {
         ))}
       </ul>
       <h3 className="mt-3 font-pen text-[22px]">명예의 전당</h3>
+      <p className="text-[11px] text-muted">데스크 운용과 종목 회의로 번 돈을 모두 더한 누적</p>
       {h.hall.length === 0 ? (
         <p className="text-[13px] text-muted">아직 아무도 없습니다.</p>
       ) : (

@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/** 멘탈 전투 (decisions.md 320번, #420). 실제 콘텐츠와 application.yml 수치로 돌린다. */
+/** 멘탈 전투 (decisions.md 328번, #420). 실제 콘텐츠와 application.yml 수치로 돌린다. */
 class MentalEngineTest {
 
   private static final CompanyProperties PROPERTIES =

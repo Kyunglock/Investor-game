@@ -1,9 +1,12 @@
 import type { Grade } from '../../api/client'
 import { Overlay } from '../game/Overlay'
 import { usePixelArt } from '../game/pixelArt'
+import { BuildingArt } from './BuildingArt'
 import { moveOf, wreathsFor } from './board'
+import { newlyOpened } from './LockedDesks'
 import { officeName } from './office'
 import { RivalSmash } from './RivalSmash'
+import { useRaisingStore } from './store'
 
 /**
  * 이사 장면 (증권사 육성 설계 8.3절). 결산 뒤 회사 등급이 바뀌었을 때 한 번 보인다. 글은 등급 대신 건물로 말한다 (238번). 오르면 우리 건물이 옆 건물을
@@ -22,7 +25,10 @@ export function MoveScene({
   onDone: () => void
 }) {
   const shown = usePixelArt((s) => s.shown)
+  const company = useRaisingStore((s) => s.company)
   const move = moveOf(before, after)
+  // 커지면서 새로 열린 자리 (#393): 무엇을 하는 자리인지 한 줄씩 알려 준다.
+  const opened = move === 'up' ? newlyOpened(company, before, after) : []
   if (!move) {
     return null
   }
@@ -32,10 +38,12 @@ export function MoveScene({
   // 회사 등급 대신 건물로 말한다 (238번): 건물이 바뀌면 이사, 같은 건물이면 사무실을 넓히거나 줄인다.
   // 오르면 옆 건물을 박치기로 무너뜨리고 그 자리에서 커진다 (243번). 라이벌 회사를 걷어낸 뒤(288번)로는 이름 없는 옆 건물이다.
   const rival = '옆 건물'
+  // 새 건물은 몇 해에 걸쳐 지어 완공 때 옮긴다 (#347): 박치기 대신 가림막이 걷히며 새 건물이 아래에서 솟아오른다.
+  const built = up && from !== to
   const line =
     from !== to
       ? up
-        ? `옆 건물을 들이받아 무너뜨리고 그 자리로 이사했다: ${from} → ${to}. 새 간판을 달고 개업 떡을 돌렸다.`
+        ? `공사가 끝났다! 가림막을 걷자 새 건물이 모습을 드러냈다: ${from} → ${to}. 새 간판을 달고 개업 떡을 돌렸다.`
         : `짐을 줄여 작은 사무실로 옮겼다: ${from} → ${to}.`
       : up
         ? `옆 건물을 들이받아 무너뜨리고 사무실을 넓혔다(${to}). 새 책상이 들어오고 떡을 돌렸다.`
@@ -50,7 +58,15 @@ export function MoveScene({
         data-testid="move-scene"
         data-move={move}
       >
-        {shown && up && <RivalSmash before={before} after={after} rival={rival} />}
+        {shown && built && (
+          <div className="relative overflow-hidden" data-testid="build-complete">
+            <div className="build-complete">
+              <BuildingArt grade={after} />
+            </div>
+            <div className="curtain-off absolute inset-x-[20%] bottom-[10%] top-[35%] rounded-sm bg-[#2f5d50]/90" />
+          </div>
+        )}
+        {shown && up && !built && <RivalSmash before={before} after={after} rival={rival} />}
         {shown && !up && (
           <svg
             viewBox="0 0 64 20"
@@ -75,6 +91,21 @@ export function MoveScene({
           </svg>
         )}
         <p className="mt-2 text-[14px] font-semibold">{line}</p>
+        {opened.length > 0 && (
+          <div
+            className="mt-2 rounded border border-gold bg-gold/10 px-2 py-1.5"
+            data-testid="unlocked"
+          >
+            <p className="text-[13px] font-semibold text-gold">새로 열렸다!</p>
+            <ul className="mt-0.5 grid gap-0.5 text-[12px]">
+              {opened.map((d) => (
+                <li key={d.code}>
+                  <b>{d.name}</b> · {d.description}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {up && (
           <ul className="mt-1 text-[13px]" data-testid="wreaths">
             {wreathsFor(year).map((sender) => (

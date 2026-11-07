@@ -2,7 +2,9 @@ import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
 import { usePixelArt } from '@web/features/game/pixelArt'
 import { BuildingArt } from '@web/features/raising/BuildingArt'
+import { ConstructionArt } from '@web/features/raising/ConstructionArt'
 import { GradeCard } from '@web/features/raising/GradeCard'
+import { IndustryLine } from '@web/features/raising/IndustryLine'
 import { OfficeArt, type SeatFocus } from '@web/features/raising/OfficeArt'
 import { nextStep } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
@@ -34,8 +36,15 @@ export function OfficeScene({ company }: { company: Company }) {
         </p>
       )}
       <TutorialWrap company={company} />
-      <div className="panel mx-auto mt-2 max-w-[360px] p-2">
+      <IndustryLine company={company} className="mt-2 text-center text-white/80" />
+      <div className="panel relative mx-auto mt-2 max-w-[360px] p-2">
         <BuildingArt grade={company.grade} />
+        {company.upgrade?.left != null && (
+          <ConstructionArt
+            done={company.upgrade.years - company.upgrade.left}
+            years={company.upgrade.years}
+          />
+        )}
       </div>
       <NextStep company={company} />
       <OfficeArt
@@ -81,6 +90,26 @@ function NextStep({ company }: { company: Company }) {
   }
   const label = step.kind === 'move' ? `다음 건물 ${step.to}` : '사무실 넓히기'
   const short = plan.needed - company.capital
+  // 공사 중 (#347): 새 건물은 몇 해에 걸쳐 짓는다. 그동안 지금 건물에서 일한다.
+  if (plan.left != null) {
+    const done = plan.years - plan.left
+    return (
+      <div className="panel mt-2 border-2 border-gold px-3 py-2" data-testid="construction">
+        <p className="text-[12px] text-muted">
+          <b className="block text-[13px] text-gold">
+            공사 중 · {step.kind === 'move' ? step.to : label}
+          </b>
+          {plan.years}년 중 {done + 1}년째 · 연말 결산마다 한 해씩 짓는다
+        </p>
+        <div className="mt-1 h-2 overflow-hidden rounded bg-white/10">
+          <div
+            className="h-full bg-gold transition-[width] duration-700"
+            style={{ width: `${Math.round(((done + 0.5) / plan.years) * 100)}%` }}
+          />
+        </div>
+      </div>
+    )
+  }
   return (
     <div
       className={`panel mt-2 flex items-center justify-between gap-2 border-2 px-3 py-2 ${
@@ -93,6 +122,7 @@ function NextStep({ company }: { company: Company }) {
         <b className={`block text-[13px] ${plan.affordable ? 'text-gold' : 'text-ink'}`}>{label}</b>
         이사 비용 {money(plan.cost)} · 자본 {money(plan.needed)}부터
         {!plan.affordable && ` (${money(short)} 더)`}
+        {plan.years > 0 && ` · 공사 ${plan.years}년`}
       </p>
       <button
         type="button"
@@ -106,7 +136,7 @@ function NextStep({ company }: { company: Company }) {
         className={`btn min-h-12 shrink-0 px-4 text-[14px] ${plan.affordable ? 'btn-gold animate-glow' : 'btn-line'}`}
         data-testid="upgrade"
       >
-        {step.kind === 'move' ? '이사하기' : '넓히기'}
+        {plan.years > 0 ? '공사 시작' : step.kind === 'move' ? '이사하기' : '넓히기'}
       </button>
     </div>
   )

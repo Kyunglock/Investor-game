@@ -348,7 +348,8 @@ class InvestEngine {
       throw new InvalidRequestException("지금 열 수 있는 투자 회의가 없다");
     }
     List<CompanyState.Remark> frozen = new ArrayList<>();
-    for (Remark r : liveRemarks(c, random)) {
+    java.util.Set<String> used = new java.util.HashSet<>();
+    for (Remark r : liveRemarks(c, random, used)) {
       CompanyState.Remark x = new CompanyState.Remark();
       x.employeeId = r.employee().id;
       x.name = r.employee().name;
@@ -360,6 +361,7 @@ class InvestEngine {
     }
     Optional<Highlight> highlight = liveHighlight(c, random);
     c.invest.remarks = frozen;
+    company.remember(c, used);
     c.invest.highlightIndex = highlight.map(Highlight::index).orElse(null);
     c.invest.highlightBy = highlight.map(Highlight::by).orElse(null);
   }
@@ -412,6 +414,11 @@ class InvestEngine {
 
   /** 지금 배치로 하는 한마디. 회의를 열 때와 시험에서만 부른다. */
   List<Remark> liveRemarks(CompanyState c, SeededRandom random) {
+    return liveRemarks(c, random, new java.util.HashSet<>());
+  }
+
+  /** used에 이번 회의에서 쓴 문구 틀을 담는다 (#392). */
+  List<Remark> liveRemarks(CompanyState c, SeededRandom random, java.util.Set<String> used) {
     if (c.invest == null) {
       return List.of();
     }
@@ -435,7 +442,9 @@ class InvestEngine {
       // 흐린 기사(241번): 안목 높은 직원은 애매하다는 것을 알아채고 그렇게 말한다.
       String tier = sharp && foggiest(c.invest) && !NEUTRAL.equals(read) ? "foggy" : voice.key();
       List<String> lines = texts.remarks().get(tier).get(read);
-      String line = lines.get(random.forKey("invest-remark", c.turn(), e.id).nextInt(lines.size()));
+      String line =
+          company.fresh(
+              c, lines, random.forKey("invest-remark", c.turn(), e.id).nextInt(lines.size()), used);
       Points points = points(c.invest.sentences, read, voice, texts.points(), null);
       remarks.add(
           new Remark(
@@ -782,6 +791,10 @@ class InvestEngine {
               : result.action.equals(right)
                   ? company.scaledGain(c, company.gainBp(c, e))
                   : -company.scaledMiss(c, returns.missBp());
+      // 크게 틀리면 더 크게 잃는다 (#388): 전에는 크게가 판돈만 두 배라 늘 크게 사는 게 이득이었다.
+      if (big && bp < 0) {
+        bp = bp * properties.invest().bigMissPercent() / PERCENT;
+      }
       result.pnl = stake * bp / BP;
       total += result.pnl;
       e.totalPnl += result.pnl;

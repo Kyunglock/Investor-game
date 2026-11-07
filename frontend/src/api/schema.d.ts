@@ -310,7 +310,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 320번)
+         * 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 328번)
          * @description 분기마다 결산 직전에 멘탈 카드를 고르고 나쁜 투자 습관(패닉셀·투매·투기·손절매)을 쏘아 물리치는 한 판을 치른다(앱). 한 판은 화면이 돌리고,
          *     서버는 물리친 적과 남은 멘탈을 상한으로 잘라 강화율을 매긴다. 강화율만큼 그 분기 돈을 굴리는 직원 모두 더 벌고 손이 덜 뒤집힌다.
          *     이미 보냈으면 아무것도 하지 않고 지금 회사를 돌려준다(같은 요청이 두 번 와도 한 번만). 이번 분기가 아니거나 없는 카드면 400.
@@ -471,15 +471,19 @@ export interface components {
                 to: components["schemas"]["Grade"];
                 /**
                  * Format: int64
-                 * @description 이사 비용(다음 띠 자본의 25%)
+                 * @description 이사 비용(다음 띠 자본의 15%). 공사 중이면 0
                  */
                 cost: number;
                 /**
                  * Format: int64
-                 * @description 이사하려면 있어야 하는 자본(다음 띠 + 이사 비용)
+                 * @description 이사하려면 있어야 하는 자본(다음 띠 + 이사 비용). 공사 중이면 0
                  */
                 needed: number;
                 affordable: boolean;
+                /** @description 그 건물을 짓는 데 걸리는 해 (#347). 같은 건물 안에서 책상만 늘면 0(바로 된다) */
+                years: number;
+                /** @description 공사 중이면 남은 해 */
+                left: number | null;
             } | null;
             /** @description 망한 회사의 한 줄. 자본이 0이면 있고 */
             broke?: string | null;
@@ -537,6 +541,15 @@ export interface components {
                 missBp?: number | null;
                 /** @description 폭락장의 시장 손익에 곱하는 비율. 100보다 작으면 폭락장에 덜 빠진다. 돈을 굴리지 않으면 null */
                 crashPercent?: number | null;
+                /** @description 이 자리가 열린 회사 등급 (#393). 처음부터 열려 있었으면 null */
+                unlockGrade?: string | null;
+            }[];
+            /** @description 아직 닫힌 돕는 자리 (#393). 회사가 unlockGrade가 되면 열려 desks에 들어간다 */
+            lockedDesks?: {
+                code: string;
+                name: string;
+                description: string;
+                unlockGrade: components["schemas"]["Grade"];
             }[];
             meeting?: {
                 /** @description 폭락 조짐. 헛조짐일 수도 있다 */
@@ -938,7 +951,16 @@ export interface components {
                  */
                 after: number;
             } | null;
-            /** @description 이번 분기의 멘탈 전투 (decisions.md 320번). 그 분기 이벤트가 장르를 정한다. 끝난 회사나 이 칸이 생기기 전의 분기면 null */
+            /** @description 업계 순위 (#351). 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다. 한 해도 마치지 않았으면 null */
+            industry?: {
+                /** @description 견준 연차(지난 연말) */
+                year: number;
+                /** @description 그 연차를 마친 회사 가운데 자리(1이 맨 위) */
+                rank: number;
+                /** @description 그 연차를 마친 회사 수 */
+                total: number;
+            };
+            /** @description 이번 분기의 멘탈 전투 (decisions.md 328번). 그 분기 이벤트가 장르를 정한다. 끝난 회사나 이 칸이 생기기 전의 분기면 null */
             mental?: {
                 /**
                  * @description ASSAULT: 공격(적이 위에서 내려온다), DEFENSE: 디펜스(금고를 지킨다), SURVIVAL: 생존(사방에서 몰려온다)
@@ -1171,7 +1193,6 @@ export interface operations {
                     "application/json": components["schemas"]["Company"];
                 };
             };
-            401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
         };
     };

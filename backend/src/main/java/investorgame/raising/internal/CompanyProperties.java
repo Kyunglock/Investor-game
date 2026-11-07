@@ -66,7 +66,7 @@ public record CompanyProperties(
     Mental mental) {
 
   /**
-   * 멘탈 전투 (decisions.md 320번). 강화율(%) = min(maxPercent, 물리친 적 ÷ killsPerPercent + 남은 멘탈 ÷
+   * 멘탈 전투 (decisions.md 328번). 강화율(%) = min(maxPercent, 물리친 적 ÷ killsPerPercent + 남은 멘탈 ÷
    * mentalPerPercent). 보고 값은 maxKills·maxMental로 자른다. genreWeights: 시장
    * 갈래(boom·normal·crash·burst)마다 장르별 가중치.
    */
@@ -79,7 +79,13 @@ public record CompanyProperties(
       Map<String, Map<String, Integer>> genreWeights) {}
 
   /** 건물 이사 (decisions.md 296번): 이사 비용은 다음 띠 자본의 percent%. 자본이 다음 띠 + 비용 이상일 때만 간다. */
-  public record Upgrade(int percent) {}
+  /**
+   * @param percent 이사 비용: 다음 띠 자본의 이 비율(%)
+   * @param buildYears 새 건물로 가는 등급의 공사 기간(해, #347). 없으면 바로 된다
+   * @param deskUnlock 돕는 자리가 열리는 회사 등급(#393). 없는 자리는 처음부터 열려 있다
+   */
+  public record Upgrade(
+      int percent, Map<String, Integer> buildYears, Map<String, String> deskUnlock) {}
 
   /**
    * 거시경제 회의 (decisions.md 266번).
@@ -88,12 +94,16 @@ public record CompanyProperties(
    * @param stakePercent 태도별 그해 결산 판돈 비율(%)
    * @param defensiveCrashPercent 방어면 폭락장의 시장 손익에 곱하는 비율(%)
    * @param windBp 섹터 바람: 순풍 자리는 맞혔을 때 이만큼 더 벌고, 역풍 자리는 덜 번다(만분율)
+   * @param rightBp 태도가 숨은 방향과 맞으면(공격인데 오름, 방어인데 내림) 판단마다 더하는 만분율 (#388)
+   * @param wrongBp 태도가 숨은 방향과 어긋나면(공격인데 내림, 방어인데 오름) 판단마다 빼는 만분율 (#388)
    */
   public record Macro(
       int normalUpPercent,
       Map<String, Integer> stakePercent,
       int defensiveCrashPercent,
-      int windBp) {}
+      int windBp,
+      Map<String, Integer> rightBp,
+      Map<String, Integer> wrongBp) {}
 
   /**
    * 종목 발굴 (decisions.md 267번). 거시경제 회의가 끝나면 종목 발굴팀 직원이 basePercent + 안목 × insightPercent / 100 확률로,
@@ -134,6 +144,7 @@ public record CompanyProperties(
       int sideOppositePercent,
       int stubbornBp,
       int bigStakePercent,
+      int bigMissPercent,
       int bigStubbornPercent,
       int meetingStakePercent,
       String proposalMinGrade,

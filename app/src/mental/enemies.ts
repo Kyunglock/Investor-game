@@ -1,4 +1,4 @@
-/** 적 넷 (decisions.md 320번): 이름이 곧 행동이다. */
+/** 적 넷 (decisions.md 328번): 이름이 곧 행동이다. */
 export type EnemyKind = 'panic' | 'dump' | 'spec' | 'stop'
 
 export interface EnemySpec {

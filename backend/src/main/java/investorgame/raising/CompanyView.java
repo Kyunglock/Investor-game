@@ -49,10 +49,21 @@ public record CompanyView(
     Settlement lastSettlement,
     Ending ending,
     Resign resign,
+    Industry industry,
+    List<LockedDesk> lockedDesks,
     Mental mental) {
 
   /**
-   * 이번 분기의 멘탈 전투 (decisions.md 320번). 끝난 회사나 이 칸이 생기기 전의 분기면 null.
+   * 업계 순위 (#351): 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다(로그인이 없는 익명 세션). 한 해도 마치지 않았으면 null.
+   *
+   * @param year 견준 연차(지난 연말)
+   * @param rank 그 연차를 마친 회사 가운데 자리(1이 맨 위)
+   * @param total 그 연차를 마친 회사 수
+   */
+  public record Industry(int year, int rank, int total) {}
+
+  /**
+   * 이번 분기의 멘탈 전투 (decisions.md 328번). 끝난 회사나 이 칸이 생기기 전의 분기면 null.
    *
    * @param genre ASSAULT(공격)·DEFENSE(디펜스)·SURVIVAL(생존). 그 분기 이벤트가 정한다
    * @param headline 이벤트 머리글
@@ -347,7 +358,11 @@ public record CompanyView(
       String description,
       Integer gainBp,
       Integer missBp,
-      Integer crashPercent) {}
+      Integer crashPercent,
+      String unlockGrade) {}
+
+  /** 아직 닫힌 돕는 자리 (#393): 회사가 unlockGrade가 되면 열린다. */
+  public record LockedDesk(String code, String name, String description, String unlockGrade) {}
 
   /**
    * @param omen 폭락 조짐(빨간 글씨). 없으면 null. 헛조짐일 수도 있다
@@ -419,7 +434,14 @@ public record CompanyView(
    * @param needed 이사하려면 있어야 하는 자본(다음 띠 + 이사 비용)
    * @param affordable 지금 자본으로 갈 수 있다
    */
-  public record Upgrade(String to, long cost, long needed, boolean affordable) {}
+  /**
+   * 다음 건물 (296번). 공사 중이면(#347) to가 짓고 있는 건물이고 left가 남은 해다.
+   *
+   * @param years 그 건물을 짓는 데 걸리는 해. 같은 건물 안에서 책상만 늘면 0(바로 된다)
+   * @param left 공사 중이면 남은 해, 아니면 null
+   */
+  public record Upgrade(
+      String to, long cost, long needed, boolean affordable, int years, Integer left) {}
 
   /** 결산한 해의 투자 회의: 기사 제목과 회의 손익(이미 자본에 들어갔다). 회의를 안 했으면 결산의 invest가 null (decisions.md 240번). */
   public record SettlementInvest(String title, long total) {}

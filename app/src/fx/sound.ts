@@ -136,7 +136,7 @@ export const sfx = {
     tone(784, 160, { wave: 'sine', gain: 0.06 })
     tone(1175, 320, { wave: 'sine', gain: 0.06, at: 0.11 })
   },
-  /** 멘탈 전투 (decisions.md 320번): 쏘기 */
+  /** 멘탈 전투 (decisions.md 328번): 쏘기 */
   shot: () => tone(1500, 45, { wave: 'square', gain: 0.025, slide: 700 }),
   /** 멘탈 전투: 적이 터진다 */
   squish: () => {

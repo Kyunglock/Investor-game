@@ -75,10 +75,22 @@ public record RaisingContent(
       Quarters quarters,
       Teams teams,
       Ending ending,
+      Construction construction,
+      Industry industry,
+      Map<String, String> omenReveal,
       Mental mental) {}
 
   /**
-   * 멘탈 전투 (decisions.md 320번). headlines: 장르(ASSAULT·DEFENSE·SURVIVAL)마다 이벤트 머리글 여럿. cards: 카드 코드 →
+   * 업계 순위 소식 (#351). first: 처음 매긴 해, up·down·same: 지난해보다 상위 몇 %가
+   * 올랐나·내렸나·그대로({year}·{rank}·{total}·{before}·{top}).
+   */
+  public record Industry(String first, String up, String down, String same) {}
+
+  /** 건물 공사 (#347). started: 공사를 시작한 해의 소식({years}), done: 다 지어 옮긴 해의 소식. */
+  public record Construction(String started, String done) {}
+
+  /**
+   * 멘탈 전투 (decisions.md 328번). headlines: 장르(ASSAULT·DEFENSE·SURVIVAL)마다 이벤트 머리글 여럿. cards: 카드 코드 →
    * 이름. line: 분기 실적 소식 줄({card}·{kills}·{left}·{percent}).
    */
   public record Mental(
@@ -230,7 +242,12 @@ public record RaisingContent(
       String moraleDown,
       String meetingIgnored,
       String heard,
-      String rested) {}
+      String rested,
+      List<String> poachers,
+      String poachAgain,
+      String keptRaise,
+      String alumniGood,
+      String alumniBad) {}
 
   /**
    * 회사 연표와 업적 (decisions.md 263번). events: 연표 한 줄(open {number} · rise {name}·{grade} · left {name}
