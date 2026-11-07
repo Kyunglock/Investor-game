@@ -10,7 +10,7 @@ import { ResignAlert } from '@web/features/raising/ResignAlert'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useLocked, useTutorialSpot } from '@web/features/raising/TutorialBanner'
 import { YearEndSheet } from '@web/features/raising/YearEnd'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
@@ -31,13 +31,37 @@ export function Windows({ company }: { company: Company }) {
   const [investOpen, setInvestOpen] = useState(false)
   const [macroOpen, setMacroOpen] = useState(false)
   const [mentalOpen, setMentalOpen] = useState(false)
+  // 디펜스는 결정 직후 (348번): 종목 회의에서 매수·매도가 정해지면 바로 전투, 끝나면 회의 창으로 돌아와 결과를 본다. 결산은 그 뒤 버튼으로.
+  const [mentalMode, setMentalMode] = useState<'settle' | 'invest'>('settle')
   const ended = company.status === 'ENDED'
   const drawn = useDrawReveal(company)
+  const outcome = company.invest?.outcome ?? null
+  const prevOutcome = useRef(outcome)
+  useEffect(() => {
+    const before = prevOutcome.current
+    prevOutcome.current = outcome
+    if (!outcome || before) {
+      return
+    }
+    const s = useRaisingStore.getState()
+    const mental = s.company?.mental
+    if (
+      investOpen &&
+      mental?.genre === 'DEFENSE' &&
+      !mental.done &&
+      !s.autoPlay &&
+      outcome.choice !== 'HOLD'
+    ) {
+      setMentalMode('invest')
+      setMentalOpen(true)
+    }
+  }, [outcome, investOpen])
 
   // 결산 직전: 이번 분기 멘탈 전투를 아직 안 치렀으면 창을 띄운다 (decisions.md 328번). 자동 진행은 건너뛴다.
   const battleOrSettle = () => {
     const s = useRaisingStore.getState()
     if (s.company?.mental && !s.company.mental.done && !s.autoPlay) {
+      setMentalMode('settle')
       setMentalOpen(true)
       return
     }
@@ -146,6 +170,7 @@ export function Windows({ company }: { company: Company }) {
             setInvestOpen(false)
             battleOrSettle()
           }}
+          hold={mentalOpen && mentalMode === 'invest'}
         />
       )}
       {!ended && company.mental && mentalOpen && (
@@ -154,7 +179,9 @@ export function Windows({ company }: { company: Company }) {
           company={company}
           onDone={() => {
             setMentalOpen(false)
-            void settle()
+            if (mentalMode === 'settle') {
+              void settle()
+            }
           }}
         />
       )}
