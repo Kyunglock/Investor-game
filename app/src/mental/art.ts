@@ -62,11 +62,11 @@ function bake(scene: Phaser.Scene, key: string, w: number, h: number, paint: Pai
   scene.textures.addCanvas(key, cv)
 }
 
-/** 아군 텍스처 열쇠: hero-idle(가만히)·hero-fire(쏘는 중, 눈썹 꾹)·hero-hurt(맞았다, 선글라스가 날아간다). 총은 'gun'으로 따로 돌린다. */
+/** 아군 텍스처 열쇠: hero-idle(가만히)·hero-fire(쏘는 중, 눈썹 꾹)·hero-hurt(맞았다, 울상). 총은 'gun'으로 따로 돌린다. */
 export const HERO_KEYS = ['hero-idle', 'hero-fire', 'hero-hurt'] as const
 
 export function bakeHero(scene: Phaser.Scene, hero: Hero) {
-  const faces = { 'hero-idle': 'boss', 'hero-fire': 'boss', 'hero-hurt': 'hurt' } as const
+  const faces = { 'hero-idle': 'idle', 'hero-fire': 'fire', 'hero-hurt': 'hurt' } as const
   for (const key of HERO_KEYS) {
     if (scene.textures.exists(key)) {
       continue
@@ -75,21 +75,6 @@ export function bakeHero(scene: Phaser.Scene, hero: Hero) {
       { ...BOSS_LOOK, face: faces[key], armsForward: key !== 'hero-hurt' },
       HERO_SCALE * DPR,
     )
-    if (key === 'hero-hurt') {
-      // 날아가는 선글라스
-      const c = cv.getContext('2d')
-      if (c) {
-        c.save()
-        c.scale(HERO_SCALE * DPR, HERO_SCALE * DPR)
-        c.translate(78, 20)
-        c.rotate(0.5)
-        c.beginPath()
-        c.roundRect(-6, -2.5, 12, 5, 2.5)
-        c.fillStyle = '#2a2a33'
-        c.fill()
-        c.restore()
-      }
-    }
     scene.textures.addCanvas(key, cv)
   }
   bake(scene, 'gun', GUN.w, GUN.h, (c) => {
