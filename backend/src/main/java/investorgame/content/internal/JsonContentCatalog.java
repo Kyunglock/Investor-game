@@ -391,6 +391,12 @@ class JsonContentCatalog implements ContentCatalog {
     require(
         company.people() != null
             && company.people().poacher() != null
+            && company.people().poachers() != null
+            && !company.people().poachers().isEmpty()
+            && company.people().poachAgain() != null
+            && company.people().keptRaise() != null
+            && company.people().alumniGood() != null
+            && company.people().alumniBad() != null
             && company.people().poach() != null
             && company.people().kept() != null
             && company.people().left() != null

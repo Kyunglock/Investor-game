@@ -1027,6 +1027,69 @@ class CompanyEngineTest {
   }
 
   /**
+   * 이직 제안을 고민거리로 (#390): 이적료는 몸값(계약금과 지난해 번 돈 가운데 큰 쪽)의 150%다. 단골 라이벌이 다시 오면 몇 번째인지 말한다. 연봉이 나가는
+   * 회사에서 붙잡으면 연봉을 맞춰 준다. 이직으로 떠난 사람의 소식은 한 해 뒤에 들린다.
+   */
+  @Test
+  void 이적료는_몸값을_따르고_단골_라이벌이_다시_오고_떠난_사람_소식이_들린다() {
+    var rules = PROPERTIES.people();
+    // 지난해 많이 번 직원은 이적료도 크다.
+    CompanyState company = null;
+    CompanyState.Poach found = null;
+    for (long seed = 1; seed <= 80 && found == null; seed++) {
+      company = open(seed, stats(50, 50, 50, 50), 5_000_000_000L);
+      CompanyState.Employee star = ENGINE.hire(company, stats(80, 80, 80, 80));
+      CompanyState.Settlement last = new CompanyState.Settlement();
+      CompanyState.Result r = new CompanyState.Result();
+      r.employeeId = star.id;
+      r.pnl = 900_000_000L;
+      last.results.add(r);
+      company.settlements.add(last);
+      company.year = rules.poachFromYear();
+      found = ENGINE.poachOf(company, new HashSeededRandom(seed));
+    }
+    assertThat(found).isNotNull();
+    assertThat(found.transferFee).as("지난해 번 돈의 150%").isEqualTo(1_350_000_000L);
+
+    // 같은 라이벌이 두 번째로 오면 "또"라고 말한다.
+    company.poach = found;
+    company.poach.count = 2;
+    assertThat(ENGINE.poachLine(company)).startsWith("또 " + found.rival).contains("2번째");
+
+    // 연봉이 나가는 회사(D 이상)에서 붙잡으면 연봉을 맞춰 주고 사기가 오른다.
+    company.building = "D";
+    int keptId = found.employeeId;
+    CompanyState.Employee kept =
+        company.employees.stream().filter(e -> e.id == keptId).findFirst().orElseThrow();
+    int raises = kept.raises;
+    int morale = kept.morale;
+    ENGINE.answerPoach(company, true);
+    assertThat(kept.raises).isEqualTo(raises + 1);
+    assertThat(kept.morale).isEqualTo(morale + 1);
+    assertThat(company.yearLines).anyMatch(line -> line.contains("연봉을 올려 줬다"));
+
+    // 이직으로 떠난 사람의 소식은 한 해 뒤에 들린다(절반 확률이라 여러 해를 본다).
+    CompanyState.Alumnus gone = new CompanyState.Alumnus();
+    gone.name = "류소울";
+    gone.from = 1;
+    gone.to = 2;
+    gone.grade = "S";
+    gone.rival = "존버캐피탈";
+    company.alumni.add(gone);
+    boolean heard = false;
+    for (int year = 3; year < 15 && !heard; year++) {
+      company.year = year;
+      company.invest = null;
+      company.poach = null;
+      company.raise = null;
+      CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(year));
+      heard = s.lines.stream().anyMatch(line -> line.contains("간 류소울"));
+    }
+    assertThat(heard).as("떠난 사람 소식").isTrue();
+    assertThat(gone.reported).isTrue();
+  }
+
+  /**
    * 이직 제안 (#325, decisions.md 262·265·288번): 셋째 해부터 다른 증권사가 가장 높은 직원에게 손을 뻗는다. 남기는 데는 돈이 들지 않고, 보내면
    * 이적료를 받는다. 답하지 않아도 직원은 남는다: 사장이 보낸다고 고를 때만 떠난다. 같은 자리 세 해째부터 손에 익는다.
    */
@@ -1044,15 +1107,17 @@ class CompanyEngineTest {
     assertThat(found).as("이직 제안이 오는 해가 있다").isNotNull();
     assertThat(found.employeeId).as("가장 높은 직원").isEqualTo(company.employees.get(1).id);
     assertThat(found.transferFee).isPositive();
+    assertThat(TestContent.load().raising().company().people().poachers()).contains(found.rival);
 
-    // 남기는 데는 돈이 들지 않는다 (265번).
+    // 작은 회사(연봉 없음)에서는 남기는 데 돈이 들지 않는다 (265번).
+    String rival = found.rival;
     company.poach = found;
     long cash = company.capital;
     ENGINE.answerPoach(company, true);
     assertThat(company.capital).isEqualTo(cash);
     assertThat(company.employees).hasSize(2);
     assertThat(company.yearLines)
-        .anyMatch(line -> line.contains("옆 동네 증권사") && line.contains("거절하고 회사에 남았다"));
+        .anyMatch(line -> line.contains(rival) && line.contains("거절하고 회사에 남았다"));
     assertThat(company.poach).isNull();
     CompanyState answered = company;
     assertThatThrownBy(() -> ENGINE.answerPoach(answered, true))
@@ -1065,6 +1130,7 @@ class CompanyEngineTest {
     assertThat(company.capital).isEqualTo(cash + found.transferFee);
     assertThat(company.employees).hasSize(1);
     assertThat(company.yearLines).anyMatch(line -> line.contains("떠났다"));
+    assertThat(company.alumni.getLast().rival).as("데려간 증권사를 기억한다 (#390)").isEqualTo(found.rival);
 
     // 답하지 않아도 직원은 남는다 (265번): 사장이 보낸다고 고를 때만 떠난다.
     CompanyState ignored = open(9, stats(50, 50, 50, 50), 100_000_000);
