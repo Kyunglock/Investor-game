@@ -114,6 +114,14 @@ const desks = [
   },
 ]
 
+const QUIRKS = [
+  ['gut', '촉파'],
+  ['chat', '단톡방파'],
+  ['chart', '차트파'],
+  ['news', '뉴스파'],
+  ['coffee', '커피파'],
+] as const
+
 const employee = (
   id: number,
   name: string,
@@ -139,6 +147,9 @@ const employee = (
   salary: 0,
   morale: 0,
   role: null,
+  // 버릇 (decisions.md 349번): 서버처럼 번호로 정한다.
+  quirk: QUIRKS[(id * 7 + 3) % QUIRKS.length][0],
+  quirkName: QUIRKS[(id * 7 + 3) % QUIRKS.length][1],
   ...extra,
 })
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Company } from '../../api/client'
-import { TUTORIAL_STEPS, tutorialStep } from './tutorial'
+import { ALL_FEATURES, TUTORIAL_STEPS, tutorialStep, unlockedFeatures } from './tutorial'
 
 function company(over: Partial<Company> = {}): Company {
   return { employees: [], lastQuarter: null, lastSettlement: null, ...over } as unknown as Company
@@ -29,7 +29,36 @@ describe('튜토리얼 걸음 (decisions.md 302번)', () => {
     for (const c of [company(), company({ lastSettlement: { year: 1 } } as never)]) {
       const step = tutorialStep(c)
       expect(step.title).not.toBe('')
+      expect(step.short).not.toBe('')
       expect(step.text).not.toContain('{')
     }
+  })
+})
+
+describe('튜토리얼 잠금·해금 (decisions.md 347번)', () => {
+  it('처음엔 채용만, 걸음을 깰 때마다 하나씩 열리고, 꺼져 있거나 끝난 회사면 전부 열려 있다', () => {
+    expect(unlockedFeatures(company(), true)).toEqual(['market'])
+    const hired = company({ employees: [{ id: 1, desk: null }] } as never)
+    expect(unlockedFeatures(hired, true)).toEqual(['market', 'staff'])
+    const placed = company({ employees: [{ id: 1, desk: 'bio' }] } as never)
+    expect(unlockedFeatures(placed, true)).toEqual(['market', 'staff', 'settle'])
+    const quartered = company({
+      employees: [{ id: 1, desk: 'bio' }],
+      lastQuarter: { year: 1, quarter: 1 },
+    } as never)
+    expect(unlockedFeatures(quartered, true)).toEqual([
+      'market',
+      'staff',
+      'settle',
+      'issue',
+      'record',
+    ])
+    const settled = company({
+      employees: [{ id: 1, desk: 'bio' }],
+      lastSettlement: { year: 1 },
+    } as never)
+    expect(unlockedFeatures(settled, true)).toEqual(ALL_FEATURES)
+    expect(unlockedFeatures(company(), false)).toEqual(ALL_FEATURES)
+    expect(unlockedFeatures(company({ status: 'ENDED' }), true)).toEqual(ALL_FEATURES)
   })
 })

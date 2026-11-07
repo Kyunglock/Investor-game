@@ -203,6 +203,25 @@ class CompanyController {
       @PositiveOrZero int kills,
       @PositiveOrZero int mentalLeft) {}
 
+  /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). */
+  @PostMapping("/weapon")
+  CompanyView equipWeapon(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody WeaponRequest request) {
+    UUID sessionId = cookies.requireSession(token);
+    CompanyView company = companies.equipWeapon(sessionId, request.kind(), request.grade());
+    PLAY.info(
+        "company-weapon session={} company={} kind={} grade={} ip={}",
+        sessionId,
+        company.companyId(),
+        request.kind(),
+        request.grade(),
+        ClientIp.current());
+    return company;
+  }
+
+  record WeaponRequest(@NotBlank String kind, @NotBlank String grade) {}
+
   /** 올해 연봉 협상에 답한다 (decisions.md 270번). */
   @PostMapping("/raise")
   CompanyView answerRaise(

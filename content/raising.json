@@ -1405,7 +1405,20 @@
         "calm": "냉정함",
         "heal": "심호흡"
       },
-      "line": "멘탈 전투 {level}레벨({cards}): 적 {kills} 물리치고 멘탈 {left} 지켰다. 이번 분기 손이 덜 흔들리고 더 벌었다 (+{percent}%)."
+      "line": "멘탈 전투 {level}레벨({cards}): 적 {kills} 물리치고 멘탈 {left} 지켰다. 이번 분기 손이 덜 흔들리고 더 벌었다 (+{percent}%).",
+      "weapons": {
+        "pistol": "권총",
+        "revolver": "리볼버",
+        "smg": "기관단총",
+        "shotgun": "산탄총",
+        "rifle": "소총"
+      },
+      "weaponGrades": {
+        "N": "일반",
+        "R": "고급",
+        "SR": "희귀",
+        "UR": "전설"
+      }
     },
     "quirks": [
       {

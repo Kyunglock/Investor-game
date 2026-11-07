@@ -6,8 +6,8 @@ import { OfficeArt, type SeatFocus } from '@web/features/raising/OfficeArt'
 import { OfficeRoom } from '@web/features/raising/OfficeRoom'
 import { nextStep } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
-import { TutorialBanner, useTutorialSpot } from '@web/features/raising/TutorialBanner'
-import { useTutorial } from '@web/features/raising/tutorial'
+import { useLocked, useTutorialSpot } from '@web/features/raising/TutorialBanner'
+import { TUTORIAL_STEPS, tutorialStep, useTutorial } from '@web/features/raising/tutorial'
 import { useFx } from '../../fx/fx'
 import { haptic } from '../../fx/haptics'
 import { sfx } from '../../fx/sound'
@@ -63,15 +63,42 @@ export function OfficeScene({ company }: { company: Company }) {
   )
 }
 
-/** 튜토리얼 띠는 종이빛 카드 안에 둔다(바탕이 어둡다). 켜져 있지 않으면 아무것도 없다. */
+/**
+ * 튜토리얼 한 줄 (decisions.md 347번): 말풍선 설명 대신 지금 걸음과 짧은 안내만. 열리지 않은 탭·버튼은 잠겨 있어 눌러야 할 것이 하나뿐이다. 마지막 걸음에선
+ * 끝내기, 그 전엔 건너뛰기(모두 연다).
+ */
 function TutorialWrap({ company }: { company: Company }) {
   const active = useTutorial((s) => s.active)
+  const { finish } = useTutorial.getState()
   if (!active || company.status === 'ENDED') {
     return null
   }
+  const step = tutorialStep(company)
+  const last = step.n === TUTORIAL_STEPS
   return (
-    <div className="panel mt-2 px-3 pb-2">
-      <TutorialBanner company={company} />
+    <div
+      className="panel mt-2 flex items-center gap-2 px-3 py-2"
+      data-testid="tutorial"
+      data-step={step.id}
+    >
+      <span className="shrink-0 rounded-full border-2 border-(--outline) bg-[#fff6c9] px-2 py-0.5 font-game text-[12px]">
+        {step.n}/{TUTORIAL_STEPS}
+      </span>
+      <p className="min-w-0 flex-1 text-[13px] leading-tight">
+        <b className="font-game text-[14px]">{step.title}</b>
+        <span className="block text-[12px] text-ink/70">{step.short}</span>
+      </p>
+      <button
+        type="button"
+        onClick={() => {
+          sfx.tap()
+          finish()
+        }}
+        className={`shrink-0 rounded-full px-3 py-1 text-[12px] ${last ? 'btn btn-teal min-h-9 text-white' : 'text-ink/55 underline'}`}
+        data-testid="tutorial-finish"
+      >
+        {last ? '다 열렸다!' : '건너뛰기'}
+      </button>
     </div>
   )
 }
@@ -83,6 +110,7 @@ function NextStep({ company }: { company: Company }) {
   const step = nextStep(company.grade)
   const plan = company.upgrade
   const spot = useTutorialSpot(company, 'upgrade')
+  const locked = useLocked(company, 'upgrade')
   if (!step || !plan || company.status === 'ENDED') {
     return null
   }
@@ -124,17 +152,25 @@ function NextStep({ company }: { company: Company }) {
       </p>
       <button
         type="button"
-        disabled={busy || !plan.affordable}
+        disabled={busy || !plan.affordable || locked}
+        aria-disabled={locked || undefined}
         onClick={(ev) => {
           sfx.stamp()
           haptic.heavy()
           useFx.getState().burstAt(ev.currentTarget, 'coins')
           void upgrade()
         }}
-        className={`btn min-h-12 shrink-0 px-4 text-[14px] ${plan.affordable ? 'btn-gold animate-glow' : 'btn-line'}`}
+        className={`btn min-h-12 shrink-0 px-4 text-[14px] ${locked ? 'btn-line opacity-50' : plan.affordable ? 'btn-gold animate-glow' : 'btn-line'}`}
         data-testid="upgrade"
+        data-locked={locked || undefined}
       >
-        {plan.years > 0 ? '공사 시작' : step.kind === 'move' ? '이사하기' : '넓히기'}
+        {locked
+          ? '🔒'
+          : plan.years > 0
+            ? '공사 시작'
+            : step.kind === 'move'
+              ? '이사하기'
+              : '넓히기'}
       </button>
     </div>
   )

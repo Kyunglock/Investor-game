@@ -51,7 +51,8 @@ public record CompanyView(
     Resign resign,
     Industry industry,
     List<LockedDesk> lockedDesks,
-    Mental mental) {
+    Mental mental,
+    List<Weapon> weapons) {
 
   /**
    * 업계 순위 (#351): 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다(로그인이 없는 익명 세션). 한 해도 마치지 않았으면 null.
@@ -68,8 +69,36 @@ public record CompanyView(
    * @param genre ASSAULT(공격)·DEFENSE(디펜스). 그 분기 이벤트가 정한다
    * @param headline 이벤트 머리글
    * @param done 이번 분기 결과를 이미 보냈다. 참이면 다시 치르지 않는다
+   * @param drop 이 판에서 떨어진 무기 (346번). 결과를 보내기 전이거나 안 떨어졌으면 null
    */
-  public record Mental(String genre, String headline, boolean done) {}
+  public record Mental(String genre, String headline, boolean done, Drop drop) {}
+
+  /**
+   * 떨어진 무기 (decisions.md 346번).
+   *
+   * @param isNew 새로 얻었다. 이미 가진 종류·등급이면 거짓
+   */
+  public record Drop(String kind, String name, String grade, String gradeName, boolean isNew) {}
+
+  /**
+   * 가진 무기 하나 (decisions.md 346번). 수치는 등급을 더한 최종값: 한 판의 바탕 수치가 된다.
+   *
+   * @param damagePercent 탄 하나의 공격력(%). 100이 적 체력 1
+   * @param fireMs 연사 간격(ms)
+   * @param streams 탄 갈래 수
+   * @param bulletSpeed 탄 속도(px/s)
+   * @param equipped 지금 든 무기
+   */
+  public record Weapon(
+      String kind,
+      String name,
+      String grade,
+      String gradeName,
+      int damagePercent,
+      int fireMs,
+      int streams,
+      int bulletSpeed,
+      boolean equipped) {}
 
   /**
    * 연봉 때문에 사표를 들고 온 직원 (decisions.md 282번). 붙잡거나 보내지 않고 다음 분기를 넘기면 떠난다. 없으면 null.

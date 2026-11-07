@@ -42,7 +42,7 @@ class DefaultCompanyService implements CompanyService {
    */
   private CompanyRepository.Row adopt(CompanyRepository.Row row) {
     CompanyState c = row.state();
-    if ((c.gachaReady && c.mental != null) || !"ACTIVE".equals(row.status())) {
+    if ((c.gachaReady && c.mental != null && c.weapon != null) || !"ACTIVE".equals(row.status())) {
       return row;
     }
     CompanyRepository.Row locked = companies.lockActive(row.sessionId()).orElse(row);
@@ -420,7 +420,21 @@ class DefaultCompanyService implements CompanyService {
         lockedDesks,
         ended || c.mental == null
             ? null
-            : new CompanyView.Mental(c.mental.genre, c.mental.headline, c.mental.cards != null));
+            : new CompanyView.Mental(
+                c.mental.genre,
+                c.mental.headline,
+                c.mental.cards != null,
+                engine.mental.dropView(c)),
+        engine.mental.weaponViews(c));
+  }
+
+  @Override
+  @Transactional
+  public CompanyView equipWeapon(UUID sessionId, String kind, String grade) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.mental.equip(row.state(), kind, grade);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
   }
 
   @Override
@@ -428,7 +442,8 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView mental(
       UUID sessionId, int year, int quarter, List<String> cards, int kills, int mentalLeft) {
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.mental.report(row.state(), year, quarter, cards, kills, mentalLeft);
+    engine.mental.report(
+        row.state(), new HashSeededRandom(row.seed()), year, quarter, cards, kills, mentalLeft);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

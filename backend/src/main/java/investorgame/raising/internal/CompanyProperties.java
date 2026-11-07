@@ -76,7 +76,27 @@ public record CompanyProperties(
       int maxPercent,
       int maxKills,
       int maxMental,
-      Map<String, Map<String, Integer>> genreWeights) {}
+      Map<String, Map<String, Integer>> genreWeights,
+      Map<String, Weapon> weapons,
+      Map<String, WeaponGrade> weaponGrades,
+      Drop drop) {}
+
+  /** 무기 종류 하나의 바탕 수치 (346번). damagePercent 100이 탄 하나에 적 체력 1. */
+  public record Weapon(int damagePercent, int fireMs, int streams, int bulletSpeed) {}
+
+  /** 무기 등급(N·R·SR·UR)이 더하는 공격력(%)과 줄이는 연사 간격(%). */
+  public record WeaponGrade(int damagePercent, int firePercent) {}
+
+  /**
+   * 무기가 떨어질 확률 (346번): percentPerKill × 물리친 적(최대 maxPercent). 등급 가중치는 물리친 적이 midKills 미만이면 low,
+   * highKills 미만이면 mid, 그 위는 high.
+   */
+  public record Drop(
+      int percentPerKill,
+      int maxPercent,
+      int midKills,
+      int highKills,
+      Map<String, Map<String, Integer>> gradeWeights) {}
 
   /** 건물 이사 (decisions.md 296번): 이사 비용은 다음 띠 자본의 percent%. 자본이 다음 띠 + 비용 이상일 때만 간다. */
   /**

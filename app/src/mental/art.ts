@@ -65,7 +65,7 @@ function bake(scene: Phaser.Scene, key: string, w: number, h: number, paint: Pai
 /** 아군 텍스처 열쇠: hero-idle(가만히)·hero-fire(쏘는 중, 눈썹 꾹)·hero-hurt(맞았다, 울상). 총은 'gun'으로 따로 돌린다. */
 export const HERO_KEYS = ['hero-idle', 'hero-fire', 'hero-hurt'] as const
 
-export function bakeHero(scene: Phaser.Scene, _hero: Hero) {
+export function bakeHero(scene: Phaser.Scene, hero: Hero) {
   const faces = { 'hero-idle': 'idle', 'hero-fire': 'fire', 'hero-hurt': 'hurt' } as const
   for (const key of HERO_KEYS) {
     if (scene.textures.exists(key)) {
@@ -80,7 +80,7 @@ export function bakeHero(scene: Phaser.Scene, _hero: Hero) {
   bake(scene, 'gun', GUN.w, GUN.h, (c) => {
     c.scale(HERO_SCALE * GUN_K, HERO_SCALE * GUN_K)
     c.translate(8, 8)
-    drawGun(c, BOSS_LOOK.fur)
+    drawGun(c, BOSS_LOOK.fur, hero.weapon.kind, hero.weapon.grade)
   })
 }
 

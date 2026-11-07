@@ -14,9 +14,49 @@ export type TutorialStep = {
   tab?: 'market' | 'staff' | 'meeting'
   /** 이 걸음에서 반짝이는 것: 탭 이름이나 분기 넘기기·이사 버튼. */
   spot?: 'market' | 'staff' | 'settle' | 'upgrade'
+  /** 앱의 한 줄 안내 (347번): 말풍선 대신 짧게. */
+  short: string
 }
 
 export const TUTORIAL_STEPS = 5
+
+/** 튜토리얼이 잠갔다 여는 것들 (decisions.md 347번): 탭 넷, 분기 넘기기, 자동 진행, 건물 키우기. */
+export type Feature = 'market' | 'staff' | 'settle' | 'issue' | 'record' | 'auto' | 'upgrade'
+
+export const FEATURE_NAMES: Record<Feature, string> = {
+  market: '채용',
+  staff: '배치',
+  settle: '분기 넘기기',
+  issue: '이슈',
+  record: '기록',
+  auto: '자동 진행',
+  upgrade: '건물 키우기',
+}
+
+const STEP_ORDER: TutorialStep['id'][] = ['hire', 'place', 'meeting', 'sheet', 'grow']
+
+/** 걸음마다 새로 열리는 것. 앞 걸음에서 연 것은 그대로 열려 있다. */
+export const UNLOCKS: Record<TutorialStep['id'], Feature[]> = {
+  hire: ['market'],
+  place: ['staff'],
+  meeting: ['settle'],
+  sheet: ['issue', 'record'],
+  grow: ['upgrade', 'auto'],
+}
+
+export const ALL_FEATURES: Feature[] = STEP_ORDER.flatMap((id) => UNLOCKS[id])
+
+/**
+ * 지금 열려 있는 것 (347번): 튜토리얼이 꺼져 있으면 전부, 켜져 있으면 지금 걸음까지 연 것만. 처음 온 사람은 채용 탭만 누를 수 있고, 걸음을 하나 깰 때마다
+ * 하나씩 열린다. 걸음은 회사 상태가 정하므로 다시 들어와도 그대로다.
+ */
+export function unlockedFeatures(company: Company, active: boolean): Feature[] {
+  if (!active || company.status === 'ENDED') {
+    return ALL_FEATURES
+  }
+  const at = STEP_ORDER.indexOf(tutorialStep(company).id)
+  return STEP_ORDER.slice(0, at + 1).flatMap((id) => UNLOCKS[id])
+}
 
 /**
  * 회사 상태로 지금 걸음을 정한다: 직원이 없으면 뽑기, 앉은 사람이 없으면 앉히기, 첫 분기면 넘기기, 첫 해면 결산 읽기, 그 뒤는 키우기(끝내기).
@@ -30,6 +70,7 @@ export function tutorialStep(company: Company): TutorialStep {
       text: '채용 탭에서 채용권으로 사람을 뽑습니다. 카드가 뒤집히며 등급이 드러납니다. 방패의 등급이 높을수록 잘 맞히고, 같은 등급 둘을 모아 카드를 끌어 겹치면 한 단계 올릴 수 있습니다.',
       tab: 'market',
       spot: 'market',
+      short: '채용 탭에서 직원을 뽑자',
     }
   }
   if (!company.employees.some((e) => e.desk)) {
@@ -40,6 +81,7 @@ export function tutorialStep(company: Company): TutorialStep {
       text: '배치 탭에서 자리를 누르고 직원을 앉힙니다. 처음엔 돈을 굴리는 섹터 데스크·단타만 열려 있습니다. 리서치 팀(형광펜)·종목 발굴팀·리스크 관리 팀·인사팀은 회사가 커지면 하나씩 열립니다. 사무실 그림의 칸을 눌러도 되고, "자동 배치"도 됩니다.',
       tab: 'staff',
       spot: 'staff',
+      short: '배치 탭에서 자리에 앉히자',
     }
   }
   if (!company.lastQuarter && !company.lastSettlement) {
@@ -49,6 +91,7 @@ export function tutorialStep(company: Company): TutorialStep {
       title: '분기 넘기기',
       text: '아래 "분기 넘기기"를 누르면 거시경제 회의(공격·중립·방어)가 열리고, 직원이 종목을 물어 왔으면 종목 회의가 이어집니다. 직원 의견을 듣고 사장이 정하거나 직원들에게 맡깁니다.',
       spot: 'settle',
+      short: '아래 분기 넘기기로 회의와 멘탈 전투를',
     }
   }
   if (!company.lastSettlement) {
@@ -59,6 +102,7 @@ export function tutorialStep(company: Company): TutorialStep {
       text: '분기 실적과 팀장 보고를 읽습니다. 네 분기를 넘기면 연말 결산서가 뜨고 연봉·인건비가 나갑니다. 이슈 탭에는 폭락 조짐·이직 제안·연봉 협상이 올라옵니다.',
       tab: 'meeting',
       spot: 'settle',
+      short: '이슈·기록 탭이 열렸다. 분기를 더 넘겨 연말 결산까지',
     }
   }
   return {
@@ -67,6 +111,7 @@ export function tutorialStep(company: Company): TutorialStep {
     title: '회사 키우기',
     text: '자본이 모이면 위의 버튼이 반짝입니다. 눌러서 사무실을 넓히거나 새 건물을 지으세요(건물은 몇 해 걸립니다). 자리가 늘고, 뽑기 등급이 오르고, 새 자리가 열립니다. 급하면 "⟳ 자동 진행"이 공채·배치·회의·결산을 대신합니다. 랜드마크 타워까지 가면 엔딩!',
     spot: 'upgrade',
+    short: '건물 키우기와 자동 진행이 열렸다. 랜드마크 타워까지!',
   }
 }
 

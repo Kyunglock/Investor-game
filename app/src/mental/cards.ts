@@ -89,6 +89,22 @@ export const BASE_LOADOUT: Loadout = {
   heal: 0,
 }
 
+/** 든 무기의 수치(서버가 등급을 더해 준 최종값, 346번)를 한 판의 바탕 수치로. 카드는 그 위에 쌓인다. */
+export function loadoutOf(weapon: {
+  damagePercent: number
+  fireMs: number
+  streams: number
+  bulletSpeed: number
+}): Loadout {
+  return {
+    ...BASE_LOADOUT,
+    damage: weapon.damagePercent / 100,
+    streams: Math.min(MAX_STREAMS, weapon.streams),
+    fireMs: weapon.fireMs,
+    bulletSpeed: weapon.bulletSpeed,
+  }
+}
+
 /** 카드 한 장을 쌓는다. 같은 카드를 또 고르면 또 쌓인다. */
 export function applyCard(loadout: Loadout, card: MentalCard): Loadout {
   switch (card) {

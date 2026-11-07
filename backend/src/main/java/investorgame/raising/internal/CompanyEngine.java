@@ -154,6 +154,7 @@ class CompanyEngine {
     company.opening =
         Korean.fill(
             content.raising().company().opening(), Map.of("capital", money(company.capital)));
+    mental.initWeapons(company);
     startYear(company, random);
     history.opened(company);
     return company;
