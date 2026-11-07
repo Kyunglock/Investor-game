@@ -97,7 +97,8 @@ public record RaisingContent(
       List<String> raiseAsk,
       Map<String, String> resign,
       String poachKept,
-      String poachLeft) {}
+      String poachLeft,
+      List<String> farewell) {}
 
   /**
    * 업계 순위 소식 (#351). first: 처음 매긴 해, up·down·same: 지난해보다 상위 몇 %가
@@ -301,7 +302,12 @@ public record RaisingContent(
    * @param ticketReasons 채용권을 받은 까닭: quarter·year·achievement·move·hr
    */
   public record Market(
-      String drawStar, String merged, String tickets, Map<String, String> ticketReasons) {}
+      String drawStar,
+      String merged,
+      String tickets,
+      Map<String, String> ticketReasons,
+      String jackpot,
+      String inherited) {}
 
   /**
    * X 이상 등급의 효과 (2.4절). 효과는 쌓인다: XX 직원은 X 효과도 가진다.

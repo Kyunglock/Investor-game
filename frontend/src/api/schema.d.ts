@@ -661,7 +661,24 @@ export interface components {
                 collection: {
                     grade: components["schemas"]["Grade"];
                     count: number;
+                    /** @description 이 등급을 합성으로 처음 만들었다 (decisions.md 350번) */
+                    mergedFirst: boolean;
                 }[];
+                /** @description 방금 한 합성 (decisions.md 350번). 아직 없으면 null. 화면은 합성 직후에만 보인다 */
+                lastMerge: {
+                    baseId: number;
+                    name: string;
+                    before: components["schemas"]["Grade"];
+                    after: components["schemas"]["Grade"];
+                    /** @description 대성공. 두 단계 뛰었다 */
+                    jackpot: boolean;
+                    /** @description 재료들의 마지막 한마디(버릇대로) */
+                    farewells: string[];
+                    /** @description 이 등급을 합성으로 처음 만들었다 */
+                    firstOfGrade: boolean;
+                    /** @description 이어받은 버릇 이름. 없으면 null */
+                    inheritedQuirk: string | null;
+                } | null;
             };
             /** @description 회사 연표·업적·명예의 전당 (decisions.md 263번) */
             history: {

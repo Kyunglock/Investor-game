@@ -1393,4 +1393,49 @@ class CompanyEngineTest {
     bold.omen = "신용 대출이 늘었다.";
     assertThat(yearWith(bold, MacroEngine.AGGRESSIVE, 5).omenCall).isEqualTo("trueIgnored");
   }
+
+  /** 합성 보상 (decisions.md 350번): 난수가 있으면 가끔 두 단계(대성공), 가끔 재료의 버릇을 이어받고, 재료는 마지막 한마디를 남긴다. */
+  @Test
+  void 합성하면_재료가_마지막_한마디를_남기고_가끔_대성공이나_버릇을_이어받는다() {
+    int jackpots = 0;
+    int inherited = 0;
+    int trials = 400;
+    for (int seed = 0; seed < trials; seed++) {
+      CompanyState company = ENGINE.open(new HashSeededRandom(seed), ENGINE.openingCapital());
+      CompanyState.Employee base = ENGINE.hire(company, stats(45, 45, 45, 45));
+      CompanyState.Employee a = ENGINE.hire(company, stats(42, 48, 40, 44));
+      company.merges = seed;
+      ENGINE.merge(company, base.id, List.of(a.id), new HashSeededRandom(seed));
+      CompanyState.Merge m = company.lastMerge;
+      assertThat(m).isNotNull();
+      assertThat(m.before).isEqualTo("C");
+      assertThat(m.farewells).hasSize(1);
+      assertThat(m.farewells.getFirst()).contains(base.name).doesNotContain("{");
+      assertThat(m.firstOfGrade).isTrue();
+      assertThat(company.mergedFirst).contains(m.after);
+      if (m.jackpot) {
+        jackpots++;
+        assertThat(CompanyEngine.employeeGrade(base)).isEqualTo("A");
+        assertThat(m.after).isEqualTo("A");
+      } else {
+        assertThat(CompanyEngine.employeeGrade(base)).isEqualTo("B");
+      }
+      if (m.inheritedQuirk != null) {
+        inherited++;
+        assertThat(base.quirk).isNotNull();
+        assertThat(ENGINE.quirks.name(base)).isEqualTo(m.inheritedQuirk);
+        assertThat(company.yearLines).anyMatch(l -> l.contains(m.inheritedQuirk));
+      }
+    }
+    // 5%·30%(버릇이 같은 짝은 빼고)쯤.
+    assertThat(jackpots).isBetween(trials * 2 / 100, trials * 10 / 100);
+    assertThat(inherited).isBetween(trials * 12 / 100, trials * 35 / 100);
+
+    CompanyState plain = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
+    CompanyState.Employee b1 = ENGINE.hire(plain, stats(45, 45, 45, 45));
+    CompanyState.Employee b2 = ENGINE.hire(plain, stats(45, 45, 45, 45));
+    ENGINE.merge(plain, b1.id, List.of(b2.id));
+    assertThat(plain.lastMerge.jackpot).as("난수가 없으면 보상 없이 한 단계").isFalse();
+    assertThat(plain.lastMerge.inheritedQuirk).isNull();
+  }
 }

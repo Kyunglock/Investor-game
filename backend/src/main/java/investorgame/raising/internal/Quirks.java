@@ -23,10 +23,22 @@ class Quirks {
     return content.raising().company().quirks();
   }
 
-  /** 직원의 버릇. 번호로 정해진다(7은 버릇 수와 서로소라 이웃한 번호의 버릇이 다르다). */
+  /** 직원의 버릇. 번호로 정해진다(7은 버릇 수와 서로소라 이웃한 번호의 버릇이 다르다). 합성으로 이어받았으면(350번) 그것. */
   RaisingContent.Quirk of(Employee e) {
     List<RaisingContent.Quirk> quirks = all();
+    if (e.quirk != null) {
+      for (RaisingContent.Quirk q : quirks) {
+        if (q.code().equals(e.quirk)) {
+          return q;
+        }
+      }
+    }
     return quirks.get(Math.floorMod(e.id * 7 + 3, quirks.size()));
+  }
+
+  /** 합성 재료의 마지막 한마디 (350번, {name}·{base}). */
+  String farewellTemplate(Employee material, int turn) {
+    return pick(of(material).farewell(), material.id, turn, "farewell");
   }
 
   /** 버릇 코드. */

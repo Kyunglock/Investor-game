@@ -188,6 +188,15 @@ export function CollectionGrid({ company }: { company: Company }) {
                   <GradeBadge grade={c.grade} size="sm" />
                 </span>
                 <span className="font-mono-num">×{c.count}</span>
+                {c.mergedFirst && (
+                  // 합성으로 처음 만든 등급 (350번)
+                  <span
+                    className="rounded bg-gold px-1 text-[9px] font-bold text-white"
+                    data-testid="collection-merged"
+                  >
+                    합성
+                  </span>
+                )}
               </>
             ) : (
               <>

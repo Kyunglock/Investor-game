@@ -896,6 +896,14 @@ class CompanyEngine {
    * 위(GOD)거나, 등급이 다르거나, 수가 맞지 않거나, 이직 제안·연봉 협상·사표가 걸린 사람이면 400.
    */
   Employee merge(CompanyState company, int baseId, List<Integer> materialIds) {
+    return merge(company, baseId, materialIds, null);
+  }
+
+  /**
+   * 합성 보상 (decisions.md 350번): random이 있으면 jackpot-percent%로 두 단계(대성공), inherit-percent%로 재료의 버릇을
+   * 이어받는다. 재료는 떠나며 버릇대로 마지막 한마디를 남기고, 합성으로 처음 만든 등급은 도감에 표시한다. 모두 lastMerge에 담아 화면이 보인다.
+   */
+  Employee merge(CompanyState company, int baseId, List<Integer> materialIds, SeededRandom random) {
     requireOpen(company);
     int need = properties.gacha().mergeCount() - 1;
     Employee base = employee(company, baseId);
@@ -919,47 +927,92 @@ class CompanyEngine {
       requireFree(company, e);
     }
     requireFree(company, base);
-    int sssAt = LADDER.indexOf(StatGrade.SSS.name());
-    if (LADDER.indexOf(grade) >= sssAt) {
-      base.rank++;
-      base.experience = 0;
-    } else {
-      StatGrade next = StatGrade.valueOf(LADDER.get(LADDER.indexOf(grade) + 1));
-      int band = properties.experience().band();
-      for (String code : StatCodes.ALL) {
-        base.stats.merge(code, band, (v, d) -> Math.min(MAX_STAT, v + d));
-      }
-      // 평균이 아직 다음 띠에 못 미치면(능력치가 100에 걸려) 낮은 능력치부터 채운다.
-      while (LADDER.indexOf(overallGrade(base.stats)) <= LADDER.indexOf(grade)) {
-        String low =
-            StatCodes.ALL.stream()
-                .min(java.util.Comparator.comparingInt((String code) -> base.stats.get(code)))
-                .orElseThrow();
-        base.stats.put(low, Math.min(MAX_STAT, Math.max(base.stats.get(low) + 1, next.min())));
+    riseOne(base);
+    java.util.random.RandomGenerator rng =
+        random == null ? null : random.forKey("merge", company.merges);
+    CompanyState.Merge result = new CompanyState.Merge();
+    result.baseId = base.id;
+    result.name = base.name;
+    result.before = grade;
+    // 대성공 (350번): 아직 오를 데가 있으면 한 단계 더.
+    if (rng != null
+        && rng.nextInt(PERCENT) < properties.gacha().jackpotPercent()
+        && LADDER.indexOf(employeeGrade(base)) < LADDER.size() - 1) {
+      riseOne(base);
+      result.jackpot = true;
+    }
+    // 버릇 이어받기 (350번): 재료 가운데 첫 사람의 버릇이 바탕과 다르면.
+    if (rng != null && rng.nextInt(PERCENT) < properties.gacha().inheritPercent()) {
+      Employee from = materials.getFirst();
+      if (!quirks.code(from).equals(quirks.code(base))) {
+        base.quirk = quirks.code(from);
+        result.inheritedQuirk = quirks.name(base);
       }
     }
     for (Employee m : materials) {
       base.totalPnl += m.totalPnl;
+      result.farewells.add(
+          Korean.fill(
+              quirks.farewellTemplate(m, company.merges),
+              Map.of("name", m.name, "base", base.name)));
     }
     company.employees.removeAll(materials);
     teams.tidy(company);
     String after = employeeGrade(base);
-    collect(company, after);
+    result.after = after;
+    if (collect(company, after)) {
+      result.firstOfGrade = true;
+      company.mergedFirst.add(after);
+    }
+    company.lastMerge = result;
+    company.merges++;
+    String names = String.join("·", materials.stream().map(m -> m.name).toList());
+    RaisingContent.Market market = content.raising().company().market();
     history.add(
         company,
         company.year,
         "rise",
         Korean.fill(
-            content.raising().company().market().merged(),
-            Map.of(
-                "names",
-                String.join("·", materials.stream().map(m -> m.name).toList()),
-                "name",
-                base.name,
-                "grade",
-                after)),
+            result.jackpot ? market.jackpot() : market.merged(),
+            Map.of("names", names, "name", base.name, "grade", after)),
         null);
+    if (result.inheritedQuirk != null) {
+      company.yearLines.add(
+          Korean.fill(
+              market.inherited(),
+              Map.of(
+                  "name",
+                  base.name,
+                  "material",
+                  materials.getFirst().name,
+                  "quirk",
+                  result.inheritedQuirk)));
+    }
     return base;
+  }
+
+  /** 한 단계 올린다: F~SS면 다섯 능력치를 한 띠, SSS 위면 단계(X…). */
+  private void riseOne(Employee base) {
+    String grade = employeeGrade(base);
+    int sssAt = LADDER.indexOf(StatGrade.SSS.name());
+    if (LADDER.indexOf(grade) >= sssAt) {
+      base.rank++;
+      base.experience = 0;
+      return;
+    }
+    StatGrade next = StatGrade.valueOf(LADDER.get(LADDER.indexOf(grade) + 1));
+    int band = properties.experience().band();
+    for (String code : StatCodes.ALL) {
+      base.stats.merge(code, band, (v, d) -> Math.min(MAX_STAT, v + d));
+    }
+    // 평균이 아직 다음 띠에 못 미치면(능력치가 100에 걸려) 낮은 능력치부터 채운다.
+    while (LADDER.indexOf(overallGrade(base.stats)) <= LADDER.indexOf(grade)) {
+      String low =
+          StatCodes.ALL.stream()
+              .min(java.util.Comparator.comparingInt((String code) -> base.stats.get(code)))
+              .orElseThrow();
+      base.stats.put(low, Math.min(MAX_STAT, Math.max(base.stats.get(low) + 1, next.min())));
+    }
   }
 
   /** 직원을 내보낸다 (decisions.md 312번): 데리고 있을 자리를 비운다. 명예의 전당과 연표에 남는다. 이직 제안·연봉 협상·사표가 걸린 사람이면 400. */

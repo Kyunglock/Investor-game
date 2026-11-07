@@ -224,6 +224,9 @@ raising:
       # 데리고 있을 수 있는 사람 (335번 다음, 337번): 자리 수와 상관없이 100명
       roster-max: 100
       merge-count: 2
+      # 합성 보상 (decisions.md 350번): jackpot-percent% 확률로 두 단계(대성공), inherit-percent% 확률로 재료의 버릇을 이어받는다
+      jackpot-percent: 5
+      inherit-percent: 30
       # 확률표: 회사 등급(인사팀이면 더 높게)보다 steps 단계 위가 percent%. 맨 끝은 특급(전의 특급 인재, 290번)
       rates:
         - { steps: -1, percent: 30, star: false }

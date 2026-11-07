@@ -121,7 +121,7 @@ class DefaultCompanyService implements CompanyService {
   @Transactional
   public CompanyView merge(UUID sessionId, int baseId, List<Integer> materialIds) {
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.merge(row.state(), baseId, materialIds);
+    engine.merge(row.state(), baseId, materialIds, new HashSeededRandom(row.seed()));
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -504,8 +504,24 @@ class DefaultCompanyService implements CompanyService {
             .toList();
     List<CompanyView.CollectionEntry> collection =
         CompanyEngine.LADDER.stream()
-            .map(g -> new CompanyView.CollectionEntry(g, c.collection.getOrDefault(g, 0)))
+            .map(
+                g ->
+                    new CompanyView.CollectionEntry(
+                        g, c.collection.getOrDefault(g, 0), c.mergedFirst.contains(g)))
             .toList();
+    CompanyState.Merge m = c.lastMerge;
+    CompanyView.Merge lastMerge =
+        m == null
+            ? null
+            : new CompanyView.Merge(
+                m.baseId,
+                m.name,
+                m.before,
+                m.after,
+                m.jackpot,
+                m.farewells,
+                m.firstOfGrade,
+                m.inheritedQuirk);
     return new CompanyView.Gacha(
         c.tickets,
         c.employees.size(),
@@ -515,7 +531,8 @@ class DefaultCompanyService implements CompanyService {
         engine.mergeCount(),
         rates,
         drawn,
-        collection);
+        collection,
+        lastMerge);
   }
 
   /** 사표를 들고 온 직원 (282번). 없으면 null. */

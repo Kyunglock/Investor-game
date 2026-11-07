@@ -180,7 +180,8 @@ public record CompanyView(
       int mergeCount,
       List<Rate> rates,
       List<Drawn> drawn,
-      List<CollectionEntry> collection) {}
+      List<CollectionEntry> collection,
+      Merge lastMerge) {}
 
   /** 확률표의 한 칸. */
   public record Rate(String grade, int percent, boolean star) {}
@@ -195,7 +196,26 @@ public record CompanyView(
       int employeeId, String name, String grade, boolean star, boolean fresh, String hello) {}
 
   /** 도감의 한 칸: 그 등급을 몇 명 얻었나. 0이면 아직 못 봤다. */
-  public record CollectionEntry(String grade, int count) {}
+  /** 도감 한 칸. mergedFirst: 이 등급을 합성으로 처음 만들었다 (350번). */
+  public record CollectionEntry(String grade, int count, boolean mergedFirst) {}
+
+  /**
+   * 방금 한 합성 (decisions.md 350번). 아직 없으면 null.
+   *
+   * @param jackpot 대성공: 두 단계 뛰었다
+   * @param farewells 재료들의 마지막 한마디
+   * @param firstOfGrade 이 등급을 합성으로 처음 만들었다
+   * @param inheritedQuirk 이어받은 버릇 이름. 없으면 null
+   */
+  public record Merge(
+      int baseId,
+      String name,
+      String before,
+      String after,
+      boolean jackpot,
+      List<String> farewells,
+      boolean firstOfGrade,
+      String inheritedQuirk) {}
 
   /**
    * 투자 회의 (decisions.md 229번). 정하기 전에는 숨은 방향이 없다.

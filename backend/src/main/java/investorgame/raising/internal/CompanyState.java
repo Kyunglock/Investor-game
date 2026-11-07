@@ -193,6 +193,15 @@ class CompanyState {
   /** 이번 분기의 멘탈 전투 (decisions.md 328번). 분기를 열 때 새로 만든다. 이 칸을 더하기 전의 분기면 null이다. */
   Mental mental;
 
+  /** 합성한 횟수 (350번). 대성공·이어받기 난수의 열쇠. */
+  int merges;
+
+  /** 방금 한 합성 (350번). 아직 없으면 null. */
+  Merge lastMerge;
+
+  /** 합성으로 처음 만든 등급들 (350번): 도감에 표시. */
+  List<String> mergedFirst = new ArrayList<>();
+
   /** 가진 무기 (decisions.md 346번). 종류+등급으로 하나씩. 처음엔 일반 권총 하나. 이 칸을 더하기 전의 회사면 null이다. */
   List<Weapon> weapons;
 
@@ -261,6 +270,31 @@ class CompanyState {
 
     /** 막판 제안을 따른 뒤 받은 상벌(BONUS·RAISE·NOTHING·CUT·FORGIVE, 349번). 다음 막판 제안 때 그에 이어지는 말을 하고 지운다. */
     String lastVerdict;
+
+    /** 합성으로 이어받은 버릇 (350번). 없으면 번호로 정한 버릇(349번). */
+    String quirk;
+  }
+
+  /** 방금 한 합성 (decisions.md 350번). 다음 합성 때 덮어쓴다. */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Merge {
+    int baseId;
+    String name;
+    String before;
+    String after;
+
+    /** 대성공: 두 단계 뛰었다. */
+    boolean jackpot;
+
+    /** 재료들의 마지막 한마디. */
+    List<String> farewells = new ArrayList<>();
+
+    /** 이 등급을 합성으로 처음 만들었다. */
+    boolean firstOfGrade;
+
+    /** 이어받은 버릇 이름. 없으면 null. */
+    String inheritedQuirk;
   }
 
   /**
