@@ -2,7 +2,7 @@
  * 고양이 그림 (decisions.md 341번). 그림은 이미지 파일이 아니라 코드다: 캔버스 경로로 그린다.
  *
  * 규칙(사용자가 고른 레퍼런스): 갈색 가는 윤곽(INK), 파스텔 면, 둥근 머리에 작은 몸, 점 눈, 아주 작은 입, 작은 귀.
- * 부위(꼬리·몸·팔·발·귀·머리)를 먼저 잉크색으로 굵게 깔고 그 위에 털색으로 다시 칠해 **바깥 윤곽선 하나만** 남긴다(안쪽 선 없음).
+ * 부위(꼬리·몸·팔·발·귀·머리)를 먼저 잉크색으로 굵게 깔고 그 위에 털색으로 다시 칠해 **바깥 윤곽선 하나만** 남긴다(안쪽 선 없음). 윤곽은 상자 기준 2.6(344번: 작게 보여도 또렷하게).
  * 좌표는 100×110 상자(머리 중심 50,40 · 발끝 ≈ 99). 그리는 쪽이 ctx.scale로 크기를 정한다.
  */
 
@@ -156,20 +156,20 @@ export function drawCat(c: Ctx, o: CatLook) {
   }
   // 1) 잉크 바탕(굵게) → 바깥 윤곽 하나
   tail()
-  c.lineWidth = 9
+  c.lineWidth = 10.4
   c.strokeStyle = INK
   c.stroke()
   for (const [draw] of parts) {
     draw()
     c.fillStyle = INK
     c.fill()
-    c.lineWidth = 4.4
+    c.lineWidth = 5.2
     c.strokeStyle = INK
     c.stroke()
   }
   // 2) 색
   tail()
-  c.lineWidth = 4.6
+  c.lineWidth = 5.2
   c.strokeStyle = fur
   c.stroke()
   for (const [draw, col] of parts) {
@@ -549,25 +549,47 @@ export function drawCat(c: Ctx, o: CatLook) {
   c.restore()
 }
 
-/** 권총과 그것을 쥔 두 앞발. 원점이 뒷손(피벗), +x가 총구 방향. 상자 좌표 -8..24 × -8..10 안에 든다. */
+/**
+ * 권총과 그것을 쥔 두 앞발 (344번). 원점이 손잡이를 쥔 뒷발(피벗), +x가 총구 방향. 상자 좌표 -8..26 × -8..14 안에 든다.
+ * 위로 겨눠도 총으로 읽히게: 긴 총신, 아래로 꺾인 손잡이, 방아쇠울, 가늠쇠. 앞발 하나는 손잡이, 하나는 총신 밑을 받친다.
+ */
 export function drawGun(c: Ctx, fur: string) {
   c.save()
   c.lineJoin = 'round'
   c.lineCap = 'round'
-  rrect(c, -3, -3, 17, 5.5, 2)
-  fs(c, '#8d8a93', 1.6)
-  rrect(c, 10, -2.2, 7, 4, 1.5)
-  fs(c, '#5e5b66', 1.4)
-  rrect(c, -3, 1.5, 5, 6, 1.5)
-  fs(c, '#6a6670', 1.4)
+  // 손잡이: 뒤로 꺾여 내려간다
+  c.save()
+  c.translate(1, 1.5)
+  c.rotate(0.5)
+  rrect(c, -3.2, 0, 6.4, 11.5, 2.2)
+  fs(c, '#8d8a93', 1.8)
+  c.restore()
+  // 총신과 슬라이드
+  rrect(c, -3, -4, 24, 7, 2.5)
+  fs(c, '#6a6670', 1.8)
+  rrect(c, -1.5, -3, 19, 2.2, 1)
+  c.fillStyle = 'rgba(255,255,255,.22)'
+  c.fill()
+  // 총구와 가늠쇠
+  rrect(c, 19, -3, 6, 5, 1.8)
+  fs(c, '#4f4c57', 1.6)
+  rrect(c, 17.5, -6.2, 2.2, 2.6, 0.8)
+  fs(c, '#4f4c57', 1.2)
+  // 방아쇠울
+  c.beginPath()
+  c.arc(7.5, 4.5, 3.2, 0.1, Math.PI - 0.1)
+  c.lineWidth = 1.8
+  c.strokeStyle = INK
+  c.stroke()
+  // 앞발: 손잡이를 쥔 뒷발, 총신 밑을 받친 앞발
   for (const [px, py] of [
-    [0, 3.5],
-    [8, 1],
+    [0.5, 7.5],
+    [11.5, 4.5],
   ]) {
-    ell(c, px, py, 4.6, 4)
+    ell(c, px, py, 4.8, 4.2)
     c.fillStyle = INK
     c.fill()
-    ell(c, px, py, 3.3, 2.8)
+    ell(c, px, py, 3.5, 2.9)
     c.fillStyle = fur
     c.fill()
   }
@@ -575,9 +597,9 @@ export function drawGun(c: Ctx, fur: string) {
 }
 
 /** 권총 피벗(총을 든 손, 상자 좌표). 전투에서 총구 화염·탄의 출발점을 잡는 데 쓴다. */
-export const GUN_PIVOT = { x: 61, y: 75 }
+export const GUN_PIVOT = { x: 75, y: 76 }
 /** 피벗에서 총구까지의 길이(상자 좌표). */
-export const GUN_LEN = 17
+export const GUN_LEN = 25
 
 /** 적 넷. 중심 (0,0), 반지름 ≈ 20. 같은 윤곽 규칙으로 단순하게: 이름이 곧 생김새다. */
 export type EnemyShape = 'panic' | 'dump' | 'spec' | 'stop'
@@ -606,7 +628,7 @@ export function drawEnemy(c: Ctx, kind: EnemyShape, t: number) {
       d()
       c.fillStyle = INK
       c.fill()
-      c.lineWidth = 4
+      c.lineWidth = 5.6
       c.strokeStyle = INK
       c.stroke()
     }
