@@ -212,14 +212,14 @@ raising:
       veteran-fee-bp: 300
       veteran-fee-step-bp: 75
     # 채용 뽑기 (decisions.md 312번): 공채 시장(지원자를 골라 계약금을 내고 뽑던 것)을 대신한다. 채용권 한 장에 한 명.
-    # 채용권은 회사를 차릴 때 5장, 분기를 넘길 때마다 1장, 연말에 2장 더, 업적마다 3장, 이사하면 3장. 한 해에 6장 남짓이라 자리가 늘수록 합성이 중요해진다.
-    # 데리고 있을 수 있는 사람은 100명(337번). 같은 등급 둘을 합치면 바탕 한 명이 한 단계 오른다(SSS 위는 X·XX… 단계).
+    # 채용권 (decisions.md 357번): 회사를 차릴 때 10장, 그 뒤로는 연말에 1장. 분기마다 주던 1장과 연말 2장·업적 3장·이사 3장은 너무 많아 뺐다(업적·이사도 1장).
+    # 한 해에 한 명이라 자리 셋(354번)에 누구를 앉히고 누구와 합칠지가 중요해진다. 같은 등급 둘을 합치면 바탕 한 명이 한 단계 오른다(SSS 위는 X·XX… 단계).
     gacha:
       start-tickets: 10
-      quarter-tickets: 1
-      year-tickets: 2
-      achievement-tickets: 3
-      move-tickets: 3
+      quarter-tickets: 0
+      year-tickets: 1
+      achievement-tickets: 1
+      move-tickets: 1
       max-draws: 10
       # 데리고 있을 수 있는 사람 (354번): 상한이 없다. 화면은 이 값 이상이면 상한을 보이지 않는다(337번의 100명을 뺐다)
       roster-max: 999999

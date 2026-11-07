@@ -522,12 +522,25 @@ class CompanyEngineTest {
 
   /** 채용권은 분기를 넘길 때마다, 연말에 더, 업적과 이사로 받는다. 받은 까닭이 분기 실적·결산 소식에 남는다 (decisions.md 312번). */
   @Test
-  void 채용권은_분기와_연말과_이사로_받는다() {
+  void 채용권은_연말과_이사로_받는다() {
+    // 채용권은 연말에 한 장 (357번): 분기를 넘겨도 받지 않고 소식도 없다.
     CompanyState company = ENGINE.open(new HashSeededRandom(4), ENGINE.openingCapital());
     int start = company.tickets;
     CompanyState.Quarter q = ENGINE.settleQuarter(company, new HashSeededRandom(4));
-    assertThat(company.tickets).isEqualTo(start + PROPERTIES.gacha().quarterTickets());
-    assertThat(q.lines).anyMatch(l -> l.contains("채용권") && l.contains("분기"));
+    assertThat(PROPERTIES.gacha().quarterTickets()).isZero();
+    assertThat(company.tickets).isEqualTo(start);
+    assertThat(q.lines).noneMatch(l -> l.contains("채용권"));
+    for (int i = 0; i < 3; i++) {
+      ENGINE.settleQuarter(company, new HashSeededRandom(4));
+    }
+    assertThat(company.year).isEqualTo(2);
+    // 연말에 한 장(+ 그해 연 업적이 있으면 한 장 더).
+    assertThat(PROPERTIES.gacha().yearTickets()).isEqualTo(1);
+    assertThat(company.tickets)
+        .as("연말에 한 장")
+        .isBetween(start + 1, start + 1 + company.settlements.getLast().achieved.size());
+    assertThat(company.settlements.getLast().lines)
+        .anyMatch(l -> l.contains("채용권") && l.contains("1장"));
     company.capital = 1_000_000_000L;
     int before = company.tickets;
     ENGINE.upgrade(company);
