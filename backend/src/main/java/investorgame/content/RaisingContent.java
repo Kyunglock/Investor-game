@@ -272,7 +272,12 @@ public record RaisingContent(
    * SSS 위(실전 경험으로 오른다, {gain}). grown: 한 해 일하며 자란 소식 줄({name}·{stat}·{before}·{after}).
    */
   public record Perks(
-      Map<String, String> names, String line, String lineTop, String proposal, String grown) {}
+      Map<String, String> names,
+      String line,
+      String lineTop,
+      String proposal,
+      String grown,
+      String promoted) {}
 
   /**
    * 직원 등급이 바뀌는 결산 소식 (6.4·2.3절). {name}·{before}·{after}·{stat} 자리표시를 쓴다.

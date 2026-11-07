@@ -1219,4 +1219,33 @@ class CompanyEngineTest {
     assertThat(old.tickets).isEqualTo(PROPERTIES.gacha().startTickets());
     assertThat(ENGINE.open(new HashSeededRandom(1), 100_000_000).gachaReady).isTrue();
   }
+
+  /** #343·#391: 자리가 원하는 능력치가 먼저 자라고, 등급 글자가 바뀔 때만 소식이 남고, 종합 등급이 오르면 올라섰다는 소식이 남는다. */
+  @Test
+  void 자리에서_자라고_등급이_바뀔_때만_소식이_남는다() {
+    Map<String, Integer> rookie =
+        new HashMap<>(
+            Map.of("insight", 10, "patience", 10, "courage", 10, "conviction", 10, "luck", 10));
+    int promoted = 0;
+    for (int seed = 0; seed < 60; seed++) {
+      CompanyState company = open(seed, rookie, 100_000_000L);
+      CompanyState.Employee e = company.employees.getFirst();
+      ENGINE.place(company, Map.of(e.id, "day"));
+      for (int year = 0; year < 12; year++) {
+        CompanyState.Settlement s = settleYear(company, new HashSeededRandom(seed));
+        for (String line : s.lines) {
+          if (line.contains("자랐다")) {
+            java.util.regex.Matcher m =
+                java.util.regex.Pattern.compile("(\\S+) → (\\S+)\\.$").matcher(line);
+            assertThat(m.find()).as(line).isTrue();
+            assertThat(m.group(1)).as("등급이 그대로면 소식이 없다: " + line).isNotEqualTo(m.group(2));
+          }
+          promoted += line.contains("올라섰다") ? 1 : 0;
+        }
+      }
+      // 단타 데스크는 용기를 원한다: 용기가 가장 먼저 자란다
+      assertThat(e.stats.get("courage")).isGreaterThanOrEqualTo(e.stats.get("insight"));
+    }
+    assertThat(promoted).as("종합 등급이 오르면 올라섰다는 소식").isPositive();
+  }
 }

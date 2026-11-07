@@ -260,25 +260,53 @@ class CompanyEngine {
       if (random.forKey("grow", company.year, e.id).nextInt(PERCENT) >= chance) {
         continue;
       }
-      String stat =
-          StatCodes.ALL.stream()
-              .filter(code -> !StatCodes.LUCK.equals(code))
-              .min(java.util.Comparator.comparingInt((String code) -> e.stats.get(code)))
-              .orElseThrow();
-      int before = e.stats.get(stat);
-      if (before >= MAX_STAT) {
+      String stat = growingStat(e);
+      if (stat == null) {
         continue;
       }
+      String overallBefore = employeeGrade(e);
+      int before = e.stats.get(stat);
       int after = Math.min(MAX_STAT, before + properties.experience().band());
       e.stats.put(stat, after);
-      settlement.lines.add(
-          gradeLine(
-              content.raising().company().perks().grown(),
-              e,
-              StatGrade.of(before).name(),
-              StatGrade.of(after).name(),
-              stat));
+      RaisingContent.Perks texts = content.raising().company().perks();
+      // 속 점수만 오르고 등급 글자가 그대로면 소식을 남기지 않는다 (#391: "용기 F → F")
+      if (!StatGrade.of(before).name().equals(StatGrade.of(after).name())) {
+        settlement.lines.add(
+            gradeLine(
+                texts.grown(), e, StatGrade.of(before).name(), StatGrade.of(after).name(), stat));
+      }
+      String overallAfter = employeeGrade(e);
+      if (!overallAfter.equals(overallBefore) && texts.names().containsKey(overallAfter)) {
+        settlement.lines.add(
+            Korean.fill(
+                texts.promoted(),
+                Map.of(
+                    "name",
+                    e.name,
+                    "title",
+                    texts.names().get(overallAfter),
+                    "before",
+                    overallBefore,
+                    "after",
+                    overallAfter)));
+      }
     }
+  }
+
+  /**
+   * 한 해 일하며 자라는 능력치 (#343): 앉은 자리가 원하는 능력치가 먼저 자란다(자리에서 자란다). 그게 꽉 찼거나 자리가 원하는 능력치가 없으면 운을 뺀 가장 낮은
+   * 능력치. 다 꽉 찼으면 null.
+   */
+  private String growingStat(Employee e) {
+    String wanted = desk(e.desk).statCode();
+    if (wanted != null && e.stats.get(wanted) < MAX_STAT) {
+      return wanted;
+    }
+    return StatCodes.ALL.stream()
+        .filter(code -> !StatCodes.LUCK.equals(code))
+        .filter(code -> e.stats.get(code) < MAX_STAT)
+        .min(java.util.Comparator.comparingInt((String code) -> e.stats.get(code)))
+        .orElse(null);
   }
 
   /** 결산마다 같은 자리 해 수를 센다. 막 손에 익은 해면 소식 줄을 남긴다 (262번). */
