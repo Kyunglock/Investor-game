@@ -17,6 +17,8 @@ const DRAG_PX = 6
 const GLIDE_MS = 480
 /** 합성 결과 줄이 떠 있는 시간(ms). */
 const RESULT_MS = 2600
+/** 인벤토리 한 줄의 칸 수. 마지막 줄은 빈 칸으로 채운다. */
+const INVENTORY_COLS = 5
 
 const reducedMotion = () =>
   typeof window !== 'undefined' &&
@@ -63,7 +65,7 @@ interface Fusing {
 }
 
 /**
- * 합성 판 (decisions.md 314·319번): 같은 등급 카드를 끌어 다른 카드 위에 놓으면 바로 합친다. 놓인 카드가 바탕이 되어 한 단계 오르고, 끌어 온
+ * 합성 판 (decisions.md 314·319·336번): 데리고 있는 사람 모두를 한 인벤토리 칸에 늘어놓는다(등급별로 나누지 않음, 높은 등급부터). 같은 등급 카드를 끌어 다른 카드 위에 놓으면 바로 합친다. 놓인 카드가 바탕이 되어 한 단계 오르고, 끌어 온
  * 카드는 재료로 바탕에 미끄러져 겹친 뒤 떠난다. 판 위에 "이름 C → B" 한 줄이 잠깐 뜬다. 누르기만으로는 합치지 않는다. 앱과 웹이 같이 쓴다.
  * mergeCount가 둘보다 크면 모자란 재료는 같은 무리에서 쉬는 사람부터 채운다.
  */
@@ -92,7 +94,7 @@ export function MergeBoard({ company, effects }: { company: Company; effects?: M
     </p>
   )
 
-  if (groups.length === 0) {
+  if (company.employees.length === 0) {
     return (
       <div>
         {resultLine}
@@ -181,77 +183,76 @@ export function MergeBoard({ company, effects }: { company: Company; effects?: M
     }
   }
 
-  const dragged = drag?.moved
-    ? groups.flatMap((g) => g.members).find((m) => m.id === drag.id)
-    : undefined
+  const dragged = drag?.moved ? company.employees.find((m) => m.id === drag.id) : undefined
+  // 인벤토리: 무리로 나누지 않고 모두 한 판에. 높은 등급부터, 같은 등급은 들어온 순서. 합칠 짝이 없는 카드는 흐리게 두고 끌리지 않는다.
+  const groupOf = new Map(groups.flatMap((g) => g.members.map((m) => [m.id, g] as const)))
+  const items = [...company.employees].sort(
+    (a, b) =>
+      EMPLOYEE_LADDER.indexOf(b.overallGrade) - EMPLOYEE_LADDER.indexOf(a.overallGrade) ||
+      a.id - b.id,
+  )
+  const blanks = Array.from(
+    { length: (INVENTORY_COLS - (items.length % INVENTORY_COLS)) % INVENTORY_COLS },
+    (_, i) => `slot-${items.length + i}`,
+  )
 
   return (
     <div data-testid="merge-board">
       {resultLine}
       <p className="mb-2 text-[12px] text-muted">
-        카드를 끌어 같은 등급 카드 위에 놓으면 합쳐집니다. 놓인 카드가 한 단계 오르고, 끌어 온
-        카드는 회사를 떠납니다(번 돈은 오른 사람에게).
+        {groups.length > 0
+          ? '카드를 끌어 같은 등급 카드 위에 놓으면 합쳐집니다. 놓인 카드가 한 단계 오르고, 끌어 온 카드는 회사를 떠납니다(번 돈은 오른 사람에게).'
+          : `같은 등급 ${need}명이 모이면 카드를 끌어 겹쳐서 한 단계 올릴 수 있습니다.`}
       </p>
-      <ul className="grid gap-3" data-testid="merge-list">
-        {groups.map((g) => {
-          const next = EMPLOYEE_LADDER[EMPLOYEE_LADDER.indexOf(g.grade) + 1]
-          const fuseHere = fusing?.grade === g.grade
+      <ul className="merge-inventory" data-testid="merge-list">
+        {items.map((m) => {
+          const g = groupOf.get(m.id)
+          const canTake = g && drag?.moved && drag.grade === g.grade && accepts(drag, m.id, g)
+          const fuseHere = g && fusing?.grade === g.grade
+          const fly = fuseHere ? fusing.fly[m.id] : undefined
+          const cls = [
+            'merge-card',
+            !g && 'is-alone',
+            drag?.moved && drag.id === m.id && 'is-dragged',
+            canTake && 'can-take',
+            drag?.over === m.id && 'is-over',
+            fuseHere && fusing.base === m.id && 'is-charging',
+            fly && 'is-flying',
+          ]
+            .filter(Boolean)
+            .join(' ')
           return (
-            <li
-              key={g.grade}
-              className="rounded-lg border border-line-soft bg-white p-3"
-              data-testid="merge-group"
-              data-grade={g.grade}
-            >
-              <p className="text-[13px] font-semibold">
-                <GradeBadge grade={g.grade} size="inline" />
-                {g.grade} {need}명 → <GradeBadge grade={next} size="inline" />
-                {next} 1명
-              </p>
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                {g.members.map((m) => {
-                  const canTake = drag?.moved && drag.grade === g.grade && accepts(drag, m.id, g)
-                  const fly = fuseHere ? fusing.fly[m.id] : undefined
-                  const cls = [
-                    'merge-card',
-                    drag?.moved && drag.id === m.id && 'is-dragged',
-                    canTake && 'can-take',
-                    drag?.over === m.id && 'is-over',
-                    fuseHere && fusing.base === m.id && 'is-charging',
-                    fly && 'is-flying',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')
-                  return (
-                    <button
-                      type="button"
-                      key={m.id}
-                      ref={(el) => {
-                        if (el) cards.current.set(m.id, el)
-                        else cards.current.delete(m.id)
-                      }}
-                      aria-label={`${m.name} ${g.grade}`}
-                      data-merge-card={m.id}
-                      data-testid="merge-card"
-                      className={cls}
-                      style={
-                        fly
-                          ? ({ '--dx': `${fly.dx}px`, '--dy': `${fly.dy}px` } as CSSProperties)
-                          : undefined
-                      }
-                      onPointerDown={(ev) => onDown(ev, g, m)}
-                      onPointerMove={(ev) => onMove(ev, g)}
-                      onPointerUp={(ev) => onUp(ev, g)}
-                      onPointerCancel={() => setDrag(null)}
-                    >
-                      <CardFace employee={m} grade={g.grade} />
-                    </button>
-                  )
-                })}
-              </div>
+            <li key={m.id}>
+              <button
+                type="button"
+                ref={(el) => {
+                  if (el) cards.current.set(m.id, el)
+                  else cards.current.delete(m.id)
+                }}
+                aria-label={`${m.name} ${m.overallGrade}`}
+                aria-disabled={!g}
+                data-merge-card={m.id}
+                data-testid="merge-card"
+                data-grade={m.overallGrade}
+                className={cls}
+                style={
+                  fly
+                    ? ({ '--dx': `${fly.dx}px`, '--dy': `${fly.dy}px` } as CSSProperties)
+                    : undefined
+                }
+                onPointerDown={g ? (ev) => onDown(ev, g, m) : undefined}
+                onPointerMove={g ? (ev) => onMove(ev, g) : undefined}
+                onPointerUp={g ? (ev) => onUp(ev, g) : undefined}
+                onPointerCancel={() => setDrag(null)}
+              >
+                <CardFace employee={m} grade={m.overallGrade} />
+              </button>
             </li>
           )
         })}
+        {blanks.map((key) => (
+          <li key={key} className="merge-slot" aria-hidden="true" />
+        ))}
       </ul>
       {dragged &&
         drag &&
@@ -272,14 +273,16 @@ export function MergeBoard({ company, effects }: { company: Company; effects?: M
 function CardFace({ employee, grade }: { employee: Employee; grade: Company['grade'] }) {
   return (
     <span
-      className={`grade-card ${tierClass(tierOf(grade))} flex h-full w-full flex-col items-center justify-center gap-0.5 p-1.5 text-ink`}
+      className={`grade-card ${tierClass(tierOf(grade))} flex h-full w-full flex-col items-center justify-center gap-0.5 p-1 text-ink`}
     >
       <span className="gem-static">
         <GradeBadge grade={grade} size="sm" />
       </span>
-      <b className="text-[13px] leading-tight">{employee.name}</b>
-      <span className="text-[10px] text-muted">{titleOf(grade)}</span>
-      {employee.desk && <span className="text-[10px] text-muted">· 자리</span>}
+      <b className="w-full truncate text-center text-[11px] leading-tight">{employee.name}</b>
+      <span className="text-[9px] leading-none text-muted">
+        {titleOf(grade)}
+        {employee.desk && ' · 자리'}
+      </span>
     </span>
   )
 }
