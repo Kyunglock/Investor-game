@@ -42,7 +42,9 @@ behavior:
     gain-bonus-percent: 150
 
 session:
-  ttl: 1d
+  # 마지막 접속 후 이만큼 지나면 세션이 만료된다. 접속할 때마다 쿠키도 다시 내려 같이 늘어난다. 앱은 며칠 쉬었다 이어 하는 것이 보통이라
+  # 하루에서 30일로 늘렸다 (decisions.md 311번). 계정 연결은 따로 붙인다
+  ttl: 30d
   cookie-secure: true
   # 안드로이드 앱이 화면을 앱 안에 담아 다른 출처(https://localhost)에서 부르면 None으로 바꾼다 (decisions.md 306번, docs/app.md)
   cookie-same-site: ${SESSION_COOKIE_SAME_SITE:Lax}

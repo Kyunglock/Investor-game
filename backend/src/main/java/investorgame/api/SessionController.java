@@ -21,13 +21,15 @@ class SessionController {
     this.cookies = cookies;
   }
 
-  /** 유효한 세션 쿠키가 있으면 그대로 두고, 없으면 새 세션을 발급한다. */
+  /** 유효한 세션 쿠키가 있으면 만료만 늘려 다시 내리고(decisions.md 311번), 없으면 새 세션을 발급한다. */
   @PostMapping
   ResponseEntity<Void> ensure(
       @CookieValue(name = SessionCookies.NAME, required = false) String token) {
     String ip = ClientIp.current();
     if (token != null && sessions.resolve(token, ip).isPresent()) {
-      return ResponseEntity.noContent().build();
+      return ResponseEntity.noContent()
+          .header(HttpHeaders.SET_COOKIE, cookies.create(token).toString())
+          .build();
     }
     IssuedSession issued = sessions.issue(ip);
     return ResponseEntity.noContent()
