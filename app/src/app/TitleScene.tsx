@@ -49,24 +49,24 @@ export function TitleScene({
   const delay = (ms: number) => ({ animationDelay: `${ms}ms` })
   return (
     <div
-      className="safe-bottom flex h-dvh flex-col items-center justify-between overflow-hidden bg-(--hud) px-6 pt-[max(env(safe-area-inset-top),24px)] pb-6 text-white"
+      className="safe-bottom flex h-dvh flex-col items-center justify-between overflow-hidden app-bg px-6 pt-[max(env(safe-area-inset-top),24px)] pb-6 text-ink"
       data-testid="title-scene"
     >
       <div className="flex w-full flex-1 flex-col items-center justify-center">
         <p
-          className="title-in text-[12px] font-semibold tracking-[0.3em] text-white/60"
+          className="title-in rounded-full border-2 border-(--outline) bg-white px-3 py-0.5 font-game text-[13px] tracking-[0.2em] text-ink"
           style={delay(0)}
         >
           증권사 육성 게임
         </p>
         <h1
-          className="title-in mt-2 font-serif-kr text-[48px] font-black leading-none drop-shadow-[0_4px_0_rgba(139,35,66,0.9)]"
+          className="title-in mt-2 font-game text-[56px] leading-none text-[#ffd23f] [-webkit-text-stroke:4px_var(--outline)] [paint-order:stroke] [text-shadow:0_5px_0_var(--outline)]"
           style={delay(120)}
           data-testid="title"
         >
           증권사 사장
         </h1>
-        <p className="title-in mt-3 text-center text-[14px] text-white/75" style={delay(240)}>
+        <p className="title-in mt-3 text-center text-[14px] text-ink/75" style={delay(240)}>
           직원을 뽑고, 회의를 열고,
           <br />
           여의도 랜드마크 타워까지.
@@ -75,7 +75,7 @@ export function TitleScene({
           <BuildingArt grade="F" />
         </div>
         <p
-          className="title-in mt-4 max-w-[320px] text-center text-[13px] leading-relaxed text-white/70"
+          className="title-in mt-4 max-w-[320px] text-center text-[13px] leading-relaxed text-ink/70"
           style={delay(480)}
           data-testid="start-story"
         >
@@ -87,7 +87,7 @@ export function TitleScene({
           <div className="scene-in grid gap-2">
             {fresh ? withTutorial : plain}
             {fresh ? plain : withTutorial}
-            <p className="text-center text-[11px] text-white/50">
+            <p className="text-center text-[11px] text-ink/50">
               튜토리얼은 다섯 걸음(뽑기 → 앉히기 → 회의 → 결산 → 키우기)을 알려 주고 언제든 건너뛸
               수 있습니다.
             </p>
@@ -99,14 +99,14 @@ export function TitleScene({
               sfx.tap()
               setReady(true)
             }}
-            className="animate-pulse-soft min-h-14 w-full rounded-xl text-[18px] font-bold tracking-wide text-white"
+            className="animate-pulse-soft min-h-14 w-full rounded-xl font-game text-[22px] tracking-wide text-ink"
             data-testid="touch-to-start"
           >
             터치해서 시작
           </button>
         )}
         {error && (
-          <p role="alert" className="mt-2 text-center text-[13px] text-[#ff8a7a]">
+          <p role="alert" className="mt-2 text-center text-[13px] text-red-pen">
             {error}
           </p>
         )}

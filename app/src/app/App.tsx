@@ -37,14 +37,14 @@ export function App() {
     <>
       {status === 'loading' && (
         <div
-          className="flex h-dvh items-center justify-center bg-(--hud) text-white/70"
+          className="flex h-dvh items-center justify-center app-bg text-ink/70"
           data-testid="loading"
         >
           <p className="animate-pulse-soft text-[14px]">불러오는 중…</p>
         </div>
       )}
       {status === 'error' && (
-        <div className="flex h-dvh flex-col items-center justify-center gap-3 bg-(--hud) px-6 text-white">
+        <div className="flex h-dvh flex-col items-center justify-center gap-3 app-bg px-6 text-ink">
           <p role="alert" className="text-[15px]">
             서버에 연결할 수 없습니다.
           </p>

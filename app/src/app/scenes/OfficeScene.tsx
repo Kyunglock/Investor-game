@@ -27,16 +27,16 @@ export function OfficeScene({ company }: { company: Company }) {
   const focus = sheet?.kind === 'seat' ? sheet.focus : null
   return (
     <div data-testid="office-scene">
-      <p className="panel-dark px-3 py-1.5 text-[12px] text-white/70" data-testid="era">
-        <b className="text-(--gold-bright)">{company.era.name}</b> · {company.era.description}
+      <p className="panel-dark px-3 py-1.5 text-[12px] text-ink/70" data-testid="era">
+        <b className="text-[#e08a00]">{company.era.name}</b> · {company.era.description}
       </p>
       {company.opening && !company.lastSettlement && (
-        <p className="mt-2 text-[13px] text-white/85" data-testid="opening">
+        <p className="mt-2 text-[13px] text-ink/85" data-testid="opening">
           {company.opening}
         </p>
       )}
       <TutorialWrap company={company} />
-      <IndustryLine company={company} className="mt-2 text-center text-white/80" />
+      <IndustryLine company={company} className="mt-2 text-center text-ink/80" />
       <div className="panel relative mx-auto mt-2 max-w-[360px] p-2">
         <BuildingArt grade={company.grade} />
         {company.upgrade?.left != null && (
@@ -101,7 +101,7 @@ function NextStep({ company }: { company: Company }) {
           </b>
           {plan.years}년 중 {done + 1}년째 · 연말 결산마다 한 해씩 짓는다
         </p>
-        <div className="mt-1 h-2 overflow-hidden rounded bg-white/10">
+        <div className="mt-1 h-2 overflow-hidden rounded bg-ink/10">
           <div
             className="h-full bg-gold transition-[width] duration-700"
             style={{ width: `${Math.round(((done + 0.5) / plan.years) * 100)}%` }}
@@ -150,7 +150,7 @@ function PixelToggle() {
     <button
       type="button"
       onClick={() => setShown(!shown)}
-      className="mt-1 text-[12px] text-white/50 underline"
+      className="mt-1 text-[12px] text-ink/50 underline"
       aria-pressed={!shown}
     >
       {shown ? '그림 끄기' : '그림 켜기'}

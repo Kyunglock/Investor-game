@@ -32,7 +32,7 @@ export function GachaScene({ company }: { company: Company }) {
   const [part, setPart] = useState<Part>('draw')
   const groups = mergeGroups(company).length
   if (company.status === 'ENDED') {
-    return <p className="text-[13px] text-white/60">끝난 회사는 사람을 뽑지 않습니다.</p>
+    return <p className="text-[13px] text-ink/60">끝난 회사는 사람을 뽑지 않습니다.</p>
   }
   const parts: { id: Part; label: string; badge?: string }[] = [
     { id: 'draw', label: '뽑기' },
@@ -52,10 +52,10 @@ export function GachaScene({ company }: { company: Company }) {
               sfx.tap()
               setPart(p.id)
             }}
-            className={`relative min-h-9 shrink-0 rounded-full border px-3 text-[13px] font-semibold ${
+            className={`relative min-h-9 shrink-0 rounded-full border-2 px-3 font-game text-[14px] shadow-[0_2px_0_var(--outline)] ${
               part === p.id
-                ? 'border-(--gold-bright) bg-(--gold-bright) text-[#3b2a05]'
-                : 'border-white/15 bg-white/10 text-white/75'
+                ? 'border-(--outline) bg-(--gold-bright) text-ink'
+                : 'border-(--outline) bg-white/80 text-ink'
             }`}
             data-testid={`gacha-part-${p.id}`}
           >
@@ -100,15 +100,15 @@ function DrawPart({ company }: { company: Company }) {
   }
   return (
     <div className="grid gap-3">
-      <div className="panel-dark flex items-center justify-between px-4 py-3 text-white">
+      <div className="panel flex items-center justify-between px-4 py-3">
         <div>
-          <p className="text-[12px] text-white/60">채용권</p>
-          <p className="font-mono-num text-[34px] font-black leading-none text-(--gold-bright)">
+          <p className="text-[12px] text-ink/60">채용권</p>
+          <p className="font-game text-[38px] leading-none text-[#e08a00] [-webkit-text-stroke:1.5px_var(--outline)] [paint-order:stroke]">
             🎟 <span data-testid="tickets">{g.tickets}</span>
           </p>
         </div>
         <div className="text-right">
-          <p className="text-[12px] text-white/60">데리고 있는 사람</p>
+          <p className="text-[12px] text-ink/60">데리고 있는 사람</p>
           <p className="font-mono-num text-[20px] font-bold" data-testid="roster">
             {g.roster} / {g.rosterMax}
           </p>
@@ -135,11 +135,11 @@ function DrawPart({ company }: { company: Company }) {
         </button>
       </div>
       {full ? (
-        <p className="text-[12px] text-[#ff8a7a]" data-testid="roster-full">
+        <p className="text-[12px] text-red-pen" data-testid="roster-full">
           데리고 있을 자리가 꽉 찼습니다. 합성하거나 쉬는 사람을 내보내세요.
         </p>
       ) : (
-        <p className="text-[12px] text-white/60">
+        <p className="text-[12px] text-ink/60">
           분기를 넘길 때마다, 연말·업적·이사 때 채용권을 받습니다.
           {company.meeting?.hrCap && ` 인사팀 덕에 ${company.meeting.hrCap} 언저리까지 나옵니다.`}
         </p>

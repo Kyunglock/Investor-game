@@ -2,14 +2,64 @@
 @import "../../frontend/src/index.css";
 @source "../../frontend/src";
 
-/* 앱 테마 (decisions.md 310번): 어두운 바탕 위에 종이빛 카드. 카드 안은 웹과 같은 색이라 회의 창·결산서·캐릭터 카드가 그대로 맞는다. */
+/*
+ * 앱 테마 (decisions.md 335번, 310번을 바꿈): 밝은 아케이드풍. 하늘빛 바탕에 흰 점무늬, 카드와 버튼은 굵은 잉크 윤곽과 아래로 떨어지는 단단한 그림자.
+ * 글꼴은 둥근 주아체(제목·버튼·탭), 본문은 그대로 Noto Sans.
+ */
 :root {
-  --bg: #151a24;
-  --desk: #151a24;
-  --hud: #0f131b;
-  --panel: #1f2635;
-  --panel-line: #313b4f;
-  --gold-bright: #f5d36b;
+  --bg: #9bdcff;
+  --desk: #9bdcff;
+  --hud: #ffffff;
+  --panel: rgba(255, 255, 255, 0.82);
+  --panel-line: #2b2340;
+  --outline: #2b2340;
+  --gold-bright: #ffd23f;
+  --font-game: "Jua", var(--font-sans);
+}
+
+/* 하늘빛 바탕: 위는 하늘, 아래는 민트. 흰 점이 깔린다 */
+.app-bg {
+  background:
+    radial-gradient(rgba(255, 255, 255, 0.5) 1.6px, transparent 1.8px) 0 0 / 22px 22px,
+    linear-gradient(180deg, #8fd6ff 0%, #b9ecf2 60%, #c9f3df 100%);
+}
+/* 아케이드 햇살: 노란 바탕에 빙글 도는 빛줄기. 멘탈 전투의 시작·레벨 업·결과 막 */
+.arcade-burst {
+  position: relative;
+  isolation: isolate;
+  background: radial-gradient(circle at 50% 42%, #fff6c4 0%, #ffd55c 55%, #ffb547 100%);
+}
+.arcade-burst::before {
+  content: "";
+  position: absolute;
+  inset: -50%;
+  z-index: -1;
+  background: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(255, 255, 255, 0.28) 0deg 10deg,
+    transparent 10deg 20deg
+  );
+  animation: burst-spin 40s linear infinite;
+  pointer-events: none;
+}
+/* 전투 위에 뜨는 막: 뒤 전장이 비친다 */
+.arcade-burst-soft {
+  background: radial-gradient(
+    circle at 50% 45%,
+    rgba(255, 246, 196, 0.9) 0%,
+    rgba(255, 213, 92, 0.82) 60%,
+    rgba(255, 181, 71, 0.78) 100%
+  );
+}
+@keyframes burst-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.font-game {
+  font-family: var(--font-game);
+  font-weight: 400;
+  letter-spacing: 0.01em;
 }
 
 html,
@@ -22,7 +72,7 @@ body,
 body {
   min-width: 0;
   overflow: hidden;
-  background: var(--hud);
+  background: #8fd6ff;
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
@@ -39,113 +89,75 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* 종이빛 카드: 안의 글은 웹과 같은 잉크색 */
+/* 흰 카드: 굵은 윤곽과 단단한 그림자. 안의 글은 웹과 같은 잉크색 */
 .panel {
-  border-radius: 16px;
-  background: var(--card);
+  border-radius: 18px;
+  background: var(--card, #fff);
   color: var(--ink);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.28);
+  border: 3px solid var(--outline);
+  box-shadow: 0 4px 0 var(--outline);
 }
-/* 어두운 카드: 바탕 위의 안내·칩 */
+/* 바탕 위의 작은 안내·칩: 반투명 흰 판 */
 .panel-dark {
   border-radius: 16px;
   background: var(--panel);
-  border: 1px solid var(--panel-line);
-  color: #fff;
+  border: 2px solid var(--outline);
+  color: var(--ink);
 }
 
-/* 게임 버튼: 아래 모서리가 두꺼워 눌리는 느낌, 누르면 내려앉는다 */
+/* 게임 버튼: 굵은 윤곽, 아래로 떨어지는 그림자. 누르면 내려앉는다 */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border-radius: 14px;
-  font-weight: 700;
+  border-radius: 16px;
+  border: 3px solid var(--outline);
+  font-family: var(--font-game);
+  font-weight: 400;
   line-height: 1.2;
+  box-shadow: 0 4px 0 var(--outline);
   transition:
     transform 0.08s ease,
     box-shadow 0.08s ease,
     filter 0.08s ease;
 }
 .btn:active:not(:disabled) {
-  transform: translateY(3px) scale(0.99);
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--outline);
 }
 .btn:disabled {
-  opacity: 0.45;
-  filter: saturate(0.6);
+  opacity: 0.5;
+  filter: saturate(0.5);
 }
 .btn-primary {
   color: #fff;
-  background: linear-gradient(180deg, #b03a62 0%, #8b2342 100%);
-  box-shadow:
-    0 4px 0 #561330,
-    0 10px 22px rgba(139, 35, 66, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
-}
-.btn-primary:active:not(:disabled) {
-  box-shadow:
-    0 1px 0 #561330,
-    0 4px 10px rgba(139, 35, 66, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  text-shadow: 0 2px 0 rgba(43, 35, 64, 0.45);
+  background: linear-gradient(180deg, #ff7fa6 0%, #ff4f7e 100%);
 }
 .btn-gold {
-  color: #3b2a05;
-  background: linear-gradient(180deg, #ffe08a 0%, #e0b44a 100%);
-  box-shadow:
-    0 4px 0 #9a6b14,
-    0 8px 18px rgba(224, 180, 74, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
-}
-.btn-gold:active:not(:disabled) {
-  box-shadow:
-    0 1px 0 #9a6b14,
-    inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  color: var(--outline);
+  background: linear-gradient(180deg, #fff08a 0%, #ffcc33 100%);
 }
 .btn-blue {
   color: #fff;
-  background: linear-gradient(180deg, #3f5a97 0%, #22355c 100%);
-  box-shadow:
-    0 4px 0 #14203a,
-    0 8px 18px rgba(34, 53, 92, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-.btn-blue:active:not(:disabled) {
-  box-shadow:
-    0 1px 0 #14203a,
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  text-shadow: 0 2px 0 rgba(43, 35, 64, 0.45);
+  background: linear-gradient(180deg, #6cc4ff 0%, #3a92f5 100%);
 }
 .btn-teal {
   color: #fff;
-  background: linear-gradient(180deg, #3b8d7c 0%, #2e7465 100%);
-  box-shadow:
-    0 4px 0 #1b4a40,
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  text-shadow: 0 2px 0 rgba(43, 35, 64, 0.45);
+  background: linear-gradient(180deg, #5fe3bd 0%, #20bf92 100%);
 }
-.btn-teal:active:not(:disabled) {
-  box-shadow:
-    0 1px 0 #1b4a40,
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-/* 어두운 바탕 위의 유리 버튼 */
 .btn-ghost {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+  color: var(--outline);
+  background: #fff;
 }
-.btn-ghost:active:not(:disabled) {
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35);
-}
-/* 종이빛 카드 위의 테두리 버튼 */
 .btn-line {
   color: var(--ink);
   background: #fff;
-  border: 1px solid var(--line);
-  box-shadow: 0 3px 0 var(--line);
-}
-.btn-line:active:not(:disabled) {
-  box-shadow: 0 1px 0 var(--line);
+  border-width: 2px;
+  box-shadow: 0 3px 0 var(--outline);
 }
 
 /* 장면이 바뀌면 옆에서 밀려 들어온다 (탭 순서대로 왼쪽·오른쪽) */
@@ -447,6 +459,7 @@ body {
   .animate-pulse-soft,
   .animate-breathe,
   .animate-shake-screen,
+  .arcade-burst::before,
   .animate-mental-banner,
   .animate-mental-card-in,
   .animate-mental-title,

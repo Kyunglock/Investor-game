@@ -10,7 +10,7 @@ export function IssueScene({ company }: { company: Company }) {
   const { answerPoach, answerRaise } = useRaisingStore.getState()
   const m = company.meeting
   if (!m) {
-    return <p className="text-[13px] text-white/60">끝난 회사에는 이슈가 없습니다.</p>
+    return <p className="text-[13px] text-ink/60">끝난 회사에는 이슈가 없습니다.</p>
   }
   const quiet =
     !m.poach && !m.raise && !m.omen && !m.earlyOmen && !m.forecast && !m.hot && !m.eraEnding
@@ -111,7 +111,7 @@ export function IssueScene({ company }: { company: Company }) {
       <Note tone="border-transparent text-ink" tag="올해 필요한 인재" tagTone="bg-ink">
         {m.wanted}
       </Note>
-      {quiet && <p className="text-center text-[12px] text-white/50">조용한 해입니다.</p>}
+      {quiet && <p className="text-center text-[12px] text-ink/50">조용한 해입니다.</p>}
     </div>
   )
 }
