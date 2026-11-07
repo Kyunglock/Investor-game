@@ -1,5 +1,5 @@
 import type { Company } from '@web/api/client'
-import { LADDER } from '@web/features/raising/grades'
+import { EMPLOYEE_LADDER, LADDER } from '@web/features/raising/grades'
 
 /** 회사가 바뀌며 일어난 일 (decisions.md 310번). 서버 응답 전후를 견줘 찾고, 효과(소리·진동·터짐·흔들림)로 바꾼다. */
 export type FxEvent =
@@ -42,8 +42,18 @@ export function companyEvents(before: Company | null, after: Company | null): Fx
       out.push({ kind: 'hired', name: e.name })
     }
   }
+  // 합성(314번): 남은 사람의 등급이 오르며 재료가 빠졌다. 합성 판이 효과를 내므로 떠남(연기)으로 치지 않는다.
+  const rank = (g: Company['grade']) => EMPLOYEE_LADDER.indexOf(g)
+  const beforeGrade = new Map(before.employees.map((e) => [e.id, e.overallGrade]))
+  const merged =
+    !yearEnd &&
+    !quarter &&
+    after.employees.some((e) => {
+      const was = beforeGrade.get(e.id)
+      return was !== undefined && rank(e.overallGrade) > rank(was)
+    })
   for (const e of before.employees) {
-    if (!afterIds.has(e.id)) {
+    if (!merged && !afterIds.has(e.id)) {
       out.push({ kind: 'left', name: e.name })
     }
   }

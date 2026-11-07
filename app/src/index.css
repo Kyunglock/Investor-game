@@ -296,6 +296,7 @@ body {
 .fx-flash {
   animation: fx-flash 0.55s ease-out both;
 }
+/* 가운데 맞춤은 여기 translate(-50%)가 한다. 요소에 -translate-x-1/2를 또 걸면 두 번 밀린다. */
 @keyframes fx-float {
   0% {
     opacity: 0;
@@ -359,6 +360,183 @@ body {
   animation: num-pop 0.5s ease-out both;
 }
 
+/* 끌어서 합성 (decisions.md 314번) */
+.merge-card {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+  border-radius: 10px;
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease,
+    filter 0.18s ease,
+    box-shadow 0.18s ease;
+}
+.merge-card.is-dragged {
+  opacity: 0.25;
+  transform: scale(0.92);
+}
+.merge-card.can-take {
+  box-shadow: 0 0 0 2px rgba(245, 211, 107, 0.7);
+  animation: merge-wiggle 0.9s ease-in-out infinite;
+}
+.merge-card.is-over {
+  transform: scale(1.08);
+  box-shadow:
+    0 0 0 3px #f5d36b,
+    0 0 22px 6px rgba(245, 211, 107, 0.75);
+  animation: none;
+}
+.merge-card.is-base {
+  box-shadow:
+    0 0 0 3px #f5d36b,
+    0 0 14px 2px rgba(245, 211, 107, 0.55);
+}
+.merge-card.is-mat {
+  transform: scale(0.86);
+  filter: saturate(0.4) brightness(0.9);
+  opacity: 0.7;
+}
+.merge-card.bump-0,
+.merge-card.bump-1 {
+  animation: merge-bump 0.35s ease-out;
+}
+.merge-card.bump-1 {
+  animation-name: merge-bump-b;
+}
+.merge-card.is-charging {
+  z-index: 2;
+  animation: merge-charge 0.75s ease-in both;
+}
+.merge-card.is-flying {
+  z-index: 1;
+  animation: merge-fly 0.6s cubic-bezier(0.55, 0, 0.85, 0.35) both;
+}
+.merge-tag {
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  border-radius: 999px;
+  padding: 0 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: white;
+}
+.merge-pip {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1.5px solid #c9a23a;
+  background: transparent;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+.merge-pip.is-on {
+  background: #f5d36b;
+  transform: scale(1.15);
+  box-shadow: 0 0 6px rgba(245, 211, 107, 0.9);
+}
+.merge-group.is-fusing {
+  animation: merge-group-glow 0.75s ease-in both;
+}
+.merge-ghost {
+  position: fixed;
+  z-index: 60;
+  width: 84px;
+  aspect-ratio: 3 / 4;
+  pointer-events: none;
+  transform: translate(-50%, -60%) rotate(-5deg) scale(1.08);
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.45));
+  transition: transform 0.12s ease;
+}
+.merge-ghost.is-over {
+  transform: translate(-50%, -60%) rotate(4deg) scale(0.9);
+}
+@keyframes merge-wiggle {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-1.5deg);
+  }
+  75% {
+    transform: rotate(1.5deg);
+  }
+}
+@keyframes merge-bump {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.16);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes merge-bump-b {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.16);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes merge-charge {
+  0% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  20% {
+    transform: scale(1.05) translateX(-2px);
+  }
+  35% {
+    transform: scale(1.06) translateX(2px);
+  }
+  50% {
+    transform: scale(1.08) translateX(-3px);
+  }
+  65% {
+    transform: scale(1.1) translateX(3px);
+  }
+  80% {
+    transform: scale(1.13) translateX(-3px);
+    filter: brightness(1.4);
+  }
+  100% {
+    transform: scale(1.18);
+    filter: brightness(2.2);
+    box-shadow:
+      0 0 0 4px #fff3c4,
+      0 0 40px 16px rgba(245, 211, 107, 0.95);
+  }
+}
+@keyframes merge-fly {
+  0% {
+    transform: scale(0.86);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(0.2) rotate(180deg);
+    opacity: 0;
+  }
+}
+@keyframes merge-group-glow {
+  100% {
+    box-shadow: 0 0 24px 4px rgba(245, 211, 107, 0.6);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .scene-in,
   .scene-left,
@@ -371,10 +549,17 @@ body {
   .fx-flash,
   .animate-tab-bounce,
   .animate-badge-pulse,
-  .animate-num-pop {
+  .animate-num-pop,
+  .merge-card.can-take,
+  .merge-card.bump-0,
+  .merge-card.bump-1,
+  .merge-card.is-charging,
+  .merge-card.is-flying,
+  .merge-group.is-fusing {
     animation: none;
   }
   .fx-float {
+    transform: translateX(-50%);
     animation: fx-flash 1s ease-out both;
   }
 }
