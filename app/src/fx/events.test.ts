@@ -28,6 +28,18 @@ describe('회사 변화의 효과 (decisions.md 310번)', () => {
     expect(companyEvents(company(), null)).toEqual([])
   })
 
+  it('합성으로 재료가 빠지면 떠남으로 치지 않는다 (314번)', () => {
+    const before = company({
+      employees: [
+        { id: 1, name: '김대리', overallGrade: 'C' },
+        { id: 2, name: '박과장', overallGrade: 'C' },
+        { id: 3, name: '이주임', overallGrade: 'C' },
+      ] as never,
+    })
+    const after = company({ employees: [{ id: 1, name: '김대리', overallGrade: 'B' }] as never })
+    expect(companyEvents(before, after)).toEqual([])
+  })
+
   it('자본이 바뀌면 변화량, 사람이 들고 나면 이름', () => {
     const before = company({ employees: [{ id: 1, name: '김대리' }] as never })
     const after = company({ capital: 90, employees: [{ id: 2, name: '박과장' }] as never })

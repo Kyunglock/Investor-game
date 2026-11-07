@@ -217,7 +217,7 @@ function FloatText({
   }, [id, drop])
   return (
     <span
-      className={`fx-float absolute -translate-x-1/2 whitespace-nowrap font-mono-num text-[20px] font-bold drop-shadow-[0_2px_2px_rgba(0,0,0,0.6)] ${TONES[tone]}`}
+      className={`fx-float absolute whitespace-nowrap font-mono-num text-[20px] font-bold drop-shadow-[0_2px_2px_rgba(0,0,0,0.6)] ${TONES[tone]}`}
       style={{ left: x, top: y }}
     >
       {text}

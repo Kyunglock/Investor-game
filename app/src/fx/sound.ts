@@ -131,6 +131,13 @@ export const sfx = {
     tone(200, 90, { wave: 'square', gain: 0.1, slide: 80 })
     noise(90, 0.12)
   },
+  /** 재료가 바탕에 겹쳐짐: 짧고 맑은 한 음, 올릴수록 조금 높게 (합성 314번) */
+  absorb: (n: number) => tone(880 * 2 ** (n / 12), 120, { wave: 'sine', gain: 0.05 }),
+  /** 합성 완료: 부드러운 두 음 */
+  levelUp: () => {
+    tone(784, 160, { wave: 'sine', gain: 0.06 })
+    tone(1175, 320, { wave: 'sine', gain: 0.06, at: 0.11 })
+  },
   /** 팡파르: 이사·업적·엔딩 */
   fanfare: () => {
     const notes = [523, 659, 784, 1046, 784, 1046]

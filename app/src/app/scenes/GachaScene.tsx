@@ -1,17 +1,18 @@
 import type { Company } from '@web/api/client'
-import { CollectionGrid, MergeList, RatesTable, ReleaseList } from '@web/features/raising/Gacha'
+import { CollectionGrid, RatesTable, ReleaseList } from '@web/features/raising/Gacha'
 import { collected, drawable, mergeGroups } from '@web/features/raising/gachaRules'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useState } from 'react'
 import { useFx } from '../../fx/fx'
 import { haptic } from '../../fx/haptics'
 import { sfx } from '../../fx/sound'
+import { MergeBoard } from './MergeBoard'
 
 type Part = 'draw' | 'merge' | 'dex'
 
 /**
- * 채용 장면 (decisions.md 312번): 뽑기 · 합성 · 도감. 뽑기는 큰 채용권 숫자와 1명·N명 뽑기 버튼, 확률표, 쉬는 사람 내보내기. 합성은 같은 등급 셋을 합쳐
- * 한 단계 올리고(팡파르·색종이), 도감은 만난 등급을 모은다.
+ * 채용 장면 (decisions.md 312번): 뽑기 · 합성 · 도감. 뽑기는 큰 채용권 숫자와 1명·N명 뽑기 버튼, 확률표, 쉬는 사람 내보내기. 합성은 같은 등급 카드를 끌어
+ * 겹쳐 한 단계 올리고(MergeBoard, 314번), 도감은 만난 등급을 모은다.
  */
 export function GachaScene({ company }: { company: Company }) {
   const [part, setPart] = useState<Part>('draw')
@@ -57,16 +58,7 @@ export function GachaScene({ company }: { company: Company }) {
         {part === 'draw' && <DrawPart company={company} />}
         {part === 'merge' && (
           <div className="panel p-3">
-            <MergeList
-              company={company}
-              buttonClassName="btn btn-gold min-h-11 w-full px-3 text-[14px]"
-              onMerged={(_, el) => {
-                sfx.fanfare()
-                haptic.success()
-                useFx.getState().burstAt(el, 'confetti')
-                useFx.getState().flashScreen('rgba(245,211,107,0.35)')
-              }}
-            />
+            <MergeBoard company={company} />
           </div>
         )}
         {part === 'dex' && (
