@@ -129,6 +129,7 @@ class CompanyEngine {
     CompanyState company = new CompanyState();
     company.capital = Math.max(0, capital);
     company.tickets = properties.gacha().startTickets();
+    company.gachaReady = true;
     company.building = grade(company.capital);
     company.era = eras().getFirst().code();
     company.opening =
@@ -169,6 +170,7 @@ class CompanyEngine {
     next.draws = broke.draws;
     next.collection.putAll(broke.collection);
     next.tickets = broke.tickets + properties.gacha().startTickets();
+    next.gachaReady = true;
     next.capital = Math.max(0, capital);
     for (Employee e : broke.employees) {
       e.desk = null;
@@ -736,6 +738,22 @@ class CompanyEngine {
     }
     fitSeats(company);
     return company.lastDraw;
+  }
+
+  /**
+   * 채용 뽑기 전에 차린 회사를 옮긴다 (decisions.md 312번): 처음 채용권을 주고 지금 직원을 도감에 올린다. 이미 옮겼으면 아무것도 하지 않는다. 옮겼으면
+   * true.
+   */
+  boolean adoptGacha(CompanyState company) {
+    if (company.gachaReady) {
+      return false;
+    }
+    company.gachaReady = true;
+    company.tickets += properties.gacha().startTickets();
+    for (Employee e : company.employees) {
+      collect(company, employeeGrade(e));
+    }
+    return true;
   }
 
   /** 도감에 한 사람을 올린다. 그 등급이 처음이면 true. */

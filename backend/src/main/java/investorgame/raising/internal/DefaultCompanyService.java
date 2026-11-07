@@ -33,7 +33,19 @@ class DefaultCompanyService implements CompanyService {
   @Override
   @Transactional
   public Optional<CompanyView> current(UUID sessionId) {
-    return companies.latest(sessionId).map(row -> view(resume(row)));
+    return companies.latest(sessionId).map(row -> view(adopt(resume(row))));
+  }
+
+  /** 채용 뽑기 전에 차린 회사면 처음 채용권을 주고 도감을 채워 저장한다 (decisions.md 312번). */
+  private CompanyRepository.Row adopt(CompanyRepository.Row row) {
+    if (row.state().gachaReady || !"ACTIVE".equals(row.status())) {
+      return row;
+    }
+    CompanyRepository.Row locked = companies.lockActive(row.sessionId()).orElse(row);
+    if (engine.adoptGacha(locked.state())) {
+      companies.update(locked.id(), locked.state(), false);
+    }
+    return locked;
   }
 
   /**
@@ -274,6 +286,8 @@ class DefaultCompanyService implements CompanyService {
   private CompanyRepository.Row lockActive(UUID sessionId) {
     CompanyRepository.Row row =
         companies.lockActive(sessionId).orElseThrow(() -> new NotFoundException("회사가 없다"));
+    // 채용 뽑기 전에 차린 회사 (312번): 무엇을 하든 그 전에 옮긴다. 요청 끝에 함께 저장된다.
+    engine.adoptGacha(row.state());
     if (row.state().finished) {
       throw new InvalidRequestException("엔딩을 본 회사다. 새 회사를 차려야 한다");
     }

@@ -1198,4 +1198,19 @@ class CompanyEngineTest {
     ENGINE.settle(company, new HashSeededRandom(2));
     assertThat(company.timeline).extracting(e -> e.kind).doesNotContain("worst");
   }
+
+  /** 채용 뽑기 전에 차린 회사 (decisions.md 312번): 처음 불러올 때 채용권을 받고 지금 직원이 도감에 오른다. 한 번만. */
+  @Test
+  void 뽑기_전에_차린_회사는_채용권을_받고_직원이_도감에_오른다() {
+    CompanyState old = open(1, stats(50, 50, 50, 50), 100_000_000);
+    old.gachaReady = false;
+    old.tickets = 0;
+    old.collection.clear();
+    assertThat(ENGINE.adoptGacha(old)).isTrue();
+    assertThat(old.tickets).isEqualTo(PROPERTIES.gacha().startTickets());
+    assertThat(old.collection).containsEntry("B", 1);
+    assertThat(ENGINE.adoptGacha(old)).as("한 번만").isFalse();
+    assertThat(old.tickets).isEqualTo(PROPERTIES.gacha().startTickets());
+    assertThat(ENGINE.open(new HashSeededRandom(1), 100_000_000).gachaReady).isTrue();
+  }
 }
