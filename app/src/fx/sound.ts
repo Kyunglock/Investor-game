@@ -131,8 +131,6 @@ export const sfx = {
     tone(200, 90, { wave: 'square', gain: 0.1, slide: 80 })
     noise(90, 0.12)
   },
-  /** 재료가 바탕에 겹쳐짐: 짧고 맑은 한 음, 올릴수록 조금 높게 (합성 314번) */
-  absorb: (n: number) => tone(880 * 2 ** (n / 12), 120, { wave: 'sine', gain: 0.05 }),
   /** 합성 완료: 부드러운 두 음 */
   levelUp: () => {
     tone(784, 160, { wave: 'sine', gain: 0.06 })

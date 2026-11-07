@@ -2,12 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import type { Company, Drawn } from '../../api/client'
 import { Overlay } from '../game/Overlay'
 import { GradeBadge, tierClass, tierOf } from './GradeCard'
-import { busyIds, collected, drawable, mergeGroups, mergePlan } from './gachaRules'
+import { busyIds, collected, drawable } from './gachaRules'
 import { EMPLOYEE_LADDER } from './grades'
+import { MergeBoard } from './MergeBoard'
 import { titleOf } from './office'
 import { useRaisingStore } from './store'
-
-type Employee = Company['employees'][number]
 
 /** 카드가 하나씩 뒤집히는 간격(ms). 특급 앞에서는 한 번 더 뜸을 들인다. */
 const FLIP_MS = 420
@@ -194,106 +193,6 @@ export function CollectionGrid({ company }: { company: Company }) {
   )
 }
 
-/**
- * 합성 (312번): 같은 등급 mergeCount명이 모인 무리마다 "C 3명 → B 1명". 바탕은 누르면 바꿀 수 있고(기본은 자리에 앉은 사람), 재료는 쉬는 사람부터.
- * onMerged는 합친 뒤 부른다(앱이 터짐을 낸다).
- */
-export function MergeList({
-  company,
-  buttonClassName = 'min-h-10 rounded border border-gold px-3 text-[13px] font-semibold text-gold disabled:opacity-50',
-  onMerged,
-}: {
-  company: Company
-  buttonClassName?: string
-  onMerged?: (base: Employee, el: HTMLElement) => void
-}) {
-  const busy = useRaisingStore((s) => s.busy)
-  const { merge } = useRaisingStore.getState()
-  const [bases, setBases] = useState<Record<string, number>>({})
-  const groups = mergeGroups(company)
-  const need = company.gacha.mergeCount
-  if (groups.length === 0) {
-    return (
-      <p className="text-[13px] text-muted" data-testid="merge-empty">
-        같은 등급 {need}명이 모이면 합쳐서 한 단계 올릴 수 있습니다.
-      </p>
-    )
-  }
-  return (
-    <ul className="grid gap-2" data-testid="merge-list">
-      {groups.map((g) => {
-        const plan = mergePlan(g, need, bases[g.grade])
-        const next = EMPLOYEE_LADDER[EMPLOYEE_LADDER.indexOf(g.grade) + 1]
-        return (
-          <li
-            key={g.grade}
-            className="rounded border border-gold/60 bg-white p-2"
-            data-testid="merge-group"
-            data-grade={g.grade}
-          >
-            <p className="text-[13px] font-semibold">
-              <GradeBadge grade={g.grade} size="inline" />
-              {g.grade} {need}명 → <GradeBadge grade={next} size="inline" />
-              {next} 1명
-            </p>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {g.members.map((m) => {
-                const isBase = m.id === plan.base.id
-                const isMaterial = plan.materials.some((x) => x.id === m.id)
-                return (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => setBases((b) => ({ ...b, [g.grade]: m.id }))}
-                    className={`min-h-9 rounded border px-2 text-[12px] ${
-                      isBase
-                        ? 'border-gold bg-gold text-white'
-                        : isMaterial
-                          ? 'border-line text-ink'
-                          : 'border-line-soft text-faint'
-                    }`}
-                    aria-pressed={isBase}
-                    title={
-                      isBase
-                        ? '바탕: 이 사람이 오른다'
-                        : isMaterial
-                          ? '재료: 회사를 떠난다'
-                          : '이번에는 빠진다'
-                    }
-                  >
-                    {m.name}
-                    {isBase ? ' ★' : isMaterial ? ' (재료)' : ''}
-                    {m.desk && <span className="ml-1 opacity-70">· 자리</span>}
-                  </button>
-                )
-              })}
-            </div>
-            <p className="mt-1 text-[11px] text-muted">
-              ★ 바탕이 오르고 재료는 회사를 떠납니다(번 돈은 바탕에게). 이름을 누르면 바탕을
-              바꿉니다.
-            </p>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={(ev) => {
-                const el = ev.currentTarget
-                void merge(
-                  plan.base.id,
-                  plan.materials.map((m) => m.id),
-                ).then(() => onMerged?.(plan.base, el))
-              }}
-              className={`mt-1 ${buttonClassName}`}
-              data-testid="merge"
-            >
-              합성 · {plan.base.name}을(를) {next}로
-            </button>
-          </li>
-        )
-      })}
-    </ul>
-  )
-}
-
 /** 쉬는 사람 내보내기 (312번): 데리고 있을 자리가 모자랄 때. 걸린 일이 있는 사람은 먼저 답해야 한다. */
 export function ReleaseList({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
@@ -376,7 +275,7 @@ export function GachaPanel({ company }: { company: Company }) {
       </div>
       {full && (
         <p className="mt-1 text-[12px] text-wine" data-testid="roster-full">
-          데리고 있을 자리가 꽉 찼습니다. 같은 등급을 합치거나 쉬는 사람을 내보내세요.
+          데리고 있을 자리가 꽉 찼습니다. 같은 등급 카드를 끌어 겹치거나 쉬는 사람을 내보내세요.
         </p>
       )}
       <details className="mt-2">
@@ -386,7 +285,7 @@ export function GachaPanel({ company }: { company: Company }) {
         </div>
       </details>
       <h4 className="mt-3 font-pen text-[20px]">합성</h4>
-      <MergeList company={company} />
+      <MergeBoard company={company} />
       <h4 className="mt-3 font-pen text-[20px]">쉬는 사람 내보내기</h4>
       <ReleaseList company={company} />
       <h4 className="mt-3 font-pen text-[20px]">도감</h4>

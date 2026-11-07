@@ -171,7 +171,7 @@ raising:
       veteran-fee-step-bp: 75
     # 채용 뽑기 (decisions.md 312번): 공채 시장(지원자를 골라 계약금을 내고 뽑던 것)을 대신한다. 채용권 한 장에 한 명.
     # 채용권은 회사를 차릴 때 5장, 분기를 넘길 때마다 1장, 연말에 2장 더, 업적마다 3장, 이사하면 3장. 한 해에 6장 남짓이라 자리가 늘수록 합성이 중요해진다.
-    # 데리고 있을 수 있는 사람은 자리 수의 두 배. 같은 등급 셋을 합치면 바탕 한 명이 한 단계 오른다(SSS 위는 X·XX… 단계).
+    # 데리고 있을 수 있는 사람은 자리 수의 두 배. 같은 등급 둘을 합치면 바탕 한 명이 한 단계 오른다(SSS 위는 X·XX… 단계).
     gacha:
       start-tickets: 5
       quarter-tickets: 1
@@ -180,7 +180,7 @@ raising:
       move-tickets: 3
       max-draws: 10
       roster-percent: 200
-      merge-count: 3
+      merge-count: 2
       # 확률표: 회사 등급(인사팀이면 더 높게)보다 steps 단계 위가 percent%. 맨 끝은 특급(전의 특급 인재, 290번)
       rates:
         - { steps: -1, percent: 30, star: false }

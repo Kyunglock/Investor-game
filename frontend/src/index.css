@@ -1071,3 +1071,106 @@ p.animate-stamp {
     animation: none;
   }
 }
+
+/* 끌어서 합성 (decisions.md 314·316번): 화려한 터짐 없이 부드러운 움직임만 */
+.merge-card {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+  border-radius: 10px;
+  transition:
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.22s ease,
+    filter 0.22s ease,
+    box-shadow 0.22s ease;
+}
+.merge-card.is-dragged {
+  opacity: 0.3;
+}
+.merge-card.can-take {
+  box-shadow: 0 0 0 1.5px rgba(201, 162, 58, 0.55);
+}
+.merge-card.is-over {
+  transform: scale(1.04);
+  box-shadow: 0 0 0 2px #c9a23a;
+}
+.merge-card.is-charging {
+  z-index: 2;
+  animation: merge-rise 0.52s ease-in-out both;
+}
+.merge-card.is-flying {
+  z-index: 1;
+  animation: merge-glide 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+.merge-ghost {
+  position: fixed;
+  z-index: 60;
+  width: 84px;
+  aspect-ratio: 3 / 4;
+  pointer-events: none;
+  transform: translate(-50%, -55%) scale(1.04);
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.28));
+  transition: transform 0.15s ease;
+}
+.merge-ghost.is-over {
+  transform: translate(-50%, -55%) scale(0.96);
+}
+.merge-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(201, 162, 58, 0.45);
+  background: #fffaf0;
+  padding: 8px 12px;
+  font-size: 13px;
+  animation: merge-result 2.6s ease both;
+}
+@keyframes merge-rise {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.03);
+    box-shadow:
+      0 0 0 2px #c9a23a,
+      0 8px 20px rgba(201, 162, 58, 0.35);
+  }
+}
+@keyframes merge-glide {
+  0% {
+    transform: scale(0.94);
+    opacity: 0.45;
+  }
+  100% {
+    transform: translate(var(--dx), var(--dy)) scale(0.7);
+    opacity: 0;
+  }
+}
+@keyframes merge-result {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  10%,
+  85% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .merge-result,
+  .merge-card.is-charging,
+  .merge-card.is-flying {
+    animation: none;
+  }
+}
