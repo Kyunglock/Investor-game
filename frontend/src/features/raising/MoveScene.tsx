@@ -1,6 +1,6 @@
 import type { Grade } from '../../api/client'
+import { INK } from '../game/cat/draw'
 import { Overlay } from '../game/Overlay'
-import { usePixelArt } from '../game/pixelArt'
 import { BuildingArt } from './BuildingArt'
 import { moveOf, wreathsFor } from './board'
 import { newlyOpened } from './LockedDesks'
@@ -11,7 +11,7 @@ import { useRaisingStore } from './store'
 /**
  * 이사 장면 (증권사 육성 설계 8.3절). 결산 뒤 회사 등급이 바뀌었을 때 한 번 보인다. 글은 등급 대신 건물로 말한다 (238번). 오르면 우리 건물이 옆 건물을
  * 박치기로 무너뜨리고 그 자리에서 커지는 장면(243번)과 단골 인물이 보낸 축하 화환,
- * 떨어지면 짐을 줄여 작은 사무실로 옮긴다. 그림을 끄면 글만 보인다 (190번).
+ * 떨어지면 짐을 줄여 작은 사무실로 옮긴다. 그림은 벡터 건물(343번)이다.
  */
 export function MoveScene({
   before,
@@ -24,7 +24,6 @@ export function MoveScene({
   year: number
   onDone: () => void
 }) {
-  const shown = usePixelArt((s) => s.shown)
   const company = useRaisingStore((s) => s.company)
   const move = moveOf(before, after)
   // 커지면서 새로 열린 자리 (#393): 무엇을 하는 자리인지 한 줄씩 알려 준다.
@@ -58,7 +57,7 @@ export function MoveScene({
         data-testid="move-scene"
         data-move={move}
       >
-        {shown && built && (
+        {built && (
           <div className="relative overflow-hidden" data-testid="build-complete">
             <div className="build-complete">
               <BuildingArt grade={after} />
@@ -66,28 +65,89 @@ export function MoveScene({
             <div className="curtain-off absolute inset-x-[20%] bottom-[10%] top-[35%] rounded-sm bg-[#2f5d50]/90" />
           </div>
         )}
-        {shown && up && !built && <RivalSmash before={before} after={after} rival={rival} />}
-        {shown && !up && (
-          <svg
-            viewBox="0 0 64 20"
-            className="block h-auto w-full"
-            style={{ imageRendering: 'pixelated', shapeRendering: 'crispEdges' }}
-            aria-hidden="true"
-          >
-            <rect x={0} y={0} width={64} height={17} fill="#cfe6e1" />
-            <rect x={0} y={17} width={64} height={3} fill="#c9d3d8" />
-            {/* 건물과 간판 */}
-            <rect x={36} y={3} width={24} height={14} fill="#efe7dc" />
-            <rect x={38} y={4} width={20} height={3} fill="#8d9199" />
-            <rect x={45} y={10} width={6} height={7} fill="#8a7560" />
+        {up && !built && <RivalSmash before={before} after={after} rival={rival} />}
+        {!up && (
+          <svg viewBox="0 0 128 40" className="block h-auto w-full rounded-xl" aria-hidden="true">
+            <rect x={0} y={0} width={128} height={34} fill="#dff1f7" />
+            <rect x={0} y={34} width={128} height={6} fill="#d9cfbf" />
+            <line x1={0} y1={34} x2={128} y2={34} stroke={INK} strokeWidth={0.8} />
+            {/* 작은 건물과 간판 */}
+            <rect
+              x={76}
+              y={8}
+              width={44}
+              height={26}
+              rx={2.5}
+              fill="#f6efe2"
+              stroke={INK}
+              strokeWidth={1.2}
+            />
+            <rect
+              x={80}
+              y={11}
+              width={36}
+              height={5}
+              rx={1.5}
+              fill="#9ab8d3"
+              stroke={INK}
+              strokeWidth={0.9}
+            />
+            <rect
+              x={92}
+              y={22}
+              width={9}
+              height={12}
+              rx={1.5}
+              fill="#a98464"
+              stroke={INK}
+              strokeWidth={0.9}
+            />
             {/* 이삿짐 트럭 */}
-            <rect x={4} y={9} width={16} height={7} fill="#6b6f76" />
-            <rect x={20} y={11} width={6} height={5} fill="#6b6f76" />
-            <rect x={21} y={12} width={3} height={2} fill="#dbeaf5" />
-            <rect x={6} y={16} width={3} height={2} fill="#1d2626" />
-            <rect x={20} y={16} width={3} height={2} fill="#1d2626" />
-            {/* 짐을 줄여 몇 개만 */}
-            <rect x={9} y={6} width={3} height={3} fill="#c08a6a" />
+            <rect
+              x={8}
+              y={14}
+              width={34}
+              height={16}
+              rx={2.5}
+              fill="#8fcf86"
+              stroke={INK}
+              strokeWidth={1.2}
+            />
+            <rect
+              x={42}
+              y={19}
+              width={14}
+              height={11}
+              rx={2}
+              fill="#ffd16b"
+              stroke={INK}
+              strokeWidth={1.2}
+            />
+            <rect
+              x={45}
+              y={21}
+              width={7}
+              height={4.5}
+              rx={1}
+              fill="#dbeaf3"
+              stroke={INK}
+              strokeWidth={0.8}
+            />
+            <circle cx={16} cy={31} r={3.4} fill="#4a3528" />
+            <circle cx={16} cy={31} r={1.3} fill="#d9cfbf" />
+            <circle cx={48} cy={31} r={3.4} fill="#4a3528" />
+            <circle cx={48} cy={31} r={1.3} fill="#d9cfbf" />
+            {/* 짐을 줄여 상자 하나 */}
+            <rect
+              x={20}
+              y={6}
+              width={9}
+              height={8}
+              rx={1.2}
+              fill="#e8b48a"
+              stroke={INK}
+              strokeWidth={0.9}
+            />
           </svg>
         )}
         <p className="mt-2 text-[14px] font-semibold">{line}</p>

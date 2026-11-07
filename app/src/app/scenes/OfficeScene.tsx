@@ -1,11 +1,9 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
-import { usePixelArt } from '@web/features/game/pixelArt'
-import { BuildingArt } from '@web/features/raising/BuildingArt'
-import { ConstructionArt } from '@web/features/raising/ConstructionArt'
 import { GradeCard } from '@web/features/raising/GradeCard'
 import { IndustryLine } from '@web/features/raising/IndustryLine'
 import { OfficeArt, type SeatFocus } from '@web/features/raising/OfficeArt'
+import { OfficeRoom } from '@web/features/raising/OfficeRoom'
 import { nextStep } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
 import { TutorialBanner, useTutorialSpot } from '@web/features/raising/TutorialBanner'
@@ -18,7 +16,8 @@ import { Sheet } from '../Sheet'
 import { useAppUi } from '../ui'
 
 /**
- * 사무실 장면 (decisions.md 309·310번): 시대 한 줄, 튜토리얼 띠, 건물, 이사, 사무실 미니맵. 미니맵의 칸을 누르면 아래에서 자리 고르기 시트가 올라온다.
+ * 사무실 장면 (decisions.md 309·310·343번): 앱의 첫 화면이다. 제목 로고, 일하는 고양이 사무실 그림, 시대 한 줄, 튜토리얼 띠, 다음 건물, 사무실 미니맵.
+ * 미니맵의 칸을 누르면 아래에서 자리 고르기 시트가 올라온다.
  */
 export function OfficeScene({ company }: { company: Company }) {
   const sheet = useAppUi((s) => s.sheet)
@@ -27,7 +26,16 @@ export function OfficeScene({ company }: { company: Company }) {
   const focus = sheet?.kind === 'seat' ? sheet.focus : null
   return (
     <div data-testid="office-scene">
-      <p className="panel-dark px-3 py-1.5 text-[12px] text-ink/70" data-testid="era">
+      <h1
+        className="title-in text-center font-game text-[30px] leading-none text-[#ffd23f] [-webkit-text-stroke:3px_var(--outline)] [paint-order:stroke] [text-shadow:0_4px_0_var(--outline)]"
+        data-testid="title"
+      >
+        흔들리지 않는 고양이
+      </h1>
+      <div className="panel mt-2 overflow-hidden p-0">
+        <OfficeRoom company={company} />
+      </div>
+      <p className="panel-dark mt-2 px-3 py-1.5 text-[12px] text-ink/70" data-testid="era">
         <b className="text-[#e08a00]">{company.era.name}</b> · {company.era.description}
       </p>
       {company.opening && !company.lastSettlement && (
@@ -37,15 +45,6 @@ export function OfficeScene({ company }: { company: Company }) {
       )}
       <TutorialWrap company={company} />
       <IndustryLine company={company} className="mt-2 text-center text-ink/80" />
-      <div className="panel relative mx-auto mt-2 max-w-[360px] p-2">
-        <BuildingArt grade={company.grade} />
-        {company.upgrade?.left != null && (
-          <ConstructionArt
-            done={company.upgrade.years - company.upgrade.left}
-            years={company.upgrade.years}
-          />
-        )}
-      </div>
       <NextStep company={company} />
       <OfficeArt
         company={company}
@@ -59,7 +58,6 @@ export function OfficeScene({ company }: { company: Company }) {
               }
         }
       />
-      <PixelToggle />
       {focus && <SeatSheet company={company} focus={focus} onClose={closeSheet} />}
     </div>
   )
@@ -139,22 +137,6 @@ function NextStep({ company }: { company: Company }) {
         {plan.years > 0 ? '공사 시작' : step.kind === 'move' ? '이사하기' : '넓히기'}
       </button>
     </div>
-  )
-}
-
-/** 도트 그림 끄기 (decisions.md 190번). */
-function PixelToggle() {
-  const shown = usePixelArt((s) => s.shown)
-  const setShown = usePixelArt((s) => s.setShown)
-  return (
-    <button
-      type="button"
-      onClick={() => setShown(!shown)}
-      className="mt-1 text-[12px] text-ink/50 underline"
-      aria-pressed={!shown}
-    >
-      {shown ? '그림 끄기' : '그림 켜기'}
-    </button>
   )
 }
 

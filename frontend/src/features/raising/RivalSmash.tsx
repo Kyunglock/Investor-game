@@ -1,9 +1,10 @@
 import { type CSSProperties, useState } from 'react'
 import type { Grade } from '../../api/client'
-import { PALETTE } from '../game/pixel/palette'
-import { BUILDING_GROUND, BUILDING_W, buildingRects } from './BuildingArt'
+import { INK } from '../game/cat/draw'
+import { BUILDING_GROUND, BUILDING_W, BuildingScene } from './BuildingArt'
+import { tierOf } from './office'
 
-/** 장면 크기(칸). 건물 그림 하나가 64×40 칸을 차지하고(그림은 128×80이라 반 크기로 줄여 그린다), 길바닥은 40행부터다. */
+/** 장면 크기. 건물 그림 하나가 64×40을 차지하고(그림 128×80을 반으로 줄인다), 길바닥은 40행부터다. */
 const SCENE_W = 128
 const SCENE_H = 48
 const GROUND_Y = 40
@@ -23,32 +24,10 @@ const PIECES: { x: number; w: number; dx: number; rot: number }[] = [
   { x: 46, w: 18, dx: 12, rot: 50 },
 ]
 
-/** 옆 건물은 우리 건물과 같은 그림을 잿빛으로 칠한다. */
-const RIVAL_PALETTE: Record<string, string> = Object.fromEntries(
-  Object.entries(PALETTE).map(([code, hex]) => {
-    const n = Number.parseInt(hex.slice(1), 16)
-    const l = 0.3 * (n >> 16) + 0.59 * ((n >> 8) & 255) + 0.11 * (n & 255)
-    const c = (k: number) =>
-      Math.round(Math.min(255, l * k))
-        .toString(16)
-        .padStart(2, '0')
-    return [code, `#${c(0.78)}${c(0.8)}${c(0.92)}`]
-  }),
-)
-
-function Sprite({ grade, palette = PALETTE }: { grade: Grade; palette?: Record<string, string> }) {
+function Sprite({ grade, grey = false }: { grade: Grade; grey?: boolean }) {
   return (
     <g transform={`scale(${SPRITE_SCALE})`}>
-      {buildingRects(grade, true, palette).map((r) => (
-        <rect
-          key={`${r.x}-${r.y}`}
-          x={r.x}
-          y={r.y}
-          width={r.width}
-          height={r.height}
-          fill={r.fill}
-        />
-      ))}
+      <BuildingScene tier={tierOf(grade)} bare tone={grey ? 'grey' : 'color'} />
     </g>
   )
 }
@@ -56,9 +35,9 @@ function Sprite({ grade, palette = PALETTE }: { grade: Grade; palette?: Record<s
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
 /**
- * 회사가 한 단계 오를 때의 장면 (decisions.md 243번). 우리 건물이 몸을 젖혔다가 옆 건물을 박치기하고("쾅!"), 옆 건물은 조각나
+ * 회사가 한 단계 오를 때의 장면 (decisions.md 243·343번). 우리 건물이 몸을 젖혔다가 옆 건물을 박치기하고("쾅!"), 옆 건물은 조각나
  * 무너지고, 우리 건물은 그 자리로 가서 새 등급의 건물로 커진다. 옆 건물은 새 등급의 건물을 잿빛으로 칠한 것이다(그 자리를 빼앗는다). 3.6초, 다시 볼 수
- * 있다. 움직임을 줄이는 설정이면 끝난 모습만.
+ * 있다. 움직임을 줄이는 설정이면 끝난 모습만. 그림은 벡터 건물(BuildingArt)이다.
  */
 export function RivalSmash({
   before,
@@ -80,21 +59,20 @@ export function RivalSmash({
       <svg
         key={run}
         viewBox={`0 0 ${SCENE_W} ${SCENE_H}`}
-        className={`block h-auto w-full rounded ${anim('smash-shake') ?? ''}`}
-        style={{ imageRendering: 'pixelated', shapeRendering: 'crispEdges' }}
+        className={`block h-auto w-full rounded-xl ${anim('smash-shake') ?? ''}`}
         role="img"
         aria-label={`우리 건물이 ${rival}을 박치기해 무너뜨리고 더 큰 건물로 커졌다`}
       >
         <defs>
           {PIECES.map((p) => (
             <clipPath key={p.x} id={`smash-piece-${run}-${p.x}`}>
-              <rect x={p.x} y={0} width={p.w} height={40} />
+              <rect x={p.x} y={-10} width={p.w} height={50} />
             </clipPath>
           ))}
         </defs>
-        <rect x={0} y={0} width={SCENE_W} height={GROUND_Y} fill="#cfe6e1" />
-        <rect x={0} y={GROUND_Y} width={SCENE_W} height={SCENE_H - GROUND_Y} fill="#c9d3d8" />
-        <rect x={0} y={GROUND_Y} width={SCENE_W} height={1} fill="#b9a995" />
+        <rect x={0} y={0} width={SCENE_W} height={GROUND_Y} fill="#dff1f7" />
+        <rect x={0} y={GROUND_Y} width={SCENE_W} height={SCENE_H - GROUND_Y} fill="#d9cfbf" />
+        <line x1={0} y1={GROUND_Y} x2={SCENE_W} y2={GROUND_Y} stroke={INK} strokeWidth={0.6} />
 
         {!still && (
           <g transform={`translate(${RIVAL_X} ${SPRITE_Y})`}>
@@ -112,7 +90,7 @@ export function RivalSmash({
                 }
                 data-testid="rival-piece"
               >
-                <Sprite grade={rivalGrade ?? after} palette={RIVAL_PALETTE} />
+                <Sprite grade={rivalGrade ?? after} grey />
               </g>
             ))}
           </g>
@@ -140,7 +118,9 @@ export function RivalSmash({
                 cx={x}
                 cy={GROUND_Y - 2}
                 r={4 + (i % 2) * 2}
-                fill="#e9e4da"
+                fill="#efe9dd"
+                stroke={INK}
+                strokeWidth={0.5}
                 className="smash-dust"
                 style={{ animationDelay: `${i * 60}ms` }}
               />
@@ -148,19 +128,12 @@ export function RivalSmash({
             <g className="smash-bang">
               <polygon
                 points="74,8 80,14 88,6 88,16 98,16 90,22 98,30 86,26 82,34 78,26 68,28 74,20"
-                fill="#e3b53a"
-                stroke="#8b2342"
+                fill="#ffd16b"
+                stroke={INK}
                 strokeWidth={1}
+                strokeLinejoin="round"
               />
-              <text
-                x={83}
-                y={23}
-                textAnchor="middle"
-                fontSize={8}
-                fontWeight={900}
-                fill="#8b2342"
-                style={{ shapeRendering: 'auto' }}
-              >
+              <text x={83} y={23} textAnchor="middle" fontSize={8} fontWeight={900} fill={INK}>
                 쾅!
               </text>
             </g>
@@ -171,8 +144,8 @@ export function RivalSmash({
               [34, 28],
             ].map(([x, y]) => (
               <g key={`${x}-${y}`} className="smash-spark">
-                <rect x={x} y={y} width={1} height={5} fill="#e3b53a" />
-                <rect x={x - 2} y={y + 2} width={5} height={1} fill="#e3b53a" />
+                <rect x={x} y={y} width={1} height={5} rx={0.5} fill="#ffd16b" />
+                <rect x={x - 2} y={y + 2} width={5} height={1} rx={0.5} fill="#ffd16b" />
               </g>
             ))}
           </>

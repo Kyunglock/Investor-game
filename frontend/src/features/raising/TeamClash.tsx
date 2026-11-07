@@ -3,8 +3,7 @@ import type { Company } from '../../api/client'
 import { CatSprite } from '../game/cat/CatSprite'
 import { customerLook, employeeLook } from '../game/cat/look'
 import { withParticle } from '../game/labels'
-import type { MoodKey } from '../game/pixel/moods'
-import { usePixelArt } from '../game/pixelArt'
+import type { MoodKey } from '../game/moods'
 
 type Employee = Company['employees'][number]
 
@@ -13,7 +12,7 @@ const CHARACTER_PX = 40
 
 /**
  * 밀어내기 장면의 고양이 하나 (286·304·341번). 직원은 사무실 미니맵(237번)과 같은 모습(품종은 번호, 차림새는 종합 등급)이고, 끌려 나온 옆자리는 손님 고양이다. 표정: 말할
- * 때 결의, 이기면 기쁨, 지면 절망. 그림을 끄면(190번) 동그라미 글자로 그린다.
+ * 때 결의, 이기면 기쁨, 지면 절망.
  */
 function Character({
   employee,
@@ -33,18 +32,6 @@ function Character({
   /** 그림 너비(px). 단톡방 프로필은 작게. */
   size?: number
 }) {
-  const shown = usePixelArt((s) => s.shown)
-  if (!shown) {
-    return (
-      <span
-        className={`flex h-7 w-7 items-center justify-center rounded-full border-2 border-card text-[13px] font-bold text-white shadow ${
-          side === 'BUY' ? 'bg-up' : 'bg-down'
-        } ${talking ? 'ring-2 ring-gold' : ''}`}
-      >
-        {fallback}
-      </span>
-    )
-  }
   const look_ = employee
     ? employeeLook(employee.id, employee.overallGrade, mood)
     : customerLook(look, mood)

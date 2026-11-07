@@ -58,7 +58,7 @@ const images: Record<string, { size: number; background: string; body: string }>
   'splash.png': {
     size: 2732,
     background: INK,
-    body: `<div class="center">${mark(560)}<div class="title" style="font-size:200px">증권사 사장</div><div class="sub" style="font-size:72px">증권사 육성 게임</div></div>`,
+    body: `<div class="center">${mark(560)}<div class="title" style="font-size:168px">흔들리지 않는 고양이</div><div class="sub" style="font-size:72px">멘탈을 지키는 투자 게임</div></div>`,
   },
 }
 images['splash-dark.png'] = images['splash.png']

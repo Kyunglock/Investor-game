@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom'
 import type { Company } from '../../api/client'
 import { Document } from '../game/Document'
 import { money, withParticle } from '../game/labels'
-import { usePixelArt } from '../game/pixelArt'
 import { toggleAutoPlay } from './autoPlay'
 import { BuildingArt } from './BuildingArt'
 import { pnlLabel } from './board'
@@ -129,7 +128,6 @@ export function CompanyScreen({ company }: { company: Company }) {
         <NextStep company={company} />
         <OfficeArt company={company} focus={focus} onSeat={ended ? undefined : setFocus} />
         {!ended && focus && <SeatPicker company={company} focus={focus} onFocus={setFocus} />}
-        <PixelToggle />
 
         <CompanyTabs company={company} />
         <AutoCountdown />
@@ -1102,22 +1100,6 @@ function HistoryTab({ company }: { company: Company }) {
         ))}
       </ol>
     </section>
-  )
-}
-
-/** 도트 그림 끄기 (decisions.md 190번). 끄면 건물 그림 대신 같은 내용을 글로 보인다. */
-function PixelToggle() {
-  const shown = usePixelArt((s) => s.shown)
-  const setShown = usePixelArt((s) => s.setShown)
-  return (
-    <button
-      type="button"
-      onClick={() => setShown(!shown)}
-      className="mt-1 text-[12px] text-muted underline"
-      aria-pressed={!shown}
-    >
-      {shown ? '그림 끄기' : '그림 켜기'}
-    </button>
   )
 }
 

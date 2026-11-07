@@ -4,7 +4,7 @@
 
 ## 1. 무엇인가
 
-- `app/`이 앱 패키지다. `app/src/`가 앱 화면, `app/android/`가 안드로이드 프로젝트, `app/capacitor.config.ts`가 앱 이름(증권사 사장)·패키지(`com.kyunglock.investorgame`)·화면을 어디서 가져올지를 정한다.
+- `app/`이 앱 패키지다. `app/src/`가 앱 화면, `app/android/`가 안드로이드 프로젝트, `app/capacitor.config.ts`가 앱 이름(흔들리지 않는 고양이)·패키지(`com.kyunglock.investorgame`)·화면을 어디서 가져올지를 정한다.
 - **앱 화면은 웹 화면과 다르다.** 웹(`frontend/`)은 공문서 한 장을 내리며 읽는 꼴이고, 앱은 위에 머리띠(건물·해·분기·자본), 가운데 장면 하나, 아래에 분기 넘기기 버튼과 다섯 탭(사무실·채용·배치·이슈·기록)이다. 바깥은 스크롤하지 않고 장면 안에서만 움직이며, 자리 고르기·자리 카드는 아래에서 올라오는 시트다. 채용은 뽑기·합성·도감으로 나뉘고, 뽑으면 카드가 하나씩 뒤집힌다(특급은 금빛으로 떨다가 늦게 열리며 화면이 번쩍이고 색종이가 터진다, 312번).
 - **같은 것을 그대로 쓴다.** 앱은 `frontend/src`를 `@web/*`로 불러 API 클라이언트·게임 상태(스토어)·도트 그림(건물·사무실·사람)·캐릭터 카드·회의 창(거시경제·종목)·결산서·분기 실적·이사 장면·사표·엔딩·튜토리얼·자동 진행을 다시 만들지 않고 쓴다. 규칙은 서버에 있다.
 - 세로 고정, 상태바 숨김(`styles.xml`), 안드로이드 뒤로 가기는 시트 닫기 → 사무실 탭 → 앱을 뒤로 보내기 순(`@capacitor/app`). 앱 안에서는 서비스 워커를 등록하지 않고 애드센스 광고를 그리지 않는다.
@@ -30,7 +30,7 @@ pnpm dev                             # http://localhost:5173/app/ (API는 localh
 pnpm check && pnpm exec tsc -b && pnpm test && pnpm build
 ```
 
-서버 없이 화면만 보려면 `pnpm dev`를 띄운 채 `CHROMIUM_PATH=/경로/chrome node scripts/shot.ts`(가짜 회사 `scripts/fixture.ts`로 모든 장면을 `scripts/shots/`에 찍는다. `EMPTY=1`이면 제목 화면).
+서버 없이 화면만 보려면 `pnpm dev`를 띄운 채 `CHROMIUM_PATH=/경로/chrome node scripts/shot.ts`(가짜 회사 `scripts/fixture.ts`로 모든 장면을 `scripts/shots/`에 찍는다. `EMPTY=1`이면 회사가 없을 때 처음 들어가는 모습).
 
 앱 화면을 고칠 때: 규칙·숫자·문구가 웹과 같아야 하는 것(회의 창, 결산서, 그림)은 `frontend/src`를 고친다(웹과 앱 둘 다 바뀐다). 틀·탭·시트·장면은 `app/src/app/`을 고친다.
 

@@ -2,7 +2,6 @@ import { memo } from 'react'
 import type { Company, Grade } from '../../api/client'
 import { CatSprite } from '../game/cat/CatSprite'
 import { customerLook, employeeLook } from '../game/cat/look'
-import { usePixelArt } from '../game/pixelArt'
 import { pnlLabel } from './board'
 import { tierOf as cardTierOf, GradeBadge, tierClass } from './GradeCard'
 import {
@@ -80,8 +79,7 @@ function Lobby({ grade }: { grade: Grade }) {
 
 /**
  * 사무실 미니맵 (decisions.md 237번). 옆모습으로 책상에 앉은 단면 그림(213번) 대신, 위에서 내려다본 바닥에 자리 칸을 늘어놓고 칸마다 직원의 정면 모습·이름·자리·
- * 지난 결산 손익을 보인다. 빈 자리는 점선 칸이고, 쉬는 사람은 휴게실 줄에 선다. 칸을 누르면 미니맵 아래에서 바로 자리를 고른다. 그림을 끄면 같은 내용을 글로
- * 보인다 (190번).
+ * 지난 결산 손익을 보인다. 빈 자리는 점선 칸이고, 쉬는 사람은 휴게실 줄에 선다. 칸을 누르면 미니맵 아래에서 바로 자리를 고른다.
  */
 export const OfficeArt = memo(function OfficeArt({
   company,
@@ -94,15 +92,7 @@ export const OfficeArt = memo(function OfficeArt({
   /** 있으면 칸을 누를 수 있다: 직원을 누르면 그 사람의 자리, 빈 자리를 누르면 앉힐 사람을 고른다. */
   onSeat?: (focus: SeatFocus) => void
 }) {
-  const shown = usePixelArt((s) => s.shown)
   const caption = officeCaption(company.grade, company.seats)
-  if (!shown) {
-    return (
-      <p className="mt-3 text-[13px] text-muted" data-testid="office-caption">
-        {caption}
-      </p>
-    )
-  }
   const { tiles, resting } = seatTiles(company)
   const [a, b] = FLOORS[tierOf(company.grade)]
   const picked = (id: number) => focus !== null && 'employee' in focus && focus.employee === id

@@ -9,7 +9,7 @@ const serverUrl = process.env.CAP_SERVER_URL?.trim() ?? 'https://game.kwaklabs.c
 
 const config: CapacitorConfig = {
   appId: 'com.kyunglock.investorgame',
-  appName: '증권사 사장',
+  appName: '흔들리지 않는 고양이',
   webDir: 'dist',
   server: serverUrl
     ? { url: serverUrl, cleartext: serverUrl.startsWith('http://') }

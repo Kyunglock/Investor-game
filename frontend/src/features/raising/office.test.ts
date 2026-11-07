@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import type { Company } from '../../api/client'
-import { PALETTE } from '../game/pixel/palette'
-import { buildingMap } from './BuildingArt'
-import { LADDER } from './grades'
 import {
   attireOf,
   customersOf,
@@ -110,36 +107,6 @@ describe('건물로 보이는 회사 (decisions.md 238번)', () => {
     expect(nextStep('E')).toEqual({ kind: 'move', to: '상가 2층' })
     expect(nextStep('SS')).toEqual({ kind: 'move', to: '여의도 빌딩 통째로' })
     expect(nextStep('ZZZ')).toBeNull()
-  })
-
-  it('모든 등급의 건물 그림은 팔레트 글자만 쓰고, 우리 층은 불이 켜져 있다', () => {
-    for (const grade of LADDER) {
-      const map = buildingMap(grade)
-      expect(map.flat().every((ch) => ch in PALETTE)).toBe(true)
-      expect(map.flat()).toContain('L')
-    }
-    // 건물이 클수록 불 켜진 창이 많다.
-    const lit = (g: (typeof LADDER)[number]) =>
-      buildingMap(g)
-        .flat()
-        .filter((c) => c === 'L').length
-    expect(lit('F')).toBeLessThan(lit('D'))
-    expect(lit('S')).toBeLessThan(lit('SSS'))
-  })
-})
-
-describe('라이벌 박치기 장면의 건물 (decisions.md 243번)', () => {
-  it('건물만 그리면 하늘·이웃 건물·길바닥 없이 건물 칸은 그대로다', () => {
-    for (const grade of ['F', 'D', 'B', 'S', 'SSS', 'X', 'Z'] as const) {
-      const full = buildingMap(grade)
-      const bare = buildingMap(grade, true)
-      expect(bare[0][0]).toBe('.')
-      expect(bare.at(-1)?.[0]).toBe('.')
-      // 불 켜진 창(우리 층)은 둘 다 같다.
-      const lit = (g: string[][]) => g.flat().filter((c) => c === 'L').length
-      expect(lit(bare)).toBe(lit(full))
-      expect(bare.flat().every((ch) => ch === '.' || ch in PALETTE)).toBe(true)
-    }
   })
 })
 

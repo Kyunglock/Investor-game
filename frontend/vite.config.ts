@@ -35,8 +35,8 @@ export default defineConfig(({ mode }) => ({
       // 안드로이드 앱 화면(app/)은 /app/ 아래에 같이 배포된다 (decisions.md 309번): 웹의 서비스 워커가 그 주소를 웹 화면으로 바꿔치지 않는다.
       workbox: { navigateFallbackDenylist: [/^\/api\//, /^\/r\//, /^\/ads\.txt$/, /^\/app\//] },
       manifest: {
-        name: '증권사 사장',
-        short_name: '증권사 사장',
+        name: '흔들리지 않는 고양이',
+        short_name: '흔들리지 않는 고양이',
         lang: 'ko',
         display: 'standalone',
         orientation: 'portrait',

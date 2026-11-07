@@ -46,10 +46,12 @@ export function CompanyStart({
     </button>
   )
   return (
-    <Document title="증권사 사장">
-      <p className="text-[12px] font-semibold tracking-[0.2em] text-muted">증권사 육성 게임</p>
+    <Document title="흔들리지 않는 고양이">
+      <p className="text-[12px] font-semibold tracking-[0.2em] text-muted">
+        멘탈을 지키는 투자 게임
+      </p>
       <h2 className="font-serif-kr text-[40px] font-black leading-tight" data-testid="title">
-        증권사 사장
+        흔들리지 않는 고양이
       </h2>
       <p className="mt-1 text-[14px] text-muted">
         직원을 뽑고, 회의를 열고, 여의도 랜드마크 타워까지.
