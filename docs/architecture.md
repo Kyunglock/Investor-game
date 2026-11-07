@@ -181,7 +181,7 @@ backend/                          Spring Boot (Gradle)
     architecture/                ArchUnit 경계 검사, 마이그레이션 규칙 검사
 frontend/                         클라이언트 (React, Vite)
   src/features/raising/          회사 화면(탭, 투자 회의 창, 자동 배치), 사무실 그림, 이사 장면
-  src/features/game/             카드·공문서·창(Overlay) 같은 공용 화면 조각, 도트 사람 그림(pixel/)
+  src/features/game/             카드·공문서·창(Overlay) 같은 공용 화면 조각, 고양이 그림(cat/, 341번), 도트 팔레트·건물용 sprite 도구(pixel/)
   src/features/admin/            관리자 플레이 기록
   e2e/                           Playwright
 contracts/openapi/                OpenAPI 명세

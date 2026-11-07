@@ -1,21 +1,18 @@
 import { type CSSProperties, useEffect, useRef, useState } from 'react'
 import type { Company } from '../../api/client'
+import { CatSprite } from '../game/cat/CatSprite'
+import { customerLook, employeeLook } from '../game/cat/look'
 import { withParticle } from '../game/labels'
-import type { Figure } from '../game/pixel/figure'
 import type { MoodKey } from '../game/pixel/moods'
-import { Person } from '../game/pixel/Person'
-import { SPRITE_HEIGHT, SPRITE_WIDTH } from '../game/pixel/sprite'
 import { usePixelArt } from '../game/pixelArt'
-import { ATTIRE_COLORS, attireOf } from './office'
 
 type Employee = Company['employees'][number]
 
-const PIXELATED = { imageRendering: 'pixelated', shapeRendering: 'crispEdges' } as const
 /** 회의실 캐릭터 너비(px). */
 const CHARACTER_PX = 40
 
 /**
- * 밀어내기 장면의 사람 하나 (286·304번). 직원은 사무실 미니맵(237번)과 같은 모습(성별·차림새는 종합 등급)이고, 끌려 나온 옆자리 사람은 손님 모습이다. 표정: 말할
+ * 밀어내기 장면의 고양이 하나 (286·304·341번). 직원은 사무실 미니맵(237번)과 같은 모습(품종은 번호, 차림새는 종합 등급)이고, 끌려 나온 옆자리는 손님 고양이다. 표정: 말할
  * 때 결의, 이기면 기쁨, 지면 절망. 그림을 끄면(190번) 동그라미 글자로 그린다.
  */
 function Character({
@@ -48,35 +45,32 @@ function Character({
       </span>
     )
   }
-  const figure: Figure = employee
-    ? {
-        who: 'me',
-        sex: employee.id % 2 === 0 ? 'F' : 'M',
-        stage: 'adult',
-        x: 0,
-        recolor: ATTIRE_COLORS[attireOf(employee.overallGrade)],
-      }
-    : { who: 'kid', look, sex: look % 2 ? 'F' : 'M', stage: 'adult', x: 0 }
+  const look_ = employee
+    ? employeeLook(employee.id, employee.overallGrade, mood)
+    : customerLook(look, mood)
   return (
-    <svg
-      viewBox={`0 0 ${SPRITE_WIDTH} ${SPRITE_HEIGHT}`}
-      width={size}
-      height={(size * SPRITE_HEIGHT) / SPRITE_WIDTH}
-      className={`block drop-shadow ${talking ? 'drop-shadow-[0_0_4px_var(--gold)]' : ''}`}
-      style={PIXELATED}
+    <span
+      className={`relative block drop-shadow ${talking ? 'drop-shadow-[0_0_4px_var(--gold)]' : ''}`}
+      style={{ width: size }}
       data-testid="room-character"
       aria-hidden="true"
     >
-      <ellipse
-        cx={SPRITE_WIDTH / 2}
-        cy={SPRITE_HEIGHT - 0.6}
-        rx={5}
-        ry={0.9}
-        fill={side === 'BUY' ? 'var(--up)' : 'var(--down)'}
-        opacity={0.35}
+      <span
+        className="absolute bottom-[3%] left-1/2 block -translate-x-1/2 rounded-full"
+        style={{
+          width: size * 0.62,
+          height: size * 0.11,
+          background: side === 'BUY' ? 'var(--up)' : 'var(--down)',
+          opacity: 0.35,
+        }}
       />
-      <Person figure={figure} me={{ adornment: null, mark: null }} mood={mood} top={0} />
-    </svg>
+      <CatSprite
+        look={look_}
+        width={size}
+        className="relative"
+        title={employee?.name ?? fallback}
+      />
+    </span>
   )
 }
 

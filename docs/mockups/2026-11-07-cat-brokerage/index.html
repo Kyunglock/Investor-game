@@ -1,0 +1,397 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>고양이 증권사 시안</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+/* 레퍼런스(찹쌀떡 고양이 슈팅)의 느낌: 연한 풀빛 바탕, 갈색 가는 윤곽, 파스텔 면, 둥근 덩어리. UI는 크림 판에 갈색 윤곽. */
+:root{
+  --ink:#4a3528; --paper:#fff8ea; --paper2:#f6ecd4; --muted:#8a7461;
+  --grass:#cfe3a0; --grass2:#bfd98c; --cliff:#8a6a4a; --orange:#ff8a3d; --bill:#79c85a; --sky:#e9f3d2;
+  --display:"Jua","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --body:"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;background:var(--grass);
+  background-image:radial-gradient(circle at 30% 20%, rgba(255,255,255,.25) 0 3px, transparent 4px);background-size:70px 70px}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 60px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+h1,h2,h3,.disp{font-family:var(--display);font-weight:400;text-wrap:balance}
+h1{font-size:clamp(30px,5vw,44px);margin:0;color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke;text-shadow:0 4px 0 var(--ink)}
+h2{font-size:26px;margin:0 0 8px}
+h3{font-size:20px;margin:0}
+p{margin:0}
+.panel{background:var(--paper);border:3px solid var(--ink);border-radius:18px;box-shadow:0 5px 0 var(--ink);padding:18px 20px;min-width:0}
+.pill{display:inline-block;background:#ffd16b;border:3px solid var(--ink);border-radius:999px;padding:2px 12px;font-family:var(--display);font-size:15px;box-shadow:0 3px 0 var(--ink)}
+.pill.green{background:var(--bill);color:#fff}.pill.orange{background:var(--orange);color:#fff}
+ul{margin:8px 0 0;padding-left:20px}li{margin:3px 0}
+.lead{display:grid;gap:14px;margin-top:18px}
+.two{display:grid;grid-template-columns:minmax(280px,380px) 1fr;gap:22px;margin-top:22px;align-items:start}
+@media (max-width:760px){.two{grid-template-columns:1fr}}
+.scene{position:relative;border:3px solid var(--ink);border-radius:14px;overflow:hidden;background:var(--grass);aspect-ratio:9/15;max-width:100%}
+.scene canvas{display:block;width:100%;height:100%}
+.scene .tag{position:absolute;left:10px;top:10px;pointer-events:none}
+.scene .hud{position:absolute;right:10px;top:10px;display:flex;gap:6px;align-items:center;pointer-events:none}
+.scene .hud .bar{width:84px;height:14px;border:3px solid var(--ink);border-radius:8px;background:#fff3d6;overflow:hidden}
+.scene .hud .bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#ff9fb0,#ffd16b)}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:inherit;color:inherit;cursor:pointer;background:var(--paper);border:3px solid var(--ink);border-radius:999px;box-shadow:0 3px 0 var(--ink);padding:4px 14px;font-family:var(--display);font-size:15px}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+button:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+.concepts{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px;margin-top:12px}
+.concept{background:var(--sky);border:2px solid var(--ink);border-radius:12px;padding:8px 4px 6px;text-align:center;min-width:0}
+.concept canvas{display:block;margin:0 auto}
+.concept .nm{font-family:var(--display);font-size:14px;margin-top:2px;line-height:1.2}
+.concept .ro{font-size:11px;color:var(--muted);line-height:1.3}
+.models{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-top:14px}
+.model{background:var(--sky);border:3px solid var(--ink);border-radius:14px;padding:10px 8px 12px;text-align:center;min-width:0;box-shadow:0 4px 0 var(--ink)}
+.model.pick{background:#fff2c2}
+.model canvas{display:block;margin:0 auto;max-width:100%;height:auto}
+.model .nm{font-family:var(--display);font-size:19px;margin-top:4px}
+.model .ro{font-size:13px;color:var(--muted);line-height:1.4}
+.lineup{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:12px}
+.cat{background:var(--sky);border:2px dashed var(--ink);border-radius:12px;padding:8px 6px;text-align:center;min-width:0}
+.cat canvas{display:block;margin:0 auto;max-width:100%;height:auto}
+.cat .nm{font-family:var(--display);font-size:16px;margin-top:2px}.cat .ro{font-size:12px;color:var(--muted)}
+.faces{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}
+.faces div{text-align:center}.faces canvas{display:block}
+.cap{font-size:13px;color:var(--muted)}
+.good{color:#3e7a2a}.bad{color:#b4412a}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:10px 0 0;font-size:14px}
+dt{font-family:var(--display);color:var(--muted)}dd{margin:0}
+.foot{margin-top:22px;display:grid;gap:14px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border-bottom:2px solid #eadfc6;padding:6px 8px;text-align:left;vertical-align:top}
+th{font-family:var(--display);font-weight:400;color:var(--muted)}
+</style>
+
+<div class="wrap">
+  <h1>고양이 증권사 시안</h1>
+  <div class="lead">
+    <div class="panel">
+      <div class="row"><span class="pill green">그림 규칙</span><span class="disp" style="font-size:18px">둥근 머리에 작은 몸, 점 눈, 작은 귀, 갈색 가는 윤곽, 파스텔 면</span></div>
+      <ul>
+        <li><b>픽셀 없음.</b> 캔버스 경로(타원·둥근 다각형)로 그린다. 윤곽은 검정이 아니라 <b>갈색</b>(#4a3528) 2.5px, 면은 채도 낮은 파스텔. 그림자는 발밑 연한 타원 하나.</li>
+        <li><b>한 덩어리 실루엣.</b> 머리·몸·팔·발·귀를 따로 선으로 나누지 않고 바깥 윤곽선 하나만 두른다(부위를 잉크색으로 먼저 깔고 털색으로 덮는 방식). 눈은 작은 점, 입은 아주 작게, 볼은 연분홍.</li>
+        <li><b>작게.</b> 전투에서 플레이어는 화면 높이의 1/12쯤(레퍼런스 비율), 적은 그보다 조금 작다.</li>
+        <li><b>품종·소품이 변수.</b> 털 무늬(단색·줄무늬·턱시도·삼색·포인트), 소품(넥타이·나비넥타이·리본·안경·선글라스·목도리·왕관). 모두 같은 함수.</li>
+        <li><b>총은 작게, 탄은 주황 줄기.</b> 레퍼런스처럼 총은 손에 쏙 들어가는 회색 권총, 탄은 주황 빛줄기와 노란 불빛, 떨어지는 건 초록 지폐.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="panel" style="margin-top:22px">
+    <h2>컨셉 고르기 (24)</h2>
+    <p class="cap">같은 몸, 색·무늬·소품만 다르다. 번호로 골라 주면 그걸 플레이어로 올린다. 마음에 드는 걸 여러 개 골라 섞어도 된다.</p>
+    <div class="concepts" id="concepts"></div>
+  </div>
+  <div class="two">
+    <div class="panel" style="padding:12px">
+      <div class="scene"><canvas id="battle" aria-label="고양이 멘탈 전투"></canvas><span class="tag pill green">멘탈 전투 · 실제 크기</span><div class="hud"><span class="pill" style="font-size:12px;padding:0 8px">멘탈</span><div class="bar"><i id="bar"></i></div></div></div>
+      <div class="row" style="margin-top:10px;justify-content:space-between"><h3 id="heroName">크림 사장냥</h3><div class="row"><button type="button" id="next">다른 모델로</button><button type="button" id="hurt">맞아 보기</button></div></div>
+      <p style="margin-top:6px" class="cap">"다른 모델로"를 누르면 아래 후보가 차례로 전투에 선다. 적(패닉셀·투기)도 같은 규칙으로 다시 그렸다.</p>
+    </div>
+    <div style="display:grid;gap:22px;min-width:0">
+      <div class="panel">
+        <h2>플레이어 모델 후보</h2>
+        <p class="cap">왼쪽이 가만히, 오른쪽이 총을 든 모습. 노란 칸이 추천.</p>
+        <div class="models" id="models"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div class="panel">
+      <h2>적 넷</h2>
+      <p class="cap">같은 윤곽 규칙으로 단순하게. 이름이 곧 생김새다.</p>
+      <div class="faces" id="enemies"></div>
+    </div>
+    <div class="panel">
+      <h2>표정</h2>
+      <p class="cap">가만히 / 쏘기 / 맞음 / 특급 뽑힘 / 사표 / 잠. 점 눈이라 표정은 눈 모양과 입, 땀·별 같은 작은 기호로 낸다.</p>
+      <div class="faces" id="faces"></div>
+    </div>
+    <div class="panel">
+      <h2>같은 규칙으로 직원들</h2>
+      <p class="cap">품종이 개성이고 등급 차림새(후드티·셔츠·정장)는 소품으로 얹는다. 사무실·채용 카드·합성판에 그대로.</p>
+      <div class="lineup" id="lineup"></div>
+    </div>
+    <div class="panel">
+      <h2>추천과 다음</h2>
+      <p><b>플레이어는 1번 "크림 사장냥"(크림색 + 빨간 넥타이 + 선글라스)</b>을 추천한다. 레퍼런스와 가장 가깝고, 넥타이와 선글라스만으로 "사장"이 읽히며, 맞으면 선글라스가 벗겨져 표정 변화가 크다. 선글라스가 부담스러우면 2번(맨 얼굴).</p>
+      <table style="margin-top:10px">
+        <thead><tr><th>단계</th><th>바꾸는 것</th><th>크기</th></tr></thead>
+        <tbody>
+          <tr><td>1 멘탈 전투</td><td>플레이어·적 넷·탄·바닥을 이 규칙으로. <code>app/src/mental/art.ts</code>를 벡터(캔버스 → Phaser 텍스처)로 통째 교체. 바닥은 레퍼런스처럼 풀밭·절벽.</td><td>중 (하루)</td></tr>
+          <tr><td>2 사람 전부</td><td>사무실 직원·채용 카드·합성판·이사·사표·엔딩의 사람을 고양이로. <code>frontend/src/features/game/pixel/</code>의 몸통·표정을 고양이 함수로.</td><td>상 (며칠)</td></tr>
+          <tr><td>3 배경</td><td>건물·사무실·회의 창 그림을 같은 파스텔 규칙으로.</td><td>상</td></tr>
+        </tbody>
+      </table>
+      <dl>
+        <dt>정할 것</dt><dd>플레이어 모델 번호. 직원 이름을 사람 이름 그대로 둘지, 고양이 이름(나비·치즈·까망)으로 갈지. 1단계만 먼저 갈지, 2단계까지 한 번에 갈지.</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<script>
+// ───────────────────────────── 그림 도구 (갈색 가는 윤곽, 둥근 이음)
+const INK = '#4a3528';
+const dpr = Math.min(2, devicePixelRatio || 1);
+function ell(c, x, y, rx, ry, rot = 0) { c.beginPath(); c.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2); }
+function fs(c, color, lw = 2.5) { c.fillStyle = color; c.fill(); if (lw) { c.lineWidth = lw; c.strokeStyle = INK; c.lineJoin = 'round'; c.lineCap = 'round'; c.stroke(); } }
+function tri(c, a, b, d) { c.beginPath(); c.moveTo(...a); c.lineTo(...b); c.lineTo(...d); c.closePath(); }
+function rrect(c, x, y, w, h, r) { c.beginPath(); c.roundRect(x, y, w, h, r); }
+function dark(hex, k = 0.82) { const n = parseInt(hex.slice(1), 16); const r = (n >> 16) * k | 0, g = ((n >> 8) & 255) * k | 0, b = (n & 255) * k | 0; return `rgb(${r},${g},${b})`; }
+
+/**
+ * 고양이. 100×110 상자. 부드러운 한 덩어리: 부위(머리·몸·팔·발·귀·꼬리)를 먼저 잉크색으로 굵게 깔고 그 위에 털색으로 다시 칠해
+ * 바깥 윤곽선 하나만 남긴다(안쪽 선 없음). 눈은 작은 점, 입은 아주 작게.
+ * o: fur, fur2, pattern('solid'|'tabby'|'tuxedo'|'calico'|'point'), outfit('none'|'hoodie'|'shirt'|'suit'),
+ *    acc[]('tie','bowtie','ribbon','glasses','scarf','crown','necklace','headset'), face('idle'|'fire'|'hurt'|'star'|'sad'|'sleep'|'boss'), gun, gunAngle
+ */
+function drawCat(c, o) {
+  const fur = o.fur || '#f6dcb0', fur2 = o.fur2 || dark(fur, 0.86), face = o.face || 'idle', acc = o.acc || [], outfit = o.outfit || 'none';
+  const HX = 50, HY = 40, HR = 24, HRY = 22;      // 머리
+  const BX = 50, BY = 72, BR = 21, BRY = 23;      // 몸 (아래 95)
+  const bodyCol = outfit === 'suit' ? '#4b5878' : outfit === 'shirt' ? '#e3edf5' : outfit === 'hoodie' ? '#a7afb8' : fur;
+  c.save(); c.lineJoin = 'round'; c.lineCap = 'round';
+  ell(c, 50, 97, 22, 5); c.fillStyle = 'rgba(74,53,40,.16)'; c.fill();
+  // 부위 목록: [그리기, 색]
+  const ear = (sgn) => { const ex = HX + sgn * 15, ey = HY - 17; c.beginPath(); c.moveTo(ex - sgn * 7, ey + 7); c.quadraticCurveTo(ex - sgn * 2, ey - 10, ex + sgn * 3, ey - 9); c.quadraticCurveTo(ex + sgn * 9, ey - 2, ex + sgn * 8, ey + 6); c.closePath(); };
+  const parts = [
+    [() => ell(c, BX, BY, BR, BRY), bodyCol],
+    [() => { if (!o.gun) ell(c, BX - BR + 2, BY + 6, 6, 9, 0.3); else ell(c, BX - 6, BY + 2, 5, 10, 1.0); }, bodyCol],
+    [() => { if (!o.gun) ell(c, BX + BR - 2, BY + 6, 6, 9, -0.3); else ell(c, BX + 13, BY + 3, 5, 9, -1.2); }, bodyCol],
+    [() => ell(c, 40, 94, 8, 5), fur], [() => ell(c, 60, 94, 8, 5), fur],
+    [() => ear(-1), fur], [() => ear(1), fur],
+    [() => ell(c, HX, HY, HR, HRY), fur],
+  ];
+  const tail = () => { c.beginPath(); c.moveTo(BX + BR - 4, BY + 14); c.quadraticCurveTo(BX + BR + 18, BY + 16, BX + BR + 12, BY - 6); };
+  // 1) 잉크 바탕(굵게) → 바깥 윤곽 하나
+  tail(); c.lineWidth = 9; c.strokeStyle = INK; c.stroke();
+  for (const [draw] of parts) { draw(); c.fillStyle = INK; c.fill(); c.lineWidth = 4.4; c.strokeStyle = INK; c.stroke(); }
+  // 2) 색
+  tail(); c.lineWidth = 4.6; c.strokeStyle = fur; c.stroke();
+  for (const [draw, col] of parts) { draw(); c.fillStyle = col; c.fill(); }
+  // 몸 위 무늬·옷 세부 (몸 안에서만)
+  c.save(); ell(c, BX, BY, BR, BRY); c.clip();
+  if (outfit === 'none' && o.pattern === 'tuxedo') { ell(c, BX, BY + 4, 13, 17); c.fillStyle = '#fff8ee'; c.fill(); }
+  if (outfit === 'suit') { c.beginPath(); c.moveTo(BX - 7, BY - 22); c.lineTo(BX + 7, BY - 22); c.lineTo(BX, BY - 8); c.closePath(); c.fillStyle = '#fff8ee'; c.fill(); }
+  if (outfit === 'shirt') { for (const y of [BY - 10, BY, BY + 10]) { ell(c, BX, y, 1.4, 1.4); c.fillStyle = '#8a97a8'; c.fill(); } }
+  if (outfit === 'hoodie') { c.beginPath(); c.moveTo(BX - 5, BY - 18); c.lineTo(BX - 6, BY - 4); c.moveTo(BX + 5, BY - 18); c.lineTo(BX + 6, BY - 4); c.lineWidth = 2; c.strokeStyle = '#f3ead6'; c.stroke(); }
+  c.restore();
+  if (acc.includes('tie')) { const ty = HY + HRY + 1; c.beginPath(); c.moveTo(BX - 3, ty); c.lineTo(BX + 3, ty); c.lineTo(BX + 2, ty + 3); c.lineTo(BX + 4, ty + 15); c.lineTo(BX, ty + 19); c.lineTo(BX - 4, ty + 15); c.lineTo(BX - 2, ty + 3); c.closePath(); c.fillStyle = '#e8503f'; c.fill(); }
+  if (acc.includes('bowtie')) { c.beginPath(); c.moveTo(BX, HY + HRY + 4); c.lineTo(BX - 8, HY + HRY); c.lineTo(BX - 8, HY + HRY + 8); c.closePath(); c.moveTo(BX, HY + HRY + 4); c.lineTo(BX + 8, HY + HRY); c.lineTo(BX + 8, HY + HRY + 8); c.closePath(); c.fillStyle = '#e8503f'; c.fill(); }
+  if (acc.includes('scarf')) { c.beginPath(); c.moveTo(BX - BR, BY - 18); c.quadraticCurveTo(BX, BY - 8, BX + BR, BY - 18); c.quadraticCurveTo(BX, BY - 2, BX - BR, BY - 18); c.fillStyle = '#e8503f'; c.fill(); }
+  if (acc.includes('necklace')) { c.beginPath(); c.moveTo(BX - 12, HY + HRY); c.quadraticCurveTo(BX, HY + HRY + 12, BX + 12, HY + HRY); c.lineWidth = 2; c.strokeStyle = '#c9972a'; c.stroke(); ell(c, BX, HY + HRY + 8, 3.2, 3.2); c.fillStyle = '#ffd16b'; c.fill(); }
+  // 귀 안쪽
+  for (const sgn of [-1, 1]) { const ex = HX + sgn * 15, ey = HY - 17; c.beginPath(); c.moveTo(ex - sgn * 3, ey + 4); c.quadraticCurveTo(ex, ey - 5, ex + sgn * 3, ey - 5); c.quadraticCurveTo(ex + sgn * 5, ey, ex + sgn * 5, ey + 4); c.closePath(); c.fillStyle = '#ffc4cc'; c.fill(); }
+  // 머리 무늬
+  c.save(); ell(c, HX, HY, HR, HRY); c.clip();
+  if (o.pattern === 'tabby') { c.lineWidth = 3.5; c.strokeStyle = fur2; c.lineCap = 'round'; c.beginPath(); for (const dx of [-7, 0, 7]) { c.moveTo(HX + dx, HY - 23); c.lineTo(HX + dx * 0.6, HY - 13); } c.stroke(); }
+  if (o.pattern === 'tuxedo') { ell(c, HX, HY + 10, 13, 10); c.fillStyle = '#fff8ee'; c.fill(); ell(c, HX - 2, HY - 9, 6, 7, 0.3); c.fillStyle = '#fff8ee'; c.fill(); }
+  if (o.pattern === 'calico') { ell(c, HX - 13, HY - 15, 11, 8); c.fillStyle = fur2; c.fill(); ell(c, HX + 17, HY - 11, 8, 7); c.fillStyle = '#5a4336'; c.fill(); }
+  if (o.pattern === 'point') { ell(c, HX, HY + 3, 15, 10); c.fillStyle = fur2; c.fill(); }
+  c.restore();
+  // 얼굴: 작은 점 눈, 코, 아주 작은 입, 볼
+  const EY = HY + 2, EX = 8.5;
+  for (const sgn of [-1, 1]) { ell(c, HX + sgn * 16, EY + 7, 4.5, 2.5); c.fillStyle = 'rgba(255,130,140,.4)'; c.fill(); }
+  const dot = (x, y) => { ell(c, x, y, 2.1, 2.5); c.fillStyle = INK; c.fill(); };
+  const brow = (sgn, up) => { const x = HX + sgn * EX; c.beginPath(); c.moveTo(x - sgn * 4.5, EY - (up ? 4 : 6)); c.lineTo(x + sgn * 3, EY - (up ? 6 : 4)); c.lineWidth = 1.8; c.strokeStyle = INK; c.stroke(); };
+  if (face === 'boss') { for (const sgn of [-1, 1]) { rrect(c, HX + sgn * EX - 6, EY - 4, 12, 7.5, 3.5); c.fillStyle = '#2a2a33'; c.fill(); c.beginPath(); c.moveTo(HX + sgn * EX - 3, EY - 1.5); c.lineTo(HX + sgn * EX + 1.5, EY - 2.5); c.lineWidth = 1.2; c.strokeStyle = 'rgba(255,255,255,.7)'; c.stroke(); } c.beginPath(); c.moveTo(HX - 2.5, EY - 0.5); c.lineTo(HX + 2.5, EY - 0.5); c.lineWidth = 1.6; c.strokeStyle = INK; c.stroke(); }
+  else if (face === 'fire') { dot(HX - EX, EY); dot(HX + EX, EY); brow(-1, true); brow(1, true); }
+  else if (face === 'hurt') { for (const sgn of [-1, 1]) { const x = HX + sgn * EX; c.beginPath(); c.moveTo(x - 3, EY - 3); c.lineTo(x + 3, EY + 3); c.moveTo(x + 3, EY - 3); c.lineTo(x - 3, EY + 3); c.lineWidth = 1.8; c.strokeStyle = INK; c.stroke(); } ell(c, HX + 15, EY + 4, 1.6, 3.2); c.fillStyle = '#8ec5ef'; c.fill(); }
+  else if (face === 'star') { for (const sgn of [-1, 1]) { const x = HX + sgn * EX; c.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 1.8 : 4.5, a = -Math.PI / 2 + i * Math.PI / 5; c.lineTo(x + Math.cos(a) * r, EY + Math.sin(a) * r); } c.closePath(); c.fillStyle = '#f2b43a'; c.fill(); } }
+  else if (face === 'sad') { for (const sgn of [-1, 1]) { const x = HX + sgn * EX; c.beginPath(); c.arc(x, EY + 2, 3, Math.PI * 1.1, Math.PI * 1.9); c.lineWidth = 1.8; c.strokeStyle = INK; c.stroke(); } ell(c, HX + 13, EY + 5, 1.5, 3); c.fillStyle = '#8ec5ef'; c.fill(); }
+  else if (face === 'sleep') { for (const sgn of [-1, 1]) { const x = HX + sgn * EX; c.beginPath(); c.arc(x, EY - 1.5, 3, Math.PI * 0.1, Math.PI * 0.9); c.lineWidth = 1.8; c.strokeStyle = INK; c.stroke(); } c.fillStyle = INK; c.font = 'bold 8px Jua, sans-serif'; c.fillText('z', HX + 22, EY - 12); }
+  else { dot(HX - EX, EY); dot(HX + EX, EY); }
+  if (acc.includes('glasses')) { for (const sgn of [-1, 1]) { ell(c, HX + sgn * EX, EY + 0.5, 5.5, 5); c.lineWidth = 1.5; c.strokeStyle = INK; c.stroke(); } c.beginPath(); c.moveTo(HX - 3, EY); c.lineTo(HX + 3, EY); c.stroke(); }
+  // 코·입 (아주 작게)
+  ell(c, HX, EY + 6, 1.6, 1.2); c.fillStyle = '#e88a95'; c.fill();
+  c.lineWidth = 1.4; c.strokeStyle = INK;
+  if (face === 'hurt') { ell(c, HX, EY + 10.5, 2.4, 2); c.fillStyle = '#8a3b3b'; c.fill(); }
+  else if (face === 'sad') { c.beginPath(); c.arc(HX, EY + 11.5, 2.2, Math.PI * 1.15, Math.PI * 1.85); c.stroke(); }
+  else if (face === 'star' || face === 'boss') { c.beginPath(); c.arc(HX, EY + 8, 2.6, 0.2, Math.PI - 0.2); c.stroke(); }
+  else { c.beginPath(); c.arc(HX - 1.6, EY + 8.2, 1.6, 0, Math.PI); c.arc(HX + 1.6, EY + 8.2, 1.6, 0, Math.PI); c.stroke(); }
+  // 머리 소품
+  if (acc.includes('ribbon')) { const bx = HX + 17, by = HY - 19; c.beginPath(); c.moveTo(bx, by); c.lineTo(bx - 7, by - 4.5); c.lineTo(bx - 6, by + 4.5); c.closePath(); c.moveTo(bx, by); c.lineTo(bx + 7, by - 4.5); c.lineTo(bx + 6, by + 4.5); c.closePath(); c.fillStyle = '#ff8fa8'; c.fill(); ell(c, bx, by, 2, 2); c.fillStyle = '#ffc2d0'; c.fill(); }
+  if (acc.includes('crown')) { const cy = HY - HRY + 2; c.beginPath(); c.moveTo(HX - 9, cy + 6); c.lineTo(HX - 7, cy - 3); c.lineTo(HX - 3, cy + 2); c.lineTo(HX, cy - 6); c.lineTo(HX + 3, cy + 2); c.lineTo(HX + 7, cy - 3); c.lineTo(HX + 9, cy + 6); c.closePath(); fs(c, '#ffd16b', 1.6); }
+  if (acc.includes('headset')) { c.beginPath(); c.arc(HX, HY - 1, 26, Math.PI * 1.12, Math.PI * 1.88); c.lineWidth = 2.5; c.strokeStyle = INK; c.stroke(); ell(c, HX - 24, HY + 3, 3.2, 5); fs(c, '#6f7b8c', 1.5); c.beginPath(); c.moveTo(HX - 24, HY + 8); c.quadraticCurveTo(HX - 24, HY + 18, HX - 12, HY + 16); c.lineWidth = 1.8; c.strokeStyle = INK; c.stroke(); }
+  if (acc.includes('visor')) { rrect(c, HX - 18, HY - 17, 36, 6, 3); fs(c, '#5cc8b8', 1.5); }
+  if (acc.includes('cap')) { c.beginPath(); c.arc(HX, HY - 12, 20, Math.PI, 0); c.closePath(); fs(c, o.hatCol || '#e8503f', 1.8); rrect(c, HX - 4, HY - 14, 30, 5, 2.5); fs(c, o.hatCol || '#e8503f', 1.6); }
+  if (acc.includes('tophat')) { rrect(c, HX - 20, HY - 22, 40, 5, 2.5); fs(c, '#2f2a33', 1.6); rrect(c, HX - 13, HY - 42, 26, 22, 3); fs(c, '#2f2a33', 1.8); rrect(c, HX - 13, HY - 26, 26, 4, 1); c.fillStyle = '#e8503f'; c.fill(); }
+  if (acc.includes('beret')) { ell(c, HX + 4, HY - 20, 20, 8); fs(c, o.hatCol || '#3b4a7a', 1.8); ell(c, HX + 6, HY - 27, 2, 2); c.fillStyle = INK; c.fill(); }
+  if (acc.includes('beanie')) { c.beginPath(); c.arc(HX, HY - 10, 21, Math.PI, 0); c.closePath(); fs(c, o.hatCol || '#7bb7a0', 1.8); rrect(c, HX - 22, HY - 14, 44, 6, 3); fs(c, o.hatCol || '#7bb7a0', 1.6); ell(c, HX, HY - 32, 4, 4); fs(c, '#fff8ee', 1.5); }
+  if (acc.includes('bandana')) { c.beginPath(); c.moveTo(HX - 22, HY - 12); c.quadraticCurveTo(HX, HY - 34, HX + 22, HY - 12); c.closePath(); fs(c, o.hatCol || '#e8503f', 1.8); c.beginPath(); c.moveTo(HX + 20, HY - 12); c.lineTo(HX + 30, HY - 4); c.lineTo(HX + 24, HY - 14); c.closePath(); fs(c, o.hatCol || '#e8503f', 1.5); }
+  if (acc.includes('hardhat')) { c.beginPath(); c.arc(HX, HY - 12, 20, Math.PI, 0); c.closePath(); fs(c, '#ffd16b', 1.8); rrect(c, HX - 24, HY - 14, 48, 5, 2.5); fs(c, '#ffd16b', 1.6); }
+  if (acc.includes('eyepatch')) { ell(c, HX + EX, EY, 6, 5.5); c.fillStyle = INK; c.fill(); c.beginPath(); c.moveTo(HX + EX - 5, EY - 3); c.lineTo(HX - 22, HY - 8); c.lineWidth = 1.6; c.strokeStyle = INK; c.stroke(); }
+  if (acc.includes('monocle')) { ell(c, HX + EX, EY + 0.5, 6, 5.5); c.lineWidth = 1.5; c.strokeStyle = INK; c.stroke(); c.beginPath(); c.moveTo(HX + EX + 5, EY + 3); c.lineTo(HX + EX + 9, EY + 14); c.stroke(); }
+  if (acc.includes('mask')) { rrect(c, HX - 14, EY + 3, 28, 12, 5); fs(c, '#2f2a33', 1.5); }
+  if (acc.includes('sweatband')) { rrect(c, HX - 21, HY - 18, 42, 6, 3); fs(c, '#fff8ee', 1.5); c.beginPath(); c.moveTo(HX - 21, HY - 15); c.lineTo(HX + 21, HY - 15); c.lineWidth = 2; c.strokeStyle = '#e8503f'; c.stroke(); }
+  if (acc.includes('bell')) { c.beginPath(); c.moveTo(BX - 14, BY - 20); c.quadraticCurveTo(BX, BY - 12, BX + 14, BY - 20); c.lineWidth = 3; c.strokeStyle = '#e8503f'; c.stroke(); ell(c, BX, BY - 14, 3.5, 3.5); fs(c, '#ffd16b', 1.4); }
+  if (acc.includes('ninja')) { rrect(c, HX - 22, HY - 20, 44, 6, 3); fs(c, '#2f2a33', 1.5); c.beginPath(); c.moveTo(HX + 20, HY - 17); c.lineTo(HX + 34, HY - 8); c.moveTo(HX + 20, HY - 17); c.lineTo(HX + 34, HY - 14); c.lineWidth = 2.5; c.strokeStyle = '#2f2a33'; c.stroke(); }
+  if (acc.includes('halo')) { ell(c, HX, HY - HRY - 6, 13, 3.5); c.lineWidth = 2.5; c.strokeStyle = '#ffd16b'; c.stroke(); }
+  if (acc.includes('horns')) { for (const sgn of [-1, 1]) { c.beginPath(); c.moveTo(HX + sgn * 10, HY - 18); c.quadraticCurveTo(HX + sgn * 14, HY - 30, HX + sgn * 20, HY - 30); c.quadraticCurveTo(HX + sgn * 16, HY - 24, HX + sgn * 15, HY - 15); c.closePath(); fs(c, '#e8503f', 1.5); } }
+  if (acc.includes('wizard')) { c.beginPath(); c.moveTo(HX - 22, HY - 14); c.lineTo(HX + 22, HY - 14); c.lineTo(HX + 4, HY - 46); c.closePath(); fs(c, '#5a4a9a', 1.8); c.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 1.5 : 3.5, a = -Math.PI / 2 + i * Math.PI / 5; c.lineTo(HX - 2 + Math.cos(a) * r, HY - 28 + Math.sin(a) * r); } c.closePath(); c.fillStyle = '#ffd16b'; c.fill(); }
+  if (acc.includes('cape')) { c.beginPath(); c.moveTo(BX - BR + 2, BY - 18); c.quadraticCurveTo(BX - BR - 10, BY + 10, BX - BR - 4, BY + 22); c.lineTo(BX + BR + 4, BY + 22); c.quadraticCurveTo(BX + BR + 10, BY + 10, BX + BR - 2, BY - 18); c.closePath(); c.globalCompositeOperation = 'destination-over'; fs(c, '#e8503f', 2); c.globalCompositeOperation = 'source-over'; }
+  // 권총(작게)
+  if (o.gun) { // 두 손으로: 몸 앞 가운데에서 겨누고, 뒷발은 손잡이·앞발은 총신에
+    c.save(); c.translate(BX + 11, BY + 3); c.rotate(o.gunAngle ?? -0.85);
+    rrect(c, -3, -3, 17, 5.5, 2); fs(c, '#8d8a93', 1.6); rrect(c, 10, -2.2, 7, 4, 1.5); fs(c, '#5e5b66', 1.4); rrect(c, -3, 1.5, 5, 6, 1.5); fs(c, '#6a6670', 1.4);
+    for (const [px, py] of [[0, 3.5], [8, 1]]) { ell(c, px, py, 4.6, 4); c.fillStyle = INK; c.fill(); ell(c, px, py, 3.3, 2.8); c.fillStyle = fur; c.fill(); }
+    c.restore(); }
+  c.restore();
+}
+
+/**
+ * 적 넷. 같은 윤곽 규칙, 단순하게. 반지름 ≈ 20.
+ * panic 패닉셀: 파란 동그라미, 걱정 눈썹에 점 눈, 작은 벌린 입, 땀 한 방울, 두 팔 올림.
+ * dump 투매: 종이 더미에 점 눈 둘과 발. 느리고 단단하다.
+ * spec 투기: 분홍 풍선, 별눈, 작은 웃음. 부풀었다 줄었다.
+ * stop 손절매: 회색 동그라미, 머리에 가위 날 둘(귀처럼), 무표정 점 눈.
+ */
+function drawEnemy(c, kind, t, flash) {
+  if (flash > 0) { c.save(); c.filter = 'brightness(1.9) saturate(0.2)'; drawEnemy(c, kind, t, 0); c.restore(); return; }
+  c.save(); c.lineJoin = 'round'; c.lineCap = 'round'; const wob = Math.sin(t * 12) * 1.2, bob = Math.sin(t * 8) * 1;
+  ell(c, 0, 18, 13, 4); c.fillStyle = 'rgba(74,53,40,.16)'; c.fill();
+  const dot = (x, y) => { ell(c, x, y, 1.9, 2.2); c.fillStyle = INK; c.fill(); };
+  const union = (parts, col) => { for (const d of parts) { d(); c.fillStyle = INK; c.fill(); c.lineWidth = 4; c.strokeStyle = INK; c.stroke(); } for (const d of parts) { d(); c.fillStyle = col; c.fill(); } };
+  if (kind === 'panic') {
+    union([() => ell(c, -15, -5 + wob, 3.5, 7.5, -0.5), () => ell(c, 15, -5 - wob, 3.5, 7.5, 0.5), () => ell(c, 0, 2 + bob, 15, 14), () => ell(c, -6, 15, 4, 3), () => ell(c, 6, 15, 4, 3)], '#aacbf2');
+    dot(-5, bob); dot(5, bob); c.beginPath(); c.moveTo(-9, -8 + bob); c.lineTo(-2.5, -5.5 + bob); c.moveTo(9, -8 + bob); c.lineTo(2.5, -5.5 + bob); c.lineWidth = 1.6; c.strokeStyle = INK; c.stroke();
+    ell(c, 0, 6.5 + bob, 2.4, 2.8); c.fillStyle = '#8a3b3b'; c.fill(); ell(c, 13, -11 - (t * 30 % 7), 1.5, 2.6); c.fillStyle = '#8ec5ef'; c.fill();
+  } else if (kind === 'dump') {
+    union([() => rrect(c, -14, -11, 28, 11, 3), () => rrect(c, -12, -4, 28, 11, 3), () => rrect(c, -14, 3, 28, 11, 3), () => ell(c, -6, 15, 4, 3), () => ell(c, 6, 15, 4, 3)], '#fff4e0');
+    c.beginPath(); c.moveTo(-12, -4); c.lineTo(14, -4); c.moveTo(-14, 3); c.lineTo(12, 3); c.lineWidth = 1.2; c.strokeStyle = '#e0c5a8'; c.stroke();
+    dot(-5, -6); dot(2, -6); c.beginPath(); c.arc(-1.5, -2, 1.6, 0.2, Math.PI - 0.2); c.lineWidth = 1.3; c.strokeStyle = INK; c.stroke();
+  } else if (kind === 'spec') {
+    const inf = 1 + Math.sin(t * 2.4) * 0.07;
+    union([() => ell(c, 0, 0, 16 * inf, 17 * inf), () => tri(c, [-2.5, 16 * inf], [2.5, 16 * inf], [0, 20 * inf])], '#f6aabd');
+    ell(c, -6, -8, 3.2, 4.5, 0.6); c.fillStyle = 'rgba(255,255,255,.5)'; c.fill();
+    c.beginPath(); c.moveTo(0, 19 * inf); c.quadraticCurveTo(2.5, 24, 0, 28); c.lineWidth = 1.4; c.strokeStyle = INK; c.stroke();
+    for (const s of [-1, 1]) { c.beginPath(); for (let i = 0; i < 10; i++) { const r = i % 2 ? 1.8 : 4.6, a = -Math.PI / 2 + i * Math.PI / 5; c.lineTo(s * 5.5 + Math.cos(a) * r, -1.5 + Math.sin(a) * r); } c.closePath(); c.fillStyle = '#f2b43a'; c.fill(); }
+    c.beginPath(); c.arc(0, 5, 2.6, 0.2, Math.PI - 0.2); c.lineWidth = 1.4; c.strokeStyle = INK; c.stroke();
+  } else {
+    union([() => tri(c, [-10, -8 + bob], [-9, -24 + bob], [-2, -9 + bob]), () => tri(c, [10, -8 + bob], [9, -24 + bob], [2, -9 + bob]), () => ell(c, 0, 3 + bob * 0.5, 15, 14), () => ell(c, -6, 16, 4, 3), () => ell(c, 6, 16, 4, 3)], '#c3c1cc');
+    tri(c, [-9, -11 + bob], [-8.5, -21 + bob], [-3.5, -11 + bob]); c.fillStyle = '#e6e9ef'; c.fill(); tri(c, [9, -11 + bob], [8.5, -21 + bob], [3.5, -11 + bob]); c.fill();
+    dot(-5, 1 + bob * 0.5); dot(5, 1 + bob * 0.5); c.beginPath(); c.moveTo(-3, 8 + bob * 0.5); c.lineTo(3, 8 + bob * 0.5); c.lineWidth = 1.4; c.strokeStyle = INK; c.stroke();
+  }
+  c.restore();
+}
+
+// ───────────────────────────── 플레이어 모델 후보
+const MODELS = [
+  { nm: '크림 사장냥', ro: '크림색 · 빨간 넥타이 · 선글라스. 레퍼런스에 가장 가깝다', pick: true, o: { fur: '#f6dcb0', pattern: 'solid', acc: ['tie'], face: 'boss' } },
+  { nm: '크림냥 (맨 얼굴)', ro: '1번에서 선글라스만 뺀 것', o: { fur: '#f6dcb0', pattern: 'solid', acc: ['tie'] } },
+  { nm: '턱시도냥', ro: '검은 털이 정장, 흰 가슴이 셔츠 · 나비넥타이', o: { fur: '#4f4a56', fur2: '#4f4a56', pattern: 'tuxedo', acc: ['bowtie'] } },
+  { nm: '치즈냥', ro: '주황 줄무늬 · 안경', o: { fur: '#f5c57c', fur2: '#e39d4a', pattern: 'tabby', acc: ['glasses'] } },
+  { nm: '고등어냥', ro: '회색 줄무늬 · 헤드셋', o: { fur: '#b9c3cf', fur2: '#6f7f93', pattern: 'tabby', acc: ['headset'] } },
+  { nm: '삼색 리본냥', ro: '흰·주황·검정 · 리본 · 목도리', o: { fur: '#fff6ea', fur2: '#f2a85a', pattern: 'calico', acc: ['ribbon', 'scarf'] } },
+  { nm: '황금 사장냥', ro: '흰 페르시안 · 왕관·금목걸이', o: { fur: '#fffaf2', pattern: 'solid', acc: ['crown', 'necklace'], face: 'star' } },
+  { nm: '샴냥', ro: '포인트 무늬 · 바이저', o: { fur: '#efe1cf', fur2: '#8b6a52', pattern: 'point', acc: ['visor'] } },
+];
+function catCanvas(o, w = 100) { const cv = document.createElement('canvas'); cv.width = w * dpr; cv.height = w * 1.1 * dpr; const c = cv.getContext('2d'); c.scale(dpr * w / 100, dpr * w / 100); drawCat(c, o); cv.style.width = w + 'px'; cv.style.height = (w * 1.1) + 'px'; return cv; }
+const CONCEPTS = [
+  ['크림 사장', '넥타이·선글라스', { fur: '#f6dcb0', acc: ['tie'], face: 'boss' }],
+  ['크림 맨얼굴', '넥타이', { fur: '#f6dcb0', acc: ['tie'] }],
+  ['턱시도 집사', '나비넥타이', { fur: '#4f4a56', fur2: '#4f4a56', pattern: 'tuxedo', acc: ['bowtie'] }],
+  ['치즈 안경', '줄무늬·안경', { fur: '#f5c57c', fur2: '#e39d4a', pattern: 'tabby', acc: ['glasses'] }],
+  ['고등어 헤드셋', '트레이딩룸', { fur: '#b9c3cf', fur2: '#6f7f93', pattern: 'tabby', acc: ['headset'] }],
+  ['삼색 리본', '리본·목도리', { fur: '#fff6ea', fur2: '#f2a85a', pattern: 'calico', acc: ['ribbon', 'scarf'] }],
+  ['황금 왕관', '페르시안·금목걸이', { fur: '#fffaf2', acc: ['crown', 'necklace'], face: 'star' }],
+  ['샴 바이저', '포인트·바이저', { fur: '#efe1cf', fur2: '#8b6a52', pattern: 'point', acc: ['visor'] }],
+  ['신사 모자', '실크해트·외알안경', { fur: '#d8c9b4', acc: ['tophat', 'monocle', 'bowtie'] }],
+  ['해적', '안대·두건', { fur: '#8a6a52', acc: ['bandana', 'eyepatch'], hatCol: '#e8503f' }],
+  ['닌자', '검은 띠·복면', { fur: '#565060', acc: ['ninja', 'mask'] }],
+  ['해커', '비니·마스크', { fur: '#9aa6b8', acc: ['beanie', 'mask'], hatCol: '#2f2a33' }],
+  ['화가', '베레모', { fur: '#fff8ee', fur2: '#4a3528', pattern: 'calico', acc: ['beret'] }],
+  ['야구 모자', '빨간 캡', { fur: '#f5c57c', fur2: '#e39d4a', pattern: 'tabby', acc: ['cap'] }],
+  ['현장 반장', '노란 안전모', { fur: '#b9c3cf', fur2: '#6f7f93', pattern: 'tabby', acc: ['hardhat'] }],
+  ['운동부', '머리띠', { fur: '#f6dcb0', acc: ['sweatband'] }],
+  ['방울 목걸이', '빨간 방울 목걸이', { fur: '#fffaf2', acc: ['bell'] }],
+  ['마법사', '별 모자', { fur: '#9aa6b8', acc: ['wizard'] }],
+  ['슈퍼 히어로', '빨간 망토·안대 없음', { fur: '#f6dcb0', acc: ['cape', 'mask'] }],
+  ['천사', '고리', { fur: '#fffaf2', acc: ['halo'] }],
+  ['악마', '뿔', { fur: '#4f4a56', fur2: '#4f4a56', acc: ['horns'] }],
+  ['러시안블루 정장', '안경', { fur: '#9aa6b8', outfit: 'suit', acc: ['glasses'] }],
+  ['까망 후드', '후드티', { fur: '#565060', outfit: 'hoodie' }],
+  ['갈색 셔츠', '셔츠·넥타이', { fur: '#b58a62', fur2: '#8a6240', pattern: 'tabby', outfit: 'shirt', acc: ['tie'] }],
+];
+const concepts = document.getElementById('concepts');
+CONCEPTS.forEach(([nm, ro, o], i) => { const d = document.createElement('div'); d.className = 'concept'; d.appendChild(catCanvas(o, 80)); d.insertAdjacentHTML('beforeend', `<div class="nm">${i + 1}. ${nm}</div><div class="ro">${ro}</div>`); d.style.cursor = 'pointer'; d.addEventListener('click', () => { MODELS[0] = { nm: `${i + 1}. ${nm}`, ro, o }; setHero(0); }); concepts.appendChild(d); });
+const models = document.getElementById('models');
+MODELS.forEach((m, i) => { const d = document.createElement('div'); d.className = 'model' + (m.pick ? ' pick' : ''); const row = document.createElement('div'); row.style.display = 'flex'; row.style.justifyContent = 'center'; row.style.gap = '4px'; row.appendChild(catCanvas(m.o, 76)); row.appendChild(catCanvas({ ...m.o, gun: true, face: m.o.face === 'boss' ? 'boss' : 'fire' }, 76)); d.appendChild(row); d.insertAdjacentHTML('beforeend', `<div class="nm">${i + 1}. ${m.nm}</div><div class="ro">${m.ro}</div>`); d.addEventListener('click', () => setHero(i)); d.style.cursor = 'pointer'; models.appendChild(d); });
+
+// ───────────────────────────── 전투 장면 (레퍼런스처럼 풀밭·절벽·나무, 주황 탄 줄기, 초록 지폐)
+const canvas = document.getElementById('battle'), bar = document.getElementById('bar'), heroName = document.getElementById('heroName');
+const HS = 0.68; let heroIdx = 0, heroImgs = {};
+function bakeHero(i) { const o = MODELS[i].o; heroImgs = {}; for (const f of ['idle', 'fire', 'hurt']) { const cv = document.createElement('canvas'); cv.width = 100 * HS * dpr; cv.height = 110 * HS * dpr; const c = cv.getContext('2d'); c.scale(HS * dpr, HS * dpr); drawCat(c, { ...o, face: f === 'idle' ? (o.face === 'boss' ? 'boss' : 'idle') : f === 'fire' ? (o.face === 'boss' ? 'boss' : 'fire') : 'hurt', gun: f !== 'hurt' }); if (f === 'hurt' && o.face === 'boss') { c.save(); c.translate(78, 20); c.rotate(0.5); rrect(c, -6, -2.5, 12, 5, 2.5); c.fillStyle = '#2a2a33'; c.fill(); c.restore(); } heroImgs[f] = cv; } heroName.textContent = MODELS[i].nm; }
+function setHero(i) { heroIdx = i; bakeHero(i); }
+bakeHero(0);
+document.getElementById('next').addEventListener('click', () => setHero((heroIdx + 1) % MODELS.length));
+const S = { t: 0, enemies: [], bullets: [], parts: [], bills: [], spawnAt: 0.5, fireAt: 0, hurtUntil: 0, flashUntil: 0, recoilUntil: 0, aim: -Math.PI / 2, mental: 1, shake: 0, W: 0, H: 0 };
+function resize() { const r = canvas.parentElement.getBoundingClientRect(); S.W = Math.round(r.width); S.H = Math.round(r.height); canvas.width = S.W * dpr; canvas.height = S.H * dpr; }
+resize(); addEventListener('resize', resize);
+const hero = () => ({ x: S.W / 2, y: S.H * 0.6 });
+function hurt() { S.hurtUntil = S.t + 0.7; S.mental = Math.max(0.15, S.mental - 0.18); S.shake = 0.25; }
+document.getElementById('hurt').addEventListener('click', hurt);
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+function muzzle() { const h = hero(); return { x: h.x + 11 * HS + Math.cos(S.aim) * 15, y: h.y + 20 * HS + Math.sin(S.aim) * 15 }; }
+function pop(x, y) { for (let i = 0; i < 5; i++) { const a = Math.random() * Math.PI * 2, s = 60 + Math.random() * 90; S.bills.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 80, life: 0.9 + Math.random() * 0.4, rot: Math.random() * 6 }); } }
+function step(dt) {
+  S.t += dt; const h = hero();
+  if (S.t > S.spawnAt && S.enemies.length < 6) { S.spawnAt = S.t + 0.7 + Math.random() * 0.5; const r = Math.random(); const kind = r < 0.45 ? 'panic' : r < 0.65 ? 'dump' : r < 0.82 ? 'spec' : 'stop'; const HP = { panic: 3, dump: 5, spec: 6, stop: 4 }, SP = { panic: 70, dump: 48, spec: 34, stop: 56 }; S.enemies.push({ kind, x: 40 + Math.random() * (S.W - 80), y: -30, hp: HP[kind], speed: SP[kind], flash: 0 }); }
+  for (const e of S.enemies) { e.y += e.speed * dt; e.flash = Math.max(0, e.flash - dt); if (e.y >= h.y - 22) { e.dead = true; hurt(); } }
+  let best = null, bd = 1e9; for (const e of S.enemies) { if (e.dead) continue; const d = (e.x - h.x) ** 2 + (e.y - h.y) ** 2; if (d < bd) { bd = d; best = e; } }
+  if (best) { const want = Math.atan2(best.y - h.y, best.x - h.x); S.aim += (want - S.aim) * Math.min(1, dt * 10); }
+  if (best && S.t > S.fireAt && S.t > S.hurtUntil) { S.fireAt = S.t + 0.22; const m = muzzle(); S.bullets.push({ x: m.x, y: m.y, vx: Math.cos(S.aim) * 560, vy: Math.sin(S.aim) * 560, life: 0.9 }); S.flashUntil = S.t + 0.07; S.recoilUntil = S.t + 0.09; }
+  for (const b of S.bullets) { b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt; for (const e of S.enemies) { if (e.dead) continue; if ((e.x - b.x) ** 2 + (e.y - b.y) ** 2 < 19 ** 2) { b.life = 0; e.hp--; e.flash = 0.08; e.y -= 4; S.parts.push({ x: e.x, y: e.y - 24, txt: ['370', '412', '1.03A'][Math.floor(Math.random() * 3)], life: 0.6 }); if (e.hp <= 0) { e.dead = true; pop(e.x, e.y); } break; } } }
+  S.bullets = S.bullets.filter(b => b.life > 0 && b.y > -20); S.enemies = S.enemies.filter(e => !e.dead);
+  for (const p of S.parts) { p.y -= 30 * dt; p.life -= dt; } S.parts = S.parts.filter(p => p.life > 0);
+  for (const b of S.bills) { b.x += b.vx * dt; b.y += b.vy * dt; b.vy += 220 * dt; b.vx *= 0.98; b.life -= dt; b.rot += dt * 3; } S.bills = S.bills.filter(b => b.life > 0);
+  S.mental = Math.min(1, S.mental + dt * 0.03); S.shake = Math.max(0, S.shake - dt);
+}
+function tuft(c, x, y) { c.beginPath(); c.moveTo(x - 6, y); c.quadraticCurveTo(x - 5, y - 8, x - 2, y - 2); c.quadraticCurveTo(x, y - 11, x + 2, y - 2); c.quadraticCurveTo(x + 5, y - 8, x + 6, y); c.closePath(); c.fillStyle = '#b4d27f'; c.fill(); }
+function tree(c, x, y, r) { c.beginPath(); c.roundRect(x - 5, y, 10, 16, 3); fs(c, '#a98464', 2); for (const [dx, dy, rr] of [[-r * 0.5, -r * 0.1, r * 0.7], [r * 0.5, -r * 0.1, r * 0.7], [0, -r * 0.55, r * 0.8]]) { ell(c, x + dx, y + dy, rr, rr); fs(c, '#8fcf86', 2.5); } ell(c, x - r * 0.3, y - r * 0.6, r * 0.25, r * 0.18); c.fillStyle = 'rgba(255,255,255,.35)'; c.fill(); }
+function draw() {
+  const c = canvas.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.translate(S.shake && !reduced ? (Math.random() - 0.5) * 6 : 0, 0);
+  c.fillStyle = '#cfe3a0'; c.fillRect(-10, 0, S.W + 20, S.H);
+  // 절벽(왼쪽 위)과 나무(오른쪽 위)
+  c.beginPath(); c.moveTo(-10, 0); c.lineTo(S.W * 0.55, 0); c.quadraticCurveTo(S.W * 0.5, 60, S.W * 0.3, 90); c.quadraticCurveTo(S.W * 0.1, 110, -10, 140); c.closePath(); c.fillStyle = '#8a6a4a'; c.fill(); c.lineWidth = 3; c.strokeStyle = INK; c.stroke();
+  c.beginPath(); c.moveTo(-10, 0); c.lineTo(S.W * 0.55, 0); c.quadraticCurveTo(S.W * 0.5, 40, S.W * 0.3, 70); c.quadraticCurveTo(S.W * 0.1, 90, -10, 118); c.closePath(); c.fillStyle = '#a9c76e'; c.fill(); c.lineWidth = 3; c.stroke();
+  tree(c, S.W * 0.8, 70, 34); tree(c, S.W * 0.97, 40, 30);
+  for (const [fx, fy] of [[0.15, 0.35], [0.85, 0.32], [0.3, 0.5], [0.7, 0.55], [0.12, 0.7], [0.9, 0.75], [0.5, 0.85], [0.25, 0.92], [0.78, 0.92]]) tuft(c, S.W * fx, S.H * fy);
+  for (const b of S.bills) { c.save(); c.translate(b.x, b.y); c.rotate(b.rot); rrect(c, -8, -5, 16, 10, 2); fs(c, '#79c85a', 2); ell(c, 0, 0, 2.5, 2.5); c.fillStyle = '#3f8f2e'; c.fill(); c.restore(); }
+  for (const e of S.enemies) { c.save(); c.translate(e.x, e.y); c.scale(0.95, 0.95); drawEnemy(c, e.kind, S.t + e.x, e.flash); c.restore(); }
+  for (const b of S.bullets) { c.save(); c.translate(b.x, b.y); c.rotate(Math.atan2(b.vy, b.vx)); c.beginPath(); c.moveTo(6, 0); c.lineTo(-20, -3); c.lineTo(-20, 3); c.closePath(); c.fillStyle = 'rgba(255,170,80,.45)'; c.fill(); c.beginPath(); c.moveTo(6, 0); c.lineTo(-14, -2.2); c.lineTo(-14, 2.2); c.closePath(); c.fillStyle = '#ff8a3d'; c.fill(); c.beginPath(); c.moveTo(4, 0); c.lineTo(-8, -1); c.lineTo(-8, 1); c.closePath(); c.fillStyle = '#fff2c0'; c.fill(); c.restore(); }
+  const h = hero(); const hurting = S.t < S.hurtUntil, firing = S.t < S.fireAt && S.enemies.length > 0; const recoil = S.t < S.recoilUntil ? 2 : 0; const breathe = reduced ? 0 : Math.sin(S.t * 3.8) * 0.02;
+  const img = heroImgs[hurting ? 'hurt' : firing ? 'fire' : 'idle']; const w = 100 * HS, hh = 110 * HS;
+  c.save(); c.translate(h.x, h.y + recoil); c.scale(1, 1 + breathe); c.drawImage(img, -w / 2, -hh / 2, w, hh); c.restore();
+  if (S.t < S.flashUntil) { const m = muzzle(); c.save(); c.translate(m.x, m.y); c.beginPath(); for (let i = 0; i < 8; i++) { const r = i % 2 ? 2.5 : 7, a = i * Math.PI / 4 + S.t * 20; c.lineTo(Math.cos(a) * r, Math.sin(a) * r); } c.closePath(); c.fillStyle = '#ffd16b'; c.fill(); ell(c, 0, 0, 3.5, 3.5); c.fillStyle = '#fff'; c.fill(); c.restore(); }
+  for (const p of S.parts) { c.font = 'bold 13px Jua, sans-serif'; c.textAlign = 'center'; c.lineWidth = 3; c.strokeStyle = INK; c.strokeText(p.txt, p.x, p.y); c.fillStyle = '#9ae36a'; c.fillText(p.txt, p.x, p.y); }
+  if (hurting) { c.fillStyle = 'rgba(255,110,90,' + (0.35 * (S.hurtUntil - S.t) / 0.7).toFixed(3) + ')'; c.fillRect(-10, 0, S.W + 20, S.H); }
+  bar.style.width = (S.mental * 100).toFixed(0) + '%';
+}
+let last = performance.now();
+(function loop(now) { const dt = Math.min(0.05, (now - last) / 1000); last = now; step(dt); draw(); requestAnimationFrame(loop); })(last);
+
+// ───────────────────────────── 표정·직원
+const en = document.getElementById('enemies');
+for (const [k, nm, say] of [['panic', '패닉셀', '빠르고 떼로. 걱정 눈썹에 땀'], ['dump', '투매', '종이 더미. 느리고 단단하다'], ['spec', '투기', '풍선. 부풀다 터진다'], ['stop', '손절매', '머리에 가위 날. 무표정']]) { const box = document.createElement('div'); box.style.maxWidth = '150px'; const cv = document.createElement('canvas'); cv.width = 120 * dpr; cv.height = 120 * dpr; cv.style.width = '120px'; cv.style.height = '120px'; const c = cv.getContext('2d'); c.scale(dpr * 2.2, dpr * 2.2); c.translate(27, 30); drawEnemy(c, k, 0.3, 0); box.appendChild(cv); box.insertAdjacentHTML('beforeend', `<div class="disp" style="font-size:17px">${nm}</div><div class="cap">${say}</div>`); en.appendChild(box); }
+const faces = document.getElementById('faces');
+for (const [f, label] of [['idle', '가만히'], ['fire', '쏘기'], ['hurt', '맞음'], ['star', '특급!'], ['sad', '사표'], ['sleep', '잠']]) { const box = document.createElement('div'); box.appendChild(catCanvas({ fur: '#f5c57c', fur2: '#e39d4a', pattern: 'tabby', face: f }, 80)); box.insertAdjacentHTML('beforeend', `<div class="cap">${label}</div>`); faces.appendChild(box); }
+const LINEUP = [
+  { nm: '치즈', ro: '신입 · 후드티', o: { fur: '#f5c57c', fur2: '#e39d4a', pattern: 'tabby', outfit: 'hoodie' } },
+  { nm: '까망', ro: '신입 · 후드티', o: { fur: '#565060', pattern: 'solid', outfit: 'hoodie' } },
+  { nm: '고등어', ro: '팀장 · 셔츠', o: { fur: '#b9c3cf', fur2: '#6f7f93', pattern: 'tabby', outfit: 'shirt', acc: ['headset'] } },
+  { nm: '턱시도', ro: '애널리스트 · 셔츠', o: { fur: '#4f4a56', fur2: '#4f4a56', pattern: 'tuxedo', outfit: 'shirt', acc: ['glasses'] } },
+  { nm: '삼색이', ro: '부장 · 정장', o: { fur: '#fff6ea', fur2: '#f2a85a', pattern: 'calico', outfit: 'suit', acc: ['ribbon'] } },
+  { nm: '러시안블루', ro: '트레이더 · 정장', o: { fur: '#9aa6b8', pattern: 'solid', outfit: 'suit', acc: ['glasses'] } },
+  { nm: '샴', ro: '임원 · 정장', o: { fur: '#efe1cf', fur2: '#8b6a52', pattern: 'point', outfit: 'suit', acc: ['tie'] } },
+  { nm: '페르시안', ro: '특급 인재', o: { fur: '#fffaf2', pattern: 'solid', acc: ['necklace', 'crown'], face: 'star' } },
+];
+const lineup = document.getElementById('lineup');
+for (const it of LINEUP) { const d = document.createElement('div'); d.className = 'cat'; d.appendChild(catCanvas(it.o, 80)); d.insertAdjacentHTML('beforeend', `<div class="nm">${it.nm}</div><div class="ro">${it.ro}</div>`); lineup.appendChild(d); }
+</script>
+</body></html>
