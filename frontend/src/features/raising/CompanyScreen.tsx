@@ -19,7 +19,7 @@ import { autoPlace, deskEffect, rankDesks, seatOne } from './placement'
 import { QuarterSheet } from './QuarterSheet'
 import { ResignAlert } from './ResignAlert'
 import { useRaisingStore } from './store'
-import { TutorialBanner, useTutorialSpot } from './Tutorial'
+import { TutorialBanner, useTutorialSpot } from './TutorialBanner'
 import { Ledger, PHASES, YearEndSheet } from './YearEnd'
 
 type Employee = Company['employees'][number]
