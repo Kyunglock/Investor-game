@@ -244,7 +244,7 @@ function Lightning({ surge, still, tone }: { surge: boolean; still: boolean; ton
 }
 
 /**
- * "너희가 알아서 해" (decisions.md 279·285·304번). 사장이 맡기면 매수파(왼쪽)와 매도파(오른쪽)가 한가운데 막대를 두고 맞선다. 말 한마디가 꽂힐 때마다 그쪽이
+ * 종목 회의 토론 (decisions.md 279·285·304·352번). 회의를 열면 매수파(왼쪽)와 매도파(오른쪽)가 한가운데 막대를 두고 맞선다. 말 한마디가 꽂힐 때마다 그쪽이
  * 반대쪽을 쿵 밀어내고(튕기며 넘어갔다 돌아온다), 경계에서 번개가 튀고 불꽃이 흩어진다. 사회가 표결을 부르면 무게대로 쭉 밀리고, 이긴 쪽이 선언하면 그쪽에
  * "매수"·"매도" 도장이 찍히고, 진 쪽이 토를 달고 물러나면 끝난다. 승패는 서버가 정한 그대로다. 움직임 줄이기·빨리 보기면 끝난 모습만.
  */
@@ -397,7 +397,7 @@ export function TeamClash({
       aria-label="매수파와 매도파가 막대를 밀어내며 맞선다"
     >
       <p className="text-center text-[13px] font-semibold">
-        “너희가 알아서 해” — <span className="text-red-pen">{status}</span>
+        종목 회의 토론 — <span className="text-red-pen">{status}</span>
       </p>
       {/* 밀어내기 (304번): 양쪽 사람이 막대를 사이에 두고 선다. 말이 꽂힐 때마다 경계가 반대쪽으로 쿵 밀린다. */}
       <div className="relative mt-1.5 rounded border border-line bg-paper px-2 pt-2 pb-1">
@@ -573,12 +573,12 @@ export function TeamClash({
               )
             })}
             {declared && (
-              // 공지 고정: 이긴 쪽 선언이 뜨면 팀 결정을 핀으로 박는다.
+              // 공지 고정: 이긴 쪽 선언이 뜨면 팀 의견을 핀으로 박는다.
               <li
                 className="animate-stamp mx-auto rounded-lg bg-gold/20 px-3 py-1 text-[13px] font-bold"
                 data-testid="clash-stamp"
               >
-                📌 팀 결정:{' '}
+                📌 팀 의견:{' '}
                 <span
                   className={`pen-circle px-2 font-pen text-[20px] ${buyWins ? 'text-up' : 'text-down'}`}
                 >
@@ -606,7 +606,7 @@ export function TeamClash({
           className={`animate-clash-win mt-1 text-center font-pen text-[26px] ${buyWins ? 'text-up' : 'text-down'}`}
           data-testid="clash-result"
         >
-          팀 결정: {buyWins ? '매수!' : '매도!'}
+          팀 의견: {buyWins ? '매수!' : '매도!'}
         </p>
       )}
     </section>

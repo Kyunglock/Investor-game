@@ -357,7 +357,8 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   // 연표 탭 (263번): 차린 해부터 큰 일이 쌓이고 업적과 명예의 전당이 보인다.
   await tab(page, /연표/)
   await expect(page.getByTestId('timeline')).toContainText('1호 회사를 차렸다')
-  await expect(page.getByTestId('achievement')).toHaveCount(8)
+  // 업적 열다섯 (351번: 실패·재미 업적 일곱이 더해졌다).
+  await expect(page.getByTestId('achievement')).toHaveCount(15)
   await expect(page.getByTestId('hall').getByRole('listitem')).toHaveCount(4)
   // 매각을 뺐다(236번): 세 해가 지나도 회사는 이어지고 4년 차 이슈가 온다. 팔 곳은 없다.
   await expect(page.getByText(/1호 회사 · 4년 차/)).toBeVisible()
@@ -440,7 +441,7 @@ test('분기 넘기기 버튼을 빠르게 두 번 눌러도 한 분기만 넘�
   expect(settles).toBeGreaterThanOrEqual(1)
 })
 
-test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 매도파가 토론하며 맞붙어 한쪽으로 정한다 (279·285번)', async ({
+test('종목 회의를 열면 먼저 매수파와 매도파가 토론하며 맞붙고, 끝나면 사장이 고른다 (279·285·352번)', async ({
   page,
 }) => {
   await openCompany(page)
@@ -457,8 +458,9 @@ test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 �
   // 고집 표시와 크게 산다·판다는 뺐다.
   await expect(meeting.getByTestId('stubborn')).toHaveCount(0)
   await expect(meeting.getByRole('button', { name: /크게/ })).toHaveCount(0)
-  await meeting.getByTestId('invest-team').click()
-  // 막판 제안이 와도 토론이 먼저 오간다 (290번): 처음 뜨는 맞붙는 장면을 본다.
+  // "너희가 알아서 해"는 없다 (352번): 토론이 먼저 뜨고, 끝날 때까지 결정 버튼은 잠겨 있다.
+  await expect(meeting.getByTestId('invest-team')).toHaveCount(0)
+  await expect(meeting.getByRole('button', { name: '산다', exact: true })).toBeDisabled()
   const clash = meeting.getByTestId('team-clash').first()
   await expect(clash).toBeVisible()
   await expect(clash).toHaveAttribute('data-phase', 'clash')
@@ -474,7 +476,7 @@ test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 �
   await expect(clash).toHaveAttribute('data-phase', 'clash')
   // 말 한 줄이 글자 수만큼 머문다 (303번): 일곱 줄이면 30초 안팎.
   await expect(clash).toHaveAttribute('data-phase', 'done', { timeout: 45_000 })
-  await expect(clash.getByTestId('clash-result')).toHaveText(/팀 결정: (매수|매도)!/)
+  await expect(clash.getByTestId('clash-result')).toHaveText(/팀 의견: (매수|매도)!/)
   // 두 바퀴 뒤 결판 세 박자 (295·304번): 사회가 표결을 부르고, 이긴 쪽이 선언하고, 진 쪽이 물러난다.
   await expect(lines).toHaveCount(7)
   const result = await clash.getByTestId('clash-result').innerText()
@@ -482,11 +484,16 @@ test('종목 회의에서 "너희가 알아서 해"를 누르면 매수파와 �
   await expect(lines.nth(5)).toHaveAttribute('data-kind', 'WIN')
   await expect(lines.nth(5)).toHaveAttribute('data-side', result.includes('매수') ? 'BUY' : 'SELL')
   await expect(lines.nth(6)).toHaveAttribute('data-kind', 'LOSE')
+  // 토론이 끝나면 사장 차례: 직원들이 기운 쪽이 한 줄로 보이고, 사장이 고른다.
+  await expect(meeting.getByTestId('invest-your-turn')).toContainText('사장님 차례')
+  await meeting
+    .getByRole('button', { name: result.includes('매수') ? '산다' : '판다', exact: true })
+    .click()
   await declineProposal(meeting)
   await expect(meeting.getByTestId('invest-choice')).toHaveText(
     result.includes('매수') ? '산다' : '판다',
   )
-  await expect(meeting.getByTestId('invest-outcome')).toContainText('팀 결정')
+  await expect(meeting.getByTestId('invest-outcome')).toContainText('사장 결정')
   const fast = meeting.getByRole('button', { name: '빨리 보기' })
   if (await fast.isVisible()) {
     await fast.click()

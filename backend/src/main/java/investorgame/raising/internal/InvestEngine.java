@@ -364,6 +364,8 @@ class InvestEngine {
     company.remember(c, used);
     c.invest.highlightIndex = highlight.map(Highlight::index).orElse(null);
     c.invest.highlightBy = highlight.map(Highlight::by).orElse(null);
+    // 토론이 먼저 (decisions.md 352번): 회의를 열면 매수파·매도파가 맞붙어 한쪽으로 기운다. 사장은 그 뒤에 고른다.
+    c.invest.teamCall = teamCall(c, random);
   }
 
   /** 형광펜: 리서치 팀이 있으면 그 안목으로 결정적 문장에, 빗나가면 반대쪽 곁가지에 긋는다. 리서치 팀이 없거나 방향을 못 읽으면 없다. */
@@ -550,11 +552,9 @@ class InvestEngine {
     if (Boolean.FALSE.equals(c.invest.found)) {
       throw new InvalidRequestException("이번 분기에는 아직 아무도 종목을 물어 오지 않았다");
     }
-    if (!List.of(BUY, SELL, HOLD, TEAM).contains(choice)) {
+    // "너희가 알아서 해"는 뺐다 (352번): 토론은 회의를 열 때 먼저 하고, 마지막은 늘 사장이 고른다.
+    if (!List.of(BUY, SELL, HOLD).contains(choice)) {
       throw new InvalidRequestException("고를 수 없는 것: " + choice);
-    }
-    if (big && TEAM.equals(choice)) {
-      throw new InvalidRequestException("맡기면서 크게 할 수는 없다");
     }
     List<Employee> traders = company.traders(c);
     if (traders.isEmpty()) {
@@ -565,13 +565,9 @@ class InvestEngine {
     if (c.invest.proposalId != null) {
       throw new InvalidRequestException("막판 제안에 먼저 답해야 한다");
     }
-    boolean delegated = TEAM.equals(choice);
-    if (delegated) {
-      choice = teamCall(c, random);
-    }
-    // 막판 뒤집기 (decisions.md 283번): 결정이 다 끝났는데 누군가 손을 들고 반대로 하자고 한다. 맡겼으면 직원들이 정한 것이라 아무도 나서지 않는다
-    // (291번).
-    if (proposals && !delegated && propose(c, choice, big, delegated, random)) {
+    boolean delegated = false;
+    // 막판 뒤집기 (decisions.md 283번): 결정이 다 끝났는데 누군가 손을 들고 반대로 하자고 한다.
+    if (proposals && propose(c, choice, big, delegated, random)) {
       return;
     }
     execute(c, choice, big, delegated, random);
@@ -847,8 +843,9 @@ class InvestEngine {
   }
 
   /**
-   * "너희가 알아서 해" (decisions.md 279번): 회의에서 나온 한마디를 저울에 단다. 사자는 매수 쪽, 팔자는 매도 쪽에 그 직원의 안목 + 10만큼
+   * 토론의 결론 (decisions.md 279·352번): 회의에서 나온 한마디를 저울에 단다. 사자는 매수 쪽, 팔자는 매도 쪽에 그 직원의 안목 + 10만큼
    * 얹고(모르겠다는 얹지 않는다), 무게만큼의 확률로 한쪽이 이긴다. 양쪽 다 비었으면 반반. 맞붙은 무게는 화면의 불꽃 장면이 쓴다. 사거나 팔 뿐 지켜보지는 않는다.
+   * 전에는 "너희가 알아서 해"로 맡길 때만 돌렸고 그게 곧 결정이었다. 지금은 회의를 열 때 돌려 토론을 먼저 보이고, 결정은 사장이 한다.
    */
   private String teamCall(CompanyState c, SeededRandom random) {
     int buy = 0;

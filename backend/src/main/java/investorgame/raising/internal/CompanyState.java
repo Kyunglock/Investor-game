@@ -369,6 +369,9 @@ class CompanyState {
     String verdictLine;
 
     /** 맡겼을 때 매수 쪽·매도 쪽에 얹힌 무게(직원 안목). 불꽃 장면이 쓴다. */
+    /** 토론 뒤 직원들이 기운 쪽(BUY·SELL, 352번). 회의를 열 때 정해지고 사장은 그 뒤에 고른다. 토론 전에 연 회의면 null. */
+    String teamCall;
+
     int teamBuy;
 
     int teamSell;
