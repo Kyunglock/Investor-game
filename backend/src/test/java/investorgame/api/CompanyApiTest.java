@@ -148,8 +148,8 @@ class CompanyApiTest {
     assertThat(company.read("$.grade", String.class)).isEqualTo("F");
     assertThat(company.read("$.seats", Integer.class)).isEqualTo(4);
     assertThat(company.read("$.employees.length()", Integer.class)).isZero();
-    // 채용 뽑기 (decisions.md 312번): 채용권 다섯 장으로 시작하고, 확률표와 도감(F~GOD)이 보인다.
-    assertThat(company.read("$.gacha.tickets", Integer.class)).isEqualTo(5);
+    // 채용 뽑기 (decisions.md 312번): 채용권 열 장으로 시작하고(#344), 확률표와 도감(F~GOD)이 보인다.
+    assertThat(company.read("$.gacha.tickets", Integer.class)).isEqualTo(10);
     assertThat(company.read("$.gacha.rosterMax", Integer.class)).isEqualTo(8);
     assertThat(company.read("$.gacha.rates.length()", Integer.class)).isEqualTo(5);
     assertThat(company.read("$.gacha.collection.length()", Integer.class)).isEqualTo(18);
@@ -161,16 +161,16 @@ class CompanyApiTest {
     DocumentContext one = draw(1);
     assertThat(one.read("$.employees.length()", Integer.class)).isEqualTo(1);
     assertThat(one.read("$.capital", Long.class)).as("뽑기는 돈이 들지 않는다").isEqualTo(capital);
-    assertThat(one.read("$.gacha.tickets", Integer.class)).isEqualTo(4);
+    assertThat(one.read("$.gacha.tickets", Integer.class)).isEqualTo(9);
     assertThat(one.read("$.gacha.drawn.length()", Integer.class)).isEqualTo(1);
     assertThat(one.read("$.gacha.drawn[0].fresh", Boolean.class)).as("처음 본 등급").isTrue();
     assertThat(one.read("$.employees[0].sectorName", String.class)).isNotBlank();
     // 같은 뽑기가 두 번 와도 한 번만 뽑는다. 아직 오지 않은 것과 모자란 채용권은 400.
     DocumentContext twice = json(drawRequest(1, 0).andExpect(status().isOk()));
-    assertThat(twice.read("$.gacha.tickets", Integer.class)).isEqualTo(4);
+    assertThat(twice.read("$.gacha.tickets", Integer.class)).isEqualTo(9);
     assertThat(twice.read("$.employees.length()", Integer.class)).isEqualTo(1);
     drawRequest(1, 5).andExpect(status().isBadRequest());
-    drawRequest(5, 1).andExpect(status().isBadRequest());
+    drawRequest(10, 1).andExpect(status().isBadRequest());
     postJson("/api/company/draws", "{}").andExpect(status().isBadRequest());
 
     int employeeId = one.read("$.employees[0].id");
@@ -324,7 +324,7 @@ class CompanyApiTest {
     DocumentContext resumed = json(mvc.perform(get("/api/company").cookie(session)));
     assertThat(resumed.read("$.status", String.class)).isEqualTo("ACTIVE");
     assertThat(resumed.read("$.companyId", String.class)).isEqualTo(id);
-    assertThat(resumed.read("$.gacha.tickets", Integer.class)).isEqualTo(5);
+    assertThat(resumed.read("$.gacha.tickets", Integer.class)).isEqualTo(10);
     settleYear(1).andExpect(jsonPath("$.year").value(2));
   }
 
@@ -336,7 +336,7 @@ class CompanyApiTest {
     List<Integer> ids = five.read("$.employees[*].id");
     assertThat(ids).hasSize(5);
     assertThat(five.read("$.gacha.roster", Integer.class)).isEqualTo(5);
-    assertThat(five.read("$.gacha.tickets", Integer.class)).isZero();
+    assertThat(five.read("$.gacha.tickets", Integer.class)).isEqualTo(5);
 
     DocumentContext released =
         json(
@@ -483,7 +483,7 @@ class CompanyApiTest {
     assertThat(rich.read("$.grade", String.class)).isEqualTo("F");
     assertThat(rich.read("$.upgrade.affordable", Boolean.class)).isTrue();
     assertThat(rich.read("$.upgrade.to", String.class)).isEqualTo("E");
-    assertThat(rich.read("$.upgrade.cost", Long.class)).isEqualTo(50_000_000L);
+    assertThat(rich.read("$.upgrade.cost", Long.class)).isEqualTo(18_000_000L);
     // 이사 비용을 내며 한 단계씩 Z까지 올라간다. 비용이 분기 실적의 이사 비용 줄에 남는다.
     DocumentContext moved = null;
     for (int i = 0; i < 12; i++) {

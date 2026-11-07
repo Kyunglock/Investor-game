@@ -121,6 +121,21 @@ class MacroEngine {
     return stakePercentOf(stance(c));
   }
 
+  /**
+   * 태도가 숨은 방향과 맞았는가에 따라 판단마다 더하거나 빼는 만분율 (#388). 공격은 오를 때, 방어는 내릴 때 맞다. 중립은 0. 전에는 공격이 판돈만 키워 기사를 안
+   * 읽고 늘 공격해도 이겼다.
+   */
+  int stanceBp(CompanyState c) {
+    String stance = stance(c);
+    if (c.macro == null || NEUTRAL.equals(stance)) {
+      return 0;
+    }
+    boolean right = AGGRESSIVE.equals(stance) == c.macro.up;
+    return right
+        ? properties.macro().rightBp().getOrDefault(stance, 0)
+        : -properties.macro().wrongBp().getOrDefault(stance, 0);
+  }
+
   /** 폭락장의 시장 손익에 곱하는 비율(%): 방어면 줄어든다. */
   int crashPercent(CompanyState c) {
     return DEFENSIVE.equals(stance(c)) ? properties.macro().defensiveCrashPercent() : PERCENT;

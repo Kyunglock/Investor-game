@@ -98,10 +98,12 @@ class EconomySimulationTest {
     // 턴이 분기가 되어(268번) 분기마다 판단 하나·수수료 4분의 1, 판돈은 1분기 자본으로 한 해 내내 같다.
     // 2,000판: E 직원 21% · C 직원 54% · A 직원 84% · S 직원 98%, 세 해 자본 중앙값 1.41 · 2.07 · 2.98 · 4.39배.
     assertThat(weak[0]).as("E 직원: 조금 자란다").isBetween(1.2, 1.8);
-    assertThat(weak[1]).as("E 직원은 가끔 오른다").isBetween(0.15, 0.45);
+    // #344: E 띠를 1.2억으로 낮춰 첫 이사가 빨라졌다. 2,000판: E 직원 75% · C 92% · A 99%, 세 해 자본 중앙값 1.72 · 2.44 ·
+    // 3.67 · 5.34배.
+    assertThat(weak[1]).as("E 직원도 절반 넘게 첫 이사를 할 수 있다").isBetween(0.6, 0.9);
     assertThat(average[0]).as("C 직원: 세 해에 2배 남짓").isBetween(1.9, 2.7);
-    assertThat(average[1]).as("C 직원: 절반 넘게 E에 닿는다").isBetween(0.5, 0.8);
-    assertThat(good[1]).as("A 직원: 대부분 E에 닿는다").isBetween(0.75, 0.95);
+    assertThat(average[1]).as("C 직원: 대부분 E에 닿는다").isBetween(0.85, 0.97);
+    assertThat(good[1]).as("A 직원: 거의 다 E에 닿는다").isGreaterThan(0.95);
     assertThat(great[1]).as("S 직원: 거의 다 E에 닿는다").isGreaterThan(0.9);
   }
 
@@ -131,11 +133,13 @@ class EconomySimulationTest {
    * 고민이 생긴다.
    */
   @Test
-  void C_직원_둘이면_여덟_해_안에_첫_이사를_한다() {
+  void C_직원_둘이면_다섯_해_안에_첫_이사를_한다() {
     assertThat(firstMove(Map.of(1, "bio", 2, "scout")))
-        .as("한 사람은 바이오, 한 사람은 종목 발굴팀")
-        .isBetween(4, 8);
-    assertThat(firstMove(Map.of(1, "bio", 2, "day"))).as("둘 다 돈을 굴리면 종목 회의가 드물다").isBetween(5, 9);
+        .as("한 사람은 바이오, 한 사람은 종목 발굴팀 (#344: 중앙값 3년)")
+        .isBetween(2, 4);
+    assertThat(firstMove(Map.of(1, "bio", 2, "day")))
+        .as("둘 다 돈을 굴리면 종목 회의가 드물다 (중앙값 4년)")
+        .isBetween(3, 5);
   }
 
   /** 돈을 굴리는 자리 일곱(섹터 데스크 여섯과 단타). 규모의 벽 측정은 자리 수만큼 직원을 고르게 앉힌다. */
@@ -182,7 +186,8 @@ class EconomySimulationTest {
       assertThat(losses / (double) trials).as(grade + " 회사도 잃는 해가 있다").isBetween(0.12, 0.4);
       // 지원자가 회사 등급을 따라 오면서(289번) 한 해 중앙값이 1.12(D)~1.30(X)배로 낮아졌다: 등급이 바로 높아지지 않는다.
       assertThat(ratio[trials / 2]).as(grade + " 회사의 한 해 중앙값").isBetween(1.05, 1.45);
-      assertThat(ratio[trials * 9 / 10]).as(grade + " 회사가 한 해에 등급 띠(3배)를 넘지 않는다").isLessThan(1.9);
+      // #344·#388: 태도가 숨은 방향과 맞으면 더 번다. 꼭대기(X)도 상위 10%가 한 해 두 배 아래다.
+      assertThat(ratio[trials * 9 / 10]).as(grade + " 회사가 한 해에 등급 띠(3배)를 넘지 않는다").isLessThan(2.0);
       if (k >= 10) {
         assertThat(dropped / (double) trials).as(grade + " 꼭대기는 폭락장에 떨어질 수 있다").isGreaterThan(0.1);
       }

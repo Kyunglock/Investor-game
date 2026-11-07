@@ -60,11 +60,11 @@ class CompanyEngineTest {
     assertThat(ENGINE.draw(company, 1, new HashSeededRandom(1)).getFirst().name).isEqualTo("박한결");
     assertThat(ENGINE.grade(company.capital)).isEqualTo("F");
     assertThat(ENGINE.seats(company.capital)).isEqualTo(4);
-    assertThat(ENGINE.grade(200_000_000)).as("E는 2억부터 (257번)").isEqualTo("E");
-    assertThat(ENGINE.grade(199_999_999)).isEqualTo("F");
-    assertThat(ENGINE.grade(600_000_000)).isEqualTo("D");
-    assertThat(ENGINE.grade(300_000_000)).isEqualTo("E");
-    assertThat(ENGINE.seats(300_000_000)).isEqualTo(6);
+    assertThat(ENGINE.grade(120_000_000)).as("E는 1.2억부터 (#344)").isEqualTo("E");
+    assertThat(ENGINE.grade(119_999_999)).isEqualTo("F");
+    assertThat(ENGINE.grade(300_000_000)).isEqualTo("D");
+    assertThat(ENGINE.grade(200_000_000)).isEqualTo("E");
+    assertThat(ENGINE.seats(200_000_000)).isEqualTo(6);
     assertThat(company.wantedDesk).isNotNull();
   }
 
@@ -163,7 +163,6 @@ class CompanyEngineTest {
     CompanyState next = ENGINE.refound(company, List.of(1), fame, new HashSeededRandom(4));
     assertThat(next.number).isEqualTo(2);
     assertThat(next.era).isNotEqualTo("plain");
-    assertThat(ENGINE.grade(next.capital)).isEqualTo("F");
     assertThat(next.capital).as("명성 A(5단계)면 시작 자본 +50%").isEqualTo(150_000_000L);
     assertThat(next.employees)
         .singleElement()
@@ -388,7 +387,10 @@ class CompanyEngineTest {
     assertThat(company.capital).as("뽑기는 돈이 들지 않는다").isEqualTo(capital);
     assertThat(company.draws).isEqualTo(2);
     assertThat(company.collection.values().stream().mapToInt(Integer::intValue).sum()).isEqualTo(2);
-    assertThatThrownBy(() -> ENGINE.draw(company, 4, new HashSeededRandom(5)))
+    assertThatThrownBy(
+            () ->
+                ENGINE.draw(
+                    company, PROPERTIES.gacha().startTickets() - 1, new HashSeededRandom(5)))
         .as("채용권이 모자란다")
         .isInstanceOf(InvalidRequestException.class);
     assertThatThrownBy(
@@ -704,8 +706,8 @@ class CompanyEngineTest {
    */
   @Test
   void 자본이_줄어_자리가_줄면_돕는_자리부터_일어나_쉰다() {
-    // E 회사(자리 6)에 여섯을 앉힌다. 해 가운데 자본이 2억 아래로 떨어져도 그해에는 자리 여섯 그대로다.
-    CompanyState company = open(5, stats(50, 50, 50, 50), 200_000_000 + 1_000_000);
+    // E 회사(자리 6)에 여섯을 앉힌다. 해 가운데 자본이 1.2억 아래로 떨어져도 그해에는 자리 여섯 그대로다.
+    CompanyState company = open(5, stats(50, 50, 50, 50), 120_000_000 + 1_000_000);
     for (int i = 0; i < 5; i++) {
       ENGINE.hire(company, stats(50, 50, 50, 50));
     }
@@ -720,7 +722,7 @@ class CompanyEngineTest {
     assertThat(ENGINE.seats(company)).isEqualTo(6);
 
     company.capital -= 2_000_000;
-    assertThat(company.capital).isLessThan(200_000_000);
+    assertThat(company.capital).isLessThan(120_000_000);
     assertThat(ENGINE.seats(company)).as("자리 수는 연말에만 바뀐다").isEqualTo(6);
     assertThat(staff.get(0).desk).isEqualTo("research");
 
@@ -1113,8 +1115,8 @@ class CompanyEngineTest {
     CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
     assertThat(company.building).isEqualTo("F");
     assertThat(ENGINE.nextGrade(company)).isEqualTo("E");
-    assertThat(ENGINE.upgradeCost(company)).as("E 2억의 25%").isEqualTo(50_000_000L);
-    assertThat(ENGINE.upgradeNeeded(company)).isEqualTo(250_000_000L);
+    assertThat(ENGINE.upgradeCost(company)).as("E 1.2억의 15% (#344)").isEqualTo(18_000_000L);
+    assertThat(ENGINE.upgradeNeeded(company)).isEqualTo(138_000_000L);
     assertThat(ENGINE.canUpgrade(company)).isFalse();
     assertThatThrownBy(() -> ENGINE.upgrade(company)).isInstanceOf(InvalidRequestException.class);
 
@@ -1130,21 +1132,21 @@ class CompanyEngineTest {
     long before = company.capital;
     ENGINE.upgrade(company);
     assertThat(ENGINE.grade(company)).isEqualTo("E");
-    assertThat(company.capital).isEqualTo(before - 50_000_000L);
-    assertThat(company.yearMoving).isEqualTo(50_000_000L);
+    assertThat(company.capital).isEqualTo(before - 18_000_000L);
+    assertThat(company.yearMoving).isEqualTo(18_000_000L);
     assertThat(ENGINE.seats(company)).isEqualTo(6);
     assertThat(company.timeline).extracting(e -> e.kind).contains("grow");
-    // 한 번에 한 단계씩: D(6억)로 가려면 7억 5천만이 있어야 하고 지금 8억 남짓이니 간다.
+    // 한 번에 한 단계씩: D(3억)로 가려면 3억 4,500만이 있어야 하고 지금 8억 남짓이니 간다.
     ENGINE.upgrade(company);
     assertThat(ENGINE.grade(company)).isEqualTo("D");
-    assertThat(company.capital).isEqualTo(before - 200_000_000L);
-    assertThat(ENGINE.canUpgrade(company)).as("C 20억은 아직").isFalse();
+    assertThat(company.capital).isEqualTo(before - 63_000_000L);
+    assertThat(ENGINE.canUpgrade(company)).as("C 10억은 아직").isFalse();
     CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(2));
-    assertThat(s.moving).isEqualTo(200_000_000L);
-    assertThat(s.quarters.stream().mapToLong(q -> q.moving).sum()).isEqualTo(200_000_000L);
+    assertThat(s.moving).isEqualTo(63_000_000L);
+    assertThat(s.quarters.stream().mapToLong(q -> q.moving).sum()).isEqualTo(63_000_000L);
 
     // 자본이 띠 아래로 떨어지면 연말에 줄어든다.
-    company.capital = 150_000_000L;
+    company.capital = 100_000_000L;
     company.invest = null;
     company.poach = null;
     CompanyState.Settlement fell = ENGINE.settle(company, new HashSeededRandom(3));
