@@ -718,4 +718,34 @@ class InvestEngineTest {
     }
     assertThat(alternatives).isPositive();
   }
+
+  /** #341: 같은 꼬리표를 단 반대쪽 문장은 한 기사에 함께 나오지 않는다. */
+  @Test
+  void 같은_사건의_반대_문장은_한_기사에_함께_나오지_않는다() {
+    List<investorgame.content.Clue> ups =
+        List.of(
+            new investorgame.content.Clue("실사를 지적 없이 마쳤다.", "실사가 깨끗했다", "inspection"),
+            new investorgame.content.Clue("수주가 늘었다.", "수주가 늘었다", null),
+            new investorgame.content.Clue("값이 올랐다.", "값이 올랐다", null));
+    List<investorgame.content.Clue> downs =
+        List.of(
+            new investorgame.content.Clue("실사에서 지적이 세 건 나왔다.", "실사에서 걸렸다", "inspection"),
+            new investorgame.content.Clue("재고가 쌓였다.", "재고가 쌓였다", null),
+            new investorgame.content.Clue("값이 내렸다.", "값이 내렸다", null));
+    int together = 0;
+    int clean = 0;
+    for (int seed = 0; seed < 300; seed++) {
+      var rng = new HashSeededRandom(seed).forKey("article", seed);
+      List<String> texts =
+          ENGINE.invest.article(ups, downs, List.of("중립."), seed % 2 == 0, rng, Map.of()).stream()
+              .map(x -> x.text)
+              .toList();
+      boolean a = texts.contains("실사를 지적 없이 마쳤다.");
+      boolean b = texts.contains("실사에서 지적이 세 건 나왔다.");
+      together += a && b ? 1 : 0;
+      clean += a || b ? 1 : 0;
+    }
+    assertThat(together).isZero();
+    assertThat(clean).as("꼬리표 문장도 나오기는 한다").isPositive();
+  }
 }

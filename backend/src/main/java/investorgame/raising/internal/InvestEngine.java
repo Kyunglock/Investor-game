@@ -275,21 +275,23 @@ class InvestEngine {
     List<Clue> truthPool = new ArrayList<>(up ? ups : downs);
     List<Clue> otherPool = new ArrayList<>(up ? downs : ups);
     List<Clue> neutralPool =
-        new ArrayList<>(neutrals.stream().map(t -> new Clue(t, null)).toList());
+        new ArrayList<>(neutrals.stream().map(t -> new Clue(t, null, null)).toList());
     List<Sentence> sentences = new ArrayList<>();
-    sentences.add(sentence(draw(truthPool, rng, names), truth, true));
+    sentences.add(sentence(draw(truthPool, otherPool, rng, names), truth, true));
     boolean anyOther = false;
     for (int i = 0; i < SIDE_SENTENCES; i++) {
       boolean opposite =
-          rng.nextInt(PERCENT) < properties.invest().sideOppositePercent()
-              || (i == SIDE_SENTENCES - 1 && !anyOther);
+          (rng.nextInt(PERCENT) < properties.invest().sideOppositePercent()
+                      || (i == SIDE_SENTENCES - 1 && !anyOther))
+                  && !otherPool.isEmpty()
+              || truthPool.isEmpty();
       anyOther |= opposite;
       sentences.add(
           opposite
-              ? sentence(draw(otherPool, rng, names), other, false)
-              : sentence(draw(truthPool, rng, names), truth, false));
+              ? sentence(draw(otherPool, truthPool, rng, names), other, false)
+              : sentence(draw(truthPool, otherPool, rng, names), truth, false));
     }
-    sentences.add(sentence(draw(neutralPool, rng, names), NEUTRAL, false));
+    sentences.add(sentence(draw(neutralPool, new ArrayList<>(), rng, names), NEUTRAL, false));
     for (int i = sentences.size() - 1; i > 0; i--) {
       int j = rng.nextInt(i + 1);
       Sentence t = sentences.get(i);
@@ -308,11 +310,17 @@ class InvestEngine {
     return s;
   }
 
-  private static Clue draw(List<Clue> pool, RandomGenerator rng, Map<String, String> names) {
+  /** pool에서 한 문장을 뽑고, 같은 꼬리표를 단 반대쪽 문장은 opposite에서 뺀다 (#341). */
+  private static Clue draw(
+      List<Clue> pool, List<Clue> opposite, RandomGenerator rng, Map<String, String> names) {
     Clue clue = pool.remove(rng.nextInt(pool.size()));
+    if (clue.topic() != null) {
+      opposite.removeIf(o -> clue.topic().equals(o.topic()));
+    }
     return new Clue(
         Korean.fill(clue.text(), names),
-        clue.point() == null ? null : Korean.fill(clue.point(), names));
+        clue.point() == null ? null : Korean.fill(clue.point(), names),
+        clue.topic());
   }
 
   /** 종목 회의를 열 수 있는가: 직원이 물어 온(267번) 정하지 않은 회의가 있고 돈을 굴리는 직원이 있다. */
