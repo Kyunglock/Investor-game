@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Company, Drawn } from '../../api/client'
 import { Overlay } from '../game/Overlay'
 import { GradeBadge, tierClass, tierOf } from './GradeCard'
-import { busyIds, collected, drawable } from './gachaRules'
+import { collected, drawable } from './gachaRules'
 import { EMPLOYEE_LADDER } from './grades'
 import { MergeBoard } from './MergeBoard'
 import { titleOf } from './office'
@@ -193,42 +193,7 @@ export function CollectionGrid({ company }: { company: Company }) {
   )
 }
 
-/** 쉬는 사람 내보내기 (312번): 데리고 있을 자리가 모자랄 때. 걸린 일이 있는 사람은 먼저 답해야 한다. */
-export function ReleaseList({ company }: { company: Company }) {
-  const busy = useRaisingStore((s) => s.busy)
-  const { release } = useRaisingStore.getState()
-  const blocked = busyIds(company)
-  const resting = company.employees.filter((e) => !e.desk && !blocked.has(e.id))
-  if (resting.length === 0) {
-    return <p className="text-[13px] text-muted">쉬는 사람이 없습니다.</p>
-  }
-  return (
-    <ul className="flex flex-wrap gap-1" data-testid="release-list">
-      {resting.map((e) => (
-        <li key={e.id}>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => {
-              if (
-                window.confirm(`${e.name}(${e.overallGrade})을(를) 내보낼까요? 돌아오지 않습니다.`)
-              ) {
-                void release(e.id)
-              }
-            }}
-            className="min-h-9 rounded border border-line bg-white px-2 text-[12px] text-wine disabled:opacity-50"
-            data-testid="release"
-          >
-            <GradeBadge grade={e.overallGrade} size="inline" />
-            {e.name} 내보내기
-          </button>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
-/** 웹의 채용 탭 (312번): 채용권과 뽑기 버튼, 확률표, 합성, 내보내기, 도감. */
+/** 웹의 채용 탭 (312번): 채용권과 뽑기 버튼, 확률표, 합성, 도감. 내보내기는 없앴다(338번). */
 export function GachaPanel({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const { draw } = useRaisingStore.getState()
@@ -275,7 +240,7 @@ export function GachaPanel({ company }: { company: Company }) {
       </div>
       {full && (
         <p className="mt-1 text-[12px] text-wine" data-testid="roster-full">
-          데리고 있을 자리가 꽉 찼습니다. 같은 등급 카드를 끌어 겹치거나 쉬는 사람을 내보내세요.
+          데리고 있을 자리가 꽉 찼습니다. 같은 등급 카드를 끌어 겹쳐 자리를 비우세요.
         </p>
       )}
       <details className="mt-2">
@@ -286,8 +251,6 @@ export function GachaPanel({ company }: { company: Company }) {
       </details>
       <h4 className="mt-3 font-pen text-[20px]">합성</h4>
       <MergeBoard company={company} />
-      <h4 className="mt-3 font-pen text-[20px]">쉬는 사람 내보내기</h4>
-      <ReleaseList company={company} />
       <h4 className="mt-3 font-pen text-[20px]">도감</h4>
       <CollectionGrid company={company} />
     </section>

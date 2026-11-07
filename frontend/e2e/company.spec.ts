@@ -240,8 +240,8 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   await expect(page.getByTestId('roster')).toContainText('4 / 100')
   // 직원이 바뀌어 화면을 새로 그려도 채용 탭에 그대로 있다.
   await expect(page.getByRole('tab', { name: /채용/ })).toHaveAttribute('aria-selected', 'true')
-  // 쉬는 사람은 내보낼 수 있다(지금은 내보내지 않는다).
-  await expect(page.getByTestId('release')).toHaveCount(4)
+  // 내보내기는 없다 (338번).
+  await expect(page.getByTestId('release')).toHaveCount(0)
 
   // 배치 (269번): 직무 자리를 먼저 누르고 그 자리에 앉힐 직원을 고른다. 후보에는 그 자리가 원하는 능력치의 등급이 보인다.
   await tab(page, /배치/)
