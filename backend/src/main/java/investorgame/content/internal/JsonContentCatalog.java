@@ -346,6 +346,13 @@ class JsonContentCatalog implements ContentCatalog {
             && company.industry().down() != null
             && company.industry().same() != null,
         "업계 순위 문구가 없다");
+    require(
+        company.omenReveal() != null
+            && company
+                .omenReveal()
+                .keySet()
+                .containsAll(List.of("falseKept", "falseDefended", "trueDefended", "trueIgnored")),
+        "조짐 밝히기 문구가 없다");
     for (RaisingContent.Era era : company.eras()) {
       require(
           era.phaseWeights().values().stream().mapToInt(Integer::intValue).sum() > 0,
