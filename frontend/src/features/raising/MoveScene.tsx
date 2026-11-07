@@ -3,8 +3,10 @@ import { Overlay } from '../game/Overlay'
 import { usePixelArt } from '../game/pixelArt'
 import { BuildingArt } from './BuildingArt'
 import { moveOf, wreathsFor } from './board'
+import { newlyOpened } from './LockedDesks'
 import { officeName } from './office'
 import { RivalSmash } from './RivalSmash'
+import { useRaisingStore } from './store'
 
 /**
  * 이사 장면 (증권사 육성 설계 8.3절). 결산 뒤 회사 등급이 바뀌었을 때 한 번 보인다. 글은 등급 대신 건물로 말한다 (238번). 오르면 우리 건물이 옆 건물을
@@ -23,7 +25,10 @@ export function MoveScene({
   onDone: () => void
 }) {
   const shown = usePixelArt((s) => s.shown)
+  const company = useRaisingStore((s) => s.company)
   const move = moveOf(before, after)
+  // 커지면서 새로 열린 자리 (#393): 무엇을 하는 자리인지 한 줄씩 알려 준다.
+  const opened = move === 'up' ? newlyOpened(company, before, after) : []
   if (!move) {
     return null
   }
@@ -86,6 +91,21 @@ export function MoveScene({
           </svg>
         )}
         <p className="mt-2 text-[14px] font-semibold">{line}</p>
+        {opened.length > 0 && (
+          <div
+            className="mt-2 rounded border border-gold bg-gold/10 px-2 py-1.5"
+            data-testid="unlocked"
+          >
+            <p className="text-[13px] font-semibold text-gold">새로 열렸다!</p>
+            <ul className="mt-0.5 grid gap-0.5 text-[12px]">
+              {opened.map((d) => (
+                <li key={d.code}>
+                  <b>{d.name}</b> · {d.description}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {up && (
           <ul className="mt-1 text-[13px]" data-testid="wreaths">
             {wreathsFor(year).map((sender) => (

@@ -2,6 +2,7 @@ import type { Company } from '@web/api/client'
 import { withParticle } from '@web/features/game/labels'
 import { GradeBadge, GradeCard } from '@web/features/raising/GradeCard'
 import { LADDER, STAT_NAMES } from '@web/features/raising/grades'
+import { LockedDesks } from '@web/features/raising/LockedDesks'
 import { autoPlace, deskEffect, seatOne } from '@web/features/raising/placement'
 import { useRaisingStore } from '@web/features/raising/store'
 import { haptic } from '../../fx/haptics'
@@ -93,6 +94,7 @@ export function StaffScene({ company }: { company: Company }) {
           })}
         </ul>
       )}
+      {!ended && <LockedDesks company={company} className="text-white/80" />}
       {company.employees.length > 0 && (
         <details className="mt-3" open={ended}>
           <summary className="cursor-pointer text-[13px] text-white/65">

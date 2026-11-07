@@ -70,7 +70,10 @@ class BalanceSimulationTest {
     for (int i = 0; i < best.size(); i++) {
       String desk = null;
       if (i < seats) {
-        desk = i == 2 ? "research" : TRADING.get(t++ % TRADING.size());
+        desk =
+            i == 2 && ENGINE.deskOpen(c, "research")
+                ? "research"
+                : TRADING.get(t++ % TRADING.size());
         if (t > TRADING.size()) {
           desk = null;
         }

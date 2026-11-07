@@ -336,8 +336,12 @@ class DefaultCompanyService implements CompanyService {
                         e.morale))
             .toList();
     List<String> hot = engine.hotDesks(c);
+    // 돕는 자리는 회사가 커 가며 하나씩 열린다 (#393). 이미 누가 앉아 있으면(열기 전에 앉힌 옛 회사) 보인다.
+    java.util.Set<String> seated = new java.util.HashSet<>();
+    c.employees.forEach(e -> seated.add(e.desk));
     List<CompanyView.Desk> desks =
         engine.desks().stream()
+            .filter(d -> engine.deskOpen(c, d.code()) || seated.contains(d.code()))
             .map(
                 d ->
                     new CompanyView.Desk(
@@ -350,7 +354,16 @@ class DefaultCompanyService implements CompanyService {
                         d.description(),
                         d.trades() ? engine.deskGainBp(c, d.code()) : null,
                         d.trades() ? engine.returnsOf(d.code()).missBp() : null,
-                        d.trades() ? engine.returnsOf(d.code()).crashPercent() : null))
+                        d.trades() ? engine.returnsOf(d.code()).crashPercent() : null,
+                        engine.unlockGrade(d.code())))
+            .toList();
+    List<CompanyView.LockedDesk> lockedDesks =
+        engine.desks().stream()
+            .filter(d -> !engine.deskOpen(c, d.code()) && !seated.contains(d.code()))
+            .map(
+                d ->
+                    new CompanyView.LockedDesk(
+                        d.code(), d.name(), d.description(), engine.unlockGrade(d.code())))
             .toList();
     String hrCap = engine.hrOf(c).map(engine::hrCap).orElse(null);
     CompanyView.Meeting meeting =
@@ -395,7 +408,8 @@ class DefaultCompanyService implements CompanyService {
                 c.finishedYear == null ? c.year : c.finishedYear, c.capital, grade)
             : null,
         resignView(c),
-        industryView(row));
+        industryView(row),
+        lockedDesks);
   }
 
   /** 연말 자본을 남기고 같은 연차 회사들 가운데 자리를 결산 소식에 적는다 (#351). 지난해보다 상위 몇 %가 5%p 넘게 오르거나 내렸으면 그렇게 말한다. */
