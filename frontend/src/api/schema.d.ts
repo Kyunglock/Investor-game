@@ -542,6 +542,13 @@ export interface components {
                 salary: number;
                 /** @description 사기. 낮으면 손이 더 뒤집힌다 (270번) */
                 morale: number;
+                /**
+                 * @description 버릇 (decisions.md 349번). 번호로 정해져 바뀌지 않고 막판 제안·상벌·연봉·사표·이직·첫인사 문구가 이를 따른다
+                 * @enum {string}
+                 */
+                quirk?: "gut" | "chat" | "chart" | "news" | "coffee";
+                /** @description 버릇 이름(촉파·단톡방파·차트파·뉴스파·커피파) */
+                quirkName?: string;
                 /** @description 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번) */
                 role?: string | null;
             }[];
@@ -647,6 +654,8 @@ export interface components {
                     star: boolean;
                     /** @description 도감에 처음 오른 등급이다 */
                     fresh: boolean;
+                    /** @description 첫인사 (349번). 버릇대로 한마디. 옛 뽑기면 null */
+                    hello?: string | null;
                 }[];
                 /** @description 도감. 등급(F~GOD)마다 뽑거나 합성해서 얻은 사람 수. 사장의 것이라 다음 회사로 이어진다 */
                 collection: {

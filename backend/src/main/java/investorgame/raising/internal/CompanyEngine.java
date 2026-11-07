@@ -88,10 +88,14 @@ class CompanyEngine {
     this.pay = new PayEngine(this, content, properties);
     this.history = new CompanyHistory(content);
     this.mental = new MentalEngine(content, properties);
+    this.quirks = new Quirks(content);
   }
 
   /** 멘탈 전투 (decisions.md 328번). */
   final MentalEngine mental;
+
+  /** 직원 버릇 (decisions.md 349번). */
+  final Quirks quirks;
 
   /** 회사 연표·업적·명예의 전당 (decisions.md 263번). */
   final CompanyHistory history;
@@ -381,12 +385,18 @@ class CompanyEngine {
       throw new InvalidRequestException("올해 이직 제안이 없다");
     }
     RaisingContent.People texts = content.raising().company().people();
+    Employee poached =
+        company.employees.stream().filter(e -> e.id == poach.employeeId).findFirst().orElse(null);
     if (!keep) {
-      letGo(company, texts.left());
+      letGo(
+          company,
+          poached == null ? texts.left() : quirks.poachLeftTemplate(poached, texts.left()));
       return;
     }
     company.yearLines.add(
-        Korean.fill(texts.kept(), Map.of("name", poachedName(company), "rival", rivalOf(company))));
+        Korean.fill(
+            poached == null ? texts.kept() : quirks.poachKeptTemplate(poached, texts.kept()),
+            Map.of("name", poachedName(company), "rival", rivalOf(company))));
     // 붙잡는 데는 값이 든다 (#390): 연봉이 나가는 회사면 제안에 맞춰 연봉을 한 번 올려 주고, 붙잡힌 직원은 사기가 오른다.
     company.employees.stream()
         .filter(e -> e.id == poach.employeeId)
@@ -840,6 +850,7 @@ class CompanyEngine {
       drawn.grade = grade;
       drawn.star = rate.star();
       drawn.fresh = collect(company, grade);
+      drawn.hello = Korean.fill(quirks.hello(employee), Map.of("name", employee.name));
       company.lastDraw.add(drawn);
       if (drawn.star) {
         history.add(

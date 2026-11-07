@@ -258,6 +258,9 @@ class CompanyState {
 
     /** 연봉을 동결당해 다음 분기를 넘길 때 떠날지 굴린다 (decisions.md 280번). */
     boolean frozenPending;
+
+    /** 막판 제안을 따른 뒤 받은 상벌(BONUS·RAISE·NOTHING·CUT·FORGIVE, 349번). 다음 막판 제안 때 그에 이어지는 말을 하고 지운다. */
+    String lastVerdict;
   }
 
   /**
@@ -644,6 +647,9 @@ class CompanyState {
 
     /** 도감에 처음 오른 등급이다. */
     boolean fresh;
+
+    /** 첫인사 (349번): 버릇대로 한마디. 이 칸을 더하기 전의 뽑기면 null. */
+    String hello;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)

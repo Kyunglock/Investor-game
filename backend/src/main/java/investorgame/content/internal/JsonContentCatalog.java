@@ -217,6 +217,27 @@ class JsonContentCatalog implements ContentCatalog {
             && mental.weaponGrades() != null
             && mental.weaponGrades().keySet().containsAll(List.of("N", "R", "SR", "UR")),
         "무기 이름이 없다 (346번)");
+    require(company.quirks() != null && !company.quirks().isEmpty(), "직원 버릇이 없다 (349번)");
+    for (RaisingContent.Quirk q : company.quirks()) {
+      require(
+          q.code() != null
+              && q.name() != null
+              && q.hello() != null
+              && !q.hello().isEmpty()
+              && q.proposals() != null
+              && !q.proposals().isEmpty()
+              && q.verdicts() != null
+              && q.verdicts()
+                  .keySet()
+                  .containsAll(List.of("BONUS", "RAISE", "NOTHING", "CUT", "FORGIVE"))
+              && q.raiseAsk() != null
+              && !q.raiseAsk().isEmpty()
+              && q.resign() != null
+              && q.resign().keySet().containsAll(List.of("IGNORED", "FROZEN"))
+              && q.poachKept() != null
+              && q.poachLeft() != null,
+          "직원 버릇 문구가 빠졌다: " + q.code());
+    }
     RaisingContent.Macro macro = company.macro();
     List<String> stances = List.of("AGGRESSIVE", "NEUTRAL", "DEFENSIVE");
     require(

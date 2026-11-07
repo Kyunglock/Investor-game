@@ -118,7 +118,9 @@ class PayEngine {
   String raiseLine(CompanyState c) {
     Employee e = raiser(c);
     return Korean.fill(
-        texts().raiseAsk(),
+        e == null
+            ? texts().raiseAsk()
+            : company.quirks.raiseAskTemplate(e, c.year, texts().raiseAsk()),
         Map.of(
             "name",
             e == null ? "" : e.name,
@@ -244,7 +246,10 @@ class PayEngine {
     c.resign = r;
     lines.add(
         Korean.fill(
-            FROZEN.equals(reason) ? texts().resignFrozen() : texts().resignIgnored(),
+            company.quirks.resignTemplate(
+                e,
+                reason,
+                FROZEN.equals(reason) ? texts().resignFrozen() : texts().resignIgnored()),
             Map.of("name", e.name)));
   }
 
@@ -286,8 +291,10 @@ class PayEngine {
 
   String resignLine(CompanyState c) {
     Employee e = resigner(c);
+    String generic =
+        FROZEN.equals(c.resign.reason) ? texts().resignFrozen() : texts().resignIgnored();
     return Korean.fill(
-        FROZEN.equals(c.resign.reason) ? texts().resignFrozen() : texts().resignIgnored(),
+        e == null ? generic : company.quirks.resignTemplate(e, c.resign.reason, generic),
         Map.of("name", e == null ? "" : e.name));
   }
 

@@ -339,7 +339,9 @@ class DefaultCompanyService implements CompanyService {
                         engine.macro.roleOf(e),
                         engine.teams.leads(c, e),
                         engine.pay.salary(c, e),
-                        e.morale))
+                        e.morale,
+                        engine.quirks.code(e),
+                        engine.quirks.name(e)))
             .toList();
     List<String> hot = engine.hotDesks(c);
     // 돕는 자리는 회사가 커 가며 하나씩 열린다 (#393). 이미 누가 앉아 있으면(열기 전에 앉힌 옛 회사) 보인다.
@@ -497,7 +499,8 @@ class DefaultCompanyService implements CompanyService {
             .toList();
     List<CompanyView.Drawn> drawn =
         c.lastDraw.stream()
-            .map(d -> new CompanyView.Drawn(d.employeeId, d.name, d.grade, d.star, d.fresh))
+            .map(
+                d -> new CompanyView.Drawn(d.employeeId, d.name, d.grade, d.star, d.fresh, d.hello))
             .toList();
     List<CompanyView.CollectionEntry> collection =
         CompanyEngine.LADDER.stream()
