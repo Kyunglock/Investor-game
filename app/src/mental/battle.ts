@@ -70,6 +70,8 @@ function enemyBody(e: Enemy, r: number) {
 }
 
 const HURT_MS = 450
+/** 적 그림 크기(333번): 64px 그림을 이만큼 줄여 보인다. 충돌 원도 같이 줄어든다. */
+const ENEMY_SCALE = 0.72
 
 class BattleScene extends Phaser.Scene {
   private readonly opts: BattleOptions
@@ -299,7 +301,7 @@ class BattleScene extends Phaser.Scene {
     const v = ENEMIES[kind]
     e.setTexture(enemyKey(kind, 0))
       .enableBody(true, x, y, true, true)
-      .setScale(1)
+      .setScale(ENEMY_SCALE)
       .clearTint()
       .setAlpha(1)
       .setDepth(3)
@@ -309,7 +311,7 @@ class BattleScene extends Phaser.Scene {
     e.kind = kind
     if (kind !== 'spec') {
       e.setScale(0.3)
-      this.tweens.add({ targets: e, scale: 1, duration: 220, ease: 'Back.easeOut' })
+      this.tweens.add({ targets: e, scale: ENEMY_SCALE, duration: 220, ease: 'Back.easeOut' })
     }
     e.hp = v.hp
     e.kbx = 0
@@ -673,32 +675,27 @@ class BattleScene extends Phaser.Scene {
         continue
       }
       const v = ENEMIES[e.kind]
-      const dx = this.wallZone ? 0 : p.x - e.x
-      const dy = (this.wallZone ? this.wallY() : p.y) - e.y
-      const d = Math.hypot(dx, dy) || 1
-      let sx = (dx / d) * v.speed
-      let sy = (dy / d) * v.speed
+      // 일자로 내려온다 (333번): 옆으로 흔들리거나 돌지 않는다. 목표는 멘탈벽 또는 플레이어의 높이.
+      const targetY = this.wallZone ? this.wallY() : p.y
+      const d = Math.abs(targetY - e.y) || 1
+      let sy = v.speed
       if (e.kind === 'stop') {
-        // 손절매: 거리를 두고 플레이어를 향해 멘탈 탄을 쏜다.
+        // 손절매: 멀찍이 멈춰 서서 플레이어를 향해 멘탈 탄을 쏜다.
+        if (targetY - e.y < 220) {
+          sy = 0
+        }
         const px = p.x - e.x
         const py = p.y - e.y
         const pd = Math.hypot(px, py) || 1
-        if (pd < 200) {
-          sx = (-px / pd) * v.speed
-          sy = (-py / pd) * v.speed
-        } else if (pd < 300) {
-          sx = (-py / pd) * v.speed * 0.8
-          sy = (px / pd) * v.speed * 0.8
-        }
-        if (this.elapsed > e.nextShot && pd < 520) {
-          e.nextShot = this.elapsed + 1.7
+        if (this.elapsed > e.nextShot && pd < 560) {
+          e.nextShot = this.elapsed + 2
           this.enemyShot(e, px / pd, py / pd)
         }
       }
       if (e.kind === 'spec') {
         // 투기: 부풀다가 터진다.
         const s = 1 + Math.min(1, (this.elapsed - e.born) / 9) * 0.9
-        e.setScale(s + Math.sin(time / 90) * 0.04)
+        e.setScale(ENEMY_SCALE * (s + Math.sin(time / 90) * 0.04))
         if (s >= 1.9) {
           const pd = Math.hypot(p.x - e.x, p.y - e.y)
           if (pd < 150 || (this.wallZone && d < 150)) {
@@ -710,11 +707,7 @@ class BattleScene extends Phaser.Scene {
           continue
         }
       }
-      if (e.kind === 'panic') {
-        sx += Math.sin(time / 80 + i) * 60
-        sy += Math.cos(time / 80 + i) * 60
-      }
-      e.setVelocity(sx + e.kbx, sy + e.kby)
+      e.setVelocity(e.kbx, sy + e.kby)
       e.kbx *= 0.86
       e.kby *= 0.86
       // 두 프레임을 번갈아: 패닉은 빠르게 떨고, 나머지는 느긋하게. 바뀔 때만 텍스처를 바꾼다.
@@ -723,7 +716,6 @@ class BattleScene extends Phaser.Scene {
         e.look = frame
         e.setTexture(enemyKey(e.kind, frame))
       }
-      e.setFlipX(dx < 0 && e.kind !== 'dump')
     }
     for (const child of this.bullets.getChildren()) {
       const b = child as Bullet
