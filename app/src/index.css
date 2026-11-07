@@ -1,0 +1,113 @@
+/* 웹과 같은 색·글꼴·카드·애니메이션을 그대로 쓴다. frontend/src의 클래스도 이 빌드가 훑는다 (docs/app.md). */
+@import "../../frontend/src/index.css";
+@source "../../frontend/src";
+
+:root {
+  --hud: #14161a;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+/* 앱 화면: 문서가 아니라 한 화면이다. 바깥은 스크롤하지 않고, 장면 안에서만 움직인다. */
+body {
+  min-width: 0;
+  overflow: hidden;
+  background: var(--hud);
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  user-select: none;
+}
+
+.app-screen {
+  display: grid;
+  height: 100dvh;
+  grid-template-rows: auto 1fr auto;
+  padding-top: env(safe-area-inset-top);
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* 장면이 바뀌면 아래서 살짝 올라오며 나타난다 */
+@keyframes scene-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.scene-in {
+  animation: scene-in 0.22s ease-out both;
+}
+
+/* 아래에서 올라오는 시트 */
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+.sheet-up {
+  animation: sheet-up 0.28s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+/* 지원자 카드가 한 장씩 넘어간다 */
+.snap-x {
+  scroll-snap-type: x mandatory;
+}
+.snap-x > * {
+  scroll-snap-align: center;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+/* 제목 화면의 "터치해서 시작" */
+@keyframes pulse-soft {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+.animate-pulse-soft {
+  animation: pulse-soft 1.6s ease-in-out infinite;
+}
+
+/* 분기 넘기기 버튼이 숨 쉰다 */
+@keyframes breathe {
+  0%,
+  100% {
+    box-shadow: 0 6px 18px rgba(139, 35, 66, 0.35);
+  }
+  50% {
+    box-shadow: 0 6px 26px rgba(139, 35, 66, 0.6);
+  }
+}
+.animate-breathe {
+  animation: breathe 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-in,
+  .sheet-up,
+  .animate-pulse-soft,
+  .animate-breathe {
+    animation: none;
+  }
+}

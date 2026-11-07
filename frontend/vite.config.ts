@@ -32,7 +32,8 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       // 온라인 전용 게임이다. 화면 자산만 캐시하고 API는 캐시하지 않는다 (architecture.md 1절).
       // 광고 요청(다른 출처)은 캐시하지 않고, ads.txt는 앱 화면으로 바꿔치지 않는다 (271번).
-      workbox: { navigateFallbackDenylist: [/^\/api\//, /^\/r\//, /^\/ads\.txt$/] },
+      // 안드로이드 앱 화면(app/)은 /app/ 아래에 같이 배포된다 (decisions.md 309번): 웹의 서비스 워커가 그 주소를 웹 화면으로 바꿔치지 않는다.
+      workbox: { navigateFallbackDenylist: [/^\/api\//, /^\/r\//, /^\/ads\.txt$/, /^\/app\//] },
       manifest: {
         name: '증권사 사장',
         short_name: '증권사 사장',

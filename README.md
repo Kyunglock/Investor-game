@@ -9,7 +9,8 @@
 | 폴더 | 내용 |
 |---|---|
 | `backend/` | Spring Boot (Java 21, Gradle). 게임 규칙 계산과 저장. 도메인은 육성(`raising`, 회사)·행동(`behavior`)·콘텐츠(`content`)·세션(`session`) |
-| `frontend/` | React + Vite (TypeScript, pnpm). 화면과 그림. 규칙은 모른다. `frontend/e2e/`에 Playwright 테스트. `frontend/android/`는 이 화면을 담은 안드로이드 앱(Capacitor, [`docs/app.md`](./docs/app.md)) |
+| `frontend/` | React + Vite (TypeScript, pnpm). 웹 화면과 그림. 규칙은 모른다. `frontend/e2e/`에 Playwright 테스트 |
+| `app/` | 안드로이드 앱 (Capacitor, [`docs/app.md`](./docs/app.md)). 폰 게임처럼 한 화면씩 넘기는 앱 전용 화면. 그림·회의 창·게임 상태는 `frontend/src`를 그대로 가져다 쓴다. `app/android/`가 안드로이드 프로젝트 |
 | `contracts/openapi/` | 클라이언트와 서버의 API 계약 |
 | `content/` | 직접 작성한 콘텐츠 (JSON): 회사 문구·자리·시대·단골 인물(`raising.json`), 뉴스와 단서 기사 문장, 종목, 위기와 조짐, 꼬드김 문구 |
 | `docs/` | 설계 문서와 도메인 스펙 |
@@ -47,11 +48,13 @@ ADMIN_TOKEN=아무-비밀값 ./gradlew bootTestRun
 
 ### 안드로이드 앱 (APK)
 
-웹을 WebView에 담은 앱이다 ([`docs/app.md`](./docs/app.md)). GitHub Actions의 **Android** 워크플로를 돌리면 운영 웹(`https://game.kwaklabs.com`)을 띄우는 `app-debug.apk`가 Artifacts에 생긴다. 다른 주소로 띄우려면 Run workflow의 `server_url`에 적는다. 내 컴퓨터에 Android Studio가 있으면:
+앱 전용 화면(`app/`)을 WebView에 담은 앱이다 ([`docs/app.md`](./docs/app.md)). 앱 화면은 웹과 같이 `https://game.kwaklabs.com/app/`에 배포되고, GitHub Actions의 **Android** 워크플로를 돌리면 그 주소를 띄우는 `app-debug.apk`가 Artifacts에 생긴다.
 
 ```bash
-cd frontend
-CAP_SERVER_URL=https://운영-주소 pnpm app:apk   # → android/app/build/outputs/apk/debug/app-debug.apk
+cd frontend && pnpm install      # 앱이 frontend/src를 쓴다
+cd ../app && pnpm install
+pnpm dev                         # http://localhost:5173/app/
+pnpm apk                         # Android Studio가 있으면 → android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
 ### 광고 켜기 (구글 애드센스)

@@ -5,7 +5,7 @@ import type { CapacitorConfig } from '@capacitor/cli'
  * - `CAP_SERVER_URL`이 있으면 앱은 그 주소(운영 웹)를 그대로 띄운다. API와 세션 쿠키가 웹과 같은 출처라 서버를 손대지 않는다. 기본.
  * - 없으면 `dist`를 앱 안에 담는다. 그때 API는 `VITE_API_BASE`로 가므로 서버에 `api.cors.origins`와 `session.cookie-same-site: None`을 둬야 한다.
  */
-const serverUrl = process.env.CAP_SERVER_URL?.trim()
+const serverUrl = process.env.CAP_SERVER_URL?.trim() ?? 'https://game.kwaklabs.com/app/'
 
 const config: CapacitorConfig = {
   appId: 'com.kyunglock.investorgame',
