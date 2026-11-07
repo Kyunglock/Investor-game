@@ -87,7 +87,11 @@ class CompanyEngine {
     this.teams = new TeamEngine(this, content);
     this.pay = new PayEngine(this, content, properties);
     this.history = new CompanyHistory(content);
+    this.mental = new MentalEngine(content, properties);
   }
+
+  /** 멘탈 전투 (decisions.md 320번). */
+  final MentalEngine mental;
 
   /** 회사 연표·업적·명예의 전당 (decisions.md 263번). */
   final CompanyHistory history;
@@ -1192,6 +1196,7 @@ class CompanyEngine {
   void startQuarter(CompanyState company, SeededRandom random) {
     company.quarterStartCapital = company.capital;
     company.invest = invest.create(company, random);
+    company.mental = mental.create(company, random);
     if (company.quarter == 1 || company.macro == null) {
       company.macro = macro.create(company, random);
     }
@@ -1451,6 +1456,13 @@ class CompanyEngine {
         crash && company.crashQuarter != null ? (burst ? properties.decisions() : 0) : 1;
     int decisions = Math.max(1, properties.decisions() / QUARTERS);
     q.crash = burst;
+    // 멘탈 전투 (320번): 잘 치렀으면 이 분기 돈을 굴리는 직원 모두 더 벌고 손이 덜 뒤집힌다.
+    int mentalBonus = mental.bonusPercent(company);
+    if (mentalBonus > 0) {
+      q.mentalCard = company.mental.card;
+      q.mentalBonusPercent = mentalBonus;
+      q.lines.add(mental.line(company));
+    }
     long totalPnl = 0;
     for (Employee employee : traders) {
       Result result = new Result();
@@ -1463,7 +1475,7 @@ class CompanyEngine {
       int insight = Math.max(employee.stats.get(StatCodes.INSIGHT), research);
       Odds odds = odds(company, employee);
       int swayBp = odds.swayBp();
-      int flipBp = odds.flipBp();
+      int flipBp = odds.flipBp() * (PERCENT - mentalBonus) / PERCENT;
       CompanyProperties.Effects effects = properties.effects();
       boolean conviction = employee.rank >= RANK_CONVICTION;
       boolean contrarian = crash && employee.rank >= RANK_CONTRARIAN;
@@ -1479,6 +1491,7 @@ class CompanyEngine {
                       + macro.windBp(company, employee.desk)));
       // 등급 효과 (289번): 종합 등급이 높을수록 맞혔을 때 더 번다. XS 큰손은 그 위에 1.5배.
       gainBp = gainBp * (PERCENT + perkGainPercent(employee)) / PERCENT;
+      gainBp = gainBp * (PERCENT + mentalBonus) / PERCENT;
       if (employee.rank >= RANK_BIG) {
         gainBp = gainBp * effects.bigGainPercent() / PERCENT;
       }

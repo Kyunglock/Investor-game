@@ -285,6 +285,30 @@ body {
 .animate-shake-screen {
   animation: shake-screen 0.5s ease-out 1;
 }
+/* 멘탈 전투의 큰 알림 (decisions.md 320번): 튀어나와 잠깐 머물다 떠오르며 사라진다 */
+@keyframes mental-banner {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(-3deg) scale(0.4);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(-3deg) scale(1.15);
+  }
+  22% {
+    transform: translate(-50%, -50%) rotate(-3deg) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -70%) rotate(-3deg) scale(1);
+  }
+}
+.animate-mental-banner {
+  animation: mental-banner 1.6s ease-out both;
+}
 @keyframes fx-flash {
   0% {
     opacity: 1;
@@ -369,6 +393,7 @@ body {
   .animate-pulse-soft,
   .animate-breathe,
   .animate-shake-screen,
+  .animate-mental-banner,
   .fx-flash,
   .animate-tab-bounce,
   .animate-badge-pulse,

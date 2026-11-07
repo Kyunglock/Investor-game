@@ -300,6 +300,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/mental": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 320번)
+         * @description 분기마다 결산 직전에 멘탈 카드를 고르고 나쁜 투자 습관(패닉셀·투매·투기·손절매)을 쏘아 물리치는 한 판을 치른다(앱). 한 판은 화면이 돌리고,
+         *     서버는 물리친 적과 남은 멘탈을 상한으로 잘라 강화율을 매긴다. 강화율만큼 그 분기 돈을 굴리는 직원 모두 더 벌고 손이 덜 뒤집힌다.
+         *     이미 보냈으면 아무것도 하지 않고 지금 회사를 돌려준다(같은 요청이 두 번 와도 한 번만). 이번 분기가 아니거나 없는 카드면 400.
+         *     치르지 않고 분기를 넘겨도 된다: 강화가 없을 뿐이다.
+         */
+        post: operations["reportMentalBattle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/macro/open": {
         parameters: {
             query?: never;
@@ -915,6 +938,18 @@ export interface components {
                  */
                 after: number;
             } | null;
+            /** @description 이번 분기의 멘탈 전투 (decisions.md 320번). 그 분기 이벤트가 장르를 정한다. 끝난 회사나 이 칸이 생기기 전의 분기면 null */
+            mental?: {
+                /**
+                 * @description ASSAULT: 공격(적이 위에서 내려온다), DEFENSE: 디펜스(금고를 지킨다), SURVIVAL: 생존(사방에서 몰려온다)
+                 * @enum {string}
+                 */
+                genre: "ASSAULT" | "DEFENSE" | "SURVIVAL";
+                /** @description 이벤트 머리글 */
+                headline: string;
+                /** @description 이번 분기 결과를 이미 보냈다 */
+                done: boolean;
+            } | null;
             /** @description 엔딩 (decisions.md 276번). 랜드마크 타워에 오르면 회사가 멈추고 사장이 다음 회사를 차린다. 아직이면 null */
             ending?: {
                 /** @description 엔딩을 본 해 */
@@ -1508,6 +1543,47 @@ export interface operations {
         };
         responses: {
             /** @description 정한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reportMentalBattle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description 지금 해(Company.year) */
+                    year: number;
+                    /** @description 지금 분기(Company.quarter) */
+                    quarter: number;
+                    /**
+                     * @description 고른 멘탈 카드(존버 정신·분산 투자·원칙 매매·강철 멘탈·냉정함)
+                     * @enum {string}
+                     */
+                    card: "hold" | "split" | "rule" | "steel" | "calm";
+                    /** @description 물리친 적 수 */
+                    kills: number;
+                    /** @description 끝날 때 남은 멘탈 */
+                    mentalLeft: number;
+                };
+            };
+        };
+        responses: {
+            /** @description 결과를 받은 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

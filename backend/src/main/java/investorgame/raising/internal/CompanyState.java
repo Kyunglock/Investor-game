@@ -172,6 +172,9 @@ class CompanyState {
   /** 올해 거시경제 회의 (decisions.md 266번). 이 칸을 더하기 전의 해면 null이다. */
   Macro macro;
 
+  /** 이번 분기의 멘탈 전투 (decisions.md 320번). 분기를 열 때 새로 만든다. 이 칸을 더하기 전의 분기면 null이다. */
+  Mental mental;
+
   /** 이 회사에서 이미 나온 뉴스. 투자 회의에 같은 뉴스가 다시 나오지 않는다(다 쓰면 비운다). */
   List<String> usedNews = new ArrayList<>();
 
@@ -466,6 +469,11 @@ class CompanyState {
     /** 이 분기에 폭락이 터졌다. */
     boolean crash;
 
+    /** 이 분기 멘탈 전투 (320번): 고른 카드와 강화율. 치르지 않았으면 null. */
+    String mentalCard;
+
+    Integer mentalBonusPercent;
+
     /** 리서치 팀 보고 (decisions.md 278번): 형광펜을 그을 회의 수, 그은 수, 결정적 문장을 짚은 수. */
     int highlightChances;
 
@@ -483,6 +491,23 @@ class CompanyState {
 
     /** 팀장 보고: 사람이 앉은 자리마다 한 줄 (269번). */
     List<Report> reports = new ArrayList<>();
+  }
+
+  /**
+   * 이번 분기의 멘탈 전투 (decisions.md 320번). 서버가 장르와 머리글을 정하고, 치른 결과(카드·물리친 적·남은 멘탈)는 한 번만 받아 강화율을 매긴다.
+   * 치르기 전에는 card가 null.
+   */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Mental {
+    /** ASSAULT(공격)·DEFENSE(디펜스)·SURVIVAL(생존). */
+    String genre;
+
+    String headline;
+    String card;
+    int kills;
+    int mentalLeft;
+    int bonusPercent;
   }
 
   /** 팀장 보고 한 줄 (decisions.md 269번). pnl은 돈을 굴리는 자리의 팀 손익, 돕는 자리면 null. */

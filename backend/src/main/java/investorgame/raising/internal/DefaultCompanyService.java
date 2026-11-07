@@ -387,7 +387,20 @@ class DefaultCompanyService implements CompanyService {
             ? new CompanyView.Ending(
                 c.finishedYear == null ? c.year : c.finishedYear, c.capital, grade)
             : null,
-        resignView(c));
+        resignView(c),
+        ended || c.mental == null
+            ? null
+            : new CompanyView.Mental(c.mental.genre, c.mental.headline, c.mental.card != null));
+  }
+
+  @Override
+  @Transactional
+  public CompanyView mental(
+      UUID sessionId, int year, int quarter, String card, int kills, int mentalLeft) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.mental.report(row.state(), year, quarter, card, kills, mentalLeft);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
   }
 
   /** 채용 뽑기 (decisions.md 312번): 채용권, 데리고 있는 사람, 확률표, 마지막 뽑기, 도감. */
