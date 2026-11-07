@@ -193,6 +193,12 @@ class CompanyState {
   /** 이번 분기의 멘탈 전투 (decisions.md 328번). 분기를 열 때 새로 만든다. 이 칸을 더하기 전의 분기면 null이다. */
   Mental mental;
 
+  /** 가진 무기 (decisions.md 346번). 종류+등급으로 하나씩. 처음엔 일반 권총 하나. 이 칸을 더하기 전의 회사면 null이다. */
+  List<Weapon> weapons;
+
+  /** 든 무기. weapons 가운데 하나. */
+  Weapon weapon;
+
   /** 이 회사에서 이미 나온 뉴스. 투자 회의에 같은 뉴스가 다시 나오지 않는다(다 쓰면 비운다). */
   List<String> usedNews = new ArrayList<>();
 
@@ -529,6 +535,31 @@ class CompanyState {
     int kills;
     int mentalLeft;
     int bonusPercent;
+
+    /** 이 판에서 떨어진 무기 (346번). 안 떨어졌으면 null. */
+    Weapon drop;
+
+    /** 떨어진 무기가 새것인가(이미 가진 것이면 거짓). */
+    boolean dropNew;
+  }
+
+  /** 무기 하나 (decisions.md 346번): 종류(pistol·revolver·smg·shotgun·rifle)와 등급(N·R·SR·UR). */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Weapon {
+    String kind;
+    String grade;
+
+    Weapon() {}
+
+    Weapon(String kind, String grade) {
+      this.kind = kind;
+      this.grade = grade;
+    }
+
+    boolean same(String kind, String grade) {
+      return this.kind.equals(kind) && this.grade.equals(grade);
+    }
   }
 
   /** 팀장 보고 한 줄 (decisions.md 269번). pnl은 돈을 굴리는 자리의 팀 손익, 돕는 자리면 null. */

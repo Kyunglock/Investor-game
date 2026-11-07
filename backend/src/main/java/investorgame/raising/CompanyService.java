@@ -90,6 +90,9 @@ public interface CompanyService {
   CompanyView mental(
       UUID sessionId, int year, int quarter, List<String> cards, int kills, int mentalLeft);
 
+  /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). 없는 종류·등급이거나 안 가진 무기면 400. */
+  CompanyView equipWeapon(UUID sessionId, String kind, String grade);
+
   /** 최근에 차린 회사부터 limit개. 관리자 플레이 기록용이며 세션을 따지지 않는다. */
   List<CompanySummary> recent(int limit);
 }
