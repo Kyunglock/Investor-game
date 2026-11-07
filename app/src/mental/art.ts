@@ -301,13 +301,13 @@ const ENEMY_PAINTERS: Record<EnemyKind, Painter> = { panic, dump, spec, stop }
 const FLOOR_PALETTE: Record<string, string> = {
   // 객장 카펫(남색)과 줄눈
   n: '#273352',
-  N: '#2d3b5e',
-  o: '#344468',
+  N: '#2a3757',
+  o: '#2e3c5f',
   // 금고실 철판
-  s: '#8f969f',
+  s: '#979ea7',
   S: '#a3aab3',
-  r: '#6c737c', // 리벳 그림자
-  t: '#c7cdd4', // 리벳 밝은 쪽
+  r: '#858c95', // 리벳 그림자
+  t: '#b4bbc3', // 리벳 밝은 쪽
 }
 
 const FLOOR_MAPS: Record<Genre, readonly string[]> = {
