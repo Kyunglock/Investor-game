@@ -357,7 +357,8 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   // 연표 탭 (263번): 차린 해부터 큰 일이 쌓이고 업적과 명예의 전당이 보인다.
   await tab(page, /연표/)
   await expect(page.getByTestId('timeline')).toContainText('1호 회사를 차렸다')
-  await expect(page.getByTestId('achievement')).toHaveCount(8)
+  // 업적 열다섯 (351번: 실패·재미 업적 일곱이 더해졌다).
+  await expect(page.getByTestId('achievement')).toHaveCount(15)
   await expect(page.getByTestId('hall').getByRole('listitem')).toHaveCount(4)
   // 매각을 뺐다(236번): 세 해가 지나도 회사는 이어지고 4년 차 이슈가 온다. 팔 곳은 없다.
   await expect(page.getByText(/1호 회사 · 4년 차/)).toBeVisible()
