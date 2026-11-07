@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -179,16 +180,16 @@ class CompanyController {
             sessionId,
             request.year(),
             request.quarter(),
-            request.card(),
+            request.cards(),
             request.kills(),
             request.mentalLeft());
     PLAY.info(
-        "company-mental session={} company={} year={} quarter={} card={} kills={} left={} ip={}",
+        "company-mental session={} company={} year={} quarter={} cards={} kills={} left={} ip={}",
         sessionId,
         company.companyId(),
         request.year(),
         request.quarter(),
-        request.card(),
+        request.cards(),
         request.kills(),
         request.mentalLeft(),
         ClientIp.current());
@@ -198,7 +199,7 @@ class CompanyController {
   record MentalRequest(
       @Positive int year,
       @Min(1) @Max(4) int quarter,
-      @NotBlank String card,
+      @NotEmpty List<@NotBlank String> cards,
       @PositiveOrZero int kills,
       @PositiveOrZero int mentalLeft) {}
 

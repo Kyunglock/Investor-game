@@ -513,7 +513,7 @@ class CompanyState {
 
   /**
    * 이번 분기의 멘탈 전투 (decisions.md 328번). 서버가 장르와 머리글을 정하고, 치른 결과(카드·물리친 적·남은 멘탈)는 한 번만 받아 강화율을 매긴다.
-   * 치르기 전에는 card가 null.
+   * 치르기 전에는 cards가 null.
    */
   @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
@@ -522,7 +522,10 @@ class CompanyState {
     String genre;
 
     String headline;
-    String card;
+
+    /** 고른 카드 코드, 고른 순서대로(처음 한 장 + 레벨이 오를 때마다 한 장, 330번). */
+    List<String> cards;
+
     int kills;
     int mentalLeft;
     int bonusPercent;

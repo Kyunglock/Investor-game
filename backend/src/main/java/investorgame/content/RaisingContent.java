@@ -91,7 +91,7 @@ public record RaisingContent(
 
   /**
    * 멘탈 전투 (decisions.md 328번). headlines: 장르(ASSAULT·DEFENSE)마다 이벤트 머리글 여럿. cards: 카드 코드 → 이름.
-   * line: 분기 실적 소식 줄({card}·{kills}·{left}·{percent}).
+   * line: 분기 실적 소식 줄({level}·{cards}·{kills}·{left}·{percent}).
    */
   public record Mental(
       Map<String, List<String>> headlines, Map<String, String> cards, String line) {}

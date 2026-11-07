@@ -349,54 +349,67 @@ const FLOOR_MAPS: Record<Genre, readonly string[]> = {
   ],
 }
 
-/** 금고 (디펜스): 회색 철제 금고, 금빛 다이얼과 손잡이. cracked면 멘탈이 반 아래로 떨어져 금이 갔다. */
-function vaultGrid(cracked: boolean): Grid {
-  const grid = empty(34, 32)
+/** 멘탈벽의 높이(픽셀의 절반: 격자 줄 수 × PX ÷ 2). 전투가 벽 자리를 잡는 데 쓴다. */
+export const WALL_H = 12 * PX
+
+/**
+ * 멘탈벽 타일 (디펜스, 331번): 가로로 이어 붙이는 분홍빛 벽돌 담. 윗줄은 빛나고 벽돌은 어긋나게 쌓였다. cracked면 멘탈이 반 아래로 떨어져 금이 갔다.
+ * 32×24.
+ */
+function wallGrid(cracked: boolean): Grid {
+  const grid = empty(24, 32)
   const put = putOf(grid)
-  shadow(put, 31.5, 16, 13)
-  blob(put, area([3, 29], [3, 28]), STOP)
-  blob(put, area([6, 26], [6, 25]), { outline: 'G', shadow: 'G', base: 'h', light: 'H' })
-  for (const [y, x] of [
-    [4, 4],
-    [4, 27],
-    [28, 4],
-    [28, 27],
-  ]) {
-    put(y, x, 'K')
+  const brick: Ramp = { outline: 'a', shadow: 'b', base: 'c', light: 'd' }
+  // 윗면: 밝은 띠
+  for (const x of Array.from({ length: 32 }, (_, i) => i)) {
+    put(0, x, 'W')
+    put(1, x, 'd')
+    put(2, x, 'c')
   }
-  blob(put, disc(16, 15, 4.5, 4.5), { outline: 'Y', shadow: 'Y', base: 'y', light: 'W' })
-  for (const [y, x] of [
-    [16, 15],
-    [12, 15],
-    [20, 15],
-    [16, 11],
-    [16, 19],
+  // 벽돌 세 줄, 줄마다 반 칸씩 어긋난다
+  for (const [row, offset] of [
+    [3, 0],
+    [10, 8],
+    [17, 0],
   ]) {
-    put(y, x, 'g')
+    for (let x = -16 + offset; x < 32; x += 16) {
+      blob(put, area([row, row + 6], [Math.max(0, x), Math.min(31, x + 14)]), brick)
+    }
   }
-  blob(put, area([11, 21], [25, 26]), { outline: 'Y', shadow: 'Y', base: 'y', light: 'W' })
-  fill(put, 30, [7, 8, 23, 24], 'g')
-  fill(put, 31, [7, 8, 23, 24], 'g')
+  // 반짝임
+  put(5, 4, 'W')
+  put(12, 13, 'W')
+  put(19, 22, 'W')
   if (cracked) {
     for (const [y, x] of [
-      [6, 20],
-      [7, 20],
-      [8, 21],
-      [9, 21],
-      [10, 22],
-      [10, 23],
-      [11, 23],
-      [12, 22],
-      [13, 22],
-      [14, 21],
-      [22, 8],
-      [23, 9],
-      [24, 9],
-      [25, 10],
-      [25, 11],
-      [26, 12],
+      [3, 9],
+      [4, 9],
+      [5, 10],
+      [6, 10],
+      [7, 11],
+      [8, 11],
+      [9, 12],
+      [10, 12],
+      [11, 13],
+      [12, 13],
+      [13, 14],
+      [14, 14],
+      [15, 15],
+      [16, 15],
+      [17, 16],
+      [18, 16],
+      [19, 17],
+      [20, 17],
+      [21, 18],
+      [22, 18],
+      [23, 19],
+      [8, 26],
+      [9, 26],
+      [10, 27],
+      [11, 27],
+      [12, 28],
     ]) {
-      put(y, x, 'g')
+      put(y, x, 'k')
     }
   }
   return grid
@@ -569,7 +582,7 @@ export function bakeEnemies(scene: Phaser.Scene) {
   }
 }
 
-/** 바닥·금고·소품·탄·파편. */
+/** 바닥·멘탈벽·소품·탄·파편. */
 export function bakeStage(scene: Phaser.Scene, genre: Genre) {
   bake(
     scene,
@@ -578,8 +591,8 @@ export function bakeStage(scene: Phaser.Scene, genre: Genre) {
     FLOOR_PALETTE,
     PX * 2,
   )
-  bake(scene, 'vault', vaultGrid(false), ENEMY_PALETTE)
-  bake(scene, 'vault-cracked', vaultGrid(true), ENEMY_PALETTE)
+  bake(scene, 'wall', wallGrid(false), ENEMY_PALETTE)
+  bake(scene, 'wall-cracked', wallGrid(true), ENEMY_PALETTE)
   bake(scene, 'desk', deskGrid(), PROP_PALETTE)
   bake(scene, 'ticker', tickerGrid(), PROP_PALETTE)
   bake(scene, 'pillar', pillarGrid(), PROP_PALETTE)

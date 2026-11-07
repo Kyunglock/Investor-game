@@ -418,15 +418,15 @@ class DefaultCompanyService implements CompanyService {
         lockedDesks,
         ended || c.mental == null
             ? null
-            : new CompanyView.Mental(c.mental.genre, c.mental.headline, c.mental.card != null));
+            : new CompanyView.Mental(c.mental.genre, c.mental.headline, c.mental.cards != null));
   }
 
   @Override
   @Transactional
   public CompanyView mental(
-      UUID sessionId, int year, int quarter, String card, int kills, int mentalLeft) {
+      UUID sessionId, int year, int quarter, List<String> cards, int kills, int mentalLeft) {
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.mental.report(row.state(), year, quarter, card, kills, mentalLeft);
+    engine.mental.report(row.state(), year, quarter, cards, kills, mentalLeft);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

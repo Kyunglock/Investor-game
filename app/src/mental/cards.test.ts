@@ -1,15 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { CARDS, loadoutOf, pickCards } from './cards'
+import { applyCard, BASE_LOADOUT, CARDS, MAX_STREAMS, pickCards, xpToNext } from './cards'
 
-describe('멘탈 카드 (decisions.md 328번)', () => {
-  it('석 장은 서로 다르고 다섯 가운데서 나온다', () => {
+function rng(seed: number) {
+  let x = seed + 1
+  return () => {
+    x = (x * 48271) % 2147483647
+    return x / 2147483647
+  }
+}
+
+describe('멘탈 카드 (decisions.md 328·330번)', () => {
+  it('석 장은 서로 다르고 카드 목록에서 나온다', () => {
     for (let seed = 0; seed < 50; seed++) {
-      let x = seed + 1
-      const random = () => {
-        x = (x * 48271) % 2147483647
-        return x / 2147483647
-      }
-      const picked = pickCards(random)
+      const picked = pickCards(BASE_LOADOUT, false, rng(seed))
       expect(picked).toHaveLength(3)
       expect(new Set(picked.map((c) => c.code)).size).toBe(3)
       for (const c of picked) {
@@ -18,12 +21,32 @@ describe('멘탈 카드 (decisions.md 328번)', () => {
     }
   })
 
-  it('카드마다 수치 하나만 바뀐다', () => {
-    const base = loadoutOf('hold')
-    expect(base.damage).toBeGreaterThan(1)
-    expect(loadoutOf('split').spread).toBe(true)
-    expect(loadoutOf('rule').fireMs).toBeLessThan(base.fireMs)
-    expect(loadoutOf('steel').maxMental).toBeGreaterThan(base.maxMental)
-    expect(loadoutOf('calm').speed).toBeGreaterThan(base.speed)
+  it('처음(멘탈이 꽉 참)에는 심호흡이 안 나오고, 탄 갈래가 꽉 차면 분산 투자가 안 나온다', () => {
+    for (let seed = 0; seed < 50; seed++) {
+      expect(pickCards(BASE_LOADOUT, true, rng(seed)).map((c) => c.code)).not.toContain('heal')
+      const full = { ...BASE_LOADOUT, streams: MAX_STREAMS }
+      expect(pickCards(full, false, rng(seed)).map((c) => c.code)).not.toContain('split')
+    }
+  })
+
+  it('카드는 쌓인다', () => {
+    let l = BASE_LOADOUT
+    l = applyCard(l, 'hold')
+    l = applyCard(l, 'hold')
+    expect(l.damage).toBeCloseTo(2.2)
+    l = applyCard(l, 'split')
+    l = applyCard(l, 'split')
+    l = applyCard(l, 'split')
+    expect(l.streams).toBe(MAX_STREAMS)
+    expect(applyCard(l, 'rule').fireMs).toBeLessThan(l.fireMs)
+    expect(applyCard(l, 'steel').maxMental).toBe(150)
+    expect(applyCard(l, 'steel').heal).toBe(50)
+    expect(applyCard(l, 'calm').speed).toBeGreaterThan(l.speed)
+    expect(applyCard(l, 'heal').heal).toBe(40)
+  })
+
+  it('다음 레벨까지 드는 경험치는 레벨이 오를수록 커진다', () => {
+    expect(xpToNext(1)).toBeLessThan(xpToNext(2))
+    expect(xpToNext(5)).toBeLessThan(xpToNext(6))
   })
 })

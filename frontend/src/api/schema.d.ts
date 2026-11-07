@@ -311,7 +311,7 @@ export interface paths {
         put?: never;
         /**
          * 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 328번)
-         * @description 분기마다 결산 직전에 멘탈 카드를 고르고 나쁜 투자 습관(패닉셀·투매·투기·손절매)을 쏘아 물리치는 한 판을 치른다(앱). 한 판은 화면이 돌리고,
+         * @description 분기마다 결산 직전에 멘탈 카드를 고르고 나쁜 투자 습관(패닉셀·투매·투기·손절매)을 쏘아 물리치는 한 판(4분)을 치른다(앱). 레벨이 오를 때마다 카드를 한 장 더 고른다(330번). 한 판은 화면이 돌리고,
          *     서버는 물리친 적과 남은 멘탈을 상한으로 잘라 강화율을 매긴다. 강화율만큼 그 분기 돈을 굴리는 직원 모두 더 벌고 손이 덜 뒤집힌다.
          *     이미 보냈으면 아무것도 하지 않고 지금 회사를 돌려준다(같은 요청이 두 번 와도 한 번만). 이번 분기가 아니거나 없는 카드면 400.
          *     치르지 않고 분기를 넘겨도 된다: 강화가 없을 뿐이다.
@@ -1591,11 +1591,8 @@ export interface operations {
                     year: number;
                     /** @description 지금 분기(Company.quarter) */
                     quarter: number;
-                    /**
-                     * @description 고른 멘탈 카드(존버 정신·분산 투자·원칙 매매·강철 멘탈·냉정함)
-                     * @enum {string}
-                     */
-                    card: "hold" | "split" | "rule" | "steel" | "calm";
+                    /** @description 고른 멘탈 카드, 고른 순서대로. 처음 한 장 + 레벨이 오를 때마다 한 장 (330번) */
+                    cards: ("hold" | "split" | "rule" | "steel" | "calm" | "heal")[];
                     /** @description 물리친 적 수 */
                     kills: number;
                     /** @description 끝날 때 남은 멘탈 */
