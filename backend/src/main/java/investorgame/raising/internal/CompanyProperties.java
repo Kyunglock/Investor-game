@@ -231,7 +231,7 @@ public record CompanyProperties(
    * @param achievementTickets 업적 하나를 열 때 받는 채용권
    * @param moveTickets 건물을 올릴 때 받는 채용권
    * @param maxDraws 한 번에 뽑을 수 있는 최대 수
-   * @param rosterPercent 데리고 있을 수 있는 사람 = 자리 수 × 이 비율(%). 넘으면 합치거나 내보내야 더 뽑는다
+   * @param rosterMax 데리고 있을 수 있는 사람 수(쉬는 사람 포함, 337번). 넘으면 합쳐야 더 뽑는다
    * @param mergeCount 합성에 드는 같은 등급 사람 수(바탕 한 명 포함). 바탕이 한 단계 오른다
    * @param rates 확률표: 회사 등급(인사팀이면 더 높게)에서 steps 단계 위가 percent%로. star면 특급
    */
@@ -242,7 +242,7 @@ public record CompanyProperties(
       int achievementTickets,
       int moveTickets,
       int maxDraws,
-      int rosterPercent,
+      int rosterMax,
       int mergeCount,
       List<Rate> rates) {}
 
