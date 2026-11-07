@@ -1,12 +1,15 @@
 import Phaser from 'phaser'
 import { sfx } from '../fx/sound'
+import { bakeEnemies, bakeHero, bakeStage, enemyKey } from './art'
 import type { Loadout } from './cards'
 import { ENEMIES, type EnemyKind } from './enemies'
 import { BATTLE_SECONDS, GENRES, type Genre } from './genres'
+import type { Hero } from './hero'
 
 /**
- * 멘탈 전투 한 판 (decisions.md 328번). Phaser 3 Arcade로 돈다: 탄·적은 풀에서 재사용하고, 캐릭터 그림은 캔버스에 한 번 그려 둔다. 규칙은 화면 규칙일
- * 뿐이고(얼마나 세지는지는 서버가 정한다), 손맛(번쩍임·밀림·숫자·파편·흔들림·멈칫)이 이 파일의 절반이다. 이 모듈은 Phaser를 담고 있어 import()로 늦게 부른다.
+ * 멘탈 전투 한 판 (decisions.md 328번). Phaser 3 Arcade로 돈다: 탄·적은 풀에서 재사용하고, 도트 그림(art.ts)은 캔버스에 한 번 구워 둔다. 규칙은 화면
+ * 규칙일 뿐이고(얼마나 세지는지는 서버가 정한다), 손맛(번쩍임·밀림·숫자·파편·흔들림·멈칫)이 이 파일의 절반이다. 이 모듈은 Phaser를 담고 있어 import()로 늦게
+ * 부른다.
  */
 
 export interface Hud {
@@ -25,6 +28,7 @@ export interface Outcome {
 
 export interface BattleOptions {
   genre: Genre
+  hero: Hero
   loadout: Loadout
   onHud: (hud: Hud) => void
   onBanner: (text: string, color: string) => void
@@ -43,95 +47,18 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   kby: number
   born: number
   nextShot: number
+  look: 0 | 1
 }
 type Bullet = Phaser.Physics.Arcade.Image & { life: number }
 
-/** 동글동글한 그림 하나를 캔버스에 그려 텍스처로 둔다. 매 프레임 그리지 않는다. */
-function blob(
-  scene: Phaser.Scene,
-  key: string,
-  r: number,
-  fill: string,
-  opts: { line?: number; face?: 'happy' | 'angry'; label?: string; font?: number } = {},
-) {
-  if (scene.textures.exists(key)) {
-    return
-  }
-  const pad = 4
-  const size = (r + pad) * 2
-  const c = size / 2
-  const tex = scene.textures.createCanvas(key, size, size)
-  if (!tex) {
-    return
-  }
-  const g = tex.getContext()
-  g.lineWidth = opts.line ?? 4
-  g.strokeStyle = INK
-  g.fillStyle = fill
-  g.beginPath()
-  g.arc(c, c, r, 0, Math.PI * 2)
-  g.fill()
-  if (g.lineWidth) {
-    g.stroke()
-  }
-  if (opts.face) {
-    const ey = opts.label ? c - r * 0.32 : c - r * 0.1
-    const ex = r * 0.32
-    g.fillStyle = INK
-    g.strokeStyle = INK
-    g.lineWidth = Math.max(2, r * 0.12)
-    g.lineCap = 'round'
-    if (opts.face === 'angry') {
-      for (const s of [-1, 1]) {
-        g.beginPath()
-        g.moveTo(c + s * ex * 1.5, ey - r * 0.14)
-        g.lineTo(c + s * ex * 0.5, ey)
-        g.stroke()
-      }
-    } else {
-      for (const s of [-1, 1]) {
-        g.beginPath()
-        g.ellipse(c + s * ex, ey, r * 0.09, r * 0.14, 0, 0, Math.PI * 2)
-        g.fill()
-      }
-      g.fillStyle = '#ff9bb3'
-      for (const s of [-1, 1]) {
-        g.beginPath()
-        g.ellipse(c + s * ex * 1.55, ey + r * 0.3, r * 0.14, r * 0.08, 0, 0, Math.PI * 2)
-        g.fill()
-      }
-      g.strokeStyle = INK
-      g.beginPath()
-      g.arc(c, ey + r * 0.22, r * 0.18, 0.15 * Math.PI, 0.85 * Math.PI)
-      g.stroke()
-    }
-  }
-  if (opts.label) {
-    g.fillStyle = INK
-    g.font = `${opts.font ?? 12}px "Gowun Dodum", sans-serif`
-    g.textAlign = 'center'
-    g.textBaseline = 'middle'
-    g.fillText(opts.label, c, c + r * 0.28)
-  }
-  tex.refresh()
+/** 적 그림(64×64)의 충돌 원: 가운데에 반지름 r. */
+function enemyBody(e: Enemy, r: number) {
+  e.body?.setCircle(r, 32 - r, 32 - r)
 }
 
-function checker(scene: Phaser.Scene) {
-  if (scene.textures.exists('floor')) {
-    return
-  }
-  const t = scene.textures.createCanvas('floor', 72, 72)
-  if (!t) {
-    return
-  }
-  const g = t.getContext()
-  g.fillStyle = '#ffe7c2'
-  g.fillRect(0, 0, 72, 72)
-  g.fillStyle = '#ffdcaa'
-  g.fillRect(0, 0, 36, 36)
-  g.fillRect(36, 36, 36, 36)
-  t.refresh()
-}
+/** 걷기 한 걸음(ms): 옆모습 두 프레임을 번갈아 보인다. */
+const STEP_MS = 140
+const HURT_MS = 450
 
 class BattleScene extends Phaser.Scene {
   private readonly opts: BattleOptions
@@ -160,6 +87,7 @@ class BattleScene extends Phaser.Scene {
   private lastHud = 0
   private over = false
   private stopped = false
+  private hurtUntil = 0
   private waves: { at: number; run: () => void }[] = []
 
   constructor(opts: BattleOptions) {
@@ -169,36 +97,31 @@ class BattleScene extends Phaser.Scene {
   }
 
   create() {
-    checker(this)
-    blob(this, 'player', 22, '#ffd84d', { face: 'happy' })
-    blob(this, 'vault', 34, '#f5d36b', { label: '금고', font: 15 })
-    blob(this, 'bullet', 6, '#fff8ea', { line: 3 })
-    blob(this, 'tear', 7, '#9fb4d6', { line: 3 })
-    blob(this, 'spark', 5, '#ffffff', { line: 0 })
-    for (const [kind, v] of Object.entries(ENEMIES)) {
-      blob(this, kind, v.r, v.fill, { face: 'angry', label: v.label, font: v.font })
-    }
+    bakeStage(this, this.opts.genre)
+    bakeHero(this, this.opts.hero)
+    bakeEnemies(this)
 
     const { width: w, height: h } = this.scale
-    this.bg = this.add.tileSprite(0, 0, w, h, 'floor').setOrigin(0)
+    this.bg = this.add.tileSprite(0, 0, w, h, `floor-${this.opts.genre}`).setOrigin(0)
     const onResize = (s: Phaser.Structs.Size) => this.bg.setSize(s.width, s.height)
     this.scale.on('resize', onResize)
     this.events.once('shutdown', () => this.scale.off('resize', onResize))
 
     this.mental = this.opts.loadout.maxMental
+    // 아군 그림은 64×80: 몸통(얼굴부터 발까지) 가운데에 충돌 원을 둔다.
     this.player = this.physics.add.image(
       w / 2,
       this.genre.area === 'bottom' ? h - 120 : h / 2,
-      'player',
+      'hero-front',
     )
     this.player.setDepth(5)
-    this.player.body?.setCircle(22, 4, 4)
+    this.player.body?.setCircle(20, 12, 24)
     if (this.genre.target === 'vault') {
       this.vault = this.physics.add
         .image(w / 2, h / 2, 'vault')
         .setDepth(2)
         .setImmovable(true)
-      this.vault.body?.setCircle(34, 4, 4)
+      this.vault.body?.setCircle(26, 6, 6)
     }
 
     // 풀: 탄과 적을 미리 만들어 두고 다시 쓴다.
@@ -249,7 +172,7 @@ class BattleScene extends Phaser.Scene {
         .particles(0, 0, 'spark', {
           speed: { min: 90, max: 320 },
           lifespan: { min: 250, max: 500 },
-          scale: { start: 1.3, end: 0 },
+          scale: { start: 2, end: 0 },
           tint: Phaser.Display.Color.HexStringToColor(v.fill).color,
           emitting: false,
         })
@@ -311,13 +234,14 @@ class BattleScene extends Phaser.Scene {
       return
     }
     const v = ENEMIES[kind]
-    e.setTexture(kind)
+    e.setTexture(enemyKey(kind, 0))
       .enableBody(true, x, y, true, true)
       .setScale(1)
       .clearTint()
       .setAlpha(1)
       .setDepth(3)
-    e.body?.setCircle(v.r, 4, 4)
+    enemyBody(e, v.r)
+    e.look = 0
     e.kind = kind
     e.hp = v.hp
     e.kbx = 0
@@ -401,7 +325,7 @@ class BattleScene extends Phaser.Scene {
     e.kby += Math.sin(angle) * kb
     this.pop(
       e.x + Phaser.Math.Between(-8, 8),
-      e.y - ENEMIES[e.kind].r,
+      e.y - ENEMIES[e.kind].r - 10,
       String(Math.round(dmg * 10)),
       '#ffffff',
       18,
@@ -455,6 +379,7 @@ class BattleScene extends Phaser.Scene {
     this.cameras.main.shake(130, 0.009)
     this.opts.onHurt()
     sfx.ouch()
+    this.hurtUntil = this.time.now + HURT_MS
     const target = this.vault && !e ? this.vault : this.player
     this.pop(target.x, target.y - 34, `멘탈 -${dmg}`, '#ff4f6d', 24)
     this.tweens.add({ targets: this.player, alpha: 0.3, duration: 80, yoyo: true, repeat: 3 })
@@ -494,7 +419,7 @@ class BattleScene extends Phaser.Scene {
         return
       }
       b.enableBody(true, this.player.x, this.player.y, true, true).setDepth(4)
-      b.body?.setCircle(6, 4, 4)
+      b.body?.setCircle(5, 1, 1)
       b.setVelocity(Math.cos(base + off) * BULLET_SPEED, Math.sin(base + off) * BULLET_SPEED)
       b.life = now + BULLET_LIFE
     }
@@ -506,7 +431,7 @@ class BattleScene extends Phaser.Scene {
       return
     }
     t.enableBody(true, e.x, e.y, true, true).setDepth(4)
-    t.body?.setCircle(7, 4, 4)
+    t.body?.setCircle(5, 0, 3)
     t.setVelocity(ux * 260, uy * 260)
   }
 
@@ -574,8 +499,18 @@ class BattleScene extends Phaser.Scene {
     p.setVelocity((mx / ml) * this.opts.loadout.speed, (my / ml) * this.opts.loadout.speed)
     const { width: w, height: h } = this.scale
     p.x = Phaser.Math.Clamp(p.x, 24, w - 24)
-    p.y = this.genre.area === 'bottom' ? h - 120 : Phaser.Math.Clamp(p.y, 90, h - 24)
-    p.rotation = Math.sin(time / 120) * (mx || my ? 0.12 : 0.03)
+    p.y = this.genre.area === 'bottom' ? h - 120 : Phaser.Math.Clamp(p.y, 90, h - 40)
+    // 아군 그림: 맞았으면 우는 얼굴, 걸으면 옆모습 두 프레임(왼쪽이면 뒤집는다), 가만히 있으면 정면.
+    if (time < this.hurtUntil) {
+      p.setTexture('hero-hurt').setFlipX(false)
+    } else if (mx || my) {
+      p.setTexture(Math.floor(time / STEP_MS) % 2 ? 'hero-walk' : 'hero-side')
+      if (mx) {
+        p.setFlipX(mx < 0)
+      }
+    } else {
+      p.setTexture('hero-front').setFlipX(false)
+    }
     if (this.vault) {
       this.vault.setPosition(w / 2, h / 2)
     }
@@ -648,7 +583,13 @@ class BattleScene extends Phaser.Scene {
       e.setVelocity(sx + e.kbx, sy + e.kby)
       e.kbx *= 0.86
       e.kby *= 0.86
-      e.rotation = Math.sin(time / 150 + i) * 0.15
+      // 두 프레임을 번갈아: 패닉은 빠르게 떨고, 나머지는 느긋하게. 바뀔 때만 텍스처를 바꾼다.
+      const frame = (Math.floor(time / (e.kind === 'panic' ? 110 : 260) + i) % 2) as 0 | 1
+      if (frame !== e.look) {
+        e.look = frame
+        e.setTexture(enemyKey(e.kind, frame))
+      }
+      e.setFlipX(dx < 0 && e.kind !== 'dump')
     }
     for (const child of this.bullets.getChildren()) {
       const b = child as Bullet
@@ -670,10 +611,11 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): () => voi
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    backgroundColor: '#ffe7c2',
+    backgroundColor: '#1c2238',
     scale: { mode: Phaser.Scale.RESIZE, width: parent.clientWidth, height: parent.clientHeight },
     physics: { default: 'arcade' },
-    render: { antialias: true, powerPreference: 'high-performance' },
+    // 도트 그림: 흐리게 키우지 않는다.
+    render: { pixelArt: true, powerPreference: 'high-performance' },
     fps: { target: 60 },
     scene: [new BattleScene(opts)],
   })
