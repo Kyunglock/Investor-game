@@ -80,5 +80,5 @@ export function customerLook(look: number, mood?: MoodKey | null): CatLook {
   return { fur: breed.fur, fur2: breed.fur2, pattern: breed.pattern, face: faceOf(mood) }
 }
 
-/** 사장(플레이어): 크림색에 빨간 넥타이와 선글라스. 사용자가 고른 1번 컨셉. */
-export const BOSS_LOOK: CatLook = { fur: '#f6dcb0', pattern: 'solid', acc: ['tie'], face: 'boss' }
+/** 사장(플레이어): 크림색, 꾸밈 없음 (345번). 전에는 넥타이·선글라스였는데 "초반 캐릭터 별로 정이 안 간다". 꾸밈은 나중에 성장·장비로 붙인다. */
+export const BOSS_LOOK: CatLook = { fur: '#f6dcb0', pattern: 'solid', face: 'idle' }
