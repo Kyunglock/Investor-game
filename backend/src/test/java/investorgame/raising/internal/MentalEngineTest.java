@@ -30,6 +30,7 @@ class MentalEngineTest {
     company.number = 2;
     company.capital = 150_000_000L;
     company.era = "plain";
+    ENGINE.mental.initWeapons(company);
     ENGINE.startYear(company, new HashSeededRandom(seed));
     ENGINE.hire(company, stats(50));
     ENGINE.place(company, Map.of(1, "bio"));
@@ -86,21 +87,21 @@ class MentalEngineTest {
   @Test
   void 결과를_보내면_강화율을_매기고_상한으로_자르며_두_번_보내도_한_번이다() {
     CompanyState c = company(1);
-    ENGINE.mental.report(c, 1, 1, List.of("steel", "hold"), 120, 80);
+    ENGINE.mental.report(c, new HashSeededRandom(1), 1, 1, List.of("steel", "hold"), 120, 80);
     assertThat(c.mental.cards).containsExactly("steel", "hold");
     assertThat(c.mental.bonusPercent).isEqualTo(12 + 8);
-    ENGINE.mental.report(c, 1, 1, List.of("hold"), 500, 150);
+    ENGINE.mental.report(c, new HashSeededRandom(1), 1, 1, List.of("hold"), 500, 150);
     assertThat(c.mental.cards).as("이미 보냈으면 그대로").containsExactly("steel", "hold");
     assertThat(c.mental.bonusPercent).isEqualTo(20);
 
     CompanyState big = company(2);
-    ENGINE.mental.report(big, 1, 1, List.of("hold"), 9_999, 9_999);
+    ENGINE.mental.report(big, new HashSeededRandom(1), 1, 1, List.of("hold"), 9_999, 9_999);
     assertThat(big.mental.kills).isEqualTo(PROPERTIES.mental().maxKills());
     assertThat(big.mental.mentalLeft).isEqualTo(PROPERTIES.mental().maxMental());
     assertThat(big.mental.bonusPercent).isEqualTo(PROPERTIES.mental().maxPercent());
 
     CompanyState none = company(3);
-    ENGINE.mental.report(none, 1, 1, List.of("calm"), 0, 0);
+    ENGINE.mental.report(none, new HashSeededRandom(1), 1, 1, List.of("calm"), 0, 0);
     assertThat(none.mental.bonusPercent).isZero();
     assertThat(ENGINE.mental.line(none)).as("강화가 없으면 소식도 없다").isNull();
   }
@@ -118,13 +119,19 @@ class MentalEngineTest {
   @Test
   void 이번_분기가_아니거나_없는_카드면_400이다() {
     CompanyState c = company(1);
-    assertThatThrownBy(() -> ENGINE.mental.report(c, 1, 2, List.of("hold"), 10, 10))
+    assertThatThrownBy(
+            () -> ENGINE.mental.report(c, new HashSeededRandom(1), 1, 2, List.of("hold"), 10, 10))
         .isInstanceOf(InvalidRequestException.class);
-    assertThatThrownBy(() -> ENGINE.mental.report(c, 2, 1, List.of("hold"), 10, 10))
+    assertThatThrownBy(
+            () -> ENGINE.mental.report(c, new HashSeededRandom(1), 2, 1, List.of("hold"), 10, 10))
         .isInstanceOf(InvalidRequestException.class);
-    assertThatThrownBy(() -> ENGINE.mental.report(c, 1, 1, List.of("hold", "yolo"), 10, 10))
+    assertThatThrownBy(
+            () ->
+                ENGINE.mental.report(
+                    c, new HashSeededRandom(1), 1, 1, List.of("hold", "yolo"), 10, 10))
         .isInstanceOf(InvalidRequestException.class);
-    assertThatThrownBy(() -> ENGINE.mental.report(c, 1, 1, List.of(), 10, 10))
+    assertThatThrownBy(
+            () -> ENGINE.mental.report(c, new HashSeededRandom(1), 1, 1, List.of(), 10, 10))
         .isInstanceOf(InvalidRequestException.class);
     assertThat(c.mental.cards).isNull();
   }
@@ -135,7 +142,8 @@ class MentalEngineTest {
     for (int seed = 0; seed < 200; seed++) {
       CompanyState plain = company(seed);
       CompanyState trained = company(seed);
-      ENGINE.mental.report(trained, 1, 1, List.of("hold", "heal", "hold"), 300, 150);
+      ENGINE.mental.report(
+          trained, new HashSeededRandom(1), 1, 1, List.of("hold", "heal", "hold"), 300, 150);
       assertThat(trained.mental.bonusPercent).isEqualTo(PROPERTIES.mental().maxPercent());
       CompanyState.Quarter p = ENGINE.settleQuarter(plain, new HashSeededRandom(seed));
       CompanyState.Quarter t = ENGINE.settleQuarter(trained, new HashSeededRandom(seed));
@@ -154,5 +162,89 @@ class MentalEngineTest {
       }
     }
     assertThat(compared).isGreaterThan(20);
+  }
+
+  @Test
+  void 처음엔_일반_권총_하나를_들고_옛_회사도_불러올_때_받는다() {
+    CompanyState c = ENGINE.open(new HashSeededRandom(1), 150_000_000L);
+    assertThat(c.weapons).hasSize(1);
+    assertThat(c.weapons.getFirst().kind).isEqualTo(MentalEngine.PISTOL);
+    assertThat(c.weapons.getFirst().grade).isEqualTo("N");
+    assertThat(c.weapon).isSameAs(c.weapons.getFirst());
+
+    CompanyState old = company(2);
+    old.weapons = null;
+    old.weapon = null;
+    assertThat(ENGINE.mental.adopt(old, new HashSeededRandom(2))).isTrue();
+    assertThat(old.weapon.kind).isEqualTo(MentalEngine.PISTOL);
+    assertThat(ENGINE.mental.adopt(old, new HashSeededRandom(2))).as("이미 있으면 그대로").isFalse();
+  }
+
+  @Test
+  void 무기_수치는_등급이_오를수록_세고_빨라진다() {
+    CompanyProperties.Weapon n = ENGINE.mental.stats("rifle", "N");
+    CompanyProperties.Weapon ur = ENGINE.mental.stats("rifle", "UR");
+    assertThat(ur.damagePercent()).isGreaterThan(n.damagePercent());
+    assertThat(ur.fireMs()).isLessThan(n.fireMs());
+    assertThat(ur.streams()).isEqualTo(n.streams());
+    assertThat(ENGINE.mental.stats("shotgun", "N").streams()).isEqualTo(3);
+  }
+
+  @Test
+  void 적을_많이_물리칠수록_무기가_잘_떨어지고_좋은_등급이_잦으며_가진_것은_두_번_얻지_않는다() {
+    int dropsLow = 0;
+    int dropsHigh = 0;
+    Map<String, Integer> gradesHigh = new HashMap<>();
+    for (int seed = 0; seed < 400; seed++) {
+      CompanyState low = company(seed);
+      ENGINE.mental.report(low, new HashSeededRandom(seed), 1, 1, List.of("hold"), 5, 50);
+      if (low.mental.drop != null) {
+        dropsLow++;
+      }
+      CompanyState high = company(seed);
+      ENGINE.mental.report(high, new HashSeededRandom(seed), 1, 1, List.of("hold"), 90, 50);
+      if (high.mental.drop != null) {
+        dropsHigh++;
+        gradesHigh.merge(high.mental.drop.grade, 1, Integer::sum);
+        assertThat(
+                high.weapons.stream()
+                    .anyMatch(w -> w.same(high.mental.drop.kind, high.mental.drop.grade)))
+            .isTrue();
+        // 새것이면 목록이 둘, 이미 가진 일반 권총이면 하나 그대로
+        boolean pistolN =
+            high.mental.drop.kind.equals(MentalEngine.PISTOL) && high.mental.drop.grade.equals("N");
+        assertThat(high.mental.dropNew).isEqualTo(!pistolN);
+        assertThat(high.weapons).hasSize(pistolN ? 1 : 2);
+      }
+    }
+    assertThat(dropsLow).isLessThan(dropsHigh);
+    assertThat(dropsHigh).isGreaterThan(400 * 70 / 100);
+    assertThat(gradesHigh.getOrDefault("UR", 0)).isPositive();
+    assertThat(gradesHigh.getOrDefault("N", 0))
+        .isLessThan(gradesHigh.getOrDefault("R", 0) + gradesHigh.getOrDefault("SR", 0));
+
+    CompanyState none = company(9);
+    ENGINE.mental.report(none, new HashSeededRandom(9), 1, 1, List.of("hold"), 0, 100);
+    assertThat(none.mental.drop).as("적을 하나도 못 잡으면 안 떨어진다").isNull();
+  }
+
+  @Test
+  void 가진_무기만_들_수_있고_화면_값은_든_것을_표시한다() {
+    CompanyState c = company(1);
+    c.weapons.add(new CompanyState.Weapon("smg", "SR"));
+    ENGINE.mental.equip(c, "smg", "SR");
+    assertThat(c.weapon.kind).isEqualTo("smg");
+    assertThat(ENGINE.mental.weaponViews(c))
+        .extracting(w -> w.kind() + ":" + w.equipped())
+        .containsExactly("pistol:false", "smg:true");
+    assertThat(ENGINE.mental.weaponViews(c).getLast().name()).isEqualTo("기관단총");
+    assertThat(ENGINE.mental.weaponViews(c).getLast().gradeName()).isEqualTo("희귀");
+    assertThatThrownBy(() -> ENGINE.mental.equip(c, "rifle", "N"))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> ENGINE.mental.equip(c, "bazooka", "N"))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> ENGINE.mental.equip(c, "smg", "XX"))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(c.weapon.kind).isEqualTo("smg");
   }
 }
