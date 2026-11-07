@@ -1,5 +1,5 @@
 import type { Company } from '@web/api/client'
-import { CollectionGrid, RatesTable, ReleaseList } from '@web/features/raising/Gacha'
+import { CollectionGrid, RatesTable } from '@web/features/raising/Gacha'
 import { collected, drawable, mergeGroups } from '@web/features/raising/gachaRules'
 import { MergeBoard } from '@web/features/raising/MergeBoard'
 import { useRaisingStore } from '@web/features/raising/store'
@@ -25,7 +25,7 @@ const MERGE_EFFECTS = {
 }
 
 /**
- * 채용 장면 (decisions.md 312번): 뽑기 · 합성 · 도감. 뽑기는 큰 채용권 숫자와 1명·N명 뽑기 버튼, 확률표, 쉬는 사람 내보내기. 합성은 같은 등급 카드 두 장을
+ * 채용 장면 (decisions.md 312번): 뽑기 · 합성 · 도감. 뽑기는 큰 채용권 숫자와 1명·N명 뽑기 버튼, 확률표(내보내기는 없앴다, 338번). 합성은 같은 등급 카드 두 장을
  * 끌어 겹쳐 한 단계 올리고(MergeBoard, 314·319번), 도감은 만난 등급을 모은다.
  */
 export function GachaScene({ company }: { company: Company }) {
@@ -85,7 +85,7 @@ export function GachaScene({ company }: { company: Company }) {
   )
 }
 
-/** 뽑기: 채용권 숫자, 1명·N명 뽑기, 확률표, 쉬는 사람 내보내기. */
+/** 뽑기: 채용권 숫자, 1명·N명 뽑기, 확률표. */
 function DrawPart({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const { draw } = useRaisingStore.getState()
@@ -147,10 +147,6 @@ function DrawPart({ company }: { company: Company }) {
       <div className="panel p-3">
         <p className="mb-1 text-[13px] font-semibold">확률표</p>
         <RatesTable company={company} />
-      </div>
-      <div className="panel p-3">
-        <p className="mb-1 text-[13px] font-semibold">쉬는 사람 내보내기</p>
-        <ReleaseList company={company} />
       </div>
     </div>
   )
