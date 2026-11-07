@@ -79,7 +79,7 @@ export function TitleScene({
           style={delay(480)}
           data-testid="start-story"
         >
-          사표를 던지고 나온 날, 통장에는 1억 원이 있었다. 반지하 사무실에 작은 간판을 걸었다.
+          사표를 던지고 나온 날, 통장에는 100b가 있었다. 반지하 사무실에 작은 간판을 걸었다.
         </p>
       </div>
       <div className="title-in w-full max-w-[360px]" style={delay(640)}>

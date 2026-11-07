@@ -1,5 +1,5 @@
 import type { Company } from '@web/api/client'
-import { shortWon } from '@web/features/game/labels'
+import { money } from '@web/features/game/labels'
 import { GradeBadge } from '@web/features/raising/GradeCard'
 import { LADDER, STAT_NAMES, STAT_ORDER } from '@web/features/raising/grades'
 import { ATTIRE_NAMES, attireOf, titleOf } from '@web/features/raising/office'
@@ -62,7 +62,7 @@ export function EmployeeDetail({ employee: e, company }: { employee: Employee; c
         {e.sectorName && ` · 관심 섹터 ${e.sectorName}`}
         {e.deskYears > 0 && ` · 같은 자리 ${e.deskYears}년`}
         {e.settled && ' · 손에 익음'}
-        {e.salary > 0 && ` · 연봉 ${shortWon(e.salary)}`}
+        {e.salary > 0 && ` · 연봉 ${money(e.salary)}`}
         {e.morale !== 0 && ` · ${MORALE[e.morale]}`}
       </p>
       <p className="mt-0.5 text-[12px] text-teal">등급 효과 · {e.perk}</p>

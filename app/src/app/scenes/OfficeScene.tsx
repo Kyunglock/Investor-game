@@ -1,5 +1,5 @@
 import type { Company } from '@web/api/client'
-import { shortWon } from '@web/features/game/labels'
+import { money } from '@web/features/game/labels'
 import { usePixelArt } from '@web/features/game/pixelArt'
 import { BuildingArt } from '@web/features/raising/BuildingArt'
 import { GradeCard } from '@web/features/raising/GradeCard'
@@ -91,8 +91,8 @@ function NextStep({ company }: { company: Company }) {
     >
       <p className="min-w-0 text-[12px] text-muted">
         <b className={`block text-[13px] ${plan.affordable ? 'text-gold' : 'text-ink'}`}>{label}</b>
-        이사 비용 {shortWon(plan.cost)} · 자본 {shortWon(plan.needed)}부터
-        {!plan.affordable && ` (${shortWon(short)} 더)`}
+        이사 비용 {money(plan.cost)} · 자본 {money(plan.needed)}부터
+        {!plan.affordable && ` (${money(short)} 더)`}
       </p>
       <button
         type="button"

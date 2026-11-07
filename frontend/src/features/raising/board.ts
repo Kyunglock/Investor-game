@@ -1,5 +1,5 @@
 import type { Grade } from '../../api/client'
-import { bigUnits } from '../game/labels'
+import { signedMoney } from '../game/labels'
 import { LADDER } from './grades'
 
 /**
@@ -127,11 +127,9 @@ export function teamRows(results: TeamResult[], reports: TeamReport[]): TeamRow[
   return [...rows.values()]
 }
 
-/** 전광판·그림의 손익: 만 원 아래는 버리고 부호를 붙인다. +3,068만원, −455만원, +1조 2,000억원. */
+/** 전광판·그림의 손익: 게임 금액에 부호를 붙인다(decisions.md 313번). +3.07b, −455a, +1.2d, 0. */
 export function pnlLabel(pnl: number): string {
-  const sign = pnl > 0 ? '+' : pnl < 0 ? '−' : ''
-  const text = bigUnits(Math.abs(pnl))
-  return text ? `${sign}${text}원` : '0원'
+  return signedMoney(pnl)
 }
 
 /** 이사 장면 (8.3절): 회사 등급이 오르면 이삿짐 트럭과 화환, 떨어지면 짐을 줄여 작은 사무실로. */

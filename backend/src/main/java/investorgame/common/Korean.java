@@ -5,8 +5,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * 한글 조사. 받침이 있으면 앞 것(과·이·을·은·으로), 없으면 뒤 것(와·가·를·는·로). 숫자는 읽는 소리로(0·1·3·6·7·8 받침), 그 밖의 한글 아닌 글자는
- * 받침이 있는 것으로 본다. 자리표시 뒤의 조사는 {@link #fill}이 값에 맞춰 고른다 (decisions.md 112번).
+ * 한글 조사. 받침이 있으면 앞 것(과·이·을·은·으로), 없으면 뒤 것(와·가·를·는·로). 숫자는 읽는 소리로(0·1·3·6·7·8 받침), 로마자도 읽는
+ * 소리로(엘·엠·엔·알만 받침, 게임 금액 100b·등급 SSS, decisions.md 313번), 그 밖의 한글 아닌 글자는 받침이 있는 것으로 본다. 자리표시 뒤의 조사는
+ * {@link #fill}이 값에 맞춰 고른다 (decisions.md 112번).
  */
 public final class Korean {
 
@@ -29,6 +30,12 @@ public final class Korean {
     false, true, false, false, false, false, false, true, true, false
   };
 
+  /** 읽을 때 받침이 있는 로마자: 엘·엠·엔·알. 나머지(에이·비·씨…)는 받침이 없다. */
+  private static final String LATIN_BATCHIM = "lmnr";
+
+  /** ㄹ 받침인 로마자: 엘·알. "로"가 붙는다. */
+  private static final String LATIN_RIEUL = "lr";
+
   private Korean() {}
 
   public static String withParticle(String word, String withBatchim, String withoutBatchim) {
@@ -49,6 +56,9 @@ public final class Korean {
     if (last >= '0' && last <= '9') {
       return DIGIT_BATCHIM[last - '0'];
     }
+    if (Character.isLetter(last) && last < 0x80) {
+      return LATIN_BATCHIM.indexOf(Character.toLowerCase(last)) >= 0;
+    }
     boolean hangul = last >= 0xAC00 && last <= 0xD7A3;
     return !hangul || (last - 0xAC00) % 28 != 0;
   }
@@ -61,6 +71,9 @@ public final class Korean {
     char last = word.charAt(word.length() - 1);
     if (last >= '0' && last <= '9') {
       return DIGIT_RIEUL[last - '0'];
+    }
+    if (Character.isLetter(last) && last < 0x80) {
+      return LATIN_RIEUL.indexOf(Character.toLowerCase(last)) >= 0;
     }
     boolean hangul = last >= 0xAC00 && last <= 0xD7A3;
     return hangul && (last - 0xAC00) % 28 == 8;

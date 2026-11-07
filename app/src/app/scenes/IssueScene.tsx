@@ -1,5 +1,5 @@
 import type { Company } from '@web/api/client'
-import { shortWon } from '@web/features/game/labels'
+import { money } from '@web/features/game/labels'
 import { useRaisingStore } from '@web/features/raising/store'
 import { haptic } from '../../fx/haptics'
 import { sfx } from '../../fx/sound'
@@ -43,7 +43,7 @@ export function IssueScene({ company }: { company: Company }) {
               onClick={() => answer(() => answerPoach(false))}
               className="btn btn-line min-h-12 text-[13px]"
             >
-              보낸다 · +{shortWon(m.poach.transferFee)}
+              보낸다 · +{money(m.poach.transferFee)}
             </button>
           </div>
         </section>
@@ -60,7 +60,7 @@ export function IssueScene({ company }: { company: Company }) {
               onClick={() => answer(() => answerRaise(true))}
               className="btn btn-blue min-h-12 text-[13px]"
             >
-              올려 준다 · 연 {shortWon(m.raise.after)}
+              올려 준다 · 연 {money(m.raise.after)}
             </button>
             <button
               type="button"

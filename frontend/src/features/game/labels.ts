@@ -12,46 +12,38 @@ export const STAT_LABELS: Record<keyof Stats, string> = {
 
 export const STAT_KEYS = Object.keys(STAT_LABELS) as (keyof Stats)[]
 
-const numberFormat = new Intl.NumberFormat('ko-KR')
-
-export function won(amount: number): string {
-  return `${numberFormat.format(amount)}원`
-}
-
-export function signedWon(amount: number): string {
-  return `${amount > 0 ? '+' : ''}${won(amount)}`
-}
-
-const MAN = 10_000
-const EOK = 100_000_000
-const JO = 1_000_000_000_000
+/** 게임 금액 단위 (decisions.md 313번): 1,000마다 a·b·c·d… 로 올라간다. 등급 글자(F~S)와 헷갈리지 않게 소문자다. */
+export const MONEY_UNITS = 'abcdefghijklmnopqrstuvwxyz'
 
 /**
- * 큰돈을 조·억·만으로 읽는다(원은 붙이지 않는다). 1조가 넘으면 조와 억까지만(만은 버린다): 56조 3,615억, 2억 4,858만, 312만. 만원이 안 되면 빈 글이다
- * (decisions.md 253번: 회사 등급 띠가 1천조까지 가는데 억까지만 써서 "563,615억원"이 됐다).
+ * 게임 금액: 1,000 아래는 그대로, 그 위는 1a(1천)·1b(100만)·1c(10억)·1d(1조)·1e(1천조)… 앞자리는 세 자리까지(10 아래는 소수 둘째, 100 아래는 첫째 자리).
+ * 원화(억·조)를 쓰지 않는다. 예: 950 · 3.5a · 412.5b → 413b · 1.2c · −45.3b.
  */
-export function bigUnits(abs: number): string {
-  const jo = Math.floor(abs / JO)
-  const eok = Math.floor((abs % JO) / EOK)
-  const man = Math.floor((abs % EOK) / MAN)
-  const parts =
-    jo > 0
-      ? [`${numberFormat.format(jo)}조`, eok > 0 ? `${numberFormat.format(eok)}억` : '']
-      : [
-          eok > 0 ? `${numberFormat.format(eok)}억` : '',
-          man > 0 ? `${numberFormat.format(man)}만` : '',
-        ]
-  return parts.filter(Boolean).join(' ')
+export function money(amount: number): string {
+  const sign = amount < 0 ? '−' : ''
+  let abs = Math.abs(Math.round(amount))
+  if (abs < 1000) {
+    return `${sign}${abs}`
+  }
+  let unit = 0
+  while (abs >= 1000 && unit < MONEY_UNITS.length) {
+    abs /= 1000
+    unit++
+  }
+  const digits = abs < 10 ? 2 : abs < 100 ? 1 : 0
+  let text = abs.toFixed(digits)
+  // 999.96b가 반올림으로 1000b가 되면 1c로 올린다.
+  if (Number(text) >= 1000 && unit < MONEY_UNITS.length) {
+    unit++
+    text = (Number(text) / 1000).toFixed(2)
+  }
+  text = text.includes('.') ? text.replace(/\.?0+$/, '') : text
+  return `${sign}${text}${MONEY_UNITS[unit - 1]}`
 }
 
-/** 수첩에 손으로 적는 금액: 만원 아래는 버린다. 56조 3,615억원, 2억 4,858만원, 312만원, 0원. 1만원이 안 되면 원 그대로. */
-export function shortWon(amount: number): string {
-  const sign = amount < 0 ? '−' : ''
-  const abs = Math.abs(amount)
-  if (abs < MAN) {
-    return `${sign}${won(abs)}`
-  }
-  return `${sign}${bigUnits(abs)}원`
+/** 부호를 붙인 게임 금액: +3.5a, −45.3b, 0. */
+export function signedMoney(amount: number): string {
+  return `${amount > 0 ? '+' : ''}${money(amount)}`
 }
 
 /** 마지막 글자에 받침이 있는가. 한글이 아니면(숫자·영문) 받침이 없다고 본다. */

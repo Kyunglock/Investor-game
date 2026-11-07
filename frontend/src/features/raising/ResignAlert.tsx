@@ -1,5 +1,5 @@
 import type { Company } from '../../api/client'
-import { shortWon, withParticle } from '../game/labels'
+import { money, withParticle } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { useRaisingStore } from './store'
 
@@ -37,7 +37,7 @@ export function ResignAlert({ resign }: { resign: NonNullable<Company['resign']>
             onClick={() => void answerResign(true)}
             className="min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50"
           >
-            연봉 올려 주고 붙잡는다 · 연 {shortWon(resign.before)} → {shortWon(resign.after)}
+            연봉 올려 주고 붙잡는다 · 연 {money(resign.before)} → {money(resign.after)}
           </button>
           <button
             type="button"

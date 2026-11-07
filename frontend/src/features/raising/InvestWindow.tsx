@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Company } from '../../api/client'
-import { shortWon, withParticle } from '../game/labels'
+import { money, withParticle } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { CHART_MS, InvestChart } from './InvestChart'
 import {
@@ -24,7 +24,7 @@ const FOLLOW: Record<string, { label: string; tone: string }> = {
 
 /** 이익은 빨강, 손실은 파랑 (한국 증시 색). */
 function signed(amount: number): string {
-  return `${amount > 0 ? '+' : ''}${shortWon(amount)}`
+  return `${amount > 0 ? '+' : ''}${money(amount)}`
 }
 
 /** 사장 결정 도장이 찍히고 막판 제안이 뜨기까지(ms) (290번). */

@@ -144,7 +144,8 @@ class TeamEngine {
                 ? (pnl > 0 ? "crashHeld" : "crashHit")
                 : pnl > 0 ? (big ? "bigUp" : "up") : big ? "bigDown" : "down";
     List<String> lines = texts.trading().get(mood);
-    Map<String, String> values = Map.of("period", period, "pnl", CompanyEngine.won(Math.abs(pnl)));
+    Map<String, String> values =
+        Map.of("period", period, "pnl", CompanyEngine.money(Math.abs(pnl)));
     StringBuilder text =
         new StringBuilder(
             Korean.fill(lines.get(Math.floorMod(seed + head.id, lines.size())), values));
@@ -174,7 +175,7 @@ class TeamEngine {
             .append(
                 Korean.fill(
                     texts.members().get(key),
-                    Map.of("name", marked.name, "pnl", CompanyEngine.won(Math.abs(marked.pnl)))));
+                    Map.of("name", marked.name, "pnl", CompanyEngine.money(Math.abs(marked.pnl)))));
       }
     }
     // ④ 손을 뒤집은 팀원과 횟수, 가장 잦았던 뒤집힘의 조언.

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { Company } from '../../api/client'
 import { Document } from '../game/Document'
-import { shortWon, withParticle } from '../game/labels'
+import { money, withParticle } from '../game/labels'
 import { usePixelArt } from '../game/pixelArt'
 import { toggleAutoPlay } from './autoPlay'
 import { BuildingArt } from './BuildingArt'
@@ -110,7 +110,7 @@ export function CompanyScreen({ company }: { company: Company }) {
             {officeName(company.grade)}
           </p>
           <p className="shrink-0 font-mono-num text-[15px]" data-testid="company-capital">
-            자본 {shortWon(company.capital)}
+            자본 {money(company.capital)}
           </p>
         </div>
         <BuildingArt grade={company.grade} />
@@ -305,8 +305,8 @@ function NextStep({ company }: { company: Company }) {
     >
       <p className="text-[12px] text-muted">
         <b className={plan.affordable ? 'text-gold' : 'text-ink'}>{label}</b> · 이사 비용{' '}
-        {shortWon(plan.cost)} · 자본 {shortWon(plan.needed)}부터
-        {!plan.affordable && ` (${shortWon(short)} 더)`} · 지금 책상 {company.seats}개
+        {money(plan.cost)} · 자본 {money(plan.needed)}부터
+        {!plan.affordable && ` (${money(short)} 더)`} · 지금 책상 {company.seats}개
       </p>
       <button
         type="button"
@@ -317,7 +317,7 @@ function NextStep({ company }: { company: Company }) {
         }`}
         data-testid="upgrade"
       >
-        {step.kind === 'move' ? '이사하기' : '넓히기'} · {shortWon(plan.cost)}
+        {step.kind === 'move' ? '이사하기' : '넓히기'} · {money(plan.cost)}
       </button>
     </div>
   )
@@ -354,7 +354,7 @@ function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
               onClick={() => void answerPoach(false)}
               className="min-h-11 rounded border border-line text-[14px]"
             >
-              보낸다 · 이적료 +{shortWon(poach.transferFee)}
+              보낸다 · 이적료 +{money(poach.transferFee)}
             </button>
           </div>
         </div>
@@ -373,7 +373,7 @@ function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
               onClick={() => void answerRaise(true)}
               className="min-h-11 rounded border border-pen text-[14px] font-semibold disabled:opacity-50"
             >
-              올려 준다 · 연 {shortWon(raise.after)}
+              올려 준다 · 연 {money(raise.after)}
             </button>
             <button
               type="button"
@@ -681,7 +681,7 @@ function EmployeeDetail({ employee: e }: { employee: Employee }) {
           {e.sectorName && ` · 관심 섹터 ${e.sectorName}`}
           {e.deskYears > 0 && ` · 같은 자리 ${e.deskYears}년`}
           {e.settled && ' · 손에 익음'}
-          {e.salary > 0 && ` · 연봉 ${shortWon(e.salary)}`}
+          {e.salary > 0 && ` · 연봉 ${money(e.salary)}`}
           {e.morale !== 0 && ` · ${MORALE[e.morale]}`}
         </span>
       </p>

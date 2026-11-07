@@ -1,22 +1,31 @@
 import { describe, expect, it } from 'vitest'
-import { shortWon, withParticle } from './labels'
+import { money, signedMoney, withParticle } from './labels'
 
-describe('shortWon', () => {
-  it('억·만 단위로 줄이고 만원 아래는 버린다', () => {
-    expect(shortWon(248_580_568)).toBe('2억 4,858만원')
-    expect(shortWon(200_000_000)).toBe('2억원')
-    expect(shortWon(3_120_000)).toBe('312만원')
-    expect(shortWon(12_345_678_901)).toBe('123억 4,567만원')
-    expect(shortWon(9_999)).toBe('9,999원')
-    expect(shortWon(0)).toBe('0원')
-    expect(shortWon(-5_200_000)).toBe('−520만원')
+describe('게임 금액 (decisions.md 313번)', () => {
+  it('1,000마다 a·b·c·d로 올라가고 앞자리는 세 자리까지', () => {
+    expect(money(0)).toBe('0')
+    expect(money(950)).toBe('950')
+    expect(money(3_500)).toBe('3.5a')
+    expect(money(500_000)).toBe('500a')
+    expect(money(3_120_000)).toBe('3.12b')
+    expect(money(100_000_000)).toBe('100b')
+    expect(money(248_580_568)).toBe('249b')
+    expect(money(41_250_000)).toBe('41.3b')
+    expect(money(1_200_000_000)).toBe('1.2c')
+    expect(money(56_361_500_000_000)).toBe('56.4d')
+    expect(money(1_000_000_000_000_000)).toBe('1e')
+    expect(money(-5_200_000)).toBe('−5.2b')
   })
 
-  it('1조가 넘으면 조와 억까지만 쓴다 (decisions.md 253번)', () => {
-    expect(shortWon(56_361_500_000_000)).toBe('56조 3,615억원')
-    expect(shortWon(1_000_000_000_000)).toBe('1조원')
-    expect(shortWon(1_000_000_000_000_000)).toBe('1,000조원')
-    expect(shortWon(-2_500_012_340_000)).toBe('−2조 5,000억원')
+  it('반올림으로 1000이 되면 다음 단위로 올린다', () => {
+    expect(money(999_960_000)).toBe('1c')
+    expect(money(999_499)).toBe('999a')
+  })
+
+  it('부호를 붙인다', () => {
+    expect(signedMoney(3_500)).toBe('+3.5a')
+    expect(signedMoney(-45_300_000)).toBe('−45.3b')
+    expect(signedMoney(0)).toBe('0')
   })
 })
 

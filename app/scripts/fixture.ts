@@ -236,7 +236,7 @@ export const company = {
     timeline: [
       { year: 1, kind: 'open', text: '반지하 원룸에 간판을 걸었다.', grade: null },
       { year: 2, kind: 'grow', text: null, grade: 'E' },
-      { year: 2, kind: 'best', text: '김대리가 한 해 1억 2천만 원을 벌었다.', grade: null },
+      { year: 2, kind: 'best', text: '김대리가 한 해 120b를 벌었다.', grade: null },
     ],
     achievements: [
       { code: 'first-hire', name: '첫 직원', description: '공채에서 처음 뽑았다', year: 1 },

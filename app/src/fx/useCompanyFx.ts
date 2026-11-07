@@ -1,4 +1,4 @@
-import { shortWon } from '@web/features/game/labels'
+import { money } from '@web/features/game/labels'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useEffect } from 'react'
 import { companyEvents, type FxEvent } from './events'
@@ -6,7 +6,7 @@ import { useFx } from './fx'
 import { haptic } from './haptics'
 import { sfx } from './sound'
 
-const signed = (n: number) => `${n > 0 ? '+' : ''}${shortWon(n)}`
+const signed = (n: number) => `${n > 0 ? '+' : ''}${money(n)}`
 const capitalEl = () => document.querySelector('[data-testid="company-capital"]')
 const settleEl = () => document.querySelector('[data-testid="settle"]')
 

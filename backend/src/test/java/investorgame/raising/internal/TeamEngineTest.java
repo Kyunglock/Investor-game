@@ -157,11 +157,11 @@ class TeamEngineTest {
     String text = trading(c, java.util.List.of(a, b), java.util.List.of(crashed), "올해");
     assertThat(text)
         .as("폭락장에서 잃은 머리줄")
-        .containsAnyOf("폭락이 터져 올해 4,000만 원 잃었습니다.", "올해 폭락장에서 −4,000만 원입니다.")
+        .containsAnyOf("폭락이 터져 올해 40b 잃었습니다.", "올해 폭락장에서 −40b입니다.")
         .as("방어 태도의 한마디")
         .contains("판돈을 줄여 둔 덕에 이 정도로 막았습니다.")
         .as("가장 크게 잃은 팀원")
-        .contains(weak.name + "은 3,000만 원 잃었습니다. 제가 옆에서 더 챙기겠습니다.")
+        .contains(weak.name + "은 30b 잃었습니다. 제가 옆에서 더 챙기겠습니다.")
         .as("뒤집힘 횟수")
         .contains(weak.name + "이 못 참고 두 번 바닥에서 던졌습니다.")
         .contains("저도 손이 떨려 한 번 놓쳤습니다.")
@@ -176,9 +176,9 @@ class TeamEngineTest {
     boom.macroStance = "AGGRESSIVE";
     String won = trading(c, java.util.List.of(small, big), java.util.List.of(boom), "이번 분기");
     assertThat(won)
-        .contains("2,500만 원")
+        .contains("25b")
         .contains("판돈을 키운 게 맞았습니다.")
-        .contains("제가 2,000만 원으로 팀을 끌었습니다.")
+        .contains("제가 20b로 팀을 끌었습니다.")
         .doesNotContain("잃었습니다");
     assertThat(texts().trading().get("bigUp").stream().map(l -> l.split("\\{")[0]))
         .anyMatch(won::startsWith);

@@ -1,5 +1,5 @@
 import type { Company } from '../../api/client'
-import { shortWon } from '../game/labels'
+import { money } from '../game/labels'
 import type { Matchup } from '../game/tug'
 import { EMPLOYEE_LADDER, STAT_NAMES, shareOf } from './grades'
 
@@ -148,7 +148,7 @@ export function hindsightOf(invest: NonNullable<Company['invest']>): string[] {
   const lines: string[] = []
   const right = outcome.up ? '샀으면' : '팔았으면'
   if (outcome.missed != null && outcome.missed > 0) {
-    lines.push(`지켜봤다. ${right} +${shortWon(outcome.missed)}이었다.`)
+    lines.push(`지켜봤다. ${right} 벌었을 돈 +${money(outcome.missed)}.`)
   }
   const up = invest.remarks.filter((r) => r.read === 'UP').length
   const down = invest.remarks.filter((r) => r.read === 'DOWN').length
