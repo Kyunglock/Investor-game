@@ -1,6 +1,7 @@
-import type { Company } from '@web/api/client'
+import type { Company, Drawn } from '@web/api/client'
 import { toggleAutoPlay } from '@web/features/raising/autoPlay'
 import { EndingScreen } from '@web/features/raising/EndingScreen'
+import { GachaReveal, useDrawReveal } from '@web/features/raising/Gacha'
 import { InvestWindow } from '@web/features/raising/InvestWindow'
 import { MacroWindow } from '@web/features/raising/MacroWindow'
 import { MoveScene } from '@web/features/raising/MoveScene'
@@ -29,6 +30,7 @@ export function Windows({ company }: { company: Company }) {
   const [investOpen, setInvestOpen] = useState(false)
   const [macroOpen, setMacroOpen] = useState(false)
   const ended = company.status === 'ENDED'
+  const drawn = useDrawReveal(company)
 
   // 거시경제 회의를 마친 뒤: 물어 온 종목이 있으면 종목 회의를 열고, 없으면 바로 결산한다.
   const stockOrSettle = async () => {
@@ -93,6 +95,14 @@ export function Windows({ company }: { company: Company }) {
       {company.ending && !justSettled && !moveAlert && !upgradeMove && (
         <EndingScreen company={company} />
       )}
+      {drawn && !justSettled && (
+        // 채용 뽑기 결과 (decisions.md 312번): 카드가 열릴 때마다 소리·진동, 특급이면 금빛 번쩍임과 색종이.
+        <GachaReveal
+          drawn={drawn}
+          onClose={() => useRaisingStore.setState({ justDrew: false })}
+          onFlip={revealFx}
+        />
+      )}
       {justQuartered && company.lastQuarter && (
         <QuarterSheet
           quarter={company.lastQuarter}
@@ -126,6 +136,28 @@ export function Windows({ company }: { company: Company }) {
       <AutoCountdown />
     </>
   )
+}
+
+/** 뽑기 카드가 열릴 때의 효과 (decisions.md 310·312번). */
+function revealFx(d: Drawn, el: HTMLElement | null) {
+  const fx = useFx.getState()
+  if (d.star) {
+    fx.flashScreen('rgba(245,211,107,0.55)')
+    fx.burstAt(el, 'confetti')
+    fx.shakeScreen()
+    sfx.fanfare()
+    haptic.heavy()
+    return
+  }
+  if (d.fresh) {
+    fx.burstAt(el, 'sparks')
+    sfx.cash()
+    haptic.medium()
+    return
+  }
+  fx.burstAt(el, 'coins')
+  sfx.coin()
+  haptic.light()
 }
 
 /** 화면 아래의 큰 버튼 (decisions.md 310번): 분기 넘기기(누르면 도장 소리·진동·불꽃)와 자동 진행. 망했으면 다음 회사 차리기. */
@@ -175,7 +207,7 @@ export function ActionBar({ company }: { company: Company }) {
       )}
       {autoPlay && (
         <p className="mb-1 text-center text-[11px] text-[#7fd1bf]" data-testid="auto-status">
-          자동 진행 중 · 공채 → 배치 → 회의(직원 다수결) → 분기 넘기기
+          자동 진행 중 · 뽑기 → 배치 → 회의(직원 다수결) → 분기 넘기기
         </p>
       )}
       <div className="grid grid-cols-[auto_1fr] gap-2">

@@ -50,4 +50,6 @@ export const api = createClient<paths>({
 type Schemas = components['schemas']
 export type Grade = Schemas['Grade']
 export type Company = Schemas['Company']
-export type Applicant = Company['applicants'][number]
+/** 채용 뽑기 (decisions.md 312번). */
+export type Gacha = Company['gacha']
+export type Drawn = Gacha['drawn'][number]

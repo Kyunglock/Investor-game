@@ -2,14 +2,11 @@ import type { Company } from '@web/api/client'
 import type { SeatFocus } from '@web/features/raising/OfficeArt'
 import { create } from 'zustand'
 
-/** 아래 탭 (decisions.md 309번): 사무실 · 공채 · 배치 · 이슈 · 기록. 웹의 탭(이슈·공채·배치·지난 결산·연표)을 폰 화면에 맞게 다시 나눴다. */
+/** 아래 탭 (decisions.md 309·312번): 사무실 · 채용 · 배치 · 이슈 · 기록. 웹의 탭(이슈·채용·배치·지난 결산·연표)을 폰 화면에 맞게 다시 나눴다. */
 export type Tab = 'office' | 'market' | 'staff' | 'issue' | 'record'
 
-/** 아래에서 올라오는 시트: 자리 고르기(사무실 그림의 칸), 자리 카드(배치), 내보내고 뽑기(공채가 꽉 찼을 때). */
-export type Sheet =
-  | { kind: 'seat'; focus: SeatFocus }
-  | { kind: 'desk'; desk: string }
-  | { kind: 'hire'; applicantId: number }
+/** 아래에서 올라오는 시트: 자리 고르기(사무실 그림의 칸), 자리 카드(배치). */
+export type Sheet = { kind: 'seat'; focus: SeatFocus } | { kind: 'desk'; desk: string }
 
 interface UiState {
   tab: Tab
@@ -62,14 +59,14 @@ export function tabFromWeb(tab: string | null): Tab | null {
   }
 }
 
-/** 탭에 다는 표: 이슈는 !(조짐·시대 끝·이직·연봉), 공채는 지원자 수, 배치는 앉힌 수. */
+/** 탭에 다는 표: 이슈는 !(조짐·시대 끝·이직·연봉), 채용은 채용권 수, 배치는 앉힌 수. */
 export function tabBadge(company: Company, tab: Tab): string | null {
   const m = company.meeting
   switch (tab) {
     case 'issue':
       return m && (m.omen || m.eraEnding || m.poach || m.raise) ? '!' : null
     case 'market':
-      return company.applicants.length > 0 ? String(company.applicants.length) : null
+      return company.gacha.tickets > 0 ? String(company.gacha.tickets) : null
     case 'staff':
       return `${company.employees.filter((e) => e.desk).length}/${company.seats}`
     default:
@@ -77,7 +74,7 @@ export function tabBadge(company: Company, tab: Tab): string | null {
   }
 }
 
-/** 회사를 처음 열 때 설 탭: 직원이 없으면 공채, 있으면 사무실. */
+/** 회사를 처음 열 때 설 탭: 직원이 없으면 채용, 있으면 사무실. */
 export function firstTab(company: Company): Tab {
   return company.employees.length === 0 && company.status !== 'ENDED' ? 'market' : 'office'
 }

@@ -20,8 +20,8 @@ import java.util.random.RandomGenerator;
 import org.springframework.stereotype.Component;
 
 /**
- * 아주 작은 회사의 규칙 (증권사 육성 설계 4·6절): 사장은 사람을 뽑아 배치만 하고 직원은 능력치대로 알아서 굴린다. 한 해 = 연초 회의(공채 시장) → 배치 → 결산.
- * DB와 시각을 모르고 상태와 난수만 받는다.
+ * 아주 작은 회사의 규칙 (증권사 육성 설계 4·6절): 사장은 사람을 뽑아 배치만 하고 직원은 능력치대로 알아서 굴린다. 한 해 = 연초 회의 → (채용 뽑기) → 배치 →
+ * 결산. DB와 시각을 모르고 상태와 난수만 받는다.
  */
 @Component
 class CompanyEngine {
@@ -33,9 +33,6 @@ class CompanyEngine {
           "XSS", "GOD");
 
   static final String CRASH = "crash";
-
-  /** 경력직이 오는 지원자 자리: 첫째는 올해 필요한 인재, 둘째는 사수가 붙는 자리라 셋째 (258번). */
-  private static final int VETERAN_SLOT = 2;
 
   private static final String NORMAL = "normal";
 
@@ -113,12 +110,12 @@ class CompanyEngine {
                 .thenComparingInt(e -> -e.id));
   }
 
-  /** 인사 직원이 데려오는 지원자의 중심 등급: 인사 직원보다 두 단계 아래, 바닥 F (6.3절). */
-  /** 인사팀이 있으면 해마다 더 오는 지원자 수 (6.3절). */
-  int hrExtraApplicants() {
-    return properties.hr().extraApplicants();
+  /** 인사팀이 있으면 연말에 더 받는 채용권 (6.3절, decisions.md 312번). */
+  int hrExtraTickets() {
+    return properties.hr().extraTickets();
   }
 
+  /** 인사 직원이 끌어올리는 뽑기의 중심 등급: 인사 직원보다 두 단계 아래, 바닥 F (6.3절). */
   String hrCap(Employee hr) {
     return LADDER.get(Math.max(0, LADDER.indexOf(employeeGrade(hr)) - properties.hr().capSteps()));
   }
@@ -127,10 +124,12 @@ class CompanyEngine {
     return properties.turns();
   }
 
-  /** 사장의 사재로 첫 회사를 차린다. 직원은 없고, 첫 해 공채 시장에서 뽑는다 (decisions.md 228번). */
+  /** 사장의 사재로 첫 회사를 차린다. 직원은 없고, 채용권으로 뽑는다 (decisions.md 228·312번). */
   CompanyState open(SeededRandom random, long capital) {
     CompanyState company = new CompanyState();
     company.capital = Math.max(0, capital);
+    company.tickets = properties.gacha().startTickets();
+    company.gachaReady = true;
     company.building = grade(company.capital);
     company.era = eras().getFirst().code();
     company.opening =
@@ -149,12 +148,9 @@ class CompanyEngine {
     return company.finished || broke(company);
   }
 
+  /** 망했는가: 문을 닫았거나 자본이 바닥났다. 사람은 채용권으로 뽑으므로(312번) 돈이 적어도 사람이 없어도 망하지 않는다. */
   boolean broke(CompanyState company) {
-    if (company.closed || company.capital <= 0) {
-      return true;
-    }
-    long cheapest = properties.market().fees().getFirst();
-    return company.employees.isEmpty() && company.capital < cheapest;
+    return company.closed || company.capital <= 0;
   }
 
   /**
@@ -170,6 +166,11 @@ class CompanyEngine {
     next.number = broke.number + 1;
     next.hired = broke.hired;
     next.met = broke.met;
+    // 채용권·뽑은 횟수·도감은 사장의 것이라 다음 회사로 이어진다 (312번). 새 회사에는 처음 채용권을 더 준다.
+    next.draws = broke.draws;
+    next.collection.putAll(broke.collection);
+    next.tickets = broke.tickets + properties.gacha().startTickets();
+    next.gachaReady = true;
     next.capital = Math.max(0, capital);
     for (Employee e : broke.employees) {
       e.desk = null;
@@ -598,148 +599,6 @@ class CompanyEngine {
   }
 
   /**
-   * 올해 공채 시장의 지원자를 받는다 (decisions.md 228번). 종합 등급의 중심은 회사 등급보다 두 단계 위이고(인사팀이 있으면 인사 직원보다 두 단계 아래까지
-   * 오른다), 지원자마다 한 단계 아래·위로 흩어진다. 첫 지원자는 올해 필요한 자리에 맞는 사람이라 그 능력치가 뾰족하다. ZZ 사수가 있으면 한 지원자에게 붙어 사수의
-   * 가장 높은 능력치가 한 띠 높다. 인사팀이 있으면 한 명 더 온다.
-   */
-  void deal(CompanyState company, SeededRandom random) {
-    CompanyProperties.Market market = properties.market();
-    RandomGenerator rng = random.forKey("applicants", company.year, company.refreshes);
-    int level = LADDER.indexOf(grade(company)) + market.levelSteps();
-    java.util.Optional<Employee> hr = hrOf(company);
-    if (hr.isPresent()) {
-      level = Math.max(level, LADDER.indexOf(hrCap(hr.get())));
-    }
-    int top = LADDER.indexOf(StatGrade.SSS.name());
-    int count = market.applicants() + (hr.isPresent() ? properties.hr().extraApplicants() : 0);
-    String wantedStat = desk(company.wantedDesk).statCode();
-    // SSS 회사부터 경력직이 하나 온다: SSS면 X, X면 XX, 그 위는 XXX (258번).
-    int companyAt = LADDER.indexOf(grade(company));
-    int sssAt = LADDER.indexOf(StatGrade.SSS.name());
-    int veteranRank = companyAt >= sssAt ? Math.min(3, companyAt - sssAt + 1) : 0;
-    java.util.Optional<Employee> mentor = bestRanked(company, RANK_MENTOR);
-    RaisingContent.Company texts = content.raising().company();
-    // 특급 인재(290번)는 새로 받아도, 해가 바뀌어도 떠날 때까지 남는다.
-    List<CompanyState.Applicant> stars = company.applicants.stream().filter(a -> a.star).toList();
-    company.applicants.clear();
-    // 관심 섹터는 따로 굴려 능력치 난수를 흔들지 않는다. 첫 지원자는 올해 필요한 자리가 섹터 데스크면 그 섹터에 관심이 있다.
-    RandomGenerator sectorRng = random.forKey("applicant-sectors", company.year, company.refreshes);
-    List<String> sectors = content.sectors().stream().map(s -> s.code()).toList();
-    for (int i = 0; i < count; i++) {
-      String sector = sectors.get(sectorRng.nextInt(sectors.size()));
-      if (i == 0 && desk(company.wantedDesk).sector() != null) {
-        sector = desk(company.wantedDesk).sector();
-      }
-      int at = Math.clamp(level + rng.nextInt(3) - 1, 0, top);
-      StatGrade center = StatGrade.valueOf(LADDER.get(at));
-      int middle = (center.min() + center.max()) / 2;
-      Map<String, Integer> stats = new java.util.LinkedHashMap<>();
-      for (String code : StatCodes.ALL) {
-        int spread = market.spread();
-        stats.put(code, Math.clamp(middle + rng.nextInt(2 * spread + 1) - spread, 1, MAX_STAT));
-      }
-      String line = null;
-      if (i == 0) {
-        // 연초 회의가 말한 "올해 필요한 인재"가 꼭 한 명은 온다.
-        int spike = Math.min(MAX_STAT, middle + market.spread() + properties.experience().band());
-        stats.merge(wantedStat, spike, Math::max);
-        line =
-            Korean.fill(
-                texts.market().wanted(),
-                Map.of(
-                    "desk", desk(company.wantedDesk).name(),
-                    "stat", texts.statNames().get(wantedStat)));
-      } else if (i == 1 && mentor.isPresent()) {
-        Employee e = mentor.get();
-        String stat =
-            StatCodes.ALL.stream()
-                .max(java.util.Comparator.comparingInt((String code) -> e.stats.get(code)))
-                .orElseThrow();
-        stats.merge(stat, properties.experience().band(), (v, d) -> Math.min(MAX_STAT, v + d));
-        line =
-            Korean.fill(
-                texts.effects().mentorTip(),
-                Map.of("name", e.name, "stat", texts.statNames().get(stat)));
-      } else if (i == count - 1 && hr.isPresent()) {
-        line = Korean.fill(texts.market().hr(), Map.of("name", hr.get().name));
-      }
-      int rank = 0;
-      if (i == VETERAN_SLOT && veteranRank > 0) {
-        // 경력직 (258번): 능력치가 모두 SSS 띠이고 실전 경험으로 X 이상까지 올랐다. 큰 회사의 공채에 새 목표를 준다.
-        rank = veteranRank;
-        for (String code : StatCodes.ALL) {
-          stats.put(
-              code,
-              Math.max(
-                  stats.get(code),
-                  StatGrade.SSS.min() + rng.nextInt(MAX_STAT - StatGrade.SSS.min() + 1)));
-        }
-        line =
-            Korean.fill(
-                texts.market().veteran(),
-                Map.of("grade", LADDER.get(LADDER.indexOf(StatGrade.SSS.name()) + rank)));
-      }
-      CompanyState.Applicant applicant = new CompanyState.Applicant();
-      applicant.id = company.met + 1;
-      applicant.name = nextName(company);
-      applicant.stats.putAll(stats);
-      applicant.rank = rank;
-      applicant.fee = fee(company.capital, stats, rank);
-      applicant.line = line;
-      applicant.sector = sector;
-      company.applicants.add(applicant);
-    }
-    company.applicants.addAll(stars);
-  }
-
-  /**
-   * 특급 인재 (decisions.md 290번). 분기를 넘길 때마다 머물 기한이 지난 특급 인재는 다른 증권사로 가고, 특급 인재가 없으면 star.percent% 확률로
-   * 새로 온다: 회사 등급보다 star.steps 단계 높고(SSS를 넘으면 경력직 단계), 계약금은 보통의 star.fee-percent%, star.quarters 분기
-   * 동안만 기다린다. 오고 가는 일은 lines(분기 실적이나 연말 결산서의 소식 줄)에 남긴다.
-   */
-  void stars(CompanyState company, SeededRandom random, List<String> lines) {
-    RaisingContent.Market texts = content.raising().company().market();
-    int now = company.quarterIndex();
-    List<CompanyState.Applicant> gone =
-        company.applicants.stream().filter(a -> a.star && a.leavesAt < now).toList();
-    for (CompanyState.Applicant a : gone) {
-      lines.add(Korean.fill(texts.starLeft(), Map.of("name", a.name)));
-    }
-    company.applicants.removeAll(gone);
-    if (company.finished || company.closed || company.applicants.stream().anyMatch(a -> a.star)) {
-      return;
-    }
-    CompanyProperties.Star rules = properties.market().star();
-    RandomGenerator rng = random.forKey("star", company.year, company.quarter);
-    if (rng.nextInt(PERCENT) >= rules.percent()) {
-      return;
-    }
-    int sssAt = LADDER.indexOf(StatGrade.SSS.name());
-    int at = LADDER.indexOf(grade(company)) + rules.steps();
-    StatGrade band = StatGrade.valueOf(LADDER.get(Math.min(at, sssAt)));
-    Map<String, Integer> stats = new java.util.LinkedHashMap<>();
-    for (String code : StatCodes.ALL) {
-      stats.put(code, band.min() + rng.nextInt(band.max() - band.min() + 1));
-    }
-    CompanyState.Applicant star = new CompanyState.Applicant();
-    star.id = company.met + 1;
-    star.name = nextName(company);
-    star.stats.putAll(stats);
-    star.rank = at > sssAt ? Math.min(RANK_FORESIGHT, at - sssAt) : 0;
-    star.fee = fee(company.capital, stats, star.rank) * rules.feePercent() / PERCENT;
-    star.line = texts.star();
-    List<String> sectors = content.sectors().stream().map(s -> s.code()).toList();
-    star.sector = sectors.get(rng.nextInt(sectors.size()));
-    star.star = true;
-    star.leavesAt = now + rules.quarters() - 1;
-    company.applicants.add(star);
-    lines.add(
-        Korean.fill(
-            texts.starArrived(),
-            Map.of("name", star.name, "grade", gradeOf(stats, star.rank), "fee", won(star.fee))));
-  }
-
-  /**
    * 계약금 (decisions.md 258번): 종합 등급으로 정한 값과 자본 × 등급별 비율 가운데 큰 쪽. 초반(1억 회사)은 정해진 값 그대로이고, 회사가 커지면 자본에
    * 비례해 무거워진다. 경력직(rank > 0)은 자본 비율이 더 크다. 전에는 정해진 값뿐이라 SSS 회사에 SSS 계약금 1.2억이 자본의 0.01%였다.
    */
@@ -765,62 +624,262 @@ class CompanyEngine {
     return (long) (capital * (bp / (double) BP));
   }
 
-  /** 지원자를 새로 받는 값: 정해진 값과 자본 × 비율 가운데 큰 쪽에, 올해 새로 받은 횟수 + 1을 곱한다 (258번). */
-  long refreshCost(CompanyState company) {
-    CompanyProperties.Market market = properties.market();
-    long base =
-        Math.max(
-            market.refreshCost(), (long) (company.capital * (market.refreshBp() / (double) BP)));
-    return base * (company.refreshes + 1);
+  /** 데리고 있을 수 있는 사람 수: 자리 수 × roster-percent (decisions.md 312번). 넘으면 합치거나 내보내야 더 뽑는다. */
+  int rosterMax(CompanyState company) {
+    return seats(company) * properties.gacha().rosterPercent() / PERCENT;
   }
 
-  /** 값을 내고 올해 지원자를 새로 받는다. 돈이 모자라면 400. */
-  void refresh(CompanyState company, SeededRandom random) {
-    requireOpen(company);
-    long cost = refreshCost(company);
-    if (company.capital < cost) {
-      throw new InvalidRequestException("지원자를 새로 받을 돈이 모자란다");
+  /** 지금 회사의 뽑기 중심 등급(LADDER 자리): 회사 등급 + level-steps, 인사팀이 있으면 인사 직원보다 cap-steps 아래까지 (6.3절). */
+  int drawLevel(CompanyState company) {
+    int level = LADDER.indexOf(grade(company)) + properties.market().levelSteps();
+    java.util.Optional<Employee> hr = hrOf(company);
+    if (hr.isPresent()) {
+      level = Math.max(level, LADDER.indexOf(hrCap(hr.get())));
     }
-    company.capital -= cost;
-    company.yearHiring += cost;
-    company.refreshes++;
-    fitSeats(company);
-    deal(company, random);
+    return level;
+  }
+
+  /** 확률표의 한 칸이 이 회사에서 나오는 종합 등급. 바닥은 F, 맨 위는 GOD. */
+  String rateGrade(CompanyState company, CompanyProperties.Rate rate) {
+    return LADDER.get(Math.clamp(drawLevel(company) + rate.steps(), 0, LADDER.size() - 1));
+  }
+
+  /** 한 번에 뽑을 수 있는 최대 수. */
+  int maxDraws() {
+    return properties.gacha().maxDraws();
+  }
+
+  /** 합성에 드는 같은 등급 사람 수(바탕 포함). */
+  int mergeCount() {
+    return properties.gacha().mergeCount();
+  }
+
+  /** 확률표 (decisions.md 312번): 회사 등급(인사팀이면 더 높게)을 중심으로 칸마다 등급과 확률. */
+  List<CompanyProperties.Rate> rates() {
+    return properties.gacha().rates();
   }
 
   /**
-   * 계약금을 내고 지원자를 뽑는다. 자리가 꽉 찼으면 replace의 직원을 내보낸다. 뽑은 직원은 쉬는 채로 들어오고, 사장이 자리에 앉힌다. 돈이 모자라거나 없는 지원자면
-   * 400.
+   * 채용 뽑기 (decisions.md 312번): 채용권 count장으로 count명을 뽑는다. 확률표에서 칸을 고르고 그 등급의 사람이 온다(능력치는 그 띠 둘레로
+   * 흩어진다). SSS를 넘는 칸이면 능력치가 모두 SSS 띠이고 실전 경험으로 오른 단계(X…)를 안고 온다. ZZ 사수가 있으면 사수의 가장 높은 능력치가 한 띠 높다.
+   * 뽑은 사람은 쉬는 채로 들어온다. 채용권이 모자라거나, 데리고 있을 자리가 모자라거나, 한 번에 max-draws를 넘으면 400.
    */
-  Employee hireApplicant(CompanyState company, int applicantId, Integer replace) {
+  List<CompanyState.Drawn> draw(CompanyState company, int count, SeededRandom random) {
     requireOpen(company);
-    CompanyState.Applicant applicant =
-        company.applicants.stream()
-            .filter(a -> a.id == applicantId)
-            .findFirst()
-            .orElseThrow(() -> new InvalidRequestException("없는 지원자"));
-    if (company.capital < applicant.fee) {
-      throw new InvalidRequestException("계약금이 모자란다");
+    CompanyProperties.Gacha gacha = properties.gacha();
+    if (count < 1 || count > gacha.maxDraws()) {
+      throw new InvalidRequestException("한 번에 1~" + gacha.maxDraws() + "명까지 뽑는다");
     }
-    if (company.employees.size() >= seats(company)) {
-      if (replace == null || company.employees.stream().noneMatch(e -> e.id == replace)) {
-        throw new InvalidRequestException("자리가 꽉 찼다. 내보낼 직원을 골라야 한다");
+    if (company.tickets < count) {
+      throw new InvalidRequestException("채용권이 모자란다");
+    }
+    if (company.employees.size() + count > rosterMax(company)) {
+      throw new InvalidRequestException("데리고 있을 자리가 모자란다. 합치거나 내보내야 한다");
+    }
+    int total = rates().stream().mapToInt(CompanyProperties.Rate::percent).sum();
+    int sssAt = LADDER.indexOf(StatGrade.SSS.name());
+    java.util.Optional<Employee> mentor = bestRanked(company, RANK_MENTOR);
+    List<String> sectors = content.sectors().stream().map(s -> s.code()).toList();
+    company.tickets -= count;
+    company.lastDraw.clear();
+    for (int i = 0; i < count; i++) {
+      RandomGenerator rng = random.forKey("draw", company.draws++);
+      int roll = rng.nextInt(total);
+      CompanyProperties.Rate rate = rates().getLast();
+      for (CompanyProperties.Rate r : rates()) {
+        if (roll < r.percent()) {
+          rate = r;
+          break;
+        }
+        roll -= r.percent();
       }
-      company.employees.stream()
-          .filter(e -> e.id == replace)
-          .findFirst()
-          .ifPresent(e -> history.retire(company, e));
-      company.employees.removeIf(e -> e.id == replace);
-      teams.tidy(company);
+      int at = Math.clamp(drawLevel(company) + rate.steps(), 0, LADDER.size() - 1);
+      StatGrade band = StatGrade.valueOf(LADDER.get(Math.min(at, sssAt)));
+      Map<String, Integer> stats = new java.util.LinkedHashMap<>();
+      int middle = (band.min() + band.max()) / 2;
+      int spread = properties.market().spread();
+      for (String code : StatCodes.ALL) {
+        // 특급·SSS 위는 능력치가 모두 그 띠 안에 고르다. 보통은 띠 가운데에서 흩어져 성격이 뾰족하다.
+        int value =
+            rate.star() || at >= sssAt
+                ? band.min() + rng.nextInt(band.max() - band.min() + 1)
+                : middle + rng.nextInt(2 * spread + 1) - spread;
+        stats.put(code, Math.clamp(value, 1, MAX_STAT));
+      }
+      if (mentor.isPresent()) {
+        Employee e = mentor.get();
+        String stat =
+            StatCodes.ALL.stream()
+                .max(java.util.Comparator.comparingInt((String code) -> e.stats.get(code)))
+                .orElseThrow();
+        stats.merge(stat, properties.experience().band(), (v, d) -> Math.min(MAX_STAT, v + d));
+      }
+      Employee employee = add(company, nextName(company), stats);
+      employee.sector = sectors.get(rng.nextInt(sectors.size()));
+      employee.rank = at > sssAt ? Math.min(RANK_GOD, at - sssAt) : 0;
+      String grade = employeeGrade(employee);
+      CompanyState.Drawn drawn = new CompanyState.Drawn();
+      drawn.employeeId = employee.id;
+      drawn.name = employee.name;
+      drawn.grade = grade;
+      drawn.star = rate.star();
+      drawn.fresh = collect(company, grade);
+      company.lastDraw.add(drawn);
+      if (drawn.star) {
+        history.add(
+            company,
+            company.year,
+            "rise",
+            Korean.fill(
+                content.raising().company().market().drawStar(),
+                Map.of("name", employee.name, "grade", grade)),
+            null);
+      }
     }
-    company.capital -= applicant.fee;
-    company.yearHiring += applicant.fee;
-    company.applicants.remove(applicant);
     fitSeats(company);
-    Employee employee = add(company, applicant.name, applicant.stats);
-    employee.sector = applicant.sector;
-    employee.rank = applicant.rank;
-    return employee;
+    return company.lastDraw;
+  }
+
+  /**
+   * 채용 뽑기 전에 차린 회사를 옮긴다 (decisions.md 312번): 처음 채용권을 주고 지금 직원을 도감에 올린다. 이미 옮겼으면 아무것도 하지 않는다. 옮겼으면
+   * true.
+   */
+  boolean adoptGacha(CompanyState company) {
+    if (company.gachaReady) {
+      return false;
+    }
+    company.gachaReady = true;
+    company.tickets += properties.gacha().startTickets();
+    for (Employee e : company.employees) {
+      collect(company, employeeGrade(e));
+    }
+    return true;
+  }
+
+  /** 도감에 한 사람을 올린다. 그 등급이 처음이면 true. */
+  private static boolean collect(CompanyState company, String grade) {
+    int before = company.collection.getOrDefault(grade, 0);
+    company.collection.put(grade, before + 1);
+    return before == 0;
+  }
+
+  /**
+   * 합성 (decisions.md 312번): 같은 종합 등급의 직원 merge-count명을 합쳐 바탕(baseId) 한 명을 한 단계 올린다. 재료는 회사를 떠나고(연표에
+   * 남지 않는다), 번 돈은 바탕에게 얹힌다. F~SS면 다섯 능력치를 모두 한 띠 올려 종합 등급을 한 단계 올리고, SSS 위면 단계(X…)가 오른다. 맨
+   * 위(GOD)거나, 등급이 다르거나, 수가 맞지 않거나, 이직 제안·연봉 협상·사표가 걸린 사람이면 400.
+   */
+  Employee merge(CompanyState company, int baseId, List<Integer> materialIds) {
+    requireOpen(company);
+    int need = properties.gacha().mergeCount() - 1;
+    Employee base = employee(company, baseId);
+    List<Employee> materials =
+        materialIds.stream()
+            .distinct()
+            .filter(id -> id != baseId)
+            .map(id -> employee(company, id))
+            .toList();
+    if (materials.size() != need || materialIds.size() != need) {
+      throw new InvalidRequestException("같은 등급 " + (need + 1) + "명을 합친다");
+    }
+    String grade = employeeGrade(base);
+    if (materials.stream().anyMatch(m -> !employeeGrade(m).equals(grade))) {
+      throw new InvalidRequestException("같은 등급끼리만 합친다");
+    }
+    if (LADDER.indexOf(grade) >= LADDER.size() - 1) {
+      throw new InvalidRequestException("더 오를 데가 없다");
+    }
+    for (Employee e : materials) {
+      requireFree(company, e);
+    }
+    requireFree(company, base);
+    int sssAt = LADDER.indexOf(StatGrade.SSS.name());
+    if (LADDER.indexOf(grade) >= sssAt) {
+      base.rank++;
+      base.experience = 0;
+    } else {
+      StatGrade next = StatGrade.valueOf(LADDER.get(LADDER.indexOf(grade) + 1));
+      int band = properties.experience().band();
+      for (String code : StatCodes.ALL) {
+        base.stats.merge(code, band, (v, d) -> Math.min(MAX_STAT, v + d));
+      }
+      // 평균이 아직 다음 띠에 못 미치면(능력치가 100에 걸려) 낮은 능력치부터 채운다.
+      while (LADDER.indexOf(overallGrade(base.stats)) <= LADDER.indexOf(grade)) {
+        String low =
+            StatCodes.ALL.stream()
+                .min(java.util.Comparator.comparingInt((String code) -> base.stats.get(code)))
+                .orElseThrow();
+        base.stats.put(low, Math.min(MAX_STAT, Math.max(base.stats.get(low) + 1, next.min())));
+      }
+    }
+    for (Employee m : materials) {
+      base.totalPnl += m.totalPnl;
+    }
+    company.employees.removeAll(materials);
+    teams.tidy(company);
+    String after = employeeGrade(base);
+    collect(company, after);
+    history.add(
+        company,
+        company.year,
+        "rise",
+        Korean.fill(
+            content.raising().company().market().merged(),
+            Map.of(
+                "names",
+                String.join("·", materials.stream().map(m -> m.name).toList()),
+                "name",
+                base.name,
+                "grade",
+                after)),
+        null);
+    return base;
+  }
+
+  /** 직원을 내보낸다 (decisions.md 312번): 데리고 있을 자리를 비운다. 명예의 전당과 연표에 남는다. 이직 제안·연봉 협상·사표가 걸린 사람이면 400. */
+  void release(CompanyState company, int employeeId) {
+    requireOpen(company);
+    Employee e = employee(company, employeeId);
+    requireFree(company, e);
+    history.retire(company, e);
+    company.employees.remove(e);
+    teams.tidy(company);
+  }
+
+  private static Employee employee(CompanyState company, int id) {
+    return company.employees.stream()
+        .filter(e -> e.id == id)
+        .findFirst()
+        .orElseThrow(() -> new InvalidRequestException("없는 직원"));
+  }
+
+  /** 이직 제안·연봉 협상·사표가 걸린 사람은 합치거나 내보낼 수 없다: 먼저 답한다. */
+  private static void requireFree(CompanyState company, Employee e) {
+    boolean busy =
+        (company.poach != null && company.poach.employeeId == e.id)
+            || (company.raise != null && company.raise.employeeId == e.id)
+            || (company.resign != null && company.resign.employeeId == e.id);
+    if (busy) {
+      throw new InvalidRequestException(e.name + "에게 걸린 일(이직 제안·연봉·사표)에 먼저 답해야 한다");
+    }
+  }
+
+  /** 채용권을 받는다. 받은 까닭을 lines(분기 실적·결산 소식)에 한 줄 남긴다. */
+  void giveTickets(CompanyState company, int count, String reason, List<String> lines) {
+    if (count <= 0) {
+      return;
+    }
+    company.tickets += count;
+    RaisingContent.Market texts = content.raising().company().market();
+    if (lines != null) {
+      lines.add(
+          Korean.fill(
+              texts.tickets(),
+              Map.of(
+                  "count",
+                  String.valueOf(count),
+                  "reason",
+                  texts.ticketReasons().getOrDefault(reason, ""))));
+    }
   }
 
   /** 자리가 줄었을 때 먼저 일어나는 자리: 인사팀 → 종목 발굴팀 → 리서치 팀 → 리스크 관리 팀 → 돈을 굴리는 자리 (decisions.md 248·267번). */
@@ -967,6 +1026,7 @@ class CompanyEngine {
     company.building = next;
     company.gradedCapital = company.capital;
     history.add(company, company.year, "grow", null, next);
+    giveTickets(company, properties.gacha().moveTickets(), "move", company.yearLines);
     if (LADDER.indexOf(next) >= LADDER.indexOf(properties.endingGrade())) {
       company.finished = true;
       company.finishedYear = company.year;
@@ -1051,7 +1111,6 @@ class CompanyEngine {
     Market next = marketOf(company, company.year + 1, random);
     company.nextPhase = next.phase();
     company.nextOmen = next.omen();
-    company.refreshes = 0;
     company.yearStartCapital = company.capital;
     company.gradedCapital = company.capital;
     company.yearHiring = 0;
@@ -1064,7 +1123,6 @@ class CompanyEngine {
     int burst = 2 + when.nextInt(QUARTERS - 1);
     company.crashQuarter = CRASH.equals(company.phase) ? burst : null;
     company.omenQuarter = company.omen == null ? null : burst - 1;
-    deal(company, random);
     company.yearLines.clear();
     company.poach = poachOf(company, random);
     company.raise = pay.raiseOf(company, random);
@@ -1453,14 +1511,15 @@ class CompanyEngine {
       q.lines.add(macro.windLine(company));
     }
     company.quarters.add(q);
+    // 채용권 (decisions.md 312번): 분기를 넘길 때마다. 지난 뽑기 결과는 비운다.
+    company.lastDraw.clear();
+    giveTickets(company, properties.gacha().quarterTickets(), "quarter", q.lines);
     if (company.quarter < QUARTERS) {
       company.quarter++;
       startQuarter(company, random);
-      stars(company, random, q.lines);
       return q;
     }
     yearEnd(company, random);
-    stars(company, random, company.settlements.getLast().lines);
     return q;
   }
 
@@ -1630,6 +1689,17 @@ class CompanyEngine {
         ranksBefore,
         eraLine,
         LADDER.indexOf(settlement.gradeAfter) <= LADDER.indexOf("E"));
+    // 채용권 (decisions.md 312번): 연말에 더, 인사팀이 있으면 더, 업적마다 더.
+    CompanyProperties.Gacha gacha = properties.gacha();
+    giveTickets(company, gacha.yearTickets(), "year", settlement.lines);
+    if (hrOf(company).isPresent()) {
+      giveTickets(company, hrExtraTickets(), "hr", settlement.lines);
+    }
+    giveTickets(
+        company,
+        gacha.achievementTickets() * settlement.achieved.size(),
+        "achievement",
+        settlement.lines);
     // 회사는 끝나지 않고 해마다 이어진다 (decisions.md 236번: 매각을 뺐다).
     startYear(company, random);
   }

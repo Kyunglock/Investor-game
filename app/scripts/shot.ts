@@ -23,6 +23,12 @@ await page.route(/\/api\/(company|sessions)(\/|$|\?)/, (route) => {
       status: process.env.EMPTY ? 404 : 200,
     })
   }
+  // 뽑기는 응답에 다섯 장을 실어 돌려준다(draws를 올려 화면이 결과 창을 띄우게).
+  if (url.includes('/api/company/draws')) {
+    return route.fulfill({
+      json: { ...company, gacha: { ...company.gacha, draws: company.gacha.draws + 5 } },
+    })
+  }
   return route.fulfill({ json: company })
 })
 const shot = async (name: string) => {
@@ -44,7 +50,19 @@ if (process.env.EMPTY) {
   await shot('office-seat-sheet')
   await page.getByRole('button', { name: '닫기 ✕' }).click()
   await page.getByTestId('tab-market').click()
-  await shot('market')
+  await shot('gacha')
+  await page.getByTestId('gacha-part-merge').click()
+  await shot('gacha-merge')
+  await page.getByTestId('gacha-part-dex').click()
+  await shot('gacha-dex')
+  await page.getByTestId('gacha-part-draw').click()
+  await page.getByTestId('draw-many').click()
+  await page.waitForTimeout(900)
+  await shot('gacha-reveal-flipping')
+  await page.getByTestId('gacha-open-all').click()
+  await page.waitForTimeout(800)
+  await shot('gacha-reveal')
+  await page.getByTestId('gacha-close').click()
   await page.getByTestId('tab-staff').click()
   await shot('staff')
   await page.getByTestId('desk-row').first().click()

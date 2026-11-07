@@ -166,12 +166,11 @@ class InvestEngine {
     return invest;
   }
 
-  /** 꼬드기는 단골 인물. 직원·지원자와 이름이 같은 인물(김대리)은 회의에 끼지 않는다: 누가 누구 말을 들었는지 헷갈린다. */
+  /** 꼬드기는 단골 인물. 직원과 이름이 같은 인물(김대리)은 회의에 끼지 않는다: 누가 누구 말을 들었는지 헷갈린다. */
   String tempterCode(CompanyState c, int roll) {
     List<RaisingContent.Tempter> tempters =
         content.raising().tempters().stream()
             .filter(t -> c.employees.stream().noneMatch(e -> e.name.equals(t.name())))
-            .filter(t -> c.applicants.stream().noneMatch(a -> a.name.equals(t.name())))
             .toList();
     if (tempters.isEmpty()) {
       tempters = content.raising().tempters();

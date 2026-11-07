@@ -182,7 +182,7 @@ export function Ledger({
           </li>
         )
       })(),
-    // 그해 공채에 쓴 돈 (decisions.md 251번): 연초 자본에서 계약금이 소리 없이 빠져 보이지 않게.
+    // 그해 인사에 쓴 돈 (decisions.md 251번): 붙잡는 값·성과금, 받은 이적료는 뺀다. 채용 뽑기는 돈이 들지 않는다(312번).
     s.hiring !== 0 &&
       (() => {
         const r = reveal()
@@ -195,7 +195,7 @@ export function Ledger({
           >
             <Row
               label={`${num()} 인사 비용`}
-              note="공채 계약금·새로 받기·붙잡는 값, 받은 이적료는 뺀다"
+              note="붙잡는 값·성과금, 받은 이적료는 뺀다"
               amount={-s.hiring}
             />
           </li>

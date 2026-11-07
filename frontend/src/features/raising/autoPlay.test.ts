@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Company } from '../../api/client'
 import {
   autoChoice,
-  autoHire,
+  autoDraw,
   autoStance,
   isWindowStep,
   nextAutoStep,
@@ -24,7 +24,7 @@ function company(over: Partial<Company> = {}): Company {
     seats: 2,
     desks: [desk('bio', 'patience'), desk('day', 'courage'), desk('research', 'insight', false)],
     employees: [],
-    applicants: [],
+    gacha: { tickets: 0, roster: 0, rosterMax: 4, draws: 0, maxDraws: 10, mergeCount: 3 },
     meeting: { wanted: '' },
     invest: null,
     ...over,
@@ -50,21 +50,19 @@ describe('자동 진행 (decisions.md 245번)', () => {
     expect(autoStance(macro(['UP', 'DOWN']))).toBe('NEUTRAL')
   })
 
-  it('빈 자리에는 계약금이 자본의 25% 이하인 사람 가운데 종합 등급이 가장 높은 사람을 뽑는다', () => {
-    const applicants = [
-      { id: 1, overallGrade: 'C', fee: 10_000_000 },
-      { id: 2, overallGrade: 'A', fee: 25_000_000 },
-      { id: 3, overallGrade: 'S', fee: 40_000_000 },
-    ]
-    expect(autoHire(company({ applicants } as never))).toBe(2)
-    const full = company({
-      applicants,
-      employees: [{ id: 9 }, { id: 8 }],
-    } as never)
-    expect(autoHire(full)).toBeNull()
+  it('빈 자리만큼 채용권으로 뽑는다: 채용권·데리고 있을 자리가 허락하는 만큼 (312번)', () => {
+    const gacha = (tickets: number, roster = 0, rosterMax = 4) => ({
+      gacha: { tickets, roster, rosterMax, draws: 0, maxDraws: 10, mergeCount: 3 },
+    })
+    expect(autoDraw(company(gacha(5) as never))).toBe(2)
+    expect(autoDraw(company(gacha(1) as never))).toBe(1)
+    expect(autoDraw(company(gacha(0) as never))).toBeNull()
+    expect(autoDraw(company({ ...gacha(5, 4, 4) } as never))).toBeNull()
+    const full = company({ ...gacha(5, 2), employees: [{ id: 9 }, { id: 8 }] } as never)
+    expect(autoDraw(full)).toBeNull()
   })
 
-  it('한 해를 결산서 닫기 → 공채 → 배치 → 투자 회의 → 결산 순으로 돈다', () => {
+  it('한 해를 결산서 닫기 → 뽑기 → 배치 → 투자 회의 → 결산 순으로 돈다', () => {
     expect(nextAutoStep(company({ status: 'ENDED' }), false).kind).toBe('stop')
     expect(nextAutoStep(company({ broke: '금고가 비었다.' }), false).kind).toBe('stop')
     expect(nextAutoStep(company(), true).kind).toBe('closeYearEnd')
@@ -76,8 +74,10 @@ describe('자동 진행 (decisions.md 245번)', () => {
     // 연봉 협상 (270번): 자동 진행은 올려 준다.
     const asked = company({ meeting: { wanted: '', raise: { after: 1 } } } as never)
     expect(nextAutoStep(asked, false)).toEqual({ kind: 'raise', accept: true })
-    const hiring = company({ applicants: [{ id: 1, overallGrade: 'C', fee: 1 }] } as never)
-    expect(nextAutoStep(hiring, false)).toEqual({ kind: 'hire', applicantId: 1 })
+    const hiring = company({
+      gacha: { tickets: 3, roster: 0, rosterMax: 4, draws: 0, maxDraws: 10, mergeCount: 3 },
+    } as never)
+    expect(nextAutoStep(hiring, false)).toEqual({ kind: 'draw', count: 2 })
     const resting = company({
       employees: [{ id: 1, grades: grades('B'), desk: null }],
     } as never)
@@ -121,7 +121,7 @@ describe('자동 진행의 창마다 시간 (decisions.md 277번)', () => {
     expect(isWindowStep(nextAutoStep(company(), true))).toBe(true)
     expect(isWindowStep(nextAutoStep(company(), false, false, true))).toBe(true)
     expect(isWindowStep({ kind: 'settle' })).toBe(false)
-    expect(isWindowStep({ kind: 'hire', applicantId: 1 })).toBe(false)
+    expect(isWindowStep({ kind: 'draw', count: 1 })).toBe(false)
   })
 
   it('켜고 끄면 남은 시간을 지운다', () => {
@@ -147,14 +147,14 @@ describe('건물 이사 (decisions.md 296번)', () => {
   it('갈 수 있으면 사람을 뽑기 전에 먼저 이사한다', () => {
     const can = company({
       upgrade: { to: 'E', cost: 50_000_000, needed: 250_000_000, affordable: true },
-      applicants: [{ id: 1, overallGrade: 'C', fee: 10_000_000 }],
+      gacha: { tickets: 3, roster: 0, rosterMax: 4, draws: 0, maxDraws: 10, mergeCount: 3 },
     } as never)
     expect(nextAutoStep(can, false)).toEqual({ kind: 'upgrade' })
     const cannot = company({
       upgrade: { to: 'E', cost: 50_000_000, needed: 250_000_000, affordable: false },
-      applicants: [{ id: 1, overallGrade: 'C', fee: 10_000_000 }],
+      gacha: { tickets: 3, roster: 0, rosterMax: 4, draws: 0, maxDraws: 10, mergeCount: 3 },
     } as never)
-    expect(nextAutoStep(cannot, false)).toEqual({ kind: 'hire', applicantId: 1 })
+    expect(nextAutoStep(cannot, false)).toEqual({ kind: 'draw', count: 2 })
   })
 })
 

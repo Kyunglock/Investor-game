@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import type { Company } from '../../api/client'
-import { LADDER } from './grades'
 import { autoPlace, type Seat } from './placement'
 import { type Stance, useRaisingStore } from './store'
 
@@ -9,7 +8,7 @@ export type AutoStep =
   | { kind: 'closeYearEnd' }
   | { kind: 'closeQuarter' }
   | { kind: 'closeMove' }
-  | { kind: 'hire'; applicantId: number }
+  | { kind: 'draw'; count: number }
   | { kind: 'upgrade' }
   | { kind: 'poach'; keep: boolean }
   | { kind: 'raise'; accept: boolean }
@@ -23,9 +22,6 @@ export type AutoStep =
   | { kind: 'invest'; choice: 'BUY' | 'SELL' | 'HOLD'; big: boolean }
   | { kind: 'settle' }
   | { kind: 'stop' }
-
-/** 계약금이 자본의 이만큼을 넘는 지원자는 뽑지 않는다. 한 해에 자본을 다 써 버리지 않게. */
-const FEE_SHARE = 0.25
 
 /** 거시경제 회의 (decisions.md 266번): 직원 한마디의 다수결. 공격적으로 하자가 많으면 공격, 방어적으로 하자가 많으면 방어, 같으면 중립. */
 export function autoStance(macro: NonNullable<Company['macro']>): Stance {
@@ -41,18 +37,16 @@ export function autoChoice(invest: NonNullable<Company['invest']>): 'BUY' | 'SEL
   return up > down ? 'BUY' : down > up ? 'SELL' : 'HOLD'
 }
 
-/** 빈 자리에 뽑을 지원자: 계약금이 자본의 25% 이하인 사람 가운데 종합 등급이 가장 높은 사람(같으면 싼 사람). */
-export function autoHire(company: Company): number | null {
-  if (company.employees.length >= company.seats) {
-    return null
-  }
-  const affordable = company.applicants.filter((a) => a.fee <= company.capital * FEE_SHARE)
-  const best = affordable.sort(
-    (a, b) =>
-      LADDER.indexOf(b.overallGrade as never) - LADDER.indexOf(a.overallGrade as never) ||
-      a.fee - b.fee,
-  )[0]
-  return best?.id ?? null
+/** 빈 자리를 채울 만큼 뽑는다 (decisions.md 312번): 채용권·데리고 있을 자리·한 번에 뽑는 수가 허락하는 만큼. 자리가 찼으면 뽑지 않는다. */
+export function autoDraw(company: Company): number | null {
+  const g = company.gacha
+  const count = Math.min(
+    company.seats - company.employees.length,
+    g.rosterMax - g.roster,
+    g.tickets,
+    g.maxDraws,
+  )
+  return count > 0 ? count : null
 }
 
 /**
@@ -100,9 +94,9 @@ export function nextAutoStep(
   if (company.upgrade?.affordable) {
     return { kind: 'upgrade' }
   }
-  const applicantId = autoHire(company)
-  if (applicantId !== null) {
-    return { kind: 'hire', applicantId }
+  const count = autoDraw(company)
+  if (count !== null) {
+    return { kind: 'draw', count }
   }
   const seats = autoPlace(company)
   const desk = new Map(company.employees.map((e) => [e.id, e.desk ?? null]))
@@ -192,7 +186,7 @@ export function useCompanyAutoPlay() {
       useRaisingStore.setState({ autoNextAt: nextAt })
     }
     const {
-      hire,
+      draw,
       upgrade,
       place,
       convene,
@@ -220,8 +214,8 @@ export function useCompanyAutoPlay() {
         case 'upgrade':
           void upgrade()
           return
-        case 'hire':
-          void hire(step.applicantId)
+        case 'draw':
+          void draw(step.count)
           return
         case 'poach':
           void answerPoach(step.keep)
