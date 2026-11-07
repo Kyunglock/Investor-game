@@ -1,6 +1,8 @@
 import type { Company } from '@web/api/client'
 import { shortWon } from '@web/features/game/labels'
 import { useRaisingStore } from '@web/features/raising/store'
+import { haptic } from '../../fx/haptics'
+import { sfx } from '../../fx/sound'
 
 /** 이슈 장면 (6.1절, decisions.md 309번): 이직 제안·연봉 협상(답하는 카드), 폭락 조짐·경보·선견·뜨는 섹터·시대의 끝, 올해 필요한 인재. */
 export function IssueScene({ company }: { company: Company }) {
@@ -8,14 +10,19 @@ export function IssueScene({ company }: { company: Company }) {
   const { answerPoach, answerRaise } = useRaisingStore.getState()
   const m = company.meeting
   if (!m) {
-    return <p className="text-[13px] text-muted">끝난 회사에는 이슈가 없습니다.</p>
+    return <p className="text-[13px] text-white/60">끝난 회사에는 이슈가 없습니다.</p>
   }
   const quiet =
     !m.poach && !m.raise && !m.omen && !m.earlyOmen && !m.forecast && !m.hot && !m.eraEnding
+  const answer = (fn: () => Promise<void>) => {
+    sfx.stamp()
+    haptic.medium()
+    void fn()
+  }
   return (
     <div className="grid gap-2" data-testid="issue-scene">
       {m.poach && (
-        <section className="rounded-xl border-2 border-wine bg-white p-3" data-testid="poach">
+        <section className="panel border-2 border-wine p-3" data-testid="poach">
           <p className="text-[11px] font-bold tracking-wide text-wine">이직 제안</p>
           <p className="mt-1 text-[15px] font-semibold">{m.poach.line}</p>
           <p className="mt-1 text-[12px] text-muted">
@@ -25,16 +32,16 @@ export function IssueScene({ company }: { company: Company }) {
             <button
               type="button"
               disabled={busy}
-              onClick={() => void answerPoach(true)}
-              className="min-h-12 rounded-lg bg-pen text-[14px] font-semibold text-white disabled:opacity-50"
+              onClick={() => answer(() => answerPoach(true))}
+              className="btn btn-blue min-h-12 text-[14px]"
             >
               남긴다
             </button>
             <button
               type="button"
               disabled={busy}
-              onClick={() => void answerPoach(false)}
-              className="min-h-12 rounded-lg border border-line text-[13px] disabled:opacity-50"
+              onClick={() => answer(() => answerPoach(false))}
+              className="btn btn-line min-h-12 text-[13px]"
             >
               보낸다 · +{shortWon(m.poach.transferFee)}
             </button>
@@ -42,7 +49,7 @@ export function IssueScene({ company }: { company: Company }) {
         </section>
       )}
       {m.raise && (
-        <section className="rounded-xl border-2 border-gold bg-white p-3" data-testid="raise">
+        <section className="panel border-2 border-gold p-3" data-testid="raise">
           <p className="text-[11px] font-bold tracking-wide text-gold">연봉 협상</p>
           <p className="mt-1 text-[15px] font-semibold">{m.raise.line}</p>
           <p className="mt-1 text-[12px] text-muted">{m.raise.odds}</p>
@@ -50,16 +57,16 @@ export function IssueScene({ company }: { company: Company }) {
             <button
               type="button"
               disabled={busy}
-              onClick={() => void answerRaise(true)}
-              className="min-h-12 rounded-lg bg-pen text-[13px] font-semibold text-white disabled:opacity-50"
+              onClick={() => answer(() => answerRaise(true))}
+              className="btn btn-blue min-h-12 text-[13px]"
             >
               올려 준다 · 연 {shortWon(m.raise.after)}
             </button>
             <button
               type="button"
               disabled={busy}
-              onClick={() => void answerRaise(false)}
-              className="min-h-12 rounded-lg border border-line text-[13px] disabled:opacity-50"
+              onClick={() => answer(() => answerRaise(false))}
+              className="btn btn-line min-h-12 text-[13px]"
             >
               동결한다
             </button>
@@ -101,10 +108,10 @@ export function IssueScene({ company }: { company: Company }) {
           {m.eraEnding}
         </Note>
       )}
-      <Note tone="border-line text-ink" tag="올해 필요한 인재" tagTone="bg-ink">
+      <Note tone="border-transparent text-ink" tag="올해 필요한 인재" tagTone="bg-ink">
         {m.wanted}
       </Note>
-      {quiet && <p className="text-center text-[12px] text-muted">조용한 해입니다.</p>}
+      {quiet && <p className="text-center text-[12px] text-white/50">조용한 해입니다.</p>}
     </div>
   )
 }
@@ -123,10 +130,7 @@ function Note({
   testId?: string
 }) {
   return (
-    <p
-      className={`rounded-xl border bg-white p-3 text-[14px] font-semibold ${tone}`}
-      data-testid={testId}
-    >
+    <p className={`panel border-2 p-3 text-[14px] font-semibold ${tone}`} data-testid={testId}>
       <span className={`mr-1.5 rounded px-1.5 py-0.5 text-[11px] text-white ${tagTone}`}>
         {tag}
       </span>

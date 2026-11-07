@@ -11,6 +11,9 @@ import { useTutorialSpot } from '@web/features/raising/TutorialBanner'
 import { YearEndSheet } from '@web/features/raising/YearEnd'
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useFx } from '../fx/fx'
+import { haptic } from '../fx/haptics'
+import { sfx } from '../fx/sound'
 import { useAppUi } from './ui'
 
 /**
@@ -125,7 +128,7 @@ export function Windows({ company }: { company: Company }) {
   )
 }
 
-/** 화면 아래의 큰 버튼: 분기 넘기기와 자동 진행. 망했으면 다음 회사 차리기. */
+/** 화면 아래의 큰 버튼 (decisions.md 310번): 분기 넘기기(누르면 도장 소리·진동·불꽃)와 자동 진행. 망했으면 다음 회사 차리기. */
 export function ActionBar({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
@@ -138,18 +141,22 @@ export function ActionBar({ company }: { company: Company }) {
   }
   if (company.broke) {
     return (
-      <div className="border-wine border-t-2 bg-card px-4 pt-2 pb-2" data-testid="broke">
-        <p className="text-[13px] font-semibold text-wine">{company.broke}</p>
+      <div className="px-4 pt-2 pb-2 text-white" data-testid="broke">
+        <p className="text-[13px] font-semibold text-[#ff8a7a]">{company.broke}</p>
         {error && (
-          <p role="alert" className="text-[12px] text-wine">
+          <p role="alert" className="text-[12px] text-[#ff8a7a]">
             {error}
           </p>
         )}
         <button
           type="button"
           disabled={busy}
-          onClick={() => void restart()}
-          className="mt-1 min-h-13 w-full rounded-xl bg-wine text-[15px] font-semibold text-white disabled:opacity-50"
+          onClick={() => {
+            sfx.stamp()
+            haptic.medium()
+            void restart()
+          }}
+          className="btn btn-primary mt-1 min-h-14 w-full text-[15px]"
         >
           문을 닫고 사재로 {company.number + 1}호 회사 차리기
         </button>
@@ -160,14 +167,14 @@ export function ActionBar({ company }: { company: Company }) {
     return null
   }
   return (
-    <div className="bg-card px-4 pt-2 pb-2">
+    <div className="px-4 pt-2 pb-2 text-white">
       {error && (
-        <p role="alert" className="mb-1 text-[12px] text-wine">
+        <p role="alert" className="mb-1 text-[12px] text-[#ff8a7a]">
           {error}
         </p>
       )}
       {autoPlay && (
-        <p className="mb-1 text-center text-[11px] text-teal" data-testid="auto-status">
+        <p className="mb-1 text-center text-[11px] text-[#7fd1bf]" data-testid="auto-status">
           자동 진행 중 · 공채 → 배치 → 회의(직원 다수결) → 분기 넘기기
         </p>
       )}
@@ -175,10 +182,11 @@ export function ActionBar({ company }: { company: Company }) {
         <button
           type="button"
           aria-pressed={autoPlay}
-          onClick={() => toggleAutoPlay(!autoPlay)}
-          className={`min-h-13 rounded-xl border px-3 text-[13px] font-semibold ${
-            autoPlay ? 'border-teal bg-teal text-white' : 'border-teal bg-white text-teal'
-          }`}
+          onClick={() => {
+            sfx.tap()
+            toggleAutoPlay(!autoPlay)
+          }}
+          className={`btn min-h-14 px-3 text-[13px] ${autoPlay ? 'btn-teal' : 'btn-ghost'}`}
           title="빈 자리에 뽑고, 자동 배치하고, 회의는 직원 다수결로 정하고, 분기를 넘긴다"
         >
           {autoPlay ? '■ 자동 멈춤' : '⟳ 자동'}
@@ -186,8 +194,13 @@ export function ActionBar({ company }: { company: Company }) {
         <button
           type="button"
           disabled={busy || autoPlay}
-          onClick={() => useAppUi.getState().requestSettle()}
-          className={`animate-breathe min-h-13 rounded-xl bg-wine text-[16px] font-bold text-white disabled:opacity-50 ${settleSpot}`}
+          onClick={(ev) => {
+            sfx.stamp()
+            haptic.medium()
+            useFx.getState().burstAt(ev.currentTarget, 'sparks')
+            useAppUi.getState().requestSettle()
+          }}
+          className={`btn btn-primary animate-breathe min-h-14 text-[17px] ${settleSpot}`}
           data-testid="settle"
         >
           {company.year}년 차 {company.quarter}분기 넘기기 ▶

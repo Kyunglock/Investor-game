@@ -2,6 +2,9 @@ import { useCompanyAutoPlay } from '@web/features/raising/autoPlay'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useTutorial } from '@web/features/raising/tutorial'
 import { useEffect } from 'react'
+import { FxLayer } from '../fx/FxLayer'
+import { armAudio } from '../fx/sound'
+import { useCompanyFx } from '../fx/useCompanyFx'
 import { Shell } from './Shell'
 import { TitleScene } from './TitleScene'
 import { firstTab, useAppUi } from './ui'
@@ -14,8 +17,10 @@ export function App() {
   const error = useRaisingStore((s) => s.error)
   const { load, open } = useRaisingStore.getState()
   useCompanyAutoPlay()
+  useCompanyFx()
 
   useEffect(() => {
+    armAudio()
     void load()
   }, [load])
 
@@ -28,45 +33,44 @@ export function App() {
     }
   }, [companyId])
 
-  if (status === 'loading') {
-    return (
-      <div
-        className="flex h-dvh items-center justify-center bg-[--hud] text-white/70"
-        data-testid="loading"
-      >
-        <p className="animate-pulse-soft text-[14px]">불러오는 중…</p>
-      </div>
-    )
-  }
-  if (status === 'error') {
-    return (
-      <div className="flex h-dvh flex-col items-center justify-center gap-3 bg-[--hud] px-6 text-white">
-        <p role="alert" className="text-[15px]">
-          서버에 연결할 수 없습니다.
-        </p>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className="min-h-12 rounded-xl border border-white/40 px-6 text-[14px] font-semibold"
+  return (
+    <>
+      {status === 'loading' && (
+        <div
+          className="flex h-dvh items-center justify-center bg-(--hud) text-white/70"
+          data-testid="loading"
         >
-          다시 시도
-        </button>
-      </div>
-    )
-  }
-  if (!company) {
-    return (
-      <TitleScene
-        onOpen={(tutorial) => {
-          if (tutorial) {
-            useTutorial.getState().start()
-          }
-          void open()
-        }}
-        busy={busy}
-        error={error}
-      />
-    )
-  }
-  return <Shell company={company} />
+          <p className="animate-pulse-soft text-[14px]">불러오는 중…</p>
+        </div>
+      )}
+      {status === 'error' && (
+        <div className="flex h-dvh flex-col items-center justify-center gap-3 bg-(--hud) px-6 text-white">
+          <p role="alert" className="text-[15px]">
+            서버에 연결할 수 없습니다.
+          </p>
+          <button
+            type="button"
+            onClick={() => void load()}
+            className="btn btn-ghost min-h-12 px-6 text-[14px]"
+          >
+            다시 시도
+          </button>
+        </div>
+      )}
+      {status === 'ready' && !company && (
+        <TitleScene
+          onOpen={(tutorial) => {
+            if (tutorial) {
+              useTutorial.getState().start()
+            }
+            void open()
+          }}
+          busy={busy}
+          error={error}
+        />
+      )}
+      {status === 'ready' && company && <Shell company={company} />}
+      <FxLayer />
+    </>
+  )
 }

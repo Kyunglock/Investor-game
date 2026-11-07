@@ -1,10 +1,12 @@
 import { BuildingArt } from '@web/features/raising/BuildingArt'
 import { useTutorial } from '@web/features/raising/tutorial'
 import { useState } from 'react'
+import { haptic } from '../fx/haptics'
+import { sfx } from '../fx/sound'
 
 /**
- * 제목 화면 (decisions.md 302·309번): 어두운 바탕에 반지하 사무실과 제목. "터치해서 시작"을 누르면 튜토리얼과 함께 시작·바로 시작이 나온다. 처음 온 사람에게는
- * 튜토리얼을 먼저 권한다.
+ * 제목 화면 (decisions.md 302·309·310번): 어두운 바탕에 반지하 사무실과 제목이 줄줄이 떠오른다. "터치해서 시작"을 누르면 튜토리얼과 함께 시작·바로 시작이
+ * 나온다. 처음 온 사람에게는 튜토리얼을 먼저 권한다.
  */
 export function TitleScene({
   onOpen,
@@ -17,16 +19,17 @@ export function TitleScene({
 }) {
   const fresh = useTutorial((s) => s.fresh)
   const [ready, setReady] = useState(false)
-  const primary =
-    'min-h-13 w-full rounded-xl bg-wine text-[16px] font-bold text-white disabled:opacity-50'
-  const secondary =
-    'min-h-12 w-full rounded-xl border border-white/40 text-[14px] font-semibold text-white disabled:opacity-50'
+  const start = (tutorial: boolean) => {
+    sfx.stamp()
+    haptic.medium()
+    onOpen(tutorial)
+  }
   const withTutorial = (
     <button
       type="button"
       disabled={busy}
-      className={fresh ? primary : secondary}
-      onClick={() => onOpen(true)}
+      className={`btn min-h-14 w-full text-[16px] ${fresh ? 'btn-primary' : 'btn-ghost'}`}
+      onClick={() => start(true)}
       data-testid="start-tutorial"
     >
       튜토리얼과 함께 시작
@@ -36,39 +39,50 @@ export function TitleScene({
     <button
       type="button"
       disabled={busy}
-      className={fresh ? secondary : primary}
-      onClick={() => onOpen(false)}
+      className={`btn min-h-14 w-full text-[16px] ${fresh ? 'btn-ghost' : 'btn-primary'}`}
+      onClick={() => start(false)}
       data-testid="start-plain"
     >
       바로 시작
     </button>
   )
+  const delay = (ms: number) => ({ animationDelay: `${ms}ms` })
   return (
     <div
-      className="safe-bottom flex h-dvh flex-col items-center justify-between bg-[--hud] px-6 pt-[max(env(safe-area-inset-top),24px)] pb-6 text-white"
+      className="safe-bottom flex h-dvh flex-col items-center justify-between overflow-hidden bg-(--hud) px-6 pt-[max(env(safe-area-inset-top),24px)] pb-6 text-white"
       data-testid="title-scene"
     >
       <div className="flex w-full flex-1 flex-col items-center justify-center">
-        <p className="text-[12px] font-semibold tracking-[0.3em] text-white/60">증권사 육성 게임</p>
-        <h1 className="mt-2 font-serif-kr text-[46px] font-black leading-none" data-testid="title">
+        <p
+          className="title-in text-[12px] font-semibold tracking-[0.3em] text-white/60"
+          style={delay(0)}
+        >
+          증권사 육성 게임
+        </p>
+        <h1
+          className="title-in mt-2 font-serif-kr text-[48px] font-black leading-none drop-shadow-[0_4px_0_rgba(139,35,66,0.9)]"
+          style={delay(120)}
+          data-testid="title"
+        >
           증권사 사장
         </h1>
-        <p className="mt-3 text-center text-[14px] text-white/75">
+        <p className="title-in mt-3 text-center text-[14px] text-white/75" style={delay(240)}>
           직원을 뽑고, 회의를 열고,
           <br />
           여의도 랜드마크 타워까지.
         </p>
-        <div className="mt-6 w-full max-w-[320px] rounded-xl bg-white/90 p-2">
+        <div className="title-in panel mt-6 w-full max-w-[320px] p-2" style={delay(360)}>
           <BuildingArt grade="F" />
         </div>
         <p
-          className="mt-4 max-w-[320px] text-center text-[13px] leading-relaxed text-white/70"
+          className="title-in mt-4 max-w-[320px] text-center text-[13px] leading-relaxed text-white/70"
+          style={delay(480)}
           data-testid="start-story"
         >
           사표를 던지고 나온 날, 통장에는 1억 원이 있었다. 반지하 사무실에 작은 간판을 걸었다.
         </p>
       </div>
-      <div className="w-full max-w-[360px]">
+      <div className="title-in w-full max-w-[360px]" style={delay(640)}>
         {ready ? (
           <div className="scene-in grid gap-2">
             {fresh ? withTutorial : plain}
@@ -81,7 +95,10 @@ export function TitleScene({
         ) : (
           <button
             type="button"
-            onClick={() => setReady(true)}
+            onClick={() => {
+              sfx.tap()
+              setReady(true)
+            }}
             className="animate-pulse-soft min-h-14 w-full rounded-xl text-[18px] font-bold tracking-wide text-white"
             data-testid="touch-to-start"
           >

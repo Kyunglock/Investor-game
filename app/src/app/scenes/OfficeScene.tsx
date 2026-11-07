@@ -7,12 +7,16 @@ import { OfficeArt, type SeatFocus } from '@web/features/raising/OfficeArt'
 import { nextStep } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
 import { TutorialBanner, useTutorialSpot } from '@web/features/raising/TutorialBanner'
+import { useTutorial } from '@web/features/raising/tutorial'
+import { useFx } from '../../fx/fx'
+import { haptic } from '../../fx/haptics'
+import { sfx } from '../../fx/sound'
 import { DeskButtons, EmployeeDetail, NameTag } from '../people'
 import { Sheet } from '../Sheet'
 import { useAppUi } from '../ui'
 
 /**
- * 사무실 장면 (decisions.md 309번): 시대 한 줄, 튜토리얼 띠, 건물, 이사, 사무실 미니맵. 미니맵의 칸을 누르면 아래에서 자리 고르기 시트가 올라온다.
+ * 사무실 장면 (decisions.md 309·310번): 시대 한 줄, 튜토리얼 띠, 건물, 이사, 사무실 미니맵. 미니맵의 칸을 누르면 아래에서 자리 고르기 시트가 올라온다.
  */
 export function OfficeScene({ company }: { company: Company }) {
   const sheet = useAppUi((s) => s.sheet)
@@ -21,23 +25,30 @@ export function OfficeScene({ company }: { company: Company }) {
   const focus = sheet?.kind === 'seat' ? sheet.focus : null
   return (
     <div data-testid="office-scene">
-      <p className="text-[12px] text-muted" data-testid="era">
-        <b className="text-ink">{company.era.name}</b> · {company.era.description}
+      <p className="panel-dark px-3 py-1.5 text-[12px] text-white/70" data-testid="era">
+        <b className="text-(--gold-bright)">{company.era.name}</b> · {company.era.description}
       </p>
       {company.opening && !company.lastSettlement && (
-        <p className="mt-1 text-[13px]" data-testid="opening">
+        <p className="mt-2 text-[13px] text-white/85" data-testid="opening">
           {company.opening}
         </p>
       )}
-      <TutorialBanner company={company} />
-      <div className="mx-auto mt-2 max-w-[360px]">
+      <TutorialWrap company={company} />
+      <div className="panel mx-auto mt-2 max-w-[360px] p-2">
         <BuildingArt grade={company.grade} />
       </div>
       <NextStep company={company} />
       <OfficeArt
         company={company}
         focus={focus}
-        onSeat={ended ? undefined : (f) => openSheet({ kind: 'seat', focus: f })}
+        onSeat={
+          ended
+            ? undefined
+            : (f) => {
+                sfx.tap()
+                openSheet({ kind: 'seat', focus: f })
+              }
+        }
       />
       <PixelToggle />
       {focus && <SeatSheet company={company} focus={focus} onClose={closeSheet} />}
@@ -45,7 +56,20 @@ export function OfficeScene({ company }: { company: Company }) {
   )
 }
 
-/** 다음 건물 (decisions.md 296번): 자본이 다음 띠 + 이사 비용 이상이면 버튼이 켜진다. */
+/** 튜토리얼 띠는 종이빛 카드 안에 둔다(바탕이 어둡다). 켜져 있지 않으면 아무것도 없다. */
+function TutorialWrap({ company }: { company: Company }) {
+  const active = useTutorial((s) => s.active)
+  if (!active || company.status === 'ENDED') {
+    return null
+  }
+  return (
+    <div className="panel mt-2 px-3 pb-2">
+      <TutorialBanner company={company} />
+    </div>
+  )
+}
+
+/** 다음 건물 (decisions.md 296번): 자본이 다음 띠 + 이사 비용 이상이면 버튼이 켜진다. 누르면 도장·진동·코인. */
 function NextStep({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const { upgrade } = useRaisingStore.getState()
@@ -59,8 +83,8 @@ function NextStep({ company }: { company: Company }) {
   const short = plan.needed - company.capital
   return (
     <div
-      className={`mt-2 flex items-center justify-between gap-2 rounded-xl border px-3 py-2 ${
-        plan.affordable ? 'border-gold bg-gold/10' : 'border-line-soft bg-white/60'
+      className={`panel mt-2 flex items-center justify-between gap-2 border-2 px-3 py-2 ${
+        plan.affordable ? 'border-gold' : 'border-transparent'
       } ${spot}`}
       data-testid="next-step"
       data-affordable={plan.affordable}
@@ -73,10 +97,13 @@ function NextStep({ company }: { company: Company }) {
       <button
         type="button"
         disabled={busy || !plan.affordable}
-        onClick={() => void upgrade()}
-        className={`min-h-11 shrink-0 rounded-lg px-3 text-[13px] font-semibold disabled:opacity-40 ${
-          plan.affordable ? 'animate-glow bg-gold text-white' : 'border border-line text-muted'
-        }`}
+        onClick={(ev) => {
+          sfx.stamp()
+          haptic.heavy()
+          useFx.getState().burstAt(ev.currentTarget, 'coins')
+          void upgrade()
+        }}
+        className={`btn min-h-12 shrink-0 px-4 text-[14px] ${plan.affordable ? 'btn-gold animate-glow' : 'btn-line'}`}
         data-testid="upgrade"
       >
         {step.kind === 'move' ? '이사하기' : '넓히기'}
@@ -93,7 +120,7 @@ function PixelToggle() {
     <button
       type="button"
       onClick={() => setShown(!shown)}
-      className="mt-1 text-[12px] text-muted underline"
+      className="mt-1 text-[12px] text-white/50 underline"
       aria-pressed={!shown}
     >
       {shown ? '그림 끄기' : '그림 켜기'}
@@ -124,7 +151,15 @@ function SeatSheet({
         </GradeCard>
         <p className="mt-3 text-[13px] text-muted">어디에 앉힐까요? 맞는 자리부터 늘어섭니다.</p>
         <div className="mt-1">
-          <DeskButtons company={company} employee={e} onSeated={onClose} />
+          <DeskButtons
+            company={company}
+            employee={e}
+            onSeated={() => {
+              sfx.tap()
+              haptic.light()
+              onClose()
+            }}
+          />
         </div>
       </Sheet>
     )
@@ -139,7 +174,7 @@ function SeatSheet({
               key={x.id}
               type="button"
               onClick={() => openSheet({ kind: 'seat', focus: { employee: x.id } })}
-              className="min-h-12 rounded-lg border border-pen bg-white px-3 text-left text-[14px]"
+              className="btn btn-line min-h-12 justify-start px-3 text-left text-[14px]"
             >
               <NameTag employee={x} />{' '}
               <span className="font-mono-num text-[12px] text-muted">종합 {x.overallGrade}</span>
@@ -151,8 +186,11 @@ function SeatSheet({
           <p className="text-[13px] text-muted">쉬는 직원이 없습니다. 공채에서 뽑으세요.</p>
           <button
             type="button"
-            onClick={() => setTab('market')}
-            className="min-h-12 rounded-lg bg-pen text-[14px] font-semibold text-white"
+            onClick={() => {
+              sfx.tap()
+              setTab('market')
+            }}
+            className="btn btn-blue min-h-12 text-[14px]"
           >
             공채 보러 가기
           </button>

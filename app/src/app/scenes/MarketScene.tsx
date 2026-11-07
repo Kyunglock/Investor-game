@@ -4,12 +4,15 @@ import { GradeCard } from '@web/features/raising/GradeCard'
 import { titleOf } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useState } from 'react'
+import { useFx } from '../../fx/fx'
+import { haptic } from '../../fx/haptics'
+import { sfx } from '../../fx/sound'
 import { NameTag, StatGrid } from '../people'
 import { Sheet } from '../Sheet'
 import { useAppUi } from '../ui'
 
 /**
- * 공채 장면 (decisions.md 228·309번): 지원자 카드가 가로로 한 장씩 넘어간다(오토배틀러의 상점처럼). 카드의 "뽑는다"를 누르면 계약금을 내고 뽑고,
+ * 공채 장면 (decisions.md 228·309·310번): 지원자 카드가 가로로 한 장씩 넘어간다(오토배틀러의 상점처럼). "뽑는다"를 누르면 코인이 터지며 계약금을 내고 뽑고,
  * 자리가 꽉 찼으면 내보낼 직원을 고르는 시트가 올라온다. 아래에 새로 받기.
  */
 export function MarketScene({ company }: { company: Company }) {
@@ -22,16 +25,16 @@ export function MarketScene({ company }: { company: Company }) {
   const applicants = [...company.applicants].sort((x, y) => Number(y.star) - Number(x.star))
   const picking = sheet?.kind === 'hire' ? applicants.find((a) => a.id === sheet.applicantId) : null
   if (company.status === 'ENDED') {
-    return <p className="text-[13px] text-muted">끝난 회사는 사람을 뽑지 않습니다.</p>
+    return <p className="text-[13px] text-white/60">끝난 회사는 사람을 뽑지 않습니다.</p>
   }
   return (
     <div className="flex h-full flex-col" data-testid="market-scene">
-      <p className="text-[12px] text-muted">
+      <p className="text-[12px] text-white/65">
         계약금을 내고 뽑습니다. 뽑은 사람은 쉬는 채로 들어오니 자리에 앉히세요.
         {company.meeting?.hrCap && ` 인사팀 덕에 ${company.meeting.hrCap} 언저리까지 옵니다.`}
       </p>
       {applicants.length === 0 ? (
-        <p className="mt-6 text-center text-[14px] text-muted">올해 지원자를 다 만났습니다.</p>
+        <p className="mt-6 text-center text-[14px] text-white/60">올해 지원자를 다 만났습니다.</p>
       ) : (
         <>
           <ul
@@ -50,9 +53,17 @@ export function MarketScene({ company }: { company: Company }) {
                 affordable={company.capital >= a.fee}
                 disabled={busy}
                 full={full}
-                onHire={() =>
-                  full ? openSheet({ kind: 'hire', applicantId: a.id }) : void hire(a.id)
-                }
+                onHire={(el) => {
+                  if (full) {
+                    sfx.tap()
+                    openSheet({ kind: 'hire', applicantId: a.id })
+                    return
+                  }
+                  sfx.coin()
+                  haptic.light()
+                  useFx.getState().burstAt(el, 'coins')
+                  void hire(a.id)
+                }}
               />
             ))}
           </ul>
@@ -60,7 +71,9 @@ export function MarketScene({ company }: { company: Company }) {
             {applicants.map((a, i) => (
               <span
                 key={a.id}
-                className={`h-1.5 w-1.5 rounded-full ${i === at ? 'bg-wine' : 'bg-line'}`}
+                className={`h-1.5 rounded-full transition-all ${
+                  i === at ? 'w-4 bg-(--gold-bright)' : 'w-1.5 bg-white/30'
+                }`}
               />
             ))}
           </p>
@@ -69,8 +82,11 @@ export function MarketScene({ company }: { company: Company }) {
       <button
         type="button"
         disabled={busy || company.capital < company.refreshCost}
-        onClick={() => void refreshApplicants()}
-        className="mt-2 min-h-11 w-full rounded-lg border border-line bg-white text-[14px] disabled:opacity-50"
+        onClick={() => {
+          sfx.whoosh()
+          void refreshApplicants()
+        }}
+        className="btn btn-ghost mt-2 min-h-12 w-full text-[14px]"
       >
         지원자 새로 받기 · {shortWon(company.refreshCost)}
       </button>
@@ -86,10 +102,12 @@ export function MarketScene({ company }: { company: Company }) {
                 type="button"
                 disabled={busy}
                 onClick={() => {
+                  sfx.coin()
+                  haptic.light()
                   closeSheet()
                   void hire(picking.id, e.id)
                 }}
-                className="min-h-12 rounded-lg border border-wine bg-white px-3 text-left text-[14px] text-wine disabled:opacity-50"
+                className="btn btn-line min-h-12 justify-start px-3 text-left text-[14px] text-wine"
               >
                 <NameTag employee={e} /> 내보내고 뽑는다
               </button>
@@ -112,7 +130,7 @@ function ApplicantCard({
   affordable: boolean
   disabled: boolean
   full: boolean
-  onHire: () => void
+  onHire: (el: Element) => void
 }) {
   return (
     <GradeCard
@@ -144,8 +162,8 @@ function ApplicantCard({
       <button
         type="button"
         disabled={disabled || !affordable}
-        onClick={onHire}
-        className="mt-3 min-h-12 w-full rounded-lg bg-pen text-[15px] font-semibold text-white disabled:opacity-50"
+        onClick={(ev) => onHire(ev.currentTarget)}
+        className="btn btn-blue mt-3 min-h-14 w-full text-[16px]"
       >
         {full ? '내보내고 뽑는다' : '뽑는다'} · {shortWon(a.fee)}
       </button>

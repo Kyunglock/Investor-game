@@ -3,6 +3,7 @@ import { pnlLabel } from '@web/features/raising/board'
 import { officeName, titleOf } from '@web/features/raising/office'
 import { Ledger, PHASES } from '@web/features/raising/YearEnd'
 import { useState } from 'react'
+import { sfx } from '../../fx/sound'
 
 type Part = 'settlement' | 'achievements' | 'hall' | 'timeline'
 
@@ -25,9 +26,14 @@ export function RecordScene({ company }: { company: Company }) {
             type="button"
             role="tab"
             aria-selected={part === p.id}
-            onClick={() => setPart(p.id)}
-            className={`min-h-9 shrink-0 rounded-full border px-3 text-[13px] ${
-              part === p.id ? 'border-ink bg-ink text-white' : 'border-line bg-white text-muted'
+            onClick={() => {
+              sfx.tap()
+              setPart(p.id)
+            }}
+            className={`min-h-9 shrink-0 rounded-full border px-3 text-[13px] font-semibold ${
+              part === p.id
+                ? 'border-(--gold-bright) bg-(--gold-bright) text-[#3b2a05]'
+                : 'border-white/15 bg-white/10 text-white/75'
             }`}
           >
             {p.label}
@@ -38,28 +44,28 @@ export function RecordScene({ company }: { company: Company }) {
         {part === 'settlement' &&
           (company.lastSettlement ? (
             <section data-testid="settlement">
-              <h3 className="font-pen text-[22px]">
+              <h3 className="font-pen text-[22px] text-(--gold-bright)">
                 {company.lastSettlement.year}년 차 결산 · {PHASES[company.lastSettlement.phase]}
               </h3>
-              <div className="mt-1 rounded-xl bg-white p-3">
+              <div className="panel mt-1 p-3">
                 <Ledger company={company} settlement={company.lastSettlement} />
               </div>
-              <ul className="mt-2 grid gap-0.5 text-[13px]">
+              <ul className="mt-2 grid gap-0.5 text-[13px] text-white/85">
                 {company.lastSettlement.lines.map((line) => (
                   <li key={line}>· {line}</li>
                 ))}
               </ul>
             </section>
           ) : (
-            <p className="text-[13px] text-muted">아직 결산한 해가 없습니다.</p>
+            <p className="text-[13px] text-white/60">아직 결산한 해가 없습니다.</p>
           ))}
         {part === 'achievements' && (
           <ul className="grid grid-cols-2 gap-1.5">
             {h.achievements.map((a) => (
               <li
                 key={a.code}
-                className={`rounded-xl border bg-white p-2 text-[12px] ${
-                  a.year != null ? 'border-gold' : 'border-line-soft text-muted opacity-70'
+                className={`panel border-2 p-2 text-[12px] ${
+                  a.year != null ? 'border-gold' : 'border-transparent opacity-60'
                 }`}
                 data-testid="achievement"
                 data-open={a.year != null}
@@ -76,13 +82,13 @@ export function RecordScene({ company }: { company: Company }) {
         )}
         {part === 'hall' &&
           (h.hall.length === 0 ? (
-            <p className="text-[13px] text-muted">아직 아무도 없습니다.</p>
+            <p className="text-[13px] text-white/60">아직 아무도 없습니다.</p>
           ) : (
             <ol className="grid gap-1" data-testid="hall">
               {h.hall.map((x, i) => (
                 <li
                   key={`${x.name}-${x.from}`}
-                  className="flex items-center justify-between gap-2 rounded-xl bg-white px-3 py-2 text-[13px]"
+                  className="panel flex items-center justify-between gap-2 px-3 py-2 text-[13px]"
                 >
                   <span>
                     <b className="mr-1 font-mono-num">{i + 1}</b>
@@ -106,7 +112,7 @@ export function RecordScene({ company }: { company: Company }) {
               .map((e, at) => ({ ...e, at }))
               .reverse()
               .map((e) => (
-                <li key={e.at} className="flex gap-2 rounded-xl bg-white px-3 py-2">
+                <li key={e.at} className="panel flex gap-2 px-3 py-2">
                   <span className="shrink-0 font-mono-num text-muted">{e.year}년 차</span>
                   <span>{eventText(e)}</span>
                 </li>

@@ -4,6 +4,8 @@ import { GradeBadge, GradeCard } from '@web/features/raising/GradeCard'
 import { LADDER, STAT_NAMES } from '@web/features/raising/grades'
 import { autoPlace, deskEffect, seatOne } from '@web/features/raising/placement'
 import { useRaisingStore } from '@web/features/raising/store'
+import { haptic } from '../../fx/haptics'
+import { sfx } from '../../fx/sound'
 import { type Desk, type Employee, EmployeeDetail, FIT_TONE, fitOf, NameTag } from '../people'
 import { Sheet } from '../Sheet'
 import { useAppUi } from '../ui'
@@ -22,22 +24,27 @@ export function StaffScene({ company }: { company: Company }) {
   return (
     <div data-testid="staff-scene">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[14px]">
-          앉힌 사람 <b className="font-mono-num">{placed}</b> / {company.seats}자리
+        <p className="text-[14px] text-white/85">
+          앉힌 사람 <b className="font-mono-num text-(--gold-bright)">{placed}</b> / {company.seats}
+          자리
         </p>
         {!ended && company.employees.length > 0 && (
           <button
             type="button"
             disabled={busy}
-            onClick={() => void place(autoPlace(company))}
-            className="min-h-10 rounded-lg border border-teal bg-white px-3 text-[13px] font-semibold text-teal disabled:opacity-50"
+            onClick={() => {
+              sfx.whoosh()
+              haptic.light()
+              void place(autoPlace(company))
+            }}
+            className="btn btn-teal min-h-11 px-4 text-[13px]"
           >
             자동 배치
           </button>
         )}
       </div>
       {company.employees.length === 0 ? (
-        <p className="mt-4 text-center text-[14px] text-muted">
+        <p className="mt-4 text-center text-[14px] text-white/60">
           아직 직원이 없습니다. 공채에서 뽑으세요.
         </p>
       ) : (
@@ -51,8 +58,11 @@ export function StaffScene({ company }: { company: Company }) {
                 <button
                   type="button"
                   disabled={ended}
-                  onClick={() => openSheet({ kind: 'desk', desk: d.code })}
-                  className="flex w-full items-start justify-between gap-2 rounded-xl border border-line bg-white p-3 text-left"
+                  onClick={() => {
+                    sfx.tap()
+                    openSheet({ kind: 'desk', desk: d.code })
+                  }}
+                  className="panel flex w-full items-start justify-between gap-2 p-3 text-left active:scale-[0.99]"
                   data-testid="desk-row"
                   data-desk={d.code}
                 >
@@ -85,7 +95,7 @@ export function StaffScene({ company }: { company: Company }) {
       )}
       {company.employees.length > 0 && (
         <details className="mt-3" open={ended}>
-          <summary className="cursor-pointer text-[13px] text-muted">
+          <summary className="cursor-pointer text-[13px] text-white/65">
             직원 상세 능력치 ({company.employees.length}명)
           </summary>
           <ul className="mt-2 grid gap-2">
@@ -164,8 +174,12 @@ function DeskSheet({
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => void appointLeader(d.code, e.id)}
-                  className="min-h-8 rounded border border-gold px-2 text-[12px] text-gold disabled:opacity-50"
+                  onClick={() => {
+                    sfx.coin()
+                    haptic.light()
+                    void appointLeader(d.code, e.id)
+                  }}
+                  className="btn btn-line min-h-8 px-2 text-[12px] text-gold"
                 >
                   팀장으로
                 </button>
@@ -173,8 +187,11 @@ function DeskSheet({
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => void place(seatOne(company, e.id, null))}
-                className="ml-auto min-h-8 rounded border border-line px-2 text-[12px] text-muted"
+                onClick={() => {
+                  sfx.tap()
+                  void place(seatOne(company, e.id, null))
+                }}
+                className="btn btn-line ml-auto min-h-8 px-2 text-[12px] text-muted"
               >
                 빼기
               </button>
@@ -196,10 +213,12 @@ function DeskSheet({
               type="button"
               disabled={busy || blocked}
               onClick={() => {
+                sfx.tap()
+                haptic.light()
                 onClose()
                 void place(seatOne(company, e.id, d.code))
               }}
-              className={`min-h-12 rounded-lg border bg-white px-2 text-left text-[13px] disabled:opacity-40 ${FIT_TONE[fit]}`}
+              className={`btn btn-line min-h-12 flex-col items-start px-2 text-left text-[13px] ${FIT_TONE[fit]}`}
               data-fit={fit}
               data-testid="desk-candidate"
             >
