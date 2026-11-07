@@ -79,7 +79,8 @@ public record RaisingContent(
       Industry industry,
       Map<String, String> omenReveal,
       Mental mental,
-      List<Quirk> quirks) {}
+      List<Quirk> quirks,
+      Map<String, String> teamGrade) {}
 
   /**
    * 직원 버릇 (decisions.md 349번). hello: 뽑혔을 때 첫인사({name}). proposals: 막판 제안({name}·{action}). again:

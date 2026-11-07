@@ -755,6 +755,16 @@ export interface components {
                 ready: boolean;
                 /** @description 회의를 열어 한마디와 형광펜을 굳혔다. 그 뒤로 배치를 바꿔도 그대로다 (decisions.md 249번) */
                 convened: boolean;
+                /** @description 회의에 앉은 팀의 합산 등급 (decisions.md 353번). 앉은 사람이 없으면 null */
+                team?: {
+                    grade: components["schemas"]["Grade"];
+                    /** @description 0~100 */
+                    score: number;
+                    /** @description 한 줄 풀이 */
+                    hint: string;
+                    /** @description 앉은 사람 수 */
+                    members: number;
+                } | null;
                 /** @description 토론에서 매수 쪽에 얹힌 무게(직원 안목 */
                 teamBuy?: number | null;
                 /** @description 토론에서 매도 쪽에 얹힌 무게. 회의를 열기 전이면 null */
@@ -898,6 +908,16 @@ export interface components {
             macro?: {
                 /** @description 주제 이름(기준금리·환율·유가·물가·경기) */
                 topic: string;
+                /** @description 회의에 앉은 팀의 합산 등급 (decisions.md 353번). 앉은 사람이 없으면 null */
+                team?: {
+                    grade: components["schemas"]["Grade"];
+                    /** @description 0~100 */
+                    score: number;
+                    /** @description 한 줄 풀이 */
+                    hint: string;
+                    /** @description 앉은 사람 수 */
+                    members: number;
+                } | null;
                 title: string;
                 /** @description 기사 문장. 리서치 팀이 형광펜을 그은 문장은 highlighted, 연초 회의의 폭락 조짐을 옮긴 문장은 omen(헛조짐일 수도 있다) */
                 sentences: {
