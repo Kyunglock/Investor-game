@@ -654,4 +654,68 @@ class InvestEngineTest {
     }
     assertThat(proposed).isBetween(trials * 82 / 100, trials * 97 / 100);
   }
+
+  private static String credit(String read, String choice, boolean up) {
+    CompanyState c = new CompanyState();
+    CompanyState.Invest i = new CompanyState.Invest();
+    i.stock = TestContent.load().stocksOf("game").getFirst().code();
+    i.finderId = 7;
+    i.finderName = "이도담";
+    i.choice = choice;
+    i.up = up;
+    i.magnitudeBp = 3500;
+    CompanyState.Remark r = new CompanyState.Remark();
+    r.employeeId = 7;
+    r.read = read;
+    i.remarks = List.of(r);
+    c.invest = i;
+    return ENGINE.invest.credit(c);
+  }
+
+  /** #340: 맺음말은 물어 온 사람의 회의 의견도 본다. */
+  @Test
+  void 물어_온_사람의_맺음말은_그_사람의_회의_의견을_본다() {
+    // 팔자고 했는데 사장이 사서 빠졌다: 그 말을 들을 걸 그랬다
+    assertThat(credit("DOWN", InvestEngine.BUY, false)).contains("들을 걸 그랬다").contains("빠졌다");
+    // 팔자고 했고 사장도 팔았고 빠졌다: 칭찬
+    assertThat(credit("DOWN", InvestEngine.SELL, false)).contains("그 말이 맞았다");
+    // 팔자고 했는데 올랐다: 본인은 팔자고 했다
+    assertThat(credit("DOWN", InvestEngine.SELL, true)).contains("본인은 팔자고");
+    // 사자고 했는데 빠졌다: 지금처럼 탓한다
+    assertThat(credit("UP", InvestEngine.BUY, false)).contains("소문 말고");
+    // 사자고 했고 올랐다: 눈이 맞았다
+    assertThat(credit("UP", InvestEngine.BUY, true)).contains("눈이 맞았다");
+  }
+
+  /** #340: 같은 기사를 다시 뽑아도 고를 수 있는 다른 종목이 있으면 지난 종목과 지난 한마디는 쉰다. */
+  @Test
+  void 지난_분기와_같은_종목과_같은_한마디는_이어_나오지_않는다() {
+    int alternatives = 0;
+    for (int seed = 0; seed < 40; seed++) {
+      CompanyState c = ENGINE.open(new HashSeededRandom(seed), 100_000_000L);
+      CompanyState.Employee finder = ENGINE.hire(c, stats(20, 50, 50, 50));
+      HashSeededRandom random = new HashSeededRandom(seed);
+      CompanyState.Invest first = ENGINE.invest.found(c, finder, null, random);
+      c.invest = first;
+      c.usedNews.remove(first.news);
+      CompanyState.Invest again = ENGINE.invest.found(c, finder, null, random);
+      assertThat(again.pitch).isNotEqualTo(first.pitch);
+      if (!again.stock.equals(first.stock)) {
+        alternatives++;
+      }
+      var news =
+          TestContent.load().news().stream()
+              .filter(n -> n.code().equals(first.news))
+              .findFirst()
+              .orElseThrow();
+      long fitting =
+          TestContent.load().stocksOf(news.sector()).stream()
+              .filter(st -> news.fits(st.code()))
+              .count();
+      if (again.news.equals(first.news) && fitting > 1) {
+        assertThat(again.stock).as("같은 기사면 다른 종목").isNotEqualTo(first.stock);
+      }
+    }
+    assertThat(alternatives).isPositive();
+  }
 }

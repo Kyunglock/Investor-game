@@ -106,9 +106,13 @@ class InvestEngine {
     Map<String, String> names = names(content.stock(invest.stock));
     List<String> pitches =
         content.raising().company().macro().scout().pitch().get(pitchTier(insight));
-    invest.pitch =
-        Korean.fill(
-            pitches.get(random.forKey("invest-pitch", c.turn()).nextInt(pitches.size())), names);
+    // 지난번과 같은 한마디는 피한다 (#340)
+    String last = c.invest == null ? null : c.invest.pitch;
+    int at = random.forKey("invest-pitch", c.turn()).nextInt(pitches.size());
+    invest.pitch = Korean.fill(pitches.get(at), names);
+    if (invest.pitch.equals(last) && pitches.size() > 1) {
+      invest.pitch = Korean.fill(pitches.get((at + 1) % pitches.size()), names);
+    }
     return invest;
   }
 
@@ -140,8 +144,13 @@ class InvestEngine {
 
     NewsDefinition news = pickNews(c, pickRoll, sector);
     c.usedNews.add(news.code());
-    List<StockDefinition> stocks =
+    List<StockDefinition> fitting =
         content.stocksOf(news.sector()).stream().filter(s -> news.fits(s.code())).toList();
+    // 지난 회의의 종목은 고를 수 있는 다른 종목이 있으면 이번에 쉰다 (#340)
+    String lastStock = c.invest == null ? null : c.invest.stock;
+    List<StockDefinition> fresh =
+        fitting.stream().filter(s -> !s.code().equals(lastStock)).toList();
+    List<StockDefinition> stocks = fresh.isEmpty() ? fitting : fresh;
     StockDefinition stock = stocks.get(stockRoll % stocks.size());
     Invest invest = new Invest();
     invest.news = news.code();
@@ -979,7 +988,10 @@ class InvestEngine {
     };
   }
 
-  /** 정한 뒤 물어 온 직원을 칭찬하거나 탓하는 한 줄 (decisions.md 267번). 물어 온 사람이 없는 옛 회의면 null. */
+  /**
+   * 정한 뒤 물어 온 직원을 칭찬하거나 탓하는 한 줄 (decisions.md 267번). 물어 온 사람의 회의 의견도 본다 (#340): 맞는 말을 했는데 사장이 다르게
+   * 골랐으면 "들을 걸 그랬다", 가져와 놓고 팔자고 했는데 빠졌으면 칭찬, 팔자고 했는데 올랐으면 그 말을 짚는다. 물어 온 사람이 없는 옛 회의면 null.
+   */
   String credit(CompanyState c) {
     Invest invest = c.invest;
     if (invest.finderName == null || invest.choice == null) {
@@ -987,15 +999,34 @@ class InvestEngine {
     }
     String who =
         invest.finderRole == null ? invest.finderName : invest.finderName + " " + invest.finderRole;
+    String read =
+        invest.remarks == null
+            ? null
+            : invest.remarks.stream()
+                .filter(r -> invest.finderId != null && r.employeeId == invest.finderId)
+                .map(r -> r.read)
+                .findFirst()
+                .orElse(null);
+    String right = invest.up ? UP : DOWN;
+    String key = right;
+    if (right.equals(read) && !invest.choice.equals(actionOf(read))) {
+      key = "ignored";
+    } else if (DOWN.equals(read) && !invest.up) {
+      key = "readDown";
+    } else if (DOWN.equals(read) && invest.up) {
+      key = "missed";
+    }
     return Korean.fill(
-        content.raising().company().macro().scout().credit().get(invest.up ? UP : DOWN),
+        content.raising().company().macro().scout().credit().get(key),
         Map.of(
             "name",
             who,
             "stock",
             content.stock(invest.stock).name(),
             "percent",
-            String.valueOf(Math.round(invest.magnitudeBp / (float) PERCENT))));
+            String.valueOf(Math.round(invest.magnitudeBp / (float) PERCENT)),
+            "moved",
+            invest.up ? "올랐다" : "빠졌다"));
   }
 
   /** 정한 뒤 드러나는 한 줄: 종목이 몇 % 올랐는지 내렸는지. */

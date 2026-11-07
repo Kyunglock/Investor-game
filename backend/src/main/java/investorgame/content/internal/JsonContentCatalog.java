@@ -297,7 +297,10 @@ class JsonContentCatalog implements ContentCatalog {
     require(
         scout != null
             && scout.none() != null
-            && scout.credit().keySet().containsAll(List.of("UP", "DOWN")),
+            && scout
+                .credit()
+                .keySet()
+                .containsAll(List.of("UP", "DOWN", "readDown", "ignored", "missed")),
         "종목 발굴 문구가 없다");
     for (String voice : List.of("low", "mid", "high")) {
       require(
