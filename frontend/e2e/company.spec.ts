@@ -191,7 +191,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await page.getByText('확률표').click()
   await expect(page.getByTestId('gacha-rates').getByRole('listitem')).toHaveCount(5)
   await expect(page.getByTestId('building-ladder').getByRole('listitem')).toHaveCount(7)
-  await expect(page.getByTestId('next-step')).toContainText('사무실 넓히기')
+  await expect(page.getByTestId('next-step')).toContainText('사무실 등급 올리기')
   // 건물은 저절로 오르지 않는다 (296번): 이사 비용과 필요한 자본이 보이고, 자본이 모자라면 버튼이 잠긴다.
   await expect(page.getByTestId('next-step')).toContainText('이사 비용 18b')
   await expect(page.getByTestId('upgrade')).toBeDisabled()
@@ -300,7 +300,8 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   await expect(page.getByTestId('office-resting')).toBeVisible()
   await page.getByTestId('office-empty').click()
   await expect(picker).toContainText('빈 자리에 누구를 앉힐까요?')
-  await picker.getByRole('button', { name: /종합/ }).click()
+  // 자리가 셋이라 쉬는 사람이 둘이다 (354번): 첫 사람을 고른다.
+  await picker.getByRole('button', { name: /종합/ }).first().click()
   await picker.getByRole('button', { name: /단타 데스크 용기/ }).click()
   await expect(picker).toHaveCount(0)
   await expect(page.getByRole('tab', { name: /배치/ })).toContainText('3/3')
@@ -740,7 +741,7 @@ test('자동 진행을 켜면 뽑기·배치·회의·결산을 해마다 하고
   // 사람이 하던 결산 버튼은 자동 진행 동안 잠긴다.
   await expect(page.getByRole('button', { name: '1년 차 1분기 넘기기' })).toBeDisabled()
   // 빈 자리 넷에 사람을 뽑아 앉히고(287번), 회의를 직원 다수결로 정하고, 결산서를 보여 준 뒤 다음 해로 간다.
-  await expect(page.getByTestId('office-seat')).toHaveCount(4, { timeout: 30_000 })
+  await expect(page.getByTestId('office-seat')).toHaveCount(3, { timeout: 30_000 })
   // 분기마다 분기 실적을 보여 주고, 네 분기를 넘기면 연말 결산서를 보여 준다 (268번).
   const quarterSheet = page.getByRole('dialog', { name: '분기 실적' })
   await expect(quarterSheet).toBeVisible({ timeout: 20_000 })
