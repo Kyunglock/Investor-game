@@ -105,6 +105,16 @@ class MentalEngineTest {
   }
 
   @Test
+  void 멘탈_전투_전에_연_분기면_불러올_때_이번_분기의_전투를_만든다() {
+    CompanyState c = company(7);
+    c.mental = null;
+    assertThat(ENGINE.mental.adopt(c, new HashSeededRandom(7))).isTrue();
+    assertThat(c.mental.genre).isIn(MentalEngine.GENRES);
+    assertThat(c.mental.card).isNull();
+    assertThat(ENGINE.mental.adopt(c, new HashSeededRandom(7))).as("이미 있으면 그대로").isFalse();
+  }
+
+  @Test
   void 이번_분기가_아니거나_없는_카드면_400이다() {
     CompanyState c = company(1);
     assertThatThrownBy(() -> ENGINE.mental.report(c, 1, 2, "hold", 10, 10))
