@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { sfx } from '../fx/sound'
-import { bakeEnemies, bakeHero, bakeStage, enemyKey, GUN, HERO_SIZE, WALL_H } from './art'
+import { bakeEnemies, bakeHero, bakeStage, DPR, enemyKey, GUN, HERO_SIZE, WALL_H } from './art'
 import { type Loadout, xpToNext } from './cards'
 import { ENEMIES, type EnemyKind } from './enemies'
 import { BATTLE_SECONDS, GENRES, type Genre } from './genres'
@@ -67,12 +67,19 @@ type Bullet = Phaser.Physics.Arcade.Image & { life: number; look: 0 | 1 }
 
 /** 적 그림(64×64)의 충돌 원: 가운데에 반지름 r. */
 function enemyBody(e: Enemy, r: number) {
-  e.body?.setCircle(r, 32 - r, 32 - r)
+  // 충돌 원은 텍스처 px 단위(배율만큼 큼).
+  e.body?.setCircle(r * DPR, (32 - r) * DPR, (32 - r) * DPR)
 }
 
 const HURT_MS = 450
-/** 적 그림 크기(333번): 64px 그림을 이만큼 줄여 보인다. 충돌 원도 같이 줄어든다. */
-const ENEMY_SCALE = 0.72
+/**
+ * 적 그림 크기(333·344번): 64px 그림을 이만큼 줄여 보인다(CSS px 기준). 충돌 원도 같이 줄어든다. 사장냥보다 확실히 작다. 텍스처는 화면 배율만큼 크게
+ * 구워져 있어(art.ts) 화면에 놓을 때는 배율로 나눈다: 전에는 안 나눠 폰에서 적이 두세 배로 컸다.
+ */
+const ENEMY_SCALE = 0.62
+const ENEMY_K = ENEMY_SCALE / DPR
+/** 구워 둔 텍스처(배율만큼 큼)를 CSS px 크기로 놓는 배율. 파티클·화염에 쓴다. */
+const TEX = 1 / DPR
 
 class BattleScene extends Phaser.Scene {
   private readonly opts: BattleOptions
@@ -169,11 +176,20 @@ class BattleScene extends Phaser.Scene {
     bakeHero(this, this.opts.hero)
     bakeEnemies(this)
 
-    const { width: w, height: h } = this.scale
-    this.bg = this.add.tileSprite(0, 0, w, h, `floor-${this.opts.genre}`).setOrigin(0)
-    const onResize = (s: Phaser.Structs.Size) => this.bg.setSize(s.width, s.height)
-    this.scale.on('resize', onResize)
-    this.events.once('shutdown', () => this.scale.off('resize', onResize))
+    // 선명하게(344번): 캔버스는 화면 배율만큼 크고(startBattle), 카메라를 그만큼 당겨 논리 좌표(view)는 CSS px 그대로다.
+    const fitView = () => {
+      const { w, h } = this.view()
+      this.cameras.main.setZoom(DPR).centerOn(w / 2, h / 2)
+      this.bg?.setSize(w, h)
+    }
+    fitView()
+    const { w, h } = this.view()
+    this.bg = this.add
+      .tileSprite(0, 0, w, h, `floor-${this.opts.genre}`)
+      .setOrigin(0)
+      .setTileScale(TEX)
+    this.scale.on('resize', fitView)
+    this.events.once('shutdown', () => this.scale.off('resize', fitView))
 
     this.mental = this.loadout.maxMental
     this.placeProps()
@@ -192,6 +208,7 @@ class BattleScene extends Phaser.Scene {
     if (this.genre.target === 'wall') {
       this.wall = this.add
         .tileSprite(0, this.wallY() - WALL_H, w, WALL_H * 2, 'wall')
+        .setTileScale(TEX)
         .setOrigin(0)
         .setDepth(2)
       this.wallZone = this.add.zone(w / 2, this.wallY(), w, WALL_H * 2)
@@ -238,7 +255,7 @@ class BattleScene extends Phaser.Scene {
         .particles(0, 0, 'spark', {
           speed: { min: 90, max: 320 },
           lifespan: { min: 200, max: 380 },
-          scale: { start: 1.6, end: 0 },
+          scale: { start: 1.6 * TEX, end: 0 },
           tint: Phaser.Display.Color.HexStringToColor(v.fill).color,
           emitting: false,
         })
@@ -248,7 +265,7 @@ class BattleScene extends Phaser.Scene {
     this.trail = this.add
       .particles(0, 0, 'trail', {
         lifespan: 110,
-        scale: { start: 2, end: 0.4 },
+        scale: { start: 2 * TEX, end: 0.4 * TEX },
         alpha: { start: 0.6, end: 0 },
         tint: [0xffe08a, 0xffb300],
         emitting: false,
@@ -258,7 +275,7 @@ class BattleScene extends Phaser.Scene {
       .particles(0, 0, 'spark', {
         speed: { min: 120, max: 260 },
         lifespan: { min: 120, max: 220 },
-        scale: { start: 1.6, end: 0 },
+        scale: { start: 1.6 * TEX, end: 0 },
         tint: [0xffffff, 0xffe08a],
         emitting: false,
       })
@@ -275,6 +292,7 @@ class BattleScene extends Phaser.Scene {
             color: '#ffffff',
             stroke: INK,
             strokeThickness: 5,
+            resolution: DPR,
           })
           .setOrigin(0.5)
           .setDepth(8)
@@ -290,35 +308,47 @@ class BattleScene extends Phaser.Scene {
   }
 
   /** 장르별 소품 (341번): 공격은 위쪽 가장자리의 나무들, 디펜스는 멘탈벽 양 끝의 풀숲. 장식일 뿐 부딪히지 않는다. */
+  /** 논리 화면 크기(CSS px). 캔버스 크기(scale)는 배율만큼 크다. */
+  private view() {
+    return { w: this.scale.width / DPR, h: this.scale.height / DPR }
+  }
+
   private placeProps() {
-    const { width: w, height: h } = this.scale
+    const { w, h } = this.view()
     if (this.opts.genre === 'ASSAULT') {
       const count = Math.max(2, Math.floor(w / 120))
       for (let i = 0; i < count; i++) {
         this.add
           .image(((i + 0.5) * w) / count + (i % 2 ? 12 : -12), i % 2 ? 44 : 30, 'tree')
+          .setScale(TEX)
           .setDepth(1)
       }
       return
     }
-    this.add.image(26, h - 150 - 30, 'bush').setDepth(1)
-    this.add.image(w - 26, h - 150 - 30, 'bush').setDepth(1)
+    this.add
+      .image(26, h - 150 - 30, 'bush')
+      .setScale(TEX)
+      .setDepth(1)
+    this.add
+      .image(w - 26, h - 150 - 30, 'bush')
+      .setScale(TEX)
+      .setDepth(1)
   }
 
   /** 멘탈벽의 세로 자리: 화면 아래쪽. */
   private wallY() {
-    return this.scale.height - 150
+    return this.view().h - 150
   }
 
   /** 플레이어의 세로 자리(붙박이, 332·340번): 공격은 화면 아래, 디펜스는 멘탈벽 뒤(아래)에 숨어 벽 너머로 쏜다. */
   private playerY() {
-    return this.genre.target === 'wall' ? this.wallY() + 78 : this.scale.height - 120
+    return this.genre.target === 'wall' ? this.wallY() + 78 : this.view().h - 120
   }
 
   // ── 생성
 
   private spawnPoint(): [number, number] {
-    return [Phaser.Math.Between(16, this.scale.width - 16), -40]
+    return [Phaser.Math.Between(16, this.view().w - 16), -40]
   }
 
   private spawn(kind: EnemyKind, at?: [number, number]) {
@@ -333,7 +363,7 @@ class BattleScene extends Phaser.Scene {
     const v = ENEMIES[kind]
     e.setTexture(enemyKey(kind, 0))
       .enableBody(true, x, y, true, true)
-      .setScale(ENEMY_SCALE)
+      .setScale(ENEMY_K)
       .clearTint()
       .setAlpha(1)
       .setDepth(3)
@@ -342,8 +372,8 @@ class BattleScene extends Phaser.Scene {
     e.dying = false
     e.kind = kind
     if (kind !== 'spec') {
-      e.setScale(0.3)
-      this.tweens.add({ targets: e, scale: ENEMY_SCALE, duration: 220, ease: 'Back.easeOut' })
+      e.setScale(0.3 * ENEMY_K)
+      this.tweens.add({ targets: e, scale: ENEMY_K, duration: 220, ease: 'Back.easeOut' })
     }
     e.hp = v.hp
     e.kbx = 0
@@ -353,7 +383,7 @@ class BattleScene extends Phaser.Scene {
 
   private waveDump() {
     this.opts.onBanner('투매 물량 쏟아진다!!', '#a98bff')
-    const { width: w } = this.scale
+    const { w } = this.view()
     const grow = 1 + Math.min(1.5, this.elapsed / 120)
     const n = Math.round(6 * grow)
     for (let i = 0; i < n; i++) {
@@ -370,7 +400,7 @@ class BattleScene extends Phaser.Scene {
 
   private wavePanic() {
     this.opts.onBanner('패닉셀 떼가 몰려온다!!!', '#3a86ff')
-    const { width: w, height: h } = this.scale
+    const { w, h } = this.view()
     const n = Math.round(10 + Math.min(10, this.elapsed / 16))
     for (let i = 0; i < n; i++) {
       const a = Math.PI + (i / (n - 1)) * Math.PI
@@ -582,11 +612,11 @@ class BattleScene extends Phaser.Scene {
     // 총 손맛: 총구 화염, 반동(눌렸다 펴짐), 화면이 살짝 흔들린다.
     const m = this.muzzle()
     const flash = this.flashes[this.flashIndex++ % this.flashes.length]
-    flash.setPosition(m.x, m.y).setRotation(base).setScale(1).setAlpha(1).setVisible(true)
+    flash.setPosition(m.x, m.y).setRotation(base).setScale(TEX).setAlpha(1).setVisible(true)
     this.tweens.killTweensOf(flash)
     this.tweens.add({
       targets: flash,
-      scale: 0.6,
+      scale: 0.6 * TEX,
       alpha: 0,
       duration: 90,
       onComplete: () => flash.setVisible(false),
@@ -666,7 +696,7 @@ class BattleScene extends Phaser.Scene {
     // 총은 따로 겨누는 쪽으로 돈다: 누르면 그쪽, 아니면 가장 가까운 적.
     const p = this.player
     const ptr = this.input.activePointer
-    const { width: w } = this.scale
+    const { w } = this.view()
     p.setVelocity(0, 0)
     p.setPosition(w / 2, this.playerY())
     const hurting = time < this.hurtUntil
@@ -738,7 +768,7 @@ class BattleScene extends Phaser.Scene {
       if (e.kind === 'spec') {
         // 투기: 부풀다가 터진다.
         const s = 1 + Math.min(1, (this.elapsed - e.born) / 9) * 0.9
-        e.setScale(ENEMY_SCALE * (s + Math.sin(time / 90) * 0.04))
+        e.setScale(ENEMY_K * (s + Math.sin(time / 90) * 0.04))
         if (s >= 1.9) {
           const pd = Math.hypot(p.x - e.x, p.y - e.y)
           if (pd < 150 || (this.wallZone && d < 150)) {
@@ -784,20 +814,38 @@ class BattleScene extends Phaser.Scene {
 /** 한 판을 parent 안에 띄운다. 손잡이로 카드를 쌓고(레벨 업) 끝낸다(창이 닫힐 때). */
 export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHandle {
   const scene = new BattleScene(opts)
+  // 선명하게(344번): RESIZE 모드는 zoom을 무시해 폰에서 캔버스가 CSS px 크기로 흐렸다. 캔버스를 배율만큼 크게 잡고 zoom으로 CSS 크기에 맞춘다.
+  // 부모 크기가 바뀌면 직접 다시 잡는다.
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
     backgroundColor: '#cfe3a0',
-    scale: { mode: Phaser.Scale.RESIZE, width: parent.clientWidth, height: parent.clientHeight },
+    scale: {
+      mode: Phaser.Scale.NONE,
+      width: Math.round(parent.clientWidth * DPR),
+      height: Math.round(parent.clientHeight * DPR),
+      zoom: 1 / DPR,
+    },
     physics: { default: 'arcade' },
     // 벡터 그림(341번): 부드럽게.
     render: { pixelArt: false, antialias: true, powerPreference: 'high-performance' },
     fps: { target: 60 },
     scene: [scene],
   })
+  const ro = new ResizeObserver(() => {
+    const w = Math.round(parent.clientWidth * DPR)
+    const h = Math.round(parent.clientHeight * DPR)
+    if (w > 0 && h > 0 && (w !== game.scale.width || h !== game.scale.height)) {
+      game.scale.resize(w, h)
+    }
+  })
+  ro.observe(parent)
   return {
     applyLoadout: (loadout) => scene.applyLoadout(loadout),
     setPaused: (paused) => scene.setPaused(paused),
-    stop: () => game.destroy(true),
+    stop: () => {
+      ro.disconnect()
+      game.destroy(true)
+    },
   }
 }

@@ -20,24 +20,26 @@ import type { Hero } from './hero'
  * 화면 배율(dpr)만큼 크게 구워 흐리지 않다.
  */
 
-/** 텍스처를 구울 때의 화면 배율. 그림 크기(setDisplaySize)는 배율과 상관없이 아래 상수를 쓴다. */
-const DPR = Math.min(3, (typeof devicePixelRatio === 'number' && devicePixelRatio) || 1)
+/** 화면 배율. 텍스처를 이만큼 크게 굽고 캔버스도 이만큼 크다(battle.ts). 그림 크기(setDisplaySize)는 배율과 상관없이 아래 상수(CSS px)를 쓴다. */
+export const DPR = Math.min(3, (typeof devicePixelRatio === 'number' && devicePixelRatio) || 1)
 
 /** 사장냥의 화면 크기(px): 상자 100×110의 0.72배. 레퍼런스처럼 화면 높이의 1/12쯤. */
 export const HERO_SCALE = 0.72
 export const HERO_SIZE = { w: CAT_W * HERO_SCALE, h: CAT_H * HERO_SCALE }
-/** 권총: 사장냥 그림의 가운데에서 피벗(손)까지의 거리(px)와 피벗에서 총구까지(px). */
+/** 권총을 사장냥 상자 좌표보다 이만큼 크게 그린다(344번): 전에는 작아서 안 보였다. 앞발도 같이 커져 꼭 쥔 느낌이다. */
+const GUN_K = 2.0
+/** 권총: 사장냥 그림의 가운데에서 피벗(뒷손)까지의 거리(px)와 피벗에서 총구까지(px). */
 export const GUN = {
   dx: (GUN_PIVOT.x - CAT_W / 2) * HERO_SCALE,
   dy: (GUN_PIVOT.y - CAT_H / 2) * HERO_SCALE,
-  len: GUN_LEN * HERO_SCALE,
-  /** 총 텍스처(상자 좌표 -8..24 × -8..10)의 원점 비율 */
-  ox: 8 / 32,
-  oy: 8 / 18,
-  w: 32 * HERO_SCALE,
-  h: 18 * HERO_SCALE,
+  len: GUN_LEN * HERO_SCALE * GUN_K,
+  /** 총 텍스처(상자 좌표 -8..26 × -8..14)의 원점 비율 */
+  ox: 8 / 34,
+  oy: 8 / 22,
+  w: 34 * HERO_SCALE * GUN_K,
+  h: 22 * HERO_SCALE * GUN_K,
 }
-/** 적 그림(64×64) 안에서 적의 반지름 ≈ 20 × 1.1: 사장냥보다 작다. */
+/** 적 그림(64×64) 안에서 적의 반지름 ≈ 20 × 1.1. 화면에서는 battle.ts의 ENEMY_SCALE만큼 줄여 사장냥보다 작다(344번). */
 export const ENEMY_SIZE = 64
 export const WALL_H = 24
 
@@ -76,7 +78,7 @@ export function bakeHero(scene: Phaser.Scene, _hero: Hero) {
     scene.textures.addCanvas(key, cv)
   }
   bake(scene, 'gun', GUN.w, GUN.h, (c) => {
-    c.scale(HERO_SCALE, HERO_SCALE)
+    c.scale(HERO_SCALE * GUN_K, HERO_SCALE * GUN_K)
     c.translate(8, 8)
     drawGun(c, BOSS_LOOK.fur)
   })
