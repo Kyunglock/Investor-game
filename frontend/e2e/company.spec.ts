@@ -278,7 +278,7 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   await expect(page.getByRole('tab', { name: /배치/ })).toContainText('1/4')
   await page.getByRole('button', { name: '자동 배치' }).click()
   await expect(page.getByRole('tab', { name: /배치/ })).toContainText('4/4')
-  // 자리가 넷이면 돕는 자리(리서치 팀 등)에도 앉힌다.
+  // 반지하(F)에는 돕는 자리가 아직 닫혀 있어(#393) 넷 다 돈을 굴리는 자리에 앉는다.
   await expect(page.getByTestId('office-tag')).toHaveCount(4)
   await expect(
     page

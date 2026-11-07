@@ -14,6 +14,7 @@ import { GradeBadge, GradeCard } from './GradeCard'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { IndustryLine } from './IndustryLine'
 import { InvestWindow } from './InvestWindow'
+import { LockedDesks } from './LockedDesks'
 import { MacroWindow } from './MacroWindow'
 import { MoveScene } from './MoveScene'
 import { OfficeArt, type SeatFocus } from './OfficeArt'
@@ -503,6 +504,7 @@ function StaffTab({ company }: { company: Company }) {
           ))}
         </ul>
       )}
+      {!ended && <LockedDesks company={company} className="text-muted" />}
       {company.employees.length > 0 && (
         <details className="mt-3" open={ended}>
           <summary className="cursor-pointer text-[13px] text-muted">

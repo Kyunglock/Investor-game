@@ -1170,6 +1170,18 @@ class CompanyEngine {
         && company.capital >= needed;
   }
 
+  /** 그 자리가 열리는 회사 등급 (#393). 처음부터 열려 있으면 null. */
+  String unlockGrade(String desk) {
+    Map<String, String> unlock = properties.upgrade().deskUnlock();
+    return unlock == null ? null : unlock.get(desk);
+  }
+
+  /** 그 자리가 지금 회사에 열려 있나 (#393). */
+  boolean deskOpen(CompanyState company, String desk) {
+    String at = unlockGrade(desk);
+    return at == null || LADDER.indexOf(grade(company)) >= LADDER.indexOf(at);
+  }
+
   /** 그 등급으로 올라갈 때 공사 기간(해, #347). 같은 건물 안에서 책상만 느는 등급이면 0. */
   int buildYears(String grade) {
     return properties.upgrade().buildYears() == null

@@ -68,8 +68,10 @@ public record CompanyProperties(
   /**
    * @param percent 이사 비용: 다음 띠 자본의 이 비율(%)
    * @param buildYears 새 건물로 가는 등급의 공사 기간(해, #347). 없으면 바로 된다
+   * @param deskUnlock 돕는 자리가 열리는 회사 등급(#393). 없는 자리는 처음부터 열려 있다
    */
-  public record Upgrade(int percent, Map<String, Integer> buildYears) {}
+  public record Upgrade(
+      int percent, Map<String, Integer> buildYears, Map<String, String> deskUnlock) {}
 
   /**
    * 거시경제 회의 (decisions.md 266번).

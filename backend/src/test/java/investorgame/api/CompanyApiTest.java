@@ -542,6 +542,19 @@ class CompanyApiTest {
     assertThat(again.read("$.industry.total", Integer.class)).isEqualTo(total + 1);
   }
 
+  /** 돕는 자리는 회사가 커 가며 열린다 (#393): 반지하(F)에는 돈을 굴리는 자리만 있고, 닫힌 자리는 열리는 등급과 함께 따로 보인다. */
+  @Test
+  void 돕는_자리는_회사가_커_가며_열린다() throws Exception {
+    DocumentContext opened =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    List<String> desks = opened.read("$.desks[*].code");
+    assertThat(desks).contains("bio", "day").doesNotContain("research", "scout", "risk", "hr");
+    List<String> locked = opened.read("$.lockedDesks[*].code");
+    assertThat(locked).containsExactlyInAnyOrder("research", "scout", "risk", "hr");
+    List<String> researchAt = opened.read("$.lockedDesks[?(@.code == 'research')].unlockGrade");
+    assertThat(researchAt).containsExactly("E");
+  }
+
   /** 엔딩을 본 회사는 더 뽑지 않는다. */
   private void drawFails() throws Exception {
     DocumentContext company = json(mvc.perform(get("/api/company").cookie(session)));

@@ -49,7 +49,8 @@ public record CompanyView(
     Settlement lastSettlement,
     Ending ending,
     Resign resign,
-    Industry industry) {
+    Industry industry,
+    List<LockedDesk> lockedDesks) {
 
   /**
    * 업계 순위 (#351): 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다(로그인이 없는 익명 세션). 한 해도 마치지 않았으면 null.
@@ -347,7 +348,11 @@ public record CompanyView(
       String description,
       Integer gainBp,
       Integer missBp,
-      Integer crashPercent) {}
+      Integer crashPercent,
+      String unlockGrade) {}
+
+  /** 아직 닫힌 돕는 자리 (#393): 회사가 unlockGrade가 되면 열린다. */
+  public record LockedDesk(String code, String name, String description, String unlockGrade) {}
 
   /**
    * @param omen 폭락 조짐(빨간 글씨). 없으면 null. 헛조짐일 수도 있다

@@ -518,6 +518,15 @@ export interface components {
                 missBp?: number | null;
                 /** @description 폭락장의 시장 손익에 곱하는 비율. 100보다 작으면 폭락장에 덜 빠진다. 돈을 굴리지 않으면 null */
                 crashPercent?: number | null;
+                /** @description 이 자리가 열린 회사 등급 (#393). 처음부터 열려 있었으면 null */
+                unlockGrade?: string | null;
+            }[];
+            /** @description 아직 닫힌 돕는 자리 (#393). 회사가 unlockGrade가 되면 열려 desks에 들어간다 */
+            lockedDesks?: {
+                code: string;
+                name: string;
+                description: string;
+                unlockGrade: components["schemas"]["Grade"];
             }[];
             meeting?: {
                 /** @description 폭락 조짐. 헛조짐일 수도 있다 */
