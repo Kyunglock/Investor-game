@@ -606,14 +606,6 @@ export function bakeStage(scene: Phaser.Scene, genre: Genre) {
   const edge = empty(7, 7)
   blob(putOf(edge), area([1, 5], [2, 4]), GOLD)
   bake(scene, 'bullet-1', edge, ENEMY_PALETTE)
-  // 손절매의 멘탈 탄: 파란 눈물
-  const tear = empty(7, 5)
-  drop(putOf(tear), 0, 2)
-  for (const [y, x] of disc(4, 2, 2, 2)) {
-    putOf(tear)(y, x, 'T')
-  }
-  putOf(tear)(3, 1, 'W')
-  bake(scene, 'tear', tear, ENEMY_PALETTE)
   // 총구 화염: 노란 별에 흰 심. 쏠 때 총구에 잠깐 떴다 사라진다
   const flash = empty(11, 11)
   const fp = putOf(flash)

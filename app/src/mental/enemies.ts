@@ -22,6 +22,6 @@ export const ENEMIES: Record<EnemyKind, EnemySpec> = {
   dump: { r: 19, fill: '#9a84d9', label: '투매', hp: 4, speed: 50, dmg: 8, reward: 25 },
   /** 투기: 크고 느리다. 부풀다가 터지면 근처 멘탈을 크게 깎는다 */
   spec: { r: 23, fill: '#ea4d6a', label: '투기', hp: 16, speed: 30, dmg: 14, reward: 80 },
-  /** 손절매: 멀찍이 멈춰 서서 멘탈 탄을 쏜다 */
+  /** 손절매: 단단하고 곧장 내려와 부딪힌다(원거리 공격은 없다, 340번) */
   stop: { r: 16, fill: '#9ba2ad', label: '손절', hp: 5, speed: 65, dmg: 6, reward: 40 },
 }

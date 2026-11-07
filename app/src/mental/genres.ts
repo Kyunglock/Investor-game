@@ -21,7 +21,7 @@ export const GENRES: Record<Genre, GenreSpec> = {
   },
   DEFENSE: {
     name: '디펜스',
-    hint: '적이 멘탈벽으로 몰려온다. 벽 앞에서 누른 쪽을 쏴라',
+    hint: '적이 멘탈벽으로 몰려온다. 벽 뒤에서 누른 쪽을 쏴라',
     target: 'wall',
   },
 }
