@@ -24,8 +24,9 @@ describe('고양이 생김새', () => {
     expect(employeeLook(3, 'C', 'despair').face).toBe('sad')
   })
 
-  it('손님은 옷이 없고, 사장은 크림색에 넥타이·선글라스', () => {
+  it('손님은 옷이 없고, 사장은 크림색에 꾸밈 없음 (345번)', () => {
     expect(customerLook(2).outfit).toBeUndefined()
-    expect(BOSS_LOOK).toMatchObject({ fur: '#f6dcb0', acc: ['tie'], face: 'boss' })
+    expect(BOSS_LOOK).toMatchObject({ fur: '#f6dcb0', face: 'idle' })
+    expect(BOSS_LOOK.acc ?? []).toHaveLength(0)
   })
 })

@@ -15,7 +15,7 @@ type Mental = NonNullable<Company['mental']>
 
 /**
  * 멘탈 전투 창 (decisions.md 328·330·331·339번): 이벤트 머리글과 장르, 출전 버튼 → 한 판(전장이 열리면 첫 카드 석 장 가운데 하나)(Phaser, 늦게 불러온다. 레벨이 오를 때마다 멈추고 카드를
- * 또 고른다) → 결과 → 서버에 고른 카드 목록과 결과를 보고 → onDone(결산). 건너뛰면 보고 없이 바로 onDone이다. 화면 전체를 쓴다.
+ * 또 고른다) → 결과 → 서버에 고른 카드 목록과 결과를 보고 → onDone(결산). 건너뛰거나 싸우다 나가면(345번) 보고 없이 바로 onDone이다. 화면 전체를 쓴다.
  */
 export function MentalWindow({
   mental,
@@ -51,6 +51,7 @@ export function MentalWindow({
           hero={hero}
           onPick={(code) => setPicked((p) => [...p, code])}
           onDone={setOutcome}
+          onQuit={onDone}
         />
       )}
       {!started && (
@@ -241,17 +242,23 @@ function CardPick({
   )
 }
 
-/** 한 판: Phaser를 늦게 불러 컨테이너에 띄우고, 위에 멘탈·시간·레벨과 큰 알림을 그린다. 레벨이 오르면 전투 위에 카드 고르기가 뜬다. */
+/**
+ * 한 판: Phaser를 늦게 불러 컨테이너에 띄우고, 위에 멘탈·시간·레벨과 큰 알림을 그린다. 레벨이 오르면 전투 위에 카드 고르기가 뜬다. 오른쪽 위 ✕로 언제든
+ * 나갈 수 있다(345번): 전투를 멈추고 물은 뒤 나가면 강화 없이 결산이다.
+ */
 function Battle({
   genre,
   hero,
   onPick,
   onDone,
+  onQuit,
 }: {
   genre: Mental['genre']
   hero: Hero
   onPick: (code: MentalCard) => void
   onDone: (outcome: Outcome) => void
+  /** 싸우다 나간다 (345번): 이번 분기 강화 없이 결산으로. */
+  onQuit: () => void
 }) {
   const host = useRef<HTMLDivElement>(null)
   const handle = useRef<BattleHandle | null>(null)
@@ -261,6 +268,7 @@ function Battle({
   const [hurt, setHurt] = useState(false)
   const [loading, setLoading] = useState(true)
   const [levelUp, setLevelUp] = useState<number | null>(null)
+  const [asking, setAsking] = useState(false)
 
   useEffect(() => {
     const el = host.current
@@ -327,6 +335,19 @@ function Battle({
             <div className="rounded-full border-[3px] border-[#2b2340] bg-white px-3 py-1 text-[14px] font-bold shadow-[0_3px_0_#2b2340]">
               적 <span className="text-[#ff4f6d]">{hud.kills}</span>
             </div>
+            <button
+              type="button"
+              aria-label="전투 나가기"
+              onClick={() => {
+                sfx.tap()
+                handle.current?.setPaused(true)
+                setAsking(true)
+              }}
+              className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full border-[3px] border-[#2b2340] bg-white text-[16px] font-bold shadow-[0_3px_0_#2b2340] active:translate-y-0.5 active:shadow-none"
+              data-testid="mental-quit"
+            >
+              ✕
+            </button>
           </div>
           <div className="flex items-center gap-2 self-start rounded-full border-[3px] border-[#2b2340] bg-white px-3 py-1 text-[13px] font-bold shadow-[0_3px_0_#2b2340]">
             Lv.{hud.level}
@@ -348,6 +369,48 @@ function Battle({
         >
           {banner.text}
         </p>
+      )}
+      {asking && (
+        <div
+          className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#2b2340]/55 px-6"
+          role="alertdialog"
+          aria-modal="true"
+          aria-label="전투 나가기"
+          data-testid="mental-quit-ask"
+        >
+          <div className="panel w-full max-w-[360px] px-5 py-5 text-center">
+            <h3 className="font-game text-[24px]">그만 싸울까요?</h3>
+            <p className="mt-1 text-[14px] text-muted">
+              나가면 이번 분기는 강화 없이 결산으로 갑니다. 물리친 적과 고른 카드는 남지 않습니다.
+            </p>
+            <div className="mt-4 grid gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  sfx.stamp()
+                  haptic.medium()
+                  setAsking(false)
+                  handle.current?.setPaused(false)
+                }}
+                className="btn btn-primary min-h-14 text-[18px]"
+                data-testid="mental-quit-no"
+              >
+                계속 싸운다 ▶
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  sfx.tap()
+                  onQuit()
+                }}
+                className="btn btn-ghost min-h-12 text-[15px]"
+                data-testid="mental-quit-yes"
+              >
+                나간다 (강화 없음)
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       {levelUp !== null && hud && (
         <div
