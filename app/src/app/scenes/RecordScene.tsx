@@ -85,26 +85,31 @@ export function RecordScene({ company }: { company: Company }) {
           (h.hall.length === 0 ? (
             <p className="text-[13px] text-white/60">아직 아무도 없습니다.</p>
           ) : (
-            <ol className="grid gap-1" data-testid="hall">
-              {h.hall.map((x, i) => (
-                <li
-                  key={`${x.name}-${x.from}`}
-                  className="panel flex items-center justify-between gap-2 px-3 py-2 text-[13px]"
-                >
-                  <span>
-                    <b className="mr-1 font-mono-num">{i + 1}</b>
-                    {x.name} {titleOf(x.grade)}{' '}
-                    <span className="text-muted">
-                      {x.from > 0 ? `${x.from}년 차` : ''}
-                      {x.to != null ? ` ~ ${x.to}년 차 · 퇴사` : ' ~ 지금'}
+            <>
+              <p className="mb-1 text-[11px] text-white/60">
+                데스크 운용과 종목 회의로 번 돈을 모두 더한 누적
+              </p>
+              <ol className="grid gap-1" data-testid="hall">
+                {h.hall.map((x, i) => (
+                  <li
+                    key={`${x.name}-${x.from}`}
+                    className="panel flex items-center justify-between gap-2 px-3 py-2 text-[13px]"
+                  >
+                    <span>
+                      <b className="mr-1 font-mono-num">{i + 1}</b>
+                      {x.name} {titleOf(x.grade)}{' '}
+                      <span className="text-muted">
+                        {x.from > 0 ? `${x.from}년 차` : ''}
+                        {x.to != null ? ` ~ ${x.to}년 차 · 퇴사` : ' ~ 지금'}
+                      </span>
                     </span>
-                  </span>
-                  <b className={x.totalPnl >= 0 ? 'text-up' : 'text-down'}>
-                    {pnlLabel(x.totalPnl)}
-                  </b>
-                </li>
-              ))}
-            </ol>
+                    <b className={x.totalPnl >= 0 ? 'text-up' : 'text-down'}>
+                      {pnlLabel(x.totalPnl)}
+                    </b>
+                  </li>
+                ))}
+              </ol>
+            </>
           ))}
         {part === 'timeline' && (
           <ol className="grid gap-1 text-[13px]" data-testid="timeline">

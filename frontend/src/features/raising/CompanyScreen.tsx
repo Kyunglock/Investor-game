@@ -911,7 +911,7 @@ function CompanyTabs({ company }: { company: Company }) {
     { id: 'settlement', label: '지난 결산', show: Boolean(company.lastSettlement) },
     {
       id: 'history',
-      label: '연표',
+      label: '업적·연표',
       badge: `${company.history.achievements.filter((a) => a.year != null).length}/${company.history.achievements.length}`,
       show: true,
     },
@@ -1037,6 +1037,7 @@ function HistoryTab({ company }: { company: Company }) {
         ))}
       </ul>
       <h3 className="mt-3 font-pen text-[22px]">명예의 전당</h3>
+      <p className="text-[11px] text-muted">데스크 운용과 종목 회의로 번 돈을 모두 더한 누적</p>
       {h.hall.length === 0 ? (
         <p className="text-[13px] text-muted">아직 아무도 없습니다.</p>
       ) : (

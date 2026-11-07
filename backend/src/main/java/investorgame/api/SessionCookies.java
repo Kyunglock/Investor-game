@@ -2,6 +2,7 @@ package investorgame.api;
 
 import investorgame.session.SessionProperties;
 import investorgame.session.SessionService;
+import java.util.Optional;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
@@ -33,6 +34,16 @@ class SessionCookies {
     }
     UUID id = sessions.resolve(token, ClientIp.current()).orElseThrow(UnauthorizedException::new);
     renew(token);
+    return id;
+  }
+
+  /** 세션이 있으면 그 ID, 쿠키가 없거나 만료되었으면 빈 값. 유효하면 쿠키를 다시 내린다 (#346: 회사가 없는 첫 방문은 401이 아니다). */
+  Optional<UUID> session(String token) {
+    if (token == null || token.isBlank()) {
+      return Optional.empty();
+    }
+    Optional<UUID> id = sessions.resolve(token, ClientIp.current());
+    id.ifPresent(x -> renew(token));
     return id;
   }
 

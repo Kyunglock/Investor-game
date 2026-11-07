@@ -1136,7 +1136,6 @@ export interface operations {
                     "application/json": components["schemas"]["Company"];
                 };
             };
-            401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
         };
     };

@@ -1294,7 +1294,7 @@ class CompanyEngine {
     return properties.experience().band();
   }
 
-  private RaisingContent.Desk desk(String code) {
+  RaisingContent.Desk desk(String code) {
     return desks().stream()
         .filter(d -> d.code().equals(code))
         .findFirst()
