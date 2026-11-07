@@ -315,7 +315,8 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   const macro = page.getByRole('dialog', { name: '거시경제 회의' })
   await expect(macro.getByTestId('macro-article')).toBeVisible()
   const heads = await macro.getByTestId('macro-opinion').getByRole('heading').allInnerTexts()
-  expect(heads.map((h) => Number(/(\d+)명/.exec(h)?.[1] ?? 0)).reduce((a, b) => a + b, 0)).toBe(4)
+  // 앉은 사람은 셋 (354번): 한마디도 셋.
+  expect(heads.map((h) => Number(/(\d+)명/.exec(h)?.[1] ?? 0)).reduce((a, b) => a + b, 0)).toBe(3)
   await expect(macro.getByRole('button', { name: /판돈 ×/ })).toHaveCount(3)
   await macro.getByRole('button', { name: '배치 다시 보기' }).click()
   await expect(macro).toBeHidden()
