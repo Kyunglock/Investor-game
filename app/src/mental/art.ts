@@ -613,6 +613,26 @@ export function bakeStage(scene: Phaser.Scene, genre: Genre) {
   }
   putOf(tear)(3, 1, 'W')
   bake(scene, 'tear', tear, ENEMY_PALETTE)
+  // 총구 화염: 노란 별에 흰 심. 쏠 때 총구에 잠깐 떴다 사라진다
+  const flash = empty(11, 11)
+  const fp = putOf(flash)
+  for (const i of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+    fp(5, i, 'y')
+    fp(i, 5, 'y')
+  }
+  for (const [y, x] of disc(5, 5, 3, 3)) {
+    fp(y, x, 'y')
+  }
+  for (const [y, x] of disc(5, 5, 1.5, 1.5)) {
+    fp(y, x, 'W')
+  }
+  fp(2, 2, 'y')
+  fp(2, 8, 'y')
+  fp(8, 2, 'y')
+  fp(8, 8, 'y')
+  bake(scene, 'flash', flash, ENEMY_PALETTE)
+  // 탄 꼬리: 금빛 점 하나(파티클이 색과 크기를 바꾼다)
+  bake(scene, 'trail', [['y']], ENEMY_PALETTE)
   // 파편: 흰 네모 한 칸(색은 적마다 입힌다)
   bake(
     scene,
