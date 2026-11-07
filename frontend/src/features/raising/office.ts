@@ -75,7 +75,7 @@ export function officeName(grade: Grade): string {
 }
 
 /**
- * 다음 단계 한 줄: 다음 등급이 다른 건물이면 이사, 같은 건물이면 사무실을 넓혀 책상을 들인다. 자본 띠는 서버가 준다(nextGradeCapital). 끝 등급이면 null.
+ * 다음 단계 한 줄: 다음 등급이 다른 건물이면 이사, 같은 건물이면 사무실 등급만 오른다(자리는 셋으로 고정, 354번). 자본 띠는 서버가 준다(nextGradeCapital). 끝 등급이면 null.
  */
 export function nextStep(grade: Grade): { kind: 'move'; to: string } | { kind: 'expand' } | null {
   const next = LADDER[LADDER.indexOf(grade) + 1]

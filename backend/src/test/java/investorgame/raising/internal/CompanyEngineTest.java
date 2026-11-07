@@ -59,28 +59,27 @@ class CompanyEngineTest {
     assertThat(company.tickets).isEqualTo(PROPERTIES.gacha().startTickets());
     assertThat(ENGINE.draw(company, 1, new HashSeededRandom(1)).getFirst().name).isEqualTo("박한결");
     assertThat(ENGINE.grade(company.capital)).isEqualTo("F");
-    assertThat(ENGINE.seats(company.capital)).isEqualTo(4);
+    assertThat(ENGINE.seats(company.capital)).as("자리는 셋으로 고정 (354번)").isEqualTo(3);
     assertThat(ENGINE.grade(120_000_000)).as("E는 1.2억부터 (#344)").isEqualTo("E");
     assertThat(ENGINE.grade(119_999_999)).isEqualTo("F");
     assertThat(ENGINE.grade(300_000_000)).isEqualTo("D");
     assertThat(ENGINE.grade(200_000_000)).isEqualTo("E");
-    assertThat(ENGINE.seats(200_000_000)).isEqualTo(6);
+    assertThat(ENGINE.seats(200_000_000)).isEqualTo(3);
     assertThat(company.wantedDesk).isNotNull();
   }
 
   @Test
   void 자리_수를_넘게_앉힐_수_없다() {
-    // F 회사는 자리 넷 (287번): 다섯을 앉히면 400, 넷이면 다섯째는 쉰다.
+    // 자리는 셋 (354번): 넷을 앉히면 400, 셋이면 넷째는 쉰다.
     CompanyState company = open(1, stats(50, 50, 50, 50), 100_000_000);
     for (int i = 0; i < 4; i++) {
       ENGINE.hire(company, stats(50, 50, 50, 50));
     }
     assertThatThrownBy(
-            () ->
-                ENGINE.place(company, Map.of(1, "bio", 2, "day", 3, "risk", 4, "game", 5, "food")))
+            () -> ENGINE.place(company, Map.of(1, "bio", 2, "day", 3, "risk", 4, "game")))
         .isInstanceOf(InvalidRequestException.class);
-    ENGINE.place(company, Map.of(1, "bio", 2, "day", 3, "risk", 4, "game"));
-    assertThat(company.employees.get(4).desk).as("빠진 직원은 쉰다").isNull();
+    ENGINE.place(company, Map.of(1, "bio", 2, "day", 3, "risk"));
+    assertThat(company.employees.get(3).desk).as("빠진 직원은 쉰다").isNull();
   }
 
   @Test
@@ -397,20 +396,19 @@ class CompanyEngineTest {
             () -> ENGINE.draw(company, PROPERTIES.gacha().maxDraws() + 1, new HashSeededRandom(5)))
         .isInstanceOf(InvalidRequestException.class);
 
-    // 자리 수와 상관없이 백 명까지 데리고 있는다 (337번).
-    assertThat(ENGINE.rosterMax(company)).isEqualTo(100);
+    // 데리고 있는 인원에 상한이 없다 (354번): 백 명을 넘겨도 더 뽑는다.
+    assertThat(ENGINE.rosterMax(company)).isGreaterThan(100_000);
     company.tickets = 200;
     while (company.employees.size() < 100) {
       int room = 100 - company.employees.size();
       ENGINE.draw(company, Math.min(PROPERTIES.gacha().maxDraws(), room), new HashSeededRandom(5));
     }
     assertThat(company.employees).hasSize(100);
-    assertThatThrownBy(() -> ENGINE.draw(company, 1, new HashSeededRandom(5)))
-        .as("데리고 있을 자리가 꽉 찼다")
-        .isInstanceOf(InvalidRequestException.class);
+    ENGINE.draw(company, 1, new HashSeededRandom(5));
+    assertThat(company.employees).hasSize(101);
     CompanyState.Employee gone = company.employees.getFirst();
     ENGINE.release(company, gone.id);
-    assertThat(company.employees).hasSize(99).doesNotContain(gone);
+    assertThat(company.employees).hasSize(100).doesNotContain(gone);
     assertThat(company.alumni).extracting(a -> a.name).containsExactly(gone.name);
     ENGINE.draw(company, 1, new HashSeededRandom(5));
 
@@ -709,43 +707,37 @@ class CompanyEngineTest {
    */
   @Test
   void 자본이_줄어_자리가_줄면_돕는_자리부터_일어나_쉰다() {
-    // E 회사(자리 6)에 여섯을 앉힌다. 해 가운데 자본이 1.2억 아래로 떨어져도 그해에는 자리 여섯 그대로다.
+    // 자리는 셋 (354번). 옛 회사처럼 여섯이 앉아 있으면(자리 수가 줄기 전) 넘친 셋이 일어난다: 돕는 자리가 먼저, 그다음 나중에 들어온 사람.
     CompanyState company = open(5, stats(50, 50, 50, 50), 120_000_000 + 1_000_000);
     for (int i = 0; i < 5; i++) {
       ENGINE.hire(company, stats(50, 50, 50, 50));
     }
     List<CompanyState.Employee> staff = company.employees;
     List<String> traders = List.of("bio", "day", "game", "food", "finance");
-    Map<Integer, String> seats = new HashMap<>();
-    seats.put(staff.get(0).id, "research");
-    for (int i = 1; i < 6; i++) {
-      seats.put(staff.get(i).id, traders.get(i - 1));
+    assertThat(ENGINE.seats(company)).isEqualTo(3);
+    Map<Integer, String> four = new HashMap<>();
+    for (int i = 0; i < 4; i++) {
+      four.put(staff.get(i).id, traders.get(i));
     }
-    ENGINE.place(company, seats);
-    assertThat(ENGINE.seats(company)).isEqualTo(6);
-
-    company.capital -= 2_000_000;
-    assertThat(company.capital).isLessThan(120_000_000);
-    assertThat(ENGINE.seats(company)).as("자리 수는 연말에만 바뀐다").isEqualTo(6);
-    assertThat(staff.get(0).desk).isEqualTo("research");
-
-    // 연말에 건물이 줄어들면(F, 자리 4, 296번) 넘친 둘이 일어난다: 돕는 자리가 먼저, 그다음 나중에 들어온 사람.
-    company.gradedCapital = company.capital;
-    company.building = ENGINE.grade(company.capital);
+    assertThatThrownBy(() -> ENGINE.place(company, four))
+        .as("넷은 앉힐 수 없다")
+        .isInstanceOf(InvalidRequestException.class);
+    staff.get(0).desk = "research";
+    for (int i = 1; i < 6; i++) {
+      staff.get(i).desk = traders.get(i - 1);
+    }
     ENGINE.fitSeats(company);
-    assertThat(ENGINE.seats(company)).isEqualTo(4);
     assertThat(staff.get(0).desk).as("돕는 자리가 먼저 일어난다").isNull();
     assertThat(staff.get(5).desk).isNull();
-    for (int i = 1; i < 5; i++) {
+    assertThat(staff.get(4).desk).isNull();
+    for (int i = 1; i < 4; i++) {
       assertThat(staff.get(i).desk).isEqualTo(traders.get(i - 1));
     }
 
     // 돕는 자리가 없으면 나중에 들어온 사람부터 일어난다.
-    company.capital = 1_000_000;
-    company.gradedCapital = company.capital;
     staff.get(0).desk = "bio";
     List<CompanyState.Employee> stood = ENGINE.fitSeats(company);
-    assertThat(stood).extracting(e -> e.id).containsExactly(staff.get(4).id);
+    assertThat(stood).extracting(e -> e.id).containsExactly(staff.get(3).id);
     assertThat(staff.get(0).desk).isEqualTo("bio");
     assertThat(staff.get(1).desk).isEqualTo("bio");
   }
@@ -756,7 +748,7 @@ class CompanyEngineTest {
     for (long seed = 1; seed <= 40; seed++) {
       CompanyState company = open(seed, stats(1, 1, 1, 1), 130_000_000);
       company.building = "E";
-      for (int i = 0; i < 5; i++) {
+      for (int i = 0; i < 2; i++) {
         ENGINE.hire(company, stats(1, 1, 1, 1));
       }
       Map<Integer, String> seats = new HashMap<>();
@@ -768,8 +760,8 @@ class CompanyEngineTest {
       company.invest = null;
       ENGINE.settle(company, new HashSeededRandom(seed));
       assertThat(ENGINE.grade(company)).isEqualTo("E");
-      assertThat(ENGINE.seats(company)).isEqualTo(6);
-      assertThat(company.employees.stream().filter(e -> e.desk != null).count()).isEqualTo(6);
+      assertThat(ENGINE.seats(company)).isEqualTo(3);
+      assertThat(company.employees.stream().filter(e -> e.desk != null).count()).isEqualTo(3);
     }
   }
 
@@ -1188,15 +1180,15 @@ class CompanyEngineTest {
     company.poach = null;
     ENGINE.settle(company, new HashSeededRandom(1));
     assertThat(ENGINE.grade(company)).isEqualTo("F");
-    assertThat(ENGINE.seats(company)).isEqualTo(4);
+    assertThat(ENGINE.seats(company)).isEqualTo(3);
 
-    // 이사: 비용이 빠지고 자리가 늘고 연표에 남는다. 그해 이사 비용은 결산에 따로 적힌다.
+    // 이사: 비용이 빠지고 연표에 남는다(자리는 셋 그대로, 354번). 그해 이사 비용은 결산에 따로 적힌다.
     long before = company.capital;
     ENGINE.upgrade(company);
     assertThat(ENGINE.grade(company)).isEqualTo("E");
     assertThat(company.capital).isEqualTo(before - 18_000_000L);
     assertThat(company.yearMoving).isEqualTo(18_000_000L);
-    assertThat(ENGINE.seats(company)).isEqualTo(6);
+    assertThat(ENGINE.seats(company)).isEqualTo(3);
     assertThat(company.timeline).extracting(e -> e.kind).contains("grow");
     // 한 번에 한 단계씩: D(3억)는 새 건물(상가)이라 한 해 동안 짓는다 (#347). 비용은 지금 다 내고, 연말 결산에서 옮긴다.
     ENGINE.upgrade(company);

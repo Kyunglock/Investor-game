@@ -212,6 +212,9 @@ export function CollectionGrid({ company }: { company: Company }) {
 }
 
 /** 웹의 채용 탭 (312번): 채용권과 뽑기 버튼, 확률표, 합성, 도감. 내보내기는 없앴다(338번). */
+/** 이 값 이상이면 인원 상한이 없는 것으로 본다 (decisions.md 354번). */
+const NO_LIMIT = 100_000
+
 export function GachaPanel({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const { draw } = useRaisingStore.getState()
@@ -229,7 +232,8 @@ export function GachaPanel({ company }: { company: Company }) {
           장
         </p>
         <p className="text-[12px] text-muted" data-testid="roster">
-          데리고 있는 사람 {g.roster} / {g.rosterMax}
+          데리고 있는 사람 {g.roster}
+          {g.rosterMax < NO_LIMIT && ` / ${g.rosterMax}`}명
         </p>
       </div>
       <p className="mt-1 text-[12px] text-muted">
