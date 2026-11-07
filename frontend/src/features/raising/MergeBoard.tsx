@@ -15,8 +15,8 @@ type Employee = Company['employees'][number]
 const DRAG_PX = 6
 /** 재료가 바탕으로 미끄러져 겹치는 시간(ms). 끝나면 서버에 합성을 보낸다. */
 const GLIDE_MS = 480
-/** 합성 결과 줄이 떠 있는 시간(ms). */
-const RESULT_MS = 2600
+/** 합성 결과 줄이 떠 있는 시간(ms). 마지막 한마디까지 읽게 조금 길다 (350번). */
+const RESULT_MS = 4200
 /** 인벤토리 한 줄의 칸 수. 마지막 줄은 빈 칸으로 채운다. */
 const INVENTORY_COLS = 5
 
@@ -31,6 +31,8 @@ export interface MergeEffects {
   /** 재료를 바탕에 놓았다(합성이 시작된다). */
   drop?: () => void
   merged?: () => void
+  /** 대성공: 두 단계 뛰었다 (350번). merged 대신 부른다. */
+  jackpot?: () => void
   failed?: () => void
 }
 
@@ -42,6 +44,11 @@ interface MergeResult {
   from: string
   to: string
   n: number
+  /** 서버가 준 보상 (350번): 대성공·마지막 한마디·이어받은 버릇·도감 첫 등급. */
+  jackpot?: boolean
+  farewells?: string[]
+  inheritedQuirk?: string | null
+  firstOfGrade?: boolean
 }
 const useMergeResult = create<{ result: MergeResult | null }>(() => ({ result: null }))
 
@@ -86,12 +93,40 @@ export function MergeBoard({ company, effects }: { company: Company; effects?: M
   }, [result])
 
   const resultLine = result && (
-    <p key={result.n} className="merge-result" role="status" data-testid="merge-result">
-      <b>{result.name}</b>
-      <span className="text-muted">
-        {result.from} → <b className="text-gold">{result.to}</b>
-      </span>
-    </p>
+    <div
+      key={result.n}
+      className={`merge-result flex-col items-stretch ${result.jackpot ? 'is-jackpot' : ''}`}
+      role="status"
+      data-testid="merge-result"
+      data-jackpot={result.jackpot || undefined}
+    >
+      <p className="flex items-center justify-between gap-2">
+        <b>
+          {result.jackpot && <span className="mr-1 text-gold">대성공!!</span>}
+          {result.name}
+        </b>
+        <span className="text-muted">
+          {result.from} → <b className="text-gold">{result.to}</b>
+          {result.firstOfGrade && (
+            <span className="ml-1 rounded bg-red-pen px-1 text-[10px] font-bold text-white">
+              도감 첫 합성
+            </span>
+          )}
+        </span>
+      </p>
+      {result.farewells && result.farewells.length > 0 && (
+        <ul className="mt-1 text-[12px] text-ink/80" data-testid="merge-farewell">
+          {result.farewells.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      )}
+      {result.inheritedQuirk && (
+        <p className="mt-1 text-[12px] font-semibold text-teal" data-testid="merge-inherited">
+          {result.name}이(가) 버릇을 이어받았다: {result.inheritedQuirk}
+        </p>
+      )}
+    </div>
   )
 
   if (company.employees.length === 0) {
@@ -134,10 +169,28 @@ export function MergeBoard({ company, effects }: { company: Company; effects?: M
       effects?.failed?.()
       return
     }
-    const next = EMPLOYEE_LADDER[EMPLOYEE_LADDER.indexOf(group.grade) + 1]
-    effects?.merged?.()
+    // 서버가 보상을 정한다 (350번): 대성공이면 두 단계, 재료의 마지막 한마디, 이어받은 버릇, 도감 첫 합성.
+    const last = useRaisingStore.getState().company?.gacha.lastMerge
+    const mine = last && last.baseId === target ? last : null
+    const next = mine?.after ?? EMPLOYEE_LADDER[EMPLOYEE_LADDER.indexOf(group.grade) + 1]
+    if (mine?.jackpot) {
+      effects?.jackpot?.() ?? effects?.merged?.()
+    } else {
+      effects?.merged?.()
+    }
     const n = (useMergeResult.getState().result?.n ?? 0) + 1
-    useMergeResult.setState({ result: { name, from: group.grade, to: next, n } })
+    useMergeResult.setState({
+      result: {
+        name,
+        from: group.grade,
+        to: next,
+        n,
+        jackpot: mine?.jackpot,
+        farewells: mine?.farewells,
+        inheritedQuirk: mine?.inheritedQuirk,
+        firstOfGrade: mine?.firstOfGrade,
+      },
+    })
   }
 
   /** 끌던 카드를 이 카드에 놓을 수 있나: 같은 무리의 다른 사람. */

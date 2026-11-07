@@ -21,6 +21,15 @@ const MERGE_EFFECTS = {
     sfx.levelUp()
     haptic.success()
   },
+  // 대성공 (350번): 금빛 번쩍임과 색종이, 팡파르, 흔들림.
+  jackpot: () => {
+    const fx = useFx.getState()
+    fx.flashScreen('rgba(245,211,107,0.55)')
+    fx.burstAt(null, 'confetti')
+    fx.shakeScreen()
+    sfx.fanfare()
+    haptic.heavy()
+  },
   failed: () => haptic.error(),
 }
 

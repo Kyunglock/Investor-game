@@ -667,7 +667,7 @@ components:
         gacha:
           type: object
           description: 채용 뽑기 (decisions.md 312번). 공채 시장(지원자를 골라 계약금을 내고 뽑던 것, 228번)을 대신한다
-          required: [tickets, roster, rosterMax, draws, maxDraws, mergeCount, rates, drawn, collection]
+          required: [tickets, roster, rosterMax, draws, maxDraws, mergeCount, rates, drawn, collection, lastMerge]
           properties:
             tickets: { type: integer, description: 가진 채용권. 한 장에 한 명. 회사를 차릴 때·분기·연말·업적·이사로 받고 다음 회사로 이어진다 }
             roster: { type: integer, description: 데리고 있는 사람 수(쉬는 사람 포함) }
@@ -703,10 +703,26 @@ components:
               description: 도감. 등급(F~GOD)마다 뽑거나 합성해서 얻은 사람 수. 사장의 것이라 다음 회사로 이어진다
               items:
                 type: object
-                required: [grade, count]
+                required: [grade, count, mergedFirst]
                 properties:
                   grade: { $ref: '#/components/schemas/Grade' }
                   count: { type: integer }
+                  mergedFirst: { type: boolean, description: 이 등급을 합성으로 처음 만들었다 (decisions.md 350번) }
+            lastMerge:
+              description: 방금 한 합성 (decisions.md 350번). 아직 없으면 null. 화면은 합성 직후에만 보인다
+              oneOf:
+                - type: object
+                  required: [baseId, name, before, after, jackpot, farewells, firstOfGrade, inheritedQuirk]
+                  properties:
+                    baseId: { type: integer }
+                    name: { type: string }
+                    before: { $ref: '#/components/schemas/Grade' }
+                    after: { $ref: '#/components/schemas/Grade' }
+                    jackpot: { type: boolean, description: 대성공. 두 단계 뛰었다 }
+                    farewells: { type: array, items: { type: string }, description: 재료들의 마지막 한마디(버릇대로) }
+                    firstOfGrade: { type: boolean, description: 이 등급을 합성으로 처음 만들었다 }
+                    inheritedQuirk: { type: [string, 'null'], description: 이어받은 버릇 이름. 없으면 null }
+                - type: 'null'
         history:
           type: object
           description: 회사 연표·업적·명예의 전당 (decisions.md 263번)

@@ -235,8 +235,15 @@ class JsonContentCatalog implements ContentCatalog {
               && q.resign() != null
               && q.resign().keySet().containsAll(List.of("IGNORED", "FROZEN"))
               && q.poachKept() != null
-              && q.poachLeft() != null,
+              && q.poachLeft() != null
+              && q.farewell() != null
+              && !q.farewell().isEmpty(),
           "직원 버릇 문구가 빠졌다: " + q.code());
+      require(
+          company.market() != null
+              && company.market().jackpot() != null
+              && company.market().inherited() != null,
+          "합성 대성공·버릇 이어받기 문구가 없다 (350번)");
     }
     RaisingContent.Macro macro = company.macro();
     List<String> stances = List.of("AGGRESSIVE", "NEUTRAL", "DEFENSIVE");

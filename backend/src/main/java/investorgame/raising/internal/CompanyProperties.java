@@ -264,7 +264,9 @@ public record CompanyProperties(
       int maxDraws,
       int rosterMax,
       int mergeCount,
-      List<Rate> rates) {}
+      List<Rate> rates,
+      int jackpotPercent,
+      int inheritPercent) {}
 
   /** 뽑기 확률표의 한 칸: 회사 등급보다 steps 단계 위(음수면 아래)가 percent%. star면 특급(특급 연출, 능력치가 그 띠에 고르게). */
   public record Rate(int steps, int percent, boolean star) {}
