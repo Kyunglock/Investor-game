@@ -98,7 +98,12 @@ export function MacroWindow({
                     {MACRO_OPINIONS[g.read].label}{' '}
                     <span className="font-mono-num text-[13px]">· {g.remarks.length}명</span>{' '}
                     <span className="font-normal text-[13px] text-ink">
-                      {shown.map((r) => `팀장 ${r.name}`).join(' · ')}
+                      {shown
+                        .map(
+                          (r) =>
+                            `팀장 ${r.name} ${employees.find((e) => e.id === r.employeeId)?.overallGrade ?? ''}`,
+                        )
+                        .join(' · ')}
                       {others > 0 && <span className="text-muted"> 외 {others}명</span>}
                     </span>
                   </h4>

@@ -606,7 +606,7 @@ function DeskCard({
                     {i > 0 && ' · '}
                     <GradeBadge grade={e.overallGrade} size="inline" />
                     {e.name}
-                    {e.leader ? '(팀장)' : ''}
+                    {e.leader ? `(팀장 ${e.overallGrade})` : ''}
                   </span>
                 ))}
           </span>

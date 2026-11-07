@@ -82,7 +82,7 @@ export function StaffScene({ company }: { company: Company }) {
                             <span key={e.id}>
                               {i > 0 && ' · '}
                               <NameTag employee={e} />
-                              {e.leader ? '(팀장)' : ''}
+                              {e.leader ? `(팀장 ${e.overallGrade})` : ''}
                             </span>
                           ))}
                     </span>
