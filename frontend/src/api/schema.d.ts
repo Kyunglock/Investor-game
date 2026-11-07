@@ -870,6 +870,16 @@ export interface components {
                      * @description 회의 손익. 이미 자본에 들어갔다
                      */
                     total: number;
+                    /** @description 결과가 드러난 뒤 양쪽의 반응 (decisions.md 358번). 맞힌 쪽(kind WIN)과 틀린 쪽(LOSE)이 한마디씩. 토론이 없던 옛 회의면 비어 있다 */
+                    reactions?: {
+                        name: string;
+                        /** @enum {string} */
+                        side: "BUY" | "SELL";
+                        text: string;
+                        last: boolean;
+                        /** @enum {string} */
+                        kind: "TALK" | "TALLY" | "WIN" | "LOSE";
+                    }[];
                     /** @description 물어 온 직원을 칭찬하거나 탓하는 한 줄 (267번). 옛 회의면 null */
                     credit?: string | null;
                     results: {

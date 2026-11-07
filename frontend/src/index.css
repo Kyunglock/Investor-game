@@ -920,6 +920,46 @@ p.animate-stamp {
   animation-delay: 0.4s;
 }
 /* 토론 한 줄이 아래에서 툭 튀어 오른다 (decisions.md 285번). */
+/* 외침 (decisions.md 358번): 말풍선이 크게 튀어나오며 좌우로 흔들린다. 선언은 도장처럼 쿵. */
+@keyframes shout {
+  0% {
+    transform: scale(0.6) rotate(-3deg);
+    opacity: 0;
+  }
+  35% {
+    transform: scale(1.18) rotate(2deg);
+    opacity: 1;
+  }
+  55% {
+    transform: scale(0.98) rotate(-1.5deg);
+  }
+  75% {
+    transform: scale(1.04) rotate(1deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+.animate-shout {
+  animation: shout 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+  transform-origin: bottom left;
+}
+@keyframes shout-stamp {
+  0% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(0.96);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.animate-shout-stamp {
+  animation: shout-stamp 0.35s ease-out both;
+}
 @keyframes debate-in {
   0% {
     opacity: 0;

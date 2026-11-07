@@ -453,6 +453,36 @@ export function InvestWindow({
                 {outcome.up ? '▲' : '▼'} {outcome.reveal}
               </span>
             </p>
+            {outcome.reactions && outcome.reactions.length > 0 && (
+              // 결과 뒤 양쪽의 반응 (358번): 맞힌 쪽은 으스대고(혹은 "제 말 들었어야죠"), 틀린 쪽은 사과하거나 안도한다.
+              <ul
+                className="mt-2 grid gap-1"
+                style={{ animationDelay: `${show.reveal}ms` }}
+                data-testid="invest-reactions"
+              >
+                {outcome.reactions.map((r, i) => (
+                  <li
+                    key={`${r.name}-${r.side}`}
+                    className={`animate-debate-in flex max-w-[92%] items-baseline gap-1.5 text-[13px] ${
+                      r.side === 'BUY' ? 'self-start' : 'flex-row-reverse self-end text-right'
+                    }`}
+                    style={{
+                      animationDelay: `${show.reveal + 300 + i * 500}ms`,
+                      animationFillMode: 'both',
+                    }}
+                    data-side={r.side}
+                    data-kind={r.kind}
+                  >
+                    <b className={r.kind === 'WIN' ? 'text-up' : 'text-down'}>{r.name}</b>
+                    <span
+                      className={`rounded-xl px-2.5 py-1 ${r.kind === 'WIN' ? 'bg-up/12' : 'bg-down/12 italic'}`}
+                    >
+                      {r.text}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
             <p
               className="animate-reveal mt-1 text-center text-[15px]"
               style={{ animationDelay: `${show.total}ms` }}

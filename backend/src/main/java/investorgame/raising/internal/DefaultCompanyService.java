@@ -639,6 +639,9 @@ class DefaultCompanyService implements CompanyService {
                                     ? null
                                     : new CompanyView.Rival(r.rivalKind, r.rival, r.guard)))
                     .toList(),
+                invest.reactions.stream()
+                    .map(d -> new CompanyView.DebateLine(d.name, d.side, d.text, d.last, kindOf(d)))
+                    .toList(),
                 meetings.credit(c));
     return new CompanyView.Invest(
         invest.title,

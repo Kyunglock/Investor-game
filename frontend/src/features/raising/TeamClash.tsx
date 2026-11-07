@@ -61,19 +61,19 @@ function Character({
   )
 }
 
-/** 토론하는 가장 짧은 시간(ms) (decisions.md 279·284·295번). */
-const CLASH_MS = 2900
+/** 토론하는 가장 짧은 시간(ms) (decisions.md 279·284·295·358번: 2.9초에서 1.8초로). */
+const CLASH_MS = 1800
 /**
- * 말 한 줄이 머무는 시간(ms) (285·303번): 읽을 만큼. 글자 수에 따라 길어진다(기본 1.2초 + 글자마다 45ms, 1.6~4초). 전에는 길이와 상관없이 1초라
- * 읽기 전에 지나갔다. 결판의 박자(표결·선언·승복)도 같은 셈이다.
+ * 말 한 줄이 머무는 시간(ms) (285·303·358번): 읽을 만큼만 빠르게. 글자 수에 따라 길어진다(기본 0.7초 + 글자마다 28ms, 1.0~2.4초). 전에는
+ * 1.2초 + 45ms(1.6~4초)라 회의가 늘어졌다. 결판의 박자(표결·선언·승복)도 같은 셈이다.
  */
 export function lineMs(text: string): number {
-  return Math.max(1600, Math.min(4000, 1200 + text.length * 45))
+  return Math.max(1000, Math.min(2400, 700 + text.length * 28))
 }
 /** 한쪽에 세우는 사람 수. 넘치면 "외 N명". */
 const SEATS = 3
-/** 단톡방에서 다음 말이 뜨기 전 "입력 중…"이 보이는 시간(ms) (305번). */
-const TYPING_MS = 700
+/** 단톡방에서 다음 말이 뜨기 전 "입력 중…"이 보이는 시간(ms) (305·358번: 0.7초에서 0.35초로). */
+const TYPING_MS = 350
 
 export type DebateLine = {
   name: string
@@ -565,11 +565,17 @@ export function TeamClash({
                       {who?.leader ? ' · 팀장' : ''}
                     </span>
                     <div
+                      // 외침 (358번): 느낌표로 끝나는 말은 크게 튀어나오며 흔들리고, 선언은 쿵 찍힌다.
                       className={`rounded-xl px-2.5 py-1.5 text-[12.5px] leading-snug shadow-sm ${
                         buySide
                           ? 'rounded-bl-sm bg-up/12 text-ink'
                           : 'rounded-br-sm bg-down/12 text-ink'
-                      } ${kind === 'WIN' ? 'font-bold' : ''} ${kind === 'LOSE' ? 'italic opacity-80' : ''}`}
+                      } ${kind === 'WIN' ? 'animate-shout-stamp font-bold' : ''} ${kind === 'LOSE' ? 'italic opacity-80' : ''} ${
+                        kind === 'TALK' && /[!！]$/.test(d.text)
+                          ? 'animate-shout text-[13.5px] font-semibold'
+                          : ''
+                      }`}
+                      data-shout={kind === 'TALK' && /[!！]$/.test(d.text) ? true : undefined}
                     >
                       {d.text}
                     </div>

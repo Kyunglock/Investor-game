@@ -746,4 +746,33 @@ class InvestEngineTest {
     assertThat(together).isZero();
     assertThat(clean).as("꼬리표 문장도 나오기는 한다").isPositive();
   }
+
+  /**
+   * 결과 뒤 양쪽 반응 (decisions.md 358번): 맞힌 쪽과 틀린 쪽이 한마디씩. 사장이 따른 쪽은 cheer/sorry, 안 따른 쪽은
+   * toldYou/relief.
+   */
+  @Test
+  void 결과가_드러나면_맞힌_쪽과_틀린_쪽이_한마디씩_한다() {
+    int seen = 0;
+    for (int seed = 0; seed < 40; seed++) {
+      CompanyState c = opened(new HashSeededRandom(seed), 300_000_000L);
+      ENGINE.hire(c, stats(90, 50, 50, 50));
+      ENGINE.hire(c, stats(20, 50, 50, 50));
+      ENGINE.place(c, Map.of(1, "day", 2, "bio"));
+      c.phase = "normal";
+      ENGINE.invest.convene(c, new HashSeededRandom(seed));
+      ENGINE.invest.decide(c, InvestEngine.BUY, new HashSeededRandom(seed));
+      List<CompanyState.DebateLine> reactions = c.invest.reactions;
+      assertThat(reactions).hasSize(2);
+      String right = c.invest.up ? InvestEngine.BUY : InvestEngine.SELL;
+      for (CompanyState.DebateLine r : reactions) {
+        assertThat(r.text).isNotBlank().doesNotContain("{");
+        assertThat(r.kind).isEqualTo(r.side.equals(right) ? InvestEngine.WIN : InvestEngine.LOSE);
+        // 말한 사람은 그쪽에서 토론한 사람이다.
+        assertThat(c.invest.debate).anyMatch(d -> d.name.equals(r.name) && d.side.equals(r.side));
+      }
+      seen++;
+    }
+    assertThat(seen).isEqualTo(40);
+  }
 }

@@ -228,12 +228,17 @@ public record RaisingContent(
    * {against}: 상대 쪽 요지, {stock}). tally: 사회(안목이 가장 높은 팀장)가 표결을 부르는 말({buy}·{sell} 무게). win: 이긴 쪽이
    * 선언하는 말. lose: 진 쪽이 토를 달고 물러나는 말. bystanders: 한쪽이 비었을 때 끌려 나오는 사람.
    */
+  /**
+   * after (358번): 결과가 드러난 뒤 양쪽의 반응. cheer: 맞힌 쪽을 사장이 따랐다 · toldYou: 맞혔는데 안 따랐다 · sorry: 틀린 쪽을 따랐다 ·
+   * relief: 틀렸는데 안 따랐다({stock}).
+   */
   public record Debate(
       Map<String, List<String>> lines,
       List<String> tally,
       Map<String, List<String>> win,
       List<String> lose,
-      List<String> bystanders) {}
+      List<String> bystanders,
+      Map<String, List<String>> after) {}
 
   /**
    * 시대가 바뀐다 (decisions.md 250번). ending: 시대의 마지막 해 연초 회의 한 줄({era}). changed: 시대가 바뀐 해의 결산 소식

@@ -924,6 +924,18 @@ components:
                         reveal: { type: string }
                         decisive: { type: integer, description: 결정적 문장의 번호(sentences 안) }
                         total: { type: integer, format: int64, description: 회의 손익. 이미 자본에 들어갔다 }
+                        reactions:
+                          type: array
+                          description: 결과가 드러난 뒤 양쪽의 반응 (decisions.md 358번). 맞힌 쪽(kind WIN)과 틀린 쪽(LOSE)이 한마디씩. 토론이 없던 옛 회의면 비어 있다
+                          items:
+                            type: object
+                            required: [name, side, text, last, kind]
+                            properties:
+                              name: { type: string }
+                              side: { type: string, enum: [BUY, SELL] }
+                              text: { type: string }
+                              last: { type: boolean }
+                              kind: { type: string, enum: [TALK, TALLY, WIN, LOSE] }
                         credit: { type: [string, 'null'], description: 물어 온 직원을 칭찬하거나 탓하는 한 줄 (267번). 옛 회의면 null }
                         results:
                           type: array
