@@ -27,7 +27,7 @@ export function tutorialStep(company: Company): TutorialStep {
       id: 'hire',
       n: 1,
       title: '직원 뽑기',
-      text: '채용 탭에서 채용권으로 사람을 뽑습니다. 카드가 뒤집히며 등급이 드러납니다. 방패의 등급이 높을수록 잘 맞히고, 같은 등급 셋을 모으면 합쳐서 한 단계 올릴 수 있습니다.',
+      text: '채용 탭에서 채용권으로 사람을 뽑습니다. 카드가 뒤집히며 등급이 드러납니다. 방패의 등급이 높을수록 잘 맞히고, 같은 등급 둘을 모아 카드를 끌어 겹치면 한 단계 올릴 수 있습니다.',
       tab: 'market',
       spot: 'market',
     }

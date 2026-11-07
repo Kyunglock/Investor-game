@@ -26,7 +26,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param effects X 이상 등급의 효과 수치 (2.4절)
  * @param hr 인사팀이 채용 뽑기를 돕는다 (6.3절)
  * @param market 뽑은 사람의 능력치와 계약금(연봉·이적료의 바탕) (decisions.md 228번)
- * @param gacha 채용 뽑기: 채용권으로 뽑고, 같은 등급 셋을 합쳐 한 단계 위로 (decisions.md 312번)
+ * @param gacha 채용 뽑기: 채용권으로 뽑고, 같은 등급 둘을 합쳐 한 단계 위로 (decisions.md 312·315번)
  * @param invest 투자 회의: 해마다 한 번 단서 기사를 놓고 직원들과 고민한다 (decisions.md 229번)
  * @param people 이직 제안과 근속 (decisions.md 262번)
  * @param macro 거시경제 회의: 올해 회사의 태도가 그해 결산 전체에 걸린다 (decisions.md 266번)

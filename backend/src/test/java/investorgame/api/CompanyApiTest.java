@@ -328,7 +328,7 @@ class CompanyApiTest {
     settleYear(1).andExpect(jsonPath("$.year").value(2));
   }
 
-  /** 데리고 있을 자리가 차면 내보내야 뽑고, 합성은 같은 등급 셋이어야 한다. 인사팀이 뽑기를 돕는다 (decisions.md 312번, 6.3절). */
+  /** 데리고 있을 자리가 차면 내보내야 뽑고, 합성은 같은 등급 둘이어야 한다(재료 한 명). 인사팀이 뽑기를 돕는다 (decisions.md 312번, 6.3절). */
   @Test
   void 내보내고_합치고_인사팀이_뽑기를_돕는다() throws Exception {
     json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
@@ -349,7 +349,7 @@ class CompanyApiTest {
         .andExpect(status().isBadRequest());
     postJson(
             "/api/company/merge",
-            "{\"baseId\":%d,\"materialIds\":[%d]}".formatted(ids.get(0), ids.get(1)))
+            "{\"baseId\":%d,\"materialIds\":[%d,%d]}".formatted(ids.get(0), ids.get(1), ids.get(2)))
         .andExpect(status().isBadRequest());
 
     DocumentContext placed =
