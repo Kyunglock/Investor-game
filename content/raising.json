@@ -477,7 +477,8 @@
       "line": "맞히면 {gain}% 더 번다 · 한 해 일하면 {growth}% 확률로 자란다",
       "lineTop": "맞히면 {gain}% 더 번다 · 실전 경험으로 오른다",
       "proposal": "잠깐만요, 사장님!! {percent}%",
-      "grown": "{name}이(가) 한 해 일하며 자랐다: {stat} {before} → {after}."
+      "grown": "{name}이(가) 한 해 일하며 자랐다: {stat} {before} → {after}.",
+      "promoted": "{name}이(가) {title}(으)로 올라섰다! 종합 {before} → {after}."
     },
     "market": {
       "drawStar": "채용 뽑기에서 특급 인재 {name}({grade})이(가) 왔다.",
