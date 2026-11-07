@@ -47,7 +47,7 @@ ADMIN_TOKEN=아무-비밀값 ./gradlew bootTestRun
 
 ### 안드로이드 앱 (APK)
 
-웹을 WebView에 담은 앱이다 ([`docs/app.md`](./docs/app.md)). GitHub Actions의 **Android** 워크플로를 돌리면(저장소 변수 `APP_SERVER_URL`에 운영 웹 주소) Artifacts에 `app-debug.apk`가 생긴다. 내 컴퓨터에 Android Studio가 있으면:
+웹을 WebView에 담은 앱이다 ([`docs/app.md`](./docs/app.md)). GitHub Actions의 **Android** 워크플로를 돌리면 운영 웹(`https://game.kwaklabs.com`)을 띄우는 `app-debug.apk`가 Artifacts에 생긴다. 다른 주소로 띄우려면 Run workflow의 `server_url`에 적는다. 내 컴퓨터에 Android Studio가 있으면:
 
 ```bash
 cd frontend
