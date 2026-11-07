@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/** 계정 없는 익명 세션. 마지막 접속 후 정해진 시간이 지나면 만료된다 (decisions.md 9번). */
+/** 계정 없는 익명 세션. 마지막 접속 후 정해진 시간(session.ttl, 30일)이 지나면 만료된다 (decisions.md 9·311번). */
 public interface SessionService {
 
   /** 새 세션을 발급한다. 토큰 원문은 이 반환값에만 있고 DB에는 해시만 저장한다. ip는 처음 접속한 주소 (decisions.md 63번). */
