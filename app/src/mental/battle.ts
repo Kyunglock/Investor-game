@@ -57,7 +57,6 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   kbx: number
   kby: number
   born: number
-  nextShot: number
   look: 0 | 1
   /** 죽는 연출 중: 몸은 이미 꺼졌고 그림만 부풀며 사라진다. */
   dying: boolean
@@ -83,7 +82,6 @@ class BattleScene extends Phaser.Scene {
   private wall: Phaser.GameObjects.TileSprite | null = null
   private wallZone: Phaser.GameObjects.Zone | null = null
   private bullets!: Phaser.Physics.Arcade.Group
-  private tears!: Phaser.Physics.Arcade.Group
   private enemies!: Phaser.Physics.Arcade.Group
   private boom!: Record<EnemyKind, Phaser.GameObjects.Particles.ParticleEmitter>
   /** 총 손맛: 탄 꼬리, 맞는 자리의 불꽃, 총구 화염 풀. */
@@ -112,8 +110,8 @@ class BattleScene extends Phaser.Scene {
   /** 첫 카드를 골라 싸움이 시작됐다 (339번). */
   private begun = false
   private nextWave = 20
-  /** 한 화면에 함께 있는 적의 최대 수(334번): 더 있으면 새로 만들지 않는다. */
-  private static readonly MAX_ALIVE = 28
+  /** 한 화면에 함께 있는 적의 최대 수(334·340번): 더 있으면 새로 만들지 않는다. */
+  private static readonly MAX_ALIVE = 60
 
   constructor(opts: BattleOptions) {
     super('battle')
@@ -172,7 +170,6 @@ class BattleScene extends Phaser.Scene {
 
     // 풀: 탄과 적을 미리 만들어 두고 다시 쓴다.
     this.bullets = this.physics.add.group({ maxSize: 400 })
-    this.tears = this.physics.add.group({ maxSize: 120 })
     this.enemies = this.physics.add.group({ maxSize: 700 })
 
     this.physics.add.overlap(this.bullets, this.enemies, (b, e) => {
@@ -192,13 +189,6 @@ class BattleScene extends Phaser.Scene {
       const enemy = e as Enemy
       if (enemy.active && !enemy.dying) {
         this.hurt(ENEMIES[enemy.kind].dmg, enemy)
-      }
-    })
-    this.physics.add.overlap(this.player, this.tears, (_p, t) => {
-      const tear = t as Phaser.Physics.Arcade.Image
-      if (tear.active) {
-        tear.disableBody(true, true)
-        this.hurt(6)
       }
     })
     if (this.wallZone) {
@@ -293,9 +283,9 @@ class BattleScene extends Phaser.Scene {
     return this.scale.height - 150
   }
 
-  /** 플레이어의 세로 자리(붙박이, 332번): 공격은 화면 아래, 디펜스는 멘탈벽 바로 앞(위). */
+  /** 플레이어의 세로 자리(붙박이, 332·340번): 공격은 화면 아래, 디펜스는 멘탈벽 뒤(아래)에 숨어 벽 너머로 쏜다. */
   private playerY() {
-    return this.genre.target === 'wall' ? this.wallY() - 70 : this.scale.height - 120
+    return this.genre.target === 'wall' ? this.wallY() + 78 : this.scale.height - 120
   }
 
   // ── 생성
@@ -332,7 +322,6 @@ class BattleScene extends Phaser.Scene {
     e.kbx = 0
     e.kby = 0
     e.born = this.elapsed
-    e.nextShot = this.elapsed + 1.2
   }
 
   private waveDump() {
@@ -582,16 +571,6 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
-  private enemyShot(e: Enemy, ux: number, uy: number) {
-    const t = this.tears.get(e.x, e.y, 'tear') as Phaser.Physics.Arcade.Image | null
-    if (!t) {
-      return
-    }
-    t.enableBody(true, e.x, e.y, true, true).setDepth(4)
-    t.body?.setCircle(5, 0, 3)
-    t.setVelocity(ux * 260, uy * 260)
-  }
-
   private finish(win: boolean) {
     if (this.over) {
       return
@@ -663,8 +642,8 @@ class BattleScene extends Phaser.Scene {
       this.shoot(time)
     }
 
-    // 생성: 4분에 걸쳐 갈수록 빨라진다. 파도는 20초마다 투매 → 투기 → 패닉 순으로 돌고 뒤로 갈수록 커진다 (334번: 한 번에 적게).
-    const every = Math.max(380, 1400 - this.elapsed * 4.2)
+    // 생성: 4분에 걸쳐 갈수록 빨라진다. 파도는 20초마다 투매 → 투기 → 패닉 순으로 돌고 뒤로 갈수록 커진다 (340번: 334번보다 두 배쯤 많이).
+    const every = Math.max(200, 700 - this.elapsed * 2.6)
     if (time - this.lastSpawn > every) {
       this.lastSpawn = time
       const r = Math.random()
@@ -693,20 +672,8 @@ class BattleScene extends Phaser.Scene {
       // 일자로 내려온다 (333번): 옆으로 흔들리거나 돌지 않는다. 목표는 멘탈벽 또는 플레이어의 높이.
       const targetY = this.wallZone ? this.wallY() : p.y
       const d = Math.abs(targetY - e.y) || 1
-      let sy = v.speed
-      if (e.kind === 'stop') {
-        // 손절매: 멀찍이 멈춰 서서 플레이어를 향해 멘탈 탄을 쏜다.
-        if (targetY - e.y < 220) {
-          sy = 0
-        }
-        const px = p.x - e.x
-        const py = p.y - e.y
-        const pd = Math.hypot(px, py) || 1
-        if (this.elapsed > e.nextShot && pd < 560) {
-          e.nextShot = this.elapsed + 2
-          this.enemyShot(e, px / pd, py / pd)
-        }
-      }
+      // 원거리 공격은 없다 (340번): 손절매도 다른 적처럼 곧장 내려와 부딪힌다.
+      const sy = v.speed
       if (e.kind === 'spec') {
         // 투기: 부풀다가 터진다.
         const s = 1 + Math.min(1, (this.elapsed - e.born) / 9) * 0.9
@@ -748,12 +715,6 @@ class BattleScene extends Phaser.Scene {
       }
       if (Math.floor(time / 16) % 2 === 0) {
         this.trail.emitParticleAt(b.x, b.y)
-      }
-    }
-    for (const child of this.tears.getChildren()) {
-      const t = child as Phaser.Physics.Arcade.Image
-      if (t.active && (t.x < -50 || t.y < -50 || t.x > w + 50 || t.y > this.scale.height + 50)) {
-        t.disableBody(true, true)
       }
     }
   }
