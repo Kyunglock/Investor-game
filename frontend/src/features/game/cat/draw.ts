@@ -549,42 +549,121 @@ export function drawCat(c: Ctx, o: CatLook) {
   c.restore()
 }
 
+export type GunKind = 'pistol' | 'revolver' | 'smg' | 'shotgun' | 'rifle'
+export type GunGrade = 'N' | 'R' | 'SR' | 'UR'
+
+/** 무기 등급별 몸통색 (346번): 일반 잿빛, 고급 파랑, 희귀 보라, 전설 금. */
+export const GUN_GRADE_COLOR: Record<GunGrade, string> = {
+  N: '#6a6670',
+  R: '#4f7fc4',
+  SR: '#8a5fd6',
+  UR: '#e0a93a',
+}
+
 /**
- * 권총과 그것을 쥔 두 앞발 (344번). 원점이 손잡이를 쥔 뒷발(피벗), +x가 총구 방향. 상자 좌표 -8..26 × -8..14 안에 든다.
+ * 무기와 그것을 쥔 두 앞발 (344·346번). 원점이 손잡이를 쥔 뒷발(피벗), +x가 총구 방향. 상자 좌표 -8..26 × -8..14 안에 든다.
  * 위로 겨눠도 총으로 읽히게: 긴 총신, 아래로 꺾인 손잡이, 방아쇠울, 가늠쇠. 앞발 하나는 손잡이, 하나는 총신 밑을 받친다.
+ * 종류마다 실루엣이 다르다: 권총(기본), 리볼버(실린더), 기관단총(탄창·짧은 개머리), 산탄총(두 겹 총신·나무 펌프), 소총(긴 총신·조준경·나무 개머리).
+ * 등급은 몸통색이고 전설은 반짝이까지.
  */
-export function drawGun(c: Ctx, fur: string) {
+export function drawGun(c: Ctx, fur: string, kind: GunKind = 'pistol', grade: GunGrade = 'N') {
+  const body = GUN_GRADE_COLOR[grade]
+  const darkBody = dark(body, 0.75)
+  const wood = '#a98464'
   c.save()
   c.lineJoin = 'round'
   c.lineCap = 'round'
+  // 개머리(기관단총·소총): 피벗 뒤로
+  if (kind === 'smg') {
+    rrect(c, -8, -2.5, 7, 4.5, 1.5)
+    fs(c, darkBody, 1.6)
+  } else if (kind === 'rifle' || kind === 'shotgun') {
+    c.beginPath()
+    c.moveTo(-2, -2.5)
+    c.lineTo(-8, 1)
+    c.lineTo(-8, 7)
+    c.lineTo(-2, 4)
+    c.closePath()
+    fs(c, wood, 1.6)
+  }
   // 손잡이: 뒤로 꺾여 내려간다
   c.save()
   c.translate(1, 1.5)
   c.rotate(0.5)
-  rrect(c, -3.2, 0, 6.4, 11.5, 2.2)
-  fs(c, '#8d8a93', 1.8)
+  rrect(c, -3.2, 0, 6.4, kind === 'revolver' ? 12.5 : 11.5, 2.2)
+  fs(c, kind === 'shotgun' || kind === 'rifle' ? wood : dark(body, 0.9), 1.8)
   c.restore()
+  // 탄창(기관단총): 총신 아래로 곧게
+  if (kind === 'smg') {
+    rrect(c, 6, 2, 4.5, 10, 1.2)
+    fs(c, darkBody, 1.5)
+  }
   // 총신과 슬라이드
-  rrect(c, -3, -4, 24, 7, 2.5)
-  fs(c, '#6a6670', 1.8)
-  rrect(c, -1.5, -3, 19, 2.2, 1)
-  c.fillStyle = 'rgba(255,255,255,.22)'
-  c.fill()
+  const len = kind === 'smg' ? 18 : kind === 'revolver' ? 21 : 24
+  if (kind === 'shotgun') {
+    rrect(c, -3, -5.5, len, 4.5, 2)
+    fs(c, body, 1.8)
+    rrect(c, -3, -1.5, len, 4.5, 2)
+    fs(c, body, 1.8)
+    rrect(c, 9, -2.5, 7, 6, 1.5)
+    fs(c, wood, 1.6)
+  } else {
+    rrect(c, -3, -4, len, kind === 'rifle' ? 5.5 : 7, 2.5)
+    fs(c, body, 1.8)
+    rrect(c, -1.5, -3, len - 5, 2.2, 1)
+    c.fillStyle = 'rgba(255,255,255,.22)'
+    c.fill()
+  }
+  // 리볼버 실린더
+  if (kind === 'revolver') {
+    rrect(c, 2, -5.5, 8, 9, 3)
+    fs(c, darkBody, 1.6)
+    ell(c, 6, -1, 1.6, 1.6)
+    c.fillStyle = INK
+    c.fill()
+  }
+  // 조준경(소총)
+  if (kind === 'rifle') {
+    rrect(c, 5, -8.5, 9, 3.6, 1.6)
+    fs(c, darkBody, 1.4)
+    ell(c, 14.2, -6.7, 1.3, 1.6)
+    c.fillStyle = '#8ec5ef'
+    c.fill()
+  }
   // 총구와 가늠쇠
-  rrect(c, 19, -3, 6, 5, 1.8)
-  fs(c, '#4f4c57', 1.6)
-  rrect(c, 17.5, -6.2, 2.2, 2.6, 0.8)
-  fs(c, '#4f4c57', 1.2)
+  rrect(c, len - 5, kind === 'shotgun' ? -4.5 : -3, 6, kind === 'shotgun' ? 8 : 5, 1.8)
+  fs(c, darkBody, 1.6)
+  if (kind !== 'rifle' && kind !== 'shotgun') {
+    rrect(c, len - 6.5, -6.2, 2.2, 2.6, 0.8)
+    fs(c, darkBody, 1.2)
+  }
   // 방아쇠울
   c.beginPath()
-  c.arc(7.5, 4.5, 3.2, 0.1, Math.PI - 0.1)
+  c.arc(kind === 'smg' ? 4 : 7.5, 4.5, 3.2, 0.1, Math.PI - 0.1)
   c.lineWidth = 1.8
   c.strokeStyle = INK
   c.stroke()
+  // 전설: 반짝이 둘
+  if (grade === 'UR') {
+    for (const [sx, sy, r] of [
+      [len - 2, -7.5, 2.2],
+      [3, -7, 1.5],
+    ]) {
+      c.beginPath()
+      for (let i = 0; i < 8; i++) {
+        const rr = i % 2 ? r * 0.4 : r
+        const a = (i * Math.PI) / 4
+        c.lineTo(sx + Math.cos(a) * rr, sy + Math.sin(a) * rr)
+      }
+      c.closePath()
+      c.fillStyle = '#fff3b0'
+      c.fill()
+    }
+  }
   // 앞발: 손잡이를 쥔 뒷발, 총신 밑을 받친 앞발
   for (const [px, py] of [
     [0.5, 7.5],
-    [11.5, 4.5],
+    [kind === 'smg' ? 13 : 11.5, 4.5],
   ]) {
     ell(c, px, py, 4.8, 4.2)
     c.fillStyle = INK

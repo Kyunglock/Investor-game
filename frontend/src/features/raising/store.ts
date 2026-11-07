@@ -9,6 +9,8 @@ export type Stance = 'AGGRESSIVE' | 'NEUTRAL' | 'DEFENSIVE'
 
 /** 멘탈 전투의 카드 코드 (decisions.md 328번). 이름·효과는 앱이 가진다. */
 export type MentalCard = 'hold' | 'split' | 'rule' | 'steel' | 'calm' | 'heal'
+export type WeaponKind = 'pistol' | 'revolver' | 'smg' | 'shotgun' | 'rifle'
+export type WeaponGrade = 'N' | 'R' | 'SR' | 'UR'
 
 interface RaisingState {
   status: Status
@@ -54,6 +56,8 @@ interface RaisingState {
   answerResign: (keep: boolean) => Promise<void>
   /** 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 328번). 강화율은 서버가 매긴다. */
   reportMental: (cards: MentalCard[], kills: number, mentalLeft: number) => Promise<void>
+  /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). */
+  equipWeapon: (kind: WeaponKind, grade: WeaponGrade) => Promise<void>
   /** 종목 회의의 막판 제안에 답한다 (decisions.md 283번). */
   answerProposal: (accept: boolean) => Promise<void>
   /** 막판 제안을 따른 직원에게 상이나 벌을 준다 (283번). */
@@ -191,6 +195,9 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
         }),
       )
     },
+
+    equipWeapon: (kind, grade) =>
+      change(api.POST('/api/company/weapon', { body: { kind, grade } })),
 
     answerProposal: (accept) =>
       change(api.POST('/api/company/invest/proposal', { body: { accept } })),

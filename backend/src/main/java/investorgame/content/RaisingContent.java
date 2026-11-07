@@ -91,10 +91,15 @@ public record RaisingContent(
 
   /**
    * 멘탈 전투 (decisions.md 328번). headlines: 장르(ASSAULT·DEFENSE)마다 이벤트 머리글 여럿. cards: 카드 코드 → 이름.
-   * line: 분기 실적 소식 줄({level}·{cards}·{kills}·{left}·{percent}).
+   * line: 분기 실적 소식 줄({level}·{cards}·{kills}·{left}·{percent}). weapons: 무기 종류 → 이름, weaponGrades:
+   * 무기 등급 → 이름 (346번).
    */
   public record Mental(
-      Map<String, List<String>> headlines, Map<String, String> cards, String line) {}
+      Map<String, List<String>> headlines,
+      Map<String, String> cards,
+      String line,
+      Map<String, String> weapons,
+      Map<String, String> weaponGrades) {}
 
   /** 엔딩 (decisions.md 276번). line: 엔딩을 본 해의 결산 소식 줄({years}). */
   public record Ending(String line) {}

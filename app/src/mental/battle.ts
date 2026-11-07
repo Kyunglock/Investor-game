@@ -45,6 +45,8 @@ export interface BattleOptions {
 export interface BattleHandle {
   /** 고른 카드를 쌓은 새 수치를 넣고 전투를 이어 간다. heal이 있으면 그만큼 회복한다. */
   applyLoadout: (loadout: Loadout) => void
+  /** 나가기 물음 동안 멈춘다/이어 간다 (345번). 카드 고르기·끝난 뒤에는 아무것도 안 한다. */
+  setPaused: (paused: boolean) => void
   stop: () => void
 }
 
@@ -118,6 +120,8 @@ class BattleScene extends Phaser.Scene {
   private xp = 0
   /** 레벨이 올라(또는 맨 처음) 카드를 고르는 동안 멈춰 있다. */
   private choosing = false
+  /** 나가기 물음으로 멈춤 (345번). */
+  private paused = false
   /** 첫 카드를 골라 싸움이 시작됐다 (339번). */
   private begun = false
   private nextWave = 20
@@ -132,6 +136,21 @@ class BattleScene extends Phaser.Scene {
   }
 
   /** 카드를 고른 뒤: 새 수치를 받고(회복 포함) 전투를 이어 간다. */
+  setPaused(paused: boolean) {
+    if (this.paused === paused || this.over) {
+      return
+    }
+    this.paused = paused
+    if (this.choosing) {
+      return
+    }
+    if (paused) {
+      this.physics.pause()
+    } else {
+      this.physics.resume()
+    }
+  }
+
   applyLoadout(loadout: Loadout) {
     this.loadout = { ...loadout, heal: 0 }
     if (loadout.heal > 0) {
@@ -146,7 +165,7 @@ class BattleScene extends Phaser.Scene {
       this.begun = true
       this.opts.onBanner('분기 시작! 멘탈 꽉 잡아', '#3a86ff')
     }
-    if (!this.over) {
+    if (!this.over && !this.paused) {
       this.physics.resume()
     }
     this.pushHud(true)
@@ -502,7 +521,7 @@ class BattleScene extends Phaser.Scene {
     this.physics.pause()
     this.stopped = true
     this.time.delayedCall(ms, () => {
-      if (!this.over) {
+      if (!this.over && !this.paused && !this.choosing) {
         this.physics.resume()
       }
       this.stopped = false
@@ -663,7 +682,7 @@ class BattleScene extends Phaser.Scene {
 
   update(time: number, dtMs: number) {
     this.pushHud()
-    if (this.over || this.stopped || this.choosing) {
+    if (this.over || this.stopped || this.choosing || this.paused) {
       return
     }
     const dt = dtMs / 1000
@@ -823,6 +842,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
   ro.observe(parent)
   return {
     applyLoadout: (loadout) => scene.applyLoadout(loadout),
+    setPaused: (paused) => scene.setPaused(paused),
     stop: () => {
       ro.disconnect()
       game.destroy(true)
