@@ -198,10 +198,10 @@ export function ActionBar({ company }: { company: Company }) {
   }
   if (company.broke) {
     return (
-      <div className="px-4 pt-2 pb-2 text-white" data-testid="broke">
-        <p className="text-[13px] font-semibold text-[#ff8a7a]">{company.broke}</p>
+      <div className="px-4 pt-2 pb-2 text-ink" data-testid="broke">
+        <p className="text-[13px] font-semibold text-red-pen">{company.broke}</p>
         {error && (
-          <p role="alert" className="text-[12px] text-[#ff8a7a]">
+          <p role="alert" className="text-[12px] text-red-pen">
             {error}
           </p>
         )}
@@ -224,14 +224,14 @@ export function ActionBar({ company }: { company: Company }) {
     return null
   }
   return (
-    <div className="px-4 pt-2 pb-2 text-white">
+    <div className="px-4 pt-2 pb-2 text-ink">
       {error && (
-        <p role="alert" className="mb-1 text-[12px] text-[#ff8a7a]">
+        <p role="alert" className="mb-1 text-[12px] text-red-pen">
           {error}
         </p>
       )}
       {autoPlay && (
-        <p className="mb-1 text-center text-[11px] text-[#7fd1bf]" data-testid="auto-status">
+        <p className="mb-1 text-center text-[11px] text-teal" data-testid="auto-status">
           자동 진행 중 · 뽑기 → 배치 → 회의(직원 다수결) → 분기 넘기기
         </p>
       )}

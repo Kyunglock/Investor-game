@@ -30,10 +30,10 @@ export function RecordScene({ company }: { company: Company }) {
               sfx.tap()
               setPart(p.id)
             }}
-            className={`min-h-9 shrink-0 rounded-full border px-3 text-[13px] font-semibold ${
+            className={`min-h-9 shrink-0 rounded-full border-2 px-3 font-game text-[14px] shadow-[0_2px_0_var(--outline)] ${
               part === p.id
-                ? 'border-(--gold-bright) bg-(--gold-bright) text-[#3b2a05]'
-                : 'border-white/15 bg-white/10 text-white/75'
+                ? 'border-(--outline) bg-(--gold-bright) text-ink'
+                : 'border-(--outline) bg-white/80 text-ink'
             }`}
           >
             {p.label}
@@ -44,13 +44,13 @@ export function RecordScene({ company }: { company: Company }) {
         {part === 'settlement' &&
           (company.lastSettlement ? (
             <section data-testid="settlement">
-              <h3 className="font-pen text-[22px] text-(--gold-bright)">
+              <h3 className="font-pen text-[22px] text-[#e08a00]">
                 {company.lastSettlement.year}년 차 결산 · {PHASES[company.lastSettlement.phase]}
               </h3>
               <div className="panel mt-1 p-3">
                 <Ledger company={company} settlement={company.lastSettlement} />
               </div>
-              <ul className="mt-2 grid gap-0.5 text-[13px] text-white/85">
+              <ul className="mt-2 grid gap-0.5 text-[13px] text-ink/85">
                 {company.lastSettlement.lines.map((line, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: 같은 소식이 두 번 올 수 있고 목록은 한 번 그리면 그대로다 (#338)
                   <li key={`${i}-${line}`}>· {line}</li>
@@ -58,7 +58,7 @@ export function RecordScene({ company }: { company: Company }) {
               </ul>
             </section>
           ) : (
-            <p className="text-[13px] text-white/60">아직 결산한 해가 없습니다.</p>
+            <p className="text-[13px] text-ink/60">아직 결산한 해가 없습니다.</p>
           ))}
         {part === 'achievements' && (
           <ul className="grid grid-cols-2 gap-1.5">
@@ -83,10 +83,10 @@ export function RecordScene({ company }: { company: Company }) {
         )}
         {part === 'hall' &&
           (h.hall.length === 0 ? (
-            <p className="text-[13px] text-white/60">아직 아무도 없습니다.</p>
+            <p className="text-[13px] text-ink/60">아직 아무도 없습니다.</p>
           ) : (
             <>
-              <p className="mb-1 text-[11px] text-white/60">
+              <p className="mb-1 text-[11px] text-ink/60">
                 데스크 운용과 종목 회의로 번 돈을 모두 더한 누적
               </p>
               <ol className="grid gap-1" data-testid="hall">

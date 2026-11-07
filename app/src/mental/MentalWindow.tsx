@@ -44,7 +44,7 @@ export function MentalWindow({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-40 bg-[#1c2238]" role="dialog" aria-label="멘탈 전투">
+    <div className="fixed inset-0 z-40 bg-[#7ddcbe]" role="dialog" aria-label="멘탈 전투">
       {started && !outcome && (
         <Battle
           genre={mental.genre}
@@ -55,12 +55,12 @@ export function MentalWindow({
         />
       )}
       {!started && (
-        <div className="flex h-full flex-col items-center justify-center gap-5 overflow-y-auto bg-[rgba(43,35,64,0.72)] px-4 py-8">
+        <div className="flex h-full flex-col items-center justify-center gap-5 arcade-burst overflow-x-hidden overflow-y-auto px-4 py-8">
           <div className="panel w-full max-w-[520px] px-5 py-4 text-center">
             <span className="inline-block rounded-lg bg-[#ff4f6d] px-3 py-0.5 text-[13px] font-bold text-white">
               이번 분기 이벤트
             </span>
-            <h2 className="mt-2 text-[22px] font-bold leading-tight">{mental.headline}</h2>
+            <h2 className="mt-2 font-game text-[24px] leading-tight">{mental.headline}</h2>
             <p className="mt-1 text-[14px] text-muted">
               장르: {genre.name} · {genre.hint}
             </p>
@@ -73,9 +73,12 @@ export function MentalWindow({
             mentalFull
             onPick={(code) => setPicked([code])}
           />
-          <ul className="flex flex-wrap justify-center gap-2 text-[12px] text-white">
+          <ul className="flex flex-wrap justify-center gap-2 font-game text-[13px] text-ink">
             {Object.values(ENEMIES).map((e) => (
-              <li key={e.label} className="rounded-full bg-[rgba(0,0,0,0.3)] px-3 py-1">
+              <li
+                key={e.label}
+                className="rounded-full border-2 border-(--outline) bg-white px-3 py-1"
+              >
                 <span
                   className="inline-block h-2.5 w-2.5 rounded-full"
                   style={{ background: e.fill }}
@@ -98,7 +101,7 @@ export function MentalWindow({
         </div>
       )}
       {outcome && (
-        <div className="flex h-full flex-col items-center justify-center gap-5 bg-[rgba(43,35,64,0.72)] px-4">
+        <div className="flex h-full flex-col items-center justify-center gap-5 arcade-burst overflow-hidden px-4">
           <div
             className="panel w-full max-w-[520px] px-5 py-5 text-center"
             data-testid="mental-result"
@@ -108,7 +111,7 @@ export function MentalWindow({
             >
               {outcome.win ? '분기 마감' : '멘탈 붕괴'}
             </span>
-            <h2 className="mt-2 text-[24px] font-bold">
+            <h2 className="mt-2 font-game text-[28px]">
               {outcome.win ? '멘탈 지켜냈다!' : '멘탈이 무너졌다…'}
             </h2>
             <div className="mt-3 grid grid-cols-3 gap-2">
@@ -143,9 +146,9 @@ export function MentalWindow({
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-xl border-2 border-line bg-[#fff8ea] px-2 py-2">
+    <div className="rounded-xl border-2 border-(--outline) bg-[#fff6c9] px-2 py-2">
       <span className="block text-[12px] text-muted">{label}</span>
-      <b className="block text-[22px]">{value}</b>
+      <b className="block font-game text-[26px] font-normal">{value}</b>
     </div>
   )
 }
@@ -184,10 +187,10 @@ function CardPick({
       className="flex w-full max-w-[620px] flex-col items-center gap-3"
       data-testid="mental-cards"
     >
-      <h3 className="animate-mental-title text-center text-[30px] font-black text-[#ffd84d] [text-shadow:0_3px_0_#2b2340,0_0_18px_rgba(255,216,77,0.6)]">
+      <h3 className="animate-mental-title text-center font-game text-[40px] text-white [-webkit-text-stroke:3px_#2b2340] [paint-order:stroke] [text-shadow:0_4px_0_#2b2340]">
         {title}
       </h3>
-      <p className="text-[14px] font-bold text-white">{sub}</p>
+      <p className="font-game text-[16px] text-ink">{sub}</p>
       <div className="grid w-full gap-3 sm:grid-cols-3">
         {cards.map((c, i) => (
           <button
@@ -221,10 +224,10 @@ function CardPick({
               {c.icon}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[18px] font-bold">{c.name}</span>
+              <span className="block font-game text-[20px]">{c.name}</span>
               <span className="block text-[13px] text-muted">{c.desc}</span>
             </span>
-            <span className="shrink-0 rounded-full bg-[#fff3c4] px-3 py-0.5 text-[13px] font-bold">
+            <span className="shrink-0 rounded-full border-2 border-(--outline) bg-[#fff3c4] px-3 py-0.5 font-game text-[14px]">
               {c.effect}
             </span>
           </button>
@@ -295,7 +298,7 @@ function Battle({
     <>
       <div ref={host} className="absolute inset-0" />
       {loading && (
-        <p className="absolute inset-0 grid place-items-center text-[16px] font-bold text-white">
+        <p className="absolute inset-0 grid place-items-center font-game text-[18px] text-ink">
           전장을 여는 중…
         </p>
       )}
@@ -304,7 +307,7 @@ function Battle({
         style={{ boxShadow: hurt ? 'inset 0 0 120px 40px rgba(255,79,109,0.55)' : 'none' }}
       />
       {hud && (
-        <div className="pointer-events-none absolute top-0 right-0 left-0 flex flex-col gap-1.5 px-3 pt-[calc(env(safe-area-inset-top)+10px)] text-[#2b2340]">
+        <div className="pointer-events-none absolute top-0 right-0 left-0 flex flex-col gap-1.5 px-3 pt-[calc(env(safe-area-inset-top)+10px)] font-game text-[#2b2340]">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 rounded-full border-[3px] border-[#2b2340] bg-white px-3 py-1 text-[14px] font-bold shadow-[0_3px_0_#2b2340]">
               멘탈
@@ -337,7 +340,7 @@ function Battle({
       {banner && (
         <p
           key={banner.id}
-          className="animate-mental-banner pointer-events-none absolute top-[22%] left-1/2 whitespace-nowrap rounded-2xl border-4 border-[#2b2340] px-6 py-2 text-[clamp(20px,4vw,34px)] font-bold text-white shadow-[0_6px_0_#2b2340]"
+          className="animate-mental-banner pointer-events-none absolute top-[22%] left-1/2 whitespace-nowrap rounded-2xl border-4 border-[#2b2340] px-6 py-2 font-game text-[clamp(22px,4.4vw,36px)] text-white [text-shadow:0_3px_0_#2b2340] shadow-[0_6px_0_#2b2340]"
           style={{ background: banner.color }}
           aria-live="polite"
         >
@@ -346,7 +349,7 @@ function Battle({
       )}
       {levelUp !== null && hud && (
         <div
-          className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[rgba(43,35,64,0.72)] px-4"
+          className="absolute inset-0 flex flex-col items-center justify-center gap-4 arcade-burst-soft px-4"
           data-testid="mental-levelup"
         >
           <CardPick

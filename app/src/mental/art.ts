@@ -297,56 +297,58 @@ const stop: Painter = (put, frame) => {
 
 const ENEMY_PAINTERS: Record<EnemyKind, Painter> = { panic, dump, spec, stop }
 
-/** 바닥 타일 한 장(16×16, 폭락장은 32×32). 장르마다 다른 장소: 공격은 객장 카펫, 디펜스는 금고실 철판. */
+/**
+ * 바닥 타일 한 장(16×16, 두 배로 키운다). 밝은 아케이드풍 체크무늬(335번): 공격은 민트빛 객장 타일, 디펜스는 살굿빛 금고실 철판.
+ * 두 칸의 밝기 차이는 작게 두어 적과 탄이 바닥에 묻히지 않는다.
+ */
 const FLOOR_PALETTE: Record<string, string> = {
-  // 객장 카펫(남색)과 줄눈
-  n: '#273352',
-  N: '#2a3757',
-  o: '#2e3c5f',
-  // 금고실 철판
-  s: '#979ea7',
-  S: '#a3aab3',
-  r: '#858c95', // 리벳 그림자
-  t: '#b4bbc3', // 리벳 밝은 쪽
+  // 객장: 민트 체크무늬와 밝은 줄눈, 반짝이
+  m: '#7ddcbe',
+  M: '#8ae3c7',
+  l: '#a9eed8',
+  w: '#e9fff6',
+  // 금고실: 살굿빛 철판과 흰 리벳
+  s: '#ffd9a6',
+  S: '#ffe2b9',
+  r: '#f2c088', // 판 이음새·리벳 그림자
+  t: '#f2fbff', // 리벳 밝은 쪽
+}
+
+/** 8칸마다 두 색을 번갈아 까는 체크무늬. 맨 윗줄·맨 왼쪽 줄은 줄눈. */
+function checker(a: string, b: string, line: string): string[] {
+  return Array.from({ length: 16 }, (_, y) =>
+    Array.from({ length: 16 }, (_, x) => {
+      if (y % 8 === 0 || x % 8 === 0) {
+        return line
+      }
+      return y < 8 === x < 8 ? a : b
+    }).join(''),
+  )
+}
+
+function withDots(rows: string[], dots: [number, number, string][]): string[] {
+  const grid = rows.map((row) => [...row])
+  for (const [y, x, c] of dots) {
+    grid[y][x] = c
+  }
+  return grid.map((row) => row.join(''))
 }
 
 const FLOOR_MAPS: Record<Genre, readonly string[]> = {
-  ASSAULT: [
-    'NNNNNNNNNNNNNNNN',
-    'NnnnnnnnNnnnnnnn',
-    'NnnnnnnnNnnnnnnn',
-    'NnnonnnnNnnnonnn',
-    'NnnnnnnnNnnnnnnn',
-    'NnnnnnnnNnnnnnnn',
-    'NnnnnnnnNnnnnnnn',
-    'NnnnnnnnNnnnnnnn',
-    'NNNNNNNNNNNNNNNN',
-    'NnnnnnnnNnnnnnnn',
-    'NnnnnnnnNnnnnnnn',
-    'NnnnnnnnNnnnnnnn',
-    'NnnnnnnnNnnnnnnn',
-    'NnnnonnnNnnnnonn',
-    'NnnnnnnnNnnnnnnn',
-    'NnnnnnnnNnnnnnnn',
-  ],
-  DEFENSE: [
-    'rrrrrrrrrrrrrrrr',
-    'rSSSSSSSSSSSSSSs',
-    'rStsSSSSSSSStsSs',
-    'rSsrSSSSSSSSsrSs',
-    'rSSSSSSSSSSSSSSs',
-    'rSSSSSSSSSSSSSSs',
-    'rSSSSSSSSSSSSSSs',
-    'rSSSSSSSSSSSSSSs',
-    'rSSSSSSSSSSSSSSs',
-    'rSSSSSSSSSSSSSSs',
-    'rSSSSSSSSSSSSSSs',
-    'rSSSSSSSSSSSSSSs',
-    'rSSSSSSSSSSSSSSs',
-    'rStsSSSSSSSStsSs',
-    'rSsrSSSSSSSSsrSs',
-    'rsssssssssssssss',
-  ],
+  ASSAULT: withDots(checker('m', 'M', 'l'), [
+    [3, 4, 'w'],
+    [12, 11, 'w'],
+  ]),
+  DEFENSE: withDots(checker('S', 's', 'r'), [
+    [2, 2, 't'],
+    [2, 14, 't'],
+    [10, 2, 't'],
+    [10, 14, 't'],
+    [3, 3, 'r'],
+    [3, 15, 'r'],
+    [11, 3, 'r'],
+    [11, 15, 'r'],
+  ]),
 }
 
 /** 멘탈벽의 높이(픽셀의 절반: 격자 줄 수 × PX ÷ 2). 전투가 벽 자리를 잡는 데 쓴다. */

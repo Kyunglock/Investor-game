@@ -65,9 +65,9 @@ export function Shell({ company }: { company: Company }) {
   const staffSpot = useTutorialSpot(company, 'staff')
   const key = `${company.companyId}-${company.year}-${company.quarter}-${company.employees.map((e) => e.id).join('.')}`
   return (
-    <div ref={screen} className="app-screen bg-(--hud)" data-testid="shell">
+    <div ref={screen} className="app-screen app-bg" data-testid="shell">
       <Hud company={company} />
-      <main className="relative overflow-hidden bg-bg">
+      <main className="relative overflow-hidden">
         <div
           key={tab}
           className={`${dir} absolute inset-0 overflow-y-auto px-4 py-3`}
@@ -80,9 +80,12 @@ export function Shell({ company }: { company: Company }) {
           {tab === 'record' && <RecordScene company={company} />}
         </div>
       </main>
-      <div className="safe-bottom bg-(--hud)">
+      <div className="safe-bottom">
         <ActionBar company={company} />
-        <nav className="grid grid-cols-5 border-white/10 border-t" aria-label="회사 일">
+        <nav
+          className="grid grid-cols-5 gap-1 border-(--outline) border-t-[3px] bg-white px-1.5 pt-1.5 pb-1"
+          aria-label="회사 일"
+        >
           {TABS.map((t) => {
             const badge = tabBadge(company, t.id)
             const on = tab === t.id
@@ -101,8 +104,10 @@ export function Shell({ company }: { company: Company }) {
                   }
                   useAppUi.getState().setTab(t.id)
                 }}
-                className={`relative flex min-h-[60px] flex-col items-center justify-center gap-0.5 text-[11px] transition-colors disabled:opacity-30 ${
-                  on ? 'font-bold text-(--gold-bright)' : 'text-white/55'
+                className={`relative flex min-h-[56px] flex-col items-center justify-center gap-0.5 rounded-2xl border-2 font-game text-[12px] transition-colors disabled:opacity-30 ${
+                  on
+                    ? 'border-(--outline) bg-(--gold-bright) text-ink shadow-[0_3px_0_var(--outline)]'
+                    : 'border-transparent text-ink/60'
                 } ${t.id === 'market' ? marketSpot : t.id === 'staff' ? staffSpot : ''}`}
                 data-testid={`tab-${t.id}`}
               >
@@ -110,18 +115,12 @@ export function Shell({ company }: { company: Company }) {
                   <Icon />
                 </span>
                 {t.label}
-                {on && (
-                  <span
-                    className="absolute top-0 h-0.5 w-8 rounded-full bg-(--gold-bright)"
-                    aria-hidden="true"
-                  />
-                )}
                 {badge && (
                   <span
-                    className={`absolute top-1.5 right-[16%] rounded-full px-1.5 font-mono-num text-[10px] ${
+                    className={`absolute -top-1 right-[12%] rounded-full border-2 border-(--outline) px-1.5 font-mono-num text-[10px] leading-4 ${
                       badge === '!'
                         ? 'animate-badge-pulse bg-red-pen text-white'
-                        : 'bg-white/15 text-white'
+                        : 'bg-white text-ink'
                     }`}
                   >
                     {badge}
@@ -144,27 +143,32 @@ function Hud({ company }: { company: Company }) {
   const ended = company.status === 'ENDED'
   return (
     <header
-      className="flex items-center justify-between gap-2 px-4 py-2 text-white"
+      className="mx-3 mt-2 mb-1 flex items-center justify-between gap-2 rounded-2xl border-[3px] border-(--outline) bg-white px-3 py-1.5 text-ink shadow-[0_4px_0_var(--outline)]"
       data-testid="hud"
     >
       <div className="min-w-0">
-        <p className="text-[11px] text-white/55">
+        <p className="text-[11px] text-ink/55">
           {company.number}호 회사 ·{' '}
           {ended ? '끝난 회사' : `${company.year}년 차 ${company.quarter}분기`}
         </p>
-        <p
-          className="truncate font-serif-kr text-[17px] font-black leading-tight"
-          data-testid="company-building"
-        >
+        <p className="truncate font-game text-[19px] leading-tight" data-testid="company-building">
           {officeName(company.grade)}
         </p>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <div className="text-right">
-          <p className="text-[11px] text-white/55">자본</p>
+        <div
+          className="flex items-center gap-1.5 rounded-full border-2 border-(--outline) bg-[#fff6c9] py-0.5 pr-3 pl-1"
+          title="자본"
+        >
+          <span
+            className="grid h-6 w-6 place-items-center rounded-full border-2 border-(--outline) bg-(--gold-bright) font-game text-[12px]"
+            aria-hidden="true"
+          >
+            ₩
+          </span>
           <p
             key={company.capital}
-            className="animate-num-pop font-mono-num text-[18px] font-bold leading-tight text-(--gold-bright)"
+            className="animate-num-pop font-mono-num text-[17px] font-bold leading-tight"
             data-testid="company-capital"
           >
             {money(capital)}
@@ -181,7 +185,7 @@ function Hud({ company }: { company: Company }) {
               sfx.tap()
             }
           }}
-          className="rounded-full p-1.5 text-white/55 active:scale-90"
+          className="rounded-full p-1.5 text-ink/55 active:scale-90"
         >
           <SoundIcon off={muted} />
         </button>

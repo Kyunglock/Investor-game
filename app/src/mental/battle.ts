@@ -755,7 +755,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    backgroundColor: '#1c2238',
+    backgroundColor: '#7ddcbe',
     scale: { mode: Phaser.Scale.RESIZE, width: parent.clientWidth, height: parent.clientHeight },
     physics: { default: 'arcade' },
     // 도트 그림: 흐리게 키우지 않는다.

@@ -25,8 +25,8 @@ export function StaffScene({ company }: { company: Company }) {
   return (
     <div data-testid="staff-scene">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[14px] text-white/85">
-          앉힌 사람 <b className="font-mono-num text-(--gold-bright)">{placed}</b> / {company.seats}
+        <p className="text-[14px] text-ink/85">
+          앉힌 사람 <b className="font-mono-num text-[#e08a00]">{placed}</b> / {company.seats}
           자리
         </p>
         {!ended && company.employees.length > 0 && (
@@ -45,7 +45,7 @@ export function StaffScene({ company }: { company: Company }) {
         )}
       </div>
       {company.employees.length === 0 ? (
-        <p className="mt-4 text-center text-[14px] text-white/60">
+        <p className="mt-4 text-center text-[14px] text-ink/60">
           아직 직원이 없습니다. 채용에서 뽑으세요.
         </p>
       ) : (
@@ -94,10 +94,10 @@ export function StaffScene({ company }: { company: Company }) {
           })}
         </ul>
       )}
-      {!ended && <LockedDesks company={company} className="text-white/80" />}
+      {!ended && <LockedDesks company={company} className="text-ink/80" />}
       {company.employees.length > 0 && (
         <details className="mt-3" open={ended}>
-          <summary className="cursor-pointer text-[13px] text-white/65">
+          <summary className="cursor-pointer text-[13px] text-ink/65">
             직원 상세 능력치 ({company.employees.length}명)
           </summary>
           <ul className="mt-2 grid gap-2">
