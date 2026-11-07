@@ -226,6 +226,13 @@ export function InvestWindow({
                         >
                           <span className="text-[11px] text-muted">팀장</span>
                           <b>{r.name}</b>
+                          {/* 팀장 옆 이름 옆에 등급 (decisions.md 355번) */}
+                          <span
+                            className="font-mono-num text-[11px] text-muted"
+                            data-testid="leader-grade"
+                          >
+                            {employees.find((e) => e.id === r.employeeId)?.overallGrade}
+                          </span>
                         </li>
                       ))}
                       {others > 0 && <li className="text-[12px] text-muted">외 {others}명</li>}

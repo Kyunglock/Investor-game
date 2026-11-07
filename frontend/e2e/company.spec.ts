@@ -255,7 +255,7 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   await bio.getByTestId('desk-candidate').first().click()
   // 앉으면 그 사람이 팀장이다.
   await expect(bio.getByTestId('leader-badge')).toHaveCount(1)
-  await expect(bio.getByTestId('desk-members')).toContainText('(팀장)')
+  await expect(bio.getByTestId('desk-members')).toContainText(/(팀장 [A-Z]+)/)
   const day = board.locator('[data-desk="day"]')
   await day.getByRole('button', { name: /사람 고르기/ }).click()
   await day.getByTestId('desk-candidate').filter({ hasText: '쉬는 중' }).first().click()

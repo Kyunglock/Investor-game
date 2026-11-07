@@ -380,6 +380,11 @@ export function TeamClash({
               >
                 {staffOf(name)?.leader && <span className="text-gold">★</span>}
                 {name}
+                {staffOf(name) && (
+                  <span className="ml-0.5 font-mono-num text-muted">
+                    {staffOf(name)?.overallGrade}
+                  </span>
+                )}
               </span>
             </div>
           )
