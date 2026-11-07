@@ -36,7 +36,7 @@ export interface BattleOptions {
   onHud: (hud: Hud) => void
   onBanner: (text: string, color: string) => void
   onHurt: () => void
-  /** 레벨이 올랐다: 전투는 멈춰 있고, 카드를 고른 뒤 applyLoadout으로 이어 간다 (330번). */
+  /** 레벨이 올랐다(맨 처음엔 Lv.1, 339번): 전투는 멈춰 있고, 카드를 고른 뒤 applyLoadout으로 이어 간다 (330번). */
   onLevelUp: (level: number) => void
   onDone: (outcome: Outcome) => void
 }
@@ -107,8 +107,10 @@ class BattleScene extends Phaser.Scene {
   private hurtUntil = 0
   private level = 1
   private xp = 0
-  /** 레벨이 올라 카드를 고르는 동안 멈춰 있다. */
+  /** 레벨이 올라(또는 맨 처음) 카드를 고르는 동안 멈춰 있다. */
   private choosing = false
+  /** 첫 카드를 골라 싸움이 시작됐다 (339번). */
+  private begun = false
   private nextWave = 20
   /** 한 화면에 함께 있는 적의 최대 수(334번): 더 있으면 새로 만들지 않는다. */
   private static readonly MAX_ALIVE = 28
@@ -131,6 +133,10 @@ class BattleScene extends Phaser.Scene {
       return
     }
     this.choosing = false
+    if (!this.begun) {
+      this.begun = true
+      this.opts.onBanner('분기 시작! 멘탈 꽉 잡아', '#3a86ff')
+    }
     if (!this.over) {
       this.physics.resume()
     }
@@ -256,7 +262,11 @@ class BattleScene extends Phaser.Scene {
       )
     }
 
-    this.opts.onBanner('분기 시작! 멘탈 꽉 잡아', '#3a86ff')
+    // 첫 카드는 전장이 열린 뒤 고른다 (339번): 멈춘 채로 Lv.1 카드 고르기를 띄운다.
+    this.choosing = true
+    this.physics.pause()
+    this.pushHud(true)
+    this.opts.onLevelUp(this.level)
   }
 
   /** 장르별 소품: 객장은 위쪽 전광판과 책상 줄, 금고실은 네 귀퉁이 기둥과 금괴 상자. 장식일 뿐 부딪히지 않는다. */
