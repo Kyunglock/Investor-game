@@ -24,15 +24,21 @@ async function drawPeople(page: Page, n: number) {
   }
 }
 
-/** 뽑기 결과 창: 모두 열고 확인. */
+/**
+ * 뽑기 결과 창: 모두 열고 확인. 카드는 저절로도 열려서 "모두 열기"가 누르는 사이에 사라질 수 있다. 그러면 기다리지 않고 확인 버튼이 나왔는지 다시 본다.
+ */
 async function closeReveal(page: Page) {
   const reveal = page.getByTestId('gacha-reveal')
   await expect(reveal).toBeVisible()
   const all = reveal.getByTestId('gacha-open-all')
-  if (await all.isVisible()) {
-    await all.click()
-  }
-  await reveal.getByTestId('gacha-close').click()
+  const close = reveal.getByTestId('gacha-close')
+  await expect(async () => {
+    if (!(await close.isVisible())) {
+      await all.click({ timeout: 1_000 })
+    }
+    await expect(close).toBeVisible({ timeout: 1_000 })
+  }).toPass({ timeout: 30_000 })
+  await close.click()
   await expect(reveal).toHaveCount(0)
 }
 
