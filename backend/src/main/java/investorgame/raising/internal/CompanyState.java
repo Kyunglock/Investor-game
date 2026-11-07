@@ -518,7 +518,7 @@ class CompanyState {
   @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
   static class Mental {
-    /** ASSAULT(공격)·DEFENSE(디펜스)·SURVIVAL(생존). */
+    /** ASSAULT(공격)·DEFENSE(디펜스). 생존형은 329번에서 뺐다. */
     String genre;
 
     String headline;

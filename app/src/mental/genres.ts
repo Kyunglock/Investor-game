@@ -2,7 +2,7 @@ import type { Company } from '@web/api/client'
 
 export type Genre = NonNullable<Company['mental']>['genre']
 
-/** 장르 셋 (decisions.md 328번): 그 분기 이벤트가 정한다. 플레이어는 고르지 않는다. */
+/** 장르 둘 (decisions.md 328·329번): 그 분기 이벤트가 정한다. 플레이어는 고르지 않는다. */
 export interface GenreSpec {
   name: string
   hint: string
@@ -28,13 +28,6 @@ export const GENRES: Record<Genre, GenreSpec> = {
     spawn: 'edges',
     area: 'free',
     target: 'vault',
-  },
-  SURVIVAL: {
-    name: '생존',
-    hint: '사방에서 몰려온다. 돌아다니며 버텨라',
-    spawn: 'edges',
-    area: 'free',
-    target: 'player',
   },
 }
 

@@ -59,7 +59,7 @@ class MentalEngineTest {
   }
 
   @Test
-  void 폭락이_터지는_분기에는_생존형이_가장_잦다() {
+  void 폭락이_터지는_분기에는_디펜스가_잦다() {
     Map<String, Integer> burst = new HashMap<>();
     Map<String, Integer> calm = new HashMap<>();
     for (int seed = 0; seed < 600; seed++) {
@@ -75,11 +75,11 @@ class MentalEngineTest {
     }
     int burstTotal = burst.values().stream().mapToInt(Integer::intValue).sum();
     assertThat(burstTotal).isGreaterThan(50);
-    assertThat(burst.getOrDefault(MentalEngine.SURVIVAL, 0))
-        .isGreaterThan(burst.getOrDefault(MentalEngine.ASSAULT, 0))
-        .isGreaterThan(burst.getOrDefault(MentalEngine.DEFENSE, 0));
-    // 터지지 않는 분기에도 생존형이 나와서 장르만으로는 폭락을 알 수 없다.
-    assertThat(calm.getOrDefault(MentalEngine.SURVIVAL, 0)).isPositive();
+    assertThat(burst.getOrDefault(MentalEngine.DEFENSE, 0))
+        .isGreaterThan(burst.getOrDefault(MentalEngine.ASSAULT, 0) * 3);
+    // 터지는 분기에도 공격이, 터지지 않는 분기에도 디펜스가 나와서 장르만으로는 폭락을 알 수 없다.
+    assertThat(burst.getOrDefault(MentalEngine.ASSAULT, 0)).isPositive();
+    assertThat(calm.getOrDefault(MentalEngine.DEFENSE, 0)).isPositive();
   }
 
   @Test
