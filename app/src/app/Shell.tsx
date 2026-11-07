@@ -3,6 +3,12 @@ import { money } from '@web/features/game/labels'
 import { officeName } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useTutorialSpot } from '@web/features/raising/TutorialBanner'
+import {
+  FEATURE_NAMES,
+  type Feature,
+  unlockedFeatures,
+  useTutorial,
+} from '@web/features/raising/tutorial'
 import { useEffect, useRef, useState } from 'react'
 import { useFx } from '../fx/fx'
 import { isMuted, setMuted, sfx } from '../fx/sound'
@@ -63,6 +69,26 @@ export function Shell({ company }: { company: Company }) {
   }, [tab])
   const marketSpot = useTutorialSpot(company, 'market')
   const staffSpot = useTutorialSpot(company, 'staff')
+  // 튜토리얼 잠금·해금 (347번): 열리지 않은 탭은 잠긴다. 새로 열리면 위에 잠깐 알린다.
+  const tutorialOn = useTutorial((s) => s.active)
+  const unlocked = unlockedFeatures(company, tutorialOn)
+  const [opened, setOpened] = useState<{ names: string; id: number } | null>(null)
+  const seen = useRef<Feature[] | null>(null)
+  useEffect(() => {
+    const before = seen.current
+    seen.current = unlocked
+    if (!tutorialOn || before === null) {
+      return
+    }
+    const fresh = unlocked.filter((f) => !before.includes(f))
+    if (fresh.length === 0) {
+      return
+    }
+    sfx.levelUp()
+    setOpened({ names: fresh.map((f) => FEATURE_NAMES[f]).join('·'), id: Date.now() })
+    const t = setTimeout(() => setOpened(null), 2200)
+    return () => clearTimeout(t)
+  }, [unlocked, tutorialOn])
   const key = `${company.companyId}-${company.year}-${company.quarter}-${company.employees.map((e) => e.id).join('.')}`
   return (
     <div ref={screen} className="app-screen app-bg" data-testid="shell">
@@ -90,6 +116,7 @@ export function Shell({ company }: { company: Company }) {
             const badge = tabBadge(company, t.id)
             const on = tab === t.id
             const hidden = ended && t.id === 'market'
+            const locked = t.id !== 'office' && !unlocked.includes(t.id)
             const Icon = t.icon
             return (
               <button
@@ -97,7 +124,7 @@ export function Shell({ company }: { company: Company }) {
                 type="button"
                 role="tab"
                 aria-selected={on}
-                disabled={hidden}
+                disabled={hidden || locked}
                 onClick={() => {
                   if (!on) {
                     sfx.tap()
@@ -110,12 +137,22 @@ export function Shell({ company }: { company: Company }) {
                     : 'border-transparent text-ink/60'
                 } ${t.id === 'market' ? marketSpot : t.id === 'staff' ? staffSpot : ''}`}
                 data-testid={`tab-${t.id}`}
+                data-locked={locked || undefined}
               >
                 <span key={on ? 'on' : 'off'} className={on ? 'animate-tab-bounce' : ''}>
                   <Icon />
                 </span>
                 {t.label}
-                {badge && (
+                {locked && (
+                  <span
+                    className="absolute -top-1 right-[12%] rounded-full border-2 border-(--outline) bg-white px-1 text-[10px] leading-4"
+                    role="img"
+                    aria-label="잠김"
+                  >
+                    🔒
+                  </span>
+                )}
+                {badge && !locked && (
                   <span
                     className={`absolute -top-1 right-[12%] rounded-full border-2 border-(--outline) px-1.5 font-mono-num text-[10px] leading-4 ${
                       badge === '!'
@@ -132,6 +169,16 @@ export function Shell({ company }: { company: Company }) {
         </nav>
       </div>
       <Windows key={key} company={company} />
+      {opened && (
+        <p
+          key={opened.id}
+          className="animate-mental-banner pointer-events-none absolute top-[18%] left-1/2 z-30 whitespace-nowrap rounded-2xl border-4 border-(--outline) bg-(--gold-bright) px-5 py-2 font-game text-[22px] text-ink shadow-[0_6px_0_var(--outline)]"
+          role="status"
+          data-testid="unlocked-toast"
+        >
+          🔓 {opened.names} 열림!
+        </p>
+      )}
     </div>
   )
 }
