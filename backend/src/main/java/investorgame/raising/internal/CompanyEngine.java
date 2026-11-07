@@ -11,8 +11,10 @@ import investorgame.content.RaisingContent;
 import investorgame.raising.internal.CompanyState.Employee;
 import investorgame.raising.internal.CompanyState.Result;
 import investorgame.raising.internal.CompanyState.Settlement;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -122,6 +124,15 @@ class CompanyEngine {
 
   int turns() {
     return properties.turns();
+  }
+
+  /** 같은 소식이 한 해에 여러 번이면 처음 자리에 한 줄만 두고 "(N번)"을 붙인다 (#338). */
+  static List<String> grouped(List<String> lines) {
+    Map<String, Integer> counts = new LinkedHashMap<>();
+    lines.forEach(line -> counts.merge(line, 1, Integer::sum));
+    List<String> out = new ArrayList<>();
+    counts.forEach((line, n) -> out.add(n > 1 ? line + " (" + n + "번)" : line));
+    return out;
   }
 
   /** 사장의 사재로 첫 회사를 차린다. 직원은 없고, 채용권으로 뽑는다 (decisions.md 228·312번). */
@@ -696,7 +707,7 @@ class CompanyEngine {
       }
       int at = Math.clamp(drawLevel(company) + rate.steps(), 0, LADDER.size() - 1);
       StatGrade band = StatGrade.valueOf(LADDER.get(Math.min(at, sssAt)));
-      Map<String, Integer> stats = new java.util.LinkedHashMap<>();
+      Map<String, Integer> stats = new LinkedHashMap<>();
       int middle = (band.min() + band.max()) / 2;
       int spread = properties.market().spread();
       for (String code : StatCodes.ALL) {
@@ -1570,7 +1581,7 @@ class CompanyEngine {
     company.employees.forEach(e -> ranksBefore.put(e.id, e.rank));
     boolean crash = CRASH.equals(company.phase);
     // 직원마다 네 분기를 모은다: 손익은 합, 판돈은 굴린 분기의 평균, 뒤집힘은 횟수를 더한다.
-    Map<Integer, Result> yearly = new java.util.LinkedHashMap<>();
+    Map<Integer, Result> yearly = new LinkedHashMap<>();
     Map<Integer, Integer> traded = new HashMap<>();
     long fee = 0;
     long meetings = 0;
@@ -1639,7 +1650,7 @@ class CompanyEngine {
     if (company.capital == 0) {
       settlement.lines.add(content.raising().company().bankrupt().emptied());
     }
-    settlement.lines.addAll(company.yearLines);
+    settlement.lines.addAll(grouped(company.yearLines));
     countTenure(company, settlement);
     grow(company, settlement, random);
     // 등급·건물·자리 수는 연말에만 바뀐다 (268번). 건물은 저절로 오르지 않고(296번: 이사 비용을 내야 한다), 자본이 지금 띠 아래로 떨어지면 줄어든다.

@@ -320,8 +320,9 @@ class PayEngine {
   }
 
   /**
-   * 종목 회의 뒤 (270번): 사장이 자기 말과 다르게 골랐는데 틀렸으면 서운하고(사기 −1), 자기 말대로 골랐는데 맞았으면 신이 난다(+1). 모르겠다고 한 사람은
-   * 그대로다. 결산 소식 줄에는 적지 않는다(298번: 사람이 늘면 "누가 맞았다"가 줄줄이 늘어서 길기만 했다). 사기는 직원 상세에 보인다.
+   * 종목 회의 뒤 (270번): 자기 말이 맞았는데 사장이 다르게 골랐으면 서운하고(사기 −1, #338: 자기 말도 틀렸으면 서운하지 않다), 자기 말대로 골랐는데 맞았으면
+   * 신이 난다(+1). 모르겠다고 한 사람은 그대로다. 결산 소식 줄에는 적지 않는다(298번: 사람이 늘면 "누가 맞았다"가 줄줄이 늘어서 길기만 했다). 사기는 직원
+   * 상세에 보인다.
    */
   void afterMeeting(CompanyState c) {
     CompanyState.Invest invest = c.invest;
@@ -337,7 +338,7 @@ class PayEngine {
       if (said == null || e == null) {
         continue;
       }
-      if (!said.equals(invest.choice) && !bossRight) {
+      if (said.equals(right) && !said.equals(invest.choice)) {
         shift(e, -1);
       } else if (said.equals(invest.choice) && bossRight) {
         shift(e, 1);
