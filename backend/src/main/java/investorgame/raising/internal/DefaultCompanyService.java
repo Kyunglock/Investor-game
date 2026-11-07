@@ -36,13 +36,19 @@ class DefaultCompanyService implements CompanyService {
     return companies.latest(sessionId).map(row -> view(adopt(resume(row))));
   }
 
-  /** 채용 뽑기 전에 차린 회사면 처음 채용권을 주고 도감을 채워 저장한다 (decisions.md 312번). */
+  /**
+   * 옛 회사를 지금 규칙으로 옮겨 저장한다: 채용 뽑기 전에 차린 회사면 처음 채용권을 주고 도감을 채우고(decisions.md 312번), 멘탈 전투 전에 연 분기면 이번
+   * 분기의 전투를 만든다(328번).
+   */
   private CompanyRepository.Row adopt(CompanyRepository.Row row) {
-    if (row.state().gachaReady || !"ACTIVE".equals(row.status())) {
+    CompanyState c = row.state();
+    if ((c.gachaReady && c.mental != null) || !"ACTIVE".equals(row.status())) {
       return row;
     }
     CompanyRepository.Row locked = companies.lockActive(row.sessionId()).orElse(row);
-    if (engine.adoptGacha(locked.state())) {
+    boolean gacha = engine.adoptGacha(locked.state());
+    boolean mental = engine.mental.adopt(locked.state(), new HashSeededRandom(locked.seed()));
+    if (gacha || mental) {
       companies.update(locked.id(), locked.state(), false);
     }
     return locked;

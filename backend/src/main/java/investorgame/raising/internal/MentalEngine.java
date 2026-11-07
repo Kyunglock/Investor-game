@@ -62,6 +62,15 @@ class MentalEngine {
     return mental;
   }
 
+  /** 멘탈 전투 전에 연 분기(이 칸이 없다)면 이번 분기의 전투를 만든다. 만들었으면 true. */
+  boolean adopt(CompanyState c, SeededRandom random) {
+    if (c.mental != null) {
+      return false;
+    }
+    c.mental = create(c, random);
+    return true;
+  }
+
   /**
    * 한 판 결과를 받는다. 이번 분기가 아니면 400, 이미 받았으면 그대로 둔다(같은 요청 두 번). 보고 값은 상한으로 자르고 강화율 = min(최대, 적 ÷ a + 멘탈
    * ÷ b).
