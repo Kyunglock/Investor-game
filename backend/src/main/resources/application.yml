@@ -115,7 +115,8 @@ raising:
     people:
       poach-from-year: 3
       poach-percent: 25
-      transfer-percent: 50
+      # 이적료는 그 직원의 몸값(계약금과 지난해 번 돈 가운데 큰 쪽)의 transfer-percent (#390): 전에는 계약금의 50%라 연봉보다 작아 고민할 거리가 없었다
+      transfer-percent: 150
       settle-years: 3
       settled-flip-percent: 80
       # 연봉과 사기 (decisions.md 270·287번): 한 해 연봉은 그 직원 계약금의 자본 비율 몫 × salary-percent(분기마다 4분의 1, 287번에서 10% → 5%). 상가(D) 아래 작은 회사의

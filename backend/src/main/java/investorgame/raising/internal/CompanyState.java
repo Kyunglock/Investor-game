@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -100,6 +101,9 @@ class CompanyState {
 
   /** 회사를 떠난 직원 (263번). */
   List<Alumnus> alumni = new ArrayList<>();
+
+  /** 증권사마다 우리에게 손을 뻗은 횟수 (#390). */
+  Map<String, Integer> poachCounts = new HashMap<>();
 
   /** 투자 회의를 연달아 번 해 수 (263번). */
   int meetingStreak;
@@ -516,6 +520,12 @@ class CompanyState {
     int to;
     long totalPnl;
     String grade;
+
+    /** 데려간 증권사 (#390). 이직 제안으로 떠난 사람만 있다. */
+    String rival;
+
+    /** 그 뒤 소식을 전했나 (#390). */
+    boolean reported;
   }
 
   /** 연봉 때문에 사표를 들고 온 직원 (decisions.md 282번). */
@@ -551,6 +561,12 @@ class CompanyState {
   static class Poach {
     int employeeId;
     long transferFee;
+
+    /** 손을 뻗은 증권사 (#390). 옛 제안이면 null(이름 없는 다른 증권사). */
+    String rival;
+
+    /** 그 증권사가 우리에게 손을 뻗은 몇 번째인가 (#390). */
+    int count;
   }
 
   /** 채용 뽑기로 온 사람 한 명 (decisions.md 312번). 화면이 카드를 뒤집어 보인다. */

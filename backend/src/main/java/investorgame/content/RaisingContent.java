@@ -233,7 +233,12 @@ public record RaisingContent(
       String moraleDown,
       String meetingIgnored,
       String heard,
-      String rested) {}
+      String rested,
+      List<String> poachers,
+      String poachAgain,
+      String keptRaise,
+      String alumniGood,
+      String alumniBad) {}
 
   /**
    * 회사 연표와 업적 (decisions.md 263번). events: 연표 한 줄(open {number} · rise {name}·{grade} · left {name}

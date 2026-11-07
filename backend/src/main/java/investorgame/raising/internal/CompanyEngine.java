@@ -348,10 +348,24 @@ class CompanyEngine {
                     .thenComparingInt(e -> e.deskYears)
                     .thenComparingInt(e -> -e.id))
             .orElseThrow();
-    long fee = fee(company.capital, target.stats, target.rank);
+    // 몸값 (#390): 계약금과 지난해 그 직원이 번 돈 가운데 큰 쪽. 잘 버는 직원일수록 이적료가 커서 보낼지 고민이 된다.
+    long worth = fee(company.capital, target.stats, target.rank);
+    if (!company.settlements.isEmpty()) {
+      for (CompanyState.Result r : company.settlements.getLast().results) {
+        if (r.employeeId == target.id) {
+          worth = Math.max(worth, r.pnl);
+        }
+      }
+    }
     CompanyState.Poach poach = new CompanyState.Poach();
     poach.employeeId = target.id;
-    poach.transferFee = fee * rules.transferPercent() / PERCENT;
+    poach.transferFee = worth * rules.transferPercent() / PERCENT;
+    // 손을 뻗는 증권사 (#390): 회사마다 단골 라이벌 하나가 셋에 둘꼴로 오고, 가끔 다른 곳이 온다.
+    List<String> rivals = content.raising().company().people().poachers();
+    int nemesis = random.forKey("poach-nemesis", 0).nextInt(rivals.size());
+    int pick = random.forKey("poach-rival", company.year).nextInt(3 * rivals.size());
+    poach.rival = rivals.get(pick < 2 * rivals.size() ? nemesis : pick % rivals.size());
+    poach.count = company.poachCounts.merge(poach.rival, 1, Integer::sum);
     return poach;
   }
 
@@ -367,15 +381,68 @@ class CompanyEngine {
       return;
     }
     company.yearLines.add(
-        Korean.fill(texts.kept(), Map.of("name", poachedName(company), "rival", poacher())));
+        Korean.fill(texts.kept(), Map.of("name", poachedName(company), "rival", rivalOf(company))));
+    // 붙잡는 데는 값이 든다 (#390): 연봉이 나가는 회사면 제안에 맞춰 연봉을 한 번 올려 주고, 붙잡힌 직원은 사기가 오른다.
+    company.employees.stream()
+        .filter(e -> e.id == poach.employeeId)
+        .findFirst()
+        .ifPresent(
+            e -> {
+              long before = pay.salary(company, e);
+              if (before > 0) {
+                e.raises++;
+                company.yearLines.add(
+                    Korean.fill(
+                        texts.keptRaise(),
+                        Map.of(
+                            "name", e.name,
+                            "rival", rivalOf(company),
+                            "before", money(before),
+                            "after", money(pay.salary(company, e)))));
+              }
+              pay.shiftMorale(e, 1);
+            });
     company.poach = null;
+  }
+
+  /** 이번 제안을 한 증권사. 옛 제안이면 이름 없는 다른 증권사. */
+  private String rivalOf(CompanyState company) {
+    return company.poach != null && company.poach.rival != null ? company.poach.rival : poacher();
+  }
+
+  /** 이직 제안으로 떠난 사람의 그 뒤 소식 (#390): 떠나고 한 해가 지나면 절반 확률로 한 번 들린다. 등급이 높았던 사람일수록 잘됐다는 소식이 많다. */
+  private void alumniNews(CompanyState company, SeededRandom random, List<String> lines) {
+    RaisingContent.People texts = content.raising().company().people();
+    for (CompanyState.Alumnus a : company.alumni) {
+      if (a.rival == null || a.reported || company.year - a.to < 1) {
+        continue;
+      }
+      RandomGenerator rng = random.forKey("alumni-news", company.year, a.from, a.to);
+      if (rng.nextInt(PERCENT) >= 50) {
+        continue;
+      }
+      a.reported = true;
+      boolean good = rng.nextInt(PERCENT) < 30 + LADDER.indexOf(a.grade) * 5;
+      lines.add(
+          Korean.fill(
+              good ? texts.alumniGood() : texts.alumniBad(),
+              Map.of("name", a.name, "rival", a.rival)));
+    }
   }
 
   /** 연초 회의의 이직 제안 한 줄. */
   String poachLine(CompanyState company) {
+    RaisingContent.People texts = content.raising().company().people();
+    boolean again = company.poach.count > 1;
     return Korean.fill(
-        content.raising().company().people().poach(),
-        Map.of("rival", poacher(), "name", poachedName(company)));
+        again ? texts.poachAgain() : texts.poach(),
+        Map.of(
+            "rival",
+            rivalOf(company),
+            "name",
+            poachedName(company),
+            "count",
+            String.valueOf(company.poach.count)));
   }
 
   private String poachedName(CompanyState company) {
@@ -393,12 +460,16 @@ class CompanyEngine {
     company.employees.stream()
         .filter(e -> e.id == poach.employeeId)
         .findFirst()
-        .ifPresent(e -> history.retire(company, e));
+        .ifPresent(
+            e -> {
+              history.retire(company, e);
+              company.alumni.getLast().rival = rivalOf(company);
+            });
     company.employees.removeIf(e -> e.id == poach.employeeId);
     teams.tidy(company);
     company.capital += poach.transferFee;
     company.yearHiring -= poach.transferFee;
-    company.yearLines.add(Korean.fill(template, Map.of("name", name, "rival", poacher())));
+    company.yearLines.add(Korean.fill(template, Map.of("name", name, "rival", rivalOf(company))));
     company.poach = null;
   }
 
@@ -1621,9 +1692,10 @@ class CompanyEngine {
       company.yearLines.add(
           Korean.fill(
               content.raising().company().people().ignored(),
-              Map.of("name", poachedName(company), "rival", poacher())));
+              Map.of("name", poachedName(company), "rival", rivalOf(company))));
       company.poach = null;
     }
+    alumniNews(company, random, company.yearLines);
     Settlement settlement = new Settlement();
     settlement.year = company.year;
     settlement.phase = company.phase;
