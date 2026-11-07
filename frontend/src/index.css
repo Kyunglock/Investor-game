@@ -1072,7 +1072,7 @@ p.animate-stamp {
   }
 }
 
-/* 끌어서 합성 (decisions.md 314·316번): 화려한 터짐 없이 부드러운 움직임만 */
+/* 끌어서 합성 (decisions.md 314·318번): 화려한 터짐 없이 부드러운 움직임만 */
 .merge-card {
   position: relative;
   aspect-ratio: 3 / 4;

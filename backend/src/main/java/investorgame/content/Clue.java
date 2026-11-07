@@ -6,5 +6,7 @@ package investorgame.content;
  *
  * @param text 기사에 실리는 문장
  * @param point 직원이 줄여 말하는 요지
+ * @param topic 같은 사건을 다루는 문장끼리 다는 꼬리표. 한 기사에 같은 꼬리표의 반대쪽 문장은 함께 나오지 않는다(#341: 같은 실사를 두고 "지적 없이
+ *     마쳤다"와 "지적이 세 건 나왔다"가 나란히 나왔다). 없으면 null
  */
-public record Clue(String text, String point) {}
+public record Clue(String text, String point, String topic) {}

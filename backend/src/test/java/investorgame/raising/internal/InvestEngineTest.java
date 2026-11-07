@@ -654,4 +654,98 @@ class InvestEngineTest {
     }
     assertThat(proposed).isBetween(trials * 82 / 100, trials * 97 / 100);
   }
+
+  private static String credit(String read, String choice, boolean up) {
+    CompanyState c = new CompanyState();
+    CompanyState.Invest i = new CompanyState.Invest();
+    i.stock = TestContent.load().stocksOf("game").getFirst().code();
+    i.finderId = 7;
+    i.finderName = "이도담";
+    i.choice = choice;
+    i.up = up;
+    i.magnitudeBp = 3500;
+    CompanyState.Remark r = new CompanyState.Remark();
+    r.employeeId = 7;
+    r.read = read;
+    i.remarks = List.of(r);
+    c.invest = i;
+    return ENGINE.invest.credit(c);
+  }
+
+  /** #340: 맺음말은 물어 온 사람의 회의 의견도 본다. */
+  @Test
+  void 물어_온_사람의_맺음말은_그_사람의_회의_의견을_본다() {
+    // 팔자고 했는데 사장이 사서 빠졌다: 그 말을 들을 걸 그랬다
+    assertThat(credit("DOWN", InvestEngine.BUY, false)).contains("들을 걸 그랬다").contains("빠졌다");
+    // 팔자고 했고 사장도 팔았고 빠졌다: 칭찬
+    assertThat(credit("DOWN", InvestEngine.SELL, false)).contains("그 말이 맞았다");
+    // 팔자고 했는데 올랐다: 본인은 팔자고 했다
+    assertThat(credit("DOWN", InvestEngine.SELL, true)).contains("본인은 팔자고");
+    // 사자고 했는데 빠졌다: 지금처럼 탓한다
+    assertThat(credit("UP", InvestEngine.BUY, false)).contains("소문 말고");
+    // 사자고 했고 올랐다: 눈이 맞았다
+    assertThat(credit("UP", InvestEngine.BUY, true)).contains("눈이 맞았다");
+  }
+
+  /** #340: 같은 기사를 다시 뽑아도 고를 수 있는 다른 종목이 있으면 지난 종목과 지난 한마디는 쉰다. */
+  @Test
+  void 지난_분기와_같은_종목과_같은_한마디는_이어_나오지_않는다() {
+    int alternatives = 0;
+    for (int seed = 0; seed < 40; seed++) {
+      CompanyState c = ENGINE.open(new HashSeededRandom(seed), 100_000_000L);
+      CompanyState.Employee finder = ENGINE.hire(c, stats(20, 50, 50, 50));
+      HashSeededRandom random = new HashSeededRandom(seed);
+      CompanyState.Invest first = ENGINE.invest.found(c, finder, null, random);
+      c.invest = first;
+      c.usedNews.remove(first.news);
+      CompanyState.Invest again = ENGINE.invest.found(c, finder, null, random);
+      assertThat(again.pitch).isNotEqualTo(first.pitch);
+      if (!again.stock.equals(first.stock)) {
+        alternatives++;
+      }
+      var news =
+          TestContent.load().news().stream()
+              .filter(n -> n.code().equals(first.news))
+              .findFirst()
+              .orElseThrow();
+      long fitting =
+          TestContent.load().stocksOf(news.sector()).stream()
+              .filter(st -> news.fits(st.code()))
+              .count();
+      if (again.news.equals(first.news) && fitting > 1) {
+        assertThat(again.stock).as("같은 기사면 다른 종목").isNotEqualTo(first.stock);
+      }
+    }
+    assertThat(alternatives).isPositive();
+  }
+
+  /** #341: 같은 꼬리표를 단 반대쪽 문장은 한 기사에 함께 나오지 않는다. */
+  @Test
+  void 같은_사건의_반대_문장은_한_기사에_함께_나오지_않는다() {
+    List<investorgame.content.Clue> ups =
+        List.of(
+            new investorgame.content.Clue("실사를 지적 없이 마쳤다.", "실사가 깨끗했다", "inspection"),
+            new investorgame.content.Clue("수주가 늘었다.", "수주가 늘었다", null),
+            new investorgame.content.Clue("값이 올랐다.", "값이 올랐다", null));
+    List<investorgame.content.Clue> downs =
+        List.of(
+            new investorgame.content.Clue("실사에서 지적이 세 건 나왔다.", "실사에서 걸렸다", "inspection"),
+            new investorgame.content.Clue("재고가 쌓였다.", "재고가 쌓였다", null),
+            new investorgame.content.Clue("값이 내렸다.", "값이 내렸다", null));
+    int together = 0;
+    int clean = 0;
+    for (int seed = 0; seed < 300; seed++) {
+      var rng = new HashSeededRandom(seed).forKey("article", seed);
+      List<String> texts =
+          ENGINE.invest.article(ups, downs, List.of("중립."), seed % 2 == 0, rng, Map.of()).stream()
+              .map(x -> x.text)
+              .toList();
+      boolean a = texts.contains("실사를 지적 없이 마쳤다.");
+      boolean b = texts.contains("실사에서 지적이 세 건 나왔다.");
+      together += a && b ? 1 : 0;
+      clean += a || b ? 1 : 0;
+    }
+    assertThat(together).isZero();
+    assertThat(clean).as("꼬리표 문장도 나오기는 한다").isPositive();
+  }
 }
