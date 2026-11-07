@@ -1,4 +1,4 @@
-# 안드로이드 앱(APK) 빌드 (decisions.md 306번, docs/app.md). 웹을 Capacitor WebView에 담은 앱이다.
+# 안드로이드 앱(APK) 빌드 (decisions.md 306·309번, docs/app.md). app/의 앱 화면을 Capacitor WebView에 담은 앱이다.
 # Actions 탭의 Run workflow 로 돌리거나, main 에 앱 관련 변경이 들어오면 돈다. 산출물(APK)은 실행 결과의 Artifacts 에서 받는다.
 name: Android
 
@@ -6,17 +6,19 @@ on:
   workflow_dispatch:
     inputs:
       server_url:
-        description: '앱이 띄울 웹 주소. 비우면 저장소 변수 APP_SERVER_URL, 그것도 없으면 운영 웹(https://game.kwaklabs.com)'
+        description: '앱이 띄울 주소. 비우면 저장소 변수 APP_SERVER_URL, 그것도 없으면 운영 웹의 앱 화면(https://game.kwaklabs.com/app/)'
         required: false
         default: ''
   push:
     branches: [main]
     paths:
-      - 'frontend/**'
+      - 'app/**'
+      - 'frontend/src/**'
       - '.github/workflows/android.yml'
   pull_request:
     paths:
-      - 'frontend/**'
+      - 'app/**'
+      - 'frontend/src/**'
       - '.github/workflows/android.yml'
 
 permissions:
@@ -33,11 +35,11 @@ jobs:
     timeout-minutes: 40
     defaults:
       run:
-        working-directory: frontend
+        working-directory: app
     env:
-      # 앱이 운영 웹 주소를 그대로 띄우는 방식(기본). 입력 → 저장소 변수 → 운영 웹 순. 화면을 앱 안에 담으려면(docs/app.md)
+      # 앱이 운영 웹의 앱 화면(/app/)을 그대로 띄우는 방식(기본). 입력 → 저장소 변수 → 운영 웹 순. 화면을 APK 안에 담으려면(docs/app.md)
       # server_url 에 'none' 을 넣고 APP_API_BASE 를 둔다.
-      CAP_SERVER_URL: ${{ inputs.server_url == 'none' && '' || inputs.server_url || vars.APP_SERVER_URL || 'https://game.kwaklabs.com' }}
+      CAP_SERVER_URL: ${{ inputs.server_url == 'none' && '' || inputs.server_url || vars.APP_SERVER_URL || 'https://game.kwaklabs.com/app/' }}
       VITE_API_BASE: ${{ vars.APP_API_BASE }}
       # step 의 if 에서는 secrets 를 직접 볼 수 없어(워크플로가 통째로 거부된다) 있는지만 여기서 env 로 내린다.
       HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
@@ -52,9 +54,12 @@ jobs:
         with:
           node-version: '24'
       - run: corepack enable
+      # 앱은 frontend/src를 그대로 가져다 쓴다 (docs/app.md).
+      - run: pnpm install --frozen-lockfile
+        working-directory: frontend
       - run: pnpm install --frozen-lockfile
 
-      - name: 웹 빌드와 앱에 복사
+      - name: 앱 화면 빌드와 안드로이드에 복사
         run: |
           if [ -z "$CAP_SERVER_URL" ] && [ -z "$VITE_API_BASE" ]; then
             echo "::warning::APP_SERVER_URL 도 APP_API_BASE 도 없다. 이 APK 는 서버에 닿지 못한다 (docs/app.md)."
@@ -63,20 +68,20 @@ jobs:
           pnpm exec cap sync android
 
       - name: 디버그 APK
-        working-directory: frontend/android
+        working-directory: app/android
         run: ./gradlew assembleDebug --console=plain
 
       - uses: actions/upload-artifact@v7
         with:
           name: app-debug
-          path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
+          path: app/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
       # 서명 키가 저장소 Secrets 에 있으면(ANDROID_KEYSTORE_BASE64·ANDROID_KEYSTORE_PASSWORD·ANDROID_KEY_ALIAS·ANDROID_KEY_PASSWORD)
       # 배포용 APK 도 만든다. 없으면 건너뛴다. 스토어 올리기(AAB)는 bundleRelease 로 바꾸면 된다.
       - name: 배포용 APK (서명 키가 있을 때)
         if: env.HAS_KEYSTORE == 'true'
-        working-directory: frontend/android
+        working-directory: app/android
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
@@ -91,5 +96,5 @@ jobs:
         if: env.HAS_KEYSTORE == 'true'
         with:
           name: app-release
-          path: frontend/android/app/build/outputs/apk/release/app-release.apk
+          path: app/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error

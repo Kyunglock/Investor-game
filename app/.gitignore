@@ -1,0 +1,8 @@
+node_modules
+dist
+*.local
+*.log
+/test-results/
+/playwright-report/
+# scripts/shot.ts가 찍은 화면
+/scripts/shots/

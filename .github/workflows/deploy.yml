@@ -55,6 +55,13 @@ jobs:
           pnpm install --frozen-lockfile
           pnpm build
 
+      # 앱 화면 (decisions.md 309번): 운영 웹의 /app/ 에 같이 올린다. 안드로이드 앱이 이 주소를 띄운다.
+      - name: 앱 화면 빌드
+        working-directory: app
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm build
+
       - name: 백엔드 빌드
         working-directory: backend
         run: ./gradlew bootJar --console=plain
@@ -68,6 +75,7 @@ jobs:
           OUT="$RUNNER_TEMP/release"
           rm -rf "$OUT" && mkdir -p "$OUT/web"
           cp -R frontend/dist/. "$OUT/web/"
+          mkdir -p "$OUT/web/app" && cp -R app/dist/. "$OUT/web/app/"
           cp "$(ls backend/build/libs/backend-*.jar | grep -v -- '-plain' | head -1)" "$OUT/backend.jar"
           DEPLOY_ARTIFACTS="$OUT" "$HOME/srv/investor-game/deploy.sh"
           rm -rf "$OUT"

@@ -13,6 +13,8 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- 게임은 전체 화면이다: 상태바를 숨긴다 (decisions.md 309번) -->
+        <item name="android:windowFullscreen">true</item>
     </style>
 
 

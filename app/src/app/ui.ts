@@ -1,0 +1,83 @@
+import type { Company } from '@web/api/client'
+import type { SeatFocus } from '@web/features/raising/OfficeArt'
+import { create } from 'zustand'
+
+/** 아래 탭 (decisions.md 309번): 사무실 · 공채 · 배치 · 이슈 · 기록. 웹의 탭(이슈·공채·배치·지난 결산·연표)을 폰 화면에 맞게 다시 나눴다. */
+export type Tab = 'office' | 'market' | 'staff' | 'issue' | 'record'
+
+/** 아래에서 올라오는 시트: 자리 고르기(사무실 그림의 칸), 자리 카드(배치), 내보내고 뽑기(공채가 꽉 찼을 때). */
+export type Sheet =
+  | { kind: 'seat'; focus: SeatFocus }
+  | { kind: 'desk'; desk: string }
+  | { kind: 'hire'; applicantId: number }
+
+interface UiState {
+  tab: Tab
+  sheet: Sheet | null
+  setTab: (tab: Tab) => void
+  openSheet: (sheet: Sheet) => void
+  closeSheet: () => void
+  /** 뒤로 가기: 시트가 열려 있으면 닫고, 다른 탭이면 사무실로. 더 갈 데가 없으면 false. */
+  back: () => boolean
+  /** 분기 넘기기를 누른 횟수. 아래 버튼이 올리고, 회의 창(Windows)이 보고 회의를 연다. */
+  settleRequest: number
+  requestSettle: () => void
+}
+
+export const useAppUi = create<UiState>((set, get) => ({
+  tab: 'office',
+  sheet: null,
+  settleRequest: 0,
+  requestSettle: () => set((s) => ({ settleRequest: s.settleRequest + 1, sheet: null })),
+  setTab: (tab) => set({ tab, sheet: null }),
+  openSheet: (sheet) => set({ sheet }),
+  closeSheet: () => set({ sheet: null }),
+  back: () => {
+    if (get().sheet) {
+      set({ sheet: null })
+      return true
+    }
+    if (get().tab !== 'office') {
+      set({ tab: 'office' })
+      return true
+    }
+    return false
+  },
+}))
+
+/** 웹의 튜토리얼·결산이 가리키는 탭을 앱 탭으로 (TutorialBanner가 store.tab을 바꾼다). */
+export function tabFromWeb(tab: string | null): Tab | null {
+  switch (tab) {
+    case 'market':
+      return 'market'
+    case 'staff':
+      return 'staff'
+    case 'meeting':
+      return 'issue'
+    case 'settlement':
+    case 'history':
+      return 'record'
+    default:
+      return null
+  }
+}
+
+/** 탭에 다는 표: 이슈는 !(조짐·시대 끝·이직·연봉), 공채는 지원자 수, 배치는 앉힌 수. */
+export function tabBadge(company: Company, tab: Tab): string | null {
+  const m = company.meeting
+  switch (tab) {
+    case 'issue':
+      return m && (m.omen || m.eraEnding || m.poach || m.raise) ? '!' : null
+    case 'market':
+      return company.applicants.length > 0 ? String(company.applicants.length) : null
+    case 'staff':
+      return `${company.employees.filter((e) => e.desk).length}/${company.seats}`
+    default:
+      return null
+  }
+}
+
+/** 회사를 처음 열 때 설 탭: 직원이 없으면 공채, 있으면 사무실. */
+export function firstTab(company: Company): Tab {
+  return company.employees.length === 0 && company.status !== 'ENDED' ? 'market' : 'office'
+}
