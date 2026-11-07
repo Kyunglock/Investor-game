@@ -697,6 +697,8 @@ export interface components {
                     name: string;
                     description: string;
                     year?: number | null;
+                    /** @description 실패 업적 (decisions.md 351번). 망한 판도 즐겁게. 열리면 채용권은 위로 보상 한 장 */
+                    fail: boolean;
                 }[];
                 /** @description 이 회사에서 가장 많이 번 사람부터(지금 직원과 떠난 직원), 다섯까지 */
                 hall: {

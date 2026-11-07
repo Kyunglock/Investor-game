@@ -566,7 +566,9 @@ public record CompanyView(
   /**
    * @param year 연 해. 아직이면 null
    */
-  public record Achievement(String code, String name, String description, Integer year) {}
+  /** fail: 실패 업적 (351번). 열리면 채용권은 위로 보상 한 장. */
+  public record Achievement(
+      String code, String name, String description, Integer year, boolean fail) {}
 
   /**
    * @param to 떠난 해. 아직 일하면 null

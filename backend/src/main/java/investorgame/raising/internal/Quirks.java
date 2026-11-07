@@ -71,6 +71,8 @@ class Quirks {
     RaisingContent.Quirk q = of(e);
     if (e.lastVerdict != null && q.again() != null) {
       String again = pick(q.again().get(e.lastVerdict), e.id, turn, "again");
+      // 깎였다가 돌아와 다시 손을 든다 (351번, 촉 수리 완료): 이번에 맞히면 업적.
+      e.repaired = "CUT".equals(e.lastVerdict);
       e.lastVerdict = null;
       if (again != null) {
         return again;

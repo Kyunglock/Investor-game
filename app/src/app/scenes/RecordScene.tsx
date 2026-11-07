@@ -72,8 +72,14 @@ export function RecordScene({ company }: { company: Company }) {
                 data-open={a.year != null}
               >
                 <b className="block text-[13px]">
-                  {a.year != null ? '🏆 ' : ''}
+                  {a.year != null ? (a.fail ? '🙃 ' : '🏆 ') : ''}
                   {a.name}
+                  {a.fail && (
+                    // 실패 업적 (decisions.md 351번): 망한 판도 즐겁게, 위로 보상 1장.
+                    <span className="ml-1 rounded-full bg-[#f3eadb] px-1.5 text-[10px] font-normal text-ink/60">
+                      실패 · 위로 1장
+                    </span>
+                  )}
                 </b>
                 {a.description}
                 {a.year != null && <span className="block text-gold">{a.year}년 차</span>}

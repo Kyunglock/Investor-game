@@ -796,7 +796,11 @@ class DefaultCompanyService implements CompanyService {
             .map(
                 a ->
                     new CompanyView.Achievement(
-                        a.code(), a.name(), a.description(), c.achievements.get(a.code())))
+                        a.code(),
+                        a.name(),
+                        a.description(),
+                        c.achievements.get(a.code()),
+                        a.isFail()))
             .toList();
     List<CompanyView.Hall> hall = new java.util.ArrayList<>();
     c.employees.forEach(

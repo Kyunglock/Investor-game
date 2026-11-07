@@ -28,6 +28,12 @@ class CompanyHistory {
   private static final int STREAK = 5;
   private static final int BASEMENT_YEARS = 10;
 
+  /** F의 전당: 전부 F인 직원이 이만큼 (351번). */
+  private static final int F_TEN = 10;
+
+  /** 잠깐만요 전문: 막판 제안을 이만큼 따랐는데 다 틀렸다 (351번). */
+  private static final int PROPOSAL_FIVE = 5;
+
   private final ContentCatalog content;
 
   CompanyHistory(ContentCatalog content) {
@@ -154,24 +160,33 @@ class CompanyHistory {
         s.results.size() >= 2
             && s.results.stream().allMatch(r -> "day".equals(r.desk))
             && staff > 0;
-    Map<String, Boolean> checks =
-        Map.of(
-            "crash-proof",
-            crashProof,
-            "doubled",
-            doubled,
-            "all-sss",
-            allSss,
-            "meeting-streak",
-            company.meetingStreak >= STREAK,
-            "day-only",
-            dayOnly,
-            "basement-ten",
-            basement && s.year >= BASEMENT_YEARS,
-            "rumor-proof",
-            "falseKept".equals(s.omenCall),
-            "foresight",
-            "trueDefended".equals(s.omenCall));
+    // 실패·재미 업적 (351번): 망한 판도 즐겁게.
+    boolean fTen =
+        company.employees.size() >= F_TEN
+            && company.employees.stream().allMatch(e -> "F".equals(CompanyEngine.employeeGrade(e)));
+    boolean sameName =
+        company.employees.stream().map(e -> e.name.replaceAll("\\d+$", "")).distinct().count()
+            < company.employees.size();
+    Map<String, Boolean> checks = new java.util.HashMap<>();
+    checks.put("crash-proof", crashProof);
+    checks.put("doubled", doubled);
+    checks.put("all-sss", allSss);
+    checks.put("meeting-streak", company.meetingStreak >= STREAK);
+    checks.put("day-only", dayOnly);
+    checks.put("basement-ten", basement && s.year >= BASEMENT_YEARS);
+    checks.put("rumor-proof", "falseKept".equals(s.omenCall));
+    checks.put("foresight", "trueDefended".equals(s.omenCall));
+    checks.put("chat-three", company.flags.contains("chat-three"));
+    checks.put("youtube-crash", "falseDefended".equals(s.omenCall) && "boom".equals(s.phase));
+    checks.put(
+        "proposal-five",
+        company.proposalsFollowed >= PROPOSAL_FIVE
+            && company.proposalsWrong == company.proposalsFollowed);
+    checks.put("bonus-backfire", company.flags.contains("bonus-backfire"));
+    checks.put("f-ten", fTen);
+    checks.put("same-name", sameName);
+    checks.put("repaired-gut", company.flags.contains("repaired-gut"));
+    company.flags.clear();
     for (RaisingContent.Achievement a : texts().achievements()) {
       if (Boolean.TRUE.equals(checks.get(a.code()))
           && !company.achievements.containsKey(a.code())) {
@@ -179,6 +194,17 @@ class CompanyHistory {
         s.achieved.add(a.name());
       }
     }
+  }
+
+  /** 이번 결산에 열린 업적의 채용권 (351번): 보통 업적은 each장, 실패 업적은 위로 보상 한 장. */
+  int achievementTickets(Settlement s, int each) {
+    int total = 0;
+    for (String name : s.achieved) {
+      boolean fail =
+          texts().achievements().stream().anyMatch(a -> a.name().equals(name) && a.isFail());
+      total += fail ? 1 : each;
+    }
+    return total;
   }
 
   /**

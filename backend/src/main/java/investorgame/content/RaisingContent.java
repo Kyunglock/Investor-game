@@ -280,7 +280,12 @@ public record RaisingContent(
    */
   public record History(Map<String, String> events, List<Achievement> achievements) {}
 
-  public record Achievement(String code, String name, String description) {}
+  /** fail: 실패 업적 (351번). 열려도 채용권은 위로 보상 한 장이다. */
+  public record Achievement(String code, String name, String description, Boolean fail) {
+    public boolean isFail() {
+      return Boolean.TRUE.equals(fail);
+    }
+  }
 
   /**
    * 망한 회사 (decisions.md 247번). notice: 회사 화면에 뜨는 한 줄. emptied: 결산에서 자본이 0이 된 해의 소식 줄. opening: 다시

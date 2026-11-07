@@ -196,6 +196,14 @@ class CompanyState {
   /** 합성한 횟수 (350번). 대성공·이어받기 난수의 열쇠. */
   int merges;
 
+  /** 막판 제안을 따른 횟수와 그 가운데 틀린 횟수 (351번). */
+  int proposalsFollowed;
+
+  int proposalsWrong;
+
+  /** 올해 열린 실패·재미 업적 표시 (351번): 연말 결산 때 읽고 지운다. */
+  List<String> flags = new ArrayList<>();
+
   /** 방금 한 합성 (350번). 아직 없으면 null. */
   Merge lastMerge;
 
@@ -273,6 +281,15 @@ class CompanyState {
 
     /** 합성으로 이어받은 버릇 (350번). 없으면 번호로 정한 버릇(349번). */
     String quirk;
+
+    /** 막판 제안을 따랐다가 잃은 연속 횟수 (351번, 단톡방의 저주). 맞히면 0. */
+    int wrongStreak;
+
+    /** 연봉이 깎여(CUT) 촉을 수리하러 갔다 온 뒤 아직 맞히지 않았다 (351번). */
+    boolean repaired;
+
+    /** 성과금을 받은 턴(해×4+분기). 다음 분기에 크게 잃으면 '성과금의 역설'. 없으면 null. */
+    Integer bonusTurn;
   }
 
   /** 방금 한 합성 (decisions.md 350번). 다음 합성 때 덮어쓴다. */

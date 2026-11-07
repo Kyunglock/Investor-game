@@ -341,6 +341,46 @@
           "code": "foresight",
           "name": "선견지명",
           "description": "조짐을 보고 방어로 돌려 폭락이 터진 분기를 막았다."
+        },
+        {
+          "code": "chat-three",
+          "name": "단톡방의 저주",
+          "description": "단톡방파 직원의 막판 제안을 따랐다가 세 번 연속 잃었다.",
+          "fail": true
+        },
+        {
+          "code": "youtube-crash",
+          "name": "유튜브 폭락설",
+          "description": "헛조짐에 속아 한 해 내내 방어로 돌렸는데 대호황이었다.",
+          "fail": true
+        },
+        {
+          "code": "proposal-five",
+          "name": "잠깐만요 전문",
+          "description": "막판 제안을 다섯 번 따랐는데 다섯 번 다 틀렸다.",
+          "fail": true
+        },
+        {
+          "code": "bonus-backfire",
+          "name": "성과금의 역설",
+          "description": "성과금을 준 다음 분기에 그 직원이 크게 잃었다.",
+          "fail": true
+        },
+        {
+          "code": "f-ten",
+          "name": "F의 전당",
+          "description": "직원이 열 명 넘게 모였는데 전부 F다.",
+          "fail": true
+        },
+        {
+          "code": "same-name",
+          "name": "동명이인",
+          "description": "같은 이름의 직원이 둘이다."
+        },
+        {
+          "code": "repaired-gut",
+          "name": "촉 수리 완료",
+          "description": "연봉이 깎여 촉을 수리하러 갔던 직원이 돌아와 맞혔다."
         }
       ]
     },
