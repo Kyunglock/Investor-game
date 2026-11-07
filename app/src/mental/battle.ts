@@ -109,7 +109,9 @@ class BattleScene extends Phaser.Scene {
   private xp = 0
   /** 레벨이 올라 카드를 고르는 동안 멈춰 있다. */
   private choosing = false
-  private nextWave = 12
+  private nextWave = 20
+  /** 한 화면에 함께 있는 적의 최대 수(334번): 더 있으면 새로 만들지 않는다. */
+  private static readonly MAX_ALIVE = 28
 
   constructor(opts: BattleOptions) {
     super('battle')
@@ -209,8 +211,8 @@ class BattleScene extends Phaser.Scene {
       boom[kind as EnemyKind] = this.add
         .particles(0, 0, 'spark', {
           speed: { min: 90, max: 320 },
-          lifespan: { min: 250, max: 500 },
-          scale: { start: 2, end: 0 },
+          lifespan: { min: 200, max: 380 },
+          scale: { start: 1.6, end: 0 },
           tint: Phaser.Display.Color.HexStringToColor(v.fill).color,
           emitting: false,
         })
@@ -219,9 +221,9 @@ class BattleScene extends Phaser.Scene {
     this.boom = boom
     this.trail = this.add
       .particles(0, 0, 'trail', {
-        lifespan: 160,
-        scale: { start: 3, end: 0.5 },
-        alpha: { start: 0.9, end: 0 },
+        lifespan: 110,
+        scale: { start: 2, end: 0.4 },
+        alpha: { start: 0.6, end: 0 },
         tint: [0xffe08a, 0xffb300],
         emitting: false,
       })
@@ -293,6 +295,9 @@ class BattleScene extends Phaser.Scene {
   }
 
   private spawn(kind: EnemyKind, at?: [number, number]) {
+    if (this.enemies.countActive() >= BattleScene.MAX_ALIVE) {
+      return
+    }
     const [x, y] = at ?? this.spawnPoint()
     const e = this.enemies.get(x, y, kind) as Enemy | null
     if (!e) {
@@ -324,7 +329,7 @@ class BattleScene extends Phaser.Scene {
     this.opts.onBanner('투매 물량 쏟아진다!!', '#a98bff')
     const { width: w } = this.scale
     const grow = 1 + Math.min(1.5, this.elapsed / 120)
-    const n = Math.round(12 * grow)
+    const n = Math.round(6 * grow)
     for (let i = 0; i < n; i++) {
       this.spawn('dump', [((i >> 1) + 0.5) * (w / Math.ceil(n / 2)), -30 - (i % 2) * 44])
     }
@@ -332,7 +337,7 @@ class BattleScene extends Phaser.Scene {
 
   private waveSpec() {
     this.opts.onBanner('투기 과열! 터지기 전에 잡아', '#ff4f6d')
-    for (let i = 0; i < 2 + Math.floor(this.elapsed / 80); i++) {
+    for (let i = 0; i < 1 + Math.floor(this.elapsed / 100); i++) {
       this.spawn('spec')
     }
   }
@@ -340,7 +345,7 @@ class BattleScene extends Phaser.Scene {
   private wavePanic() {
     this.opts.onBanner('패닉셀 떼가 몰려온다!!!', '#3a86ff')
     const { width: w, height: h } = this.scale
-    const n = Math.round(24 + Math.min(30, this.elapsed / 6))
+    const n = Math.round(10 + Math.min(10, this.elapsed / 16))
     for (let i = 0; i < n; i++) {
       const a = Math.PI + (i / (n - 1)) * Math.PI
       this.spawn('panic', [w / 2 + Math.cos(a) * w * 0.55, h * 0.25 + Math.sin(a) * h * 0.5])
@@ -376,7 +381,7 @@ class BattleScene extends Phaser.Scene {
     e.setTintFill(0xffffff)
     this.time.delayedCall(55, () => e.active && e.clearTint())
     // 맞는 자리에 불꽃이 튀고 살짝 들썩인다.
-    this.hitSpark.explode(6, e.x - Math.cos(angle) * 10, e.y - Math.sin(angle) * 10)
+    this.hitSpark.explode(3, e.x - Math.cos(angle) * 10, e.y - Math.sin(angle) * 10)
     sfx.hit()
     this.tweens.killTweensOf(e)
     this.tweens.add({
@@ -389,13 +394,16 @@ class BattleScene extends Phaser.Scene {
     const kb = e.kind === 'spec' ? 60 : 240
     e.kbx += Math.cos(angle) * kb
     e.kby += Math.sin(angle) * kb
-    this.pop(
-      e.x + Phaser.Math.Between(-8, 8),
-      e.y - ENEMIES[e.kind].r - 10,
-      String(Math.round(dmg * 10)),
-      '#ffffff',
-      18,
-    )
+    // 데미지 숫자는 한 방에 안 죽는 적(투기·손절매·투매)에만: 패닉까지 띄우면 화면이 숫자로 덮인다 (334번).
+    if (ENEMIES[e.kind].hp > 1 && e.hp > 0) {
+      this.pop(
+        e.x + Phaser.Math.Between(-8, 8),
+        e.y - ENEMIES[e.kind].r - 10,
+        String(Math.round(dmg * 10)),
+        '#ffffff',
+        16,
+      )
+    }
     if (e.hp <= 0) {
       this.kill(e, true)
     }
@@ -403,7 +411,7 @@ class BattleScene extends Phaser.Scene {
 
   private kill(e: Enemy, byPlayer: boolean) {
     const v = ENEMIES[e.kind]
-    this.boom[e.kind].explode(e.kind === 'spec' ? 46 : 14, e.x, e.y)
+    this.boom[e.kind].explode(e.kind === 'spec' ? 28 : 7, e.x, e.y)
     if (byPlayer) {
       this.kills++
       this.score += v.reward
@@ -415,8 +423,6 @@ class BattleScene extends Phaser.Scene {
         this.pop(e.x, e.y - 40, '투기 진압!', '#ffd84d', 30)
       } else if (e.kind === 'stop') {
         this.pop(e.x, e.y - 30, '손절 안 해!', '#ffd84d', 22)
-      } else {
-        this.cameras.main.shake(40, 0.002)
       }
     }
     // 몸은 바로 꺼지고 그림만 부풀며 사라진다. 풀로 돌아가는 것은 연출이 끝난 뒤.
@@ -527,7 +533,7 @@ class BattleScene extends Phaser.Scene {
     flash
       .setPosition(p.x + Math.cos(base) * 34, p.y - 6 + Math.sin(base) * 34)
       .setRotation(base)
-      .setScale(2.2)
+      .setScale(1.6)
       .setAlpha(1)
       .setVisible(true)
     this.tweens.killTweensOf(flash)
@@ -541,7 +547,6 @@ class BattleScene extends Phaser.Scene {
     this.tweens.killTweensOf(p)
     p.setScale(1.14, 0.88)
     this.tweens.add({ targets: p, scaleX: 1, scaleY: 1, duration: 110, ease: 'Back.easeOut' })
-    this.cameras.main.shake(30, 0.0012)
     const offs =
       this.loadout.streams >= 3
         ? [-0.22, 0, 0.22]
@@ -648,15 +653,15 @@ class BattleScene extends Phaser.Scene {
       this.shoot(time)
     }
 
-    // 생성: 4분에 걸쳐 갈수록 빨라진다. 파도는 12초마다 투매 → 투기 → 패닉 순으로 돌고 뒤로 갈수록 커진다.
-    const every = Math.max(150, 900 - this.elapsed * 3.1)
+    // 생성: 4분에 걸쳐 갈수록 빨라진다. 파도는 20초마다 투매 → 투기 → 패닉 순으로 돌고 뒤로 갈수록 커진다 (334번: 한 번에 적게).
+    const every = Math.max(380, 1400 - this.elapsed * 4.2)
     if (time - this.lastSpawn > every) {
       this.lastSpawn = time
       const r = Math.random()
       this.spawn(r < 0.6 ? 'panic' : r < 0.82 ? 'dump' : r < 0.95 ? 'stop' : 'spec')
     }
     if (this.elapsed >= this.nextWave) {
-      const n = Math.floor(this.nextWave / 12) % 3
+      const n = Math.floor(this.nextWave / 20) % 3
       if (n === 1) {
         this.waveDump()
       } else if (n === 2) {
@@ -664,7 +669,7 @@ class BattleScene extends Phaser.Scene {
       } else {
         this.wavePanic()
       }
-      this.nextWave += 12
+      this.nextWave += 20
     }
 
     // 적 움직임: 매 프레임 새 객체를 만들지 않는다.
@@ -731,7 +736,9 @@ class BattleScene extends Phaser.Scene {
         b.look = look
         b.setTexture(`bullet-${look}`)
       }
-      this.trail.emitParticleAt(b.x, b.y)
+      if (Math.floor(time / 16) % 2 === 0) {
+        this.trail.emitParticleAt(b.x, b.y)
+      }
     }
     for (const child of this.tears.getChildren()) {
       const t = child as Phaser.Physics.Arcade.Image
