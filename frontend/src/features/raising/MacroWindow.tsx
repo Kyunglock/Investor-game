@@ -3,6 +3,7 @@ import { withParticle } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { groupRemarks, leadersOf } from './investShow'
 import { type Stance, useRaisingStore } from './store'
+import { TeamGradeChip } from './TeamGradeChip'
 
 type Macro = NonNullable<Company['macro']>
 
@@ -58,6 +59,7 @@ export function MacroWindow({
             </button>
           )}
         </header>
+        <TeamGradeChip team={macro.team} />
         <article className="mt-2 rounded border border-line bg-card p-3">
           <p className="text-[12px] text-muted">올해의 큰 흐름 · {macro.topic}</p>
           <h4 className="mt-0.5 font-semibold text-[16px]">{macro.title}</h4>

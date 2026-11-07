@@ -673,7 +673,8 @@ class DefaultCompanyService implements CompanyService {
         debated ? invest.teamBuy : null,
         debated ? invest.teamSell : null,
         debated ? invest.teamCall : null,
-        debate);
+        debate,
+        engine.teamGrade.of(c, TeamGrade.INVEST));
   }
 
   /** 옛 저장(295번 전)은 kind가 없다: last면 두 줄 가운데 앞이 WIN, 뒤가 LOSE였지만 구분할 수 없어 WIN으로 읽는다. */
@@ -760,7 +761,8 @@ class DefaultCompanyService implements CompanyService {
         stances,
         meetings.open(c),
         meetings.convened(c),
-        outcome);
+        outcome,
+        engine.teamGrade.of(c, TeamGrade.MACRO));
   }
 
   private CompanyView.Raise raiseView(CompanyState c) {

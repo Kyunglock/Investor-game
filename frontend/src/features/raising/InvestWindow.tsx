@@ -13,6 +13,7 @@ import {
 } from './investShow'
 import { useRaisingStore } from './store'
 import { TeamClash, teamClashMs } from './TeamClash'
+import { TeamGradeChip } from './TeamGradeChip'
 
 type Invest = NonNullable<Company['invest']>
 
@@ -147,6 +148,7 @@ export function InvestWindow({
             </button>
           )}
         </header>
+        <TeamGradeChip team={invest.team} />
         {invest.finder && (
           <p className="mt-1 text-[13px]" data-testid="invest-finder">
             <b>

@@ -218,6 +218,13 @@ class JsonContentCatalog implements ContentCatalog {
             && mental.weaponGrades().keySet().containsAll(List.of("N", "R", "SR", "UR")),
         "무기 이름이 없다 (346번)");
     require(company.quirks() != null && !company.quirks().isEmpty(), "직원 버릇이 없다 (349번)");
+    require(
+        company.teamGrade() != null
+            && company
+                .teamGrade()
+                .keySet()
+                .containsAll(List.of("F", "E", "D", "C", "B", "A", "S", "SS", "SSS")),
+        "팀 합산 등급 풀이가 없다 (353번)");
     for (RaisingContent.Quirk q : company.quirks()) {
       require(
           q.code() != null

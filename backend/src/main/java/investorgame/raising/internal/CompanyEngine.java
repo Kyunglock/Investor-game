@@ -89,7 +89,11 @@ class CompanyEngine {
     this.history = new CompanyHistory(content);
     this.mental = new MentalEngine(content, properties);
     this.quirks = new Quirks(content);
+    this.teamGrade = new TeamGrade(this, content);
   }
+
+  /** 회의 팀 합산 등급 (decisions.md 353번). */
+  final TeamGrade teamGrade;
 
   /** 멘탈 전투 (decisions.md 328번). */
   final MentalEngine mental;

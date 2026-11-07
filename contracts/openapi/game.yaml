@@ -818,6 +818,17 @@ components:
                       label: { type: string }
                 ready: { type: boolean, description: 지금 정할 수 있다(정하지 않았고 돈을 굴리는 자리에 사람이 있다) }
                 convened: { type: boolean, description: 회의를 열어 한마디와 형광펜을 굳혔다. 그 뒤로 배치를 바꿔도 그대로다 (decisions.md 249번) }
+                team:
+                  description: 회의에 앉은 팀의 합산 등급 (decisions.md 353번). 앉은 사람이 없으면 null
+                  oneOf:
+                    - type: object
+                      required: [grade, score, hint, members]
+                      properties:
+                        grade: { $ref: '#/components/schemas/Grade' }
+                        score: { type: integer, description: 0~100 }
+                        hint: { type: string, description: 한 줄 풀이 }
+                        members: { type: integer, description: 앉은 사람 수 }
+                    - type: 'null'
                 teamBuy: { type: [integer, 'null'], description: 토론에서 매수 쪽에 얹힌 무게(직원 안목, 352번). 회의를 열기 전이면 null }
                 teamSell: { type: [integer, 'null'], description: 토론에서 매도 쪽에 얹힌 무게. 회의를 열기 전이면 null }
                 teamCall: { type: [string, 'null'], enum: [BUY, SELL, null], description: 토론 뒤 직원들이 기운 쪽 (decisions.md 352번). 사장은 그 뒤에 고른다. 회의를 열기 전이면 null }
@@ -951,6 +962,17 @@ components:
               required: [topic, title, sentences, remarks, stances, ready, convened]
               properties:
                 topic: { type: string, description: 주제 이름(기준금리·환율·유가·물가·경기) }
+                team:
+                  description: 회의에 앉은 팀의 합산 등급 (decisions.md 353번). 앉은 사람이 없으면 null
+                  oneOf:
+                    - type: object
+                      required: [grade, score, hint, members]
+                      properties:
+                        grade: { $ref: '#/components/schemas/Grade' }
+                        score: { type: integer, description: 0~100 }
+                        hint: { type: string, description: 한 줄 풀이 }
+                        members: { type: integer, description: 앉은 사람 수 }
+                    - type: 'null'
                 title: { type: string }
                 sentences:
                   type: array

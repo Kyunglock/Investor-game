@@ -245,7 +245,18 @@ public record CompanyView(
       Integer teamBuy,
       Integer teamSell,
       String teamCall,
-      List<DebateLine> debate) {}
+      List<DebateLine> debate,
+      TeamGrade team) {}
+
+  /**
+   * 회의에 앉은 팀의 합산 등급 (decisions.md 353번): 잘하는 셋의 가중 평균(종목 회의는 안목 절반, 거시경제 회의는 안목·줏대) + 리서치 팀·팀장 보너스.
+   *
+   * @param grade F~SSS
+   * @param score 0~100
+   * @param hint 한 줄 풀이("이 팀이면 기사 열에 일곱은 맞힌다")
+   * @param members 앉은 사람 수
+   */
+  public record TeamGrade(String grade, int score, String hint, int members) {}
 
   /**
    * 막판 뒤집기 (decisions.md 283·290번): 결정이 다 끝났는데 누군가 반대로 하자고 나섰다. 답할 때까지 회의는 정해지지 않는다. 화면은 먼저 정해진
@@ -305,7 +316,8 @@ public record CompanyView(
       List<Stance> stances,
       boolean ready,
       boolean convened,
-      MacroOutcome outcome) {}
+      MacroOutcome outcome,
+      TeamGrade team) {}
 
   /** omen: 연초 회의의 폭락 조짐을 옮긴 문장(헛조짐일 수도 있다). */
   public record MacroSentence(String text, boolean highlighted, boolean omen) {}
