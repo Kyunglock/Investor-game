@@ -702,6 +702,24 @@ class InvestEngine {
     if (e == null) {
       return;
     }
+    // 실패·재미 업적 표시 (351번).
+    c.proposalsFollowed++;
+    if (good) {
+      e.wrongStreak = 0;
+      if (e.repaired) {
+        c.flags.add("repaired-gut");
+      }
+    } else {
+      c.proposalsWrong++;
+      e.wrongStreak++;
+      if ("chat".equals(company.quirks.code(e)) && e.wrongStreak >= 3) {
+        c.flags.add("chat-three");
+      }
+    }
+    e.repaired = false;
+    if ("BONUS".equals(choice)) {
+      e.bonusTurn = c.turn();
+    }
     Map<String, String> values = new HashMap<>();
     values.put("name", e.name);
     switch (choice) {

@@ -1743,6 +1743,17 @@ class CompanyEngine {
       result.pnl = stake * bp / BP;
       totalPnl += result.pnl;
       employee.totalPnl += result.pnl;
+      // 성과금의 역설 (351번): 성과금을 받은 바로 다음 분기에 판돈의 1할 넘게 잃었다.
+      if (employee.bonusTurn != null) {
+        if (company.turn() == employee.bonusTurn + 1
+            && result.pnl < 0
+            && -result.pnl * 10 > stake) {
+          company.flags.add("bonus-backfire");
+        }
+        if (company.turn() > employee.bonusTurn) {
+          employee.bonusTurn = null;
+        }
+      }
       // 손을 뒤집은 일은 팀장 보고(269번)가 전한다.
       q.results.add(result);
     }
@@ -2006,9 +2017,10 @@ class CompanyEngine {
     if (hrOf(company).isPresent()) {
       giveTickets(company, hrExtraTickets(), "hr", settlement.lines);
     }
+    // 업적마다 채용권, 실패 업적은 위로 보상 한 장 (351번).
     giveTickets(
         company,
-        gacha.achievementTickets() * settlement.achieved.size(),
+        history.achievementTickets(settlement, gacha.achievementTickets()),
         "achievement",
         settlement.lines);
     // 회사는 끝나지 않고 해마다 이어진다 (decisions.md 236번: 매각을 뺐다).

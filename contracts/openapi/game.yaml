@@ -746,12 +746,13 @@ components:
               description: 모든 업적. year가 없으면 아직 못 열었다
               items:
                 type: object
-                required: [code, name, description]
+                required: [code, name, description, fail]
                 properties:
                   code: { type: string }
                   name: { type: string }
                   description: { type: string }
                   year: { type: [integer, 'null'] }
+                  fail: { type: boolean, description: 실패 업적 (decisions.md 351번). 망한 판도 즐겁게. 열리면 채용권은 위로 보상 한 장 }
             hall:
               type: array
               description: 이 회사에서 가장 많이 번 사람부터(지금 직원과 떠난 직원), 다섯까지

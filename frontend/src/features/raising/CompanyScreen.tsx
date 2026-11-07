@@ -1062,8 +1062,13 @@ function HistoryTab({ company }: { company: Company }) {
             data-open={a.year != null}
           >
             <b className="block text-[13px]">
-              {a.year != null ? '🏆 ' : ''}
+              {a.year != null ? (a.fail ? '🙃 ' : '🏆 ') : ''}
               {a.name}
+              {a.fail && (
+                <span className="ml-1 rounded bg-line-soft px-1 text-[10px] font-normal text-muted">
+                  실패 업적 · 위로 1장
+                </span>
+              )}
             </b>
             {a.description}
             {a.year != null && <span className="block text-gold">{a.year}년 차</span>}
