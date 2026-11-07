@@ -46,6 +46,7 @@ export function InvestWindow({
   employees,
   onClose,
   onSettle,
+  hold = false,
 }: {
   invest: Invest
   year: number
@@ -53,6 +54,8 @@ export function InvestWindow({
   employees: Company['employees']
   onClose: () => void
   onSettle: () => void
+  /** 결과를 아직 보이지 않는다 (348번): 디펜스 멘탈 전투가 결정 직후에 끼어들어 끝날 때까지. 풀리면 차트가 처음부터 그려진다. */
+  hold?: boolean
 }) {
   const busy = useRaisingStore((s) => s.busy)
   const { decideInvest, answerProposal, giveVerdict } = useRaisingStore.getState()
@@ -83,12 +86,12 @@ export function InvestWindow({
   const show = chartTimeline(1, CHART_MS, skipped, lead)
   const [finished, setFinished] = useState(skipped)
   useEffect(() => {
-    if (!outcome || finished) {
+    if (!outcome || finished || hold) {
       return
     }
     const id = setTimeout(() => setFinished(true), show.end)
     return () => clearTimeout(id)
-  }, [outcome, finished, show.end])
+  }, [outcome, finished, show.end, hold])
   const skip = () => {
     setSkipped(true)
     setFinished(true)
@@ -348,7 +351,7 @@ export function InvestWindow({
           </div>
         )}
 
-        {outcome && (
+        {outcome && !hold && (
           <div className="mt-3" data-testid="invest-outcome">
             {outcome.delegated && (
               <TeamClash
