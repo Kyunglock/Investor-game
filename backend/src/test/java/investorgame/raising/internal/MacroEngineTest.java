@@ -229,7 +229,9 @@ class MacroEngineTest {
         found++;
         assertThat(ENGINE.invest.open(c)).isTrue();
         if (c.invest.finderId == 2) {
-          assertThat(c.invest.finderRole).as("종합 A면 직함 가운데").isEqualTo("종목 발굴 담당");
+          assertThat(c.invest.finderRole)
+              .as("혼자 앉으면 팀장: 분기 실적과 같은 호칭 (#346)")
+              .isEqualTo("종목 발굴팀 팀장");
           assertThat(c.invest.pitch).doesNotContain("{").contains(ENGINE.stockName(c.invest.stock));
           assertThat(c.invest.clarity).as("안목 90이면 또렷한 기사").isEqualTo("clear");
         }

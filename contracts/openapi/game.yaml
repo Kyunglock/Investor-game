@@ -29,8 +29,8 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Company' }
-        '401': { $ref: '#/components/responses/SessionRequired' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404':
+          description: 회사가 없다. 세션이 없거나 만료된 첫 방문도 여기다 (#346)
     post:
       operationId: openCompany
       summary: 사장의 사재로 회사를 차린다 (decisions.md 228·247번)

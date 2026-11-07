@@ -236,6 +236,17 @@ class MacroEngine {
     discover(c, random);
   }
 
+  /**
+   * 종목을 물어 온 사람의 호칭 (#346): 그 자리의 팀장이면 분기 실적의 팀장 보고와 같이 "종목 발굴팀 팀장", 아니면 직함. 전에는 같은 사람이 회의에서는 "종목
+   * 발굴 담당", 실적에서는 "종목 발굴팀 팀장"이었다.
+   */
+  String finderTitle(CompanyState c, Employee e) {
+    if (e.desk != null && company.teams.leads(c, e)) {
+      return company.desk(e.desk).name() + " 팀장";
+    }
+    return roleOf(e);
+  }
+
   /** 종목 발굴팀에 앉은 사람의 직함 (decisions.md 267번). 직함이 없는 자리면 null. */
   String roleOf(Employee e) {
     if (e.desk == null) {
@@ -297,7 +308,7 @@ class MacroEngine {
       return;
     }
     c.usedNews.remove(c.invest.news);
-    c.invest = invest.found(c, finder, roleOf(finder), random);
+    c.invest = invest.found(c, finder, finderTitle(c, finder), random);
   }
 
   /** 분기 실적의 한 줄: 그 분기 주제가 분 섹터 바람 (266·268번). */

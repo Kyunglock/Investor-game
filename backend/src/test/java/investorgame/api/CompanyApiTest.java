@@ -139,6 +139,8 @@ class CompanyApiTest {
   @Test
   void 사재로_회사를_차리고_채용권으로_뽑아_세_해를_넘겨도_이어진다() throws Exception {
     mvc.perform(get("/api/company").cookie(session)).andExpect(status().isNotFound());
+    // 세션 쿠키가 없는 첫 방문도 401이 아니라 "회사가 없다" (#346).
+    mvc.perform(get("/api/company")).andExpect(status().isNotFound());
 
     DocumentContext company =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));

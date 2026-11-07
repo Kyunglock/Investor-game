@@ -245,7 +245,8 @@ export function seatTiles(company: Company): { tiles: SeatTile[]; resting: Emplo
     }
     const desk = desks.get(employee.desk ?? '')
     const r = results.get(employee.id)
-    const pnl = r && r.stake > 0 ? r.pnl : null
+    // 돈을 굴리는 자리에만 운용 손익 배지를 단다 (#346): 해 가운데 발굴팀으로 옮긴 사람에게 지난 운용 손익이 붙었다.
+    const pnl = r && r.stake > 0 && desk?.trades ? r.pnl : null
     return {
       index,
       employee,
