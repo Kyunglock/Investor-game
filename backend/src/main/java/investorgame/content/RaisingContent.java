@@ -78,7 +78,26 @@ public record RaisingContent(
       Construction construction,
       Industry industry,
       Map<String, String> omenReveal,
-      Mental mental) {}
+      Mental mental,
+      List<Quirk> quirks) {}
+
+  /**
+   * 직원 버릇 (decisions.md 349번). hello: 뽑혔을 때 첫인사({name}). proposals: 막판 제안({name}·{action}). again:
+   * 지난 상벌(BONUS·RAISE·NOTHING·CUT·FORGIVE)에 이어지는 막판 제안. verdicts: 상벌 결과({name}·{bonus}). raiseAsk:
+   * 연봉 협상({name}·{before}·{after}). resign: 사표(IGNORED·FROZEN, {name}). poachKept·poachLeft: 이직 제안에
+   * 남거나 떠남({name}·{rival}).
+   */
+  public record Quirk(
+      String code,
+      String name,
+      List<String> hello,
+      List<String> proposals,
+      Map<String, List<String>> again,
+      Map<String, String> verdicts,
+      List<String> raiseAsk,
+      Map<String, String> resign,
+      String poachKept,
+      String poachLeft) {}
 
   /**
    * 업계 순위 소식 (#351). first: 처음 매긴 해, up·down·same: 지난해보다 상위 몇 %가

@@ -97,6 +97,15 @@ export function GachaReveal({
                           NEW
                         </span>
                       )}
+                      {d.hello && i < open && (
+                        // 첫인사 (349번): 버릇대로 한마디.
+                        <span
+                          className="mt-1 line-clamp-3 text-[10px] leading-tight text-ink/75"
+                          data-testid="drawn-hello"
+                        >
+                          “{d.hello}”
+                        </span>
+                      )}
                     </span>
                   </span>
                 </span>

@@ -54,6 +54,15 @@ export function EmployeeDetail({ employee: e, company }: { employee: Employee; c
         {e.name}{' '}
         <span className="text-[13px] font-normal text-muted">{titleOf(e.overallGrade)}</span>{' '}
         <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>
+        {e.quirkName && (
+          // 버릇 (decisions.md 349번): 막판 제안·상벌·연봉·사표 문구가 이를 따른다.
+          <span
+            className="ml-1 rounded-full border border-ink/30 bg-[#fff6c9] px-1.5 text-[11px] font-normal"
+            data-testid="quirk"
+          >
+            {e.quirkName}
+          </span>
+        )}
       </p>
       <p className="text-[12px] text-muted">
         {ATTIRE_NAMES[attireOf(e.overallGrade)]}

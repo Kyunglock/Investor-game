@@ -567,6 +567,8 @@ components:
               leader: { type: boolean, description: 앉은 자리의 팀장이다 (decisions.md 269번) }
               salary: { type: integer, format: int64, description: 한 해 연봉. 상가 아래 작은 회사면 0 (decisions.md 270번) }
               morale: { type: integer, minimum: -2, maximum: 2, description: 사기. 낮으면 손이 더 뒤집힌다 (270번) }
+              quirk: { type: string, enum: [gut, chat, chart, news, coffee], description: 버릇 (decisions.md 349번). 번호로 정해져 바뀌지 않고 막판 제안·상벌·연봉·사표·이직·첫인사 문구가 이를 따른다 }
+              quirkName: { type: string, description: 버릇 이름(촉파·단톡방파·차트파·뉴스파·커피파) }
               role: { type: [string, 'null'], description: 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번) }
         desks:
           type: array
@@ -669,6 +671,7 @@ components:
                   grade: { $ref: '#/components/schemas/Grade' }
                   star: { type: boolean, description: 특급 칸에서 나왔다 }
                   fresh: { type: boolean, description: 도감에 처음 오른 등급이다 }
+                  hello: { type: [string, 'null'], description: 첫인사 (349번). 버릇대로 한마디. 옛 뽑기면 null }
             collection:
               type: array
               description: 도감. 등급(F~GOD)마다 뽑거나 합성해서 얻은 사람 수. 사장의 것이라 다음 회사로 이어진다

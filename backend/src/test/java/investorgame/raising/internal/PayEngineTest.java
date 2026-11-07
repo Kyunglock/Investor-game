@@ -193,7 +193,7 @@ class PayEngineTest {
     c.resign = new CompanyState.Resign();
     c.resign.employeeId = e.id;
     c.resign.reason = "IGNORED";
-    assertThat(ENGINE.pay.resignLine(c)).contains(e.name).contains("기다리다 지쳤습니다");
+    assertThat(ENGINE.pay.resignLine(c)).contains(e.name).contains("사표를 들고 왔다");
     long before = ENGINE.pay.salary(c, e);
     long kept = ENGINE.pay.keepSalary(c, e);
     assertThat(kept).isGreaterThan(before);
@@ -234,7 +234,7 @@ class PayEngineTest {
         left++;
         assertThat(c.raise).isNull();
         assertThat(c.resign.reason).isEqualTo("IGNORED");
-        assertThat(q.lines).anyMatch(l -> l.contains("기다리다 지쳤습니다"));
+        assertThat(q.lines).anyMatch(l -> l.contains("사표를 들고 왔다"));
         CompanyState.Quarter next = ENGINE.settleQuarter(c, new HashSeededRandom(seed));
         assertThat(c.employees).isEmpty();
         assertThat(next.lines).anyMatch(l -> l.contains("기다리다 지쳐 회사를 떠났다"));

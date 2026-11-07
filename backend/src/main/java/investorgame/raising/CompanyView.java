@@ -125,7 +125,9 @@ public record CompanyView(
       String role,
       boolean leader,
       long salary,
-      int morale) {}
+      int morale,
+      String quirk,
+      String quirkName) {}
 
   /**
    * 채용 뽑기 (decisions.md 312번).
@@ -160,7 +162,8 @@ public record CompanyView(
    * @param star 특급 칸에서 나왔다
    * @param fresh 도감에 처음 오른 등급이다
    */
-  public record Drawn(int employeeId, String name, String grade, boolean star, boolean fresh) {}
+  public record Drawn(
+      int employeeId, String name, String grade, boolean star, boolean fresh, String hello) {}
 
   /** 도감의 한 칸: 그 등급을 몇 명 얻었나. 0이면 아직 못 봤다. */
   public record CollectionEntry(String grade, int count) {}

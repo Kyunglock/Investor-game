@@ -1120,7 +1120,7 @@ class CompanyEngineTest {
     assertThat(company.capital).isEqualTo(cash);
     assertThat(company.employees).hasSize(2);
     assertThat(company.yearLines)
-        .anyMatch(line -> line.contains(rival) && line.contains("거절하고 회사에 남았다"));
+        .anyMatch(line -> line.contains(rival) && line.contains("제안을 거절하고"));
     assertThat(company.poach).isNull();
     CompanyState answered = company;
     assertThatThrownBy(() -> ENGINE.answerPoach(answered, true))

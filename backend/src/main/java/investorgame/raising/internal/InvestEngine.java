@@ -615,9 +615,11 @@ class InvestEngine {
     c.invest.proposalId = who.id;
     c.invest.proposalName = who.name;
     c.invest.proposalAction = opposite;
+    // 버릇대로 말한다 (349번): 지난 상벌이 있으면 그에 이어서. 난수는 전처럼 소모해 다른 굴림이 바뀌지 않게 한다.
+    rng.nextInt(lines.size());
     c.invest.proposalLine =
         Korean.fill(
-            lines.get(rng.nextInt(lines.size())),
+            company.quirks.proposalTemplate(who, lines, c.turn()),
             Map.of("name", who.name, "action", texts.options().get(opposite)));
     c.invest.pendingChoice = choice;
     c.invest.pendingBig = big;
@@ -722,7 +724,10 @@ class InvestEngine {
       default -> company.pay.shiftMorale(e, 1);
     }
     i.verdictLine =
-        Korean.fill(content.raising().company().invest().verdicts().get(choice), values);
+        Korean.fill(
+            company.quirks.verdictTemplate(
+                e, choice, content.raising().company().invest().verdicts().get(choice)),
+            values);
     c.yearLines.add(i.verdictLine);
   }
 

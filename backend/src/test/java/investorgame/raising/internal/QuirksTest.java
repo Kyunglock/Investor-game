@@ -1,0 +1,90 @@
+package investorgame.raising.internal;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import investorgame.behavior.internal.TestBehavior;
+import investorgame.common.random.HashSeededRandom;
+import investorgame.content.internal.TestContent;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import org.junit.jupiter.api.Test;
+
+/** 직원 버릇 (decisions.md 349번, #395). 실제 콘텐츠로 돌린다. */
+class QuirksTest {
+
+  private static final CompanyEngine ENGINE =
+      new CompanyEngine(
+          TestContent.load(),
+          TestBehavior.create(),
+          TestBehavior.bind("raising.company", CompanyProperties.class));
+
+  private static Map<String, Integer> stats(int value) {
+    return Map.of(
+        "insight", value, "patience", value, "courage", value, "conviction", value, "luck", value);
+  }
+
+  @Test
+  void 버릇은_번호로_정해져_바뀌지_않고_다섯이_고루_나온다() {
+    CompanyState c = ENGINE.open(new HashSeededRandom(1), 150_000_000L);
+    Set<String> seen = new HashSet<>();
+    for (int i = 0; i < 10; i++) {
+      CompanyState.Employee e = ENGINE.hire(c, stats(50));
+      String code = ENGINE.quirks.code(e);
+      assertThat(ENGINE.quirks.code(e)).isEqualTo(code);
+      assertThat(ENGINE.quirks.name(e)).isNotBlank();
+      seen.add(code);
+    }
+    assertThat(seen).containsExactlyInAnyOrder("gut", "chat", "chart", "news", "coffee");
+    // 이웃한 번호는 버릇이 다르다.
+    assertThat(ENGINE.quirks.code(c.employees.get(0)))
+        .isNotEqualTo(ENGINE.quirks.code(c.employees.get(1)));
+  }
+
+  @Test
+  void 뽑히면_버릇대로_첫인사를_하고_자리표시가_남지_않는다() {
+    CompanyState c = ENGINE.open(new HashSeededRandom(2), 150_000_000L);
+    c.tickets = 5;
+    ENGINE.draw(c, 5, new HashSeededRandom(2));
+    assertThat(c.lastDraw).hasSize(5);
+    for (CompanyState.Drawn d : c.lastDraw) {
+      assertThat(d.hello).isNotBlank().doesNotContain("{").contains(d.name);
+    }
+  }
+
+  @Test
+  void 막판_제안은_버릇_문구를_쓰고_지난_상벌이_있으면_그에_이어서_말한_뒤_지운다() {
+    CompanyState c = ENGINE.open(new HashSeededRandom(3), 150_000_000L);
+    CompanyState.Employee e = ENGINE.hire(c, stats(50));
+    List<String> generic = List.of("{name} 공용 {action}");
+    String plain = ENGINE.quirks.proposalTemplate(e, generic, 1);
+    assertThat(plain).contains("{name}").contains("{action}").isNotEqualTo(generic.getFirst());
+    assertThat(ENGINE.quirks.proposalTemplate(e, generic, 1)).as("같은 열쇠면 같은 말").isEqualTo(plain);
+
+    String verdict = ENGINE.quirks.verdictTemplate(e, "CUT", "공용 벌");
+    assertThat(verdict).contains("{name}").isNotEqualTo("공용 벌");
+    assertThat(e.lastVerdict).isEqualTo("CUT");
+    String again = ENGINE.quirks.proposalTemplate(e, generic, 2);
+    assertThat(again)
+        .contains("{action}")
+        .isNotEqualTo(ENGINE.quirks.proposalTemplate(e, generic, 2));
+    assertThat(e.lastVerdict).as("이어지는 말은 한 번만").isNull();
+  }
+
+  @Test
+  void 연봉_사표_이직_문구도_버릇을_따르고_빠진_문구는_공용으로() {
+    CompanyState c = ENGINE.open(new HashSeededRandom(4), 150_000_000L);
+    CompanyState.Employee e = ENGINE.hire(c, stats(50));
+    assertThat(ENGINE.quirks.raiseAskTemplate(e, 1, "공용"))
+        .contains("{name}")
+        .contains("{before}")
+        .contains("{after}");
+    assertThat(ENGINE.quirks.resignTemplate(e, "FROZEN", "공용"))
+        .contains("{name}")
+        .isNotEqualTo("공용");
+    assertThat(ENGINE.quirks.resignTemplate(e, "WHATEVER", "공용")).isEqualTo("공용");
+    assertThat(ENGINE.quirks.poachKeptTemplate(e, "공용")).contains("{rival}");
+    assertThat(ENGINE.quirks.poachLeftTemplate(e, "공용")).contains("{name}");
+  }
+}
