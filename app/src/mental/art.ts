@@ -23,8 +23,8 @@ const ENEMY_PALETTE: Record<string, string> = {
   // 패닉셀: 파랑
   '1': '#1b2f5c',
   '2': '#2f58a8',
-  '3': '#5b93e6',
-  '4': '#9cc4ff',
+  '3': '#6fa8f0',
+  '4': '#b7d6ff',
   // 투매: 보라 종이 더미
   A: '#3d2a6e',
   B: '#6b4fb3',
@@ -33,13 +33,13 @@ const ENEMY_PALETTE: Record<string, string> = {
   // 투기: 빨강 풍선
   a: '#6e1526',
   b: '#b82a45',
-  c: '#ea4d6a',
-  d: '#ff8fa3',
+  c: '#f0607b',
+  d: '#ffa3b4',
   // 손절매: 회색 몸, 가위 날
   g: '#3b3f47',
   G: '#6f7580',
-  h: '#9ba2ad',
-  H: '#ccd2da',
+  h: '#aab1bc',
+  H: '#d9dee5',
   i: '#5c6672', // 가위 윤곽
   I: '#aeb9c6', // 가위 날 그림자
   J: '#e6edf4', // 가위 날
@@ -52,6 +52,7 @@ const ENEMY_PALETTE: Record<string, string> = {
   m: '#7a1f2e', // 벌린 입
   T: '#7fb6ea', // 식은땀
   W: '#ffffff', // 반짝임
+  r: '#ff9bb3', // 볼 홍조
   y: '#f6d873', // 금빛
   Y: '#b8871c',
 }
@@ -96,79 +97,85 @@ function fill(put: Put, y: number, xs: number[], ch: string) {
   }
 }
 
-/** 동그란 흰자에 검은 눈동자. dx로 눈동자를 옆으로 흘린다. */
-function eye(put: Put, y: number, x: number, dx = 0, big = false) {
-  const r = big ? 2 : 1
-  for (const [cy, cx] of disc(y, x, r + 0.5, r + 0.5)) {
+/** 커다란 동그란 눈: 흰자 위에 2×2 눈동자와 반짝임. dx로 눈동자를 옆으로 흘린다. */
+function eye(put: Put, y: number, x: number, dx = 0) {
+  for (const [cy, cx] of disc(y, x, 2.5, 2.5)) {
     put(cy, cx, 'E')
   }
-  put(y, x + dx, 'k')
-  if (big) {
-    put(y + 1, x + dx, 'k')
-    put(y, x + dx + 1, 'k')
-    put(y + 1, x + dx + 1, 'k')
-    put(y, x + dx, 'W')
+  for (const [cy, cx] of disc(y + 0.5, x + dx + 0.5, 1.5, 1.5)) {
+    put(cy, cx, 'k')
   }
+  put(y, x + dx, 'W')
 }
 
-/** 화난 눈썹: 가운데로 내려오는 사선. */
-function brow(put: Put, y: number, x: number, dir: 1 | -1) {
+/** 감은 웃는 눈(^ ^). */
+function happyEye(put: Put, y: number, x: number) {
   put(y, x, 'k')
-  put(y + 1, x + dir, 'k')
-  put(y + 1, x + dir * 2, 'k')
+  put(y - 1, x - 1, 'k')
+  put(y - 1, x + 1, 'k')
+  put(y, x - 2, 'k')
+  put(y, x + 2, 'k')
+}
+
+/** 볼 홍조 두 점. */
+function blush(put: Put, y: number, lx: number, rx: number) {
+  fill(put, y, [lx, lx + 1, rx, rx + 1], 'r')
 }
 
 type Painter = (put: Put, frame: 0 | 1) => void
 
-/** 패닉셀: 작고 동그란 파란 몸, 튀어나올 듯한 눈, 식은땀, 떨리는 다리. 2프레임은 몸이 한 칸 흔들리고 땀이 떨어진다. */
+/** 패닉셀: 동그란 파란 아기 몸에 왕눈이, 두 손을 번쩍 들고 "으악". 식은땀이 톡. 2프레임은 몸이 한 칸 흔들리고 땀이 떨어진다. */
 const panic: Painter = (put, frame) => {
   const ox = frame ? 1 : 0
-  blob(put, disc(17, 16 + ox, 8, 8.5), PANIC)
-  // 다리
-  blob(put, area([25, 28], [11 + ox, 13 + ox]), PANIC)
-  blob(put, area([25, 28], [19 + ox, 21 + ox]), PANIC)
-  eye(put, 15, 12 + ox, frame ? -1 : 1, true)
-  eye(put, 15, 20 + ox, frame ? -1 : 1, true)
-  // 벌린 입(비명)
-  for (const [y, x] of disc(21, 16 + ox, 2, 2.5)) {
+  // 번쩍 든 짧은 팔
+  blob(put, area([9, 13], [4 + ox, 6 + ox]), PANIC)
+  blob(put, area([9, 13], [26 + ox, 28 + ox]), PANIC)
+  blob(put, disc(17, 16 + ox, 9.5, 10), PANIC)
+  // 아장아장 발
+  blob(put, area([26, 28], [11 + ox, 14 + ox]), PANIC)
+  blob(put, area([26, 28], [18 + ox, 21 + ox]), PANIC)
+  eye(put, 15, 11 + ox, frame ? -1 : 1)
+  eye(put, 15, 21 + ox, frame ? -1 : 1)
+  blush(put, 19, 8 + ox, 23 + ox)
+  // 조그맣게 벌린 입
+  for (const [y, x] of disc(21.5, 16 + ox, 1.5, 1.5)) {
     put(y, x, 'm')
   }
-  put(20, 16 + ox, 'E')
   // 식은땀
-  const sy = frame ? 10 : 8
-  put(sy, 26, 'T')
-  fill(put, sy + 1, [25, 26, 27], 'T')
-  put(sy + 1, 25, 'W')
-  put(sy + 2, 26, 'T')
-  put(sy - 2, 5, 'T')
-  put(sy - 1, 5, 'T')
+  const sy = frame ? 9 : 7
+  put(sy, 25 + ox, 'T')
+  fill(put, sy + 1, [24 + ox, 25 + ox, 26 + ox], 'T')
+  put(sy + 1, 24 + ox, 'W')
+  put(sy + 2, 25 + ox, 'T')
 }
 
-/** 투매: 쏟아지는 매도 주문지 더미. 보라 몸통 위에 흰 종이 세 장이 어긋나게 겹치고 붉은 줄이 그어져 있다. 2프레임은 종이가 한 칸 미끄러진다. */
+/** 투매: 보라 찹쌀떡 몸이 매도 주문지를 모자처럼 이고 있다. 걱정 가득한 왕눈이와 물결 입. 2프레임은 종이가 한 칸 미끄러진다. */
 const dump: Painter = (put, frame) => {
-  blob(put, disc(19, 16, 9, 9.5), DUMP)
   const off = frame ? 1 : 0
+  blob(put, disc(20, 16, 9, 10), DUMP)
+  // 머리에 인 종이 두 장
   for (const [i, [y, x]] of (
     [
-      [6, 10 - off],
-      [9, 14 + off],
-      [12, 9],
+      [4, 8 - off],
+      [7, 14 + off],
     ] as [number, number][]
   ).entries()) {
-    blob(put, area([y, y + 8], [x, x + 11]), PAPER)
-    for (const ly of [y + 2, y + 4, y + 6]) {
-      fill(put, ly, [x + 2, x + 3, x + 4, x + 5, x + 6], i === 2 ? 'R' : 'k')
-    }
-    fill(put, y + 2, [x + 8, x + 9], 'R')
+    blob(put, area([y, y + 6], [x, x + 9]), PAPER)
+    fill(put, y + 2, [x + 2, x + 3, x + 4, x + 5], 'R')
+    fill(put, y + 4, [x + 2, x + 3, x + 4, x + 5, x + 6], i ? 'R' : 'k')
   }
-  brow(put, 21, 11, 1)
-  brow(put, 21, 21, -1)
-  eye(put, 24, 12, 0)
-  eye(put, 24, 20, 0)
-  fill(put, 27, [14, 15, 16, 17, 18], 'k')
+  eye(put, 18, 11, 0)
+  eye(put, 18, 21, 0)
+  blush(put, 22, 8, 23)
+  // 물결 입(걱정)
+  fill(put, 24, [14, 16, 18], 'k')
+  fill(put, 25, [15, 17], 'k')
+  // 아장아장 발
+  blob(put, area([28, 30], [11, 14]), DUMP)
+  blob(put, area([28, 30], [18, 21]), DUMP)
 }
 
-/** 투기: 한껏 부푼 빨간 풍선. 매듭 아래에 금빛 동전이 달렸다. 탐욕스런 반달눈과 활짝 벌린 입. 2프레임은 조금 더 부푼다. */
+/** 투기: 방실방실 웃는 빨간 풍선. 감은 눈(^ ^), 볼 홍조, 하트 입, 매듭 아래 금빛 동전. 2프레임은 조금 더 부푼다. */
 const spec: Painter = (put, frame) => {
   const r = frame ? 12 : 11.5
   blob(put, disc(14, 16, r, r), SPEC)
@@ -176,48 +183,58 @@ const spec: Painter = (put, frame) => {
   fill(put, 6, [10, 11], 'W')
   put(7, 9, 'W')
   put(8, 9, 'W')
+  put(9, 22, 'W')
+  happyEye(put, 13, 11)
+  happyEye(put, 13, 21)
+  blush(put, 16, 7, 23)
+  // 작은 하트 입
+  fill(put, 17, [14, 15, 17, 18], 'm')
+  fill(put, 18, [14, 15, 16, 17, 18], 'm')
+  fill(put, 19, [15, 16, 17], 'm')
+  put(20, 16, 'm')
   // 매듭과 동전
   blob(put, area([26, 27], [15, 17]), SPEC)
   blob(put, area([28, 31], [14, 18]), { outline: 'Y', shadow: 'Y', base: 'y', light: 'W' })
-  // 탐욕: 아래로 처진 반달눈($ 느낌)
-  fill(put, 11, [9, 10, 11, 12, 19, 20, 21, 22], 'k')
-  fill(put, 12, [9, 12, 19, 22], 'k')
-  fill(put, 12, [10, 11, 20, 21], 'y')
-  // 활짝 벌린 입
-  for (const [y, x] of disc(17, 16, 2.5, 5)) {
-    put(y, x, 'm')
-  }
-  fill(put, 15, [12, 13, 14, 15, 16, 17, 18, 19, 20], 'k')
-  fill(put, 16, [13, 14, 15, 16, 17, 18, 19], 'E')
 }
 
-/** 손절매: 회색 몸에 큰 가위를 들었다. 날 두 개가 머리 위에서 엇갈린다. 2프레임은 가위가 벌어진다. */
+/** 손절매: 그렁그렁한 눈의 회색 몽실이가 가위를 꼭 안고 있다. 2프레임은 가위가 조금 벌어진다. */
 const stop: Painter = (put, frame) => {
-  blob(put, disc(21, 16, 7, 8), STOP)
-  // 가위 날 둘(엇갈림). frame 1이면 더 벌어진다
-  const spread = frame ? 2 : 0
+  blob(put, disc(16, 16, 10, 10.5), STOP)
+  // 아장아장 발
+  blob(put, area([26, 28], [11, 14]), STOP)
+  blob(put, area([26, 28], [18, 21]), STOP)
+  eye(put, 13, 11, 0)
+  eye(put, 13, 21, 0)
+  // 그렁그렁한 눈물
+  put(16, 9, 'T')
+  put(17, 9, 'T')
+  put(16, 23, 'T')
+  put(17, 23, 'T')
+  blush(put, 17, 7, 24)
+  // 작은 입 (~)
+  fill(put, 19, [14, 15, 17, 18], 'k')
+  put(20, 16, 'k')
+  // 몸 앞에 꼭 안은 작은 가위
+  const spread = frame ? 1 : 0
   const left: [number, number][] = []
   const right: [number, number][] = []
-  for (let i = 0; i < 11; i++) {
-    const w = i < 3 ? 1 : i < 8 ? 2 : 1
-    for (let k = 0; k < w; k++) {
-      left.push([3 + i, 9 + i - spread + k])
-      right.push([3 + i, 22 - i + spread + k])
-    }
+  for (let i = 0; i < 7; i++) {
+    left.push([19 + i, 13 - i * 0.5 - spread] as [number, number])
+    right.push([19 + i, 19 + i * 0.5 + spread] as [number, number])
   }
-  blob(put, left, BLADE)
-  blob(put, right, BLADE)
-  // 손잡이 고리
-  blob(put, disc(16, 11 - spread, 2, 2.5), { outline: 'g', shadow: 'G', base: 'h', light: 'H' })
-  blob(put, disc(16, 21 + spread, 2, 2.5), { outline: 'g', shadow: 'G', base: 'h', light: 'H' })
-  // 가는 눈과 꾹 다문 입
-  fill(put, 20, [11, 12, 13, 19, 20, 21], 'k')
-  fill(put, 21, [12, 20], 'E')
-  fill(put, 24, [13, 14, 15, 16, 17, 18, 19], 'k')
-  brow(put, 18, 10, 1)
-  brow(put, 18, 22, -1)
+  blob(
+    put,
+    left.map(([y, x]) => [y, Math.round(x)]),
+    BLADE,
+  )
+  blob(
+    put,
+    right.map(([y, x]) => [y, Math.round(x)]),
+    BLADE,
+  )
+  blob(put, disc(27, 11 - spread, 1.5, 2), STOP)
+  blob(put, disc(27, 21 + spread, 1.5, 2), STOP)
 }
-
 const ENEMY_PAINTERS: Record<EnemyKind, Painter> = { panic, dump, spec, stop }
 
 /** 바닥 타일 한 장(16×16, 폭락장은 32×32). 장르마다 다른 장소: 공격은 객장 카펫, 디펜스는 금고실 철판, 생존은 금이 간 폭락장 바닥. */
