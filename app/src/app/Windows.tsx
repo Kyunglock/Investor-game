@@ -15,6 +15,7 @@ import { createPortal } from 'react-dom'
 import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
+import { MentalWindow } from '../mental/MentalWindow'
 import { useAppUi } from './ui'
 
 /**
@@ -29,13 +30,24 @@ export function Windows({ company }: { company: Company }) {
   const { settle, convene } = useRaisingStore.getState()
   const [investOpen, setInvestOpen] = useState(false)
   const [macroOpen, setMacroOpen] = useState(false)
+  const [mentalOpen, setMentalOpen] = useState(false)
   const ended = company.status === 'ENDED'
   const drawn = useDrawReveal(company)
+
+  // 결산 직전: 이번 분기 멘탈 전투를 아직 안 치렀으면 창을 띄운다 (decisions.md 328번). 자동 진행은 건너뛴다.
+  const battleOrSettle = () => {
+    const s = useRaisingStore.getState()
+    if (s.company?.mental && !s.company.mental.done && !s.autoPlay) {
+      setMentalOpen(true)
+      return
+    }
+    void settle()
+  }
 
   // 거시경제 회의를 마친 뒤: 물어 온 종목이 있으면 종목 회의를 열고, 없으면 바로 결산한다.
   const stockOrSettle = async () => {
     if (!useRaisingStore.getState().company?.invest?.ready) {
-      void settle()
+      battleOrSettle()
       return
     }
     if (await convene()) {
@@ -130,7 +142,19 @@ export function Windows({ company }: { company: Company }) {
           quarter={company.quarter}
           employees={company.employees}
           onClose={() => setInvestOpen(false)}
-          onSettle={() => void settle()}
+          onSettle={() => {
+            setInvestOpen(false)
+            battleOrSettle()
+          }}
+        />
+      )}
+      {!ended && company.mental && mentalOpen && (
+        <MentalWindow
+          mental={company.mental}
+          onDone={() => {
+            setMentalOpen(false)
+            void settle()
+          }}
         />
       )}
       <AutoCountdown />

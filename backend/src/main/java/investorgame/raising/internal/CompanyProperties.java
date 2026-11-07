@@ -62,7 +62,21 @@ public record CompanyProperties(
     Macro macro,
     Scout scout,
     Sale sale,
-    String endingGrade) {
+    String endingGrade,
+    Mental mental) {
+
+  /**
+   * 멘탈 전투 (decisions.md 328번). 강화율(%) = min(maxPercent, 물리친 적 ÷ killsPerPercent + 남은 멘탈 ÷
+   * mentalPerPercent). 보고 값은 maxKills·maxMental로 자른다. genreWeights: 시장
+   * 갈래(boom·normal·crash·burst)마다 장르별 가중치.
+   */
+  public record Mental(
+      int killsPerPercent,
+      int mentalPerPercent,
+      int maxPercent,
+      int maxKills,
+      int maxMental,
+      Map<String, Map<String, Integer>> genreWeights) {}
 
   /** 건물 이사 (decisions.md 296번): 이사 비용은 다음 띠 자본의 percent%. 자본이 다음 띠 + 비용 이상일 때만 간다. */
   /**

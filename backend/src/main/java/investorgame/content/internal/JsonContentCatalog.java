@@ -203,6 +203,14 @@ class JsonContentCatalog implements ContentCatalog {
     for (RaisingContent.Desk desk : company.desks()) {
       require(desk.roles() == null || desk.roles().size() == 3, "직함은 셋이어야 한다: " + desk.code());
     }
+    RaisingContent.Mental mental = company.mental();
+    require(
+        mental != null
+            && mental.headlines().keySet().containsAll(List.of("ASSAULT", "DEFENSE", "SURVIVAL"))
+            && mental.headlines().values().stream().noneMatch(List::isEmpty)
+            && !mental.cards().isEmpty()
+            && mental.line() != null,
+        "멘탈 전투 문구가 없다");
     RaisingContent.Macro macro = company.macro();
     List<String> stances = List.of("AGGRESSIVE", "NEUTRAL", "DEFENSIVE");
     require(

@@ -77,7 +77,8 @@ public record RaisingContent(
       Ending ending,
       Construction construction,
       Industry industry,
-      Map<String, String> omenReveal) {}
+      Map<String, String> omenReveal,
+      Mental mental) {}
 
   /**
    * 업계 순위 소식 (#351). first: 처음 매긴 해, up·down·same: 지난해보다 상위 몇 %가
@@ -87,6 +88,13 @@ public record RaisingContent(
 
   /** 건물 공사 (#347). started: 공사를 시작한 해의 소식({years}), done: 다 지어 옮긴 해의 소식. */
   public record Construction(String started, String done) {}
+
+  /**
+   * 멘탈 전투 (decisions.md 328번). headlines: 장르(ASSAULT·DEFENSE·SURVIVAL)마다 이벤트 머리글 여럿. cards: 카드 코드 →
+   * 이름. line: 분기 실적 소식 줄({card}·{kills}·{left}·{percent}).
+   */
+  public record Mental(
+      Map<String, List<String>> headlines, Map<String, String> cards, String line) {}
 
   /** 엔딩 (decisions.md 276번). line: 엔딩을 본 해의 결산 소식 줄({years}). */
   public record Ending(String line) {}

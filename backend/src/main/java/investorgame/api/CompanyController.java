@@ -168,6 +168,40 @@ class CompanyController {
 
   record MacroRequest(@NotBlank String stance) {}
 
+  /** 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 328번). */
+  @PostMapping("/mental")
+  CompanyView mental(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody MentalRequest request) {
+    UUID sessionId = cookies.requireSession(token);
+    CompanyView company =
+        companies.mental(
+            sessionId,
+            request.year(),
+            request.quarter(),
+            request.card(),
+            request.kills(),
+            request.mentalLeft());
+    PLAY.info(
+        "company-mental session={} company={} year={} quarter={} card={} kills={} left={} ip={}",
+        sessionId,
+        company.companyId(),
+        request.year(),
+        request.quarter(),
+        request.card(),
+        request.kills(),
+        request.mentalLeft(),
+        ClientIp.current());
+    return company;
+  }
+
+  record MentalRequest(
+      @Positive int year,
+      @Min(1) @Max(4) int quarter,
+      @NotBlank String card,
+      @PositiveOrZero int kills,
+      @PositiveOrZero int mentalLeft) {}
+
   /** 올해 연봉 협상에 답한다 (decisions.md 270번). */
   @PostMapping("/raise")
   CompanyView answerRaise(

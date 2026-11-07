@@ -155,6 +155,19 @@ raising:
       big-gain-percent: 150
       wall-miss-percent: 50
       god-flip-percent: 50
+    # 멘탈 전투 (decisions.md 328번): 분기마다 결산 직전 한 판. 강화율 = min(30%, 물리친 적 ÷ 10 + 남은 멘탈 ÷ 10)이 그 분기 돈을 굴리는
+    # 직원 모두의 버는 몫을 키우고 뒤집힘을 줄인다. 장르는 시장 갈래를 가중치로만 섞어 뽑아 숨은 값이 새지 않는다(burst는 폭락이 터지는 분기)
+    mental:
+      kills-per-percent: 10
+      mental-per-percent: 10
+      max-percent: 30
+      max-kills: 500
+      max-mental: 150
+      genre-weights:
+        boom: { ASSAULT: 50, DEFENSE: 20, SURVIVAL: 30 }
+        normal: { ASSAULT: 35, DEFENSE: 35, SURVIVAL: 30 }
+        crash: { ASSAULT: 25, DEFENSE: 45, SURVIVAL: 30 }
+        burst: { ASSAULT: 15, DEFENSE: 25, SURVIVAL: 60 }
     # 등급 효과 (decisions.md 289번): 종합 등급마다 맞혔을 때 버는 몫에 gain-percent%를 더 얹고, 한 해 자리에서 일하면
     # growth-percent% 확률로 가장 낮은 능력치(운 빼고)가 한 띠 오른다. 낮은 등급일수록 잘 크고 높을수록 더디다. SSS 위는 실전 경험으로 오른다
     perks:

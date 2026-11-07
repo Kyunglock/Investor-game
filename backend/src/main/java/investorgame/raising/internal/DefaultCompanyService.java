@@ -409,7 +409,20 @@ class DefaultCompanyService implements CompanyService {
             : null,
         resignView(c),
         industryView(row),
-        lockedDesks);
+        lockedDesks,
+        ended || c.mental == null
+            ? null
+            : new CompanyView.Mental(c.mental.genre, c.mental.headline, c.mental.card != null));
+  }
+
+  @Override
+  @Transactional
+  public CompanyView mental(
+      UUID sessionId, int year, int quarter, String card, int kills, int mentalLeft) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.mental.report(row.state(), year, quarter, card, kills, mentalLeft);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
   }
 
   /** 연말 자본을 남기고 같은 연차 회사들 가운데 자리를 결산 소식에 적는다 (#351). 지난해보다 상위 몇 %가 5%p 넘게 오르거나 내렸으면 그렇게 말한다. */

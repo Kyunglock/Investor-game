@@ -136,6 +136,18 @@ export const sfx = {
     tone(784, 160, { wave: 'sine', gain: 0.06 })
     tone(1175, 320, { wave: 'sine', gain: 0.06, at: 0.11 })
   },
+  /** 멘탈 전투 (decisions.md 328번): 쏘기 */
+  shot: () => tone(1500, 45, { wave: 'square', gain: 0.025, slide: 700 }),
+  /** 멘탈 전투: 적이 터진다 */
+  squish: () => {
+    tone(420, 70, { wave: 'triangle', gain: 0.06, slide: 140 })
+    noise(60, 0.05)
+  },
+  /** 멘탈 전투: 내가 맞았다 */
+  ouch: () => {
+    tone(260, 160, { wave: 'sawtooth', gain: 0.1, slide: 90 })
+    noise(120, 0.08)
+  },
   /** 팡파르: 이사·업적·엔딩 */
   fanfare: () => {
     const notes = [523, 659, 784, 1046, 784, 1046]
