@@ -8,6 +8,7 @@ import type { Hud, Outcome } from './battle'
 import { type Card, loadoutOf, pickCards } from './cards'
 import { ENEMIES } from './enemies'
 import { GENRES } from './genres'
+import { type Hero, heroOf } from './hero'
 
 type Mental = NonNullable<Company['mental']>
 
@@ -15,8 +16,18 @@ type Mental = NonNullable<Company['mental']>
  * 멘탈 전투 창 (decisions.md 328번): 이벤트 머리글과 장르 → 카드 석 장 가운데 하나 → 한 판(Phaser, 늦게 불러온다) → 결과 → 서버에 보고 → onDone(결산).
  * 건너뛰면 보고 없이 바로 onDone이다. 화면 전체를 쓴다.
  */
-export function MentalWindow({ mental, onDone }: { mental: Mental; onDone: () => void }) {
+export function MentalWindow({
+  mental,
+  company,
+  onDone,
+}: {
+  mental: Mental
+  company: Company
+  onDone: () => void
+}) {
   const [cards] = useState(() => pickCards())
+  // 싸우는 사람은 창을 여는 순간 정한다: 회사가 다시 그려져도 한 판이 다시 시작되지 않게.
+  const [hero] = useState(() => heroOf(company))
   const [card, setCard] = useState<Card | null>(null)
   const [outcome, setOutcome] = useState<Outcome | null>(null)
   const [sending, setSending] = useState(false)
@@ -32,8 +43,10 @@ export function MentalWindow({ mental, onDone }: { mental: Mental; onDone: () =>
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-40 bg-[#ffe7c2]" role="dialog" aria-label="멘탈 전투">
-      {card && !outcome && <Battle genre={mental.genre} card={card} onDone={setOutcome} />}
+    <div className="fixed inset-0 z-40 bg-[#1c2238]" role="dialog" aria-label="멘탈 전투">
+      {card && !outcome && (
+        <Battle genre={mental.genre} hero={hero} card={card} onDone={setOutcome} />
+      )}
       {!card && (
         <div className="flex h-full flex-col items-center justify-center gap-5 overflow-y-auto bg-[rgba(43,35,64,0.72)] px-4 py-8">
           <div className="panel w-full max-w-[520px] px-5 py-4 text-center">
@@ -44,6 +57,7 @@ export function MentalWindow({ mental, onDone }: { mental: Mental; onDone: () =>
             <p className="mt-1 text-[14px] text-muted">
               장르: {genre.name} · {genre.hint}
             </p>
+            <p className="mt-1 text-[14px] font-bold">출전: {hero.name}</p>
           </div>
           <p className="text-[15px] font-bold text-white">멘탈 카드 한 장을 고르세요</p>
           <div
@@ -158,10 +172,12 @@ function Stat({ label, value }: { label: string; value: number | string }) {
 /** 한 판: Phaser를 늦게 불러 컨테이너에 띄우고, 위에 멘탈·시간·점수와 큰 알림을 그린다. */
 function Battle({
   genre,
+  hero,
   card,
   onDone,
 }: {
   genre: Mental['genre']
+  hero: Hero
   card: Card
   onDone: (outcome: Outcome) => void
 }) {
@@ -186,6 +202,7 @@ function Battle({
       setLoading(false)
       stop = startBattle(el, {
         genre,
+        hero,
         loadout: loadoutOf(card.code),
         onHud: setHud,
         onBanner: (text, color) => setBanner({ text, color, id: ++bannerId }),
@@ -201,13 +218,13 @@ function Battle({
       cancelled = true
       stop?.()
     }
-  }, [genre, card, onDone])
+  }, [genre, hero, card, onDone])
 
   return (
     <>
       <div ref={host} className="absolute inset-0" />
       {loading && (
-        <p className="absolute inset-0 grid place-items-center text-[16px] font-bold text-[#2b2340]">
+        <p className="absolute inset-0 grid place-items-center text-[16px] font-bold text-white">
           전장을 여는 중…
         </p>
       )}

@@ -151,6 +151,7 @@ export function Windows({ company }: { company: Company }) {
       {!ended && company.mental && mentalOpen && (
         <MentalWindow
           mental={company.mental}
+          company={company}
           onDone={() => {
             setMentalOpen(false)
             void settle()
