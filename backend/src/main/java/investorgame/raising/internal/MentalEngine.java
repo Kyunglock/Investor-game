@@ -71,24 +71,30 @@ class MentalEngine {
   }
 
   /**
-   * 한 판 결과를 받는다. 이번 분기가 아니면 400, 이미 받았으면 그대로 둔다(같은 요청 두 번). 보고 값은 상한으로 자르고 강화율 = min(최대, 적 ÷ a + 멘탈
-   * ÷ b).
+   * 한 판 결과를 받는다: 레벨이 오를 때마다 고른 카드(처음 한 장 포함, 330번)와 물리친 적·남은 멘탈. 이번 분기가 아니거나 없는 카드면 400, 이미 받았으면
+   * 그대로 둔다(같은 요청 두 번). 보고 값은 상한으로 자르고 강화율 = min(최대, 적 ÷ a + 멘탈 ÷ b).
    */
-  void report(CompanyState c, int year, int quarter, String card, int kills, int mentalLeft) {
+  void report(
+      CompanyState c, int year, int quarter, List<String> cards, int kills, int mentalLeft) {
     if (c.year != year || c.quarter != quarter) {
       throw new InvalidRequestException("이번 분기가 아니다: " + year + "년 " + quarter + "분기");
     }
     if (c.mental == null) {
       throw new InvalidRequestException("이번 분기에는 멘탈 전투가 없다");
     }
-    if (!text().cards().containsKey(card)) {
-      throw new InvalidRequestException("없는 카드다: " + card);
+    for (String card : cards) {
+      if (!text().cards().containsKey(card)) {
+        throw new InvalidRequestException("없는 카드다: " + card);
+      }
     }
-    if (c.mental.card != null) {
+    if (cards.isEmpty()) {
+      throw new InvalidRequestException("카드를 한 장은 골라야 한다");
+    }
+    if (c.mental.cards != null) {
       return;
     }
     CompanyProperties.Mental rule = properties.mental();
-    c.mental.card = card;
+    c.mental.cards = List.copyOf(cards);
     c.mental.kills = Math.clamp(kills, 0, rule.maxKills());
     c.mental.mentalLeft = Math.clamp(mentalLeft, 0, rule.maxMental());
     c.mental.bonusPercent =
@@ -100,7 +106,7 @@ class MentalEngine {
 
   /** 이번 분기 강화율(%). 치르지 않았거나 이 칸이 없던 분기면 0. */
   int bonusPercent(CompanyState c) {
-    return c.mental == null || c.mental.card == null ? 0 : c.mental.bonusPercent;
+    return c.mental == null || c.mental.cards == null ? 0 : c.mental.bonusPercent;
   }
 
   /** 분기 실적 소식 줄. 치르지 않았으면 null. */
@@ -111,7 +117,8 @@ class MentalEngine {
     return Korean.fill(
         text().line(),
         Map.of(
-            "card", text().cards().get(c.mental.card),
+            "level", String.valueOf(c.mental.cards.size()),
+            "cards", String.join("·", c.mental.cards.stream().map(text().cards()::get).toList()),
             "kills", String.valueOf(c.mental.kills),
             "left", String.valueOf(c.mental.mentalLeft),
             "percent", String.valueOf(c.mental.bonusPercent)));

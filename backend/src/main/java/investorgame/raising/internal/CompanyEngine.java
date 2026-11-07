@@ -1602,7 +1602,7 @@ class CompanyEngine {
     // 멘탈 전투 (328번): 잘 치렀으면 이 분기 돈을 굴리는 직원 모두 더 벌고 손이 덜 뒤집힌다.
     int mentalBonus = mental.bonusPercent(company);
     if (mentalBonus > 0) {
-      q.mentalCard = company.mental.card;
+      q.mentalCard = String.join("·", company.mental.cards);
       q.mentalBonusPercent = mentalBonus;
       q.lines.add(mental.line(company));
     }

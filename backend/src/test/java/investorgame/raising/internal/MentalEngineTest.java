@@ -8,6 +8,7 @@ import investorgame.common.error.InvalidRequestException;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.content.internal.TestContent;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -42,14 +43,14 @@ class MentalEngineTest {
       assertThat(c.mental).isNotNull();
       assertThat(c.mental.genre).isIn(MentalEngine.GENRES);
       assertThat(c.mental.headline).isNotBlank();
-      assertThat(c.mental.card).isNull();
+      assertThat(c.mental.cards).isNull();
       CompanyState again = company(seed);
       assertThat(again.mental.genre).isEqualTo(c.mental.genre);
       assertThat(again.mental.headline).isEqualTo(c.mental.headline);
       String first = c.mental.genre;
       ENGINE.settleQuarter(c, new HashSeededRandom(seed));
       assertThat(c.quarter).isEqualTo(2);
-      assertThat(c.mental.card).as("새 분기면 새 전투").isNull();
+      assertThat(c.mental.cards).as("새 분기면 새 전투").isNull();
       // 분기마다 다른 열쇠로 뽑으므로 늘 같은 장르가 나오지는 않는다(시드 50개 가운데 하나라도 바뀌면 된다).
       if (!first.equals(c.mental.genre)) {
         return;
@@ -85,21 +86,21 @@ class MentalEngineTest {
   @Test
   void 결과를_보내면_강화율을_매기고_상한으로_자르며_두_번_보내도_한_번이다() {
     CompanyState c = company(1);
-    ENGINE.mental.report(c, 1, 1, "steel", 120, 80);
-    assertThat(c.mental.card).isEqualTo("steel");
+    ENGINE.mental.report(c, 1, 1, List.of("steel", "hold"), 120, 80);
+    assertThat(c.mental.cards).containsExactly("steel", "hold");
     assertThat(c.mental.bonusPercent).isEqualTo(12 + 8);
-    ENGINE.mental.report(c, 1, 1, "hold", 500, 150);
-    assertThat(c.mental.card).as("이미 보냈으면 그대로").isEqualTo("steel");
+    ENGINE.mental.report(c, 1, 1, List.of("hold"), 500, 150);
+    assertThat(c.mental.cards).as("이미 보냈으면 그대로").containsExactly("steel", "hold");
     assertThat(c.mental.bonusPercent).isEqualTo(20);
 
     CompanyState big = company(2);
-    ENGINE.mental.report(big, 1, 1, "hold", 9_999, 9_999);
+    ENGINE.mental.report(big, 1, 1, List.of("hold"), 9_999, 9_999);
     assertThat(big.mental.kills).isEqualTo(PROPERTIES.mental().maxKills());
     assertThat(big.mental.mentalLeft).isEqualTo(PROPERTIES.mental().maxMental());
     assertThat(big.mental.bonusPercent).isEqualTo(PROPERTIES.mental().maxPercent());
 
     CompanyState none = company(3);
-    ENGINE.mental.report(none, 1, 1, "calm", 0, 0);
+    ENGINE.mental.report(none, 1, 1, List.of("calm"), 0, 0);
     assertThat(none.mental.bonusPercent).isZero();
     assertThat(ENGINE.mental.line(none)).as("강화가 없으면 소식도 없다").isNull();
   }
@@ -110,20 +111,22 @@ class MentalEngineTest {
     c.mental = null;
     assertThat(ENGINE.mental.adopt(c, new HashSeededRandom(7))).isTrue();
     assertThat(c.mental.genre).isIn(MentalEngine.GENRES);
-    assertThat(c.mental.card).isNull();
+    assertThat(c.mental.cards).isNull();
     assertThat(ENGINE.mental.adopt(c, new HashSeededRandom(7))).as("이미 있으면 그대로").isFalse();
   }
 
   @Test
   void 이번_분기가_아니거나_없는_카드면_400이다() {
     CompanyState c = company(1);
-    assertThatThrownBy(() -> ENGINE.mental.report(c, 1, 2, "hold", 10, 10))
+    assertThatThrownBy(() -> ENGINE.mental.report(c, 1, 2, List.of("hold"), 10, 10))
         .isInstanceOf(InvalidRequestException.class);
-    assertThatThrownBy(() -> ENGINE.mental.report(c, 2, 1, "hold", 10, 10))
+    assertThatThrownBy(() -> ENGINE.mental.report(c, 2, 1, List.of("hold"), 10, 10))
         .isInstanceOf(InvalidRequestException.class);
-    assertThatThrownBy(() -> ENGINE.mental.report(c, 1, 1, "yolo", 10, 10))
+    assertThatThrownBy(() -> ENGINE.mental.report(c, 1, 1, List.of("hold", "yolo"), 10, 10))
         .isInstanceOf(InvalidRequestException.class);
-    assertThat(c.mental.card).isNull();
+    assertThatThrownBy(() -> ENGINE.mental.report(c, 1, 1, List.of(), 10, 10))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(c.mental.cards).isNull();
   }
 
   @Test
@@ -132,14 +135,15 @@ class MentalEngineTest {
     for (int seed = 0; seed < 200; seed++) {
       CompanyState plain = company(seed);
       CompanyState trained = company(seed);
-      ENGINE.mental.report(trained, 1, 1, "hold", 300, 150);
+      ENGINE.mental.report(trained, 1, 1, List.of("hold", "heal", "hold"), 300, 150);
       assertThat(trained.mental.bonusPercent).isEqualTo(PROPERTIES.mental().maxPercent());
       CompanyState.Quarter p = ENGINE.settleQuarter(plain, new HashSeededRandom(seed));
       CompanyState.Quarter t = ENGINE.settleQuarter(trained, new HashSeededRandom(seed));
       assertThat(p.mentalBonusPercent).isNull();
       assertThat(t.mentalBonusPercent).isEqualTo(PROPERTIES.mental().maxPercent());
-      assertThat(t.mentalCard).isEqualTo("hold");
-      assertThat(t.lines).anyMatch(l -> l.contains("멘탈 전투(존버 정신)") && l.contains("+30%"));
+      assertThat(t.mentalCard).isEqualTo("hold·heal·hold");
+      assertThat(t.lines)
+          .anyMatch(l -> l.contains("3레벨") && l.contains("존버 정신·심호흡·존버 정신") && l.contains("+30%"));
       assertThat(p.lines).noneMatch(l -> l.contains("멘탈 전투"));
       CompanyState.Result pr = p.results.getFirst();
       CompanyState.Result tr = t.results.getFirst();

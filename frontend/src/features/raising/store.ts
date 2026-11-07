@@ -8,7 +8,7 @@ type Status = 'loading' | 'ready' | 'error'
 export type Stance = 'AGGRESSIVE' | 'NEUTRAL' | 'DEFENSIVE'
 
 /** 멘탈 전투의 카드 코드 (decisions.md 328번). 이름·효과는 앱이 가진다. */
-export type MentalCard = 'hold' | 'split' | 'rule' | 'steel' | 'calm'
+export type MentalCard = 'hold' | 'split' | 'rule' | 'steel' | 'calm' | 'heal'
 
 interface RaisingState {
   status: Status
@@ -53,7 +53,7 @@ interface RaisingState {
   /** 사표를 들고 온 직원에게 답한다: 연봉을 올려 붙잡거나 보낸다 (decisions.md 282번). */
   answerResign: (keep: boolean) => Promise<void>
   /** 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 328번). 강화율은 서버가 매긴다. */
-  reportMental: (card: MentalCard, kills: number, mentalLeft: number) => Promise<void>
+  reportMental: (cards: MentalCard[], kills: number, mentalLeft: number) => Promise<void>
   /** 종목 회의의 막판 제안에 답한다 (decisions.md 283번). */
   answerProposal: (accept: boolean) => Promise<void>
   /** 막판 제안을 따른 직원에게 상이나 벌을 준다 (283번). */
@@ -180,14 +180,14 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
 
     answerResign: (keep) => change(api.POST('/api/company/resign', { body: { keep } })),
 
-    reportMental: async (card, kills, mentalLeft) => {
+    reportMental: async (cards, kills, mentalLeft) => {
       const c = get().company
       if (!c) {
         return
       }
       await change(
         api.POST('/api/company/mental', {
-          body: { year: c.year, quarter: c.quarter, card, kills, mentalLeft },
+          body: { year: c.year, quarter: c.quarter, cards, kills, mentalLeft },
         }),
       )
     },
