@@ -990,8 +990,9 @@ function SettlementView({ company }: { company: Company }) {
         <Ledger company={company} settlement={s} />
       </div>
       <ul className="mt-2 text-[13px]">
-        {s.lines.map((line) => (
-          <li key={line}>{line}</li>
+        {s.lines.map((line, i) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: 같은 소식이 두 번 올 수 있고 목록은 한 번 그리면 그대로다 (#338)
+          <li key={`${i}-${line}`}>{line}</li>
         ))}
       </ul>
     </section>

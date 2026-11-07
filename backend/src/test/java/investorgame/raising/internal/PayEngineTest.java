@@ -7,6 +7,7 @@ import investorgame.behavior.internal.TestBehavior;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.content.internal.TestContent;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -245,5 +246,38 @@ class PayEngineTest {
         .contains("25%")
         .contains("2분기")
         .contains("30%");
+  }
+
+  private static int moraleAfter(String read, String choice, boolean up) {
+    CompanyState c = company(1, 100_000_000L, 1);
+    CompanyState.Employee e = ENGINE.hire(c, stats(50));
+    int before = e.morale;
+    CompanyState.Remark r = new CompanyState.Remark();
+    r.employeeId = e.id;
+    r.read = read;
+    c.invest = new CompanyState.Invest();
+    c.invest.remarks = List.of(r);
+    c.invest.choice = choice;
+    c.invest.up = up;
+    ENGINE.pay.afterMeeting(c);
+    return e.morale - before;
+  }
+
+  /** #338: 자기 말도 틀렸으면 서운하지 않다. 자기 말이 맞았는데 사장이 다르게 골랐을 때만 서운하다. */
+  @Test
+  void 자기_말이_맞았는데_안_들어_줬을_때만_서운하다() {
+    // 사자고 했는데 사장은 지켜봤고, 내렸다: 둘 다 틀렸다
+    assertThat(moraleAfter("UP", InvestEngine.HOLD, false)).isZero();
+    // 사자고 했는데 사장은 지켜봤고, 올랐다: 직원 말이 맞았다
+    assertThat(moraleAfter("UP", InvestEngine.HOLD, true)).isEqualTo(-1);
+    // 사자고 했는데 사장은 팔았고, 내렸다: 사장이 맞았다
+    assertThat(moraleAfter("UP", InvestEngine.SELL, false)).isZero();
+    // 사자고 했고 사장도 샀고, 올랐다
+    assertThat(moraleAfter("UP", InvestEngine.BUY, true)).isEqualTo(1);
+  }
+
+  @Test
+  void 같은_소식은_한_줄로_묶고_횟수를_붙인다() {
+    assertThat(CompanyEngine.grouped(List.of("가", "나", "가", "가"))).containsExactly("가 (3번)", "나");
   }
 }
