@@ -167,6 +167,7 @@ class MacroEngine {
     RaisingContent.Macro texts = texts();
     Macro macro = c.macro;
     List<CompanyState.Remark> remarks = new ArrayList<>();
+    java.util.Set<String> used = new java.util.HashSet<>();
     int penalty = invest.penalty(macro.clarity);
     for (Employee e : c.employees) {
       if (e.desk == null || CompanyEngine.HR_DESK.equals(e.desk)) {
@@ -182,7 +183,9 @@ class MacroEngine {
               ? "foggy"
               : voice.key();
       List<String> lines = texts.remarks().get(tier).get(read);
-      String line = lines.get(random.forKey("macro-remark", c.turn(), e.id).nextInt(lines.size()));
+      String line =
+          company.fresh(
+              c, lines, random.forKey("macro-remark", c.turn(), e.id).nextInt(lines.size()), used);
       InvestEngine.Points points =
           InvestEngine.points(
               macro.sentences,
@@ -199,6 +202,7 @@ class MacroEngine {
       remarks.add(r);
     }
     macro.remarks = remarks;
+    company.remember(c, used);
     Optional<Employee> researcher = company.researcher(c);
     if (researcher.isPresent()) {
       Employee r = researcher.get();

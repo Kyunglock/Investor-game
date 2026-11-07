@@ -102,6 +102,9 @@ class CompanyState {
   /** 회사를 떠난 직원 (263번). */
   List<Alumnus> alumni = new ArrayList<>();
 
+  /** 최근에 쓴 문구 틀 (#392): 회의 한마디·팀장 보고가 같은 줄로 이어 나오지 않게 고를 때 건너뛴다. 오래된 것부터 빠진다. */
+  List<String> recentLines = new ArrayList<>();
+
   /** 증권사마다 우리에게 손을 뻗은 횟수 (#390). */
   Map<String, Integer> poachCounts = new HashMap<>();
 
