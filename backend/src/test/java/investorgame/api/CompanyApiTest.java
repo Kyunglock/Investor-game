@@ -538,4 +538,30 @@ class CompanyApiTest {
     postJson("/api/company/hires", "{\"applicantId\":%d,\"replace\":null}".formatted(applicant))
         .andExpect(status().isBadRequest());
   }
+
+  /** 접속할 때마다 같은 토큰의 쿠키를 새 만료(30일)로 다시 내린다: 마지막 접속부터 30일이 흐른다 (decisions.md 311번). */
+  @Test
+  void 접속할_때마다_세션_쿠키를_30일로_다시_내린다() throws Exception {
+    mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated());
+
+    Cookie renewed =
+        mvc.perform(get("/api/company").cookie(session))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getCookie(SessionCookies.NAME);
+    assertThat(renewed).as("이어 하기 요청도 쿠키를 다시 내린다").isNotNull();
+    assertThat(renewed.getValue()).as("같은 세션").isEqualTo(session.getValue());
+    assertThat(renewed.getMaxAge()).isEqualTo(30 * 24 * 60 * 60);
+    assertThat(renewed.isHttpOnly()).isTrue();
+
+    Cookie ensured =
+        mvc.perform(post("/api/sessions").cookie(session))
+            .andExpect(status().isNoContent())
+            .andReturn()
+            .getResponse()
+            .getCookie(SessionCookies.NAME);
+    assertThat(ensured).as("유효한 세션이면 새로 발급하지 않고 만료만 늘린다").isNotNull();
+    assertThat(ensured.getValue()).isEqualTo(session.getValue());
+  }
 }
