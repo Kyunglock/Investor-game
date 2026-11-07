@@ -87,6 +87,11 @@ class BattleScene extends Phaser.Scene {
   private tears!: Phaser.Physics.Arcade.Group
   private enemies!: Phaser.Physics.Arcade.Group
   private boom!: Record<EnemyKind, Phaser.GameObjects.Particles.ParticleEmitter>
+  /** 총 손맛: 탄 꼬리, 맞는 자리의 불꽃, 총구 화염 풀. */
+  private trail!: Phaser.GameObjects.Particles.ParticleEmitter
+  private hitSpark!: Phaser.GameObjects.Particles.ParticleEmitter
+  private flashes: Phaser.GameObjects.Image[] = []
+  private flashIndex = 0
   private pops: Phaser.GameObjects.Text[] = []
   private popIndex = 0
   private keys: Record<
@@ -217,6 +222,27 @@ class BattleScene extends Phaser.Scene {
         .setDepth(6)
     }
     this.boom = boom
+    this.trail = this.add
+      .particles(0, 0, 'trail', {
+        lifespan: 160,
+        scale: { start: 3, end: 0.5 },
+        alpha: { start: 0.9, end: 0 },
+        tint: [0xffe08a, 0xffb300],
+        emitting: false,
+      })
+      .setDepth(3)
+    this.hitSpark = this.add
+      .particles(0, 0, 'spark', {
+        speed: { min: 120, max: 260 },
+        lifespan: { min: 120, max: 220 },
+        scale: { start: 1.6, end: 0 },
+        tint: [0xffffff, 0xffe08a],
+        emitting: false,
+      })
+      .setDepth(7)
+    for (let i = 0; i < 6; i++) {
+      this.flashes.push(this.add.image(0, 0, 'flash').setDepth(6).setVisible(false))
+    }
     for (let i = 0; i < 40; i++) {
       this.pops.push(
         this.add
@@ -355,6 +381,17 @@ class BattleScene extends Phaser.Scene {
     // 하얗게 번쩍, 뒤로 밀림, 데미지 숫자: 맞은 느낌의 세 가지.
     e.setTintFill(0xffffff)
     this.time.delayedCall(55, () => e.active && e.clearTint())
+    // 맞는 자리에 불꽃이 튀고 살짝 들썩인다.
+    this.hitSpark.explode(6, e.x - Math.cos(angle) * 10, e.y - Math.sin(angle) * 10)
+    sfx.hit()
+    this.tweens.killTweensOf(e)
+    this.tweens.add({
+      targets: e,
+      scaleX: e.scaleX * 1.18,
+      scaleY: e.scaleY * 0.84,
+      duration: 50,
+      yoyo: true,
+    })
     const kb = e.kind === 'spec' ? 60 : 240
     e.kbx += Math.cos(angle) * kb
     e.kby += Math.sin(angle) * kb
@@ -489,7 +526,28 @@ class BattleScene extends Phaser.Scene {
   private fire(now: number, base: number) {
     this.lastFire = now
     sfx.shot()
-    this.player.setFlipX(Math.cos(base) < -0.3)
+    const p = this.player
+    p.setFlipX(Math.cos(base) < -0.3)
+    // 총 손맛: 총구 화염, 반동(눌렸다 펴짐), 화면이 살짝 흔들린다.
+    const flash = this.flashes[this.flashIndex++ % this.flashes.length]
+    flash
+      .setPosition(p.x + Math.cos(base) * 34, p.y - 6 + Math.sin(base) * 34)
+      .setRotation(base)
+      .setScale(2.2)
+      .setAlpha(1)
+      .setVisible(true)
+    this.tweens.killTweensOf(flash)
+    this.tweens.add({
+      targets: flash,
+      scale: 0.6,
+      alpha: 0,
+      duration: 90,
+      onComplete: () => flash.setVisible(false),
+    })
+    this.tweens.killTweensOf(p)
+    p.setScale(1.14, 0.88)
+    this.tweens.add({ targets: p, scaleX: 1, scaleY: 1, duration: 110, ease: 'Back.easeOut' })
+    this.cameras.main.shake(30, 0.0012)
     const offs =
       this.loadout.streams >= 3
         ? [-0.22, 0, 0.22]
@@ -505,6 +563,7 @@ class BattleScene extends Phaser.Scene {
         .enableBody(true, this.player.x, this.player.y, true, true)
         .setDepth(4)
       b.look = 0
+      b.setScale(1.5)
       b.body?.setCircle(6, 1, 1)
       b.setVelocity(Math.cos(base + off) * BULLET_SPEED, Math.sin(base + off) * BULLET_SPEED)
       b.life = now + BULLET_LIFE
@@ -603,7 +662,9 @@ class BattleScene extends Phaser.Scene {
       p.setTexture('hero-front').setFlipX(false)
     }
     // 숨쉬기: 가만히 있으면 살짝 눌렸다 펴진다.
-    p.setScale(1, mx || my ? 1 : 1 + Math.sin(time / 260) * 0.025)
+    if (!this.tweens.isTweening(p)) {
+      p.setScale(1, mx || my ? 1 : 1 + Math.sin(time / 260) * 0.025)
+    }
     if (this.wall && this.wallZone) {
       this.wall.setPosition(0, this.wallY() - WALL_H).setSize(w, WALL_H * 2)
       this.wallZone.setPosition(w / 2, this.wallY()).setSize(w, WALL_H * 2)
@@ -707,6 +768,7 @@ class BattleScene extends Phaser.Scene {
         b.look = look
         b.setTexture(`bullet-${look}`)
       }
+      this.trail.emitParticleAt(b.x, b.y)
     }
     for (const child of this.tears.getChildren()) {
       const t = child as Phaser.Physics.Arcade.Image

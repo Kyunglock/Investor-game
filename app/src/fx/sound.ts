@@ -137,7 +137,12 @@ export const sfx = {
     tone(1175, 320, { wave: 'sine', gain: 0.06, at: 0.11 })
   },
   /** 멘탈 전투 (decisions.md 328번): 쏘기 */
-  shot: () => tone(1500, 45, { wave: 'square', gain: 0.025, slide: 700 }),
+  shot: () => {
+    tone(900, 60, { wave: 'square', gain: 0.05, slide: 260 })
+    noise(40, 0.04)
+  },
+  /** 멘탈 전투: 탄이 맞았다 */
+  hit: () => tone(2400, 25, { wave: 'square', gain: 0.02, slide: 1600 }),
   /** 멘탈 전투: 적이 터진다 */
   squish: () => {
     tone(420, 70, { wave: 'triangle', gain: 0.06, slide: 140 })
