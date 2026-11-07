@@ -1325,4 +1325,20 @@ class CompanyEngineTest {
     }
     assertThat(promoted).as("종합 등급이 오르면 올라섰다는 소식").isPositive();
   }
+
+  /** #392: 최근에 쓴 문구와 이번에 이미 쓴 문구는 건너뛰고, 다 썼으면 굴린 것을 쓴다. 기억은 60개까지. */
+  @Test
+  void 같은_문구는_이어_나오지_않게_고른다() {
+    CompanyState c = new CompanyState();
+    List<String> lines = List.of("가", "나", "다");
+    java.util.Set<String> now = new java.util.HashSet<>();
+    ENGINE.remember(c, List.of("가"));
+    assertThat(ENGINE.fresh(c, lines, 0, now)).as("최근에 쓴 가는 건너뛴다").isEqualTo("나");
+    assertThat(ENGINE.fresh(c, lines, 0, now)).as("이번에 쓴 나도 건너뛴다").isEqualTo("다");
+    assertThat(ENGINE.fresh(c, lines, 0, now)).as("다 썼으면 굴린 것").isEqualTo("가");
+    for (int i = 0; i < 100; i++) {
+      ENGINE.remember(c, List.of("x" + i));
+    }
+    assertThat(c.recentLines).hasSize(CompanyEngine.RECENT_LINES).doesNotContain("가");
+  }
 }

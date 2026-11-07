@@ -100,6 +100,7 @@ class TeamEngine {
         (int)
             results.stream().filter(r -> r.flips.getOrDefault(StatCodes.CONVICTION, 0) > 0).count();
     List<Report> reports = new ArrayList<>();
+    java.util.Set<String> used = new java.util.HashSet<>();
     for (RaisingContent.Desk desk : company.desks()) {
       Optional<Employee> leader = leaderOf(c, desk.code());
       List<Result> team = byDesk.getOrDefault(desk.code(), List.of());
@@ -114,12 +115,13 @@ class TeamEngine {
       if (desk.trades()) {
         long pnl = team.stream().mapToLong(r -> r.pnl).sum();
         report.pnl = pnl;
-        report.text = tradingLine(head, team, quarters, period, seed);
+        report.text = tradingLine(c, head, team, quarters, period, seed, used);
       } else {
         report.text = supportLine(c, desk.code(), quarters, period, swayed);
       }
       reports.add(report);
     }
+    company.remember(c, used);
     return reports;
   }
 
@@ -127,11 +129,13 @@ class TeamEngine {
   static final int BIG_PERCENT = 15;
 
   private String tradingLine(
+      CompanyState c,
       Employee head,
       List<Result> team,
       List<CompanyState.Quarter> quarters,
       String period,
-      int seed) {
+      int seed,
+      java.util.Set<String> used) {
     RaisingContent.Teams texts = texts();
     long pnl = team.stream().mapToLong(r -> r.pnl).sum();
     long stake = team.stream().mapToLong(r -> r.stake).sum();
@@ -147,8 +151,7 @@ class TeamEngine {
     Map<String, String> values =
         Map.of("period", period, "pnl", CompanyEngine.money(Math.abs(pnl)));
     StringBuilder text =
-        new StringBuilder(
-            Korean.fill(lines.get(Math.floorMod(seed + head.id, lines.size())), values));
+        new StringBuilder(Korean.fill(company.fresh(c, lines, seed + head.id, used), values));
     // ② 태도: 공격·방어가 손익에 미친 한마디. 중립이거나 본전이면 없다.
     String stance =
         quarters.stream()
@@ -198,7 +201,13 @@ class TeamEngine {
         .max(
             Map.Entry.<String, Integer>comparingByValue().thenComparing(Map.Entry.comparingByKey()))
         .map(x -> texts.flipTips().get(x.getKey()))
-        .ifPresent(tip -> text.append(' ').append(tip));
+        // 같은 조언은 최근에 했으면 다시 하지 않는다 (#392): 분기마다 같은 조언이 붙었다.
+        .filter(tip -> !c.recentLines.contains(tip) && !used.contains(tip))
+        .ifPresent(
+            tip -> {
+              used.add(tip);
+              text.append(' ').append(tip);
+            });
     return text.toString();
   }
 

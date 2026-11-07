@@ -1108,6 +1108,35 @@ class CompanyEngine {
     return at < properties.gradeCapital().size() ? LADDER.get(at) : null;
   }
 
+  /** 최근에 쓴 문구 틀을 몇 개까지 기억하나 (#392). */
+  static final int RECENT_LINES = 60;
+
+  /**
+   * 같은 문구가 이어 나오지 않게 고른다 (#392): 굴린 자리에서부터 최근에 쓴 것과 이번에 이미 쓴 것을 건너뛴다. 다 썼으면 굴린 것. 고른 틀은 now에 담는다.
+   * 굴린 값만으로 정하므로 같은 상태면 같은 줄이 나온다.
+   */
+  String fresh(CompanyState company, List<String> lines, int roll, java.util.Set<String> now) {
+    int start = Math.floorMod(roll, lines.size());
+    for (int i = 0; i < lines.size(); i++) {
+      String line = lines.get((start + i) % lines.size());
+      if (!company.recentLines.contains(line) && !now.contains(line)) {
+        now.add(line);
+        return line;
+      }
+    }
+    String line = lines.get(start);
+    now.add(line);
+    return line;
+  }
+
+  /** 쓴 문구 틀을 기억한다 (#392). */
+  void remember(CompanyState company, java.util.Collection<String> used) {
+    company.recentLines.addAll(used);
+    while (company.recentLines.size() > RECENT_LINES) {
+      company.recentLines.removeFirst();
+    }
+  }
+
   /** 업계 순위 소식 문구 (#351). */
   RaisingContent.Industry industryTexts() {
     return content.raising().company().industry();
