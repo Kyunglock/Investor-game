@@ -241,7 +241,11 @@ public record CompanyView(
       Finder finder,
       InvestOutcome outcome,
       Proposal proposal,
-      Verdict verdict) {}
+      Verdict verdict,
+      Integer teamBuy,
+      Integer teamSell,
+      String teamCall,
+      List<DebateLine> debate) {}
 
   /**
    * 막판 뒤집기 (decisions.md 283·290번): 결정이 다 끝났는데 누군가 반대로 하자고 나섰다. 답할 때까지 회의는 정해지지 않는다. 화면은 먼저 정해진

@@ -237,7 +237,8 @@ class CompanyApiTest {
                 .andExpect(status().isOk()));
     assertThat(again.read("$.invest.remarks[0].text", String.class)).isEqualTo(said);
     // 산다·판다·지켜본다·너희가 알아서 해 (decisions.md 279번)
-    assertThat(meeting.read("$.invest.options.length()", Integer.class)).isEqualTo(4);
+    // "너희가 알아서 해"는 뺐다 (352번): 산다·판다·지켜본다.
+    assertThat(meeting.read("$.invest.options.length()", Integer.class)).isEqualTo(3);
     assertThat(meeting.read("$.invest.outcome", Object.class)).isNull();
     settle(1, 1).andExpect(status().isBadRequest());
     postJson("/api/company/invest", "{\"choice\":\"SHORT\"}").andExpect(status().isBadRequest());

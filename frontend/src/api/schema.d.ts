@@ -755,6 +755,25 @@ export interface components {
                 ready: boolean;
                 /** @description 회의를 열어 한마디와 형광펜을 굳혔다. 그 뒤로 배치를 바꿔도 그대로다 (decisions.md 249번) */
                 convened: boolean;
+                /** @description 토론에서 매수 쪽에 얹힌 무게(직원 안목 */
+                teamBuy?: number | null;
+                /** @description 토론에서 매도 쪽에 얹힌 무게. 회의를 열기 전이면 null */
+                teamSell?: number | null;
+                /**
+                 * @description 토론 뒤 직원들이 기운 쪽 (decisions.md 352번). 사장은 그 뒤에 고른다. 회의를 열기 전이면 null
+                 * @enum {string|null}
+                 */
+                teamCall?: "BUY" | "SELL" | null;
+                /** @description 회의를 열면 먼저 오가는 매수파·매도파의 토론 (352번). 결정 전에 본다. 회의를 열기 전이면 비어 있다 */
+                debate?: {
+                    name: string;
+                    /** @enum {string} */
+                    side: "BUY" | "SELL";
+                    text: string;
+                    last: boolean;
+                    /** @enum {string} */
+                    kind: "TALK" | "TALLY" | "WIN" | "LOSE";
+                }[];
                 /** @description 이 종목을 물어 온 직원 (267번). 아직 아무도 안 가져왔거나 옛 회의면 null */
                 finder?: components["schemas"]["Finder"] | null;
                 /** @description 막판 뒤집기 (decisions.md 283·290번). 결정이 끝났는데 누군가 반대로 하자고 나섰다. 답할 때까지 outcome이 없다. 화면은 정해진 결정(도장·토론)을 먼저 보이고 제안을 띄운다. 없으면 null */

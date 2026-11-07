@@ -590,10 +590,19 @@ class DefaultCompanyService implements CompanyService {
                         r.text,
                         r.stubbornBp == null ? null : meetings.stubbornLevel(r.stubbornBp)))
             .toList();
+    // "너희가 알아서 해"는 뺐다 (352번).
     List<CompanyView.Option> options =
-        List.of(InvestEngine.BUY, InvestEngine.SELL, InvestEngine.HOLD, InvestEngine.TEAM).stream()
+        List.of(InvestEngine.BUY, InvestEngine.SELL, InvestEngine.HOLD).stream()
             .map(code -> new CompanyView.Option(code, texts.options().get(code)))
             .toList();
+    // 토론이 먼저 (352번): 회의를 열면 토론과 직원들이 기운 쪽이 결정 전에 보인다.
+    boolean debated = meetings.convened(c) && invest.teamCall != null;
+    List<CompanyView.DebateLine> debate =
+        debated
+            ? invest.debate.stream()
+                .map(d -> new CompanyView.DebateLine(d.name, d.side, d.text, d.last, kindOf(d)))
+                .toList()
+            : List.of();
     CompanyView.InvestOutcome outcome =
         invest.choice == null
             ? null
@@ -660,7 +669,11 @@ class DefaultCompanyService implements CompanyService {
                                     d.name, d.side, d.text, d.last, kindOf(d)))
                         .toList()
                     : List.of()),
-        verdictView(c));
+        verdictView(c),
+        debated ? invest.teamBuy : null,
+        debated ? invest.teamSell : null,
+        debated ? invest.teamCall : null,
+        debate);
   }
 
   /** 옛 저장(295번 전)은 kind가 없다: last면 두 줄 가운데 앞이 WIN, 뒤가 LOSE였지만 구분할 수 없어 WIN으로 읽는다. */

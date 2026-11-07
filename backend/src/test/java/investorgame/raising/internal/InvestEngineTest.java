@@ -405,11 +405,11 @@ class InvestEngineTest {
   }
 
   /**
-   * "너희가 알아서 해" (decisions.md 279번): 사장이 맡기면 회의 한마디를 안목만큼 저울질해 사거나 판다. 지켜보지 않는다. 직원은 팀 결정대로 하고, 맞붙은
-   * 무게가 남는다. 크게 맡길 수는 없다.
+   * 토론이 먼저 (decisions.md 279·352번): 회의를 열면 한마디를 안목만큼 저울질해 직원들이 사자·팔자 한쪽으로 기운다(teamCall). 지켜보지는 않는다.
+   * 결정은 사장이 하고, "너희가 알아서 해"(TEAM)는 더는 고를 수 없다.
    */
   @Test
-  void 맡기면_직원_한마디를_안목만큼_저울질해_한쪽으로_정한다() {
+  void 회의를_열면_직원_한마디를_안목만큼_저울질해_한쪽으로_기운다() {
     int agreed = 0;
     int decided = 0;
     for (int seed = 0; seed < 200; seed++) {
@@ -421,20 +421,22 @@ class InvestEngineTest {
       ENGINE.invest.convene(c, new HashSeededRandom(seed));
       long ups = c.invest.remarks.stream().filter(r -> "UP".equals(r.read)).count();
       long downs = c.invest.remarks.stream().filter(r -> "DOWN".equals(r.read)).count();
-      ENGINE.invest.decide(c, InvestEngine.TEAM, new HashSeededRandom(seed));
-      assertThat(c.invest.delegated).isTrue();
-      assertThat(c.invest.choice).isIn(InvestEngine.BUY, InvestEngine.SELL);
+      assertThat(c.invest.choice).as("열기만 해서는 정해지지 않는다").isNull();
+      assertThat(c.invest.teamCall).isIn(InvestEngine.BUY, InvestEngine.SELL);
       assertThat(c.invest.teamBuy).isEqualTo(ups * 100);
       assertThat(c.invest.teamSell).isEqualTo(downs * 100);
-      assertThat(c.invest.results)
-          .filteredOn(r -> "BOSS".equals(r.follow))
-          .allMatch(r -> r.line.startsWith("팀 결정대로"));
+      assertThat(c.invest.debate).isNotEmpty();
       if (ups != downs) {
         decided++;
-        if (c.invest.choice.equals(ups > downs ? InvestEngine.BUY : InvestEngine.SELL)) {
+        if (c.invest.teamCall.equals(ups > downs ? InvestEngine.BUY : InvestEngine.SELL)) {
           agreed++;
         }
       }
+      // 사장이 고르면 그대로 사장 결정이다: 토론은 그대로 남는다.
+      ENGINE.invest.decide(c, InvestEngine.SELL, new HashSeededRandom(seed));
+      assertThat(c.invest.delegated).isFalse();
+      assertThat(c.invest.choice).isEqualTo(InvestEngine.SELL);
+      assertThat(c.invest.debate).isNotEmpty();
     }
     // 둘 다 같은 쪽이면 늘 그쪽, 갈리면 무게대로 반반이라 다수 쪽이 대개 이긴다.
     assertThat(agreed).isGreaterThan(decided * 7 / 10);
@@ -442,17 +444,18 @@ class InvestEngineTest {
     CompanyState big = opened(new HashSeededRandom(1), 100_000_000L);
     ENGINE.hire(big, stats(50, 50, 50, 50));
     ENGINE.place(big, Map.of(1, "day"));
-    assertThatThrownBy(
-            () -> ENGINE.invest.decide(big, InvestEngine.TEAM, true, new HashSeededRandom(1)))
+    assertThatThrownBy(() -> ENGINE.invest.decide(big, "TEAM", new HashSeededRandom(1)))
+        .as("너희가 알아서 해는 뺐다 (352번)")
         .isInstanceOf(InvalidRequestException.class);
+    assertThat(big.invest.choice).isNull();
   }
 
   /**
-   * 맡기면 토론한다 (decisions.md 285번): 사자던 직원은 매수파, 팔자던 직원은 매도파로 두 번씩 번갈아 말하고, 이긴 쪽이 결판을 내고 진 쪽이 투덜댄다.
-   * 말에는 기사의 요지가 들어가고 기사를 따오지 않는다. 한쪽이 비면 모르겠다던 직원이나 옆자리 사람이 그쪽을 든다.
+   * 회의를 열면 토론한다 (decisions.md 285·352번): 사자던 직원은 매수파, 팔자던 직원은 매도파로 두 번씩 번갈아 말하고, 이긴 쪽이 결판을 내고 진 쪽이
+   * 투덜댄다. 말에는 기사의 요지가 들어가고 기사를 따오지 않는다. 한쪽이 비면 모르겠다던 직원이나 옆자리 사람이 그쪽을 든다.
    */
   @Test
-  void 맡기면_매수파와_매도파가_번갈아_토론하고_이긴_쪽이_결판낸다() {
+  void 회의를_열면_매수파와_매도파가_번갈아_토론하고_이긴_쪽이_결판낸다() {
     for (int seed = 0; seed < 60; seed++) {
       CompanyState c = opened(new HashSeededRandom(seed), 300_000_000L);
       ENGINE.hire(c, stats(90, 50, 50, 50));
@@ -460,7 +463,6 @@ class InvestEngineTest {
       ENGINE.place(c, Map.of(1, "day", 2, "bio"));
       c.phase = "normal";
       ENGINE.invest.convene(c, new HashSeededRandom(seed));
-      ENGINE.invest.decide(c, InvestEngine.TEAM, new HashSeededRandom(seed));
       List<CompanyState.DebateLine> debate = c.invest.debate;
       assertThat(debate).hasSize(7);
       for (int i = 0; i < 4; i++) {
@@ -476,7 +478,7 @@ class InvestEngineTest {
           .contains("매수 " + c.invest.teamBuy)
           .contains("매도 " + c.invest.teamSell);
       assertThat(debate.get(5).kind).isEqualTo(InvestEngine.WIN);
-      assertThat(debate.get(5).side).isEqualTo(c.invest.choice);
+      assertThat(debate.get(5).side).isEqualTo(c.invest.teamCall);
       assertThat(debate.get(6).kind).isEqualTo(InvestEngine.LOSE);
       assertThat(debate.get(6).side).isNotEqualTo(c.invest.choice);
       for (CompanyState.Remark r : c.invest.remarks) {
@@ -496,13 +498,13 @@ class InvestEngineTest {
       names.addAll(List.of("옆자리 신입", "지나가던 인턴"));
       assertThat(debate).allMatch(d -> names.contains(d.name));
     }
-    // 정하지 않은 회의(사장이 고름)는 토론이 없다.
+    // 창을 거치지 않고 바로 정해도(옛 화면·시험) 토론은 연 셈 쳐서 남는다.
     CompanyState boss = opened(new HashSeededRandom(1), 100_000_000L);
     ENGINE.hire(boss, stats(50, 50, 50, 50));
     ENGINE.place(boss, Map.of(1, "day"));
-    ENGINE.invest.convene(boss, new HashSeededRandom(1));
     ENGINE.invest.decide(boss, InvestEngine.BUY, new HashSeededRandom(1));
-    assertThat(boss.invest.debate).isEmpty();
+    assertThat(boss.invest.debate).isNotEmpty();
+    assertThat(boss.invest.choice).isEqualTo(InvestEngine.BUY);
   }
 
   /** 토론은 팀장만 한다 (decisions.md 295번): 같은 자리에 셋이면 팀장만 말하고, 팀장과 다른 의견 쪽은 그쪽 안목 1위 하나만 말한다. */
@@ -517,7 +519,6 @@ class InvestEngineTest {
       ENGINE.place(c, Map.of(1, "day", 2, "day", 3, "day"));
       c.phase = "normal";
       ENGINE.invest.convene(c, new HashSeededRandom(seed));
-      ENGINE.invest.decide(c, InvestEngine.TEAM, new HashSeededRandom(seed));
       String leader = ENGINE.teams.leaderOf(c, "day").orElseThrow().name;
       List<CompanyState.DebateLine> debate = c.invest.debate;
       String leaderSide =
@@ -536,20 +537,17 @@ class InvestEngineTest {
     assertThat(leaderOnly).as("팀장이 의견을 낸 판이 있다").isPositive();
   }
 
-  /** 맡기면 직원들이 정한 것이라 막판 뒤집기가 없다 (decisions.md 291번). */
+  /** 맡기기는 없다 (decisions.md 352번): TEAM을 보내면 400이고 아무것도 정해지지 않는다. */
   @Test
-  void 너희가_알아서_해면_막판_제안이_없다() {
-    for (int seed = 0; seed < 60; seed++) {
-      CompanyState c = opened(new HashSeededRandom(seed), 300_000_000L);
-      ENGINE.hire(c, stats(60, 50, 50, 50));
-      ENGINE.hire(c, stats(60, 50, 50, 50));
-      ENGINE.place(c, Map.of(1, "day", 2, "bio"));
-      c.phase = "normal";
-      ENGINE.invest.decide(c, InvestEngine.TEAM, false, new HashSeededRandom(seed), true);
-      assertThat(c.invest.proposalId).isNull();
-      assertThat(c.invest.delegated).isTrue();
-      assertThat(c.invest.choice).isIn(InvestEngine.BUY, InvestEngine.SELL);
-    }
+  void 너희가_알아서_해는_고를_수_없다() {
+    CompanyState c = opened(new HashSeededRandom(3), 300_000_000L);
+    ENGINE.hire(c, stats(60, 50, 50, 50));
+    ENGINE.place(c, Map.of(1, "day"));
+    c.phase = "normal";
+    assertThatThrownBy(() -> ENGINE.invest.decide(c, "TEAM", false, new HashSeededRandom(3), true))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(c.invest.choice).isNull();
+    assertThat(c.invest.proposalId).isNull();
   }
 
   /**

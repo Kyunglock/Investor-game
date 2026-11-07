@@ -36,7 +36,7 @@ const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce
  * 종목 회의 (decisions.md 229·231·235·267번). 직원이 종목을 물어 온 해에만 거시경제 회의 다음에 열린다: 창 머리에 누가 가져왔는지 보이고, 끝나면 그 사람을
  * 칭찬하거나 탓하는 한 줄이 붙는다. 한 해의 중대 결정이라 예전 매매 이벤트 창처럼 화면 가운데에 뜬다: 결산을 누르면 열리고, 고르면 결과를 보고 그대로
  * 그해 결산으로 넘어간다. 단서 기사를 놓고 직원들과 고민한다. 리서치 팀이 형광펜을 긋고, 자리에 앉은 직원이 한마디씩 하고, 사장이 고른다(산다·판다·지켜본다,
- * 또는 "너희가 알아서 해" 하고 맡기면 매수파와 매도파가 불꽃을 튀기며 맞붙어 한쪽으로 정한다, 279번). 고르면 사장 결정에 도장이 찍히고, 돈을 굴리는 직원마다 **맞대결 막대**에서 사장 말과 꼬드김·제 판단이 엎치락뒤치락하다 이긴 쪽으로
+ * 회의를 열면 먼저 매수파와 매도파가 불꽃을 튀기며 토론하고(352번), 그 뒤에 사장이 고른다. 전에는 "너희가 알아서 해" 하고 맡겨야 맞붙어 한쪽으로 정한다, 279번). 고르면 사장 결정에 도장이 찍히고, 돈을 굴리는 직원마다 **맞대결 막대**에서 사장 말과 꼬드김·제 판단이 엎치락뒤치락하다 이긴 쪽으로
  * 쭉 찬다(181번의 막대를 되살림). 다 끝나면 종목이 오르내린 것이 드러나고 직원마다 손익이 뜬다.
  */
 export function InvestWindow({
@@ -69,6 +69,17 @@ export function InvestWindow({
   const [preplayed, setPreplayed] = useState(false)
   const decidedMs = proposal ? (proposal.delegated ? teamClashMs(proposal.debate) : DECIDED_MS) : 0
   const [proposalShown, setProposalShown] = useState(skipped)
+  // 토론이 먼저 (352번): 회의를 열면 매수파·매도파가 맞붙고, 끝난 뒤에야 사장이 고른다. 다시 그린 회의(정했거나 제안 중)는 이미 본 것.
+  const debate = invest.debate ?? []
+  const debateFirst = !outcome && !invest.proposal && invest.convened && debate.length > 0
+  const [debated, setDebated] = useState(skipped || !debateFirst)
+  useEffect(() => {
+    if (!debateFirst || debated) {
+      return
+    }
+    const id = setTimeout(() => setDebated(true), teamClashMs(debate))
+    return () => clearTimeout(id)
+  }, [debateFirst, debated, debate])
   useEffect(() => {
     if (!proposal) {
       return
@@ -120,12 +131,15 @@ export function InvestWindow({
               배치 다시 보기
             </button>
           )}
-          {((outcome && !finished) || (proposal && !proposalShown)) && (
+          {((outcome && !finished) ||
+            (proposal && !proposalShown) ||
+            (debateFirst && !debated)) && (
             <button
               type="button"
               onClick={() => {
                 skip()
                 setProposalShown(true)
+                setDebated(true)
               }}
               className="text-[12px] text-muted underline"
             >
@@ -315,39 +329,50 @@ export function InvestWindow({
           </Overlay>
         )}
 
+        {debateFirst && (
+          // 토론이 먼저 (352번): 매수파·매도파가 맞붙어 한쪽으로 기운다. 사장은 보고 나서 고른다.
+          <TeamClash
+            key={`debate-${skipped}`}
+            buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
+            sellNames={invest.remarks.filter((r) => r.read === 'DOWN').map((r) => r.name)}
+            buy={invest.teamBuy ?? 0}
+            sell={invest.teamSell ?? 0}
+            choice={invest.teamCall ?? 'HOLD'}
+            debate={debate}
+            staff={employees}
+            stock={invest.stockName}
+            instant={skipped || debated}
+          />
+        )}
         {!outcome && !invest.proposal && (
-          <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="mt-3 grid grid-cols-3 gap-2" data-testid="invest-options">
+            {debateFirst && debated && (
+              <p className="col-span-3 text-center text-[13px]" data-testid="invest-your-turn">
+                직원들은{' '}
+                <b className={invest.teamCall === 'BUY' ? 'text-up' : 'text-down'}>
+                  {invest.teamCall === 'BUY' ? '사자' : '팔자'}
+                </b>{' '}
+                쪽으로 기울었다. 이제 <b>사장님 차례</b>입니다.
+              </p>
+            )}
             {invest.options
               .filter((o) => o.code !== 'TEAM')
               .map((o) => (
                 <button
                   key={o.code}
                   type="button"
-                  disabled={busy || !invest.ready}
+                  disabled={busy || !invest.ready || (debateFirst && !debated)}
                   onClick={() => void decideInvest(o.code)}
                   className="min-h-12 rounded border border-pen font-semibold transition-transform hover:bg-pen hover:text-white active:scale-95 disabled:opacity-50"
                 >
                   {o.label}
                 </button>
               ))}
-            {/* 너희가 알아서 해 (279번): 직원들끼리 맞붙어 사거나 판다. */}
-            {invest.options
-              .filter((o) => o.code === 'TEAM')
-              .map((o) => (
-                <button
-                  key={o.code}
-                  type="button"
-                  disabled={busy || !invest.ready}
-                  onClick={() => void decideInvest(o.code)}
-                  className="col-span-3 min-h-12 rounded border border-wine font-semibold text-wine transition-transform hover:bg-wine hover:text-white active:scale-95 disabled:opacity-50"
-                  data-testid="invest-team"
-                >
-                  “{o.label}”
-                </button>
-              ))}
-            <p className="col-span-3 text-center text-[12px] text-muted">
-              맡기면 직원들끼리 의견을 맞붙여 사거나 팝니다. 안목이 높은 사람 말이 더 무겁습니다.
-            </p>
+            {debateFirst && !debated && (
+              <p className="col-span-3 text-center text-[12px] text-muted">
+                토론이 끝나면 고를 수 있습니다.
+              </p>
+            )}
           </div>
         )}
 
