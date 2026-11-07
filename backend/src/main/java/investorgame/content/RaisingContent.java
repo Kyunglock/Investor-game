@@ -76,7 +76,8 @@ public record RaisingContent(
       Teams teams,
       Ending ending,
       Construction construction,
-      Industry industry) {}
+      Industry industry,
+      Map<String, String> omenReveal) {}
 
   /**
    * 업계 순위 소식 (#351). first: 처음 매긴 해, up·down·same: 지난해보다 상위 몇 %가

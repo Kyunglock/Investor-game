@@ -1879,6 +1879,28 @@ class CompanyEngine {
     if (!crash && company.omen != null) {
       settlement.lines.add(1, content.raising().company().falseOmenNote());
     }
+    // 조짐이 맞았나 헛소문이었나, 사장은 어떻게 읽었나를 밝힌다 (#394). 조짐 읽는 법을 배울 수 있게 한 줄 덧붙인다.
+    if (company.omen != null) {
+      long defended =
+          settlement.quarters.stream()
+              .filter(q -> MacroEngine.DEFENSIVE.equals(q.macroStance))
+              .count();
+      // 폭락이 한 분기에 터졌으면 그 분기에 방어였나, 고르게 빠졌으면 두 분기 이상 방어였나.
+      boolean burst = settlement.quarters.stream().anyMatch(q -> q.crash);
+      boolean defendedCrash =
+          burst
+              ? settlement.quarters.stream()
+                  .anyMatch(q -> q.crash && MacroEngine.DEFENSIVE.equals(q.macroStance))
+              : defended >= 2;
+      settlement.omenCall =
+          crash
+              ? (defendedCrash ? "trueDefended" : "trueIgnored")
+              : (defended == 0 ? "falseKept" : "falseDefended");
+      settlement.lines.add(
+          Korean.fill(
+              content.raising().company().omenReveal().get(settlement.omenCall),
+              Map.of("omen", company.omen, "count", String.valueOf(defended))));
+    }
     company.settlements.add(settlement);
     String eraBefore = company.era;
     String eraAfter = eraOf(company, company.year + 1, random);

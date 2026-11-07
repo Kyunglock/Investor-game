@@ -620,6 +620,12 @@ class CompanyState {
     String gradeBefore;
     String gradeAfter;
 
+    /**
+     * 올해 조짐을 사장이 어떻게 읽었나 (#394): falseKept(헛조짐에 안 속음)·falseDefended(헛조짐에 방어)·trueDefended(진짜 조짐에
+     * 방어)·trueIgnored(진짜 조짐을 보고도 버팀). 조짐이 없었으면 null.
+     */
+    String omenCall;
+
     /** 이 결산으로 랜드마크 타워에 올라 엔딩을 봤다 (276번). */
     boolean finished;
 
