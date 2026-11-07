@@ -41,7 +41,7 @@ describe('멘탈 카드 (decisions.md 328·330번)', () => {
     expect(applyCard(l, 'rule').fireMs).toBeLessThan(l.fireMs)
     expect(applyCard(l, 'steel').maxMental).toBe(150)
     expect(applyCard(l, 'steel').heal).toBe(50)
-    expect(applyCard(l, 'calm').speed).toBeGreaterThan(l.speed)
+    expect(applyCard(l, 'calm').bulletSpeed).toBeGreaterThan(l.bulletSpeed)
     expect(applyCard(l, 'heal').heal).toBe(40)
   })
 

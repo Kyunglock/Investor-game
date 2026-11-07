@@ -50,7 +50,7 @@ export const CARDS: readonly Card[] = [
     code: 'calm',
     name: '냉정함',
     desc: '급할수록 침착하게',
-    effect: '이동 +35%',
+    effect: '탄이 더 빠르고 멀리',
     icon: '🧊',
     color: '#cfe9ff',
   },
@@ -74,7 +74,8 @@ export interface Loadout {
   streams: number
   fireMs: number
   maxMental: number
-  speed: number
+  /** 탄의 빠르기(px/s). 날아가는 시간은 같아서 빠를수록 멀리 간다. */
+  bulletSpeed: number
   /** 이번 카드로 바로 회복할 멘탈. 전투가 적용하고 0으로 돌린다. */
   heal: number
 }
@@ -84,7 +85,7 @@ export const BASE_LOADOUT: Loadout = {
   streams: 1,
   fireMs: 260,
   maxMental: 100,
-  speed: 260,
+  bulletSpeed: 720,
   heal: 0,
 }
 
@@ -100,7 +101,7 @@ export function applyCard(loadout: Loadout, card: MentalCard): Loadout {
     case 'steel':
       return { ...loadout, maxMental: loadout.maxMental + 50, heal: 50 }
     case 'calm':
-      return { ...loadout, speed: loadout.speed + BASE_LOADOUT.speed * 0.35 }
+      return { ...loadout, bulletSpeed: loadout.bulletSpeed + BASE_LOADOUT.bulletSpeed * 0.3 }
     case 'heal':
       return { ...loadout, heal: 40 }
   }

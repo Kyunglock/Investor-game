@@ -536,8 +536,8 @@ function bake(
   tex.refresh()
 }
 
-/** 아군 텍스처 열쇠: hero-front(가만히)·hero-side·hero-walk(걷기 두 프레임, 오른쪽을 본다)·hero-hurt(맞았다). */
-export const HERO_KEYS = ['hero-front', 'hero-side', 'hero-walk', 'hero-hurt'] as const
+/** 아군 텍스처 열쇠: hero-front(가만히)·hero-side(쏘는 쪽을 본다, 왼쪽이면 뒤집는다)·hero-hurt(맞았다). */
+export const HERO_KEYS = ['hero-front', 'hero-side', 'hero-hurt'] as const
 
 export function bakeHero(scene: Phaser.Scene, hero: Hero) {
   const palette = {
@@ -558,7 +558,6 @@ export function bakeHero(scene: Phaser.Scene, hero: Hero) {
   }
   bake(scene, 'hero-front', grounded(compose(viewBody(hero.sex, 'adult', 'front'), [])), palette)
   bake(scene, 'hero-side', grounded(compose(viewBody(hero.sex, 'adult', 'side'), [])), palette)
-  bake(scene, 'hero-walk', grounded(compose(viewBody(hero.sex, 'adult', 'walk'), [])), palette)
   bake(
     scene,
     'hero-hurt',

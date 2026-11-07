@@ -49,7 +49,6 @@ export interface BattleHandle {
 }
 
 const INK = '#2b2340'
-const BULLET_SPEED = 720
 const BULLET_LIFE = 900
 
 type Enemy = Phaser.Physics.Arcade.Image & {
@@ -70,8 +69,6 @@ function enemyBody(e: Enemy, r: number) {
   e.body?.setCircle(r, 32 - r, 32 - r)
 }
 
-/** 걷기 한 걸음(ms): 옆모습 두 프레임을 번갈아 보인다. */
-const STEP_MS = 140
 const HURT_MS = 450
 
 class BattleScene extends Phaser.Scene {
@@ -94,10 +91,6 @@ class BattleScene extends Phaser.Scene {
   private flashIndex = 0
   private pops: Phaser.GameObjects.Text[] = []
   private popIndex = 0
-  private keys: Record<
-    'W' | 'A' | 'S' | 'D' | 'UP' | 'DOWN' | 'LEFT' | 'RIGHT',
-    Phaser.Input.Keyboard.Key
-  > | null = null
 
   private mental = 100
   private score = 0
@@ -259,7 +252,6 @@ class BattleScene extends Phaser.Scene {
       )
     }
 
-    this.keys = this.input.keyboard?.addKeys('W,A,S,D,UP,DOWN,LEFT,RIGHT') as BattleScene['keys']
     this.opts.onBanner('분기 시작! 멘탈 꽉 잡아', '#3a86ff')
   }
 
@@ -287,9 +279,9 @@ class BattleScene extends Phaser.Scene {
     return this.scale.height - 150
   }
 
-  /** 플레이어의 세로 자리: 공격은 아래 띠, 디펜스는 멘탈벽 바로 앞(위). */
+  /** 플레이어의 세로 자리(붙박이, 332번): 공격은 화면 아래, 디펜스는 멘탈벽 바로 앞(위). */
   private playerY() {
-    return this.genre.area === 'bottom' ? this.scale.height - 120 : this.wallY() - 70
+    return this.genre.target === 'wall' ? this.wallY() - 70 : this.scale.height - 120
   }
 
   // ── 생성
@@ -500,7 +492,7 @@ class BattleScene extends Phaser.Scene {
 
   private shoot(now: number) {
     const ptr = this.input.activePointer
-    if (this.genre.area === 'fixed' && ptr.isDown) {
+    if (ptr.isDown) {
       this.fire(now, Math.atan2(ptr.worldY - this.player.y, ptr.worldX - this.player.x))
       return
     }
@@ -565,7 +557,10 @@ class BattleScene extends Phaser.Scene {
       b.look = 0
       b.setScale(1.5)
       b.body?.setCircle(6, 1, 1)
-      b.setVelocity(Math.cos(base + off) * BULLET_SPEED, Math.sin(base + off) * BULLET_SPEED)
+      b.setVelocity(
+        Math.cos(base + off) * this.loadout.bulletSpeed,
+        Math.sin(base + off) * this.loadout.bulletSpeed,
+      )
       b.life = now + BULLET_LIFE
     }
   }
@@ -624,46 +619,22 @@ class BattleScene extends Phaser.Scene {
       return
     }
 
-    // 이동: 키보드, 또는 누르고 있는 곳으로.
+    // 붙박이 (332번): 자리는 고정, 누르고 있는 쪽을 쏜다. 그림은 맞았으면 우는 얼굴, 누르고 있으면 옆모습(쏘는 쪽), 아니면 정면.
     const p = this.player
-    const k = this.keys
     const ptr = this.input.activePointer
-    let mx = k ? Number(k.D.isDown || k.RIGHT.isDown) - Number(k.A.isDown || k.LEFT.isDown) : 0
-    let my = k ? Number(k.S.isDown || k.DOWN.isDown) - Number(k.W.isDown || k.UP.isDown) : 0
-    if (ptr.isDown) {
-      const dx = ptr.worldX - p.x
-      const dy = this.genre.area === 'bottom' ? 0 : ptr.worldY - p.y
-      const d = Math.hypot(dx, dy)
-      if (d > 8) {
-        mx = dx / d
-        my = dy / d
-      }
-    }
-    my = 0
-    if (this.genre.area === 'fixed') {
-      mx = 0
-    }
-    const ml = Math.hypot(mx, my) || 1
-    p.setVelocity((mx / ml) * this.loadout.speed, (my / ml) * this.loadout.speed)
-    const { width: w, height: h } = this.scale
-    p.x = Phaser.Math.Clamp(p.x, 24, w - 24)
-    p.y = this.playerY()
-    // 아군 그림: 맞았으면 우는 얼굴, 걸으면 옆모습 두 프레임(왼쪽이면 뒤집는다), 가만히 있으면 정면.
+    const { width: w } = this.scale
+    p.setVelocity(0, 0)
+    p.setPosition(w / 2, this.playerY())
     if (time < this.hurtUntil) {
       p.setTexture('hero-hurt').setFlipX(false)
-    } else if (this.genre.area === 'fixed') {
-      p.setTexture(ptr.isDown ? 'hero-side' : 'hero-front')
-    } else if (mx || my) {
-      p.setTexture(Math.floor(time / STEP_MS) % 2 ? 'hero-walk' : 'hero-side')
-      if (mx) {
-        p.setFlipX(mx < 0)
-      }
+    } else if (ptr.isDown) {
+      p.setTexture('hero-side')
     } else {
       p.setTexture('hero-front').setFlipX(false)
     }
-    // 숨쉬기: 가만히 있으면 살짝 눌렸다 펴진다.
+    // 숨쉬기: 살짝 눌렸다 펴진다.
     if (!this.tweens.isTweening(p)) {
-      p.setScale(1, mx || my ? 1 : 1 + Math.sin(time / 260) * 0.025)
+      p.setScale(1, 1 + Math.sin(time / 260) * 0.025)
     }
     if (this.wall && this.wallZone) {
       this.wall.setPosition(0, this.wallY() - WALL_H).setSize(w, WALL_H * 2)
@@ -772,7 +743,7 @@ class BattleScene extends Phaser.Scene {
     }
     for (const child of this.tears.getChildren()) {
       const t = child as Phaser.Physics.Arcade.Image
-      if (t.active && (t.x < -50 || t.y < -50 || t.x > w + 50 || t.y > h + 50)) {
+      if (t.active && (t.x < -50 || t.y < -50 || t.x > w + 50 || t.y > this.scale.height + 50)) {
         t.disableBody(true, true)
       }
     }
