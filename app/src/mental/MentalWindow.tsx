@@ -14,7 +14,7 @@ import { type Hero, heroOf } from './hero'
 type Mental = NonNullable<Company['mental']>
 
 /**
- * 멘탈 전투 창 (decisions.md 328·330·331번): 이벤트 머리글과 장르 → 카드 석 장 가운데 하나 → 한 판(Phaser, 늦게 불러온다. 레벨이 오를 때마다 멈추고 카드를
+ * 멘탈 전투 창 (decisions.md 328·330·331·339번): 이벤트 머리글과 장르, 출전 버튼 → 한 판(전장이 열리면 첫 카드 석 장 가운데 하나)(Phaser, 늦게 불러온다. 레벨이 오를 때마다 멈추고 카드를
  * 또 고른다) → 결과 → 서버에 고른 카드 목록과 결과를 보고 → onDone(결산). 건너뛰면 보고 없이 바로 onDone이다. 화면 전체를 쓴다.
  */
 export function MentalWindow({
@@ -28,11 +28,11 @@ export function MentalWindow({
 }) {
   // 싸우는 사람은 창을 여는 순간 정한다: 회사가 다시 그려져도 한 판이 다시 시작되지 않게.
   const [hero] = useState(() => heroOf(company))
+  const [started, setStarted] = useState(false)
   const [picked, setPicked] = useState<MentalCard[]>([])
   const [outcome, setOutcome] = useState<Outcome | null>(null)
   const [sending, setSending] = useState(false)
   const genre = GENRES[mental.genre]
-  const started = picked.length > 0
 
   const finish = async () => {
     if (!outcome || sending || picked.length === 0) {
@@ -49,7 +49,6 @@ export function MentalWindow({
         <Battle
           genre={mental.genre}
           hero={hero}
-          first={picked[0]}
           onPick={(code) => setPicked((p) => [...p, code])}
           onDone={setOutcome}
         />
@@ -66,13 +65,18 @@ export function MentalWindow({
             </p>
             <p className="mt-1 text-[14px] font-bold">출전: {hero.name} · 4분</p>
           </div>
-          <CardPick
-            title="멘탈 카드"
-            sub="한 장을 고르세요. 레벨이 오를 때마다 또 고릅니다"
-            loadout={BASE_LOADOUT}
-            mentalFull
-            onPick={(code) => setPicked([code])}
-          />
+          <button
+            type="button"
+            onClick={() => {
+              sfx.stamp()
+              haptic.medium()
+              setStarted(true)
+            }}
+            className="btn btn-primary animate-breathe min-h-16 w-full max-w-[320px] text-[24px]"
+            data-testid="mental-start"
+          >
+            출전! ▶
+          </button>
           <ul className="flex flex-wrap justify-center gap-2 font-game text-[13px] text-ink">
             {Object.values(ENEMIES).map((e) => (
               <li
@@ -241,19 +245,17 @@ function CardPick({
 function Battle({
   genre,
   hero,
-  first,
   onPick,
   onDone,
 }: {
   genre: Mental['genre']
   hero: Hero
-  first: MentalCard
   onPick: (code: MentalCard) => void
   onDone: (outcome: Outcome) => void
 }) {
   const host = useRef<HTMLDivElement>(null)
   const handle = useRef<BattleHandle | null>(null)
-  const loadout = useRef(applyCard(BASE_LOADOUT, first))
+  const loadout = useRef(BASE_LOADOUT)
   const [hud, setHud] = useState<Hud | null>(null)
   const [banner, setBanner] = useState<{ text: string; color: string; id: number } | null>(null)
   const [hurt, setHurt] = useState(false)
@@ -354,8 +356,12 @@ function Battle({
         >
           <CardPick
             key={levelUp}
-            title={`LEVEL UP! Lv.${levelUp}`}
-            sub="카드 한 장을 더 쌓으세요"
+            title={levelUp === 1 ? '멘탈 카드' : `LEVEL UP! Lv.${levelUp}`}
+            sub={
+              levelUp === 1
+                ? '한 장을 고르세요. 레벨이 오를 때마다 또 고릅니다'
+                : '카드 한 장을 더 쌓으세요'
+            }
             loadout={loadout.current}
             mentalFull={hud.mental >= hud.maxMental}
             onPick={(code) => {
