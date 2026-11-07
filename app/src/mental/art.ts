@@ -53,6 +53,8 @@ const ENEMY_PALETTE: Record<string, string> = {
   T: '#7fb6ea', // 식은땀
   W: '#ffffff', // 반짝임
   r: '#ff9bb3', // 볼 홍조
+  M: '#5a1420', // 입 안
+  _: 'rgba(20, 16, 30, 0.28)', // 그림자
   y: '#f6d873', // 금빛
   Y: '#b8871c',
 }
@@ -97,147 +99,205 @@ function fill(put: Put, y: number, xs: number[], ch: string) {
   }
 }
 
-/** 커다란 동그란 눈: 흰자 위에 2×2 눈동자와 반짝임. dx로 눈동자를 옆으로 흘린다. */
-function eye(put: Put, y: number, x: number, dx = 0) {
-  for (const [cy, cx] of disc(y, x, 2.5, 2.5)) {
-    put(cy, cx, 'E')
-  }
-  for (const [cy, cx] of disc(y + 0.5, x + dx + 0.5, 1.5, 1.5)) {
+/** 왕눈이: 검은 테두리 안에 흰자, 색 있는 홍채, 눈동자, 반짝임 둘. dx로 눈동자를 옆으로 흘린다. */
+function bigEye(put: Put, y: number, x: number, iris: string, dx = 0) {
+  for (const [cy, cx] of disc(y, x, 4.5, 4.5)) {
     put(cy, cx, 'k')
   }
-  put(y, x + dx, 'W')
+  for (const [cy, cx] of disc(y, x, 3.5, 3.5)) {
+    put(cy, cx, 'E')
+  }
+  for (const [cy, cx] of disc(y + 0.5, x + dx, 2.5, 2.5)) {
+    put(cy, cx, iris)
+  }
+  for (const [cy, cx] of disc(y + 1, x + dx, 1.5, 1.5)) {
+    put(cy, cx, 'k')
+  }
+  put(y - 1, x + dx - 1, 'W')
+  put(y - 1, x + dx, 'W')
+  put(y + 2, x + dx + 1, 'W')
 }
 
-/** 감은 웃는 눈(^ ^). */
-function happyEye(put: Put, y: number, x: number) {
+/** 반짝이는 별눈(투기): 금빛 별. */
+function starEye(put: Put, y: number, x: number) {
+  fill(put, y, [x - 3, x - 2, x - 1, x, x + 1, x + 2, x + 3], 'y')
+  for (const dy of [-3, -2, -1, 1, 2, 3]) {
+    put(y + dy, x, 'y')
+  }
+  fill(put, y - 1, [x - 1, x + 1], 'y')
+  fill(put, y + 1, [x - 1, x + 1], 'Y')
+  put(y + 2, x, 'Y')
+  put(y, x + 2, 'Y')
+  put(y, x + 3, 'Y')
+  put(y - 1, x - 1, 'W')
+}
+
+/** 걱정 눈썹: 바깥이 처진 사선(ㅅ 모양의 바깥쪽). dir 1이면 왼눈. */
+function worriedBrow(put: Put, y: number, x: number, dir: 1 | -1) {
+  put(y + 2, x - dir * 3, 'k')
+  put(y + 1, x - dir * 2, 'k')
+  put(y + 1, x - dir, 'k')
   put(y, x, 'k')
-  put(y - 1, x - 1, 'k')
-  put(y - 1, x + 1, 'k')
-  put(y, x - 2, 'k')
-  put(y, x + 2, 'k')
+  put(y, x + dir, 'k')
 }
 
-/** 볼 홍조 두 점. */
+/** 볼 홍조: 가로로 긴 분홍 두 점. */
 function blush(put: Put, y: number, lx: number, rx: number) {
-  fill(put, y, [lx, lx + 1, rx, rx + 1], 'r')
+  fill(put, y, [lx, lx + 1, lx + 2, rx, rx + 1, rx + 2], 'r')
+  fill(put, y + 1, [lx + 1, rx + 1], 'r')
+}
+
+/** 벌린 입: 어두운 안쪽에 입술 윤곽. */
+function openMouth(put: Put, y: number, x: number, ry: number, rx: number) {
+  for (const [cy, cx] of disc(y, x, ry + 1, rx + 1)) {
+    put(cy, cx, 'm')
+  }
+  for (const [cy, cx] of disc(y, x, ry, rx)) {
+    put(cy, cx, 'M')
+  }
+}
+
+/** 땀방울: 위가 뾰족한 물방울에 반짝임. */
+function drop(put: Put, y: number, x: number) {
+  put(y, x, 'T')
+  fill(put, y + 1, [x - 1, x, x + 1], 'T')
+  fill(put, y + 2, [x - 1, x, x + 1], 'T')
+  put(y + 1, x - 1, 'W')
+}
+
+/** 아장아장 발 두 개(윤곽 있음). */
+function feet(put: Put, y: number, ramp: Ramp, ox = 0) {
+  blob(put, area([y, y + 2], [10 + ox, 14 + ox]), ramp)
+  blob(put, area([y, y + 2], [18 + ox, 22 + ox]), ramp)
+}
+
+/** 그림자: 발밑의 반투명 타원. 몸보다 먼저 그려 몸이 덮는다. */
+function shadow(put: Put, y: number, x: number, rx: number) {
+  for (const [cy, cx] of disc(y, x, 1.5, rx)) {
+    put(cy, cx, '_')
+  }
 }
 
 type Painter = (put: Put, frame: 0 | 1) => void
 
-/** 패닉셀: 동그란 파란 아기 몸에 왕눈이, 두 손을 번쩍 들고 "으악". 식은땀이 톡. 2프레임은 몸이 한 칸 흔들리고 땀이 떨어진다. */
+/** 패닉셀: 파란 아기 몸, 왕눈이에 걱정 눈썹, 두 손 번쩍, "으악" 입, 땀. 2프레임은 몸이 흔들리고 눈동자가 돌고 땀이 떨어진다. */
 const panic: Painter = (put, frame) => {
   const ox = frame ? 1 : 0
-  // 번쩍 든 짧은 팔
-  blob(put, area([9, 13], [4 + ox, 6 + ox]), PANIC)
-  blob(put, area([9, 13], [26 + ox, 28 + ox]), PANIC)
-  blob(put, disc(17, 16 + ox, 9.5, 10), PANIC)
-  // 아장아장 발
-  blob(put, area([26, 28], [11 + ox, 14 + ox]), PANIC)
-  blob(put, area([26, 28], [18 + ox, 21 + ox]), PANIC)
-  eye(put, 15, 11 + ox, frame ? -1 : 1)
-  eye(put, 15, 21 + ox, frame ? -1 : 1)
-  blush(put, 19, 8 + ox, 23 + ox)
-  // 조그맣게 벌린 입
-  for (const [y, x] of disc(21.5, 16 + ox, 1.5, 1.5)) {
-    put(y, x, 'm')
-  }
-  // 식은땀
-  const sy = frame ? 9 : 7
-  put(sy, 25 + ox, 'T')
-  fill(put, sy + 1, [24 + ox, 25 + ox, 26 + ox], 'T')
-  put(sy + 1, 24 + ox, 'W')
-  put(sy + 2, 25 + ox, 'T')
+  shadow(put, 29.5, 16, 9)
+  // 번쩍 든 팔과 손
+  blob(put, area([8, 14], [3 + ox, 5 + ox]), PANIC)
+  blob(put, area([8, 14], [26 + ox, 28 + ox]), PANIC)
+  blob(put, disc(7, 4 + ox, 2, 2), PANIC)
+  blob(put, disc(7, 27 + ox, 2, 2), PANIC)
+  blob(put, disc(17, 16 + ox, 10, 10.5), PANIC)
+  feet(put, 26, PANIC, ox)
+  bigEye(put, 15, 11 + ox, '2', frame ? -1 : 1)
+  bigEye(put, 15, 21 + ox, '2', frame ? -1 : 1)
+  worriedBrow(put, 7, 11 + ox, 1)
+  worriedBrow(put, 7, 21 + ox, -1)
+  blush(put, 20, 6 + ox, 23 + ox)
+  openMouth(put, 22.5, 16 + ox, 1.5, 2)
+  drop(put, frame ? 10 : 8, 29 + ox)
+  drop(put, frame ? 4 : 3, 7 + ox)
 }
 
-/** 투매: 보라 찹쌀떡 몸이 매도 주문지를 모자처럼 이고 있다. 걱정 가득한 왕눈이와 물결 입. 2프레임은 종이가 한 칸 미끄러진다. */
+/** 투매: 보라 찹쌀떡이 "매도" 주문지 더미를 이고 있다. 왕눈이·걱정 눈썹·물결 입·식은땀. 2프레임은 종이가 미끄러진다. */
 const dump: Painter = (put, frame) => {
   const off = frame ? 1 : 0
-  blob(put, disc(20, 16, 9, 10), DUMP)
-  // 머리에 인 종이 두 장
+  shadow(put, 29.5, 16, 10)
+  blob(put, disc(20, 16, 9.5, 10.5), DUMP)
+  feet(put, 27, DUMP)
+  // 종이 세 장: 윤곽, 흰 바탕, 오른쪽 아래 그림자, 붉은 "매도" 줄과 검은 글줄
   for (const [i, [y, x]] of (
     [
-      [4, 8 - off],
-      [7, 14 + off],
+      [2, 6 - off],
+      [4, 14 + off],
+      [7, 9],
     ] as [number, number][]
   ).entries()) {
-    blob(put, area([y, y + 6], [x, x + 9]), PAPER)
+    blob(put, area([y, y + 7], [x, x + 10]), PAPER)
     fill(put, y + 2, [x + 2, x + 3, x + 4, x + 5], 'R')
-    fill(put, y + 4, [x + 2, x + 3, x + 4, x + 5, x + 6], i ? 'R' : 'k')
+    fill(put, y + 4, [x + 2, x + 3, x + 4, x + 5, x + 6, x + 7], 'k')
+    fill(put, y + 5, [x + 2, x + 3, x + 4], i === 2 ? 'R' : 'k')
+    put(y + 2, x + 7, 'R')
+    put(y + 2, x + 8, 'R')
   }
-  eye(put, 18, 11, 0)
-  eye(put, 18, 21, 0)
-  blush(put, 22, 8, 23)
-  // 물결 입(걱정)
-  fill(put, 24, [14, 16, 18], 'k')
-  fill(put, 25, [15, 17], 'k')
-  // 아장아장 발
-  blob(put, area([28, 30], [11, 14]), DUMP)
-  blob(put, area([28, 30], [18, 21]), DUMP)
+  bigEye(put, 18, 11, 'B', 0)
+  bigEye(put, 18, 21, 'B', 0)
+  worriedBrow(put, 11, 11, 1)
+  worriedBrow(put, 11, 21, -1)
+  blush(put, 23, 6, 23)
+  fill(put, 25, [13, 15, 17, 19], 'k')
+  fill(put, 26, [14, 16, 18], 'k')
+  drop(put, frame ? 13 : 12, 29)
 }
 
-/** 투기: 방실방실 웃는 빨간 풍선. 감은 눈(^ ^), 볼 홍조, 하트 입, 매듭 아래 금빛 동전. 2프레임은 조금 더 부푼다. */
+/** 투기: 방실방실 웃는 빨간 풍선. 별눈, 큰 반짝임, 볼 홍조, 활짝 웃는 입, 매듭 아래 ₩ 동전. 2프레임은 조금 더 부푼다. */
 const spec: Painter = (put, frame) => {
-  const r = frame ? 12 : 11.5
+  const r = frame ? 12.5 : 12
+  shadow(put, 30.5, 16, 7)
   blob(put, disc(14, 16, r, r), SPEC)
-  // 반짝임
-  fill(put, 6, [10, 11], 'W')
-  put(7, 9, 'W')
-  put(8, 9, 'W')
-  put(9, 22, 'W')
-  happyEye(put, 13, 11)
-  happyEye(put, 13, 21)
-  blush(put, 16, 7, 23)
-  // 작은 하트 입
-  fill(put, 17, [14, 15, 17, 18], 'm')
-  fill(put, 18, [14, 15, 16, 17, 18], 'm')
-  fill(put, 19, [15, 16, 17], 'm')
-  put(20, 16, 'm')
-  // 매듭과 동전
+  // 큰 반짝임
+  fill(put, 5, [9, 10, 11], 'W')
+  fill(put, 6, [8, 9], 'W')
+  put(7, 8, 'W')
+  put(8, 7, 'W')
+  put(9, 7, 'W')
+  put(8, 23, 'W')
+  starEye(put, 12, 10)
+  starEye(put, 12, 22)
+  blush(put, 17, 5, 24)
+  // 활짝 웃는 입: 안쪽은 어둡고 혀는 분홍
+  openMouth(put, 19, 16, 1.5, 4.5)
+  fill(put, 21, [14, 15, 16, 17, 18], 'r')
+  fill(put, 18, [12, 13, 14, 15, 16, 17, 18, 19, 20], 'k')
+  // 매듭과 ₩ 동전
   blob(put, area([26, 27], [15, 17]), SPEC)
-  blob(put, area([28, 31], [14, 18]), { outline: 'Y', shadow: 'Y', base: 'y', light: 'W' })
+  blob(put, disc(29.5, 16, 2.5, 3), { outline: 'Y', shadow: 'Y', base: 'y', light: 'W' })
+  put(29, 15, 'Y')
+  put(29, 17, 'Y')
+  put(30, 16, 'Y')
 }
 
-/** 손절매: 그렁그렁한 눈의 회색 몽실이가 가위를 꼭 안고 있다. 2프레임은 가위가 조금 벌어진다. */
+/** 손절매: 그렁그렁한 눈의 회색 몽실이가 가위를 안고 있다. 슬픈 눈썹, 흐르는 눈물, 작은 입. 2프레임은 가위가 벌어진다. */
 const stop: Painter = (put, frame) => {
+  shadow(put, 29.5, 16, 9)
   blob(put, disc(16, 16, 10, 10.5), STOP)
-  // 아장아장 발
-  blob(put, area([26, 28], [11, 14]), STOP)
-  blob(put, area([26, 28], [18, 21]), STOP)
-  eye(put, 13, 11, 0)
-  eye(put, 13, 21, 0)
-  // 그렁그렁한 눈물
-  put(16, 9, 'T')
-  put(17, 9, 'T')
-  put(16, 23, 'T')
-  put(17, 23, 'T')
-  blush(put, 17, 7, 24)
-  // 작은 입 (~)
-  fill(put, 19, [14, 15, 17, 18], 'k')
-  put(20, 16, 'k')
-  // 몸 앞에 꼭 안은 작은 가위
+  feet(put, 26, STOP)
+  bigEye(put, 13, 11, 'G', 0)
+  bigEye(put, 13, 21, 'G', 0)
+  worriedBrow(put, 5, 11, 1)
+  worriedBrow(put, 5, 21, -1)
+  // 흐르는 눈물
+  for (const dy of [0, 1, 2, 3]) {
+    put(18 + dy, 8, 'T')
+    put(18 + dy, 24, 'T')
+  }
+  put(19, 8, 'W')
+  blush(put, 19, 5, 24)
+  fill(put, 21, [14, 15, 17, 18], 'k')
+  put(22, 16, 'k')
+  // 몸 앞에 안은 가위: 날 둘이 위로 엇갈리고, 손잡이 고리 둘
   const spread = frame ? 1 : 0
   const left: [number, number][] = []
   const right: [number, number][] = []
-  for (let i = 0; i < 7; i++) {
-    left.push([19 + i, 13 - i * 0.5 - spread] as [number, number])
-    right.push([19 + i, 19 + i * 0.5 + spread] as [number, number])
+  for (let i = 0; i < 9; i++) {
+    const lx = 14 - Math.round(i * 0.6) - spread
+    const rx = 18 + Math.round(i * 0.6) + spread
+    left.push([24 - i, lx], [24 - i, lx + 1])
+    right.push([24 - i, rx], [24 - i, rx + 1])
   }
-  blob(
-    put,
-    left.map(([y, x]) => [y, Math.round(x)]),
-    BLADE,
-  )
-  blob(
-    put,
-    right.map(([y, x]) => [y, Math.round(x)]),
-    BLADE,
-  )
-  blob(put, disc(27, 11 - spread, 1.5, 2), STOP)
-  blob(put, disc(27, 21 + spread, 1.5, 2), STOP)
+  blob(put, left, BLADE)
+  blob(put, right, BLADE)
+  blob(put, disc(27, 12 - spread, 2, 2.5), STOP)
+  blob(put, disc(27, 20 + spread, 2, 2.5), STOP)
+  put(27, 12 - spread, 'g')
+  put(27, 20 + spread, 'g')
 }
+
 const ENEMY_PAINTERS: Record<EnemyKind, Painter> = { panic, dump, spec, stop }
 
-/** 바닥 타일 한 장(16×16, 폭락장은 32×32). 장르마다 다른 장소: 공격은 객장 카펫, 디펜스는 금고실 철판, 생존은 금이 간 폭락장 바닥. */
+/** 바닥 타일 한 장(16×16, 폭락장은 32×32). 장르마다 다른 장소: 공격은 객장 카펫, 디펜스는 금고실 철판. */
 const FLOOR_PALETTE: Record<string, string> = {
   // 객장 카펫(남색)과 줄눈
   n: '#273352',
@@ -248,11 +308,6 @@ const FLOOR_PALETTE: Record<string, string> = {
   S: '#a3aab3',
   r: '#6c737c', // 리벳 그림자
   t: '#c7cdd4', // 리벳 밝은 쪽
-  // 폭락장: 바랜 주황 바닥과 붉은 금
-  p: '#e8c79a',
-  P: '#dcb987',
-  q: '#b9412f',
-  Q: '#8e2b22',
 }
 
 const FLOOR_MAPS: Record<Genre, readonly string[]> = {
@@ -292,57 +347,154 @@ const FLOOR_MAPS: Record<Genre, readonly string[]> = {
     'rSsrSSSSSSSSsrSs',
     'rsssssssssssssss',
   ],
-  SURVIVAL: [
-    'pppppppppppppppppppPpppppppppppp',
-    'ppPppppppppppppppppppppppppppppp',
-    'ppppppppppppQqppppppppppppppPppp',
-    'pppppppppppQqppppppppppppppppppp',
-    'ppppppppppQqpppppppppPpppppppppp',
-    'pppppppppQqppppppppppppppppppppp',
-    'ppppppppQqpppQqppppppppppppppppp',
-    'pppppppQqpppQqpppppppppppppppppp',
-    'ppppppQqQqqQqppppppppppppPpppppp',
-    'pppppQqppQqqpppppppppppppppppppp',
-    'ppppQqppppQqpppppppppppppppppppp',
-    'pppQqppppppQqppppppppppppppppppp',
-    'ppQqpppppppQqpppppppppppppppppqQ',
-    'pQqpppppppppQqppppppppppppppppQq',
-    'Qqppppppppppppppppppppppppppppqp',
-    'pppppppppppppppppppPpppppppppQqp',
-    'pppppppppppppppppppppppppppQqppp',
-    'ppppppPppppppppppppppppppQqppppp',
-    'ppppppppppppppppppppppppQqpppppp',
-    'pppppppppppppppppppppppQqppppppp',
-    'pppppppppppppppppppppQqpppppppPp',
-    'ppppppppppppppppppQqQqpppppppppp',
-    'pppppppppppppppppQqqQqpppppppppp',
-    'ppppPpppppppppppQqpppQqppppppppp',
-    'pppppppppppppppQqppppppQqpppPppp',
-    'ppppppppppppppQqppppppppQqpppppp',
-    'pppppppppppppQqppppppppppQqppppp',
-    'ppppppppppppQqpppppppppppppppppp',
-    'pppppppppppppppppppppppppppppppp',
-    'ppPppppppppppppppppppppppppppppp',
-    'ppppppppppppppppppppppPppppppppp',
-    'pppppppppppppppppppppppppppppppp',
-  ],
 }
 
-/** 금고 (디펜스): 회색 철제 금고, 금빛 다이얼과 손잡이. */
-function vaultGrid(): Grid {
-  const grid = empty(32, 32)
+/** 금고 (디펜스): 회색 철제 금고, 금빛 다이얼과 손잡이. cracked면 멘탈이 반 아래로 떨어져 금이 갔다. */
+function vaultGrid(cracked: boolean): Grid {
+  const grid = empty(34, 32)
   const put = putOf(grid)
-  blob(put, area([4, 29], [4, 27]), STOP)
-  blob(put, area([7, 26], [7, 24]), { outline: 'G', shadow: 'G', base: 'h', light: 'H' })
-  blob(put, disc(16, 16, 4, 4), { outline: 'Y', shadow: 'Y', base: 'y', light: 'W' })
-  put(16, 16, 'g')
-  put(13, 16, 'g')
-  put(19, 16, 'g')
-  put(16, 13, 'g')
-  put(16, 19, 'g')
-  blob(put, area([12, 20], [25, 26]), { outline: 'Y', shadow: 'Y', base: 'y', light: 'W' })
-  fill(put, 30, [8, 9, 22, 23], 'g')
-  fill(put, 31, [8, 9, 22, 23], 'g')
+  shadow(put, 31.5, 16, 13)
+  blob(put, area([3, 29], [3, 28]), STOP)
+  blob(put, area([6, 26], [6, 25]), { outline: 'G', shadow: 'G', base: 'h', light: 'H' })
+  for (const [y, x] of [
+    [4, 4],
+    [4, 27],
+    [28, 4],
+    [28, 27],
+  ]) {
+    put(y, x, 'K')
+  }
+  blob(put, disc(16, 15, 4.5, 4.5), { outline: 'Y', shadow: 'Y', base: 'y', light: 'W' })
+  for (const [y, x] of [
+    [16, 15],
+    [12, 15],
+    [20, 15],
+    [16, 11],
+    [16, 19],
+  ]) {
+    put(y, x, 'g')
+  }
+  blob(put, area([11, 21], [25, 26]), { outline: 'Y', shadow: 'Y', base: 'y', light: 'W' })
+  fill(put, 30, [7, 8, 23, 24], 'g')
+  fill(put, 31, [7, 8, 23, 24], 'g')
+  if (cracked) {
+    for (const [y, x] of [
+      [6, 20],
+      [7, 20],
+      [8, 21],
+      [9, 21],
+      [10, 22],
+      [10, 23],
+      [11, 23],
+      [12, 22],
+      [13, 22],
+      [14, 21],
+      [22, 8],
+      [23, 9],
+      [24, 9],
+      [25, 10],
+      [25, 11],
+      [26, 12],
+    ]) {
+      put(y, x, 'g')
+    }
+  }
+  return grid
+}
+
+/** 소품 팔레트: 책상·모니터·전광판·기둥·금괴 상자. */
+const PROP_PALETTE: Record<string, string> = {
+  ...ENEMY_PALETTE,
+  w: '#5a3e2b', // 책상 윤곽
+  x: '#8a6240', // 책상 그림자
+  z: '#b07f54', // 책상 기본
+  Z: '#d3a06f', // 책상 밝은 쪽
+  n: '#141a26', // 모니터 테두리
+  N: '#1e2a3c', // 모니터 화면
+  u: '#3ddc84', // 오르는 선
+  U: '#ff5c7a', // 내리는 선
+  o: '#2a2f3a', // 전광판 바탕
+  O: '#111318', // 전광판 테두리
+  P: '#e6e1d6', // 대리석 기둥
+  p: '#bdb7aa', // 기둥 그림자
+  Q: '#9a9387', // 기둥 윤곽
+  V: '#f7f2e8', // 기둥 밝은 쪽
+}
+
+const WOOD: Ramp = { outline: 'w', shadow: 'x', base: 'z', light: 'Z' }
+const MARBLE: Ramp = { outline: 'Q', shadow: 'p', base: 'P', light: 'V' }
+const GOLD: Ramp = { outline: 'Y', shadow: 'Y', base: 'y', light: 'W' }
+
+/** 객장 책상: 모니터 둘에 주가 선(왼쪽은 오르고 오른쪽은 내린다). 32×24. */
+function deskGrid(): Grid {
+  const grid = empty(24, 32)
+  const put = putOf(grid)
+  shadow(put, 22.5, 16, 15)
+  blob(put, area([12, 21], [1, 30]), WOOD)
+  fill(put, 22, [3, 4, 27, 28], 'w')
+  for (const mx of [4, 18]) {
+    blob(put, area([2, 10], [mx, mx + 9]), { outline: 'n', shadow: 'N', base: 'N', light: 'N' })
+    fill(put, 11, [mx + 4, mx + 5], 'n')
+    const up = mx === 4
+    const ys = up ? [8, 7, 7, 6, 5, 5, 4, 3] : [3, 4, 4, 5, 6, 6, 7, 8]
+    ys.forEach((y, i) => {
+      put(y, mx + 1 + i, up ? 'u' : 'U')
+    })
+  }
+  return grid
+}
+
+/** 전광판 타일(가로로 이어 붙인다): 어두운 바탕에 오르내리는 숫자 줄. 32×8. */
+function tickerGrid(): Grid {
+  const grid = empty(8, 32)
+  const put = putOf(grid)
+  for (const [y, x] of area([0, 7], [0, 31])) {
+    put(y, x, 'o')
+  }
+  const all = Array.from({ length: 32 }, (_, i) => i)
+  fill(put, 0, all, 'O')
+  fill(put, 7, all, 'O')
+  for (let x = 1; x < 31; x += 3) {
+    const up = ((x - 1) / 3) % 2 === 0
+    const c = up ? 'u' : 'U'
+    for (const y of [2, 3, 4, 5]) {
+      put(y, x, c)
+    }
+    put(up ? 2 : 5, x + 1, c)
+  }
+  return grid
+}
+
+/** 금고실 기둥: 대리석 기둥 한 개. 16×48. */
+function pillarGrid(): Grid {
+  const grid = empty(48, 16)
+  const put = putOf(grid)
+  shadow(put, 46.5, 8, 7)
+  blob(put, area([0, 3], [1, 14]), MARBLE)
+  blob(put, area([4, 42], [3, 12]), MARBLE)
+  blob(put, area([43, 45], [1, 14]), MARBLE)
+  for (let y = 6; y < 41; y += 2) {
+    put(y, 5, 'p')
+    put(y, 10, 'V')
+  }
+  return grid
+}
+
+/** 금괴 상자: 나무 상자에 금괴가 쌓였다. 24×20. */
+function crateGrid(): Grid {
+  const grid = empty(20, 24)
+  const put = putOf(grid)
+  shadow(put, 18.5, 12, 11)
+  blob(put, area([7, 17], [1, 22]), WOOD)
+  fill(
+    put,
+    12,
+    Array.from({ length: 20 }, (_, i) => i + 2),
+    'x',
+  )
+  blob(put, area([4, 7], [3, 9]), GOLD)
+  blob(put, area([4, 7], [11, 17]), GOLD)
+  blob(put, area([1, 4], [7, 13]), GOLD)
   return grid
 }
 
@@ -375,11 +527,31 @@ function bake(
 export const HERO_KEYS = ['hero-front', 'hero-side', 'hero-walk', 'hero-hurt'] as const
 
 export function bakeHero(scene: Phaser.Scene, hero: Hero) {
-  const palette = { ...CHARACTER_PALETTE, ...ATTIRE_COLORS[attireOf(hero.grade)] }
-  bake(scene, 'hero-front', compose(viewBody(hero.sex, 'adult', 'front'), []), palette)
-  bake(scene, 'hero-side', compose(viewBody(hero.sex, 'adult', 'side'), []), palette)
-  bake(scene, 'hero-walk', compose(viewBody(hero.sex, 'adult', 'walk'), []), palette)
-  bake(scene, 'hero-hurt', compose(viewBody(hero.sex, 'adult', 'front'), [MOODS.despair]), palette)
+  const palette = {
+    ...CHARACTER_PALETTE,
+    ...ATTIRE_COLORS[attireOf(hero.grade)],
+    _: ENEMY_PALETTE._,
+  }
+  // 발밑에 그림자 넉 줄을 덧붙인다(32×40 → 32×44). 그림자는 발 뒤에 깔린다.
+  const grounded = (grid: Grid): Grid => {
+    const out = [...grid.map((r) => [...r]), ...empty(4, 32)]
+    const put = putOf(out)
+    for (const [y, x] of disc(40.5, 16, 2, 10)) {
+      if (out[y]?.[x] === '.') {
+        put(y, x, '_')
+      }
+    }
+    return out
+  }
+  bake(scene, 'hero-front', grounded(compose(viewBody(hero.sex, 'adult', 'front'), [])), palette)
+  bake(scene, 'hero-side', grounded(compose(viewBody(hero.sex, 'adult', 'side'), [])), palette)
+  bake(scene, 'hero-walk', grounded(compose(viewBody(hero.sex, 'adult', 'walk'), [])), palette)
+  bake(
+    scene,
+    'hero-hurt',
+    grounded(compose(viewBody(hero.sex, 'adult', 'front'), [MOODS.despair])),
+    palette,
+  )
 }
 
 /** 적 텍스처 열쇠: `${kind}-0`·`${kind}-1` 두 프레임. */
@@ -397,7 +569,7 @@ export function bakeEnemies(scene: Phaser.Scene) {
   }
 }
 
-/** 바닥·금고·탄·파편. */
+/** 바닥·금고·소품·탄·파편. */
 export function bakeStage(scene: Phaser.Scene, genre: Genre) {
   bake(
     scene,
@@ -406,20 +578,27 @@ export function bakeStage(scene: Phaser.Scene, genre: Genre) {
     FLOOR_PALETTE,
     PX * 2,
   )
-  bake(scene, 'vault', vaultGrid(), ENEMY_PALETTE)
-  // 탄: 금빛 동전 한 닢
-  const bullet = empty(6, 6)
-  blob(putOf(bullet), disc(2.5, 2.5, 2, 2), { outline: 'Y', shadow: 'Y', base: 'y', light: 'W' })
-  bake(scene, 'bullet', bullet, ENEMY_PALETTE)
+  bake(scene, 'vault', vaultGrid(false), ENEMY_PALETTE)
+  bake(scene, 'vault-cracked', vaultGrid(true), ENEMY_PALETTE)
+  bake(scene, 'desk', deskGrid(), PROP_PALETTE)
+  bake(scene, 'ticker', tickerGrid(), PROP_PALETTE)
+  bake(scene, 'pillar', pillarGrid(), PROP_PALETTE)
+  bake(scene, 'crate', crateGrid(), PROP_PALETTE)
+  // 탄: 빙글 도는 금빛 동전(둥근 면과 얇은 옆면)
+  const coin = empty(7, 7)
+  blob(putOf(coin), disc(3, 3, 2.5, 2.5), GOLD)
+  putOf(coin)(3, 3, 'Y')
+  bake(scene, 'bullet-0', coin, ENEMY_PALETTE)
+  const edge = empty(7, 7)
+  blob(putOf(edge), area([1, 5], [2, 4]), GOLD)
+  bake(scene, 'bullet-1', edge, ENEMY_PALETTE)
   // 손절매의 멘탈 탄: 파란 눈물
   const tear = empty(7, 5)
-  const tp = putOf(tear)
-  tp(0, 2, 'T')
-  fill(tp, 1, [1, 2, 3], 'T')
+  drop(putOf(tear), 0, 2)
   for (const [y, x] of disc(4, 2, 2, 2)) {
-    tp(y, x, 'T')
+    putOf(tear)(y, x, 'T')
   }
-  tp(3, 1, 'W')
+  putOf(tear)(3, 1, 'W')
   bake(scene, 'tear', tear, ENEMY_PALETTE)
   // 파편: 흰 네모 한 칸(색은 적마다 입힌다)
   bake(

@@ -1017,7 +1017,7 @@ components:
             - type: object
               required: [genre, headline, done]
               properties:
-                genre: { type: string, enum: [ASSAULT, DEFENSE, SURVIVAL], description: 'ASSAULT: 공격(적이 위에서 내려온다), DEFENSE: 디펜스(금고를 지킨다), SURVIVAL: 생존(사방에서 몰려온다)' }
+                genre: { type: string, enum: [ASSAULT, DEFENSE], description: 'ASSAULT: 공격(적이 위에서 내려온다), DEFENSE: 디펜스(금고를 지킨다)' }
                 headline: { type: string, description: 이벤트 머리글 }
                 done: { type: boolean, description: 이번 분기 결과를 이미 보냈다 }
             - type: 'null'

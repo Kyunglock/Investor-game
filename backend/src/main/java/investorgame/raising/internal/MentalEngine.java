@@ -18,8 +18,7 @@ class MentalEngine {
 
   static final String ASSAULT = "ASSAULT";
   static final String DEFENSE = "DEFENSE";
-  static final String SURVIVAL = "SURVIVAL";
-  static final List<String> GENRES = List.of(ASSAULT, DEFENSE, SURVIVAL);
+  static final List<String> GENRES = List.of(ASSAULT, DEFENSE);
 
   /** 폭락이 터지는 분기의 가중치 열쇠. 시장 갈래(boom·normal·crash)와 나란히 쓴다. */
   static final String BURST = "burst";
@@ -37,7 +36,7 @@ class MentalEngine {
   }
 
   /**
-   * 분기를 열 때: 장르를 시장 갈래의 가중치로만 섞어 뽑는다. 폭락이 터지는 분기면 생존형이 자주 나오지만 꼭 나오지는 않아 숨은 값이 새지 않는다. 머리글은 장르의 것
+   * 분기를 열 때: 장르를 시장 갈래의 가중치로만 섞어 뽑는다. 폭락이 터지는 분기면 디펜스가 자주 나오지만 꼭 나오지는 않아 숨은 값이 새지 않는다. 머리글은 장르의 것
    * 가운데 하나.
    */
   CompanyState.Mental create(CompanyState c, SeededRandom random) {

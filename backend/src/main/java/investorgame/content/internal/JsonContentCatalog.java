@@ -206,7 +206,7 @@ class JsonContentCatalog implements ContentCatalog {
     RaisingContent.Mental mental = company.mental();
     require(
         mental != null
-            && mental.headlines().keySet().containsAll(List.of("ASSAULT", "DEFENSE", "SURVIVAL"))
+            && mental.headlines().keySet().containsAll(List.of("ASSAULT", "DEFENSE"))
             && mental.headlines().values().stream().noneMatch(List::isEmpty)
             && !mental.cards().isEmpty()
             && mental.line() != null,

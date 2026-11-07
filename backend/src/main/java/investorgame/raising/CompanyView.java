@@ -65,7 +65,7 @@ public record CompanyView(
   /**
    * 이번 분기의 멘탈 전투 (decisions.md 328번). 끝난 회사나 이 칸이 생기기 전의 분기면 null.
    *
-   * @param genre ASSAULT(공격)·DEFENSE(디펜스)·SURVIVAL(생존). 그 분기 이벤트가 정한다
+   * @param genre ASSAULT(공격)·DEFENSE(디펜스). 그 분기 이벤트가 정한다
    * @param headline 이벤트 머리글
    * @param done 이번 분기 결과를 이미 보냈다. 참이면 다시 치르지 않는다
    */

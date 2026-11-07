@@ -963,10 +963,10 @@ export interface components {
             /** @description 이번 분기의 멘탈 전투 (decisions.md 328번). 그 분기 이벤트가 장르를 정한다. 끝난 회사나 이 칸이 생기기 전의 분기면 null */
             mental?: {
                 /**
-                 * @description ASSAULT: 공격(적이 위에서 내려온다), DEFENSE: 디펜스(금고를 지킨다), SURVIVAL: 생존(사방에서 몰려온다)
+                 * @description ASSAULT: 공격(적이 위에서 내려온다), DEFENSE: 디펜스(금고를 지킨다)
                  * @enum {string}
                  */
-                genre: "ASSAULT" | "DEFENSE" | "SURVIVAL";
+                genre: "ASSAULT" | "DEFENSE";
                 /** @description 이벤트 머리글 */
                 headline: string;
                 /** @description 이번 분기 결과를 이미 보냈다 */

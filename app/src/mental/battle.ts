@@ -48,8 +48,10 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   born: number
   nextShot: number
   look: 0 | 1
+  /** 죽는 연출 중: 몸은 이미 꺼졌고 그림만 부풀며 사라진다. */
+  dying: boolean
 }
-type Bullet = Phaser.Physics.Arcade.Image & { life: number }
+type Bullet = Phaser.Physics.Arcade.Image & { life: number; look: 0 | 1 }
 
 /** 적 그림(64×64)의 충돌 원: 가운데에 반지름 r. */
 function enemyBody(e: Enemy, r: number) {
@@ -108,10 +110,12 @@ class BattleScene extends Phaser.Scene {
     this.events.once('shutdown', () => this.scale.off('resize', onResize))
 
     this.mental = this.opts.loadout.maxMental
-    // 아군 그림은 64×80: 몸통(얼굴부터 발까지) 가운데에 충돌 원을 둔다.
+    this.placeProps()
+    // 아군 그림은 64×88(그림자 포함): 몸통(얼굴부터 발까지) 가운데에 충돌 원을 둔다.
+    // 디펜스는 금고 아래에서 시작한다(금고를 가리지 않게).
     this.player = this.physics.add.image(
       w / 2,
-      this.genre.area === 'bottom' ? h - 120 : h / 2,
+      this.genre.area === 'bottom' ? h - 120 : h / 2 + 110,
       'hero-front',
     )
     this.player.setDepth(5)
@@ -121,7 +125,7 @@ class BattleScene extends Phaser.Scene {
         .image(w / 2, h / 2, 'vault')
         .setDepth(2)
         .setImmovable(true)
-      this.vault.body?.setCircle(26, 6, 6)
+      this.vault.body?.setCircle(26, 6, 8)
     }
 
     // 풀: 탄과 적을 미리 만들어 두고 다시 쓴다.
@@ -132,7 +136,7 @@ class BattleScene extends Phaser.Scene {
     this.physics.add.overlap(this.bullets, this.enemies, (b, e) => {
       const bullet = b as Bullet
       const enemy = e as Enemy
-      if (!bullet.active || !enemy.active || !bullet.body) {
+      if (!bullet.active || !enemy.active || enemy.dying || !bullet.body) {
         return
       }
       bullet.disableBody(true, true)
@@ -144,7 +148,7 @@ class BattleScene extends Phaser.Scene {
     })
     this.physics.add.overlap(this.player, this.enemies, (_p, e) => {
       const enemy = e as Enemy
-      if (enemy.active) {
+      if (enemy.active && !enemy.dying) {
         this.hurt(ENEMIES[enemy.kind].dmg, enemy)
       }
     })
@@ -159,7 +163,7 @@ class BattleScene extends Phaser.Scene {
       // 디펜스: 적이 금고에 닿으면 멘탈이 깎이고 적은 터진다.
       this.physics.add.overlap(this.vault, this.enemies, (_v, e) => {
         const enemy = e as Enemy
-        if (enemy.active) {
+        if (enemy.active && !enemy.dying) {
           this.hurt(ENEMIES[enemy.kind].dmg)
           this.kill(enemy, false)
         }
@@ -207,6 +211,29 @@ class BattleScene extends Phaser.Scene {
     this.opts.onBanner('분기 시작! 멘탈 꽉 잡아', '#3a86ff')
   }
 
+  /** 장르별 소품: 객장은 위쪽 전광판과 책상 줄, 금고실은 네 귀퉁이 기둥과 금괴 상자. 장식일 뿐 부딪히지 않는다. */
+  private placeProps() {
+    const { width: w, height: h } = this.scale
+    if (this.opts.genre === 'ASSAULT') {
+      this.add.tileSprite(0, 64, w, 16, 'ticker').setOrigin(0).setDepth(1)
+      const count = Math.max(2, Math.floor(w / 110))
+      for (let i = 0; i < count; i++) {
+        this.add.image(((i + 0.5) * w) / count, 118, 'desk').setDepth(1)
+      }
+      return
+    }
+    for (const [x, y] of [
+      [28, 110],
+      [w - 28, 110],
+      [28, h - 60],
+      [w - 28, h - 60],
+    ]) {
+      this.add.image(x, y, 'pillar').setDepth(1)
+    }
+    this.add.image(w / 2 - 70, h / 2 + 90, 'crate').setDepth(1)
+    this.add.image(w / 2 + 70, h / 2 - 80, 'crate').setDepth(1)
+  }
+
   // ── 생성
 
   private spawnPoint(): [number, number] {
@@ -242,7 +269,12 @@ class BattleScene extends Phaser.Scene {
       .setDepth(3)
     enemyBody(e, v.r)
     e.look = 0
+    e.dying = false
     e.kind = kind
+    if (kind !== 'spec') {
+      e.setScale(0.3)
+      this.tweens.add({ targets: e, scale: 1, duration: 220, ease: 'Back.easeOut' })
+    }
     e.hp = v.hp
     e.kbx = 0
     e.kby = 0
@@ -352,7 +384,20 @@ class BattleScene extends Phaser.Scene {
         this.cameras.main.shake(40, 0.002)
       }
     }
-    e.disableBody(true, true)
+    // 몸은 바로 꺼지고 그림만 부풀며 사라진다. 풀로 돌아가는 것은 연출이 끝난 뒤.
+    e.dying = true
+    if (e.body) {
+      e.body.enable = false
+    }
+    this.tweens.killTweensOf(e)
+    this.tweens.add({
+      targets: e,
+      scale: e.scale * 1.5,
+      alpha: 0,
+      duration: 170,
+      ease: 'Quad.easeOut',
+      onComplete: () => e.disableBody(true, true),
+    })
   }
 
   /** 아주 짧게 멈칫: 큰 적을 잡은 무게. */
@@ -376,6 +421,9 @@ class BattleScene extends Phaser.Scene {
     }
     this.mental = Math.max(0, this.mental - dmg)
     this.invulnUntil = this.elapsed + 0.7
+    if (this.vault && this.mental <= this.opts.loadout.maxMental / 2) {
+      this.vault.setTexture('vault-cracked')
+    }
     this.cameras.main.shake(130, 0.009)
     this.opts.onHurt()
     sfx.ouch()
@@ -414,12 +462,15 @@ class BattleScene extends Phaser.Scene {
     sfx.shot()
     const base = Math.atan2(best.y - this.player.y, best.x - this.player.x)
     for (const off of this.opts.loadout.spread ? [-0.22, 0, 0.22] : [0]) {
-      const b = this.bullets.get(this.player.x, this.player.y, 'bullet') as Bullet | null
+      const b = this.bullets.get(this.player.x, this.player.y, 'bullet-0') as Bullet | null
       if (!b) {
         return
       }
-      b.enableBody(true, this.player.x, this.player.y, true, true).setDepth(4)
-      b.body?.setCircle(5, 1, 1)
+      b.setTexture('bullet-0')
+        .enableBody(true, this.player.x, this.player.y, true, true)
+        .setDepth(4)
+      b.look = 0
+      b.body?.setCircle(6, 1, 1)
       b.setVelocity(Math.cos(base + off) * BULLET_SPEED, Math.sin(base + off) * BULLET_SPEED)
       b.life = now + BULLET_LIFE
     }
@@ -511,6 +562,8 @@ class BattleScene extends Phaser.Scene {
     } else {
       p.setTexture('hero-front').setFlipX(false)
     }
+    // 숨쉬기: 가만히 있으면 살짝 눌렸다 펴진다.
+    p.setScale(1, mx || my ? 1 : 1 + Math.sin(time / 260) * 0.025)
     if (this.vault) {
       this.vault.setPosition(w / 2, h / 2)
     }
@@ -535,7 +588,7 @@ class BattleScene extends Phaser.Scene {
     const list = this.enemies.getChildren()
     for (let i = 0; i < list.length; i++) {
       const e = list[i] as Enemy
-      if (!e.active) {
+      if (!e.active || e.dying) {
         continue
       }
       const v = ENEMIES[e.kind]
@@ -593,8 +646,17 @@ class BattleScene extends Phaser.Scene {
     }
     for (const child of this.bullets.getChildren()) {
       const b = child as Bullet
-      if (b.active && time > b.life) {
+      if (!b.active) {
+        continue
+      }
+      if (time > b.life) {
         b.disableBody(true, true)
+        continue
+      }
+      const look = (Math.floor(time / 70) % 2) as 0 | 1
+      if (look !== b.look) {
+        b.look = look
+        b.setTexture(`bullet-${look}`)
       }
     }
     for (const child of this.tears.getChildren()) {
