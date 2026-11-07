@@ -148,25 +148,7 @@ body {
 }
 
 /* 캐릭터 눈꺼풀: 평소엔 숨어 있다가 깜빡일 때만 잠깐 덮는다 (3초 주기) */
-@keyframes lid {
-  0%,
-  92%,
-  100% {
-    opacity: 0;
-  }
-  95% {
-    opacity: 1;
-  }
-}
-
 /* 약점 표시가 떨어지며 사라진다 */
-@keyframes drop {
-  to {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-}
-
 /* 엔딩 크레딧이 화면 아래에서 올라와 위로 사라진다. 길이는 줄 수에 따라 컴포넌트가 정한다 */
 
 .animate-reveal {
@@ -181,13 +163,6 @@ body {
 }
 .animate-flash {
   animation: flash 0.6s ease-out 1;
-}
-.animate-lid {
-  opacity: 0;
-  animation: lid 3s steps(1) infinite;
-}
-.animate-drop {
-  animation: drop 0.5s ease-in forwards;
 }
 /* 자동 진행 막대: 카드가 뜬 뒤 저절로 넘어가기까지 차오른다. 길이는 컴포넌트가 animation-duration으로 준다 */
 @keyframes auto-fill {
@@ -982,8 +957,6 @@ p.animate-stamp {
   .animate-credit-in,
   .animate-slide-in,
   .animate-flash,
-  .animate-lid,
-  .animate-drop,
   .animate-debate-in {
     animation: none;
   }

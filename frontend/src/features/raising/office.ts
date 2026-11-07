@@ -156,53 +156,6 @@ export function glowOf(grade: Grade): 'blue' | 'gold' | null {
   return grade.startsWith('X') ? 'blue' : null
 }
 
-/**
- * 차림새의 옷·바지 색. 캐릭터 팔레트 글자(윗옷 q·d·c·C, 바지 z·P·p·u: 윤곽·그림자·기본·밝은 쪽)를 바꾼다 (palette.ts CHARACTER_PALETTE,
- * looks.ts와 같은 방식).
- */
-export const ATTIRE_COLORS: Record<Attire, Record<string, string>> = {
-  hoodie: {
-    q: '#4a4d52',
-    d: '#6b6f76',
-    c: '#8d9199',
-    C: '#adb1b8',
-    z: '#2b3442',
-    P: '#3d4a5e',
-    p: '#53627a',
-    u: '#6d7d96',
-  },
-  shirt: {
-    q: '#5b7a99',
-    d: '#8fb0cc',
-    c: '#c4dbee',
-    C: '#e3eff8',
-    z: '#2a2f3a',
-    P: '#3c4352',
-    p: '#525b6e',
-    u: '#6a7488',
-  },
-  suit: {
-    q: '#0f1a2e',
-    d: '#1d2c48',
-    c: '#2c3f64',
-    C: '#3f5682',
-    z: '#0f1a2e',
-    P: '#1d2c48',
-    p: '#2c3f64',
-    u: '#3f5682',
-  },
-  tailored: {
-    q: '#0b0b0f',
-    d: '#1b1b22',
-    c: '#2b2b35',
-    C: '#45454f',
-    z: '#0b0b0f',
-    P: '#1b1b22',
-    p: '#2b2b35',
-    u: '#45454f',
-  },
-}
-
 /** 사무실 바닥 무늬 (미니맵, decisions.md 237번): 반지하·상가는 시멘트, 빌딩은 나무 마루, 사옥부터 대리석. */
 export const FLOORS: Record<Tier, [string, string]> = {
   basement: ['#c9c6bf', '#bdb9b1'],
