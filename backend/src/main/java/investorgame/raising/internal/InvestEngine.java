@@ -782,6 +782,10 @@ class InvestEngine {
               : result.action.equals(right)
                   ? company.scaledGain(c, company.gainBp(c, e))
                   : -company.scaledMiss(c, returns.missBp());
+      // 크게 틀리면 더 크게 잃는다 (#388): 전에는 크게가 판돈만 두 배라 늘 크게 사는 게 이득이었다.
+      if (big && bp < 0) {
+        bp = bp * properties.invest().bigMissPercent() / PERCENT;
+      }
       result.pnl = stake * bp / BP;
       total += result.pnl;
       e.totalPnl += result.pnl;

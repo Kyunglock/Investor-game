@@ -74,12 +74,16 @@ public record CompanyProperties(
    * @param stakePercent 태도별 그해 결산 판돈 비율(%)
    * @param defensiveCrashPercent 방어면 폭락장의 시장 손익에 곱하는 비율(%)
    * @param windBp 섹터 바람: 순풍 자리는 맞혔을 때 이만큼 더 벌고, 역풍 자리는 덜 번다(만분율)
+   * @param rightBp 태도가 숨은 방향과 맞으면(공격인데 오름, 방어인데 내림) 판단마다 더하는 만분율 (#388)
+   * @param wrongBp 태도가 숨은 방향과 어긋나면(공격인데 내림, 방어인데 오름) 판단마다 빼는 만분율 (#388)
    */
   public record Macro(
       int normalUpPercent,
       Map<String, Integer> stakePercent,
       int defensiveCrashPercent,
-      int windBp) {}
+      int windBp,
+      Map<String, Integer> rightBp,
+      Map<String, Integer> wrongBp) {}
 
   /**
    * 종목 발굴 (decisions.md 267번). 거시경제 회의가 끝나면 종목 발굴팀 직원이 basePercent + 안목 × insightPercent / 100 확률로,
@@ -120,6 +124,7 @@ public record CompanyProperties(
       int sideOppositePercent,
       int stubbornBp,
       int bigStakePercent,
+      int bigMissPercent,
       int bigStubbornPercent,
       int meetingStakePercent,
       String proposalMinGrade,

@@ -1102,7 +1102,9 @@ class CompanyEngine {
 
   /** 규모의 벽 (decisions.md 244번): 등급 단계만큼 거듭제곱한 비율을 곱한다. F는 그대로. */
   private int scaled(CompanyState company, int bp, int percent) {
-    double factor = Math.pow(percent / (double) PERCENT, LADDER.indexOf(grade(company)));
+    // 건물이 아니라 자본의 띠로 정한다 (#344): 건물로 정하면 이사를 안 하고 반지하에 머물러 벽을 피할 수 있었다.
+    long capital = company.yearStake != null ? company.yearStake : company.capital;
+    double factor = Math.pow(percent / (double) PERCENT, LADDER.indexOf(grade(capital)));
     return (int) Math.round(bp * factor);
   }
 
@@ -1450,6 +1452,7 @@ class CompanyEngine {
     int phaseShare =
         crash && company.crashQuarter != null ? (burst ? properties.decisions() : 0) : 1;
     int decisions = Math.max(1, properties.decisions() / QUARTERS);
+    int stanceBp = macro.stanceBp(company);
     q.crash = burst;
     long totalPnl = 0;
     for (Employee employee : traders) {
@@ -1504,6 +1507,7 @@ class CompanyEngine {
         int hitRoll = rng.nextInt(BP);
         // XXX 역발상: 폭락장인 해에 빠지는 동안 사서 회복 구간에서 번다.
         bp += contrarian ? effects.contrarianCrashBp() : phaseBp * phaseShare;
+        bp += stanceBp;
         if (swayRoll < swayBp) {
           result.flips.merge(StatCodes.CONVICTION, 1, Integer::sum);
           bp -= missBp;

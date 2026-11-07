@@ -177,7 +177,7 @@ async function closeYearEnd(page: Page, year: number) {
   }
 }
 
-test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자리 네 개와 채용권 다섯 장이 있다', async ({
+test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자리 네 개와 채용권 열 장이 있다', async ({
   page,
 }) => {
   await openCompany(page)
@@ -185,7 +185,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await expect(page.getByTestId('company-building')).toHaveText('반지하 원룸')
   // 직원이 없으면 채용 탭이 먼저 열린다 (312번).
   await expect(page.getByRole('tab', { name: /채용/ })).toHaveAttribute('aria-selected', 'true')
-  await expect(page.getByTestId('tickets')).toHaveText('5')
+  await expect(page.getByTestId('tickets')).toHaveText('10')
   await expect(page.getByTestId('roster')).toContainText('0 / 8')
   await expect(page.getByTestId('collection-entry')).toHaveCount(18)
   await page.getByText('확률표').click()
@@ -193,7 +193,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await expect(page.getByTestId('building-ladder').getByRole('listitem')).toHaveCount(7)
   await expect(page.getByTestId('next-step')).toContainText('사무실 넓히기')
   // 건물은 저절로 오르지 않는다 (296번): 이사 비용과 필요한 자본이 보이고, 자본이 모자라면 버튼이 잠긴다.
-  await expect(page.getByTestId('next-step')).toContainText('이사 비용 50b')
+  await expect(page.getByTestId('next-step')).toContainText('이사 비용 18b')
   await expect(page.getByTestId('upgrade')).toBeDisabled()
   // 라이벌 회사를 걷어냈다 (288번): 업계 순위가 없다.
   await expect(page.getByTestId('industry')).toHaveCount(0)
@@ -236,7 +236,7 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   await expect(reveal).toContainText('NEW')
   await reveal.getByTestId('gacha-close').click()
   await drawPeople(page, 3)
-  await expect(page.getByTestId('tickets')).toHaveText('1')
+  await expect(page.getByTestId('tickets')).toHaveText('6')
   await expect(page.getByTestId('roster')).toContainText('4 / 8')
   // 직원이 바뀌어 화면을 새로 그려도 채용 탭에 그대로 있다.
   await expect(page.getByRole('tab', { name: /채용/ })).toHaveAttribute('aria-selected', 'true')
