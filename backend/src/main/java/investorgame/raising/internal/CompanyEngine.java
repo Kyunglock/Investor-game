@@ -754,7 +754,7 @@ class CompanyEngine {
     return (long) (capital * (bp / (double) BP));
   }
 
-  /** 데리고 있을 수 있는 사람 수: 자리 수와 상관없이 roster-max (decisions.md 337번, 312번을 바꿈). 넘으면 합쳐야 더 뽑는다. */
+  /** 데리고 있을 수 있는 사람 수: 상한이 없다(354번, roster-max를 아주 크게). 전에는 100명(337번). */
   int rosterMax(CompanyState company) {
     return properties.gacha().rosterMax();
   }
@@ -1169,9 +1169,13 @@ class CompanyEngine {
     return seatsOf(grade(capital));
   }
 
+  /** 자리 수 (354번): 목록이 하나면 모든 등급이 그 수(셋으로 고정). 목록이 길면 등급마다 다르고 그 위는 둘씩 는다(옛 규칙). */
   int seatsOf(String grade) {
     int at = LADDER.indexOf(grade);
     List<Integer> seats = properties.seats();
+    if (seats.size() == 1) {
+      return seats.getFirst();
+    }
     return at < seats.size() ? seats.get(at) : seats.getLast() + 2 * (at - seats.size() + 1);
   }
 

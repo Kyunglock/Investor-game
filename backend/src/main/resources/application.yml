@@ -78,8 +78,8 @@ raising:
       build-years: { D: 1, B: 1, S: 2, SSS: 2, X: 3, Z: 3 }
       # 돕는 자리는 회사가 이 등급이 되면 열린다 (#393): 처음엔 돈을 굴리는 자리만 보고, 커 가며 하나씩 배운다. 표에 없는 자리는 처음부터 열려 있다
       desk-unlock: { research: E, scout: D, risk: D, hr: B }
-    # 자리 수 (decisions.md 281·287번): 건물이 커질수록 더 많이 앉힌다. F 4 · E 6 · D 10 · C 14 · B 18 · A 22 · S 26 · SS 30 · SSS 34, 그 위는 한 단계마다 +4
-    seats: [4, 6, 10, 14, 18, 22, 26, 30, 34]
+    # 자리 수 (decisions.md 354번): 회사 등급·건물과 상관없이 셋으로 고정. 전에는 건물이 커질수록 늘었다(281·287번). 목록이 하나면 모든 등급이 그 수다
+    seats: [3]
     # 규모의 벽 (decisions.md 244번): 등급 단계(F = 0)마다 맞혀서 버는 몫 ×gain, 잃는 몫 ×miss, 폭락장 손익 ×crash.
     # 전에는 등급마다 수수료·판돈 ×1.5라 B부터 잃는 해가 없고 SSS면 수수료만으로 자본이 두 배가 됐다
     scale:
@@ -221,8 +221,8 @@ raising:
       achievement-tickets: 3
       move-tickets: 3
       max-draws: 10
-      # 데리고 있을 수 있는 사람 (335번 다음, 337번): 자리 수와 상관없이 100명
-      roster-max: 100
+      # 데리고 있을 수 있는 사람 (354번): 상한이 없다. 화면은 이 값 이상이면 상한을 보이지 않는다(337번의 100명을 뺐다)
+      roster-max: 999999
       merge-count: 2
       # 합성 보상 (decisions.md 350번): jackpot-percent% 확률로 두 단계(대성공), inherit-percent% 확률로 재료의 버릇을 이어받는다
       jackpot-percent: 5

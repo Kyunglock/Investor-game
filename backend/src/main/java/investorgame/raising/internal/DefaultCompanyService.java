@@ -42,13 +42,17 @@ class DefaultCompanyService implements CompanyService {
    */
   private CompanyRepository.Row adopt(CompanyRepository.Row row) {
     CompanyState c = row.state();
-    if ((c.gachaReady && c.mental != null && c.weapon != null) || !"ACTIVE".equals(row.status())) {
+    boolean overSeated = c.employees.stream().filter(e -> e.desk != null).count() > engine.seats(c);
+    if ((c.gachaReady && c.mental != null && c.weapon != null && !overSeated)
+        || !"ACTIVE".equals(row.status())) {
       return row;
     }
     CompanyRepository.Row locked = companies.lockActive(row.sessionId()).orElse(row);
     boolean gacha = engine.adoptGacha(locked.state());
     boolean mental = engine.mental.adopt(locked.state(), new HashSeededRandom(locked.seed()));
-    if (gacha || mental) {
+    // 자리가 셋으로 줄었다 (354번): 옛 회사에서 넘치게 앉은 사람은 쉬는 사람으로 내린다.
+    boolean stood = !engine.fitSeats(locked.state()).isEmpty();
+    if (gacha || mental || stood) {
       companies.update(locked.id(), locked.state(), false);
     }
     return locked;

@@ -148,11 +148,13 @@ class CompanyApiTest {
     long capital = company.read("$.capital", Long.class);
     assertThat(capital).isEqualTo(100_000_000L);
     assertThat(company.read("$.grade", String.class)).isEqualTo("F");
-    assertThat(company.read("$.seats", Integer.class)).isEqualTo(4);
+    assertThat(company.read("$.seats", Integer.class)).as("자리는 셋 (354번)").isEqualTo(3);
     assertThat(company.read("$.employees.length()", Integer.class)).isZero();
     // 채용 뽑기 (decisions.md 312번): 채용권 열 장으로 시작하고(#344), 확률표와 도감(F~GOD)이 보인다.
     assertThat(company.read("$.gacha.tickets", Integer.class)).isEqualTo(10);
-    assertThat(company.read("$.gacha.rosterMax", Integer.class)).isEqualTo(100);
+    assertThat(company.read("$.gacha.rosterMax", Integer.class))
+        .as("인원 상한 없음 (354번)")
+        .isGreaterThan(100_000);
     assertThat(company.read("$.gacha.rates.length()", Integer.class)).isEqualTo(5);
     assertThat(company.read("$.gacha.collection.length()", Integer.class)).isEqualTo(18);
     // 섹터 데스크 (4.2·9.4절): 첫 회사는 평범한 시대라 뜨는 섹터가 없다.

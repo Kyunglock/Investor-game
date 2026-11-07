@@ -114,7 +114,7 @@ function NextStep({ company }: { company: Company }) {
   if (!step || !plan || company.status === 'ENDED') {
     return null
   }
-  const label = step.kind === 'move' ? `다음 건물 ${step.to}` : '사무실 넓히기'
+  const label = step.kind === 'move' ? `다음 건물 ${step.to}` : '사무실 등급 올리기'
   const short = plan.needed - company.capital
   // 공사 중 (#347): 새 건물은 몇 해에 걸쳐 짓는다. 그동안 지금 건물에서 일한다.
   if (plan.left != null) {
@@ -170,7 +170,7 @@ function NextStep({ company }: { company: Company }) {
             ? '공사 시작'
             : step.kind === 'move'
               ? '이사하기'
-              : '넓히기'}
+              : '올리기'}
       </button>
     </div>
   )

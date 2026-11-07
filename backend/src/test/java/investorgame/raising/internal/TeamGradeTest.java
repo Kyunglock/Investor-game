@@ -45,18 +45,18 @@ class TeamGradeTest {
   }
 
   @Test
-  void 사람_수만_늘려서는_오르지_않고_잘하는_셋의_평균이다() {
+  void 앉은_사람의_평균이고_잘하는_셋까지만_센다() {
     CompanyState c = ENGINE.open(new HashSeededRandom(2), 150_000_000L);
     CompanyState.Employee a = ENGINE.hire(c, stats(80, 80));
     CompanyState.Employee b = ENGINE.hire(c, stats(80, 80));
-    CompanyState.Employee d = ENGINE.hire(c, stats(80, 80));
-    ENGINE.place(c, Map.of(a.id, "day", b.id, "bio", d.id, "semiconductor"));
-    int three = ENGINE.teamGrade.of(c, TeamGrade.INVEST).score();
-    // 못하는 사람을 더 앉혀도 잘하는 셋만 센다(place는 배치를 통째로 바꾼다).
+    ENGINE.place(c, Map.of(a.id, "day", b.id, "bio"));
+    // 둘 다 제 자리의 팀장이라 +2.
+    assertThat(ENGINE.teamGrade.of(c, TeamGrade.INVEST).score()).isEqualTo(82);
+    // 자리는 셋(354번): 못하는 사람을 셋째로 앉히면 셋의 평균이라 내려간다(잘하는 셋까지만 센다).
     CompanyState.Employee weak = ENGINE.hire(c, stats(10, 10));
-    ENGINE.place(c, Map.of(a.id, "day", b.id, "bio", d.id, "semiconductor", weak.id, "food"));
-    assertThat(ENGINE.teamGrade.of(c, TeamGrade.INVEST).score()).isEqualTo(three);
-    assertThat(ENGINE.teamGrade.of(c, TeamGrade.INVEST).members()).isEqualTo(4);
+    ENGINE.place(c, Map.of(a.id, "day", b.id, "bio", weak.id, "semiconductor"));
+    assertThat(ENGINE.teamGrade.of(c, TeamGrade.INVEST).score()).isEqualTo(59);
+    assertThat(ENGINE.teamGrade.of(c, TeamGrade.INVEST).members()).isEqualTo(3);
     // 못하는 사람 둘뿐이면 그 둘의 평균이라 낮다.
     CompanyState low = ENGINE.open(new HashSeededRandom(3), 150_000_000L);
     CompanyState.Employee x = ENGINE.hire(low, stats(20, 20));

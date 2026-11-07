@@ -119,7 +119,8 @@ function DrawPart({ company }: { company: Company }) {
         <div className="text-right">
           <p className="text-[12px] text-ink/60">데리고 있는 사람</p>
           <p className="font-mono-num text-[20px] font-bold" data-testid="roster">
-            {g.roster} / {g.rosterMax}
+            {g.roster}
+            {g.rosterMax < 100_000 && ` / ${g.rosterMax}`}명
           </p>
         </div>
       </div>
