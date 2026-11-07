@@ -10,7 +10,7 @@ import { sfx } from '../../fx/sound'
 
 type Part = 'draw' | 'merge' | 'dex'
 
-/** 합성 판의 소리·진동 (318번): 집으면 가볍게, 놓으면 휙, 합쳐지면 두 음. */
+/** 합성 판의 소리·진동 (319번): 집으면 가볍게, 놓으면 휙, 합쳐지면 두 음. */
 const MERGE_EFFECTS = {
   pick: () => haptic.light(),
   drop: () => {
@@ -26,7 +26,7 @@ const MERGE_EFFECTS = {
 
 /**
  * 채용 장면 (decisions.md 312번): 뽑기 · 합성 · 도감. 뽑기는 큰 채용권 숫자와 1명·N명 뽑기 버튼, 확률표, 쉬는 사람 내보내기. 합성은 같은 등급 카드 두 장을
- * 끌어 겹쳐 한 단계 올리고(MergeBoard, 314·318번), 도감은 만난 등급을 모은다.
+ * 끌어 겹쳐 한 단계 올리고(MergeBoard, 314·319번), 도감은 만난 등급을 모은다.
  */
 export function GachaScene({ company }: { company: Company }) {
   const [part, setPart] = useState<Part>('draw')
