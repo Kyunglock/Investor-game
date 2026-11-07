@@ -1,14 +1,11 @@
 import { memo } from 'react'
 import type { Company, Grade } from '../../api/client'
-import type { Figure } from '../game/pixel/figure'
-import { Person } from '../game/pixel/Person'
-import { SPRITE_HEIGHT, SPRITE_WIDTH } from '../game/pixel/sprite'
+import { CatSprite } from '../game/cat/CatSprite'
+import { customerLook, employeeLook } from '../game/cat/look'
 import { usePixelArt } from '../game/pixelArt'
 import { pnlLabel } from './board'
 import { tierOf as cardTierOf, GradeBadge, tierClass } from './GradeCard'
 import {
-  ATTIRE_COLORS,
-  attireOf,
   customersOf,
   FLOORS,
   glowOf,
@@ -24,9 +21,7 @@ type Employee = Company['employees'][number]
 /** 미니맵에서 고른 것: 앉아 있거나 쉬는 직원, 또는 빈 자리(몇 번째). 미니맵 아래에 자리 고르기가 열린다. */
 export type SeatFocus = { employee: number } | { empty: number }
 
-const PIXELATED = { imageRendering: 'pixelated', shapeRendering: 'crispEdges' } as const
-
-/** 정면을 보는 직원 한 명. 차림새는 종합 등급, 표정은 그해 손익, X 이상은 뒤에 빛이 돈다 (8.2절). */
+/** 정면을 보는 직원 한 명: 고양이 (341번). 품종은 번호, 차림새는 종합 등급, 표정은 그해 손익, X 이상은 뒤에 빛이 돈다 (8.2절). */
 function Face({
   employee,
   mood,
@@ -37,46 +32,33 @@ function Face({
   size: number
 }) {
   const glow = glowOf(employee.overallGrade)
-  const figure: Figure = {
-    who: 'me',
-    sex: employee.id % 2 === 0 ? 'F' : 'M',
-    stage: 'adult',
-    x: 0,
-    recolor: ATTIRE_COLORS[attireOf(employee.overallGrade)],
-  }
   return (
-    <svg
-      viewBox={`0 0 ${SPRITE_WIDTH} ${SPRITE_HEIGHT}`}
-      width={size}
-      height={(size * SPRITE_HEIGHT) / SPRITE_WIDTH}
-      className="block"
-      style={PIXELATED}
-      aria-hidden="true"
-    >
+    <span className="relative block" style={{ width: size }}>
       {glow && (
-        <circle
-          cx={SPRITE_WIDTH / 2}
-          cy={SPRITE_HEIGHT / 2 - 2}
-          r={7}
-          fill={glow === 'gold' ? '#e3b53a' : '#4f8fd6'}
-          opacity={0.45}
+        <span
+          className="absolute left-1/2 top-[42%] block -translate-x-1/2 -translate-y-1/2 rounded-full"
+          style={{
+            width: size * 0.9,
+            height: size * 0.9,
+            background: glow === 'gold' ? '#e3b53a' : '#4f8fd6',
+            opacity: 0.45,
+          }}
           data-testid={`glow-${glow}`}
         />
       )}
-      <Person figure={figure} me={{ adornment: null, mark: null }} mood={mood} top={0} />
-    </svg>
+      <CatSprite
+        look={employeeLook(employee.id, employee.overallGrade, mood)}
+        width={size}
+        className="relative"
+        title={employee.name}
+      />
+    </span>
   )
 }
 
-/** 객장 손님: 회사 등급만큼 작은 사람이 줄을 선다. F는 길고양이 한 마리 (8.1절). */
+/** 객장의 손님들: 옷 없는 고양이들. 등급이 F면 길고양이 한 마리. */
 function Lobby({ grade }: { grade: Grade }) {
-  const customers: Figure[] = Array.from({ length: customersOf(grade) }, (_, i) => ({
-    who: 'kid',
-    look: i,
-    sex: i % 2 ? 'F' : 'M',
-    stage: 'adult',
-    x: i * SPRITE_WIDTH,
-  }))
+  const customers = Array.from({ length: customersOf(grade) }, (_, i) => i)
   return (
     <div
       className="mt-2 flex min-h-8 items-end gap-1 border-t-2 border-dashed border-ink/25 pt-1"
@@ -88,17 +70,9 @@ function Lobby({ grade }: { grade: Grade }) {
           🐈
         </span>
       ) : (
-        <svg
-          viewBox={`0 0 ${customers.length * SPRITE_WIDTH} ${SPRITE_HEIGHT}`}
-          width={customers.length * 16}
-          height={20}
-          style={PIXELATED}
-          aria-hidden="true"
-        >
-          {customers.map((f) => (
-            <Person key={f.x} figure={f} me={{ adornment: null, mark: null }} mood={null} top={0} />
-          ))}
-        </svg>
+        customers.map((i) => (
+          <CatSprite key={i} look={customerLook(i + 1)} width={18} title="손님" />
+        ))
       )}
     </div>
   )

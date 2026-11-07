@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { sfx } from '../fx/sound'
-import { bakeEnemies, bakeHero, bakeStage, enemyKey, WALL_H } from './art'
+import { bakeEnemies, bakeHero, bakeStage, enemyKey, GUN, HERO_SIZE, WALL_H } from './art'
 import { type Loadout, xpToNext } from './cards'
 import { ENEMIES, type EnemyKind } from './enemies'
 import { BATTLE_SECONDS, GENRES, type Genre } from './genres'
@@ -78,6 +78,10 @@ class BattleScene extends Phaser.Scene {
   private loadout: Loadout
   private bg!: Phaser.GameObjects.TileSprite
   private player!: Phaser.Physics.Arcade.Image
+  /** 권총: 사장냥의 손에서 겨누는 쪽으로 돈다 (341번). */
+  private gun!: Phaser.GameObjects.Image
+  /** 겨누는 각도(라디안). 누르면 그쪽, 아니면 가장 가까운 적. */
+  private aim = -Math.PI / 2
   /** 디펜스의 멘탈벽: 그림(가로로 이어 붙인 벽돌)과 닿음 판정. 적이 닿으면 멘탈이 깎인다. */
   private wall: Phaser.GameObjects.TileSprite | null = null
   private wallZone: Phaser.GameObjects.Zone | null = null
@@ -154,11 +158,18 @@ class BattleScene extends Phaser.Scene {
 
     this.mental = this.loadout.maxMental
     this.placeProps()
-    // 아군 그림은 64×88(그림자 포함): 몸통(얼굴부터 발까지) 가운데에 충돌 원을 둔다.
-    // 둘 다 아래에 선다. 디펜스는 멘탈벽 바로 앞에 붙박이.
-    this.player = this.physics.add.image(w / 2, this.playerY(), 'hero-front')
-    this.player.setDepth(5)
-    this.player.body?.setCircle(20, 12, 24)
+    // 아군은 사장냥(341번): 상자 100×110의 0.72배. 몸통 가운데에 충돌 원을 둔다. 둘 다 아래에 붙박이.
+    this.player = this.physics.add.image(w / 2, this.playerY(), 'hero-idle')
+    this.player.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h).setDepth(5)
+    const pr = 22
+    const tex = this.textures.get('hero-idle').getSourceImage() as { width: number; height: number }
+    const k = tex.width / HERO_SIZE.w
+    this.player.body?.setCircle(pr * k, (HERO_SIZE.w / 2 - pr) * k, (HERO_SIZE.h / 2 - pr + 4) * k)
+    this.gun = this.add
+      .image(0, 0, 'gun')
+      .setOrigin(GUN.ox, GUN.oy)
+      .setDisplaySize(GUN.w, GUN.h)
+      .setDepth(6)
     if (this.genre.target === 'wall') {
       this.wall = this.add
         .tileSprite(0, this.wallY() - WALL_H, w, WALL_H * 2, 'wall')
@@ -259,23 +270,20 @@ class BattleScene extends Phaser.Scene {
     this.opts.onLevelUp(this.level)
   }
 
-  /** 장르별 소품: 객장은 위쪽 전광판과 책상 줄, 금고실은 네 귀퉁이 기둥과 금괴 상자. 장식일 뿐 부딪히지 않는다. */
+  /** 장르별 소품 (341번): 공격은 위쪽 가장자리의 나무들, 디펜스는 멘탈벽 양 끝의 풀숲. 장식일 뿐 부딪히지 않는다. */
   private placeProps() {
     const { width: w, height: h } = this.scale
     if (this.opts.genre === 'ASSAULT') {
-      this.add.tileSprite(0, 64, w, 16, 'ticker').setOrigin(0).setDepth(1)
-      const count = Math.max(2, Math.floor(w / 110))
+      const count = Math.max(2, Math.floor(w / 120))
       for (let i = 0; i < count; i++) {
-        this.add.image(((i + 0.5) * w) / count, 118, 'desk').setDepth(1)
+        this.add
+          .image(((i + 0.5) * w) / count + (i % 2 ? 12 : -12), i % 2 ? 44 : 30, 'tree')
+          .setDepth(1)
       }
       return
     }
-    for (const x of [28, w - 28]) {
-      this.add.image(x, 110, 'pillar').setDepth(1)
-    }
-    // 멘탈벽 뒤(아래)에 지키는 금괴 상자
-    this.add.image(w / 2 - 90, h - 46, 'crate').setDepth(1)
-    this.add.image(w / 2 + 90, h - 46, 'crate').setDepth(1)
+    this.add.image(26, h - 150 - 30, 'bush').setDepth(1)
+    this.add.image(w - 26, h - 150 - 30, 'bush').setDepth(1)
   }
 
   /** 멘탈벽의 세로 자리: 화면 아래쪽. */
@@ -497,6 +505,31 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
+  /** 살아 있는 적 가운데 가장 가까운 것. */
+  private nearestEnemy(): Enemy | null {
+    let best: Enemy | null = null
+    let bd = Number.POSITIVE_INFINITY
+    for (const child of this.enemies.getChildren()) {
+      const e = child as Enemy
+      if (!e.active || e.dying) {
+        continue
+      }
+      const d = (e.x - this.player.x) ** 2 + (e.y - this.player.y) ** 2
+      if (d < bd) {
+        bd = d
+        best = e
+      }
+    }
+    return best
+  }
+
+  /** 총구 자리: 총 피벗에서 겨누는 쪽으로 총 길이만큼. */
+  private muzzle() {
+    const px = this.player.x + GUN.dx
+    const py = this.player.y + GUN.dy
+    return { x: px + Math.cos(this.aim) * GUN.len, y: py + Math.sin(this.aim) * GUN.len }
+  }
+
   private shoot(now: number) {
     const ptr = this.input.activePointer
     if (ptr.isDown) {
@@ -526,15 +559,11 @@ class BattleScene extends Phaser.Scene {
     this.lastFire = now
     sfx.shot()
     const p = this.player
-    p.setFlipX(Math.cos(base) < -0.3)
+    this.aim = base
     // 총 손맛: 총구 화염, 반동(눌렸다 펴짐), 화면이 살짝 흔들린다.
+    const m = this.muzzle()
     const flash = this.flashes[this.flashIndex++ % this.flashes.length]
-    flash
-      .setPosition(p.x + Math.cos(base) * 34, p.y - 6 + Math.sin(base) * 34)
-      .setRotation(base)
-      .setScale(1.6)
-      .setAlpha(1)
-      .setVisible(true)
+    flash.setPosition(m.x, m.y).setRotation(base).setScale(1).setAlpha(1).setVisible(true)
     this.tweens.killTweensOf(flash)
     this.tweens.add({
       targets: flash,
@@ -544,8 +573,9 @@ class BattleScene extends Phaser.Scene {
       onComplete: () => flash.setVisible(false),
     })
     this.tweens.killTweensOf(p)
-    p.setScale(1.14, 0.88)
-    this.tweens.add({ targets: p, scaleX: 1, scaleY: 1, duration: 110, ease: 'Back.easeOut' })
+    const [sx, sy] = [p.scaleX, p.scaleY]
+    p.setScale(sx * 1.1, sy * 0.92)
+    this.tweens.add({ targets: p, scaleX: sx, scaleY: sy, duration: 110, ease: 'Back.easeOut' })
     const offs =
       this.loadout.streams >= 3
         ? [-0.22, 0, 0.22]
@@ -553,16 +583,14 @@ class BattleScene extends Phaser.Scene {
           ? [-0.12, 0.12]
           : [0]
     for (const off of offs) {
-      const b = this.bullets.get(this.player.x, this.player.y, 'bullet-0') as Bullet | null
+      const b = this.bullets.get(m.x, m.y, 'bullet-0') as Bullet | null
       if (!b) {
         return
       }
-      b.setTexture('bullet-0')
-        .enableBody(true, this.player.x, this.player.y, true, true)
-        .setDepth(4)
+      b.setTexture('bullet-0').enableBody(true, m.x, m.y, true, true).setDepth(4)
       b.look = 0
-      b.setScale(1.5)
-      b.body?.setCircle(6, 1, 1)
+      b.setDisplaySize(32, 10).setRotation(base + off)
+      b.body?.setCircle(5 * (b.width / 32), b.width - 10 * (b.width / 32), 0)
       b.setVelocity(
         Math.cos(base + off) * this.loadout.bulletSpeed,
         Math.sin(base + off) * this.loadout.bulletSpeed,
@@ -615,23 +643,37 @@ class BattleScene extends Phaser.Scene {
       return
     }
 
-    // 붙박이 (332번): 자리는 고정, 누르고 있는 쪽을 쏜다. 그림은 맞았으면 우는 얼굴, 누르고 있으면 옆모습(쏘는 쪽), 아니면 정면.
+    // 붙박이 (332번): 자리는 고정, 누르고 있는 쪽을 쏜다. 그림(341번)은 맞았으면 울상(총을 놓친다), 누르고 있으면 눈썹 꾹, 아니면 가만히.
+    // 총은 따로 겨누는 쪽으로 돈다: 누르면 그쪽, 아니면 가장 가까운 적.
     const p = this.player
     const ptr = this.input.activePointer
     const { width: w } = this.scale
     p.setVelocity(0, 0)
     p.setPosition(w / 2, this.playerY())
-    if (time < this.hurtUntil) {
-      p.setTexture('hero-hurt').setFlipX(false)
-    } else if (ptr.isDown) {
-      p.setTexture('hero-side')
-    } else {
-      p.setTexture('hero-front').setFlipX(false)
-    }
+    const hurting = time < this.hurtUntil
+    p.setTexture(hurting ? 'hero-hurt' : ptr.isDown ? 'hero-fire' : 'hero-idle')
     // 숨쉬기: 살짝 눌렸다 펴진다.
     if (!this.tweens.isTweening(p)) {
-      p.setScale(1, 1 + Math.sin(time / 260) * 0.025)
+      p.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h * (1 + Math.sin(time / 260) * 0.025))
     }
+    if (!ptr.isDown) {
+      const near = this.nearestEnemy()
+      if (near) {
+        const want = Math.atan2(near.y - p.y, near.x - p.x)
+        this.aim +=
+          Phaser.Math.Angle.ShortestBetween(
+            Phaser.Math.RadToDeg(this.aim),
+            Phaser.Math.RadToDeg(want),
+          ) *
+          (Math.PI / 180) *
+          Math.min(1, dt * 10)
+      }
+    }
+    this.gun
+      .setVisible(!hurting)
+      .setPosition(p.x + GUN.dx, p.y + GUN.dy)
+      .setRotation(this.aim)
+      .setFlipY(Math.cos(this.aim) < 0)
     if (this.wall && this.wallZone) {
       this.wall.setPosition(0, this.wallY() - WALL_H).setSize(w, WALL_H * 2)
       this.wallZone.setPosition(w / 2, this.wallY()).setSize(w, WALL_H * 2)
@@ -726,11 +768,11 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    backgroundColor: '#7ddcbe',
+    backgroundColor: '#cfe3a0',
     scale: { mode: Phaser.Scale.RESIZE, width: parent.clientWidth, height: parent.clientHeight },
     physics: { default: 'arcade' },
-    // 도트 그림: 흐리게 키우지 않는다.
-    render: { pixelArt: true, powerPreference: 'high-performance' },
+    // 벡터 그림(341번): 부드럽게.
+    render: { pixelArt: false, antialias: true, powerPreference: 'high-performance' },
     fps: { target: 60 },
     scene: [scene],
   })
