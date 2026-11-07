@@ -532,11 +532,11 @@ class CompanyEngineTest {
   }
 
   /**
-   * 합성 (decisions.md 312번): 같은 종합 등급 셋을 합치면 바탕 한 명이 한 단계 오른다. 재료는 회사를 떠나고 번 돈은 바탕에게 얹힌다. SSS 위는
-   * 단계(X…)가 오른다. 등급이 다르거나 수가 맞지 않거나 맨 위면 400.
+   * 합성 (decisions.md 312번): 같은 종합 등급 둘(316번)을 합치면 바탕 한 명이 한 단계 오른다. 재료는 회사를 떠나고 번 돈은 바탕에게 얹힌다. SSS
+   * 위는 단계(X…)가 오른다. 등급이 다르거나 수가 맞지 않거나 맨 위면 400.
    */
   @Test
-  void 같은_등급_셋을_합치면_한_단계_오른다() {
+  void 같은_등급_둘을_합치면_한_단계_오른다() {
     CompanyState company = ENGINE.open(new HashSeededRandom(6), ENGINE.openingCapital());
     CompanyState.Employee base = ENGINE.hire(company, stats(45, 45, 45, 45));
     CompanyState.Employee a = ENGINE.hire(company, stats(42, 48, 40, 44));
@@ -545,38 +545,36 @@ class CompanyEngineTest {
     a.totalPnl = 300;
     base.desk = "day";
     assertThat(CompanyEngine.employeeGrade(base)).isEqualTo("C");
-    assertThatThrownBy(() -> ENGINE.merge(company, base.id, List.of(a.id, odd.id)))
+    assertThatThrownBy(() -> ENGINE.merge(company, base.id, List.of(odd.id)))
         .as("등급이 다르다")
         .isInstanceOf(InvalidRequestException.class);
-    assertThatThrownBy(() -> ENGINE.merge(company, base.id, List.of(a.id)))
-        .as("셋이어야 한다")
+    assertThatThrownBy(() -> ENGINE.merge(company, base.id, List.of(a.id, b.id)))
+        .as("재료는 한 명이어야 한다")
         .isInstanceOf(InvalidRequestException.class);
-    ENGINE.merge(company, base.id, List.of(a.id, b.id));
+    ENGINE.merge(company, base.id, List.of(a.id));
     assertThat(CompanyEngine.employeeGrade(base)).isEqualTo("B");
     assertThat(base.desk).as("바탕은 자리에 그대로").isEqualTo("day");
     assertThat(base.totalPnl).isEqualTo(300);
-    assertThat(company.employees).containsExactly(base, odd);
+    assertThat(company.employees).containsExactly(base, b, odd);
     assertThat(company.alumni).as("재료는 떠난 직원으로 남지 않는다").isEmpty();
     assertThat(company.collection).containsEntry("B", 1);
     assertThat(company.timeline)
         .anyMatch(t -> t.text != null && t.text.contains(a.name) && t.text.contains("B"));
 
-    // SSS 셋이면 X로.
+    // SSS 둘이면 X로.
     Map<String, Integer> top = new HashMap<>(stats(95, 95, 95, 95));
     top.put("luck", 95);
     CompanyState.Employee s1 = ENGINE.hire(company, top);
     CompanyState.Employee s2 = ENGINE.hire(company, top);
-    CompanyState.Employee s3 = ENGINE.hire(company, top);
-    ENGINE.merge(company, s1.id, List.of(s2.id, s3.id));
+    ENGINE.merge(company, s1.id, List.of(s2.id));
     assertThat(CompanyEngine.employeeGrade(s1)).isEqualTo("X");
 
     // 능력치가 100에 걸려도 평균이 다음 띠에 닿게 채운다.
     CompanyState.Employee x1 = ENGINE.hire(company, stats(100, 100, 100, 72));
     x1.stats.put("luck", 30);
     CompanyState.Employee x2 = ENGINE.hire(company, new HashMap<>(x1.stats));
-    CompanyState.Employee x3 = ENGINE.hire(company, new HashMap<>(x1.stats));
     String was = CompanyEngine.employeeGrade(x1);
-    ENGINE.merge(company, x1.id, List.of(x2.id, x3.id));
+    ENGINE.merge(company, x1.id, List.of(x2.id));
     assertThat(CompanyEngine.LADDER.indexOf(CompanyEngine.employeeGrade(x1)))
         .isEqualTo(CompanyEngine.LADDER.indexOf(was) + 1);
   }
