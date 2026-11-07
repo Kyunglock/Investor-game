@@ -152,33 +152,40 @@ raising:
     perks:
       gain-percent: { F: 0, E: 2, D: 4, C: 6, B: 8, A: 10, S: 12, SS: 14, SSS: 16 }
       growth-percent: { F: 60, E: 50, D: 40, C: 35, B: 30, A: 25, S: 20, SS: 15, SSS: 0 }
-    # 인사 직원 (6.3절): 인사팀에 사람이 있으면 지원자가 한 명 더 오고, 지원자 등급의 중심이 인사 직원보다 두 단계 아래까지 오른다
+    # 인사 직원 (6.3절): 인사팀에 사람이 있으면 뽑기 확률표의 중심이 인사 직원보다 두 단계 아래까지 오르고, 연말에 채용권을 한 장 더 받는다 (decisions.md 312번)
     hr:
       cap-steps: 2
-      extra-applicants: 1
-    # 공채 시장 (decisions.md 228·287번): 해마다 지원자 다섯이 온다(자리가 늘어 셋에서 늘렸다). 등급의 중심은 회사 등급(F 회사면 F, 289번: 전에는 두 단계 위)이고
-    # 한 단계 아래·위로 흩어진다. 계약금을 내고 뽑는다. 새로 받는 값 300만 원
+      extra-tickets: 1
+    # 뽑은 사람의 능력치와 계약금 (decisions.md 228·287·312번). 계약금은 이제 내지 않지만 연봉(270번)과 이적료(262번)의 바탕이다
     market:
-      applicants: 5
       level-steps: 0
       spread: 15
       # 계약금 F 50만 · E 100만 · D 200만 · C 250만 · B 400만 · A 600만 · S 1,000만 · SS 1,800만 · SSS 3,000만 (287번: 전의 4분의 1)
       fees: [500000, 1000000, 2000000, 2500000, 4000000, 6000000, 10000000, 18000000, 30000000]
-      # 큰 회사에도 계약금이 무겁게 (decisions.md 258번): 정해진 계약금과 자본 × 이 만분율(F~SSS) 가운데 큰 쪽. 1억 회사는 정해진 값 그대로다
+      # 큰 회사에도 계약금이 무겁게 (decisions.md 258번): 정해진 계약금과 자본 × 이 만분율(F~SSS) 가운데 큰 쪽
       fee-bp: [12, 25, 38, 50, 75, 100, 125, 160, 200]
-      # SSS 회사부터 오는 경력직(X 이상)의 계약금: 자본 × 이 만분율, 단계마다 step만큼 더
+      # 경력직(X 이상)의 계약금: 자본 × 이 만분율, 단계마다 step만큼 더
       veteran-fee-bp: 300
       veteran-fee-step-bp: 75
-      # 새로 받기 값: 정해진 값과 자본 × refresh-bp 가운데 큰 쪽. 한 해에 받을수록 (횟수 + 1)배
-      refresh-cost: 3000000
-      refresh-bp: 50
-      # 특급 인재 (decisions.md 290번): 분기마다 percent% 확률로 회사 등급보다 steps 단계 높은 지원자가 온다.
-      # 계약금은 보통의 fee-percent%, quarters 분기가 지나면 다른 증권사로 간다
-      star:
-        percent: 15
-        steps: 4
-        fee-percent: 600
-        quarters: 2
+    # 채용 뽑기 (decisions.md 312번): 공채 시장(지원자를 골라 계약금을 내고 뽑던 것)을 대신한다. 채용권 한 장에 한 명.
+    # 채용권은 회사를 차릴 때 5장, 분기를 넘길 때마다 1장, 연말에 2장 더, 업적마다 3장, 이사하면 3장. 한 해에 6장 남짓이라 자리가 늘수록 합성이 중요해진다.
+    # 데리고 있을 수 있는 사람은 자리 수의 두 배. 같은 등급 셋을 합치면 바탕 한 명이 한 단계 오른다(SSS 위는 X·XX… 단계).
+    gacha:
+      start-tickets: 5
+      quarter-tickets: 1
+      year-tickets: 2
+      achievement-tickets: 3
+      move-tickets: 3
+      max-draws: 10
+      roster-percent: 200
+      merge-count: 3
+      # 확률표: 회사 등급(인사팀이면 더 높게)보다 steps 단계 위가 percent%. 맨 끝은 특급(전의 특급 인재, 290번)
+      rates:
+        - { steps: -1, percent: 30, star: false }
+        - { steps: 0, percent: 44, star: false }
+        - { steps: 1, percent: 18, star: false }
+        - { steps: 2, percent: 6, star: false }
+        - { steps: 4, percent: 2, star: true }
     # 투자 회의 (decisions.md 229번): 해마다 한 번 단서 기사를 놓고 직원들과 고민한다. 호황이면 오르는 뉴스가 +15%p, 폭락장이면 −10%p.
     # 곁가지 문장은 60% 반대쪽(기사만 읽고 다수결하면 약 64% 맞는다). 제멋대로 할 확률이 20% 이상이면 고집 "보통", 40% 이상이면 "높음"(D 직원이 보통, E 직원이 높음)
     invest:

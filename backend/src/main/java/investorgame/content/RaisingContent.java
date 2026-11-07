@@ -243,8 +243,16 @@ public record RaisingContent(
    * 경력직({grade}, decisions.md 258번).
    */
   /** 공채 시장 문구. star: 특급 인재 카드 한 줄(290번). starArrived·starLeft: 분기 실적 소식 줄({name}·{grade}·{fee}). */
+  /**
+   * 채용 뽑기의 문구 (decisions.md 312번).
+   *
+   * @param drawStar 특급이 나왔을 때 연표 한 줄. {name}·{grade}
+   * @param merged 합성했을 때 연표 한 줄. {names}·{name}·{grade}
+   * @param tickets 채용권을 받았을 때 분기 실적·결산 소식 한 줄. {count}·{reason}
+   * @param ticketReasons 채용권을 받은 까닭: quarter·year·achievement·move·hr
+   */
   public record Market(
-      String wanted, String hr, String veteran, String star, String starArrived, String starLeft) {}
+      String drawStar, String merged, String tickets, Map<String, String> ticketReasons) {}
 
   /**
    * X 이상 등급의 효과 (2.4절). 효과는 쌓인다: XX 직원은 X 효과도 가진다.

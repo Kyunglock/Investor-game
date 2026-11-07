@@ -7,8 +7,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useFx } from '../fx/fx'
 import { isMuted, setMuted, sfx } from '../fx/sound'
 import { BookIcon, BuildingIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from './Icons'
+import { GachaScene } from './scenes/GachaScene'
 import { IssueScene } from './scenes/IssueScene'
-import { MarketScene } from './scenes/MarketScene'
 import { OfficeScene } from './scenes/OfficeScene'
 import { RecordScene } from './scenes/RecordScene'
 import { StaffScene } from './scenes/StaffScene'
@@ -18,7 +18,7 @@ import { ActionBar, Windows } from './Windows'
 
 const TABS: { id: Tab; label: string; icon: () => React.ReactNode }[] = [
   { id: 'office', label: '사무실', icon: BuildingIcon },
-  { id: 'market', label: '공채', icon: ClipboardIcon },
+  { id: 'market', label: '채용', icon: ClipboardIcon },
   { id: 'staff', label: '배치', icon: ChairIcon },
   { id: 'issue', label: '이슈', icon: NewsIcon },
   { id: 'record', label: '기록', icon: BookIcon },
@@ -74,7 +74,7 @@ export function Shell({ company }: { company: Company }) {
           data-testid="scene"
         >
           {tab === 'office' && <OfficeScene company={company} />}
-          {tab === 'market' && <MarketScene company={company} />}
+          {tab === 'market' && <GachaScene company={company} />}
           {tab === 'staff' && <StaffScene company={company} />}
           {tab === 'issue' && <IssueScene company={company} />}
           {tab === 'record' && <RecordScene company={company} />}

@@ -137,19 +137,28 @@ class CompanyState {
 
   String nextOmen;
 
-  /** 올해 공채 시장의 지원자 (오토배틀러의 상점). 해가 바뀌면 새로 온다. 뽑으면 빠진다. */
-  List<Applicant> applicants = new ArrayList<>();
+  /**
+   * 채용권 (decisions.md 312번). 채용 뽑기 한 번에 한 장. 회사를 차릴 때·분기를 넘길 때·연말 결산·업적·이사로 받는다. 다음 회사로 이어진다. 공채
+   * 시장(지원자를 골라 계약금을 내고 뽑던 것, 228번)을 대신한다.
+   */
+  int tickets;
+
+  /** 지금까지 뽑은 횟수. 뽑기 난수의 열쇠이고, 뽑기 요청에 실어 같은 요청이 두 번 와도 한 번만 뽑는다. 다음 회사로 이어진다. */
+  int draws;
+
+  /** 도감 (312번): 등급 → 뽑거나 합성해서 얻은 사람 수. 사장의 것이라 다음 회사로 이어진다. */
+  Map<String, Integer> collection = new LinkedHashMap<>();
+
+  /** 마지막 뽑기의 결과. 화면이 카드를 뒤집어 보인다. 분기를 넘기면 비운다. */
+  List<Drawn> lastDraw = new ArrayList<>();
 
   /** 올해 연초 회의 때의 자본. 연말 결산서의 연초 자본이다 (decisions.md 251번). 이 칸을 더하기 전의 해면 null. */
   Long yearStartCapital;
 
-  /** 올해 채용에 쓴 돈: 계약금과 새로 받기 값 (251번). */
+  /** 올해 인사에 쓴 돈(받은 이적료는 뺀다, 251번). 계약금은 채용 뽑기로 바뀌며 없어졌다 (312번). */
   long yearHiring;
 
-  /** 올해 지원자를 새로 받은 횟수. 같은 해에 새로 받을 때마다 다른 지원자가 온다. */
-  int refreshes;
-
-  /** 지금까지 만난 지원자 수. 지원자 이름과 번호를 이것으로 붙인다. 다음 회사로 이어진다. */
+  /** 지금까지 만난 사람 수. 뽑은 사람의 이름을 이것으로 붙인다. 다음 회사로 이어진다. */
   int met;
 
   /** 올해 종목 회의 (decisions.md 229번). 연초에 준비해 두지만 직원이 종목을 물어 와야(found) 열린다 (267번). 옛 회사면 null이다. */
@@ -528,31 +537,19 @@ class CompanyState {
     long transferFee;
   }
 
-  /** 공채 시장의 지원자 한 명. 계약금을 내고 뽑으면 그대로 직원이 된다. */
+  /** 채용 뽑기로 온 사람 한 명 (decisions.md 312번). 화면이 카드를 뒤집어 보인다. */
   @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
-  static class Applicant {
-    /** 회사 안에서 지원자를 가리키는 번호(만난 순서). */
-    int id;
-
+  static class Drawn {
+    int employeeId;
     String name;
-    Map<String, Integer> stats = new LinkedHashMap<>();
-    long fee;
+    String grade;
 
-    /** 지원자 카드의 한 줄(올해 필요한 인재, 사수가 붙음). 없으면 null. */
-    String line;
-
-    /** 관심 섹터 코드. 뽑으면 직원이 안고 들어온다. */
-    String sector;
-
-    /** 경력직이면 SSS 위의 단계(1 X …). 다른 회사에서 위기를 버텨 올랐다 (decisions.md 258번). 보통 지원자는 0. */
-    int rank;
-
-    /** 특급 인재 (decisions.md 290번): 가끔 오는 아주 좋은 지원자. 계약금이 아주 비싸고 leavesAt 분기가 지나면 떠난다. */
+    /** 특급: 확률표의 맨 끝 칸(회사 등급보다 훨씬 위)에서 나왔다. */
     boolean star;
 
-    /** 특급 인재가 머무는 마지막 분기(CompanyState.quarterIndex()). 보통 지원자는 0. */
-    int leavesAt;
+    /** 도감에 처음 오른 등급이다. */
+    boolean fresh;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)

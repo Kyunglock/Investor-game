@@ -183,7 +183,7 @@ function SeatSheet({
         </div>
       ) : (
         <div className="grid gap-2">
-          <p className="text-[13px] text-muted">쉬는 직원이 없습니다. 공채에서 뽑으세요.</p>
+          <p className="text-[13px] text-muted">쉬는 직원이 없습니다. 채용에서 뽑으세요.</p>
           <button
             type="button"
             onClick={() => {
@@ -192,7 +192,7 @@ function SeatSheet({
             }}
             className="btn btn-blue min-h-12 text-[14px]"
           >
-            공채 보러 가기
+            채용 보러 가기
           </button>
         </div>
       )}

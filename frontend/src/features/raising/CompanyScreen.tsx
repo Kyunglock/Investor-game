@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { Applicant, Company } from '../../api/client'
+import type { Company } from '../../api/client'
 import { Document } from '../game/Document'
 import { shortWon, withParticle } from '../game/labels'
 import { usePixelArt } from '../game/pixelArt'
@@ -8,6 +8,7 @@ import { toggleAutoPlay } from './autoPlay'
 import { BuildingArt } from './BuildingArt'
 import { pnlLabel } from './board'
 import { EndingScreen } from './EndingScreen'
+import { GachaPanel, GachaReveal, useDrawReveal } from './Gacha'
 import { GradeBadge, GradeCard } from './GradeCard'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { InvestWindow } from './InvestWindow'
@@ -38,8 +39,8 @@ const FIT_TONE = {
 } as const
 
 /**
- * 회사 화면 (증권사 육성 설계 4·6절). 한 해 = 이슈(공채 시장) → 배치 → (결산을 누르면 뜨는) 거시경제 회의 → (직원이 물어 오면) 종목 회의 → 결산. 사장은 사람을 뽑아 앉히기만 하고 직원은 능력치대로 알아서
- * 굴린다. 이슈·공채·배치·지난 결산은 탭으로 나뉘고(231번), 결산 버튼은 화면 아래에 늘 붙어 있다. 배치는 작년 그대로가 기본이고(7.2절), 자리를 누르면 바로
+ * 회사 화면 (증권사 육성 설계 4·6절). 한 해 = 이슈 → 채용 뽑기 → 배치 → (결산을 누르면 뜨는) 거시경제 회의 → (직원이 물어 오면) 종목 회의 → 결산. 사장은 사람을 뽑아 앉히기만 하고 직원은 능력치대로 알아서
+ * 굴린다. 이슈·채용·배치·지난 결산은 탭으로 나뉘고(231번), 결산 버튼은 화면 아래에 늘 붙어 있다. 배치는 작년 그대로가 기본이고(7.2절), 자리를 누르면 바로
  * 앉는다.
  */
 export function CompanyScreen({ company }: { company: Company }) {
@@ -61,6 +62,7 @@ export function CompanyScreen({ company }: { company: Company }) {
   const ended = company.status === 'ENDED'
   const meeting = company.meeting
   const settleSpot = useTutorialSpot(company, 'settle')
+  const drawn = useDrawReveal(company)
 
   // 거시경제 회의를 마친 뒤: 물어 온 종목이 있으면 종목 회의를 열고(한마디를 굳힌다, 249번) 창을 띄운다. 없으면 바로 결산한다.
   const stockOrSettle = async () => {
@@ -157,6 +159,14 @@ export function CompanyScreen({ company }: { company: Company }) {
           <EndingScreen company={company} />
         )}
 
+        {drawn && !justSettled && (
+          // 채용 뽑기 결과 (decisions.md 312번): 카드가 하나씩 뒤집힌다.
+          <GachaReveal
+            drawn={drawn}
+            onClose={() => useRaisingStore.setState({ justDrew: false })}
+          />
+        )}
+
         {justQuartered && company.lastQuarter && (
           // 분기 실적 (268번): 1~3분기를 넘기면 짧게 뜬다.
           <QuarterSheet
@@ -224,7 +234,7 @@ export function CompanyScreen({ company }: { company: Company }) {
             )}
             {autoPlay && (
               <p className="text-center text-[12px] text-teal" data-testid="auto-status">
-                자동 진행 중 · 공채 → 배치 → 거시경제 회의·종목 회의(직원 다수결) → 분기 넘기기를
+                자동 진행 중 · 뽑기 → 배치 → 거시경제 회의·종목 회의(직원 다수결) → 분기 넘기기를
                 되풀이합니다
               </p>
             )}
@@ -438,7 +448,7 @@ function StaffTab({ company }: { company: Company }) {
         )}
       </div>
       {company.employees.length === 0 ? (
-        <p className="mt-1 text-[13px] text-muted">아직 직원이 없습니다. 공채에서 뽑으세요.</p>
+        <p className="mt-1 text-[13px] text-muted">아직 직원이 없습니다. 채용 탭에서 뽑으세요.</p>
       ) : (
         !ended && (
           <p className="mt-1 text-[13px] text-muted">
@@ -773,7 +783,7 @@ function DeskButtons({
 
 /**
  * 미니맵 칸을 누르면 미니맵 바로 아래에 열린다 (237번, #298 "배치가 그림과 따로 논다"). 사람을 눌렀으면 그 사람의 상세 능력치와 자리 버튼, 빈 자리를 눌렀으면
- * 쉬는 직원 가운데 앉힐 사람을 먼저 고른다. 쉬는 사람이 없으면 공채 탭으로 데려간다. 앉히면 닫힌다.
+ * 쉬는 직원 가운데 앉힐 사람을 먼저 고른다. 쉬는 사람이 없으면 채용 탭으로 데려간다. 앉히면 닫힌다.
  */
 function SeatPicker({
   company,
@@ -860,7 +870,7 @@ function SeatPicker({
             }}
             className="min-h-10 rounded border border-pen px-3 text-[13px] font-semibold"
           >
-            공채에서 뽑기
+            채용에서 뽑기
           </button>
         </div>
       )}
@@ -871,8 +881,8 @@ function SeatPicker({
 type Tab = 'meeting' | 'market' | 'staff' | 'settlement' | 'history'
 
 /**
- * 이슈 · 공채 · 배치 · 지난 결산을 탭으로 나눈다. 한 장에 길게 늘어놓으면 위아래로 오가야 했다. 고른 탭은 스토어에 둔다: 직원이 들고 나면 회사 화면을
- * 새로 그리기 때문이다. 아무것도 안 골랐으면 직원이 없을 때 공채, 그 밖에는 이슈. 결산하면 지난 결산으로 간다.
+ * 이슈 · 채용 · 배치 · 지난 결산을 탭으로 나눈다. 한 장에 길게 늘어놓으면 위아래로 오가야 했다. 고른 탭은 스토어에 둔다: 직원이 들고 나면 회사 화면을
+ * 새로 그리기 때문이다. 아무것도 안 골랐으면 직원이 없을 때 채용, 그 밖에는 이슈. 결산하면 지난 결산으로 간다.
  */
 function CompanyTabs({ company }: { company: Company }) {
   const stored = useRaisingStore((s) => s.tab) as Tab | null
@@ -893,8 +903,8 @@ function CompanyTabs({ company }: { company: Company }) {
     },
     {
       id: 'market',
-      label: '공채',
-      badge: company.applicants.length > 0 ? `${company.applicants.length}명` : undefined,
+      label: '채용',
+      badge: company.gacha.tickets > 0 ? `${company.gacha.tickets}장` : undefined,
       show: !ended,
     },
     { id: 'staff', label: '배치', badge: `${placed}/${company.seats}`, show: true },
@@ -917,7 +927,7 @@ function CompanyTabs({ company }: { company: Company }) {
   const tab = shown.some((t) => t.id === stored) && stored ? stored : fallback
   const marketSpot = useTutorialSpot(company, 'market')
   const staffSpot = useTutorialSpot(company, 'staff')
-  // 처음 정한 탭을 붙잡아 둔다: 공채에서 사람을 뽑아 직원이 생겨도 공채 탭에 그대로 있게.
+  // 처음 정한 탭을 붙잡아 둔다: 채용에서 사람을 뽑아 직원이 생겨도 채용 탭에 그대로 있게.
   useEffect(() => {
     if (stored !== tab) {
       useRaisingStore.setState({ tab })
@@ -956,7 +966,7 @@ function CompanyTabs({ company }: { company: Company }) {
       </div>
       <div role="tabpanel" className="pt-3">
         {tab === 'meeting' && company.meeting && <MeetingTab meeting={company.meeting} />}
-        {tab === 'market' && <MarketPanel company={company} />}
+        {tab === 'market' && <GachaPanel company={company} />}
         {tab === 'staff' && <StaffTab company={company} />}
         {tab === 'settlement' && <SettlementView company={company} />}
         {tab === 'history' && <HistoryTab company={company} />}
@@ -1070,165 +1080,6 @@ function PixelToggle() {
     >
       {shown ? '그림 끄기' : '그림 켜기'}
     </button>
-  )
-}
-
-/**
- * 연초 공채 (decisions.md 228번). 오토배틀러의 상점처럼 해마다 지원자가 오고, 계약금을 내고 뽑는다. 자리가 꽉 찼으면 내보낼 직원을 고른다. 마음에 안 들면
- * 값을 내고 새로 받는다.
- */
-function MarketPanel({ company }: { company: Company }) {
-  const busy = useRaisingStore((s) => s.busy)
-  const { hire, refreshApplicants } = useRaisingStore.getState()
-  const [picking, setPicking] = useState<number | null>(null)
-  const full = company.employees.length >= company.seats
-  const meeting = company.meeting
-  return (
-    <section data-testid="market">
-      <h3 className="sr-only">연초 공채</h3>
-      <p className="text-[12px] text-muted">
-        계약금을 내고 뽑습니다. 뽑은 사람은 쉬는 채로 들어오니 자리에 앉히세요.
-        {meeting?.hrCap && ` 인사팀 덕에 지원자 등급이 ${meeting.hrCap} 언저리까지 올라옵니다.`}
-      </p>
-      {company.applicants.length === 0 && (
-        <p className="mt-2 text-[13px] text-muted">올해 지원자를 다 만났습니다.</p>
-      )}
-      <ul className="mt-2 grid gap-2 md:grid-cols-3">
-        {[...company.applicants]
-          // 특급 인재(290번)는 맨 위에.
-          .sort((x, y) => Number(y.star) - Number(x.star))
-          .map((a) => (
-            <ApplicantCard
-              key={a.id}
-              applicant={a}
-              affordable={company.capital >= a.fee}
-              disabled={busy}
-              picking={picking === a.id}
-              full={full}
-              employees={company.employees}
-              onHire={(replace) => {
-                setPicking(null)
-                void hire(a.id, replace)
-              }}
-              onPick={() => setPicking(picking === a.id ? null : a.id)}
-            />
-          ))}
-      </ul>
-      <button
-        type="button"
-        disabled={busy || company.capital < company.refreshCost}
-        onClick={() => {
-          setPicking(null)
-          void refreshApplicants()
-        }}
-        className="mt-2 min-h-11 w-full rounded border border-line text-[14px] disabled:opacity-50"
-      >
-        지원자 새로 받기 ({shortWon(company.refreshCost)})
-      </button>
-    </section>
-  )
-}
-
-function ApplicantCard({
-  applicant: a,
-  affordable,
-  disabled,
-  picking,
-  full,
-  employees,
-  onHire,
-  onPick,
-}: {
-  applicant: Applicant
-  affordable: boolean
-  disabled: boolean
-  picking: boolean
-  full: boolean
-  employees: Company['employees']
-  onHire: (replace?: number) => void
-  onPick: () => void
-}) {
-  const button =
-    'min-h-11 w-full rounded font-semibold disabled:opacity-50 border border-pen hover:bg-pen hover:text-white'
-  return (
-    <GradeCard
-      as="li"
-      grade={a.overallGrade}
-      badgeLabel={a.star ? '특급' : '지원자'}
-      className={`p-3 ${a.star ? 'animate-glow' : ''}`}
-      data-testid="applicant"
-      data-star={String(a.star)}
-    >
-      {a.star && (
-        // 특급 인재 (290번): 아주 좋은 등급, 아주 비싼 계약금, 곧 떠난다.
-        <p
-          className="mb-1 flex items-center gap-2 pl-[70px] text-[12px] font-bold text-gold"
-          data-testid="applicant-star"
-        >
-          <span>★ 특급 인재</span>
-          <span className="rounded bg-gold px-1.5 text-white">
-            {a.leavesIn <= 1 ? '이번 분기만' : `${a.leavesIn}분기 남음`}
-          </span>
-        </p>
-      )}
-      <p className="pl-[70px] font-semibold">
-        {a.name}{' '}
-        <span className="text-[13px] font-normal text-muted">{titleOf(a.overallGrade)}</span>
-      </p>
-      {a.line && <p className="mt-1 pl-[70px] text-[13px] text-teal">{a.line}</p>}
-      <p className="mt-1 pl-[70px] text-[12px] text-muted" data-testid="applicant-perk">
-        등급 효과 · {a.perk}
-      </p>
-      {a.sectorName && (
-        <p className="mt-1 text-[12px] text-muted" data-testid="applicant-sector">
-          관심 섹터 {a.sectorName}
-        </p>
-      )}
-      <ul className="mt-2 grid grid-cols-5 gap-1 text-center text-[11px]">
-        {STAT_ORDER.map((code) => (
-          <li key={code} className="rounded border border-line-soft py-0.5">
-            {STAT_NAMES[code]}
-            <b className="block font-mono-num text-[14px]">{a.grades[code]}</b>
-          </li>
-        ))}
-      </ul>
-      <div className="mt-2 grid gap-1">
-        {!full ? (
-          <button
-            type="button"
-            disabled={disabled || !affordable}
-            onClick={() => onHire()}
-            className={button}
-          >
-            뽑는다 · 계약금 {shortWon(a.fee)}
-          </button>
-        ) : (
-          <button
-            type="button"
-            disabled={disabled || !affordable}
-            onClick={onPick}
-            className={button}
-            aria-expanded={picking}
-          >
-            {picking ? '접는다' : `자리가 꽉 찼다 · 계약금 ${shortWon(a.fee)}`}
-          </button>
-        )}
-        {full &&
-          picking &&
-          employees.map((e) => (
-            <button
-              key={e.id}
-              type="button"
-              disabled={disabled}
-              onClick={() => onHire(e.id)}
-              className="min-h-10 w-full rounded border border-wine text-[13px] text-wine disabled:opacity-50"
-            >
-              {e.name}(종합 {e.overallGrade}) 내보내고 뽑는다
-            </button>
-          ))}
-        {!affordable && <p className="text-[12px] text-muted">계약금이 모자랍니다.</p>}
-      </div>
-    </GradeCard>
   )
 }
 

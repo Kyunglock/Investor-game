@@ -254,7 +254,7 @@ class TeamEngine {
         return Korean.fill(s.get("scoutMany"), values);
       }
       case "hr" -> {
-        values.put("extra", String.valueOf(company.hrExtraApplicants()));
+        values.put("extra", String.valueOf(company.hrExtraTickets()));
         values.put("cap", company.hrOf(c).map(company::hrCap).orElse("F"));
         return Korean.fill(s.get("hr"), values);
       }

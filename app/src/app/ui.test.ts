@@ -7,7 +7,7 @@ function company(over: Partial<Company> = {}): Company {
     status: 'ACTIVE',
     seats: 4,
     employees: [],
-    applicants: [],
+    gacha: { tickets: 0 },
     meeting: { wanted: '' },
     ...over,
   } as unknown as Company
@@ -27,7 +27,7 @@ describe('앱 탭 (decisions.md 309번)', () => {
   })
 
   it('탭을 바꾸면 열린 시트는 닫힌다', () => {
-    useAppUi.getState().openSheet({ kind: 'hire', applicantId: 1 })
+    useAppUi.getState().openSheet({ kind: 'desk', desk: 'day' })
     useAppUi.getState().setTab('market')
     expect(useAppUi.getState().sheet).toBeNull()
   })
@@ -39,9 +39,9 @@ describe('앱 탭 (decisions.md 309번)', () => {
     expect(tabFromWeb(null)).toBeNull()
   })
 
-  it('탭의 표: 이슈 !, 공채 수, 배치 앉힌 수', () => {
+  it('탭의 표: 이슈 !, 채용권 수, 배치 앉힌 수', () => {
     const c = company({
-      applicants: [{ id: 1 }, { id: 2 }] as never,
+      gacha: { tickets: 2 } as never,
       employees: [
         { id: 1, desk: 'bio' },
         { id: 2, desk: null },
@@ -55,7 +55,7 @@ describe('앱 탭 (decisions.md 309번)', () => {
     expect(tabBadge(company(), 'issue')).toBeNull()
   })
 
-  it('직원이 없으면 공채부터, 있으면 사무실부터', () => {
+  it('직원이 없으면 채용부터, 있으면 사무실부터', () => {
     expect(firstTab(company())).toBe('market')
     expect(firstTab(company({ employees: [{ id: 1 }] as never }))).toBe('office')
     expect(firstTab(company({ status: 'ENDED' }))).toBe('office')

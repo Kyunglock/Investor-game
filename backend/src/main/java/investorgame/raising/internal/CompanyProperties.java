@@ -24,8 +24,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param swayPercent 꼬드김 판정이 다른 판정보다 덜 일어나는 비율. 리스크 관리 팀이 없을 때
  * @param experience 실전 경험과 큰 손실의 등급 하락 (2.3·6.4절)
  * @param effects X 이상 등급의 효과 수치 (2.4절)
- * @param hr 인사팀이 공채 시장을 돕는다 (6.3절)
- * @param market 공채 시장: 해마다 지원자가 오고 계약금을 내고 뽑는다 (decisions.md 228번)
+ * @param hr 인사팀이 채용 뽑기를 돕는다 (6.3절)
+ * @param market 뽑은 사람의 능력치와 계약금(연봉·이적료의 바탕) (decisions.md 228번)
+ * @param gacha 채용 뽑기: 채용권으로 뽑고, 같은 등급 셋을 합쳐 한 단계 위로 (decisions.md 312번)
  * @param invest 투자 회의: 해마다 한 번 단서 기사를 놓고 직원들과 고민한다 (decisions.md 229번)
  * @param people 이직 제안과 근속 (decisions.md 262번)
  * @param macro 거시경제 회의: 올해 회사의 태도가 그해 결산 전체에 걸린다 (decisions.md 266번)
@@ -55,6 +56,7 @@ public record CompanyProperties(
     Perks perks,
     Hr hr,
     Market market,
+    Gacha gacha,
     Invest invest,
     People people,
     Macro macro,
@@ -138,20 +140,13 @@ public record CompanyProperties(
   public record Clarity(String code, int weight, int penalty) {}
 
   /**
-   * @param applicants 해마다 오는 지원자 수
-   * @param levelSteps 지원자 종합 등급의 중심 = 회사 등급보다 이만큼 위 (F 회사면 D)
-   * @param spread 지원자 능력치가 중심 띠에서 흩어지는 폭(±점수). 성격이 뾰족해진다
-   * @param fees 종합 등급별 계약금(원). F부터 SSS까지
-   * @param refreshCost 지원자를 새로 받는 값(원)
-   */
-  /**
-   * 공채 시장 (decisions.md 228·258번).
+   * 뽑은 사람의 능력치와 계약금 (decisions.md 228·258·312번). 계약금은 이제 내지 않지만 연봉(270번)과 이적료(262번)의 바탕으로 남는다.
    *
+   * @param levelSteps 뽑기 확률표의 중심 = 회사 등급보다 이만큼 위
+   * @param spread 뽑은 사람의 능력치가 중심 띠에서 흩어지는 폭(±점수). 성격이 뾰족해진다
    * @param fees 종합 등급(F~SSS)별 정해진 계약금
-   * @param feeBp 종합 등급별 자본 비율 계약금(만분율). 정해진 계약금과 이것 가운데 큰 쪽을 낸다
+   * @param feeBp 종합 등급별 자본 비율 계약금(만분율). 정해진 계약금과 이것 가운데 큰 쪽
    * @param veteranFeeBp 경력직(X 이상)의 계약금(자본의 만분율). 단계마다 veteranFeeStepBp만큼 더
-   * @param refreshCost 새로 받기의 정해진 값
-   * @param refreshBp 새로 받기의 자본 비율 값(만분율). 둘 가운데 큰 쪽에 (올해 새로 받은 횟수 + 1)을 곱한다
    */
   /**
    * 이직 제안과 근속 (decisions.md 262번).
@@ -195,28 +190,45 @@ public record CompanyProperties(
       int raiseGrowPercent) {}
 
   public record Market(
-      int applicants,
       int levelSteps,
       int spread,
       List<Long> fees,
       List<Integer> feeBp,
       int veteranFeeBp,
-      int veteranFeeStepBp,
-      long refreshCost,
-      int refreshBp,
-      Star star) {}
+      int veteranFeeStepBp) {}
 
   /**
-   * 특급 인재 (decisions.md 290번): 분기마다 percent 확률로 회사 등급보다 steps 단계 높은 지원자가 온다(SSS를 넘으면 경력직 단계로). 계약금은
-   * 보통의 feePercent%이고 quarters 분기가 지나면 떠난다.
+   * 채용 뽑기 (decisions.md 312번).
+   *
+   * @param startTickets 회사를 차릴 때 받는 채용권
+   * @param quarterTickets 분기를 넘길 때마다 받는 채용권
+   * @param yearTickets 연말 결산 때 더 받는 채용권
+   * @param achievementTickets 업적 하나를 열 때 받는 채용권
+   * @param moveTickets 건물을 올릴 때 받는 채용권
+   * @param maxDraws 한 번에 뽑을 수 있는 최대 수
+   * @param rosterPercent 데리고 있을 수 있는 사람 = 자리 수 × 이 비율(%). 넘으면 합치거나 내보내야 더 뽑는다
+   * @param mergeCount 합성에 드는 같은 등급 사람 수(바탕 한 명 포함). 바탕이 한 단계 오른다
+   * @param rates 확률표: 회사 등급(인사팀이면 더 높게)에서 steps 단계 위가 percent%로. star면 특급
    */
-  public record Star(int percent, int steps, int feePercent, int quarters) {}
+  public record Gacha(
+      int startTickets,
+      int quarterTickets,
+      int yearTickets,
+      int achievementTickets,
+      int moveTickets,
+      int maxDraws,
+      int rosterPercent,
+      int mergeCount,
+      List<Rate> rates) {}
+
+  /** 뽑기 확률표의 한 칸: 회사 등급보다 steps 단계 위(음수면 아래)가 percent%. star면 특급(특급 연출, 능력치가 그 띠에 고르게). */
+  public record Rate(int steps, int percent, boolean star) {}
 
   /**
-   * @param capSteps 인사 직원이 데려오는 지원자의 중심 등급 = 인사 직원 종합 등급보다 이만큼 아래. 회사 등급으로 정한 중심보다 높을 때만 쓴다
-   * @param extraApplicants 인사팀에 사람이 있으면 더 오는 지원자 수
+   * @param capSteps 인사 직원이 끌어올리는 뽑기 중심 등급 = 인사 직원 종합 등급보다 이만큼 아래. 회사 등급으로 정한 중심보다 높을 때만 쓴다
+   * @param extraTickets 인사팀에 사람이 있으면 연말에 더 받는 채용권
    */
-  public record Hr(int capSteps, int extraApplicants) {}
+  public record Hr(int capSteps, int extraTickets) {}
 
   /**
    * @param convictionGainBp X 확신: 맞히면 더 버는 몫(만분율)

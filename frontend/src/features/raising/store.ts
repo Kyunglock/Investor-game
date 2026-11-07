@@ -20,6 +20,8 @@ interface RaisingState {
   justQuartered: boolean
   /** 방금 연말 결산으로 건물이 바뀌었다(오르거나 줄었다). 연말 결산서를 닫으면 건물 알림이 뜨고, 닫으면 지운다 (decisions.md 281번). */
   moveAlert: boolean
+  /** 방금 채용 뽑기를 했다 (decisions.md 312번). 카드를 뒤집는 창을 띄우고 닫으면 지운다. 자동 진행 중에는 띄우지 않는다. */
+  justDrew: boolean
   /** 방금 이사 비용을 내고 건물을 올렸다 (decisions.md 296번). 건물 알림을 띄우고 닫으면 지운다. */
   upgradeMove: { before: Company['grade']; after: Company['grade']; year: number } | null
   /** 자동 진행을 켰다 (245번). 새로 고치면 꺼진다: 모르는 사이에 돈을 쓰지 않게. */
@@ -33,12 +35,14 @@ interface RaisingState {
   open: () => Promise<void>
   /** 망한 회사를 닫고 사장의 사재로 다음 회사를 차린다 (decisions.md 247번). 세션은 그대로다. */
   restart: () => Promise<void>
-  /** 계약금을 내고 공채 시장의 지원자를 뽑는다. 자리가 꽉 찼으면 replace의 직원을 내보낸다. */
-  hire: (applicantId: number, replace?: number) => Promise<void>
+  /** 채용권으로 count명을 뽑는다 (decisions.md 312번). */
+  draw: (count: number) => Promise<void>
+  /** 같은 등급 직원을 합쳐 바탕 한 명을 한 단계 올린다 (312번). */
+  merge: (baseId: number, materialIds: number[]) => Promise<void>
+  /** 직원을 내보낸다 (312번). */
+  release: (employeeId: number) => Promise<void>
   /** 이사 비용을 내고 다음 건물로 간다 (decisions.md 296번). */
   upgrade: () => Promise<void>
-  /** 값을 내고 올해 지원자를 새로 받는다. */
-  refreshApplicants: () => Promise<void>
   /** 올해 이직 제안에 답한다: 붙잡거나 보낸다 (decisions.md 262번). */
   answerPoach: (keep: boolean) => Promise<void>
   /** 올해 연봉 협상에 답한다: 올려 주거나 동결한다 (decisions.md 270번). */
@@ -92,6 +96,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     error: null,
     justSettled: false,
     justQuartered: false,
+    justDrew: false,
     moveAlert: false,
     upgradeMove: null,
     autoPlay: false,
@@ -134,21 +139,23 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       set({ busy: false, error: reason(res?.error) })
     },
 
-    hire: (applicantId, replace) =>
-      change(api.POST('/api/company/hires', { body: { applicantId, replace: replace ?? null } })),
-
-    refreshApplicants: async () => {
-      const company = get().company
-      if (!company || get().busy) {
+    draw: async (count) => {
+      const before = get().company
+      if (!before || get().busy) {
         return
       }
-      // 해와 지금까지 새로 받은 횟수를 함께 보낸다: 두 번 눌리거나 끊긴 요청을 다시 보내도 한 번만 낸다 (254번).
-      await change(
-        api.POST('/api/company/applicants/refresh', {
-          body: { year: company.year, refreshes: company.refreshes },
-        }),
-      )
+      // 지금까지 뽑은 횟수를 함께 보낸다: 두 번 눌리거나 끊긴 요청을 다시 보내도 한 번만 뽑는다 (254번과 같은 방식).
+      await change(api.POST('/api/company/draws', { body: { count, draws: before.gacha.draws } }))
+      const after = get().company
+      if (!get().error && after && after.gacha.draws > before.gacha.draws) {
+        set({ justDrew: !get().autoPlay })
+      }
     },
+
+    merge: (baseId, materialIds) =>
+      change(api.POST('/api/company/merge', { body: { baseId, materialIds } })),
+
+    release: (employeeId) => change(api.POST('/api/company/release', { body: { employeeId } })),
 
     answerPoach: (keep) => change(api.POST('/api/company/poach', { body: { keep } })),
 

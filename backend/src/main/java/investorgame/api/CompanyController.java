@@ -62,34 +62,46 @@ class CompanyController {
     return ResponseEntity.status(HttpStatus.CREATED).body(company);
   }
 
-  /** 계약금을 내고 공채 시장의 지원자를 뽑는다. 자리가 꽉 찼으면 replace의 직원을 내보낸다. */
-  @PostMapping("/hires")
-  CompanyView hire(
+  /**
+   * 채용권으로 count명을 뽑는다 (decisions.md 312번). 요청에 지금까지 뽑은 횟수(draws)를 싣는다: 이미 한 뽑기면 아무것도 하지 않고, 아직 오지
+   * 않은 뽑기면 400. 두 번 눌리거나 끊긴 요청을 다시 보내도 한 번만 뽑는다 (254번과 같은 방식).
+   */
+  @PostMapping("/draws")
+  CompanyView draw(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody HireRequest request) {
+      @Valid @RequestBody DrawRequest request) {
     UUID sessionId = cookies.requireSession(token);
-    CompanyView company = companies.hire(sessionId, request.applicantId(), request.replace());
+    CompanyView company = companies.draw(sessionId, request.count(), request.draws());
     PLAY.info(
-        "company-hire session={} company={} applicant={} replace={} ip={}",
+        "company-draw session={} company={} count={} ip={}",
         sessionId,
         company.companyId(),
-        request.applicantId(),
-        request.replace(),
+        request.count(),
         ClientIp.current());
     return company;
   }
 
-  /** 값을 내고 올해 지원자를 새로 받는다. 요청에 해와 지금까지 새로 받은 횟수를 싣는다: 두 번 와도 한 번만 낸다 (decisions.md 254번). */
-  @PostMapping("/applicants/refresh")
-  CompanyView refreshApplicants(
+  record DrawRequest(@NotNull @Positive Integer count, @NotNull @PositiveOrZero Integer draws) {}
+
+  /** 같은 등급 직원을 합쳐 바탕 한 명을 한 단계 올린다 (decisions.md 312번). */
+  @PostMapping("/merge")
+  CompanyView merge(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody RefreshRequest request) {
-    return companies.refreshApplicants(
-        cookies.requireSession(token), request.year(), request.refreshes());
+      @Valid @RequestBody MergeRequest request) {
+    return companies.merge(cookies.requireSession(token), request.baseId(), request.materialIds());
   }
 
-  record RefreshRequest(
-      @NotNull @Positive Integer year, @NotNull @PositiveOrZero Integer refreshes) {}
+  record MergeRequest(@NotNull Integer baseId, @NotNull List<Integer> materialIds) {}
+
+  /** 직원을 내보낸다 (decisions.md 312번). */
+  @PostMapping("/release")
+  CompanyView release(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody ReleaseRequest request) {
+    return companies.release(cookies.requireSession(token), request.employeeId());
+  }
+
+  record ReleaseRequest(@NotNull Integer employeeId) {}
 
   /** 올해 이직 제안에 답한다: keep이 참이면 남기고, 거짓이면 이적료를 받고 보낸다 (decisions.md 262·265번). */
   @PostMapping("/poach")
@@ -249,8 +261,6 @@ class CompanyController {
   }
 
   /** replace는 자리가 꽉 찼을 때 내보낼 직원 ID. */
-  record HireRequest(@NotNull Integer applicantId, Integer replace) {}
-
   record PlacementRequest(@NotNull List<@Valid Seat> seats) {}
 
   /** desk가 null이면 쉰다. */

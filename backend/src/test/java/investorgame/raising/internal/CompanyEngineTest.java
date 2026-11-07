@@ -51,21 +51,13 @@ class CompanyEngineTest {
   }
 
   @Test
-  void 사장의_사재로_직원_없이_F등급_자리_네_개로_열리고_지원자가_온다() {
+  void 사장의_사재로_직원_없이_F등급_자리_네_개로_열리고_채용권을_받는다() {
     CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
     assertThat(company.capital).isEqualTo(100_000_000);
     assertThat(company.employees).isEmpty();
     assertThat(company.opening).contains("1억 원");
-    assertThat(company.applicants).hasSize(PROPERTIES.market().applicants());
-    assertThat(company.applicants.getFirst().name).isEqualTo("박한결");
-    assertThat(company.applicants.getFirst().line)
-        .as("첫 지원자는 올해 필요한 인재")
-        .contains(
-            TestContent.load().raising().company().desks().stream()
-                .filter(d -> d.code().equals(company.wantedDesk))
-                .findFirst()
-                .orElseThrow()
-                .name());
+    assertThat(company.tickets).isEqualTo(PROPERTIES.gacha().startTickets());
+    assertThat(ENGINE.draw(company, 1, new HashSeededRandom(1)).getFirst().name).isEqualTo("박한결");
     assertThat(ENGINE.grade(company.capital)).isEqualTo("F");
     assertThat(ENGINE.seats(company.capital)).isEqualTo(4);
     assertThat(ENGINE.grade(200_000_000)).as("E는 2억부터 (257번)").isEqualTo("E");
@@ -106,7 +98,9 @@ class CompanyEngineTest {
       }
       assertThat(company.year).isEqualTo(PROPERTIES.turns() + 3);
       assertThat(company.invest).as("다음 해 투자 회의가 온다").isNotNull();
-      assertThat(company.applicants).as("다음 해 공채").isNotEmpty();
+      assertThat(company.tickets)
+          .as("분기·연말마다 채용권을 받는다")
+          .isGreaterThan(PROPERTIES.gacha().startTickets());
       capitals[k] = company.capital;
     }
     assertThat(capitals[0]).isEqualTo(capitals[1]);
@@ -176,9 +170,7 @@ class CompanyEngineTest {
         .satisfies(e -> assertThat(e.stats.get("insight")).as("등급 그대로").isEqualTo(80));
     String cofounder = next.employees.getFirst().name;
     assertThat(next.opening).contains(cofounder);
-    // 새 지원자는 지난 회사에서 만난 사람의 이름을 이어 쓴다.
-    assertThat(next.applicants).extracting(a -> a.name).doesNotContain(cofounder);
-    assertThat(next.met).isGreaterThan(company.met);
+    assertThat(next.met).as("만난 사람 수(이름)를 이어 센다").isEqualTo(company.met);
   }
 
   /** 큰 손실을 낸 직원은 원인이 된 능력치가 한 띠 내려가고, 폭락장을 버티면 되찾는다. SSS는 버틸 때마다 실전 경험이 쌓여 X·XX로 오른다 (6.4·2.3절). */
@@ -265,18 +257,17 @@ class CompanyEngineTest {
     assertThat(ENGINE.forecast(company)).contains("선견").contains("폭락장");
     assertThat(ENGINE.effectsOf(first)).containsExactly("확신", "경보", "역발상", "리더", "사수", "선견");
 
-    first.rank = 4;
-    ENGINE.deal(company, new HashSeededRandom(2));
-    assertThat(company.applicants)
-        .extracting(a -> a.line)
-        .noneMatch(l -> l != null && l.contains("사수"));
-    first.rank = 5;
+    // ZZ 사수: 뽑은 사람에게 사수의 가장 높은 능력치가 한 띠 더 붙는다. 같은 시드로 사수 없이 뽑은 사람과 견준다.
     first.stats.put("courage", 99);
-    ENGINE.deal(company, new HashSeededRandom(2));
-    assertThat(company.applicants.get(1).line)
-        .as("둘째 지원자에게 사수가 붙어 사수의 가장 높은 능력치가 한 띠 높다")
-        .contains(first.name)
-        .contains("용기");
+    CompanyState plain = open(2, ace, 100_000_000);
+    plain.employees.getFirst().stats.put("courage", 99);
+    plain.employees.getFirst().rank = 4;
+    first.rank = 5;
+    int without = drawOne(plain).stats.get("courage");
+    int with = drawOne(company).stats.get("courage");
+    assertThat(with)
+        .as("사수가 붙으면 용기가 한 띠 높다")
+        .isEqualTo(Math.min(100, without + PROPERTIES.experience().band()));
   }
 
   /** XS 큰손·XSS 철벽·GOD 신의 손 (decisions.md 289번): ZZZ 위 직원 등급. 회사 등급은 ZZZ까지다. */
@@ -379,150 +370,215 @@ class CompanyEngineTest {
     return flips;
   }
 
-  /** 공채 시장 (decisions.md 228번): 계약금을 내고 뽑고, 자리가 꽉 차면 내보낼 사람을 고르고, 값을 내고 새로 받는다. */
+  /**
+   * 채용 뽑기 (decisions.md 312번): 채용권 한 장에 한 명이 쉬는 채로 온다. 돈은 들지 않는다. 데리고 있을 수 있는 사람은 자리 수의 두 배이고, 넘으면
+   * 합치거나 내보내야 더 뽑는다.
+   */
   @Test
-  void 공채_시장에서_계약금을_내고_뽑는다() {
+  void 채용권으로_뽑고_데리고_있을_자리가_모자라면_내보낸다() {
     CompanyState company = ENGINE.open(new HashSeededRandom(5), ENGINE.openingCapital());
-    CompanyState.Applicant first = company.applicants.getFirst();
-    assertThat(first.fee).isEqualTo(ENGINE.fee(company.capital, first.stats, 0));
-    long before = company.capital;
-    CompanyState.Employee hired = ENGINE.hireApplicant(company, first.id, null);
-    assertThat(hired.name).isEqualTo(first.name);
-    assertThat(hired.stats).isEqualTo(first.stats);
-    assertThat(hired.desk).as("뽑으면 쉬는 채로 들어온다").isNull();
-    assertThat(company.capital).isEqualTo(before - first.fee);
-    assertThat(company.applicants).doesNotContain(first);
-    assertThatThrownBy(() -> ENGINE.hireApplicant(company, first.id, null))
-        .as("뽑힌 지원자는 없다")
+    long capital = company.capital;
+    List<CompanyState.Drawn> drawn = ENGINE.draw(company, 2, new HashSeededRandom(5));
+    assertThat(drawn).hasSize(2);
+    assertThat(company.employees).hasSize(2).allSatisfy(e -> assertThat(e.desk).isNull());
+    assertThat(drawn)
+        .extracting(d -> d.name)
+        .containsExactlyElementsOf(company.employees.stream().map(e -> e.name).toList());
+    assertThat(company.tickets).isEqualTo(PROPERTIES.gacha().startTickets() - 2);
+    assertThat(company.capital).as("뽑기는 돈이 들지 않는다").isEqualTo(capital);
+    assertThat(company.draws).isEqualTo(2);
+    assertThat(company.collection.values().stream().mapToInt(Integer::intValue).sum()).isEqualTo(2);
+    assertThatThrownBy(() -> ENGINE.draw(company, 4, new HashSeededRandom(5)))
+        .as("채용권이 모자란다")
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(
+            () -> ENGINE.draw(company, PROPERTIES.gacha().maxDraws() + 1, new HashSeededRandom(5)))
         .isInstanceOf(InvalidRequestException.class);
 
-    // 지원자 다섯에 F 회사 자리 넷 (287번): 넷째까지 뽑으면 꽉 찬다.
-    for (int i = 0; i < 3; i++) {
-      ENGINE.hireApplicant(company, company.applicants.getFirst().id, null);
-    }
-    CompanyState.Applicant fifth = company.applicants.getFirst();
-    assertThatThrownBy(() -> ENGINE.hireApplicant(company, fifth.id, null))
-        .as("자리 네 개가 꽉 찼다")
+    // F 회사는 자리 넷이라 여덟까지 데리고 있는다.
+    company.tickets = 20;
+    assertThat(ENGINE.rosterMax(company)).isEqualTo(8);
+    ENGINE.draw(company, 6, new HashSeededRandom(5));
+    assertThat(company.employees).hasSize(8);
+    assertThatThrownBy(() -> ENGINE.draw(company, 1, new HashSeededRandom(5)))
+        .as("데리고 있을 자리가 꽉 찼다")
         .isInstanceOf(InvalidRequestException.class);
-    ENGINE.hireApplicant(company, fifth.id, hired.id);
-    assertThat(company.employees).extracting(e -> e.name).doesNotContain(hired.name);
+    CompanyState.Employee gone = company.employees.getFirst();
+    ENGINE.release(company, gone.id);
+    assertThat(company.employees).hasSize(7).doesNotContain(gone);
+    assertThat(company.alumni).extracting(a -> a.name).containsExactly(gone.name);
+    ENGINE.draw(company, 1, new HashSeededRandom(5));
 
-    long cash = company.capital;
-    ENGINE.refresh(company, new HashSeededRandom(5));
-    assertThat(company.capital)
-        .as("1억 회사는 정해진 값")
-        .isEqualTo(cash - PROPERTIES.market().refreshCost());
-    assertThat(company.applicants).hasSize(PROPERTIES.market().applicants());
-    company.capital = 0;
-    assertThatThrownBy(() -> ENGINE.refresh(company, new HashSeededRandom(5)))
-        .isInstanceOf(InvalidRequestException.class);
-    CompanyState.Applicant pricey = company.applicants.getFirst();
-    assertThatThrownBy(() -> ENGINE.hireApplicant(company, pricey.id, null))
-        .as("계약금이 모자란다")
+    // 이직 제안·연봉 협상·사표가 걸린 사람은 먼저 답해야 한다.
+    CompanyState.Raise raise = new CompanyState.Raise();
+    raise.employeeId = company.employees.getFirst().id;
+    company.raise = raise;
+    assertThatThrownBy(() -> ENGINE.release(company, raise.employeeId))
         .isInstanceOf(InvalidRequestException.class);
   }
 
-  /** 지원자 등급의 중심은 회사 등급(F 회사면 F, 289번)이고, 등급이 높을수록 계약금이 비싸다. 해가 바뀌면 새 지원자가 온다. */
-  @Test
-  void 지원자는_회사_등급을_따라_오고_해마다_바뀐다() {
-    int sum = 0;
-    int count = 0;
-    for (int seed = 0; seed < 300; seed++) {
-      CompanyState company = ENGINE.open(new HashSeededRandom(seed), ENGINE.openingCapital());
-      for (CompanyState.Applicant a : company.applicants) {
-        int at = CompanyEngine.LADDER.indexOf(CompanyEngine.overallGrade(a.stats));
-        assertThat(at).as("F 회사에는 F~D가 온다").isBetween(0, 2);
-        sum += at;
-        count++;
-      }
-    }
-    assertThat(sum / (double) count).as("중심은 F 언저리: F부터 시작한다").isBetween(0.1, 0.8);
-    assertThat(ENGINE.fee(100_000_000, stats(90, 90, 90, 90), 0))
-        .isGreaterThan(ENGINE.fee(100_000_000, stats(30, 30, 30, 30), 0));
-
-    CompanyState company = ENGINE.open(new HashSeededRandom(8), ENGINE.openingCapital());
-    List<String> first = company.applicants.stream().map(a -> a.name).toList();
-    settleYear(company, new HashSeededRandom(8));
-    assertThat(company.applicants).extracting(a -> a.name).doesNotContainAnyElementsOf(first);
+  /** 뽑기 하나. 채용권이 없으면 한 장 쥐여 준다. */
+  private static CompanyState.Employee drawOne(CompanyState company) {
+    company.tickets = Math.max(company.tickets, 1);
+    int id = ENGINE.draw(company, 1, new HashSeededRandom(77)).getFirst().employeeId;
+    return company.employees.stream().filter(e -> e.id == id).findFirst().orElseThrow();
   }
 
   /**
-   * 특급 인재 (decisions.md 290번): 분기를 넘길 때 가끔 회사 등급보다 네 단계 높은 지원자가 온다. 계약금은 보통의 여섯 배이고, 두 분기가 지나면 다른
-   * 증권사로 간다. 새로 받거나 해가 바뀌어도 떠날 때까지 남는다.
+   * 확률표 (decisions.md 312번): 회사 등급을 중심으로 한 단계 아래 30% · 같은 등급 44% · 위 18% · 두 단계 위 6% · 특급(네 단계 위)
+   * 2%.
    */
   @Test
-  void 특급_인재는_가끔_오고_비싸며_곧_떠난다() {
-    var rules = PROPERTIES.market().star();
-    int arrived = 0;
-    CompanyState found = null;
-    for (int seed = 0; seed < 200; seed++) {
-      CompanyState company = ENGINE.open(new HashSeededRandom(seed), ENGINE.openingCapital());
-      HashSeededRandom random = new HashSeededRandom(seed);
-      for (int q = 0; q < 4 && found == null; q++) {
-        CompanyState.Quarter quarter = ENGINE.settleQuarter(company, random);
-        if (company.applicants.stream().anyMatch(a -> a.star)) {
-          arrived++;
-          found = company;
-          if (company.quarter > 1) {
-            assertThat(quarter.lines).anyMatch(l -> l.contains("특급 인재") && l.contains("공채에 왔다"));
-          }
-        }
-      }
-      if (found != null) {
-        break;
+  void 뽑기는_회사_등급을_중심으로_확률표대로_나온다() {
+    CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
+    assertThat(ENGINE.rates())
+        .extracting(CompanyProperties.Rate::percent)
+        .containsExactly(30, 44, 18, 6, 2);
+    assertThat(ENGINE.rates().stream().map(r -> ENGINE.rateGrade(company, r)).toList())
+        .as("F 회사: 바닥은 F")
+        .containsExactly("F", "F", "E", "D", "B");
+    int[] counts = new int[CompanyEngine.LADDER.size()];
+    int stars = 0;
+    int total = 0;
+    for (int round = 0; round < 300; round++) {
+      company.employees.clear();
+      company.tickets = 8;
+      for (CompanyState.Drawn d : ENGINE.draw(company, 8, new HashSeededRandom(round))) {
+        counts[CompanyEngine.LADDER.indexOf(d.grade)]++;
+        stars += d.star ? 1 : 0;
+        total++;
       }
     }
-    assertThat(arrived).as("특급 인재가 오는 회사가 있다").isPositive();
-    CompanyState.Applicant star =
-        found.applicants.stream().filter(a -> a.star).findFirst().orElseThrow();
-    assertThat(CompanyEngine.LADDER.indexOf(CompanyEngine.gradeOf(star.stats, star.rank)))
-        .as("F 회사에 B 인재")
-        .isEqualTo(CompanyEngine.LADDER.indexOf("B"));
-    assertThat(star.fee)
-        .as("계약금은 보통의 여섯 배")
-        .isEqualTo(ENGINE.fee(found.capital, star.stats, 0) * rules.feePercent() / 100);
-    assertThat(star.leavesAt).isEqualTo(found.quarterIndex() + rules.quarters() - 1);
-    ENGINE.refresh(found, new HashSeededRandom(1));
-    assertThat(found.applicants).as("새로 받아도 남는다").contains(star);
-    // 머무는 기한이 지나면 떠난다.
-    HashSeededRandom random = new HashSeededRandom(99);
-    for (int q = 0; q < rules.quarters() && found.applicants.contains(star); q++) {
-      ENGINE.settleQuarter(found, random);
-    }
-    assertThat(found.applicants).as("기한이 지나면 다른 증권사로 간다").doesNotContain(star);
+    assertThat(stars / (double) total).as("특급은 2% 언저리").isBetween(0.008, 0.035);
+    assertThat(counts[CompanyEngine.LADDER.indexOf("A")]).as("F 회사에 A 이상은 특급(B)뿐").isZero();
+    assertThat((counts[0] + counts[1]) / (double) total).as("F·E가 대부분").isGreaterThan(0.7);
+    assertThat(ENGINE.fee(100_000_000, stats(90, 90, 90, 90), 0))
+        .isGreaterThan(ENGINE.fee(100_000_000, stats(30, 30, 30, 30), 0));
 
-    // 분기마다 15% 남짓으로 온다.
-    int companies = 0;
-    int withStar = 0;
-    for (int seed = 0; seed < 300; seed++) {
-      CompanyState c = ENGINE.open(new HashSeededRandom(seed), ENGINE.openingCapital());
-      ENGINE.settleQuarter(c, new HashSeededRandom(seed));
-      companies++;
-      withStar += c.applicants.stream().anyMatch(a -> a.star) ? 1 : 0;
-    }
-    assertThat(withStar / (double) companies).isBetween(0.08, 0.25);
+    CompanyState big = ENGINE.open(new HashSeededRandom(1), 10_000_000_000L);
+    assertThat(ENGINE.rateGrade(big, ENGINE.rates().get(1))).as("B 회사의 중심은 B").isEqualTo("B");
   }
 
-  /** 인사 직원 (6.3절): 인사팀에 사람이 있으면 지원자가 한 명 더 오고, 지원자 등급의 중심이 인사 직원보다 두 단계 아래까지 오른다. */
+  /** 특급 (decisions.md 290·312번): 확률표의 맨 끝 칸. F 회사에 네 단계 위 B가 오고, 능력치가 모두 그 띠 안이며, 연표에 남는다. */
   @Test
-  void 인사팀이_공채를_돕는다() {
+  void 특급은_드물게_네_단계_위에서_오고_연표에_남는다() {
+    CompanyState found = null;
+    CompanyState.Drawn star = null;
+    for (int round = 0; round < 400 && star == null; round++) {
+      CompanyState company = ENGINE.open(new HashSeededRandom(round), ENGINE.openingCapital());
+      for (CompanyState.Drawn d : ENGINE.draw(company, 5, new HashSeededRandom(round))) {
+        if (d.star) {
+          star = d;
+          found = company;
+        }
+      }
+    }
+    assertThat(star).as("특급이 나오는 회사가 있다").isNotNull();
+    assertThat(star.grade).isEqualTo("B");
+    int id = star.employeeId;
+    CompanyState.Employee e =
+        found.employees.stream().filter(x -> x.id == id).findFirst().orElseThrow();
+    assertThat(e.stats.values()).as("능력치가 모두 B 띠").allSatisfy(v -> assertThat(v).isBetween(50, 59));
+    assertThat(found.timeline)
+        .anyMatch(t -> t.text != null && t.text.contains("특급 인재") && t.text.contains(e.name));
+  }
+
+  /** 인사 직원 (6.3절, decisions.md 312번): 뽑기의 중심이 인사 직원보다 두 단계 아래까지 오르고, 연말에 채용권을 한 장 더 받는다. */
+  @Test
+  void 인사팀이_뽑기를_돕는다() {
     Map<String, Integer> sharp = stats(92, 92, 92, 92);
     CompanyState company = open(3, sharp, 100_000_000);
     ENGINE.place(company, Map.of(1, "hr"));
     assertThat(ENGINE.hrCap(company.employees.getFirst())).as("평균 84(SS)의 두 단계 아래").isEqualTo("A");
+    assertThat(ENGINE.rateGrade(company, ENGINE.rates().get(1))).as("중심이 A로 오른다").isEqualTo("A");
     int sum = 0;
     int count = 0;
-    for (int seed = 0; seed < 100; seed++) {
-      ENGINE.deal(company, new HashSeededRandom(seed));
-      count += company.applicants.size();
-      assertThat(company.applicants).hasSize(PROPERTIES.market().applicants() + 1);
-      assertThat(company.applicants.getLast().line).contains("인사팀");
-      sum +=
-          company.applicants.stream()
-              .mapToInt(a -> CompanyEngine.LADDER.indexOf(CompanyEngine.overallGrade(a.stats)))
-              .sum();
+    for (int round = 0; round < 60; round++) {
+      company.tickets = 5;
+      for (CompanyState.Drawn d : ENGINE.draw(company, 5, new HashSeededRandom(round))) {
+        sum += CompanyEngine.LADDER.indexOf(d.grade);
+        count++;
+      }
+      company.employees.removeIf(e -> e.id != 1);
     }
     assertThat(sum / (double) count).as("중심이 A 언저리로 오른다").isGreaterThan(4.3);
+
+    company.invest = null;
+    company.poach = null;
+    company.raise = null;
+    company.tickets = 0;
+    CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(3));
+    assertThat(s.lines).anyMatch(l -> l.contains("인사팀이 좋은 사람을"));
+    assertThat(company.tickets)
+        .as("분기 넷 + 연말 + 인사팀")
+        .isGreaterThanOrEqualTo(
+            4 * PROPERTIES.gacha().quarterTickets()
+                + PROPERTIES.gacha().yearTickets()
+                + PROPERTIES.hr().extraTickets());
+  }
+
+  /** 채용권은 분기를 넘길 때마다, 연말에 더, 업적과 이사로 받는다. 받은 까닭이 분기 실적·결산 소식에 남는다 (decisions.md 312번). */
+  @Test
+  void 채용권은_분기와_연말과_이사로_받는다() {
+    CompanyState company = ENGINE.open(new HashSeededRandom(4), ENGINE.openingCapital());
+    int start = company.tickets;
+    CompanyState.Quarter q = ENGINE.settleQuarter(company, new HashSeededRandom(4));
+    assertThat(company.tickets).isEqualTo(start + PROPERTIES.gacha().quarterTickets());
+    assertThat(q.lines).anyMatch(l -> l.contains("채용권") && l.contains("분기"));
+    company.capital = 1_000_000_000L;
+    int before = company.tickets;
+    ENGINE.upgrade(company);
+    assertThat(company.tickets).isEqualTo(before + PROPERTIES.gacha().moveTickets());
+  }
+
+  /**
+   * 합성 (decisions.md 312번): 같은 종합 등급 셋을 합치면 바탕 한 명이 한 단계 오른다. 재료는 회사를 떠나고 번 돈은 바탕에게 얹힌다. SSS 위는
+   * 단계(X…)가 오른다. 등급이 다르거나 수가 맞지 않거나 맨 위면 400.
+   */
+  @Test
+  void 같은_등급_셋을_합치면_한_단계_오른다() {
+    CompanyState company = ENGINE.open(new HashSeededRandom(6), ENGINE.openingCapital());
+    CompanyState.Employee base = ENGINE.hire(company, stats(45, 45, 45, 45));
+    CompanyState.Employee a = ENGINE.hire(company, stats(42, 48, 40, 44));
+    CompanyState.Employee b = ENGINE.hire(company, stats(40, 40, 40, 49));
+    CompanyState.Employee odd = ENGINE.hire(company, stats(60, 60, 60, 60));
+    a.totalPnl = 300;
+    base.desk = "day";
+    assertThat(CompanyEngine.employeeGrade(base)).isEqualTo("C");
+    assertThatThrownBy(() -> ENGINE.merge(company, base.id, List.of(a.id, odd.id)))
+        .as("등급이 다르다")
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> ENGINE.merge(company, base.id, List.of(a.id)))
+        .as("셋이어야 한다")
+        .isInstanceOf(InvalidRequestException.class);
+    ENGINE.merge(company, base.id, List.of(a.id, b.id));
+    assertThat(CompanyEngine.employeeGrade(base)).isEqualTo("B");
+    assertThat(base.desk).as("바탕은 자리에 그대로").isEqualTo("day");
+    assertThat(base.totalPnl).isEqualTo(300);
+    assertThat(company.employees).containsExactly(base, odd);
+    assertThat(company.alumni).as("재료는 떠난 직원으로 남지 않는다").isEmpty();
+    assertThat(company.collection).containsEntry("B", 1);
+    assertThat(company.timeline)
+        .anyMatch(t -> t.text != null && t.text.contains(a.name) && t.text.contains("B"));
+
+    // SSS 셋이면 X로.
+    Map<String, Integer> top = new HashMap<>(stats(95, 95, 95, 95));
+    top.put("luck", 95);
+    CompanyState.Employee s1 = ENGINE.hire(company, top);
+    CompanyState.Employee s2 = ENGINE.hire(company, top);
+    CompanyState.Employee s3 = ENGINE.hire(company, top);
+    ENGINE.merge(company, s1.id, List.of(s2.id, s3.id));
+    assertThat(CompanyEngine.employeeGrade(s1)).isEqualTo("X");
+
+    // 능력치가 100에 걸려도 평균이 다음 띠에 닿게 채운다.
+    CompanyState.Employee x1 = ENGINE.hire(company, stats(100, 100, 100, 72));
+    x1.stats.put("luck", 30);
+    CompanyState.Employee x2 = ENGINE.hire(company, new HashMap<>(x1.stats));
+    CompanyState.Employee x3 = ENGINE.hire(company, new HashMap<>(x1.stats));
+    String was = CompanyEngine.employeeGrade(x1);
+    ENGINE.merge(company, x1.id, List.of(x2.id, x3.id));
+    assertThat(CompanyEngine.LADDER.indexOf(CompanyEngine.employeeGrade(x1)))
+        .isEqualTo(CompanyEngine.LADDER.indexOf(was) + 1);
   }
 
   /** 섹터 데스크 (4.2·9.4절): 그 시대에 뜨는 섹터 데스크에 그 자리가 원하는 능력치가 좋은 사람을 앉히면 결과가 좋아진다. */
@@ -567,17 +623,15 @@ class CompanyEngineTest {
   }
 
   @Test
-  void 연초_회의에_이번_시대에_뜨는_섹터가_보이고_지원자는_관심_섹터를_안고_온다() {
+  void 연초_회의에_이번_시대에_뜨는_섹터가_보이고_뽑은_사람은_관심_섹터를_안고_온다() {
     CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
     assertThat(ENGINE.hotLine(company)).as("평범한 시대엔 뜨는 섹터가 없다").isNull();
     company.era = "long-winter";
     assertThat(ENGINE.hotDesks(company)).containsExactly("food", "finance");
     assertThat(ENGINE.hotLine(company)).isEqualTo("이번 시대에 뜨는 섹터: 식품 데스크·금융 데스크.");
 
-    assertThat(company.applicants).allSatisfy(a -> assertThat(a.sector).isNotNull());
-    CompanyState.Applicant first = company.applicants.getFirst();
-    CompanyState.Employee hired = ENGINE.hireApplicant(company, first.id, null);
-    assertThat(hired.sector).as("뽑으면 관심 섹터를 안고 들어온다").isEqualTo(first.sector);
+    CompanyState.Employee hired = drawOne(company);
+    assertThat(hired.sector).as("뽑은 사람은 관심 섹터를 안고 온다").isNotNull();
 
     hired.desk = "day";
     assertThat(ENGINE.interested(hired)).as("단타 데스크는 섹터를 가리지 않는다").isFalse();
@@ -585,27 +639,7 @@ class CompanyEngineTest {
     assertThat(ENGINE.interested(hired)).isTrue();
   }
 
-  /** 올해 필요한 자리가 섹터 데스크면 첫 지원자는 그 섹터에 관심이 있다. */
-  @Test
-  void 필요한_인재가_섹터_데스크면_첫_지원자의_관심_섹터도_같다() {
-    int seen = 0;
-    for (int seed = 0; seed < 200; seed++) {
-      CompanyState company = ENGINE.open(new HashSeededRandom(seed), ENGINE.openingCapital());
-      String sector =
-          ENGINE.desks().stream()
-              .filter(d -> d.code().equals(company.wantedDesk))
-              .findFirst()
-              .orElseThrow()
-              .sector();
-      if (sector != null) {
-        seen++;
-        assertThat(company.applicants.getFirst().sector).isEqualTo(sector);
-      }
-    }
-    assertThat(seen).as("필요한 인재가 섹터 데스크인 해가 있다").isPositive();
-  }
-
-  /** 망한 회사 (decisions.md 247번): 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 닫고 사재로 다음 회사를 차린다. */
+  /** 망한 회사 (decisions.md 247·312번): 자본이 0이면 닫고 사재로 다음 회사를 차린다. 채용권·도감은 따라온다. */
   @Test
   void 자본이_바닥나면_망한_회사가_되고_사재로_다음_회사를_차린다() {
     CompanyState fresh = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
@@ -614,17 +648,21 @@ class CompanyEngineTest {
     assertThatThrownBy(() -> ENGINE.restart(fresh, new HashSeededRandom(2), 100_000_000))
         .isInstanceOf(InvalidRequestException.class);
 
-    long cheapest = PROPERTIES.market().fees().getFirst();
-    CompanyState poor = ENGINE.open(new HashSeededRandom(1), cheapest - 1);
-    assertThat(ENGINE.broke(poor)).as("직원 없이 가장 싼 계약금도 못 낸다").isTrue();
+    CompanyState poor = ENGINE.open(new HashSeededRandom(1), 1);
+    assertThat(ENGINE.broke(poor)).as("사람은 채용권으로 뽑으니 돈이 적어도 망하지 않는다").isFalse();
     ENGINE.hire(poor, stats(50, 50, 50, 50));
-    assertThat(ENGINE.broke(poor)).as("직원이 있으면 적은 돈으로도 굴려 다시 일어설 수 있다").isFalse();
     poor.capital = 0;
     assertThat(ENGINE.broke(poor)).as("자본 0은 수수료도 판돈도 0이다").isTrue();
     assertThat(ENGINE.brokeNotice(poor)).isNotBlank();
 
     poor.met = 7;
+    poor.tickets = 2;
+    poor.collection.put("C", 3);
     CompanyState next = ENGINE.restart(poor, new HashSeededRandom(2), ENGINE.openingCapital());
+    assertThat(next.tickets)
+        .as("채용권은 이어지고 처음 몫을 더 받는다")
+        .isEqualTo(2 + PROPERTIES.gacha().startTickets());
+    assertThat(next.collection).as("도감은 사장의 것").containsEntry("C", 3);
     assertThat(poor.closed).isTrue();
     assertThat(next.number).isEqualTo(2);
     assertThat(next.year).isEqualTo(1);
@@ -634,8 +672,7 @@ class CompanyEngineTest {
     assertThat(next.employees.getFirst().desk).as("쉬는 채로").isNull();
     assertThat(poor.employees).isEmpty();
     assertThat(next.opening).contains("직원들은 모두 따라왔다");
-    assertThat(next.applicants).isNotEmpty();
-    assertThat(next.applicants.getFirst().name).as("이름은 이어 센다").isNotEqualTo("박한결");
+    assertThat(drawOne(next).name).as("이름은 이어 센다").isNotEqualTo("박한결");
     assertThat(next.opening).contains("1호 회사는 문을 닫았다").contains("2호 회사");
   }
 
@@ -669,7 +706,7 @@ class CompanyEngineTest {
    */
   @Test
   void 자본이_줄어_자리가_줄면_돕는_자리부터_일어나_쉰다() {
-    // E 회사(자리 6)에 여섯을 앉힌다. 새로 받기 값을 내면 2억 아래로 떨어지지만 그해에는 자리 여섯 그대로다.
+    // E 회사(자리 6)에 여섯을 앉힌다. 해 가운데 자본이 2억 아래로 떨어져도 그해에는 자리 여섯 그대로다.
     CompanyState company = open(5, stats(50, 50, 50, 50), 200_000_000 + 1_000_000);
     for (int i = 0; i < 5; i++) {
       ENGINE.hire(company, stats(50, 50, 50, 50));
@@ -684,7 +721,7 @@ class CompanyEngineTest {
     ENGINE.place(company, seats);
     assertThat(ENGINE.seats(company)).isEqualTo(6);
 
-    ENGINE.refresh(company, new HashSeededRandom(5));
+    company.capital -= 2_000_000;
     assertThat(company.capital).isLessThan(200_000_000);
     assertThat(ENGINE.seats(company)).as("자리 수는 연말에만 바뀐다").isEqualTo(6);
     assertThat(staff.get(0).desk).isEqualTo("research");
@@ -783,47 +820,34 @@ class CompanyEngineTest {
   }
 
   /**
-   * 연말 결산서의 장부가 맞는다 (#314, decisions.md 251번): 연초 자본은 연초 회의 때의 자본이고, 그해 계약금·새로 받기 값은 채용비 줄로 나온다. 연초
-   * 자본 + 회의 + 직원들 + 수수료 − 채용비 = 연말 자본.
+   * 연말 결산서의 장부가 맞는다 (#314, decisions.md 251번): 연초 자본은 연초 회의 때의 자본이다. 채용 뽑기는 돈이 들지 않아(312번) 인사 비용이
+   * 없다. 연초 자본 + 회의 + 직원들 + 수수료 − 인사 비용 = 연말 자본.
    */
   @Test
-  void 연말_결산서의_연초_자본은_연초_회의_때의_자본이고_채용비가_따로_나온다() {
+  void 연말_결산서의_연초_자본은_연초_회의_때의_자본이고_장부가_맞는다() {
     for (long seed = 1; seed <= 20; seed++) {
       CompanyState company = ENGINE.open(new HashSeededRandom(seed), ENGINE.openingCapital());
       HashSeededRandom random = new HashSeededRandom(seed);
       for (int year = 1; year <= 4; year++) {
         long start = company.capital;
-        long spent = 0;
-        long refreshCost = ENGINE.refreshCost(company);
-        if (company.employees.size() < ENGINE.seats(company.capital - refreshCost)) {
-          ENGINE.refresh(company, random);
-          spent += refreshCost;
-          CompanyState.Applicant cheapest =
-              company.applicants.stream()
-                  .min(java.util.Comparator.comparingLong(a -> a.fee))
-                  .orElseThrow();
-          if (company.capital >= cheapest.fee
-              && company.employees.size() < ENGINE.seats(company.capital - cheapest.fee)) {
-            CompanyState.Employee hired = ENGINE.hireApplicant(company, cheapest.id, null);
-            spent += cheapest.fee;
-            Map<Integer, String> seats = new HashMap<>();
-            company.employees.forEach(e -> seats.put(e.id, e.desk));
-            seats.put(hired.id, "day");
-            if (seats.values().stream().filter(d -> d != null).count()
-                <= ENGINE.seats(company.capital)) {
-              ENGINE.place(company, seats);
-            }
+        if (company.tickets > 0 && company.employees.size() < ENGINE.seats(company)) {
+          CompanyState.Employee hired = drawOne(company);
+          Map<Integer, String> seats = new HashMap<>();
+          company.employees.forEach(e -> seats.put(e.id, e.desk));
+          seats.put(hired.id, "day");
+          if (seats.values().stream().filter(d -> d != null).count() <= ENGINE.seats(company)) {
+            ENGINE.place(company, seats);
           }
         }
         // 이직 제안(262번)은 따로 본다: 이적료가 인사 비용에 섞이지 않게 없앤다.
         company.poach = null;
         CompanyState.Settlement s = settleYear(company, random);
         assertThat(s.capitalBefore).isEqualTo(start);
-        assertThat(s.hiring).isEqualTo(spent);
+        assertThat(s.hiring).as("뽑기는 돈이 들지 않는다").isZero();
         long staff = s.results.stream().mapToLong(r -> r.pnl).sum();
         long invest = s.investTotal == null ? 0 : s.investTotal;
         if (s.capitalAfter > 0) {
-          assertThat(s.capitalBefore + invest + staff + s.fee - s.hiring)
+          assertThat(s.capitalBefore + invest + staff + s.fee - s.hiring - s.salary - s.moving)
               .as("%d번 시드 %d년 차 장부", seed, year)
               .isEqualTo(s.capitalAfter);
         }
@@ -924,39 +948,42 @@ class CompanyEngineTest {
     throw new AssertionError("인내심 1인데 한 번도 못 참지 않았다");
   }
 
-  /** 지원자 이름은 성 × 이름 조합을 겹치지 않게 돌리고 직함을 붙이지 않는다 (#319, decisions.md 256번). */
+  /** 뽑은 사람 이름은 성 × 이름 조합을 겹치지 않게 돌리고 직함을 붙이지 않는다 (#319, decisions.md 256번). */
   @Test
-  void 지원자_이름은_겹치지_않고_직함이_없다() {
+  void 뽑은_사람_이름은_겹치지_않고_직함이_없다() {
     var texts = TestContent.load().raising().company();
     int total = texts.surnames().size() * texts.names().size();
-    CompanyState company = ENGINE.open(new HashSeededRandom(1), 100_000_000_000L);
+    CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
     java.util.Set<String> names = new java.util.HashSet<>();
     String previous = null;
     while (names.size() < total) {
-      for (CompanyState.Applicant a : company.applicants) {
-        assertThat(names.add(a.name)).as("겹친 이름: %s", a.name).isTrue();
-        assertThat(a.name).doesNotContain("대리").doesNotContain("수습").doesNotContain("주임");
+      company.tickets = PROPERTIES.gacha().maxDraws();
+      company.employees.clear();
+      for (CompanyState.Drawn d :
+          ENGINE.draw(
+              company,
+              Math.min(PROPERTIES.gacha().maxDraws(), ENGINE.rosterMax(company)),
+              new HashSeededRandom(1))) {
+        assertThat(names.add(d.name)).as("겹친 이름: %s", d.name).isTrue();
+        assertThat(d.name).doesNotContain("대리").doesNotContain("수습").doesNotContain("주임");
         if (previous != null) {
-          assertThat(a.name.charAt(0)).as("이웃한 지원자의 성이 다르다").isNotEqualTo(previous.charAt(0));
+          assertThat(d.name.charAt(0)).as("이웃한 사람의 성이 다르다").isNotEqualTo(previous.charAt(0));
         }
-        previous = a.name;
+        previous = d.name;
         if (names.size() == total) {
           break;
         }
       }
-      // 새로 받을수록 비싸지므로(258번) 횟수를 되돌린다. 이름은 만난 수로 붙으니 그래도 이어진다.
-      company.refreshes = 0;
-      ENGINE.refresh(company, new HashSeededRandom(1));
     }
     assertThat(names).hasSize(total);
   }
 
   /**
-   * 큰 회사에도 공채가 무겁다 (#321, decisions.md 258번): 계약금은 정해진 값과 자본 비율 가운데 큰 쪽, 새로 받기 값은 자본에 비례하고 한 해에
-   * 받을수록 비싸지며, SSS 회사부터 경력직(X 이상)이 온다.
+   * 큰 회사의 계약금(연봉·이적료의 바탕)은 자본에 비례한다 (#321, decisions.md 258번). SSS 회사의 뽑기는 위 칸에서 X 이상 경력직이
+   * 나온다(312번).
    */
   @Test
-  void 큰_회사의_계약금과_새로_받기_값은_자본에_비례하고_경력직이_온다() {
+  void 큰_회사의_계약금은_자본에_비례하고_SSS_회사의_뽑기에는_경력직이_나온다() {
     Map<String, Integer> sss = new HashMap<>(stats(95, 95, 95, 95));
     sss.put("luck", 95);
     long small = ENGINE.fee(100_000_000, sss, 0);
@@ -965,22 +992,25 @@ class CompanyEngineTest {
     assertThat(big).as("1조 회사의 SSS 계약금은 자본의 2%").isEqualTo(20_000_000_000L);
     assertThat(ENGINE.fee(1_000_000_000_000L, sss, 1)).as("경력직은 더 비싸다").isGreaterThan(big);
 
-    // 새로 받기 값을 내고도 SSS(1조 이상)에 머물게 넉넉히 연다.
     CompanyState company = ENGINE.open(new HashSeededRandom(3), 1_200_000_000_000L);
-    long first = ENGINE.refreshCost(company);
-    assertThat(first).as("1.2조 회사의 새로 받기는 자본의 0.5%").isEqualTo(6_000_000_000L);
-    ENGINE.refresh(company, new HashSeededRandom(3));
-    assertThat(ENGINE.refreshCost(company)).as("두 번째는 두 배쯤").isGreaterThan(first * 19 / 10);
-
-    CompanyState.Applicant veteran = company.applicants.get(2);
-    assertThat(veteran.rank).as("SSS 회사에는 X 경력직이 온다").isEqualTo(1);
-    assertThat(CompanyEngine.gradeOf(veteran.stats, veteran.rank)).isEqualTo("X");
-    assertThat(veteran.line).contains("경력직");
-    CompanyState.Employee hired = ENGINE.hireApplicant(company, veteran.id, null);
-    assertThat(CompanyEngine.employeeGrade(hired)).isEqualTo("X");
-
-    CompanyState small2 = ENGINE.open(new HashSeededRandom(3), 100_000_000);
-    assertThat(small2.applicants).allMatch(a -> a.rank == 0);
+    assertThat(ENGINE.grade(company)).isEqualTo("SSS");
+    assertThat(ENGINE.rateGrade(company, ENGINE.rates().get(2))).isEqualTo("X");
+    company.tickets = 60;
+    List<CompanyState.Drawn> drawn = new java.util.ArrayList<>();
+    for (int i = 0; i < 6; i++) {
+      drawn.addAll(ENGINE.draw(company, 10, new HashSeededRandom(3)));
+    }
+    CompanyState.Drawn veteran =
+        drawn.stream().filter(d -> d.grade.equals("X")).findFirst().orElseThrow();
+    CompanyState.Employee e =
+        company.employees.stream()
+            .filter(x -> x.id == veteran.employeeId)
+            .findFirst()
+            .orElseThrow();
+    assertThat(e.rank).isEqualTo(1);
+    assertThat(e.stats.values())
+        .as("능력치가 모두 SSS 띠")
+        .allSatisfy(v -> assertThat(v).isGreaterThanOrEqualTo(90));
   }
 
   /**
@@ -1148,29 +1178,20 @@ class CompanyEngineTest {
     assertThat(company.timeline).extracting(e -> e.kind).contains("grow", "best");
     assertThat(a.totalPnl).isEqualTo(s.results.getFirst().pnl);
 
-    // 자리가 꽉 찬 회사에서 바꿔 뽑으면 내보낸 사람이 떠난 직원으로 남는다.
-    ENGINE.hire(company, stats(50, 50, 50, 50));
-    ENGINE.hire(company, stats(50, 50, 50, 50));
-    while (company.employees.size() < ENGINE.seats(company.capital)) {
-      ENGINE.hire(company, stats(50, 50, 50, 50));
-    }
-    CompanyState.Applicant next = company.applicants.getFirst();
-    company.capital = Math.max(company.capital, next.fee * 2);
-    ENGINE.hireApplicant(company, next.id, a.id);
+    assertThat(s.lines).as("업적을 열면 채용권").anyMatch(l -> l.contains("업적을 열었다"));
+
+    // 내보낸 사람이 떠난 직원으로 남는다.
+    ENGINE.release(company, a.id);
     assertThat(company.alumni).extracting(x -> x.name).containsExactly(a.name);
     assertThat(company.timeline).extracting(e -> e.kind).contains("left");
   }
 
-  /** 공채에 쓴 돈만으로는 "가장 아팠던 해"가 아니다: 연표와 업적은 인사 비용을 빼기 전의 운용 결과로 본다 (263번). */
+  /** 인사 비용만으로는 "가장 아팠던 해"가 아니다: 연표와 업적은 인사 비용을 빼기 전의 운용 결과로 본다 (263번). */
   @Test
-  void 공채에_쓴_돈만으로는_가장_아팠던_해가_아니다() {
+  void 인사_비용만으로는_가장_아팠던_해가_아니다() {
     CompanyState company = ENGINE.open(new HashSeededRandom(2), ENGINE.openingCapital());
-    company.applicants.sort(
-        java.util.Comparator.comparingLong((CompanyState.Applicant a) -> -a.fee));
-    CompanyState.Applicant dear = company.applicants.getFirst();
-    company.capital = 100_000_000L;
-    ENGINE.hireApplicant(company, dear.id, null);
-    company.capital -= 25_000_000L;
+    drawOne(company);
+    company.capital = 100_000_000L - 25_000_000L;
     company.yearHiring += 25_000_000L;
     company.invest = null;
     company.poach = null;

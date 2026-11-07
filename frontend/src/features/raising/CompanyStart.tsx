@@ -58,8 +58,8 @@ export function CompanyStart({
       <p className="mt-3 text-[13px] leading-relaxed" data-testid="start-story">
         사표를 던지고 나온 날, 통장에는 1억 원이 있었다. 반지하 사무실에 작은 간판을 걸었다.
         <br />
-        공채에서 사람을 뽑아 자리에 앉히면, 직원들은 저마다의 성격대로 돈을 굴린다. 사장은 회의에서
-        결정하고, 결산서를 읽고, 건물을 키운다.
+        채용권으로 사람을 뽑아 자리에 앉히면, 직원들은 저마다의 성격대로 돈을 굴린다. 사장은
+        회의에서 결정하고, 결산서를 읽고, 건물을 키운다.
       </p>
       <div className="mt-5 grid gap-2">
         {fresh ? withTutorial : plain}

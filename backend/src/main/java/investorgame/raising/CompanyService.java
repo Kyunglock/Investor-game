@@ -6,8 +6,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * 증권사 (증권사 육성 설계 4·6·9절). 사장의 사재로 회사를 차리고, 해마다 연초 회의(공채 시장) → 배치 → 결산을 돈다. 직원은 공채 시장에서 계약금을 내고 뽑는다
- * (decisions.md 228번).
+ * 증권사 (증권사 육성 설계 4·6·9절). 사장의 사재로 회사를 차리고, 해마다 연초 회의 → 배치 → 결산을 돈다. 직원은 채용권으로 뽑고, 같은 등급을 합쳐 키운다
+ * (decisions.md 228·312번).
  */
 public interface CompanyService {
 
@@ -15,22 +15,22 @@ public interface CompanyService {
   Optional<CompanyView> current(UUID sessionId);
 
   /**
-   * 사장의 사재로 회사를 차린다. 이미 회사가 있으면 400. 가장 최근 회사가 망했으면(자본 0, 또는 직원 없이 가장 싼 계약금도 못 냄) 그 회사를 닫고 다음 번호로
-   * 새로 차린다 (decisions.md 247번).
+   * 사장의 사재로 회사를 차린다. 이미 회사가 있으면 400. 가장 최근 회사가 망했으면(자본 0) 그 회사를 닫고 다음 번호로 새로 차린다 (decisions.md
+   * 247번).
    */
   CompanyView open(UUID sessionId);
 
   /**
-   * 계약금을 내고 올해 공채 시장의 지원자를 뽑는다. 자리가 꽉 찼으면 replace의 직원을 내보낸다. 없는 지원자, 모자란 돈, 꽉 찬 자리에 replace가 없으면
-   * 400.
+   * 채용권으로 count명을 뽑는다 (decisions.md 312번). 지금까지 draws번 뽑았다는 요청이다: 이미 한 뽑기면 아무것도 하지 않고 지금 회사를 돌려주고,
+   * 아직 오지 않은 것이면 400. 채용권이나 데리고 있을 자리가 모자라면 400.
    */
-  CompanyView hire(UUID sessionId, int applicantId, Integer replace);
+  CompanyView draw(UUID sessionId, int count, int draws);
 
-  /**
-   * 값을 내고 올해 지원자를 새로 받는다. year 해에 이미 refreshes번 새로 받았다는 요청이다: 이미 한 것이면 아무것도 하지 않고 지금 회사를 돌려주고(같은
-   * 요청이 두 번 와도 한 번만 낸다), 아직 오지 않은 것이면 400. 돈이 모자라면 400 (decisions.md 254번).
-   */
-  CompanyView refreshApplicants(UUID sessionId, int year, int refreshes);
+  /** 같은 등급 직원을 합쳐 바탕 한 명을 한 단계 올린다 (312번). 수·등급이 맞지 않거나 걸린 일이 있는 사람이면 400. */
+  CompanyView merge(UUID sessionId, int baseId, List<Integer> materialIds);
+
+  /** 직원을 내보낸다 (312번). 걸린 일이 있는 사람이면 400. */
+  CompanyView release(UUID sessionId, int employeeId);
 
   /** 올해 이직 제안에 답한다: 남기거나 보낸다(이적료를 받는다). 직원은 보낼 때만 떠난다. 제안이 없으면 400 (decisions.md 262·265번). */
   CompanyView answerPoach(UUID sessionId, boolean keep);

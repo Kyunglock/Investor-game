@@ -45,7 +45,7 @@ export function StaffScene({ company }: { company: Company }) {
       </div>
       {company.employees.length === 0 ? (
         <p className="mt-4 text-center text-[14px] text-white/60">
-          아직 직원이 없습니다. 공채에서 뽑으세요.
+          아직 직원이 없습니다. 채용에서 뽑으세요.
         </p>
       ) : (
         <ul className="mt-2 grid gap-2" data-testid="desk-board">

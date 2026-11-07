@@ -46,7 +46,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/company/hires": {
+    "/api/company/draws": {
         parameters: {
             query?: never;
             header?: never;
@@ -56,11 +56,53 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 계약금을 내고 공채 시장의 지원자를 뽑는다
-         * @description 뽑은 직원은 쉬는 채로 들어온다. 자리가 꽉 찼으면 replace의 직원을 내보낸다.
-         *     없는 지원자, 모자란 계약금, 꽉 찬 자리에 replace가 없으면 400.
+         * 채용권으로 count명을 뽑는다 (decisions.md 312번)
+         * @description 채용권 한 장에 한 명이 쉬는 채로 온다. 돈은 들지 않는다. 등급은 회사 등급(인사팀이 있으면 더 높게)을 중심으로 한 확률표대로다.
+         *     요청에 지금까지 뽑은 횟수(draws)를 싣는다: 이미 한 뽑기면 아무것도 하지 않고 지금 회사를 돌려주고, 아직 오지 않은 것이면 400.
+         *     채용권이나 데리고 있을 자리(자리 수의 두 배)가 모자라거나 한 번에 maxDraws를 넘으면 400.
          */
-        post: operations["hireApplicant"];
+        post: operations["drawEmployees"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 같은 등급 직원을 합쳐 바탕 한 명을 한 단계 올린다 (decisions.md 312번)
+         * @description 바탕(baseId)과 같은 종합 등급의 재료 mergeCount−1명. 재료는 회사를 떠나고 번 돈은 바탕에게 얹힌다. F~SS는 다섯 능력치가 한 띠 오르고,
+         *     SSS 위는 단계(X…)가 오른다. 수·등급이 맞지 않거나, 맨 위(GOD)거나, 이직 제안·연봉 협상·사표가 걸린 사람이면 400.
+         */
+        post: operations["mergeEmployees"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 직원을 내보낸다 (decisions.md 312번)
+         * @description 데리고 있을 자리를 비운다. 명예의 전당과 연표에 남는다. 걸린 일(이직 제안·연봉 협상·사표)이 있으면 400.
+         */
+        post: operations["releaseEmployee"];
         delete?: never;
         options?: never;
         head?: never;
@@ -343,28 +385,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/company/applicants/refresh": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 값(refreshCost)을 내고 올해 지원자를 새로 받는다
-         * @description 지금 해(year)와 올해 지금까지 새로 받은 횟수(Company.refreshes)를 싣는다.
-         *     이미 한 새로 받기면 아무것도 하지 않고 지금 회사를 200으로 돌려준다(같은 요청이 두 번 와도 한 번만 낸다).
-         *     아직 오지 않은 것이면 400. 돈이 모자라면 400 (decisions.md 254번).
-         */
-        post: operations["refreshApplicants"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/admin/plays": {
         parameters: {
             query?: never;
@@ -438,7 +458,7 @@ export interface components {
                 needed: number;
                 affordable: boolean;
             } | null;
-            /** @description 망한 회사의 한 줄. 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 있고 */
+            /** @description 망한 회사의 한 줄. 자본이 0이면 있고 */
             broke?: string | null;
             seats: number;
             employees: {
@@ -541,38 +561,42 @@ export interface components {
                     odds: string;
                 } | null;
             } | null;
-            /** @description 올해 공채 시장의 지원자 (decisions.md 228번). 끝난 회사면 비어 있다 */
-            applicants: {
-                id: number;
-                name: string;
-                overallGrade: components["schemas"]["Grade"];
-                grades: {
-                    [key: string]: components["schemas"]["Grade"];
-                };
-                /**
-                 * Format: int64
-                 * @description 계약금. 뽑으면 회사 자본에서 나간다
-                 */
-                fee: number;
-                /** @description 올해 필요한 인재 */
-                line?: string | null;
-                /** @description 관심 섹터 코드. 뽑으면 직원이 안고 들어온다 */
-                sector?: string | null;
-                sectorName?: string | null;
-                /** @description 등급 효과 한 줄 (decisions.md 289번) */
-                perk: string;
-                /** @description 특급 인재: 아주 좋은 등급에 계약금이 아주 비싸고 곧 떠난다 (decisions.md 290번) */
-                star: boolean;
-                /** @description 특급 인재가 머무는 남은 분기(이번 분기 포함). 보통 지원자는 0 */
-                leavesIn: number;
-            }[];
-            /**
-             * Format: int64
-             * @description 지원자를 새로 받는 값
-             */
-            refreshCost: number;
-            /** @description 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 254번) */
-            refreshes: number;
+            /** @description 채용 뽑기 (decisions.md 312번). 공채 시장(지원자를 골라 계약금을 내고 뽑던 것, 228번)을 대신한다 */
+            gacha: {
+                /** @description 가진 채용권. 한 장에 한 명. 회사를 차릴 때·분기·연말·업적·이사로 받고 다음 회사로 이어진다 */
+                tickets: number;
+                /** @description 데리고 있는 사람 수(쉬는 사람 포함) */
+                roster: number;
+                /** @description 데리고 있을 수 있는 사람 수(자리 수의 두 배). 넘으면 합치거나 내보내야 더 뽑는다 */
+                rosterMax: number;
+                /** @description 지금까지 뽑은 횟수. 뽑기 요청에 싣는다 */
+                draws: number;
+                /** @description 한 번에 뽑을 수 있는 최대 수 */
+                maxDraws: number;
+                /** @description 합성에 드는 같은 등급 사람 수(바탕 포함) */
+                mergeCount: number;
+                /** @description 이 회사의 확률표. 칸마다 나오는 종합 등급과 확률. star면 특급 */
+                rates: {
+                    grade: components["schemas"]["Grade"];
+                    percent: number;
+                    star: boolean;
+                }[];
+                /** @description 마지막 뽑기에서 온 사람. 분기를 넘기면 비운다. 화면이 카드를 뒤집어 보인다 */
+                drawn: {
+                    employeeId: number;
+                    name: string;
+                    grade: components["schemas"]["Grade"];
+                    /** @description 특급 칸에서 나왔다 */
+                    star: boolean;
+                    /** @description 도감에 처음 오른 등급이다 */
+                    fresh: boolean;
+                }[];
+                /** @description 도감. 등급(F~GOD)마다 뽑거나 합성해서 얻은 사람 수. 사장의 것이라 다음 회사로 이어진다 */
+                collection: {
+                    grade: components["schemas"]["Grade"];
+                    count: number;
+                }[];
+            };
             /** @description 회사 연표·업적·명예의 전당 (decisions.md 263번) */
             history: {
                 /** @description 큰 일, 오래된 것부터 */
@@ -1138,7 +1162,7 @@ export interface operations {
             401: components["responses"]["SessionRequired"];
         };
     };
-    hireApplicant: {
+    drawEmployees: {
         parameters: {
             query?: never;
             header?: never;
@@ -1148,14 +1172,73 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    applicantId: number;
-                    /** @description 자리가 꽉 찼을 때 내보낼 직원 ID */
-                    replace?: number | null;
+                    count: number;
+                    /** @description 지금까지 뽑은 횟수(Company.gacha.draws) */
+                    draws: number;
                 };
             };
         };
         responses: {
-            /** @description 뽑은 뒤의 회사 */
+            /** @description 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    mergeEmployees: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    baseId: number;
+                    materialIds: number[];
+                };
+            };
+        };
+        responses: {
+            /** @description 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    releaseEmployee: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    employeeId: number;
+                };
+            };
+        };
+        responses: {
+            /** @description 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1546,37 +1629,6 @@ export interface operations {
         };
         responses: {
             /** @description 팀장을 정한 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    refreshApplicants: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    year: number;
-                    /** @description 올해 지금까지 새로 받은 횟수(Company.refreshes) */
-                    refreshes: number;
-                };
-            };
-        };
-        responses: {
-            /** @description 새 지원자가 온 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -355,11 +355,16 @@ class JsonContentCatalog implements ContentCatalog {
     }
     require(
         company.market() != null
-            && company.market().veteran() != null
-            && company.market().star() != null
-            && company.market().starArrived() != null
-            && company.market().starLeft() != null,
-        "공채 시장 문구가 없다");
+            && company.market().drawStar() != null
+            && company.market().merged() != null
+            && company.market().tickets() != null
+            && company.market().ticketReasons() != null
+            && company
+                .market()
+                .ticketReasons()
+                .keySet()
+                .containsAll(List.of("quarter", "year", "achievement", "move", "hr")),
+        "채용 뽑기 문구가 없다");
     require(
         company.bankrupt() != null
             && company.bankrupt().notice() != null

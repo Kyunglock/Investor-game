@@ -14,12 +14,9 @@ import java.util.UUID;
  * @param nextGradeCapital 다음 등급의 자본. 맨 위면 null
  * @param seats 앉힐 수 있는 자리 수
  * @param meeting 연초 회의. 끝난 회사면 null
- * @param applicants 올해 공채 시장의 지원자. 끝난 회사면 비어 있다 (decisions.md 228번)
- * @param refreshCost 지원자를 새로 받는 값
+ * @param gacha 채용 뽑기: 채용권, 데리고 있는 사람, 확률표, 마지막 뽑기, 도감 (decisions.md 312번)
  * @param history 회사 연표·업적·명예의 전당 (decisions.md 263번)
- * @param refreshes 올해 지원자를 새로 받은 횟수. 새로 받기 요청에 싣는다 (decisions.md 254번)
- * @param broke 망한 회사의 한 줄. 자본이 0이거나 직원 없이 가장 싼 계약금도 못 내면 있고, 그때 사재로 다음 회사를 차릴 수 있다. 아니면 null
- *     (decisions.md 247번)
+ * @param broke 망한 회사의 한 줄. 자본이 0이면 있고, 그때 사재로 다음 회사를 차릴 수 있다. 아니면 null (decisions.md 247번)
  * @param invest 올해 종목 회의. 끝난 회사나 옛 회사면 null (decisions.md 229번). 직원이 물어 오기 전에는 ready가 거짓이다 (267번)
  * @param macro 올해 거시경제 회의. 끝난 회사나 이 회의가 생기기 전의 해면 null (decisions.md 266번)
  * @param lastSettlement 지난 결산. 아직 없으면 null
@@ -43,9 +40,7 @@ public record CompanyView(
     List<Employee> employees,
     List<Desk> desks,
     Meeting meeting,
-    List<Applicant> applicants,
-    long refreshCost,
-    int refreshes,
+    Gacha gacha,
     History history,
     String broke,
     Invest invest,
@@ -112,26 +107,42 @@ public record CompanyView(
       int morale) {}
 
   /**
-   * 공채 시장의 지원자 한 명.
+   * 채용 뽑기 (decisions.md 312번).
    *
-   * @param fee 계약금. 뽑으면 회사 자본에서 나간다
-   * @param line 카드의 한 줄(올해 필요한 인재, 사수가 붙음, 인사팀이 데려옴). 없으면 null
-   * @param sector 관심 섹터 코드. 뽑으면 직원이 안고 들어온다
-   * @param star 특급 인재: 아주 좋은 등급에 계약금이 아주 비싸고 곧 떠난다 (decisions.md 290번)
-   * @param leavesIn 특급 인재가 머무는 남은 분기(이번 분기 포함). 보통 지원자는 0
+   * @param tickets 가진 채용권. 한 장에 한 명
+   * @param roster 데리고 있는 사람 수(쉬는 사람 포함)
+   * @param rosterMax 데리고 있을 수 있는 사람 수. 넘으면 합치거나 내보내야 더 뽑는다
+   * @param draws 지금까지 뽑은 횟수. 뽑기 요청에 싣는다
+   * @param maxDraws 한 번에 뽑을 수 있는 최대 수
+   * @param mergeCount 합성에 드는 같은 등급 사람 수(바탕 포함)
+   * @param rates 이 회사의 확률표: 칸마다 나오는 등급과 확률. star면 특급
+   * @param drawn 마지막 뽑기에서 온 사람. 분기를 넘기면 비운다
+   * @param collection 도감: 등급(F~GOD)마다 뽑거나 합성해서 얻은 사람 수. 다음 회사로 이어진다
    */
-  public record Applicant(
-      int id,
-      String name,
-      String overallGrade,
-      Map<String, String> grades,
-      long fee,
-      String line,
-      String sector,
-      String sectorName,
-      String perk,
-      boolean star,
-      int leavesIn) {}
+  public record Gacha(
+      int tickets,
+      int roster,
+      int rosterMax,
+      int draws,
+      int maxDraws,
+      int mergeCount,
+      List<Rate> rates,
+      List<Drawn> drawn,
+      List<CollectionEntry> collection) {}
+
+  /** 확률표의 한 칸. */
+  public record Rate(String grade, int percent, boolean star) {}
+
+  /**
+   * 뽑기로 온 사람.
+   *
+   * @param star 특급 칸에서 나왔다
+   * @param fresh 도감에 처음 오른 등급이다
+   */
+  public record Drawn(int employeeId, String name, String grade, boolean star, boolean fresh) {}
+
+  /** 도감의 한 칸: 그 등급을 몇 명 얻었나. 0이면 아직 못 봤다. */
+  public record CollectionEntry(String grade, int count) {}
 
   /**
    * 투자 회의 (decisions.md 229번). 정하기 전에는 숨은 방향이 없다.

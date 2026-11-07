@@ -84,26 +84,35 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView hire(UUID sessionId, int applicantId, Integer replace) {
+  public CompanyView draw(UUID sessionId, int count, int draws) {
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.hireApplicant(row.state(), applicantId, replace);
+    CompanyState c = row.state();
+    // 이미 한 뽑기면 아무것도 하지 않는다(버튼 두 번, 끊긴 요청 다시 보내기, 254번과 같은 방식). 아직 오지 않은 것이면 400.
+    if (draws < c.draws) {
+      return view(row);
+    }
+    if (draws > c.draws) {
+      throw new InvalidRequestException("아직 오지 않은 뽑기다: " + draws + "번");
+    }
+    engine.draw(c, count, new HashSeededRandom(row.seed()));
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
 
   @Override
   @Transactional
-  public CompanyView refreshApplicants(UUID sessionId, int year, int refreshes) {
+  public CompanyView merge(UUID sessionId, int baseId, List<Integer> materialIds) {
     CompanyRepository.Row row = lockActive(sessionId);
-    CompanyState c = row.state();
-    // 이미 한 새로 받기면 아무것도 하지 않는다(버튼 두 번, 끊긴 요청 다시 보내기, 254번). 아직 오지 않은 것이면 400.
-    if (year < c.year || (year == c.year && refreshes < c.refreshes)) {
-      return view(row);
-    }
-    if (year > c.year || refreshes > c.refreshes) {
-      throw new InvalidRequestException("아직 오지 않은 새로 받기다: " + year + "년 " + refreshes + "번");
-    }
-    engine.refresh(c, new HashSeededRandom(row.seed()));
+    engine.merge(row.state(), baseId, materialIds);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView release(UUID sessionId, int employeeId) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.release(row.state(), employeeId);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -322,25 +331,6 @@ class DefaultCompanyService implements CompanyService {
                         d.trades() ? engine.returnsOf(d.code()).missBp() : null,
                         d.trades() ? engine.returnsOf(d.code()).crashPercent() : null))
             .toList();
-    List<CompanyView.Applicant> applicants =
-        ended
-            ? List.of()
-            : c.applicants.stream()
-                .map(
-                    a ->
-                        new CompanyView.Applicant(
-                            a.id,
-                            a.name,
-                            CompanyEngine.gradeOf(a.stats, a.rank),
-                            CompanyEngine.grades(a.stats),
-                            a.fee,
-                            a.line,
-                            a.sector,
-                            a.sector == null ? null : engine.sectorName(a.sector),
-                            engine.perkLine(a.stats, a.rank),
-                            a.star,
-                            a.star ? a.leavesAt - c.quarterIndex() + 1 : 0))
-                .toList();
     String hrCap = engine.hrOf(c).map(engine::hrCap).orElse(null);
     CompanyView.Meeting meeting =
         ended
@@ -372,9 +362,7 @@ class DefaultCompanyService implements CompanyService {
         employees,
         desks,
         meeting,
-        applicants,
-        engine.refreshCost(c),
-        c.refreshes,
+        gachaView(c),
         historyView(c),
         ended ? null : engine.brokeNotice(c),
         ended ? null : investView(c, new HashSeededRandom(row.seed())),
@@ -386,6 +374,32 @@ class DefaultCompanyService implements CompanyService {
                 c.finishedYear == null ? c.year : c.finishedYear, c.capital, grade)
             : null,
         resignView(c));
+  }
+
+  /** 채용 뽑기 (decisions.md 312번): 채용권, 데리고 있는 사람, 확률표, 마지막 뽑기, 도감. */
+  private CompanyView.Gacha gachaView(CompanyState c) {
+    List<CompanyView.Rate> rates =
+        engine.rates().stream()
+            .map(r -> new CompanyView.Rate(engine.rateGrade(c, r), r.percent(), r.star()))
+            .toList();
+    List<CompanyView.Drawn> drawn =
+        c.lastDraw.stream()
+            .map(d -> new CompanyView.Drawn(d.employeeId, d.name, d.grade, d.star, d.fresh))
+            .toList();
+    List<CompanyView.CollectionEntry> collection =
+        CompanyEngine.LADDER.stream()
+            .map(g -> new CompanyView.CollectionEntry(g, c.collection.getOrDefault(g, 0)))
+            .toList();
+    return new CompanyView.Gacha(
+        c.tickets,
+        c.employees.size(),
+        engine.rosterMax(c),
+        c.draws,
+        engine.maxDraws(),
+        engine.mergeCount(),
+        rates,
+        drawn,
+        collection);
   }
 
   /** 사표를 들고 온 직원 (282번). 없으면 null. */

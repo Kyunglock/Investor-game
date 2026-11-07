@@ -24,7 +24,7 @@ export function App() {
     void load()
   }, [load])
 
-  // 회사가 생기면(차리거나 불러오면) 첫 탭을 정한다: 직원이 없으면 공채부터.
+  // 회사가 생기면(차리거나 불러오면) 첫 탭을 정한다: 직원이 없으면 채용부터.
   const companyId = company?.companyId
   useEffect(() => {
     const c = useRaisingStore.getState().company

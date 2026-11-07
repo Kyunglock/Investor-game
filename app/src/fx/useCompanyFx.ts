@@ -21,9 +21,7 @@ export function playEvent(e: FxEvent) {
       }
       return
     case 'hired':
-      fx.burstAt(document.querySelector('[data-testid="hud"]'), 'coins')
-      sfx.coin()
-      haptic.light()
+      // 뽑기는 카드를 뒤집는 창(GachaReveal)이 카드마다 효과를 낸다 (312번).
       return
     case 'left':
       fx.burstAt(document.querySelector('[data-testid="hud"]'), 'smoke')
