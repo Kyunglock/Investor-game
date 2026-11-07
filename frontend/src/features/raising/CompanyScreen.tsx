@@ -12,6 +12,7 @@ import { EndingScreen } from './EndingScreen'
 import { GachaPanel, GachaReveal, useDrawReveal } from './Gacha'
 import { GradeBadge, GradeCard } from './GradeCard'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
+import { IndustryLine } from './IndustryLine'
 import { InvestWindow } from './InvestWindow'
 import { MacroWindow } from './MacroWindow'
 import { MoveScene } from './MoveScene'
@@ -114,6 +115,7 @@ export function CompanyScreen({ company }: { company: Company }) {
             자본 {money(company.capital)}
           </p>
         </div>
+        <IndustryLine company={company} className="mb-1 text-muted" />
         <div className="relative">
           <BuildingArt grade={company.grade} />
           {company.upgrade?.left != null && (

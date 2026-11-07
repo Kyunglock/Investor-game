@@ -1037,6 +1037,11 @@ class CompanyEngine {
     return at < properties.gradeCapital().size() ? LADDER.get(at) : null;
   }
 
+  /** 업계 순위 소식 문구 (#351). */
+  RaisingContent.Industry industryTexts() {
+    return content.raising().company().industry();
+  }
+
   /** 다음 건물로 가는 이사 비용 (296번): 다음 띠 자본의 upgrade.percent%. 끝 등급이면 0. */
   long upgradeCost(CompanyState company) {
     String next = nextGrade(company);

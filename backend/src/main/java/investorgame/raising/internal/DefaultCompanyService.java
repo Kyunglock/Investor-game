@@ -258,6 +258,9 @@ class DefaultCompanyService implements CompanyService {
     }
     // 회사는 분기마다, 해마다 이어진다 (236·268번). 랜드마크 타워에 오르면 엔딩이다 (276번).
     engine.settleQuarter(c, new HashSeededRandom(row.seed()));
+    if (c.year > year) {
+      recordYear(row, year);
+    }
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -391,7 +394,51 @@ class DefaultCompanyService implements CompanyService {
             ? new CompanyView.Ending(
                 c.finishedYear == null ? c.year : c.finishedYear, c.capital, grade)
             : null,
-        resignView(c));
+        resignView(c),
+        industryView(row));
+  }
+
+  /** 연말 자본을 남기고 같은 연차 회사들 가운데 자리를 결산 소식에 적는다 (#351). 지난해보다 상위 몇 %가 5%p 넘게 오르거나 내렸으면 그렇게 말한다. */
+  private void recordYear(CompanyRepository.Row row, int year) {
+    CompanyState c = row.state();
+    companies.recordYear(row.id(), year, c.capital);
+    companies
+        .rankAt(row.id(), year)
+        .ifPresent(
+            r -> {
+              int top = (int) Math.max(1, Math.ceil(r[0] * 100.0 / r[1]));
+              RaisingContent.Industry texts = engine.industryTexts();
+              String template =
+                  c.industryTop == null
+                      ? texts.first()
+                      : top < c.industryTop - 5
+                          ? texts.up()
+                          : top > c.industryTop + 5 ? texts.down() : texts.same();
+              String line =
+                  investorgame.common.Korean.fill(
+                      template,
+                      java.util.Map.of(
+                          "year", String.valueOf(year),
+                          "rank", String.valueOf(r[0]),
+                          "total", String.valueOf(r[1]),
+                          "top", String.valueOf(top)));
+              c.industryTop = top;
+              if (!c.settlements.isEmpty()) {
+                c.settlements.getLast().lines.add(line);
+              }
+            });
+  }
+
+  /** 업계 순위 (#351): 지난 연말의 같은 연차 회사들 가운데 자리. */
+  private CompanyView.Industry industryView(CompanyRepository.Row row) {
+    int year = row.state().settlements.isEmpty() ? 0 : row.state().settlements.getLast().year;
+    if (year < 1) {
+      return null;
+    }
+    return companies
+        .rankAt(row.id(), year)
+        .map(r -> new CompanyView.Industry(year, r[0], r[1]))
+        .orElse(null);
   }
 
   /** 채용 뽑기 (decisions.md 312번): 채용권, 데리고 있는 사람, 확률표, 마지막 뽑기, 도감. */

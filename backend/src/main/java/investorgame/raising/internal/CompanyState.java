@@ -44,6 +44,9 @@ class CompanyState {
    */
   String building;
 
+  /** 지난 연말 업계 순위의 상위 몇 % (#351). 아직 매기지 않았으면 null. */
+  Integer industryTop;
+
   /** 짓고 있는 건물의 회사 등급 (#347). 짓지 않으면 null. */
   String buildingTo;
 

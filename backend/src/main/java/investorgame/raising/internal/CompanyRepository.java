@@ -115,6 +115,38 @@ class CompanyRepository {
         .update();
   }
 
+  /** 그 회사의 그해 연말 자본을 남긴다 (#351). 같은 해가 두 번 오면 처음 것을 둔다. */
+  void recordYear(UUID companyId, int year, long capital) {
+    jdbc.sql(
+            """
+            INSERT INTO raising_company_year (company_id, year, capital, recorded_at)
+            VALUES (:id, :year, :capital, :now)
+            ON CONFLICT (company_id, year) DO NOTHING
+            """)
+        .param("id", companyId)
+        .param("year", year)
+        .param("capital", capital)
+        .param("now", now())
+        .update();
+  }
+
+  /** 업계 순위 (#351): 그 연차를 마친 회사 수와, 그 회사보다 연말 자본이 큰 회사 수 + 1. 그 회사의 기록이 없으면 빈 값. */
+  java.util.Optional<int[]> rankAt(UUID companyId, int year) {
+    return jdbc.sql(
+            """
+            SELECT
+              (SELECT COUNT(*) FROM raising_company_year o
+                 WHERE o.year = m.year AND o.capital > m.capital) + 1 AS rank,
+              (SELECT COUNT(*) FROM raising_company_year o WHERE o.year = m.year) AS total
+            FROM raising_company_year m
+            WHERE m.company_id = :id AND m.year = :year
+            """)
+        .param("id", companyId)
+        .param("year", year)
+        .query((rs, i) -> new int[] {rs.getInt("rank"), rs.getInt("total")})
+        .optional();
+  }
+
   /** 시대가 끝나 멈췄던 옛 회사를 다시 돌린다 (decisions.md 236번: 매각을 뺐다). */
   void reopen(UUID id, CompanyState state) {
     jdbc.sql(

@@ -919,6 +919,15 @@ export interface components {
                  */
                 after: number;
             } | null;
+            /** @description 업계 순위 (#351). 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다. 한 해도 마치지 않았으면 null */
+            industry?: {
+                /** @description 견준 연차(지난 연말) */
+                year: number;
+                /** @description 그 연차를 마친 회사 가운데 자리(1이 맨 위) */
+                rank: number;
+                /** @description 그 연차를 마친 회사 수 */
+                total: number;
+            } | null;
             /** @description 엔딩 (decisions.md 276번). 랜드마크 타워에 오르면 회사가 멈추고 사장이 다음 회사를 차린다. 아직이면 null */
             ending?: {
                 /** @description 엔딩을 본 해 */
