@@ -131,33 +131,12 @@ export const sfx = {
     tone(200, 90, { wave: 'square', gain: 0.1, slide: 80 })
     noise(90, 0.12)
   },
-  /** 카드를 집어 듦 (합성 끌기) */
-  pick: () => tone(520, 70, { wave: 'triangle', gain: 0.05, slide: 780 }),
-  /** 재료가 바탕에 겹쳐짐: 올릴수록 높아진다 */
-  absorb: (n: number) => {
-    const base = 660 * 2 ** (n / 6)
-    tone(base, 90, { wave: 'square', gain: 0.05 })
-    tone(base * 1.5, 140, { wave: 'triangle', gain: 0.06, at: 0.06 })
-  },
-  /** 합성 직전 기 모으기: 위로 휘감기는 소리 */
-  charge: () => {
-    tone(220, 700, { wave: 'sawtooth', gain: 0.05, slide: 1320 })
-    tone(330, 700, { wave: 'triangle', gain: 0.05, slide: 1760 })
-    noise(600, 0.03)
-  },
-  /** 합성 성공: 쾅 하고 위로 오르는 팡파르 */
+  /** 재료가 바탕에 겹쳐짐: 짧고 맑은 한 음, 올릴수록 조금 높게 (합성 314번) */
+  absorb: (n: number) => tone(880 * 2 ** (n / 12), 120, { wave: 'sine', gain: 0.05 }),
+  /** 합성 완료: 부드러운 두 음 */
   levelUp: () => {
-    tone(160, 200, { wave: 'square', gain: 0.12, slide: 60 })
-    noise(160, 0.1)
-    const notes = [784, 988, 1175, 1568]
-    for (const [i, n] of notes.entries()) {
-      tone(n, i === notes.length - 1 ? 520 : 110, {
-        wave: 'triangle',
-        gain: 0.1,
-        at: 0.12 + i * 0.09,
-      })
-    }
-    tone(2093, 400, { wave: 'sine', gain: 0.04, at: 0.5 })
+    tone(784, 160, { wave: 'sine', gain: 0.06 })
+    tone(1175, 320, { wave: 'sine', gain: 0.06, at: 0.11 })
   },
   /** 팡파르: 이사·업적·엔딩 */
   fanfare: () => {

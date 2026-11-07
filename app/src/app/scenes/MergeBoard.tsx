@@ -7,7 +7,6 @@ import { useRaisingStore } from '@web/features/raising/store'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useFx } from '../../fx/fx'
 import { haptic } from '../../fx/haptics'
 import { sfx } from '../../fx/sound'
 
@@ -15,8 +14,10 @@ type Employee = Company['employees'][number]
 
 /** 끌기로 치는 손가락 이동(px). 이보다 덜 움직이면 누른 것이다. */
 const DRAG_PX = 6
-/** 재료가 바탕으로 빨려 들어가며 모이는 시간(ms). 끝나면 서버에 합성을 보낸다. */
-const CHARGE_MS = 750
+/** 재료가 바탕으로 미끄러져 겹치는 시간(ms). 끝나면 서버에 합성을 보낸다. */
+const CHARGE_MS = 520
+/** 합성 결과 줄이 떠 있는 시간(ms). */
+const RESULT_MS = 2600
 
 const reducedMotion = () =>
   typeof window !== 'undefined' &&
@@ -49,8 +50,8 @@ interface Fusing {
 }
 
 /**
- * 앱의 합성 판 (decisions.md 314번): 같은 등급 카드를 끌어 다른 카드 위에 놓는다. 놓인 카드가 바탕(★)이 되고 끌어 온 카드는 재료로 올라간다. 재료가
- * mergeCount−1장 차면 재료가 바탕으로 빨려 들어가며 바탕이 떨고 빛을 모은 뒤 합성되고, 번쩍임·색종이·흔들림·팡파르·떠오르는 "승급!"이 터진다.
+ * 앱의 합성 판 (decisions.md 314번): 같은 등급 카드를 끌어 다른 카드 위에 놓는다. 놓인 카드가 바탕이 되고 끌어 온 카드는 재료로 올라간다. 재료가
+ * mergeCount−1장 차면 재료가 바탕으로 미끄러져 겹친 뒤 합성되고, 판 위에 "이름 C → B" 한 줄이 잠깐 뜬다. 터짐·흔들림 없이 깔끔하게.
  * 올린 재료를 누르면 내려오고, 바탕을 누르면 모두 내려온다. 끌기가 어려우면 "알아서 합성"(웹과 같은 바탕·재료 고르기).
  */
 export function MergeBoard({ company }: { company: Company }) {
@@ -61,6 +62,12 @@ export function MergeBoard({ company }: { company: Company }) {
   const [drag, setDrag] = useState<Drag | null>(null)
   const [fusing, setFusing] = useState<Fusing | null>(null)
   const [bump, setBump] = useState<{ id: number; n: number } | null>(null)
+  const [result, setResult] = useState<{
+    name: string
+    from: string
+    to: string
+    n: number
+  } | null>(null)
   const cards = useRef(new Map<number, HTMLElement>())
 
   // 회사가 바뀌어 무리에서 빠진 사람은 올려 둔 것에서도 내린다.
@@ -78,11 +85,30 @@ export function MergeBoard({ company }: { company: Company }) {
     })
   }, [memberIds])
 
+  // 합성 결과 줄은 잠깐 떠 있다 사라진다.
+  useEffect(() => {
+    if (!result) return
+    const t = setTimeout(() => setResult(null), RESULT_MS)
+    return () => clearTimeout(t)
+  }, [result])
+
+  const resultLine = result && (
+    <p key={result.n} className="merge-result" role="status" data-testid="merge-result">
+      <b>{result.name}</b>
+      <span className="text-muted">
+        {result.from} → <b className="text-gold">{result.to}</b>
+      </span>
+    </p>
+  )
+
   if (groups.length === 0) {
     return (
-      <p className="text-[13px] text-muted" data-testid="merge-empty">
-        같은 등급 {need}명이 모이면 끌어다 겹쳐서 한 단계 올릴 수 있습니다.
-      </p>
+      <div>
+        {resultLine}
+        <p className="text-[13px] text-muted" data-testid="merge-empty">
+          같은 등급 {need}명이 모이면 끌어다 겹쳐서 한 단계 올릴 수 있습니다.
+        </p>
+      </div>
     )
   }
 
@@ -111,35 +137,20 @@ export function MergeBoard({ company }: { company: Company }) {
       }
     }
     setFusing({ grade: group.grade, base, mats, fly })
-    sfx.charge()
-    haptic.medium()
+    sfx.whoosh()
     await new Promise((r) => setTimeout(r, reducedMotion() ? 0 : CHARGE_MS))
-    // 합성 뒤에는 바탕 카드가 다른 무리로 옮겨 가므로, 터질 자리는 미리 잡아 둔다.
-    const at = baseEl?.getBoundingClientRect() ?? to
+    const name = group.members.find((m) => m.id === base)?.name ?? ''
     await useRaisingStore.getState().merge(base, mats)
     setFusing(null)
     setLoads(({ [group.grade]: _, ...rest }) => rest)
-    const fx = useFx.getState()
-    // 떠오르는 글이 화면 밖으로 잘리지 않게 가장자리에서 띄운다.
-    const x = Math.min(
-      Math.max(at ? at.left + at.width / 2 : window.innerWidth / 2, 80),
-      window.innerWidth - 80,
-    )
-    const y = at ? at.top + at.height / 2 : window.innerHeight / 2
     if (useRaisingStore.getState().error) {
-      sfx.thud()
       haptic.error()
-      fx.burst(x, y, 'smoke')
       return
     }
     const next = EMPLOYEE_LADDER[EMPLOYEE_LADDER.indexOf(group.grade) + 1]
     sfx.levelUp()
     haptic.success()
-    fx.flashScreen('rgba(245,211,107,0.45)')
-    fx.shakeScreen()
-    fx.burst(x, y, 'sparks')
-    fx.burst(x, y, 'confetti')
-    fx.float(x, y - 20, `${next} 승급!`, 'gold')
+    setResult((r) => ({ name, from: group.grade, to: next, n: (r?.n ?? 0) + 1 }))
   }
 
   const drop = (group: MergeGroup, src: number, target: number) => {
@@ -147,15 +158,12 @@ export function MergeBoard({ company }: { company: Company }) {
     const mats = [...l.mats, src]
     setLoads((all) => ({ ...all, [group.grade]: { base: l.base, mats } }))
     setBump({ id: target, n: (bump?.n ?? 0) + 1 })
-    const fx = useFx.getState()
-    fx.burstAt(cards.current.get(target), 'sparks')
     if (mats.length >= need - 1) {
       void fuse(group, l.base, mats)
       return
     }
     sfx.absorb(mats.length)
     haptic.light()
-    fx.floatAt(cards.current.get(target), `${mats.length + 1}/${need}`, 'gold')
   }
 
   const tap = (group: MergeGroup, id: number) => {
@@ -195,7 +203,6 @@ export function MergeBoard({ company }: { company: Company }) {
     if (!drag || drag.pointer !== ev.pointerId || drag.over === -1) return
     const moved = drag.moved || Math.hypot(ev.clientX - drag.sx, ev.clientY - drag.sy) > DRAG_PX
     if (moved && !drag.moved) {
-      sfx.pick()
       haptic.light()
     }
     const hit = document
@@ -203,9 +210,6 @@ export function MergeBoard({ company }: { company: Company }) {
       ?.closest<HTMLElement>('[data-merge-card]')
     const id = hit ? Number(hit.dataset.mergeCard) : null
     const over = moved && id !== null && accepts(drag, id, group) ? id : null
-    if (over !== null && over !== drag.over) {
-      haptic.light()
-    }
     setDrag({ ...drag, x: ev.clientX, y: ev.clientY, moved, over })
   }
 
@@ -223,7 +227,6 @@ export function MergeBoard({ company }: { company: Company }) {
   const auto = (group: MergeGroup) => {
     const l = loads[group.grade]
     const plan = mergePlan(group, need, l?.base)
-    sfx.stamp()
     void fuse(
       group,
       plan.base.id,
@@ -237,9 +240,10 @@ export function MergeBoard({ company }: { company: Company }) {
 
   return (
     <div data-testid="merge-board">
+      {resultLine}
       <p className="mb-2 text-[12px] text-muted">
-        카드를 <b>끌어서</b> 같은 등급 카드 위에 놓으세요. 놓인 카드(★)가 오르고 끌어 온 카드는
-        재료로 떠납니다(번 돈은 ★에게). 올린 카드를 누르면 내려옵니다.
+        카드를 끌어 같은 등급 카드 위에 놓으세요. 놓인 카드가 오르고, 끌어 온 카드는 재료가 됩니다.
+        올린 카드를 누르면 내려옵니다.
       </p>
       <ul className="grid gap-3" data-testid="merge-list">
         {groups.map((g) => {
@@ -250,7 +254,7 @@ export function MergeBoard({ company }: { company: Company }) {
           return (
             <li
               key={g.grade}
-              className={`merge-group rounded-lg border bg-white p-2 ${fuseHere ? 'is-fusing border-gold' : 'border-gold/60'}`}
+              className="rounded-lg border border-line-soft bg-white p-3"
               data-testid="merge-group"
               data-grade={g.grade}
             >
@@ -318,8 +322,8 @@ export function MergeBoard({ company }: { company: Company }) {
                       onPointerCancel={() => setDrag(null)}
                     >
                       <CardFace employee={m} grade={g.grade} />
-                      {isBase && <span className="merge-tag bg-gold">★ 바탕</span>}
-                      {isMat && <span className="merge-tag bg-ink/70">재료</span>}
+                      {isBase && <span className="merge-tag bg-gold">바탕</span>}
+                      {isMat && <span className="merge-tag bg-ink/60">재료</span>}
                     </button>
                   )
                 })}

@@ -360,7 +360,7 @@ body {
   animation: num-pop 0.5s ease-out both;
 }
 
-/* 끌어서 합성 (decisions.md 314번) */
+/* 끌어서 합성 (decisions.md 314번): 화려한 터짐 없이 부드러운 움직임만 */
 .merge-card {
   position: relative;
   aspect-ratio: 3 / 4;
@@ -370,80 +370,65 @@ body {
   cursor: grab;
   border-radius: 10px;
   transition:
-    transform 0.18s ease,
-    opacity 0.18s ease,
-    filter 0.18s ease,
-    box-shadow 0.18s ease;
+    transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.22s ease,
+    filter 0.22s ease,
+    box-shadow 0.22s ease;
 }
 .merge-card.is-dragged {
-  opacity: 0.25;
-  transform: scale(0.92);
+  opacity: 0.3;
 }
 .merge-card.can-take {
-  box-shadow: 0 0 0 2px rgba(245, 211, 107, 0.7);
-  animation: merge-wiggle 0.9s ease-in-out infinite;
+  box-shadow: 0 0 0 1.5px rgba(201, 162, 58, 0.55);
 }
 .merge-card.is-over {
-  transform: scale(1.08);
-  box-shadow:
-    0 0 0 3px #f5d36b,
-    0 0 22px 6px rgba(245, 211, 107, 0.75);
-  animation: none;
+  transform: scale(1.04);
+  box-shadow: 0 0 0 2px #c9a23a;
 }
 .merge-card.is-base {
-  box-shadow:
-    0 0 0 3px #f5d36b,
-    0 0 14px 2px rgba(245, 211, 107, 0.55);
+  box-shadow: 0 0 0 2px #c9a23a;
 }
 .merge-card.is-mat {
-  transform: scale(0.86);
-  filter: saturate(0.4) brightness(0.9);
-  opacity: 0.7;
+  transform: scale(0.94);
+  opacity: 0.45;
+  filter: saturate(0.3);
 }
-.merge-card.bump-0,
-.merge-card.bump-1 {
-  animation: merge-bump 0.35s ease-out;
+.merge-card.bump-0 {
+  animation: merge-settle 0.28s ease-out;
 }
 .merge-card.bump-1 {
-  animation-name: merge-bump-b;
+  animation: merge-settle-b 0.28s ease-out;
 }
 .merge-card.is-charging {
   z-index: 2;
-  animation: merge-charge 0.75s ease-in both;
+  animation: merge-rise 0.52s ease-in-out both;
 }
 .merge-card.is-flying {
   z-index: 1;
-  animation: merge-fly 0.6s cubic-bezier(0.55, 0, 0.85, 0.35) both;
+  animation: merge-glide 0.45s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 .merge-tag {
   position: absolute;
   left: 50%;
-  bottom: -6px;
+  bottom: -7px;
   transform: translateX(-50%);
   white-space: nowrap;
   border-radius: 999px;
-  padding: 0 6px;
+  padding: 0 7px;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   color: white;
 }
 .merge-pip {
-  width: 10px;
-  height: 10px;
+  width: 7px;
+  height: 7px;
   border-radius: 999px;
-  border: 1.5px solid #c9a23a;
-  background: transparent;
-  transition:
-    background 0.2s ease,
-    transform 0.2s ease;
+  background: rgba(201, 162, 58, 0.25);
+  transition: background 0.2s ease;
 }
 .merge-pip.is-on {
-  background: #f5d36b;
-  transform: scale(1.15);
-  box-shadow: 0 0 6px rgba(245, 211, 107, 0.9);
-}
-.merge-group.is-fusing {
-  animation: merge-group-glow 0.75s ease-in both;
+  background: #c9a23a;
 }
 .merge-ghost {
   position: fixed;
@@ -451,89 +436,81 @@ body {
   width: 84px;
   aspect-ratio: 3 / 4;
   pointer-events: none;
-  transform: translate(-50%, -60%) rotate(-5deg) scale(1.08);
-  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.45));
-  transition: transform 0.12s ease;
+  transform: translate(-50%, -55%) scale(1.04);
+  filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.28));
+  transition: transform 0.15s ease;
 }
 .merge-ghost.is-over {
-  transform: translate(-50%, -60%) rotate(4deg) scale(0.9);
+  transform: translate(-50%, -55%) scale(0.96);
 }
-@keyframes merge-wiggle {
-  0%,
-  100% {
-    transform: rotate(0);
-  }
-  25% {
-    transform: rotate(-1.5deg);
-  }
-  75% {
-    transform: rotate(1.5deg);
-  }
+.merge-result {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(201, 162, 58, 0.45);
+  background: #fffaf0;
+  padding: 8px 12px;
+  font-size: 13px;
+  animation: merge-result 2.6s ease both;
 }
-@keyframes merge-bump {
+@keyframes merge-settle {
   0% {
     transform: scale(1);
   }
-  35% {
-    transform: scale(1.16);
+  40% {
+    transform: scale(1.03);
   }
   100% {
     transform: scale(1);
   }
 }
-@keyframes merge-bump-b {
+@keyframes merge-settle-b {
   0% {
     transform: scale(1);
   }
-  35% {
-    transform: scale(1.16);
+  40% {
+    transform: scale(1.03);
   }
   100% {
     transform: scale(1);
   }
 }
-@keyframes merge-charge {
+@keyframes merge-rise {
   0% {
     transform: scale(1);
-    filter: brightness(1);
-  }
-  20% {
-    transform: scale(1.05) translateX(-2px);
-  }
-  35% {
-    transform: scale(1.06) translateX(2px);
-  }
-  50% {
-    transform: scale(1.08) translateX(-3px);
-  }
-  65% {
-    transform: scale(1.1) translateX(3px);
-  }
-  80% {
-    transform: scale(1.13) translateX(-3px);
-    filter: brightness(1.4);
   }
   100% {
-    transform: scale(1.18);
-    filter: brightness(2.2);
+    transform: scale(1.03);
     box-shadow:
-      0 0 0 4px #fff3c4,
-      0 0 40px 16px rgba(245, 211, 107, 0.95);
+      0 0 0 2px #c9a23a,
+      0 8px 20px rgba(201, 162, 58, 0.35);
   }
 }
-@keyframes merge-fly {
+@keyframes merge-glide {
   0% {
-    transform: scale(0.86);
-    opacity: 0.8;
+    transform: scale(0.94);
+    opacity: 0.45;
   }
   100% {
-    transform: translate(var(--dx), var(--dy)) scale(0.2) rotate(180deg);
+    transform: translate(var(--dx), var(--dy)) scale(0.7);
     opacity: 0;
   }
 }
-@keyframes merge-group-glow {
+@keyframes merge-result {
+  0% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  10%,
+  85% {
+    opacity: 1;
+    transform: none;
+  }
   100% {
-    box-shadow: 0 0 24px 4px rgba(245, 211, 107, 0.6);
+    opacity: 0;
   }
 }
 
@@ -550,12 +527,11 @@ body {
   .animate-tab-bounce,
   .animate-badge-pulse,
   .animate-num-pop,
-  .merge-card.can-take,
+  .merge-result,
   .merge-card.bump-0,
   .merge-card.bump-1,
   .merge-card.is-charging,
-  .merge-card.is-flying,
-  .merge-group.is-fusing {
+  .merge-card.is-flying {
     animation: none;
   }
   .fx-float {
