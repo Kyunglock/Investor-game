@@ -48,7 +48,17 @@ public record CompanyView(
     Quarter lastQuarter,
     Settlement lastSettlement,
     Ending ending,
-    Resign resign) {
+    Resign resign,
+    Industry industry) {
+
+  /**
+   * 업계 순위 (#351): 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다(로그인이 없는 익명 세션). 한 해도 마치지 않았으면 null.
+   *
+   * @param year 견준 연차(지난 연말)
+   * @param rank 그 연차를 마친 회사 가운데 자리(1이 맨 위)
+   * @param total 그 연차를 마친 회사 수
+   */
+  public record Industry(int year, int rank, int total) {}
 
   /**
    * 연봉 때문에 사표를 들고 온 직원 (decisions.md 282번). 붙잡거나 보내지 않고 다음 분기를 넘기면 떠난다. 없으면 null.

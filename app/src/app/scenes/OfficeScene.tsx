@@ -4,6 +4,7 @@ import { usePixelArt } from '@web/features/game/pixelArt'
 import { BuildingArt } from '@web/features/raising/BuildingArt'
 import { ConstructionArt } from '@web/features/raising/ConstructionArt'
 import { GradeCard } from '@web/features/raising/GradeCard'
+import { IndustryLine } from '@web/features/raising/IndustryLine'
 import { OfficeArt, type SeatFocus } from '@web/features/raising/OfficeArt'
 import { nextStep } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
@@ -35,6 +36,7 @@ export function OfficeScene({ company }: { company: Company }) {
         </p>
       )}
       <TutorialWrap company={company} />
+      <IndustryLine company={company} className="mt-2 text-center text-white/80" />
       <div className="panel relative mx-auto mt-2 max-w-[360px] p-2">
         <BuildingArt grade={company.grade} />
         {company.upgrade?.left != null && (

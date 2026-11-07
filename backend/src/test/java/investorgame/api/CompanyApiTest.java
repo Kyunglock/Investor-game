@@ -449,13 +449,16 @@ class CompanyApiTest {
         .isEqualTo(1);
   }
 
-  /** 라이벌 회사를 걷어냈다 (decisions.md 288번): 업계 순위도, 올해의 라이벌 고르기도, 결산의 앞지른 라이벌도 없다. */
+  /**
+   * 라이벌 회사를 걷어냈다 (decisions.md 288번): 지어낸 라이벌의 올해 고르기도, 결산의 앞지른 라이벌도 없다. 업계 순위는 실제 유저 회사끼리(#351)라 한
+   * 해를 마치기 전에는 비어 있다.
+   */
   @Test
   void 라이벌_회사가_없다() throws Exception {
     DocumentContext opened =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
     Map<String, Object> company = opened.read("$");
-    assertThat(company).doesNotContainKey("industry");
+    assertThat(company.get("industry")).isNull();
     Map<String, Object> meeting = opened.read("$.meeting");
     assertThat(meeting).doesNotContainKey("rivalry");
     DocumentContext year = json(settleYear(1));
@@ -514,6 +517,29 @@ class CompanyApiTest {
     assertThat(next.read("$.capital", Long.class)).isEqualTo(100_000_000L);
     assertThat(next.read("$.ending", Object.class)).isNull();
     assertThat(next.read("$.grade", String.class)).isEqualTo("F");
+  }
+
+  /** 업계 순위 (#351): 한 해를 마치면 같은 연차 회사들 가운데 자리가 보이고 결산 소식에 남는다. 다른 회사가 같은 연차를 마치면 함께 센다. */
+  @Test
+  void 한_해를_마치면_같은_연차_회사들_가운데_순위가_보인다() throws Exception {
+    DocumentContext opened =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    assertThat(opened.read("$.industry", Object.class)).as("한 해도 안 마쳤다").isNull();
+    DocumentContext first = json(settleYear(1));
+    int total = first.read("$.industry.total", Integer.class);
+    assertThat(first.read("$.industry.year", Integer.class)).isEqualTo(1);
+    assertThat(first.read("$.industry.rank", Integer.class)).isBetween(1, total);
+    List<String> lines = first.read("$.lastSettlement.lines");
+    assertThat(lines).anyMatch(line -> line.contains("같은 1년 차 회사"));
+
+    // 다른 유저가 같은 연차를 마치면 함께 센다.
+    Cookie mine = session;
+    setUp();
+    json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    DocumentContext other = json(settleYear(1));
+    assertThat(other.read("$.industry.total", Integer.class)).isEqualTo(total + 1);
+    DocumentContext again = json(mvc.perform(get("/api/company").cookie(mine)));
+    assertThat(again.read("$.industry.total", Integer.class)).isEqualTo(total + 1);
   }
 
   /** 엔딩을 본 회사는 더 뽑지 않는다. */

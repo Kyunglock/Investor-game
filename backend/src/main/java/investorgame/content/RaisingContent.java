@@ -75,7 +75,14 @@ public record RaisingContent(
       Quarters quarters,
       Teams teams,
       Ending ending,
-      Construction construction) {}
+      Construction construction,
+      Industry industry) {}
+
+  /**
+   * 업계 순위 소식 (#351). first: 처음 매긴 해, up·down·same: 지난해보다 상위 몇 %가
+   * 올랐나·내렸나·그대로({year}·{rank}·{total}·{before}·{top}).
+   */
+  public record Industry(String first, String up, String down, String same) {}
 
   /** 건물 공사 (#347). started: 공사를 시작한 해의 소식({years}), done: 다 지어 옮긴 해의 소식. */
   public record Construction(String started, String done) {}

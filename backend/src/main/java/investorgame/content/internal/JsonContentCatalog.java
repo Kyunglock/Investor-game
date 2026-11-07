@@ -339,6 +339,13 @@ class JsonContentCatalog implements ContentCatalog {
             && company.construction().started() != null
             && company.construction().done() != null,
         "건물 공사 문구가 없다");
+    require(
+        company.industry() != null
+            && company.industry().first() != null
+            && company.industry().up() != null
+            && company.industry().down() != null
+            && company.industry().same() != null,
+        "업계 순위 문구가 없다");
     for (RaisingContent.Era era : company.eras()) {
       require(
           era.phaseWeights().values().stream().mapToInt(Integer::intValue).sum() > 0,
