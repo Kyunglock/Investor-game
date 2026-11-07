@@ -219,6 +219,26 @@ class JsonContentCatalog implements ContentCatalog {
         "무기 이름이 없다 (346번)");
     require(company.quirks() != null && !company.quirks().isEmpty(), "직원 버릇이 없다 (349번)");
     require(
+        company.invest().debate() != null
+            && company.invest().debate().after() != null
+            && company
+                .invest()
+                .debate()
+                .after()
+                .keySet()
+                .containsAll(List.of("cheer", "toldYou", "sorry", "relief")),
+        "회의 결과 뒤 반응 문구가 없다 (358번)");
+    require(
+        company.invest().debate() != null
+            && company.invest().debate().after() != null
+            && company
+                .invest()
+                .debate()
+                .after()
+                .keySet()
+                .containsAll(List.of("cheer", "toldYou", "sorry", "relief")),
+        "회의 결과 뒤 반응 문구가 없다 (358번)");
+    require(
         company.teamGrade() != null
             && company
                 .teamGrade()

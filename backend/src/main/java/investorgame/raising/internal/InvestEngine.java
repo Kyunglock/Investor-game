@@ -836,6 +836,7 @@ class InvestEngine {
     c.invest.missed = HOLD.equals(choice) ? missed : null;
     c.invest.total = total;
     c.capital = Math.max(0, c.capital + total);
+    c.invest.reactions = reactions(c, choice, random);
     // 자기 말을 들어 줬는지에 따라 사기가 움직인다 (270번). 맡겼으면 사장이 들어 주고 말고가 없다.
     if (!delegated) {
       company.pay.afterMeeting(c);
@@ -865,6 +866,44 @@ class InvestEngine {
     boolean buys = buy + sell == 0 ? rng.nextBoolean() : rng.nextInt(buy + sell) < buy;
     c.invest.debate = debate(c, buys, random);
     return buys ? BUY : SELL;
+  }
+
+  /**
+   * 결과가 드러난 뒤 양쪽의 반응 (decisions.md 358번, #415): 토론에서 각 쪽을 대표해 말한 첫 사람이 한마디씩. 맞힌 쪽은 사장이 따랐으면 cheer,
+   * 안 따랐으면 toldYou. 틀린 쪽은 사장이 따랐으면 sorry, 안 따랐으면 relief. 지켜봤으면 아무도 따르지 않은 것이다. 토론이 없으면(옛 회의) 비어 있다.
+   */
+  private List<CompanyState.DebateLine> reactions(
+      CompanyState c, String choice, SeededRandom random) {
+    List<CompanyState.DebateLine> out = new ArrayList<>();
+    Map<String, List<String>> after = content.raising().company().invest().debate().after();
+    if (after == null || c.invest.debate.isEmpty()) {
+      return out;
+    }
+    RandomGenerator rng = random.forKey("invest-after", c.turn());
+    String right = c.invest.up ? BUY : SELL;
+    for (String side : List.of(BUY, SELL)) {
+      CompanyState.DebateLine speaker =
+          c.invest.debate.stream()
+              .filter(d -> side.equals(d.side) && !d.last)
+              .findFirst()
+              .orElse(null);
+      if (speaker == null) {
+        continue;
+      }
+      boolean isRight = side.equals(right);
+      boolean followed = side.equals(choice);
+      String key = isRight ? (followed ? "cheer" : "toldYou") : (followed ? "sorry" : "relief");
+      List<String> lines = after.getOrDefault(key, List.of());
+      if (lines.isEmpty()) {
+        continue;
+      }
+      String text =
+          Korean.fill(
+              lines.get(rng.nextInt(lines.size())),
+              Map.of("stock", company.stockName(c.invest.stock)));
+      out.add(debateLine(speaker.name, side, text, isRight ? WIN : LOSE));
+    }
+    return out;
   }
 
   /** 토론에서 오가는 말의 차례 수: 매수파·매도파가 이만큼씩 번갈아 말한 뒤 결판을 낸다 (304번: 셋에서 둘로, 대신 한마디가 길다). */

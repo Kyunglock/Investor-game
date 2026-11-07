@@ -381,6 +381,7 @@ public record CompanyView(
       int decisive,
       long total,
       List<InvestResult> results,
+      List<DebateLine> reactions,
       String credit) {}
 
   /**

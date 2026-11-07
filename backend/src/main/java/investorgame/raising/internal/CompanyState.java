@@ -379,6 +379,9 @@ class CompanyState {
     /** 맡겼을 때 직원들이 매수파·매도파로 갈려 주고받은 말 (decisions.md 285번). 화면이 한 줄씩 띄운다. 맡기지 않았으면 비었다. */
     List<DebateLine> debate = new ArrayList<>();
 
+    /** 결과가 드러난 뒤 양쪽의 반응 (358번): 맞힌 쪽과 틀린 쪽이 한마디씩. */
+    List<DebateLine> reactions = new ArrayList<>();
+
     List<InvestResult> results = new ArrayList<>();
     long total;
 
