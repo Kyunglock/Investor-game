@@ -1357,14 +1357,12 @@ class CompanyEngineTest {
     assertThat(c.recentLines).hasSize(CompanyEngine.RECENT_LINES).doesNotContain("가");
   }
 
-  /** 한 해를 분기마다 같은 태도로 넘긴다. */
-  private static CompanyState.Settlement yearWith(CompanyState c, String stance, long seed) {
+  /** 한 해를 넘긴다: 분기마다 직원이 종목을 물어 왔으면 지켜본다. */
+  private static CompanyState.Settlement year(CompanyState c, long seed) {
     HashSeededRandom random = new HashSeededRandom(seed);
     int year = c.year;
     while (c.year == year) {
-      if (ENGINE.macro.open(c)) {
-        ENGINE.macro.decide(c, stance, random);
-      }
+      ENGINE.scout.discover(c, random);
       if (ENGINE.invest.open(c)) {
         ENGINE.invest.decide(c, InvestEngine.HOLD, random);
       }
@@ -1373,37 +1371,28 @@ class CompanyEngineTest {
     return c.settlements.getLast();
   }
 
-  /** #394: 연말에 조짐이 맞았나 헛소문이었나, 사장은 어떻게 읽었나를 밝히고, 잘 읽었으면 업적이 열린다. */
+  /** #394: 연말에 조짐이 맞았나 헛소문이었나를 밝힌다. 방어로 돌릴 태도가 없어(382번) 늘 버틴 셈이다. */
   @Test
-  void 연말에_조짐이_맞았는지_밝히고_잘_읽었으면_업적이_열린다() {
-    // 헛조짐: 보통 해인데 조짐이 떴다. 방어로 돌리지 않고 버텼다.
+  void 연말에_조짐이_맞았는지_밝힌다() {
+    // 헛조짐: 보통 해인데 조짐이 떴다. 버텼다.
     CompanyState calm = open(3, stats(60, 60, 60, 60), 100_000_000);
     ENGINE.place(calm, Map.of(calm.employees.getFirst().id, "day"));
     calm.phase = "normal";
     calm.omen = "경제 유튜브 채널마다 '곧 폭락이 온다'는 영상이 올라온다.";
-    CompanyState.Settlement kept = yearWith(calm, MacroEngine.NEUTRAL, 3);
+    CompanyState.Settlement kept = year(calm, 3);
     assertThat(kept.omenCall).isEqualTo("falseKept");
     assertThat(kept.lines).anyMatch(line -> line.startsWith("헛소문이었다"));
     assertThat(kept.achieved).contains("헛소문 감별사");
 
-    // 진짜 조짐: 폭락장인데 미리 방어로 돌렸다.
+    // 진짜 조짐: 폭락장이다.
     CompanyState storm = open(4, stats(60, 60, 60, 60), 100_000_000);
     ENGINE.place(storm, Map.of(storm.employees.getFirst().id, "day"));
     storm.phase = CompanyEngine.CRASH;
     storm.crashQuarter = 3;
     storm.omen = "신용 대출이 늘었다.";
-    CompanyState.Settlement saw = yearWith(storm, MacroEngine.DEFENSIVE, 4);
-    assertThat(saw.omenCall).isEqualTo("trueDefended");
-    assertThat(saw.lines).anyMatch(line -> line.startsWith("조짐이 맞았다") && line.contains("덜 맞았다"));
-    assertThat(saw.achieved).contains("선견지명");
-
-    // 진짜 조짐을 보고도 공격했다.
-    CompanyState bold = open(5, stats(60, 60, 60, 60), 100_000_000);
-    ENGINE.place(bold, Map.of(bold.employees.getFirst().id, "day"));
-    bold.phase = CompanyEngine.CRASH;
-    bold.crashQuarter = 2;
-    bold.omen = "신용 대출이 늘었다.";
-    assertThat(yearWith(bold, MacroEngine.AGGRESSIVE, 5).omenCall).isEqualTo("trueIgnored");
+    CompanyState.Settlement saw = year(storm, 4);
+    assertThat(saw.omenCall).isEqualTo("trueIgnored");
+    assertThat(saw.lines).anyMatch(line -> line.startsWith("조짐이 맞았다"));
   }
 
   /** 합성 보상 (decisions.md 350번): 난수가 있으면 가끔 두 단계(대성공), 가끔 재료의 버릇을 이어받고, 재료는 마지막 한마디를 남긴다. */

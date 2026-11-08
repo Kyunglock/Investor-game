@@ -79,9 +79,9 @@ class CompanyApiTest {
         json(mvc.perform(get("/api/company").cookie(session))).read("$.quarter", Integer.class);
     ResultActions last = null;
     for (int q = quarter; q <= 4; q++) {
-      // 2~4분기에는 분기를 열 때 직원이 종목을 물어 올 수 있다 (281번): 회의가 열렸으면 지켜보고 넘긴다.
+      // 분기 넘기기를 누르면 직원이 종목을 물어 올 수 있다 (267·382번): 회의가 열렸으면 지켜보고 넘긴다.
       Boolean ready =
-          json(mvc.perform(get("/api/company").cookie(session)))
+          json(mvc.perform(post("/api/company/scout").cookie(session)).andExpect(status().isOk()))
               .read("$.invest.ready", Boolean.class);
       if (Boolean.TRUE.equals(ready)) {
         decide("HOLD");
@@ -176,39 +176,22 @@ class CompanyApiTest {
         .andExpect(jsonPath("$.employees[0].desk").value("semiconductor"))
         .andExpect(jsonPath("$.employees[0].sector").isNotEmpty());
 
-    // 거시경제 회의 (266번): 해마다 연다. 한마디는 회의를 연 때 굳힌다(249번과 같다). 종목 회의는 아직 아무도 물어 오지 않아 닫혀 있다(267번).
+    // 종목 발굴 (267·382번): 분기 넘기기를 누르기 전에는 아무도 물어 오지 않아 종목 회의가 닫혀 있다. 거시경제 회의는 뺐다.
     DocumentContext meeting = json(mvc.perform(get("/api/company").cookie(session)));
     assertThat(meeting.read("$.invest.ready", Boolean.class)).isFalse();
-    assertThat(meeting.read("$.macro.ready", Boolean.class)).isTrue();
-    assertThat(meeting.read("$.macro.sentences.length()", Integer.class)).isGreaterThanOrEqualTo(4);
-    assertThat(meeting.read("$.macro.stances.length()", Integer.class)).isEqualTo(3);
-    assertThat(meeting.read("$.macro.convened", Boolean.class)).isFalse();
-    assertThat(meeting.read("$.macro.remarks.length()", Integer.class)).isZero();
-    assertThat(meeting.read("$.macro.outcome", Object.class)).isNull();
+    java.util.Map<String, Object> top = meeting.read("$");
+    assertThat(top).doesNotContainKey("macro");
     postJson("/api/company/invest", "{\"choice\":\"BUY\"}").andExpect(status().isBadRequest());
-    DocumentContext macroOpen =
-        json(
-            mvc.perform(post("/api/company/macro/open").cookie(session))
-                .andExpect(status().isOk()));
-    assertThat(macroOpen.read("$.macro.convened", Boolean.class)).isTrue();
-    String macroSaid = macroOpen.read("$.macro.remarks[0].text");
+    DocumentContext scouted =
+        json(mvc.perform(post("/api/company/scout").cookie(session)).andExpect(status().isOk()));
+    // 첫 회사의 첫해에는 돈을 굴리는 직원이 꼭 종목을 물어 온다 (267번). 두 번 눌러도 그대로다.
+    assertThat(scouted.read("$.invest.finder.employeeId", Integer.class)).isEqualTo(employeeId);
+    assertThat(scouted.read("$.invest.finder.pitch", String.class)).isNotBlank();
+    String title = scouted.read("$.invest.title");
     assertThat(
-            json(mvc.perform(post("/api/company/macro/open").cookie(session))
-                    .andExpect(status().isOk()))
-                .read("$.macro.remarks[0].text", String.class))
-        .isEqualTo(macroSaid);
-    postJson("/api/company/macro", "{\"stance\":\"ALL_IN\"}").andExpect(status().isBadRequest());
-    DocumentContext stance =
-        json(
-            postJson("/api/company/macro", "{\"stance\":\"AGGRESSIVE\"}")
-                .andExpect(status().isOk()));
-    assertThat(stance.read("$.macro.ready", Boolean.class)).isFalse();
-    assertThat(stance.read("$.macro.outcome.stance", String.class)).isEqualTo("AGGRESSIVE");
-    postJson("/api/company/macro", "{\"stance\":\"DEFENSIVE\"}").andExpect(status().isBadRequest());
-    // 첫 회사의 첫해에는 돈을 굴리는 직원이 꼭 종목을 물어 온다 (267번).
-    assertThat(stance.read("$.macro.outcome.finder.employeeId", Integer.class))
-        .isEqualTo(employeeId);
-    assertThat(stance.read("$.invest.finder.pitch", String.class)).isNotBlank();
+            json(mvc.perform(post("/api/company/scout").cookie(session)).andExpect(status().isOk()))
+                .read("$.invest.title", String.class))
+        .isEqualTo(title);
 
     // 종목 회의 (229번): 물어 왔으면 정해야 결산한다. 숨은 방향은 정한 뒤에만 보인다.
     meeting = json(mvc.perform(get("/api/company").cookie(session)));
@@ -236,15 +219,9 @@ class CompanyApiTest {
     settle(1, 1).andExpect(status().isBadRequest());
     postJson("/api/company/invest", "{\"choice\":\"SHORT\"}").andExpect(status().isBadRequest());
     for (int year = 1; year <= 3; year++) {
-      if (year > 1) {
-        DocumentContext macro =
-            json(
-                postJson("/api/company/macro", "{\"stance\":\"NEUTRAL\"}")
-                    .andExpect(status().isOk()));
-        assertThat(macro.read("$.macro.outcome.stance", String.class)).isEqualTo("NEUTRAL");
-      }
       long meetingTotal = 0;
-      boolean held = json(mvc.perform(get("/api/company").cookie(session))).read("$.invest.ready");
+      boolean held =
+          json(mvc.perform(post("/api/company/scout").cookie(session))).read("$.invest.ready");
       if (held) {
         DocumentContext decided = decide("BUY");
         assertThat(decided.read("$.invest.ready", Boolean.class)).isFalse();
@@ -256,14 +233,11 @@ class CompanyApiTest {
       }
       DocumentContext settled = json(settleYear(year));
       assertThat(settled.read("$.lastSettlement.year", Integer.class)).isEqualTo(year);
-      // 연말 결산서(240·251·266번): 거시경제 회의의 태도, 회의 몫과 채용비가 따로 실리고, 연초 자본 + 회의 + 직원들 몫 + 수수료 − 채용비 = 연말
-      // 자본.
-      // 거시경제 회의는 한 해에 한 번이다 (281번): 1분기에 고른 태도가 네 분기 내내 걸린다.
+      // 연말 결산서(240·251번): 회의 몫과 채용비가 따로 실리고, 연초 자본 + 회의 + 직원들 몫 + 수수료 − 채용비 = 연말 자본. 분기에 태도는 없다
+      // (382번).
       assertThat(settled.read("$.lastSettlement.quarters.length()", Integer.class)).isEqualTo(4);
-      assertThat(settled.read("$.lastSettlement.quarters[0].stance", String.class))
-          .isEqualTo(year == 1 ? "AGGRESSIVE" : "NEUTRAL");
-      assertThat(settled.read("$.lastSettlement.quarters[3].stance", String.class))
-          .isEqualTo(year == 1 ? "AGGRESSIVE" : "NEUTRAL");
+      java.util.Map<String, Object> firstQuarter = settled.read("$.lastSettlement.quarters[0]");
+      assertThat(firstQuarter).doesNotContainKeys("stance", "topic");
       if (held) {
         // 2~4분기에도 종목을 물어 올 수 있어 한 해 회의 몫은 1분기 몫과 다를 수 있다 (281번).
         assertThat(settled.read("$.lastSettlement.invest.title", String.class)).isNotBlank();
@@ -287,7 +261,6 @@ class CompanyApiTest {
     DocumentContext fourth = json(mvc.perform(get("/api/company").cookie(session)));
     assertThat(fourth.read("$.status", String.class)).isEqualTo("ACTIVE");
     assertThat(fourth.read("$.year", Integer.class)).isEqualTo(4);
-    assertThat(fourth.read("$.macro.ready", Boolean.class)).isTrue();
     // 채용권은 연말마다 한 장 (357번).
     assertThat(fourth.read("$.gacha.tickets", Integer.class)).isPositive();
     assertThat(fourth.read("$.meeting", Object.class)).isNotNull();
@@ -298,14 +271,8 @@ class CompanyApiTest {
     mvc.perform(post("/api/company").cookie(session)).andExpect(status().isBadRequest());
     postJson("/api/company/sale", "{\"cofounders\":[" + employeeId + "]}")
         .andExpect(status().is4xxClientError());
-    // 거시경제 회의를 건너뛰고 결산하면 중립이다. 물어 온 종목이 있으면 그 회의는 정해야 한다.
-    if (json(mvc.perform(get("/api/company").cookie(session)))
-        .read("$.invest.ready", Boolean.class)) {
-      decide("HOLD");
-    }
-    settleYear(4)
-        .andExpect(jsonPath("$.lastSettlement.year").value(4))
-        .andExpect(jsonPath("$.lastSettlement.quarters[0].stance").value("NEUTRAL"));
+    // 물어 온 종목이 있으면 그 회의는 정해야 결산한다.
+    settleYear(4).andExpect(jsonPath("$.lastSettlement.year").value(4));
   }
 
   /** 매각을 빼기 전에 시대가 끝나 멈춘 회사는 다시 열면 다음 해 연초 회의부터 이어진다 (236번). */

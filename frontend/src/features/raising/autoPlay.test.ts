@@ -3,7 +3,6 @@ import type { Company } from '../../api/client'
 import {
   autoChoice,
   autoDraw,
-  autoStance,
   isWindowStep,
   nextAutoStep,
   toggleAutoPlay,
@@ -40,14 +39,6 @@ describe('자동 진행 (decisions.md 245번)', () => {
     expect(autoChoice(invest(['UP', 'UP', 'DOWN']))).toBe('BUY')
     expect(autoChoice(invest(['DOWN', 'NEUTRAL']))).toBe('SELL')
     expect(autoChoice(invest(['UP', 'DOWN', 'NEUTRAL']))).toBe('HOLD')
-  })
-
-  it('거시경제 회의는 직원 다수결: 공격적으로 하자가 많으면 공격, 방어적으로 하자가 많으면 방어, 같으면 중립 (266번)', () => {
-    const macro = (reads: ('UP' | 'DOWN' | 'NEUTRAL')[]) =>
-      ({ remarks: reads.map(remark) }) as unknown as NonNullable<Company['macro']>
-    expect(autoStance(macro(['UP', 'UP', 'DOWN']))).toBe('AGGRESSIVE')
-    expect(autoStance(macro(['DOWN', 'NEUTRAL']))).toBe('DEFENSIVE')
-    expect(autoStance(macro(['UP', 'DOWN']))).toBe('NEUTRAL')
   })
 
   it('빈 자리만큼 채용권으로 뽑는다: 채용권·데리고 있을 자리가 허락하는 만큼 (312번)', () => {
@@ -101,16 +92,11 @@ describe('자동 진행 (decisions.md 245번)', () => {
     const closed = { ...seated, invest: { ...seated.invest, convened: false, remarks: [] } }
     expect(nextAutoStep(closed as never, false).kind).toBe('convene')
     expect(nextAutoStep({ ...seated, invest: null }, false).kind).toBe('settle')
-    // 거시경제 회의가 종목 회의보다 먼저다 (266·267번): 열고, 다수결로 고른다.
-    const macro = { ready: true, convened: false, remarks: [] }
-    expect(nextAutoStep({ ...seated, macro } as never, false).kind).toBe('conveneMacro')
-    const opened = { ...macro, convened: true, remarks: [remark('UP')] }
-    expect(nextAutoStep({ ...seated, macro: opened } as never, false)).toEqual({
-      kind: 'macro',
-      stance: 'AGGRESSIVE',
-    })
-    const decided = { ...opened, ready: false }
-    expect(nextAutoStep({ ...seated, macro: decided } as never, false).kind).toBe('invest')
+    // 분기 넘기기를 누르면 직원이 종목을 물어 온다 (267·382번): 아직 안 굴렸으면 먼저 굴리고, 굴렸는데 아무도 안 왔으면 넘긴다.
+    const unscouted = { ...seated, invest: { ready: false, scouted: false, remarks: [] } }
+    expect(nextAutoStep(unscouted as never, false).kind).toBe('scout')
+    const nobody = { ...seated, invest: { ready: false, scouted: true, remarks: [] } }
+    expect(nextAutoStep(nobody as never, false).kind).toBe('settle')
   })
 })
 

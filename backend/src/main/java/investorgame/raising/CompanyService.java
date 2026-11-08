@@ -62,14 +62,11 @@ public interface CompanyService {
    */
   CompanyView invest(UUID sessionId, String choice, boolean big);
 
-  /** 올해 거시경제 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 266번). 열 수 없으면 400. */
-  CompanyView conveneMacro(UUID sessionId);
-
   /**
-   * 올해 거시경제 회의에서 회사의 태도를 고른다: AGGRESSIVE·NEUTRAL·DEFENSIVE (266번). 고르면 직원이 종목을 물어 올 수 있다(267번). 이미
-   * 골랐으면 400.
+   * 분기 넘기기를 누르면 직원이 종목을 물어 온다 (decisions.md 267·382번): 지금 배치로 한 분기에 한 번 굴린다. 물어 왔으면 invest.ready가
+   * 참이 되고 종목 회의를 열 수 있다. 이미 굴렸거나 돈을 굴리는 직원이 없으면 아무것도 하지 않는다.
    */
-  CompanyView macro(UUID sessionId, String stance);
+  CompanyView scout(UUID sessionId);
 
   /**
    * 한 분기를 넘긴다 (decisions.md 268번). 4분기면 연말 결산을 하고 다음 해 1분기로 간다. 넘길 해와 분기를 싣는다: 이미 넘긴 분기면 아무것도 하지 않고

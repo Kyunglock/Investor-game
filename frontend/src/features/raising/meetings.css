@@ -117,12 +117,10 @@
   line-height: 1.9;
   font-size: 14px;
 }
-.meeting-window [data-testid="macro-remarks"],
 .meeting-window [data-testid="remarks"] {
   margin-top: 16px;
   gap: 10px;
 }
-.meeting-window [data-testid="macro-opinion"],
 .meeting-window [data-testid="opinion"] {
   padding: 12px;
   border-radius: 12px;
@@ -192,16 +190,6 @@
   border-radius: 12px;
   background: #f2f4f6;
   line-height: 1.8;
-}
-.meeting-window [data-testid="macro-outcome"] {
-  padding: 16px;
-  background: #eef3fb;
-  border: 1px solid #c6d4e9;
-  border-radius: 14px;
-}
-.meeting-window [data-testid="macro-finder"] {
-  background: #fff9e8;
-  border-radius: 12px;
 }
 .meeting-window [data-testid="invest-reveal"] {
   padding: 12px;

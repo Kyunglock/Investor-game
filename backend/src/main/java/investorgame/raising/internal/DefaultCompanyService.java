@@ -168,18 +168,9 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView conveneMacro(UUID sessionId) {
+  public CompanyView scout(UUID sessionId) {
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.macro.convene(row.state(), new HashSeededRandom(row.seed()));
-    companies.update(row.id(), row.state(), false);
-    return view(row);
-  }
-
-  @Override
-  @Transactional
-  public CompanyView macro(UUID sessionId, String stance) {
-    CompanyRepository.Row row = lockActive(sessionId);
-    engine.macro.decide(row.state(), stance, new HashSeededRandom(row.seed()));
+    engine.scout.discover(row.state(), new HashSeededRandom(row.seed()));
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -321,7 +312,7 @@ class DefaultCompanyService implements CompanyService {
                         e.sector == null ? null : engine.sectorName(e.sector),
                         e.desk != null && e.desk.equals(e.lastDesk) ? e.deskYears : 0,
                         engine.settled(e),
-                        engine.macro.roleOf(e),
+                        engine.scout.roleOf(e),
                         engine.teams.leads(c, e),
                         engine.pay.salary(c, e),
                         e.morale,
@@ -393,7 +384,6 @@ class DefaultCompanyService implements CompanyService {
         historyView(c),
         ended ? null : engine.brokeNotice(c),
         ended ? null : investView(c, new HashSeededRandom(row.seed())),
-        ended ? null : macroView(c),
         c.quarters.isEmpty() ? null : quarterView(c.quarters.getLast()),
         last == null ? null : settlementView(last),
         resignView(c),
@@ -681,7 +671,8 @@ class DefaultCompanyService implements CompanyService {
         debated ? invest.teamSell : null,
         debated ? invest.teamCall : null,
         debate,
-        engine.teamGrade.of(c, TeamGrade.INVEST));
+        engine.teamGrade.of(c),
+        invest.scouted || Boolean.TRUE.equals(invest.found));
   }
 
   /** 옛 저장(295번 전)은 kind가 없다: last면 두 줄 가운데 앞이 WIN, 뒤가 LOSE였지만 구분할 수 없어 WIN으로 읽는다. */
@@ -695,59 +686,6 @@ class DefaultCompanyService implements CompanyService {
     }
     return new CompanyView.Finder(
         invest.finderId, invest.finderName, invest.finderRole, invest.finderDesk, invest.pitch);
-  }
-
-  /** 거시경제 회의 (decisions.md 266번). 한마디와 형광펜은 회의를 연 때 굳힌 것만 보인다. */
-  private CompanyView.Macro macroView(CompanyState c) {
-    CompanyState.Macro macro = c.macro;
-    if (macro == null) {
-      return null;
-    }
-    MacroEngine meetings = engine.macro;
-    List<CompanyView.MacroSentence> sentences = new java.util.ArrayList<>();
-    for (int i = 0; i < macro.sentences.size(); i++) {
-      CompanyState.Sentence s = macro.sentences.get(i);
-      boolean highlighted =
-          meetings.convened(c) && macro.highlightIndex != null && macro.highlightIndex == i;
-      sentences.add(new CompanyView.MacroSentence(s.text, highlighted, s.omen));
-    }
-    List<CompanyView.Remark> remarks =
-        meetings.convened(c)
-            ? macro.remarks.stream()
-                .map(
-                    r -> new CompanyView.Remark(r.employeeId, r.name, r.desk, r.read, r.text, null))
-                .toList()
-            : List.of();
-    List<CompanyView.Stance> stances =
-        MacroEngine.STANCES.stream()
-            .map(
-                code ->
-                    new CompanyView.Stance(
-                        code,
-                        meetings.stanceLabel(code),
-                        meetings.stanceNote(code),
-                        meetings.stakePercentOf(code)))
-            .toList();
-    CompanyView.MacroOutcome outcome = null;
-    if (macro.stance != null) {
-      CompanyView.Finder finder =
-          c.invest != null && Boolean.TRUE.equals(c.invest.found) ? finderView(c.invest) : null;
-      outcome =
-          new CompanyView.MacroOutcome(
-              macro.stance, finder, finder == null ? meetings.noneLine() : null);
-    }
-    RaisingContent.MacroTopic topic = meetings.topic(macro);
-    return new CompanyView.Macro(
-        topic.name(),
-        topic.title(),
-        sentences,
-        meetings.convened(c) ? macro.highlightBy : null,
-        remarks,
-        stances,
-        meetings.open(c),
-        meetings.convened(c),
-        outcome,
-        engine.teamGrade.of(c, TeamGrade.MACRO));
   }
 
   private CompanyView.Raise raiseView(CompanyState c) {
@@ -853,8 +791,6 @@ class DefaultCompanyService implements CompanyService {
         q.investTotal == null
             ? null
             : new CompanyView.SettlementInvest(q.investTitle, q.investTotal),
-        q.macroTopic,
-        q.macroStance,
         q.crash,
         List.copyOf(q.lines),
         reportViews(q.reports));

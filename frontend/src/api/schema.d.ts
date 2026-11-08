@@ -140,7 +140,7 @@ export interface paths {
         put?: never;
         /**
          * 한 분기를 넘긴다. 4분기면 연말 결산을 하고 다음 해 연초 회의로 간다 (decisions.md 268번)
-         * @description 직원들이 배치대로 한 분기를 굴린 결과가 lastQuarter에 실리고, 다음 분기의 거시경제 회의가 새로 온다.
+         * @description 직원들이 배치대로 한 분기를 굴린 결과가 lastQuarter에 실린다.
          *     4분기를 넘기면 네 분기를 모은 연말 결산서가 lastSettlement에 실리고 다음 해 지원자가 온다. 회사는 끝나지 않는다(236번).
          *     종목 회의를 열 수 있는데(invest.ready) 안 했으면 400.
          *     넘길 해와 분기를 싣는다. 이미 넘긴 분기면 아무것도 하지 않고 지금 회사를 200으로 돌려준다(같은 요청이 두 번 와도 한 분기만 넘어간다).
@@ -408,7 +408,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/company/macro/open": {
+    "/api/company/scout": {
         parameters: {
             query?: never;
             header?: never;
@@ -418,33 +418,12 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 올해 거시경제 회의를 연다 (decisions.md 266번)
-         * @description 지금 배치로 직원 한마디(macro.remarks)와 리서치 팀 형광펜을 굳힌다(249번과 같다). 이미 열었으면 지금 회사를 그대로 돌려준다.
-         *     열 수 없는 회의(골랐거나 돈을 굴리는 자리에 아무도 없다)면 400.
+         * 분기 넘기기를 누르면 직원이 종목을 물어 온다 (decisions.md 267·382번)
+         * @description 지금 배치로 한 분기에 한 번 굴린다: 종목 발굴팀(낮은 확률로 섹터 데스크) 직원이 종목을 물어 오면 invest.ready가 참이 되고 종목 회의가 열린다.
+         *     아무도 안 왔으면 그대로 분기를 넘기면 된다. 이미 굴렸거나 돈을 굴리는 자리에 아무도 없으면 아무것도 하지 않고 지금 회사를 돌려준다.
+         *     거시경제 회의(266번)는 382번에서 뺐다.
          */
-        post: operations["conveneMacroMeeting"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/company/macro": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 올해 거시경제 회의에서 회사의 태도를 고른다 (decisions.md 266·267번)
-         * @description 공격은 그해 결산 판돈을 키우고 방어는 줄인다(폭락장에 덜 빠진다). 고르지 않고 결산하면 중립이다.
-         *     고르면 회의가 끝나고 종목 발굴팀(낮은 확률로 섹터 데스크) 직원이 종목을 물어 올 수 있다: 물어 오면 invest.ready가 참이 되고 종목 회의가 열린다.
-         *     아직 회의를 열지 않았으면 지금 배치로 연 셈 친다. 이미 골랐거나 없는 태도면 400.
-         */
-        post: operations["holdMacroMeeting"];
+        post: operations["scoutStock"];
         delete?: never;
         options?: never;
         head?: never;
@@ -778,10 +757,12 @@ export interface components {
             };
             /**
              * @description 올해 종목 회의 (decisions.md 229번). 끝난 회사나 옛 회사면 null. 숨은 방향은 정한 뒤 outcome에만 있다.
-             *     직원이 종목을 물어 와야(finder) 열린다: 그 전에는 ready가 거짓이다 (267번)
+             *     직원이 종목을 물어 와야(finder) 열린다: 그 전에는 ready가 거짓이다 (267번). 분기 넘기기를 누르면 /api/company/scout로 물어 온다(382번)
              */
             invest?: {
                 title: string;
+                /** @description 이번 분기에 이미 직원이 종목을 물어 왔거나 발굴을 굴렸다 (267·382번) */
+                scouted: boolean;
                 stockName: string;
                 sectorName: string;
                 /** @description 단서 기사 문장. 리서치 팀이 형광펜을 그은 문장은 highlighted */
@@ -934,58 +915,6 @@ export interface components {
                             stat: string;
                         } | null;
                     }[];
-                } | null;
-            } | null;
-            /** @description 이번 분기의 거시경제 회의 (decisions.md 266·268번). 끝난 회사나 이 회의가 생기기 전의 해면 null. 숨은 방향은 분기 실적의 섹터 바람으로 드러난다 */
-            macro?: {
-                /** @description 주제 이름(기준금리·환율·유가·물가·경기) */
-                topic: string;
-                /** @description 회의에 앉은 팀의 합산 등급 (decisions.md 353번). 앉은 사람이 없으면 null */
-                team?: {
-                    grade: components["schemas"]["Grade"];
-                    /** @description 0~100 */
-                    score: number;
-                    /** @description 한 줄 풀이 */
-                    hint: string;
-                    /** @description 앉은 사람 수 */
-                    members: number;
-                } | null;
-                title: string;
-                /** @description 기사 문장. 리서치 팀이 형광펜을 그은 문장은 highlighted, 연초 회의의 폭락 조짐을 옮긴 문장은 omen(헛조짐일 수도 있다) */
-                sentences: {
-                    text: string;
-                    highlighted: boolean;
-                    omen: boolean;
-                }[];
-                highlightBy?: string | null;
-                /** @description 자리에 앉은 직원의 한마디. 회의를 열기 전에는 비어 있다. read UP은 공격, DOWN은 방어 쪽 */
-                remarks: {
-                    employeeId: number;
-                    name: string;
-                    desk: string;
-                    /** @enum {string} */
-                    read: "UP" | "DOWN" | "NEUTRAL";
-                    text: string;
-                    stubborn?: null;
-                }[];
-                stances: {
-                    /** @enum {string} */
-                    code: "AGGRESSIVE" | "NEUTRAL" | "DEFENSIVE";
-                    label: string;
-                    note: string;
-                    /** @description 그해 결산 판돈 비율(%) */
-                    stakePercent: number;
-                }[];
-                /** @description 지금 고를 수 있다(안 골랐고 돈을 굴리는 자리에 사람이 있다) */
-                ready: boolean;
-                convened: boolean;
-                outcome?: {
-                    /** @enum {string} */
-                    stance: "AGGRESSIVE" | "NEUTRAL" | "DEFENSIVE";
-                    /** @description 회의가 끝나고 종목을 물어 온 직원. 아무도 안 왔으면 null */
-                    finder?: components["schemas"]["Finder"] | null;
-                    /** @description 아무도 안 왔을 때 한 줄 */
-                    none?: string | null;
                 } | null;
             } | null;
             lastSettlement?: {
@@ -1240,10 +1169,6 @@ export interface components {
                 /** Format: int64 */
                 total: number;
             } | null;
-            /** @description 이 분기 거시경제 회의의 주제 */
-            topic?: string | null;
-            /** @enum {string|null} */
-            stance?: "AGGRESSIVE" | "NEUTRAL" | "DEFENSIVE" | null;
             /** @description 이 분기에 폭락이 터졌다 */
             crash: boolean;
             lines: string[];
@@ -1953,7 +1878,7 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    conveneMacroMeeting: {
+    scoutStock: {
         parameters: {
             query?: never;
             header?: never;
@@ -1962,7 +1887,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 회의를 연 회사 */
+            /** @description 굴린 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1971,37 +1896,6 @@ export interface operations {
                     "application/json": components["schemas"]["Company"];
                 };
             };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    holdMacroMeeting: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @enum {string} */
-                    stance: "AGGRESSIVE" | "NEUTRAL" | "DEFENSIVE";
-                };
-            };
-        };
-        responses: {
-            /** @description 고른 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
         };

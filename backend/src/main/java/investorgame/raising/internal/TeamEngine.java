@@ -84,9 +84,9 @@ class TeamEngine {
    * 팀장 보고 (269·291번). 자리 순서대로 사람이 앉은 자리마다 한 줄. results는 그 기간에 돈을 굴린 결과(분기 또는 한 해), quarters는 그 기간의
    * 분기들(돕는 자리가 한 일, 278번), period는 "이번 분기"·"올해". 결과가 있는 사람은 지금 자리가 아니라 그 결과의 자리로 묶는다.
    *
-   * <p>돈을 굴리는 팀의 보고는 네 토막이다 (291번): ① 머리줄 — 손익의 크기(판돈의 {@value #BIG_PERCENT}% 이상이면 크게)와 그 기간에 폭락이
-   * 터졌는지로 고른다. ② 그 기간의 태도(공격·방어)가 손익에 미친 한마디. ③ 팀이 둘 이상이면 벌었을 때 가장 많이 번 사람, 잃었을 때 가장 크게 잃은 사람. ④ 손을
-   * 뒤집은 팀원(횟수까지)과, 가장 잦았던 뒤집힘에 대한 조언. 팀장은 보고만 하고 수치에는 손대지 않는다.
+   * <p>돈을 굴리는 팀의 보고는 세 토막이다 (291번): ① 머리줄 — 손익의 크기(판돈의 {@value #BIG_PERCENT}% 이상이면 크게)와 그 기간에 폭락이
+   * 터졌는지로 고른다. ② 팀이 둘 이상이면 벌었을 때 가장 많이 번 사람, 잃었을 때 가장 크게 잃은 사람. ③ 손을 뒤집은 팀원(횟수까지)과, 가장 잦았던 뒤집힘에 대한
+   * 조언. 팀장은 보고만 하고 수치에는 손대지 않는다. 태도(공격·방어) 한마디는 거시경제 회의와 함께 뺐다 (382번).
    */
   List<Report> reports(
       CompanyState c,
@@ -152,20 +152,7 @@ class TeamEngine {
         Map.of("period", period, "pnl", CompanyEngine.money(Math.abs(pnl)));
     StringBuilder text =
         new StringBuilder(Korean.fill(company.fresh(c, lines, seed + head.id, used), values));
-    // ② 태도: 공격·방어가 손익에 미친 한마디. 중립이거나 본전이면 없다.
-    String stance =
-        quarters.stream()
-            .map(q -> q.macroStance)
-            .filter(x -> x != null)
-            .reduce((first, second) -> second)
-            .orElse(null);
-    if (pnl != 0 && stance != null) {
-      String line = texts.stance().getOrDefault(stance, Map.of()).get(pnl > 0 ? "up" : "down");
-      if (line != null) {
-        text.append(' ').append(line);
-      }
-    }
-    // ③ 팀원: 둘 이상이면 벌었을 때 가장 많이 번 사람, 잃었을 때 가장 크게 잃은 사람.
+    // ② 팀원: 둘 이상이면 벌었을 때 가장 많이 번 사람, 잃었을 때 가장 크게 잃은 사람.
     if (team.size() >= 2) {
       Result marked =
           pnl > 0
@@ -181,7 +168,7 @@ class TeamEngine {
                     Map.of("name", marked.name, "pnl", CompanyEngine.money(Math.abs(marked.pnl)))));
       }
     }
-    // ④ 손을 뒤집은 팀원과 횟수, 가장 잦았던 뒤집힘의 조언.
+    // ③ 손을 뒤집은 팀원과 횟수, 가장 잦았던 뒤집힘의 조언.
     Map<String, Integer> totals = new HashMap<>();
     for (Result r : team) {
       for (Map.Entry<String, Integer> flip : r.flips.entrySet()) {

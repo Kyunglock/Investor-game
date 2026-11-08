@@ -11,13 +11,6 @@ type Settlement = NonNullable<Company['lastSettlement']>
 
 export const PHASES: Record<string, string> = { boom: '호황', normal: '보통', crash: '폭락장' }
 
-/** 거시경제 회의의 태도 이름 (decisions.md 266번). */
-export const STANCES: Record<string, string> = {
-  AGGRESSIVE: '공격',
-  NEUTRAL: '중립',
-  DEFENSIVE: '방어',
-}
-
 /** 결산서 줄이 차례로 드러나는 간격 (연말 결산서만). */
 const STEP_MS = 160
 const ROW_MS = 90
@@ -279,7 +272,7 @@ export function Ledger({
 }
 
 /**
- * 분기별 막대 (decisions.md 268번): 분기마다 자본이 얼마나 움직였는지와 그 분기 태도. "2분기에 크게 잃고 4분기에 되찾았다"가 한눈에 보인다. 폭락이 터진
+ * 분기별 막대 (decisions.md 268번): 분기마다 자본이 얼마나 움직였는지. "2분기에 크게 잃고 4분기에 되찾았다"가 한눈에 보인다. 폭락이 터진
  * 분기에는 번개 표시.
  */
 function QuarterBars({ quarters }: { quarters: Settlement['quarters'] }) {
@@ -310,7 +303,6 @@ function QuarterBars({ quarters }: { quarters: Settlement['quarters'] }) {
               {q.quarter}분기
             </p>
             <p className={`font-mono-num text-[11px] ${tone(m)}`}>{pnlLabel(m)}</p>
-            {q.stance && <p className="text-[11px] text-muted">{STANCES[q.stance]}</p>}
           </li>
         )
       })}

@@ -4,9 +4,6 @@ import { moveOf } from './board'
 
 type Status = 'loading' | 'ready' | 'error'
 
-/** 거시경제 회의의 태도 (decisions.md 266번). */
-export type Stance = 'AGGRESSIVE' | 'NEUTRAL' | 'DEFENSIVE'
-
 /** 멘탈 전투의 카드 코드 (decisions.md 328번). 이름·효과는 앱이 가진다. */
 export type MentalCard = 'hold' | 'split' | 'rule' | 'steel' | 'calm' | 'heal'
 export type WeaponKind = 'pistol' | 'revolver' | 'smg' | 'shotgun' | 'rifle'
@@ -79,10 +76,8 @@ interface RaisingState {
   convene: () => Promise<boolean>
   /** 올해 종목 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). big이면 크게 한다 (260번). */
   decideInvest: (choice: string, big?: boolean) => Promise<void>
-  /** 올해 거시경제 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 266번). 됐으면 true. */
-  conveneMacro: () => Promise<boolean>
-  /** 올해 거시경제 회의에서 회사의 태도를 고른다. 고르면 직원이 종목을 물어 올 수 있다 (266·267번). */
-  decideMacro: (stance: Stance) => Promise<void>
+  /** 분기 넘기기를 누르면 직원이 종목을 물어 온다 (decisions.md 267·382번). 물어 와 종목 회의를 열 수 있으면 true. */
+  scout: () => Promise<boolean>
   place: (seats: { employeeId: number; desk: string | null }[]) => Promise<void>
   /** 그 자리의 팀장을 정한다 (decisions.md 269번). */
   appointLeader: (desk: string, employeeId: number) => Promise<void>
@@ -250,15 +245,14 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
         }),
       ),
 
-    conveneMacro: async () => {
-      if (get().company?.macro?.convened) {
-        return true
+    scout: async () => {
+      const invest = get().company?.invest
+      if (!invest || invest.ready || invest.scouted) {
+        return Boolean(invest?.ready)
       }
-      await change(api.POST('/api/company/macro/open'))
-      return Boolean(get().company?.macro?.convened)
+      await change(api.POST('/api/company/scout'))
+      return Boolean(get().company?.invest?.ready)
     },
-
-    decideMacro: (stance) => change(api.POST('/api/company/macro', { body: { stance } })),
 
     place: (seats) => change(api.POST('/api/company/placement', { body: { seats } })),
 

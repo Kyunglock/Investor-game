@@ -83,7 +83,7 @@ class CompanyEngine {
       }
     }
     this.invest = new InvestEngine(this, content, behavior, properties);
-    this.macro = new MacroEngine(this, invest, content, behavior, properties);
+    this.scout = new ScoutEngine(this, invest, properties);
     this.teams = new TeamEngine(this, content);
     this.pay = new PayEngine(this, content, properties);
     this.history = new CompanyHistory(content);
@@ -104,8 +104,8 @@ class CompanyEngine {
   /** 회사 연표·업적·명예의 전당 (decisions.md 263번). */
   final CompanyHistory history;
 
-  /** 거시경제 회의와 종목 발굴 (decisions.md 266·267번). */
-  final MacroEngine macro;
+  /** 종목 발굴 (decisions.md 267번). */
+  final ScoutEngine scout;
 
   /** 팀장과 팀장 보고 (decisions.md 269번). */
   final TeamEngine teams;
@@ -507,19 +507,16 @@ class CompanyEngine {
   }
 
   /**
-   * 돕는 자리가 이 분기에 한 일 (decisions.md 278번). 리서치 팀: 거시경제 회의·종목 회의에서 형광펜을 그을 수 있었던 회의 수, 그은 수, 결정적 문장을
-   * 짚은 수. 종목 발굴팀: 그 팀 사람이 가져와 회의한 종목과 오르내림.
+   * 돕는 자리가 이 분기에 한 일 (decisions.md 278번). 리서치 팀: 종목 회의에서 형광펜을 그을 수 있었던 회의 수, 그은 수, 결정적 문장을 짚은 수. 종목
+   * 발굴팀: 그 팀 사람이 가져와 회의한 종목과 오르내림.
    */
   private void recordSupport(CompanyState company, CompanyState.Quarter q) {
-    if (company.macro != null && company.macro.remarks != null) {
-      countHighlight(q, company.macro.highlightIndex, company.macro.sentences);
-    }
     CompanyState.Invest i = company.invest;
     if (i != null && i.choice != null) {
       if (i.remarks != null) {
         countHighlight(q, i.highlightIndex, i.sentences);
       }
-      if (MacroEngine.SCOUT_DESK.equals(i.finderDesk)) {
+      if (ScoutEngine.SCOUT_DESK.equals(i.finderDesk)) {
         q.scoutStock = stockName(i.stock);
         q.scoutUp = i.up;
         q.scoutPercent = Math.round(i.magnitudeBp / (float) PERCENT);
@@ -1063,7 +1060,7 @@ class CompanyEngine {
 
   /** 자리가 줄었을 때 먼저 일어나는 자리: 인사팀 → 종목 발굴팀 → 리서치 팀 → 리스크 관리 팀 → 돈을 굴리는 자리 (decisions.md 248·267번). */
   private static final List<String> STAND_UP_ORDER =
-      List.of(HR_DESK, MacroEngine.SCOUT_DESK, RESEARCH_DESK, RISK_DESK);
+      List.of(HR_DESK, ScoutEngine.SCOUT_DESK, RESEARCH_DESK, RISK_DESK);
 
   /**
    * 앉은 사람이 자리 수보다 많으면 넘친 사람을 쉬게 한다 (248번). 결산·계약금·새로 받기로 자본이 줄어 회사 등급과 자리 수가 내려갔을 때다. 돈을 굴리는 자리를
@@ -1389,7 +1386,7 @@ class CompanyEngine {
     company.quarter = 1;
     company.yearStake = null;
     company.quarters.clear();
-    // 폭락은 2~4분기 가운데 한 분기에 터지고, 조짐은 그 바로 앞 분기의 거시경제 기사에 실린다 (268번). 헛조짐은 1~3분기 가운데 하나.
+    // 폭락은 2~4분기 가운데 한 분기에 터진다 (268번). 조짐(헛조짐이면 1~3분기 가운데 하나)은 그 바로 앞 분기다.
     RandomGenerator when = random.forKey("crash-quarter", company.year);
     int burst = 2 + when.nextInt(QUARTERS - 1);
     company.crashQuarter = CRASH.equals(company.phase) ? burst : null;
@@ -1401,19 +1398,13 @@ class CompanyEngine {
   }
 
   /**
-   * 분기를 연다: 직원이 물어 오면 열릴 종목 회의를 준비한다 (268번). 거시경제 회의는 한 해에 한 번, 1분기에만 연다(decisions.md 281번): 고른 태도는
-   * 한 해 내내 판돈에 걸린다. 2~4분기에는 분기를 열 때 직원이 종목을 물어 온다(1분기에는 거시경제 회의가 끝나고 물어 온다, 267번).
+   * 분기를 연다: 직원이 물어 오면 열릴 종목 회의를 준비한다 (268번). 직원은 사장이 분기 넘기기를 누를 때 그때 배치로 종목을 물어 온다(267·382번,
+   * ScoutEngine).
    */
   void startQuarter(CompanyState company, SeededRandom random) {
     company.quarterStartCapital = company.capital;
     company.invest = invest.create(company, random);
     company.mental = mental.create(company, random);
-    if (company.quarter == 1 || company.macro == null) {
-      company.macro = macro.create(company, random);
-    }
-    if (company.macro.stance != null) {
-      macro.discover(company, random);
-    }
   }
 
   List<Long> gradeCapital() {
@@ -1657,8 +1648,7 @@ class CompanyEngine {
         company.quarterStartCapital != null ? company.quarterStartCapital : company.capital;
     int research = researchInsight(company);
     List<Employee> traders = traders(company);
-    // 거시경제 회의의 태도가 그 분기 판돈 전체에 걸린다 (decisions.md 266번).
-    long stake = stakeOf(company, traders.size()) * macro.stakePercent(company) / PERCENT;
+    long stake = stakeOf(company, traders.size());
     boolean crash = CRASH.equals(company.phase);
     // 폭락은 정해진 분기에 한 해 몫이 한꺼번에 터진다. 그 칸이 없던 해면 네 분기에 고르게 빠진다.
     boolean burst =
@@ -1666,7 +1656,6 @@ class CompanyEngine {
     int phaseShare =
         crash && company.crashQuarter != null ? (burst ? properties.decisions() : 0) : 1;
     int decisions = Math.max(1, properties.decisions() / QUARTERS);
-    int stanceBp = macro.stanceBp(company);
     q.crash = burst;
     // 멘탈 스테이지 (328·369번): 깬 최고 스테이지만큼 이 분기 돈을 굴리는 직원 모두 더 벌고 손이 덜 뒤집힌다.
     int mentalBonus = mental.bonusPercent(company);
@@ -1692,15 +1681,12 @@ class CompanyEngine {
       boolean conviction = employee.rank >= RANK_CONVICTION;
       boolean contrarian = crash && employee.rank >= RANK_CONTRARIAN;
       int hitBp = behavior.hintAccuracyPercent(insight) * PERCENT;
-      // 규모의 벽(244번): 올해 회사 등급으로 정한다. 섹터 바람(266번): 그 분기 거시경제 회의의 주제가 순풍 자리는 더, 역풍 자리는 덜 벌게 한다.
+      // 규모의 벽(244번): 올해 회사 등급으로 정한다.
       int gainBp =
           scaledGain(
               company,
               Math.max(
-                  0,
-                  gainBp(company, employee)
-                      + (conviction ? effects.convictionGainBp() : 0)
-                      + macro.windBp(company, employee.desk)));
+                  0, gainBp(company, employee) + (conviction ? effects.convictionGainBp() : 0)));
       // 등급 효과 (289번): 종합 등급이 높을수록 맞혔을 때 더 번다. XS 큰손은 그 위에 1.5배.
       gainBp = gainBp * (PERCENT + perkGainPercent(employee)) / PERCENT;
       gainBp = gainBp * (PERCENT + mentalBonus) / PERCENT;
@@ -1713,13 +1699,13 @@ class CompanyEngine {
         missBp = missBp * effects.wallMissPercent() / PERCENT;
       }
       int flipLossBp = scaledMiss(company, returns.flipBp());
-      // 시장 손익. 폭락장에는 섹터마다 빠지는 폭이 다르다(식품·금융은 덜, 반도체는 더). 방어로 돌렸으면 덜 빠진다 (266번).
+      // 시장 손익. 폭락장에는 섹터마다 빠지는 폭이 다르다(식품·금융은 덜, 반도체는 더).
       int phaseBp = properties.phaseBp().getOrDefault(company.phase, 0);
       if (crash) {
         phaseBp =
             scaled(
                 company,
-                phaseBp * returns.crashPercent() / PERCENT * macro.crashPercent(company) / PERCENT,
+                phaseBp * returns.crashPercent() / PERCENT,
                 properties.scale().crashPercent());
       }
       long bp = 0;
@@ -1729,7 +1715,6 @@ class CompanyEngine {
         int hitRoll = rng.nextInt(BP);
         // XXX 역발상: 폭락장인 해에 빠지는 동안 사서 회복 구간에서 번다.
         bp += contrarian ? effects.contrarianCrashBp() : phaseBp * phaseShare;
-        bp += stanceBp;
         if (swayRoll < swayBp) {
           result.flips.merge(StatCodes.CONVICTION, 1, Integer::sum);
           bp -= missBp;
@@ -1792,11 +1777,6 @@ class CompanyEngine {
     RaisingContent.Quarters texts = content.raising().company().quarters();
     if (burst) {
       q.lines.addFirst(texts.crash());
-    }
-    if (company.macro != null) {
-      q.macroTopic = macro.topic(company.macro).name();
-      q.macroStance = macro.stance(company);
-      q.lines.add(macro.windLine(company));
     }
     company.quarters.add(q);
     // 채용권 (decisions.md 312번): 분기를 넘길 때마다. 지난 뽑기 결과는 비운다.
@@ -1959,27 +1939,13 @@ class CompanyEngine {
     if (!crash && company.omen != null) {
       settlement.lines.add(1, content.raising().company().falseOmenNote());
     }
-    // 조짐이 맞았나 헛소문이었나, 사장은 어떻게 읽었나를 밝힌다 (#394). 조짐 읽는 법을 배울 수 있게 한 줄 덧붙인다.
+    // 조짐이 맞았나 헛소문이었나를 밝힌다 (#394). 조짐 읽는 법을 배울 수 있게 한 줄 덧붙인다. 방어로 돌릴 태도가 없어져(382번) 늘 버틴 셈이다.
     if (company.omen != null) {
-      long defended =
-          settlement.quarters.stream()
-              .filter(q -> MacroEngine.DEFENSIVE.equals(q.macroStance))
-              .count();
-      // 폭락이 한 분기에 터졌으면 그 분기에 방어였나, 고르게 빠졌으면 두 분기 이상 방어였나.
-      boolean burst = settlement.quarters.stream().anyMatch(q -> q.crash);
-      boolean defendedCrash =
-          burst
-              ? settlement.quarters.stream()
-                  .anyMatch(q -> q.crash && MacroEngine.DEFENSIVE.equals(q.macroStance))
-              : defended >= 2;
-      settlement.omenCall =
-          crash
-              ? (defendedCrash ? "trueDefended" : "trueIgnored")
-              : (defended == 0 ? "falseKept" : "falseDefended");
+      settlement.omenCall = crash ? "trueIgnored" : "falseKept";
       settlement.lines.add(
           Korean.fill(
               content.raising().company().omenReveal().get(settlement.omenCall),
-              Map.of("omen", company.omen, "count", String.valueOf(defended))));
+              Map.of("omen", company.omen, "count", "0")));
     }
     company.settlements.add(settlement);
     String eraBefore = company.era;

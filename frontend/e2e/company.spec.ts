@@ -43,9 +43,9 @@ async function closeReveal(page: Page) {
 }
 
 /**
- * 분기 넘기기를 누르면 거시경제 회의 창이 먼저 뜬다 (266·268번): 이번 분기 회사의 태도를 고르면 직원이 종목을 물어 올 수 있다 (267번). 물어 왔으면 종목
- * 회의 창으로 넘어가 고르고, 직원마다 맞대결 막대가 돌고(235번) 끝나면 창에서 그대로 분기를 넘긴다 (231번). 아무도 안 왔으면 거시경제 회의 창에서 바로
- * 넘긴다. watch면 연출을 끝까지 보고, 아니면 빨리 보기로 넘긴다. 1~3분기면 분기 실적이, 4분기면 연말 결산서가 뜨고 닫는다. 종목 회의를 했으면 true.
+ * 분기 넘기기를 누르면 직원이 종목을 물어 올 수 있다 (267·382번). 물어 왔으면 종목 회의 창이 바로 뜨고, 고르고, 직원마다 맞대결 막대가 돌고(235번) 끝나면
+ * 창에서 그대로 분기를 넘긴다 (231번). 아무도 안 왔으면 바로 넘긴다. watch면 연출을 끝까지 보고, 아니면 빨리 보기로 넘긴다. 1~3분기면 분기 실적이,
+ * 4분기면 연말 결산서가 뜨고 닫는다. 종목 회의를 했으면 true.
  */
 async function passQuarter(
   page: Page,
@@ -53,35 +53,15 @@ async function passQuarter(
   quarter: number,
   choice: string,
   watch = false,
-  stance = '중립',
 ): Promise<boolean> {
   const label = `${year}년 차 ${quarter}분기 넘기기`
   await page.getByRole('button', { name: label, exact: true }).click()
-  const macro = page.getByRole('dialog', { name: '거시경제 회의' })
   const meeting = page.getByRole('dialog', { name: '종목 회의' })
-  let held = false
-  // 거시경제 회의는 한 해에 한 번, 1분기에만 열린다 (281번). 2~4분기에는 직원이 물어 왔으면 종목 회의가 바로 뜬다.
-  if (quarter === 1) {
-    await expect(macro).toBeVisible()
-    await macro.getByRole('button', { name: new RegExp(`^${stance}`) }).click()
-    await expect(macro.getByTestId('macro-stance')).toHaveText(stance)
-    const next = macro.getByRole('button', { name: /종목 회의 열기|분기 넘기기/ })
-    await expect(next).toBeVisible()
-    if (!(await macro.getByTestId('macro-finder').isVisible())) {
-      await expect(macro.getByTestId('macro-none')).toBeVisible()
-      await macro.getByRole('button', { name: `${label} →` }).click()
-      await expect(macro).toBeHidden()
-    } else {
-      await macro.getByRole('button', { name: '종목 회의 열기 →' }).click()
-      await expect(macro).toBeHidden()
-      held = true
-    }
-  } else {
-    await expect(macro).toHaveCount(0)
-    const sheet = page.getByRole('dialog', { name: quarter < 4 ? '분기 실적' : '연말 결산서' })
-    await expect(meeting.or(sheet)).toBeVisible()
-    held = await meeting.isVisible()
-  }
+  // 거시경제 회의는 뺐다 (382번).
+  await expect(page.getByRole('dialog', { name: '거시경제 회의' })).toHaveCount(0)
+  const sheet = page.getByRole('dialog', { name: quarter < 4 ? '분기 실적' : '연말 결산서' })
+  await expect(meeting.or(sheet)).toBeVisible()
+  const held = await meeting.isVisible()
   if (held) {
     await expect(meeting).toBeVisible()
     // 누가 이 종목을 물어 왔는지 창 머리에 보인다 (267번).
@@ -117,15 +97,9 @@ async function passQuarter(
   return held
 }
 
-/** 한 해를 네 분기 넘긴다. 1분기는 고른 태도·결정으로, 나머지는 중립으로 지켜본다. 1분기에 종목 회의를 했으면 true. */
-async function passYear(
-  page: Page,
-  year: number,
-  choice: string,
-  watch = false,
-  stance = '중립',
-): Promise<boolean> {
-  const held = await passQuarter(page, year, 1, choice, watch, stance)
+/** 한 해를 네 분기 넘긴다. 1분기는 고른 결정으로, 나머지는 지켜본다. 1분기에 종목 회의를 했으면 true. */
+async function passYear(page: Page, year: number, choice: string, watch = false): Promise<boolean> {
+  const held = await passQuarter(page, year, 1, choice, watch)
   for (let quarter = 2; quarter <= 4; quarter++) {
     await passQuarter(page, year, quarter, '지켜본다')
   }
@@ -295,25 +269,8 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   await expect(page.getByTestId('office-empty')).toHaveCount(0)
   await expect(page.getByTestId('office-resting')).toHaveCount(0)
 
-  // 거시경제 회의 (266번): 분기 넘기기를 누르면 창이 뜬다. 큰 흐름 하나를 놓고 직원들이 한마디씩 하고, 같은 의견끼리 뭉친다(242·246번).
-  // 태도는 공격·중립·방어 셋이다. 창을 닫고 배치로 돌아갈 수도 있다.
-  await page.getByRole('button', { name: '1년 차 1분기 넘기기' }).click()
-  const macro = page.getByRole('dialog', { name: '거시경제 회의' })
-  await expect(macro.getByTestId('macro-article')).toBeVisible()
-  const heads = await macro.getByTestId('macro-opinion').getByRole('heading').allInnerTexts()
-  expect(heads.map((h) => Number(/(\d+)명/.exec(h)?.[1] ?? 0)).reduce((a, b) => a + b, 0)).toBe(4)
-  await expect(macro.getByRole('button', { name: /판돈 ×/ })).toHaveCount(3)
-  await macro.getByRole('button', { name: '배치 다시 보기' }).click()
-  await expect(macro).toBeHidden()
-
   for (let year = 1; year <= 3; year++) {
-    const held = await passYear(
-      page,
-      year,
-      year === 1 ? '산다' : '지켜본다',
-      year === 1,
-      year === 1 ? '공격' : '중립',
-    )
+    const held = await passYear(page, year, year === 1 ? '산다' : '지켜본다', year === 1)
     // 첫 회사의 첫 분기에는 돈을 굴리는 직원이 꼭 종목을 물어 온다 (267번): 종목 회의를 배운다.
     if (year === 1) {
       expect(held).toBe(true)
@@ -322,13 +279,10 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
         'aria-selected',
         'true',
       )
-      // 장부에 종목 회의 한 건이 직원들의 1년 운용과 따로 있고, 거시경제 회의의 태도가 위에 붙는다 (240·266번).
+      // 장부에 종목 회의 한 건이 직원들의 1년 운용과 따로 있다 (240번).
       await expect(page.getByTestId('ledger-invest')).toContainText('종목 회의')
-      // 연말 결산서에 분기별 막대가 있고 1분기 태도가 보인다 (268번).
+      // 연말 결산서에 분기별 막대가 있다 (268번). 태도는 거시경제 회의와 함께 뺐다 (382번).
       await expect(page.getByTestId('quarter-bars').getByRole('listitem')).toHaveCount(4)
-      await expect(page.getByTestId('quarter-bars').getByRole('listitem').first()).toContainText(
-        '공격',
-      )
       await expect(page.getByTestId('ledger-staff')).toBeVisible()
       // 채용 뽑기는 돈이 들지 않아 첫 해에는 인사 비용 줄이 없다 (251·312번).
       await expect(page.getByTestId('ledger-hiring')).toHaveCount(0)
@@ -436,11 +390,8 @@ test('종목 회의를 열면 먼저 매수파와 매도파가 토론하며 맞�
   await drawPeople(page, 2)
   await tab(page, /배치/)
   await page.getByRole('button', { name: '자동 배치' }).click()
+  // 첫 회사의 첫 분기에는 꼭 누가 종목을 물어 온다 (267번): 분기 넘기기를 누르면 종목 회의가 바로 뜬다 (382번).
   await page.getByRole('button', { name: '1년 차 1분기 넘기기', exact: true }).click()
-  const macro = page.getByRole('dialog', { name: '거시경제 회의' })
-  await macro.getByRole('button', { name: /^중립/ }).click()
-  // 첫 회사의 첫 분기에는 꼭 누가 종목을 물어 온다 (267번).
-  await macro.getByRole('button', { name: '종목 회의 열기 →' }).click()
   const meeting = page.getByRole('dialog', { name: '종목 회의' })
   await expect(meeting).toBeVisible()
   // 첫 화면은 종목 분석이다 (368번): 기사만 보이고, 직원 의견(378번)·토론·결정 버튼은 결정 화면에 있다.

@@ -3,14 +3,13 @@ import { money } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { pnlLabel } from './board'
 import { TeamReports } from './TeamReports'
-import { STANCES } from './YearEnd'
 
 type Quarter = NonNullable<Company['lastQuarter']>
 
 const tone = (amount: number) => (amount > 0 ? 'text-up' : amount < 0 ? 'text-down' : 'text-muted')
 
 /**
- * 분기 실적 (decisions.md 268번, #330). 1~3분기를 넘기면 짧게 뜬다: 자본이 얼마에서 얼마가 됐는지, 그 분기 태도, 직원 소식 한두 줄. 등급·건물·자리 수는
+ * 분기 실적 (decisions.md 268번, #330). 1~3분기를 넘기면 짧게 뜬다: 자본이 얼마에서 얼마가 됐는지, 직원 소식 한두 줄. 등급·건물·자리 수는
  * 연말에만 바뀌므로 여기에는 없다. 4분기를 넘기면 이 대신 연말 결산서가 뜬다.
  */
 export function QuarterSheet({ quarter: q, onClose }: { quarter: Quarter; onClose: () => void }) {
@@ -26,11 +25,6 @@ export function QuarterSheet({ quarter: q, onClose }: { quarter: Quarter; onClos
       >
         <h2 className="font-pen text-[24px] leading-tight">
           {q.year}년 차 {q.quarter}분기 실적
-          {q.stance && (
-            <span className="ml-2 rounded bg-ink px-1.5 align-middle font-sans text-[12px] text-white">
-              {STANCES[q.stance]}
-            </span>
-          )}
         </h2>
         {q.crash && (
           <p className="mt-1 text-[15px] font-bold text-red-pen" data-testid="quarter-crash">
