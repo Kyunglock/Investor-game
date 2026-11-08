@@ -131,6 +131,9 @@ export const sfx = {
     tone(200, 90, { wave: 'square', gain: 0.1, slide: 80 })
     noise(90, 0.12)
   },
+  /** 강화 한 단계 (394번): 짧은 톡. 꾹 눌러 빨라질수록(combo) 음이 높아진다. */
+  upgrade: (combo = 0) =>
+    tone(660 * 2 ** (Math.min(combo, 18) / 12), 45, { wave: 'triangle', gain: 0.05 }),
   /** 오름: 부드러운 두 음 */
   levelUp: () => {
     tone(784, 160, { wave: 'sine', gain: 0.06 })

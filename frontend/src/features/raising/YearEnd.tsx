@@ -178,7 +178,7 @@ export function Ledger({
           </li>
         )
       })(),
-    // 전투 강화 비용 (decisions.md 367번): 자본으로 산 데미지·연사·고양이 속도.
+    // 전투 강화 비용 (decisions.md 367·394번): 자본으로 산 공격력·연사.
     s.upgrades !== 0 &&
       (() => {
         const r = reveal()
@@ -191,7 +191,7 @@ export function Ledger({
           >
             <Row
               label={`${num()} 전투 강화 비용`}
-              note="자본으로 산 데미지·연사·고양이 속도"
+              note="자본으로 산 공격력·연사"
               amount={-s.upgrades}
             />
           </li>

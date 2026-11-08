@@ -58,8 +58,11 @@ interface RaisingState {
   reportStage: (stage: number, cleared: boolean, stars: number) => Promise<void>
   /** EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번). */
   reportEx: (kills: number) => Promise<void>
-  /** 자본으로 전투 강화(데미지·연사·고양이 속도) 한 단계를 산다 (decisions.md 367번). */
-  buyBattleUpgrade: (kind: 'damage' | 'fire' | 'speed') => Promise<void>
+  /**
+   * 자본으로 전투 강화를 levels단계까지 산다 (decisions.md 367·394번). 꾹 눌러 연속으로 올리는 화면이 줄을 세워 부르므로 busy를 켜지 않는다. 받은
+   * 회사(실패면 null)를 돌려준다.
+   */
+  buyBattleUpgrade: (kind: 'damage' | 'fire', levels?: number) => Promise<Company | null>
   /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). 결과는 company.armory.lastDraw. */
   drawWeapon: () => Promise<void>
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */
@@ -206,7 +209,11 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
 
     reportEx: (kills) => change(api.POST('/api/company/ex', { body: { kills } })),
 
-    buyBattleUpgrade: (kind) => change(api.POST('/api/company/battle-upgrade', { body: { kind } })),
+    buyBattleUpgrade: async (kind, levels = 1) => {
+      const res = await safely(api.POST('/api/company/battle-upgrade', { body: { kind, levels } }))
+      set({ company: res?.data ?? get().company, error: reason(res?.error) })
+      return res?.data ?? null
+    },
 
     drawWeapon: () => change(api.POST('/api/company/weapon/draw')),
 

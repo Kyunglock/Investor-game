@@ -213,23 +213,25 @@ class CompanyController {
 
   record ExRequest(@PositiveOrZero int kills) {}
 
-  /** 자본으로 전투 강화 한 단계를 산다 (decisions.md 367번). */
+  /** 자본으로 전투 강화를 levels단계까지(없으면 한 단계) 산다 (decisions.md 367·394번). 꾹 눌러 모은 단계를 묶어 보낸다. */
   @PostMapping("/battle-upgrade")
   CompanyView buyBattleUpgrade(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody BattleUpgradeRequest request) {
     UUID sessionId = cookies.requireSession(token);
-    CompanyView company = companies.buyBattleUpgrade(sessionId, request.kind());
+    int levels = request.levels() == null ? 1 : request.levels();
+    CompanyView company = companies.buyBattleUpgrade(sessionId, request.kind(), levels);
     PLAY.info(
-        "company-battle-upgrade session={} company={} kind={} ip={}",
+        "company-battle-upgrade session={} company={} kind={} levels={} ip={}",
         sessionId,
         company.companyId(),
         request.kind(),
+        levels,
         ClientIp.current());
     return company;
   }
 
-  record BattleUpgradeRequest(@NotBlank String kind) {}
+  record BattleUpgradeRequest(@NotBlank String kind, @Positive Integer levels) {}
 
   /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). */
   @PostMapping("/weapon/draw")

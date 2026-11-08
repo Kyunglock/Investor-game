@@ -230,7 +230,7 @@ export function ActionBar({
           >
             <small>자본으로</small>
             <strong>강화</strong>
-            <em>{upgradeLevels > 0 ? `${upgradeLevels}단계 올림` : '데미지·연사·속도'}</em>
+            <em>{upgradeLevels > 0 ? `${upgradeLevels}단계 올림` : '공격력·연사'}</em>
           </button>
           <button
             type="button"

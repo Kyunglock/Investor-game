@@ -112,22 +112,22 @@ public record CompanyView(
       int stage, boolean cleared, int stars, boolean firstClear, long capital, int tickets) {}
 
   /**
-   * 자본으로 사는 전투 강화 하나 (decisions.md 367번).
+   * 자본으로 사는 전투 강화 하나 (decisions.md 367·394번). 최대 단계는 없다.
    *
-   * @param kind damage(데미지)·fire(연사)·speed(고양이 속도)
+   * @param kind damage(공격력)·fire(연사)
    * @param level 지금 단계(0부터)
-   * @param maxLevel 최대 단계
-   * @param price 다음 단계 값. 다 올렸으면 null
-   * @param bonusPercent 지금 단계의 효과(%): 데미지·속도는 그만큼 오르고, 연사는 쏘는 간격이 그만큼 준다
-   * @param nextBonusPercent 다음 단계의 효과(%). 다 올렸으면 null
+   * @param price 다음 단계 값
+   * @param priceGrowthPercent 단계마다 값이 오르는 비율(%). 꾹 눌러 연속으로 올릴 때 화면이 다음 값들을 미리 셈한다(정하는 것은 서버)
+   * @param bonusPercent 지금 단계의 효과(%): 공격력은 그만큼 오르고, 연사는 쏘는 빠르기가 그만큼 오른다
+   * @param nextBonusPercent 다음 단계의 효과(%)
    */
   public record BattleUpgrade(
       String kind,
       int level,
-      int maxLevel,
-      Long price,
+      long price,
+      int priceGrowthPercent,
       int bonusPercent,
-      Integer nextBonusPercent) {}
+      int nextBonusPercent) {}
 
   /**
    * 뽑은 무기 하나 (366번).

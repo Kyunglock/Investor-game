@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 /** 멘탈 전투 (decisions.md 328번, #420). 실제 콘텐츠와 application.yml 수치로 돌린다. */
 class MentalEngineTest {
@@ -297,46 +298,84 @@ class MentalEngineTest {
   }
 
   @Test
-  void 전투_강화는_자본으로_사고_값은_단계마다_두_배이며_다_올리면_멈춘다() {
+  void 전투_강화는_자본으로_끝없이_사고_한_단계에_1퍼센트씩_값은_완만하게_오른다() {
     CompanyState c = company(5);
     CompanyProperties.Upgrades rule = PROPERTIES.mental().upgrades();
+    assertThat(MentalEngine.UPGRADES).as("고양이 속도 강화는 뺐다 (394번)").containsExactly("damage", "fire");
+    assertThat(rule.stepPercent()).containsEntry("damage", 1).containsEntry("fire", 1);
     long before = c.capital;
-    ENGINE.mental.buyUpgrade(c, "damage");
+    assertThat(ENGINE.mental.buyUpgrade(c, "damage", 1)).isEqualTo(1);
     assertThat(c.capital).isEqualTo(before - rule.basePrice());
     assertThat(c.yearUpgrades).as("강화 비용은 따로 적는다").isEqualTo(rule.basePrice());
-    assertThat(ENGINE.mental.upgradePrice(1)).isEqualTo(rule.basePrice() * rule.priceFactor());
-    CompanyView.BattleUpgrade damage =
-        ENGINE.mental.upgradeViews(c).stream()
-            .filter(u -> u.kind().equals("damage"))
-            .findFirst()
-            .orElseThrow();
+    // 단계마다 몇 %씩만 오른다: 두 배씩이면 끝없이 살 수 없다.
+    assertThat(ENGINE.mental.upgradePrice(0)).isEqualTo(rule.basePrice());
+    assertThat(ENGINE.mental.upgradePrice(1)).isEqualTo(1_040_000L);
+    assertThat(ENGINE.mental.upgradePrice(100))
+        .as("100단계째 약 0.5억")
+        .isBetween(40_000_000L, 60_000_000L);
+    assertThat(ENGINE.mental.upgradePrice(200))
+        .as("200단계째 약 25억")
+        .isBetween(2_000_000_000L, 3_000_000_000L);
+    assertThat(ENGINE.mental.upgradePrice(5_000)).as("long을 넘으면 못 사는 값").isEqualTo(Long.MAX_VALUE);
+    CompanyView.BattleUpgrade damage = view(c, "damage");
     assertThat(damage.level()).isEqualTo(1);
-    assertThat(damage.bonusPercent()).isEqualTo(rule.stepPercent().get("damage"));
+    assertThat(damage.bonusPercent()).isEqualTo(1);
+    assertThat(damage.nextBonusPercent()).isEqualTo(2);
     assertThat(damage.price()).isEqualTo(ENGINE.mental.upgradePrice(1));
+    assertThat(damage.priceGrowthPercent()).isEqualTo(rule.priceGrowthPercent());
 
+    // 꾹 눌러 모은 단계는 묶어 산다. 최대 단계는 없다.
     c.capital = Long.MAX_VALUE / 4;
-    for (int i = 1; i < rule.maxLevel(); i++) {
-      ENGINE.mental.buyUpgrade(c, "speed");
+    long spent = c.yearUpgrades;
+    long expected = 0;
+    for (int level = 0; level < 250; level++) {
+      expected += ENGINE.mental.upgradePrice(level);
     }
-    ENGINE.mental.buyUpgrade(c, "speed");
-    assertThat(c.battleUpgrades.get("speed")).isEqualTo(rule.maxLevel());
-    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "speed"))
-        .as("다 올리면 더 못 산다")
+    assertThat(ENGINE.mental.buyUpgrade(c, "fire", 100)).isEqualTo(100);
+    assertThat(ENGINE.mental.buyUpgrade(c, "fire", 100)).isEqualTo(100);
+    assertThat(ENGINE.mental.buyUpgrade(c, "fire", 50)).isEqualTo(50);
+    assertThat(c.battleLevels.get("fire")).isEqualTo(250);
+    assertThat(c.yearUpgrades - spent).as("묶어 사도 한 단계씩 산 값의 합").isEqualTo(expected);
+    assertThat(view(c, "fire").bonusPercent()).isEqualTo(250);
+    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "fire", 0))
         .isInstanceOf(InvalidRequestException.class);
-    assertThat(
-            ENGINE.mental.upgradeViews(c).stream()
-                .filter(u -> u.kind().equals("speed"))
-                .findFirst()
-                .orElseThrow()
-                .price())
-        .isNull();
+    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "fire", rule.maxBatch() + 1))
+        .isInstanceOf(InvalidRequestException.class);
 
+    // 자본이 닿는 데까지만 산다. 한 단계도 못 사면 400.
     CompanyState poor = company(6);
-    poor.capital = 0;
-    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(poor, "fire"))
+    poor.capital = rule.basePrice() + 1_040_000L + 1_000L;
+    assertThat(ENGINE.mental.buyUpgrade(poor, "fire", 10)).as("두 단계까지만 닿는다").isEqualTo(2);
+    assertThat(poor.capital).isEqualTo(1_000L);
+    assertThat(poor.battleLevels.get("fire")).isEqualTo(2);
+    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(poor, "fire", 1))
         .isInstanceOf(InvalidRequestException.class);
-    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(poor, "armor"))
+    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(poor, "speed", 1))
+        .as("고양이 속도 강화는 없다")
         .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(poor, "armor", 1))
+        .isInstanceOf(InvalidRequestException.class);
+  }
+
+  @Test
+  void 옛_전투_강화_단계는_돌려주지_않고_0단계로_돌아간다() throws Exception {
+    String old =
+        """
+        {"year": 2, "capital": 5000000000, "battleUpgrades": {"damage": 10, "fire": 7, "speed": 3}}
+        """;
+    CompanyState c = JsonMapper.builder().build().readValue(old, CompanyState.class);
+    assertThat(c.battleLevels).as("출시 전이라 리셋한다 (394번)").isEmpty();
+    assertThat(c.capital).as("쓴 돈도 돌려주지 않는다").isEqualTo(5_000_000_000L);
+    assertThat(ENGINE.mental.upgradeViews(c))
+        .extracting(CompanyView.BattleUpgrade::level)
+        .containsExactly(0, 0);
+  }
+
+  private static CompanyView.BattleUpgrade view(CompanyState c, String kind) {
+    return ENGINE.mental.upgradeViews(c).stream()
+        .filter(u -> u.kind().equals(kind))
+        .findFirst()
+        .orElseThrow();
   }
 
   @Test

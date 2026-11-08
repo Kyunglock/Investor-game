@@ -333,6 +333,73 @@ class CompanyApiTest {
         .andExpect(status().isBadRequest());
   }
 
+  /**
+   * 자본으로 사는 전투 강화 (decisions.md 367·394번): 공격력·연사 둘, 최대 단계 없이 한 단계에 1%. 꾹 눌러 모은 단계는 levels로 묶어 사고,
+   * 자본이 닿는 데까지만 산다. 고양이 속도는 없다. 쓴 돈은 분기 실적의 전투 강화 비용 줄에 나온다.
+   */
+  @Test
+  void 전투_강화를_묶어_사고_자본이_닿는_데까지만_오른다() throws Exception {
+    String id =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()))
+            .read("$.companyId", String.class);
+    DocumentContext opened = json(mvc.perform(get("/api/company").cookie(session)));
+    List<String> kinds = opened.read("$.battleUpgrades[*].kind");
+    assertThat(kinds).containsExactly("damage", "fire");
+    assertThat(opened.read("$.battleUpgrades[0].level", Integer.class)).isZero();
+    assertThat(opened.read("$.battleUpgrades[0].price", Long.class)).isEqualTo(1_000_000L);
+    assertThat(opened.read("$.battleUpgrades[0].nextBonusPercent", Integer.class)).isEqualTo(1);
+    Map<String, Object> first = opened.read("$.battleUpgrades[0]");
+    assertThat(first).doesNotContainKey("maxLevel");
+    long capital = opened.read("$.capital", Long.class);
+
+    DocumentContext one =
+        json(
+            postJson("/api/company/battle-upgrade", "{\"kind\":\"damage\"}")
+                .andExpect(status().isOk()));
+    assertThat(one.read("$.battleUpgrades[0].level", Integer.class)).isEqualTo(1);
+    assertThat(one.read("$.capital", Long.class)).isEqualTo(capital - 1_000_000L);
+    DocumentContext five =
+        json(
+            postJson("/api/company/battle-upgrade", "{\"kind\":\"fire\",\"levels\":5}")
+                .andExpect(status().isOk()));
+    assertThat(five.read("$.battleUpgrades[1].level", Integer.class)).isEqualTo(5);
+    assertThat(five.read("$.battleUpgrades[1].bonusPercent", Integer.class)).isEqualTo(5);
+    long spent = capital - five.read("$.capital", Long.class);
+    assertThat(spent).as("1b + 연사 다섯 단계").isGreaterThan(6_000_000L).isLessThan(7_000_000L);
+
+    postJson("/api/company/battle-upgrade", "{\"kind\":\"speed\"}")
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/battle-upgrade", "{\"kind\":\"fire\",\"levels\":0}")
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/battle-upgrade", "{\"kind\":\"fire\",\"levels\":101}")
+        .andExpect(status().isBadRequest());
+
+    // 분기 실적의 전투 강화 비용 줄에 쓴 돈이 그대로 나온다.
+    Boolean ready =
+        json(mvc.perform(post("/api/company/scout").cookie(session)).andExpect(status().isOk()))
+            .read("$.invest.ready", Boolean.class);
+    if (Boolean.TRUE.equals(ready)) {
+      decide("HOLD");
+    }
+    DocumentContext quarter = json(settle(1, 1).andExpect(status().isOk()));
+    assertThat(quarter.read("$.lastQuarter.upgrades", Long.class)).isEqualTo(spent);
+
+    // 자본이 닿는 데까지만 산다: 한 단계 값(1b) 반 남짓이면 열 단계를 보내도 한 단계만 오르고, 바닥이면 400.
+    jdbc.sql(
+            "UPDATE raising_company SET state = jsonb_set(state, '{capital}', '1500000')"
+                + " WHERE id = CAST(:id AS uuid)")
+        .param("id", id)
+        .update();
+    DocumentContext partial =
+        json(
+            postJson("/api/company/battle-upgrade", "{\"kind\":\"damage\",\"levels\":10}")
+                .andExpect(status().isOk()));
+    assertThat(partial.read("$.battleUpgrades[0].level", Integer.class)).isEqualTo(2);
+    assertThat(partial.read("$.capital", Long.class)).isEqualTo(1_500_000L - 1_040_000L);
+    postJson("/api/company/battle-upgrade", "{\"kind\":\"damage\"}")
+        .andExpect(status().isBadRequest());
+  }
+
   /** 데리고 있을 자리가 차면 내보내야 뽑는다. 인사팀이 뽑기를 돕는다 (decisions.md 312번, 6.3절). 직원 합성은 384번에서 뺐다. */
   @Test
   void 내보내고_인사팀이_뽑기를_돕는다() throws Exception {

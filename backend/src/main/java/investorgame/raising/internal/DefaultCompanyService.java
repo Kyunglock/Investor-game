@@ -396,9 +396,9 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView buyBattleUpgrade(UUID sessionId, String kind) {
+  public CompanyView buyBattleUpgrade(UUID sessionId, String kind, int levels) {
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.mental.buyUpgrade(row.state(), kind);
+    engine.mental.buyUpgrade(row.state(), kind, levels);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
