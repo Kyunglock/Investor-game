@@ -1,17 +1,4 @@
-.year-report {
-  color: #343b65;
-  background: #fffdf6;
-  border: 1px solid #c5cdec;
-  border-radius: 24px;
-  box-shadow:
-    0 8px 0 #354e7840,
-    0 24px 70px #20304840;
-  overflow: auto;
-  max-height: calc(100dvh - 80px);
-  scrollbar-width: thin;
-  --color-up: #bd573d;
-  --color-down: #426da9;
-}
+/* 연말 결산서만의 표지·자본·장부 (decisions.md 240번). 종이·소제목·꼬리 버튼은 분기 실적과 같이 쓰는 report-paper.css에 있다 (396번). */
 .year-cover {
   padding: 22px 24px 26px;
   color: #fffbed;
@@ -66,9 +53,6 @@
 .year-cover-message {
   margin-top: 10px;
   font-size: 12px;
-}
-.year-report-body {
-  padding: 20px 22px 8px;
 }
 .year-capital {
   text-align: center;
@@ -153,27 +137,6 @@
 .year-highlight strong {
   font-size: 13px;
 }
-.year-section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 25px 0 8px;
-}
-.year-section-title > span {
-  display: grid;
-  place-items: center;
-  width: 25px;
-  height: 25px;
-  border-radius: 8px;
-  background: #e8edf7;
-  color: #536fa7;
-  font-size: 11px;
-  font-weight: 800;
-}
-.year-section-title h3 {
-  font-size: 15px;
-  font-weight: 800;
-}
 .year-caption {
   font-size: 11px;
   line-height: 1.7;
@@ -249,42 +212,9 @@
   color: #747891;
   margin: 24px 0 12px;
 }
-.year-footer {
-  position: sticky;
-  bottom: 0;
-  padding: 12px 22px 16px;
-  background: #fffdf6f5;
-  border-top: 1px solid #e4e5e4;
-}
-.year-footer button {
-  width: 100%;
-  min-height: 48px;
-  border-radius: 13px;
-  background: #557ac0;
-  color: white;
-  font-size: 16px;
-  font-weight: 700;
-  box-shadow: 0 3px 0 #3c5e98;
-}
-.year-footer button:hover {
-  background: #496db1;
-}
-.year-footer button:focus-visible {
-  outline: 3px solid #b78938;
-  outline-offset: 3px;
-}
-.year-footer p {
-  font-size: 10px;
-  color: #747891;
-  text-align: center;
-  margin-top: 9px;
-}
 @media (max-width: 360px) {
   .year-cover {
     padding: 18px 16px 22px;
-  }
-  .year-report-body {
-    padding: 16px 14px 8px;
   }
   .year-seal {
     width: 58px;
@@ -293,11 +223,5 @@
   }
   .year-metrics b {
     font-size: 16px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .year-report,
-  .year-report .animate-reveal {
-    animation: none;
   }
 }

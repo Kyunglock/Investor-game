@@ -1,0 +1,169 @@
+/* 분기 실적만의 표지·자본·칸 (decisions.md 396번). 종이·소제목·꼬리 버튼은 report-paper.css. 연말 결산서의 파란 표지·도장보다 가볍게 둔다. */
+.quarter-cover {
+  padding: 16px 22px 18px;
+  background: linear-gradient(135deg, #e6ecf8, #f8f2e2);
+  border-bottom: 3px solid #ebcc88;
+}
+.quarter-cover-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: #687c9e;
+}
+.quarter-pips {
+  display: flex;
+  gap: 4px;
+  letter-spacing: 0;
+}
+.quarter-pips > li {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 18px;
+  border: 1px solid #c5cdec;
+  border-radius: 5px;
+  background: #fffdf6;
+  color: #9aa5c0;
+  font-size: 10px;
+  font-weight: 800;
+}
+.quarter-pips > li[data-state="done"] {
+  background: #cfdaef;
+  border-color: #cfdaef;
+  color: #536fa7;
+}
+.quarter-pips > li[data-state="now"] {
+  background: #536fa7;
+  border-color: #536fa7;
+  color: #fffbed;
+  transform: scale(1.12);
+}
+.quarter-cover h2 {
+  margin-top: 8px;
+  font-family: var(--font-game, var(--font-sans));
+  font-size: clamp(22px, 6vw, 28px);
+  font-weight: 800;
+  line-height: 1.35;
+}
+.quarter-capital {
+  padding: 14px 12px 16px;
+  text-align: center;
+  border: 1px solid #e5dac2;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #fff9e6, #fffefb);
+}
+.quarter-report[data-result="loss"] .quarter-capital {
+  background: linear-gradient(145deg, #edf3fc, #fffefb);
+  border-color: #cdd9ed;
+}
+.quarter-capital > p,
+.quarter-capital > span {
+  font-size: 12px;
+  color: #747891;
+}
+.quarter-capital > strong {
+  display: block;
+  font-family: var(--font-game, var(--font-sans));
+  font-size: clamp(28px, 8vw, 38px);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.quarter-capital > span {
+  display: block;
+}
+.quarter-change {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 3px 16px;
+  border-radius: 999px;
+  background: #f1ece0;
+  font-size: 20px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.quarter-change.text-up {
+  background: #bd573d1a;
+}
+.quarter-change.text-down {
+  background: #426da91a;
+}
+.quarter-flow {
+  border-top: 1px solid #dedfdc;
+}
+.quarter-flow > li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 9px 2px;
+  border-bottom: 1px dashed #e2dccb;
+  font-size: 14px;
+}
+.quarter-flow small {
+  display: block;
+  font-size: 12px;
+  color: #747891;
+}
+.quarter-flow b {
+  flex-shrink: 0;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.quarter-box {
+  padding: 2px 12px 12px;
+  border: 1px solid #e4e5e4;
+  border-radius: 14px;
+  background: #fffefb;
+}
+.quarter-lines {
+  display: grid;
+  gap: 6px;
+}
+.quarter-lines > li {
+  padding: 8px 12px;
+  border-left: 4px solid #ebcc88;
+  border-radius: 10px;
+  background: #f2f5fa;
+  font-size: 13px;
+}
+/* 폭락 분기: 표지가 붉어지고 노랑·검정 경고 띠가 붙는다. */
+.quarter-report[data-crash] .quarter-cover {
+  color: #fff4e0;
+  background: radial-gradient(circle at 90% 100%, #e0785855, transparent 60%), #8c3a35;
+  border-bottom: 0;
+}
+.quarter-report[data-crash] .quarter-cover-meta {
+  color: #f3c9b8;
+}
+.quarter-report[data-crash] .quarter-pips > li {
+  background: transparent;
+  border-color: #f3c9b866;
+  color: #f3c9b8;
+}
+.quarter-report[data-crash] .quarter-pips > li[data-state="now"] {
+  background: #f2c14e;
+  border-color: #f2c14e;
+  color: #3a2626;
+}
+.quarter-crash {
+  padding: 7px 12px;
+  text-align: center;
+  background: repeating-linear-gradient(-45deg, #f2c14e 0 12px, #3a2626 12px 24px);
+}
+.quarter-crash > span {
+  display: inline-block;
+  padding: 2px 12px;
+  border-radius: 8px;
+  background: #3a2626;
+  color: #ffd76a;
+  font-size: 15px;
+  font-weight: 800;
+}
+@media (max-width: 360px) {
+  .quarter-cover {
+    padding: 14px 14px 16px;
+  }
+}

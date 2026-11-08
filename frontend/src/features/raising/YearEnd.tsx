@@ -1,10 +1,11 @@
+import './report-paper.css'
 import './year-end.css'
-import type { CSSProperties } from 'react'
 import type { Company } from '../../api/client'
 import { money } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { bubbleOf, pnlLabel, teamRows } from './board'
 import { officeName } from './office'
+import { revealer } from './reveal'
 import { TeamReports } from './TeamReports'
 
 type Settlement = NonNullable<Company['lastSettlement']>
@@ -35,16 +36,8 @@ export function Ledger({
   const staff = s.results.reduce((sum, r) => sum + r.pnl, 0)
   // 전광판은 자리마다 한 줄, 이름은 팀장만 (292번).
   const teams = teamRows(s.results, s.reports)
-  let at = 0
   // 줄마다 드러나는 시각. 직원 줄은 그 사이를 짧게 잇는다.
-  const reveal = (ms = STEP_MS): { className: string; style?: CSSProperties } => {
-    if (!staged) {
-      return { className: '' }
-    }
-    const style = { animationDelay: `${at}ms`, animationFillMode: 'both' as const }
-    at += ms
-    return { className: 'animate-reveal', style }
-  }
+  const reveal = revealer(staged, STEP_MS)
   let n = 0
   const num = () => '①②③④⑤⑥'[n++]
   const before = officeName(s.gradeBefore)
@@ -326,7 +319,7 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
   return (
     <Overlay>
       <section
-        className="year-report animate-pop"
+        className="report-paper year-report animate-pop"
         data-result={result}
         role="dialog"
         aria-modal="true"
@@ -350,7 +343,7 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
           </div>
           <p className="year-cover-message">{headline}</p>
         </header>
-        <div className="year-report-body">
+        <div className="report-body">
           <section className="year-capital" aria-label="연간 자본 요약">
             <p>올해의 연말 자본</p>
             <strong data-testid="year-capital">{money(s.capitalAfter)}</strong>
@@ -383,7 +376,7 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
               <strong className={tone(leading.pnl)}>{pnlLabel(leading.pnl)}</strong>
             </div>
           )}
-          <div className="year-section-title">
+          <div className="report-section-title">
             <span>01</span>
             <h3>한 해의 자금 흐름</h3>
           </div>
@@ -393,7 +386,7 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
           </div>
           {s.reports.length > 0 && (
             <div className="year-reports">
-              <div className="year-section-title">
+              <div className="report-section-title">
                 <span>02</span>
                 <h3>함께 만든 성과</h3>
               </div>
@@ -418,7 +411,7 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
           )}
           <p className="year-signoff">한 해 동안 수고했어요, 사장님.</p>
         </div>
-        <footer className="year-footer">
+        <footer className="report-footer">
           <button type="button" onClick={onClose}>
             확인
           </button>
