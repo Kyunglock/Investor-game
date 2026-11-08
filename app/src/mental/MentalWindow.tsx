@@ -22,6 +22,7 @@ import { ENEMIES } from './enemies'
 import { GunSprite } from './GunSprite'
 import { BATTLE_SECONDS } from './genres'
 import { StagePortrait } from './StagePortrait'
+import { WEAPON_EFFECTS } from './weaponEffects'
 import './stage.css'
 import { DEFAULT_WEAPON, type Hero, heroOf, type Weapon } from './hero'
 
@@ -408,6 +409,13 @@ function WeaponPicker({
               <span className="text-[11px] text-muted">
                 {w.equipped ? '장착 중 · ' : ''}공격 ×{w.damagePercent / 100} ·{' '}
                 {(1000 / w.fireMs).toFixed(1)}발/초{w.count > 1 ? ` · ${w.count}개` : ''}
+              </span>
+              <span
+                className="stage-weapon-effect"
+                data-testid="weapon-effect"
+                title={WEAPON_EFFECTS[w.kind].desc}
+              >
+                {WEAPON_EFFECTS[w.kind].name} · {WEAPON_EFFECTS[w.kind].desc}
               </span>
             </button>
             {armory && w.grade !== 'UR' && w.count >= armory.mergeCount && (

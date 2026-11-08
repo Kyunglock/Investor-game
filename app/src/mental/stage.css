@@ -157,6 +157,13 @@
   flex: 0 0 145px;
   scroll-snap-align: start;
 }
+.stage-weapon-effect {
+  font-size: 10px;
+  font-weight: 700;
+  color: #5b6f99;
+  line-height: 1.35;
+  word-break: keep-all;
+}
 .stage-weapon {
   width: 100%;
   border: 1px solid #c3cdd1;

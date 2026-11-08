@@ -24,6 +24,7 @@ import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres
 import type { Hero } from './hero'
 import { BULLET_H, BULLET_W, bulletHitbox } from './hitbox'
 import { wallOffset } from './stageArt'
+import { pierceOf, SLOW_FACTOR, SLOW_SECONDS, weaponDamage } from './weaponEffects'
 
 /**
  * 멘탈 전투 한 판 (decisions.md 328번). Phaser 3 Arcade로 돈다: 탄·적은 풀에서 재사용하고, 도트 그림(art.ts)은 캔버스에 한 번 구워 둔다. 규칙은 화면
@@ -101,6 +102,10 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   blocker: boolean
   /** 전진 모드의 마지막 보스(364번). */
   boss: boolean
+  /** 기관단총에 맞아 이 전투 시각(초)까지 느리다 (376번). */
+  slowUntil: number
+  /** 지금 파르스름하게 칠해 두었나. */
+  chilled: boolean
 }
 type Bullet = Phaser.Physics.Arcade.Image & {
   life: number
@@ -110,6 +115,9 @@ type Bullet = Phaser.Physics.Arcade.Image & {
   /** 2단계부터 맞은 자리에서 터져 휘말리게 하는 반지름(px)과 피해. 0이면 없다. */
   splashRadius: number
   splashDamage: number
+  /** 앞으로 더 맞힐 수 있는 적의 수(소총 관통, 376번)와 이미 맞힌 적. */
+  pierce: number
+  hitList: Enemy[]
 }
 
 /** 적 그림(64×64)의 충돌 원: 가운데에 반지름 r. */
@@ -349,11 +357,23 @@ class BattleScene extends Phaser.Scene {
       if (!bullet.active || !enemy.active || enemy.dying || !bullet.body) {
         return
       }
+      if (bullet.hitList.includes(enemy)) {
+        return
+      }
       const angle = Math.atan2(bullet.body.velocity.y, bullet.body.velocity.x)
       const [bx, by] = [bullet.x, bullet.y]
       this.impact(bx, by, bullet.power)
-      bullet.disableBody(true, true)
-      this.hit(enemy, bullet.damage, angle)
+      // 무기마다 다른 효과 (376번): 소총은 뚫고 지나가고, 리볼버는 치명타, 기관단총은 맞은 적을 느리게 한다.
+      bullet.hitList.push(enemy)
+      if (--bullet.pierce <= 0) {
+        bullet.disableBody(true, true)
+      }
+      const kind = this.opts.hero.weapon.kind
+      const shot = weaponDamage(kind, bullet.damage, Math.random())
+      if (kind === 'smg') {
+        enemy.slowUntil = this.elapsed + SLOW_SECONDS
+      }
+      this.hit(enemy, shot.damage, angle, shot.crit)
       if (bullet.splashRadius > 0) {
         this.splash(bx, by, bullet.splashRadius, bullet.splashDamage, enemy)
       }
@@ -578,6 +598,8 @@ class BattleScene extends Phaser.Scene {
     }
     e.blocker = false
     e.boss = false
+    e.slowUntil = 0
+    e.chilled = false
     const v = ENEMIES[kind]
     e.setTexture(enemyKey(kind, 0))
       .enableBody(true, x, y, true, true)
@@ -710,11 +732,15 @@ class BattleScene extends Phaser.Scene {
     })
   }
 
-  private hit(e: Enemy, dmg: number, angle: number) {
+  private hit(e: Enemy, dmg: number, angle: number, crit = false) {
     e.hp -= dmg
     // 하얗게 번쩍, 들썩임, 데미지 숫자: 맞은 느낌의 세 가지.
     e.setTintFill(0xffffff)
-    this.time.delayedCall(55, () => e.active && e.clearTint())
+    this.time.delayedCall(55, () => {
+      if (!e.active) return
+      if (e.chilled) e.setTint(0x9fd4ff)
+      else e.clearTint()
+    })
     // 맞는 자리에 불꽃이 튀고 살짝 들썩인다.
     this.hitSpark.explode(3, e.x - Math.cos(angle) * 10, e.y - Math.sin(angle) * 10)
     sfx.hit()
@@ -728,7 +754,10 @@ class BattleScene extends Phaser.Scene {
     })
     // 탄에 맞아도 밀려나지 않는다: 밀리면 내려오던 줄이 흐트러져 조준이 어긋났다. 밀림은 사장냥에 부딪혔을 때(hurt)만.
     // 데미지 숫자는 한 방에 안 죽는 적(투기·손절매·투매)에만: 패닉까지 띄우면 화면이 숫자로 덮인다 (334번).
-    if ((ENEMIES[e.kind].hp > 1 || e.boss) && e.hp > 0) {
+    if (crit) {
+      // 리볼버 치명타 (376번): 노랗고 큰 숫자.
+      this.pop(e.x, e.y - ENEMIES[e.kind].r - 14, `${Math.round(dmg * 10)}!`, '#ffd84d', 22)
+    } else if ((ENEMIES[e.kind].hp > 1 || e.boss) && e.hp > 0) {
       this.pop(
         e.x + Phaser.Math.Between(-8, 8),
         e.y - ENEMIES[e.kind].r - 10,
@@ -974,6 +1003,8 @@ class BattleScene extends Phaser.Scene {
     b.power = stats.power
     b.splashRadius = stats.splashRadius
     b.splashDamage = stats.splashDamage
+    b.pierce = pierceOf(this.opts.hero.weapon.kind)
+    b.hitList = []
     b.setDisplaySize(BULLET_W * stats.scale, BULLET_H * stats.scale).setRotation(base)
     b.setTint([0xffffff, 0xffdd99, 0xffb966, 0xff9955][stats.power])
     const hb = bulletHitbox(b.width, b.height)
@@ -1193,7 +1224,17 @@ class BattleScene extends Phaser.Scene {
       const targetY = this.wallZone ? this.wallY() : p.y
       const d = Math.abs(targetY - e.y) || 1
       // 원거리 공격은 없다 (340번): 손절매도 다른 적처럼 곧장 내려와 부딪힌다.
-      const sy = v.speed
+      // 기관단총에 맞으면 잠깐 느리고 파르스름하다 (376번).
+      const slowed = e.slowUntil > this.elapsed
+      if (slowed !== e.chilled) {
+        e.chilled = slowed
+        if (slowed) {
+          e.setTint(0x9fd4ff)
+        } else {
+          e.clearTint()
+        }
+      }
+      const sy = slowed ? v.speed * SLOW_FACTOR : v.speed
       if (e.kind === 'spec') {
         // 투기: 부풀다가 터진다.
         const s = 1 + Math.min(1, (this.elapsed - e.born) / 9) * 0.9
