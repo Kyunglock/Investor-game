@@ -175,26 +175,6 @@ export function InvestWindow({
           )}
         </header>
         <div className="meeting-body" data-step={step}>
-          <nav className="meeting-agenda" aria-label="회의 진행">
-            <span
-              data-active={step === 'analysis'}
-              aria-current={step === 'analysis' ? 'step' : undefined}
-            >
-              01 종목 분석
-            </span>
-            <span
-              data-active={step === 'decide'}
-              aria-current={step === 'decide' ? 'step' : undefined}
-            >
-              02 투자 결정
-            </span>
-            <span
-              data-active={step === 'result'}
-              aria-current={step === 'result' ? 'step' : undefined}
-            >
-              03 결과 확인
-            </span>
-          </nav>
           {step === 'analysis' && (
             <>
               <TeamGradeChip team={invest.team} />
