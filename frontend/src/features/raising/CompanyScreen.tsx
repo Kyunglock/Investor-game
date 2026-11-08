@@ -153,14 +153,10 @@ export function CompanyScreen({ company }: { company: Company }) {
           />
         )}
 
-        {company.resign &&
-          !justSettled &&
-          !justQuartered &&
-          !moveAlert &&
-          !upgradeMove && (
-            // 연봉 때문에 사표를 들고 왔다 (282번): 다른 창을 다 닫은 뒤 마지막 기회로 뜬다.
-            <ResignAlert resign={company.resign} />
-          )}
+        {company.resign && !justSettled && !justQuartered && !moveAlert && !upgradeMove && (
+          // 연봉 때문에 사표를 들고 왔다 (282번): 다른 창을 다 닫은 뒤 마지막 기회로 뜬다.
+          <ResignAlert resign={company.resign} />
+        )}
 
         {drawn && !justSettled && (
           // 채용 뽑기 결과 (decisions.md 312번): 카드가 하나씩 뒤집힌다.

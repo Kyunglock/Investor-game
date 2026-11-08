@@ -98,11 +98,9 @@ export function Windows({ company }: { company: Company }) {
           onDone={() => useRaisingStore.setState({ upgradeMove: null })}
         />
       )}
-      {company.resign &&
-        !justSettled &&
-        !justQuartered &&
-        !moveAlert &&
-        !upgradeMove && <ResignAlert resign={company.resign} />}
+      {company.resign && !justSettled && !justQuartered && !moveAlert && !upgradeMove && (
+        <ResignAlert resign={company.resign} />
+      )}
       {drawn && !justSettled && (
         // 채용 뽑기 결과 (decisions.md 312번): 카드가 열릴 때마다 소리·진동, 특급이면 금빛 번쩍임과 색종이.
         <GachaReveal
