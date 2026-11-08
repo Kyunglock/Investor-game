@@ -12,9 +12,9 @@ import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 /**
- * 회사 경제의 맞춤 (증권사 육성 설계 5절 1번, decisions.md 226·229·266번). 첫 회사(1억 원, F)에 같은 능력치의 직원 둘을 맞는
- * 자리(바이오·단타)에 앉히고 해마다 거시경제 회의(기사 다수결), 직원이 종목을 물어 왔으면 종목 회의(기사 다수결), 결산을 하며 한 시대(세 해)를 2,000번 돌려,
- * 능력치에 따라 회사가 자라는 폭이 목표 안에 드는지 본다. 수치를 바꾸면 이 목표부터 다시 맞춘다.
+ * 회사 경제의 맞춤 (증권사 육성 설계 5절 1번, decisions.md 226·229·389번). 첫 회사(1억 원, F)에 같은 능력치의 직원 둘을 맞는
+ * 자리(바이오·단타)에 앉히고 분기마다 직원이 종목을 물어 왔으면 종목 회의(기사 다수결), 결산을 하며 한 시대(세 해)를 2,000번 돌려, 능력치에 따라 회사가 자라는
+ * 폭이 목표 안에 드는지 본다(거시경제 회의는 382번에서 빠졌다). 수치를 바꾸면 이 목표부터 다시 맞춘다.
  */
 class EconomySimulationTest {
 
@@ -105,7 +105,7 @@ class EconomySimulationTest {
     // 1.92 · 3.79 · 20.6 · 95.3배. 반지하에서 뽑히는 사람은 대개 F·E라 A·S 둘로 차리는 일은 없다.
     // 388번: 종목 회의 수익률을 데스크 몫과 떼어 −50% ~ +300%로(판돈은 분기 몫의 260% × 등급마다 0.77). 2,000판: E에 닿는 몫 82% ·
     // 98% ·
-    // 100% · 100%, 세 해 자본 중앙값 2.03 · 4.01 · 21.3 · 93.8배.
+    // 100% · 100%, 세 해 자본 중앙값 2.03 · 4.01 · 21.3 · 93.8배. 389번(#546)에서 다시 재도 같아 그대로 둔다.
     assertThat(weak[0]).as("D 직원: 두 배 가까이 자란다").isBetween(1.6, 2.3);
     assertThat(weak[1]).as("D 직원도 절반 넘게 첫 이사를 할 수 있다").isBetween(0.6, 0.9);
     assertThat(average[0]).as("C 직원: 세 해에 서너 배").isBetween(3.0, 4.6);
@@ -113,6 +113,64 @@ class EconomySimulationTest {
     assertThat(good[0]).as("A 직원은 C 직원보다 훨씬 크게 자란다(등급마다 두 배)").isGreaterThan(average[0] * 3);
     assertThat(good[1]).as("A 직원: 거의 다 E에 닿는다").isGreaterThan(0.95);
     assertThat(great[1]).as("S 직원: 거의 다 E에 닿는다").isGreaterThan(0.9);
+  }
+
+  /**
+   * 첫 회사의 회의 판돈 (decisions.md 389번, 제안). 반지하(F)의 종목 회의는 판돈이 분기 몫의 260%라 자본의 약 60%를 걸고, 회의 수익률은 −50%
+   * ~ +300%(388번, 사용자 결정)다. 크게 걸어 회의 한 번이 짜릿하되 한 번에 무너지지는 않는지 본다. 첫 회사에 D 직원
+   * 둘(EconomySimulationTest의 가장 약한 시대)로 첫 해를 2,000번 돌린다. 2026-11-09: 회의 판돈 평균 자본의 61% · 회의 한 번에 25%
+   * 넘게 잃는 일 6.9% · 가장 크게 잃은 회의 −32% · 한 해 중앙값 1.46배(하위 10% 0.86배, 상위 10% 2.55배) · 잃는 해 18% · 반토막
+   * 0.5%.
+   */
+  @Test
+  void 첫_회사의_첫_해는_회의_한_번에_무너지지_않는다() {
+    int trials = TRIALS;
+    double[] ratio = new double[trials];
+    int losses = 0;
+    int halved = 0;
+    int meetings = 0;
+    int deep = 0;
+    double stakeShare = 0;
+    double worst = 0;
+    for (int seed = 0; seed < trials; seed++) {
+      CompanyState company = ENGINE.open(new HashSeededRandom(seed), START);
+      ENGINE.hire(company, stats(30));
+      ENGINE.hire(company, stats(30));
+      ENGINE.place(company, Map.of(1, "bio", 2, "day"));
+      HashSeededRandom random = new HashSeededRandom(seed);
+      while (company.year == 1) {
+        ENGINE.scout.discover(company, random);
+        if (ENGINE.invest.open(company)) {
+          long before = company.capital;
+          ENGINE.invest.decide(company, majority(company.invest), random);
+          double change = (company.capital - before) / (double) before;
+          meetings++;
+          stakeShare += company.invest.stake / (double) before;
+          deep += change < -0.25 ? 1 : 0;
+          worst = Math.min(worst, change);
+        }
+        ENGINE.settleQuarter(company, random);
+      }
+      ratio[seed] = company.capital / (double) START;
+      losses += company.capital < START ? 1 : 0;
+      halved += company.capital < START / 2 ? 1 : 0;
+    }
+    Arrays.sort(ratio);
+    System.out.printf(
+        "ECONOMY 첫 회사 첫 해: 회의 판돈 평균 %.0f%% · 25%% 넘게 잃는 회의 %.1f%% · 가장 크게 잃은 회의 %.0f%% · 중앙값 %.2f(하위 10%% %.2f · 상위 10%% %.2f)"
+            + " · 잃는 해 %.0f%% · 반토막 %.1f%%%n",
+        stakeShare * 100 / meetings,
+        deep * 100.0 / meetings,
+        worst * 100,
+        ratio[trials / 2],
+        ratio[trials / 10],
+        ratio[trials * 9 / 10],
+        losses * 100.0 / trials,
+        halved * 100.0 / trials);
+    assertThat(worst).as("회의 한 번에 자본의 3분의 1 넘게 잃지 않는다(−50% × 판돈)").isGreaterThan(-0.34);
+    assertThat(deep / (double) meetings).as("회의 한 번에 4분의 1 넘게 잃는 일은 드물다").isLessThan(0.1);
+    assertThat(losses / (double) trials).as("첫 해에 잃는 회사는 열에 둘쯤").isBetween(0.1, 0.3);
+    assertThat(halved / (double) trials).as("첫 해에 반토막 나는 회사는 거의 없다").isLessThan(0.02);
   }
 
   /** 첫 회사에 C 직원 둘을 그 자리에 앉히고 반지하를 떠나 상가(D)에 닿는 해의 중앙값. */
@@ -208,9 +266,10 @@ class EconomySimulationTest {
       // 등급이
       // 조금 더 자란다. 800판: D 1.09 · B 1.12 · S 1.18 · SSS 1.37 · X 1.39 · XX 1.26배, 잃는 해 22~39%, XX는
       // 폭락장에 18%
-      // 떨어진다.
+      // 떨어진다. 389번(#546)에서 다시 재도 같다: D의 잃는 해 39%가 상한(40%)에 가장 가깝지만 첫 회사의 판돈은 줄이지 않는다
+      // (아래 첫_회사의_첫_해는_회의_한_번에_무너지지_않는다).
       assertThat(ratio[trials / 2]).as(grade + " 회사의 한 해 중앙값").isBetween(1.05, 1.45);
-      // #344·#388: 태도가 숨은 방향과 맞으면 더 번다. 꼭대기(X)도 상위 10%가 한 해 두 배 아래다.
+      // 꼭대기(X)도 상위 10%가 한 해 두 배 아래다(SS~X 1.57~1.59배).
       assertThat(ratio[trials * 9 / 10]).as(grade + " 회사가 한 해에 등급 띠(3배)를 넘지 않는다").isLessThan(2.0);
       if (k >= 10) {
         assertThat(dropped / (double) trials).as(grade + " 꼭대기는 폭락장에 떨어질 수 있다").isGreaterThan(0.1);
