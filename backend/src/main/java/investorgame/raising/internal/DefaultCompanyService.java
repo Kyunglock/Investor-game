@@ -222,12 +222,12 @@ class DefaultCompanyService implements CompanyService {
 
   /** 다음 건물로 가는 데 드는 돈 (296번). 끝 등급이거나 끝난 회사면 null. */
   private CompanyView.Upgrade upgradeView(CompanyState c) {
-    if (c.buildingTo != null && !c.finished) {
+    if (c.buildingTo != null) {
       return new CompanyView.Upgrade(c.buildingTo, 0, 0, false, c.buildYears, c.buildLeft);
     }
     String to = engine.nextGrade(c);
     Long needed = engine.upgradeNeeded(c);
-    if (to == null || needed == null || c.finished) {
+    if (to == null || needed == null) {
       return null;
     }
     return new CompanyView.Upgrade(
@@ -305,9 +305,8 @@ class DefaultCompanyService implements CompanyService {
         companies.lockActive(sessionId).orElseThrow(() -> new NotFoundException("회사가 없다"));
     // 채용 뽑기 전에 차린 회사 (312번): 무엇을 하든 그 전에 옮긴다. 요청 끝에 함께 저장된다.
     engine.adoptGacha(row.state());
-    if (row.state().finished) {
-      throw new InvalidRequestException("엔딩을 본 회사다. 새 회사를 차려야 한다");
-    }
+    // 엔딩을 없앴다 (374번): 옛 엔딩으로 멈췄던 회사도 다시 이어 간다. 요청 끝에 함께 저장된다.
+    row.state().finished = false;
     return row;
   }
 
@@ -415,10 +414,6 @@ class DefaultCompanyService implements CompanyService {
         ended ? null : macroView(c),
         c.quarters.isEmpty() ? null : quarterView(c.quarters.getLast()),
         last == null ? null : settlementView(last),
-        c.finished
-            ? new CompanyView.Ending(
-                c.finishedYear == null ? c.year : c.finishedYear, c.capital, grade)
-            : null,
         resignView(c),
         industryView(row),
         lockedDesks,
@@ -953,7 +948,6 @@ class DefaultCompanyService implements CompanyService {
                         r.employeeId, r.name, r.desk, r.stake, r.pnl, Map.copyOf(r.flips)))
             .toList(),
         List.copyOf(s.lines),
-        reportViews(s.reports),
-        s.finished);
+        reportViews(s.reports));
   }
 }

@@ -98,10 +98,6 @@ class CompanyHistory {
     if (eraLine != null) {
       add(company, s.year, "era", eraLine, null);
     }
-    // 랜드마크 타워에 올라 엔딩을 봤다 (276번).
-    if (s.finished) {
-      add(company, s.year, "ending", texts().events().get("ending"), s.gradeAfter);
-    }
     for (Employee e : company.employees) {
       if (e.rank > ranksBefore.getOrDefault(e.id, e.rank)) {
         add(

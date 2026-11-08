@@ -348,5 +348,4 @@ export const company = {
     reports: [],
   },
   resign: null,
-  ending: null,
 }

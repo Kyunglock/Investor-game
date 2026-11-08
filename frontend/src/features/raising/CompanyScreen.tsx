@@ -7,7 +7,6 @@ import { toggleAutoPlay } from './autoPlay'
 import { BuildingArt } from './BuildingArt'
 import { pnlLabel } from './board'
 import { ConstructionArt } from './ConstructionArt'
-import { EndingScreen } from './EndingScreen'
 import { GachaPanel, GachaReveal, useDrawReveal } from './Gacha'
 import { GradeBadge, GradeCard } from './GradeCard'
 import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
@@ -154,19 +153,9 @@ export function CompanyScreen({ company }: { company: Company }) {
           />
         )}
 
-        {company.resign &&
-          !company.ending &&
-          !justSettled &&
-          !justQuartered &&
-          !moveAlert &&
-          !upgradeMove && (
-            // 연봉 때문에 사표를 들고 왔다 (282번): 다른 창을 다 닫은 뒤 마지막 기회로 뜬다.
-            <ResignAlert resign={company.resign} />
-          )}
-
-        {company.ending && !justSettled && !moveAlert && !upgradeMove && (
-          // 랜드마크 타워 엔딩 (276번): 결산서와 건물 알림 뒤에 뜨고, 다음 회사를 차린다.
-          <EndingScreen company={company} />
+        {company.resign && !justSettled && !justQuartered && !moveAlert && !upgradeMove && (
+          // 연봉 때문에 사표를 들고 왔다 (282번): 다른 창을 다 닫은 뒤 마지막 기회로 뜬다.
+          <ResignAlert resign={company.resign} />
         )}
 
         {drawn && !justSettled && (
@@ -234,7 +223,7 @@ export function CompanyScreen({ company }: { company: Company }) {
           </section>
         )}
 
-        {!ended && !company.broke && !company.ending && meeting && (
+        {!ended && !company.broke && meeting && (
           // 결산은 한 해의 마지막 일이라 화면 아래에 늘 붙어 있다.
           <div className="sticky bottom-0 z-10 -mx-1 mt-4 grid gap-1 bg-card/95 px-1 pt-2 pb-3 backdrop-blur">
             {error && (

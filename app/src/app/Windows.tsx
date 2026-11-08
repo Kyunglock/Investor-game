@@ -1,6 +1,5 @@
 import type { Company, Drawn } from '@web/api/client'
 import { toggleAutoPlay } from '@web/features/raising/autoPlay'
-import { EndingScreen } from '@web/features/raising/EndingScreen'
 import { GachaReveal, useDrawReveal } from '@web/features/raising/Gacha'
 import { InvestWindow } from '@web/features/raising/InvestWindow'
 import { MacroWindow } from '@web/features/raising/MacroWindow'
@@ -99,14 +98,8 @@ export function Windows({ company }: { company: Company }) {
           onDone={() => useRaisingStore.setState({ upgradeMove: null })}
         />
       )}
-      {company.resign &&
-        !company.ending &&
-        !justSettled &&
-        !justQuartered &&
-        !moveAlert &&
-        !upgradeMove && <ResignAlert resign={company.resign} />}
-      {company.ending && !justSettled && !moveAlert && !upgradeMove && (
-        <EndingScreen company={company} />
+      {company.resign && !justSettled && !justQuartered && !moveAlert && !upgradeMove && (
+        <ResignAlert resign={company.resign} />
       )}
       {drawn && !justSettled && (
         // 채용 뽑기 결과 (decisions.md 312번): 카드가 열릴 때마다 소리·진동, 특급이면 금빛 번쩍임과 색종이.
@@ -200,7 +193,7 @@ export function ActionBar({
   const settleLocked = useLocked(company, 'settle')
   const autoLocked = useLocked(company, 'auto')
   const ended = company.status === 'ENDED'
-  if (ended || company.ending) {
+  if (ended) {
     return null
   }
   if (company.broke) {

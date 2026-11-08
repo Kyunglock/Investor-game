@@ -1139,8 +1139,6 @@ export interface components {
                 lines: string[];
                 /** @description 팀장들의 한 해 보고 (decisions.md 269번) */
                 reports: components["schemas"]["Report"][];
-                /** @description 이 결산으로 랜드마크 타워에 올라 엔딩을 봤다 (decisions.md 276번) */
-                finished?: boolean;
             } | null;
             /** @description 연봉 때문에 사표를 들고 온 직원 (decisions.md 282번). 붙잡거나 보내지 않고 다음 분기를 넘기면 떠난다. 없으면 null */
             resign?: {
@@ -1274,14 +1272,6 @@ export interface components {
                     isNew: boolean;
                 } | null;
             };
-            /** @description 엔딩 (decisions.md 276번). 랜드마크 타워에 오르면 회사가 멈추고 사장이 다음 회사를 차린다. 아직이면 null */
-            ending?: {
-                /** @description 엔딩을 본 해 */
-                year: number;
-                /** Format: int64 */
-                capital: number;
-                grade: components["schemas"]["Grade"];
-            } | null;
         };
         /** @description 분기 하나의 실적 (decisions.md 268번) */
         Quarter: {

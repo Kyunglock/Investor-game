@@ -712,41 +712,6 @@ test('새 건물 공사가 끝나면 가림막이 걷히며 새 건물이 솟아
   await expect(move).toContainText('반지하 원룸 → 상가 2층')
 })
 
-test('랜드마크 타워에 오르면 결산서 뒤에 엔딩이 뜨고 다음 회사를 차리게 한다 (276번)', async ({
-  page,
-}) => {
-  await openCompany(page)
-  // 자본 100조 원은 실제로 플레이해 닿기 어렵다: 연말 결산 응답을 엔딩으로 바꿔 본다.
-  await page.route('**/api/company/settle', async (route) => {
-    const response = await route.fetch()
-    const company = await response.json()
-    if (company.quarter === 1 && company.lastSettlement) {
-      company.lastSettlement.finished = true
-      company.ending = { year: 1, capital: 100_000_000_000_000, grade: 'Z' }
-    }
-    await route.fulfill({ response, json: company })
-  })
-  for (let quarter = 1; quarter <= 4; quarter++) {
-    await page.getByRole('button', { name: `1년 차 ${quarter}분기 넘기기` }).click()
-    if (quarter < 4) {
-      await closeQuarter(page, 1, quarter)
-    }
-  }
-  const ending = page.getByRole('dialog', { name: '엔딩' })
-  // 연말 결산서가 먼저다.
-  await expect(ending).toHaveCount(0)
-  await page
-    .getByRole('dialog', { name: '연말 결산서' })
-    .getByRole('button', { name: '확인' })
-    .click()
-  await expect(ending).toBeVisible()
-  await expect(ending).toContainText('랜드마크 타워에 올랐다!')
-  await expect(ending.getByTestId('ending-years')).toHaveText('반지하 원룸에서 1년 만에')
-  await expect(ending.getByRole('button', { name: '사재 100b로 2호 회사 차리기' })).toBeVisible()
-  // 엔딩을 본 회사는 분기를 넘기지 않는다.
-  await expect(page.getByRole('button', { name: '2년 차 1분기 넘기기' })).toHaveCount(0)
-})
-
 test('자동 진행을 켜면 뽑기·배치·회의·결산을 해마다 하고, 멈추면 선다 (245번)', async ({
   page,
 }) => {

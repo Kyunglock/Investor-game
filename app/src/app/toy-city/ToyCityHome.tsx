@@ -72,7 +72,7 @@ export function ToyCityHome({ company }: { company: Company }) {
   const staffSpot = useTutorialSpot(company, 'staff')
   const progress = growthProgress(company)
   const ended = company.status === 'ENDED'
-  const unavailable = ended || Boolean(company.broke || company.ending)
+  const unavailable = ended || Boolean(company.broke)
   const assigned = company.employees.filter((e) => e.desk).length
   const resting = company.employees.length - assigned
   const plan = company.upgrade
@@ -302,7 +302,7 @@ export function ToyCityHome({ company }: { company: Company }) {
               <button
                 type="button"
                 className="toy-sheet-action"
-                disabled={autoLocked || ended || Boolean(company.broke || company.ending)}
+                disabled={autoLocked || ended || Boolean(company.broke)}
                 aria-pressed={autoPlay}
                 data-testid="auto"
                 onClick={() => {

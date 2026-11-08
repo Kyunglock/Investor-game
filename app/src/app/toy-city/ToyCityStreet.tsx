@@ -138,13 +138,7 @@ export function ToyCityStreet({
   const targetY =
     560 + 10 * after.scale - (targetSide === 'left' ? 220 : 242) - 7 * after.scale - 70
   const plan = company.upgrade
-  const showGoal =
-    onUpgrade &&
-    plan &&
-    !transition &&
-    company.status !== 'ENDED' &&
-    !company.broke &&
-    !company.ending
+  const showGoal = onUpgrade && plan && !transition && company.status !== 'ENDED' && !company.broke
   const moving = Boolean(transition && phase < 3)
   const buildingStyle = {
     transformOrigin: `${center}px 560px`,
