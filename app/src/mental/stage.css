@@ -677,7 +677,8 @@
   pointer-events: none;
   position: absolute;
   left: 50%;
-  top: 20%;
+  /* 적은 위에서 내려오니 알림은 멘탈벽 바로 위 빈 띠에 띄운다 (decisions.md 372번) */
+  top: 60%;
   max-width: 90%;
   width: max-content;
   white-space: normal;
