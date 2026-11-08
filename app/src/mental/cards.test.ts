@@ -80,6 +80,19 @@ describe('멘탈 카드 (decisions.md 328·330번)', () => {
     expect(at(2).splashDamage).toBeCloseTo(at(2).damage * 0.5)
   })
 
+  it('자본으로 산 전투 강화가 무기 위에 붙는다', () => {
+    const weapon = { damagePercent: 100, fireMs: 200, power: 0, bulletSpeed: 720 }
+    const plain = loadoutOf(weapon)
+    const upgraded = loadoutOf(weapon, [
+      { kind: 'damage', bonusPercent: 50 },
+      { kind: 'fire', bonusPercent: 25 },
+      { kind: 'speed', bonusPercent: 40 },
+    ])
+    expect(upgraded.damage).toBeCloseTo(plain.damage * 1.5)
+    expect(upgraded.fireMs).toBeCloseTo(150)
+    expect(upgraded.moveSpeed).toBeCloseTo(plain.moveSpeed * 1.4)
+  })
+
   it('다음 레벨까지 드는 경험치는 레벨이 오를수록 커진다', () => {
     expect(xpToNext(1)).toBeLessThan(xpToNext(2))
     expect(xpToNext(5)).toBeLessThan(xpToNext(6))

@@ -222,6 +222,24 @@ class CompanyController {
 
   record WeaponRequest(@NotBlank String kind, @NotBlank String grade) {}
 
+  /** 자본으로 전투 강화 한 단계를 산다 (decisions.md 367번). */
+  @PostMapping("/battle-upgrade")
+  CompanyView buyBattleUpgrade(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody BattleUpgradeRequest request) {
+    UUID sessionId = cookies.requireSession(token);
+    CompanyView company = companies.buyBattleUpgrade(sessionId, request.kind());
+    PLAY.info(
+        "company-battle-upgrade session={} company={} kind={} ip={}",
+        sessionId,
+        company.companyId(),
+        request.kind(),
+        ClientIp.current());
+    return company;
+  }
+
+  record BattleUpgradeRequest(@NotBlank String kind) {}
+
   /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). */
   @PostMapping("/weapon/draw")
   CompanyView drawWeapon(@CookieValue(name = SessionCookies.NAME, required = false) String token) {

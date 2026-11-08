@@ -1,12 +1,14 @@
 import type { Company } from '@web/api/client'
 
 export type Weapon = NonNullable<Company['weapons']>[number]
+export type BattleUpgrade = NonNullable<Company['battleUpgrades']>[number]
 
-/** 싸우는 건 사장냥(플레이어 본인, decisions.md 341번). 이름과 든 무기(346번). */
+/** 싸우는 건 사장냥(플레이어 본인, decisions.md 341번). 이름과 든 무기(346번), 자본으로 산 전투 강화(367번). */
 export interface Hero {
   name: string
   /** 든 무기. 무기 전에 차린 회사라 목록이 비어 있으면 일반 권총. */
   weapon: Weapon
+  upgrades: BattleUpgrade[]
 }
 
 export const DEFAULT_WEAPON: Weapon = {
@@ -24,5 +26,5 @@ export const DEFAULT_WEAPON: Weapon = {
 
 export function heroOf(company: Company): Hero {
   const weapon = (company.weapons ?? []).find((w) => w.equipped) ?? DEFAULT_WEAPON
-  return { name: '사장냥', weapon }
+  return { name: '사장냥', weapon, upgrades: company.battleUpgrades ?? [] }
 }

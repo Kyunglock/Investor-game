@@ -1391,6 +1391,7 @@ class CompanyEngine {
     company.gradedCapital = company.capital;
     company.yearHiring = 0;
     company.yearMoving = 0;
+    company.yearUpgrades = 0;
     company.quarter = 1;
     company.yearStake = null;
     company.quarters.clear();
@@ -1789,6 +1790,8 @@ class CompanyEngine {
     // 분기 실적이 맞아떨어지게 이 분기에 낸 이사 비용(296번)과 인사 비용을 따로 둔다: 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 − 이사 비용
     // = 끝 자본.
     q.moving = company.yearMoving - company.quarters.stream().mapToLong(x -> x.moving).sum();
+    // 전투 강화에 쓴 돈(367번)도 따로 둔다: 안 그러면 인사 비용으로 읽힌다.
+    q.upgrades = company.yearUpgrades - company.quarters.stream().mapToLong(x -> x.upgrades).sum();
     if (q.capitalAfter > 0) {
       q.hiring =
           q.capitalBefore
@@ -1797,6 +1800,7 @@ class CompanyEngine {
               + q.fee
               - q.salary
               - q.moving
+              - q.upgrades
               - q.capitalAfter;
     }
     RaisingContent.Quarters texts = content.raising().company().quarters();
@@ -1841,6 +1845,7 @@ class CompanyEngine {
     settlement.omen = company.omen;
     settlement.hiring = company.yearHiring;
     settlement.moving = company.yearMoving;
+    settlement.upgrades = company.yearUpgrades;
     settlement.capitalBefore =
         company.yearStartCapital != null
             ? company.yearStartCapital

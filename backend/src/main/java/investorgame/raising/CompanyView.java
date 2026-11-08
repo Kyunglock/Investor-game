@@ -53,7 +53,8 @@ public record CompanyView(
     List<LockedDesk> lockedDesks,
     Mental mental,
     List<Weapon> weapons,
-    Armory armory) {
+    Armory armory,
+    List<BattleUpgrade> battleUpgrades) {
 
   /**
    * 업계 순위 (#351): 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다(로그인이 없는 익명 세션). 한 해도 마치지 않았으면 null.
@@ -81,6 +82,24 @@ public record CompanyView(
    * @param lastDraw 마지막으로 뽑은 무기. 뽑은 적이 없으면 null
    */
   public record Armory(int tickets, int mergeCount, WeaponDraw lastDraw) {}
+
+  /**
+   * 자본으로 사는 전투 강화 하나 (decisions.md 367번).
+   *
+   * @param kind damage(데미지)·fire(연사)·speed(고양이 속도)
+   * @param level 지금 단계(0부터)
+   * @param maxLevel 최대 단계
+   * @param price 다음 단계 값. 다 올렸으면 null
+   * @param bonusPercent 지금 단계의 효과(%): 데미지·속도는 그만큼 오르고, 연사는 쏘는 간격이 그만큼 준다
+   * @param nextBonusPercent 다음 단계의 효과(%). 다 올렸으면 null
+   */
+  public record BattleUpgrade(
+      String kind,
+      int level,
+      int maxLevel,
+      Long price,
+      int bonusPercent,
+      Integer nextBonusPercent) {}
 
   /**
    * 뽑은 무기 하나 (366번).
@@ -496,6 +515,7 @@ public record CompanyView(
       long fee,
       long hiring,
       long moving,
+      long upgrades,
       long salary,
       SettlementInvest invest,
       List<Quarter> quarters,
@@ -533,6 +553,7 @@ public record CompanyView(
    * @param staff 직원들이 이 분기에 굴린 몫
    * @param hiring 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료)
    * @param moving 이 분기에 낸 이사 비용 (296번)
+   * @param upgrades 이 분기에 전투 강화에 쓴 돈 (367번)
    * @param invest 이 분기 종목 회의. 안 열렸으면 null
    * @param topic 이 분기 거시경제 회의의 주제. 회의가 없던 분기면 null
    * @param stance 이 분기 태도. 회의가 없던 분기면 null
@@ -548,6 +569,7 @@ public record CompanyView(
       long staff,
       long hiring,
       long moving,
+      long upgrades,
       long salary,
       SettlementInvest invest,
       String topic,

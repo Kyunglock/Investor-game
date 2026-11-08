@@ -344,6 +344,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/battle-upgrade": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 자본으로 전투 강화 한 단계를 산다 (decisions.md 367번)
+         * @description 데미지(+10%)·연사(쏘는 간격 −5%)·고양이 속도(+8%)를 한 단계씩, 10단계까지. 값은 1b부터 단계마다 2배.
+         *     쓴 돈은 분기 실적·결산서에 전투 강화 비용으로 따로 적는다. 자본이 모자라거나 다 올렸으면 400.
+         */
+        post: operations["buyBattleUpgrade"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/weapon/draw": {
         parameters: {
             query?: never;
@@ -1037,6 +1058,11 @@ export interface components {
                 moving: number;
                 /**
                  * Format: int64
+                 * @description 그해 전투 강화에 쓴 돈 (decisions.md 367번)
+                 */
+                upgrades: number;
+                /**
+                 * Format: int64
                  * @description 그해 나간 연봉의 합(인건비
                  */
                 salary: number;
@@ -1133,6 +1159,26 @@ export interface components {
                 /** @description 가진 수 (decisions.md 366번). 같은 무기를 또 뽑으면 늘고, armory.mergeCount개면 합쳐 한 등급 올린다 */
                 count: number;
             }[];
+            /** @description 자본으로 사는 전투 강화 (decisions.md 367번). 데미지·연사·고양이 속도, 멘탈 전투의 바탕 수치에 영구로 붙는다 */
+            battleUpgrades?: {
+                /**
+                 * @description damage: 데미지, fire: 연사(쏘는 간격이 준다), speed: 고양이 이동 속도
+                 * @enum {string}
+                 */
+                kind: "damage" | "fire" | "speed";
+                /** @description 지금 단계(0부터) */
+                level: number;
+                maxLevel: number;
+                /**
+                 * Format: int64
+                 * @description 다음 단계 값. 다 올렸으면 null
+                 */
+                price: number | null;
+                /** @description 지금 단계의 효과(%) */
+                bonusPercent: number;
+                /** @description 다음 단계의 효과(%). 다 올렸으면 null */
+                nextBonusPercent: number | null;
+            }[];
             /** @description 무기 뽑기 (decisions.md 366번). 무기는 전투에서 떨어지지 않고 무기 뽑기권으로 뽑는다 */
             armory?: {
                 /** @description 가진 무기 뽑기권 */
@@ -1188,6 +1234,11 @@ export interface components {
              * @description 이 분기에 낸 이사 비용 (296번)
              */
             moving: number;
+            /**
+             * Format: int64
+             * @description 이 분기에 전투 강화에 쓴 돈 (decisions.md 367번)
+             */
+            upgrades: number;
             /**
              * Format: int64
              * @description 이 분기에 나간 연봉(인건비
@@ -1813,6 +1864,36 @@ export interface operations {
         };
         responses: {
             /** @description 무기를 든 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    buyBattleUpgrade: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    kind: "damage" | "fire" | "speed";
+                };
+            };
+        };
+        responses: {
+            /** @description 산 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

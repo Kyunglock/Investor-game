@@ -426,7 +426,8 @@ class DefaultCompanyService implements CompanyService {
             ? null
             : new CompanyView.Mental(c.mental.genre, c.mental.headline, c.mental.cards != null),
         engine.mental.weaponViews(c),
-        engine.mental.armoryView(c));
+        engine.mental.armoryView(c),
+        engine.mental.upgradeViews(c));
   }
 
   @Override
@@ -434,6 +435,15 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView equipWeapon(UUID sessionId, String kind, String grade) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.mental.equip(row.state(), kind, grade);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView buyBattleUpgrade(UUID sessionId, String kind) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.mental.buyUpgrade(row.state(), kind);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -884,6 +894,7 @@ class DefaultCompanyService implements CompanyService {
         q.staff,
         q.hiring,
         q.moving,
+        q.upgrades,
         q.salary,
         q.investTotal == null
             ? null
@@ -905,6 +916,7 @@ class DefaultCompanyService implements CompanyService {
         s.fee,
         s.hiring,
         s.moving,
+        s.upgrades,
         s.salary,
         s.investTotal == null
             ? null

@@ -48,13 +48,6 @@ export function growthProgress(company: Company): { percent: number; label: stri
   }
 }
 
-export function companyMood(company: Company) {
-  const employees = company.employees.filter((e) => e.desk)
-  if (!employees.length) return '준비 중'
-  const morale = employees.reduce((sum, e) => sum + e.morale, 0) / employees.length
-  return morale > 0.5 ? '좋음' : morale < -0.5 ? '지침' : '평온'
-}
-
 const RIVALS = [
   '치즈증권',
   '삼색캐피탈',

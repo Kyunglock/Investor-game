@@ -183,6 +183,25 @@ export function Ledger({
           </li>
         )
       })(),
+    // 전투 강화 비용 (decisions.md 367번): 자본으로 산 데미지·연사·고양이 속도.
+    s.upgrades !== 0 &&
+      (() => {
+        const r = reveal()
+        return (
+          <li
+            key="upgrades"
+            className={`py-2 ${r.className}`}
+            style={r.style}
+            data-testid="ledger-upgrades"
+          >
+            <Row
+              label={`${num()} 전투 강화 비용`}
+              note="자본으로 산 데미지·연사·고양이 속도"
+              amount={-s.upgrades}
+            />
+          </li>
+        )
+      })(),
     // 그해 인사에 쓴 돈 (decisions.md 251번): 붙잡는 값·성과금, 받은 이적료는 뺀다. 채용 뽑기는 돈이 들지 않는다(312번).
     s.hiring !== 0 &&
       (() => {

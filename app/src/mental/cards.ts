@@ -92,20 +92,29 @@ export const BASE_LOADOUT: Loadout = {
   moveSpeed: 520,
 }
 
-/** 든 무기의 수치(서버가 등급을 더해 준 최종값, 346번)를 한 판의 바탕 수치로. 카드는 그 위에 쌓인다. */
-export function loadoutOf(weapon: {
-  damagePercent: number
-  fireMs: number
-  power: number
-  bulletSpeed: number
-}): Loadout {
+/**
+ * 든 무기의 수치(서버가 등급을 더해 준 최종값, 346번)를 한 판의 바탕 수치로. 자본으로 산 전투 강화(367번)가 그 위에 붙고(데미지·속도는 그만큼
+ * 오르고 연사는 쏘는 간격이 그만큼 준다), 카드는 다시 그 위에 쌓인다.
+ */
+export function loadoutOf(
+  weapon: {
+    damagePercent: number
+    fireMs: number
+    power: number
+    bulletSpeed: number
+  },
+  upgrades: ReadonlyArray<{ kind: 'damage' | 'fire' | 'speed'; bonusPercent: number }> = [],
+): Loadout {
+  const bonus = (kind: 'damage' | 'fire' | 'speed') =>
+    (upgrades.find((u) => u.kind === kind)?.bonusPercent ?? 0) / 100
   return {
     ...BASE_LOADOUT,
-    damage: weapon.damagePercent / 100,
+    damage: (weapon.damagePercent / 100) * (1 + bonus('damage')),
     // 무기가 처음부터 가진 강화 단계(산탄총 2). 카드는 그 위에 쌓인다.
     bulletPower: Math.min(MAX_BULLET_POWER, Math.max(0, weapon.power)),
-    fireMs: weapon.fireMs,
+    fireMs: Math.max(60, weapon.fireMs * (1 - bonus('fire'))),
     bulletSpeed: weapon.bulletSpeed,
+    moveSpeed: BASE_LOADOUT.moveSpeed * (1 + bonus('speed')),
   }
 }
 

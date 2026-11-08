@@ -59,6 +59,9 @@ class CompanyState {
   /** 올해 낸 이사 비용 (296번). */
   long yearMoving;
 
+  /** 올해 전투 강화에 쓴 돈 (367번). */
+  long yearUpgrades;
+
   /**
    * 올해 판돈과 수수료를 정하는 자본: 1분기를 넘길 때의 자본 (268번). 분기마다 자본을 다시 걸면 이긴 분기가 겹겹이 불어나 한 해 합계가 예전 규칙과 달라진다.
    * 자본이 그 아래로 줄면 지금 자본만큼만 건다. 아직 1분기를 안 넘겼으면 null.
@@ -218,6 +221,9 @@ class CompanyState {
 
   /** 무기 뽑기권 (decisions.md 366번). */
   int weaponTickets;
+
+  /** 자본으로 산 전투 강화의 단계 (decisions.md 367번): damage·fire·speed. 없으면 0단계. */
+  Map<String, Integer> battleUpgrades = new LinkedHashMap<>();
 
   /** 무기 뽑기로 바뀐 뒤의 회사인가 (366번). 그 전에 차린 회사는 거짓으로 읽히고, 처음 불러올 때 처음 뽑기권을 받는다. */
   boolean weaponGachaReady;
@@ -551,6 +557,9 @@ class CompanyState {
     /** 이 분기에 낸 이사 비용 (296번). */
     long moving;
 
+    /** 이 분기에 전투 강화에 쓴 돈 (367번). */
+    long upgrades;
+
     /** 이 분기에 나간 연봉(인건비, 270번). */
     long salary;
 
@@ -735,6 +744,9 @@ class CompanyState {
 
     /** 그해 낸 이사 비용 (296번). */
     long moving;
+
+    /** 그해 전투 강화에 쓴 돈 (367번). */
+    long upgrades;
 
     /** 그해 나간 연봉의 합(인건비, 270번). */
     long salary;

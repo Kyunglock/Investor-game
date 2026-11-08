@@ -28,6 +28,9 @@ class MentalEngine {
   /** 무기 등급, 낮은 것부터 (346번). */
   static final List<String> WEAPON_GRADES = List.of("N", "R", "SR", "UR");
 
+  /** 자본으로 사는 전투 강화 (367번): 데미지·연사·고양이 속도. */
+  static final List<String> UPGRADES = List.of("damage", "fire", "speed");
+
   /** 처음 드는 무기: 일반 권총. */
   static final String PISTOL = "pistol";
 
@@ -177,6 +180,60 @@ class MentalEngine {
 
   private static CompanyState.Weapon find(CompanyState c, String kind, String grade) {
     return c.weapons.stream().filter(w -> w.same(kind, grade)).findFirst().orElse(null);
+  }
+
+  /** 전투 강화 level단계에서 다음 단계로 가는 값 (367번): 처음 basePrice, 단계마다 priceFactor배. */
+  long upgradePrice(int level) {
+    CompanyProperties.Upgrades rule = properties.mental().upgrades();
+    long price = rule.basePrice();
+    for (int i = 0; i < level; i++) {
+      price *= rule.priceFactor();
+    }
+    return price;
+  }
+
+  /**
+   * 자본으로 전투 강화 한 단계를 산다 (decisions.md 367번). 없는 강화거나 다 올렸거나 자본이 모자라면 400. 쓴 돈은 올해 강화 비용으로 따로 적는다(분기
+   * 실적에서 인사 비용으로 읽히지 않게).
+   */
+  void buyUpgrade(CompanyState c, String kind) {
+    if (!UPGRADES.contains(kind)) {
+      throw new InvalidRequestException("없는 강화다: " + kind);
+    }
+    if (c.finished || c.closed) {
+      throw new InvalidRequestException("끝난 회사다");
+    }
+    int level = c.battleUpgrades.getOrDefault(kind, 0);
+    if (level >= properties.mental().upgrades().maxLevel()) {
+      throw new InvalidRequestException("이미 다 올렸다: " + kind);
+    }
+    long price = upgradePrice(level);
+    if (c.capital < price) {
+      throw new InvalidRequestException("자본이 모자라다: " + price + "원 필요");
+    }
+    c.capital -= price;
+    c.yearUpgrades += price;
+    c.battleUpgrades.put(kind, level + 1);
+  }
+
+  /** 전투 강화의 화면 값 (367번): 강화마다 지금 단계·값·효과. */
+  List<CompanyView.BattleUpgrade> upgradeViews(CompanyState c) {
+    CompanyProperties.Upgrades rule = properties.mental().upgrades();
+    return UPGRADES.stream()
+        .map(
+            kind -> {
+              int level = c.battleUpgrades.getOrDefault(kind, 0);
+              int step = rule.stepPercent().getOrDefault(kind, 0);
+              boolean max = level >= rule.maxLevel();
+              return new CompanyView.BattleUpgrade(
+                  kind,
+                  level,
+                  rule.maxLevel(),
+                  max ? null : upgradePrice(level),
+                  level * step,
+                  max ? null : (level + 1) * step);
+            })
+        .toList();
   }
 
   /** 무기 뽑기의 화면 값 (366번). */

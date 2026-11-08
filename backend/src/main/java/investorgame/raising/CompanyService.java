@@ -93,6 +93,9 @@ public interface CompanyService {
   /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). 없는 종류·등급이거나 안 가진 무기면 400. */
   CompanyView equipWeapon(UUID sessionId, String kind, String grade);
 
+  /** 자본으로 전투 강화(damage·fire·speed) 한 단계를 산다 (decisions.md 367번). 자본이 모자라거나 다 올렸으면 400. */
+  CompanyView buyBattleUpgrade(UUID sessionId, String kind);
+
   /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). 뽑기권이 없으면 400. */
   CompanyView drawWeapon(UUID sessionId);
 

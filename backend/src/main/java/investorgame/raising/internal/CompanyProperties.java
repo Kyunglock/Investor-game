@@ -79,7 +79,8 @@ public record CompanyProperties(
       Map<String, Map<String, Integer>> genreWeights,
       Map<String, Weapon> weapons,
       Map<String, WeaponGrade> weaponGrades,
-      WeaponGacha weaponGacha) {}
+      WeaponGacha weaponGacha,
+      Upgrades upgrades) {}
 
   /** 무기 종류 하나의 바탕 수치 (346번). damagePercent 100이 탄 하나에 적 체력 1. power는 탄 강화 단계(362번). */
   public record Weapon(int damagePercent, int fireMs, int power, int bulletSpeed) {}
@@ -97,6 +98,17 @@ public record CompanyProperties(
    */
   public record WeaponGacha(
       Map<String, Integer> gradeWeights, int startTickets, int battleTickets, int mergeCount) {}
+
+  /**
+   * 자본으로 사는 전투 강화 (decisions.md 367번).
+   *
+   * @param maxLevel 강화마다 올릴 수 있는 최대 단계
+   * @param basePrice 첫 단계 값(원)
+   * @param priceFactor 단계마다 값에 곱하는 수
+   * @param stepPercent 강화(damage·fire·speed)마다 한 단계에 오르는 비율(%). fire는 연사 간격을 줄인다
+   */
+  public record Upgrades(
+      int maxLevel, long basePrice, int priceFactor, Map<String, Integer> stepPercent) {}
 
   /** 건물 이사 (decisions.md 296번): 이사 비용은 다음 띠 자본의 percent%. 자본이 다음 띠 + 비용 이상일 때만 간다. */
   /**

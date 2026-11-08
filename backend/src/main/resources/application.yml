@@ -190,6 +190,13 @@ raising:
         start-tickets: 3
         battle-tickets: 1
         merge-count: 2
+      # 자본으로 사는 전투 강화 (decisions.md 367번): 데미지·연사·고양이 속도를 단계마다 step-percent%씩, max-level단계까지. 값은 처음
+      # base-price(1b)이고 단계마다 price-factor배. 멘탈 전투의 바탕 수치(무기 위)에 영구로 붙는다
+      upgrades:
+        max-level: 10
+        base-price: 1000000
+        price-factor: 2
+        step-percent: { damage: 10, fire: 5, speed: 8 }
     # 등급 효과 (decisions.md 289번): 종합 등급마다 맞혔을 때 버는 몫에 gain-percent%를 더 얹고, 한 해 자리에서 일하면
     # growth-percent% 확률로 가장 낮은 능력치(운 빼고)가 한 띠 오른다. 낮은 등급일수록 잘 크고 높을수록 더디다. SSS 위는 실전 경험으로 오른다
     perks:
