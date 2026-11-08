@@ -45,9 +45,6 @@ if (process.env.EMPTY) {
 } else {
   await page.getByTestId('shell').waitFor()
   await shot('office')
-  await page.getByTestId('office-seat').first().click()
-  await shot('office-seat-sheet')
-  await page.getByRole('button', { name: '닫기 ✕' }).click()
   await page.getByTestId('tab-market').click()
   await shot('gacha')
   await page.getByTestId('gacha-part-merge').click()

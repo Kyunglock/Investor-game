@@ -25,10 +25,17 @@ interface RaisingState {
   justQuartered: boolean
   /** 방금 연말 결산으로 건물이 바뀌었다(오르거나 줄었다). 연말 결산서를 닫으면 건물 알림이 뜨고, 닫으면 지운다 (decisions.md 281번). */
   moveAlert: boolean
+  /** Capacity before the completed upgrade/settlement, for the app growth scene. */
+  moveBeforeSeats: number | null
   /** 방금 채용 뽑기를 했다 (decisions.md 312번). 카드를 뒤집는 창을 띄우고 닫으면 지운다. 자동 진행 중에는 띄우지 않는다. */
   justDrew: boolean
   /** 방금 이사 비용을 내고 건물을 올렸다 (decisions.md 296번). 건물 알림을 띄우고 닫으면 지운다. */
-  upgradeMove: { before: Company['grade']; after: Company['grade']; year: number } | null
+  upgradeMove: {
+    before: Company['grade']
+    after: Company['grade']
+    year: number
+    beforeSeats?: number
+  } | null
   /** 자동 진행을 켰다 (245번). 새로 고치면 꺼진다: 모르는 사이에 돈을 쓰지 않게. */
   autoPlay: boolean
   /** 자동 진행이 띄운 창(분기 실적·연말 결산서·건물 알림)을 닫을 때(ms). 화면이 남은 초를 센다. 창이 없으면 null (decisions.md 277번). */
@@ -107,6 +114,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     justQuartered: false,
     justDrew: false,
     moveAlert: false,
+    moveBeforeSeats: null,
     upgradeMove: null,
     autoPlay: false,
     autoNextAt: null,
@@ -177,8 +185,18 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       }
       await change(api.POST('/api/company/upgrade'))
       const after = get().company
+      if (after === before && !get().error) {
+        set({ error: '서버에 연결하지 못했어요. 잠시 후 다시 시도해주세요.' })
+      }
       if (!get().error && after && after.grade !== before.grade) {
-        set({ upgradeMove: { before: before.grade, after: after.grade, year: after.year } })
+        set({
+          upgradeMove: {
+            before: before.grade,
+            after: after.grade,
+            year: after.year,
+            beforeSeats: before.seats,
+          },
+        })
       }
     },
 
@@ -257,6 +275,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       if (after.year > before.year) {
         set({
           justSettled: true,
+          moveBeforeSeats: before.seats,
           justQuartered: false,
           tab: 'settlement',
           moveAlert: Boolean(
