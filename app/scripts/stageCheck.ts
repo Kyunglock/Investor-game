@@ -115,6 +115,62 @@ try {
     const wall = await box('battle-wall')
     assert(wall.y >= wallY && wall.y + wall.height <= wallY + 48, 'mental gauge on the wall')
   }
+  /**
+   * 카드 고르기 (decisions.md 393번): 석 장이 뒤집힌 채 나와 한 장씩 펼쳐지고, 다 펼친 뒤에만 고른다. 다 펼치기 전에 누르면 남은 카드를 한 번에 펼친다.
+   * 펼치는 순서는 setTimeout이라 Playwright 시계로 넘긴다.
+   */
+  const pickCard = async (prefer: readonly string[] = []) => {
+    const panel = page.getByTestId('mental-cards')
+    // 처음 누름은 남은 카드를 펼치고(이미 다 펼쳐졌으면 바로 고른다), 다음 누름이 고른다. prefer에 든 카드가 있으면 그것을 고른다.
+    for (let i = 0; i < 3 && (await panel.count()); i++) {
+      const wanted = panel.locator(
+        prefer.map((code) => `button[data-card="${code}"]`).join(', ') || 'button',
+      )
+      await ((await wanted.count()) ? wanted : panel.getByRole('button')).first().click()
+      await page.clock.runFor(400)
+    }
+    await expect(panel).toHaveCount(0)
+  }
+  const faces = () =>
+    page
+      .getByTestId('mental-cards')
+      .getByRole('button')
+      .evaluateAll((els) => els.map((el) => el.getAttribute('data-face')))
+  /**
+   * 펼치는 동안을 지켜본다: 시계를 멈추고 50ms씩 넘기며, 늘 왼쪽부터 앞면인지 보고, 카드 하나의 모습이 바뀔 때마다(떨림·누움·앞면) CSS 연출이 도는
+   * 중간에 찍는다. CSS 애니메이션은 실제 시간으로 돌아 찍기 전에 잠깐 기다린다. 다 펼쳐 고를 수 있게 되면 시계를 다시 흘린다.
+   */
+  const watchReveal = async (name: string) => {
+    // 페이지가 바쁘면 페이지의 Date.now가 시계보다 조금 늦을 수 있어, 과거라고 거절되면 조금 더 앞에서 멈춘다.
+    for (const ahead of [120, 400, 900]) {
+      const paused = await page.clock
+        .pauseAt((await page.evaluate(() => Date.now())) + ahead)
+        .then(() => true)
+        .catch(() => false)
+      if (paused) break
+    }
+    let before = (await faces()).join(' ')
+    let shot = 0
+    for (let t = 0; t < 7000; t += 50) {
+      const now = await faces()
+      const firstHidden = now.findIndex((f) => f !== 'front')
+      assert(
+        firstHidden === -1 || now.slice(firstHidden).every((f) => f !== 'front'),
+        `reveals from the left: ${now}`,
+      )
+      if (now.join(' ') !== before) {
+        before = now.join(' ')
+        await page.waitForTimeout(now.includes('tease') ? 260 : 140)
+        await page.screenshot({ path: resolve(out, `${name}-${++shot}.png`) })
+      }
+      if ((await page.getByTestId('mental-cards').getAttribute('data-revealed')) === 'true') break
+      await page.clock.runFor(50)
+    }
+    await expect(page.getByTestId('mental-cards')).toHaveAttribute('data-revealed', 'true')
+    assert.deepEqual(await faces(), ['front', 'front', 'front'])
+    await page.clock.resume()
+    return shot
+  }
   const base = process.env.APP_URL ?? 'http://127.0.0.1:5182/app/'
   await page.goto(base)
   await page.getByTestId('stage-open').click()
@@ -133,9 +189,15 @@ try {
   await page.getByTestId('mental-start').click()
   await expect(page.getByTestId('mental-cards')).toBeVisible({ timeout: 30000 })
   await expect(page.getByTestId('battle-timer')).toHaveText('2:00')
+  // 처음엔 석 장 모두 뒷면이고 아직 못 고른다. 누르지 않으면 왼쪽부터 한 장씩 펼쳐진다.
+  const first = await faces()
+  assert(!first.includes('front') && first[2] === 'back', `starts face down: ${first}`)
+  await expect(page.getByTestId('mental-cards')).toHaveAttribute('data-revealed', 'false')
+  await page.screenshot({ path: resolve(out, 'cards-back.png') })
+  assert((await watchReveal('cards-reveal')) >= 2, 'cards turn over in turn')
+  await page.waitForTimeout(700)
   await page.screenshot({ path: resolve(out, 'cards.png') })
-  await page.getByTestId('mental-cards').getByRole('button').first().click()
-  await page.clock.runFor(400)
+  await pickCard()
   await expect(page.getByTestId('mental-cards')).toHaveCount(0)
   await page.clock.runFor(5000)
   await checkHud()
@@ -147,6 +209,8 @@ try {
     killing: number
     peak: number
     casts: Record<string, number>
+    mateShots: number
+    mates: number
   }
   const damage = () =>
     page.evaluate(() => (window as unknown as { __mentalDamage: DamageStats }).__mentalDamage)
@@ -170,8 +234,7 @@ try {
   // 첫 파도(15초, 투매 떼)가 쏟아질 때 숫자가 화면을 덮지 않는지 본다.
   for (let i = 0; i < 9; i++) {
     if (await page.getByTestId('mental-cards').count()) {
-      await page.getByTestId('mental-cards').getByRole('button').first().click()
-      await page.clock.runFor(400)
+      await pickCard()
     }
     await page.clock.runFor(1500)
   }
@@ -192,8 +255,8 @@ try {
     )
   const pickIfAsked = async (level: number) => {
     if (await page.getByTestId('mental-cards').count()) {
-      await page.getByTestId('mental-cards').getByRole('button').first().click()
-      await page.clock.runFor(400)
+      // 마법 카드를 골라 앱의 마법 레벨도 올린다: 아래의 펼치기 중간 프레임에 영웅·전설 카드가 나오게.
+      await pickCard(['fire', 'water', 'lightning'])
       await setMagic(level)
     }
   }
@@ -217,12 +280,64 @@ try {
   }
   assert(afterMagic.peak <= 44, 'damage numbers stay within the pool with magic')
   console.log('magic', JSON.stringify(afterMagic.casts))
+  // 카드 펼치기 중간 프레임 (393번): 마법을 2레벨로 두면 영웅·전설 카드가 잘 나온다. 다음 카드 고르기가 뜰 때까지 싸우고, 펼치는 동안을 찍는다.
+  await pickIfAsked(2)
+  await setMagic(2)
+  for (let i = 0; i < 30 && (await page.getByTestId('mental-cards').count()) === 0; i++) {
+    await page.clock.runFor(800)
+    await setMagic(2)
+  }
+  if (await page.getByTestId('mental-cards').count()) {
+    const grades = await page
+      .getByTestId('mental-cards')
+      .getByRole('button')
+      .evaluateAll((els) => els.map((el) => el.getAttribute('data-grade')))
+    console.log('reveal grades', grades.join(' '))
+    await watchReveal('cards-reveal-lv')
+    await pickCard()
+  }
+  // 함께 싸우는 고양이 (393번): 개발 서버에서만 내보내는 __mentalMates로 고양이 1·2·3마리(사장냥까지 2·3·4)를 세우고, 저마다 쏘는지 본다.
+  const setMates = (n: number) =>
+    page.evaluate(
+      (m) => (window as unknown as { __mentalMates: (n: number) => void }).__mentalMates(m),
+      n,
+    )
+  await setMagic(1)
+  for (const mates of [1, 2, 3]) {
+    let shot = false
+    // 레벨이 올라 카드 고르기가 뜨면 전투가 멈춰 쏘지 않으니 고르고 다시 본다.
+    for (let attempt = 0; attempt < 4 && !shot; attempt++) {
+      await pickIfAsked(1)
+      await setMates(mates)
+      await page.clock.runFor(700)
+      if (await page.getByTestId('mental-cards').count()) continue
+      // 적이 다 쓸려 과녁이 없을 수 있어 위를 눌러 쏘게 한다: 고양이도 누른 곳을 제 총으로 겨눈다.
+      const before = await damage()
+      await page.mouse.move(195, 260)
+      await page.mouse.down()
+      await page.clock.runFor(600)
+      await page.mouse.up()
+      const after = await damage()
+      assert.equal(after.mates, mates, 'mates stand in line')
+      shot = after.mateShots > before.mateShots
+    }
+    assert(shot, `${mates} mate(s) shoot`)
+    await page.clock.runFor(300)
+    await page.screenshot({ path: resolve(out, `mates-${mates + 1}.png`) })
+  }
+  await page.setViewportSize({ width: 320, height: 640 })
+  await page.clock.runFor(300)
+  await page.screenshot({ path: resolve(out, 'mates-4-small.png') })
+  await checkHud()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.clock.runFor(100)
+  await setMates(0)
   await pickIfAsked(0)
   await setMagic(0)
+  await setMates(0)
   // 2분 판은 레벨이 빨리 올라 그사이 카드 고르기가 떠 있을 수 있다.
   if (await page.getByTestId('mental-cards').count()) {
-    await page.getByTestId('mental-cards').getByRole('button').first().click()
-    await page.clock.runFor(400)
+    await pickCard()
   }
   await page.getByTestId('mental-quit').click()
   await expect(page.getByTestId('mental-quit-ask')).toBeVisible()
@@ -245,10 +360,10 @@ try {
     await page.clock.runFor(5000)
     if (await page.getByTestId('mental-cards').count()) {
       await page.mouse.up()
-      await page.getByTestId('mental-cards').getByRole('button').first().click()
-      await page.clock.runFor(400)
-      // 고른 카드가 마법이어도 빼 둔다: 마법은 총알과 따로 나가 아래로 쏘아도 적을 잡는다(392번).
+      await pickCard()
+      // 고른 카드가 마법이어도 빼 둔다: 마법은 총알과 따로 나가 아래로 쏘아도 적을 잡는다(392번). 고양이 카드(393번)도 빼 둔다.
       await setMagic(0)
+      await setMates(0)
       await page.mouse.move(195, 800)
       await page.mouse.down()
     }
@@ -288,7 +403,7 @@ try {
   await expect(page.getByTestId('battle-canvas')).toHaveCount(0)
   assert.deepEqual(errors, [])
   console.log(
-    'PASS: stage pick, lobby, equipment, real Phaser/sprites, first card pause, HUD layout, damage numbers, magic Lv.1-3, aiming, wall gauge damage, pause/resume, loss, failed save/retry, both genres, asset load retry, quit cleanup',
+    'PASS: stage pick, lobby, equipment, real Phaser/sprites, first card pause, face-down cards revealed one by one and skip, HUD layout, damage numbers, magic Lv.1-3, mates 2-4 cats shooting, aiming, wall gauge damage, pause/resume, loss, failed save/retry, both genres, asset load retry, quit cleanup',
   )
 } finally {
   await browser.close()
