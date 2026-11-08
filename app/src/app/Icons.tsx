@@ -52,6 +52,16 @@ export function NewsIcon() {
   )
 }
 
+export function BookIcon() {
+  return (
+    <svg {...base} aria-hidden="true">
+      <path d="M5 4h12a1 1 0 0 1 1 1v15H6a2 2 0 0 0-2 2V6a2 2 0 0 1 1-2z" />
+      <path d="M4 20a2 2 0 0 1 2-2h12" />
+      <path d="M9 8h5" />
+    </svg>
+  )
+}
+
 export function SoundIcon({ off }: { off: boolean }) {
   return (
     <svg {...base} aria-hidden="true">
