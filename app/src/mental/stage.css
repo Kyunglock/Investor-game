@@ -563,99 +563,78 @@
       0 0 30px #ffc944;
   }
 }
+/* 전투 위의 표시 (decisions.md 390번): 흰 판 없이 조각을 가장자리와 멘탈벽에 붙인다. 위쪽 가운데는 적이 들어오는 자리라 비운다. */
 .battle-hud {
-  position: absolute;
-  z-index: 2;
-  top: max(10px, env(safe-area-inset-top));
-  left: 10px;
-  right: 10px;
-  padding: 10px 11px;
-  background: #fff9ec;
-  border: 1.5px solid #8798b1;
-  border-radius: 19px;
-  box-shadow: 0 3px 0 #7a94a044;
   pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   font-family: var(--font-game);
 }
-.battle-hud-top {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-.battle-mental {
+.battle-corner {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  right: 10px;
   display: flex;
   align-items: center;
   gap: 6px;
-  flex: 1;
-  min-width: 0;
 }
-.battle-mental > span {
-  color: #ef8d7d;
-  font-size: 24px;
-  line-height: 1;
-}
-.battle-mental > b {
-  font-weight: 400;
-  font-size: 15px;
-}
-.battle-health {
-  position: relative;
-  height: 23px;
-  border-radius: 15px;
-  overflow: hidden;
-  background: #d4ccce;
-  border: 1px solid #a89a9b;
-  flex: 1;
-  min-width: 40px;
-}
-.battle-health i {
-  display: block;
-  height: 100%;
-  background: #f58e7d;
-  border-radius: 14px;
-  transition: width 0.15s;
-}
-.battle-health strong {
-  position: absolute;
-  inset: 0;
-  text-align: center;
-  font-size: 12px;
-  line-height: 21px;
-  color: #663c38;
-  font-weight: 400;
-}
-.battle-hud time {
-  font-size: 21px;
+.battle-corner time {
+  padding: 3px 9px;
+  border: 1.5px solid #8798b1;
+  border-radius: 12px;
+  background: #fff9ecdd;
+  font-size: 17px;
+  line-height: 1.2;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 /* 전진 모드의 구간 표시 (decisions.md 364번) */
 .battle-segment {
   font-weight: 400;
-  font-size: 15px;
+  font-size: 13px;
   white-space: nowrap;
-  padding: 2px 8px;
+  padding: 3px 8px;
   border-radius: 10px;
   background: #7be0c3;
   color: #2b2340;
 }
-/* 전진 모드의 보스 체력 (364번) */
+.battle-pause {
+  flex-shrink: 0;
+  pointer-events: auto;
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid #8798b1;
+  border-radius: 12px;
+  background: #fffaf1;
+  font-size: 19px;
+  line-height: 1;
+}
+/* 보스 체력 (364·375번): 왼쪽 레벨 줄과 오른쪽 위 구석 사이, 맨 위에 얇게. 보스는 화면 높이 18%에 서니 가리지 않는다. */
 .battle-boss {
+  position: absolute;
+  top: calc(max(10px, env(safe-area-inset-top)) + 7px);
+  left: 52px;
+  right: 112px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 6px;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 11px;
+  background: #fff9ecdd;
+  border: 1px solid #c98a96;
 }
 .battle-boss > b {
   font-weight: 400;
-  font-size: 15px;
+  font-size: 12px;
   white-space: nowrap;
   color: #c2304b;
 }
 .battle-boss-health {
   flex: 1;
-  height: 12px;
-  border-radius: 6px;
+  min-width: 30px;
+  height: 9px;
+  border-radius: 5px;
   background: #2b234022;
   overflow: hidden;
 }
@@ -665,59 +644,109 @@
   background: #ff4f6d;
   transition: width 120ms linear;
 }
-.battle-pause {
-  flex-shrink: 0;
-  pointer-events: auto;
-  width: 40px;
-  height: 40px;
-  border: 1.5px solid #8798b1;
-  border-radius: 13px;
-  background: #fffaf1;
-  font-size: 22px;
+/* 레벨은 왼쪽 가장자리에 세로로: 경험치는 아래에서 위로 찬다. 가장자리 건물 위라 가운데 적 길과 겹치지 않는다. */
+.battle-level {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  left: 8px;
+  width: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  font-size: 14px;
   line-height: 1;
 }
-.battle-hud-bottom {
-  margin-top: 8px;
-  border-top: 1px solid #d4d7d1;
-  padding-top: 7px;
+.battle-level > b,
+.battle-level > span {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  font-size: 14px;
-}
-.battle-hud-bottom b {
+  gap: 1px;
+  width: 100%;
+  padding: 4px 0 5px;
+  border: 1.5px solid #8798b1;
+  border-radius: 11px;
+  background: #fff9ecdd;
   font-weight: 400;
 }
-.battle-hud-bottom > span {
-  white-space: nowrap;
+.battle-level > b {
+  font-size: 18px;
+}
+.battle-level small {
+  font-size: 10px;
+}
+.battle-level > span b {
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 .battle-xp {
-  flex: 1;
-  height: 9px;
+  position: relative;
+  width: 10px;
+  height: clamp(90px, 24vh, 200px);
   border: 1px solid #9aaabd;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
-  background: #dbd7da;
+  background: #dbd7dacc;
 }
 .battle-xp i {
-  display: block;
-  height: 100%;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: #6bb7de;
-  transition: width 0.15s;
+  transition: height 0.15s;
 }
-.battle-wall-label {
-  pointer-events: none;
+/* 멘탈 게이지는 멘탈벽 위에 직접: 벽 그림(벽 줄 위 24px ~ 아래 48px)의 아래쪽(벽 줄 아래 10~34px)에 얹어, 적이 부딪히는 윗단과 사장냥은 가리지 않는다.
+   벽 줄의 높이는 stageArt.ts의 wallOffset(화면 높이 26%, 150~230px)과 같다. */
+.battle-wall {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: calc(clamp(150px, 26%, 230px) + 25px);
-  background: #fff2d9;
+  bottom: calc(clamp(150px, 26%, 230px) - 34px);
+  width: min(78%, 300px);
+  height: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px 0 9px;
+  background: #fff2d9e6;
   border: 1.5px solid #a38f76;
-  border-radius: 20px;
+  border-radius: 13px;
   box-shadow: 0 2px 0 #7b918440;
-  padding: 2px 14px;
-  font-family: var(--font-game);
-  font-size: 13px;
+}
+.battle-wall-label {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.battle-wall-label > span {
+  color: #ef6f5d;
+}
+.battle-health {
+  position: relative;
+  flex: 1;
+  min-width: 40px;
+  height: 16px;
+  border-radius: 9px;
+  overflow: hidden;
+  background: #d4ccce;
+  border: 1px solid #a89a9b;
+}
+.battle-health i {
+  display: block;
+  height: 100%;
+  background: #f58e7d;
+  border-radius: 8px;
+  transition: width 0.15s;
+}
+.battle-health strong {
+  position: absolute;
+  inset: 0;
+  text-align: center;
+  font-size: 11px;
+  line-height: 14px;
+  color: #663c38;
+  font-weight: 400;
 }
 .battle-footer {
   pointer-events: none;
@@ -800,28 +829,15 @@
   }
 }
 @media (max-width: 350px) {
-  .battle-hud {
-    left: 6px;
-    right: 6px;
-    padding: 8px;
+  .battle-wall {
+    width: 82%;
   }
-  .battle-hud-top {
-    gap: 6px;
+  .battle-corner time {
+    font-size: 15px;
   }
-  .battle-mental {
-    gap: 4px;
-  }
-  .battle-mental > b {
-    font-size: 12px;
-  }
-  .battle-mental > span {
-    font-size: 20px;
-  }
-  .battle-health strong {
-    font-size: 10px;
-  }
-  .battle-hud time {
-    font-size: 18px;
+  .battle-boss {
+    left: 48px;
+    right: 106px;
   }
   .stage-lobby {
     padding-left: 14px;
