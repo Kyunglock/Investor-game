@@ -4,6 +4,7 @@ import { bakeEnemies, bakeHero, bakeStage, DPR, enemyKey, GUN, HERO_SIZE, WALL_H
 import { STAGE_ASSETS } from './assets'
 import { bulletStats, type Loadout, xpToNext } from './cards'
 import { ENEMIES, type EnemyKind } from './enemies'
+import { WALK_FRAMES, walkFrame } from './enemyWalk'
 import { BATTLE_SECONDS, GENRES, type Genre } from './genres'
 import type { Hero } from './hero'
 import { BULLET_H, BULLET_W, bulletHitbox } from './hitbox'
@@ -64,7 +65,8 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   kbx: number
   kby: number
   born: number
-  look: 0 | 1
+  walkOffset: number
+  look: number
   /** 죽는 연출 중: 몸은 이미 꺼졌고 그림만 부풀며 사라진다. */
   dying: boolean
 }
@@ -130,6 +132,7 @@ class BattleScene extends Phaser.Scene {
   private over = false
   private stopped = false
   private hurtUntil = 0
+  private reducedMotion = false
   private level = 1
   private xp = 0
   /** 레벨이 올라(또는 맨 처음) 카드를 고르는 동안 멈춰 있다. */
@@ -197,6 +200,7 @@ class BattleScene extends Phaser.Scene {
       this.opts.onError?.('전장 그림을 불러오지 못했어요. 다시 시도해주세요.')
       return
     }
+    this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
     this.opts.onReady?.()
     bakeStage(this, this.opts.genre)
     bakeHero(this, this.opts.hero)
@@ -392,6 +396,7 @@ class BattleScene extends Phaser.Scene {
       .setDepth(3)
     enemyBody(e, v.r)
     e.look = 0
+    e.walkOffset = Phaser.Math.Between(0, WALK_FRAMES - 1)
     e.dying = false
     e.kind = kind
     if (kind !== 'spec') {
@@ -858,8 +863,8 @@ class BattleScene extends Phaser.Scene {
       e.setVelocity(e.kbx, sy + e.kby)
       e.kbx *= 0.86
       e.kby *= 0.86
-      // 두 프레임을 번갈아: 패닉은 빠르게 떨고, 나머지는 느긋하게. 바뀔 때만 텍스처를 바꾼다.
-      const frame = (Math.floor(time / (e.kind === 'panic' ? 110 : 260) + i) % 2) as 0 | 1
+      // 전투 시간 기준이라 일시정지·카드 선택 뒤에도 같은 발걸음에서 이어진다.
+      const frame = walkFrame(e.kind, this.elapsed - e.born, e.walkOffset, this.reducedMotion)
       if (frame !== e.look) {
         e.look = frame
         e.setTexture(enemyKey(e.kind, frame))
