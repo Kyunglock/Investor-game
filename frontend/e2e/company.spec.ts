@@ -86,6 +86,8 @@ async function passQuarter(
     await expect(meeting).toBeVisible()
     // 누가 이 종목을 물어 왔는지 창 머리에 보인다 (267번).
     await expect(meeting.getByTestId('invest-finder')).toContainText('가져온 종목')
+    // 종목 분석 → 투자 결정은 한 화면씩 (368번): 분석을 보고 결정하러 간다.
+    await meeting.getByTestId('invest-to-decide').click()
     const pick = quarter === 1 ? choice : '지켜본다'
     // 버튼 이름을 그대로 맞춘다.
     await meeting.getByRole('button', { name: pick, exact: true }).click()
@@ -458,6 +460,12 @@ test('종목 회의를 열면 먼저 매수파와 매도파가 토론하며 맞�
   await macro.getByRole('button', { name: '종목 회의 열기 →' }).click()
   const meeting = page.getByRole('dialog', { name: '종목 회의' })
   await expect(meeting).toBeVisible()
+  // 첫 화면은 종목 분석이다 (368번): 기사와 의견만 보이고, 토론과 결정 버튼은 결정 화면에 있다.
+  await expect(meeting.getByTestId('invest-article')).toBeVisible()
+  await expect(meeting.getByTestId('team-clash')).toHaveCount(0)
+  await expect(meeting.getByRole('button', { name: '산다', exact: true })).toHaveCount(0)
+  await meeting.getByTestId('invest-to-decide').click()
+  await expect(meeting.getByTestId('invest-article')).toHaveCount(0)
   // 고집 표시와 크게 산다·판다는 뺐다.
   await expect(meeting.getByTestId('stubborn')).toHaveCount(0)
   await expect(meeting.getByRole('button', { name: /크게/ })).toHaveCount(0)
@@ -578,6 +586,7 @@ test('정하고 나면 누군가 막판에 반대로 하자고 하고, 따랐으
   await macro.getByRole('button', { name: /^중립/ }).click()
   await macro.getByRole('button', { name: '종목 회의 열기 →' }).click()
   const meeting = page.getByRole('dialog', { name: '종목 회의' })
+  await meeting.getByTestId('invest-to-decide').click()
   await meeting.getByRole('button', { name: '산다', exact: true }).click()
   // 회의가 정해진 뒤에 막판 제안이 온다 (290번): 사장 결정 도장이 먼저 찍힌다.
   await expect(meeting.getByTestId('decided-choice')).toHaveText('산다')
