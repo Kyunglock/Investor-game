@@ -1,6 +1,7 @@
-import { drawGun, type GunGrade, type GunKind } from '@web/features/game/cat/draw'
+import type { GunGrade, GunKind } from '@web/features/game/cat/draw'
 import { BOSS_LOOK } from '@web/features/game/cat/look'
 import { useEffect, useRef } from 'react'
+import { drawStageGun } from './drawStageGun'
 
 /** 무기 그림 상자(상자 좌표 -8..26 × -8..14, draw.ts drawGun). */
 const BOX_W = 34
@@ -32,7 +33,7 @@ export function GunSprite({
     c.setTransform(scale, 0, 0, scale, 0, 0)
     c.clearRect(0, 0, BOX_W, BOX_H)
     c.translate(8, 8)
-    drawGun(c, BOSS_LOOK.fur, kind, grade)
+    drawStageGun(c, BOSS_LOOK.fur, kind, grade)
   }, [kind, grade, width])
   return (
     <canvas

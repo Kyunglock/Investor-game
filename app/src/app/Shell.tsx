@@ -36,6 +36,7 @@ const TABS: { id: Tab; label: string; icon: () => React.ReactNode }[] = [
  */
 export function Shell({ company }: { company: Company }) {
   const tab = useAppUi((s) => s.tab)
+  const modalBack = useAppUi((s) => s.modalBack)
   const webTab = useRaisingStore((s) => s.tab)
   const shake = useFx((s) => s.shake)
   const screen = useRef<HTMLDivElement>(null)
@@ -93,6 +94,7 @@ export function Shell({ company }: { company: Company }) {
   return (
     <div
       ref={screen}
+      inert={Boolean(modalBack)}
       className={`app-screen app-bg ${tab === 'office' ? 'toy-shell-home' : ''}`}
       data-testid="shell"
     >

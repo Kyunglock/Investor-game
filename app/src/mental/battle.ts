@@ -1,11 +1,13 @@
 import Phaser from 'phaser'
 import { sfx } from '../fx/sound'
 import { bakeEnemies, bakeHero, bakeStage, DPR, enemyKey, GUN, HERO_SIZE, WALL_H } from './art'
+import { STAGE_ASSETS } from './assets'
 import { type Loadout, xpToNext } from './cards'
 import { ENEMIES, type EnemyKind } from './enemies'
 import { BATTLE_SECONDS, GENRES, type Genre } from './genres'
 import type { Hero } from './hero'
 import { BULLET_H, BULLET_W, bulletHitbox } from './hitbox'
+import { wallOffset } from './stageArt'
 
 /**
  * 멘탈 전투 한 판 (decisions.md 328번). Phaser 3 Arcade로 돈다: 탄·적은 풀에서 재사용하고, 도트 그림(art.ts)은 캔버스에 한 번 구워 둔다. 규칙은 화면
@@ -34,6 +36,8 @@ export interface BattleOptions {
   genre: Genre
   hero: Hero
   loadout: Loadout
+  onReady?: () => void
+  onError?: (message: string) => void
   onHud: (hud: Hud) => void
   onBanner: (text: string, color: string) => void
   onHurt: () => void
@@ -86,14 +90,16 @@ class BattleScene extends Phaser.Scene {
   private readonly opts: BattleOptions
   private readonly genre
   private loadout: Loadout
-  private bg!: Phaser.GameObjects.TileSprite
+  private bg!: Phaser.GameObjects.Image
   private player!: Phaser.Physics.Arcade.Image
   /** 권총: 사장냥의 손에서 겨누는 쪽으로 돈다 (341번). */
   private gun!: Phaser.GameObjects.Image
   /** 겨누는 각도(라디안). 누르면 그쪽, 아니면 가장 가까운 적. */
   private aim = -Math.PI / 2
-  /** 디펜스의 멘탈벽: 그림(가로로 이어 붙인 벽돌)과 닿음 판정. 적이 닿으면 멘탈이 깎인다. */
-  private wall: Phaser.GameObjects.TileSprite | null = null
+  /** 디펜스의 멘탈벽: 그림(반투명 보호막)과 닿음 판정. 적이 닿으면 멘탈이 깎인다. */
+  private wall: Phaser.GameObjects.Image | null = null
+  private ripples: Phaser.GameObjects.Image[] = []
+  private rippleIndex = 0
   private wallZone: Phaser.GameObjects.Zone | null = null
   private bullets!: Phaser.Physics.Arcade.Group
   private enemies!: Phaser.Physics.Arcade.Group
@@ -173,28 +179,51 @@ class BattleScene extends Phaser.Scene {
     this.pushHud(true)
   }
 
+  preload() {
+    for (const [key, url] of Object.entries(STAGE_ASSETS)) this.load.image(`art-${key}`, url)
+  }
+
   create() {
+    if (Object.keys(STAGE_ASSETS).some((key) => !this.textures.exists(`art-${key}`))) {
+      this.over = true
+      this.opts.onError?.('전장 그림을 불러오지 못했어요. 다시 시도해주세요.')
+      return
+    }
+    this.opts.onReady?.()
     bakeStage(this, this.opts.genre)
     bakeHero(this, this.opts.hero)
     bakeEnemies(this)
 
     // 선명하게(344번): 캔버스는 화면 배율만큼 크고(startBattle), 카메라를 그만큼 당겨 논리 좌표(view)는 CSS px 그대로다.
+    let previousWidth = this.view().w
     const fitView = () => {
       const { w, h } = this.view()
       this.cameras.main.setZoom(DPR).centerOn(w / 2, h / 2)
-      this.bg?.setSize(w, h)
+      this.bg?.setDisplaySize(w, h)
+      if (previousWidth !== w) {
+        for (const group of [this.enemies, this.bullets]) {
+          for (const object of group?.getChildren() ?? []) {
+            const sprite = object as Phaser.Physics.Arcade.Image
+            sprite.setX((sprite.x * w) / previousWidth)
+          }
+        }
+      }
+      previousWidth = w
+      this.player?.setPosition(w / 2, this.playerY())
+      this.gun?.setPosition(w / 2 + GUN.dx, this.playerY() + GUN.dy)
+      this.wall?.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)
+      if (this.wallZone) {
+        this.wallZone.setPosition(w / 2, this.wallY()).setSize(w, WALL_H * 2)
+        ;(this.wallZone.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject()
+      }
     }
     fitView()
     const { w, h } = this.view()
-    this.bg = this.add
-      .tileSprite(0, 0, w, h, `floor-${this.opts.genre}`)
-      .setOrigin(0)
-      .setTileScale(TEX)
+    this.bg = this.add.image(0, 0, 'art-street').setOrigin(0).setDisplaySize(w, h)
     this.scale.on('resize', fitView)
     this.events.once('shutdown', () => this.scale.off('resize', fitView))
 
     this.mental = this.loadout.maxMental
-    this.placeProps()
     // 아군은 사장냥(341번): 상자 100×110의 0.72배. 몸통 가운데에 충돌 원을 둔다. 둘 다 아래에 붙박이.
     this.player = this.physics.add.image(w / 2, this.playerY(), 'hero-idle')
     this.player.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h).setDepth(5)
@@ -203,14 +232,15 @@ class BattleScene extends Phaser.Scene {
     const k = tex.width / HERO_SIZE.w
     this.player.body?.setCircle(pr * k, (HERO_SIZE.w / 2 - pr) * k, (HERO_SIZE.h / 2 - pr + 4) * k)
     this.gun = this.add
-      .image(0, 0, 'gun')
+      .image(this.player.x + GUN.dx, this.player.y + GUN.dy, 'gun')
+      .setRotation(this.aim)
       .setOrigin(GUN.ox, GUN.oy)
       .setDisplaySize(GUN.w, GUN.h)
       .setDepth(6)
     if (this.genre.target === 'wall') {
       this.wall = this.add
-        .tileSprite(0, this.wallY() - WALL_H, w, WALL_H * 2, 'wall')
-        .setTileScale(TEX)
+        .image(0, this.wallY() - WALL_H, 'wall')
+        .setDisplaySize(w, WALL_H * 3)
         .setOrigin(0)
         .setDepth(2)
       this.wallZone = this.add.zone(w / 2, this.wallY(), w, WALL_H * 2)
@@ -245,7 +275,7 @@ class BattleScene extends Phaser.Scene {
       this.physics.add.overlap(this.wallZone, this.enemies, (_z, e) => {
         const enemy = e as Enemy
         if (enemy.active && !enemy.dying) {
-          this.hurt(ENEMIES[enemy.kind].dmg)
+          this.hurt(ENEMIES[enemy.kind].dmg, undefined, enemy.x)
           this.kill(enemy, false)
         }
       })
@@ -302,6 +332,9 @@ class BattleScene extends Phaser.Scene {
       )
     }
 
+    for (let i = 0; i < 6; i++)
+      this.ripples.push(this.add.image(0, 0, 'wall-ripple').setDepth(7).setVisible(false))
+
     // 첫 카드는 전장이 열린 뒤 고른다 (339번): 멈춘 채로 Lv.1 카드 고르기를 띄운다.
     this.choosing = true
     this.physics.pause()
@@ -315,31 +348,9 @@ class BattleScene extends Phaser.Scene {
     return { w: this.scale.width / DPR, h: this.scale.height / DPR }
   }
 
-  private placeProps() {
-    const { w, h } = this.view()
-    if (this.opts.genre === 'ASSAULT') {
-      const count = Math.max(2, Math.floor(w / 120))
-      for (let i = 0; i < count; i++) {
-        this.add
-          .image(((i + 0.5) * w) / count + (i % 2 ? 12 : -12), i % 2 ? 44 : 30, 'tree')
-          .setScale(TEX)
-          .setDepth(1)
-      }
-      return
-    }
-    this.add
-      .image(26, h - 150 - 30, 'bush')
-      .setScale(TEX)
-      .setDepth(1)
-    this.add
-      .image(w - 26, h - 150 - 30, 'bush')
-      .setScale(TEX)
-      .setDepth(1)
-  }
-
   /** 멘탈벽의 세로 자리: 화면 아래쪽. */
   private wallY() {
-    return this.view().h - 150
+    return this.view().h - wallOffset(this.view().h)
   }
 
   /** 플레이어의 세로 자리(붙박이, 332·340번): 공격은 화면 아래, 디펜스는 멘탈벽 뒤(아래)에 숨어 벽 너머로 쏜다. */
@@ -350,7 +361,8 @@ class BattleScene extends Phaser.Scene {
   // ── 생성
 
   private spawnPoint(): [number, number] {
-    return [Phaser.Math.Between(16, this.view().w - 16), -40]
+    const w = this.view().w
+    return [Phaser.Math.Between(Math.round(w * 0.16), Math.round(w * 0.84)), -40]
   }
 
   private spawn(kind: EnemyKind, at?: [number, number]) {
@@ -391,7 +403,10 @@ class BattleScene extends Phaser.Scene {
     const n = Math.round(15 * grow)
     const cols = Math.ceil(n / 3)
     for (let i = 0; i < n; i++) {
-      this.spawn('dump', [(Math.floor(i / 3) + 0.5) * (w / cols), -30 - (i % 3) * 44])
+      this.spawn('dump', [
+        w * 0.16 + (Math.floor(i / 3) + 0.5) * ((w * 0.68) / cols),
+        -30 - (i % 3) * 44,
+      ])
     }
   }
 
@@ -413,7 +428,7 @@ class BattleScene extends Phaser.Scene {
       const j = ring ? i - half : i
       const m = ring ? n - half : half
       const a = Math.PI + ((j + 0.5) / m) * Math.PI
-      const rw = w * (0.55 + ring * 0.12)
+      const rw = w * (0.28 + ring * 0.05)
       const rh = h * (0.5 + ring * 0.14)
       this.spawn('panic', [w / 2 + Math.cos(a) * rw, h * 0.25 + Math.sin(a) * rh])
     }
@@ -537,14 +552,27 @@ class BattleScene extends Phaser.Scene {
     })
   }
 
-  private hurt(dmg: number, e?: Enemy) {
+  private hurt(dmg: number, e?: Enemy, contactX?: number) {
     if (this.elapsed < this.invulnUntil || this.over) {
       return
     }
     this.mental = Math.max(0, this.mental - dmg)
     this.invulnUntil = this.elapsed + 0.7
-    if (this.wall && this.mental <= this.loadout.maxMental / 2) {
-      this.wall.setTexture('wall-cracked')
+    if (this.wall && contactX != null) {
+      const ripple = this.ripples[this.rippleIndex++ % this.ripples.length]
+      this.tweens.killTweensOf(ripple)
+      ripple
+        .setPosition(contactX, this.wallY() - 8)
+        .setScale(TEX * 0.45)
+        .setAlpha(1)
+        .setVisible(true)
+      this.tweens.add({
+        targets: ripple,
+        scale: TEX * 1.1,
+        alpha: 0,
+        duration: 420,
+        onComplete: () => ripple.setVisible(false),
+      })
     }
     // 멘탈벽에 닿은 건 자주 일어나니 살짝만, 사장냥이 직접 맞은 건 더 세게 흔든다.
     if (this.wallZone && !e) {
@@ -554,10 +582,11 @@ class BattleScene extends Phaser.Scene {
     }
     this.opts.onHurt()
     sfx.ouch()
-    this.hurtUntil = this.time.now + HURT_MS
+    if (e) this.hurtUntil = this.time.now + HURT_MS
     const target = this.wallZone && !e ? this.wallZone : this.player
     this.pop(target.x, target.y - 34, `멘탈 -${dmg}`, '#ff4f6d', 24)
-    this.tweens.add({ targets: this.player, alpha: 0.3, duration: 80, yoyo: true, repeat: 3 })
+    if (e)
+      this.tweens.add({ targets: this.player, alpha: 0.3, duration: 80, yoyo: true, repeat: 3 })
     if (e) {
       const a = Math.atan2(e.y - this.player.y, e.x - this.player.x)
       e.kbx += Math.cos(a) * 500
@@ -700,6 +729,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   update(time: number, dtMs: number) {
+    if (this.over && !this.player) return
     this.pushHud()
     if (this.over || this.stopped || this.choosing || this.paused) {
       return
@@ -743,7 +773,9 @@ class BattleScene extends Phaser.Scene {
       .setRotation(this.aim)
       .setFlipY(Math.cos(this.aim) < 0)
     if (this.wall && this.wallZone) {
-      this.wall.setPosition(0, this.wallY() - WALL_H).setSize(w, WALL_H * 2)
+      this.wall.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)
+      this.wall.setTexture(this.mental <= this.loadout.maxMental / 2 ? 'wall-cracked' : 'wall')
+      this.wall.setAlpha(0.55 + (0.45 * this.mental) / this.loadout.maxMental)
       this.wallZone.setPosition(w / 2, this.wallY()).setSize(w, WALL_H * 2)
       ;(this.wallZone.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject()
     }
@@ -838,7 +870,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    backgroundColor: '#cfe3a0',
+    backgroundColor: '#bfe8cf',
     scale: {
       mode: Phaser.Scale.NONE,
       width: Math.round(parent.clientWidth * DPR),

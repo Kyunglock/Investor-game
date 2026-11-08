@@ -14,6 +14,18 @@ function company(over: Partial<Company> = {}): Company {
 }
 
 describe('앱 탭 (decisions.md 309번)', () => {
+  it('전투 중 뒤로 가기는 앱을 내리지 않고 전투의 일시정지를 먼저 연다', () => {
+    let paused = false
+    useAppUi.getState().setTab('office')
+    useAppUi.getState().setModalBack(() => {
+      paused = true
+    })
+    expect(useAppUi.getState().back()).toBe(true)
+    expect(paused).toBe(true)
+    useAppUi.getState().setModalBack(null)
+    expect(useAppUi.getState().back()).toBe(false)
+  })
+
   it('안드로이드 뒤로 가기로 메인의 설정·확장 시트도 닫힌다', () => {
     useAppUi.getState().setTab('office')
     useAppUi.getState().openSheet({ kind: 'toy', panel: 'upgrade' })
