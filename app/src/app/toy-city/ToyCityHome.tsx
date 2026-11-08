@@ -9,7 +9,7 @@ import { useState } from 'react'
 import { haptic } from '../../fx/haptics'
 import { isMuted, setMuted, sfx } from '../../fx/sound'
 import { stageLabel } from '../../mental/advance'
-import { BookIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from '../Icons'
+import { ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from '../Icons'
 import { Sheet } from '../Sheet'
 import { type BattleEntry, type Tab, type ToyPanel, tabBadge, useAppUi } from '../ui'
 import { useCountUp } from '../useCountUp'
@@ -17,13 +17,12 @@ import { ActionBar } from '../Windows'
 import { growthProgress } from './model'
 import { ToyCityStreet } from './ToyCityStreet'
 
-export function ToyIcon({ kind }: { kind: 'upgrade' | 'heart' | 'settings' | 'cup' | 'auto' }) {
+export function ToyIcon({ kind }: { kind: 'upgrade' | 'heart' | 'settings' | 'auto' }) {
   const paths = {
     upgrade: 'M6 22V3M3 3h18L6 9m11-6v7m-3 2h6v6h-6zM3 22h7',
     heart: 'M12 21S2 14 2 8a5 5 0 0 1 10-1 5 5 0 0 1 10 1c0 6-10 13-10 13Z',
     settings:
       'm9 2-1 3-3 1-3 3 2 3-1 4 3 3 4-1 3 3 4-2 1-4 3-2-1-4-4-1-1-4ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
-    cup: 'M7 3h10v7a5 5 0 0 1-10 0Zm0 2H3v4q0 4 5 4m9-8h4v4q0 4-5 4m-4 2v6m-5 0h10',
     auto: 'M19 7a8 8 0 1 0 1 9M19 2v5h-5m-4 1 6 4-6 4Z',
   }
   return (
@@ -47,7 +46,6 @@ const MENU = [
   { tab: 'market', text: '채용', Icon: ClipboardIcon },
   { tab: 'staff', text: '인력 관리', Icon: ChairIcon },
   { tab: 'issue', text: '이슈', Icon: NewsIcon },
-  { tab: 'record', text: '기록', Icon: BookIcon },
 ] as const
 
 export function ToyCityHome({ company }: { company: Company }) {
@@ -119,15 +117,6 @@ export function ToyCityHome({ company }: { company: Company }) {
           }}
         >
           <SoundIcon off={muted} />
-        </button>
-        <button
-          type="button"
-          className="toy-round"
-          aria-label="업적과 기록"
-          disabled={!unlocked.includes('record')}
-          onClick={() => changeTab('record')}
-        >
-          <ToyIcon kind="cup" />
         </button>
       </div>
       <div className="toy-wallets" data-testid="hud">

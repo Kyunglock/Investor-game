@@ -12,11 +12,10 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { useFx } from '../fx/fx'
 import { isMuted, setMuted, sfx } from '../fx/sound'
-import { BookIcon, BuildingIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from './Icons'
+import { BuildingIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from './Icons'
 import { GachaScene } from './scenes/GachaScene'
 import { IssueScene } from './scenes/IssueScene'
 import { OfficeScene } from './scenes/OfficeScene'
-import { RecordScene } from './scenes/RecordScene'
 import { StaffScene } from './scenes/StaffScene'
 import { type Tab, tabBadge, tabFromWeb, useAppUi } from './ui'
 import { useCountUp } from './useCountUp'
@@ -27,11 +26,10 @@ const TABS: { id: Tab; label: string; icon: () => React.ReactNode }[] = [
   { id: 'market', label: '채용', icon: ClipboardIcon },
   { id: 'staff', label: '인력 관리', icon: ChairIcon },
   { id: 'issue', label: '이슈', icon: NewsIcon },
-  { id: 'record', label: '기록', icon: BookIcon },
 ]
 
 /**
- * 앱 화면의 틀 (decisions.md 309·310번): 위에 회사 머리띠(건물·해·분기·자본), 가운데 장면 하나, 아래에 분기 넘기기 버튼과 다섯 탭. 문서처럼 길게 내리지 않고
+ * 앱 화면의 틀 (decisions.md 309·310번): 위에 회사 머리띠(건물·해·분기·자본), 가운데 장면 하나, 아래에 분기 넘기기 버튼과 네 탭(기록은 380번에서 뺐다). 문서처럼 길게 내리지 않고
  * 장면을 옆으로 밀어 가며 본다. 장면 안에서만 스크롤한다. 폭락·손실이면 화면이 흔들리고(FxLayer), 자본은 숫자가 굴러간다.
  */
 export function Shell({ company }: { company: Company }) {
@@ -113,7 +111,6 @@ export function Shell({ company }: { company: Company }) {
           {tab === 'market' && <GachaScene company={company} />}
           {tab === 'staff' && <StaffScene company={company} />}
           {tab === 'issue' && <IssueScene company={company} />}
-          {tab === 'record' && <RecordScene company={company} />}
         </div>
       </main>
       {tab !== 'office' && (
