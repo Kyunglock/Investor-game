@@ -1,5 +1,4 @@
 import type { Company, Drawn } from '@web/api/client'
-import { signedMoney } from '@web/features/game/labels'
 import { toggleAutoPlay } from '@web/features/raising/autoPlay'
 import { EndingScreen } from '@web/features/raising/EndingScreen'
 import { GachaReveal, useDrawReveal } from '@web/features/raising/Gacha'
@@ -16,7 +15,6 @@ import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { MentalWindow } from '../mental/MentalWindow'
-import { companyMood } from './toy-city/model'
 import { ToyCityMove } from './toy-city/ToyCityMove'
 import { useAppUi } from './ui'
 
@@ -267,9 +265,8 @@ export function ActionBar({
     return null
   }
   if (variant === 'toy') {
-    const quarter = company.lastQuarter
-    const delta = quarter ? quarter.capitalAfter - quarter.capitalBefore : null
     const assigned = company.employees.filter((e) => e.desk).length
+    const upgradeLevels = (company.battleUpgrades ?? []).reduce((n, u) => n + u.level, 0)
     return (
       <div className="toy-action-area">
         {error && (
@@ -288,16 +285,22 @@ export function ActionBar({
             자동 진행 중 · 누르면 멈춤
           </button>
         )}
+        {/* 아래 카드 셋 (decisions.md 367번): 지난 분기 수익·팀 분위기를 빼고 전투 강화와 스테이지를 둔다. */}
         <div className="toy-bottom-cards">
-          <div className="toy-stat">
-            <small>지난 분기 수익</small>
-            <strong className={delta != null && delta < 0 ? 'toy-loss' : 'toy-gain'}>
-              {delta == null ? '—' : signedMoney(delta)}
-            </strong>
-            <em>
-              {quarter ? `${quarter.year}년 ${quarter.quarter}분기 결산` : '첫 결산을 기다려요'}
-            </em>
-          </div>
+          <button
+            type="button"
+            className="toy-stat"
+            data-testid="battle-upgrade-open"
+            onClick={() => {
+              sfx.tap()
+              haptic.light()
+              useAppUi.getState().openSheet({ kind: 'toy', panel: 'battle' })
+            }}
+          >
+            <small>자본으로</small>
+            <strong>강화</strong>
+            <em>{upgradeLevels > 0 ? `${upgradeLevels}단계 올림` : '데미지·연사·속도'}</em>
+          </button>
           <button
             type="button"
             disabled={busy || autoPlay || settleLocked}
@@ -313,15 +316,25 @@ export function ActionBar({
           >
             <small>{busy ? '처리 중…' : settleLocked ? '직원을 앉혀주세요' : '다음 분기로'}</small>
             <strong>▶ 넘기기</strong>
-            <em>{assigned}명 일하는 중</em>
-          </button>
-          <div className="toy-stat">
-            <small>팀 분위기</small>
-            <strong>{companyMood(company)}</strong>
             <em>
               자리 {assigned}/{company.seats}
             </em>
-          </div>
+          </button>
+          {/* 스테이지 입구: 스테이지 선택(#493)이 생기기 전까지는 이번 분기 멘탈 시트를 연다. */}
+          <button
+            type="button"
+            className="toy-stat"
+            data-testid="stage-open"
+            onClick={() => {
+              sfx.tap()
+              haptic.light()
+              useAppUi.getState().openSheet({ kind: 'toy', panel: 'mental' })
+            }}
+          >
+            <small>멘탈 전투</small>
+            <strong>스테이지</strong>
+            <em>{company.mental?.done ? '이번 분기 완료' : '전진 모드'}</em>
+          </button>
         </div>
       </div>
     )

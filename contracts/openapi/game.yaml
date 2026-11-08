@@ -407,6 +407,31 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/battle-upgrade:
+    post:
+      operationId: buyBattleUpgrade
+      summary: 자본으로 전투 강화 한 단계를 산다 (decisions.md 367번)
+      description: |
+        데미지(+10%)·연사(쏘는 간격 −5%)·고양이 속도(+8%)를 한 단계씩, 10단계까지. 값은 1b부터 단계마다 2배.
+        쓴 돈은 분기 실적·결산서에 전투 강화 비용으로 따로 적는다. 자본이 모자라거나 다 올렸으면 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind]
+              properties:
+                kind: { type: string, enum: [damage, fire, speed] }
+      responses:
+        '200':
+          description: 산 뒤의 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/weapon/draw:
     post:
       operationId: drawWeapon
@@ -1081,7 +1106,7 @@ components:
         lastSettlement:
           oneOf:
             - type: object
-              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, moving, salary, quarters, gradeBefore, gradeAfter, achieved, results, lines, reports]
+              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, moving, upgrades, salary, quarters, gradeBefore, gradeAfter, achieved, results, lines, reports]
               properties:
                 year: { type: integer }
                 phase: { type: string, enum: [boom, normal, crash] }
@@ -1091,6 +1116,7 @@ components:
                 fee: { type: integer, format: int64, description: 수수료 매출 }
                 hiring: { type: integer, format: int64, description: 그해 인사 비용(계약금·새로 받기·붙잡는 값 − 받은 이적료, 음수일 수 있다). 연초 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 − 이사 비용 = 연말 자본 (251·262·296번) }
                 moving: { type: integer, format: int64, description: 그해 낸 이사 비용 (296번) }
+                upgrades: { type: integer, format: int64, description: 그해 전투 강화에 쓴 돈 (decisions.md 367번) }
                 salary: { type: integer, format: int64, description: 그해 나간 연봉의 합(인건비, decisions.md 270번) }
                 invest:
                   description: 그해 투자 회의(기사 제목과 손익, 이미 자본에 들어갔다). 회의를 안 했거나 옛 결산이면 null (decisions.md 240번)
@@ -1179,6 +1205,19 @@ components:
               bulletSpeed: { type: integer, description: 탄 속도(px/s) }
               equipped: { type: boolean, description: 지금 든 무기 }
               count: { type: integer, description: "가진 수 (decisions.md 366번). 같은 무기를 또 뽑으면 늘고, armory.mergeCount개면 합쳐 한 등급 올린다" }
+        battleUpgrades:
+          description: 자본으로 사는 전투 강화 (decisions.md 367번). 데미지·연사·고양이 속도, 멘탈 전투의 바탕 수치에 영구로 붙는다
+          type: array
+          items:
+            type: object
+            required: [kind, level, maxLevel, price, bonusPercent, nextBonusPercent]
+            properties:
+              kind: { type: string, enum: [damage, fire, speed], description: 'damage: 데미지, fire: 연사(쏘는 간격이 준다), speed: 고양이 이동 속도' }
+              level: { type: integer, description: 지금 단계(0부터) }
+              maxLevel: { type: integer }
+              price: { type: [integer, 'null'], format: int64, description: 다음 단계 값. 다 올렸으면 null }
+              bonusPercent: { type: integer, description: 지금 단계의 효과(%) }
+              nextBonusPercent: { type: [integer, 'null'], description: 다음 단계의 효과(%). 다 올렸으면 null }
         armory:
           description: 무기 뽑기 (decisions.md 366번). 무기는 전투에서 떨어지지 않고 무기 뽑기권으로 뽑는다
           type: object
@@ -1211,7 +1250,7 @@ components:
     Quarter:
       type: object
       description: 분기 하나의 실적 (decisions.md 268번)
-      required: [year, quarter, capitalBefore, capitalAfter, fee, staff, hiring, moving, salary, crash, lines, reports]
+      required: [year, quarter, capitalBefore, capitalAfter, fee, staff, hiring, moving, upgrades, salary, crash, lines, reports]
       properties:
         year: { type: integer }
         quarter: { type: integer }
@@ -1221,6 +1260,7 @@ components:
         staff: { type: integer, format: int64, description: 직원들이 이 분기에 굴린 몫 }
         hiring: { type: integer, format: int64, description: 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 − 이사 비용 = 끝 자본 }
         moving: { type: integer, format: int64, description: 이 분기에 낸 이사 비용 (296번) }
+        upgrades: { type: integer, format: int64, description: 이 분기에 전투 강화에 쓴 돈 (decisions.md 367번) }
         salary: { type: integer, format: int64, description: 이 분기에 나간 연봉(인건비, decisions.md 270번) }
         invest:
           description: 이 분기 종목 회의(기사 제목과 손익). 안 열렸으면 null

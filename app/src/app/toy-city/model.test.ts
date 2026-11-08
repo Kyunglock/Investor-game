@@ -1,6 +1,6 @@
 import type { Company, Grade } from '@web/api/client'
 import { describe, expect, it } from 'vitest'
-import { companyMood, expansionSide, growthProgress, officeGeometry } from './model'
+import { expansionSide, growthProgress, officeGeometry } from './model'
 
 describe('토이시티의 실제 회사 상태 표시', () => {
   it('다섯 번의 확장은 왼쪽·오른쪽을 번갈아 밀어낸다', () => {
@@ -42,16 +42,5 @@ describe('토이시티의 실제 회사 상태 표시', () => {
     expect(growthProgress(company)).toEqual({ percent: 50, label: '공사 중 · 완공까지 2년' })
     company.upgrade.left = 0
     expect(growthProgress(company)).toEqual({ percent: 100, label: '공사 중 · 완공까지 0년' })
-  })
-
-  it('분위기는 배치된 직원의 사기만 반영한다', () => {
-    const company = {
-      employees: [
-        { desk: 'bio', morale: -2 },
-        { desk: null, morale: 2 },
-      ],
-    } as Company
-    expect(companyMood(company)).toBe('지침')
-    expect(companyMood({ employees: [] } as unknown as Company)).toBe('준비 중')
   })
 })

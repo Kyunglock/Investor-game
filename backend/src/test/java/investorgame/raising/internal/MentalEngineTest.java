@@ -7,6 +7,7 @@ import investorgame.behavior.internal.TestBehavior;
 import investorgame.common.error.InvalidRequestException;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.content.internal.TestContent;
+import investorgame.raising.CompanyView;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -228,6 +229,49 @@ class MentalEngineTest {
     CompanyState empty = company(1);
     empty.weaponTickets = 0;
     assertThatThrownBy(() -> ENGINE.mental.drawWeapon(empty, new HashSeededRandom(1)))
+        .isInstanceOf(InvalidRequestException.class);
+  }
+
+  @Test
+  void 전투_강화는_자본으로_사고_값은_단계마다_두_배이며_다_올리면_멈춘다() {
+    CompanyState c = company(5);
+    CompanyProperties.Upgrades rule = PROPERTIES.mental().upgrades();
+    long before = c.capital;
+    ENGINE.mental.buyUpgrade(c, "damage");
+    assertThat(c.capital).isEqualTo(before - rule.basePrice());
+    assertThat(c.yearUpgrades).as("강화 비용은 따로 적는다").isEqualTo(rule.basePrice());
+    assertThat(ENGINE.mental.upgradePrice(1)).isEqualTo(rule.basePrice() * rule.priceFactor());
+    CompanyView.BattleUpgrade damage =
+        ENGINE.mental.upgradeViews(c).stream()
+            .filter(u -> u.kind().equals("damage"))
+            .findFirst()
+            .orElseThrow();
+    assertThat(damage.level()).isEqualTo(1);
+    assertThat(damage.bonusPercent()).isEqualTo(rule.stepPercent().get("damage"));
+    assertThat(damage.price()).isEqualTo(ENGINE.mental.upgradePrice(1));
+
+    c.capital = Long.MAX_VALUE / 4;
+    for (int i = 1; i < rule.maxLevel(); i++) {
+      ENGINE.mental.buyUpgrade(c, "speed");
+    }
+    ENGINE.mental.buyUpgrade(c, "speed");
+    assertThat(c.battleUpgrades.get("speed")).isEqualTo(rule.maxLevel());
+    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "speed"))
+        .as("다 올리면 더 못 산다")
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(
+            ENGINE.mental.upgradeViews(c).stream()
+                .filter(u -> u.kind().equals("speed"))
+                .findFirst()
+                .orElseThrow()
+                .price())
+        .isNull();
+
+    CompanyState poor = company(6);
+    poor.capital = 0;
+    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(poor, "fire"))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(poor, "armor"))
         .isInstanceOf(InvalidRequestException.class);
   }
 

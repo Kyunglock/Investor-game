@@ -526,7 +526,7 @@ function Battle({
 }) {
   const host = useRef<HTMLDivElement>(null)
   const handle = useRef<BattleHandle | null>(null)
-  const loadout = useRef(loadoutOf(hero.weapon))
+  const loadout = useRef(loadoutOf(hero.weapon, hero.upgrades))
   const [hud, setHud] = useState<Hud | null>(null)
   const [banner, setBanner] = useState<{ text: string; color: string; id: number } | null>(null)
   const [hurt, setHurt] = useState(false)
