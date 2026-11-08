@@ -71,7 +71,7 @@ export function playEvent(e: FxEvent) {
       fx.burstAt(null, 'sparks')
       sfx.whoosh()
       return
-    case 'ending':
+    case 'landmark':
       fx.burstAt(null, 'confetti')
       sfx.fanfare()
       haptic.success()

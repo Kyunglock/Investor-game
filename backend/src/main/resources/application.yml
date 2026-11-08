@@ -111,7 +111,7 @@ raising:
     sway-percent: 50
     # 폭락장에 손이 뒤집히면(못 참고 팔면) 손실이 두 배
     crash-flip-percent: 200
-    # 엔딩 (decisions.md 276번): 연말 결산에서 회사 등급이 이 등급(랜드마크 타워, 자본 100조 원)에 오르면 엔딩을 보고 회사가 멈춘다
+    # 랜드마크 타워 (decisions.md 276·374번): 이 등급(자본 100조 원)으로 이사하면 축하 한 줄과 연표를 남긴다. 엔딩은 없어 회사는 ZZ·ZZZ로 이어 간다
     ending-grade: Z
     # 사람 이야기 (decisions.md 262번): 이직 제안은 poach-from-year 해부터 해마다 poach-percent 확률로 온다.
     # 보내면 받는 이적료는 그 직원 계약금의 transfer-percent. 남기는 데는 돈이 들지 않고, 답하지 않아도 남는다(265번). 같은 자리 settle-years 해째부터 손 뒤집힘 settled-flip-percent배

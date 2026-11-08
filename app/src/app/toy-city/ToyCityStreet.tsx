@@ -143,8 +143,7 @@ export function ToyCityStreet({
     plan &&
     !transition &&
     company.status !== 'ENDED' &&
-    !company.broke &&
-    !company.ending
+    !company.broke
   const moving = Boolean(transition && phase < 3)
   const buildingStyle = {
     transformOrigin: `${center}px 560px`,

@@ -71,10 +71,6 @@ export function nextAutoStep(
   if (moveAlert) {
     return { kind: 'closeMove' }
   }
-  // 랜드마크 타워 엔딩 (276번): 엔딩을 보면 멈춘다. 다음 회사는 사장이 직접 차린다.
-  if (company.ending) {
-    return { kind: 'stop' }
-  }
   if (justQuartered) {
     return { kind: 'closeQuarter' }
   }

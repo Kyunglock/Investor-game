@@ -47,7 +47,6 @@ public record CompanyView(
     Macro macro,
     Quarter lastQuarter,
     Settlement lastSettlement,
-    Ending ending,
     Resign resign,
     Industry industry,
     List<LockedDesk> lockedDesks,
@@ -172,13 +171,6 @@ public record CompanyView(
    */
   public record Resign(
       int employeeId, String name, String reason, String line, long before, long after) {}
-
-  /**
-   * 엔딩 (decisions.md 276번): 랜드마크 타워에 올랐다. 엔딩을 본 회사는 멈추고 사장이 다음 회사를 차린다. 아직이면 null.
-   *
-   * @param year 엔딩을 본 해(몇 년 만에 올랐나)
-   */
-  public record Ending(int year, long capital, String grade) {}
 
   public enum Status {
     ACTIVE,
@@ -557,8 +549,7 @@ public record CompanyView(
       List<String> achieved,
       List<Result> results,
       List<String> lines,
-      List<Report> reports,
-      boolean finished) {}
+      List<Report> reports) {}
 
   /**
    * 건물 이사 (decisions.md 296번): 다음 건물로 가는 데 드는 돈. 끝 등급이면 null.

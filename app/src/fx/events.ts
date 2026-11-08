@@ -11,7 +11,7 @@ export type FxEvent =
   | { kind: 'grade-up'; to: Company['grade'] }
   | { kind: 'grade-down'; to: Company['grade'] }
   | { kind: 'opened'; number: number }
-  | { kind: 'ending' }
+  | { kind: 'landmark' }
   | { kind: 'broke' }
 
 export function companyEvents(before: Company | null, after: Company | null): FxEvent[] {
@@ -63,8 +63,9 @@ export function companyEvents(before: Company | null, after: Company | null): Fx
   } else if (step < 0) {
     out.push({ kind: 'grade-down', to: after.grade })
   }
-  if (after.ending && !before.ending) {
-    out.push({ kind: 'ending' })
+  // 랜드마크 타워에 올랐다 (374번): 엔딩은 없지만 크게 축하한다.
+  if (after.grade === 'Z' && before.grade !== 'Z') {
+    out.push({ kind: 'landmark' })
   }
   if (after.broke && !before.broke) {
     out.push({ kind: 'broke' })

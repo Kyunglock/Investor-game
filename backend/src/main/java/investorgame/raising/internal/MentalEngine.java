@@ -200,7 +200,7 @@ class MentalEngine {
     if (!UPGRADES.contains(kind)) {
       throw new InvalidRequestException("없는 강화다: " + kind);
     }
-    if (c.finished || c.closed) {
+    if (c.closed) {
       throw new InvalidRequestException("끝난 회사다");
     }
     int level = c.battleUpgrades.getOrDefault(kind, 0);
@@ -386,7 +386,7 @@ class MentalEngine {
     if (stage < 1 || stage > Math.min(best + 1, rule.perChapter())) {
       throw new InvalidRequestException("아직 열리지 않은 스테이지다: " + stage);
     }
-    if (c.finished || c.closed) {
+    if (c.closed) {
       throw new InvalidRequestException("끝난 회사다");
     }
     CompanyState.StageResult r = new CompanyState.StageResult();

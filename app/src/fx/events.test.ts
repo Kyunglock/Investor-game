@@ -76,12 +76,13 @@ describe('회사 변화의 효과 (decisions.md 310번)', () => {
     ])
   })
 
-  it('건물이 줄거나, 엔딩·파산이 새로 생기면 알린다', () => {
+  it('건물이 줄거나, 랜드마크 타워에 오르거나, 파산이 새로 생기면 알린다', () => {
     expect(companyEvents(company({ grade: 'E' }), company({ grade: 'F' }))).toEqual([
       { kind: 'grade-down', to: 'F' },
     ])
-    expect(companyEvents(company(), company({ ending: { year: 9 } } as never))).toEqual([
-      { kind: 'ending' },
+    expect(companyEvents(company({ grade: 'XXX' }), company({ grade: 'Z' }))).toEqual([
+      { kind: 'grade-up', to: 'Z' },
+      { kind: 'landmark' },
     ])
     expect(companyEvents(company(), company({ broke: '금고가 비었다' }))).toEqual([
       { kind: 'broke' },

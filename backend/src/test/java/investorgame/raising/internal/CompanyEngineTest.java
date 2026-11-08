@@ -1182,7 +1182,7 @@ class CompanyEngineTest {
    */
   /**
    * 건물 이사 (decisions.md 296번): 등급은 저절로 오르지 않는다. 자본이 다음 띠 + 이사 비용(다음 띠의 25%) 이상이면 비용을 내고 올라가고, 자리 수가
-   * 바로 바뀐다. 자본이 띠 아래로 떨어지면 연말에 저절로 줄어든다. 랜드마크 타워(Z)에 오르면 엔딩이다.
+   * 바로 바뀐다. 자본이 띠 아래로 떨어지면 연말에 저절로 줄어든다. 랜드마크 타워(Z)에 올라도 엔딩 없이 이어진다(374번).
    */
   @Test
   void 건물은_이사_비용을_내야_올라가고_자본이_띠_아래로_떨어지면_연말에_줄어든다() {
@@ -1236,9 +1236,9 @@ class CompanyEngineTest {
     assertThat(fell.gradeAfter).isEqualTo("D");
     assertThat(ENGINE.grade(company)).isEqualTo("D");
 
-    // 랜드마크 타워(Z)에 오르면 엔딩이다.
+    // 랜드마크 타워(Z)에 올라도 엔딩 없이 이어진다 (374번).
     company.capital = 200_000_000_000_000L;
-    for (int seed = 10; !company.finished && seed < 60; seed++) {
+    for (int seed = 10; !"Z".equals(ENGINE.grade(company)) && seed < 60; seed++) {
       if (ENGINE.canUpgrade(company)) {
         ENGINE.upgrade(company);
       } else {
@@ -1251,9 +1251,9 @@ class CompanyEngineTest {
       }
     }
     assertThat(ENGINE.grade(company)).isEqualTo("Z");
-    assertThat(company.finished).isTrue();
-    // 연말 결산에서 완공되면 결산 뒤로 해가 넘어간다.
-    assertThat(company.finishedYear).isBetween(company.year - 1, company.year);
+    assertThat(company.finished).isFalse();
+    assertThat(company.timeline).extracting(e -> e.kind).contains("ending");
+    assertThat(ENGINE.nextGrade(company)).as("Z 다음 건물").isEqualTo("ZZ");
   }
 
   @Test

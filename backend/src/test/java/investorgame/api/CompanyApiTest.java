@@ -506,11 +506,11 @@ class CompanyApiTest {
   }
 
   /**
-   * 랜드마크 타워 엔딩 (decisions.md 276·296번): 건물은 결산으로 오르지 않고 이사 비용을 내고 올라간다. Z(자본 100조 원)로 이사하면 그 자리에서
-   * 엔딩을 보고 회사가 멈춘다. 그 뒤로는 뽑기·결산이 400이고, 사장의 사재로 다음 회사를 차릴 수 있다.
+   * 랜드마크 타워 (decisions.md 276·296·374번): 건물은 결산으로 오르지 않고 이사 비용을 내고 올라간다. Z(자본 100조 원)로 이사해도 엔딩 없이
+   * 축하 한 줄과 연표만 남고, 회사는 ZZ로 이어 간다. 옛 엔딩으로 멈췄던 회사도 다시 움직인다.
    */
   @Test
-  void 랜드마크_타워에_오르면_엔딩을_보고_다음_회사를_차린다() throws Exception {
+  void 랜드마크_타워에_올라도_엔딩_없이_이어_간다() throws Exception {
     String id =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()))
             .read("$.companyId", String.class);
@@ -523,14 +523,13 @@ class CompanyApiTest {
         .update();
     // 자본이 넉넉해도 결산으로는 건물이 오르지 않는다 (296번).
     DocumentContext rich = json(settleYear(1));
-    assertThat(rich.read("$.lastSettlement.finished", Boolean.class)).isFalse();
     assertThat(rich.read("$.grade", String.class)).isEqualTo("F");
     assertThat(rich.read("$.upgrade.affordable", Boolean.class)).isTrue();
     assertThat(rich.read("$.upgrade.to", String.class)).isEqualTo("E");
     assertThat(rich.read("$.upgrade.cost", Long.class)).isEqualTo(18_000_000L);
     // 이사 비용을 내며 한 단계씩 Z까지 올라간다. 새 건물은 몇 해에 걸쳐 짓는다(#347): 공사 중이면 한 해를 넘긴다.
     DocumentContext moved = json(mvc.perform(get("/api/company").cookie(session)));
-    for (int i = 0; i < 60 && moved.read("$.ending", Object.class) == null; i++) {
+    for (int i = 0; i < 60 && !"Z".equals(moved.read("$.grade", String.class)); i++) {
       if (moved.read("$.upgrade.left", Integer.class) != null) {
         assertThat(moved.read("$.upgrade.affordable", Boolean.class)).isFalse();
         settleYear(moved.read("$.year", Integer.class));
@@ -540,22 +539,25 @@ class CompanyApiTest {
       }
     }
     assertThat(moved.read("$.grade", String.class)).isEqualTo("Z");
-    assertThat(moved.read("$.upgrade", Object.class)).isNull();
-    assertThat(moved.read("$.ending.year", Integer.class)).isGreaterThan(2);
-    assertThat(moved.read("$.ending.grade", String.class)).isEqualTo("Z");
+    Map<String, Object> company = moved.read("$");
+    assertThat(company).doesNotContainKey("ending");
+    assertThat(moved.read("$.upgrade.to", String.class)).as("Z 다음 건물").isEqualTo("ZZ");
     List<?> kinds = moved.read("$.history.timeline[*].kind");
     assertThat(kinds.stream().map(String::valueOf)).contains("grow", "ending");
-    drawFails();
-    settle(moved.read("$.year", Integer.class), moved.read("$.quarter", Integer.class))
-        .andExpect(status().isBadRequest());
-    postJson("/api/company/upgrade", "{}").andExpect(status().isBadRequest());
+    // 회사는 멈추지 않는다: 뽑고 결산하고 계속 간다.
+    DocumentContext after = json(mvc.perform(get("/api/company").cookie(session)));
+    assertThat(after.read("$.gacha.tickets", Integer.class)).as("이사할 때마다 받았다").isPositive();
+    drawRequest(1, after.read("$.gacha.draws", Integer.class)).andExpect(status().isOk());
+    int year = moved.read("$.year", Integer.class);
+    settleYear(year).andExpect(jsonPath("$.year").value(year + 1));
 
-    DocumentContext next =
-        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
-    assertThat(next.read("$.number", Integer.class)).isEqualTo(2);
-    assertThat(next.read("$.capital", Long.class)).isEqualTo(100_000_000L);
-    assertThat(next.read("$.ending", Object.class)).isNull();
-    assertThat(next.read("$.grade", String.class)).isEqualTo("F");
+    // 옛 엔딩으로 멈췄던 회사도 다시 움직인다.
+    jdbc.sql(
+            "UPDATE raising_company SET state = jsonb_set(state, '{finished}', 'true')"
+                + " WHERE id = CAST(:id AS uuid)")
+        .param("id", id)
+        .update();
+    settleYear(year + 1).andExpect(jsonPath("$.year").value(year + 2));
   }
 
   /** 업계 순위 (#351): 한 해를 마치면 같은 연차 회사들 가운데 자리가 보이고 결산 소식에 남는다. 다른 회사가 같은 연차를 마치면 함께 센다. */
@@ -592,13 +594,6 @@ class CompanyApiTest {
     assertThat(locked).containsExactlyInAnyOrder("research", "scout", "risk", "hr");
     List<String> researchAt = opened.read("$.lockedDesks[?(@.code == 'research')].unlockGrade");
     assertThat(researchAt).containsExactly("E");
-  }
-
-  /** 엔딩을 본 회사는 더 뽑지 않는다. */
-  private void drawFails() throws Exception {
-    DocumentContext company = json(mvc.perform(get("/api/company").cookie(session)));
-    assertThat(company.read("$.gacha.tickets", Integer.class)).as("이사할 때마다 받았다").isPositive();
-    drawRequest(1, company.read("$.gacha.draws", Integer.class)).andExpect(status().isBadRequest());
   }
 
   /** 접속할 때마다 같은 토큰의 쿠키를 새 만료(30일)로 다시 내린다: 마지막 접속부터 30일이 흐른다 (decisions.md 311번). */

@@ -134,12 +134,10 @@ describe('자동 진행의 창마다 시간 (decisions.md 277번)', () => {
   })
 })
 
-describe('엔딩 (decisions.md 276번)', () => {
-  it('엔딩을 보면 멈춘다: 다음 회사는 사장이 직접 차린다', () => {
-    const ended = { ...company(), ending: { year: 30, capital: 100_000_000_000_000, grade: 'Z' } }
-    expect(nextAutoStep(ended as never, true).kind).toBe('closeYearEnd')
-    expect(nextAutoStep(ended as never, false, false, true).kind).toBe('closeMove')
-    expect(nextAutoStep(ended as never, false).kind).toBe('stop')
+describe('엔딩 없음 (decisions.md 374번)', () => {
+  it('랜드마크 타워(Z)에 올라도 멈추지 않는다', () => {
+    const landmark = company({ grade: 'Z' })
+    expect(nextAutoStep(landmark, false).kind).not.toBe('stop')
   })
 })
 
