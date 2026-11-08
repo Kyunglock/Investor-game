@@ -665,3 +665,42 @@
   margin-top: 0;
   flex-shrink: 0;
 }
+
+/* 스테이지 선택 (decisions.md 369번) */
+.toy-stage-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 12px 0;
+}
+.toy-stage-pick {
+  width: 100%;
+  min-height: 58px;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  border: 1.5px solid #2b2340;
+  border-radius: 12px;
+  background: #fffaf0;
+  color: #2b2340;
+  box-shadow: 0 2px 0 #2b2340;
+}
+.toy-stage-pick b {
+  font-size: 15px;
+}
+.toy-stage-pick small {
+  font-size: 10px;
+  color: #c79a1a;
+  white-space: nowrap;
+}
+.toy-stage-pick.is-cleared {
+  background: #e7f8f1;
+}
+.toy-stage-pick.is-boss {
+  background: #ffe4e8;
+  border-color: #c2304b;
+}
+.toy-stage-pick:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+}

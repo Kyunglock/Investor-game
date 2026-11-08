@@ -343,12 +343,27 @@ class MentalEngine {
     c.weaponTickets += rule.weaponGacha().battleTickets();
   }
 
-  /** 이번 분기 강화율(%). 치르지 않았거나 이 칸이 없던 분기면 0. */
-  int bonusPercent(CompanyState c) {
-    return c.mental == null || c.mental.cards == null ? 0 : c.mental.bonusPercent;
+  /** 깬 최고 스테이지 (369번). 0이면 아직 없다. */
+  int bestStage(CompanyState c) {
+    return c.stageStars == null ? 0 : c.stageStars.size();
   }
 
-  /** 분기 실적 소식 줄. 치르지 않았으면 null. */
+  /** 스테이지 이름: 챕터-번호 (예: 1-3). */
+  String stageLabel(int stage) {
+    int per = properties.mental().stages().perChapter();
+    return ((stage - 1) / per + 1) + "-" + ((stage - 1) % per + 1);
+  }
+
+  /**
+   * 이번 분기 강화율(%) (369번): 깬 최고 스테이지 × bonusPerStage, 상한 maxBonus. 그 분기에 싸우지 않아도 매 분기 저절로 붙는다. 한 판
+   * 결과로 매기던 것(328번)은 쓰지 않는다.
+   */
+  int bonusPercent(CompanyState c) {
+    CompanyProperties.Stages rule = properties.mental().stages();
+    return Math.min(rule.maxBonus(), bestStage(c) * rule.bonusPerStage());
+  }
+
+  /** 분기 실적 소식 줄. 깬 스테이지가 없으면 null. */
   String line(CompanyState c) {
     if (bonusPercent(c) == 0) {
       return null;
@@ -356,10 +371,81 @@ class MentalEngine {
     return Korean.fill(
         text().line(),
         Map.of(
-            "level", String.valueOf(c.mental.cards.size()),
-            "cards", String.join("·", c.mental.cards.stream().map(text().cards()::get).toList()),
-            "kills", String.valueOf(c.mental.kills),
-            "left", String.valueOf(c.mental.mentalLeft),
-            "percent", String.valueOf(c.mental.bonusPercent)));
+            "stage", stageLabel(bestStage(c)),
+            "percent", String.valueOf(bonusPercent(c))));
+  }
+
+  /**
+   * 멘탈 스테이지 한 판의 결과 (decisions.md 369번). 열린 스테이지(1 ~ 깬 최고 + 1, 마지막 스테이지까지)만 받는다. 깼으면: 처음이면 자본(번호 ×
+   * capitalPerStage)과 뽑기권(보스면 더), 별이 전보다 많으면 늘어난 별마다 뽑기권. 받은 자본은 올해 스테이지 보상으로 따로 적는다. 못 깼으면 보상 없이
+   * 결과만 남긴다.
+   */
+  void reportStage(CompanyState c, int stage, boolean cleared, int stars) {
+    CompanyProperties.Stages rule = properties.mental().stages();
+    int best = bestStage(c);
+    if (stage < 1 || stage > Math.min(best + 1, rule.perChapter())) {
+      throw new InvalidRequestException("아직 열리지 않은 스테이지다: " + stage);
+    }
+    if (c.finished || c.closed) {
+      throw new InvalidRequestException("끝난 회사다");
+    }
+    CompanyState.StageResult r = new CompanyState.StageResult();
+    r.stage = stage;
+    r.cleared = cleared;
+    r.stars = cleared ? Math.clamp(stars, 1, 3) : 0;
+    if (cleared) {
+      if (stage == best + 1) {
+        c.stageStars.add(0);
+        r.firstClear = true;
+        r.capital = stage * rule.capitalPerStage();
+        r.tickets += stage % rule.perChapter() == 0 ? rule.bossTickets() : rule.clearTickets();
+      }
+      int before = c.stageStars.get(stage - 1);
+      if (r.stars > before) {
+        r.tickets += (r.stars - before) * rule.starTickets();
+        c.stageStars.set(stage - 1, r.stars);
+      }
+      c.capital += r.capital;
+      c.yearRewards += r.capital;
+      c.weaponTickets += r.tickets;
+    }
+    c.lastStage = r;
+  }
+
+  /**
+   * EX 디펜스 (369번): 분기에 한 번, 뽑기권 1 + 적 ÷ exKillsPerTicket장(상한 exMaxTickets). 이번 분기에 이미 했으면 보상 없이 그대로
+   * 둔다.
+   */
+  void reportEx(CompanyState c, int kills) {
+    if (c.mental == null) {
+      throw new InvalidRequestException("이번 분기에는 멘탈 전투가 없다");
+    }
+    if (c.mental.exDone) {
+      return;
+    }
+    CompanyProperties.Stages rule = properties.mental().stages();
+    c.mental.exDone = true;
+    CompanyState.StageResult r = new CompanyState.StageResult();
+    r.cleared = true;
+    r.tickets = Math.min(rule.exMaxTickets(), 1 + Math.max(0, kills) / rule.exKillsPerTicket());
+    c.weaponTickets += r.tickets;
+    c.lastStage = r;
+  }
+
+  /** 스테이지 화면 값 (369번). */
+  CompanyView.Stages stagesView(CompanyState c) {
+    CompanyProperties.Stages rule = properties.mental().stages();
+    CompanyState.StageResult r = c.lastStage;
+    return new CompanyView.Stages(
+        bestStage(c),
+        rule.perChapter(),
+        rule.perChapter(),
+        c.stageStars == null ? List.of() : List.copyOf(c.stageStars),
+        bonusPercent(c),
+        c.mental != null && !c.mental.exDone,
+        r == null
+            ? null
+            : new CompanyView.StageResult(
+                r.stage, r.cleared, r.stars, r.firstClear, r.capital, r.tickets));
   }
 }

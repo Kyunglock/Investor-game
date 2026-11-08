@@ -65,6 +65,10 @@ interface RaisingState {
   reportMental: (cards: MentalCard[], kills: number, mentalLeft: number) => Promise<void>
   /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). */
   equipWeapon: (kind: WeaponKind, grade: WeaponGrade) => Promise<void>
+  /** 멘탈 스테이지 한 판의 결과를 보낸다 (decisions.md 369번). 보상은 company.stages.lastResult. */
+  reportStage: (stage: number, cleared: boolean, stars: number) => Promise<void>
+  /** EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번). */
+  reportEx: (kills: number) => Promise<void>
   /** 자본으로 전투 강화(데미지·연사·고양이 속도) 한 단계를 산다 (decisions.md 367번). */
   buyBattleUpgrade: (kind: 'damage' | 'fire' | 'speed') => Promise<void>
   /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). 결과는 company.armory.lastDraw. */
@@ -222,6 +226,11 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
 
     equipWeapon: (kind, grade) =>
       change(api.POST('/api/company/weapon', { body: { kind, grade } })),
+
+    reportStage: (stage, cleared, stars) =>
+      change(api.POST('/api/company/stage', { body: { stage, cleared, stars } })),
+
+    reportEx: (kills) => change(api.POST('/api/company/ex', { body: { kills } })),
 
     buyBattleUpgrade: (kind) => change(api.POST('/api/company/battle-upgrade', { body: { kind } })),
 

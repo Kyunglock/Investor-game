@@ -344,6 +344,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/stage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 멘탈 스테이지 한 판의 결과를 보낸다 (decisions.md 369번)
+         * @description 열린 스테이지(1 ~ 깬 최고 + 1)만 받는다. 깼으면 처음이면 자본(번호 × 1b)과 무기 뽑기권(보스면 3장), 별을 처음 얻을 때마다 뽑기권 한 장.
+         *     못 깼으면 보상 없이 결과만 남는다. 결과는 stages.lastResult에 담긴다. 아직 안 열린 스테이지면 400.
+         */
+        post: operations["reportStage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/ex": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번)
+         * @description 분기에 한 번 무기 뽑기권 1 + 물리친 적 40마다 한 장(최대 3장). 이번 분기에 이미 했으면 그대로 둔다.
+         */
+        post: operations["reportEx"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/battle-upgrade": {
         parameters: {
             query?: never;
@@ -1063,6 +1104,11 @@ export interface components {
                 upgrades: number;
                 /**
                  * Format: int64
+                 * @description 그해 스테이지 보상으로 받은 자본 (decisions.md 369번)
+                 */
+                rewards: number;
+                /**
+                 * Format: int64
                  * @description 그해 나간 연봉의 합(인건비
                  */
                 salary: number;
@@ -1159,6 +1205,37 @@ export interface components {
                 /** @description 가진 수 (decisions.md 366번). 같은 무기를 또 뽑으면 늘고, armory.mergeCount개면 합쳐 한 등급 올린다 */
                 count: number;
             }[];
+            /** @description 멘탈 스테이지 (decisions.md 369번). 번호 스테이지를 골라 전진 모드로 깬다. 분기 강화율은 깬 최고 스테이지로 매 분기 저절로 붙는다 */
+            stages?: {
+                /** @description 깬 최고 스테이지(0이면 아직 없다). 다음에 열리는 것은 best + 1 */
+                best: number;
+                /** @description 마지막 스테이지(지금은 챕터 하나) */
+                last: number;
+                /** @description 한 챕터의 스테이지 수. 챕터 마지막은 보스 */
+                perChapter: number;
+                /** @description 깬 스테이지의 별(1~3) */
+                stars: number[];
+                /** @description 이번 분기 강화율(%) */
+                bonusPercent: number;
+                /** @description 이번 분기 EX 디펜스를 아직 안 했다 */
+                exAvailable: boolean;
+                /** @description 마지막으로 보낸 스테이지·EX 결과와 받은 보상. 없으면 null */
+                lastResult: {
+                    /** @description 스테이지 번호. EX 디펜스면 0 */
+                    stage: number;
+                    cleared: boolean;
+                    stars: number;
+                    /** @description 이 판에 처음 깼다 */
+                    firstClear: boolean;
+                    /**
+                     * Format: int64
+                     * @description 받은 자본
+                     */
+                    capital: number;
+                    /** @description 받은 무기 뽑기권 */
+                    tickets: number;
+                } | null;
+            };
             /** @description 자본으로 사는 전투 강화 (decisions.md 367번). 데미지·연사·고양이 속도, 멘탈 전투의 바탕 수치에 영구로 붙는다 */
             battleUpgrades?: {
                 /**
@@ -1239,6 +1316,11 @@ export interface components {
              * @description 이 분기에 전투 강화에 쓴 돈 (decisions.md 367번)
              */
             upgrades: number;
+            /**
+             * Format: int64
+             * @description 이 분기에 스테이지 보상으로 받은 자본 (decisions.md 369번)
+             */
+            rewards: number;
             /**
              * Format: int64
              * @description 이 분기에 나간 연봉(인건비
@@ -1864,6 +1946,66 @@ export interface operations {
         };
         responses: {
             /** @description 무기를 든 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reportStage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    stage: number;
+                    cleared: boolean;
+                    stars: number;
+                };
+            };
+        };
+        responses: {
+            /** @description 결과를 받은 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reportEx: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    kills: number;
+                };
+            };
+        };
+        responses: {
+            /** @description 결과를 받은 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

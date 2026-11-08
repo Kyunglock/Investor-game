@@ -192,6 +192,19 @@ raising:
         merge-count: 2
       # 자본으로 사는 전투 강화 (decisions.md 367번): 데미지·연사·고양이 속도를 단계마다 step-percent%씩, max-level단계까지. 값은 처음
       # base-price(1b)이고 단계마다 price-factor배. 멘탈 전투의 바탕 수치(무기 위)에 영구로 붙는다
+      # 스테이지 (decisions.md 369번): 번호 스테이지를 골라 전진 모드로 깬다. 한 챕터 per-chapter개, 마지막은 보스. 처음 깨면 자본
+      # (스테이지 번호 × capital-per-stage)과 무기 뽑기권 clear-tickets장(보스면 boss-tickets장), 별을 처음 얻을 때마다 star-tickets장.
+      # 분기 강화율 = min(max-bonus, 깬 최고 스테이지 × bonus-per-stage). EX 디펜스는 분기에 한 번, 뽑기권 1 + 적 ÷ ex-kills-per-ticket장(최대 ex-max-tickets)
+      stages:
+        per-chapter: 10
+        capital-per-stage: 1000000
+        clear-tickets: 1
+        boss-tickets: 3
+        star-tickets: 1
+        bonus-per-stage: 3
+        max-bonus: 30
+        ex-kills-per-ticket: 40
+        ex-max-tickets: 3
       upgrades:
         max-level: 10
         base-price: 1000000

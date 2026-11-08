@@ -1392,6 +1392,7 @@ class CompanyEngine {
     company.yearHiring = 0;
     company.yearMoving = 0;
     company.yearUpgrades = 0;
+    company.yearRewards = 0;
     company.quarter = 1;
     company.yearStake = null;
     company.quarters.clear();
@@ -1674,10 +1675,10 @@ class CompanyEngine {
     int decisions = Math.max(1, properties.decisions() / QUARTERS);
     int stanceBp = macro.stanceBp(company);
     q.crash = burst;
-    // 멘탈 전투 (328번): 잘 치렀으면 이 분기 돈을 굴리는 직원 모두 더 벌고 손이 덜 뒤집힌다.
+    // 멘탈 스테이지 (328·369번): 깬 최고 스테이지만큼 이 분기 돈을 굴리는 직원 모두 더 벌고 손이 덜 뒤집힌다.
     int mentalBonus = mental.bonusPercent(company);
     if (mentalBonus > 0) {
-      q.mentalCard = String.join("·", company.mental.cards);
+      q.mentalCard = mental.stageLabel(mental.bestStage(company));
       q.mentalBonusPercent = mentalBonus;
       q.lines.add(mental.line(company));
     }
@@ -1792,12 +1793,15 @@ class CompanyEngine {
     q.moving = company.yearMoving - company.quarters.stream().mapToLong(x -> x.moving).sum();
     // 전투 강화에 쓴 돈(367번)도 따로 둔다: 안 그러면 인사 비용으로 읽힌다.
     q.upgrades = company.yearUpgrades - company.quarters.stream().mapToLong(x -> x.upgrades).sum();
+    // 스테이지 보상으로 받은 자본(369번)도 따로 둔다: 안 그러면 인사 비용이 마이너스로 읽힌다.
+    q.rewards = company.yearRewards - company.quarters.stream().mapToLong(x -> x.rewards).sum();
     if (q.capitalAfter > 0) {
       q.hiring =
           q.capitalBefore
               + (q.investTotal == null ? 0 : q.investTotal)
               + q.staff
               + q.fee
+              + q.rewards
               - q.salary
               - q.moving
               - q.upgrades
@@ -1846,6 +1850,7 @@ class CompanyEngine {
     settlement.hiring = company.yearHiring;
     settlement.moving = company.yearMoving;
     settlement.upgrades = company.yearUpgrades;
+    settlement.rewards = company.yearRewards;
     settlement.capitalBefore =
         company.yearStartCapital != null
             ? company.yearStartCapital

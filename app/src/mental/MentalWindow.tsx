@@ -1,12 +1,14 @@
 import type { Company } from '@web/api/client'
+import { money } from '@web/features/game/labels'
 import { type MentalCard, useRaisingStore } from '@web/features/raising/store'
-import { type CSSProperties, useEffect, useEffectEvent, useRef, useState } from 'react'
+import { type CSSProperties, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useAppUi } from '../app/ui'
+import { type BattleEntry, useAppUi } from '../app/ui'
 import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
-import { type BattleMode, SEGMENTS } from './advance'
+
+import { type BattleMode, type StageSpec, stageLabel, stageSpec } from './advance'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
 import { applyCard, CARDS, type Loadout, loadoutOf, pickCards } from './cards'
@@ -17,7 +19,7 @@ import { StagePortrait } from './StagePortrait'
 import './stage.css'
 import { DEFAULT_WEAPON, type Hero, heroOf, type Weapon } from './hero'
 
-type Mental = NonNullable<Company['mental']>
+type Genre = NonNullable<Company['mental']>['genre']
 type Armory = NonNullable<Company['armory']>
 
 /** 합칠 수 있는 등급: 가장 높은 등급(UR)은 못 합친다 (366번). */
@@ -32,15 +34,16 @@ const GRADE_BADGE: Record<Weapon['grade'], string> = {
 }
 
 /**
- * 멘탈 전투 창 (decisions.md 328·330·331·339·345·346번): 이벤트 머리글과 장르, 무기 고르기, 출전 버튼 → 한 판(전장이 열리면 첫 카드 석 장 가운데 하나)(Phaser, 늦게 불러온다. 레벨이 오를 때마다 멈추고 카드를
- * 또 고른다) → 결과 → 서버에 고른 카드 목록과 결과를 보고 → onDone(결산). 건너뛰거나 싸우다 나가면(345번) 보고 없이 바로 onDone이다. 화면 전체를 쓴다.
+ * 멘탈 전투 창 (decisions.md 328·330·339·345·346·369번): 스테이지 선택에서 고른 판(번호 스테이지 = 전진 모드, EX = 디펜스)의 출전 화면, 무기 고르기,
+ * 출전 버튼 → 한 판(Phaser, 늦게 불러온다. 레벨이 오를 때마다 멈추고 카드를 고른다) → 결과를 서버에 보내고 받은 보상을 보인다 → onDone(돌아가기).
+ * 돌아가거나 싸우다 나가면(345번) 보고 없이 바로 onDone이다. 화면 전체를 쓴다.
  */
 export function MentalWindow({
-  mental,
+  entry,
   company,
   onDone,
 }: {
-  mental: Mental
+  entry: BattleEntry
   company: Company
   onDone: () => void
 }) {
@@ -55,8 +58,17 @@ export function MentalWindow({
   const busy = useRaisingStore((s) => s.busy)
   const apiError = useRaisingStore((s) => s.error)
   const modal = useRef<HTMLDivElement>(null)
-  /** 분기 전투는 늘 전진 모드다 (364번). 디펜스(EX)의 입구는 스테이지 선택(#493)에서 붙는다. */
-  const mode: BattleMode = 'advance'
+  // 번호 스테이지는 전진 모드, EX는 디펜스 (364·369번).
+  const mode: BattleMode = entry.kind === 'ex' ? 'defense' : 'advance'
+  const perChapter = company.stages?.perChapter
+  // 한 번만 만든다: 새 객체면 전투(Battle)의 effect가 다시 돌아 판이 처음부터 다시 시작됐다.
+  const stageNumber = entry.kind === 'stage' ? entry.stage : null
+  const spec: StageSpec | undefined = useMemo(
+    () => (stageNumber === null ? undefined : stageSpec(stageNumber, perChapter)),
+    [stageNumber, perChapter],
+  )
+  const genre: Genre = company.mental?.genre ?? 'DEFENSE'
+  const [saved, setSaved] = useState(false)
   const weapons = company.weapons?.length ? company.weapons : [DEFAULT_WEAPON]
 
   const back = useEffectEvent(() => {
@@ -107,22 +119,31 @@ export function MentalWindow({
     }
   }, [])
 
-  const finish = async () => {
-    if (!outcome || sending || picked.length === 0) {
+  // 결과가 나오면 바로 서버에 보내고(369번) 받은 보상을 결과 카드에 보인다.
+  const save = useEffectEvent(async () => {
+    if (!outcome || sending || saved) {
       return
     }
     setSending(true)
     setReportError(null)
-    await useRaisingStore.getState().reportMental(picked, outcome.kills, outcome.mentalLeft)
-    const state = useRaisingStore.getState()
-    if (state.error || !state.company?.mental?.done) {
-      setReportError(state.error ?? '결과를 저장하지 못했어요. 연결을 확인하고 다시 시도해주세요.')
-      setSending(false)
-      return
+    const store = useRaisingStore.getState()
+    if (entry.kind === 'stage') {
+      await store.reportStage(entry.stage, outcome.win, outcome.stars)
+    } else {
+      await store.reportEx(outcome.kills)
     }
-    // 무기는 떨어지지 않는다 (366번): 무기 뽑기권을 받고 그대로 결산으로.
-    onDone()
-  }
+    const state = useRaisingStore.getState()
+    if (state.error) {
+      setReportError(state.error)
+    } else {
+      setSaved(true)
+    }
+    setSending(false)
+  })
+  useEffect(() => {
+    if (outcome) void save()
+  }, [outcome])
+  const reward = saved ? (company.stages?.lastResult ?? null) : null
 
   return createPortal(
     <div
@@ -137,7 +158,8 @@ export function MentalWindow({
         {hero && !outcome && (
           <Battle
             mode={mode}
-            genre={mental.genre}
+            stage={spec}
+            genre={genre}
             hero={hero}
             cards={picked}
             pauseRequest={pauseRequest}
@@ -150,18 +172,36 @@ export function MentalWindow({
           <div className="stage-lobby" data-testid="mental-lobby">
             <header className="stage-heading">
               <span className="stage-eyebrow">
-                {company.year}년 차 · {company.quarter}분기
+                {entry.kind === 'stage' ? '멘탈 스테이지' : 'EX 도전 · 분기에 한 번'}
               </span>
-              <h2>마음의 방어선</h2>
-              <p>{mental.headline}</p>
+              <h2>
+                {entry.kind === 'stage'
+                  ? `스테이지 ${stageLabel(entry.stage, perChapter)}`
+                  : 'EX 디펜스'}
+              </h2>
+              <p>{company.mental?.headline ?? '흔들리지 않는 마음으로'}</p>
             </header>
             <div className="stage-hero-card">
-              <span className="stage-mode">
-                전진 · 구간 {SEGMENTS.length}개 · 제한 시간 {BATTLE_SECONDS / 60}분
+              <span className="stage-mode" data-testid="stage-mode">
+                {spec
+                  ? `전진 · 구간 ${spec.segments}개${spec.boss ? ' + 보스' : ''} · 제한 시간 ${BATTLE_SECONDS / 60}분`
+                  : `디펜스 · 제한 시간 ${BATTLE_SECONDS / 60}분 버티기`}
               </span>
               <StagePortrait weapon={heroOf(company).weapon} />
-              <p>길을 막는 불안을 치우고 앞으로 나아가세요</p>
-              <small>끌어서 움직이기 · 총은 자동으로 쏜다 · 빨리 깰수록 별이 많다</small>
+              {spec ? (
+                <>
+                  <p>길을 막는 불안을 치우고 앞으로 나아가세요</p>
+                  <small>끌어서 움직이기 · 총은 자동으로 쏜다 · 빨리 깰수록 별이 많다</small>
+                </>
+              ) : (
+                <>
+                  <div className="stage-mini-wall">
+                    <span>♡</span> 멘탈벽
+                  </div>
+                  <p>몰려오는 불안을 막아 멘탈벽을 지키세요</p>
+                  <small>누른 방향으로 발사 · 적을 많이 잡을수록 무기 뽑기권이 많다</small>
+                </>
+              )}
             </div>
             <WeaponPicker weapons={weapons} armory={company.armory ?? null} busy={busy} />
             {apiError && (
@@ -188,7 +228,7 @@ export function MentalWindow({
                 setHero(heroOf(company))
               }}
             >
-              멘탈 지키러 가기 <span aria-hidden="true">▶</span>
+              {spec ? '출발' : '멘탈 지키러 가기'} <span aria-hidden="true">▶</span>
             </button>
             <button
               type="button"
@@ -199,7 +239,7 @@ export function MentalWindow({
                 onDone()
               }}
             >
-              이번 분기는 쉬어가기 · 강화 없음
+              돌아가기
             </button>
           </div>
         )}
@@ -209,36 +249,57 @@ export function MentalWindow({
               <span
                 className={`inline-block rounded-lg px-3 py-0.5 text-[13px] font-bold text-white ${outcome.win ? 'bg-teal' : 'bg-[#ff4f6d]'}`}
               >
-                {outcome.win ? '전진 성공' : outcome.reason === 'time' ? '시간 초과' : '멘탈 붕괴'}
+                {outcome.win
+                  ? spec
+                    ? '전진 성공'
+                    : '멘탈 지켜냈다'
+                  : outcome.reason === 'time'
+                    ? '시간 초과'
+                    : '멘탈 붕괴'}
               </span>
               <h2 className="mt-2 font-game text-[28px]">
                 {outcome.win
-                  ? '끝까지 나아갔다!'
+                  ? spec
+                    ? '끝까지 나아갔다!'
+                    : '멘탈 지켜냈다!'
                   : outcome.reason === 'time'
                     ? '시간 안에 못 넘었다…'
                     : '멘탈이 무너졌다…'}
               </h2>
-              <p
-                className="mt-1 text-[30px] tracking-[4px]"
-                role="img"
-                aria-label={`별 ${outcome.stars}개`}
-                data-testid="mental-stars"
-                data-stars={outcome.stars}
-              >
-                {[0, 1, 2].map((i) => (
-                  <span key={i} className={i < outcome.stars ? 'text-[#ffc83d]' : 'text-ink/20'}>
-                    ★
-                  </span>
-                ))}
-              </p>
+              {spec && (
+                <p
+                  className="mt-1 text-[30px] tracking-[4px]"
+                  role="img"
+                  aria-label={`별 ${outcome.stars}개`}
+                  data-testid="mental-stars"
+                  data-stars={outcome.stars}
+                >
+                  {[0, 1, 2].map((i) => (
+                    <span key={i} className={i < outcome.stars ? 'text-[#ffc83d]' : 'text-ink/20'}>
+                      ★
+                    </span>
+                  ))}
+                </p>
+              )}
               <div className="mt-3 grid grid-cols-3 gap-2">
-                <Stat label="넘긴 구간" value={`${outcome.segments}/${SEGMENTS.length}`} />
+                {spec ? (
+                  <Stat label="넘긴 구간" value={`${outcome.segments}/${spec.segments}`} />
+                ) : (
+                  <Stat label="레벨" value={picked.length} />
+                )}
                 <Stat label="물리친 적" value={outcome.kills} />
                 <Stat label="남은 멘탈" value={outcome.mentalLeft} />
               </div>
-              <p className="mt-3 text-[13px] text-muted">
-                얼마나 세지는지는 결산에서 알려준다: 적을 많이 물리치고 멘탈을 많이 남길수록 이번
-                분기 직원들이 더 벌고 손이 덜 흔들린다.
+              <p className="mt-3 text-[14px]" data-testid="mental-reward">
+                {sending
+                  ? '보상을 받는 중…'
+                  : !reward
+                    ? ''
+                    : reward.capital > 0 || reward.tickets > 0
+                      ? `${reward.firstClear ? '처음 깼다! ' : ''}${reward.capital > 0 ? `자본 +${money(reward.capital)} · ` : ''}무기 뽑기권 +${reward.tickets}장`
+                      : spec && !outcome.win
+                        ? '깨면 자본과 무기 뽑기권을 받는다.'
+                        : '이번에 더 받을 보상은 없다.'}
               </p>
             </div>
             <button
@@ -247,12 +308,13 @@ export function MentalWindow({
               onClick={() => {
                 sfx.stamp()
                 haptic.medium()
-                void finish()
+                if (reportError) void save()
+                else onDone()
               }}
               className="stage-primary"
               data-testid="mental-done"
             >
-              {sending ? '저장 중…' : reportError ? '다시 저장하고 계속' : '결산으로 ▶'}
+              {sending ? '저장 중…' : reportError ? '다시 저장하기' : '돌아가기 ▶'}
             </button>
             {reportError && (
               <p className="stage-error" role="alert">
@@ -506,6 +568,7 @@ function CardPick({
  */
 function Battle({
   mode,
+  stage,
   genre,
   hero,
   cards,
@@ -515,7 +578,8 @@ function Battle({
   onQuit,
 }: {
   mode: BattleMode
-  genre: Mental['genre']
+  stage?: StageSpec
+  genre: Genre
   hero: Hero
   cards: MentalCard[]
   pauseRequest: number
@@ -561,6 +625,7 @@ function Battle({
         }
         handle.current = startBattle(el, {
           mode,
+          stage,
           genre,
           hero,
           loadout: loadout.current,
@@ -591,7 +656,7 @@ function Battle({
       handle.current?.stop()
       handle.current = null
     }
-  }, [mode, genre, hero, onDone, attempt])
+  }, [mode, stage, genre, hero, onDone, attempt])
 
   return (
     <>
@@ -737,7 +802,7 @@ function Battle({
           <div className="stage-result-card">
             <h3 className="font-game text-[24px]">잠깐 쉬어가요</h3>
             <p className="mt-1 text-[14px] text-muted">
-              나가면 이번 분기는 강화 없이 결산으로 갑니다. 물리친 적과 고른 카드는 남지 않습니다.
+              나가면 이번 판은 기록되지 않습니다. 물리친 적과 고른 카드도 남지 않습니다.
             </p>
             <div className="mt-4 grid gap-2">
               <button

@@ -62,6 +62,9 @@ class CompanyState {
   /** 올해 전투 강화에 쓴 돈 (367번). */
   long yearUpgrades;
 
+  /** 올해 스테이지 보상으로 받은 자본 (369번). */
+  long yearRewards;
+
   /**
    * 올해 판돈과 수수료를 정하는 자본: 1분기를 넘길 때의 자본 (268번). 분기마다 자본을 다시 걸면 이긴 분기가 겹겹이 불어나 한 해 합계가 예전 규칙과 달라진다.
    * 자본이 그 아래로 줄면 지금 자본만큼만 건다. 아직 1분기를 안 넘겼으면 null.
@@ -224,6 +227,12 @@ class CompanyState {
 
   /** 자본으로 산 전투 강화의 단계 (decisions.md 367번): damage·fire·speed. 없으면 0단계. */
   Map<String, Integer> battleUpgrades = new LinkedHashMap<>();
+
+  /** 깬 스테이지의 별 (decisions.md 369번): 1번 스테이지부터 차례로. 길이가 곧 깬 최고 스테이지다. */
+  List<Integer> stageStars = new ArrayList<>();
+
+  /** 마지막으로 보낸 스테이지·EX 결과와 받은 보상. 없으면 null. */
+  StageResult lastStage;
 
   /** 무기 뽑기로 바뀐 뒤의 회사인가 (366번). 그 전에 차린 회사는 거짓으로 읽히고, 처음 불러올 때 처음 뽑기권을 받는다. */
   boolean weaponGachaReady;
@@ -560,6 +569,9 @@ class CompanyState {
     /** 이 분기에 전투 강화에 쓴 돈 (367번). */
     long upgrades;
 
+    /** 이 분기에 스테이지 보상으로 받은 자본 (369번). */
+    long rewards;
+
     /** 이 분기에 나간 연봉(인건비, 270번). */
     long salary;
 
@@ -618,6 +630,21 @@ class CompanyState {
     int kills;
     int mentalLeft;
     int bonusPercent;
+
+    /** 이번 분기 EX 디펜스를 치렀다 (369번): 분기에 한 번. */
+    boolean exDone;
+  }
+
+  /** 스테이지·EX 한 판의 결과와 보상 (decisions.md 369번). EX면 stage가 0. */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class StageResult {
+    int stage;
+    boolean cleared;
+    int stars;
+    boolean firstClear;
+    long capital;
+    int tickets;
   }
 
   /** 무기 하나 (decisions.md 346번): 종류(pistol·revolver·smg·shotgun·rifle)와 등급(N·R·SR·UR). */
@@ -747,6 +774,9 @@ class CompanyState {
 
     /** 그해 전투 강화에 쓴 돈 (367번). */
     long upgrades;
+
+    /** 그해 스테이지 보상으로 받은 자본 (369번). */
+    long rewards;
 
     /** 그해 나간 연봉의 합(인건비, 270번). */
     long salary;

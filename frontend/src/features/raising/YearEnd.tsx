@@ -183,6 +183,25 @@ export function Ledger({
           </li>
         )
       })(),
+    // 스테이지 보상 (decisions.md 369번): 멘탈 스테이지를 처음 깨고 받은 자본.
+    s.rewards !== 0 &&
+      (() => {
+        const r = reveal()
+        return (
+          <li
+            key="rewards"
+            className={`py-2 ${r.className}`}
+            style={r.style}
+            data-testid="ledger-rewards"
+          >
+            <Row
+              label={`${num()} 스테이지 보상`}
+              note="멘탈 스테이지를 처음 깨고 받은 돈"
+              amount={s.rewards}
+            />
+          </li>
+        )
+      })(),
     // 전투 강화 비용 (decisions.md 367번): 자본으로 산 데미지·연사·고양이 속도.
     s.upgrades !== 0 &&
       (() => {

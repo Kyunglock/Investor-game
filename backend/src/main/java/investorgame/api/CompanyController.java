@@ -222,6 +222,37 @@ class CompanyController {
 
   record WeaponRequest(@NotBlank String kind, @NotBlank String grade) {}
 
+  /** 멘탈 스테이지 한 판의 결과를 보낸다 (decisions.md 369번). */
+  @PostMapping("/stage")
+  CompanyView reportStage(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody StageRequest request) {
+    UUID sessionId = cookies.requireSession(token);
+    CompanyView company =
+        companies.reportStage(sessionId, request.stage(), request.cleared(), request.stars());
+    PLAY.info(
+        "company-stage session={} company={} stage={} cleared={} stars={} ip={}",
+        sessionId,
+        company.companyId(),
+        request.stage(),
+        request.cleared(),
+        request.stars(),
+        ClientIp.current());
+    return company;
+  }
+
+  record StageRequest(@Positive int stage, boolean cleared, @Min(0) @Max(3) int stars) {}
+
+  /** EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번). */
+  @PostMapping("/ex")
+  CompanyView reportEx(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody ExRequest request) {
+    return companies.reportEx(cookies.requireSession(token), request.kills());
+  }
+
+  record ExRequest(@PositiveOrZero int kills) {}
+
   /** 자본으로 전투 강화 한 단계를 산다 (decisions.md 367번). */
   @PostMapping("/battle-upgrade")
   CompanyView buyBattleUpgrade(

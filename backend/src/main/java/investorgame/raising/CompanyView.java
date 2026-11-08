@@ -54,7 +54,8 @@ public record CompanyView(
     Mental mental,
     List<Weapon> weapons,
     Armory armory,
-    List<BattleUpgrade> battleUpgrades) {
+    List<BattleUpgrade> battleUpgrades,
+    Stages stages) {
 
   /**
    * 업계 순위 (#351): 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다(로그인이 없는 익명 세션). 한 해도 마치지 않았으면 null.
@@ -82,6 +83,37 @@ public record CompanyView(
    * @param lastDraw 마지막으로 뽑은 무기. 뽑은 적이 없으면 null
    */
   public record Armory(int tickets, int mergeCount, WeaponDraw lastDraw) {}
+
+  /**
+   * 멘탈 스테이지 (decisions.md 369번).
+   *
+   * @param best 깬 최고 스테이지(0이면 아직 없다). 다음에 열리는 것은 best + 1
+   * @param last 마지막 스테이지(지금은 챕터 하나라 perChapter)
+   * @param perChapter 한 챕터의 스테이지 수. 챕터 마지막은 보스
+   * @param stars 깬 스테이지의 별, 1번부터 차례로
+   * @param bonusPercent 이번 분기 강화율(%): 깬 최고 스테이지로 매 분기 저절로 붙는다
+   * @param exAvailable 이번 분기 EX 디펜스를 아직 안 했다
+   * @param lastResult 마지막으로 보낸 스테이지·EX 결과와 받은 보상. 없으면 null
+   */
+  public record Stages(
+      int best,
+      int last,
+      int perChapter,
+      List<Integer> stars,
+      int bonusPercent,
+      boolean exAvailable,
+      StageResult lastResult) {}
+
+  /**
+   * 스테이지·EX 한 판의 결과 (369번).
+   *
+   * @param stage 스테이지 번호. EX 디펜스면 0
+   * @param firstClear 이 판에 처음 깼다
+   * @param capital 받은 자본
+   * @param tickets 받은 무기 뽑기권
+   */
+  public record StageResult(
+      int stage, boolean cleared, int stars, boolean firstClear, long capital, int tickets) {}
 
   /**
    * 자본으로 사는 전투 강화 하나 (decisions.md 367번).
@@ -516,6 +548,7 @@ public record CompanyView(
       long hiring,
       long moving,
       long upgrades,
+      long rewards,
       long salary,
       SettlementInvest invest,
       List<Quarter> quarters,
@@ -554,6 +587,7 @@ public record CompanyView(
    * @param hiring 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료)
    * @param moving 이 분기에 낸 이사 비용 (296번)
    * @param upgrades 이 분기에 전투 강화에 쓴 돈 (367번)
+   * @param rewards 이 분기에 스테이지 보상으로 받은 자본 (369번)
    * @param invest 이 분기 종목 회의. 안 열렸으면 null
    * @param topic 이 분기 거시경제 회의의 주제. 회의가 없던 분기면 null
    * @param stance 이 분기 태도. 회의가 없던 분기면 null
@@ -570,6 +604,7 @@ public record CompanyView(
       long hiring,
       long moving,
       long upgrades,
+      long rewards,
       long salary,
       SettlementInvest invest,
       String topic,

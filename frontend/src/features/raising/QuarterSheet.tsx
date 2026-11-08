@@ -56,6 +56,7 @@ export function QuarterSheet({ quarter: q, onClose }: { quarter: Quarter; onClos
           {q.hiring !== 0 && <li>인사 비용 {pnlLabel(-q.hiring)}</li>}
           {q.moving !== 0 && <li>이사 비용 {pnlLabel(-q.moving)}</li>}
           {q.upgrades !== 0 && <li>전투 강화 비용 {pnlLabel(-q.upgrades)}</li>}
+          {q.rewards !== 0 && <li>스테이지 보상 {pnlLabel(q.rewards)}</li>}
           {q.salary !== 0 && <li>인건비 {pnlLabel(-q.salary)}</li>}
         </ul>
         {q.lines.length > 0 && (
