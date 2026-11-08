@@ -11,7 +11,7 @@ import type { BattleHandle, Hud, Outcome } from './battle'
 import { applyCard, CARDS, type Loadout, loadoutOf, pickCards } from './cards'
 import { ENEMIES } from './enemies'
 import { GunSprite } from './GunSprite'
-import { GENRES } from './genres'
+import { BATTLE_SECONDS, GENRES } from './genres'
 import { StagePortrait } from './StagePortrait'
 import './stage.css'
 import { DEFAULT_WEAPON, type Hero, heroOf, type Weapon } from './hero'
@@ -157,7 +157,9 @@ export function MentalWindow({
               <p>{mental.headline}</p>
             </header>
             <div className="stage-hero-card">
-              <span className="stage-mode">{genre.name} · 제한 시간 4분</span>
+              <span className="stage-mode">
+                {genre.name} · 제한 시간 {BATTLE_SECONDS / 60}분
+              </span>
               <StagePortrait weapon={heroOf(company).weapon} />
               <div className="stage-mini-wall">
                 <span>♡</span> 멘탈벽

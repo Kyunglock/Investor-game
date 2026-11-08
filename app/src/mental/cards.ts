@@ -143,9 +143,9 @@ export function pickCards(
   return picked
 }
 
-/** 다음 레벨까지 드는 경험치: 레벨이 오를수록 더 든다. 4분 한 판에 예닐곱 번 오르게 잡았다. */
+/** 다음 레벨까지 드는 경험치: 레벨이 오를수록 더 든다. 2분 한 판에 예닐곱 번 오르게 잡았다 (363번, 4분일 때는 120). */
 export function xpToNext(level: number): number {
-  return Math.round(120 * level ** 1.35)
+  return Math.round(70 * level ** 1.35)
 }
 
 /** 범위 피해가 붙는 강화 단계 (decisions.md 362번). */

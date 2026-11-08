@@ -26,5 +26,13 @@ export const GENRES: Record<Genre, GenreSpec> = {
   },
 }
 
-/** 한 판의 길이(초): 4분. 레벨이 예닐곱 번 오를 길이 (330번). */
-export const BATTLE_SECONDS = 240
+/** 한 판의 길이(초): 2분 (decisions.md 363번, 330번의 4분은 너무 길었다). 레벨이 예닐곱 번 오를 길이. */
+export const BATTLE_SECONDS = 120
+
+/**
+ * 난이도 곡선의 빠르기: 적이 늘고 파도가 커지는 곡선은 예전 4분 판 기준으로 잡혀 있어, 그 시계를 이만큼 빨리 돌려 2분 끝에 같은 세기에 닿게 한다.
+ */
+export const PACE = 240 / BATTLE_SECONDS
+
+/** 파도 사이(초): 2분에 여덟 번. */
+export const WAVE_SECONDS = 15
