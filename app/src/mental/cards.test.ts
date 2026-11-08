@@ -3,18 +3,17 @@ import {
   applyCard,
   BASE_LOADOUT,
   bulletStats,
-  burnPerSecond,
-  CARDS,
-  chainOf,
   loadoutOf,
+  MAGICS,
   MAX_BULLET_POWER,
   magicCard,
+  magicEffect,
+  magicGrade,
   pickCards,
-  rollGrade,
   SIMPLE_CARDS,
-  waterSlow,
   xpToNext,
 } from './cards'
+import { MAGIC_MAX_LEVEL } from './magic'
 
 function rng(seed: number) {
   let x = seed + 1
@@ -24,47 +23,66 @@ function rng(seed: number) {
   }
 }
 
-describe('멘탈 카드 (decisions.md 328·330·377번)', () => {
-  it('석 장은 서로 다르고 카드 목록에서 나온다', () => {
+describe('멘탈 카드 (decisions.md 328·330·377·392번)', () => {
+  it('석 장은 서로 다른 카드이고, 마법 카드는 지금 레벨의 다음 레벨을 낸다', () => {
+    const levels = { water: 2, fire: 0, lightning: 4 }
+    let magics = 0
     for (let seed = 0; seed < 50; seed++) {
-      const picked = pickCards(rng(seed))
+      const picked = pickCards(levels, rng(seed))
       expect(picked).toHaveLength(3)
-      expect(new Set(picked.map((c) => `${c.code}-${c.grade}`)).size).toBe(3)
+      expect(new Set(picked.map((c) => c.code)).size).toBe(3)
       for (const c of picked) {
-        expect(CARDS).toContainEqual(c)
+        if (c.code === 'atk' || c.code === 'spd') {
+          expect(SIMPLE_CARDS).toContainEqual(c)
+          continue
+        }
+        magics++
+        expect(c.level).toEqual({ from: levels[c.code], to: levels[c.code] + 1 })
+        expect(c).toEqual(magicCard(c.code, levels[c.code]))
+      }
+    }
+    expect(magics).toBeGreaterThan(0)
+  })
+
+  it('최대 레벨인 마법은 더 나오지 않는다', () => {
+    const levels = { water: MAGIC_MAX_LEVEL, fire: MAGIC_MAX_LEVEL, lightning: 1 }
+    for (let seed = 0; seed < 50; seed++) {
+      for (const c of pickCards(levels, rng(seed))) {
+        expect(['water', 'fire']).not.toContain(c.code)
       }
     }
   })
 
-  it('일반 카드는 공격력·공격 속도 +10%, 마법은 등급이 높을수록 단계가 높다', () => {
+  it('일반 카드는 공격력·공격 속도 +10%, 마법은 등급과 상관없이 고를 때마다 한 레벨씩 오른다', () => {
     const [atk, spd] = SIMPLE_CARDS
     expect(applyCard(BASE_LOADOUT, atk).damage).toBeCloseTo(1.1)
     expect(applyCard(BASE_LOADOUT, spd).fireMs).toBeCloseTo(260 / 1.1)
-    expect(applyCard(BASE_LOADOUT, magicCard('fire', 'R')).fire).toBe(1)
-    expect(applyCard(BASE_LOADOUT, magicCard('fire', 'UR')).fire).toBe(3)
-    // 같은 마법은 쌓인다.
-    const twice = applyCard(
-      applyCard(BASE_LOADOUT, magicCard('water', 'R')),
-      magicCard('water', 'SR'),
-    )
-    expect(twice.water).toBe(3)
+    let loadout = BASE_LOADOUT
+    for (let i = 0; i < MAGIC_MAX_LEVEL + 2; i++) {
+      loadout = applyCard(loadout, magicCard('fire', loadout.fire))
+      expect(loadout.fire).toBe(Math.min(MAGIC_MAX_LEVEL, i + 1))
+    }
+    expect(loadout.water).toBe(0)
   })
 
-  it('등급은 일반이 가장 흔하고 전설이 가장 드물다', () => {
-    const count = { N: 0, R: 0, SR: 0, UR: 0 }
-    const r = rng(7)
-    for (let i = 0; i < 4000; i++) count[rollGrade(r)]++
-    expect(count.N).toBeGreaterThan(count.R)
-    expect(count.R).toBeGreaterThan(count.SR)
-    expect(count.SR).toBeGreaterThan(count.UR)
-    expect(count.UR).toBeGreaterThan(0)
+  it('마법 카드의 등급은 오르는 레벨을 보인다: Lv.1 희귀, Lv.2 영웅, Lv.3부터 전설', () => {
+    expect(magicCard('water', 0)).toMatchObject({ grade: 'R', level: { from: 0, to: 1 } })
+    expect(magicCard('water', 1).grade).toBe('SR')
+    expect(magicCard('water', 2).grade).toBe('UR')
+    expect(magicGrade(5)).toBe('UR')
   })
 
-  it('마법 세기: 물은 단계마다 더 느리게(최대 70%), 불은 피해 비례, 번개는 단계만큼 튄다', () => {
-    expect(waterSlow(1).factor).toBeCloseTo(0.8)
-    expect(waterSlow(9).factor).toBeCloseTo(0.3)
-    expect(burnPerSecond(2, 2)).toBeCloseTo(1.2)
-    expect(chainOf(2, 3)).toEqual({ targets: 3, damage: 1.2 })
+  it('카드 문구는 레벨마다 연출 이름과 수치가 바뀐다', () => {
+    expect(magicEffect('water', 1)).toContain('물방울')
+    expect(magicEffect('water', 2)).toContain('물줄기')
+    expect(magicEffect('water', 3)).toContain('큰 물결')
+    expect(magicEffect('fire', 1)).toContain('불씨')
+    expect(magicEffect('fire', 3)).toContain('불기둥')
+    expect(magicEffect('lightning', 3)).toContain('갈래 번개')
+    expect(magicEffect('lightning', 4)).toContain('2줄기')
+    for (const m of MAGICS) {
+      expect(magicEffect(m, 1)).not.toBe(magicEffect(m, 2))
+    }
   })
 
   it('강화탄은 공격력과 크기가 함께 커지고 최대 단계에서 멈춘다', () => {

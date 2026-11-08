@@ -146,6 +146,7 @@ try {
     merged: number
     killing: number
     peak: number
+    casts: Record<string, number>
   }
   const damage = () =>
     page.evaluate(() => (window as unknown as { __mentalDamage: DamageStats }).__mentalDamage)
@@ -179,6 +180,45 @@ try {
   assert(waveDamage.shown.bullet > firstDamage.shown.bullet, 'numbers keep coming in the wave')
   assert(waveDamage.peak <= 44, 'damage numbers stay within the pool in the wave')
   console.log('damage numbers', JSON.stringify(waveDamage))
+  // 마법 (decisions.md 392번): 레벨 1·2·3을 바로 넣어 총알과 따로 나가는 연출을 레벨마다 찍는다. 카드를 고르면 앱의 수치로 돌아가니 다시 넣는다.
+  // 끝나면 마법을 빼 아래의 벽 피격 검사가 그대로 돈다.
+  const setMagic = (level: number) =>
+    page.evaluate(
+      (l) =>
+        (
+          window as unknown as { __mentalMagic: (levels: Record<string, number>) => void }
+        ).__mentalMagic({ water: l, fire: l, lightning: l }),
+      level,
+    )
+  const pickIfAsked = async (level: number) => {
+    if (await page.getByTestId('mental-cards').count()) {
+      await page.getByTestId('mental-cards').getByRole('button').first().click()
+      await page.clock.runFor(400)
+      await setMagic(level)
+    }
+  }
+  const beforeMagic = await damage()
+  for (const level of [1, 2, 3]) {
+    await pickIfAsked(level)
+    await setMagic(level)
+    for (const [i, ms] of [140, 460, 400].entries()) {
+      await page.clock.runFor(ms)
+      await page.screenshot({ path: resolve(out, `magic-lv${level}-${i + 1}.png`) })
+    }
+    for (let i = 0; i < 4; i++) {
+      await page.clock.runFor(600)
+      await pickIfAsked(level)
+    }
+  }
+  const afterMagic = await damage()
+  for (const m of ['water', 'fire', 'lightning']) {
+    assert(afterMagic.casts[m] >= beforeMagic.casts[m] + 3, `${m} magic casts on its own`)
+    assert(afterMagic.shown[m] > beforeMagic.shown[m], `${m} magic shows its damage numbers`)
+  }
+  assert(afterMagic.peak <= 44, 'damage numbers stay within the pool with magic')
+  console.log('magic', JSON.stringify(afterMagic.casts))
+  await pickIfAsked(0)
+  await setMagic(0)
   // 2분 판은 레벨이 빨리 올라 그사이 카드 고르기가 떠 있을 수 있다.
   if (await page.getByTestId('mental-cards').count()) {
     await page.getByTestId('mental-cards').getByRole('button').first().click()
@@ -207,6 +247,8 @@ try {
       await page.mouse.up()
       await page.getByTestId('mental-cards').getByRole('button').first().click()
       await page.clock.runFor(400)
+      // 고른 카드가 마법이어도 빼 둔다: 마법은 총알과 따로 나가 아래로 쏘아도 적을 잡는다(392번).
+      await setMagic(0)
       await page.mouse.move(195, 800)
       await page.mouse.down()
     }
@@ -246,7 +288,7 @@ try {
   await expect(page.getByTestId('battle-canvas')).toHaveCount(0)
   assert.deepEqual(errors, [])
   console.log(
-    'PASS: stage pick, lobby, equipment, real Phaser/sprites, first card pause, HUD layout, damage numbers, aiming, wall gauge damage, pause/resume, loss, failed save/retry, both genres, asset load retry, quit cleanup',
+    'PASS: stage pick, lobby, equipment, real Phaser/sprites, first card pause, HUD layout, damage numbers, magic Lv.1-3, aiming, wall gauge damage, pause/resume, loss, failed save/retry, both genres, asset load retry, quit cleanup',
   )
 } finally {
   await browser.close()

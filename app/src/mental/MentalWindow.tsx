@@ -17,7 +17,7 @@ import {
 } from './advance'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
-import { applyCard, type Card, GRADE_NAMES, loadoutOf, pickCards } from './cards'
+import { applyCard, type Card, GRADE_NAMES, loadoutOf, type MagicLevels, pickCards } from './cards'
 import { ENEMIES } from './enemies'
 import { GunSprite } from './GunSprite'
 import { BATTLE_SECONDS } from './genres'
@@ -461,18 +461,20 @@ const GRADE_ORDER: Record<Card['grade'], number> = { N: 0, R: 1, SR: 2, UR: 3 }
 
 /**
  * 카드 석 장 고르기 (330번): 제목이 쿵 하고 찍히고, 카드가 아래에서 차례로 튀어 올라 뒤집히며 자리를 잡는다(소리·진동). 누르면 그 카드가 번쩍 커졌다 사라진 뒤
- * onPick.
+ * onPick. 마법 카드는 지금 레벨과 오를 레벨을 보인다(392번).
  */
 function CardPick({
   title,
   sub,
+  levels,
   onPick,
 }: {
   title: string
   sub: string
+  levels: MagicLevels
   onPick: (card: Card) => void
 }) {
-  const [cards] = useState(() => pickCards())
+  const [cards] = useState(() => pickCards(levels))
   const [chosen, setChosen] = useState<Card | null>(null)
   const pickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(
@@ -550,6 +552,13 @@ function CardPick({
                 <span aria-hidden="true">✦ {String(i + 1).padStart(2, '0')}</span>
               </span>
               <span className="stage-card-name">{c.name}</span>
+              {c.level && (
+                <span className="stage-card-level" data-testid="card-level">
+                  {c.level.from === 0
+                    ? `새 마법 · Lv.${c.level.to}`
+                    : `Lv.${c.level.from} → Lv.${c.level.to}`}
+                </span>
+              )}
               <span className="stage-card-description">{c.desc}</span>
             </span>
             <span className="stage-card-effect">
@@ -781,13 +790,17 @@ function Battle({
                 const top = same.reduce((a, b) =>
                   GRADE_ORDER[b.grade] > GRADE_ORDER[a.grade] ? b : a,
                 )
+                // 마법은 고른 수가 곧 레벨이다(392번).
+                const label = top.level
+                  ? `${top.name} Lv.${same.length}`
+                  : `${top.name} ${same.length}장`
                 return (
                   <span
                     key={code}
                     data-grade={top.grade}
-                    title={`${top.name} ${same.length}장`}
+                    title={label}
                     role="img"
-                    aria-label={`${top.name} ${same.length}장`}
+                    aria-label={label}
                   >
                     {top.icon}
                     <small>{same.length}</small>
@@ -860,6 +873,7 @@ function Battle({
                 ? '한 장을 고르세요. 레벨이 오를 때마다 또 고릅니다'
                 : '카드 한 장을 더 쌓으세요'
             }
+            levels={loadout.current}
             onPick={(card) => {
               loadout.current = applyCard(loadout.current, card)
               onPick(card)
