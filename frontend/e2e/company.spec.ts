@@ -165,7 +165,10 @@ async function closeQuarter(page: Page, year: number, quarter: number) {
  */
 async function closeYearEnd(page: Page, year: number) {
   const sheet = page.getByRole('dialog', { name: '연말 결산서' })
-  await expect(sheet).toContainText(`${year}년 차 연말 결산서`)
+  await expect(sheet.getByRole('heading', { name: '연말 결산서', exact: true })).toBeVisible()
+  await expect(
+    sheet.getByText(`${String(year).padStart(2, '0')}년 차 · 우리 회사의 기록`, { exact: true }),
+  ).toBeVisible()
   await expect(sheet.getByTestId('ledger-staff')).toContainText('직원들의 1년 운용')
   await expect(sheet.getByTestId('ledger-after')).toBeVisible()
   await sheet.getByRole('button', { name: '확인' }).click()
