@@ -23,7 +23,6 @@ try {
   await page.addInitScript(() => localStorage.setItem('investor-game.tutorial', 'done'))
   let company = {
     ...structuredClone(fixture),
-    macro: null,
     invest: null,
     lastSettlement: null,
     mental: {

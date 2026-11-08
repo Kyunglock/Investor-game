@@ -71,7 +71,7 @@ public record RaisingContent(
       Perks perks,
       Market market,
       Invest invest,
-      Macro macro,
+      Scout scout,
       Quarters quarters,
       Teams teams,
       Ending ending,
@@ -122,16 +122,14 @@ public record RaisingContent(
 
   /**
    * 팀장 보고 (decisions.md 269·291번). trading: 돈을 굴리는 팀의
-   * 머리줄(bigUp·up·flat·down·bigDown·crashHeld·crashHit별 문구 여럿, {period}·{pnl}). stance: 그 기간
-   * 태도(AGGRESSIVE·DEFENSIVE)가 손익(up·down)에 미친 한 줄. members: 팀이 둘 이상일 때 가장 많이 번 사람(best, 팀장 자신이면
-   * bestSelf)이나 가장 크게 잃은 사람(worst·worstSelf, {name}·{pnl}). flips: 팀원이 손을 뒤집었을 때 덧붙이는 한 줄(능력치별,
-   * {name}·{times}), selfFlips는 팀장 자신. flipTips: 가장 잦았던 뒤집힘의 능력치별 조언 한 줄. times: 횟수를 읽는 말(한 번·두
-   * 번…), 그보다 많으면 timesMany({count}). support: 돕는 자리의 보고(자리 코드별, {period}·{swayed}). head:
-   * 보고자({desk}·{name}). appointed: 팀장을 바꿨을 때 소식 줄({name}·{desk}).
+   * 머리줄(bigUp·up·flat·down·bigDown·crashHeld·crashHit별 문구 여럿, {period}·{pnl}). members: 팀이 둘 이상일 때
+   * 가장 많이 번 사람(best, 팀장 자신이면 bestSelf)이나 가장 크게 잃은 사람(worst·worstSelf, {name}·{pnl}). flips: 팀원이 손을
+   * 뒤집었을 때 덧붙이는 한 줄(능력치별, {name}·{times}), selfFlips는 팀장 자신. flipTips: 가장 잦았던 뒤집힘의 능력치별 조언 한 줄.
+   * times: 횟수를 읽는 말(한 번·두 번…), 그보다 많으면 timesMany({count}). support: 돕는 자리의 보고(자리 코드별,
+   * {period}·{swayed}). head: 보고자({desk}·{name}). appointed: 팀장을 바꿨을 때 소식 줄({name}·{desk}).
    */
   public record Teams(
       Map<String, List<String>> trading,
-      Map<String, Map<String, String>> stance,
       Map<String, String> members,
       Map<String, String> flips,
       Map<String, String> selfFlips,
@@ -146,46 +144,10 @@ public record RaisingContent(
   public record Quarters(String crash, String crashAt) {}
 
   /**
-   * 거시경제 회의 (decisions.md 266번). 해마다 연다: 기준금리·환율 같은 큰 흐름 하나를 놓고 사장이 올해 회사의 태도(AGGRESSIVE·NEUTRAL·
-   * DEFENSIVE)를 고른다. 숨은 답은 올해 시장 갈래와 섹터 바람이다.
-   *
-   * @param stances 태도 버튼 이름
-   * @param notes 태도마다 한 줄 설명
-   * @param topics 주제. 해마다 하나를 뽑는다
-   * @param remarks 직원 한마디. 투자 회의와 같은 꼴: 안목 구간 → 읽은 쪽(UP·DOWN·NEUTRAL) → 문구 여럿, {point}·{against}
-   *     (272번)
-   * @param scout 종목 발굴 (decisions.md 267번)
-   * @param omenPoint 기사에 실린 폭락 조짐(266번) 문장의 요지. 조짐 문장은 위기 콘텐츠에서 와서 요지를 한 줄로 둔다
+   * 종목 발굴 (decisions.md 267번). pitch: 가져올 때 한마디, 안목 구간(low·mid·high)별 {stock}. credit: 종목 회의 뒤 가져온
+   * 사람을 칭찬하거나 탓하는 한 줄, UP·DOWN별 {name}·{stock}·{percent}. 거시경제 회의 문구 아래에 있다가 회의를 빼며 옮겼다 (382번).
    */
-  public record Macro(
-      Map<String, String> stances,
-      Map<String, String> notes,
-      List<MacroTopic> topics,
-      Map<String, Map<String, List<String>>> remarks,
-      Scout scout,
-      String omenPoint) {}
-
-  /**
-   * 거시경제 회의의 주제 하나. up·down·neutral은 기사 문장(오름은 시장에 좋은 쪽, 오름·내림에는 요지가 붙는다). winds는 숨은 방향(UP·DOWN)마다
-   * 그해 순풍·역풍을 받는 자리와 결산 한 줄.
-   */
-  public record MacroTopic(
-      String code,
-      String name,
-      String title,
-      List<Clue> up,
-      List<Clue> down,
-      List<String> neutral,
-      Map<String, Wind> winds) {}
-
-  /** 섹터 바람: tail 자리는 맞혔을 때 더 벌고, head 자리는 덜 번다. line은 결산 소식 줄. */
-  public record Wind(List<String> tail, List<String> head, String line) {}
-
-  /**
-   * 종목 발굴 (decisions.md 267번). pitch: 가져올 때 한마디, 안목 구간(low·mid·high)별 {stock}. none: 아무도 안 가져온 해.
-   * credit: 종목 회의 뒤 가져온 사람을 칭찬하거나 탓하는 한 줄, UP·DOWN별 {name}·{stock}·{percent}.
-   */
-  public record Scout(Map<String, List<String>> pitch, String none, Map<String, String> credit) {}
+  public record Scout(Map<String, List<String>> pitch, Map<String, String> credit) {}
 
   /**
    * 투자 회의 (decisions.md 229번). 고르는 것은 BUY·SELL·HOLD.

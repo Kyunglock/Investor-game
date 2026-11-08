@@ -35,7 +35,7 @@ class InvestEngineTest {
         50);
   }
 
-  /** 회사를 차리고 올해 종목을 누가 물어 온 셈 친다: 이 시험은 종목 회의 자체를 본다 (발굴은 MacroEngineTest, decisions.md 267번). */
+  /** 회사를 차리고 올해 종목을 누가 물어 온 셈 친다: 이 시험은 종목 회의 자체를 본다 (발굴은 ScoutEngineTest, decisions.md 267번). */
   private static CompanyState opened(HashSeededRandom random, long capital) {
     CompanyState company = ENGINE.open(random, capital);
     company.invest.found = true;

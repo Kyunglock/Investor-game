@@ -18,7 +18,6 @@ import java.util.UUID;
  * @param history 회사 연표·업적·명예의 전당 (decisions.md 263번)
  * @param broke 망한 회사의 한 줄. 자본이 0이면 있고, 그때 사재로 다음 회사를 차릴 수 있다. 아니면 null (decisions.md 247번)
  * @param invest 올해 종목 회의. 끝난 회사나 옛 회사면 null (decisions.md 229번). 직원이 물어 오기 전에는 ready가 거짓이다 (267번)
- * @param macro 올해 거시경제 회의. 끝난 회사나 이 회의가 생기기 전의 해면 null (decisions.md 266번)
  * @param lastSettlement 지난 결산. 아직 없으면 null
  * @param number 사장이 차린 몇 번째 회사인가
  * @param era 이 회사의 시대 (9.4절)
@@ -44,7 +43,6 @@ public record CompanyView(
     History history,
     String broke,
     Invest invest,
-    Macro macro,
     Quarter lastQuarter,
     Settlement lastSettlement,
     Resign resign,
@@ -281,6 +279,7 @@ public record CompanyView(
    * @param convened 회의를 열어 한마디와 형광펜을 굳혔다. 그 뒤로 배치를 바꿔도 그대로다 (decisions.md 249번)
    * @param finder 이 종목을 물어 온 직원 (267번). 아직 아무도 안 가져왔거나 옛 회의면 null
    * @param outcome 정한 뒤의 결과. 아직이면 null
+   * @param scouted 이번 분기에 이미 직원이 종목을 물어 왔거나, 분기 넘기기를 눌러 발굴을 굴렸다 (267·382번)
    */
   public record Invest(
       String title,
@@ -299,10 +298,11 @@ public record CompanyView(
       Integer teamSell,
       String teamCall,
       List<DebateLine> debate,
-      TeamGrade team) {}
+      TeamGrade team,
+      boolean scouted) {}
 
   /**
-   * 회의에 앉은 팀의 합산 등급 (decisions.md 353번): 잘하는 셋의 가중 평균(종목 회의는 안목 절반, 거시경제 회의는 안목·줏대) + 리서치 팀·팀장 보너스.
+   * 회의에 앉은 팀의 합산 등급 (decisions.md 353번): 잘하는 셋의 가중 평균(종목 회의는 안목 절반) + 리서치 팀·팀장 보너스.
    *
    * @param grade F~SSS
    * @param score 0~100
@@ -318,40 +318,6 @@ public record CompanyView(
    * @param pitch 가져올 때 한마디
    */
   public record Finder(int employeeId, String name, String role, String desk, String pitch) {}
-
-  /**
-   * 거시경제 회의 (decisions.md 266번). 고르기 전에는 숨은 방향이 없다.
-   *
-   * @param topic 주제 이름(기준금리·환율…)
-   * @param remarks 자리에 앉은 직원의 한마디. 회의를 열기 전에는 비어 있다. read UP은 공격, DOWN은 방어 쪽
-   * @param stances 고를 수 있는 태도와 그해 판돈 비율
-   * @param ready 지금 고를 수 있다(돈을 굴리는 자리에 사람이 있고 아직 안 골랐다)
-   * @param outcome 고른 뒤. 아직이면 null
-   */
-  public record Macro(
-      String topic,
-      String title,
-      List<MacroSentence> sentences,
-      String highlightBy,
-      List<Remark> remarks,
-      List<Stance> stances,
-      boolean ready,
-      boolean convened,
-      MacroOutcome outcome,
-      TeamGrade team) {}
-
-  /** omen: 연초 회의의 폭락 조짐을 옮긴 문장(헛조짐일 수도 있다). */
-  public record MacroSentence(String text, boolean highlighted, boolean omen) {}
-
-  /** stakePercent: 그해 결산 판돈 비율(%). */
-  public record Stance(String code, String label, String note, int stakePercent) {}
-
-  /**
-   * @param stance 고른 태도
-   * @param finder 회의가 끝나고 종목을 물어 온 직원. 아무도 안 왔으면 null
-   * @param none 아무도 안 왔을 때 한 줄. 왔으면 null
-   */
-  public record MacroOutcome(String stance, Finder finder, String none) {}
 
   public record InvestSentence(String text, boolean highlighted) {}
 
@@ -546,10 +512,8 @@ public record CompanyView(
    * @param upgrades 이 분기에 전투 강화에 쓴 돈 (367번)
    * @param rewards 이 분기에 스테이지 보상으로 받은 자본 (369번)
    * @param invest 이 분기 종목 회의. 안 열렸으면 null
-   * @param topic 이 분기 거시경제 회의의 주제. 회의가 없던 분기면 null
-   * @param stance 이 분기 태도. 회의가 없던 분기면 null
    * @param crash 이 분기에 폭락이 터졌다
-   * @param lines 분기 소식 줄(직원 소식·섹터 바람)
+   * @param lines 분기 소식 줄(직원 소식)
    */
   public record Quarter(
       int year,
@@ -564,8 +528,6 @@ public record CompanyView(
       long rewards,
       long salary,
       SettlementInvest invest,
-      String topic,
-      String stance,
       boolean crash,
       List<String> lines,
       List<Report> reports) {}

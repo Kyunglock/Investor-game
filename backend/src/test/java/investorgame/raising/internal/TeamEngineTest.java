@@ -87,11 +87,15 @@ class TeamEngineTest {
 
     for (int seed = 0; seed < 20; seed++) {
       CompanyState c = company(seed);
-      ENGINE.macro.convene(c, new HashSeededRandom(seed));
+      HashSeededRandom random = new HashSeededRandom(seed);
+      // 반도체 데스크 직원이 종목을 물어 와 종목 회의를 열었다.
+      c.invest = ENGINE.invest.found(c, c.employees.get(1), null, random);
+      ENGINE.invest.convene(c, random);
       // 분기를 넘기면 다음 분기 회의로 바뀌므로 그은 문장을 먼저 본다.
-      Integer at = c.macro.highlightIndex;
-      int expected = at != null && c.macro.sentences.get(at).decisive ? 1 : 0;
-      CompanyState.Quarter q = ENGINE.settleQuarter(c, new HashSeededRandom(seed));
+      Integer at = c.invest.highlightIndex;
+      int expected = at != null && c.invest.sentences.get(at).decisive ? 1 : 0;
+      ENGINE.invest.decide(c, InvestEngine.HOLD, random);
+      CompanyState.Quarter q = ENGINE.settleQuarter(c, random);
       assertThat(q.highlightChances).isEqualTo(1);
       String text = q.reports.get(1).text;
       assertThat(q.highlights).isEqualTo(at == null ? 0 : 1);
@@ -119,7 +123,7 @@ class TeamEngineTest {
     ENGINE.startYear(c, new HashSeededRandom(1));
     ENGINE.hire(c, stats(50));
     ENGINE.hire(c, stats(50));
-    ENGINE.place(c, Map.of(1, "semiconductor", 2, MacroEngine.SCOUT_DESK));
+    ENGINE.place(c, Map.of(1, "semiconductor", 2, ScoutEngine.SCOUT_DESK));
     CompanyState.Quarter up = new CompanyState.Quarter();
     up.scoutStock = "삼송바이오";
     up.scoutUp = true;
@@ -142,7 +146,7 @@ class TeamEngineTest {
 
   /** 돈을 굴리는 팀의 보고 (291번): 손익 크기·폭락·태도로 고른 머리줄, 팀원 성적, 뒤집힘 횟수, 조언. */
   @Test
-  void 돈을_굴리는_팀장은_크기와_폭락과_태도와_팀원과_뒤집힘_횟수까지_보고한다() {
+  void 돈을_굴리는_팀장은_크기와_폭락과_팀원과_뒤집힘_횟수까지_보고한다() {
     CompanyState c = company(1);
     Employee weak = c.employees.get(0);
     Employee head = c.employees.get(1);
@@ -152,14 +156,11 @@ class TeamEngineTest {
     b.flips.put("courage", 1);
     CompanyState.Quarter crashed = new CompanyState.Quarter();
     crashed.crash = true;
-    crashed.macroStance = "DEFENSIVE";
 
     String text = trading(c, java.util.List.of(a, b), java.util.List.of(crashed), "올해");
     assertThat(text)
         .as("폭락장에서 잃은 머리줄")
         .containsAnyOf("폭락이 터져 올해 40b 잃었습니다.", "올해 폭락장에서 −40b입니다.")
-        .as("방어 태도의 한마디")
-        .contains("판돈을 줄여 둔 덕에 이 정도로 막았습니다.")
         .as("가장 크게 잃은 팀원")
         .contains(weak.name + "은 30b 잃었습니다. 제가 옆에서 더 챙기겠습니다.")
         .as("뒤집힘 횟수")
@@ -169,21 +170,20 @@ class TeamEngineTest {
         .contains("폭락장에서 버티는 건 인내심입니다.")
         .doesNotContain("{");
 
-    // 크게 벌고 공격했으면: 판돈 15% 이상이 크게다. 팀장 자신이 가장 많이 벌었다.
+    // 크게 벌었으면: 판돈 15% 이상이 크게다. 팀장 자신이 가장 많이 벌었다. 태도 한마디는 뺐다 (382번).
     CompanyState.Result big = result(head, 100_000_000L, 20_000_000L);
     CompanyState.Result small = result(weak, 100_000_000L, 5_000_000L);
     CompanyState.Quarter boom = new CompanyState.Quarter();
-    boom.macroStance = "AGGRESSIVE";
     String won = trading(c, java.util.List.of(small, big), java.util.List.of(boom), "이번 분기");
     assertThat(won)
         .contains("25b")
-        .contains("판돈을 키운 게 맞았습니다.")
+        .doesNotContain("판돈")
         .contains("제가 20b로 팀을 끌었습니다.")
         .doesNotContain("잃었습니다");
     assertThat(texts().trading().get("bigUp").stream().map(l -> l.split("\\{")[0]))
         .anyMatch(won::startsWith);
 
-    // 중립·본전이면 태도와 팀원 줄이 없다. 다섯 번 넘게 뒤집히면 숫자로 읽는다.
+    // 본전이면 팀원 줄이 없다. 다섯 번 넘게 뒤집히면 숫자로 읽는다.
     CompanyState.Result even = result(head, 100_000_000L, 0);
     even.flips.put("conviction", 5);
     String flat =
@@ -220,7 +220,7 @@ class TeamEngineTest {
   private static String scoutLine(
       CompanyState c, java.util.List<CompanyState.Quarter> quarters, String period) {
     return ENGINE.teams.reports(c, java.util.List.of(), quarters, period, 1).stream()
-        .filter(r -> MacroEngine.SCOUT_DESK.equals(r.desk))
+        .filter(r -> ScoutEngine.SCOUT_DESK.equals(r.desk))
         .findFirst()
         .orElseThrow()
         .text;

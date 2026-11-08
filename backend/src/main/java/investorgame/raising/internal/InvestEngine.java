@@ -104,8 +104,7 @@ class InvestEngine {
     invest.finderRole = role;
     invest.finderDesk = finder.desk;
     Map<String, String> names = names(content.stock(invest.stock));
-    List<String> pitches =
-        content.raising().company().macro().scout().pitch().get(pitchTier(insight));
+    List<String> pitches = content.raising().company().scout().pitch().get(pitchTier(insight));
     // 지난번과 같은 한마디는 피한다 (#340)
     String last = c.invest == null ? null : c.invest.pitch;
     int at = random.forKey("invest-pitch", c.turn()).nextInt(pitches.size());
@@ -205,7 +204,7 @@ class InvestEngine {
     return penalty(invest.clarity);
   }
 
-  int penalty(String clarity) {
+  private int penalty(String clarity) {
     return properties.invest().clarity().stream()
         .filter(x -> x.code().equals(clarity))
         .mapToInt(CompanyProperties.Clarity::penalty)
@@ -218,7 +217,7 @@ class InvestEngine {
     return foggiest(invest.clarity);
   }
 
-  boolean foggiest(String clarity) {
+  private boolean foggiest(String clarity) {
     int most =
         properties.invest().clarity().stream()
             .mapToInt(CompanyProperties.Clarity::penalty)
@@ -262,7 +261,7 @@ class InvestEngine {
     return article(clues.up(), clues.down(), clues.neutral(), up, rng, names);
   }
 
-  /** 단서 기사를 짓는다. 거시경제 회의(266번)도 같은 꼴로 짓는다. */
+  /** 단서 기사를 짓는다. */
   List<Sentence> article(
       List<Clue> ups,
       List<Clue> downs,
@@ -447,7 +446,7 @@ class InvestEngine {
       String line =
           company.fresh(
               c, lines, random.forKey("invest-remark", c.turn(), e.id).nextInt(lines.size()), used);
-      Points points = points(c.invest.sentences, read, voice, texts.points(), null);
+      Points points = points(c.invest.sentences, read, voice, texts.points());
       remarks.add(
           new Remark(
               e,
@@ -468,21 +467,15 @@ class InvestEngine {
    */
   record Points(String point, String against) {}
 
-  /**
-   * 기사에서 한마디에 엮을 요지를 고른다. 요지가 없는 문장(이 규칙 전에 지은 기사)이면 fallback(UP·DOWN)을, 폭락 조짐 문장이면 omenPoint를 쓴다.
-   */
+  /** 기사에서 한마디에 엮을 요지를 고른다. 요지가 없는 문장(이 규칙 전에 지은 기사)이면 fallback(UP·DOWN)을 쓴다. */
   static Points points(
-      List<Sentence> sentences,
-      String read,
-      Hint.Detail voice,
-      Map<String, String> fallback,
-      String omenPoint) {
+      List<Sentence> sentences, String read, Hint.Detail voice, Map<String, String> fallback) {
     boolean sharp = voice == Hint.Detail.HIGH || voice == Hint.Detail.EXPERT;
     String mine = NEUTRAL.equals(read) ? UP : read;
     String theirs = UP.equals(mine) ? DOWN : UP;
     return new Points(
-        pointOf(pick(sentences, mine, sharp), mine, fallback, omenPoint),
-        pointOf(pick(sentences, theirs, false), theirs, fallback, omenPoint));
+        pointOf(pick(sentences, mine, sharp), mine, fallback),
+        pointOf(pick(sentences, theirs, false), theirs, fallback));
   }
 
   private static Sentence pick(List<Sentence> sentences, String sign, boolean sharp) {
@@ -495,11 +488,7 @@ class InvestEngine {
     return pick;
   }
 
-  private static String pointOf(
-      Sentence s, String sign, Map<String, String> fallback, String omenPoint) {
-    if (s != null && s.omen && omenPoint != null) {
-      return omenPoint;
-    }
+  private static String pointOf(Sentence s, String sign, Map<String, String> fallback) {
     return s != null && s.point != null ? s.point : fallback.get(sign);
   }
 
@@ -844,7 +833,7 @@ class InvestEngine {
       List<Sentence> sentences, String sign, Map<String, String> fallback) {
     List<String> out = new ArrayList<>();
     for (Sentence s : sentences) {
-      if (sign.equals(s.sign) && s.point != null && !s.omen && !out.contains(s.point)) {
+      if (sign.equals(s.sign) && s.point != null && !out.contains(s.point)) {
         out.add(s.point);
       }
     }
@@ -913,7 +902,7 @@ class InvestEngine {
       key = "missed";
     }
     return Korean.fill(
-        content.raising().company().macro().scout().credit().get(key),
+        content.raising().company().scout().credit().get(key),
         Map.of(
             "name",
             who,

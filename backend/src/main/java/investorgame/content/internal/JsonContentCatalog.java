@@ -198,8 +198,8 @@ class JsonContentCatalog implements ContentCatalog {
     validateRaising();
   }
 
-  /** 거시경제 회의와 종목 발굴 문구 (decisions.md 266·267번). */
-  private void validateMacro(RaisingContent.Company company) {
+  /** 직함·멘탈·버릇·팀장 보고·종목 발굴 문구 (decisions.md 267번). */
+  private void validateCompanyTexts(RaisingContent.Company company) {
     for (RaisingContent.Desk desk : company.desks()) {
       require(desk.roles() == null || desk.roles().size() == 3, "직함은 셋이어야 한다: " + desk.code());
     }
@@ -266,43 +266,6 @@ class JsonContentCatalog implements ContentCatalog {
               && company.market().inherited() != null,
           "합성 대성공·버릇 이어받기 문구가 없다 (350번)");
     }
-    RaisingContent.Macro macro = company.macro();
-    List<String> stances = List.of("AGGRESSIVE", "NEUTRAL", "DEFENSIVE");
-    require(
-        macro != null
-            && macro.stances().keySet().containsAll(stances)
-            && macro.notes().keySet().containsAll(stances),
-        "거시경제 회의 문구가 없다");
-    require(macro.topics().size() >= 3, "거시경제 회의 주제가 셋 이상이어야 한다");
-    for (RaisingContent.MacroTopic topic : macro.topics()) {
-      require(
-          topic.up().size() >= 3 && topic.down().size() >= 3 && !topic.neutral().isEmpty(),
-          "거시경제 기사 문장이 모자란다(오름·내림 셋 이상, 중립 하나 이상): " + topic.code());
-      requirePoints(topic.up(), "거시경제 " + topic.code());
-      requirePoints(topic.down(), "거시경제 " + topic.code());
-      for (String side : List.of("UP", "DOWN")) {
-        RaisingContent.Wind wind = topic.winds().get(side);
-        require(wind != null && wind.line() != null, "섹터 바람이 없다: " + topic.code() + " " + side);
-        for (String code :
-            java.util.stream.Stream.concat(wind.tail().stream(), wind.head().stream()).toList()) {
-          require(
-              company.desks().stream().anyMatch(d -> d.code().equals(code) && d.trades()),
-              "섹터 바람이 돈을 굴리는 자리가 아니다: " + topic.code() + " " + code);
-        }
-      }
-    }
-    for (String voice : List.of("low", "mid", "high", "expert")) {
-      for (String read : List.of("UP", "DOWN", "NEUTRAL")) {
-        List<String> lines = macro.remarks().getOrDefault(voice, Map.of()).get(read);
-        require(lines != null && !lines.isEmpty(), "거시경제 한마디가 없다: " + voice + " " + read);
-      }
-    }
-    for (String read : List.of("UP", "DOWN")) {
-      List<String> lines = macro.remarks().getOrDefault("foggy", Map.of()).get(read);
-      require(lines != null && !lines.isEmpty(), "흐린 거시경제 기사의 한마디가 없다: " + read);
-    }
-    requireNoQuote(macro.remarks(), "거시경제");
-    requirePoint(macro.omenPoint(), "거시경제 폭락 조짐");
     require(
         company.quarters() != null
             && company.quarters().crash() != null
@@ -328,16 +291,7 @@ class JsonContentCatalog implements ContentCatalog {
             && teams
                 .members()
                 .keySet()
-                .containsAll(List.of("best", "bestSelf", "worst", "worstSelf"))
-            && teams.stance() != null
-            && List.of("AGGRESSIVE", "DEFENSIVE").stream()
-                .allMatch(
-                    k ->
-                        teams
-                            .stance()
-                            .getOrDefault(k, Map.of())
-                            .keySet()
-                            .containsAll(List.of("up", "down"))),
+                .containsAll(List.of("best", "bestSelf", "worst", "worstSelf")),
         "팀장 보고 문구가 없다");
     // 돕는 자리의 보고는 그 기간에 한 일을 말한다 (decisions.md 278번).
     for (String key :
@@ -356,10 +310,11 @@ class JsonContentCatalog implements ContentCatalog {
             "scoutNone")) {
       require(teams.support().containsKey(key), "돕는 자리의 팀장 보고가 없다: " + key);
     }
-    RaisingContent.Scout scout = macro.scout();
+    RaisingContent.Scout scout = company.scout();
     require(
         scout != null
-            && scout.none() != null
+            && scout.pitch() != null
+            && scout.credit() != null
             && scout
                 .credit()
                 .keySet()
@@ -543,7 +498,7 @@ class JsonContentCatalog implements ContentCatalog {
     for (String stat : List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE)) {
       require(raising.flipTips().containsKey(stat), "처음 뒤집힘 설명이 없다: " + stat);
     }
-    validateMacro(company);
+    validateCompanyTexts(company);
     for (NewsDefinition definition : news) {
       NewsClues clue = clues.get(definition.code());
       require(clue != null, "단서 기사 문장이 없다: " + definition.code());

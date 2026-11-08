@@ -2,7 +2,6 @@ import type { Company, Drawn } from '@web/api/client'
 import { toggleAutoPlay } from '@web/features/raising/autoPlay'
 import { GachaReveal, useDrawReveal } from '@web/features/raising/Gacha'
 import { InvestWindow } from '@web/features/raising/InvestWindow'
-import { MacroWindow } from '@web/features/raising/MacroWindow'
 import { QuarterSheet } from '@web/features/raising/QuarterSheet'
 import { ResignAlert } from '@web/features/raising/ResignAlert'
 import { useRaisingStore } from '@web/features/raising/store'
@@ -18,7 +17,7 @@ import { ToyCityMove } from './toy-city/ToyCityMove'
 import { useAppUi } from './ui'
 
 /**
- * 회의 창과 결산서 (웹의 CompanyScreen과 같은 흐름): 분기 넘기기를 누르면 거시경제 회의 → (직원이 물어 오면) 종목 회의 → 결산. 연말 결산서·분기 실적·
+ * 회의 창과 결산서 (웹의 CompanyScreen과 같은 흐름): 분기 넘기기를 누르면 (직원이 종목을 물어 오면, 382번) 종목 회의 → 결산. 연말 결산서·분기 실적·
  * 건물 알림·사표·엔딩은 서버 상태와 스토어의 표시로 뜬다. 이 컴포넌트는 회사·해·분기·직원이 바뀌면 다시 그려져 창 상태가 초기화된다.
  */
 export function Windows({ company }: { company: Company }) {
@@ -27,9 +26,8 @@ export function Windows({ company }: { company: Company }) {
   const upgradeMove = useRaisingStore((s) => s.upgradeMove)
   const moveBeforeSeats = useRaisingStore((s) => s.moveBeforeSeats)
   const justQuartered = useRaisingStore((s) => s.justQuartered)
-  const { settle, convene } = useRaisingStore.getState()
+  const { settle, convene, scout } = useRaisingStore.getState()
   const [investOpen, setInvestOpen] = useState(false)
-  const [macroOpen, setMacroOpen] = useState(false)
   // 멘탈 전투는 스테이지를 골라 들어간다 (decisions.md 369번): 분기를 넘길 때 저절로 뜨지 않는다.
   const battle = useAppUi((s) => s.battle)
   const ended = company.status === 'ENDED'
@@ -40,9 +38,9 @@ export function Windows({ company }: { company: Company }) {
     void settle()
   }
 
-  // 거시경제 회의를 마친 뒤: 물어 온 종목이 있으면 종목 회의를 열고, 없으면 바로 결산한다.
+  // 분기 넘기기: 직원이 종목을 물어 오면(267·382번) 종목 회의를 열고, 아무도 안 왔으면 바로 결산한다.
   const stockOrSettle = async () => {
-    if (!useRaisingStore.getState().company?.invest?.ready) {
+    if (!(await scout())) {
       battleOrSettle()
       return
     }
@@ -51,22 +49,13 @@ export function Windows({ company }: { company: Company }) {
     }
   }
 
-  // 분기 넘기기 (결산 버튼이 부른다): 돈을 굴리는 직원이 있으면 먼저 거시경제 회의를 연다.
+  // 분기 넘기기 (결산 버튼이 부른다).
   useEffect(() => {
     return useAppUi.subscribe((state, prev) => {
       if (state.settleRequest === prev.settleRequest) {
         return
       }
-      void (async () => {
-        const c = useRaisingStore.getState().company
-        if (!c?.macro?.ready) {
-          await stockOrSettle()
-          return
-        }
-        if (await useRaisingStore.getState().conveneMacro()) {
-          setMacroOpen(true)
-        }
-      })()
+      void stockOrSettle()
     })
   })
 
@@ -112,20 +101,6 @@ export function Windows({ company }: { company: Company }) {
         <QuarterSheet
           quarter={company.lastQuarter}
           onClose={() => useRaisingStore.setState({ justQuartered: false })}
-        />
-      )}
-      {!ended && company.macro && macroOpen && (
-        <MacroWindow
-          macro={company.macro}
-          year={company.year}
-          quarter={company.quarter}
-          employees={company.employees}
-          stockMeeting={Boolean(company.invest?.ready)}
-          onClose={() => setMacroOpen(false)}
-          onNext={() => {
-            setMacroOpen(false)
-            void stockOrSettle()
-          }}
         />
       )}
       {!ended && company.invest && investOpen && (

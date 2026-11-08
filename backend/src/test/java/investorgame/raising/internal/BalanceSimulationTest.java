@@ -31,14 +31,6 @@ class BalanceSimulationTest {
     STAGES
   }
 
-  static String majorityStance(CompanyState.Macro macro) {
-    long up = macro.sentences.stream().filter(s -> s.sign.equals("UP")).count();
-    long down = macro.sentences.stream().filter(s -> s.sign.equals("DOWN")).count();
-    return up > down
-        ? MacroEngine.AGGRESSIVE
-        : down > up ? MacroEngine.DEFENSIVE : MacroEngine.NEUTRAL;
-  }
-
   static String majorityChoice(CompanyState.Invest invest) {
     long up = invest.sentences.stream().filter(s -> s.sign.equals("UP")).count();
     long down = invest.sentences.stream().filter(s -> s.sign.equals("DOWN")).count();
@@ -115,15 +107,8 @@ class BalanceSimulationTest {
   }
 
   static void quarter(CompanyState c, HashSeededRandom random, Boss boss) {
-    if (ENGINE.macro.open(c)) {
-      String stance =
-          switch (boss) {
-            case GREEDY -> MacroEngine.AGGRESSIVE;
-            case READER, STAGES -> majorityStance(c.macro);
-            case LAZY -> MacroEngine.NEUTRAL;
-          };
-      ENGINE.macro.decide(c, stance, random);
-    }
+    // 분기 넘기기를 누르면 직원이 종목을 물어 온다 (267·382번).
+    ENGINE.scout.discover(c, random);
     if (ENGINE.invest.open(c)) {
       String choice =
           switch (boss) {
@@ -204,10 +189,11 @@ class BalanceSimulationTest {
 
   /**
    * 25년 일생 120판 (#344·#388·#389·#468). 성장의 주된 길은 기사를 읽고 멘탈 스테이지를 깨는 사장이다(decisions.md 371번): 깬 최고
-   * 스테이지만큼 붙는 분기 강화율(369번)이 쌓여 등급이 3~5년에 하나씩 오르고 25년 안에 SS에 닿는다. 스테이지를 안 하는 기사 사장은 그보다 훨씬 느리지만(의도)
-   * 늘 공격·크게 하는 사장보다 낫고, 그 사장이 이사 안 하는 사장보다 낫다. 2026-11-08 120판: 스테이지 1조 2,071억 · 등급 첫 해 E 2 · D 6 ·
-   * C 8 · B 14 · A 17 · S 22 · SS 23 / 기사 806억(E 3 · D 8 · C 13 · B 18 · A 23, S 없음) · 공격 39억 · 이사
-   * 안 함 13억. 처음 깸 자본을 빼면 스테이지 8,911억이라 차이의 대부분은 분기 강화율이다.
+   * 스테이지만큼 붙는 분기 강화율(369번)이 쌓여 등급이 3~6년에 하나씩 오른다. 스테이지를 안 하는 기사 사장은 그보다 훨씬 느리지만(의도) 늘 공격·크게 하는 사장보다
+   * 낫고, 그 사장이 이사 안 하는 사장보다 낫다. 2026-11-08 120판(거시경제 회의가 있을 때): 스테이지 1조 2,071억 · 등급 첫 해 E 2 · D 6 ·
+   * C 8 · B 14 · A 17 · S 22 · SS 23 / 기사 806억 · 공격 39억 · 이사 안 함 13억. 2026-11-09 회의를 뺀 뒤(382번, 태도는
+   * 늘 중립이라 맞힌 태도의 판단마다 +4%p와 섹터 바람이 없다): 스테이지 4,334억 · E 2 · D 6 · C 10 · B 15 · A 19 · S 25 · SS
+   * 없음 / 기사 238억(E 3 · D 11 · C 15 · B 23, A 없음) · 공격 44억 · 이사 안 함 14억.
    */
   @Test
   void 스테이지를_깨며_기사를_읽는_사장이_가장_빨리_크고_등급이_고르게_오른다() {
@@ -243,7 +229,8 @@ class BalanceSimulationTest {
     org.assertj.core.api.Assertions.assertThat(stages.firstYear()[1])
         .as("첫 이사")
         .isLessThanOrEqualTo(3);
-    for (int k = 2; k <= LADDER.indexOf("SS"); k++) {
+    // 거시경제 회의의 태도 보너스(맞힌 태도 판단마다 +4%p)와 섹터 바람을 뺀 뒤로(382번) 25년 안에 SS에 닿지 않아 S까지 본다.
+    for (int k = 2; k <= LADDER.indexOf("S"); k++) {
       org.assertj.core.api.Assertions.assertThat(stages.firstYear()[k] - stages.firstYear()[k - 1])
           .as(LADDER.get(k - 1) + " → " + LADDER.get(k))
           .isBetween(1L, 6L);

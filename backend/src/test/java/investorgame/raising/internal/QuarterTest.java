@@ -37,11 +37,9 @@ class QuarterTest {
   void 분기마다_판단_하나와_수수료_4분의_1이_들어오고_네_분기를_넘기면_연말_결산이다() {
     for (int seed = 0; seed < 30; seed++) {
       CompanyState c = company(seed, 150_000_000L);
-      String topic = c.macro.topic;
       for (int quarter = 1; quarter <= 4; quarter++) {
         assertThat(c.year).isEqualTo(1);
         assertThat(c.quarter).isEqualTo(quarter);
-        assertThat(c.macro.stance).as("분기마다 새 거시경제 회의").isNull();
         long before = c.capital;
         long base = ENGINE.stakeBase(c);
         CompanyState.Quarter q = ENGINE.settleQuarter(c, new HashSeededRandom(seed));
@@ -73,12 +71,11 @@ class QuarterTest {
       // 건물은 저절로 오르지 않고(296번), 지은 건물은 자본이 줄어도 그대로다(#347).
       assertThat(s.gradeAfter).isEqualTo(s.gradeBefore);
       assertThat(c.quarters).as("해가 바뀌면 비운다").isEmpty();
-      assertThat(topic).isNotNull();
     }
   }
 
   @Test
-  void 폭락은_한_분기에_터지고_그_앞_분기_기사에_조짐이_실린다() {
+  void 폭락은_한_분기에_터진다() {
     int crashes = 0;
     for (int seed = 0; seed < 400; seed++) {
       CompanyState c = company(seed, 150_000_000L);
@@ -89,10 +86,6 @@ class QuarterTest {
       int burst = c.crashQuarter;
       assertThat(burst).isBetween(2, 4);
       for (int quarter = 1; quarter <= 4; quarter++) {
-        // 거시경제 회의는 한 해에 한 번이다 (281번): 폭락장인 해의 숨은 방향은 내림이고, 조짐은 그 회의 기사에 실린다.
-        assertThat(c.macro.up).as("폭락장인 해의 숨은 방향은 내림").isFalse();
-        boolean omen = c.macro.sentences.stream().anyMatch(s -> s.omen);
-        assertThat(omen).isEqualTo(c.omen != null);
         CompanyState.Quarter q = ENGINE.settleQuarter(c, new HashSeededRandom(seed));
         assertThat(q.crash).isEqualTo(quarter == burst);
       }

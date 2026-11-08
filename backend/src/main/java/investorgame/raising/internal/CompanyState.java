@@ -193,9 +193,6 @@ class CompanyState {
   /** 올해 종목 회의 (decisions.md 229번). 연초에 준비해 두지만 직원이 종목을 물어 와야(found) 열린다 (267번). 옛 회사면 null이다. */
   Invest invest;
 
-  /** 올해 거시경제 회의 (decisions.md 266번). 이 칸을 더하기 전의 해면 null이다. */
-  Macro macro;
-
   /** 이번 분기의 멘탈 전투 (decisions.md 328번). 분기를 열 때 새로 만든다. 이 칸을 더하기 전의 분기면 null이다. */
   Mental mental;
 
@@ -349,6 +346,9 @@ class CompanyState {
     /** 크게 했는가: 판돈 두 배, 고집 1.5배 (decisions.md 260번). */
     boolean big;
 
+    /** 이번 분기에 종목 발굴을 굴렸는가 (267·382번): 분기 넘기기를 누르면 한 번 굴린다. 옛 저장은 거짓이라 다시 굴린다. */
+    boolean scouted;
+
     /** 지켜봤을 때, 맞는 쪽으로 했으면 벌었을 돈(뒤집힘 없이). 지켜보지 않았으면 null (260번). */
     Long missed;
 
@@ -401,28 +401,6 @@ class CompanyState {
     String pitch;
   }
 
-  /**
-   * 거시경제 회의 한 번 (decisions.md 266번): 큰 흐름 하나(기준금리·환율…)를 놓고 사장이 올해 회사의 태도를 고른다. 숨은 방향 up은 시장에 좋은 쪽이고
-   * 결산 전에는 화면에 나가지 않는다.
-   */
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
-  static class Macro {
-    String topic;
-    boolean up;
-    List<Sentence> sentences = new ArrayList<>();
-    String clarity;
-
-    /** 회의를 연 때 굳힌 한마디와 형광펜 (249번과 같다). 아직 안 열었으면 remarks가 null. */
-    List<Remark> remarks;
-
-    Integer highlightIndex;
-    String highlightBy;
-
-    /** 사장이 고른 태도(AGGRESSIVE·NEUTRAL·DEFENSIVE). 아직이면 null이고, 고르지 않고 결산하면 중립으로 본다. */
-    String stance;
-  }
-
   /** 맡긴 회의의 토론 한 줄 (285번). side는 BUY·SELL, last면 결판을 내는 마지막 두 줄(이긴 쪽·진 쪽)이다. */
   @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
@@ -462,9 +440,6 @@ class CompanyState {
     String sign;
 
     boolean decisive;
-
-    /** 연초 회의의 폭락 조짐을 거시경제 기사로 옮긴 문장 (266번). 헛조짐일 수도 있다. */
-    boolean omen;
   }
 
   /** 투자 회의에서 직원 한 명이 한 일. follow: BOSS(사장 말대로)·OWN(제멋대로)·SWAY(꼬드김). */
@@ -537,11 +512,6 @@ class CompanyState {
     String investTitle;
 
     Long investTotal;
-
-    /** 이 분기 거시경제 회의의 주제 이름과 태도. 회의가 없던 분기면 null. */
-    String macroTopic;
-
-    String macroStance;
 
     /** 이 분기에 폭락이 터졌다. */
     boolean crash;

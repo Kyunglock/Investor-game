@@ -37,26 +37,15 @@ class EconomySimulationTest {
     return up > down ? InvestEngine.BUY : down > up ? InvestEngine.SELL : InvestEngine.HOLD;
   }
 
-  /** 거시경제 회의(266번): 기사 문장(조짐 포함)의 다수결. 좋은 말이 많으면 공격, 나쁜 말이 많으면 방어, 같으면 중립. */
-  private static String stance(CompanyState.Macro macro) {
-    long up = macro.sentences.stream().filter(s -> s.sign.equals("UP")).count();
-    long down = macro.sentences.stream().filter(s -> s.sign.equals("DOWN")).count();
-    return up > down
-        ? MacroEngine.AGGRESSIVE
-        : down > up ? MacroEngine.DEFENSIVE : MacroEngine.NEUTRAL;
-  }
-
   /**
-   * 한 해를 사람처럼 돈다: 분기마다 거시경제 회의(기사 다수결) → 직원이 종목을 물어 왔으면 종목 회의(기사 다수결) → 분기 결산, 네 분기를 넘기면 연말 결산
-   * (decisions.md 266·267·268번).
+   * 한 해를 사람처럼 돈다: 분기마다 분기 넘기기를 누르면 직원이 종목을 물어 오고, 물어 왔으면 종목 회의(기사 다수결) → 분기 결산, 네 분기를 넘기면 연말 결산
+   * (decisions.md 267·268·382번).
    */
   private static void year(CompanyState company, long seed) {
     HashSeededRandom random = new HashSeededRandom(seed);
     int year = company.year;
     while (company.year == year) {
-      if (ENGINE.macro.open(company)) {
-        ENGINE.macro.decide(company, stance(company.macro), random);
-      }
+      ENGINE.scout.discover(company, random);
       if (ENGINE.invest.open(company)) {
         ENGINE.invest.decide(company, majority(company.invest), random);
       }

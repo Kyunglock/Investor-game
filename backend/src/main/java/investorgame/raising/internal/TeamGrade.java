@@ -11,13 +11,10 @@ import java.util.Map;
 
 /**
  * 회의에 앉은 팀의 합산 등급 (decisions.md 353번, #400). 사람 수만 늘려서는 오르지 않게 **가장 잘하는 셋의 평균**을 바탕으로, 회의에서 중요한
- * 능력치에 무게를 둔다(종목 회의는 안목, 거시경제 회의는 안목·줏대). 리서치 팀이 앉아 있으면 +4, 팀장이 둘 이상이면 +2. 점수는 능력치와 같은 띠(F~SSS)로
- * 읽고, 띠마다 한 줄 풀이가 붙는다("이 팀이면 기사 열에 일곱은 맞힌다").
+ * 능력치에 무게를 둔다(종목 회의는 안목). 리서치 팀이 앉아 있으면 +4, 팀장이 둘 이상이면 +2. 점수는 능력치와 같은 띠(F~SSS)로 읽고, 띠마다 한 줄 풀이가
+ * 붙는다("이 팀이면 기사 열에 일곱은 맞힌다").
  */
 class TeamGrade {
-
-  static final String INVEST = "invest";
-  static final String MACRO = "macro";
 
   /** 종목 회의: 안목이 절반. */
   private static final Map<String, Integer> INVEST_WEIGHTS =
@@ -25,15 +22,6 @@ class TeamGrade {
           StatCodes.INSIGHT, 50,
           StatCodes.CONVICTION, 20,
           StatCodes.PATIENCE, 15,
-          StatCodes.COURAGE, 10,
-          StatCodes.LUCK, 5);
-
-  /** 거시경제 회의: 안목과 줏대. */
-  private static final Map<String, Integer> MACRO_WEIGHTS =
-      Map.of(
-          StatCodes.INSIGHT, 35,
-          StatCodes.CONVICTION, 30,
-          StatCodes.PATIENCE, 20,
           StatCodes.COURAGE, 10,
           StatCodes.LUCK, 5);
 
@@ -64,12 +52,12 @@ class TeamGrade {
   }
 
   /** 앉은 사람이 없으면 null. */
-  CompanyView.TeamGrade of(CompanyState c, String meeting) {
+  CompanyView.TeamGrade of(CompanyState c) {
     List<Employee> seated = c.employees.stream().filter(e -> e.desk != null).toList();
     if (seated.isEmpty()) {
       return null;
     }
-    Map<String, Integer> weights = MACRO.equals(meeting) ? MACRO_WEIGHTS : INVEST_WEIGHTS;
+    Map<String, Integer> weights = INVEST_WEIGHTS;
     List<Integer> scores =
         seated.stream()
             .map(e -> memberScore(e, weights))

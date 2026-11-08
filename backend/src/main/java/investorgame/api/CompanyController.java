@@ -143,31 +143,11 @@ class CompanyController {
   /** big이 참이면 크게 한다: 판돈 두 배, 고집 1.5배 (decisions.md 260번). 없으면 거짓. */
   record InvestRequest(@NotBlank String choice, Boolean big) {}
 
-  /** 올해 거시경제 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 266번). */
-  @PostMapping("/macro/open")
-  CompanyView conveneMacro(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    return companies.conveneMacro(cookies.requireSession(token));
+  /** 분기 넘기기를 누르면 직원이 종목을 물어 온다 (decisions.md 267·382번). 물어 왔으면 종목 회의가 열린다. */
+  @PostMapping("/scout")
+  CompanyView scout(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
+    return companies.scout(cookies.requireSession(token));
   }
-
-  /** 올해 거시경제 회의에서 회사의 태도를 고른다: AGGRESSIVE·NEUTRAL·DEFENSIVE (266번). */
-  @PostMapping("/macro")
-  CompanyView macro(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody MacroRequest request) {
-    UUID sessionId = cookies.requireSession(token);
-    CompanyView company = companies.macro(sessionId, request.stance());
-    PLAY.info(
-        "company-macro session={} company={} year={} stance={} ip={}",
-        sessionId,
-        company.companyId(),
-        company.year(),
-        request.stance(),
-        ClientIp.current());
-    return company;
-  }
-
-  record MacroRequest(@NotBlank String stance) {}
 
   /** 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 328번). */
   @PostMapping("/mental")

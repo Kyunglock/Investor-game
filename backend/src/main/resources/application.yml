@@ -271,18 +271,7 @@ raising:
         - { code: clear, weight: 35, penalty: 0 }
         - { code: murky, weight: 40, penalty: 25 }
         - { code: foggy, weight: 25, penalty: 55 }
-    # 거시경제 회의 (decisions.md 266번): 해마다 큰 흐름 하나를 놓고 올해 회사의 태도를 고른다. 공격은 그 분기 판돈 ×1.3, 방어는 ×0.8에
-    # 폭락장 시장 손익 ×0.9 (분기 결산, 268번). 숨은 방향은 호황이면 오름, 폭락장이면 내림, 보통 해면 55%로 오름. 방향마다 섹터 바람이 불어 순풍 자리는 맞히면 +3%p, 역풍 자리는 −3%p.
-    # 방어를 더 세게 하면 큰 회사가 잃는 해가 사라지고, 공격을 더 세게 하면 한 해에 등급 띠를 넘는다 (EconomySimulationTest)
-    macro:
-      normal-up-percent: 55
-      stake-percent: { AGGRESSIVE: 130, NEUTRAL: 100, DEFENSIVE: 80 }
-      defensive-crash-percent: 90
-      wind-bp: 300
-      # 태도가 숨은 방향과 맞았나 (#388): 판단마다 맞으면 더하고 어긋나면 뺀다(만분율). 기사를 읽고 고르는 사장이 늘 공격하는 사장을 이기게
-      right-bp: { AGGRESSIVE: 400, DEFENSIVE: 300 }
-      wrong-bp: { AGGRESSIVE: 400, DEFENSIVE: 300 }
-    # 종목 발굴 (decisions.md 267번): 종목 회의는 직원이 종목을 물어 올 때만 열린다. 종목 발굴팀은 40% + 안목의 절반(안목 100이면 90%),
+    # 종목 발굴 (decisions.md 267번): 종목 회의는 직원이 종목을 물어 올 때만 열린다. 분기 넘기기를 누르면 물어 온다(382번). 종목 발굴팀은 40% + 안목의 절반(안목 100이면 90%),
     # 섹터 데스크 직원은 15%. 가져온 사람의 안목이 50보다 높을수록 오르는 종목(안목 1점에 +0.3%p), 70 이상이면 또렷한 기사, 40 아래면 소문
     scout:
       base-percent: 40

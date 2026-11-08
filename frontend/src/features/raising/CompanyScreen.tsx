@@ -13,7 +13,6 @@ import { LADDER, STAT_NAMES, STAT_ORDER } from './grades'
 import { IndustryLine } from './IndustryLine'
 import { InvestWindow } from './InvestWindow'
 import { LockedDesks } from './LockedDesks'
-import { MacroWindow } from './MacroWindow'
 import { MoveScene } from './MoveScene'
 import { OfficeArt, type SeatFocus } from './OfficeArt'
 import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName, titleOf } from './office'
@@ -40,7 +39,7 @@ const FIT_TONE = {
 } as const
 
 /**
- * 회사 화면 (증권사 육성 설계 4·6절). 한 해 = 이슈 → 채용 뽑기 → 배치 → (결산을 누르면 뜨는) 거시경제 회의 → (직원이 물어 오면) 종목 회의 → 결산. 사장은 사람을 뽑아 앉히기만 하고 직원은 능력치대로 알아서
+ * 회사 화면 (증권사 육성 설계 4·6절). 한 해 = 이슈 → 채용 뽑기 → 배치 → (분기 넘기기를 눌러 직원이 물어 오면) 종목 회의 → 결산. 사장은 사람을 뽑아 앉히기만 하고 직원은 능력치대로 알아서
  * 굴린다. 이슈·채용·배치·지난 결산은 탭으로 나뉘고(231번), 결산 버튼은 화면 아래에 늘 붙어 있다. 배치는 작년 그대로가 기본이고(7.2절), 자리를 누르면 바로
  * 앉는다.
  */
@@ -52,12 +51,10 @@ export function CompanyScreen({ company }: { company: Company }) {
   const upgradeMove = useRaisingStore((s) => s.upgradeMove)
   const justQuartered = useRaisingStore((s) => s.justQuartered)
   const autoPlay = useRaisingStore((s) => s.autoPlay)
-  const { settle, restart, convene, conveneMacro } = useRaisingStore.getState()
+  const { settle, restart, convene, scout } = useRaisingStore.getState()
   // 이사 장면은 결산 뒤 한 번만 본다. 해가 바뀌면 화면이 새로 그려져 다시 볼 수 있다.
-  // 종목 회의 창 (231번): 직원이 종목을 물어 왔으면 거시경제 회의 다음에 뜨고, 고른 뒤 그대로 결산한다 (267번).
+  // 종목 회의 창 (231번): 분기 넘기기를 눌러 직원이 종목을 물어 왔으면 뜨고, 고른 뒤 그대로 결산한다 (267·382번).
   const [investOpen, setInvestOpen] = useState(false)
-  // 거시경제 회의 창 (266번): 결산을 누르면 먼저 뜬다.
-  const [macroOpen, setMacroOpen] = useState(false)
   // 건물 그림에서 누른 책상 (237번). 그림 바로 아래에서 자리를 고른다.
   const [focus, setFocus] = useState<SeatFocus | null>(null)
   const ended = company.status === 'ENDED'
@@ -65,9 +62,9 @@ export function CompanyScreen({ company }: { company: Company }) {
   const settleSpot = useTutorialSpot(company, 'settle')
   const drawn = useDrawReveal(company)
 
-  // 거시경제 회의를 마친 뒤: 물어 온 종목이 있으면 종목 회의를 열고(한마디를 굳힌다, 249번) 창을 띄운다. 없으면 바로 결산한다.
+  // 분기 넘기기: 직원이 종목을 물어 오면(267·382번) 종목 회의를 열고(한마디를 굳힌다, 249번) 창을 띄운다. 아무도 안 왔으면 바로 결산한다.
   const stockOrSettle = async () => {
-    if (!useRaisingStore.getState().company?.invest?.ready) {
+    if (!(await scout())) {
       void settle()
       return
     }
@@ -174,21 +171,6 @@ export function CompanyScreen({ company }: { company: Company }) {
           />
         )}
 
-        {!ended && company.macro && macroOpen && (
-          <MacroWindow
-            macro={company.macro}
-            year={company.year}
-            quarter={company.quarter}
-            employees={company.employees}
-            stockMeeting={Boolean(company.invest?.ready)}
-            onClose={() => setMacroOpen(false)}
-            onNext={() => {
-              setMacroOpen(false)
-              void stockOrSettle()
-            }}
-          />
-        )}
-
         {!ended && company.invest && investOpen && (
           <InvestWindow
             invest={company.invest}
@@ -233,8 +215,7 @@ export function CompanyScreen({ company }: { company: Company }) {
             )}
             {autoPlay && (
               <p className="text-center text-[12px] text-teal" data-testid="auto-status">
-                자동 진행 중 · 뽑기 → 배치 → 거시경제 회의·종목 회의(직원 다수결) → 분기 넘기기를
-                되풀이합니다
+                자동 진행 중 · 뽑기 → 배치 → 종목 회의(직원 다수결) → 분기 넘기기를 되풀이합니다
               </p>
             )}
             <div className="grid grid-cols-[auto_1fr] gap-2">
@@ -252,16 +233,8 @@ export function CompanyScreen({ company }: { company: Company }) {
               <button
                 type="button"
                 disabled={busy || autoPlay}
-                // 돈을 굴리는 직원이 있으면 먼저 거시경제 회의를 열고(한마디를 굳힌다, 266번) 창을 띄운다. 이미 골랐으면 종목 회의나 결산으로.
-                onClick={async () => {
-                  if (!company.macro?.ready) {
-                    await stockOrSettle()
-                    return
-                  }
-                  if (await conveneMacro()) {
-                    setMacroOpen(true)
-                  }
-                }}
+                // 직원이 종목을 물어 오면 종목 회의, 아니면 바로 결산 (267·382번).
+                onClick={() => void stockOrSettle()}
                 className={`min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50 ${settleSpot}`}
               >
                 {company.year}년 차 {company.quarter}분기 넘기기
