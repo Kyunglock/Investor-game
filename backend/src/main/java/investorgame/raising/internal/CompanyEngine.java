@@ -1276,6 +1276,23 @@ class CompanyEngine {
     return properties.desks().get(desk);
   }
 
+  /** 폭락장 손익이 이 비율 이하인 자리(식품·금융)는 폭락에 덜 빠진다. 웹의 자동 배치(`crashSafe`)와 같은 기준이다. */
+  static final int CRASH_SAFE_PERCENT = 50;
+
+  /**
+   * 그 분기에 폭락에 대비했나 (386번): 돈을 굴린 사람이 있고 모두 폭락에 덜 빠지는 자리(식품·금융)에 앉아 있었다. 거시경제 회의의 방어 태도(382번에서 뺐다)
+   * 대신 조짐을 읽은 사장이 할 수 있는 일이다. 덜 버는 자리라 헛조짐이면 그만큼 덜 번다.
+   */
+  boolean braced(CompanyState.Quarter quarter) {
+    return !quarter.results.isEmpty()
+        && quarter.results.stream()
+            .allMatch(
+                r -> {
+                  CompanyProperties.DeskReturn returns = returnsOf(r.desk);
+                  return returns != null && returns.crashPercent() <= CRASH_SAFE_PERCENT;
+                });
+  }
+
   /** 한 해의 분기 수 (decisions.md 268번). */
   static final int QUARTERS = 4;
 
@@ -1585,13 +1602,22 @@ class CompanyEngine {
     if (!crash && company.omen != null) {
       settlement.lines.add(1, content.raising().company().falseOmenNote());
     }
-    // 조짐이 맞았나 헛소문이었나를 밝힌다 (#394). 조짐 읽는 법을 배울 수 있게 한 줄 덧붙인다. 방어로 돌릴 태도가 없어져(382번) 늘 버틴 셈이다.
+    // 조짐이 맞았나 헛소문이었나, 사장은 어떻게 읽었나를 밝힌다 (#394). 조짐 읽는 법을 배울 수 있게 한 줄 덧붙인다. 거시경제 회의의 방어 태도가
+    // 빠져(382번) 이제 방어는 돈을 굴리는 사람을 모두 폭락에 덜 빠지는 자리(식품·금융)로 옮겨 둔 분기다 (386번).
     if (company.omen != null) {
-      settlement.omenCall = crash ? "trueIgnored" : "falseKept";
+      long braced = settlement.quarters.stream().filter(this::braced).count();
+      // 폭락이 한 분기에 터졌으면 그 분기에 방어였나, 고르게 빠졌으면 두 분기 이상 방어였나.
+      boolean burst = settlement.quarters.stream().anyMatch(q -> q.crash);
+      boolean bracedCrash =
+          burst ? settlement.quarters.stream().anyMatch(q -> q.crash && braced(q)) : braced >= 2;
+      settlement.omenCall =
+          crash
+              ? (bracedCrash ? "trueDefended" : "trueIgnored")
+              : (braced == 0 ? "falseKept" : "falseDefended");
       settlement.lines.add(
           Korean.fill(
               content.raising().company().omenReveal().get(settlement.omenCall),
-              Map.of("omen", company.omen, "count", "0")));
+              Map.of("omen", company.omen, "count", String.valueOf(braced))));
     }
     company.settlements.add(settlement);
     String eraBefore = company.era;

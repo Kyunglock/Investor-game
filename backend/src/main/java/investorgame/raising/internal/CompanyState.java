@@ -619,7 +619,7 @@ class CompanyState {
 
     /**
      * 올해 조짐을 사장이 어떻게 읽었나 (#394): falseKept(헛조짐에 안 속음)·falseDefended(헛조짐에 방어)·trueDefended(진짜 조짐에
-     * 방어)·trueIgnored(진짜 조짐을 보고도 버팀). 조짐이 없었으면 null.
+     * 방어)·trueIgnored(진짜 조짐을 보고도 버팀). 방어는 돈을 굴리는 사람을 모두 식품·금융 데스크로 옮겨 둔 분기다(386번). 조짐이 없었으면 null.
      */
     String omenCall;
 
