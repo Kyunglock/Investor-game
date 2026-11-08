@@ -1,24 +1,13 @@
-import {
-  bakeCat,
-  CAT_H,
-  CAT_W,
-  drawEnemy,
-  drawGun,
-  GUN_LEN,
-  GUN_PIVOT,
-  INK,
-} from '@web/features/game/cat/draw'
+import { CAT_H, CAT_W, GUN_LEN } from '@web/features/game/cat/draw'
 import { BOSS_LOOK } from '@web/features/game/cat/look'
 import type Phaser from 'phaser'
+import { drawStageGun } from './drawStageGun'
 import type { EnemyKind } from './enemies'
 import type { Genre } from './genres'
 import type { Hero } from './hero'
+import { drawMentalWall, drawSprite } from './stageArt'
 
-/**
- * 멘탈 전투의 그림 (decisions.md 341번). 그림은 이미지 파일이 아니라 코드다(설계 7.1절): 사장냥·적 넷은 `@web/features/game/cat/draw`의
- * 캔버스 그림을 쓰고, 풀밭·멘탈벽·나무·탄도 같은 규칙(갈색 가는 윤곽, 파스텔 면)으로 캔버스에 그려 Phaser 텍스처로 한 번만 굽는다.
- * 화면 배율(dpr)만큼 크게 구워 흐리지 않다.
- */
+/** 승인한 캐주얼 시안의 투명 스프라이트를 Phaser 텍스처로 굽고, 무기·벽·탄환을 실시간 상태에 맞춰 합성한다. */
 
 /** 화면 배율. 텍스처를 이만큼 크게 굽고 캔버스도 이만큼 크다(battle.ts). 그림 크기(setDisplaySize)는 배율과 상관없이 아래 상수(CSS px)를 쓴다. */
 export const DPR = Math.min(3, (typeof devicePixelRatio === 'number' && devicePixelRatio) || 1)
@@ -27,11 +16,11 @@ export const DPR = Math.min(3, (typeof devicePixelRatio === 'number' && devicePi
 export const HERO_SCALE = 0.72
 export const HERO_SIZE = { w: CAT_W * HERO_SCALE, h: CAT_H * HERO_SCALE }
 /** 권총을 사장냥 상자 좌표보다 이만큼 크게 그린다(344번): 전에는 작아서 안 보였다. 앞발도 같이 커져 꼭 쥔 느낌이다. */
-const GUN_K = 2.0
+const GUN_K = 1.55
 /** 권총: 사장냥 그림의 가운데에서 피벗(뒷손)까지의 거리(px)와 피벗에서 총구까지(px). */
 export const GUN = {
-  dx: (GUN_PIVOT.x - CAT_W / 2) * HERO_SCALE,
-  dy: (GUN_PIVOT.y - CAT_H / 2) * HERO_SCALE,
+  dx: 8,
+  dy: 10,
   len: GUN_LEN * HERO_SCALE * GUN_K,
   /** 총 텍스처(상자 좌표 -8..26 × -8..14)의 원점 비율 */
   ox: 8 / 34,
@@ -62,25 +51,34 @@ function bake(scene: Phaser.Scene, key: string, w: number, h: number, paint: Pai
   scene.textures.addCanvas(key, cv)
 }
 
-/** 아군 텍스처 열쇠: hero-idle(가만히)·hero-fire(쏘는 중, 눈썹 꾹)·hero-hurt(맞았다, 울상). 총은 'gun'으로 따로 돌린다. */
+/** 아군 텍스처 열쇠: hero-idle(가만히)·hero-fire(쏘는 중)·hero-hurt(직접 피격 색상). 총은 'gun'으로 따로 돌린다. */
 export const HERO_KEYS = ['hero-idle', 'hero-fire', 'hero-hurt'] as const
 
 export function bakeHero(scene: Phaser.Scene, hero: Hero) {
-  const faces = { 'hero-idle': 'idle', 'hero-fire': 'fire', 'hero-hurt': 'hurt' } as const
+  const source = scene.textures.get('art-hero').getSourceImage() as HTMLImageElement
   for (const key of HERO_KEYS) {
-    if (scene.textures.exists(key)) {
-      continue
-    }
-    const cv = bakeCat(
-      { ...BOSS_LOOK, face: faces[key], armsForward: key !== 'hero-hurt' },
-      HERO_SCALE * DPR,
-    )
-    scene.textures.addCanvas(key, cv)
+    bake(scene, key, CAT_W, CAT_H, (c) => {
+      c.fillStyle = '#4f8a7133'
+      c.beginPath()
+      c.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
+      c.fill()
+      drawSprite(
+        c,
+        source,
+        { x: 0, y: 0, w: source.width, h: source.height },
+        { x: 14, y: 3, w: 75, h: 100 },
+      )
+      if (key === 'hero-hurt') {
+        c.globalCompositeOperation = 'source-atop'
+        c.fillStyle = '#fc795e33'
+        c.fillRect(0, 0, CAT_W, CAT_H)
+      }
+    })
   }
   bake(scene, 'gun', GUN.w, GUN.h, (c) => {
     c.scale(HERO_SCALE * GUN_K, HERO_SCALE * GUN_K)
     c.translate(8, 8)
-    drawGun(c, BOSS_LOOK.fur, hero.weapon.kind, hero.weapon.grade)
+    drawStageGun(c, BOSS_LOOK.fur, hero.weapon.kind, hero.weapon.grade)
   })
 }
 
@@ -90,133 +88,62 @@ export function enemyKey(kind: EnemyKind, frame: 0 | 1): string {
 }
 
 export function bakeEnemies(scene: Phaser.Scene) {
-  for (const kind of ['panic', 'dump', 'spec', 'stop'] as const) {
+  const source = scene.textures.get('art-enemies').getSourceImage() as HTMLImageElement
+  const kinds = ['panic', 'dump', 'spec', 'stop'] as const
+  for (const [i, kind] of kinds.entries()) {
     for (const frame of [0, 1] as const) {
       bake(scene, enemyKey(kind, frame), ENEMY_SIZE, ENEMY_SIZE, (c) => {
-        c.translate(32, 34)
-        c.scale(1.1, 1.1)
-        drawEnemy(c, kind, frame ? 0.25 : 0)
+        c.fillStyle = '#477c6533'
+        c.beginPath()
+        c.ellipse(32, 54, 19, 4, 0, 0, Math.PI * 2)
+        c.fill()
+        const size = kind === 'spec' ? 55 : kind === 'panic' ? 43 : 49
+        drawSprite(
+          c,
+          source,
+          {
+            x: ((i % 2) * source.width) / 2,
+            y: (Math.floor(i / 2) * source.height) / 2,
+            w: source.width / 2,
+            h: source.height / 2,
+          },
+          { x: 32 - size / 2, y: 32 - size / 2 + frame, w: size, h: size },
+        )
       })
     }
   }
 }
 
-function tuft(c: CanvasRenderingContext2D, x: number, y: number, col: string) {
-  c.beginPath()
-  c.moveTo(x - 6, y)
-  c.quadraticCurveTo(x - 5, y - 8, x - 2, y - 2)
-  c.quadraticCurveTo(x, y - 11, x + 2, y - 2)
-  c.quadraticCurveTo(x + 5, y - 8, x + 6, y)
-  c.closePath()
-  c.fillStyle = col
-  c.fill()
-}
-
-function outlined(c: CanvasRenderingContext2D, col: string, lw = 2.5) {
-  c.fillStyle = col
-  c.fill()
-  c.lineWidth = lw
-  c.strokeStyle = INK
-  c.lineJoin = 'round'
-  c.stroke()
-}
-
-/** 바닥·멘탈벽·소품·탄·파편. */
-export function bakeStage(scene: Phaser.Scene, genre: Genre) {
-  // 바닥: 공격은 풀밭, 디펜스는 마른 풀밭(살굿빛). 64×64 타일에 풀 포기 둘.
-  const [base, tuftCol] = genre === 'ASSAULT' ? ['#cfe3a0', '#b4d27f'] : ['#e9dfb0', '#cfc28a']
-  bake(scene, `floor-${genre}`, 64, 64, (c) => {
-    c.fillStyle = base
-    c.fillRect(0, 0, 64, 64)
-    tuft(c, 14, 20, tuftCol)
-    tuft(c, 46, 52, tuftCol)
-  })
-  // 멘탈벽: 분홍 벽돌 담(331번). 64×24 타일, 금이 가면 검은 금.
+/** 멘탈벽과 탄환은 실제 상태에 맞춰 게임 안에서 그린다. */
+export function bakeStage(scene: Phaser.Scene, _genre: Genre) {
   for (const cracked of [false, true]) {
-    bake(scene, cracked ? 'wall-cracked' : 'wall', 64, WALL_H, (c) => {
-      c.fillStyle = '#c84f7d'
-      c.fillRect(0, 0, 64, WALL_H)
-      for (let row = 0; row < 2; row++) {
-        const off = row % 2 ? 16 : 0
-        for (let x = -32; x < 64; x += 32) {
-          c.beginPath()
-          c.roundRect(x + off + 1.5, row * 12 + 1.5, 29, 9, 2.5)
-          c.fillStyle = '#ff9fc0'
-          c.fill()
-          c.lineWidth = 2
-          c.strokeStyle = INK
-          c.stroke()
-          c.fillStyle = '#ffd0e0'
-          c.fillRect(x + off + 4, row * 12 + 3.5, 10, 2)
-        }
-      }
-      if (cracked) {
-        c.beginPath()
-        c.moveTo(20, 0)
-        c.lineTo(26, 9)
-        c.lineTo(22, 16)
-        c.lineTo(28, WALL_H)
-        c.lineWidth = 2
-        c.strokeStyle = INK
-        c.stroke()
-      }
-    })
+    bake(scene, cracked ? 'wall-cracked' : 'wall', 512, 96, (c) => drawMentalWall(c, cracked))
   }
-  // 나무(위쪽 가장자리)와 풀숲(벽 옆) — 장식일 뿐 부딪히지 않는다.
-  bake(scene, 'tree', 72, 76, (c) => {
-    c.beginPath()
-    c.roundRect(31, 52, 10, 20, 3)
-    outlined(c, '#a98464', 2)
-    for (const [x, y, r] of [
-      [22, 40, 20],
-      [50, 40, 20],
-      [36, 24, 22],
-    ]) {
+  bake(scene, 'wall-ripple', 80, 50, (c) => {
+    for (const r of [15, 25, 36]) {
       c.beginPath()
-      c.ellipse(x, y, r, r, 0, 0, Math.PI * 2)
-      outlined(c, '#8fcf86')
-    }
-    c.beginPath()
-    c.ellipse(28, 18, 6, 4, 0, 0, Math.PI * 2)
-    c.fillStyle = 'rgba(255,255,255,.35)'
-    c.fill()
-  })
-  bake(scene, 'bush', 44, 30, (c) => {
-    for (const [x, y, r] of [
-      [12, 18, 10],
-      [32, 18, 10],
-      [22, 12, 12],
-    ]) {
-      c.beginPath()
-      c.ellipse(x, y, r, r, 0, 0, Math.PI * 2)
-      outlined(c, '#9ed08f')
+      c.ellipse(40, 25, r, r * 0.6, 0, 0, Math.PI * 2)
+      c.strokeStyle = '#ffd88b'
+      c.lineWidth = 2.5
+      c.stroke()
     }
   })
-  // 탄: 주황 빛줄기(+x 방향). 두 프레임은 길이가 조금 다르다.
   for (const look of [0, 1] as const) {
     bake(scene, `bullet-${look}`, 32, 10, (c) => {
-      const len = look ? 22 : 26
+      c.fillStyle = '#ffe29a77'
       c.beginPath()
-      c.moveTo(31, 5)
-      c.lineTo(31 - len, 1)
-      c.lineTo(31 - len, 9)
+      c.moveTo(3, 5)
+      c.lineTo(20, 2)
+      c.lineTo(20, 8)
       c.closePath()
-      c.fillStyle = 'rgba(255,170,80,.45)'
       c.fill()
       c.beginPath()
-      c.moveTo(31, 5)
-      c.lineTo(31 - len * 0.7, 2.5)
-      c.lineTo(31 - len * 0.7, 7.5)
-      c.closePath()
-      c.fillStyle = '#ff8a3d'
+      c.roundRect(12, 1.2, look ? 15 : 17, 7.6, 3.8)
+      c.fillStyle = '#fff6cc'
       c.fill()
-      c.beginPath()
-      c.moveTo(29, 5)
-      c.lineTo(31 - len * 0.4, 4)
-      c.lineTo(31 - len * 0.4, 6)
-      c.closePath()
-      c.fillStyle = '#fff2c0'
-      c.fill()
+      c.strokeStyle = '#eba839'
+      c.lineWidth = 1.7
+      c.stroke()
     })
   }
   // 총구 화염: 노란 별에 흰 심

@@ -11,6 +11,8 @@ export type Sheet =
 
 interface UiState {
   tab: Tab
+  modalBack: (() => void) | null
+  setModalBack: (handler: (() => void) | null) => void
   sheet: Sheet | null
   setTab: (tab: Tab) => void
   openSheet: (sheet: Sheet) => void
@@ -24,6 +26,8 @@ interface UiState {
 
 export const useAppUi = create<UiState>((set, get) => ({
   tab: 'office',
+  modalBack: null,
+  setModalBack: (modalBack) => set({ modalBack }),
   sheet: null,
   settleRequest: 0,
   requestSettle: () => set((s) => ({ settleRequest: s.settleRequest + 1, sheet: null })),
@@ -31,6 +35,10 @@ export const useAppUi = create<UiState>((set, get) => ({
   openSheet: (sheet) => set({ sheet }),
   closeSheet: () => set({ sheet: null }),
   back: () => {
+    if (get().modalBack) {
+      get().modalBack?.()
+      return true
+    }
     if (get().sheet) {
       set({ sheet: null })
       return true

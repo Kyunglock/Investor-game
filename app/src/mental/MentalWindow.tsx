@@ -1,15 +1,19 @@
 import type { Company } from '@web/api/client'
 import { type MentalCard, useRaisingStore } from '@web/features/raising/store'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useAppUi } from '../app/ui'
 import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
+import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
-import { applyCard, type Loadout, loadoutOf, pickCards } from './cards'
+import { applyCard, CARDS, type Loadout, loadoutOf, pickCards } from './cards'
 import { ENEMIES } from './enemies'
 import { GunSprite } from './GunSprite'
 import { GENRES } from './genres'
+import { StagePortrait } from './StagePortrait'
+import './stage.css'
 import { DEFAULT_WEAPON, type Hero, heroOf, type Weapon } from './hero'
 
 type Mental = NonNullable<Company['mental']>
@@ -42,17 +46,76 @@ export function MentalWindow({
   const [picked, setPicked] = useState<MentalCard[]>([])
   const [outcome, setOutcome] = useState<Outcome | null>(null)
   const [sending, setSending] = useState(false)
+  const [reportError, setReportError] = useState<string | null>(null)
+  const [pauseRequest, setPauseRequest] = useState(0)
   const [drop, setDrop] = useState<Drop | null>(null)
   const busy = useRaisingStore((s) => s.busy)
+  const apiError = useRaisingStore((s) => s.error)
+  const modal = useRef<HTMLDivElement>(null)
   const genre = GENRES[mental.genre]
   const weapons = company.weapons?.length ? company.weapons : [DEFAULT_WEAPON]
+
+  const back = useEffectEvent(() => {
+    if (hero && !outcome) setPauseRequest((n) => n + 1)
+    else if (!hero) onDone()
+  })
+  useEffect(() => {
+    const previousFocus = document.activeElement as HTMLElement | null
+    modal.current?.focus()
+    const previous = useAppUi.getState().modalBack
+    const handler = () => back()
+    useAppUi.getState().setModalBack(handler)
+    const key = (e: KeyboardEvent) => {
+      if (e.key === 'Tab') {
+        const root = modal.current
+        const active =
+          root?.querySelector('.stage-pause-overlay') ??
+          root?.querySelector('.stage-card-overlay') ??
+          root
+        const controls = active
+          ? Array.from(active.querySelectorAll<HTMLElement>('button:not(:disabled)'))
+          : []
+        const first = controls[0],
+          last = controls.at(-1)
+        if (
+          first &&
+          (!active?.contains(document.activeElement) ||
+            document.activeElement === root ||
+            (!e.shiftKey && document.activeElement === last))
+        ) {
+          e.preventDefault()
+          first.focus()
+        } else if (last && e.shiftKey && document.activeElement === first) {
+          e.preventDefault()
+          last.focus()
+        }
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        handler()
+      }
+    }
+    document.addEventListener('keydown', key)
+    return () => {
+      useAppUi.getState().setModalBack(previous)
+      document.removeEventListener('keydown', key)
+      previousFocus?.focus()
+    }
+  }, [])
 
   const finish = async () => {
     if (!outcome || sending || picked.length === 0) {
       return
     }
     setSending(true)
+    setReportError(null)
     await useRaisingStore.getState().reportMental(picked, outcome.kills, outcome.mentalLeft)
+    const state = useRaisingStore.getState()
+    if (state.error || !state.company?.mental?.done) {
+      setReportError(state.error ?? '결과를 저장하지 못했어요. 연결을 확인하고 다시 시도해주세요.')
+      setSending(false)
+      return
+    }
     // 무기가 떨어졌으면(346번) 결산 전에 보여 준다.
     const fallen = useRaisingStore.getState().company?.mental?.drop ?? null
     if (fallen) {
@@ -64,149 +127,163 @@ export function MentalWindow({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-40 bg-[#7ddcbe]" role="dialog" aria-label="멘탈 전투">
-      {hero && !outcome && (
-        <Battle
-          genre={mental.genre}
-          hero={hero}
-          onPick={(code) => setPicked((p) => [...p, code])}
-          onDone={setOutcome}
-          onQuit={onDone}
-        />
-      )}
-      {!started && (
-        <div className="flex h-full flex-col items-center justify-center gap-5 arcade-burst overflow-x-hidden overflow-y-auto px-4 py-8">
-          <div className="panel w-full max-w-[520px] px-5 py-4 text-center">
-            <span className="inline-block rounded-lg bg-[#ff4f6d] px-3 py-0.5 text-[13px] font-bold text-white">
-              이번 분기 이벤트
-            </span>
-            <h2 className="mt-2 font-game text-[24px] leading-tight">{mental.headline}</h2>
-            <p className="mt-1 text-[14px] text-muted">
-              장르: {genre.name} · {genre.hint}
-            </p>
-            <p className="mt-1 text-[14px] font-bold">출전: 사장냥 · 4분</p>
+    <div
+      ref={modal}
+      tabIndex={-1}
+      className="stage-layer"
+      role="dialog"
+      aria-modal="true"
+      aria-label="멘탈 전투"
+    >
+      <div className="stage-frame" style={{ backgroundImage: `url(${STAGE_ASSETS.street})` }}>
+        {hero && !outcome && (
+          <Battle
+            genre={mental.genre}
+            hero={hero}
+            cards={picked}
+            pauseRequest={pauseRequest}
+            onPick={(code) => setPicked((p) => [...p, code])}
+            onDone={setOutcome}
+            onQuit={onDone}
+          />
+        )}
+        {!started && (
+          <div className="stage-lobby" data-testid="mental-lobby">
+            <header className="stage-heading">
+              <span className="stage-eyebrow">
+                {company.year}년 차 · {company.quarter}분기
+              </span>
+              <h2>마음의 방어선</h2>
+              <p>{mental.headline}</p>
+            </header>
+            <div className="stage-hero-card">
+              <span className="stage-mode">{genre.name} · 제한 시간 4분</span>
+              <StagePortrait weapon={heroOf(company).weapon} />
+              <div className="stage-mini-wall">
+                <span>♡</span> 멘탈벽
+              </div>
+              <p>몰려오는 불안을 막아주세요</p>
+              <small>누른 방향으로 발사 · 손을 떼면 자동 조준</small>
+            </div>
+            <WeaponPicker weapons={weapons} busy={busy} />
+            {apiError && (
+              <p role="alert" className="stage-error">
+                {apiError}
+              </p>
+            )}
+            <div className="stage-enemies">
+              {Object.values(ENEMIES).map((e) => (
+                <span key={e.label}>
+                  <i style={{ background: e.fill }} />
+                  {e.label}
+                </span>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={busy}
+              className="stage-primary"
+              data-testid="mental-start"
+              onClick={() => {
+                sfx.stamp()
+                haptic.medium()
+                setHero(heroOf(company))
+              }}
+            >
+              멘탈 지키러 가기 <span aria-hidden="true">▶</span>
+            </button>
+            <button
+              type="button"
+              className="stage-skip"
+              data-testid="mental-skip"
+              onClick={() => {
+                sfx.tap()
+                onDone()
+              }}
+            >
+              이번 분기는 쉬어가기 · 강화 없음
+            </button>
           </div>
-          <WeaponPicker weapons={weapons} busy={busy} />
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => {
-              sfx.stamp()
-              haptic.medium()
-              setHero(heroOf(company))
-            }}
-            className="btn btn-primary animate-breathe min-h-16 w-full max-w-[320px] text-[24px]"
-            data-testid="mental-start"
-          >
-            출전! ▶
-          </button>
-          <ul className="flex flex-wrap justify-center gap-2 font-game text-[13px] text-ink">
-            {Object.values(ENEMIES).map((e) => (
-              <li
-                key={e.label}
-                className="rounded-full border-2 border-(--outline) bg-white px-3 py-1"
+        )}
+        {outcome && drop && (
+          <div className="stage-summary" data-testid="mental-drop" data-new={drop.isNew}>
+            <div className="stage-result-card">
+              <span
+                className={`inline-block rounded-lg px-3 py-0.5 text-[13px] font-bold ${GRADE_BADGE[drop.grade]}`}
               >
-                <span
-                  className="inline-block h-2.5 w-2.5 rounded-full"
-                  style={{ background: e.fill }}
-                />{' '}
-                {e.label}
-              </li>
-            ))}
-          </ul>
-          <button
-            type="button"
-            onClick={() => {
-              sfx.tap()
-              onDone()
-            }}
-            className="btn btn-ghost min-h-11 px-5 text-[14px]"
-            data-testid="mental-skip"
-          >
-            이번 분기는 건너뛰기 (강화 없음)
-          </button>
-        </div>
-      )}
-      {outcome && drop && (
-        <div
-          className="flex h-full flex-col items-center justify-center gap-5 arcade-burst overflow-hidden px-4"
-          data-testid="mental-drop"
-          data-new={drop.isNew}
-        >
-          <div className="panel w-full max-w-[420px] px-5 py-5 text-center">
-            <span
-              className={`inline-block rounded-lg px-3 py-0.5 text-[13px] font-bold ${GRADE_BADGE[drop.grade]}`}
-            >
-              {drop.gradeName}
-            </span>
-            <h2 className="mt-2 font-game text-[28px]">
-              {drop.isNew ? '새 무기를 주웠다!' : '무기를 주웠지만…'}
-            </h2>
-            <div className="mx-auto mt-3 w-[200px] animate-pop">
-              <GunSprite kind={drop.kind} grade={drop.grade} width={200} />
+                {drop.gradeName}
+              </span>
+              <h2 className="mt-2 font-game text-[28px]">
+                {drop.isNew ? '새 무기를 주웠다!' : '무기를 주웠지만…'}
+              </h2>
+              <div className="mx-auto mt-3 w-[200px] animate-pop">
+                <GunSprite kind={drop.kind} grade={drop.grade} width={200} />
+              </div>
+              <p className="mt-2 font-game text-[22px]">
+                {drop.gradeName} {drop.name}
+              </p>
+              <p className="mt-1 text-[13px] text-muted">
+                {drop.isNew
+                  ? '출전 전에 무기를 골라 들 수 있다. 등급이 높을수록 세고 빠르다.'
+                  : '이미 가진 것이라 그대로 두었다. 적을 더 많이 물리치면 좋은 무기가 잦다.'}
+              </p>
             </div>
-            <p className="mt-2 font-game text-[22px]">
-              {drop.gradeName} {drop.name}
-            </p>
-            <p className="mt-1 text-[13px] text-muted">
-              {drop.isNew
-                ? '출전 전에 무기를 골라 들 수 있다. 등급이 높을수록 세고 빠르다.'
-                : '이미 가진 것이라 그대로 두었다. 적을 더 많이 물리치면 좋은 무기가 잦다.'}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              sfx.stamp()
-              haptic.medium()
-              onDone()
-            }}
-            className="btn btn-gold min-h-14 px-10 text-[18px]"
-            data-testid="mental-drop-done"
-          >
-            결산으로 ▶
-          </button>
-        </div>
-      )}
-      {outcome && !drop && (
-        <div className="flex h-full flex-col items-center justify-center gap-5 arcade-burst overflow-hidden px-4">
-          <div
-            className="panel w-full max-w-[520px] px-5 py-5 text-center"
-            data-testid="mental-result"
-          >
-            <span
-              className={`inline-block rounded-lg px-3 py-0.5 text-[13px] font-bold text-white ${outcome.win ? 'bg-teal' : 'bg-[#ff4f6d]'}`}
+            <button
+              type="button"
+              onClick={() => {
+                sfx.stamp()
+                haptic.medium()
+                onDone()
+              }}
+              className="stage-primary"
+              data-testid="mental-drop-done"
             >
-              {outcome.win ? '분기 마감' : '멘탈 붕괴'}
-            </span>
-            <h2 className="mt-2 font-game text-[28px]">
-              {outcome.win ? '멘탈 지켜냈다!' : '멘탈이 무너졌다…'}
-            </h2>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <Stat label="물리친 적" value={outcome.kills} />
-              <Stat label="남은 멘탈" value={outcome.mentalLeft} />
-              <Stat label="레벨" value={picked.length} />
-            </div>
-            <p className="mt-3 text-[13px] text-muted">
-              얼마나 세지는지는 결산에서 알려준다: 적을 많이 물리치고 멘탈을 많이 남길수록 이번 분기
-              직원들이 더 벌고 손이 덜 흔들린다.
-            </p>
+              결산으로 ▶
+            </button>
           </div>
-          <button
-            type="button"
-            disabled={sending}
-            onClick={() => {
-              sfx.stamp()
-              haptic.medium()
-              void finish()
-            }}
-            className="btn btn-gold min-h-14 px-10 text-[18px]"
-            data-testid="mental-done"
-          >
-            결산으로 ▶
-          </button>
-        </div>
-      )}
+        )}
+        {outcome && !drop && (
+          <div className="stage-summary">
+            <div className="stage-result-card" data-testid="mental-result">
+              <span
+                className={`inline-block rounded-lg px-3 py-0.5 text-[13px] font-bold text-white ${outcome.win ? 'bg-teal' : 'bg-[#ff4f6d]'}`}
+              >
+                {outcome.win ? '분기 마감' : '멘탈 붕괴'}
+              </span>
+              <h2 className="mt-2 font-game text-[28px]">
+                {outcome.win ? '멘탈 지켜냈다!' : '멘탈이 무너졌다…'}
+              </h2>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <Stat label="물리친 적" value={outcome.kills} />
+                <Stat label="남은 멘탈" value={outcome.mentalLeft} />
+                <Stat label="레벨" value={picked.length} />
+              </div>
+              <p className="mt-3 text-[13px] text-muted">
+                얼마나 세지는지는 결산에서 알려준다: 적을 많이 물리치고 멘탈을 많이 남길수록 이번
+                분기 직원들이 더 벌고 손이 덜 흔들린다.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={sending || busy}
+              onClick={() => {
+                sfx.stamp()
+                haptic.medium()
+                void finish()
+              }}
+              className="stage-primary"
+              data-testid="mental-done"
+            >
+              {sending ? '저장 중…' : reportError ? '다시 저장하고 계속' : '결산으로 ▶'}
+            </button>
+            {reportError && (
+              <p className="stage-error" role="alert">
+                {reportError}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
     </div>,
     document.body,
   )
@@ -215,11 +292,11 @@ export function MentalWindow({
 /** 무기 고르기 (decisions.md 346번): 가진 무기를 늘어놓고 누르면 든다. 든 무기는 테두리가 진하다. */
 function WeaponPicker({ weapons, busy }: { weapons: Weapon[]; busy: boolean }) {
   return (
-    <div className="panel w-full max-w-[520px] px-4 py-3" data-testid="weapon-picker">
+    <div className="stage-weapons" data-testid="weapon-picker">
       <p className="font-game text-[15px]">
         무기 <span className="text-[12px] text-muted">· 적을 많이 물리치면 새 무기가 떨어진다</span>
       </p>
-      <ul className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+      <ul className="stage-weapon-list">
         {weapons.map((w) => (
           <li key={`${w.kind}-${w.grade}`}>
             <button
@@ -231,11 +308,7 @@ function WeaponPicker({ weapons, busy }: { weapons: Weapon[]; busy: boolean }) {
                 haptic.light()
                 void useRaisingStore.getState().equipWeapon(w.kind, w.grade)
               }}
-              className={`flex w-full flex-col items-center gap-1 rounded-xl border-[3px] px-2 py-2 text-center ${
-                w.equipped
-                  ? 'border-(--outline) bg-[#fff6c9] shadow-[0_3px_0_var(--outline)]'
-                  : 'border-ink/20 bg-white active:translate-y-0.5'
-              }`}
+              className={`stage-weapon ${w.equipped ? 'is-equipped' : ''}`}
               data-testid="weapon"
               data-kind={w.kind}
               data-grade={w.grade}
@@ -250,8 +323,8 @@ function WeaponPicker({ weapons, busy }: { weapons: Weapon[]; busy: boolean }) {
                 </span>
               </span>
               <span className="text-[11px] text-muted">
-                공격 {w.damagePercent / 100} · 연사 {(1000 / w.fireMs).toFixed(1)}/초 · 갈래{' '}
-                {w.streams}
+                {w.equipped ? '장착 중 · ' : ''}공격 ×{w.damagePercent / 100} ·{' '}
+                {(1000 / w.fireMs).toFixed(1)}발/초
               </span>
             </button>
           </li>
@@ -263,7 +336,7 @@ function WeaponPicker({ weapons, busy }: { weapons: Weapon[]; busy: boolean }) {
 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
-    <div className="rounded-xl border-2 border-(--outline) bg-[#fff6c9] px-2 py-2">
+    <div className="stage-stat">
       <span className="block text-[12px] text-muted">{label}</span>
       <b className="block font-game text-[26px] font-normal">{value}</b>
     </div>
@@ -289,6 +362,13 @@ function CardPick({
 }) {
   const [cards] = useState(() => pickCards(loadout, mentalFull))
   const [chosen, setChosen] = useState<MentalCard | null>(null)
+  const pickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  useEffect(
+    () => () => {
+      if (pickTimer.current) clearTimeout(pickTimer.current)
+    },
+    [],
+  )
   useEffect(() => {
     sfx.levelUp()
     haptic.medium()
@@ -300,15 +380,10 @@ function CardPick({
     }
   }, [cards])
   return (
-    <div
-      className="flex w-full max-w-[620px] flex-col items-center gap-3"
-      data-testid="mental-cards"
-    >
-      <h3 className="animate-mental-title text-center font-game text-[40px] text-white [-webkit-text-stroke:3px_#2b2340] [paint-order:stroke] [text-shadow:0_4px_0_#2b2340]">
-        {title}
-      </h3>
+    <div className="stage-cards" data-testid="mental-cards">
+      <h3 className="stage-card-title">{title}</h3>
       <p className="font-game text-[16px] text-ink">{sub}</p>
-      <div className="grid w-full gap-3 sm:grid-cols-3">
+      <div className="stage-card-options">
         {cards.map((c, i) => (
           <button
             key={c.code}
@@ -323,9 +398,12 @@ function CardPick({
               sfx.cash()
               haptic.heavy()
               useFx.getState().burstAt(ev.currentTarget, 'sparks')
-              setTimeout(() => onPick(c.code), 380)
+              pickTimer.current = setTimeout(
+                () => onPick(c.code),
+                matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 240,
+              )
             }}
-            className={`panel flex items-center gap-3 px-4 py-3 text-left sm:flex-col sm:items-center sm:text-center ${
+            className={`stage-card-option ${
               chosen === c.code
                 ? 'animate-mental-card-pick'
                 : chosen
@@ -333,20 +411,14 @@ function CardPick({
                   : 'animate-mental-card-in'
             }`}
           >
-            <span
-              className="grid h-14 w-14 shrink-0 place-items-center rounded-full border-[3px] border-[#2b2340] text-[26px]"
-              style={{ background: c.color }}
-              aria-hidden="true"
-            >
+            <span className="stage-card-icon" style={{ background: c.color }} aria-hidden="true">
               {c.icon}
             </span>
             <span className="min-w-0 flex-1">
               <span className="block font-game text-[20px]">{c.name}</span>
               <span className="block text-[13px] text-muted">{c.desc}</span>
             </span>
-            <span className="shrink-0 rounded-full border-2 border-(--outline) bg-[#fff3c4] px-3 py-0.5 font-game text-[14px]">
-              {c.effect}
-            </span>
+            <span className="stage-card-effect">{c.effect}</span>
           </button>
         ))}
       </div>
@@ -361,12 +433,16 @@ function CardPick({
 function Battle({
   genre,
   hero,
+  cards,
+  pauseRequest,
   onPick,
   onDone,
   onQuit,
 }: {
   genre: Mental['genre']
   hero: Hero
+  cards: MentalCard[]
+  pauseRequest: number
   onPick: (code: MentalCard) => void
   onDone: (outcome: Outcome) => void
   /** 싸우다 나간다 (345번): 이번 분기 강화 없이 결산으로. */
@@ -379,46 +455,87 @@ function Battle({
   const [banner, setBanner] = useState<{ text: string; color: string; id: number } | null>(null)
   const [hurt, setHurt] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [attempt, setAttempt] = useState(0)
   const [levelUp, setLevelUp] = useState<number | null>(null)
   const [asking, setAsking] = useState(false)
 
+  const togglePause = useEffectEvent(() => {
+    handle.current?.setPaused(!asking)
+    setAsking(!asking)
+  })
   useEffect(() => {
+    if (pauseRequest > 0) togglePause()
+  }, [pauseRequest])
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 재시도 횟수가 바뀌면 실패한 전장 로더를 새로 만든다.
+  useEffect(() => {
+    setLoading(true)
+    setLoadError(null)
     const el = host.current
     if (!el) {
       return
     }
     let cancelled = false
     let bannerId = 0
-    void import('./battle').then(({ startBattle }) => {
-      if (cancelled) {
-        return
-      }
-      setLoading(false)
-      handle.current = startBattle(el, {
-        genre,
-        hero,
-        loadout: loadout.current,
-        onHud: setHud,
-        onBanner: (text, color) => setBanner({ text, color, id: ++bannerId }),
-        onHurt: () => {
-          setHurt(true)
-          haptic.light()
-          setTimeout(() => setHurt(false), 80)
-        },
-        onLevelUp: setLevelUp,
-        onDone,
+    void import('./battle')
+      .then(({ startBattle }) => {
+        if (cancelled) {
+          return
+        }
+        handle.current = startBattle(el, {
+          genre,
+          hero,
+          loadout: loadout.current,
+          onReady: () => setLoading(false),
+          onError: (message) => {
+            setLoading(false)
+            setLoadError(message)
+          },
+          onHud: setHud,
+          onBanner: (text, color) => setBanner({ text, color, id: ++bannerId }),
+          onHurt: () => {
+            setHurt(true)
+            haptic.light()
+            setTimeout(() => setHurt(false), 80)
+          },
+          onLevelUp: setLevelUp,
+          onDone,
+        })
       })
-    })
+      .catch(() => {
+        if (!cancelled) {
+          setLoading(false)
+          setLoadError('전장을 불러오지 못했어요. 다시 시도해주세요.')
+        }
+      })
     return () => {
       cancelled = true
       handle.current?.stop()
       handle.current = null
     }
-  }, [genre, hero, onDone])
+  }, [genre, hero, onDone, attempt])
 
   return (
     <>
-      <div ref={host} className="absolute inset-0" />
+      <div ref={host} className="absolute inset-0" data-testid="battle-canvas" />
+      {loadError && (
+        <div className="stage-overlay">
+          <div className="stage-result-card">
+            <p role="alert">{loadError}</p>
+            <button
+              type="button"
+              className="stage-primary"
+              onClick={() => setAttempt((n) => n + 1)}
+            >
+              다시 불러오기
+            </button>
+            <button type="button" className="stage-skip" onClick={onQuit}>
+              이번 분기는 쉬어가기
+            </button>
+          </div>
+        </div>
+      )}
       {loading && (
         <p className="absolute inset-0 grid place-items-center font-game text-[18px] text-ink">
           전장을 여는 중…
@@ -428,54 +545,84 @@ function Battle({
         className="pointer-events-none absolute inset-0 transition-shadow"
         style={{ boxShadow: hurt ? 'inset 0 0 120px 40px rgba(255,79,109,0.55)' : 'none' }}
       />
-      {hud && (
-        <div className="pointer-events-none absolute top-0 right-0 left-0 flex flex-col gap-1.5 px-3 pt-[calc(env(safe-area-inset-top)+10px)] font-game text-[#2b2340]">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2 rounded-full border-[3px] border-[#2b2340] bg-white px-3 py-1 text-[14px] font-bold shadow-[0_3px_0_#2b2340]">
-              멘탈
-              <span className="block h-3.5 w-[min(160px,26vw)] overflow-hidden rounded-full border-2 border-[#2b2340] bg-[#f3eadb]">
-                <span
-                  className="block h-full bg-gradient-to-r from-[#ff7aa8] to-[#ffd84d] transition-[width]"
-                  style={{ width: `${(hud.mental / hud.maxMental) * 100}%` }}
-                />
+      {hud && !loadError && (
+        <>
+          <div className="battle-hud" data-testid="battle-hud">
+            <div className="battle-hud-top">
+              <div className="battle-mental">
+                <span aria-hidden="true">♥</span>
+                <b>멘탈</b>
+                <div
+                  className="battle-health"
+                  role="progressbar"
+                  aria-label="멘탈벽 내구도"
+                  aria-valuenow={hud.mental}
+                  aria-valuemin={0}
+                  aria-valuemax={hud.maxMental}
+                >
+                  <i style={{ width: `${(hud.mental / hud.maxMental) * 100}%` }} />
+                  <strong>
+                    {hud.mental} / {hud.maxMental}
+                  </strong>
+                </div>
+              </div>
+              <time data-testid="battle-timer">
+                {Math.floor(hud.secondsLeft / 60)}:{String(hud.secondsLeft % 60).padStart(2, '0')}
+              </time>
+              <button
+                type="button"
+                aria-label="전투 일시정지"
+                className="battle-pause"
+                data-testid="mental-quit"
+                onClick={() => {
+                  sfx.tap()
+                  handle.current?.setPaused(true)
+                  setAsking(true)
+                }}
+              >
+                Ⅱ
+              </button>
+            </div>
+            <div className="battle-hud-bottom">
+              <b>Lv. {hud.level}</b>
+              <div
+                className="battle-xp"
+                role="progressbar"
+                aria-label="다음 레벨 경험치"
+                aria-valuenow={Math.round(hud.xp * 100)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                <i style={{ width: `${hud.xp * 100}%` }} />
+              </div>
+              <span>
+                처치 <b>{hud.kills}</b>
               </span>
-              {hud.mental}
             </div>
-            <div className="mx-auto rounded-full border-[3px] border-[#2b2340] bg-white px-3 py-1 text-[14px] font-bold shadow-[0_3px_0_#2b2340]">
-              {Math.floor(hud.secondsLeft / 60)}:{String(hud.secondsLeft % 60).padStart(2, '0')}
-            </div>
-            <div className="rounded-full border-[3px] border-[#2b2340] bg-white px-3 py-1 text-[14px] font-bold shadow-[0_3px_0_#2b2340]">
-              적 <span className="text-[#ff4f6d]">{hud.kills}</span>
-            </div>
-            <button
-              type="button"
-              aria-label="전투 나가기"
-              onClick={() => {
-                sfx.tap()
-                handle.current?.setPaused(true)
-                setAsking(true)
-              }}
-              className="pointer-events-auto grid h-9 w-9 place-items-center rounded-full border-[3px] border-[#2b2340] bg-white text-[16px] font-bold shadow-[0_3px_0_#2b2340] active:translate-y-0.5 active:shadow-none"
-              data-testid="mental-quit"
-            >
-              ✕
-            </button>
           </div>
-          <div className="flex items-center gap-2 self-start rounded-full border-[3px] border-[#2b2340] bg-white px-3 py-1 text-[13px] font-bold shadow-[0_3px_0_#2b2340]">
-            Lv.{hud.level}
-            <span className="block h-2.5 w-[min(200px,40vw)] overflow-hidden rounded-full border-2 border-[#2b2340] bg-[#e8f3ff]">
-              <span
-                className="block h-full bg-[#6aa8ff] transition-[width]"
-                style={{ width: `${hud.xp * 100}%` }}
-              />
-            </span>
+          <span className="battle-wall-label">멘탈벽</span>
+          <div className="battle-footer">
+            <span>누른 방향으로 발사</span>
+            <div>
+              {CARDS.filter((c) => cards.includes(c.code)).map((c) => (
+                <span
+                  key={c.code}
+                  title={`${c.name} ${cards.filter((code) => code === c.code).length}장`}
+                  role="img"
+                  aria-label={`${c.name} ${cards.filter((code) => code === c.code).length}장`}
+                >
+                  {c.icon}
+                  <small>{cards.filter((code) => code === c.code).length}</small>
+                </span>
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
       {banner && (
         <p
           key={banner.id}
-          className="animate-mental-banner pointer-events-none absolute top-[22%] left-1/2 whitespace-nowrap rounded-2xl border-4 border-[#2b2340] px-6 py-2 font-game text-[clamp(22px,4.4vw,36px)] text-white [text-shadow:0_3px_0_#2b2340] shadow-[0_6px_0_#2b2340]"
+          className="stage-banner animate-mental-banner"
           style={{ background: banner.color }}
           aria-live="polite"
         >
@@ -484,14 +631,14 @@ function Battle({
       )}
       {asking && (
         <div
-          className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-[#2b2340]/55 px-6"
+          className="stage-overlay stage-pause-overlay"
           role="alertdialog"
           aria-modal="true"
           aria-label="전투 나가기"
           data-testid="mental-quit-ask"
         >
-          <div className="panel w-full max-w-[360px] px-5 py-5 text-center">
-            <h3 className="font-game text-[24px]">그만 싸울까요?</h3>
+          <div className="stage-result-card">
+            <h3 className="font-game text-[24px]">잠깐 쉬어가요</h3>
             <p className="mt-1 text-[14px] text-muted">
               나가면 이번 분기는 강화 없이 결산으로 갑니다. 물리친 적과 고른 카드는 남지 않습니다.
             </p>
@@ -504,10 +651,10 @@ function Battle({
                   setAsking(false)
                   handle.current?.setPaused(false)
                 }}
-                className="btn btn-primary min-h-14 text-[18px]"
+                className="stage-primary"
                 data-testid="mental-quit-no"
               >
-                계속 싸운다 ▶
+                계속 지키기 ▶
               </button>
               <button
                 type="button"
@@ -515,23 +662,20 @@ function Battle({
                   sfx.tap()
                   onQuit()
                 }}
-                className="btn btn-ghost min-h-12 text-[15px]"
+                className="stage-skip"
                 data-testid="mental-quit-yes"
               >
-                나간다 (강화 없음)
+                전투 마치기 · 강화 없음
               </button>
             </div>
           </div>
         </div>
       )}
       {levelUp !== null && hud && (
-        <div
-          className="absolute inset-0 flex flex-col items-center justify-center gap-4 arcade-burst-soft px-4"
-          data-testid="mental-levelup"
-        >
+        <div className="stage-overlay stage-card-overlay" data-testid="mental-levelup">
           <CardPick
             key={levelUp}
-            title={levelUp === 1 ? '멘탈 카드' : `LEVEL UP! Lv.${levelUp}`}
+            title={levelUp === 1 ? '오늘의 마음가짐' : `한층 더 단단하게 · Lv. ${levelUp}`}
             sub={
               levelUp === 1
                 ? '한 장을 고르세요. 레벨이 오를 때마다 또 고릅니다'
