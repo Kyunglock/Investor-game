@@ -117,13 +117,13 @@ type Remark = NonNullable<Company['invest']>['remarks'][number]
 
 /** 한마디가 말하는 쪽. 같은 쪽끼리 묶는다 (decisions.md 242번). */
 export const OPINIONS: Record<Remark['read'], { label: string; tone: string }> = {
-  UP: { label: '사자', tone: 'border-up text-up' },
-  DOWN: { label: '팔자', tone: 'border-down text-down' },
+  UP: { label: '투자하자', tone: 'border-up text-up' },
+  DOWN: { label: '매도하자', tone: 'border-down text-down' },
   NEUTRAL: { label: '모르겠다', tone: 'border-line text-muted' },
 }
 
 /**
- * 투자 회의 한마디를 같은 의견(사자·팔자·모르겠다)끼리 모은다 (242번). 사람이 많은 쪽이 먼저, 같으면 사자 → 팔자 → 모르겠다. 아무도 없는 의견은 뺀다.
+ * 투자 회의 한마디를 같은 의견(투자하자·매도하자·모르겠다)끼리 모은다 (242·378번). 사람이 많은 쪽이 먼저, 같으면 투자하자 → 매도하자 → 모르겠다. 아무도 없는 의견은 뺀다.
  * 묶음 안의 순서는 자리 순서 그대로다.
  */
 export function groupRemarks(remarks: Remark[]): { read: Remark['read']; remarks: Remark[] }[] {
@@ -155,7 +155,9 @@ export function hindsightOf(invest: NonNullable<Company['invest']>): string[] {
   if (up !== down) {
     const said = up > down ? 'UP' : 'DOWN'
     const ok = (said === 'UP') === outcome.up
-    lines.push(`직원 다수결(${said === 'UP' ? '사자' : '팔자'})은 ${ok ? '맞았다' : '틀렸다'}.`)
+    lines.push(
+      `직원 다수결(${said === 'UP' ? '투자하자' : '매도하자'})은 ${ok ? '맞았다' : '틀렸다'}.`,
+    )
   } else if (invest.remarks.length > 0) {
     lines.push('직원 의견은 반반이었다.')
   }

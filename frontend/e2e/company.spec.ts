@@ -460,12 +460,18 @@ test('종목 회의를 열면 먼저 매수파와 매도파가 토론하며 맞�
   await macro.getByRole('button', { name: '종목 회의 열기 →' }).click()
   const meeting = page.getByRole('dialog', { name: '종목 회의' })
   await expect(meeting).toBeVisible()
-  // 첫 화면은 종목 분석이다 (368번): 기사와 의견만 보이고, 토론과 결정 버튼은 결정 화면에 있다.
+  // 첫 화면은 종목 분석이다 (368번): 기사만 보이고, 직원 의견(378번)·토론·결정 버튼은 결정 화면에 있다.
   await expect(meeting.getByTestId('invest-article')).toBeVisible()
   await expect(meeting.getByTestId('team-clash')).toHaveCount(0)
+  await expect(meeting.getByTestId('remarks')).toHaveCount(0)
   await expect(meeting.getByRole('button', { name: '산다', exact: true })).toHaveCount(0)
   await meeting.getByTestId('invest-to-decide').click()
   await expect(meeting.getByTestId('invest-article')).toHaveCount(0)
+  // 직원 의견은 결정 화면에 있다 (378번): 투자하자·매도하자, 명수는 없다.
+  await expect(meeting.getByTestId('remarks')).toBeVisible()
+  await expect(meeting.getByTestId('opinion').first().getByRole('heading')).toHaveText(
+    /^(투자하자|매도하자|모르겠다)$/,
+  )
   // 고집 표시와 크게 산다·판다는 뺐다.
   await expect(meeting.getByTestId('stubborn')).toHaveCount(0)
   await expect(meeting.getByRole('button', { name: /크게/ })).toHaveCount(0)

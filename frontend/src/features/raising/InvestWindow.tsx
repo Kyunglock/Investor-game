@@ -247,64 +247,6 @@ export function InvestWindow({
                 </p>
               </article>
 
-              {invest.remarks.length > 0 && !outcome && (
-                // 같은 의견끼리 뭉친다 (242·246번): 의견마다 칸 하나, 그 의견을 낸 사람들의 이름(고집 표시)을 한 줄로 묶고, 한마디는 그 칸에서
-                // 안목이 가장 높은 사람이 대표로 한 번만 한다. 사람이 많은 의견이 먼저.
-                <div className="mt-2 grid gap-2" data-testid="remarks">
-                  {groupRemarks(invest.remarks).map((g, i) => {
-                    // 팀장만 이름을 보이고 나머지는 "외 N명" (293번).
-                    const { shown, voice, others } = leadersOf(g.remarks, employees)
-                    return (
-                      <section
-                        key={g.read}
-                        className={`animate-reveal rounded border-l-4 bg-line-soft/40 py-1.5 pr-2 pl-2.5 ${OPINIONS[g.read].tone}`}
-                        // 의견 칸이 차례로 나온다.
-                        style={{ animationDelay: `${250 + i * 300}ms` }}
-                        aria-label={`${OPINIONS[g.read].label} ${g.remarks.length}명`}
-                        data-testid="opinion"
-                        data-read={g.read}
-                      >
-                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                          <h4 className="font-bold text-[14px]">
-                            {OPINIONS[g.read].label}{' '}
-                            <span className="font-mono-num text-[13px]">
-                              · {g.remarks.length}명
-                            </span>
-                          </h4>
-                          <ul className="flex flex-wrap items-baseline gap-1 text-ink">
-                            {shown.map((r) => (
-                              <li
-                                key={r.employeeId}
-                                className="flex items-baseline gap-1 rounded bg-card px-1.5 text-[13px]"
-                              >
-                                <span className="text-[11px] text-muted">팀장</span>
-                                <b>{r.name}</b>
-                                {/* 팀장 옆 이름 옆에 등급 (decisions.md 355번) */}
-                                <span
-                                  className="font-mono-num text-[11px] text-muted"
-                                  data-testid="leader-grade"
-                                >
-                                  {employees.find((e) => e.id === r.employeeId)?.overallGrade}
-                                </span>
-                              </li>
-                            ))}
-                            {others > 0 && (
-                              <li className="text-[12px] text-muted">외 {others}명</li>
-                            )}
-                          </ul>
-                        </div>
-                        <p className="mt-1 text-[14px] text-ink" data-testid="opinion-voice">
-                          “{voice.text}”{' '}
-                          <span className="whitespace-nowrap text-[12px] text-muted">
-                            — {voice.name}
-                          </span>
-                        </p>
-                      </section>
-                    )
-                  })}
-                </div>
-              )}
-
               {!outcome && (
                 <p className="mt-2 text-[12px] text-muted" data-testid="invest-frozen">
                   회의에서 나온 말은 배치를 다시 바꿔도 그대로입니다.
@@ -339,6 +281,59 @@ export function InvestWindow({
               <p className="mt-1 text-[13px] text-muted" data-testid="invest-context">
                 {invest.stockName} · {invest.title}
               </p>
+
+              {invest.remarks.length > 0 && !outcome && (
+                // 직원 의견은 투자 결정 화면에서 고르기 바로 앞에 본다 (378번). 같은 의견끼리 뭉친다 (242·246번): 의견마다 칸 하나, 그 의견을 낸 사람들의 이름(고집 표시)을 한 줄로 묶고, 한마디는 그 칸에서
+                // 안목이 가장 높은 사람이 대표로 한 번만 한다. 사람이 많은 의견이 먼저.
+                <div className="mt-2 grid gap-2" data-testid="remarks">
+                  {groupRemarks(invest.remarks).map((g, i) => {
+                    // 팀장만 이름을 보이고 나머지는 "외 N명" (293번).
+                    const { shown, voice, others } = leadersOf(g.remarks, employees)
+                    return (
+                      <section
+                        key={g.read}
+                        className={`animate-reveal rounded border-l-4 bg-line-soft/40 py-1.5 pr-2 pl-2.5 ${OPINIONS[g.read].tone}`}
+                        // 의견 칸이 차례로 나온다.
+                        style={{ animationDelay: `${250 + i * 300}ms` }}
+                        aria-label={OPINIONS[g.read].label}
+                        data-testid="opinion"
+                        data-read={g.read}
+                      >
+                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                          <h4 className="font-bold text-[14px]">{OPINIONS[g.read].label}</h4>
+                          <ul className="flex flex-wrap items-baseline gap-1 text-ink">
+                            {shown.map((r) => (
+                              <li
+                                key={r.employeeId}
+                                className="flex items-baseline gap-1 rounded bg-card px-1.5 text-[13px]"
+                              >
+                                <span className="text-[11px] text-muted">팀장</span>
+                                <b>{r.name}</b>
+                                {/* 팀장 옆 이름 옆에 등급 (decisions.md 355번) */}
+                                <span
+                                  className="font-mono-num text-[11px] text-muted"
+                                  data-testid="leader-grade"
+                                >
+                                  {employees.find((e) => e.id === r.employeeId)?.overallGrade}
+                                </span>
+                              </li>
+                            ))}
+                            {others > 0 && (
+                              <li className="text-[12px] text-muted">외 {others}명</li>
+                            )}
+                          </ul>
+                        </div>
+                        <p className="mt-1 text-[14px] text-ink" data-testid="opinion-voice">
+                          “{voice.text}”{' '}
+                          <span className="whitespace-nowrap text-[12px] text-muted">
+                            — {voice.name}
+                          </span>
+                        </p>
+                      </section>
+                    )
+                  })}
+                </div>
+              )}
 
               {proposal && (
                 // 정해진 결정 (290번): 맡겼으면 토론과 결판, 아니면 사장 결정 도장. 그 뒤에 막판 제안이 뜬다.
@@ -467,7 +462,7 @@ export function InvestWindow({
                     >
                       직원들은{' '}
                       <b className={invest.teamCall === 'BUY' ? 'text-up' : 'text-down'}>
-                        {invest.teamCall === 'BUY' ? '사자' : '팔자'}
+                        {invest.teamCall === 'BUY' ? '투자하자' : '매도하자'}
                       </b>{' '}
                       쪽으로 기울었다. 이제 <b>사장님 차례</b>입니다.
                     </p>

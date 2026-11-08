@@ -102,7 +102,7 @@ describe('같은 의견끼리 모은 한마디 (decisions.md 242번)', () => {
   const remark = (employeeId: number, read: Remark['read']) =>
     ({ employeeId, name: `직원${employeeId}`, desk: 'day', read, text: '' }) as Remark
 
-  it('사람이 많은 의견이 먼저이고, 같으면 사자 → 팔자 → 모르겠다, 아무도 없는 의견은 없다', () => {
+  it('사람이 많은 의견이 먼저이고, 같으면 투자하자 → 매도하자 → 모르겠다, 아무도 없는 의견은 없다', () => {
     const groups = groupRemarks([
       remark(1, 'UP'),
       remark(2, 'DOWN'),
@@ -134,7 +134,7 @@ describe('회의 뒤 돌아보기 (decisions.md 260번)', () => {
     } as never
     expect(hindsightOf(invest)).toEqual([
       '지켜봤다. 샀으면 벌었을 돈 +12b.',
-      '직원 다수결(사자)은 맞았다.',
+      '직원 다수결(투자하자)은 맞았다.',
       '형광펜은 결정적 문장에 그었다.',
     ])
     const wrong = {
@@ -143,7 +143,7 @@ describe('회의 뒤 돌아보기 (decisions.md 260번)', () => {
       outcome: { up: true, decisive: 1, missed: null },
     } as never
     expect(hindsightOf(wrong)).toEqual([
-      '직원 다수결(팔자)은 틀렸다.',
+      '직원 다수결(매도하자)은 틀렸다.',
       '형광펜은 곁가지에 그었다. 이번엔 빗나갔다.',
     ])
   })
