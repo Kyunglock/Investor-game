@@ -1,4 +1,6 @@
+import './company-scenes.css'
 import type { Company } from '@web/api/client'
+import { money } from '@web/features/game/labels'
 import { pnlLabel } from '@web/features/raising/board'
 import { officeName, titleOf } from '@web/features/raising/office'
 import { Ledger, PHASES } from '@web/features/raising/YearEnd'
@@ -18,8 +20,39 @@ export function RecordScene({ company }: { company: Company }) {
     { id: 'timeline', label: '연표' },
   ]
   return (
-    <div data-testid="record-scene">
-      <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4" role="tablist">
+    <div className="company-scene record-scene" data-testid="record-scene">
+      <header className="scene-cover">
+        <p className="scene-eyebrow">COMPANY ARCHIVE</p>
+        <h1>우리 회사의 발자취</h1>
+        <p>함께 성장한 시간, 오래 기억할 순간들.</p>
+        <span className="scene-cover-mark" aria-hidden="true">
+          ✧
+        </span>
+      </header>
+      <div className="scene-stats">
+        <div>
+          <span>걸어온 시간</span>
+          <strong>
+            {company.year}
+            <small>년 차</small>
+          </strong>
+        </div>
+        <div>
+          <span>달성 업적</span>
+          <strong>
+            {h.achievements.filter((a) => a.year != null).length}
+            <small>개</small>
+          </strong>
+        </div>
+        <div>
+          <span>남긴 기록</span>
+          <strong>
+            {h.timeline.length}
+            <small>건</small>
+          </strong>
+        </div>
+      </div>
+      <div className="scene-tabs no-scrollbar" role="tablist">
         {parts.map((p) => (
           <button
             key={p.id}
@@ -43,7 +76,17 @@ export function RecordScene({ company }: { company: Company }) {
       <div className="mt-3">
         {part === 'settlement' &&
           (company.lastSettlement ? (
-            <section data-testid="settlement">
+            <section className="record-settlement" data-testid="settlement">
+              <div className="record-balance">
+                <span>지난해 연말 자본</span>
+                <strong>{money(company.lastSettlement.capitalAfter)}</strong>
+                <small>
+                  연간 증감{' '}
+                  {pnlLabel(
+                    company.lastSettlement.capitalAfter - company.lastSettlement.capitalBefore,
+                  )}
+                </small>
+              </div>
               <h3 className="font-pen text-[22px] text-[#e08a00]">
                 {company.lastSettlement.year}년 차 결산 · {PHASES[company.lastSettlement.phase]}
               </h3>
@@ -61,7 +104,7 @@ export function RecordScene({ company }: { company: Company }) {
             <p className="text-[13px] text-ink/60">아직 결산한 해가 없습니다.</p>
           ))}
         {part === 'achievements' && (
-          <ul className="grid grid-cols-2 gap-1.5">
+          <ul className="record-achievements grid grid-cols-2 gap-2">
             {h.achievements.map((a) => (
               <li
                 key={a.code}
@@ -72,7 +115,9 @@ export function RecordScene({ company }: { company: Company }) {
                 data-open={a.year != null}
               >
                 <b className="block text-[13px]">
-                  {a.year != null ? (a.fail ? '🙃 ' : '🏆 ') : ''}
+                  <span className="record-medal" aria-hidden="true">
+                    {a.year != null ? (a.fail ? '☂' : '★') : '◇'}
+                  </span>
                   {a.name}
                   {a.fail && (
                     // 실패 업적 (decisions.md 351번): 망한 판도 즐겁게, 위로 보상 1장.
@@ -95,7 +140,7 @@ export function RecordScene({ company }: { company: Company }) {
               <p className="mb-1 text-[11px] text-ink/60">
                 데스크 운용과 종목 회의로 번 돈을 모두 더한 누적
               </p>
-              <ol className="grid gap-1" data-testid="hall">
+              <ol className="record-hall grid gap-2" data-testid="hall">
                 {h.hall.map((x, i) => (
                   <li
                     key={`${x.name}-${x.from}`}
@@ -118,7 +163,7 @@ export function RecordScene({ company }: { company: Company }) {
             </>
           ))}
         {part === 'timeline' && (
-          <ol className="grid gap-1 text-[13px]" data-testid="timeline">
+          <ol className="record-timeline grid gap-2 text-[13px]" data-testid="timeline">
             {h.timeline
               // 같은 해에 같은 일이 여럿일 수 있고 연표는 쌓이기만 하므로 자리 번호가 곧 열쇠다.
               .map((e, at) => ({ ...e, at }))

@@ -24,10 +24,10 @@ export const CARDS: readonly Card[] = [
   },
   {
     code: 'split',
-    name: '분산 투자',
-    desc: '한곳에 몰지 않는다',
-    effect: '탄 갈래 +1',
-    icon: '🔱',
+    name: '총알 강화',
+    desc: '한 발에 힘을 응축한다',
+    effect: '탄 위력 +40% · 크기 +20%',
+    icon: '💥',
     color: '#7be0c3',
   },
   {
@@ -64,14 +64,14 @@ export const CARDS: readonly Card[] = [
   },
 ]
 
-/** 탄 갈래의 최대 수. 분산 투자를 이만큼 쌓으면 더는 나오지 않는다. */
-export const MAX_STREAMS = 3
+/** 총알 강화는 세 단계까지 쌓인다. */
+export const MAX_BULLET_POWER = 3
 
 /** 한 판의 수치. 카드를 고를 때마다 쌓인다. */
 export interface Loadout {
   damage: number
-  /** 탄 갈래 수(1이면 한 줄). */
-  streams: number
+  /** 총알 강화 단계. 발사 방향은 항상 한 줄이다. */
+  bulletPower: number
   fireMs: number
   maxMental: number
   /** 탄의 빠르기(px/s). 날아가는 시간은 같아서 빠를수록 멀리 간다. */
@@ -82,7 +82,7 @@ export interface Loadout {
 
 export const BASE_LOADOUT: Loadout = {
   damage: 1,
-  streams: 1,
+  bulletPower: 0,
   fireMs: 260,
   maxMental: 100,
   bulletSpeed: 720,
@@ -99,7 +99,8 @@ export function loadoutOf(weapon: {
   return {
     ...BASE_LOADOUT,
     damage: weapon.damagePercent / 100,
-    streams: Math.min(MAX_STREAMS, weapon.streams),
+    // 기존 무기의 추가 갈래는 강화 단계로 환산한다.
+    bulletPower: Math.min(MAX_BULLET_POWER, Math.max(0, weapon.streams - 1)),
     fireMs: weapon.fireMs,
     bulletSpeed: weapon.bulletSpeed,
   }
@@ -111,7 +112,7 @@ export function applyCard(loadout: Loadout, card: MentalCard): Loadout {
     case 'hold':
       return { ...loadout, damage: loadout.damage + 0.6 }
     case 'split':
-      return { ...loadout, streams: Math.min(MAX_STREAMS, loadout.streams + 1) }
+      return { ...loadout, bulletPower: Math.min(MAX_BULLET_POWER, loadout.bulletPower + 1) }
     case 'rule':
       return { ...loadout, fireMs: Math.max(80, loadout.fireMs / 1.45) }
     case 'steel':
@@ -123,7 +124,7 @@ export function applyCard(loadout: Loadout, card: MentalCard): Loadout {
   }
 }
 
-/** 고를 석 장: 서로 다른 셋. 탄 갈래가 꽉 찼으면 분산 투자는 빼고, 멘탈이 꽉 차 있으면 심호흡은 뺀다. */
+/** 고를 석 장: 서로 다른 셋. 총알 강화가 최대면 해당 카드는 빼고, 멘탈이 꽉 차 있으면 심호흡은 뺀다. */
 export function pickCards(
   loadout: Loadout = BASE_LOADOUT,
   mentalFull = true,
@@ -131,7 +132,8 @@ export function pickCards(
 ): Card[] {
   const pool = CARDS.filter(
     (c) =>
-      !(c.code === 'split' && loadout.streams >= MAX_STREAMS) && !(c.code === 'heal' && mentalFull),
+      !(c.code === 'split' && loadout.bulletPower >= MAX_BULLET_POWER) &&
+      !(c.code === 'heal' && mentalFull),
   )
   const picked: Card[] = []
   while (picked.length < 3 && pool.length > 0) {
@@ -144,4 +146,14 @@ export function pickCards(
 /** 다음 레벨까지 드는 경험치: 레벨이 오를수록 더 든다. 4분 한 판에 예닐곱 번 오르게 잡았다. */
 export function xpToNext(level: number): number {
   return Math.round(120 * level ** 1.35)
+}
+
+/** 강화 수치와 연출은 같은 단계에서 계산한다. */
+export function bulletStats(loadout: Loadout) {
+  const power = Math.min(MAX_BULLET_POWER, Math.max(0, loadout.bulletPower))
+  return {
+    damage: loadout.damage * (1 + power * 0.4),
+    scale: 1 + power * 0.2,
+    power,
+  }
 }

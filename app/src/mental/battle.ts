@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { sfx } from '../fx/sound'
 import { bakeEnemies, bakeHero, bakeStage, DPR, enemyKey, GUN, HERO_SIZE, WALL_H } from './art'
 import { STAGE_ASSETS } from './assets'
-import { type Loadout, xpToNext } from './cards'
+import { bulletStats, type Loadout, xpToNext } from './cards'
 import { ENEMIES, type EnemyKind } from './enemies'
 import { BATTLE_SECONDS, GENRES, type Genre } from './genres'
 import type { Hero } from './hero'
@@ -68,7 +68,12 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   /** 죽는 연출 중: 몸은 이미 꺼졌고 그림만 부풀며 사라진다. */
   dying: boolean
 }
-type Bullet = Phaser.Physics.Arcade.Image & { life: number; look: 0 | 1 }
+type Bullet = Phaser.Physics.Arcade.Image & {
+  life: number
+  look: 0 | 1
+  damage: number
+  power: number
+}
 
 /** 적 그림(64×64)의 충돌 원: 가운데에 반지름 r. */
 function enemyBody(e: Enemy, r: number) {
@@ -109,6 +114,8 @@ class BattleScene extends Phaser.Scene {
   private hitSpark!: Phaser.GameObjects.Particles.ParticleEmitter
   private flashes: Phaser.GameObjects.Image[] = []
   private flashIndex = 0
+  private impacts: Phaser.GameObjects.Image[] = []
+  private impactIndex = 0
   private pops: Phaser.GameObjects.Text[] = []
   private popIndex = 0
 
@@ -258,12 +265,10 @@ class BattleScene extends Phaser.Scene {
       if (!bullet.active || !enemy.active || enemy.dying || !bullet.body) {
         return
       }
+      const angle = Math.atan2(bullet.body.velocity.y, bullet.body.velocity.x)
+      this.impact(bullet.x, bullet.y, bullet.power)
       bullet.disableBody(true, true)
-      this.hit(
-        enemy,
-        this.loadout.damage,
-        Math.atan2(bullet.body.velocity.y, bullet.body.velocity.x),
-      )
+      this.hit(enemy, bullet.damage, angle)
     })
     this.physics.add.overlap(this.player, this.enemies, (_p, e) => {
       const enemy = e as Enemy
@@ -315,6 +320,9 @@ class BattleScene extends Phaser.Scene {
       .setDepth(7)
     for (let i = 0; i < 6; i++) {
       this.flashes.push(this.add.image(0, 0, 'flash').setDepth(6).setVisible(false))
+    }
+    for (let i = 0; i < 20; i++) {
+      this.impacts.push(this.add.image(0, 0, 'bullet-impact').setDepth(7).setVisible(false))
     }
     for (let i = 0; i < 40; i++) {
       this.pops.push(
@@ -672,29 +680,44 @@ class BattleScene extends Phaser.Scene {
     const [sx, sy] = [p.scaleX, p.scaleY]
     p.setScale(sx * 1.1, sy * 0.92)
     this.tweens.add({ targets: p, scaleX: sx, scaleY: sy, duration: 110, ease: 'Back.easeOut' })
-    const offs =
-      this.loadout.streams >= 3
-        ? [-0.22, 0, 0.22]
-        : this.loadout.streams === 2
-          ? [-0.12, 0.12]
-          : [0]
-    for (const off of offs) {
-      const b = this.bullets.get(m.x, m.y, 'bullet-0') as Bullet | null
-      if (!b) {
-        return
-      }
-      b.setTexture('bullet-0').enableBody(true, m.x, m.y, true, true).setDepth(4)
-      b.look = 0
-      b.setDisplaySize(BULLET_W, BULLET_H).setRotation(base + off)
-      // 충돌 원은 그림 한가운데(hitbox.ts): 몸은 돌지 않으니 끝에 두면 위로 쏠 때 비켜 난다.
-      const hb = bulletHitbox(b.width, b.height)
-      b.body?.setCircle(hb.radius, hb.ox, hb.oy)
-      b.setVelocity(
-        Math.cos(base + off) * this.loadout.bulletSpeed,
-        Math.sin(base + off) * this.loadout.bulletSpeed,
-      )
-      b.life = now + BULLET_LIFE
-    }
+    const stats = bulletStats(this.loadout)
+    const b = this.bullets.get(m.x, m.y, 'bullet-0') as Bullet | null
+    if (!b) return
+    b.setTexture('bullet-0').enableBody(true, m.x, m.y, true, true).setDepth(4)
+    b.look = 0
+    b.damage = stats.damage
+    b.power = stats.power
+    b.setDisplaySize(BULLET_W * stats.scale, BULLET_H * stats.scale).setRotation(base)
+    b.setTint([0xffffff, 0xffdd99, 0xffb966, 0xff9955][stats.power])
+    const hb = bulletHitbox(b.width, b.height)
+    b.body?.setCircle(hb.radius, hb.ox, hb.oy)
+    b.setVelocity(
+      Math.cos(base) * this.loadout.bulletSpeed,
+      Math.sin(base) * this.loadout.bulletSpeed,
+    )
+    b.life = now + BULLET_LIFE
+  }
+
+  /** 명중 폭발: 재사용 풀로 섬광과 충격파를 함께 펼친다. */
+  private impact(x: number, y: number, power: number) {
+    const effect = this.impacts[this.impactIndex++ % this.impacts.length]
+    this.tweens.killTweensOf(effect)
+    const size = TEX * (0.65 + power * 0.22)
+    effect
+      .setPosition(x, y)
+      .setScale(size * 0.3)
+      .setAlpha(1)
+      .setRotation(Math.random() * Math.PI)
+      .setVisible(true)
+    this.hitSpark.explode(5 + power * 3, x, y)
+    this.tweens.add({
+      targets: effect,
+      scale: size,
+      alpha: 0,
+      duration: 210 + power * 25,
+      ease: 'Cubic.easeOut',
+      onComplete: () => effect.setVisible(false),
+    })
   }
 
   private finish(win: boolean) {

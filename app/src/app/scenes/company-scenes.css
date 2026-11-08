@@ -1,0 +1,286 @@
+.company-scene {
+  color: #343b65;
+  max-width: 640px;
+  margin: 0 auto;
+}
+.scene-cover {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: 22px 20px;
+  background: #557aa9;
+  color: #fffbed;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 0 #8297b755;
+}
+.scene-cover::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  width: 160px;
+  height: 160px;
+  border: 24px solid #ffffff12;
+  border-radius: 50%;
+  right: -65px;
+  top: -60px;
+}
+.scene-cover .scene-eyebrow {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #ffffffbb;
+  margin-bottom: 9px;
+}
+.scene-cover h1 {
+  font-family: var(--font-game);
+  font-size: clamp(23px, 6vw, 29px);
+  line-height: 1.3;
+  padding-right: 16px;
+}
+.scene-cover p {
+  font-size: 11px;
+  margin-top: 7px;
+}
+.scene-cover-mark {
+  position: absolute;
+  right: 17px;
+  top: 17px;
+  color: #f7d995;
+  font-size: 36px;
+  line-height: 1;
+}
+.staff-scene .scene-cover {
+  background: #517e7c;
+}
+.record-scene .scene-cover {
+  background: #73759b;
+}
+.scene-tabs {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  background: #edf1f7;
+  padding: 5px;
+  border: 1px solid #c7d0e3;
+  border-radius: 14px;
+}
+.scene-tabs button[role="tab"] {
+  flex: 1;
+  min-height: 38px;
+  border: 0;
+  border-radius: 10px;
+  padding: 5px 11px;
+  box-shadow: none;
+  white-space: nowrap;
+  background: transparent;
+  color: #6c7896;
+  font-size: 13px;
+}
+.scene-tabs button[aria-selected="true"] {
+  background: #fffdf8;
+  color: #3d5e99;
+  box-shadow: 0 2px 5px #3b4c7020;
+}
+.scene-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  background: #fffdf8;
+  border: 1px solid #c5cdec;
+  border-radius: 16px;
+  padding: 14px 4px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+.scene-stats > div + div {
+  border-left: 1px solid #e1e5ee;
+}
+.scene-stats span {
+  display: block;
+  font-size: 10px;
+  color: #76829d;
+}
+.scene-stats strong {
+  display: block;
+  font-family: var(--font-game);
+  font-size: 27px;
+  margin-top: 4px;
+  line-height: 1.2;
+}
+.scene-stats small {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  margin-left: 3px;
+  font-weight: 400;
+}
+.recruit-ticket {
+  position: relative;
+  padding: 23px 18px;
+  background: linear-gradient(120deg, #fff3d1, #fffdf6);
+  border: 1px solid #e4cb94;
+  border-radius: 18px;
+  margin-top: 4px;
+}
+.recruit-ticket > div + div {
+  border-left: 1px dashed #d2b87d;
+  padding-left: 15px;
+}
+.recruit-ticket p[data-testid="roster"] {
+  font-size: 16px;
+}
+.recruit-actions button {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 80px;
+  border-radius: 15px;
+}
+.recruit-actions small {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.85;
+}
+.recruit-actions [data-testid="draw-many"] {
+  background: #557ac0;
+  color: #fffdf6;
+  border-color: #a8bde3;
+  box-shadow: 0 3px 0 #7895c5;
+}
+.staff-toolbar {
+  background: #e4eeec;
+  padding: 10px 12px;
+  border-radius: 14px;
+  margin-bottom: 12px;
+}
+.staff-toolbar .btn {
+  background: #527f7c;
+  border-color: #a4c3bd;
+  color: white;
+  box-shadow: 0 3px 0 #719590;
+}
+.staff-desk {
+  position: relative;
+  border-radius: 16px;
+  padding: 15px 13px 15px 17px;
+  border-left: 4px solid #8eaaa9;
+  background: #fffdf8;
+}
+.staff-desk[data-hot="true"] {
+  border-left-color: #dfac5b;
+  background: #fff9e9;
+}
+.staff-desk[data-filled="false"] {
+  border-style: dashed;
+  background: #f5f8f9;
+}
+.staff-desk [data-testid="desk-members"] {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e7e9ec;
+  line-height: 1.8;
+}
+.staff-roster {
+  border: 1px solid #c7d0e3;
+  border-radius: 14px;
+  padding: 13px;
+  background: #f4f7fa;
+}
+.record-balance {
+  padding: 20px;
+  text-align: center;
+  background: #fffaf0;
+  border: 1px solid #e2d4b7;
+  border-radius: 16px;
+  margin-bottom: 16px;
+}
+.record-balance span,
+.record-balance small {
+  display: block;
+  font-size: 11px;
+  color: #7a7890;
+}
+.record-balance strong {
+  display: block;
+  font-family: var(--font-game);
+  font-size: 35px;
+  padding: 4px 0;
+}
+.record-settlement > h3 {
+  font-family: var(--font-game);
+  color: #646586;
+  font-size: 20px;
+}
+.record-achievements > li {
+  padding: 16px 12px;
+  border-radius: 16px;
+  background: #fffdf8;
+  line-height: 1.7;
+}
+.record-achievements > li[data-open="true"] {
+  border: 1px solid #dec384;
+  background: linear-gradient(150deg, #fff5d8, #fffdf8);
+}
+.record-achievements > li[data-open="false"] {
+  opacity: 1;
+  color: #7c859a;
+  background: #eaf0f5;
+  border: 1px dashed #bdc8db;
+}
+.record-medal {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-bottom: 10px;
+  border-radius: 50%;
+  background: #eadbb9;
+  color: #8e6b2f;
+  font-size: 22px;
+}
+.record-hall > li {
+  padding: 16px 12px;
+  border-radius: 14px;
+}
+.record-hall > li:first-child {
+  background: #fff5d8;
+  border-color: #d9be80;
+}
+.record-timeline {
+  border-left: 2px solid #bac4db;
+  margin: 8px 0 8px 7px;
+  padding-left: 17px;
+}
+.record-timeline > li {
+  position: relative;
+  border: 0;
+  box-shadow: none;
+  background: #fffdf8;
+  border-radius: 12px;
+  padding: 13px;
+  flex-direction: column;
+  gap: 4px;
+}
+.record-timeline > li::before {
+  content: "";
+  position: absolute;
+  left: -23px;
+  top: 19px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid #f4f5fa;
+  border-radius: 50%;
+  background: #8d94b8;
+}
+.company-scene button:focus-visible {
+  outline: 3px solid #486ba3;
+  outline-offset: 3px;
+}
+@media (max-width: 360px) {
+  .scene-cover {
+    padding: 18px 15px;
+  }
+  .scene-tabs button[role="tab"] {
+    padding: 5px 8px;
+    font-size: 12px;
+  }
+}

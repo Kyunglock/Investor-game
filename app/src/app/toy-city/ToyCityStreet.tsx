@@ -31,48 +31,50 @@ function Cat({ id = 0, grade = 'F' }: { id?: number; grade?: Grade }) {
 function Rival({
   x,
   height,
+  width,
   name,
   hit,
 }: {
   x: number
   height: number
+  width: number
   name: string
   hit?: 'left' | 'right'
 }) {
   return (
     <g
       className={hit ? `toy-rival toy-evict-${hit}` : 'toy-rival'}
-      style={{ transformOrigin: `${x + 29}px 560px` }}
+      style={{ transformOrigin: `${x + width / 2}px 560px` }}
       data-hit={hit}
     >
-      <path d={`M${x} ${560 - height}l9-7h58v${height}l-9 7`} fill="#8fa5c8" />
-      <rect x={x} y={560 - height} width="58" height={height} rx="5" fill="#b9c7e2" />
-      <rect x={x + 4} y={568 - height} width="50" height="18" rx="3" fill="#829bc4" />
+      <path d={`M${x} ${560 - height}l9-7h${width}v${height}l-9 7`} fill="#8fa5c8" />
+      <rect x={x} y={560 - height} width={width} height={height} rx="5" fill="#b9c7e2" />
+      <rect x={x + 4} y={568 - height} width={width - 8} height="24" rx="3" fill="#829bc4" />
       <text
-        x={x + 29}
-        y={580 - height}
+        x={x + width / 2}
+        y={584 - height}
         textAnchor="middle"
-        fontSize="6.5"
+        fontSize="10"
         fill="#fff"
         fontWeight="700"
       >
         {name}
       </text>
-      {Array.from({ length: Math.floor((height - 44) / 28) }, (_, r) =>
-        [0, 1].map((col) => (
+      {Array.from({ length: Math.floor((height - 60) / 36) }, (_, r) =>
+        Array.from({ length: Math.max(3, Math.floor(width / 32)) }, (_, col) => (
           <rect
             // biome-ignore lint/suspicious/noArrayIndexKey: 고정된 건물 창문 좌표다.
             key={`${r}-${col}`}
-            x={x + 8 + col * 25}
-            y={595 - height + r * 28}
-            width="17"
-            height="18"
+            x={x + 10 + col * ((width - 20) / Math.max(3, Math.floor(width / 32)))}
+            y={602 - height + r * 36}
+            width={(width - 20) / Math.max(3, Math.floor(width / 32)) - 8}
+            height="22"
             rx="3"
             fill={(r + col) % 3 ? '#97b5c9' : '#ffdc8f'}
           />
         )),
       )}
-      <rect x={x + 19} y="537" width="22" height="23" fill="#829bc4" />
+      <rect x={x + width / 2 - 11} y="537" width="22" height="23" fill="#829bc4" />
     </g>
   )
 }
@@ -119,6 +121,10 @@ export function ToyCityStreet({
   const oldRivals = phase < 3 && transition
   const rivalGeometry = oldRivals ? before : after
   const rivalGrade = oldRivals ? transition.before : company.grade
+  const rivalWidth = Math.max(
+    130 / rivalGeometry.scale,
+    219 / rivalGeometry.scale - rivalGeometry.width / 2,
+  )
   const moving = Boolean(transition && phase < 3)
   const buildingStyle = {
     transformOrigin: `${center}px 560px`,
@@ -174,14 +180,16 @@ export function ToyCityStreet({
         <path d="M-700 609h1800v446H-700" fill="#a0c7b8" />
         <path d="M-700 620h1800" stroke="#c8dfd0" strokeWidth="5" />
         <Rival
-          x={rivalGeometry.x - 66}
-          height={Math.min(350, rivalGeometry.height + 25)}
+          x={rivalGeometry.x - rivalWidth - 6}
+          width={rivalWidth}
+          height={220 / rivalGeometry.scale}
           name={rivalName(rivalGrade, 'left')}
           hit={up && moving && side === 'left' ? 'left' : undefined}
         />
         <Rival
-          x={rivalGeometry.x + rivalGeometry.width + 8}
-          height={Math.min(380, rivalGeometry.height + 50)}
+          x={rivalGeometry.x + rivalGeometry.width + 6}
+          width={rivalWidth}
+          height={242 / rivalGeometry.scale}
           name={rivalName(rivalGrade, 'right')}
           hit={up && moving && side === 'right' ? 'right' : undefined}
         />

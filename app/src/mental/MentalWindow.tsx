@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import { type MentalCard, useRaisingStore } from '@web/features/raising/store'
-import { useEffect, useEffectEvent, useRef, useState } from 'react'
+import { type CSSProperties, useEffect, useEffectEvent, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppUi } from '../app/ui'
 import { useFx } from '../fx/fx'
@@ -343,6 +343,15 @@ function Stat({ label, value }: { label: string; value: number | string }) {
   )
 }
 
+const CARD_ROLES: Record<MentalCard, string> = {
+  hold: '공격',
+  split: '탄환',
+  rule: '연사',
+  steel: '방어',
+  calm: '탄속',
+  heal: '회복',
+}
+
 /**
  * 카드 석 장 고르기 (330번): 제목이 쿵 하고 찍히고, 카드가 아래에서 차례로 튀어 올라 뒤집히며 자리를 잡는다(소리·진동). 누르면 그 카드가 번쩍 커졌다 사라진 뒤
  * onPick.
@@ -381,15 +390,30 @@ function CardPick({
   }, [cards])
   return (
     <div className="stage-cards" data-testid="mental-cards">
-      <h3 className="stage-card-title">{title}</h3>
-      <p className="font-game text-[16px] text-ink">{sub}</p>
+      <header className="stage-card-heading">
+        <span className="stage-card-crown" aria-hidden="true">
+          ✦
+        </span>
+        <p className="stage-card-eyebrow">MENTAL UPGRADE</p>
+        <h3 className="stage-card-title">{title}</h3>
+        <p className="stage-card-subtitle">{sub}</p>
+        <span className="stage-card-count">세 가지 가능성 · 단 한 장의 선택</span>
+      </header>
       <div className="stage-card-options">
         {cards.map((c, i) => (
           <button
             key={c.code}
             type="button"
             disabled={chosen !== null}
-            style={{ animationDelay: chosen ? '0ms' : `${120 + i * 110}ms`, background: undefined }}
+            style={
+              {
+                animationDelay: chosen ? '0ms' : `${120 + i * 110}ms`,
+                '--card-accent': c.color,
+              } as CSSProperties
+            }
+            data-card={c.code}
+            data-chosen={chosen === c.code}
+            aria-pressed={chosen === c.code}
             onClick={(ev) => {
               if (chosen) {
                 return
@@ -411,17 +435,28 @@ function CardPick({
                   : 'animate-mental-card-in'
             }`}
           >
-            <span className="stage-card-icon" style={{ background: c.color }} aria-hidden="true">
-              {c.icon}
+            <span className="stage-card-icon" aria-hidden="true">
+              <span>{c.icon}</span>
             </span>
-            <span className="min-w-0 flex-1">
-              <span className="block font-game text-[20px]">{c.name}</span>
-              <span className="block text-[13px] text-muted">{c.desc}</span>
+            <span className="stage-card-copy">
+              <span className="stage-card-meta">
+                <span>{CARD_ROLES[c.code]} 강화</span>
+                <span aria-hidden="true">✦ {String(i + 1).padStart(2, '0')}</span>
+              </span>
+              <span className="stage-card-name">{c.name}</span>
+              <span className="stage-card-description">{c.desc}</span>
             </span>
-            <span className="stage-card-effect">{c.effect}</span>
+            <span className="stage-card-effect">
+              <span aria-hidden="true">＋</span>
+              {c.effect}
+            </span>
+            <span className="stage-card-select" aria-hidden="true">
+              {chosen === c.code ? '✓ 선택 완료' : '선택 ›'}
+            </span>
           </button>
         ))}
       </div>
+      <p className="stage-card-footnote">선택 즉시 적용 · 이번 전투 동안 유지</p>
     </div>
   )
 }

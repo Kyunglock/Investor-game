@@ -1,3 +1,4 @@
+import './company-scenes.css'
 import type { Company } from '@web/api/client'
 import { CollectionGrid, RatesTable } from '@web/features/raising/Gacha'
 import { collected, drawable, mergeGroups } from '@web/features/raising/gachaRules'
@@ -49,8 +50,16 @@ export function GachaScene({ company }: { company: Company }) {
     { id: 'dex', label: `도감 ${collected(company)}/${company.gacha.collection.length}` },
   ]
   return (
-    <div data-testid="gacha-scene">
-      <div className="no-scrollbar -mx-4 flex gap-1.5 overflow-x-auto px-4" role="tablist">
+    <div className="company-scene recruitment-scene" data-testid="gacha-scene">
+      <header className="scene-cover">
+        <p className="scene-eyebrow">TALENT OFFICE</p>
+        <h1>새로운 동료를 만나요</h1>
+        <p>작은 만남이 회사의 다음 장을 바꿔요.</p>
+        <span className="scene-cover-mark" aria-hidden="true">
+          ✦
+        </span>
+      </header>
+      <div className="scene-tabs no-scrollbar" role="tablist">
         {parts.map((p) => (
           <button
             key={p.id}
@@ -109,7 +118,7 @@ function DrawPart({ company }: { company: Company }) {
   }
   return (
     <div className="grid gap-3">
-      <div className="panel flex items-center justify-between px-4 py-3">
+      <div className="recruit-ticket panel flex items-center justify-between px-4 py-3">
         <div>
           <p className="text-[12px] text-ink/60">채용권</p>
           <p className="font-game text-[38px] leading-none text-[#e08a00] [-webkit-text-stroke:1.5px_var(--outline)] [paint-order:stroke]">
@@ -117,14 +126,14 @@ function DrawPart({ company }: { company: Company }) {
           </p>
         </div>
         <div className="text-right">
-          <p className="text-[12px] text-ink/60">데리고 있는 사람</p>
+          <p className="text-[12px] text-ink/60">함께하는 동료</p>
           <p className="font-mono-num text-[20px] font-bold" data-testid="roster">
             {g.roster}
             {g.rosterMax < 100_000 && ` / ${g.rosterMax}`}명
           </p>
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-2">
+      <div className="recruit-actions grid grid-cols-2 gap-2">
         <button
           type="button"
           disabled={busy || many < 1}
@@ -132,7 +141,8 @@ function DrawPart({ company }: { company: Company }) {
           className="btn btn-primary min-h-16 text-[17px]"
           data-testid="draw-one"
         >
-          1명 뽑기
+          <span>1명 뽑기</span>
+          <small>채용권 1장</small>
         </button>
         <button
           type="button"
@@ -141,12 +151,13 @@ function DrawPart({ company }: { company: Company }) {
           className="btn btn-gold min-h-16 text-[17px]"
           data-testid="draw-many"
         >
-          {many >= 2 ? `${many}명 뽑기` : '여러 명'}
+          <span>{many >= 2 ? `${many}명 뽑기` : '여러 명'}</span>
+          <small>{many >= 2 ? `채용권 ${many}장` : '채용권을 모아주세요'}</small>
         </button>
       </div>
       {full ? (
         <p className="text-[12px] text-red-pen" data-testid="roster-full">
-          데리고 있을 자리(100명)가 꽉 찼습니다. 합성해서 자리를 비우세요.
+          데리고 있을 자리({g.rosterMax}명)가 꽉 찼습니다. 합성해서 자리를 비우세요.
         </p>
       ) : (
         <p className="text-[12px] text-ink/60">
@@ -155,7 +166,7 @@ function DrawPart({ company }: { company: Company }) {
         </p>
       )}
       <div className="panel p-3">
-        <p className="mb-1 text-[13px] font-semibold">확률표</p>
+        <p className="mb-1 text-[13px] font-semibold">어떤 동료를 만나게 될까요?</p>
         <RatesTable company={company} />
       </div>
     </div>
