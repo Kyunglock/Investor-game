@@ -127,7 +127,8 @@ class BattleScene extends Phaser.Scene {
   private begun = false
   private nextWave = 20
   /** 한 화면에 함께 있는 적의 최대 수(334·340번): 더 있으면 새로 만들지 않는다. */
-  private static readonly MAX_ALIVE = 60
+  /** 동시에 살아 있는 적의 최대: 파도(투매 최대 36, 패닉 최대 44)가 잘리지 않게 넉넉히. */
+  private static readonly MAX_ALIVE = 100
 
   constructor(opts: BattleOptions) {
     super('battle')
@@ -386,9 +387,11 @@ class BattleScene extends Phaser.Scene {
     this.opts.onBanner('투매 물량 쏟아진다!!', '#a98bff')
     const { w } = this.view()
     const grow = 1 + Math.min(1.5, this.elapsed / 120)
-    const n = Math.round(6 * grow)
+    // 세 줄로 쏟아진다: 처음 15, 뒤로 갈수록 36까지. 전에는 6~15로 '쏟아진다'는 말이 무색했다.
+    const n = Math.round(15 * grow)
+    const cols = Math.ceil(n / 3)
     for (let i = 0; i < n; i++) {
-      this.spawn('dump', [((i >> 1) + 0.5) * (w / Math.ceil(n / 2)), -30 - (i % 2) * 44])
+      this.spawn('dump', [(Math.floor(i / 3) + 0.5) * (w / cols), -30 - (i % 3) * 44])
     }
   }
 
@@ -402,10 +405,17 @@ class BattleScene extends Phaser.Scene {
   private wavePanic() {
     this.opts.onBanner('패닉셀 떼가 몰려온다!!!', '#3a86ff')
     const { w, h } = this.view()
-    const n = Math.round(10 + Math.min(10, this.elapsed / 16))
+    // 두 겹의 반원 떼: 처음 24, 뒤로 갈수록 44까지. 전에는 10~20이라 떼 같지 않았다.
+    const n = Math.round(24 + Math.min(20, this.elapsed / 8))
+    const half = Math.ceil(n / 2)
     for (let i = 0; i < n; i++) {
-      const a = Math.PI + (i / (n - 1)) * Math.PI
-      this.spawn('panic', [w / 2 + Math.cos(a) * w * 0.55, h * 0.25 + Math.sin(a) * h * 0.5])
+      const ring = i < half ? 0 : 1
+      const j = ring ? i - half : i
+      const m = ring ? n - half : half
+      const a = Math.PI + ((j + 0.5) / m) * Math.PI
+      const rw = w * (0.55 + ring * 0.12)
+      const rh = h * (0.5 + ring * 0.14)
+      this.spawn('panic', [w / 2 + Math.cos(a) * rw, h * 0.25 + Math.sin(a) * rh])
     }
   }
 
