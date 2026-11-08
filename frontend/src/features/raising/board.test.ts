@@ -72,10 +72,18 @@ describe('결산 전광판은 자리마다 한 줄, 이름은 팀장만 (decisio
         pnl: 20,
         stake: 200,
         flips: { courage: 2, patience: 2 },
-        members: 2,
+        memberIds: [1, 3],
       },
       // 보고가 없는 자리는 가장 많이 번 사람이 팀장이다.
-      { desk: 'bio', leader: '이지우', leaderId: 2, pnl: -5, stake: 100, flips: {}, members: 1 },
+      {
+        desk: 'bio',
+        leader: '이지우',
+        leaderId: 2,
+        pnl: -5,
+        stake: 100,
+        flips: {},
+        memberIds: [2],
+      },
     ])
     expect(teamRows([], [])).toEqual([])
   })

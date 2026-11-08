@@ -122,6 +122,9 @@ class CompanyApiTest {
     assertThat(year.read("$.lastQuarter", Object.class)).as("새해에는 넘긴 분기가 없다").isNull();
     assertThat(year.read("$.lastSettlement.year", Integer.class)).isEqualTo(1);
     assertThat(year.read("$.lastSettlement.quarters.length()", Integer.class)).isEqualTo(4);
+    assertThat(year.read("$.lastSettlement.promotions", Object.class))
+        .as("등급 상승 칸은 늘 있다 (397번)")
+        .isInstanceOf(java.util.List.class);
     DocumentContext twice = json(settle(1, 4).andExpect(status().isOk()));
     assertThat(twice.read("$.year", Integer.class)).isEqualTo(2);
     assertThat(twice.read("$.capital", Long.class)).isEqualTo(year.read("$.capital", Long.class));

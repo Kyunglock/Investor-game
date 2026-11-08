@@ -4,6 +4,8 @@ import type { Company } from '../../api/client'
 import { money } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { bubbleOf, pnlLabel, teamRows } from './board'
+import { GradeBadge, MemberGrades } from './GradeCard'
+import { teamGrades } from './grades'
 import { officeName } from './office'
 import { revealer } from './reveal'
 import { TeamReports } from './TeamReports'
@@ -87,25 +89,32 @@ export function Ledger({
                 const row = reveal(ROW_MS)
                 // 팀장과 해로 문구를 돌린다 (255번).
                 const bubble = bubbleOf(x.flips, x.pnl, x.stake, x.leaderId * 7 + s.year)
+                // 팀장 등급은 눈에 띄는 방패, 팀원은 작은 방패 줄 (397번). 그새 떠난 팀원은 "외 N명"으로 센다.
+                const grades = teamGrades(company.employees, x.leaderId, x.memberIds)
+                const gone = x.memberIds.length - 1 - grades.members.length
                 return (
                   <li
                     key={x.desk}
-                    className={`flex flex-wrap items-baseline justify-between gap-x-2 py-0.5 ${row.className}`}
+                    className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 py-0.5 ${row.className}`}
                     style={row.style}
                     data-testid="board-team"
+                    data-desk={x.desk}
                   >
-                    <span>
-                      {desk(x.desk)} · 팀장 {x.leader}
-                      {x.members > 1 && (
-                        <span className="ml-1 text-[11px] opacity-70">외 {x.members - 1}명</span>
-                      )}
+                    <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                      <span>{desk(x.desk)} · 팀장</span>
+                      <span className="whitespace-nowrap">
+                        {grades.leader && <GradeBadge grade={grades.leader} size="md" />}
+                        {x.leader}
+                      </span>
+                      <MemberGrades grades={grades.members} />
+                      {gone > 0 && <span className="text-[11px] opacity-70">외 {gone}명</span>}
                     </span>
                     <b className={x.pnl >= 0 ? 'text-[#ff8a7a]' : 'text-[#8cc3ec]'}>
                       {pnlLabel(x.pnl)}
                     </b>
                     {bubble && (
                       <span
-                        className="w-full rounded bg-white px-2 text-[12px] text-ink"
+                        className="col-span-2 rounded bg-white px-2 text-[12px] text-ink"
                         data-testid="bubble"
                       >
                         💬 {bubble}
@@ -316,6 +325,14 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
         : '차곡차곡 쌓아가는 한 해'
   const teams = teamRows(s.results, s.reports)
   const leading = [...teams].sort((a, b) => b.pnl - a.pnl)[0]
+  const leadingGrade = leading && teamGrades(company.employees, leading.leaderId, []).leader
+  let n = 0
+  const section = (title: string) => (
+    <div className="report-section-title">
+      <span>{String(++n).padStart(2, '0')}</span>
+      <h3>{title}</h3>
+    </div>
+  )
   return (
     <Overlay>
       <section
@@ -370,28 +387,44 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
                 <small>올해의 선두 팀</small>
                 <b>
                   {company.desks.find((d) => d.code === leading.desk)?.name ?? leading.desk} ·{' '}
+                  {leadingGrade && <GradeBadge grade={leadingGrade} size="md" />}
                   {leading.leader}
                 </b>
               </div>
               <strong className={tone(leading.pnl)}>{pnlLabel(leading.pnl)}</strong>
             </div>
           )}
-          <div className="report-section-title">
-            <span>01</span>
-            <h3>한 해의 자금 흐름</h3>
-          </div>
+          {section('한 해의 자금 흐름')}
           <p className="year-caption">네 분기의 운용 성과와 회사에 들어오고 나간 돈을 모았어요.</p>
           <div className="mt-3">
             <Ledger company={company} settlement={s} staged />
           </div>
           {s.reports.length > 0 && (
             <div className="year-reports">
-              <div className="report-section-title">
-                <span>02</span>
-                <h3>함께 만든 성과</h3>
-              </div>
+              {section('함께 만든 성과')}
               <TeamReports reports={s.reports} employees={company.employees} />
             </div>
+          )}
+          {s.promotions.length > 0 && (
+            <section className="year-promotions" aria-label="등급 상승" data-testid="promotions">
+              {section('등급이 오른 직원')}
+              <ul>
+                {s.promotions.map((p) => (
+                  <li key={p.employeeId} data-testid="promotion" data-grade={p.after}>
+                    <b>{p.name}</b>
+                    <span
+                      className="year-promotion-grades"
+                      role="img"
+                      aria-label={`${p.before}에서 ${p.after}로`}
+                    >
+                      <GradeBadge grade={p.before} size="inline" />
+                      <span aria-hidden="true">→</span>
+                      <GradeBadge grade={p.after} size="md" />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
           {s.achieved.length > 0 && (
             <section

@@ -1,15 +1,17 @@
 import type { Company } from '../../api/client'
 import { pnlLabel } from './board'
-import { GradeBadge } from './GradeCard'
+import { GradeBadge, MemberGrades } from './GradeCard'
+import { teamGrades } from './grades'
 
 type Report = NonNullable<Company['lastQuarter']>['reports'][number]
 type Employee = Company['employees'][number]
 
 /**
- * 팀 실적과 팀장 보고 (decisions.md 269·356번). 돈을 굴리는 팀을 번 순서로 늘어놓고 손익 막대를 그린다. 팀장 보고는 **가장 많이 번 팀과 가장 적게 번
- * 팀, 둘만** 읽는다(전에는 자리마다 한 줄씩 길게 늘어졌다). 돕는 팀은 한 줄로 접는다. 분기 실적과 연말 결산서가 같이 쓴다.
+ * 팀 실적과 팀장 보고 (decisions.md 269·356·397번). 돈을 굴리는 팀을 번 순서로 늘어놓고 손익 막대를 그린다. 팀마다 팀장 등급은 눈에 띄는 방패로,
+ * 팀원 등급은 작은 방패 줄로 붙인다(지금 그 자리에 앉은 사람). 팀장 보고는 **가장 많이 번 팀과 가장 적게 번 팀, 둘만** 읽는다(전에는 자리마다 한 줄씩
+ * 길게 늘어졌다). 돕는 팀은 한 줄로 접는다. 분기 실적과 연말 결산서가 같이 쓴다.
  */
-export function TeamReports({ reports, employees }: { reports: Report[]; employees?: Employee[] }) {
+export function TeamReports({ reports, employees }: { reports: Report[]; employees: Employee[] }) {
   const trading = reports.filter((r) => r.pnl != null).sort((a, b) => (b.pnl ?? 0) - (a.pnl ?? 0))
   const support = reports.filter((r) => r.pnl == null)
   if (reports.length === 0) {
@@ -18,7 +20,12 @@ export function TeamReports({ reports, employees }: { reports: Report[]; employe
   const best = trading[0]
   const worst = trading.length > 1 ? trading[trading.length - 1] : undefined
   const scale = Math.max(1, ...trading.map((r) => Math.abs(r.pnl ?? 0)))
-  const gradeOf = (r: Report) => employees?.find((e) => e.id === r.leaderId)?.overallGrade
+  const gradesOf = (r: Report) =>
+    teamGrades(
+      employees,
+      r.leaderId,
+      employees.filter((e) => e.desk === r.desk).map((e) => e.id),
+    )
   const total = trading.reduce((sum, r) => sum + (r.pnl ?? 0), 0)
   return (
     <section className="mt-3" data-testid="team-reports">
@@ -40,36 +47,34 @@ export function TeamReports({ reports, employees }: { reports: Report[]; employe
             const width = Math.round((Math.abs(pnl) / scale) * 100)
             const tone = pnl > 0 ? 'bg-up' : pnl < 0 ? 'bg-down' : 'bg-line-soft'
             const mark = r === best ? '🏆' : r === worst ? '🫠' : ''
+            const grades = gradesOf(r)
             return (
               <li
                 key={r.desk}
-                className="grid grid-cols-[minmax(0,7rem)_1fr_auto] items-center gap-2 text-[12px]"
+                className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 text-[12px]"
                 data-testid="team-bar"
                 data-desk={r.desk}
               >
-                <span className="truncate">
-                  {mark && <span className="mr-0.5">{mark}</span>}
+                <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                  {mark && <span>{mark}</span>}
                   <b>{r.deskName}</b>
-                  <span className="ml-1 text-muted">
+                  <span className="whitespace-nowrap text-muted">
+                    {grades.leader && <GradeBadge grade={grades.leader} size="md" />}
                     {r.leader}
-                    {gradeOf(r) && (
-                      <span className="ml-0.5">
-                        <GradeBadge grade={gradeOf(r) as Employee['overallGrade']} size="inline" />
-                      </span>
-                    )}
                   </span>
-                </span>
-                <span className="relative h-3 overflow-hidden rounded bg-line-soft">
-                  <span
-                    className={`absolute inset-y-0 left-0 rounded ${tone}`}
-                    style={{ width: `${width}%` }}
-                  />
+                  <MemberGrades grades={grades.members} />
                 </span>
                 <b
                   className={`font-mono-num ${pnl > 0 ? 'text-up' : pnl < 0 ? 'text-down' : 'text-muted'}`}
                 >
                   {pnlLabel(pnl)}
                 </b>
+                <span className="relative col-span-2 h-2.5 overflow-hidden rounded bg-line-soft">
+                  <span
+                    className={`absolute inset-y-0 left-0 rounded ${tone}`}
+                    style={{ width: `${width}%` }}
+                  />
+                </span>
               </li>
             )
           })}
@@ -109,7 +114,17 @@ export function TeamReports({ reports, employees }: { reports: Report[]; employe
       </ul>
       {support.length > 0 && (
         <p className="mt-1.5 text-[12px] text-muted" data-testid="team-support">
-          돕는 팀 · {support.map((r) => `${r.deskName} ${r.leader}`).join(' · ')}
+          돕는 팀
+          {support.map((r) => {
+            const leader = gradesOf(r).leader
+            return (
+              <span key={r.desk}>
+                {' · '}
+                {r.deskName} {leader && <GradeBadge grade={leader} size="inline" />}
+                {r.leader}
+              </span>
+            )
+          })}
         </p>
       )}
     </section>

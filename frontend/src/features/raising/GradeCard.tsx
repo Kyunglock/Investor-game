@@ -95,10 +95,13 @@ export function GradeCard({
   )
 }
 
-/** 등급표 크기: full은 카드 모서리의 방패와 티어 이름·보석 수, sm은 작은 방패만(미니맵 칸), inline은 글줄 안에 끼우는 작은 방패(이름 앞). */
-export type BadgeSize = 'full' | 'sm' | 'inline'
+/**
+ * 등급표 크기: full은 카드 모서리의 방패와 티어 이름·보석 수, sm은 작은 방패만(미니맵 칸), md는 글줄 안에서 눈에 띄는 방패(결산서의 팀장, 금부터
+ * 빛이 흐르고 번진다, 397번), inline은 글줄 안에 끼우는 작은 방패(이름 앞).
+ */
+export type BadgeSize = 'full' | 'sm' | 'md' | 'inline'
 
-const BADGE_WIDTH: Record<BadgeSize, number> = { full: 56, sm: 30, inline: 18 }
+const BADGE_WIDTH: Record<BadgeSize, number> = { full: 56, sm: 30, md: 26, inline: 18 }
 
 /**
  * 방패 보석 안에 등급 글자: 위가 밝게 비치고 아래가 어두운 보석 질감, 글자는 새긴 듯 그림자. full이면 그 아래 티어 이름과 보석 수. 모양은 viewBox로 그려
@@ -211,6 +214,26 @@ export function GradeBadge({
           </span>
         </>
       )}
+    </span>
+  )
+}
+
+/** 결산서의 팀원 등급 줄 (decisions.md 397번): "외 N명" 대신 팀원 등급을 작은 방패로 높은 것부터(S · A · C). 팀원이 없으면 아무것도 없다. */
+export function MemberGrades({ grades }: { grades: Grade[] }) {
+  if (grades.length === 0) {
+    return null
+  }
+  return (
+    <span
+      className="inline-flex items-center"
+      role="img"
+      aria-label={`팀원 등급 ${grades.join(' · ')}`}
+      data-testid="member-grades"
+    >
+      {grades.map((grade, i) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: 같은 등급이 여럿일 수 있고 줄은 한 번 그리면 그대로다
+        <GradeBadge key={i} grade={grade} size="inline" />
+      ))}
     </span>
   )
 }

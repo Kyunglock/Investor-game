@@ -96,6 +96,7 @@ export function Windows({ company }: { company: Company }) {
       {justQuartered && company.lastQuarter && (
         <QuarterSheet
           quarter={company.lastQuarter}
+          employees={company.employees}
           onClose={() => useRaisingStore.setState({ justQuartered: false })}
         />
       )}

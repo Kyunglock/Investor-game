@@ -307,5 +307,6 @@ export const company = {
     ],
     lines: ['김대리가 반도체 데스크에서 크게 벌었다.', '박과장이 폭락장에 손이 뒤집혔다.'],
     reports: [],
+    promotions: [{ employeeId: 1, name: '김대리', before: 'C', after: 'B' }],
   },
 }
