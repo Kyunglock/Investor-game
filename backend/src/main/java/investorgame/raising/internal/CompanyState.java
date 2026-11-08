@@ -202,14 +202,6 @@ class CompanyState {
   /** 합성한 횟수 (350번). 대성공·이어받기 난수의 열쇠. */
   int merges;
 
-  /** 막판 제안을 따른 횟수와 그 가운데 틀린 횟수 (351번). */
-  int proposalsFollowed;
-
-  int proposalsWrong;
-
-  /** 올해 열린 실패·재미 업적 표시 (351번): 연말 결산 때 읽고 지운다. */
-  List<String> flags = new ArrayList<>();
-
   /** 방금 한 합성 (350번). 아직 없으면 null. */
   Merge lastMerge;
 
@@ -305,20 +297,8 @@ class CompanyState {
     /** 연봉을 동결당해 다음 분기를 넘길 때 떠날지 굴린다 (decisions.md 280번). */
     boolean frozenPending;
 
-    /** 막판 제안을 따른 뒤 받은 상벌(BONUS·RAISE·NOTHING·CUT·FORGIVE, 349번). 다음 막판 제안 때 그에 이어지는 말을 하고 지운다. */
-    String lastVerdict;
-
     /** 합성으로 이어받은 버릇 (350번). 없으면 번호로 정한 버릇(349번). */
     String quirk;
-
-    /** 막판 제안을 따랐다가 잃은 연속 횟수 (351번, 단톡방의 저주). 맞히면 0. */
-    int wrongStreak;
-
-    /** 연봉이 깎여(CUT) 촉을 수리하러 갔다 온 뒤 아직 맞히지 않았다 (351번). */
-    boolean repaired;
-
-    /** 성과금을 받은 턴(해×4+분기). 다음 분기에 크게 잃으면 '성과금의 역설'. 없으면 null. */
-    Integer bonusTurn;
   }
 
   /** 방금 한 합성 (decisions.md 350번). 다음 합성 때 덮어쓴다. */
@@ -374,28 +354,6 @@ class CompanyState {
 
     /** 사장이 "너희가 알아서 해" 하고 맡겼다 (decisions.md 279번). choice는 직원들이 정한 쪽(BUY·SELL)이다. */
     boolean delegated;
-
-    /** 막판 뒤집기 (decisions.md 283번): 반대로 하자고 나선 직원과 그 행동·한마디. 답할 때까지 회의는 정해지지 않는다. 없으면 null. */
-    Integer proposalId;
-
-    String proposalName;
-    String proposalAction;
-    String proposalLine;
-
-    /** 제안이 나오기 전 사장의 결정. 제안을 거절하면 이대로 한다. */
-    String pendingChoice;
-
-    boolean pendingBig;
-    boolean pendingDelegated;
-
-    /** 제안을 따랐으면 그 직원. 결과를 보고 상이나 벌을 줄 차례가 온다(verdictPending). */
-    Integer followedId;
-
-    String followedName;
-    boolean verdictPending;
-
-    /** 상이나 벌을 준 한 줄. */
-    String verdictLine;
 
     /** 맡겼을 때 매수 쪽·매도 쪽에 얹힌 무게(직원 안목). 불꽃 장면이 쓴다. */
     /** 토론 뒤 직원들이 기운 쪽(BUY·SELL, 352번). 회의를 열 때 정해지고 사장은 그 뒤에 고른다. 토론 전에 연 회의면 null. */

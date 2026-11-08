@@ -6,7 +6,6 @@ import investorgame.behavior.internal.TestBehavior;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.content.internal.TestContent;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
@@ -51,25 +50,6 @@ class QuirksTest {
     for (CompanyState.Drawn d : c.lastDraw) {
       assertThat(d.hello).isNotBlank().doesNotContain("{").contains(d.name);
     }
-  }
-
-  @Test
-  void 막판_제안은_버릇_문구를_쓰고_지난_상벌이_있으면_그에_이어서_말한_뒤_지운다() {
-    CompanyState c = ENGINE.open(new HashSeededRandom(3), 150_000_000L);
-    CompanyState.Employee e = ENGINE.hire(c, stats(50));
-    List<String> generic = List.of("{name} 공용 {action}");
-    String plain = ENGINE.quirks.proposalTemplate(e, generic, 1);
-    assertThat(plain).contains("{name}").contains("{action}").isNotEqualTo(generic.getFirst());
-    assertThat(ENGINE.quirks.proposalTemplate(e, generic, 1)).as("같은 열쇠면 같은 말").isEqualTo(plain);
-
-    String verdict = ENGINE.quirks.verdictTemplate(e, "CUT", "공용 벌");
-    assertThat(verdict).contains("{name}").isNotEqualTo("공용 벌");
-    assertThat(e.lastVerdict).isEqualTo("CUT");
-    String again = ENGINE.quirks.proposalTemplate(e, generic, 2);
-    assertThat(again)
-        .contains("{action}")
-        .isNotEqualTo(ENGINE.quirks.proposalTemplate(e, generic, 2));
-    assertThat(e.lastVerdict).as("이어지는 말은 한 번만").isNull();
   }
 
   @Test

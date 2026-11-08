@@ -32,9 +32,6 @@ function signed(amount: number): string {
   return `${amount > 0 ? '+' : ''}${money(amount)}`
 }
 
-/** 사장 결정 도장이 찍히고 막판 제안이 뜨기까지(ms) (290번). */
-const DECIDED_MS = 1400
-
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
 
 /**
@@ -63,36 +60,25 @@ export function InvestWindow({
   hold?: boolean
 }) {
   const busy = useRaisingStore((s) => s.busy)
-  const { decideInvest, answerProposal, giveVerdict } = useRaisingStore.getState()
+  const { decideInvest } = useRaisingStore.getState()
   const outcome = invest.outcome
-  const proposal = !outcome ? invest.proposal : null
-  // 세 단계를 한 화면씩 (decisions.md 368번): 종목 분석 → (결정하러 가기) → 투자 결정 → 결과 확인. 정했으면 결과, 막판 제안 중이면 결정 화면이다.
+  // 세 단계를 한 화면씩 (decisions.md 368번): 종목 분석 → (결정하러 가기) → 투자 결정 → 결과 확인. 정했으면 결과 화면이다.
   const [stage, setStage] = useState<'analysis' | 'decide'>(() =>
-    invest.outcome || invest.proposal ? 'decide' : 'analysis',
+    invest.outcome ? 'decide' : 'analysis',
   )
-  const step: Step = outcome ? 'result' : invest.proposal ? 'decide' : stage
+  const step: Step = outcome ? 'result' : stage
   const scroller = useRef<HTMLElement>(null)
   // biome-ignore lint/correctness/useExhaustiveDependencies: 단계가 바뀔 때마다 새 화면의 맨 위부터 본다.
   useEffect(() => {
     scroller.current?.scrollTo?.({ top: 0 })
   }, [step])
-  // 창을 열 때 이미 정한 회의면(다시 그림) 연출 없이 끝난 모습을 보인다. 막판 제안을 기다리는 회의도 결정 장면은 이미 본 것이다.
-  const [skipped, setSkipped] = useState(
-    () => Boolean(outcome) || Boolean(invest.proposal) || reducedMotion(),
-  )
-  // 막판 제안 (283·290번): 정해진 결정(도장, 맡겼으면 토론과 결판)을 먼저 보이고, 그 뒤에 제안을 띄운다.
-  const [preplayed, setPreplayed] = useState(false)
+  // 창을 열 때 이미 정한 회의면(다시 그림) 연출 없이 끝난 모습을 보인다.
+  const [skipped, setSkipped] = useState(() => Boolean(outcome) || reducedMotion())
   // 토론은 접어 둔다 (decisions.md 370번, #498): 결과 한 줄만 보이고, 펼쳐야 토론이 나온다. 접혀 있으면 토론을 기다리지 않는다.
   const [debateOpen, setDebateOpen] = useState(false)
-  const decidedMs = proposal
-    ? proposal.delegated && debateOpen
-      ? teamClashMs(proposal.debate)
-      : DECIDED_MS
-    : 0
-  const [proposalShown, setProposalShown] = useState(skipped)
-  // 토론이 먼저 (352번): 회의를 열면 매수파·매도파가 맞붙고, 끝난 뒤에야 사장이 고른다. 다시 그린 회의(정했거나 제안 중)는 이미 본 것.
+  // 토론이 먼저 (352번): 회의를 열면 매수파·매도파가 맞붙고, 끝난 뒤에야 사장이 고른다. 다시 그린 회의(정했으면)는 이미 본 것.
   const debate = invest.debate ?? []
-  const debateFirst = !outcome && !invest.proposal && invest.convened && debate.length > 0
+  const debateFirst = !outcome && invest.convened && debate.length > 0
   const [debated, setDebated] = useState(skipped || !debateFirst)
   // 펼쳐 둔 토론이 끝나기를 기다리는 중: 이때만 고르기를 잠근다.
   const waiting = debateFirst && debateOpen && !debated
@@ -104,20 +90,8 @@ export function InvestWindow({
     const id = setTimeout(() => setDebated(true), teamClashMs(debate))
     return () => clearTimeout(id)
   }, [debateFirst, debated, debateOpen, debate, step])
-  useEffect(() => {
-    if (!proposal) {
-      return
-    }
-    setPreplayed(true)
-    if (skipped) {
-      setProposalShown(true)
-      return
-    }
-    const id = setTimeout(() => setProposalShown(true), decidedMs)
-    return () => clearTimeout(id)
-  }, [proposal, skipped, decidedMs])
-  // 맡겼으면(279·285번) 매수파·매도파가 먼저 토론하며 맞붙고, 그 뒤에 차트가 그려진다. 막판 제안 전에 이미 봤으면 바로 차트로.
-  const lead = outcome?.delegated && !preplayed && debateOpen ? teamClashMs(outcome.debate) : 0
+  // 맡겼으면(279·285번) 매수파·매도파가 먼저 토론하며 맞붙고, 그 뒤에 차트가 그려진다.
+  const lead = outcome?.delegated && debateOpen ? teamClashMs(outcome.debate) : 0
   const show = chartTimeline(1, CHART_MS, skipped, lead)
   const [finished, setFinished] = useState(skipped)
   useEffect(() => {
@@ -160,12 +134,11 @@ export function InvestWindow({
               배치 다시 보기
             </button>
           )}
-          {((outcome && !finished) || (proposal && !proposalShown) || waiting) && (
+          {((outcome && !finished) || waiting) && (
             <button
               type="button"
               onClick={() => {
                 skip()
-                setProposalShown(true)
                 setDebated(true)
               }}
               className="text-[12px] text-muted underline"
@@ -248,16 +221,14 @@ export function InvestWindow({
 
           {step === 'decide' && (
             <>
-              {!invest.proposal && (
-                <button
-                  type="button"
-                  onClick={() => setStage('analysis')}
-                  className="mt-1 text-[12px] text-muted underline"
-                  data-testid="invest-to-analysis"
-                >
-                  ← 분석 다시 보기
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => setStage('analysis')}
+                className="mt-1 text-[12px] text-muted underline"
+                data-testid="invest-to-analysis"
+              >
+                ← 분석 다시 보기
+              </button>
               <p className="mt-1 text-[13px] text-muted" data-testid="invest-context">
                 {invest.stockName} · {invest.title}
               </p>
@@ -315,99 +286,6 @@ export function InvestWindow({
                 </div>
               )}
 
-              {proposal && (
-                // 정해진 결정 (290번): 맡겼으면 토론과 결판, 아니면 사장 결정 도장. 그 뒤에 막판 제안이 뜬다.
-                <div className="mt-3" data-testid="invest-decided">
-                  {proposal.delegated && (
-                    <DebateFold
-                      invest={invest}
-                      choice={proposal.choice}
-                      open={debateOpen}
-                      onToggle={setDebateOpen}
-                    >
-                      <TeamClash
-                        key={`decided-${skipped}`}
-                        buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
-                        sellNames={invest.remarks
-                          .filter((r) => r.read === 'DOWN')
-                          .map((r) => r.name)}
-                        buy={proposal.teamBuy}
-                        sell={proposal.teamSell}
-                        choice={proposal.choice}
-                        debate={proposal.debate}
-                        staff={employees}
-                        stock={invest.stockName}
-                        instant={skipped}
-                      />
-                    </DebateFold>
-                  )}
-                  <p
-                    className="animate-reveal mt-2 flex items-center gap-2 text-[14px]"
-                    style={{
-                      animationDelay: `${proposal.delegated && debateOpen && !skipped ? decidedMs - 600 : 0}ms`,
-                    }}
-                  >
-                    {proposal.delegated ? '팀 결정' : '사장 결정'}
-                    <span
-                      className="animate-stamp pen-circle inline-block px-3 py-0.5 font-pen text-[22px] text-red-pen"
-                      data-testid="decided-choice"
-                    >
-                      {proposal.big ? `크게 ${label(proposal.choice)}` : label(proposal.choice)}
-                    </span>
-                  </p>
-                </div>
-              )}
-
-              {proposal && proposalShown && invest.proposal && (
-                // 막판 뒤집기 (283·292번): 결정이 다 끝났는데 누군가 "잠깐만요!" 하고 끼어든다. 회의 창 위에 알림으로 뜬다.
-                <Overlay>
-                  <section
-                    className="animate-pop rounded border-4 border-gold bg-card p-5 text-center shadow-xl"
-                    role="alertdialog"
-                    aria-modal="true"
-                    aria-label="막판 제안"
-                    data-testid="invest-proposal"
-                  >
-                    <div className="animate-shake">
-                      <p className="text-[40px] leading-none" aria-hidden="true">
-                        ✋
-                      </p>
-                      <h3
-                        className="mt-1 font-pen text-[34px] leading-tight text-red-pen"
-                        data-testid="proposal-shout"
-                      >
-                        잠깐만요, 사장님!!
-                      </h3>
-                    </div>
-                    <p className="mt-1 text-[12px] text-muted">
-                      결정이 끝난 줄 알았는데 {withParticle(invest.proposal.name, '이', '가')} 손을
-                      들었다.
-                    </p>
-                    <p className="mt-3 text-left text-[15px]" data-testid="proposal-line">
-                      {invest.proposal.line}
-                    </p>
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void answerProposal(true)}
-                        className="min-h-12 rounded bg-gold font-semibold text-white disabled:opacity-50"
-                      >
-                        그래, 네 말대로 해 · {label(invest.proposal.action)}
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() => void answerProposal(false)}
-                        className="min-h-12 rounded border border-pen font-semibold disabled:opacity-50"
-                      >
-                        됐어, 원래대로 해
-                      </button>
-                    </div>
-                  </section>
-                </Overlay>
-              )}
-
               {debateFirst && (
                 // 토론 (352번): 매수파·매도파가 맞붙어 한쪽으로 기운다. 접어 두면 결과 한 줄만 보이고 바로 고른다 (370번).
                 <DebateFold
@@ -430,7 +308,7 @@ export function InvestWindow({
                   />
                 </DebateFold>
               )}
-              {!outcome && !invest.proposal && (
+              {!outcome && (
                 <div
                   className="meeting-choices meeting-step-action grid grid-cols-3 gap-2"
                   data-testid="invest-options"
@@ -498,8 +376,8 @@ export function InvestWindow({
                   onToggle={setDebateOpen}
                 >
                   <TeamClash
-                    // 빨리 보기를 누르면 끝난 모습으로 다시 그린다. 막판 제안 전에 본 토론은 다시 돌리지 않는다.
-                    key={`clash-${skipped}-${preplayed}`}
+                    // 빨리 보기를 누르면 끝난 모습으로 다시 그린다.
+                    key={`clash-${skipped}`}
                     buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
                     sellNames={invest.remarks.filter((r) => r.read === 'DOWN').map((r) => r.name)}
                     buy={outcome.teamBuy}
@@ -508,7 +386,7 @@ export function InvestWindow({
                     debate={outcome.debate}
                     staff={employees}
                     stock={invest.stockName}
-                    instant={skipped || preplayed}
+                    instant={skipped}
                   />
                 </DebateFold>
               )}
@@ -616,36 +494,6 @@ export function InvestWindow({
                     </p>
                   )}
                   <Hindsight invest={invest} />
-                  {invest.verdict && (
-                    // 막판 제안을 따랐다 (283번): 결과를 보고 상이나 벌을 준다.
-                    <div
-                      className="animate-pop mt-3 rounded border-2 border-gold p-3"
-                      data-testid="invest-verdict"
-                    >
-                      <p className="text-[15px] font-semibold">{invest.verdict.ask}</p>
-                      {invest.verdict.options.length > 0 ? (
-                        <div className="mt-2 grid gap-2">
-                          {invest.verdict.options.map((o) => (
-                            <button
-                              key={o.code}
-                              type="button"
-                              disabled={busy}
-                              onClick={() => void giveVerdict(o.code)}
-                              className={`min-h-11 rounded border text-[14px] font-semibold disabled:opacity-50 ${
-                                invest.verdict?.good ? 'border-up text-up' : 'border-down text-down'
-                              }`}
-                            >
-                              {o.label}
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="mt-1 text-[14px]" data-testid="verdict-result">
-                          {invest.verdict.result}
-                        </p>
-                      )}
-                    </div>
-                  )}
                   <p
                     className="animate-reveal mt-3 rounded bg-line-soft px-3 py-2 text-center text-[13px]"
                     data-testid="invest-next"
@@ -656,8 +504,7 @@ export function InvestWindow({
                   <div className="meeting-step-action">
                     <button
                       type="button"
-                      // 상이나 벌을 고르기 전에는 넘기지 않는다 (283번).
-                      disabled={busy || (invest.verdict?.options.length ?? 0) > 0}
+                      disabled={busy}
                       onClick={onSettle}
                       className="animate-reveal min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
                     >

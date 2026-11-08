@@ -83,18 +83,13 @@ public record RaisingContent(
       Map<String, String> teamGrade) {}
 
   /**
-   * 직원 버릇 (decisions.md 349번). hello: 뽑혔을 때 첫인사({name}). proposals: 막판 제안({name}·{action}). again:
-   * 지난 상벌(BONUS·RAISE·NOTHING·CUT·FORGIVE)에 이어지는 막판 제안. verdicts: 상벌 결과({name}·{bonus}). raiseAsk:
-   * 연봉 협상({name}·{before}·{after}). resign: 사표(IGNORED·FROZEN, {name}). poachKept·poachLeft: 이직 제안에
-   * 남거나 떠남({name}·{rival}).
+   * 직원 버릇 (decisions.md 349번). hello: 뽑혔을 때 첫인사({name}). raiseAsk: 연봉 협상({name}·{before}·{after}).
+   * resign: 사표(IGNORED·FROZEN, {name}). poachKept·poachLeft: 이직 제안에 남거나 떠남({name}·{rival}).
    */
   public record Quirk(
       String code,
       String name,
       List<String> hello,
-      List<String> proposals,
-      Map<String, List<String>> again,
-      Map<String, String> verdicts,
       List<String> raiseAsk,
       Map<String, String> resign,
       String poachKept,
@@ -213,12 +208,7 @@ public record RaisingContent(
       Map<String, String> actions,
       String obey,
       String team,
-      List<String> proposals,
-      String rejected,
       Debate debate,
-      Map<String, String> verdictAsk,
-      Map<String, String> verdictOptions,
-      Map<String, String> verdicts,
       String rogue,
       String swayed,
       Map<String, String> reveal) {}
@@ -338,12 +328,7 @@ public record RaisingContent(
    * SSS 위(실전 경험으로 오른다, {gain}). grown: 한 해 일하며 자란 소식 줄({name}·{stat}·{before}·{after}).
    */
   public record Perks(
-      Map<String, String> names,
-      String line,
-      String lineTop,
-      String proposal,
-      String grown,
-      String promoted) {}
+      Map<String, String> names, String line, String lineTop, String grown, String promoted) {}
 
   /**
    * 직원 등급이 바뀌는 결산 소식 (6.4·2.3절). {name}·{before}·{after}·{stat} 자리표시를 쓴다.

@@ -31,9 +31,6 @@ class CompanyHistory {
   /** F의 전당: 전부 F인 직원이 이만큼 (351번). */
   private static final int F_TEN = 10;
 
-  /** 잠깐만요 전문: 막판 제안을 이만큼 따랐는데 다 틀렸다 (351번). */
-  private static final int PROPOSAL_FIVE = 5;
-
   private final ContentCatalog content;
 
   CompanyHistory(ContentCatalog content) {
@@ -172,17 +169,9 @@ class CompanyHistory {
     checks.put("basement-ten", basement && s.year >= BASEMENT_YEARS);
     checks.put("rumor-proof", "falseKept".equals(s.omenCall));
     checks.put("foresight", "trueDefended".equals(s.omenCall));
-    checks.put("chat-three", company.flags.contains("chat-three"));
     checks.put("youtube-crash", "falseDefended".equals(s.omenCall) && "boom".equals(s.phase));
-    checks.put(
-        "proposal-five",
-        company.proposalsFollowed >= PROPOSAL_FIVE
-            && company.proposalsWrong == company.proposalsFollowed);
-    checks.put("bonus-backfire", company.flags.contains("bonus-backfire"));
     checks.put("f-ten", fTen);
     checks.put("same-name", sameName);
-    checks.put("repaired-gut", company.flags.contains("repaired-gut"));
-    company.flags.clear();
     for (RaisingContent.Achievement a : texts().achievements()) {
       if (Boolean.TRUE.equals(checks.get(a.code()))
           && !company.achievements.containsKey(a.code())) {

@@ -75,10 +75,6 @@ interface RaisingState {
   drawWeapon: () => Promise<void>
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */
   mergeWeapon: (kind: WeaponKind, grade: Exclude<WeaponGrade, 'UR'>) => Promise<void>
-  /** 종목 회의의 막판 제안에 답한다 (decisions.md 283번). */
-  answerProposal: (accept: boolean) => Promise<void>
-  /** 막판 제안을 따른 직원에게 상이나 벌을 준다 (283번). */
-  giveVerdict: (choice: string) => Promise<void>
   /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 249번). 됐으면 true. */
   convene: () => Promise<boolean>
   /** 올해 종목 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). big이면 크게 한다 (260번). */
@@ -238,16 +234,6 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
 
     mergeWeapon: (kind, grade) =>
       change(api.POST('/api/company/weapon/merge', { body: { kind, grade } })),
-
-    answerProposal: (accept) =>
-      change(api.POST('/api/company/invest/proposal', { body: { accept } })),
-
-    giveVerdict: (choice) =>
-      change(
-        api.POST('/api/company/invest/verdict', {
-          body: { choice: choice as 'BONUS' | 'RAISE' | 'NOTHING' | 'CUT' | 'FORGIVE' },
-        }),
-      ),
 
     convene: async () => {
       if (get().company?.invest?.convened) {

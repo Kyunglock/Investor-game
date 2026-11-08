@@ -295,8 +295,6 @@ public record CompanyView(
       boolean convened,
       Finder finder,
       InvestOutcome outcome,
-      Proposal proposal,
-      Verdict verdict,
       Integer teamBuy,
       Integer teamSell,
       String teamCall,
@@ -312,38 +310,6 @@ public record CompanyView(
    * @param members 앉은 사람 수
    */
   public record TeamGrade(String grade, int score, String hint, int members) {}
-
-  /**
-   * 막판 뒤집기 (decisions.md 283·290번): 결정이 다 끝났는데 누군가 반대로 하자고 나섰다. 답할 때까지 회의는 정해지지 않는다. 화면은 먼저 정해진
-   * 결정(사장 결정 도장, 맡겼으면 토론과 결판)을 보이고 그 뒤에 이 제안을 띄운다.
-   *
-   * @param action 제안한 행동(BUY·SELL)
-   * @param choice 막판 제안 전에 정해진 결정(BUY·SELL·HOLD). 맡겼으면 직원들이 정한 쪽
-   * @param delegated 사장이 "너희가 알아서 해" 하고 맡겼다
-   * @param debate 맡겼을 때의 토론(285번). 맡기지 않았으면 비었다
-   */
-  public record Proposal(
-      int employeeId,
-      String name,
-      String action,
-      String line,
-      String choice,
-      boolean big,
-      boolean delegated,
-      int teamBuy,
-      int teamSell,
-      List<DebateLine> debate) {}
-
-  /**
-   * 막판 제안을 따른 뒤의 상과 벌 (283번).
-   *
-   * @param good 따랐더니 벌었다
-   * @param ask 결과 한 줄("○○의 말대로 해서 1,200만 원 벌었다!")
-   * @param options 고를 것: 벌었으면 BONUS·RAISE·NOTHING, 잃었으면 CUT·FORGIVE. 이미 골랐으면 비었다
-   * @param result 고른 뒤의 한 줄. 아직이면 null
-   */
-  public record Verdict(
-      int employeeId, String name, boolean good, String ask, List<Option> options, String result) {}
 
   /**
    * 종목을 물어 온 직원 (decisions.md 267번).

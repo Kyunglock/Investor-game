@@ -192,9 +192,6 @@ public record CompanyProperties(
    * @param yearUpBp 올해 시장 갈래(boom·normal·crash)가 뉴스가 오를 확률에 더하는 만분율
    * @param sideOppositePercent 곁가지 문장이 숨은 방향의 반대쪽일 확률
    * @param stubbornBp 직원이 제멋대로 할(꼬드김 + 손 뒤집힘) 확률이 이 만분율 이상이면 "보통", 두 배 이상이면 "높음"으로 보인다
-   * @param proposalMinGrade "잠깐만요, 사장님!!"(막판 제안)을 쓸 수 있는 가장 낮은 종합 등급 (decisions.md 300번)
-   * @param proposalPercent 그 등급 직원이 손을 들 확률(%), 한 단계 높을 때마다 proposalStepPercent씩 더해
-   *     proposalMaxPercent까지
    */
   public record Invest(
       Map<String, Integer> yearUpBp,
@@ -204,11 +201,6 @@ public record CompanyProperties(
       int bigMissPercent,
       int bigStubbornPercent,
       int meetingStakePercent,
-      String proposalMinGrade,
-      int proposalPercent,
-      int proposalStepPercent,
-      int proposalMaxPercent,
-      int proposalBonusPercent,
       List<Clarity> clarity) {}
 
   /**

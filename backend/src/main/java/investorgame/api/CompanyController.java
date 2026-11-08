@@ -312,26 +312,6 @@ class CompanyController {
 
   record ResignRequest(@NotNull Boolean keep) {}
 
-  /** 종목 회의의 막판 제안에 답한다 (decisions.md 283번). */
-  @PostMapping("/invest/proposal")
-  CompanyView answerProposal(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody ProposalRequest request) {
-    return companies.answerProposal(cookies.requireSession(token), request.accept());
-  }
-
-  record ProposalRequest(@NotNull Boolean accept) {}
-
-  /** 막판 제안을 따른 직원에게 상이나 벌을 준다 (283번). */
-  @PostMapping("/invest/verdict")
-  CompanyView verdict(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody VerdictRequest request) {
-    return companies.verdict(cookies.requireSession(token), request.choice());
-  }
-
-  record VerdictRequest(@NotBlank String choice) {}
-
   /** 그 자리의 팀장을 정한다 (decisions.md 269번). */
   /** 이사 비용을 내고 다음 건물로 간다 (decisions.md 296번). */
   @PostMapping("/upgrade")

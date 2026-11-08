@@ -13,8 +13,6 @@ export type AutoStep =
   | { kind: 'poach'; keep: boolean }
   | { kind: 'raise'; accept: boolean }
   | { kind: 'resign'; keep: boolean }
-  | { kind: 'proposal'; accept: boolean }
-  | { kind: 'verdict'; choice: string }
   | { kind: 'place'; seats: Seat[] }
   | { kind: 'conveneMacro' }
   | { kind: 'macro'; stance: Stance }
@@ -106,13 +104,6 @@ export function nextAutoStep(
     }
     return { kind: 'macro', stance: autoStance(company.macro) }
   }
-  // 막판 뒤집기 (283번): 자동 진행은 제 다수결을 지킨다. 따랐던 회의면(사장이 직접 따른 경우) 벌었으면 연봉을 올리고 잃었으면 봐준다.
-  if (company.invest?.proposal) {
-    return { kind: 'proposal', accept: false }
-  }
-  if ((company.invest?.verdict?.options.length ?? 0) > 0) {
-    return { kind: 'verdict', choice: company.invest?.verdict?.good ? 'RAISE' : 'FORGIVE' }
-  }
   if (company.invest?.ready) {
     // 한마디는 회의를 열어야 나온다 (249번). 연 뒤에 다수결로 정한다.
     if (!company.invest.convened) {
@@ -191,8 +182,6 @@ export function useCompanyAutoPlay() {
       answerPoach,
       answerRaise,
       answerResign,
-      answerProposal,
-      giveVerdict,
       conveneMacro,
       decideMacro,
     } = useRaisingStore.getState()
@@ -221,12 +210,6 @@ export function useCompanyAutoPlay() {
           return
         case 'resign':
           void answerResign(step.keep)
-          return
-        case 'proposal':
-          void answerProposal(step.accept)
-          return
-        case 'verdict':
-          void giveVerdict(step.choice)
           return
         case 'place':
           void place(step.seats)
