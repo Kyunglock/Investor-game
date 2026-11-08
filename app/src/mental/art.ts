@@ -226,3 +226,109 @@ export function bakeStage(scene: Phaser.Scene, _genre: Genre) {
     c.fill()
   })
 }
+
+/**
+ * 마법 그림 (decisions.md 392번): 물방울·물결·불덩이·불기둥·충격파 고리·부드러운 빛. 색은 흰빛에 가깝게 구워 두고 화면에서 물들이거나(tint) 더해(ADD)
+ * 빛나게 한다. 번개 줄기는 매번 모양이 달라 Graphics로 그린다(battle.ts).
+ */
+export function bakeMagic(scene: Phaser.Scene) {
+  const radial = (
+    c: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    r: number,
+    stops: string[],
+  ) => {
+    const g = c.createRadialGradient(x, y, 0, x, y, r)
+    for (const [i, color] of stops.entries()) g.addColorStop(i / (stops.length - 1), color)
+    return g
+  }
+  bake(scene, 'magic-soft', 12, 12, (c) => {
+    c.fillStyle = radial(c, 6, 6, 6, ['#ffffff', '#ffffffaa', '#ffffff00'])
+    c.fillRect(0, 0, 12, 12)
+  })
+  bake(scene, 'magic-glow', 64, 64, (c) => {
+    c.fillStyle = radial(c, 32, 32, 32, ['#ffffff', '#ffffff88', '#ffffff22', '#ffffff00'])
+    c.fillRect(0, 0, 64, 64)
+  })
+  // 물방울: 오른쪽(나아가는 쪽)이 둥글고 왼쪽으로 꼬리가 빠진다.
+  bake(scene, 'magic-drop', 32, 20, (c) => {
+    c.beginPath()
+    c.moveTo(1, 10)
+    c.quadraticCurveTo(12, 3, 22, 2.5)
+    c.arc(22, 10, 7.5, -Math.PI / 2, Math.PI / 2)
+    c.quadraticCurveTo(12, 17, 1, 10)
+    const g = c.createLinearGradient(0, 0, 32, 0)
+    g.addColorStop(0, '#9fdcff00')
+    g.addColorStop(0.45, '#7fcbff')
+    g.addColorStop(1, '#2f8fe8')
+    c.fillStyle = g
+    c.fill()
+    c.strokeStyle = '#e8f7ff'
+    c.lineWidth = 1.2
+    c.stroke()
+    c.beginPath()
+    c.ellipse(24, 7, 2.6, 1.6, -0.4, 0, Math.PI * 2)
+    c.fillStyle = '#ffffff'
+    c.fill()
+  })
+  // 큰 물결: 오른쪽(나아가는 쪽)으로 부푼 초승달. 앞은 흰 거품, 뒤로 갈수록 옅은 파랑.
+  bake(scene, 'magic-wave', 44, 120, (c) => {
+    c.beginPath()
+    c.arc(-46, 60, 84, -0.82, 0.82)
+    c.arc(-76, 60, 84, 0.9, -0.9, true)
+    c.closePath()
+    const g = c.createLinearGradient(0, 0, 44, 0)
+    g.addColorStop(0, '#3fa2f000')
+    g.addColorStop(0.3, '#3f9ff0cc')
+    g.addColorStop(0.8, '#9fe0ff')
+    g.addColorStop(1, '#ffffff')
+    c.fillStyle = g
+    c.fill()
+    c.strokeStyle = '#ffffffdd'
+    c.lineWidth = 2
+    c.beginPath()
+    c.arc(-46, 60, 84, -0.78, 0.78)
+    c.stroke()
+  })
+  // 불덩이: 흰 심 → 노랑 → 주황 → 빨강으로 번진다.
+  bake(scene, 'magic-ember', 28, 28, (c) => {
+    c.fillStyle = radial(c, 14, 14, 14, ['#ffffff', '#fff2a0', '#ffb340', '#ff5a1f', '#d9261a00'])
+    c.fillRect(0, 0, 28, 28)
+  })
+  // 불기둥: 아래가 하얗게 뜨겁고 위로 갈수록 빨갛게 사라지는 일렁이는 기둥. 원점은 아래 가운데.
+  bake(scene, 'magic-pillar', 48, 140, (c) => {
+    c.beginPath()
+    c.moveTo(6, 140)
+    for (let y = 140; y >= 0; y -= 14) c.lineTo(8 + (140 - y) * 0.09 + Math.sin(y / 9) * 3, y)
+    for (let y = 0; y <= 140; y += 14) c.lineTo(40 - (140 - y) * 0.09 + Math.sin(y / 7) * 3, y)
+    c.closePath()
+    const g = c.createLinearGradient(0, 140, 0, 0)
+    g.addColorStop(0, '#fffbe0')
+    g.addColorStop(0.25, '#ffd24d')
+    g.addColorStop(0.6, '#ff7a26cc')
+    g.addColorStop(1, '#d9261a00')
+    c.fillStyle = g
+    c.fill()
+  })
+  // 탄 자리: 바닥에 깔리는 납작한 불빛.
+  bake(scene, 'magic-scorch', 80, 44, (c) => {
+    c.save()
+    c.scale(1, 44 / 80)
+    c.fillStyle = radial(c, 40, 40, 40, ['#fff0a0ee', '#ffb340bb', '#ff6a2a66', '#ff6a2a00'])
+    c.fillRect(0, 0, 80, 80)
+    c.restore()
+  })
+  bake(scene, 'magic-ring', 80, 80, (c) => {
+    c.beginPath()
+    c.arc(40, 40, 36, 0, Math.PI * 2)
+    c.strokeStyle = '#ffffff'
+    c.lineWidth = 4
+    c.stroke()
+    c.beginPath()
+    c.arc(40, 40, 31, 0, Math.PI * 2)
+    c.strokeStyle = '#ffffff66'
+    c.lineWidth = 3
+    c.stroke()
+  })
+}

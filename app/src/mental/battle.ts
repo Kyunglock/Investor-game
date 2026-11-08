@@ -15,18 +15,19 @@ import {
   stars,
   TRICKLE_SECONDS,
 } from './advance'
-import { bakeEnemies, bakeHero, bakeStage, DPR, enemyKey, GUN, HERO_SIZE, WALL_H } from './art'
-import { STAGE_ASSETS } from './assets'
 import {
-  BURN_SECONDS,
-  bulletStats,
-  burnPerSecond,
-  CHAIN_RADIUS,
-  chainOf,
-  type Loadout,
-  waterSlow,
-  xpToNext,
-} from './cards'
+  bakeEnemies,
+  bakeHero,
+  bakeMagic,
+  bakeStage,
+  DPR,
+  enemyKey,
+  GUN,
+  HERO_SIZE,
+  WALL_H,
+} from './art'
+import { STAGE_ASSETS } from './assets'
+import { bulletStats, type Loadout, MAGICS, type Magic, type MagicLevels, xpToNext } from './cards'
 import {
   BURN_TICK_SECONDS,
   CRIT_POOL,
@@ -43,6 +44,20 @@ import { WALK_FRAMES, walkFrame } from './enemyWalk'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
 import type { Hero } from './hero'
 import { BULLET_H, BULLET_W, bulletHitbox } from './hitbox'
+import {
+  chainTargets,
+  densest,
+  fireStats,
+  type LightningStats,
+  lightningStats,
+  MagicClock,
+  magicTier,
+  nearestTo,
+  strongest,
+  sweepHits,
+  type WaterStats,
+  waterStats,
+} from './magic'
 import { wallOffset } from './stageArt'
 import { pierceOf, SLOW_FACTOR, SLOW_SECONDS, weaponDamage } from './weaponEffects'
 
@@ -124,9 +139,9 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   boss: boolean
   /** 기관단총에 맞아 이 전투 시각(초)까지 느리다 (376번). */
   slowUntil: number
-  /** 느린 동안의 빠르기 배율(기관단총·물 마법, 376·377번). */
+  /** 느린 동안의 빠르기 배율(기관단총·물 마법, 376·392번). */
   slowFactor: number
-  /** 불 마법에 타는 동안(전투 시각, 초)과 초당 피해 (377번). */
+  /** 불 마법에 타는 동안(전투 시각, 초)과 초당 피해 (392번). */
   burnUntil: number
   burnDps: number
   /** 화상 피해를 숫자로 묶는 중(391번): 지난 숫자 뒤로 탄 피해와 시간(초). BURN_TICK_SECONDS마다 하나로 띄운다. */
@@ -151,6 +166,54 @@ type Bullet = Phaser.Physics.Arcade.Image & {
 /** 데미지 숫자 한 칸: 합칠 때 다시 튀게 하는 크기 트윈. */
 type DamageText = Phaser.GameObjects.Text & { punch: Phaser.Tweens.Tween | null }
 
+/** 마법을 쏘는 주체 (392번): 자리와 마법 시계. 지금은 사장냥 하나이고, 함께 싸우는 고양이가 생기면 저마다 하나씩 더해 같은 마법을 제 자리에서 쓴다. */
+interface MagicCaster {
+  at: () => { x: number; y: number }
+  clock: MagicClock
+}
+/** 날아가는 물(풀에서 돌려 쓴다): 물방울·물줄기·큰 물결. half·depth는 지금 맞는 폭(sweepHits). */
+interface WaterShot {
+  img: Phaser.GameObjects.Image
+  active: boolean
+  level: number
+  x: number
+  y: number
+  dx: number
+  dy: number
+  half: number
+  depth: number
+  travelled: number
+  hitList: Enemy[]
+}
+/** 포물선으로 날아가는 불덩이: 출발·도착 자리와 진행(0~1). */
+interface FireShot {
+  img: Phaser.GameObjects.Image
+  active: boolean
+  level: number
+  sx: number
+  sy: number
+  tx: number
+  ty: number
+  height: number
+  t: number
+  duration: number
+}
+/** 불덩이가 떨어진 자리에 남는 불길: 그동안 들어온 적도 탄다. */
+interface FirePatch {
+  img: Phaser.GameObjects.Image
+  active: boolean
+  level: number
+  x: number
+  y: number
+  until: number
+  nextTick: number
+}
+/** 물이 날아갈 수 있는 거리(px)와, 끝에서 이만큼 남으면 옅어지기 시작한다. */
+const WATER_RANGE = 820
+const WATER_FADE = 140
+/** 불길이 둘레의 적을 태우는 간격(초). */
+const PATCH_TICK = 0.25
+
 /** 개발 서버의 확인 스크립트(app/scripts/stageCheck.ts)가 읽는 데미지 숫자 집계. 운영 빌드에는 내보내지 않는다. */
 export interface DamageStats {
   /** 새로 띄운 숫자 수(종류별)와 합친 횟수, 죽이는 마지막 한 방에 띄운 숫자 수, 한꺼번에 떠 있던 최대 수. */
@@ -158,6 +221,8 @@ export interface DamageStats {
   merged: number
   killing: number
   peak: number
+  /** 마법이 나간 횟수 (392번). */
+  casts: Record<Magic, number>
 }
 
 /** 적 그림(64×64)의 충돌 원: 가운데에 반지름 r. */
@@ -183,7 +248,8 @@ class BattleScene extends Phaser.Scene {
   private readonly spec: StageSpec
   /** 이 판 보스의 최대 체력: 스테이지가 키운다. */
   private bossMax = BOSS.hp
-  private loadout: Loadout
+  /** 지금 수치. 개발 서버의 확인 스크립트가 마법 레벨만 바꿔 넣을 때 읽는다(startBattle). */
+  loadout: Loadout
   private bg!: Phaser.GameObjects.Image
   /** 전진 모드: 위에 이어 붙인 둘째 배경. 둘이 함께 내려가며 길이 올라가는 것처럼 보인다. */
   private bg2: Phaser.GameObjects.Image | null = null
@@ -231,7 +297,29 @@ class BattleScene extends Phaser.Scene {
     merged: 0,
     killing: 0,
     peak: 0,
+    casts: { water: 0, fire: 0, lightning: 0 },
   }
+  /** 마법 (392번): 쏘는 주체들과 풀에서 돌려 쓰는 탄·불길·번개 줄기·빛, 마법마다 파티클 하나. */
+  private casters: MagicCaster[] = []
+  private waters: WaterShot[] = []
+  private embers: FireShot[] = []
+  private patches: FirePatch[] = []
+  private patchIndex = 0
+  private bolts: Phaser.GameObjects.Graphics[] = []
+  private boltIndex = 0
+  private rings: Phaser.GameObjects.Image[] = []
+  private ringIndex = 0
+  private glows: Phaser.GameObjects.Image[] = []
+  private glowIndex = 0
+  private pillars: Phaser.GameObjects.Image[] = []
+  private pillarIndex = 0
+  private waterFx!: Phaser.GameObjects.Particles.ParticleEmitter
+  private fireFx!: Phaser.GameObjects.Particles.ParticleEmitter
+  private boltFx!: Phaser.GameObjects.Particles.ParticleEmitter
+  /** 마법이 노릴 화면 안의 적(magicTargets)과 번개 줄기의 꺾인 점: 매번 새로 만들지 않는다. */
+  private targetBuf: Enemy[] = []
+  private readonly boltXs = new Float32Array(48)
+  private readonly boltYs = new Float32Array(48)
 
   private mental = 100
   private score = 0
@@ -287,6 +375,10 @@ class BattleScene extends Phaser.Scene {
   }
 
   applyLoadout(loadout: Loadout) {
+    for (const m of MAGICS) {
+      // 마법을 새로 배우거나 레벨이 올랐다: 새 연출이 곧바로 한 번 나간다.
+      if (loadout[m] > this.loadout[m]) for (const c of this.casters) c.clock.ready(m)
+    }
     this.loadout = { ...loadout, heal: 0 }
     if (loadout.heal > 0) {
       this.mental = Math.min(loadout.maxMental, this.mental + loadout.heal)
@@ -324,6 +416,7 @@ class BattleScene extends Phaser.Scene {
     bakeStage(this, this.opts.genre)
     bakeHero(this, this.opts.hero)
     bakeEnemies(this)
+    bakeMagic(this)
 
     // 선명하게(344번): 캔버스는 화면 배율만큼 크고(startBattle), 카메라를 그만큼 당겨 논리 좌표(view)는 CSS px 그대로다.
     let previousWidth = this.view().w
@@ -422,7 +515,6 @@ class BattleScene extends Phaser.Scene {
       if (kind === 'smg') {
         this.slow(enemy, SLOW_FACTOR, SLOW_SECONDS)
       }
-      this.magic(enemy, shot.damage)
       this.hit(enemy, shot.damage, angle, shot.crit ? 'crit' : 'bullet')
       if (bullet.splashRadius > 0) {
         this.splash(bx, by, bullet.splashRadius, bullet.splashDamage, enemy)
@@ -476,6 +568,7 @@ class BattleScene extends Phaser.Scene {
         emitting: false,
       })
       .setDepth(7)
+    this.createMagic()
     for (let i = 0; i < 6; i++) {
       this.flashes.push(this.add.image(0, 0, 'flash').setDepth(6).setVisible(false))
     }
@@ -1155,34 +1248,525 @@ class BattleScene extends Phaser.Scene {
     e.slowUntil = Math.max(e.slowUntil, this.elapsed + seconds)
   }
 
-  /** 마법 카드 (377번): 물은 느리게, 불은 태우고, 번개는 곁의 적에게 튄다. */
-  private magic(e: Enemy, damage: number) {
-    const { water, fire, lightning } = this.loadout
-    if (water > 0) {
-      const w = waterSlow(water)
-      this.slow(e, w.factor, w.seconds)
+  // ── 마법 (392번): 총알과 따로, 제 주기에 스스로 나간다. 레벨이 오를수록 연출이 세 단계로 화려해진다.
+
+  /** 마법의 풀과 파티클을 만든다. 탄·불길·줄기·빛은 미리 만들어 돌려 쓰고, 파티클은 한꺼번에 살아 있는 수를 묶어 폰에서 끊기지 않게 한다. */
+  private createMagic() {
+    this.casters.push({
+      at: () => ({ x: this.player.x, y: this.player.y - 24 }),
+      clock: new MagicClock(),
+    })
+    const soft = (config: Phaser.Types.GameObjects.Particles.ParticleEmitterConfig) =>
+      this.add
+        .particles(0, 0, 'magic-soft', { emitting: false, maxAliveParticles: 140, ...config })
+        .setDepth(6)
+    this.waterFx = soft({
+      speed: { min: 60, max: 240 },
+      lifespan: { min: 260, max: 520 },
+      scale: { start: 0.9 * TEX, end: 0 },
+      alpha: { start: 1, end: 0.3 },
+      gravityY: 420,
+      tint: [0xffffff, 0xbfe8ff, 0x6cc0ff, 0x2f8fe8],
+    })
+    this.fireFx = soft({
+      speed: { min: 30, max: 190 },
+      lifespan: { min: 300, max: 640 },
+      scale: { start: 1.3 * TEX, end: 0.2 * TEX },
+      alpha: { start: 1, end: 0 },
+      gravityY: -160,
+      tint: [0xfff6c0, 0xffd04d, 0xff8a2a, 0xff4a1a, 0xd9261a],
+    })
+    this.boltFx = this.add
+      .particles(0, 0, 'spark', {
+        emitting: false,
+        maxAliveParticles: 100,
+        speed: { min: 120, max: 380 },
+        lifespan: { min: 120, max: 300 },
+        scale: { start: 1.8 * TEX, end: 0 },
+        tint: [0xffffff, 0xfff27a, 0xffd23f, 0x9d8cff],
+      })
+      .setDepth(7)
+    const hidden = (key: string, depth: number) =>
+      this.add.image(0, 0, key).setDepth(depth).setVisible(false)
+    for (let i = 0; i < 8; i++) {
+      this.waters.push({
+        img: hidden('magic-drop', 4),
+        active: false,
+        level: 1,
+        x: 0,
+        y: 0,
+        dx: 0,
+        dy: -1,
+        half: 0,
+        depth: 0,
+        travelled: 0,
+        hitList: [],
+      })
     }
-    if (fire > 0) {
-      e.burnUntil = this.elapsed + BURN_SECONDS
-      e.burnDps = Math.max(e.burnDps, burnPerSecond(damage, fire))
+    for (let i = 0; i < 6; i++) {
+      this.embers.push({
+        img: hidden('magic-ember', 6),
+        active: false,
+        level: 1,
+        sx: 0,
+        sy: 0,
+        tx: 0,
+        ty: 0,
+        height: 0,
+        t: 0,
+        duration: 1,
+      })
+      this.patches.push({
+        img: hidden('magic-scorch', 2.5),
+        active: false,
+        level: 1,
+        x: 0,
+        y: 0,
+        until: 0,
+        nextTick: 0,
+      })
+      this.bolts.push(this.add.graphics().setDepth(6).setVisible(false))
     }
-    if (lightning > 0) {
-      const chain = chainOf(damage, lightning)
-      const near: { e: Enemy; d: number }[] = []
-      for (const child of this.enemies.getChildren()) {
-        const o = child as Enemy
-        if (o === e || !o.active || o.dying) continue
-        const d = Math.hypot(o.x - e.x, o.y - e.y)
-        if (d <= CHAIN_RADIUS) near.push({ e: o, d })
+    for (let i = 0; i < 10; i++) {
+      this.rings.push(hidden('magic-ring', 6))
+      this.glows.push(hidden('magic-glow', 5))
+    }
+    for (let i = 0; i < 3; i++) this.pillars.push(hidden('magic-pillar', 6).setOrigin(0.5, 1))
+  }
+
+  /** 줄인 움직임이면 파티클을 반만. */
+  private fx(n: number) {
+    return this.reducedMotion ? Math.ceil(n / 2) : n
+  }
+
+  /** 4·5레벨은 3단계 연출이 조금씩 더 커진다. */
+  private grow(level: number) {
+    return 1 + Math.max(0, level - 3) * 0.12
+  }
+
+  /** 풀에서 꺼낸 빛·고리 하나를 한 번 퍼뜨린다. from·to는 텍스처 크기에 대한 배율. */
+  private flare(
+    img: Phaser.GameObjects.Image,
+    x: number,
+    y: number,
+    tint: number,
+    from: number,
+    to: number,
+    ms: number,
+    alpha = 1,
+  ) {
+    this.tweens.killTweensOf(img)
+    img
+      .setPosition(x, y)
+      .setTint(tint)
+      .setScale(from * TEX)
+      .setAlpha(alpha)
+      .setVisible(true)
+    this.tweens.add({
+      targets: img,
+      scale: to * TEX,
+      alpha: 0,
+      duration: ms,
+      ease: 'Cubic.easeOut',
+      onComplete: () => img.setVisible(false),
+    })
+  }
+
+  /** 반지름 r(px)의 고리와 빛. 고리 텍스처는 반지름 36, 빛은 32. */
+  private ring(x: number, y: number, tint: number, r: number, ms: number) {
+    this.flare(this.rings[this.ringIndex++ % this.rings.length], x, y, tint, 0.25, r / 36, ms)
+  }
+  private glow(x: number, y: number, tint: number, r: number, ms: number, alpha = 0.8) {
+    this.flare(this.glows[this.glowIndex++ % this.glows.length], x, y, tint, 0.3, r / 32, ms, alpha)
+  }
+
+  /** 마법이 노릴 수 있는 적: 살아 있고 화면 안에 들어온 적. 같은 배열을 다시 채운다. */
+  private magicTargets(): Enemy[] {
+    const buf = this.targetBuf
+    buf.length = 0
+    const { w, h } = this.view()
+    for (const child of this.enemies.getChildren()) {
+      const e = child as Enemy
+      if (e.active && !e.dying && e.y > 12 && e.y < h && e.x > 0 && e.x < w) buf.push(e)
+    }
+    return buf
+  }
+
+  /** 시전자마다 주기가 된 마법을 쏜다. 노릴 적이 없거나 풀이 다 날고 있으면 잠시 뒤 다시 본다. */
+  private castMagic() {
+    for (const caster of this.casters) {
+      for (const m of MAGICS) {
+        const level = this.loadout[m]
+        if (!caster.clock.due(m, level, this.elapsed)) continue
+        const from = caster.at()
+        const cast =
+          m === 'water'
+            ? this.castWater(from, level)
+            : m === 'fire'
+              ? this.castFire(from, level)
+              : this.castLightning(from, level)
+        if (cast) {
+          caster.clock.cast(m, level, this.elapsed)
+          this.damageStats.casts[m]++
+        } else {
+          caster.clock.retry(m, this.elapsed)
+        }
       }
-      near.sort((a, b) => a.d - b.d)
-      const g = this.add.graphics().setDepth(6)
-      g.lineStyle(3, 0xffe066, 1)
-      for (const { e: o } of near.slice(0, chain.targets)) {
-        g.lineBetween(e.x, e.y, o.x, o.y)
-        this.hit(o, chain.damage, Math.atan2(o.y - e.y, o.x - e.x), 'chain')
+    }
+  }
+
+  private updateMagic(dt: number) {
+    for (const s of this.waters) if (s.active) this.moveWater(s, dt)
+    for (const s of this.embers) if (s.active) this.moveEmber(s, dt)
+    for (const p of this.patches) if (p.active) this.burnPatch(p)
+  }
+
+  /** 불에 탄다: 타는 중이면 더 센 불과 더 긴 시간을 남긴다. 피해는 update의 화상 틱이 준다. */
+  private ignite(e: Enemy, dps: number, seconds: number) {
+    const burning = e.burnUntil > this.elapsed
+    e.burnDps = burning ? Math.max(e.burnDps, dps) : dps
+    e.burnUntil = Math.max(e.burnUntil, this.elapsed + seconds)
+  }
+
+  // 물: 가까운 적에게 물방울(Lv.1, 맞으면 터져 둘레를 적신다) → 물줄기(Lv.2, 꿰뚫는다) → 큰 물결(Lv.3, 넓게 쓸고 간다). 맞은 적은 느려진다.
+
+  private castWater(from: { x: number; y: number }, level: number): boolean {
+    const target = nearestTo(this.magicTargets(), from)
+    const s = this.waters.find((w) => !w.active)
+    if (!target || !s) return false
+    const tier = magicTier(level)
+    const a = Math.atan2(target.y - from.y, target.x - from.x)
+    s.active = true
+    s.level = level
+    s.x = from.x
+    s.y = from.y
+    s.dx = Math.cos(a)
+    s.dy = Math.sin(a)
+    s.travelled = 0
+    s.hitList.length = 0
+    s.depth = tier === 3 ? 18 : 12
+    s.img
+      .setTexture(tier === 3 ? 'magic-wave' : 'magic-drop')
+      .setPosition(s.x, s.y)
+      .setRotation(a)
+      .setAlpha(1)
+      .setVisible(true)
+    if (tier === 1) s.img.setDisplaySize(36, 23)
+    else if (tier === 2) s.img.setDisplaySize(92, 26)
+    this.moveWater(s, 0)
+    this.waterFx.explode(this.fx(3 * tier), from.x, from.y)
+    sfx.splash()
+    return true
+  }
+
+  private moveWater(s: WaterShot, dt: number) {
+    const st = waterStats(s.level)
+    const tier = magicTier(s.level)
+    const step = st.speed * dt
+    s.x += s.dx * step
+    s.y += s.dy * step
+    s.travelled += step
+    // 큰 물결은 나아가며 넓어진다.
+    s.half = tier === 3 ? Math.min(st.half, 24 + s.travelled * 0.5) : st.half
+    const { w, h } = this.view()
+    const left = WATER_RANGE - s.travelled
+    if (left <= 0 || s.y < -80 || s.y > h + 80 || s.x < -80 || s.x > w + 80) {
+      this.endWater(s)
+      return
+    }
+    s.img.setPosition(s.x, s.y).setAlpha(Math.min(1, left / WATER_FADE))
+    if (tier === 3) s.img.setDisplaySize(58 * this.grow(s.level), s.half * 2.1)
+    if (dt > 0) {
+      // 꼬리 물보라: 물방울은 가끔, 물줄기는 촘촘히, 물결은 폭 전체에서 거품이 튄다.
+      if (tier === 1) {
+        if (Math.random() < 0.5) this.waterFx.emitParticleAt(s.x - s.dx * 12, s.y - s.dy * 12)
+      } else if (tier === 2) {
+        this.waterFx.emitParticleAt(s.x - s.dx * 30, s.y - s.dy * 30, 2)
+      } else {
+        for (let i = 0; i < this.fx(2); i++) {
+          const k = (Math.random() * 2 - 1) * s.half
+          this.waterFx.emitParticleAt(s.x - s.dy * k, s.y + s.dx * k)
+        }
       }
-      this.tweens.add({ targets: g, alpha: 0, duration: 120, onComplete: () => g.destroy() })
+    }
+    const angle = Math.atan2(s.dy, s.dx)
+    for (const e of this.magicTargets()) {
+      if (s.hitList.includes(e) || !sweepHits(s, e, ENEMIES[e.kind].r)) continue
+      if (!st.pierce) {
+        this.waterSplash(s, st, e.x, e.y)
+        return
+      }
+      s.hitList.push(e)
+      this.waterFx.explode(this.fx(2 + tier), e.x, e.y)
+      this.waterHit(e, st, angle)
+    }
+  }
+
+  /** 물방울이 처음 맞은 적에서 터진다: 둘레의 적이 모두 젖는다. */
+  private waterSplash(s: WaterShot, st: WaterStats, x: number, y: number) {
+    this.endWater(s)
+    this.ring(x, y, 0x6cc0ff, st.splash, 260)
+    this.glow(x, y, 0xbfe8ff, st.splash * 0.8, 200, 0.6)
+    this.waterFx.explode(this.fx(10), x, y)
+    const angle = Math.atan2(s.dy, s.dx)
+    for (const e of this.magicTargets()) {
+      const reach = st.splash + ENEMIES[e.kind].r
+      if ((e.x - x) ** 2 + (e.y - y) ** 2 <= reach * reach) this.waterHit(e, st, angle)
+    }
+  }
+
+  private waterHit(e: Enemy, st: WaterStats, angle: number) {
+    this.slow(e, st.slowFactor, st.slowSeconds)
+    this.hit(e, st.damage * this.loadout.damage, angle, 'water')
+  }
+
+  private endWater(s: WaterShot) {
+    s.active = false
+    s.img.setVisible(false)
+  }
+
+  // 불: 적이 가장 많이 모인 곳에 불씨(Lv.1) → 불덩이(Lv.2) → 불기둥과 폭발(Lv.3)을 던진다. 떨어진 둘레가 타고 불길이 잠시 남는다.
+
+  private castFire(from: { x: number; y: number }, level: number): boolean {
+    const st = fireStats(level)
+    const target = densest(this.magicTargets(), st.radius)
+    const s = this.embers.find((f) => !f.active)
+    if (!target || !s) return false
+    const tier = magicTier(level)
+    const d = Math.hypot(target.x - from.x, target.y - from.y)
+    s.duration = 0.36 + d / 1600
+    // 내려오는 적이 닿을 자리를 앞질러 노린다.
+    const v = target.body?.velocity
+    s.active = true
+    s.level = level
+    s.sx = from.x
+    s.sy = from.y
+    s.tx = target.x + (v?.x ?? 0) * s.duration
+    s.ty = target.y + (v?.y ?? 0) * s.duration
+    s.height = Math.min(140, d * 0.35)
+    s.t = 0
+    s.img
+      .setPosition(from.x, from.y)
+      .setScale(TEX * [0.75, 1.15, 1.6][tier - 1] * this.grow(level))
+      .setAlpha(1)
+      .setVisible(true)
+    sfx.whoosh()
+    return true
+  }
+
+  private moveEmber(s: FireShot, dt: number) {
+    s.t = Math.min(1, s.t + dt / s.duration)
+    const x = s.sx + (s.tx - s.sx) * s.t
+    const y = s.sy + (s.ty - s.sy) * s.t - Math.sin(Math.PI * s.t) * s.height
+    s.img.setPosition(x, y).setRotation(s.img.rotation + dt * 9)
+    this.fireFx.emitParticleAt(x, y, magicTier(s.level) === 3 ? 2 : 1)
+    if (s.t >= 1) {
+      s.active = false
+      s.img.setVisible(false)
+      this.fireExplode(s.tx, s.ty, s.level)
+    }
+  }
+
+  private fireExplode(x: number, y: number, level: number) {
+    const st = fireStats(level)
+    const tier = magicTier(level)
+    const grow = this.grow(level)
+    this.ring(x, y, 0xff8a2a, st.radius, 260 + tier * 60)
+    this.glow(x, y, 0xffc04d, st.radius * 0.9, 240 + tier * 40, 0.85)
+    this.fireFx.explode(this.fx([8, 16, 28][tier - 1]), x, y)
+    if (tier >= 2) this.glow(x, y, 0xff5a1f, st.radius * 0.55, 380)
+    if (tier === 3) {
+      // 불기둥: 솟구쳤다 사그라든다. 두 번째 고리가 늦게 퍼지며 폭발이 크게 보인다.
+      const pillar = this.pillars[this.pillarIndex++ % this.pillars.length]
+      this.tweens.killTweensOf(pillar)
+      pillar
+        .setPosition(x, y + st.radius * 0.25)
+        .setScale(TEX * 1.1 * grow, 0)
+        .setAlpha(1)
+        .setVisible(true)
+      this.tweens.add({
+        targets: pillar,
+        scaleY: TEX * 1.25 * grow,
+        duration: 180,
+        ease: 'Back.easeOut',
+        onComplete: () =>
+          this.tweens.add({
+            targets: pillar,
+            alpha: 0,
+            scaleX: TEX * 0.6 * grow,
+            delay: 120,
+            duration: 520,
+            onComplete: () => pillar.setVisible(false),
+          }),
+      })
+      this.time.delayedCall(90, () => this.ring(x, y, 0xffd04d, st.radius * 1.25, 360))
+      if (!this.reducedMotion) this.cameras.main.shake(110, 0.004)
+    }
+    sfx.boom()
+    const dmg = st.damage * this.loadout.damage
+    const dps = st.burnDps * this.loadout.damage
+    for (const e of this.magicTargets()) {
+      const reach = st.radius + ENEMIES[e.kind].r
+      if ((e.x - x) ** 2 + (e.y - y) ** 2 > reach * reach) continue
+      this.ignite(e, dps, st.burnSeconds)
+      this.hit(e, dmg, Math.atan2(e.y - y, e.x - x), 'fire')
+    }
+    const p = this.patches[this.patchIndex++ % this.patches.length]
+    p.active = true
+    p.level = level
+    p.x = x
+    p.y = y
+    p.until = this.elapsed + st.patchSeconds
+    p.nextTick = this.elapsed + PATCH_TICK
+    p.img
+      .setPosition(x, y)
+      .setDisplaySize(st.radius * 2.2, st.radius * 1.2)
+      .setAlpha(0.75)
+      .setVisible(true)
+  }
+
+  /** 남은 불길: 틱마다 불꽃이 일렁이고 둘레에 들어온 적에 불이 붙는다. 끝나기 0.4초 전부터 옅어진다. */
+  private burnPatch(p: FirePatch) {
+    const left = p.until - this.elapsed
+    if (left <= 0) {
+      p.active = false
+      p.img.setVisible(false)
+      return
+    }
+    p.img.setAlpha(Math.min(0.75, (left / 0.4) * 0.75))
+    if (this.elapsed < p.nextTick) return
+    p.nextTick = this.elapsed + PATCH_TICK
+    const st = fireStats(p.level)
+    for (let i = 0; i < this.fx(magicTier(p.level)); i++) {
+      const a = Math.random() * Math.PI * 2
+      const r = Math.random() * st.radius * 0.8
+      this.fireFx.emitParticleAt(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r * 0.55)
+    }
+    const dps = st.burnDps * this.loadout.damage
+    for (const e of this.magicTargets()) {
+      const reach = st.radius + ENEMIES[e.kind].r
+      if ((e.x - p.x) ** 2 + (e.y - p.y) ** 2 <= reach * reach) this.ignite(e, dps, st.burnSeconds)
+    }
+  }
+
+  // 번개: 하늘에서 체력이 가장 많은 적에게 내리꽂혀 옆 적에게 차례로 튄다. 가는 줄기(Lv.1) → 굵은 번개(Lv.2) → 여러 갈래(Lv.3).
+
+  private castLightning(from: { x: number; y: number }, level: number): boolean {
+    const st = lightningStats(level)
+    const list = this.magicTargets()
+    const struck: Enemy[] = []
+    for (let i = 0; i < st.bolts; i++) {
+      const target = strongest(list, from, struck)
+      if (!target) break
+      struck.push(target)
+    }
+    if (struck.length === 0) return false
+    // 맞아 죽은 적이 목록에서 빠지기 전에 튈 곳까지 정한다.
+    const plans = struck.map((t) => ({
+      t,
+      chain: chainTargets(t, list, st.chains, st.chainRadius),
+    }))
+    for (const { t, chain } of plans) this.strike(t, chain, st, level)
+    sfx.zap()
+    return true
+  }
+
+  private strike(target: Enemy, chain: Enemy[], st: LightningStats, level: number) {
+    const tier = magicTier(level)
+    const width = [2, 4, 5.5][tier - 1] * this.grow(level)
+    const g = this.bolts[this.boltIndex++ % this.bolts.length]
+    this.tweens.killTweensOf(g)
+    g.clear().setAlpha(1).setVisible(true)
+    this.drawBolt(
+      g,
+      target.x + Phaser.Math.Between(-40, 40),
+      -20,
+      target.x,
+      target.y,
+      width,
+      [0, 1, 3][tier - 1],
+    )
+    let prev = target
+    for (const o of chain) {
+      this.drawBolt(g, prev.x, prev.y, o.x, o.y, Math.max(1.5, width * 0.55), 0)
+      prev = o
+    }
+    this.glow(target.x, target.y, 0xfff27a, [24, 40, 60][tier - 1] * this.grow(level), 220)
+    if (tier >= 2) this.ring(target.x, target.y, 0xffe94d, [0, 42, 66][tier - 1], 240)
+    this.boltFx.explode(this.fx([6, 12, 22][tier - 1]), target.x, target.y)
+    // 번쩍임: 단계가 높을수록 여러 번 깜박인 뒤 사라진다.
+    this.tweens.add({
+      targets: g,
+      alpha: 0.25,
+      duration: 45,
+      yoyo: true,
+      repeat: tier - 1,
+      onComplete: () =>
+        this.tweens.add({
+          targets: g,
+          alpha: 0,
+          duration: 110 + tier * 50,
+          onComplete: () => g.setVisible(false),
+        }),
+    })
+    const dmg = st.damage * this.loadout.damage
+    this.hit(target, dmg, Math.PI / 2, 'lightning')
+    prev = target
+    for (const o of chain) {
+      this.boltFx.explode(this.fx(3), o.x, o.y)
+      if (o.active && !o.dying) {
+        this.hit(o, dmg * st.chainDamage, Math.atan2(o.y - prev.y, o.x - prev.x), 'chain')
+      }
+      prev = o
+    }
+  }
+
+  /**
+   * 번개 줄기 하나: 두 점 사이를 꺾인 선으로, 보랏빛 번짐(밝은 바닥에서도 보이게) → 노란 줄기 → 흰 심 세 겹. forks만큼 곁가지가 아래로 갈라진다.
+   */
+  private drawBolt(
+    g: Phaser.GameObjects.Graphics,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    width: number,
+    forks: number,
+  ) {
+    const len = Math.hypot(x2 - x1, y2 - y1) || 1
+    const xs = this.boltXs
+    const ys = this.boltYs
+    const n = Math.min(xs.length - 1, Math.max(4, Math.round(len / 22)))
+    const nx = -(y2 - y1) / len
+    const ny = (x2 - x1) / len
+    const jag = Math.min(16, len * 0.08)
+    for (let i = 0; i <= n; i++) {
+      const t = i / n
+      const off = i === 0 || i === n ? 0 : (Math.random() * 2 - 1) * jag
+      xs[i] = x1 + (x2 - x1) * t + nx * off
+      ys[i] = y1 + (y2 - y1) * t + ny * off
+    }
+    const stroke = (lw: number, color: number, alpha: number) => {
+      g.lineStyle(lw, color, alpha)
+      g.beginPath()
+      g.moveTo(xs[0], ys[0])
+      for (let i = 1; i <= n; i++) g.lineTo(xs[i], ys[i])
+      g.strokePath()
+    }
+    stroke(width * 3.2, 0x6b5cff, 0.28)
+    stroke(width, 0xffe24d, 1)
+    stroke(Math.max(1, width * 0.4), 0xffffff, 1)
+    // 곁가지는 꺾인 점을 다 쓴 뒤에 그린다(같은 버퍼를 다시 쓰므로 갈라질 자리를 먼저 적어 둔다).
+    const main = Math.atan2(y2 - y1, x2 - x1)
+    const starts: [number, number, number][] = []
+    for (let f = 0; f < forks; f++) {
+      const i = 1 + Math.floor(Math.random() * Math.max(1, n * 0.7))
+      const a = main + (Math.random() < 0.5 ? -1 : 1) * (0.45 + Math.random() * 0.45)
+      starts.push([xs[i], ys[i], a])
+    }
+    for (const [fx, fy, a] of starts) {
+      const l = 40 + Math.random() * 50
+      this.drawBolt(g, fx, fy, fx + Math.cos(a) * l, fy + Math.sin(a) * l, width * 0.5, 0)
     }
   }
 
@@ -1356,6 +1940,9 @@ class BattleScene extends Phaser.Scene {
     if (time - this.lastFire > this.loadout.fireMs) {
       this.shoot(time)
     }
+    // 마법은 총알과 따로 제 주기에 스스로 나간다 (392번).
+    this.castMagic()
+    this.updateMagic(dt)
 
     if (this.mode === 'advance') {
       this.advanceStep(dt, h)
@@ -1394,7 +1981,7 @@ class BattleScene extends Phaser.Scene {
       const targetY = this.wallZone ? this.wallY() : p.y
       const d = Math.abs(targetY - e.y) || 1
       // 원거리 공격은 없다 (340번): 손절매도 다른 적처럼 곧장 내려와 부딪힌다.
-      // 기관단총·물 마법에 맞으면 잠깐 느리고 파르스름하다 (376·377번). 불 마법에 맞으면 타며 주황빛이다.
+      // 기관단총·물 마법에 맞으면 잠깐 느리고 파르스름하다 (376·392번). 불 마법에 맞으면 타며 주황빛이다.
       const slowed = e.slowUntil > this.elapsed
       const burning = e.burnUntil > this.elapsed
       if (burning) {
@@ -1513,8 +2100,13 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
     scene: [scene],
   })
   if (import.meta.env.DEV) {
-    // 개발 서버에서만: 확인 스크립트가 데미지 숫자 집계를 읽는다(stageCheck.ts).
-    ;(window as unknown as { __mentalDamage?: DamageStats }).__mentalDamage = scene.damageStats
+    // 개발 서버에서만: 확인 스크립트가 데미지 숫자·마법 집계를 읽고, 마법 레벨을 바로 넣어 레벨마다 연출을 찍는다(stageCheck.ts).
+    const dev = window as unknown as {
+      __mentalDamage?: DamageStats
+      __mentalMagic?: (levels: Partial<MagicLevels>) => void
+    }
+    dev.__mentalDamage = scene.damageStats
+    dev.__mentalMagic = (levels) => scene.applyLoadout({ ...scene.loadout, ...levels })
   }
   const ro = new ResizeObserver(() => {
     const w = Math.round(parent.clientWidth * DPR)

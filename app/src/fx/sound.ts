@@ -147,6 +147,21 @@ export const sfx = {
   },
   /** 멘탈 전투: 탄이 맞았다 */
   hit: () => tone(2400, 25, { wave: 'square', gain: 0.02, slide: 1600 }),
+  /** 멘탈 전투 마법 (392번): 물을 쏜다 */
+  splash: () => {
+    tone(620, 120, { wave: 'sine', gain: 0.05, slide: 260 })
+    noise(80, 0.03)
+  },
+  /** 멘탈 전투 마법: 불덩이가 터진다 */
+  boom: () => {
+    tone(160, 180, { wave: 'sawtooth', gain: 0.06, slide: 55 })
+    noise(160, 0.07)
+  },
+  /** 멘탈 전투 마법: 번개가 내리꽂힌다 */
+  zap: () => {
+    tone(1700, 110, { wave: 'sawtooth', gain: 0.04, slide: 140 })
+    noise(90, 0.06)
+  },
   /** 멘탈 전투: 적이 터진다 */
   squish: () => {
     tone(420, 70, { wave: 'triangle', gain: 0.06, slide: 140 })

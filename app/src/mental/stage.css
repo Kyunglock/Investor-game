@@ -429,6 +429,20 @@
   line-height: 1.25;
   word-break: keep-all;
 }
+/* 마법 레벨 (392번): "Lv.2 → Lv.3"을 잉크색 알약에 카드 색 글자로(노랑 카드에서도 읽히게). */
+.stage-card-level {
+  display: inline-block;
+  margin-top: 3px;
+  padding: 1px 7px;
+  border-radius: 20px;
+  font-family: var(--font-game);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--card-accent);
+  background: #2b2340;
+  box-shadow: 0 2px 0 #00000022;
+  white-space: nowrap;
+}
 .stage-card-description {
   display: block;
   font-size: 10px;
