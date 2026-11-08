@@ -17,8 +17,8 @@
 
 - 실제 전장 자산: `app/src/mental/assets/{street,hero,enemies}.png`. 승인한 시안에서 이미지 생성 도구로 만든 전용 배경·투명 캐릭터이며, 생성 프롬프트는 같은 폴더의 `README.md`에 있다. Vite가 파일을 해시하고 APK와 `/app/` 산출물에 함께 넣는다.
 - `art.ts`·`stageArt.ts`가 투명 여백을 제외하고 기존 크기에 맞춰 텍스처를 굽는다. `drawStageGun.ts`는 실제 무기의 종류·등급 및 두 앞발을 그린다. 멘탈벽은 실시간으로 밝기·균열·접촉 파동을 표시한다.
-- UI는 `MentalWindow.tsx`·`stage.css`. 결과 보고가 거절되거나 끊기면 결산으로 넘어가지 않고 재시도한다. 로딩 실패도 전투를 시작하지 않고 재시도/건너뛰기를 제공한다. 다른 앱 화면은 전투 중 `inert`로 처리하며 뒤로 가기와 Escape는 일시정지를 연다.
-- 개발 서버(`pnpm dev --port 5182`)에서 `BROWSER_CHANNEL=msedge node scripts/stageCheck.ts`로 실제 Phaser를 실행한다. API만 가짜 응답이며, 장비 교체·첫 카드 정지·조준·벽 피격·일시정지·패배·보고 실패/재시도·드롭·두 장르·그림 재로딩·종료를 검증한다. Playwright의 시계로 프레임을 진행하며 `scripts/shots/stage/`에 캡처한다. Android 실기기 성능 검증은 별도다.
+- UI는 `MentalWindow.tsx`·`stage.css`. 전투 위에는 흰 판이 없다(390번): 멘탈 게이지는 멘탈벽 그림 위에(`battle-wall`), 레벨·경험치(아래에서 위로 찬다)·처치 수는 왼쪽 가장자리에 세로로(`battle-level`), 시간·일시정지는 오른쪽 위 구석에, 보스 체력은 보스가 나올 때만 맨 위에 얇게 둬서 적이 내려오는 위쪽 가운데를 비운다. 결과 보고가 거절되거나 끊기면 결산으로 넘어가지 않고 재시도한다. 로딩 실패도 전투를 시작하지 않고 재시도/건너뛰기를 제공한다. 다른 앱 화면은 전투 중 `inert`로 처리하며 뒤로 가기와 Escape는 일시정지를 연다.
+- 개발 서버(`pnpm dev --port 5182`)에서 `BROWSER_CHANNEL=msedge node scripts/stageCheck.ts`(크로미움 경로는 `CHROMIUM_PATH`)로 실제 Phaser를 실행한다. API만 가짜 응답이며, 스테이지 선택으로 1-1에 들어가 장비 교체·첫 카드 정지·전투 표시의 자리(390번)·조준·벽 피격(벽 위 게이지가 준다)·일시정지·패배·보고 실패/재시도·두 장르·그림 재로딩·종료를 검증한다. Playwright의 시계로 프레임을 진행하며 `scripts/shots/stage/`에 캡처한다. Android 실기기 성능 검증은 별도다.
 
 ### 화면 개선 (2026-11-08)
 

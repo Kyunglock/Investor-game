@@ -568,7 +568,7 @@ function CardPick({
 }
 
 /**
- * 한 판: Phaser를 늦게 불러 컨테이너에 띄우고, 위에 멘탈·시간·레벨과 큰 알림을 그린다. 레벨이 오르면 전투 위에 카드 고르기가 뜬다. 오른쪽 위 ✕로 언제든
+ * 한 판: Phaser를 늦게 불러 컨테이너에 띄우고, 그 위에 멘탈(멘탈벽 위)·레벨(왼쪽 세로)·시간(오른쪽 위)과 큰 알림을 그린다. 레벨이 오르면 전투 위에 카드 고르기가 뜬다. 오른쪽 위 Ⅱ로 언제든
  * 나갈 수 있다(345번): 전투를 멈추고 물은 뒤 나가면 강화 없이 결산이다.
  */
 function Battle({
@@ -694,25 +694,9 @@ function Battle({
       />
       {hud && !loadError && (
         <>
+          {/* 위의 흰 판을 없앴다 (390번): 적이 내려오는 위쪽 가운데를 비우고, 멘탈은 멘탈벽 위에, 레벨은 왼쪽 가장자리에 세로로 둔다. */}
           <div className="battle-hud" data-testid="battle-hud">
-            <div className="battle-hud-top">
-              <div className="battle-mental">
-                <span aria-hidden="true">♥</span>
-                <b>멘탈</b>
-                <div
-                  className="battle-health"
-                  role="progressbar"
-                  aria-label="멘탈벽 내구도"
-                  aria-valuenow={hud.mental}
-                  aria-valuemin={0}
-                  aria-valuemax={hud.maxMental}
-                >
-                  <i style={{ width: `${(hud.mental / hud.maxMental) * 100}%` }} />
-                  <strong>
-                    {hud.mental} / {hud.maxMental}
-                  </strong>
-                </div>
-              </div>
+            <div className="battle-corner">
               {hud.segment && (
                 <b className="battle-segment" data-testid="battle-segment">
                   {hud.boss ? '보스' : `구간 ${hud.segment.at}/${hud.segment.total}`}
@@ -750,8 +734,11 @@ function Battle({
                 </div>
               </div>
             )}
-            <div className="battle-hud-bottom">
-              <b>Lv. {hud.level}</b>
+            <div className="battle-level" data-testid="battle-level">
+              <b>
+                <small>Lv.</small>
+                {hud.level}
+              </b>
               <div
                 className="battle-xp"
                 role="progressbar"
@@ -760,14 +747,32 @@ function Battle({
                 aria-valuemin={0}
                 aria-valuemax={100}
               >
-                <i style={{ width: `${hud.xp * 100}%` }} />
+                <i style={{ height: `${hud.xp * 100}%` }} />
               </div>
               <span>
-                처치 <b>{hud.kills}</b>
+                <small>처치</small>
+                <b>{hud.kills}</b>
               </span>
             </div>
+            <div className="battle-wall" data-testid="battle-wall">
+              <span className="battle-wall-label">
+                <span aria-hidden="true">♥</span> 멘탈벽
+              </span>
+              <div
+                className="battle-health"
+                role="progressbar"
+                aria-label="멘탈벽 내구도"
+                aria-valuenow={hud.mental}
+                aria-valuemin={0}
+                aria-valuemax={hud.maxMental}
+              >
+                <i style={{ width: `${(hud.mental / hud.maxMental) * 100}%` }} />
+                <strong>
+                  {hud.mental} / {hud.maxMental}
+                </strong>
+              </div>
+            </div>
           </div>
-          {mode === 'defense' && <span className="battle-wall-label">멘탈벽</span>}
           <div className="battle-footer">
             <span>{mode === 'advance' ? '끌어서 움직이기 · 자동 사격' : '누른 방향으로 발사'}</span>
             <div>
