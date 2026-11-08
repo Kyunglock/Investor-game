@@ -49,7 +49,10 @@ export function GachaReveal({
     }
   }, [open, drawn, onFlip])
   const done = open >= drawn.length
-  const best = drawn.reduce((top, d) => Math.max(top, EMPLOYEE_LADDER.indexOf(d.grade)), 0)
+  const best = drawn.reduce(
+    (top, d) => (EMPLOYEE_LADDER.indexOf(d.grade) > EMPLOYEE_LADDER.indexOf(top.grade) ? d : top),
+    drawn[0],
+  )
   return (
     <Overlay>
       <section
@@ -84,15 +87,22 @@ export function GachaReveal({
                   </span>
                   <span className="flip-front">
                     <span
-                      className={`grade-card ${tierClass(tierOf(d.grade))} flex h-full w-full flex-col items-center justify-center gap-1 p-2 text-ink`}
+                      className={`grade-card ${tierClass(tierOf(d.grade))} flex h-full w-full flex-col items-center justify-center gap-0.5 p-2 text-ink`}
                     >
                       <span className="gem-static">
                         <GradeBadge grade={d.grade} label={d.star ? '특급' : undefined} />
                       </span>
                       <b className="text-[14px] leading-tight">{d.name}</b>
                       <span className="text-[11px] text-muted">{titleOf(d.grade)}</span>
+                      {/* 등급 효과 (387번): 맞히면 버는 배수가 등급마다 두 배라 카드에서 바로 보인다. */}
+                      <span
+                        className="break-keep text-center text-[10px] font-bold leading-tight text-teal"
+                        data-testid="drawn-perk"
+                      >
+                        {d.perk}
+                      </span>
                       {d.fresh && (
-                        <span className="rounded bg-red-pen px-1.5 text-[10px] font-bold text-white">
+                        <span className="absolute top-1.5 right-1.5 rounded bg-red-pen px-1.5 text-[10px] font-bold text-white">
                           NEW
                         </span>
                       )}
@@ -115,7 +125,9 @@ export function GachaReveal({
         {done ? (
           <>
             <p className="mt-3 text-center text-[13px] text-white/75" data-testid="gacha-best">
-              최고 {EMPLOYEE_LADDER[best]} · 뽑은 사람은 쉬는 채로 들어왔습니다. 자리에 앉히세요.
+              최고 {best.grade} · {best.perk}
+              <br />
+              뽑은 사람은 쉬는 채로 들어왔습니다. 자리에 앉히세요.
             </p>
             <button
               type="button"

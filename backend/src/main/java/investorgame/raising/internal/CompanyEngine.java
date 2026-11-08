@@ -228,26 +228,97 @@ class CompanyEngine {
         && employee.deskYears + 1 >= properties.people().settleYears();
   }
 
-  /** 등급 효과의 "더 버는 몫"(%, 289번). SSS 위는 SSS 값. */
-  int perkGainPercent(Employee employee) {
-    return properties.perks().gainPercent().getOrDefault(overallGrade(employee.stats), 0);
+  /** 등급 효과의 "더 버는 몫"(%, 289·387번): 종합 등급마다 두 배, SSS 위 단계(X~GOD)도 이어서 두 배. */
+  long perkGainPercent(Employee employee) {
+    return gainPercentOf(employeeGrade(employee));
   }
 
-  /** 등급 효과 한 줄 (289번): "새내기 · 맞히면 2% 더 번다 · 한 해 일하면 50% 확률로 자란다". */
+  long gainPercentOf(String grade) {
+    return properties.perks().gainPercent().getOrDefault(grade, 0);
+  }
+
+  /** 등급 효과의 판단 보정 (387번): 손이 뒤집힐 확률에 곱하는 비율(%). SSS 위는 SSS 값. */
+  int perkFlipPercent(Map<String, Integer> stats) {
+    return properties.perks().flipPercent().getOrDefault(overallGrade(stats), PERCENT);
+  }
+
+  /** 등급 효과의 판단 보정 (387번): 종목 회의에서 기사를 읽을 때 안목에 더하는 점수. SSS 위는 SSS 값. */
+  int perkReadBonus(Employee employee) {
+    return properties.perks().readBonus().getOrDefault(overallGrade(employee.stats), 0);
+  }
+
+  /** 이름 붙은 등급 효과(A 손절·S 끌어주기·SS 방패·SSS 전설의 촉, 387번)를 가졌나: 능력치로 매긴 종합 등급이 그 등급 이상이다. 쌓인다. */
+  static boolean reaches(Employee employee, String grade) {
+    return LADDER.indexOf(overallGrade(employee.stats)) >= LADDER.indexOf(grade);
+  }
+
+  static final String STOP_LOSS = "A";
+  static final String PULL = "S";
+  static final String SHIELD = "SS";
+  static final String LEGEND = "SSS";
+
+  /** S 끌어주기 (387번): 같은 데스크에 S 이상 동료가 있다. 여럿이어도 한 번만 붙는다. */
+  boolean pulled(CompanyState company, Employee employee) {
+    return company.employees.stream()
+        .anyMatch(e -> e != employee && employee.desk.equals(e.desk) && reaches(e, PULL));
+  }
+
+  /** 맞히면 버는 배수(1 + 더 버는 몫): "13.8". */
+  private static String times(long gainPercent) {
+    return String.format(
+        java.util.Locale.ROOT, "%,.1f", (PERCENT + gainPercent) / (double) PERCENT);
+  }
+
+  /** 그 등급까지 쌓인 등급 효과 가운데 가장 높은 것 (387번). A 아래면 없다. */
+  private java.util.Optional<RaisingContent.Effect> topEffect(String grade) {
+    int at = LADDER.indexOf(grade);
+    return content.raising().company().effects().list().stream()
+        .filter(effect -> LADDER.indexOf(effect.grade()) <= at)
+        .reduce((first, second) -> second);
+  }
+
+  /**
+   * 등급 효과 한 줄 (289·387번): "스타 · 맞히면 13.8배 번다(+1,280%) · 손 뒤집힘 −50% · 방패: 한 분기에 잃으면 손실의 3할을 막는다 · 한
+   * 해 일하면 15% 확률로 자란다". SSS 위는 이름 대신 등급, 자랄 확률 대신 실전 경험.
+   */
   String perkLine(Map<String, Integer> stats, int rank) {
     RaisingContent.Perks texts = content.raising().company().perks();
     String grade = overallGrade(stats);
-    int gain = properties.perks().gainPercent().getOrDefault(grade, 0);
-    int growth = properties.perks().growthPercent().getOrDefault(grade, 0);
     String full = gradeOf(stats, rank);
-    String name = rank > 0 ? full : texts.names().get(grade);
-    String line =
+    long gain = gainPercentOf(full);
+    int growth = properties.perks().growthPercent().getOrDefault(grade, 0);
+    int steady = PERCENT - perkFlipPercent(stats);
+    List<String> parts = new ArrayList<>();
+    parts.add(rank > 0 ? full : texts.names().get(grade));
+    parts.add(
+        Korean.fill(
+            texts.gain(),
+            Map.of(
+                "times", times(gain), "gain", String.format(java.util.Locale.ROOT, "%,d", gain))));
+    if (steady > 0) {
+      parts.add(Korean.fill(texts.steady(), Map.of("percent", String.valueOf(steady))));
+    }
+    topEffect(grade)
+        .ifPresent(
+            effect ->
+                parts.add(
+                    Korean.fill(
+                        texts.named(),
+                        Map.of("name", effect.name(), "description", effect.description()))));
+    parts.add(
         growth > 0
-            ? Korean.fill(
-                texts.line(),
-                Map.of("gain", String.valueOf(gain), "growth", String.valueOf(growth)))
-            : Korean.fill(texts.lineTop(), Map.of("gain", String.valueOf(gain)));
-    return name + " · " + line;
+            ? Korean.fill(texts.growth(), Map.of("growth", String.valueOf(growth)))
+            : texts.top());
+    return String.join(" · ", parts);
+  }
+
+  /** 뽑기 카드의 짧은 등급 효과 (387번): "맞히면 13.8배 · 방패". 등급만으로 정해 지난 뽑기에도 보인다. */
+  String drawnPerk(String grade) {
+    String line =
+        Korean.fill(
+            content.raising().company().perks().drawn(),
+            Map.of("times", times(gainPercentOf(grade))));
+    return topEffect(grade).map(effect -> line + " · " + effect.name()).orElse(line);
   }
 
   /** 등급 효과의 성장 확률(%, 289번). SSS와 그 위는 0: 실전 경험으로 오른다. */
@@ -1007,10 +1078,26 @@ class CompanyEngine {
 
   /** 규모의 벽 (decisions.md 244번): 등급 단계만큼 거듭제곱한 비율을 곱한다. F는 그대로. */
   private int scaled(CompanyState company, int bp, int percent) {
-    // 건물이 아니라 자본의 띠로 정한다 (#344): 건물로 정하면 이사를 안 하고 반지하에 머물러 벽을 피할 수 있었다.
-    long capital = company.yearStake != null ? company.yearStake : company.capital;
-    double factor = Math.pow(percent / (double) PERCENT, LADDER.indexOf(grade(capital)));
+    double factor = Math.pow(percent / (double) PERCENT, scaleStep(company));
     return (int) Math.round(bp * factor);
+  }
+
+  /**
+   * 규모의 벽을 정하는 회사 등급 단계(F = 0). 건물이 아니라 자본의 띠로 정한다 (#344): 건물로 정하면 이사를 안 하고 반지하에 머물러 벽을 피할 수 있었다.
+   */
+  private int scaleStep(CompanyState company) {
+    long capital = company.yearStake != null ? company.yearStake : company.capital;
+    return LADDER.indexOf(grade(capital));
+  }
+
+  /**
+   * 분기 데스크에서 맞혔을 때 버는 몫(만분율, 387번) = 자리의 몫 × 데스크 규모의 벽 × (1 + 등급 효과). 등급 효과가 등급마다 두 배라 벽도 회사 등급마다
+   * 거의 절반씩 높아진다: 회사 등급과 같은 등급의 직원은 전과 비슷하게 벌고, 같은 회사에서 한 등급 높은 직원은 두 배 가까이 번다.
+   */
+  long tradeGainBp(CompanyState company, Employee employee, int bp) {
+    List<Double> wall = properties.scale().deskGainPercent();
+    double factor = wall.get(Math.min(scaleStep(company), wall.size() - 1)) / PERCENT;
+    return Math.round(bp * factor * (PERCENT + perkGainPercent(employee)) / PERCENT);
   }
 
   /** 맞혔을 때 버는 몫. 큰 회사일수록 줄어든다. */
@@ -1235,6 +1322,8 @@ class CompanyEngine {
       // 같은 자리 세 해째부터 손에 익는다 (262번).
       flipBp = flipBp * properties.people().settledFlipPercent() / PERCENT;
     }
+    // 등급 효과 (387번): 높은 등급일수록 판단이 흔들리지 않는다.
+    flipBp = flipBp * perkFlipPercent(employee.stats) / PERCENT;
     // 사기 (270번): 낮으면 손이 더 뒤집히고 높으면 덜 뒤집힌다.
     flipBp = flipBp * pay.moralePercent(employee) / PERCENT;
     swayBp = swayBp * pay.moralePercent(employee) / PERCENT;
@@ -1314,6 +1403,20 @@ class CompanyEngine {
                 });
   }
 
+  /** 판돈 × 만분율. 높은 등급이 버는 몫(387번)이 커서 곱이 long을 넘으면 실수로 셈한다. */
+  static long ofStake(long stake, long bp) {
+    long high = Math.multiplyHigh(stake, bp);
+    long low = stake * bp;
+    boolean fits = high == 0 && low >= 0 || high == -1 && low < 0;
+    return fits ? low / BP : (long) ((double) stake * bp / BP);
+  }
+
+  /** 넘치면 long 끝에 멈추는 덧셈: 꼭대기 직원이 버는 몫(387번)이 자본을 음수로 뒤집지 않게. */
+  static long plus(long a, long b) {
+    long sum = a + b;
+    return ((a ^ sum) & (b ^ sum)) < 0 ? (a < 0 ? Long.MIN_VALUE : Long.MAX_VALUE) : sum;
+  }
+
   /** 한 해의 분기 수 (decisions.md 268번). */
   static final int QUARTERS = 4;
 
@@ -1380,17 +1483,22 @@ class CompanyEngine {
       int swayBp = odds.swayBp();
       int flipBp = odds.flipBp() * (PERCENT - mentalBonus) / PERCENT;
       CompanyProperties.Effects effects = properties.effects();
+      CompanyProperties.Perks perks = properties.perks();
       boolean conviction = employee.rank >= RANK_CONVICTION;
       boolean contrarian = crash && employee.rank >= RANK_CONTRARIAN;
       int hitBp = behavior.hintAccuracyPercent(insight) * PERCENT;
-      // 규모의 벽(244번): 올해 회사 등급으로 정한다.
-      int gainBp =
-          scaledGain(
+      // 규모의 벽(244번): 올해 회사 등급으로 정한다. 등급 효과 (289·387번): 종합 등급마다 두 배로 더 번다(F 1.1배 … SS 13.8배). 벽도 데스크
+      // 몫은 따로 높다. XS 큰손은 그 위에 1.5배.
+      long gainBp =
+          tradeGainBp(
               company,
+              employee,
               Math.max(
                   0, gainBp(company, employee) + (conviction ? effects.convictionGainBp() : 0)));
-      // 등급 효과 (289번): 종합 등급이 높을수록 맞혔을 때 더 번다. XS 큰손은 그 위에 1.5배.
-      gainBp = gainBp * (PERCENT + perkGainPercent(employee)) / PERCENT;
+      // S 끌어주기 (387번): 같은 데스크에 S 이상 동료가 있으면 더 번다.
+      if (pulled(company, employee)) {
+        gainBp = gainBp * (PERCENT + perks.pullGainPercent()) / PERCENT;
+      }
       gainBp = gainBp * (PERCENT + mentalBonus) / PERCENT;
       if (employee.rank >= RANK_BIG) {
         gainBp = gainBp * effects.bigGainPercent() / PERCENT;
@@ -1401,6 +1509,10 @@ class CompanyEngine {
         missBp = missBp * effects.wallMissPercent() / PERCENT;
       }
       int flipLossBp = scaledMiss(company, returns.flipBp());
+      // A 손절 (387번): 손이 뒤집혀도 잃는 몫이 줄어든다.
+      if (reaches(employee, STOP_LOSS)) {
+        flipLossBp = flipLossBp * perks.stopLossPercent() / PERCENT;
+      }
       // 시장 손익. 폭락장에는 섹터마다 빠지는 폭이 다르다(식품·금융은 덜, 반도체는 더).
       int phaseBp = properties.phaseBp().getOrDefault(company.phase, 0);
       if (crash) {
@@ -1431,9 +1543,13 @@ class CompanyEngine {
                   : -missBp * (conviction ? effects.convictionMissPercent() : PERCENT) / PERCENT;
         }
       }
-      result.pnl = stake * bp / BP;
-      totalPnl += result.pnl;
-      employee.totalPnl += result.pnl;
+      result.pnl = ofStake(stake, bp);
+      // SS 방패 (387번): 한 분기에 잃었으면 손실의 일부를 막는다.
+      if (result.pnl < 0 && reaches(employee, SHIELD)) {
+        result.pnl = result.pnl * (PERCENT - perks.shieldPercent()) / PERCENT;
+      }
+      totalPnl = plus(totalPnl, result.pnl);
+      employee.totalPnl = plus(employee.totalPnl, result.pnl);
       // 손을 뒤집은 일은 팀장 보고(269번)가 전한다.
       q.results.add(result);
     }
@@ -1444,7 +1560,7 @@ class CompanyEngine {
     // 팀장 보고 (269번): 분기를 넘기면 자리마다 팀장이 보고한다. 돕는 자리는 이 분기에 한 일을 센다 (278번).
     recordSupport(company, q);
     q.reports.addAll(teams.reports(company, q.results, List.of(q), "이번 분기", company.turn()));
-    company.capital = Math.max(0, company.capital + fee + totalPnl);
+    company.capital = Math.max(0, plus(company.capital, plus(fee, totalPnl)));
     q.capitalAfter = company.capital;
     if (company.invest != null && company.invest.choice != null) {
       q.investTitle = company.invest.title;
@@ -1812,10 +1928,19 @@ class CompanyEngine {
             java.util.Comparator.comparingInt((Employee e) -> e.rank).thenComparingInt(e -> -e.id));
   }
 
-  /** 직원이 가진 효과 이름. 쌓인다. */
+  /**
+   * 직원이 가진 등급 효과 이름. 쌓인다: 능력치로 매긴 종합 등급까지의 A 손절·S 끌어주기·SS 방패·SSS 전설의 촉(387번) 위에 SSS 위 단계만큼 X 확신 …
+   * GOD 신의 손(2.4절).
+   */
   List<String> effectsOf(Employee employee) {
+    int at = LADDER.indexOf(overallGrade(employee.stats));
+    int sss = LADDER.indexOf(StatGrade.SSS.name());
     return content.raising().company().effects().list().stream()
-        .limit(employee.rank)
+        .filter(
+            effect -> {
+              int grade = LADDER.indexOf(effect.grade());
+              return grade <= sss ? grade <= at : grade - sss <= employee.rank;
+            })
         .map(RaisingContent.Effect::name)
         .toList();
   }

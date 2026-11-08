@@ -165,8 +165,11 @@ public record CompanyProperties(
    * @param gainPercent 맞혔을 때 버는 몫(투자 회의 포함)에 등급 단계마다 곱하는 비율
    * @param missPercent 틀리거나 꼬드김·손 뒤집힘으로 잃는 몫(투자 회의 포함)에 등급 단계마다 곱하는 비율
    * @param crashPercent 폭락장의 시장 손익에 등급 단계마다 곱하는 비율
+   * @param deskGainPercent 분기 데스크에서 맞혔을 때 버는 몫에 회사 등급(F부터)마다 곱하는 비율(%). gainPercent 대신 쓴다. 등급 효과가
+   *     등급마다 두 배라(387번) 벽도 등급마다 거의 절반씩 높다. 목록보다 높은 등급은 마지막 값
    */
-  public record Scale(int gainPercent, int missPercent, int crashPercent) {}
+  public record Scale(
+      int gainPercent, int missPercent, int crashPercent, List<Double> deskGainPercent) {}
 
   /**
    * @param yearUpBp 올해 시장 갈래(boom·normal·crash)가 뉴스가 오를 확률에 더하는 만분율
@@ -264,12 +267,24 @@ public record CompanyProperties(
       int godFlipPercent) {}
 
   /**
-   * 등급 효과 (decisions.md 289번): 종합 등급(F~SSS)마다.
+   * 등급 효과 (decisions.md 289·387번): 종합 등급마다.
    *
-   * @param gainPercent 맞혔을 때 버는 몫에 더 얹는 비율(%). SSS 위(X~GOD)는 SSS 값
+   * @param gainPercent 분기 데스크에서 맞혔을 때 버는 몫에 더 얹는 비율(%). F~GOD 모두, 등급마다 두 배. 종목 회의 손익에는 붙지 않는다
    * @param growthPercent 한 해 자리에서 일하면 가장 낮은 능력치(운 빼고)가 한 띠 오를 확률(%). SSS는 0: 그 위는 실전 경험으로 오른다
+   * @param flipPercent 손이 뒤집힐 확률에 곱하는 비율(%). 높을수록 판단이 흔들리지 않는다. SSS 위는 SSS 값
+   * @param readBonus 종목 회의에서 기사를 읽을 때 안목에 더하는 점수. SSS 위는 SSS 값
+   * @param stopLossPercent A 손절: 손이 뒤집혀 잃는 몫에 곱하는 비율(%)
+   * @param pullGainPercent S 끌어주기: 같은 데스크 동료가 맞혔을 때 더 버는 비율(%)
+   * @param shieldPercent SS 방패: 분기에 잃었을 때 막아 주는 손실의 비율(%)
    */
-  public record Perks(Map<String, Integer> gainPercent, Map<String, Integer> growthPercent) {}
+  public record Perks(
+      Map<String, Integer> gainPercent,
+      Map<String, Integer> growthPercent,
+      Map<String, Integer> flipPercent,
+      Map<String, Integer> readBonus,
+      int stopLossPercent,
+      int pullGainPercent,
+      int shieldPercent) {}
 
   /**
    * @param dropLossPercent 한 해 결산에서 맡은 판돈이 이만큼 빠지면 종합 등급 한 단계 하락 (6.4절 제안: 30)

@@ -484,7 +484,15 @@ class DefaultCompanyService implements CompanyService {
     List<CompanyView.Drawn> drawn =
         c.lastDraw.stream()
             .map(
-                d -> new CompanyView.Drawn(d.employeeId, d.name, d.grade, d.star, d.fresh, d.hello))
+                d ->
+                    new CompanyView.Drawn(
+                        d.employeeId,
+                        d.name,
+                        d.grade,
+                        d.star,
+                        d.fresh,
+                        d.hello,
+                        engine.drawnPerk(d.grade)))
             .toList();
     List<CompanyView.CollectionEntry> collection =
         CompanyEngine.LADDER.stream()

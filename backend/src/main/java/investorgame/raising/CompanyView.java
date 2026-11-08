@@ -169,8 +169,9 @@ public record CompanyView(
    * @param overallGrade 종합 등급. SSS면 실전 경험으로 X~ZZZ까지 오른다 (2.3절)
    * @param experience 실전 경험
    * @param experienceNeeded 다음 단계까지 드는 실전 경험. SSS가 아니면 null(아직 쌓이지 않는다)
-   * @param effects X 이상 등급의 효과 이름(확신·경보…). 쌓인다 (2.4절)
-   * @param perk 등급 효과 한 줄: 이름·맞혔을 때 더 버는 몫·자랄 확률 (decisions.md 289번)
+   * @param effects 등급 효과 이름(A 손절·S 끌어주기·SS 방패·SSS 전설의 촉, X 이상의 확신·경보…). 쌓인다 (2.4절, decisions.md
+   *     387번)
+   * @param perk 등급 효과 한 줄: 이름·맞히면 버는 배수·손 뒤집힘 보정·이름 붙은 효과·자랄 확률 (decisions.md 289·387번)
    * @param sector 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다. 없으면 null
    * @param deskYears 지금 자리에서 결산을 맞은 해 수 (decisions.md 262번)
    * @param settled 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다
@@ -228,9 +229,16 @@ public record CompanyView(
    *
    * @param star 특급 칸에서 나왔다
    * @param fresh 도감에 처음 오른 등급이다
+   * @param perk 짧은 등급 효과: 맞히면 버는 배수와 가장 높은 이름 붙은 효과("맞히면 13.8배 · 방패", decisions.md 387번)
    */
   public record Drawn(
-      int employeeId, String name, String grade, boolean star, boolean fresh, String hello) {}
+      int employeeId,
+      String name,
+      String grade,
+      boolean star,
+      boolean fresh,
+      String hello,
+      String perk) {}
 
   /** 도감의 한 칸: 그 등급을 몇 명 얻었나. 0이면 아직 못 봤다. */
   public record CollectionEntry(String grade, int count) {}

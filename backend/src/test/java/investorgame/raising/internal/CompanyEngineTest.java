@@ -37,6 +37,12 @@ class CompanyEngineTest {
         50);
   }
 
+  /** 운까지 다섯 능력치가 모두 value. */
+  private static Map<String, Integer> all(int value) {
+    return Map.of(
+        "insight", value, "patience", value, "courage", value, "conviction", value, "luck", value);
+  }
+
   /** 회사를 차리고 그 직원을 바로 들인다. 지원자는 그대로 둔다. */
   private static CompanyState open(long seed, Map<String, Integer> stats, long capital) {
     CompanyState company = ENGINE.open(new HashSeededRandom(seed), capital);
@@ -256,7 +262,9 @@ class CompanyEngineTest {
     assertThat(ENGINE.forecast(company)).as("선견은 ZZZ부터").isNull();
     first.rank = 6;
     assertThat(ENGINE.forecast(company)).contains("선견").contains("폭락장");
-    assertThat(ENGINE.effectsOf(first)).containsExactly("확신", "경보", "역발상", "리더", "사수", "선견");
+    assertThat(ENGINE.effectsOf(first))
+        .as("능력치로 정하는 이름 붙은 효과(SS까지, 387번) 위에 단계로 정하는 X 이상 효과가 쌓인다")
+        .containsExactly("손절", "끌어주기", "방패", "확신", "경보", "역발상", "리더", "사수", "선견");
 
     // ZZ 사수: 뽑은 사람에게 사수의 가장 높은 능력치가 한 띠 더 붙는다. 같은 시드로 사수 없이 뽑은 사람과 견준다.
     first.stats.put("courage", 99);
@@ -299,8 +307,8 @@ class CompanyEngineTest {
   }
 
   /**
-   * 등급 효과 (decisions.md 289번): 종합 등급이 높을수록 맞혔을 때 더 벌고, 낮을수록 잘 자란다. F 직원은 몇 해 일해야 E가 된다: 등급이 바로 높아지지
-   * 않는다.
+   * 등급 효과 (decisions.md 289·387번): 종합 등급이 높을수록 맞혔을 때 더 벌고, 낮을수록 잘 자란다. F 직원은 몇 해 일해야 E가 된다: 등급이 바로
+   * 높아지지 않는다.
    */
   @Test
   void 등급마다_더_버는_몫과_자라는_빠르기가_다르다() {
@@ -309,13 +317,25 @@ class CompanyEngineTest {
             Map.of("insight", 10, "patience", 10, "courage", 10, "conviction", 10, "luck", 10));
     CompanyState probe = open(1, rookie, 100_000_000);
     CompanyState.Employee f = probe.employees.getFirst();
-    assertThat(ENGINE.perkGainPercent(f)).isZero();
+    assertThat(ENGINE.perkGainPercent(f)).isEqualTo(10);
     assertThat(ENGINE.perkGrowthPercent(f)).isEqualTo(60);
-    assertThat(ENGINE.perkLine(f.stats, 0)).startsWith("새내기 · 맞히면 0% 더 번다").contains("60% 확률로 자란다");
+    assertThat(ENGINE.perkLine(f.stats, 0))
+        .as("F는 손 뒤집힘 보정도 이름 붙은 효과도 없다")
+        .isEqualTo("새내기 · 맞히면 1.1배 번다(+10%) · 한 해 일하면 60% 확률로 자란다");
+    assertThat(ENGINE.perkLine(all(85), 0))
+        .isEqualTo(
+            "스타 · 맞히면 13.8배 번다(+1,280%) · 손 뒤집힘 −50% · 방패: 한 분기에 잃으면 손실의 3할을 막는다 · 한 해 일하면"
+                + " 15% 확률로 자란다");
     Map<String, Integer> legend = stats(95, 95, 95, 95);
     legend = new HashMap<>(legend);
     legend.put("luck", 95);
-    assertThat(ENGINE.perkLine(legend, 0)).startsWith("레전드 · 맞히면 16% 더 번다").contains("실전 경험");
+    assertThat(ENGINE.perkLine(legend, 0))
+        .startsWith("레전드 · 맞히면 26.6배 번다(+2,560%) · 손 뒤집힘 −60% · 전설의 촉")
+        .endsWith("실전 경험으로 오른다");
+    assertThat(ENGINE.perkLine(legend, 9)).startsWith("GOD · 맞히면 13,108.2배 번다(+1,310,720%)");
+    assertThat(ENGINE.drawnPerk("D")).isEqualTo("맞히면 1.4배");
+    assertThat(ENGINE.drawnPerk("SS")).isEqualTo("맞히면 13.8배 · 방패");
+    assertThat(ENGINE.drawnPerk("X")).isEqualTo("맞히면 52.2배 · 확신");
     assertThat(averageWithRank(stats(55, 55, 55, 55), 0, null))
         .as("같은 능력치라도 등급이 같으니 같다: 효과는 등급을 따라간다")
         .isEqualTo(averageWithRank(stats(55, 55, 55, 55), 0, null));
@@ -338,6 +358,171 @@ class CompanyEngineTest {
     java.util.Arrays.sort(years);
     assertThat(years[trials / 2]).as("F 직원이 E가 되기까지 해 수의 중앙값").isBetween(6, 12);
     assertThat(grownLines).as("자란 해는 소식 줄에 남는다").isPositive();
+  }
+
+  /**
+   * 더 버는 몫은 등급마다 두 배다 (decisions.md 387번, 사용자 결정): F 10% · E 20% · D 40% · C 80% · B 160% · A 320%
+   * · S 640% · SS 1,280% · SSS 2,560%, 그 위(X~GOD)도 단계마다 두 배. 같은 회사·같은 자리에서 한 등급 높은 직원이 한 해에 훨씬 더
+   * 번다.
+   */
+  @Test
+  void 더_버는_몫이_등급마다_두_배다() {
+    List<String> ladder = CompanyEngine.LADDER;
+    assertThat(ENGINE.gainPercentOf("F")).isEqualTo(10);
+    for (int i = 1; i < ladder.size(); i++) {
+      assertThat(ENGINE.gainPercentOf(ladder.get(i)))
+          .as(ladder.get(i))
+          .isEqualTo(ENGINE.gainPercentOf(ladder.get(i - 1)) * 2);
+    }
+    assertThat(ENGINE.gainPercentOf("SS")).isEqualTo(1280);
+    assertThat(ENGINE.gainPercentOf("SSS")).isEqualTo(2560);
+    double b = averageWithRank(stats(55, 55, 55, 55), 0, null);
+    double a = averageWithRank(stats(65, 65, 65, 65), 0, null);
+    double ss = averageWithRank(all(85), 0, null);
+    assertThat(a).as("A는 B보다 한 해에 훨씬 더 번다").isGreaterThan(b * 1.5);
+    assertThat(ss).as("SS는 B의 세 배 넘게 번다").isGreaterThan(b * 3);
+  }
+
+  /** 높은 등급일수록 판단이 흔들리지 않는다 (decisions.md 387번): 같은 시드로 손 뒤집힘 보정을 끈 엔진과 견준다. */
+  @Test
+  void 높은_등급일수록_손이_덜_뒤집힌다() {
+    CompanyEngine plain =
+        withPerks(
+            p ->
+                new CompanyProperties.Perks(
+                    p.gainPercent(),
+                    p.growthPercent(),
+                    Map.of(),
+                    p.readBonus(),
+                    p.stopLossPercent(),
+                    p.pullGainPercent(),
+                    p.shieldPercent()));
+    // 인내심(바이오 데스크가 원하는 능력치)이 낮은 SS 직원: 자주 뒤집힐 사람이 반만 뒤집힌다.
+    Map<String, Integer> shaky =
+        Map.of("insight", 100, "patience", 30, "courage", 100, "conviction", 100, "luck", 100);
+    assertThat(CompanyEngine.overallGrade(shaky)).isEqualTo("SS");
+    assertThat(flips(ENGINE, shaky)).isLessThan(flips(plain, shaky) * 7 / 10);
+  }
+
+  /**
+   * 이름 붙은 등급 효과 (decisions.md 387번): A 손절은 손이 뒤집혀도 덜 잃고, S 끌어주기는 같은 데스크 동료가 더 벌고, SS 방패는 잃은 분기의 손실을
+   * 줄인다. 같은 시드로 그 효과만 끈 엔진과 견준다.
+   */
+  @Test
+  void A_손절_S_끌어주기_SS_방패() {
+    CompanyEngine noStopLoss =
+        withPerks(
+            p ->
+                new CompanyProperties.Perks(
+                    p.gainPercent(),
+                    p.growthPercent(),
+                    p.flipPercent(),
+                    p.readBonus(),
+                    100,
+                    p.pullGainPercent(),
+                    p.shieldPercent()));
+    Map<String, Integer> veteran =
+        Map.of("insight", 80, "patience", 20, "courage", 80, "conviction", 80, "luck", 50);
+    assertThat(CompanyEngine.overallGrade(veteran)).isEqualTo("A");
+    assertThat(yearPnl(ENGINE, veteran, null, false))
+        .as("A 손절: 손이 뒤집혀도 덜 잃는다")
+        .isGreaterThan(yearPnl(noStopLoss, veteran, null, false));
+
+    CompanyEngine noPull =
+        withPerks(
+            p ->
+                new CompanyProperties.Perks(
+                    p.gainPercent(),
+                    p.growthPercent(),
+                    p.flipPercent(),
+                    p.readBonus(),
+                    p.stopLossPercent(),
+                    0,
+                    p.shieldPercent()));
+    Map<String, Integer> rookie = stats(30, 30, 30, 30);
+    Map<String, Integer> ace = stats(75, 75, 75, 75);
+    assertThat(yearPnl(ENGINE, rookie, ace, true))
+        .as("S 끌어주기: 같은 데스크 동료가 더 번다")
+        .isGreaterThan(yearPnl(noPull, rookie, ace, true));
+    assertThat(yearPnl(ENGINE, rookie, ace, false))
+        .as("다른 데스크면 붙지 않는다")
+        .isEqualTo(yearPnl(noPull, rookie, ace, false));
+
+    CompanyEngine noShield =
+        withPerks(
+            p ->
+                new CompanyProperties.Perks(
+                    p.gainPercent(),
+                    p.growthPercent(),
+                    p.flipPercent(),
+                    p.readBonus(),
+                    p.stopLossPercent(),
+                    p.pullGainPercent(),
+                    0));
+    Map<String, Integer> star = all(85);
+    assertThat(yearPnl(ENGINE, star, null, false))
+        .as("SS 방패: 잃은 분기의 손실이 준다")
+        .isGreaterThan(yearPnl(noShield, star, null, false));
+  }
+
+  /** 첫 직원(바이오 데스크)이 한 해 번 돈의 합, 300판. mate는 같은 데스크(sameDesk) 또는 단타 데스크에 앉는 동료다. */
+  private static long yearPnl(
+      CompanyEngine engine,
+      Map<String, Integer> first,
+      Map<String, Integer> mate,
+      boolean sameDesk) {
+    long sum = 0;
+    for (int seed = 0; seed < 300; seed++) {
+      CompanyState company = engine.open(new HashSeededRandom(seed), 1_000_000_000L);
+      engine.hire(company, first);
+      if (mate != null) {
+        engine.hire(company, mate);
+        engine.place(company, Map.of(1, "bio", 2, sameDesk ? "bio" : "day"));
+      } else {
+        engine.place(company, Map.of(1, "bio"));
+      }
+      if (engine.invest.open(company)) {
+        engine.invest.decide(company, InvestEngine.HOLD, new HashSeededRandom(seed));
+      }
+      sum += engine.settle(company, new HashSeededRandom(seed)).results.getFirst().pnl;
+    }
+    return sum;
+  }
+
+  /** 바이오 데스크에 혼자 앉은 직원이 한 해에 뒤집힌 횟수의 합, 1,000판. */
+  private static int flips(CompanyEngine engine, Map<String, Integer> stats) {
+    int flips = 0;
+    for (int seed = 0; seed < 1000; seed++) {
+      CompanyState company = engine.open(new HashSeededRandom(seed), 1_000_000_000L);
+      engine.hire(company, stats);
+      engine.place(company, Map.of(1, "bio"));
+      company.phase = "normal";
+      if (engine.invest.open(company)) {
+        engine.invest.decide(company, InvestEngine.HOLD, new HashSeededRandom(seed));
+      }
+      CompanyState.Result r = engine.settle(company, new HashSeededRandom(seed)).results.getFirst();
+      flips += r.flips.values().stream().mapToInt(Integer::intValue).sum();
+    }
+    return flips;
+  }
+
+  /** 등급 효과 수치만 바꾼 엔진 (387번). 같은 시드로 효과를 켜고 끈 결과를 견준다. */
+  static CompanyEngine withPerks(java.util.function.UnaryOperator<CompanyProperties.Perks> change) {
+    try {
+      var components = CompanyProperties.class.getRecordComponents();
+      Object[] values = new Object[components.length];
+      Class<?>[] types = new Class<?>[components.length];
+      for (int i = 0; i < components.length; i++) {
+        types[i] = components[i].getType();
+        Object value = components[i].getAccessor().invoke(PROPERTIES);
+        values[i] = value instanceof CompanyProperties.Perks perks ? change.apply(perks) : value;
+      }
+      CompanyProperties changed =
+          CompanyProperties.class.getDeclaredConstructor(types).newInstance(values);
+      return new CompanyEngine(TestContent.load(), TestBehavior.create(), changed);
+    } catch (ReflectiveOperationException e) {
+      throw new IllegalStateException(e);
+    }
   }
 
   private static double averageWithRank(Map<String, Integer> stats, int rank, String phase) {

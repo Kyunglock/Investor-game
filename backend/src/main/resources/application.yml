@@ -87,6 +87,11 @@ raising:
       gain-percent: 91
       miss-percent: 108
       crash-percent: 118
+      # 분기 데스크에서 맞혀 버는 몫은 이 벽(F부터 회사 등급마다 %)을 gain-percent 대신 쓴다 (decisions.md 387번). 등급 효과가 등급마다 두 배라
+      # 벽도 등급마다 거의 절반씩 높다: 0.91^등급 × (1 + 289번의 더 버는 몫) ÷ (1 + 지금의 더 버는 몫)이라 회사 등급과 같은 등급의 직원은 전과 비슷하게
+      # 벌고, 한 등급 높은 직원은 두 배 가까이 번다(A·XX는 시뮬레이션으로 조금 올렸다). 종목 회의는 gain-percent
+      desk-gain-percent:
+        [100, 77.3, 61.6, 44.4, 28.5, 17, 8.65, 4.28, 2.07, 0.96, 0.53, 0.2, 0.092, 0.042, 0.019]
     # 수수료 매출 자본의 3%, 판돈은 자본 전부(자본을 넘지 않음). 경제 맞춤 (decisions.md 226·244번, EconomySimulationTest)
     fee-bp: 300
     stake-percent: 100
@@ -191,11 +196,22 @@ raising:
         base-price: 1000000
         price-factor: 2
         step-percent: { damage: 10, fire: 5, speed: 8 }
-    # 등급 효과 (decisions.md 289번): 종합 등급마다 맞혔을 때 버는 몫에 gain-percent%를 더 얹고, 한 해 자리에서 일하면
-    # growth-percent% 확률로 가장 낮은 능력치(운 빼고)가 한 띠 오른다. 낮은 등급일수록 잘 크고 높을수록 더디다. SSS 위는 실전 경험으로 오른다
+    # 등급 효과 (decisions.md 289·387번): 종합 등급마다 분기 데스크에서 맞혔을 때 버는 몫에 gain-percent%를 더 얹는다. 등급마다 두 배라
+    # F 1.1배 · S 7.4배 · SS 13.8배 · SSS 26.6배를 벌고, SSS 위(X~GOD)도 단계마다 두 배다. 종목 회의 손익에는 붙지 않는다.
+    # 한 해 자리에서 일하면 growth-percent% 확률로 가장 낮은 능력치(운 빼고)가 한 띠 오른다. 낮은 등급일수록 잘 크고 높을수록 더디다. SSS 위는 실전 경험으로 오른다.
+    # 높을수록 판단이 정확하다: 손이 뒤집힐 확률(사기·근속과 함께 곱한다)에 flip-percent%를 곱하고, 종목 회의에서 기사를 읽을 때 안목에 read-bonus를 더한다
+    # (SSS 위는 SSS 값). 이름 붙은 효과(쌓인다): A 손절은 손이 뒤집혀 잃는 몫이 stop-loss-percent%, S 끌어주기는 같은 데스크 동료가 맞히면
+    # pull-gain-percent% 더 벌고, SS 방패는 분기에 잃으면 손실의 shield-percent%를 막고, SSS 전설의 촉은 종목 회의에서 기사를 늘 맞게 읽는다
     perks:
-      gain-percent: { F: 0, E: 2, D: 4, C: 6, B: 8, A: 10, S: 12, SS: 14, SSS: 16 }
+      gain-percent:
+        { F: 10, E: 20, D: 40, C: 80, B: 160, A: 320, S: 640, SS: 1280, SSS: 2560, X: 5120, XX: 10240,
+          XXX: 20480, Z: 40960, ZZ: 81920, ZZZ: 163840, XS: 327680, XSS: 655360, GOD: 1310720 }
       growth-percent: { F: 60, E: 50, D: 40, C: 35, B: 30, A: 25, S: 20, SS: 15, SSS: 0 }
+      flip-percent: { F: 100, E: 95, D: 90, C: 85, B: 80, A: 70, S: 60, SS: 50, SSS: 40 }
+      read-bonus: { F: 0, E: 2, D: 4, C: 6, B: 8, A: 10, S: 13, SS: 16, SSS: 20 }
+      stop-loss-percent: 50
+      pull-gain-percent: 50
+      shield-percent: 30
     # 인사 직원 (6.3절): 인사팀에 사람이 있으면 뽑기 확률표의 중심이 인사 직원보다 두 단계 아래까지 오르고, 연말에 채용권을 한 장 더 받는다 (decisions.md 312번)
     hr:
       cap-steps: 2

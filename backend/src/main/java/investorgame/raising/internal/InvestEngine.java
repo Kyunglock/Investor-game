@@ -500,15 +500,27 @@ class InvestEngine {
 
   /**
    * 직원이 기사를 읽은 쪽(UP·DOWN·NEUTRAL). 리서치 팀의 형광펜을 보지만 반만 믿는다: 리서치 팀이 더 밝으면 그 차이의 절반만큼 안목이 오른다(239번,
-   * 전에는 리서치 팀의 안목을 그대로 빌려 모두 같은 말을 했다). 같은 해·같은 직원이면 늘 같다.
+   * 전에는 리서치 팀의 안목을 그대로 빌려 모두 같은 말을 했다). 종합 등급이 높을수록 더 잘 읽고(387번, 등급 효과의 판단 보정), SSS 이상은 전설의 촉으로 늘
+   * 맞게 읽는다. 같은 해·같은 직원이면 늘 같다.
    */
   private String ownRead(CompanyState c, Employee e, SeededRandom random) {
+    if (CompanyEngine.reaches(e, CompanyEngine.LEGEND)) {
+      return c.invest.up ? UP : DOWN;
+    }
     int own = e.stats.get(StatCodes.INSIGHT);
     int insight =
-        Math.max(0, own + Math.max(0, company.researchInsight(c) - own) / 2 - penalty(c.invest));
+        Math.clamp(
+            own
+                + Math.max(0, company.researchInsight(c) - own) / 2
+                - penalty(c.invest)
+                + company.perkReadBonus(e),
+            0,
+            MAX_INSIGHT);
     Hint hint = read(c, insight, random.forKey("invest-read", c.turn(), e.id));
     return hint.direction().name();
   }
+
+  private static final int MAX_INSIGHT = 100;
 
   private Hint read(CompanyState c, int insight, RandomGenerator rng) {
     return behavior.hint(insight, c.invest.up ? Direction.UP : Direction.DOWN, rng);
