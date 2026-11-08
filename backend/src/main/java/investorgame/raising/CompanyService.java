@@ -26,11 +26,8 @@ public interface CompanyService {
    */
   CompanyView draw(UUID sessionId, int count, int draws);
 
-  /** 직원을 내보낸다 (312번). 걸린 일이 있는 사람이면 400. */
+  /** 직원을 내보낸다 (312번). */
   CompanyView release(UUID sessionId, int employeeId);
-
-  /** 올해 이직 제안에 답한다: 남기거나 보낸다(이적료를 받는다). 직원은 보낼 때만 떠난다. 제안이 없으면 400 (decisions.md 262·265번). */
-  CompanyView answerPoach(UUID sessionId, boolean keep);
 
   /** 그 자리의 팀장을 정한다 (decisions.md 269번). 그 자리에 앉은 직원이 아니면 400. */
   CompanyView leader(UUID sessionId, String desk, int employeeId);

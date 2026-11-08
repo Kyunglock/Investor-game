@@ -83,11 +83,10 @@ public record RaisingContent(
       Map<String, String> teamGrade) {}
 
   /**
-   * 직원 버릇 (decisions.md 349번). hello: 뽑혔을 때 첫인사({name}). poachKept·poachLeft: 이직 제안에 남거나
-   * 떠남({name}·{rival}). 연봉 협상·사표 문구는 뺐다(383번), 합성 작별 한마디도 뺐다(384번).
+   * 직원 버릇 (decisions.md 349번). hello: 뽑혔을 때 첫인사({name}). 연봉 협상·사표 문구는 뺐다(383번), 합성 작별 한마디도
+   * 뺐다(384번), 이직 제안에 남거나 떠나는 문구도 뺐다(385번).
    */
-  public record Quirk(
-      String code, String name, List<String> hello, String poachKept, String poachLeft) {}
+  public record Quirk(String code, String name, List<String> hello) {}
 
   /**
    * 업계 순위 소식 (#351). first: 처음 매긴 해, up·down·same: 지난해보다 상위 몇 %가
@@ -192,25 +191,16 @@ public record RaisingContent(
   public record EraTurn(String ending, String changed) {}
 
   /**
-   * 사람 이야기 (decisions.md 262번). poacher: 손을 뻗는 곳(이름 없는 다른 증권사, 288번). poach: 그곳이 손을
-   * 뻗었다({rival}·{name}). kept·left·ignored: 붙잡음·보냄·답 없이 떠남. settled: 같은 자리 세 해째({name}·{desk}).
+   * 사람 이야기 (decisions.md 262번). settled: 같은 자리 세 해째({name}·{desk}). 이직 제안의 문구(손을 뻗는 증권사·붙잡음·보냄·답 없이
+   * 흐지부지·떠난 사람 소식)는 이직 제안과 함께 뺐다(385번).
    */
   public record People(
-      String poacher,
-      String poach,
-      String kept,
-      String left,
-      String ignored,
       String settled,
       String moraleUp,
       String moraleDown,
       String meetingIgnored,
       String heard,
-      String rested,
-      List<String> poachers,
-      String poachAgain,
-      String alumniGood,
-      String alumniBad) {}
+      String rested) {}
 
   /**
    * 회사 연표와 업적 (decisions.md 263번). events: 연표 한 줄(open {number} · rise {name}·{grade} · left {name}

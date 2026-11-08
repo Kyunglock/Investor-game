@@ -141,7 +141,6 @@ api ─→ 세션 (확인, 관리자 세션 목록)
 | 채용 뽑기 | `POST /api/company/draws` `{count, draws}` | 채용권 count장으로 count명이 쉬는 채로 온다. 돈은 들지 않는다. 지금까지 뽑은 횟수를 실어 이미 한 뽑기면 그대로 돌려준다. 채용권·데리고 있을 자리(100명, 337번)가 모자라면 400 (decisions.md 312번) |
 | 내보내기 | `POST /api/company/release` `{employeeId}` | 직원을 내보낸다. 명예의 전당에 남는다 (312번) |
 | 배치 | `POST /api/company/placement` | 직원 ID → 자리 코드(쉬면 null). 자리 수를 넘거나 같은 직원이 두 번 오면 400 |
-| 이직 제안 | `POST /api/company/poach` `{keep}` | 남기거나 보낸다(이적료). 답하지 않아도 직원은 남는다. 제안이 없으면 400 (262·265번) |
 | 종목 발굴 | `POST /api/company/scout` | 분기 넘기기를 누르면 지금 배치로 직원이 종목을 물어 온다. 한 분기에 한 번, 이미 굴렸으면 그대로 (267·382번) |
 | 종목 회의 열기 | `POST /api/company/invest/open` | 지금 배치로 직원 한마디와 형광펜을 굳힌다. 이미 열었으면 그대로 (249번) |
 | 종목 회의 | `POST /api/company/invest` | 직원이 종목을 물어 왔을 때만(267번). 본문 `{choice, big}`: `BUY`·`SELL`·`HOLD`, 크게(260번). 이미 했거나 돈을 굴리는 직원이 없으면 400 (decisions.md 229번) |

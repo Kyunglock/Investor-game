@@ -10,7 +10,6 @@ export type AutoStep =
   | { kind: 'closeMove' }
   | { kind: 'draw'; count: number }
   | { kind: 'upgrade' }
-  | { kind: 'poach'; keep: boolean }
   | { kind: 'place'; seats: Seat[] }
   | { kind: 'scout' }
   | { kind: 'convene' }
@@ -61,10 +60,6 @@ export function nextAutoStep(
   }
   if (justQuartered) {
     return { kind: 'closeQuarter' }
-  }
-  // 이직 제안 (262·265번): 자동 진행은 직원을 보내지 않는다. 늘 남긴다.
-  if (company.meeting?.poach) {
-    return { kind: 'poach', keep: true }
   }
   // 건물 이사 (296번): 갈 수 있으면 먼저 간다. 돈을 쓰는 순서는 건물이 먼저다.
   if (company.upgrade?.affordable) {
@@ -151,7 +146,7 @@ export function useCompanyAutoPlay() {
     if (useRaisingStore.getState().autoNextAt !== nextAt) {
       useRaisingStore.setState({ autoNextAt: nextAt })
     }
-    const { draw, upgrade, place, convene, decideInvest, settle, answerPoach, scout } =
+    const { draw, upgrade, place, convene, decideInvest, settle, scout } =
       useRaisingStore.getState()
     const id = setTimeout(() => {
       switch (step.kind) {
@@ -169,9 +164,6 @@ export function useCompanyAutoPlay() {
           return
         case 'draw':
           void draw(step.count)
-          return
-        case 'poach':
-          void answerPoach(step.keep)
           return
         case 'place':
           void place(step.seats)

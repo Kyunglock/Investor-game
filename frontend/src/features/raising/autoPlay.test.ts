@@ -59,9 +59,6 @@ describe('자동 진행 (decisions.md 245번)', () => {
     expect(nextAutoStep(company(), true).kind).toBe('closeYearEnd')
     // 분기 실적은 짧게 보여 주고 닫는다 (268번).
     expect(nextAutoStep(company(), false, true).kind).toBe('closeQuarter')
-    // 이직 제안 (262·265번): 자동 진행은 직원을 보내지 않고 늘 남긴다.
-    const poached = company({ meeting: { wanted: '', poach: { transferFee: 1 } } } as never)
-    expect(nextAutoStep(poached, false)).toEqual({ kind: 'poach', keep: true })
     const hiring = company({
       gacha: { tickets: 3, roster: 0, rosterMax: 4, draws: 0, maxDraws: 10 },
     } as never)

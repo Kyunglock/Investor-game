@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonAutoDetect.Visibility;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -111,9 +110,6 @@ class CompanyState {
   /** 최근에 쓴 문구 틀 (#392): 회의 한마디·팀장 보고가 같은 줄로 이어 나오지 않게 고를 때 건너뛴다. 오래된 것부터 빠진다. */
   List<String> recentLines = new ArrayList<>();
 
-  /** 증권사마다 우리에게 손을 뻗은 횟수 (#390). */
-  Map<String, Integer> poachCounts = new HashMap<>();
-
   /** 투자 회의를 연달아 번 해 수 (263번). */
   int meetingStreak;
 
@@ -122,11 +118,8 @@ class CompanyState {
 
   int worstYearBp;
 
-  /** 올해 결산 전에 일어난 사람 이야기(붙잡음·보냄). 결산 소식 줄에 붙고 해가 바뀌면 비운다 (262번). */
+  /** 올해 결산 전에 일어난 일(이사·채용권·랜드마크 같은). 결산 소식 줄에 붙고 해가 바뀌면 비운다 (262번). */
   List<String> yearLines = new ArrayList<>();
-
-  /** 올해의 이직 제안 (decisions.md 262번). 없으면 null. 답하지 않은 채 결산하면 그 직원이 떠난다. */
-  Poach poach;
 
   /** 망해서 문을 닫았는가 (decisions.md 247번). 닫은 회사는 끝난 채로 남고 사장이 다음 회사를 차린다. */
   boolean closed;
@@ -178,7 +171,7 @@ class CompanyState {
   /** 올해 연초 회의 때의 자본. 연말 결산서의 연초 자본이다 (decisions.md 251번). 이 칸을 더하기 전의 해면 null. */
   Long yearStartCapital;
 
-  /** 올해 인사에 쓴 돈(받은 이적료는 뺀다, 251번). 계약금은 채용 뽑기로 바뀌며 없어졌다 (312번). */
+  /** 올해 인사에 쓴 돈(251번). 계약금은 채용 뽑기로 바뀌며(312번), 이적료는 이직 제안과 함께(385번) 없어졌다. */
   long yearHiring;
 
   /** 지금까지 만난 사람 수. 뽑은 사람의 이름을 이것으로 붙인다. 다음 회사로 이어진다. */
@@ -447,7 +440,7 @@ class CompanyState {
     /** 직원들이 이 분기에 굴린 몫. */
     long staff;
 
-    /** 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). */
+    /** 이 분기에 낸 인사 비용(계약금·새로 받기 값). 이적료는 이직 제안과 함께 뺐다(385번). */
     long hiring;
 
     /** 이 분기에 낸 이사 비용 (296번). */
@@ -568,26 +561,6 @@ class CompanyState {
     int to;
     long totalPnl;
     String grade;
-
-    /** 데려간 증권사 (#390). 이직 제안으로 떠난 사람만 있다. */
-    String rival;
-
-    /** 그 뒤 소식을 전했나 (#390). */
-    boolean reported;
-  }
-
-  /** 다른 증권사가 우리 직원에게 손을 뻗었다 (262·288번). */
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
-  static class Poach {
-    int employeeId;
-    long transferFee;
-
-    /** 손을 뻗은 증권사 (#390). 옛 제안이면 null(이름 없는 다른 증권사). */
-    String rival;
-
-    /** 그 증권사가 우리에게 손을 뻗은 몇 번째인가 (#390). */
-    int count;
   }
 
   /** 채용 뽑기로 온 사람 한 명 (decisions.md 312번). 화면이 카드를 뒤집어 보인다. */

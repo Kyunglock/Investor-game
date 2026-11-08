@@ -132,15 +132,6 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView answerPoach(UUID sessionId, boolean keep) {
-    CompanyRepository.Row row = lockActive(sessionId);
-    engine.answerPoach(row.state(), keep);
-    companies.update(row.id(), row.state(), false);
-    return view(row);
-  }
-
-  @Override
-  @Transactional
   public CompanyView convene(UUID sessionId) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.invest.convene(row.state(), new HashSeededRandom(row.seed()));
@@ -341,8 +332,7 @@ class DefaultCompanyService implements CompanyService {
                 engine.forecast(c),
                 engine.wantedLine(c),
                 engine.hotLine(c),
-                engine.eraEndingLine(c),
-                poachView(c));
+                engine.eraEndingLine(c));
     CompanyState.Settlement last = c.settlements.isEmpty() ? null : c.settlements.getLast();
     return new CompanyView(
         row.id(),
@@ -623,25 +613,6 @@ class DefaultCompanyService implements CompanyService {
     }
     return new CompanyView.Finder(
         invest.finderId, invest.finderName, invest.finderRole, invest.finderDesk, invest.pitch);
-  }
-
-  private CompanyView.Poach poachView(CompanyState c) {
-    CompanyState.Poach p = c.poach;
-    if (p == null) {
-      return null;
-    }
-    String name =
-        c.employees.stream()
-            .filter(e -> e.id == p.employeeId)
-            .findFirst()
-            .map(e -> e.name)
-            .orElse("");
-    return new CompanyView.Poach(
-        p.employeeId,
-        name,
-        p.rival != null ? p.rival : engine.poacher(),
-        p.transferFee,
-        engine.poachLine(c));
   }
 
   private static final int HALL_SIZE = 5;

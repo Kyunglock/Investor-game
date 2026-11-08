@@ -314,39 +314,9 @@ function NextStep({ company }: { company: Company }) {
 
 /** 이슈 탭: 올해 폭락 조짐, 경보·선견, 올해 필요한 인재 (6.1절). */
 function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
-  const busy = useRaisingStore((s) => s.busy)
-  const { answerPoach } = useRaisingStore.getState()
-  const poach = meeting.poach
   return (
     <section data-testid="meeting">
       <h3 className="font-pen text-[22px]">이슈</h3>
-      {poach && (
-        // 이직 제안 (262번): 답하지 않고 결산하면 이적료를 남기고 떠난다.
-        <div className="mt-1 rounded border border-wine p-2" data-testid="poach">
-          <p className="text-[14px] font-semibold text-wine">{poach.line}</p>
-          <p className="text-[12px] text-muted">
-            답하지 않아도 회사에 남습니다. 보낼 때만 떠납니다.
-          </p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void answerPoach(true)}
-              className="min-h-11 rounded border border-pen text-[14px] font-semibold disabled:opacity-50"
-            >
-              남긴다
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void answerPoach(false)}
-              className="min-h-11 rounded border border-line text-[14px]"
-            >
-              보낸다 · 이적료 +{money(poach.transferFee)}
-            </button>
-          </div>
-        </div>
-      )}
       {meeting.omen && (
         <p className="mt-1 text-[14px] font-bold text-red-pen" data-testid="company-omen">
           <span className="mr-1 rounded bg-red-pen px-1 text-[11px] text-white">폭락 조짐</span>
@@ -853,10 +823,7 @@ function CompanyTabs({ company }: { company: Company }) {
     {
       id: 'meeting',
       label: '이슈',
-      badge:
-        company.meeting?.omen || company.meeting?.eraEnding || company.meeting?.poach
-          ? '!'
-          : undefined,
+      badge: company.meeting?.omen || company.meeting?.eraEnding ? '!' : undefined,
       show: Boolean(company.meeting),
     },
     {
