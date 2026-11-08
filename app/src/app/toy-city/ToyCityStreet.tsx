@@ -1,5 +1,6 @@
 import type { Company, Grade } from '@web/api/client'
 import { breedOf } from '@web/features/game/cat/look'
+import { money } from '@web/features/game/labels'
 import { LADDER } from '@web/features/raising/grades'
 import { type CSSProperties, useEffect, useId, useState } from 'react'
 import { expansionSide, officeGeometry, rivalName } from './model'
@@ -83,9 +84,11 @@ function Rival({
 export function ToyCityStreet({
   company,
   transition,
+  onUpgrade,
 }: {
   company: Company
   transition?: OfficeTransition
+  onUpgrade?: () => void
 }) {
   const [phase, setPhase] = useState(transition ? 0 : 3)
   const wall = useId().replaceAll(':', '')
@@ -125,6 +128,23 @@ export function ToyCityStreet({
     130 / rivalGeometry.scale,
     219 / rivalGeometry.scale - rivalGeometry.width / 2,
   )
+  // 카메라가 물러나도 화면에서 보이는 골목 폭은 유지한다.
+  const rivalGap = 28 / rivalGeometry.scale
+  const targetSide = company.upgrade ? expansionSide(company.upgrade.to) : null
+  const targetX =
+    targetSide === 'left'
+      ? Math.max(58, (195 - (after.width * after.scale) / 2 - 28) / 2)
+      : Math.min(332, (195 + (after.width * after.scale) / 2 + 28 + 390) / 2)
+  const targetY =
+    560 + 10 * after.scale - (targetSide === 'left' ? 220 : 242) - 7 * after.scale - 70
+  const plan = company.upgrade
+  const showGoal =
+    onUpgrade &&
+    plan &&
+    !transition &&
+    company.status !== 'ENDED' &&
+    !company.broke &&
+    !company.ending
   const moving = Boolean(transition && phase < 3)
   const buildingStyle = {
     transformOrigin: `${center}px 560px`,
@@ -137,7 +157,6 @@ export function ToyCityStreet({
       className="toy-street"
       viewBox="0 0 390 814"
       preserveAspectRatio="xMidYMid slice"
-      role="img"
       aria-label={`우리 회사 · 자리 ${company.seats}개`}
       data-testid="toy-street"
       data-seats={company.seats}
@@ -180,14 +199,14 @@ export function ToyCityStreet({
         <path d="M-700 609h1800v446H-700" fill="#a0c7b8" />
         <path d="M-700 620h1800" stroke="#c8dfd0" strokeWidth="5" />
         <Rival
-          x={rivalGeometry.x - rivalWidth - 6}
+          x={rivalGeometry.x - rivalWidth - rivalGap}
           width={rivalWidth}
           height={220 / rivalGeometry.scale}
           name={rivalName(rivalGrade, 'left')}
           hit={up && moving && side === 'left' ? 'left' : undefined}
         />
         <Rival
-          x={rivalGeometry.x + rivalGeometry.width + 6}
+          x={rivalGeometry.x + rivalGeometry.width + rivalGap}
           width={rivalWidth}
           height={242 / rivalGeometry.scale}
           name={rivalName(rivalGrade, 'right')}
@@ -272,6 +291,28 @@ export function ToyCityStreet({
           <Cat />
         </g>
       </g>
+      {showGoal && plan && (
+        <foreignObject x={targetX - 50} y={targetY} width="100" height="72">
+          <button
+            type="button"
+            className="toy-rival-goal"
+            onClick={onUpgrade}
+            data-testid="rival-goal"
+            data-side={targetSide}
+            aria-label={`${rivalName(company.grade, targetSide ?? 'left')} 밀어내기 목표 자본 ${money(plan.needed)}`}
+          >
+            <span>목표 자본</span>
+            <strong>{money(plan.needed)}</strong>
+            <small>
+              {plan.left != null
+                ? `공사 ${plan.left}년 남음`
+                : plan.affordable
+                  ? '확장 가능!'
+                  : `${money(Math.max(0, plan.needed - company.capital))} 더 필요`}
+            </small>
+          </button>
+        </foreignObject>
+      )}
     </svg>
   )
 }
