@@ -58,6 +58,15 @@
 .meeting-body {
   padding: 16px 20px 22px;
 }
+/* 종목 회의 단계마다 누를 버튼 (decisions.md 368번): 창 아래에 붙어 내용이 길어도 늘 보인다. */
+.meeting-step-action {
+  position: sticky;
+  bottom: -22px;
+  z-index: 15;
+  margin: 12px -20px -22px;
+  padding: 14px 20px 18px;
+  background: linear-gradient(to bottom, #fffdf700, #fffdf7 28%);
+}
 .meeting-agenda {
   display: flex;
   gap: 4px;
