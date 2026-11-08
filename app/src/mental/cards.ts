@@ -78,6 +78,8 @@ export interface Loadout {
   bulletSpeed: number
   /** 이번 카드로 바로 회복할 멘탈. 전투가 적용하고 0으로 돌린다. */
   heal: number
+  /** 전진 모드에서 사장냥이 손가락을 따라가는 최대 빠르기(px/s, 364번). */
+  moveSpeed: number
 }
 
 export const BASE_LOADOUT: Loadout = {
@@ -87,6 +89,7 @@ export const BASE_LOADOUT: Loadout = {
   maxMental: 100,
   bulletSpeed: 720,
   heal: 0,
+  moveSpeed: 520,
 }
 
 /** 든 무기의 수치(서버가 등급을 더해 준 최종값, 346번)를 한 판의 바탕 수치로. 카드는 그 위에 쌓인다. */

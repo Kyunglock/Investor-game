@@ -6,12 +6,13 @@ import { useAppUi } from '../app/ui'
 import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
+import { type BattleMode, SEGMENTS } from './advance'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
 import { applyCard, CARDS, type Loadout, loadoutOf, pickCards } from './cards'
 import { ENEMIES } from './enemies'
 import { GunSprite } from './GunSprite'
-import { BATTLE_SECONDS, GENRES } from './genres'
+import { BATTLE_SECONDS } from './genres'
 import { StagePortrait } from './StagePortrait'
 import './stage.css'
 import { DEFAULT_WEAPON, type Hero, heroOf, type Weapon } from './hero'
@@ -52,7 +53,8 @@ export function MentalWindow({
   const busy = useRaisingStore((s) => s.busy)
   const apiError = useRaisingStore((s) => s.error)
   const modal = useRef<HTMLDivElement>(null)
-  const genre = GENRES[mental.genre]
+  /** 분기 전투는 늘 전진 모드다 (364번). 디펜스(EX)의 입구는 스테이지 선택(#493)에서 붙는다. */
+  const mode: BattleMode = 'advance'
   const weapons = company.weapons?.length ? company.weapons : [DEFAULT_WEAPON]
 
   const back = useEffectEvent(() => {
@@ -138,6 +140,7 @@ export function MentalWindow({
       <div className="stage-frame" style={{ backgroundImage: `url(${STAGE_ASSETS.street})` }}>
         {hero && !outcome && (
           <Battle
+            mode={mode}
             genre={mental.genre}
             hero={hero}
             cards={picked}
@@ -158,14 +161,11 @@ export function MentalWindow({
             </header>
             <div className="stage-hero-card">
               <span className="stage-mode">
-                {genre.name} · 제한 시간 {BATTLE_SECONDS / 60}분
+                전진 · 구간 {SEGMENTS.length}개 · 제한 시간 {BATTLE_SECONDS / 60}분
               </span>
               <StagePortrait weapon={heroOf(company).weapon} />
-              <div className="stage-mini-wall">
-                <span>♡</span> 멘탈벽
-              </div>
-              <p>몰려오는 불안을 막아주세요</p>
-              <small>누른 방향으로 발사 · 손을 떼면 자동 조준</small>
+              <p>길을 막는 불안을 치우고 앞으로 나아가세요</p>
+              <small>끌어서 움직이기 · 총은 자동으로 쏜다 · 빨리 깰수록 별이 많다</small>
             </div>
             <WeaponPicker weapons={weapons} busy={busy} />
             {apiError && (
@@ -250,15 +250,32 @@ export function MentalWindow({
               <span
                 className={`inline-block rounded-lg px-3 py-0.5 text-[13px] font-bold text-white ${outcome.win ? 'bg-teal' : 'bg-[#ff4f6d]'}`}
               >
-                {outcome.win ? '분기 마감' : '멘탈 붕괴'}
+                {outcome.win ? '전진 성공' : outcome.reason === 'time' ? '시간 초과' : '멘탈 붕괴'}
               </span>
               <h2 className="mt-2 font-game text-[28px]">
-                {outcome.win ? '멘탈 지켜냈다!' : '멘탈이 무너졌다…'}
+                {outcome.win
+                  ? '끝까지 나아갔다!'
+                  : outcome.reason === 'time'
+                    ? '시간 안에 못 넘었다…'
+                    : '멘탈이 무너졌다…'}
               </h2>
+              <p
+                className="mt-1 text-[30px] tracking-[4px]"
+                role="img"
+                aria-label={`별 ${outcome.stars}개`}
+                data-testid="mental-stars"
+                data-stars={outcome.stars}
+              >
+                {[0, 1, 2].map((i) => (
+                  <span key={i} className={i < outcome.stars ? 'text-[#ffc83d]' : 'text-ink/20'}>
+                    ★
+                  </span>
+                ))}
+              </p>
               <div className="mt-3 grid grid-cols-3 gap-2">
+                <Stat label="넘긴 구간" value={`${outcome.segments}/${SEGMENTS.length}`} />
                 <Stat label="물리친 적" value={outcome.kills} />
                 <Stat label="남은 멘탈" value={outcome.mentalLeft} />
-                <Stat label="레벨" value={picked.length} />
               </div>
               <p className="mt-3 text-[13px] text-muted">
                 얼마나 세지는지는 결산에서 알려준다: 적을 많이 물리치고 멘탈을 많이 남길수록 이번
@@ -468,6 +485,7 @@ function CardPick({
  * 나갈 수 있다(345번): 전투를 멈추고 물은 뒤 나가면 강화 없이 결산이다.
  */
 function Battle({
+  mode,
   genre,
   hero,
   cards,
@@ -476,6 +494,7 @@ function Battle({
   onDone,
   onQuit,
 }: {
+  mode: BattleMode
   genre: Mental['genre']
   hero: Hero
   cards: MentalCard[]
@@ -521,6 +540,7 @@ function Battle({
           return
         }
         handle.current = startBattle(el, {
+          mode,
           genre,
           hero,
           loadout: loadout.current,
@@ -551,7 +571,7 @@ function Battle({
       handle.current?.stop()
       handle.current = null
     }
-  }, [genre, hero, onDone, attempt])
+  }, [mode, genre, hero, onDone, attempt])
 
   return (
     <>
@@ -603,6 +623,11 @@ function Battle({
                   </strong>
                 </div>
               </div>
+              {hud.segment && (
+                <b className="battle-segment" data-testid="battle-segment">
+                  구간 {hud.segment.at}/{hud.segment.total}
+                </b>
+              )}
               <time data-testid="battle-timer">
                 {Math.floor(hud.secondsLeft / 60)}:{String(hud.secondsLeft % 60).padStart(2, '0')}
               </time>
@@ -637,9 +662,9 @@ function Battle({
               </span>
             </div>
           </div>
-          <span className="battle-wall-label">멘탈벽</span>
+          {mode === 'defense' && <span className="battle-wall-label">멘탈벽</span>}
           <div className="battle-footer">
-            <span>누른 방향으로 발사</span>
+            <span>{mode === 'advance' ? '끌어서 움직이기 · 자동 사격' : '누른 방향으로 발사'}</span>
             <div>
               {CARDS.filter((c) => cards.includes(c.code)).map((c) => (
                 <span
