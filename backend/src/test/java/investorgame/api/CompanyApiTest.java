@@ -148,7 +148,7 @@ class CompanyApiTest {
     long capital = company.read("$.capital", Long.class);
     assertThat(capital).isEqualTo(100_000_000L);
     assertThat(company.read("$.grade", String.class)).isEqualTo("F");
-    assertThat(company.read("$.seats", Integer.class)).as("자리는 셋 (354번)").isEqualTo(3);
+    assertThat(company.read("$.seats", Integer.class)).isEqualTo(4);
     assertThat(company.read("$.employees.length()", Integer.class)).isZero();
     // 채용 뽑기 (decisions.md 312번): 채용권 열 장으로 시작하고(#344), 확률표와 도감(F~GOD)이 보인다.
     assertThat(company.read("$.gacha.tickets", Integer.class)).isEqualTo(10);

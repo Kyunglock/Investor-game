@@ -198,6 +198,8 @@ class BalanceSimulationTest {
    * 25년 일생 120판 (#344·#388·#389). 기사를 다수결로 읽는 사장이 늘 공격·크게 하는 사장보다, 그 사장이 이사 안 하고 중립·보류만 하는 사장보다 낫다.
    * 기사 읽는 사장은 첫 이사(E)를 3년 안에 하고, 등급 하나에 5년 넘게 걸리지 않는다. 새 건물을 몇 해에 걸쳐 짓게 한 뒤(#347, 120판): 기사 9,687억
    * · 공격 1,925억 · 이사 안 함 220억, 기사 사장의 등급 첫 해 E 3 · D 7 · C 11 · B 16 · A 19 · S 24 · SS 25.
+   * 자리 셋 고정(354번)을 풀고(359번) 채용권이 해마다 한 장(357번)인 지금: 기사 806억 · 공격 39억 · 이사 안 함 13억, 등급 첫 해 E 3 · D 8 · C 13 ·
+   * B 18 · A 23이고 S는 25년 안에 오지 않는다. 그래서 등급 간격은 A까지만 본다(S까지 오는 속도는 #468에서 다시 잡는다).
    */
   @Test
   void 기사를_읽는_사장이_이기고_등급이_고르게_오른다() {
@@ -216,22 +218,19 @@ class BalanceSimulationTest {
             + "억 | 이사 안 함 "
             + lazy.capital() / 100_000_000
             + "억");
-    // 자리가 셋으로 고정되며(354번) 세 사람 판돈이 커져 공격 사장이 기사 사장만큼 번다(기사 5.4조 · 공격 5.9조). 균형 재조정은 #468:
-    // 그때까지는 기사 사장이 공격 사장의 절반은 넘는 것만 지킨다.
     org.assertj.core.api.Assertions.assertThat(reader.capital())
-        .as("기사 읽는 사장이 공격 사장의 절반은 넘게 번다 (354번 뒤 임시, #468)")
-        .isGreaterThan(greedy.capital() / 2);
+        .as("기사 읽는 사장이 늘 공격·크게 하는 사장의 세 배 넘게 번다")
+        .isGreaterThan(greedy.capital() * 3);
     org.assertj.core.api.Assertions.assertThat(greedy.capital())
         .as("이사 안 하고 버티는 쪽이 가장 못하다 (규모의 벽은 자본을 본다)")
         .isGreaterThan(lazy.capital());
     org.assertj.core.api.Assertions.assertThat(reader.firstYear()[1])
         .as("첫 이사")
         .isLessThanOrEqualTo(3);
-    for (int k = 2; k <= LADDER.indexOf("S"); k++) {
-      // 354번 뒤 등급이 한 해에 둘씩 오르기도 한다(E 2 · D 7 · C 8 · B 12 · A 15 · S 20): 폭을 0~8로 넓혔다 (#468).
+    for (int k = 2; k <= LADDER.indexOf("A"); k++) {
       org.assertj.core.api.Assertions.assertThat(reader.firstYear()[k] - reader.firstYear()[k - 1])
           .as(LADDER.get(k - 1) + " → " + LADDER.get(k))
-          .isBetween(0L, 8L);
+          .isBetween(2L, 5L);
     }
   }
 }

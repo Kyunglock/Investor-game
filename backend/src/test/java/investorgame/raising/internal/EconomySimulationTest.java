@@ -183,8 +183,7 @@ class EconomySimulationTest {
       }
       Arrays.sort(ratio);
       String grade = LADDER.get(k);
-      // 자리가 셋으로 고정되며(354번) 큰 회사도 세 사람으로 굴려 잃는 해가 잦아졌다: 상한을 0.4에서 0.5로.
-      assertThat(losses / (double) trials).as(grade + " 회사도 잃는 해가 있다").isBetween(0.12, 0.5);
+      assertThat(losses / (double) trials).as(grade + " 회사도 잃는 해가 있다").isBetween(0.12, 0.4);
       // 지원자가 회사 등급을 따라 오면서(289번) 한 해 중앙값이 1.12(D)~1.30(X)배로 낮아졌다: 등급이 바로 높아지지 않는다.
       assertThat(ratio[trials / 2]).as(grade + " 회사의 한 해 중앙값").isBetween(1.05, 1.45);
       // #344·#388: 태도가 숨은 방향과 맞으면 더 번다. 꼭대기(X)도 상위 10%가 한 해 두 배 아래다.
