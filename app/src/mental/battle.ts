@@ -5,8 +5,11 @@ import {
   BOSS,
   bossSummonSeconds,
   formation,
+  PER_CHAPTER,
   SCROLL_SECONDS,
   SEGMENTS,
+  type StageSpec,
+  stageSpec,
   stars,
   TRICKLE_SECONDS,
 } from './advance'
@@ -55,6 +58,8 @@ export interface Outcome {
 export interface BattleOptions {
   /** 전진 모드(주 콘텐츠) 또는 디펜스(EX) (364번). */
   mode: BattleMode
+  /** 전진 모드의 스테이지 판 (369번). 없으면 다섯 구간 + 보스. */
+  stage?: StageSpec
   genre: Genre
   hero: Hero
   loadout: Loadout
@@ -125,6 +130,9 @@ class BattleScene extends Phaser.Scene {
   private readonly opts: BattleOptions
   private readonly genre
   private readonly mode: BattleMode
+  private readonly spec: StageSpec
+  /** 이 판 보스의 최대 체력: 스테이지가 키운다. */
+  private bossMax = BOSS.hp
   private loadout: Loadout
   private bg!: Phaser.GameObjects.Image
   /** 전진 모드: 위에 이어 붙인 둘째 배경. 둘이 함께 내려가며 길이 올라가는 것처럼 보인다. */
@@ -192,6 +200,7 @@ class BattleScene extends Phaser.Scene {
     this.opts = opts
     this.genre = GENRES[opts.genre]
     this.mode = opts.mode
+    this.spec = opts.stage ?? stageSpec(PER_CHAPTER)
     this.loadout = opts.loadout
   }
 
@@ -463,6 +472,8 @@ class BattleScene extends Phaser.Scene {
       const e = this.spawn(spot.kind, [spot.x, spot.y], true)
       if (e) {
         e.blocker = true
+        // 스테이지가 뒤로 갈수록 길막 적이 단단하다 (369번).
+        e.hp = ENEMIES[spot.kind].hp * this.spec.hpScale
         this.blockersLeft++
       }
     }
@@ -471,12 +482,17 @@ class BattleScene extends Phaser.Scene {
   /** 길막 적을 다 잡았다: 다음 구간으로 화면이 올라가거나, 마지막이면 깼다. */
   private segmentCleared() {
     this.segment++
+    const last = this.segment >= this.spec.segments
+    if (last && !this.spec.boss) {
+      // 보스가 없는 스테이지는 마지막 구간을 넘으면 바로 깬다 (369번).
+      this.opts.onBanner('돌파!! 멘탈 전진 성공', '#ffd84d')
+      this.finish(true, 'clear')
+      return
+    }
     sfx.levelUp()
     this.opts.onBanner(
-      this.segment >= SEGMENTS.length
-        ? `${BOSS.name} 등장!!`
-        : `구간 돌파! ${this.segment}/${SEGMENTS.length}`,
-      this.segment >= SEGMENTS.length ? '#ff4f6d' : '#7be0c3',
+      last ? `${BOSS.name} 등장!!` : `구간 돌파! ${this.segment}/${this.spec.segments}`,
+      last ? '#ff4f6d' : '#7be0c3',
     )
     this.scrolling = SCROLL_SECONDS
     this.pushHud(true)
@@ -493,7 +509,8 @@ class BattleScene extends Phaser.Scene {
     }
     this.tweens.killTweensOf(e)
     e.boss = true
-    e.hp = BOSS.hp
+    this.bossMax = BOSS.hp * this.spec.hpScale
+    e.hp = this.bossMax
     e.setScale(ENEMY_K * BOSS.scale)
     this.bossEnemy = e
     this.lastSummon = this.elapsed
@@ -566,7 +583,7 @@ class BattleScene extends Phaser.Scene {
       this.scrolling -= dt
       if (this.scrolling <= 0) {
         this.scrolling = 0
-        if (this.segment >= SEGMENTS.length) {
+        if (this.segment >= this.spec.segments) {
           this.startBoss()
         } else {
           this.startSegment()
@@ -579,7 +596,7 @@ class BattleScene extends Phaser.Scene {
       if (
         boss.active &&
         !boss.dying &&
-        this.elapsed - this.lastSummon > bossSummonSeconds(boss.hp)
+        this.elapsed - this.lastSummon > bossSummonSeconds(boss.hp, this.bossMax)
       ) {
         this.lastSummon = this.elapsed
         this.summon(boss)
@@ -843,7 +860,7 @@ class BattleScene extends Phaser.Scene {
   private autoTarget(): Enemy | null {
     const near = this.nearestEnemy()
     const boss = this.bossEnemy
-    if (!boss || !boss.active || boss.dying || !near || near === boss) {
+    if (!boss?.active || boss.dying || !near || near === boss) {
       return near
     }
     const close = (near.x - this.player.x) ** 2 + (near.y - this.player.y) ** 2 < 150 * 150
@@ -1019,10 +1036,10 @@ class BattleScene extends Phaser.Scene {
       xp: Math.min(1, this.xp / xpToNext(this.level)),
       segment:
         this.mode === 'advance'
-          ? { at: Math.min(SEGMENTS.length, this.segment + 1), total: SEGMENTS.length }
+          ? { at: Math.min(this.spec.segments, this.segment + 1), total: this.spec.segments }
           : null,
       boss: this.bossEnemy
-        ? { name: BOSS.name, hp: Math.max(0, this.bossEnemy.hp) / BOSS.hp }
+        ? { name: BOSS.name, hp: Math.max(0, this.bossEnemy.hp) / this.bossMax }
         : null,
     })
   }

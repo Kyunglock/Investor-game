@@ -8,9 +8,10 @@ import { tutorialStep, unlockedFeatures, useTutorial } from '@web/features/raisi
 import { useState } from 'react'
 import { haptic } from '../../fx/haptics'
 import { isMuted, setMuted, sfx } from '../../fx/sound'
+import { stageLabel } from '../../mental/advance'
 import { BookIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from '../Icons'
 import { Sheet } from '../Sheet'
-import { type Tab, type ToyPanel, tabBadge, useAppUi } from '../ui'
+import { type BattleEntry, type Tab, type ToyPanel, tabBadge, useAppUi } from '../ui'
 import { useCountUp } from '../useCountUp'
 import { ActionBar } from '../Windows'
 import { growthProgress } from './model'
@@ -65,7 +66,6 @@ export function ToyCityHome({ company }: { company: Company }) {
   const unlocked = unlockedFeatures(company, tutorialOn)
   const tutorial = tutorialStep(company)
   const upgradeLocked = useLocked(company, 'upgrade')
-  const settleLocked = useLocked(company, 'settle')
   const autoLocked = useLocked(company, 'auto')
   const upgradeSpot = useTutorialSpot(company, 'upgrade')
   const marketSpot = useTutorialSpot(company, 'market')
@@ -138,10 +138,9 @@ export function ToyCityHome({ company }: { company: Company }) {
         <button
           type="button"
           className="toy-wallet toy-mental-chip"
-          onClick={() => setPanel('mental')}
+          onClick={() => setPanel('stage')}
         >
-          <i aria-hidden="true">♥</i>멘탈{' '}
-          {company.mental?.done ? '완료' : company.mental ? '준비' : '휴식'}
+          <i aria-hidden="true">♥</i>멘탈 +{company.stages?.bonusPercent ?? 0}%
         </button>
       </div>
       <header className="toy-stage">
@@ -208,7 +207,7 @@ export function ToyCityHome({ company }: { company: Company }) {
                   : '성장 목표'}
           </small>
         </button>
-        <button type="button" className="toy-menu" onClick={() => setPanel('mental')}>
+        <button type="button" className="toy-menu" onClick={() => setPanel('stage')}>
           <ToyIcon kind="heart" />
           <span>멘탈</span>
         </button>
@@ -239,8 +238,8 @@ export function ToyCityHome({ company }: { company: Company }) {
           title={
             panel === 'upgrade'
               ? '다음 단계로 성장하기'
-              : panel === 'mental'
-                ? '이번 분기의 멘탈'
+              : panel === 'stage'
+                ? '멘탈 스테이지'
                 : panel === 'battle'
                   ? '자본으로 전투 강화'
                   : '회사 설정'
@@ -295,27 +294,7 @@ export function ToyCityHome({ company }: { company: Company }) {
               )}
             </>
           )}
-          {panel === 'mental' && (
-            <>
-              <p className="toy-sheet-lead">{company.mental?.headline ?? '평온한 하루예요'}</p>
-              <p>
-                {company.mental?.done
-                  ? '이번 분기 멘탈 전투를 마쳤어요.'
-                  : '분기를 넘기면 회의를 거쳐 멘탈 전투에 들어갑니다.'}
-              </p>
-              <button
-                type="button"
-                className="toy-sheet-action"
-                disabled={unavailable || !company.meeting || busy || autoPlay || settleLocked}
-                onClick={() => {
-                  setPanel(null)
-                  useAppUi.getState().requestSettle()
-                }}
-              >
-                다음 분기 진행
-              </button>
-            </>
-          )}
+          {panel === 'stage' && <StageSelect company={company} disabled={unavailable} />}
           {panel === 'battle' && <BattleUpgrades company={company} />}
           {panel === 'settings' && (
             <>
@@ -414,6 +393,67 @@ function BattleUpgrades({ company }: { company: Company }) {
           {error}
         </p>
       )}
+    </>
+  )
+}
+
+/**
+ * 스테이지 선택 (decisions.md 369번): 번호 스테이지를 골라 전진 모드로 들어간다. 깬 다음 스테이지까지 열리고, 챕터 마지막은 보스. 별과 분기 강화율이
+ * 보이고, 아래에 분기에 한 번 하는 EX 디펜스가 있다.
+ */
+function StageSelect({ company, disabled }: { company: Company; disabled: boolean }) {
+  const stages = company.stages
+  if (!stages) return null
+  const open = Math.min(stages.best + 1, stages.last)
+  const numbers = Array.from({ length: stages.last }, (_, i) => i + 1)
+  const start = (entry: BattleEntry) => {
+    sfx.stamp()
+    haptic.medium()
+    useAppUi.getState().startBattle(entry)
+  }
+  return (
+    <>
+      <p className="toy-sheet-lead">챕터 1 · 개미의 첫걸음</p>
+      <p className="text-sm text-muted" data-testid="stage-bonus">
+        깬 최고 스테이지만큼 매 분기 직원들이 더 번다: 지금 +{stages.bonusPercent}%
+      </p>
+      <ol className="toy-stage-grid" data-testid="stage-grid">
+        {numbers.map((n) => {
+          const stars = stages.stars[n - 1] ?? 0
+          const locked = n > open
+          const boss = n % stages.perChapter === 0
+          return (
+            <li key={n}>
+              <button
+                type="button"
+                className={`toy-stage-pick ${boss ? 'is-boss' : ''} ${stars > 0 ? 'is-cleared' : ''}`}
+                disabled={disabled || locked}
+                data-testid="stage"
+                data-stage={n}
+                data-stars={stars}
+                aria-label={`스테이지 ${stageLabel(n, stages.perChapter)}${locked ? ' 잠김' : ''}${boss ? ' 보스' : ''} 별 ${stars}개`}
+                onClick={() => start({ kind: 'stage', stage: n })}
+              >
+                <b>{locked ? '🔒' : stageLabel(n, stages.perChapter)}</b>
+                <small aria-hidden="true">
+                  {boss && !locked ? '보스 ' : ''}
+                  {'★'.repeat(stars)}
+                  {'☆'.repeat(3 - stars)}
+                </small>
+              </button>
+            </li>
+          )
+        })}
+      </ol>
+      <button
+        type="button"
+        className="toy-sheet-action"
+        data-testid="stage-ex"
+        disabled={disabled || !stages.exAvailable}
+        onClick={() => start({ kind: 'ex' })}
+      >
+        {stages.exAvailable ? 'EX 디펜스 · 분기에 한 번 · 무기 뽑기권' : 'EX 디펜스는 다음 분기에'}
+      </button>
     </>
   )
 }

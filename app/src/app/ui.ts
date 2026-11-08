@@ -5,7 +5,10 @@ import { create } from 'zustand'
 export type Tab = 'office' | 'market' | 'staff' | 'issue' | 'record'
 
 /** 인력 관리의 자리 카드와 메인 화면의 설정·확장·멘탈·전투 강화(367번) 시트. */
-export type ToyPanel = 'upgrade' | 'mental' | 'settings' | 'battle'
+export type ToyPanel = 'upgrade' | 'stage' | 'settings' | 'battle'
+
+/** 들어갈 멘탈 전투 (decisions.md 369번): 번호 스테이지(전진 모드) 또는 EX 디펜스. */
+export type BattleEntry = { kind: 'stage'; stage: number } | { kind: 'ex' }
 export type Sheet = { kind: 'desk'; desk: string } | { kind: 'toy'; panel: ToyPanel }
 
 interface UiState {
@@ -21,6 +24,10 @@ interface UiState {
   /** 분기 넘기기를 누른 횟수. 아래 버튼이 올리고, 회의 창(Windows)이 보고 회의를 연다. */
   settleRequest: number
   requestSettle: () => void
+  /** 지금 치르는 멘탈 전투. 없으면 null. */
+  battle: BattleEntry | null
+  startBattle: (entry: BattleEntry) => void
+  endBattle: () => void
 }
 
 export const useAppUi = create<UiState>((set, get) => ({
@@ -29,6 +36,9 @@ export const useAppUi = create<UiState>((set, get) => ({
   setModalBack: (modalBack) => set({ modalBack }),
   sheet: null,
   settleRequest: 0,
+  battle: null,
+  startBattle: (battle) => set({ battle, sheet: null }),
+  endBattle: () => set({ battle: null }),
   requestSettle: () => set((s) => ({ settleRequest: s.settleRequest + 1, sheet: null })),
   setTab: (tab) => set({ tab, sheet: null }),
   openSheet: (sheet) => set({ sheet }),

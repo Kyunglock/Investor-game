@@ -80,7 +80,32 @@ public record CompanyProperties(
       Map<String, Weapon> weapons,
       Map<String, WeaponGrade> weaponGrades,
       WeaponGacha weaponGacha,
-      Upgrades upgrades) {}
+      Upgrades upgrades,
+      Stages stages) {}
+
+  /**
+   * 스테이지 (decisions.md 369번).
+   *
+   * @param perChapter 한 챕터의 스테이지 수. 지금은 챕터 하나라 이것이 마지막 스테이지다. 챕터 마지막은 보스
+   * @param capitalPerStage 처음 깰 때 주는 자본 = 스테이지 번호 × 이것
+   * @param clearTickets 처음 깰 때 주는 무기 뽑기권
+   * @param bossTickets 보스 스테이지를 처음 깰 때 주는 무기 뽑기권
+   * @param starTickets 별을 처음 얻을 때마다 주는 무기 뽑기권
+   * @param bonusPerStage 분기 강화율: 깬 최고 스테이지 하나에 이만큼(%)
+   * @param maxBonus 분기 강화율 상한(%)
+   * @param exKillsPerTicket EX 디펜스: 물리친 적 이만큼마다 뽑기권 한 장 더
+   * @param exMaxTickets EX 디펜스가 주는 뽑기권 상한
+   */
+  public record Stages(
+      int perChapter,
+      long capitalPerStage,
+      int clearTickets,
+      int bossTickets,
+      int starTickets,
+      int bonusPerStage,
+      int maxBonus,
+      int exKillsPerTicket,
+      int exMaxTickets) {}
 
   /** 무기 종류 하나의 바탕 수치 (346번). damagePercent 100이 탄 하나에 적 체력 1. power는 탄 강화 단계(362번). */
   public record Weapon(int damagePercent, int fireMs, int power, int bulletSpeed) {}

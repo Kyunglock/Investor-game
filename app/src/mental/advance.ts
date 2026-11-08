@@ -63,9 +63,39 @@ export const BOSS = {
   enragedFactor: 0.6,
 }
 
-/** 보스가 졸개를 부르는 간격(초): 체력이 반 아래면 더 잦다. */
-export function bossSummonSeconds(hpLeft: number): number {
-  return hpLeft <= BOSS.hp / 2 ? BOSS.summonSeconds * BOSS.enragedFactor : BOSS.summonSeconds
+/** 보스가 졸개를 부르는 간격(초): 체력이 반 아래면 더 잦다. maxHp는 스테이지가 키운 최대 체력. */
+export function bossSummonSeconds(hpLeft: number, maxHp: number = BOSS.hp): number {
+  return hpLeft <= maxHp / 2 ? BOSS.summonSeconds * BOSS.enragedFactor : BOSS.summonSeconds
+}
+
+/** 한 챕터의 스테이지 수 (decisions.md 369번). 서버(company.stages.perChapter)와 같다. */
+export const PER_CHAPTER = 10
+
+/** 스테이지 하나의 판 (369번): 넘을 구간 수, 적 체력 배율, 끝에 보스가 나오나. */
+export interface StageSpec {
+  stage: number
+  segments: number
+  hpScale: number
+  boss: boolean
+}
+
+/**
+ * 번호 스테이지의 판 (decisions.md 369번): 챕터 안에서 앞 셋은 구간 셋, 다음 셋은 넷, 그 뒤는 다섯. 적 체력은 스테이지마다 12%씩 단단해지고, 챕터
+ * 마지막 스테이지에만 보스가 나온다.
+ */
+export function stageSpec(stage: number, perChapter: number = PER_CHAPTER): StageSpec {
+  const n = ((stage - 1) % perChapter) + 1
+  return {
+    stage,
+    segments: Math.min(SEGMENTS.length, n <= 3 ? 3 : n <= 6 ? 4 : 5),
+    hpScale: 1 + (stage - 1) * 0.12,
+    boss: n === perChapter,
+  }
+}
+
+/** 스테이지 이름: 챕터-번호 (예: 1-3). */
+export function stageLabel(stage: number, perChapter: number = PER_CHAPTER): string {
+  return `${Math.floor((stage - 1) / perChapter) + 1}-${((stage - 1) % perChapter) + 1}`
 }
 
 /** 한 구간을 넘겨 화면이 올라가는 시간(초). */

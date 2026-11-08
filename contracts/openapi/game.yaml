@@ -407,6 +407,56 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/stage:
+    post:
+      operationId: reportStage
+      summary: 멘탈 스테이지 한 판의 결과를 보낸다 (decisions.md 369번)
+      description: |
+        열린 스테이지(1 ~ 깬 최고 + 1)만 받는다. 깼으면 처음이면 자본(번호 × 1b)과 무기 뽑기권(보스면 3장), 별을 처음 얻을 때마다 뽑기권 한 장.
+        못 깼으면 보상 없이 결과만 남는다. 결과는 stages.lastResult에 담긴다. 아직 안 열린 스테이지면 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stage, cleared, stars]
+              properties:
+                stage: { type: integer, minimum: 1 }
+                cleared: { type: boolean }
+                stars: { type: integer, minimum: 0, maximum: 3 }
+      responses:
+        '200':
+          description: 결과를 받은 뒤의 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/ex:
+    post:
+      operationId: reportEx
+      summary: EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번)
+      description: 분기에 한 번 무기 뽑기권 1 + 물리친 적 40마다 한 장(최대 3장). 이번 분기에 이미 했으면 그대로 둔다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kills]
+              properties:
+                kills: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: 결과를 받은 뒤의 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/battle-upgrade:
     post:
       operationId: buyBattleUpgrade
@@ -1106,7 +1156,7 @@ components:
         lastSettlement:
           oneOf:
             - type: object
-              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, moving, upgrades, salary, quarters, gradeBefore, gradeAfter, achieved, results, lines, reports]
+              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, moving, upgrades, rewards, salary, quarters, gradeBefore, gradeAfter, achieved, results, lines, reports]
               properties:
                 year: { type: integer }
                 phase: { type: string, enum: [boom, normal, crash] }
@@ -1117,6 +1167,7 @@ components:
                 hiring: { type: integer, format: int64, description: 그해 인사 비용(계약금·새로 받기·붙잡는 값 − 받은 이적료, 음수일 수 있다). 연초 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 − 이사 비용 = 연말 자본 (251·262·296번) }
                 moving: { type: integer, format: int64, description: 그해 낸 이사 비용 (296번) }
                 upgrades: { type: integer, format: int64, description: 그해 전투 강화에 쓴 돈 (decisions.md 367번) }
+                rewards: { type: integer, format: int64, description: 그해 스테이지 보상으로 받은 자본 (decisions.md 369번) }
                 salary: { type: integer, format: int64, description: 그해 나간 연봉의 합(인건비, decisions.md 270번) }
                 invest:
                   description: 그해 투자 회의(기사 제목과 손익, 이미 자본에 들어갔다). 회의를 안 했거나 옛 결산이면 null (decisions.md 240번)
@@ -1205,6 +1256,30 @@ components:
               bulletSpeed: { type: integer, description: 탄 속도(px/s) }
               equipped: { type: boolean, description: 지금 든 무기 }
               count: { type: integer, description: "가진 수 (decisions.md 366번). 같은 무기를 또 뽑으면 늘고, armory.mergeCount개면 합쳐 한 등급 올린다" }
+        stages:
+          description: 멘탈 스테이지 (decisions.md 369번). 번호 스테이지를 골라 전진 모드로 깬다. 분기 강화율은 깬 최고 스테이지로 매 분기 저절로 붙는다
+          type: object
+          required: [best, last, perChapter, stars, bonusPercent, exAvailable, lastResult]
+          properties:
+            best: { type: integer, description: 깬 최고 스테이지(0이면 아직 없다). 다음에 열리는 것은 best + 1 }
+            last: { type: integer, description: 마지막 스테이지(지금은 챕터 하나) }
+            perChapter: { type: integer, description: 한 챕터의 스테이지 수. 챕터 마지막은 보스 }
+            stars: { type: array, items: { type: integer }, description: 깬 스테이지의 별(1~3), 1번부터 차례로 }
+            bonusPercent: { type: integer, description: 이번 분기 강화율(%) }
+            exAvailable: { type: boolean, description: 이번 분기 EX 디펜스를 아직 안 했다 }
+            lastResult:
+              description: 마지막으로 보낸 스테이지·EX 결과와 받은 보상. 없으면 null
+              oneOf:
+                - type: object
+                  required: [stage, cleared, stars, firstClear, capital, tickets]
+                  properties:
+                    stage: { type: integer, description: 스테이지 번호. EX 디펜스면 0 }
+                    cleared: { type: boolean }
+                    stars: { type: integer }
+                    firstClear: { type: boolean, description: 이 판에 처음 깼다 }
+                    capital: { type: integer, format: int64, description: 받은 자본 }
+                    tickets: { type: integer, description: 받은 무기 뽑기권 }
+                - type: 'null'
         battleUpgrades:
           description: 자본으로 사는 전투 강화 (decisions.md 367번). 데미지·연사·고양이 속도, 멘탈 전투의 바탕 수치에 영구로 붙는다
           type: array
@@ -1250,7 +1325,7 @@ components:
     Quarter:
       type: object
       description: 분기 하나의 실적 (decisions.md 268번)
-      required: [year, quarter, capitalBefore, capitalAfter, fee, staff, hiring, moving, upgrades, salary, crash, lines, reports]
+      required: [year, quarter, capitalBefore, capitalAfter, fee, staff, hiring, moving, upgrades, rewards, salary, crash, lines, reports]
       properties:
         year: { type: integer }
         quarter: { type: integer }
@@ -1261,6 +1336,7 @@ components:
         hiring: { type: integer, format: int64, description: 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 − 이사 비용 = 끝 자본 }
         moving: { type: integer, format: int64, description: 이 분기에 낸 이사 비용 (296번) }
         upgrades: { type: integer, format: int64, description: 이 분기에 전투 강화에 쓴 돈 (decisions.md 367번) }
+        rewards: { type: integer, format: int64, description: 이 분기에 스테이지 보상으로 받은 자본 (decisions.md 369번) }
         salary: { type: integer, format: int64, description: 이 분기에 나간 연봉(인건비, decisions.md 270번) }
         invest:
           description: 이 분기 종목 회의(기사 제목과 손익). 안 열렸으면 null

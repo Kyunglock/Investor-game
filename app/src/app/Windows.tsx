@@ -9,7 +9,7 @@ import { ResignAlert } from '@web/features/raising/ResignAlert'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useLocked, useTutorialSpot } from '@web/features/raising/TutorialBanner'
 import { YearEndSheet } from '@web/features/raising/YearEnd'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
@@ -31,41 +31,13 @@ export function Windows({ company }: { company: Company }) {
   const { settle, convene } = useRaisingStore.getState()
   const [investOpen, setInvestOpen] = useState(false)
   const [macroOpen, setMacroOpen] = useState(false)
-  const [mentalOpen, setMentalOpen] = useState(false)
-  // 디펜스는 결정 직후 (348번): 종목 회의에서 매수·매도가 정해지면 바로 전투, 끝나면 회의 창으로 돌아와 결과를 본다. 결산은 그 뒤 버튼으로.
-  const [mentalMode, setMentalMode] = useState<'settle' | 'invest'>('settle')
+  // 멘탈 전투는 스테이지를 골라 들어간다 (decisions.md 369번): 분기를 넘길 때 저절로 뜨지 않는다.
+  const battle = useAppUi((s) => s.battle)
   const ended = company.status === 'ENDED'
   const drawn = useDrawReveal(company)
-  const outcome = company.invest?.outcome ?? null
-  const prevOutcome = useRef(outcome)
-  useEffect(() => {
-    const before = prevOutcome.current
-    prevOutcome.current = outcome
-    if (!outcome || before) {
-      return
-    }
-    const s = useRaisingStore.getState()
-    const mental = s.company?.mental
-    if (
-      investOpen &&
-      mental?.genre === 'DEFENSE' &&
-      !mental.done &&
-      !s.autoPlay &&
-      outcome.choice !== 'HOLD'
-    ) {
-      setMentalMode('invest')
-      setMentalOpen(true)
-    }
-  }, [outcome, investOpen])
 
-  // 결산 직전: 이번 분기 멘탈 전투를 아직 안 치렀으면 창을 띄운다 (decisions.md 328번). 자동 진행은 건너뛴다.
+  // 결산: 전투 없이 바로 넘긴다 (369번).
   const battleOrSettle = () => {
-    const s = useRaisingStore.getState()
-    if (s.company?.mental && !s.company.mental.done && !s.autoPlay) {
-      setMentalMode('settle')
-      setMentalOpen(true)
-      return
-    }
     void settle()
   }
 
@@ -175,19 +147,13 @@ export function Windows({ company }: { company: Company }) {
             setInvestOpen(false)
             battleOrSettle()
           }}
-          hold={mentalOpen && mentalMode === 'invest'}
         />
       )}
-      {!ended && company.mental && mentalOpen && (
+      {!ended && battle && (
         <MentalWindow
-          mental={company.mental}
+          entry={battle}
           company={company}
-          onDone={() => {
-            setMentalOpen(false)
-            if (mentalMode === 'settle') {
-              void settle()
-            }
-          }}
+          onDone={() => useAppUi.getState().endBattle()}
         />
       )}
       <AutoCountdown />
@@ -320,7 +286,7 @@ export function ActionBar({
               자리 {assigned}/{company.seats}
             </em>
           </button>
-          {/* 스테이지 입구: 스테이지 선택(#493)이 생기기 전까지는 이번 분기 멘탈 시트를 연다. */}
+          {/* 스테이지 입구 (decisions.md 369번): 스테이지 선택 시트를 연다. */}
           <button
             type="button"
             className="toy-stat"
@@ -328,12 +294,16 @@ export function ActionBar({
             onClick={() => {
               sfx.tap()
               haptic.light()
-              useAppUi.getState().openSheet({ kind: 'toy', panel: 'mental' })
+              useAppUi.getState().openSheet({ kind: 'toy', panel: 'stage' })
             }}
           >
             <small>멘탈 전투</small>
             <strong>스테이지</strong>
-            <em>{company.mental?.done ? '이번 분기 완료' : '전진 모드'}</em>
+            <em>
+              {company.stages && company.stages.best > 0
+                ? `${company.stages.best}/${company.stages.last} · +${company.stages.bonusPercent}%`
+                : '1-1부터'}
+            </em>
           </button>
         </div>
       </div>

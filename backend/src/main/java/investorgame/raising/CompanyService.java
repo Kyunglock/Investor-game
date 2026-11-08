@@ -93,6 +93,15 @@ public interface CompanyService {
   /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). 없는 종류·등급이거나 안 가진 무기면 400. */
   CompanyView equipWeapon(UUID sessionId, String kind, String grade);
 
+  /**
+   * 멘탈 스테이지 한 판의 결과를 보낸다 (decisions.md 369번). 처음 깨면 자본과 무기 뽑기권, 별을 처음 얻으면 뽑기권을 더 준다. 아직 안 열린 스테이지면
+   * 400.
+   */
+  CompanyView reportStage(UUID sessionId, int stage, boolean cleared, int stars);
+
+  /** EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번). 분기에 한 번 무기 뽑기권을 준다. */
+  CompanyView reportEx(UUID sessionId, int kills);
+
   /** 자본으로 전투 강화(damage·fire·speed) 한 단계를 산다 (decisions.md 367번). 자본이 모자라거나 다 올렸으면 400. */
   CompanyView buyBattleUpgrade(UUID sessionId, String kind);
 

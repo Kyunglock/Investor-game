@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { BOSS, bossSummonSeconds, formation, SEGMENTS, stars } from './advance'
+import {
+  BOSS,
+  bossSummonSeconds,
+  formation,
+  SEGMENTS,
+  stageLabel,
+  stageSpec,
+  stars,
+} from './advance'
 
 describe('전진 모드', () => {
   it('구간은 다섯이고 뒤로 갈수록 길막 적이 많다', () => {
@@ -27,6 +35,18 @@ describe('전진 모드', () => {
     expect(bossSummonSeconds(BOSS.hp)).toBe(BOSS.summonSeconds)
     expect(bossSummonSeconds(BOSS.hp / 2)).toBeLessThan(BOSS.summonSeconds)
     expect(bossSummonSeconds(1)).toBeLessThan(BOSS.summonSeconds)
+  })
+
+  it('스테이지가 뒤로 갈수록 구간이 늘고 단단해지며, 챕터 마지막에만 보스가 나온다', () => {
+    expect(stageSpec(1).segments).toBe(3)
+    expect(stageSpec(5).segments).toBe(4)
+    expect(stageSpec(9).segments).toBe(5)
+    expect(stageSpec(2).hpScale).toBeGreaterThan(stageSpec(1).hpScale)
+    expect(stageSpec(9).boss).toBe(false)
+    expect(stageSpec(10).boss).toBe(true)
+    expect(stageLabel(3)).toBe('1-3')
+    expect(stageLabel(10)).toBe('1-10')
+    expect(bossSummonSeconds(50, 100)).toBeLessThan(bossSummonSeconds(60, 100))
   })
 
   it('별: 깨면 하나, 절반 시간 안이면 하나 더, 멘탈을 반 넘게 남기면 하나 더', () => {
