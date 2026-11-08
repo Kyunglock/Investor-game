@@ -71,32 +71,6 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
-  /api/company/merge:
-    post:
-      operationId: mergeEmployees
-      summary: 같은 등급 직원을 합쳐 바탕 한 명을 한 단계 올린다 (decisions.md 312번)
-      description: |
-        바탕(baseId)과 같은 종합 등급의 재료 mergeCount−1명. 재료는 회사를 떠나고 번 돈은 바탕에게 얹힌다. F~SS는 다섯 능력치가 한 띠 오르고,
-        SSS 위는 단계(X…)가 오른다. 수·등급이 맞지 않거나, 맨 위(GOD)거나, 이직 제안이 걸린 사람이면 400.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [baseId, materialIds]
-              properties:
-                baseId: { type: integer }
-                materialIds: { type: array, items: { type: integer } }
-      responses:
-        '200':
-          description: 뒤의 회사
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Company' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/SessionRequired' }
-        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/release:
     post:
       operationId: releaseEmployee
@@ -389,7 +363,7 @@ paths:
       operationId: drawWeapon
       summary: 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번)
       description: |
-        등급은 N 60·R 30·SR 9·UR 1의 가중치로, 종류는 고르게 뽑는다. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 합성 재료가 된다.
+        등급은 N 60·R 30·SR 9·UR 1의 가중치로, 종류는 고르게 뽑는다. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 무기 합성 재료가 된다.
         결과는 armory.lastDraw에 담긴다. 뽑기권이 없으면 400.
       responses:
         '200':
@@ -585,7 +559,7 @@ components:
               settled: { type: boolean, description: 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다 }
               leader: { type: boolean, description: 앉은 자리의 팀장이다 (decisions.md 269번) }
               morale: { type: integer, minimum: -2, maximum: 2, description: 사기. 낮으면 손이 더 뒤집힌다 (270번) }
-              quirk: { type: string, enum: [gut, chat, chart, news, coffee], description: 버릇 (decisions.md 349번). 번호로 정해져 바뀌지 않고 이직·첫인사·합성 문구가 이를 따른다 }
+              quirk: { type: string, enum: [gut, chat, chart, news, coffee], description: 버릇 (decisions.md 349번). 번호로 정해져 바뀌지 않고 이직·첫인사 문구가 이를 따른다 }
               quirkName: { type: string, description: 버릇 이름(촉파·단톡방파·차트파·뉴스파·커피파) }
               role: { type: [string, 'null'], description: 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번) }
         desks:
@@ -646,14 +620,13 @@ components:
         gacha:
           type: object
           description: 채용 뽑기 (decisions.md 312번). 공채 시장(지원자를 골라 계약금을 내고 뽑던 것, 228번)을 대신한다
-          required: [tickets, roster, rosterMax, draws, maxDraws, mergeCount, rates, drawn, collection, lastMerge]
+          required: [tickets, roster, rosterMax, draws, maxDraws, rates, drawn, collection]
           properties:
             tickets: { type: integer, description: 가진 채용권. 한 장에 한 명. 회사를 차릴 때·분기·연말·업적·이사로 받고 다음 회사로 이어진다 }
             roster: { type: integer, description: 데리고 있는 사람 수(쉬는 사람 포함) }
-            rosterMax: { type: integer, description: 데리고 있을 수 있는 사람 수(100명). 넘으면 합쳐야 더 뽑는다 }
+            rosterMax: { type: integer, description: 데리고 있을 수 있는 사람 수(100명). 넘으면 내보내야 더 뽑는다 }
             draws: { type: integer, description: 지금까지 뽑은 횟수. 뽑기 요청에 싣는다 }
             maxDraws: { type: integer, description: 한 번에 뽑을 수 있는 최대 수 }
-            mergeCount: { type: integer, description: 합성에 드는 같은 등급 사람 수(바탕 포함) }
             rates:
               type: array
               description: 이 회사의 확률표. 칸마다 나오는 종합 등급과 확률. star면 특급
@@ -679,29 +652,13 @@ components:
                   hello: { type: [string, 'null'], description: 첫인사 (349번). 버릇대로 한마디. 옛 뽑기면 null }
             collection:
               type: array
-              description: 도감. 등급(F~GOD)마다 뽑거나 합성해서 얻은 사람 수. 사장의 것이라 다음 회사로 이어진다
+              description: 도감. 등급(F~GOD)마다 뽑아서 얻은 사람 수. 사장의 것이라 다음 회사로 이어진다
               items:
                 type: object
-                required: [grade, count, mergedFirst]
+                required: [grade, count]
                 properties:
                   grade: { $ref: '#/components/schemas/Grade' }
                   count: { type: integer }
-                  mergedFirst: { type: boolean, description: 이 등급을 합성으로 처음 만들었다 (decisions.md 350번) }
-            lastMerge:
-              description: 방금 한 합성 (decisions.md 350번). 아직 없으면 null. 화면은 합성 직후에만 보인다
-              oneOf:
-                - type: object
-                  required: [baseId, name, before, after, jackpot, farewells, firstOfGrade, inheritedQuirk]
-                  properties:
-                    baseId: { type: integer }
-                    name: { type: string }
-                    before: { $ref: '#/components/schemas/Grade' }
-                    after: { $ref: '#/components/schemas/Grade' }
-                    jackpot: { type: boolean, description: 대성공. 두 단계 뛰었다 }
-                    farewells: { type: array, items: { type: string }, description: 재료들의 마지막 한마디(버릇대로) }
-                    firstOfGrade: { type: boolean, description: 이 등급을 합성으로 처음 만들었다 }
-                    inheritedQuirk: { type: [string, 'null'], description: 이어받은 버릇 이름. 없으면 null }
-                - type: 'null'
         history:
           type: object
           description: 회사 연표·업적·명예의 전당 (decisions.md 263번)

@@ -132,7 +132,7 @@ public record CompanyView(
   /**
    * 뽑은 무기 하나 (366번).
    *
-   * @param isNew 새로 얻었다. 이미 가진 종류·등급이면 거짓(그 무기의 수가 하나 늘어 합성 재료가 된다)
+   * @param isNew 새로 얻었다. 이미 가진 종류·등급이면 거짓(그 무기의 수가 하나 늘어 무기 합성 재료가 된다)
    */
   public record WeaponDraw(
       String kind, String name, String grade, String gradeName, boolean isNew) {}
@@ -145,7 +145,7 @@ public record CompanyView(
    * @param power 탄 강화 단계(0~3). 탄은 항상 한 줄이고, 단계가 오를수록 세고 크며 2단계부터 맞으면 주변 적도 휘말린다
    * @param bulletSpeed 탄 속도(px/s)
    * @param equipped 지금 든 무기
-   * @param count 가진 수 (366번). 합성 재료로 쓴다
+   * @param count 가진 수 (366번). 무기 합성 재료로 쓴다
    */
   public record Weapon(
       String kind,
@@ -203,13 +203,12 @@ public record CompanyView(
    *
    * @param tickets 가진 채용권. 한 장에 한 명
    * @param roster 데리고 있는 사람 수(쉬는 사람 포함)
-   * @param rosterMax 데리고 있을 수 있는 사람 수(100명, 337번). 넘으면 합쳐야 더 뽑는다
+   * @param rosterMax 데리고 있을 수 있는 사람 수(100명, 337번). 넘으면 내보내야 더 뽑는다
    * @param draws 지금까지 뽑은 횟수. 뽑기 요청에 싣는다
    * @param maxDraws 한 번에 뽑을 수 있는 최대 수
-   * @param mergeCount 합성에 드는 같은 등급 사람 수(바탕 포함)
    * @param rates 이 회사의 확률표: 칸마다 나오는 등급과 확률. star면 특급
    * @param drawn 마지막 뽑기에서 온 사람. 분기를 넘기면 비운다
-   * @param collection 도감: 등급(F~GOD)마다 뽑거나 합성해서 얻은 사람 수. 다음 회사로 이어진다
+   * @param collection 도감: 등급(F~GOD)마다 뽑아서 얻은 사람 수. 다음 회사로 이어진다
    */
   public record Gacha(
       int tickets,
@@ -217,11 +216,9 @@ public record CompanyView(
       int rosterMax,
       int draws,
       int maxDraws,
-      int mergeCount,
       List<Rate> rates,
       List<Drawn> drawn,
-      List<CollectionEntry> collection,
-      Merge lastMerge) {}
+      List<CollectionEntry> collection) {}
 
   /** 확률표의 한 칸. */
   public record Rate(String grade, int percent, boolean star) {}
@@ -236,26 +233,7 @@ public record CompanyView(
       int employeeId, String name, String grade, boolean star, boolean fresh, String hello) {}
 
   /** 도감의 한 칸: 그 등급을 몇 명 얻었나. 0이면 아직 못 봤다. */
-  /** 도감 한 칸. mergedFirst: 이 등급을 합성으로 처음 만들었다 (350번). */
-  public record CollectionEntry(String grade, int count, boolean mergedFirst) {}
-
-  /**
-   * 방금 한 합성 (decisions.md 350번). 아직 없으면 null.
-   *
-   * @param jackpot 대성공: 두 단계 뛰었다
-   * @param farewells 재료들의 마지막 한마디
-   * @param firstOfGrade 이 등급을 합성으로 처음 만들었다
-   * @param inheritedQuirk 이어받은 버릇 이름. 없으면 null
-   */
-  public record Merge(
-      int baseId,
-      String name,
-      String before,
-      String after,
-      boolean jackpot,
-      List<String> farewells,
-      boolean firstOfGrade,
-      String inheritedQuirk) {}
+  public record CollectionEntry(String grade, int count) {}
 
   /**
    * 투자 회의 (decisions.md 229번). 정하기 전에는 숨은 방향이 없다.

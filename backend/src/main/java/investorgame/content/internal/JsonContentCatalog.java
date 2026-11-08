@@ -252,15 +252,8 @@ class JsonContentCatalog implements ContentCatalog {
               && q.hello() != null
               && !q.hello().isEmpty()
               && q.poachKept() != null
-              && q.poachLeft() != null
-              && q.farewell() != null
-              && !q.farewell().isEmpty(),
+              && q.poachLeft() != null,
           "직원 버릇 문구가 빠졌다: " + q.code());
-      require(
-          company.market() != null
-              && company.market().jackpot() != null
-              && company.market().inherited() != null,
-          "합성 대성공·버릇 이어받기 문구가 없다 (350번)");
     }
     require(
         company.quarters() != null
@@ -392,7 +385,6 @@ class JsonContentCatalog implements ContentCatalog {
     require(
         company.market() != null
             && company.market().drawStar() != null
-            && company.market().merged() != null
             && company.market().tickets() != null
             && company.market().ticketReasons() != null
             && company

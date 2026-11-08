@@ -68,27 +68,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/company/merge": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 같은 등급 직원을 합쳐 바탕 한 명을 한 단계 올린다 (decisions.md 312번)
-         * @description 바탕(baseId)과 같은 종합 등급의 재료 mergeCount−1명. 재료는 회사를 떠나고 번 돈은 바탕에게 얹힌다. F~SS는 다섯 능력치가 한 띠 오르고,
-         *     SSS 위는 단계(X…)가 오른다. 수·등급이 맞지 않거나, 맨 위(GOD)거나, 이직 제안이 걸린 사람이면 400.
-         */
-        post: operations["mergeEmployees"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/company/release": {
         parameters: {
             query?: never;
@@ -335,7 +314,7 @@ export interface paths {
         put?: never;
         /**
          * 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번)
-         * @description 등급은 N 60·R 30·SR 9·UR 1의 가중치로, 종류는 고르게 뽑는다. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 합성 재료가 된다.
+         * @description 등급은 N 60·R 30·SR 9·UR 1의 가중치로, 종류는 고르게 뽑는다. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 무기 합성 재료가 된다.
          *     결과는 armory.lastDraw에 담긴다. 뽑기권이 없으면 400.
          */
         post: operations["drawWeapon"];
@@ -539,7 +518,7 @@ export interface components {
                 /** @description 사기. 낮으면 손이 더 뒤집힌다 (270번) */
                 morale: number;
                 /**
-                 * @description 버릇 (decisions.md 349번). 번호로 정해져 바뀌지 않고 이직·첫인사·합성 문구가 이를 따른다
+                 * @description 버릇 (decisions.md 349번). 번호로 정해져 바뀌지 않고 이직·첫인사 문구가 이를 따른다
                  * @enum {string}
                  */
                 quirk?: "gut" | "chat" | "chart" | "news" | "coffee";
@@ -609,14 +588,12 @@ export interface components {
                 tickets: number;
                 /** @description 데리고 있는 사람 수(쉬는 사람 포함) */
                 roster: number;
-                /** @description 데리고 있을 수 있는 사람 수(100명). 넘으면 합쳐야 더 뽑는다 */
+                /** @description 데리고 있을 수 있는 사람 수(100명). 넘으면 내보내야 더 뽑는다 */
                 rosterMax: number;
                 /** @description 지금까지 뽑은 횟수. 뽑기 요청에 싣는다 */
                 draws: number;
                 /** @description 한 번에 뽑을 수 있는 최대 수 */
                 maxDraws: number;
-                /** @description 합성에 드는 같은 등급 사람 수(바탕 포함) */
-                mergeCount: number;
                 /** @description 이 회사의 확률표. 칸마다 나오는 종합 등급과 확률. star면 특급 */
                 rates: {
                     grade: components["schemas"]["Grade"];
@@ -635,28 +612,11 @@ export interface components {
                     /** @description 첫인사 (349번). 버릇대로 한마디. 옛 뽑기면 null */
                     hello?: string | null;
                 }[];
-                /** @description 도감. 등급(F~GOD)마다 뽑거나 합성해서 얻은 사람 수. 사장의 것이라 다음 회사로 이어진다 */
+                /** @description 도감. 등급(F~GOD)마다 뽑아서 얻은 사람 수. 사장의 것이라 다음 회사로 이어진다 */
                 collection: {
                     grade: components["schemas"]["Grade"];
                     count: number;
-                    /** @description 이 등급을 합성으로 처음 만들었다 (decisions.md 350번) */
-                    mergedFirst: boolean;
                 }[];
-                /** @description 방금 한 합성 (decisions.md 350번). 아직 없으면 null. 화면은 합성 직후에만 보인다 */
-                lastMerge: {
-                    baseId: number;
-                    name: string;
-                    before: components["schemas"]["Grade"];
-                    after: components["schemas"]["Grade"];
-                    /** @description 대성공. 두 단계 뛰었다 */
-                    jackpot: boolean;
-                    /** @description 재료들의 마지막 한마디(버릇대로) */
-                    farewells: string[];
-                    /** @description 이 등급을 합성으로 처음 만들었다 */
-                    firstOfGrade: boolean;
-                    /** @description 이어받은 버릇 이름. 없으면 null */
-                    inheritedQuirk: string | null;
-                } | null;
             };
             /** @description 회사 연표·업적·명예의 전당 (decisions.md 263번) */
             history: {
@@ -1280,36 +1240,6 @@ export interface operations {
                     count: number;
                     /** @description 지금까지 뽑은 횟수(Company.gacha.draws) */
                     draws: number;
-                };
-            };
-        };
-        responses: {
-            /** @description 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    mergeEmployees: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    baseId: number;
-                    materialIds: number[];
                 };
             };
         };

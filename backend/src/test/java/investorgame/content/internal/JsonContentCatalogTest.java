@@ -61,7 +61,7 @@ class JsonContentCatalogTest {
     }
     RaisingContent raising = catalog.raising();
     assertThat(raising.tempters()).hasSizeGreaterThanOrEqualTo(2);
-    assertThat(raising.company().market().merged()).contains("{names}").contains("{grade}");
+    assertThat(raising.company().market().drawStar()).contains("{name}").contains("{grade}");
     assertThat(raising.company().market().ticketReasons()).containsKeys("quarter", "year", "hr");
     assertThat(raising.company().desks())
         .extracting(RaisingContent.Desk::code)

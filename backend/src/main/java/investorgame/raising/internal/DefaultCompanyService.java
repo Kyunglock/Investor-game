@@ -123,15 +123,6 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView merge(UUID sessionId, int baseId, List<Integer> materialIds) {
-    CompanyRepository.Row row = lockActive(sessionId);
-    engine.merge(row.state(), baseId, materialIds, new HashSeededRandom(row.seed()));
-    companies.update(row.id(), row.state(), false);
-    return view(row);
-  }
-
-  @Override
-  @Transactional
   public CompanyView release(UUID sessionId, int employeeId) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.release(row.state(), employeeId);
@@ -507,35 +498,17 @@ class DefaultCompanyService implements CompanyService {
             .toList();
     List<CompanyView.CollectionEntry> collection =
         CompanyEngine.LADDER.stream()
-            .map(
-                g ->
-                    new CompanyView.CollectionEntry(
-                        g, c.collection.getOrDefault(g, 0), c.mergedFirst.contains(g)))
+            .map(g -> new CompanyView.CollectionEntry(g, c.collection.getOrDefault(g, 0)))
             .toList();
-    CompanyState.Merge m = c.lastMerge;
-    CompanyView.Merge lastMerge =
-        m == null
-            ? null
-            : new CompanyView.Merge(
-                m.baseId,
-                m.name,
-                m.before,
-                m.after,
-                m.jackpot,
-                m.farewells,
-                m.firstOfGrade,
-                m.inheritedQuirk);
     return new CompanyView.Gacha(
         c.tickets,
         c.employees.size(),
         engine.rosterMax(c),
         c.draws,
         engine.maxDraws(),
-        engine.mergeCount(),
         rates,
         drawn,
-        collection,
-        lastMerge);
+        collection);
   }
 
   private CompanyView.Invest investView(CompanyState c, HashSeededRandom random) {

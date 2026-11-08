@@ -131,7 +131,7 @@ export const sfx = {
     tone(200, 90, { wave: 'square', gain: 0.1, slide: 80 })
     noise(90, 0.12)
   },
-  /** 합성 완료: 부드러운 두 음 */
+  /** 오름: 부드러운 두 음 */
   levelUp: () => {
     tone(784, 160, { wave: 'sine', gain: 0.06 })
     tone(1175, 320, { wave: 'sine', gain: 0.06, at: 0.11 })

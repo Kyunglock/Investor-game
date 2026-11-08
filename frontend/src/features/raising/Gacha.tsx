@@ -4,7 +4,6 @@ import { Overlay } from '../game/Overlay'
 import { GradeBadge, tierClass, tierOf } from './GradeCard'
 import { collected, drawable } from './gachaRules'
 import { EMPLOYEE_LADDER } from './grades'
-import { MergeBoard } from './MergeBoard'
 import { titleOf } from './office'
 import { useRaisingStore } from './store'
 
@@ -188,15 +187,6 @@ export function CollectionGrid({ company }: { company: Company }) {
                   <GradeBadge grade={c.grade} size="sm" />
                 </span>
                 <span className="font-mono-num">×{c.count}</span>
-                {c.mergedFirst && (
-                  // 합성으로 처음 만든 등급 (350번)
-                  <span
-                    className="rounded bg-gold px-1 text-[9px] font-bold text-white"
-                    data-testid="collection-merged"
-                  >
-                    합성
-                  </span>
-                )}
               </>
             ) : (
               <>
@@ -211,7 +201,7 @@ export function CollectionGrid({ company }: { company: Company }) {
   )
 }
 
-/** 웹의 채용 탭 (312번): 채용권과 뽑기 버튼, 확률표, 합성, 도감. 내보내기는 없앴다(338번). */
+/** 웹의 채용 탭 (312번): 채용권과 뽑기 버튼, 확률표, 도감. 내보내기는 없앴다(338번), 합성도 뺐다(384번). */
 /** 이 값 이상이면 인원 상한이 없는 것으로 본다 (decisions.md 354번). */
 const NO_LIMIT = 100_000
 
@@ -262,7 +252,7 @@ export function GachaPanel({ company }: { company: Company }) {
       </div>
       {full && (
         <p className="mt-1 text-[12px] text-wine" data-testid="roster-full">
-          데리고 있을 자리가 꽉 찼습니다. 같은 등급 카드를 끌어 겹쳐 자리를 비우세요.
+          데리고 있을 자리가 꽉 찼습니다.
         </p>
       )}
       <details className="mt-2">
@@ -271,8 +261,6 @@ export function GachaPanel({ company }: { company: Company }) {
           <RatesTable company={company} />
         </div>
       </details>
-      <h4 className="mt-3 font-pen text-[20px]">합성</h4>
-      <MergeBoard company={company} />
       <h4 className="mt-3 font-pen text-[20px]">도감</h4>
       <CollectionGrid company={company} />
     </section>

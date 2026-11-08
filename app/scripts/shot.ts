@@ -47,8 +47,6 @@ if (process.env.EMPTY) {
   await shot('office')
   await page.getByTestId('tab-market').click()
   await shot('gacha')
-  await page.getByTestId('gacha-part-merge').click()
-  await shot('gacha-merge')
   await page.getByTestId('gacha-part-dex').click()
   await shot('gacha-dex')
   await page.getByTestId('gacha-part-draw').click()

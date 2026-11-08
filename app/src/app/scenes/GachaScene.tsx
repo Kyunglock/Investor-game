@@ -1,52 +1,26 @@
 import './company-scenes.css'
 import type { Company } from '@web/api/client'
 import { CollectionGrid, RatesTable } from '@web/features/raising/Gacha'
-import { collected, drawable, mergeGroups } from '@web/features/raising/gachaRules'
-import { MergeBoard } from '@web/features/raising/MergeBoard'
+import { collected, drawable } from '@web/features/raising/gachaRules'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useState } from 'react'
 import { useFx } from '../../fx/fx'
 import { haptic } from '../../fx/haptics'
 import { sfx } from '../../fx/sound'
 
-type Part = 'draw' | 'merge' | 'dex'
-
-/** 합성 판의 소리·진동 (319번): 집으면 가볍게, 놓으면 휙, 합쳐지면 두 음. */
-const MERGE_EFFECTS = {
-  pick: () => haptic.light(),
-  drop: () => {
-    sfx.whoosh()
-    haptic.light()
-  },
-  merged: () => {
-    sfx.levelUp()
-    haptic.success()
-  },
-  // 대성공 (350번): 금빛 번쩍임과 색종이, 팡파르, 흔들림.
-  jackpot: () => {
-    const fx = useFx.getState()
-    fx.flashScreen('rgba(245,211,107,0.55)')
-    fx.burstAt(null, 'confetti')
-    fx.shakeScreen()
-    sfx.fanfare()
-    haptic.heavy()
-  },
-  failed: () => haptic.error(),
-}
+type Part = 'draw' | 'dex'
 
 /**
- * 채용 장면 (decisions.md 312번): 뽑기 · 합성 · 도감. 뽑기는 큰 채용권 숫자와 1명·N명 뽑기 버튼, 확률표(내보내기는 없앴다, 338번). 합성은 같은 등급 카드 두 장을
- * 끌어 겹쳐 한 단계 올리고(MergeBoard, 314·319번), 도감은 만난 등급을 모은다.
+ * 채용 장면 (decisions.md 312번): 뽑기 · 도감. 뽑기는 큰 채용권 숫자와 1명·N명 뽑기 버튼, 확률표(내보내기는 없앴다, 338번). 도감은 만난 등급을
+ * 모은다. 직원 합성은 뺐다(384번).
  */
 export function GachaScene({ company }: { company: Company }) {
   const [part, setPart] = useState<Part>('draw')
-  const groups = mergeGroups(company).length
   if (company.status === 'ENDED') {
     return <p className="text-[13px] text-ink/60">끝난 회사는 사람을 뽑지 않습니다.</p>
   }
   const parts: { id: Part; label: string; badge?: string }[] = [
     { id: 'draw', label: '뽑기' },
-    { id: 'merge', label: '합성', badge: groups > 0 ? String(groups) : undefined },
     { id: 'dex', label: `도감 ${collected(company)}/${company.gacha.collection.length}` },
   ]
   return (
@@ -88,11 +62,6 @@ export function GachaScene({ company }: { company: Company }) {
       </div>
       <div className="mt-3">
         {part === 'draw' && <DrawPart company={company} />}
-        {part === 'merge' && (
-          <div className="panel p-3">
-            <MergeBoard company={company} effects={MERGE_EFFECTS} />
-          </div>
-        )}
         {part === 'dex' && (
           <div className="panel p-3">
             <CollectionGrid company={company} />
@@ -157,7 +126,7 @@ function DrawPart({ company }: { company: Company }) {
       </div>
       {full ? (
         <p className="text-[12px] text-red-pen" data-testid="roster-full">
-          데리고 있을 자리({g.rosterMax}명)가 꽉 찼습니다. 합성해서 자리를 비우세요.
+          데리고 있을 자리({g.rosterMax}명)가 꽉 찼습니다.
         </p>
       ) : (
         <p className="text-[12px] text-ink/60">

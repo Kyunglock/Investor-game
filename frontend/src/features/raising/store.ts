@@ -46,8 +46,6 @@ interface RaisingState {
   restart: () => Promise<void>
   /** 채용권으로 count명을 뽑는다 (decisions.md 312번). */
   draw: (count: number) => Promise<void>
-  /** 같은 등급 직원을 합쳐 바탕 한 명을 한 단계 올린다 (312번). */
-  merge: (baseId: number, materialIds: number[]) => Promise<void>
   /** 직원을 내보낸다 (312번). */
   release: (employeeId: number) => Promise<void>
   /** 이사 비용을 내고 다음 건물로 간다 (decisions.md 296번). */
@@ -165,9 +163,6 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
         set({ justDrew: !get().autoPlay })
       }
     },
-
-    merge: (baseId, materialIds) =>
-      change(api.POST('/api/company/merge', { body: { baseId, materialIds } })),
 
     release: (employeeId) => change(api.POST('/api/company/release', { body: { employeeId } })),
 

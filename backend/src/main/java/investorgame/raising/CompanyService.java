@@ -6,8 +6,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * 증권사 (증권사 육성 설계 4·6·9절). 사장의 사재로 회사를 차리고, 해마다 연초 회의 → 배치 → 결산을 돈다. 직원은 채용권으로 뽑고, 같은 등급을 합쳐 키운다
- * (decisions.md 228·312번).
+ * 증권사 (증권사 육성 설계 4·6·9절). 사장의 사재로 회사를 차리고, 해마다 연초 회의 → 배치 → 결산을 돈다. 직원은 채용권으로 뽑는다 (decisions.md
+ * 228·312번, 합성은 384번에서 뺐다).
  */
 public interface CompanyService {
 
@@ -25,9 +25,6 @@ public interface CompanyService {
    * 아직 오지 않은 것이면 400. 채용권이나 데리고 있을 자리가 모자라면 400.
    */
   CompanyView draw(UUID sessionId, int count, int draws);
-
-  /** 같은 등급 직원을 합쳐 바탕 한 명을 한 단계 올린다 (312번). 수·등급이 맞지 않거나 걸린 일이 있는 사람이면 400. */
-  CompanyView merge(UUID sessionId, int baseId, List<Integer> materialIds);
 
   /** 직원을 내보낸다 (312번). 걸린 일이 있는 사람이면 400. */
   CompanyView release(UUID sessionId, int employeeId);
