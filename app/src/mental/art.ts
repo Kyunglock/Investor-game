@@ -3,6 +3,7 @@ import { BOSS_LOOK } from '@web/features/game/cat/look'
 import type Phaser from 'phaser'
 import { drawStageGun } from './drawStageGun'
 import type { EnemyKind } from './enemies'
+import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import type { Hero } from './hero'
 import { drawMentalWall, drawSprite } from './stageArt'
@@ -82,8 +83,8 @@ export function bakeHero(scene: Phaser.Scene, hero: Hero) {
   })
 }
 
-/** 적 텍스처 열쇠: `${kind}-0`·`${kind}-1` 두 프레임(흔들림의 두 순간). */
-export function enemyKey(kind: EnemyKind, frame: 0 | 1): string {
+/** 고정된 크기의 8프레임 보행. 그림만 변형하고 충돌 원은 유지한다. */
+export function enemyKey(kind: EnemyKind, frame: number): string {
   return `${kind}-${frame}`
 }
 
@@ -91,24 +92,53 @@ export function bakeEnemies(scene: Phaser.Scene) {
   const source = scene.textures.get('art-enemies').getSourceImage() as HTMLImageElement
   const kinds = ['panic', 'dump', 'spec', 'stop'] as const
   for (const [i, kind] of kinds.entries()) {
-    for (const frame of [0, 1] as const) {
+    const sprite = document.createElement('canvas')
+    sprite.width = sprite.height = ENEMY_SIZE * DPR
+    const paint = sprite.getContext('2d')
+    if (!paint) continue
+    paint.scale(DPR, DPR)
+    const size = kind === 'spec' ? 55 : kind === 'panic' ? 43 : 49
+    drawSprite(
+      paint,
+      source,
+      {
+        x: ((i % 2) * source.width) / 2,
+        y: (Math.floor(i / 2) * source.height) / 2,
+        w: source.width / 2,
+        h: source.height / 2,
+      },
+      { x: 32 - size / 2, y: 32 - size / 2, w: size, h: size },
+    )
+    for (let frame = 0; frame < WALK_FRAMES; frame++) {
       bake(scene, enemyKey(kind, frame), ENEMY_SIZE, ENEMY_SIZE, (c) => {
+        const pose = walkPose(kind, frame)
         c.fillStyle = '#477c6533'
         c.beginPath()
-        c.ellipse(32, 54, 19, 4, 0, 0, Math.PI * 2)
+        c.ellipse(32, 55, 19 * pose.shadow, 4 * pose.shadow, 0, 0, Math.PI * 2)
         c.fill()
-        const size = kind === 'spec' ? 55 : kind === 'panic' ? 43 : 49
-        drawSprite(
-          c,
-          source,
-          {
-            x: ((i % 2) * source.width) / 2,
-            y: (Math.floor(i / 2) * source.height) / 2,
-            w: source.width / 2,
-            h: source.height / 2,
-          },
-          { x: 32 - size / 2, y: 32 - size / 2 + frame, w: size, h: size },
-        )
+        c.save()
+        c.translate(32, 48 + pose.bob)
+        c.rotate(pose.tilt)
+        c.scale(1 / pose.squash, pose.squash)
+        c.translate(-32, -48)
+        // 발목 위는 한 장으로, 아래는 좌우를 나눠 늘리고 접는다.
+        // 경계의 시작점은 고정이므로 몸통과 발 사이가 벌어지지 않는다.
+        const ankle = kind === 'spec' ? 48 : 46
+        c.drawImage(sprite, 0, 0, 64 * DPR, ankle * DPR, 0, 0, 64, ankle)
+        for (const [side, step] of [pose.leftFoot, pose.rightFoot].entries()) {
+          c.drawImage(
+            sprite,
+            side * 32 * DPR,
+            ankle * DPR,
+            32 * DPR,
+            (64 - ankle) * DPR,
+            side * 32,
+            ankle,
+            32,
+            (64 - ankle) * (1 + step),
+          )
+        }
+        c.restore()
       })
     }
   }
