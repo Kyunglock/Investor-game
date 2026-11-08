@@ -74,6 +74,24 @@ export function chartTimeline(
   return { chartAt, tugAt: () => chartAt, pnlAt, reveal, total, end: total + END_PAUSE_MS }
 }
 
+/** 회의 수익률(만분율)을 화면 글자로: +132%, −50%, 0% (decisions.md 388번). 빼기는 다른 숫자 표시처럼 '−'. */
+export function returnText(bp: number): string {
+  const percent = Math.round(Math.abs(bp) / 100)
+  if (percent === 0) {
+    return '0%'
+  }
+  return `${bp > 0 ? '+' : '−'}${percent}%`
+}
+
+/** 수익률 띠(−50% ~ +300%)에서 이 수익률이 놓이는 자리(왼쪽 끝 0 ~ 오른쪽 끝 100). 띠 밖이면 끝에 붙인다. */
+export function bandAt(bp: number, range: { lossBp: number; gainBp: number }): number {
+  const width = range.gainBp - range.lossBp
+  if (width <= 0) {
+    return 0
+  }
+  return Math.min(100, Math.max(0, ((bp - range.lossBp) / width) * 100))
+}
+
 /** 공개 문장의 몇 %("넥손게임즈가 35% 내렸다."). 못 찾으면 0. */
 export function percentOf(reveal: string): number {
   const m = /(\d+)%/.exec(reveal)

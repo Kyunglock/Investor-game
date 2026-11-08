@@ -81,6 +81,16 @@ class EconomySimulationTest {
     double[] average = era(45);
     double[] good = era(60);
     double[] great = era(75);
+    System.out.printf(
+        "ECONOMY 세 해 D %.2f(%.0f%%) · C %.2f(%.0f%%) · A %.2f(%.0f%%) · S %.2f(%.0f%%)%n",
+        weak[0],
+        weak[1] * 100,
+        average[0],
+        average[1] * 100,
+        good[0],
+        good[1] * 100,
+        great[0],
+        great[1] * 100);
     // 투자 회의가 한 해에 판단 하나만큼 더해 226번 목표(E 1.14배·C 1.71배·A 34%·S 77%)보다 3할쯤 커졌다 (229번).
     // E 띠를 2억으로 낮추고 첫 회사의 첫해에 폭락장을 뺐다(257번): 첫 시대에 E(첫 책상 추가)에 닿는 몫이 커졌다.
     // 종목 회의가 물어 올 때만 열리고(267번) 해마다 거시경제 회의를 연다(266번): 조금 줄었다.
@@ -93,6 +103,9 @@ class EconomySimulationTest {
     // 회사가 커져야 높아진다). 2,000판(능력치 30·45·60·75 = 종합 D·C·A·S): E에 닿는 몫 83% · 99% · 100% · 100%, 세 해 자본
     // 중앙값
     // 1.92 · 3.79 · 20.6 · 95.3배. 반지하에서 뽑히는 사람은 대개 F·E라 A·S 둘로 차리는 일은 없다.
+    // 388번: 종목 회의 수익률을 데스크 몫과 떼어 −50% ~ +300%로(판돈은 분기 몫의 260% × 등급마다 0.77). 2,000판: E에 닿는 몫 82% ·
+    // 98% ·
+    // 100% · 100%, 세 해 자본 중앙값 2.03 · 4.01 · 21.3 · 93.8배.
     assertThat(weak[0]).as("D 직원: 두 배 가까이 자란다").isBetween(1.6, 2.3);
     assertThat(weak[1]).as("D 직원도 절반 넘게 첫 이사를 할 수 있다").isBetween(0.6, 0.9);
     assertThat(average[0]).as("C 직원: 세 해에 서너 배").isBetween(3.0, 4.6);
@@ -119,6 +132,7 @@ class EconomySimulationTest {
       years[seed] = year - 1;
     }
     Arrays.sort(years);
+    System.out.println("ECONOMY 첫 이사 " + placements + " " + years[trials / 2] + "년");
     return years[trials / 2];
   }
 
@@ -130,7 +144,7 @@ class EconomySimulationTest {
   @Test
   void C_직원_둘이면_다섯_해_안에_첫_이사를_한다() {
     assertThat(firstMove(Map.of(1, "bio", 2, "scout")))
-        .as("한 사람은 바이오, 한 사람은 종목 발굴팀 (#344: 중앙값 3년)")
+        .as("한 사람은 바이오, 한 사람은 종목 발굴팀 (#344: 중앙값 3년, 387·388번: 2년)")
         .isBetween(2, 4);
     assertThat(firstMove(Map.of(1, "bio", 2, "day")))
         .as("둘 다 돈을 굴리면 종목 회의가 드물다 (중앙값 4년)")
@@ -178,11 +192,23 @@ class EconomySimulationTest {
       }
       Arrays.sort(ratio);
       String grade = LADDER.get(k);
+      System.out.printf(
+          "ECONOMY %s 한 해 중앙값 %.2f · 상위 10%% %.2f · 잃는 해 %.0f%% · 떨어짐 %.0f%%%n",
+          grade,
+          ratio[trials / 2],
+          ratio[trials * 9 / 10],
+          losses * 100.0 / trials,
+          dropped * 100.0 / trials);
       assertThat(losses / (double) trials).as(grade + " 회사도 잃는 해가 있다").isBetween(0.12, 0.4);
       // 지원자가 회사 등급을 따라 오면서(289번) 한 해 중앙값이 1.12(D)~1.30(X)배로 낮아졌다: 등급이 바로 높아지지 않는다.
       // 387번: 더 버는 몫이 등급마다 두 배라 데스크 몫의 벽도 등급마다 거의 절반씩 높였다. 800판: D 1.09 · B 1.11 · S 1.13 · SSS
       // 1.27 ·
       // X 1.25 · XX 1.07배, 잃는 해 24~39%, XX는 폭락장에 17% 떨어진다.
+      // 388번: 회의 수익률이 −50% ~ +300%로 넓어지고 규모의 벽이 수익률 대신 회의 판돈에 붙어(전에는 큰 회사일수록 회의에서 덜 벌고 더 잃었다) 높은
+      // 등급이
+      // 조금 더 자란다. 800판: D 1.09 · B 1.12 · S 1.18 · SSS 1.37 · X 1.39 · XX 1.26배, 잃는 해 22~39%, XX는
+      // 폭락장에 18%
+      // 떨어진다.
       assertThat(ratio[trials / 2]).as(grade + " 회사의 한 해 중앙값").isBetween(1.05, 1.45);
       // #344·#388: 태도가 숨은 방향과 맞으면 더 번다. 꼭대기(X)도 상위 10%가 한 해 두 배 아래다.
       assertThat(ratio[trials * 9 / 10]).as(grade + " 회사가 한 해에 등급 띠(3배)를 넘지 않는다").isLessThan(2.0);

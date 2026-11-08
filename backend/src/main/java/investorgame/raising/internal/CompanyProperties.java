@@ -162,19 +162,21 @@ public record CompanyProperties(
    * 규모의 벽 (decisions.md 244번). 회사 등급 단계(F = 0)만큼 거듭제곱해 곱한다. 큰 돈은 시장이 받아 주지 않아 맞혀도 덜 벌고, 틀리면 빠져나오기
    * 어려워 더 잃고, 폭락장에는 덩치만큼 크게 맞는다. 그래서 어느 등급에서도 잃는 해가 있다.
    *
-   * @param gainPercent 맞혔을 때 버는 몫(투자 회의 포함)에 등급 단계마다 곱하는 비율
-   * @param missPercent 틀리거나 꼬드김·손 뒤집힘으로 잃는 몫(투자 회의 포함)에 등급 단계마다 곱하는 비율
+   * @param meetingPercent 종목 회의 판돈에 등급 단계마다 곱하는 비율 (decisions.md 388번). 전에는 회의에서 맞혀 버는 몫에
+   *     곱했다(gain-percent). 회의 수익률의 폭(−50% ~ +300%)은 사용자가 정한 것이라 그대로 두고 판돈으로 벽을 세운다
+   * @param missPercent 분기 데스크에서 틀리거나 꼬드김·손 뒤집힘으로 잃는 몫에 등급 단계마다 곱하는 비율
    * @param crashPercent 폭락장의 시장 손익에 등급 단계마다 곱하는 비율
    * @param deskGainPercent 분기 데스크에서 맞혔을 때 버는 몫에 회사 등급(F부터)마다 곱하는 비율(%). gainPercent 대신 쓴다. 등급 효과가
    *     등급마다 두 배라(387번) 벽도 등급마다 거의 절반씩 높다. 목록보다 높은 등급은 마지막 값
    */
   public record Scale(
-      int gainPercent, int missPercent, int crashPercent, List<Double> deskGainPercent) {}
+      int meetingPercent, int missPercent, int crashPercent, List<Double> deskGainPercent) {}
 
   /**
    * @param yearUpBp 올해 시장 갈래(boom·normal·crash)가 뉴스가 오를 확률에 더하는 만분율
    * @param sideOppositePercent 곁가지 문장이 숨은 방향의 반대쪽일 확률
    * @param stubbornBp 직원이 제멋대로 할(꼬드김 + 손 뒤집힘) 확률이 이 만분율 이상이면 "보통", 두 배 이상이면 "높음"으로 보인다
+   * @param returns 종목 회의만의 수익률 (decisions.md 388번)
    */
   public record Invest(
       Map<String, Integer> yearUpBp,
@@ -184,7 +186,27 @@ public record CompanyProperties(
       int bigMissPercent,
       int bigStubbornPercent,
       int meetingStakePercent,
-      List<Clarity> clarity) {}
+      List<Clarity> clarity,
+      Returns returns) {}
+
+  /**
+   * 종목 회의 수익률 (decisions.md 388번). 분기 데스크의 gain-bp·miss-bp와 떼어 낸 회의만의 수익률이다. 기사의 크기(magnitude)를
+   * 콘텐츠에서 가장 작은 폭 ~ 가장 큰 폭 사이의 자리(0~1)로 놓고 정한다. 직원 등급 효과(387번)는 붙지 않는다.
+   *
+   * @param gainMinBp 맞혔을 때 가장 작은 기사의 수익률(만분율)
+   * @param gainMaxBp 맞혔을 때 가장 큰 기사의 수익률. 화면의 범위 끝(+300%)
+   * @param gainPower 맞혔을 때 기사 자리(0~1)를 이만큼 거듭제곱해 곱한다: 평범한 기사는 수십 %, 대박 기사만 +300% 가까이
+   * @param lossMinBp 틀렸을 때 가장 작은 기사에서 잃는 몫
+   * @param lossMaxBp 틀렸을 때 가장 큰 기사에서 잃는 몫(곧게 늘어난다)
+   * @param lossCapBp 크게 틀려도(big-miss-percent) 이보다 더 잃지 않는다. 화면의 범위 끝(−50%)
+   */
+  public record Returns(
+      int gainMinBp,
+      int gainMaxBp,
+      double gainPower,
+      int lossMinBp,
+      int lossMaxBp,
+      int lossCapBp) {}
 
   /**
    * 투자 회의 기사가 얼마나 또렷한가 (decisions.md 241번). 회의마다 가중치로 하나를 뽑고, 기사를 읽는 모든 직원(리서치 팀 형광펜 포함)의 안목에서

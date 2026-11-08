@@ -322,6 +322,11 @@ class CompanyState {
     List<InvestResult> results = new ArrayList<>();
     long total;
 
+    /**
+     * 돈을 굴린 직원 모두의 판돈을 더한 것 (decisions.md 388번): 회의 수익률 = total ÷ stake. 이 칸을 더하기 전에 정한 회의면 null.
+     */
+    Long stake;
+
     /** 기사가 얼마나 또렷한가(clear·murky·foggy, 241번). 이 칸을 더하기 전의 회의면 null(깎지 않는다). */
     String clarity;
 

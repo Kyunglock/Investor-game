@@ -253,6 +253,7 @@ public record CompanyView(
    * @param finder 이 종목을 물어 온 직원 (267번). 아직 아무도 안 가져왔거나 옛 회의면 null
    * @param outcome 정한 뒤의 결과. 아직이면 null
    * @param scouted 이번 분기에 이미 직원이 종목을 물어 왔거나, 분기 넘기기를 눌러 발굴을 굴렸다 (267·382번)
+   * @param range 종목 회의 수익률이 오갈 수 있는 범위 (decisions.md 388번): −50% ~ +300%
    */
   public record Invest(
       String title,
@@ -272,7 +273,16 @@ public record CompanyView(
       String teamCall,
       List<DebateLine> debate,
       TeamGrade team,
-      boolean scouted) {}
+      boolean scouted,
+      InvestRange range) {}
+
+  /**
+   * 종목 회의 수익률의 범위 (decisions.md 388번, 만분율). 데스크 몫과 떼어 낸 회의만의 수익률이다.
+   *
+   * @param lossBp 틀렸을 때 가장 크게 잃는 몫(음수, −50%)
+   * @param gainBp 맞혔을 때 가장 크게 버는 몫(+300%)
+   */
+  public record InvestRange(int lossBp, int gainBp) {}
 
   /**
    * 회의에 앉은 팀의 합산 등급 (decisions.md 353번): 잘하는 셋의 가중 평균(종목 회의는 안목 절반) + 리서치 팀·팀장 보너스.
@@ -327,6 +337,9 @@ public record CompanyView(
    * @param teamBuy 맡겼을 때 매수 쪽에 얹힌 무게(직원 안목). 맡기지 않았으면 0
    * @param teamSell 매도 쪽 무게
    * @param debate 맡겼을 때 매수파·매도파가 주고받은 말(decisions.md 285번). 맡기지 않았으면 비었다
+   * @param returnBp 회의 수익률(만분율, decisions.md 388번) = 회의 손익 ÷ 건 판돈. 판돈을 적기 전에 정한 옛 회의면 null
+   * @param gainBp 이 종목을 맞힌 쪽으로 했으면 번 수익률(만분율)
+   * @param lossBp 틀린 쪽으로 했으면 잃은 수익률(만분율, 음수, 크게 했으면 크게 틀린 몫)
    */
   public record InvestOutcome(
       String choice,
@@ -342,7 +355,10 @@ public record CompanyView(
       long total,
       List<InvestResult> results,
       List<DebateLine> reactions,
-      String credit) {}
+      String credit,
+      Integer returnBp,
+      int gainBp,
+      int lossBp) {}
 
   /**
    * follow: BOSS(사장 말대로)·OWN(제 판단대로, "제가 알아서 할게요")·SWAY(꼬드김).

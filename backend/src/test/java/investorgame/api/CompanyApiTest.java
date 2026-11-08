@@ -223,6 +223,9 @@ class CompanyApiTest {
     // "너희가 알아서 해"는 뺐다 (352번): 산다·판다·지켜본다.
     assertThat(meeting.read("$.invest.options.length()", Integer.class)).isEqualTo(3);
     assertThat(meeting.read("$.invest.outcome", Object.class)).isNull();
+    // 종목 회의 수익률의 범위 (decisions.md 388번): −50% ~ +300%
+    assertThat(meeting.read("$.invest.range.lossBp", Integer.class)).isEqualTo(-5_000);
+    assertThat(meeting.read("$.invest.range.gainBp", Integer.class)).isEqualTo(30_000);
     settle(1, 1).andExpect(status().isBadRequest());
     postJson("/api/company/invest", "{\"choice\":\"SHORT\"}").andExpect(status().isBadRequest());
     for (int year = 1; year <= 3; year++) {
@@ -235,6 +238,11 @@ class CompanyApiTest {
         assertThat(decided.read("$.invest.outcome.results.length()", Integer.class)).isEqualTo(1);
         assertThat(decided.read("$.invest.outcome.reveal", String.class)).isNotBlank();
         assertThat(decided.read("$.invest.outcome.credit", String.class)).isNotBlank();
+        // 회의 수익률은 손익 ÷ 판돈이고 −50% ~ +300% 사이다 (388번).
+        assertThat(decided.read("$.invest.outcome.returnBp", Integer.class))
+            .isBetween(-5_000, 30_000);
+        assertThat(decided.read("$.invest.outcome.gainBp", Integer.class)).isBetween(1, 30_000);
+        assertThat(decided.read("$.invest.outcome.lossBp", Integer.class)).isBetween(-5_000, -1);
         postJson("/api/company/invest", "{\"choice\":\"BUY\"}").andExpect(status().isBadRequest());
         meetingTotal = decided.read("$.invest.outcome.total", Long.class);
       }

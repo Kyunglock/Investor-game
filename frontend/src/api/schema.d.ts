@@ -625,6 +625,13 @@ export interface components {
              */
             invest?: {
                 title: string;
+                /** @description 종목 회의 수익률이 오갈 수 있는 범위(만분율, decisions.md 388번). 데스크 몫과 떼어 낸 회의만의 수익률로 −50% ~ +300% */
+                range: {
+                    /** @description 틀렸을 때 가장 크게 잃는 몫(음수). 크게 틀려도 이 아래로는 안 간다 */
+                    lossBp: number;
+                    /** @description 맞혔을 때 가장 크게 버는 몫. 기사가 클수록 이 끝에 가깝다 */
+                    gainBp: number;
+                };
                 /** @description 이번 분기에 이미 직원이 종목을 물어 왔거나 발굴을 굴렸다 (267·382번) */
                 scouted: boolean;
                 stockName: string;
@@ -737,6 +744,12 @@ export interface components {
                      * @description 회의 손익. 이미 자본에 들어갔다
                      */
                     total: number;
+                    /** @description 회의 수익률(만분율, decisions.md 388번) = 회의 손익 ÷ 건 판돈. 판돈을 적기 전에 정한 옛 회의면 null */
+                    returnBp: number | null;
+                    /** @description 이 종목을 맞힌 쪽으로 했으면 번 수익률(만분율). 기사가 클수록 크다(최대 +300%) */
+                    gainBp: number;
+                    /** @description 틀린 쪽으로 했으면 잃은 수익률(만분율 */
+                    lossBp: number;
                     /** @description 결과가 드러난 뒤 양쪽의 반응 (decisions.md 358번). 맞힌 쪽(kind WIN)과 틀린 쪽(LOSE)이 한마디씩. 토론이 없던 옛 회의면 비어 있다 */
                     reactions?: {
                         name: string;

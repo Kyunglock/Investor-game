@@ -44,11 +44,82 @@ class InvestEngineTest {
 
   /** 단타 데스크에 직원 한 명을 앉힌 회사. 폭락장이면 손 뒤집힘이 인내심으로 바뀌므로 보통 해로 둔다. */
   private static CompanyState company(long seed, Map<String, Integer> trader) {
+    return company(seed, trader, "day");
+  }
+
+  private static CompanyState company(long seed, Map<String, Integer> trader, String desk) {
     CompanyState company = opened(new HashSeededRandom(seed), 100_000_000L);
     ENGINE.hire(company, trader);
-    ENGINE.place(company, Map.of(1, "day"));
+    ENGINE.place(company, Map.of(1, desk));
     company.phase = "normal";
     return company;
+  }
+
+  private static CompanyState.Invest sized(int magnitudeBp) {
+    CompanyState.Invest invest = new CompanyState.Invest();
+    invest.magnitudeBp = magnitudeBp;
+    return invest;
+  }
+
+  /**
+   * 종목 회의 수익률은 −50% ~ +300% (decisions.md 388번): 기사의 크기(콘텐츠의 가장 작은 폭 4% ~ 가장 큰 폭 35%)로 정한다. 맞히면 작은
+   * 기사는 +15%, 평범한 기사는 수십 %, 가장 큰 기사는 +300%. 틀리면 기사가 클수록 더 잃고(−20% ~ −50%), 크게 틀려도 −50% 아래로는 안 간다.
+   */
+  @Test
+  void 회의_수익률은_기사_크기로_정하고_마이너스_50에서_플러스_300_사이다() {
+    assertThat(ENGINE.invest.gainBp(sized(400))).isEqualTo(1_500);
+    assertThat(ENGINE.invest.gainBp(sized(1_800))).as("평범한 기사는 수십 %").isBetween(2_000, 9_000);
+    assertThat(ENGINE.invest.gainBp(sized(3_500))).isEqualTo(30_000);
+    assertThat(ENGINE.invest.lossBp(sized(400), false)).isEqualTo(2_000);
+    assertThat(ENGINE.invest.lossBp(sized(400), true)).as("크게 틀리면 ×1.5").isEqualTo(3_000);
+    assertThat(ENGINE.invest.lossBp(sized(3_500), false)).isEqualTo(5_000);
+    assertThat(ENGINE.invest.lossBp(sized(3_500), true)).as("크게 틀려도 −50%에서 멈춘다").isEqualTo(5_000);
+    int lastGain = 0;
+    int lastLoss = 0;
+    for (int m = 400; m <= 3_500; m += 50) {
+      int gain = ENGINE.invest.gainBp(sized(m));
+      int loss = ENGINE.invest.lossBp(sized(m), false);
+      assertThat(gain)
+          .as("기사가 클수록 더 번다")
+          .isGreaterThanOrEqualTo(lastGain)
+          .isLessThanOrEqualTo(30_000);
+      assertThat(loss).as("기사가 클수록 더 잃는다").isGreaterThanOrEqualTo(lastLoss);
+      assertThat(ENGINE.invest.lossBp(sized(m), true)).isBetween(loss, 5_000);
+      lastGain = gain;
+      lastLoss = loss;
+    }
+    assertThat(ENGINE.invest.lossCapBp()).isEqualTo(5_000);
+    assertThat(ENGINE.invest.gainMaxBp()).isEqualTo(30_000);
+  }
+
+  /**
+   * 종목 회의는 데스크 수익과 별개다 (decisions.md 388번): 같은 종목이면 식품 데스크든 게임 데스크든, 직원 등급이 높든 낮든 수익률이 같다(등급 효과
+   * 387번은 분기 데스크에만). 회의 수익률(returnBp)은 회의 손익 ÷ 건 판돈이라, 사장 말대로 했으면 맞힌 만큼 벌고 틀린 만큼 잃는다.
+   */
+  @Test
+  void 회의_수익률은_자리와_등급에_상관없이_같다() {
+    int checked = 0;
+    for (long seed = 0; seed < 60; seed++) {
+      CompanyState food = company(seed, stats(20, 100, 100, 100), "food");
+      CompanyState game = company(seed, stats(95, 100, 100, 100), "game");
+      boolean wins = seed % 2 == 0;
+      ENGINE.invest.decide(food, wins ? right(food) : wrong(food), new HashSeededRandom(seed));
+      ENGINE.invest.decide(game, wins ? right(game) : wrong(game), new HashSeededRandom(seed));
+      CompanyState.InvestResult a = food.invest.results.getFirst();
+      CompanyState.InvestResult b = game.invest.results.getFirst();
+      if (!InvestEngine.BOSS.equals(a.follow) || !InvestEngine.BOSS.equals(b.follow)) {
+        continue;
+      }
+      checked++;
+      int expected =
+          wins ? ENGINE.invest.gainBp(food.invest) : -ENGINE.invest.lossBp(food.invest, false);
+      assertThat(a.pnl).as("자리·등급과 상관없다").isEqualTo(b.pnl);
+      assertThat(ENGINE.invest.returnBp(food.invest)).isEqualTo(expected);
+      assertThat(ENGINE.invest.returnBp(food.invest)).isBetween(-5_000, 30_000);
+    }
+    assertThat(checked).isGreaterThan(30);
+    CompanyState.Invest old = sized(1_000);
+    assertThat(ENGINE.invest.returnBp(old)).as("판돈을 적기 전에 정한 회의").isNull();
   }
 
   private static String wrong(CompanyState company) {

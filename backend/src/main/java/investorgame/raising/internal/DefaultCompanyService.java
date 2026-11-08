@@ -588,7 +588,10 @@ class DefaultCompanyService implements CompanyService {
                 invest.reactions.stream()
                     .map(d -> new CompanyView.DebateLine(d.name, d.side, d.text, d.last, kindOf(d)))
                     .toList(),
-                meetings.credit(c));
+                meetings.credit(c),
+                meetings.returnBp(invest),
+                meetings.gainBp(invest),
+                -meetings.lossBp(invest, invest.big));
     return new CompanyView.Invest(
         invest.title,
         engine.stockName(invest.stock),
@@ -607,7 +610,8 @@ class DefaultCompanyService implements CompanyService {
         debated ? invest.teamCall : null,
         debate,
         engine.teamGrade.of(c),
-        invest.scouted || Boolean.TRUE.equals(invest.found));
+        invest.scouted || Boolean.TRUE.equals(invest.found),
+        new CompanyView.InvestRange(-meetings.lossCapBp(), meetings.gainMaxBp()));
   }
 
   /** 옛 저장(295번 전)은 kind가 없다: last면 두 줄 가운데 앞이 WIN, 뒤가 LOSE였지만 구분할 수 없어 WIN으로 읽는다. */
