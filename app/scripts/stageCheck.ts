@@ -140,6 +140,19 @@ try {
   await page.clock.runFor(5000)
   await checkHud()
   await page.screenshot({ path: resolve(out, 'battle.png') })
+  // 데미지 숫자 (decisions.md 391번): 한 방에 죽는 패닉과 죽이는 마지막 한 방에도 뜨고, 풀(36+8)을 넘지 않는다.
+  type DamageStats = {
+    shown: Record<string, number>
+    merged: number
+    killing: number
+    peak: number
+  }
+  const damage = () =>
+    page.evaluate(() => (window as unknown as { __mentalDamage: DamageStats }).__mentalDamage)
+  const firstDamage = await damage()
+  assert(firstDamage.shown.bullet > 0, 'bullet damage numbers shown')
+  assert(firstDamage.killing > 0, 'killing blow shows a number')
+  assert(firstDamage.peak <= 44, 'damage numbers stay within the pool')
   await page.waitForTimeout(2100)
   await page.screenshot({
     path: resolve(out, 'battle-preview.jpg'),
@@ -153,6 +166,19 @@ try {
   await checkHud()
   await page.setViewportSize({ width: 390, height: 844 })
   await page.clock.runFor(100)
+  // 첫 파도(15초, 투매 떼)가 쏟아질 때 숫자가 화면을 덮지 않는지 본다.
+  for (let i = 0; i < 9; i++) {
+    if (await page.getByTestId('mental-cards').count()) {
+      await page.getByTestId('mental-cards').getByRole('button').first().click()
+      await page.clock.runFor(400)
+    }
+    await page.clock.runFor(1500)
+  }
+  await page.screenshot({ path: resolve(out, 'damage-wave.png') })
+  const waveDamage = await damage()
+  assert(waveDamage.shown.bullet > firstDamage.shown.bullet, 'numbers keep coming in the wave')
+  assert(waveDamage.peak <= 44, 'damage numbers stay within the pool in the wave')
+  console.log('damage numbers', JSON.stringify(waveDamage))
   // 2분 판은 레벨이 빨리 올라 그사이 카드 고르기가 떠 있을 수 있다.
   if (await page.getByTestId('mental-cards').count()) {
     await page.getByTestId('mental-cards').getByRole('button').first().click()
@@ -220,7 +246,7 @@ try {
   await expect(page.getByTestId('battle-canvas')).toHaveCount(0)
   assert.deepEqual(errors, [])
   console.log(
-    'PASS: stage pick, lobby, equipment, real Phaser/sprites, first card pause, HUD layout, aiming, wall gauge damage, pause/resume, loss, failed save/retry, both genres, asset load retry, quit cleanup',
+    'PASS: stage pick, lobby, equipment, real Phaser/sprites, first card pause, HUD layout, damage numbers, aiming, wall gauge damage, pause/resume, loss, failed save/retry, both genres, asset load retry, quit cleanup',
   )
 } finally {
   await browser.close()
