@@ -423,7 +423,11 @@ public record CompanyView(
       List<String> achieved,
       List<Result> results,
       List<String> lines,
-      List<Report> reports) {}
+      List<Report> reports,
+      List<Promotion> promotions) {}
+
+  /** 그해 종합 등급이 오른 직원 (#535). before·after는 결산 전후의 종합 등급. */
+  public record Promotion(int employeeId, String name, String before, String after) {}
 
   /**
    * 건물 이사 (decisions.md 296번): 다음 건물로 가는 데 드는 돈. 끝 등급이면 null.

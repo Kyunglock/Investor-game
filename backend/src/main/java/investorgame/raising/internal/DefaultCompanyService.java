@@ -714,6 +714,9 @@ class DefaultCompanyService implements CompanyService {
                         r.employeeId, r.name, r.desk, r.stake, r.pnl, Map.copyOf(r.flips)))
             .toList(),
         List.copyOf(s.lines),
-        reportViews(s.reports));
+        reportViews(s.reports),
+        s.promotions.stream()
+            .map(p -> new CompanyView.Promotion(p.employeeId, p.name, p.before, p.after))
+            .toList());
   }
 }

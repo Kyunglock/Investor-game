@@ -8,6 +8,7 @@ import { revealer } from './reveal'
 import { TeamReports } from './TeamReports'
 
 type Quarter = NonNullable<Company['lastQuarter']>
+type Employee = Company['employees'][number]
 type Flow = { key: string; label: string; note?: string; amount: number }
 
 /** 분기 실적 줄이 차례로 드러나는 간격. 연말 결산서(160·90ms)보다 짧게 끝난다. */
@@ -18,9 +19,17 @@ const tone = (amount: number) => (amount > 0 ? 'text-up' : amount < 0 ? 'text-do
 /**
  * 분기 실적 (decisions.md 268·396번, #330). 1~3분기를 넘기면 뜬다. 연말 결산서와 같은 종이에 가벼운 표지(몇 년 차 몇 분기, 네 칸 중 몇 번째)를 달고,
  * 자본이 얼마에서 얼마가 됐는지를 크게 보인 뒤 돈의 흐름·팀 실적·직원 소식을 칸을 나눠 차례로 드러낸다. 폭락이 터진 분기는 표지가 붉어지고 경고 띠가
- * 붙는다. 등급·건물·자리 수는 연말에만 바뀌므로 여기에는 없다. 4분기를 넘기면 이 대신 연말 결산서가 뜬다.
+ * 붙는다. 팀별 성적에는 팀장·팀원 등급이 붙는다(397번). 회사 등급·건물·자리 수와 직원 등급 변화는 연말에만 바뀌므로 여기에는 없다. 4분기를 넘기면 이 대신 연말 결산서가 뜬다.
  */
-export function QuarterSheet({ quarter: q, onClose }: { quarter: Quarter; onClose: () => void }) {
+export function QuarterSheet({
+  quarter: q,
+  employees,
+  onClose,
+}: {
+  quarter: Quarter
+  employees: Employee[]
+  onClose: () => void
+}) {
   const change = q.capitalAfter - q.capitalBefore
   const flow = [
     { key: 'staff', label: '직원들의 운용', amount: q.staff },
@@ -113,7 +122,7 @@ export function QuarterSheet({ quarter: q, onClose }: { quarter: Quarter; onClos
                 const r = reveal()
                 return (
                   <div className={`quarter-box ${r.className}`} style={r.style}>
-                    <TeamReports reports={q.reports} />
+                    <TeamReports reports={q.reports} employees={employees} />
                   </div>
                 )
               })()}

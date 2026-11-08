@@ -1126,6 +1126,7 @@ class CompanyEngineTest {
         new HashMap<>(
             Map.of("insight", 10, "patience", 10, "courage", 10, "conviction", 10, "luck", 10));
     int promoted = 0;
+    int promotions = 0;
     for (int seed = 0; seed < 60; seed++) {
       CompanyState company = open(seed, rookie, 100_000_000L);
       CompanyState.Employee e = company.employees.getFirst();
@@ -1141,11 +1142,22 @@ class CompanyEngineTest {
           }
           promoted += line.contains("올라섰다") ? 1 : 0;
         }
+        // 등급 상승 칸 (#535): 결산 전보다 종합 등급이 오른 사람만, 지금 등급으로
+        for (CompanyState.Promotion p : s.promotions) {
+          assertThat(p.employeeId).isEqualTo(e.id);
+          assertThat(p.name).isEqualTo(e.name);
+          assertThat(p.after).isEqualTo(CompanyEngine.employeeGrade(e));
+          assertThat(CompanyEngine.LADDER.indexOf(p.after))
+              .as(p.before + " → " + p.after)
+              .isGreaterThan(CompanyEngine.LADDER.indexOf(p.before));
+        }
+        promotions += s.promotions.size();
       }
       // 단타 데스크는 용기를 원한다: 용기가 가장 먼저 자란다
       assertThat(e.stats.get("courage")).isGreaterThanOrEqualTo(e.stats.get("insight"));
     }
     assertThat(promoted).as("종합 등급이 오르면 올라섰다는 소식").isPositive();
+    assertThat(promotions).as("종합 등급이 오른 해는 등급 상승 칸에 남는다").isPositive();
   }
 
   /** #392: 최근에 쓴 문구와 이번에 이미 쓴 문구는 건너뛰고, 다 썼으면 굴린 것을 쓴다. 기억은 60개까지. */

@@ -128,12 +128,18 @@ async function closeQuarter(page: Page, year: number, quarter: number) {
   const reports = await sheet.getByTestId('team-report').count()
   const staffed = await page.getByTestId('office-seat').count()
   expect(reports > 0).toBe(staffed > 0)
+  // 팀마다 팀장 등급이 눈에 띄는 방패로 붙는다 (397번).
+  const bars = sheet.getByTestId('team-bar')
+  for (let i = 0; i < (await bars.count()); i++) {
+    await expect(bars.nth(i).locator('[data-testid="grade-badge"][data-size="md"]')).toHaveCount(1)
+  }
   await sheet.getByRole('button', { name: '확인' }).click()
   await expect(sheet).toBeHidden()
 }
 
 /**
- * 결산하면 연말 결산서가 따로 뜬다 (240번): 종목 회의 한 건과 직원들이 1년 동안 굴린 몫이 나뉘어 있고, 확인하면 닫힌다.
+ * 결산하면 연말 결산서가 따로 뜬다 (240번): 종목 회의 한 건과 직원들이 1년 동안 굴린 몫이 나뉘어 있고, 팀장 등급과 등급이 오른 직원이 보인다 (397번).
+ * 확인하면 닫힌다.
  */
 async function closeYearEnd(page: Page, year: number) {
   const sheet = page.getByRole('dialog', { name: '연말 결산서' })
@@ -143,6 +149,18 @@ async function closeYearEnd(page: Page, year: number) {
   ).toBeVisible()
   await expect(sheet.getByTestId('ledger-staff')).toContainText('직원들의 1년 운용')
   await expect(sheet.getByTestId('ledger-after')).toBeVisible()
+  // 결산 전광판에 팀장 등급 방패가 붙고, 등급이 오른 직원은 옛 등급 → 새 등급으로 보인다 (397번).
+  if ((await sheet.getByTestId('board-team').count()) > 0) {
+    await expect(
+      sheet
+        .locator('[data-testid="board-team"] [data-testid="grade-badge"][data-size="md"]')
+        .first(),
+    ).toBeVisible()
+  }
+  const promotions = sheet.getByTestId('promotion')
+  for (let i = 0; i < (await promotions.count()); i++) {
+    await expect(promotions.nth(i).getByTestId('grade-badge')).toHaveCount(2)
+  }
   await sheet.getByRole('button', { name: '확인' }).click()
   await expect(sheet).toBeHidden()
   // 건물이 바뀌었으면 건물 알림이 뜬다 (281번).

@@ -822,7 +822,7 @@ components:
         lastSettlement:
           oneOf:
             - type: object
-              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, moving, upgrades, rewards, quarters, gradeBefore, gradeAfter, achieved, results, lines, reports]
+              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, moving, upgrades, rewards, quarters, gradeBefore, gradeAfter, achieved, results, lines, reports, promotions]
               properties:
                 year: { type: integer }
                 phase: { type: string, enum: [boom, normal, crash] }
@@ -870,6 +870,17 @@ components:
                   type: array
                   description: 팀장들의 한 해 보고 (decisions.md 269번)
                   items: { $ref: '#/components/schemas/Report' }
+                promotions:
+                  type: array
+                  description: 그해 종합 등급이 오른 직원 (decisions.md 397번). 연말 결산서의 등급 상승 칸. 이 칸을 더하기 전의 결산이면 비어 있다
+                  items:
+                    type: object
+                    required: [employeeId, name, before, after]
+                    properties:
+                      employeeId: { type: integer }
+                      name: { type: string }
+                      before: { $ref: '#/components/schemas/Grade' }
+                      after: { $ref: '#/components/schemas/Grade' }
             - type: 'null'
         industry:
           description: 업계 순위 (#351). 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다. 한 해도 마치지 않았으면 null

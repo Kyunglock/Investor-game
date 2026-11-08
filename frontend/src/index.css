@@ -759,6 +759,18 @@ p.animate-stamp {
   width: 30px;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
 }
+/* 글줄 안의 눈에 띄는 방패 (397번): 결산서의 팀장. 금부터는 티어 빛이 번진다. */
+.grade-gem-md {
+  position: static;
+  display: inline-flex;
+  width: 26px;
+  margin-right: 3px;
+  vertical-align: -8px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+}
+.grade-gem-md.tier-shine {
+  filter: drop-shadow(0 0 3px var(--g-base)) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+}
 /* 글줄 안의 작은 방패 (301번): 배치 탭의 이름 앞. */
 .grade-gem-inline {
   position: static;

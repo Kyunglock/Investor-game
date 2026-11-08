@@ -302,6 +302,27 @@ class CompanyEngine {
   }
 
   /**
+   * 그해 종합 등급이 오른 직원을 결산에 남긴다 (#535): 자라서(289번)든 실전 경험으로(2.3절)든 내려갔던 능력치를 되찾아서든, 결산 전보다 높아졌으면 연말
+   * 결산서의 등급 상승 칸에 오른다. 내려갔다 도로 오른 사람처럼 결산 전과 같으면 없다.
+   */
+  private void recordPromotions(
+      CompanyState company, Map<Integer, String> gradesBefore, Settlement settlement) {
+    for (Employee e : company.employees) {
+      String before = gradesBefore.get(e.id);
+      String after = employeeGrade(e);
+      if (before == null || LADDER.indexOf(after) <= LADDER.indexOf(before)) {
+        continue;
+      }
+      CompanyState.Promotion p = new CompanyState.Promotion();
+      p.employeeId = e.id;
+      p.name = e.name;
+      p.before = before;
+      p.after = after;
+      settlement.promotions.add(p);
+    }
+  }
+
+  /**
    * 한 해 일하며 자라는 능력치 (#343): 앉은 자리가 원하는 능력치가 먼저 자란다(자리에서 자란다). 그게 꽉 찼거나 자리가 원하는 능력치가 없으면 운을 뺀 가장 낮은
    * 능력치. 다 꽉 찼으면 null.
    */
@@ -1486,6 +1507,8 @@ class CompanyEngine {
 
     Map<Integer, Integer> ranksBefore = new HashMap<>();
     company.employees.forEach(e -> ranksBefore.put(e.id, e.rank));
+    Map<Integer, String> gradesBefore = new HashMap<>();
+    company.employees.forEach(e -> gradesBefore.put(e.id, employeeGrade(e)));
     boolean crash = CRASH.equals(company.phase);
     // 직원마다 네 분기를 모은다: 손익은 합, 판돈은 굴린 분기의 평균, 뒤집힘은 횟수를 더한다.
     Map<Integer, Result> yearly = new LinkedHashMap<>();
@@ -1559,6 +1582,7 @@ class CompanyEngine {
     settlement.lines.addAll(grouped(company.yearLines));
     countTenure(company, settlement);
     grow(company, settlement, random);
+    recordPromotions(company, gradesBefore, settlement);
     // 등급·건물·자리 수는 연말에만 바뀐다 (268번). 건물은 저절로 오르지 않고(296번: 이사 비용을 내야 한다), 지은 건물은 자본이 줄어도 그대로다(#347).
     String kept = grade(company);
     company.gradedCapital = company.capital;

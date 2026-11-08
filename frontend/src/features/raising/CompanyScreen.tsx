@@ -161,6 +161,7 @@ export function CompanyScreen({ company }: { company: Company }) {
           // 분기 실적 (268번): 1~3분기를 넘기면 짧게 뜬다.
           <QuarterSheet
             quarter={company.lastQuarter}
+            employees={company.employees}
             onClose={() => useRaisingStore.setState({ justQuartered: false })}
           />
         )}

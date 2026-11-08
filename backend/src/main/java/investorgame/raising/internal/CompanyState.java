@@ -631,6 +631,19 @@ class CompanyState {
 
     List<Result> results = new ArrayList<>();
     List<String> lines = new ArrayList<>();
+
+    /** 그해 종합 등급이 오른 직원 (#535). 이 칸을 더하기 전의 결산이면 비어 있다. */
+    List<Promotion> promotions = new ArrayList<>();
+  }
+
+  /** 그해 종합 등급이 오른 직원 한 명 (#535): 연말 결산서의 등급 상승 칸. before·after는 결산 전후의 종합 등급. */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Promotion {
+    int employeeId;
+    String name;
+    String before;
+    String after;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)

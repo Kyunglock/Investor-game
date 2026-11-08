@@ -81,7 +81,7 @@ type TeamResult = {
 }
 type TeamReport = { desk: string; leaderId: number; leader: string }
 
-/** 결산 전광판의 한 줄 (decisions.md 292번): 자리 하나, 팀장 이름, 팀 손익·판돈, 팀의 뒤집힘 합, 사람 수. */
+/** 결산 전광판의 한 줄 (decisions.md 292·397번): 자리 하나, 팀장 이름, 팀 손익·판돈, 팀의 뒤집힘 합, 그 자리에서 굴린 사람들(팀장 포함). */
 export type TeamRow = {
   desk: string
   leader: string
@@ -89,7 +89,7 @@ export type TeamRow = {
   pnl: number
   stake: number
   flips: Record<string, number>
-  members: number
+  memberIds: number[]
 }
 
 /**
@@ -106,11 +106,11 @@ export function teamRows(results: TeamResult[], reports: TeamReport[]): TeamRow[
       pnl: 0,
       stake: 0,
       flips: {},
-      members: 0,
+      memberIds: [],
     }
     row.pnl += r.pnl
     row.stake += r.stake
-    row.members += 1
+    row.memberIds.push(r.employeeId)
     for (const [stat, count] of Object.entries(r.flips)) {
       row.flips[stat] = (row.flips[stat] ?? 0) + count
     }

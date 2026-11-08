@@ -842,6 +842,13 @@ export interface components {
                 lines: string[];
                 /** @description 팀장들의 한 해 보고 (decisions.md 269번) */
                 reports: components["schemas"]["Report"][];
+                /** @description 그해 종합 등급이 오른 직원 (decisions.md 397번). 연말 결산서의 등급 상승 칸. 이 칸을 더하기 전의 결산이면 비어 있다 */
+                promotions: {
+                    employeeId: number;
+                    name: string;
+                    before: components["schemas"]["Grade"];
+                    after: components["schemas"]["Grade"];
+                }[];
             } | null;
             /** @description 업계 순위 (#351). 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다. 한 해도 마치지 않았으면 null */
             industry?: {
