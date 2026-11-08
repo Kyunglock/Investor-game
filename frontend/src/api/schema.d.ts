@@ -334,10 +334,52 @@ export interface paths {
         put?: never;
         /**
          * 가진 무기 가운데 하나를 든다 (decisions.md 346번)
-         * @description 무기는 멘탈 전투에서 드는 총이다. 종류(권총·리볼버·기관단총·산탄총·소총)와 등급(N·R·SR·UR)이 있고, 한 판 결과를 보낼 때 물리친 적 수로 떨어진다.
-         *     든 무기의 수치가 다음 판의 바탕 수치(공격력·연사·탄 갈래·탄 속도)가 된다. 없는 종류·등급이거나 안 가진 무기면 400.
+         * @description 무기는 멘탈 전투에서 드는 총이다. 종류(권총·리볼버·기관단총·산탄총·소총)와 등급(N·R·SR·UR)이 있고, 무기 뽑기로 얻는다(366번).
+         *     든 무기의 수치가 다음 판의 바탕 수치(공격력·연사·탄 강화 단계·탄 속도)가 된다. 없는 종류·등급이거나 안 가진 무기면 400.
          */
         post: operations["equipWeapon"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/weapon/draw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번)
+         * @description 등급은 N 60·R 30·SR 9·UR 1의 가중치로, 종류는 고르게 뽑는다. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 합성 재료가 된다.
+         *     결과는 armory.lastDraw에 담긴다. 뽑기권이 없으면 400.
+         */
+        post: operations["drawWeapon"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/weapon/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번)
+         * @description 같은 종류·등급의 무기 armory.mergeCount개를 합쳐 한 등급 위의 같은 종류 하나로 만든다. 들고 있던 무기를 다 썼으면 합친 무기를 든다.
+         *     모자라거나 가장 높은 등급(UR)이면 400.
+         */
+        post: operations["mergeWeapon"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1069,17 +1111,6 @@ export interface components {
                 headline: string;
                 /** @description 이번 분기 결과를 이미 보냈다 */
                 done: boolean;
-                /** @description 이 판에서 떨어진 무기 (decisions.md 346번). 결과를 보내기 전이거나 안 떨어졌으면 null */
-                drop: {
-                    /** @enum {string} */
-                    kind: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
-                    name: string;
-                    /** @enum {string} */
-                    grade: "N" | "R" | "SR" | "UR";
-                    gradeName: string;
-                    /** @description 새로 얻었다. 이미 가진 종류·등급이면 거짓 */
-                    isNew: boolean;
-                } | null;
             } | null;
             /** @description 가진 무기 (decisions.md 346번). 수치는 등급을 더한 최종값으로 한 판의 바탕 수치다. 처음엔 일반 권총 하나 */
             weapons?: {
@@ -1099,7 +1130,27 @@ export interface components {
                 bulletSpeed: number;
                 /** @description 지금 든 무기 */
                 equipped: boolean;
+                /** @description 가진 수 (decisions.md 366번). 같은 무기를 또 뽑으면 늘고, armory.mergeCount개면 합쳐 한 등급 올린다 */
+                count: number;
             }[];
+            /** @description 무기 뽑기 (decisions.md 366번). 무기는 전투에서 떨어지지 않고 무기 뽑기권으로 뽑는다 */
+            armory?: {
+                /** @description 가진 무기 뽑기권 */
+                tickets: number;
+                /** @description 합쳐 한 등급 올리는 데 드는 같은 무기 수 */
+                mergeCount: number;
+                /** @description 마지막으로 뽑은 무기. 뽑은 적이 없으면 null */
+                lastDraw: {
+                    /** @enum {string} */
+                    kind: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
+                    name: string;
+                    /** @enum {string} */
+                    grade: "N" | "R" | "SR" | "UR";
+                    gradeName: string;
+                    /** @description 새로 얻었다. 이미 가진 종류·등급이면 거짓(그 무기의 수가 하나 는다) */
+                    isNew: boolean;
+                } | null;
+            };
             /** @description 엔딩 (decisions.md 276번). 랜드마크 타워에 오르면 회사가 멈추고 사장이 다음 회사를 차린다. 아직이면 null */
             ending?: {
                 /** @description 엔딩을 본 해 */
@@ -1762,6 +1813,61 @@ export interface operations {
         };
         responses: {
             /** @description 무기를 든 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    drawWeapon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 뽑은 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    mergeWeapon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    kind: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
+                    /** @enum {string} */
+                    grade: "N" | "R" | "SR";
+                };
+            };
+        };
+        responses: {
+            /** @description 합친 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;
