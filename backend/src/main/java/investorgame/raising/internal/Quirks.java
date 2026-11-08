@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * 직원 버릇 (decisions.md 349번, #395): 촉파·단톡방파·차트파·뉴스파·커피파. 번호로 정해져 바뀌지 않고, 이직 제안·뽑기 첫인사·합성의 문구가 버릇을
- * 따른다. 문구 고르기는 난수가 아니라 열쇠(직원·해·분기)의 해시라 같은 상황이면 같은 말을 한다.
+ * 직원 버릇 (decisions.md 349번, #395): 촉파·단톡방파·차트파·뉴스파·커피파. 번호로 정해져 바뀌지 않고, 이직 제안·뽑기 첫인사의 문구가 버릇을 따른다.
+ * 문구 고르기는 난수가 아니라 열쇠(직원·해·분기)의 해시라 같은 상황이면 같은 말을 한다.
  */
 class Quirks {
 
@@ -22,7 +22,7 @@ class Quirks {
     return content.raising().company().quirks();
   }
 
-  /** 직원의 버릇. 번호로 정해진다(7은 버릇 수와 서로소라 이웃한 번호의 버릇이 다르다). 합성으로 이어받았으면(350번) 그것. */
+  /** 직원의 버릇. 번호로 정해진다(7은 버릇 수와 서로소라 이웃한 번호의 버릇이 다르다). 옛 합성으로 이어받았으면(350번) 그것. */
   RaisingContent.Quirk of(Employee e) {
     List<RaisingContent.Quirk> quirks = all();
     if (e.quirk != null) {
@@ -33,11 +33,6 @@ class Quirks {
       }
     }
     return quirks.get(Math.floorMod(e.id * 7 + 3, quirks.size()));
-  }
-
-  /** 합성 재료의 마지막 한마디 (350번, {name}·{base}). */
-  String farewellTemplate(Employee material, int turn) {
-    return pick(of(material).farewell(), material.id, turn, "farewell");
   }
 
   /** 버릇 코드. */

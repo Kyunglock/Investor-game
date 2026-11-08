@@ -169,7 +169,7 @@ raising:
         SR: { damage-percent: 50, fire-percent: 15 }
         UR: { damage-percent: 100, fire-percent: 25 }
       # 무기 뽑기 (decisions.md 366번): 무기 뽑기권 한 장에 한 번. 등급 가중치로 등급을, 종류는 고르게 뽑는다. 같은 무기(종류+등급)가 merge-count개
-      # 모이면 합쳐 한 등급 올린다(직원 합성과 같다). 뽑기권은 처음 start-tickets장, 분기 전투를 마칠 때마다 battle-tickets장
+      # 모이면 합쳐 한 등급 올린다. 뽑기권은 처음 start-tickets장, 분기 전투를 마칠 때마다 battle-tickets장
       # (스테이지를 처음 깰 때·별·EX 도전 보상은 #493에서 붙는다)
       weapon-gacha:
         grade-weights: { N: 60, R: 30, SR: 9, UR: 1 }
@@ -218,7 +218,7 @@ raising:
       veteran-fee-step-bp: 75
     # 채용 뽑기 (decisions.md 312번): 공채 시장(지원자를 골라 계약금을 내고 뽑던 것)을 대신한다. 채용권 한 장에 한 명.
     # 채용권 (decisions.md 357번): 회사를 차릴 때 10장, 그 뒤로는 연말에 1장. 분기마다 주던 1장과 연말 2장·업적 3장·이사 3장은 너무 많아 뺐다(업적·이사도 1장).
-    # 한 해에 한 명이라 자리에 누구를 앉히고 누구와 합칠지가 중요해진다. 같은 등급 둘을 합치면 바탕 한 명이 한 단계 오른다(SSS 위는 X·XX… 단계).
+    # 한 해에 한 명이라 자리에 누구를 앉힐지가 중요해진다. 직원 합성은 384번에서 뺐다.
     gacha:
       start-tickets: 10
       quarter-tickets: 0
@@ -228,10 +228,6 @@ raising:
       max-draws: 10
       # 데리고 있을 수 있는 사람 (354번): 상한이 없다. 화면은 이 값 이상이면 상한을 보이지 않는다(337번의 100명을 뺐다)
       roster-max: 999999
-      merge-count: 2
-      # 합성 보상 (decisions.md 350번): jackpot-percent% 확률로 두 단계(대성공), inherit-percent% 확률로 재료의 버릇을 이어받는다
-      jackpot-percent: 5
-      inherit-percent: 30
       # 확률표: 회사 등급(인사팀이면 더 높게)보다 steps 단계 위가 percent%. 맨 끝은 특급(전의 특급 인재, 290번)
       rates:
         - { steps: -1, percent: 30, star: false }

@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 /** 아주 작은 회사의 규칙 (증권사 육성 설계 4·6절). 실제 콘텐츠와 application.yml 수치로 돌린다. */
 class CompanyEngineTest {
@@ -369,8 +370,8 @@ class CompanyEngineTest {
   }
 
   /**
-   * 채용 뽑기 (decisions.md 312번): 채용권 한 장에 한 명이 쉬는 채로 온다. 돈은 들지 않는다. 데리고 있을 수 있는 사람은 100명이고, 넘으면 합치거나
-   * 내보내야 더 뽑는다.
+   * 채용 뽑기 (decisions.md 312번): 채용권 한 장에 한 명이 쉬는 채로 온다. 돈은 들지 않는다. 데리고 있을 수 있는 사람은 100명이고, 넘으면 내보내야
+   * 더 뽑는다.
    */
   @Test
   void 채용권으로_뽑고_데리고_있을_자리가_모자라면_내보낸다() {
@@ -544,54 +545,6 @@ class CompanyEngineTest {
     int before = company.tickets;
     ENGINE.upgrade(company);
     assertThat(company.tickets).isEqualTo(before + PROPERTIES.gacha().moveTickets());
-  }
-
-  /**
-   * 합성 (decisions.md 312번): 같은 종합 등급 둘(319번)을 합치면 바탕 한 명이 한 단계 오른다. 재료는 회사를 떠나고 번 돈은 바탕에게 얹힌다. SSS
-   * 위는 단계(X…)가 오른다. 등급이 다르거나 수가 맞지 않거나 맨 위면 400.
-   */
-  @Test
-  void 같은_등급_둘을_합치면_한_단계_오른다() {
-    CompanyState company = ENGINE.open(new HashSeededRandom(6), ENGINE.openingCapital());
-    CompanyState.Employee base = ENGINE.hire(company, stats(45, 45, 45, 45));
-    CompanyState.Employee a = ENGINE.hire(company, stats(42, 48, 40, 44));
-    CompanyState.Employee b = ENGINE.hire(company, stats(40, 40, 40, 49));
-    CompanyState.Employee odd = ENGINE.hire(company, stats(60, 60, 60, 60));
-    a.totalPnl = 300;
-    base.desk = "day";
-    assertThat(CompanyEngine.employeeGrade(base)).isEqualTo("C");
-    assertThatThrownBy(() -> ENGINE.merge(company, base.id, List.of(odd.id)))
-        .as("등급이 다르다")
-        .isInstanceOf(InvalidRequestException.class);
-    assertThatThrownBy(() -> ENGINE.merge(company, base.id, List.of(a.id, b.id)))
-        .as("재료는 한 명이어야 한다")
-        .isInstanceOf(InvalidRequestException.class);
-    ENGINE.merge(company, base.id, List.of(a.id));
-    assertThat(CompanyEngine.employeeGrade(base)).isEqualTo("B");
-    assertThat(base.desk).as("바탕은 자리에 그대로").isEqualTo("day");
-    assertThat(base.totalPnl).isEqualTo(300);
-    assertThat(company.employees).containsExactly(base, b, odd);
-    assertThat(company.alumni).as("재료는 떠난 직원으로 남지 않는다").isEmpty();
-    assertThat(company.collection).containsEntry("B", 1);
-    assertThat(company.timeline)
-        .anyMatch(t -> t.text != null && t.text.contains(a.name) && t.text.contains("B"));
-
-    // SSS 둘이면 X로.
-    Map<String, Integer> top = new HashMap<>(stats(95, 95, 95, 95));
-    top.put("luck", 95);
-    CompanyState.Employee s1 = ENGINE.hire(company, top);
-    CompanyState.Employee s2 = ENGINE.hire(company, top);
-    ENGINE.merge(company, s1.id, List.of(s2.id));
-    assertThat(CompanyEngine.employeeGrade(s1)).isEqualTo("X");
-
-    // 능력치가 100에 걸려도 평균이 다음 띠에 닿게 채운다.
-    CompanyState.Employee x1 = ENGINE.hire(company, stats(100, 100, 100, 72));
-    x1.stats.put("luck", 30);
-    CompanyState.Employee x2 = ENGINE.hire(company, new HashMap<>(x1.stats));
-    String was = CompanyEngine.employeeGrade(x1);
-    ENGINE.merge(company, x1.id, List.of(x2.id));
-    assertThat(CompanyEngine.LADDER.indexOf(CompanyEngine.employeeGrade(x1)))
-        .isEqualTo(CompanyEngine.LADDER.indexOf(was) + 1);
   }
 
   /** 섹터 데스크 (4.2·9.4절): 그 시대에 뜨는 섹터 데스크에 그 자리가 원하는 능력치가 좋은 사람을 앉히면 결과가 좋아진다. */
@@ -1391,49 +1344,22 @@ class CompanyEngineTest {
     assertThat(saw.lines).anyMatch(line -> line.startsWith("조짐이 맞았다"));
   }
 
-  /** 합성 보상 (decisions.md 350번): 난수가 있으면 가끔 두 단계(대성공), 가끔 재료의 버릇을 이어받고, 재료는 마지막 한마디를 남긴다. */
+  /** 옛 저장 상태에 직원 합성 기록(합성 횟수·방금 한 합성·합성으로 처음 만든 등급)이 남아 있어도 읽힌다 (384번). */
   @Test
-  void 합성하면_재료가_마지막_한마디를_남기고_가끔_대성공이나_버릇을_이어받는다() {
-    int jackpots = 0;
-    int inherited = 0;
-    int trials = 400;
-    for (int seed = 0; seed < trials; seed++) {
-      CompanyState company = ENGINE.open(new HashSeededRandom(seed), ENGINE.openingCapital());
-      CompanyState.Employee base = ENGINE.hire(company, stats(45, 45, 45, 45));
-      CompanyState.Employee a = ENGINE.hire(company, stats(42, 48, 40, 44));
-      company.merges = seed;
-      ENGINE.merge(company, base.id, List.of(a.id), new HashSeededRandom(seed));
-      CompanyState.Merge m = company.lastMerge;
-      assertThat(m).isNotNull();
-      assertThat(m.before).isEqualTo("C");
-      assertThat(m.farewells).hasSize(1);
-      assertThat(m.farewells.getFirst()).contains(base.name).doesNotContain("{");
-      assertThat(m.firstOfGrade).isTrue();
-      assertThat(company.mergedFirst).contains(m.after);
-      if (m.jackpot) {
-        jackpots++;
-        assertThat(CompanyEngine.employeeGrade(base)).isEqualTo("A");
-        assertThat(m.after).isEqualTo("A");
-      } else {
-        assertThat(CompanyEngine.employeeGrade(base)).isEqualTo("B");
-      }
-      if (m.inheritedQuirk != null) {
-        inherited++;
-        assertThat(base.quirk).isNotNull();
-        assertThat(ENGINE.quirks.name(base)).isEqualTo(m.inheritedQuirk);
-        assertThat(company.yearLines).anyMatch(l -> l.contains(m.inheritedQuirk));
-      }
-    }
-    // 5%·30%(버릇이 같은 짝은 빼고)쯤.
-    assertThat(jackpots).isBetween(trials * 2 / 100, trials * 10 / 100);
-    assertThat(inherited).isBetween(trials * 12 / 100, trials * 35 / 100);
-
-    CompanyState plain = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
-    CompanyState.Employee b1 = ENGINE.hire(plain, stats(45, 45, 45, 45));
-    CompanyState.Employee b2 = ENGINE.hire(plain, stats(45, 45, 45, 45));
-    ENGINE.merge(plain, b1.id, List.of(b2.id));
-    assertThat(plain.lastMerge.jackpot).as("난수가 없으면 보상 없이 한 단계").isFalse();
-    assertThat(plain.lastMerge.inheritedQuirk).isNull();
+  void 옛_저장_상태의_합성_기록은_무시하고_읽는다() {
+    String old =
+        """
+        {"year": 2, "capital": 5000000000, "merges": 3,
+         "lastMerge": {"baseId": 1, "name": "김촉", "before": "C", "after": "A", "jackpot": true,
+                       "farewells": ["잘 부탁해요"], "firstOfGrade": true, "inheritedQuirk": "촉파"},
+         "mergedFirst": ["A"],
+         "collection": {"C": 2, "A": 1},
+         "employees": [{"id": 1, "name": "김촉", "quirk": "gut"}]}
+        """;
+    CompanyState c = JsonMapper.builder().build().readValue(old, CompanyState.class);
+    assertThat(c.year).isEqualTo(2);
+    assertThat(c.collection).containsEntry("A", 1);
+    assertThat(c.employees).singleElement().satisfies(e -> assertThat(e.quirk).isEqualTo("gut"));
   }
 
   /** 실패·재미 업적 (decisions.md 351번): 망한 판도 즐겁게. 연말 결산이 읽는다. */

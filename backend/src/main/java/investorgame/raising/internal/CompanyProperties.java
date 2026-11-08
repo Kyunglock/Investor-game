@@ -26,7 +26,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param effects X 이상 등급의 효과 수치 (2.4절)
  * @param hr 인사팀이 채용 뽑기를 돕는다 (6.3절)
  * @param market 뽑은 사람의 능력치와 계약금(연봉·이적료의 바탕) (decisions.md 228번)
- * @param gacha 채용 뽑기: 채용권으로 뽑고, 같은 등급 둘을 합쳐 한 단계 위로 (decisions.md 312·315번)
+ * @param gacha 채용 뽑기: 채용권으로 뽑는다 (decisions.md 312·315번, 합성은 384번에서 뺐다)
  * @param invest 투자 회의: 해마다 한 번 단서 기사를 놓고 직원들과 고민한다 (decisions.md 229번)
  * @param people 이직 제안과 근속 (decisions.md 262번)
  * @param scout 종목 발굴: 종목 회의는 직원이 종목을 물어 올 때만 열린다 (decisions.md 267번)
@@ -243,8 +243,7 @@ public record CompanyProperties(
    * @param achievementTickets 업적 하나를 열 때 받는 채용권
    * @param moveTickets 건물을 올릴 때 받는 채용권
    * @param maxDraws 한 번에 뽑을 수 있는 최대 수
-   * @param rosterMax 데리고 있을 수 있는 사람 수(쉬는 사람 포함, 337번). 넘으면 합쳐야 더 뽑는다
-   * @param mergeCount 합성에 드는 같은 등급 사람 수(바탕 한 명 포함). 바탕이 한 단계 오른다
+   * @param rosterMax 데리고 있을 수 있는 사람 수(쉬는 사람 포함, 337번). 넘으면 내보내야 더 뽑는다
    * @param rates 확률표: 회사 등급(인사팀이면 더 높게)에서 steps 단계 위가 percent%로. star면 특급
    */
   public record Gacha(
@@ -255,10 +254,7 @@ public record CompanyProperties(
       int moveTickets,
       int maxDraws,
       int rosterMax,
-      int mergeCount,
-      List<Rate> rates,
-      int jackpotPercent,
-      int inheritPercent) {}
+      List<Rate> rates) {}
 
   /** 뽑기 확률표의 한 칸: 회사 등급보다 steps 단계 위(음수면 아래)가 percent%. star면 특급(특급 연출, 능력치가 그 띠에 고르게). */
   public record Rate(int steps, int percent, boolean star) {}

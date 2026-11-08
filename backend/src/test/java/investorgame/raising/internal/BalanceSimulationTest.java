@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/** 측정: 한 회사의 일생(뽑기·합성·배치·이사·회의·결산)을 사장 셋으로 굴린다 (#344·#388·#389). */
+/** 측정: 한 회사의 일생(뽑기·배치·이사·회의·결산)을 사장 셋으로 굴린다 (#344·#388·#389). */
 class BalanceSimulationTest {
 
   static final CompanyProperties PROPERTIES =
@@ -37,7 +37,7 @@ class BalanceSimulationTest {
     return up > down ? InvestEngine.BUY : down > up ? InvestEngine.SELL : InvestEngine.HOLD;
   }
 
-  /** 연초: 채용권을 다 쓰고, 같은 등급 둘씩 합치고, 넘치면 내보내고, 높은 사람부터 앉히고, 이사할 수 있으면 한다. */
+  /** 연초: 채용권을 다 쓰고, 넘치면 내보내고, 높은 사람부터 앉히고, 이사할 수 있으면 한다. */
   static void yearStart(CompanyState c, HashSeededRandom random, Boss boss) {
     if (boss != Boss.LAZY) {
       while (ENGINE.canUpgrade(c)) {
@@ -47,15 +47,12 @@ class BalanceSimulationTest {
     while (c.tickets > 0) {
       int room = ENGINE.rosterMax(c) - c.employees.size();
       if (room <= 0) {
-        if (!mergeOnce(c)) {
-          CompanyState.Employee worst = c.employees.stream().min(byGrade()).orElseThrow();
-          ENGINE.release(c, worst.id);
-        }
+        CompanyState.Employee worst = c.employees.stream().min(byGrade()).orElseThrow();
+        ENGINE.release(c, worst.id);
         continue;
       }
       ENGINE.draw(c, Math.min(Math.min(c.tickets, room), PROPERTIES.gacha().maxDraws()), random);
     }
-    while (c.employees.size() > ENGINE.seats(c) && mergeOnce(c)) {}
     List<CompanyState.Employee> best = new ArrayList<>(c.employees);
     best.sort(byGrade().reversed());
     int seats = ENGINE.seats(c);
@@ -80,30 +77,6 @@ class BalanceSimulationTest {
   static Comparator<CompanyState.Employee> byGrade() {
     return Comparator.comparingInt(
         (CompanyState.Employee e) -> LADDER.indexOf(CompanyEngine.employeeGrade(e)) * 100 + e.rank);
-  }
-
-  static boolean mergeOnce(CompanyState c) {
-    Map<String, List<CompanyState.Employee>> by = new HashMap<>();
-    for (CompanyState.Employee e : c.employees) {
-      if (CompanyEngine.employeeGrade(e).equals("GOD")) {
-        continue;
-      }
-      by.computeIfAbsent(CompanyEngine.employeeGrade(e), k -> new ArrayList<>()).add(e);
-    }
-    for (List<CompanyState.Employee> same : by.values()) {
-      if (same.size() >= PROPERTIES.gacha().mergeCount()) {
-        try {
-          ENGINE.merge(
-              c,
-              same.get(0).id,
-              same.subList(1, PROPERTIES.gacha().mergeCount()).stream().map(e -> e.id).toList());
-          return true;
-        } catch (RuntimeException ignored) {
-          // 이직 제안 등이 걸린 사람
-        }
-      }
-    }
-    return false;
   }
 
   static void quarter(CompanyState c, HashSeededRandom random, Boss boss) {
@@ -189,7 +162,8 @@ class BalanceSimulationTest {
    * 늘 중립이라 맞힌 태도의 판단마다 +4%p와 섹터 바람이 없다): 스테이지 4,334억 · E 2 · D 6 · C 10 · B 15 · A 19 · S 25 · SS
    * 없음 / 기사 238억(E 3 · D 11 · C 15 · B 23, A 없음) · 공격 44억 · 이사 안 함 14억. 2026-11-09 인건비·연봉 협상·사표를 뺀
    * 뒤(383번, 연봉이 나가지 않지만 올려 줄 때 능력치가 오르던 보람도 없다): 스테이지 4,699억 · 등급 첫 해는 그대로 / 기사 194억 · 공격 35억 · 이사
-   * 안 함 14억.
+   * 안 함 14억. 2026-11-09 직원 합성을 뺀 뒤(384번, 같은 등급 둘을 합쳐 올리던 길이 없다): 스테이지 2,596억 · E 2 · D 7 · C 10 · B
+   * 16 · A 20(25년 안에 S 없음) / 기사 103억 · 공격 33억 · 이사 안 함 6억.
    */
   @Test
   void 스테이지를_깨며_기사를_읽는_사장이_가장_빨리_크고_등급이_고르게_오른다() {
@@ -225,8 +199,9 @@ class BalanceSimulationTest {
     org.assertj.core.api.Assertions.assertThat(stages.firstYear()[1])
         .as("첫 이사")
         .isLessThanOrEqualTo(3);
-    // 거시경제 회의의 태도 보너스(맞힌 태도 판단마다 +4%p)와 섹터 바람을 뺀 뒤로(382번) 25년 안에 SS에 닿지 않아 S까지 본다.
-    for (int k = 2; k <= LADDER.indexOf("S"); k++) {
+    // 거시경제 회의의 태도 보너스(맞힌 태도 판단마다 +4%p)와 섹터 바람을 뺀 뒤로(382번) 25년 안에 SS에 닿지 않고, 직원 합성을 뺀 뒤로(384번)
+    // S에도 닿지 않아 A까지 본다.
+    for (int k = 2; k <= LADDER.indexOf("A"); k++) {
       org.assertj.core.api.Assertions.assertThat(stages.firstYear()[k] - stages.firstYear()[k - 1])
           .as(LADDER.get(k - 1) + " → " + LADDER.get(k))
           .isBetween(1L, 6L);

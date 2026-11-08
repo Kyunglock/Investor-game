@@ -169,7 +169,7 @@ class CompanyState {
   /** 지금까지 뽑은 횟수. 뽑기 난수의 열쇠이고, 뽑기 요청에 실어 같은 요청이 두 번 와도 한 번만 뽑는다. 다음 회사로 이어진다. */
   int draws;
 
-  /** 도감 (312번): 등급 → 뽑거나 합성해서 얻은 사람 수. 사장의 것이라 다음 회사로 이어진다. */
+  /** 도감 (312번): 등급 → 뽑아서 얻은 사람 수. 사장의 것이라 다음 회사로 이어진다. */
   Map<String, Integer> collection = new LinkedHashMap<>();
 
   /** 마지막 뽑기의 결과. 화면이 카드를 뒤집어 보인다. 분기를 넘기면 비운다. */
@@ -189,15 +189,6 @@ class CompanyState {
 
   /** 이번 분기의 멘탈 전투 (decisions.md 328번). 분기를 열 때 새로 만든다. 이 칸을 더하기 전의 분기면 null이다. */
   Mental mental;
-
-  /** 합성한 횟수 (350번). 대성공·이어받기 난수의 열쇠. */
-  int merges;
-
-  /** 방금 한 합성 (350번). 아직 없으면 null. */
-  Merge lastMerge;
-
-  /** 합성으로 처음 만든 등급들 (350번): 도감에 표시. */
-  List<String> mergedFirst = new ArrayList<>();
 
   /** 가진 무기 (decisions.md 346번). 종류+등급으로 하나씩. 처음엔 일반 권총 하나. 이 칸을 더하기 전의 회사면 null이다. */
   List<Weapon> weapons;
@@ -279,30 +270,8 @@ class CompanyState {
     /** 올해 한 번도 자리에 앉지 않았나: 연말에 쉬어서 사기가 오른다. 분기를 넘길 때마다 앉아 있었으면 거짓. */
     boolean restedAllYear = true;
 
-    /** 합성으로 이어받은 버릇 (350번). 없으면 번호로 정한 버릇(349번). */
+    /** 옛 합성으로 이어받은 버릇 (350번, 384번에서 합성을 뺐다). 없으면 번호로 정한 버릇(349번). */
     String quirk;
-  }
-
-  /** 방금 한 합성 (decisions.md 350번). 다음 합성 때 덮어쓴다. */
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
-  static class Merge {
-    int baseId;
-    String name;
-    String before;
-    String after;
-
-    /** 대성공: 두 단계 뛰었다. */
-    boolean jackpot;
-
-    /** 재료들의 마지막 한마디. */
-    List<String> farewells = new ArrayList<>();
-
-    /** 이 등급을 합성으로 처음 만들었다. */
-    boolean firstOfGrade;
-
-    /** 이어받은 버릇 이름. 없으면 null. */
-    String inheritedQuirk;
   }
 
   /**
@@ -564,7 +533,7 @@ class CompanyState {
     String kind;
     String grade;
 
-    /** 가진 수 (366번): 같은 무기를 또 뽑으면 늘고, 합성에 쓰면 준다. 이 칸이 생기기 전의 무기는 하나다. */
+    /** 가진 수 (366번): 같은 무기를 또 뽑으면 늘고, 무기 합성에 쓰면 준다. 이 칸이 생기기 전의 무기는 하나다. */
     int count = 1;
 
     Weapon() {}

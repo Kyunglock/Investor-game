@@ -326,9 +326,9 @@ class CompanyApiTest {
         .andExpect(status().isBadRequest());
   }
 
-  /** 데리고 있을 자리가 차면 내보내야 뽑고, 합성은 같은 등급 둘이어야 한다(재료 한 명). 인사팀이 뽑기를 돕는다 (decisions.md 312번, 6.3절). */
+  /** 데리고 있을 자리가 차면 내보내야 뽑는다. 인사팀이 뽑기를 돕는다 (decisions.md 312번, 6.3절). 직원 합성은 384번에서 뺐다. */
   @Test
-  void 내보내고_합치고_인사팀이_뽑기를_돕는다() throws Exception {
+  void 내보내고_인사팀이_뽑기를_돕는다() throws Exception {
     json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
     DocumentContext five = draw(5);
     List<Integer> ids = five.read("$.employees[*].id");
@@ -344,10 +344,6 @@ class CompanyApiTest {
     List<String> kinds = released.read("$.history.timeline[*].kind");
     assertThat(kinds).contains("left");
     postJson("/api/company/release", "{\"employeeId\":%d}".formatted(ids.get(4)))
-        .andExpect(status().isBadRequest());
-    postJson(
-            "/api/company/merge",
-            "{\"baseId\":%d,\"materialIds\":[%d,%d]}".formatted(ids.get(0), ids.get(1), ids.get(2)))
         .andExpect(status().isBadRequest());
 
     DocumentContext placed =

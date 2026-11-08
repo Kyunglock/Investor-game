@@ -23,7 +23,7 @@ function company(over: Partial<Company> = {}): Company {
     seats: 2,
     desks: [desk('bio', 'patience'), desk('day', 'courage'), desk('research', 'insight', false)],
     employees: [],
-    gacha: { tickets: 0, roster: 0, rosterMax: 4, draws: 0, maxDraws: 10, mergeCount: 3 },
+    gacha: { tickets: 0, roster: 0, rosterMax: 4, draws: 0, maxDraws: 10 },
     meeting: { wanted: '' },
     invest: null,
     ...over,
@@ -43,7 +43,7 @@ describe('자동 진행 (decisions.md 245번)', () => {
 
   it('빈 자리만큼 채용권으로 뽑는다: 채용권·데리고 있을 자리가 허락하는 만큼 (312번)', () => {
     const gacha = (tickets: number, roster = 0, rosterMax = 4) => ({
-      gacha: { tickets, roster, rosterMax, draws: 0, maxDraws: 10, mergeCount: 3 },
+      gacha: { tickets, roster, rosterMax, draws: 0, maxDraws: 10 },
     })
     expect(autoDraw(company(gacha(5) as never))).toBe(2)
     expect(autoDraw(company(gacha(1) as never))).toBe(1)
@@ -63,7 +63,7 @@ describe('자동 진행 (decisions.md 245번)', () => {
     const poached = company({ meeting: { wanted: '', poach: { transferFee: 1 } } } as never)
     expect(nextAutoStep(poached, false)).toEqual({ kind: 'poach', keep: true })
     const hiring = company({
-      gacha: { tickets: 3, roster: 0, rosterMax: 4, draws: 0, maxDraws: 10, mergeCount: 3 },
+      gacha: { tickets: 3, roster: 0, rosterMax: 4, draws: 0, maxDraws: 10 },
     } as never)
     expect(nextAutoStep(hiring, false)).toEqual({ kind: 'draw', count: 2 })
     const resting = company({
@@ -128,12 +128,12 @@ describe('건물 이사 (decisions.md 296번)', () => {
   it('갈 수 있으면 사람을 뽑기 전에 먼저 이사한다', () => {
     const can = company({
       upgrade: { to: 'E', cost: 50_000_000, needed: 250_000_000, affordable: true },
-      gacha: { tickets: 3, roster: 0, rosterMax: 4, draws: 0, maxDraws: 10, mergeCount: 3 },
+      gacha: { tickets: 3, roster: 0, rosterMax: 4, draws: 0, maxDraws: 10 },
     } as never)
     expect(nextAutoStep(can, false)).toEqual({ kind: 'upgrade' })
     const cannot = company({
       upgrade: { to: 'E', cost: 50_000_000, needed: 250_000_000, affordable: false },
-      gacha: { tickets: 3, roster: 0, rosterMax: 4, draws: 0, maxDraws: 10, mergeCount: 3 },
+      gacha: { tickets: 3, roster: 0, rosterMax: 4, draws: 0, maxDraws: 10 },
     } as never)
     expect(nextAutoStep(cannot, false)).toEqual({ kind: 'draw', count: 2 })
   })

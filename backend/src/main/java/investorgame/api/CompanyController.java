@@ -85,16 +85,6 @@ class CompanyController {
 
   record DrawRequest(@NotNull @Positive Integer count, @NotNull @PositiveOrZero Integer draws) {}
 
-  /** 같은 등급 직원을 합쳐 바탕 한 명을 한 단계 올린다 (decisions.md 312번). */
-  @PostMapping("/merge")
-  CompanyView merge(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody MergeRequest request) {
-    return companies.merge(cookies.requireSession(token), request.baseId(), request.materialIds());
-  }
-
-  record MergeRequest(@NotNull Integer baseId, @NotNull List<Integer> materialIds) {}
-
   /** 직원을 내보낸다 (decisions.md 312번). */
   @PostMapping("/release")
   CompanyView release(

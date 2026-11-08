@@ -745,11 +745,6 @@ class CompanyEngine {
     return properties.gacha().maxDraws();
   }
 
-  /** 합성에 드는 같은 등급 사람 수(바탕 포함). */
-  int mergeCount() {
-    return properties.gacha().mergeCount();
-  }
-
   /** 확률표 (decisions.md 312번): 회사 등급(인사팀이면 더 높게)을 중심으로 칸마다 등급과 확률. */
   List<CompanyProperties.Rate> rates() {
     return properties.gacha().rates();
@@ -770,7 +765,7 @@ class CompanyEngine {
       throw new InvalidRequestException("채용권이 모자란다");
     }
     if (company.employees.size() + count > rosterMax(company)) {
-      throw new InvalidRequestException("데리고 있을 자리가 모자란다. 합쳐야 더 뽑는다");
+      throw new InvalidRequestException("데리고 있을 자리가 모자란다. 내보내야 더 뽑는다");
     }
     int total = rates().stream().mapToInt(CompanyProperties.Rate::percent).sum();
     int sssAt = LADDER.indexOf(StatGrade.SSS.name());
@@ -860,131 +855,6 @@ class CompanyEngine {
     return before == 0;
   }
 
-  /**
-   * 합성 (decisions.md 312번): 같은 종합 등급의 직원 merge-count명을 합쳐 바탕(baseId) 한 명을 한 단계 올린다. 재료는 회사를 떠나고(연표에
-   * 남지 않는다), 번 돈은 바탕에게 얹힌다. F~SS면 다섯 능력치를 모두 한 띠 올려 종합 등급을 한 단계 올리고, SSS 위면 단계(X…)가 오른다. 맨
-   * 위(GOD)거나, 등급이 다르거나, 수가 맞지 않거나, 이직 제안이 걸린 사람이면 400.
-   */
-  Employee merge(CompanyState company, int baseId, List<Integer> materialIds) {
-    return merge(company, baseId, materialIds, null);
-  }
-
-  /**
-   * 합성 보상 (decisions.md 350번): random이 있으면 jackpot-percent%로 두 단계(대성공), inherit-percent%로 재료의 버릇을
-   * 이어받는다. 재료는 떠나며 버릇대로 마지막 한마디를 남기고, 합성으로 처음 만든 등급은 도감에 표시한다. 모두 lastMerge에 담아 화면이 보인다.
-   */
-  Employee merge(CompanyState company, int baseId, List<Integer> materialIds, SeededRandom random) {
-    requireOpen(company);
-    int need = properties.gacha().mergeCount() - 1;
-    Employee base = employee(company, baseId);
-    List<Employee> materials =
-        materialIds.stream()
-            .distinct()
-            .filter(id -> id != baseId)
-            .map(id -> employee(company, id))
-            .toList();
-    if (materials.size() != need || materialIds.size() != need) {
-      throw new InvalidRequestException("같은 등급 " + (need + 1) + "명을 합친다");
-    }
-    String grade = employeeGrade(base);
-    if (materials.stream().anyMatch(m -> !employeeGrade(m).equals(grade))) {
-      throw new InvalidRequestException("같은 등급끼리만 합친다");
-    }
-    if (LADDER.indexOf(grade) >= LADDER.size() - 1) {
-      throw new InvalidRequestException("더 오를 데가 없다");
-    }
-    for (Employee e : materials) {
-      requireFree(company, e);
-    }
-    requireFree(company, base);
-    riseOne(base);
-    java.util.random.RandomGenerator rng =
-        random == null ? null : random.forKey("merge", company.merges);
-    CompanyState.Merge result = new CompanyState.Merge();
-    result.baseId = base.id;
-    result.name = base.name;
-    result.before = grade;
-    // 대성공 (350번): 아직 오를 데가 있으면 한 단계 더.
-    if (rng != null
-        && rng.nextInt(PERCENT) < properties.gacha().jackpotPercent()
-        && LADDER.indexOf(employeeGrade(base)) < LADDER.size() - 1) {
-      riseOne(base);
-      result.jackpot = true;
-    }
-    // 버릇 이어받기 (350번): 재료 가운데 첫 사람의 버릇이 바탕과 다르면.
-    if (rng != null && rng.nextInt(PERCENT) < properties.gacha().inheritPercent()) {
-      Employee from = materials.getFirst();
-      if (!quirks.code(from).equals(quirks.code(base))) {
-        base.quirk = quirks.code(from);
-        result.inheritedQuirk = quirks.name(base);
-      }
-    }
-    for (Employee m : materials) {
-      base.totalPnl += m.totalPnl;
-      result.farewells.add(
-          Korean.fill(
-              quirks.farewellTemplate(m, company.merges),
-              Map.of("name", m.name, "base", base.name)));
-    }
-    company.employees.removeAll(materials);
-    teams.tidy(company);
-    String after = employeeGrade(base);
-    result.after = after;
-    if (collect(company, after)) {
-      result.firstOfGrade = true;
-      company.mergedFirst.add(after);
-    }
-    company.lastMerge = result;
-    company.merges++;
-    String names = String.join("·", materials.stream().map(m -> m.name).toList());
-    RaisingContent.Market market = content.raising().company().market();
-    history.add(
-        company,
-        company.year,
-        "rise",
-        Korean.fill(
-            result.jackpot ? market.jackpot() : market.merged(),
-            Map.of("names", names, "name", base.name, "grade", after)),
-        null);
-    if (result.inheritedQuirk != null) {
-      company.yearLines.add(
-          Korean.fill(
-              market.inherited(),
-              Map.of(
-                  "name",
-                  base.name,
-                  "material",
-                  materials.getFirst().name,
-                  "quirk",
-                  result.inheritedQuirk)));
-    }
-    return base;
-  }
-
-  /** 한 단계 올린다: F~SS면 다섯 능력치를 한 띠, SSS 위면 단계(X…). */
-  private void riseOne(Employee base) {
-    String grade = employeeGrade(base);
-    int sssAt = LADDER.indexOf(StatGrade.SSS.name());
-    if (LADDER.indexOf(grade) >= sssAt) {
-      base.rank++;
-      base.experience = 0;
-      return;
-    }
-    StatGrade next = StatGrade.valueOf(LADDER.get(LADDER.indexOf(grade) + 1));
-    int band = properties.experience().band();
-    for (String code : StatCodes.ALL) {
-      base.stats.merge(code, band, (v, d) -> Math.min(MAX_STAT, v + d));
-    }
-    // 평균이 아직 다음 띠에 못 미치면(능력치가 100에 걸려) 낮은 능력치부터 채운다.
-    while (LADDER.indexOf(overallGrade(base.stats)) <= LADDER.indexOf(grade)) {
-      String low =
-          StatCodes.ALL.stream()
-              .min(java.util.Comparator.comparingInt((String code) -> base.stats.get(code)))
-              .orElseThrow();
-      base.stats.put(low, Math.min(MAX_STAT, Math.max(base.stats.get(low) + 1, next.min())));
-    }
-  }
-
   /** 직원을 내보낸다 (decisions.md 312번): 데리고 있을 자리를 비운다. 명예의 전당과 연표에 남는다. 이직 제안이 걸린 사람이면 400. */
   void release(CompanyState company, int employeeId) {
     requireOpen(company);
@@ -1002,7 +872,7 @@ class CompanyEngine {
         .orElseThrow(() -> new InvalidRequestException("없는 직원"));
   }
 
-  /** 이직 제안이 걸린 사람은 합치거나 내보낼 수 없다: 먼저 답한다. */
+  /** 이직 제안이 걸린 사람은 내보낼 수 없다: 먼저 답한다. */
   private static void requireFree(CompanyState company, Employee e) {
     boolean busy = company.poach != null && company.poach.employeeId == e.id;
     if (busy) {

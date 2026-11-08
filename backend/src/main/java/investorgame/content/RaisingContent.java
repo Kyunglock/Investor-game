@@ -84,15 +84,10 @@ public record RaisingContent(
 
   /**
    * 직원 버릇 (decisions.md 349번). hello: 뽑혔을 때 첫인사({name}). poachKept·poachLeft: 이직 제안에 남거나
-   * 떠남({name}·{rival}). 연봉 협상·사표 문구는 뺐다(383번).
+   * 떠남({name}·{rival}). 연봉 협상·사표 문구는 뺐다(383번), 합성 작별 한마디도 뺐다(384번).
    */
   public record Quirk(
-      String code,
-      String name,
-      List<String> hello,
-      String poachKept,
-      String poachLeft,
-      List<String> farewell) {}
+      String code, String name, List<String> hello, String poachKept, String poachLeft) {}
 
   /**
    * 업계 순위 소식 (#351). first: 처음 매긴 해, up·down·same: 지난해보다 상위 몇 %가
@@ -245,17 +240,10 @@ public record RaisingContent(
    * 채용 뽑기의 문구 (decisions.md 312번).
    *
    * @param drawStar 특급이 나왔을 때 연표 한 줄. {name}·{grade}
-   * @param merged 합성했을 때 연표 한 줄. {names}·{name}·{grade}
    * @param tickets 채용권을 받았을 때 분기 실적·결산 소식 한 줄. {count}·{reason}
    * @param ticketReasons 채용권을 받은 까닭: quarter·year·achievement·move·hr
    */
-  public record Market(
-      String drawStar,
-      String merged,
-      String tickets,
-      Map<String, String> ticketReasons,
-      String jackpot,
-      String inherited) {}
+  public record Market(String drawStar, String tickets, Map<String, String> ticketReasons) {}
 
   /**
    * X 이상 등급의 효과 (2.4절). 효과는 쌓인다: XX 직원은 X 효과도 가진다.

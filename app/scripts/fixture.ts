@@ -198,7 +198,6 @@ export const company = {
     rosterMax: 12,
     draws: 9,
     maxDraws: 10,
-    mergeCount: 3,
     rates: [
       { grade: 'F', percent: 30, star: false },
       { grade: 'E', percent: 44, star: false },
