@@ -28,8 +28,13 @@ class BalanceSimulationTest {
     READER,
     LAZY,
     /** 기사 읽는 사장이 분기마다 멘탈 스테이지를 하나씩 깬다 (369번): 스테이지 보상 자본과 분기 강화율이 붙는다. */
-    STAGES
+    STAGES,
+    /** 스테이지 사장이 연초마다 자본의 BUYER_PERCENT%까지 전투 강화(394번)를 산다: 공격력·연사 가운데 싼 쪽부터. */
+    BUYER
   }
+
+  /** 전투 강화를 사는 사장(BUYER)이 연초마다 강화에 쓰는 자본 비율(%). */
+  static final int BUYER_PERCENT = 2;
 
   static String majorityChoice(CompanyState.Invest invest) {
     long up = invest.sentences.stream().filter(s -> s.sign.equals("UP")).count();
@@ -42,6 +47,21 @@ class BalanceSimulationTest {
     if (boss != Boss.LAZY) {
       while (ENGINE.canUpgrade(c)) {
         ENGINE.upgrade(c);
+      }
+    }
+    if (boss == Boss.BUYER) {
+      long budget = c.capital * BUYER_PERCENT / 100;
+      while (true) {
+        String kind =
+            MentalEngine.UPGRADES.stream()
+                .min(Comparator.comparingInt(k -> c.battleLevels.getOrDefault(k, 0)))
+                .orElseThrow();
+        long price = ENGINE.mental.upgradePrice(c.battleLevels.getOrDefault(kind, 0));
+        if (price > budget) {
+          break;
+        }
+        budget -= price;
+        ENGINE.mental.buyUpgrade(c, kind, 1);
       }
     }
     while (c.tickets > 0) {
@@ -86,12 +106,12 @@ class BalanceSimulationTest {
       String choice =
           switch (boss) {
             case GREEDY -> InvestEngine.BUY;
-            case READER, STAGES -> majorityChoice(c.invest);
+            case READER, STAGES, BUYER -> majorityChoice(c.invest);
             case LAZY -> InvestEngine.HOLD;
           };
       ENGINE.invest.decide(c, choice, boss == Boss.GREEDY, random);
     }
-    if (boss == Boss.STAGES) {
+    if (boss == Boss.STAGES || boss == Boss.BUYER) {
       int next = ENGINE.mental.bestStage(c) + 1;
       if (next <= PROPERTIES.mental().stages().perChapter()) {
         ENGINE.mental.reportStage(c, next, true, 2);
@@ -100,8 +120,12 @@ class BalanceSimulationTest {
     ENGINE.settleQuarter(c, random);
   }
 
-  /** 한 회사의 일생: 해마다 회사 등급(건물)의 첫 해를 적는다. 반환: [해 → 등급 단계], 마지막 자본. */
-  record Life(int[] firstYearAt, long capital) {}
+  /**
+   * 한 회사의 일생: 해마다 회사 등급(건물)의 첫 해를 적는다. 반환: [해 → 등급 단계], 마지막 자본, 해마다 연말의 전투 강화 단계(공격력 + 연사), 분기
+   * 실적·결산서의 전투 강화 비용 줄을 모두 더한 값, 산 강화 단계들의 값을 모두 더한 값.
+   */
+  record Life(
+      int[] firstYearAt, long capital, int[] battleLevels, long bookedUpgrades, long boughtValue) {}
 
   static Life life(long seed, Boss boss, int years) {
     HashSeededRandom random = new HashSeededRandom(seed);
@@ -109,6 +133,7 @@ class BalanceSimulationTest {
     int[] first = new int[LADDER.size()];
     Arrays.fill(first, -1);
     first[0] = 0;
+    int[] levels = new int[years + 1];
     for (int y = 1; y <= years && !c.finished; y++) {
       yearStart(c, random, boss);
       // 한 해에 여러 단계를 지나면(공사가 끝난 다음 해 바로 책상을 늘리면) 지난 단계도 그해로 친다.
@@ -122,8 +147,16 @@ class BalanceSimulationTest {
       while (c.year == year && !c.finished) {
         quarter(c, random, boss);
       }
+      levels[y] = c.battleLevels.values().stream().mapToInt(Integer::intValue).sum();
     }
-    return new Life(first, c.capital);
+    long booked = c.settlements.stream().mapToLong(s -> s.upgrades).sum() + c.yearUpgrades;
+    long bought = 0;
+    for (int level : c.battleLevels.values()) {
+      for (int i = 0; i < level; i++) {
+        bought += ENGINE.mental.upgradePrice(i);
+      }
+    }
+    return new Life(first, c.capital, levels, booked, bought);
   }
 
   static long median(long[] xs) {
@@ -210,5 +243,60 @@ class BalanceSimulationTest {
           .as(LADDER.get(k - 1) + " → " + LADDER.get(k))
           .isBetween(1L, 6L);
     }
+  }
+
+  /**
+   * 전투 강화는 끝없이 산다 (394번): 스테이지 사장이 연초마다 자본의 2%까지 공격력·연사를 사면, 자본이 커지는 만큼 단계가 계속 오른다. 값이 단계마다 4%씩 오르니
+   * 자본이 열 배 크면 약 59단계를 더 산다. 쓴 돈은 분기 실적·결산서의 전투 강화 비용 줄에 빠짐없이 적힌다. 2026-11-09 40판(25년): 강화 사는 사장
+   * 1,334억(안 사면 1,801억) · 공격력+연사 단계 5년 14 · 10년 48 · 15년 109 · 20년 177 · 25년 250(하나에 약 125단계,
+   * +125%). 5%씩 쓰면 25년 279단계지만 자본이 절반(874억)으로 줄어 2%로 잰다.
+   */
+  @Test
+  void 전투_강화를_사는_스테이지_사장은_자본이_커지는_만큼_단계가_끝없이_오른다() {
+    int trials = 40;
+    int years = 25;
+    long[] capital = new long[trials];
+    long[][] levels = new long[years + 1][trials];
+    for (int seed = 0; seed < trials; seed++) {
+      Life l = life(seed, Boss.BUYER, years);
+      capital[seed] = l.capital();
+      for (int y = 1; y <= years; y++) {
+        levels[y][seed] = l.battleLevels()[y];
+      }
+      org.assertj.core.api.Assertions.assertThat(l.bookedUpgrades())
+          .as("분기 실적·결산서의 전투 강화 비용 줄 = 강화에 쓴 돈")
+          .isEqualTo(l.boughtValue());
+    }
+    long[] median = new long[years + 1];
+    for (int y = 1; y <= years; y++) {
+      median[y] = median(levels[y]);
+    }
+    Summary stages = run(Boss.STAGES, trials, years);
+    System.out.println(
+        "BATTLE-UPGRADES 강화 사는 스테이지 사장 "
+            + median(capital) / 100_000_000
+            + "억 (안 사면 "
+            + stages.capital() / 100_000_000
+            + "억) · 공격력+연사 단계 5년 "
+            + median[5]
+            + " · 10년 "
+            + median[10]
+            + " · 15년 "
+            + median[15]
+            + " · 20년 "
+            + median[20]
+            + " · 25년 "
+            + median[25]);
+    for (int y = 5; y + 5 <= years; y += 5) {
+      org.assertj.core.api.Assertions.assertThat(median[y + 5])
+          .as(y + "년 → " + (y + 5) + "년에도 단계가 오른다")
+          .isGreaterThan(median[y]);
+    }
+    org.assertj.core.api.Assertions.assertThat(median[years])
+        .as("25년이면 공격력·연사 합쳐 200단계 넘게(하나에 +100% 넘게)")
+        .isGreaterThan(200);
+    org.assertj.core.api.Assertions.assertThat(median(capital))
+        .as("강화에 자본의 2%씩 써도 성장의 큰 줄기는 그대로다")
+        .isGreaterThan(stages.capital() * 3 / 5);
   }
 }

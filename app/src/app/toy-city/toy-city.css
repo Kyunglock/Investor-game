@@ -647,25 +647,6 @@
   }
 }
 
-/* 자본으로 사는 전투 강화 시트 (decisions.md 367번) */
-.toy-battle-upgrades {
-  display: grid;
-  gap: 10px;
-  margin-top: 10px;
-}
-.toy-battle-upgrades li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-}
-.toy-battle-upgrades li .toy-sheet-action {
-  width: auto;
-  min-width: 96px;
-  margin-top: 0;
-  flex-shrink: 0;
-}
-
 /* 스테이지 선택 (decisions.md 369번) */
 .toy-stage-grid {
   display: grid;

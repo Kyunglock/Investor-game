@@ -100,11 +100,16 @@ describe('멘탈 카드 (decisions.md 328·330·377번)', () => {
     const upgraded = loadoutOf(weapon, [
       { kind: 'damage', bonusPercent: 50 },
       { kind: 'fire', bonusPercent: 25 },
-      { kind: 'speed', bonusPercent: 40 },
     ])
     expect(upgraded.damage).toBeCloseTo(plain.damage * 1.5)
-    expect(upgraded.fireMs).toBeCloseTo(150)
-    expect(upgraded.moveSpeed).toBeCloseTo(plain.moveSpeed * 1.4)
+    expect(upgraded.fireMs).toBeCloseTo(160)
+    expect(upgraded.moveSpeed).toBe(plain.moveSpeed)
+  })
+
+  it('연사 강화는 끝없이 올라도 간격이 0이나 음수가 되지 않는다 (394번)', () => {
+    const weapon = { damagePercent: 100, fireMs: 200, power: 0, bulletSpeed: 720 }
+    expect(loadoutOf(weapon, [{ kind: 'fire', bonusPercent: 100 }]).fireMs).toBeCloseTo(100)
+    expect(loadoutOf(weapon, [{ kind: 'fire', bonusPercent: 1000 }]).fireMs).toBe(60)
   })
 
   it('다음 레벨까지 드는 경험치는 레벨이 오를수록 커진다', () => {

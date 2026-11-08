@@ -192,8 +192,11 @@ class CompanyState {
   /** 무기 뽑기권 (decisions.md 366번). */
   int weaponTickets;
 
-  /** 자본으로 산 전투 강화의 단계 (decisions.md 367번): damage·fire·speed. 없으면 0단계. */
-  Map<String, Integer> battleUpgrades = new LinkedHashMap<>();
+  /**
+   * 자본으로 산 전투 강화의 단계 (decisions.md 367·394번): damage·fire. 없으면 0단계. 394번에서 끝없이 올리게 바꾸며 옛
+   * 칸(battleUpgrades)을 버리고 새 이름으로 둬서, 출시 전 옛 회사의 강화는 돌려주지 않고 0단계로 돌아간다.
+   */
+  Map<String, Integer> battleLevels = new LinkedHashMap<>();
 
   /** 깬 스테이지의 별 (decisions.md 369번): 1번 스테이지부터 차례로. 길이가 곧 깬 최고 스테이지다. */
   List<Integer> stageStars = new ArrayList<>();

@@ -271,9 +271,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 자본으로 전투 강화 한 단계를 산다 (decisions.md 367번)
-         * @description 데미지(+10%)·연사(쏘는 간격 −5%)·고양이 속도(+8%)를 한 단계씩, 10단계까지. 값은 1b부터 단계마다 2배.
-         *     쓴 돈은 분기 실적·결산서에 전투 강화 비용으로 따로 적는다. 자본이 모자라거나 다 올렸으면 400.
+         * 자본으로 전투 강화를 levels단계까지 산다 (decisions.md 367·394번)
+         * @description 공격력(+1%)·연사(쏘는 빠르기 +1%)를 단계마다, 최대 단계 없이 끝없이. 값은 1b부터 단계마다 4%씩 오른다.
+         *     꾹 눌러 연속으로 올릴 때 화면이 모은 단계를 levels로 묶어 보낸다: 자본이 닿는 데까지 한 단계씩 사고, 한 단계도 못 사면 400.
+         *     쓴 돈은 분기 실적·결산서에 전투 강화 비용으로 따로 적는다. 고양이 속도 강화는 394번에서 뺐다.
          */
         post: operations["buyBattleUpgrade"];
         delete?: never;
@@ -925,25 +926,26 @@ export interface components {
                     tickets: number;
                 } | null;
             };
-            /** @description 자본으로 사는 전투 강화 (decisions.md 367번). 데미지·연사·고양이 속도, 멘탈 전투의 바탕 수치에 영구로 붙는다 */
+            /** @description 자본으로 사는 전투 강화 (decisions.md 367·394번). 공격력·연사, 최대 단계 없이 멘탈 전투의 바탕 수치에 영구로 붙는다 */
             battleUpgrades?: {
                 /**
-                 * @description damage: 데미지, fire: 연사(쏘는 간격이 준다), speed: 고양이 이동 속도
+                 * @description damage: 공격력, fire: 연사(쏘는 빠르기가 오른다)
                  * @enum {string}
                  */
-                kind: "damage" | "fire" | "speed";
+                kind: "damage" | "fire";
                 /** @description 지금 단계(0부터) */
                 level: number;
-                maxLevel: number;
                 /**
                  * Format: int64
-                 * @description 다음 단계 값. 다 올렸으면 null
+                 * @description 다음 단계 값
                  */
-                price: number | null;
+                price: number;
+                /** @description 단계마다 값이 오르는 비율(%). 꾹 눌러 연속으로 올릴 때 화면이 다음 값들을 미리 셈한다(정하는 것은 서버) */
+                priceGrowthPercent: number;
                 /** @description 지금 단계의 효과(%) */
                 bonusPercent: number;
-                /** @description 다음 단계의 효과(%). 다 올렸으면 null */
-                nextBonusPercent: number | null;
+                /** @description 다음 단계의 효과(%) */
+                nextBonusPercent: number;
             }[];
             /** @description 무기 뽑기 (decisions.md 366번). 무기는 전투에서 떨어지지 않고 무기 뽑기권으로 뽑는다 */
             armory?: {
@@ -1526,7 +1528,9 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    kind: "damage" | "fire" | "speed";
+                    kind: "damage" | "fire";
+                    /** @description 올릴 단계 수. 없으면 1 */
+                    levels?: number;
                 };
             };
         };

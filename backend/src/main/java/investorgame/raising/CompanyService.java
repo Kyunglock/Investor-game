@@ -81,8 +81,11 @@ public interface CompanyService {
   /** EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번). 분기에 한 번 무기 뽑기권을 준다. */
   CompanyView reportEx(UUID sessionId, int kills);
 
-  /** 자본으로 전투 강화(damage·fire·speed) 한 단계를 산다 (decisions.md 367번). 자본이 모자라거나 다 올렸으면 400. */
-  CompanyView buyBattleUpgrade(UUID sessionId, String kind);
+  /**
+   * 자본으로 전투 강화(damage·fire)를 levels단계까지 산다 (decisions.md 367·394번). 자본이 닿는 데까지 사고, 한 단계도 못 사면 400.
+   * 최대 단계는 없다.
+   */
+  CompanyView buyBattleUpgrade(UUID sessionId, String kind, int levels);
 
   /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). 뽑기권이 없으면 400. */
   CompanyView drawWeapon(UUID sessionId);

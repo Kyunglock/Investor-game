@@ -14,6 +14,7 @@ import { Sheet } from '../Sheet'
 import { type BattleEntry, type Tab, type ToyPanel, tabBadge, useAppUi } from '../ui'
 import { useCountUp } from '../useCountUp'
 import { ActionBar } from '../Windows'
+import { BattleUpgrades } from './BattleUpgrades'
 import { growthProgress } from './model'
 import { ToyCityStreet } from './ToyCityStreet'
 
@@ -330,70 +331,6 @@ export function ToyCityHome({ company }: { company: Company }) {
         </Sheet>
       )}
     </div>
-  )
-}
-
-const BATTLE_UPGRADE_TEXT: Record<'damage' | 'fire' | 'speed', { name: string; effect: string }> = {
-  damage: { name: '데미지', effect: '탄 공격력' },
-  fire: { name: '연사', effect: '쏘는 간격 단축' },
-  speed: { name: '고양이 속도', effect: '전진 모드 이동 속도' },
-}
-
-/** 강화 효과 글: 0이면 부호 없이, 연사는 간격이 줄어 −. */
-function bonusLabel(kind: 'damage' | 'fire' | 'speed', percent: number) {
-  if (percent === 0) return '0%'
-  return `${kind === 'fire' ? '−' : '+'}${percent}%`
-}
-
-/** 자본으로 사는 전투 강화 (decisions.md 367번): 데미지·연사·고양이 속도를 한 단계씩. 값과 효과는 서버가 준다. */
-function BattleUpgrades({ company }: { company: Company }) {
-  const busy = useRaisingStore((s) => s.busy)
-  const error = useRaisingStore((s) => s.error)
-  const upgrades = company.battleUpgrades ?? []
-  return (
-    <>
-      <p className="toy-sheet-lead">멘탈 전투에 영구로 붙어요</p>
-      <p className="text-sm text-muted">자본 {money(company.capital)}</p>
-      <ul className="toy-battle-upgrades" data-testid="battle-upgrades">
-        {upgrades.map((u) => {
-          const text = BATTLE_UPGRADE_TEXT[u.kind]
-          const max = u.price == null
-          const affordable = !max && company.capital >= (u.price ?? 0)
-          return (
-            <li key={u.kind} data-kind={u.kind} data-level={u.level}>
-              <div>
-                <b>{text.name}</b>{' '}
-                <small>
-                  {u.level}/{u.maxLevel}단계
-                </small>
-                <p className="text-sm text-muted">
-                  {text.effect} {bonusLabel(u.kind, u.bonusPercent)}
-                  {u.nextBonusPercent != null && ` → ${bonusLabel(u.kind, u.nextBonusPercent)}`}
-                </p>
-              </div>
-              <button
-                type="button"
-                className="toy-sheet-action"
-                data-testid="battle-upgrade-buy"
-                disabled={busy || max || !affordable}
-                onClick={() => {
-                  sfx.stamp()
-                  haptic.medium()
-                  void useRaisingStore.getState().buyBattleUpgrade(u.kind)
-                }}
-              >
-                {max ? '최대' : money(u.price ?? 0)}
-              </button>
-            </li>
-          )
-        })}
-      </ul>
-      {error && (
-        <p role="alert" className="mt-2 text-red-pen">
-          {error}
-        </p>
-      )}
-    </>
   )
 }
 

@@ -28,8 +28,8 @@ class MentalEngine {
   /** 무기 등급, 낮은 것부터 (346번). */
   static final List<String> WEAPON_GRADES = List.of("N", "R", "SR", "UR");
 
-  /** 자본으로 사는 전투 강화 (367번): 데미지·연사·고양이 속도. */
-  static final List<String> UPGRADES = List.of("damage", "fire", "speed");
+  /** 자본으로 사는 전투 강화 (367·394번): 공격력·연사. 고양이 속도는 394번에서 뺐다. */
+  static final List<String> UPGRADES = List.of("damage", "fire");
 
   /** 처음 드는 무기: 일반 권총. */
   static final String PISTOL = "pistol";
@@ -182,56 +182,65 @@ class MentalEngine {
     return c.weapons.stream().filter(w -> w.same(kind, grade)).findFirst().orElse(null);
   }
 
-  /** 전투 강화 level단계에서 다음 단계로 가는 값 (367번): 처음 basePrice, 단계마다 priceFactor배. */
+  /**
+   * 전투 강화 level단계에서 다음 단계로 가는 값 (394번): 처음 basePrice, 단계마다 priceGrowthPercent%씩 오른다(끝없이 살 수 있게
+   * 완만하게). long을 넘으면 Long.MAX_VALUE(못 산다).
+   */
   long upgradePrice(int level) {
     CompanyProperties.Upgrades rule = properties.mental().upgrades();
-    long price = rule.basePrice();
-    for (int i = 0; i < level; i++) {
-      price *= rule.priceFactor();
-    }
-    return price;
+    double growth = 1 + rule.priceGrowthPercent() / 100.0;
+    return Math.round(rule.basePrice() * StrictMath.pow(growth, level));
   }
 
   /**
-   * 자본으로 전투 강화 한 단계를 산다 (decisions.md 367번). 없는 강화거나 다 올렸거나 자본이 모자라면 400. 쓴 돈은 올해 강화 비용으로 따로 적는다(분기
-   * 실적에서 인사 비용으로 읽히지 않게).
+   * 자본으로 전투 강화를 levels단계까지 산다 (decisions.md 367·394번). 최대 단계는 없고, 자본이 닿는 데까지 한 단계씩 사서 산 단계 수를 돌려준다.
+   * 없는 강화거나 한 단계도 못 사면 400. 쓴 돈은 올해 강화 비용으로 따로 적는다(분기 실적에서 인사 비용으로 읽히지 않게). 꾹 눌러 연속으로 올릴 때 화면이 모아 둔
+   * 단계를 한 번에 보낸다.
    */
-  void buyUpgrade(CompanyState c, String kind) {
+  int buyUpgrade(CompanyState c, String kind, int levels) {
     if (!UPGRADES.contains(kind)) {
       throw new InvalidRequestException("없는 강화다: " + kind);
     }
     if (c.closed) {
       throw new InvalidRequestException("끝난 회사다");
     }
-    int level = c.battleUpgrades.getOrDefault(kind, 0);
-    if (level >= properties.mental().upgrades().maxLevel()) {
-      throw new InvalidRequestException("이미 다 올렸다: " + kind);
+    int max = properties.mental().upgrades().maxBatch();
+    if (levels < 1 || levels > max) {
+      throw new InvalidRequestException("한 번에 1~" + max + "단계까지 올린다: " + levels);
     }
-    long price = upgradePrice(level);
-    if (c.capital < price) {
-      throw new InvalidRequestException("자본이 모자라다: " + price + "원 필요");
+    int level = c.battleLevels.getOrDefault(kind, 0);
+    int bought = 0;
+    while (bought < levels) {
+      long price = upgradePrice(level + bought);
+      if (c.capital < price) {
+        break;
+      }
+      c.capital -= price;
+      c.yearUpgrades += price;
+      bought++;
     }
-    c.capital -= price;
-    c.yearUpgrades += price;
-    c.battleUpgrades.put(kind, level + 1);
+    if (bought == 0) {
+      throw new InvalidRequestException("자본이 모자라다: " + upgradePrice(level) + "원 필요");
+    }
+    c.battleLevels.put(kind, level + bought);
+    return bought;
   }
 
-  /** 전투 강화의 화면 값 (367번): 강화마다 지금 단계·값·효과. */
+  /** 전투 강화의 화면 값 (367·394번): 강화마다 지금 단계·다음 값·효과. */
   List<CompanyView.BattleUpgrade> upgradeViews(CompanyState c) {
     CompanyProperties.Upgrades rule = properties.mental().upgrades();
     return UPGRADES.stream()
         .map(
             kind -> {
-              int level = c.battleUpgrades.getOrDefault(kind, 0);
+              int level = c.battleLevels.getOrDefault(kind, 0);
               int step = rule.stepPercent().getOrDefault(kind, 0);
-              boolean max = level >= rule.maxLevel();
               return new CompanyView.BattleUpgrade(
                   kind,
                   level,
-                  rule.maxLevel(),
-                  max ? null : upgradePrice(level),
+                  upgradePrice(level),
+                  rule.priceGrowthPercent(),
                   level * step,
-                  max ? null : (level + 1) * step);
+                  (level + 1) * step);
             })
         .toList();
   }
