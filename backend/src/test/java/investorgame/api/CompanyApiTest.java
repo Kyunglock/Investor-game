@@ -353,7 +353,19 @@ class CompanyApiTest {
         .as("처음 권총 하나 + 뽑은 수")
         .isEqualTo(1 + tickets);
     postJson("/api/company/weapon/draw", "").andExpect(status().isBadRequest());
-    postJson("/api/company/weapon/merge", "{\"kind\":\"rifle\",\"grade\":\"SR\"}")
+    // 모자란 합성: 뽑기 운에 따라 같은 무기 둘이 나올 수 있으니(그러면 합성이 된다) 하나도 없는 종류·등급을 고른다.
+    List<java.util.Map<String, Object>> weapons = drawn.read("$.weapons[*]");
+    List<String> have = weapons.stream().map(w -> w.get("kind") + "/" + w.get("grade")).toList();
+    String missing =
+        java.util.stream.Stream.of("pistol", "revolver", "smg", "shotgun", "rifle")
+            .flatMap(k -> java.util.stream.Stream.of("N", "R", "SR").map(g -> k + "/" + g))
+            .filter(kg -> !have.contains(kg))
+            .findFirst()
+            .orElseThrow();
+    String[] kg = missing.split("/");
+    postJson(
+            "/api/company/weapon/merge",
+            "{\"kind\":\"%s\",\"grade\":\"%s\"}".formatted(kg[0], kg[1]))
         .andExpect(status().isBadRequest());
   }
 
