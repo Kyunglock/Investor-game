@@ -500,6 +500,16 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
+/* 전진 모드의 구간 표시 (decisions.md 364번) */
+.battle-segment {
+  font-weight: 400;
+  font-size: 15px;
+  white-space: nowrap;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #7be0c3;
+  color: #2b2340;
+}
 .battle-pause {
   flex-shrink: 0;
   pointer-events: auto;

@@ -1,5 +1,13 @@
 import Phaser from 'phaser'
 import { sfx } from '../fx/sound'
+import {
+  type BattleMode,
+  formation,
+  SCROLL_SECONDS,
+  SEGMENTS,
+  stars,
+  TRICKLE_SECONDS,
+} from './advance'
 import { bakeEnemies, bakeHero, bakeStage, DPR, enemyKey, GUN, HERO_SIZE, WALL_H } from './art'
 import { STAGE_ASSETS } from './assets'
 import { bulletStats, type Loadout, xpToNext } from './cards'
@@ -25,15 +33,24 @@ export interface Hud {
   level: number
   /** 다음 레벨까지 찬 비율(0~1). */
   xp: number
+  /** 전진 모드의 구간: 지금 몇 번째(1부터)를 싸우는지와 전체 수. 디펜스는 null. */
+  segment: { at: number; total: number } | null
 }
 
 export interface Outcome {
   kills: number
   mentalLeft: number
   win: boolean
+  /** 왜 끝났나: 깼다(디펜스는 시간을 버텼다), 시간이 다 됐다(전진 모드 실패), 멘탈이 무너졌다. */
+  reason: 'clear' | 'time' | 'mental'
+  /** 전진 모드에서 넘긴 구간 수와 별(0~3, 364번). 디펜스는 0. */
+  segments: number
+  stars: number
 }
 
 export interface BattleOptions {
+  /** 전진 모드(주 콘텐츠) 또는 디펜스(EX) (364번). */
+  mode: BattleMode
   genre: Genre
   hero: Hero
   loadout: Loadout
@@ -69,6 +86,8 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   look: number
   /** 죽는 연출 중: 몸은 이미 꺼졌고 그림만 부풀며 사라진다. */
   dying: boolean
+  /** 전진 모드에서 길을 막는 적: 다 잡아야 다음 구간이 열린다. 아래로 지나가면 다시 위에서 내려온다. */
+  blocker: boolean
 }
 type Bullet = Phaser.Physics.Arcade.Image & {
   life: number
@@ -99,8 +118,18 @@ const TEX = 1 / DPR
 class BattleScene extends Phaser.Scene {
   private readonly opts: BattleOptions
   private readonly genre
+  private readonly mode: BattleMode
   private loadout: Loadout
   private bg!: Phaser.GameObjects.Image
+  /** 전진 모드: 위에 이어 붙인 둘째 배경. 둘이 함께 내려가며 길이 올라가는 것처럼 보인다. */
+  private bg2: Phaser.GameObjects.Image | null = null
+  /** 전진 모드의 구간 (364번): 지금 구간 번호(0부터), 남은 길막 적, 화면이 올라가는 중이면 남은 초. */
+  private segment = 0
+  private blockersLeft = 0
+  private scrolling = 0
+  private lastTrickle = 0
+  /** 전진 모드의 드래그: 누른 자리와 그때 사장냥 자리. 손가락이 움직인 만큼 사장냥이 따라간다. */
+  private drag: { px: number; py: number; cx: number; cy: number } | null = null
   private player!: Phaser.Physics.Arcade.Image
   /** 권총: 사장냥의 손에서 겨누는 쪽으로 돈다 (341번). */
   private gun!: Phaser.GameObjects.Image
@@ -153,6 +182,7 @@ class BattleScene extends Phaser.Scene {
     super('battle')
     this.opts = opts
     this.genre = GENRES[opts.genre]
+    this.mode = opts.mode
     this.loadout = opts.loadout
   }
 
@@ -185,7 +215,10 @@ class BattleScene extends Phaser.Scene {
     this.choosing = false
     if (!this.begun) {
       this.begun = true
-      this.opts.onBanner('분기 시작! 멘탈 꽉 잡아', '#3a86ff')
+      this.opts.onBanner(
+        this.mode === 'advance' ? '전진! 길을 막는 불안을 치워라' : '분기 시작! 멘탈 꽉 잡아',
+        '#3a86ff',
+      )
     }
     if (!this.over && !this.paused) {
       this.physics.resume()
@@ -215,6 +248,7 @@ class BattleScene extends Phaser.Scene {
       const { w, h } = this.view()
       this.cameras.main.setZoom(DPR).centerOn(w / 2, h / 2)
       this.bg?.setDisplaySize(w, h)
+      this.bg2?.setDisplaySize(w, h)
       if (previousWidth !== w) {
         for (const group of [this.enemies, this.bullets]) {
           for (const object of group?.getChildren() ?? []) {
@@ -224,8 +258,13 @@ class BattleScene extends Phaser.Scene {
         }
       }
       previousWidth = w
-      this.player?.setPosition(w / 2, this.playerY())
-      this.gun?.setPosition(w / 2 + GUN.dx, this.playerY() + GUN.dy)
+      if (this.mode === 'advance') {
+        if (this.player) this.movePlayer(this.player.x, this.player.y)
+        this.drag = null
+      } else {
+        this.player?.setPosition(w / 2, this.playerY())
+        this.gun?.setPosition(w / 2 + GUN.dx, this.playerY() + GUN.dy)
+      }
       this.wall?.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)
       if (this.wallZone) {
         this.wallZone.setPosition(w / 2, this.wallY()).setSize(w, WALL_H * 2)
@@ -235,6 +274,18 @@ class BattleScene extends Phaser.Scene {
     fitView()
     const { w, h } = this.view()
     this.bg = this.add.image(0, 0, 'art-street').setOrigin(0).setDisplaySize(w, h)
+    if (this.mode === 'advance') {
+      // 같은 그림을 위에 하나 더 이어 붙여 함께 내린다: 그림 하나로 끝없이 올라가는 길. 뒤집어 붙이면 이음매는 맞지만 집이 거꾸로 보였다.
+      this.bg2 = this.add.image(0, -h, 'art-street').setOrigin(0).setDisplaySize(w, h)
+      this.input.on('pointerdown', (ptr: Phaser.Input.Pointer) => {
+        this.drag = { px: ptr.worldX, py: ptr.worldY, cx: this.player.x, cy: this.player.y }
+      })
+      const release = () => {
+        this.drag = null
+      }
+      this.input.on('pointerup', release)
+      this.input.on('pointerupoutside', release)
+    }
     this.scale.on('resize', fitView)
     this.events.once('shutdown', () => this.scale.off('resize', fitView))
 
@@ -252,7 +303,7 @@ class BattleScene extends Phaser.Scene {
       .setOrigin(GUN.ox, GUN.oy)
       .setDisplaySize(GUN.w, GUN.h)
       .setDepth(6)
-    if (this.genre.target === 'wall') {
+    if (this.mode === 'defense' && this.genre.target === 'wall') {
       this.wall = this.add
         .image(0, this.wallY() - WALL_H, 'wall')
         .setDisplaySize(w, WALL_H * 3)
@@ -355,6 +406,10 @@ class BattleScene extends Phaser.Scene {
     for (let i = 0; i < 6; i++)
       this.ripples.push(this.add.image(0, 0, 'wall-ripple').setDepth(7).setVisible(false))
 
+    if (this.mode === 'advance') {
+      this.startSegment()
+    }
+
     // 첫 카드는 전장이 열린 뒤 고른다 (339번): 멈춘 채로 Lv.1 카드 고르기를 띄운다.
     this.choosing = true
     this.physics.pause()
@@ -373,9 +428,49 @@ class BattleScene extends Phaser.Scene {
     return this.view().h - wallOffset(this.view().h)
   }
 
-  /** 플레이어의 세로 자리(붙박이, 332·340번): 공격은 화면 아래, 디펜스는 멘탈벽 뒤(아래)에 숨어 벽 너머로 쏜다. */
+  /** 플레이어의 세로 자리(붙박이, 332·340번): 디펜스는 멘탈벽 뒤(아래)에 숨어 벽 너머로 쏜다. 전진 모드는 처음 자리(아래쪽)다. */
   private playerY() {
-    return this.genre.target === 'wall' ? this.wallY() + 78 : this.view().h - 120
+    return this.mode === 'defense' && this.genre.target === 'wall'
+      ? this.wallY() + 78
+      : this.view().h - 140
+  }
+
+  /** 전진 모드: 사장냥을 옮긴다. 화면 가장자리와 위쪽 길막 줄에는 못 간다. */
+  private movePlayer(x: number, y: number) {
+    const { w, h } = this.view()
+    const px = Phaser.Math.Clamp(x, 28, w - 28)
+    const py = Phaser.Math.Clamp(y, h * 0.4, h - 70)
+    this.player.setPosition(px, py)
+  }
+
+  // ── 전진 모드의 구간 (364번)
+
+  /** 구간을 연다: 길막 적이 줄지어 위에서 들어온다. */
+  private startSegment() {
+    const { w } = this.view()
+    const spots = formation(SEGMENTS[this.segment], w)
+    this.blockersLeft = 0
+    for (const spot of spots) {
+      const e = this.spawn(spot.kind, [spot.x, spot.y], true)
+      if (e) {
+        e.blocker = true
+        this.blockersLeft++
+      }
+    }
+  }
+
+  /** 길막 적을 다 잡았다: 다음 구간으로 화면이 올라가거나, 마지막이면 깼다. */
+  private segmentCleared() {
+    this.segment++
+    if (this.segment >= SEGMENTS.length) {
+      this.opts.onBanner('돌파!! 멘탈 전진 성공', '#ffd84d')
+      this.finish(true, 'clear')
+      return
+    }
+    sfx.levelUp()
+    this.opts.onBanner(`구간 돌파! ${this.segment}/${SEGMENTS.length}`, '#7be0c3')
+    this.scrolling = SCROLL_SECONDS
+    this.pushHud(true)
   }
 
   // ── 생성
@@ -385,15 +480,17 @@ class BattleScene extends Phaser.Scene {
     return [Phaser.Math.Between(Math.round(w * 0.16), Math.round(w * 0.84)), -40]
   }
 
-  private spawn(kind: EnemyKind, at?: [number, number]) {
-    if (this.enemies.countActive() >= BattleScene.MAX_ALIVE) {
-      return
+  /** 적 하나를 꺼낸다. 길막 적(force)은 화면에 적이 많아도 꺼낸다: 못 꺼내면 구간이 안 끝난다. */
+  private spawn(kind: EnemyKind, at?: [number, number], force = false): Enemy | null {
+    if (!force && this.enemies.countActive() >= BattleScene.MAX_ALIVE) {
+      return null
     }
     const [x, y] = at ?? this.spawnPoint()
     const e = this.enemies.get(x, y, kind) as Enemy | null
     if (!e) {
-      return
+      return null
     }
+    e.blocker = false
     const v = ENEMIES[kind]
     e.setTexture(enemyKey(kind, 0))
       .enableBody(true, x, y, true, true)
@@ -414,6 +511,32 @@ class BattleScene extends Phaser.Scene {
     e.kbx = 0
     e.kby = 0
     e.born = this.elapsed
+    return e
+  }
+
+  /** 전진 모드의 한 프레임: 화면이 올라가는 중이면 배경을 내리고, 다 올라가면 다음 구간을 연다. 싸우는 중에는 패닉이 이따금 달려든다. */
+  private advanceStep(dt: number, h: number) {
+    if (this.scrolling > 0) {
+      const move = (h / SCROLL_SECONDS) * 0.6 * dt
+      for (const bg of [this.bg, this.bg2]) {
+        if (!bg) continue
+        bg.y += move
+        if (bg.y >= h) bg.y -= 2 * h
+      }
+      this.scrolling -= dt
+      if (this.scrolling <= 0) {
+        this.scrolling = 0
+        this.startSegment()
+      }
+      return
+    }
+    if (this.elapsed - this.lastTrickle > TRICKLE_SECONDS) {
+      // 사장냥 머리 위 언저리로 떨어져 피하거나 쏴야 한다: 아무 데나 떨어지면 거의 닿지 않았다.
+      this.lastTrickle = this.elapsed
+      const { w } = this.view()
+      const x = Phaser.Math.Clamp(this.player.x + Phaser.Math.Between(-80, 80), w * 0.12, w * 0.88)
+      this.spawn('panic', [x, -40])
+    }
   }
 
   /** 난이도 곡선의 시각(초): 예전 4분 판 기준으로 잡은 곡선을 2분 판에 맞춰 PACE배 빨리 돈다 (363번). */
@@ -517,6 +640,13 @@ class BattleScene extends Phaser.Scene {
 
   private kill(e: Enemy, byPlayer: boolean) {
     const v = ENEMIES[e.kind]
+    if (e.blocker) {
+      e.blocker = false
+      this.blockersLeft--
+      if (this.blockersLeft <= 0 && !this.over) {
+        this.segmentCleared()
+      }
+    }
     this.boom[e.kind].explode(e.kind === 'spec' ? 28 : 7, e.x, e.y)
     if (byPlayer) {
       this.kills++
@@ -619,7 +749,7 @@ class BattleScene extends Phaser.Scene {
       e.kby += Math.sin(a) * 500
     }
     if (this.mental <= 0) {
-      this.finish(false)
+      this.finish(false, 'mental')
     }
   }
 
@@ -653,7 +783,8 @@ class BattleScene extends Phaser.Scene {
     const ptr = this.input.activePointer
     const gx = this.player.x + GUN.dx
     const gy = this.player.y + GUN.dy
-    if (ptr.isDown) {
+    // 전진 모드는 손가락이 이동이라 늘 자동 조준이다 (364번).
+    if (ptr.isDown && this.mode === 'defense') {
       this.fire(now, Math.atan2(ptr.worldY - gy, ptr.worldX - gx))
       return
     }
@@ -753,7 +884,7 @@ class BattleScene extends Phaser.Scene {
     })
   }
 
-  private finish(win: boolean) {
+  private finish(win: boolean, reason: Outcome['reason']) {
     if (this.over) {
       return
     }
@@ -764,7 +895,25 @@ class BattleScene extends Phaser.Scene {
     }
     this.pushHud(true)
     this.time.delayedCall(win ? 300 : 700, () =>
-      this.opts.onDone({ kills: this.kills, mentalLeft: Math.ceil(this.mental), win }),
+      this.opts.onDone({
+        kills: this.kills,
+        mentalLeft: Math.ceil(this.mental),
+        win,
+        reason,
+        segments: this.mode === 'advance' ? this.segment : 0,
+        stars:
+          this.mode === 'advance'
+            ? stars(
+                {
+                  win,
+                  seconds: this.elapsed,
+                  mentalLeft: this.mental,
+                  maxMental: this.loadout.maxMental,
+                },
+                BATTLE_SECONDS,
+              )
+            : 0,
+      }),
     )
   }
 
@@ -782,6 +931,10 @@ class BattleScene extends Phaser.Scene {
       score: this.score,
       level: this.level,
       xp: Math.min(1, this.xp / xpToNext(this.level)),
+      segment:
+        this.mode === 'advance'
+          ? { at: Math.min(SEGMENTS.length, this.segment + 1), total: SEGMENTS.length }
+          : null,
     })
   }
 
@@ -794,7 +947,12 @@ class BattleScene extends Phaser.Scene {
     const dt = dtMs / 1000
     this.elapsed += dt
     if (this.elapsed >= BATTLE_SECONDS) {
-      this.finish(true)
+      // 디펜스는 버티면 이기고, 전진 모드는 시간 안에 못 넘으면 진다 (364번).
+      if (this.mode === 'advance') {
+        this.finish(false, 'time')
+      } else {
+        this.finish(true, 'clear')
+      }
       return
     }
 
@@ -802,16 +960,31 @@ class BattleScene extends Phaser.Scene {
     // 총은 따로 겨누는 쪽으로 돈다: 누르면 그쪽, 아니면 가장 가까운 적.
     const p = this.player
     const ptr = this.input.activePointer
-    const { w } = this.view()
+    const { w, h } = this.view()
     p.setVelocity(0, 0)
-    p.setPosition(w / 2, this.playerY())
+    if (this.mode === 'advance') {
+      // 드래그 이동 (364번): 손가락이 움직인 만큼 따라가되, 한 프레임에 갈 수 있는 거리는 moveSpeed로 묶는다.
+      if (this.drag && ptr.isDown) {
+        const tx = this.drag.cx + (ptr.worldX - this.drag.px)
+        const ty = this.drag.cy + (ptr.worldY - this.drag.py)
+        const dx = tx - p.x
+        const dy = ty - p.y
+        const dist = Math.hypot(dx, dy)
+        const step = Math.min(dist, this.loadout.moveSpeed * dt)
+        if (dist > 0.5) {
+          this.movePlayer(p.x + (dx / dist) * step, p.y + (dy / dist) * step)
+        }
+      }
+    } else {
+      p.setPosition(w / 2, this.playerY())
+    }
     const hurting = time < this.hurtUntil
     p.setTexture(hurting ? 'hero-hurt' : ptr.isDown ? 'hero-fire' : 'hero-idle')
     // 숨쉬기: 살짝 눌렸다 펴진다.
     if (!this.tweens.isTweening(p)) {
       p.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h * (1 + Math.sin(time / 260) * 0.025))
     }
-    if (!ptr.isDown) {
+    if (!ptr.isDown || this.mode === 'advance') {
       const near = this.nearestEnemy()
       if (near) {
         const want = Math.atan2(near.y - (p.y + GUN.dy), near.x - (p.x + GUN.dx))
@@ -841,14 +1014,18 @@ class BattleScene extends Phaser.Scene {
       this.shoot(time)
     }
 
+    if (this.mode === 'advance') {
+      this.advanceStep(dt, h)
+    }
+
     // 생성: 한 판(2분)에 걸쳐 갈수록 빨라진다. 파도는 15초마다 투매 → 투기 → 패닉 순으로 돌고 뒤로 갈수록 커진다 (340·363번).
     const every = Math.max(200, 700 - this.curve() * 2.6)
-    if (time - this.lastSpawn > every) {
+    if (this.mode === 'defense' && time - this.lastSpawn > every) {
       this.lastSpawn = time
       const r = Math.random()
       this.spawn(r < 0.6 ? 'panic' : r < 0.82 ? 'dump' : r < 0.95 ? 'stop' : 'spec')
     }
-    if (this.elapsed >= this.nextWave) {
+    if (this.mode === 'defense' && this.elapsed >= this.nextWave) {
       const n = Math.floor(this.nextWave / WAVE_SECONDS) % 3
       if (n === 1) {
         this.waveDump()
@@ -888,7 +1065,21 @@ class BattleScene extends Phaser.Scene {
           continue
         }
       }
-      e.setVelocity(e.kbx, sy + e.kby)
+      if (this.mode === 'advance') {
+        // 길막 적은 천천히 사장냥 쪽으로 다가오고, 아래로 지나가면 다시 위에서 내려온다. 달려드는 패닉은 지나가면 사라진다.
+        if (e.y > h + 50) {
+          if (e.blocker) {
+            e.setPosition(Phaser.Math.Between(Math.round(w * 0.16), Math.round(w * 0.84)), -40)
+          } else {
+            e.disableBody(true, true)
+            continue
+          }
+        }
+        const drift = Phaser.Math.Clamp(p.x - e.x, -1, 1) * 25
+        e.setVelocity(e.kbx + (e.blocker ? drift : 0), (e.blocker ? sy * 0.55 : sy * 1.4) + e.kby)
+      } else {
+        e.setVelocity(e.kbx, sy + e.kby)
+      }
       e.kbx *= 0.86
       e.kby *= 0.86
       // 전투 시간 기준이라 일시정지·카드 선택 뒤에도 같은 발걸음에서 이어진다.
