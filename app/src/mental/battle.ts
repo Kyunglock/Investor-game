@@ -444,7 +444,7 @@ class BattleScene extends Phaser.Scene {
 
   private hit(e: Enemy, dmg: number, angle: number) {
     e.hp -= dmg
-    // 하얗게 번쩍, 뒤로 밀림, 데미지 숫자: 맞은 느낌의 세 가지.
+    // 하얗게 번쩍, 들썩임, 데미지 숫자: 맞은 느낌의 세 가지.
     e.setTintFill(0xffffff)
     this.time.delayedCall(55, () => e.active && e.clearTint())
     // 맞는 자리에 불꽃이 튀고 살짝 들썩인다.
@@ -458,9 +458,7 @@ class BattleScene extends Phaser.Scene {
       duration: 50,
       yoyo: true,
     })
-    const kb = e.kind === 'spec' ? 60 : 240
-    e.kbx += Math.cos(angle) * kb
-    e.kby += Math.sin(angle) * kb
+    // 탄에 맞아도 밀려나지 않는다: 밀리면 내려오던 줄이 흐트러져 조준이 어긋났다. 밀림은 사장냥에 부딪혔을 때(hurt)만.
     // 데미지 숫자는 한 방에 안 죽는 적(투기·손절매·투매)에만: 패닉까지 띄우면 화면이 숫자로 덮인다 (334번).
     if (ENEMIES[e.kind].hp > 1 && e.hp > 0) {
       this.pop(

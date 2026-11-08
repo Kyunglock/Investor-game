@@ -9,15 +9,15 @@ export type Genre = NonNullable<Company['mental']>['genre']
 export interface GenreSpec {
   name: string
   hint: string
-  /** 적이 노리는 것: 플레이어(닿으면 멘탈이 깎인다) 또는 아래의 멘탈벽. */
+  /** 적이 노리는 것. 두 장르 다 멘탈벽이다: 벽 없는 판은 사장냥이 바로 맞아 버그처럼 보였다. 장르는 바닥·소품 분위기만 가른다. */
   target: 'player' | 'wall'
 }
 
 export const GENRES: Record<Genre, GenreSpec> = {
   ASSAULT: {
     name: '공격',
-    hint: '적이 나를 노리고 내려온다. 닿기 전에 누른 쪽을 쏴라',
-    target: 'player',
+    hint: '적이 숲을 지나 멘탈벽으로 내려온다. 벽 뒤에서 누른 쪽을 쏴라',
+    target: 'wall',
   },
   DEFENSE: {
     name: '디펜스',
