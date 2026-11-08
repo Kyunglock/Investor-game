@@ -16,7 +16,7 @@ export const DEFAULT_WEAPON: Weapon = {
   gradeName: '일반',
   damagePercent: 100,
   fireMs: 260,
-  streams: 1,
+  power: 0,
   bulletSpeed: 720,
   equipped: true,
 }

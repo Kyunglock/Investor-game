@@ -64,10 +64,20 @@ describe('멘탈 카드 (decisions.md 328·330번)', () => {
     )
   })
 
-  it('기존 무기의 추가 탄 갈래를 강화 단계로 바꾼다', () => {
-    const loadout = loadoutOf({ damagePercent: 120, fireMs: 240, streams: 3, bulletSpeed: 720 })
+  it('무기가 가진 강화 단계에서 시작한다', () => {
+    const loadout = loadoutOf({ damagePercent: 120, fireMs: 240, power: 2, bulletSpeed: 720 })
     expect(loadout.bulletPower).toBe(2)
     expect(bulletStats(loadout).damage).toBeCloseTo(2.16)
+  })
+
+  it('범위 피해는 강화 2단계부터 붙고 단계가 오를수록 넓어진다', () => {
+    const at = (bulletPower: number) => bulletStats({ ...BASE_LOADOUT, bulletPower })
+    expect(at(0).splashRadius).toBe(0)
+    expect(at(1).splashRadius).toBe(0)
+    expect(at(1).splashDamage).toBe(0)
+    expect(at(2).splashRadius).toBeGreaterThan(0)
+    expect(at(3).splashRadius).toBeGreaterThan(at(2).splashRadius)
+    expect(at(2).splashDamage).toBeCloseTo(at(2).damage * 0.5)
   })
 
   it('다음 레벨까지 드는 경험치는 레벨이 오를수록 커진다', () => {

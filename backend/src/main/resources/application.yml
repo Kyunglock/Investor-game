@@ -169,15 +169,15 @@ raising:
         normal: { ASSAULT: 50, DEFENSE: 50 }
         crash: { ASSAULT: 35, DEFENSE: 65 }
         burst: { ASSAULT: 15, DEFENSE: 85 }
-      # 무기 (decisions.md 346번): 종류마다 공격력(%)·연사 간격(ms)·탄 갈래·탄 속도. 등급(N·R·SR·UR)은 공격력을 damage-percent% 더하고 연사 간격을
+      # 무기 (decisions.md 346번): 종류마다 공격력(%)·연사 간격(ms)·탄 강화 단계(power, 362번)·탄 속도. 등급(N·R·SR·UR)은 공격력을 damage-percent% 더하고 연사 간격을
       # fire-percent% 줄인다. 한 판 결과를 보낼 때 물리친 적 수로 떨어질 확률(percent-per-kill × 적, 최대 max-percent)을 굴리고, 등급 가중치는
       # 적 수가 mid-kills·high-kills를 넘을수록 좋은 쪽으로. 종류는 고르게. 이미 가진 무기면 새로 얻지 못한 것으로 적는다
       weapons:
-        pistol: { damage-percent: 100, fire-ms: 260, streams: 1, bullet-speed: 720 }
-        revolver: { damage-percent: 200, fire-ms: 340, streams: 1, bullet-speed: 820 }
-        smg: { damage-percent: 100, fire-ms: 150, streams: 1, bullet-speed: 700 }
-        shotgun: { damage-percent: 100, fire-ms: 430, streams: 3, bullet-speed: 640 }
-        rifle: { damage-percent: 300, fire-ms: 390, streams: 1, bullet-speed: 980 }
+        pistol: { damage-percent: 100, fire-ms: 260, power: 0, bullet-speed: 720 }
+        revolver: { damage-percent: 200, fire-ms: 340, power: 0, bullet-speed: 820 }
+        smg: { damage-percent: 100, fire-ms: 150, power: 0, bullet-speed: 700 }
+        shotgun: { damage-percent: 100, fire-ms: 430, power: 2, bullet-speed: 640 }
+        rifle: { damage-percent: 300, fire-ms: 390, power: 0, bullet-speed: 980 }
       weapon-grades:
         N: { damage-percent: 0, fire-percent: 0 }
         R: { damage-percent: 25, fire-percent: 8 }

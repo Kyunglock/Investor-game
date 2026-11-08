@@ -1093,8 +1093,8 @@ export interface components {
                 damagePercent: number;
                 /** @description 연사 간격(ms) */
                 fireMs: number;
-                /** @description 탄 갈래 수 */
-                streams: number;
+                /** @description 탄 강화 단계(0~3). 탄은 항상 한 줄이고, 2단계부터 맞으면 주변 적도 휘말린다 (decisions.md 362번) */
+                power: number;
                 /** @description 탄 속도(px/s) */
                 bulletSpeed: number;
                 /** @description 지금 든 무기 */
