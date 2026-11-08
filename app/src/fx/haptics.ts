@@ -21,6 +21,15 @@ export const haptic = {
     native()
       ? void Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {})
       : vibrate([30, 30, 40]),
+  /** 멘탈 카드의 전설이 터질 때 (393번): 세게 두 번, 길게. */
+  burst: () => {
+    if (!native()) {
+      vibrate([60, 40, 120])
+      return
+    }
+    void Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {})
+    setTimeout(() => void Haptics.impact({ style: ImpactStyle.Heavy }).catch(() => {}), 110)
+  },
   success: () =>
     native()
       ? void Haptics.notification({ type: NotificationType.Success }).catch(() => {})

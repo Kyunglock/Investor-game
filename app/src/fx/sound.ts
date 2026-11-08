@@ -1,6 +1,6 @@
 /**
  * 효과음 (decisions.md 310번). 소리 파일 없이 Web Audio로 만든다: 톡(버튼), 코인(뽑기·이득), 금고(결산 이득), 쿵(손실·폭락), 팡파르(이사·업적), 휙(장면).
- * 건물 확장(399번): 힘 모으기, 쾅(부딪힘), 와르르(밀려나는 건물), 축하.
+ * 건물 확장(399번): 힘 모으기, 쾅(부딪힘), 와르르(밀려나는 건물), 축하. 멘탈 카드 펼치기(393번): 깔기·뜸·등급마다 펼침·고르기, 고양이 합류.
  * 처음 손이 닿을 때 오디오를 켠다(브라우저 정책). 끄기는 브라우저에 남는다.
  */
 const KEY = 'investor-app.sound'
@@ -161,6 +161,65 @@ export const sfx = {
   zap: () => {
     tone(1700, 110, { wave: 'sawtooth', gain: 0.04, slide: 140 })
     noise(90, 0.06)
+  },
+  /** 멘탈 전투 (393번): 함께 싸우는 고양이가 내려앉아 합류한다. 쿵 + 반가운 두 음. */
+  mateJoin: () => {
+    tone(150, 140, { wave: 'triangle', gain: 0.1, slide: 70 })
+    noise(90, 0.06)
+    tone(988, 90, { wave: 'triangle', gain: 0.06, at: 0.1 })
+    tone(1319, 160, { wave: 'triangle', gain: 0.06, at: 0.18 })
+  },
+  /** 멘탈 카드 펼치기 (393번): 뒷면 석 장이 쿵 깔린다. */
+  cardDeal: () => {
+    for (let i = 0; i < 3; i++) {
+      tone(170 - i * 12, 120, { wave: 'triangle', gain: 0.09, at: i * 0.07, slide: 70 })
+      noise(70, 0.07, i * 0.07)
+    }
+  },
+  /** 카드 펼치기: 뒤집기 직전 빛이 새어 나온다. 등급이 높을수록 길고 높이 끌어올린다(전설은 한참). */
+  cardTease: (ms = 200) =>
+    tone(420, ms, { wave: 'sine', gain: 0.04, slide: ms > 600 ? 1500 : 900 }),
+  /** 카드 펼치기: 일반은 가볍게 탁. */
+  cardFlip: () => {
+    tone(1250, 40, { wave: 'triangle', gain: 0.07, slide: 700 })
+    noise(35, 0.06)
+  },
+  /** 카드 펼치기: 희귀는 파란 반짝임. */
+  cardRare: () => {
+    tone(1250, 40, { wave: 'triangle', gain: 0.06, slide: 700 })
+    tone(1568, 120, { wave: 'sine', gain: 0.06, at: 0.03 })
+    tone(2093, 180, { wave: 'sine', gain: 0.05, at: 0.1 })
+    tone(2637, 220, { wave: 'sine', gain: 0.03, at: 0.18 })
+  },
+  /** 카드 펼치기: 영웅은 보라 빛기둥이 솟는 화음. */
+  cardEpic: () => {
+    tone(220, 380, { wave: 'sawtooth', gain: 0.05, slide: 660 })
+    noise(160, 0.06)
+    for (const n of [659, 831, 988]) tone(n, 420, { wave: 'triangle', gain: 0.05, at: 0.12 })
+    tone(1976, 260, { wave: 'sine', gain: 0.04, at: 0.3 })
+  },
+  /** 카드 펼치기: 전설은 큰 폭발과 금빛 팡파르. */
+  cardLegend: () => {
+    tone(80, 700, { wave: 'sine', gain: 0.26, slide: 30 })
+    tone(160, 220, { wave: 'square', gain: 0.08, slide: 60 })
+    noise(520, 0.2)
+    const notes = [523, 659, 784, 1046]
+    for (const [i, n] of notes.entries()) {
+      tone(n, 140, { wave: 'triangle', gain: 0.09, at: 0.12 + i * 0.07 })
+    }
+    for (const n of [1046, 1318, 1568, 2093]) {
+      tone(n, 900, { wave: 'triangle', gain: 0.06, at: 0.42 })
+    }
+    tone(3136, 140, { wave: 'sine', gain: 0.04, at: 0.6 })
+    tone(2637, 200, { wave: 'sine', gain: 0.04, at: 0.75 })
+  },
+  /** 카드를 골랐다: 도장 쾅에 금고 소리를 붙여 세게. */
+  cardPick: () => {
+    tone(180, 120, { wave: 'square', gain: 0.1, slide: 70 })
+    noise(110, 0.12)
+    tone(784, 80, { wave: 'triangle', gain: 0.08, at: 0.06 })
+    tone(1046, 80, { wave: 'triangle', gain: 0.08, at: 0.13 })
+    tone(1568, 260, { wave: 'triangle', gain: 0.09, at: 0.2 })
   },
   /** 멘탈 전투: 적이 터진다 */
   squish: () => {

@@ -6,9 +6,11 @@ import {
   loadoutOf,
   MAGICS,
   MAX_BULLET_POWER,
+  MAX_MATES,
   magicCard,
   magicEffect,
   magicGrade,
+  mateCard,
   pickCards,
   SIMPLE_CARDS,
   xpToNext,
@@ -23,11 +25,12 @@ function rng(seed: number) {
   }
 }
 
-describe('멘탈 카드 (decisions.md 328·330·377·392번)', () => {
+describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
   it('석 장은 서로 다른 카드이고, 마법 카드는 지금 레벨의 다음 레벨을 낸다', () => {
-    const levels = { water: 2, fire: 0, lightning: 4 }
+    const levels = { water: 2, fire: 0, lightning: 4, mates: 1 }
     let magics = 0
-    for (let seed = 0; seed < 50; seed++) {
+    let mates = 0
+    for (let seed = 0; seed < 80; seed++) {
       const picked = pickCards(levels, rng(seed))
       expect(picked).toHaveLength(3)
       expect(new Set(picked.map((c) => c.code)).size).toBe(3)
@@ -36,12 +39,66 @@ describe('멘탈 카드 (decisions.md 328·330·377·392번)', () => {
           expect(SIMPLE_CARDS).toContainEqual(c)
           continue
         }
+        if (c.code === 'cat') {
+          mates++
+          expect(c).toEqual(mateCard(1))
+          continue
+        }
         magics++
         expect(c.level).toEqual({ from: levels[c.code], to: levels[c.code] + 1 })
         expect(c).toEqual(magicCard(c.code, levels[c.code]))
       }
     }
     expect(magics).toBeGreaterThan(0)
+    expect(mates).toBeGreaterThan(0)
+  })
+
+  it('"고양이 한 마리 더"는 희귀 카드이고 고를 때마다 한 마리씩, 최대 셋까지 는다', () => {
+    const card = mateCard(0)
+    expect(card).toMatchObject({ code: 'cat', grade: 'R', mates: { from: 0, to: 1 } })
+    expect(mateCard(2).mates).toEqual({ from: 2, to: MAX_MATES })
+    expect(mateCard(MAX_MATES).mates?.to).toBe(MAX_MATES)
+    let loadout = BASE_LOADOUT
+    expect(loadout.mates).toBe(0)
+    for (let i = 0; i < MAX_MATES + 2; i++) {
+      loadout = applyCard(loadout, mateCard(loadout.mates))
+      expect(loadout.mates).toBe(Math.min(MAX_MATES, i + 1))
+    }
+    // 고양이는 수치를 바꾸지 않는다: 저마다 사장냥과 같은 수치로 싸운다.
+    expect(loadout.damage).toBe(BASE_LOADOUT.damage)
+    expect(loadout.fireMs).toBe(BASE_LOADOUT.fireMs)
+  })
+
+  it('고양이가 셋 다 차면 고양이 카드는 더 나오지 않고, 그 몫은 일반 카드로 간다', () => {
+    const full = { water: 0, fire: 0, lightning: 0, mates: MAX_MATES }
+    let magics = 0
+    let slots = 0
+    for (let seed = 0; seed < 200; seed++) {
+      for (const c of pickCards(full, rng(seed))) {
+        expect(c.code).not.toBe('cat')
+        slots++
+        if (c.level) magics++
+      }
+    }
+    // 마법 몫(45%)은 그대로다. 같은 카드를 다시 굴리니 정확히 45%는 아니다.
+    expect(magics / slots).toBeGreaterThan(0.35)
+  })
+
+  it('고양이 카드는 칸마다 8%쯤 나온다', () => {
+    let cats = 0
+    let picks = 0
+    for (let seed = 0; seed < 400; seed++) {
+      picks++
+      if (
+        pickCards({ water: 0, fire: 0, lightning: 0, mates: 0 }, rng(seed)).some(
+          (c) => c.code === 'cat',
+        )
+      )
+        cats++
+    }
+    // 석 장에 한 장이라도 나올 확률 ≈ 1 - 0.92³ ≈ 22%.
+    expect(cats / picks).toBeGreaterThan(0.12)
+    expect(cats / picks).toBeLessThan(0.34)
   })
 
   it('최대 레벨인 마법은 더 나오지 않는다', () => {

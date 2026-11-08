@@ -1,14 +1,15 @@
 import { fireStats, lightningStats, MAGIC_MAX_LEVEL, magicTier, waterStats } from './magic'
 
 /**
- * 멘탈 카드 (decisions.md 328·330·377·392번). 처음 한 장, 그리고 레벨이 오를 때마다 한 장을 고른다. 효과는 한 판 안의 화면 규칙이라 앱이 가진다.
+ * 멘탈 카드 (decisions.md 328·330·377·392·393번). 처음 한 장, 그리고 레벨이 오를 때마다 한 장을 고른다. 효과는 한 판 안의 화면 규칙이라 앱이 가진다.
  *
  * 등급이 있다 (377번): 일반 카드는 공격력 +10%·공격 속도 +10% 두 가지뿐이고, 희귀·영웅·전설은 물·불·번개 마법이다. 마법은 총알과 따로 제 주기에 스스로
  * 나가고(392번, magic.ts), 고를 때마다 한 레벨씩 오른다. 마법 카드의 등급은 그 카드로 오르는 레벨을 보인다: Lv.1 희귀, Lv.2 영웅, Lv.3부터 전설.
+ * 희귀 카드 "고양이 한 마리 더"(393번)는 사장냥과 똑같이 싸우는 고양이를 한 마리 더 부른다(최대 MAX_MATES).
  */
 export type CardGrade = 'N' | 'R' | 'SR' | 'UR'
 export type Magic = 'water' | 'fire' | 'lightning'
-export type CardCode = 'atk' | 'spd' | Magic
+export type CardCode = 'atk' | 'spd' | 'cat' | Magic
 
 export interface Card {
   code: CardCode
@@ -20,6 +21,8 @@ export interface Card {
   color: string
   /** 마법 카드: 지금 레벨(0이면 처음 배움)과 이 카드로 오르는 레벨. */
   level?: { from: number; to: number }
+  /** 고양이 카드: 지금 함께 싸우는 고양이 수와 이 카드로 늘어난 수. */
+  mates?: { from: number; to: number }
 }
 
 export const GRADE_NAMES: Record<CardGrade, string> = {
@@ -29,8 +32,12 @@ export const GRADE_NAMES: Record<CardGrade, string> = {
   UR: '전설',
 }
 
-/** 한 칸이 마법 카드일 확률(%). 나머지는 일반 카드다. */
+/** 한 칸이 마법 카드일 확률(%). */
 export const MAGIC_CHANCE = 45
+/** 한 칸이 "고양이 한 마리 더"일 확률(%, 393번). 고양이가 다 차면 이 몫은 일반 카드로 간다. 나머지는 일반 카드다. */
+export const MATE_CHANCE = 8
+/** 함께 싸우는 고양이의 최대 수(393번, 사용자 결정): 사장냥까지 모두 넷. */
+export const MAX_MATES = 3
 
 /** 마법 카드의 등급: 이 카드로 오르는 레벨을 보인다(392번). Lv.1 희귀, Lv.2 영웅, Lv.3부터 전설. */
 export function magicGrade(level: number): Exclude<CardGrade, 'N'> {
@@ -117,6 +124,21 @@ export function magicCard(magic: Magic, from: number): Card {
 
 export const MAGICS: readonly Magic[] = ['water', 'fire', 'lightning']
 
+/** "고양이 한 마리 더" (393번): 희귀 카드. 함께 싸우는 고양이는 사장냥의 무기·피해·연사·카드 효과·마법을 그대로 받는다. */
+export function mateCard(have: number): Card {
+  const to = Math.min(MAX_MATES, have + 1)
+  return {
+    code: 'cat',
+    grade: 'R',
+    name: '고양이 한 마리 더',
+    desc: '사장냥 옆에 서서 함께 싸운다',
+    effect: '무기·공격력·연사·마법 모두 사장냥과 똑같이',
+    icon: '🐱',
+    color: '#ff9db8',
+    mates: { from: have, to },
+  }
+}
+
 /** 마법마다 지금 레벨. */
 export type MagicLevels = Record<Magic, number>
 
@@ -140,6 +162,8 @@ export interface Loadout {
   water: number
   fire: number
   lightning: number
+  /** 함께 싸우는 고양이 수 (393번, 0~MAX_MATES). */
+  mates: number
 }
 
 export const BASE_LOADOUT: Loadout = {
@@ -153,6 +177,7 @@ export const BASE_LOADOUT: Loadout = {
   water: 0,
   fire: 0,
   lightning: 0,
+  mates: 0,
 }
 
 /**
@@ -180,30 +205,39 @@ export function loadoutOf(
   }
 }
 
-/** 카드 한 장을 쌓는다. 같은 카드를 또 고르면 또 쌓인다. 마법은 등급과 상관없이 한 레벨씩 오른다(392번). */
+/** 카드 한 장을 쌓는다. 같은 카드를 또 고르면 또 쌓인다. 마법은 등급과 상관없이 한 레벨씩 오른다(392번). 고양이는 한 마리씩 는다(393번). */
 export function applyCard(loadout: Loadout, card: Card): Loadout {
   switch (card.code) {
     case 'atk':
       return { ...loadout, damage: loadout.damage * 1.1 }
     case 'spd':
       return { ...loadout, fireMs: Math.max(60, loadout.fireMs / 1.1) }
+    case 'cat':
+      return { ...loadout, mates: Math.min(MAX_MATES, loadout.mates + 1) }
     default:
       return { ...loadout, [card.code]: Math.min(MAGIC_MAX_LEVEL, loadout[card.code] + 1) }
   }
 }
 
 /**
- * 고를 석 장 (377·392번): 칸마다 MAGIC_CHANCE로 마법, 아니면 일반 카드. 마법은 아직 최대 레벨이 아닌 것 가운데 하나를 지금 레벨의 다음 레벨 카드로
- * 낸다. 같은 카드는 겹치지 않는다.
+ * 고를 석 장 (377·392·393번): 칸마다 MATE_CHANCE로 "고양이 한 마리 더"(다 찼으면 일반 카드), MAGIC_CHANCE로 마법, 나머지는 일반 카드. 마법은 아직
+ * 최대 레벨이 아닌 것 가운데 하나를 지금 레벨의 다음 레벨 카드로 낸다. 같은 카드는 겹치지 않는다.
  */
-export function pickCards(levels: MagicLevels, random: () => number = Math.random): Card[] {
-  const open = MAGICS.filter((m) => levels[m] < MAGIC_MAX_LEVEL)
+export function pickCards(
+  state: MagicLevels & { mates?: number },
+  random: () => number = Math.random,
+): Card[] {
+  const open = MAGICS.filter((m) => state[m] < MAGIC_MAX_LEVEL)
+  const mates = state.mates ?? 0
   const picked: Card[] = []
   for (let tries = 0; picked.length < 3 && tries < 60; tries++) {
     let card = SIMPLE_CARDS[Math.floor(random() * SIMPLE_CARDS.length)]
-    if (random() * 100 < MAGIC_CHANCE && open.length > 0) {
+    const roll = random() * 100
+    if (roll < MATE_CHANCE) {
+      if (mates < MAX_MATES) card = mateCard(mates)
+    } else if (roll < MATE_CHANCE + MAGIC_CHANCE && open.length > 0) {
       const m = open[Math.floor(random() * open.length)]
-      card = magicCard(m, levels[m])
+      card = magicCard(m, state[m])
     }
     if (!picked.some((c) => c.code === card.code)) {
       picked.push(card)

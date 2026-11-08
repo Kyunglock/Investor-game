@@ -158,9 +158,9 @@ export class MagicClock {
     this.next[magic] = elapsed + MAGIC_RETRY_SECONDS
   }
 
-  /** 레벨이 올랐다: 새 연출을 바로 보여 준다. */
-  ready(magic: Magic) {
-    this.next[magic] = 0
+  /** 레벨이 올랐다: 새 연출을 바로(at초부터) 보여 준다. 고양이가 여럿이면 at을 조금씩 늦춰 한꺼번에 겹쳐 나가지 않게 한다(393번). */
+  ready(magic: Magic, at = 0) {
+    this.next[magic] = at
   }
 }
 

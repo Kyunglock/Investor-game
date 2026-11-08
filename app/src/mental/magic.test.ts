@@ -58,6 +58,10 @@ describe('물·불·번개 마법 (decisions.md 392번)', () => {
     expect(clock.due('fire', 2, 9)).toBe(true)
     // 다른 마법의 시계는 따로 돈다.
     expect(clock.due('water', 1, 9)).toBe(true)
+    // 고양이가 여럿이면 시전자마다 조금씩 늦춰 한꺼번에 겹치지 않게 한다 (393번).
+    clock.ready('water', 9.36)
+    expect(clock.due('water', 1, 9.2)).toBe(false)
+    expect(clock.due('water', 1, 9.36)).toBe(true)
   })
 
   it('과녁: 물은 가장 가까운 적, 불은 가장 몰린 적, 번개는 체력이 가장 많은 적', () => {

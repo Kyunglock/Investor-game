@@ -17,7 +17,8 @@ import {
 } from './advance'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
-import { applyCard, type Card, GRADE_NAMES, loadoutOf, type MagicLevels, pickCards } from './cards'
+import { DEAL_MS, READY_GAP_MS, REVEAL_TIMING, revealPlan, topGrade } from './cardReveal'
+import { applyCard, type Card, GRADE_NAMES, loadoutOf, pickCards } from './cards'
 import { ENEMIES } from './enemies'
 import { GunSprite } from './GunSprite'
 import { BATTLE_SECONDS } from './genres'
@@ -452,6 +453,7 @@ function Stat({ label, value }: { label: string; value: number | string }) {
 const CARD_ROLES: Record<Card['code'], string> = {
   atk: '공격',
   spd: '연사',
+  cat: '동료',
   water: '물 마법',
   fire: '불 마법',
   lightning: '번개 마법',
@@ -459,9 +461,34 @@ const CARD_ROLES: Record<Card['code'], string> = {
 
 const GRADE_ORDER: Record<Card['grade'], number> = { N: 0, R: 1, SR: 2, UR: 3 }
 
+/** 카드 한 장의 앞뒤 (393번): 뒷면 → 떨리며 빛이 샘 → 옆으로 누움 → 앞면. */
+type Face = 'back' | 'tease' | 'turn' | 'front'
+
+/** 전투 화면을 흔든다(카드가 깔릴 때 살짝, 전설은 크게). 움직임 줄이기면 부르지 않는다. */
+function shake(el: Element | null | undefined, power: number, ms: number) {
+  if (!(el instanceof HTMLElement) || typeof el.animate !== 'function') return
+  const k = power
+  el.animate(
+    [
+      { transform: 'translate(0, 0)' },
+      { transform: `translate(${-k}px, ${k * 0.6}px)` },
+      { transform: `translate(${k * 0.9}px, ${-k * 0.5}px)` },
+      { transform: `translate(${-k * 0.6}px, ${-k * 0.4}px)` },
+      { transform: `translate(${k * 0.4}px, ${k * 0.3}px)` },
+      { transform: 'translate(0, 0)' },
+    ],
+    { duration: ms, easing: 'ease-out' },
+  )
+}
+
+/** 반짝이 수: 희귀 8, 영웅 10, 전설 14. 일반은 없다. */
+const SPARKLES: Record<Card['grade'], number> = { N: 0, R: 8, SR: 10, UR: 14 }
+
 /**
- * 카드 석 장 고르기 (330번): 제목이 쿵 하고 찍히고, 카드가 아래에서 차례로 튀어 올라 뒤집히며 자리를 잡는다(소리·진동). 누르면 그 카드가 번쩍 커졌다 사라진 뒤
- * onPick. 마법 카드는 지금 레벨과 오를 레벨을 보인다(392번).
+ * 카드 석 장 고르기 (330·393번): 석 장이 뒷면으로 쿵 깔리고(화면 살짝 흔들림), 왼쪽부터 한 장씩 떨리며 빛이 새다가 뒤집힌다. 등급이 높을수록 세다: 일반은
+ * 가볍게 탁, 희귀는 파란 빛과 반짝이, 영웅은 보라 빛기둥·화면 번쩍·진동, 전설은 화면이 어두워지며 한참 뜸을 들였다가 금빛 폭발·빛줄기·크게 흔들림·큰
+ * 소리. 뒷면 테두리가 등급을 살짝 흘린다(높을수록 미리 빛난다). 다 펼친 뒤에만 고르고, 그 전에 누르면 남은 카드를 한 번에 펼친다. 움직임 줄이기면
+ * 처음부터 앞면이다. 고르면 그 카드가 번쩍 커지며 날아가고 나머지는 가라앉은 뒤 onPick. 순서와 시각은 cardReveal.ts.
  */
 function CardPick({
   title,
@@ -471,108 +498,263 @@ function CardPick({
 }: {
   title: string
   sub: string
-  levels: MagicLevels
+  levels: Parameters<typeof pickCards>[0]
   onPick: (card: Card) => void
 }) {
   const [cards] = useState(() => pickCards(levels))
+  const [reduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
+  const plan = useMemo(() => revealPlan(cards.map((c) => c.grade)), [cards])
+  const [faces, setFaces] = useState<Face[]>(() => cards.map(() => (reduced ? 'front' : 'back')))
+  const facesNow = useRef(faces)
+  const [ready, setReady] = useState(reduced)
+  const readyNow = useRef(reduced)
+  const [dim, setDim] = useState(false)
   const [chosen, setChosen] = useState<Card | null>(null)
-  const pickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(
-    () => () => {
-      if (pickTimer.current) clearTimeout(pickTimer.current)
-    },
-    [],
-  )
-  useEffect(() => {
-    sfx.levelUp()
-    haptic.medium()
-    const timers = cards.map((_, i) => setTimeout(() => sfx.tap(), 120 + i * 110))
-    return () => {
-      for (const t of timers) {
-        clearTimeout(t)
-      }
+  const root = useRef<HTMLDivElement>(null)
+  const buttons = useRef<(HTMLButtonElement | null)[]>([])
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([])
+  const later = (ms: number, fn: () => void) => {
+    timers.current.push(setTimeout(fn, ms))
+  }
+  const clearTimers = () => {
+    for (const t of timers.current) clearTimeout(t)
+    timers.current = []
+  }
+  const setFace = (i: number, face: Face) => {
+    facesNow.current = facesNow.current.map((f, j) => (j === i ? face : f))
+    setFaces(facesNow.current)
+  }
+  const frame = () => root.current?.closest('.stage-frame')
+  const makeReady = () => {
+    readyNow.current = true
+    setReady(true)
+  }
+
+  /** 앞면이 보이는 순간의 소리·진동·화면 연출. 카드 둘레의 빛·반짝이·빛기둥·빛줄기는 CSS(stage.css)가 그린다. */
+  const revealFx = (grade: Card['grade'], el: Element | null | undefined) => {
+    const fx = useFx.getState()
+    if (grade === 'N') {
+      sfx.cardFlip()
+      haptic.light()
+    } else if (grade === 'R') {
+      sfx.cardRare()
+      haptic.light()
+    } else if (grade === 'SR') {
+      sfx.cardEpic()
+      haptic.heavy()
+      fx.flashScreen('rgba(190,140,255,0.42)')
+      shake(frame(), 4, 280)
+    } else {
+      sfx.cardLegend()
+      haptic.burst()
+      fx.flashScreen('rgba(255,216,110,0.6)')
+      fx.burstAt(el, 'coins')
+      fx.burstAt(el, 'sparks')
+      shake(frame(), 11, 620)
     }
-  }, [cards])
+  }
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 카드는 처음 한 번 정해지고 펼치는 순서도 한 번만 돈다.
+  useEffect(() => {
+    if (reduced) {
+      sfx.levelUp()
+      haptic.medium()
+      return
+    }
+    sfx.cardDeal()
+    haptic.medium()
+    later(DEAL_MS - 220, () => shake(frame(), 3, 240))
+    plan.steps.forEach((step, i) => {
+      const grade = cards[i].grade
+      later(step.tease, () => {
+        setFace(i, 'tease')
+        sfx.cardTease(REVEAL_TIMING[grade].tease)
+        if (grade === 'UR') setDim(true)
+      })
+      later(step.turn, () => setFace(i, 'turn'))
+      later(step.face, () => {
+        setFace(i, 'front')
+        setDim(false)
+        revealFx(grade, buttons.current[i])
+      })
+    })
+    later(plan.ready, makeReady)
+    return clearTimers
+  }, [])
+
+  /** 다 펼치기 전에 누르면 남은 카드를 한 번에 펼친다. 연출은 남은 것 가운데 가장 높은 등급 것을 한 번만. */
+  const skip = () => {
+    if (readyNow.current || facesNow.current.every((f) => f === 'front')) return
+    clearTimers()
+    const pending = cards.filter((_, i) => facesNow.current[i] !== 'front')
+    const top = topGrade(pending.map((c) => c.grade))
+    const at = cards.findIndex((c, i) => facesNow.current[i] !== 'front' && c.grade === top)
+    facesNow.current = cards.map(() => 'front')
+    setFaces(facesNow.current)
+    setDim(false)
+    revealFx(top, buttons.current[at])
+    later(READY_GAP_MS, makeReady)
+  }
+
+  const pick = (c: Card, el: HTMLElement) => {
+    if (chosen) return
+    if (!readyNow.current) {
+      skip()
+      return
+    }
+    setChosen(c)
+    sfx.cardPick()
+    haptic.heavy()
+    const fx = useFx.getState()
+    fx.burstAt(el, 'sparks')
+    if (!reduced) {
+      fx.flashScreen('rgba(255,240,190,0.4)')
+      shake(frame(), 3, 220)
+    }
+    later(reduced ? 0 : 380, () => onPick(c))
+  }
+
   return (
-    <div className="stage-cards" data-testid="mental-cards">
-      <header className="stage-card-heading">
-        <span className="stage-card-crown" aria-hidden="true">
-          ✦
-        </span>
-        <p className="stage-card-eyebrow">MENTAL UPGRADE</p>
-        <h3 className="stage-card-title">{title}</h3>
-        <p className="stage-card-subtitle">{sub}</p>
-        <span className="stage-card-count">세 가지 가능성 · 단 한 장의 선택</span>
-      </header>
-      <div className="stage-card-options">
-        {cards.map((c, i) => (
-          <button
-            key={`${c.code}-${c.grade}`}
-            type="button"
-            disabled={chosen !== null}
-            style={
-              {
-                animationDelay: chosen ? '0ms' : `${120 + i * 110}ms`,
-                '--card-accent': c.color,
-              } as CSSProperties
-            }
-            data-card={c.code}
-            data-grade={c.grade}
-            data-chosen={chosen === c}
-            aria-pressed={chosen === c}
-            onClick={(ev) => {
-              if (chosen) {
-                return
-              }
-              setChosen(c)
-              sfx.cash()
-              haptic.heavy()
-              useFx.getState().burstAt(ev.currentTarget, 'sparks')
-              pickTimer.current = setTimeout(
-                () => onPick(c),
-                matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 240,
-              )
-            }}
-            className={`stage-card-option ${
-              chosen === c
-                ? 'animate-mental-card-pick'
-                : chosen
-                  ? 'opacity-30'
-                  : 'animate-mental-card-in'
-            }`}
-          >
-            <span className="stage-card-icon" aria-hidden="true">
-              <span>{c.icon}</span>
-            </span>
-            <span className="stage-card-copy">
-              <span className="stage-card-meta">
-                <span>
-                  {GRADE_NAMES[c.grade]} · {CARD_ROLES[c.code]}
-                </span>
-                <span aria-hidden="true">✦ {String(i + 1).padStart(2, '0')}</span>
-              </span>
-              <span className="stage-card-name">{c.name}</span>
-              {c.level && (
-                <span className="stage-card-level" data-testid="card-level">
-                  {c.level.from === 0
-                    ? `새 마법 · Lv.${c.level.to}`
-                    : `Lv.${c.level.from} → Lv.${c.level.to}`}
-                </span>
-              )}
-              <span className="stage-card-description">{c.desc}</span>
-            </span>
-            <span className="stage-card-effect">
-              <span aria-hidden="true">＋</span>
-              {c.effect}
-            </span>
-            <span className="stage-card-select" aria-hidden="true">
-              {chosen === c ? '✓ 선택 완료' : '선택 ›'}
-            </span>
-          </button>
-        ))}
+    <>
+      {!ready && (
+        <div
+          className="stage-card-catcher"
+          data-dim={dim}
+          aria-hidden="true"
+          onPointerDown={skip}
+        />
+      )}
+      <div
+        ref={root}
+        className="stage-cards"
+        data-testid="mental-cards"
+        data-revealed={ready}
+        onPointerDown={() => {
+          if (!readyNow.current) skip()
+        }}
+      >
+        <header className="stage-card-heading">
+          <span className="stage-card-crown" aria-hidden="true">
+            ✦
+          </span>
+          <p className="stage-card-eyebrow">MENTAL UPGRADE</p>
+          <h3 className="stage-card-title">{title}</h3>
+          <p className="stage-card-subtitle" aria-live="polite">
+            {ready ? sub : '카드를 펼치는 중 · 누르면 바로 펼쳐요'}
+          </p>
+          <span className="stage-card-count">세 가지 가능성 · 단 한 장의 선택</span>
+        </header>
+        <div className="stage-card-options">
+          {cards.map((c, i) => {
+            const face = faces[i]
+            const shown = face === 'front'
+            return (
+              <div
+                key={`${c.code}-${c.grade}`}
+                className="stage-card-slot"
+                data-grade={c.grade}
+                data-face={face}
+                data-chosen={chosen === c}
+                style={
+                  {
+                    '--card-accent': c.color,
+                    '--deal-delay': `${i * 70}ms`,
+                    '--tease-ms': `${REVEAL_TIMING[c.grade].tease}ms`,
+                    '--turn-ms': `${REVEAL_TIMING[c.grade].turn}ms`,
+                  } as CSSProperties
+                }
+              >
+                {shown && !reduced && c.grade !== 'N' && (
+                  <>
+                    <span className="stage-card-fx" aria-hidden="true">
+                      <span className="stage-card-glow" />
+                      {c.grade === 'SR' && <span className="stage-card-pillar" />}
+                      {c.grade === 'UR' && <span className="stage-card-rays" />}
+                    </span>
+                    <span className="stage-card-fx is-front" aria-hidden="true">
+                      {c.grade === 'UR' && <span className="stage-card-ring" />}
+                      {Array.from({ length: SPARKLES[c.grade] }, (_, k) => (
+                        <i
+                          // biome-ignore lint/suspicious/noArrayIndexKey: 반짝이는 자리만 다르고 늘 같은 수다.
+                          key={k}
+                          style={
+                            {
+                              '--a': `${(360 / SPARKLES[c.grade]) * k + (k % 2) * 14}deg`,
+                              '--d': `${54 + (k % 3) * 18}px`,
+                              animationDelay: `${(k % 4) * 40}ms`,
+                            } as CSSProperties
+                          }
+                        />
+                      ))}
+                    </span>
+                  </>
+                )}
+                {chosen === c && !reduced && (
+                  <span className="stage-card-fx is-front" aria-hidden="true">
+                    <span className="stage-card-ring is-pick" />
+                  </span>
+                )}
+                <button
+                  ref={(el) => {
+                    buttons.current[i] = el
+                  }}
+                  type="button"
+                  disabled={chosen !== null}
+                  aria-disabled={!ready}
+                  aria-label={shown ? undefined : `${i + 1}번째 카드 · 아직 뒤집혀 있음`}
+                  data-card={c.code}
+                  data-grade={c.grade}
+                  data-face={face}
+                  data-chosen={chosen === c}
+                  aria-pressed={chosen === c}
+                  onClick={(ev) => pick(c, ev.currentTarget)}
+                  className={`stage-card-option ${
+                    chosen === c ? 'animate-mental-card-pick' : chosen ? 'is-passed' : ''
+                  }`}
+                >
+                  <span className="stage-card-back" aria-hidden="true">
+                    <span className="stage-card-back-emblem">✦</span>
+                  </span>
+                  <span className="stage-card-icon" aria-hidden="true">
+                    <span>{c.icon}</span>
+                  </span>
+                  <span className="stage-card-copy">
+                    <span className="stage-card-meta">
+                      <span>
+                        {GRADE_NAMES[c.grade]} · {CARD_ROLES[c.code]}
+                      </span>
+                      <span aria-hidden="true">✦ {String(i + 1).padStart(2, '0')}</span>
+                    </span>
+                    <span className="stage-card-name">{c.name}</span>
+                    {c.level && (
+                      <span className="stage-card-level" data-testid="card-level">
+                        {c.level.from === 0
+                          ? `새 마법 · Lv.${c.level.to}`
+                          : `Lv.${c.level.from} → Lv.${c.level.to}`}
+                      </span>
+                    )}
+                    {c.mates && (
+                      <span className="stage-card-level" data-testid="card-mates">
+                        고양이 {c.mates.from} → {c.mates.to}마리
+                      </span>
+                    )}
+                    <span className="stage-card-description">{c.desc}</span>
+                  </span>
+                  <span className="stage-card-effect">
+                    <span aria-hidden="true">＋</span>
+                    {c.effect}
+                  </span>
+                  <span className="stage-card-select" aria-hidden="true">
+                    {chosen === c ? '✓ 선택 완료' : '선택 ›'}
+                  </span>
+                </button>
+              </div>
+            )
+          })}
+        </div>
+        <p className="stage-card-footnote">선택 즉시 적용 · 이번 전투 동안 유지</p>
       </div>
-      <p className="stage-card-footnote">선택 즉시 적용 · 이번 전투 동안 유지</p>
-    </div>
+    </>
   )
 }
 
@@ -790,10 +972,13 @@ function Battle({
                 const top = same.reduce((a, b) =>
                   GRADE_ORDER[b.grade] > GRADE_ORDER[a.grade] ? b : a,
                 )
-                // 마법은 고른 수가 곧 레벨이다(392번).
-                const label = top.level
-                  ? `${top.name} Lv.${same.length}`
-                  : `${top.name} ${same.length}장`
+                // 마법은 고른 수가 곧 레벨이다(392번). 고양이 카드는 함께 싸우는 고양이 수(393번).
+                const label =
+                  code === 'cat'
+                    ? `함께 싸우는 고양이 ${same.length}마리`
+                    : top.level
+                      ? `${top.name} Lv.${same.length}`
+                      : `${top.name} ${same.length}장`
                 return (
                   <span
                     key={code}

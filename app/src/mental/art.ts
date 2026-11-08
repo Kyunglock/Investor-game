@@ -6,6 +6,7 @@ import type { EnemyKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import type { Hero } from './hero'
+import { MATE_LOOKS } from './mates'
 import { drawMentalWall, drawSprite } from './stageArt'
 
 /** 승인한 캐주얼 시안의 투명 스프라이트를 Phaser 텍스처로 굽고, 무기·벽·탄환을 실시간 상태에 맞춰 합성한다. */
@@ -81,6 +82,83 @@ export function bakeHero(scene: Phaser.Scene, hero: Hero) {
     c.translate(8, 8)
     drawStageGun(c, BOSS_LOOK.fur, hero.weapon.kind, hero.weapon.grade)
   })
+}
+
+/** 함께 싸우는 고양이 i번의 텍스처 열쇠: 몸과 (같은 무기를 쥔) 앞발. */
+export const mateKey = (i: number) => `mate-${i}`
+export const mateGunKey = (i: number) => `mate-${i}-gun`
+
+/**
+ * 그린 것에 색을 'color'로 섞는다(393번): 밝기는 두고 빛깔만 바꿔 윤곽·눈은 그대로, 털만 다른 색 고양이가 된다. 섞으면 투명한 곳까지 칠해지니 원래 그림의
+ * 모양으로 다시 오린다. 'color' 섞기는 캔버스 2D에서 어디서나 된다(필터와 달리).
+ */
+function recolor(c: CanvasRenderingContext2D, w: number, h: number, color: string, paint: Painter) {
+  const make = () => {
+    const cv = document.createElement('canvas')
+    cv.width = Math.ceil(w * DPR)
+    cv.height = Math.ceil(h * DPR)
+    return cv
+  }
+  const art = make()
+  const g = art.getContext('2d')
+  const shape = make()
+  const m = shape.getContext('2d')
+  if (!g || !m) return
+  g.scale(DPR, DPR)
+  paint(g)
+  m.drawImage(art, 0, 0)
+  g.setTransform(1, 0, 0, 1, 0, 0)
+  g.globalCompositeOperation = 'color'
+  g.globalAlpha = 0.85
+  g.fillStyle = color
+  g.fillRect(0, 0, art.width, art.height)
+  g.globalAlpha = 1
+  g.globalCompositeOperation = 'destination-in'
+  g.drawImage(shape, 0, 0)
+  c.drawImage(art, 0, 0, w, h)
+}
+
+/** 한 색에 recolor와 같은 섞기를 한 결과 색: 앞발을 털과 같은 색으로 칠할 때 쓴다. */
+function mixed(base: string, color: string): string {
+  const cv = document.createElement('canvas')
+  cv.width = cv.height = 1
+  const g = cv.getContext('2d', { willReadFrequently: true })
+  if (!g) return base
+  g.fillStyle = base
+  g.fillRect(0, 0, 1, 1)
+  g.globalCompositeOperation = 'color'
+  g.globalAlpha = 0.85
+  g.fillStyle = color
+  g.fillRect(0, 0, 1, 1)
+  const [r, gr, b] = g.getImageData(0, 0, 1, 1).data
+  return `rgb(${r}, ${gr}, ${b})`
+}
+
+/** 사장냥과 똑같은 고양이를 색만 바꿔 굽는다(393번). 든 무기도 같고, 무기를 쥔 앞발은 그 고양이 털 색이다. */
+export function bakeMates(scene: Phaser.Scene, hero: Hero) {
+  const source = scene.textures.get('art-hero').getSourceImage() as HTMLImageElement
+  for (const [i, look] of MATE_LOOKS.entries()) {
+    bake(scene, mateKey(i), CAT_W, CAT_H, (c) => {
+      c.fillStyle = '#4f8a7133'
+      c.beginPath()
+      c.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
+      c.fill()
+      recolor(c, CAT_W, CAT_H, look.color, (g) =>
+        drawSprite(
+          g,
+          source,
+          { x: 0, y: 0, w: source.width, h: source.height },
+          { x: 14, y: 3, w: 75, h: 100 },
+        ),
+      )
+    })
+    bake(scene, mateGunKey(i), GUN.w, GUN.h, (c) => {
+      // 총은 사장냥 것과 같고, 쥔 앞발만 고양이 털 색이다.
+      c.scale(HERO_SCALE * GUN_K, HERO_SCALE * GUN_K)
+      c.translate(8, 8)
+      drawStageGun(c, mixed(BOSS_LOOK.fur, look.color), hero.weapon.kind, hero.weapon.grade)
+    })
+  }
 }
 
 /** 고정된 크기의 8프레임 보행. 그림만 변형하고 충돌 원은 유지한다. */

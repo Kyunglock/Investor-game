@@ -19,11 +19,14 @@ import {
   bakeEnemies,
   bakeHero,
   bakeMagic,
+  bakeMates,
   bakeStage,
   DPR,
   enemyKey,
   GUN,
   HERO_SIZE,
+  mateGunKey,
+  mateKey,
   WALL_H,
 } from './art'
 import { STAGE_ASSETS } from './assets'
@@ -58,6 +61,7 @@ import {
   type WaterStats,
   waterStats,
 } from './magic'
+import { MATE_LOOKS, mateFormation } from './mates'
 import { wallOffset } from './stageArt'
 import { pierceOf, SLOW_FACTOR, SLOW_SECONDS, weaponDamage } from './weaponEffects'
 
@@ -166,11 +170,28 @@ type Bullet = Phaser.Physics.Arcade.Image & {
 /** 데미지 숫자 한 칸: 합칠 때 다시 튀게 하는 크기 트윈. */
 type DamageText = Phaser.GameObjects.Text & { punch: Phaser.Tweens.Tween | null }
 
-/** 마법을 쏘는 주체 (392번): 자리와 마법 시계. 지금은 사장냥 하나이고, 함께 싸우는 고양이가 생기면 저마다 하나씩 더해 같은 마법을 제 자리에서 쓴다. */
+/** 마법을 쏘는 주체 (392번): 자리와 마법 시계. 사장냥 하나에 함께 싸우는 고양이(393번)마다 하나씩 더해 같은 마법을 제 자리에서 쓴다. */
 interface MagicCaster {
   at: () => { x: number; y: number }
   clock: MagicClock
 }
+/**
+ * 함께 싸우는 고양이 (393번): 그림·총·시전자. 사장냥과 똑같이 세다(같은 수치로 쏘고 같은 마법을 쓴다). 몸(충돌)은 없다: 멘탈벽 뒤에 서서 쏘기만
+ * 하고 적에게 맞지 않는다.
+ */
+interface Mate {
+  body: Phaser.GameObjects.Image
+  gun: Phaser.GameObjects.Image
+  caster: MagicCaster
+  aim: number
+  lastFire: number
+  /** 합류할 때 위에서 떨어지는 높이(px). 트윈이 0으로 줄인다. */
+  drop: number
+}
+/** 여러 시전자가 같은 마법을 한꺼번에 겹쳐 쏘지 않게 시전자마다 늦추는 초. */
+const CAST_STAGGER = 0.18
+/** 같은 마법 소리를 이 간격(ms) 안에 또 내지 않는다: 고양이 넷이 함께 쏘면 소리가 뭉개지고 폰에서 오디오 노드가 쌓였다. */
+const SOUND_GAP_MS = 90
 /** 날아가는 물(풀에서 돌려 쓴다): 물방울·물줄기·큰 물결. half·depth는 지금 맞는 폭(sweepHits). */
 interface WaterShot {
   img: Phaser.GameObjects.Image
@@ -223,6 +244,9 @@ export interface DamageStats {
   peak: number
   /** 마법이 나간 횟수 (392번). */
   casts: Record<Magic, number>
+  /** 함께 싸우는 고양이가 쏜 총알 수와 지금 고양이 수 (393번). */
+  mateShots: number
+  mates: number
 }
 
 /** 적 그림(64×64)의 충돌 원: 가운데에 반지름 r. */
@@ -298,9 +322,17 @@ class BattleScene extends Phaser.Scene {
     killing: 0,
     peak: 0,
     casts: { water: 0, fire: 0, lightning: 0 },
+    mateShots: 0,
+    mates: 0,
   }
   /** 마법 (392번): 쏘는 주체들과 풀에서 돌려 쓰는 탄·불길·번개 줄기·빛, 마법마다 파티클 하나. */
   private casters: MagicCaster[] = []
+  /** 함께 싸우는 고양이 (393번): 들어온 차례대로. */
+  private mates: Mate[] = []
+  /** 지금 쏠 곳과 그것을 찾은 때(update). */
+  private target: { x: number; y: number } | null = null
+  private targetAt = 0
+  private lastSound: Partial<Record<'splash' | 'whoosh' | 'boom' | 'zap', number>> = {}
   private waters: WaterShot[] = []
   private embers: FireShot[] = []
   private patches: FirePatch[] = []
@@ -376,10 +408,14 @@ class BattleScene extends Phaser.Scene {
 
   applyLoadout(loadout: Loadout) {
     for (const m of MAGICS) {
-      // 마법을 새로 배우거나 레벨이 올랐다: 새 연출이 곧바로 한 번 나간다.
-      if (loadout[m] > this.loadout[m]) for (const c of this.casters) c.clock.ready(m)
+      // 마법을 새로 배우거나 레벨이 올랐다: 새 연출이 곧바로 한 번 나간다. 고양이가 여럿이면 차례로 조금씩 늦게.
+      if (loadout[m] > this.loadout[m]) {
+        for (const [i, c] of this.casters.entries())
+          c.clock.ready(m, this.elapsed + i * CAST_STAGGER)
+      }
     }
     this.loadout = { ...loadout, heal: 0 }
+    this.syncMates()
     if (loadout.heal > 0) {
       this.mental = Math.min(loadout.maxMental, this.mental + loadout.heal)
       this.pop(this.player.x, this.player.y - 40, `멘탈 +${loadout.heal}`, '#7be0c3', 24)
@@ -415,6 +451,7 @@ class BattleScene extends Phaser.Scene {
     this.opts.onReady?.()
     bakeStage(this, this.opts.genre)
     bakeHero(this, this.opts.hero)
+    bakeMates(this, this.opts.hero)
     bakeEnemies(this)
     bakeMagic(this)
 
@@ -437,10 +474,11 @@ class BattleScene extends Phaser.Scene {
       if (this.mode === 'advance') {
         if (this.player) this.movePlayer(this.player.x, this.player.y)
         this.drag = null
-      } else {
-        this.player?.setPosition(w / 2, this.playerY())
-        this.gun?.setPosition(w / 2 + GUN.dx, this.playerY() + GUN.dy)
+      } else if (this.player) {
+        this.player.setPosition(this.standX(0), this.playerY())
+        this.gun?.setPosition(this.player.x + GUN.dx, this.playerY() + GUN.dy)
       }
+      for (const [i, m] of this.mates.entries()) m.body.setX(this.standX(i + 1))
       this.wall?.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)
       if (this.wallZone) {
         this.wallZone.setPosition(w / 2, this.wallY()).setSize(w, WALL_H * 2)
@@ -557,6 +595,8 @@ class BattleScene extends Phaser.Scene {
         alpha: { start: 0.6, end: 0 },
         tint: [0xffe08a, 0xffb300],
         emitting: false,
+        // 고양이 넷이 쏘면 탄이 넷 배라 꼬리 수를 묶는다 (393번).
+        maxAliveParticles: 160,
       })
       .setDepth(3)
     this.hitSpark = this.add
@@ -566,10 +606,12 @@ class BattleScene extends Phaser.Scene {
         scale: { start: 1.6 * TEX, end: 0 },
         tint: [0xffffff, 0xffe08a],
         emitting: false,
+        maxAliveParticles: 120,
       })
       .setDepth(7)
     this.createMagic()
-    for (let i = 0; i < 6; i++) {
+    // 총구 화염은 고양이 넷이 함께 쏘아도 모자라지 않게 (393번).
+    for (let i = 0; i < 12; i++) {
       this.flashes.push(this.add.image(0, 0, 'flash').setDepth(6).setVisible(false))
     }
     for (let i = 0; i < 20; i++) {
@@ -645,6 +687,93 @@ class BattleScene extends Phaser.Scene {
     return this.mode === 'defense' && this.genre.target === 'wall'
       ? this.wallY() + 78
       : this.view().h - 140
+  }
+
+  /**
+   * 한 줄로 늘어선 자리의 x (393번, mates.ts): 0은 사장냥, 1부터 함께 싸우는 고양이. 디펜스는 멘탈벽 뒤 가운데에 줄 전체를 두고, 전진 모드는 사장냥을
+   * 따라다닌다(화면 밖으로 나가지 않게).
+   */
+  private standX(i: number) {
+    const { w } = this.view()
+    const line = mateFormation(this.mates.length + 1, w)
+    const off = line[i] ?? 0
+    if (this.mode === 'defense' || !this.player) return w / 2 + off
+    return Phaser.Math.Clamp(this.player.x + off - line[0], 28, w - 28)
+  }
+
+  /** 고양이 수를 수치에 맞춘다. 실제 판에서는 늘기만 하고, 개발 서버의 확인 스크립트가 줄이면 뒤에서부터 뺀다. */
+  private syncMates() {
+    if (!this.player) return
+    const want = Phaser.Math.Clamp(Math.floor(this.loadout.mates), 0, MATE_LOOKS.length)
+    while (this.mates.length > want) {
+      const m = this.mates.pop()
+      if (!m) break
+      this.tweens.killTweensOf(m)
+      m.body.destroy()
+      m.gun.destroy()
+      this.casters = this.casters.filter((c) => c !== m.caster)
+    }
+    while (this.mates.length < want) this.addMate()
+    this.damageStats.mates = this.mates.length
+  }
+
+  /** 고양이 한 마리가 제자리 위에서 떨어져 내려와 합류한다: 쿵, 고리, 이름. 배운 마법은 곧 한 번씩 보여 준다. */
+  private addMate() {
+    const i = this.mates.length
+    const y = this.mode === 'defense' ? this.playerY() : this.player.y
+    const body = this.add
+      .image(this.player.x, y, mateKey(i))
+      .setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
+      .setDepth(5)
+    const gun = this.add
+      .image(body.x + GUN.dx, y + GUN.dy, mateGunKey(i))
+      .setRotation(this.aim)
+      .setOrigin(GUN.ox, GUN.oy)
+      .setDisplaySize(GUN.w, GUN.h)
+      .setDepth(6)
+    const mate: Mate = {
+      body,
+      gun,
+      caster: { at: () => ({ x: body.x, y: body.y - 24 }), clock: new MagicClock() },
+      aim: this.aim,
+      // 사장냥과 번갈아 쏘게 연사 간격 안에서 조금씩 어긋나게 시작한다.
+      lastFire: this.lastFire + (this.loadout.fireMs * (i + 1)) / (MATE_LOOKS.length + 1),
+      drop: this.reducedMotion ? 0 : -150,
+    }
+    this.mates.push(mate)
+    this.casters.push(mate.caster)
+    for (const m of MAGICS) {
+      if (this.loadout[m] > 0)
+        mate.caster.clock.ready(m, this.elapsed + 0.45 + this.casters.length * CAST_STAGGER)
+    }
+    // 늘어선 자리가 바뀌었다: 새 고양이는 제자리에서 내려오고 나머지는 옆으로 비켜선다(update가 미끄러지게 옮긴다).
+    body.setPosition(this.standX(i + 1), y + mate.drop)
+    gun.setPosition(body.x + GUN.dx, body.y + GUN.dy)
+    const land = () => {
+      const fx = body.x
+      const fy = body.y + 30
+      this.ring(fx, fy, 0xffffff, 56, 320)
+      this.glow(fx, fy - 20, 0xffe7a8, 60, 360, 0.7)
+      this.hitSpark.explode(this.fx(14), fx, fy)
+      this.pop(fx, body.y - 56, `${MATE_LOOKS[i].name} 합류!`, '#ffe08a', 22)
+      sfx.mateJoin()
+      if (!this.reducedMotion) this.cameras.main.shake(120, 0.004)
+    }
+    if (this.reducedMotion) {
+      land()
+      return
+    }
+    this.tweens.add({
+      targets: mate,
+      drop: 0,
+      duration: 460,
+      ease: 'Bounce.easeOut',
+      onComplete: () => {
+        // 튀는 끝값이 부동소수 오차로 0이 아닐 수 있어 딱 맞춘다(내려앉아야 쏜다).
+        mate.drop = 0
+        land()
+      },
+    })
   }
 
   /** 전진 모드: 사장냥을 옮긴다. 화면 가장자리와 위쪽 길막 줄에는 못 간다. */
@@ -1148,30 +1277,24 @@ class BattleScene extends Phaser.Scene {
     return close ? near : boss
   }
 
-  /** 총구 자리: 총 피벗에서 겨누는 쪽으로 총 길이만큼. */
-  private muzzle() {
-    const px = this.player.x + GUN.dx
-    const py = this.player.y + GUN.dy
-    return { x: px + Math.cos(this.aim) * GUN.len, y: py + Math.sin(this.aim) * GUN.len }
+  /** 총구 자리: 쏘는 고양이의 총 피벗에서 겨누는 쪽으로 총 길이만큼. */
+  private muzzle(x: number, y: number, aim: number) {
+    const px = x + GUN.dx
+    const py = y + GUN.dy
+    return { x: px + Math.cos(aim) * GUN.len, y: py + Math.sin(aim) * GUN.len }
   }
 
-  private shoot(now: number) {
-    // 각도는 총 피벗에서 잰다: 사장냥 가운데에서 재면 가까운 적은 총구가 비켜 있어 빗나간다.
+  /**
+   * 이번에 쏠 곳: 디펜스에서 누르고 있으면 누른 자리, 전진 모드는 자동 조준의 과녁, 디펜스에서 안 누르면 사장냥 총에서 520px 안의 가장 가까운 적.
+   * 함께 싸우는 고양이도 같은 곳을 제 총에서 겨눠 쏜다(393번: 같은 방향으로).
+   */
+  private shotTarget(): { x: number; y: number } | null {
     const ptr = this.input.activePointer
     const gx = this.player.x + GUN.dx
     const gy = this.player.y + GUN.dy
     // 전진 모드는 손가락이 이동이라 늘 자동 조준이다 (364번).
-    if (ptr.isDown && this.mode === 'defense') {
-      this.fire(now, Math.atan2(ptr.worldY - gy, ptr.worldX - gx))
-      return
-    }
-    if (this.mode === 'advance') {
-      const target = this.autoTarget()
-      if (target) {
-        this.fire(now, Math.atan2(target.y - gy, target.x - gx))
-      }
-      return
-    }
+    if (ptr.isDown && this.mode === 'defense') return { x: ptr.worldX, y: ptr.worldY }
+    if (this.mode === 'advance') return this.autoTarget()
     let best: Enemy | null = null
     let bestDist = 520 * 520
     for (const child of this.enemies.getChildren()) {
@@ -1185,19 +1308,29 @@ class BattleScene extends Phaser.Scene {
         best = e
       }
     }
-    if (!best) {
-      return
-    }
-    this.fire(now, Math.atan2(best.y - gy, best.x - gx))
+    return best
   }
 
-  private fire(now: number, base: number) {
-    this.lastFire = now
-    sfx.shot()
-    const p = this.player
-    this.aim = base
+  /** 각도는 총 피벗에서 잰다: 고양이 가운데에서 재면 가까운 적은 총구가 비켜 있어 빗나간다. */
+  private angleFrom(x: number, y: number, target: { x: number; y: number }) {
+    return Math.atan2(target.y - (y + GUN.dy), target.x - (x + GUN.dx))
+  }
+
+  /** 한 발 쏜다. mate가 없으면 사장냥, 있으면 그 고양이가 같은 수치(무기·피해·연사·강화)로 쏜다(393번). */
+  private fire(now: number, base: number, mate?: Mate) {
+    const p = mate ? mate.body : this.player
+    if (mate) {
+      mate.lastFire = now
+      mate.aim = base
+      this.damageStats.mateShots++
+    } else {
+      this.lastFire = now
+      // 총소리는 사장냥 것만: 넷이 다 내면 뭉개지고 오디오 노드가 쌓인다.
+      sfx.shot()
+      this.aim = base
+    }
     // 총 손맛: 총구 화염, 반동(눌렸다 펴짐), 화면이 살짝 흔들린다.
-    const m = this.muzzle()
+    const m = this.muzzle(p.x, p.y, base)
     const flash = this.flashes[this.flashIndex++ % this.flashes.length]
     flash.setPosition(m.x, m.y).setRotation(base).setScale(TEX).setAlpha(1).setVisible(true)
     this.tweens.killTweensOf(flash)
@@ -1209,7 +1342,7 @@ class BattleScene extends Phaser.Scene {
       onComplete: () => flash.setVisible(false),
     })
     this.tweens.killTweensOf(p)
-    const [sx, sy] = [p.scaleX, p.scaleY]
+    const [sx, sy] = [HERO_SIZE.w / p.width, HERO_SIZE.h / p.height]
     p.setScale(sx * 1.1, sy * 0.92)
     this.tweens.add({ targets: p, scaleX: sx, scaleY: sy, duration: 110, ease: 'Back.easeOut' })
     const stats = bulletStats(this.loadout)
@@ -1288,7 +1421,8 @@ class BattleScene extends Phaser.Scene {
       .setDepth(7)
     const hidden = (key: string, depth: number) =>
       this.add.image(0, 0, key).setDepth(depth).setVisible(false)
-    for (let i = 0; i < 8; i++) {
+    // 풀은 고양이 넷이 같은 마법을 써도 모자라지 않게 392번의 두 배로 잡는다 (393번). 파티클은 위의 상한이 묶는다.
+    for (let i = 0; i < 16; i++) {
       this.waters.push({
         img: hidden('magic-drop', 4),
         active: false,
@@ -1303,7 +1437,7 @@ class BattleScene extends Phaser.Scene {
         hitList: [],
       })
     }
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 12; i++) {
       this.embers.push({
         img: hidden('magic-ember', 6),
         active: false,
@@ -1327,11 +1461,19 @@ class BattleScene extends Phaser.Scene {
       })
       this.bolts.push(this.add.graphics().setDepth(6).setVisible(false))
     }
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
       this.rings.push(hidden('magic-ring', 6))
       this.glows.push(hidden('magic-glow', 5))
     }
-    for (let i = 0; i < 3; i++) this.pillars.push(hidden('magic-pillar', 6).setOrigin(0.5, 1))
+    for (let i = 0; i < 6; i++) this.pillars.push(hidden('magic-pillar', 6).setOrigin(0.5, 1))
+  }
+
+  /** 마법 소리: 같은 소리는 SOUND_GAP_MS 안에 한 번만 (393번, 고양이 넷이 함께 쓸 때). */
+  private magicSound(key: 'splash' | 'whoosh' | 'boom' | 'zap') {
+    const now = performance.now()
+    if (now - (this.lastSound[key] ?? Number.NEGATIVE_INFINITY) < SOUND_GAP_MS) return
+    this.lastSound[key] = now
+    sfx[key]()
   }
 
   /** 줄인 움직임이면 파티클을 반만. */
@@ -1455,7 +1597,7 @@ class BattleScene extends Phaser.Scene {
     else if (tier === 2) s.img.setDisplaySize(92, 26)
     this.moveWater(s, 0)
     this.waterFx.explode(this.fx(3 * tier), from.x, from.y)
-    sfx.splash()
+    this.magicSound('splash')
     return true
   }
 
@@ -1550,7 +1692,7 @@ class BattleScene extends Phaser.Scene {
       .setScale(TEX * [0.75, 1.15, 1.6][tier - 1] * this.grow(level))
       .setAlpha(1)
       .setVisible(true)
-    sfx.whoosh()
+    this.magicSound('whoosh')
     return true
   }
 
@@ -1602,7 +1744,7 @@ class BattleScene extends Phaser.Scene {
       this.time.delayedCall(90, () => this.ring(x, y, 0xffd04d, st.radius * 1.25, 360))
       if (!this.reducedMotion) this.cameras.main.shake(110, 0.004)
     }
-    sfx.boom()
+    this.magicSound('boom')
     const dmg = st.damage * this.loadout.damage
     const dps = st.burnDps * this.loadout.damage
     for (const e of this.magicTargets()) {
@@ -1667,7 +1809,7 @@ class BattleScene extends Phaser.Scene {
       chain: chainTargets(t, list, st.chains, st.chainRadius),
     }))
     for (const { t, chain } of plans) this.strike(t, chain, st, level)
-    sfx.zap()
+    this.magicSound('zap')
     return true
   }
 
@@ -1865,6 +2007,32 @@ class BattleScene extends Phaser.Scene {
     })
   }
 
+  /** 함께 싸우는 고양이: 제자리로 미끄러지고, 숨 쉬고, 같은 곳을 겨눠 연사 간격마다 쏜다 (393번). */
+  private updateMates(time: number, dt: number, target: { x: number; y: number } | null) {
+    const y = this.mode === 'defense' ? this.playerY() : this.player.y
+    const k = Math.min(1, dt * 8)
+    const turn = Math.min(1, dt * 10)
+    for (const [i, m] of this.mates.entries()) {
+      const b = m.body
+      b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop)
+      if (!this.tweens.isTweening(b)) {
+        b.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h * (1 + Math.sin(time / 260 + i * 1.7) * 0.025))
+      }
+      if (target) {
+        const want = this.angleFrom(b.x, b.y, target)
+        if (m.drop === 0 && time - m.lastFire > this.loadout.fireMs) {
+          this.fire(time, want, m)
+        } else {
+          m.aim += Phaser.Math.Angle.Wrap(want - m.aim) * turn
+        }
+      }
+      m.gun
+        .setPosition(b.x + GUN.dx, b.y + GUN.dy)
+        .setRotation(m.aim)
+        .setFlipY(Math.cos(m.aim) < 0)
+    }
+  }
+
   update(time: number, dtMs: number) {
     if (this.over && !this.player) return
     this.pushHud()
@@ -1903,7 +2071,8 @@ class BattleScene extends Phaser.Scene {
         }
       }
     } else {
-      p.setPosition(w / 2, this.playerY())
+      // 고양이가 늘면 줄이 넓어지며 사장냥도 제자리로 미끄러진다 (393번).
+      p.setPosition(p.x + (this.standX(0) - p.x) * Math.min(1, dt * 8), this.playerY())
     }
     const hurting = time < this.hurtUntil
     p.setTexture(hurting ? 'hero-hurt' : ptr.isDown ? 'hero-fire' : 'hero-idle')
@@ -1937,9 +2106,18 @@ class BattleScene extends Phaser.Scene {
       ;(this.wallZone.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject()
     }
 
-    if (time - this.lastFire > this.loadout.fireMs) {
-      this.shoot(time)
+    // 사장냥과 함께 싸우는 고양이가 같은 곳을 저마다 제 총으로 쏜다 (393번). 과녁 찾기는 적 풀 전체를 도니 누가 쏠 때거나 80ms마다만 새로 찾는다.
+    const fireMs = this.loadout.fireMs
+    const due = time - this.lastFire > fireMs || this.mates.some((m) => time - m.lastFire > fireMs)
+    if (due || time - this.targetAt > 80) {
+      this.target = this.shotTarget()
+      this.targetAt = time
     }
+    const target = this.target
+    if (target && time - this.lastFire > fireMs) {
+      this.fire(time, this.angleFrom(p.x, p.y, target))
+    }
+    this.updateMates(time, dt, target)
     // 마법은 총알과 따로 제 주기에 스스로 나간다 (392번).
     this.castMagic()
     this.updateMagic(dt)
@@ -2104,9 +2282,11 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
     const dev = window as unknown as {
       __mentalDamage?: DamageStats
       __mentalMagic?: (levels: Partial<MagicLevels>) => void
+      __mentalMates?: (mates: number) => void
     }
     dev.__mentalDamage = scene.damageStats
     dev.__mentalMagic = (levels) => scene.applyLoadout({ ...scene.loadout, ...levels })
+    dev.__mentalMates = (mates) => scene.applyLoadout({ ...scene.loadout, mates })
   }
   const ro = new ResizeObserver(() => {
     const w = Math.round(parent.clientWidth * DPR)
