@@ -45,6 +45,29 @@ export const SEGMENTS: readonly Segment[] = [
   },
 ]
 
+/**
+ * 마지막 보스 (364번, #487): 다섯 구간을 넘으면 '패닉셀 대장'이 나온다. 패닉셀 그림을 크게 키워 쓴다. 화면 위쪽에서 좌우로 오가며 졸개 패닉셀을 사장냥
+ * 쪽으로 내려보내고, 체력이 반 아래로 떨어지면 더 자주 부른다. 잡으면 클리어다.
+ */
+export const BOSS = {
+  name: '패닉셀 대장',
+  kind: 'panic' as EnemyKind,
+  hp: 60,
+  /** 보통 적 크기에 곱하는 배율. */
+  scale: 2.6,
+  /** 부딪히면 깎는 멘탈. */
+  dmg: 15,
+  /** 졸개를 부르는 간격(초)과 한 번에 부르는 수. 체력이 반 아래면 간격이 이만큼 줄어든다. */
+  summonSeconds: 2.4,
+  summonCount: 3,
+  enragedFactor: 0.6,
+}
+
+/** 보스가 졸개를 부르는 간격(초): 체력이 반 아래면 더 잦다. */
+export function bossSummonSeconds(hpLeft: number): number {
+  return hpLeft <= BOSS.hp / 2 ? BOSS.summonSeconds * BOSS.enragedFactor : BOSS.summonSeconds
+}
+
 /** 한 구간을 넘겨 화면이 올라가는 시간(초). */
 export const SCROLL_SECONDS = 1.2
 

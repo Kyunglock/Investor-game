@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formation, SEGMENTS, stars } from './advance'
+import { BOSS, bossSummonSeconds, formation, SEGMENTS, stars } from './advance'
 
 describe('전진 모드', () => {
   it('구간은 다섯이고 뒤로 갈수록 길막 적이 많다', () => {
@@ -21,6 +21,12 @@ describe('전진 모드', () => {
         expect(s.y).toBeLessThan(0)
       }
     }
+  })
+
+  it('보스는 체력이 반 아래로 떨어지면 졸개를 더 자주 부른다', () => {
+    expect(bossSummonSeconds(BOSS.hp)).toBe(BOSS.summonSeconds)
+    expect(bossSummonSeconds(BOSS.hp / 2)).toBeLessThan(BOSS.summonSeconds)
+    expect(bossSummonSeconds(1)).toBeLessThan(BOSS.summonSeconds)
   })
 
   it('별: 깨면 하나, 절반 시간 안이면 하나 더, 멘탈을 반 넘게 남기면 하나 더', () => {

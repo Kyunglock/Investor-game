@@ -625,7 +625,7 @@ function Battle({
               </div>
               {hud.segment && (
                 <b className="battle-segment" data-testid="battle-segment">
-                  구간 {hud.segment.at}/{hud.segment.total}
+                  {hud.boss ? '보스' : `구간 ${hud.segment.at}/${hud.segment.total}`}
                 </b>
               )}
               <time data-testid="battle-timer">
@@ -645,6 +645,21 @@ function Battle({
                 Ⅱ
               </button>
             </div>
+            {hud.boss && (
+              <div className="battle-boss" data-testid="battle-boss">
+                <b>{hud.boss.name}</b>
+                <div
+                  className="battle-boss-health"
+                  role="progressbar"
+                  aria-label={`${hud.boss.name} 체력`}
+                  aria-valuenow={Math.round(hud.boss.hp * 100)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <i style={{ width: `${hud.boss.hp * 100}%` }} />
+                </div>
+              </div>
+            )}
             <div className="battle-hud-bottom">
               <b>Lv. {hud.level}</b>
               <div

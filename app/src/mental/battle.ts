@@ -2,6 +2,8 @@ import Phaser from 'phaser'
 import { sfx } from '../fx/sound'
 import {
   type BattleMode,
+  BOSS,
+  bossSummonSeconds,
   formation,
   SCROLL_SECONDS,
   SEGMENTS,
@@ -35,6 +37,8 @@ export interface Hud {
   xp: number
   /** 전진 모드의 구간: 지금 몇 번째(1부터)를 싸우는지와 전체 수. 디펜스는 null. */
   segment: { at: number; total: number } | null
+  /** 보스가 나와 있으면 이름과 남은 체력 비율(0~1). */
+  boss: { name: string; hp: number } | null
 }
 
 export interface Outcome {
@@ -88,6 +92,8 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   dying: boolean
   /** 전진 모드에서 길을 막는 적: 다 잡아야 다음 구간이 열린다. 아래로 지나가면 다시 위에서 내려온다. */
   blocker: boolean
+  /** 전진 모드의 마지막 보스(364번). */
+  boss: boolean
 }
 type Bullet = Phaser.Physics.Arcade.Image & {
   life: number
@@ -128,6 +134,9 @@ class BattleScene extends Phaser.Scene {
   private blockersLeft = 0
   private scrolling = 0
   private lastTrickle = 0
+  /** 마지막 보스와 마지막으로 졸개를 부른 때(초). */
+  private bossEnemy: Enemy | null = null
+  private lastSummon = 0
   /** 전진 모드의 드래그: 누른 자리와 그때 사장냥 자리. 손가락이 움직인 만큼 사장냥이 따라간다. */
   private drag: { px: number; py: number; cx: number; cy: number } | null = null
   private player!: Phaser.Physics.Arcade.Image
@@ -335,7 +344,7 @@ class BattleScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.enemies, (_p, e) => {
       const enemy = e as Enemy
       if (enemy.active && !enemy.dying) {
-        this.hurt(ENEMIES[enemy.kind].dmg, enemy)
+        this.hurt(enemy.boss ? BOSS.dmg : ENEMIES[enemy.kind].dmg, enemy)
       }
     })
     if (this.wallZone) {
@@ -462,15 +471,45 @@ class BattleScene extends Phaser.Scene {
   /** 길막 적을 다 잡았다: 다음 구간으로 화면이 올라가거나, 마지막이면 깼다. */
   private segmentCleared() {
     this.segment++
-    if (this.segment >= SEGMENTS.length) {
-      this.opts.onBanner('돌파!! 멘탈 전진 성공', '#ffd84d')
+    sfx.levelUp()
+    this.opts.onBanner(
+      this.segment >= SEGMENTS.length
+        ? `${BOSS.name} 등장!!`
+        : `구간 돌파! ${this.segment}/${SEGMENTS.length}`,
+      this.segment >= SEGMENTS.length ? '#ff4f6d' : '#7be0c3',
+    )
+    this.scrolling = SCROLL_SECONDS
+    this.pushHud(true)
+  }
+
+  /** 마지막 보스를 부른다: 화면 위 가운데에서 크게 내려온다. 보통 적 수 제한과 상관없이 나온다. */
+  private startBoss() {
+    const { w } = this.view()
+    const e = this.spawn(BOSS.kind, [w / 2, -90], true)
+    if (!e) {
+      // 풀이 꽉 차 보스를 못 꺼내면 판이 끝나지 않으니 그대로 깬 것으로 친다.
       this.finish(true, 'clear')
       return
     }
-    sfx.levelUp()
-    this.opts.onBanner(`구간 돌파! ${this.segment}/${SEGMENTS.length}`, '#7be0c3')
-    this.scrolling = SCROLL_SECONDS
+    this.tweens.killTweensOf(e)
+    e.boss = true
+    e.hp = BOSS.hp
+    e.setScale(ENEMY_K * BOSS.scale)
+    this.bossEnemy = e
+    this.lastSummon = this.elapsed
+    this.cameras.main.shake(260, 0.012)
     this.pushHud(true)
+  }
+
+  /** 보스가 졸개를 부른다: 보스 발밑에서 사장냥 쪽으로 부채꼴로 내려간다. */
+  private summon(boss: Enemy) {
+    const { w } = this.view()
+    for (let i = 0; i < BOSS.summonCount; i++) {
+      const spread = (i - (BOSS.summonCount - 1) / 2) * 46
+      const x = Phaser.Math.Clamp(boss.x + spread, w * 0.1, w * 0.9)
+      this.spawn('panic', [x, boss.y + 40])
+    }
+    this.pop(boss.x, boss.y - 70, '다 팔아!!', '#3a86ff', 26)
   }
 
   // ── 생성
@@ -491,6 +530,7 @@ class BattleScene extends Phaser.Scene {
       return null
     }
     e.blocker = false
+    e.boss = false
     const v = ENEMIES[kind]
     e.setTexture(enemyKey(kind, 0))
       .enableBody(true, x, y, true, true)
@@ -526,7 +566,23 @@ class BattleScene extends Phaser.Scene {
       this.scrolling -= dt
       if (this.scrolling <= 0) {
         this.scrolling = 0
-        this.startSegment()
+        if (this.segment >= SEGMENTS.length) {
+          this.startBoss()
+        } else {
+          this.startSegment()
+        }
+      }
+      return
+    }
+    const boss = this.bossEnemy
+    if (boss) {
+      if (
+        boss.active &&
+        !boss.dying &&
+        this.elapsed - this.lastSummon > bossSummonSeconds(boss.hp)
+      ) {
+        this.lastSummon = this.elapsed
+        this.summon(boss)
       }
       return
     }
@@ -624,7 +680,7 @@ class BattleScene extends Phaser.Scene {
     })
     // 탄에 맞아도 밀려나지 않는다: 밀리면 내려오던 줄이 흐트러져 조준이 어긋났다. 밀림은 사장냥에 부딪혔을 때(hurt)만.
     // 데미지 숫자는 한 방에 안 죽는 적(투기·손절매·투매)에만: 패닉까지 띄우면 화면이 숫자로 덮인다 (334번).
-    if (ENEMIES[e.kind].hp > 1 && e.hp > 0) {
+    if ((ENEMIES[e.kind].hp > 1 || e.boss) && e.hp > 0) {
       this.pop(
         e.x + Phaser.Math.Between(-8, 8),
         e.y - ENEMIES[e.kind].r - 10,
@@ -640,6 +696,15 @@ class BattleScene extends Phaser.Scene {
 
   private kill(e: Enemy, byPlayer: boolean) {
     const v = ENEMIES[e.kind]
+    if (e.boss) {
+      e.boss = false
+      this.bossEnemy = null
+      this.cameras.main.shake(420, 0.02)
+      this.hitstop(140)
+      this.boom[e.kind].explode(40, e.x, e.y)
+      this.opts.onBanner('돌파!! 멘탈 전진 성공', '#ffd84d')
+      this.finish(true, 'clear')
+    }
     if (e.blocker) {
       e.blocker = false
       this.blockersLeft--
@@ -771,6 +836,20 @@ class BattleScene extends Phaser.Scene {
     return best
   }
 
+  /**
+   * 자동 조준의 과녁. 보통은 가장 가까운 적이다. 보스가 나와 있으면 보스를 노리되, 졸개가 사장냥 바로 곁(150px)까지 오면 그 졸개를 먼저 쏜다. 가장 가까운
+   * 적만 노리면 보스가 계속 부르는 졸개만 쏘다 시간이 다 갔다.
+   */
+  private autoTarget(): Enemy | null {
+    const near = this.nearestEnemy()
+    const boss = this.bossEnemy
+    if (!boss || !boss.active || boss.dying || !near || near === boss) {
+      return near
+    }
+    const close = (near.x - this.player.x) ** 2 + (near.y - this.player.y) ** 2 < 150 * 150
+    return close ? near : boss
+  }
+
   /** 총구 자리: 총 피벗에서 겨누는 쪽으로 총 길이만큼. */
   private muzzle() {
     const px = this.player.x + GUN.dx
@@ -786,6 +865,13 @@ class BattleScene extends Phaser.Scene {
     // 전진 모드는 손가락이 이동이라 늘 자동 조준이다 (364번).
     if (ptr.isDown && this.mode === 'defense') {
       this.fire(now, Math.atan2(ptr.worldY - gy, ptr.worldX - gx))
+      return
+    }
+    if (this.mode === 'advance') {
+      const target = this.autoTarget()
+      if (target) {
+        this.fire(now, Math.atan2(target.y - gy, target.x - gx))
+      }
       return
     }
     let best: Enemy | null = null
@@ -935,6 +1021,9 @@ class BattleScene extends Phaser.Scene {
         this.mode === 'advance'
           ? { at: Math.min(SEGMENTS.length, this.segment + 1), total: SEGMENTS.length }
           : null,
+      boss: this.bossEnemy
+        ? { name: BOSS.name, hp: Math.max(0, this.bossEnemy.hp) / BOSS.hp }
+        : null,
     })
   }
 
@@ -985,7 +1074,7 @@ class BattleScene extends Phaser.Scene {
       p.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h * (1 + Math.sin(time / 260) * 0.025))
     }
     if (!ptr.isDown || this.mode === 'advance') {
-      const near = this.nearestEnemy()
+      const near = this.mode === 'advance' ? this.autoTarget() : this.nearestEnemy()
       if (near) {
         const want = Math.atan2(near.y - (p.y + GUN.dy), near.x - (p.x + GUN.dx))
         this.aim +=
@@ -1075,8 +1164,16 @@ class BattleScene extends Phaser.Scene {
             continue
           }
         }
-        const drift = Phaser.Math.Clamp(p.x - e.x, -1, 1) * 25
-        e.setVelocity(e.kbx + (e.blocker ? drift : 0), (e.blocker ? sy * 0.55 : sy * 1.4) + e.kby)
+        if (e.boss) {
+          // 보스: 화면 위쪽(높이의 18%)까지 내려와 좌우로 오간다. 밀리지 않는다.
+          const tx = w / 2 + Math.sin(this.elapsed * 0.8) * w * 0.28
+          e.kbx = 0
+          e.kby = 0
+          e.setVelocity((tx - e.x) * 2, (h * 0.18 - e.y) * 2)
+        } else {
+          const drift = Phaser.Math.Clamp(p.x - e.x, -1, 1) * 25
+          e.setVelocity(e.kbx + (e.blocker ? drift : 0), (e.blocker ? sy * 0.55 : sy * 1.4) + e.kby)
+        }
       } else {
         e.setVelocity(e.kbx, sy + e.kby)
       }
