@@ -14,6 +14,14 @@ function company(over: Partial<Company> = {}): Company {
 }
 
 describe('앱 탭 (decisions.md 309번)', () => {
+  it('안드로이드 뒤로 가기로 메인의 설정·확장 시트도 닫힌다', () => {
+    useAppUi.getState().setTab('office')
+    useAppUi.getState().openSheet({ kind: 'toy', panel: 'upgrade' })
+    expect(useAppUi.getState().back()).toBe(true)
+    expect(useAppUi.getState().sheet).toBeNull()
+    expect(useAppUi.getState().tab).toBe('office')
+  })
+
   it('뒤로 가기는 시트 → 사무실 → 끝 순으로 되돌아간다', () => {
     const ui = useAppUi.getState()
     ui.setTab('staff')

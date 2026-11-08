@@ -1,12 +1,13 @@
 import type { Company } from '@web/api/client'
-import type { SeatFocus } from '@web/features/raising/OfficeArt'
 import { create } from 'zustand'
 
 /** 아래 탭 (decisions.md 309·312번): 사무실 · 채용 · 배치 · 이슈 · 기록. 웹의 탭(이슈·채용·배치·지난 결산·연표)을 폰 화면에 맞게 다시 나눴다. */
 export type Tab = 'office' | 'market' | 'staff' | 'issue' | 'record'
 
-/** 아래에서 올라오는 시트: 자리 고르기(사무실 그림의 칸), 자리 카드(배치). */
-export type Sheet = { kind: 'seat'; focus: SeatFocus } | { kind: 'desk'; desk: string }
+/** 인력 관리의 자리 카드와 메인 화면의 설정·확장·멘탈 시트. */
+export type Sheet =
+  | { kind: 'desk'; desk: string }
+  | { kind: 'toy'; panel: 'upgrade' | 'mental' | 'settings' }
 
 interface UiState {
   tab: Tab

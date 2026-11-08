@@ -25,7 +25,7 @@ import { ActionBar, Windows } from './Windows'
 const TABS: { id: Tab; label: string; icon: () => React.ReactNode }[] = [
   { id: 'office', label: '사무실', icon: BuildingIcon },
   { id: 'market', label: '채용', icon: ClipboardIcon },
-  { id: 'staff', label: '배치', icon: ChairIcon },
+  { id: 'staff', label: '인력 관리', icon: ChairIcon },
   { id: 'issue', label: '이슈', icon: NewsIcon },
   { id: 'record', label: '기록', icon: BookIcon },
 ]
@@ -91,12 +91,20 @@ export function Shell({ company }: { company: Company }) {
   }, [unlocked, tutorialOn])
   const key = `${company.companyId}-${company.year}-${company.quarter}-${company.employees.map((e) => e.id).join('.')}`
   return (
-    <div ref={screen} className="app-screen app-bg" data-testid="shell">
-      <Hud company={company} />
+    <div
+      ref={screen}
+      className={`app-screen app-bg ${tab === 'office' ? 'toy-shell-home' : ''}`}
+      data-testid="shell"
+    >
+      {tab !== 'office' && <Hud company={company} />}
       <main className="relative overflow-hidden">
         <div
           key={tab}
-          className={`${dir} absolute inset-0 overflow-y-auto px-4 py-3`}
+          className={
+            tab === 'office'
+              ? 'absolute inset-0 overflow-y-auto'
+              : `${dir} absolute inset-0 overflow-y-auto px-4 py-3`
+          }
           data-testid="scene"
         >
           {tab === 'office' && <OfficeScene company={company} />}
@@ -106,68 +114,70 @@ export function Shell({ company }: { company: Company }) {
           {tab === 'record' && <RecordScene company={company} />}
         </div>
       </main>
-      <div className="safe-bottom">
-        <ActionBar company={company} />
-        <nav
-          className="grid grid-cols-5 gap-1 border-(--outline) border-t-[3px] bg-white px-1.5 pt-1.5 pb-1"
-          aria-label="회사 일"
-        >
-          {TABS.map((t) => {
-            const badge = tabBadge(company, t.id)
-            const on = tab === t.id
-            const hidden = ended && t.id === 'market'
-            const locked = t.id !== 'office' && !unlocked.includes(t.id)
-            const Icon = t.icon
-            return (
-              <button
-                key={t.id}
-                type="button"
-                role="tab"
-                aria-selected={on}
-                disabled={hidden || locked}
-                onClick={() => {
-                  if (!on) {
-                    sfx.tap()
-                  }
-                  useAppUi.getState().setTab(t.id)
-                }}
-                className={`relative flex min-h-[56px] flex-col items-center justify-center gap-0.5 rounded-2xl border-2 font-game text-[12px] transition-colors disabled:opacity-30 ${
-                  on
-                    ? 'border-(--outline) bg-(--gold-bright) text-ink shadow-[0_3px_0_var(--outline)]'
-                    : 'border-transparent text-ink/60'
-                } ${t.id === 'market' ? marketSpot : t.id === 'staff' ? staffSpot : ''}`}
-                data-testid={`tab-${t.id}`}
-                data-locked={locked || undefined}
-              >
-                <span key={on ? 'on' : 'off'} className={on ? 'animate-tab-bounce' : ''}>
-                  <Icon />
-                </span>
-                {t.label}
-                {locked && (
-                  <span
-                    className="absolute -top-1 right-[12%] rounded-full border-2 border-(--outline) bg-white px-1 text-[10px] leading-4"
-                    role="img"
-                    aria-label="잠김"
-                  >
-                    🔒
+      {tab !== 'office' && (
+        <div className="safe-bottom">
+          <ActionBar company={company} />
+          <nav
+            className="grid grid-cols-5 gap-1 border-(--outline) border-t-[3px] bg-white px-1.5 pt-1.5 pb-1"
+            aria-label="회사 일"
+          >
+            {TABS.map((t) => {
+              const badge = tabBadge(company, t.id)
+              const on = tab === t.id
+              const hidden = ended && t.id === 'market'
+              const locked = t.id !== 'office' && !unlocked.includes(t.id)
+              const Icon = t.icon
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  disabled={hidden || locked}
+                  onClick={() => {
+                    if (!on) {
+                      sfx.tap()
+                    }
+                    useAppUi.getState().setTab(t.id)
+                  }}
+                  className={`relative flex min-h-[56px] flex-col items-center justify-center gap-0.5 rounded-2xl border-2 font-game text-[12px] transition-colors disabled:opacity-30 ${
+                    on
+                      ? 'border-(--outline) bg-(--gold-bright) text-ink shadow-[0_3px_0_var(--outline)]'
+                      : 'border-transparent text-ink/60'
+                  } ${t.id === 'market' ? marketSpot : t.id === 'staff' ? staffSpot : ''}`}
+                  data-testid={`tab-${t.id}`}
+                  data-locked={locked || undefined}
+                >
+                  <span key={on ? 'on' : 'off'} className={on ? 'animate-tab-bounce' : ''}>
+                    <Icon />
                   </span>
-                )}
-                {badge && !locked && (
-                  <span
-                    className={`absolute -top-1 right-[12%] rounded-full border-2 border-(--outline) px-1.5 font-mono-num text-[10px] leading-4 ${
-                      badge === '!'
-                        ? 'animate-badge-pulse bg-red-pen text-white'
-                        : 'bg-white text-ink'
-                    }`}
-                  >
-                    {badge}
-                  </span>
-                )}
-              </button>
-            )
-          })}
-        </nav>
-      </div>
+                  {t.label}
+                  {locked && (
+                    <span
+                      className="absolute -top-1 right-[12%] rounded-full border-2 border-(--outline) bg-white px-1 text-[10px] leading-4"
+                      role="img"
+                      aria-label="잠김"
+                    >
+                      🔒
+                    </span>
+                  )}
+                  {badge && !locked && (
+                    <span
+                      className={`absolute -top-1 right-[12%] rounded-full border-2 border-(--outline) px-1.5 font-mono-num text-[10px] leading-4 ${
+                        badge === '!'
+                          ? 'animate-badge-pulse bg-red-pen text-white'
+                          : 'bg-white text-ink'
+                      }`}
+                    >
+                      {badge}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+      )}
       <Windows key={key} company={company} />
       {opened && (
         <p

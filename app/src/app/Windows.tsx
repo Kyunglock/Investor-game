@@ -1,10 +1,10 @@
 import type { Company, Drawn } from '@web/api/client'
+import { signedMoney } from '@web/features/game/labels'
 import { toggleAutoPlay } from '@web/features/raising/autoPlay'
 import { EndingScreen } from '@web/features/raising/EndingScreen'
 import { GachaReveal, useDrawReveal } from '@web/features/raising/Gacha'
 import { InvestWindow } from '@web/features/raising/InvestWindow'
 import { MacroWindow } from '@web/features/raising/MacroWindow'
-import { MoveScene } from '@web/features/raising/MoveScene'
 import { QuarterSheet } from '@web/features/raising/QuarterSheet'
 import { ResignAlert } from '@web/features/raising/ResignAlert'
 import { useRaisingStore } from '@web/features/raising/store'
@@ -16,6 +16,8 @@ import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { MentalWindow } from '../mental/MentalWindow'
+import { companyMood } from './toy-city/model'
+import { ToyCityMove } from './toy-city/ToyCityMove'
 import { useAppUi } from './ui'
 
 /**
@@ -26,6 +28,7 @@ export function Windows({ company }: { company: Company }) {
   const justSettled = useRaisingStore((s) => s.justSettled)
   const moveAlert = useRaisingStore((s) => s.moveAlert)
   const upgradeMove = useRaisingStore((s) => s.upgradeMove)
+  const moveBeforeSeats = useRaisingStore((s) => s.moveBeforeSeats)
   const justQuartered = useRaisingStore((s) => s.justQuartered)
   const { settle, convene } = useRaisingStore.getState()
   const [investOpen, setInvestOpen] = useState(false)
@@ -107,7 +110,9 @@ export function Windows({ company }: { company: Company }) {
     <>
       {justSettled && <YearEndSheet company={company} onClose={closeYearEnd} />}
       {company.lastSettlement && moveAlert && !justSettled && (
-        <MoveScene
+        <ToyCityMove
+          company={company}
+          beforeSeats={moveBeforeSeats ?? company.seats}
           before={company.lastSettlement.gradeBefore}
           after={company.lastSettlement.gradeAfter}
           year={company.lastSettlement.year}
@@ -115,7 +120,9 @@ export function Windows({ company }: { company: Company }) {
         />
       )}
       {upgradeMove && !justSettled && (
-        <MoveScene
+        <ToyCityMove
+          company={company}
+          beforeSeats={upgradeMove.beforeSeats ?? company.seats}
           before={upgradeMove.before}
           after={upgradeMove.after}
           year={upgradeMove.year}
@@ -213,7 +220,13 @@ function revealFx(d: Drawn, el: HTMLElement | null) {
 }
 
 /** 화면 아래의 큰 버튼 (decisions.md 310번): 분기 넘기기(누르면 도장 소리·진동·불꽃)와 자동 진행. 망했으면 다음 회사 차리기. */
-export function ActionBar({ company }: { company: Company }) {
+export function ActionBar({
+  company,
+  variant = 'default',
+}: {
+  company: Company
+  variant?: 'default' | 'toy'
+}) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   const autoPlay = useRaisingStore((s) => s.autoPlay)
@@ -252,6 +265,66 @@ export function ActionBar({ company }: { company: Company }) {
   }
   if (!company.meeting) {
     return null
+  }
+  if (variant === 'toy') {
+    const quarter = company.lastQuarter
+    const delta = quarter ? quarter.capitalAfter - quarter.capitalBefore : null
+    const assigned = company.employees.filter((e) => e.desk).length
+    return (
+      <div className="toy-action-area">
+        {error && (
+          <p role="alert" className="toy-error">
+            {error}
+          </p>
+        )}
+        {autoPlay && (
+          <button
+            type="button"
+            className="toy-auto-stop"
+            data-testid="auto"
+            aria-pressed="true"
+            onClick={() => toggleAutoPlay(false)}
+          >
+            자동 진행 중 · 누르면 멈춤
+          </button>
+        )}
+        <div className="toy-bottom-cards">
+          <div className="toy-stat">
+            <small>지난 분기 수익</small>
+            <strong className={delta != null && delta < 0 ? 'toy-loss' : 'toy-gain'}>
+              {delta == null ? '—' : signedMoney(delta)}
+            </strong>
+            <em>
+              {quarter ? `${quarter.year}년 ${quarter.quarter}분기 결산` : '첫 결산을 기다려요'}
+            </em>
+          </div>
+          <button
+            type="button"
+            disabled={busy || autoPlay || settleLocked}
+            className={`toy-stat toy-advance ${settleSpot}`}
+            data-testid="settle"
+            data-locked={settleLocked || undefined}
+            onClick={(ev) => {
+              sfx.stamp()
+              haptic.medium()
+              useFx.getState().burstAt(ev.currentTarget, 'sparks')
+              useAppUi.getState().requestSettle()
+            }}
+          >
+            <small>{busy ? '처리 중…' : settleLocked ? '직원을 앉혀주세요' : '다음 분기로'}</small>
+            <strong>▶ 넘기기</strong>
+            <em>{assigned}명 일하는 중</em>
+          </button>
+          <div className="toy-stat">
+            <small>팀 분위기</small>
+            <strong>{companyMood(company)}</strong>
+            <em>
+              자리 {assigned}/{company.seats}
+            </em>
+          </div>
+        </div>
+      </div>
+    )
   }
   return (
     <div className="px-4 pt-2 pb-2 text-ink">
