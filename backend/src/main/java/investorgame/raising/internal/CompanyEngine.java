@@ -233,9 +233,7 @@ class CompanyEngine {
     return properties.perks().gainPercent().getOrDefault(overallGrade(employee.stats), 0);
   }
 
-  /**
-   * 등급 효과 한 줄 (289·300번): "새내기 · 맞히면 2% 더 번다 · 한 해 일하면 50% 확률로 자란다". S부터는 "잠깐만요, 사장님!! 60%"가 붙는다.
-   */
+  /** 등급 효과 한 줄 (289번): "새내기 · 맞히면 2% 더 번다 · 한 해 일하면 50% 확률로 자란다". */
   String perkLine(Map<String, Integer> stats, int rank) {
     RaisingContent.Perks texts = content.raising().company().perks();
     String grade = overallGrade(stats);
@@ -249,10 +247,6 @@ class CompanyEngine {
                 texts.line(),
                 Map.of("gain", String.valueOf(gain), "growth", String.valueOf(growth)))
             : Korean.fill(texts.lineTop(), Map.of("gain", String.valueOf(gain)));
-    int proposal = invest.proposalPercent(full);
-    if (proposal > 0) {
-      line += " · " + Korean.fill(texts.proposal(), Map.of("percent", String.valueOf(proposal)));
-    }
     return name + " · " + line;
   }
 
@@ -1753,17 +1747,6 @@ class CompanyEngine {
       result.pnl = stake * bp / BP;
       totalPnl += result.pnl;
       employee.totalPnl += result.pnl;
-      // 성과금의 역설 (351번): 성과금을 받은 바로 다음 분기에 판돈의 1할 넘게 잃었다.
-      if (employee.bonusTurn != null) {
-        if (company.turn() == employee.bonusTurn + 1
-            && result.pnl < 0
-            && -result.pnl * 10 > stake) {
-          company.flags.add("bonus-backfire");
-        }
-        if (company.turn() > employee.bonusTurn) {
-          employee.bonusTurn = null;
-        }
-      }
       // 손을 뒤집은 일은 팀장 보고(269번)가 전한다.
       q.results.add(result);
     }

@@ -131,7 +131,7 @@ class BalanceSimulationTest {
             case READER, STAGES -> majorityChoice(c.invest);
             case LAZY -> InvestEngine.HOLD;
           };
-      ENGINE.invest.decide(c, choice, boss == Boss.GREEDY, random, false);
+      ENGINE.invest.decide(c, choice, boss == Boss.GREEDY, random);
     }
     if (c.raise != null) {
       ENGINE.pay.answer(c, true, random);

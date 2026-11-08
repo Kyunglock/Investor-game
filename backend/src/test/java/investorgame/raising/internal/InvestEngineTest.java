@@ -544,113 +544,25 @@ class InvestEngineTest {
     ENGINE.hire(c, stats(60, 50, 50, 50));
     ENGINE.place(c, Map.of(1, "day"));
     c.phase = "normal";
-    assertThatThrownBy(() -> ENGINE.invest.decide(c, "TEAM", false, new HashSeededRandom(3), true))
+    assertThatThrownBy(() -> ENGINE.invest.decide(c, "TEAM", false, new HashSeededRandom(3)))
         .isInstanceOf(InvalidRequestException.class);
     assertThat(c.invest.choice).isNull();
-    assertThat(c.invest.proposalId).isNull();
   }
 
-  /**
-   * 막판 뒤집기 "잠깐만요, 사장님!!" (decisions.md 283·300번): 실제 플레이에서는 정하면 S 이상 직원이 60%로 반대로 하자고 나선다. 답할 때까지
-   * 회의는 정해지지 않고 결산도 못 한다. 따르면 반대쪽으로, 거절하면 원래대로 한다. 따랐으면 결과를 보고 상이나 벌을 준다.
-   */
+  /** 막판 뒤집기는 없다 (decisions.md 381번): S 이상 직원이 앉아 있어도 사장이 정하면 그대로 정해지고, 등급 효과 줄에 "잠깐만요"가 붙지 않는다. */
   @Test
-  void 결정이_끝나면_누군가_막판에_반대로_하자고_하고_따르면_상이나_벌을_준다() {
-    int proposed = 0;
-    int trials = 400;
-    for (int seed = 0; seed < trials; seed++) {
-      CompanyState c = opened(new HashSeededRandom(seed), 300_000_000L);
-      ENGINE.hire(c, stats(75, 75, 75, 75));
-      ENGINE.hire(c, stats(75, 75, 75, 75));
-      ENGINE.place(c, Map.of(1, "day", 2, "bio"));
-      c.phase = "normal";
-      ENGINE.invest.decide(c, InvestEngine.BUY, false, new HashSeededRandom(seed), true);
-      if (c.invest.proposalId == null) {
-        assertThat(c.invest.choice).isEqualTo(InvestEngine.BUY);
-        continue;
-      }
-      proposed++;
-      assertThat(c.invest.choice).as("답할 때까지 정해지지 않는다").isNull();
-      assertThat(c.invest.proposalAction).as("사자면 팔자고 한다").isEqualTo(InvestEngine.SELL);
-      assertThat(c.invest.proposalLine).contains(c.invest.proposalName).doesNotContain("{");
-      assertThat(ENGINE.invest.open(c)).as("결산을 막는다").isTrue();
-      boolean accept = seed % 2 == 0;
-      ENGINE.invest.answerProposal(c, accept, new HashSeededRandom(seed));
-      assertThat(c.invest.choice).isEqualTo(accept ? InvestEngine.SELL : InvestEngine.BUY);
-      assertThat(c.invest.proposalId).isNull();
-      if (!accept) {
-        assertThat(c.invest.verdictPending).isFalse();
-        assertThat(c.yearLines).anyMatch(l -> l.contains("시무룩하게"));
-        continue;
-      }
-      assertThat(c.invest.verdictPending).isTrue();
-      boolean good = c.invest.total > 0;
-      CompanyState.Employee who =
-          c.employees.stream().filter(e -> e.id == c.invest.followedId).findFirst().orElseThrow();
-      int morale = who.morale;
-      int raises = who.raises;
-      long capital = c.capital;
-      assertThatThrownBy(() -> ENGINE.invest.verdict(c, good ? "CUT" : "BONUS"))
-          .isInstanceOf(InvalidRequestException.class);
-      if (good) {
-        ENGINE.invest.verdict(c, "BONUS");
-        assertThat(c.capital).isLessThan(capital);
-        assertThat(who.morale).isEqualTo(Math.min(2, morale + 2));
-        assertThat(c.invest.verdictLine).contains("성과금");
-      } else {
-        ENGINE.invest.verdict(c, "CUT");
-        assertThat(who.raises).isEqualTo(raises - 1);
-        assertThat(who.morale).isEqualTo(Math.max(-2, morale - 2));
-        assertThat(c.invest.verdictLine).contains("연봉을 깎았다");
-      }
-      assertThat(c.invest.verdictPending).isFalse();
-      assertThatThrownBy(() -> ENGINE.invest.verdict(c, "NOTHING"))
-          .isInstanceOf(InvalidRequestException.class);
-    }
-    assertThat(proposed).isBetween(trials * 50 / 100, trials * 70 / 100);
-  }
-
-  /**
-   * "잠깐만요, 사장님!!"은 S부터 쓰는 스킬이다 (decisions.md 300번): S 아래 직원만 앉아 있으면 아무도 손을 들지 않는다. S 60%에서 한 단계마다
-   * 5%p씩 올라 90%가 상한이고, 자리에 앉은 직원 가운데 가장 높은 등급으로 재서 S 아래 직원이 같이 있어도 손을 들 수 있다.
-   */
-  @Test
-  void 막판_제안은_S부터_쓰고_등급이_높을수록_자주_나서며_90퍼센트가_상한이다() {
-    assertThat(ENGINE.invest.proposalPercent("A")).isZero();
-    assertThat(ENGINE.invest.proposalPercent("S")).isEqualTo(60);
-    assertThat(ENGINE.invest.proposalPercent("SS")).isEqualTo(65);
-    assertThat(ENGINE.invest.proposalPercent("SSS")).isEqualTo(70);
-    assertThat(ENGINE.invest.proposalPercent("XXX")).isEqualTo(85);
-    assertThat(ENGINE.invest.proposalPercent("Z")).isEqualTo(90);
-    assertThat(ENGINE.invest.proposalPercent("GOD")).isEqualTo(90);
-    assertThat(ENGINE.perkLine(stats(75, 75, 75, 75), 0)).contains("잠깐만요, 사장님!! 60%");
-    assertThat(ENGINE.perkLine(stats(60, 50, 50, 50), 0)).doesNotContain("잠깐만요");
-    int trials = 300;
-    int proposed = 0;
-    for (int seed = 0; seed < trials; seed++) {
-      CompanyState c = opened(new HashSeededRandom(seed), 300_000_000L);
-      ENGINE.hire(c, stats(69, 69, 69, 69));
-      ENGINE.hire(c, stats(60, 50, 50, 50));
-      ENGINE.place(c, Map.of(1, "day", 2, "bio"));
-      c.phase = "normal";
-      ENGINE.invest.decide(c, InvestEngine.BUY, false, new HashSeededRandom(seed), true);
-      assertThat(c.invest.proposalId).as("S 아래만 있으면 아무도 나서지 않는다").isNull();
-      assertThat(c.invest.choice).isEqualTo(InvestEngine.BUY);
-    }
-    for (int seed = 0; seed < trials; seed++) {
+  void 사장이_정하면_막판_뒤집기_없이_바로_정해진다() {
+    assertThat(ENGINE.perkLine(stats(75, 75, 75, 75), 0)).doesNotContain("잠깐만요");
+    for (int seed = 0; seed < 50; seed++) {
       CompanyState c = opened(new HashSeededRandom(seed), 300_000_000L);
       CompanyState.Employee legend = ENGINE.hire(c, stats(100, 100, 100, 100));
       legend.rank = 3; // SSS + 3 = Z
-      ENGINE.hire(c, stats(60, 50, 50, 50));
+      ENGINE.hire(c, stats(75, 75, 75, 75));
       ENGINE.place(c, Map.of(1, "day", 2, "bio"));
       c.phase = "normal";
-      ENGINE.invest.decide(c, InvestEngine.BUY, false, new HashSeededRandom(seed), true);
-      if (c.invest.proposalId != null) {
-        proposed++;
-        assertThat(c.invest.proposalId).as("S 아래 직원은 손을 들지 않는다").isEqualTo(legend.id);
-      }
+      ENGINE.invest.decide(c, InvestEngine.BUY, new HashSeededRandom(seed));
+      assertThat(c.invest.choice).isEqualTo(InvestEngine.BUY);
     }
-    assertThat(proposed).isBetween(trials * 82 / 100, trials * 97 / 100);
   }
 
   private static String credit(String read, String choice, boolean up) {

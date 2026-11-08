@@ -161,25 +161,7 @@ class DefaultCompanyService implements CompanyService {
   @Transactional
   public CompanyView invest(UUID sessionId, String choice, boolean big) {
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.invest.decide(row.state(), choice, big, new HashSeededRandom(row.seed()), true);
-    companies.update(row.id(), row.state(), false);
-    return view(row);
-  }
-
-  @Override
-  @Transactional
-  public CompanyView answerProposal(UUID sessionId, boolean accept) {
-    CompanyRepository.Row row = lockActive(sessionId);
-    engine.invest.answerProposal(row.state(), accept, new HashSeededRandom(row.seed()));
-    companies.update(row.id(), row.state(), false);
-    return view(row);
-  }
-
-  @Override
-  @Transactional
-  public CompanyView verdict(UUID sessionId, String choice) {
-    CompanyRepository.Row row = lockActive(sessionId);
-    engine.invest.verdict(row.state(), choice);
+    engine.invest.decide(row.state(), choice, big, new HashSeededRandom(row.seed()));
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -695,27 +677,6 @@ class DefaultCompanyService implements CompanyService {
         meetings.convened(c),
         finderView(invest),
         outcome,
-        invest.proposalId == null || invest.choice != null
-            ? null
-            : new CompanyView.Proposal(
-                invest.proposalId,
-                invest.proposalName,
-                invest.proposalAction,
-                invest.proposalLine,
-                invest.pendingChoice,
-                invest.pendingBig,
-                invest.pendingDelegated,
-                invest.teamBuy,
-                invest.teamSell,
-                invest.pendingDelegated
-                    ? invest.debate.stream()
-                        .map(
-                            d ->
-                                new CompanyView.DebateLine(
-                                    d.name, d.side, d.text, d.last, kindOf(d)))
-                        .toList()
-                    : List.of()),
-        verdictView(c),
         debated ? invest.teamBuy : null,
         debated ? invest.teamSell : null,
         debated ? invest.teamCall : null,
@@ -726,28 +687,6 @@ class DefaultCompanyService implements CompanyService {
   /** 옛 저장(295번 전)은 kind가 없다: last면 두 줄 가운데 앞이 WIN, 뒤가 LOSE였지만 구분할 수 없어 WIN으로 읽는다. */
   private static String kindOf(CompanyState.DebateLine d) {
     return d.kind != null ? d.kind : d.last ? InvestEngine.WIN : InvestEngine.TALK;
-  }
-
-  /** 막판 제안을 따른 뒤의 상과 벌 (283번). 따르지 않았으면 null. */
-  private CompanyView.Verdict verdictView(CompanyState c) {
-    CompanyState.Invest i = c.invest;
-    if (i.followedId == null || i.choice == null) {
-      return null;
-    }
-    boolean good = engine.invest.verdictGood(c);
-    RaisingContent.Invest texts = engine.investTexts();
-    List<CompanyView.Option> options =
-        !i.verdictPending
-            ? List.of()
-            : (good ? InvestEngine.GOOD_VERDICTS : InvestEngine.BAD_VERDICTS)
-                .stream()
-                    .map(code -> new CompanyView.Option(code, texts.verdictOptions().get(code)))
-                    .toList();
-    String ask =
-        investorgame.common.Korean.fill(
-            texts.verdictAsk().get(good ? "GOOD" : "BAD"),
-            Map.of("name", i.followedName, "pnl", CompanyEngine.money(Math.abs(i.total))));
-    return new CompanyView.Verdict(i.followedId, i.followedName, good, ask, options, i.verdictLine);
   }
 
   private static CompanyView.Finder finderView(CompanyState.Invest invest) {

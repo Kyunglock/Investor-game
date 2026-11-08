@@ -1451,7 +1451,7 @@ class CompanyEngineTest {
     assertThat(plain.lastMerge.inheritedQuirk).isNull();
   }
 
-  /** 실패·재미 업적 (decisions.md 351번): 망한 판도 즐겁게. 표시(flags)·카운터는 회의 쪽이 올리고 연말 결산이 읽는다. */
+  /** 실패·재미 업적 (decisions.md 351번): 망한 판도 즐겁게. 연말 결산이 읽는다. */
   @Test
   void 실패_업적은_연말에_열리고_위로_보상은_한_장이다() {
     CompanyState c = ENGINE.open(new HashSeededRandom(11), ENGINE.openingCapital());
@@ -1460,20 +1460,12 @@ class CompanyEngineTest {
     }
     assertThat(c.employees).allMatch(e -> "F".equals(CompanyEngine.employeeGrade(e)));
     c.employees.get(1).name = c.employees.get(0).name;
-    c.flags.add("chat-three");
-    c.flags.add("bonus-backfire");
-    c.flags.add("repaired-gut");
-    c.proposalsFollowed = 5;
-    c.proposalsWrong = 5;
     for (int q = 0; q < 4; q++) {
       ENGINE.settleQuarter(c, new HashSeededRandom(11));
     }
     CompanyState.Settlement s = c.settlements.getLast();
-    assertThat(c.achievements)
-        .containsKeys(
-            "f-ten", "same-name", "chat-three", "bonus-backfire", "repaired-gut", "proposal-five");
-    assertThat(c.flags).as("표시는 읽고 지운다").isEmpty();
-    // 실패 업적 다섯은 한 장씩, 재미 업적(동명이인·촉 수리 완료)은 보통대로.
+    assertThat(c.achievements).containsKeys("f-ten", "same-name");
+    // 실패 업적(F의 전당)은 한 장, 재미 업적(동명이인)은 보통대로.
     int fails = 0;
     int normals = 0;
     for (String name : s.achieved) {
@@ -1483,18 +1475,8 @@ class CompanyEngineTest {
         normals++;
       }
     }
-    assertThat(fails).isGreaterThanOrEqualTo(4);
-    assertThat(normals).isGreaterThanOrEqualTo(2);
+    assertThat(fails).isGreaterThanOrEqualTo(1);
+    assertThat(normals).isGreaterThanOrEqualTo(1);
     assertThat(ENGINE.history.achievementTickets(s, 3)).isEqualTo(fails + normals * 3);
-
-    // 막판 제안을 다섯 번 따랐어도 하나라도 맞혔으면 아니다.
-    CompanyState ok = ENGINE.open(new HashSeededRandom(12), ENGINE.openingCapital());
-    ENGINE.hire(ok, stats(45, 45, 45, 45));
-    ok.proposalsFollowed = 5;
-    ok.proposalsWrong = 4;
-    for (int q = 0; q < 4; q++) {
-      ENGINE.settleQuarter(ok, new HashSeededRandom(12));
-    }
-    assertThat(ok.achievements).doesNotContainKey("proposal-five");
   }
 }

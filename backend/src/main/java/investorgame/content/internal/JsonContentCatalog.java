@@ -251,12 +251,6 @@ class JsonContentCatalog implements ContentCatalog {
               && q.name() != null
               && q.hello() != null
               && !q.hello().isEmpty()
-              && q.proposals() != null
-              && !q.proposals().isEmpty()
-              && q.verdicts() != null
-              && q.verdicts()
-                  .keySet()
-                  .containsAll(List.of("BONUS", "RAISE", "NOTHING", "CUT", "FORGIVE"))
               && q.raiseAsk() != null
               && !q.raiseAsk().isEmpty()
               && q.resign() != null
@@ -399,7 +393,6 @@ class JsonContentCatalog implements ContentCatalog {
                 .containsAll(List.of("F", "E", "D", "C", "B", "A", "S", "SS", "SSS"))
             && company.perks().line() != null
             && company.perks().lineTop() != null
-            && company.perks().proposal() != null
             && company.perks().grown() != null
             && company.perks().promoted() != null,
         "등급 효과 문구가 없다");

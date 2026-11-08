@@ -62,20 +62,11 @@ class CompanyApiTest {
     return json(drawRequest(count, draws).andExpect(status().isOk()));
   }
 
-  /** 종목 회의에서 고른다. 막판 뒤집기(decisions.md 283번)가 끼어들면 원래대로 한다고 답한다: 시험이 고른 결정 그대로 굴린다. */
+  /** 종목 회의에서 고른다. */
   private DocumentContext decide(String choice) throws Exception {
-    DocumentContext decided =
-        json(
-            postJson("/api/company/invest", "{\"choice\":\"" + choice + "\"}")
-                .andExpect(status().isOk()));
-    if (decided.read("$.invest.proposal", Object.class) != null) {
-      assertThat(decided.read("$.invest.outcome", Object.class)).as("답할 때까지 정해지지 않는다").isNull();
-      decided =
-          json(
-              postJson("/api/company/invest/proposal", "{\"accept\":false}")
-                  .andExpect(status().isOk()));
-    }
-    return decided;
+    return json(
+        postJson("/api/company/invest", "{\"choice\":\"" + choice + "\"}")
+            .andExpect(status().isOk()));
   }
 
   private ResultActions settle(int year, int quarter) throws Exception {

@@ -174,36 +174,3 @@ describe('사표 (decisions.md 282번)', () => {
     expect(nextAutoStep(c as never, false)).toEqual({ kind: 'resign', keep: true })
   })
 })
-
-describe('막판 뒤집기 (decisions.md 283번)', () => {
-  it('자동 진행은 막판 제안을 거절하고, 상벌 차례면 벌었을 때 연봉 인상·잃었을 때 봐준다', () => {
-    const base = company()
-    const proposed = {
-      ...base,
-      invest: {
-        ready: true,
-        convened: true,
-        remarks: [],
-        proposal: { employeeId: 1, name: '이도담', action: 'SELL', line: '' },
-      },
-    }
-    expect(nextAutoStep(proposed as never, false)).toEqual({ kind: 'proposal', accept: false })
-    const verdict = (good: boolean) => ({
-      ...base,
-      invest: {
-        ready: false,
-        convened: true,
-        remarks: [],
-        verdict: { employeeId: 1, name: '', good, ask: '', options: [{ code: 'X', label: '' }] },
-      },
-    })
-    expect(nextAutoStep(verdict(true) as never, false)).toEqual({
-      kind: 'verdict',
-      choice: 'RAISE',
-    })
-    expect(nextAutoStep(verdict(false) as never, false)).toEqual({
-      kind: 'verdict',
-      choice: 'FORGIVE',
-    })
-  })
-})
