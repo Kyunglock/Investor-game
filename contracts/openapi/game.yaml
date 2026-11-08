@@ -77,7 +77,7 @@ paths:
       summary: 같은 등급 직원을 합쳐 바탕 한 명을 한 단계 올린다 (decisions.md 312번)
       description: |
         바탕(baseId)과 같은 종합 등급의 재료 mergeCount−1명. 재료는 회사를 떠나고 번 돈은 바탕에게 얹힌다. F~SS는 다섯 능력치가 한 띠 오르고,
-        SSS 위는 단계(X…)가 오른다. 수·등급이 맞지 않거나, 맨 위(GOD)거나, 이직 제안·연봉 협상·사표가 걸린 사람이면 400.
+        SSS 위는 단계(X…)가 오른다. 수·등급이 맞지 않거나, 맨 위(GOD)거나, 이직 제안이 걸린 사람이면 400.
       requestBody:
         required: true
         content:
@@ -101,7 +101,7 @@ paths:
     post:
       operationId: releaseEmployee
       summary: 직원을 내보낸다 (decisions.md 312번)
-      description: 데리고 있을 자리를 비운다. 명예의 전당과 연표에 남는다. 걸린 일(이직 제안·연봉 협상·사표)이 있으면 400.
+      description: 데리고 있을 자리를 비운다. 명예의 전당과 연표에 남는다. 이직 제안이 걸려 있으면 400.
       requestBody:
         required: true
         content:
@@ -186,56 +186,6 @@ paths:
       description: |
         keep이 참이면 남긴다(돈이 들지 않는다). 거짓이면 이적료(transferFee)를 받고 보낸다.
         답하지 않은 채 결산해도 직원은 남는다: 직원은 사장이 보낼 때만 떠난다 (decisions.md 265번). 제안이 없으면 400.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [keep]
-              properties:
-                keep: { type: boolean }
-      responses:
-        '200':
-          description: 답한 뒤의 회사
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Company' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/SessionRequired' }
-        '404': { $ref: '#/components/responses/NotFound' }
-  /api/company/raise:
-    post:
-      operationId: answerRaise
-      summary: 올해 연봉 협상에 답한다 (decisions.md 270번)
-      description: |
-        accept가 참이면 연봉을 올려 준다(사기 +1), 거짓이면 동결한다(사기 −2). 답하지 않은 채 연말이 오면 흐지부지되고 사기가 조금 내린다.
-        협상이 없으면 400.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [accept]
-              properties:
-                accept: { type: boolean }
-      responses:
-        '200':
-          description: 답한 뒤의 회사
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Company' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/SessionRequired' }
-        '404': { $ref: '#/components/responses/NotFound' }
-  /api/company/resign:
-    post:
-      operationId: answerResign
-      summary: 연봉 때문에 사표를 들고 온 직원에게 답한다 (decisions.md 282번)
-      description: |
-        keep이 참이면 연봉을 두 번 올려 준 만큼(약 +21%) 올려 주고 붙잡는다(사기 +1). 거짓이면 지금 떠난다.
-        답하지 않고 다음 분기를 넘기면 떠난다. 사표가 없으면 400.
       requestBody:
         required: true
         content:
@@ -613,7 +563,7 @@ components:
           type: array
           items:
             type: object
-            required: [id, name, overallGrade, grades, experience, effects, perk, deskYears, settled, leader, salary, morale]
+            required: [id, name, overallGrade, grades, experience, effects, perk, deskYears, settled, leader, morale]
             properties:
               id: { type: integer }
               name: { type: string }
@@ -634,9 +584,8 @@ components:
               deskYears: { type: integer, description: 지금 자리에서 결산을 맞은 해 수 (decisions.md 262번) }
               settled: { type: boolean, description: 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다 }
               leader: { type: boolean, description: 앉은 자리의 팀장이다 (decisions.md 269번) }
-              salary: { type: integer, format: int64, description: 한 해 연봉. 상가 아래 작은 회사면 0 (decisions.md 270번) }
               morale: { type: integer, minimum: -2, maximum: 2, description: 사기. 낮으면 손이 더 뒤집힌다 (270번) }
-              quirk: { type: string, enum: [gut, chat, chart, news, coffee], description: 버릇 (decisions.md 349번). 번호로 정해져 바뀌지 않고 막판 제안·상벌·연봉·사표·이직·첫인사 문구가 이를 따른다 }
+              quirk: { type: string, enum: [gut, chat, chart, news, coffee], description: 버릇 (decisions.md 349번). 번호로 정해져 바뀌지 않고 이직·첫인사·합성 문구가 이를 따른다 }
               quirkName: { type: string, description: 버릇 이름(촉파·단톡방파·차트파·뉴스파·커피파) }
               role: { type: [string, 'null'], description: 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번) }
         desks:
@@ -692,19 +641,6 @@ components:
                         rival: { type: string, description: 손을 뻗은 곳(이름 없는 다른 증권사) }
                         transferFee: { type: integer, format: int64, description: 보내면 받는 이적료 }
                         line: { type: string }
-                    - type: 'null'
-                raise:
-                  description: 올해의 연봉 협상 (decisions.md 270번). 없으면 null
-                  oneOf:
-                    - type: object
-                      required: [employeeId, name, before, after, line, odds]
-                      properties:
-                        employeeId: { type: integer }
-                        name: { type: string }
-                        before: { type: integer, format: int64, description: 지금 연봉 }
-                        after: { type: integer, format: int64, description: 올려 주면 연봉 }
-                        line: { type: string }
-                        odds: { type: string, description: '답에 따른 확률 한 줄: 올리면 능력치 상승, 동결하거나 답하지 않으면 떠남 (decisions.md 280번)' }
                     - type: 'null'
             - type: 'null'
         gacha:
@@ -966,7 +902,7 @@ components:
         lastSettlement:
           oneOf:
             - type: object
-              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, moving, upgrades, rewards, salary, quarters, gradeBefore, gradeAfter, achieved, results, lines, reports]
+              required: [year, phase, capitalBefore, capitalAfter, fee, hiring, moving, upgrades, rewards, quarters, gradeBefore, gradeAfter, achieved, results, lines, reports]
               properties:
                 year: { type: integer }
                 phase: { type: string, enum: [boom, normal, crash] }
@@ -978,7 +914,6 @@ components:
                 moving: { type: integer, format: int64, description: 그해 낸 이사 비용 (296번) }
                 upgrades: { type: integer, format: int64, description: 그해 전투 강화에 쓴 돈 (decisions.md 367번) }
                 rewards: { type: integer, format: int64, description: 그해 스테이지 보상으로 받은 자본 (decisions.md 369번) }
-                salary: { type: integer, format: int64, description: 그해 나간 연봉의 합(인건비, decisions.md 270번) }
                 invest:
                   description: 그해 투자 회의(기사 제목과 손익, 이미 자본에 들어갔다). 회의를 안 했거나 옛 결산이면 null (decisions.md 240번)
                   oneOf:
@@ -1015,19 +950,6 @@ components:
                   type: array
                   description: 팀장들의 한 해 보고 (decisions.md 269번)
                   items: { $ref: '#/components/schemas/Report' }
-            - type: 'null'
-        resign:
-          description: 연봉 때문에 사표를 들고 온 직원 (decisions.md 282번). 붙잡거나 보내지 않고 다음 분기를 넘기면 떠난다. 없으면 null
-          oneOf:
-            - type: object
-              required: [employeeId, name, reason, line, before, after]
-              properties:
-                employeeId: { type: integer }
-                name: { type: string }
-                reason: { type: string, enum: [IGNORED, FROZEN], description: 'IGNORED: 연봉 답을 기다리다 지쳤다, FROZEN: 동결에 실망했다' }
-                line: { type: string }
-                before: { type: integer, format: int64, description: 지금 연봉 }
-                after: { type: integer, format: int64, description: 붙잡으면 오를 연봉 }
             - type: 'null'
         industry:
           description: 업계 순위 (#351). 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다. 한 해도 마치지 않았으면 null
@@ -1124,7 +1046,7 @@ components:
     Quarter:
       type: object
       description: 분기 하나의 실적 (decisions.md 268번)
-      required: [year, quarter, capitalBefore, capitalAfter, fee, staff, hiring, moving, upgrades, rewards, salary, crash, lines, reports]
+      required: [year, quarter, capitalBefore, capitalAfter, fee, staff, hiring, moving, upgrades, rewards, crash, lines, reports]
       properties:
         year: { type: integer }
         quarter: { type: integer }
@@ -1136,7 +1058,6 @@ components:
         moving: { type: integer, format: int64, description: 이 분기에 낸 이사 비용 (296번) }
         upgrades: { type: integer, format: int64, description: 이 분기에 전투 강화에 쓴 돈 (decisions.md 367번) }
         rewards: { type: integer, format: int64, description: 이 분기에 스테이지 보상으로 받은 자본 (decisions.md 369번) }
-        salary: { type: integer, format: int64, description: 이 분기에 나간 연봉(인건비, decisions.md 270번) }
         invest:
           description: 이 분기 종목 회의(기사 제목과 손익). 안 열렸으면 null
           oneOf:

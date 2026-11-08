@@ -138,25 +138,6 @@ export function Ledger({
         </li>
       )
     })(),
-    // 연봉 (decisions.md 270번): 상가부터 직원들에게 나간다.
-    s.salary !== 0 &&
-      (() => {
-        const r = reveal()
-        return (
-          <li
-            key="salary"
-            className={`py-2 ${r.className}`}
-            style={r.style}
-            data-testid="ledger-salary"
-          >
-            <Row
-              label={`${num()} 인건비`}
-              note="직원들의 연봉, 분기마다 나갔다"
-              amount={-s.salary}
-            />
-          </li>
-        )
-      })(),
     // 이사 비용 (decisions.md 296번): 건물을 올리는 데 낸 돈.
     s.moving !== 0 &&
       (() => {

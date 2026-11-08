@@ -83,15 +83,13 @@ public record RaisingContent(
       Map<String, String> teamGrade) {}
 
   /**
-   * 직원 버릇 (decisions.md 349번). hello: 뽑혔을 때 첫인사({name}). raiseAsk: 연봉 협상({name}·{before}·{after}).
-   * resign: 사표(IGNORED·FROZEN, {name}). poachKept·poachLeft: 이직 제안에 남거나 떠남({name}·{rival}).
+   * 직원 버릇 (decisions.md 349번). hello: 뽑혔을 때 첫인사({name}). poachKept·poachLeft: 이직 제안에 남거나
+   * 떠남({name}·{rival}). 연봉 협상·사표 문구는 뺐다(383번).
    */
   public record Quirk(
       String code,
       String name,
       List<String> hello,
-      List<String> raiseAsk,
-      Map<String, String> resign,
       String poachKept,
       String poachLeft,
       List<String> farewell) {}
@@ -209,18 +207,6 @@ public record RaisingContent(
       String left,
       String ignored,
       String settled,
-      String raiseAsk,
-      String raised,
-      String frozen,
-      String raiseIgnored,
-      String raiseOdds,
-      String raiseGrew,
-      String raiseQuit,
-      String frozenQuit,
-      String resignIgnored,
-      String resignFrozen,
-      String resignKept,
-      String resignLet,
       String moraleUp,
       String moraleDown,
       String meetingIgnored,
@@ -228,7 +214,6 @@ public record RaisingContent(
       String rested,
       List<String> poachers,
       String poachAgain,
-      String keptRaise,
       String alumniGood,
       String alumniBad) {}
 

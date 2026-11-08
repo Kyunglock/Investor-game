@@ -62,9 +62,6 @@ describe('자동 진행 (decisions.md 245번)', () => {
     // 이직 제안 (262·265번): 자동 진행은 직원을 보내지 않고 늘 남긴다.
     const poached = company({ meeting: { wanted: '', poach: { transferFee: 1 } } } as never)
     expect(nextAutoStep(poached, false)).toEqual({ kind: 'poach', keep: true })
-    // 연봉 협상 (270번): 자동 진행은 올려 준다.
-    const asked = company({ meeting: { wanted: '', raise: { after: 1 } } } as never)
-    expect(nextAutoStep(asked, false)).toEqual({ kind: 'raise', accept: true })
     const hiring = company({
       gacha: { tickets: 3, roster: 0, rosterMax: 4, draws: 0, maxDraws: 10, mergeCount: 3 },
     } as never)
@@ -148,15 +145,5 @@ describe('건물 알림 (decisions.md 281번)', () => {
     const step = nextAutoStep(company(), false, false, true)
     expect(step.kind).toBe('closeMove')
     expect(isWindowStep(step)).toBe(true)
-  })
-})
-
-describe('사표 (decisions.md 282번)', () => {
-  it('사표를 들고 오면 자동 진행은 연봉을 올려 붙잡는다', () => {
-    const c = {
-      ...company(),
-      resign: { employeeId: 1, name: '이도담', reason: 'FROZEN', line: '', before: 1, after: 2 },
-    }
-    expect(nextAutoStep(c as never, false)).toEqual({ kind: 'resign', keep: true })
   })
 })

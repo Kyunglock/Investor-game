@@ -53,17 +53,9 @@ class QuirksTest {
   }
 
   @Test
-  void 연봉_사표_이직_문구도_버릇을_따르고_빠진_문구는_공용으로() {
+  void 이직_문구도_버릇을_따른다() {
     CompanyState c = ENGINE.open(new HashSeededRandom(4), 150_000_000L);
     CompanyState.Employee e = ENGINE.hire(c, stats(50));
-    assertThat(ENGINE.quirks.raiseAskTemplate(e, 1, "공용"))
-        .contains("{name}")
-        .contains("{before}")
-        .contains("{after}");
-    assertThat(ENGINE.quirks.resignTemplate(e, "FROZEN", "공용"))
-        .contains("{name}")
-        .isNotEqualTo("공용");
-    assertThat(ENGINE.quirks.resignTemplate(e, "WHATEVER", "공용")).isEqualTo("공용");
     assertThat(ENGINE.quirks.poachKeptTemplate(e, "공용")).contains("{rival}");
     assertThat(ENGINE.quirks.poachLeftTemplate(e, "공용")).contains("{name}");
   }

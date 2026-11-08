@@ -1,5 +1,4 @@
 import type { Company } from '@web/api/client'
-import { money } from '@web/features/game/labels'
 import { GradeBadge } from '@web/features/raising/GradeCard'
 import { LADDER, STAT_NAMES, STAT_ORDER } from '@web/features/raising/grades'
 import { ATTIRE_NAMES, attireOf, titleOf } from '@web/features/raising/office'
@@ -45,7 +44,7 @@ export function StatGrid({ grades, size = 14 }: { grades: Record<string, string>
   )
 }
 
-/** 직원 한 명의 상세: 이름·직함·차림새·효과·관심 섹터·연봉·사기와 능력치 다섯. */
+/** 직원 한 명의 상세: 이름·직함·차림새·효과·관심 섹터·사기와 능력치 다섯. */
 export function EmployeeDetail({ employee: e, company }: { employee: Employee; company: Company }) {
   const desk = company.desks.find((d) => d.code === e.desk)
   return (
@@ -55,7 +54,7 @@ export function EmployeeDetail({ employee: e, company }: { employee: Employee; c
         <span className="text-[13px] font-normal text-muted">{titleOf(e.overallGrade)}</span>{' '}
         <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>
         {e.quirkName && (
-          // 버릇 (decisions.md 349번): 막판 제안·상벌·연봉·사표 문구가 이를 따른다.
+          // 버릇 (decisions.md 349번): 이직·첫인사·합성 문구가 이를 따른다.
           <span
             className="ml-1 rounded-full border border-ink/30 bg-[#fff6c9] px-1.5 text-[11px] font-normal"
             data-testid="quirk"
@@ -71,7 +70,6 @@ export function EmployeeDetail({ employee: e, company }: { employee: Employee; c
         {e.sectorName && ` · 관심 섹터 ${e.sectorName}`}
         {e.deskYears > 0 && ` · 같은 자리 ${e.deskYears}년`}
         {e.settled && ' · 손에 익음'}
-        {e.salary > 0 && ` · 연봉 ${money(e.salary)}`}
         {e.morale !== 0 && ` · ${MORALE[e.morale]}`}
       </p>
       <p className="mt-0.5 text-[12px] text-teal">등급 효과 · {e.perk}</p>

@@ -18,7 +18,6 @@ import { OfficeArt, type SeatFocus } from './OfficeArt'
 import { ATTIRE_NAMES, attireOf, glowOf, nextStep, officeName, titleOf } from './office'
 import { autoPlace, deskEffect, rankDesks, seatOne } from './placement'
 import { QuarterSheet } from './QuarterSheet'
-import { ResignAlert } from './ResignAlert'
 import { useRaisingStore } from './store'
 import { TutorialBanner, useTutorialSpot } from './TutorialBanner'
 import { Ledger, PHASES, YearEndSheet } from './YearEnd'
@@ -148,11 +147,6 @@ export function CompanyScreen({ company }: { company: Company }) {
             year={upgradeMove.year}
             onDone={() => useRaisingStore.setState({ upgradeMove: null })}
           />
-        )}
-
-        {company.resign && !justSettled && !justQuartered && !moveAlert && !upgradeMove && (
-          // 연봉 때문에 사표를 들고 왔다 (282번): 다른 창을 다 닫은 뒤 마지막 기회로 뜬다.
-          <ResignAlert resign={company.resign} />
         )}
 
         {drawn && !justSettled && (
@@ -321,9 +315,8 @@ function NextStep({ company }: { company: Company }) {
 /** 이슈 탭: 올해 폭락 조짐, 경보·선견, 올해 필요한 인재 (6.1절). */
 function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
   const busy = useRaisingStore((s) => s.busy)
-  const { answerPoach, answerRaise } = useRaisingStore.getState()
+  const { answerPoach } = useRaisingStore.getState()
   const poach = meeting.poach
-  const raise = meeting.raise
   return (
     <section data-testid="meeting">
       <h3 className="font-pen text-[22px]">이슈</h3>
@@ -350,33 +343,6 @@ function MeetingTab({ meeting }: { meeting: NonNullable<Company['meeting']> }) {
               className="min-h-11 rounded border border-line text-[14px]"
             >
               보낸다 · 이적료 +{money(poach.transferFee)}
-            </button>
-          </div>
-        </div>
-      )}
-      {raise && (
-        // 연봉 협상 (270·280번): 올려 주면 사기가 오르고 능력치가 오를 수 있다. 동결하거나 답하지 않고 버티면 떠날 수 있다.
-        <div className="mt-1 rounded border border-gold p-2" data-testid="raise">
-          <p className="text-[14px] font-semibold">{raise.line}</p>
-          <p className="text-[12px] text-muted" data-testid="raise-odds">
-            {raise.odds}
-          </p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void answerRaise(true)}
-              className="min-h-11 rounded border border-pen text-[14px] font-semibold disabled:opacity-50"
-            >
-              올려 준다 · 연 {money(raise.after)}
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void answerRaise(false)}
-              className="min-h-11 rounded border border-line text-[14px]"
-            >
-              동결한다
             </button>
           </div>
         </div>
@@ -677,7 +643,6 @@ function EmployeeDetail({ employee: e }: { employee: Employee }) {
           {e.sectorName && ` · 관심 섹터 ${e.sectorName}`}
           {e.deskYears > 0 && ` · 같은 자리 ${e.deskYears}년`}
           {e.settled && ' · 손에 익음'}
-          {e.salary > 0 && ` · 연봉 ${money(e.salary)}`}
           {e.morale !== 0 && ` · ${MORALE[e.morale]}`}
         </span>
       </p>
@@ -889,10 +854,7 @@ function CompanyTabs({ company }: { company: Company }) {
       id: 'meeting',
       label: '이슈',
       badge:
-        company.meeting?.omen ||
-        company.meeting?.eraEnding ||
-        company.meeting?.poach ||
-        company.meeting?.raise
+        company.meeting?.omen || company.meeting?.eraEnding || company.meeting?.poach
           ? '!'
           : undefined,
       show: Boolean(company.meeting),

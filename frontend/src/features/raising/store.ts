@@ -54,10 +54,6 @@ interface RaisingState {
   upgrade: () => Promise<void>
   /** 올해 이직 제안에 답한다: 붙잡거나 보낸다 (decisions.md 262번). */
   answerPoach: (keep: boolean) => Promise<void>
-  /** 올해 연봉 협상에 답한다: 올려 주거나 동결한다 (decisions.md 270번). */
-  answerRaise: (accept: boolean) => Promise<void>
-  /** 사표를 들고 온 직원에게 답한다: 연봉을 올려 붙잡거나 보낸다 (decisions.md 282번). */
-  answerResign: (keep: boolean) => Promise<void>
   /** 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 328번). 강화율은 서버가 매긴다. */
   reportMental: (cards: MentalCard[], kills: number, mentalLeft: number) => Promise<void>
   /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). */
@@ -177,8 +173,6 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
 
     answerPoach: (keep) => change(api.POST('/api/company/poach', { body: { keep } })),
 
-    answerRaise: (accept) => change(api.POST('/api/company/raise', { body: { accept } })),
-
     upgrade: async () => {
       const before = get().company
       if (!before || get().busy) {
@@ -200,8 +194,6 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
         })
       }
     },
-
-    answerResign: (keep) => change(api.POST('/api/company/resign', { body: { keep } })),
 
     reportMental: async (cards, kills, mentalLeft) => {
       const c = get().company

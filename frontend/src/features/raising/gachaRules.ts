@@ -9,12 +9,10 @@ export interface MergeGroup {
   members: Employee[]
 }
 
-/** 이직 제안·연봉 협상·사표가 걸린 사람: 먼저 답해야 합치거나 내보낼 수 있다. */
+/** 이직 제안이 걸린 사람: 먼저 답해야 합치거나 내보낼 수 있다. */
 export function busyIds(company: Company): Set<number> {
   const ids = new Set<number>()
   if (company.meeting?.poach) ids.add(company.meeting.poach.employeeId)
-  if (company.meeting?.raise) ids.add(company.meeting.raise.employeeId)
-  if (company.resign) ids.add(company.resign.employeeId)
   return ids
 }
 

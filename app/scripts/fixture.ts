@@ -144,7 +144,6 @@ const employee = (
   deskYears: 1,
   settled: false,
   leader: false,
-  salary: 0,
   morale: 0,
   role: null,
   // 버릇 (decisions.md 349번): 서버처럼 번호로 정한다.
@@ -192,14 +191,6 @@ export const company = {
     hot: '반도체 섹터에 시대 보너스가 붙는다.',
     eraEnding: '내년에는 시대가 바뀐다. 다음 시대에 맞을 사람을 미리 생각하자.',
     poach: null,
-    raise: {
-      employeeId: 1,
-      name: '김대리',
-      before: 20_000_000,
-      after: 22_000_000,
-      line: '김대리가 연봉을 올려 달라고 한다. "옆 회사는 더 준답니다."',
-      odds: '올려 주면 40%로 능력치 한 띠, 동결하면 25%로 떠난다',
-    },
   },
   gacha: {
     tickets: 6,
@@ -275,7 +266,6 @@ export const company = {
     fee: 6_300_000,
     hiring: 8_000_000,
     moving: 0,
-    salary: 0,
     invest: { title: '반도체 수출 사상 최대', total: 48_000_000 },
     quarters: [
       {
@@ -320,5 +310,4 @@ export const company = {
     lines: ['김대리가 반도체 데스크에서 크게 벌었다.', '박과장이 폭락장에 손이 뒤집혔다.'],
     reports: [],
   },
-  resign: null,
 }

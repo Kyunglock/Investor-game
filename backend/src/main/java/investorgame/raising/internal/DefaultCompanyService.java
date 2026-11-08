@@ -177,15 +177,6 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView answerRaise(UUID sessionId, boolean accept) {
-    CompanyRepository.Row row = lockActive(sessionId);
-    engine.pay.answer(row.state(), accept, new HashSeededRandom(row.seed()));
-    companies.update(row.id(), row.state(), false);
-    return view(row);
-  }
-
-  @Override
-  @Transactional
   public CompanyView upgrade(UUID sessionId) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.upgrade(row.state());
@@ -314,7 +305,6 @@ class DefaultCompanyService implements CompanyService {
                         engine.settled(e),
                         engine.scout.roleOf(e),
                         engine.teams.leads(c, e),
-                        engine.pay.salary(c, e),
                         e.morale,
                         engine.quirks.code(e),
                         engine.quirks.name(e)))
@@ -361,8 +351,7 @@ class DefaultCompanyService implements CompanyService {
                 engine.wantedLine(c),
                 engine.hotLine(c),
                 engine.eraEndingLine(c),
-                poachView(c),
-                raiseView(c));
+                poachView(c));
     CompanyState.Settlement last = c.settlements.isEmpty() ? null : c.settlements.getLast();
     return new CompanyView(
         row.id(),
@@ -386,7 +375,6 @@ class DefaultCompanyService implements CompanyService {
         ended ? null : investView(c, new HashSeededRandom(row.seed())),
         c.quarters.isEmpty() ? null : quarterView(c.quarters.getLast()),
         last == null ? null : settlementView(last),
-        resignView(c),
         industryView(row),
         lockedDesks,
         ended || c.mental == null
@@ -550,30 +538,6 @@ class DefaultCompanyService implements CompanyService {
         lastMerge);
   }
 
-  /** 사표를 들고 온 직원 (282번). 없으면 null. */
-  private CompanyView.Resign resignView(CompanyState c) {
-    CompanyState.Employee e = engine.pay.resigner(c);
-    if (e == null) {
-      return null;
-    }
-    return new CompanyView.Resign(
-        e.id,
-        e.name,
-        c.resign.reason,
-        engine.pay.resignLine(c),
-        engine.pay.salary(c, e),
-        engine.pay.keepSalary(c, e));
-  }
-
-  @Override
-  @Transactional
-  public CompanyView answerResign(UUID sessionId, boolean keep) {
-    CompanyRepository.Row row = lockActive(sessionId);
-    engine.pay.answerResign(row.state(), keep);
-    companies.update(row.id(), row.state(), false);
-    return view(row);
-  }
-
   private CompanyView.Invest investView(CompanyState c, HashSeededRandom random) {
     CompanyState.Invest invest = c.invest;
     if (invest == null) {
@@ -688,21 +652,6 @@ class DefaultCompanyService implements CompanyService {
         invest.finderId, invest.finderName, invest.finderRole, invest.finderDesk, invest.pitch);
   }
 
-  private CompanyView.Raise raiseView(CompanyState c) {
-    CompanyState.Raise r = c.raise;
-    if (r == null) {
-      return null;
-    }
-    String name =
-        c.employees.stream()
-            .filter(e -> e.id == r.employeeId)
-            .findFirst()
-            .map(e -> e.name)
-            .orElse("");
-    return new CompanyView.Raise(
-        r.employeeId, name, r.before, r.after, engine.pay.raiseLine(c), engine.pay.raiseOdds());
-  }
-
   private CompanyView.Poach poachView(CompanyState c) {
     CompanyState.Poach p = c.poach;
     if (p == null) {
@@ -787,7 +736,6 @@ class DefaultCompanyService implements CompanyService {
         q.moving,
         q.upgrades,
         q.rewards,
-        q.salary,
         q.investTotal == null
             ? null
             : new CompanyView.SettlementInvest(q.investTitle, q.investTotal),
@@ -808,7 +756,6 @@ class DefaultCompanyService implements CompanyService {
         s.moving,
         s.upgrades,
         s.rewards,
-        s.salary,
         s.investTotal == null
             ? null
             : new CompanyView.SettlementInvest(s.investTitle, s.investTotal),
