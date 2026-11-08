@@ -51,12 +51,4 @@ class QuirksTest {
       assertThat(d.hello).isNotBlank().doesNotContain("{").contains(d.name);
     }
   }
-
-  @Test
-  void 이직_문구도_버릇을_따른다() {
-    CompanyState c = ENGINE.open(new HashSeededRandom(4), 150_000_000L);
-    CompanyState.Employee e = ENGINE.hire(c, stats(50));
-    assertThat(ENGINE.quirks.poachKeptTemplate(e, "공용")).contains("{rival}");
-    assertThat(ENGINE.quirks.poachLeftTemplate(e, "공용")).contains("{name}");
-  }
 }

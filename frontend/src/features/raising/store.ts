@@ -50,8 +50,6 @@ interface RaisingState {
   release: (employeeId: number) => Promise<void>
   /** 이사 비용을 내고 다음 건물로 간다 (decisions.md 296번). */
   upgrade: () => Promise<void>
-  /** 올해 이직 제안에 답한다: 붙잡거나 보낸다 (decisions.md 262번). */
-  answerPoach: (keep: boolean) => Promise<void>
   /** 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 328번). 강화율은 서버가 매긴다. */
   reportMental: (cards: MentalCard[], kills: number, mentalLeft: number) => Promise<void>
   /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). */
@@ -165,8 +163,6 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     },
 
     release: (employeeId) => change(api.POST('/api/company/release', { body: { employeeId } })),
-
-    answerPoach: (keep) => change(api.POST('/api/company/poach', { body: { keep } })),
 
     upgrade: async () => {
       const before = get().company

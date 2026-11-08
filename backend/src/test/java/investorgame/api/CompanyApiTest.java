@@ -453,6 +453,8 @@ class CompanyApiTest {
     assertThat(company.get("industry")).isNull();
     Map<String, Object> meeting = opened.read("$.meeting");
     assertThat(meeting).doesNotContainKey("rivalry");
+    // 다른 증권사의 이직 제안도 뺐다 (385번).
+    assertThat(meeting).doesNotContainKey("poach");
     DocumentContext year = json(settleYear(1));
     Map<String, Object> settlement = year.read("$.lastSettlement");
     assertThat(settlement).doesNotContainKeys("overtook", "target");

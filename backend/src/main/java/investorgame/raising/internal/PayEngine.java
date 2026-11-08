@@ -38,11 +38,6 @@ class PayEngine {
     return PERCENT - e.morale * rules().moraleFlipPercent();
   }
 
-  /** 사기를 움직인다(−2~+2). 이직 제안을 붙잡을 때 쓴다. */
-  void shiftMorale(Employee e, int by) {
-    shift(e, by);
-  }
-
   private static void shift(Employee e, int by) {
     e.morale = Math.clamp(e.morale + by, MORALE_MIN, MORALE_MAX);
   }

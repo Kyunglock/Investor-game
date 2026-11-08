@@ -403,17 +403,7 @@ public record CompanyView(
       String forecast,
       String wanted,
       String hot,
-      String eraEnding,
-      Poach poach) {}
-
-  /**
-   * 다른 증권사가 우리 직원에게 손을 뻗었다 (decisions.md 262번).
-   *
-   * @param rival 손을 뻗은 곳(이름 없는 다른 증권사, 288번)
-   * @param transferFee 보내면 받는 이적료
-   * @param line 연초 회의 한 줄
-   */
-  public record Poach(int employeeId, String name, String rival, long transferFee, String line) {}
+      String eraEnding) {}
 
   public record Settlement(
       int year,
@@ -459,7 +449,7 @@ public record CompanyView(
    * 분기 하나의 실적 (decisions.md 268번).
    *
    * @param staff 직원들이 이 분기에 굴린 몫
-   * @param hiring 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료)
+   * @param hiring 이 분기에 낸 인사 비용(계약금·새로 받기 값)
    * @param moving 이 분기에 낸 이사 비용 (296번)
    * @param upgrades 이 분기에 전투 강화에 쓴 돈 (367번)
    * @param rewards 이 분기에 스테이지 보상으로 받은 자본 (369번)

@@ -95,16 +95,6 @@ class CompanyController {
 
   record ReleaseRequest(@NotNull Integer employeeId) {}
 
-  /** 올해 이직 제안에 답한다: keep이 참이면 남기고, 거짓이면 이적료를 받고 보낸다 (decisions.md 262·265번). */
-  @PostMapping("/poach")
-  CompanyView answerPoach(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody PoachRequest request) {
-    return companies.answerPoach(cookies.requireSession(token), request.keep());
-  }
-
-  record PoachRequest(@NotNull Boolean keep) {}
-
   /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 249번). */
   @PostMapping("/invest/open")
   CompanyView convene(@CookieValue(name = SessionCookies.NAME, required = false) String token) {

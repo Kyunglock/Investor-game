@@ -190,7 +190,6 @@ export const company = {
     wanted: '올해는 용기 있는 사람이 필요하다. 반도체 데스크가 뜬다.',
     hot: '반도체 섹터에 시대 보너스가 붙는다.',
     eraEnding: '내년에는 시대가 바뀐다. 다음 시대에 맞을 사람을 미리 생각하자.',
-    poach: null,
   },
   gacha: {
     tickets: 6,

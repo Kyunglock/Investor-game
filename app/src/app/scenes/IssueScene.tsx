@@ -1,52 +1,14 @@
 import type { Company } from '@web/api/client'
-import { money } from '@web/features/game/labels'
-import { useRaisingStore } from '@web/features/raising/store'
-import { haptic } from '../../fx/haptics'
-import { sfx } from '../../fx/sound'
 
-/** 이슈 장면 (6.1절, decisions.md 309번): 이직 제안(답하는 카드), 폭락 조짐·경보·선견·뜨는 섹터·시대의 끝, 올해 필요한 인재. */
+/** 이슈 장면 (6.1절, decisions.md 309번): 폭락 조짐·경보·선견·뜨는 섹터·시대의 끝, 올해 필요한 인재. 이직 제안 카드는 385번에서 뺐다. */
 export function IssueScene({ company }: { company: Company }) {
-  const busy = useRaisingStore((s) => s.busy)
-  const { answerPoach } = useRaisingStore.getState()
   const m = company.meeting
   if (!m) {
     return <p className="text-[13px] text-ink/60">끝난 회사에는 이슈가 없습니다.</p>
   }
-  const quiet = !m.poach && !m.omen && !m.earlyOmen && !m.forecast && !m.hot && !m.eraEnding
-  const answer = (fn: () => Promise<void>) => {
-    sfx.stamp()
-    haptic.medium()
-    void fn()
-  }
+  const quiet = !m.omen && !m.earlyOmen && !m.forecast && !m.hot && !m.eraEnding
   return (
     <div className="grid gap-2" data-testid="issue-scene">
-      {m.poach && (
-        <section className="panel border-2 border-wine p-3" data-testid="poach">
-          <p className="text-[11px] font-bold tracking-wide text-wine">이직 제안</p>
-          <p className="mt-1 text-[15px] font-semibold">{m.poach.line}</p>
-          <p className="mt-1 text-[12px] text-muted">
-            답하지 않아도 회사에 남습니다. 보낼 때만 떠납니다.
-          </p>
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => answer(() => answerPoach(true))}
-              className="btn btn-blue min-h-12 text-[14px]"
-            >
-              남긴다
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => answer(() => answerPoach(false))}
-              className="btn btn-line min-h-12 text-[13px]"
-            >
-              보낸다 · +{money(m.poach.transferFee)}
-            </button>
-          </div>
-        </section>
-      )}
       {m.omen && (
         <Note
           tone="border-red-pen text-red-pen"

@@ -25,10 +25,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param experience 실전 경험과 큰 손실의 등급 하락 (2.3·6.4절)
  * @param effects X 이상 등급의 효과 수치 (2.4절)
  * @param hr 인사팀이 채용 뽑기를 돕는다 (6.3절)
- * @param market 뽑은 사람의 능력치와 계약금(연봉·이적료의 바탕) (decisions.md 228번)
+ * @param market 뽑은 사람의 능력치 (decisions.md 228번)
  * @param gacha 채용 뽑기: 채용권으로 뽑는다 (decisions.md 312·315번, 합성은 384번에서 뺐다)
  * @param invest 투자 회의: 해마다 한 번 단서 기사를 놓고 직원들과 고민한다 (decisions.md 229번)
- * @param people 이직 제안과 근속 (decisions.md 262번)
+ * @param people 근속과 사기 (decisions.md 262·270번, 이직 제안은 385번에서 뺐다)
  * @param scout 종목 발굴: 종목 회의는 직원이 종목을 물어 올 때만 열린다 (decisions.md 267번)
  * @param sale 매각과 재창업 (9절). 매각을 뺀 뒤(236번)로는 API가 부르지 않는다. 다시 붙일 때를 위해 남겼다 (264번)
  */
@@ -194,30 +194,12 @@ public record CompanyProperties(
   public record Clarity(String code, int weight, int penalty) {}
 
   /**
-   * 뽑은 사람의 능력치와 계약금 (decisions.md 228·258·312번). 계약금은 이제 내지 않지만 연봉(270번)과 이적료(262번)의 바탕으로 남는다.
+   * 근속 (decisions.md 262번). 이직 제안(poach-from-year·poach-percent·transfer-percent)은 385번에서 뺐다.
    *
-   * @param levelSteps 뽑기 확률표의 중심 = 회사 등급보다 이만큼 위
-   * @param spread 뽑은 사람의 능력치가 중심 띠에서 흩어지는 폭(±점수). 성격이 뾰족해진다
-   * @param fees 종합 등급(F~SSS)별 정해진 계약금
-   * @param feeBp 종합 등급별 자본 비율 계약금(만분율). 정해진 계약금과 이것 가운데 큰 쪽
-   * @param veteranFeeBp 경력직(X 이상)의 계약금(자본의 만분율). 단계마다 veteranFeeStepBp만큼 더
-   */
-  /**
-   * 이직 제안과 근속 (decisions.md 262번).
-   *
-   * @param poachFromYear 이 해부터 이직 제안이 온다
-   * @param poachPercent 해마다 이직 제안이 올 확률
-   * @param transferPercent 보낼 때 받는 이적료 = 그 직원 계약금 × 이 비율
    * @param settleYears 같은 자리에서 이 해째부터 손에 익는다
    * @param settledFlipPercent 손에 익으면 손이 뒤집힐 확률에 곱한다
    */
-  public record People(
-      int poachFromYear,
-      int poachPercent,
-      int transferPercent,
-      int settleYears,
-      int settledFlipPercent,
-      Pay pay) {}
+  public record People(int settleYears, int settledFlipPercent, Pay pay) {}
 
   /**
    * 사기 (decisions.md 270번). 연봉·연봉 협상·사표는 뺐다(383번).
@@ -226,13 +208,14 @@ public record CompanyProperties(
    */
   public record Pay(int moraleFlipPercent) {}
 
-  public record Market(
-      int levelSteps,
-      int spread,
-      List<Long> fees,
-      List<Integer> feeBp,
-      int veteranFeeBp,
-      int veteranFeeStepBp) {}
+  /**
+   * 뽑은 사람의 능력치 (decisions.md 228·312번). 계약금(fees·fee-bp·veteran-fee-*)은 채용 뽑기로 바뀌며 내지 않게 됐고(312번),
+   * 그것을 바탕으로 하던 연봉(383번)과 이적료(385번)도 빠져 함께 뺐다.
+   *
+   * @param levelSteps 뽑기 확률표의 중심 = 회사 등급보다 이만큼 위
+   * @param spread 뽑은 사람의 능력치가 중심 띠에서 흩어지는 폭(±점수). 성격이 뾰족해진다
+   */
+  public record Market(int levelSteps, int spread) {}
 
   /**
    * 채용 뽑기 (decisions.md 312번).

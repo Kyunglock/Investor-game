@@ -74,12 +74,12 @@ export function tabFromWeb(tab: string | null): Tab | null {
   }
 }
 
-/** 탭에 다는 표: 이슈는 !(조짐·시대 끝·이직), 채용은 채용권 수, 배치는 앉힌 수. */
+/** 탭에 다는 표: 이슈는 !(조짐·시대 끝), 채용은 채용권 수, 배치는 앉힌 수. */
 export function tabBadge(company: Company, tab: Tab): string | null {
   const m = company.meeting
   switch (tab) {
     case 'issue':
-      return m && (m.omen || m.eraEnding || m.poach) ? '!' : null
+      return m && (m.omen || m.eraEnding) ? '!' : null
     case 'market':
       return company.gacha.tickets > 0 ? String(company.gacha.tickets) : null
     case 'staff':

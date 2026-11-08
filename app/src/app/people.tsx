@@ -54,7 +54,7 @@ export function EmployeeDetail({ employee: e, company }: { employee: Employee; c
         <span className="text-[13px] font-normal text-muted">{titleOf(e.overallGrade)}</span>{' '}
         <span className="font-mono-num text-[13px]">종합 {e.overallGrade}</span>
         {e.quirkName && (
-          // 버릇 (decisions.md 349번): 이직·첫인사 문구가 이를 따른다.
+          // 버릇 (decisions.md 349번): 첫인사 문구가 이를 따른다.
           <span
             className="ml-1 rounded-full border border-ink/30 bg-[#fff6c9] px-1.5 text-[11px] font-normal"
             data-testid="quirk"

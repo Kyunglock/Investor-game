@@ -79,7 +79,7 @@ export interface paths {
         put?: never;
         /**
          * 직원을 내보낸다 (decisions.md 312번)
-         * @description 데리고 있을 자리를 비운다. 명예의 전당과 연표에 남는다. 이직 제안이 걸려 있으면 400.
+         * @description 데리고 있을 자리를 비운다. 명예의 전당과 연표에 남는다.
          */
         post: operations["releaseEmployee"];
         delete?: never;
@@ -126,27 +126,6 @@ export interface paths {
          *     아직 오지 않은 분기면 400 (decisions.md 234번).
          */
         post: operations["settleQuarter"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/company/poach": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 올해 이직 제안에 답한다 (decisions.md 262번)
-         * @description keep이 참이면 남긴다(돈이 들지 않는다). 거짓이면 이적료(transferFee)를 받고 보낸다.
-         *     답하지 않은 채 결산해도 직원은 남는다: 직원은 사장이 보낼 때만 떠난다 (decisions.md 265번). 제안이 없으면 400.
-         */
-        post: operations["answerPoach"];
         delete?: never;
         options?: never;
         head?: never;
@@ -518,7 +497,7 @@ export interface components {
                 /** @description 사기. 낮으면 손이 더 뒤집힌다 (270번) */
                 morale: number;
                 /**
-                 * @description 버릇 (decisions.md 349번). 번호로 정해져 바뀌지 않고 이직·첫인사 문구가 이를 따른다
+                 * @description 버릇 (decisions.md 349번). 번호로 정해져 바뀌지 않고 첫인사 문구가 이를 따른다
                  * @enum {string}
                  */
                 quirk?: "gut" | "chat" | "chart" | "news" | "coffee";
@@ -568,19 +547,6 @@ export interface components {
                 hot?: string | null;
                 /** @description 지금 시대의 마지막 해면 "내년에는 시대가 바뀐다" 한 줄. 아니면 null (decisions.md 250번) */
                 eraEnding?: string | null;
-                /** @description 다른 증권사가 우리 직원에게 손을 뻗었다 (decisions.md 262·288번). 없으면 null */
-                poach?: {
-                    employeeId: number;
-                    name: string;
-                    /** @description 손을 뻗은 곳(이름 없는 다른 증권사) */
-                    rival: string;
-                    /**
-                     * Format: int64
-                     * @description 보내면 받는 이적료
-                     */
-                    transferFee: number;
-                    line: string;
-                } | null;
             } | null;
             /** @description 채용 뽑기 (decisions.md 312번). 공채 시장(지원자를 골라 계약금을 내고 뽑던 것, 228번)을 대신한다 */
             gacha: {
@@ -831,7 +797,7 @@ export interface components {
                 fee: number;
                 /**
                  * Format: int64
-                 * @description 그해 인사 비용(계약금·새로 받기·붙잡는 값 − 받은 이적료
+                 * @description 그해 인사 비용(계약금·새로 받기 값. 이적료는 385번에서 이직 제안과 함께 뺐다). 연초 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 이사 비용 = 연말 자본 (251·296번)
                  */
                 hiring: number;
                 /**
@@ -1009,7 +975,7 @@ export interface components {
             staff: number;
             /**
              * Format: int64
-             * @description 이 분기에 낸 인사 비용(계약금·새로 받기 값 − 받은 이적료). 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 − 이사 비용 = 끝 자본
+             * @description 이 분기에 낸 인사 비용(계약금·새로 받기 값). 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 이사 비용 = 끝 자본
              */
             hiring: number;
             /**
@@ -1339,35 +1305,6 @@ export interface operations {
         };
         responses: {
             /** @description 결산한 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    answerPoach: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    keep: boolean;
-                };
-            };
-        };
-        responses: {
-            /** @description 답한 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

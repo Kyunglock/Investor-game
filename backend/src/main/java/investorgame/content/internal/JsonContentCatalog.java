@@ -247,12 +247,7 @@ class JsonContentCatalog implements ContentCatalog {
         "팀 합산 등급 풀이가 없다 (353번)");
     for (RaisingContent.Quirk q : company.quirks()) {
       require(
-          q.code() != null
-              && q.name() != null
-              && q.hello() != null
-              && !q.hello().isEmpty()
-              && q.poachKept() != null
-              && q.poachLeft() != null,
+          q.code() != null && q.name() != null && q.hello() != null && !q.hello().isEmpty(),
           "직원 버릇 문구가 빠졌다: " + q.code());
     }
     require(
@@ -402,16 +397,6 @@ class JsonContentCatalog implements ContentCatalog {
     require(company.seatsCut() != null, "자리가 줄 때의 소식 줄이 없다");
     require(
         company.people() != null
-            && company.people().poacher() != null
-            && company.people().poachers() != null
-            && !company.people().poachers().isEmpty()
-            && company.people().poachAgain() != null
-            && company.people().alumniGood() != null
-            && company.people().alumniBad() != null
-            && company.people().poach() != null
-            && company.people().kept() != null
-            && company.people().left() != null
-            && company.people().ignored() != null
             && company.people().settled() != null
             && company.people().meetingIgnored() != null
             && company.people().heard() != null

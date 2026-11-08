@@ -91,9 +91,6 @@ class BalanceSimulationTest {
           };
       ENGINE.invest.decide(c, choice, boss == Boss.GREEDY, random);
     }
-    if (c.poach != null) {
-      ENGINE.answerPoach(c, true);
-    }
     if (boss == Boss.STAGES) {
       int next = ENGINE.mental.bestStage(c) + 1;
       if (next <= PROPERTIES.mental().stages().perChapter()) {
@@ -163,7 +160,9 @@ class BalanceSimulationTest {
    * 없음 / 기사 238억(E 3 · D 11 · C 15 · B 23, A 없음) · 공격 44억 · 이사 안 함 14억. 2026-11-09 인건비·연봉 협상·사표를 뺀
    * 뒤(383번, 연봉이 나가지 않지만 올려 줄 때 능력치가 오르던 보람도 없다): 스테이지 4,699억 · 등급 첫 해는 그대로 / 기사 194억 · 공격 35억 · 이사
    * 안 함 14억. 2026-11-09 직원 합성을 뺀 뒤(384번, 같은 등급 둘을 합쳐 올리던 길이 없다): 스테이지 2,596억 · E 2 · D 7 · C 10 · B
-   * 16 · A 20(25년 안에 S 없음) / 기사 103억 · 공격 33억 · 이사 안 함 6억.
+   * 16 · A 20(25년 안에 S 없음) / 기사 103억 · 공격 33억 · 이사 안 함 6억. 2026-11-09 이직 제안을 뺀 뒤(385번, 사장은 늘 남겨
+   * 이적료는 원래 없었고 붙잡힌 직원의 사기 +1이 빠졌다): 스테이지 2,596억 · 등급 첫 해는 그대로 / 기사 98억 · 공격 34억 · 이사 안 함 6억. 기사와
+   * 공격의 차이가 세 배 아래로 좁혀져 두 배 반으로 본다(경제 성장은 #546에서 다시 맞춘다).
    */
   @Test
   void 스테이지를_깨며_기사를_읽는_사장이_가장_빨리_크고_등급이_고르게_오른다() {
@@ -191,8 +190,8 @@ class BalanceSimulationTest {
         .as("스테이지를 깨는 사장이 안 깨는 사장보다 크게 번다")
         .isGreaterThan(reader.capital() * 3);
     org.assertj.core.api.Assertions.assertThat(reader.capital())
-        .as("기사 읽는 사장이 늘 공격·크게 하는 사장의 세 배 넘게 번다")
-        .isGreaterThan(greedy.capital() * 3);
+        .as("기사 읽는 사장이 늘 공격·크게 하는 사장의 두 배 반 넘게 번다 (385번 전에는 세 배)")
+        .isGreaterThan(greedy.capital() * 5 / 2);
     org.assertj.core.api.Assertions.assertThat(greedy.capital())
         .as("이사 안 하고 버티는 쪽이 가장 못하다 (규모의 벽은 자본을 본다)")
         .isGreaterThan(lazy.capital());
