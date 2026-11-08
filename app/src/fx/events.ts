@@ -8,7 +8,8 @@ export type FxEvent =
   | { kind: 'left'; name: string }
   | { kind: 'quarter'; crash: boolean; delta: number }
   | { kind: 'year-end'; delta: number; achieved: string[] }
-  | { kind: 'grade-up'; to: Company['grade'] }
+  /** scene: 연말 결산이 아닌 확장(구매)이라 건물 확장 연출이 곧바로 축하를 맡는다 (399번). */
+  | { kind: 'grade-up'; to: Company['grade']; scene: boolean }
   | { kind: 'grade-down'; to: Company['grade'] }
   | { kind: 'opened'; number: number }
   | { kind: 'landmark' }
@@ -49,7 +50,7 @@ export function companyEvents(before: Company | null, after: Company | null): Fx
   }
   const step = LADDER.indexOf(after.grade) - LADDER.indexOf(before.grade)
   if (step > 0) {
-    out.push({ kind: 'grade-up', to: after.grade })
+    out.push({ kind: 'grade-up', to: after.grade, scene: !yearEnd })
   } else if (step < 0) {
     out.push({ kind: 'grade-down', to: after.grade })
   }

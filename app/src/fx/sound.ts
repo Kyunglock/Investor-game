@@ -1,5 +1,6 @@
 /**
  * 효과음 (decisions.md 310번). 소리 파일 없이 Web Audio로 만든다: 톡(버튼), 코인(뽑기·이득), 금고(결산 이득), 쿵(손실·폭락), 팡파르(이사·업적), 휙(장면).
+ * 건물 확장(399번): 힘 모으기, 쾅(부딪힘), 와르르(밀려나는 건물), 축하.
  * 처음 손이 닿을 때 오디오를 켠다(브라우저 정책). 끄기는 브라우저에 남는다.
  */
 const KEY = 'investor-app.sound'
@@ -155,6 +156,34 @@ export const sfx = {
   ouch: () => {
     tone(260, 160, { wave: 'sawtooth', gain: 0.1, slide: 90 })
     noise(120, 0.08)
+  },
+  /** 건물 확장 (399번): 힘 모으기. 낮은 음이 끌어올려진다. */
+  charge: () => tone(180, 380, { wave: 'triangle', gain: 0.06, slide: 620 }),
+  /** 건물 확장: 옆 건물과 부딪히는 쾅. 낮게 울리는 북 + 짧은 금속음 + 큰 잡음. */
+  crash: () => {
+    tone(95, 480, { wave: 'sine', gain: 0.25, slide: 32 })
+    tone(190, 140, { wave: 'square', gain: 0.1, slide: 60 })
+    tone(1400, 90, { wave: 'square', gain: 0.03, slide: 500 })
+    noise(420, 0.22)
+  },
+  /** 건물 확장: 밀려난 건물이 무너지는 와르르. 잘게 부서지는 소리를 겹친다. */
+  crumble: () => {
+    for (let i = 0; i < 7; i++) {
+      noise(110, 0.09 - i * 0.008, i * 0.065)
+      tone(260 - i * 22, 70, { wave: 'triangle', gain: 0.04, at: i * 0.065, slide: 90 })
+    }
+  },
+  /** 건물 확장: 커진 건물 축하. 올라가는 아르페지오 끝에 화음과 반짝임. */
+  celebrate: () => {
+    const notes = [523, 659, 784, 1046, 1318]
+    for (const [i, n] of notes.entries()) {
+      tone(n, 120, { wave: 'triangle', gain: 0.08, at: i * 0.07 })
+    }
+    for (const n of [1046, 1318, 1568]) {
+      tone(n, 520, { wave: 'triangle', gain: 0.06, at: 0.38 })
+    }
+    tone(2093, 90, { wave: 'sine', gain: 0.04, at: 0.5 })
+    tone(2637, 140, { wave: 'sine', gain: 0.04, at: 0.62 })
   },
   /** 팡파르: 이사·업적·엔딩 */
   fanfare: () => {

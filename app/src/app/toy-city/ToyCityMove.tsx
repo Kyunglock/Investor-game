@@ -4,7 +4,7 @@ import { officeName } from '@web/features/raising/office'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppUi } from '../ui'
-import { expansionSide, gradeIndex } from './model'
+import { expansionSide, gradeIndex, MOVE_DONE, MOVE_MS, type MovePhase } from './model'
 import { ToyCityStreet } from './ToyCityStreet'
 
 /** Replaces the app's old construction card only after the server confirms a grade change. */
@@ -24,6 +24,8 @@ export function ToyCityMove({
   onDone: () => void
 }) {
   const [finished, setFinished] = useState(false)
+  const [skipped, setSkipped] = useState(false)
+  const [phase, setPhase] = useState<MovePhase>(0)
   const button = useRef<HTMLButtonElement>(null)
   const transition = useMemo(() => ({ before, after, beforeSeats }), [before, after, beforeSeats])
   const up = gradeIndex(after) > gradeIndex(before)
@@ -38,7 +40,7 @@ export function ToyCityMove({
     button.current?.focus()
     const timer = setTimeout(
       () => setFinished(true),
-      matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 2400,
+      matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : MOVE_MS,
     )
     return () => {
       clearTimeout(timer)
@@ -54,6 +56,12 @@ export function ToyCityMove({
         aria-labelledby="toy-move-title"
         data-testid="move-scene"
         data-move={up ? 'up' : 'down'}
+        // 연출 도중 화면 아무 데나 누르면 끝 모습으로 건너뛴다 (399번). 아래 버튼은 지금처럼 사무실로 간다.
+        onClick={(e) => {
+          if ((e.target as Element).closest('button') || phase === MOVE_DONE) return
+          setSkipped(true)
+          setFinished(true)
+        }}
         onKeyDown={(e) => {
           if (e.key === 'Escape') done()
           if (e.key === 'Tab') {
@@ -62,7 +70,24 @@ export function ToyCityMove({
           }
         }}
       >
-        <ToyCityStreet company={company} transition={transition} />
+        <ToyCityStreet
+          company={company}
+          transition={transition}
+          skip={skipped}
+          onPhase={setPhase}
+        />
+        {/* 번쩍임은 SVG 밖의 HTML 층에 둔다: 투명도만 바뀌어 폰에서 거리 그림을 다시 그리지 않는다. */}
+        {up && phase === 1 && <div className="toy-move-flash" aria-hidden="true" />}
+        {up && phase === 3 && (
+          // 새 건물 이름이 크게 떠오른다. 같은 건물 안에서 넓힌 것이면 "확장 완료!" (399번).
+          <div className="toy-move-banner" data-testid="move-banner" aria-hidden="true">
+            <small>{officeName(before)}</small>
+            {officeName(before) !== officeName(after) && <span>▼</span>}
+            <strong>
+              {officeName(before) !== officeName(after) ? officeName(after) : '확장 완료!'}
+            </strong>
+          </div>
+        )}
         <div className="toy-move-heading">
           <p>
             {year}년 차 ·{' '}

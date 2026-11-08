@@ -1,6 +1,13 @@
 import type { Company, Grade } from '@web/api/client'
 import { describe, expect, it } from 'vitest'
-import { expansionSide, growthProgress, officeGeometry } from './model'
+import {
+  expansionSide,
+  growthProgress,
+  MOVE_DONE,
+  MOVE_MS,
+  moveTimeline,
+  officeGeometry,
+} from './model'
 
 describe('토이시티의 실제 회사 상태 표시', () => {
   it('다섯 번의 확장은 왼쪽·오른쪽을 번갈아 밀어낸다', () => {
@@ -42,5 +49,17 @@ describe('토이시티의 실제 회사 상태 표시', () => {
     expect(growthProgress(company)).toEqual({ percent: 50, label: '공사 중 · 완공까지 2년' })
     company.upgrade.left = 0
     expect(growthProgress(company)).toEqual({ percent: 100, label: '공사 중 · 완공까지 0년' })
+  })
+
+  it('확장 연출은 힘 모으기·부딪힘·커지기·축하를 2~2.5초에 차례로 지나고, 내려갈 때는 축하가 없다', () => {
+    const up = moveTimeline(true)
+    expect(up.map((s) => s.phase)).toEqual([1, 2, 3, MOVE_DONE])
+    expect(up.map((s) => s.at)).toEqual([...up.map((s) => s.at)].sort((a, b) => a - b))
+    expect(up.at(-1)?.at).toBe(MOVE_MS)
+    expect(MOVE_MS).toBeGreaterThanOrEqual(2000)
+    expect(MOVE_MS).toBeLessThanOrEqual(2500)
+    const down = moveTimeline(false)
+    expect(down.map((s) => s.phase)).not.toContain(3)
+    expect(down.at(-1)?.phase).toBe(MOVE_DONE)
   })
 })

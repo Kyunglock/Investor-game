@@ -60,7 +60,7 @@ describe('회사 변화의 효과 (decisions.md 310번)', () => {
     expect(y).toEqual([
       { kind: 'year-end', delta: 200, achieved: ['첫 이사'] },
       { kind: 'capital', delta: 200 },
-      { kind: 'grade-up', to: 'E' },
+      { kind: 'grade-up', to: 'E', scene: false },
     ])
   })
 
@@ -69,7 +69,7 @@ describe('회사 변화의 효과 (decisions.md 310번)', () => {
       { kind: 'grade-down', to: 'F' },
     ])
     expect(companyEvents(company({ grade: 'XXX' }), company({ grade: 'Z' }))).toEqual([
-      { kind: 'grade-up', to: 'Z' },
+      { kind: 'grade-up', to: 'Z', scene: true },
       { kind: 'landmark' },
     ])
     expect(companyEvents(company(), company({ broke: '금고가 비었다' }))).toEqual([
