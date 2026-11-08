@@ -510,6 +510,32 @@
   background: #7be0c3;
   color: #2b2340;
 }
+/* 전진 모드의 보스 체력 (364번) */
+.battle-boss {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.battle-boss > b {
+  font-weight: 400;
+  font-size: 15px;
+  white-space: nowrap;
+  color: #c2304b;
+}
+.battle-boss-health {
+  flex: 1;
+  height: 12px;
+  border-radius: 6px;
+  background: #2b234022;
+  overflow: hidden;
+}
+.battle-boss-health > i {
+  display: block;
+  height: 100%;
+  background: #ff4f6d;
+  transition: width 120ms linear;
+}
 .battle-pause {
   flex-shrink: 0;
   pointer-events: auto;
