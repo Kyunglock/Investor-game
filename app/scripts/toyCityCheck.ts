@@ -83,7 +83,7 @@ try {
   await page.getByTestId('desk-row').first().click()
   await page.getByRole('button', { name: '닫기 ✕' }).click()
   await page.getByTestId('tab-office').click()
-  for (const tab of ['market', 'issue']) {
+  for (const tab of ['market', 'issue', 'record']) {
     await page.getByTestId(`tab-${tab}`).click()
     await page.getByTestId('tab-office').click()
     await expect(home).toBeVisible()

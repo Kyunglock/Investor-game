@@ -264,6 +264,8 @@ export const company = {
     fee: 6_300_000,
     hiring: 8_000_000,
     moving: 0,
+    upgrades: 0,
+    rewards: 0,
     invest: { title: '반도체 수출 사상 최대', total: 48_000_000 },
     quarters: [
       {

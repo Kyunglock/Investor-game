@@ -54,8 +54,7 @@ describe('앱 탭 (decisions.md 309번)', () => {
 
   it('웹의 탭 이름을 앱 탭으로 옮긴다', () => {
     expect(tabFromWeb('meeting')).toBe('issue')
-    // 기록 탭은 없앴다 (380번): 결산·연표는 앱 탭으로 옮기지 않는다.
-    expect(tabFromWeb('settlement')).toBeNull()
+    expect(tabFromWeb('settlement')).toBe('record')
     expect(tabFromWeb('market')).toBe('market')
     expect(tabFromWeb(null)).toBeNull()
   })
