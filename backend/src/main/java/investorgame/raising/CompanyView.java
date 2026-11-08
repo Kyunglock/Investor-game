@@ -85,7 +85,7 @@ public record CompanyView(
    *
    * @param damagePercent 탄 하나의 공격력(%). 100이 적 체력 1
    * @param fireMs 연사 간격(ms)
-   * @param streams 탄 갈래 수
+   * @param power 탄 강화 단계(0~3). 탄은 항상 한 줄이고, 단계가 오를수록 세고 크며 2단계부터 맞으면 주변 적도 휘말린다
    * @param bulletSpeed 탄 속도(px/s)
    * @param equipped 지금 든 무기
    */
@@ -96,7 +96,7 @@ public record CompanyView(
       String gradeName,
       int damagePercent,
       int fireMs,
-      int streams,
+      int power,
       int bulletSpeed,
       boolean equipped) {}
 

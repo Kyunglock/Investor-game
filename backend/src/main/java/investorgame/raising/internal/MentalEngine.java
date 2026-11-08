@@ -136,7 +136,7 @@ class MentalEngine {
                   text().weaponGrades().get(w.grade),
                   s.damagePercent(),
                   s.fireMs(),
-                  s.streams(),
+                  s.power(),
                   s.bulletSpeed(),
                   c.weapon != null && c.weapon.same(w.kind, w.grade));
             })
@@ -150,7 +150,7 @@ class MentalEngine {
     return new CompanyProperties.Weapon(
         base.damagePercent() * (100 + g.damagePercent()) / 100,
         Math.max(60, base.fireMs() * (100 - g.firePercent()) / 100),
-        base.streams(),
+        base.power(),
         base.bulletSpeed());
   }
 

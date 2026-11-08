@@ -26,7 +26,7 @@ export const CARDS: readonly Card[] = [
     code: 'split',
     name: '총알 강화',
     desc: '한 발에 힘을 응축한다',
-    effect: '탄 위력 +40% · 크기 +20%',
+    effect: '탄 위력 +40% · 크기 +20% · 2단계부터 폭발',
     icon: '💥',
     color: '#7be0c3',
   },
@@ -93,14 +93,14 @@ export const BASE_LOADOUT: Loadout = {
 export function loadoutOf(weapon: {
   damagePercent: number
   fireMs: number
-  streams: number
+  power: number
   bulletSpeed: number
 }): Loadout {
   return {
     ...BASE_LOADOUT,
     damage: weapon.damagePercent / 100,
-    // 기존 무기의 추가 갈래는 강화 단계로 환산한다.
-    bulletPower: Math.min(MAX_BULLET_POWER, Math.max(0, weapon.streams - 1)),
+    // 무기가 처음부터 가진 강화 단계(산탄총 2). 카드는 그 위에 쌓인다.
+    bulletPower: Math.min(MAX_BULLET_POWER, Math.max(0, weapon.power)),
     fireMs: weapon.fireMs,
     bulletSpeed: weapon.bulletSpeed,
   }
@@ -148,12 +148,21 @@ export function xpToNext(level: number): number {
   return Math.round(120 * level ** 1.35)
 }
 
-/** 강화 수치와 연출은 같은 단계에서 계산한다. */
+/** 범위 피해가 붙는 강화 단계 (decisions.md 362번). */
+export const SPLASH_FROM = 2
+
+/**
+ * 강화 수치와 연출은 같은 단계에서 계산한다. 2단계부터는 맞은 자리에서 터져 주변 적도 휘말린다: 반지름(px)과 맞은 적 피해에 대한 비율.
+ */
 export function bulletStats(loadout: Loadout) {
   const power = Math.min(MAX_BULLET_POWER, Math.max(0, loadout.bulletPower))
+  const damage = loadout.damage * (1 + power * 0.4)
+  const splash = power >= SPLASH_FROM
   return {
-    damage: loadout.damage * (1 + power * 0.4),
+    damage,
     scale: 1 + power * 0.2,
     power,
+    splashRadius: splash ? 40 + (power - SPLASH_FROM) * 20 : 0,
+    splashDamage: splash ? damage * 0.5 : 0,
   }
 }

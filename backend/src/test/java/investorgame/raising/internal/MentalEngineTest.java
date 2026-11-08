@@ -186,8 +186,9 @@ class MentalEngineTest {
     CompanyProperties.Weapon ur = ENGINE.mental.stats("rifle", "UR");
     assertThat(ur.damagePercent()).isGreaterThan(n.damagePercent());
     assertThat(ur.fireMs()).isLessThan(n.fireMs());
-    assertThat(ur.streams()).isEqualTo(n.streams());
-    assertThat(ENGINE.mental.stats("shotgun", "N").streams()).isEqualTo(3);
+    assertThat(ur.power()).isEqualTo(n.power());
+    assertThat(ENGINE.mental.stats("shotgun", "N").power()).as("산탄총은 강화탄 2단계로 시작").isEqualTo(2);
+    assertThat(ENGINE.mental.stats("pistol", "N").power()).isZero();
   }
 
   @Test

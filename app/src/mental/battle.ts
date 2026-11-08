@@ -75,6 +75,9 @@ type Bullet = Phaser.Physics.Arcade.Image & {
   look: 0 | 1
   damage: number
   power: number
+  /** 2단계부터 맞은 자리에서 터져 휘말리게 하는 반지름(px)과 피해. 0이면 없다. */
+  splashRadius: number
+  splashDamage: number
 }
 
 /** 적 그림(64×64)의 충돌 원: 가운데에 반지름 r. */
@@ -270,9 +273,13 @@ class BattleScene extends Phaser.Scene {
         return
       }
       const angle = Math.atan2(bullet.body.velocity.y, bullet.body.velocity.x)
-      this.impact(bullet.x, bullet.y, bullet.power)
+      const [bx, by] = [bullet.x, bullet.y]
+      this.impact(bx, by, bullet.power)
       bullet.disableBody(true, true)
       this.hit(enemy, bullet.damage, angle)
+      if (bullet.splashRadius > 0) {
+        this.splash(bx, by, bullet.splashRadius, bullet.splashDamage, enemy)
+      }
     })
     this.physics.add.overlap(this.player, this.enemies, (_p, e) => {
       const enemy = e as Enemy
@@ -692,6 +699,8 @@ class BattleScene extends Phaser.Scene {
     b.look = 0
     b.damage = stats.damage
     b.power = stats.power
+    b.splashRadius = stats.splashRadius
+    b.splashDamage = stats.splashDamage
     b.setDisplaySize(BULLET_W * stats.scale, BULLET_H * stats.scale).setRotation(base)
     b.setTint([0xffffff, 0xffdd99, 0xffb966, 0xff9955][stats.power])
     const hb = bulletHitbox(b.width, b.height)
@@ -701,6 +710,20 @@ class BattleScene extends Phaser.Scene {
       Math.sin(base) * this.loadout.bulletSpeed,
     )
     b.life = now + BULLET_LIFE
+  }
+
+  /** 범위 피해 (decisions.md 362번): 맞은 적을 뺀, 터진 자리 반지름 안의 적이 함께 맞는다. 바깥으로 밀어내는 각도로 맞는다. */
+  private splash(x: number, y: number, radius: number, dmg: number, except: Enemy) {
+    for (const child of this.enemies.getChildren()) {
+      const e = child as Enemy
+      if (e === except || !e.active || e.dying) {
+        continue
+      }
+      const reach = radius + ENEMIES[e.kind].r
+      if ((e.x - x) ** 2 + (e.y - y) ** 2 <= reach * reach) {
+        this.hit(e, dmg, Math.atan2(e.y - y, e.x - x))
+      }
+    }
   }
 
   /** 명중 폭발: 재사용 풀로 섬광과 충격파를 함께 펼친다. */
