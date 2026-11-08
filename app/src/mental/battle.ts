@@ -27,6 +27,17 @@ import {
   waterSlow,
   xpToNext,
 } from './cards'
+import {
+  BURN_TICK_SECONDS,
+  CRIT_POOL,
+  DAMAGE_FONT_PX,
+  DAMAGE_POOL,
+  DAMAGE_STYLE,
+  type DamageKind,
+  DamagePool,
+  damageLabel,
+  scatterOffset,
+} from './damageNumbers'
 import { ENEMIES, type EnemyKind } from './enemies'
 import { WALK_FRAMES, walkFrame } from './enemyWalk'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
@@ -118,6 +129,9 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   /** 불 마법에 타는 동안(전투 시각, 초)과 초당 피해 (377번). */
   burnUntil: number
   burnDps: number
+  /** 화상 피해를 숫자로 묶는 중(391번): 지난 숫자 뒤로 탄 피해와 시간(초). BURN_TICK_SECONDS마다 하나로 띄운다. */
+  burnShown: number
+  burnTick: number
   /** 지금 칠해 둔 빛: 없음·파랑(느림)·주황(화상). */
   chilled: boolean
   tintKind: 0 | 1 | 2
@@ -133,6 +147,17 @@ type Bullet = Phaser.Physics.Arcade.Image & {
   /** 앞으로 더 맞힐 수 있는 적의 수(소총 관통, 376번)와 이미 맞힌 적. */
   pierce: number
   hitList: Enemy[]
+}
+/** 데미지 숫자 한 칸: 합칠 때 다시 튀게 하는 크기 트윈. */
+type DamageText = Phaser.GameObjects.Text & { punch: Phaser.Tweens.Tween | null }
+
+/** 개발 서버의 확인 스크립트(app/scripts/stageCheck.ts)가 읽는 데미지 숫자 집계. 운영 빌드에는 내보내지 않는다. */
+export interface DamageStats {
+  /** 새로 띄운 숫자 수(종류별)와 합친 횟수, 죽이는 마지막 한 방에 띄운 숫자 수, 한꺼번에 떠 있던 최대 수. */
+  shown: Record<DamageKind, number>
+  merged: number
+  killing: number
+  peak: number
 }
 
 /** 적 그림(64×64)의 충돌 원: 가운데에 반지름 r. */
@@ -198,6 +223,15 @@ class BattleScene extends Phaser.Scene {
   private impactIndex = 0
   private pops: Phaser.GameObjects.Text[] = []
   private popIndex = 0
+  /** 데미지 숫자 풀(391번): 보통 숫자(종류마다 글자 색, 잉크 윤곽)와 치명타(금빛 글자·빨간 윤곽). */
+  private damage!: DamagePool<DamageText>
+  private crits!: DamagePool<DamageText>
+  readonly damageStats: DamageStats = {
+    shown: { bullet: 0, crit: 0, water: 0, fire: 0, lightning: 0, burn: 0, chain: 0 },
+    merged: 0,
+    killing: 0,
+    peak: 0,
+  }
 
   private mental = 100
   private score = 0
@@ -389,7 +423,7 @@ class BattleScene extends Phaser.Scene {
         this.slow(enemy, SLOW_FACTOR, SLOW_SECONDS)
       }
       this.magic(enemy, shot.damage)
-      this.hit(enemy, shot.damage, angle, shot.crit)
+      this.hit(enemy, shot.damage, angle, shot.crit ? 'crit' : 'bullet')
       if (bullet.splashRadius > 0) {
         this.splash(bx, by, bullet.splashRadius, bullet.splashDamage, enemy)
       }
@@ -448,7 +482,8 @@ class BattleScene extends Phaser.Scene {
     for (let i = 0; i < 20; i++) {
       this.impacts.push(this.add.image(0, 0, 'bullet-impact').setDepth(7).setVisible(false))
     }
-    for (let i = 0; i < 40; i++) {
+    // 알림 글자(멘탈 ±·투기 진압! 같은 말)는 데미지 숫자보다 위에 둔다.
+    for (let i = 0; i < 16; i++) {
       this.pops.push(
         this.add
           .text(0, 0, '', {
@@ -460,10 +495,32 @@ class BattleScene extends Phaser.Scene {
             resolution: DPR,
           })
           .setOrigin(0.5)
-          .setDepth(8)
+          .setDepth(9)
           .setVisible(false),
       )
     }
+    const damageText = (fill: string, stroke: string, thickness: number) =>
+      Object.assign(
+        this.add
+          .text(0, 0, '', {
+            fontFamily: '"Jua", "Gowun Dodum", sans-serif',
+            fontSize: `${DAMAGE_FONT_PX}px`,
+            color: fill,
+            stroke,
+            strokeThickness: thickness,
+            resolution: DPR,
+          })
+          .setOrigin(0.5)
+          .setDepth(8)
+          .setVisible(false),
+        { punch: null },
+      ) as DamageText
+    this.damage = new DamagePool(
+      Array.from({ length: DAMAGE_POOL }, () => damageText('#ffffff', INK, 5)),
+    )
+    this.crits = new DamagePool(
+      Array.from({ length: CRIT_POOL }, () => damageText('#ffd84d', '#c4123f', 7)),
+    )
 
     for (let i = 0; i < 6; i++)
       this.ripples.push(this.add.image(0, 0, 'wall-ripple').setDepth(7).setVisible(false))
@@ -618,6 +675,8 @@ class BattleScene extends Phaser.Scene {
     e.slowFactor = 1
     e.burnUntil = 0
     e.burnDps = 0
+    e.burnShown = 0
+    e.burnTick = 0
     e.chilled = false
     e.tintKind = 0
     const v = ENEMIES[kind]
@@ -752,7 +811,68 @@ class BattleScene extends Phaser.Scene {
     })
   }
 
-  private hit(e: Enemy, dmg: number, angle: number, crit = false) {
+  /**
+   * 데미지 숫자 하나 (391번): 적이 피해를 받는 모든 경우에 부른다. 종류(총알·치명타·물·불·번개·불 지속·번개 튐)마다 색과 크기가 다르다. 같은 적의 같은
+   * 종류는 MERGE_MS 안이면 떠 있는 숫자에 더해 하나로 보이고, 새 숫자는 적 머리 위에서 살짝 흩뿌려 떠오르며 빨리 사라진다. 텍스트는 풀에서 돌려 쓴다:
+   * 글자 크기는 하나로 두고 종류별 크기는 배율로만 바꿔, 글자나 색이 바뀔 때만 한 번 다시 그린다.
+   */
+  private damageNumber(e: Enemy, amount: number, kind: DamageKind) {
+    if (amount <= 0) return
+    const style = DAMAGE_STYLE[kind]
+    const pool = kind === 'crit' ? this.crits : this.damage
+    const { slot, merged, n } = pool.take(e, kind, amount, this.time.now)
+    const t = slot.item
+    const label = damageLabel(kind, slot.total)
+    if (t.style.color !== style.color) {
+      // 색만 바꾸고(다시 그리지 않음) 아래 setText 또는 updateText로 한 번만 그린다.
+      t.style.color = style.color
+      if (t.text === label) t.updateText()
+    }
+    t.setText(label)
+    const stats = this.damageStats
+    if (e.hp <= 0) stats.killing++
+    if (merged) {
+      // 합친 숫자는 제자리에서 한 번 더 튄다. 떠오르며 사라지는 트윈은 처음 뜬 때 그대로라 오래 남지 않는다.
+      stats.merged++
+      t.punch?.stop()
+      t.setScale(style.scale * 1.25)
+      t.punch = this.tweens.add({ targets: t, scale: style.scale, duration: 90 })
+      return
+    }
+    stats.shown[kind]++
+    this.tweens.killTweensOf(t)
+    const { w } = this.view()
+    const { dx, dy } = scatterOffset(n)
+    // 머리 위: 충돌 원 반지름(텍스처 px)에 지금 크기를 곱한다. 부푼 투기·큰 보스도 머리 위에 뜬다.
+    const r = ENEMIES[e.kind].r * DPR * Math.abs(e.scaleY)
+    const x = Phaser.Math.Clamp(e.x + dx, 16, w - 16)
+    const y = e.y - r - 10 + dy
+    const big = kind === 'crit' ? 1.7 : 1.3
+    t.setPosition(x, y)
+      .setAlpha(1)
+      .setScale(style.scale * big)
+      .setVisible(true)
+    t.punch = this.tweens.add({
+      targets: t,
+      scale: style.scale,
+      duration: kind === 'crit' ? 160 : 110,
+      ease: 'Back.easeOut',
+    })
+    this.tweens.add({
+      targets: t,
+      y: y - style.rise,
+      alpha: { value: 0, ease: 'Quad.easeIn' },
+      duration: style.life,
+      ease: 'Cubic.easeOut',
+      onComplete: () => {
+        t.setVisible(false)
+        pool.release(slot)
+      },
+    })
+    stats.peak = Math.max(stats.peak, this.damage.live() + this.crits.live())
+  }
+
+  private hit(e: Enemy, dmg: number, angle: number, kind: DamageKind = 'bullet') {
     e.hp -= dmg
     // 하얗게 번쩍, 들썩임, 데미지 숫자: 맞은 느낌의 세 가지.
     e.setTintFill(0xffffff)
@@ -769,19 +889,8 @@ class BattleScene extends Phaser.Scene {
       yoyo: true,
     })
     // 탄에 맞아도 밀려나지 않는다: 밀리면 내려오던 줄이 흐트러져 조준이 어긋났다. 밀림은 사장냥에 부딪혔을 때(hurt)만.
-    // 데미지 숫자는 한 방에 안 죽는 적(투기·손절매·투매)에만: 패닉까지 띄우면 화면이 숫자로 덮인다 (334번).
-    if (crit) {
-      // 리볼버 치명타 (376번): 노랗고 큰 숫자.
-      this.pop(e.x, e.y - ENEMIES[e.kind].r - 14, `${Math.round(dmg * 10)}!`, '#ffd84d', 22)
-    } else if ((ENEMIES[e.kind].hp > 1 || e.boss) && e.hp > 0) {
-      this.pop(
-        e.x + Phaser.Math.Between(-8, 8),
-        e.y - ENEMIES[e.kind].r - 10,
-        String(Math.round(dmg * 10)),
-        '#ffffff',
-        16,
-      )
-    }
+    // 데미지 숫자는 모든 적, 죽이는 마지막 한 방까지 (391번, 334번의 "한 방에 안 죽는 적에만"을 뒤집음). 리볼버 치명타(376번)는 크고 노랗다.
+    this.damageNumber(e, dmg, kind)
     if (e.hp <= 0) {
       this.kill(e, true)
     }
@@ -1071,7 +1180,7 @@ class BattleScene extends Phaser.Scene {
       g.lineStyle(3, 0xffe066, 1)
       for (const { e: o } of near.slice(0, chain.targets)) {
         g.lineBetween(e.x, e.y, o.x, o.y)
-        this.hit(o, chain.damage, Math.atan2(o.y - e.y, o.x - e.x))
+        this.hit(o, chain.damage, Math.atan2(o.y - e.y, o.x - e.x), 'chain')
       }
       this.tweens.add({ targets: g, alpha: 0, duration: 120, onComplete: () => g.destroy() })
     }
@@ -1289,11 +1398,25 @@ class BattleScene extends Phaser.Scene {
       const slowed = e.slowUntil > this.elapsed
       const burning = e.burnUntil > this.elapsed
       if (burning) {
-        e.hp -= e.burnDps * dt
+        const burn = e.burnDps * dt
+        e.hp -= burn
+        // 화상 숫자는 틱마다 작게 (391번): 매 프레임 띄우면 숫자로 덮이니 BURN_TICK_SECONDS 동안 탄 만큼을 하나로.
+        e.burnShown += burn
+        e.burnTick += dt
+        if (e.burnTick >= BURN_TICK_SECONDS || e.hp <= 0) {
+          this.damageNumber(e, e.burnShown, 'burn')
+          e.burnShown = 0
+          e.burnTick = 0
+        }
         if (e.hp <= 0) {
           this.kill(e, true)
           continue
         }
+      } else if (e.burnShown > 0) {
+        // 틱 사이에 불이 꺼졌다: 남은 만큼 마저 띄운다.
+        this.damageNumber(e, e.burnShown, 'burn')
+        e.burnShown = 0
+        e.burnTick = 0
       }
       e.chilled = slowed
       const tintKind = burning ? 2 : slowed ? 1 : 0
@@ -1389,6 +1512,10 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
     fps: { target: 60 },
     scene: [scene],
   })
+  if (import.meta.env.DEV) {
+    // 개발 서버에서만: 확인 스크립트가 데미지 숫자 집계를 읽는다(stageCheck.ts).
+    ;(window as unknown as { __mentalDamage?: DamageStats }).__mentalDamage = scene.damageStats
+  }
   const ro = new ResizeObserver(() => {
     const w = Math.round(parent.clientWidth * DPR)
     const h = Math.round(parent.clientHeight * DPR)
