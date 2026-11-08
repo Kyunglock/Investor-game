@@ -322,7 +322,6 @@ class CompanyEngineTest {
     int[] years = new int[trials];
     int grownLines = 0;
     for (int seed = 0; seed < trials; seed++) {
-      // 연봉이 없는 작은 회사(270번)라 연봉 때문에 떠나지 않는다.
       CompanyState company = open(seed, rookie, 100_000_000L);
       CompanyState.Employee e = company.employees.getFirst();
       ENGINE.place(company, Map.of(e.id, "day"));
@@ -413,11 +412,11 @@ class CompanyEngineTest {
     assertThat(company.alumni).extracting(a -> a.name).containsExactly(gone.name);
     ENGINE.draw(company, 1, new HashSeededRandom(5));
 
-    // 이직 제안·연봉 협상·사표가 걸린 사람은 먼저 답해야 한다.
-    CompanyState.Raise raise = new CompanyState.Raise();
-    raise.employeeId = company.employees.getFirst().id;
-    company.raise = raise;
-    assertThatThrownBy(() -> ENGINE.release(company, raise.employeeId))
+    // 이직 제안이 걸린 사람은 먼저 답해야 한다.
+    CompanyState.Poach poach = new CompanyState.Poach();
+    poach.employeeId = company.employees.getFirst().id;
+    company.poach = poach;
+    assertThatThrownBy(() -> ENGINE.release(company, poach.employeeId))
         .isInstanceOf(InvalidRequestException.class);
   }
 
@@ -509,7 +508,6 @@ class CompanyEngineTest {
 
     company.invest = null;
     company.poach = null;
-    company.raise = null;
     company.tickets = 0;
     CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(3));
     assertThat(s.lines).anyMatch(l -> l.contains("인사팀이 좋은 사람을"));
@@ -855,7 +853,7 @@ class CompanyEngineTest {
         long staff = s.results.stream().mapToLong(r -> r.pnl).sum();
         long invest = s.investTotal == null ? 0 : s.investTotal;
         if (s.capitalAfter > 0) {
-          assertThat(s.capitalBefore + invest + staff + s.fee - s.hiring - s.salary - s.moving)
+          assertThat(s.capitalBefore + invest + staff + s.fee - s.hiring - s.moving)
               .as("%d번 시드 %d년 차 장부", seed, year)
               .isEqualTo(s.capitalAfter);
         }
@@ -1042,8 +1040,8 @@ class CompanyEngineTest {
   }
 
   /**
-   * 이직 제안을 고민거리로 (#390): 이적료는 몸값(계약금과 지난해 번 돈 가운데 큰 쪽)의 150%다. 단골 라이벌이 다시 오면 몇 번째인지 말한다. 연봉이 나가는
-   * 회사에서 붙잡으면 연봉을 맞춰 준다. 이직으로 떠난 사람의 소식은 한 해 뒤에 들린다.
+   * 이직 제안을 고민거리로 (#390): 이적료는 몸값(계약금과 지난해 번 돈 가운데 큰 쪽)의 150%다. 단골 라이벌이 다시 오면 몇 번째인지 말한다. 붙잡으면 사기가
+   * 오른다(연봉을 맞춰 주던 것은 383번에서 뺐다). 이직으로 떠난 사람의 소식은 한 해 뒤에 들린다.
    */
   @Test
   void 이적료는_몸값을_따르고_단골_라이벌이_다시_오고_떠난_사람_소식이_들린다() {
@@ -1071,17 +1069,17 @@ class CompanyEngineTest {
     company.poach.count = 2;
     assertThat(ENGINE.poachLine(company)).startsWith("또 " + found.rival).contains("2번째");
 
-    // 연봉이 나가는 회사(D 이상)에서 붙잡으면 연봉을 맞춰 주고 사기가 오른다.
+    // 붙잡으면 사기가 오르고 돈은 들지 않는다.
     company.building = "D";
     int keptId = found.employeeId;
     CompanyState.Employee kept =
         company.employees.stream().filter(e -> e.id == keptId).findFirst().orElseThrow();
-    int raises = kept.raises;
     int morale = kept.morale;
+    long cash = company.capital;
     ENGINE.answerPoach(company, true);
-    assertThat(kept.raises).isEqualTo(raises + 1);
     assertThat(kept.morale).isEqualTo(morale + 1);
-    assertThat(company.yearLines).anyMatch(line -> line.contains("연봉을 올려 줬다"));
+    assertThat(company.capital).isEqualTo(cash);
+    assertThat(company.yearLines).noneMatch(line -> line.contains("연봉"));
 
     // 이직으로 떠난 사람의 소식은 한 해 뒤에 들린다(절반 확률이라 여러 해를 본다).
     CompanyState.Alumnus gone = new CompanyState.Alumnus();
@@ -1096,7 +1094,6 @@ class CompanyEngineTest {
       company.year = year;
       company.invest = null;
       company.poach = null;
-      company.raise = null;
       CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(year));
       heard = s.lines.stream().anyMatch(line -> line.contains("간 류소울"));
     }
@@ -1124,7 +1121,7 @@ class CompanyEngineTest {
     assertThat(found.transferFee).isPositive();
     assertThat(TestContent.load().raising().company().people().poachers()).contains(found.rival);
 
-    // 작은 회사(연봉 없음)에서는 남기는 데 돈이 들지 않는다 (265번).
+    // 남기는 데는 돈이 들지 않는다 (265번).
     String rival = found.rival;
     company.poach = found;
     long cash = company.capital;
@@ -1245,7 +1242,6 @@ class CompanyEngineTest {
         // 공사 중이면 한 해 짓는다.
         company.invest = null;
         company.poach = null;
-        company.raise = null;
         ENGINE.settle(company, new HashSeededRandom(seed));
         company.capital = Math.max(company.capital, 200_000_000_000_000L);
       }

@@ -3,7 +3,6 @@ import { toggleAutoPlay } from '@web/features/raising/autoPlay'
 import { GachaReveal, useDrawReveal } from '@web/features/raising/Gacha'
 import { InvestWindow } from '@web/features/raising/InvestWindow'
 import { QuarterSheet } from '@web/features/raising/QuarterSheet'
-import { ResignAlert } from '@web/features/raising/ResignAlert'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useLocked, useTutorialSpot } from '@web/features/raising/TutorialBanner'
 import { YearEndSheet } from '@web/features/raising/YearEnd'
@@ -18,7 +17,7 @@ import { useAppUi } from './ui'
 
 /**
  * 회의 창과 결산서 (웹의 CompanyScreen과 같은 흐름): 분기 넘기기를 누르면 (직원이 종목을 물어 오면, 382번) 종목 회의 → 결산. 연말 결산서·분기 실적·
- * 건물 알림·사표·엔딩은 서버 상태와 스토어의 표시로 뜬다. 이 컴포넌트는 회사·해·분기·직원이 바뀌면 다시 그려져 창 상태가 초기화된다.
+ * 건물 알림·엔딩은 서버 상태와 스토어의 표시로 뜬다. 이 컴포넌트는 회사·해·분기·직원이 바뀌면 다시 그려져 창 상태가 초기화된다.
  */
 export function Windows({ company }: { company: Company }) {
   const justSettled = useRaisingStore((s) => s.justSettled)
@@ -85,9 +84,6 @@ export function Windows({ company }: { company: Company }) {
           year={upgradeMove.year}
           onDone={() => useRaisingStore.setState({ upgradeMove: null })}
         />
-      )}
-      {company.resign && !justSettled && !justQuartered && !moveAlert && !upgradeMove && (
-        <ResignAlert resign={company.resign} />
       )}
       {drawn && !justSettled && (
         // 채용 뽑기 결과 (decisions.md 312번): 카드가 열릴 때마다 소리·진동, 특급이면 금빛 번쩍임과 색종이.

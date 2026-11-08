@@ -220,28 +220,11 @@ public record CompanyProperties(
       Pay pay) {}
 
   /**
-   * 연봉과 사기 (decisions.md 270번).
+   * 사기 (decisions.md 270번). 연봉·연봉 협상·사표는 뺐다(383번).
    *
-   * @param salaryPercent 한 해 연봉 = 그 직원 계약금의 자본 비율 몫 × 이 비율(%). 분기마다 4분의 1씩 나간다
-   * @param salaryFromGrade 이 회사 등급부터 연봉이 나간다. 그 아래 작은 회사의 직원은 지분으로 받는다
-   * @param raiseStepPercent 연봉을 올려 줄 때마다 오르는 비율(%)
-   * @param raiseFromYear 이 해부터 연봉 협상이 온다
-   * @param raisePercent 해마다 연봉 협상이 올 확률(%)
-   * @param raiseEveryYears 한 사람이 이만큼 해가 지나야 다시 올려 달라고 한다
    * @param moraleFlipPercent 사기 한 칸마다 손이 뒤집힐 확률에 더하거나(낮을 때) 빼는(높을 때) 비율(%)
    */
-  public record Pay(
-      int salaryPercent,
-      String salaryFromGrade,
-      int raiseStepPercent,
-      int raiseFromYear,
-      int raisePercent,
-      int raiseEveryYears,
-      int moraleFlipPercent,
-      int ignoreQuarters,
-      int ignoreLeavePercent,
-      int freezeLeavePercent,
-      int raiseGrowPercent) {}
+  public record Pay(int moraleFlipPercent) {}
 
   public record Market(
       int levelSteps,

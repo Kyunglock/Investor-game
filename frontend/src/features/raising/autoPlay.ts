@@ -11,8 +11,6 @@ export type AutoStep =
   | { kind: 'draw'; count: number }
   | { kind: 'upgrade' }
   | { kind: 'poach'; keep: boolean }
-  | { kind: 'raise'; accept: boolean }
-  | { kind: 'resign'; keep: boolean }
   | { kind: 'place'; seats: Seat[] }
   | { kind: 'scout' }
   | { kind: 'convene' }
@@ -67,14 +65,6 @@ export function nextAutoStep(
   // 이직 제안 (262·265번): 자동 진행은 직원을 보내지 않는다. 늘 남긴다.
   if (company.meeting?.poach) {
     return { kind: 'poach', keep: true }
-  }
-  // 사표 (282번): 자동 진행은 연봉을 올려 붙잡는다.
-  if (company.resign) {
-    return { kind: 'resign', keep: true }
-  }
-  // 연봉 협상 (270번): 자동 진행은 올려 준다. 사기가 꺾이면 손이 더 뒤집힌다.
-  if (company.meeting?.raise) {
-    return { kind: 'raise', accept: true }
   }
   // 건물 이사 (296번): 갈 수 있으면 먼저 간다. 돈을 쓰는 순서는 건물이 먼저다.
   if (company.upgrade?.affordable) {
@@ -161,18 +151,8 @@ export function useCompanyAutoPlay() {
     if (useRaisingStore.getState().autoNextAt !== nextAt) {
       useRaisingStore.setState({ autoNextAt: nextAt })
     }
-    const {
-      draw,
-      upgrade,
-      place,
-      convene,
-      decideInvest,
-      settle,
-      answerPoach,
-      answerRaise,
-      answerResign,
-      scout,
-    } = useRaisingStore.getState()
+    const { draw, upgrade, place, convene, decideInvest, settle, answerPoach, scout } =
+      useRaisingStore.getState()
     const id = setTimeout(() => {
       switch (step.kind) {
         case 'closeYearEnd':
@@ -192,12 +172,6 @@ export function useCompanyAutoPlay() {
           return
         case 'poach':
           void answerPoach(step.keep)
-          return
-        case 'raise':
-          void answerRaise(step.accept)
-          return
-        case 'resign':
-          void answerResign(step.keep)
           return
         case 'place':
           void place(step.seats)

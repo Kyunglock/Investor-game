@@ -118,12 +118,6 @@ class BalanceSimulationTest {
           };
       ENGINE.invest.decide(c, choice, boss == Boss.GREEDY, random);
     }
-    if (c.raise != null) {
-      ENGINE.pay.answer(c, true, random);
-    }
-    if (c.resign != null) {
-      ENGINE.pay.answerResign(c, true);
-    }
     if (c.poach != null) {
       ENGINE.answerPoach(c, true);
     }
@@ -193,7 +187,9 @@ class BalanceSimulationTest {
    * 낫고, 그 사장이 이사 안 하는 사장보다 낫다. 2026-11-08 120판(거시경제 회의가 있을 때): 스테이지 1조 2,071억 · 등급 첫 해 E 2 · D 6 ·
    * C 8 · B 14 · A 17 · S 22 · SS 23 / 기사 806억 · 공격 39억 · 이사 안 함 13억. 2026-11-09 회의를 뺀 뒤(382번, 태도는
    * 늘 중립이라 맞힌 태도의 판단마다 +4%p와 섹터 바람이 없다): 스테이지 4,334억 · E 2 · D 6 · C 10 · B 15 · A 19 · S 25 · SS
-   * 없음 / 기사 238억(E 3 · D 11 · C 15 · B 23, A 없음) · 공격 44억 · 이사 안 함 14억.
+   * 없음 / 기사 238억(E 3 · D 11 · C 15 · B 23, A 없음) · 공격 44억 · 이사 안 함 14억. 2026-11-09 인건비·연봉 협상·사표를 뺀
+   * 뒤(383번, 연봉이 나가지 않지만 올려 줄 때 능력치가 오르던 보람도 없다): 스테이지 4,699억 · 등급 첫 해는 그대로 / 기사 194억 · 공격 35억 · 이사
+   * 안 함 14억.
    */
   @Test
   void 스테이지를_깨며_기사를_읽는_사장이_가장_빨리_크고_등급이_고르게_오른다() {

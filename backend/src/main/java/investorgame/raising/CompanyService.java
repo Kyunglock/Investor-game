@@ -35,12 +35,6 @@ public interface CompanyService {
   /** 올해 이직 제안에 답한다: 남기거나 보낸다(이적료를 받는다). 직원은 보낼 때만 떠난다. 제안이 없으면 400 (decisions.md 262·265번). */
   CompanyView answerPoach(UUID sessionId, boolean keep);
 
-  /** 올해 연봉 협상에 답한다: 올려 주거나 동결한다 (decisions.md 270번). 협상이 없으면 400. */
-  CompanyView answerRaise(UUID sessionId, boolean accept);
-
-  /** 연봉 때문에 사표를 들고 온 직원에게 답한다: 붙잡거나 보낸다 (decisions.md 282번). 사표가 없으면 400. */
-  CompanyView answerResign(UUID sessionId, boolean keep);
-
   /** 그 자리의 팀장을 정한다 (decisions.md 269번). 그 자리에 앉은 직원이 아니면 400. */
   CompanyView leader(UUID sessionId, String desk, int employeeId);
 

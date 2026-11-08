@@ -251,10 +251,6 @@ class JsonContentCatalog implements ContentCatalog {
               && q.name() != null
               && q.hello() != null
               && !q.hello().isEmpty()
-              && q.raiseAsk() != null
-              && !q.raiseAsk().isEmpty()
-              && q.resign() != null
-              && q.resign().keySet().containsAll(List.of("IGNORED", "FROZEN"))
               && q.poachKept() != null
               && q.poachLeft() != null
               && q.farewell() != null
@@ -418,7 +414,6 @@ class JsonContentCatalog implements ContentCatalog {
             && company.people().poachers() != null
             && !company.people().poachers().isEmpty()
             && company.people().poachAgain() != null
-            && company.people().keptRaise() != null
             && company.people().alumniGood() != null
             && company.people().alumniBad() != null
             && company.people().poach() != null
@@ -426,10 +421,6 @@ class JsonContentCatalog implements ContentCatalog {
             && company.people().left() != null
             && company.people().ignored() != null
             && company.people().settled() != null
-            && company.people().raiseAsk() != null
-            && company.people().raised() != null
-            && company.people().frozen() != null
-            && company.people().raiseIgnored() != null
             && company.people().meetingIgnored() != null
             && company.people().heard() != null
             && company.people().rested() != null,

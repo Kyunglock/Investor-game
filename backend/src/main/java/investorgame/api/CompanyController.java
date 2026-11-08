@@ -272,26 +272,6 @@ class CompanyController {
     return companies.mergeWeapon(cookies.requireSession(token), request.kind(), request.grade());
   }
 
-  /** 올해 연봉 협상에 답한다 (decisions.md 270번). */
-  @PostMapping("/raise")
-  CompanyView answerRaise(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody RaiseRequest request) {
-    return companies.answerRaise(cookies.requireSession(token), request.accept());
-  }
-
-  record RaiseRequest(@NotNull Boolean accept) {}
-
-  /** 사표를 들고 온 직원에게 답한다: 연봉을 올려 붙잡거나 보낸다 (decisions.md 282번). */
-  @PostMapping("/resign")
-  CompanyView answerResign(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody ResignRequest request) {
-    return companies.answerResign(cookies.requireSession(token), request.keep());
-  }
-
-  record ResignRequest(@NotNull Boolean keep) {}
-
   /** 그 자리의 팀장을 정한다 (decisions.md 269번). */
   /** 이사 비용을 내고 다음 건물로 간다 (decisions.md 296번). */
   @PostMapping("/upgrade")

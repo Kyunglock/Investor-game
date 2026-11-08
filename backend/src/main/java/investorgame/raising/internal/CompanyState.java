@@ -125,12 +125,6 @@ class CompanyState {
   /** 올해 결산 전에 일어난 사람 이야기(붙잡음·보냄). 결산 소식 줄에 붙고 해가 바뀌면 비운다 (262번). */
   List<String> yearLines = new ArrayList<>();
 
-  /** 올해의 연봉 협상 (decisions.md 270번). 없으면 null. */
-  Raise raise;
-
-  /** 연봉 때문에 사표를 들고 온 직원 (decisions.md 282번). 붙잡거나 보내기 전이면 다음 분기를 넘길 때 떠난다. 없으면 null. */
-  Resign resign;
-
   /** 올해의 이직 제안 (decisions.md 262번). 없으면 null. 답하지 않은 채 결산하면 그 직원이 떠난다. */
   Poach poach;
 
@@ -279,20 +273,11 @@ class CompanyState {
     /** 이 회사에서 번 돈의 합(결산과 투자 회의). 명예의 전당이 쓴다 (263번). */
     long totalPnl;
 
-    /** 연봉을 올려 준 횟수 (decisions.md 270번). 한 번마다 연봉이 raise-step-percent만큼 오른다. */
-    int raises;
-
-    /** 마지막으로 연봉을 올려 달라고 한 해. 아직 없으면 0. */
-    int askedYear;
-
     /** 사기(−2~+2, 270번). 낮으면 손이 더 뒤집히고 높으면 덜 뒤집힌다. 해마다 0 쪽으로 한 칸 돌아온다. */
     int morale;
 
     /** 올해 한 번도 자리에 앉지 않았나: 연말에 쉬어서 사기가 오른다. 분기를 넘길 때마다 앉아 있었으면 거짓. */
     boolean restedAllYear = true;
-
-    /** 연봉을 동결당해 다음 분기를 넘길 때 떠날지 굴린다 (decisions.md 280번). */
-    boolean frozenPending;
 
     /** 합성으로 이어받은 버릇 (350번). 없으면 번호로 정한 버릇(349번). */
     String quirk;
@@ -505,9 +490,6 @@ class CompanyState {
     /** 이 분기에 스테이지 보상으로 받은 자본 (369번). */
     long rewards;
 
-    /** 이 분기에 나간 연봉(인건비, 270번). */
-    long salary;
-
     /** 이 분기 종목 회의의 기사 제목과 손익. 안 열렸으면 null. */
     String investTitle;
 
@@ -625,33 +607,6 @@ class CompanyState {
     boolean reported;
   }
 
-  /** 연봉 때문에 사표를 들고 온 직원 (decisions.md 282번). */
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
-  static class Resign {
-    int employeeId;
-
-    /** IGNORED(연봉 답을 기다리다 지쳤다)·FROZEN(동결에 실망했다) */
-    String reason;
-
-    /** 사표를 들고 온 해·분기. 그다음 분기를 넘기면 떠난다. */
-    int year;
-
-    int quarter;
-  }
-
-  /** 올해의 연봉 협상 (decisions.md 270번). 답하지 않고 연말이 오면 흐지부지되고 사기가 조금 내린다. */
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
-  static class Raise {
-    int employeeId;
-    long before;
-    long after;
-
-    /** 답하지 않은 채 넘긴 분기 수 (decisions.md 280번). */
-    int quarters;
-  }
-
   /** 다른 증권사가 우리 직원에게 손을 뻗었다 (262·288번). */
   @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
@@ -705,9 +660,6 @@ class CompanyState {
 
     /** 그해 스테이지 보상으로 받은 자본 (369번). */
     long rewards;
-
-    /** 그해 나간 연봉의 합(인건비, 270번). */
-    long salary;
 
     /** 그해 투자 회의의 기사 제목과 손익. 회의를 안 했거나 이 칸을 더하기 전(240번)의 결산이면 null. */
     String investTitle;

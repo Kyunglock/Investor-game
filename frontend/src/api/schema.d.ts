@@ -80,7 +80,7 @@ export interface paths {
         /**
          * 같은 등급 직원을 합쳐 바탕 한 명을 한 단계 올린다 (decisions.md 312번)
          * @description 바탕(baseId)과 같은 종합 등급의 재료 mergeCount−1명. 재료는 회사를 떠나고 번 돈은 바탕에게 얹힌다. F~SS는 다섯 능력치가 한 띠 오르고,
-         *     SSS 위는 단계(X…)가 오른다. 수·등급이 맞지 않거나, 맨 위(GOD)거나, 이직 제안·연봉 협상·사표가 걸린 사람이면 400.
+         *     SSS 위는 단계(X…)가 오른다. 수·등급이 맞지 않거나, 맨 위(GOD)거나, 이직 제안이 걸린 사람이면 400.
          */
         post: operations["mergeEmployees"];
         delete?: never;
@@ -100,7 +100,7 @@ export interface paths {
         put?: never;
         /**
          * 직원을 내보낸다 (decisions.md 312번)
-         * @description 데리고 있을 자리를 비운다. 명예의 전당과 연표에 남는다. 걸린 일(이직 제안·연봉 협상·사표)이 있으면 400.
+         * @description 데리고 있을 자리를 비운다. 명예의 전당과 연표에 남는다. 이직 제안이 걸려 있으면 400.
          */
         post: operations["releaseEmployee"];
         delete?: never;
@@ -168,48 +168,6 @@ export interface paths {
          *     답하지 않은 채 결산해도 직원은 남는다: 직원은 사장이 보낼 때만 떠난다 (decisions.md 265번). 제안이 없으면 400.
          */
         post: operations["answerPoach"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/company/raise": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 올해 연봉 협상에 답한다 (decisions.md 270번)
-         * @description accept가 참이면 연봉을 올려 준다(사기 +1), 거짓이면 동결한다(사기 −2). 답하지 않은 채 연말이 오면 흐지부지되고 사기가 조금 내린다.
-         *     협상이 없으면 400.
-         */
-        post: operations["answerRaise"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/company/resign": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 연봉 때문에 사표를 들고 온 직원에게 답한다 (decisions.md 282번)
-         * @description keep이 참이면 연봉을 두 번 올려 준 만큼(약 +21%) 올려 주고 붙잡는다(사기 +1). 거짓이면 지금 떠난다.
-         *     답하지 않고 다음 분기를 넘기면 떠난다. 사표가 없으면 400.
-         */
-        post: operations["answerResign"];
         delete?: never;
         options?: never;
         head?: never;
@@ -578,15 +536,10 @@ export interface components {
                 settled: boolean;
                 /** @description 앉은 자리의 팀장이다 (decisions.md 269번) */
                 leader: boolean;
-                /**
-                 * Format: int64
-                 * @description 한 해 연봉. 상가 아래 작은 회사면 0 (decisions.md 270번)
-                 */
-                salary: number;
                 /** @description 사기. 낮으면 손이 더 뒤집힌다 (270번) */
                 morale: number;
                 /**
-                 * @description 버릇 (decisions.md 349번). 번호로 정해져 바뀌지 않고 막판 제안·상벌·연봉·사표·이직·첫인사 문구가 이를 따른다
+                 * @description 버릇 (decisions.md 349번). 번호로 정해져 바뀌지 않고 이직·첫인사·합성 문구가 이를 따른다
                  * @enum {string}
                  */
                 quirk?: "gut" | "chat" | "chart" | "news" | "coffee";
@@ -648,24 +601,6 @@ export interface components {
                      */
                     transferFee: number;
                     line: string;
-                } | null;
-                /** @description 올해의 연봉 협상 (decisions.md 270번). 없으면 null */
-                raise?: {
-                    employeeId: number;
-                    name: string;
-                    /**
-                     * Format: int64
-                     * @description 지금 연봉
-                     */
-                    before: number;
-                    /**
-                     * Format: int64
-                     * @description 올려 주면 연봉
-                     */
-                    after: number;
-                    line: string;
-                    /** @description 답에 따른 확률 한 줄: 올리면 능력치 상승, 동결하거나 답하지 않으면 떠남 (decisions.md 280번) */
-                    odds: string;
                 } | null;
             } | null;
             /** @description 채용 뽑기 (decisions.md 312번). 공채 시장(지원자를 골라 계약금을 내고 뽑던 것, 228번)을 대신한다 */
@@ -954,11 +889,6 @@ export interface components {
                  * @description 그해 스테이지 보상으로 받은 자본 (decisions.md 369번)
                  */
                 rewards: number;
-                /**
-                 * Format: int64
-                 * @description 그해 나간 연봉의 합(인건비
-                 */
-                salary: number;
                 /** @description 그해 투자 회의(기사 제목과 손익, 이미 자본에 들어갔다). 회의를 안 했거나 옛 결산이면 null (decisions.md 240번) */
                 invest?: {
                     title: string;
@@ -986,27 +916,6 @@ export interface components {
                 lines: string[];
                 /** @description 팀장들의 한 해 보고 (decisions.md 269번) */
                 reports: components["schemas"]["Report"][];
-            } | null;
-            /** @description 연봉 때문에 사표를 들고 온 직원 (decisions.md 282번). 붙잡거나 보내지 않고 다음 분기를 넘기면 떠난다. 없으면 null */
-            resign?: {
-                employeeId: number;
-                name: string;
-                /**
-                 * @description IGNORED: 연봉 답을 기다리다 지쳤다, FROZEN: 동결에 실망했다
-                 * @enum {string}
-                 */
-                reason: "IGNORED" | "FROZEN";
-                line: string;
-                /**
-                 * Format: int64
-                 * @description 지금 연봉
-                 */
-                before: number;
-                /**
-                 * Format: int64
-                 * @description 붙잡으면 오를 연봉
-                 */
-                after: number;
             } | null;
             /** @description 업계 순위 (#351). 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다. 한 해도 마치지 않았으면 null */
             industry?: {
@@ -1158,11 +1067,6 @@ export interface components {
              * @description 이 분기에 스테이지 보상으로 받은 자본 (decisions.md 369번)
              */
             rewards: number;
-            /**
-             * Format: int64
-             * @description 이 분기에 나간 연봉(인건비
-             */
-            salary: number;
             /** @description 이 분기 종목 회의(기사 제목과 손익). 안 열렸으면 null */
             invest?: {
                 title: string;
@@ -1519,64 +1423,6 @@ export interface operations {
         };
     };
     answerPoach: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    keep: boolean;
-                };
-            };
-        };
-        responses: {
-            /** @description 답한 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    answerRaise: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    accept: boolean;
-                };
-            };
-        };
-        responses: {
-            /** @description 답한 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    answerResign: {
         parameters: {
             query?: never;
             header?: never;

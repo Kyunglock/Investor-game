@@ -14,7 +14,6 @@ function company(over: Record<string, unknown> = {}): Company {
   return {
     employees: [],
     meeting: { wanted: '' },
-    resign: null,
     gacha: {
       tickets: 5,
       roster: 0,
@@ -58,7 +57,7 @@ describe('채용 뽑기 (decisions.md 312번)', () => {
   it('걸린 일이 있는 사람과 맨 위(GOD)는 빠진다', () => {
     const c = company({
       employees: [e(1, 'C'), e(2, 'C'), e(3, 'C'), e(4, 'GOD'), e(5, 'GOD'), e(6, 'GOD')],
-      meeting: { wanted: '', raise: { employeeId: 3 } },
+      meeting: { wanted: '', poach: { employeeId: 3 } },
     })
     expect(busyIds(c)).toEqual(new Set([3]))
     expect(mergeGroups(c)).toEqual([])

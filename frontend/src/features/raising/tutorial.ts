@@ -99,7 +99,7 @@ export function tutorialStep(company: Company): TutorialStep {
       id: 'sheet',
       n: 4,
       title: '결산 읽기',
-      text: '분기 실적과 팀장 보고를 읽습니다. 네 분기를 넘기면 연말 결산서가 뜨고 연봉·인건비가 나갑니다. 이슈 탭에는 폭락 조짐·이직 제안·연봉 협상이 올라옵니다.',
+      text: '분기 실적과 팀장 보고를 읽습니다. 네 분기를 넘기면 연말 결산서가 뜹니다. 이슈 탭에는 폭락 조짐·이직 제안이 올라옵니다.',
       tab: 'meeting',
       spot: 'settle',
       short: '이슈·기록 탭이 열렸다. 분기를 더 넘겨 연말 결산까지',

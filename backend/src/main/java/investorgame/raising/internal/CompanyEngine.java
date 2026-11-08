@@ -85,7 +85,7 @@ class CompanyEngine {
     this.invest = new InvestEngine(this, content, behavior, properties);
     this.scout = new ScoutEngine(this, invest, properties);
     this.teams = new TeamEngine(this, content);
-    this.pay = new PayEngine(this, content, properties);
+    this.pay = new PayEngine(content, properties);
     this.history = new CompanyHistory(content);
     this.mental = new MentalEngine(content, properties);
     this.quirks = new Quirks(content);
@@ -110,7 +110,7 @@ class CompanyEngine {
   /** 팀장과 팀장 보고 (decisions.md 269번). */
   final TeamEngine teams;
 
-  /** 연봉과 사기 (decisions.md 270번). */
+  /** 사기 (decisions.md 270번). */
   final PayEngine pay;
 
   static final String HR_DESK = "hr";
@@ -396,26 +396,11 @@ class CompanyEngine {
         Korean.fill(
             poached == null ? texts.kept() : quirks.poachKeptTemplate(poached, texts.kept()),
             Map.of("name", poachedName(company), "rival", rivalOf(company))));
-    // 붙잡는 데는 값이 든다 (#390): 연봉이 나가는 회사면 제안에 맞춰 연봉을 한 번 올려 주고, 붙잡힌 직원은 사기가 오른다.
+    // 붙잡힌 직원은 사기가 오른다 (#390). 연봉을 올려 주던 값은 연봉과 함께 뺐다(383번).
     company.employees.stream()
         .filter(e -> e.id == poach.employeeId)
         .findFirst()
-        .ifPresent(
-            e -> {
-              long before = pay.salary(company, e);
-              if (before > 0) {
-                e.raises++;
-                company.yearLines.add(
-                    Korean.fill(
-                        texts.keptRaise(),
-                        Map.of(
-                            "name", e.name,
-                            "rival", rivalOf(company),
-                            "before", money(before),
-                            "after", money(pay.salary(company, e)))));
-              }
-              pay.shiftMorale(e, 1);
-            });
+        .ifPresent(e -> pay.shiftMorale(e, 1));
     company.poach = null;
   }
 
@@ -735,17 +720,6 @@ class CompanyEngine {
     return Math.max(fixed, (long) (capital * (bp / (double) BP)));
   }
 
-  /** 계약금의 자본 비율 몫(정해진 값을 뺀 것). 연봉이 쓴다 (decisions.md 270번): 작은 회사에는 가볍고 큰 회사에는 무겁다. */
-  long feeShare(long capital, Map<String, Integer> stats, int rank) {
-    CompanyProperties.Market market = properties.market();
-    int at = Math.min(market.fees().size() - 1, LADDER.indexOf(overallGrade(stats)));
-    int bp =
-        rank > 0
-            ? market.veteranFeeBp() + (rank - 1) * market.veteranFeeStepBp()
-            : market.feeBp().get(Math.min(market.feeBp().size() - 1, at));
-    return (long) (capital * (bp / (double) BP));
-  }
-
   /** 데리고 있을 수 있는 사람 수: 상한이 없다(354번, roster-max를 아주 크게). 전에는 100명(337번). */
   int rosterMax(CompanyState company) {
     return properties.gacha().rosterMax();
@@ -889,7 +863,7 @@ class CompanyEngine {
   /**
    * 합성 (decisions.md 312번): 같은 종합 등급의 직원 merge-count명을 합쳐 바탕(baseId) 한 명을 한 단계 올린다. 재료는 회사를 떠나고(연표에
    * 남지 않는다), 번 돈은 바탕에게 얹힌다. F~SS면 다섯 능력치를 모두 한 띠 올려 종합 등급을 한 단계 올리고, SSS 위면 단계(X…)가 오른다. 맨
-   * 위(GOD)거나, 등급이 다르거나, 수가 맞지 않거나, 이직 제안·연봉 협상·사표가 걸린 사람이면 400.
+   * 위(GOD)거나, 등급이 다르거나, 수가 맞지 않거나, 이직 제안이 걸린 사람이면 400.
    */
   Employee merge(CompanyState company, int baseId, List<Integer> materialIds) {
     return merge(company, baseId, materialIds, null);
@@ -1011,7 +985,7 @@ class CompanyEngine {
     }
   }
 
-  /** 직원을 내보낸다 (decisions.md 312번): 데리고 있을 자리를 비운다. 명예의 전당과 연표에 남는다. 이직 제안·연봉 협상·사표가 걸린 사람이면 400. */
+  /** 직원을 내보낸다 (decisions.md 312번): 데리고 있을 자리를 비운다. 명예의 전당과 연표에 남는다. 이직 제안이 걸린 사람이면 400. */
   void release(CompanyState company, int employeeId) {
     requireOpen(company);
     Employee e = employee(company, employeeId);
@@ -1028,14 +1002,11 @@ class CompanyEngine {
         .orElseThrow(() -> new InvalidRequestException("없는 직원"));
   }
 
-  /** 이직 제안·연봉 협상·사표가 걸린 사람은 합치거나 내보낼 수 없다: 먼저 답한다. */
+  /** 이직 제안이 걸린 사람은 합치거나 내보낼 수 없다: 먼저 답한다. */
   private static void requireFree(CompanyState company, Employee e) {
-    boolean busy =
-        (company.poach != null && company.poach.employeeId == e.id)
-            || (company.raise != null && company.raise.employeeId == e.id)
-            || (company.resign != null && company.resign.employeeId == e.id);
+    boolean busy = company.poach != null && company.poach.employeeId == e.id;
     if (busy) {
-      throw new InvalidRequestException(e.name + "에게 걸린 일(이직 제안·연봉·사표)에 먼저 답해야 한다");
+      throw new InvalidRequestException(e.name + "에게 걸린 이직 제안에 먼저 답해야 한다");
     }
   }
 
@@ -1393,7 +1364,6 @@ class CompanyEngine {
     company.omenQuarter = company.omen == null ? null : burst - 1;
     company.yearLines.clear();
     company.poach = poachOf(company, random);
-    company.raise = pay.raiseOf(company, random);
     startQuarter(company, random);
   }
 
@@ -1487,16 +1457,6 @@ class CompanyEngine {
   /** 그 자리에 앉은 사람의 직함(종합 등급 C 아래·S 아래·S 이상). 직함이 없는 자리면 null (decisions.md 267번). */
   List<String> deskRoles(String code) {
     return desk(code).roles();
-  }
-
-  /** 그 자리가 원하는 능력치 코드. */
-  String deskStat(String code) {
-    return desk(code).statCode();
-  }
-
-  /** 능력치 한 띠(점수). */
-  int band() {
-    return properties.experience().band();
   }
 
   RaisingContent.Desk desk(String code) {
@@ -1738,24 +1698,17 @@ class CompanyEngine {
     long fee = (long) (stakeBase(company) * properties.feeBp() / (double) BP / QUARTERS);
     q.fee = fee;
     q.staff = totalPnl;
-    // 연봉 (270번): 분기마다 한 해 몫의 4분의 1이 나간다. 쉬는 사람도 받는다.
-    q.salary = pay.quarterSalary(company);
     pay.markWorked(company);
     // 팀장 보고 (269번): 분기를 넘기면 자리마다 팀장이 보고한다. 돕는 자리는 이 분기에 한 일을 센다 (278번).
     recordSupport(company, q);
     q.reports.addAll(teams.reports(company, q.results, List.of(q), "이번 분기", company.turn()));
-    company.capital = Math.max(0, company.capital + fee + totalPnl - q.salary);
+    company.capital = Math.max(0, company.capital + fee + totalPnl);
     q.capitalAfter = company.capital;
-    // 연봉 협상의 뒤끝 (280번): 답하지 않고 버티거나 동결하면 떠날 수 있다. 분기 실적과 연말 소식에 남긴다.
-    List<String> quits = new java.util.ArrayList<>();
-    pay.quarterPassed(company, random, quits);
-    q.lines.addAll(quits);
-    company.yearLines.addAll(quits);
     if (company.invest != null && company.invest.choice != null) {
       q.investTitle = company.invest.title;
       q.investTotal = company.invest.total;
     }
-    // 분기 실적이 맞아떨어지게 이 분기에 낸 이사 비용(296번)과 인사 비용을 따로 둔다: 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 인건비 − 이사 비용
+    // 분기 실적이 맞아떨어지게 이 분기에 낸 이사 비용(296번)과 인사 비용을 따로 둔다: 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 이사 비용
     // = 끝 자본.
     q.moving = company.yearMoving - company.quarters.stream().mapToLong(x -> x.moving).sum();
     // 전투 강화에 쓴 돈(367번)도 따로 둔다: 안 그러면 인사 비용으로 읽힌다.
@@ -1769,7 +1722,6 @@ class CompanyEngine {
               + q.staff
               + q.fee
               + q.rewards
-              - q.salary
               - q.moving
               - q.upgrades
               - q.capitalAfter;
@@ -1887,7 +1839,6 @@ class CompanyEngine {
                           content.raising().company().flipLines().get(stat), Map.of("name", y.name))
                       + (count > 1 ? " (" + count + "번)" : "")));
     }
-    settlement.salary = company.quarters.stream().mapToLong(q -> q.salary).sum();
     pay.yearEnd(company, company.yearLines);
     settlement.capitalAfter = company.capital;
     if (company.capital == 0) {

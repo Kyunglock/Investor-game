@@ -45,7 +45,6 @@ public record CompanyView(
     Invest invest,
     Quarter lastQuarter,
     Settlement lastSettlement,
-    Resign resign,
     Industry industry,
     List<LockedDesk> lockedDesks,
     Mental mental,
@@ -160,16 +159,6 @@ public record CompanyView(
       boolean equipped,
       int count) {}
 
-  /**
-   * 연봉 때문에 사표를 들고 온 직원 (decisions.md 282번). 붙잡거나 보내지 않고 다음 분기를 넘기면 떠난다. 없으면 null.
-   *
-   * @param reason IGNORED(연봉 답을 기다리다 지쳤다)·FROZEN(동결에 실망했다)
-   * @param before 지금 연봉
-   * @param after 붙잡으면 오를 연봉
-   */
-  public record Resign(
-      int employeeId, String name, String reason, String line, long before, long after) {}
-
   public enum Status {
     ACTIVE,
     ENDED
@@ -187,7 +176,6 @@ public record CompanyView(
    * @param settled 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다
    * @param role 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번)
    * @param leader 앉은 자리의 팀장이다 (decisions.md 269번)
-   * @param salary 한 해 연봉 (decisions.md 270번)
    * @param morale 사기(−2~+2). 낮으면 손이 더 뒤집힌다 (270번)
    */
   public record Employee(
@@ -206,7 +194,6 @@ public record CompanyView(
       boolean settled,
       String role,
       boolean leader,
-      long salary,
       int morale,
       String quirk,
       String quirkName) {}
@@ -439,19 +426,7 @@ public record CompanyView(
       String wanted,
       String hot,
       String eraEnding,
-      Poach poach,
-      Raise raise) {}
-
-  /**
-   * 올해의 연봉 협상 (decisions.md 270번).
-   *
-   * @param before 지금 연봉
-   * @param after 올려 주면 연봉
-   * @param line 연초 회의 한 줄
-   * @param odds 답에 따른 확률 한 줄: 올리면 능력치 상승, 동결·무응답이면 떠남 (decisions.md 280번)
-   */
-  public record Raise(
-      int employeeId, String name, long before, long after, String line, String odds) {}
+      Poach poach) {}
 
   /**
    * 다른 증권사가 우리 직원에게 손을 뻗었다 (decisions.md 262번).
@@ -473,7 +448,6 @@ public record CompanyView(
       long moving,
       long upgrades,
       long rewards,
-      long salary,
       SettlementInvest invest,
       List<Quarter> quarters,
       String gradeBefore,
@@ -526,7 +500,6 @@ public record CompanyView(
       long moving,
       long upgrades,
       long rewards,
-      long salary,
       SettlementInvest invest,
       boolean crash,
       List<String> lines,

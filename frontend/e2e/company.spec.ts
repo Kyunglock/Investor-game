@@ -458,41 +458,6 @@ test('종목 회의를 열면 먼저 매수파와 매도파가 토론하며 맞�
   await closeQuarter(page, 1, 1)
 })
 
-test('연봉 때문에 사표를 들고 오면 붙잡을 마지막 기회가 뜬다 (282번)', async ({ page }) => {
-  await openCompany(page)
-  // 동결 뒤 25%를 기다리기 어렵다: 회사 응답에 사표를 넣어 본다.
-  let plain: unknown = null
-  await page.route('**/api/company', async (route) => {
-    if (route.request().method() !== 'GET') {
-      await route.continue()
-      return
-    }
-    const response = await route.fetch()
-    const company = await response.json()
-    plain = structuredClone(company)
-    company.resign = {
-      employeeId: 1,
-      name: '이도담',
-      reason: 'FROZEN',
-      line: '이도담이 사표를 들고 왔다. "동결이라니요. 저 이만 가 보겠습니다."',
-      before: 12_000_000,
-      after: 14_520_000,
-    }
-    await route.fulfill({ response, json: company })
-  })
-  await page.route('**/api/company/resign', async (route) => {
-    expect(route.request().postDataJSON()).toEqual({ keep: true })
-    await route.fulfill({ json: plain })
-  })
-  await page.reload()
-  const resign = page.getByRole('alertdialog', { name: '사표' })
-  await expect(resign).toBeVisible()
-  await expect(resign.getByTestId('resign-line')).toContainText('동결이라니요')
-  await expect(resign).toContainText('마지막 기회')
-  await resign.getByRole('button', { name: /연봉 올려 주고 붙잡는다/ }).click()
-  await expect(resign).toBeHidden()
-})
-
 test('건물이 커지면 연말 결산서 뒤 알림 창에서 옆 건물을 들이받아 무너뜨린다 (243·281·288번)', async ({
   page,
 }) => {
