@@ -2,7 +2,7 @@ import type { Company } from '@web/api/client'
 import { create } from 'zustand'
 
 /** 아래 탭 (decisions.md 309·312번): 사무실 · 채용 · 배치 · 이슈 · 기록. 웹의 탭(이슈·채용·배치·지난 결산·연표)을 폰 화면에 맞게 다시 나눴다. */
-export type Tab = 'office' | 'market' | 'staff' | 'issue' | 'record'
+export type Tab = 'office' | 'market' | 'staff' | 'issue'
 
 /** 인력 관리의 자리 카드와 메인 화면의 설정·확장·멘탈·전투 강화(367번) 시트. */
 export type ToyPanel = 'upgrade' | 'stage' | 'settings' | 'battle'
@@ -69,9 +69,6 @@ export function tabFromWeb(tab: string | null): Tab | null {
       return 'staff'
     case 'meeting':
       return 'issue'
-    case 'settlement':
-    case 'history':
-      return 'record'
     default:
       return null
   }

@@ -72,7 +72,6 @@ export function Windows({ company }: { company: Company }) {
 
   const closeYearEnd = () => {
     useRaisingStore.setState({ justSettled: false })
-    useAppUi.getState().setTab('record')
   }
 
   return (
