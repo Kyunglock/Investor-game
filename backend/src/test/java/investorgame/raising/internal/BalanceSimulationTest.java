@@ -26,7 +26,9 @@ class BalanceSimulationTest {
   enum Boss {
     GREEDY,
     READER,
-    LAZY
+    LAZY,
+    /** 기사 읽는 사장이 분기마다 멘탈 스테이지를 하나씩 깬다 (369번): 스테이지 보상 자본과 분기 강화율이 붙는다. */
+    STAGES
   }
 
   static String majorityStance(CompanyState.Macro macro) {
@@ -117,7 +119,7 @@ class BalanceSimulationTest {
       String stance =
           switch (boss) {
             case GREEDY -> MacroEngine.AGGRESSIVE;
-            case READER -> majorityStance(c.macro);
+            case READER, STAGES -> majorityStance(c.macro);
             case LAZY -> MacroEngine.NEUTRAL;
           };
       ENGINE.macro.decide(c, stance, random);
@@ -126,7 +128,7 @@ class BalanceSimulationTest {
       String choice =
           switch (boss) {
             case GREEDY -> InvestEngine.BUY;
-            case READER -> majorityChoice(c.invest);
+            case READER, STAGES -> majorityChoice(c.invest);
             case LAZY -> InvestEngine.HOLD;
           };
       ENGINE.invest.decide(c, choice, boss == Boss.GREEDY, random, false);
@@ -139,6 +141,12 @@ class BalanceSimulationTest {
     }
     if (c.poach != null) {
       ENGINE.answerPoach(c, true);
+    }
+    if (boss == Boss.STAGES) {
+      int next = ENGINE.mental.bestStage(c) + 1;
+      if (next <= PROPERTIES.mental().stages().perChapter()) {
+        ENGINE.mental.reportStage(c, next, true, 2);
+      }
     }
     ENGINE.settleQuarter(c, random);
   }
@@ -195,21 +203,26 @@ class BalanceSimulationTest {
   }
 
   /**
-   * 25년 일생 120판 (#344·#388·#389). 기사를 다수결로 읽는 사장이 늘 공격·크게 하는 사장보다, 그 사장이 이사 안 하고 중립·보류만 하는 사장보다 낫다.
-   * 기사 읽는 사장은 첫 이사(E)를 3년 안에 하고, 등급 하나에 5년 넘게 걸리지 않는다. 새 건물을 몇 해에 걸쳐 짓게 한 뒤(#347, 120판): 기사 9,687억
-   * · 공격 1,925억 · 이사 안 함 220억, 기사 사장의 등급 첫 해 E 3 · D 7 · C 11 · B 16 · A 19 · S 24 · SS 25. 자리 셋
-   * 고정(354번)을 풀고(359번) 채용권이 해마다 한 장(357번)인 지금: 기사 806억 · 공격 39억 · 이사 안 함 13억, 등급 첫 해 E 3 · D 8 · C
-   * 13 · B 18 · A 23이고 S는 25년 안에 오지 않는다. 그래서 등급 간격은 A까지만 본다(S까지 오는 속도는 #468에서 다시 잡는다).
+   * 25년 일생 120판 (#344·#388·#389·#468). 성장의 주된 길은 기사를 읽고 멘탈 스테이지를 깨는 사장이다(decisions.md 371번): 깬 최고
+   * 스테이지만큼 붙는 분기 강화율(369번)이 쌓여 등급이 3~5년에 하나씩 오르고 25년 안에 SS에 닿는다. 스테이지를 안 하는 기사 사장은 그보다 훨씬 느리지만(의도)
+   * 늘 공격·크게 하는 사장보다 낫고, 그 사장이 이사 안 하는 사장보다 낫다. 2026-11-08 120판: 스테이지 1조 2,071억 · 등급 첫 해 E 2 · D 6 ·
+   * C 8 · B 14 · A 17 · S 22 · SS 23 / 기사 806억(E 3 · D 8 · C 13 · B 18 · A 23, S 없음) · 공격 39억 · 이사
+   * 안 함 13억. 처음 깸 자본을 빼면 스테이지 8,911억이라 차이의 대부분은 분기 강화율이다.
    */
   @Test
-  void 기사를_읽는_사장이_이기고_등급이_고르게_오른다() {
+  void 스테이지를_깨며_기사를_읽는_사장이_가장_빨리_크고_등급이_고르게_오른다() {
     int trials = 120;
     int years = 25;
+    Summary stages = run(Boss.STAGES, trials, years);
     Summary reader = run(Boss.READER, trials, years);
     Summary greedy = run(Boss.GREEDY, trials, years);
     Summary lazy = run(Boss.LAZY, trials, years);
     System.out.println(
-        "BALANCE 기사 "
+        "BALANCE 스테이지 "
+            + stages.capital() / 100_000_000
+            + "억 "
+            + Arrays.toString(stages.firstYear())
+            + " | 기사 "
             + reader.capital() / 100_000_000
             + "억 "
             + Arrays.toString(reader.firstYear())
@@ -218,19 +231,22 @@ class BalanceSimulationTest {
             + "억 | 이사 안 함 "
             + lazy.capital() / 100_000_000
             + "억");
+    org.assertj.core.api.Assertions.assertThat(stages.capital())
+        .as("스테이지를 깨는 사장이 안 깨는 사장보다 크게 번다")
+        .isGreaterThan(reader.capital() * 3);
     org.assertj.core.api.Assertions.assertThat(reader.capital())
         .as("기사 읽는 사장이 늘 공격·크게 하는 사장의 세 배 넘게 번다")
         .isGreaterThan(greedy.capital() * 3);
     org.assertj.core.api.Assertions.assertThat(greedy.capital())
         .as("이사 안 하고 버티는 쪽이 가장 못하다 (규모의 벽은 자본을 본다)")
         .isGreaterThan(lazy.capital());
-    org.assertj.core.api.Assertions.assertThat(reader.firstYear()[1])
+    org.assertj.core.api.Assertions.assertThat(stages.firstYear()[1])
         .as("첫 이사")
         .isLessThanOrEqualTo(3);
-    for (int k = 2; k <= LADDER.indexOf("A"); k++) {
-      org.assertj.core.api.Assertions.assertThat(reader.firstYear()[k] - reader.firstYear()[k - 1])
+    for (int k = 2; k <= LADDER.indexOf("SS"); k++) {
+      org.assertj.core.api.Assertions.assertThat(stages.firstYear()[k] - stages.firstYear()[k - 1])
           .as(LADDER.get(k - 1) + " → " + LADDER.get(k))
-          .isBetween(2L, 5L);
+          .isBetween(1L, 6L);
     }
   }
 }
