@@ -167,7 +167,9 @@ class CompanyHistory {
     checks.put("meeting-streak", company.meetingStreak >= STREAK);
     checks.put("day-only", dayOnly);
     checks.put("basement-ten", basement && s.year >= BASEMENT_YEARS);
-    checks.put("rumor-proof", "falseKept".equals(s.omenCall));
+    // 조짐 업적 (327·351·386번): 방어는 돈을 굴리는 사람을 모두 식품·금융 데스크로 옮겨 둔 분기다. 헛소문 감별사는 저절로 열리지 않게
+    // 헛조짐에 피하지 않고 직원들이 벌어야 한다.
+    checks.put("rumor-proof", "falseKept".equals(s.omenCall) && staff > 0);
     checks.put("foresight", "trueDefended".equals(s.omenCall));
     checks.put("youtube-crash", "falseDefended".equals(s.omenCall) && "boom".equals(s.phase));
     checks.put("f-ten", fTen);

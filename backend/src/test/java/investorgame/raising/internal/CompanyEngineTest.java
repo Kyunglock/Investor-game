@@ -1178,10 +1178,10 @@ class CompanyEngineTest {
     return c.settlements.getLast();
   }
 
-  /** #394: 연말에 조짐이 맞았나 헛소문이었나를 밝힌다. 방어로 돌릴 태도가 없어(382번) 늘 버틴 셈이다. */
+  /** #394: 연말에 조짐이 맞았나 헛소문이었나를 밝힌다. 거시경제 회의의 방어 태도(382번) 대신 식품·금융 데스크로 옮긴 분기가 방어다 (386번). */
   @Test
   void 연말에_조짐이_맞았는지_밝힌다() {
-    // 헛조짐: 보통 해인데 조짐이 떴다. 버텼다.
+    // 헛조짐: 보통 해인데 조짐이 떴다. 단타 데스크에서 버텼다.
     CompanyState calm = open(3, stats(60, 60, 60, 60), 100_000_000);
     ENGINE.place(calm, Map.of(calm.employees.getFirst().id, "day"));
     calm.phase = "normal";
@@ -1189,9 +1189,12 @@ class CompanyEngineTest {
     CompanyState.Settlement kept = year(calm, 3);
     assertThat(kept.omenCall).isEqualTo("falseKept");
     assertThat(kept.lines).anyMatch(line -> line.startsWith("헛소문이었다"));
-    assertThat(kept.achieved).contains("헛소문 감별사");
+    long staff = kept.results.stream().mapToLong(r -> r.pnl).sum();
+    assertThat(kept.achieved.contains("헛소문 감별사"))
+        .as("헛조짐에 피하지 않고 직원들이 벌어야 열린다: 저절로 열리지 않는다")
+        .isEqualTo(staff > 0);
 
-    // 진짜 조짐: 폭락장이다.
+    // 진짜 조짐을 보고도 버텼다: 폭락장이다.
     CompanyState storm = open(4, stats(60, 60, 60, 60), 100_000_000);
     ENGINE.place(storm, Map.of(storm.employees.getFirst().id, "day"));
     storm.phase = CompanyEngine.CRASH;
@@ -1200,6 +1203,51 @@ class CompanyEngineTest {
     CompanyState.Settlement saw = year(storm, 4);
     assertThat(saw.omenCall).isEqualTo("trueIgnored");
     assertThat(saw.lines).anyMatch(line -> line.startsWith("조짐이 맞았다"));
+    assertThat(saw.achieved).doesNotContain("선견지명");
+  }
+
+  /** 386번: 조짐을 보고 돈 굴리는 사람을 모두 식품·금융 데스크로 옮겨 폭락 분기를 맞으면 선견지명이 열린다. */
+  @Test
+  void 조짐을_보고_식품_금융으로_옮겨_폭락을_막으면_선견지명() {
+    CompanyState storm = open(4, stats(60, 60, 60, 60), 100_000_000);
+    ENGINE.place(storm, Map.of(storm.employees.getFirst().id, "food"));
+    storm.phase = CompanyEngine.CRASH;
+    storm.crashQuarter = 3;
+    storm.omen = "신용 대출이 늘었다.";
+    CompanyState.Settlement saw = year(storm, 4);
+    assertThat(saw.omenCall).isEqualTo("trueDefended");
+    assertThat(saw.lines).anyMatch(line -> line.contains("식품·금융 데스크로 옮겨 두어"));
+    assertThat(saw.achieved).contains("선견지명");
+  }
+
+  /** 386번: 헛조짐에 속아 식품·금융 데스크로 피했는데 대호황이면 실패 업적 유튜브 폭락설이 열린다. */
+  @Test
+  void 헛조짐에_식품_금융으로_피했는데_대호황이면_유튜브_폭락설() {
+    CompanyState boom = open(3, stats(60, 60, 60, 60), 100_000_000);
+    ENGINE.place(boom, Map.of(boom.employees.getFirst().id, "finance"));
+    boom.phase = "boom";
+    boom.omen = "경제 유튜브 채널마다 '곧 폭락이 온다'는 영상이 올라온다.";
+    CompanyState.Settlement fooled = year(boom, 3);
+    assertThat(fooled.omenCall).isEqualTo("falseDefended");
+    assertThat(fooled.lines).anyMatch(line -> line.contains("식품·금융 데스크로 피한 4분기만큼"));
+    assertThat(fooled.achieved).contains("유튜브 폭락설").doesNotContain("헛소문 감별사");
+  }
+
+  /** 386번: 돈을 굴린 사람이 모두 폭락장 손익 절반 이하인 자리에 앉은 분기만 방어로 친다. 아무도 안 굴렸으면 방어가 아니다. */
+  @Test
+  void 모두_식품_금융에_앉은_분기만_방어다() {
+    CompanyState.Quarter q = new CompanyState.Quarter();
+    assertThat(ENGINE.braced(q)).as("돈 굴린 사람이 없다").isFalse();
+    CompanyState.Result food = new CompanyState.Result();
+    food.desk = "food";
+    CompanyState.Result finance = new CompanyState.Result();
+    finance.desk = "finance";
+    q.results.addAll(List.of(food, finance));
+    assertThat(ENGINE.braced(q)).isTrue();
+    CompanyState.Result chip = new CompanyState.Result();
+    chip.desk = "semiconductor";
+    q.results.add(chip);
+    assertThat(ENGINE.braced(q)).as("한 사람이라도 폭락에 크게 빠지는 자리면 방어가 아니다").isFalse();
   }
 
   /** 옛 저장 상태에 직원 합성 기록(합성 횟수·방금 한 합성·합성으로 처음 만든 등급)이 남아 있어도 읽힌다 (384번). */
