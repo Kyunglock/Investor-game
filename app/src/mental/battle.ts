@@ -5,6 +5,7 @@ import { type Loadout, xpToNext } from './cards'
 import { ENEMIES, type EnemyKind } from './enemies'
 import { BATTLE_SECONDS, GENRES, type Genre } from './genres'
 import type { Hero } from './hero'
+import { BULLET_H, BULLET_W, bulletHitbox } from './hitbox'
 
 /**
  * 멘탈 전투 한 판 (decisions.md 328번). Phaser 3 Arcade로 돈다: 탄·적은 풀에서 재사용하고, 도트 그림(art.ts)은 캔버스에 한 번 구워 둔다. 규칙은 화면
@@ -537,7 +538,12 @@ class BattleScene extends Phaser.Scene {
     if (this.wall && this.mental <= this.loadout.maxMental / 2) {
       this.wall.setTexture('wall-cracked')
     }
-    this.cameras.main.shake(130, 0.009)
+    // 멘탈벽에 닿은 건 자주 일어나니 살짝만, 사장냥이 직접 맞은 건 더 세게 흔든다.
+    if (this.wallZone && !e) {
+      this.cameras.main.shake(80, 0.003)
+    } else {
+      this.cameras.main.shake(130, 0.009)
+    }
     this.opts.onHurt()
     sfx.ouch()
     this.hurtUntil = this.time.now + HURT_MS
@@ -580,19 +586,22 @@ class BattleScene extends Phaser.Scene {
   }
 
   private shoot(now: number) {
+    // 각도는 총 피벗에서 잰다: 사장냥 가운데에서 재면 가까운 적은 총구가 비켜 있어 빗나간다.
     const ptr = this.input.activePointer
+    const gx = this.player.x + GUN.dx
+    const gy = this.player.y + GUN.dy
     if (ptr.isDown) {
-      this.fire(now, Math.atan2(ptr.worldY - this.player.y, ptr.worldX - this.player.x))
+      this.fire(now, Math.atan2(ptr.worldY - gy, ptr.worldX - gx))
       return
     }
     let best: Enemy | null = null
     let bestDist = 520 * 520
     for (const child of this.enemies.getChildren()) {
       const e = child as Enemy
-      if (!e.active) {
+      if (!e.active || e.dying) {
         continue
       }
-      const d = (e.x - this.player.x) ** 2 + (e.y - this.player.y) ** 2
+      const d = (e.x - gx) ** 2 + (e.y - gy) ** 2
       if (d < bestDist) {
         bestDist = d
         best = e
@@ -601,7 +610,7 @@ class BattleScene extends Phaser.Scene {
     if (!best) {
       return
     }
-    this.fire(now, Math.atan2(best.y - this.player.y, best.x - this.player.x))
+    this.fire(now, Math.atan2(best.y - gy, best.x - gx))
   }
 
   private fire(now: number, base: number) {
@@ -638,8 +647,10 @@ class BattleScene extends Phaser.Scene {
       }
       b.setTexture('bullet-0').enableBody(true, m.x, m.y, true, true).setDepth(4)
       b.look = 0
-      b.setDisplaySize(32, 10).setRotation(base + off)
-      b.body?.setCircle(5 * (b.width / 32), b.width - 10 * (b.width / 32), 0)
+      b.setDisplaySize(BULLET_W, BULLET_H).setRotation(base + off)
+      // 충돌 원은 그림 한가운데(hitbox.ts): 몸은 돌지 않으니 끝에 두면 위로 쏠 때 비켜 난다.
+      const hb = bulletHitbox(b.width, b.height)
+      b.body?.setCircle(hb.radius, hb.ox, hb.oy)
       b.setVelocity(
         Math.cos(base + off) * this.loadout.bulletSpeed,
         Math.sin(base + off) * this.loadout.bulletSpeed,
@@ -708,7 +719,7 @@ class BattleScene extends Phaser.Scene {
     if (!ptr.isDown) {
       const near = this.nearestEnemy()
       if (near) {
-        const want = Math.atan2(near.y - p.y, near.x - p.x)
+        const want = Math.atan2(near.y - (p.y + GUN.dy), near.x - (p.x + GUN.dx))
         this.aim +=
           Phaser.Math.Angle.ShortestBetween(
             Phaser.Math.RadToDeg(this.aim),
