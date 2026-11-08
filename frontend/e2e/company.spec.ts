@@ -469,8 +469,14 @@ test('종목 회의를 열면 먼저 매수파와 매도파가 토론하며 맞�
   // 고집 표시와 크게 산다·판다는 뺐다.
   await expect(meeting.getByTestId('stubborn')).toHaveCount(0)
   await expect(meeting.getByRole('button', { name: /크게/ })).toHaveCount(0)
-  // "너희가 알아서 해"는 없다 (352번): 토론이 먼저 뜨고, 끝날 때까지 결정 버튼은 잠겨 있다.
+  // "너희가 알아서 해"는 없다 (352번).
   await expect(meeting.getByTestId('invest-team')).toHaveCount(0)
+  // 토론은 접혀 있다 (370번, #498): 결과 한 줄만 보이고, 기다리지 않고 바로 고를 수 있다.
+  await expect(meeting.getByTestId('debate-summary')).toContainText(/매수 \d+ : 매도 \d+/)
+  await expect(meeting.getByTestId('team-clash')).toHaveCount(0)
+  await expect(meeting.getByRole('button', { name: '산다', exact: true })).toBeEnabled()
+  // 펼치면 지금처럼 토론이 나오고, 끝날 때까지 결정 버튼은 잠긴다.
+  await meeting.getByTestId('debate-toggle').click()
   await expect(meeting.getByRole('button', { name: '산다', exact: true })).toBeDisabled()
   const clash = meeting.getByTestId('team-clash').first()
   await expect(clash).toBeVisible()

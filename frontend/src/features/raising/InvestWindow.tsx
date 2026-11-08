@@ -1,5 +1,5 @@
 import './meetings.css'
-import { useEffect, useRef, useState } from 'react'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import type { Company } from '../../api/client'
 import { money, withParticle } from '../game/labels'
 import { Overlay } from '../game/Overlay'
@@ -82,20 +82,28 @@ export function InvestWindow({
   )
   // 막판 제안 (283·290번): 정해진 결정(도장, 맡겼으면 토론과 결판)을 먼저 보이고, 그 뒤에 제안을 띄운다.
   const [preplayed, setPreplayed] = useState(false)
-  const decidedMs = proposal ? (proposal.delegated ? teamClashMs(proposal.debate) : DECIDED_MS) : 0
+  // 토론은 접어 둔다 (decisions.md 370번, #498): 결과 한 줄만 보이고, 펼쳐야 토론이 나온다. 접혀 있으면 토론을 기다리지 않는다.
+  const [debateOpen, setDebateOpen] = useState(false)
+  const decidedMs = proposal
+    ? proposal.delegated && debateOpen
+      ? teamClashMs(proposal.debate)
+      : DECIDED_MS
+    : 0
   const [proposalShown, setProposalShown] = useState(skipped)
   // 토론이 먼저 (352번): 회의를 열면 매수파·매도파가 맞붙고, 끝난 뒤에야 사장이 고른다. 다시 그린 회의(정했거나 제안 중)는 이미 본 것.
   const debate = invest.debate ?? []
   const debateFirst = !outcome && !invest.proposal && invest.convened && debate.length > 0
   const [debated, setDebated] = useState(skipped || !debateFirst)
+  // 펼쳐 둔 토론이 끝나기를 기다리는 중: 이때만 고르기를 잠근다.
+  const waiting = debateFirst && debateOpen && !debated
   useEffect(() => {
-    // 토론은 결정 화면에 들어와야 시작한다: 분석을 읽는 동안 저절로 끝나 버리지 않게.
-    if (!debateFirst || debated || step !== 'decide') {
+    // 토론은 결정 화면에서 펼쳐야 시작한다: 분석을 읽는 동안 저절로 끝나 버리지 않게.
+    if (!debateFirst || debated || !debateOpen || step !== 'decide') {
       return
     }
     const id = setTimeout(() => setDebated(true), teamClashMs(debate))
     return () => clearTimeout(id)
-  }, [debateFirst, debated, debate, step])
+  }, [debateFirst, debated, debateOpen, debate, step])
   useEffect(() => {
     if (!proposal) {
       return
@@ -109,7 +117,7 @@ export function InvestWindow({
     return () => clearTimeout(id)
   }, [proposal, skipped, decidedMs])
   // 맡겼으면(279·285번) 매수파·매도파가 먼저 토론하며 맞붙고, 그 뒤에 차트가 그려진다. 막판 제안 전에 이미 봤으면 바로 차트로.
-  const lead = outcome?.delegated && !preplayed ? teamClashMs(outcome.debate) : 0
+  const lead = outcome?.delegated && !preplayed && debateOpen ? teamClashMs(outcome.debate) : 0
   const show = chartTimeline(1, CHART_MS, skipped, lead)
   const [finished, setFinished] = useState(skipped)
   useEffect(() => {
@@ -152,9 +160,7 @@ export function InvestWindow({
               배치 다시 보기
             </button>
           )}
-          {((outcome && !finished) ||
-            (proposal && !proposalShown) ||
-            (debateFirst && !debated)) && (
+          {((outcome && !finished) || (proposal && !proposalShown) || waiting) && (
             <button
               type="button"
               onClick={() => {
@@ -338,23 +344,32 @@ export function InvestWindow({
                 // 정해진 결정 (290번): 맡겼으면 토론과 결판, 아니면 사장 결정 도장. 그 뒤에 막판 제안이 뜬다.
                 <div className="mt-3" data-testid="invest-decided">
                   {proposal.delegated && (
-                    <TeamClash
-                      key={`decided-${skipped}`}
-                      buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
-                      sellNames={invest.remarks.filter((r) => r.read === 'DOWN').map((r) => r.name)}
-                      buy={proposal.teamBuy}
-                      sell={proposal.teamSell}
+                    <DebateFold
+                      invest={invest}
                       choice={proposal.choice}
-                      debate={proposal.debate}
-                      staff={employees}
-                      stock={invest.stockName}
-                      instant={skipped}
-                    />
+                      open={debateOpen}
+                      onToggle={setDebateOpen}
+                    >
+                      <TeamClash
+                        key={`decided-${skipped}`}
+                        buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
+                        sellNames={invest.remarks
+                          .filter((r) => r.read === 'DOWN')
+                          .map((r) => r.name)}
+                        buy={proposal.teamBuy}
+                        sell={proposal.teamSell}
+                        choice={proposal.choice}
+                        debate={proposal.debate}
+                        staff={employees}
+                        stock={invest.stockName}
+                        instant={skipped}
+                      />
+                    </DebateFold>
                   )}
                   <p
                     className="animate-reveal mt-2 flex items-center gap-2 text-[14px]"
                     style={{
-                      animationDelay: `${proposal.delegated && !skipped ? decidedMs - 600 : 0}ms`,
+                      animationDelay: `${proposal.delegated && debateOpen && !skipped ? decidedMs - 600 : 0}ms`,
                     }}
                   >
                     {proposal.delegated ? '팀 결정' : '사장 결정'}
@@ -419,26 +434,33 @@ export function InvestWindow({
               )}
 
               {debateFirst && (
-                // 토론이 먼저 (352번): 매수파·매도파가 맞붙어 한쪽으로 기운다. 사장은 보고 나서 고른다.
-                <TeamClash
-                  key={`debate-${skipped}`}
-                  buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
-                  sellNames={invest.remarks.filter((r) => r.read === 'DOWN').map((r) => r.name)}
-                  buy={invest.teamBuy ?? 0}
-                  sell={invest.teamSell ?? 0}
+                // 토론 (352번): 매수파·매도파가 맞붙어 한쪽으로 기운다. 접어 두면 결과 한 줄만 보이고 바로 고른다 (370번).
+                <DebateFold
+                  invest={invest}
                   choice={invest.teamCall ?? 'HOLD'}
-                  debate={debate}
-                  staff={employees}
-                  stock={invest.stockName}
-                  instant={skipped || debated}
-                />
+                  open={debateOpen}
+                  onToggle={setDebateOpen}
+                >
+                  <TeamClash
+                    key={`debate-${skipped}`}
+                    buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
+                    sellNames={invest.remarks.filter((r) => r.read === 'DOWN').map((r) => r.name)}
+                    buy={invest.teamBuy ?? 0}
+                    sell={invest.teamSell ?? 0}
+                    choice={invest.teamCall ?? 'HOLD'}
+                    debate={debate}
+                    staff={employees}
+                    stock={invest.stockName}
+                    instant={skipped || debated}
+                  />
+                </DebateFold>
               )}
               {!outcome && !invest.proposal && (
                 <div
                   className="meeting-choices meeting-step-action grid grid-cols-3 gap-2"
                   data-testid="invest-options"
                 >
-                  {debateFirst && debated && (
+                  {debateFirst && debateOpen && debated && (
                     <p
                       className="col-span-3 text-center text-[13px]"
                       data-testid="invest-your-turn"
@@ -457,7 +479,7 @@ export function InvestWindow({
                         key={o.code}
                         data-choice={o.code}
                         type="button"
-                        disabled={busy || !invest.ready || (debateFirst && !debated)}
+                        disabled={busy || !invest.ready || waiting}
                         onClick={() => void decideInvest(o.code)}
                         className="min-h-12 rounded border border-pen font-semibold transition-transform hover:bg-pen hover:text-white active:scale-95 disabled:opacity-50"
                       >
@@ -467,7 +489,7 @@ export function InvestWindow({
                         {o.label}
                       </button>
                     ))}
-                  {debateFirst && !debated && (
+                  {waiting && (
                     <p className="col-span-3 text-center text-[12px] text-muted">
                       토론이 끝나면 고를 수 있습니다.
                     </p>
@@ -494,19 +516,26 @@ export function InvestWindow({
                 </p>
               )}
               {outcome.delegated && (
-                <TeamClash
-                  // 빨리 보기를 누르면 끝난 모습으로 다시 그린다. 막판 제안 전에 본 토론은 다시 돌리지 않는다.
-                  key={`clash-${skipped}-${preplayed}`}
-                  buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
-                  sellNames={invest.remarks.filter((r) => r.read === 'DOWN').map((r) => r.name)}
-                  buy={outcome.teamBuy}
-                  sell={outcome.teamSell}
+                <DebateFold
+                  invest={invest}
                   choice={outcome.choice}
-                  debate={outcome.debate}
-                  staff={employees}
-                  stock={invest.stockName}
-                  instant={skipped || preplayed}
-                />
+                  open={debateOpen}
+                  onToggle={setDebateOpen}
+                >
+                  <TeamClash
+                    // 빨리 보기를 누르면 끝난 모습으로 다시 그린다. 막판 제안 전에 본 토론은 다시 돌리지 않는다.
+                    key={`clash-${skipped}-${preplayed}`}
+                    buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
+                    sellNames={invest.remarks.filter((r) => r.read === 'DOWN').map((r) => r.name)}
+                    buy={outcome.teamBuy}
+                    sell={outcome.teamSell}
+                    choice={outcome.choice}
+                    debate={outcome.debate}
+                    staff={employees}
+                    stock={invest.stockName}
+                    instant={skipped || preplayed}
+                  />
+                </DebateFold>
               )}
               <p
                 className="animate-reveal mt-2 flex items-center gap-2 text-[14px]"
@@ -667,6 +696,49 @@ export function InvestWindow({
         </div>
       </section>
     </Overlay>
+  )
+}
+
+/**
+ * 접어 둔 토론 (decisions.md 370번, #498): 결과 한 줄(어느 쪽이 우세했고 몇 대 몇)만 보이고, "토론 보기"를 누르면 맞붙는 토론이 나온다.
+ */
+function DebateFold({
+  invest,
+  choice,
+  open,
+  onToggle,
+  children,
+}: {
+  invest: Invest
+  choice: string
+  open: boolean
+  onToggle: (open: boolean) => void
+  children: ReactNode
+}) {
+  const buy = invest.remarks.filter((r) => r.read === 'UP').length
+  const sell = invest.remarks.filter((r) => r.read === 'DOWN').length
+  const side = choice === 'BUY' ? '매수파 우세' : choice === 'SELL' ? '매도파 우세' : '팽팽'
+  return (
+    <div className="mt-2" data-testid="debate-fold" data-open={open}>
+      <div className="flex items-center justify-between gap-2 rounded bg-line-soft/60 px-2 py-1.5 text-[13px]">
+        <p data-testid="debate-summary">
+          <b className={choice === 'BUY' ? 'text-up' : choice === 'SELL' ? 'text-down' : ''}>
+            {side}
+          </b>{' '}
+          · 매수 {buy} : 매도 {sell}
+        </p>
+        <button
+          type="button"
+          onClick={() => onToggle(!open)}
+          aria-expanded={open}
+          className="shrink-0 text-[12px] text-muted underline"
+          data-testid="debate-toggle"
+        >
+          {open ? '토론 접기' : '토론 보기'}
+        </button>
+      </div>
+      {open && children}
+    </div>
   )
 }
 
