@@ -62,3 +62,25 @@ export function rivalName(grade: Grade, side: 'left' | 'right') {
   const i = side === 'left' ? 2 * Math.ceil(n / 2) : 1 + 2 * Math.floor(n / 2)
   return RIVALS[i % RIVALS.length]
 }
+
+/**
+ * 확장 연출의 단계 (decisions.md 399번): 0 힘 모으기 → 1 부딪힘(히트스톱·흔들림·번쩍임) → 2 커지며 밀어내기 → 3 성장 축하 → 4 끝.
+ * 등급이 내려가면 축하(3)를 건너뛰고 예전처럼 짧게 끝낸다.
+ */
+export const MOVE_DONE = 4
+export const MOVE_MS = 2400
+export type MovePhase = 0 | 1 | 2 | 3 | 4
+export function moveTimeline(up: boolean): { phase: MovePhase; at: number }[] {
+  return up
+    ? [
+        { phase: 1, at: 450 },
+        { phase: 2, at: 750 },
+        { phase: 3, at: 1350 },
+        { phase: MOVE_DONE, at: MOVE_MS },
+      ]
+    : [
+        { phase: 1, at: 350 },
+        { phase: 2, at: 650 },
+        { phase: MOVE_DONE, at: 1500 },
+      ]
+}

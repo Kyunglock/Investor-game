@@ -56,6 +56,10 @@ export function playEvent(e: FxEvent) {
       haptic.success()
       return
     case 'grade-up':
+      // 확장을 사서 오른 것이면 건물 확장 연출(ToyCityMove)이 힘 모으기·쾅·축하를 차례로 낸다: 여기서 먼저 터뜨리면 겹친다 (399번).
+      if (e.scene) {
+        return
+      }
       fx.burstAt(null, 'confetti')
       fx.flashScreen('rgba(245,211,107,0.4)')
       sfx.fanfare()

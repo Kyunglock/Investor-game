@@ -111,7 +111,42 @@ try {
       'data-direction',
       i % 2 ? 'right' : 'left',
     )
-    await expect(move.getByTestId('toy-street')).toHaveAttribute('data-phase', '3')
+    if (i === 0) {
+      // 확장 연출의 중간 장면 (399번): 힘 모으기 → 쾅 → 밀어내기 → 축하. 마지막엔 효과가 모두 사라진다.
+      // 부딪힘(1단계)은 0.2초뿐이라 expect의 폴링으로는 놓친다: 프레임마다 단계를 본다.
+      const reach = (phase: number) =>
+        page.waitForFunction(
+          (n) =>
+            Number(
+              document
+                .querySelector('[data-testid="move-scene"] [data-testid="toy-street"]')
+                ?.getAttribute('data-phase'),
+            ) >= n,
+          phase,
+          { polling: 'raf' },
+        )
+      await page.screenshot({ path: resolve(out, 'expansion-0-windup.png') })
+      await reach(1)
+      await page.waitForTimeout(60)
+      await page.screenshot({ path: resolve(out, 'expansion-1-impact.png') })
+      await reach(2)
+      await expect(move.getByTestId('toy-eviction')).toHaveCount(1)
+      await page.waitForTimeout(100)
+      await page.screenshot({ path: resolve(out, 'expansion-2-evict.png') })
+      await reach(3)
+      await expect(move.getByTestId('move-banner')).toBeVisible()
+      await expect(move.getByTestId('toy-celebration')).toHaveCount(1)
+      await page.waitForTimeout(250)
+      await page.screenshot({ path: resolve(out, 'expansion-3-celebrate.png') })
+    }
+    if (i === 1) {
+      // 화면을 누르면 연출을 건너뛰고 끝 모습으로 간다.
+      await move.getByTestId('toy-street').click({ position: { x: 60, y: 420 } })
+      await expect(move).toBeVisible()
+    }
+    await expect(move.getByTestId('toy-street')).toHaveAttribute('data-phase', '4')
+    await expect(move.getByTestId('toy-impact')).toHaveCount(0)
+    await expect(move.getByTestId('move-banner')).toHaveCount(0)
     await expect(move.getByTestId('toy-employee')).toHaveCount(employees)
     await page.screenshot({ path: resolve(out, `expansion-${i + 1}.png`) })
     await move.getByRole('button').click()
@@ -134,9 +169,20 @@ try {
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.reload()
   await expect(page.getByTestId('move-scene')).toHaveCount(0)
+  // 움직임 줄이기: 확장해도 연출 없이 바로 끝 모습이다.
+  await page.setViewportSize({ width: 390, height: 844 })
+  grades.push('S')
+  capacities.push(26)
+  await page.reload()
+  await page.getByTestId('open-upgrade').click()
+  await page.getByTestId('upgrade').click()
+  const still = page.getByTestId('move-scene')
+  await expect(still.getByTestId('toy-street')).toHaveAttribute('data-phase', '4', { timeout: 300 })
+  await expect(still.getByTestId('toy-impact')).toHaveCount(0)
+  await expect(still.getByTestId('move-banner')).toHaveCount(0)
   assert.deepEqual(errors, [])
   console.log(
-    'PASS: navigation, no desks, dialog focus, API rejection, construction, five alternating expansions, real employee count, responsive viewports, reload',
+    'PASS: navigation, no desks, dialog focus, API rejection, construction, five alternating expansions with impact/evict/celebrate frames and tap-to-skip, real employee count, responsive viewports, reduced motion',
   )
 } finally {
   await browser.close()
