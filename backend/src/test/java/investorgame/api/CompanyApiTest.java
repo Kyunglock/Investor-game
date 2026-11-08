@@ -333,6 +333,30 @@ class CompanyApiTest {
     settleYear(1).andExpect(jsonPath("$.year").value(2));
   }
 
+  /** 무기는 무기 뽑기권으로 뽑는다. 다 쓰면 400, 모자란 합성도 400 (decisions.md 366번). */
+  @Test
+  void 무기_뽑기권으로_무기를_뽑고_다_쓰면_400이다() throws Exception {
+    DocumentContext opened =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    int tickets = opened.read("$.armory.tickets", Integer.class);
+    assertThat(tickets).as("처음 무기 뽑기권").isPositive();
+    assertThat(opened.read("$.armory.lastDraw", Object.class)).isNull();
+    assertThat(opened.read("$.weapons[0].count", Integer.class)).isEqualTo(1);
+    DocumentContext drawn = opened;
+    for (int i = 0; i < tickets; i++) {
+      drawn = json(postJson("/api/company/weapon/draw", "").andExpect(status().isOk()));
+    }
+    assertThat(drawn.read("$.armory.tickets", Integer.class)).isZero();
+    assertThat(drawn.read("$.armory.lastDraw.grade", String.class)).isIn("N", "R", "SR", "UR");
+    List<Integer> counts = drawn.read("$.weapons[*].count");
+    assertThat(counts.stream().mapToInt(Integer::intValue).sum())
+        .as("처음 권총 하나 + 뽑은 수")
+        .isEqualTo(1 + tickets);
+    postJson("/api/company/weapon/draw", "").andExpect(status().isBadRequest());
+    postJson("/api/company/weapon/merge", "{\"kind\":\"rifle\",\"grade\":\"SR\"}")
+        .andExpect(status().isBadRequest());
+  }
+
   /** 데리고 있을 자리가 차면 내보내야 뽑고, 합성은 같은 등급 둘이어야 한다(재료 한 명). 인사팀이 뽑기를 돕는다 (decisions.md 312번, 6.3절). */
   @Test
   void 내보내고_합치고_인사팀이_뽑기를_돕는다() throws Exception {

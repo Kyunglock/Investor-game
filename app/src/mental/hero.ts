@@ -19,6 +19,7 @@ export const DEFAULT_WEAPON: Weapon = {
   power: 0,
   bulletSpeed: 720,
   equipped: true,
+  count: 1,
 }
 
 export function heroOf(company: Company): Hero {

@@ -69,9 +69,12 @@ class MentalEngine {
     return mental;
   }
 
-  /** 멘탈 전투 전에 연 분기(이 칸이 없다)면 이번 분기의 전투를 만들고, 무기 전에 차린 회사면 일반 권총을 쥐여 준다. 바꿨으면 true. */
+  /**
+   * 멘탈 전투 전에 연 분기(이 칸이 없다)면 이번 분기의 전투를 만들고, 무기 전에 차린 회사면 일반 권총을, 무기 뽑기 전에 차린 회사면 처음 뽑기권을 준다. 바꿨으면
+   * true.
+   */
   boolean adopt(CompanyState c, SeededRandom random) {
-    boolean changed = initWeapons(c);
+    boolean changed = initWeapons(c) | initWeaponGacha(c);
     if (c.mental != null) {
       return changed;
     }
@@ -92,6 +95,106 @@ class MentalEngine {
     return true;
   }
 
+  /** 무기 뽑기 전에 차린 회사(이 칸이 거짓)면 처음 무기 뽑기권을 준다 (366번). 줬으면 true. */
+  boolean initWeaponGacha(CompanyState c) {
+    if (c.weaponGachaReady) {
+      return false;
+    }
+    c.weaponGachaReady = true;
+    c.weaponTickets += properties.mental().weaponGacha().startTickets();
+    return true;
+  }
+
+  /**
+   * 무기 뽑기 (decisions.md 366번): 뽑기권 한 장으로 하나. 등급은 가중치로, 종류는 고르게. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 합성 재료가
+   * 된다. 뽑기권이 없으면 400.
+   */
+  void drawWeapon(CompanyState c, SeededRandom random) {
+    initWeapons(c);
+    if (c.weaponTickets <= 0) {
+      throw new InvalidRequestException("무기 뽑기권이 없다");
+    }
+    c.weaponTickets--;
+    c.weaponDraws++;
+    RandomGenerator rng = random.forKey("weapon-draw", c.weaponDraws);
+    Map<String, Integer> weights = properties.mental().weaponGacha().gradeWeights();
+    int total = WEAPON_GRADES.stream().mapToInt(g -> weights.getOrDefault(g, 0)).sum();
+    int roll = rng.nextInt(total);
+    String grade = WEAPON_GRADES.getFirst();
+    for (String g : WEAPON_GRADES) {
+      roll -= weights.getOrDefault(g, 0);
+      if (roll < 0) {
+        grade = g;
+        break;
+      }
+    }
+    List<String> kinds = properties.mental().weapons().keySet().stream().sorted().toList();
+    String kind = kinds.get(rng.nextInt(kinds.size()));
+    CompanyState.Weapon owned = find(c, kind, grade);
+    if (owned != null) {
+      owned.count++;
+    } else {
+      c.weapons.add(new CompanyState.Weapon(kind, grade));
+    }
+    c.lastWeaponDraw = new CompanyState.Weapon(kind, grade);
+    c.lastWeaponDrawNew = owned == null;
+  }
+
+  /**
+   * 무기 합성 (decisions.md 366번): 같은 무기(종류+등급) mergeCount개를 합쳐 한 등급 위의 같은 종류 하나로. 가장 높은 등급이거나 모자라면
+   * 400. 들고 있던 무기를 다 썼으면 합쳐 만든 무기를 든다.
+   */
+  void mergeWeapon(CompanyState c, String kind, String grade) {
+    initWeapons(c);
+    int at = WEAPON_GRADES.indexOf(grade);
+    if (!properties.mental().weapons().containsKey(kind) || at < 0) {
+      throw new InvalidRequestException("없는 무기다: " + kind + " " + grade);
+    }
+    if (at == WEAPON_GRADES.size() - 1) {
+      throw new InvalidRequestException("가장 높은 등급이라 더 합칠 수 없다: " + kind + " " + grade);
+    }
+    int need = properties.mental().weaponGacha().mergeCount();
+    CompanyState.Weapon owned = find(c, kind, grade);
+    if (owned == null || owned.count < need) {
+      throw new InvalidRequestException("같은 무기가 " + need + "개 있어야 합친다: " + kind + " " + grade);
+    }
+    owned.count -= need;
+    String up = WEAPON_GRADES.get(at + 1);
+    CompanyState.Weapon upgraded = find(c, kind, up);
+    if (upgraded != null) {
+      upgraded.count++;
+    } else {
+      upgraded = new CompanyState.Weapon(kind, up);
+      c.weapons.add(upgraded);
+    }
+    if (owned.count == 0) {
+      c.weapons.remove(owned);
+      if (c.weapon != null && c.weapon.same(kind, grade)) {
+        c.weapon = upgraded;
+      }
+    }
+  }
+
+  private static CompanyState.Weapon find(CompanyState c, String kind, String grade) {
+    return c.weapons.stream().filter(w -> w.same(kind, grade)).findFirst().orElse(null);
+  }
+
+  /** 무기 뽑기의 화면 값 (366번). */
+  CompanyView.Armory armoryView(CompanyState c) {
+    CompanyState.Weapon d = c.lastWeaponDraw;
+    return new CompanyView.Armory(
+        c.weaponTickets,
+        properties.mental().weaponGacha().mergeCount(),
+        d == null
+            ? null
+            : new CompanyView.WeaponDraw(
+                d.kind,
+                text().weapons().get(d.kind),
+                d.grade,
+                text().weaponGrades().get(d.grade),
+                c.lastWeaponDrawNew));
+  }
+
   /** 가진 무기 가운데 하나를 든다 (346번). 없는 종류·등급이거나 안 가진 무기면 400. */
   void equip(CompanyState c, String kind, String grade) {
     initWeapons(c);
@@ -104,20 +207,6 @@ class MentalEngine {
       throw new InvalidRequestException("가지지 않은 무기다: " + kind + " " + grade);
     }
     c.weapon = owned;
-  }
-
-  /** 떨어진 무기의 화면 값. 없으면 null. */
-  CompanyView.Drop dropView(CompanyState c) {
-    CompanyState.Weapon d = c.mental == null ? null : c.mental.drop;
-    if (d == null) {
-      return null;
-    }
-    return new CompanyView.Drop(
-        d.kind,
-        text().weapons().get(d.kind),
-        d.grade,
-        text().weaponGrades().get(d.grade),
-        c.mental.dropNew);
   }
 
   /** 가진 무기의 화면 값 (346번): 등급을 더한 최종 수치와 든 것 표시. 무기 전에 차린 회사는 불러올 때 권총을 받는다(adopt). */
@@ -138,7 +227,8 @@ class MentalEngine {
                   s.fireMs(),
                   s.power(),
                   s.bulletSpeed(),
-                  c.weapon != null && c.weapon.same(w.kind, w.grade));
+                  c.weapon != null && c.weapon.same(w.kind, w.grade),
+                  Math.max(1, w.count));
             })
         .toList();
   }
@@ -155,46 +245,9 @@ class MentalEngine {
   }
 
   /**
-   * 한 판 결과에 무기가 떨어지는가 (346번): 확률 = min(최대, 적 × percentPerKill). 등급 가중치는 적 수 띠(low·mid·high)로, 종류는
-   * 고르게. 이미 가진 종류·등급이면 새로 얻지 못한 것으로 적고 목록은 그대로다.
-   */
-  private void dropWeapon(CompanyState c, RandomGenerator rng) {
-    CompanyProperties.Drop rule = properties.mental().drop();
-    int chance = Math.min(rule.maxPercent(), c.mental.kills * rule.percentPerKill());
-    if (rng.nextInt(100) >= chance) {
-      return;
-    }
-    String band =
-        c.mental.kills < rule.midKills()
-            ? "low"
-            : c.mental.kills < rule.highKills() ? "mid" : "high";
-    Map<String, Integer> weights = rule.gradeWeights().get(band);
-    int total = WEAPON_GRADES.stream().mapToInt(g -> weights.getOrDefault(g, 0)).sum();
-    int roll = rng.nextInt(total);
-    String picked = WEAPON_GRADES.getFirst();
-    for (String g : WEAPON_GRADES) {
-      roll -= weights.getOrDefault(g, 0);
-      if (roll < 0) {
-        picked = g;
-        break;
-      }
-    }
-    String grade = picked;
-    List<String> kinds = properties.mental().weapons().keySet().stream().sorted().toList();
-    String kind = kinds.get(rng.nextInt(kinds.size()));
-    initWeapons(c);
-    boolean owned = c.weapons.stream().anyMatch(w -> w.same(kind, grade));
-    CompanyState.Weapon drop = new CompanyState.Weapon(kind, grade);
-    c.mental.drop = drop;
-    c.mental.dropNew = !owned;
-    if (!owned) {
-      c.weapons.add(drop);
-    }
-  }
-
-  /**
    * 한 판 결과를 받는다: 레벨이 오를 때마다 고른 카드(처음 한 장 포함, 330번)와 물리친 적·남은 멘탈. 이번 분기가 아니거나 없는 카드면 400, 이미 받았으면
-   * 그대로 둔다(같은 요청 두 번). 보고 값은 상한으로 자르고 강화율 = min(최대, 적 ÷ a + 멘탈 ÷ b). 그 뒤 무기가 떨어지는지 굴린다 (346번).
+   * 그대로 둔다(같은 요청 두 번). 보고 값은 상한으로 자르고 강화율 = min(최대, 적 ÷ a + 멘탈 ÷ b). 무기는 떨어지지 않고, 무기 뽑기권을 받는다
+   * (366번).
    */
   void report(
       CompanyState c,
@@ -230,7 +283,7 @@ class MentalEngine {
             rule.maxPercent(),
             c.mental.kills / rule.killsPerPercent()
                 + c.mental.mentalLeft / rule.mentalPerPercent());
-    dropWeapon(c, random.forKey("weapon", c.year, c.quarter));
+    c.weaponTickets += rule.weaponGacha().battleTickets();
   }
 
   /** 이번 분기 강화율(%). 치르지 않았거나 이 칸이 없던 분기면 0. */

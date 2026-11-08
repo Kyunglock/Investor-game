@@ -216,6 +216,20 @@ class CompanyState {
   /** 든 무기. weapons 가운데 하나. */
   Weapon weapon;
 
+  /** 무기 뽑기권 (decisions.md 366번). */
+  int weaponTickets;
+
+  /** 무기 뽑기로 바뀐 뒤의 회사인가 (366번). 그 전에 차린 회사는 거짓으로 읽히고, 처음 불러올 때 처음 뽑기권을 받는다. */
+  boolean weaponGachaReady;
+
+  /** 무기를 뽑은 횟수. 뽑기 난수의 열쇠. */
+  int weaponDraws;
+
+  /** 마지막으로 뽑은 무기와 그것이 새것이었나. 뽑은 적이 없으면 null. */
+  Weapon lastWeaponDraw;
+
+  boolean lastWeaponDrawNew;
+
   /** 이 회사에서 이미 나온 뉴스. 투자 회의에 같은 뉴스가 다시 나오지 않는다(다 쓰면 비운다). */
   List<String> usedNews = new ArrayList<>();
 
@@ -595,12 +609,6 @@ class CompanyState {
     int kills;
     int mentalLeft;
     int bonusPercent;
-
-    /** 이 판에서 떨어진 무기 (346번). 안 떨어졌으면 null. */
-    Weapon drop;
-
-    /** 떨어진 무기가 새것인가(이미 가진 것이면 거짓). */
-    boolean dropNew;
   }
 
   /** 무기 하나 (decisions.md 346번): 종류(pistol·revolver·smg·shotgun·rifle)와 등급(N·R·SR·UR). */
@@ -609,6 +617,9 @@ class CompanyState {
   static class Weapon {
     String kind;
     String grade;
+
+    /** 가진 수 (366번): 같은 무기를 또 뽑으면 늘고, 합성에 쓰면 준다. 이 칸이 생기기 전의 무기는 하나다. */
+    int count = 1;
 
     Weapon() {}
 

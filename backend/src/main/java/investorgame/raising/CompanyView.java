@@ -52,7 +52,8 @@ public record CompanyView(
     Industry industry,
     List<LockedDesk> lockedDesks,
     Mental mental,
-    List<Weapon> weapons) {
+    List<Weapon> weapons,
+    Armory armory) {
 
   /**
    * 업계 순위 (#351): 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다(로그인이 없는 익명 세션). 한 해도 마치지 않았으면 null.
@@ -69,16 +70,25 @@ public record CompanyView(
    * @param genre ASSAULT(공격)·DEFENSE(디펜스). 그 분기 이벤트가 정한다
    * @param headline 이벤트 머리글
    * @param done 이번 분기 결과를 이미 보냈다. 참이면 다시 치르지 않는다
-   * @param drop 이 판에서 떨어진 무기 (346번). 결과를 보내기 전이거나 안 떨어졌으면 null
    */
-  public record Mental(String genre, String headline, boolean done, Drop drop) {}
+  public record Mental(String genre, String headline, boolean done) {}
 
   /**
-   * 떨어진 무기 (decisions.md 346번).
+   * 무기 뽑기 (decisions.md 366번).
    *
-   * @param isNew 새로 얻었다. 이미 가진 종류·등급이면 거짓
+   * @param tickets 가진 무기 뽑기권
+   * @param mergeCount 합쳐 한 등급 올리는 데 드는 같은 무기 수
+   * @param lastDraw 마지막으로 뽑은 무기. 뽑은 적이 없으면 null
    */
-  public record Drop(String kind, String name, String grade, String gradeName, boolean isNew) {}
+  public record Armory(int tickets, int mergeCount, WeaponDraw lastDraw) {}
+
+  /**
+   * 뽑은 무기 하나 (366번).
+   *
+   * @param isNew 새로 얻었다. 이미 가진 종류·등급이면 거짓(그 무기의 수가 하나 늘어 합성 재료가 된다)
+   */
+  public record WeaponDraw(
+      String kind, String name, String grade, String gradeName, boolean isNew) {}
 
   /**
    * 가진 무기 하나 (decisions.md 346번). 수치는 등급을 더한 최종값: 한 판의 바탕 수치가 된다.
@@ -88,6 +98,7 @@ public record CompanyView(
    * @param power 탄 강화 단계(0~3). 탄은 항상 한 줄이고, 단계가 오를수록 세고 크며 2단계부터 맞으면 주변 적도 휘말린다
    * @param bulletSpeed 탄 속도(px/s)
    * @param equipped 지금 든 무기
+   * @param count 가진 수 (366번). 합성 재료로 쓴다
    */
   public record Weapon(
       String kind,
@@ -98,7 +109,8 @@ public record CompanyView(
       int fireMs,
       int power,
       int bulletSpeed,
-      boolean equipped) {}
+      boolean equipped,
+      int count) {}
 
   /**
    * 연봉 때문에 사표를 들고 온 직원 (decisions.md 282번). 붙잡거나 보내지 않고 다음 분기를 넘기면 떠난다. 없으면 null.

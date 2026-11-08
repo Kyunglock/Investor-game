@@ -79,7 +79,7 @@ public record CompanyProperties(
       Map<String, Map<String, Integer>> genreWeights,
       Map<String, Weapon> weapons,
       Map<String, WeaponGrade> weaponGrades,
-      Drop drop) {}
+      WeaponGacha weaponGacha) {}
 
   /** 무기 종류 하나의 바탕 수치 (346번). damagePercent 100이 탄 하나에 적 체력 1. power는 탄 강화 단계(362번). */
   public record Weapon(int damagePercent, int fireMs, int power, int bulletSpeed) {}
@@ -88,15 +88,15 @@ public record CompanyProperties(
   public record WeaponGrade(int damagePercent, int firePercent) {}
 
   /**
-   * 무기가 떨어질 확률 (346번): percentPerKill × 물리친 적(최대 maxPercent). 등급 가중치는 물리친 적이 midKills 미만이면 low,
-   * highKills 미만이면 mid, 그 위는 high.
+   * 무기 뽑기 (decisions.md 366번).
+   *
+   * @param gradeWeights 등급(N·R·SR·UR)별 가중치. 종류는 고르게 뽑는다
+   * @param startTickets 처음(또는 이 칸이 생기기 전의 회사가 처음 불러올 때) 받는 무기 뽑기권
+   * @param battleTickets 분기 전투 결과를 보낼 때마다 받는 무기 뽑기권
+   * @param mergeCount 합쳐 한 등급 올리는 데 드는 같은 무기 수
    */
-  public record Drop(
-      int percentPerKill,
-      int maxPercent,
-      int midKills,
-      int highKills,
-      Map<String, Map<String, Integer>> gradeWeights) {}
+  public record WeaponGacha(
+      Map<String, Integer> gradeWeights, int startTickets, int battleTickets, int mergeCount) {}
 
   /** 건물 이사 (decisions.md 296번): 이사 비용은 다음 띠 자본의 percent%. 자본이 다음 띠 + 비용 이상일 때만 간다. */
   /**

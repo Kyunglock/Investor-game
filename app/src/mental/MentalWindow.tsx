@@ -18,7 +18,10 @@ import './stage.css'
 import { DEFAULT_WEAPON, type Hero, heroOf, type Weapon } from './hero'
 
 type Mental = NonNullable<Company['mental']>
-type Drop = NonNullable<Mental['drop']>
+type Armory = NonNullable<Company['armory']>
+
+/** 합칠 수 있는 등급: 가장 높은 등급(UR)은 못 합친다 (366번). */
+type MergeGrade = Exclude<Weapon['grade'], 'UR'>
 
 /** 무기 등급 배지 색 (346번). */
 const GRADE_BADGE: Record<Weapon['grade'], string> = {
@@ -49,7 +52,6 @@ export function MentalWindow({
   const [sending, setSending] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
   const [pauseRequest, setPauseRequest] = useState(0)
-  const [drop, setDrop] = useState<Drop | null>(null)
   const busy = useRaisingStore((s) => s.busy)
   const apiError = useRaisingStore((s) => s.error)
   const modal = useRef<HTMLDivElement>(null)
@@ -118,13 +120,7 @@ export function MentalWindow({
       setSending(false)
       return
     }
-    // 무기가 떨어졌으면(346번) 결산 전에 보여 준다.
-    const fallen = useRaisingStore.getState().company?.mental?.drop ?? null
-    if (fallen) {
-      setDrop(fallen)
-      setSending(false)
-      return
-    }
+    // 무기는 떨어지지 않는다 (366번): 무기 뽑기권을 받고 그대로 결산으로.
     onDone()
   }
 
@@ -167,7 +163,7 @@ export function MentalWindow({
               <p>길을 막는 불안을 치우고 앞으로 나아가세요</p>
               <small>끌어서 움직이기 · 총은 자동으로 쏜다 · 빨리 깰수록 별이 많다</small>
             </div>
-            <WeaponPicker weapons={weapons} busy={busy} />
+            <WeaponPicker weapons={weapons} armory={company.armory ?? null} busy={busy} />
             {apiError && (
               <p role="alert" className="stage-error">
                 {apiError}
@@ -207,44 +203,7 @@ export function MentalWindow({
             </button>
           </div>
         )}
-        {outcome && drop && (
-          <div className="stage-summary" data-testid="mental-drop" data-new={drop.isNew}>
-            <div className="stage-result-card">
-              <span
-                className={`inline-block rounded-lg px-3 py-0.5 text-[13px] font-bold ${GRADE_BADGE[drop.grade]}`}
-              >
-                {drop.gradeName}
-              </span>
-              <h2 className="mt-2 font-game text-[28px]">
-                {drop.isNew ? '새 무기를 주웠다!' : '무기를 주웠지만…'}
-              </h2>
-              <div className="mx-auto mt-3 w-[200px] animate-pop">
-                <GunSprite kind={drop.kind} grade={drop.grade} width={200} />
-              </div>
-              <p className="mt-2 font-game text-[22px]">
-                {drop.gradeName} {drop.name}
-              </p>
-              <p className="mt-1 text-[13px] text-muted">
-                {drop.isNew
-                  ? '출전 전에 무기를 골라 들 수 있다. 등급이 높을수록 세고 빠르다.'
-                  : '이미 가진 것이라 그대로 두었다. 적을 더 많이 물리치면 좋은 무기가 잦다.'}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                sfx.stamp()
-                haptic.medium()
-                onDone()
-              }}
-              className="stage-primary"
-              data-testid="mental-drop-done"
-            >
-              결산으로 ▶
-            </button>
-          </div>
-        )}
-        {outcome && !drop && (
+        {outcome && (
           <div className="stage-summary">
             <div className="stage-result-card" data-testid="mental-result">
               <span
@@ -308,13 +267,59 @@ export function MentalWindow({
   )
 }
 
-/** 무기 고르기 (decisions.md 346번): 가진 무기를 늘어놓고 누르면 든다. 든 무기는 테두리가 진하다. */
-function WeaponPicker({ weapons, busy }: { weapons: Weapon[]; busy: boolean }) {
+/**
+ * 무기 고르기 (decisions.md 346·366번): 가진 무기를 늘어놓고 누르면 든다. 든 무기는 테두리가 진하다. 무기 뽑기권으로 뽑고, 같은 무기가 mergeCount개면
+ * 합쳐 한 등급 올린다.
+ */
+function WeaponPicker({
+  weapons,
+  armory,
+  busy,
+}: {
+  weapons: Weapon[]
+  armory: Armory | null
+  busy: boolean
+}) {
+  const [shown, setShown] = useState(false)
+  const last = armory?.lastDraw ?? null
   return (
     <div className="stage-weapons" data-testid="weapon-picker">
-      <p className="font-game text-[15px]">
-        무기 <span className="text-[12px] text-muted">· 적을 많이 물리치면 새 무기가 떨어진다</span>
-      </p>
+      <div className="stage-weapon-head">
+        <p className="font-game text-[15px]">
+          무기{' '}
+          <span className="text-[12px] text-muted">
+            · 뽑기권 <b data-testid="weapon-tickets">{armory?.tickets ?? 0}</b>장
+          </span>
+        </p>
+        <button
+          type="button"
+          className="stage-weapon-draw"
+          data-testid="weapon-draw"
+          disabled={busy || !armory || armory.tickets <= 0}
+          onClick={() => {
+            sfx.stamp()
+            haptic.medium()
+            setShown(true)
+            void useRaisingStore.getState().drawWeapon()
+          }}
+        >
+          무기 뽑기
+        </button>
+      </div>
+      {shown && last && (
+        <p
+          className="stage-weapon-drawn animate-pop"
+          data-testid="weapon-drawn"
+          data-new={last.isNew}
+        >
+          <span
+            className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${GRADE_BADGE[last.grade]}`}
+          >
+            {last.gradeName}
+          </span>{' '}
+          {last.name} {last.isNew ? '— 새 무기!' : '— 합성 재료 +1'}
+        </p>
+      )}
       <ul className="stage-weapon-list">
         {weapons.map((w) => (
           <li key={`${w.kind}-${w.grade}`}>
@@ -343,9 +348,24 @@ function WeaponPicker({ weapons, busy }: { weapons: Weapon[]; busy: boolean }) {
               </span>
               <span className="text-[11px] text-muted">
                 {w.equipped ? '장착 중 · ' : ''}공격 ×{w.damagePercent / 100} ·{' '}
-                {(1000 / w.fireMs).toFixed(1)}발/초
+                {(1000 / w.fireMs).toFixed(1)}발/초{w.count > 1 ? ` · ${w.count}개` : ''}
               </span>
             </button>
+            {armory && w.grade !== 'UR' && w.count >= armory.mergeCount && (
+              <button
+                type="button"
+                className="stage-weapon-merge"
+                data-testid="weapon-merge"
+                disabled={busy}
+                onClick={() => {
+                  sfx.levelUp()
+                  haptic.medium()
+                  void useRaisingStore.getState().mergeWeapon(w.kind, w.grade as MergeGrade)
+                }}
+              >
+                {armory.mergeCount}개 합쳐 등급 올리기
+              </button>
+            )}
           </li>
         ))}
       </ul>

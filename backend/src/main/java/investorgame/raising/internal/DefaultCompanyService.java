@@ -38,12 +38,12 @@ class DefaultCompanyService implements CompanyService {
 
   /**
    * 옛 회사를 지금 규칙으로 옮겨 저장한다: 채용 뽑기 전에 차린 회사면 처음 채용권을 주고 도감을 채우고(decisions.md 312번), 멘탈 전투 전에 연 분기면 이번
-   * 분기의 전투를 만든다(328번).
+   * 분기의 전투를 만들고, 무기 뽑기 전에 차린 회사면 처음 무기 뽑기권을 준다(328·366번).
    */
   private CompanyRepository.Row adopt(CompanyRepository.Row row) {
     CompanyState c = row.state();
     boolean overSeated = c.employees.stream().filter(e -> e.desk != null).count() > engine.seats(c);
-    if ((c.gachaReady && c.mental != null && c.weapon != null && !overSeated)
+    if ((c.gachaReady && c.mental != null && c.weapon != null && c.weaponGachaReady && !overSeated)
         || !"ACTIVE".equals(row.status())) {
       return row;
     }
@@ -424,12 +424,9 @@ class DefaultCompanyService implements CompanyService {
         lockedDesks,
         ended || c.mental == null
             ? null
-            : new CompanyView.Mental(
-                c.mental.genre,
-                c.mental.headline,
-                c.mental.cards != null,
-                engine.mental.dropView(c)),
-        engine.mental.weaponViews(c));
+            : new CompanyView.Mental(c.mental.genre, c.mental.headline, c.mental.cards != null),
+        engine.mental.weaponViews(c),
+        engine.mental.armoryView(c));
   }
 
   @Override
@@ -437,6 +434,24 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView equipWeapon(UUID sessionId, String kind, String grade) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.mental.equip(row.state(), kind, grade);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView drawWeapon(UUID sessionId) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.mental.drawWeapon(row.state(), new HashSeededRandom(row.seed()));
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView mergeWeapon(UUID sessionId, String kind, String grade) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.mental.mergeWeapon(row.state(), kind, grade);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

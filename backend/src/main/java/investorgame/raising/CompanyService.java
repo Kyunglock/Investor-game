@@ -93,6 +93,12 @@ public interface CompanyService {
   /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). 없는 종류·등급이거나 안 가진 무기면 400. */
   CompanyView equipWeapon(UUID sessionId, String kind, String grade);
 
+  /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). 뽑기권이 없으면 400. */
+  CompanyView drawWeapon(UUID sessionId);
+
+  /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). 모자라거나 가장 높은 등급이면 400. */
+  CompanyView mergeWeapon(UUID sessionId, String kind, String grade);
+
   /** 최근에 차린 회사부터 limit개. 관리자 플레이 기록용이며 세션을 따지지 않는다. */
   List<CompanySummary> recent(int limit);
 }

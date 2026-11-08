@@ -65,6 +65,10 @@ interface RaisingState {
   reportMental: (cards: MentalCard[], kills: number, mentalLeft: number) => Promise<void>
   /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). */
   equipWeapon: (kind: WeaponKind, grade: WeaponGrade) => Promise<void>
+  /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). 결과는 company.armory.lastDraw. */
+  drawWeapon: () => Promise<void>
+  /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */
+  mergeWeapon: (kind: WeaponKind, grade: Exclude<WeaponGrade, 'UR'>) => Promise<void>
   /** 종목 회의의 막판 제안에 답한다 (decisions.md 283번). */
   answerProposal: (accept: boolean) => Promise<void>
   /** 막판 제안을 따른 직원에게 상이나 벌을 준다 (283번). */
@@ -216,6 +220,11 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
 
     equipWeapon: (kind, grade) =>
       change(api.POST('/api/company/weapon', { body: { kind, grade } })),
+
+    drawWeapon: () => change(api.POST('/api/company/weapon/draw')),
+
+    mergeWeapon: (kind, grade) =>
+      change(api.POST('/api/company/weapon/merge', { body: { kind, grade } })),
 
     answerProposal: (accept) =>
       change(api.POST('/api/company/invest/proposal', { body: { accept } })),

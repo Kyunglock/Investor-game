@@ -222,6 +222,27 @@ class CompanyController {
 
   record WeaponRequest(@NotBlank String kind, @NotBlank String grade) {}
 
+  /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). */
+  @PostMapping("/weapon/draw")
+  CompanyView drawWeapon(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
+    UUID sessionId = cookies.requireSession(token);
+    CompanyView company = companies.drawWeapon(sessionId);
+    PLAY.info(
+        "company-weapon-draw session={} company={} ip={}",
+        sessionId,
+        company.companyId(),
+        ClientIp.current());
+    return company;
+  }
+
+  /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */
+  @PostMapping("/weapon/merge")
+  CompanyView mergeWeapon(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody WeaponRequest request) {
+    return companies.mergeWeapon(cookies.requireSession(token), request.kind(), request.grade());
+  }
+
   /** 올해 연봉 협상에 답한다 (decisions.md 270번). */
   @PostMapping("/raise")
   CompanyView answerRaise(
