@@ -461,6 +461,108 @@
   color: #71829a;
   white-space: nowrap;
 }
+/* 카드 등급 (377번): 희귀 파랑, 영웅 보라 빛, 전설 금빛이 흐르고 맥박치듯 빛난다. 등급 차이가 한눈에 보이게. */
+.stage-card-option[data-grade="R"] {
+  border: 2px solid #4f8bff;
+  border-top: 5px solid var(--card-accent);
+  background: linear-gradient(180deg, #eef5ff, #fffdf6 70%);
+  box-shadow:
+    0 4px 0 #4f8bff55,
+    0 0 12px #4f8bff44;
+}
+.stage-card-option[data-grade="SR"] {
+  border: 2px solid #a259ff;
+  border-top: 5px solid var(--card-accent);
+  background:
+    radial-gradient(circle at 50% 0%, #e9d8ff, transparent 65%),
+    linear-gradient(180deg, #f6eeff, #fffaf6 75%);
+  box-shadow:
+    0 4px 0 #a259ff66,
+    0 0 18px #a259ff66;
+}
+.stage-card-option[data-grade="SR"]::after,
+.stage-card-option[data-grade="UR"]::after {
+  animation: card-grade-shine 2.4s ease-in-out infinite;
+}
+.stage-card-option[data-grade="UR"] {
+  border: 3px solid transparent;
+  border-top-width: 5px;
+  background:
+    radial-gradient(circle at 50% 0%, #ffe27a, transparent 62%) padding-box,
+    linear-gradient(180deg, #fff1b0, #fff9e0 80%) padding-box,
+    linear-gradient(120deg, #ffb300, #ff6a00, #ffe066, #ff9d00, #fff2a8, #ffb300) border-box;
+  background-size:
+    auto,
+    auto,
+    300% 300%;
+  animation:
+    mental-card-in 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2) both,
+    card-legend-border 3s linear infinite,
+    card-legend-glow 1.6s ease-in-out infinite;
+}
+.stage-card-option[data-grade="UR"].opacity-30 {
+  animation: none;
+}
+.stage-card-option[data-grade="UR"].animate-mental-card-pick {
+  animation: mental-card-pick 0.4s ease-in both;
+}
+.stage-card-option[data-grade="UR"] .stage-card-name {
+  background: linear-gradient(90deg, #b8860b, #ff8a3d, #b8860b);
+  background-clip: text;
+  color: transparent;
+}
+.stage-card-option[data-grade="R"] .stage-card-meta > span:first-child {
+  background: #4f8bff;
+  border-color: #4f8bff;
+  color: #fff;
+}
+.stage-card-option[data-grade="SR"] .stage-card-meta > span:first-child {
+  background: #a259ff;
+  border-color: #a259ff;
+  color: #fff;
+}
+.stage-card-option[data-grade="UR"] .stage-card-meta > span:first-child {
+  background: linear-gradient(90deg, #ffb300, #ff8a3d);
+  border-color: #e79a00;
+  color: #fff;
+  font-weight: 800;
+}
+.stage-card-option[data-grade="SR"] .stage-card-icon,
+.stage-card-option[data-grade="UR"] .stage-card-icon {
+  box-shadow:
+    inset 0 -4px 0 #465b7510,
+    0 0 14px var(--card-accent);
+}
+@keyframes card-grade-shine {
+  0%,
+  55% {
+    left: -80px;
+  }
+  100% {
+    left: 130%;
+  }
+}
+@keyframes card-legend-border {
+  to {
+    background-position:
+      0 0,
+      0 0,
+      300% 0;
+  }
+}
+@keyframes card-legend-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 4px 0 #e0a10066,
+      0 0 14px #ffc94499;
+  }
+  50% {
+    box-shadow:
+      0 4px 0 #e0a10066,
+      0 0 30px #ffc944;
+  }
+}
 .battle-hud {
   position: absolute;
   z-index: 2;
@@ -780,7 +882,9 @@
   .stage-frame .animate-pop {
     animation: none;
   }
-  .stage-card-option[data-chosen="true"]::after {
+  .stage-card-option[data-chosen="true"]::after,
+  .stage-card-option[data-grade]::after,
+  .stage-card-option[data-grade="UR"] {
     animation: none;
   }
   .stage-card-option {

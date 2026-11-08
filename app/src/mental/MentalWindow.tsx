@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
-import { type MentalCard, useRaisingStore } from '@web/features/raising/store'
+import { useRaisingStore } from '@web/features/raising/store'
 import { type CSSProperties, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { type BattleEntry, useAppUi } from '../app/ui'
@@ -17,7 +17,7 @@ import {
 } from './advance'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
-import { applyCard, CARDS, type Loadout, loadoutOf, pickCards } from './cards'
+import { applyCard, type Card, GRADE_NAMES, loadoutOf, pickCards } from './cards'
 import { ENEMIES } from './enemies'
 import { GunSprite } from './GunSprite'
 import { BATTLE_SECONDS } from './genres'
@@ -57,7 +57,7 @@ export function MentalWindow({
   // 싸우는 사람과 든 무기는 출전을 누르는 순간 굳힌다: 회사가 다시 그려져도 한 판이 다시 시작되지 않게.
   const [hero, setHero] = useState<Hero | null>(null)
   const started = hero !== null
-  const [picked, setPicked] = useState<MentalCard[]>([])
+  const [picked, setPicked] = useState<Card[]>([])
   const [outcome, setOutcome] = useState<Outcome | null>(null)
   const [sending, setSending] = useState(false)
   const [reportError, setReportError] = useState<string | null>(null)
@@ -170,7 +170,7 @@ export function MentalWindow({
             hero={hero}
             cards={picked}
             pauseRequest={pauseRequest}
-            onPick={(code) => setPicked((p) => [...p, code])}
+            onPick={(card) => setPicked((p) => [...p, card])}
             onDone={setOutcome}
             onQuit={onDone}
           />
@@ -449,14 +449,15 @@ function Stat({ label, value }: { label: string; value: number | string }) {
   )
 }
 
-const CARD_ROLES: Record<MentalCard, string> = {
-  hold: '공격',
-  split: '탄환',
-  rule: '연사',
-  steel: '방어',
-  calm: '탄속',
-  heal: '회복',
+const CARD_ROLES: Record<Card['code'], string> = {
+  atk: '공격',
+  spd: '연사',
+  water: '물 마법',
+  fire: '불 마법',
+  lightning: '번개 마법',
 }
+
+const GRADE_ORDER: Record<Card['grade'], number> = { N: 0, R: 1, SR: 2, UR: 3 }
 
 /**
  * 카드 석 장 고르기 (330번): 제목이 쿵 하고 찍히고, 카드가 아래에서 차례로 튀어 올라 뒤집히며 자리를 잡는다(소리·진동). 누르면 그 카드가 번쩍 커졌다 사라진 뒤
@@ -465,18 +466,14 @@ const CARD_ROLES: Record<MentalCard, string> = {
 function CardPick({
   title,
   sub,
-  loadout,
-  mentalFull,
   onPick,
 }: {
   title: string
   sub: string
-  loadout: Loadout
-  mentalFull: boolean
-  onPick: (code: MentalCard) => void
+  onPick: (card: Card) => void
 }) {
-  const [cards] = useState(() => pickCards(loadout, mentalFull))
-  const [chosen, setChosen] = useState<MentalCard | null>(null)
+  const [cards] = useState(() => pickCards())
+  const [chosen, setChosen] = useState<Card | null>(null)
   const pickTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(
     () => () => {
@@ -508,7 +505,7 @@ function CardPick({
       <div className="stage-card-options">
         {cards.map((c, i) => (
           <button
-            key={c.code}
+            key={`${c.code}-${c.grade}`}
             type="button"
             disabled={chosen !== null}
             style={
@@ -518,23 +515,24 @@ function CardPick({
               } as CSSProperties
             }
             data-card={c.code}
-            data-chosen={chosen === c.code}
-            aria-pressed={chosen === c.code}
+            data-grade={c.grade}
+            data-chosen={chosen === c}
+            aria-pressed={chosen === c}
             onClick={(ev) => {
               if (chosen) {
                 return
               }
-              setChosen(c.code)
+              setChosen(c)
               sfx.cash()
               haptic.heavy()
               useFx.getState().burstAt(ev.currentTarget, 'sparks')
               pickTimer.current = setTimeout(
-                () => onPick(c.code),
+                () => onPick(c),
                 matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 240,
               )
             }}
             className={`stage-card-option ${
-              chosen === c.code
+              chosen === c
                 ? 'animate-mental-card-pick'
                 : chosen
                   ? 'opacity-30'
@@ -546,7 +544,9 @@ function CardPick({
             </span>
             <span className="stage-card-copy">
               <span className="stage-card-meta">
-                <span>{CARD_ROLES[c.code]} 강화</span>
+                <span>
+                  {GRADE_NAMES[c.grade]} · {CARD_ROLES[c.code]}
+                </span>
                 <span aria-hidden="true">✦ {String(i + 1).padStart(2, '0')}</span>
               </span>
               <span className="stage-card-name">{c.name}</span>
@@ -557,7 +557,7 @@ function CardPick({
               {c.effect}
             </span>
             <span className="stage-card-select" aria-hidden="true">
-              {chosen === c.code ? '✓ 선택 완료' : '선택 ›'}
+              {chosen === c ? '✓ 선택 완료' : '선택 ›'}
             </span>
           </button>
         ))}
@@ -586,9 +586,9 @@ function Battle({
   stage?: StageSpec
   genre: Genre
   hero: Hero
-  cards: MentalCard[]
+  cards: Card[]
   pauseRequest: number
-  onPick: (code: MentalCard) => void
+  onPick: (card: Card) => void
   onDone: (outcome: Outcome) => void
   /** 싸우다 나간다 (345번): 이번 분기 강화 없이 결산으로. */
   onQuit: () => void
@@ -771,17 +771,24 @@ function Battle({
           <div className="battle-footer">
             <span>{mode === 'advance' ? '끌어서 움직이기 · 자동 사격' : '누른 방향으로 발사'}</span>
             <div>
-              {CARDS.filter((c) => cards.includes(c.code)).map((c) => (
-                <span
-                  key={c.code}
-                  title={`${c.name} ${cards.filter((code) => code === c.code).length}장`}
-                  role="img"
-                  aria-label={`${c.name} ${cards.filter((code) => code === c.code).length}장`}
-                >
-                  {c.icon}
-                  <small>{cards.filter((code) => code === c.code).length}</small>
-                </span>
-              ))}
+              {[...new Set(cards.map((c) => c.code))].map((code) => {
+                const same = cards.filter((c) => c.code === code)
+                const top = same.reduce((a, b) =>
+                  GRADE_ORDER[b.grade] > GRADE_ORDER[a.grade] ? b : a,
+                )
+                return (
+                  <span
+                    key={code}
+                    data-grade={top.grade}
+                    title={`${top.name} ${same.length}장`}
+                    role="img"
+                    aria-label={`${top.name} ${same.length}장`}
+                  >
+                    {top.icon}
+                    <small>{same.length}</small>
+                  </span>
+                )
+              })}
             </div>
           </div>
         </>
@@ -848,11 +855,9 @@ function Battle({
                 ? '한 장을 고르세요. 레벨이 오를 때마다 또 고릅니다'
                 : '카드 한 장을 더 쌓으세요'
             }
-            loadout={loadout.current}
-            mentalFull={hud.mental >= hud.maxMental}
-            onPick={(code) => {
-              loadout.current = applyCard(loadout.current, code)
-              onPick(code)
+            onPick={(card) => {
+              loadout.current = applyCard(loadout.current, card)
+              onPick(card)
               setLevelUp(null)
               handle.current?.applyLoadout(loadout.current)
             }}

@@ -1,11 +1,16 @@
-import type { MentalCard } from '@web/features/raising/store'
-
 /**
- * 멘탈 카드 (decisions.md 328·330번). 처음 한 장, 그리고 레벨이 오를 때마다 한 장을 고른다. 효과는 한 판 안의 화면 규칙이라 앱이 가진다. 이름은 서버
- * 콘텐츠(company.mental.cards)와 같다.
+ * 멘탈 카드 (decisions.md 328·330·377번). 처음 한 장, 그리고 레벨이 오를 때마다 한 장을 고른다. 효과는 한 판 안의 화면 규칙이라 앱이 가진다.
+ *
+ * 등급이 있다 (377번): 일반 카드는 공격력 +10%·공격 속도 +10% 두 가지뿐이고, 희귀·영웅·전설은 물·불·번개 마법이다. 등급이 높을수록 드물고
+ * 마법이 세다(같은 마법을 또 고르면 단계가 쌓인다).
  */
+export type CardGrade = 'N' | 'R' | 'SR' | 'UR'
+export type Magic = 'water' | 'fire' | 'lightning'
+export type CardCode = 'atk' | 'spd' | Magic
+
 export interface Card {
-  code: MentalCard
+  code: CardCode
+  grade: CardGrade
   name: string
   desc: string
   effect: string
@@ -13,55 +18,95 @@ export interface Card {
   color: string
 }
 
-export const CARDS: readonly Card[] = [
+export const GRADE_NAMES: Record<CardGrade, string> = {
+  N: '일반',
+  R: '희귀',
+  SR: '영웅',
+  UR: '전설',
+}
+
+/** 등급마다 나올 확률(%). 한 칸마다 따로 굴린다. */
+export const GRADE_ODDS: Record<CardGrade, number> = { N: 55, R: 28, SR: 13, UR: 4 }
+
+/** 마법 카드 한 장이 올리는 단계: 희귀 1, 영웅 2, 전설 3. */
+export const MAGIC_LEVEL: Record<Exclude<CardGrade, 'N'>, number> = { R: 1, SR: 2, UR: 3 }
+
+/** 일반 카드 둘 (377번): 공격력 +10%, 공격 속도 +10%. */
+export const SIMPLE_CARDS: readonly Card[] = [
   {
-    code: 'hold',
+    code: 'atk',
+    grade: 'N',
     name: '존버 정신',
     desc: '흔들려도 버틴다',
-    effect: '공격력 +60%',
+    effect: '공격력 +10%',
     icon: '💪',
     color: '#ffd84d',
   },
   {
-    code: 'split',
-    name: '총알 강화',
-    desc: '한 발에 힘을 응축한다',
-    effect: '탄 위력 +40% · 크기 +20% · 2단계부터 폭발',
-    icon: '💥',
-    color: '#7be0c3',
-  },
-  {
-    code: 'rule',
+    code: 'spd',
+    grade: 'N',
     name: '원칙 매매',
     desc: '정한 대로만 쏜다',
-    effect: '연사 +45%',
+    effect: '공격 속도 +10%',
     icon: '📏',
     color: '#8fb8ff',
   },
-  {
-    code: 'steel',
-    name: '강철 멘탈',
-    desc: '웬만해선 안 무너진다',
-    effect: '최대 멘탈 +50, 회복',
-    icon: '🛡️',
-    color: '#ff7aa8',
-  },
-  {
-    code: 'calm',
-    name: '냉정함',
-    desc: '급할수록 침착하게',
-    effect: '탄이 더 빠르고 멀리',
-    icon: '🧊',
-    color: '#cfe9ff',
-  },
-  {
-    code: 'heal',
-    name: '심호흡',
-    desc: '후… 하고 한숨 돌린다',
-    effect: '멘탈 +40 회복',
-    icon: '🌬️',
-    color: '#d9f5c2',
-  },
+]
+
+const MAGIC_INFO: Record<Magic, { name: string; desc: string; icon: string; color: string }> = {
+  water: { name: '물의 마법', desc: '차가운 물이 발을 묶는다', icon: '💧', color: '#5ab8ff' },
+  fire: { name: '불의 마법', desc: '맞은 적이 활활 탄다', icon: '🔥', color: '#ff7a45' },
+  lightning: { name: '번개 마법', desc: '번개가 옆 적에게 튄다', icon: '⚡', color: '#ffd23f' },
+}
+
+/** 물: 단계마다 맞은 적이 이만큼(%) 느려지고(최대 70%), 1초 + 단계 × 0.5초 동안 이어진다. */
+export function waterSlow(level: number) {
+  return { factor: 1 - Math.min(0.7, 0.2 * level), seconds: 1 + 0.5 * level }
+}
+
+/** 불: 맞은 적이 2초 동안 초마다 맞은 피해 × 단계 × 30%만큼 탄다. */
+export const BURN_SECONDS = 2
+export function burnPerSecond(damage: number, level: number): number {
+  return damage * 0.3 * level
+}
+
+/** 번개: 맞은 적 곁(반지름 150px)의 적 단계 수만큼에게 맞은 피해의 60%가 튄다. */
+export const CHAIN_RADIUS = 150
+export function chainOf(damage: number, level: number) {
+  return { targets: level, damage: damage * 0.6 }
+}
+
+function magicEffect(magic: Magic, level: number): string {
+  if (magic === 'water') {
+    const w = waterSlow(level)
+    return `맞은 적 ${Math.round((1 - w.factor) * 100)}% 느리게 · ${w.seconds}초`
+  }
+  if (magic === 'fire') {
+    return `2초 동안 화상 · 초당 피해 ${level * 30}%`
+  }
+  return `옆 적 ${level}마리에게 번개 · 피해 60%`
+}
+
+/** 마법 카드 한 장 (등급별). */
+export function magicCard(magic: Magic, grade: Exclude<CardGrade, 'N'>): Card {
+  const info = MAGIC_INFO[magic]
+  return {
+    code: magic,
+    grade,
+    name: info.name,
+    desc: info.desc,
+    effect: magicEffect(magic, MAGIC_LEVEL[grade]),
+    icon: info.icon,
+    color: info.color,
+  }
+}
+
+const MAGICS: readonly Magic[] = ['water', 'fire', 'lightning']
+
+/** 나올 수 있는 모든 카드: 일반 둘 + 마법 셋 × 등급 셋. */
+export const CARDS: readonly Card[] = [
+  ...SIMPLE_CARDS,
+  ...MAGICS.flatMap((m) => (['R', 'SR', 'UR'] as const).map((g) => magicCard(m, g))),
 ]
 
 /** 총알 강화는 세 단계까지 쌓인다. */
@@ -80,6 +125,10 @@ export interface Loadout {
   heal: number
   /** 전진 모드에서 사장냥이 손가락을 따라가는 최대 빠르기(px/s, 364번). */
   moveSpeed: number
+  /** 마법 단계 (377번). 0이면 없다. */
+  water: number
+  fire: number
+  lightning: number
 }
 
 export const BASE_LOADOUT: Loadout = {
@@ -90,6 +139,9 @@ export const BASE_LOADOUT: Loadout = {
   bulletSpeed: 720,
   heal: 0,
   moveSpeed: 520,
+  water: 0,
+  fire: 0,
+  lightning: 0,
 }
 
 /**
@@ -119,38 +171,44 @@ export function loadoutOf(
 }
 
 /** 카드 한 장을 쌓는다. 같은 카드를 또 고르면 또 쌓인다. */
-export function applyCard(loadout: Loadout, card: MentalCard): Loadout {
-  switch (card) {
-    case 'hold':
-      return { ...loadout, damage: loadout.damage + 0.6 }
-    case 'split':
-      return { ...loadout, bulletPower: Math.min(MAX_BULLET_POWER, loadout.bulletPower + 1) }
-    case 'rule':
-      return { ...loadout, fireMs: Math.max(80, loadout.fireMs / 1.45) }
-    case 'steel':
-      return { ...loadout, maxMental: loadout.maxMental + 50, heal: 50 }
-    case 'calm':
-      return { ...loadout, bulletSpeed: loadout.bulletSpeed + BASE_LOADOUT.bulletSpeed * 0.3 }
-    case 'heal':
-      return { ...loadout, heal: 40 }
+export function applyCard(loadout: Loadout, card: Card): Loadout {
+  switch (card.code) {
+    case 'atk':
+      return { ...loadout, damage: loadout.damage * 1.1 }
+    case 'spd':
+      return { ...loadout, fireMs: Math.max(60, loadout.fireMs / 1.1) }
+    default:
+      return {
+        ...loadout,
+        [card.code]: loadout[card.code] + MAGIC_LEVEL[card.grade as Exclude<CardGrade, 'N'>],
+      }
   }
 }
 
-/** 고를 석 장: 서로 다른 셋. 총알 강화가 최대면 해당 카드는 빼고, 멘탈이 꽉 차 있으면 심호흡은 뺀다. */
-export function pickCards(
-  loadout: Loadout = BASE_LOADOUT,
-  mentalFull = true,
-  random: () => number = Math.random,
-): Card[] {
-  const pool = CARDS.filter(
-    (c) =>
-      !(c.code === 'split' && loadout.bulletPower >= MAX_BULLET_POWER) &&
-      !(c.code === 'heal' && mentalFull),
-  )
+/** 한 칸의 등급을 굴린다. */
+export function rollGrade(random: () => number = Math.random): CardGrade {
+  let r = random() * 100
+  for (const g of ['UR', 'SR', 'R'] as const) {
+    if (r < GRADE_ODDS[g]) {
+      return g
+    }
+    r -= GRADE_ODDS[g]
+  }
+  return 'N'
+}
+
+/** 고를 석 장 (377번): 칸마다 등급을 굴려 일반이면 일반 카드, 아니면 그 등급의 마법 하나. 같은 카드(종류·등급)는 겹치지 않는다. */
+export function pickCards(random: () => number = Math.random): Card[] {
   const picked: Card[] = []
-  while (picked.length < 3 && pool.length > 0) {
-    const i = Math.floor(random() * pool.length)
-    picked.push(...pool.splice(i, 1))
+  for (let tries = 0; picked.length < 3 && tries < 60; tries++) {
+    const grade = rollGrade(random)
+    const card =
+      grade === 'N'
+        ? SIMPLE_CARDS[Math.floor(random() * SIMPLE_CARDS.length)]
+        : magicCard(MAGICS[Math.floor(random() * MAGICS.length)], grade)
+    if (!picked.some((c) => c.code === card.code && c.grade === card.grade)) {
+      picked.push(card)
+    }
   }
   return picked
 }
