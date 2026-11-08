@@ -44,7 +44,7 @@ async function closeReveal(page: Page) {
 
 /**
  * 분기 넘기기를 누르면 직원이 종목을 물어 올 수 있다 (267·382번). 물어 왔으면 종목 회의 창이 바로 뜨고, 고르고, 직원마다 맞대결 막대가 돌고(235번) 끝나면
- * 창에서 그대로 분기를 넘긴다 (231번). 아무도 안 왔으면 바로 넘긴다. watch면 연출을 끝까지 보고, 아니면 빨리 보기로 넘긴다. 1~3분기면 분기 실적이,
+ * 창에서 그대로 분기를 넘긴다 (231번). 아무도 안 왔으면 바로 넘긴다. watch면 연출을 끝까지 보고, 아니면 차트 밑의 빨리 보기(395번)로 넘긴다. 1~3분기면 분기 실적이,
  * 4분기면 연말 결산서가 뜨고 닫는다. 종목 회의를 했으면 true.
  */
 async function passQuarter(
@@ -83,7 +83,13 @@ async function passQuarter(
       // 가져온 직원을 칭찬하거나 탓하는 한 줄이 붙는다.
       await expect(meeting.getByTestId('invest-credit')).toBeVisible()
     } else {
-      await meeting.getByRole('button', { name: '빨리 보기' }).click()
+      // 빨리 보기는 종목 차트 바로 밑의 큰 버튼이다 (395번): 창 머리줄에는 없다.
+      const skip = meeting.getByTestId('invest-skip')
+      await expect(
+        meeting.locator('header').getByRole('button', { name: '빨리 보기' }),
+      ).toHaveCount(0)
+      await skip.click()
+      await expect(skip).toHaveCount(0)
     }
     await settle.click()
     await expect(meeting).toBeHidden()
@@ -418,6 +424,10 @@ test('종목 회의를 열면 먼저 매수파와 매도파가 토론하며 맞�
   // 펼치면 지금처럼 토론이 나오고, 끝날 때까지 결정 버튼은 잠긴다.
   await meeting.getByTestId('debate-toggle').click()
   await expect(meeting.getByRole('button', { name: '산다', exact: true })).toBeDisabled()
+  // 차트가 아직 없는 토론 중에는 토론 장면 바로 밑에 빨리 보기가 있다 (395번).
+  await expect(
+    meeting.getByTestId('debate-fold').locator('xpath=following-sibling::*[1]'),
+  ).toHaveAttribute('data-testid', 'invest-skip')
   const clash = meeting.getByTestId('team-clash').first()
   await expect(clash).toBeVisible()
   await expect(clash).toHaveAttribute('data-phase', 'clash')
@@ -443,6 +453,7 @@ test('종목 회의를 열면 먼저 매수파와 매도파가 토론하며 맞�
   await expect(lines.nth(6)).toHaveAttribute('data-kind', 'LOSE')
   // 토론이 끝나면 사장 차례: 직원들이 기운 쪽이 한 줄로 보이고, 사장이 고른다.
   await expect(meeting.getByTestId('invest-your-turn')).toContainText('사장님 차례')
+  await expect(meeting.getByTestId('invest-skip')).toHaveCount(0)
   await meeting
     .getByRole('button', { name: result.includes('매수') ? '산다' : '판다', exact: true })
     .click()
@@ -450,7 +461,8 @@ test('종목 회의를 열면 먼저 매수파와 매도파가 토론하며 맞�
     result.includes('매수') ? '산다' : '판다',
   )
   await expect(meeting.getByTestId('invest-outcome')).toContainText('사장 결정')
-  const fast = meeting.getByRole('button', { name: '빨리 보기' })
+  // 빨리 보기는 차트 바로 밑에 있다 (395번). 차트가 다 그려졌으면 이미 사라졌다.
+  const fast = meeting.getByTestId('invest-skip')
   if (await fast.isVisible()) {
     await fast.click()
   }
