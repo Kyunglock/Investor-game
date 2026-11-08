@@ -139,6 +139,19 @@ export interface AdvanceResult {
 /**
  * 별 (decisions.md 364번, #493): 깨면 ★1, 제한 시간의 절반 안에 깨면 ★ 하나 더, 멘탈을 반 넘게 남기면 ★ 하나 더. 못 깨면 0.
  */
+/** 디펜스 번호 스테이지(509번)에서 보스가 나오는 때(초): 한 판(2분)의 한가운데. 보스 스테이지는 보스를 쓰러뜨려야 깬다. */
+export const DEFENSE_BOSS_SECONDS = 60
+
+/**
+ * 디펜스 번호 스테이지의 별 (509번): 버티면(보스 스테이지는 보스를 쓰러뜨리면) 하나, 멘탈벽이 반 넘게 남으면 하나, 거의 다(80% 이상) 남으면 또 하나.
+ */
+export function defenseStars(win: boolean, mentalLeft: number, maxMental: number): number {
+  if (!win) {
+    return 0
+  }
+  return 1 + (mentalLeft > maxMental / 2 ? 1 : 0) + (mentalLeft >= maxMental * 0.8 ? 1 : 0)
+}
+
 export function stars(r: AdvanceResult, limitSeconds: number): number {
   if (!r.win) {
     return 0

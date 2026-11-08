@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   BOSS,
   bossSummonSeconds,
+  defenseStars,
   formation,
   SEGMENTS,
   stageLabel,
@@ -56,5 +57,14 @@ describe('전진 모드', () => {
     expect(stars({ ...base, mentalLeft: 51 }, 120)).toBe(2)
     expect(stars({ ...base, seconds: 50, mentalLeft: 90 }, 120)).toBe(3)
     expect(stars({ ...base, win: false, seconds: 10, mentalLeft: 100 }, 120)).toBe(0)
+  })
+})
+
+describe('디펜스 번호 스테이지의 별 (decisions.md 375번)', () => {
+  it('지면 0, 버티면 1, 멘탈벽이 반 넘게 남으면 2, 80% 이상이면 3', () => {
+    expect(defenseStars(false, 100, 100)).toBe(0)
+    expect(defenseStars(true, 30, 100)).toBe(1)
+    expect(defenseStars(true, 60, 100)).toBe(2)
+    expect(defenseStars(true, 80, 100)).toBe(3)
   })
 })

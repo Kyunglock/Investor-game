@@ -4,6 +4,8 @@ import {
   type BattleMode,
   BOSS,
   bossSummonSeconds,
+  DEFENSE_BOSS_SECONDS,
+  defenseStars,
   formation,
   PER_CHAPTER,
   SCROLL_SECONDS,
@@ -145,6 +147,10 @@ class BattleScene extends Phaser.Scene {
   /** 마지막 보스와 마지막으로 졸개를 부른 때(초). */
   private bossEnemy: Enemy | null = null
   private lastSummon = 0
+  /** 디펜스 번호 스테이지(509번): 적 체력 배율과, 보스를 이미 불렀나. EX(스테이지 없음)는 배율 1이고 보스가 없다. */
+  private readonly hpScale: number
+  private readonly defenseBoss: boolean
+  private bossCalled = false
   /** 전진 모드의 드래그: 누른 자리와 그때 사장냥 자리. 손가락이 움직인 만큼 사장냥이 따라간다. */
   private drag: { px: number; py: number; cx: number; cy: number } | null = null
   private player!: Phaser.Physics.Arcade.Image
@@ -201,6 +207,8 @@ class BattleScene extends Phaser.Scene {
     this.genre = GENRES[opts.genre]
     this.mode = opts.mode
     this.spec = opts.stage ?? stageSpec(PER_CHAPTER)
+    this.hpScale = opts.stage?.hpScale ?? 1
+    this.defenseBoss = opts.mode === 'defense' && Boolean(opts.stage?.boss)
     this.loadout = opts.loadout
   }
 
@@ -498,6 +506,28 @@ class BattleScene extends Phaser.Scene {
     this.pushHud(true)
   }
 
+  /** 디펜스 보스 스테이지 (509번): 한 판의 한가운데에 보스가 나와 위에서 졸개를 부른다. 보스를 쓰러뜨리면 깬다. */
+  private defenseBossStep() {
+    if (!this.bossCalled) {
+      if (this.elapsed >= DEFENSE_BOSS_SECONDS) {
+        this.bossCalled = true
+        sfx.levelUp()
+        this.opts.onBanner(`${BOSS.name} 등장!!`, '#ff4f6d')
+        this.startBoss()
+      }
+      return
+    }
+    const boss = this.bossEnemy
+    if (
+      boss?.active &&
+      !boss.dying &&
+      this.elapsed - this.lastSummon > bossSummonSeconds(boss.hp, this.bossMax)
+    ) {
+      this.lastSummon = this.elapsed
+      this.summon(boss)
+    }
+  }
+
   /** 마지막 보스를 부른다: 화면 위 가운데에서 크게 내려온다. 보통 적 수 제한과 상관없이 나온다. */
   private startBoss() {
     const { w } = this.view()
@@ -564,7 +594,8 @@ class BattleScene extends Phaser.Scene {
       e.setScale(0.3 * ENEMY_K)
       this.tweens.add({ targets: e, scale: ENEMY_K, duration: 220, ease: 'Back.easeOut' })
     }
-    e.hp = v.hp
+    // 디펜스 번호 스테이지는 뒤로 갈수록 적이 단단하다 (509번).
+    e.hp = this.mode === 'defense' ? v.hp * this.hpScale : v.hp
     e.kbx = 0
     e.kby = 0
     e.born = this.elapsed
@@ -719,7 +750,10 @@ class BattleScene extends Phaser.Scene {
       this.cameras.main.shake(420, 0.02)
       this.hitstop(140)
       this.boom[e.kind].explode(40, e.x, e.y)
-      this.opts.onBanner('돌파!! 멘탈 전진 성공', '#ffd84d')
+      this.opts.onBanner(
+        this.mode === 'advance' ? '돌파!! 멘탈 전진 성공' : '보스 격파!! 멘탈 지켜냈다',
+        '#ffd84d',
+      )
       this.finish(true, 'clear')
     }
     if (e.blocker) {
@@ -1015,7 +1049,9 @@ class BattleScene extends Phaser.Scene {
                 },
                 BATTLE_SECONDS,
               )
-            : 0,
+            : this.opts.stage
+              ? defenseStars(win, this.mental, this.loadout.maxMental)
+              : 0,
       }),
     )
   }
@@ -1053,8 +1089,8 @@ class BattleScene extends Phaser.Scene {
     const dt = dtMs / 1000
     this.elapsed += dt
     if (this.elapsed >= BATTLE_SECONDS) {
-      // 디펜스는 버티면 이기고, 전진 모드는 시간 안에 못 넘으면 진다 (364번).
-      if (this.mode === 'advance') {
+      // 디펜스는 버티면 이기고, 전진 모드와 디펜스 보스 스테이지는 시간 안에 못 넘으면(보스를 못 잡으면) 진다 (364·509번).
+      if (this.mode === 'advance' || this.defenseBoss) {
         this.finish(false, 'time')
       } else {
         this.finish(true, 'clear')
@@ -1122,6 +1158,8 @@ class BattleScene extends Phaser.Scene {
 
     if (this.mode === 'advance') {
       this.advanceStep(dt, h)
+    } else if (this.defenseBoss) {
+      this.defenseBossStep()
     }
 
     // 생성: 한 판(2분)에 걸쳐 갈수록 빨라진다. 파도는 15초마다 투매 → 투기 → 패닉 순으로 돌고 뒤로 갈수록 커진다 (340·363번).
@@ -1171,7 +1209,13 @@ class BattleScene extends Phaser.Scene {
           continue
         }
       }
-      if (this.mode === 'advance') {
+      if (e.boss) {
+        // 보스: 화면 위쪽(높이의 18%)까지 내려와 좌우로 오간다. 밀리지 않고 벽까지 내려오지 않는다.
+        const tx = w / 2 + Math.sin(this.elapsed * 0.8) * w * 0.28
+        e.kbx = 0
+        e.kby = 0
+        e.setVelocity((tx - e.x) * 2, (h * 0.18 - e.y) * 2)
+      } else if (this.mode === 'advance') {
         // 길막 적은 천천히 사장냥 쪽으로 다가오고, 아래로 지나가면 다시 위에서 내려온다. 달려드는 패닉은 지나가면 사라진다.
         if (e.y > h + 50) {
           if (e.blocker) {
@@ -1181,16 +1225,8 @@ class BattleScene extends Phaser.Scene {
             continue
           }
         }
-        if (e.boss) {
-          // 보스: 화면 위쪽(높이의 18%)까지 내려와 좌우로 오간다. 밀리지 않는다.
-          const tx = w / 2 + Math.sin(this.elapsed * 0.8) * w * 0.28
-          e.kbx = 0
-          e.kby = 0
-          e.setVelocity((tx - e.x) * 2, (h * 0.18 - e.y) * 2)
-        } else {
-          const drift = Phaser.Math.Clamp(p.x - e.x, -1, 1) * 25
-          e.setVelocity(e.kbx + (e.blocker ? drift : 0), (e.blocker ? sy * 0.55 : sy * 1.4) + e.kby)
-        }
+        const drift = Phaser.Math.Clamp(p.x - e.x, -1, 1) * 25
+        e.setVelocity(e.kbx + (e.blocker ? drift : 0), (e.blocker ? sy * 0.55 : sy * 1.4) + e.kby)
       } else {
         e.setVelocity(e.kbx, sy + e.kby)
       }
