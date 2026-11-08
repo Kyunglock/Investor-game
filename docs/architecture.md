@@ -233,7 +233,8 @@ investorgame/raising/
 | 회사의 한 해 | `CompanyEngineTest`. 채용 뽑기·채용권, 배치, 결산, 큰 손실과 실전 경험, X 이상 효과, 매각 규칙(지금은 API가 부르지 않음) |
 | 종목 발굴 | `ScoutEngineTest`. 분기 넘기기에 한 번 굴리기, 발굴 확률과 안목에 따른 종목, 첫 회사 첫 분기 |
 | 종목 회의 | `InvestEngineTest`. 단서 기사 짜임, 회의를 해야 결산, 고집 없는 직원·고집 센 직원·줏대 없는 직원, 회의 수익률(기사 크기로 −50% ~ +300%, 자리·등급과 상관없음, 388번) |
-| 경제 | `EconomySimulationTest`. 능력치별 한 시대 뒤 자본 목표 (decisions.md 226·229번) |
+| 경제 | `EconomySimulationTest`. 능력치별 한 시대 뒤 자본 목표 (decisions.md 226·229번), 회사 등급마다 한 해, 첫 회사 첫 해의 회의 판돈 (389번) |
+| 성장 속도 | `BalanceSimulationTest`. 25년 120판: 스테이지·강화 사는 스테이지·기사·공격·이사 안 함 사장의 자본과 등급 첫 해, 스테이지가 성장의 주된 길 (decisions.md 371·389번) |
 | API 흐름 | `CompanyApiTest`, `AdminApiTest`. 차리기 → 뽑기 → 세 해를 넘겨 이어짐, 멈췄던 옛 회사 다시 열기, 꽉 찬 자리와 인사팀 |
 | 콘텐츠 | `JsonContentCatalogTest`. 서버 시작 때 규칙을 어기는 콘텐츠는 실패한다 |
 | DB | Testcontainers의 실제 Postgres에서 마이그레이션과 쿼리 검증 |
