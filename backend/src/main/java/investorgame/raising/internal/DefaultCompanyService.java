@@ -50,7 +50,7 @@ class DefaultCompanyService implements CompanyService {
     CompanyRepository.Row locked = companies.lockActive(row.sessionId()).orElse(row);
     boolean gacha = engine.adoptGacha(locked.state());
     boolean mental = engine.mental.adopt(locked.state(), new HashSeededRandom(locked.seed()));
-    // 자리가 셋으로 줄었다 (354번): 옛 회사에서 넘치게 앉은 사람은 쉬는 사람으로 내린다.
+    // 자리 수가 줄었으면(354번처럼) 옛 회사에서 넘치게 앉은 사람은 쉬는 사람으로 내린다.
     boolean stood = !engine.fitSeats(locked.state()).isEmpty();
     if (gacha || mental || stood) {
       companies.update(locked.id(), locked.state(), false);

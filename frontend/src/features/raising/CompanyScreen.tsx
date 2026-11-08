@@ -303,7 +303,7 @@ function NextStep({ company }: { company: Company }) {
   if (!step || !plan || company.status === 'ENDED') {
     return null
   }
-  const label = step.kind === 'move' ? `다음 건물 ${step.to}` : '사무실 등급 올리기'
+  const label = step.kind === 'move' ? `다음 건물 ${step.to}` : '사무실 넓히기(책상 추가)'
   const short = (company.capital - plan.needed) * -1
   // 공사 중 (#347): 새 건물은 몇 해에 걸쳐 짓는다. 그동안 지금 건물에서 일한다.
   if (plan.left != null) {
@@ -349,7 +349,7 @@ function NextStep({ company }: { company: Company }) {
         }`}
         data-testid="upgrade"
       >
-        {plan.years > 0 ? '공사 시작' : step.kind === 'move' ? '이사하기' : '올리기'} ·{' '}
+        {plan.years > 0 ? '공사 시작' : step.kind === 'move' ? '이사하기' : '넓히기'} ·{' '}
         {money(plan.cost)}
       </button>
     </div>

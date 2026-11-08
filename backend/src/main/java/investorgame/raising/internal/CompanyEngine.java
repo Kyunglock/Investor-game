@@ -1169,7 +1169,7 @@ class CompanyEngine {
     return seatsOf(grade(capital));
   }
 
-  /** 자리 수 (354번): 목록이 하나면 모든 등급이 그 수(셋으로 고정). 목록이 길면 등급마다 다르고 그 위는 둘씩 는다(옛 규칙). */
+  /** 자리 수 (281·287·359번): 등급마다 다르고 목록 끝 위로는 둘씩 는다. 목록이 하나면 모든 등급이 그 수(354번에서 셋으로 묶었던 방식). */
   int seatsOf(String grade) {
     int at = LADDER.indexOf(grade);
     List<Integer> seats = properties.seats();

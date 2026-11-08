@@ -191,7 +191,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await page.getByText('확률표').click()
   await expect(page.getByTestId('gacha-rates').getByRole('listitem')).toHaveCount(5)
   await expect(page.getByTestId('building-ladder').getByRole('listitem')).toHaveCount(7)
-  await expect(page.getByTestId('next-step')).toContainText('사무실 등급 올리기')
+  await expect(page.getByTestId('next-step')).toContainText('사무실 넓히기')
   // 건물은 저절로 오르지 않는다 (296번): 이사 비용과 필요한 자본이 보이고, 자본이 모자라면 버튼이 잠긴다.
   await expect(page.getByTestId('next-step')).toContainText('이사 비용 18b')
   await expect(page.getByTestId('upgrade')).toBeDisabled()
@@ -206,7 +206,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   // 회사 건물 단면: 책상은 자리 수, 아직 아무도 없다 (8.1·8.4절).
   await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '0')
   // 사무실 미니맵 (237번): 자리마다 칸이 있고 아직 다 빈 자리다. 누르면 쉬는 사람이 없으니 채용으로 데려간다.
-  await expect(page.getByTestId('office-empty')).toHaveCount(3)
+  await expect(page.getByTestId('office-empty')).toHaveCount(4)
   await page.getByRole('button', { name: '빈 자리 1에 앉힐 사람 고르기' }).click()
   await expect(page.getByTestId('seat-picker')).toContainText('쉬는 직원이 없습니다')
   await page.getByTestId('seat-picker').getByRole('button', { name: '채용에서 뽑기' }).click()
@@ -214,7 +214,7 @@ test('처음 오면 회사를 차리고, 직원 없이 반지하 원룸에 자�
   await expect(page.getByRole('tab', { name: /채용/ })).toHaveAttribute('aria-selected', 'true')
   // 그림 끄기는 없다(343번): 설명글은 그림 아래에 늘 있다.
   await expect(page.getByTestId('office-art')).toContainText(
-    '사무실: 반지하 원룸, 책상 3개 · 객장: 손님 없음, 길고양이 한 마리',
+    '사무실: 반지하 원룸, 책상 4개 · 객장: 손님 없음, 길고양이 한 마리',
   )
 })
 
@@ -261,7 +261,7 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   await day.getByTestId('desk-candidate').filter({ hasText: '쉬는 중' }).first().click()
   await expect(page.getByTestId('office-art')).toHaveAttribute('data-staff', '2')
   await expect(page.getByTestId('office-tag')).toHaveCount(2)
-  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/3')
+  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('2/4')
   // 같은 자리에 둘이면 팀장을 바꿀 수 있다: 단타 데스크 사람을 바이오로 옮겨 팀장으로 정한다.
   await bio.getByRole('button', { name: /사람 고르기/ }).click()
   await bio.getByTestId('desk-candidate').filter({ hasText: '단타 데스크에서 옮김' }).click()
@@ -271,11 +271,11 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   await expect(bio.getByTestId('leader-badge')).toHaveCount(1)
   // 빼면 쉰다. 자동 배치 (232·233번): 버튼 하나로 두 사람이 다시 돈을 굴리는 자리에 앉는다.
   await bio.getByRole('button', { name: '빼기' }).first().click()
-  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('1/3')
+  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('1/4')
   await page.getByRole('button', { name: '자동 배치' }).click()
-  // 자리는 셋 (354번): 넷 가운데 셋이 앉고 하나는 쉰다. 반지하(F)에는 돕는 자리가 아직 닫혀 있어(#393) 셋 다 돈을 굴리는 자리에 앉는다.
-  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('3/3')
-  await expect(page.getByTestId('office-tag')).toHaveCount(3)
+  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('4/4')
+  // 반지하(F)에는 돕는 자리가 아직 닫혀 있어(#393) 넷 다 돈을 굴리는 자리에 앉는다.
+  await expect(page.getByTestId('office-tag')).toHaveCount(4)
   await expect(
     page
       .getByTestId('office-tag')
@@ -287,7 +287,7 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
 
   // 미니맵에서 바로 배치 (237번): 앉은 사람을 눌러 쉬게 하면 휴게실로 가고, 빈 자리를 눌러 그 사람을 골라 다시 앉힌다.
   const seats = page.getByTestId('office-seat')
-  await expect(seats).toHaveCount(3)
+  await expect(seats).toHaveCount(4)
   await seats.nth(1).click()
   const picker = page.getByTestId('seat-picker')
   await expect(picker).toContainText('어디에 앉힐까요?')
@@ -300,14 +300,12 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   await expect(page.getByTestId('office-resting')).toBeVisible()
   await page.getByTestId('office-empty').click()
   await expect(picker).toContainText('빈 자리에 누구를 앉힐까요?')
-  // 자리가 셋이라 쉬는 사람이 둘이다 (354번): 첫 사람을 고른다.
-  await picker.getByRole('button', { name: /종합/ }).first().click()
+  await picker.getByRole('button', { name: /종합/ }).click()
   await picker.getByRole('button', { name: /단타 데스크 용기/ }).click()
   await expect(picker).toHaveCount(0)
-  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('3/3')
+  await expect(page.getByRole('tab', { name: /배치/ })).toContainText('4/4')
   await expect(page.getByTestId('office-empty')).toHaveCount(0)
-  // 자리가 셋이라 넷 가운데 하나는 여전히 쉰다 (354번).
-  await expect(page.getByTestId('office-resting')).toBeVisible()
+  await expect(page.getByTestId('office-resting')).toHaveCount(0)
 
   // 거시경제 회의 (266번): 분기 넘기기를 누르면 창이 뜬다. 큰 흐름 하나를 놓고 직원들이 한마디씩 하고, 같은 의견끼리 뭉친다(242·246번).
   // 태도는 공격·중립·방어 셋이다. 창을 닫고 배치로 돌아갈 수도 있다.
@@ -315,8 +313,7 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   const macro = page.getByRole('dialog', { name: '거시경제 회의' })
   await expect(macro.getByTestId('macro-article')).toBeVisible()
   const heads = await macro.getByTestId('macro-opinion').getByRole('heading').allInnerTexts()
-  // 앉은 사람은 셋 (354번): 한마디도 셋.
-  expect(heads.map((h) => Number(/(\d+)명/.exec(h)?.[1] ?? 0)).reduce((a, b) => a + b, 0)).toBe(3)
+  expect(heads.map((h) => Number(/(\d+)명/.exec(h)?.[1] ?? 0)).reduce((a, b) => a + b, 0)).toBe(4)
   await expect(macro.getByRole('button', { name: /판돈 ×/ })).toHaveCount(3)
   await macro.getByRole('button', { name: '배치 다시 보기' }).click()
   await expect(macro).toBeHidden()
@@ -742,7 +739,7 @@ test('자동 진행을 켜면 뽑기·배치·회의·결산을 해마다 하고
   // 사람이 하던 결산 버튼은 자동 진행 동안 잠긴다.
   await expect(page.getByRole('button', { name: '1년 차 1분기 넘기기' })).toBeDisabled()
   // 빈 자리 넷에 사람을 뽑아 앉히고(287번), 회의를 직원 다수결로 정하고, 결산서를 보여 준 뒤 다음 해로 간다.
-  await expect(page.getByTestId('office-seat')).toHaveCount(3, { timeout: 30_000 })
+  await expect(page.getByTestId('office-seat')).toHaveCount(4, { timeout: 30_000 })
   // 분기마다 분기 실적을 보여 주고, 네 분기를 넘기면 연말 결산서를 보여 준다 (268번).
   const quarterSheet = page.getByRole('dialog', { name: '분기 실적' })
   await expect(quarterSheet).toBeVisible({ timeout: 20_000 })
