@@ -89,10 +89,10 @@ class MentalEngineTest {
     CompanyState c = company(1);
     ENGINE.mental.report(c, new HashSeededRandom(1), 1, 1, List.of("steel", "hold"), 120, 80);
     assertThat(c.mental.cards).containsExactly("steel", "hold");
-    assertThat(c.mental.bonusPercent).isEqualTo(12 + 8);
+    assertThat(c.mental.bonusPercent).isEqualTo(20 + 8);
     ENGINE.mental.report(c, new HashSeededRandom(1), 1, 1, List.of("hold"), 500, 150);
     assertThat(c.mental.cards).as("이미 보냈으면 그대로").containsExactly("steel", "hold");
-    assertThat(c.mental.bonusPercent).isEqualTo(20);
+    assertThat(c.mental.bonusPercent).isEqualTo(28);
 
     CompanyState big = company(2);
     ENGINE.mental.report(big, new HashSeededRandom(1), 1, 1, List.of("hold"), 9_999, 9_999);

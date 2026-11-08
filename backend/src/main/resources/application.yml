@@ -156,13 +156,13 @@ raising:
       big-gain-percent: 150
       wall-miss-percent: 50
       god-flip-percent: 50
-    # 멘탈 전투 (decisions.md 328번): 분기마다 결산 직전 한 판. 강화율 = min(30%, 물리친 적 ÷ 10 + 남은 멘탈 ÷ 10)이 그 분기 돈을 굴리는
+    # 멘탈 전투 (decisions.md 328번): 분기마다 결산 직전 한 판. 강화율 = min(30%, 물리친 적 ÷ 6 + 남은 멘탈 ÷ 10, 363번: 한 판이 2분이라 적 수가 줄었다)이 그 분기 돈을 굴리는
     # 직원 모두의 버는 몫을 키우고 뒤집힘을 줄인다. 장르는 시장 갈래를 가중치로만 섞어 뽑아 숨은 값이 새지 않는다(burst는 폭락이 터지는 분기)
     mental:
-      kills-per-percent: 10
+      kills-per-percent: 6
       mental-per-percent: 10
       max-percent: 30
-      max-kills: 500
+      max-kills: 300
       max-mental: 150
       genre-weights:
         boom: { ASSAULT: 65, DEFENSE: 35 }
@@ -184,10 +184,10 @@ raising:
         SR: { damage-percent: 50, fire-percent: 15 }
         UR: { damage-percent: 100, fire-percent: 25 }
       drop:
-        percent-per-kill: 2
+        percent-per-kill: 3
         max-percent: 80
-        mid-kills: 30
-        high-kills: 60
+        mid-kills: 18
+        high-kills: 36
         grade-weights:
           low: { N: 70, R: 25, SR: 5, UR: 0 }
           mid: { N: 45, R: 35, SR: 17, UR: 3 }

@@ -5,7 +5,7 @@ import { STAGE_ASSETS } from './assets'
 import { bulletStats, type Loadout, xpToNext } from './cards'
 import { ENEMIES, type EnemyKind } from './enemies'
 import { WALK_FRAMES, walkFrame } from './enemyWalk'
-import { BATTLE_SECONDS, GENRES, type Genre } from './genres'
+import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
 import type { Hero } from './hero'
 import { BULLET_H, BULLET_W, bulletHitbox } from './hitbox'
 import { wallOffset } from './stageArt'
@@ -144,7 +144,7 @@ class BattleScene extends Phaser.Scene {
   private paused = false
   /** 첫 카드를 골라 싸움이 시작됐다 (339번). */
   private begun = false
-  private nextWave = 20
+  private nextWave = WAVE_SECONDS
   /** 한 화면에 함께 있는 적의 최대 수(334·340번): 더 있으면 새로 만들지 않는다. */
   /** 동시에 살아 있는 적의 최대: 파도(투매 최대 36, 패닉 최대 44)가 잘리지 않게 넉넉히. */
   private static readonly MAX_ALIVE = 100
@@ -416,10 +416,15 @@ class BattleScene extends Phaser.Scene {
     e.born = this.elapsed
   }
 
+  /** 난이도 곡선의 시각(초): 예전 4분 판 기준으로 잡은 곡선을 2분 판에 맞춰 PACE배 빨리 돈다 (363번). */
+  private curve() {
+    return this.elapsed * PACE
+  }
+
   private waveDump() {
     this.opts.onBanner('투매 물량 쏟아진다!!', '#a98bff')
     const { w } = this.view()
-    const grow = 1 + Math.min(1.5, this.elapsed / 120)
+    const grow = 1 + Math.min(1.5, this.curve() / 120)
     // 세 줄로 쏟아진다: 처음 15, 뒤로 갈수록 36까지. 전에는 6~15로 '쏟아진다'는 말이 무색했다.
     const n = Math.round(15 * grow)
     const cols = Math.ceil(n / 3)
@@ -433,7 +438,7 @@ class BattleScene extends Phaser.Scene {
 
   private waveSpec() {
     this.opts.onBanner('투기 과열! 터지기 전에 잡아', '#ff4f6d')
-    for (let i = 0; i < 1 + Math.floor(this.elapsed / 100); i++) {
+    for (let i = 0; i < 1 + Math.floor(this.curve() / 100); i++) {
       this.spawn('spec')
     }
   }
@@ -442,7 +447,7 @@ class BattleScene extends Phaser.Scene {
     this.opts.onBanner('패닉셀 떼가 몰려온다!!!', '#3a86ff')
     const { w, h } = this.view()
     // 두 겹의 반원 떼: 처음 24, 뒤로 갈수록 44까지. 전에는 10~20이라 떼 같지 않았다.
-    const n = Math.round(24 + Math.min(20, this.elapsed / 8))
+    const n = Math.round(24 + Math.min(20, this.curve() / 8))
     const half = Math.ceil(n / 2)
     for (let i = 0; i < n; i++) {
       const ring = i < half ? 0 : 1
@@ -836,15 +841,15 @@ class BattleScene extends Phaser.Scene {
       this.shoot(time)
     }
 
-    // 생성: 4분에 걸쳐 갈수록 빨라진다. 파도는 20초마다 투매 → 투기 → 패닉 순으로 돌고 뒤로 갈수록 커진다 (340번: 334번보다 두 배쯤 많이).
-    const every = Math.max(200, 700 - this.elapsed * 2.6)
+    // 생성: 한 판(2분)에 걸쳐 갈수록 빨라진다. 파도는 15초마다 투매 → 투기 → 패닉 순으로 돌고 뒤로 갈수록 커진다 (340·363번).
+    const every = Math.max(200, 700 - this.curve() * 2.6)
     if (time - this.lastSpawn > every) {
       this.lastSpawn = time
       const r = Math.random()
       this.spawn(r < 0.6 ? 'panic' : r < 0.82 ? 'dump' : r < 0.95 ? 'stop' : 'spec')
     }
     if (this.elapsed >= this.nextWave) {
-      const n = Math.floor(this.nextWave / 20) % 3
+      const n = Math.floor(this.nextWave / WAVE_SECONDS) % 3
       if (n === 1) {
         this.waveDump()
       } else if (n === 2) {
@@ -852,7 +857,7 @@ class BattleScene extends Phaser.Scene {
       } else {
         this.wavePanic()
       }
-      this.nextWave += 20
+      this.nextWave += WAVE_SECONDS
     }
 
     // 적 움직임: 매 프레임 새 객체를 만들지 않는다.
