@@ -17,7 +17,16 @@ import {
 } from './advance'
 import { bakeEnemies, bakeHero, bakeStage, DPR, enemyKey, GUN, HERO_SIZE, WALL_H } from './art'
 import { STAGE_ASSETS } from './assets'
-import { bulletStats, type Loadout, xpToNext } from './cards'
+import {
+  BURN_SECONDS,
+  bulletStats,
+  burnPerSecond,
+  CHAIN_RADIUS,
+  chainOf,
+  type Loadout,
+  waterSlow,
+  xpToNext,
+} from './cards'
 import { ENEMIES, type EnemyKind } from './enemies'
 import { WALK_FRAMES, walkFrame } from './enemyWalk'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
@@ -104,8 +113,14 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   boss: boolean
   /** 기관단총에 맞아 이 전투 시각(초)까지 느리다 (376번). */
   slowUntil: number
-  /** 지금 파르스름하게 칠해 두었나. */
+  /** 느린 동안의 빠르기 배율(기관단총·물 마법, 376·377번). */
+  slowFactor: number
+  /** 불 마법에 타는 동안(전투 시각, 초)과 초당 피해 (377번). */
+  burnUntil: number
+  burnDps: number
+  /** 지금 칠해 둔 빛: 없음·파랑(느림)·주황(화상). */
   chilled: boolean
+  tintKind: 0 | 1 | 2
 }
 type Bullet = Phaser.Physics.Arcade.Image & {
   life: number
@@ -371,8 +386,9 @@ class BattleScene extends Phaser.Scene {
       const kind = this.opts.hero.weapon.kind
       const shot = weaponDamage(kind, bullet.damage, Math.random())
       if (kind === 'smg') {
-        enemy.slowUntil = this.elapsed + SLOW_SECONDS
+        this.slow(enemy, SLOW_FACTOR, SLOW_SECONDS)
       }
+      this.magic(enemy, shot.damage)
       this.hit(enemy, shot.damage, angle, shot.crit)
       if (bullet.splashRadius > 0) {
         this.splash(bx, by, bullet.splashRadius, bullet.splashDamage, enemy)
@@ -599,7 +615,11 @@ class BattleScene extends Phaser.Scene {
     e.blocker = false
     e.boss = false
     e.slowUntil = 0
+    e.slowFactor = 1
+    e.burnUntil = 0
+    e.burnDps = 0
     e.chilled = false
+    e.tintKind = 0
     const v = ENEMIES[kind]
     e.setTexture(enemyKey(kind, 0))
       .enableBody(true, x, y, true, true)
@@ -736,11 +756,7 @@ class BattleScene extends Phaser.Scene {
     e.hp -= dmg
     // 하얗게 번쩍, 들썩임, 데미지 숫자: 맞은 느낌의 세 가지.
     e.setTintFill(0xffffff)
-    this.time.delayedCall(55, () => {
-      if (!e.active) return
-      if (e.chilled) e.setTint(0x9fd4ff)
-      else e.clearTint()
-    })
+    this.time.delayedCall(55, () => e.active && this.paint(e))
     // 맞는 자리에 불꽃이 튀고 살짝 들썩인다.
     this.hitSpark.explode(3, e.x - Math.cos(angle) * 10, e.y - Math.sin(angle) * 10)
     sfx.hit()
@@ -1016,6 +1032,51 @@ class BattleScene extends Phaser.Scene {
     b.life = now + BULLET_LIFE
   }
 
+  /** 적의 빛: 화상이면 주황, 느리면 파랑, 아니면 원래대로. */
+  private paint(e: Enemy) {
+    if (e.tintKind === 2) e.setTint(0xffb38a)
+    else if (e.tintKind === 1) e.setTint(0x9fd4ff)
+    else e.clearTint()
+  }
+
+  /** 느리게 한다: 더 느린 쪽, 더 오래 가는 쪽을 남긴다. */
+  private slow(e: Enemy, factor: number, seconds: number) {
+    const active = e.slowUntil > this.elapsed
+    e.slowFactor = active ? Math.min(e.slowFactor, factor) : factor
+    e.slowUntil = Math.max(e.slowUntil, this.elapsed + seconds)
+  }
+
+  /** 마법 카드 (377번): 물은 느리게, 불은 태우고, 번개는 곁의 적에게 튄다. */
+  private magic(e: Enemy, damage: number) {
+    const { water, fire, lightning } = this.loadout
+    if (water > 0) {
+      const w = waterSlow(water)
+      this.slow(e, w.factor, w.seconds)
+    }
+    if (fire > 0) {
+      e.burnUntil = this.elapsed + BURN_SECONDS
+      e.burnDps = Math.max(e.burnDps, burnPerSecond(damage, fire))
+    }
+    if (lightning > 0) {
+      const chain = chainOf(damage, lightning)
+      const near: { e: Enemy; d: number }[] = []
+      for (const child of this.enemies.getChildren()) {
+        const o = child as Enemy
+        if (o === e || !o.active || o.dying) continue
+        const d = Math.hypot(o.x - e.x, o.y - e.y)
+        if (d <= CHAIN_RADIUS) near.push({ e: o, d })
+      }
+      near.sort((a, b) => a.d - b.d)
+      const g = this.add.graphics().setDepth(6)
+      g.lineStyle(3, 0xffe066, 1)
+      for (const { e: o } of near.slice(0, chain.targets)) {
+        g.lineBetween(e.x, e.y, o.x, o.y)
+        this.hit(o, chain.damage, Math.atan2(o.y - e.y, o.x - e.x))
+      }
+      this.tweens.add({ targets: g, alpha: 0, duration: 120, onComplete: () => g.destroy() })
+    }
+  }
+
   /** 범위 피해 (decisions.md 362번): 맞은 적을 뺀, 터진 자리 반지름 안의 적이 함께 맞는다. 바깥으로 밀어내는 각도로 맞는다. */
   private splash(x: number, y: number, radius: number, dmg: number, except: Enemy) {
     for (const child of this.enemies.getChildren()) {
@@ -1224,17 +1285,23 @@ class BattleScene extends Phaser.Scene {
       const targetY = this.wallZone ? this.wallY() : p.y
       const d = Math.abs(targetY - e.y) || 1
       // 원거리 공격은 없다 (340번): 손절매도 다른 적처럼 곧장 내려와 부딪힌다.
-      // 기관단총에 맞으면 잠깐 느리고 파르스름하다 (376번).
+      // 기관단총·물 마법에 맞으면 잠깐 느리고 파르스름하다 (376·377번). 불 마법에 맞으면 타며 주황빛이다.
       const slowed = e.slowUntil > this.elapsed
-      if (slowed !== e.chilled) {
-        e.chilled = slowed
-        if (slowed) {
-          e.setTint(0x9fd4ff)
-        } else {
-          e.clearTint()
+      const burning = e.burnUntil > this.elapsed
+      if (burning) {
+        e.hp -= e.burnDps * dt
+        if (e.hp <= 0) {
+          this.kill(e, true)
+          continue
         }
       }
-      const sy = slowed ? v.speed * SLOW_FACTOR : v.speed
+      e.chilled = slowed
+      const tintKind = burning ? 2 : slowed ? 1 : 0
+      if (tintKind !== e.tintKind) {
+        e.tintKind = tintKind
+        this.paint(e)
+      }
+      const sy = slowed ? v.speed * e.slowFactor : v.speed
       if (e.kind === 'spec') {
         // 투기: 부풀다가 터진다.
         const s = 1 + Math.min(1, (this.elapsed - e.born) / 9) * 0.9
