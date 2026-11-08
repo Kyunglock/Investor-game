@@ -157,6 +157,7 @@ class BattleScene extends Phaser.Scene {
     } else {
       this.physics.resume()
     }
+    this.pushHud(true)
   }
 
   applyLoadout(loadout: Loadout) {

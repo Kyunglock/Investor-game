@@ -124,6 +124,13 @@ try {
   await expect(page.getByTestId('mental-cards')).toHaveCount(0)
   await page.clock.runFor(5000)
   await page.screenshot({ path: resolve(out, 'battle.png') })
+  await page.waitForTimeout(2100)
+  await page.screenshot({
+    path: resolve(out, 'battle-preview.jpg'),
+    type: 'jpeg',
+    quality: 85,
+    scale: 'css',
+  })
   await page.setViewportSize({ width: 320, height: 640 })
   await page.clock.runFor(100)
   await page.screenshot({ path: resolve(out, 'battle-small.png') })
@@ -131,6 +138,7 @@ try {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.clock.runFor(100)
   await page.getByTestId('mental-quit').click()
+  await expect(page.getByTestId('mental-quit-ask')).toBeVisible()
   const pausedTime = await page.getByTestId('battle-timer').textContent()
   await page.clock.runFor(2000)
   await expect(page.getByTestId('battle-timer')).toHaveText(pausedTime ?? '')
@@ -170,14 +178,15 @@ try {
   assert.equal(settlements, 1)
   // 두 장르 모두 같은 방어선·로딩 복구를 지원한다.
   company = { ...company, mental: { ...company.mental, genre: 'ASSAULT', done: false } }
-  await page.route('**/assets/enemies.png', (route) => route.fulfill({ status: 404, body: '' }))
+  const enemyAsset = /\/assets\/enemies(?:-[\w-]+)?\.png$/
+  await page.route(enemyAsset, (route) => route.fulfill({ status: 404, body: '' }))
   await page.reload()
   await page.getByTestId('settle').click()
   await page.getByTestId('mental-start').click()
   await expect(
     page.getByRole('dialog', { name: '멘탈 전투', exact: true }).getByRole('alert'),
   ).toContainText('전장 그림', { timeout: 30000 })
-  await page.unroute('**/assets/enemies.png')
+  await page.unroute(enemyAsset)
   await page.getByRole('button', { name: '다시 불러오기' }).click()
   await expect(page.getByTestId('mental-cards')).toBeVisible({ timeout: 30000 })
   await page.keyboard.press('Escape')
