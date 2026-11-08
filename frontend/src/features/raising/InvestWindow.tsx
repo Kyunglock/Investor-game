@@ -101,9 +101,11 @@ export function InvestWindow({
     const id = setTimeout(() => setFinished(true), show.end)
     return () => clearTimeout(id)
   }, [outcome, finished, show.end, hold])
+  // 빨리 보기 (395번): 결과면 차트를 다 그린 모습으로, 토론 중이면 다 오간 모습으로 넘긴다.
   const skip = () => {
     setSkipped(true)
     setFinished(true)
+    setDebated(true)
   }
   const label = (code: string) => invest.options.find((o) => o.code === code)?.label ?? code
   const loss = Boolean(outcome && outcome.total < 0)
@@ -120,7 +122,7 @@ export function InvestWindow({
         data-testid="invest"
         data-finished={finished}
       >
-        {/* 맡긴 회의는 토론(285번)으로 창이 길어진다: 머리줄(빨리 보기)은 내려도 위에 붙어 있다. */}
+        {/* 머리줄은 내려도 위에 붙어 있다. 빨리 보기는 여기 두지 않고 차트(토론) 바로 밑에 둔다 (decisions.md 395번). */}
         <header className="meeting-header">
           <div>
             <p className="meeting-eyebrow">
@@ -132,18 +134,6 @@ export function InvestWindow({
           {!outcome && (
             <button type="button" onClick={onClose} className="text-[12px] text-muted underline">
               배치 다시 보기
-            </button>
-          )}
-          {((outcome && !finished) || waiting) && (
-            <button
-              type="button"
-              onClick={() => {
-                skip()
-                setDebated(true)
-              }}
-              className="text-[12px] text-muted underline"
-            >
-              빨리 보기
             </button>
           )}
         </header>
@@ -308,6 +298,8 @@ export function InvestWindow({
                   />
                 </DebateFold>
               )}
+              {/* 차트가 아직 없는 토론 중에는 토론 장면 바로 밑에서 건너뛴다 (395번). */}
+              {waiting && <SkipButton onSkip={skip} />}
               {!outcome && (
                 <div
                   className="meeting-choices meeting-step-action grid grid-cols-3 gap-2"
@@ -413,6 +405,8 @@ export function InvestWindow({
                 delay={show.chartAt}
                 instant={skipped}
               />
+              {/* 빨리 보기는 차트 바로 밑에 (395번): 머리줄 구석의 밑줄 글씨는 찾기 어려웠다. 다 그려지면 사라진다. */}
+              {!finished && <SkipButton onSkip={skip} />}
               {/* 직원마다 한 줄씩 돌던 결과는 뺐다 (decisions.md 284번): 회의 손익 하나만 본다. 사장 말을 안 따른 사람만 한 줄로 알린다. */}
               {outcome.results.some((r) => r.follow !== 'BOSS') && (
                 <p
@@ -518,6 +512,22 @@ export function InvestWindow({
         </div>
       </section>
     </Overlay>
+  )
+}
+
+/**
+ * 빨리 보기 (decisions.md 395번): 연출을 건너뛰고 끝난 모습을 보인다. 차트(토론) 바로 밑에 손가락으로 누르기 쉬운 크기로 둔다.
+ */
+function SkipButton({ onSkip }: { onSkip: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onSkip}
+      className="mt-2 min-h-12 w-full rounded border border-line bg-card font-semibold text-[14px] text-muted active:scale-95"
+      data-testid="invest-skip"
+    >
+      빨리 보기 <span aria-hidden="true">⏩</span>
+    </button>
   )
 }
 
