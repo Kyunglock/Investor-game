@@ -146,6 +146,26 @@ export function bakeStage(scene: Phaser.Scene, _genre: Genre) {
       c.stroke()
     })
   }
+  bake(scene, 'bullet-impact', 80, 80, (c) => {
+    c.beginPath()
+    c.arc(40, 40, 33, 0, Math.PI * 2)
+    c.strokeStyle = '#ffac50'
+    c.lineWidth = 4
+    c.stroke()
+    c.beginPath()
+    for (let i = 0; i < 20; i++) {
+      const a = (i * Math.PI) / 10
+      const r = i % 2 ? 12 : 28
+      c.lineTo(40 + Math.cos(a) * r, 40 + Math.sin(a) * r)
+    }
+    c.closePath()
+    c.fillStyle = '#ffd56b'
+    c.fill()
+    c.beginPath()
+    c.arc(40, 40, 12, 0, Math.PI * 2)
+    c.fillStyle = '#fff9df'
+    c.fill()
+  })
   // 총구 화염: 노란 별에 흰 심
   bake(scene, 'flash', 24, 24, (c) => {
     c.beginPath()

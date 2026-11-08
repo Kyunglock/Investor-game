@@ -369,7 +369,7 @@ paths:
                   type: array
                   minItems: 1
                   description: 고른 멘탈 카드, 고른 순서대로. 처음 한 장 + 레벨이 오를 때마다 한 장 (330번)
-                  items: { type: string, enum: [hold, split, rule, steel, calm, heal], description: 존버 정신·분산 투자·원칙 매매·강철 멘탈·냉정함·심호흡 }
+                  items: { type: string, enum: [hold, split, rule, steel, calm, heal], description: 존버 정신·총알 강화·원칙 매매·강철 멘탈·냉정함·심호흡 }
                 kills: { type: integer, minimum: 0, description: 물리친 적 수 }
                 mentalLeft: { type: integer, minimum: 0, description: 끝날 때 남은 멘탈 }
       responses:

@@ -13,7 +13,7 @@ import { Sheet } from '../Sheet'
 import { type Tab, tabBadge, useAppUi } from '../ui'
 import { useCountUp } from '../useCountUp'
 import { ActionBar } from '../Windows'
-import { growthProgress } from './model'
+import { expansionSide, growthProgress, rivalName } from './model'
 import { ToyCityStreet } from './ToyCityStreet'
 
 export function ToyIcon({ kind }: { kind: 'upgrade' | 'heart' | 'settings' | 'cup' | 'auto' }) {
@@ -76,6 +76,7 @@ export function ToyCityHome({ company }: { company: Company }) {
   const assigned = company.employees.filter((e) => e.desk).length
   const resting = company.employees.length - assigned
   const plan = company.upgrade
+  const targetSide = plan ? expansionSide(plan.to) : null
   const changeTab = (tab: Tab) => {
     sfx.tap()
     useAppUi.getState().setTab(tab)
@@ -151,6 +152,27 @@ export function ToyCityHome({ company }: { company: Company }) {
           {ended ? '끝난 회사' : `${company.year}년 차 ${company.quarter}분기`} · 자리 {assigned} /{' '}
           {company.seats}
         </span>
+        {plan && targetSide && !unavailable && (
+          <button
+            type="button"
+            className="toy-rival-goal"
+            onClick={() => setPanel('upgrade')}
+            data-testid="rival-goal"
+          >
+            <span>
+              {targetSide === 'left' ? '← 왼쪽' : '오른쪽 →'} ·{' '}
+              {rivalName(company.grade, targetSide)} 밀어내기
+            </span>
+            <strong>목표 자본 {money(plan.needed)}</strong>
+            <small>
+              {plan.left != null
+                ? `공사 중 · 완공까지 ${plan.left}년`
+                : plan.affordable
+                  ? '목표 달성! 건물을 확장해요'
+                  : `${money(Math.max(0, plan.needed - company.capital))} 더 모으면 확장 가능`}
+            </small>
+          </button>
+        )}
       </header>
       {tutorialOn && !ended && (
         <div className="toy-tutorial" data-testid="tutorial" data-step={tutorial.id}>

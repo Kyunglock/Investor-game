@@ -1,3 +1,4 @@
+import './year-end.css'
 import type { CSSProperties } from 'react'
 import type { Company } from '../../api/client'
 import { money } from '../game/labels'
@@ -18,8 +19,8 @@ export const STANCES: Record<string, string> = {
 }
 
 /** 결산서 줄이 차례로 드러나는 간격 (연말 결산서만). */
-const STEP_MS = 700
-const ROW_MS = 400
+const STEP_MS = 160
+const ROW_MS = 90
 
 const tone = (amount: number) => (amount > 0 ? 'text-up' : amount < 0 ? 'text-down' : 'text-muted')
 
@@ -52,7 +53,7 @@ export function Ledger({
     return { className: 'animate-reveal', style }
   }
   let n = 0
-  const num = () => '①②③④⑤'[n++]
+  const num = () => '①②③④⑤⑥'[n++]
   const before = officeName(s.gradeBefore)
   const after = officeName(s.gradeAfter)
   const rows = [
@@ -92,7 +93,7 @@ export function Ledger({
             <p className="mt-1 text-[12px] text-muted">돈을 굴린 직원이 없었다.</p>
           ) : (
             <ol
-              className="mt-1.5 rounded bg-ink p-2 font-mono-num text-[13px] text-white"
+              className="year-team-board mt-1.5 rounded bg-ink p-2 font-mono-num text-[13px] text-white"
               aria-label="결산 전광판"
               data-testid="board"
             >
@@ -204,14 +205,19 @@ export function Ledger({
   ]
   const end = reveal()
   return (
-    <div data-testid="ledger">
-      {s.quarters.length > 0 && <QuarterBars quarters={s.quarters} />}
+    <div className="year-ledger" data-testid="ledger">
+      {s.quarters.length > 0 && (
+        <div className="year-quarter-chart">
+          <h3>네 분기의 발자취</h3>
+          <QuarterBars quarters={s.quarters} />
+        </div>
+      )}
       <p className="flex items-baseline justify-between text-[14px]">
         <span className="text-muted">연초 자본</span>
         <span className="font-mono-num">{money(s.capitalBefore)}</span>
       </p>
       <ol className="mt-1 divide-y divide-line-soft border-y border-line">{rows}</ol>
-      <div className={`pt-2 ${end.className}`} style={end.style}>
+      <div className={`year-ledger-total pt-2 ${end.className}`} style={end.style}>
         <p className="flex items-baseline justify-between text-[15px]">
           <b>연말 자본</b>
           <b className="font-mono-num text-[18px]" data-testid="ledger-after">
@@ -295,58 +301,118 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
   if (!s) {
     return null
   }
-  // 확인 버튼은 장부의 마지막 줄(연말 자본)과 함께 나온다.
-  const done =
-    (s.invest ? STEP_MS : 0) +
-    (s.hiring !== 0 ? STEP_MS : 0) +
-    (s.moving !== 0 ? STEP_MS : 0) +
-    (s.salary !== 0 ? STEP_MS : 0) +
-    ROW_MS * (1 + teamRows(s.results, s.reports).length) +
-    STEP_MS * 2
+  const delta = s.capitalAfter - s.capitalBefore
+  const rate = s.capitalBefore > 0 ? (delta / s.capitalBefore) * 100 : null
+  const result = delta > 0 ? 'gain' : delta < 0 ? 'loss' : 'flat'
+  const headline =
+    delta > 0
+      ? '한 뼘 더 자란 우리 회사'
+      : delta < 0
+        ? '다음 도약을 준비하는 시간'
+        : '차곡차곡 쌓아가는 한 해'
+  const teams = teamRows(s.results, s.reports)
+  const leading = [...teams].sort((a, b) => b.pnl - a.pnl)[0]
   return (
     <Overlay>
       <section
-        className="animate-pop rounded bg-card p-5 shadow-xl"
+        className="year-report animate-pop"
+        data-result={result}
         role="dialog"
         aria-modal="true"
         aria-label="연말 결산서"
         data-testid="year-end"
       >
-        <h2 className="font-pen text-[26px] leading-tight">
-          {s.year}년 차 연말 결산서{' '}
-          <span className="text-[18px] text-muted">· {PHASES[s.phase]}</span>
-        </h2>
-        <p className="mt-1 text-[13px] text-muted">
-          네 분기 동안 거시경제 회의에서 정한 태도로 직원들이 배치대로 알아서 굴렸습니다. 종목
-          회의는 직원이 물어 온 건만 따로 셉니다.
-        </p>
-        <div className="mt-3">
-          <Ledger company={company} settlement={s} staged />
+        <header className="year-cover">
+          <div className="year-cover-meta">
+            <span>ANNUAL REPORT</span>
+            <span>{PHASES[s.phase] ?? s.phase}</span>
+          </div>
+          <div className="year-cover-title">
+            <div>
+              <p>{String(s.year).padStart(2, '0')}년 차 · 우리 회사의 기록</p>
+              <h2>연말 결산서</h2>
+            </div>
+            <span className="year-seal" aria-hidden="true">
+              한 해<br />
+              결산 완료
+            </span>
+          </div>
+          <p className="year-cover-message">{headline}</p>
+        </header>
+        <div className="year-report-body">
+          <section className="year-capital" aria-label="연간 자본 요약">
+            <p>올해의 연말 자본</p>
+            <strong data-testid="year-capital">{money(s.capitalAfter)}</strong>
+            <span>연초 {money(s.capitalBefore)}에서 여기까지</span>
+            <div className="year-metrics">
+              <div>
+                <span>연간 자본 증감</span>
+                <b className={tone(delta)}>{pnlLabel(delta)}</b>
+              </div>
+              <div>
+                <span>자본 증감률</span>
+                <b className={tone(delta)}>
+                  {rate == null
+                    ? '—'
+                    : `${rate > 0 ? '+' : ''}${rate.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}%`}
+                </b>
+              </div>
+            </div>
+          </section>
+          {leading && (
+            <div className="year-highlight">
+              <span aria-hidden="true">{leading.pnl > 0 ? '★' : '◆'}</span>
+              <div>
+                <small>올해의 선두 팀</small>
+                <b>
+                  {company.desks.find((d) => d.code === leading.desk)?.name ?? leading.desk} ·{' '}
+                  {leading.leader}
+                </b>
+              </div>
+              <strong className={tone(leading.pnl)}>{pnlLabel(leading.pnl)}</strong>
+            </div>
+          )}
+          <div className="year-section-title">
+            <span>01</span>
+            <h3>한 해의 자금 흐름</h3>
+          </div>
+          <p className="year-caption">네 분기의 운용 성과와 회사에 들어오고 나간 돈을 모았어요.</p>
+          <div className="mt-3">
+            <Ledger company={company} settlement={s} staged />
+          </div>
+          {s.reports.length > 0 && (
+            <div className="year-reports">
+              <div className="year-section-title">
+                <span>02</span>
+                <h3>함께 만든 성과</h3>
+              </div>
+              <TeamReports reports={s.reports} employees={company.employees} />
+            </div>
+          )}
+          {s.achieved.length > 0 && (
+            <section
+              className="year-achievements"
+              data-testid="achieved"
+              aria-label="올해 달성한 업적"
+            >
+              <h3>
+                <span aria-hidden="true">🏆</span> 올해의 빛나는 순간
+              </h3>
+              <ul>
+                {s.achieved.map((name) => (
+                  <li key={name}>{name}</li>
+                ))}
+              </ul>
+            </section>
+          )}
+          <p className="year-signoff">한 해 동안 수고했어요, 사장님.</p>
         </div>
-        <div
-          className="animate-reveal"
-          style={{ animationDelay: `${done}ms`, animationFillMode: 'both' }}
-        >
-          <TeamReports reports={s.reports} employees={company.employees} />
-        </div>
-        {s.achieved.length > 0 && (
-          // 그해 연 업적 (263번).
-          <p
-            className="animate-stamp mt-3 rounded border border-gold px-3 py-2 text-center text-[14px] font-semibold text-gold"
-            style={{ animationDelay: `${done}ms`, animationFillMode: 'both' }}
-            data-testid="achieved"
-          >
-            🏆 업적: {s.achieved.join(' · ')}
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={onClose}
-          className="animate-reveal mt-4 min-h-12 w-full rounded bg-wine font-semibold text-white"
-          style={{ animationDelay: `${done}ms`, animationFillMode: 'both' }}
-        >
-          확인
-        </button>
+        <footer className="year-footer">
+          <button type="button" onClick={onClose}>
+            확인
+          </button>
+          <p>결산서는 기록 탭에서 다시 볼 수 있어요</p>
+        </footer>
       </section>
     </Overlay>
   )

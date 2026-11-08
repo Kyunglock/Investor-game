@@ -1,0 +1,237 @@
+.meeting-window {
+  max-height: calc(100dvh - 80px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  background: #fffdf7;
+  color: #343b65;
+  border: 1px solid #bdcbe0;
+  border-radius: 22px;
+  box-shadow:
+    0 7px 0 #344b7333,
+    0 24px 60px #23354b33;
+}
+.meeting-header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  color: #fffdf1;
+  background: #536fa7;
+  border-bottom: 4px solid #d4bd89;
+}
+.invest-meeting .meeting-header {
+  background: #527c7b;
+  border-bottom-color: #b7d4bd;
+}
+.meeting-header > div {
+  flex: 1;
+  min-width: 180px;
+}
+.meeting-eyebrow {
+  font-size: 9px;
+  letter-spacing: 1.2px;
+  color: #ffffffbb;
+}
+.meeting-header h3 {
+  font-family: var(--font-game, var(--font-sans));
+  font-size: 28px;
+  line-height: 1.5;
+  margin-top: 3px;
+}
+.meeting-subtitle {
+  font-size: 11px;
+  color: #ffffffdd;
+}
+.meeting-header > button {
+  min-height: 32px;
+  color: #fffdf1;
+  font-size: 11px;
+  text-decoration: none;
+  border: 1px solid #ffffff55;
+  border-radius: 20px;
+  padding: 4px 10px;
+}
+.meeting-body {
+  padding: 16px 20px 22px;
+}
+.meeting-agenda {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.meeting-agenda > span {
+  flex: 1;
+  text-align: center;
+  padding: 7px 2px;
+  border-radius: 7px;
+  font-size: 10px;
+  background: #edf0f5;
+  color: #8891a4;
+}
+.meeting-agenda > span[data-active="true"] {
+  background: #e5ecf8;
+  color: #496a9e;
+  font-weight: 700;
+}
+.meeting-window [data-testid="team-grade"] {
+  border-radius: 11px;
+  background: #eef2f7;
+  padding: 10px;
+  border-color: #d8dfeb;
+}
+.meeting-article {
+  position: relative;
+  margin-top: 14px;
+  padding: 18px 16px;
+  border: 1px solid #dfd8c6;
+  border-top: 4px solid #b8c8dd;
+  border-radius: 12px;
+  background: linear-gradient(#fffefa, #fff9ee);
+  box-shadow: 0 3px 0 #dbcba520;
+}
+.meeting-article h4 {
+  font-size: 19px;
+  line-height: 1.5;
+  margin-top: 7px;
+  color: #333e59;
+}
+.meeting-article > p:first-child {
+  color: #7084a2;
+  font-weight: 700;
+  font-size: 11px;
+}
+.meeting-article > p[data-testid] {
+  line-height: 1.9;
+  font-size: 14px;
+}
+.meeting-window [data-testid="macro-remarks"],
+.meeting-window [data-testid="remarks"] {
+  margin-top: 16px;
+  gap: 10px;
+}
+.meeting-window [data-testid="macro-opinion"],
+.meeting-window [data-testid="opinion"] {
+  padding: 12px;
+  border-radius: 12px;
+  background: #f0f3f7;
+}
+.meeting-window [data-read="UP"] {
+  background: #fff0e8;
+}
+.meeting-window [data-read="DOWN"] {
+  background: #edf3fc;
+}
+.meeting-window [data-testid="invest-finder"] {
+  padding: 11px 12px;
+  border-radius: 12px;
+  background: #edf4ee;
+  margin-top: 12px;
+  line-height: 1.7;
+}
+.meeting-choices {
+  margin-top: 18px;
+  gap: 8px;
+}
+.meeting-choices > button {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 3px;
+  padding: 12px 4px;
+  min-height: 90px;
+  border: 1px solid #c3cde0;
+  border-radius: 14px;
+  background: #eff2f7;
+  color: #536384;
+  box-shadow: 0 3px 0 #acbad0;
+  font-size: 14px;
+}
+.meeting-choices > button[data-choice="AGGRESSIVE"],
+.meeting-choices > button[data-choice="BUY"] {
+  background: #fff0e8;
+  color: #ad573d;
+  border-color: #e4b6a5;
+  box-shadow: 0 3px 0 #d4a18c;
+}
+.meeting-choices > button[data-choice="DEFENSIVE"],
+.meeting-choices > button[data-choice="SELL"] {
+  background: #eaf1fc;
+  color: #496da6;
+  border-color: #aebfdd;
+  box-shadow: 0 3px 0 #92a8ce;
+}
+.meeting-choice-icon {
+  font-size: 25px;
+  line-height: 1.1;
+}
+.meeting-choices > button:hover:not(:disabled) {
+  filter: brightness(0.97);
+  transform: translateY(-2px);
+}
+.meeting-choices > button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.meeting-choices > ul {
+  padding: 12px;
+  margin-top: 8px;
+  border-radius: 12px;
+  background: #f2f4f6;
+  line-height: 1.8;
+}
+.meeting-window [data-testid="macro-outcome"] {
+  padding: 16px;
+  background: #eef3fb;
+  border: 1px solid #c6d4e9;
+  border-radius: 14px;
+}
+.meeting-window [data-testid="macro-finder"] {
+  background: #fff9e8;
+  border-radius: 12px;
+}
+.meeting-window [data-testid="invest-reveal"] {
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff5df;
+}
+.meeting-window [data-testid="hindsight"] {
+  border: 1px dashed #c0cbd7;
+  border-radius: 12px;
+  padding: 13px;
+  background: #f4f7f8;
+  line-height: 1.8;
+}
+.meeting-window .bg-wine {
+  background: #557ac0;
+  border-radius: 13px;
+  box-shadow: 0 3px 0 #3e609a;
+}
+.meeting-window button:focus-visible {
+  outline: 3px solid #c4994c;
+  outline-offset: 3px;
+}
+@media (max-width: 360px) {
+  .meeting-header {
+    padding: 16px;
+  }
+  .meeting-body {
+    padding: 14px 12px 18px;
+  }
+  .meeting-header h3 {
+    font-size: 25px;
+  }
+  .meeting-header > div {
+    min-width: 160px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .meeting-window .animate-reveal,
+  .meeting-window .animate-pop {
+    animation: none;
+  }
+}

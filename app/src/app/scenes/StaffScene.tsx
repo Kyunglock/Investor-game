@@ -1,3 +1,4 @@
+import './company-scenes.css'
 import type { Company } from '@web/api/client'
 import { withParticle } from '@web/features/game/labels'
 import { GradeBadge, GradeCard } from '@web/features/raising/GradeCard'
@@ -23,8 +24,39 @@ export function StaffScene({ company }: { company: Company }) {
   const placed = company.employees.filter((e) => e.desk).length
   const open = sheet?.kind === 'desk' ? company.desks.find((d) => d.code === sheet.desk) : null
   return (
-    <div data-testid="staff-scene">
-      <div className="flex items-center justify-between gap-2">
+    <div className="company-scene staff-scene" data-testid="staff-scene">
+      <header className="scene-cover">
+        <p className="scene-eyebrow">OUR TEAM</p>
+        <h1>잘하는 일을 맡겨요</h1>
+        <p>동료의 강점이 모여 더 단단한 회사가 돼요.</p>
+        <span className="scene-cover-mark" aria-hidden="true">
+          ✳
+        </span>
+      </header>
+      <div className="scene-stats">
+        <div>
+          <span>근무 중</span>
+          <strong>
+            {placed}
+            <small>명</small>
+          </strong>
+        </div>
+        <div>
+          <span>쉬는 동료</span>
+          <strong>
+            {company.employees.length - placed}
+            <small>명</small>
+          </strong>
+        </div>
+        <div>
+          <span>빈 자리</span>
+          <strong>
+            {Math.max(0, company.seats - placed)}
+            <small>석</small>
+          </strong>
+        </div>
+      </div>
+      <div className="staff-toolbar flex items-center justify-between gap-2">
         <p className="text-[14px] text-ink/85">
           앉힌 사람 <b className="font-mono-num text-[#e08a00]">{placed}</b> / {company.seats}
           자리
@@ -63,9 +95,11 @@ export function StaffScene({ company }: { company: Company }) {
                     sfx.tap()
                     openSheet({ kind: 'desk', desk: d.code })
                   }}
-                  className="panel flex w-full items-start justify-between gap-2 p-3 text-left active:scale-[0.99]"
+                  className="staff-desk panel flex w-full items-start justify-between gap-2 p-3 text-left active:scale-[0.99]"
                   data-testid="desk-row"
                   data-desk={d.code}
+                  data-filled={seated.length > 0}
+                  data-hot={d.hot}
                 >
                   <span className="min-w-0">
                     <span className="block text-[15px] font-semibold">
@@ -77,7 +111,7 @@ export function StaffScene({ company }: { company: Company }) {
                     </span>
                     <span className="mt-0.5 block text-[13px]" data-testid="desk-members">
                       {seated.length === 0
-                        ? '비어 있음'
+                        ? '동료를 배치해 팀을 시작하세요'
                         : seated.map((e, i) => (
                             <span key={e.id}>
                               {i > 0 && ' · '}
@@ -96,7 +130,7 @@ export function StaffScene({ company }: { company: Company }) {
       )}
       {!ended && <LockedDesks company={company} className="text-ink/80" />}
       {company.employees.length > 0 && (
-        <details className="mt-3" open={ended}>
+        <details className="staff-roster mt-3" open={ended}>
           <summary className="cursor-pointer text-[13px] text-ink/65">
             직원 상세 능력치 ({company.employees.length}명)
           </summary>

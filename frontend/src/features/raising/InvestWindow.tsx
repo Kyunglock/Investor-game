@@ -1,3 +1,4 @@
+import './meetings.css'
 import { useEffect, useState } from 'react'
 import type { Company } from '../../api/client'
 import { money, withParticle } from '../game/labels'
@@ -113,7 +114,7 @@ export function InvestWindow({
   return (
     <Overlay>
       <section
-        className={`animate-pop rounded bg-card p-5 shadow-xl ${
+        className={`meeting-window invest-meeting animate-pop ${
           finished && outcome && !skipped ? (loss ? 'animate-shake' : 'animate-glow') : ''
         }`}
         role="dialog"
@@ -123,10 +124,14 @@ export function InvestWindow({
         data-finished={finished}
       >
         {/* 맡긴 회의는 토론(285번)으로 창이 길어진다: 머리줄(빨리 보기)은 내려도 위에 붙어 있다. */}
-        <header className="sticky top-0 z-20 -mx-5 -mt-5 flex items-baseline justify-between rounded-t bg-card px-5 pt-5 pb-1">
-          <h3 className="font-pen text-[24px]">
-            {year}년 차 {quarter}분기 종목 회의
-          </h3>
+        <header className="meeting-header">
+          <div>
+            <p className="meeting-eyebrow">
+              STOCK MEETING · {year}년 차 {quarter}분기
+            </p>
+            <h3>종목 회의</h3>
+            <p className="meeting-subtitle">단서를 살피고, 동료의 의견을 들어보세요.</p>
+          </div>
           {!outcome && (
             <button type="button" onClick={onClose} className="text-[12px] text-muted underline">
               배치 다시 보기
@@ -148,414 +153,430 @@ export function InvestWindow({
             </button>
           )}
         </header>
-        <TeamGradeChip team={invest.team} />
-        {invest.finder && (
-          <p className="mt-1 text-[13px]" data-testid="invest-finder">
-            <b>
-              {withParticle(
-                invest.finder.role
-                  ? `${invest.finder.name} ${invest.finder.role}`
-                  : invest.finder.name,
-                '이',
-                '가',
-              )}
-            </b>{' '}
-            가져온 종목 · <span className="text-muted">“{invest.finder.pitch}”</span>
-          </p>
-        )}
-        <article className="mt-2 rounded border border-line bg-card p-3">
-          <p className="text-[12px] text-muted">
-            {invest.sectorName} · {invest.stockName}
-          </p>
-          <h4 className="mt-0.5 font-semibold text-[16px]">{invest.title}</h4>
-          <p className="mt-2 text-[14px] leading-relaxed" data-testid="invest-article">
-            {invest.sentences.map((s, i) => (
-              <span
-                // 문장 순서는 회의 내내 그대로다.
-                // biome-ignore lint/suspicious/noArrayIndexKey: 같은 문장이 두 번 나오지 않지만 순서가 곧 정체다
-                key={i}
-                className={`${s.highlighted ? 'highlighter' : ''} ${
-                  outcome && outcome.decisive === i ? 'decisive' : ''
-                }`}
-                style={
-                  outcome && outcome.decisive === i
-                    ? { animationDelay: `${show.reveal}ms` }
-                    : undefined
-                }
-                data-highlighted={s.highlighted}
-              >
-                {s.text}{' '}
-              </span>
-            ))}
-          </p>
-          {invest.highlightBy && (
-            <p className="mt-1 text-[12px] text-muted">형광펜: 리서치 팀 {invest.highlightBy}</p>
+        <div className="meeting-body">
+          <nav className="meeting-agenda" aria-label="회의 진행">
+            <span data-active={!outcome}>01 종목 분석</span>
+            <span data-active={!outcome}>02 투자 결정</span>
+            <span data-active={Boolean(outcome)}>03 결과 확인</span>
+          </nav>
+          <TeamGradeChip team={invest.team} />
+          {invest.finder && (
+            <p className="mt-1 text-[13px]" data-testid="invest-finder">
+              <b>
+                {withParticle(
+                  invest.finder.role
+                    ? `${invest.finder.name} ${invest.finder.role}`
+                    : invest.finder.name,
+                  '이',
+                  '가',
+                )}
+              </b>{' '}
+              가져온 종목 · <span className="text-muted">“{invest.finder.pitch}”</span>
+            </p>
           )}
-          <p className="mt-2 rounded border border-line-soft px-2 py-1 text-[13px]">
-            <b>{invest.sway.who}</b>: “{invest.sway.text}”
-          </p>
-        </article>
-
-        {invest.remarks.length > 0 && !outcome && (
-          // 같은 의견끼리 뭉친다 (242·246번): 의견마다 칸 하나, 그 의견을 낸 사람들의 이름(고집 표시)을 한 줄로 묶고, 한마디는 그 칸에서
-          // 안목이 가장 높은 사람이 대표로 한 번만 한다. 사람이 많은 의견이 먼저.
-          <div className="mt-2 grid gap-2" data-testid="remarks">
-            {groupRemarks(invest.remarks).map((g, i) => {
-              // 팀장만 이름을 보이고 나머지는 "외 N명" (293번).
-              const { shown, voice, others } = leadersOf(g.remarks, employees)
-              return (
-                <section
-                  key={g.read}
-                  className={`animate-reveal rounded border-l-4 bg-line-soft/40 py-1.5 pr-2 pl-2.5 ${OPINIONS[g.read].tone}`}
-                  // 의견 칸이 차례로 나온다.
-                  style={{ animationDelay: `${250 + i * 300}ms` }}
-                  aria-label={`${OPINIONS[g.read].label} ${g.remarks.length}명`}
-                  data-testid="opinion"
-                  data-read={g.read}
+          <article className="meeting-article mt-2 rounded border border-line bg-card p-3">
+            <p className="text-[12px] text-muted">
+              {invest.sectorName} · {invest.stockName}
+            </p>
+            <h4 className="mt-0.5 font-semibold text-[16px]">{invest.title}</h4>
+            <p className="mt-2 text-[14px] leading-relaxed" data-testid="invest-article">
+              {invest.sentences.map((s, i) => (
+                <span
+                  // 문장 순서는 회의 내내 그대로다.
+                  // biome-ignore lint/suspicious/noArrayIndexKey: 같은 문장이 두 번 나오지 않지만 순서가 곧 정체다
+                  key={i}
+                  className={`${s.highlighted ? 'highlighter' : ''} ${
+                    outcome && outcome.decisive === i ? 'decisive' : ''
+                  }`}
+                  style={
+                    outcome && outcome.decisive === i
+                      ? { animationDelay: `${show.reveal}ms` }
+                      : undefined
+                  }
+                  data-highlighted={s.highlighted}
                 >
-                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                    <h4 className="font-bold text-[14px]">
-                      {OPINIONS[g.read].label}{' '}
-                      <span className="font-mono-num text-[13px]">· {g.remarks.length}명</span>
-                    </h4>
-                    <ul className="flex flex-wrap items-baseline gap-1 text-ink">
-                      {shown.map((r) => (
-                        <li
-                          key={r.employeeId}
-                          className="flex items-baseline gap-1 rounded bg-card px-1.5 text-[13px]"
-                        >
-                          <span className="text-[11px] text-muted">팀장</span>
-                          <b>{r.name}</b>
-                          {/* 팀장 옆 이름 옆에 등급 (decisions.md 355번) */}
-                          <span
-                            className="font-mono-num text-[11px] text-muted"
-                            data-testid="leader-grade"
+                  {s.text}{' '}
+                </span>
+              ))}
+            </p>
+            {invest.highlightBy && (
+              <p className="mt-1 text-[12px] text-muted">형광펜: 리서치 팀 {invest.highlightBy}</p>
+            )}
+            <p className="mt-2 rounded border border-line-soft px-2 py-1 text-[13px]">
+              <b>{invest.sway.who}</b>: “{invest.sway.text}”
+            </p>
+          </article>
+
+          {invest.remarks.length > 0 && !outcome && (
+            // 같은 의견끼리 뭉친다 (242·246번): 의견마다 칸 하나, 그 의견을 낸 사람들의 이름(고집 표시)을 한 줄로 묶고, 한마디는 그 칸에서
+            // 안목이 가장 높은 사람이 대표로 한 번만 한다. 사람이 많은 의견이 먼저.
+            <div className="mt-2 grid gap-2" data-testid="remarks">
+              {groupRemarks(invest.remarks).map((g, i) => {
+                // 팀장만 이름을 보이고 나머지는 "외 N명" (293번).
+                const { shown, voice, others } = leadersOf(g.remarks, employees)
+                return (
+                  <section
+                    key={g.read}
+                    className={`animate-reveal rounded border-l-4 bg-line-soft/40 py-1.5 pr-2 pl-2.5 ${OPINIONS[g.read].tone}`}
+                    // 의견 칸이 차례로 나온다.
+                    style={{ animationDelay: `${250 + i * 300}ms` }}
+                    aria-label={`${OPINIONS[g.read].label} ${g.remarks.length}명`}
+                    data-testid="opinion"
+                    data-read={g.read}
+                  >
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <h4 className="font-bold text-[14px]">
+                        {OPINIONS[g.read].label}{' '}
+                        <span className="font-mono-num text-[13px]">· {g.remarks.length}명</span>
+                      </h4>
+                      <ul className="flex flex-wrap items-baseline gap-1 text-ink">
+                        {shown.map((r) => (
+                          <li
+                            key={r.employeeId}
+                            className="flex items-baseline gap-1 rounded bg-card px-1.5 text-[13px]"
                           >
-                            {employees.find((e) => e.id === r.employeeId)?.overallGrade}
-                          </span>
-                        </li>
-                      ))}
-                      {others > 0 && <li className="text-[12px] text-muted">외 {others}명</li>}
-                    </ul>
-                  </div>
-                  <p className="mt-1 text-[14px] text-ink" data-testid="opinion-voice">
-                    “{voice.text}”{' '}
-                    <span className="whitespace-nowrap text-[12px] text-muted">— {voice.name}</span>
+                            <span className="text-[11px] text-muted">팀장</span>
+                            <b>{r.name}</b>
+                            {/* 팀장 옆 이름 옆에 등급 (decisions.md 355번) */}
+                            <span
+                              className="font-mono-num text-[11px] text-muted"
+                              data-testid="leader-grade"
+                            >
+                              {employees.find((e) => e.id === r.employeeId)?.overallGrade}
+                            </span>
+                          </li>
+                        ))}
+                        {others > 0 && <li className="text-[12px] text-muted">외 {others}명</li>}
+                      </ul>
+                    </div>
+                    <p className="mt-1 text-[14px] text-ink" data-testid="opinion-voice">
+                      “{voice.text}”{' '}
+                      <span className="whitespace-nowrap text-[12px] text-muted">
+                        — {voice.name}
+                      </span>
+                    </p>
+                  </section>
+                )
+              })}
+            </div>
+          )}
+
+          {!outcome && (
+            <p className="mt-2 text-[12px] text-muted" data-testid="invest-frozen">
+              회의에서 나온 말은 배치를 다시 바꿔도 그대로입니다.
+            </p>
+          )}
+
+          {proposal && (
+            // 정해진 결정 (290번): 맡겼으면 토론과 결판, 아니면 사장 결정 도장. 그 뒤에 막판 제안이 뜬다.
+            <div className="mt-3" data-testid="invest-decided">
+              {proposal.delegated && (
+                <TeamClash
+                  key={`decided-${skipped}`}
+                  buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
+                  sellNames={invest.remarks.filter((r) => r.read === 'DOWN').map((r) => r.name)}
+                  buy={proposal.teamBuy}
+                  sell={proposal.teamSell}
+                  choice={proposal.choice}
+                  debate={proposal.debate}
+                  staff={employees}
+                  stock={invest.stockName}
+                  instant={skipped}
+                />
+              )}
+              <p
+                className="animate-reveal mt-2 flex items-center gap-2 text-[14px]"
+                style={{
+                  animationDelay: `${proposal.delegated && !skipped ? decidedMs - 600 : 0}ms`,
+                }}
+              >
+                {proposal.delegated ? '팀 결정' : '사장 결정'}
+                <span
+                  className="animate-stamp pen-circle inline-block px-3 py-0.5 font-pen text-[22px] text-red-pen"
+                  data-testid="decided-choice"
+                >
+                  {proposal.big ? `크게 ${label(proposal.choice)}` : label(proposal.choice)}
+                </span>
+              </p>
+            </div>
+          )}
+
+          {proposal && proposalShown && invest.proposal && (
+            // 막판 뒤집기 (283·292번): 결정이 다 끝났는데 누군가 "잠깐만요!" 하고 끼어든다. 회의 창 위에 알림으로 뜬다.
+            <Overlay>
+              <section
+                className="animate-pop rounded border-4 border-gold bg-card p-5 text-center shadow-xl"
+                role="alertdialog"
+                aria-modal="true"
+                aria-label="막판 제안"
+                data-testid="invest-proposal"
+              >
+                <div className="animate-shake">
+                  <p className="text-[40px] leading-none" aria-hidden="true">
+                    ✋
                   </p>
-                </section>
-              )
-            })}
-          </div>
-        )}
+                  <h3
+                    className="mt-1 font-pen text-[34px] leading-tight text-red-pen"
+                    data-testid="proposal-shout"
+                  >
+                    잠깐만요, 사장님!!
+                  </h3>
+                </div>
+                <p className="mt-1 text-[12px] text-muted">
+                  결정이 끝난 줄 알았는데 {withParticle(invest.proposal.name, '이', '가')} 손을
+                  들었다.
+                </p>
+                <p className="mt-3 text-left text-[15px]" data-testid="proposal-line">
+                  {invest.proposal.line}
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void answerProposal(true)}
+                    className="min-h-12 rounded bg-gold font-semibold text-white disabled:opacity-50"
+                  >
+                    그래, 네 말대로 해 · {label(invest.proposal.action)}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void answerProposal(false)}
+                    className="min-h-12 rounded border border-pen font-semibold disabled:opacity-50"
+                  >
+                    됐어, 원래대로 해
+                  </button>
+                </div>
+              </section>
+            </Overlay>
+          )}
 
-        {!outcome && (
-          <p className="mt-2 text-[12px] text-muted" data-testid="invest-frozen">
-            회의에서 나온 말은 배치를 다시 바꿔도 그대로입니다.
-          </p>
-        )}
+          {debateFirst && (
+            // 토론이 먼저 (352번): 매수파·매도파가 맞붙어 한쪽으로 기운다. 사장은 보고 나서 고른다.
+            <TeamClash
+              key={`debate-${skipped}`}
+              buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
+              sellNames={invest.remarks.filter((r) => r.read === 'DOWN').map((r) => r.name)}
+              buy={invest.teamBuy ?? 0}
+              sell={invest.teamSell ?? 0}
+              choice={invest.teamCall ?? 'HOLD'}
+              debate={debate}
+              staff={employees}
+              stock={invest.stockName}
+              instant={skipped || debated}
+            />
+          )}
+          {!outcome && !invest.proposal && (
+            <div
+              className="meeting-choices mt-3 grid grid-cols-3 gap-2"
+              data-testid="invest-options"
+            >
+              {debateFirst && debated && (
+                <p className="col-span-3 text-center text-[13px]" data-testid="invest-your-turn">
+                  직원들은{' '}
+                  <b className={invest.teamCall === 'BUY' ? 'text-up' : 'text-down'}>
+                    {invest.teamCall === 'BUY' ? '사자' : '팔자'}
+                  </b>{' '}
+                  쪽으로 기울었다. 이제 <b>사장님 차례</b>입니다.
+                </p>
+              )}
+              {invest.options
+                .filter((o) => o.code !== 'TEAM')
+                .map((o) => (
+                  <button
+                    key={o.code}
+                    data-choice={o.code}
+                    type="button"
+                    disabled={busy || !invest.ready || (debateFirst && !debated)}
+                    onClick={() => void decideInvest(o.code)}
+                    className="min-h-12 rounded border border-pen font-semibold transition-transform hover:bg-pen hover:text-white active:scale-95 disabled:opacity-50"
+                  >
+                    <span className="meeting-choice-icon" aria-hidden="true">
+                      {o.code === 'BUY' ? '↗' : o.code === 'SELL' ? '↘' : '◉'}
+                    </span>
+                    {o.label}
+                  </button>
+                ))}
+              {debateFirst && !debated && (
+                <p className="col-span-3 text-center text-[12px] text-muted">
+                  토론이 끝나면 고를 수 있습니다.
+                </p>
+              )}
+            </div>
+          )}
 
-        {proposal && (
-          // 정해진 결정 (290번): 맡겼으면 토론과 결판, 아니면 사장 결정 도장. 그 뒤에 막판 제안이 뜬다.
-          <div className="mt-3" data-testid="invest-decided">
-            {proposal.delegated && (
-              <TeamClash
-                key={`decided-${skipped}`}
-                buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
-                sellNames={invest.remarks.filter((r) => r.read === 'DOWN').map((r) => r.name)}
-                buy={proposal.teamBuy}
-                sell={proposal.teamSell}
-                choice={proposal.choice}
-                debate={proposal.debate}
-                staff={employees}
+          {outcome && !hold && (
+            <div className="mt-3" data-testid="invest-outcome">
+              {outcome.delegated && (
+                <TeamClash
+                  // 빨리 보기를 누르면 끝난 모습으로 다시 그린다. 막판 제안 전에 본 토론은 다시 돌리지 않는다.
+                  key={`clash-${skipped}-${preplayed}`}
+                  buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
+                  sellNames={invest.remarks.filter((r) => r.read === 'DOWN').map((r) => r.name)}
+                  buy={outcome.teamBuy}
+                  sell={outcome.teamSell}
+                  choice={outcome.choice}
+                  debate={outcome.debate}
+                  staff={employees}
+                  stock={invest.stockName}
+                  instant={skipped || preplayed}
+                />
+              )}
+              <p
+                className="animate-reveal mt-2 flex items-center gap-2 text-[14px]"
+                style={{ animationDelay: `${lead}ms` }}
+              >
+                {outcome.delegated ? '팀 결정' : '사장 결정'}
+                <span
+                  className="animate-stamp pen-circle inline-block px-3 py-0.5 font-pen text-[22px] text-red-pen"
+                  style={{ animationDelay: `${lead}ms` }}
+                  data-testid="invest-choice"
+                >
+                  {outcome.big ? `크게 ${label(outcome.choice)}` : label(outcome.choice)}
+                </span>
+              </p>
+              {/* 결정 장면 (283번): 직원마다 막대 대신 종목 차트가 그려지며 오르거나 빠진다. */}
+              <InvestChart
+                // 빨리 보기를 누르면 다 그린 차트로 다시 그린다.
+                key={`chart-${skipped}`}
                 stock={invest.stockName}
+                up={outcome.up}
+                percent={percentOf(outcome.reveal)}
+                delay={show.chartAt}
                 instant={skipped}
               />
-            )}
-            <p
-              className="animate-reveal mt-2 flex items-center gap-2 text-[14px]"
-              style={{
-                animationDelay: `${proposal.delegated && !skipped ? decidedMs - 600 : 0}ms`,
-              }}
-            >
-              {proposal.delegated ? '팀 결정' : '사장 결정'}
-              <span
-                className="animate-stamp pen-circle inline-block px-3 py-0.5 font-pen text-[22px] text-red-pen"
-                data-testid="decided-choice"
-              >
-                {proposal.big ? `크게 ${label(proposal.choice)}` : label(proposal.choice)}
-              </span>
-            </p>
-          </div>
-        )}
-
-        {proposal && proposalShown && invest.proposal && (
-          // 막판 뒤집기 (283·292번): 결정이 다 끝났는데 누군가 "잠깐만요!" 하고 끼어든다. 회의 창 위에 알림으로 뜬다.
-          <Overlay>
-            <section
-              className="animate-pop rounded border-4 border-gold bg-card p-5 text-center shadow-xl"
-              role="alertdialog"
-              aria-modal="true"
-              aria-label="막판 제안"
-              data-testid="invest-proposal"
-            >
-              <div className="animate-shake">
-                <p className="text-[40px] leading-none" aria-hidden="true">
-                  ✋
-                </p>
-                <h3
-                  className="mt-1 font-pen text-[34px] leading-tight text-red-pen"
-                  data-testid="proposal-shout"
+              {/* 직원마다 한 줄씩 돌던 결과는 뺐다 (decisions.md 284번): 회의 손익 하나만 본다. 사장 말을 안 따른 사람만 한 줄로 알린다. */}
+              {outcome.results.some((r) => r.follow !== 'BOSS') && (
+                <p
+                  className="animate-reveal mt-2 rounded bg-line-soft/60 px-2 py-1 text-[13px]"
+                  style={{ animationDelay: `${show.pnlAt(0)}ms` }}
+                  data-testid="invest-strays"
                 >
-                  잠깐만요, 사장님!!
-                </h3>
-              </div>
-              <p className="mt-1 text-[12px] text-muted">
-                결정이 끝난 줄 알았는데 {withParticle(invest.proposal.name, '이', '가')} 손을
-                들었다.
-              </p>
-              <p className="mt-3 text-left text-[15px]" data-testid="proposal-line">
-                {invest.proposal.line}
-              </p>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void answerProposal(true)}
-                  className="min-h-12 rounded bg-gold font-semibold text-white disabled:opacity-50"
-                >
-                  그래, 네 말대로 해 · {label(invest.proposal.action)}
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void answerProposal(false)}
-                  className="min-h-12 rounded border border-pen font-semibold disabled:opacity-50"
-                >
-                  됐어, 원래대로 해
-                </button>
-              </div>
-            </section>
-          </Overlay>
-        )}
-
-        {debateFirst && (
-          // 토론이 먼저 (352번): 매수파·매도파가 맞붙어 한쪽으로 기운다. 사장은 보고 나서 고른다.
-          <TeamClash
-            key={`debate-${skipped}`}
-            buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
-            sellNames={invest.remarks.filter((r) => r.read === 'DOWN').map((r) => r.name)}
-            buy={invest.teamBuy ?? 0}
-            sell={invest.teamSell ?? 0}
-            choice={invest.teamCall ?? 'HOLD'}
-            debate={debate}
-            staff={employees}
-            stock={invest.stockName}
-            instant={skipped || debated}
-          />
-        )}
-        {!outcome && !invest.proposal && (
-          <div className="mt-3 grid grid-cols-3 gap-2" data-testid="invest-options">
-            {debateFirst && debated && (
-              <p className="col-span-3 text-center text-[13px]" data-testid="invest-your-turn">
-                직원들은{' '}
-                <b className={invest.teamCall === 'BUY' ? 'text-up' : 'text-down'}>
-                  {invest.teamCall === 'BUY' ? '사자' : '팔자'}
-                </b>{' '}
-                쪽으로 기울었다. 이제 <b>사장님 차례</b>입니다.
-              </p>
-            )}
-            {invest.options
-              .filter((o) => o.code !== 'TEAM')
-              .map((o) => (
-                <button
-                  key={o.code}
-                  type="button"
-                  disabled={busy || !invest.ready || (debateFirst && !debated)}
-                  onClick={() => void decideInvest(o.code)}
-                  className="min-h-12 rounded border border-pen font-semibold transition-transform hover:bg-pen hover:text-white active:scale-95 disabled:opacity-50"
-                >
-                  {o.label}
-                </button>
-              ))}
-            {debateFirst && !debated && (
-              <p className="col-span-3 text-center text-[12px] text-muted">
-                토론이 끝나면 고를 수 있습니다.
-              </p>
-            )}
-          </div>
-        )}
-
-        {outcome && !hold && (
-          <div className="mt-3" data-testid="invest-outcome">
-            {outcome.delegated && (
-              <TeamClash
-                // 빨리 보기를 누르면 끝난 모습으로 다시 그린다. 막판 제안 전에 본 토론은 다시 돌리지 않는다.
-                key={`clash-${skipped}-${preplayed}`}
-                buyNames={invest.remarks.filter((r) => r.read === 'UP').map((r) => r.name)}
-                sellNames={invest.remarks.filter((r) => r.read === 'DOWN').map((r) => r.name)}
-                buy={outcome.teamBuy}
-                sell={outcome.teamSell}
-                choice={outcome.choice}
-                debate={outcome.debate}
-                staff={employees}
-                stock={invest.stockName}
-                instant={skipped || preplayed}
-              />
-            )}
-            <p
-              className="animate-reveal mt-2 flex items-center gap-2 text-[14px]"
-              style={{ animationDelay: `${lead}ms` }}
-            >
-              {outcome.delegated ? '팀 결정' : '사장 결정'}
-              <span
-                className="animate-stamp pen-circle inline-block px-3 py-0.5 font-pen text-[22px] text-red-pen"
-                style={{ animationDelay: `${lead}ms` }}
-                data-testid="invest-choice"
-              >
-                {outcome.big ? `크게 ${label(outcome.choice)}` : label(outcome.choice)}
-              </span>
-            </p>
-            {/* 결정 장면 (283번): 직원마다 막대 대신 종목 차트가 그려지며 오르거나 빠진다. */}
-            <InvestChart
-              // 빨리 보기를 누르면 다 그린 차트로 다시 그린다.
-              key={`chart-${skipped}`}
-              stock={invest.stockName}
-              up={outcome.up}
-              percent={percentOf(outcome.reveal)}
-              delay={show.chartAt}
-              instant={skipped}
-            />
-            {/* 직원마다 한 줄씩 돌던 결과는 뺐다 (decisions.md 284번): 회의 손익 하나만 본다. 사장 말을 안 따른 사람만 한 줄로 알린다. */}
-            {outcome.results.some((r) => r.follow !== 'BOSS') && (
-              <p
-                className="animate-reveal mt-2 rounded bg-line-soft/60 px-2 py-1 text-[13px]"
-                style={{ animationDelay: `${show.pnlAt(0)}ms` }}
-                data-testid="invest-strays"
-              >
-                {outcome.results
-                  .filter((r) => r.follow !== 'BOSS')
-                  .map((r) => (
-                    <span key={r.employeeId} className="mr-2 inline-block">
-                      <span className={`mr-1 rounded px-1 text-[11px] ${FOLLOW[r.follow].tone}`}>
-                        {FOLLOW[r.follow].label}
+                  {outcome.results
+                    .filter((r) => r.follow !== 'BOSS')
+                    .map((r) => (
+                      <span key={r.employeeId} className="mr-2 inline-block">
+                        <span className={`mr-1 rounded px-1 text-[11px] ${FOLLOW[r.follow].tone}`}>
+                          {FOLLOW[r.follow].label}
+                        </span>
+                        <b>{r.name}</b> {r.line}
                       </span>
-                      <b>{r.name}</b> {r.line}
-                    </span>
-                  ))}
-              </p>
-            )}
-            <p
-              className="animate-stamp mt-3 text-center font-semibold text-[16px]"
-              style={{ animationDelay: `${show.reveal}ms` }}
-              data-testid="invest-reveal"
-            >
-              <span className={outcome.up ? 'text-up' : 'text-down'}>
-                {outcome.up ? '▲' : '▼'} {outcome.reveal}
-              </span>
-            </p>
-            {outcome.reactions && outcome.reactions.length > 0 && (
-              // 결과 뒤 양쪽의 반응 (358번): 맞힌 쪽은 으스대고(혹은 "제 말 들었어야죠"), 틀린 쪽은 사과하거나 안도한다.
-              <ul
-                className="mt-2 grid gap-1"
+                    ))}
+                </p>
+              )}
+              <p
+                className="animate-stamp mt-3 text-center font-semibold text-[16px]"
                 style={{ animationDelay: `${show.reveal}ms` }}
-                data-testid="invest-reactions"
+                data-testid="invest-reveal"
               >
-                {outcome.reactions.map((r, i) => (
-                  <li
-                    key={`${r.name}-${r.side}`}
-                    className={`animate-debate-in flex max-w-[92%] items-baseline gap-1.5 text-[13px] ${
-                      r.side === 'BUY' ? 'self-start' : 'flex-row-reverse self-end text-right'
-                    }`}
-                    style={{
-                      animationDelay: `${show.reveal + 300 + i * 500}ms`,
-                      animationFillMode: 'both',
-                    }}
-                    data-side={r.side}
-                    data-kind={r.kind}
-                  >
-                    <b className={r.kind === 'WIN' ? 'text-up' : 'text-down'}>{r.name}</b>
-                    <span
-                      className={`rounded-xl px-2.5 py-1 ${r.kind === 'WIN' ? 'bg-up/12' : 'bg-down/12 italic'}`}
+                <span className={outcome.up ? 'text-up' : 'text-down'}>
+                  {outcome.up ? '▲' : '▼'} {outcome.reveal}
+                </span>
+              </p>
+              {outcome.reactions && outcome.reactions.length > 0 && (
+                // 결과 뒤 양쪽의 반응 (358번): 맞힌 쪽은 으스대고(혹은 "제 말 들었어야죠"), 틀린 쪽은 사과하거나 안도한다.
+                <ul
+                  className="mt-2 grid gap-1"
+                  style={{ animationDelay: `${show.reveal}ms` }}
+                  data-testid="invest-reactions"
+                >
+                  {outcome.reactions.map((r, i) => (
+                    <li
+                      key={`${r.name}-${r.side}`}
+                      className={`animate-debate-in flex max-w-[92%] items-baseline gap-1.5 text-[13px] ${
+                        r.side === 'BUY' ? 'self-start' : 'flex-row-reverse self-end text-right'
+                      }`}
+                      style={{
+                        animationDelay: `${show.reveal + 300 + i * 500}ms`,
+                        animationFillMode: 'both',
+                      }}
+                      data-side={r.side}
+                      data-kind={r.kind}
                     >
-                      {r.text}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <p
-              className="animate-reveal mt-1 text-center text-[15px]"
-              style={{ animationDelay: `${show.total}ms` }}
-            >
-              회의 손익{' '}
-              <b
-                className={`animate-flash text-[20px] ${outcome.total >= 0 ? 'text-up' : 'text-down'}`}
+                      <b className={r.kind === 'WIN' ? 'text-up' : 'text-down'}>{r.name}</b>
+                      <span
+                        className={`rounded-xl px-2.5 py-1 ${r.kind === 'WIN' ? 'bg-up/12' : 'bg-down/12 italic'}`}
+                      >
+                        {r.text}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p
+                className="animate-reveal mt-1 text-center text-[15px]"
                 style={{ animationDelay: `${show.total}ms` }}
               >
-                {signed(outcome.total)}
-              </b>
-            </p>
-            {finished && (
-              <>
-                {outcome.credit && (
+                회의 손익{' '}
+                <b
+                  className={`animate-flash text-[20px] ${outcome.total >= 0 ? 'text-up' : 'text-down'}`}
+                  style={{ animationDelay: `${show.total}ms` }}
+                >
+                  {signed(outcome.total)}
+                </b>
+              </p>
+              {finished && (
+                <>
+                  {outcome.credit && (
+                    <p
+                      className="animate-reveal mt-2 text-center text-[14px] font-semibold"
+                      data-testid="invest-credit"
+                    >
+                      {outcome.credit}
+                    </p>
+                  )}
+                  <Hindsight invest={invest} />
+                  {invest.verdict && (
+                    // 막판 제안을 따랐다 (283번): 결과를 보고 상이나 벌을 준다.
+                    <div
+                      className="animate-pop mt-3 rounded border-2 border-gold p-3"
+                      data-testid="invest-verdict"
+                    >
+                      <p className="text-[15px] font-semibold">{invest.verdict.ask}</p>
+                      {invest.verdict.options.length > 0 ? (
+                        <div className="mt-2 grid gap-2">
+                          {invest.verdict.options.map((o) => (
+                            <button
+                              key={o.code}
+                              type="button"
+                              disabled={busy}
+                              onClick={() => void giveVerdict(o.code)}
+                              className={`min-h-11 rounded border text-[14px] font-semibold disabled:opacity-50 ${
+                                invest.verdict?.good ? 'border-up text-up' : 'border-down text-down'
+                              }`}
+                            >
+                              {o.label}
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-1 text-[14px]" data-testid="verdict-result">
+                          {invest.verdict.result}
+                        </p>
+                      )}
+                    </div>
+                  )}
                   <p
-                    className="animate-reveal mt-2 text-center text-[14px] font-semibold"
-                    data-testid="invest-credit"
+                    className="animate-reveal mt-3 rounded bg-line-soft px-3 py-2 text-center text-[13px]"
+                    data-testid="invest-next"
                   >
-                    {outcome.credit}
+                    회의는 이 <b>한 건</b>으로 끝났습니다. 이제 직원들이 <b>이번 분기</b>에 배치대로
+                    굴린 결과를 봅니다.
                   </p>
-                )}
-                <Hindsight invest={invest} />
-                {invest.verdict && (
-                  // 막판 제안을 따랐다 (283번): 결과를 보고 상이나 벌을 준다.
-                  <div
-                    className="animate-pop mt-3 rounded border-2 border-gold p-3"
-                    data-testid="invest-verdict"
+                  <button
+                    type="button"
+                    // 상이나 벌을 고르기 전에는 넘기지 않는다 (283번).
+                    disabled={busy || (invest.verdict?.options.length ?? 0) > 0}
+                    onClick={onSettle}
+                    className="animate-reveal mt-2 min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
                   >
-                    <p className="text-[15px] font-semibold">{invest.verdict.ask}</p>
-                    {invest.verdict.options.length > 0 ? (
-                      <div className="mt-2 grid gap-2">
-                        {invest.verdict.options.map((o) => (
-                          <button
-                            key={o.code}
-                            type="button"
-                            disabled={busy}
-                            onClick={() => void giveVerdict(o.code)}
-                            className={`min-h-11 rounded border text-[14px] font-semibold disabled:opacity-50 ${
-                              invest.verdict?.good ? 'border-up text-up' : 'border-down text-down'
-                            }`}
-                          >
-                            {o.label}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="mt-1 text-[14px]" data-testid="verdict-result">
-                        {invest.verdict.result}
-                      </p>
-                    )}
-                  </div>
-                )}
-                <p
-                  className="animate-reveal mt-3 rounded bg-line-soft px-3 py-2 text-center text-[13px]"
-                  data-testid="invest-next"
-                >
-                  회의는 이 <b>한 건</b>으로 끝났습니다. 이제 직원들이 <b>이번 분기</b>에 배치대로
-                  굴린 결과를 봅니다.
-                </p>
-                <button
-                  type="button"
-                  // 상이나 벌을 고르기 전에는 넘기지 않는다 (283번).
-                  disabled={busy || (invest.verdict?.options.length ?? 0) > 0}
-                  onClick={onSettle}
-                  className="animate-reveal mt-2 min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
-                >
-                  {year}년 차 {quarter}분기 넘기기 →
-                </button>
-              </>
-            )}
-          </div>
-        )}
+                    {year}년 차 {quarter}분기 넘기기 →
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </section>
     </Overlay>
   )
