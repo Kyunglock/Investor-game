@@ -81,15 +81,16 @@ raising:
     # 자리 수 (decisions.md 281·287번, 359번): 건물이 커질수록 더 많이 앉힌다. F 4 · E 6 · D 10 · C 14 · B 18 · A 22 · S 26 · SS 30 · SSS 34, 그 위는 한 단계마다 +2.
     # 354번에서 셋으로 묶었다가 359번에서 풀었다. 목록이 하나면 모든 등급이 그 수다
     seats: [4, 6, 10, 14, 18, 22, 26, 30, 34]
-    # 규모의 벽 (decisions.md 244번): 등급 단계(F = 0)마다 맞혀서 버는 몫 ×gain, 잃는 몫 ×miss, 폭락장 손익 ×crash.
+    # 규모의 벽 (decisions.md 244번): 등급 단계(F = 0)마다 종목 회의 판돈 ×meeting, 데스크에서 잃는 몫 ×miss, 폭락장 손익 ×crash.
     # 전에는 등급마다 수수료·판돈 ×1.5라 B부터 잃는 해가 없고 SSS면 수수료만으로 자본이 두 배가 됐다
     scale:
-      gain-percent: 91
+      # 종목 회의는 수익률이 아니라 판돈에 등급 단계마다 곱한다 (decisions.md 388번): 회의 수익률의 폭(−50% ~ +300%)은 사용자가 정한 것이라 그대로다
+      meeting-percent: 77
       miss-percent: 108
       crash-percent: 118
-      # 분기 데스크에서 맞혀 버는 몫은 이 벽(F부터 회사 등급마다 %)을 gain-percent 대신 쓴다 (decisions.md 387번). 등급 효과가 등급마다 두 배라
+      # 분기 데스크에서 맞혀 버는 몫은 이 벽(F부터 회사 등급마다 %)을 쓴다 (decisions.md 387번, 전에는 0.91 = 옛 gain-percent). 등급 효과가 등급마다 두 배라
       # 벽도 등급마다 거의 절반씩 높다: 0.91^등급 × (1 + 289번의 더 버는 몫) ÷ (1 + 지금의 더 버는 몫)이라 회사 등급과 같은 등급의 직원은 전과 비슷하게
-      # 벌고, 한 등급 높은 직원은 두 배 가까이 번다(A·XX는 시뮬레이션으로 조금 올렸다). 종목 회의는 gain-percent
+      # 벌고, 한 등급 높은 직원은 두 배 가까이 번다(A·XX는 시뮬레이션으로 조금 올렸다). 종목 회의는 meeting-percent(388번)
       desk-gain-percent:
         [100, 77.3, 61.6, 44.4, 28.5, 17, 8.65, 4.28, 2.07, 0.96, 0.53, 0.2, 0.092, 0.042, 0.019]
     # 수수료 매출 자본의 3%, 판돈은 자본 전부(자본을 넘지 않음). 경제 맞춤 (decisions.md 226·244번, EconomySimulationTest)
@@ -248,11 +249,22 @@ raising:
       stubborn-bp: 2000
       # 크게 (decisions.md 260번): 판돈이 두 배, 대신 직원이 사장 말을 안 들을 확률(꼬드김·제 판단)이 1.5배
       big-stake-percent: 200
-      # 크게 틀리면 잃는 몫에 한 번 더 곱한다 (#388): 판돈 두 배에 더해 손실은 ×1.5
+      # 크게 틀리면 잃는 몫에 한 번 더 곱한다 (#388): 판돈 두 배에 더해 손실은 ×1.5. 그래도 returns.loss-cap-bp(−50%) 아래로는 안 간다(388번)
       big-miss-percent: 150
       big-stubborn-percent: 150
-      # 회의 손익 배율 (decisions.md 281번): 종목 회의 한 번의 판돈 = 분기 몫 × 이 비율(%). 전에는 100이라 회의가 가벼웠다
-      meeting-stake-percent: 300
+      # 회의 손익 배율 (decisions.md 281번): 종목 회의 한 번의 판돈 = 분기 몫 × 이 비율(%) × scale.meeting-percent^등급. 전에는 100이라 회의가 가벼웠다.
+      # 회의 수익률을 넓히며(388번) 300 → 260, 벽은 수익률 대신 판돈에(BalanceSimulationTest·EconomySimulationTest)
+      meeting-stake-percent: 260
+      # 종목 회의 수익률 (decisions.md 388번): 데스크의 gain-bp·miss-bp와 떼어 낸 회의만의 수익률. 기사의 크기(magnitude)가 콘텐츠의 가장 작은 폭(4%) ~
+      # 가장 큰 폭(35%)에서 어디쯤인지(0~1)로 정한다. 맞히면 gain-min ~ gain-max를 gain-power제곱으로(평범하면 수십 %, 대박이면 +300%), 틀리면
+      # loss-min ~ loss-max를 곧게, 크게 틀리면 ×big-miss-percent지만 loss-cap(−50%)에서 멈춘다. 직원 등급 효과(387번)는 붙지 않는다
+      returns:
+        gain-min-bp: 1500
+        gain-max-bp: 30000
+        gain-power: 3
+        loss-min-bp: 2000
+        loss-max-bp: 5000
+        loss-cap-bp: 5000
       # 기사가 얼마나 또렷한가 (decisions.md 241번): 흐릴수록 읽을 때 안목을 깎아 안목 높은 직원끼리도 의견이 갈린다
       clarity:
         - { code: clear, weight: 35, penalty: 0 }

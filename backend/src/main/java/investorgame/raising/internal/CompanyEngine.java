@@ -1100,9 +1100,11 @@ class CompanyEngine {
     return Math.round(bp * factor * (PERCENT + perkGainPercent(employee)) / PERCENT);
   }
 
-  /** 맞혔을 때 버는 몫. 큰 회사일수록 줄어든다. */
-  int scaledGain(CompanyState company, int bp) {
-    return scaled(company, bp, properties.scale().gainPercent());
+  /** 종목 회의 판돈의 규모의 벽 (decisions.md 388번). 큰 회사일수록 줄어든다. 회의 수익률의 폭은 그대로다. */
+  long scaledMeetingStake(CompanyState company, long stake) {
+    double factor =
+        Math.pow(properties.scale().meetingPercent() / (double) PERCENT, scaleStep(company));
+    return Math.round(stake * factor);
   }
 
   /** 틀리거나 손이 뒤집혀 잃는 몫. 큰 회사일수록 커진다. */

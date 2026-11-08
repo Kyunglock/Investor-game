@@ -528,7 +528,8 @@ class InvestEngine {
 
   /**
    * 사장이 고른다. 돈을 굴리는 직원마다 꼬드김(줏대) → 손 뒤집힘(자리 능력치) 순으로 굴린다. 꼬드김에 넘어가면 단골 인물 말대로(사라면 사고 팔라면 판다), 뒤집히면
-   * "제가 알아서 할게요" 하고 제 판단대로 한다(제 판단이 사장과 같으면 그대로다). 맞으면 자리의 맞힘 몫, 틀리면 틀림 몫, 지켜보면 0. 손익은 바로 자본에 들어간다.
+   * "제가 알아서 할게요" 하고 제 판단대로 한다(제 판단이 사장과 같으면 그대로다). 맞으면 회의만의 수익률(388번, 기사가 클수록 크게, 최대 +300%), 틀리면
+   * 그만큼 잃고(최대 −50%), 지켜보면 0. 손익은 바로 자본에 들어간다.
    */
   void decide(CompanyState c, String choice, SeededRandom random) {
     decide(c, choice, false, random);
@@ -571,13 +572,19 @@ class InvestEngine {
     RaisingContent.Invest texts = content.raising().company().invest();
     // 한 분기의 회의라 판돈도 한 분기 몫이다 (decisions.md 268번): 한 해 몫을 걸면 분기마다 열리는 회의가 한 해 경제를 뒤집는다.
     // 회의 손익 배율 (decisions.md 281번): 분기 몫에 meeting-stake-percent를 곱해 회의 한 번의 무게를 키운다.
+    // 회의 수익률의 폭은 그대로 두고 규모의 벽은 판돈에 세운다 (decisions.md 388번).
     long stake =
-        company.stakeOf(c, traders.size())
-            * (big ? properties.invest().bigStakePercent() : PERCENT)
-            / PERCENT
-            * properties.invest().meetingStakePercent()
-            / PERCENT
-            / CompanyEngine.QUARTERS;
+        company.scaledMeetingStake(
+            c,
+            company.stakeOf(c, traders.size())
+                * (big ? properties.invest().bigStakePercent() : PERCENT)
+                / PERCENT
+                * properties.invest().meetingStakePercent()
+                / PERCENT
+                / CompanyEngine.QUARTERS);
+    // 종목 회의만의 수익률 (388번): 데스크 몫과 떼어 내 기사의 크기로 정한다. 누가 어느 자리에 앉았든 같다.
+    int gainBp = gainBp(c.invest);
+    int lossBp = lossBp(c.invest, big);
     int stubborn = big ? properties.invest().bigStubbornPercent() : PERCENT;
     long missed = 0;
     String right = c.invest.up ? BUY : SELL;
@@ -620,21 +627,11 @@ class InvestEngine {
         result.rival = own;
         result.guard = company.flipStat(c, e);
       }
-      CompanyProperties.DeskReturn returns = company.returnsOf(e.desk);
-      int bp =
-          HOLD.equals(result.action)
-              ? 0
-              : result.action.equals(right)
-                  ? company.scaledGain(c, company.gainBp(c, e))
-                  : -company.scaledMiss(c, returns.missBp());
-      // 크게 틀리면 더 크게 잃는다 (#388): 전에는 크게가 판돈만 두 배라 늘 크게 사는 게 이득이었다.
-      if (big && bp < 0) {
-        bp = bp * properties.invest().bigMissPercent() / PERCENT;
-      }
-      result.pnl = stake * bp / BP;
+      int bp = HOLD.equals(result.action) ? 0 : result.action.equals(right) ? gainBp : -lossBp;
+      result.pnl = CompanyEngine.ofStake(stake, bp);
       total += result.pnl;
       e.totalPnl += result.pnl;
-      missed += stake * company.scaledGain(c, company.gainBp(c, e)) / BP;
+      missed += CompanyEngine.ofStake(stake, gainBp);
       Map<String, String> values = new HashMap<>();
       values.put("action", texts.actions().get(result.action));
       values.put("who", who);
@@ -652,12 +649,64 @@ class InvestEngine {
     c.invest.delegated = delegated;
     c.invest.missed = HOLD.equals(choice) ? missed : null;
     c.invest.total = total;
+    c.invest.stake = stake * traders.size();
     c.capital = Math.max(0, c.capital + total);
     c.invest.reactions = reactions(c, choice, random);
     // 자기 말을 들어 줬는지에 따라 사기가 움직인다 (270번). 맡겼으면 사장이 들어 주고 말고가 없다.
     if (!delegated) {
       company.pay.afterMeeting(c);
     }
+  }
+
+  /**
+   * 종목 회의에서 맞혔을 때의 수익률(만분율, decisions.md 388번): 기사의 크기가 콘텐츠의 가장 작은 폭 ~ 가장 큰 폭에서 어디쯤인지(0~1)를
+   * gain-power만큼 거듭제곱해 gain-min-bp ~ gain-max-bp에 놓는다. 평범한 기사는 수십 %, 가장 크게 움직이는 기사는 +300%.
+   */
+  int gainBp(Invest invest) {
+    CompanyProperties.Returns r = properties.invest().returns();
+    double at = Math.pow(magnitudeAt(invest.magnitudeBp), r.gainPower());
+    return (int) Math.round(r.gainMinBp() + (r.gainMaxBp() - r.gainMinBp()) * at);
+  }
+
+  /**
+   * 종목 회의에서 틀렸을 때 잃는 몫(만분율, 양수, 388번): 기사가 클수록 곧게 늘어난다(loss-min-bp ~ loss-max-bp). 크게 틀리면
+   * big-miss-percent를 곱하지만(#388) loss-cap-bp(−50%)보다 더 잃지는 않는다.
+   */
+  int lossBp(Invest invest, boolean big) {
+    CompanyProperties.Returns r = properties.invest().returns();
+    double at = magnitudeAt(invest.magnitudeBp);
+    long loss = Math.round(r.lossMinBp() + (r.lossMaxBp() - r.lossMinBp()) * at);
+    if (big) {
+      loss = loss * properties.invest().bigMissPercent() / PERCENT;
+    }
+    return (int) Math.min(r.lossCapBp(), loss);
+  }
+
+  /** 화면에 보이는 회의 수익률의 범위(만분율): 틀렸을 때 가장 크게 잃는 몫과 맞혔을 때 가장 크게 버는 몫 (388번). */
+  int lossCapBp() {
+    return properties.invest().returns().lossCapBp();
+  }
+
+  int gainMaxBp() {
+    return properties.invest().returns().gainMaxBp();
+  }
+
+  /** 회의 수익률(만분율) = 회의 손익 ÷ 건 판돈 (388번). 판돈을 적기 전에 정한 회의거나 판돈이 0이면 null. */
+  Integer returnBp(Invest invest) {
+    if (invest.stake == null || invest.stake <= 0) {
+      return null;
+    }
+    return (int) Math.round(invest.total * (double) BP / invest.stake);
+  }
+
+  /** 기사의 크기가 콘텐츠의 모든 뉴스에서 가장 작은 폭 ~ 가장 큰 폭 사이 어디쯤인가(0~1). */
+  private double magnitudeAt(int magnitudeBp) {
+    int least = content.news().stream().mapToInt(n -> n.magnitude().minBp()).min().orElse(0);
+    int most = content.news().stream().mapToInt(n -> n.magnitude().maxBp()).max().orElse(least);
+    if (most <= least) {
+      return 1;
+    }
+    return Math.clamp((magnitudeBp - least) / (double) (most - least), 0.0, 1.0);
   }
 
   /**

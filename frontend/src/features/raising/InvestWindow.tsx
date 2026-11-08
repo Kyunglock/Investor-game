@@ -4,6 +4,7 @@ import type { Company } from '../../api/client'
 import { money, withParticle } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { CHART_MS, InvestChart } from './InvestChart'
+import { ReturnRange, ReturnResult } from './InvestReturn'
 import {
   chartTimeline,
   groupRemarks,
@@ -222,6 +223,8 @@ export function InvestWindow({
               <p className="mt-1 text-[13px] text-muted" data-testid="invest-context">
                 {invest.stockName} · {invest.title}
               </p>
+              {/* 이번 회의가 얼마나 오르내릴 수 있는지 (decisions.md 388번): −50% ~ +300% */}
+              <ReturnRange range={invest.range} />
 
               {invest.remarks.length > 0 && !outcome && (
                 // 직원 의견은 투자 결정 화면에서 고르기 바로 앞에 본다 (378번). 같은 의견끼리 뭉친다 (242·246번): 의견마다 칸 하나, 그 의견을 낸 사람들의 이름(고집 표시)을 한 줄로 묶고, 한마디는 그 칸에서
@@ -465,6 +468,8 @@ export function InvestWindow({
                   ))}
                 </ul>
               )}
+              {/* 실제 나온 회의 수익률을 크게, 띠 위에 점으로 (decisions.md 388번). */}
+              <ReturnResult range={invest.range} outcome={outcome} delay={show.total} />
               <p
                 className="animate-reveal mt-1 text-center text-[15px]"
                 style={{ animationDelay: `${show.total}ms` }}
