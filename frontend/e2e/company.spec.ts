@@ -112,11 +112,18 @@ async function passYear(page: Page, year: number, choice: string, watch = false)
   return held
 }
 
-/** 1~3분기를 넘기면 분기 실적이 짧게 뜬다 (268번): 자본이 얼마에서 얼마가 됐는지. 확인하면 닫힌다. */
+/**
+ * 1~3분기를 넘기면 분기 실적이 뜬다 (268번): 자본이 얼마에서 얼마가 됐는지. 결산서 같은 종이에 표지의 네 칸 중 지금 분기가 표시되고, 폭락 분기면 표지가
+ * 바뀐다 (396번). 확인하면 닫힌다.
+ */
 async function closeQuarter(page: Page, year: number, quarter: number) {
   const sheet = page.getByRole('dialog', { name: '분기 실적' })
   await expect(sheet).toContainText(`${year}년 차 ${quarter}분기 실적`)
   await expect(sheet.getByTestId('quarter-change')).toBeVisible()
+  await expect(sheet.getByRole('list', { name: `네 분기 중 ${quarter}번째` })).toBeVisible()
+  if ((await sheet.getByTestId('quarter-crash').count()) > 0) {
+    await expect(sheet).toHaveAttribute('data-crash', 'true')
+  }
   // 자리마다 팀장이 보고한다 (269번). 돈을 굴리는 사람이 없으면 보고도 없다.
   const reports = await sheet.getByTestId('team-report').count()
   const staffed = await page.getByTestId('office-seat').count()

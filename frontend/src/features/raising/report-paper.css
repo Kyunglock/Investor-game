@@ -1,0 +1,80 @@
+/* 결산서 종이 (decisions.md 240·396번): 연말 결산서와 분기 실적이 같이 쓰는 종이·색·둥근 테두리·그림자·꼬리 버튼. */
+.report-paper {
+  color: #343b65;
+  background: #fffdf6;
+  border: 1px solid #c5cdec;
+  border-radius: 24px;
+  box-shadow:
+    0 8px 0 #354e7840,
+    0 24px 70px #20304840;
+  overflow: auto;
+  max-height: calc(100dvh - 80px);
+  scrollbar-width: thin;
+  --color-up: #bd573d;
+  --color-down: #426da9;
+}
+.report-body {
+  padding: 20px 22px 8px;
+}
+.report-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 25px 0 8px;
+}
+.report-section-title > span {
+  display: grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border-radius: 8px;
+  background: #e8edf7;
+  color: #536fa7;
+  font-size: 11px;
+  font-weight: 800;
+}
+.report-section-title h3 {
+  font-size: 15px;
+  font-weight: 800;
+}
+.report-footer {
+  position: sticky;
+  bottom: 0;
+  padding: 12px 22px 16px;
+  background: #fffdf6f5;
+  border-top: 1px solid #e4e5e4;
+}
+.report-footer button {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 13px;
+  background: #557ac0;
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: 0 3px 0 #3c5e98;
+}
+.report-footer button:hover {
+  background: #496db1;
+}
+.report-footer button:focus-visible {
+  outline: 3px solid #b78938;
+  outline-offset: 3px;
+}
+.report-footer p {
+  font-size: 10px;
+  color: #747891;
+  text-align: center;
+  margin-top: 9px;
+}
+@media (max-width: 360px) {
+  .report-body {
+    padding: 16px 14px 8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .report-paper,
+  .report-paper .animate-reveal {
+    animation: none;
+  }
+}
