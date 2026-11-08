@@ -8,7 +8,13 @@ import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 
-import { type BattleMode, type StageSpec, stageLabel, stageSpec } from './advance'
+import {
+  type BattleMode,
+  DEFENSE_BOSS_SECONDS,
+  type StageSpec,
+  stageLabel,
+  stageSpec,
+} from './advance'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
 import { applyCard, CARDS, type Loadout, loadoutOf, pickCards } from './cards'
@@ -58,8 +64,8 @@ export function MentalWindow({
   const busy = useRaisingStore((s) => s.busy)
   const apiError = useRaisingStore((s) => s.error)
   const modal = useRef<HTMLDivElement>(null)
-  // 번호 스테이지는 전진 모드, EX는 디펜스 (364·369번).
-  const mode: BattleMode = entry.kind === 'ex' ? 'defense' : 'advance'
+  // 디펜스가 주 콘텐츠다 (509번): 번호 스테이지도 EX도 멘탈벽을 지키는 디펜스다. 전진 모드(364번)는 지금 쓰지 않는다.
+  const mode: BattleMode = 'defense'
   const perChapter = company.stages?.perChapter
   // 한 번만 만든다: 새 객체면 전투(Battle)의 effect가 다시 돌아 판이 처음부터 다시 시작됐다.
   const stageNumber = entry.kind === 'stage' ? entry.stage : null
@@ -183,25 +189,24 @@ export function MentalWindow({
             </header>
             <div className="stage-hero-card">
               <span className="stage-mode" data-testid="stage-mode">
-                {spec
-                  ? `전진 · 구간 ${spec.segments}개${spec.boss ? ' + 보스' : ''} · 제한 시간 ${BATTLE_SECONDS / 60}분`
+                {spec?.boss
+                  ? `디펜스 · ${DEFENSE_BOSS_SECONDS / 60}분에 보스 · 제한 시간 ${BATTLE_SECONDS / 60}분 안에 격파`
                   : `디펜스 · 제한 시간 ${BATTLE_SECONDS / 60}분 버티기`}
               </span>
               <StagePortrait weapon={heroOf(company).weapon} />
-              {spec ? (
-                <>
-                  <p>길을 막는 불안을 치우고 앞으로 나아가세요</p>
-                  <small>끌어서 움직이기 · 총은 자동으로 쏜다 · 빨리 깰수록 별이 많다</small>
-                </>
-              ) : (
-                <>
-                  <div className="stage-mini-wall">
-                    <span>♡</span> 멘탈벽
-                  </div>
-                  <p>몰려오는 불안을 막아 멘탈벽을 지키세요</p>
-                  <small>누른 방향으로 발사 · 적을 많이 잡을수록 무기 뽑기권이 많다</small>
-                </>
-              )}
+              <div className="stage-mini-wall">
+                <span>♡</span> 멘탈벽
+              </div>
+              <p>
+                {spec?.boss
+                  ? '불안을 막고 패닉셀 대장을 쓰러뜨리세요'
+                  : '몰려오는 불안을 막아 멘탈벽을 지키세요'}
+              </p>
+              <small>
+                {spec
+                  ? '누른 방향으로 발사 · 멘탈벽이 많이 남을수록 별이 많다'
+                  : '누른 방향으로 발사 · 적을 많이 잡을수록 무기 뽑기권이 많다'}
+              </small>
             </div>
             <WeaponPicker weapons={weapons} armory={company.armory ?? null} busy={busy} />
             {apiError && (
@@ -250,20 +255,16 @@ export function MentalWindow({
                 className={`inline-block rounded-lg px-3 py-0.5 text-[13px] font-bold text-white ${outcome.win ? 'bg-teal' : 'bg-[#ff4f6d]'}`}
               >
                 {outcome.win
-                  ? spec
-                    ? '전진 성공'
-                    : '멘탈 지켜냈다'
+                  ? '멘탈 지켜냈다'
                   : outcome.reason === 'time'
                     ? '시간 초과'
                     : '멘탈 붕괴'}
               </span>
               <h2 className="mt-2 font-game text-[28px]">
                 {outcome.win
-                  ? spec
-                    ? '끝까지 나아갔다!'
-                    : '멘탈 지켜냈다!'
+                  ? '멘탈 지켜냈다!'
                   : outcome.reason === 'time'
-                    ? '시간 안에 못 넘었다…'
+                    ? '보스를 못 쓰러뜨렸다…'
                     : '멘탈이 무너졌다…'}
               </h2>
               {spec && (
@@ -282,11 +283,7 @@ export function MentalWindow({
                 </p>
               )}
               <div className="mt-3 grid grid-cols-3 gap-2">
-                {spec ? (
-                  <Stat label="넘긴 구간" value={`${outcome.segments}/${spec.segments}`} />
-                ) : (
-                  <Stat label="레벨" value={picked.length} />
-                )}
+                <Stat label="레벨" value={picked.length} />
                 <Stat label="물리친 적" value={outcome.kills} />
                 <Stat label="남은 멘탈" value={outcome.mentalLeft} />
               </div>
