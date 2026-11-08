@@ -321,8 +321,15 @@ class JsonContentCatalog implements ContentCatalog {
         company.gradeLines() != null && company.statNames().keySet().containsAll(StatCodes.ALL),
         "직원 등급 소식 문구가 없다");
     require(
-        company.effects() != null && company.effects().list().size() == 9,
-        "X 이상 효과는 아홉 개여야 한다(X~ZZZ, XS·XSS·GOD)");
+        company.effects() != null
+            && company.effects().list().stream()
+                .map(RaisingContent.Effect::grade)
+                .toList()
+                .equals(
+                    List.of(
+                        "A", "S", "SS", "SSS", "X", "XX", "XXX", "Z", "ZZ", "ZZZ", "XS", "XSS",
+                        "GOD")),
+        "등급 효과는 A·S·SS·SSS와 X~ZZZ·XS·XSS·GOD 열세 개가 차례로 있어야 한다");
     require(
         company.perks() != null
             && company
@@ -330,8 +337,12 @@ class JsonContentCatalog implements ContentCatalog {
                 .names()
                 .keySet()
                 .containsAll(List.of("F", "E", "D", "C", "B", "A", "S", "SS", "SSS"))
-            && company.perks().line() != null
-            && company.perks().lineTop() != null
+            && company.perks().gain() != null
+            && company.perks().steady() != null
+            && company.perks().growth() != null
+            && company.perks().top() != null
+            && company.perks().named() != null
+            && company.perks().drawn() != null
             && company.perks().grown() != null
             && company.perks().promoted() != null,
         "등급 효과 문구가 없다");

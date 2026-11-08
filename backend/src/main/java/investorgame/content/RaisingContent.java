@@ -249,11 +249,23 @@ public record RaisingContent(
   public record Effect(String grade, String name, String description) {}
 
   /**
-   * 등급 효과 (decisions.md 289번). names: 종합 등급(F~SSS)마다 이름. line: 효과 한 줄({gain}·{growth}). lineTop:
-   * SSS 위(실전 경험으로 오른다, {gain}). grown: 한 해 일하며 자란 소식 줄({name}·{stat}·{before}·{after}).
+   * 등급 효과 (decisions.md 289·387번). 효과 한 줄은 " · "로 잇는다: 이름 · gain({times}배·{gain}%) · steady(손 뒤집힘
+   * 줄어든 {percent}%, 줄지 않으면 뺀다) · named(그 등급 구간의 이름 붙은 효과 {name}·{description}) · growth({growth}%,
+   * SSS 위는 top). drawn: 뽑기 카드의 짧은 효과({times}). grown: 한 해 일하며 자란 소식
+   * 줄({name}·{stat}·{before}·{after}).
+   *
+   * @param names 종합 등급(F~SSS)마다 이름
    */
   public record Perks(
-      Map<String, String> names, String line, String lineTop, String grown, String promoted) {}
+      Map<String, String> names,
+      String gain,
+      String steady,
+      String growth,
+      String top,
+      String named,
+      String drawn,
+      String grown,
+      String promoted) {}
 
   /**
    * 직원 등급이 바뀌는 결산 소식 (6.4·2.3절). {name}·{before}·{after}·{stat} 자리표시를 쓴다.

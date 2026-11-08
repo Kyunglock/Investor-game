@@ -687,4 +687,37 @@ class InvestEngineTest {
     }
     assertThat(seen).isEqualTo(40);
   }
+
+  /**
+   * 등급 효과의 판단 보정 (decisions.md 387번): 안목이 같아도 종합 등급이 높으면 종목 회의에서 기사를 더 잘 읽고, SSS 이상은 전설의 촉으로 늘 맞게
+   * 읽는다.
+   */
+  @Test
+  void 등급이_높을수록_회의에서_기사를_잘_읽고_SSS는_늘_맞게_읽는다() {
+    int rookieRight = 0;
+    int starRight = 0;
+    int trials = 1000;
+    for (int seed = 0; seed < trials; seed++) {
+      CompanyState c = opened(new HashSeededRandom(seed), 300_000_000L);
+      ENGINE.hire(
+          c, Map.of("insight", 50, "patience", 10, "courage", 10, "conviction", 10, "luck", 10));
+      ENGINE.hire(
+          c, Map.of("insight", 50, "patience", 90, "courage", 90, "conviction", 90, "luck", 90));
+      ENGINE.hire(
+          c,
+          Map.of("insight", 100, "patience", 100, "courage", 100, "conviction", 100, "luck", 100));
+      ENGINE.place(c, Map.of(1, "day", 2, "day", 3, "day"));
+      c.phase = "normal";
+      var remarks = ENGINE.invest.liveRemarks(c, new HashSeededRandom(seed));
+      String truth = c.invest.up ? "UP" : "DOWN";
+      rookieRight += remarks.get(0).read().equals(truth) ? 1 : 0;
+      starRight += remarks.get(1).read().equals(truth) ? 1 : 0;
+      assertThat(remarks.get(2).read()).as("SSS 전설의 촉").isEqualTo(truth);
+    }
+    assertThat(
+            CompanyEngine.overallGrade(
+                Map.of("insight", 50, "patience", 90, "courage", 90, "conviction", 90, "luck", 90)))
+        .isEqualTo("SS");
+    assertThat(starRight).as("안목이 같아도 SS가 F보다 잘 읽는다").isGreaterThan(rookieRight + trials / 30);
+  }
 }

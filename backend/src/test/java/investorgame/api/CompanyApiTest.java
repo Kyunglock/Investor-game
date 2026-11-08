@@ -162,6 +162,10 @@ class CompanyApiTest {
     assertThat(one.read("$.gacha.tickets", Integer.class)).isEqualTo(9);
     assertThat(one.read("$.gacha.drawn.length()", Integer.class)).isEqualTo(1);
     assertThat(one.read("$.gacha.drawn[0].fresh", Boolean.class)).as("처음 본 등급").isTrue();
+    assertThat(one.read("$.gacha.drawn[0].perk", String.class))
+        .as("뽑기 카드의 등급 효과 (387번)")
+        .startsWith("맞히면 ")
+        .endsWith("배");
     assertThat(one.read("$.employees[0].sectorName", String.class)).isNotBlank();
     // 같은 뽑기가 두 번 와도 한 번만 뽑는다. 아직 오지 않은 것과 모자란 채용권은 400.
     DocumentContext twice = json(drawRequest(1, 0).andExpect(status().isOk()));

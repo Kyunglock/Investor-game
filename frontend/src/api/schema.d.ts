@@ -477,9 +477,9 @@ export interface components {
                 experience: number;
                 /** @description 다음 단계까지 드는 실전 경험. SSS가 아니면 null */
                 experienceNeeded?: number | null;
-                /** @description X 이상 등급의 효과 이름(확신·경보·역발상·리더·사수·선견·큰손·철벽·신의 손). 쌓인다 (2.4절) */
+                /** @description 등급 효과 이름. 쌓인다. 능력치로 매긴 종합 등급까지의 A 손절·S 끌어주기·SS 방패·SSS 전설의 촉(decisions.md 387번) 위에 SSS 위 단계만큼 확신·경보·역발상·리더·사수·선견·큰손·철벽·신의 손 (2.4절) */
                 effects: string[];
-                /** @description 등급 효과 한 줄: 이름·맞혔을 때 더 버는 몫·자랄 확률 (decisions.md 289번) */
+                /** @description 등급 효과 한 줄: 이름·맞히면 버는 배수(더 버는 몫, 등급마다 두 배)·손 뒤집힘 보정·그 등급의 이름 붙은 효과·자랄 확률 (decisions.md 289·387번) */
                 perk: string;
                 grades: {
                     [key: string]: components["schemas"]["Grade"];
@@ -575,6 +575,8 @@ export interface components {
                     star: boolean;
                     /** @description 도감에 처음 오른 등급이다 */
                     fresh: boolean;
+                    /** @description 짧은 등급 효과: 맞히면 버는 배수와 가장 높은 등급 효과 이름("맞히면 13.8배 · 방패", decisions.md 387번). 등급으로 정한다 */
+                    perk: string;
                     /** @description 첫인사 (349번). 버릇대로 한마디. 옛 뽑기면 null */
                     hello?: string | null;
                 }[];
