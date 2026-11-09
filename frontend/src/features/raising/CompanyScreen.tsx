@@ -599,7 +599,7 @@ const MORALE: Record<number, string> = {
   2: '의욕 넘침',
 }
 
-/** 직원 한 명의 상세 능력치: 종합 등급·차림새·효과·실전 경험·관심 섹터와 능력치 다섯의 등급. 배치 탭과 미니맵을 누르면 열리는 칸(237번)이 같이 쓴다. */
+/** 직원 한 명의 상세 능력치: 종합 등급·차림새·효과·관심 섹터와 능력치 다섯의 등급. 배치 탭과 미니맵을 누르면 열리는 칸(237번)이 같이 쓴다. */
 function EmployeeDetail({ employee: e }: { employee: Employee }) {
   return (
     <div className="min-w-0 flex-1" data-testid="employee-detail">
@@ -609,7 +609,6 @@ function EmployeeDetail({ employee: e }: { employee: Employee }) {
         <span className="text-[12px] text-muted" data-testid="attire">
           · {ATTIRE_NAMES[attireOf(e.overallGrade)]}
           {e.effects.length > 0 && ` · ${e.effects.join('·')}`}
-          {e.experienceNeeded != null && ` · 실전 경험 ${e.experience}/${e.experienceNeeded}`}
           {glowOf(e.overallGrade) && ` · ${glowOf(e.overallGrade) === 'gold' ? '금빛' : '파란빛'}`}
           {e.sectorName && ` · 관심 섹터 ${e.sectorName}`}
           {e.deskYears > 0 && ` · 같은 자리 ${e.deskYears}년`}

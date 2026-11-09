@@ -22,7 +22,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param interestBonusBp 직원의 관심 섹터와 같은 섹터 데스크에 앉으면 맞혔을 때 더하는 몫(만분율)
  * @param phaseBp 한 해 시장이 판단 하나마다 더하는 손익(만분율)
  * @param swayPercent 꼬드김 판정이 다른 판정보다 덜 일어나는 비율. 리스크 관리 팀이 없을 때
- * @param experience 실전 경험과 큰 손실의 등급 하락 (2.3·6.4절)
+ * @param experience 능력치 한 띠의 점수 (등급은 뽑은 그대로 간다, 421번)
  * @param effects X 이상 등급의 효과 수치 (2.4절)
  * @param hr 인사팀이 채용 뽑기를 돕는다 (6.3절)
  * @param market 뽑은 사람의 능력치 (decisions.md 228번)
@@ -303,7 +303,6 @@ public record CompanyProperties(
    * 등급 효과 (decisions.md 289·387번): 종합 등급마다.
    *
    * @param gainPercent 분기 데스크에서 맞혔을 때 버는 몫에 더 얹는 비율(%). F~GOD 모두, 등급마다 두 배. 종목 회의 손익에는 붙지 않는다
-   * @param growthPercent 한 해 자리에서 일하면 가장 낮은 능력치(운 빼고)가 한 띠 오를 확률(%). SSS는 0: 그 위는 실전 경험으로 오른다
    * @param flipPercent 손이 뒤집힐 확률에 곱하는 비율(%). 높을수록 판단이 흔들리지 않는다. SSS 위는 SSS 값
    * @param readBonus 종목 회의에서 기사를 읽을 때 안목에 더하는 점수. SSS 위는 SSS 값
    * @param stopLossPercent A 손절: 손이 뒤집혀 잃는 몫에 곱하는 비율(%)
@@ -312,7 +311,6 @@ public record CompanyProperties(
    */
   public record Perks(
       Map<String, Integer> gainPercent,
-      Map<String, Integer> growthPercent,
       Map<String, Integer> flipPercent,
       Map<String, Integer> readBonus,
       int stopLossPercent,
@@ -320,11 +318,9 @@ public record CompanyProperties(
       int shieldPercent) {}
 
   /**
-   * @param dropLossPercent 한 해 결산에서 맡은 판돈이 이만큼 빠지면 종합 등급 한 단계 하락 (6.4절 제안: 30)
-   * @param band 능력치 한 띠의 점수. 떨어지거나 되찾을 때 이만큼 움직인다
-   * @param needBase SSS에서 X로 오르는 데 드는 실전 경험. 단계마다 1씩 더 든다 (2.3절: 단계마다 커진다)
+   * @param band 능력치 한 띠의 점수. ZZ 사수가 신입의 능력치를 이만큼 올린다 (222번)
    */
-  public record Experience(int dropLossPercent, int band, int needBase) {}
+  public record Experience(int band) {}
 
   /**
    * @param crashPercent 폭락장에 한 해 시장 손익(phase-bp)에 곱하는 비율. 식품·금융처럼 방어가 되는 섹터는 100보다 작고, 반도체처럼 크게 빠지는

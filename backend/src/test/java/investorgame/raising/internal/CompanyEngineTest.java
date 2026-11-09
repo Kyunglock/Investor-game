@@ -180,63 +180,43 @@ class CompanyEngineTest {
     assertThat(next.met).as("만난 사람 수(이름)를 이어 센다").isEqualTo(company.met);
   }
 
-  /** 큰 손실을 낸 직원은 원인이 된 능력치가 한 띠 내려가고, 폭락장을 버티면 되찾는다. SSS는 버틸 때마다 실전 경험이 쌓여 X·XX로 오른다 (6.4·2.3절). */
+  /**
+   * 직원 등급은 뽑은 그대로 간다 (decisions.md 421번, #582): 크게 잃은 해에도 떨어지지 않고, 폭락장을 버티거나 한 해 일해도 오르지 않는다.
+   * 능력치·SSS 위 단계 모두 그대로고 등급이 바뀌었다는 소식 줄도 없다.
+   */
   @Test
-  void 큰_손실은_등급을_내리고_위기를_버티면_오른다() {
-    CompanyState.Employee weak = new CompanyState.Employee();
-    weak.name = "김대리";
-    weak.desk = "bio";
-    weak.stats.putAll(stats(50, 50, 50, 50));
-    CompanyState.Settlement settlement = new CompanyState.Settlement();
-    CompanyState.Result result = new CompanyState.Result();
-    result.stake = 100;
-    result.pnl = -40;
-    result.flips.put("patience", 3);
-    result.flips.put("conviction", 1);
-    ENGINE.drop(weak, result, settlement);
-    assertThat(weak.stats.get("patience")).as("가장 많이 뒤집은 인내심이 한 띠").isEqualTo(40);
-    assertThat(settlement.lines.getLast()).contains("김대리의 인내심이 한 띠 내려갔다 (B → C)");
-
-    ENGINE.survive(weak, settlement);
-    assertThat(weak.stats.get("patience")).as("폭락장을 버티면 되찾는다").isEqualTo(50);
-    assertThat(weak.dropped).isEmpty();
-
-    CompanyState.Employee ace = new CompanyState.Employee();
-    ace.name = "박주임";
-    ace.stats.putAll(stats(95, 95, 95, 95));
-    ace.stats.put("luck", 95);
-    assertThat(CompanyEngine.employeeGrade(ace)).isEqualTo("SSS");
-    ENGINE.survive(ace, settlement);
-    assertThat(CompanyEngine.employeeGrade(ace)).as("X까지 경험 1").isEqualTo("X");
-    ENGINE.survive(ace, settlement);
-    assertThat(CompanyEngine.employeeGrade(ace)).as("XX까지 경험 2").isEqualTo("X");
-    ENGINE.survive(ace, settlement);
-    assertThat(CompanyEngine.employeeGrade(ace)).isEqualTo("XX");
-    assertThat(settlement.lines.getLast()).contains("박주임이 폭락장을 버텨 등급이 올랐다 (X → XX)");
-
-    result.flips.clear();
-    ENGINE.drop(ace, result, settlement);
-    assertThat(CompanyEngine.employeeGrade(ace)).as("X 이상은 종합 등급이 내려간다").isEqualTo("X");
-    assertThat(ace.stats.get("insight")).isEqualTo(95);
-  }
-
-  /** 결산에서 판돈의 30% 이상을 잃은 직원만 등급이 내려간다. */
-  @Test
-  void 결산에서_크게_잃은_직원의_등급이_내려간다() {
-    int dropped = 0;
-    for (int seed = 0; seed < 300; seed++) {
-      // F 띠(0~19)는 더 내려갈 등급이 없으니(252번) D 띠로 본다.
-      CompanyState company = open(seed, stats(30, 30, 30, 30), 1_000_000_000L);
-      ENGINE.place(company, Map.of(1, "bio"));
-      CompanyState.Settlement s = settleYear(company, new HashSeededRandom(seed));
-      CompanyState.Result r = s.results.getFirst();
-      boolean big = r.pnl * 100 <= -r.stake * PROPERTIES.experience().dropLossPercent();
-      assertThat(!company.employees.getFirst().dropped.isEmpty()).isEqualTo(big);
-      if (big) {
-        dropped++;
+  void 직원_등급은_결산으로_오르지도_떨어지지도_않는다() {
+    List<Map<String, Integer>> kinds =
+        List.of(stats(10, 10, 10, 10), stats(30, 30, 30, 30), stats(55, 55, 55, 55), all(95));
+    int big = 0;
+    for (int seed = 0; seed < 40; seed++) {
+      Map<String, Integer> start = new HashMap<>(kinds.get(seed % kinds.size()));
+      CompanyState company = open(seed, start, 1_000_000_000L);
+      CompanyState.Employee e = company.employees.getFirst();
+      e.rank = seed % 3 == 0 && CompanyEngine.overallGrade(e.stats).equals("SSS") ? 2 : 0;
+      int rank = e.rank;
+      Map<String, Integer> before = new HashMap<>(e.stats);
+      ENGINE.place(company, Map.of(e.id, "bio"));
+      for (int year = 0; year < 8; year++) {
+        CompanyState.Settlement s = settleYear(company, new HashSeededRandom(seed * 31L + year));
+        for (CompanyState.Result r : s.results) {
+          big += r.stake > 0 && r.pnl * 100 <= -r.stake * 30 ? 1 : 0;
+        }
+        assertThat(s.lines)
+            .as("등급이 바뀌었다는 소식이 없다")
+            .noneMatch(
+                line ->
+                    line.contains("일하며 자랐다")
+                        || line.contains("올라섰다! 종합")
+                        || line.contains("등급이 내려갔다")
+                        || line.contains("한 띠 내려갔다")
+                        || line.contains("되찾았다 (")
+                        || line.contains("실전 경험"));
       }
+      assertThat(e.stats).as("능력치 그대로").isEqualTo(before);
+      assertThat(e.rank).as("SSS 위 단계 그대로").isEqualTo(rank);
     }
-    assertThat(dropped).as("능력치가 낮으면 크게 잃는 해가 있다").isPositive();
+    assertThat(big).as("크게 잃은 해가 있어도 그대로다").isPositive();
   }
 
   /** X 이상 효과 (2.4절): 확신·역발상·리더는 결산에서, 경보·선견은 연초 회의에서, 사수는 공채 시장에서 보인다. */
@@ -299,39 +279,31 @@ class CompanyEngineTest {
     CompanyState company = open(1, top, 100_000_000);
     CompanyState.Employee god = company.employees.getFirst();
     god.rank = 9;
-    assertThat(ENGINE.topRank(god)).as("GOD가 맨 위").isTrue();
     assertThat(ENGINE.effectsOf(god)).endsWith("큰손", "철벽", "신의 손");
-    god.rank = 6;
-    assertThat(ENGINE.topRank(god)).as("ZZZ 위로 더 오를 수 있다").isFalse();
     assertThat(ENGINE.grade(Long.MAX_VALUE)).as("회사 등급은 ZZZ까지").isEqualTo("ZZZ");
   }
 
-  /**
-   * 등급 효과 (decisions.md 289·387번): 종합 등급이 높을수록 맞혔을 때 더 벌고, 낮을수록 잘 자란다. F 직원은 몇 해 일해야 E가 된다: 등급이 바로
-   * 높아지지 않는다.
-   */
+  /** 등급 효과 (decisions.md 289·387번): 종합 등급이 높을수록 맞혔을 때 더 번다. 등급은 뽑은 그대로라(421번) 자라는 확률은 효과 줄에 없다. */
   @Test
-  void 등급마다_더_버는_몫과_자라는_빠르기가_다르다() {
+  void 등급마다_더_버는_몫이_다르다() {
     Map<String, Integer> rookie =
         new HashMap<>(
             Map.of("insight", 10, "patience", 10, "courage", 10, "conviction", 10, "luck", 10));
     CompanyState probe = open(1, rookie, 100_000_000);
     CompanyState.Employee f = probe.employees.getFirst();
     assertThat(ENGINE.perkGainPercent(f)).isEqualTo(10);
-    assertThat(ENGINE.perkGrowthPercent(f)).isEqualTo(60);
     assertThat(ENGINE.perkLine(f.stats, 0))
         .as("F는 손 뒤집힘 보정도 이름 붙은 효과도 없다")
-        .isEqualTo("새내기 · 맞히면 1.1배 번다(+10%) · 한 해 일하면 60% 확률로 자란다");
+        .isEqualTo("새내기 · 맞히면 1.1배 번다(+10%)");
     assertThat(ENGINE.perkLine(all(85), 0))
-        .isEqualTo(
-            "스타 · 맞히면 13.8배 번다(+1,280%) · 손 뒤집힘 −50% · 방패: 한 분기에 잃으면 손실의 3할을 막는다 · 한 해 일하면"
-                + " 15% 확률로 자란다");
+        .isEqualTo("스타 · 맞히면 13.8배 번다(+1,280%) · 손 뒤집힘 −50% · 방패: 한 분기에 잃으면 손실의 3할을 막는다");
     Map<String, Integer> legend = stats(95, 95, 95, 95);
     legend = new HashMap<>(legend);
     legend.put("luck", 95);
     assertThat(ENGINE.perkLine(legend, 0))
         .startsWith("레전드 · 맞히면 26.6배 번다(+2,560%) · 손 뒤집힘 −60% · 전설의 촉")
-        .endsWith("실전 경험으로 오른다");
+        .doesNotContain("실전 경험")
+        .doesNotContain("자란다");
     assertThat(ENGINE.perkLine(legend, 9)).startsWith("GOD · 맞히면 13,108.2배 번다(+1,310,720%)");
     assertThat(ENGINE.drawnPerk("D")).isEqualTo("맞히면 1.4배");
     assertThat(ENGINE.drawnPerk("SS")).isEqualTo("맞히면 13.8배 · 방패");
@@ -339,25 +311,6 @@ class CompanyEngineTest {
     assertThat(averageWithRank(stats(55, 55, 55, 55), 0, null))
         .as("같은 능력치라도 등급이 같으니 같다: 효과는 등급을 따라간다")
         .isEqualTo(averageWithRank(stats(55, 55, 55, 55), 0, null));
-
-    int trials = 200;
-    int[] years = new int[trials];
-    int grownLines = 0;
-    for (int seed = 0; seed < trials; seed++) {
-      CompanyState company = open(seed, rookie, 100_000_000L);
-      CompanyState.Employee e = company.employees.getFirst();
-      ENGINE.place(company, Map.of(e.id, "day"));
-      int year = 0;
-      while (year < 40 && CompanyEngine.overallGrade(e.stats).equals("F")) {
-        CompanyState.Settlement s = settleYear(company, new HashSeededRandom(seed));
-        grownLines += s.lines.stream().anyMatch(l -> l.contains("자랐다")) ? 1 : 0;
-        year++;
-      }
-      years[seed] = year;
-    }
-    java.util.Arrays.sort(years);
-    assertThat(years[trials / 2]).as("F 직원이 E가 되기까지 해 수의 중앙값").isBetween(6, 12);
-    assertThat(grownLines).as("자란 해는 소식 줄에 남는다").isPositive();
   }
 
   /**
@@ -391,7 +344,6 @@ class CompanyEngineTest {
             p ->
                 new CompanyProperties.Perks(
                     p.gainPercent(),
-                    p.growthPercent(),
                     Map.of(),
                     p.readBonus(),
                     p.stopLossPercent(),
@@ -415,7 +367,6 @@ class CompanyEngineTest {
             p ->
                 new CompanyProperties.Perks(
                     p.gainPercent(),
-                    p.growthPercent(),
                     p.flipPercent(),
                     p.readBonus(),
                     100,
@@ -433,7 +384,6 @@ class CompanyEngineTest {
             p ->
                 new CompanyProperties.Perks(
                     p.gainPercent(),
-                    p.growthPercent(),
                     p.flipPercent(),
                     p.readBonus(),
                     p.stopLossPercent(),
@@ -453,7 +403,6 @@ class CompanyEngineTest {
             p ->
                 new CompanyProperties.Perks(
                     p.gainPercent(),
-                    p.growthPercent(),
                     p.flipPercent(),
                     p.readBonus(),
                     p.stopLossPercent(),
@@ -995,53 +944,6 @@ class CompanyEngineTest {
     }
   }
 
-  /**
-   * 하락은 글자가 바뀐다 (#315, decisions.md 252번): SSS 100이 90이 되어 "SSS → SSS"가 뜨던 것을 띠 경계 아래까지 내린다. 되찾을 때는
-   * 내린 만큼만 돌려주고, 바닥 띠(F)에서는 더 내리지 않는다. 같은 횟수면 줏대 → 인내심 → 용기 순으로 탓한다.
-   */
-  @Test
-  void 하락은_한_등급_아래로_내리고_되찾을_때는_내린_만큼만_돌려준다() {
-    CompanyState.Employee e = new CompanyState.Employee();
-    e.name = "최사원";
-    e.desk = "day";
-    e.stats.putAll(stats(50, 50, 100, 50));
-    CompanyState.Settlement settlement = new CompanyState.Settlement();
-    CompanyState.Result result = new CompanyState.Result();
-    result.flips.put("courage", 2);
-    ENGINE.drop(e, result, settlement);
-    assertThat(e.stats.get("courage")).as("SSS 100 → SS 띠").isEqualTo(89);
-    assertThat(settlement.lines.getLast()).contains("(SSS → SS)");
-    ENGINE.survive(e, settlement);
-    assertThat(e.stats.get("courage")).as("내린 만큼(11점)만 되찾는다").isEqualTo(100);
-
-    e.stats.put("patience", 25);
-    result.flips.clear();
-    result.flips.put("patience", 1);
-    ENGINE.drop(e, result, settlement);
-    assertThat(e.stats.get("patience")).as("E 25 → F 15").isEqualTo(15);
-    ENGINE.survive(e, settlement);
-    assertThat(e.stats.get("patience")).as("되찾아도 원래 점수를 넘지 않는다").isEqualTo(25);
-
-    e.stats.put("patience", 5);
-    int lines = settlement.lines.size();
-    ENGINE.drop(e, result, settlement);
-    assertThat(e.stats.get("patience")).as("F 띠에서는 더 내리지 않는다").isEqualTo(5);
-    assertThat(e.dropped).isEmpty();
-    assertThat(settlement.lines).hasSize(lines);
-
-    // 같은 횟수면 말풍선과 같은 순서: 줏대가 먼저다.
-    e.stats.putAll(stats(50, 50, 50, 50));
-    result.flips.clear();
-    result.flips.put("patience", 2);
-    result.flips.put("courage", 2);
-    result.flips.put("conviction", 2);
-    ENGINE.drop(e, result, settlement);
-    assertThat(e.stats.get("conviction")).isEqualTo(40);
-    result.flips.remove("conviction");
-    ENGINE.drop(e, result, settlement);
-    assertThat(e.stats.get("patience")).as("그다음 인내심").isEqualTo(40);
-  }
-
   /** 판돈은 자본이 아니라 건물의 값이다 (411번): 자본을 전투 강화·이사에 다 써도 버는 양이 그대로다. */
   @Test
   void 판돈과_수수료는_자본이_아니라_건물의_값에서_나온다() {
@@ -1325,47 +1227,6 @@ class CompanyEngineTest {
     assertThat(ENGINE.adoptGacha(old)).as("한 번만").isFalse();
     assertThat(old.tickets).isEqualTo(PROPERTIES.gacha().startTickets());
     assertThat(ENGINE.open(new HashSeededRandom(1), 100_000_000).gachaReady).isTrue();
-  }
-
-  /** #343·#391: 자리가 원하는 능력치가 먼저 자라고, 등급 글자가 바뀔 때만 소식이 남고, 종합 등급이 오르면 올라섰다는 소식이 남는다. */
-  @Test
-  void 자리에서_자라고_등급이_바뀔_때만_소식이_남는다() {
-    Map<String, Integer> rookie =
-        new HashMap<>(
-            Map.of("insight", 10, "patience", 10, "courage", 10, "conviction", 10, "luck", 10));
-    int promoted = 0;
-    int promotions = 0;
-    for (int seed = 0; seed < 60; seed++) {
-      CompanyState company = open(seed, rookie, 100_000_000L);
-      CompanyState.Employee e = company.employees.getFirst();
-      ENGINE.place(company, Map.of(e.id, "day"));
-      for (int year = 0; year < 12; year++) {
-        CompanyState.Settlement s = settleYear(company, new HashSeededRandom(seed));
-        for (String line : s.lines) {
-          if (line.contains("자랐다")) {
-            java.util.regex.Matcher m =
-                java.util.regex.Pattern.compile("(\\S+) → (\\S+)\\.$").matcher(line);
-            assertThat(m.find()).as(line).isTrue();
-            assertThat(m.group(1)).as("등급이 그대로면 소식이 없다: " + line).isNotEqualTo(m.group(2));
-          }
-          promoted += line.contains("올라섰다") ? 1 : 0;
-        }
-        // 등급 상승 칸 (#535): 결산 전보다 종합 등급이 오른 사람만, 지금 등급으로
-        for (CompanyState.Promotion p : s.promotions) {
-          assertThat(p.employeeId).isEqualTo(e.id);
-          assertThat(p.name).isEqualTo(e.name);
-          assertThat(p.after).isEqualTo(CompanyEngine.employeeGrade(e));
-          assertThat(CompanyEngine.LADDER.indexOf(p.after))
-              .as(p.before + " → " + p.after)
-              .isGreaterThan(CompanyEngine.LADDER.indexOf(p.before));
-        }
-        promotions += s.promotions.size();
-      }
-      // 단타 데스크는 용기를 원한다: 용기가 가장 먼저 자란다
-      assertThat(e.stats.get("courage")).isGreaterThanOrEqualTo(e.stats.get("insight"));
-    }
-    assertThat(promoted).as("종합 등급이 오르면 올라섰다는 소식").isPositive();
-    assertThat(promotions).as("종합 등급이 오른 해는 등급 상승 칸에 남는다").isPositive();
   }
 
   /** #392: 최근에 쓴 문구와 이번에 이미 쓴 문구는 건너뛰고, 다 썼으면 굴린 것을 쓴다. 기억은 60개까지. */

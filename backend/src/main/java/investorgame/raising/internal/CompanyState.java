@@ -233,20 +233,11 @@ class CompanyState {
     /** 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다. 섹터 데스크 전에 들어온 직원은 없다(null). */
     String sector;
 
-    /** SSS 위의 단계: 0이면 없음, 1 X … 6 ZZZ (2.2·2.3절). 능력치가 아니라 종합 등급에만 붙는다. */
-    int rank;
-
-    /** 실전 경험. 위기를 버틸 때 쌓이고, SSS에서 다음 단계로 오르면 0이 된다 (2.3절). */
-    int experience;
-
-    /** 큰 손실로 내려간 능력치. 위기를 버티면 맨 뒤의 것부터 되찾는다 (6.4절). */
-    List<String> dropped = new ArrayList<>();
-
     /**
-     * dropped와 같은 순서로, 그때 내려간 점수 (decisions.md 252번). 되찾을 때 이만큼만 돌려준다. 이 칸을 더하기 전에 내려간 것은 없다(한 띠로
-     * 본다).
+     * SSS 위의 단계: 0이면 없음, 1 X … 6 ZZZ (2.2·2.3절). 능력치가 아니라 종합 등급에만 붙는다. 뽑을 때 정해지고 바뀌지 않는다(421번). 그
+     * 전에 쌓던 실전 경험·내려간 능력치 칸은 지웠다(저장된 회사의 그 칸은 읽을 때 버린다).
      */
-    List<Integer> droppedBy = new ArrayList<>();
+    int rank;
 
     /** 같은 자리에서 결산을 맞은 해 수 (decisions.md 262번). 자리가 바뀌면 1부터 다시 센다. */
     int deskYears;
@@ -648,19 +639,6 @@ class CompanyState {
 
     List<Result> results = new ArrayList<>();
     List<String> lines = new ArrayList<>();
-
-    /** 그해 종합 등급이 오른 직원 (#535). 이 칸을 더하기 전의 결산이면 비어 있다. */
-    List<Promotion> promotions = new ArrayList<>();
-  }
-
-  /** 그해 종합 등급이 오른 직원 한 명 (#535): 연말 결산서의 등급 상승 칸. before·after는 결산 전후의 종합 등급. */
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
-  static class Promotion {
-    int employeeId;
-    String name;
-    String before;
-    String after;
   }
 
   @JsonIgnoreProperties(ignoreUnknown = true)

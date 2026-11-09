@@ -494,15 +494,11 @@ export interface components {
             employees: {
                 id: number;
                 name: string;
-                /** @description SSS면 실전 경험으로 X~ZZZ, 그 위 XS·XSS·GOD까지 오른다 (2.3절, decisions.md 289번) */
+                /** @description F~SSS, 그 위 X~ZZZ·XS·XSS·GOD. 뽑은 그대로 가고 오르거나 떨어지지 않는다 (2.3절, decisions.md 421번) */
                 overallGrade: components["schemas"]["Grade"];
-                /** @description 실전 경험. 폭락장을 손실 없이 버틸 때 쌓인다 */
-                experience: number;
-                /** @description 다음 단계까지 드는 실전 경험. SSS가 아니면 null */
-                experienceNeeded?: number | null;
                 /** @description 등급 효과 이름. 쌓인다. 능력치로 매긴 종합 등급까지의 A 손절·S 끌어주기·SS 방패·SSS 전설의 촉(decisions.md 387번) 위에 SSS 위 단계만큼 확신·경보·역발상·리더·사수·선견·큰손·철벽·신의 손 (2.4절) */
                 effects: string[];
-                /** @description 등급 효과 한 줄: 이름·맞히면 버는 배수(더 버는 몫, 등급마다 두 배)·손 뒤집힘 보정·그 등급의 이름 붙은 효과·자랄 확률 (decisions.md 289·387번) */
+                /** @description 등급 효과 한 줄: 이름·맞히면 버는 배수(더 버는 몫, 등급마다 두 배)·손 뒤집힘 보정·그 등급의 이름 붙은 효과 (decisions.md 289·387번) */
                 perk: string;
                 grades: {
                     [key: string]: components["schemas"]["Grade"];
@@ -909,13 +905,6 @@ export interface components {
                 lines: string[];
                 /** @description 팀장들의 한 해 보고 (decisions.md 269번) */
                 reports: components["schemas"]["Report"][];
-                /** @description 그해 종합 등급이 오른 직원 (decisions.md 397번). 연말 결산서의 등급 상승 칸. 이 칸을 더하기 전의 결산이면 비어 있다 */
-                promotions: {
-                    employeeId: number;
-                    name: string;
-                    before: components["schemas"]["Grade"];
-                    after: components["schemas"]["Grade"];
-                }[];
             } | null;
             /** @description 업계 순위 (#351). 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다. 한 해도 마치지 않았으면 null */
             industry?: {

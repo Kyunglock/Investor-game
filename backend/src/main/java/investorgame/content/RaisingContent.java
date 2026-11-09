@@ -66,7 +66,6 @@ public record RaisingContent(
       List<Era> eras,
       Sale sale,
       Map<String, String> statNames,
-      GradeLines gradeLines,
       Effects effects,
       Perks perks,
       Market market,
@@ -203,8 +202,8 @@ public record RaisingContent(
       String rested) {}
 
   /**
-   * 회사 연표와 업적 (decisions.md 263번). events: 연표 한 줄(open {number} · rise {name}·{grade} · left {name}
-   * · best {ratio} · worst {percent} · overtake {name}). achievements: 업적 코드·이름·설명.
+   * 회사 연표와 업적 (decisions.md 263번). events: 연표 한 줄(open {number} · left {name} · best {ratio} ·
+   * worst {percent} · overtake {name}). achievements: 업적 코드·이름·설명.
    */
   public record History(Map<String, String> events, List<Achievement> achievements) {}
 
@@ -250,34 +249,13 @@ public record RaisingContent(
 
   /**
    * 등급 효과 (decisions.md 289·387번). 효과 한 줄은 " · "로 잇는다: 이름 · gain({times}배·{gain}%) · steady(손 뒤집힘
-   * 줄어든 {percent}%, 줄지 않으면 뺀다) · named(그 등급 구간의 이름 붙은 효과 {name}·{description}) · growth({growth}%,
-   * SSS 위는 top). drawn: 뽑기 카드의 짧은 효과({times}). grown: 한 해 일하며 자란 소식
-   * 줄({name}·{stat}·{before}·{after}).
+   * 줄어든 {percent}%, 줄지 않으면 뺀다) · named(그 등급 구간의 이름 붙은 효과 {name}·{description}). drawn: 뽑기 카드의 짧은
+   * 효과({times}). 등급은 뽑은 그대로라 자라는 확률·승진 소식은 없다(421번).
    *
    * @param names 종합 등급(F~SSS)마다 이름
    */
   public record Perks(
-      Map<String, String> names,
-      String gain,
-      String steady,
-      String growth,
-      String top,
-      String named,
-      String drawn,
-      String grown,
-      String promoted) {}
-
-  /**
-   * 직원 등급이 바뀌는 결산 소식 (6.4·2.3절). {name}·{before}·{after}·{stat} 자리표시를 쓴다.
-   *
-   * @param drop X 이상 직원의 종합 등급이 내려갔다
-   * @param statDrop 원인이 된 능력치가 한 띠 내려갔다
-   * @param rise 실전 경험으로 종합 등급이 X 이상으로 올랐다
-   * @param recover 위기를 버텨 내려갔던 능력치를 되찾았다
-   * @param experience 위기를 버텨 실전 경험이 쌓였다(아직 오르지는 않음)
-   */
-  public record GradeLines(
-      String drop, String statDrop, String rise, String recover, String experience) {}
+      Map<String, String> names, String gain, String steady, String named, String drawn) {}
 
   /** 시대 (9.4절). 한 해 시장 갈래의 가중치와 자리별 손익 보너스(맞혔을 때 더하는 만분율)가 다르다. */
   public record Era(

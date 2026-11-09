@@ -206,35 +206,6 @@
   border: 1px solid #ebd8a7;
   border-radius: 8px;
 }
-/* 등급이 오른 직원 (397번): 이름과 옛 등급 → 새 등급 방패. */
-.year-promotions ul {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 7px;
-}
-.year-promotions li {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 7px 10px;
-  border: 1px solid #dfe5f2;
-  border-radius: 10px;
-  background: #f5f8fd;
-  font-size: 12px;
-}
-.year-promotions li b {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-.year-promotion-grades {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  color: #8a93b4;
-  font-size: 11px;
-  white-space: nowrap;
-}
 .year-signoff {
   text-align: center;
   font-size: 12px;

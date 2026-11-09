@@ -317,9 +317,7 @@ class JsonContentCatalog implements ContentCatalog {
     require(company != null && !company.names().isEmpty(), "회사 문구가 없다");
     require(company.desks().stream().anyMatch(RaisingContent.Desk::trades), "돈을 굴리는 자리가 없다");
     require(!company.eras().isEmpty() && company.sale() != null, "시대·매각 문구가 없다");
-    require(
-        company.gradeLines() != null && company.statNames().keySet().containsAll(StatCodes.ALL),
-        "직원 등급 소식 문구가 없다");
+    require(company.statNames().keySet().containsAll(StatCodes.ALL), "능력치 이름이 없다");
     require(
         company.effects() != null
             && company.effects().list().stream()
@@ -339,12 +337,8 @@ class JsonContentCatalog implements ContentCatalog {
                 .containsAll(List.of("F", "E", "D", "C", "B", "A", "S", "SS", "SSS"))
             && company.perks().gain() != null
             && company.perks().steady() != null
-            && company.perks().growth() != null
-            && company.perks().top() != null
             && company.perks().named() != null
-            && company.perks().drawn() != null
-            && company.perks().grown() != null
-            && company.perks().promoted() != null,
+            && company.perks().drawn() != null,
         "등급 효과 문구가 없다");
     require(
         company.construction() != null
@@ -419,7 +413,7 @@ class JsonContentCatalog implements ContentCatalog {
                 .history()
                 .events()
                 .keySet()
-                .containsAll(List.of("open", "rise", "left", "best", "worst"))
+                .containsAll(List.of("open", "left", "best", "worst"))
             && !company.history().achievements().isEmpty(),
         "회사 연표·업적 문구가 없다");
     require(

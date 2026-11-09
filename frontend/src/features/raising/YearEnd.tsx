@@ -405,27 +405,6 @@ export function YearEndSheet({ company, onClose }: { company: Company; onClose: 
               <TeamReports reports={s.reports} employees={company.employees} />
             </div>
           )}
-          {s.promotions.length > 0 && (
-            <section className="year-promotions" aria-label="등급 상승" data-testid="promotions">
-              {section('등급이 오른 직원')}
-              <ul>
-                {s.promotions.map((p) => (
-                  <li key={p.employeeId} data-testid="promotion" data-grade={p.after}>
-                    <b>{p.name}</b>
-                    <span
-                      className="year-promotion-grades"
-                      role="img"
-                      aria-label={`${p.before}에서 ${p.after}로`}
-                    >
-                      <GradeBadge grade={p.before} size="inline" />
-                      <span aria-hidden="true">→</span>
-                      <GradeBadge grade={p.after} size="md" />
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
           {s.achieved.length > 0 && (
             <section
               className="year-achievements"

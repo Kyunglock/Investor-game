@@ -133,8 +133,6 @@ const employee = (
   id,
   name,
   overallGrade,
-  experience: 0,
-  experienceNeeded: null,
   effects: [],
   perk: '주니어 · 맞히면 1.4배 번다(+40%) · 손 뒤집힘 −10% · 한 해 일하면 40% 확률로 자란다',
   grades,
@@ -372,6 +370,5 @@ export const company = {
     ],
     lines: ['김대리가 반도체 데스크에서 크게 벌었다.', '박과장이 폭락장에 손이 뒤집혔다.'],
     reports: [],
-    promotions: [{ employeeId: 1, name: '김대리', before: 'C', after: 'B' }],
   },
 }
