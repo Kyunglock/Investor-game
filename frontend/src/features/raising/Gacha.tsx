@@ -7,16 +7,16 @@ import { EMPLOYEE_LADDER } from './grades'
 import { titleOf } from './office'
 import { useRaisingStore } from './store'
 
-/** 카드가 하나씩 뒤집히는 간격(ms). 특급 앞에서는 한 번 더 뜸을 들인다. */
-const FLIP_MS = 420
-const STAR_PAUSE_MS = 900
+/** 카드가 하나씩 뒤집히는 간격(ms). 등급과 상관없이 모두 같다(decisions.md 420번): 특급도 따로 뜸을 들이지 않는다. 첫 장은 창이 뜬 뒤 FIRST_MS. */
+const FLIP_MS = 250
+const FIRST_MS = 300
 
 const reducedMotion = () =>
   typeof window !== 'undefined' &&
   (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
 
 /**
- * 뽑기 결과 (decisions.md 312번): 뒤집힌 카드가 하나씩 열린다. 특급은 뒷면이 금빛으로 떨다가 늦게 열리고, 도감에 처음 오른 등급에는 NEW가 붙는다. 카드를
+ * 뽑기 결과 (decisions.md 312번): 뒤집힌 카드가 하나씩 열린다. 특급은 뒷면이 금빛으로 떨지만 다른 카드와 같은 빠르기로 열리고(420번), 도감에 처음 오른 등급에는 NEW가 붙는다. 카드를
  * 누르면 바로 열리고 "모두 열기"로 한꺼번에 연다. 다 열리면 확인. onFlip은 카드가 열릴 때마다 부른다(앱이 소리·진동·터짐을 낸다).
  */
 export function GachaReveal({
@@ -31,12 +31,12 @@ export function GachaReveal({
   const [open, setOpen] = useState<number>(() => (reducedMotion() ? drawn.length : 0))
   const cards = useRef<(HTMLButtonElement | null)[]>([])
   const flipped = useRef(new Set<number>())
-  // 하나씩 연다. 다음 카드가 특급이면 한 번 더 뜸을 들인다.
+  // 하나씩 같은 간격으로 연다.
   useEffect(() => {
     if (open >= drawn.length) {
       return
     }
-    const wait = open === 0 ? 500 : drawn[open].star ? STAR_PAUSE_MS : FLIP_MS
+    const wait = open === 0 ? FIRST_MS : FLIP_MS
     const id = setTimeout(() => setOpen((n) => Math.max(n, open + 1)), wait)
     return () => clearTimeout(id)
   }, [open, drawn])

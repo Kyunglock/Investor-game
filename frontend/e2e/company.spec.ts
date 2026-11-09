@@ -149,7 +149,7 @@ async function closeYearEnd(page: Page, year: number) {
   ).toBeVisible()
   await expect(sheet.getByTestId('ledger-staff')).toContainText('직원들의 1년 운용')
   await expect(sheet.getByTestId('ledger-after')).toBeVisible()
-  // 결산 전광판에 팀장 등급 방패가 붙고, 등급이 오른 직원은 옛 등급 → 새 등급으로 보인다 (397번).
+  // 결산 전광판에 팀장 등급 방패가 붙는다 (397번). 직원 등급은 바뀌지 않아 등급 상승 칸은 없다(421번).
   if ((await sheet.getByTestId('board-team').count()) > 0) {
     await expect(
       sheet
@@ -157,10 +157,7 @@ async function closeYearEnd(page: Page, year: number) {
         .first(),
     ).toBeVisible()
   }
-  const promotions = sheet.getByTestId('promotion')
-  for (let i = 0; i < (await promotions.count()); i++) {
-    await expect(promotions.nth(i).getByTestId('grade-badge')).toHaveCount(2)
-  }
+  await expect(sheet.getByTestId('promotions')).toHaveCount(0)
   await sheet.getByRole('button', { name: '확인' }).click()
   await expect(sheet).toBeHidden()
   // 건물이 바뀌었으면 건물 알림이 뜬다 (281번).

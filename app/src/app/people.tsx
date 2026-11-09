@@ -66,7 +66,6 @@ export function EmployeeDetail({ employee: e, company }: { employee: Employee; c
       <p className="text-[12px] text-muted">
         {ATTIRE_NAMES[attireOf(e.overallGrade)]}
         {e.effects.length > 0 && ` · ${e.effects.join('·')}`}
-        {e.experienceNeeded != null && ` · 실전 경험 ${e.experience}/${e.experienceNeeded}`}
         {e.sectorName && ` · 관심 섹터 ${e.sectorName}`}
         {e.deskYears > 0 && ` · 같은 자리 ${e.deskYears}년`}
         {e.settled && ' · 손에 익음'}

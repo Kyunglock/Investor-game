@@ -266,7 +266,6 @@
     "history": {
       "events": {
         "open": "{number}호 회사를 차렸다.",
-        "rise": "{name}이(가) 폭락장을 버텨 {grade}이(가) 됐다.",
         "left": "{name}이(가) 회사를 떠났다.",
         "best": "가장 크게 번 해다. 자본이 {ratio}배가 됐다.",
         "worst": "가장 아팠던 해다. 자본이 {percent}% 줄었다.",
@@ -425,13 +424,6 @@
       "conviction": "줏대",
       "luck": "운"
     },
-    "gradeLines": {
-      "drop": "{name}이(가) 이번 손실로 등급이 내려갔다 ({before} → {after}).",
-      "statDrop": "{name}의 {stat}이(가) 한 띠 내려갔다 ({before} → {after}). 크게 잃은 해였다.",
-      "rise": "{name}이(가) 폭락장을 버텨 등급이 올랐다 ({before} → {after}).",
-      "recover": "{name}이(가) 폭락장을 버텨 {stat}을(를) 되찾았다 ({before} → {after}).",
-      "experience": "{name}이(가) 폭락장을 버텼다. 실전 경험이 쌓였다."
-    },
     "effects": {
       "list": [
         {
@@ -522,12 +514,8 @@
       },
       "gain": "맞히면 {times}배 번다(+{gain}%)",
       "steady": "손 뒤집힘 −{percent}%",
-      "growth": "한 해 일하면 {growth}% 확률로 자란다",
-      "top": "실전 경험으로 오른다",
       "named": "{name}: {description}",
-      "drawn": "맞히면 {times}배",
-      "grown": "{name}이(가) 한 해 일하며 자랐다: {stat} {before} → {after}.",
-      "promoted": "{name}이(가) {title}(으)로 올라섰다! 종합 {before} → {after}."
+      "drawn": "맞히면 {times}배"
     },
     "market": {
       "drawStar": "채용 뽑기에서 특급 인재 {name}({grade})이(가) 왔다.",

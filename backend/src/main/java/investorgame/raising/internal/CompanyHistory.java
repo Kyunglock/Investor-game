@@ -77,16 +77,8 @@ class CompanyHistory {
         null);
   }
 
-  /**
-   * 결산 한 해를 적는다. ranksBefore는 결산 전 직원별 SSS 위 단계(실전 경험으로 오른 사람을 가린다). eraLine은 시대가 바뀐 해의 소식 줄(없으면
-   * null).
-   */
-  void settled(
-      CompanyState company,
-      Settlement s,
-      Map<Integer, Integer> ranksBefore,
-      String eraLine,
-      boolean basement) {
+  /** 결산 한 해를 적는다. eraLine은 시대가 바뀐 해의 소식 줄(없으면 null). 직원 등급은 결산으로 바뀌지 않는다(421번). */
+  void settled(CompanyState company, Settlement s, String eraLine, boolean basement) {
     int before = CompanyEngine.LADDER.indexOf(s.gradeBefore);
     int after = CompanyEngine.LADDER.indexOf(s.gradeAfter);
     if (after != before) {
@@ -94,18 +86,6 @@ class CompanyHistory {
     }
     if (eraLine != null) {
       add(company, s.year, "era", eraLine, null);
-    }
-    for (Employee e : company.employees) {
-      if (e.rank > ranksBefore.getOrDefault(e.id, e.rank)) {
-        add(
-            company,
-            s.year,
-            "rise",
-            Korean.fill(
-                texts().events().get("rise"),
-                Map.of("name", e.name, "grade", CompanyEngine.employeeGrade(e))),
-            null);
-      }
     }
     if (s.capitalBefore > 0) {
       int ratioBp = (int) Math.min(Integer.MAX_VALUE, operated(s) * BP / s.capitalBefore);

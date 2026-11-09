@@ -166,12 +166,10 @@ public record CompanyView(
 
   /**
    * @param desk 앉은 자리 코드. 쉬면 null
-   * @param overallGrade 종합 등급. SSS면 실전 경험으로 X~ZZZ까지 오른다 (2.3절)
-   * @param experience 실전 경험
-   * @param experienceNeeded 다음 단계까지 드는 실전 경험. SSS가 아니면 null(아직 쌓이지 않는다)
+   * @param overallGrade 종합 등급(F~SSS, 그 위 X~GOD). 뽑은 그대로 가고 오르거나 떨어지지 않는다 (421번)
    * @param effects 등급 효과 이름(A 손절·S 끌어주기·SS 방패·SSS 전설의 촉, X 이상의 확신·경보…). 쌓인다 (2.4절, decisions.md
    *     387번)
-   * @param perk 등급 효과 한 줄: 이름·맞히면 버는 배수·손 뒤집힘 보정·이름 붙은 효과·자랄 확률 (decisions.md 289·387번)
+   * @param perk 등급 효과 한 줄: 이름·맞히면 버는 배수·손 뒤집힘 보정·이름 붙은 효과·(decisions.md 289·387번)
    * @param sector 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다. 없으면 null
    * @param deskYears 지금 자리에서 결산을 맞은 해 수 (decisions.md 262번)
    * @param settled 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다
@@ -185,8 +183,6 @@ public record CompanyView(
       String overallGrade,
       Map<String, String> grades,
       String desk,
-      int experience,
-      Integer experienceNeeded,
       List<String> effects,
       String perk,
       String sector,
@@ -462,11 +458,7 @@ public record CompanyView(
       List<String> achieved,
       List<Result> results,
       List<String> lines,
-      List<Report> reports,
-      List<Promotion> promotions) {}
-
-  /** 그해 종합 등급이 오른 직원 (#535). before·after는 결산 전후의 종합 등급. */
-  public record Promotion(int employeeId, String name, String before, String after) {}
+      List<Report> reports) {}
 
   /**
    * 건물 이사 (decisions.md 296번): 다음 건물로 가는 데 드는 돈. 끝 등급이면 null.

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Company } from '../../api/client'
 import {
-  bandAt,
   chartTimeline,
   groupRemarks,
   hindsightOf,
@@ -212,14 +211,5 @@ describe('회의 수익률 (decisions.md 388번)', () => {
     expect(returnText(-5_000)).toBe('−50%')
     expect(returnText(0)).toBe('0%')
     expect(returnText(-20)).toBe('0%')
-  })
-
-  it('−50% ~ +300% 띠에서 놓이는 자리를 0~100으로', () => {
-    const range = { lossBp: -5_000, gainBp: 30_000 }
-    expect(bandAt(-5_000, range)).toBe(0)
-    expect(bandAt(30_000, range)).toBe(100)
-    expect(bandAt(0, range)).toBeCloseTo(14.29, 1)
-    expect(bandAt(-9_000, range)).toBe(0)
-    expect(bandAt(40_000, range)).toBe(100)
   })
 })

@@ -41,10 +41,6 @@ class CompanyEngine {
   /** 폭락장인데 아무도 바닥에서 던지지 않은 해의 머리줄 (255번). */
   private static final String CRASH_HELD = "crashHeld";
 
-  /** 큰 손실 때 같은 횟수로 뒤집힌 능력치를 탓하는 순서. 결산 말풍선(224번)과 같다. */
-  private static final List<String> FLIP_BLAME_ORDER =
-      List.of(StatCodes.CONVICTION, StatCodes.PATIENCE, StatCodes.COURAGE);
-
   private static final String RISK_DESK = "risk";
   private static final String RESEARCH_DESK = "research";
   private static final int BP = 10_000;
@@ -280,15 +276,14 @@ class CompanyEngine {
   }
 
   /**
-   * 등급 효과 한 줄 (289·387번): "스타 · 맞히면 13.8배 번다(+1,280%) · 손 뒤집힘 −50% · 방패: 한 분기에 잃으면 손실의 3할을 막는다 · 한
-   * 해 일하면 15% 확률로 자란다". SSS 위는 이름 대신 등급, 자랄 확률 대신 실전 경험.
+   * 등급 효과 한 줄 (289·387번): "스타 · 맞히면 13.8배 번다(+1,280%) · 손 뒤집힘 −50% · 방패: 한 분기에 잃으면 손실의 3할을 막는다".
+   * SSS 위는 이름 대신 등급. 등급은 뽑은 그대로라(421번) 자라는 확률은 없다.
    */
   String perkLine(Map<String, Integer> stats, int rank) {
     RaisingContent.Perks texts = content.raising().company().perks();
     String grade = overallGrade(stats);
     String full = gradeOf(stats, rank);
     long gain = gainPercentOf(full);
-    int growth = properties.perks().growthPercent().getOrDefault(grade, 0);
     int steady = PERCENT - perkFlipPercent(stats);
     List<String> parts = new ArrayList<>();
     parts.add(rank > 0 ? full : texts.names().get(grade));
@@ -307,10 +302,6 @@ class CompanyEngine {
                     Korean.fill(
                         texts.named(),
                         Map.of("name", effect.name(), "description", effect.description()))));
-    parts.add(
-        growth > 0
-            ? Korean.fill(texts.growth(), Map.of("growth", String.valueOf(growth)))
-            : texts.top());
     return String.join(" · ", parts);
   }
 
@@ -321,94 +312,6 @@ class CompanyEngine {
             content.raising().company().perks().drawn(),
             Map.of("times", times(gainPercentOf(grade))));
     return topEffect(grade).map(effect -> line + " · " + effect.name()).orElse(line);
-  }
-
-  /** 등급 효과의 성장 확률(%, 289번). SSS와 그 위는 0: 실전 경험으로 오른다. */
-  int perkGrowthPercent(Employee employee) {
-    return properties.perks().growthPercent().getOrDefault(overallGrade(employee.stats), 0);
-  }
-
-  /**
-   * 한 해 자리에서 일한 직원이 자란다 (decisions.md 289번): 종합 등급마다 정한 확률로 가장 낮은 능력치(운 빼고, 같으면 앞의 것)가 한 띠 오른다. 낮은
-   * 등급일수록 잘 크고 높을수록 더디다. 쉬는 사람은 자라지 않는다.
-   */
-  private void grow(CompanyState company, Settlement settlement, SeededRandom random) {
-    for (Employee e : company.employees) {
-      int chance = perkGrowthPercent(e);
-      if (e.desk == null || chance <= 0) {
-        continue;
-      }
-      if (random.forKey("grow", company.year, e.id).nextInt(PERCENT) >= chance) {
-        continue;
-      }
-      String stat = growingStat(e);
-      if (stat == null) {
-        continue;
-      }
-      String overallBefore = employeeGrade(e);
-      int before = e.stats.get(stat);
-      int after = Math.min(MAX_STAT, before + properties.experience().band());
-      e.stats.put(stat, after);
-      RaisingContent.Perks texts = content.raising().company().perks();
-      // 속 점수만 오르고 등급 글자가 그대로면 소식을 남기지 않는다 (#391: "용기 F → F")
-      if (!StatGrade.of(before).name().equals(StatGrade.of(after).name())) {
-        settlement.lines.add(
-            gradeLine(
-                texts.grown(), e, StatGrade.of(before).name(), StatGrade.of(after).name(), stat));
-      }
-      String overallAfter = employeeGrade(e);
-      if (!overallAfter.equals(overallBefore) && texts.names().containsKey(overallAfter)) {
-        settlement.lines.add(
-            Korean.fill(
-                texts.promoted(),
-                Map.of(
-                    "name",
-                    e.name,
-                    "title",
-                    texts.names().get(overallAfter),
-                    "before",
-                    overallBefore,
-                    "after",
-                    overallAfter)));
-      }
-    }
-  }
-
-  /**
-   * 그해 종합 등급이 오른 직원을 결산에 남긴다 (#535): 자라서(289번)든 실전 경험으로(2.3절)든 내려갔던 능력치를 되찾아서든, 결산 전보다 높아졌으면 연말
-   * 결산서의 등급 상승 칸에 오른다. 내려갔다 도로 오른 사람처럼 결산 전과 같으면 없다.
-   */
-  private void recordPromotions(
-      CompanyState company, Map<Integer, String> gradesBefore, Settlement settlement) {
-    for (Employee e : company.employees) {
-      String before = gradesBefore.get(e.id);
-      String after = employeeGrade(e);
-      if (before == null || LADDER.indexOf(after) <= LADDER.indexOf(before)) {
-        continue;
-      }
-      CompanyState.Promotion p = new CompanyState.Promotion();
-      p.employeeId = e.id;
-      p.name = e.name;
-      p.before = before;
-      p.after = after;
-      settlement.promotions.add(p);
-    }
-  }
-
-  /**
-   * 한 해 일하며 자라는 능력치 (#343): 앉은 자리가 원하는 능력치가 먼저 자란다(자리에서 자란다). 그게 꽉 찼거나 자리가 원하는 능력치가 없으면 운을 뺀 가장 낮은
-   * 능력치. 다 꽉 찼으면 null.
-   */
-  private String growingStat(Employee e) {
-    String wanted = desk(e.desk).statCode();
-    if (wanted != null && e.stats.get(wanted) < MAX_STAT) {
-      return wanted;
-    }
-    return StatCodes.ALL.stream()
-        .filter(code -> !StatCodes.LUCK.equals(code))
-        .filter(code -> e.stats.get(code) < MAX_STAT)
-        .min(java.util.Comparator.comparingInt((String code) -> e.stats.get(code)))
-        .orElse(null);
   }
 
   /** 결산마다 같은 자리 해 수를 센다. 막 손에 익은 해면 소식 줄을 남긴다 (262번). */
@@ -1676,10 +1579,6 @@ class CompanyEngine {
     settlement.gradeBefore = grade(company);
     settlement.quarters.addAll(company.quarters);
 
-    Map<Integer, Integer> ranksBefore = new HashMap<>();
-    company.employees.forEach(e -> ranksBefore.put(e.id, e.rank));
-    Map<Integer, String> gradesBefore = new HashMap<>();
-    company.employees.forEach(e -> gradesBefore.put(e.id, employeeGrade(e)));
     boolean crash = CRASH.equals(company.phase);
     // 직원마다 네 분기를 모은다: 손익은 합, 판돈은 굴린 분기의 평균, 뒤집힘은 횟수를 더한다.
     Map<Integer, Result> yearly = new LinkedHashMap<>();
@@ -1723,21 +1622,10 @@ class CompanyEngine {
       settlement.investTitle = String.join(" · ", titles);
       settlement.investTotal = meetings;
     }
-    CompanyProperties.Experience rules = properties.experience();
+    // 직원 등급은 뽑은 그대로 간다 (421번): 큰 손실로 떨어지지도, 폭락장을 버텨 오르지도 않는다.
     for (Result y : yearly.values()) {
       y.stake = y.stake / traded.get(y.employeeId);
       settlement.results.add(y);
-      Employee employee =
-          company.employees.stream().filter(e -> e.id == y.employeeId).findFirst().orElse(null);
-      if (employee == null) {
-        continue;
-      }
-      if (y.stake > 0 && y.pnl * PERCENT <= -y.stake * rules.dropLossPercent()) {
-        drop(employee, y, settlement);
-      } else if (crash && y.stake > 0 && y.pnl >= 0) {
-        // 판돈이 없었으면 버틴 것이 아니다 (252번).
-        survive(employee, settlement);
-      }
       y.flips.forEach(
           (stat, count) ->
               settlement.lines.add(
@@ -1752,8 +1640,6 @@ class CompanyEngine {
     }
     settlement.lines.addAll(grouped(company.yearLines));
     countTenure(company, settlement);
-    grow(company, settlement, random);
-    recordPromotions(company, gradesBefore, settlement);
     // 등급·건물·자리 수는 연말에만 바뀐다 (268번). 건물은 저절로 오르지 않고(296번: 이사 비용을 내야 한다), 지은 건물은 자본이 줄어도 그대로다(#347).
     String kept = grade(company);
     company.gradedCapital = company.capital;
@@ -1830,11 +1716,7 @@ class CompanyEngine {
       settlement.lines.add(eraLine);
     }
     history.settled(
-        company,
-        settlement,
-        ranksBefore,
-        eraLine,
-        LADDER.indexOf(settlement.gradeAfter) <= LADDER.indexOf("E"));
+        company, settlement, eraLine, LADDER.indexOf(settlement.gradeAfter) <= LADDER.indexOf("E"));
     // 채용권 (decisions.md 312번): 연말에 더, 인사팀이 있으면 더, 업적마다 더.
     CompanyProperties.Gacha gacha = properties.gacha();
     giveTickets(company, gacha.yearTickets(), "year", settlement.lines);
@@ -1851,117 +1733,7 @@ class CompanyEngine {
     startYear(company, random);
   }
 
-  /**
-   * 큰 손실을 낸 직원은 종합 등급이 한 단계 떨어진다 (6.4절). 떠나지 않는다. X 이상이면 종합 등급이, 그 아래면 그해 손을 가장 많이 뒤집은 능력치(뒤집힘이
-   * 없었으면 자리가 원하는 능력치)가 한 띠 내려간다. 종합 등급만 내리면 실제 성적이 그대로라 판정에 쓰는 능력치를 내린다. 종합 등급이 F·E면 내려가지 않는다
-   * (289번).
-   */
-  void drop(Employee employee, Result result, Settlement settlement) {
-    RaisingContent.GradeLines lines = content.raising().company().gradeLines();
-    String before = employeeGrade(employee);
-    // 새내기·견습(F·E)은 배우는 중이라 큰 손실로 깎이지 않는다 (289번): 깎이면 자라는 만큼 도로 내려가 F를 벗어나지 못했다.
-    if (employee.rank == 0 && LADDER.indexOf(before) < LADDER.indexOf(StatGrade.D.name())) {
-      return;
-    }
-    if (employee.rank > 0) {
-      employee.rank--;
-      employee.experience = 0;
-      settlement.lines.add(
-          gradeLine(lines.drop(), employee, before, employeeGrade(employee), null));
-      return;
-    }
-    // 같은 횟수면 결산 말풍선(224번)과 같은 순서로 탓한다: 줏대 → 인내심 → 용기 (252번).
-    String stat =
-        result.flips.entrySet().stream()
-            .max(
-                Map.Entry.<String, Integer>comparingByValue()
-                    .thenComparing(e -> -FLIP_BLAME_ORDER.indexOf(e.getKey())))
-            .map(Map.Entry::getKey)
-            .orElse(desk(employee.desk != null ? employee.desk : result.desk).statCode());
-    int value = employee.stats.get(stat);
-    StatGrade from = StatGrade.of(value);
-    if (from == StatGrade.F) {
-      // 이미 바닥 띠면 더 내려갈 등급이 없다: 글자가 그대로인 하락 소식을 띄우지 않는다.
-      return;
-    }
-    // 한 띠(10점)를 내리되 적어도 한 등급은 내려가게 띠 경계 아래까지 (252번). 전에는 SSS 100이 90이 되어 "SSS → SSS"가 떴다.
-    int lowered = Math.max(1, Math.min(value - properties.experience().band(), from.min() - 1));
-    employee.stats.put(stat, lowered);
-    employee.dropped.add(stat);
-    employee.droppedBy.add(value - lowered);
-    settlement.lines.add(
-        gradeLine(
-            lines.statDrop(),
-            employee,
-            StatGrade.of(value).name(),
-            StatGrade.of(lowered).name(),
-            stat));
-  }
-
-  /**
-   * 폭락장을 손실 없이 버티면 실전 경험이 쌓인다 (2.3·6.4절). 큰 손실로 내려갔던 능력치가 있으면 그것부터 되찾고, SSS에서는 경험이 쌓여 X·XX…로 오른다.
-   */
-  void survive(Employee employee, Settlement settlement) {
-    RaisingContent.GradeLines lines = content.raising().company().gradeLines();
-    if (!employee.dropped.isEmpty()) {
-      String stat = employee.dropped.removeLast();
-      // 내려간 만큼만 되찾는다 (252번). 옛 하락은 늘 새 하락보다 앞에 있으니, droppedBy가 남아 있으면 맨 뒤끼리 짝이다. 이 칸을 더하기 전에
-      // 내려간 것은 한 띠로 본다.
-      int by =
-          employee.droppedBy.isEmpty()
-              ? properties.experience().band()
-              : employee.droppedBy.removeLast();
-      int value = employee.stats.get(stat);
-      int raised = Math.min(MAX_STAT, value + by);
-      employee.stats.put(stat, raised);
-      settlement.lines.add(
-          gradeLine(
-              lines.recover(),
-              employee,
-              StatGrade.of(value).name(),
-              StatGrade.of(raised).name(),
-              stat));
-      return;
-    }
-    if (!StatGrade.SSS.name().equals(overallGrade(employee.stats))
-        || employee.rank >= LADDER.size() - 1 - LADDER.indexOf(StatGrade.SSS.name())) {
-      return;
-    }
-    String before = employeeGrade(employee);
-    employee.experience++;
-    if (employee.experience >= experienceNeeded(employee)) {
-      employee.rank++;
-      employee.experience = 0;
-      settlement.lines.add(
-          gradeLine(lines.rise(), employee, before, employeeGrade(employee), null));
-    } else {
-      settlement.lines.add(gradeLine(lines.experience(), employee, before, before, null));
-    }
-  }
-
-  /** SSS 위 단계의 맨 위(ZZZ)인가. */
-  boolean topRank(Employee employee) {
-    return employee.rank >= LADDER.size() - 1 - LADDER.indexOf(StatGrade.SSS.name());
-  }
-
-  /** 다음 단계로 오르는 데 드는 실전 경험. 단계마다 하나씩 더 든다 (2.3절). */
-  int experienceNeeded(Employee employee) {
-    return properties.experience().needBase() + employee.rank;
-  }
-
-  private String gradeLine(
-      String template, Employee employee, String before, String after, String stat) {
-    Map<String, String> values = new HashMap<>();
-    values.put("name", employee.name);
-    values.put("before", before);
-    values.put("after", after);
-    if (stat != null) {
-      values.put("stat", content.raising().company().statNames().get(stat));
-    }
-    return Korean.fill(template, values);
-  }
-
-  /** 직원의 종합 등급: 다섯 능력치 평균의 F~SSS, SSS면 실전 경험으로 오른 X~ZZZ (2.2·2.3절). */
+  /** 직원의 종합 등급: 다섯 능력치 평균의 F~SSS, SSS면 뽑을 때 정해진 X~ZZZ (2.2·2.3절, 421번). */
   static String employeeGrade(Employee employee) {
     return gradeOf(employee.stats, employee.rank);
   }

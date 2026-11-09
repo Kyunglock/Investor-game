@@ -283,11 +283,6 @@ class DefaultCompanyService implements CompanyService {
                         CompanyEngine.employeeGrade(e),
                         CompanyEngine.grades(e.stats),
                         e.desk,
-                        e.experience,
-                        // ZZZ(맨 위)면 더 오를 데가 없다: "실전 경험 0/7"을 보이지 않는다 (264번).
-                        CompanyEngine.overallGrade(e.stats).equals("SSS") && !engine.topRank(e)
-                            ? engine.experienceNeeded(e)
-                            : null,
                         engine.effectsOf(e),
                         engine.perkLine(e.stats, e.rank),
                         e.sector,
@@ -736,10 +731,7 @@ class DefaultCompanyService implements CompanyService {
                         r.employeeId, r.name, r.desk, r.stake, r.pnl, Map.copyOf(r.flips)))
             .toList(),
         List.copyOf(s.lines),
-        reportViews(s.reports),
-        s.promotions.stream()
-            .map(p -> new CompanyView.Promotion(p.employeeId, p.name, p.before, p.after))
-            .toList());
+        reportViews(s.reports));
   }
 
   /** 종목 회의 뒤 전투의 화면 값 (414번). 지켜봤거나 아직 안 정했으면 null. */
