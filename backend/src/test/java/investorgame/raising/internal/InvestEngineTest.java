@@ -736,8 +736,10 @@ class InvestEngineTest {
   void 물어_온_사람의_맺음말은_그_사람의_회의_의견을_본다() {
     // 팔자고 했는데 사장이 사서 빠졌다: 그 말을 들을 걸 그랬다
     assertThat(credit("DOWN", InvestEngine.BUY, false)).contains("들을 걸 그랬다").contains("빠졌다");
-    // 팔자고 했고 사장도 팔았고 빠졌다: 칭찬
-    assertThat(credit("DOWN", InvestEngine.SELL, false)).contains("그 말이 맞았다");
+    // 팔자고 했고 사장도 팔았고 빠졌다: 있는 그대로 적는다("그 말이 맞았다"는 뺐다)
+    assertThat(credit("DOWN", InvestEngine.SELL, false))
+        .contains("팔자고 했고")
+        .doesNotContain("그 말이 맞았다");
     // 팔자고 했는데 올랐다: 본인은 팔자고 했다
     assertThat(credit("DOWN", InvestEngine.SELL, true)).contains("본인은 팔자고");
     // 사자고 했는데 빠졌다: 지금처럼 탓한다

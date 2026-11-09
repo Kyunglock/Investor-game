@@ -15,7 +15,7 @@ import {
   stageLabel,
   stageSpec,
 } from './advance'
-import { ASSAULT_SECONDS, type AssaultSpec, assaultSpec } from './assault'
+import { type AssaultSpec, assaultSpec } from './assault'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
 import {
@@ -211,11 +211,11 @@ export function MentalWindow({
                       : '멘탈을 지켜라'
                     : 'EX 디펜스'}
               </h2>
-              {entry.kind === 'invest' && (
+              {/* 매도벽 돌파는 설명 글(어느 쪽에 걸었나·별 배율)을 뺐다 (439번). */}
+              {entry.kind === 'invest' && mode !== 'assault' && (
                 <p data-testid="invest-battle-rule" className="stage-invest-rule">
-                  {mode === 'assault'
-                    ? '맞힌 쪽에 걸었다. 매도벽을 빨리 부술수록 회의 수익이 커진다 · 별 1·2·3개 → ×1.2 · ×1.5 · ×2'
-                    : '반대로 걸었다. 버틸수록 회의 손실이 줄어든다 · 별 1·2·3개 → 손실 30% · 60% 막기 · 다 막고 판돈 10% 더'}
+                  반대로 걸었다. 버틸수록 회의 손실이 줄어든다 · 별 1·2·3개 → 손실 30% · 60% 막기 ·
+                  다 막고 판돈 10% 더
                 </p>
               )}
               {entry.kind !== 'invest' && (
@@ -223,13 +223,13 @@ export function MentalWindow({
               )}
             </header>
             <div className="stage-hero-card">
-              <span className="stage-mode" data-testid="stage-mode">
-                {mode === 'assault'
-                  ? `공격 · 매도벽 ${assault?.walls.length ?? 10}개를 부수고 올라가기 · 제한 시간 ${ASSAULT_SECONDS / 60}분`
-                  : spec?.boss
+              {mode !== 'assault' && (
+                <span className="stage-mode" data-testid="stage-mode">
+                  {spec?.boss
                     ? `디펜스 · ${DEFENSE_BOSS_SECONDS / 60}분에 보스 · 제한 시간 ${BATTLE_SECONDS / 60}분 안에 격파`
                     : `디펜스 · 제한 시간 ${BATTLE_SECONDS / 60}분 버티기`}
-              </span>
+                </span>
+              )}
               {entry.kind === 'invest' && (
                 // 회의 뒤 전투의 세기와 오른 이유 (#594): 회사가 크고 사장이 강할수록 적도 강하다.
                 <span className="stage-level" data-testid="stage-level">
@@ -238,27 +238,23 @@ export function MentalWindow({
                 </span>
               )}
               <StagePortrait weapon={heroOf(company).weapon} />
-              {mode === 'assault' ? (
-                <div className="stage-mini-wall">매도 1,200주 · 매도 800주</div>
-              ) : (
-                <div className="stage-mini-wall">
-                  <span>♡</span> 멘탈벽
-                </div>
+              {mode !== 'assault' && (
+                <>
+                  <div className="stage-mini-wall">
+                    <span>♡</span> 멘탈벽
+                  </div>
+                  <p>
+                    {spec?.boss
+                      ? '불안을 막고 패닉셀 대장을 쓰러뜨리세요'
+                      : '몰려오는 불안을 막아 멘탈벽을 지키세요'}
+                  </p>
+                  <small>
+                    {spec
+                      ? '누른 방향으로 발사 · 멘탈벽이 많이 남을수록 별이 많다'
+                      : '누른 방향으로 발사 · 적을 많이 잡을수록 무기 뽑기권이 많다'}
+                  </small>
+                </>
               )}
-              <p>
-                {mode === 'assault'
-                  ? '매도 물량을 피해 매도벽을 부수세요'
-                  : spec?.boss
-                    ? '불안을 막고 패닉셀 대장을 쓰러뜨리세요'
-                    : '몰려오는 불안을 막아 멘탈벽을 지키세요'}
-              </p>
-              <small>
-                {mode === 'assault'
-                  ? '좌우로만 움직이기 · 위로 자동 사격 · 빨리 부술수록 별이 많다'
-                  : spec
-                    ? '누른 방향으로 발사 · 멘탈벽이 많이 남을수록 별이 많다'
-                    : '누른 방향으로 발사 · 적을 많이 잡을수록 무기 뽑기권이 많다'}
-              </small>
             </div>
             <EquippedWeapon
               weapon={heroOf(company).weapon}
