@@ -1,0 +1,215 @@
+import type { OrderKind } from './enemies'
+
+/**
+ * 공격 판: 매도벽을 부수고 올라간다 (decisions.md 413번, #573). 종목 회의에서 맞혔을 때 들어가는 판이다. 길을 가로로 막는 **매도벽**(호가 칸이 줄지어
+ * 쌓인 벽, 칸마다 체력과 물량)을 쏘아 부숴야 다음 구간(다음 호가)으로 오른다. 진행은 시간이 아니라 **벽을 부수는 속도**로 정해진다: 세면 빨리 녹여 빨리
+ * 오르고, 약하면 벽 앞에 막혀 그동안 몰려오는 **매도 물량**(enemies.ts ORDERS)에 시달린다. 마지막 구간은 가장 두꺼운 대량 매도벽과 그 앞의 큰손 보스.
+ * 이 파일은 Phaser 없이 규칙과 숫자만 갖는다. 그리는 것과 움직임은 battle.ts(mode 'assault').
+ */
+
+/** 벽 앞에서 쏟아지는 매도 물량의 종류(벽 칸·보스는 빼고). */
+export type FlowKind = Exclude<OrderKind, 'cell' | 'whale'>
+
+/** 매도벽 하나. */
+export interface AssaultWall {
+  /** 칸이 쌓인 줄 수: 위 구간일수록 두껍다. 맨 아랫줄부터 맞는다. */
+  rows: number
+  /** 칸 하나의 바탕 체력: 가로 ASSAULT_COLS칸 기준이고, 좁은 화면에서 칸이 줄면 한 줄의 체력이 같게 칸 체력이 는다(cellHps). */
+  cellHp: number
+  /** 마지막 대량 매도벽: 벽 앞에 큰손 보스가 선다. */
+  boss: boolean
+  /** 벽 앞(또는 벽이 다가오는 동안)에서 매도 물량이 나오는 바탕 간격(초). 벽 앞에 오래 막힐수록 짧아진다(spawnSeconds). */
+  spawnSeconds: number
+  /** 나오는 물량의 비중. */
+  mix: Readonly<Partial<Record<FlowKind, number>>>
+}
+
+/** 다섯 구간 (level 1 기준): 뒤로 갈수록 줄이 늘고 칸이 단단하며 물량이 잦고 무겁다. 마지막은 대량 매도벽 + 큰손. */
+export const ASSAULT_WALLS: readonly AssaultWall[] = [
+  { rows: 1, cellHp: 7.5, boss: false, spawnSeconds: 1.7, mix: { order: 5, market: 3 } },
+  { rows: 1, cellHp: 10, boss: false, spawnSeconds: 1.55, mix: { order: 5, market: 3, fake: 1 } },
+  {
+    rows: 2,
+    cellHp: 9,
+    boss: false,
+    spawnSeconds: 1.4,
+    mix: { order: 4, market: 3, bulk: 1, fake: 1 },
+  },
+  {
+    rows: 2,
+    cellHp: 11,
+    boss: false,
+    spawnSeconds: 1.25,
+    mix: { order: 4, market: 4, bulk: 1.5, fake: 1 },
+  },
+  {
+    rows: 3,
+    cellHp: 12.5,
+    boss: true,
+    spawnSeconds: 1.15,
+    mix: { order: 3, market: 4, bulk: 2, fake: 1 },
+  },
+]
+
+/** 벽 한 줄의 바탕 칸 수(넓은 화면). 좁은 화면(360px 밑)은 하나 적다. */
+export const ASSAULT_COLS = 6
+
+/** level이 1 오를 때마다 붙는 배율: 벽 칸 체력·물량 체력·수·빠르기·멘탈 피해·보스 체력. */
+export const ASSAULT_STEP = {
+  wallHp: 0.45,
+  enemyHp: 0.3,
+  count: 0.15,
+  speed: 0.04,
+  dmg: 0.15,
+  bossHp: 0.45,
+}
+
+/** 큰손 보스 (365번 보스의 짜임을 그대로): 벽 앞에서 좌우로 오가며 시장가 매도를 쏟아 내고, 체력이 반 아래면 더 잦다. */
+export const ASSAULT_BOSS = {
+  name: '대량 매도 큰손',
+  hp: 70,
+  /** 졸개를 부르는 간격(초)과 한 번에 부르는 수. 체력이 반 아래면 간격이 이만큼 줄어든다. */
+  summonSeconds: 2.2,
+  summonCount: 4,
+  enragedFactor: 0.6,
+  /** 잡으면 남은 대량 매도벽 칸마다 최대 체력의 이만큼을 깎는다("큰손이 손을 뗐다"). */
+  wallBreak: 0.4,
+}
+
+/** 오르는 움직임 (#573 "올라가는 모션"): 벽이 없을 때 천천히 오르는 빠르기(px/s), 벽을 뚫을 때 치고 오르는 빠르기와 그 시간(초). */
+export const ASSAULT_MOTION = {
+  drift: 85,
+  dash: 950,
+  dashSeconds: 0.75,
+  /** 다음 벽이 놓이는 거리: 멈춘 벽 줄에서 화면 높이의 이만큼 위. */
+  gap: 0.62,
+}
+
+export interface AssaultSpec {
+  /** 난이도(1부터, 소수도 된다). */
+  level: number
+  walls: readonly AssaultWall[]
+  /** 매도 물량의 체력·빠르기·멘탈 피해·나오는 수 배율. */
+  enemyHp: number
+  enemySpeed: number
+  enemyDmg: number
+  enemyCount: number
+  bossHp: number
+  /** 가격 눈금: 시작 가격과 벽 하나를 부술 때마다 오르는 한 칸(원). */
+  startPrice: number
+  tick: number
+  /** 벽에 붙는 이름(종목 이름). 없으면 "매도벽". */
+  name: string
+}
+
+/**
+ * 공격 판 하나 (decisions.md 413번). **level**은 1부터의 난이도다(소수 가능, 1 아래는 1). 회의 쪽(부르는 곳)이 기사의 크기·"크게"(260번)·깬 최고
+ * 번호 스테이지로 정해 넘긴다. level이 1 오를 때마다 벽 칸 체력 +45%, 물량 체력 +30%, 나오는 수 +15%, 빠르기 +4%, 멘탈 피해 +15%, 보스 체력 +45%.
+ * level 1은 강화 없는 권총으로 2분 안에 겨우 깨는 판이다(scripts/stageCheck.ts의 공격 판 표).
+ * price는 시작 가격(원, 없으면 10,000), tickPercent는 벽 하나에 오르는 비율(%, 없으면 2).
+ */
+export function assaultSpec(
+  level = 1,
+  opts: { name?: string; price?: number; tickPercent?: number } = {},
+): AssaultSpec {
+  const k = Math.max(0, (Number.isFinite(level) ? level : 1) - 1)
+  const wallHp = 1 + k * ASSAULT_STEP.wallHp
+  const startPrice = Math.max(1, Math.round(opts.price ?? 10000))
+  return {
+    level: 1 + k,
+    walls: ASSAULT_WALLS.map((w) => ({ ...w, cellHp: w.cellHp * wallHp })),
+    enemyHp: 1 + k * ASSAULT_STEP.enemyHp,
+    enemySpeed: 1 + k * ASSAULT_STEP.speed,
+    enemyDmg: 1 + k * ASSAULT_STEP.dmg,
+    enemyCount: 1 + k * ASSAULT_STEP.count,
+    bossHp: ASSAULT_BOSS.hp * (1 + k * ASSAULT_STEP.bossHp),
+    startPrice,
+    tick: Math.max(1, Math.round((startPrice * (opts.tickPercent ?? 2)) / 100)),
+    name: opts.name ?? '매도벽',
+  }
+}
+
+/** 화면 폭에 맞는 한 줄의 칸 수. */
+export function wallCols(width: number): number {
+  return width < 360 ? ASSAULT_COLS - 1 : ASSAULT_COLS
+}
+
+/**
+ * 벽 한 줄 칸들의 체력: 바탕은 cellHp × (ASSAULT_COLS / cols)라 칸 수가 달라도 한 줄의 체력은 같다. 줄마다 칸 하나는 **약한 칸**(절반 남짓)이고
+ * 그만큼을 나머지 칸이 나눠 가진다: 좌우로 움직여 약한 칸을 노리면 먼저 뚫린다. random은 약한 칸 자리와 칸마다의 들쭉날쭉(±15%)에 쓴다.
+ */
+export function rowHps(cellHp: number, cols: number, random: () => number = Math.random): number[] {
+  const base = (cellHp * ASSAULT_COLS) / cols
+  const weak = Math.floor(random() * cols)
+  const raw = Array.from({ length: cols }, (_, i) => (i === weak ? 0.5 : 0.85 + random() * 0.3))
+  const sum = raw.reduce((a, b) => a + b, 0)
+  return raw.map((f) => (f / sum) * base * cols)
+}
+
+/** 칸 체력이 얼마면 약한 칸으로 보이나: 바탕 칸 체력의 이 비율 밑. */
+export const WEAK_CELL = 0.7
+
+/** 칸에 적힌 물량(주): 체력에 비례하고 100주 단위. 맞을수록 남은 체력만큼 깎여 보인다(0이 되기 전엔 적어도 100주). */
+export function cellShares(maxHp: number, hpLeft: number): number {
+  const full = Math.max(1, Math.round((maxHp * 150) / 100)) * 100
+  if (hpLeft <= 0) return 0
+  return Math.max(100, Math.ceil((full * Math.min(1, hpLeft / maxHp)) / 100) * 100)
+}
+
+/**
+ * 벽 앞에서 물량이 나오는 간격(초): 바탕 간격을 판의 수 배율로 나누고, 벽 앞에 막힌 시간(stuck초)이 길수록 더 잦다(25초마다 한 배씩, 최소 0.3초).
+ * 벽이 아직 다가오는 중이면(arrived false) 두 배 느리다.
+ */
+export function spawnSeconds(
+  wall: AssaultWall,
+  spec: AssaultSpec,
+  stuck: number,
+  arrived: boolean,
+): number {
+  const base = wall.spawnSeconds / spec.enemyCount / (1 + Math.max(0, stuck) / 25)
+  return Math.max(0.3, arrived ? base : base * 2)
+}
+
+/** 비중대로 하나 고른다. r은 0~1. */
+export function pickFlow(mix: AssaultWall['mix'], r: number): FlowKind {
+  const entries = Object.entries(mix).filter(([, w]) => (w ?? 0) > 0) as [FlowKind, number][]
+  const total = entries.reduce((a, [, w]) => a + w, 0)
+  let x = Math.min(0.999999, Math.max(0, r)) * total
+  for (const [kind, w] of entries) {
+    if (x < w) return kind
+    x -= w
+  }
+  return entries[entries.length - 1]?.[0] ?? 'order'
+}
+
+/** 시장가 매도는 떼로: 한 번에 나오는 수. */
+export function swarmSize(spec: AssaultSpec, r: number): number {
+  return Math.round((3 + Math.floor(r * 3)) * Math.min(2, spec.enemyCount))
+}
+
+/** 벽을 broken개 부순 뒤의 가격과 목표가(마지막 벽까지 다 부순 가격). */
+export function assaultPrice(spec: AssaultSpec, broken: number): number {
+  return spec.startPrice + spec.tick * Math.max(0, Math.min(spec.walls.length, broken))
+}
+export function assaultTarget(spec: AssaultSpec): number {
+  return assaultPrice(spec, spec.walls.length)
+}
+
+/** 보스가 졸개를 부르는 간격(초): 체력이 반 아래면 더 잦다. */
+export function whaleSummonSeconds(hpLeft: number, maxHp: number): number {
+  return hpLeft <= maxHp / 2
+    ? ASSAULT_BOSS.summonSeconds * ASSAULT_BOSS.enragedFactor
+    : ASSAULT_BOSS.summonSeconds
+}
+
+/**
+ * 벽을 뚫은 뒤 지난 시간(초)에 따른 오르는 빠르기(px/s): 처음엔 dash로 쭉 치고 올라 dashSeconds에 걸쳐 drift까지 줄어든다. 줄인 움직임이면 치고
+ * 오르기 없이 drift의 두 배로 고르게 오른다.
+ */
+export function climbSpeed(sinceBreak: number, reduced = false): number {
+  const { drift, dash, dashSeconds } = ASSAULT_MOTION
+  if (reduced) return drift * 2
+  if (sinceBreak >= dashSeconds) return drift
+  const t = Math.max(0, sinceBreak) / dashSeconds
+  return drift + (dash - drift) * (1 - t) ** 2
+}

@@ -187,6 +187,13 @@ describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
     expect(loadoutOf(weapon, [{ kind: 'fire', bonusPercent: 1000 }]).fireMs).toBe(60)
   })
 
+  it('체력 강화는 최대 멘탈을 늘린다 (410번)', () => {
+    const weapon = { damagePercent: 100, fireMs: 200, power: 0, bulletSpeed: 720 }
+    expect(loadoutOf(weapon).maxMental).toBe(100)
+    expect(loadoutOf(weapon, [{ kind: 'hp', bonusPercent: 25 }]).maxMental).toBe(125)
+    expect(loadoutOf(weapon, [{ kind: 'hp', bonusPercent: 300 }]).maxMental).toBe(400)
+  })
+
   it('다음 레벨까지 드는 경험치는 레벨이 오를수록 커진다', () => {
     expect(xpToNext(1)).toBeLessThan(xpToNext(2))
     expect(xpToNext(5)).toBeLessThan(xpToNext(6))

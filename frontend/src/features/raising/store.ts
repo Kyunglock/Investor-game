@@ -56,13 +56,15 @@ interface RaisingState {
   equipWeapon: (kind: WeaponKind, grade: WeaponGrade) => Promise<void>
   /** 멘탈 스테이지 한 판의 결과를 보낸다 (decisions.md 369번). 보상은 company.stages.lastResult. */
   reportStage: (stage: number, cleared: boolean, stars: number) => Promise<void>
+  /** 종목 회의 뒤 전투의 결과 (decisions.md 414번, #573). 별에 따라 회의 손익이 바뀐다. */
+  reportInvestBattle: (mode: 'DEFENSE' | 'ASSAULT', stars: number) => Promise<void>
   /** EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번). */
   reportEx: (kills: number) => Promise<void>
   /**
    * 자본으로 전투 강화를 levels단계까지 산다 (decisions.md 367·394번). 꾹 눌러 연속으로 올리는 화면이 줄을 세워 부르므로 busy를 켜지 않는다. 받은
    * 회사(실패면 null)를 돌려준다.
    */
-  buyBattleUpgrade: (kind: 'damage' | 'fire', levels?: number) => Promise<Company | null>
+  buyBattleUpgrade: (kind: 'damage' | 'fire' | 'hp', levels?: number) => Promise<Company | null>
   /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). 결과는 company.armory.lastDraw. */
   drawWeapon: () => Promise<void>
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */
@@ -208,6 +210,9 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       change(api.POST('/api/company/stage', { body: { stage, cleared, stars } })),
 
     reportEx: (kills) => change(api.POST('/api/company/ex', { body: { kills } })),
+
+    reportInvestBattle: (mode, stars) =>
+      change(api.POST('/api/company/invest/battle', { body: { mode, stars } })),
 
     buyBattleUpgrade: async (kind, levels = 1) => {
       const res = await safely(api.POST('/api/company/battle-upgrade', { body: { kind, levels } }))

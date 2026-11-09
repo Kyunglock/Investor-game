@@ -15,6 +15,7 @@ import {
   stageLabel,
   stageSpec,
 } from './advance'
+import { type AssaultSpec, assaultSpec } from './assault'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
 import {
@@ -64,10 +65,23 @@ export function MentalWindow({
   const apiError = useRaisingStore((s) => s.error)
   const modal = useRef<HTMLDivElement>(null)
   // 디펜스가 주 콘텐츠다 (509번): 번호 스테이지도 EX도 멘탈벽을 지키는 디펜스다. 전진 모드(364번)는 지금 쓰지 않는다.
-  const mode: BattleMode = 'defense'
+  // 종목 회의 뒤 전투(414번): 맞힌 쪽에 걸었으면 공격 판(매도벽 돌파, 413번), 틀렸으면 디펜스.
+  const assaultLevel = entry.kind === 'invest' && entry.mode === 'ASSAULT' ? entry.level : null
+  const mode: BattleMode = assaultLevel !== null ? 'assault' : 'defense'
+  const stockName = company.invest?.stockName
+  const assault = useMemo(
+    () => (assaultLevel === null ? undefined : assaultSpec(assaultLevel, { name: stockName })),
+    [assaultLevel, stockName],
+  )
   const perChapter = company.stages?.perChapter
   // 한 번만 만든다: 새 객체면 전투(Battle)의 effect가 다시 돌아 판이 처음부터 다시 시작됐다.
-  const stageNumber = entry.kind === 'stage' ? entry.stage : null
+  // 종목 회의 뒤 디펜스 (414번)는 세기(level)만큼의 번호 스테이지 판을 빌려 쓴다. 보스 판(챕터 끝)은 피한다.
+  const stageNumber =
+    entry.kind === 'stage'
+      ? entry.stage
+      : entry.kind === 'invest'
+        ? investStage(entry.level, perChapter)
+        : null
   const spec: StageSpec | undefined = useMemo(
     () => (stageNumber === null ? undefined : stageSpec(stageNumber, perChapter)),
     [stageNumber, perChapter],
@@ -133,6 +147,8 @@ export function MentalWindow({
     const store = useRaisingStore.getState()
     if (entry.kind === 'stage') {
       await store.reportStage(entry.stage, outcome.win, outcome.stars)
+    } else if (entry.kind === 'invest') {
+      await store.reportInvestBattle(entry.mode, outcome.stars)
     } else {
       await store.reportEx(outcome.kills)
     }
@@ -147,7 +163,8 @@ export function MentalWindow({
   useEffect(() => {
     if (outcome) void save()
   }, [outcome])
-  const reward = saved ? (company.stages?.lastResult ?? null) : null
+  const reward = saved && entry.kind !== 'invest' ? (company.stages?.lastResult ?? null) : null
+  const investBattle = saved && entry.kind === 'invest' ? company.invest?.outcome?.battle : null
 
   return createPortal(
     <div
@@ -162,7 +179,8 @@ export function MentalWindow({
         {hero && !outcome && (
           <Battle
             mode={mode}
-            stage={spec}
+            stage={mode === 'assault' ? undefined : spec}
+            assault={assault}
             genre={genre}
             hero={hero}
             cards={picked}
@@ -176,34 +194,61 @@ export function MentalWindow({
           <div className="stage-lobby" data-testid="mental-lobby">
             <header className="stage-heading">
               <span className="stage-eyebrow">
-                {entry.kind === 'stage' ? '멘탈 스테이지' : 'EX 도전 · 분기에 한 번'}
+                {entry.kind === 'stage'
+                  ? '멘탈 스테이지'
+                  : entry.kind === 'invest'
+                    ? `종목 회의 뒤 전투 · 세기 ${entry.level}`
+                    : 'EX 도전 · 분기에 한 번'}
               </span>
               <h2>
                 {entry.kind === 'stage'
                   ? `스테이지 ${stageLabel(entry.stage, perChapter)}`
-                  : 'EX 디펜스'}
+                  : entry.kind === 'invest'
+                    ? mode === 'assault'
+                      ? '매도벽을 돌파하라'
+                      : '멘탈을 지켜라'
+                    : 'EX 디펜스'}
               </h2>
-              <p>{company.mental?.headline ?? '흔들리지 않는 마음으로'}</p>
+              {entry.kind === 'invest' && (
+                <p data-testid="invest-battle-rule" className="stage-invest-rule">
+                  {mode === 'assault'
+                    ? '맞힌 쪽에 걸었다. 매도벽을 빨리 부술수록 회의 수익이 커진다 · 별 1·2·3개 → ×1.2 · ×1.5 · ×2'
+                    : '반대로 걸었다. 버틸수록 회의 손실이 줄어든다 · 별 1·2·3개 → 손실 30% · 60% 막기 · 다 막고 판돈 10% 더'}
+                </p>
+              )}
+              {entry.kind !== 'invest' && (
+                <p>{company.mental?.headline ?? '흔들리지 않는 마음으로'}</p>
+              )}
             </header>
             <div className="stage-hero-card">
               <span className="stage-mode" data-testid="stage-mode">
-                {spec?.boss
-                  ? `디펜스 · ${DEFENSE_BOSS_SECONDS / 60}분에 보스 · 제한 시간 ${BATTLE_SECONDS / 60}분 안에 격파`
-                  : `디펜스 · 제한 시간 ${BATTLE_SECONDS / 60}분 버티기`}
+                {mode === 'assault'
+                  ? `공격 · 매도벽 ${assault?.walls.length ?? 5}개를 부수고 올라가기 · 제한 시간 ${BATTLE_SECONDS / 60}분`
+                  : spec?.boss
+                    ? `디펜스 · ${DEFENSE_BOSS_SECONDS / 60}분에 보스 · 제한 시간 ${BATTLE_SECONDS / 60}분 안에 격파`
+                    : `디펜스 · 제한 시간 ${BATTLE_SECONDS / 60}분 버티기`}
               </span>
               <StagePortrait weapon={heroOf(company).weapon} />
-              <div className="stage-mini-wall">
-                <span>♡</span> 멘탈벽
-              </div>
+              {mode === 'assault' ? (
+                <div className="stage-mini-wall">매도 1,200주 · 매도 800주</div>
+              ) : (
+                <div className="stage-mini-wall">
+                  <span>♡</span> 멘탈벽
+                </div>
+              )}
               <p>
-                {spec?.boss
-                  ? '불안을 막고 패닉셀 대장을 쓰러뜨리세요'
-                  : '몰려오는 불안을 막아 멘탈벽을 지키세요'}
+                {mode === 'assault'
+                  ? '매도 물량을 피해 매도벽을 부수세요'
+                  : spec?.boss
+                    ? '불안을 막고 패닉셀 대장을 쓰러뜨리세요'
+                    : '몰려오는 불안을 막아 멘탈벽을 지키세요'}
               </p>
               <small>
-                {spec
-                  ? '누른 방향으로 발사 · 멘탈벽이 많이 남을수록 별이 많다'
-                  : '누른 방향으로 발사 · 적을 많이 잡을수록 무기 뽑기권이 많다'}
+                {mode === 'assault'
+                  ? '좌우로만 움직이기 · 위로 자동 사격 · 빨리 부술수록 별이 많다'
+                  : spec
+                    ? '누른 방향으로 발사 · 멘탈벽이 많이 남을수록 별이 많다'
+                    : '누른 방향으로 발사 · 적을 많이 잡을수록 무기 뽑기권이 많다'}
               </small>
             </div>
             <EquippedWeapon
@@ -220,7 +265,14 @@ export function MentalWindow({
               </p>
             )}
             <div className="stage-enemies">
-              {Object.values(ENEMIES).map((e) => (
+              {(mode === 'assault'
+                ? [
+                    { label: '시장가 매도', fill: '#5b8def' },
+                    { label: '대량 매도', fill: '#2f5fbf' },
+                    { label: '허매도', fill: '#a9c1f0' },
+                  ]
+                : Object.values(ENEMIES)
+              ).map((e) => (
                 <span key={e.label}>
                   <i style={{ background: e.fill }} />
                   {e.label}
@@ -266,11 +318,13 @@ export function MentalWindow({
                     : '멘탈 붕괴'}
               </span>
               <h2 className="mt-2 font-game text-[28px]">
-                {outcome.win
-                  ? '멘탈 지켜냈다!'
-                  : outcome.reason === 'time'
-                    ? '보스를 못 쓰러뜨렸다…'
-                    : '멘탈이 무너졌다…'}
+                {outcome.win && mode === 'assault'
+                  ? '매도벽 돌파!'
+                  : outcome.win
+                    ? '멘탈 지켜냈다!'
+                    : outcome.reason === 'time'
+                      ? '보스를 못 쓰러뜨렸다…'
+                      : '멘탈이 무너졌다…'}
               </h2>
               {spec && (
                 <p
@@ -295,13 +349,15 @@ export function MentalWindow({
               <p className="mt-3 text-[14px]" data-testid="mental-reward">
                 {sending
                   ? '보상을 받는 중…'
-                  : !reward
-                    ? ''
-                    : reward.capital > 0 || reward.tickets > 0
-                      ? `${reward.firstClear ? '처음 깼다! ' : ''}${reward.capital > 0 ? `자본 +${money(reward.capital)} · ` : ''}무기 뽑기권 +${reward.tickets}장`
-                      : spec && !outcome.win
-                        ? '깨면 자본과 무기 뽑기권을 받는다.'
-                        : '이번에 더 받을 보상은 없다.'}
+                  : investBattle && investBattle.after != null
+                    ? `회의 손익 ${signedMoney(investBattle.before)} → ${signedMoney(investBattle.after)}`
+                    : !reward
+                      ? ''
+                      : reward.capital > 0 || reward.tickets > 0
+                        ? `${reward.firstClear ? '처음 깼다! ' : ''}${reward.capital > 0 ? `자본 +${money(reward.capital)} · ` : ''}무기 뽑기권 +${reward.tickets}장`
+                        : spec && !outcome.win
+                          ? '깨면 자본과 무기 뽑기권을 받는다.'
+                          : '이번에 더 받을 보상은 없다.'}
               </p>
             </div>
             <button
@@ -725,6 +781,7 @@ function CardPick({
 function Battle({
   mode,
   stage,
+  assault,
   genre,
   hero,
   cards,
@@ -735,6 +792,8 @@ function Battle({
 }: {
   mode: BattleMode
   stage?: StageSpec
+  /** 공격 판(mode 'assault', decisions.md 413번)의 판: assaultSpec(level)을 useMemo로 한 번만 만들어 넘긴다(새 객체면 판이 다시 시작된다). */
+  assault?: AssaultSpec
   genre: Genre
   hero: Hero
   cards: Card[]
@@ -782,6 +841,7 @@ function Battle({
         handle.current = startBattle(el, {
           mode,
           stage,
+          assault,
           genre,
           hero,
           loadout: loadout.current,
@@ -812,7 +872,7 @@ function Battle({
       handle.current?.stop()
       handle.current = null
     }
-  }, [mode, stage, genre, hero, onDone, attempt])
+  }, [mode, stage, assault, genre, hero, onDone, attempt])
 
   return (
     <>
@@ -850,7 +910,11 @@ function Battle({
             <div className="battle-corner">
               {hud.segment && (
                 <b className="battle-segment" data-testid="battle-segment">
-                  {hud.boss ? '보스' : `구간 ${hud.segment.at}/${hud.segment.total}`}
+                  {hud.boss
+                    ? '보스'
+                    : hud.assault
+                      ? `매도벽 ${hud.segment.at}/${hud.segment.total}`
+                      : `구간 ${hud.segment.at}/${hud.segment.total}`}
                 </b>
               )}
               <time data-testid="battle-timer">
@@ -870,8 +934,30 @@ function Battle({
                 Ⅱ
               </button>
             </div>
+            {hud.assault && (
+              <div className="battle-price" data-testid="battle-price">
+                <span className="battle-price-now">
+                  <small className="battle-price-name">{hud.assault.name}</small>
+                  <b className="battle-price-value">{hud.assault.price.toLocaleString()}</b>
+                  <em className="battle-price-up">
+                    ▲
+                    {(((hud.assault.price - hud.assault.start) / hud.assault.start) * 100).toFixed(
+                      1,
+                    )}
+                    %
+                  </em>
+                </span>
+                <span className="battle-price-goal">
+                  <small className="battle-price-name">목표가</small>
+                  <b className="battle-price-target">{hud.assault.target.toLocaleString()}</b>
+                </span>
+              </div>
+            )}
             {hud.boss && (
-              <div className="battle-boss" data-testid="battle-boss">
+              <div
+                className={`battle-boss${hud.assault ? ' battle-boss-low' : ''}`}
+                data-testid="battle-boss"
+              >
                 <b>{hud.boss.name}</b>
                 <div
                   className="battle-boss-health"
@@ -905,14 +991,17 @@ function Battle({
                 <b>{hud.kills}</b>
               </span>
             </div>
-            <div className="battle-wall" data-testid="battle-wall">
+            <div
+              className={`battle-wall${hud.assault ? ' battle-wall-assault' : ''}`}
+              data-testid="battle-wall"
+            >
               <span className="battle-wall-label">
-                <span aria-hidden="true">♥</span> 멘탈벽
+                <span aria-hidden="true">♥</span> {hud.assault ? '멘탈' : '멘탈벽'}
               </span>
               <div
                 className="battle-health"
                 role="progressbar"
-                aria-label="멘탈벽 내구도"
+                aria-label={hud.assault ? '멘탈' : '멘탈벽 내구도'}
                 aria-valuenow={hud.mental}
                 aria-valuemin={0}
                 aria-valuemax={hud.maxMental}
@@ -925,7 +1014,13 @@ function Battle({
             </div>
           </div>
           <div className="battle-footer">
-            <span>{mode === 'advance' ? '끌어서 움직이기 · 자동 사격' : '누른 방향으로 발사'}</span>
+            <span>
+              {mode === 'assault'
+                ? '좌우로 끌거나 화면 왼쪽·오른쪽 누르기 · 위로 자동 사격'
+                : mode === 'advance'
+                  ? '끌어서 움직이기 · 자동 사격'
+                  : '누른 방향으로 발사'}
+            </span>
             <div>
               {[...new Set(cards.map((c) => c.code))].map((code) => {
                 const same = cards.filter((c) => c.code === code)
@@ -991,7 +1086,7 @@ function Battle({
                 className="stage-primary"
                 data-testid="mental-quit-no"
               >
-                계속 지키기 ▶
+                {mode === 'assault' ? '계속 오르기 ▶' : '계속 지키기 ▶'}
               </button>
               <button
                 type="button"
@@ -1031,4 +1126,14 @@ function Battle({
       )}
     </>
   )
+}
+
+/** 종목 회의 뒤 디펜스의 판 (414번): 세기 1이면 1스테이지, 세기마다 두 스테이지씩 단단해진다. 챕터 끝(보스) 판은 한 칸 앞으로. */
+function investStage(level: number, perChapter = 10): number {
+  const n = Math.max(1, level * 2 - 1)
+  return n % perChapter === 0 ? n - 1 : n
+}
+
+function signedMoney(amount: number): string {
+  return `${amount >= 0 ? '+' : '−'}${money(Math.abs(amount))}`
 }

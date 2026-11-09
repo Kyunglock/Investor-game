@@ -10,10 +10,11 @@ import './battle-upgrades.css'
 const TEXT: Record<UpgradeKind, { name: string; effect: string }> = {
   damage: { name: '공격력', effect: '탄 공격력' },
   fire: { name: '연사', effect: '쏘는 빠르기' },
+  hp: { name: '체력', effect: '최대 멘탈' },
 }
 
 /**
- * 자본으로 사는 전투 강화 (decisions.md 367·394번): 공격력·연사를 끝없이, 한 단계에 1%. 한 번 누르면 한 단계, 꾹 누르고 있으면 0.4초마다에서
+ * 자본으로 사는 전투 강화 (decisions.md 367·394번): 공격력·연사·체력(410번)을 끝없이, 한 단계에 1%. 한 번 누르면 한 단계, 꾹 누르고 있으면 0.4초마다에서
  * 점점 빨라져 0.05초마다 오른다. 손을 떼거나 자본이 모자라면 멈춘다. 값과 효과는 서버가 정하고, 그사이는 줄에 선 단계까지 미리 셈해 보인다.
  */
 export function BattleUpgrades({ company }: { company: Company }) {

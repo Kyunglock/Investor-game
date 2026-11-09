@@ -322,6 +322,15 @@ class CompanyState {
     List<InvestResult> results = new ArrayList<>();
     long total;
 
+    /** 회의 뒤 전투에서 얻은 별 (414번, #573). 아직 안 했으면 null. */
+    Integer battleStars;
+
+    /** 회의 뒤 전투로 바뀐 손익(막은 손실 + 더 번 몫, 0 이상). 회의 손익(total)과 따로 자본에 들어갔다. 안 했으면 null. */
+    Long battleBonus;
+
+    /** 회의 뒤 전투를 더 할 수 없다: 했거나 그 분기를 넘겼다(받지 못한 전투는 배율 1로 끝난다). */
+    boolean battleClosed;
+
     /**
      * 돈을 굴린 직원 모두의 판돈을 더한 것 (decisions.md 388번): 회의 수익률 = total ÷ stake. 이 칸을 더하기 전에 정한 회의면 null.
      */
