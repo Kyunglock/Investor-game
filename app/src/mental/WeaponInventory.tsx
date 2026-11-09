@@ -5,7 +5,7 @@ import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { GunSprite } from './GunSprite'
 import { DEFAULT_WEAPON, type Weapon } from './hero'
-import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from './weaponEffects'
+import { FIRE_STYLE_NAMES, WEAPON_EFFECTS, WEAPON_TRAITS } from './weaponEffects'
 import './weapons.css'
 
 type Armory = NonNullable<Company['armory']>
@@ -137,6 +137,12 @@ export function WeaponInventory({ company }: { company: Company }) {
                 title={WEAPON_EFFECTS[w.kind].desc}
               >
                 {WEAPON_EFFECTS[w.kind].name} · {WEAPON_EFFECTS[w.kind].desc}
+              </span>
+              {/* 강점·약점 한 줄 (#587, decisions.md 430번). */}
+              <span className="weapon-traits" data-testid="weapon-traits">
+                <b className="text-teal">강점</b> {WEAPON_TRAITS[w.kind].strength}
+                <br />
+                <b className="text-red-pen">약점</b> {WEAPON_TRAITS[w.kind].weakness}
               </span>
             </button>
             {armory && w.grade !== 'UR' && w.count >= armory.mergeCount && (

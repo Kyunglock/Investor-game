@@ -156,10 +156,11 @@ raising:
       # fire-percent% 줄인다. 무기는 전투에서 떨어지지 않고 무기 뽑기로 얻는다(366번, weapon-gacha)
       weapons:
         pistol: { damage-percent: 100, fire-ms: 260, power: 0, bullet-speed: 720 }
-        revolver: { damage-percent: 200, fire-ms: 340, power: 0, bullet-speed: 820 }
-        smg: { damage-percent: 100, fire-ms: 150, power: 0, bullet-speed: 700 }
-        shotgun: { damage-percent: 100, fire-ms: 430, power: 2, bullet-speed: 640 }
-        rifle: { damage-percent: 300, fire-ms: 390, power: 0, bullet-speed: 980 }
+        # 장단점이 극명하게 (decisions.md 430번, #587): 리볼버 한 방·느린 연사, 기관단총 약한 한 발·아주 빠른 연사, 산탄총 센 한 발·느림, 소총 가장 세고 가장 느림
+        revolver: { damage-percent: 250, fire-ms: 600, power: 0, bullet-speed: 820 }
+        smg: { damage-percent: 50, fire-ms: 80, power: 0, bullet-speed: 700 }
+        shotgun: { damage-percent: 220, fire-ms: 700, power: 2, bullet-speed: 640 }
+        rifle: { damage-percent: 330, fire-ms: 900, power: 0, bullet-speed: 1100 }
       weapon-grades:
         N: { damage-percent: 0, fire-percent: 0 }
         R: { damage-percent: 25, fire-percent: 8 }

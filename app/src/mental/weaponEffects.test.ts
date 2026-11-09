@@ -6,6 +6,7 @@ import {
   pierceOf,
   RIFLE_PIERCE,
   WEAPON_EFFECTS,
+  WEAPON_TRAITS,
   weaponDamage,
 } from './weaponEffects'
 
@@ -47,5 +48,36 @@ describe('무기마다 쏘는 방식 (#563)', () => {
     const s = Object.values(FIRE_STYLES)
     expect(FIRE_STYLES.rifle.length).toBe(Math.max(...s.map((x) => x.length)))
     expect(FIRE_STYLES.shotgun.width).toBe(Math.max(...s.map((x) => x.width)))
+  })
+})
+
+describe('무기마다 극명한 강점과 약점 (#587, decisions.md 430번)', () => {
+  it('다섯 무기의 강점·약점이 모두 다르다', () => {
+    const t = Object.values(WEAPON_TRAITS)
+    expect(new Set(t.map((x) => x.strength)).size).toBe(5)
+    expect(new Set(t.map((x) => x.weakness)).size).toBe(5)
+  })
+
+  it('기관단총·산탄총만 사거리가 짧고(산탄총이 더 짧다), 리볼버만 재장전, 산탄총만 밀어낸다', () => {
+    expect(WEAPON_TRAITS.pistol.range).toBeNull()
+    expect(WEAPON_TRAITS.rifle.range).toBeNull()
+    expect(WEAPON_TRAITS.shotgun.range).toBeLessThan(WEAPON_TRAITS.smg.range ?? 1)
+    expect(
+      Object.entries(WEAPON_TRAITS)
+        .filter(([, x]) => x.magazine)
+        .map(([k]) => k),
+    ).toEqual(['revolver'])
+    expect(
+      Object.entries(WEAPON_TRAITS)
+        .filter(([, x]) => x.knockback > 0)
+        .map(([k]) => k),
+    ).toEqual(['shotgun'])
+  })
+
+  it('리볼버 치명타는 40%·세 배, 소총은 넷까지 뚫는다', () => {
+    expect(weaponDamage('revolver', 2, 0.39).crit).toBe(true)
+    expect(weaponDamage('revolver', 2, 0.41).crit).toBe(false)
+    expect(CRIT_MULT).toBe(3)
+    expect(RIFLE_PIERCE).toBe(4)
   })
 })

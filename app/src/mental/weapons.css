@@ -85,3 +85,10 @@
   line-height: 1.35;
   word-break: keep-all;
 }
+/* 무기 강점·약점 한 줄 (#587). */
+.weapon-traits {
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: #5b6a80;
+  text-align: left;
+}
