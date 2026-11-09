@@ -48,7 +48,6 @@ import {
   rowHps,
   spawnSeconds,
   swarmSize,
-  WEAK_CELL,
   wallCols,
   whaleSummonSeconds,
 } from './assault'
@@ -275,9 +274,11 @@ interface AssaultCell {
 /** 매도벽 칸의 높이(px)와 칸 사이 틈. 폭은 길 폭을 칸 수로 나눈다. */
 const CELL_H = 30
 const CELL_GAP = 3
-/** 공격 판의 길: 왼쪽은 레벨 줄(390번), 오른쪽은 가격 눈금이 쓴다. */
+/** 한 덩어리 매도벽(416번)의 체력 = 줄·칸 체력의 합 × 이 비율. stageCheck로 맞췄다. */
+const CHUNK_HP = 0.65
+/** 공격 판의 길: 왼쪽은 레벨 줄(390번)이 쓴다. 오른쪽 가격 눈금은 뺐다(416번). */
 const LANE_LEFT = 50
-const LANE_RIGHT = 46
+const LANE_RIGHT = 16
 /** 같은 소리를 이 간격(ms) 안에 또 내지 않는다(체결·금 가는 소리, 마법 소리). */
 type SoundKey = 'splash' | 'whoosh' | 'boom' | 'zap' | 'coin' | 'thud' | 'squish'
 
@@ -1139,7 +1140,7 @@ class BattleScene extends Phaser.Scene {
       spec: ws,
       index,
       y,
-      cols,
+      cols: 1,
       cells: [],
       left: 0,
       band,
@@ -1147,17 +1148,16 @@ class BattleScene extends Phaser.Scene {
       arrived: false,
       broken: false,
     }
+    // 매도벽은 큰 덩어리 하나다 (416번): 칸으로 나누지 않고, 줄 수만큼 두껍고 줄·칸 체력을 모두 더한 만큼 단단하다.
+    let hp = 0
     for (let row = 0; row < ws.rows; row++) {
-      // 위 줄일수록 조금 더 단단하다: 맨 아랫줄을 뚫어도 뒤가 남는다.
-      const hps = rowHps(ws.cellHp * (1 + row * 0.15), cols)
-      const base = (ws.cellHp * (1 + row * 0.15) * 6) / cols
-      for (let col = 0; col < cols; col++) {
-        const e = this.spawnCell(wall, row, col, hps[col], hps[col] < base * WEAK_CELL)
-        if (e) {
-          wall.cells.push(e)
-          wall.left++
-        }
-      }
+      hp += rowHps(ws.cellHp * (1 + row * 0.15), cols).reduce((a, b) => a + b, 0)
+    }
+    // 칸이 여럿이던 때는 퍼지는 마법·불길이 칸 여러 개를 한꺼번에 맞혔다. 한 덩어리라 그만큼 덜 단단하게 둔다.
+    const e = this.spawnCell(wall, 0, 0, hp * CHUNK_HP, false)
+    if (e) {
+      wall.cells.push(e)
+      wall.left++
     }
     this.layoutWall(wall)
     this.placeWall(wall)
@@ -1195,18 +1195,18 @@ class BattleScene extends Phaser.Scene {
     const label = this.add
       .text(0, 0, '', {
         fontFamily: '"Jua", "Gowun Dodum", sans-serif',
-        fontSize: '11px',
+        fontSize: '18px',
         color: '#ffffff',
         align: 'center',
         stroke: '#0d2466',
-        strokeThickness: 3,
+        strokeThickness: 4,
         lineSpacing: -3,
         resolution: DPR,
       })
       .setOrigin(0.5)
       .setDepth(2.6)
     const shares = cellShares(hp, hp)
-    label.setText(`매도\n${shares.toLocaleString()}주`)
+    label.setText(`매도 ${shares.toLocaleString()}주`)
     e.cell = { wall, row, col, label, shares, crack: 0, weak }
     this.paint(e)
     return e
@@ -1218,7 +1218,7 @@ class BattleScene extends Phaser.Scene {
     const cellW = lane.width / wall.cols
     for (const e of wall.cells) {
       if (!e.active || e.dying) continue
-      e.setDisplaySize(cellW - CELL_GAP, CELL_H - CELL_GAP)
+      e.setDisplaySize(cellW - CELL_GAP, wall.spec.rows * CELL_H - CELL_GAP)
       ;(e.body as Phaser.Physics.Arcade.Body).setSize(e.width, e.height, true)
     }
     wall.band.setDisplaySize(lane.width + 8, wall.spec.rows * CELL_H + 8)
@@ -1232,12 +1232,13 @@ class BattleScene extends Phaser.Scene {
       const c = e.cell
       if (!c || !e.active || e.dying) continue
       const x = lane.left + (c.col + 0.5) * cellW
-      const y = wall.y - (c.row + 0.5) * CELL_H
+      const y = wall.y - (wall.spec.rows * CELL_H) / 2
       e.setPosition(x, y)
       c.label.setPosition(x, y + 1)
     }
     wall.band.setPosition(lane.left - 4, wall.y + 4)
-    wall.price.setPosition(this.view().w - 3, wall.y - (wall.spec.rows * CELL_H) / 2)
+    // 벽 옆의 가격 표는 뺐다(416번): 가격은 위 HUD에만 보인다.
+    wall.price.setVisible(false)
   }
 
   /** 칸이 맞았다: 금이 가고(4단계 그림) 조각이 튀고, 남은 물량이 깎여 보인다. */
@@ -1256,7 +1257,7 @@ class BattleScene extends Phaser.Scene {
     const shares = cellShares(e.maxHp, e.hp)
     if (shares !== c.shares && e.hp > 0) {
       c.shares = shares
-      c.label.setText(`매도\n${shares.toLocaleString()}주`)
+      c.label.setText(`매도 ${shares.toLocaleString()}주`)
     }
   }
 
@@ -1443,15 +1444,8 @@ class BattleScene extends Phaser.Scene {
     const lane = this.lane()
     const kind = pickFlow(wall.spec.mix, Math.random())
     // 벽 틈(부서진 칸) 자리에서 나오면 좋고, 아니면 길 아무 데나. 벽 바로 앞에서 나온다.
-    const front = new Set(wall.cells.filter((e) => e.cell?.row === 0).map((e) => e.cell?.col))
-    const gaps: number[] = []
-    for (let col = 0; col < wall.cols; col++) if (!front.has(col)) gaps.push(col)
-    const cellW = lane.width / wall.cols
-    const col =
-      gaps.length && Math.random() < 0.5
-        ? gaps[Math.floor(Math.random() * gaps.length)]
-        : Math.floor(Math.random() * wall.cols)
-    const x = lane.left + (col + 0.5) * cellW
+    // 벽이 한 덩어리라(416번) 벽 앞 아무 데서나 나온다.
+    const x = lane.left + 16 + Math.random() * (lane.width - 32)
     const y = wall.y + 16
     if (kind === 'market') {
       const n = swarmSize(spec, Math.random())
@@ -1534,13 +1528,13 @@ class BattleScene extends Phaser.Scene {
     this.drawClimb(dt)
   }
 
-  /** 지나가는 호가 줄(길 위의 옅은 가로줄)과 오른쪽 가격 눈금, 오르는 동안의 속도선. */
+  /** 지나가는 호가 줄(길 위의 옅은 가로줄)과 오르는 동안의 속도선. */
   private drawClimb(dt: number) {
     const spec = this.assault
     const book = this.book
     const ladder = this.ladder
     if (!spec || !book || !ladder) return
-    const { w, h } = this.view()
+    const { h } = this.view()
     const lane = this.lane()
     const step = 46
     const off = this.climbed % step
@@ -1552,29 +1546,8 @@ class BattleScene extends Phaser.Scene {
       book.fillRect(lane.left - 6, y, 4, step / 2)
       book.fillRect(lane.right + 2, y, 4, step / 2)
     }
-    // 가격 눈금: 오른쪽 가장자리의 세로 줄에 눈금이 흘러내린다. 큰 눈금은 다섯 칸마다.
+    // 오른쪽 가격 눈금은 뺐다 (416번).
     ladder.clear()
-    const top = 58
-    const bottom = h - 96
-    ladder.fillStyle(0x0d1a3a, 0.55)
-    ladder.fillRoundedRect(w - LANE_RIGHT + 6, top, LANE_RIGHT - 10, bottom - top, 8)
-    const tick = 18
-    const t0 = this.climbed % tick
-    for (let y = top + t0; y < bottom; y += tick) {
-      const n = Math.round((this.climbed - (y - top - t0)) / tick)
-      const major = ((n % 5) + 5) % 5 === 0
-      ladder.fillStyle(0xbfd8ff, major ? 0.9 : 0.45)
-      ladder.fillRect(w - 14, y, major ? 10 : 5, major ? 2 : 1)
-    }
-    // 지금 가격의 표시(사장냥 높이)와 목표가(맨 위).
-    const broken = this.wallsBroken
-    const fillTo = bottom - ((bottom - top) * broken) / spec.walls.length
-    ladder.fillStyle(0xe8434f, 0.85)
-    ladder.fillRect(w - 18, fillTo, 3, bottom - fillTo)
-    ladder.fillStyle(0xffd84d, 1)
-    ladder.fillTriangle(w - 22, top + 2, w - 12, top + 2, w - 17, top + 10)
-    ladder.fillStyle(0xe8434f, 1)
-    ladder.fillTriangle(w - 24, fillTo - 5, w - 24, fillTo + 5, w - 16, fillTo)
     // 속도선: 오를 때만, 빠를수록 짙게.
     const speed = this.climbV
     const k = Phaser.Math.Clamp(
