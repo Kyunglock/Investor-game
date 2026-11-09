@@ -177,7 +177,7 @@ class DefaultCompanyService implements CompanyService {
       return null;
     }
     return new CompanyView.Upgrade(
-        to, engine.upgradeCost(c), needed, engine.canUpgrade(c), engine.buildYears(to), null);
+        to, engine.upgradeCost(c), needed, engine.canUpgrade(c), 0, null);
   }
 
   @Override

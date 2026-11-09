@@ -1208,21 +1208,31 @@ class CompanyEngineTest {
     assertThat(company.yearMoving).isEqualTo(18_000_000L);
     assertThat(ENGINE.seats(company)).isEqualTo(6);
     assertThat(company.timeline).extracting(e -> e.kind).contains("grow");
-    // 한 번에 한 단계씩: D(3억)는 새 건물(상가)이라 한 해 동안 짓는다 (#347). 비용은 지금 다 내고, 연말 결산에서 옮긴다.
+    // 한 번에 한 단계씩: D(3억)는 새 건물(상가)이지만 공사 기간 없이 바로 옮긴다 (405번).
     ENGINE.upgrade(company);
-    assertThat(ENGINE.grade(company)).as("공사 중에는 지금 건물 그대로").isEqualTo("E");
-    assertThat(company.buildingTo).isEqualTo("D");
-    assertThat(company.buildLeft).isEqualTo(1);
+    assertThat(ENGINE.grade(company)).as("공사 없이 바로").isEqualTo("D");
+    assertThat(company.buildingTo).isNull();
     assertThat(company.capital).isEqualTo(before - 63_000_000L);
-    assertThat(ENGINE.canUpgrade(company)).as("공사 중에는 다음 건물을 못 짓는다").isFalse();
+    assertThat(company.yearLines).noneMatch(line -> line.contains("공사"));
     company.invest = null;
     CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(2));
-    assertThat(ENGINE.grade(company)).as("한 해 지어 옮겼다").isEqualTo("D");
-    assertThat(company.buildingTo).isNull();
     assertThat(s.gradeAfter).isEqualTo("D");
-    assertThat(s.lines).anyMatch(line -> line.contains("다 지어졌다"));
     assertThat(s.moving).isEqualTo(63_000_000L);
     assertThat(ENGINE.canUpgrade(company)).as("C 10억은 아직").isFalse();
+
+    // 405번 전에 시작한 공사는 다음 연말 결산에 옮긴다.
+    CompanyState old = ENGINE.open(new HashSeededRandom(4), ENGINE.openingCapital());
+    old.capital = 900_000_000L;
+    ENGINE.upgrade(old);
+    old.buildingTo = "D";
+    old.buildYears = 1;
+    old.buildLeft = 1;
+    assertThat(ENGINE.canUpgrade(old)).as("공사 중에는 다음 건물을 못 짓는다").isFalse();
+    old.invest = null;
+    CompanyState.Settlement built = ENGINE.settle(old, new HashSeededRandom(5));
+    assertThat(ENGINE.grade(old)).isEqualTo("D");
+    assertThat(old.buildingTo).isNull();
+    assertThat(built.lines).anyMatch(line -> line.contains("다 지어졌다"));
 
     // 지은 건물은 자본이 띠 아래로 떨어져도 그대로다 (#347).
     company.capital = 100_000_000L;
@@ -1234,15 +1244,9 @@ class CompanyEngineTest {
 
     // 랜드마크 타워(Z)에 올라도 엔딩 없이 이어진다 (374번).
     company.capital = 200_000_000_000_000L;
-    for (int seed = 10; !"Z".equals(ENGINE.grade(company)) && seed < 60; seed++) {
-      if (ENGINE.canUpgrade(company)) {
-        ENGINE.upgrade(company);
-      } else {
-        // 공사 중이면 한 해 짓는다.
-        company.invest = null;
-        ENGINE.settle(company, new HashSeededRandom(seed));
-        company.capital = Math.max(company.capital, 200_000_000_000_000L);
-      }
+    for (int i = 0; !"Z".equals(ENGINE.grade(company)) && i < 50; i++) {
+      assertThat(ENGINE.canUpgrade(company)).as("공사 없이 곧바로 다음 건물로 (405번)").isTrue();
+      ENGINE.upgrade(company);
     }
     assertThat(ENGINE.grade(company)).isEqualTo("Z");
     assertThat(company.finished).isFalse();

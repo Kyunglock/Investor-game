@@ -136,11 +136,9 @@ public record CompanyProperties(
   /** 건물 이사 (decisions.md 296번): 이사 비용은 다음 띠 자본의 percent%. 자본이 다음 띠 + 비용 이상일 때만 간다. */
   /**
    * @param percent 이사 비용: 다음 띠 자본의 이 비율(%)
-   * @param buildYears 새 건물로 가는 등급의 공사 기간(해, #347). 없으면 바로 된다
    * @param deskUnlock 돕는 자리가 열리는 회사 등급(#393). 없는 자리는 처음부터 열려 있다
    */
-  public record Upgrade(
-      int percent, Map<String, Integer> buildYears, Map<String, String> deskUnlock) {}
+  public record Upgrade(int percent, Map<String, String> deskUnlock) {}
 
   /**
    * 종목 발굴 (decisions.md 267번). 분기 넘기기를 누르면 종목 발굴팀 직원이 basePercent + 안목 × insightPercent / 100 확률로,
