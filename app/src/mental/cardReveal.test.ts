@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { DEAL_MS, READY_GAP_MS, REVEAL_TIMING, revealPlan, topGrade } from './cardReveal'
+import {
+  AUTO_PICK_MS,
+  autoPickIndex,
+  DEAL_MS,
+  READY_GAP_MS,
+  REVEAL_TIMING,
+  revealPlan,
+  TURN_MS,
+  topGrade,
+} from './cardReveal'
 
 describe('카드 펼치기 (decisions.md 393번)', () => {
   it('석 장이 깔린 뒤 왼쪽부터 한 장씩: 떨림 → 누움 → 앞면, 다음 카드는 앞 카드가 펼쳐진 뒤', () => {
@@ -22,6 +31,10 @@ describe('카드 펼치기 (decisions.md 393번)', () => {
     expect(REVEAL_TIMING.UR.tease).toBeGreaterThanOrEqual(1000)
   })
 
+  it('뒤집히는 속도는 모든 등급이 같다 (#562)', () => {
+    for (const g of ['N', 'R', 'SR', 'UR'] as const) expect(REVEAL_TIMING[g].turn).toBe(TURN_MS)
+  })
+
   it('일반 석 장은 2초 안에, 전설이 섞여도 4초 안에 고를 수 있다', () => {
     expect(revealPlan(['N', 'N', 'N']).ready).toBeLessThan(2000)
     expect(revealPlan(['UR', 'SR', 'UR']).ready).toBeLessThan(5500)
@@ -32,5 +45,34 @@ describe('카드 펼치기 (decisions.md 393번)', () => {
     expect(topGrade(['N', 'SR', 'R'])).toBe('SR')
     expect(topGrade(['UR', 'N'])).toBe('UR')
     expect(topGrade([])).toBe('N')
+  })
+})
+
+describe('카드 자동 선택 (#566)', () => {
+  it('5초를 기다린다', () => {
+    expect(AUTO_PICK_MS).toBe(5000)
+  })
+
+  it('등급이 가장 높은 카드, 같으면 마법 > 고양이 > 일반, 그래도 같으면 왼쪽', () => {
+    expect(
+      autoPickIndex([
+        { grade: 'N', code: 'atk' },
+        { grade: 'SR', code: 'fire' },
+        { grade: 'R', code: 'water' },
+      ]),
+    ).toBe(1)
+    expect(
+      autoPickIndex([
+        { grade: 'R', code: 'cat' },
+        { grade: 'R', code: 'water' },
+      ]),
+    ).toBe(1)
+    expect(
+      autoPickIndex([
+        { grade: 'N', code: 'atk' },
+        { grade: 'N', code: 'spd' },
+        { grade: 'N', code: 'atk' },
+      ]),
+    ).toBe(0)
   })
 })

@@ -44,6 +44,12 @@ describe('전진 모드', () => {
     expect(stageSpec(9).segments).toBe(5)
     expect(stageSpec(2).hpScale).toBeGreaterThan(stageSpec(1).hpScale)
     expect(stageSpec(9).boss).toBe(false)
+    // 1-1은 예전 판 그대로, 뒤로 갈수록 체력·수·빠르기·멘탈 피해가 함께 오른다 (#565).
+    const one = stageSpec(1)
+    expect([one.hpScale, one.countScale, one.speedScale, one.dmgScale]).toEqual([1, 1, 1, 1])
+    for (const key of ['hpScale', 'countScale', 'speedScale', 'dmgScale'] as const) {
+      expect(stageSpec(5)[key]).toBeGreaterThan(stageSpec(4)[key])
+    }
     expect(stageSpec(10).boss).toBe(true)
     expect(stageLabel(3)).toBe('1-3')
     expect(stageLabel(10)).toBe('1-10')

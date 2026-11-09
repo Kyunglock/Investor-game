@@ -10,6 +10,7 @@ import {
   PER_CHAPTER,
   SCROLL_SECONDS,
   SEGMENTS,
+  STAGE_RAMP,
   type StageSpec,
   stageSpec,
   stars,
@@ -63,7 +64,14 @@ import {
 } from './magic'
 import { MATE_LOOKS, mateFormation } from './mates'
 import { wallOffset } from './stageArt'
-import { pierceOf, SLOW_FACTOR, SLOW_SECONDS, weaponDamage } from './weaponEffects'
+import {
+  aimWithJitter,
+  FIRE_STYLES,
+  pierceOf,
+  SLOW_FACTOR,
+  SLOW_SECONDS,
+  weaponDamage,
+} from './weaponEffects'
 
 /**
  * 멘탈 전투 한 판 (decisions.md 328번). Phaser 3 Arcade로 돈다: 탄·적은 풀에서 재사용하고, 도트 그림(art.ts)은 캔버스에 한 번 구워 둔다. 규칙은 화면
@@ -166,6 +174,9 @@ type Bullet = Phaser.Physics.Arcade.Image & {
   /** 앞으로 더 맞힐 수 있는 적의 수(소총 관통, 376번)와 이미 맞힌 적. */
   pierce: number
   hitList: Enemy[]
+  /** 꼬리를 남기는 간격(ms): 무기마다 다르다 (#563). 마지막으로 남긴 때. */
+  trailMs: number
+  trailAt?: number
 }
 /** 데미지 숫자 한 칸: 합칠 때 다시 튀게 하는 크기 트윈. */
 type DamageText = Phaser.GameObjects.Text & { punch: Phaser.Tweens.Tween | null }
@@ -287,6 +298,10 @@ class BattleScene extends Phaser.Scene {
   private lastSummon = 0
   /** 디펜스 번호 스테이지(509번): 적 체력 배율과, 보스를 이미 불렀나. EX(스테이지 없음)는 배율 1이고 보스가 없다. */
   private readonly hpScale: number
+  /** 디펜스 번호 스테이지의 적 수·빠르기·멘탈 피해 배율 (#565). EX 디펜스는 1. */
+  private readonly countScale: number
+  private readonly speedScale: number
+  private readonly dmgScale: number
   private readonly defenseBoss: boolean
   private bossCalled = false
   /** 전진 모드의 드래그: 누른 자리와 그때 사장냥 자리. 손가락이 움직인 만큼 사장냥이 따라간다. */
@@ -385,6 +400,10 @@ class BattleScene extends Phaser.Scene {
     this.mode = opts.mode
     this.spec = opts.stage ?? stageSpec(PER_CHAPTER)
     this.hpScale = opts.stage?.hpScale ?? 1
+    const scaled = opts.mode === 'defense' ? opts.stage : undefined
+    this.countScale = scaled?.countScale ?? 1
+    this.speedScale = scaled?.speedScale ?? 1
+    this.dmgScale = scaled?.dmgScale ?? 1
     this.defenseBoss = opts.mode === 'defense' && Boolean(opts.stage?.boss)
     this.loadout = opts.loadout
   }
@@ -561,7 +580,12 @@ class BattleScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.enemies, (_p, e) => {
       const enemy = e as Enemy
       if (enemy.active && !enemy.dying) {
-        this.hurt(enemy.boss ? BOSS.dmg : ENEMIES[enemy.kind].dmg, enemy)
+        this.hurt(
+          Math.round(
+            (enemy.boss ? BOSS.dmg : ENEMIES[enemy.kind].dmg) * this.staged(this.dmgScale),
+          ),
+          enemy,
+        )
       }
     })
     if (this.wallZone) {
@@ -569,7 +593,11 @@ class BattleScene extends Phaser.Scene {
       this.physics.add.overlap(this.wallZone, this.enemies, (_z, e) => {
         const enemy = e as Enemy
         if (enemy.active && !enemy.dying) {
-          this.hurt(ENEMIES[enemy.kind].dmg, undefined, enemy.x)
+          this.hurt(
+            Math.round(ENEMIES[enemy.kind].dmg * this.staged(this.dmgScale)),
+            undefined,
+            enemy.x,
+          )
           this.kill(enemy, false)
         }
       })
@@ -866,8 +894,9 @@ class BattleScene extends Phaser.Scene {
   /** 보스가 졸개를 부른다: 보스 발밑에서 사장냥 쪽으로 부채꼴로 내려간다. */
   private summon(boss: Enemy) {
     const { w } = this.view()
-    for (let i = 0; i < BOSS.summonCount; i++) {
-      const spread = (i - (BOSS.summonCount - 1) / 2) * 46
+    const count = Math.round(BOSS.summonCount * this.countScale)
+    for (let i = 0; i < count; i++) {
+      const spread = (i - (count - 1) / 2) * 46
       const x = Phaser.Math.Clamp(boss.x + spread, w * 0.1, w * 0.9)
       this.spawn('panic', [x, boss.y + 40])
     }
@@ -918,7 +947,7 @@ class BattleScene extends Phaser.Scene {
       this.tweens.add({ targets: e, scale: ENEMY_K, duration: 220, ease: 'Back.easeOut' })
     }
     // 디펜스 번호 스테이지는 뒤로 갈수록 적이 단단하다 (509번).
-    e.hp = this.mode === 'defense' ? v.hp * this.hpScale : v.hp
+    e.hp = this.mode === 'defense' ? v.hp * this.staged(this.hpScale) : v.hp
     e.kbx = 0
     e.kby = 0
     e.born = this.elapsed
@@ -966,6 +995,18 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * 스테이지 배율을 판 안에서 천천히 건다 (#565): 처음에는 STAGE_RAMP.from만큼만, STAGE_RAMP.seconds에 걸쳐 끝까지. 카드가 쌓이기 전 첫 20초에 판이
+   * 갈려 결과가 운(첫 카드)에 달리던 것을 줄인다.
+   */
+  private staged(scale: number) {
+    const k = Math.min(
+      1,
+      STAGE_RAMP.from + ((1 - STAGE_RAMP.from) * this.elapsed) / STAGE_RAMP.seconds,
+    )
+    return 1 + (scale - 1) * k
+  }
+
   /** 난이도 곡선의 시각(초): 예전 4분 판 기준으로 잡은 곡선을 2분 판에 맞춰 PACE배 빨리 돈다 (363번). */
   private curve() {
     return this.elapsed * PACE
@@ -976,7 +1017,7 @@ class BattleScene extends Phaser.Scene {
     const { w } = this.view()
     const grow = 1 + Math.min(1.5, this.curve() / 120)
     // 세 줄로 쏟아진다: 처음 15, 뒤로 갈수록 36까지. 전에는 6~15로 '쏟아진다'는 말이 무색했다.
-    const n = Math.round(15 * grow)
+    const n = Math.round(15 * grow * this.staged(this.countScale))
     const cols = Math.ceil(n / 3)
     for (let i = 0; i < n; i++) {
       this.spawn('dump', [
@@ -988,7 +1029,11 @@ class BattleScene extends Phaser.Scene {
 
   private waveSpec() {
     this.opts.onBanner('투기 과열! 터지기 전에 잡아', '#ff4f6d')
-    for (let i = 0; i < 1 + Math.floor(this.curve() / 100); i++) {
+    for (
+      let i = 0;
+      i < Math.round((1 + Math.floor(this.curve() / 100)) * this.staged(this.countScale));
+      i++
+    ) {
       this.spawn('spec')
     }
   }
@@ -997,7 +1042,7 @@ class BattleScene extends Phaser.Scene {
     this.opts.onBanner('패닉셀 떼가 몰려온다!!!', '#3a86ff')
     const { w, h } = this.view()
     // 두 겹의 반원 떼: 처음 24, 뒤로 갈수록 44까지. 전에는 10~20이라 떼 같지 않았다.
-    const n = Math.round(24 + Math.min(20, this.curve() / 8))
+    const n = Math.round((24 + Math.min(20, this.curve() / 8)) * this.staged(this.countScale))
     const half = Math.ceil(n / 2)
     for (let i = 0; i < n; i++) {
       const ring = i < half ? 0 : 1
@@ -1317,48 +1362,76 @@ class BattleScene extends Phaser.Scene {
   }
 
   /** 한 발 쏜다. mate가 없으면 사장냥, 있으면 그 고양이가 같은 수치(무기·피해·연사·강화)로 쏜다(393번). */
-  private fire(now: number, base: number, mate?: Mate) {
+  private fire(now: number, aim: number, mate?: Mate) {
     const p = mate ? mate.body : this.player
+    const kind = this.opts.hero.weapon.kind
+    const style = FIRE_STYLES[kind]
+    // 무기마다 쏘는 방식 (#563): 총은 겨눈 쪽(aim)을 보고, 탄만 흩어진다(기관단총).
+    const base = aimWithJitter(kind, aim, Math.random())
     if (mate) {
       mate.lastFire = now
-      mate.aim = base
+      mate.aim = aim
       this.damageStats.mateShots++
     } else {
       this.lastFire = now
       // 총소리는 사장냥 것만: 넷이 다 내면 뭉개지고 오디오 노드가 쌓인다.
-      sfx.shot()
-      this.aim = base
+      sfx.shot(kind)
+      this.aim = aim
+      if (style.shake && !this.reducedMotion) this.cameras.main.shake(style.shakeMs, style.shake)
     }
-    // 총 손맛: 총구 화염, 반동(눌렸다 펴짐), 화면이 살짝 흔들린다.
-    const m = this.muzzle(p.x, p.y, base)
+    // 총 손맛: 총구 화염, 반동(눌렸다 펴짐). 크기·시간이 무기마다 다르다.
+    const m = this.muzzle(p.x, p.y, aim)
     const flash = this.flashes[this.flashIndex++ % this.flashes.length]
-    flash.setPosition(m.x, m.y).setRotation(base).setScale(TEX).setAlpha(1).setVisible(true)
+    flash
+      .setPosition(m.x, m.y)
+      .setRotation(aim)
+      .setScale(TEX * style.flash)
+      .setAlpha(1)
+      .setVisible(true)
     this.tweens.killTweensOf(flash)
     this.tweens.add({
       targets: flash,
-      scale: 0.6 * TEX,
+      scale: 0.6 * TEX * style.flash,
       alpha: 0,
-      duration: 90,
+      duration: style.flashMs,
       onComplete: () => flash.setVisible(false),
     })
+    // 산탄총: 총구 앞으로 불꽃이 부채꼴로 튄다(탄은 한 덩이, 362번).
+    for (let i = 0; i < style.sparks && !this.reducedMotion; i++) {
+      const a = aim + ((i / (style.sparks - 1)) * 2 - 1) * 0.45
+      this.trail.emitParticleAt(m.x + Math.cos(a) * 18, m.y + Math.sin(a) * 18)
+      this.trail.emitParticleAt(m.x + Math.cos(a) * 32, m.y + Math.sin(a) * 32)
+    }
     this.tweens.killTweensOf(p)
     const [sx, sy] = [HERO_SIZE.w / p.width, HERO_SIZE.h / p.height]
-    p.setScale(sx * 1.1, sy * 0.92)
-    this.tweens.add({ targets: p, scaleX: sx, scaleY: sy, duration: 110, ease: 'Back.easeOut' })
+    p.setScale(sx * (1 + 0.1 * style.recoil), sy * (1 - 0.08 * style.recoil))
+    this.tweens.add({
+      targets: p,
+      scaleX: sx,
+      scaleY: sy,
+      duration: 80 + 30 * style.recoil,
+      ease: 'Back.easeOut',
+    })
     const stats = bulletStats(this.loadout)
     const b = this.bullets.get(m.x, m.y, 'bullet-0') as Bullet | null
     if (!b) return
     b.setTexture('bullet-0').enableBody(true, m.x, m.y, true, true).setDepth(4)
     b.look = 0
+    b.trailMs = style.trailMs
     b.damage = stats.damage
     b.power = stats.power
     b.splashRadius = stats.splashRadius
     b.splashDamage = stats.splashDamage
-    b.pierce = pierceOf(this.opts.hero.weapon.kind)
+    b.pierce = pierceOf(kind)
     b.hitList = []
-    b.setDisplaySize(BULLET_W * stats.scale, BULLET_H * stats.scale).setRotation(base)
-    b.setTint([0xffffff, 0xffdd99, 0xffb966, 0xff9955][stats.power])
-    const hb = bulletHitbox(b.width, b.height)
+    b.setDisplaySize(
+      BULLET_W * stats.scale * style.length,
+      BULLET_H * stats.scale * style.width,
+    ).setRotation(base)
+    // 무기 빛 위에 강화 단계가 오를수록 주황을 더 섞는다.
+    const powerTint = [0xffffff, 0xffdd99, 0xffb966, 0xff9955][stats.power]
+    b.setTint(stats.power && kind === 'pistol' ? powerTint : style.tint)
+    const hb = bulletHitbox(b.width, b.height, style.length)
     b.body?.setCircle(hb.radius, hb.ox, hb.oy)
     b.setVelocity(
       Math.cos(base) * this.loadout.bulletSpeed,
@@ -2129,7 +2202,7 @@ class BattleScene extends Phaser.Scene {
     }
 
     // 생성: 한 판(2분)에 걸쳐 갈수록 빨라진다. 파도는 15초마다 투매 → 투기 → 패닉 순으로 돌고 뒤로 갈수록 커진다 (340·363번).
-    const every = Math.max(200, 700 - this.curve() * 2.6)
+    const every = Math.max(200, 700 - this.curve() * 2.6) / this.staged(this.countScale)
     if (this.mode === 'defense' && time - this.lastSpawn > every) {
       this.lastSpawn = time
       const r = Math.random()
@@ -2189,7 +2262,8 @@ class BattleScene extends Phaser.Scene {
         e.tintKind = tintKind
         this.paint(e)
       }
-      const sy = slowed ? v.speed * e.slowFactor : v.speed
+      const speed = v.speed * this.staged(this.speedScale)
+      const sy = slowed ? speed * e.slowFactor : speed
       if (e.kind === 'spec') {
         // 투기: 부풀다가 터진다.
         const s = 1 + Math.min(1, (this.elapsed - e.born) / 9) * 0.9
@@ -2249,7 +2323,8 @@ class BattleScene extends Phaser.Scene {
         b.look = look
         b.setTexture(`bullet-${look}`)
       }
-      if (Math.floor(time / 16) % 2 === 0) {
+      if (time - (b.trailAt ?? 0) >= b.trailMs) {
+        b.trailAt = time
         this.trail.emitParticleAt(b.x, b.y)
       }
     }

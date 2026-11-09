@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { haptic } from '../../fx/haptics'
 import { isMuted, setMuted, sfx } from '../../fx/sound'
 import { stageLabel } from '../../mental/advance'
+import { WeaponInventory, weaponBadge } from '../../mental/WeaponInventory'
 import { BookIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from '../Icons'
 import { Sheet } from '../Sheet'
 import { type BattleEntry, type Tab, type ToyPanel, tabBadge, useAppUi } from '../ui'
@@ -18,7 +19,11 @@ import { BattleUpgrades } from './BattleUpgrades'
 import { growthProgress } from './model'
 import { ToyCityStreet } from './ToyCityStreet'
 
-export function ToyIcon({ kind }: { kind: 'upgrade' | 'heart' | 'settings' | 'cup' | 'auto' }) {
+export function ToyIcon({
+  kind,
+}: {
+  kind: 'upgrade' | 'heart' | 'settings' | 'cup' | 'auto' | 'gun'
+}) {
   const paths = {
     upgrade: 'M6 22V3M3 3h18L6 9m11-6v7m-3 2h6v6h-6zM3 22h7',
     heart: 'M12 21S2 14 2 8a5 5 0 0 1 10-1 5 5 0 0 1 10 1c0 6-10 13-10 13Z',
@@ -26,6 +31,7 @@ export function ToyIcon({ kind }: { kind: 'upgrade' | 'heart' | 'settings' | 'cu
       'm9 2-1 3-3 1-3 3 2 3-1 4 3 3 4-1 3 3 4-2 1-4 3-2-1-4-4-1-1-4ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
     cup: 'M7 3h10v7a5 5 0 0 1-10 0Zm0 2H3v4q0 4 5 4m9-8h4v4q0 4-5 4m-4 2v6m-5 0h10',
     auto: 'M19 7a8 8 0 1 0 1 9M19 2v5h-5m-4 1 6 4-6 4Z',
+    gun: 'M3 8h17l1 3h-6l-1 2h-3l-2 6H5l2-6H3ZM9 13v-2',
   }
   return (
     <svg
@@ -212,6 +218,16 @@ export function ToyCityHome({ company }: { company: Company }) {
           <ToyIcon kind="heart" />
           <span>멘탈</span>
         </button>
+        <button
+          type="button"
+          className="toy-menu"
+          data-testid="open-weapons"
+          onClick={() => setPanel('weapons')}
+        >
+          <ToyIcon kind="gun" />
+          <span>무기</span>
+          {weaponBadge(company) && <b className="toy-badge">{weaponBadge(company)}</b>}
+        </button>
       </div>
       <div className="toy-speech">
         {resting > 0
@@ -243,7 +259,9 @@ export function ToyCityHome({ company }: { company: Company }) {
                 ? '멘탈 스테이지'
                 : panel === 'battle'
                   ? '자본으로 전투 강화'
-                  : '회사 설정'
+                  : panel === 'weapons'
+                    ? '무기 인벤토리'
+                    : '회사 설정'
           }
           testId={`toy-${panel}-sheet`}
           onClose={() => setPanel(null)}
@@ -297,6 +315,7 @@ export function ToyCityHome({ company }: { company: Company }) {
           )}
           {panel === 'stage' && <StageSelect company={company} disabled={unavailable} />}
           {panel === 'battle' && <BattleUpgrades company={company} />}
+          {panel === 'weapons' && <WeaponInventory company={company} />}
           {panel === 'settings' && (
             <>
               <p className="toy-sheet-lead">내 속도에 맞춰 회사를 키워요</p>

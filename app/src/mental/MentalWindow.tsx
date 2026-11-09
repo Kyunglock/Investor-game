@@ -17,29 +17,26 @@ import {
 } from './advance'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
-import { DEAL_MS, READY_GAP_MS, REVEAL_TIMING, revealPlan, topGrade } from './cardReveal'
+import {
+  AUTO_PICK_MS,
+  autoPickIndex,
+  DEAL_MS,
+  READY_GAP_MS,
+  REVEAL_TIMING,
+  revealPlan,
+  topGrade,
+} from './cardReveal'
 import { applyCard, type Card, GRADE_NAMES, loadoutOf, pickCards } from './cards'
 import { ENEMIES } from './enemies'
 import { GunSprite } from './GunSprite'
 import { BATTLE_SECONDS } from './genres'
 import { StagePortrait } from './StagePortrait'
-import { WEAPON_EFFECTS } from './weaponEffects'
+import { GRADE_BADGE } from './WeaponInventory'
+import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from './weaponEffects'
 import './stage.css'
-import { DEFAULT_WEAPON, type Hero, heroOf, type Weapon } from './hero'
+import { type Hero, heroOf, type Weapon } from './hero'
 
 type Genre = NonNullable<Company['mental']>['genre']
-type Armory = NonNullable<Company['armory']>
-
-/** 합칠 수 있는 등급: 가장 높은 등급(UR)은 못 합친다 (366번). */
-type MergeGrade = Exclude<Weapon['grade'], 'UR'>
-
-/** 무기 등급 배지 색 (346번). */
-const GRADE_BADGE: Record<Weapon['grade'], string> = {
-  N: 'bg-[#e6e3ea] text-ink',
-  R: 'bg-[#cfe0f7] text-[#2d5c9e]',
-  SR: 'bg-[#e4d6fb] text-[#5d3aa6]',
-  UR: 'bg-[#ffe7a6] text-[#8a5a00]',
-}
 
 /**
  * 멘탈 전투 창 (decisions.md 328·330·339·345·346·369번): 스테이지 선택에서 고른 판(번호 스테이지 = 전진 모드, EX = 디펜스)의 출전 화면, 무기 고르기,
@@ -77,7 +74,6 @@ export function MentalWindow({
   )
   const genre: Genre = company.mental?.genre ?? 'DEFENSE'
   const [saved, setSaved] = useState(false)
-  const weapons = company.weapons?.length ? company.weapons : [DEFAULT_WEAPON]
 
   const back = useEffectEvent(() => {
     if (hero && !outcome) setPauseRequest((n) => n + 1)
@@ -210,7 +206,14 @@ export function MentalWindow({
                   : '누른 방향으로 발사 · 적을 많이 잡을수록 무기 뽑기권이 많다'}
               </small>
             </div>
-            <WeaponPicker weapons={weapons} armory={company.armory ?? null} busy={busy} />
+            <EquippedWeapon
+              weapon={heroOf(company).weapon}
+              onChange={() => {
+                sfx.tap()
+                onDone()
+                useAppUi.getState().openSheet({ kind: 'toy', panel: 'weapons' })
+              }}
+            />
             {apiError && (
               <p role="alert" className="stage-error">
                 {apiError}
@@ -329,114 +332,34 @@ export function MentalWindow({
 }
 
 /**
- * 무기 고르기 (decisions.md 346·366번): 가진 무기를 늘어놓고 누르면 든다. 든 무기는 테두리가 진하다. 무기 뽑기권으로 뽑고, 같은 무기가 mergeCount개면
- * 합쳐 한 등급 올린다.
+ * 출전 화면의 든 무기 (#564): 무기 고르기·뽑기·합성은 메인의 무기 인벤토리(WeaponInventory.tsx)로 옮겼다. 여기서는 든 무기만 작게 보이고, 바꾸려면
+ * 출전 화면을 닫고 인벤토리를 연다.
  */
-function WeaponPicker({
-  weapons,
-  armory,
-  busy,
-}: {
-  weapons: Weapon[]
-  armory: Armory | null
-  busy: boolean
-}) {
-  const [shown, setShown] = useState(false)
-  const last = armory?.lastDraw ?? null
+function EquippedWeapon({ weapon, onChange }: { weapon: Weapon; onChange: () => void }) {
   return (
-    <div className="stage-weapons" data-testid="weapon-picker">
-      <div className="stage-weapon-head">
-        <p className="font-game text-[15px]">
-          무기{' '}
-          <span className="text-[12px] text-muted">
-            · 뽑기권 <b data-testid="weapon-tickets">{armory?.tickets ?? 0}</b>장
-          </span>
-        </p>
-        <button
-          type="button"
-          className="stage-weapon-draw"
-          data-testid="weapon-draw"
-          disabled={busy || !armory || armory.tickets <= 0}
-          onClick={() => {
-            sfx.stamp()
-            haptic.medium()
-            setShown(true)
-            void useRaisingStore.getState().drawWeapon()
-          }}
-        >
-          무기 뽑기
-        </button>
-      </div>
-      {shown && last && (
-        <p
-          className="stage-weapon-drawn animate-pop"
-          data-testid="weapon-drawn"
-          data-new={last.isNew}
-        >
+    <div className="stage-equipped" data-testid="stage-weapon" data-kind={weapon.kind}>
+      <GunSprite kind={weapon.kind} grade={weapon.grade} width={64} />
+      <span className="min-w-0 flex-1 text-left">
+        <b className="block font-game text-[15px] font-normal">
+          {weapon.name}{' '}
           <span
-            className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${GRADE_BADGE[last.grade]}`}
+            className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${GRADE_BADGE[weapon.grade]}`}
           >
-            {last.gradeName}
-          </span>{' '}
-          {last.name} {last.isNew ? '— 새 무기!' : '— 합성 재료 +1'}
-        </p>
-      )}
-      <ul className="stage-weapon-list">
-        {weapons.map((w) => (
-          <li key={`${w.kind}-${w.grade}`}>
-            <button
-              type="button"
-              disabled={busy || w.equipped}
-              aria-pressed={w.equipped}
-              onClick={() => {
-                sfx.tap()
-                haptic.light()
-                void useRaisingStore.getState().equipWeapon(w.kind, w.grade)
-              }}
-              className={`stage-weapon ${w.equipped ? 'is-equipped' : ''}`}
-              data-testid="weapon"
-              data-kind={w.kind}
-              data-grade={w.grade}
-            >
-              <GunSprite kind={w.kind} grade={w.grade} width={88} />
-              <span className="font-game text-[15px]">
-                {w.name}{' '}
-                <span
-                  className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${GRADE_BADGE[w.grade]}`}
-                >
-                  {w.gradeName}
-                </span>
-              </span>
-              <span className="text-[11px] text-muted">
-                {w.equipped ? '장착 중 · ' : ''}공격 ×{w.damagePercent / 100} ·{' '}
-                {(1000 / w.fireMs).toFixed(1)}발/초{w.count > 1 ? ` · ${w.count}개` : ''}
-              </span>
-              <span
-                className="stage-weapon-effect"
-                data-testid="weapon-effect"
-                title={WEAPON_EFFECTS[w.kind].desc}
-              >
-                {WEAPON_EFFECTS[w.kind].name} · {WEAPON_EFFECTS[w.kind].desc}
-              </span>
-            </button>
-            {armory && w.grade !== 'UR' && w.count >= armory.mergeCount && (
-              <button
-                type="button"
-                className="stage-weapon-merge"
-                data-testid="weapon-merge"
-                disabled={busy}
-                onClick={() => {
-                  sfx.levelUp()
-                  haptic.medium()
-                  void useRaisingStore.getState().mergeWeapon(w.kind, w.grade as MergeGrade)
-                }}
-              >
-                {armory.mergeCount}개 합쳐 등급 올리기
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
+            {weapon.gradeName}
+          </span>
+        </b>
+        <span className="block text-[11px] text-muted">
+          {FIRE_STYLE_NAMES[weapon.kind]} · {WEAPON_EFFECTS[weapon.kind].name}
+        </span>
+      </span>
+      <button
+        type="button"
+        className="stage-weapon-change"
+        data-testid="stage-weapon-change"
+        onClick={onChange}
+      >
+        무기 바꾸기
+      </button>
     </div>
   )
 }
@@ -489,16 +412,20 @@ const SPARKLES: Record<Card['grade'], number> = { N: 0, R: 8, SR: 10, UR: 14 }
  * 가볍게 탁, 희귀는 파란 빛과 반짝이, 영웅은 보라 빛기둥·화면 번쩍·진동, 전설은 화면이 어두워지며 한참 뜸을 들였다가 금빛 폭발·빛줄기·크게 흔들림·큰
  * 소리. 뒷면 테두리가 등급을 살짝 흘린다(높을수록 미리 빛난다). 다 펼친 뒤에만 고르고, 그 전에 누르면 남은 카드를 한 번에 펼친다. 움직임 줄이기면
  * 처음부터 앞면이다. 고르면 그 카드가 번쩍 커지며 날아가고 나머지는 가라앉은 뒤 onPick. 순서와 시각은 cardReveal.ts.
+ * 다 펼친 뒤 AUTO_PICK_MS(5초) 안에 고르지 않으면 autoPickIndex의 카드를 저절로 고른다(#566). 그 카드는 미리 빛나고 남은 시간이 막대로 줄어든다.
+ * 일시정지(paused)나 앱이 뒤로 간 동안은 세지 않는다.
  */
 function CardPick({
   title,
   sub,
   levels,
+  paused,
   onPick,
 }: {
   title: string
   sub: string
   levels: Parameters<typeof pickCards>[0]
+  paused: boolean
   onPick: (card: Card) => void
 }) {
   const [cards] = useState(() => pickCards(levels))
@@ -510,6 +437,8 @@ function CardPick({
   const readyNow = useRef(reduced)
   const [dim, setDim] = useState(false)
   const [chosen, setChosen] = useState<Card | null>(null)
+  const auto = useMemo(() => autoPickIndex(cards), [cards])
+  const [autoLeft, setAutoLeft] = useState(AUTO_PICK_MS)
   const root = useRef<HTMLDivElement>(null)
   const buttons = useRef<(HTMLButtonElement | null)[]>([])
   const timers = useRef<ReturnType<typeof setTimeout>[]>([])
@@ -614,6 +543,23 @@ function CardPick({
     later(reduced ? 0 : 380, () => onPick(c))
   }
 
+  const autoPick = useEffectEvent(() => {
+    const el = buttons.current[auto]
+    if (el) pick(cards[auto], el)
+  })
+  // 자동 선택 시계: 고를 수 있는 동안만 0.1초씩 센다. 멈춤·앱이 뒤로 간 동안(document.hidden)은 그대로 둔다.
+  useEffect(() => {
+    if (!ready || chosen || paused) return
+    const id = setInterval(() => {
+      if (document.hidden) return
+      setAutoLeft((left) => Math.max(0, left - 100))
+    }, 100)
+    return () => clearInterval(id)
+  }, [ready, chosen, paused])
+  useEffect(() => {
+    if (ready && !chosen && autoLeft <= 0) autoPick()
+  }, [ready, chosen, autoLeft])
+
   return (
     <>
       {!ready && (
@@ -655,6 +601,7 @@ function CardPick({
                 data-grade={c.grade}
                 data-face={face}
                 data-chosen={chosen === c}
+                data-auto={ready && !chosen && i === auto}
                 style={
                   {
                     '--card-accent': c.color,
@@ -752,7 +699,20 @@ function CardPick({
             )
           })}
         </div>
-        <p className="stage-card-footnote">선택 즉시 적용 · 이번 전투 동안 유지</p>
+        {ready && !chosen ? (
+          <div className="stage-card-auto" data-testid="card-auto">
+            <span
+              className="stage-card-auto-bar"
+              style={{ transform: `scaleX(${autoLeft / AUTO_PICK_MS})` }}
+              aria-hidden="true"
+            />
+            <p className="stage-card-footnote">
+              {Math.ceil(autoLeft / 1000)}초 뒤 「{cards[auto].name}」 자동 선택
+            </p>
+          </div>
+        ) : (
+          <p className="stage-card-footnote">선택 즉시 적용 · 이번 전투 동안 유지</p>
+        )}
       </div>
     </>
   )
@@ -1059,6 +1019,7 @@ function Battle({
                 : '카드 한 장을 더 쌓으세요'
             }
             levels={loadout.current}
+            paused={asking}
             onPick={(card) => {
               loadout.current = applyCard(loadout.current, card)
               onPick(card)

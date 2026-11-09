@@ -71,24 +71,44 @@ export function bossSummonSeconds(hpLeft: number, maxHp: number = BOSS.hp): numb
 /** 한 챕터의 스테이지 수 (decisions.md 369번). 서버(company.stages.perChapter)와 같다. */
 export const PER_CHAPTER = 10
 
-/** 스테이지 하나의 판 (369번): 넘을 구간 수, 적 체력 배율, 끝에 보스가 나오나. */
+/** 스테이지 하나의 판 (369번): 넘을 구간 수, 적 배율들, 끝에 보스가 나오나. */
 export interface StageSpec {
   stage: number
   segments: number
+  /** 적 체력 배율. */
   hpScale: number
+  /** 적 수 배율 (#565): 디펜스에서 나오는 간격을 이만큼 줄이고 파도·보스 졸개를 이만큼 키운다. */
+  countScale: number
+  /** 적 빠르기 배율 (#565). */
+  speedScale: number
+  /** 멘탈벽·사장냥에 닿을 때 깎는 멘탈 배율 (#565). */
+  dmgScale: number
   boss: boolean
 }
 
 /**
- * 번호 스테이지의 판 (decisions.md 369번): 챕터 안에서 앞 셋은 구간 셋, 다음 셋은 넷, 그 뒤는 다섯. 적 체력은 스테이지마다 12%씩 단단해지고, 챕터
- * 마지막 스테이지에만 보스가 나온다.
+ * 스테이지가 오를 때마다 붙는 배율 (#565). 예전에는 체력만 12%씩 올라 강화 없이 1-10까지 별 셋으로 깼다. 이제 체력·수·빠르기·멘탈 피해가 함께 오른다.
+ * 1-1은 예전과 같은 판이다(배율 1). 숫자는 scripts/balanceCheck.ts로 강화 없는 일반 권총을 돌려 맞췄다(decisions.md 404번).
+ */
+export const STAGE_STEP = { hp: 0.9, count: 0.2, speed: 0.06, dmg: 0.2 }
+
+/** 스테이지 배율을 한 판 안에서 거는 정도 (#565): 처음엔 from만큼, seconds초에 걸쳐 끝까지(보스 졸개·보스 체력은 처음부터 끝까지). */
+export const STAGE_RAMP = { from: 0.15, seconds: 70 }
+
+/**
+ * 번호 스테이지의 판 (decisions.md 369번): 챕터 안에서 앞 셋은 구간 셋, 다음 셋은 넷, 그 뒤는 다섯. 적은 스테이지마다 STAGE_STEP만큼 단단하고 많고
+ * 빠르고 아프다 (#565). 챕터 마지막 스테이지에만 보스가 나온다.
  */
 export function stageSpec(stage: number, perChapter: number = PER_CHAPTER): StageSpec {
   const n = ((stage - 1) % perChapter) + 1
+  const k = stage - 1
   return {
     stage,
     segments: Math.min(SEGMENTS.length, n <= 3 ? 3 : n <= 6 ? 4 : 5),
-    hpScale: 1 + (stage - 1) * 0.12,
+    hpScale: 1 + k * STAGE_STEP.hp,
+    countScale: 1 + k * STAGE_STEP.count,
+    speedScale: 1 + k * STAGE_STEP.speed,
+    dmgScale: 1 + k * STAGE_STEP.dmg,
     boss: n === perChapter,
   }
 }

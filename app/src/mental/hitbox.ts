@@ -7,8 +7,9 @@ export const BULLET_W = 32
 export const BULLET_H = 10
 export const BULLET_R = 8
 
-export function bulletHitbox(texW: number, texH: number) {
+/** stretch: 탄 그림을 가로로 늘린 배율(무기마다 쏘는 방식, #563). Arcade 원의 반지름은 가로 배율을 따르니 나눠 두어 판정 크기는 그대로다. */
+export function bulletHitbox(texW: number, texH: number, stretch = 1) {
   const k = texW / BULLET_W
-  const radius = BULLET_R * k
+  const radius = (BULLET_R * k) / stretch
   return { radius, ox: texW / 2 - radius, oy: texH / 2 - radius }
 }

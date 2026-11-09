@@ -1,0 +1,87 @@
+/* 무기 인벤토리 (#564, decisions.md 346·366번): 메인의 무기 메뉴 시트. */
+.weapon-equipped {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #e2eff7;
+  border: 2px solid #749cc0;
+  border-radius: 16px;
+  padding: 10px 12px;
+}
+.weapon-tag {
+  display: inline-block;
+  margin-top: 2px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #2d5c9e;
+}
+.weapon-draw-row {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.weapon-draw,
+.weapon-merge {
+  font-family: var(--font-game);
+  border: 1.5px solid #2b2340;
+  border-radius: 12px;
+  background: #ffd84d;
+  color: #2b2340;
+  box-shadow: 0 2px 0 #2b2340;
+}
+.weapon-draw {
+  padding: 6px 16px;
+  font-size: 16px;
+}
+.weapon-merge {
+  margin-top: 4px;
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 12px;
+  background: #7be0c3;
+}
+.weapon-draw:disabled,
+.weapon-merge:disabled {
+  opacity: 0.45;
+  box-shadow: none;
+}
+.weapon-drawn {
+  margin-top: 6px;
+  font-family: var(--font-game);
+  font-size: 15px;
+}
+.weapon-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 6px;
+}
+.weapon-card {
+  width: 100%;
+  border: 1px solid #c3cdd1;
+  background: #fffefa;
+  border-radius: 14px;
+  min-height: 150px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+.weapon-card.is-equipped {
+  background: #e2eff7;
+  border: 2px solid #749cc0;
+}
+.weapon-card.is-equipped:disabled {
+  opacity: 1;
+}
+.weapon-effect {
+  font-size: 10px;
+  font-weight: 700;
+  color: #5b6f99;
+  line-height: 1.35;
+  word-break: keep-all;
+}

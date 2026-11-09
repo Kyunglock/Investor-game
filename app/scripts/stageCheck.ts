@@ -173,14 +173,21 @@ try {
   }
   const base = process.env.APP_URL ?? 'http://127.0.0.1:5182/app/'
   await page.goto(base)
-  await page.getByTestId('stage-open').click()
-  await page.locator('[data-testid=stage][data-stage="1"]').click()
-  await expect(page.getByTestId('mental-lobby')).toBeVisible()
+  // 무기는 메인의 무기 인벤토리에서 고른다 (#564). 출전 화면에는 든 무기만 보인다.
+  await page.getByTestId('open-weapons').click()
+  await expect(page.getByTestId('toy-weapons-sheet')).toBeVisible()
   await page.locator('[data-testid=weapon][data-grade=R]').click()
   await expect(page.locator('[data-testid=weapon][data-grade=R]')).toHaveAttribute(
     'aria-pressed',
     'true',
   )
+  await page.screenshot({ path: resolve(out, 'weapons.png') })
+  await page.getByRole('button', { name: '닫기' }).first().click()
+  await page.getByTestId('stage-open').click()
+  await page.locator('[data-testid=stage][data-stage="1"]').click()
+  await expect(page.getByTestId('mental-lobby')).toBeVisible()
+  await expect(page.getByTestId('weapon-picker')).toHaveCount(0)
+  await expect(page.getByTestId('stage-weapon')).toBeVisible()
   await page.screenshot({ path: resolve(out, 'lobby.png') })
   await page.setViewportSize({ width: 320, height: 640 })
   await page.getByTestId('mental-start').scrollIntoViewIfNeeded()
