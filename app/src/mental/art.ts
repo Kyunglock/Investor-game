@@ -2,6 +2,16 @@ import { CAT_H, CAT_W, GUN_LEN } from '@web/features/game/cat/draw'
 import { BOSS_LOOK } from '@web/features/game/cat/look'
 import type Phaser from 'phaser'
 import { drawStageGun } from './drawStageGun'
+import {
+  drawEarthArmor,
+  drawEmber,
+  drawImpact,
+  drawPillar,
+  drawSellCell,
+  drawTracer,
+  drawWater,
+  drawWave,
+} from './effectArt'
 import type { UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
@@ -237,43 +247,9 @@ export function bakeStage(scene: Phaser.Scene, _genre: Genre) {
     }
   })
   for (const look of [0, 1] as const) {
-    bake(scene, `bullet-${look}`, 32, 10, (c) => {
-      c.fillStyle = '#ffe29a77'
-      c.beginPath()
-      c.moveTo(3, 5)
-      c.lineTo(20, 2)
-      c.lineTo(20, 8)
-      c.closePath()
-      c.fill()
-      c.beginPath()
-      c.roundRect(12, 1.2, look ? 15 : 17, 7.6, 3.8)
-      c.fillStyle = '#fff6cc'
-      c.fill()
-      c.strokeStyle = '#eba839'
-      c.lineWidth = 1.7
-      c.stroke()
-    })
+    bake(scene, `bullet-${look}`, 32, 10, (c) => drawTracer(c, look))
   }
-  bake(scene, 'bullet-impact', 80, 80, (c) => {
-    c.beginPath()
-    c.arc(40, 40, 33, 0, Math.PI * 2)
-    c.strokeStyle = '#ffac50'
-    c.lineWidth = 4
-    c.stroke()
-    c.beginPath()
-    for (let i = 0; i < 20; i++) {
-      const a = (i * Math.PI) / 10
-      const r = i % 2 ? 12 : 28
-      c.lineTo(40 + Math.cos(a) * r, 40 + Math.sin(a) * r)
-    }
-    c.closePath()
-    c.fillStyle = '#ffd56b'
-    c.fill()
-    c.beginPath()
-    c.arc(40, 40, 12, 0, Math.PI * 2)
-    c.fillStyle = '#fff9df'
-    c.fill()
-  })
+  bake(scene, 'bullet-impact', 80, 80, drawImpact)
   // 총구 화염: 노란 별에 흰 심
   bake(scene, 'flash', 24, 24, (c) => {
     c.beginPath()
@@ -330,65 +306,13 @@ export function bakeMagic(scene: Phaser.Scene) {
     c.fillRect(0, 0, 64, 64)
   })
   // 물방울: 오른쪽(나아가는 쪽)이 둥글고 왼쪽으로 꼬리가 빠진다.
-  bake(scene, 'magic-drop', 32, 20, (c) => {
-    c.beginPath()
-    c.moveTo(1, 10)
-    c.quadraticCurveTo(12, 3, 22, 2.5)
-    c.arc(22, 10, 7.5, -Math.PI / 2, Math.PI / 2)
-    c.quadraticCurveTo(12, 17, 1, 10)
-    const g = c.createLinearGradient(0, 0, 32, 0)
-    g.addColorStop(0, '#9fdcff00')
-    g.addColorStop(0.45, '#7fcbff')
-    g.addColorStop(1, '#2f8fe8')
-    c.fillStyle = g
-    c.fill()
-    c.strokeStyle = '#e8f7ff'
-    c.lineWidth = 1.2
-    c.stroke()
-    c.beginPath()
-    c.ellipse(24, 7, 2.6, 1.6, -0.4, 0, Math.PI * 2)
-    c.fillStyle = '#ffffff'
-    c.fill()
-  })
+  bake(scene, 'magic-drop', 32, 20, drawWater)
   // 큰 물결: 오른쪽(나아가는 쪽)으로 부푼 초승달. 앞은 흰 거품, 뒤로 갈수록 옅은 파랑.
-  bake(scene, 'magic-wave', 44, 120, (c) => {
-    c.beginPath()
-    c.arc(-46, 60, 84, -0.82, 0.82)
-    c.arc(-76, 60, 84, 0.9, -0.9, true)
-    c.closePath()
-    const g = c.createLinearGradient(0, 0, 44, 0)
-    g.addColorStop(0, '#3fa2f000')
-    g.addColorStop(0.3, '#3f9ff0cc')
-    g.addColorStop(0.8, '#9fe0ff')
-    g.addColorStop(1, '#ffffff')
-    c.fillStyle = g
-    c.fill()
-    c.strokeStyle = '#ffffffdd'
-    c.lineWidth = 2
-    c.beginPath()
-    c.arc(-46, 60, 84, -0.78, 0.78)
-    c.stroke()
-  })
+  bake(scene, 'magic-wave', 44, 120, drawWave)
   // 불덩이: 흰 심 → 노랑 → 주황 → 빨강으로 번진다.
-  bake(scene, 'magic-ember', 28, 28, (c) => {
-    c.fillStyle = radial(c, 14, 14, 14, ['#ffffff', '#fff2a0', '#ffb340', '#ff5a1f', '#d9261a00'])
-    c.fillRect(0, 0, 28, 28)
-  })
+  bake(scene, 'magic-ember', 28, 28, drawEmber)
   // 불기둥: 아래가 하얗게 뜨겁고 위로 갈수록 빨갛게 사라지는 일렁이는 기둥. 원점은 아래 가운데.
-  bake(scene, 'magic-pillar', 48, 140, (c) => {
-    c.beginPath()
-    c.moveTo(6, 140)
-    for (let y = 140; y >= 0; y -= 14) c.lineTo(8 + (140 - y) * 0.09 + Math.sin(y / 9) * 3, y)
-    for (let y = 0; y <= 140; y += 14) c.lineTo(40 - (140 - y) * 0.09 + Math.sin(y / 7) * 3, y)
-    c.closePath()
-    const g = c.createLinearGradient(0, 140, 0, 0)
-    g.addColorStop(0, '#fffbe0')
-    g.addColorStop(0.25, '#ffd24d')
-    g.addColorStop(0.6, '#ff7a26cc')
-    g.addColorStop(1, '#d9261a00')
-    c.fillStyle = g
-    c.fill()
-  })
+  bake(scene, 'magic-pillar', 48, 140, drawPillar)
   // 탄 자리: 바닥에 깔리는 납작한 불빛.
   bake(scene, 'magic-scorch', 80, 44, (c) => {
     c.save()
@@ -490,6 +414,7 @@ export function bakeMagic(scene: Phaser.Scene) {
     c.moveTo(65, 24)
     c.lineTo(85, 24)
     c.stroke()
+    drawEarthArmor(c)
   })
   // 돌 조각: 충차 뒤로 튀는 흙·돌 파편과 땅에서 솟는 돌기둥.
   bake(scene, 'magic-rock', 14, 12, (c) => {
@@ -533,7 +458,7 @@ export function bakeMagic(scene: Phaser.Scene) {
 export const RAM_ART = 2.5
 
 /** 매도벽 칸 텍스처의 크기(px). 화면에서는 칸 크기로 늘여 놓는다. 금 간 정도 0~3. */
-export const CELL_TEX = { w: 60, h: 30 }
+export const CELL_TEX = { w: 360, h: 60 }
 export const CELL_CRACKS = 4
 export const cellKey = (crack: number) => `cell-${crack}`
 
@@ -736,76 +661,7 @@ export function bakeOrders(scene: Phaser.Scene) {
   }
   // 매도벽 칸: 파란 호가 칸. 금은 맞을수록 늘고 3단계는 이가 빠진다. 물량 글자는 battle.ts가 Text로 얹는다.
   for (let crack = 0; crack < CELL_CRACKS; crack++) {
-    bake(scene, cellKey(crack), CELL_TEX.w, CELL_TEX.h, (c) => {
-      const { w, h } = CELL_TEX
-      const g = c.createLinearGradient(0, 0, 0, h)
-      g.addColorStop(0, crack >= 2 ? '#5b8fdc' : '#6aa5ff')
-      g.addColorStop(1, crack >= 2 ? '#2f5fb0' : '#3b74d6')
-      c.fillStyle = g
-      c.beginPath()
-      if (crack === 3) {
-        c.moveTo(2, 2)
-        c.lineTo(w - 14, 2)
-        c.lineTo(w - 8, 9)
-        c.lineTo(w - 2, 7)
-        c.lineTo(w - 2, h - 2)
-        c.lineTo(12, h - 2)
-        c.lineTo(6, h - 8)
-        c.lineTo(2, h - 6)
-        c.closePath()
-      } else {
-        c.roundRect(2, 2, w - 4, h - 4, 4)
-      }
-      c.fill()
-      c.lineWidth = 2
-      c.strokeStyle = '#173f8f'
-      c.stroke()
-      c.fillStyle = '#ffffff40'
-      c.fillRect(5, 4, w - 10, 3)
-      if (crack > 0) {
-        c.strokeStyle = '#0d2466'
-        c.lineWidth = 1.6
-        c.lineJoin = 'round'
-        const lines: number[][][] = [
-          [
-            [w * 0.3, 2],
-            [w * 0.36, h * 0.45],
-            [w * 0.28, h * 0.7],
-          ],
-          [
-            [w * 0.72, h - 2],
-            [w * 0.66, h * 0.55],
-            [w * 0.78, h * 0.3],
-            [w * 0.7, 3],
-          ],
-          [
-            [3, h * 0.4],
-            [w * 0.18, h * 0.55],
-            [w * 0.36, h * 0.45],
-            [w * 0.52, h * 0.62],
-            [w * 0.66, h * 0.55],
-          ],
-        ]
-        for (const line of lines.slice(0, crack)) {
-          c.beginPath()
-          for (const [i, [x, y]] of line.entries()) {
-            if (i) c.lineTo(x, y)
-            else c.moveTo(x, y)
-          }
-          c.stroke()
-        }
-        c.strokeStyle = '#d8e8ff88'
-        c.lineWidth = 0.8
-        for (const line of lines.slice(0, crack)) {
-          c.beginPath()
-          for (const [i, [x, y]] of line.entries()) {
-            if (i) c.lineTo(x + 1, y + 1)
-            else c.moveTo(x + 1, y + 1)
-          }
-          c.stroke()
-        }
-      }
-    })
+    bake(scene, cellKey(crack), CELL_TEX.w, CELL_TEX.h, (c) => drawSellCell(c, crack))
   }
   // 벽 뒤 판: 칸들이 박힌 짙은 남색 띠(호가창 줄).
   bake(scene, 'wall-band', 64, 32, (c) => {
