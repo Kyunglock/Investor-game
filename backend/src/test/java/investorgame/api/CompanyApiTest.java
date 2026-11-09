@@ -216,9 +216,9 @@ class CompanyApiTest {
             mvc.perform(post("/api/company/invest/open").cookie(session))
                 .andExpect(status().isOk()));
     assertThat(again.read("$.invest.remarks[0].text", String.class)).isEqualTo(said);
-    // 산다·판다·지켜본다·너희가 알아서 해 (decisions.md 279번)
-    // "너희가 알아서 해"는 뺐다 (352번): 산다·판다·지켜본다.
-    assertThat(meeting.read("$.invest.options.length()", Integer.class)).isEqualTo(3);
+    // "너희가 알아서 해"는 352번, 지켜본다는 423번에서 뺐다: 산다·판다 둘. 지켜본다를 보내면 400이다.
+    assertThat(meeting.read("$.invest.options.length()", Integer.class)).isEqualTo(2);
+    postJson("/api/company/invest", "{\"choice\":\"HOLD\"}").andExpect(status().isBadRequest());
     assertThat(meeting.read("$.invest.outcome", Object.class)).isNull();
     // 종목 회의 수익률의 범위 (decisions.md 388번): −50% ~ +300%
     assertThat(meeting.read("$.invest.range.lossBp", Integer.class)).isEqualTo(-5_000);
