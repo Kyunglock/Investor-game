@@ -32,3 +32,35 @@ export function mateFormation(count: number, width: number): number[] {
   }
   return [slot(hero), ...order.map(slot)]
 }
+
+/**
+ * 고양이마다 다른 적을 노린다 (409번): 393번에서는 모두 사장냥이 노리는 한 적을 쏴 한 마리에 탄이 몰렸다. 사장냥 총에서 range 안의 가까운 적을
+ * 쏘는 수(shooters.length)만큼 고르고, 사장냥(0번)부터 차례로 저에게 가장 가까운 아직 안 맡은 적을 맡는다. 적이 쏘는 수보다 적으면 남는 고양이는
+ * 그 가운데 저에게 가장 가까운 적을 함께 쏜다. 적이 없으면 모두 null.
+ */
+export function spreadTargets<T extends { x: number; y: number }>(
+  shooters: readonly { x: number; y: number }[],
+  enemies: readonly T[],
+  range: number,
+): (T | null)[] {
+  if (shooters.length === 0) return []
+  const lead = shooters[0]
+  const dist = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+    (a.x - b.x) ** 2 + (a.y - b.y) ** 2
+  const near = enemies
+    .map((e) => ({ e, d: dist(lead, e) }))
+    .filter((c) => c.d < range * range)
+    .sort((a, b) => a.d - b.d)
+    .slice(0, shooters.length)
+    .map((c) => c.e)
+  if (near.length === 0) return shooters.map(() => null)
+  const taken = new Set<T>()
+  return shooters.map((s) => {
+    const free = near.filter((e) => !taken.has(e))
+    const pool = free.length ? free : near
+    let best = pool[0]
+    for (const e of pool) if (dist(s, e) < dist(s, best)) best = e
+    taken.add(best)
+    return best
+  })
+}

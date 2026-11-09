@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { MAX_MATES } from './cards'
-import { MATE_GAP, MATE_LOOKS, MATE_MARGIN, mateFormation } from './mates'
+import { MATE_GAP, MATE_LOOKS, MATE_MARGIN, mateFormation, spreadTargets } from './mates'
 
 describe('함께 싸우는 고양이 (decisions.md 393번)', () => {
   it('고양이마다 색과 이름이 있고 최대 수만큼 있다', () => {
@@ -34,5 +34,39 @@ describe('함께 싸우는 고양이 (decisions.md 393번)', () => {
       }
     }
     expect(mateFormation(4, 320)[1] - mateFormation(4, 320)[0]).toBeCloseTo((320 - 44) / 4)
+  })
+})
+
+describe('고양이마다 다른 적을 노린다 (409번)', () => {
+  const shooters = [
+    { x: 0, y: 0 },
+    { x: 80, y: 0 },
+    { x: -80, y: 0 },
+  ]
+
+  it('적이 넉넉하면 저마다 가까운 다른 적을 맡는다', () => {
+    const enemies = [
+      { x: 0, y: -100, id: 'a' },
+      { x: 90, y: -110, id: 'b' },
+      { x: -90, y: -120, id: 'c' },
+      { x: 0, y: -400, id: 'far' },
+    ]
+    const picked = spreadTargets(shooters, enemies, 520).map((e) => e?.id)
+    expect(picked).toEqual(['a', 'b', 'c'])
+  })
+
+  it('적이 쏘는 수보다 적으면 남는 고양이는 가까운 적을 함께 쏜다', () => {
+    const enemies = [
+      { x: 70, y: -100, id: 'a' },
+      { x: -70, y: -100, id: 'b' },
+    ]
+    // 사장냥이 a, 오른쪽 고양이가 남은 b를 맡고, 왼쪽 고양이는 저에게 가까운 b를 함께 쏜다.
+    const picked = spreadTargets(shooters, enemies, 520).map((e) => e?.id)
+    expect(picked).toEqual(['a', 'b', 'b'])
+  })
+
+  it('사거리 밖이거나 적이 없으면 아무도 안 노린다', () => {
+    expect(spreadTargets(shooters, [{ x: 0, y: -900 }], 520)).toEqual([null, null, null])
+    expect(spreadTargets(shooters, [], 520)).toEqual([null, null, null])
   })
 })
