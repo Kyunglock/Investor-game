@@ -73,11 +73,11 @@ export interface EarthStats {
 }
 
 const EARTH: readonly EarthStats[] = [
-  { cooldown: 3.6, damage: 1.2, siege: 4, half: 16, speed: 760, push: 260, quake: 0 },
-  { cooldown: 3.2, damage: 1.6, siege: 4.5, half: 22, speed: 820, push: 320, quake: 0 },
-  { cooldown: 2.8, damage: 2.1, siege: 5, half: 30, speed: 880, push: 380, quake: 70 },
-  { cooldown: 2.5, damage: 2.5, siege: 5.4, half: 34, speed: 920, push: 420, quake: 85 },
-  { cooldown: 2.2, damage: 2.9, siege: 5.8, half: 38, speed: 960, push: 460, quake: 100 },
+  { cooldown: 3.6, damage: 1.2, siege: 4, half: 16, speed: 560, push: 260, quake: 0 },
+  { cooldown: 3.2, damage: 1.6, siege: 4.5, half: 22, speed: 600, push: 320, quake: 0 },
+  { cooldown: 2.8, damage: 2.1, siege: 5, half: 30, speed: 640, push: 380, quake: 70 },
+  { cooldown: 2.5, damage: 2.5, siege: 5.4, half: 34, speed: 680, push: 420, quake: 85 },
+  { cooldown: 2.2, damage: 2.9, siege: 5.8, half: 38, speed: 720, push: 460, quake: 100 },
 ]
 
 const WATER: readonly WaterStats[] = [

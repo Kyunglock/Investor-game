@@ -363,6 +363,8 @@ interface RamShot {
   nextSpike: number
   hitList: Enemy[]
 }
+/** 충차가 박차고 나가기 전 뒤로 당기는 시간(초). */
+const RAM_WINDUP = 0.16
 /** 충차가 달릴 수 있는 거리(px). */
 const RAM_RANGE = 900
 /** 대지 충차(3단계)가 지나간 길에 돌기둥이 솟는 간격(px). */
@@ -535,6 +537,9 @@ class BattleScene extends Phaser.Scene {
   private pillars: Phaser.GameObjects.Image[] = []
   private pillarIndex = 0
   private rams: RamShot[] = []
+  /** 충차의 "쿵!" 글자(넷을 돌려 쓴다). */
+  private thumps: Phaser.GameObjects.Text[] = []
+  private thumpIndex = 0
   private spikes: Phaser.GameObjects.Image[] = []
   private spikeIndex = 0
   private waterFx!: Phaser.GameObjects.Particles.ParticleEmitter
@@ -3016,21 +3021,23 @@ class BattleScene extends Phaser.Scene {
     const s = this.rams.find((r) => !r.active)
     if (!target || !s) return false
     const tier = magicTier(level)
-    // 매도벽은 길 폭을 다 덮는 덩어리라 시전자 바로 위를 들이받는다(벽 끝을 넘지 않게).
-    let tx = target.x
+    // 충차는 늘 아래(시전자 줄)에서 위로 곧게 들이받는다. 매도벽은 길 폭을 다 덮는 덩어리라 시전자 바로 위를(벽 끝을 넘지 않게), 큰손·적은 그
+    // 바로 밑에서 출발한다.
+    let sx = target.x
     if (target.cell) {
       const half = Math.max(0, target.displayWidth / 2 - 14)
-      tx = Phaser.Math.Clamp(from.x, target.x - half, target.x + half)
+      sx = Phaser.Math.Clamp(from.x, target.x - half, target.x + half)
     }
-    const a = Math.atan2(target.y - from.y, tx - from.x)
+    const sy = Math.max(from.y, target.y + 60)
+    const a = -Math.PI / 2
     const k = [0.8, 1.1, 1.45][tier - 1] * this.grow(level)
     this.tweens.killTweensOf(s.img)
     s.active = true
     s.level = level
-    s.x = from.x
-    s.y = from.y
-    s.dx = Math.cos(a)
-    s.dy = Math.sin(a)
+    s.x = sx
+    s.y = sy
+    s.dx = 0
+    s.dy = -1
     s.half = st.half
     s.depth = 18 * k
     s.t = 0
@@ -3043,8 +3050,8 @@ class BattleScene extends Phaser.Scene {
       .setScale(TEX * k)
       .setAlpha(1)
       .setVisible(true)
-    this.dustFx.explode(this.fx(4 + tier * 3), from.x, from.y + 10)
-    if (tier >= 2) this.rockFx.explode(this.fx(tier * 2), from.x, from.y + 10)
+    this.dustFx.explode(this.fx(4 + tier * 3), sx, sy + 16)
+    if (tier >= 2) this.rockFx.explode(this.fx(tier * 2), sx, sy + 16)
     this.playSound('rumble')
     return true
   }
@@ -3053,7 +3060,14 @@ class BattleScene extends Phaser.Scene {
     const st = earthStats(s.level)
     const tier = magicTier(s.level)
     s.t += dt
-    const step = ramSpeed(st.speed, s.t) * dt
+    if (s.t < RAM_WINDUP) {
+      // 뒤로 당겼다가(힘 모으기) 박차고 나간다. 당기는 동안은 아무것도 맞히지 않는다.
+      const back = Math.sin((s.t / RAM_WINDUP) * Math.PI * 0.5) * 18
+      s.img.setPosition(s.x - s.dx * back, s.y - s.dy * back)
+      if (dt > 0 && Math.random() < 0.5) this.dustFx.emitParticleAt(s.x, s.y + 20)
+      return
+    }
+    const step = ramSpeed(st.speed, s.t - RAM_WINDUP) * dt
     s.x += s.dx * step
     s.y += s.dy * step
     s.travelled += step
@@ -3140,7 +3154,10 @@ class BattleScene extends Phaser.Scene {
     this.rockFx.explode(this.fx([6, 10, 16][tier - 1]), x, y)
     this.dustFx.explode(this.fx([5, 8, 12][tier - 1]), x, y)
     this.chips?.explode(this.fx(4 + tier * 3), x, y - 4)
+    this.thump(x, y + 26, [34, 42, 52][tier - 1] * grow)
+    this.hitstop(tier === 3 ? 70 : 45)
     this.playSound('ram')
+    haptic.medium()
     this.damageStats.rams++
     const angle = Math.atan2(s.dy, s.dx)
     const dmg = st.damage * this.loadout.damage
@@ -3164,6 +3181,54 @@ class BattleScene extends Phaser.Scene {
         this.hit(o, dmg, oa, 'earth')
       }
     }
+  }
+
+  /** 들이받은 자리에 큰 "쿵!": 확 커졌다 줄며 잠깐 머문 뒤 떠오르며 사라진다. */
+  private thump(x: number, y: number, size: number) {
+    let t = this.thumps[this.thumpIndex++ % 4]
+    if (!t) {
+      t = this.add
+        .text(0, 0, '쿵!', {
+          fontFamily: '"Jua", "Gowun Dodum", sans-serif',
+          fontSize: '52px',
+          color: '#ffd27a',
+          stroke: '#5a2a00',
+          strokeThickness: 8,
+          resolution: DPR,
+        })
+        .setOrigin(0.5)
+        .setDepth(9)
+      this.thumps.push(t)
+    }
+    const k = size / 52
+    this.tweens.killTweensOf(t)
+    t.setPosition(x, y)
+      .setAngle(Phaser.Math.Between(-8, 8))
+      .setScale(k * 0.3)
+      .setAlpha(1)
+      .setVisible(true)
+    this.tweens.add({
+      targets: t,
+      scale: k * 1.25,
+      duration: 90,
+      ease: 'Quad.easeOut',
+      onComplete: () =>
+        this.tweens.add({
+          targets: t,
+          scale: k,
+          duration: 110,
+          ease: 'Back.easeOut',
+          onComplete: () =>
+            this.tweens.add({
+              targets: t,
+              y: y - 30,
+              alpha: 0,
+              delay: 260,
+              duration: 300,
+              onComplete: () => t.setVisible(false),
+            }),
+        }),
+    })
   }
 
   /** 땅에서 돌기둥 하나가 솟았다 가라앉는다. */
