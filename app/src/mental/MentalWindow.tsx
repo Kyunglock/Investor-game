@@ -15,6 +15,7 @@ import {
   stageLabel,
   stageSpec,
 } from './advance'
+import type { AssaultSpec } from './assault'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
 import {
@@ -748,6 +749,7 @@ function CardPick({
 function Battle({
   mode,
   stage,
+  assault,
   genre,
   hero,
   cards,
@@ -758,6 +760,8 @@ function Battle({
 }: {
   mode: BattleMode
   stage?: StageSpec
+  /** 공격 판(mode 'assault', decisions.md 413번)의 판: assaultSpec(level)을 useMemo로 한 번만 만들어 넘긴다(새 객체면 판이 다시 시작된다). */
+  assault?: AssaultSpec
   genre: Genre
   hero: Hero
   cards: Card[]
@@ -805,6 +809,7 @@ function Battle({
         handle.current = startBattle(el, {
           mode,
           stage,
+          assault,
           genre,
           hero,
           loadout: loadout.current,
@@ -835,7 +840,7 @@ function Battle({
       handle.current?.stop()
       handle.current = null
     }
-  }, [mode, stage, genre, hero, onDone, attempt])
+  }, [mode, stage, assault, genre, hero, onDone, attempt])
 
   return (
     <>
@@ -873,7 +878,11 @@ function Battle({
             <div className="battle-corner">
               {hud.segment && (
                 <b className="battle-segment" data-testid="battle-segment">
-                  {hud.boss ? '보스' : `구간 ${hud.segment.at}/${hud.segment.total}`}
+                  {hud.boss
+                    ? '보스'
+                    : hud.assault
+                      ? `매도벽 ${hud.segment.at}/${hud.segment.total}`
+                      : `구간 ${hud.segment.at}/${hud.segment.total}`}
                 </b>
               )}
               <time data-testid="battle-timer">
@@ -893,8 +902,30 @@ function Battle({
                 Ⅱ
               </button>
             </div>
+            {hud.assault && (
+              <div className="battle-price" data-testid="battle-price">
+                <span className="battle-price-now">
+                  <small className="battle-price-name">{hud.assault.name}</small>
+                  <b className="battle-price-value">{hud.assault.price.toLocaleString()}</b>
+                  <em className="battle-price-up">
+                    ▲
+                    {(((hud.assault.price - hud.assault.start) / hud.assault.start) * 100).toFixed(
+                      1,
+                    )}
+                    %
+                  </em>
+                </span>
+                <span className="battle-price-goal">
+                  <small className="battle-price-name">목표가</small>
+                  <b className="battle-price-target">{hud.assault.target.toLocaleString()}</b>
+                </span>
+              </div>
+            )}
             {hud.boss && (
-              <div className="battle-boss" data-testid="battle-boss">
+              <div
+                className={`battle-boss${hud.assault ? ' battle-boss-low' : ''}`}
+                data-testid="battle-boss"
+              >
                 <b>{hud.boss.name}</b>
                 <div
                   className="battle-boss-health"
@@ -928,14 +959,17 @@ function Battle({
                 <b>{hud.kills}</b>
               </span>
             </div>
-            <div className="battle-wall" data-testid="battle-wall">
+            <div
+              className={`battle-wall${hud.assault ? ' battle-wall-assault' : ''}`}
+              data-testid="battle-wall"
+            >
               <span className="battle-wall-label">
-                <span aria-hidden="true">♥</span> 멘탈벽
+                <span aria-hidden="true">♥</span> {hud.assault ? '멘탈' : '멘탈벽'}
               </span>
               <div
                 className="battle-health"
                 role="progressbar"
-                aria-label="멘탈벽 내구도"
+                aria-label={hud.assault ? '멘탈' : '멘탈벽 내구도'}
                 aria-valuenow={hud.mental}
                 aria-valuemin={0}
                 aria-valuemax={hud.maxMental}
@@ -948,7 +982,13 @@ function Battle({
             </div>
           </div>
           <div className="battle-footer">
-            <span>{mode === 'advance' ? '끌어서 움직이기 · 자동 사격' : '누른 방향으로 발사'}</span>
+            <span>
+              {mode === 'assault'
+                ? '좌우로 끌거나 화면 왼쪽·오른쪽 누르기 · 위로 자동 사격'
+                : mode === 'advance'
+                  ? '끌어서 움직이기 · 자동 사격'
+                  : '누른 방향으로 발사'}
+            </span>
             <div>
               {[...new Set(cards.map((c) => c.code))].map((code) => {
                 const same = cards.filter((c) => c.code === code)
@@ -1014,7 +1054,7 @@ function Battle({
                 className="stage-primary"
                 data-testid="mental-quit-no"
               >
-                계속 지키기 ▶
+                {mode === 'assault' ? '계속 오르기 ▶' : '계속 지키기 ▶'}
               </button>
               <button
                 type="button"

@@ -6,7 +6,8 @@ import type { EnemyKind } from './enemies'
  * Phaser 없이 규칙만 갖는다.
  */
 
-export type BattleMode = 'advance' | 'defense'
+/** 'assault'는 종목 회의에서 맞혔을 때의 공격 판: 매도벽을 부수고 올라간다 (decisions.md 413번, assault.ts). */
+export type BattleMode = 'advance' | 'defense' | 'assault'
 
 /** 한 구간에서 길을 막는 적: 종류와 수. */
 export interface Segment {

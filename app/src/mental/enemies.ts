@@ -25,3 +25,102 @@ export const ENEMIES: Record<EnemyKind, EnemySpec> = {
   /** 손절매: 단단하고 곧장 내려와 부딪힌다(원거리 공격은 없다, 340번) */
   stop: { r: 16, fill: '#9ba2ad', label: '손절', hp: 5, speed: 65, dmg: 6, reward: 40 },
 }
+
+/**
+ * 공격 판의 매도 물량 (decisions.md 413번, #573): 공격 판의 적은 패닉셀 고양이가 아니라 파란 "매도" 주문서다. 그림은 art.ts bakeOrders. 64×64 그림
+ * 좌표의 반지름(r)에 scale을 곱해 보인다(주문서 숫자가 읽히게 고양이 적보다 크게).
+ */
+export type OrderKind = 'order' | 'market' | 'bulk' | 'fake' | 'cell' | 'whale'
+export type UnitKind = EnemyKind | OrderKind
+
+export interface OrderSpec extends EnemySpec {
+  /** 64×64 그림을 보이는 배율(고양이 적의 ENEMY_SCALE에 곱한다). */
+  scale: number
+  /** 주문서에 적힌 물량(주). 잡으면 이 숫자가 깎이며 "체결!" */
+  shares: number
+}
+
+export const ORDERS: Record<OrderKind, OrderSpec> = {
+  /** 매도 주문(300주): 천천히 사장냥 쪽으로 다가온다 */
+  order: {
+    r: 17,
+    fill: '#3a7bea',
+    label: '매도',
+    hp: 2.4,
+    speed: 58,
+    dmg: 6,
+    reward: 12,
+    scale: 1.45,
+    shares: 300,
+  },
+  /** 시장가 매도(100주): 작고 빠르게 떼로 쏟아진다 */
+  market: {
+    r: 12,
+    fill: '#5aa2ff',
+    label: '시장가',
+    hp: 0.9,
+    speed: 128,
+    dmg: 4,
+    reward: 6,
+    scale: 1.3,
+    shares: 100,
+  },
+  /** 대량 매도(5,000주): 묵직하고 느리고 단단하다 */
+  bulk: {
+    r: 24,
+    fill: '#2347a8',
+    label: '대량 매도',
+    hp: 13,
+    speed: 30,
+    dmg: 13,
+    reward: 55,
+    scale: 1.55,
+    shares: 5000,
+  },
+  /** 허매도: 맞히면 그냥 사라지는 가짜 물량(체결이 아니라 경험치·처치가 없다) */
+  fake: {
+    r: 17,
+    fill: '#9db6dc',
+    label: '허매도',
+    hp: 1,
+    speed: 66,
+    dmg: 4,
+    reward: 0,
+    scale: 1.45,
+    shares: 800,
+  },
+  /** 매도벽의 한 칸: 움직이지 않고 벽과 함께 내려온다. 체력·물량은 판(assault.ts)이 정한다 */
+  cell: {
+    r: 15,
+    fill: '#4f8df0',
+    label: '매도벽',
+    hp: 8,
+    speed: 0,
+    dmg: 0,
+    reward: 5,
+    scale: 1,
+    shares: 1000,
+  },
+  /** 마지막 대량 매도벽 앞의 큰손 보스: 체력은 판이 정한다 */
+  whale: {
+    r: 26,
+    fill: '#1f3f99',
+    label: '큰손',
+    hp: 70,
+    speed: 0,
+    dmg: 15,
+    reward: 200,
+    scale: 2.3,
+    shares: 50000,
+  },
+}
+
+/** 고양이 적과 매도 물량을 한 표로: 전투(battle.ts)는 이 표로 반지름·체력·피해를 읽는다. 디펜스 출전 화면의 적 소개는 ENEMIES(고양이 넷)만 쓴다. */
+export const UNITS: Record<UnitKind, EnemySpec & { scale?: number; shares?: number }> = {
+  ...ENEMIES,
+  ...ORDERS,
+}
+
+export function isOrder(kind: UnitKind): kind is OrderKind {
+  return kind in ORDERS
+}

@@ -1304,3 +1304,66 @@
     transition: none;
   }
 }
+
+/* 공격 판 (decisions.md 413번, #573): 왼쪽 위에 지금 가격·오른 비율·목표가, 멘탈 게이지는 사장냥 발밑, 보스 줄은 가격 아래.
+   오른쪽 가장자리의 가격 눈금은 캔버스가 그린다(battle.ts drawClimb). */
+.battle-price {
+  position: absolute;
+  top: max(10px, env(safe-area-inset-top));
+  left: 52px;
+  right: 112px;
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  pointer-events: none;
+}
+.battle-price-now,
+.battle-price-goal {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 2px 8px 3px;
+  border-radius: 11px;
+  background: #fff9ecee;
+  border: 1.5px solid #8798b1;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+.battle-price-now {
+  flex: 1;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 5px;
+}
+.battle-price-name {
+  flex-basis: 100%;
+  font-size: 10px;
+  color: #5b6478;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.battle-price-value,
+.battle-price-target {
+  font-weight: 400;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.battle-price-target {
+  font-size: 13px;
+  color: #b8860b;
+}
+.battle-price-up {
+  font-style: normal;
+  font-size: 12px;
+  color: #e8434f;
+  font-variant-numeric: tabular-nums;
+}
+.battle-boss.battle-boss-low {
+  top: calc(max(10px, env(safe-area-inset-top)) + 46px);
+}
+.battle-wall.battle-wall-assault {
+  bottom: 62px;
+  width: min(62%, 240px);
+}
