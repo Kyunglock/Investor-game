@@ -416,7 +416,14 @@ export function bakeMagic(scene: Phaser.Scene) {
   })
   // 땅 (433번): 충차. 위에서 내려다본 공성 수레: 바퀴 넷 위에 판자 지붕, 그 밑으로 들보가 나오고 끝에 뾰족한 쇠 쐐기. 오른쪽이 나아가는
   // 쪽이고 화면에서는 위로 돌려 아래에서 위로 들이받는다.
-  bake(scene, 'magic-ram', 88, 48, (c) => {
+  // 크게 늘여 쓰니 RAM_ART배로 구워 흐려지지 않게 한다.
+  bake(scene, 'magic-ram', 88 * RAM_ART, 48 * RAM_ART, (c) => {
+    c.scale(RAM_ART, RAM_ART)
+    // 땅에 드리운 그림자: 수레 몸통만, 살짝 비껴서
+    c.fillStyle = '#1a120a33'
+    c.beginPath()
+    c.roundRect(6, 12, 46, 32, 4)
+    c.fill()
     // 바퀴 넷(양옆으로 삐져나온다)
     for (const [x, y] of [
       [16, 6],
@@ -521,6 +528,9 @@ export function bakeMagic(scene: Phaser.Scene) {
 }
 
 // ── 공격 판 (decisions.md 413번, #573): 매도벽 칸·매도 물량 주문서·큰손 보스·파편·속도선
+
+/** 충차 그림을 구운 배율: 화면에서 두세 배로 키워 쓴다(battle.ts). */
+export const RAM_ART = 2.5
 
 /** 매도벽 칸 텍스처의 크기(px). 화면에서는 칸 크기로 늘여 놓는다. 금 간 정도 0~3. */
 export const CELL_TEX = { w: 60, h: 30 }
