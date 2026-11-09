@@ -84,7 +84,7 @@ public record CompanyView(
    * 멘탈 스테이지 (decisions.md 369번).
    *
    * @param best 깬 최고 스테이지(0이면 아직 없다). 다음에 열리는 것은 best + 1
-   * @param last 마지막 스테이지(지금은 챕터 하나라 perChapter)
+   * @param last 마지막 스테이지(챕터당 스테이지 수 × 챕터 수, 407번)
    * @param perChapter 한 챕터의 스테이지 수. 챕터 마지막은 보스
    * @param stars 깬 스테이지의 별, 1번부터 차례로
    * @param bonusPercent 이번 분기 강화율(%): 깬 최고 스테이지로 매 분기 저절로 붙는다

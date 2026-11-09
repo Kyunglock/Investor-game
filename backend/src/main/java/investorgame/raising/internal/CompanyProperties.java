@@ -96,6 +96,7 @@ public record CompanyProperties(
    */
   public record Stages(
       int perChapter,
+      int chapters,
       long capitalPerStage,
       int clearTickets,
       int bossTickets,

@@ -937,7 +937,7 @@ components:
           required: [best, last, perChapter, stars, bonusPercent, exAvailable, lastResult]
           properties:
             best: { type: integer, description: 깬 최고 스테이지(0이면 아직 없다). 다음에 열리는 것은 best + 1 }
-            last: { type: integer, description: 마지막 스테이지(지금은 챕터 하나) }
+            last: { type: integer, description: 마지막 스테이지(챕터당 스테이지 수 × 챕터 수, 407번) }
             perChapter: { type: integer, description: 한 챕터의 스테이지 수. 챕터 마지막은 보스 }
             stars: { type: array, items: { type: integer }, description: 깬 스테이지의 별(1~3), 1번부터 차례로 }
             bonusPercent: { type: integer, description: 이번 분기 강화율(%) }
