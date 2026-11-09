@@ -288,8 +288,8 @@ export function ActionBar({
               useAppUi.getState().openSheet({ kind: 'toy', panel: 'stage' })
             }}
           >
-            <small>멘탈 전투</small>
-            <strong>스테이지</strong>
+            <small>멘탈</small>
+            <strong>수련</strong>
             <em>
               {company.stages && company.stages.best > 0
                 ? `${company.stages.best}/${company.stages.last} · +${company.stages.bonusPercent}%`
