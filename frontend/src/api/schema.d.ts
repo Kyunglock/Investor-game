@@ -682,7 +682,7 @@ export interface components {
                 }[];
                 options: {
                     /** @enum {string} */
-                    code: "BUY" | "SELL" | "HOLD" | "TEAM";
+                    code: "BUY" | "SELL";
                     label: string;
                 }[];
                 /** @description 지금 정할 수 있다(정하지 않았고 돈을 굴리는 자리에 사람이 있다) */
@@ -722,7 +722,7 @@ export interface components {
                 finder?: components["schemas"]["Finder"] | null;
                 outcome?: {
                     /**
-                     * @description 정한 것. 맡겼으면 직원들이 정한 쪽
+                     * @description 정한 것. HOLD는 423번 전의 옛 회의에만 있다
                      * @enum {string}
                      */
                     choice: "BUY" | "SELL" | "HOLD";
@@ -748,11 +748,6 @@ export interface components {
                          */
                         kind: "TALK" | "TALLY" | "WIN" | "LOSE";
                     }[];
-                    /**
-                     * Format: int64
-                     * @description 지켜봤을 때 맞는 쪽으로 했으면 벌었을 돈(뒤집힘 없이). 지켜보지 않았으면 null
-                     */
-                    missed?: number | null;
                     up: boolean;
                     reveal: string;
                     /** @description 결정적 문장의 번호(sentences 안) */
@@ -1416,10 +1411,10 @@ export interface operations {
             content: {
                 "application/json": {
                     /**
-                     * @description TEAM은 "너희가 알아서 해": 직원 한마디를 안목만큼 저울질해 사거나 판다 (decisions.md 279번)
+                     * @description 산다·판다 둘 중 하나 (decisions.md 423번: 지켜본다·맡기기는 뺐다)
                      * @enum {string}
                      */
-                    choice: "BUY" | "SELL" | "HOLD" | "TEAM";
+                    choice: "BUY" | "SELL";
                     /** @description 크게 한다(화면에서는 뺐다 */
                     big?: boolean | null;
                 };

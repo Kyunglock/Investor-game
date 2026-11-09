@@ -86,12 +86,6 @@
   color: #496a9e;
   font-weight: 700;
 }
-.meeting-window [data-testid="team-grade"] {
-  border-radius: 11px;
-  background: #eef2f7;
-  padding: 10px;
-  border-color: #d8dfeb;
-}
 .meeting-article {
   position: relative;
   margin-top: 14px;

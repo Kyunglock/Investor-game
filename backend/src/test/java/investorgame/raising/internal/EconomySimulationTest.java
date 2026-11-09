@@ -34,7 +34,7 @@ class EconomySimulationTest {
   private static String majority(CompanyState.Invest invest) {
     long up = invest.sentences.stream().filter(s -> s.sign.equals("UP")).count();
     long down = invest.sentences.stream().filter(s -> s.sign.equals("DOWN")).count();
-    return up > down ? InvestEngine.BUY : down > up ? InvestEngine.SELL : InvestEngine.HOLD;
+    return down > up ? InvestEngine.SELL : InvestEngine.BUY;
   }
 
   /**

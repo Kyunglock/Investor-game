@@ -94,7 +94,7 @@ class TeamEngineTest {
       // 분기를 넘기면 다음 분기 회의로 바뀌므로 그은 문장을 먼저 본다.
       Integer at = c.invest.highlightIndex;
       int expected = at != null && c.invest.sentences.get(at).decisive ? 1 : 0;
-      ENGINE.invest.decide(c, InvestEngine.HOLD, random);
+      ENGINE.invest.decide(c, InvestEngine.BUY, random);
       CompanyState.Quarter q = ENGINE.settleQuarter(c, random);
       assertThat(q.highlightChances).isEqualTo(1);
       String text = q.reports.get(1).text;

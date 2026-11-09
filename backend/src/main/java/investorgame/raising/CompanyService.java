@@ -45,7 +45,7 @@ public interface CompanyService {
   CompanyView convene(UUID sessionId);
 
   /**
-   * 올해 투자 회의에서 고른다(BUY·SELL·HOLD). 돈을 굴리는 직원마다 사장 말대로 하거나, 꼬드김에 넘어가거나, 제 판단대로 한다. 손익은 바로 자본에 들어간다.
+   * 올해 투자 회의에서 고른다(BUY·SELL, 423번). 돈을 굴리는 직원마다 사장 말대로 하거나, 꼬드김에 넘어가거나, 제 판단대로 한다. 손익은 바로 자본에 들어간다.
    * 이미 했거나 돈을 굴리는 자리에 아무도 없으면 400 (decisions.md 229번).
    */
   CompanyView invest(UUID sessionId, String choice, boolean big);

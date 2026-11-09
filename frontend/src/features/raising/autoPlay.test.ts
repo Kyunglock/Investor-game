@@ -33,12 +33,13 @@ function company(over: Partial<Company> = {}): Company {
 const remark = (read: 'UP' | 'DOWN' | 'NEUTRAL') => ({ read })
 
 describe('자동 진행 (decisions.md 245번)', () => {
-  it('투자 회의는 직원 다수결, 같으면 지켜본다', () => {
+  it('투자 회의는 직원 다수결, 같으면 산다 (423번)', () => {
     const invest = (reads: ('UP' | 'DOWN' | 'NEUTRAL')[]) =>
       ({ remarks: reads.map(remark) }) as unknown as NonNullable<Company['invest']>
     expect(autoChoice(invest(['UP', 'UP', 'DOWN']))).toBe('BUY')
     expect(autoChoice(invest(['DOWN', 'NEUTRAL']))).toBe('SELL')
-    expect(autoChoice(invest(['UP', 'DOWN', 'NEUTRAL']))).toBe('HOLD')
+    expect(autoChoice(invest(['UP', 'DOWN', 'NEUTRAL']))).toBe('BUY')
+    expect(autoChoice(invest(['NEUTRAL']))).toBe('BUY')
   })
 
   it('빈 자리만큼 채용권으로 뽑는다: 채용권·데리고 있을 자리가 허락하는 만큼 (312번)', () => {

@@ -101,7 +101,7 @@ class CompanyController {
     return companies.convene(cookies.requireSession(token));
   }
 
-  /** 올해 투자 회의에서 고른다: BUY·SELL·HOLD (decisions.md 229번). */
+  /** 올해 투자 회의에서 고른다: BUY·SELL (decisions.md 229·423번). */
   @PostMapping("/invest")
   CompanyView invest(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,

@@ -39,7 +39,7 @@ class BalanceSimulationTest {
   static String majorityChoice(CompanyState.Invest invest) {
     long up = invest.sentences.stream().filter(s -> s.sign.equals("UP")).count();
     long down = invest.sentences.stream().filter(s -> s.sign.equals("DOWN")).count();
-    return up > down ? InvestEngine.BUY : down > up ? InvestEngine.SELL : InvestEngine.HOLD;
+    return down > up ? InvestEngine.SELL : InvestEngine.BUY;
   }
 
   /** 연초: 채용권을 다 쓰고, 넘치면 내보내고, 높은 사람부터 앉히고, 이사할 수 있으면 한다. */
@@ -107,7 +107,7 @@ class BalanceSimulationTest {
           switch (boss) {
             case GREEDY -> InvestEngine.BUY;
             case READER, STAGES, BUYER -> majorityChoice(c.invest);
-            case LAZY -> InvestEngine.HOLD;
+            case LAZY -> majorityChoice(c.invest); // 지켜본다는 없다(423번): 자동 진행처럼 다수결
           };
       ENGINE.invest.decide(c, choice, boss == Boss.GREEDY, random);
       // 회의 뒤 전투 (414번, #573): 스테이지를 하는 사장은 별 2개를 얻는다고 친다.

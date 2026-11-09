@@ -419,7 +419,16 @@
   color: #71829a;
   white-space: nowrap;
 }
-/* 카드 등급 (377번): 희귀 파랑, 영웅 보라 빛, 전설 금빛이 흐르고 맥박치듯 빛난다. 등급 차이가 한눈에 보이게. */
+/* 카드 등급 (377·420번): 일반 회색, 희귀 파랑, 영웅 보라 빛, 전설 금빛이 흐르고 맥박치듯 빛난다. 등급 차이는 앞면 표시로 한눈에 보이게. */
+.stage-card-option[data-grade="N"] {
+  border: 2px solid #9aa6b6;
+  border-top: 5px solid var(--card-accent);
+}
+.stage-card-option[data-grade="N"] .stage-card-meta > span:first-child {
+  background: #8a96a8;
+  border-color: #8a96a8;
+  color: #fff;
+}
 .stage-card-option[data-grade="R"] {
   border: 2px solid #4f8bff;
   border-top: 5px solid var(--card-accent);
@@ -811,12 +820,16 @@
 }
 /*
  * 카드 펼치기 (393번): 석 장이 뒷면으로 쿵 깔리고 왼쪽부터 한 장씩 떨리며(빛이 샘) 옆으로 누웠다 앞면으로 일어선다. 순서와 시각은 cardReveal.ts,
- * 상태는 버튼의 data-face(back·tease·turn·front). 뒷면 테두리는 등급을 살짝 흘린다(--leak: 희귀 파랑, 영웅 보라, 전설 금빛이 미리 빛남).
+ * 상태는 버튼의 data-face(back·tease·turn·front). 뒷면·뜸·뒤집기는 등급과 상관없이 같다(420번, #585): 떨림·새는 빛(--back-glow)이 모두 같고, 등급은
+ * 앞면이 보일 때 드러난다. --leak은 앞면이 펼쳐진 뒤의 연출에만 쓴다.
  */
 .stage-card-slot {
   position: relative;
   display: flex;
   min-width: 0;
+}
+.stage-card-slot {
+  --back-glow: #cfe0ff;
 }
 .stage-card-slot > .stage-card-option {
   flex: 1;
@@ -839,7 +852,7 @@
   --leak: #ffb800;
   --spark: #ffe58a;
 }
-/* 펼치는 동안 카드 밖을 눌러도 건너뛴다. 전설의 뜸 동안에는 화면이 어두워진다. */
+/* 펼치는 동안 카드 밖을 눌러도 건너뛴다. 전설이 펼쳐진 순간 화면이 잠깐 어두워진다(420번). */
 .stage-card-catcher {
   position: absolute;
   inset: 0;
@@ -865,7 +878,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 44%, var(--leak), transparent 70%);
+  background: radial-gradient(circle at 50% 44%, var(--back-glow), transparent 70%);
   opacity: 0;
 }
 .stage-card-back-emblem {
@@ -893,43 +906,27 @@
   background: #2b2f63;
   box-shadow: 0 4px 0 #1d1f4566;
 }
-.stage-cards .stage-card-option[data-grade="R"]:not([data-face="front"]) {
-  border-color: #79a6ff;
-  box-shadow:
-    0 4px 0 #1d1f4566,
-    0 0 8px #4f8bff66;
-}
-.stage-cards .stage-card-option[data-grade="SR"]:not([data-face="front"]) {
-  border-color: #b98dff;
-}
-.stage-cards .stage-card-option[data-grade="UR"]:not([data-face="front"]) {
-  border-color: #ffcd55;
-}
 .stage-cards .stage-card-option[data-face="back"] {
   animation: card-deal 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.25) var(--deal-delay) both;
 }
-.stage-cards .stage-card-option[data-face="back"][data-grade="SR"],
-.stage-cards .stage-card-option[data-face="back"][data-grade="UR"] {
+.stage-cards .stage-card-option[data-face="back"] {
   animation:
     card-deal 0.42s cubic-bezier(0.2, 0.9, 0.3, 1.25) var(--deal-delay) both,
     card-back-pulse 1.3s ease-in-out 0.5s infinite;
 }
-/* 뜸: 빠르게 떨리면서(translate·rotate) 커지고 빛이 차오른다(scale·그림자). 전설은 더 크게 떤다. */
+/* 뜸: 빠르게 떨리면서(translate·rotate) 커지고 빛이 차오른다(scale·그림자). 모든 등급이 같다(420번). */
 .stage-cards .stage-card-option[data-face="tease"] {
   --shake: 1.6px;
   animation:
     card-tremble 0.09s linear infinite,
     card-tease var(--tease-ms) ease-in both;
 }
-.stage-cards .stage-card-option[data-face="tease"][data-grade="UR"] {
-  --shake: 3px;
-}
 .stage-cards .stage-card-option[data-face="tease"] > .stage-card-back::after {
   animation: card-leak var(--tease-ms) ease-in both;
 }
 .stage-cards .stage-card-option[data-face="turn"] {
   animation: card-turn var(--turn-ms) ease-in both;
-  box-shadow: 0 0 26px 6px var(--leak);
+  box-shadow: 0 0 26px 6px var(--back-glow);
 }
 .stage-cards .stage-card-option[data-face="front"] {
   animation: card-face 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.3) both;
@@ -966,12 +963,12 @@
   100% {
     box-shadow:
       0 4px 0 #1d1f4566,
-      0 0 6px var(--leak);
+      0 0 6px var(--back-glow);
   }
   50% {
     box-shadow:
       0 4px 0 #1d1f4566,
-      0 0 16px 2px var(--leak);
+      0 0 16px 2px var(--back-glow);
   }
 }
 @keyframes card-tremble {
@@ -1001,13 +998,13 @@
     scale: 1;
     box-shadow:
       0 4px 0 #1d1f4566,
-      0 0 4px var(--leak);
+      0 0 4px var(--back-glow);
   }
   100% {
     scale: 1.07;
     box-shadow:
       0 4px 0 #1d1f4566,
-      0 0 30px 8px var(--leak);
+      0 0 30px 8px var(--back-glow);
   }
 }
 @keyframes card-leak {
