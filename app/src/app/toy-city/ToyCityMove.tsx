@@ -34,6 +34,8 @@ export function ToyCityMove({
   const done = () => {
     onDone()
     useAppUi.getState().setTab('office')
+    // 사무실에 돌아오면 밀어낸 자리에 새 라이벌이 밑에서 위로 지어진다 (415번). 등급이 내려간 때는 부수지 않으니 없다.
+    if (up) useAppUi.getState().setRivalRise(direction)
   }
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null

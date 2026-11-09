@@ -12,7 +12,10 @@ import {
   type MovePhase,
   moveTimeline,
   officeGeometry,
+  RISE_FLOORS,
+  RISE_MS,
   rivalName,
+  rivalShown,
 } from './model'
 
 export type OfficeTransition = { before: Grade; after: Grade; beforeSeats: number }
@@ -24,6 +27,7 @@ function Rival({
   name,
   hit,
   fly = 0,
+  rise = false,
 }: {
   x: number
   height: number
@@ -32,10 +36,13 @@ function Rival({
   hit?: 'left' | 'right'
   /** 밀려날 때 날아가는 거리(세계 좌표). 카메라가 물러나도 화면에서 같은 만큼 날아가게 축척으로 나눠 받는다. */
   fly?: number
+  /** 빈자리에 새로 지어진다 (415번): 땅에서부터 한 층씩 올라오고 다 서면 간판이 내려와 걸린다. */
+  rise?: boolean
 }) {
   return (
     <g
-      className={hit ? 'toy-rival toy-evict' : 'toy-rival'}
+      className={hit ? 'toy-rival toy-evict' : rise ? 'toy-rival toy-rise' : 'toy-rival'}
+      data-rise={rise || undefined}
       style={
         {
           transformOrigin: `${x + width / 2}px 560px`,
@@ -49,7 +56,11 @@ function Rival({
       <path d={`M${x} ${560 - height}l9-7h${width}v${height}l-9 7`} fill="#8fa5c8" />
       <rect x={x} y={560 - height} width={width} height={height} rx="5" fill="#b9c7e2" />
       {/* 밀려날 때 간판은 떨어지는 조각(Eviction)이 따로 그린다. */}
-      {!hit && <RivalSign x={x} width={width} height={height} name={name} />}
+      {!hit && (
+        <g className="toy-rival-sign">
+          <RivalSign x={x} width={width} height={height} name={name} />
+        </g>
+      )}
       {Array.from({ length: Math.floor((height - 60) / 36) }, (_, r) =>
         Array.from({ length: Math.max(3, Math.floor(width / 32)) }, (_, col) => (
           <rect
@@ -94,6 +105,38 @@ function RivalSign({
         {name}
       </text>
     </>
+  )
+}
+
+/** 밀어낸 자리 (415번): 흙바닥과 먼지, "매물" 팻말. 사무실로 돌아오면 여기에 새 라이벌이 지어진다. */
+function EmptyLot({ x, width }: { x: number; width: number }) {
+  return (
+    <g data-testid="toy-empty-lot">
+      <ellipse cx={x + width / 2} cy="562" rx={width / 2 + 6} ry="9" fill="#c9a77a" />
+      <ellipse cx={x + width * 0.3} cy="556" rx="14" ry="5" fill="#d8bf98" opacity=".8" />
+      <ellipse cx={x + width * 0.72} cy="557" rx="10" ry="4" fill="#d8bf98" opacity=".7" />
+      <rect x={x + width / 2 - 2} y="520" width="4" height="40" fill="#8a6a4a" />
+      <rect
+        x={x + width / 2 - 22}
+        y="504"
+        width="44"
+        height="22"
+        rx="3"
+        fill="#fff7e5"
+        stroke="#8a6a4a"
+        strokeWidth="2"
+      />
+      <text
+        x={x + width / 2}
+        y="520"
+        textAnchor="middle"
+        fontSize="11"
+        fontWeight="700"
+        fill="#c0503a"
+      >
+        매물
+      </text>
+    </g>
   )
 }
 
@@ -305,6 +348,8 @@ export function ToyCityStreet({
   onUpgrade,
   skip = false,
   onPhase,
+  rise = null,
+  onRiseDone,
 }: {
   company: Company
   transition?: OfficeTransition
@@ -312,6 +357,9 @@ export function ToyCityStreet({
   /** 화면을 눌러 연출을 건너뛰면 바로 끝 모습으로 간다. */
   skip?: boolean
   onPhase?: (phase: MovePhase) => void
+  /** 확장 뒤 처음 사무실에 왔을 때 새 라이벌이 지어지는 쪽 (415번). 없으면 null. */
+  rise?: 'left' | 'right' | null
+  onRiseDone?: () => void
 }) {
   const [phase, setPhase] = useState<MovePhase>(() =>
     transition && !skip && !matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : MOVE_DONE,
@@ -352,6 +400,27 @@ export function ToyCityStreet({
     )
     return () => timers.forEach(clearTimeout)
   }, [transition, skip, up])
+  // 새 라이벌이 밑에서 위로 지어진다 (415번): 층마다 "툭", 다 서면 간판이 걸리며 한 번 흔들린다. 움직임 줄이기면 바로 서 있다.
+  const riseDone = useRef(onRiseDone)
+  riseDone.current = onRiseDone
+  useEffect(() => {
+    if (!rise) return
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      riseDone.current?.()
+      return
+    }
+    const timers = Array.from({ length: RISE_FLOORS }, (_, i) =>
+      setTimeout(
+        () => {
+          sfx.thud()
+          if (i === RISE_FLOORS - 1) haptic.light()
+        },
+        ((i + 1) * RISE_MS) / RISE_FLOORS,
+      ),
+    )
+    timers.push(setTimeout(() => riseDone.current?.(), RISE_MS + 500))
+    return () => timers.forEach(clearTimeout)
+  }, [rise])
   useEffect(() => {
     report.current?.(phase)
     // 색종이는 화면 맨 위 효과 층(FxLayer)에 터뜨린다: 캔버스라 조각이 많아도 가볍고, 움직임 줄이기면 그리지 않는다.
@@ -474,22 +543,35 @@ export function ToyCityStreet({
           <path d="M-700 620h1800" stroke="#c8dfd0" strokeWidth="5" />
         </g>
         {celebrate && <Rays x={after.center} y={560 - after.height * 0.6} k={k} />}
-        <Rival
-          x={rivalGeometry.x - rivalWidth - rivalGap}
-          width={rivalWidth}
-          height={220 / rivalGeometry.scale}
-          name={rivalName(rivalGrade, 'left')}
-          hit={hitRival && side === 'left' ? 'left' : undefined}
-          fly={-420 * k}
-        />
-        <Rival
-          x={rivalGeometry.x + rivalGeometry.width + rivalGap}
-          width={rivalWidth}
-          height={242 / rivalGeometry.scale}
-          name={rivalName(rivalGrade, 'right')}
-          hit={hitRival && side === 'right' ? 'right' : undefined}
-          fly={420 * k}
-        />
+        {/* 밀어낸 쪽은 축하·끝 모습에 빈자리다 (415번). 사무실로 돌아오면 그 자리에 새 라이벌이 지어진다. */}
+        {rivalShown('left', side, phase, up) ? (
+          <Rival
+            key={rise === 'left' ? 'rise-left' : 'left'}
+            x={rivalGeometry.x - rivalWidth - rivalGap}
+            width={rivalWidth}
+            height={220 / rivalGeometry.scale}
+            name={rivalName(rivalGrade, 'left')}
+            hit={hitRival && side === 'left' ? 'left' : undefined}
+            fly={-420 * k}
+            rise={rise === 'left'}
+          />
+        ) : (
+          <EmptyLot x={rivalGeometry.x - rivalWidth - rivalGap} width={rivalWidth} />
+        )}
+        {rivalShown('right', side, phase, up) ? (
+          <Rival
+            key={rise === 'right' ? 'rise-right' : 'right'}
+            x={rivalGeometry.x + rivalGeometry.width + rivalGap}
+            width={rivalWidth}
+            height={242 / rivalGeometry.scale}
+            name={rivalName(rivalGrade, 'right')}
+            hit={hitRival && side === 'right' ? 'right' : undefined}
+            fly={420 * k}
+            rise={rise === 'right'}
+          />
+        ) : (
+          <EmptyLot x={rivalGeometry.x + rivalGeometry.width + rivalGap} width={rivalWidth} />
+        )}
         <g className={`toy-building${motion}`} style={buildingStyle}>
           <ellipse cx={center} cy="569" rx={w / 2 + 12} ry="11" fill="#34486122" />
           <path d={`M${x} ${top}l13-10h${w}v${h}l-13 10`} fill="#d4b38a" />

@@ -38,6 +38,9 @@ interface UiState {
   battle: BattleEntry | null
   startBattle: (entry: BattleEntry) => void
   endBattle: () => void
+  /** 확장으로 밀어낸 쪽 (decisions.md 415번, #577). 사무실을 처음 볼 때 그 자리에 새 라이벌이 밑에서 위로 지어지고 지워진다. */
+  rivalRise: 'left' | 'right' | null
+  setRivalRise: (side: 'left' | 'right' | null) => void
 }
 
 export const useAppUi = create<UiState>((set, get) => ({
@@ -49,6 +52,8 @@ export const useAppUi = create<UiState>((set, get) => ({
   battle: null,
   startBattle: (battle) => set({ battle, sheet: null }),
   endBattle: () => set({ battle: null }),
+  rivalRise: null,
+  setRivalRise: (rivalRise) => set({ rivalRise }),
   requestSettle: () => set((s) => ({ settleRequest: s.settleRequest + 1, sheet: null })),
   setTab: (tab) => set({ tab, sheet: null }),
   openSheet: (sheet) => set({ sheet }),

@@ -5,7 +5,7 @@ import { nextStep, officeName } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useLocked, useTutorialSpot } from '@web/features/raising/TutorialBanner'
 import { tutorialStep, unlockedFeatures, useTutorial } from '@web/features/raising/tutorial'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { haptic } from '../../fx/haptics'
 import { isMuted, setMuted, sfx } from '../../fx/sound'
 import { chapterName, stageLabel } from '../../mental/advance'
@@ -59,6 +59,9 @@ const MENU = [
 
 export function ToyCityHome({ company }: { company: Company }) {
   const sheet = useAppUi((s) => s.sheet)
+  // 확장 뒤 처음 사무실을 볼 때만 새 라이벌이 지어진다 (415번): 다른 탭으로 가면 지운다.
+  const rivalRise = useAppUi((s) => s.rivalRise)
+  useEffect(() => () => useAppUi.getState().setRivalRise(null), [])
   const panel = sheet?.kind === 'toy' ? sheet.panel : null
   const setPanel = (panel: ToyPanel | null) => {
     if (panel) useAppUi.getState().openSheet({ kind: 'toy', panel })
@@ -90,7 +93,12 @@ export function ToyCityHome({ company }: { company: Company }) {
   const issue = company.meeting?.omen ?? company.meeting?.eraEnding ?? company.era.description
   return (
     <div className="toy-home" data-testid="office-scene">
-      <ToyCityStreet company={company} onUpgrade={() => setPanel('upgrade')} />
+      <ToyCityStreet
+        company={company}
+        onUpgrade={() => setPanel('upgrade')}
+        rise={rivalRise}
+        onRiseDone={() => useAppUi.getState().setRivalRise(null)}
+      />
       <div className="toy-growth">
         <div
           role="progressbar"

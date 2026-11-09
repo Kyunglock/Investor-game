@@ -7,6 +7,7 @@ import {
   MOVE_MS,
   moveTimeline,
   officeGeometry,
+  rivalShown,
 } from './model'
 
 describe('토이시티의 실제 회사 상태 표시', () => {
@@ -61,5 +62,18 @@ describe('토이시티의 실제 회사 상태 표시', () => {
     const down = moveTimeline(false)
     expect(down.map((s) => s.phase)).not.toContain(3)
     expect(down.at(-1)?.phase).toBe(MOVE_DONE)
+  })
+})
+
+describe('확장 뒤 밀어낸 자리 (415번)', () => {
+  it('등급이 오르면 밀어낸 쪽은 축하·끝 모습에 빈자리다', () => {
+    expect(rivalShown('left', 'left', 2, true)).toBe(true)
+    expect(rivalShown('left', 'left', 3, true)).toBe(false)
+    expect(rivalShown('left', 'left', 4, true)).toBe(false)
+    expect(rivalShown('right', 'left', 4, true)).toBe(true)
+  })
+
+  it('등급이 내려가면 부수지 않으니 그대로다', () => {
+    expect(rivalShown('left', 'left', 4, false)).toBe(true)
   })
 })
