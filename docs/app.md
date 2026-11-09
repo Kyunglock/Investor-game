@@ -104,3 +104,4 @@ cd app && pnpm assets     # scripts/appAssets.ts가 assets/*.png를 그리고, @
 - Play 스토어는 APK가 아니라 **AAB**를 받는다: 워크플로의 `assembleRelease`를 `bundleRelease`로 바꾸면 `app/build/outputs/bundle/release/app-release.aab`가 나온다.
 - 개인정보처리방침 주소(웹의 `/privacy`)를 스토어 등록 정보에 적는다.
 - 시즌·친구·라이벌처럼 앱에서만 붙일 것은 증권사 육성 설계 10절에 있다. 아직 정하지 않았다.
+- **종목 회의 뒤 전투** (decisions.md 413·414번): 회의 결과 화면에서 틀린 쪽에 걸었으면 디펜스로 손실을 줄이고, 맞힌 쪽이면 공격 판(매도벽을 부수고 오르기, 좌우로만 이동)으로 수익을 키운다. 별에 따라 회의 손익이 바뀌고(`POST /api/company/invest/battle`), 끝나면 회의 창으로 돌아와 전·후 손익을 보이고 분기를 넘긴다. 건너뛰면 손익 그대로다.

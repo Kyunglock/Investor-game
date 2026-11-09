@@ -1367,3 +1367,12 @@
   bottom: 62px;
   width: min(62%, 240px);
 }
+
+/* 종목 회의 뒤 전투의 규칙 한 줄 (414번): 좁은 폰에서도 잘리지 않게. */
+.stage-heading .stage-invest-rule {
+  max-width: 100%;
+  padding: 0 16px;
+  font-size: 13px;
+  line-height: 1.45;
+  word-break: keep-all;
+}
