@@ -140,10 +140,27 @@ export const sfx = {
     tone(784, 160, { wave: 'sine', gain: 0.06 })
     tone(1175, 320, { wave: 'sine', gain: 0.06, at: 0.11 })
   },
-  /** 멘탈 전투 (decisions.md 328번): 쏘기 */
-  shot: () => {
-    tone(900, 60, { wave: 'square', gain: 0.05, slide: 260 })
-    noise(40, 0.04)
+  /** 멘탈 전투 (decisions.md 328번): 쏘기. 무기마다 다른 총소리 (#563). */
+  shot: (kind: 'pistol' | 'revolver' | 'smg' | 'shotgun' | 'rifle' = 'pistol') => {
+    if (kind === 'revolver') {
+      tone(420, 120, { wave: 'sawtooth', gain: 0.07, slide: 90 })
+      noise(110, 0.09)
+    } else if (kind === 'smg') {
+      tone(1300, 30, { wave: 'square', gain: 0.035, slide: 600 })
+      noise(25, 0.03)
+    } else if (kind === 'shotgun') {
+      tone(160, 160, { wave: 'sawtooth', gain: 0.08, slide: 50 })
+      noise(170, 0.12)
+      // 펌프질: 철컥
+      tone(1800, 25, { wave: 'square', gain: 0.03, at: 0.2 })
+      tone(1200, 30, { wave: 'square', gain: 0.03, at: 0.27 })
+    } else if (kind === 'rifle') {
+      tone(2200, 70, { wave: 'sawtooth', gain: 0.05, slide: 300 })
+      noise(60, 0.06)
+    } else {
+      tone(900, 60, { wave: 'square', gain: 0.05, slide: 260 })
+      noise(40, 0.04)
+    }
   },
   /** 멘탈 전투: 탄이 맞았다 */
   hit: () => tone(2400, 25, { wave: 'square', gain: 0.02, slide: 1600 }),

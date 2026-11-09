@@ -13,12 +13,12 @@ export const TURN_MS = 140
 /** 다 펼친 뒤, 또는 눌러 건너뛴 뒤 고를 수 있게 되기까지. */
 export const READY_GAP_MS = 280
 
-/** 등급마다: 뒤집기 전 떨리는 뜸, 뒤집기 앞 절반, 펼친 뒤 다음 카드까지의 여운. */
+/** 등급마다: 뒤집기 전 떨리는 뜸, 뒤집기 앞 절반, 펼친 뒤 다음 카드까지의 여운. 뒤집히는 속도(turn)는 모든 등급이 같다(#562): 등급 차이는 뜸·여운·연출로만 낸다. */
 export const REVEAL_TIMING: Record<CardGrade, { tease: number; turn: number; after: number }> = {
   N: { tease: 150, turn: TURN_MS, after: 130 },
   R: { tease: 300, turn: TURN_MS, after: 260 },
-  SR: { tease: 480, turn: 170, after: 420 },
-  UR: { tease: 1100, turn: 220, after: 700 },
+  SR: { tease: 480, turn: TURN_MS, after: 420 },
+  UR: { tease: 1100, turn: TURN_MS, after: 700 },
 }
 
 export interface RevealStep {
@@ -56,4 +56,20 @@ export function topGrade(grades: readonly CardGrade[]): CardGrade {
     (top, g) => (order.indexOf(g) > order.indexOf(top) ? g : top),
     'N',
   )
+}
+
+/** 다 펼쳐 고를 수 있게 된 뒤 이만큼 고르지 않으면 한 장을 저절로 고른다 (#566). 일시정지·앱이 뒤로 간 동안은 세지 않는다. */
+export const AUTO_PICK_MS = 5000
+
+/** 저절로 고를 카드의 자리: 등급이 가장 높은 것, 같으면 마법 레벨업 > 고양이 동료 > 일반 카드, 그래도 같으면 왼쪽. */
+export function autoPickIndex(cards: readonly { grade: CardGrade; code: string }[]): number {
+  const order: CardGrade[] = ['N', 'R', 'SR', 'UR']
+  const kind = (code: string) => (code === 'atk' || code === 'spd' ? 0 : code === 'cat' ? 1 : 2)
+  let best = 0
+  cards.forEach((c, i) => {
+    const b = cards[best]
+    const g = order.indexOf(c.grade) - order.indexOf(b.grade)
+    if (g > 0 || (g === 0 && kind(c.code) > kind(b.code))) best = i
+  })
+  return best
 }

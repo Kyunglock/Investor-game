@@ -5,7 +5,7 @@ import { create } from 'zustand'
 export type Tab = 'office' | 'market' | 'staff' | 'issue' | 'record'
 
 /** 인력 관리의 자리 카드와 메인 화면의 설정·확장·멘탈·전투 강화(367번) 시트. */
-export type ToyPanel = 'upgrade' | 'stage' | 'settings' | 'battle'
+export type ToyPanel = 'upgrade' | 'stage' | 'settings' | 'battle' | 'weapons'
 
 /** 들어갈 멘탈 전투 (decisions.md 369번): 번호 스테이지(전진 모드) 또는 EX 디펜스. */
 export type BattleEntry = { kind: 'stage'; stage: number } | { kind: 'ex' }
