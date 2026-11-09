@@ -375,17 +375,19 @@ export function TeamClash({
                 talking={up}
                 fallback={done ? (wins ? '🙌' : '😩') : name.slice(0, 1)}
               />
+              {/* 이름은 한 줄에 온전히, 팀장 별·등급은 그 밑 작은 줄에: 한 줄에 다 넣으니 세 글자 이름이 칸(48px)을 넘어 밀렸다. */}
               <span
-                className={`w-full truncate text-center text-[10px] leading-tight ${up ? 'font-bold' : ''}`}
+                className={`whitespace-nowrap text-center text-[10px] leading-tight ${up ? 'font-bold' : ''}`}
+                data-testid="speaker-name"
               >
-                {staffOf(name)?.leader && <span className="text-gold">★</span>}
                 {name}
-                {staffOf(name) && (
-                  <span className="ml-0.5 font-mono-num text-muted">
-                    {staffOf(name)?.overallGrade}
-                  </span>
-                )}
               </span>
+              {staffOf(name) && (
+                <span className="whitespace-nowrap text-center font-mono-num text-[9px] text-muted leading-none">
+                  {staffOf(name)?.leader && <span className="text-gold">★</span>}
+                  {staffOf(name)?.overallGrade}
+                </span>
+              )}
             </div>
           )
         })}
