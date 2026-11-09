@@ -414,51 +414,74 @@ export function bakeMagic(scene: Phaser.Scene) {
     c.fillStyle = '#ffffff'
     c.fillRect(0, 0, 6, 10)
   })
-  // 땅 (433번): 바위 충차. 오른쪽(나아가는 쪽)에 돌로 깎은 들이받는 머리, 뒤로 쇠띠를 두른 통나무. 화면에서 돌진 방향으로 돌린다.
-  bake(scene, 'magic-ram', 76, 36, (c) => {
-    // 통나무
-    c.beginPath()
-    c.roundRect(4, 9, 50, 18, 7)
-    const wood = c.createLinearGradient(0, 9, 0, 27)
-    wood.addColorStop(0, '#c9935a')
-    wood.addColorStop(0.5, '#9a6232')
-    wood.addColorStop(1, '#5e3a1c')
-    c.fillStyle = wood
-    c.fill()
-    c.strokeStyle = '#3a2410'
-    c.lineWidth = 2
-    c.stroke()
-    // 쇠띠 셋
-    for (const x of [14, 28, 42]) {
-      c.fillStyle = '#5b6470'
-      c.fillRect(x, 8, 4, 20)
-      c.fillStyle = '#aeb8c4'
-      c.fillRect(x, 9, 4, 3)
+  // 땅 (433번): 충차. 위에서 내려다본 공성 수레: 바퀴 넷 위에 판자 지붕, 그 밑으로 들보가 나오고 끝에 뾰족한 쇠 쐐기. 오른쪽이 나아가는
+  // 쪽이고 화면에서는 위로 돌려 아래에서 위로 들이받는다.
+  bake(scene, 'magic-ram', 88, 48, (c) => {
+    // 바퀴 넷(양옆으로 삐져나온다)
+    for (const [x, y] of [
+      [16, 6],
+      [16, 42],
+      [40, 6],
+      [40, 42],
+    ]) {
+      c.fillStyle = '#3a2814'
+      c.fillRect(x - 7, y - 4, 14, 8)
+      c.fillStyle = '#6b4a28'
+      c.fillRect(x - 5, y - 3, 10, 6)
+      c.fillStyle = '#2a1c0e'
+      for (const dx of [-3, 0, 3]) c.fillRect(x + dx - 0.6, y - 3, 1.2, 6)
     }
-    // 돌 머리: 뭉툭한 쐐기
-    c.beginPath()
-    c.moveTo(50, 4)
-    c.lineTo(64, 6)
-    c.quadraticCurveTo(75, 18, 64, 30)
-    c.lineTo(50, 32)
-    c.closePath()
-    const stone = c.createLinearGradient(50, 0, 76, 36)
-    stone.addColorStop(0, '#d8d2c4')
-    stone.addColorStop(0.55, '#9c9384')
-    stone.addColorStop(1, '#5c554a')
-    c.fillStyle = stone
-    c.fill()
-    c.strokeStyle = '#3b352c'
+    // 들보: 지붕 밑에서 앞으로 나온 네모난 나무 들보
+    c.fillStyle = '#7a4e26'
+    c.fillRect(44, 17, 18, 14)
+    c.fillStyle = '#5a3818'
+    c.fillRect(44, 27, 18, 4)
+    c.strokeStyle = '#2e1c0a'
+    c.lineWidth = 1.5
+    c.strokeRect(44, 17, 18, 14)
+    // 판자 지붕
+    c.fillStyle = '#9a6a3a'
+    c.fillRect(4, 8, 44, 32)
+    c.fillStyle = '#b5814a'
+    for (let x = 6; x < 46; x += 8) c.fillRect(x, 10, 5, 28)
+    c.strokeStyle = '#2e1c0a'
     c.lineWidth = 2
+    c.strokeRect(4, 8, 44, 32)
+    // 쇠 띠와 못
+    c.fillStyle = '#4c5560'
+    c.fillRect(4, 13, 44, 3)
+    c.fillRect(4, 32, 44, 3)
+    c.fillStyle = '#c9d2dc'
+    for (const x of [8, 26, 44]) {
+      c.fillRect(x - 1, 13.5, 2, 2)
+      c.fillRect(x - 1, 32.5, 2, 2)
+    }
+    // 쇠 고리(들보와 쐐기 이음)
+    c.fillStyle = '#4c5560'
+    c.fillRect(60, 14, 5, 20)
+    c.fillStyle = '#9aa6b2'
+    c.fillRect(60, 14, 5, 3)
+    // 뾰족한 쇠 쐐기
+    c.beginPath()
+    c.moveTo(64, 10)
+    c.lineTo(87, 24)
+    c.lineTo(64, 38)
+    c.closePath()
+    const steel = c.createLinearGradient(0, 10, 0, 38)
+    steel.addColorStop(0, '#eef2f6')
+    steel.addColorStop(0.5, '#9aa6b2')
+    steel.addColorStop(1, '#4a535e')
+    c.fillStyle = steel
+    c.fill()
+    c.strokeStyle = '#262c33'
+    c.lineWidth = 1.8
     c.stroke()
-    // 돌 결
-    c.strokeStyle = '#6d6556'
+    // 날 선 등줄기
+    c.strokeStyle = '#ffffff'
     c.lineWidth = 1.2
     c.beginPath()
-    c.moveTo(57, 10)
-    c.lineTo(62, 16)
-    c.moveTo(56, 24)
-    c.lineTo(63, 21)
+    c.moveTo(65, 24)
+    c.lineTo(85, 24)
     c.stroke()
   })
   // 돌 조각: 충차 뒤로 튀는 흙·돌 파편과 땅에서 솟는 돌기둥.
