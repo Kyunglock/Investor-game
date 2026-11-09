@@ -564,16 +564,13 @@ class CompanyApiTest {
     assertThat(rich.read("$.upgrade.affordable", Boolean.class)).isTrue();
     assertThat(rich.read("$.upgrade.to", String.class)).isEqualTo("E");
     assertThat(rich.read("$.upgrade.cost", Long.class)).isEqualTo(18_000_000L);
-    // 이사 비용을 내며 한 단계씩 Z까지 올라간다. 새 건물은 몇 해에 걸쳐 짓는다(#347): 공사 중이면 한 해를 넘긴다.
+    // 이사 비용을 내며 한 단계씩 Z까지 올라간다. 공사 기간 없이 누를 때마다 바로 옮긴다 (405번).
     DocumentContext moved = json(mvc.perform(get("/api/company").cookie(session)));
     for (int i = 0; i < 60 && !"Z".equals(moved.read("$.grade", String.class)); i++) {
-      if (moved.read("$.upgrade.left", Integer.class) != null) {
-        assertThat(moved.read("$.upgrade.affordable", Boolean.class)).isFalse();
-        settleYear(moved.read("$.year", Integer.class));
-        moved = json(mvc.perform(get("/api/company").cookie(session)));
-      } else {
-        moved = json(postJson("/api/company/upgrade", "{}").andExpect(status().isOk()));
-      }
+      String to = moved.read("$.upgrade.to", String.class);
+      moved = json(postJson("/api/company/upgrade", "{}").andExpect(status().isOk()));
+      assertThat(moved.read("$.grade", String.class)).isEqualTo(to);
+      assertThat(moved.read("$.upgrade.left", Integer.class)).isNull();
     }
     assertThat(moved.read("$.grade", String.class)).isEqualTo("Z");
     Map<String, Object> company = moved.read("$");

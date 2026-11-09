@@ -1015,15 +1015,8 @@ class CompanyEngine {
     return at == null || LADDER.indexOf(grade(company)) >= LADDER.indexOf(at);
   }
 
-  /** 그 등급으로 올라갈 때 공사 기간(해, #347). 같은 건물 안에서 책상만 느는 등급이면 0. */
-  int buildYears(String grade) {
-    return properties.upgrade().buildYears() == null
-        ? 0
-        : properties.upgrade().buildYears().getOrDefault(grade, 0);
-  }
-
   /**
-   * 건물 이사 (decisions.md 296번): 이사 비용을 내고 다음 건물로 올라간다. 자리 수·규모의 벽은 바로 새 건물로 바뀐다. 랜드마크 타워에 올라도 엔딩 없이
+   * 건물 이사 (decisions.md 296·405번): 이사 비용을 내고 곧바로 다음 건물로 올라간다(공사 기간 없음). 자리 수·규모의 벽은 바로 새 건물로 바뀐다. 랜드마크 타워에 올라도 엔딩 없이
    * 이어진다(374번). 돈이 모자라거나 끝 등급이면 400.
    */
   void upgrade(CompanyState company) {
@@ -1041,18 +1034,7 @@ class CompanyEngine {
     company.capital -= cost;
     company.yearMoving += cost;
     company.gradedCapital = company.capital;
-    int years = buildYears(next);
-    if (years > 0) {
-      // 새 건물은 몇 해에 걸쳐 짓는다 (#347): 비용은 지금 다 내고, 연말마다 한 해씩 지어 다 지은 해에 옮긴다.
-      company.buildingTo = next;
-      company.buildYears = years;
-      company.buildLeft = years;
-      company.yearLines.add(
-          Korean.fill(
-              content.raising().company().construction().started(),
-              Map.of("years", String.valueOf(years))));
-      return;
-    }
+    // 공사 기간 없이 바로 옮긴다 (405번): 322번(#347)의 몇 해에 걸친 공사를 뺐다.
     company.building = next;
     history.add(company, company.year, "grow", null, next);
     giveTickets(company, properties.gacha().moveTickets(), "move", company.yearLines);
@@ -1706,7 +1688,7 @@ class CompanyEngine {
     company.gradedCapital = company.capital;
     company.building = kept;
     if (company.buildingTo != null && --company.buildLeft <= 0) {
-      // 공사가 끝났다 (#347): 새 건물로 옮긴다. 랜드마크 타워면 축하한다(374번).
+      // 공사가 끝났다 (#347): 새 건물로 옮긴다. 405번부터 새 공사는 없고, 그 전에 시작한 공사만 여기서 끝난다. 랜드마크 타워면 축하한다(374번).
       String to = company.buildingTo;
       company.building = to;
       company.buildingTo = null;
