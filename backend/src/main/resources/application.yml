@@ -90,9 +90,10 @@ raising:
       # 벌고, 한 등급 높은 직원은 두 배 가까이 번다(A·XX는 시뮬레이션으로 조금 올렸다). 종목 회의는 meeting-percent(388번)
       desk-gain-percent:
         [100, 77.3, 61.6, 44.4, 28.5, 17, 8.65, 4.28, 2.07, 0.96, 0.53, 0.2, 0.092, 0.042, 0.019]
-    # 수수료 매출 자본의 3%, 판돈은 자본 전부(자본을 넘지 않음). 경제 맞춤 (decisions.md 226·244번, EconomySimulationTest)
+    # 수수료 매출 건물의 값의 3%, 판돈은 건물의 값 × stake-percent%. 건물의 값은 지금 건물 등급의 자본 띠(반지하는 base-capital)라 자본을 강화·이사에
+    # 써도 버는 양이 줄지 않는다(decisions.md 411번, #567, 전에는 자본 전부 226·244번). 자본이 겹겹이 불지 않는 만큼 100 → 180으로 올려 성장 속도를 맞췄다
     fee-bp: 300
-    stake-percent: 100
+    stake-percent: 180
     decisions: 4
     omen-percent: 75
     false-omen-percent: 15
@@ -250,8 +251,9 @@ raising:
       big-miss-percent: 150
       big-stubborn-percent: 150
       # 회의 손익 배율 (decisions.md 281번): 종목 회의 한 번의 판돈 = 분기 몫 × 이 비율(%) × scale.meeting-percent^등급. 전에는 100이라 회의가 가벼웠다.
-      # 회의 수익률을 넓히며(388번) 300 → 260, 벽은 수익률 대신 판돈에(BalanceSimulationTest·EconomySimulationTest)
-      meeting-stake-percent: 260
+      # 회의 수익률을 넓히며(388번) 300 → 260, 벽은 수익률 대신 판돈에(BalanceSimulationTest·EconomySimulationTest). 411번에서 분기 몫이
+      # 1.8배가 되어 145로(분기 몫 × 비율이 전과 같게)
+      meeting-stake-percent: 145
       # 종목 회의 수익률 (decisions.md 388번): 데스크의 gain-bp·miss-bp와 떼어 낸 회의만의 수익률. 기사의 크기(magnitude)가 콘텐츠의 가장 작은 폭(4%) ~
       # 가장 큰 폭(35%)에서 어디쯤인지(0~1)로 정한다. 맞히면 gain-min ~ gain-max를 gain-power제곱으로(평범하면 수십 %, 대박이면 +300%), 틀리면
       # loss-min ~ loss-max를 곧게, 크게 틀리면 ×big-miss-percent지만 loss-cap(−50%)에서 멈춘다. 직원 등급 효과(387번)는 붙지 않는다

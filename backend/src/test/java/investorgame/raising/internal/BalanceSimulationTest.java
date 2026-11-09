@@ -237,8 +237,10 @@ class BalanceSimulationTest {
         .as("전투 강화를 사도 스테이지가 성장의 주된 길이다 (394번)")
         .isGreaterThan(reader.capital() * 3);
     org.assertj.core.api.Assertions.assertThat(reader.capital())
-        .as("기사 읽는 사장이 늘 공격·크게 하는 사장의 세 배 넘게 번다 (371번, 385~388번 동안은 두 배 반)")
-        .isGreaterThan(greedy.capital() * 3);
+        .as(
+            "기사 읽는 사장이 늘 공격·크게 하는 사장의 한 배 반 넘게 번다 (371번은 세 배, 411번에서 판돈이 건물의 값이라 자본이 겹겹이 불지 않아 차가"
+                + " 줄었다)")
+        .isGreaterThan(greedy.capital() * 3 / 2);
     org.assertj.core.api.Assertions.assertThat(greedy.capital())
         .as("이사 안 하고 버티는 쪽이 가장 못하다 (규모의 벽은 자본을 본다)")
         .isGreaterThan(lazy.capital());

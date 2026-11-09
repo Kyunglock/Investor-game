@@ -174,9 +174,11 @@ class CompanyEngine {
     return broke(company);
   }
 
-  /** 망했는가: 문을 닫았거나 자본이 바닥났다. 사람은 채용권으로 뽑으므로(312번) 돈이 적어도 사람이 없어도 망하지 않는다. */
+  /**
+   * 망했는가: 문을 닫았다. 판돈·수수료가 건물의 값에서 나와(411번) 자본이 바닥나도 건물에서 다시 벌 수 있으니 자본 0은 더 이상 망함이 아니다(247번을 뒤집는다).
+   */
   boolean broke(CompanyState company) {
-    return company.closed || company.capital <= 0;
+    return company.closed;
   }
 
   /**
@@ -1068,8 +1070,10 @@ class CompanyEngine {
    * 규모의 벽을 정하는 회사 등급 단계(F = 0). 건물이 아니라 자본의 띠로 정한다 (#344): 건물로 정하면 이사를 안 하고 반지하에 머물러 벽을 피할 수 있었다.
    */
   private int scaleStep(CompanyState company) {
-    long capital = company.yearStake != null ? company.yearStake : company.capital;
-    return LADDER.indexOf(grade(capital));
+    // 판돈이 건물의 값이 된 뒤(411번)로는 벽도 건물로 정한다: 자본으로 정하면 자본을 강화에 써 띠를 낮춰 벽을 피할 수 있다. 반지하에 머무르면 판돈이 작아
+    // #344의 틈은
+    // 없다.
+    return LADDER.indexOf(grade(company));
   }
 
   /**
@@ -1349,21 +1353,34 @@ class CompanyEngine {
     return company.employees.stream().filter(e -> e.desk != null && desk(e.desk).trades()).toList();
   }
 
-  /** 돈을 굴리는 직원 한 명이 맡는 판돈 = 자본 × 비율 ÷ 사람 수 (자본을 넘지 않는다). 규모의 벽(244번)은 판돈이 아니라 손익 비율에 붙는다. */
+  /**
+   * 돈을 굴리는 직원 한 명이 맡는 판돈 = 건물의 값 × 비율 ÷ 사람 수 (411번). 자본과 상관없어 자본보다 클 수 있다. 직원마다 버는 몫은 등급 효과(387번)가
+   * 정한다.
+   */
   long stakeOf(CompanyState company, int traders) {
     if (traders == 0) {
       return 0;
     }
     long base = stakeBase(company);
-    long pot = Math.min(base, (long) (base * properties.stakePercent() / (double) PERCENT));
+    long pot = (long) (base * properties.stakePercent() / (double) PERCENT);
     return pot / traders;
   }
 
-  /** 판돈과 수수료를 정하는 자본 (268번): 올해 1분기를 넘길 때의 자본, 자본이 그 아래로 줄었으면 지금 자본. */
+  /**
+   * 판돈과 수수료를 정하는 돈 = 지금 건물의 값 (410번 뒤 411번, #567). 전에는 자본(268번)이라 전투 강화·이사에 자본을 쓰면 버는 양이 함께 줄었다.
+   * 건물의 값은 그 등급의 자본 띠(`grade-capital`)이고, 띠가 0인 반지하(F)는 사장의 사재(`base-capital`)다. 자본이 줄어도 건물이 그대로면
+   * 버는 양도 그대로다.
+   */
   long stakeBase(CompanyState company) {
-    return company.yearStake == null
-        ? company.capital
-        : Math.min(company.capital, company.yearStake);
+    return buildingValue(company);
+  }
+
+  /** 지금 건물의 값 (411번): 그 등급의 자본 띠. 반지하(띠 0)는 사장의 사재, 띠 표 너머 등급은 마지막 띠. */
+  long buildingValue(CompanyState company) {
+    List<Long> bands = properties.gradeCapital();
+    int at = Math.min(LADDER.indexOf(grade(company)), bands.size() - 1);
+    long band = bands.get(Math.max(0, at));
+    return band > 0 ? band : properties.baseCapital();
   }
 
   CompanyProperties.DeskReturn returnsOf(String desk) {
@@ -1396,6 +1413,41 @@ class CompanyEngine {
   }
 
   /** 넘치면 long 끝에 멈추는 덧셈: 꼭대기 직원이 버는 몫(387번)이 자본을 음수로 뒤집지 않게. */
+  /**
+   * 잃을 자본이 모자랄 때 손실을 줄인다 (411번). 판돈이 자본이 아니라 건물의 값에서 나와 자본보다 클 수 있다: 가진 돈(available)보다 많이 잃지 않게 잃은
+   * 몫들을 같은 비율로 깎는다. 번 몫은 그대로다. 합이 −available 아래로 내려가지 않는 새 손익을 돌려준다.
+   */
+  static long[] capLosses(long available, long[] pnls) {
+    long total = 0;
+    long lost = 0;
+    for (long p : pnls) {
+      total = plus(total, p);
+      if (p < 0) {
+        lost = plus(lost, p);
+      }
+    }
+    long floor = -Math.max(0, available);
+    if (total >= floor || lost == 0) {
+      return pnls.clone();
+    }
+    // 잃은 몫의 합이 floor − 번 몫이 되게 깎는다.
+    long gained = total - lost;
+    long target = Math.min(0, floor - gained);
+    double ratio = (double) target / lost;
+    long[] out = pnls.clone();
+    long sum = 0;
+    int last = -1;
+    for (int i = 0; i < out.length; i++) {
+      if (out[i] < 0) {
+        out[i] = Math.round(out[i] * ratio);
+        sum += out[i];
+        last = i;
+      }
+    }
+    out[last] += target - sum;
+    return out;
+  }
+
   static long plus(long a, long b) {
     long sum = a + b;
     return ((a ^ sum) & (b ^ sum)) < 0 ? (a < 0 ? Long.MIN_VALUE : Long.MAX_VALUE) : sum;
@@ -1538,6 +1590,22 @@ class CompanyEngine {
       q.results.add(result);
     }
     long fee = (long) (stakeBase(company) * properties.feeBp() / (double) BP / QUARTERS);
+    // 판돈이 건물의 값이라 자본보다 클 수 있다 (411번): 잃을 자본이 모자라면 잃은 사람들의 손실을 그만큼 줄인다(장부가 맞게).
+    long[] pnls = q.results.stream().mapToLong(r -> r.pnl).toArray();
+    long[] capped = capLosses(plus(company.capital, fee), pnls);
+    totalPnl = 0;
+    for (int i = 0; i < capped.length; i++) {
+      CompanyState.Result r = q.results.get(i);
+      long cut = capped[i] - r.pnl;
+      if (cut != 0) {
+        r.pnl = capped[i];
+        company.employees.stream()
+            .filter(e -> e.id == r.employeeId)
+            .findFirst()
+            .ifPresent(e -> e.totalPnl = plus(e.totalPnl, cut));
+      }
+      totalPnl = plus(totalPnl, r.pnl);
+    }
     q.fee = fee;
     q.staff = totalPnl;
     pay.markWorked(company);

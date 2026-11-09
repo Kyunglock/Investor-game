@@ -644,6 +644,23 @@ class InvestEngine {
       result.line = Korean.fill(template, values);
       c.invest.results.add(result);
     }
+    // 판돈이 건물의 값이라 자본보다 클 수 있다 (411번): 잃을 자본이 모자라면 잃은 사람들의 손실을 그만큼 줄인다.
+    long[] capped =
+        CompanyEngine.capLosses(
+            c.capital, c.invest.results.stream().mapToLong(r -> r.pnl).toArray());
+    total = 0;
+    for (int i = 0; i < capped.length; i++) {
+      InvestResult r = c.invest.results.get(i);
+      long cut = capped[i] - r.pnl;
+      if (cut != 0) {
+        r.pnl = capped[i];
+        traders.stream()
+            .filter(e -> e.id == r.employeeId)
+            .findFirst()
+            .ifPresent(e -> e.totalPnl += cut);
+      }
+      total += r.pnl;
+    }
     c.invest.choice = choice;
     c.invest.big = big;
     c.invest.delegated = delegated;
