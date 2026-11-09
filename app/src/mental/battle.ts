@@ -249,19 +249,18 @@ type Bullet = Phaser.Physics.Arcade.Image & {
 /** 데미지 숫자 한 칸: 합칠 때 다시 튀게 하는 크기 트윈. */
 type DamageText = Phaser.GameObjects.Text & { punch: Phaser.Tweens.Tween | null }
 
-/** 마법을 쏘는 주체 (392번): 자리와 마법 시계. 사장냥 하나에 함께 싸우는 고양이(393번)마다 하나씩 더해 같은 마법을 제 자리에서 쓴다. */
+/** 마법을 쏘는 주체 (392번): 자리와 마법 시계. 마법은 사장냥만 쓴다(440번): 함께 싸우는 고양이(393번)는 시전자를 갖지 않는다. */
 interface MagicCaster {
   at: () => { x: number; y: number }
   clock: MagicClock
 }
 /**
- * 함께 싸우는 고양이 (393번): 그림·총·시전자. 사장냥과 똑같이 세다(같은 수치로 쏘고 같은 마법을 쓴다). 몸(충돌)은 없다: 멘탈벽 뒤에 서서 쏘기만
- * 하고 적에게 맞지 않는다.
+ * 함께 싸우는 고양이 (393번): 그림·총. 사장냥과 같은 수치로 쏜다. 마법은 쓰지 않는다: 마법은 사장냥만 쓴다 (440번). 몸(충돌)은 없다: 멘탈벽
+ * 뒤에 서서 쏘기만 하고 적에게 맞지 않는다.
  */
 interface Mate {
   body: Phaser.GameObjects.Image
   gun: Phaser.GameObjects.Image
-  caster: MagicCaster
   aim: number
   lastFire: number
   /** 재장전 전까지 쏜 탄 수 (#587, 리볼버). */
@@ -954,13 +953,12 @@ class BattleScene extends Phaser.Scene {
       this.tweens.killTweensOf(m)
       m.body.destroy()
       m.gun.destroy()
-      this.casters = this.casters.filter((c) => c !== m.caster)
     }
     while (this.mates.length < want) this.addMate()
     this.damageStats.mates = this.mates.length
   }
 
-  /** 고양이 한 마리가 제자리 위에서 떨어져 내려와 합류한다: 쿵, 고리, 이름. 배운 마법은 곧 한 번씩 보여 준다. */
+  /** 고양이 한 마리가 제자리 위에서 떨어져 내려와 합류한다: 쿵, 고리, 이름. */
   private addMate() {
     const i = this.mates.length
     const y = this.mode === 'defense' ? this.playerY() : this.player.y
@@ -977,7 +975,6 @@ class BattleScene extends Phaser.Scene {
     const mate: Mate = {
       body,
       gun,
-      caster: { at: () => ({ x: body.x, y: body.y - 24 }), clock: new MagicClock() },
       aim: this.aim,
       // 사장냥과 번갈아 쏘게 연사 간격 안에서 조금씩 어긋나게 시작한다.
       lastFire: this.lastFire + (this.loadout.fireMs * (i + 1)) / (MATE_LOOKS.length + 1),
@@ -985,11 +982,6 @@ class BattleScene extends Phaser.Scene {
       drop: this.reducedMotion ? 0 : -150,
     }
     this.mates.push(mate)
-    this.casters.push(mate.caster)
-    for (const m of MAGICS) {
-      if (this.loadout[m] > 0)
-        mate.caster.clock.ready(m, this.elapsed + 0.45 + this.casters.length * CAST_STAGGER)
-    }
     // 늘어선 자리가 바뀌었다: 새 고양이는 제자리에서 내려오고 나머지는 옆으로 비켜선다(update가 미끄러지게 옮긴다).
     body.setPosition(this.standX(i + 1), y + mate.drop)
     gun.setPosition(body.x + GUN.dx, body.y + GUN.dy)

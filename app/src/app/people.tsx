@@ -2,7 +2,13 @@ import type { Company } from '@web/api/client'
 import { GradeBadge } from '@web/features/raising/GradeCard'
 import { LADDER, STAT_NAMES, STAT_ORDER } from '@web/features/raising/grades'
 import { ATTIRE_NAMES, attireOf, titleOf } from '@web/features/raising/office'
-import { deskEffect, rankDesks, seatOne } from '@web/features/raising/placement'
+import {
+  DESK_CAP,
+  deskEffect,
+  rankDesks,
+  seatedCount,
+  seatOne,
+} from '@web/features/raising/placement'
 import { useRaisingStore } from '@web/features/raising/store'
 
 export type Employee = Company['employees'][number]
@@ -107,12 +113,14 @@ export function DeskButtons({
       {rankDesks(company, e).map((d) => {
         const on = e.desk === d.code
         const fit = fitOf(e, d)
+        // 한 자리에는 DESK_CAP명까지 (440번).
+        const packed = !on && seatedCount(company, d.code) >= DESK_CAP
         return (
           <button
             key={d.code}
             type="button"
             aria-pressed={on}
-            disabled={busy || (!on && full)}
+            disabled={busy || (!on && full) || packed}
             onClick={() => void seat(on ? null : d.code)}
             className={`min-h-12 rounded-lg border px-2 text-left text-[13px] disabled:opacity-40 ${
               on ? 'border-pen bg-pen text-white' : `bg-white ${FIT_TONE[fit]}`
@@ -125,6 +133,7 @@ export function DeskButtons({
             <span className="block font-mono-num text-[11px] opacity-80">
               {STAT_NAMES[d.statCode]} {e.grades[d.statCode]}
               {e.sector && d.sector === e.sector && ' · 관심'}
+              {packed && ` · 꽉 참 ${DESK_CAP}/${DESK_CAP}`}
             </span>
           </button>
         )

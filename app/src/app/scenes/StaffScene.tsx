@@ -5,7 +5,7 @@ import { signedMoney, withParticle } from '@web/features/game/labels'
 import { GradeBadge, GradeCard } from '@web/features/raising/GradeCard'
 import { LADDER, STAT_NAMES } from '@web/features/raising/grades'
 import { LockedDesks } from '@web/features/raising/LockedDesks'
-import { autoPlace, deskEffect, seatOne } from '@web/features/raising/placement'
+import { autoPlace, DESK_CAP, deskEffect, seatOne } from '@web/features/raising/placement'
 import { useRaisingStore } from '@web/features/raising/store'
 import { haptic } from '../../fx/haptics'
 import { sfx } from '../../fx/sound'
@@ -401,6 +401,8 @@ function DeskSheet({
   const full = placed >= company.seats
   const rank = (e: Employee) => LADDER.indexOf(e.grades[d.statCode] as (typeof LADDER)[number])
   const seated = seatedAt(company, d.code)
+  // 한 자리에는 DESK_CAP명까지 (440번).
+  const packed = seated.length >= DESK_CAP
   const others = company.employees
     .filter((e) => e.desk !== d.code)
     .sort((a, b) => rank(b) - rank(a) || a.id - b.id)
@@ -465,12 +467,15 @@ function DeskSheet({
       )}
       <p className="mt-3 text-[12px] text-muted">
         앉힐 사람 · {withParticle(STAT_NAMES[d.statCode], '이', '가')} 높은 순
-        {full && ' · 자리가 꽉 차서 쉬는 사람은 앉힐 수 없습니다'}
+        {` · ${seated.length}/${DESK_CAP}명`}
+        {packed
+          ? ' · 이 자리는 꽉 찼습니다'
+          : full && ' · 자리가 꽉 차서 쉬는 사람은 앉힐 수 없습니다'}
       </p>
       <div className="mt-1 grid grid-cols-2 gap-1.5">
         {others.map((e) => {
           const fit = fitOf(e, d)
-          const blocked = !e.desk && full
+          const blocked = packed || (!e.desk && full)
           return (
             <button
               key={e.id}

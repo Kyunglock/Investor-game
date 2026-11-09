@@ -1169,11 +1169,20 @@ class CompanyEngine {
         .orElseThrow(() -> new InvalidRequestException("없는 자리: " + code));
   }
 
-  /** 직원을 자리에 앉힌다. 자리 수를 넘게 앉힐 수 없다. 빠진 직원은 쉬고, 같은 자리에 여럿 앉아도 된다. */
+  /** 한 자리(데스크·팀)에 앉힐 수 있는 최대 인원 (decisions.md 440번, 사용자 결정). 앱의 `placement.ts` DESK_CAP과 같다. */
+  static final int DESK_CAP = 8;
+
+  /** 직원을 자리에 앉힌다. 자리 수를 넘게 앉힐 수 없다. 빠진 직원은 쉬고, 같은 자리에는 DESK_CAP명까지 앉는다. */
   void place(CompanyState company, Map<Integer, String> placements) {
     int placed = (int) placements.values().stream().filter(d -> d != null).count();
     if (placed > seats(company)) {
       throw new InvalidRequestException("자리가 모자란다");
+    }
+    Map<String, Integer> perDesk = new HashMap<>();
+    for (String code : placements.values()) {
+      if (code != null && perDesk.merge(code, 1, Integer::sum) > DESK_CAP) {
+        throw new InvalidRequestException("한 자리에는 " + DESK_CAP + "명까지 앉힐 수 있다");
+      }
     }
     Set<Integer> ids = new HashSet<>();
     for (Employee employee : company.employees) {

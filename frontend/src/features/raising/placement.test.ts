@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Company } from '../../api/client'
-import { autoPlace, deskEffect, rankDesks, seatOne } from './placement'
+import { autoPlace, DESK_CAP, deskEffect, rankDesks, seatOne } from './placement'
 
 function desk(code: string, statCode: string, sector: string | null = null, trades = true) {
   return { code, name: code, statCode, trades, sector, hot: false, description: '' }
@@ -45,6 +45,18 @@ function company(
 
 const deskOf = (seats: { employeeId: number; desk: string | null }[], id: number) =>
   seats.find((s) => s.employeeId === id)?.desk
+
+describe('자리 정원 (decisions.md 440번)', () => {
+  it('자동 배치는 한 자리에 DESK_CAP명까지만 앉히고 나머지는 다음으로 맞는 자리에 앉힌다', () => {
+    // 모두 용기만 좋다: 용기 자리(반도체·게임·단타) 가운데 앞 자리에 몰리려 한다.
+    const brave = Array.from({ length: 20 }, (_, i) => employee(i + 1, 'F', 'F', 'A', 'F'))
+    const seats = autoPlace(company(20, brave))
+    const count = new Map<string, number>()
+    for (const s of seats) if (s.desk) count.set(s.desk, (count.get(s.desk) ?? 0) + 1)
+    expect(Math.max(...count.values())).toBeLessThanOrEqual(DESK_CAP)
+    expect(seats.filter((s) => s.desk).length).toBe(20)
+  })
+})
 
 describe('자동 배치 (decisions.md 232·233번)', () => {
   it('인내심 좋은 사람은 인내심 자리, 용기 좋은 사람은 용기 자리에 앉힌다', () => {

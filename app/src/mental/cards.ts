@@ -143,7 +143,7 @@ export function magicCard(magic: Magic, from: number): Card {
 
 export const MAGICS: readonly Magic[] = ['water', 'fire', 'lightning', 'earth']
 
-/** "고양이 한 마리 더" (393번): 희귀 카드. 함께 싸우는 고양이는 사장냥의 무기·피해·연사·카드 효과·마법을 그대로 받는다. */
+/** "고양이 한 마리 더" (393번): 희귀 카드. 함께 싸우는 고양이는 사장냥의 무기·피해·연사·카드 효과를 그대로 받는다. 마법은 사장냥만 쓴다 (440번). */
 export function mateCard(have: number): Card {
   const to = Math.min(MAX_MATES, have + 1)
   return {
@@ -151,7 +151,7 @@ export function mateCard(have: number): Card {
     grade: 'R',
     name: '고양이 한 마리 더',
     desc: '사장냥 옆에 서서 함께 싸운다',
-    effect: '무기·공격력·연사·마법 모두 사장냥과 똑같이',
+    effect: '무기·공격력·연사는 사장냥과 똑같이 · 마법은 사장냥만',
     icon: '🐱',
     color: '#ff9db8',
     mates: { from: have, to },
