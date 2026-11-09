@@ -409,6 +409,11 @@ export function bakeMagic(scene: Phaser.Scene) {
     c.lineWidth = 3
     c.stroke()
   })
+  // 클리어 색종이(공격 판): 흰 네모를 물들여 쓴다.
+  bake(scene, 'confetti', 6, 10, (c) => {
+    c.fillStyle = '#ffffff'
+    c.fillRect(0, 0, 6, 10)
+  })
   // 땅 (433번): 바위 충차. 오른쪽(나아가는 쪽)에 돌로 깎은 들이받는 머리, 뒤로 쇠띠를 두른 통나무. 화면에서 돌진 방향으로 돌린다.
   bake(scene, 'magic-ram', 76, 36, (c) => {
     // 통나무
