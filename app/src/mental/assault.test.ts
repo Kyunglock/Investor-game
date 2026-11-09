@@ -4,14 +4,18 @@ import {
   ASSAULT_BOSS,
   ASSAULT_COLS,
   ASSAULT_MOTION,
+  ASSAULT_RUSH,
+  ASSAULT_SECONDS,
   ASSAULT_WALLS,
   assaultPrice,
   assaultSpec,
   assaultTarget,
   cellShares,
   climbSpeed,
+  orderPriceStep,
   pickFlow,
   rowHps,
+  rushSpawnSeconds,
   spawnSeconds,
   swarmSize,
   WEAK_CELL,
@@ -27,12 +31,50 @@ const seq = (...xs: number[]) => {
 }
 
 describe('공격 판: 매도벽 (decisions.md 413번)', () => {
-  it('다섯 벽, 위로 갈수록 두껍고 단단하며 마지막만 보스가 있는 대량 매도벽이다', () => {
-    expect(ASSAULT_WALLS).toHaveLength(5)
-    const total = ASSAULT_WALLS.map((w) => w.rows * w.cellHp)
-    for (let i = 1; i < total.length; i++) expect(total[i]).toBeGreaterThan(total[i - 1])
-    expect(ASSAULT_WALLS.map((w) => w.boss)).toEqual([false, false, false, false, true])
+  it('열 벽(#593): 다섯째는 중간 큰손, 마지막만 대량 매도벽+큰손이고 가장 두껍다. 벽 뒤로 갈수록 물량이 잦다', () => {
+    expect(ASSAULT_WALLS).toHaveLength(10)
+    expect(ASSAULT_WALLS.map((w) => Boolean(w.mid))).toEqual([
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+    ])
+    expect(ASSAULT_WALLS.map((w) => w.boss)).toEqual([
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+    ])
     expect(ASSAULT_WALLS.at(-1)?.rows).toBe(Math.max(...ASSAULT_WALLS.map((w) => w.rows)))
+    for (let i = 1; i < ASSAULT_WALLS.length; i++)
+      expect(ASSAULT_WALLS[i].spawnSeconds).toBeLessThan(ASSAULT_WALLS[i - 1].spawnSeconds)
+    const total = (w: (typeof ASSAULT_WALLS)[number]) => w.rows * w.cellHp
+    expect(total(ASSAULT_WALLS[9])).toBeGreaterThan(total(ASSAULT_WALLS[0]) * 2)
+    expect(ASSAULT_SECONDS).toBe(180)
+  })
+
+  it('세기가 커져도 물량 빠르기는 1.6배까지, 중간 큰손은 큰손의 절반', () => {
+    expect(assaultSpec(30).enemySpeed).toBe(1.6)
+    expect(assaultSpec(3).midBossHp).toBeCloseTo(assaultSpec(3).bossHp * 0.5)
+  })
+
+  it('잡몹 구간은 다음 벽보다 잦게 나오고, 물량 하나를 잡으면 한 칸의 5%가 오른다', () => {
+    const spec = assaultSpec(1, { price: 52000 })
+    expect(rushSpawnSeconds(ASSAULT_WALLS[1], spec)).toBeLessThan(ASSAULT_WALLS[1].spawnSeconds)
+    expect(orderPriceStep(spec)).toBe(52)
+    expect(ASSAULT_RUSH.seconds).toBeGreaterThan(0)
   })
 
   it('level이 오르면 벽·물량·보스가 함께 세지고, 1 아래는 1로 본다', () => {
@@ -56,7 +98,7 @@ describe('공격 판: 매도벽 (decisions.md 413번)', () => {
     expect(spec.tick).toBe(1040)
     expect(assaultPrice(spec, 0)).toBe(52000)
     expect(assaultPrice(spec, 2)).toBe(54080)
-    expect(assaultTarget(spec)).toBe(52000 + 5 * 1040)
+    expect(assaultTarget(spec)).toBe(52000 + 10 * 1040)
     expect(assaultPrice(spec, 99)).toBe(assaultTarget(spec))
   })
 

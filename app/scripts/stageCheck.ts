@@ -185,6 +185,8 @@ async function assaultCheck() {
       'kills',
       'wallsBroken',
       'wallsTotal',
+      'priceStart',
+      'priceEnd',
     ])
       assert(key in outcome, `outcome has ${key}`)
     const picked = await page.evaluate(
@@ -213,7 +215,8 @@ async function assaultCheck() {
   assert(triple.win, '+200% clears')
   assert(triple.seconds < half.seconds || !half.win, 'stronger clears faster (+200% < +50%)')
   assert(triple.seconds < none.seconds || !none.win, 'stronger clears faster (+200% < none)')
-  assert(triple.seconds <= 60, '+200% clears within half the time')
+  // 판이 열 구간·3분이라(#593) 절반 시간은 90초다.
+  assert(triple.seconds <= 90, '+200% clears within half the time')
   if (none.win && half.seconds > none.seconds)
     console.log(`note: +50% (${half.seconds}s) slower than none (${none.seconds}s) this run`)
 }

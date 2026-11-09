@@ -18,38 +18,94 @@ export interface AssaultWall {
   cellHp: number
   /** 마지막 대량 매도벽: 벽 앞에 큰손 보스가 선다. */
   boss: boolean
+  /** 중간 매도벽 (#593): 벽 앞에 중간 큰손(체력 MID_BOSS_HP배)이 선다. 잡아야 다음 구간으로 간다(판이 끝나지는 않는다). */
+  mid?: boolean
   /** 벽 앞(또는 벽이 다가오는 동안)에서 매도 물량이 나오는 바탕 간격(초). 벽 앞에 오래 막힐수록 짧아진다(spawnSeconds). */
   spawnSeconds: number
   /** 나오는 물량의 비중. */
   mix: Readonly<Partial<Record<FlowKind, number>>>
 }
 
-/** 다섯 구간 (level 1 기준): 뒤로 갈수록 줄이 늘고 칸이 단단하며 물량이 잦고 무겁다. 마지막은 대량 매도벽 + 큰손. */
+/**
+ * 열 구간 (level 1 기준, #593에서 다섯 → 열): 뒤로 갈수록 두껍고 단단하며 물량이 잦고 무겁다. 다섯째는 중간 큰손이 선 중간 매도벽, 열째는 대량
+ * 매도벽 + 큰손. 판이 길어진 만큼 벽 하나는 다섯 구간 때보다 얇다(강화 없는 권총으로 3분 안에 겨우 깬다, stageCheck).
+ */
 export const ASSAULT_WALLS: readonly AssaultWall[] = [
-  { rows: 1, cellHp: 7.5, boss: false, spawnSeconds: 1.7, mix: { order: 5, market: 3 } },
-  { rows: 1, cellHp: 10, boss: false, spawnSeconds: 1.55, mix: { order: 5, market: 3, fake: 1 } },
+  { rows: 1, cellHp: 4.7, boss: false, spawnSeconds: 1.6, mix: { order: 5, market: 3 } },
+  { rows: 1, cellHp: 5.8, boss: false, spawnSeconds: 1.5, mix: { order: 5, market: 3, fake: 1 } },
+  { rows: 1, cellHp: 6.8, boss: false, spawnSeconds: 1.45, mix: { order: 4, market: 3, fake: 1 } },
   {
     rows: 2,
-    cellHp: 9,
+    cellHp: 4.4,
     boss: false,
     spawnSeconds: 1.4,
     mix: { order: 4, market: 3, bulk: 1, fake: 1 },
   },
   {
     rows: 2,
-    cellHp: 11,
+    cellHp: 5.2,
+    boss: false,
+    mid: true,
+    spawnSeconds: 1.35,
+    mix: { order: 4, market: 3, bulk: 1, fake: 1 },
+  },
+  {
+    rows: 1,
+    cellHp: 8.9,
+    boss: false,
+    spawnSeconds: 1.3,
+    mix: { order: 4, market: 4, bulk: 1, fake: 1 },
+  },
+  {
+    rows: 2,
+    cellHp: 5.2,
     boss: false,
     spawnSeconds: 1.25,
     mix: { order: 4, market: 4, bulk: 1.5, fake: 1 },
   },
   {
-    rows: 3,
-    cellHp: 12.5,
-    boss: true,
+    rows: 2,
+    cellHp: 5.8,
+    boss: false,
+    spawnSeconds: 1.2,
+    mix: { order: 3, market: 4, bulk: 1.5, fake: 1 },
+  },
+  {
+    rows: 2,
+    cellHp: 6.3,
+    boss: false,
     spawnSeconds: 1.15,
     mix: { order: 3, market: 4, bulk: 2, fake: 1 },
   },
+  {
+    rows: 3,
+    cellHp: 5.2,
+    boss: true,
+    spawnSeconds: 1.1,
+    mix: { order: 3, market: 4, bulk: 2, fake: 1 },
+  },
 ]
+
+/** 공격 판의 제한 시간(초): 구간이 열이라 디펜스(BATTLE_SECONDS 2분)보다 길다 (#593). */
+export const ASSAULT_SECONDS = 180
+
+/**
+ * 벽 사이의 잡몹 구간 (#593): 벽을 부순 뒤 다음 벽이 내려오기 전 이만큼(초) 위에서 매도 물량 떼만 몰려온다. 그동안도 천천히 오른다. 세도 판이 너무 빨리
+ * 끝나지 않고, 벽만 부수지 않고 물량과도 싸운다.
+ */
+export const ASSAULT_RUSH = {
+  seconds: 5,
+  /** 이 구간에서 물량이 나오는 간격은 다음 벽의 바탕 간격에 이 비율을 곱한다(더 잦다). */
+  spawnFactor: 0.55,
+}
+
+/** 중간 큰손의 이름과 체력: 큰손(ASSAULT_BOSS.hp)의 이 비율. */
+export const MID_BOSS_NAME = '매도 큰손'
+
+export const MID_BOSS_HP = 0.5
+
+/** 매도 물량 하나를 잡으면 가격이 오르는 몫: 벽 하나의 한 칸(tick)의 이 비율 (#593). */
+export const ORDER_PRICE_SHARE = 0.05
 
 /** 벽 한 줄의 바탕 칸 수(넓은 화면). 좁은 화면(360px 밑)은 하나 적다. */
 export const ASSAULT_COLS = 6
@@ -62,6 +118,8 @@ export const ASSAULT_STEP = {
   speed: 0.04,
   dmg: 0.15,
   bossHp: 0.45,
+  /** 빠르기 배율의 상한 (#594). */
+  speedCap: 1.6,
 }
 
 /** 큰손 보스 (365번 보스의 짜임을 그대로): 벽 앞에서 좌우로 오가며 시장가 매도를 쏟아 내고, 체력이 반 아래면 더 잦다. */
@@ -95,6 +153,8 @@ export interface AssaultSpec {
   enemyDmg: number
   enemyCount: number
   bossHp: number
+  /** 중간 큰손의 체력. */
+  midBossHp: number
   /** 가격 눈금: 시작 가격과 벽 하나를 부술 때마다 오르는 한 칸(원). */
   startPrice: number
   tick: number
@@ -105,7 +165,7 @@ export interface AssaultSpec {
 /**
  * 공격 판 하나 (decisions.md 413번). **level**은 1부터의 난이도다(소수 가능, 1 아래는 1). 회의 쪽(부르는 곳)이 기사의 크기·"크게"(260번)·깬 최고
  * 번호 스테이지로 정해 넘긴다. level이 1 오를 때마다 벽 칸 체력 +45%, 물량 체력 +30%, 나오는 수 +15%, 빠르기 +4%, 멘탈 피해 +15%, 보스 체력 +45%.
- * level 1은 강화 없는 권총으로 2분 안에 겨우 깨는 판이다(scripts/stageCheck.ts의 공격 판 표).
+ * level 1은 강화 없는 권총으로 3분(ASSAULT_SECONDS) 안에 겨우 깨는 판이다(scripts/stageCheck.ts의 공격 판 표).
  * price는 시작 가격(원, 없으면 10,000), tickPercent는 벽 하나에 오르는 비율(%, 없으면 2).
  */
 export function assaultSpec(
@@ -119,10 +179,12 @@ export function assaultSpec(
     level: 1 + k,
     walls: ASSAULT_WALLS.map((w) => ({ ...w, cellHp: w.cellHp * wallHp })),
     enemyHp: 1 + k * ASSAULT_STEP.enemyHp,
-    enemySpeed: 1 + k * ASSAULT_STEP.speed,
+    // 세기가 커져도(#594) 물량이 너무 빨라 피할 수 없게 되지 않도록 빠르기는 1.6배까지.
+    enemySpeed: Math.min(ASSAULT_STEP.speedCap, 1 + k * ASSAULT_STEP.speed),
     enemyDmg: 1 + k * ASSAULT_STEP.dmg,
     enemyCount: 1 + k * ASSAULT_STEP.count,
     bossHp: ASSAULT_BOSS.hp * (1 + k * ASSAULT_STEP.bossHp),
+    midBossHp: ASSAULT_BOSS.hp * MID_BOSS_HP * (1 + k * ASSAULT_STEP.bossHp),
     startPrice,
     tick: Math.max(1, Math.round((startPrice * (opts.tickPercent ?? 2)) / 100)),
     name: opts.name ?? '매도벽',
@@ -187,7 +249,17 @@ export function swarmSize(spec: AssaultSpec, r: number): number {
   return Math.round((3 + Math.floor(r * 3)) * Math.min(2, spec.enemyCount))
 }
 
-/** 벽을 broken개 부순 뒤의 가격과 목표가(마지막 벽까지 다 부순 가격). */
+/** 벽 사이 잡몹 구간에서 물량이 나오는 간격(초): 다음 벽의 바탕 간격 × spawnFactor ÷ 수 배율, 최소 0.3초. */
+export function rushSpawnSeconds(next: AssaultWall, spec: AssaultSpec): number {
+  return Math.max(0.3, (next.spawnSeconds * ASSAULT_RUSH.spawnFactor) / spec.enemyCount)
+}
+
+/** 매도 물량 하나를 잡으면 오르는 가격(원, 적어도 1). */
+export function orderPriceStep(spec: AssaultSpec): number {
+  return Math.max(1, Math.round(spec.tick * ORDER_PRICE_SHARE))
+}
+
+/** 벽을 broken개 부순 뒤의 가격과 목표가(마지막 벽까지 다 부순 가격). 잡은 물량으로 오른 몫(#593)은 부르는 쪽이 더한다. */
 export function assaultPrice(spec: AssaultSpec, broken: number): number {
   return spec.startPrice + spec.tick * Math.max(0, Math.min(spec.walls.length, broken))
 }

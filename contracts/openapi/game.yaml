@@ -816,10 +816,19 @@ components:
                         battle:
                           type: [object, 'null']
                           description: 회의 뒤 전투 (decisions.md 414번, #573). 지켜봤으면 null
-                          required: [mode, level, open, stars, bonus, before, after]
+                          required: [mode, level, levelParts, open, stars, bonus, before, after]
                           properties:
                             mode: { type: string, enum: [DEFENSE, ASSAULT], description: 'DEFENSE: 틀린 쪽에 걸어 디펜스로 손실을 줄인다. ASSAULT: 맞힌 쪽이라 공격 판(매도벽)으로 수익을 키운다' }
-                            level: { type: integer, description: 전투의 세기(1부터). 크게 움직인 종목, 크게 건 회의, 깬 번호 스테이지가 많을수록 높다 }
+                            level: { type: integer, description: '전투의 세기(1부터). 크게 움직인 종목, 크게 건 회의, 깬 번호 스테이지, 회사 건물, 연차, 자본 전투 강화가 클수록 높다 (#594)' }
+                            levelParts:
+                              type: array
+                              description: 세기가 오른 이유와 그만큼(0인 것은 뺐다, #594)
+                              items:
+                                type: object
+                                required: [code, plus]
+                                properties:
+                                  code: { type: string, enum: [news, big, stage, building, year, upgrade] }
+                                  plus: { type: integer }
                             open: { type: boolean, description: 아직 할 수 있다. 분기를 넘기면 끝난다(배율 1) }
                             stars: { type: [integer, 'null'], description: 얻은 별(0~3). 아직 안 했으면 null }
                             bonus: { type: [integer, 'null'], format: int64, description: 전투로 막은 손실 + 더 번 몫(0 이상). 아직 안 했으면 null }

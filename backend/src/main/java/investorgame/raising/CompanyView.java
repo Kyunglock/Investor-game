@@ -359,7 +359,8 @@ public record CompanyView(
    * 종목 회의 뒤 전투 (decisions.md 414번, #573).
    *
    * @param mode DEFENSE(틀린 쪽에 걸어 손실을 줄인다) · ASSAULT(맞힌 쪽이라 매도벽을 부수고 수익을 키운다)
-   * @param level 전투의 세기(1부터): 크게 움직인 종목, 크게 건 회의, 깬 번호 스테이지가 많을수록 높다
+   * @param level 전투의 세기(1부터): 크게 움직인 종목, 크게 건 회의, 깬 번호 스테이지, 회사 건물, 연차, 자본 전투 강화가 클수록 높다 (#594)
+   * @param levelParts 세기가 오른 이유와 그만큼(0인 것은 빼고). news·big·stage·building·year·upgrade
    * @param open 아직 할 수 있다(분기를 넘기면 끝난다)
    * @param stars 얻은 별. 아직 안 했으면 null
    * @param bonus 전투로 막은 손실 + 더 번 몫(0 이상). 아직 안 했으면 null
@@ -367,7 +368,17 @@ public record CompanyView(
    * @param after 전투 뒤 회의 손익(= before + bonus). 아직 안 했으면 null
    */
   public record InvestBattle(
-      String mode, int level, boolean open, Integer stars, Long bonus, long before, Long after) {}
+      String mode,
+      int level,
+      List<LevelPart> levelParts,
+      boolean open,
+      Integer stars,
+      Long bonus,
+      long before,
+      Long after) {}
+
+  /** 회의 뒤 전투의 세기가 오른 이유 하나 (#594): code는 news·big·stage·building·year·upgrade, plus는 더한 세기. */
+  public record LevelPart(String code, int plus) {}
 
   /**
    * follow: BOSS(사장 말대로)·OWN(제 판단대로, "제가 알아서 할게요")·SWAY(꼬드김).

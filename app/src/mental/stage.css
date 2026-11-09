@@ -1373,3 +1373,11 @@
   line-height: 1.45;
   word-break: keep-all;
 }
+
+/* 회의 뒤 전투의 세기와 오른 이유 (#594). */
+.stage-level {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #6b7a99;
+}

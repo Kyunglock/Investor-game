@@ -15,7 +15,7 @@ import {
   stageLabel,
   stageSpec,
 } from './advance'
-import { type AssaultSpec, assaultSpec } from './assault'
+import { ASSAULT_SECONDS, type AssaultSpec, assaultSpec } from './assault'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
 import {
@@ -225,11 +225,18 @@ export function MentalWindow({
             <div className="stage-hero-card">
               <span className="stage-mode" data-testid="stage-mode">
                 {mode === 'assault'
-                  ? `공격 · 매도벽 ${assault?.walls.length ?? 5}개를 부수고 올라가기 · 제한 시간 ${BATTLE_SECONDS / 60}분`
+                  ? `공격 · 매도벽 ${assault?.walls.length ?? 10}개를 부수고 올라가기 · 제한 시간 ${ASSAULT_SECONDS / 60}분`
                   : spec?.boss
                     ? `디펜스 · ${DEFENSE_BOSS_SECONDS / 60}분에 보스 · 제한 시간 ${BATTLE_SECONDS / 60}분 안에 격파`
                     : `디펜스 · 제한 시간 ${BATTLE_SECONDS / 60}분 버티기`}
               </span>
+              {entry.kind === 'invest' && (
+                // 회의 뒤 전투의 세기와 오른 이유 (#594): 회사가 크고 사장이 강할수록 적도 강하다.
+                <span className="stage-level" data-testid="stage-level">
+                  세기 {entry.level}
+                  {levelWhy(company.invest?.outcome?.battle?.levelParts)}
+                </span>
+              )}
               <StagePortrait weapon={heroOf(company).weapon} />
               {mode === 'assault' ? (
                 <div className="stage-mini-wall">매도 1,200주 · 매도 800주</div>
@@ -308,59 +315,64 @@ export function MentalWindow({
         )}
         {outcome && (
           <div className="stage-summary">
-            <div className="stage-result-card" data-testid="mental-result">
-              <span
-                className={`inline-block rounded-lg px-3 py-0.5 text-[13px] font-bold text-white ${outcome.win ? 'bg-teal' : 'bg-[#ff4f6d]'}`}
-              >
-                {outcome.win
-                  ? '멘탈 지켜냈다'
-                  : outcome.reason === 'time'
-                    ? '시간 초과'
-                    : '멘탈 붕괴'}
-              </span>
-              <h2 className="mt-2 font-game text-[28px]">
-                {outcome.win && mode === 'assault'
-                  ? '매도벽 돌파!'
-                  : outcome.win
+            {mode === 'assault' ? (
+              <AssaultResult outcome={outcome} battle={investBattle} sending={sending} />
+            ) : (
+              <div className="stage-result-card" data-testid="mental-result">
+                <span
+                  className={`inline-block rounded-lg px-3 py-0.5 text-[13px] font-bold text-white ${outcome.win ? 'bg-teal' : 'bg-[#ff4f6d]'}`}
+                >
+                  {outcome.win
+                    ? '멘탈 지켜냈다'
+                    : outcome.reason === 'time'
+                      ? '시간 초과'
+                      : '멘탈 붕괴'}
+                </span>
+                <h2 className="mt-2 font-game text-[28px]">
+                  {outcome.win
                     ? '멘탈 지켜냈다!'
                     : outcome.reason === 'time'
                       ? '보스를 못 쓰러뜨렸다…'
                       : '멘탈이 무너졌다…'}
-              </h2>
-              {spec && (
-                <p
-                  className="mt-1 text-[30px] tracking-[4px]"
-                  role="img"
-                  aria-label={`별 ${outcome.stars}개`}
-                  data-testid="mental-stars"
-                  data-stars={outcome.stars}
-                >
-                  {[0, 1, 2].map((i) => (
-                    <span key={i} className={i < outcome.stars ? 'text-[#ffc83d]' : 'text-ink/20'}>
-                      ★
-                    </span>
-                  ))}
+                </h2>
+                {spec && (
+                  <p
+                    className="mt-1 text-[30px] tracking-[4px]"
+                    role="img"
+                    aria-label={`별 ${outcome.stars}개`}
+                    data-testid="mental-stars"
+                    data-stars={outcome.stars}
+                  >
+                    {[0, 1, 2].map((i) => (
+                      <span
+                        key={i}
+                        className={i < outcome.stars ? 'text-[#ffc83d]' : 'text-ink/20'}
+                      >
+                        ★
+                      </span>
+                    ))}
+                  </p>
+                )}
+                <div className="mt-3 grid grid-cols-3 gap-2">
+                  <Stat label="레벨" value={picked.length} />
+                  <Stat label="물리친 적" value={outcome.kills} />
+                  <Stat label="남은 멘탈" value={outcome.mentalLeft} />
+                </div>
+                <p className="mt-3 text-[14px]" data-testid="mental-reward">
+                  {sending
+                    ? '보상을 받는 중…'
+                    : investBattle && investBattle.after != null
+                      ? `회의 손익 ${signedMoney(investBattle.before)} → ${signedMoney(investBattle.after)}`
+                      : !reward
+                        ? ''
+                        : reward.capital > 0 || reward.tickets > 0
+                          ? `${reward.firstClear ? '처음 깼다! ' : ''}${reward.capital > 0 ? `자본 +${money(reward.capital)} · ` : ''}무기 뽑기권 +${reward.tickets}장`
+                          : spec && !outcome.win
+                            ? '깨면 자본과 무기 뽑기권을 받는다.'
+                            : '이번에 더 받을 보상은 없다.'}
                 </p>
-              )}
-              <div className="mt-3 grid grid-cols-3 gap-2">
-                <Stat label="레벨" value={picked.length} />
-                <Stat label="물리친 적" value={outcome.kills} />
-                <Stat label="남은 멘탈" value={outcome.mentalLeft} />
               </div>
-              <p className="mt-3 text-[14px]" data-testid="mental-reward">
-                {sending
-                  ? '보상을 받는 중…'
-                  : investBattle && investBattle.after != null
-                    ? `회의 손익 ${signedMoney(investBattle.before)} → ${signedMoney(investBattle.after)}`
-                    : !reward
-                      ? ''
-                      : reward.capital > 0 || reward.tickets > 0
-                        ? `${reward.firstClear ? '처음 깼다! ' : ''}${reward.capital > 0 ? `자본 +${money(reward.capital)} · ` : ''}무기 뽑기권 +${reward.tickets}장`
-                        : spec && !outcome.win
-                          ? '깨면 자본과 무기 뽑기권을 받는다.'
-                          : '이번에 더 받을 보상은 없다.'}
-              </p>
-            </div>
+            )}
             <button
               type="button"
               disabled={sending || busy}
@@ -385,6 +397,101 @@ export function MentalWindow({
       </div>
     </div>,
     document.body,
+  )
+}
+
+const LEVEL_NAMES: Record<string, string> = {
+  news: '기사',
+  big: '크게',
+  stage: '스테이지',
+  building: '건물',
+  year: '연차',
+  upgrade: '강화',
+}
+
+/** 세기가 오른 이유 한 줄: " · 기사 +2 · 건물 +1". 없으면 빈칸. */
+function levelWhy(parts: { code: string; plus: number }[] | undefined): string {
+  if (!parts?.length) return ''
+  return parts.map((p) => ` · ${LEVEL_NAMES[p.code] ?? p.code} +${p.plus}`).join('')
+}
+
+/** 공격 판의 별에 따른 회의 수익 배율 (414번 ②). 서버 `invest.battle`의 규칙과 같다. */
+const ASSAULT_MULT = [1, 1.2, 1.5, 2] as const
+
+/**
+ * 매도벽 돌파 결과 (#591, decisions.md 428번): 공격 판이 끝나면 돌파 결과만 크게 보인다. 배지·제목은 공격 판 문구, 별 셋을 크게, 숫자 칸은 부순
+ * 매도벽·걸린 시간·주가, 가장 크게 회의 수익 배율과 회의 손익 전→후. 디펜스용 레벨·물리친 적·남은 멘탈은 보이지 않는다.
+ */
+function AssaultResult({
+  outcome,
+  battle,
+  sending,
+}: {
+  outcome: Outcome
+  battle: { before: number; after?: number | null } | null | undefined
+  sending: boolean
+}) {
+  const priceUp =
+    outcome.priceStart > 0
+      ? Math.round(((outcome.priceEnd - outcome.priceStart) / outcome.priceStart) * 1000) / 10
+      : 0
+  const mm = Math.floor(outcome.seconds / 60)
+  const ss = String(Math.floor(outcome.seconds % 60)).padStart(2, '0')
+  const mult = ASSAULT_MULT[Math.max(0, Math.min(3, outcome.stars))]
+  return (
+    <div className="stage-result-card" data-testid="mental-result" data-mode="assault">
+      <span
+        className={`inline-block rounded-lg px-3 py-0.5 text-[13px] font-bold text-white ${outcome.win ? 'bg-[#e8434f]' : 'bg-[#6b7a99]'}`}
+      >
+        {outcome.win ? '매도벽 돌파!' : outcome.reason === 'time' ? '시간 초과' : '멘탈 붕괴'}
+      </span>
+      <h2 className="mt-2 font-game text-[28px]">
+        {outcome.win
+          ? '매도벽 돌파!'
+          : outcome.reason === 'time'
+            ? '매도벽에 막혔다…'
+            : '멘탈이 무너졌다…'}
+      </h2>
+      <p
+        className="mt-1 text-[44px] leading-none tracking-[6px]"
+        role="img"
+        aria-label={`별 ${outcome.stars}개`}
+        data-testid="mental-stars"
+        data-stars={outcome.stars}
+      >
+        {[0, 1, 2].map((i) => (
+          <span key={i} className={i < outcome.stars ? 'text-[#ffc83d]' : 'text-ink/20'}>
+            ★
+          </span>
+        ))}
+      </p>
+      <p
+        className="mt-2 font-game text-[34px] leading-none text-[#e8434f]"
+        data-testid="assault-mult"
+      >
+        회의 수익 ×{mult}
+      </p>
+      <p className="mt-2" data-testid="mental-reward">
+        {sending ? (
+          <span className="text-[14px]">회의 손익을 바꾸는 중…</span>
+        ) : battle && battle.after != null ? (
+          <span className="block">
+            <span className="block text-[13px] text-muted">회의 손익</span>
+            <span className="font-game text-[22px]">
+              {signedMoney(battle.before)} →{' '}
+              <b className={battle.after >= 0 ? 'text-[#e8434f]' : 'text-[#3a86ff]'}>
+                {signedMoney(battle.after)}
+              </b>
+            </span>
+          </span>
+        ) : null}
+      </p>
+      <div className="mt-3 grid grid-cols-3 gap-2" data-testid="assault-stats">
+        <Stat label="부순 매도벽" value={`${outcome.wallsBroken}/${outcome.wallsTotal}`} />
+        <Stat label="걸린 시간" value={`${mm}:${ss}`} />
+        <Stat label="주가" value={`${priceUp >= 0 ? '+' : ''}${priceUp}%`} />
+      </div>
+    </div>
   )
 }
 
