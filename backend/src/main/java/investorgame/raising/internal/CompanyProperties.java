@@ -138,8 +138,7 @@ public record CompanyProperties(
    * @param percent 이사 비용: 다음 띠 자본의 이 비율(%)
    * @param deskUnlock 돕는 자리가 열리는 회사 등급(#393). 없는 자리는 처음부터 열려 있다
    */
-  public record Upgrade(
-      int percent, Map<String, String> deskUnlock) {}
+  public record Upgrade(int percent, Map<String, String> deskUnlock) {}
 
   /**
    * 종목 발굴 (decisions.md 267번). 분기 넘기기를 누르면 종목 발굴팀 직원이 basePercent + 안목 × insightPercent / 100 확률로,
