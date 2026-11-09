@@ -448,7 +448,7 @@ export function ToyCityStreet({
   ]
   return (
     <svg
-      className={`toy-street${up && (phase === 1 || phase === 2) ? ' toy-shake' : ''}${celebrate ? ' toy-celebrate' : ''}`}
+      className={`toy-street${celebrate ? ' toy-celebrate' : ''}`}
       viewBox="0 0 390 814"
       preserveAspectRatio="xMidYMid slice"
       aria-label={`우리 회사 · 자리 ${company.seats}개`}

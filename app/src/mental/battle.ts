@@ -785,7 +785,6 @@ class BattleScene extends Phaser.Scene {
       this.hitSpark.explode(this.fx(14), fx, fy)
       this.pop(fx, body.y - 56, `${MATE_LOOKS[i].name} 합류!`, '#ffe08a', 22)
       sfx.mateJoin()
-      if (!this.reducedMotion) this.cameras.main.shake(120, 0.004)
     }
     if (this.reducedMotion) {
       land()
@@ -887,7 +886,6 @@ class BattleScene extends Phaser.Scene {
     e.setScale(ENEMY_K * BOSS.scale)
     this.bossEnemy = e
     this.lastSummon = this.elapsed
-    this.cameras.main.shake(260, 0.012)
     this.pushHud(true)
   }
 
@@ -1168,7 +1166,6 @@ class BattleScene extends Phaser.Scene {
     if (e.boss) {
       e.boss = false
       this.bossEnemy = null
-      this.cameras.main.shake(420, 0.02)
       this.hitstop(140)
       this.boom[e.kind].explode(40, e.x, e.y)
       this.opts.onBanner(
@@ -1191,7 +1188,6 @@ class BattleScene extends Phaser.Scene {
       this.gainXp(v.reward)
       sfx.squish()
       if (e.kind === 'spec') {
-        this.cameras.main.shake(160, 0.012)
         this.hitstop(70)
         this.pop(e.x, e.y - 40, '투기 진압!', '#ffd84d', 30)
       } else if (e.kind === 'stop') {
@@ -1266,12 +1262,6 @@ class BattleScene extends Phaser.Scene {
         duration: 420,
         onComplete: () => ripple.setVisible(false),
       })
-    }
-    // 멘탈벽에 닿은 건 자주 일어나니 살짝만, 사장냥이 직접 맞은 건 더 세게 흔든다.
-    if (this.wallZone && !e) {
-      this.cameras.main.shake(80, 0.003)
-    } else {
-      this.cameras.main.shake(130, 0.009)
     }
     this.opts.onHurt()
     sfx.ouch()
@@ -1377,7 +1367,6 @@ class BattleScene extends Phaser.Scene {
       // 총소리는 사장냥 것만: 넷이 다 내면 뭉개지고 오디오 노드가 쌓인다.
       sfx.shot(kind)
       this.aim = aim
-      if (style.shake && !this.reducedMotion) this.cameras.main.shake(style.shakeMs, style.shake)
     }
     // 총 손맛: 총구 화염, 반동(눌렸다 펴짐). 크기·시간이 무기마다 다르다.
     const m = this.muzzle(p.x, p.y, aim)
@@ -1815,7 +1804,6 @@ class BattleScene extends Phaser.Scene {
           }),
       })
       this.time.delayedCall(90, () => this.ring(x, y, 0xffd04d, st.radius * 1.25, 360))
-      if (!this.reducedMotion) this.cameras.main.shake(110, 0.004)
     }
     this.magicSound('boom')
     const dmg = st.damage * this.loadout.damage
@@ -2027,9 +2015,6 @@ class BattleScene extends Phaser.Scene {
     }
     this.over = true
     this.physics.pause()
-    if (!win) {
-      this.cameras.main.shake(300, 0.02)
-    }
     this.pushHud(true)
     this.time.delayedCall(win ? 300 : 700, () =>
       this.opts.onDone({
@@ -2274,7 +2259,6 @@ class BattleScene extends Phaser.Scene {
             this.hurt(20)
           }
           this.pop(e.x, e.y - 50, '펑!!', '#ff4f6d', 34)
-          this.cameras.main.shake(220, 0.015)
           this.kill(e, false)
           continue
         }

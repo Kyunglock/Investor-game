@@ -10,7 +10,6 @@ import {
   useTutorial,
 } from '@web/features/raising/tutorial'
 import { useEffect, useRef, useState } from 'react'
-import { useFx } from '../fx/fx'
 import { isMuted, setMuted, sfx } from '../fx/sound'
 import { BookIcon, BuildingIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from './Icons'
 import { GachaScene } from './scenes/GachaScene'
@@ -38,7 +37,6 @@ export function Shell({ company }: { company: Company }) {
   const tab = useAppUi((s) => s.tab)
   const modalBack = useAppUi((s) => s.modalBack)
   const webTab = useRaisingStore((s) => s.tab)
-  const shake = useFx((s) => s.shake)
   const screen = useRef<HTMLDivElement>(null)
   const ended = company.status === 'ENDED'
   // 웹의 튜토리얼·결산이 가리키는 탭(store.tab)을 따라간다.
@@ -49,16 +47,6 @@ export function Shell({ company }: { company: Company }) {
       useRaisingStore.setState({ tab: null })
     }
   }, [webTab])
-  // 흔들림: 클래스를 뗐다 붙여 애니메이션을 다시 돌린다.
-  useEffect(() => {
-    const el = screen.current
-    if (!el || shake === 0) {
-      return
-    }
-    el.classList.remove('animate-shake-screen')
-    void el.offsetWidth
-    el.classList.add('animate-shake-screen')
-  }, [shake])
   // 장면 방향: 오른쪽 탭으로 가면 오른쪽에서, 왼쪽 탭으로 가면 왼쪽에서 들어온다.
   const prevTab = useRef(tab)
   const dir =

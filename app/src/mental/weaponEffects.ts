@@ -39,7 +39,7 @@ export function pierceOf(kind: WeaponKind): number {
 }
 
 /**
- * 무기마다 쏘는 방식 (#563): 탄 모양·빛·흔들림, 총구 화염, 반동, 화면 흔들림, 꼬리, 소리가 다르다. 수치(공격·연사·탄속)와 효과(376번)는 그대로이고
+ * 무기마다 쏘는 방식 (#563): 탄 모양·빛·흩어짐, 총구 화염, 반동, 꼬리, 소리가 다르다(화면 흔들림은 408번에서 뺐다). 수치(공격·연사·탄속)와 효과(376번)는 그대로이고
  * 한 발씩 한 줄로 나간다(362번: 갈래는 없다). 산탄총은 굵은 산탄 한 덩이에 부채꼴로 터지는 총구 화염, 기관단총은 살짝 흩뿌린다.
  */
 export interface FireStyle {
@@ -55,9 +55,6 @@ export interface FireStyle {
   flashMs: number
   /** 쏠 때 몸이 눌리는 정도(1 = 권총). */
   recoil: number
-  /** 화면 흔들림(세기, 0이면 없음)과 시간(ms). 사장냥이 쏠 때만. */
-  shake: number
-  shakeMs: number
   /** 탄 꼬리를 남기는 간격(ms). 작을수록 촘촘하다. */
   trailMs: number
   /** 쏠 때 화염 둘레로 튀는 불꽃 수(산탄총 부채꼴). */
@@ -73,8 +70,6 @@ export const FIRE_STYLES: Record<WeaponKind, FireStyle> = {
     flash: 1,
     flashMs: 90,
     recoil: 1,
-    shake: 0,
-    shakeMs: 0,
     trailMs: 32,
     sparks: 0,
   },
@@ -86,8 +81,6 @@ export const FIRE_STYLES: Record<WeaponKind, FireStyle> = {
     flash: 1.7,
     flashMs: 140,
     recoil: 2,
-    shake: 0.0035,
-    shakeMs: 90,
     trailMs: 24,
     sparks: 0,
   },
@@ -99,8 +92,6 @@ export const FIRE_STYLES: Record<WeaponKind, FireStyle> = {
     flash: 0.65,
     flashMs: 55,
     recoil: 0.45,
-    shake: 0,
-    shakeMs: 0,
     trailMs: 64,
     sparks: 0,
   },
@@ -112,8 +103,6 @@ export const FIRE_STYLES: Record<WeaponKind, FireStyle> = {
     flash: 2,
     flashMs: 120,
     recoil: 2.4,
-    shake: 0.005,
-    shakeMs: 110,
     trailMs: 32,
     sparks: 7,
   },
@@ -125,8 +114,6 @@ export const FIRE_STYLES: Record<WeaponKind, FireStyle> = {
     flash: 1.2,
     flashMs: 80,
     recoil: 1.4,
-    shake: 0.002,
-    shakeMs: 60,
     trailMs: 8,
     sparks: 0,
   },

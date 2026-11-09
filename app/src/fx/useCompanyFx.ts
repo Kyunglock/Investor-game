@@ -28,7 +28,6 @@ export function playEvent(e: FxEvent) {
       return
     case 'quarter':
       if (e.crash) {
-        fx.shakeScreen()
         fx.flashScreen('rgba(195,58,44,0.35)')
         sfx.thud()
         haptic.heavy()
@@ -66,7 +65,6 @@ export function playEvent(e: FxEvent) {
       haptic.success()
       return
     case 'grade-down':
-      fx.shakeScreen()
       fx.burstAt(null, 'smoke')
       sfx.thud()
       haptic.error()
@@ -81,7 +79,6 @@ export function playEvent(e: FxEvent) {
       haptic.success()
       return
     case 'broke':
-      fx.shakeScreen()
       fx.flashScreen('rgba(139,35,66,0.5)')
       sfx.thud()
       haptic.error()

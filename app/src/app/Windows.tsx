@@ -132,7 +132,6 @@ function revealFx(d: Drawn, el: HTMLElement | null) {
   if (d.star) {
     fx.flashScreen('rgba(245,211,107,0.55)')
     fx.burstAt(el, 'confetti')
-    fx.shakeScreen()
     sfx.fanfare()
     haptic.heavy()
     return

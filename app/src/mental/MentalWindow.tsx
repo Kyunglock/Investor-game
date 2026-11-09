@@ -20,7 +20,6 @@ import type { BattleHandle, Hud, Outcome } from './battle'
 import {
   AUTO_PICK_MS,
   autoPickIndex,
-  DEAL_MS,
   READY_GAP_MS,
   REVEAL_TIMING,
   revealPlan,
@@ -387,29 +386,12 @@ const GRADE_ORDER: Record<Card['grade'], number> = { N: 0, R: 1, SR: 2, UR: 3 }
 /** 카드 한 장의 앞뒤 (393번): 뒷면 → 떨리며 빛이 샘 → 옆으로 누움 → 앞면. */
 type Face = 'back' | 'tease' | 'turn' | 'front'
 
-/** 전투 화면을 흔든다(카드가 깔릴 때 살짝, 전설은 크게). 움직임 줄이기면 부르지 않는다. */
-function shake(el: Element | null | undefined, power: number, ms: number) {
-  if (!(el instanceof HTMLElement) || typeof el.animate !== 'function') return
-  const k = power
-  el.animate(
-    [
-      { transform: 'translate(0, 0)' },
-      { transform: `translate(${-k}px, ${k * 0.6}px)` },
-      { transform: `translate(${k * 0.9}px, ${-k * 0.5}px)` },
-      { transform: `translate(${-k * 0.6}px, ${-k * 0.4}px)` },
-      { transform: `translate(${k * 0.4}px, ${k * 0.3}px)` },
-      { transform: 'translate(0, 0)' },
-    ],
-    { duration: ms, easing: 'ease-out' },
-  )
-}
-
 /** 반짝이 수: 희귀 8, 영웅 10, 전설 14. 일반은 없다. */
 const SPARKLES: Record<Card['grade'], number> = { N: 0, R: 8, SR: 10, UR: 14 }
 
 /**
- * 카드 석 장 고르기 (330·393번): 석 장이 뒷면으로 쿵 깔리고(화면 살짝 흔들림), 왼쪽부터 한 장씩 떨리며 빛이 새다가 뒤집힌다. 등급이 높을수록 세다: 일반은
- * 가볍게 탁, 희귀는 파란 빛과 반짝이, 영웅은 보라 빛기둥·화면 번쩍·진동, 전설은 화면이 어두워지며 한참 뜸을 들였다가 금빛 폭발·빛줄기·크게 흔들림·큰
+ * 카드 석 장 고르기 (330·393번): 석 장이 뒷면으로 쿵 깔리고(화면 흔들림은 408번에서 뺐다), 왼쪽부터 한 장씩 떨리며 빛이 새다가 뒤집힌다. 등급이 높을수록 세다: 일반은
+ * 가볍게 탁, 희귀는 파란 빛과 반짝이, 영웅은 보라 빛기둥·화면 번쩍·진동, 전설은 화면이 어두워지며 한참 뜸을 들였다가 금빛 폭발·빛줄기·큰
  * 소리. 뒷면 테두리가 등급을 살짝 흘린다(높을수록 미리 빛난다). 다 펼친 뒤에만 고르고, 그 전에 누르면 남은 카드를 한 번에 펼친다. 움직임 줄이기면
  * 처음부터 앞면이다. 고르면 그 카드가 번쩍 커지며 날아가고 나머지는 가라앉은 뒤 onPick. 순서와 시각은 cardReveal.ts.
  * 다 펼친 뒤 AUTO_PICK_MS(5초) 안에 고르지 않으면 autoPickIndex의 카드를 저절로 고른다(#566). 그 카드는 미리 빛나고 남은 시간이 막대로 줄어든다.
@@ -453,7 +435,6 @@ function CardPick({
     facesNow.current = facesNow.current.map((f, j) => (j === i ? face : f))
     setFaces(facesNow.current)
   }
-  const frame = () => root.current?.closest('.stage-frame')
   const makeReady = () => {
     readyNow.current = true
     setReady(true)
@@ -472,14 +453,12 @@ function CardPick({
       sfx.cardEpic()
       haptic.heavy()
       fx.flashScreen('rgba(190,140,255,0.42)')
-      shake(frame(), 4, 280)
     } else {
       sfx.cardLegend()
       haptic.burst()
       fx.flashScreen('rgba(255,216,110,0.6)')
       fx.burstAt(el, 'coins')
       fx.burstAt(el, 'sparks')
-      shake(frame(), 11, 620)
     }
   }
 
@@ -492,7 +471,6 @@ function CardPick({
     }
     sfx.cardDeal()
     haptic.medium()
-    later(DEAL_MS - 220, () => shake(frame(), 3, 240))
     plan.steps.forEach((step, i) => {
       const grade = cards[i].grade
       later(step.tease, () => {
@@ -538,7 +516,6 @@ function CardPick({
     fx.burstAt(el, 'sparks')
     if (!reduced) {
       fx.flashScreen('rgba(255,240,190,0.4)')
-      shake(frame(), 3, 220)
     }
     later(reduced ? 0 : 380, () => onPick(c))
   }

@@ -122,37 +122,6 @@
     transform: none;
   }
 }
-.toy-shake {
-  transform-origin: 50% 60%;
-  will-change: transform;
-  animation: toy-shake 0.42s 0.1s linear both;
-}
-@keyframes toy-shake {
-  0% {
-    transform: scale(1.06);
-  }
-  100% {
-    transform: none;
-  }
-  12% {
-    transform: scale(1.06) translate(-11px, 6px) rotate(-1deg);
-  }
-  26% {
-    transform: scale(1.06) translate(10px, -7px) rotate(0.9deg);
-  }
-  40% {
-    transform: scale(1.06) translate(-8px, 4px) rotate(-0.6deg);
-  }
-  56% {
-    transform: scale(1.06) translate(6px, -3px) rotate(0.4deg);
-  }
-  72% {
-    transform: scale(1.06) translate(-3px, 2px);
-  }
-  86% {
-    transform: scale(1.03) translate(2px, -1px);
-  }
-}
 .toy-move-flash {
   position: absolute;
   inset: 0;
