@@ -289,7 +289,7 @@ export function ActionBar({
             }}
           >
             <small>멘탈</small>
-            <strong>수련</strong>
+            <strong>강화</strong>
             <em>
               {company.stages && company.stages.best > 0
                 ? `${company.stages.best}/${company.stages.last} · +${company.stages.bonusPercent}%`

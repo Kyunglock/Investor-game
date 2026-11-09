@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   chainTargets,
   densest,
+  earthStats,
   fireStats,
   lightningStats,
   MAGIC_MAX_LEVEL,
@@ -10,6 +11,9 @@ import {
   magicCooldown,
   magicTier,
   nearestTo,
+  RAM_SPOOL,
+  ramSpeed,
+  siegeTarget,
   strongest,
   sweepHits,
   waterStats,
@@ -20,7 +24,7 @@ const levels = Array.from({ length: MAGIC_MAX_LEVEL }, (_, i) => i + 1)
 describe('물·불·번개 마법 (decisions.md 392번)', () => {
   it('레벨이 오를수록 쿨다운은 짧아지고 피해·범위는 커진다', () => {
     for (const l of levels.slice(1)) {
-      for (const m of ['water', 'fire', 'lightning'] as const) {
+      for (const m of ['water', 'fire', 'lightning', 'earth'] as const) {
         expect(magicCooldown(m, l)).toBeLessThan(magicCooldown(m, l - 1))
       }
       expect(waterStats(l).damage).toBeGreaterThan(waterStats(l - 1).damage)
@@ -30,6 +34,9 @@ describe('물·불·번개 마법 (decisions.md 392번)', () => {
       expect(fireStats(l).radius).toBeGreaterThan(fireStats(l - 1).radius)
       expect(lightningStats(l).damage).toBeGreaterThan(lightningStats(l - 1).damage)
       expect(lightningStats(l).chains).toBeGreaterThan(lightningStats(l - 1).chains)
+      expect(earthStats(l).damage).toBeGreaterThan(earthStats(l - 1).damage)
+      expect(earthStats(l).siege).toBeGreaterThan(earthStats(l - 1).siege)
+      expect(earthStats(l).half).toBeGreaterThan(earthStats(l - 1).half)
     }
   })
 
@@ -97,5 +104,40 @@ describe('물·불·번개 마법 (decisions.md 392번)', () => {
     expect(sweepHits(shot, { x: 25, y: 0 }, 8)).toBe(true)
     expect(sweepHits(shot, { x: 30, y: 0 }, 8)).toBe(false)
     expect(sweepHits(shot, { x: 0, y: -30 }, 8)).toBe(false)
+  })
+
+  it('땅 (433번): 충차는 보통 적에겐 약하고 벽·큰손에는 다른 마법보다 세게 들이받는다', () => {
+    for (const l of levels) {
+      const e = earthStats(l)
+      // 보통 적에게 주는 피해는 번개보다 약하다.
+      expect(e.damage).toBeLessThan(lightningStats(l).damage)
+      // 벽에는 초당 피해가 물·불·번개보다 세다.
+      const wallDps = (e.damage * e.siege) / e.cooldown
+      for (const other of [waterStats(l), fireStats(l), lightningStats(l)]) {
+        expect(wallDps).toBeGreaterThan(other.damage / other.cooldown)
+      }
+    }
+    expect(earthStats(1).quake).toBe(0)
+    expect(earthStats(2).quake).toBe(0)
+    expect(earthStats(3).quake).toBeGreaterThan(0)
+  })
+
+  it('땅의 과녁: 가장 가까운 벽 칸·큰손, 없으면 체력이 가장 많은 적', () => {
+    const near = { x: 0, y: -50, hp: 2, wall: false }
+    const tough = { x: 300, y: -300, hp: 30, wall: false }
+    const wallFar = { x: 0, y: -500, hp: 50, wall: true }
+    const wallNear = { x: 0, y: -400, hp: 80, wall: true }
+    const isWall = (t: { wall: boolean }) => t.wall
+    const from = { x: 0, y: 0 }
+    expect(siegeTarget([near, tough, wallFar, wallNear], from, isWall)).toBe(wallNear)
+    expect(siegeTarget([near, tough], from, isWall)).toBe(tough)
+    expect(siegeTarget([], from, isWall)).toBeNull()
+  })
+
+  it('충차는 느리게 출발해 RAM_SPOOL초 뒤 다 달린다', () => {
+    expect(ramSpeed(1000, 0)).toBeCloseTo(350)
+    expect(ramSpeed(1000, RAM_SPOOL / 2)).toBeGreaterThan(350)
+    expect(ramSpeed(1000, RAM_SPOOL)).toBeCloseTo(1000)
+    expect(ramSpeed(1000, 5)).toBeCloseTo(1000)
   })
 })

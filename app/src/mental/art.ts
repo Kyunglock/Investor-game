@@ -409,6 +409,87 @@ export function bakeMagic(scene: Phaser.Scene) {
     c.lineWidth = 3
     c.stroke()
   })
+  // 땅 (433번): 바위 충차. 오른쪽(나아가는 쪽)에 돌로 깎은 들이받는 머리, 뒤로 쇠띠를 두른 통나무. 화면에서 돌진 방향으로 돌린다.
+  bake(scene, 'magic-ram', 76, 36, (c) => {
+    // 통나무
+    c.beginPath()
+    c.roundRect(4, 9, 50, 18, 7)
+    const wood = c.createLinearGradient(0, 9, 0, 27)
+    wood.addColorStop(0, '#c9935a')
+    wood.addColorStop(0.5, '#9a6232')
+    wood.addColorStop(1, '#5e3a1c')
+    c.fillStyle = wood
+    c.fill()
+    c.strokeStyle = '#3a2410'
+    c.lineWidth = 2
+    c.stroke()
+    // 쇠띠 셋
+    for (const x of [14, 28, 42]) {
+      c.fillStyle = '#5b6470'
+      c.fillRect(x, 8, 4, 20)
+      c.fillStyle = '#aeb8c4'
+      c.fillRect(x, 9, 4, 3)
+    }
+    // 돌 머리: 뭉툭한 쐐기
+    c.beginPath()
+    c.moveTo(50, 4)
+    c.lineTo(64, 6)
+    c.quadraticCurveTo(75, 18, 64, 30)
+    c.lineTo(50, 32)
+    c.closePath()
+    const stone = c.createLinearGradient(50, 0, 76, 36)
+    stone.addColorStop(0, '#d8d2c4')
+    stone.addColorStop(0.55, '#9c9384')
+    stone.addColorStop(1, '#5c554a')
+    c.fillStyle = stone
+    c.fill()
+    c.strokeStyle = '#3b352c'
+    c.lineWidth = 2
+    c.stroke()
+    // 돌 결
+    c.strokeStyle = '#6d6556'
+    c.lineWidth = 1.2
+    c.beginPath()
+    c.moveTo(57, 10)
+    c.lineTo(62, 16)
+    c.moveTo(56, 24)
+    c.lineTo(63, 21)
+    c.stroke()
+  })
+  // 돌 조각: 충차 뒤로 튀는 흙·돌 파편과 땅에서 솟는 돌기둥.
+  bake(scene, 'magic-rock', 14, 12, (c) => {
+    c.beginPath()
+    c.moveTo(2, 7)
+    c.lineTo(5, 2)
+    c.lineTo(11, 1.5)
+    c.lineTo(13, 7)
+    c.lineTo(8, 11)
+    c.lineTo(3, 10.5)
+    c.closePath()
+    c.fillStyle = '#a8865c'
+    c.fill()
+    c.strokeStyle = '#4a3420'
+    c.lineWidth = 1.2
+    c.stroke()
+  })
+  bake(scene, 'magic-spike', 28, 48, (c) => {
+    c.beginPath()
+    c.moveTo(2, 48)
+    c.lineTo(9, 14)
+    c.lineTo(15, 1)
+    c.lineTo(20, 16)
+    c.lineTo(26, 48)
+    c.closePath()
+    const g = c.createLinearGradient(0, 0, 28, 0)
+    g.addColorStop(0, '#d2b384')
+    g.addColorStop(0.5, '#9a7346')
+    g.addColorStop(1, '#5a3e22')
+    c.fillStyle = g
+    c.fill()
+    c.strokeStyle = '#3a2814'
+    c.lineWidth = 1.6
+    c.stroke()
+  })
 }
 
 // ── 공격 판 (decisions.md 413번, #573): 매도벽 칸·매도 물량 주문서·큰손 보스·파편·속도선

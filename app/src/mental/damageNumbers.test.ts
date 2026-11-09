@@ -16,26 +16,27 @@ describe('데미지 숫자 (decisions.md 391번)', () => {
     expect(shownDamage(0.01)).toBe(1)
   })
 
-  it('치명타만 느낌표, 더 크고 오래 남으며 합치지 않는다', () => {
+  it('치명타만 느낌표, 더 크고 오래 남으며 합치지 않는다(충차의 들이받기도 한 방씩)', () => {
     expect(damageLabel('crit', 2)).toBe('20!')
     expect(damageLabel('bullet', 2)).toBe('20')
     for (const kind of Object.keys(DAMAGE_STYLE) as DamageKind[]) {
       if (kind === 'crit') continue
       expect(DAMAGE_STYLE.crit.scale).toBeGreaterThan(DAMAGE_STYLE[kind].scale)
       expect(DAMAGE_STYLE.crit.life).toBeGreaterThan(DAMAGE_STYLE[kind].life)
-      expect(DAMAGE_STYLE[kind].merge).toBe(true)
+      expect(DAMAGE_STYLE[kind].merge).toBe(kind !== 'siege')
     }
     expect(DAMAGE_STYLE.crit.merge).toBe(false)
+    // 땅 (433번): 벽을 들이받는 한 방은 지나가며 밀친 피해보다 크다.
+    expect(DAMAGE_STYLE.siege.scale).toBeGreaterThan(DAMAGE_STYLE.earth.scale)
   })
 
   it('마법 피해는 총알과 다른 색: 물 파랑·불 주황·번개 노랑, 불 지속은 불보다 작다', () => {
     const bullet = DAMAGE_STYLE.bullet.color
-    for (const kind of ['water', 'fire', 'lightning'] as const) {
+    const magics = ['water', 'fire', 'lightning', 'earth'] as const
+    for (const kind of magics) {
       expect(DAMAGE_STYLE[kind].color).not.toBe(bullet)
     }
-    expect(
-      new Set(['water', 'fire', 'lightning'].map((k) => DAMAGE_STYLE[k as DamageKind].color)).size,
-    ).toBe(3)
+    expect(new Set(magics.map((k) => DAMAGE_STYLE[k].color)).size).toBe(4)
     expect(DAMAGE_STYLE.burn.color).toBe(DAMAGE_STYLE.fire.color)
     expect(DAMAGE_STYLE.burn.scale).toBeLessThan(DAMAGE_STYLE.fire.scale)
     expect(DAMAGE_STYLE.chain.color).toBe(DAMAGE_STYLE.lightning.color)
