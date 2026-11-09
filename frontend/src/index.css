@@ -1028,7 +1028,7 @@ p.animate-stamp {
   }
 }
 
-/* 채용 뽑기 (decisions.md 312번): 카드가 뒤집혀 등급이 드러난다. 특급은 뒷면이 금빛으로 떤다. */
+/* 채용 뽑기 (decisions.md 312·420번): 카드가 뒤집혀 등급이 드러난다. 뒷면은 모두 같고(특급도 미리 떨지 않는다) 등급은 앞면이 보일 때 드러난다. */
 .flip-card {
   perspective: 900px;
 }
@@ -1038,7 +1038,7 @@ p.animate-stamp {
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
-  transition: transform 0.55s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  transition: transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
 }
 .flip-card.is-open .flip-inner {
   transform: rotateY(180deg);
@@ -1064,25 +1064,8 @@ p.animate-stamp {
 .flip-front {
   transform: rotateY(180deg);
 }
-.flip-card.is-star:not(.is-open) .flip-back {
-  border-color: #f5d36b;
-  animation: star-tremble 0.35s ease-in-out infinite;
-  box-shadow: 0 0 22px rgba(245, 211, 107, 0.75);
-}
 .flip-card.is-star.is-open .flip-front {
   box-shadow: 0 0 26px rgba(245, 211, 107, 0.85);
-}
-@keyframes star-tremble {
-  0%,
-  100% {
-    transform: rotate(0);
-  }
-  25% {
-    transform: rotate(-2deg) scale(1.02);
-  }
-  75% {
-    transform: rotate(2deg) scale(1.02);
-  }
 }
 /* 카드 가운데에 그리는 방패: 모서리에 붙지 않는다 */
 .gem-static > .grade-gem {
@@ -1091,9 +1074,6 @@ p.animate-stamp {
 @media (prefers-reduced-motion: reduce) {
   .flip-inner {
     transition: none;
-  }
-  .flip-card.is-star:not(.is-open) .flip-back {
-    animation: none;
   }
 }
 

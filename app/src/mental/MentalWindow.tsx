@@ -534,14 +534,15 @@ function CardPick({
       later(step.tease, () => {
         setFace(i, 'tease')
         sfx.cardTease(REVEAL_TIMING[grade].tease)
-        if (grade === 'UR') setDim(true)
       })
       later(step.turn, () => setFace(i, 'turn'))
       later(step.face, () => {
         setFace(i, 'front')
-        setDim(false)
         revealFx(grade, buttons.current[i])
+        // 전설은 앞면이 보인 뒤에 화면이 잠깐 어두워진다 (420번): 뜸에서 미리 알리지 않는다. 다음 카드를 늦추지 않는다.
+        if (grade === 'UR') setDim(true)
       })
+      if (grade === 'UR') later(step.face + 350, () => setDim(false))
     })
     later(plan.ready, makeReady)
     return clearTimers

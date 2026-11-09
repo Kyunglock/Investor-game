@@ -16,7 +16,7 @@ const reducedMotion = () =>
   (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false)
 
 /**
- * 뽑기 결과 (decisions.md 312번): 뒤집힌 카드가 하나씩 열린다. 특급은 뒷면이 금빛으로 떨지만 다른 카드와 같은 빠르기로 열리고(420번), 도감에 처음 오른 등급에는 NEW가 붙는다. 카드를
+ * 뽑기 결과 (decisions.md 312번): 뒤집힌 카드가 하나씩 열린다. 뒷면은 모두 같고 같은 빠르기로 열린다(420번): 특급은 열린 뒤 금빛으로 빛난다. 도감에 처음 오른 등급에는 NEW가 붙는다. 카드를
  * 누르면 바로 열리고 "모두 열기"로 한꺼번에 연다. 다 열리면 확인. onFlip은 카드가 열릴 때마다 부른다(앱이 소리·진동·터짐을 낸다).
  */
 export function GachaReveal({
