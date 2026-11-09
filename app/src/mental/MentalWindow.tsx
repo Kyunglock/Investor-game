@@ -67,7 +67,13 @@ export function MentalWindow({
   const mode: BattleMode = 'defense'
   const perChapter = company.stages?.perChapter
   // 한 번만 만든다: 새 객체면 전투(Battle)의 effect가 다시 돌아 판이 처음부터 다시 시작됐다.
-  const stageNumber = entry.kind === 'stage' ? entry.stage : null
+  // 종목 회의 뒤 디펜스 (414번)는 세기(level)만큼의 번호 스테이지 판을 빌려 쓴다. 보스 판(챕터 끝)은 피한다.
+  const stageNumber =
+    entry.kind === 'stage'
+      ? entry.stage
+      : entry.kind === 'invest'
+        ? investStage(entry.level, perChapter)
+        : null
   const spec: StageSpec | undefined = useMemo(
     () => (stageNumber === null ? undefined : stageSpec(stageNumber, perChapter)),
     [stageNumber, perChapter],
@@ -133,6 +139,8 @@ export function MentalWindow({
     const store = useRaisingStore.getState()
     if (entry.kind === 'stage') {
       await store.reportStage(entry.stage, outcome.win, outcome.stars)
+    } else if (entry.kind === 'invest') {
+      await store.reportInvestBattle(entry.mode, outcome.stars)
     } else {
       await store.reportEx(outcome.kills)
     }
@@ -147,7 +155,8 @@ export function MentalWindow({
   useEffect(() => {
     if (outcome) void save()
   }, [outcome])
-  const reward = saved ? (company.stages?.lastResult ?? null) : null
+  const reward = saved && entry.kind !== 'invest' ? (company.stages?.lastResult ?? null) : null
+  const investBattle = saved && entry.kind === 'invest' ? company.invest?.outcome?.battle : null
 
   return createPortal(
     <div
@@ -176,13 +185,25 @@ export function MentalWindow({
           <div className="stage-lobby" data-testid="mental-lobby">
             <header className="stage-heading">
               <span className="stage-eyebrow">
-                {entry.kind === 'stage' ? '멘탈 스테이지' : 'EX 도전 · 분기에 한 번'}
+                {entry.kind === 'stage'
+                  ? '멘탈 스테이지'
+                  : entry.kind === 'invest'
+                    ? `종목 회의 뒤 전투 · 세기 ${entry.level}`
+                    : 'EX 도전 · 분기에 한 번'}
               </span>
               <h2>
                 {entry.kind === 'stage'
                   ? `스테이지 ${stageLabel(entry.stage, perChapter)}`
-                  : 'EX 디펜스'}
+                  : entry.kind === 'invest'
+                    ? '멘탈을 지켜라'
+                    : 'EX 디펜스'}
               </h2>
+              {entry.kind === 'invest' && (
+                <p data-testid="invest-battle-rule">
+                  반대로 걸었다. 버틸수록 회의 손실이 줄어든다 · 별 1·2·3개 → 손실 30% · 60% 막기 ·
+                  다 막고 판돈 10% 더
+                </p>
+              )}
               <p>{company.mental?.headline ?? '흔들리지 않는 마음으로'}</p>
             </header>
             <div className="stage-hero-card">
@@ -295,13 +316,15 @@ export function MentalWindow({
               <p className="mt-3 text-[14px]" data-testid="mental-reward">
                 {sending
                   ? '보상을 받는 중…'
-                  : !reward
-                    ? ''
-                    : reward.capital > 0 || reward.tickets > 0
-                      ? `${reward.firstClear ? '처음 깼다! ' : ''}${reward.capital > 0 ? `자본 +${money(reward.capital)} · ` : ''}무기 뽑기권 +${reward.tickets}장`
-                      : spec && !outcome.win
-                        ? '깨면 자본과 무기 뽑기권을 받는다.'
-                        : '이번에 더 받을 보상은 없다.'}
+                  : investBattle && investBattle.after != null
+                    ? `회의 손익 ${signedMoney(investBattle.before)} → ${signedMoney(investBattle.after)}`
+                    : !reward
+                      ? ''
+                      : reward.capital > 0 || reward.tickets > 0
+                        ? `${reward.firstClear ? '처음 깼다! ' : ''}${reward.capital > 0 ? `자본 +${money(reward.capital)} · ` : ''}무기 뽑기권 +${reward.tickets}장`
+                        : spec && !outcome.win
+                          ? '깨면 자본과 무기 뽑기권을 받는다.'
+                          : '이번에 더 받을 보상은 없다.'}
               </p>
             </div>
             <button
@@ -1031,4 +1054,14 @@ function Battle({
       )}
     </>
   )
+}
+
+/** 종목 회의 뒤 디펜스의 판 (414번): 세기 1이면 1스테이지, 세기마다 두 스테이지씩 단단해진다. 챕터 끝(보스) 판은 한 칸 앞으로. */
+function investStage(level: number, perChapter = 10): number {
+  const n = Math.max(1, level * 2 - 1)
+  return n % perChapter === 0 ? n - 1 : n
+}
+
+function signedMoney(amount: number): string {
+  return `${amount >= 0 ? '+' : '−'}${money(Math.abs(amount))}`
 }

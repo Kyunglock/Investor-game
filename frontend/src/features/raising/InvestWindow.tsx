@@ -49,6 +49,7 @@ export function InvestWindow({
   employees,
   onClose,
   onSettle,
+  onBattle,
   hold = false,
 }: {
   invest: Invest
@@ -57,6 +58,11 @@ export function InvestWindow({
   employees: Company['employees']
   onClose: () => void
   onSettle: () => void
+  /**
+   * 회의 뒤 전투로 간다 (decisions.md 414번, #573): 틀렸으면 디펜스로 손실을 줄이고, 맞혔으면 공격 판(매도벽)으로 수익을 키운다. 주지 않으면(웹) 전투
+   * 없이 그대로다.
+   */
+  onBattle?: (battle: NonNullable<NonNullable<Invest['outcome']>['battle']>) => void
   /** 결과를 아직 보이지 않는다 (348번): 디펜스 멘탈 전투가 결정 직후에 끼어들어 끝날 때까지. 풀리면 차트가 처음부터 그려진다. */
   hold?: boolean
 }) {
@@ -500,13 +506,40 @@ export function InvestWindow({
                     회의는 이 <b>한 건</b>으로 끝났습니다. 이제 직원들이 <b>이번 분기</b>에 배치대로
                     굴린 결과를 봅니다.
                   </p>
-                  <div className="meeting-step-action">
+                  <BattleAfter outcome={outcome} />
+                  <div className="meeting-step-action grid gap-2">
+                    {onBattle && outcome.battle?.open && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => outcome.battle && onBattle(outcome.battle)}
+                        className={`animate-reveal min-h-14 w-full rounded font-bold text-white disabled:opacity-50 ${
+                          outcome.battle.mode === 'ASSAULT' ? 'bg-up' : 'bg-down'
+                        }`}
+                        data-testid="invest-battle"
+                        data-mode={outcome.battle.mode}
+                      >
+                        {outcome.battle.mode === 'ASSAULT'
+                          ? '🔥 매도벽 돌파하러 가기 · 수익 키우기'
+                          : '🛡 멘탈 지키러 가기 · 손실 줄이기'}
+                        <span className="block text-[12px] font-normal opacity-90">
+                          {outcome.battle.mode === 'ASSAULT'
+                            ? '별 1·2·3개 → 회의 수익 ×1.2 · ×1.5 · ×2'
+                            : '별 1·2·3개 → 손실 30% · 60% 막기 · 다 막고 판돈 10% 더'}
+                        </span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       disabled={busy}
                       onClick={onSettle}
-                      className="animate-reveal min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
+                      className={`animate-reveal min-h-12 w-full rounded font-semibold disabled:opacity-50 ${
+                        onBattle && outcome.battle?.open
+                          ? 'border border-line bg-white text-ink'
+                          : 'bg-wine text-white'
+                      }`}
                     >
+                      {onBattle && outcome.battle?.open ? '전투 없이 ' : ''}
                       {year}년 차 {quarter}분기 넘기기 →
                     </button>
                   </div>
@@ -595,5 +628,21 @@ function Hindsight({ invest }: { invest: Invest }) {
         <li key={`${i}-${line}`}>· {line}</li>
       ))}
     </ul>
+  )
+}
+
+/** 회의 뒤 전투를 했으면 전·후 회의 손익 (decisions.md 414번). */
+function BattleAfter({ outcome }: { outcome: NonNullable<Invest['outcome']> }) {
+  const b = outcome.battle
+  if (!b || b.stars == null || b.after == null) return null
+  return (
+    <p
+      className="animate-reveal mt-2 rounded bg-line-soft px-3 py-2 text-center text-[14px]"
+      data-testid="invest-battle-after"
+    >
+      {b.mode === 'ASSAULT' ? '매도벽 돌파' : '멘탈 방어'} {'★'.repeat(b.stars)}
+      {'☆'.repeat(3 - b.stars)} · 회의 손익 {signed(b.before)} →{' '}
+      <b className={b.after >= 0 ? 'text-up' : 'text-down'}>{signed(b.after)}</b>
+    </p>
   )
 }
