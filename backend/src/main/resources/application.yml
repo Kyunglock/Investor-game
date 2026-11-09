@@ -180,6 +180,8 @@ raising:
       # 분기 강화율 = min(max-bonus, 깬 최고 스테이지 × bonus-per-stage). EX 디펜스는 분기에 한 번, 뽑기권 1 + 적 ÷ ex-kills-per-ticket장(최대 ex-max-tickets)
       stages:
         per-chapter: 10
+        # 챕터 수 (407번): 챕터 보스를 깨면 다음 챕터가 열린다. 마지막 스테이지는 per-chapter × chapters
+        chapters: 5
         capital-per-stage: 1000000
         clear-tickets: 1
         boss-tickets: 3

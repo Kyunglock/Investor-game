@@ -963,7 +963,7 @@ export interface components {
             stages?: {
                 /** @description 깬 최고 스테이지(0이면 아직 없다). 다음에 열리는 것은 best + 1 */
                 best: number;
-                /** @description 마지막 스테이지(지금은 챕터 하나) */
+                /** @description 마지막 스테이지(챕터당 스테이지 수 × 챕터 수 */
                 last: number;
                 /** @description 한 챕터의 스테이지 수. 챕터 마지막은 보스 */
                 perChapter: number;

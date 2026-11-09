@@ -114,6 +114,20 @@ export function stageSpec(stage: number, perChapter: number = PER_CHAPTER): Stag
   }
 }
 
+/** 챕터 이름 (407번): 챕터 보스를 깨면 다음 챕터가 열린다. 서버의 챕터 수(stages.last ÷ perChapter)보다 많으면 남는 이름은 쓰지 않는다. */
+export const CHAPTER_NAMES = [
+  '개미의 첫걸음',
+  '흔들리는 장',
+  '공포의 투매',
+  '광기의 거품',
+  '흔들리지 않는 마음',
+]
+
+/** 챕터 이름: 이름표를 넘어가면 번호만. */
+export function chapterName(chapter: number): string {
+  return CHAPTER_NAMES[chapter - 1] ?? `챕터 ${chapter}`
+}
+
 /** 스테이지 이름: 챕터-번호 (예: 1-3). */
 export function stageLabel(stage: number, perChapter: number = PER_CHAPTER): string {
   return `${Math.floor((stage - 1) / perChapter) + 1}-${((stage - 1) % perChapter) + 1}`

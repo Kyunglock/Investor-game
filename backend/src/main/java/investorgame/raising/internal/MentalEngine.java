@@ -357,6 +357,12 @@ class MentalEngine {
     return c.stageStars == null ? 0 : c.stageStars.size();
   }
 
+  /** 마지막 스테이지 (407번): 챕터 수 × 챕터당 스테이지 수. 챕터 보스를 깨면 다음 챕터의 첫 스테이지가 열린다. */
+  int lastStage() {
+    CompanyProperties.Stages rule = properties.mental().stages();
+    return rule.perChapter() * rule.chapters();
+  }
+
   /** 스테이지 이름: 챕터-번호 (예: 1-3). */
   String stageLabel(int stage) {
     int per = properties.mental().stages().perChapter();
@@ -385,14 +391,14 @@ class MentalEngine {
   }
 
   /**
-   * 멘탈 스테이지 한 판의 결과 (decisions.md 369번). 열린 스테이지(1 ~ 깬 최고 + 1, 마지막 스테이지까지)만 받는다. 깼으면: 처음이면 자본(번호 ×
-   * capitalPerStage)과 뽑기권(보스면 더), 별이 전보다 많으면 늘어난 별마다 뽑기권. 받은 자본은 올해 스테이지 보상으로 따로 적는다. 못 깼으면 보상 없이
-   * 결과만 남긴다.
+   * 멘탈 스테이지 한 판의 결과 (decisions.md 369번). 열린 스테이지(1 ~ 깬 최고 + 1, 마지막 스테이지(407번: 챕터 수 × 챕터당)까지)만 받는다.
+   * 깼으면: 처음이면 자본(번호 × capitalPerStage)과 뽑기권(보스면 더), 별이 전보다 많으면 늘어난 별마다 뽑기권. 받은 자본은 올해 스테이지 보상으로 따로
+   * 적는다. 못 깼으면 보상 없이 결과만 남긴다.
    */
   void reportStage(CompanyState c, int stage, boolean cleared, int stars) {
     CompanyProperties.Stages rule = properties.mental().stages();
     int best = bestStage(c);
-    if (stage < 1 || stage > Math.min(best + 1, rule.perChapter())) {
+    if (stage < 1 || stage > Math.min(best + 1, lastStage())) {
       throw new InvalidRequestException("아직 열리지 않은 스테이지다: " + stage);
     }
     if (c.closed) {
@@ -447,7 +453,7 @@ class MentalEngine {
     CompanyState.StageResult r = c.lastStage;
     return new CompanyView.Stages(
         bestStage(c),
-        rule.perChapter(),
+        lastStage(),
         rule.perChapter(),
         c.stageStars == null ? List.of() : List.copyOf(c.stageStars),
         bonusPercent(c),

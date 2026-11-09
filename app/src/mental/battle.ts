@@ -84,7 +84,7 @@ import {
   type WaterStats,
   waterStats,
 } from './magic'
-import { MATE_LOOKS, mateFormation } from './mates'
+import { MATE_LOOKS, mateFormation, spreadTargets } from './mates'
 import { wallOffset } from './stageArt'
 import {
   aimWithJitter,
@@ -454,7 +454,7 @@ class BattleScene extends Phaser.Scene {
   /** 함께 싸우는 고양이 (393번): 들어온 차례대로. */
   private mates: Mate[] = []
   /** 지금 쏠 곳과 그것을 찾은 때(update). */
-  private target: { x: number; y: number } | null = null
+  private targets: ({ x: number; y: number } | null)[] = []
   private targetAt = 0
   private lastSound: Partial<Record<SoundKey, number>> = {}
   private waters: WaterShot[] = []
@@ -915,7 +915,6 @@ class BattleScene extends Phaser.Scene {
       this.hitSpark.explode(this.fx(14), fx, fy)
       this.pop(fx, body.y - 56, `${MATE_LOOKS[i].name} 합류!`, '#ffe08a', 22)
       sfx.mateJoin()
-      if (!this.reducedMotion) this.shake(120, 0.004)
     }
     if (this.reducedMotion) {
       land()
@@ -932,12 +931,6 @@ class BattleScene extends Phaser.Scene {
         land()
       },
     })
-  }
-
-  /** 화면 흔들기. 공격 판(413번)은 흔들지 않는다(벽이 무너지고 사장냥이 치고 오르는 움직임만으로 손맛을 낸다). */
-  private shake(ms: number, intensity: number) {
-    if (this.assault) return
-    this.cameras.main.shake(ms, intensity)
   }
 
   /** 전진 모드: 사장냥을 옮긴다. 화면 가장자리와 위쪽 길막 줄에는 못 간다. */
@@ -1023,7 +1016,6 @@ class BattleScene extends Phaser.Scene {
     e.setScale(ENEMY_K * BOSS.scale)
     this.bossEnemy = e
     this.lastSummon = this.elapsed
-    this.shake(260, 0.012)
     this.pushHud(true)
   }
 
@@ -1956,7 +1948,6 @@ class BattleScene extends Phaser.Scene {
     } else if (e.boss) {
       e.boss = false
       this.bossEnemy = null
-      this.shake(420, 0.02)
       this.hitstop(140)
       this.boom[e.kind].explode(40, e.x, e.y)
       this.opts.onBanner(
@@ -2003,7 +1994,6 @@ class BattleScene extends Phaser.Scene {
         sfx.squish()
       }
       if (e.kind === 'spec') {
-        this.shake(160, 0.012)
         this.hitstop(70)
         this.pop(e.x, e.y - 40, '투기 진압!', '#ffd84d', 30)
       } else if (e.kind === 'stop') {
@@ -2079,12 +2069,6 @@ class BattleScene extends Phaser.Scene {
         onComplete: () => ripple.setVisible(false),
       })
     }
-    // 멘탈벽에 닿은 건 자주 일어나니 살짝만, 사장냥이 직접 맞은 건 더 세게 흔든다.
-    if (this.wallZone && !e) {
-      this.shake(80, 0.003)
-    } else {
-      this.shake(130, 0.009)
-    }
     this.opts.onHurt()
     sfx.ouch()
     if (e) this.hurtUntil = this.time.now + HURT_MS
@@ -2142,32 +2126,36 @@ class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * 이번에 쏠 곳: 디펜스에서 누르고 있으면 누른 자리, 전진 모드는 자동 조준의 과녁, 디펜스에서 안 누르면 사장냥 총에서 520px 안의 가장 가까운 적.
-   * 함께 싸우는 고양이도 같은 곳을 제 총에서 겨눠 쏜다(393번: 같은 방향으로).
+   * 이번에 쏠 곳(0번 사장냥, 1번부터 고양이): 디펜스에서 누르고 있으면 모두 누른 자리, 전진 모드는 자동 조준의 과녁, 디펜스에서 안 누르면 사장냥 총에서
+   * 520px 안의 가까운 적을 고양이마다 나눠 맡는다(409번, mates.ts spreadTargets. 393번에서는 모두 한 적을 쏴 몰렸다).
    */
-  private shotTarget(): { x: number; y: number } | null {
+  private shotTargets(): ({ x: number; y: number } | null)[] {
     const ptr = this.input.activePointer
-    const gx = this.player.x + GUN.dx
-    const gy = this.player.y + GUN.dy
+    const count = 1 + this.mates.length
+    // 디펜스에서 누르고 있으면 모두 누른 자리를 쏜다.
+    if (ptr.isDown && this.mode === 'defense') {
+      const at = { x: ptr.worldX, y: ptr.worldY }
+      return Array.from({ length: count }, () => at)
+    }
     // 전진 모드는 손가락이 이동이라 늘 자동 조준이다 (364번).
-    if (ptr.isDown && this.mode === 'defense') return { x: ptr.worldX, y: ptr.worldY }
-    if (this.mode === 'advance') return this.autoTarget()
-    // 공격 판 (413번): 위로 곧게 쏜다. 과녁은 쏘는 고양이마다 제 머리 위(updateMates·update가 곧장 위로 겨눈다).
-    if (this.assault) return { x: gx, y: -1000 }
-    let best: Enemy | null = null
-    let bestDist = 520 * 520
+    if (this.mode === 'advance') {
+      const t = this.autoTarget()
+      return Array.from({ length: count }, () => t)
+    }
+    const gun = (x: number, y: number) => ({ x: x + GUN.dx, y: y + GUN.dy })
+    const shooters = [
+      gun(this.player.x, this.player.y),
+      ...this.mates.map((m) => gun(m.body.x, m.body.y)),
+    ]
+    // 공격 판 (413번): 위로 곧게 쏜다. 과녁은 쏘는 고양이마다 제 머리 위.
+    if (this.assault) return shooters.map((g) => ({ x: g.x, y: -1000 }))
+    // 안 누르면 고양이마다 다른 적을 노린다 (409번): 사장냥 총에서 520px 안의 가까운 적을 나눠 맡는다.
+    const live: Enemy[] = []
     for (const child of this.enemies.getChildren()) {
       const e = child as Enemy
-      if (!e.active || e.dying) {
-        continue
-      }
-      const d = (e.x - gx) ** 2 + (e.y - gy) ** 2
-      if (d < bestDist) {
-        bestDist = d
-        best = e
-      }
+      if (e.active && !e.dying) live.push(e)
     }
-    return best
+    return spreadTargets(shooters, live, 520)
   }
 
   /** 각도는 총 피벗에서 잰다: 고양이 가운데에서 재면 가까운 적은 총구가 비켜 있어 빗나간다. */
@@ -2191,7 +2179,6 @@ class BattleScene extends Phaser.Scene {
       // 총소리는 사장냥 것만: 넷이 다 내면 뭉개지고 오디오 노드가 쌓인다.
       sfx.shot(kind)
       this.aim = aim
-      if (style.shake && !this.reducedMotion) this.shake(style.shakeMs, style.shake)
     }
     // 총 손맛: 총구 화염, 반동(눌렸다 펴짐). 크기·시간이 무기마다 다르다.
     const m = this.muzzle(p.x, p.y, aim)
@@ -2631,7 +2618,6 @@ class BattleScene extends Phaser.Scene {
           }),
       })
       this.time.delayedCall(90, () => this.ring(x, y, 0xffd04d, st.radius * 1.25, 360))
-      if (!this.reducedMotion) this.shake(110, 0.004)
     }
     this.playSound('boom')
     const dmg = st.damage * this.loadout.damage
@@ -2844,7 +2830,6 @@ class BattleScene extends Phaser.Scene {
     this.over = true
     this.physics.pause()
     if (!win) {
-      this.shake(300, 0.02)
     }
     this.pushHud(true)
     const wallsTotal = this.assault?.walls.length ?? 0
@@ -2920,13 +2905,14 @@ class BattleScene extends Phaser.Scene {
     })
   }
 
-  /** 함께 싸우는 고양이: 제자리로 미끄러지고, 숨 쉬고, 같은 곳을 겨눠 연사 간격마다 쏜다 (393번). */
-  private updateMates(time: number, dt: number, target: { x: number; y: number } | null) {
+  /** 함께 싸우는 고양이: 제자리로 미끄러지고, 숨 쉬고, 맡은 적을 겨눠 연사 간격마다 쏜다 (393·409번). */
+  private updateMates(time: number, dt: number, targets: ({ x: number; y: number } | null)[]) {
     const y = this.mode === 'defense' ? this.playerY() : this.player.y
     const k = Math.min(1, dt * 8)
     const turn = Math.min(1, dt * 10)
     for (const [i, m] of this.mates.entries()) {
       const b = m.body
+      const target = targets[i + 1] ?? null
       b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop)
       if (!this.tweens.isTweening(b)) {
         b.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h * (1 + Math.sin(time / 260 + i * 1.7) * 0.025))
@@ -3044,18 +3030,18 @@ class BattleScene extends Phaser.Scene {
       ;(this.wallZone.body as Phaser.Physics.Arcade.StaticBody).updateFromGameObject()
     }
 
-    // 사장냥과 함께 싸우는 고양이가 같은 곳을 저마다 제 총으로 쏜다 (393번). 과녁 찾기는 적 풀 전체를 도니 누가 쏠 때거나 80ms마다만 새로 찾는다.
+    // 사장냥과 함께 싸우는 고양이가 저마다 맡은 적을 제 총으로 쏜다 (393·409번). 과녁 찾기는 적 풀 전체를 도니 누가 쏠 때거나 80ms마다만 새로 찾는다.
     const fireMs = this.loadout.fireMs
     const due = time - this.lastFire > fireMs || this.mates.some((m) => time - m.lastFire > fireMs)
     if (due || time - this.targetAt > 80) {
-      this.target = this.shotTarget()
+      this.targets = this.shotTargets()
       this.targetAt = time
     }
-    const target = this.target
+    const target = this.targets[0] ?? null
     if (target && time - this.lastFire > fireMs) {
       this.fire(time, this.assault ? -Math.PI / 2 : this.angleFrom(p.x, p.y, target))
     }
-    this.updateMates(time, dt, target)
+    this.updateMates(time, dt, this.targets)
     // 마법은 총알과 따로 제 주기에 스스로 나간다 (392번).
     this.castMagic()
     this.updateMagic(dt)
@@ -3143,7 +3129,6 @@ class BattleScene extends Phaser.Scene {
             this.hurt(20)
           }
           this.pop(e.x, e.y - 50, '펑!!', '#ff4f6d', 34)
-          this.shake(220, 0.015)
           this.kill(e, false)
           continue
         }

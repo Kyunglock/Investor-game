@@ -18,13 +18,10 @@ export interface Float {
 }
 
 interface FxState {
-  /** 오를 때마다 화면이 한 번 흔들린다. */
-  shake: number
   /** 화면을 한 번 번쩍이는 색. */
   flash: { id: number; color: string } | null
   bursts: Burst[]
   floats: Float[]
-  shakeScreen: () => void
   flashScreen: (color: string) => void
   burst: (x: number, y: number, kind: BurstKind) => void
   /** 요소의 가운데에서 터진다. 요소가 없으면 화면 가운데. */
@@ -47,11 +44,9 @@ function center(el: Element | null | undefined): { x: number; y: number } {
 
 /** 임팩트 효과 (decisions.md 310번): 흔들림·번쩍임·터짐·떠오르는 글. FxLayer가 그린다. */
 export const useFx = create<FxState>((set, get) => ({
-  shake: 0,
   flash: null,
   bursts: [],
   floats: [],
-  shakeScreen: () => set((s) => ({ shake: s.shake + 1 })),
   flashScreen: (color) => set({ flash: { id: ++seq, color } }),
   burst: (x, y, kind) => set((s) => ({ bursts: [...s.bursts, { id: ++seq, x, y, kind }] })),
   burstAt: (el, kind) => {

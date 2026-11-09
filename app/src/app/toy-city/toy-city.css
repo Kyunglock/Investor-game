@@ -122,37 +122,6 @@
     transform: none;
   }
 }
-.toy-shake {
-  transform-origin: 50% 60%;
-  will-change: transform;
-  animation: toy-shake 0.42s 0.1s linear both;
-}
-@keyframes toy-shake {
-  0% {
-    transform: scale(1.06);
-  }
-  100% {
-    transform: none;
-  }
-  12% {
-    transform: scale(1.06) translate(-11px, 6px) rotate(-1deg);
-  }
-  26% {
-    transform: scale(1.06) translate(10px, -7px) rotate(0.9deg);
-  }
-  40% {
-    transform: scale(1.06) translate(-8px, 4px) rotate(-0.6deg);
-  }
-  56% {
-    transform: scale(1.06) translate(6px, -3px) rotate(0.4deg);
-  }
-  72% {
-    transform: scale(1.06) translate(-3px, 2px);
-  }
-  86% {
-    transform: scale(1.03) translate(2px, -1px);
-  }
-}
 .toy-move-flash {
   position: absolute;
   inset: 0;
@@ -976,7 +945,32 @@
   }
 }
 
-/* 스테이지 선택 (decisions.md 369번) */
+/* 스테이지 선택 (decisions.md 369번). 챕터 넘기기 (407번) */
+.toy-chapter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.toy-chapter .toy-sheet-lead {
+  flex: 1;
+  text-align: center;
+  margin: 0;
+}
+.toy-chapter button {
+  width: 40px;
+  height: 40px;
+  border: 1.5px solid #2b2340;
+  border-radius: 12px;
+  background: #fffaf0;
+  color: #2b2340;
+  font-size: 22px;
+  box-shadow: 0 2px 0 #2b2340;
+}
+.toy-chapter button:disabled {
+  opacity: 0.35;
+  box-shadow: none;
+}
 .toy-stage-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

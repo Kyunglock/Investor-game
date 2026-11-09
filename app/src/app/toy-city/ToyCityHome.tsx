@@ -8,7 +8,7 @@ import { tutorialStep, unlockedFeatures, useTutorial } from '@web/features/raisi
 import { useState } from 'react'
 import { haptic } from '../../fx/haptics'
 import { isMuted, setMuted, sfx } from '../../fx/sound'
-import { stageLabel } from '../../mental/advance'
+import { chapterName, stageLabel } from '../../mental/advance'
 import { WeaponInventory, weaponBadge } from '../../mental/WeaponInventory'
 import { BookIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from '../Icons'
 import { Sheet } from '../Sheet'
@@ -354,30 +354,66 @@ export function ToyCityHome({ company }: { company: Company }) {
 }
 
 /**
- * 스테이지 선택 (decisions.md 369번): 번호 스테이지를 골라 전진 모드로 들어간다. 깬 다음 스테이지까지 열리고, 챕터 마지막은 보스. 별과 분기 강화율이
- * 보이고, 아래에 분기에 한 번 하는 EX 디펜스가 있다.
+ * 스테이지 선택 (decisions.md 369·407번): 번호 스테이지를 골라 전진 모드로 들어간다. 깬 다음 스테이지까지 열리고, 챕터 마지막은 보스. 보스를 깨면
+ * 다음 챕터가 열린다. 챕터는 ‹ › 로 넘겨 보고, 처음에는 지금 깰 차례인 챕터가 보인다. 별과 분기 강화율이 보이고, 아래에 분기에 한 번 하는 EX
+ * 디펜스가 있다.
  */
 function StageSelect({ company, disabled }: { company: Company; disabled: boolean }) {
   const stages = company.stages
+  const per = stages?.perChapter ?? 10
+  const open = stages ? Math.min(stages.best + 1, stages.last) : 1
+  const chapters = stages ? Math.ceil(stages.last / per) : 1
+  const openChapter = Math.ceil(open / per)
+  const [chapter, setChapter] = useState(openChapter)
   if (!stages) return null
-  const open = Math.min(stages.best + 1, stages.last)
-  const numbers = Array.from({ length: stages.last }, (_, i) => i + 1)
+  const numbers = Array.from({ length: per }, (_, i) => (chapter - 1) * per + i + 1).filter(
+    (n) => n <= stages.last,
+  )
   const start = (entry: BattleEntry) => {
     sfx.stamp()
     haptic.medium()
     useAppUi.getState().startBattle(entry)
   }
+  const turn = (to: number) => {
+    sfx.tap()
+    setChapter(to)
+  }
   return (
     <>
-      <p className="toy-sheet-lead">챕터 1 · 개미의 첫걸음</p>
+      <div className="toy-chapter" data-testid="stage-chapter" data-chapter={chapter}>
+        <button
+          type="button"
+          aria-label="앞 챕터"
+          disabled={chapter <= 1}
+          onClick={() => turn(chapter - 1)}
+          data-testid="chapter-prev"
+        >
+          ‹
+        </button>
+        <p className="toy-sheet-lead">
+          챕터 {chapter} · {chapterName(chapter)}
+          {chapter > openChapter && <small> · 잠김</small>}
+        </p>
+        <button
+          type="button"
+          aria-label="다음 챕터"
+          disabled={chapter >= chapters}
+          onClick={() => turn(chapter + 1)}
+          data-testid="chapter-next"
+        >
+          ›
+        </button>
+      </div>
       <p className="text-sm text-muted" data-testid="stage-bonus">
-        깬 최고 스테이지만큼 매 분기 직원들이 더 번다: 지금 +{stages.bonusPercent}%
+        {chapter > openChapter
+          ? `챕터 ${chapter - 1} 보스를 깨면 열린다`
+          : `깬 최고 스테이지만큼 매 분기 직원들이 더 번다: 지금 +${stages.bonusPercent}%`}
       </p>
       <ol className="toy-stage-grid" data-testid="stage-grid">
         {numbers.map((n) => {
           const stars = stages.stars[n - 1] ?? 0
           const locked = n > open
-          const boss = n % stages.perChapter === 0
+          const boss = n % per === 0
           return (
             <li key={n}>
               <button
@@ -387,10 +423,10 @@ function StageSelect({ company, disabled }: { company: Company; disabled: boolea
                 data-testid="stage"
                 data-stage={n}
                 data-stars={stars}
-                aria-label={`스테이지 ${stageLabel(n, stages.perChapter)}${locked ? ' 잠김' : ''}${boss ? ' 보스' : ''} 별 ${stars}개`}
+                aria-label={`스테이지 ${stageLabel(n, per)}${locked ? ' 잠김' : ''}${boss ? ' 보스' : ''} 별 ${stars}개`}
                 onClick={() => start({ kind: 'stage', stage: n })}
               >
-                <b>{locked ? '🔒' : stageLabel(n, stages.perChapter)}</b>
+                <b>{locked ? '🔒' : stageLabel(n, per)}</b>
                 <small aria-hidden="true">
                   {boss && !locked ? '보스 ' : ''}
                   {'★'.repeat(stars)}

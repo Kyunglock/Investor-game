@@ -207,10 +207,24 @@ class MentalEngineTest {
     assertThat(c.lastStage.tickets)
         .as("보스 스테이지")
         .isEqualTo(rule.bossTickets() + rule.starTickets());
-    assertThatThrownBy(() -> ENGINE.mental.reportStage(c, rule.perChapter() + 1, true, 1))
-        .as("챕터 하나뿐")
+    // 챕터 보스를 깨면 다음 챕터가 열린다 (407번): 2-1을 깰 수 있고, 그 다음 칸(2-3)은 아직이다.
+    assertThat(ENGINE.mental.stagesView(c).last()).isEqualTo(rule.perChapter() * rule.chapters());
+    ENGINE.mental.reportStage(c, rule.perChapter() + 1, true, 1);
+    assertThat(ENGINE.mental.bestStage(c)).isEqualTo(rule.perChapter() + 1);
+    assertThat(c.lastStage.firstClear).isTrue();
+    assertThatThrownBy(() -> ENGINE.mental.reportStage(c, rule.perChapter() + 3, true, 1))
+        .as("아직 안 열린 스테이지")
         .isInstanceOf(InvalidRequestException.class);
+    // 마지막 챕터 보스 너머는 없다.
+    for (int stage = rule.perChapter() + 2; stage <= ENGINE.mental.lastStage(); stage++) {
+      ENGINE.mental.reportStage(c, stage, true, 1);
+    }
+    assertThatThrownBy(() -> ENGINE.mental.reportStage(c, ENGINE.mental.lastStage() + 1, true, 1))
+        .as("마지막 챕터 너머")
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(ENGINE.mental.bonusPercent(c)).as("강화율 상한은 그대로").isEqualTo(rule.maxBonus());
     assertThat(ENGINE.mental.stageLabel(3)).isEqualTo("1-3");
+    assertThat(ENGINE.mental.stageLabel(rule.perChapter() + 1)).isEqualTo("2-1");
   }
 
   @Test

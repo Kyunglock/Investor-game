@@ -270,33 +270,6 @@ body {
 }
 
 /* 임팩트 (decisions.md 310번) */
-@keyframes shake-screen {
-  0%,
-  100% {
-    transform: none;
-  }
-  15% {
-    transform: translate(-9px, 3px) rotate(-0.6deg);
-  }
-  30% {
-    transform: translate(8px, -3px) rotate(0.5deg);
-  }
-  45% {
-    transform: translate(-6px, 2px);
-  }
-  60% {
-    transform: translate(5px, -2px);
-  }
-  75% {
-    transform: translate(-3px, 1px);
-  }
-  90% {
-    transform: translate(2px, 0);
-  }
-}
-.animate-shake-screen {
-  animation: shake-screen 0.5s ease-out 1;
-}
 /* 멘탈 전투의 큰 알림 (decisions.md 328번): 튀어나와 잠깐 머물다 떠오르며 사라진다 */
 @keyframes mental-banner {
   0% {
@@ -458,7 +431,6 @@ body {
   .title-in,
   .animate-pulse-soft,
   .animate-breathe,
-  .animate-shake-screen,
   .arcade-burst::before,
   .animate-mental-banner,
   .animate-mental-card-in,
