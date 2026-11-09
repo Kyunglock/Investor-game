@@ -47,10 +47,13 @@ export function MentalWindow({
   entry,
   company,
   onDone,
+  onChangeWeapon,
 }: {
   entry: BattleEntry
   company: Company
   onDone: () => void
+  /** 출전 화면의 "무기 바꾸기": 전투 창을 닫고 메인의 무기 인벤토리를 연다(Windows가 맡는다). */
+  onChangeWeapon: () => void
 }) {
   // 싸우는 사람과 든 무기는 출전을 누르는 순간 굳힌다: 회사가 다시 그려져도 한 판이 다시 시작되지 않게.
   const [hero, setHero] = useState<Hero | null>(null)
@@ -254,8 +257,7 @@ export function MentalWindow({
               weapon={heroOf(company).weapon}
               onChange={() => {
                 sfx.tap()
-                onDone()
-                useAppUi.getState().openSheet({ kind: 'toy', panel: 'weapons' })
+                onChangeWeapon()
               }}
             />
             {apiError && (
