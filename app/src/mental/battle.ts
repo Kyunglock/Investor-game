@@ -2169,8 +2169,9 @@ class BattleScene extends Phaser.Scene {
       return
     }
     e.hp -= dmg
-    // 하얗게 번쩍, 들썩임, 데미지 숫자: 맞은 느낌의 세 가지.
-    e.setTintFill(0xffffff)
+    // 매도벽은 연사 중에도 장갑과 균열이 보여야 한다. 밝기만 올리고 명중 불꽃을 얹는다.
+    if (e.cell) e.clearTint()
+    else e.setTintFill(0xffffff)
     this.time.delayedCall(55, () => e.active && this.paint(e))
     // 맞는 자리에 불꽃이 튀고 살짝 들썩인다.
     this.hitSpark.explode(3, e.x - Math.cos(angle) * 10, e.y - Math.sin(angle) * 10)
@@ -2912,7 +2913,10 @@ class BattleScene extends Phaser.Scene {
     s.t = Math.min(1, s.t + dt / s.duration)
     const x = s.sx + (s.tx - s.sx) * s.t
     const y = s.sy + (s.ty - s.sy) * s.t - Math.sin(Math.PI * s.t) * s.height
-    s.img.setPosition(x, y).setRotation(s.img.rotation + dt * 9)
+    // 불꽃의 꼬리가 비행 방향 뒤로 흐른다.
+    const vx = s.tx - s.sx
+    const vy = s.ty - s.sy - Math.cos(Math.PI * s.t) * Math.PI * s.height
+    s.img.setPosition(x, y).setRotation(Math.atan2(vy, vx) - Math.PI / 2)
     this.fireFx.emitParticleAt(x, y, magicTier(s.level) === 3 ? 2 : 1)
     if (s.t >= 1) {
       s.active = false
@@ -3346,7 +3350,7 @@ class BattleScene extends Phaser.Scene {
     const n = Math.min(xs.length - 1, Math.max(4, Math.round(len / 22)))
     const nx = -(y2 - y1) / len
     const ny = (x2 - x1) / len
-    const jag = Math.min(16, len * 0.08)
+    const jag = Math.min(22, len * 0.12)
     for (let i = 0; i <= n; i++) {
       const t = i / n
       const off = i === 0 || i === n ? 0 : (Math.random() * 2 - 1) * jag
@@ -3360,9 +3364,24 @@ class BattleScene extends Phaser.Scene {
       for (let i = 1; i <= n; i++) g.lineTo(xs[i], ys[i])
       g.strokePath()
     }
-    stroke(width * 3.2, 0x6b5cff, 0.28)
-    stroke(width, 0xffe24d, 1)
+    stroke(width * 4.5, 0x6250da, 0.12)
+    stroke(width * 2.2, 0x8179ed, 0.35)
+    stroke(width, 0xffdf75, 1)
     stroke(Math.max(1, width * 0.4), 0xffffff, 1)
+    // 짧은 방전 가지: 본줄기보다 가늘게, 흰 심을 가리지 않게 밖으로 뻗는다.
+    g.lineStyle(Math.max(0.7, width * 0.2), 0xd9cfff, 0.8)
+    for (let i = 2; i < n; i += 3) {
+      const side = i % 2 ? 1 : -1
+      const reach = Math.min(18, len * 0.1)
+      g.beginPath()
+      g.moveTo(xs[i], ys[i])
+      g.lineTo(xs[i] + nx * reach * side, ys[i] + ny * reach * side)
+      g.lineTo(
+        xs[i] + nx * reach * side * 1.5 + (x2 - x1) * 0.025,
+        ys[i] + ny * reach * side * 1.5 + (y2 - y1) * 0.025,
+      )
+      g.strokePath()
+    }
     // 곁가지는 꺾인 점을 다 쓴 뒤에 그린다(같은 버퍼를 다시 쓰므로 갈라질 자리를 먼저 적어 둔다).
     const main = Math.atan2(y2 - y1, x2 - x1)
     const starts: [number, number, number][] = []
