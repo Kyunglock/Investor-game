@@ -770,8 +770,14 @@ export interface components {
                          * @enum {string}
                          */
                         mode: "DEFENSE" | "ASSAULT";
-                        /** @description 전투의 세기(1부터). 크게 움직인 종목 */
+                        /** @description 전투의 세기(1부터). 크게 움직인 종목, 크게 건 회의, 깬 번호 스테이지, 회사 건물, 연차, 자본 전투 강화가 클수록 높다 (#594) */
                         level: number;
+                        /** @description 세기가 오른 이유와 그만큼(0인 것은 뺐다, */
+                        levelParts: {
+                            /** @enum {string} */
+                            code: "news" | "big" | "stage" | "building" | "year" | "upgrade";
+                            plus: number;
+                        }[];
                         /** @description 아직 할 수 있다. 분기를 넘기면 끝난다(배율 1) */
                         open: boolean;
                         /** @description 얻은 별(0~3). 아직 안 했으면 null */

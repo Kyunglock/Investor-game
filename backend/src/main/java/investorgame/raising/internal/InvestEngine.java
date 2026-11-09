@@ -709,14 +709,27 @@ class InvestEngine {
   }
 
   /**
-   * 회의 뒤 전투의 세기 (414번): 1부터. 크게 움직인 종목일수록(기사의 크기 0~1을 0~4로), 크게 걸었으면 +1, 깬 번호 스테이지 10개마다 +1. 앱이
-   * 적·벽의 세기에 쓴다.
+   * 회의 뒤 전투의 세기 (414번, #594에서 진행도·사장 힘을 더함): 1부터, 이유마다 더한 것. 크게 움직인 종목일수록(기사의 크기 0~1을 0~4로), 크게
+   * 걸었으면 +1, 깬 번호 스테이지 5개마다 +1, 회사 건물이 두 단계 오를 때마다 +1, 두 해마다 +1, 자본 전투 강화(공격·연사)가 합쳐 50단계마다 +1. 회사가
+   * 크고 사장이 강해질수록 적도 강해진다. 앱이 적·벽의 세기에 쓴다.
    */
-  int battleLevel(Invest invest, int bestStage) {
-    return 1
-        + (int) Math.round(magnitudeAt(invest.magnitudeBp) * 4)
-        + (invest.big ? 1 : 0)
-        + bestStage / 10;
+  java.util.LinkedHashMap<String, Integer> battleLevelParts(
+      CompanyState c, Invest invest, int bestStage) {
+    java.util.LinkedHashMap<String, Integer> parts = new java.util.LinkedHashMap<>();
+    parts.put("news", (int) Math.round(magnitudeAt(invest.magnitudeBp) * 4));
+    parts.put("big", invest.big ? 1 : 0);
+    parts.put("stage", bestStage / 5);
+    String building = c.building == null ? "F" : c.building;
+    parts.put("building", Math.max(0, CompanyEngine.LADDER.indexOf(building)) / 2);
+    parts.put("year", Math.max(0, c.year - 1) / 2);
+    int upgrades =
+        c.battleLevels.getOrDefault("damage", 0) + c.battleLevels.getOrDefault("fire", 0);
+    parts.put("upgrade", upgrades / 50);
+    return parts;
+  }
+
+  int battleLevel(CompanyState c, Invest invest, int bestStage) {
+    return 1 + battleLevelParts(c, invest, bestStage).values().stream().mapToInt(i -> i).sum();
   }
 
   /** 아직 회의 뒤 전투를 할 수 있는가. */

@@ -236,6 +236,29 @@ class InvestEngineTest {
         .isInstanceOf(InvalidRequestException.class);
   }
 
+  /** 회의 뒤 전투의 세기 (#594): 회사가 크고 오래되고 사장이 강해질수록 오른다. 이유마다 몫이 보인다. */
+  @Test
+  void 회의_뒤_전투의_세기는_진행할수록_오른다() {
+    CompanyState c = company(3, stats(50, 100, 100, 100));
+    ENGINE.invest.decide(c, right(c), new HashSeededRandom(3));
+    int base = ENGINE.invest.battleLevel(c, c.invest, 0);
+    assertThat(ENGINE.invest.battleLevel(c, c.invest, 10)).as("스테이지 5개마다 +1").isEqualTo(base + 2);
+    c.year = 5;
+    assertThat(ENGINE.invest.battleLevel(c, c.invest, 0)).as("두 해마다 +1").isEqualTo(base + 2);
+    c.building = CompanyEngine.LADDER.get(4);
+    assertThat(ENGINE.invest.battleLevel(c, c.invest, 0)).as("건물 두 단계마다 +1").isEqualTo(base + 4);
+    c.battleLevels.put("damage", 60);
+    c.battleLevels.put("fire", 40);
+    c.battleLevels.put("hp", 500);
+    assertThat(ENGINE.invest.battleLevel(c, c.invest, 0))
+        .as("공격·연사 강화 50단계마다 +1, 체력은 넣지 않는다")
+        .isEqualTo(base + 6);
+    assertThat(ENGINE.invest.battleLevelParts(c, c.invest, 0))
+        .containsEntry("year", 2)
+        .containsEntry("building", 2)
+        .containsEntry("upgrade", 2);
+  }
+
   /** 용기가 낮은 단타 직원은 "제가 알아서 할게요" 하고 제 판단대로 한다. 안목이 좋으면 제멋대로 한 쪽이 맞을 때가 많다. */
   @Test
   void 고집_센_직원은_제멋대로_하고_맞을_때도_있다() {

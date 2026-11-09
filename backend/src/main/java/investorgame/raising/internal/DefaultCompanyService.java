@@ -741,9 +741,15 @@ class DefaultCompanyService implements CompanyService {
     }
     Long after =
         invest.battleBonus == null ? null : CompanyEngine.plus(invest.total, invest.battleBonus);
+    int best = engine.mental.bestStage(c);
+    java.util.Map<String, Integer> parts = engine.invest.battleLevelParts(c, invest, best);
     return new CompanyView.InvestBattle(
         mode,
-        engine.invest.battleLevel(invest, engine.mental.bestStage(c)),
+        engine.invest.battleLevel(c, invest, best),
+        parts.entrySet().stream()
+            .filter(e -> e.getValue() > 0)
+            .map(e -> new CompanyView.LevelPart(e.getKey(), e.getValue()))
+            .toList(),
         InvestEngine.battleOpen(invest),
         invest.battleStars,
         invest.battleBonus,
