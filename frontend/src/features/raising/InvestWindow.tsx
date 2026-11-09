@@ -1,21 +1,13 @@
 import './meetings.css'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import type { Company } from '../../api/client'
-import { money, withParticle } from '../game/labels'
+import { money } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { CHART_MS, InvestChart } from './InvestChart'
 import { ReturnResult } from './InvestReturn'
-import {
-  chartTimeline,
-  groupRemarks,
-  hindsightOf,
-  leadersOf,
-  OPINIONS,
-  percentOf,
-} from './investShow'
+import { chartTimeline, groupRemarks, leadersOf, OPINIONS, percentOf } from './investShow'
 import { useRaisingStore } from './store'
 import { TeamClash, teamClashMs } from './TeamClash'
-import { TeamGradeChip } from './TeamGradeChip'
 
 type Invest = NonNullable<Company['invest']>
 
@@ -38,7 +30,7 @@ const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce
 /**
  * 종목 회의 (decisions.md 229·231·235·267번). 분기 넘기기를 눌러 직원이 종목을 물어 왔을 때만 열린다(382번): 창 머리에 누가 가져왔는지 보이고, 끝나면 그 사람을
  * 칭찬하거나 탓하는 한 줄이 붙는다. 한 해의 중대 결정이라 예전 매매 이벤트 창처럼 화면 가운데에 뜬다: 결산을 누르면 열리고, 고르면 결과를 보고 그대로
- * 그해 결산으로 넘어간다. 단서 기사를 놓고 직원들과 고민한다. 리서치 팀이 형광펜을 긋고, 자리에 앉은 직원이 한마디씩 하고, 사장이 고른다(산다·판다·지켜본다,
+ * 그해 결산으로 넘어간다. 단서 기사를 놓고 직원들과 고민한다. 리서치 팀이 형광펜을 긋고, 자리에 앉은 직원이 한마디씩 하고, 사장이 고른다(산다·판다, 지켜본다는 423번에서 뺐다,
  * 회의를 열면 먼저 매수파와 매도파가 불꽃을 튀기며 토론하고(352번), 그 뒤에 사장이 고른다. 전에는 "너희가 알아서 해" 하고 맡겨야 맞붙어 한쪽으로 정한다, 279번). 고르면 사장 결정에 도장이 찍히고, 돈을 굴리는 직원마다 **맞대결 막대**에서 사장 말과 꼬드김·제 판단이 엎치락뒤치락하다 이긴 쪽으로
  * 쭉 찬다(181번의 막대를 되살림). 다 끝나면 종목이 오르내린 것이 드러나고 직원마다 손익이 뜬다.
  */
@@ -147,21 +139,7 @@ export function InvestWindow({
         <div className="meeting-body" data-step={step}>
           {step === 'analysis' && (
             <>
-              <TeamGradeChip team={invest.team} />
-              {invest.finder && (
-                <p className="mt-1 text-[13px]" data-testid="invest-finder">
-                  <b>
-                    {withParticle(
-                      invest.finder.role
-                        ? `${invest.finder.name} ${invest.finder.role}`
-                        : invest.finder.name,
-                      '이',
-                      '가',
-                    )}
-                  </b>{' '}
-                  가져온 종목 · <span className="text-muted">“{invest.finder.pitch}”</span>
-                </p>
-              )}
+              {/* 팀 합산 칩과 "○○이 가져온 종목" 줄은 뺐다 (decisions.md 422번, #588). */}
               <article className="meeting-article mt-2 rounded border border-line bg-card p-3">
                 <p className="text-[12px] text-muted">
                   {invest.sectorName} · {invest.stockName}
@@ -309,12 +287,12 @@ export function InvestWindow({
               {waiting && <SkipButton onSkip={skip} />}
               {!outcome && (
                 <div
-                  className="meeting-choices meeting-step-action grid grid-cols-3 gap-2"
+                  className="meeting-choices meeting-step-action grid grid-cols-2 gap-2"
                   data-testid="invest-options"
                 >
                   {debateFirst && debateOpen && debated && (
                     <p
-                      className="col-span-3 text-center text-[13px]"
+                      className="col-span-2 text-center text-[13px]"
                       data-testid="invest-your-turn"
                     >
                       직원들은{' '}
@@ -324,25 +302,23 @@ export function InvestWindow({
                       쪽으로 기울었다. 이제 <b>사장님 차례</b>입니다.
                     </p>
                   )}
-                  {invest.options
-                    .filter((o) => o.code !== 'TEAM')
-                    .map((o) => (
-                      <button
-                        key={o.code}
-                        data-choice={o.code}
-                        type="button"
-                        disabled={busy || !invest.ready || waiting}
-                        onClick={() => void decideInvest(o.code)}
-                        className="min-h-12 rounded border border-pen font-semibold transition-transform hover:bg-pen hover:text-white active:scale-95 disabled:opacity-50"
-                      >
-                        <span className="meeting-choice-icon" aria-hidden="true">
-                          {o.code === 'BUY' ? '↗' : o.code === 'SELL' ? '↘' : '◉'}
-                        </span>
-                        {o.label}
-                      </button>
-                    ))}
+                  {invest.options.map((o) => (
+                    <button
+                      key={o.code}
+                      data-choice={o.code}
+                      type="button"
+                      disabled={busy || !invest.ready || waiting}
+                      onClick={() => void decideInvest(o.code)}
+                      className="min-h-12 rounded border border-pen font-semibold transition-transform hover:bg-pen hover:text-white active:scale-95 disabled:opacity-50"
+                    >
+                      <span className="meeting-choice-icon" aria-hidden="true">
+                        {o.code === 'BUY' ? '↗' : o.code === 'SELL' ? '↘' : '◉'}
+                      </span>
+                      {o.label}
+                    </button>
+                  ))}
                   {waiting && (
-                    <p className="col-span-3 text-center text-[12px] text-muted">
+                    <p className="col-span-2 text-center text-[12px] text-muted">
                       토론이 끝나면 고를 수 있습니다.
                     </p>
                   )}
@@ -496,14 +472,6 @@ export function InvestWindow({
                       {outcome.credit}
                     </p>
                   )}
-                  <Hindsight invest={invest} />
-                  <p
-                    className="animate-reveal mt-3 rounded bg-line-soft px-3 py-2 text-center text-[13px]"
-                    data-testid="invest-next"
-                  >
-                    회의는 이 <b>한 건</b>으로 끝났습니다. 이제 직원들이 <b>이번 분기</b>에 배치대로
-                    굴린 결과를 봅니다.
-                  </p>
                   <BattleAfter outcome={outcome} />
                   <div className="meeting-step-action grid gap-2">
                     {onBattle && outcome.battle?.open && (
@@ -606,25 +574,6 @@ function DebateFold({
       </div>
       {open && children}
     </div>
-  )
-}
-
-/**
- * 회의 뒤 돌아보기 (decisions.md 260번): 지켜봤으면 놓친 돈, 직원 다수결과 형광펜이 맞았는지. 사장 실력이 숫자로 보인다.
- */
-function Hindsight({ invest }: { invest: Invest }) {
-  const outcome = invest.outcome
-  if (!outcome) {
-    return null
-  }
-  const lines = hindsightOf(invest)
-  return (
-    <ul className="animate-reveal mt-3 grid gap-0.5 text-[13px]" data-testid="hindsight">
-      {lines.map((line, i) => (
-        // biome-ignore lint/suspicious/noArrayIndexKey: 같은 소식이 두 번 올 수 있고 목록은 한 번 그리면 그대로다 (#338)
-        <li key={`${i}-${line}`}>· {line}</li>
-      ))}
-    </ul>
   )
 }
 
