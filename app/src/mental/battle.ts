@@ -32,6 +32,7 @@ import {
   HERO_SIZE,
   mateGunKey,
   mateKey,
+  RAM_ART,
   WALL_H,
 } from './art'
 import {
@@ -366,7 +367,7 @@ interface RamShot {
 /** 충차가 박차고 나가기 전 뒤로 당기는 시간(초). */
 const RAM_WINDUP = 0.16
 /** 충차가 달릴 수 있는 거리(px). */
-const RAM_RANGE = 900
+const RAM_RANGE = 1500
 /** 대지 충차(3단계)가 지나간 길에 돌기둥이 솟는 간격(px). */
 const SPIKE_GAP = 48
 /** 물이 날아갈 수 있는 거리(px)와, 끝에서 이만큼 남으면 옅어지기 시작한다. */
@@ -2665,7 +2666,7 @@ class BattleScene extends Phaser.Scene {
       .setDepth(6)
     for (let i = 0; i < 12; i++) {
       this.rams.push({
-        img: hidden('magic-ram', 5.5),
+        img: hidden('magic-ram', 4.6),
         active: false,
         level: 1,
         x: 0,
@@ -3028,9 +3029,13 @@ class BattleScene extends Phaser.Scene {
       const half = Math.max(0, target.displayWidth / 2 - 14)
       sx = Phaser.Math.Clamp(from.x, target.x - half, target.x + half)
     }
-    const sy = Math.max(from.y, target.y + 60)
+    // 크게 (사용자): 길이 약 130px(돌 충차) → 160 → 200px(대지 충차), 4·5레벨은 더. 화면 아래 끝에서 밀고 올라온다.
+    const k = [1.5, 1.85, 2.25][tier - 1] * this.grow(level)
+    const { w, h } = this.view()
+    const side = 24 * k
+    sx = Phaser.Math.Clamp(sx, side, w - side)
+    const sy = Math.max(h + 10 * k, target.y + 60)
     const a = -Math.PI / 2
-    const k = [0.8, 1.1, 1.45][tier - 1] * this.grow(level)
     this.tweens.killTweensOf(s.img)
     s.active = true
     s.level = level
@@ -3038,8 +3043,9 @@ class BattleScene extends Phaser.Scene {
     s.y = sy
     s.dx = 0
     s.dy = -1
-    s.half = st.half
-    s.depth = 18 * k
+    // 맞는 폭과 길이는 보이는 크기를 따른다(쐐기 끝이 닿으면 들이받는다).
+    s.half = Math.max(st.half, 20 * k)
+    s.depth = 42 * k
     s.t = 0
     s.travelled = 0
     s.nextSpike = SPIKE_GAP
@@ -3047,11 +3053,11 @@ class BattleScene extends Phaser.Scene {
     s.img
       .setPosition(s.x, s.y)
       .setRotation(a)
-      .setScale(TEX * k)
+      .setScale((TEX * k) / RAM_ART)
       .setAlpha(1)
       .setVisible(true)
-    this.dustFx.explode(this.fx(4 + tier * 3), sx, sy + 16)
-    if (tier >= 2) this.rockFx.explode(this.fx(tier * 2), sx, sy + 16)
+    this.dustFx.explode(this.fx(6 + tier * 4), sx, Math.min(sy, h - 10))
+    this.rockFx.explode(this.fx(2 + tier * 2), sx, Math.min(sy, h - 10))
     this.playSound('rumble')
     return true
   }
@@ -3083,8 +3089,8 @@ class BattleScene extends Phaser.Scene {
     s.img.setPosition(s.x - s.dy * bob, s.y + s.dx * bob).setAlpha(Math.min(1, left / 120))
     if (dt > 0) {
       // 꼬리 흙먼지: 단계가 높을수록 짙고, 대지 충차는 지나간 길에 돌기둥이 솟는다.
-      const bx = s.x - s.dx * 30
-      const by = s.y - s.dy * 30
+      const bx = s.x - s.dx * s.depth
+      const by = s.y - s.dy * s.depth
       if (tier === 1) {
         if (Math.random() < 0.5) this.dustFx.emitParticleAt(bx, by)
       } else {
@@ -3093,7 +3099,7 @@ class BattleScene extends Phaser.Scene {
       }
       if (tier === 3) {
         while (s.travelled >= s.nextSpike) {
-          const back = s.travelled - s.nextSpike + 26
+          const back = s.travelled - s.nextSpike + s.depth
           this.spike(s.x - s.dx * back, s.y - s.dy * back + 14, 0.75 * this.grow(s.level))
           s.nextSpike += SPIKE_GAP
         }
@@ -3139,22 +3145,23 @@ class BattleScene extends Phaser.Scene {
     const y = e.cell ? e.y + e.displayHeight / 2 : s.y
     const img = s.img
     this.tweens.killTweensOf(img)
-    img.setPosition(x - s.dx * 6, y - s.dy * 6)
+    // 쐐기 끝이 벽에 박힌 자리에 두고, 튕겨 물러나며 사라진다.
+    img.setPosition(x - s.dx * (s.depth - 6), y - s.dy * (s.depth - 6))
     this.tweens.add({
       targets: img,
-      x: x - s.dx * 26,
-      y: y - s.dy * 26,
+      x: x - s.dx * (s.depth + 30),
+      y: y - s.dy * (s.depth + 30),
       alpha: 0,
       duration: 260,
       ease: 'Quad.easeOut',
       onComplete: () => img.setVisible(false),
     })
-    this.glow(x, y, 0xffd9a0, [40, 56, 76][tier - 1] * grow, 240, 0.9)
-    this.ring(x, y, 0xd8a868, [34, 52, 72][tier - 1] * grow, 300)
-    this.rockFx.explode(this.fx([6, 10, 16][tier - 1]), x, y)
-    this.dustFx.explode(this.fx([5, 8, 12][tier - 1]), x, y)
+    this.glow(x, y, 0xffd9a0, [70, 90, 120][tier - 1] * grow, 260, 0.95)
+    this.ring(x, y, 0xd8a868, [60, 80, 110][tier - 1] * grow, 340)
+    this.rockFx.explode(this.fx([10, 16, 24][tier - 1]), x, y)
+    this.dustFx.explode(this.fx([8, 12, 18][tier - 1]), x, y)
     this.chips?.explode(this.fx(4 + tier * 3), x, y - 4)
-    this.thump(x, y + 26, [34, 42, 52][tier - 1] * grow)
+    this.thump(x, y + 34, [48, 58, 70][tier - 1] * grow)
     this.hitstop(tier === 3 ? 70 : 45)
     this.playSound('ram')
     haptic.medium()
