@@ -37,6 +37,8 @@ import {
 import {
   ASSAULT_BOSS,
   ASSAULT_MOTION,
+  ASSAULT_RUSH,
+  ASSAULT_SECONDS,
   type AssaultSpec,
   type AssaultWall,
   assaultPrice,
@@ -44,8 +46,11 @@ import {
   assaultTarget,
   cellShares,
   climbSpeed,
+  MID_BOSS_NAME,
+  orderPriceStep,
   pickFlow,
   rowHps,
+  rushSpawnSeconds,
   spawnSeconds,
   swarmSize,
   wallCols,
@@ -145,6 +150,9 @@ export interface Outcome {
   /** 공격 판(413번)에서 부순 매도벽 수와 전체 벽 수. 다른 모드는 0. */
   wallsBroken: number
   wallsTotal: number
+  /** 공격 판의 시작 가격과 끝난 때의 가격(벽·잡은 물량으로 오른 만큼, #591·#593). 다른 모드는 0. */
+  priceStart: number
+  priceEnd: number
 }
 
 export interface BattleOptions {
@@ -398,6 +406,14 @@ class BattleScene extends Phaser.Scene {
   private sinceBreak = 0
   private stuck = 0
   private lastFlow = 0
+  /** 벽 사이 잡몹 구간(#593)의 남은 초. 0이면 아니다. 끝나면 다음 벽이 내려온다. */
+  private rushLeft = 0
+  /** 지금 나와 있는 큰손이 중간 큰손인가(#593): 잡아도 판이 끝나지 않고 다음 구간이 열린다. */
+  private bossMid = false
+  /** 중간 매도벽을 부쉈는데 중간 큰손이 아직 살아 있다: 잡으면 잡몹 구간이 시작된다. */
+  private midPending = false
+  /** 잡은 매도 물량으로 오른 가격(원, #593). */
+  private priceBonus = 0
   /** 지금 오르는 빠르기(px/s)와 지금까지 오른 거리(px): 배경·호가 줄·가격 눈금이 이만큼 내려간다. */
   private climbV = 0
   private climbed = 0
@@ -1303,7 +1319,7 @@ class BattleScene extends Phaser.Scene {
     sfx.crumble()
     sfx.crash()
     haptic.medium()
-    const price = assaultPrice(spec, this.wallsBroken)
+    const price = this.assaultNow()
     const total = spec.walls.length
     this.pop(
       this.view().w - 60,
@@ -1334,7 +1350,13 @@ class BattleScene extends Phaser.Scene {
         `매도벽 돌파! ${this.wallsBroken}/${total} · ${price.toLocaleString()}원`,
         '#e8434f',
       )
-      this.addWall(this.wallsBroken, this.stopY() - this.view().h * ASSAULT_MOTION.gap)
+      // 다음 벽은 잡몹 구간 뒤에 내려온다 (#593). 중간 큰손이 살아 있으면 잡을 때까지 기다린다.
+      if (wall.spec.mid && this.bossEnemy?.active && !this.bossEnemy.dying) {
+        this.midPending = true
+        this.opts.onBanner(`중간 매도벽 돌파! ${MID_BOSS_NAME}을 잡아라`, '#ff4f6d')
+      } else {
+        this.startRush()
+      }
     }
     this.pushHud(true)
   }
@@ -1343,19 +1365,24 @@ class BattleScene extends Phaser.Scene {
   private startWhale(wall: WallState) {
     const spec = this.assault
     if (!spec) return
+    const mid = Boolean(wall.spec.mid)
     const e = this.spawn('whale', [this.view().w / 2, wall.y - 40], true)
     if (!e) return
     this.tweens.killTweensOf(e)
     e.boss = true
-    this.bossMax = spec.bossHp
+    this.bossMid = mid
+    this.bossMax = mid ? spec.midBossHp : spec.bossHp
     e.hp = this.bossMax
     e.maxHp = this.bossMax
-    e.setScale(unitK('whale'))
+    e.setScale(unitK('whale') * (mid ? 0.8 : 1))
     e.setDepth(3.5)
     this.bossEnemy = e
     this.lastSummon = this.elapsed
     sfx.levelUp()
-    this.opts.onBanner(`${ASSAULT_BOSS.name} 등장!! 대량 매도벽`, '#ff4f6d')
+    this.opts.onBanner(
+      mid ? `${MID_BOSS_NAME} 등장! 중간 매도벽` : `${ASSAULT_BOSS.name} 등장!! 대량 매도벽`,
+      '#ff4f6d',
+    )
     this.pushHud(true)
   }
 
@@ -1376,16 +1403,37 @@ class BattleScene extends Phaser.Scene {
   private whaleDown() {
     haptic.heavy()
     this.hitstop(140)
-    const last = this.walls.find((wl) => wl.spec.boss && !wl.broken)
+    const mid = this.bossMid
+    this.bossMid = false
+    const last = this.walls.find((wl) => (mid ? wl.spec.mid : wl.spec.boss) && !wl.broken)
     if (last) {
-      this.opts.onBanner('큰손 격파!! 대량 매도벽이 흔들린다', '#ffd84d')
+      this.opts.onBanner(
+        mid ? '중간 큰손 격파! 매도벽이 흔들린다' : '큰손 격파!! 대량 매도벽이 흔들린다',
+        '#ffd84d',
+      )
       for (const e of [...last.cells]) {
         if (e.active && !e.dying && e.cell) {
           this.hit(e, e.maxHp * ASSAULT_BOSS.wallBreak, -Math.PI / 2, 'lightning')
         }
       }
     }
+    // 중간 큰손 (#593): 벽을 이미 부쉈으면 잡몹 구간이 시작된다. 판은 끝나지 않는다.
+    if (mid) {
+      if (this.midPending) {
+        this.midPending = false
+        this.startRush()
+      }
+      return
+    }
     this.assaultCheckClear()
+  }
+
+  /** 벽 사이 잡몹 구간 (#593): 다음 벽이 내려오기 전에 위에서 매도 물량 떼만 몰려온다. 끝나면 다음 벽을 세운다. */
+  private startRush() {
+    if (!this.assault || this.over) return
+    this.rushLeft = ASSAULT_RUSH.seconds
+    this.lastFlow = this.elapsed
+    this.opts.onBanner('매도 물량이 몰려온다! 체결시켜라', '#3a7bea')
   }
 
   /** 마지막 벽까지 다 부수고 큰손도 없으면 깼다. */
@@ -1439,14 +1487,18 @@ class BattleScene extends Phaser.Scene {
 
   /** 벽 앞(벽 틈)에서 매도 물량이 나온다: 벽 앞에 오래 막힐수록 잦다. */
   private spawnFlow(wall: WallState) {
+    this.spawnFlowAt(wall.spec.mix, wall.y + 16)
+  }
+
+  /** 매도 물량 한 번: 길 아무 데서나 y에서 나온다. 시장가는 떼로. */
+  private spawnFlowAt(mix: AssaultWall['mix'], y: number) {
     const spec = this.assault
     if (!spec) return
     const lane = this.lane()
-    const kind = pickFlow(wall.spec.mix, Math.random())
+    const kind = pickFlow(mix, Math.random())
     // 벽 틈(부서진 칸) 자리에서 나오면 좋고, 아니면 길 아무 데나. 벽 바로 앞에서 나온다.
     // 벽이 한 덩어리라(416번) 벽 앞 아무 데서나 나온다.
     const x = lane.left + 16 + Math.random() * (lane.width - 32)
-    const y = wall.y + 16
     if (kind === 'market') {
       const n = swarmSize(spec, Math.random())
       for (let i = 0; i < n; i++) {
@@ -1478,7 +1530,7 @@ class BattleScene extends Phaser.Scene {
         move = Math.max(0, stop - wall.y)
         wall.arrived = true
         this.stuck = 0
-        if (wall.spec.boss) {
+        if (wall.spec.boss || wall.spec.mid) {
           this.startWhale(wall)
         } else if (wall.index === 0) {
           this.opts.onBanner(`${spec.name}! 부수고 올라가라`, '#3a7bea')
@@ -1487,6 +1539,19 @@ class BattleScene extends Phaser.Scene {
       }
     } else if (wall?.arrived) {
       this.stuck += dt
+    } else if (!wall && this.rushLeft > 0) {
+      // 잡몹 구간 (#593): 천천히 오르며 위에서 물량 떼가 내려온다. 끝나면 다음 벽이 위에서 내려온다.
+      move = climbSpeed(this.sinceBreak, this.reducedMotion) * dt
+      this.rushLeft -= dt
+      const next = spec.walls[this.wallsBroken]
+      if (next && !this.over && this.elapsed - this.lastFlow > rushSpawnSeconds(next, spec)) {
+        this.lastFlow = this.elapsed
+        this.spawnFlowAt(next.mix, -24)
+      }
+      if (this.rushLeft <= 0) {
+        this.rushLeft = 0
+        this.addWall(this.wallsBroken, this.stopY() - this.view().h * ASSAULT_MOTION.gap)
+      }
     }
     this.climbV = dt > 0 ? move / dt : 0
     this.climbed += move
@@ -1961,8 +2026,11 @@ class BattleScene extends Phaser.Scene {
       this.score += v.reward
       this.gainXp(v.reward)
       if (isOrder(e.kind)) {
-        // 매도 물량을 잡았다: 물량이 0까지 깎이며 "체결!" (413번).
+        // 매도 물량을 잡았다: 물량이 0까지 깎이며 "체결!" (413번). 물량이 줄면 가격이 조금 오른다 (#593).
         if (e.kind !== 'whale') this.fill(e.x, e.y, ORDERS[e.kind].shares)
+        if (this.assault && e.kind !== 'whale' && e.kind !== 'fake') {
+          this.priceBonus += orderPriceStep(this.assault)
+        }
       } else {
         sfx.squish()
       }
@@ -2120,8 +2188,21 @@ class BattleScene extends Phaser.Scene {
       gun(this.player.x, this.player.y),
       ...this.mates.map((m) => gun(m.body.x, m.body.y)),
     ]
-    // 공격 판 (413번): 위로 곧게 쏜다. 과녁은 쏘는 고양이마다 제 머리 위.
-    if (this.assault) return shooters.map((g) => ({ x: g.x, y: -1000 }))
+    // 공격 판 (#593, 413번의 "위로 곧게"를 뒤집음): 자동 조준. 매도 물량(허매도 빼고)을 고양이마다 나눠 맡고, 없으면 큰손, 그것도 없으면 제 머리 위로
+    // 곧게(바로 위의 매도벽).
+    if (this.assault) {
+      const orders: Enemy[] = []
+      for (const child of this.enemies.getChildren()) {
+        const e = child as Enemy
+        if (e.active && !e.dying && !e.cell && !e.boss && e.kind !== 'fake' && e.y > -10) {
+          orders.push(e)
+        }
+      }
+      const boss = this.bossEnemy?.active && !this.bossEnemy.dying ? this.bossEnemy : null
+      return spreadTargets(shooters, orders, 900).map(
+        (t, i) => t ?? boss ?? { x: shooters[i].x, y: -1000 },
+      )
+    }
     // 안 누르면 고양이마다 다른 적을 노린다 (409번): 사장냥 총에서 520px 안의 가까운 적을 나눠 맡는다.
     const live: Enemy[] = []
     for (const child of this.enemies.getChildren()) {
@@ -2814,9 +2895,11 @@ class BattleScene extends Phaser.Scene {
         win,
         reason,
         segments: this.mode === 'advance' ? this.segment : this.assault ? this.wallsBroken : 0,
-        seconds: Math.round(Math.min(BATTLE_SECONDS, this.elapsed) * 10) / 10,
+        seconds: Math.round(Math.min(this.limitSeconds(), this.elapsed) * 10) / 10,
         wallsBroken: this.assault ? this.wallsBroken : 0,
         wallsTotal,
+        priceStart: this.assault?.startPrice ?? 0,
+        priceEnd: this.assault ? this.assaultNow() : 0,
         stars:
           this.mode === 'advance' || this.mode === 'assault'
             ? stars(
@@ -2826,13 +2909,23 @@ class BattleScene extends Phaser.Scene {
                   mentalLeft: this.mental,
                   maxMental: this.loadout.maxMental,
                 },
-                BATTLE_SECONDS,
+                this.limitSeconds(),
               )
             : this.opts.stage
               ? defenseStars(win, this.mental, this.loadout.maxMental)
               : 0,
       }),
     )
+  }
+
+  /** 이 판의 제한 시간(초): 공격 판은 3분(#593), 나머지는 BATTLE_SECONDS. */
+  private limitSeconds() {
+    return this.assault ? ASSAULT_SECONDS : BATTLE_SECONDS
+  }
+
+  /** 공격 판의 지금 가격: 부순 벽만큼 + 잡은 물량만큼(#593). */
+  private assaultNow() {
+    return this.assault ? assaultPrice(this.assault, this.wallsBroken) + this.priceBonus : 0
   }
 
   private pushHud(force = false) {
@@ -2844,7 +2937,7 @@ class BattleScene extends Phaser.Scene {
     this.opts.onHud({
       mental: Math.ceil(this.mental),
       maxMental: this.loadout.maxMental,
-      secondsLeft: Math.max(0, Math.ceil(BATTLE_SECONDS - this.elapsed)),
+      secondsLeft: Math.max(0, Math.ceil(this.limitSeconds() - this.elapsed)),
       kills: this.kills,
       score: this.score,
       level: this.level,
@@ -2860,14 +2953,14 @@ class BattleScene extends Phaser.Scene {
             : null,
       boss: this.bossEnemy
         ? {
-            name: this.assault ? ASSAULT_BOSS.name : BOSS.name,
+            name: this.assault ? (this.bossMid ? MID_BOSS_NAME : ASSAULT_BOSS.name) : BOSS.name,
             hp: Math.max(0, this.bossEnemy.hp) / this.bossMax,
           }
         : null,
       assault: this.assault
         ? {
             name: this.assault.name,
-            price: assaultPrice(this.assault, this.wallsBroken),
+            price: this.assaultNow(),
             start: this.assault.startPrice,
             target: assaultTarget(this.assault),
             wallsBroken: this.wallsBroken,
@@ -2891,8 +2984,8 @@ class BattleScene extends Phaser.Scene {
         b.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h * (1 + Math.sin(time / 260 + i * 1.7) * 0.025))
       }
       if (target) {
-        // 공격 판은 저마다 제 머리 위로 곧게 (413번): 고양이가 늘면 벽의 여러 칸을 함께 깎는다.
-        const want = this.assault ? -Math.PI / 2 : this.angleFrom(b.x, b.y, target)
+        // 공격 판도 맡은 과녁을 겨눈다 (#593). 과녁이 없으면 제 머리 위(벽).
+        const want = this.angleFrom(b.x, b.y, target)
         if (m.drop === 0 && time - m.lastFire > this.loadout.fireMs) {
           this.fire(time, want, m)
         } else {
@@ -2932,7 +3025,7 @@ class BattleScene extends Phaser.Scene {
     }
     const dt = dtMs / 1000
     this.elapsed += dt
-    if (this.elapsed >= BATTLE_SECONDS) {
+    if (this.elapsed >= this.limitSeconds()) {
       // 디펜스는 버티면 이기고, 전진 모드와 디펜스 보스 스테이지는 시간 안에 못 넘으면(보스를 못 잡으면) 진다 (364·509번).
       if (this.mode === 'advance' || this.mode === 'assault' || this.defenseBoss) {
         if (this.assault) this.opts.onBanner('시간 초과… 매도벽에 막혔다', '#6b7a99')
@@ -3012,7 +3105,7 @@ class BattleScene extends Phaser.Scene {
     }
     const target = this.targets[0] ?? null
     if (target && time - this.lastFire > fireMs) {
-      this.fire(time, this.assault ? -Math.PI / 2 : this.angleFrom(p.x, p.y, target))
+      this.fire(time, this.angleFrom(p.x, p.y, target))
     }
     this.updateMates(time, dt, this.targets)
     // 마법은 총알과 따로 제 주기에 스스로 나간다 (392번).
@@ -3108,7 +3201,7 @@ class BattleScene extends Phaser.Scene {
       }
       if (e.boss && this.assault) {
         // 큰손 (413번): 대량 매도벽 바로 앞에서 좌우로 천천히 오간다. 벽을 가리고 서서, 비키는 틈에 벽을 쏜다.
-        const wall = this.walls.find((wl) => wl.spec.boss)
+        const wall = this.walls.find((wl) => (this.bossMid ? wl.spec.mid : wl.spec.boss))
         const lane = this.lane()
         const tx = lane.left + lane.width / 2 + Math.sin(this.elapsed * 0.55) * lane.width * 0.36
         const ty = (wall?.y ?? this.stopY()) + 58
