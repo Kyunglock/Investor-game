@@ -342,8 +342,8 @@ class CompanyApiTest {
   }
 
   /**
-   * 자본으로 사는 전투 강화 (decisions.md 367·394번): 공격력·연사 둘, 최대 단계 없이 한 단계에 1%. 꾹 눌러 모은 단계는 levels로 묶어 사고,
-   * 자본이 닿는 데까지만 산다. 고양이 속도는 없다. 쓴 돈은 분기 실적의 전투 강화 비용 줄에 나온다.
+   * 자본으로 사는 전투 강화 (decisions.md 367·394번): 공격력·연사·체력(410번) 셋, 최대 단계 없이 한 단계에 1%. 꾹 눌러 모은 단계는
+   * levels로 묶어 사고, 자본이 닿는 데까지만 산다. 고양이 속도는 없다. 쓴 돈은 분기 실적의 전투 강화 비용 줄에 나온다.
    */
   @Test
   void 전투_강화를_묶어_사고_자본이_닿는_데까지만_오른다() throws Exception {
@@ -352,7 +352,7 @@ class CompanyApiTest {
             .read("$.companyId", String.class);
     DocumentContext opened = json(mvc.perform(get("/api/company").cookie(session)));
     List<String> kinds = opened.read("$.battleUpgrades[*].kind");
-    assertThat(kinds).containsExactly("damage", "fire");
+    assertThat(kinds).containsExactly("damage", "fire", "hp");
     assertThat(opened.read("$.battleUpgrades[0].level", Integer.class)).isZero();
     assertThat(opened.read("$.battleUpgrades[0].price", Long.class)).isEqualTo(1_000_000L);
     assertThat(opened.read("$.battleUpgrades[0].nextBonusPercent", Integer.class)).isEqualTo(1);

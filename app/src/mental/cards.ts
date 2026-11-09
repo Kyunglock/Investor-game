@@ -182,7 +182,7 @@ export const BASE_LOADOUT: Loadout = {
 
 /**
  * 든 무기의 수치(서버가 등급을 더해 준 최종값, 346번)를 한 판의 바탕 수치로. 자본으로 산 전투 강화(367·394번)가 그 위에 붙고(공격력은 그만큼
- * 오르고, 연사는 쏘는 빠르기가 그만큼 올라 간격이 1 + 비율로 나뉜다. 단계가 끝없어 간격을 빼면 0에 닿는다), 카드는 다시 그 위에 쌓인다.
+ * 오르고, 연사는 쏘는 빠르기가 그만큼 올라 간격이 1 + 비율로 나뉘고, 체력은 최대 멘탈이 그만큼 는다. 단계가 끝없어 간격을 빼면 0에 닿는다), 카드는 다시 그 위에 쌓인다.
  */
 export function loadoutOf(
   weapon: {
@@ -191,9 +191,9 @@ export function loadoutOf(
     power: number
     bulletSpeed: number
   },
-  upgrades: ReadonlyArray<{ kind: 'damage' | 'fire'; bonusPercent: number }> = [],
+  upgrades: ReadonlyArray<{ kind: 'damage' | 'fire' | 'hp'; bonusPercent: number }> = [],
 ): Loadout {
-  const bonus = (kind: 'damage' | 'fire') =>
+  const bonus = (kind: 'damage' | 'fire' | 'hp') =>
     (upgrades.find((u) => u.kind === kind)?.bonusPercent ?? 0) / 100
   return {
     ...BASE_LOADOUT,
@@ -202,6 +202,8 @@ export function loadoutOf(
     bulletPower: Math.min(MAX_BULLET_POWER, Math.max(0, weapon.power)),
     fireMs: Math.max(60, weapon.fireMs / (1 + bonus('fire'))),
     bulletSpeed: weapon.bulletSpeed,
+    // 체력 강화(410번)는 최대 멘탈을 그만큼 늘린다. 판은 가득 찬 채로 시작한다.
+    maxMental: Math.round(BASE_LOADOUT.maxMental * (1 + bonus('hp'))),
   }
 }
 

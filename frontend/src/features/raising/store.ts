@@ -62,7 +62,7 @@ interface RaisingState {
    * 자본으로 전투 강화를 levels단계까지 산다 (decisions.md 367·394번). 꾹 눌러 연속으로 올리는 화면이 줄을 세워 부르므로 busy를 켜지 않는다. 받은
    * 회사(실패면 null)를 돌려준다.
    */
-  buyBattleUpgrade: (kind: 'damage' | 'fire', levels?: number) => Promise<Company | null>
+  buyBattleUpgrade: (kind: 'damage' | 'fire' | 'hp', levels?: number) => Promise<Company | null>
   /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). 결과는 company.armory.lastDraw. */
   drawWeapon: () => Promise<void>
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */

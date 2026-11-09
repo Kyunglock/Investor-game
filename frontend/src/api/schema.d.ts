@@ -942,10 +942,10 @@ export interface components {
             /** @description 자본으로 사는 전투 강화 (decisions.md 367·394번). 공격력·연사, 최대 단계 없이 멘탈 전투의 바탕 수치에 영구로 붙는다 */
             battleUpgrades?: {
                 /**
-                 * @description damage: 공격력, fire: 연사(쏘는 빠르기가 오른다)
+                 * @description damage: 공격력, fire: 연사(쏘는 빠르기가 오른다), hp: 체력(최대 멘탈이 오른다)
                  * @enum {string}
                  */
-                kind: "damage" | "fire";
+                kind: "damage" | "fire" | "hp";
                 /** @description 지금 단계(0부터) */
                 level: number;
                 /**
@@ -1541,7 +1541,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    kind: "damage" | "fire";
+                    kind: "damage" | "fire" | "hp";
                     /** @description 올릴 단계 수. 없으면 1 */
                     levels?: number;
                 };
