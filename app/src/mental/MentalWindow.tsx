@@ -545,6 +545,7 @@ const CARD_ROLES: Record<Card['code'], string> = {
   water: '물 마법',
   fire: '불 마법',
   lightning: '번개 마법',
+  earth: '땅 마법',
 }
 
 const GRADE_ORDER: Record<Card['grade'], number> = { N: 0, R: 1, SR: 2, UR: 3 }

@@ -1,14 +1,21 @@
-import { fireStats, lightningStats, MAGIC_MAX_LEVEL, magicTier, waterStats } from './magic'
+import {
+  earthStats,
+  fireStats,
+  lightningStats,
+  MAGIC_MAX_LEVEL,
+  magicTier,
+  waterStats,
+} from './magic'
 
 /**
  * 멘탈 카드 (decisions.md 328·330·377·392·393번). 처음 한 장, 그리고 레벨이 오를 때마다 한 장을 고른다. 효과는 한 판 안의 화면 규칙이라 앱이 가진다.
  *
- * 등급이 있다 (377번): 일반 카드는 공격력 +10%·공격 속도 +10% 두 가지뿐이고, 희귀·영웅·전설은 물·불·번개 마법이다. 마법은 총알과 따로 제 주기에 스스로
+ * 등급이 있다 (377번): 일반 카드는 공격력 +10%·공격 속도 +10% 두 가지뿐이고, 희귀·영웅·전설은 물·불·번개·땅 마법이다(땅은 매도벽 돌파용 충차, 433번). 마법은 총알과 따로 제 주기에 스스로
  * 나가고(392번, magic.ts), 고를 때마다 한 레벨씩 오른다. 마법 카드의 등급은 그 카드로 오르는 레벨을 보인다: Lv.1 희귀, Lv.2 영웅, Lv.3부터 전설.
  * 희귀 카드 "고양이 한 마리 더"(393번)는 사장냥과 똑같이 싸우는 고양이를 한 마리 더 부른다(최대 MAX_MATES).
  */
 export type CardGrade = 'N' | 'R' | 'SR' | 'UR'
-export type Magic = 'water' | 'fire' | 'lightning'
+export type Magic = 'water' | 'fire' | 'lightning' | 'earth'
 export type CardCode = 'atk' | 'spd' | 'cat' | Magic
 
 export interface Card {
@@ -80,12 +87,19 @@ const MAGIC_INFO: Record<Magic, { name: string; desc: string; icon: string; colo
     icon: '⚡',
     color: '#ffd23f',
   },
+  earth: {
+    name: '땅의 마법',
+    desc: '바위 충차가 돌진해 매도벽을 들이받는다',
+    icon: '🪨',
+    color: '#c08a4a',
+  },
 }
 
 const LOOK_NAMES: Record<Magic, readonly [string, string, string]> = {
   water: ['물방울', '물줄기', '큰 물결'],
   fire: ['불씨', '불덩이', '불기둥'],
   lightning: ['번개', '굵은 번개', '갈래 번개'],
+  earth: ['돌 충차', '바위 충차', '대지 충차'],
 }
 
 const pct = (k: number) => `${Math.round(k * 100)}%`
@@ -100,6 +114,11 @@ export function magicEffect(magic: Magic, level: number): string {
   if (magic === 'fire') {
     const f = fireStats(level)
     return `${f.cooldown}초마다 ${look} · 피해 ${pct(f.damage)} · ${f.burnSeconds}초 화상`
+  }
+  if (magic === 'earth') {
+    const e = earthStats(level)
+    const quake = e.quake > 0 ? ' · 충격파' : ''
+    return `${e.cooldown}초마다 ${look} · 벽·큰손 피해 ${pct(e.damage * e.siege)}${quake}`
   }
   const l = lightningStats(level)
   const bolts = l.bolts > 1 ? ` ${l.bolts}줄기` : ''
@@ -122,7 +141,7 @@ export function magicCard(magic: Magic, from: number): Card {
   }
 }
 
-export const MAGICS: readonly Magic[] = ['water', 'fire', 'lightning']
+export const MAGICS: readonly Magic[] = ['water', 'fire', 'lightning', 'earth']
 
 /** "고양이 한 마리 더" (393번): 희귀 카드. 함께 싸우는 고양이는 사장냥의 무기·피해·연사·카드 효과·마법을 그대로 받는다. */
 export function mateCard(have: number): Card {
@@ -162,6 +181,8 @@ export interface Loadout {
   water: number
   fire: number
   lightning: number
+  /** 땅 마법 레벨 (433번): 매도벽 돌파용 충차. */
+  earth: number
   /** 함께 싸우는 고양이 수 (393번, 0~MAX_MATES). */
   mates: number
 }
@@ -177,6 +198,7 @@ export const BASE_LOADOUT: Loadout = {
   water: 0,
   fire: 0,
   lightning: 0,
+  earth: 0,
   mates: 0,
 }
 

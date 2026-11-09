@@ -1,7 +1,7 @@
 import type { Magic } from './cards'
 
 /**
- * 물·불·번개 마법 (decisions.md 392번, 377번의 "총알에 덤으로 붙는 마법"을 뒤집음). 마법은 총알과 따로, 제 주기마다 스스로 나간다. 처음 고르면 Lv.1이고
+ * 물·불·번개·땅 마법 (decisions.md 392번, 377번의 "총알에 덤으로 붙는 마법"을 뒤집음. 땅은 433번). 마법은 총알과 따로, 제 주기마다 스스로 나간다. 처음 고르면 Lv.1이고
  * 같은 마법을 또 고를 때마다 한 레벨씩 오른다(최대 MAGIC_MAX_LEVEL). 레벨이 오를수록 쿨다운·피해·범위가 좋아지고, 연출은 세 단계(MagicTier)로 눈에 띄게
  * 화려해진다. 피해는 총알 피해가 아니라 마법 자체의 배율 × 지금 공격력(무기·자본 강화·공격력 카드)이다. 이 모듈은 Phaser 없이 규칙만 가진다(그리는 것은
  * battle.ts의 마법 부분).
@@ -9,7 +9,7 @@ import type { Magic } from './cards'
 
 export const MAGIC_MAX_LEVEL = 5
 
-/** 연출 단계: 물방울→물줄기→큰 물결, 불씨→불덩이→불기둥, 가는 번개→굵은 번개→여러 갈래. 4·5레벨은 3단계 연출이 조금 더 커진다. */
+/** 연출 단계: 물방울→물줄기→큰 물결, 불씨→불덩이→불기둥, 가는 번개→굵은 번개→여러 갈래, 돌 충차→바위 충차→대지 충차. 4·5레벨은 3단계 연출이 조금 더 커진다. */
 export type MagicTier = 1 | 2 | 3
 
 export function magicTier(level: number): MagicTier {
@@ -53,6 +53,32 @@ export interface LightningStats {
   /** 한 번에 내리꽂는 번개 줄기 수. */
   bolts: number
 }
+
+/**
+ * 땅 (433번): 매도벽 돌파용 충차. 바위 충차가 땅을 박차고 곧게 돌진해 앞을 막는 적은 밀쳐 내며 꿰뚫고, 매도벽 칸이나 큰손(보스)에 닿으면 쾅 들이받고
+ * 멈춘다. 들이받을 때는 피해에 siege를 곱한다: 보통 적에게는 약하고 벽에는 아주 세다.
+ */
+export interface EarthStats {
+  cooldown: number
+  /** 지나가며 들이받는 보통 적의 피해(공격력 배율). 벽·큰손은 이것에 siege를 곱한다. */
+  damage: number
+  siege: number
+  /** 맞는 폭의 절반(px)과 다 달린 빠르기(px/s). 처음엔 느리게 출발해 빨라진다. */
+  half: number
+  speed: number
+  /** 지나가며 옆으로 밀쳐 내는 세기(px/s). */
+  push: number
+  /** 들이받은 자리의 충격파 반지름(px, 3단계부터): 둘레의 적도 damage만큼 맞는다. 0이면 없다. */
+  quake: number
+}
+
+const EARTH: readonly EarthStats[] = [
+  { cooldown: 3.6, damage: 1.2, siege: 4, half: 16, speed: 760, push: 260, quake: 0 },
+  { cooldown: 3.2, damage: 1.6, siege: 4.5, half: 22, speed: 820, push: 320, quake: 0 },
+  { cooldown: 2.8, damage: 2.1, siege: 5, half: 30, speed: 880, push: 380, quake: 70 },
+  { cooldown: 2.5, damage: 2.5, siege: 5.4, half: 34, speed: 920, push: 420, quake: 85 },
+  { cooldown: 2.2, damage: 2.9, siege: 5.8, half: 38, speed: 960, push: 460, quake: 100 },
+]
 
 const WATER: readonly WaterStats[] = [
   {
@@ -129,10 +155,12 @@ const at = <T>(table: readonly T[], level: number) =>
 export const waterStats = (level: number) => at(WATER, level)
 export const fireStats = (level: number) => at(FIRE, level)
 export const lightningStats = (level: number) => at(LIGHTNING, level)
+export const earthStats = (level: number) => at(EARTH, level)
 
 export function magicCooldown(magic: Magic, level: number): number {
   if (magic === 'water') return waterStats(level).cooldown
   if (magic === 'fire') return fireStats(level).cooldown
+  if (magic === 'earth') return earthStats(level).cooldown
   return lightningStats(level).cooldown
 }
 
@@ -144,7 +172,12 @@ export const MAGIC_RETRY_SECONDS = 0.25
  * 제 자리에서 쏜다. 처음 배우거나 레벨이 오르면 곧바로 한 번 나간다.
  */
 export class MagicClock {
-  private readonly next: Record<Magic, number> = { water: 0, fire: 0, lightning: 0 }
+  private readonly next: Record<Magic, number> = {
+    water: 0,
+    fire: 0,
+    lightning: 0,
+    earth: 0,
+  }
 
   due(magic: Magic, level: number, elapsed: number): boolean {
     return level > 0 && elapsed >= this.next[magic]
@@ -217,6 +250,34 @@ export function strongest<T extends Point & { hp: number }>(
     }
   }
   return best
+}
+
+/**
+ * 땅의 과녁 (433번): 들이받을 것(매도벽 칸·큰손, isSiege) 가운데 시전자에게 가장 가까운 것. 없으면 번개처럼 체력이 가장 많은 적.
+ */
+export function siegeTarget<T extends Point & { hp: number }>(
+  list: readonly T[],
+  from: Point,
+  isSiege: (t: T) => boolean,
+): T | null {
+  let best: T | null = null
+  let bd = Number.POSITIVE_INFINITY
+  for (const p of list) {
+    if (!isSiege(p)) continue
+    const d = dist2(p, from)
+    if (d < bd) {
+      bd = d
+      best = p
+    }
+  }
+  return best ?? strongest(list, from)
+}
+
+/** 충차의 빠르기: 출발해서 RAM_SPOOL초 동안 다 달린 빠르기의 35%에서 100%까지 빨라진다(땅을 박차고 가속하는 맛). */
+export const RAM_SPOOL = 0.35
+export function ramSpeed(top: number, t: number): number {
+  const k = Math.min(1, Math.max(0, t) / RAM_SPOOL)
+  return top * (0.35 + 0.65 * k * k)
 }
 
 /** 번개가 튀는 차례: 맞은 적에서 가장 가까운 안 맞은 적으로, 거기서 다시 가장 가까운 적으로. 한 번 맞은 적에게는 다시 튀지 않는다. */

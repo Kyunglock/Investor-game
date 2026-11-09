@@ -4,8 +4,17 @@
  * (그리는 것은 battle.ts의 damageNumber).
  */
 
-/** 피해 종류: 총알·치명타(리볼버)·마법 셋(물·불·번개)·불 지속(화상 틱)·번개 튐. */
-export type DamageKind = 'bullet' | 'crit' | 'water' | 'fire' | 'lightning' | 'burn' | 'chain'
+/** 피해 종류: 총알·치명타(리볼버)·마법 넷(물·불·번개·땅)·불 지속(화상 틱)·번개 튐. 땅(433번)은 충차가 지나가며 밀친 피해, 들이받기(siege)는 벽·큰손을 들이받는 한 방이라 크고 합치지 않는다. */
+export type DamageKind =
+  | 'bullet'
+  | 'crit'
+  | 'water'
+  | 'fire'
+  | 'lightning'
+  | 'earth'
+  | 'siege'
+  | 'burn'
+  | 'chain'
 
 export interface DamageStyle {
   /** 글자 색(윤곽은 잉크색). 치명타는 따로 둔 풀의 금빛 글자에 빨간 윤곽이다. */
@@ -28,6 +37,8 @@ export const DAMAGE_STYLE: Record<DamageKind, DamageStyle> = {
   water: { color: '#6cc8ff', scale: 0.7, life: 460, rise: 26, merge: true },
   fire: { color: '#ff9a3c', scale: 0.7, life: 460, rise: 26, merge: true },
   lightning: { color: '#ffe94d', scale: 0.7, life: 460, rise: 26, merge: true },
+  earth: { color: '#e0a860', scale: 0.7, life: 460, rise: 26, merge: true },
+  siege: { color: '#ffb35c', scale: 0.95, life: 600, rise: 32, merge: false },
   burn: { color: '#ff9a3c', scale: 0.5, life: 380, rise: 18, merge: true },
   chain: { color: '#ffe94d', scale: 0.6, life: 420, rise: 22, merge: true },
 }

@@ -27,7 +27,7 @@ function rng(seed: number) {
 
 describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
   it('석 장은 서로 다른 카드이고, 마법 카드는 지금 레벨의 다음 레벨을 낸다', () => {
-    const levels = { water: 2, fire: 0, lightning: 4, mates: 1 }
+    const levels = { water: 2, fire: 0, lightning: 4, earth: 3, mates: 1 }
     let magics = 0
     let mates = 0
     for (let seed = 0; seed < 80; seed++) {
@@ -70,7 +70,7 @@ describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
   })
 
   it('고양이가 셋 다 차면 고양이 카드는 더 나오지 않고, 그 몫은 일반 카드로 간다', () => {
-    const full = { water: 0, fire: 0, lightning: 0, mates: MAX_MATES }
+    const full = { water: 0, fire: 0, lightning: 0, earth: 0, mates: MAX_MATES }
     let magics = 0
     let slots = 0
     for (let seed = 0; seed < 200; seed++) {
@@ -90,7 +90,7 @@ describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
     for (let seed = 0; seed < 400; seed++) {
       picks++
       if (
-        pickCards({ water: 0, fire: 0, lightning: 0, mates: 0 }, rng(seed)).some(
+        pickCards({ water: 0, fire: 0, lightning: 0, earth: 0, mates: 0 }, rng(seed)).some(
           (c) => c.code === 'cat',
         )
       )
@@ -102,10 +102,15 @@ describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
   })
 
   it('최대 레벨인 마법은 더 나오지 않는다', () => {
-    const levels = { water: MAGIC_MAX_LEVEL, fire: MAGIC_MAX_LEVEL, lightning: 1 }
+    const levels = {
+      water: MAGIC_MAX_LEVEL,
+      fire: MAGIC_MAX_LEVEL,
+      lightning: 1,
+      earth: MAGIC_MAX_LEVEL,
+    }
     for (let seed = 0; seed < 50; seed++) {
       for (const c of pickCards(levels, rng(seed))) {
-        expect(['water', 'fire']).not.toContain(c.code)
+        expect(['water', 'fire', 'earth']).not.toContain(c.code)
       }
     }
   })
@@ -137,6 +142,11 @@ describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
     expect(magicEffect('fire', 3)).toContain('불기둥')
     expect(magicEffect('lightning', 3)).toContain('갈래 번개')
     expect(magicEffect('lightning', 4)).toContain('2줄기')
+    // 땅 (433번): 벽·큰손을 들이받는 피해와, 3단계부터 충격파.
+    expect(magicEffect('earth', 1)).toContain('돌 충차')
+    expect(magicEffect('earth', 1)).toContain('벽·큰손 피해 480%')
+    expect(magicEffect('earth', 2)).not.toContain('충격파')
+    expect(magicEffect('earth', 3)).toContain('대지 충차 · 벽·큰손 피해 1050% · 충격파')
     for (const m of MAGICS) {
       expect(magicEffect(m, 1)).not.toBe(magicEffect(m, 2))
     }

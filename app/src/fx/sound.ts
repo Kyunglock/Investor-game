@@ -179,6 +179,17 @@ export const sfx = {
     tone(1700, 110, { wave: 'sawtooth', gain: 0.04, slide: 140 })
     noise(90, 0.06)
   },
+  /** 멘탈 전투 마법 (433번): 바위 충차가 땅을 박차고 돌진한다. 낮게 구르는 소리. */
+  rumble: () => {
+    tone(70, 260, { wave: 'triangle', gain: 0.08, slide: 110 })
+    noise(220, 0.04)
+  },
+  /** 멘탈 전투 마법: 충차가 매도벽을 들이받는다. 쿵 + 나무 부딪히는 소리. */
+  ram: () => {
+    tone(80, 300, { wave: 'sine', gain: 0.2, slide: 34 })
+    tone(240, 90, { wave: 'square', gain: 0.06, slide: 120 })
+    noise(200, 0.12)
+  },
   /** 멘탈 전투 (393번): 함께 싸우는 고양이가 내려앉아 합류한다. 쿵 + 반가운 두 음. */
   mateJoin: () => {
     tone(150, 140, { wave: 'triangle', gain: 0.1, slide: 70 })

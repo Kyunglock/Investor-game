@@ -77,12 +77,16 @@ import { BULLET_H, BULLET_W, bulletHitbox } from './hitbox'
 import {
   chainTargets,
   densest,
+  type EarthStats,
+  earthStats,
   fireStats,
   type LightningStats,
   lightningStats,
   MagicClock,
   magicTier,
   nearestTo,
+  ramSpeed,
+  siegeTarget,
   strongest,
   sweepHits,
   type WaterStats,
@@ -295,7 +299,7 @@ const CHUNK_HP = 0.65
 const LANE_LEFT = 50
 const LANE_RIGHT = 16
 /** 같은 소리를 이 간격(ms) 안에 또 내지 않는다(체결·금 가는 소리, 마법 소리). */
-type SoundKey = 'splash' | 'whoosh' | 'boom' | 'zap' | 'coin' | 'thud' | 'squish'
+type SoundKey = 'splash' | 'whoosh' | 'boom' | 'zap' | 'rumble' | 'ram' | 'coin' | 'thud' | 'squish'
 
 /** 여러 시전자가 같은 마법을 한꺼번에 겹쳐 쏘지 않게 시전자마다 늦추는 초. */
 const CAST_STAGGER = 0.18
@@ -338,6 +342,27 @@ interface FirePatch {
   until: number
   nextTick: number
 }
+/** 돌진하는 바위 충차 (433번): 물처럼 곧게 가며 보통 적은 밀쳐 꿰뚫고, 벽 칸·큰손에 닿으면 들이받고 멈춘다. t는 출발한 뒤 시간(초). */
+interface RamShot {
+  img: Phaser.GameObjects.Image
+  active: boolean
+  level: number
+  x: number
+  y: number
+  dx: number
+  dy: number
+  half: number
+  depth: number
+  t: number
+  travelled: number
+  /** 다음 돌기둥이 솟을 거리(대지 충차). */
+  nextSpike: number
+  hitList: Enemy[]
+}
+/** 충차가 달릴 수 있는 거리(px). */
+const RAM_RANGE = 900
+/** 대지 충차(3단계)가 지나간 길에 돌기둥이 솟는 간격(px). */
+const SPIKE_GAP = 48
 /** 물이 날아갈 수 있는 거리(px)와, 끝에서 이만큼 남으면 옅어지기 시작한다. */
 const WATER_RANGE = 820
 const WATER_FADE = 140
@@ -351,7 +376,8 @@ export interface DamageStats {
   merged: number
   killing: number
   peak: number
-  /** 마법이 나간 횟수 (392번). */
+  /** 마법이 나간 횟수 (392번)와 땅 충차가 벽·큰손을 들이받은 횟수 (433번). */
+  rams: number
   casts: Record<Magic, number>
   /** 함께 싸우는 고양이가 쏜 총알 수와 지금 고양이 수 (393번). */
   mateShots: number
@@ -465,11 +491,22 @@ class BattleScene extends Phaser.Scene {
   private damage!: DamagePool<DamageText>
   private crits!: DamagePool<DamageText>
   readonly damageStats: DamageStats = {
-    shown: { bullet: 0, crit: 0, water: 0, fire: 0, lightning: 0, burn: 0, chain: 0 },
+    shown: {
+      bullet: 0,
+      crit: 0,
+      water: 0,
+      fire: 0,
+      lightning: 0,
+      earth: 0,
+      siege: 0,
+      burn: 0,
+      chain: 0,
+    },
+    rams: 0,
     merged: 0,
     killing: 0,
     peak: 0,
-    casts: { water: 0, fire: 0, lightning: 0 },
+    casts: { water: 0, fire: 0, lightning: 0, earth: 0 },
     mateShots: 0,
     mates: 0,
   }
@@ -493,9 +530,15 @@ class BattleScene extends Phaser.Scene {
   private glowIndex = 0
   private pillars: Phaser.GameObjects.Image[] = []
   private pillarIndex = 0
+  private rams: RamShot[] = []
+  private spikes: Phaser.GameObjects.Image[] = []
+  private spikeIndex = 0
   private waterFx!: Phaser.GameObjects.Particles.ParticleEmitter
   private fireFx!: Phaser.GameObjects.Particles.ParticleEmitter
   private boltFx!: Phaser.GameObjects.Particles.ParticleEmitter
+  /** 땅 (433번): 흙먼지와 튀는 돌 조각. */
+  private dustFx!: Phaser.GameObjects.Particles.ParticleEmitter
+  private rockFx!: Phaser.GameObjects.Particles.ParticleEmitter
   /** 마법이 노릴 화면 안의 적(magicTargets)과 번개 줄기의 꺾인 점: 매번 새로 만들지 않는다. */
   private targetBuf: Enemy[] = []
   private readonly boltXs = new Float32Array(48)
@@ -2423,6 +2466,45 @@ class BattleScene extends Phaser.Scene {
       this.glows.push(hidden('magic-glow', 5))
     }
     for (let i = 0; i < 6; i++) this.pillars.push(hidden('magic-pillar', 6).setOrigin(0.5, 1))
+    // 땅 (433번): 충차 풀(고양이 넷이 같이 써도 넉넉히), 돌기둥, 흙먼지·돌 조각 파티클.
+    this.dustFx = soft({
+      speed: { min: 20, max: 120 },
+      lifespan: { min: 380, max: 760 },
+      scale: { start: 1.6 * TEX, end: 2.6 * TEX },
+      alpha: { start: 0.7, end: 0 },
+      gravityY: -20,
+      tint: [0xd8c09a, 0xb8946a, 0x8a6a48],
+    }).setDepth(4.5)
+    this.rockFx = this.add
+      .particles(0, 0, 'magic-rock', {
+        emitting: false,
+        maxAliveParticles: 80,
+        speed: { min: 90, max: 300 },
+        lifespan: { min: 360, max: 680 },
+        scale: { start: 1.1 * TEX, end: 0.5 * TEX },
+        rotate: { min: 0, max: 360 },
+        gravityY: 620,
+        alpha: { start: 1, end: 0.2 },
+      })
+      .setDepth(6)
+    for (let i = 0; i < 12; i++) {
+      this.rams.push({
+        img: hidden('magic-ram', 5.5),
+        active: false,
+        level: 1,
+        x: 0,
+        y: 0,
+        dx: 0,
+        dy: -1,
+        half: 0,
+        depth: 0,
+        t: 0,
+        travelled: 0,
+        nextSpike: 0,
+        hitList: [],
+      })
+    }
+    for (let i = 0; i < 16; i++) this.spikes.push(hidden('magic-spike', 3).setOrigin(0.5, 1))
   }
 
   /** 마법 소리: 같은 소리는 SOUND_GAP_MS 안에 한 번만 (393번, 고양이 넷이 함께 쓸 때). */
@@ -2503,7 +2585,9 @@ class BattleScene extends Phaser.Scene {
             ? this.castWater(from, level)
             : m === 'fire'
               ? this.castFire(from, level)
-              : this.castLightning(from, level)
+              : m === 'earth'
+                ? this.castEarth(from, level)
+                : this.castLightning(from, level)
         if (cast) {
           caster.clock.cast(m, level, this.elapsed)
           this.damageStats.casts[m]++
@@ -2518,6 +2602,7 @@ class BattleScene extends Phaser.Scene {
     for (const s of this.waters) if (s.active) this.moveWater(s, dt)
     for (const s of this.embers) if (s.active) this.moveEmber(s, dt)
     for (const p of this.patches) if (p.active) this.burnPatch(p)
+    for (const r of this.rams) if (r.active) this.moveRam(r, dt)
   }
 
   /** 불에 탄다: 타는 중이면 더 센 불과 더 긴 시간을 남긴다. 피해는 update의 화상 틱이 준다. */
@@ -2745,6 +2830,194 @@ class BattleScene extends Phaser.Scene {
       const reach = st.radius + UNITS[e.kind].r
       if ((e.x - p.x) ** 2 + (e.y - p.y) ** 2 <= reach * reach) this.ignite(e, dps, st.burnSeconds)
     }
+  }
+
+  // 땅 (433번): 매도벽 돌파용 충차. 가장 가까운 매도벽 칸·큰손(없으면 체력이 가장 많은 적)을 향해 땅을 박차고 돌진한다. 지나가는 보통 적은 옆으로
+  // 밀쳐 내며 꿰뚫고, 벽·큰손에 닿으면 쾅 들이받고(피해 × siege) 멈춘다. 돌 충차(Lv.1) → 흙먼지를 끄는 바위 충차(Lv.2) → 돌기둥이 솟고 충격파가
+  // 퍼지는 대지 충차(Lv.3).
+
+  private isSiege = (e: Enemy) => Boolean(e.cell) || e.boss
+
+  private castEarth(from: { x: number; y: number }, level: number): boolean {
+    const st = earthStats(level)
+    const target = siegeTarget(this.magicTargets(), from, this.isSiege)
+    const s = this.rams.find((r) => !r.active)
+    if (!target || !s) return false
+    const tier = magicTier(level)
+    // 매도벽은 길 폭을 다 덮는 덩어리라 시전자 바로 위를 들이받는다(벽 끝을 넘지 않게).
+    let tx = target.x
+    if (target.cell) {
+      const half = Math.max(0, target.displayWidth / 2 - 14)
+      tx = Phaser.Math.Clamp(from.x, target.x - half, target.x + half)
+    }
+    const a = Math.atan2(target.y - from.y, tx - from.x)
+    const k = [0.8, 1.1, 1.45][tier - 1] * this.grow(level)
+    this.tweens.killTweensOf(s.img)
+    s.active = true
+    s.level = level
+    s.x = from.x
+    s.y = from.y
+    s.dx = Math.cos(a)
+    s.dy = Math.sin(a)
+    s.half = st.half
+    s.depth = 18 * k
+    s.t = 0
+    s.travelled = 0
+    s.nextSpike = SPIKE_GAP
+    s.hitList.length = 0
+    s.img
+      .setPosition(s.x, s.y)
+      .setRotation(a)
+      .setScale(TEX * k)
+      .setAlpha(1)
+      .setVisible(true)
+    this.dustFx.explode(this.fx(4 + tier * 3), from.x, from.y + 10)
+    if (tier >= 2) this.rockFx.explode(this.fx(tier * 2), from.x, from.y + 10)
+    this.playSound('rumble')
+    return true
+  }
+
+  private moveRam(s: RamShot, dt: number) {
+    const st = earthStats(s.level)
+    const tier = magicTier(s.level)
+    s.t += dt
+    const step = ramSpeed(st.speed, s.t) * dt
+    s.x += s.dx * step
+    s.y += s.dy * step
+    s.travelled += step
+    const { w, h } = this.view()
+    const left = RAM_RANGE - s.travelled
+    if (left <= 0 || s.y < -80 || s.y > h + 80 || s.x < -80 || s.x > w + 80) {
+      s.active = false
+      s.img.setVisible(false)
+      return
+    }
+    // 달리며 살짝 덜컹거린다.
+    const bob = Math.sin(s.t * 40) * 1.5
+    s.img.setPosition(s.x - s.dy * bob, s.y + s.dx * bob).setAlpha(Math.min(1, left / 120))
+    if (dt > 0) {
+      // 꼬리 흙먼지: 단계가 높을수록 짙고, 대지 충차는 지나간 길에 돌기둥이 솟는다.
+      const bx = s.x - s.dx * 30
+      const by = s.y - s.dy * 30
+      if (tier === 1) {
+        if (Math.random() < 0.5) this.dustFx.emitParticleAt(bx, by)
+      } else {
+        this.dustFx.emitParticleAt(bx, by, tier)
+        if (Math.random() < 0.25 * tier) this.rockFx.emitParticleAt(bx, by)
+      }
+      if (tier === 3) {
+        while (s.travelled >= s.nextSpike) {
+          const back = s.travelled - s.nextSpike + 26
+          this.spike(s.x - s.dx * back, s.y - s.dy * back + 14, 0.75 * this.grow(s.level))
+          s.nextSpike += SPIKE_GAP
+        }
+      }
+    }
+    const angle = Math.atan2(s.dy, s.dx)
+    for (const e of this.magicTargets()) {
+      if (s.hitList.includes(e)) continue
+      if (e.cell) {
+        // 벽 덩어리는 가로로 길어 원이 아니라 네모로 본다.
+        if (
+          Math.abs(e.x - s.x) > e.displayWidth / 2 + 6 ||
+          Math.abs(e.y - s.y) > e.displayHeight / 2 + s.depth
+        )
+          continue
+        this.ramImpact(s, st, e)
+        return
+      }
+      if (!sweepHits(s, e, UNITS[e.kind].r)) continue
+      if (e.boss) {
+        this.ramImpact(s, st, e)
+        return
+      }
+      s.hitList.push(e)
+      // 옆으로 밀쳐 낸다: 충차 오른쪽에 있으면 오른쪽으로, 왼쪽이면 왼쪽으로, 조금 앞으로도.
+      const px = -s.dy
+      const py = s.dx
+      const side = (e.x - s.x) * px + (e.y - s.y) * py >= 0 ? 1 : -1
+      e.kbx += (px * side + s.dx * 0.3) * st.push
+      e.kby += (py * side + s.dy * 0.3) * st.push
+      this.dustFx.explode(this.fx(2 + tier), e.x, e.y)
+      this.hit(e, st.damage * this.loadout.damage, angle, 'earth')
+    }
+  }
+
+  /** 들이받는다: 벽 칸·큰손에 피해 × siege, 충차가 튕겨 났다 사라지고 돌 조각과 먼지가 쏟아진다. 대지 충차는 둘레에 충격파와 돌기둥. */
+  private ramImpact(s: RamShot, st: EarthStats, e: Enemy) {
+    const tier = magicTier(s.level)
+    const grow = this.grow(s.level)
+    s.active = false
+    // 부딪힌 자리: 벽이면 벽의 앞(아래) 끝, 큰손이면 그 몸.
+    const x = s.x
+    const y = e.cell ? e.y + e.displayHeight / 2 : s.y
+    const img = s.img
+    this.tweens.killTweensOf(img)
+    img.setPosition(x - s.dx * 6, y - s.dy * 6)
+    this.tweens.add({
+      targets: img,
+      x: x - s.dx * 26,
+      y: y - s.dy * 26,
+      alpha: 0,
+      duration: 260,
+      ease: 'Quad.easeOut',
+      onComplete: () => img.setVisible(false),
+    })
+    this.glow(x, y, 0xffd9a0, [40, 56, 76][tier - 1] * grow, 240, 0.9)
+    this.ring(x, y, 0xd8a868, [34, 52, 72][tier - 1] * grow, 300)
+    this.rockFx.explode(this.fx([6, 10, 16][tier - 1]), x, y)
+    this.dustFx.explode(this.fx([5, 8, 12][tier - 1]), x, y)
+    this.chips?.explode(this.fx(4 + tier * 3), x, y - 4)
+    this.playSound('ram')
+    this.damageStats.rams++
+    const angle = Math.atan2(s.dy, s.dx)
+    const dmg = st.damage * this.loadout.damage
+    this.hit(e, dmg * st.siege, angle, 'siege')
+    if (st.quake > 0) {
+      // 충격파: 들이받은 둘레의 적이 밀려나며 맞는다. 땅이 갈라지며 돌기둥이 솟는다.
+      this.time.delayedCall(70, () => this.ring(x, y, 0xb88a52, st.quake * 1.15, 360))
+      for (let i = 0; i < 3; i++) {
+        const a = angle + Math.PI + (i - 1) * 0.9
+        this.spike(x + Math.cos(a) * st.quake * 0.5, y + 16 + Math.sin(a) * 10, grow)
+      }
+      for (const o of this.magicTargets()) {
+        if (o === e || o.cell || o.boss) continue
+        const reach = st.quake + UNITS[o.kind].r
+        const ox = o.x - x
+        const oy = o.y - y
+        if (ox * ox + oy * oy > reach * reach) continue
+        const oa = Math.atan2(oy, ox)
+        o.kbx += Math.cos(oa) * st.push
+        o.kby += Math.sin(oa) * st.push
+        this.hit(o, dmg, oa, 'earth')
+      }
+    }
+  }
+
+  /** 땅에서 돌기둥 하나가 솟았다 가라앉는다. */
+  private spike(x: number, y: number, k: number) {
+    const img = this.spikes[this.spikeIndex++ % this.spikes.length]
+    this.tweens.killTweensOf(img)
+    img
+      .setPosition(x, y)
+      .setScale(TEX * k, 0)
+      .setAlpha(1)
+      .setVisible(true)
+    this.tweens.add({
+      targets: img,
+      scaleY: TEX * k,
+      duration: 110,
+      ease: 'Back.easeOut',
+      onComplete: () =>
+        this.tweens.add({
+          targets: img,
+          scaleY: 0,
+          alpha: 0,
+          delay: 260,
+          duration: 300,
+          onComplete: () => img.setVisible(false),
+        }),
+    })
   }
 
   // 번개: 하늘에서 체력이 가장 많은 적에게 내리꽂혀 옆 적에게 차례로 튄다. 가는 줄기(Lv.1) → 굵은 번개(Lv.2) → 여러 갈래(Lv.3).
