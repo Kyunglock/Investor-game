@@ -653,6 +653,24 @@ class InvestEngineTest {
     return ENGINE.invest.credit(c);
   }
 
+  /** 회의 뒤 종목이 움직인 폭도 회의 수익률과 같은 −50% ~ +300%다: 오르면 +15% ~ +300%, 내리면 −20% ~ −50%. */
+  @Test
+  void 회의_뒤_주가는_마이너스_50에서_플러스_300까지_움직인다() {
+    CompanyState.Invest small = sized(400);
+    CompanyState.Invest big = sized(3500);
+    small.up = true;
+    big.up = true;
+    assertThat(ENGINE.invest.movedPercent(small)).isEqualTo(15);
+    assertThat(ENGINE.invest.movedPercent(big)).isEqualTo(300);
+    small.up = false;
+    big.up = false;
+    assertThat(ENGINE.invest.movedPercent(small)).isEqualTo(20);
+    assertThat(ENGINE.invest.movedPercent(big)).isEqualTo(50);
+    // 공개 문장과 맺음말도 이 폭을 쓴다.
+    assertThat(credit("UP", InvestEngine.BUY, true)).contains("300%");
+    assertThat(credit("DOWN", InvestEngine.SELL, false)).contains("50%");
+  }
+
   /** #340: 맺음말은 물어 온 사람의 회의 의견도 본다. */
   @Test
   void 물어_온_사람의_맺음말은_그_사람의_회의_의견을_본다() {

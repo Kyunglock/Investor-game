@@ -455,7 +455,7 @@ class CompanyEngine {
       if (ScoutEngine.SCOUT_DESK.equals(i.finderDesk)) {
         q.scoutStock = stockName(i.stock);
         q.scoutUp = i.up;
-        q.scoutPercent = Math.round(i.magnitudeBp / (float) PERCENT);
+        q.scoutPercent = invest.movedPercent(i);
       }
     }
   }

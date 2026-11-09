@@ -699,6 +699,16 @@ class InvestEngine {
     return (int) Math.round(invest.total * (double) BP / invest.stake);
   }
 
+  /**
+   * 회의 뒤 종목이 움직인 폭(%, 양수, #405 뒤 사용자 요청): 회의 수익률의 폭(−50% ~ +300%, 388번)과 같게, 올랐으면 맞혔을 때 수익률(+15% ~
+   * +300%), 내렸으면 틀렸을 때 잃는 몫(−20% ~ −50%)이다. 차트·"n% 올랐다" 문구·발굴 보고가 이 값을 쓴다. 기사의 크기(magnitudeBp,
+   * 4~35%)는 이 폭이 콘텐츠의 어디쯤인지 정하는 데만 쓴다.
+   */
+  int movedPercent(Invest invest) {
+    int bp = invest.up ? gainBp(invest) : lossBp(invest, false);
+    return Math.round(bp / (float) PERCENT);
+  }
+
   /** 기사의 크기가 콘텐츠의 모든 뉴스에서 가장 작은 폭 ~ 가장 큰 폭 사이 어디쯤인가(0~1). */
   private double magnitudeAt(int magnitudeBp) {
     int least = content.news().stream().mapToInt(n -> n.magnitude().minBp()).min().orElse(0);
@@ -970,7 +980,7 @@ class InvestEngine {
             "stock",
             content.stock(invest.stock).name(),
             "percent",
-            String.valueOf(Math.round(invest.magnitudeBp / (float) PERCENT)),
+            String.valueOf(movedPercent(invest)),
             "moved",
             invest.up ? "올랐다" : "빠졌다"));
   }
@@ -980,10 +990,6 @@ class InvestEngine {
     StockDefinition stock = content.stock(c.invest.stock);
     return Korean.fill(
         content.raising().company().invest().reveal().get(c.invest.up ? UP : DOWN),
-        Map.of(
-            "stock",
-            stock.name(),
-            "percent",
-            String.valueOf(Math.round(c.invest.magnitudeBp / (float) PERCENT))));
+        Map.of("stock", stock.name(), "percent", String.valueOf(movedPercent(c.invest))));
   }
 }
