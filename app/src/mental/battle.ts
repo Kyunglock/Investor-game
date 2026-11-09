@@ -223,6 +223,8 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   /** 지금 칠해 둔 빛: 없음·파랑(느림)·주황(화상). */
   chilled: boolean
   tintKind: 0 | 1 | 2
+  /** 제 크기(배율): 맞아 들썩인 뒤 늘 여기로 돌아온다. 들썩임이 겹쳐 가로세로가 따로 불어 찌그러지던 것을 막는다. */
+  baseK: number
 }
 type Bullet = Phaser.Physics.Arcade.Image & {
   life: number
@@ -342,6 +344,8 @@ interface FirePatch {
   until: number
   nextTick: number
 }
+/** 공격 판 클리어 연출(clearShow)을 보이는 시간(ms): 끝나면 결과 화면으로 넘어간다. */
+const CLEAR_SHOW_MS = 2300
 /** 돌진하는 바위 충차 (433번): 물처럼 곧게 가며 보통 적은 밀쳐 꿰뚫고, 벽 칸·큰손에 닿으면 들이받고 멈춘다. t는 출발한 뒤 시간(초). */
 interface RamShot {
   img: Phaser.GameObjects.Image
@@ -1090,6 +1094,7 @@ class BattleScene extends Phaser.Scene {
     this.bossMax = BOSS.hp * this.spec.hpScale
     e.hp = this.bossMax
     e.setScale(ENEMY_K * BOSS.scale)
+    e.baseK = ENEMY_K * BOSS.scale
     this.bossEnemy = e
     this.lastSummon = this.elapsed
     this.pushHud(true)
@@ -1174,7 +1179,13 @@ class BattleScene extends Phaser.Scene {
 
   /** 벽이 멈춰 서는 줄(맨 아랫줄의 아래 끝): 화면 높이의 34%, 190~320px. 사장냥과 사이에 물량이 내려올 거리를 남긴다. */
   private stopY() {
-    return Phaser.Math.Clamp(this.view().h * 0.34, 190, 320)
+    // 벽은 사장냥에게서 멀찍이(위로) 선다: 벽에서 나온 물량이 내려올 거리가 넉넉하다.
+    return Phaser.Math.Clamp(this.view().h * 0.24, 150, 240)
+  }
+
+  /** 잡몹 구간 동안 다음 벽이 멈춰 서서 물량을 내보내는 줄: 화면 맨 위에 벽 아래 끝이 보인다. */
+  private holdY() {
+    return Phaser.Math.Clamp(this.view().h * 0.1, 60, 100)
   }
 
   private lane() {
@@ -1359,6 +1370,9 @@ class BattleScene extends Phaser.Scene {
     this.wallsBroken++
     this.sinceBreak = 0
     this.stuck = 0
+    // 치고 오르는 동안 화면이 쭉 내려가 남아 있던 물량이 사장냥에게 쏟아져 맞았다: 남은 물량은 벽과 함께 체결되고, 치고 오르는 동안은 맞지 않는다.
+    this.sweepFlows(wall.y)
+    this.invulnUntil = Math.max(this.invulnUntil, this.elapsed + ASSAULT_MOTION.dashSeconds + 0.5)
     const lane = this.lane()
     for (let i = 0; i < 7; i++) {
       const x = lane.left + ((i + 0.5) * lane.width) / 7
@@ -1434,6 +1448,7 @@ class BattleScene extends Phaser.Scene {
     e.hp = this.bossMax
     e.maxHp = this.bossMax
     e.setScale(unitK('whale') * (mid ? 0.8 : 1))
+    e.baseK = e.scaleX
     e.setDepth(3.5)
     this.bossEnemy = e
     this.lastSummon = this.elapsed
@@ -1492,10 +1507,33 @@ class BattleScene extends Phaser.Scene {
     if (!this.assault || this.over) return
     this.rushLeft = ASSAULT_RUSH.seconds
     this.lastFlow = this.elapsed
-    this.opts.onBanner('매도 물량이 몰려온다! 체결시켜라', '#3a7bea')
+    // 다음 벽이 곧바로 위에서 내려와 화면 맨 위(holdY)에 멈춰 서서 물량을 쏟아 낸다. 잡몹 구간이 끝나면 멈춤 줄까지 내려온다.
+    this.addWall(this.wallsBroken, this.stopY() - this.view().h * ASSAULT_MOTION.gap)
+    this.opts.onBanner('다음 매도벽이 물량을 쏟아 낸다! 체결시켜라', '#3a7bea')
   }
 
-  /** 마지막 벽까지 다 부수고 큰손도 없으면 깼다. */
+  /** 잡몹 구간(#593) 동안 화면 맨 위에 멈춰 물량을 내보내는 다음 벽의 칸: 아직 깨지지 않는다. */
+  private held(e: Enemy) {
+    return Boolean(e.cell && this.rushLeft > 0 && !e.cell.wall.arrived)
+  }
+
+  /** 화면에 남은 매도 물량(벽 칸·큰손 빼고)이 위(fromY)에서부터 차례로 체결된다. */
+  private sweepFlows(fromY: number) {
+    for (const child of this.enemies.getChildren()) {
+      const e = child as Enemy
+      if (!e.active || e.dying || e.cell || e.boss) continue
+      const delay = this.reducedMotion ? 0 : Math.min(420, Math.max(0, e.y - fromY) * 0.6)
+      e.dying = true
+      if (e.body) e.body.enable = false
+      this.time.delayedCall(delay, () => {
+        if (!e.active) return
+        e.dying = false
+        this.kill(e, true)
+      })
+    }
+  }
+
+  /** 마지막 벽까지 다 부수고 큰손도 없으면 깼다: 클리어 연출을 보이고 결과로 넘어간다. */
   private assaultCheckClear() {
     const spec = this.assault
     if (!spec || this.over) return
@@ -1503,8 +1541,121 @@ class BattleScene extends Phaser.Scene {
     if (this.wallsBroken >= spec.walls.length && !bossAlive) {
       this.opts.onBanner(`목표가 돌파!! ${assaultTarget(spec).toLocaleString()}원`, '#ffd84d')
       haptic.success()
-      sfx.levelUp()
-      this.finish(true, 'clear')
+      this.clearShow()
+      this.finish(true, 'clear', this.reducedMotion ? 900 : CLEAR_SHOW_MS)
+    }
+  }
+
+  /**
+   * 공격 판 클리어 연출: 화면이 금빛으로 번쩍이고, 남은 물량이 모두 체결되며, "목표가 돌파!!"와 오른 비율이 크게 찍힌다. 위에서 색종이가 쏟아지고
+   * 하늘 곳곳에서 불꽃이 터지며 사장냥이 펄쩍 뛴다.
+   */
+  private clearShow() {
+    const spec = this.assault
+    if (!spec) return
+    const { w, h } = this.view()
+    this.sweepFlows(0)
+    sfx.fanfare()
+    this.time.delayedCall(350, () => sfx.celebrate())
+    const flash = this.add
+      .rectangle(w / 2, h / 2, w, h, 0xfff2b0)
+      .setDepth(20)
+      .setAlpha(0.85)
+      .setBlendMode(Phaser.BlendModes.ADD)
+    this.tweens.add({
+      targets: flash,
+      alpha: 0,
+      duration: 650,
+      ease: 'Quad.easeOut',
+      onComplete: () => flash.destroy(),
+    })
+    const style = {
+      fontFamily: '"Jua", "Gowun Dodum", sans-serif',
+      color: '#ffe066',
+      stroke: '#7a2e00',
+      strokeThickness: 8,
+      align: 'center',
+      resolution: DPR,
+    }
+    const title = this.add
+      .text(w / 2, h * 0.36, '목표가 돌파!!', { ...style, fontSize: '46px' })
+      .setOrigin(0.5)
+      .setDepth(22)
+      .setScale(0)
+    const pct = ((this.assaultNow() - spec.startPrice) / spec.startPrice) * 100
+    const sub = this.add
+      .text(w / 2, h * 0.36 + 52, '', {
+        ...style,
+        fontSize: '30px',
+        color: '#ff6b7a',
+        stroke: '#ffffff',
+      })
+      .setOrigin(0.5)
+      .setDepth(22)
+      .setAlpha(0)
+    const count = { n: 0 }
+    this.tweens.add({
+      targets: title,
+      scale: 1,
+      duration: 420,
+      ease: 'Back.easeOut',
+      onComplete: () =>
+        this.tweens.add({ targets: title, scale: 1.08, duration: 380, yoyo: true, repeat: -1 }),
+    })
+    this.tweens.add({
+      targets: count,
+      n: pct,
+      delay: 300,
+      duration: 900,
+      ease: 'Cubic.easeOut',
+      onStart: () => sub.setAlpha(1),
+      onUpdate: () => sub.setText(`▲ +${count.n.toFixed(1)}%`),
+    })
+    // 사장냥이 두 번 펄쩍.
+    this.tweens.killTweensOf(this.lift)
+    if (!this.reducedMotion) {
+      // 판이 끝나 update가 멈췄으니 뛰는 높이를 직접 옮긴다.
+      this.tweens.add({
+        targets: this.lift,
+        y: 60,
+        duration: 240,
+        ease: 'Quad.easeOut',
+        yoyo: true,
+        repeat: 1,
+        onUpdate: () => this.moveHero(this.player.x),
+      })
+    }
+    // 색종이 비.
+    const confetti = this.add
+      .particles(0, -10, 'confetti', {
+        x: { min: 0, max: w },
+        speedY: { min: 160, max: 320 },
+        speedX: { min: -60, max: 60 },
+        rotate: { start: 0, end: 540 },
+        scale: { min: 0.7 * TEX, max: 1.2 * TEX },
+        lifespan: h / 0.16,
+        quantity: this.reducedMotion ? 1 : 3,
+        frequency: 40,
+        tint: [0xffd84d, 0xff6b7a, 0x6cc8ff, 0x8be38f, 0xc49bff, 0xffffff],
+      })
+      .setDepth(21)
+    this.time.delayedCall(1400, () => confetti.stop())
+    // 불꽃놀이: 하늘 곳곳에서 차례로.
+    const colors = [0xffd84d, 0xff6b7a, 0x6cc8ff, 0x8be38f, 0xffa64d]
+    const bursts = this.reducedMotion ? 3 : 8
+    for (let i = 0; i < bursts; i++) {
+      this.time.delayedCall(120 + i * 190, () => {
+        const x = w * (0.15 + Math.random() * 0.7)
+        const y = h * (0.1 + Math.random() * 0.35)
+        const c = colors[i % colors.length]
+        const r = 70 + Math.random() * 40
+        this.ring(x, y, c, r, 520)
+        this.time.delayedCall(90, () => this.ring(x, y, 0xffffff, r * 0.6, 420))
+        this.glow(x, y, c, 90, 480, 1)
+        this.boltFx.explode(this.fx(24), x, y)
+        this.fireFx.explode(this.fx(14), x, y)
+        this.playSound('boom')
+      })
     }
   }
 
@@ -1544,15 +1695,20 @@ class BattleScene extends Phaser.Scene {
     this.playSound('coin')
   }
 
-  /** 벽 앞(벽 틈)에서 매도 물량이 나온다: 벽 앞에 오래 막힐수록 잦다. */
+  /** 매도 물량은 벽에서 나온다: 벽 아래 끝에서 튀어나오며 벽 면에 먼지와 파편이 인다. 벽 앞에 오래 막힐수록 잦다. */
   private spawnFlow(wall: WallState) {
-    this.spawnFlowAt(wall.spec.mix, wall.y + 16)
+    const out = this.spawnFlowAt(wall.spec.mix, wall.y + 6)
+    for (const e of out) {
+      this.chips?.explode(this.fx(2), e.x, wall.y - 4)
+      this.boom.cell.explode(this.fx(2), e.x, wall.y - 2)
+    }
   }
 
-  /** 매도 물량 한 번: 길 아무 데서나 y에서 나온다. 시장가는 떼로. */
-  private spawnFlowAt(mix: AssaultWall['mix'], y: number) {
+  /** 매도 물량 한 번: 길 아무 데서나 y에서 나온다. 시장가는 떼로. 나온 물량을 돌려준다. */
+  private spawnFlowAt(mix: AssaultWall['mix'], y: number): Enemy[] {
+    const out: Enemy[] = []
     const spec = this.assault
-    if (!spec) return
+    if (!spec) return out
     const lane = this.lane()
     const kind = pickFlow(mix, Math.random())
     // 벽 틈(부서진 칸) 자리에서 나오면 좋고, 아니면 길 아무 데나. 벽 바로 앞에서 나온다.
@@ -1561,14 +1717,17 @@ class BattleScene extends Phaser.Scene {
     if (kind === 'market') {
       const n = swarmSize(spec, Math.random())
       for (let i = 0; i < n; i++) {
-        this.spawn('market', [
+        const e = this.spawn('market', [
           Phaser.Math.Clamp(x + (i - (n - 1) / 2) * 22, lane.left + 8, lane.right - 8),
           y + (i % 2) * 18,
         ])
+        if (e) out.push(e)
       }
     } else {
-      this.spawn(kind, [x, y])
+      const e = this.spawn(kind, [x, y])
+      if (e) out.push(e)
     }
+    return out
   }
 
   /**
@@ -1582,11 +1741,15 @@ class BattleScene extends Phaser.Scene {
     this.sinceBreak += dt
     const wall = this.walls.find((wl) => !wl.broken)
     let move = 0
+    const rushing = this.rushLeft > 0
     if (wall && !wall.arrived) {
       move = climbSpeed(this.sinceBreak, this.reducedMotion) * dt
-      const stop = this.stopY()
+      const stop = rushing ? this.holdY() : this.stopY()
+      if (rushing) this.rushLeft = Math.max(0, this.rushLeft - dt)
       if (wall.y + move >= stop) {
         move = Math.max(0, stop - wall.y)
+      }
+      if (!rushing && wall.y + move >= stop) {
         wall.arrived = true
         this.stuck = 0
         if (wall.spec.boss || wall.spec.mid) {
@@ -1598,19 +1761,6 @@ class BattleScene extends Phaser.Scene {
       }
     } else if (wall?.arrived) {
       this.stuck += dt
-    } else if (!wall && this.rushLeft > 0) {
-      // 잡몹 구간 (#593): 천천히 오르며 위에서 물량 떼가 내려온다. 끝나면 다음 벽이 위에서 내려온다.
-      move = climbSpeed(this.sinceBreak, this.reducedMotion) * dt
-      this.rushLeft -= dt
-      const next = spec.walls[this.wallsBroken]
-      if (next && !this.over && this.elapsed - this.lastFlow > rushSpawnSeconds(next, spec)) {
-        this.lastFlow = this.elapsed
-        this.spawnFlowAt(next.mix, -24)
-      }
-      if (this.rushLeft <= 0) {
-        this.rushLeft = 0
-        this.addWall(this.wallsBroken, this.stopY() - this.view().h * ASSAULT_MOTION.gap)
-      }
     }
     this.climbV = dt > 0 ? move / dt : 0
     this.climbed += move
@@ -1623,8 +1773,12 @@ class BattleScene extends Phaser.Scene {
     }
     for (const wl of this.walls) {
       wl.y += move
-      if (!wl.broken) this.placeWall(wl)
-      else wl.price.y += move
+      if (!wl.broken) {
+        this.placeWall(wl)
+        // 잡몹 구간에 멈춰 선 벽은 옅게: 아직 깨지지 않는다.
+        const a = rushing && !wl.arrived ? 0.7 : 1
+        for (const c of wl.cells) if (c.active && !c.dying) c.setAlpha(a)
+      } else wl.price.y += move
     }
     // 무너진 벽의 이름표가 화면 아래로 빠지면 치운다.
     this.walls = this.walls.filter((wl) => {
@@ -1635,7 +1789,11 @@ class BattleScene extends Phaser.Scene {
       return true
     })
     if (wall && wall.y > -20 && !this.over) {
-      if (this.elapsed - this.lastFlow > spawnSeconds(wall.spec, spec, this.stuck, wall.arrived)) {
+      // 잡몹 구간 (#593)에는 화면 맨 위에 멈춘 다음 벽이 더 잦게 물량을 쏟아 낸다.
+      const every = rushing
+        ? rushSpawnSeconds(wall.spec, spec)
+        : spawnSeconds(wall.spec, spec, this.stuck, wall.arrived)
+      if (this.elapsed - this.lastFlow > every) {
         this.lastFlow = this.elapsed
         this.spawnFlow(wall)
       }
@@ -1782,6 +1940,7 @@ class BattleScene extends Phaser.Scene {
     e.tintKind = 0
     const v = UNITS[kind]
     const k = unitK(kind)
+    e.baseK = k
     e.setTexture(enemyKey(kind, 0))
       .enableBody(true, x, y, true, true)
       .setScale(k)
@@ -2006,6 +2165,11 @@ class BattleScene extends Phaser.Scene {
       this.kill(e, false)
       return
     }
+    if (this.held(e)) {
+      // 잡몹 구간의 다음 벽은 아직 멀어 깨지지 않는다: 튕겨 나가는 불꽃만.
+      this.hitSpark.explode(2, e.x - Math.cos(angle) * 10, e.y + 10)
+      return
+    }
     e.hp -= dmg
     // 하얗게 번쩍, 들썩임, 데미지 숫자: 맞은 느낌의 세 가지.
     e.setTintFill(0xffffff)
@@ -2017,13 +2181,20 @@ class BattleScene extends Phaser.Scene {
       // 공격 판의 벽 칸·큰손은 1초에 여러 번 맞아 들썩임 트윈이 겹치면 크기가 조금씩 불었다: 번쩍임과 금·파편만.
       if (e.cell) this.crackCell(e)
     } else {
+      // 들썩임은 늘 제 크기(baseK)에서 시작해 제 크기로 끝난다. 지금 크기에서 곱하면 연달아 맞을 때(대량 매도처럼 단단한 적) 가로세로가 따로
+      // 불어 찌그러졌다.
       this.tweens.killTweensOf(e)
+      const k = e.baseK || e.scaleX
+      e.setScale(k)
       this.tweens.add({
         targets: e,
-        scaleX: e.scaleX * 1.18,
-        scaleY: e.scaleY * 0.84,
+        scaleX: k * 1.18,
+        scaleY: k * 0.84,
         duration: 50,
         yoyo: true,
+        onComplete: () => {
+          if (e.active && !e.dying) e.setScale(k)
+        },
       })
     }
     // 탄에 맞아도 밀려나지 않는다: 밀리면 내려오던 줄이 흐트러져 조준이 어긋났다. 밀림은 사장냥에 부딪혔을 때(hurt)만.
@@ -2568,7 +2739,8 @@ class BattleScene extends Phaser.Scene {
     const { w, h } = this.view()
     for (const child of this.enemies.getChildren()) {
       const e = child as Enemy
-      if (e.active && !e.dying && e.y > 12 && e.y < h && e.x > 0 && e.x < w) buf.push(e)
+      if (e.active && !e.dying && e.y > 12 && e.y < h && e.x > 0 && e.x < w && !this.held(e))
+        buf.push(e)
     }
     return buf
   }
@@ -3177,7 +3349,7 @@ class BattleScene extends Phaser.Scene {
     })
   }
 
-  private finish(win: boolean, reason: Outcome['reason']) {
+  private finish(win: boolean, reason: Outcome['reason'], delayMs?: number) {
     if (this.over) {
       return
     }
@@ -3187,7 +3359,7 @@ class BattleScene extends Phaser.Scene {
     }
     this.pushHud(true)
     const wallsTotal = this.assault?.walls.length ?? 0
-    this.time.delayedCall(win ? 300 : 700, () =>
+    this.time.delayedCall(delayMs ?? (win ? 300 : 700), () =>
       this.opts.onDone({
         kills: this.kills,
         mentalLeft: Math.ceil(this.mental),
