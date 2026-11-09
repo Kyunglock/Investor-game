@@ -13,15 +13,18 @@ export type AutoStep =
   | { kind: 'place'; seats: Seat[] }
   | { kind: 'scout' }
   | { kind: 'convene' }
-  | { kind: 'invest'; choice: 'BUY' | 'SELL' | 'HOLD'; big: boolean }
+  | { kind: 'invest'; choice: 'BUY' | 'SELL'; big: boolean }
   | { kind: 'settle' }
   | { kind: 'stop' }
 
-/** 종목 회의: 직원 한마디의 다수결. 사자가 많으면 산다, 팔자가 많으면 판다, 같거나 모르겠다뿐이면 지켜본다. */
-export function autoChoice(invest: NonNullable<Company['invest']>): 'BUY' | 'SELL' | 'HOLD' {
+/**
+ * 종목 회의: 직원 한마디의 다수결. 사자가 많으면 산다, 팔자가 많으면 판다. 같거나 모르겠다뿐이면 산다(지켜본다는 423번에서 뺐다: 시장은 오르는 날이
+ * 더 많다).
+ */
+export function autoChoice(invest: NonNullable<Company['invest']>): 'BUY' | 'SELL' {
   const up = invest.remarks.filter((r) => r.read === 'UP').length
   const down = invest.remarks.filter((r) => r.read === 'DOWN').length
-  return up > down ? 'BUY' : down > up ? 'SELL' : 'HOLD'
+  return down > up ? 'SELL' : 'BUY'
 }
 
 /** 빈 자리를 채울 만큼 뽑는다 (decisions.md 312번): 채용권·데리고 있을 자리·한 번에 뽑는 수가 허락하는 만큼. 자리가 찼으면 뽑지 않는다. */

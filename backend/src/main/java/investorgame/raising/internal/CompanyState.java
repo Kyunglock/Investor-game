@@ -281,7 +281,7 @@ class CompanyState {
     String sway;
     String swaySentiment;
 
-    /** 사장이 고른 것(BUY·SELL·HOLD). 아직 안 골랐으면 null. */
+    /** 사장이 고른 것(BUY·SELL, 423번 전의 옛 회의는 HOLD일 수 있다). 아직 안 골랐으면 null. */
     String choice;
 
     /** 크게 했는가: 판돈 두 배, 고집 1.5배 (decisions.md 260번). */
@@ -289,9 +289,6 @@ class CompanyState {
 
     /** 이번 분기에 종목 발굴을 굴렸는가 (267·382번): 분기 넘기기를 누르면 한 번 굴린다. 옛 저장은 거짓이라 다시 굴린다. */
     boolean scouted;
-
-    /** 지켜봤을 때, 맞는 쪽으로 했으면 벌었을 돈(뒤집힘 없이). 지켜보지 않았으면 null (260번). */
-    Long missed;
 
     /** 사장이 "너희가 알아서 해" 하고 맡겼다 (decisions.md 279번). choice는 직원들이 정한 쪽(BUY·SELL)이다. */
     boolean delegated;

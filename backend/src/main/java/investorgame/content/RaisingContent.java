@@ -141,7 +141,7 @@ public record RaisingContent(
   public record Scout(Map<String, List<String>> pitch, Map<String, String> credit) {}
 
   /**
-   * 투자 회의 (decisions.md 229번). 고르는 것은 BUY·SELL·HOLD.
+   * 투자 회의 (decisions.md 229번). 고르는 것은 BUY·SELL(423번). HOLD 문구는 직원의 행동과 옛 회의에 쓴다.
    *
    * @param options 사장이 고르는 버튼 이름
    * @param remarks 직원의 한마디. 안목 구간(low·mid·high·expert) → 읽은 쪽(UP·DOWN·NEUTRAL) → 문구 여럿. 기사 문장을 따오지

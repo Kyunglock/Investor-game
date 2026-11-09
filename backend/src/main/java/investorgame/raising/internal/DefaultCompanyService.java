@@ -546,7 +546,7 @@ class DefaultCompanyService implements CompanyService {
             .toList();
     // "너희가 알아서 해"는 뺐다 (352번).
     List<CompanyView.Option> options =
-        List.of(InvestEngine.BUY, InvestEngine.SELL, InvestEngine.HOLD).stream()
+        List.of(InvestEngine.BUY, InvestEngine.SELL).stream()
             .map(code -> new CompanyView.Option(code, texts.options().get(code)))
             .toList();
     // 토론이 먼저 (352번): 회의를 열면 토론과 직원들이 기운 쪽이 결정 전에 보인다.
@@ -569,7 +569,6 @@ class DefaultCompanyService implements CompanyService {
                 invest.debate.stream()
                     .map(d -> new CompanyView.DebateLine(d.name, d.side, d.text, d.last, kindOf(d)))
                     .toList(),
-                invest.missed,
                 invest.up,
                 meetings.reveal(c),
                 decisive,

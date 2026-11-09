@@ -84,7 +84,7 @@ class CompanyApiTest {
           json(mvc.perform(post("/api/company/scout").cookie(session)).andExpect(status().isOk()))
               .read("$.invest.ready", Boolean.class);
       if (Boolean.TRUE.equals(ready)) {
-        decide("HOLD");
+        decide("BUY");
       }
       last = settle(year, q).andExpect(status().isOk());
     }
@@ -384,7 +384,7 @@ class CompanyApiTest {
         json(mvc.perform(post("/api/company/scout").cookie(session)).andExpect(status().isOk()))
             .read("$.invest.ready", Boolean.class);
     if (Boolean.TRUE.equals(ready)) {
-      decide("HOLD");
+      decide("BUY");
     }
     DocumentContext quarter = json(settle(1, 1).andExpect(status().isOk()));
     assertThat(quarter.read("$.lastQuarter.upgrades", Long.class)).isEqualTo(spent);

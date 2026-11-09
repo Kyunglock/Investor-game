@@ -64,11 +64,11 @@ async function passQuarter(
   const held = await meeting.isVisible()
   if (held) {
     await expect(meeting).toBeVisible()
-    // 누가 이 종목을 물어 왔는지 창 머리에 보인다 (267번).
-    await expect(meeting.getByTestId('invest-finder')).toContainText('가져온 종목')
+    // 누가 가져왔는지·팀 합산 칩은 보이지 않는다 (422번).
+    await expect(meeting.getByTestId('invest-finder')).toHaveCount(0)
     // 종목 분석 → 투자 결정은 한 화면씩 (368번): 분석을 보고 결정하러 간다.
     await meeting.getByTestId('invest-to-decide').click()
-    const pick = quarter === 1 ? choice : '지켜본다'
+    const pick = quarter === 1 ? choice : '산다'
     // 버튼 이름을 그대로 맞춘다.
     await meeting.getByRole('button', { name: pick, exact: true }).click()
     await expect(meeting.getByTestId('invest-outcome')).toBeVisible()
@@ -103,11 +103,11 @@ async function passQuarter(
   return held
 }
 
-/** 한 해를 네 분기 넘긴다. 1분기는 고른 결정으로, 나머지는 지켜본다. 1분기에 종목 회의를 했으면 true. */
+/** 한 해를 네 분기 넘긴다. 1분기는 고른 결정으로, 나머지는 산다(지켜본다는 423번에서 뺐다). 1분기에 종목 회의를 했으면 true. */
 async function passYear(page: Page, year: number, choice: string, watch = false): Promise<boolean> {
   const held = await passQuarter(page, year, 1, choice, watch)
   for (let quarter = 2; quarter <= 4; quarter++) {
-    await passQuarter(page, year, quarter, '지켜본다')
+    await passQuarter(page, year, quarter, '산다')
   }
   return held
 }
@@ -298,7 +298,7 @@ test('채용권으로 뽑아 앉히고, 쉬는 사람을 내보낼 수 있고, �
   await expect(page.getByTestId('office-resting')).toHaveCount(0)
 
   for (let year = 1; year <= 3; year++) {
-    const held = await passYear(page, year, year === 1 ? '산다' : '지켜본다', year === 1)
+    const held = await passYear(page, year, '산다', year === 1)
     // 첫 회사의 첫 분기에는 돈을 굴리는 직원이 꼭 종목을 물어 온다 (267번): 종목 회의를 배운다.
     if (year === 1) {
       expect(held).toBe(true)

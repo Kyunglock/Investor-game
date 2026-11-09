@@ -326,7 +326,6 @@ public record CompanyView(
    */
   /**
    * @param big 크게 했다: 판돈 두 배, 고집 1.5배 (decisions.md 260번)
-   * @param missed 지켜봤을 때 맞는 쪽으로 했으면 벌었을 돈. 지켜보지 않았으면 null
    */
   /**
    * @param delegated 사장이 "너희가 알아서 해" 하고 맡겼다(decisions.md 279번). choice는 직원들이 정한 쪽
@@ -344,7 +343,6 @@ public record CompanyView(
       int teamBuy,
       int teamSell,
       List<DebateLine> debate,
-      Long missed,
       boolean up,
       String reveal,
       int decisive,

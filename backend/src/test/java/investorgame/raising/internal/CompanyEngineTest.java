@@ -53,7 +53,7 @@ class CompanyEngineTest {
   /** 투자 회의는 지켜본다로 넘기고 한 해를 결산한다. 결산 규칙만 볼 때 쓴다. */
   private static CompanyState.Settlement settleYear(CompanyState company, HashSeededRandom random) {
     if (ENGINE.invest.open(company)) {
-      ENGINE.invest.decide(company, InvestEngine.HOLD, random);
+      ENGINE.invest.decide(company, InvestEngine.BUY, random);
     }
     return ENGINE.settle(company, random);
   }
@@ -431,7 +431,7 @@ class CompanyEngineTest {
         engine.place(company, Map.of(1, "bio"));
       }
       if (engine.invest.open(company)) {
-        engine.invest.decide(company, InvestEngine.HOLD, new HashSeededRandom(seed));
+        engine.invest.decide(company, InvestEngine.BUY, new HashSeededRandom(seed));
       }
       sum += engine.settle(company, new HashSeededRandom(seed)).results.getFirst().pnl;
     }
@@ -447,7 +447,7 @@ class CompanyEngineTest {
       engine.place(company, Map.of(1, "bio"));
       company.phase = "normal";
       if (engine.invest.open(company)) {
-        engine.invest.decide(company, InvestEngine.HOLD, new HashSeededRandom(seed));
+        engine.invest.decide(company, InvestEngine.BUY, new HashSeededRandom(seed));
       }
       CompanyState.Result r = engine.settle(company, new HashSeededRandom(seed)).results.getFirst();
       flips += r.flips.values().stream().mapToInt(Integer::intValue).sum();
@@ -1252,7 +1252,7 @@ class CompanyEngineTest {
     while (c.year == year) {
       ENGINE.scout.discover(c, random);
       if (ENGINE.invest.open(c)) {
-        ENGINE.invest.decide(c, InvestEngine.HOLD, random);
+        ENGINE.invest.decide(c, InvestEngine.BUY, random);
       }
       ENGINE.settleQuarter(c, random);
     }

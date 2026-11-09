@@ -158,20 +158,21 @@ class InvestEngineTest {
         .isInstanceOf(InvalidRequestException.class);
     assertThatThrownBy(() -> ENGINE.invest.decide(company, "SHORT", new HashSeededRandom(2)))
         .isInstanceOf(InvalidRequestException.class);
-    ENGINE.invest.decide(company, InvestEngine.HOLD, new HashSeededRandom(2));
+    ENGINE.invest.decide(company, InvestEngine.BUY, new HashSeededRandom(2));
+    long total = company.invest.total;
     assertThatThrownBy(
             () -> ENGINE.invest.decide(company, InvestEngine.BUY, new HashSeededRandom(2)))
         .as("한 해에 한 번")
         .isInstanceOf(InvalidRequestException.class);
     String title = company.invest.title;
     CompanyState.Settlement s = ENGINE.settle(company, new HashSeededRandom(2));
-    // 연말 결산서(240번): 회의는 소식 줄이 아니라 따로 실린다(지켜봤으니 0).
+    // 연말 결산서(240번): 회의는 소식 줄이 아니라 따로 실린다.
     assertThat(s.investTitle).isEqualTo(title);
-    assertThat(s.investTotal).isZero();
+    assertThat(s.investTotal).isEqualTo(total);
     assertThat(s.lines).noneMatch(l -> l.startsWith("투자 회의"));
   }
 
-  /** 줏대·용기가 만점이면 사장 말대로 하고, 맞히면 벌고 틀리면 잃고, 지켜보면 0. 손익은 바로 자본에 들어간다. */
+  /** 줏대·용기가 만점이면 사장 말대로 하고, 맞히면 벌고 틀리면 잃는다. 손익은 바로 자본에 들어간다. 사장은 지켜볼 수 없다(423번). */
   @Test
   void 고집이_없는_직원은_사장_말대로_한다() {
     CompanyState company = company(3, stats(50, 100, 100, 100));
@@ -188,8 +189,11 @@ class InvestEngineTest {
     assertThat(loser.invest.results.getFirst().pnl).isNegative();
 
     CompanyState holder = company(3, stats(50, 100, 100, 100));
-    ENGINE.invest.decide(holder, InvestEngine.HOLD, new HashSeededRandom(3));
-    assertThat(holder.invest.total).isZero();
+    assertThatThrownBy(
+            () -> ENGINE.invest.decide(holder, InvestEngine.HOLD, new HashSeededRandom(3)))
+        .as("지켜본다는 없다 (423번)")
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(holder.invest.choice).isNull();
   }
 
   /** 회의 뒤 전투 (414번, #573): 틀렸으면 디펜스로 손실을 줄이고, 맞혔으면 공격 판으로 수익을 키운다. 한 회의에 한 번, 분기를 넘기면 끝난다. */
@@ -223,10 +227,6 @@ class InvestEngineTest {
     assertThat(ENGINE.invest.battle(perfect, InvestEngine.DEFENSE, 3))
         .as("별 셋이면 손실을 없애고 판돈의 10%를 번다")
         .isEqualTo(-perfect.invest.total + stake / 10);
-
-    CompanyState holder = company(3, stats(50, 100, 100, 100));
-    ENGINE.invest.decide(holder, InvestEngine.HOLD, new HashSeededRandom(3));
-    assertThat(InvestEngine.battleMode(holder.invest)).as("지켜봤으면 전투가 없다").isNull();
 
     CompanyState late = company(3, stats(50, 100, 100, 100));
     ENGINE.invest.decide(late, wrong(late), new HashSeededRandom(3));
@@ -262,7 +262,10 @@ class InvestEngineTest {
     int swayed = 0;
     for (int seed = 0; seed < 300; seed++) {
       CompanyState company = company(seed, stats(50, 100, 100, 0));
-      ENGINE.invest.decide(company, InvestEngine.HOLD, new HashSeededRandom(seed));
+      // 꼬드김과 반대쪽을 고른다(지켜본다가 없어져서, 423번): 넘어가면 꼬드김 쪽으로 간다.
+      String against =
+          "POS".equals(company.invest.swaySentiment) ? InvestEngine.SELL : InvestEngine.BUY;
+      ENGINE.invest.decide(company, against, new HashSeededRandom(seed));
       CompanyState.InvestResult r = company.invest.results.getFirst();
       if (InvestEngine.SWAY.equals(r.follow)) {
         swayed++;
@@ -280,7 +283,7 @@ class InvestEngineTest {
   void 결과마다_사장_말과_맞붙은_행동과_지킨_능력치가_있다() {
     for (int seed = 0; seed < 200; seed++) {
       CompanyState company = company(seed, stats(60, 50, 10, 10));
-      String choice = List.of(InvestEngine.BUY, InvestEngine.SELL, InvestEngine.HOLD).get(seed % 3);
+      String choice = List.of(InvestEngine.BUY, InvestEngine.SELL).get(seed % 2);
       ENGINE.invest.decide(company, choice, new HashSeededRandom(seed));
       CompanyState.InvestResult r = company.invest.results.getFirst();
       if (r.rival == null) {
@@ -454,7 +457,7 @@ class InvestEngineTest {
       assertThat(ENGINE.invest.highlight(c)).isEmpty();
 
       // 정할 때의 제 판단도 회의에서 한 말 그대로다.
-      ENGINE.invest.decide(c, InvestEngine.HOLD, random);
+      ENGINE.invest.decide(c, InvestEngine.BUY, random);
       for (CompanyState.InvestResult r : c.invest.results) {
         if (InvestEngine.OWN.equals(r.follow)) {
           String said =
@@ -486,9 +489,9 @@ class InvestEngineTest {
     assertThat(ENGINE.invest.remarks(c)).hasSize(1);
   }
 
-  /** 크게 하면 판돈이 두 배고 직원이 사장 말을 덜 듣는다. 지켜보면 놓친 돈이 남는다 (#323, decisions.md 260번). */
+  /** 크게 하면 판돈이 두 배고 직원이 사장 말을 덜 듣는다 (#323, decisions.md 260번). */
   @Test
-  void 크게_하면_판돈이_두_배고_지켜보면_놓친_돈이_남는다() {
+  void 크게_하면_판돈이_두_배고_사장_말을_덜_듣는다() {
     int bossSmall = 0;
     int bossBig = 0;
     for (long seed = 0; seed < 300; seed++) {
@@ -507,16 +510,6 @@ class InvestEngineTest {
       bossBig += InvestEngine.BOSS.equals(b.follow) ? 1 : 0;
     }
     assertThat(bossBig).as("크게 하면 사장 말을 덜 듣는다").isLessThan(bossSmall);
-
-    CompanyState hold = company(1, stats(50, 50, 50, 50));
-    assertThatThrownBy(
-            () -> ENGINE.invest.decide(hold, InvestEngine.HOLD, true, new HashSeededRandom(1)))
-        .isInstanceOf(InvalidRequestException.class);
-    ENGINE.invest.decide(hold, InvestEngine.HOLD, false, new HashSeededRandom(1));
-    assertThat(hold.invest.missed).as("지켜봤으면 놓친 돈").isPositive();
-    CompanyState bought = company(1, stats(50, 50, 50, 50));
-    ENGINE.invest.decide(bought, InvestEngine.BUY, new HashSeededRandom(1));
-    assertThat(bought.invest.missed).isNull();
   }
 
   /**
