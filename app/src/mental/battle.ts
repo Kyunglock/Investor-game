@@ -96,6 +96,7 @@ import {
   pierceOf,
   SLOW_FACTOR,
   SLOW_SECONDS,
+  WEAPON_TRAITS,
   weaponDamage,
 } from './weaponEffects'
 
@@ -233,6 +234,10 @@ type Bullet = Phaser.Physics.Arcade.Image & {
   /** 꼬리를 남기는 간격(ms): 무기마다 다르다 (#563). 마지막으로 남긴 때. */
   trailMs: number
   trailAt?: number
+  /** 쏜 자리와 날아갈 수 있는 거리(px, #587). 끝없으면 Infinity. */
+  fromX: number
+  fromY: number
+  range: number
 }
 /** 데미지 숫자 한 칸: 합칠 때 다시 튀게 하는 크기 트윈. */
 type DamageText = Phaser.GameObjects.Text & { punch: Phaser.Tweens.Tween | null }
@@ -252,6 +257,8 @@ interface Mate {
   caster: MagicCaster
   aim: number
   lastFire: number
+  /** 재장전 전까지 쏜 탄 수 (#587, 리볼버). */
+  shots: number
   /** 합류할 때 위에서 떨어지는 높이(px). 트윈이 0으로 줄인다. */
   drop: number
 }
@@ -499,6 +506,8 @@ class BattleScene extends Phaser.Scene {
   private kills = 0
   private elapsed = 0
   private lastFire = 0
+  /** 사장냥이 쏜 탄 수(재장전, #587). */
+  private heroShots = 0
   private lastSpawn = 0
   private invulnUntil = 0
   private lastHud = 0
@@ -714,6 +723,12 @@ class BattleScene extends Phaser.Scene {
         this.slow(enemy, SLOW_FACTOR, SLOW_SECONDS)
       }
       this.hit(enemy, shot.damage, angle, shot.crit ? 'crit' : 'bullet')
+      // 산탄총은 맞은 적을 밀어낸다 (#587). 보스·매도벽은 밀리지 않는다.
+      const push = WEAPON_TRAITS[kind].knockback
+      if (push > 0 && !enemy.boss && !enemy.cell && !enemy.dying) {
+        enemy.kbx += Math.cos(angle) * push
+        enemy.kby += Math.sin(angle) * push
+      }
       if (bullet.splashRadius > 0) {
         this.splash(bx, by, bullet.splashRadius, bullet.splashDamage, enemy)
       }
@@ -913,6 +928,7 @@ class BattleScene extends Phaser.Scene {
       aim: this.aim,
       // 사장냥과 번갈아 쏘게 연사 간격 안에서 조금씩 어긋나게 시작한다.
       lastFire: this.lastFire + (this.loadout.fireMs * (i + 1)) / (MATE_LOOKS.length + 1),
+      shots: 0,
       drop: this.reducedMotion ? 0 : -150,
     }
     this.mates.push(mate)
@@ -2224,12 +2240,20 @@ class BattleScene extends Phaser.Scene {
     const style = FIRE_STYLES[kind]
     // 무기마다 쏘는 방식 (#563): 총은 겨눈 쪽(aim)을 보고, 탄만 흩어진다(기관단총).
     const base = aimWithJitter(kind, aim, Math.random())
+    // 재장전 (#587): 탄창을 다 쓰면 재장전 시간만큼 다음 한 발이 늦어진다(lastFire를 미래로 민다).
+    const traits = WEAPON_TRAITS[kind]
+    const reload = (shots: number) =>
+      traits.magazine && shots % traits.magazine === 0 ? traits.reloadMs : 0
     if (mate) {
-      mate.lastFire = now
+      mate.shots++
+      mate.lastFire = now + reload(mate.shots)
       mate.aim = aim
       this.damageStats.mateShots++
     } else {
-      this.lastFire = now
+      this.heroShots++
+      const wait = reload(this.heroShots)
+      this.lastFire = now + wait
+      if (wait > 0) this.pop(p.x, p.y - 70, '장전!', '#ffd84d', 16)
       // 총소리는 사장냥 것만: 넷이 다 내면 뭉개지고 오디오 노드가 쌓인다.
       sfx.shot(kind)
       this.aim = aim
@@ -2279,6 +2303,9 @@ class BattleScene extends Phaser.Scene {
     b.splashDamage = stats.splashDamage
     b.pierce = pierceOf(kind)
     b.hitList = []
+    b.fromX = m.x
+    b.fromY = m.y
+    b.range = traits.range == null ? Number.POSITIVE_INFINITY : this.view().h * traits.range
     b.setDisplaySize(
       BULLET_W * stats.scale * style.length,
       BULLET_H * stats.scale * style.width,
@@ -2987,7 +3014,10 @@ class BattleScene extends Phaser.Scene {
         // 공격 판도 맡은 과녁을 겨눈다 (#593). 과녁이 없으면 제 머리 위(벽).
         const want = this.angleFrom(b.x, b.y, target)
         if (m.drop === 0 && time - m.lastFire > this.loadout.fireMs) {
-          this.fire(time, want, m)
+          const ms = this.loadout.fireMs
+          for (let n = 0; time - m.lastFire > ms && n < 3; n++) {
+            this.fire(Math.max(m.lastFire + ms, time - ms), want, m)
+          }
         } else {
           m.aim += Phaser.Math.Angle.Wrap(want - m.aim) * turn
         }
@@ -3104,8 +3134,10 @@ class BattleScene extends Phaser.Scene {
       this.targetAt = time
     }
     const target = this.targets[0] ?? null
-    if (target && time - this.lastFire > fireMs) {
-      this.fire(time, this.angleFrom(p.x, p.y, target))
+    // 프레임이 연사 간격보다 길면(느린 휴대폰) 밀린 만큼 한 프레임에 몇 발 더 쏜다(최대 3, #587): 아니면 연사가 빠른 무기(기관단총)일수록
+    // 프레임 수에 묶여 제 연사를 못 냈다.
+    for (let n = 0; target && time - this.lastFire > fireMs && n < 3; n++) {
+      this.fire(Math.max(this.lastFire + fireMs, time - fireMs), this.angleFrom(p.x, p.y, target))
     }
     this.updateMates(time, dt, this.targets)
     // 마법은 총알과 따로 제 주기에 스스로 나간다 (392번).
@@ -3262,7 +3294,8 @@ class BattleScene extends Phaser.Scene {
       if (!b.active) {
         continue
       }
-      if (time > b.life) {
+      // 사거리 (#587): 기관단총·산탄총은 정해진 거리만큼 날아가면 사라진다.
+      if (time > b.life || (b.x - b.fromX) ** 2 + (b.y - b.fromY) ** 2 > b.range * b.range) {
         b.disableBody(true, true)
         continue
       }

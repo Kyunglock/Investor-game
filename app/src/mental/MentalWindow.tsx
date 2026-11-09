@@ -32,7 +32,7 @@ import { GunSprite } from './GunSprite'
 import { BATTLE_SECONDS } from './genres'
 import { StagePortrait } from './StagePortrait'
 import { GRADE_BADGE } from './WeaponInventory'
-import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from './weaponEffects'
+import { FIRE_STYLE_NAMES, WEAPON_EFFECTS, WEAPON_TRAITS } from './weaponEffects'
 import './stage.css'
 import { type Hero, heroOf, type Weapon } from './hero'
 
@@ -197,14 +197,14 @@ export function MentalWindow({
             <header className="stage-heading">
               <span className="stage-eyebrow">
                 {entry.kind === 'stage'
-                  ? '멘탈 스테이지'
+                  ? '멘탈 수련'
                   : entry.kind === 'invest'
                     ? `종목 회의 뒤 전투 · 세기 ${entry.level}`
                     : 'EX 도전 · 분기에 한 번'}
               </span>
               <h2>
                 {entry.kind === 'stage'
-                  ? `스테이지 ${stageLabel(entry.stage, perChapter)}`
+                  ? `수련 ${stageLabel(entry.stage, perChapter)}`
                   : entry.kind === 'invest'
                     ? mode === 'assault'
                       ? '매도벽을 돌파하라'
@@ -403,7 +403,7 @@ export function MentalWindow({
 const LEVEL_NAMES: Record<string, string> = {
   news: '기사',
   big: '크게',
-  stage: '스테이지',
+  stage: '수련',
   building: '건물',
   year: '연차',
   upgrade: '강화',
@@ -513,7 +513,8 @@ function EquippedWeapon({ weapon, onChange }: { weapon: Weapon; onChange: () => 
           </span>
         </b>
         <span className="block text-[11px] text-muted">
-          {FIRE_STYLE_NAMES[weapon.kind]} · {WEAPON_EFFECTS[weapon.kind].name}
+          {FIRE_STYLE_NAMES[weapon.kind]} · {WEAPON_EFFECTS[weapon.kind].name} · 강점{' '}
+          {WEAPON_TRAITS[weapon.kind].strength}
         </span>
       </span>
       <button

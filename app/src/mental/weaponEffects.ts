@@ -9,23 +9,83 @@ export interface WeaponEffect {
 }
 
 export const WEAPON_EFFECTS: Record<WeaponKind, WeaponEffect> = {
-  pistol: { name: '기본', desc: '특별한 효과 없이 고르게 쏜다' },
-  revolver: { name: '치명타', desc: '30% 확률로 두 배 피해' },
-  smg: { name: '둔화', desc: '맞은 적이 1초 동안 40% 느려진다' },
-  shotgun: { name: '폭발', desc: '맞은 자리에서 터져 주변 적도 휘말린다' },
-  rifle: { name: '관통', desc: '탄이 적을 뚫고 지나가 셋까지 맞힌다' },
+  pistol: { name: '기본', desc: '사거리 끝없이, 재장전 없이 고르게 쏜다' },
+  revolver: { name: '치명타', desc: '40% 확률로 세 배 피해 · 여섯 발마다 재장전' },
+  smg: { name: '둔화', desc: '맞은 적이 1초 동안 40% 느려진다 · 탄이 흩어지고 멀리 못 간다' },
+  shotgun: { name: '폭발', desc: '맞은 자리에서 크게 터지고 적을 밀어낸다 · 가까이만 닿는다' },
+  rifle: { name: '관통', desc: '탄이 적을 뚫고 지나가 넷까지 맞힌다 · 가장 느리게 쏜다' },
+}
+
+/**
+ * 무기마다 극명한 강점과 약점 (decisions.md 430번, #587): 잘 맞는 상황(떼 적·보스·빠른 적·가까이 붙은 적)과 안 맞는 상황이 갈린다. 공격·연사 간격은
+ * 서버(`mental.weapons`)가, 사거리·재장전·밀어내기 같은 한 판 안의 규칙은 앱이 가진다(376번처럼).
+ */
+export interface WeaponTraits {
+  /** 강점·약점 한 줄: 인벤토리·출전 화면에 보인다. */
+  strength: string
+  weakness: string
+  /** 탄이 날아가는 거리(화면 높이의 비율). null이면 끝없이(화면 밖까지). */
+  range: number | null
+  /** 한 번에 쏘는 탄 수와 다 쏘면 쉬는 재장전 시간(ms). magazine이 null이면 재장전이 없다. */
+  magazine: number | null
+  reloadMs: number
+  /** 맞은 적을 밀어내는 빠르기(px/s). 0이면 밀지 않는다. 보스·매도벽은 밀리지 않는다. */
+  knockback: number
+}
+
+export const WEAPON_TRAITS: Record<WeaponKind, WeaponTraits> = {
+  pistol: {
+    strength: '고르게 강함 · 사거리 끝없음',
+    weakness: '특별히 센 상황이 없다',
+    range: null,
+    magazine: null,
+    reloadMs: 0,
+    knockback: 0,
+  },
+  revolver: {
+    strength: '보스·단단한 적에 강함',
+    weakness: '떼로 오면 막기 어렵다',
+    range: null,
+    magazine: 6,
+    reloadMs: 1000,
+    knockback: 0,
+  },
+  smg: {
+    strength: '떼 적·빠른 적에 강함',
+    weakness: '보스·멀리 있는 적에 약함',
+    range: 0.85,
+    magazine: null,
+    reloadMs: 0,
+    knockback: 0,
+  },
+  shotgun: {
+    strength: '가까이 몰린 적에 강함',
+    weakness: '멀리 있는 적을 못 맞힌다',
+    range: 0.6,
+    magazine: null,
+    reloadMs: 0,
+    knockback: 520,
+  },
+  rifle: {
+    strength: '줄지은 적·보스에 강함',
+    weakness: '가까이 붙은 떼에 약함',
+    range: null,
+    magazine: null,
+    reloadMs: 0,
+    knockback: 0,
+  },
 }
 
 /** 리볼버 치명타: 확률과 배율. */
-export const CRIT_CHANCE = 0.3
-export const CRIT_MULT = 2
+export const CRIT_CHANCE = 0.4
+export const CRIT_MULT = 3
 
 /** 기관단총 둔화: 이어지는 시간(초)과 그동안의 빠르기 배율. */
 export const SLOW_SECONDS = 1
 export const SLOW_FACTOR = 0.6
 
 /** 소총 관통: 탄 하나가 맞히는 적의 수. 다른 무기는 하나. */
-export const RIFLE_PIERCE = 3
+export const RIFLE_PIERCE = 4
 
 /** 한 발의 피해와 치명타 여부. roll은 0~1 난수(테스트에서 고정). */
 export function weaponDamage(kind: WeaponKind, damage: number, roll: number) {
@@ -85,7 +145,7 @@ export const FIRE_STYLES: Record<WeaponKind, FireStyle> = {
     sparks: 0,
   },
   smg: {
-    jitter: 0.09,
+    jitter: 0.08,
     length: 0.8,
     width: 0.72,
     tint: 0xfff1a8,

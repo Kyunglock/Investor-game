@@ -17,6 +17,7 @@ import { useCountUp } from '../useCountUp'
 import { ActionBar } from '../Windows'
 import { BattleUpgrades } from './BattleUpgrades'
 import { growthProgress } from './model'
+import { StreetLife } from './StreetLife'
 import { ToyCityStreet } from './ToyCityStreet'
 
 export function ToyIcon({
@@ -61,6 +62,7 @@ export function ToyCityHome({ company }: { company: Company }) {
   const sheet = useAppUi((s) => s.sheet)
   // 확장 뒤 처음 사무실을 볼 때만 새 라이벌이 지어진다 (415번): 다른 탭으로 가면 지운다.
   const rivalRise = useAppUi((s) => s.rivalRise)
+  const battle = useAppUi((s) => s.battle)
   useEffect(() => () => useAppUi.getState().setRivalRise(null), [])
   const panel = sheet?.kind === 'toy' ? sheet.panel : null
   const setPanel = (panel: ToyPanel | null) => {
@@ -99,6 +101,8 @@ export function ToyCityHome({ company }: { company: Company }) {
         rise={rivalRise}
         onRiseDone={() => useAppUi.getState().setRivalRise(null)}
       />
+      {/* 살아 있는 거리 (#597): 날씨·계절·구름·행인. 전투·확장 연출 중에는 멈춘다. */}
+      <StreetLife company={company} paused={Boolean(battle) || Boolean(rivalRise)} />
       <div className="toy-growth">
         <div
           role="progressbar"
@@ -224,7 +228,7 @@ export function ToyCityHome({ company }: { company: Company }) {
         </button>
         <button type="button" className="toy-menu" onClick={() => setPanel('stage')}>
           <ToyIcon kind="heart" />
-          <span>멘탈</span>
+          <span>멘탈 수련</span>
         </button>
         <button
           type="button"
@@ -264,7 +268,7 @@ export function ToyCityHome({ company }: { company: Company }) {
             panel === 'upgrade'
               ? '다음 단계로 성장하기'
               : panel === 'stage'
-                ? '멘탈 스테이지'
+                ? '멘탈 수련'
                 : panel === 'battle'
                   ? '자본으로 전투 강화'
                   : panel === 'weapons'
@@ -415,7 +419,7 @@ function StageSelect({ company, disabled }: { company: Company; disabled: boolea
       <p className="text-sm text-muted" data-testid="stage-bonus">
         {chapter > openChapter
           ? `챕터 ${chapter - 1} 보스를 깨면 열린다`
-          : `깬 최고 스테이지만큼 매 분기 직원들이 더 번다: 지금 +${stages.bonusPercent}%`}
+          : `마친 최고 수련만큼 매 분기 직원들이 더 번다: 지금 +${stages.bonusPercent}%`}
       </p>
       <ol className="toy-stage-grid" data-testid="stage-grid">
         {numbers.map((n) => {
@@ -431,7 +435,7 @@ function StageSelect({ company, disabled }: { company: Company; disabled: boolea
                 data-testid="stage"
                 data-stage={n}
                 data-stars={stars}
-                aria-label={`스테이지 ${stageLabel(n, per)}${locked ? ' 잠김' : ''}${boss ? ' 보스' : ''} 별 ${stars}개`}
+                aria-label={`수련 ${stageLabel(n, per)}${locked ? ' 잠김' : ''}${boss ? ' 보스' : ''} 별 ${stars}개`}
                 onClick={() => start({ kind: 'stage', stage: n })}
               >
                 <b>{locked ? '🔒' : stageLabel(n, per)}</b>

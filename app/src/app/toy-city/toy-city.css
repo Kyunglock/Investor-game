@@ -1038,3 +1038,171 @@
   opacity: 0.45;
   box-shadow: none;
 }
+
+/*
+ * 살아 있는 거리 (#597, decisions.md 432번): 거리 그림 위의 HTML 층. 움직임은 모두 transform·opacity라 합성 층에서 돈다(#586과 같은 원칙).
+ * 날씨는 지난 분기 손익, 계절은 지금 분기. 앱이 뒤로 가거나 확장 연출 중이면 멈춘다(data-paused).
+ */
+.toy-life {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.toy-life[data-paused] > *,
+.toy-life[data-paused] > *::before {
+  animation-play-state: paused;
+}
+.toy-life-sky {
+  position: absolute;
+  inset: 0 0 45%;
+  opacity: 0;
+  transition: opacity 1.2s;
+}
+.toy-life[data-weather="rain"] .toy-life-sky {
+  background: linear-gradient(#5f7a96, transparent);
+  opacity: 0.45;
+}
+.toy-life[data-weather="storm"] .toy-life-sky {
+  background: linear-gradient(#2e3a52, transparent);
+  opacity: 0.7;
+  animation: toy-life-flash 7s 2s infinite;
+}
+@keyframes toy-life-flash {
+  0%,
+  92%,
+  96%,
+  100% {
+    opacity: 0.7;
+  }
+  93%,
+  95% {
+    opacity: 0.15;
+  }
+}
+.toy-life-sun {
+  position: absolute;
+  left: 8%;
+  top: 22%;
+  width: 120px;
+  height: 120px;
+  margin: -40px 0 0 -30px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff6c8aa, #fff6c800 70%);
+  animation: toy-life-glow 4s ease-in-out infinite;
+}
+@keyframes toy-life-glow {
+  50% {
+    transform: scale(1.18);
+    opacity: 0.7;
+  }
+}
+.toy-life-cloud {
+  position: absolute;
+  left: 0;
+  width: 92px;
+  height: 22px;
+  border-radius: 11px;
+  background: #ffffffaa;
+  will-change: transform;
+  animation: toy-life-cloud var(--dur) linear var(--delay) infinite;
+}
+.toy-life-cloud::before {
+  content: "";
+  position: absolute;
+  left: 22px;
+  top: -12px;
+  width: 40px;
+  height: 26px;
+  border-radius: 50%;
+  background: inherit;
+}
+.toy-life[data-weather="rain"] .toy-life-cloud,
+.toy-life[data-weather="storm"] .toy-life-cloud {
+  background: #8d9db3cc;
+}
+@keyframes toy-life-cloud {
+  from {
+    transform: translateX(-120px);
+  }
+  to {
+    transform: translateX(520px);
+  }
+}
+/* 행인·차: 길(아래쪽) 위를 옆으로 지나간다. 짝수는 오른쪽으로, 홀수는 왼쪽으로. */
+.toy-life-walker {
+  position: absolute;
+  left: 0;
+  bottom: var(--lane);
+  font-size: 22px;
+  line-height: 1;
+  will-change: transform;
+  animation: toy-life-walk var(--dur) linear var(--delay) infinite;
+}
+.toy-life-walker.is-left {
+  animation-name: toy-life-walk-left;
+}
+@keyframes toy-life-walk {
+  from {
+    transform: translateX(-40px) scaleX(-1);
+  }
+  to {
+    transform: translateX(440px) scaleX(-1);
+  }
+}
+@keyframes toy-life-walk-left {
+  from {
+    transform: translateX(440px);
+  }
+  to {
+    transform: translateX(-40px);
+  }
+}
+.toy-life-fall {
+  position: absolute;
+  top: 0;
+  font-size: 13px;
+  opacity: 0.85;
+  will-change: transform;
+  animation: toy-life-fall var(--dur) linear var(--delay) infinite;
+}
+@keyframes toy-life-fall {
+  from {
+    transform: translate(0, -20px) rotate(0deg);
+  }
+  50% {
+    transform: translate(22px, 45vh) rotate(160deg);
+  }
+  to {
+    transform: translate(-8px, 92vh) rotate(320deg);
+  }
+}
+.toy-life-rain {
+  position: absolute;
+  top: 0;
+  width: 2px;
+  height: 18px;
+  border-radius: 1px;
+  background: #dcebffcc;
+  will-change: transform;
+  animation: toy-life-rain var(--dur) linear var(--delay) infinite;
+}
+@keyframes toy-life-rain {
+  from {
+    transform: translate(0, -30px) rotate(12deg);
+  }
+  to {
+    transform: translate(-40px, 95vh) rotate(12deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toy-life {
+    display: none;
+  }
+}
+
+/* 확장 연출 중(phase 0~3)에는 늘 도는 고양이 숨쉬기를 멈춰 연출에 프레임을 몰아준다 (#586). 축하 때 뛰는 것은 그대로. */
+.toy-street:is([data-phase="0"], [data-phase="1"], [data-phase="2"]) .toy-cat {
+  animation-play-state: paused;
+}

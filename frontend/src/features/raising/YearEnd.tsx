@@ -172,7 +172,7 @@ export function Ledger({
           >
             <Row
               label={`${num()} 스테이지 보상`}
-              note="멘탈 스테이지를 처음 깨고 받은 돈"
+              note="멘탈 수련을 처음 마치고 받은 돈"
               amount={s.rewards}
             />
           </li>

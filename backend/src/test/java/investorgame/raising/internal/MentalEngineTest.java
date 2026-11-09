@@ -158,7 +158,7 @@ class MentalEngineTest {
       assertThat(t.mentalBonusPercent).isEqualTo(rule.maxBonus());
       assertThat(t.mentalCard).isEqualTo("1-10");
       assertThat(t.lines).anyMatch(l -> l.contains("1-10") && l.contains("+30%"));
-      assertThat(p.lines).noneMatch(l -> l.contains("멘탈 스테이지"));
+      assertThat(p.lines).noneMatch(l -> l.contains("멘탈 수련"));
       CompanyState.Result pr = p.results.getFirst();
       CompanyState.Result tr = t.results.getFirst();
       // 둘 다 손이 뒤집히지 않고 맞힌 분기만 견준다: 같은 난수라 버는 몫만 다르다.

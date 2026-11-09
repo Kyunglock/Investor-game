@@ -1,7 +1,7 @@
 import type { Company, Grade } from '@web/api/client'
 import { money } from '@web/features/game/labels'
 import { LADDER } from '@web/features/raising/grades'
-import { type CSSProperties, useEffect, useId, useRef, useState } from 'react'
+import { type CSSProperties, memo, useEffect, useId, useRef, useState } from 'react'
 import { useFx } from '../../fx/fx'
 import { haptic } from '../../fx/haptics'
 import { sfx } from '../../fx/sound'
@@ -20,7 +20,11 @@ import {
 
 export type OfficeTransition = { before: Grade; after: Grade; beforeSeats: number }
 
-function Rival({
+/**
+ * 라이벌 건물. 창문 격자는 한 장의 무늬(<pattern>)로 칠한다 (#586): 창문 하나하나를 그리면 큰 건물에서 요소가 백 개를 넘어, 카메라가 움직이는 동안
+ * 매 프레임 다시 그리는 값이 컸다. 같은 값이면 다시 그리지 않는다(memo).
+ */
+const Rival = memo(function Rival({
   x,
   height,
   width,
@@ -61,24 +65,74 @@ function Rival({
           <RivalSign x={x} width={width} height={height} name={name} />
         </g>
       )}
-      {Array.from({ length: Math.floor((height - 60) / 36) }, (_, r) =>
-        Array.from({ length: Math.max(3, Math.floor(width / 32)) }, (_, col) => (
-          <rect
-            // biome-ignore lint/suspicious/noArrayIndexKey: 고정된 건물 창문 좌표다.
-            key={`${r}-${col}`}
-            x={x + 10 + col * ((width - 20) / Math.max(3, Math.floor(width / 32)))}
-            y={602 - height + r * 36}
-            width={(width - 20) / Math.max(3, Math.floor(width / 32)) - 8}
-            height="22"
-            rx="3"
-            fill={(r + col) % 3 ? '#97b5c9' : '#ffdc8f'}
-          />
-        )),
-      )}
+      <RivalWindows x={x} width={width} height={height} />
       <rect x={x + width / 2 - 11} y="537" width="22" height="23" fill="#829bc4" />
     </g>
   )
+})
+
+/** 라이벌 창문: 줄마다 36px, 칸 폭은 건물 폭에 맞춘다. 불 켜진 창(노랑)은 (줄 + 칸) % 3 == 0 자리라 3×3 무늬 한 장이 되풀이된다. */
+function RivalWindows({ x, width, height }: { x: number; width: number; height: number }) {
+  const id = useId().replaceAll(':', '')
+  const rows = Math.floor((height - 60) / 36)
+  const cols = Math.max(3, Math.floor(width / 32))
+  const step = (width - 20) / cols
+  if (rows <= 0) return null
+  const top = 602 - height
+  return (
+    <>
+      <defs>
+        <pattern
+          id={id}
+          patternUnits="userSpaceOnUse"
+          x={x + 10}
+          y={top}
+          width={step * 3}
+          height={108}
+        >
+          {[0, 1, 2].map((r) =>
+            [0, 1, 2].map((c) => (
+              <rect
+                key={`${r}-${c}`}
+                x={c * step}
+                y={r * 36}
+                width={step - 8}
+                height="22"
+                rx="3"
+                fill={(r + c) % 3 ? '#97b5c9' : '#ffdc8f'}
+              />
+            )),
+          )}
+        </pattern>
+      </defs>
+      <rect x={x + 10} y={top} width={step * cols} height={rows * 36} fill={`url(#${id})`} />
+    </>
+  )
 }
+
+/** 거리 뒤 배경(먼 건물·땅): 바뀌지 않으니 한 번 그리고 다시 그리지 않는다 (#586). */
+const Backdrop = memo(function Backdrop() {
+  return (
+    <>
+      <g fill="#9ec7dc">
+        {Array.from({ length: 17 }, (_, i) => (
+          <rect
+            // biome-ignore lint/suspicious/noArrayIndexKey: 고정된 배경 건물 좌표다.
+            key={`sky-${i}`}
+            x={-500 + i * 75}
+            y={260 + ((i * 47) % 130)}
+            width="50"
+            height="330"
+            rx="4"
+          />
+        ))}
+      </g>
+      <path d="M-700 555h1800v500H-700" fill="#b9d8c6" />
+      <path d="M-700 609h1800v446H-700" fill="#a0c7b8" />
+      <path d="M-700 620h1800" stroke="#c8dfd0" strokeWidth="5" />
+    </>
+  )
+})
 
 function RivalSign({
   x,
@@ -424,7 +478,10 @@ export function ToyCityStreet({
   useEffect(() => {
     report.current?.(phase)
     // 색종이는 화면 맨 위 효과 층(FxLayer)에 터뜨린다: 캔버스라 조각이 많아도 가볍고, 움직임 줄이기면 그리지 않는다.
-    if (phase === 3) useFx.getState().burstAt(roof.current, 'confetti')
+    // 축하 순간에 소리·진동·SVG 연출·색종이가 한 프레임에 몰리지 않게 색종이는 조금 뒤에 (#586).
+    if (phase !== 3) return
+    const t = setTimeout(() => useFx.getState().burstAt(roof.current, 'confetti'), 140)
+    return () => clearTimeout(t)
   }, [phase])
   const side = expansionSide(transition?.after ?? company.grade)
   const dir = side === 'left' ? -1 : 1
@@ -525,22 +582,7 @@ export function ToyCityStreet({
       >
         {/* 옆 건물이 밀려날 때 땅이 들썩인다 (399번). */}
         <g className={hitRival ? 'toy-ground toy-quake' : 'toy-ground'}>
-          <g fill="#9ec7dc">
-            {Array.from({ length: 17 }, (_, i) => (
-              <rect
-                // biome-ignore lint/suspicious/noArrayIndexKey: 고정된 배경 건물 좌표다.
-                key={`sky-${i}`}
-                x={-500 + i * 75}
-                y={260 + ((i * 47) % 130)}
-                width="50"
-                height="330"
-                rx="4"
-              />
-            ))}
-          </g>
-          <path d="M-700 555h1800v500H-700" fill="#b9d8c6" />
-          <path d="M-700 609h1800v446H-700" fill="#a0c7b8" />
-          <path d="M-700 620h1800" stroke="#c8dfd0" strokeWidth="5" />
+          <Backdrop />
         </g>
         {celebrate && <Rays x={after.center} y={560 - after.height * 0.6} k={k} />}
         {/* 밀어낸 쪽은 축하·끝 모습에 빈자리다 (415번). 사무실로 돌아오면 그 자리에 새 라이벌이 지어진다. */}
