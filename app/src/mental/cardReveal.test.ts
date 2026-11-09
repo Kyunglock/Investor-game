@@ -22,23 +22,19 @@ describe('카드 펼치기 (decisions.md 393번)', () => {
     expect(ready).toBe(steps[2].face + READY_GAP_MS)
   })
 
-  it('등급이 높을수록 뜸과 여운이 길고, 전설은 1초 넘게 뜸을 들인다', () => {
-    const order = ['N', 'R', 'SR', 'UR'] as const
-    for (let i = 1; i < order.length; i++) {
-      expect(REVEAL_TIMING[order[i]].tease).toBeGreaterThan(REVEAL_TIMING[order[i - 1]].tease)
-      expect(REVEAL_TIMING[order[i]].after).toBeGreaterThan(REVEAL_TIMING[order[i - 1]].after)
+  it('펼치는 시간(뜸·뒤집기·여운)은 모든 등급이 같다 (#562·#585)', () => {
+    for (const g of ['N', 'R', 'SR', 'UR'] as const) {
+      expect(REVEAL_TIMING[g].tease).toBe(REVEAL_TIMING.N.tease)
+      expect(REVEAL_TIMING[g].turn).toBe(TURN_MS)
+      expect(REVEAL_TIMING[g].after).toBe(REVEAL_TIMING.N.after)
     }
-    expect(REVEAL_TIMING.UR.tease).toBeGreaterThanOrEqual(1000)
+    expect(revealPlan(['UR', 'SR', 'UR']).ready).toBe(revealPlan(['N', 'N', 'N']).ready)
   })
 
-  it('뒤집히는 속도는 모든 등급이 같다 (#562)', () => {
-    for (const g of ['N', 'R', 'SR', 'UR'] as const) expect(REVEAL_TIMING[g].turn).toBe(TURN_MS)
-  })
-
-  it('일반 석 장은 2초 안에, 전설이 섞여도 4초 안에 고를 수 있다', () => {
-    expect(revealPlan(['N', 'N', 'N']).ready).toBeLessThan(2000)
-    expect(revealPlan(['UR', 'SR', 'UR']).ready).toBeLessThan(5500)
-    expect(revealPlan(['N', 'R', 'UR']).ready).toBeLessThan(4000)
+  it('빠르다: 한 장 0.3초, 석 장이 깔리고 1.7초 안에 고를 수 있다', () => {
+    const t = REVEAL_TIMING.N
+    expect(t.tease + t.turn + t.after).toBeLessThanOrEqual(300)
+    expect(revealPlan(['N', 'R', 'UR']).ready).toBeLessThan(1700)
   })
 
   it('건너뛸 때는 남은 카드 가운데 가장 높은 등급의 연출을 낸다', () => {

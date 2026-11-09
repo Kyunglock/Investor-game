@@ -2,7 +2,7 @@ import type { CardGrade } from './cards'
 
 /**
  * 카드 펼치기 순서 (decisions.md 393번): 석 장이 뒷면으로 쿵 깔리고, 왼쪽부터 한 장씩 뒤집힌다. 뒤집히기 직전에 카드가 떨리며 빛이 새어 나오고(뜸),
- * 등급이 높을수록 뜸이 길고 펼친 뒤 여운도 길다. 전설은 한참 멈췄다가 터진다. 다 펼친 뒤 READY_GAP_MS가 지나야 고를 수 있다(빨리 두 번 눌러 모르고
+ * 펼치는 시간(뜸·뒤집기·여운)은 모든 등급이 같고 빠르다(420번): 등급 차이는 펼친 순간의 연출(빛·반짝이·빛기둥·폭발, 금빛 테두리)로만 낸다. 다 펼친 뒤 READY_GAP_MS가 지나야 고를 수 있다(빨리 두 번 눌러 모르고
  * 고르지 않게). 시각은 모두 카드 고르기가 뜬 때부터의 ms다. 그리는 것은 MentalWindow.tsx의 CardPick과 stage.css.
  */
 
@@ -13,12 +13,21 @@ export const TURN_MS = 140
 /** 다 펼친 뒤, 또는 눌러 건너뛴 뒤 고를 수 있게 되기까지. */
 export const READY_GAP_MS = 280
 
-/** 등급마다: 뒤집기 전 떨리는 뜸, 뒤집기 앞 절반, 펼친 뒤 다음 카드까지의 여운. 뒤집히는 속도(turn)는 모든 등급이 같다(#562): 등급 차이는 뜸·여운·연출로만 낸다. */
+/** 뒤집기 전 떨리는 뜸. */
+export const TEASE_MS = 80
+/** 펼친 뒤 다음 카드까지의 여운. */
+export const AFTER_MS = 80
+
+/**
+ * 등급마다: 뒤집기 전 떨리는 뜸, 뒤집기 앞 절반, 펼친 뒤 다음 카드까지의 여운. 모든 등급이 같다(#562에서 turn, 420번·#585에서 뜸·여운까지): 한 장
+ * 0.3초. 등급 차이는 연출로만 낸다.
+ */
+const SAME = { tease: TEASE_MS, turn: TURN_MS, after: AFTER_MS }
 export const REVEAL_TIMING: Record<CardGrade, { tease: number; turn: number; after: number }> = {
-  N: { tease: 150, turn: TURN_MS, after: 130 },
-  R: { tease: 300, turn: TURN_MS, after: 260 },
-  SR: { tease: 480, turn: TURN_MS, after: 420 },
-  UR: { tease: 1100, turn: TURN_MS, after: 700 },
+  N: SAME,
+  R: SAME,
+  SR: SAME,
+  UR: SAME,
 }
 
 export interface RevealStep {
