@@ -108,6 +108,10 @@ export function InvestWindow({
   }
   const label = (code: string) => invest.options.find((o) => o.code === code)?.label ?? code
   const loss = Boolean(outcome && outcome.total < 0)
+  // 회의 뒤 전투를 마치고 돌아왔으면 (#591, decisions.md 428번) 회의 결과 전체 대신 전투 결과 한 장과 분기 넘기기만 보인다.
+  const battleDone = Boolean(
+    onBattle && outcome?.battle && outcome.battle.stars != null && outcome.battle.after != null,
+  )
   return (
     <Overlay>
       <section
@@ -327,7 +331,24 @@ export function InvestWindow({
             </>
           )}
 
-          {outcome && !hold && (
+          {outcome && battleDone && (
+            <div className="mt-3 grid gap-3" data-testid="invest-battle-summary">
+              <p className="text-[13px] text-muted" data-testid="invest-context">
+                {invest.stockName} · {invest.title}
+              </p>
+              <BattleAfter outcome={outcome} big />
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onSettle}
+                className="animate-reveal min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
+                data-testid="invest-settle"
+              >
+                {year}년 차 {quarter}분기 넘기기 →
+              </button>
+            </div>
+          )}
+          {outcome && !hold && !battleDone && (
             <div className="mt-3" data-testid="invest-outcome">
               <p className="text-[13px] text-muted" data-testid="invest-context">
                 {invest.stockName} · {invest.title}
@@ -577,10 +598,52 @@ function DebateFold({
   )
 }
 
-/** 회의 뒤 전투를 했으면 전·후 회의 손익 (decisions.md 414번). */
-function BattleAfter({ outcome }: { outcome: NonNullable<Invest['outcome']> }) {
+/** 공격 판 별에 따른 회의 수익 배율 (414번 ②). */
+const ASSAULT_MULT = [1, 1.2, 1.5, 2] as const
+
+/**
+ * 회의 뒤 전투를 했으면 전·후 회의 손익 (decisions.md 414번). big이면 전투를 마치고 돌아온 회의 창의 결과 한 장(#591): 별·배율·회의 손익 전→후를
+ * 크게.
+ */
+function BattleAfter({
+  outcome,
+  big = false,
+}: {
+  outcome: NonNullable<Invest['outcome']>
+  big?: boolean
+}) {
   const b = outcome.battle
   if (!b || b.stars == null || b.after == null) return null
+  if (big) {
+    const assault = b.mode === 'ASSAULT'
+    return (
+      <section
+        className="animate-reveal rounded-lg border-2 border-line bg-card px-3 py-4 text-center"
+        data-testid="invest-battle-after"
+        data-mode={b.mode}
+      >
+        <p className="font-bold text-[18px]">{assault ? '매도벽 돌파 결과' : '멘탈 방어 결과'}</p>
+        <p
+          className="mt-1 text-[40px] leading-none tracking-[6px]"
+          role="img"
+          aria-label={`별 ${b.stars}개`}
+        >
+          <span className="text-[#ffc83d]">{'★'.repeat(b.stars)}</span>
+          <span className="text-ink/20">{'★'.repeat(3 - b.stars)}</span>
+        </p>
+        {assault && (
+          <p className="mt-2 font-bold text-[26px] text-up">
+            회의 수익 ×{ASSAULT_MULT[Math.min(3, b.stars)]}
+          </p>
+        )}
+        <p className="mt-2 text-[13px] text-muted">회의 손익</p>
+        <p className="font-bold font-mono-num text-[22px]">
+          {signed(b.before)} →{' '}
+          <b className={b.after >= 0 ? 'text-up' : 'text-down'}>{signed(b.after)}</b>
+        </p>
+      </section>
+    )
+  }
   return (
     <p
       className="animate-reveal mt-2 rounded bg-line-soft px-3 py-2 text-center text-[14px]"
