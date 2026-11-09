@@ -5,6 +5,14 @@ type Employee = Company['employees'][number]
 type Desk = Company['desks'][number]
 export type Seat = { employeeId: number; desk: string | null }
 
+/** 한 자리(데스크·팀)에 앉힐 수 있는 최대 인원 (decisions.md 440번). 서버(CompanyEngine.DESK_CAP)와 같다. */
+export const DESK_CAP = 8
+
+/** 그 자리에 지금 앉은 사람 수. */
+export function seatedCount(company: Company, desk: string): number {
+  return company.employees.filter((e) => e.desk === desk).length
+}
+
 /** 자리별로 보는 능력치의 등급 순위. 높을수록 맞다. 화면에는 숫자가 없어 등급으로 견준다. */
 function score(e: Employee, stat: string): number {
   return LADDER.indexOf(e.grades[stat] as Grade)
@@ -40,9 +48,16 @@ export function rankDesks(company: Company, e: Employee): Desk[] {
     .map((x) => x.d)
 }
 
-/** 그 직원에게 가장 맞는 돈 굴리는 자리. 같으면 자리 순서가 앞인 쪽. */
-function bestTrading(e: Employee, trading: Desk[], omen = false): { desk: Desk; score: number } {
-  return trading
+/** 그 직원에게 가장 맞는 돈 굴리는 자리. 같으면 자리 순서가 앞인 쪽. 다 찬 자리(DESK_CAP)는 뺀다. 남은 자리가 없으면 null. */
+function bestTrading(
+  e: Employee,
+  trading: Desk[],
+  omen = false,
+  count?: Map<string, number>,
+): { desk: Desk; score: number } | null {
+  const open = trading.filter((d) => (count?.get(d.code) ?? 0) < DESK_CAP)
+  if (open.length === 0) return null
+  return open
     .map((desk) => ({ desk, score: tradeScore(e, desk, omen) }))
     .reduce((a, b) => (b.score > a.score ? b : a))
 }
@@ -51,7 +66,7 @@ function bestTrading(e: Employee, trading: Desk[], omen = false): { desk: Desk; 
  * 자동 배치 (decisions.md 232·233번). 돈을 굴리는 자리부터 채운다: 가장 맞는 돈 굴리는 자리가 가장 잘 맞는 두 사람을 그 자리에 앉힌다(섹터 데스크 여섯과
  * 단타 데스크 가운데, 같은 자리에 둘이 앉아도 된다). 판돈은 돈을 굴리는 사람끼리 나누므로 셋째부터는 돕는 자리가 낫다: 종목 발굴팀(안목, 종목 회의를 연다,
  * 267번), 폭락 조짐이 있으면 리스크 관리 팀(줏대)을 리서치 팀(안목)보다 먼저, 그다음 인사팀(안목). 그래도 사람과 자리가 남으면 돈을 굴리는 자리에 더 앉힌다.
- * 자리가 모자라면 남은 사람은 쉰다.
+ * 자리가 모자라면 남은 사람은 쉰다. 한 자리에는 DESK_CAP명까지만 앉힌다(440번).
  */
 export function autoPlace(company: Company): Seat[] {
   const desks = new Map(company.desks.map((d) => [d.code, d]))
@@ -60,21 +75,23 @@ export function autoPlace(company: Company): Seat[] {
   const omen = Boolean(company.meeting?.omen)
   const left = [...company.employees]
   const placed = new Map<number, string>()
+  const count = new Map<string, number>()
   let seats = company.seats
 
   const take = (e: Employee, desk: string) => {
     placed.set(e.id, desk)
+    count.set(desk, (count.get(desk) ?? 0) + 1)
     left.splice(left.indexOf(e), 1)
     seats--
   }
   const best = (stat: string) =>
     left.reduce<Employee | null>((a, e) => (!a || score(e, stat) > score(a, stat) ? e : a), null)
-  const trade = (count: number) => {
-    const ranked = [...left].sort(
-      (a, b) => bestTrading(b, trading, omen).score - bestTrading(a, trading, omen).score,
-    )
-    for (const e of ranked.slice(0, Math.min(count, seats))) {
-      take(e, bestTrading(e, trading, omen).desk.code)
+  const trade = (n: number) => {
+    const scoreOf = (e: Employee) => bestTrading(e, trading, omen)?.score ?? -1
+    const ranked = [...left].sort((a, b) => scoreOf(b) - scoreOf(a))
+    for (const e of ranked.slice(0, Math.min(n, seats))) {
+      const best = bestTrading(e, trading, omen, count)
+      if (best) take(e, best.desk.code)
     }
   }
 

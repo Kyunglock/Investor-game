@@ -92,6 +92,28 @@ class CompanyEngineTest {
   }
 
   @Test
+  void 한_자리에는_여덟_명까지_앉힐_수_있다() {
+    // 440번: 자리 수가 넉넉해도 한 데스크에는 DESK_CAP(8)명까지.
+    CompanyState company = open(1, stats(50, 50, 50, 50), 1_000_000_000_000L);
+    assertThat(ENGINE.seats(company)).isGreaterThan(CompanyEngine.DESK_CAP);
+    Map<Integer, String> nine = new HashMap<>();
+    for (int i = 0; i < CompanyEngine.DESK_CAP; i++) {
+      ENGINE.hire(company, stats(50, 50, 50, 50));
+    }
+    for (CompanyState.Employee e : company.employees) {
+      nine.put(e.id, "day");
+    }
+    assertThat(nine).hasSize(CompanyEngine.DESK_CAP + 1);
+    assertThatThrownBy(() -> ENGINE.place(company, nine))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("8명까지");
+    nine.put(company.employees.getLast().id, "bio");
+    ENGINE.place(company, nine);
+    assertThat(company.employees.stream().filter(e -> "day".equals(e.desk)).count())
+        .isEqualTo(CompanyEngine.DESK_CAP);
+  }
+
+  @Test
   /** 매각을 뺐다(236번): 세 해가 지나도 회사는 끝나지 않고 다음 해 연초 회의가 온다. */
   void 세_해를_넘겨도_회사가_이어지고_같은_시드면_같은_결과다() {
     long[] capitals = new long[2];
