@@ -4,12 +4,12 @@ import { holdCharge, holdDelay, queuedCost, type UpgradeKind, UpgradeQueue } fro
 
 /** 서버 흉내: 단계마다 4%씩 오르는 값, 자본이 닿는 데까지만 산다. */
 function fakeServer(capital: number) {
-  const levels: Record<UpgradeKind, number> = { damage: 0, fire: 0 }
+  const levels: Record<UpgradeKind, number> = { damage: 0, fire: 0, hp: 0 }
   const price = (level: number) => Math.round(1_000_000 * 1.04 ** level)
   const company = () =>
     ({
       capital,
-      battleUpgrades: (['damage', 'fire'] as const).map((kind) => ({
+      battleUpgrades: (['damage', 'fire', 'hp'] as const).map((kind) => ({
         kind,
         level: levels[kind],
         price: price(levels[kind]),

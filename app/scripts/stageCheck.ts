@@ -12,6 +12,221 @@ const browser = await chromium.launch({
   channel: process.env.BROWSER_CHANNEL || undefined,
   executablePath: process.env.CHROMIUM_PATH || undefined,
 })
+
+/**
+ * 공격 판 (decisions.md 413번, #573): 매도벽을 부수고 올라가는 판을 강화 단계별로 자동으로 돌린다. 개발 서버의 전투 모듈을 바로 불러 앱 위에 띄우고
+ * (회의 → 전투 흐름은 앱이 맡는다), 개발 서버에서만 내보내는 `window.__mentalAutopilot`으로 사장냥이 약한 칸 밑으로 가고 바로 위 물량을 비키게 한다.
+ * 카드는 자동 선택(401번 autoPickIndex)과 같은 규칙으로 고르고 Math.random은 씨앗을 고정한다. 강할수록 빨리 깨는지(걸린 시간이 줄어드는지) 본다.
+ * STAGE_CHECK=assault면 이것만 돈다. ASSAULT_SHOTS에 벽 앞·벽이 무너진 뒤·보스 장면을 찍는다(없으면 shots/stage).
+ */
+async function assaultCheck() {
+  const shots = process.env.ASSAULT_SHOTS ?? out
+  mkdirSync(shots, { recursive: true })
+  type Row = {
+    label: string
+    level: number
+    win: boolean
+    reason: string
+    seconds: number
+    wallsBroken: number
+    wallsTotal: number
+    mentalLeft: number
+    maxMental: number
+    stars: number
+    kills: number
+  }
+  const configs = [
+    { label: '강화 없음', level: 1, bonus: 0, shoot: false },
+    { label: '공격·연사 +50%', level: 1, bonus: 50, shoot: true },
+    { label: '공격·연사 +200%', level: 1, bonus: 200, shoot: false },
+    { label: '강화 없음 · 판 level 2', level: 2, bonus: 0, shoot: false },
+    { label: '공격·연사 +200% · 판 level 3', level: 3, bonus: 200, shoot: false },
+    { label: '강화 없음 · 판 level 4', level: 4, bonus: 0, shoot: false },
+  ]
+  // 판마다 새 페이지(찍는 판만 배율 2).
+  const only = process.env.ASSAULT_ONLY
+  const picked = only
+    ? configs.filter((c) => only.split(',').includes(String(configs.indexOf(c))))
+    : configs
+  const run = async (config: (typeof configs)[number]): Promise<Row> => {
+    const started = Date.now()
+    const page = await browser.newPage({
+      viewport: { width: 390, height: 844 },
+      deviceScaleFactor: config.shoot ? 2 : 1,
+    })
+    const errors: string[] = []
+    page.on('pageerror', (e) => errors.push(e.message))
+    await page.addInitScript(() => localStorage.setItem('investor-game.tutorial', 'done'))
+    await page.route(/\/api\/(company|sessions)(\/|$|\?)/, (route) =>
+      route.fulfill({ json: { ...structuredClone(fixture), invest: null, lastSettlement: null } }),
+    )
+    await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5182/app/')
+    await page.evaluate(
+      async ({ level, bonus, salt }) => {
+        // 같은 판이 같게 돌도록 씨앗을 고정한 난수(mulberry32).
+        let seed = 573 + level * 7 + bonus + salt * 1000
+        Math.random = () => {
+          seed = (seed + 0x6d2b79f5) | 0
+          let t = Math.imul(seed ^ (seed >>> 15), 1 | seed)
+          t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+        }
+        const base = '/app/src/mental/'
+        const [{ startBattle }, cards, { autoPickIndex }, { assaultSpec }, { DEFAULT_WEAPON }] =
+          await Promise.all([
+            import(/* @vite-ignore */ `${base}battle.ts`),
+            import(/* @vite-ignore */ `${base}cards.ts`),
+            import(/* @vite-ignore */ `${base}cardReveal.ts`),
+            import(/* @vite-ignore */ `${base}assault.ts`),
+            import(/* @vite-ignore */ `${base}hero.ts`),
+          ])
+        const host = document.createElement('div')
+        host.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#bfe8cf'
+        document.body.append(host)
+        const w = window as unknown as Record<string, unknown>
+        let loadout = cards.loadoutOf(DEFAULT_WEAPON, [
+          { kind: 'damage', bonusPercent: bonus },
+          { kind: 'fire', bonusPercent: bonus },
+        ])
+        w.__assaultCards = [] as string[]
+        const handle = startBattle(host, {
+          mode: 'assault',
+          assault: assaultSpec(level),
+          genre: 'DEFENSE',
+          hero: { name: '사장냥', weapon: DEFAULT_WEAPON, upgrades: [] },
+          loadout,
+          onHud: (hud: unknown) => {
+            w.__assaultHud = hud
+          },
+          onBanner: () => {},
+          onHurt: () => {},
+          onLevelUp: () => {
+            // 카드 자동 선택(401번)과 같은 규칙: 가장 높은 등급, 같으면 마법 > 고양이 > 일반.
+            setTimeout(() => {
+              const offer = cards.pickCards({ ...loadout })
+              const card = offer[autoPickIndex(offer)]
+              ;(w.__assaultCards as string[]).push(card.code)
+              loadout = cards.applyCard(loadout, card)
+              handle.applyLoadout(loadout)
+            }, 0)
+          },
+          onDone: (outcome: unknown) => {
+            w.__assaultOutcome = outcome
+          },
+        })
+        ;(w.__mentalAutopilot as (on: boolean) => void)(true)
+      },
+      { ...config, salt: Number(process.env.ASSAULT_SEED ?? 0) },
+    )
+    type Hud = {
+      boss: { hp: number } | null
+      mental: number
+      secondsLeft: number
+      level: number
+      assault: { stuck: boolean; wallsBroken: number }
+    }
+    let lastLog = -1
+    const state = () =>
+      page.evaluate(() => {
+        const w = window as unknown as Record<string, unknown>
+        return {
+          hud: w.__assaultHud as Hud | undefined,
+          outcome: w.__assaultOutcome as Row | undefined,
+        }
+      })
+    const seen = { wall: false, collapse: false, boss: false }
+    let broken = 0
+    // 실제 시간으로 돌리되 전투를 SPEED배로(개발 서버에서만 내보내는 __mentalSpeed: 물리는 같은 고정 걸음을 더 밟는다). 찍는 판은 덜 빠르게.
+    const speed = config.shoot ? 1.5 : Number(process.env.ASSAULT_SPEED ?? 3)
+    let sped = false
+    for (let t = 0; t < 400_000 / speed; t += 100) {
+      await page.waitForTimeout(100)
+      const { hud, outcome } = await state()
+      if (outcome) break
+      if (process.env.ASSAULT_DEBUG && hud && 120 - hud.secondsLeft >= lastLog + 5) {
+        lastLog = 120 - hud.secondsLeft
+        console.log(
+          `  ${config.label} t=${lastLog} walls=${hud.assault.wallsBroken} stuck=${hud.assault.stuck} mental=${hud.mental} lv=${hud.level} boss=${hud.boss ? hud.boss.hp.toFixed(2) : '-'}`,
+        )
+      }
+      if (hud && !sped) {
+        sped = true
+        await page.evaluate(
+          (k) => (window as unknown as { __mentalSpeed: (k: number) => void }).__mentalSpeed(k),
+          speed,
+        )
+      }
+      if (!config.shoot || !hud?.assault) continue
+      // 화면 셋: 첫 벽 앞에 멈춰 쏘는 중, 벽이 막 무너진 뒤(치고 오르는 중), 큰손 보스.
+      if (!seen.wall && hud.assault.stuck && hud.assault.wallsBroken === 0 && t > 3000) {
+        seen.wall = true
+        await page.screenshot({ path: resolve(shots, 'assault-wall.png') })
+      }
+      if (!seen.collapse && hud.assault.wallsBroken > broken && hud.assault.wallsBroken >= 2) {
+        seen.collapse = true
+        await page.screenshot({ path: resolve(shots, 'assault-collapse.png') })
+      }
+      broken = hud.assault.wallsBroken
+      if (!seen.boss && hud.boss) {
+        seen.boss = true
+        await page.waitForTimeout(2500)
+        await page.screenshot({ path: resolve(shots, 'assault-boss.png') })
+      }
+    }
+    await page.waitForTimeout(1500)
+    const { outcome } = await state()
+    assert(outcome, `${config.label}: battle ends`)
+    for (const key of [
+      'win',
+      'stars',
+      'seconds',
+      'mentalLeft',
+      'maxMental',
+      'kills',
+      'wallsBroken',
+      'wallsTotal',
+    ])
+      assert(key in outcome, `outcome has ${key}`)
+    const picked = await page.evaluate(
+      () => (window as unknown as { __assaultCards: string[] }).__assaultCards,
+    )
+    console.log(
+      `assault ${config.label}: ${outcome.win ? 'clear' : outcome.reason} ${outcome.seconds}s, cards ${picked.join(',')} (${Math.round((Date.now() - started) / 1000)}s real)`,
+    )
+    assert.deepEqual(errors, [], `${config.label}: no page errors`)
+    await page.close()
+    return { ...outcome, label: config.label, level: config.level }
+  }
+  // 한 판씩 차례로: 여럿을 함께 돌리면 프레임이 떨어져 자동 조종이 굼떠지고 결과가 흔들렸다.
+  const rows: Row[] = []
+  for (const config of picked) rows.push(await run(config))
+  if (only) return
+  console.log('| 설정 | 판 level | 깼나 | 걸린 시간(초) | 부순 벽 | 남은 멘탈 | 별 | 처치 |')
+  console.log('|---|---|---|---|---|---|---|---|')
+  for (const r of rows)
+    console.log(
+      `| ${r.label} | ${r.level} | ${r.win ? '깼다' : `못 깸(${r.reason})`} | ${r.seconds} | ${r.wallsBroken}/${r.wallsTotal} | ${r.mentalLeft}/${r.maxMental} | ${r.stars} | ${r.kills} |`,
+    )
+  // 강할수록 빨리: 같은 판(level 1)에서 가장 센 강화(+200%)는 강화 없음·+50%보다 빨리, 절반 시간 안에 깬다. +50%와 강화 없음은 카드(마법·고양이) 운과
+  // 프레임에 따라 몇십 초씩 흔들려 순서만 알린다.
+  const [none, half, triple] = rows
+  assert(triple.win, '+200% clears')
+  assert(triple.seconds < half.seconds || !half.win, 'stronger clears faster (+200% < +50%)')
+  assert(triple.seconds < none.seconds || !none.win, 'stronger clears faster (+200% < none)')
+  assert(triple.seconds <= 60, '+200% clears within half the time')
+  if (none.win && half.seconds > none.seconds)
+    console.log(`note: +50% (${half.seconds}s) slower than none (${none.seconds}s) this run`)
+}
+
+if (process.env.STAGE_CHECK === 'assault') {
+  try {
+    await assaultCheck()
+    console.log('PASS: assault (sell walls) at several upgrade levels')
+  } finally {
+    await browser.close()
+  }
+  process.exit(0)
+}
 try {
   const page = await browser.newPage({
     viewport: { width: 390, height: 844 },
@@ -409,8 +624,9 @@ try {
   await page.getByTestId('mental-quit-yes').click()
   await expect(page.getByTestId('battle-canvas')).toHaveCount(0)
   assert.deepEqual(errors, [])
+  await assaultCheck()
   console.log(
-    'PASS: stage pick, lobby, equipment, real Phaser/sprites, first card pause, face-down cards revealed one by one and skip, HUD layout, damage numbers, magic Lv.1-3, mates 2-4 cats shooting, aiming, wall gauge damage, pause/resume, loss, failed save/retry, both genres, asset load retry, quit cleanup',
+    'PASS: assault sell walls by upgrade level, stage pick, lobby, equipment, real Phaser/sprites, first card pause, face-down cards revealed one by one and skip, HUD layout, damage numbers, magic Lv.1-3, mates 2-4 cats shooting, aiming, wall gauge damage, pause/resume, loss, failed save/retry, both genres, asset load retry, quit cleanup',
   )
 } finally {
   await browser.close()

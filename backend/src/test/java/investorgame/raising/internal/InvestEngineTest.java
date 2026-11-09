@@ -192,6 +192,50 @@ class InvestEngineTest {
     assertThat(holder.invest.total).isZero();
   }
 
+  /** 회의 뒤 전투 (414번, #573): 틀렸으면 디펜스로 손실을 줄이고, 맞혔으면 공격 판으로 수익을 키운다. 한 회의에 한 번, 분기를 넘기면 끝난다. */
+  @Test
+  void 회의_뒤_전투는_틀리면_손실을_줄이고_맞히면_수익을_키운다() {
+    CompanyState winner = company(3, stats(50, 100, 100, 100));
+    ENGINE.invest.decide(winner, right(winner), new HashSeededRandom(3));
+    assertThat(InvestEngine.battleMode(winner.invest)).isEqualTo(InvestEngine.ASSAULT);
+    assertThatThrownBy(() -> ENGINE.invest.battle(winner, InvestEngine.DEFENSE, 2))
+        .as("모드는 회의 결과로 정해진다")
+        .isInstanceOf(InvalidRequestException.class);
+    long won = winner.invest.total;
+    long before = winner.capital;
+    assertThat(ENGINE.invest.battle(winner, InvestEngine.ASSAULT, 2)).isEqualTo(won / 2);
+    assertThat(winner.capital).isEqualTo(before + won / 2);
+    assertThatThrownBy(() -> ENGINE.invest.battle(winner, InvestEngine.ASSAULT, 3))
+        .as("한 회의에 한 번")
+        .isInstanceOf(InvalidRequestException.class);
+
+    CompanyState loser = company(3, stats(50, 100, 100, 100));
+    ENGINE.invest.decide(loser, wrong(loser), new HashSeededRandom(3));
+    assertThat(InvestEngine.battleMode(loser.invest)).isEqualTo(InvestEngine.DEFENSE);
+    long lost = loser.invest.total;
+    assertThat(ENGINE.invest.battle(loser, InvestEngine.DEFENSE, 1))
+        .as("별 하나면 잃은 몫의 70%만 남긴다")
+        .isEqualTo(lost * 70 / 100 - lost);
+
+    CompanyState perfect = company(3, stats(50, 100, 100, 100));
+    ENGINE.invest.decide(perfect, wrong(perfect), new HashSeededRandom(3));
+    long stake = perfect.invest.stake;
+    assertThat(ENGINE.invest.battle(perfect, InvestEngine.DEFENSE, 3))
+        .as("별 셋이면 손실을 없애고 판돈의 10%를 번다")
+        .isEqualTo(-perfect.invest.total + stake / 10);
+
+    CompanyState holder = company(3, stats(50, 100, 100, 100));
+    ENGINE.invest.decide(holder, InvestEngine.HOLD, new HashSeededRandom(3));
+    assertThat(InvestEngine.battleMode(holder.invest)).as("지켜봤으면 전투가 없다").isNull();
+
+    CompanyState late = company(3, stats(50, 100, 100, 100));
+    ENGINE.invest.decide(late, wrong(late), new HashSeededRandom(3));
+    ENGINE.settleQuarter(late, new HashSeededRandom(3));
+    assertThat(InvestEngine.battleOpen(late.invest)).as("분기를 넘기면 끝난다").isFalse();
+    assertThatThrownBy(() -> ENGINE.invest.battle(late, InvestEngine.DEFENSE, 3))
+        .isInstanceOf(InvalidRequestException.class);
+  }
+
   /** 용기가 낮은 단타 직원은 "제가 알아서 할게요" 하고 제 판단대로 한다. 안목이 좋으면 제멋대로 한 쪽이 맞을 때가 많다. */
   @Test
   void 고집_센_직원은_제멋대로_하고_맞을_때도_있다() {

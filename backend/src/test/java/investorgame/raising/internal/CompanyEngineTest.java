@@ -781,9 +781,12 @@ class CompanyEngineTest {
     assertThat(ENGINE.interested(hired)).isTrue();
   }
 
-  /** 망한 회사 (decisions.md 247·312번): 자본이 0이면 닫고 사재로 다음 회사를 차린다. 채용권·도감은 따라온다. */
+  /**
+   * 망한 회사 (decisions.md 247·312번, 411번에서 바뀜): 판돈·수수료가 건물의 값에서 나와 자본 0은 더 이상 망함이 아니다. 닫은 회사만 사재로 다음
+   * 회사를 차린다. 채용권·도감은 따라온다.
+   */
   @Test
-  void 자본이_바닥나면_망한_회사가_되고_사재로_다음_회사를_차린다() {
+  void 자본이_바닥나도_망하지_않고_닫은_회사만_사재로_다음_회사를_차린다() {
     CompanyState fresh = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
     assertThat(ENGINE.broke(fresh)).isFalse();
     assertThat(ENGINE.brokeNotice(fresh)).isNull();
@@ -794,7 +797,10 @@ class CompanyEngineTest {
     assertThat(ENGINE.broke(poor)).as("사람은 채용권으로 뽑으니 돈이 적어도 망하지 않는다").isFalse();
     ENGINE.hire(poor, stats(50, 50, 50, 50));
     poor.capital = 0;
-    assertThat(ENGINE.broke(poor)).as("자본 0은 수수료도 판돈도 0이다").isTrue();
+    assertThat(ENGINE.broke(poor)).as("자본 0이어도 건물에서 다시 번다 (411번)").isFalse();
+    assertThat(ENGINE.stakeOf(poor, 1)).as("판돈은 건물의 값에서 나온다").isPositive();
+    poor.closed = true;
+    assertThat(ENGINE.broke(poor)).isTrue();
     assertThat(ENGINE.brokeNotice(poor)).isNotBlank();
 
     poor.met = 7;
@@ -834,7 +840,7 @@ class CompanyEngineTest {
       if (company.capital == 0) {
         emptiedYears++;
         assertThat(settlement.lines).contains(emptied);
-        assertThat(ENGINE.broke(company)).isTrue();
+        assertThat(ENGINE.broke(company)).as("자본 0은 망함이 아니다 (411번)").isFalse();
       } else {
         assertThat(settlement.lines).doesNotContain(emptied);
       }
@@ -950,6 +956,7 @@ class CompanyEngineTest {
   @Test
   void 망해서_다시_차린_회사는_지난_회사와_다른_시대로_연다() {
     CompanyState broke = ENGINE.open(new HashSeededRandom(1), 0);
+    broke.closed = true;
     CompanyState next = ENGINE.restart(broke, new HashSeededRandom(2), ENGINE.openingCapital());
     assertThat(next.era).isNotEqualTo(broke.era);
   }
@@ -1035,16 +1042,28 @@ class CompanyEngineTest {
     assertThat(e.stats.get("patience")).as("그다음 인내심").isEqualTo(40);
   }
 
+  /** 판돈은 자본이 아니라 건물의 값이다 (411번): 자본을 전투 강화·이사에 다 써도 버는 양이 그대로다. */
   @Test
-  void 판돈이_없던_직원은_폭락장을_버틴_것으로_치지_않는다() {
-    CompanyState company = open(1, stats(95, 95, 95, 95), 0);
-    company.employees.getFirst().stats.put("luck", 95);
-    company.employees.getFirst().desk = "day";
-    company.phase = CompanyEngine.CRASH;
-    company.invest = null;
-    ENGINE.settle(company, new HashSeededRandom(1));
-    assertThat(company.employees.getFirst().experience).isZero();
-    assertThat(company.employees.getFirst().rank).isZero();
+  void 판돈과_수수료는_자본이_아니라_건물의_값에서_나온다() {
+    CompanyState rich = open(1, stats(50, 50, 50, 50), 100_000_000);
+    CompanyState spent = open(1, stats(50, 50, 50, 50), 1_000);
+    assertThat(ENGINE.grade(rich)).isEqualTo("F");
+    assertThat(ENGINE.buildingValue(spent)).as("반지하는 사장의 사재").isEqualTo(ENGINE.openingCapital());
+    assertThat(ENGINE.stakeOf(spent, 2)).isEqualTo(ENGINE.stakeOf(rich, 2)).isPositive();
+    spent.building = "C";
+    assertThat(ENGINE.buildingValue(spent)).as("C 건물은 그 띠의 값").isEqualTo(1_000_000_000L);
+    assertThat(ENGINE.stakeOf(spent, 1))
+        .isEqualTo(1_000_000_000L * PROPERTIES.stakePercent() / 100);
+  }
+
+  /** 잃을 자본이 모자라면 잃은 몫들을 같은 비율로 줄여 장부가 맞는다 (411번). */
+  @Test
+  void 잃을_자본이_모자라면_손실을_가진_만큼으로_줄인다() {
+    assertThat(CompanyEngine.capLosses(1_000, new long[] {300, -200})).containsExactly(300, -200);
+    assertThat(CompanyEngine.capLosses(100, new long[] {50, -400, -200}))
+        .as("합이 −100이 되게 손실만 깎는다")
+        .containsExactly(50, -100, -50);
+    assertThat(CompanyEngine.capLosses(0, new long[] {-7, -3})).containsExactly(0, 0);
   }
 
   @Test

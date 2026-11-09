@@ -90,9 +90,10 @@ raising:
       # 벌고, 한 등급 높은 직원은 두 배 가까이 번다(A·XX는 시뮬레이션으로 조금 올렸다). 종목 회의는 meeting-percent(388번)
       desk-gain-percent:
         [100, 77.3, 61.6, 44.4, 28.5, 17, 8.65, 4.28, 2.07, 0.96, 0.53, 0.2, 0.092, 0.042, 0.019]
-    # 수수료 매출 자본의 3%, 판돈은 자본 전부(자본을 넘지 않음). 경제 맞춤 (decisions.md 226·244번, EconomySimulationTest)
+    # 수수료 매출 건물의 값의 3%, 판돈은 건물의 값 × stake-percent%. 건물의 값은 지금 건물 등급의 자본 띠(반지하는 base-capital)라 자본을 강화·이사에
+    # 써도 버는 양이 줄지 않는다(decisions.md 411번, #567, 전에는 자본 전부 226·244번). 자본이 겹겹이 불지 않는 만큼 100 → 180으로 올려 성장 속도를 맞췄다
     fee-bp: 300
-    stake-percent: 100
+    stake-percent: 180
     decisions: 4
     omen-percent: 75
     false-omen-percent: 15
@@ -191,12 +192,12 @@ raising:
         ex-max-tickets: 3
       # 자본으로 사는 전투 강화 (decisions.md 367·394번): 공격력·연사를 단계마다 step-percent%씩, 최대 단계 없이 끝없이. 값은 처음
       # base-price(1b)이고 단계마다 price-growth-percent%씩 오른다(100단계째 약 0.5억, 200단계째 약 25억). 한 요청에 max-batch단계까지 묶어 산다.
-      # 멘탈 전투의 바탕 수치(무기 위)에 영구로 붙는다. 고양이 속도 강화는 394번에서 뺐다
+      # 멘탈 전투의 바탕 수치(무기 위)에 영구로 붙는다. 고양이 속도 강화는 394번에서 뺐다. 체력(hp)은 최대 멘탈을 단계마다 step-percent%씩 (410번)
       upgrades:
         base-price: 1000000
         price-growth-percent: 4
         max-batch: 100
-        step-percent: { damage: 1, fire: 1 }
+        step-percent: { damage: 1, fire: 1, hp: 1 }
     # 등급 효과 (decisions.md 289·387번): 종합 등급마다 분기 데스크에서 맞혔을 때 버는 몫에 gain-percent%를 더 얹는다. 등급마다 두 배라
     # F 1.1배 · S 7.4배 · SS 13.8배 · SSS 26.6배를 벌고, SSS 위(X~GOD)도 단계마다 두 배다. 종목 회의 손익에는 붙지 않는다.
     # 한 해 자리에서 일하면 growth-percent% 확률로 가장 낮은 능력치(운 빼고)가 한 띠 오른다. 낮은 등급일수록 잘 크고 높을수록 더디다. SSS 위는 실전 경험으로 오른다.
@@ -252,8 +253,9 @@ raising:
       big-miss-percent: 150
       big-stubborn-percent: 150
       # 회의 손익 배율 (decisions.md 281번): 종목 회의 한 번의 판돈 = 분기 몫 × 이 비율(%) × scale.meeting-percent^등급. 전에는 100이라 회의가 가벼웠다.
-      # 회의 수익률을 넓히며(388번) 300 → 260, 벽은 수익률 대신 판돈에(BalanceSimulationTest·EconomySimulationTest)
-      meeting-stake-percent: 260
+      # 회의 수익률을 넓히며(388번) 300 → 260, 벽은 수익률 대신 판돈에(BalanceSimulationTest·EconomySimulationTest). 411번에서 분기 몫이
+      # 1.8배가 되어 145로(분기 몫 × 비율이 전과 같게)
+      meeting-stake-percent: 145
       # 종목 회의 수익률 (decisions.md 388번): 데스크의 gain-bp·miss-bp와 떼어 낸 회의만의 수익률. 기사의 크기(magnitude)가 콘텐츠의 가장 작은 폭(4%) ~
       # 가장 큰 폭(35%)에서 어디쯤인지(0~1)로 정한다. 맞히면 gain-min ~ gain-max를 gain-power제곱으로(평범하면 수십 %, 대박이면 +300%), 틀리면
       # loss-min ~ loss-max를 곧게, 크게 틀리면 ×big-miss-percent지만 loss-cap(−50%)에서 멈춘다. 직원 등급 효과(387번)는 붙지 않는다
@@ -264,6 +266,12 @@ raising:
         loss-min-bp: 2000
         loss-max-bp: 5000
         loss-cap-bp: 5000
+      # 회의 뒤 전투 (decisions.md 414번, #573): 틀린 쪽에 걸었으면 디펜스로 손실을 줄이고(별 0·1·2·3 → 잃은 몫의 100·70·40·0%를 남긴다, 별 3개면
+      # 판돈의 defense-gain-percent%를 더 번다), 맞힌 쪽이면 공격 판(매도벽)으로 번 몫을 키운다(별 0·1·2·3 → ×1·1.2·1.5·2). 건너뛰면 그대로
+      battle:
+        defense-keep-percent: [100, 70, 40, 0]
+        defense-gain-percent: 10
+        assault-percent: [100, 120, 150, 200]
       # 기사가 얼마나 또렷한가 (decisions.md 241번): 흐릴수록 읽을 때 안목을 깎아 안목 높은 직원끼리도 의견이 갈린다
       clarity:
         - { code: clear, weight: 35, penalty: 0 }

@@ -1,0 +1,376 @@
+/* 인력 관리 "우리 사무실" (decisions.md 412번): 장난감 도시 색(잉크 #343b65, 흰 판·#c5cdec 테·#a5b3ce 그림자, 산호 버튼, 나무 책상 #b98a5a). */
+.staff-office {
+  --office-ink: #343b65;
+  --office-muted: #7a82a8;
+  --office-line: #c5cdec;
+  --office-shadow: #a5b3ce;
+  color: var(--office-ink);
+}
+.office-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.office-top h1 {
+  font-family: var(--font-game);
+  font-size: 22px;
+  line-height: 1.2;
+}
+.office-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.office-badges li {
+  font-size: 12px;
+  background: #fff;
+  border: 1px solid var(--office-line);
+  border-radius: 999px;
+  padding: 3px 10px;
+  color: var(--office-muted);
+  white-space: nowrap;
+}
+.office-empty {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--office-muted);
+}
+.office-rooms {
+  display: grid;
+  gap: 12px;
+}
+.office-room {
+  position: relative;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid var(--office-line);
+  box-shadow: 0 3px 0 var(--office-shadow);
+  overflow: hidden;
+}
+.office-room[data-hot="true"] {
+  border-color: #e9c27a;
+  box-shadow: 0 3px 0 #d9ac5f;
+}
+.office-room-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 12px 0;
+}
+.office-room-head h2 {
+  font-size: 16px;
+  font-weight: 800;
+  min-width: 0;
+}
+.office-hot {
+  color: #e0a530;
+}
+.office-hearts {
+  display: inline-flex;
+  gap: 1px;
+  flex-shrink: 0;
+  font-size: 12px;
+  font-style: normal;
+}
+.office-hearts i {
+  font-style: normal;
+}
+.office-hearts i[data-on="false"] {
+  opacity: 0.22;
+  filter: grayscale(0.4);
+}
+.office-hint {
+  font-size: 12px;
+  color: var(--office-muted);
+}
+.office-room-sub {
+  padding: 1px 12px 0;
+  font-size: 12px;
+  color: var(--office-muted);
+  line-height: 1.45;
+}
+.office-room-sub b {
+  color: var(--office-ink);
+}
+.office-room-sub .office-up {
+  color: #d24b3a;
+}
+.office-room-sub .office-down {
+  color: #3b6fc4;
+}
+
+/* 벽과 바닥, 책상 한 줄에 넷까지 */
+.office-floor,
+.office-lounge-floor {
+  margin: 8px 10px 0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.office-row {
+  position: relative;
+  display: grid;
+  align-items: end;
+  padding: 10px 6px 4px;
+  background: linear-gradient(#f3ead9 0 50%, #e5d2b3 50%);
+}
+.office-row[data-talk="true"] {
+  padding-top: 46px;
+}
+.office-desk {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 24px;
+  height: 13px;
+  border-radius: 4px;
+  background: #b98a5a;
+  box-shadow: 0 4px 0 #8f6640;
+  z-index: 1;
+}
+.office-seat {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 44px;
+  min-height: 80px;
+  border-radius: 10px;
+  color: inherit;
+}
+.office-seat:active {
+  transform: translateY(1px);
+}
+.office-figure {
+  position: relative;
+  display: block;
+  width: 52px;
+  height: 58px;
+}
+.office-cat-svg {
+  display: block;
+  width: 52px;
+  height: 58px;
+}
+.office-bob {
+  display: block;
+  transform-origin: 50% 100%;
+  animation: office-bob 3s ease-in-out infinite;
+}
+@keyframes office-bob {
+  50% {
+    transform: translateY(-2px);
+  }
+}
+.office-monitor {
+  position: absolute;
+  right: -15px;
+  bottom: 12px;
+  width: 20px;
+  height: 14px;
+  border-radius: 3px;
+  background: #46507a;
+  border: 2px solid #343b65;
+  z-index: 2;
+}
+.office-crown {
+  position: absolute;
+  top: -14px;
+  left: 2px;
+  font-size: 15px;
+  line-height: 1;
+  transform: rotate(-12deg);
+  z-index: 2;
+}
+.office-plate {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  min-height: 20px;
+  padding: 0 5px 0 2px;
+  border-radius: 7px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.office-plate > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.office-seat[data-leader="true"] .office-plate {
+  box-shadow: 0 0 0 1.5px #e0a530;
+}
+.office-bubble {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  z-index: 3;
+  padding: 3px 8px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid var(--office-line);
+  box-shadow: 0 2px 0 var(--office-shadow);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.office-bubble::after {
+  content: "";
+  position: absolute;
+  left: 18px;
+  bottom: -5px;
+  width: 8px;
+  height: 8px;
+  background: #fff;
+  border-right: 1px solid var(--office-line);
+  border-bottom: 1px solid var(--office-line);
+  transform: rotate(45deg);
+}
+.office-add {
+  justify-content: center;
+  padding-bottom: 22px;
+}
+.office-add-box {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 48px;
+  border: 2px dashed #b9a988;
+  border-radius: 10px;
+  background: #fffaf0aa;
+  color: #a8946c;
+  font-size: 22px;
+  font-weight: 700;
+}
+.office-room-foot {
+  display: flex;
+  width: 100%;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px 8px;
+  font-size: 13px;
+  text-align: left;
+  color: inherit;
+}
+.office-room-foot:disabled {
+  cursor: default;
+}
+.office-more {
+  flex-shrink: 0;
+  color: #2f9e95;
+  font-weight: 700;
+}
+
+/* 휴게실: 소파에서 조는 동료, 화분과 커피 */
+.office-lounge {
+  margin-top: 12px;
+  padding-bottom: 10px;
+}
+.office-lounge-floor {
+  background: linear-gradient(#e2f0ea 0 50%, #cfe3d6 50%);
+}
+.office-sofa-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) 64px;
+  align-items: end;
+  min-height: 96px;
+  padding: 12px 6px 4px;
+}
+.office-sofa-row[data-talk="true"] {
+  padding-top: 46px;
+}
+.office-sofa {
+  position: absolute;
+  left: 8px;
+  right: 76px;
+  bottom: 24px;
+  height: 30px;
+  border-radius: 12px 12px 6px 6px;
+  background: #fc9a82;
+  box-shadow: 0 5px 0 #d9725c;
+}
+.office-rest .office-figure {
+  z-index: 1;
+}
+.office-zz {
+  position: absolute;
+  top: -6px;
+  right: -12px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--office-muted);
+  animation: office-zz 2.4s ease-in-out infinite;
+}
+@keyframes office-zz {
+  50% {
+    transform: translate(2px, -3px);
+    opacity: 0.6;
+  }
+}
+.office-lounge-deco {
+  grid-column: 4;
+  grid-row: 1;
+  position: relative;
+  align-self: stretch;
+}
+.office-stand {
+  position: absolute;
+  right: 10px;
+  bottom: 4px;
+  width: 38px;
+  height: 46px;
+  border-radius: 6px;
+  background: #9fc7b3;
+  box-shadow: 0 3px 0 #7fa894;
+}
+.office-plant {
+  position: absolute;
+  right: 16px;
+  bottom: 48px;
+  font-size: 22px;
+  line-height: 1;
+}
+.office-coffee {
+  position: absolute;
+  left: -2px;
+  bottom: 8px;
+  font-size: 17px;
+  line-height: 1;
+}
+.office-sofa-empty {
+  position: relative;
+  margin-top: -28px;
+  padding: 0 0 8px 16px;
+  font-size: 12px;
+  color: #6b8a7c;
+}
+
+/* 빈 책상은 낮게: "+" 하나만 놓인다 */
+.office-floor[data-empty="true"] .office-row {
+  padding-top: 6px;
+}
+.office-floor[data-empty="true"] .office-seat {
+  min-height: 64px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .office-bob,
+  .office-zz {
+    animation: none;
+  }
+}

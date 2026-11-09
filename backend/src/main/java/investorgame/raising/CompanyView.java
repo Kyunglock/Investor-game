@@ -114,11 +114,11 @@ public record CompanyView(
   /**
    * 자본으로 사는 전투 강화 하나 (decisions.md 367·394번). 최대 단계는 없다.
    *
-   * @param kind damage(공격력)·fire(연사)
+   * @param kind damage(공격력)·fire(연사)·hp(체력: 최대 멘탈, 410번)
    * @param level 지금 단계(0부터)
    * @param price 다음 단계 값
    * @param priceGrowthPercent 단계마다 값이 오르는 비율(%). 꾹 눌러 연속으로 올릴 때 화면이 다음 값들을 미리 셈한다(정하는 것은 서버)
-   * @param bonusPercent 지금 단계의 효과(%): 공격력은 그만큼 오르고, 연사는 쏘는 빠르기가 그만큼 오른다
+   * @param bonusPercent 지금 단계의 효과(%): 공격력은 그만큼 오르고, 연사는 쏘는 빠르기가 그만큼 오르고, 체력은 최대 멘탈이 그만큼 오른다
    * @param nextBonusPercent 다음 단계의 효과(%)
    */
   public record BattleUpgrade(
@@ -358,7 +358,22 @@ public record CompanyView(
       String credit,
       Integer returnBp,
       int gainBp,
-      int lossBp) {}
+      int lossBp,
+      InvestBattle battle) {}
+
+  /**
+   * 종목 회의 뒤 전투 (decisions.md 414번, #573).
+   *
+   * @param mode DEFENSE(틀린 쪽에 걸어 손실을 줄인다) · ASSAULT(맞힌 쪽이라 매도벽을 부수고 수익을 키운다)
+   * @param level 전투의 세기(1부터): 크게 움직인 종목, 크게 건 회의, 깬 번호 스테이지가 많을수록 높다
+   * @param open 아직 할 수 있다(분기를 넘기면 끝난다)
+   * @param stars 얻은 별. 아직 안 했으면 null
+   * @param bonus 전투로 막은 손실 + 더 번 몫(0 이상). 아직 안 했으면 null
+   * @param before 전투 전 회의 손익
+   * @param after 전투 뒤 회의 손익(= before + bonus). 아직 안 했으면 null
+   */
+  public record InvestBattle(
+      String mode, int level, boolean open, Integer stars, Long bonus, long before, Long after) {}
 
   /**
    * follow: BOSS(사장 말대로)·OWN(제 판단대로, "제가 알아서 할게요")·SWAY(꼬드김).

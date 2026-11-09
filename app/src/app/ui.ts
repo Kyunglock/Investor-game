@@ -7,9 +7,19 @@ export type Tab = 'office' | 'market' | 'staff' | 'issue' | 'record'
 /** 인력 관리의 자리 카드와 메인 화면의 설정·확장·멘탈·전투 강화(367번) 시트. */
 export type ToyPanel = 'upgrade' | 'stage' | 'settings' | 'battle' | 'weapons'
 
-/** 들어갈 멘탈 전투 (decisions.md 369번): 번호 스테이지(전진 모드) 또는 EX 디펜스. */
-export type BattleEntry = { kind: 'stage'; stage: number } | { kind: 'ex' }
-export type Sheet = { kind: 'desk'; desk: string } | { kind: 'toy'; panel: ToyPanel }
+/**
+ * 들어갈 멘탈 전투 (decisions.md 369·414번): 번호 스테이지, EX 디펜스, 또는 종목 회의 뒤 전투(틀렸으면 디펜스, 맞혔으면 공격 판 매도벽 돌파).
+ */
+export type BattleEntry =
+  | { kind: 'stage'; stage: number }
+  | { kind: 'ex' }
+  | { kind: 'invest'; mode: 'DEFENSE' | 'ASSAULT'; level: number }
+/** 인력 관리의 시트 (decisions.md 412번): 팀(desk), 앉은 직원 상세(employee), 휴게실 동료를 보낼 팀 고르기(lounge). */
+export type Sheet =
+  | { kind: 'desk'; desk: string }
+  | { kind: 'employee'; id: number }
+  | { kind: 'lounge'; id: number }
+  | { kind: 'toy'; panel: ToyPanel }
 
 interface UiState {
   tab: Tab

@@ -112,13 +112,22 @@ export function Windows({ company }: { company: Company }) {
             setInvestOpen(false)
             battleOrSettle()
           }}
+          onBattle={(b) => {
+            // 회의 뒤 전투 (414번): 창을 닫고 전투로 갔다가, 끝나면 회의 창으로 돌아와 전·후 손익을 보고 분기를 넘긴다.
+            setInvestOpen(false)
+            useAppUi.getState().startBattle({ kind: 'invest', mode: b.mode, level: b.level })
+          }}
         />
       )}
       {!ended && battle && (
         <MentalWindow
           entry={battle}
           company={company}
-          onDone={() => useAppUi.getState().endBattle()}
+          onDone={() => {
+            const back = battle.kind === 'invest'
+            useAppUi.getState().endBattle()
+            if (back) setInvestOpen(true)
+          }}
         />
       )}
       <AutoCountdown />

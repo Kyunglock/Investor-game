@@ -315,8 +315,13 @@ class MentalEngineTest {
   void 전투_강화는_자본으로_끝없이_사고_한_단계에_1퍼센트씩_값은_완만하게_오른다() {
     CompanyState c = company(5);
     CompanyProperties.Upgrades rule = PROPERTIES.mental().upgrades();
-    assertThat(MentalEngine.UPGRADES).as("고양이 속도 강화는 뺐다 (394번)").containsExactly("damage", "fire");
-    assertThat(rule.stepPercent()).containsEntry("damage", 1).containsEntry("fire", 1);
+    assertThat(MentalEngine.UPGRADES)
+        .as("고양이 속도 강화는 뺐고(394번) 체력을 넣었다(410번)")
+        .containsExactly("damage", "fire", "hp");
+    assertThat(rule.stepPercent())
+        .containsEntry("damage", 1)
+        .containsEntry("fire", 1)
+        .containsEntry("hp", 1);
     long before = c.capital;
     assertThat(ENGINE.mental.buyUpgrade(c, "damage", 1)).isEqualTo(1);
     assertThat(c.capital).isEqualTo(before - rule.basePrice());
@@ -369,6 +374,12 @@ class MentalEngineTest {
         .isInstanceOf(InvalidRequestException.class);
     assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(poor, "armor", 1))
         .isInstanceOf(InvalidRequestException.class);
+
+    // 체력(최대 멘탈)도 같은 규칙으로 산다 (410번).
+    CompanyState tough = company(7);
+    assertThat(ENGINE.mental.buyUpgrade(tough, "hp", 3)).isEqualTo(3);
+    assertThat(view(tough, "hp").bonusPercent()).isEqualTo(3);
+    assertThat(view(tough, "hp").price()).isEqualTo(ENGINE.mental.upgradePrice(3));
   }
 
   @Test
@@ -382,7 +393,7 @@ class MentalEngineTest {
     assertThat(c.capital).as("쓴 돈도 돌려주지 않는다").isEqualTo(5_000_000_000L);
     assertThat(ENGINE.mental.upgradeViews(c))
         .extracting(CompanyView.BattleUpgrade::level)
-        .containsExactly(0, 0);
+        .containsExactly(0, 0, 0);
   }
 
   private static CompanyView.BattleUpgrade view(CompanyState c, String kind) {

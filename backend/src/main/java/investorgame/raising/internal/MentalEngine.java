@@ -28,8 +28,8 @@ class MentalEngine {
   /** 무기 등급, 낮은 것부터 (346번). */
   static final List<String> WEAPON_GRADES = List.of("N", "R", "SR", "UR");
 
-  /** 자본으로 사는 전투 강화 (367·394번): 공격력·연사. 고양이 속도는 394번에서 뺐다. */
-  static final List<String> UPGRADES = List.of("damage", "fire");
+  /** 자본으로 사는 전투 강화 (367·394·410번): 공격력·연사·체력(최대 멘탈). 고양이 속도는 394번에서 뺐다. */
+  static final List<String> UPGRADES = List.of("damage", "fire", "hp");
 
   /** 처음 드는 무기: 일반 권총. */
   static final String PISTOL = "pistol";

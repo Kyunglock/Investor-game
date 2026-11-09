@@ -49,9 +49,6 @@
   font-size: 36px;
   line-height: 1;
 }
-.staff-scene .scene-cover {
-  background: #517e7c;
-}
 .record-scene .scene-cover {
   background: #73759b;
 }
@@ -145,45 +142,6 @@
   color: #fffdf6;
   border-color: #a8bde3;
   box-shadow: 0 3px 0 #7895c5;
-}
-.staff-toolbar {
-  background: #e4eeec;
-  padding: 10px 12px;
-  border-radius: 14px;
-  margin-bottom: 12px;
-}
-.staff-toolbar .btn {
-  background: #527f7c;
-  border-color: #a4c3bd;
-  color: white;
-  box-shadow: 0 3px 0 #719590;
-}
-.staff-desk {
-  position: relative;
-  border-radius: 16px;
-  padding: 15px 13px 15px 17px;
-  border-left: 4px solid #8eaaa9;
-  background: #fffdf8;
-}
-.staff-desk[data-hot="true"] {
-  border-left-color: #dfac5b;
-  background: #fff9e9;
-}
-.staff-desk[data-filled="false"] {
-  border-style: dashed;
-  background: #f5f8f9;
-}
-.staff-desk [data-testid="desk-members"] {
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #e7e9ec;
-  line-height: 1.8;
-}
-.staff-roster {
-  border: 1px solid #c7d0e3;
-  border-radius: 14px;
-  padding: 13px;
-  background: #f4f7fa;
 }
 .record-balance {
   padding: 20px;

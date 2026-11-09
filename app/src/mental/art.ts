@@ -2,7 +2,7 @@ import { CAT_H, CAT_W, GUN_LEN } from '@web/features/game/cat/draw'
 import { BOSS_LOOK } from '@web/features/game/cat/look'
 import type Phaser from 'phaser'
 import { drawStageGun } from './drawStageGun'
-import type { EnemyKind } from './enemies'
+import type { UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import type { Hero } from './hero'
@@ -162,7 +162,7 @@ export function bakeMates(scene: Phaser.Scene, hero: Hero) {
 }
 
 /** 고정된 크기의 8프레임 보행. 그림만 변형하고 충돌 원은 유지한다. */
-export function enemyKey(kind: EnemyKind, frame: number): string {
+export function enemyKey(kind: UnitKind, frame: number): string {
   return `${kind}-${frame}`
 }
 
@@ -408,5 +408,312 @@ export function bakeMagic(scene: Phaser.Scene) {
     c.strokeStyle = '#ffffff66'
     c.lineWidth = 3
     c.stroke()
+  })
+}
+
+// ── 공격 판 (decisions.md 413번, #573): 매도벽 칸·매도 물량 주문서·큰손 보스·파편·속도선
+
+/** 매도벽 칸 텍스처의 크기(px). 화면에서는 칸 크기로 늘여 놓는다. 금 간 정도 0~3. */
+export const CELL_TEX = { w: 60, h: 30 }
+export const CELL_CRACKS = 4
+export const cellKey = (crack: number) => `cell-${crack}`
+
+const ORDER_FONT = '"Jua", "Gowun Dodum", sans-serif'
+
+/** 주문서 한 장: 둥근 종이에 위 띠(종류)와 큰 물량 숫자. dashed면 허매도(점선 테두리, 옅게). */
+function ticket(
+  c: CanvasRenderingContext2D,
+  box: { x: number; y: number; w: number; h: number },
+  look: {
+    fill: string
+    edge: string
+    band: string
+    title: string
+    amount: string
+    dashed?: boolean
+  },
+) {
+  const { x, y, w, h } = box
+  c.save()
+  if (look.dashed) c.globalAlpha = 0.78
+  c.fillStyle = '#10204a33'
+  c.beginPath()
+  c.roundRect(x + 1.5, y + 2.5, w, h, 6)
+  c.fill()
+  c.fillStyle = look.fill
+  c.beginPath()
+  c.roundRect(x, y, w, h, 6)
+  c.fill()
+  c.fillStyle = look.band
+  c.beginPath()
+  c.roundRect(x, y, w, h * 0.38, [6, 6, 0, 0])
+  c.fill()
+  c.lineWidth = 2
+  c.strokeStyle = look.edge
+  if (look.dashed) c.setLineDash([4, 3])
+  c.beginPath()
+  c.roundRect(x, y, w, h, 6)
+  c.stroke()
+  c.setLineDash([])
+  c.textAlign = 'center'
+  c.textBaseline = 'middle'
+  c.fillStyle = '#ffffff'
+  c.font = `${Math.round(h * 0.28)}px ${ORDER_FONT}`
+  c.fillText(look.title, x + w / 2, y + h * 0.2)
+  c.font = `${Math.round(h * 0.44)}px ${ORDER_FONT}`
+  c.lineWidth = 3
+  c.strokeStyle = look.edge
+  c.strokeText(look.amount, x + w / 2, y + h * 0.68)
+  c.fillText(look.amount, x + w / 2, y + h * 0.68)
+  c.restore()
+}
+
+/** 큰손 보스: 파란 고래가 정장 모자를 쓰고 "대량 매도" 팻말을 든다. */
+function whale(c: CanvasRenderingContext2D) {
+  c.fillStyle = '#10204a33'
+  c.beginPath()
+  c.ellipse(32, 57, 24, 4, 0, 0, Math.PI * 2)
+  c.fill()
+  // 꼬리
+  c.fillStyle = '#1f3f99'
+  c.beginPath()
+  c.moveTo(52, 34)
+  c.quadraticCurveTo(62, 22, 63, 18)
+  c.quadraticCurveTo(58, 30, 63, 42)
+  c.quadraticCurveTo(58, 40, 52, 40)
+  c.closePath()
+  c.fill()
+  // 몸
+  c.beginPath()
+  c.ellipse(30, 36, 25, 17, 0, 0, Math.PI * 2)
+  c.fill()
+  c.fillStyle = '#9cc2ff'
+  c.beginPath()
+  c.ellipse(28, 44, 19, 8, 0, 0, Math.PI)
+  c.fill()
+  c.lineWidth = 2
+  c.strokeStyle = '#0d2466'
+  c.beginPath()
+  c.ellipse(30, 36, 25, 17, 0, 0, Math.PI * 2)
+  c.stroke()
+  // 눈썹·눈(못마땅한 얼굴)
+  c.fillStyle = '#ffffff'
+  c.beginPath()
+  c.ellipse(17, 31, 4, 4, 0, 0, Math.PI * 2)
+  c.fill()
+  c.fillStyle = '#0d2466'
+  c.beginPath()
+  c.ellipse(16, 32, 2, 2.2, 0, 0, Math.PI * 2)
+  c.fill()
+  c.lineWidth = 2
+  c.beginPath()
+  c.moveTo(11, 25)
+  c.lineTo(22, 28)
+  c.stroke()
+  // 모자(큰손)
+  c.fillStyle = '#2b2340'
+  c.fillRect(20, 6, 18, 12)
+  c.fillRect(15, 17, 28, 3.5)
+  c.fillStyle = '#ff4f6d'
+  c.fillRect(20, 14, 18, 2.5)
+  // 물줄기 대신 쏟아지는 주문서
+  c.fillStyle = '#cfe2ff'
+  c.fillRect(42, 13, 7, 5)
+  c.fillRect(48, 7, 6, 4)
+  // 팻말
+  c.fillStyle = '#fff9ec'
+  c.strokeStyle = '#0d2466'
+  c.lineWidth = 1.5
+  c.beginPath()
+  c.roundRect(14, 40, 30, 13, 3)
+  c.fill()
+  c.stroke()
+  c.fillStyle = '#1f3f99'
+  c.font = `9px ${ORDER_FONT}`
+  c.textAlign = 'center'
+  c.textBaseline = 'middle'
+  c.fillText('대량 매도', 29, 47)
+}
+
+/**
+ * 매도 물량 그림: 64×64 칸 가운데에 그린다(battle.ts가 종류마다 배율을 곱해 놓는다). 프레임마다 살짝 떠올랐다 가라앉아(그림 안에서만) 걷는 고양이 적처럼
+ * 같은 열쇠(enemyKey)로 돌린다. 매도벽 칸은 금 간 정도마다 하나씩.
+ */
+export function bakeOrders(scene: Phaser.Scene) {
+  const looks = {
+    order: {
+      box: { x: 11, y: 18, w: 42, h: 28 },
+      look: { fill: '#3a7bea', edge: '#1b3f8f', band: '#2a5fc4', title: '매도', amount: '300주' },
+    },
+    market: {
+      box: { x: 15, y: 22, w: 34, h: 21 },
+      look: { fill: '#5aa2ff', edge: '#1f56b8', band: '#3f86ea', title: '시장가', amount: '100' },
+    },
+    bulk: {
+      box: { x: 6, y: 14, w: 52, h: 36 },
+      look: {
+        fill: '#2347a8',
+        edge: '#0b1f5c',
+        band: '#16337f',
+        title: '대량 매도',
+        amount: '5,000주',
+      },
+    },
+    fake: {
+      box: { x: 11, y: 18, w: 42, h: 28 },
+      look: {
+        fill: '#9db6dc',
+        edge: '#5c78a8',
+        band: '#8aa3cc',
+        title: '허매도',
+        amount: '800주',
+        dashed: true,
+      },
+    },
+  } as const
+  for (let frame = 0; frame < WALK_FRAMES; frame++) {
+    const phase = (frame / WALK_FRAMES) * Math.PI * 2
+    for (const [kind, v] of Object.entries(looks)) {
+      bake(scene, enemyKey(kind as UnitKind, frame), ENEMY_SIZE, ENEMY_SIZE, (c) => {
+        // 그림자는 제자리, 종이만 들썩인다. 시장가는 더 빨리 흔들린다.
+        c.fillStyle = '#10204a26'
+        c.beginPath()
+        c.ellipse(32, 56, v.box.w * 0.42, 3.5, 0, 0, Math.PI * 2)
+        c.fill()
+        c.save()
+        c.translate(32, 32 + Math.sin(phase) * 1.6)
+        c.rotate(Math.sin(phase + 1) * (kind === 'market' ? 0.08 : 0.04))
+        c.translate(-32, -32)
+        // 대량 매도는 뒤에 겹친 종이 두 장.
+        if (kind === 'bulk') {
+          for (const d of [6, 3]) {
+            c.fillStyle = d === 6 ? '#0b1f5c88' : '#16337fbb'
+            c.beginPath()
+            c.roundRect(v.box.x + d, v.box.y - d, v.box.w, v.box.h, 6)
+            c.fill()
+          }
+        }
+        // 시장가는 아래로 쏟아지는 꼬리(속도선) 셋.
+        if (kind === 'market') {
+          c.strokeStyle = '#9cc8ff'
+          c.lineWidth = 2
+          for (const dx of [-9, 0, 9]) {
+            c.beginPath()
+            c.moveTo(32 + dx, v.box.y - 2)
+            c.lineTo(32 + dx, v.box.y - 10)
+            c.stroke()
+          }
+        }
+        ticket(c, v.box, v.look)
+        c.restore()
+      })
+    }
+    bake(scene, enemyKey('whale', frame), ENEMY_SIZE, ENEMY_SIZE, (c) => {
+      c.save()
+      c.translate(0, Math.sin(phase) * 1.2)
+      whale(c)
+      c.restore()
+    })
+  }
+  // 매도벽 칸: 파란 호가 칸. 금은 맞을수록 늘고 3단계는 이가 빠진다. 물량 글자는 battle.ts가 Text로 얹는다.
+  for (let crack = 0; crack < CELL_CRACKS; crack++) {
+    bake(scene, cellKey(crack), CELL_TEX.w, CELL_TEX.h, (c) => {
+      const { w, h } = CELL_TEX
+      const g = c.createLinearGradient(0, 0, 0, h)
+      g.addColorStop(0, crack >= 2 ? '#5b8fdc' : '#6aa5ff')
+      g.addColorStop(1, crack >= 2 ? '#2f5fb0' : '#3b74d6')
+      c.fillStyle = g
+      c.beginPath()
+      if (crack === 3) {
+        c.moveTo(2, 2)
+        c.lineTo(w - 14, 2)
+        c.lineTo(w - 8, 9)
+        c.lineTo(w - 2, 7)
+        c.lineTo(w - 2, h - 2)
+        c.lineTo(12, h - 2)
+        c.lineTo(6, h - 8)
+        c.lineTo(2, h - 6)
+        c.closePath()
+      } else {
+        c.roundRect(2, 2, w - 4, h - 4, 4)
+      }
+      c.fill()
+      c.lineWidth = 2
+      c.strokeStyle = '#173f8f'
+      c.stroke()
+      c.fillStyle = '#ffffff40'
+      c.fillRect(5, 4, w - 10, 3)
+      if (crack > 0) {
+        c.strokeStyle = '#0d2466'
+        c.lineWidth = 1.6
+        c.lineJoin = 'round'
+        const lines: number[][][] = [
+          [
+            [w * 0.3, 2],
+            [w * 0.36, h * 0.45],
+            [w * 0.28, h * 0.7],
+          ],
+          [
+            [w * 0.72, h - 2],
+            [w * 0.66, h * 0.55],
+            [w * 0.78, h * 0.3],
+            [w * 0.7, 3],
+          ],
+          [
+            [3, h * 0.4],
+            [w * 0.18, h * 0.55],
+            [w * 0.36, h * 0.45],
+            [w * 0.52, h * 0.62],
+            [w * 0.66, h * 0.55],
+          ],
+        ]
+        for (const line of lines.slice(0, crack)) {
+          c.beginPath()
+          for (const [i, [x, y]] of line.entries()) {
+            if (i) c.lineTo(x, y)
+            else c.moveTo(x, y)
+          }
+          c.stroke()
+        }
+        c.strokeStyle = '#d8e8ff88'
+        c.lineWidth = 0.8
+        for (const line of lines.slice(0, crack)) {
+          c.beginPath()
+          for (const [i, [x, y]] of line.entries()) {
+            if (i) c.lineTo(x + 1, y + 1)
+            else c.moveTo(x + 1, y + 1)
+          }
+          c.stroke()
+        }
+      }
+    })
+  }
+  // 벽 뒤 판: 칸들이 박힌 짙은 남색 띠(호가창 줄).
+  bake(scene, 'wall-band', 64, 32, (c) => {
+    c.fillStyle = '#14234add'
+    c.fillRect(0, 0, 64, 32)
+    c.fillStyle = '#8fb8ff'
+    c.fillRect(0, 0, 64, 2)
+    c.fillRect(0, 30, 64, 2)
+  })
+  // 파편: 파란 벽 조각과 흰 먼지.
+  bake(scene, 'chip', 6, 5, (c) => {
+    c.fillStyle = '#4f8df0'
+    c.beginPath()
+    c.moveTo(0, 1)
+    c.lineTo(5, 0)
+    c.lineTo(6, 4)
+    c.lineTo(1, 5)
+    c.closePath()
+    c.fill()
+  })
+  // 속도선: 위로 치고 오를 때 화면을 지나가는 흰 줄.
+  bake(scene, 'speedline', 4, 90, (c) => {
+    const g = c.createLinearGradient(0, 0, 0, 90)
+    g.addColorStop(0, '#ffffff00')
+    g.addColorStop(0.5, '#ffffffcc')
+    g.addColorStop(1, '#ffffff00')
+    c.fillStyle = g
+    c.fillRect(1, 0, 2, 90)
   })
 }

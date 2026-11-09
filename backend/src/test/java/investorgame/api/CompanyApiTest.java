@@ -342,8 +342,8 @@ class CompanyApiTest {
   }
 
   /**
-   * 자본으로 사는 전투 강화 (decisions.md 367·394번): 공격력·연사 둘, 최대 단계 없이 한 단계에 1%. 꾹 눌러 모은 단계는 levels로 묶어 사고,
-   * 자본이 닿는 데까지만 산다. 고양이 속도는 없다. 쓴 돈은 분기 실적의 전투 강화 비용 줄에 나온다.
+   * 자본으로 사는 전투 강화 (decisions.md 367·394번): 공격력·연사·체력(410번) 셋, 최대 단계 없이 한 단계에 1%. 꾹 눌러 모은 단계는
+   * levels로 묶어 사고, 자본이 닿는 데까지만 산다. 고양이 속도는 없다. 쓴 돈은 분기 실적의 전투 강화 비용 줄에 나온다.
    */
   @Test
   void 전투_강화를_묶어_사고_자본이_닿는_데까지만_오른다() throws Exception {
@@ -352,7 +352,7 @@ class CompanyApiTest {
             .read("$.companyId", String.class);
     DocumentContext opened = json(mvc.perform(get("/api/company").cookie(session)));
     List<String> kinds = opened.read("$.battleUpgrades[*].kind");
-    assertThat(kinds).containsExactly("damage", "fire");
+    assertThat(kinds).containsExactly("damage", "fire", "hp");
     assertThat(opened.read("$.battleUpgrades[0].level", Integer.class)).isZero();
     assertThat(opened.read("$.battleUpgrades[0].price", Long.class)).isEqualTo(1_000_000L);
     assertThat(opened.read("$.battleUpgrades[0].nextBonusPercent", Integer.class)).isEqualTo(1);
@@ -437,9 +437,12 @@ class CompanyApiTest {
     assertThat(placed.read("$.meeting.hrCap", String.class)).isNotBlank();
   }
 
-  /** 망한 회사는 닫고 사장의 사재로 다음 회사를 차린다 (decisions.md 247번). 망하지 않았으면 400이다. */
+  /**
+   * 망한(닫힌) 회사는 사장의 사재로 다음 회사를 차린다 (decisions.md 247번). 판돈이 건물의 값에서 나와(411번) 자본 0은 망함이 아니다. 망하지 않았으면
+   * 400이다.
+   */
   @Test
-  void 자본이_바닥난_회사를_닫고_사재로_다음_회사를_차린다() throws Exception {
+  void 자본이_바닥나도_망하지_않고_닫힌_회사는_사재로_다음_회사를_차린다() throws Exception {
     String id =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()))
             .read("$.companyId");
@@ -447,6 +450,14 @@ class CompanyApiTest {
 
     jdbc.sql(
             "UPDATE raising_company SET state = jsonb_set(state, '{capital}', '0') WHERE id = CAST(:id AS uuid)")
+        .param("id", id)
+        .update();
+    DocumentContext emptied = json(mvc.perform(get("/api/company").cookie(session)));
+    assertThat(emptied.read("$.broke", String.class)).as("자본 0은 망함이 아니다").isNull();
+    mvc.perform(post("/api/company").cookie(session)).andExpect(status().isBadRequest());
+
+    jdbc.sql(
+            "UPDATE raising_company SET state = jsonb_set(state, '{closed}', 'true') WHERE id = CAST(:id AS uuid)")
         .param("id", id)
         .update();
     DocumentContext broke = json(mvc.perform(get("/api/company").cookie(session)));
