@@ -148,8 +148,19 @@ try {
     await expect(move.getByTestId('toy-impact')).toHaveCount(0)
     await expect(move.getByTestId('move-banner')).toHaveCount(0)
     await expect(move.getByTestId('toy-employee')).toHaveCount(employees)
+    // 밀어낸 쪽은 빈자리로 끝난다 (415번).
+    await expect(move.getByTestId('toy-empty-lot')).toHaveCount(1)
     await page.screenshot({ path: resolve(out, `expansion-${i + 1}.png`) })
     await move.getByRole('button').click()
+    // 사무실에 돌아오면 그 자리에 새 라이벌이 밑에서 위로 지어지고, 한 번만이다 (415번).
+    await expect(home.locator('[data-rise="true"]')).toHaveCount(1)
+    await expect(home.getByTestId('toy-empty-lot')).toHaveCount(0)
+    if (i === 0) {
+      await page.waitForTimeout(500)
+      await page.screenshot({ path: resolve(out, 'expansion-rise-mid.png') })
+    }
+    await expect(home.locator('[data-rise="true"]')).toHaveCount(0, { timeout: 4000 })
+    if (i === 0) await page.screenshot({ path: resolve(out, 'expansion-rise-done.png') })
     await expect(home.getByTestId('toy-street')).toHaveAttribute(
       'data-seats',
       String(capacities[i]),
@@ -182,7 +193,7 @@ try {
   await expect(still.getByTestId('move-banner')).toHaveCount(0)
   assert.deepEqual(errors, [])
   console.log(
-    'PASS: navigation, no desks, dialog focus, API rejection, construction, five alternating expansions with impact/evict/celebrate frames and tap-to-skip, real employee count, responsive viewports, reduced motion',
+    'PASS: navigation, no desks, dialog focus, API rejection, construction, five alternating expansions with impact/evict/celebrate frames, empty lot and rival rising once, tap-to-skip, real employee count, responsive viewports, reduced motion',
   )
 } finally {
   await browser.close()

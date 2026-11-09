@@ -84,3 +84,20 @@ export function moveTimeline(up: boolean): { phase: MovePhase; at: number }[] {
         { phase: MOVE_DONE, at: 1500 },
       ]
 }
+
+/**
+ * 거리에 그 쪽 라이벌 건물을 그리는가 (decisions.md 415번, #577). 등급이 올라 밀어낸 쪽은 축하(3)·끝(4)에 빈자리로 남는다: 막 부순 자리에 새 라이벌이 바로
+ * 서 있으면 부순 것처럼 보이지 않는다. 새 라이벌은 사무실로 돌아와 밑에서 위로 지어진다.
+ */
+export function rivalShown(
+  side: 'left' | 'right',
+  evicted: 'left' | 'right',
+  phase: MovePhase,
+  up: boolean,
+): boolean {
+  return !(up && side === evicted && phase >= 3)
+}
+
+/** 새 라이벌이 지어지는 시간(ms)과 층 수 (415번): 층마다 "툭" 한 번, 다 서면 간판이 걸린다. */
+export const RISE_MS = 1100
+export const RISE_FLOORS = 5
