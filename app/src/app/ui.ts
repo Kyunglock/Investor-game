@@ -9,7 +9,12 @@ export type ToyPanel = 'upgrade' | 'stage' | 'settings' | 'battle' | 'weapons'
 
 /** 들어갈 멘탈 전투 (decisions.md 369번): 번호 스테이지(전진 모드) 또는 EX 디펜스. */
 export type BattleEntry = { kind: 'stage'; stage: number } | { kind: 'ex' }
-export type Sheet = { kind: 'desk'; desk: string } | { kind: 'toy'; panel: ToyPanel }
+/** 인력 관리의 시트 (decisions.md 412번): 팀(desk), 앉은 직원 상세(employee), 휴게실 동료를 보낼 팀 고르기(lounge). */
+export type Sheet =
+  | { kind: 'desk'; desk: string }
+  | { kind: 'employee'; id: number }
+  | { kind: 'lounge'; id: number }
+  | { kind: 'toy'; panel: ToyPanel }
 
 interface UiState {
   tab: Tab

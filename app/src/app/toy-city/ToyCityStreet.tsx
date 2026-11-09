@@ -1,11 +1,11 @@
 import type { Company, Grade } from '@web/api/client'
-import { breedOf } from '@web/features/game/cat/look'
 import { money } from '@web/features/game/labels'
 import { LADDER } from '@web/features/raising/grades'
 import { type CSSProperties, useEffect, useId, useRef, useState } from 'react'
 import { useFx } from '../../fx/fx'
 import { haptic } from '../../fx/haptics'
 import { sfx } from '../../fx/sound'
+import { CatFigure } from './CatFigure'
 import {
   expansionSide,
   MOVE_DONE,
@@ -16,28 +16,6 @@ import {
 } from './model'
 
 export type OfficeTransition = { before: Grade; after: Grade; beforeSeats: number }
-
-function Cat({ id = 0, grade = 'F' }: { id?: number; grade?: Grade }) {
-  const fur = breedOf(id).fur
-  return (
-    <g>
-      <path d="M8 39Q7 22 18 22t10 17" fill={LADDER.indexOf(grade) >= 6 ? '#526780' : '#779a9a'} />
-      <path d="m14 24 4 5 4-5" fill="#fff9e9" />
-      <path d="m17 29-2 7 3 3 3-3-2-7" fill="#e9af5b" />
-      <path d="M5 14 4 2l11 7h6L32 2l-1 14q0 10-13 10T5 14" fill={fur} />
-      <path d="m7 5 5 5-5 2m22-7-5 5 5 2" fill="#eaa99a" />
-      <circle cx="12" cy="17" r="1.3" fill="#40424b" />
-      <circle cx="24" cy="17" r="1.3" fill="#40424b" />
-      <path
-        d="m16 21 2 1 2-1"
-        fill="none"
-        stroke="#80645c"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-      />
-    </g>
-  )
-}
 
 function Rival({
   x,
@@ -576,7 +554,7 @@ export function ToyCityStreet({
                   data-testid="toy-employee"
                   style={{ '--toy-jump-delay': `${(i % 3) * 0.06}s` } as CSSProperties}
                 >
-                  <Cat id={employee.id} grade={employee.overallGrade} />
+                  <CatFigure id={employee.id} grade={employee.overallGrade} />
                 </g>
               </g>
             )
@@ -584,7 +562,7 @@ export function ToyCityStreet({
         </g>
         <g transform="translate(177 612) scale(1.25)">
           <g className="toy-cat">
-            <Cat />
+            <CatFigure />
           </g>
         </g>
         {up && (phase === 1 || phase === 2) && (
