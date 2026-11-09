@@ -110,6 +110,11 @@ class BalanceSimulationTest {
             case LAZY -> InvestEngine.HOLD;
           };
       ENGINE.invest.decide(c, choice, boss == Boss.GREEDY, random);
+      // 회의 뒤 전투 (414번, #573): 스테이지를 하는 사장은 별 2개를 얻는다고 친다.
+      String battle = InvestEngine.battleMode(c.invest);
+      if (battle != null && (boss == Boss.STAGES || boss == Boss.BUYER)) {
+        ENGINE.invest.battle(c, battle, 2);
+      }
     }
     if (boss == Boss.STAGES || boss == Boss.BUYER) {
       int next = ENGINE.mental.bestStage(c) + 1;

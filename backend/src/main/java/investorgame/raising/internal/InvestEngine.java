@@ -699,6 +699,78 @@ class InvestEngine {
     return (int) Math.min(r.lossCapBp(), loss);
   }
 
+  /** 회의 뒤 전투 모드 (414번, #573): 틀린 쪽에 걸었으면 디펜스, 맞힌 쪽이면 공격 판. */
+  static final String DEFENSE = "DEFENSE";
+
+  static final String ASSAULT = "ASSAULT";
+
+  /** 이 회의 뒤에 할 전투. 아직 안 정했거나 지켜봤으면 null. */
+  static String battleMode(Invest invest) {
+    if (invest == null || invest.choice == null || HOLD.equals(invest.choice)) {
+      return null;
+    }
+    String right = invest.up ? BUY : SELL;
+    return right.equals(invest.choice) ? ASSAULT : DEFENSE;
+  }
+
+  /**
+   * 회의 뒤 전투의 세기 (414번): 1부터. 크게 움직인 종목일수록(기사의 크기 0~1을 0~4로), 크게 걸었으면 +1, 깬 번호 스테이지 10개마다 +1. 앱이
+   * 적·벽의 세기에 쓴다.
+   */
+  int battleLevel(Invest invest, int bestStage) {
+    return 1
+        + (int) Math.round(magnitudeAt(invest.magnitudeBp) * 4)
+        + (invest.big ? 1 : 0)
+        + bestStage / 10;
+  }
+
+  /** 아직 회의 뒤 전투를 할 수 있는가. */
+  static boolean battleOpen(Invest invest) {
+    return battleMode(invest) != null && !invest.battleClosed && invest.battleStars == null;
+  }
+
+  /**
+   * 회의 뒤 전투의 결과를 받아 회의 손익을 확정한다 (414번, #573). 디펜스는 별에 따라 잃은 몫을 남기는 비율이 줄고(별 3개면 손실을 없애고 판돈의 일부를 더
+   * 번다), 공격은 번 몫을 키운다. 바뀐 몫(0 이상)을 자본에 더하고 돌려준다. 한 회의에 한 번, 그 분기 안에만.
+   */
+  long battle(CompanyState c, String mode, int stars) {
+    Invest invest = c.invest;
+    String expected = battleMode(invest);
+    if (expected == null) {
+      throw new InvalidRequestException("이번 회의 뒤에는 전투가 없다");
+    }
+    if (!expected.equals(mode)) {
+      throw new InvalidRequestException("이번 회의 뒤 전투는 " + expected + "다");
+    }
+    if (!battleOpen(invest)) {
+      throw new InvalidRequestException("이번 회의 뒤 전투는 이미 끝났다");
+    }
+    if (stars < 0 || stars > 3) {
+      throw new InvalidRequestException("별은 0~3개다: " + stars);
+    }
+    CompanyProperties.Battle rule = properties.invest().battle();
+    long bonus = 0;
+    if (DEFENSE.equals(mode)) {
+      if (invest.total < 0) {
+        long kept = invest.total * rule.defenseKeepPercent().get(stars) / PERCENT;
+        bonus = kept - invest.total;
+      }
+      if (stars == 3 && invest.stake != null) {
+        bonus += invest.stake * rule.defenseGainPercent() / PERCENT;
+      }
+    } else if (invest.total > 0) {
+      bonus =
+          CompanyEngine.ofStake(invest.total, (long) rule.assaultPercent().get(stars) * 100)
+              - invest.total;
+    }
+    bonus = Math.max(0, bonus);
+    invest.battleStars = stars;
+    invest.battleBonus = bonus;
+    invest.battleClosed = true;
+    c.capital = CompanyEngine.plus(c.capital, bonus);
+    return bonus;
+  }
+
   /** 화면에 보이는 회의 수익률의 범위(만분율): 틀렸을 때 가장 크게 잃는 몫과 맞혔을 때 가장 크게 버는 몫 (388번). */
   int lossCapBp() {
     return properties.invest().returns().lossCapBp();

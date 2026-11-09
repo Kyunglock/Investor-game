@@ -197,6 +197,33 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/invest/battle:
+    post:
+      operationId: reportInvestBattle
+      summary: 종목 회의 뒤 전투의 결과를 보낸다 (decisions.md 414번, #573)
+      description: |
+        틀린 쪽에 걸었으면 디펜스(DEFENSE)로 손실을 줄이고(별 0·1·2·3 → 잃은 몫의 100·70·40·0%, 별 3개면 판돈의 10%를 더 번다),
+        맞힌 쪽이면 공격 판(ASSAULT)으로 번 몫을 키운다(×1·1.2·1.5·2). 바뀐 몫은 자본에 들어가고 invest.outcome.battle에 실린다.
+        모드가 회의 결과와 다르거나, 지켜봤거나, 이미 보냈거나, 그 분기를 넘겼으면 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mode, stars]
+              properties:
+                mode: { type: string, enum: [DEFENSE, ASSAULT] }
+                stars: { type: integer, minimum: 0, maximum: 3 }
+      responses:
+        '200':
+          description: 전투 뒤의 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/mental:
     post:
       operationId: reportMentalBattle
@@ -762,7 +789,7 @@ components:
                 outcome:
                   oneOf:
                     - type: object
-                      required: [choice, big, delegated, teamBuy, teamSell, debate, up, reveal, decisive, total, results, returnBp, gainBp, lossBp]
+                      required: [choice, big, delegated, teamBuy, teamSell, debate, up, reveal, decisive, total, results, returnBp, gainBp, lossBp, battle]
                       properties:
                         choice: { type: string, enum: [BUY, SELL, HOLD], description: 정한 것. 맡겼으면 직원들이 정한 쪽 }
                         big: { type: boolean, description: 크게 했다 (decisions.md 260번) }
@@ -789,6 +816,18 @@ components:
                         returnBp: { type: [integer, 'null'], description: '회의 수익률(만분율, decisions.md 388번) = 회의 손익 ÷ 건 판돈. 판돈을 적기 전에 정한 옛 회의면 null' }
                         gainBp: { type: integer, description: 이 종목을 맞힌 쪽으로 했으면 번 수익률(만분율). 기사가 클수록 크다(최대 +300%) }
                         lossBp: { type: integer, description: 틀린 쪽으로 했으면 잃은 수익률(만분율, 음수). 크게 했으면 크게 틀린 몫이고 −50% 아래로는 안 간다 }
+                        battle:
+                          type: [object, 'null']
+                          description: 회의 뒤 전투 (decisions.md 414번, #573). 지켜봤으면 null
+                          required: [mode, level, open, stars, bonus, before, after]
+                          properties:
+                            mode: { type: string, enum: [DEFENSE, ASSAULT], description: 'DEFENSE: 틀린 쪽에 걸어 디펜스로 손실을 줄인다. ASSAULT: 맞힌 쪽이라 공격 판(매도벽)으로 수익을 키운다' }
+                            level: { type: integer, description: 전투의 세기(1부터). 크게 움직인 종목, 크게 건 회의, 깬 번호 스테이지가 많을수록 높다 }
+                            open: { type: boolean, description: 아직 할 수 있다. 분기를 넘기면 끝난다(배율 1) }
+                            stars: { type: [integer, 'null'], description: 얻은 별(0~3). 아직 안 했으면 null }
+                            bonus: { type: [integer, 'null'], format: int64, description: 전투로 막은 손실 + 더 번 몫(0 이상). 아직 안 했으면 null }
+                            before: { type: integer, format: int64, description: 전투 전 회의 손익 }
+                            after: { type: [integer, 'null'], format: int64, description: 전투 뒤 회의 손익. 아직 안 했으면 null }
                         reactions:
                           type: array
                           description: 결과가 드러난 뒤 양쪽의 반응 (decisions.md 358번). 맞힌 쪽(kind WIN)과 틀린 쪽(LOSE)이 한마디씩. 토론이 없던 옛 회의면 비어 있다

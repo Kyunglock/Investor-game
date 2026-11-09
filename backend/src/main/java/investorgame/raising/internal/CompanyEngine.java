@@ -1616,7 +1616,10 @@ class CompanyEngine {
     q.capitalAfter = company.capital;
     if (company.invest != null && company.invest.choice != null) {
       q.investTitle = company.invest.title;
-      q.investTotal = company.invest.total;
+      // 회의 뒤 전투로 바뀐 몫(414번)도 회의 손익에 넣는다. 받지 못한 전투는 이 분기를 넘기며 배율 1로 끝난다.
+      long bonus = company.invest.battleBonus == null ? 0 : company.invest.battleBonus;
+      q.investTotal = plus(company.invest.total, bonus);
+      company.invest.battleClosed = true;
     }
     // 분기 실적이 맞아떨어지게 이 분기에 낸 이사 비용(296번)과 인사 비용을 따로 둔다: 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 이사 비용
     // = 끝 자본.

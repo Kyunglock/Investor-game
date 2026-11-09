@@ -176,6 +176,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/invest/battle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 종목 회의 뒤 전투의 결과를 보낸다 (decisions.md 414번,
+         * @description 틀린 쪽에 걸었으면 디펜스(DEFENSE)로 손실을 줄이고(별 0·1·2·3 → 잃은 몫의 100·70·40·0%, 별 3개면 판돈의 10%를 더 번다),
+         *     맞힌 쪽이면 공격 판(ASSAULT)으로 번 몫을 키운다(×1·1.2·1.5·2). 바뀐 몫은 자본에 들어가고 invest.outcome.battle에 실린다.
+         *     모드가 회의 결과와 다르거나, 지켜봤거나, 이미 보냈거나, 그 분기를 넘겼으면 400.
+         */
+        post: operations["reportInvestBattle"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/mental": {
         parameters: {
             query?: never;
@@ -750,6 +772,35 @@ export interface components {
                     gainBp: number;
                     /** @description 틀린 쪽으로 했으면 잃은 수익률(만분율 */
                     lossBp: number;
+                    /** @description 회의 뒤 전투 (decisions.md 414번, */
+                    battle: {
+                        /**
+                         * @description DEFENSE: 틀린 쪽에 걸어 디펜스로 손실을 줄인다. ASSAULT: 맞힌 쪽이라 공격 판(매도벽)으로 수익을 키운다
+                         * @enum {string}
+                         */
+                        mode: "DEFENSE" | "ASSAULT";
+                        /** @description 전투의 세기(1부터). 크게 움직인 종목 */
+                        level: number;
+                        /** @description 아직 할 수 있다. 분기를 넘기면 끝난다(배율 1) */
+                        open: boolean;
+                        /** @description 얻은 별(0~3). 아직 안 했으면 null */
+                        stars: number | null;
+                        /**
+                         * Format: int64
+                         * @description 전투로 막은 손실 + 더 번 몫(0 이상). 아직 안 했으면 null
+                         */
+                        bonus: number | null;
+                        /**
+                         * Format: int64
+                         * @description 전투 전 회의 손익
+                         */
+                        before: number;
+                        /**
+                         * Format: int64
+                         * @description 전투 뒤 회의 손익. 아직 안 했으면 null
+                         */
+                        after: number | null;
+                    } | null;
                     /** @description 결과가 드러난 뒤 양쪽의 반응 (decisions.md 358번). 맞힌 쪽(kind WIN)과 틀린 쪽(LOSE)이 한마디씩. 토론이 없던 옛 회의면 비어 있다 */
                     reactions?: {
                         name: string;
@@ -1387,6 +1438,37 @@ export interface operations {
         };
         responses: {
             /** @description 정한 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reportInvestBattle: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    mode: "DEFENSE" | "ASSAULT";
+                    stars: number;
+                };
+            };
+        };
+        responses: {
+            /** @description 전투 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

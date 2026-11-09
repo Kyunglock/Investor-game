@@ -51,6 +51,12 @@ public interface CompanyService {
   CompanyView invest(UUID sessionId, String choice, boolean big);
 
   /**
+   * 종목 회의 뒤 전투의 결과를 보낸다 (decisions.md 414번, #573): 틀린 쪽에 걸었으면 디펜스(DEFENSE), 맞힌 쪽이면 공격 판(ASSAULT).
+   * 별에 따라 회의 손익이 바뀐다. 한 회의에 한 번, 그 분기 안에만.
+   */
+  CompanyView investBattle(UUID sessionId, String mode, int stars);
+
+  /**
    * 분기 넘기기를 누르면 직원이 종목을 물어 온다 (decisions.md 267·382번): 지금 배치로 한 분기에 한 번 굴린다. 물어 왔으면 invest.ready가
    * 참이 되고 종목 회의를 열 수 있다. 이미 굴렸거나 돈을 굴리는 직원이 없으면 아무것도 하지 않는다.
    */

@@ -185,7 +185,19 @@ public record CompanyProperties(
       int bigStubbornPercent,
       int meetingStakePercent,
       List<Clarity> clarity,
-      Returns returns) {}
+      Returns returns,
+      Battle battle) {}
+
+  /**
+   * 회의 뒤 전투 (decisions.md 414번, #573). 틀린 쪽에 걸었으면 디펜스, 맞힌 쪽이면 공격 판(매도벽)을 하고, 별에 따라 회의 손익을 바꾼다. 목록은
+   * 별 0~3개 차례.
+   *
+   * @param defenseKeepPercent 디펜스: 회의에서 잃은 몫 가운데 남기는 비율(%)
+   * @param defenseGainPercent 디펜스 별 3개: 손실을 없애고 판돈의 이만큼(%)을 더 번다
+   * @param assaultPercent 공격: 회의에서 번 몫에 곱하는 비율(%)
+   */
+  public record Battle(
+      List<Integer> defenseKeepPercent, int defenseGainPercent, List<Integer> assaultPercent) {}
 
   /**
    * 종목 회의 수익률 (decisions.md 388번). 분기 데스크의 gain-bp·miss-bp와 떼어 낸 회의만의 수익률이다. 기사의 크기(magnitude)를

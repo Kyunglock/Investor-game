@@ -123,6 +123,25 @@ class CompanyController {
   /** big이 참이면 크게 한다: 판돈 두 배, 고집 1.5배 (decisions.md 260번). 없으면 거짓. */
   record InvestRequest(@NotBlank String choice, Boolean big) {}
 
+  /** 종목 회의 뒤 전투의 결과 (decisions.md 414번, #573). 별에 따라 회의 손익이 바뀐다. */
+  @PostMapping("/invest/battle")
+  CompanyView investBattle(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody InvestBattleRequest request) {
+    UUID sessionId = cookies.requireSession(token);
+    CompanyView company = companies.investBattle(sessionId, request.mode(), request.stars());
+    PLAY.info(
+        "company-invest-battle session={} company={} mode={} stars={} ip={}",
+        sessionId,
+        company.companyId(),
+        request.mode(),
+        request.stars(),
+        ClientIp.current());
+    return company;
+  }
+
+  record InvestBattleRequest(@NotBlank String mode, @Min(0) @Max(3) int stars) {}
+
   /** 분기 넘기기를 누르면 직원이 종목을 물어 온다 (decisions.md 267·382번). 물어 왔으면 종목 회의가 열린다. */
   @PostMapping("/scout")
   CompanyView scout(@CookieValue(name = SessionCookies.NAME, required = false) String token) {

@@ -56,6 +56,8 @@ interface RaisingState {
   equipWeapon: (kind: WeaponKind, grade: WeaponGrade) => Promise<void>
   /** 멘탈 스테이지 한 판의 결과를 보낸다 (decisions.md 369번). 보상은 company.stages.lastResult. */
   reportStage: (stage: number, cleared: boolean, stars: number) => Promise<void>
+  /** 종목 회의 뒤 전투의 결과 (decisions.md 414번, #573). 별에 따라 회의 손익이 바뀐다. */
+  reportInvestBattle: (mode: 'DEFENSE' | 'ASSAULT', stars: number) => Promise<void>
   /** EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번). */
   reportEx: (kills: number) => Promise<void>
   /**
@@ -208,6 +210,9 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       change(api.POST('/api/company/stage', { body: { stage, cleared, stars } })),
 
     reportEx: (kills) => change(api.POST('/api/company/ex', { body: { kills } })),
+
+    reportInvestBattle: (mode, stars) =>
+      change(api.POST('/api/company/invest/battle', { body: { mode, stars } })),
 
     buyBattleUpgrade: async (kind, levels = 1) => {
       const res = await safely(api.POST('/api/company/battle-upgrade', { body: { kind, levels } }))

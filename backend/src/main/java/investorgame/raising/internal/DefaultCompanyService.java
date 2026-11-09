@@ -150,6 +150,15 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
+  public CompanyView investBattle(UUID sessionId, String mode, int stars) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.invest.battle(row.state(), mode, stars);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
   public CompanyView scout(UUID sessionId) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.scout.discover(row.state(), new HashSeededRandom(row.seed()));
@@ -591,7 +600,8 @@ class DefaultCompanyService implements CompanyService {
                 meetings.credit(c),
                 meetings.returnBp(invest),
                 meetings.gainBp(invest),
-                -meetings.lossBp(invest, invest.big));
+                -meetings.lossBp(invest, invest.big),
+                investBattle(c, invest));
     return new CompanyView.Invest(
         invest.title,
         engine.stockName(invest.stock),
@@ -730,5 +740,23 @@ class DefaultCompanyService implements CompanyService {
         s.promotions.stream()
             .map(p -> new CompanyView.Promotion(p.employeeId, p.name, p.before, p.after))
             .toList());
+  }
+
+  /** 종목 회의 뒤 전투의 화면 값 (414번). 지켜봤거나 아직 안 정했으면 null. */
+  private CompanyView.InvestBattle investBattle(CompanyState c, CompanyState.Invest invest) {
+    String mode = InvestEngine.battleMode(invest);
+    if (mode == null) {
+      return null;
+    }
+    Long after =
+        invest.battleBonus == null ? null : CompanyEngine.plus(invest.total, invest.battleBonus);
+    return new CompanyView.InvestBattle(
+        mode,
+        engine.invest.battleLevel(invest, engine.mental.bestStage(c)),
+        InvestEngine.battleOpen(invest),
+        invest.battleStars,
+        invest.battleBonus,
+        invest.total,
+        after);
   }
 }
