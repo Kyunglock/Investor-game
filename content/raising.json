@@ -779,7 +779,7 @@
       "credit": {
         "UP": "{name}의 눈이 맞았다: 가져온 {stock}이(가) {percent}% 올랐다.",
         "DOWN": "{name}이(가) 가져온 {stock}은(는) {percent}% 빠졌다. 다음엔 소문 말고 보고서를 보자.",
-        "readDown": "{name}은(는) {stock}을(를) 가져와 놓고 팔자고 했다. 그 말이 맞았다: {percent}% 빠졌다.",
+        "readDown": "{name}은(는) {stock}을(를) 가져와 놓고 팔자고 했고, {percent}% 빠졌다.",
         "ignored": "{name} 말을 들을 걸 그랬다. 가져온 {stock}이(가) {percent}% {moved}.",
         "missed": "{name}이(가) 가져온 {stock}은(는) {percent}% 올랐다. 정작 본인은 팔자고 했는데."
       }
