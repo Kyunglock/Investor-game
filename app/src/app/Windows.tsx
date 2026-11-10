@@ -1,4 +1,5 @@
 import type { Company, Drawn } from '@web/api/client'
+import { BattleEntryButton } from '@web/features/raising/BattleEntryButton'
 import { GachaReveal, useDrawReveal } from '@web/features/raising/Gacha'
 import { InvestWindow } from '@web/features/raising/InvestWindow'
 import { QuarterSheet } from '@web/features/raising/QuarterSheet'
@@ -46,6 +47,11 @@ export function Windows({ company }: { company: Company }) {
 
   // 분기 넘기기: 직원이 종목을 물어 오면(267·382번) 종목 회의를 열고, 아무도 안 왔으면 바로 결산한다.
   const stockOrSettle = async () => {
+    const pending = useRaisingStore.getState().company?.invest?.outcome?.battle
+    if (pending?.open) {
+      useAppUi.getState().startBattle({ kind: 'invest', mode: pending.mode, level: pending.level })
+      return
+    }
     if (!(await scout())) {
       battleOrSettle()
       return
@@ -114,7 +120,10 @@ export function Windows({ company }: { company: Company }) {
           year={company.year}
           quarter={company.quarter}
           employees={company.employees}
-          onClose={() => setInvestOpen(false)}
+          onClose={() => {
+            setInvestOpen(false)
+            if (company.invest?.outcome) useAppUi.getState().setTab('office')
+          }}
           onSettle={() => {
             setInvestOpen(false)
             battleOrSettle()
@@ -186,6 +195,14 @@ export function ActionBar({
   // 튜토리얼 잠금 (347번): 분기 넘기기는 직원을 앉힌 뒤 열린다.
   const settleLocked = useLocked(company, 'settle')
   const ended = company.status === 'ENDED'
+  const battle = company.invest?.outcome?.battle
+  const pending = battle?.open ? battle : null
+  const enterBattle = () => {
+    if (!pending) return
+    sfx.stamp()
+    haptic.medium()
+    useAppUi.getState().startBattle({ kind: 'invest', mode: pending.mode, level: pending.level })
+  }
   if (ended) {
     return null
   }
@@ -242,25 +259,37 @@ export function ActionBar({
             <strong>강화</strong>
             <em>{upgradeLevels > 0 ? `${upgradeLevels}단계 올림` : '공격력·연사'}</em>
           </button>
-          <button
-            type="button"
-            disabled={busy || settleLocked}
-            className={`toy-stat toy-advance ${settleSpot}`}
-            data-testid="settle"
-            data-locked={settleLocked || undefined}
-            onClick={(ev) => {
-              sfx.stamp()
-              haptic.medium()
-              useFx.getState().burstAt(ev.currentTarget, 'sparks')
-              useAppUi.getState().requestSettle()
-            }}
-          >
-            <small>{busy ? '처리 중…' : settleLocked ? '직원을 앉혀주세요' : '다음 분기로'}</small>
-            <strong>▶ 넘기기</strong>
-            <em>
-              자리 {assigned}/{company.seats}
-            </em>
-          </button>
+          {pending ? (
+            <BattleEntryButton
+              mode={pending.mode}
+              onClick={enterBattle}
+              disabled={busy}
+              compact
+              testId="pending-invest-battle"
+            />
+          ) : (
+            <button
+              type="button"
+              disabled={busy || settleLocked}
+              className={`toy-stat toy-advance ${settleSpot}`}
+              data-testid="settle"
+              data-locked={settleLocked || undefined}
+              onClick={(ev) => {
+                sfx.stamp()
+                haptic.medium()
+                useFx.getState().burstAt(ev.currentTarget, 'sparks')
+                useAppUi.getState().requestSettle()
+              }}
+            >
+              <small>
+                {busy ? '처리 중…' : settleLocked ? '직원을 앉혀주세요' : '다음 분기로'}
+              </small>
+              <strong>▶ 넘기기</strong>
+              <em>
+                자리 {assigned}/{company.seats}
+              </em>
+            </button>
+          )}
           {/* 스테이지 입구 (decisions.md 369번): 스테이지 선택 시트를 연다. */}
           <button
             type="button"
@@ -284,6 +313,22 @@ export function ActionBar({
       </div>
     )
   }
+  if (pending)
+    return (
+      <div className="px-4 pt-2 pb-3 text-ink">
+        {error && (
+          <p role="alert" className="mb-1 text-[12px] text-red-pen">
+            {error}
+          </p>
+        )}
+        <BattleEntryButton
+          mode={pending.mode}
+          onClick={enterBattle}
+          disabled={busy}
+          testId="pending-invest-battle"
+        />
+      </div>
+    )
   return (
     <div className="px-4 pt-2 pb-2 text-ink">
       {error && (
