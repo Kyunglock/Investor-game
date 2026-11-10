@@ -58,6 +58,16 @@
 .meeting-body {
   padding: 16px 20px 22px;
 }
+.meeting-header > .meeting-exit {
+  min-height: 44px;
+  flex-shrink: 0;
+  background: #ffffff18;
+  font-weight: 700;
+}
+.meeting-header > .meeting-exit:focus-visible {
+  outline: 2px solid white;
+  outline-offset: 3px;
+}
 /* 종목 회의 단계마다 누를 버튼 (decisions.md 368번): 창 아래에 붙어 내용이 길어도 늘 보인다. */
 .meeting-step-action {
   position: sticky;

@@ -1,3 +1,4 @@
+import { BattleEntryButton } from './BattleEntryButton'
 import './meetings.css'
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import type { Company } from '../../api/client'
@@ -134,6 +135,17 @@ export function InvestWindow({
             <h3>종목 회의</h3>
             <p className="meeting-subtitle">단서를 살피고, 동료의 의견을 들어보세요.</p>
           </div>
+          {outcome && onBattle && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onClose}
+              className="meeting-exit"
+              data-testid="invest-leave"
+            >
+              사무실로 나가기
+            </button>
+          )}
           {!outcome && (
             <button type="button" onClick={onClose} className="text-[12px] text-muted underline">
               배치 다시 보기
@@ -496,27 +508,14 @@ export function InvestWindow({
                   <BattleAfter outcome={outcome} />
                   <div className="meeting-step-action grid gap-2">
                     {onBattle && outcome.battle?.open && (
-                      <button
-                        type="button"
+                      <BattleEntryButton
+                        mode={outcome.battle.mode}
                         disabled={busy}
                         onClick={() => outcome.battle && onBattle(outcome.battle)}
-                        className={`animate-reveal min-h-14 w-full rounded font-bold text-white disabled:opacity-50 ${
-                          outcome.battle.mode === 'ASSAULT' ? 'bg-up' : 'bg-down'
-                        }`}
-                        data-testid="invest-battle"
-                        data-mode={outcome.battle.mode}
-                      >
-                        {outcome.battle.mode === 'ASSAULT'
-                          ? '🔥 매도벽 돌파하러 가기 · 수익 키우기'
-                          : '🛡 멘탈 지키러 가기 · 손실 줄이기'}
-                        <span className="block text-[12px] font-normal opacity-90">
-                          {outcome.battle.mode === 'ASSAULT'
-                            ? '별 1·2·3개 → 회의 수익 ×1.2 · ×1.5 · ×2'
-                            : '별 1·2·3개 → 손실 30% · 60% 막기 · 다 막고 판돈 10% 더'}
-                        </span>
-                      </button>
+                        testId="invest-battle"
+                      />
                     )}
-                    {/* 전투가 열리면 반드시 싸운다 (decisions.md 419번): "전투 없이 넘기기"는 없다. 전투를 마치면 open이 꺼져 넘기기가 나온다. */}
+                    {/* 사무실로 나가 전투를 미룰 수 있지만, 전투를 건너뛰고 분기를 넘길 수는 없다. 전투를 마치면 open이 꺼져 넘기기가 나온다. */}
                     {!(onBattle && outcome.battle?.open) && (
                       <button
                         type="button"

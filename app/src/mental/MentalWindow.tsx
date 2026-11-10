@@ -209,7 +209,7 @@ export function MentalWindow({
                   ? `수련 ${stageLabel(entry.stage, perChapter)}`
                   : entry.kind === 'invest'
                     ? mode === 'assault'
-                      ? '매도벽을 돌파하라'
+                      ? '매도벽 돌파!'
                       : '멘탈을 지켜라'
                     : 'EX 디펜스'}
               </h2>
