@@ -3,7 +3,7 @@ import { BOSS_LOOK } from '@web/features/game/cat/look'
 import type Phaser from 'phaser'
 import { drawStageGun, GUN_ART } from './drawStageGun'
 import { drawEarthArmor, drawEmber, drawPillar, drawWater, drawWave } from './effectArt'
-import type { UnitKind } from './enemies'
+import { ORDERS, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import type { Hero } from './hero'
@@ -514,7 +514,10 @@ function ticket(
   c.fillStyle = '#ffffff'
   c.font = `${Math.round(h * 0.28)}px ${ORDER_FONT}`
   c.fillText(look.title, x + w / 2, y + h * 0.2)
-  c.font = `${Math.round(h * 0.44)}px ${ORDER_FONT}`
+  const amountSize = Math.round(h * 0.44)
+  c.font = `${amountSize}px ${ORDER_FONT}`
+  const fit = Math.min(1, (w - 8) / Math.max(1, c.measureText(look.amount).width))
+  c.font = `${amountSize * fit}px ${ORDER_FONT}`
   c.lineWidth = 3
   c.strokeStyle = look.edge
   c.strokeText(look.amount, x + w / 2, y + h * 0.68)
@@ -617,12 +620,24 @@ function whale(c: CanvasRenderingContext2D) {
 export function bakeOrders(scene: Phaser.Scene) {
   const looks = {
     order: {
-      box: { x: 11, y: 18, w: 42, h: 28 },
-      look: { fill: '#3a7bea', edge: '#1b3f8f', band: '#2a5fc4', title: '매도', amount: '300주' },
+      box: { x: 7, y: 17, w: 50, h: 30 },
+      look: {
+        fill: '#3a7bea',
+        edge: '#1b3f8f',
+        band: '#2a5fc4',
+        title: '매도',
+        amount: `${ORDERS.order.shares.toLocaleString('ko-KR')}주`,
+      },
     },
     market: {
-      box: { x: 15, y: 22, w: 34, h: 21 },
-      look: { fill: '#5aa2ff', edge: '#1f56b8', band: '#3f86ea', title: '시장가', amount: '100' },
+      box: { x: 9, y: 20, w: 46, h: 26 },
+      look: {
+        fill: '#5aa2ff',
+        edge: '#1f56b8',
+        band: '#3f86ea',
+        title: '시장가',
+        amount: `${ORDERS.market.shares.toLocaleString('ko-KR')}주`,
+      },
     },
     bulk: {
       box: { x: 6, y: 14, w: 52, h: 36 },
@@ -631,17 +646,17 @@ export function bakeOrders(scene: Phaser.Scene) {
         edge: '#0b1f5c',
         band: '#16337f',
         title: '대량 매도',
-        amount: '5,000주',
+        amount: `${ORDERS.bulk.shares.toLocaleString('ko-KR')}주`,
       },
     },
     fake: {
-      box: { x: 11, y: 18, w: 42, h: 28 },
+      box: { x: 7, y: 17, w: 50, h: 30 },
       look: {
         fill: '#9db6dc',
         edge: '#5c78a8',
         band: '#8aa3cc',
         title: '허매도',
-        amount: '800주',
+        amount: `${ORDERS.fake.shares.toLocaleString('ko-KR')}주`,
         dashed: true,
       },
     },

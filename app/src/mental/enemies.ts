@@ -41,7 +41,7 @@ export interface OrderSpec extends EnemySpec {
 }
 
 export const ORDERS: Record<OrderKind, OrderSpec> = {
-  /** 매도 주문(300주): 천천히 사장냥 쪽으로 다가온다 */
+  /** 매도 주문(2,000주): 천천히 사장냥 쪽으로 다가온다 */
   order: {
     r: 17,
     fill: '#3a7bea',
@@ -51,9 +51,9 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     dmg: 6,
     reward: 12,
     scale: 1.45,
-    shares: 300,
+    shares: 2000,
   },
-  /** 시장가 매도(100주): 작고 빠르게 떼로 쏟아진다 */
+  /** 시장가 매도(1,000주): 작고 빠르게 떼로 쏟아진다 */
   market: {
     r: 12,
     fill: '#5aa2ff',
@@ -63,7 +63,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     dmg: 4,
     reward: 6,
     scale: 1.3,
-    shares: 100,
+    shares: 1000,
   },
   /** 대량 매도(5,000주): 묵직하고 느리고 단단하다 */
   bulk: {
@@ -87,7 +87,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     dmg: 4,
     reward: 0,
     scale: 1.45,
-    shares: 800,
+    shares: 3000,
   },
   /** 매도벽의 한 칸: 움직이지 않고 벽과 함께 내려온다. 체력·물량은 판(assault.ts)이 정한다 */
   cell: {
