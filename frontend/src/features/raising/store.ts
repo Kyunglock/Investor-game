@@ -24,7 +24,7 @@ interface RaisingState {
   moveAlert: boolean
   /** Capacity before the completed upgrade/settlement, for the app growth scene. */
   moveBeforeSeats: number | null
-  /** 방금 채용 뽑기를 했다 (decisions.md 312번). 카드를 뒤집는 창을 띄우고 닫으면 지운다. 자동 진행 중에는 띄우지 않는다. */
+  /** 방금 채용 뽑기를 했다 (decisions.md 312번). 카드를 뒤집는 창을 띄우고 닫으면 지운다. */
   justDrew: boolean
   /** 방금 이사 비용을 내고 건물을 올렸다 (decisions.md 296번). 건물 알림을 띄우고 닫으면 지운다. */
   upgradeMove: {
@@ -33,10 +33,6 @@ interface RaisingState {
     year: number
     beforeSeats?: number
   } | null
-  /** 자동 진행을 켰다 (245번). 새로 고치면 꺼진다: 모르는 사이에 돈을 쓰지 않게. */
-  autoPlay: boolean
-  /** 자동 진행이 띄운 창(분기 실적·연말 결산서·건물 알림)을 닫을 때(ms). 화면이 남은 초를 센다. 창이 없으면 null (decisions.md 277번). */
-  autoNextAt: number | null
   /** 회사 화면에서 고른 탭. null이면 화면이 정한다 (231번). */
   tab: 'meeting' | 'market' | 'staff' | 'settlement' | 'history' | null
   load: () => Promise<void>
@@ -114,8 +110,6 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     moveAlert: false,
     moveBeforeSeats: null,
     upgradeMove: null,
-    autoPlay: false,
-    autoNextAt: null,
     tab: null,
 
     load: async () => {
@@ -145,7 +139,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     },
 
     restart: async () => {
-      set({ busy: true, error: null, autoPlay: false })
+      set({ busy: true, error: null })
       const res = await safely(api.POST('/api/company'))
       if (res?.data) {
         set({ company: res.data, busy: false, tab: null, justSettled: false })
@@ -163,7 +157,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       await change(api.POST('/api/company/draws', { body: { count, draws: before.gacha.draws } }))
       const after = get().company
       if (!get().error && after && after.gacha.draws > before.gacha.draws) {
-        set({ justDrew: !get().autoPlay })
+        set({ justDrew: true })
       }
     },
 

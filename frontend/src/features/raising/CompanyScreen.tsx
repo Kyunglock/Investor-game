@@ -1,9 +1,7 @@
 import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
 import type { Company } from '../../api/client'
 import { Document } from '../game/Document'
 import { money, withParticle } from '../game/labels'
-import { toggleAutoPlay } from './autoPlay'
 import { BuildingArt } from './BuildingArt'
 import { pnlLabel } from './board'
 import { ConstructionArt } from './ConstructionArt'
@@ -49,7 +47,6 @@ export function CompanyScreen({ company }: { company: Company }) {
   const moveAlert = useRaisingStore((s) => s.moveAlert)
   const upgradeMove = useRaisingStore((s) => s.upgradeMove)
   const justQuartered = useRaisingStore((s) => s.justQuartered)
-  const autoPlay = useRaisingStore((s) => s.autoPlay)
   const { settle, restart, convene, scout } = useRaisingStore.getState()
   // 이사 장면은 결산 뒤 한 번만 본다. 해가 바뀌면 화면이 새로 그려져 다시 볼 수 있다.
   // 종목 회의 창 (231번): 분기 넘기기를 눌러 직원이 종목을 물어 왔으면 뜨고, 고른 뒤 그대로 결산한다 (267·382번).
@@ -125,7 +122,6 @@ export function CompanyScreen({ company }: { company: Company }) {
         {!ended && focus && <SeatPicker company={company} focus={focus} onFocus={setFocus} />}
 
         <CompanyTabs company={company} />
-        <AutoCountdown />
 
         {justSettled && <YearEndSheet company={company} onClose={closeYearEnd} />}
 
@@ -208,26 +204,10 @@ export function CompanyScreen({ company }: { company: Company }) {
                 {error}
               </p>
             )}
-            {autoPlay && (
-              <p className="text-center text-[12px] text-teal" data-testid="auto-status">
-                자동 진행 중 · 뽑기 → 배치 → 종목 회의(직원 다수결) → 분기 넘기기를 되풀이합니다
-              </p>
-            )}
-            <div className="grid grid-cols-[auto_1fr] gap-2">
+            <div className="grid gap-2">
               <button
                 type="button"
-                aria-pressed={autoPlay}
-                onClick={() => toggleAutoPlay(!autoPlay)}
-                className={`min-h-12 rounded border px-3 text-[14px] font-semibold ${
-                  autoPlay ? 'border-teal bg-teal text-white' : 'border-teal text-teal'
-                }`}
-                title="빈 자리에 뽑고, 자동 배치하고, 회의는 직원 다수결로 정하고, 결산을 해마다 되풀이한다"
-              >
-                {autoPlay ? '■ 자동 멈춤' : '⟳ 자동 진행'}
-              </button>
-              <button
-                type="button"
-                disabled={busy || autoPlay}
+                disabled={busy}
                 // 직원이 종목을 물어 오면 종목 회의, 아니면 바로 결산 (267·382번).
                 onClick={() => void stockOrSettle()}
                 className={`min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50 ${settleSpot}`}
@@ -996,36 +976,5 @@ function HistoryTab({ company }: { company: Company }) {
         ))}
       </ol>
     </section>
-  )
-}
-
-/**
- * 자동 진행이 띄운 창을 닫기까지 남은 초 (decisions.md 277번). 창(오버레이) 위에 떠야 보여서 화면 맨 위에 따로 붙인다(아래는 자동 멈춤 버튼이 있다). 창이 없으면 그리지 않는다.
- */
-function AutoCountdown() {
-  const nextAt = useRaisingStore((s) => s.autoNextAt)
-  const auto = useRaisingStore((s) => s.autoPlay)
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    if (nextAt === null) {
-      return
-    }
-    setNow(Date.now())
-    const id = setInterval(() => setNow(Date.now()), 250)
-    return () => clearInterval(id)
-  }, [nextAt])
-  if (!auto || nextAt === null) {
-    return null
-  }
-  const left = Math.max(0, Math.ceil((nextAt - now) / 1000))
-  return createPortal(
-    <p
-      className="fixed top-3 left-1/2 z-40 -translate-x-1/2 rounded-full bg-teal px-4 py-2 text-[13px] font-semibold text-white shadow-lg"
-      data-testid="auto-countdown"
-      aria-live="polite"
-    >
-      자동 진행 · {left}초 뒤 닫힘
-    </p>,
-    document.body,
   )
 }

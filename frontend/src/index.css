@@ -164,19 +164,6 @@ body {
 .animate-flash {
   animation: flash 0.6s ease-out 1;
 }
-/* 자동 진행 막대: 카드가 뜬 뒤 저절로 넘어가기까지 차오른다. 길이는 컴포넌트가 animation-duration으로 준다 */
-@keyframes auto-fill {
-  from {
-    width: 0%;
-  }
-  to {
-    width: 100%;
-  }
-}
-.animate-auto-fill {
-  animation: auto-fill 3s linear forwards;
-}
-
 /* 안목 렌즈 (decisions.md 161번): 힌트 글이 흐릿한 데서 초점이 맞으며 나타난다. 안목이 높을수록 빠르고 또렷하다. */
 @keyframes lens-focus-low {
   from {
@@ -1011,10 +998,6 @@ p.animate-stamp {
   .animate-flash,
   .animate-debate-in {
     animation: none;
-  }
-  .animate-auto-fill {
-    animation: none;
-    width: 100%;
   }
   .animate-lens-mid,
   .animate-lens-high,

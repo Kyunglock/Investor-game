@@ -1,6 +1,5 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
-import { toggleAutoPlay } from '@web/features/raising/autoPlay'
 import { nextStep, officeName } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useLocked, useTutorialSpot } from '@web/features/raising/TutorialBanner'
@@ -72,13 +71,11 @@ export function ToyCityHome({ company }: { company: Company }) {
   const [muted, setMutedState] = useState(isMuted)
   const capital = useCountUp(company.capital)
   const busy = useRaisingStore((s) => s.busy)
-  const autoPlay = useRaisingStore((s) => s.autoPlay)
   const error = useRaisingStore((s) => s.error)
   const tutorialOn = useTutorial((s) => s.active)
   const unlocked = unlockedFeatures(company, tutorialOn)
   const tutorial = tutorialStep(company)
   const upgradeLocked = useLocked(company, 'upgrade')
-  const autoLocked = useLocked(company, 'auto')
   const upgradeSpot = useTutorialSpot(company, 'upgrade')
   const marketSpot = useTutorialSpot(company, 'market')
   const staffSpot = useTutorialSpot(company, 'staff')
@@ -302,9 +299,7 @@ export function ToyCityHome({ company }: { company: Company }) {
                     <button
                       type="button"
                       className="toy-sheet-action"
-                      disabled={
-                        unavailable || busy || !plan.affordable || upgradeLocked || autoPlay
-                      }
+                      disabled={unavailable || busy || !plan.affordable || upgradeLocked}
                       data-testid="upgrade"
                       onClick={async () => {
                         sfx.stamp()
@@ -331,22 +326,6 @@ export function ToyCityHome({ company }: { company: Company }) {
           {panel === 'settings' && (
             <>
               <p className="toy-sheet-lead">내 속도에 맞춰 회사를 키워요</p>
-              <button
-                type="button"
-                className="toy-sheet-action"
-                disabled={autoLocked || ended || Boolean(company.broke)}
-                aria-pressed={autoPlay}
-                data-testid="auto"
-                onClick={() => {
-                  toggleAutoPlay(!autoPlay)
-                  setPanel(null)
-                }}
-              >
-                {autoPlay ? '자동 진행 멈추기' : '자동 진행 시작'}
-              </button>
-              <p className="mt-3 text-sm text-muted">
-                자동 진행은 채용·배치·회의·분기 넘기기를 대신합니다.
-              </p>
               <button
                 type="button"
                 className="toy-sheet-secondary"
