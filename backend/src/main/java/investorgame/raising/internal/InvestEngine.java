@@ -694,24 +694,22 @@ class InvestEngine {
     return (int) Math.min(r.lossCapBp(), loss);
   }
 
-  /** 회의 뒤 전투 모드 (414번, #573): 틀린 쪽에 걸었으면 디펜스, 맞힌 쪽이면 공격 판. */
-  static final String DEFENSE = "DEFENSE";
-
+  /** 회의 뒤 전투는 맞힌 쪽의 매도벽 돌파만 남긴다. */
   static final String ASSAULT = "ASSAULT";
 
-  /** 이 회의 뒤에 할 전투. 아직 안 정했거나 지켜봤으면 null. */
+  /** 이 회의 뒤에 할 전투. 틀렸거나 아직 안 정했거나 지켜봤으면 null. 옛 방어 대기도 해제된다. */
   static String battleMode(Invest invest) {
     if (invest == null || invest.choice == null || HOLD.equals(invest.choice)) {
       return null;
     }
     String right = invest.up ? BUY : SELL;
-    return right.equals(invest.choice) ? ASSAULT : DEFENSE;
+    return right.equals(invest.choice) ? ASSAULT : null;
   }
 
   /**
    * 회의 뒤 전투의 세기 (414번, #594에서 진행도·사장 힘을 더함): 1부터, 이유마다 더한 것. 크게 움직인 종목일수록(기사의 크기 0~1을 0~4로), 크게
-   * 걸었으면 +1, 깬 번호 스테이지 5개마다 +1, 회사 건물이 두 단계 오를 때마다 +1, 두 해마다 +1, 자본 전투 강화(공격·연사)가 합쳐 50단계마다 +1. 회사가
-   * 크면 적도 강해진다. 매도벽 돌파에서는 구매한 강화가 벽·적 강화로 상쇄되지 않도록 강화 단계를 제외한다.
+   * 걸었으면 +1, 깬 번호 스테이지 5개마다 +1, 회사 건물이 두 단계 오를 때마다 +1, 두 해마다 +1. 구매한 강화가 벽·적 강화로 상쇄되지 않도록 강화 단계는
+   * 제외한다.
    */
   java.util.LinkedHashMap<String, Integer> battleLevelParts(
       CompanyState c, Invest invest, int bestStage) {
@@ -722,11 +720,6 @@ class InvestEngine {
     String building = c.building == null ? "F" : c.building;
     parts.put("building", Math.max(0, CompanyEngine.LADDER.indexOf(building)) / 2);
     parts.put("year", Math.max(0, c.year - 1) / 2);
-    if (!ASSAULT.equals(battleMode(invest))) {
-      int upgrades =
-          c.battleLevels.getOrDefault("damage", 0) + c.battleLevels.getOrDefault("fire", 0);
-      parts.put("upgrade", upgrades / 50);
-    }
     return parts;
   }
 
@@ -739,10 +732,7 @@ class InvestEngine {
     return battleMode(invest) != null && !invest.battleClosed && invest.battleStars == null;
   }
 
-  /**
-   * 회의 뒤 전투의 결과를 받아 회의 손익을 확정한다 (414번, #573). 디펜스는 별에 따라 잃은 몫을 남기는 비율이 줄고(별 3개면 손실을 없애고 판돈의 일부를 더
-   * 번다), 공격은 번 몫을 키운다. 바뀐 몫(0 이상)을 자본에 더하고 돌려준다. 한 회의에 한 번, 그 분기 안에만.
-   */
+  /** 매도벽 돌파 결과로 회의 수익을 키운다. 바뀐 몫(0 이상)을 자본에 더하고 돌려준다. 한 회의에 한 번, 그 분기 안에만. */
   long battle(CompanyState c, String mode, int stars) {
     Invest invest = c.invest;
     String expected = battleMode(invest);
@@ -760,15 +750,7 @@ class InvestEngine {
     }
     CompanyProperties.Battle rule = properties.invest().battle();
     long bonus = 0;
-    if (DEFENSE.equals(mode)) {
-      if (invest.total < 0) {
-        long kept = invest.total * rule.defenseKeepPercent().get(stars) / PERCENT;
-        bonus = kept - invest.total;
-      }
-      if (stars == 3 && invest.stake != null) {
-        bonus += invest.stake * rule.defenseGainPercent() / PERCENT;
-      }
-    } else if (invest.total > 0) {
+    if (invest.total > 0) {
       bonus =
           CompanyEngine.ofStake(invest.total, (long) rule.assaultPercent().get(stars) * 100)
               - invest.total;
