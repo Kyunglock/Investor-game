@@ -1,4 +1,4 @@
-import type { OrderKind } from './enemies'
+import type { EnemyKind, OrderKind } from './enemies'
 import { SHARES_PER_HP } from './shares'
 
 /**
@@ -8,8 +8,8 @@ import { SHARES_PER_HP } from './shares'
  * 이 파일은 Phaser 없이 규칙과 숫자만 갖는다. 그리는 것과 움직임은 battle.ts(mode 'assault').
  */
 
-/** 벽 앞에서 쏟아지는 매도 물량과 패닉셀·투매의 종류(벽 칸·보스는 빼고). */
-export type FlowKind = Exclude<OrderKind, 'cell' | 'whale'> | 'panic' | 'dump'
+/** 벽 앞에서 쏟아지는 매도 물량과 고양이 몹(패닉셀·투매·손절·투기·공매도)의 종류(벽 칸·보스는 빼고). */
+export type FlowKind = Exclude<OrderKind, 'cell' | 'whale'> | EnemyKind
 
 /** 매도벽 하나. */
 export interface AssaultWall {
@@ -28,7 +28,8 @@ export interface AssaultWall {
 }
 
 /**
- * 열 구간 (level 1 기준, #593에서 다섯 → 열): 뒤로 갈수록 두껍고 단단하며 물량이 잦고 무겁다. 다섯째는 중간 큰손이 선 중간 매도벽, 열째는 대량
+ * 열 구간 (level 1 기준, #593에서 다섯 → 열): 뒤로 갈수록 두껍고 단단하며 물량이 잦고 무겁다. 손절은 처음부터, 투기는 셋째 벽부터, 공매도는
+ * 넷째 벽부터 섞여 뒤로 갈수록 잦다. 다섯째는 중간 큰손이 선 중간 매도벽, 열째는 대량
  * 매도벽 + 큰손. 판이 길어진 만큼 벽 하나는 다섯 구간 때보다 얇다(강화 없는 권총으로 3분 안에 겨우 깬다, stageCheck).
  */
 export const ASSAULT_WALLS: readonly AssaultWall[] = [
@@ -37,28 +38,38 @@ export const ASSAULT_WALLS: readonly AssaultWall[] = [
     cellHp: 4.7,
     boss: false,
     spawnSeconds: 1.6,
-    mix: { panic: 2, dump: 1, order: 5, market: 3 },
+    mix: { panic: 2, dump: 1, order: 5, market: 3, stop: 0.5 },
   },
   {
     rows: 1,
     cellHp: 5.8,
     boss: false,
     spawnSeconds: 1.5,
-    mix: { panic: 2, dump: 1, order: 5, market: 3, fake: 1 },
+    mix: { panic: 2, dump: 1, order: 5, market: 3, fake: 1, stop: 0.7 },
   },
   {
     rows: 1,
     cellHp: 6.8,
     boss: false,
     spawnSeconds: 1.45,
-    mix: { panic: 2, dump: 1, order: 4, market: 3, fake: 1 },
+    mix: { panic: 2, dump: 1, order: 4, market: 3, fake: 1, stop: 1, spec: 0.4 },
   },
   {
     rows: 2,
     cellHp: 4.4,
     boss: false,
     spawnSeconds: 1.4,
-    mix: { panic: 2, dump: 1, order: 4, market: 3, bulk: 1, fake: 1 },
+    mix: {
+      panic: 2,
+      dump: 1,
+      order: 4,
+      market: 3,
+      bulk: 1,
+      fake: 1,
+      stop: 1,
+      spec: 0.5,
+      short: 0.4,
+    },
   },
   {
     rows: 2,
@@ -66,42 +77,92 @@ export const ASSAULT_WALLS: readonly AssaultWall[] = [
     boss: false,
     mid: true,
     spawnSeconds: 1.35,
-    mix: { panic: 2, dump: 1, order: 4, market: 3, bulk: 1, fake: 1 },
+    mix: {
+      panic: 2,
+      dump: 1,
+      order: 4,
+      market: 3,
+      bulk: 1,
+      fake: 1,
+      stop: 1,
+      spec: 0.6,
+      short: 0.5,
+    },
   },
   {
     rows: 1,
     cellHp: 8.9,
     boss: false,
     spawnSeconds: 1.3,
-    mix: { panic: 2, dump: 1, order: 4, market: 4, bulk: 1, fake: 1 },
+    mix: {
+      panic: 2,
+      dump: 1,
+      order: 4,
+      market: 4,
+      bulk: 1,
+      fake: 1,
+      stop: 1,
+      spec: 0.6,
+      short: 0.6,
+    },
   },
   {
     rows: 2,
     cellHp: 5.2,
     boss: false,
     spawnSeconds: 1.25,
-    mix: { panic: 2, dump: 1, order: 4, market: 4, bulk: 1.5, fake: 1 },
+    mix: {
+      panic: 2,
+      dump: 1,
+      order: 4,
+      market: 4,
+      bulk: 1.5,
+      fake: 1,
+      stop: 1.2,
+      spec: 0.7,
+      short: 0.7,
+    },
   },
   {
     rows: 2,
     cellHp: 5.8,
     boss: false,
     spawnSeconds: 1.2,
-    mix: { panic: 2, dump: 1, order: 3, market: 4, bulk: 1.5, fake: 1 },
+    mix: {
+      panic: 2,
+      dump: 1,
+      order: 3,
+      market: 4,
+      bulk: 1.5,
+      fake: 1,
+      stop: 1.2,
+      spec: 0.8,
+      short: 0.8,
+    },
   },
   {
     rows: 2,
     cellHp: 6.3,
     boss: false,
     spawnSeconds: 1.15,
-    mix: { panic: 2, dump: 1, order: 3, market: 4, bulk: 2, fake: 1 },
+    mix: {
+      panic: 2,
+      dump: 1,
+      order: 3,
+      market: 4,
+      bulk: 2,
+      fake: 1,
+      stop: 1.2,
+      spec: 0.8,
+      short: 0.9,
+    },
   },
   {
     rows: 3,
     cellHp: 5.2,
     boss: true,
     spawnSeconds: 1.1,
-    mix: { panic: 2, dump: 1, order: 3, market: 4, bulk: 2, fake: 1 },
+    mix: { panic: 2, dump: 1, order: 3, market: 4, bulk: 2, fake: 1, stop: 1.2, spec: 1, short: 1 },
   },
 ]
 

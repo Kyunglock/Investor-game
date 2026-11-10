@@ -433,6 +433,13 @@ const unitK = (kind: UnitKind) => ENEMY_K * (UNITS[kind].scale ?? 1)
 /** 구워 둔 텍스처(배율만큼 큼)를 CSS px 크기로 놓는 배율. 파티클·화염에 쓴다. */
 const TEX = 1 / DPR
 
+/** 공격 판에서 손절·투기·공매도가 처음 나올 때의 배너. */
+const ASSAULT_MOB_BANNERS: Record<'stop' | 'spec' | 'short', [string, string]> = {
+  stop: ['손절매 출현! 단단하게 들이받는다', '#9ba2ad'],
+  spec: ['투기 몬스터 출현! 부풀면 터진다', '#ea4d6a'],
+  short: ['공매도 출현! 방패로 버틴다', '#9eb7ff'],
+}
+
 class BattleScene extends Phaser.Scene {
   private readonly opts: BattleOptions
   private readonly genre
@@ -612,6 +619,8 @@ class BattleScene extends Phaser.Scene {
   /** 첫 카드를 골라 싸움이 시작됐다 (339번). */
   private begun = false
   private nextWave = WAVE_SECONDS
+  /** 공격 판에서 이미 출현 배너를 띄운 몹(손절·투기·공매도). */
+  private assaultSeen = new Set<string>()
   /** 다음 패닉셀 러시 시각(초)과, 러시 중이면 아직 나올 패닉셀 수·다음 한 마리까지 남은 시간. */
   private nextPanicRush: number = PANIC_RUSH.first + panicRushGap(Math.random()) / 2
   private panicRushLeft = 0
@@ -2099,6 +2108,13 @@ class BattleScene extends Phaser.Scene {
           kind === 'panic' ? '#82bbff' : '#c5a1ff',
         )
       this.marketStats[kind]++
+    }
+    if (this.assault && (kind === 'stop' || kind === 'spec' || kind === 'short')) {
+      if (!this.assaultSeen.has(kind)) {
+        this.assaultSeen.add(kind)
+        const [text, color] = ASSAULT_MOB_BANNERS[kind]
+        this.opts.onBanner(text, color)
+      }
     }
     return e
   }
