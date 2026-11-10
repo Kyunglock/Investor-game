@@ -1,5 +1,5 @@
 import type { Company, Drawn } from '@web/api/client'
-import { BattleEntryButton, BattleEntryContent } from '@web/features/raising/BattleEntryButton'
+import { BattleEntryContent } from '@web/features/raising/BattleEntryButton'
 import { GachaReveal, useDrawReveal } from '@web/features/raising/Gacha'
 import { InvestWindow } from '@web/features/raising/InvestWindow'
 import { QuarterSheet } from '@web/features/raising/QuarterSheet'
@@ -53,7 +53,7 @@ export function Windows({ company }: { company: Company }) {
   const stockOrSettle = async () => {
     const pending = useRaisingStore.getState().company?.invest?.outcome?.battle
     if (pending?.open) {
-      useAppUi.getState().startBattle({ kind: 'invest', mode: pending.mode, level: pending.level })
+      useAppUi.getState().setTab('office')
       return
     }
     if (!(await scout())) {
@@ -132,11 +132,7 @@ export function Windows({ company }: { company: Company }) {
             setInvestOpen(false)
             battleOrSettle()
           }}
-          onBattle={(b) => {
-            // 회의 뒤 전투 (414번): 창을 닫고 전투로 갔다가, 끝나면 회의 창으로 돌아와 전·후 손익을 보고 분기를 넘긴다.
-            setInvestOpen(false)
-            useAppUi.getState().startBattle({ kind: 'invest', mode: b.mode, level: b.level })
-          }}
+          battleInOffice
         />
       )}
       {!ended && battle && (
@@ -339,22 +335,7 @@ export function ActionBar({
       </div>
     )
   }
-  if (pending)
-    return (
-      <div className="px-4 pt-2 pb-3 text-ink">
-        {error && (
-          <p role="alert" className="mb-1 text-[12px] text-red-pen">
-            {error}
-          </p>
-        )}
-        <BattleEntryButton
-          mode={pending.mode}
-          onClick={enterBattle}
-          disabled={busy}
-          testId="pending-invest-battle"
-        />
-      </div>
-    )
+  if (pending) return null
   return (
     <div className="px-4 pt-2 pb-2 text-ink">
       {error && (
