@@ -2773,7 +2773,7 @@ class BattleScene extends Phaser.Scene {
         until: 0,
         nextTick: 0,
       })
-      this.bolts.push(this.add.graphics().setDepth(6).setVisible(false))
+      this.bolts.push(this.add.graphics().setDepth(8).setVisible(false))
     }
     for (let i = 0; i < 20; i++) {
       this.rings.push(hidden('magic-ring', 6))
@@ -3414,54 +3414,48 @@ class BattleScene extends Phaser.Scene {
     })
   }
 
-  // 번개: 몬스터 중 체력이 가장 많은 적에게 내리꽂혀 몬스터끼리 튄다. 몬스터가 없으면 매도벽을 노린다. 가는 줄기(Lv.1) → 굵은 번개(Lv.2) → 여러 갈래(Lv.3).
+  // 번개: 시전자에서 몬스터로 뻗고 몬스터끼리 튄다. 몬스터가 없으면 매도벽을 노린다.
 
   private castLightning(from: { x: number; y: number }, level: number): boolean {
     const st = lightningStats(level)
     const plans = lightningPlan(this.magicTargets(), from, st, (e) => Boolean(e.cell))
     if (plans.length === 0) return false
-    for (const { target, chain } of plans) this.strike(target, chain, st, level)
+    for (const { target, chain } of plans) this.strike(from, target, chain, st, level)
     this.playSound('zap')
     return true
   }
 
-  private strike(target: Enemy, chain: Enemy[], st: LightningStats, level: number) {
+  private strike(
+    from: { x: number; y: number },
+    target: Enemy,
+    chain: Enemy[],
+    st: LightningStats,
+    level: number,
+  ) {
     const tier = magicTier(level)
-    const width = [2, 4, 5.5][tier - 1] * this.grow(level)
+    const width = [4, 6, 8][tier - 1] * this.grow(level)
     const g = this.bolts[this.boltIndex++ % this.bolts.length]
     this.tweens.killTweensOf(g)
     g.clear().setAlpha(1).setVisible(true)
-    this.drawBolt(
-      g,
-      target.x + Phaser.Math.Between(-40, 40),
-      -20,
-      target.x,
-      target.y,
-      width,
-      [0, 1, 3][tier - 1],
-    )
+    this.drawBolt(g, from.x, from.y, target.x, target.y, width, [0, 1, 3][tier - 1])
     let prev = target
     for (const o of chain) {
-      this.drawBolt(g, prev.x, prev.y, o.x, o.y, Math.max(1.5, width * 0.55), 0)
+      this.drawBolt(g, prev.x, prev.y, o.x, o.y, Math.max(3, width * 0.65), 0)
+      this.drawLightningImpact(g, o.x, o.y, 9 + tier * 2)
       prev = o
     }
-    this.glow(target.x, target.y, 0xfff27a, [24, 40, 60][tier - 1] * this.grow(level), 220)
-    if (tier >= 2) this.ring(target.x, target.y, 0xffe94d, [0, 42, 66][tier - 1], 240)
-    this.boltFx.explode(this.fx([6, 12, 22][tier - 1]), target.x, target.y)
-    // 번쩍임: 단계가 높을수록 여러 번 깜박인 뒤 사라진다.
+    this.drawLightningImpact(g, target.x, target.y, 15 + tier * 4)
+    this.glow(target.x, target.y, 0xfff27a, [42, 58, 76][tier - 1] * this.grow(level), 360)
+    this.ring(target.x, target.y, 0xffe94d, [34, 50, 72][tier - 1], 360)
+    this.boltFx.explode(this.fx([10, 16, 22][tier - 1]), target.x, target.y)
+    // 경로를 잠시 선명하게 유지한 뒤 한 번만 사라진다. 빠른 점멸 없이 타격과 연쇄를 읽을 수 있다.
     this.tweens.add({
       targets: g,
-      alpha: 0.25,
-      duration: 45,
-      yoyo: true,
-      repeat: tier - 1,
-      onComplete: () =>
-        this.tweens.add({
-          targets: g,
-          alpha: 0,
-          duration: 110 + tier * 50,
-          onComplete: () => g.setVisible(false),
-        }),
+      alpha: 0,
+      delay: 120 + tier * 30,
+      duration: this.reducedMotion ? 180 : 260,
+      ease: 'Quad.easeIn',
+      onComplete: () => g.setVisible(false),
     })
     const dmg = st.damage * this.loadout.damage
     this.hit(target, dmg, Math.PI / 2, 'lightning')
@@ -3472,6 +3466,30 @@ class BattleScene extends Phaser.Scene {
         this.hit(o, dmg * st.chainDamage, Math.atan2(o.y - prev.y, o.x - prev.x), 'chain')
       }
       prev = o
+    }
+  }
+
+  /** 밝은 바닥에서도 맞은 자리를 알아볼 수 있는 보라색 테두리와 노란 방전 고리. */
+  private drawLightningImpact(
+    g: Phaser.GameObjects.Graphics,
+    x: number,
+    y: number,
+    radius: number,
+  ) {
+    g.lineStyle(6, 0x493078, 0.85)
+    g.strokeCircle(x, y, radius)
+    g.lineStyle(3, 0xffed82, 1)
+    g.strokeCircle(x, y, radius)
+    for (let i = 0; i < 4; i++) {
+      const angle = Math.PI / 4 + (i * Math.PI) / 2
+      const dx = Math.cos(angle)
+      const dy = Math.sin(angle)
+      g.lineBetween(
+        x + dx * (radius + 4),
+        y + dy * (radius + 4),
+        x + dx * (radius + 12),
+        y + dy * (radius + 12),
+      )
     }
   }
 
@@ -3507,10 +3525,10 @@ class BattleScene extends Phaser.Scene {
       for (let i = 1; i <= n; i++) g.lineTo(xs[i], ys[i])
       g.strokePath()
     }
-    stroke(width * 4.5, 0x6250da, 0.12)
-    stroke(width * 2.2, 0x8179ed, 0.35)
-    stroke(width, 0xffdf75, 1)
-    stroke(Math.max(1, width * 0.4), 0xffffff, 1)
+    stroke(width * 4, 0x7760e0, 0.2)
+    stroke(width * 2, 0x493078, 0.85)
+    stroke(width * 1.25, 0xffd23f, 1)
+    stroke(Math.max(2, width * 0.5), 0xffffff, 1)
     // 짧은 방전 가지: 본줄기보다 가늘게, 흰 심을 가리지 않게 밖으로 뻗는다.
     g.lineStyle(Math.max(0.7, width * 0.2), 0xd9cfff, 0.8)
     for (let i = 2; i < n; i += 3) {
