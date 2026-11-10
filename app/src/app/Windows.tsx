@@ -132,7 +132,9 @@ export function Windows({ company }: { company: Company }) {
             setInvestOpen(false)
             battleOrSettle()
           }}
-          battleInOffice
+          onBattle={(b) => {
+            useAppUi.getState().startBattle({ kind: 'invest', mode: b.mode, level: b.level })
+          }}
         />
       )}
       {!ended && battle && (
