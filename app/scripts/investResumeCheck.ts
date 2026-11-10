@@ -138,6 +138,11 @@ try {
       await expect(page.locator('.toy-progress')).toHaveAttribute('data-progress', mode)
       await expect(page.locator('.toy-progress')).not.toContainText('다음 분기로')
       await expect(page.locator('.toy-progress')).not.toContainText('넘기기')
+      await expect(page.locator('.toy-progress svg')).toHaveCount(0)
+      const copy = page.locator('.toy-progress .battle-entry-copy')
+      const subtitle = await copy.locator('small').boundingBox()
+      const title = await copy.locator('strong').boundingBox()
+      assert(subtitle && title && subtitle.y + subtitle.height + 7 <= title.y)
       await expect(page.locator('.toy-bottom-cards > button')).toHaveCount(3)
       const boxes = await page.locator('.toy-bottom-cards > button').evaluateAll((els) =>
         els.map((el) => {

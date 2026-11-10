@@ -77,25 +77,25 @@
   margin-left: auto;
 }
 .battle-entry-compact {
-  flex-direction: column;
-  gap: 4px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
   min-height: 108px;
-  padding: 8px 3px;
+  padding: 12px 6px;
   text-align: center;
 }
-.battle-entry-compact .battle-entry-icon {
-  height: 32px;
-  flex-basis: 32px;
-  background: none;
-  box-shadow: none;
-}
-.battle-entry-compact .battle-entry-icon svg {
-  width: 30px;
-  height: 30px;
+.battle-entry-compact .battle-entry-copy {
+  width: 100%;
+  gap: 8px;
 }
 .battle-entry-compact .battle-entry-copy strong {
   font-size: clamp(14px, 3.8vw, 20px);
-  white-space: nowrap;
+  font-weight: 400;
+  font-synthesis: none;
+  text-shadow: none;
+  line-height: 1.4;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 .battle-entry-compact .battle-entry-copy small {
   font-size: 8px;
