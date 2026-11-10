@@ -196,9 +196,9 @@ class InvestEngineTest {
     assertThat(holder.invest.choice).isNull();
   }
 
-  /** 맞힌 회의만 매도벽 돌파가 열리고, 틀린 회의는 손익 그대로 분기를 넘긴다. */
+  /** 맞힌 회의와 틀린 회의 모두 매도벽 돌파가 열리며 회의 손익 계산은 유지한다. */
   @Test
-  void 회의_뒤_전투는_맞힌_경우에만_열린다() {
+  void 회의_뒤_전투는_정답과_오답_모두_매도벽_돌파다() {
     CompanyState winner = company(3, stats(50, 100, 100, 100));
     ENGINE.invest.decide(winner, right(winner), new HashSeededRandom(3));
     assertThat(InvestEngine.battleMode(winner.invest)).isEqualTo(InvestEngine.ASSAULT);
@@ -215,11 +215,15 @@ class InvestEngineTest {
 
     CompanyState loser = company(3, stats(50, 100, 100, 100));
     ENGINE.invest.decide(loser, wrong(loser), new HashSeededRandom(3));
-    assertThat(InvestEngine.battleMode(loser.invest)).isNull();
-    assertThat(InvestEngine.battleOpen(loser.invest)).isFalse();
+    assertThat(InvestEngine.battleMode(loser.invest)).isEqualTo(InvestEngine.ASSAULT);
+    assertThat(InvestEngine.battleOpen(loser.invest)).isTrue();
     long lost = loser.invest.total;
     long capital = loser.capital;
     assertThatThrownBy(() -> ENGINE.invest.battle(loser, "DEFENSE", 3))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(ENGINE.invest.battle(loser, InvestEngine.ASSAULT, 3)).isZero();
+    assertThat(InvestEngine.battleOpen(loser.invest)).isFalse();
+    assertThatThrownBy(() -> ENGINE.invest.battle(loser, InvestEngine.ASSAULT, 3))
         .isInstanceOf(InvalidRequestException.class);
     assertThat(loser.invest.total).isEqualTo(lost);
     assertThat(loser.capital).isEqualTo(capital);
