@@ -14,6 +14,7 @@ type Part = 'settlement' | 'achievements' | 'hall' | 'timeline'
 export function RecordScene({ company }: { company: Company }) {
   const [part, setPart] = useState<Part>(company.lastSettlement ? 'settlement' : 'achievements')
   const h = company.history
+  const news = company.lastSettlement?.lines.filter((line) => newsKind(line).tag !== '성장') ?? []
   const parts: { id: Part; label: string }[] = [
     { id: 'settlement', label: '지난 결산' },
     { id: 'achievements', label: '업적' },
@@ -94,13 +95,13 @@ export function RecordScene({ company }: { company: Company }) {
               <div className="panel mt-1 p-3">
                 <Ledger company={company} settlement={company.lastSettlement} />
               </div>
-              {company.lastSettlement.lines.length > 0 && (
+              {news.length > 0 && (
                 <>
                   <h4 className="record-news-title">
-                    그해의 소식 <small>{company.lastSettlement.lines.length}건</small>
+                    그해의 소식 <small>{news.length}건</small>
                   </h4>
                   <ul className="record-news" data-testid="settlement-news">
-                    {company.lastSettlement.lines.map((line, i) => {
+                    {news.map((line, i) => {
                       const kind = newsKind(line)
                       return (
                         // biome-ignore lint/suspicious/noArrayIndexKey: 같은 소식이 두 번 올 수 있고 목록은 한 번 그리면 그대로다 (#338)
