@@ -1,11 +1,18 @@
 import type Phaser from 'phaser'
 import { BUY_WALL, type BuyWall } from './buyWall'
+import { shareLabel } from './shares'
 
 /** 붉은 매수 주문 벽과 소량의 상승 주문. 매도벽의 파란 물량과 구분한다. */
 export class BuyWallFx {
   private ink: Phaser.GameObjects.Graphics
   private title: Phaser.GameObjects.Text
-  private shots: { x: number; y: number; active: boolean; label: Phaser.GameObjects.Text }[]
+  private shots: {
+    x: number
+    y: number
+    damage: number
+    active: boolean
+    label: Phaser.GameObjects.Text
+  }[]
   constructor(scene: Phaser.Scene) {
     this.ink = scene.add.graphics().setDepth(4)
     this.title = scene.add
@@ -21,9 +28,10 @@ export class BuyWallFx {
     this.shots = Array.from({ length: 6 }, () => ({
       x: 0,
       y: 0,
+      damage: 0,
       active: false,
       label: scene.add
-        .text(0, 0, '매수 ↑', {
+        .text(0, 0, '', {
           fontFamily: 'Jua, sans-serif',
           fontSize: 11,
           color: '#fff7d6',
@@ -35,15 +43,18 @@ export class BuyWallFx {
         .setVisible(false),
     }))
   }
-  launch(x: number, y: number) {
+  launch(x: number, y: number, damage: number) {
     const shot = this.shots.find((s) => !s.active)
-    if (shot) Object.assign(shot, { x, y, active: true })
+    if (shot) {
+      Object.assign(shot, { x, y, damage, active: true })
+      shot.label.setText(`매수 ${shareLabel(damage)} ↑`)
+    }
   }
-  step(dt: number, hit: (x: number, fromY: number, toY: number) => boolean) {
+  step(dt: number, hit: (x: number, fromY: number, toY: number, damage: number) => boolean) {
     for (const shot of this.shots) {
       if (!shot.active) continue
       const next = shot.y - dt * 360
-      if (hit(shot.x, shot.y, next) || next < -30) shot.active = false
+      if (hit(shot.x, shot.y, next, shot.damage) || next < -30) shot.active = false
       shot.y = next
     }
   }
@@ -62,7 +73,7 @@ export class BuyWallFx {
       g.fillStyle(0x4f2837).fillRect(left, y + 17, width, 4)
       g.fillStyle(0xffdc87).fillRect(left, y + 17, (width * wall.hp) / wall.maxHp, 4)
       this.title
-        .setText(`매수벽 ${Math.ceil(wall.hp)}/${wall.maxHp}`)
+        .setText(`매수벽 ${shareLabel(wall.hp)} / ${shareLabel(wall.maxHp)}`)
         .setPosition(left + width / 2, y)
     } else {
       const t = Math.min(1, (BUY_WALL.rebuildSeconds - wall.rebuildLeft) / 0.8)
@@ -84,8 +95,9 @@ export class BuyWallFx {
       shot.label.setVisible(shot.active).setPosition(shot.x, shot.y)
       if (!shot.active) continue
       g.fillStyle(0xffd394, 0.35).fillRoundedRect(shot.x - 10, shot.y, 20, 38, 5)
-      g.fillStyle(0xc64b45).fillRoundedRect(shot.x - 21, shot.y - 10, 42, 21, 5)
-      g.lineStyle(1.5, 0xffd394).strokeRoundedRect(shot.x - 21, shot.y - 10, 42, 21, 5)
+      const width = Math.max(42, shot.label.width + 12)
+      g.fillStyle(0xc64b45).fillRoundedRect(shot.x - width / 2, shot.y - 10, width, 21, 5)
+      g.lineStyle(1.5, 0xffd394).strokeRoundedRect(shot.x - width / 2, shot.y - 10, width, 21, 5)
     }
   }
 }

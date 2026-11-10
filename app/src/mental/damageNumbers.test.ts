@@ -16,6 +16,13 @@ describe('데미지 숫자 (decisions.md 391번)', () => {
     expect(shownDamage(0.01)).toBe(1)
   })
 
+  it('매도벽 돌파에서는 일반·치명타·지속 공격을 매도벽과 같은 주 단위로 표시한다', () => {
+    expect(damageLabel('bullet', 8, true)).toBe('1,200주')
+    expect(damageLabel('crit', 2, true)).toBe('300주!')
+    expect(damageLabel('burn', 0.01, true)).toBe('2주')
+    expect(damageLabel('bullet', 2)).toBe('20')
+  })
+
   it('치명타만 느낌표, 더 크고 오래 남으며 합치지 않는다(충차의 들이받기도 한 방씩)', () => {
     expect(damageLabel('crit', 2)).toBe('20!')
     expect(damageLabel('bullet', 2)).toBe('20')

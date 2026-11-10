@@ -1,3 +1,5 @@
+import { shareLabel } from './shares'
+
 /**
  * 데미지 숫자 (decisions.md 391번): 적이 피해를 받는 모든 경우에 숫자를 띄운다. 334번의 "한 방에 안 죽는 적에만"을 뒤집었다. 숫자가 화면을 덮지
  * 않게 짧은 시간 같은 적의 같은 피해는 하나로 합치고, 새로 뜨는 숫자는 살짝 흩뿌리며, 텍스트는 풀로 돌려 쓴다. 이 모듈은 Phaser 없이 규칙만 가진다
@@ -59,8 +61,8 @@ export function shownDamage(amount: number): number {
 }
 
 /** 숫자 글자: 치명타만 느낌표가 붙는다. */
-export function damageLabel(kind: DamageKind, amount: number): string {
-  const n = shownDamage(amount)
+export function damageLabel(kind: DamageKind, amount: number, shares = false): string {
+  const n = shares ? shareLabel(amount) : shownDamage(amount)
   return kind === 'crit' ? `${n}!` : String(n)
 }
 
