@@ -4,6 +4,7 @@ import {
   bossSummonSeconds,
   defenseStars,
   formation,
+  numberedStageScale,
   SEGMENTS,
   stageLabel,
   stageSpec,
@@ -72,5 +73,26 @@ describe('디펜스 번호 스테이지의 별 (decisions.md 375번)', () => {
     expect(defenseStars(true, 30, 100)).toBe(1)
     expect(defenseStars(true, 60, 100)).toBe(2)
     expect(defenseStars(true, 80, 100)).toBe(3)
+  })
+})
+
+describe('번호 스테이지 초반 난이도', () => {
+  it('첫 스테이지는 유지하고 후반은 시작부터 체력과 물량 차이가 난다', () => {
+    for (const t of [0, 15, 35, 120]) {
+      expect(numberedStageScale(1, t)).toBe(1)
+    }
+    expect(numberedStageScale(stageSpec(5).hpScale, 0)).toBeGreaterThan(3)
+    expect(numberedStageScale(stageSpec(5).countScale, 0)).toBeGreaterThan(1.4)
+    for (const key of ['hpScale', 'countScale', 'speedScale', 'dmgScale'] as const) {
+      const scales = [1, 3, 5, 9].map((stage) => numberedStageScale(stageSpec(stage)[key], 0))
+      for (let i = 1; i < scales.length; i++) expect(scales[i]).toBeGreaterThan(scales[i - 1])
+    }
+  })
+  it('35초에 목표 난이도에 도달하고 이후에는 초과하지 않는다', () => {
+    const scale = stageSpec(9).hpScale
+    expect(numberedStageScale(scale, -1)).toBe(numberedStageScale(scale, 0))
+    expect(numberedStageScale(scale, 15)).toBeGreaterThan(numberedStageScale(scale, 0))
+    expect(numberedStageScale(scale, 35)).toBe(scale)
+    expect(numberedStageScale(scale, 120)).toBe(scale)
   })
 })

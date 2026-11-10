@@ -96,6 +96,15 @@ export const STAGE_STEP = { hp: 0.9, count: 0.2, speed: 0.06, dmg: 0.2 }
 /** 스테이지 배율을 한 판 안에서 거는 정도 (#565): 처음엔 from만큼, seconds초에 걸쳐 끝까지(보스 졸개·보스 체력은 처음부터 끝까지). */
 export const STAGE_RAMP = { from: 0.15, seconds: 70 }
 
+/** 번호 스테이지는 입장부터 차이가 나고, 첫 두 파도 뒤에는 전체 난이도에 도달한다. */
+export const NUMBERED_STAGE_RAMP = { from: 0.6, seconds: 35 }
+
+export function numberedStageScale(scale: number, elapsed: number): number {
+  const progress = Math.min(1, Math.max(0, elapsed) / NUMBERED_STAGE_RAMP.seconds)
+  const weight = NUMBERED_STAGE_RAMP.from + (1 - NUMBERED_STAGE_RAMP.from) * progress
+  return 1 + (scale - 1) * weight
+}
+
 /**
  * 번호 스테이지의 판 (decisions.md 369번): 챕터 안에서 앞 셋은 구간 셋, 다음 셋은 넷, 그 뒤는 다섯. 적은 스테이지마다 STAGE_STEP만큼 단단하고 많고
  * 빠르고 아프다 (#565). 챕터 마지막 스테이지에만 보스가 나온다.

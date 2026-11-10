@@ -8,6 +8,7 @@ import {
   DEFENSE_BOSS_SECONDS,
   defenseStars,
   formation,
+  numberedStageScale,
   PER_CHAPTER,
   SCROLL_SECONDS,
   SEGMENTS,
@@ -2092,6 +2093,9 @@ class BattleScene extends Phaser.Scene {
    * 갈려 결과가 운(첫 카드)에 달리던 것을 줄인다.
    */
   private staged(scale: number) {
+    if (this.mode === 'defense' && this.opts.stage) {
+      return numberedStageScale(scale, this.elapsed)
+    }
     const k = Math.min(
       1,
       STAGE_RAMP.from + ((1 - STAGE_RAMP.from) * this.elapsed) / STAGE_RAMP.seconds,
