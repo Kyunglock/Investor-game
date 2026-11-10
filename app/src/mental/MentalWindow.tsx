@@ -31,6 +31,7 @@ import {
 import { applyCard, type Card, GRADE_NAMES, loadoutOf, pickCards } from './cards'
 import { ENEMIES } from './enemies'
 import { GunSprite } from './GunSprite'
+import { type GameSpeed, loadGameSpeed, nextGameSpeed, saveGameSpeed } from './gameSpeed'
 import { BATTLE_SECONDS } from './genres'
 import { StagePortrait } from './StagePortrait'
 import { GRADE_BADGE } from './WeaponInventory'
@@ -926,6 +927,7 @@ function Battle({
   const [attempt, setAttempt] = useState(0)
   const [levelUp, setLevelUp] = useState<number | null>(null)
   const [asking, setAsking] = useState(false)
+  const [speed, setSpeed] = useState<GameSpeed>(loadGameSpeed)
 
   const togglePause = useEffectEvent(() => {
     handle.current?.setPaused(!asking)
@@ -952,6 +954,7 @@ function Battle({
           return
         }
         handle.current = startBattle(el, {
+          speed: loadGameSpeed(),
           mode,
           stage,
           assault,
@@ -1040,6 +1043,22 @@ function Battle({
               <time data-testid="battle-timer">
                 {Math.floor(hud.secondsLeft / 60)}:{String(hud.secondsLeft % 60).padStart(2, '0')}
               </time>
+              <button
+                type="button"
+                aria-label={`전투 배속 ${speed}배, 눌러서 바꾸기`}
+                className="battle-pause battle-speed"
+                data-testid="battle-speed"
+                data-speed={speed}
+                onClick={() => {
+                  sfx.tap()
+                  const next = nextGameSpeed(speed)
+                  setSpeed(next)
+                  saveGameSpeed(next)
+                  handle.current?.setSpeed(next)
+                }}
+              >
+                {speed}x
+              </button>
               <button
                 type="button"
                 aria-label="전투 일시정지"
