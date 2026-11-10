@@ -90,7 +90,6 @@ export function ToyCityHome({ company }: { company: Company }) {
     sfx.tap()
     useAppUi.getState().setTab(tab)
   }
-  const issue = company.meeting?.omen ?? company.meeting?.eraEnding ?? company.era.description
   return (
     <div className="toy-home" data-testid="office-scene">
       <ToyCityStreet
@@ -249,17 +248,6 @@ export function ToyCityHome({ company }: { company: Company }) {
             : '첫 동료를 기다리고 있어요'}
       </div>
       <div className="toy-bottom">
-        <button
-          type="button"
-          className="toy-ticker"
-          disabled={!unlocked.includes('issue')}
-          onClick={() => changeTab('issue')}
-          data-testid="era"
-        >
-          <b>거리 소식</b>
-          <span>{issue}</span>
-          <span aria-hidden="true">→</span>
-        </button>
         <ActionBar company={company} variant="toy" />
       </div>
       {panel && (
