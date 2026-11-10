@@ -320,8 +320,7 @@ interface AssaultCell {
   crack: number
   weak: boolean
 }
-/** 매도벽 칸의 높이(px)와 칸 사이 틈. 폭은 길 폭을 칸 수로 나눈다. */
-const CELL_H = 30
+/** 매도벽 층 사이 틈(px). 층 높이는 layerHeight, 폭은 길 폭을 칸 수로 나눈다. */
 const CELL_GAP = 3
 /** 한 덩어리 매도벽(416번)의 체력 = 줄·칸 체력의 합 × 이 비율. stageCheck로 맞췄다. */
 const CHUNK_HP = 0.65
@@ -1296,16 +1295,16 @@ class BattleScene extends Phaser.Scene {
       arrived: false,
       broken: false,
     }
-    // 매도벽은 큰 덩어리 하나다 (416번): 칸으로 나누지 않고, 줄 수만큼 두껍고 줄·칸 체력을 모두 더한 만큼 단단하다.
-    let hp = 0
-    for (let row = 0; row < ws.rows; row++) {
-      hp += rowHps(ws.cellHp * (1 + row * 0.15), cols).reduce((a, b) => a + b, 0)
-    }
-    // 칸이 여럿이던 때는 퍼지는 마법·불길이 칸 여러 개를 한꺼번에 맞혔다. 한 덩어리라 그만큼 덜 단단하게 둔다.
-    const e = this.spawnCell(wall, 0, 0, hp * CHUNK_HP, false)
-    if (e) {
-      wall.cells.push(e)
-      wall.left++
+    // 매도벽은 칸으로 나누지 않은 덩어리다 (416번). 줄이 여럿이면 길게 늘이지 않고 같은 크기의 벽을 한 층씩 위로 쌓는다. 층마다 그 줄의 체력을 갖고,
+    // 맨 아래 층부터 맞아 부서지면 위층이 내려앉는다.
+    for (let row = 0; row < Math.max(1, ws.rows); row++) {
+      const hp = rowHps(ws.cellHp * (1 + row * 0.15), cols).reduce((a, b) => a + b, 0)
+      // 칸이 여럿이던 때는 퍼지는 마법·불길이 칸 여러 개를 한꺼번에 맞혔다. 덩어리라 그만큼 덜 단단하게 둔다.
+      const e = this.spawnCell(wall, row, 0, hp * CHUNK_HP, false)
+      if (e) {
+        wall.cells.push(e)
+        wall.left++
+      }
     }
     this.layoutWall(wall)
     this.placeWall(wall)
@@ -1352,38 +1351,72 @@ class BattleScene extends Phaser.Scene {
     return e
   }
 
-  /** 얇은 초기 벽도 정사각형 블록 한 줄보다 낮게 눌리지 않는다. */
-  private wallHeight(wall: WallState) {
-    return Math.max(wall.spec.rows * CELL_H, (this.lane().width - CELL_GAP) / 6 + CELL_GAP)
+  /** 매도벽 한 층의 높이: 정사각형 블록 한 줄. 층이 여럿이어도 늘이지 않고 이 높이로 쌓는다. */
+  private layerHeight() {
+    return (this.lane().width - CELL_GAP) / 6 + CELL_GAP
   }
 
-  /** 칸 크기를 화면 폭에 맞춘다(만들 때와 화면 크기가 바뀔 때). */
+  /** 남은 층(아래부터). */
+  private wallLayers(wall: WallState) {
+    return wall.cells
+      .filter((e) => e.active && !e.dying && e.cell)
+      .sort((a, b) => (a.cell?.row ?? 0) - (b.cell?.row ?? 0))
+  }
+
+  /** 지금 벽 전체 높이: 남은 층 수 × 한 층 높이. */
+  private wallHeight(wall: WallState) {
+    return Math.max(1, this.wallLayers(wall).length) * this.layerHeight()
+  }
+
+  /** 칸 크기를 화면 폭에 맞춘다(만들 때와 화면 크기가 바뀔 때, 층이 부서졌을 때). */
   private layoutWall(wall: WallState) {
     const lane = this.lane()
     const cellW = lane.width / wall.cols
-    for (const e of wall.cells) {
-      if (!e.active || e.dying) continue
-      e.setDisplaySize(cellW - CELL_GAP, this.wallHeight(wall) - CELL_GAP)
+    for (const e of this.wallLayers(wall)) {
+      e.setDisplaySize(cellW - CELL_GAP, this.layerHeight() - CELL_GAP)
       ;(e.body as Phaser.Physics.Arcade.Body).setSize(e.width, e.height, true)
     }
     wall.band.setDisplaySize(lane.width + 8, this.wallHeight(wall) + 8)
   }
 
-  /** 벽과 칸·글자를 지금 y에 놓는다(오를 때 매 프레임). */
+  /** 벽과 층·글자를 지금 y에 놓는다(오를 때 매 프레임). 맨 아래 층이 wall.y에 닿고 위로 한 층씩 쌓인다. */
   private placeWall(wall: WallState) {
     const lane = this.lane()
     const cellW = lane.width / wall.cols
-    for (const e of wall.cells) {
+    const layer = this.layerHeight()
+    this.wallLayers(wall).forEach((e, i) => {
       const c = e.cell
-      if (!c || !e.active || e.dying) continue
+      if (!c) return
       const x = lane.left + (c.col + 0.5) * cellW
-      const y = wall.y - this.wallHeight(wall) / 2
+      const y = wall.y - (i + 0.5) * layer
       e.setPosition(x, y)
       c.label.setPosition(x, y + 1)
-    }
+    })
     wall.band.setPosition(lane.left - 4, wall.y + 4)
     // 벽 옆의 가격 표는 뺐다(416번): 가격은 위 HUD에만 보인다.
     wall.price.setVisible(false)
+  }
+
+  /** 서킷브레이커 (#593): 벽의 남은 체력은 그대로 두고 rows층으로 다시 쌓는다(층마다 같은 몫). */
+  private restackWall(wall: WallState, rows: number) {
+    const layers = this.wallLayers(wall)
+    const total = layers.reduce((sum, e) => sum + e.hp, 0)
+    for (let row = layers.length; row < rows; row++) {
+      const e = this.spawnCell(wall, row, 0, 1, false)
+      if (e) wall.cells.push(e)
+    }
+    wall.left = wall.cells.length
+    const all = this.wallLayers(wall)
+    for (const e of all) {
+      e.hp = total / all.length
+      e.maxHp = e.hp
+      if (e.cell) {
+        e.cell.crack = 0
+        e.cell.shares = cellShares(e.hp, e.hp)
+        e.cell.label.setText(`매도 ${e.cell.shares.toLocaleString()}주`)
+      }
+      e.setTexture(cellKey(0))
+    }
   }
 
   /** 칸이 맞았다: 금이 가고(4단계 그림) 조각이 튀고, 남은 물량이 깎여 보인다. */
@@ -1417,6 +1450,11 @@ class BattleScene extends Phaser.Scene {
     // 적 풀은 돌려 쓰니 부서진 칸은 벽에서 바로 뺀다(같은 객체가 물량으로 다시 나올 수 있다).
     c.wall.cells = c.wall.cells.filter((o) => o !== e)
     c.wall.left = c.wall.cells.length
+    // 위층이 있으면 한 층 내려앉는다.
+    if (c.wall.left > 0) {
+      this.layoutWall(c.wall)
+      this.placeWall(c.wall)
+    }
     this.playSound('thud')
     if (c.wall.left <= 0 && !c.wall.broken) this.wallCollapse(c.wall)
   }
@@ -3918,9 +3956,9 @@ class BattleScene extends Phaser.Scene {
       this.circuit = new CircuitBreaker(this.mental, this.loadout.maxMental)
       this.circuitWall = this.walls.find((wall) => !wall.broken) ?? null
       if (this.circuitWall) {
-        // 다음 벽의 기존 체력은 유지하고, 쌓이는 조각이 보이도록 세 층 높이로 세운다.
+        // 다음 벽의 기존 체력은 유지하고, 쌓이는 조각이 보이도록 세 층으로 다시 쌓는다.
         const wall = this.circuitWall
-        wall.spec = { ...wall.spec, rows: Math.max(3, wall.spec.rows) }
+        this.restackWall(wall, Math.max(3, wall.spec.rows))
         wall.y = this.stopY()
         this.layoutWall(wall)
         this.placeWall(wall)
