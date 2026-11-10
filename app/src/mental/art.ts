@@ -8,6 +8,7 @@ import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import type { Hero } from './hero'
 import { MATE_LOOKS } from './mates'
+import { shareLabel, sharesOf } from './shares'
 import { drawMentalWall, drawSprite, drawToySellWall, STAGE_HERO } from './stageArt'
 import { drawWeaponBullet, drawWeaponImpact, WEAPON_GRADES } from './weaponVisuals'
 
@@ -519,6 +520,27 @@ function ticket(
   c.strokeText(look.amount, x + w / 2, y + h * 0.68)
   c.fillText(look.amount, x + w / 2, y + h * 0.68)
   c.restore()
+}
+
+/** 매도 주문과 같은 투톤 서식. 색과 제목만 매수로 바꾸고 아래에 실제 물량을 표시한다. */
+export function buyOrderTexture(scene: Phaser.Scene, damage: number): string {
+  const key = `buy-order-${sharesOf(damage)}`
+  if (!scene.textures.exists(key)) {
+    bake(scene, key, 64, 64, (c) =>
+      ticket(
+        c,
+        { x: 11, y: 18, w: 42, h: 28 },
+        {
+          fill: '#ef6965',
+          edge: '#8e2633',
+          band: '#c83f4a',
+          title: '매수',
+          amount: shareLabel(damage),
+        },
+      ),
+    )
+  }
+  return key
 }
 
 /** 큰손 보스: 파란 고래가 정장 모자를 쓰고 "대량 매도" 팻말을 든다. */

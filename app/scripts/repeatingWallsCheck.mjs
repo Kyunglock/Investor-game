@@ -25,7 +25,7 @@ try {
     const host = document.createElement('div')
     host.style.cssText = 'position:fixed;inset:0;z-index:99999'
     document.body.append(host)
-    let loadout = { ...cards.loadoutOf(DEFAULT_WEAPON), damage: 0.01, fireMs: 10000 }
+    let loadout = { ...cards.loadoutOf(DEFAULT_WEAPON), damage: 8 / 9, fireMs: 10000 }
     window.wallTransitions = []
     const spec = assaultSpec(1)
     // 전환 도중 이미 날아간 강화탄이 다음 벽을 즉사시키지 않게 관찰할 벽만 단단하게 둔다.
@@ -65,6 +65,7 @@ try {
       loadout = { ...loadout, damage: 30, fireMs: 60, lightning: 5 }
       handle.applyLoadout(loadout)
     }
+    window.pauseBattle = (paused) => handle.setPaused(paused)
   })
   await page.waitForFunction(() => window.hud?.secondsLeft < 176)
   const before = await page.evaluate(() => window.__mentalMarket().buyWall)
@@ -78,6 +79,13 @@ try {
   const after = await page.evaluate(() => window.__mentalMarket().buyWall)
   assert.equal(after.playerX, before.playerX)
   assert.equal(after.playerY, before.playerY)
+  await page.waitForFunction(() => {
+    const wall = window.__mentalMarket().buyWall
+    return wall.shots === wall.sells && wall.shots > 0 && wall.feedback.orders.length > 0
+  })
+  const orders = await page.evaluate(() => window.__mentalMarket().buyWall.feedback.orders)
+  assert(orders.every((order) => order.title === '매수' && order.amount === '100주'))
+  if (process.env.BUY_ORDER_SHOT) await page.screenshot({ path: process.env.BUY_ORDER_SHOT })
   const hit = await page.evaluate(() => {
     const before = window.__mentalMarket()
     window.__mentalBuyWallHit(1)
@@ -106,11 +114,34 @@ try {
   })
   assert.equal(protectedHit.mental, broken.mental)
   assert.equal(protectedHit.buyWall.breaks, broken.buyWall.breaks)
-  assert.equal(broken.buyWall.hp, broken.buyWall.maxHp)
-  assert.equal(broken.buyWall.rebuildLeft, 0)
+  assert.equal(broken.buyWall.hp, 0)
+  assert.equal(broken.buyWall.rebuildLeft, 1.5)
   assert.equal(broken.buyWall.playerY, before.playerY)
   assert(broken.pushedEnemies.length > 0)
   assert(broken.pushedEnemies.every((enemy) => enemy.velocityY === -600))
+  await page.waitForFunction(
+    (time) => window.__mentalMarket().battleSeconds >= time + 0.75,
+    broken.battleSeconds,
+  )
+  const retreat = await page.evaluate(() => window.__mentalMarket())
+  assert.equal(retreat.buyWall.hp, 0)
+  assert(retreat.climbed <= broken.climbed - 75, 'the battlefield retreats 80px')
+  await page.evaluate(() => window.pauseBattle(true))
+  const paused = await page.evaluate(() => window.__mentalMarket().buyWall.rebuildLeft)
+  await page.waitForTimeout(150)
+  assert.equal(await page.evaluate(() => window.__mentalMarket().buyWall.rebuildLeft), paused)
+  await page.evaluate(() => window.pauseBattle(false))
+  await page.waitForFunction(() => window.__mentalMarket().buyWall.hp > 0)
+  const rebuilt = await page.evaluate(() => window.__mentalMarket())
+  assert.equal(rebuilt.buyWall.hp, rebuilt.buyWall.maxHp)
+  assert(rebuilt.battleSeconds - broken.battleSeconds >= 1.48)
+  assert(rebuilt.battleSeconds - broken.battleSeconds < 1.8)
+  const protectedRebuild = await page.evaluate(() => {
+    window.__mentalBuyWallHit(100000)
+    return window.__mentalMarket()
+  })
+  assert.equal(protectedRebuild.mental, rebuilt.mental)
+  assert.equal(protectedRebuild.buyWall.hp, rebuilt.buyWall.hp)
   await page.evaluate(() => window.powerUp())
   await page.waitForFunction(() =>
     window.wallTransitions.some((walls) => walls.some((wall) => wall.index > 0)),
@@ -125,12 +156,12 @@ try {
   const transition = await page.evaluate(() => window.transitionMarket)
   assert.equal(collapse.walls.length, 0, 'old wall breaks before the next wall appears')
   assert(
-    transition.battleSeconds - collapse.market.battleSeconds >= 0.28,
-    'show collapse for 0.3 seconds',
+    transition.battleSeconds - collapse.market.battleSeconds >= 1.48,
+    'show collapse for 1.5 seconds',
   )
   assert(
-    transition.battleSeconds - collapse.market.battleSeconds < 0.6,
-    'no long wait between walls',
+    transition.battleSeconds - collapse.market.battleSeconds < 1.8,
+    'start the next wall promptly after 1.5 seconds',
   )
   await page.waitForFunction(() =>
     window.__mentalWalls().some((wall) => wall.index === 1 && wall.arrived),
@@ -146,7 +177,7 @@ try {
   assert.equal(arrival.market.buyWall.playerY, before.playerY)
   assert.deepEqual(errors, [])
   console.log(
-    'PASS: buy-wall hit/break feedback, mental loss once, immediate rebuild/push, forward scrolling',
+    'PASS: red buy orders 1:1, mental loss, retreat, 1.5s rebuild and sell-wall interval, pause',
   )
 } finally {
   await browser.close()

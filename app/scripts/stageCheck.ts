@@ -349,7 +349,7 @@ async function assaultCheck() {
       assert(checkedBuyWall, 'collapse was exercised')
       assert(market)
       assert(market.buyWall.shots > 0, 'support actually fires')
-      assert(market.buyWall.shots * 3 <= market.buyWall.sells, 'one buy per three sells')
+      assert(market.buyWall.shots <= market.buyWall.sells, 'one buy order per sell unit')
     }
     const picked = await page.evaluate(
       () => (window as unknown as { __assaultCards: string[] }).__assaultCards,

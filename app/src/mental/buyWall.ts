@@ -1,15 +1,15 @@
 export const BUY_WALL = {
   hpRatio: 0.25,
   mentalLossRatio: 0.12,
-  rebuildSeconds: 0,
+  rebuildSeconds: 1.5,
   protectionSeconds: 1,
-  shotSeconds: 1.8,
-  sellsPerShot: 3,
+  shotSeconds: 0.35,
+  sellsPerShot: 1,
   retreatSeconds: 0.7,
   retreatDistance: 80,
 } as const
 
-/** 매수 지원은 매도 물량 세 개당 최대 한 발. 벽이 무너지면 즉시 새 벽을 세우고 잠시 보호한다. */
+/** 매도 물량 하나당 매수 주문 하나로 맞선다. 붕괴하면 후퇴하고 1.5초 뒤 새 벽을 세운다. */
 export class BuyWall {
   readonly maxHp: number
   hp: number
@@ -20,7 +20,6 @@ export class BuyWall {
   breaks = 0
   private shotClock = 0
   private protectionLeft = 0
-  private rebuilt = false
   constructor(maxMental: number) {
     this.maxHp = Math.max(1, Math.round(maxMental * BUY_WALL.hpRatio))
     this.hp = this.maxHp
@@ -38,36 +37,35 @@ export class BuyWall {
     this.hp = Math.max(0, this.hp - Math.max(0, damage))
     if (this.hp > 0) return false
     this.breaks++
-    this.hp = this.maxHp
-    this.protectionLeft = BUY_WALL.protectionSeconds
-    this.rebuilt = true
     this.rebuildLeft = BUY_WALL.rebuildSeconds
     this.retreatLeft = BUY_WALL.retreatSeconds
     this.shotClock = 0
     return true
   }
-  step(dt: number): { retreat: number; fire: boolean; rebuilt: boolean } {
+  step(dt: number): { retreat: number; fire: boolean; fireCount: number; rebuilt: boolean } {
     const time = Math.max(0, dt)
     this.protectionLeft = Math.max(0, this.protectionLeft - time)
-    const rebuilt = this.rebuilt
-    this.rebuilt = false
     const retreat =
       (Math.min(time, this.retreatLeft) * BUY_WALL.retreatDistance) / BUY_WALL.retreatSeconds
     this.retreatLeft = Math.max(0, this.retreatLeft - time)
     if (!this.active) {
       this.rebuildLeft = Math.max(0, this.rebuildLeft - time)
-      if (this.rebuildLeft === 0) this.hp = this.maxHp
-      return { retreat, fire: false, rebuilt: this.active }
+      if (this.rebuildLeft === 0) {
+        this.hp = this.maxHp
+        this.protectionLeft = BUY_WALL.protectionSeconds
+      }
+      return { retreat, fire: false, fireCount: 0, rebuilt: this.active }
     }
     this.shotClock += time
-    const fire =
-      this.shotClock >= BUY_WALL.shotSeconds &&
-      (this.shots + 1) * BUY_WALL.sellsPerShot <= this.sells
-    if (fire) {
-      this.shots++
+    const fireCount =
+      this.shotClock >= BUY_WALL.shotSeconds
+        ? Math.max(0, Math.floor(this.sells / BUY_WALL.sellsPerShot) - this.shots)
+        : 0
+    if (fireCount > 0) {
+      this.shots += fireCount
       this.shotClock = 0
     }
-    return { retreat, fire, rebuilt }
+    return { retreat, fire: fireCount > 0, fireCount, rebuilt: false }
   }
 }
 

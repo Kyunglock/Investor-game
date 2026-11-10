@@ -923,7 +923,7 @@ class BattleScene extends Phaser.Scene {
     if (this.assault) {
       this.createAssaultPools()
       this.buyWall = new BuyWall(this.loadout.maxMental)
-      this.buyWallFx = new BuyWallFx(this)
+      this.buyWallFx = new BuyWallFx(this, unitK('order'))
       this.drawBuyWall()
       // 첫 벽은 화면 위쪽 바깥에서 기다린다: 첫 카드를 고르면 치고 올라 벽 앞에 선다.
       this.addWall(0, Math.min(this.holdY(), this.stopY() - h * 0.5))
@@ -1394,7 +1394,10 @@ class BattleScene extends Phaser.Scene {
     this.stuck = 0
     // 치고 오르는 동안 화면이 쭉 내려가 남아 있던 물량이 사장냥에게 쏟아져 맞았다: 남은 물량은 벽과 함께 체결되고, 치고 오르는 동안은 맞지 않는다.
     this.sweepFlows(wall.y)
-    this.invulnUntil = Math.max(this.invulnUntil, this.elapsed + ASSAULT_MOTION.dashSeconds + 0.5)
+    this.invulnUntil = Math.max(
+      this.invulnUntil,
+      this.elapsed + ASSAULT_MOTION.breakSeconds + ASSAULT_MOTION.dashSeconds + 0.5,
+    )
     const lane = this.lane()
     for (let i = 0; i < 7; i++) {
       const x = lane.left + ((i + 0.5) * lane.width) / 7
@@ -1762,13 +1765,20 @@ class BattleScene extends Phaser.Scene {
       this.stuck += dt
     }
     const support = this.buyWall?.step(dt)
-    if (support?.fire) {
+    if ((this.buyWall && !this.buyWall.active) || support?.retreat) {
+      move = -(support?.retreat ?? 0)
+      if (wall) wall.arrived = false
+    }
+    if (support?.rebuilt) this.opts.onBanner('새 매수벽 등장!', '#7be0c3')
+    if (support && support.fireCount > 0) {
       const lane = this.lane()
-      this.buyWallFx?.launch(
-        lane.left + lane.width * (0.2 + Math.random() * 0.6),
-        this.buyWallY(),
-        this.loadout.damage * 0.75,
-      )
+      for (let i = 0; i < support.fireCount; i++) {
+        this.buyWallFx?.launch(
+          lane.left + lane.width * (0.1 + (0.8 * (i + 0.5)) / support.fireCount),
+          this.buyWallY(),
+          this.loadout.damage * 0.75,
+        )
+      }
     }
     this.buyWallFx?.step(dt, (x, fromY, toY, damage) => {
       const targets = this.magicTargets().filter(
@@ -2435,7 +2445,7 @@ class BattleScene extends Phaser.Scene {
     this.pop(x, this.buyWallY() - 55, `매수 -${shareLabel(lost)}`, '#ffb278', 20)
     if (broken) {
       const loss = Math.max(1, Math.round(this.loadout.maxMental * BUY_WALL.mentalLossRatio))
-      this.opts.onBanner(`매수벽 붕괴! 멘탈 -${loss} · 새 벽 등장`, '#ffb278')
+      this.opts.onBanner(`매수벽 붕괴! 멘탈 -${loss} · 1.5초 후 재건`, '#ffb278')
       // 일반 피격 무적 시간과 무관하게 붕괴 한 번당 정확히 한 번 깎는다.
       this.hurt(loss, undefined, undefined, true)
       for (const child of this.enemies.getChildren()) {
