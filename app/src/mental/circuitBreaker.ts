@@ -1,7 +1,7 @@
 /** 중간 매도벽과 중간 보스를 넘긴 뒤 한 번만 거래를 잠깐 멈추고 숨을 고른다. */
 export const CIRCUIT_BREAKER = {
   afterWalls: [5] as readonly number[],
-  seconds: 5,
+  seconds: 4,
   healRatio: 0.2,
   pieces: 24,
   assembleUntil: 0.8,

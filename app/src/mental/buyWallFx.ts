@@ -62,19 +62,23 @@ export class BuyWallFx {
     const g = this.ink.clear()
     const cw = width / 6
     if (wall.active) {
-      g.fillStyle(0x823b48).fillRoundedRect(left - 4, y - 14, width + 8, 36, 7)
-      for (let i = 0; i < 6; i++) {
-        const x = left + i * cw
-        g.fillStyle(i % 2 ? 0xf18c69 : 0xe97162).fillRoundedRect(x + 1, y - 12, cw - 2, 26, 4)
-        g.lineStyle(1.5, 0xffdb9f).strokeRoundedRect(x + 1, y - 12, cw - 2, 26, 4)
-        if (wall.hp < wall.maxHp * 0.5)
-          g.lineStyle(2, 0x803b3f).lineBetween(x + 8, y - 10, x + cw - 8, y + 10)
+      // 매도벽처럼 칸을 나누지 않은 하나의 두꺼운 주문 벽이다.
+      g.fillStyle(0x823b48).fillRoundedRect(left - 4, y - 28, width + 8, 58, 8)
+      g.fillStyle(0xe97162).fillRoundedRect(left, y - 30, width, 52, 7)
+      g.lineStyle(2, 0xffdb9f).strokeRoundedRect(left, y - 30, width, 52, 7)
+      g.lineStyle(3, 0xffbc8d).lineBetween(left + 10, y - 24, left + width - 10, y - 24)
+      if (wall.hp < wall.maxHp * 0.5) {
+        const x = left + width * 0.72
+        g.lineStyle(2, 0x803b3f)
+          .lineBetween(x, y - 29, x - 9, y - 15)
+          .lineBetween(x - 9, y - 15, x + 3, y - 7)
+          .lineBetween(x + 3, y - 7, x - 6, y + 7)
       }
-      g.fillStyle(0x4f2837).fillRect(left, y + 17, width, 4)
-      g.fillStyle(0xffdc87).fillRect(left, y + 17, (width * wall.hp) / wall.maxHp, 4)
+      g.fillStyle(0x4f2837).fillRect(left + 5, y + 24, width - 10, 4)
+      g.fillStyle(0xffdc87).fillRect(left + 5, y + 24, ((width - 10) * wall.hp) / wall.maxHp, 4)
       this.title
         .setText(`매수벽 ${shareLabel(wall.hp)} / ${shareLabel(wall.maxHp)}`)
-        .setPosition(left + width / 2, y)
+        .setPosition(left + width / 2, y - 4)
     } else {
       const t = Math.min(1, (BUY_WALL.rebuildSeconds - wall.rebuildLeft) / 0.8)
       for (let i = 0; i < 12; i++) {
@@ -86,7 +90,7 @@ export class BuyWallFx {
           10,
         )
       }
-      g.lineStyle(1, 0xf7c7a5, 0.6).strokeRoundedRect(left, y - 12, width, 26, 4)
+      g.lineStyle(1, 0xf7c7a5, 0.6).strokeRoundedRect(left, y - 30, width, 52, 7)
       this.title
         .setText(`매수벽 붕괴 · 재정비 ${Math.ceil(wall.rebuildLeft)}초`)
         .setPosition(left + width / 2, y)
