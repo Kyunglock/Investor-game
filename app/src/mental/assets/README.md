@@ -9,7 +9,7 @@
 - hero-toy.png: B안의 둥근 크림색 장난감 고양이 뒷모습. 총과 두 앞발은 drawStageGun.ts에서 회전 렌더링하며 준비 화면도 같은 결합점을 사용한다.
 - hero.png: 이전 고양이 원본 (현재 미사용)
 - enemies.png: 2×2 아틀라스. 좌상 패닉, 우상 투매, 좌하 투기, 우하 손절
-- wall-blocks-toy.png: B안의 표면 입자·둥근 모서리·양각 그래프를 유지한 블록 아틀라스. 위쪽 매수 / 아래쪽 매도, 왼쪽 정상 / 오른쪽 균열. 벽은 여섯 블록으로 조합한다.
+- wall-blocks-toy.png: B안의 표면 입자·둥근 모서리를 유지하고 앞면의 차트 그림을 제거한 블록 아틀라스. 위쪽 매수 / 아래쪽 매도, 왼쪽 정상 / 오른쪽 균열. 벽은 여섯 블록으로 조합한다.
 
 원본의 여백은 런타임에서 알파값으로 측정하고 한 번만 캐시합니다. 충돌 반지름·총구 좌표는 코드에서 관리합니다.
 
@@ -17,9 +17,9 @@
 
 ### wall-blocks-toy.png
 
-내장 image_gen 사용, transparent_background: true. 참조: `docs/mockups/2026-11-10-toy-arena/concept-b.png`.
+내장 image_gen 편집 사용, transparent_background: true. 편집 대상은 기존 `wall-blocks-toy.png`이며, 정상·균열 네 블록 모두의 양각 차트를 제거했다. 투명 배경과 2×2 배치는 유지한다.
 
-Create ONE production transparent game sprite atlas, square canvas divided into EXACT equal 2x2 invisible cells. Source reference is the approved B concept: faithfully match the chunky coral SELL wall and aqua BUY wall block material, not a reinterpretation. Four isolated SINGLE wall blocks, one per quadrant, each centered at 25%/75% canvas coordinates and fitting central 78% of its cell, no overlap. Top left: intact aqua/teal buy block with ONE short ivory cylindrical peg on the top, three ascending raised teal volume bars embossed on its front. Top right: same aqua block, same peg, same size/camera/lighting, with a substantial branching crack and one tiny chipped corner but no detached debris. Bottom left: intact coral salmon sell block, no peg, three small ascending raised coral volume bars on front. Bottom right: same coral block, same size/camera/lighting with a branching fracture and a chipped corner, no detached debris. Material and shape CRITICAL: thick squishy-looking matte molded toy blocks like the reference, broad strongly rounded bevels, softly illuminated top face, visible chunky right side and lower edge, fine subtle foam/clay grain, soft ambient occlusion at edges and relief marks. Orthographic elevated near-front view, front face dominant, top face clearly visible, small right side visible. No bright white outlines, no flat vector style, no thin luminous stroke, no glossy glass, no flat UI button look. Warm soft studio lighting upper left. Consistent scale between cells, approximately square blocks (buy peg adds a little height). Truly transparent alpha background. No ground plane, no cast shadow outside block, no text, labels, numbers, characters, coins, dividers, borders or additional objects. All four blocks are SEPARATE reusable game sprites, not assembled into a wall.
+Edit target: the attached existing production game sprite atlas. Precise-object-edit. Remove ONLY the embossed three-bar chart symbols from the front faces of ALL FOUR blocks, replacing the symbols and their shadows with seamless matching plain textured material. Preserve everything else as closely as possible: the exact 2 by 2 grid, quadrant positions, transparent margins and background, the silhouettes and dimensions of each block, perspective, mint turquoise top two blocks with cream cylinder on top, coral orange bottom two blocks, rounded edges, highlights, fine plastic/clay grain texture, and especially the existing deep cracks on both RIGHT-hand blocks. The two left blocks stay intact, the two right blocks stay cracked. No charts, bars, arrows, pictograms, letters, numbers, new objects or decorations. This will replace the existing game texture and must retain the same 2x2 atlas layout with each sprite wholly within its quadrant. Truly transparent alpha background. Output one edited atlas.
 
 ### hero-toy.png
 
