@@ -774,6 +774,12 @@
 .toy-advance em {
   color: inherit;
 }
+/* 상태가 바뀐 중앙 버튼은 독립된 영역에 그린다. 글자·아이콘은 자기 버튼 밖으로 새지 않는다. */
+.toy-progress {
+  contain: paint;
+  isolation: isolate;
+  background-color: #fc795e;
+}
 .toy-error {
   font-size: 11px;
   line-height: 1.4;
