@@ -2,7 +2,7 @@ import { CAT_H, CAT_W } from '@web/features/game/cat/draw'
 import { BOSS_LOOK } from '@web/features/game/cat/look'
 import type Phaser from 'phaser'
 import { drawStageGun, GUN_ART } from './drawStageGun'
-import { drawEarthArmor, drawEmber, drawPillar, drawWater, drawWave } from './effectArt'
+import { drawEmber, drawPillar, drawWater, drawWave, drawWoodenRam } from './effectArt'
 import { ORDERS, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
@@ -351,83 +351,10 @@ export function bakeMagic(scene: Phaser.Scene) {
     c.fillStyle = '#ffffff'
     c.fillRect(0, 0, 6, 10)
   })
-  // 땅 (433번): 충차. 위에서 내려다본 공성 수레: 바퀴 넷 위에 판자 지붕, 그 밑으로 들보가 나오고 끝에 뾰족한 쇠 쐐기. 오른쪽이 나아가는
-  // 쪽이고 화면에서는 위로 돌려 아래에서 위로 들이받는다.
-  // 크게 늘여 쓰니 RAM_ART배로 구워 흐려지지 않게 한다.
+  // 목제 공성 충차: 나무 프레임·밧줄·통나무 단면. 오른쪽 앞끝을 위로 돌려 들이받는다.
   bake(scene, 'magic-ram', 88 * RAM_ART, 48 * RAM_ART, (c) => {
     c.scale(RAM_ART, RAM_ART)
-    // 땅에 드리운 그림자: 수레 몸통만, 살짝 비껴서
-    c.fillStyle = '#1a120a33'
-    c.beginPath()
-    c.roundRect(6, 12, 46, 32, 4)
-    c.fill()
-    // 바퀴 넷(양옆으로 삐져나온다)
-    for (const [x, y] of [
-      [16, 6],
-      [16, 42],
-      [40, 6],
-      [40, 42],
-    ]) {
-      c.fillStyle = '#3a2814'
-      c.fillRect(x - 7, y - 4, 14, 8)
-      c.fillStyle = '#6b4a28'
-      c.fillRect(x - 5, y - 3, 10, 6)
-      c.fillStyle = '#2a1c0e'
-      for (const dx of [-3, 0, 3]) c.fillRect(x + dx - 0.6, y - 3, 1.2, 6)
-    }
-    // 들보: 지붕 밑에서 앞으로 나온 네모난 나무 들보
-    c.fillStyle = '#7a4e26'
-    c.fillRect(44, 17, 18, 14)
-    c.fillStyle = '#5a3818'
-    c.fillRect(44, 27, 18, 4)
-    c.strokeStyle = '#2e1c0a'
-    c.lineWidth = 1.5
-    c.strokeRect(44, 17, 18, 14)
-    // 판자 지붕
-    c.fillStyle = '#9a6a3a'
-    c.fillRect(4, 8, 44, 32)
-    c.fillStyle = '#b5814a'
-    for (let x = 6; x < 46; x += 8) c.fillRect(x, 10, 5, 28)
-    c.strokeStyle = '#2e1c0a'
-    c.lineWidth = 2
-    c.strokeRect(4, 8, 44, 32)
-    // 쇠 띠와 못
-    c.fillStyle = '#4c5560'
-    c.fillRect(4, 13, 44, 3)
-    c.fillRect(4, 32, 44, 3)
-    c.fillStyle = '#c9d2dc'
-    for (const x of [8, 26, 44]) {
-      c.fillRect(x - 1, 13.5, 2, 2)
-      c.fillRect(x - 1, 32.5, 2, 2)
-    }
-    // 쇠 고리(들보와 쐐기 이음)
-    c.fillStyle = '#4c5560'
-    c.fillRect(60, 14, 5, 20)
-    c.fillStyle = '#9aa6b2'
-    c.fillRect(60, 14, 5, 3)
-    // 뾰족한 쇠 쐐기
-    c.beginPath()
-    c.moveTo(64, 10)
-    c.lineTo(87, 24)
-    c.lineTo(64, 38)
-    c.closePath()
-    const steel = c.createLinearGradient(0, 10, 0, 38)
-    steel.addColorStop(0, '#eef2f6')
-    steel.addColorStop(0.5, '#9aa6b2')
-    steel.addColorStop(1, '#4a535e')
-    c.fillStyle = steel
-    c.fill()
-    c.strokeStyle = '#262c33'
-    c.lineWidth = 1.8
-    c.stroke()
-    // 날 선 등줄기
-    c.strokeStyle = '#ffffff'
-    c.lineWidth = 1.2
-    c.beginPath()
-    c.moveTo(65, 24)
-    c.lineTo(85, 24)
-    c.stroke()
-    drawEarthArmor(c)
+    drawWoodenRam(c)
   })
   // 돌 조각: 충차 뒤로 튀는 흙·돌 파편과 땅에서 솟는 돌기둥.
   bake(scene, 'magic-rock', 14, 12, (c) => {

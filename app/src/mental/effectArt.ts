@@ -134,96 +134,121 @@ export function drawPillar(c: Paint) {
   c.fill()
 }
 
-/** 기존 공성 수레에 암석 장갑과 호박색 마력 균열을 입힌다. */
-export function drawEarthArmor(c: Paint) {
-  shape(
-    c,
-    [
-      [7, 11],
-      [19, 7],
-      [31, 12],
-      [30, 24],
-      [12, 27],
-      [5, 21],
-    ],
-    '#a79170',
-    '#594631',
-  )
-  shape(
-    c,
-    [
-      [11, 28],
-      [28, 25],
-      [44, 29],
-      [42, 39],
-      [23, 42],
-      [8, 37],
-    ],
-    '#806e56',
-    '#594631',
-  )
-  shape(
-    c,
-    [
-      [32, 9],
-      [45, 10],
-      [49, 21],
-      [40, 28],
-      [31, 22],
-    ],
-    '#c6b18c',
-    '#594631',
-  )
-  shape(
-    c,
-    [
-      [7, 11],
-      [19, 7],
-      [31, 12],
-      [23, 15],
-    ],
-    '#dfceaa',
-  )
+/** 오른쪽을 향한 목제 공성 충차. 88×48 영역과 통나무 앞끝의 타격 위치를 유지한다. */
+export function drawWoodenRam(c: Paint) {
+  c.save()
+  c.lineJoin = 'round'
+  c.lineCap = 'round'
+  const timber = (x: number, y: number, w: number, h: number, color: string) => {
+    c.beginPath()
+    c.roundRect(x, y, w, h, 2)
+    c.fillStyle = color
+    c.fill()
+    c.strokeStyle = '#503019'
+    c.lineWidth = 1.3
+    c.stroke()
+  }
+  c.fillStyle = '#4a291c30'
   c.beginPath()
-  c.moveTo(14, 13)
-  c.lineTo(22, 19)
-  c.lineTo(19, 29)
-  c.lineTo(29, 35)
-  c.moveTo(22, 19)
-  c.lineTo(37, 17)
-  c.lineTo(41, 24)
-  c.strokeStyle = '#634724'
-  c.lineWidth = 4
+  c.ellipse(43, 27, 40, 18, 0, 0, Math.PI * 2)
+  c.fill()
+  // 네 나무 바퀴: 두꺼운 테두리와 바퀴살.
+  for (const x of [17, 47])
+    for (const y of [6, 42]) {
+      timber(x - 8, y - 4, 16, 8, '#684225')
+      c.strokeStyle = '#b98b50'
+      c.lineWidth = 1.5
+      for (const dx of [-4, 0, 4]) {
+        c.beginPath()
+        c.moveTo(x + dx, y - 2.5)
+        c.lineTo(x + dx, y + 2.5)
+        c.stroke()
+      }
+    }
+  // 바퀴축과 양옆의 긴 받침대.
+  for (const x of [17, 47]) timber(x - 2, 6, 4, 36, '#81542b')
+  timber(4, 10, 55, 5, '#af7a41')
+  timber(4, 33, 55, 5, '#82502a')
+  // 넓은 나무 프레임의 대각 버팀대.
+  for (const points of [
+    [
+      [6, 14],
+      [20, 6],
+      [23, 9],
+      [10, 19],
+    ],
+    [
+      [6, 34],
+      [20, 42],
+      [23, 39],
+      [10, 29],
+    ],
+  ]) {
+    shape(c, points, '#be8b4e', '#58351e')
+  }
+  // 둥근 통나무 몸통. 금속 하이라이트 대신 껍질의 길쭉한 결을 넣는다.
+  const wood = c.createLinearGradient(0, 14, 0, 34)
+  wood.addColorStop(0, '#d4a365')
+  wood.addColorStop(0.35, '#b47b3f')
+  wood.addColorStop(1, '#70411f')
+  c.beginPath()
+  c.roundRect(12, 14, 69, 20, 8)
+  c.fillStyle = wood
+  c.fill()
+  c.strokeStyle = '#51301a'
+  c.lineWidth = 1.5
   c.stroke()
-  c.strokeStyle = '#ffd46d'
+  for (const y of [18, 24, 30]) {
+    c.beginPath()
+    c.moveTo(18, y)
+    c.bezierCurveTo(31, y - 2, 55, y + 2, 77, y - 0.5)
+    c.strokeStyle = y === 18 ? '#e0b47b' : '#815025'
+    c.lineWidth = 1
+    c.stroke()
+  }
+  // 통나무를 매단 두 겹의 밧줄과 프레임 가로대.
+  for (const x of [23, 49]) {
+    timber(x - 3, 8, 6, 32, '#986431')
+    for (const dx of [-1.4, 1.4]) {
+      c.beginPath()
+      c.moveTo(x + dx, 11)
+      c.lineTo(x + dx, 37)
+      c.strokeStyle = '#e6c48b'
+      c.lineWidth = 1.5
+      c.stroke()
+    }
+    c.strokeStyle = '#7c512b'
+    c.lineWidth = 0.7
+    for (let y = 14; y < 36; y += 4) {
+      c.beginPath()
+      c.moveTo(x - 2.5, y)
+      c.lineTo(x + 2.5, y + 2)
+      c.stroke()
+    }
+  }
+  // 평평하게 잘린 나무 머리: 둥근 단면·나이테·작은 갈라짐.
+  c.beginPath()
+  c.ellipse(80, 24, 6, 10, 0, 0, Math.PI * 2)
+  c.fillStyle = '#e6b979'
+  c.fill()
+  c.strokeStyle = '#68401f'
   c.lineWidth = 1.6
   c.stroke()
-  shape(
-    c,
-    [
-      [65, 12],
-      [84, 24],
-      [65, 35],
-      [71, 24],
-    ],
-    '#ad9170',
-    '#594631',
-  )
-  shape(
-    c,
-    [
-      [65, 12],
-      [84, 24],
-      [71, 24],
-    ],
-    '#ead4ab',
-  )
+  for (const k of [0.72, 0.43, 0.16]) {
+    c.beginPath()
+    c.ellipse(80.3, 24, 6 * k, 10 * k, 0.12, 0, Math.PI * 2)
+    c.strokeStyle = '#ab733c'
+    c.lineWidth = 0.9
+    c.stroke()
+  }
   c.beginPath()
-  c.moveTo(66, 24)
-  c.lineTo(78, 24)
-  c.strokeStyle = '#ffe79a'
-  c.lineWidth = 2
+  c.moveTo(83.5, 16.5)
+  c.lineTo(80.5, 21)
+  c.lineTo(81.5, 22.5)
+  c.strokeStyle = '#81522b'
+  c.lineWidth = 1
   c.stroke()
+  c.restore()
 }
 
 /** 한 덩어리인 매도벽의 실제 가로 비율로 굽는다. */

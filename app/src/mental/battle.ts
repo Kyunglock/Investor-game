@@ -3224,7 +3224,7 @@ class BattleScene extends Phaser.Scene {
     s.y = sy
     s.dx = 0
     s.dy = -1
-    // 맞는 폭과 길이는 보이는 크기를 따른다(쐐기 끝이 닿으면 들이받는다).
+    // 맞는 폭과 길이는 보이는 크기를 따른다(통나무 앞끝이 닿으면 들이받는다).
     s.half = Math.max(st.half, 20 * k)
     s.depth = 42 * k
     s.t = 0
