@@ -82,7 +82,7 @@ export class CircuitBreakerFx {
         .fillRect(x - 1.5, y - 5, 3, 10)
     }
     this.recovery
-      .setPosition(playerX, playerY - 88)
+      .setPosition(Math.max(80, Math.min(w - 80, playerX)), playerY - 88)
       .setText(
         c.recovery > 0 ? `멘탈 회복 +${Math.round(c.recovery * c.progress)}` : '멘탈 충전 완료',
       )
