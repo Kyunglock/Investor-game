@@ -40,6 +40,12 @@ try {
         window.hud = hud
       },
       onBanner: (text) => {
+        if (text.startsWith('매도벽 돌파!')) {
+          window.collapse = {
+            market: window.__mentalMarket(),
+            walls: window.__mentalWalls(),
+          }
+        }
         if (text === '매도벽을 부수고 다음 벽으로!') {
           window.wallTransitions.push(window.__mentalWalls())
           if (window.__mentalWalls().some((wall) => wall.index > 0)) {
@@ -72,10 +78,34 @@ try {
   const after = await page.evaluate(() => window.__mentalMarket().buyWall)
   assert.equal(after.playerX, before.playerX)
   assert.equal(after.playerY, before.playerY)
+  const hit = await page.evaluate(() => {
+    const before = window.__mentalMarket()
+    window.__mentalBuyWallHit(1)
+    return { before, after: window.__mentalMarket() }
+  })
+  assert.equal(hit.after.buyWall.hp, hit.before.buyWall.hp - 1)
+  assert.equal(hit.after.mental, hit.before.mental)
+  assert(hit.after.buyWall.feedback.hitLeft > 0)
+  if (process.env.WALL_HIT_SHOT) await page.screenshot({ path: process.env.WALL_HIT_SHOT })
   const broken = await page.evaluate(() => {
+    window.mentalBeforeBreak = window.__mentalMarket().mental
     window.__mentalBuyWallHit(100000)
     return window.__mentalMarket()
   })
+  const mentalBeforeBreak = await page.evaluate(() => window.mentalBeforeBreak)
+  assert.equal(broken.mental, mentalBeforeBreak - Math.max(1, Math.round(broken.maxMental * 0.12)))
+  assert(broken.buyWall.feedback.breakLeft > 0)
+  assert.equal(broken.buyWall.feedback.fragments, 12)
+  if (process.env.WALL_BREAK_SHOT) {
+    await page.waitForTimeout(180)
+    await page.screenshot({ path: process.env.WALL_BREAK_SHOT })
+  }
+  const protectedHit = await page.evaluate(() => {
+    window.__mentalBuyWallHit(100000)
+    return window.__mentalMarket()
+  })
+  assert.equal(protectedHit.mental, broken.mental)
+  assert.equal(protectedHit.buyWall.breaks, broken.buyWall.breaks)
   assert.equal(broken.buyWall.hp, broken.buyWall.maxHp)
   assert.equal(broken.buyWall.rebuildLeft, 0)
   assert.equal(broken.buyWall.playerY, before.playerY)
@@ -91,6 +121,17 @@ try {
   assert(transitions.every((wall) => wall.bottom > 0 && !wall.held))
   const entering = transitions.find((wall) => wall.index === 1)
   assert(entering && !entering.arrived)
+  const collapse = await page.evaluate(() => window.collapse)
+  const transition = await page.evaluate(() => window.transitionMarket)
+  assert.equal(collapse.walls.length, 0, 'old wall breaks before the next wall appears')
+  assert(
+    transition.battleSeconds - collapse.market.battleSeconds >= 0.28,
+    'show collapse for 0.3 seconds',
+  )
+  assert(
+    transition.battleSeconds - collapse.market.battleSeconds < 0.6,
+    'no long wait between walls',
+  )
   await page.waitForFunction(() =>
     window.__mentalWalls().some((wall) => wall.index === 1 && wall.arrived),
   )
@@ -104,7 +145,9 @@ try {
   assert.equal(arrival.market.buyWall.playerX, before.playerX)
   assert.equal(arrival.market.buyWall.playerY, before.playerY)
   assert.deepEqual(errors, [])
-  console.log('PASS: fixed cat, buy-wall push, visible next wall with forward scrolling')
+  console.log(
+    'PASS: buy-wall hit/break feedback, mental loss once, immediate rebuild/push, forward scrolling',
+  )
 } finally {
   await browser.close()
 }

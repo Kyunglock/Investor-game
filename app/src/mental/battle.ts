@@ -58,7 +58,7 @@ import {
   whaleSummonSeconds,
 } from './assault'
 import { STAGE_ASSETS } from './assets'
-import { BuyWall } from './buyWall'
+import { BUY_WALL, BuyWall } from './buyWall'
 import { BuyWallFx } from './buyWallFx'
 import {
   awakenedMateCount,
@@ -105,6 +105,7 @@ import {
   waterStats,
 } from './magic'
 import { MATE_LOOKS, mateFormation, spreadTargets } from './mates'
+import { shareLabel } from './shares'
 import { wallOffset } from './stageArt'
 import {
   aimWithJitter,
@@ -478,6 +479,7 @@ class BattleScene extends Phaser.Scene {
     wallHpAfter: 0,
   }
   private rushLeft = 0
+  private nextWallIn = 0
   /** 지금 나와 있는 큰손이 중간 큰손인가(#593): 잡아도 판이 끝나지 않고 다음 구간이 열린다. */
   private bossMid = false
   /** 중간 매도벽을 부쉈는데 중간 큰손이 아직 살아 있다: 잡으면 잡몹 구간이 시작된다. */
@@ -1426,7 +1428,7 @@ class BattleScene extends Phaser.Scene {
         `매도벽 돌파! ${this.wallsBroken}/${total} · ${price.toLocaleString()}원`,
         '#e8434f',
       )
-      this.startRush()
+      this.nextWallIn = ASSAULT_MOTION.breakSeconds
     }
     this.pushHud(true)
   }
@@ -1494,10 +1496,11 @@ class BattleScene extends Phaser.Scene {
     this.assaultCheckClear()
   }
 
-  /** 다음 벽을 즉시 보이게 세우고, 돌파 속도로 전장을 올리며 전투 위치까지 끌어온다. */
+  /** 짧은 붕괴 연출 뒤 다음 벽을 보이게 세우고, 돌파 속도로 전장을 올린다. */
   private startRush() {
     if (!this.assault || this.over) return
     this.rushLeft = 0
+    this.sinceBreak = 0
     this.lastFlow = this.elapsed
     // 첫 프레임부터 벽 아래쪽이 보인다. 도착 위치와 거리를 둬 배경·호가 줄도 함께 흐른다.
     this.addWall(this.wallsBroken, Math.max(32, this.stopY() - 160))
@@ -1732,6 +1735,10 @@ class BattleScene extends Phaser.Scene {
     const spec = this.assault
     if (!spec) return
     const { h } = this.view()
+    if (this.nextWallIn > 0) {
+      this.nextWallIn = Math.max(0, this.nextWallIn - dt)
+      if (this.nextWallIn === 0) this.startRush()
+    }
     this.sinceBreak += dt
     const wall = this.walls.find((wl) => !wl.broken)
     let move = 0
@@ -1755,8 +1762,6 @@ class BattleScene extends Phaser.Scene {
       this.stuck += dt
     }
     const support = this.buyWall?.step(dt)
-    if (support?.rebuilt)
-      this.pop(this.player.x, this.playerY() - 45, '매수벽 재정비!', '#ffd99e', 20)
     if (support?.fire) {
       const lane = this.lane()
       this.buyWallFx?.launch(
@@ -1885,6 +1890,7 @@ class BattleScene extends Phaser.Scene {
     return {
       ...this.marketStats,
       climbed: this.climbed,
+      nextWallIn: this.nextWallIn,
       pushedEnemies: (this.enemies.getChildren() as Enemy[])
         .filter((e) => e.active && !e.dying && e.wallPushUntil > this.elapsed)
         .map((e) => ({ y: e.y, velocityY: e.body?.velocity.y })),
@@ -1900,6 +1906,7 @@ class BattleScene extends Phaser.Scene {
             playerX: this.player.x,
             playerY: this.player.y,
             wallY: this.buyWallY(),
+            feedback: this.buyWallFx?.inspect(),
           }
         : null,
       circuit: this.circuit
@@ -2420,10 +2427,17 @@ class BattleScene extends Phaser.Scene {
 
   hitBuyWall(damage: number, x: number) {
     if (!this.buyWall?.active || this.over) return
+    const before = this.buyWall.hp
     const broken = this.buyWall.hit(damage)
-    this.ring(x, this.buyWallY(), 0xffb278, 35, 220)
+    if (!broken && this.buyWall.hp === before) return
+    this.buyWallFx?.impact(x, broken)
+    const lost = broken ? before : before - this.buyWall.hp
+    this.pop(x, this.buyWallY() - 55, `매수 -${shareLabel(lost)}`, '#ffb278', 20)
     if (broken) {
-      this.opts.onBanner('새 매수벽! 몹 밀어내기', '#7be0c3')
+      const loss = Math.max(1, Math.round(this.loadout.maxMental * BUY_WALL.mentalLossRatio))
+      this.opts.onBanner(`매수벽 붕괴! 멘탈 -${loss} · 새 벽 등장`, '#ffb278')
+      // 일반 피격 무적 시간과 무관하게 붕괴 한 번당 정확히 한 번 깎는다.
+      this.hurt(loss, undefined, undefined, true)
       for (const child of this.enemies.getChildren()) {
         const enemy = child as Enemy
         if (!enemy.active || enemy.dying || enemy.cell) continue
@@ -2434,8 +2448,12 @@ class BattleScene extends Phaser.Scene {
       }
       sfx.crumble()
       haptic.medium()
+    } else {
+      this.playSound('thud')
+      haptic.light()
     }
     this.drawBuyWall()
+    this.pushHud(true)
   }
 
   /** 살아 있는 적 가운데 가장 가까운 것. */
