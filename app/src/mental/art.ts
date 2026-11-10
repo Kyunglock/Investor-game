@@ -5,10 +5,8 @@ import { drawStageGun } from './drawStageGun'
 import {
   drawEarthArmor,
   drawEmber,
-  drawImpact,
   drawPillar,
   drawSellCell,
-  drawTracer,
   drawWater,
   drawWave,
 } from './effectArt'
@@ -18,6 +16,7 @@ import type { Genre } from './genres'
 import type { Hero } from './hero'
 import { MATE_LOOKS } from './mates'
 import { drawMentalWall, drawSprite } from './stageArt'
+import { drawWeaponBullet, drawWeaponImpact, WEAPON_GRADES } from './weaponVisuals'
 
 /** 승인한 캐주얼 시안의 투명 스프라이트를 Phaser 텍스처로 굽고, 무기·벽·탄환을 실시간 상태에 맞춰 합성한다. */
 
@@ -246,10 +245,12 @@ export function bakeStage(scene: Phaser.Scene, _genre: Genre) {
       c.stroke()
     }
   })
-  for (const look of [0, 1] as const) {
-    bake(scene, `bullet-${look}`, 32, 10, (c) => drawTracer(c, look))
+  for (const grade of WEAPON_GRADES) {
+    for (const look of [0, 1] as const) {
+      bake(scene, `bullet-${grade}-${look}`, 32, 10, (c) => drawWeaponBullet(c, grade, look))
+    }
+    bake(scene, `impact-${grade}`, 80, 80, (c) => drawWeaponImpact(c, grade))
   }
-  bake(scene, 'bullet-impact', 80, 80, drawImpact)
   // 총구 화염: 노란 별에 흰 심
   bake(scene, 'flash', 24, 24, (c) => {
     c.beginPath()

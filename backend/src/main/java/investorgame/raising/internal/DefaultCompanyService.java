@@ -42,9 +42,21 @@ class DefaultCompanyService implements CompanyService {
    */
   private CompanyRepository.Row adopt(CompanyRepository.Row row) {
     CompanyState c = row.state();
+    if (!"ACTIVE".equals(row.status())) {
+      if (!engine.mental.needsWeaponReset(c)) return row;
+      CompanyRepository.Row locked = companies.lockLatest(row.sessionId()).orElse(row);
+      if (engine.mental.initWeapons(locked.state())) {
+        companies.update(locked.id(), locked.state(), false);
+      }
+      return locked;
+    }
     boolean overSeated = c.employees.stream().filter(e -> e.desk != null).count() > engine.seats(c);
-    if ((c.gachaReady && c.mental != null && c.weapon != null && c.weaponGachaReady && !overSeated)
-        || !"ACTIVE".equals(row.status())) {
+    if (c.gachaReady
+        && c.mental != null
+        && c.weapon != null
+        && c.weaponGachaReady
+        && !overSeated
+        && !engine.mental.needsWeaponReset(c)) {
       return row;
     }
     CompanyRepository.Row locked = companies.lockActive(row.sessionId()).orElse(row);

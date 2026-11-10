@@ -10,18 +10,21 @@ import './weapons.css'
 
 type Armory = NonNullable<Company['armory']>
 
-/** 합칠 수 있는 등급: 가장 높은 등급(UR)은 못 합친다 (366번). */
-type MergeGrade = Exclude<Weapon['grade'], 'UR'>
+/** 합칠 수 있는 등급: 가장 높은 등급(S)은 못 합친다 (366번). */
+type MergeGrade = Exclude<Weapon['grade'], 'S'>
 
 /** 무기 등급 배지 색 (346번). */
 export const GRADE_BADGE: Record<Weapon['grade'], string> = {
-  N: 'bg-[#e6e3ea] text-ink',
-  R: 'bg-[#cfe0f7] text-[#2d5c9e]',
-  SR: 'bg-[#e4d6fb] text-[#5d3aa6]',
-  UR: 'bg-[#ffe7a6] text-[#8a5a00]',
+  F: 'bg-slate-200 text-slate-700',
+  E: 'bg-emerald-100 text-emerald-800',
+  D: 'bg-sky-100 text-sky-800',
+  C: 'bg-violet-100 text-violet-800',
+  B: 'bg-fuchsia-100 text-fuchsia-800',
+  A: 'bg-orange-100 text-orange-800',
+  S: 'bg-cyan-100 text-cyan-900',
 }
 
-const GRADE_ORDER: Record<Weapon['grade'], number> = { N: 0, R: 1, SR: 2, UR: 3 }
+const GRADE_ORDER: Record<Weapon['grade'], number> = { F: 0, E: 1, D: 2, C: 3, B: 4, A: 5, S: 6 }
 
 /** 인벤토리 메뉴의 배지: 쓸 수 있는 무기 뽑기권 수. */
 export function weaponBadge(company: Company): string | null {
@@ -145,7 +148,7 @@ export function WeaponInventory({ company }: { company: Company }) {
                 <b className="text-red-pen">약점</b> {WEAPON_TRAITS[w.kind].weakness}
               </span>
             </button>
-            {armory && w.grade !== 'UR' && w.count >= armory.mergeCount && (
+            {armory && w.grade !== 'S' && w.count >= armory.mergeCount && (
               <button
                 type="button"
                 className="weapon-merge"

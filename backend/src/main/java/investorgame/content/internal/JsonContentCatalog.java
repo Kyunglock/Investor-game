@@ -215,7 +215,10 @@ class JsonContentCatalog implements ContentCatalog {
         mental.weapons() != null
             && mental.weapons().containsKey("pistol")
             && mental.weaponGrades() != null
-            && mental.weaponGrades().keySet().containsAll(List.of("N", "R", "SR", "UR")),
+            && mental
+                .weaponGrades()
+                .keySet()
+                .containsAll(List.of("F", "E", "D", "C", "B", "A", "S")),
         "무기 이름이 없다 (346번)");
     require(company.quirks() != null && !company.quirks().isEmpty(), "직원 버릇이 없다 (349번)");
     require(

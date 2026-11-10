@@ -304,6 +304,45 @@ class CompanyApiTest {
 
   /** 무기는 무기 뽑기권으로 뽑는다. 다 쓰면 400, 모자란 합성도 400 (decisions.md 366번). */
   @Test
+  void 옛_무기는_진행중이거나_끝난_회사에서도_한번만_초기화한다() throws Exception {
+    String id =
+        json(mvc.perform(post("/api/company").cookie(session))).read("$.companyId", String.class);
+    for (String state : List.of("ACTIVE", "ENDED")) {
+      jdbc.sql(
+              """
+          UPDATE raising_company SET status = :status,
+            state = state || CAST(:old AS jsonb)
+          WHERE id = CAST(:id AS uuid)
+          """)
+          .param("status", state)
+          .param("id", id)
+          .param(
+              "old",
+              """
+              {"weapons":[{"kind":"rifle","grade":"UR","count":8}],
+               "weapon":{"kind":"rifle","grade":"UR","count":8},
+               "weaponTickets":99,"weaponGachaReady":true,"closed":true}
+              """)
+          .update();
+      for (int repeat = 0; repeat < 2; repeat++) {
+        mvc.perform(get("/api/company").cookie(session))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.weapons.length()").value(1))
+            .andExpect(jsonPath("$.weapons[0].grade").value("F"))
+            .andExpect(jsonPath("$.weapons[0].kind").value("pistol"))
+            .andExpect(jsonPath("$.armory.tickets").value(3));
+      }
+      assertThat(
+              jdbc.sql(
+                      "SELECT state->'weapon'->>'grade' FROM raising_company WHERE id = CAST(:id AS uuid)")
+                  .param("id", id)
+                  .query(String.class)
+                  .single())
+          .isEqualTo("F");
+    }
+  }
+
+  @Test
   void 무기_뽑기권으로_무기를_뽑고_다_쓰면_400이다() throws Exception {
     DocumentContext opened =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
@@ -316,7 +355,8 @@ class CompanyApiTest {
       drawn = json(postJson("/api/company/weapon/draw", "").andExpect(status().isOk()));
     }
     assertThat(drawn.read("$.armory.tickets", Integer.class)).isZero();
-    assertThat(drawn.read("$.armory.lastDraw.grade", String.class)).isIn("N", "R", "SR", "UR");
+    assertThat(drawn.read("$.armory.lastDraw.grade", String.class))
+        .isIn("F", "E", "D", "C", "B", "A", "S");
     List<Integer> counts = drawn.read("$.weapons[*].count");
     assertThat(counts.stream().mapToInt(Integer::intValue).sum())
         .as("처음 권총 하나 + 뽑은 수")
@@ -327,7 +367,8 @@ class CompanyApiTest {
     List<String> have = weapons.stream().map(w -> w.get("kind") + "/" + w.get("grade")).toList();
     String missing =
         java.util.stream.Stream.of("pistol", "revolver", "smg", "shotgun", "rifle")
-            .flatMap(k -> java.util.stream.Stream.of("N", "R", "SR").map(g -> k + "/" + g))
+            .flatMap(
+                k -> java.util.stream.Stream.of("F", "E", "D", "C", "B", "A").map(g -> k + "/" + g))
             .filter(kg -> !have.contains(kg))
             .findFirst()
             .orElseThrow();

@@ -13,7 +13,10 @@ export const WEAPON_EFFECTS: Record<WeaponKind, WeaponEffect> = {
   revolver: { name: '치명타', desc: '40% 확률로 세 배 피해 · 여섯 발마다 재장전' },
   smg: { name: '둔화', desc: '맞은 적이 1초 동안 40% 느려진다 · 탄이 흩어지고 멀리 못 간다' },
   shotgun: { name: '폭발', desc: '맞은 자리에서 크게 터지고 적을 밀어낸다 · 가까이만 닿는다' },
-  rifle: { name: '관통', desc: '탄이 적을 뚫고 지나가 넷까지 맞힌다 · 가장 느리게 쏜다' },
+  rifle: {
+    name: '관통',
+    desc: '탄이 적을 뚫고 지나가 넷까지 맞힌다 · 성운 탄두의 폭발이 주변까지 번진다',
+  },
 }
 
 /**
@@ -67,8 +70,8 @@ export const WEAPON_TRAITS: Record<WeaponKind, WeaponTraits> = {
     knockback: 520,
   },
   rifle: {
-    strength: '줄지은 적·보스에 강함',
-    weakness: '가까이 붙은 떼에 약함',
+    strength: '관통·광역 폭발로 적진을 가른다',
+    weakness: '관통은 한 탄당 네 번까지',
     range: null,
     magazine: null,
     reloadMs: 0,

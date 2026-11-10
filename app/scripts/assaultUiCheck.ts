@@ -63,8 +63,8 @@ try {
             {
               kind: 'pistol',
               name: '권총',
-              grade: 'N',
-              gradeName: '일반',
+              grade: 'F',
+              gradeName: 'F',
               damagePercent: 100,
               fireMs: 260,
               power: 1,
