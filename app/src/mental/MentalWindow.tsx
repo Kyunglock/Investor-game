@@ -35,6 +35,8 @@ import { GRADE_BADGE } from './WeaponInventory'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS, WEAPON_TRAITS } from './weaponEffects'
 import './stage.css'
 import { type Hero, heroOf, type Weapon } from './hero'
+import { WallGainFlight } from './WallGainFlight'
+import { queueWallGain, shownPrice, type WallGain } from './wallGain'
 
 type Genre = NonNullable<Company['mental']>['genre']
 
@@ -826,7 +828,6 @@ function CardPick({
                         고양이 {c.mates.from} → {c.mates.to}마리
                       </span>
                     )}
-                    <span className="stage-card-description">{c.desc}</span>
                   </span>
                   <span className="stage-card-effect">
                     <span aria-hidden="true">＋</span>
@@ -892,6 +893,10 @@ function Battle({
   const handle = useRef<BattleHandle | null>(null)
   const loadout = useRef(loadoutOf(hero.weapon, hero.upgrades))
   const [hud, setHud] = useState<Hud | null>(null)
+  const [gains, setGains] = useState<WallGain[]>([])
+  const gainId = useRef(0)
+  const priceTarget = useRef<HTMLElement>(null)
+  const displayPrice = hud?.assault ? shownPrice(hud.assault.price, gains) : 0
   const [banner, setBanner] = useState<{ text: string; color: string; id: number } | null>(null)
   const [hurt, setHurt] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -912,6 +917,7 @@ function Battle({
   useEffect(() => {
     setLoading(true)
     setLoadError(null)
+    setGains([])
     const el = host.current
     if (!el) {
       return
@@ -936,6 +942,10 @@ function Battle({
             setLoadError(message)
           },
           onHud: setHud,
+          onWallGain: (amount, start) => {
+            const gain = { id: ++gainId.current, amount, start }
+            setGains((queue) => queueWallGain(queue, gain))
+          },
           onBanner: (text, color) => setBanner({ text, color, id: ++bannerId }),
           onHurt: () => {
             setHurt(true)
@@ -991,14 +1001,17 @@ function Battle({
       {hud && !loadError && (
         <>
           {/* 위의 흰 판을 없앴다 (390번): 적이 내려오는 위쪽 가운데를 비우고, 멘탈은 멘탈벽 위에, 레벨은 왼쪽 가장자리에 세로로 둔다. */}
-          <div className="battle-hud" data-testid="battle-hud">
+          <div
+            className={`battle-hud${hud.assault ? ' battle-hud-assault' : ''}`}
+            data-testid="battle-hud"
+          >
             <div className="battle-corner">
               {hud.segment && (
                 <b className="battle-segment" data-testid="battle-segment">
                   {hud.boss
                     ? '보스'
                     : hud.assault
-                      ? `매도벽 ${hud.segment.at}/${hud.segment.total}`
+                      ? `남은 벽 ${hud.assault.wallsTotal - hud.assault.wallsBroken}`
                       : `구간 ${hud.segment.at}/${hud.segment.total}`}
                 </b>
               )}
@@ -1023,13 +1036,9 @@ function Battle({
               <div className="battle-price" data-testid="battle-price">
                 <span className="battle-price-now">
                   <small className="battle-price-name">{hud.assault.name}</small>
-                  <b className="battle-price-value">{hud.assault.price.toLocaleString()}</b>
-                  <em className="battle-price-up">
-                    ▲
-                    {(((hud.assault.price - hud.assault.start) / hud.assault.start) * 100).toFixed(
-                      1,
-                    )}
-                    %
+                  <b className="battle-price-value">{displayPrice.toLocaleString()}</b>
+                  <em ref={priceTarget} className="battle-price-up" data-testid="battle-price-up">
+                    ▲{(((displayPrice - hud.assault.start) / hud.assault.start) * 100).toFixed(1)}%
                   </em>
                 </span>
                 <span className="battle-price-goal">
@@ -1098,7 +1107,16 @@ function Battle({
               </div>
             </div>
           </div>
-          <div className="battle-footer">
+          {gains[0] && (
+            <WallGainFlight
+              key={gains[0].id}
+              gain={gains[0]}
+              target={priceTarget}
+              paused={asking || levelUp !== null}
+              onDone={() => setGains((queue) => queue.slice(1))}
+            />
+          )}
+          <div className={`battle-footer${hud.assault ? ' battle-footer-assault' : ''}`}>
             <span>
               {mode === 'assault'
                 ? '좌우로 끌거나 화면 왼쪽·오른쪽 누르기 · 위로 자동 사격'
