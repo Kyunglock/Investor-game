@@ -501,7 +501,6 @@ class BattleScene extends Phaser.Scene {
   /** 개발 서버의 확인 스크립트가 켜는 자동 조종: 약한 벽 칸 밑으로 가고 바로 위 물량은 비킨다. */
   autopilot = false
   private simSpeed = 1
-  private simTime = 0
   private player!: Phaser.Physics.Arcade.Image
   /** 권총: 사장냥의 손에서 겨누는 쪽으로 돈다 (341번). */
   private gun!: Phaser.GameObjects.Image
@@ -641,7 +640,7 @@ class BattleScene extends Phaser.Scene {
     }
     if (paused) {
       this.physics.pause()
-    } else if (!this.circuit) {
+    } else if (!this.circuit && !this.stopped) {
       this.physics.resume()
     }
     this.pushHud(true)
@@ -678,7 +677,7 @@ class BattleScene extends Phaser.Scene {
       // 공격 판은 첫 카드를 고르면 한 번 쭉 치고 오르며 시작한다.
       this.sinceBreak = 0
     }
-    if (!this.over && !this.paused && !this.circuit) {
+    if (!this.over && !this.paused && !this.circuit && !this.stopped) {
       this.physics.resume()
     }
     this.pushHud(true)
@@ -1934,6 +1933,11 @@ class BattleScene extends Phaser.Scene {
       circuit: this.circuit
         ? { elapsed: this.circuit.elapsed, assembled: this.circuit.assembled }
         : null,
+      projectiles: (this.bullets.getChildren() as Bullet[]).flatMap((b, id) =>
+        b.active
+          ? [{ id, x: b.x, y: b.y, expiresAt: b.life, remainingMs: b.life - this.elapsed * 1000 }]
+          : [],
+      ),
       battleSeconds: this.elapsed,
       mental: this.mental,
       maxMental: this.loadout.maxMental,
@@ -2437,7 +2441,7 @@ class BattleScene extends Phaser.Scene {
     }
     this.opts.onHurt()
     sfx.ouch()
-    if (e) this.hurtUntil = this.time.now + HURT_MS
+    if (e) this.hurtUntil = this.elapsed * 1000 + HURT_MS
     const target = this.wallZone && !e ? this.wallZone : this.player
     this.pop(target.x, target.y - 34, `멘탈 -${dmg}`, '#ff4f6d', 24)
     if (e)
@@ -2626,13 +2630,13 @@ class BattleScene extends Phaser.Scene {
     const reload = (shots: number) =>
       traits.magazine && shots % traits.magazine === 0 ? traits.reloadMs : 0
     if (mate) {
-      mate.recoilAt = this.time.now
+      mate.recoilAt = this.elapsed * 1000
       mate.shots++
       mate.lastFire = now + reload(mate.shots)
       mate.aim = aim
       this.damageStats.mateShots++
     } else {
-      this.recoilAt = this.time.now
+      this.recoilAt = this.elapsed * 1000
       this.heroShots++
       const wait = reload(this.heroShots)
       this.lastFire = now + wait
@@ -2642,7 +2646,7 @@ class BattleScene extends Phaser.Scene {
       this.aim = aim
     }
     // 총 손맛: 총구 화염, 반동(눌렸다 펴짐). 크기·시간이 무기마다 다르다.
-    this.poseGun(mate?.gun ?? this.gun, p.x, p.y, aim, this.time.now, this.time.now)
+    this.poseGun(mate?.gun ?? this.gun, p.x, p.y, aim, this.elapsed * 1000, this.elapsed * 1000)
     const m = this.muzzle(p.x, p.y, aim)
     const flash = this.flashes[this.flashIndex++ % this.flashes.length]
     flash
@@ -3748,15 +3752,9 @@ class BattleScene extends Phaser.Scene {
     this.time.timeScale = this.simSpeed
   }
 
-  update(realTime: number, realDtMs: number) {
+  update(_realTime: number, realDtMs: number) {
     if (this.over && !this.player) return
-    let time = realTime
-    let dtMs = realDtMs
-    if (this.simSpeed !== 1) {
-      dtMs = realDtMs * this.simSpeed
-      this.simTime += dtMs
-      time = this.simTime
-    }
+    const dtMs = realDtMs * this.simSpeed
     this.pushHud()
     if (this.over || this.stopped || this.choosing || this.paused) {
       return
@@ -3798,6 +3796,8 @@ class BattleScene extends Phaser.Scene {
       return
     }
     this.elapsed += dt
+    // 물리가 멈추는 카드 선택·일시정지·서킷브레이커는 탄 수명/연사/재장전에도 포함하지 않는다.
+    const time = this.elapsed * 1000
     if (this.elapsed >= this.limitSeconds()) {
       // 디펜스는 버티면 이기고, 전진 모드와 디펜스 보스 스테이지는 시간 안에 못 넘으면(보스를 못 잡으면) 진다 (364·509번).
       if (this.mode === 'advance' || this.mode === 'assault' || this.defenseBoss) {
