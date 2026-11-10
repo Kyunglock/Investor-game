@@ -719,34 +719,6 @@
   left: 12px;
   right: 12px;
 }
-.toy-ticker {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  width: 100%;
-  min-height: 38px;
-  padding: 9px;
-  border: 1px solid #c5cdec;
-  border-radius: 12px;
-  background: #fffdf9;
-  box-shadow: 0 3px 0 #8d9ac4;
-  text-align: left;
-  margin-bottom: 14px;
-  font-size: 10px;
-}
-.toy-ticker b {
-  flex-shrink: 0;
-  background: #e5ecff;
-  padding: 3px 5px;
-  border-radius: 4px;
-  font-size: 8px;
-}
-.toy-ticker > span:nth-child(2) {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex: 1;
-}
 .toy-bottom-cards {
   display: grid;
   grid-template-columns: 1fr 1.45fr 1fr;
@@ -932,9 +904,6 @@
   }
   .toy-bottom {
     bottom: 10px;
-  }
-  .toy-ticker {
-    margin-bottom: 10px;
   }
   .toy-speech {
     top: 70%;
