@@ -4,7 +4,10 @@ import { company } from './fixture.ts'
 
 const browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || undefined })
 try {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  const page = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    reducedMotion: process.env.REDUCED_MOTION ? 'reduce' : 'no-preference',
+  })
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.route(/\/api\/(company|sessions)(\/|$|\?)/, (route) =>
@@ -24,9 +27,12 @@ try {
     document.body.append(host)
     let loadout = { ...cards.loadoutOf(DEFAULT_WEAPON), damage: 0.01, fireMs: 10000 }
     window.wallTransitions = []
+    const spec = assaultSpec(1)
+    // 전환 도중 이미 날아간 강화탄이 다음 벽을 즉사시키지 않게 관찰할 벽만 단단하게 둔다.
+    spec.walls = spec.walls.map((wall, index) => (index === 0 ? wall : { ...wall, cellHp: 100000 }))
     const handle = startBattle(host, {
       mode: 'assault',
-      assault: assaultSpec(1),
+      assault: spec,
       genre: 'DEFENSE',
       hero: { name: '사장냥', weapon: DEFAULT_WEAPON, upgrades: [] },
       loadout,
@@ -36,6 +42,11 @@ try {
       onBanner: (text) => {
         if (text === '매도벽을 부수고 다음 벽으로!') {
           window.wallTransitions.push(window.__mentalWalls())
+          if (window.__mentalWalls().some((wall) => wall.index > 0)) {
+            window.transitionMarket = window.__mentalMarket()
+            loadout = { ...loadout, damage: 0.01, fireMs: 10000, lightning: 0 }
+            handle.applyLoadout(loadout)
+          }
         }
       },
       onHurt: () => {},
@@ -78,8 +89,22 @@ try {
     window.wallTransitions.flat().filter((wall) => wall.index > 0),
   )
   assert(transitions.every((wall) => wall.bottom > 0 && !wall.held))
+  const entering = transitions.find((wall) => wall.index === 1)
+  assert(entering && !entering.arrived)
+  await page.waitForFunction(() =>
+    window.__mentalWalls().some((wall) => wall.index === 1 && wall.arrived),
+  )
+  const arrival = await page.evaluate(() => ({
+    wall: window.__mentalWalls().find((wall) => wall.index === 1),
+    market: window.__mentalMarket(),
+    start: window.transitionMarket,
+  }))
+  assert(arrival.wall.bottom > entering.bottom + 100)
+  assert(arrival.market.climbed > arrival.start.climbed + 100)
+  assert.equal(arrival.market.buyWall.playerX, before.playerX)
+  assert.equal(arrival.market.buyWall.playerY, before.playerY)
   assert.deepEqual(errors, [])
-  console.log('PASS: fixed cat, immediate buy wall, monster push, immediate next sell wall')
+  console.log('PASS: fixed cat, buy-wall push, visible next wall with forward scrolling')
 } finally {
   await browser.close()
 }
