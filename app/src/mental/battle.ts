@@ -4067,21 +4067,12 @@ class BattleScene extends Phaser.Scene {
           if (e.wallPushUntil <= this.elapsed) this.kill(e, false)
           continue
         }
-        // 매도 물량 (413번): 벽 앞에서 사장냥 쪽으로 내려온다. 시장가는 사장냥을 향해 꺾여 들고, 허매도는 흔들린다. 오르는 만큼 함께 내려간다.
+        // 매도 물량 (413번): 벽 앞에서 일직선으로 곧게 내려온다. 사장냥 쪽으로 꺾이거나 흔들리지 않는다. 오르는 만큼 함께 내려간다.
         if (e.y > h + 40) {
           e.disableBody(true, true)
           continue
         }
-        const toward = p.x - e.x
-        const vx =
-          e.kind === 'short'
-            ? 0
-            : e.kind === 'market'
-              ? Phaser.Math.Clamp(toward * 0.7, -80, 80)
-              : e.kind === 'fake'
-                ? Math.sin((this.elapsed - e.born) * 3 + e.walkOffset) * 40
-                : Phaser.Math.Clamp(toward, -1, 1) * 22
-        e.setVelocity(e.kbx + vx, sy + e.kby + this.climbV)
+        e.setVelocity(e.kbx, sy + e.kby + this.climbV)
       } else if (this.mode === 'advance') {
         // 길막 적은 천천히 사장냥 쪽으로 다가오고, 아래로 지나가면 다시 위에서 내려온다. 달려드는 패닉은 지나가면 사라진다.
         if (e.y > h + 50) {
