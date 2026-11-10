@@ -1031,7 +1031,7 @@ class BattleScene extends Phaser.Scene {
       gun,
       aim: this.aim,
       // 사장냥과 번갈아 쏘게 연사 간격 안에서 조금씩 어긋나게 시작한다.
-      lastFire: this.lastFire + (this.loadout.fireMs * (i + 1)) / (MATE_LOOKS.length + 1),
+      lastFire: this.lastFire + (this.attackInterval * (i + 1)) / (MATE_LOOKS.length + 1),
       shots: 0,
       drop: this.reducedMotion ? 0 : -150,
     }
@@ -1774,7 +1774,8 @@ class BattleScene extends Phaser.Scene {
       const lane = this.lane()
       for (let i = 0; i < support.fireCount; i++) {
         this.buyWallFx?.launch(
-          lane.left + lane.width * (0.1 + (0.8 * (i + 0.5)) / support.fireCount),
+          lane.left +
+            lane.width * (0.1 + (0.8 * ((((this.buyWall?.shots ?? 1) - 1) % 6) + 0.5)) / 6),
           this.buyWallY(),
           this.loadout.damage * 0.75,
         )
@@ -2562,6 +2563,11 @@ class BattleScene extends Phaser.Scene {
     return Math.atan2(target.y - (y + GUN.dy), target.x - (x + GUN.dx))
   }
 
+  /** 초당 발사 수를 기존의 80%로 낮춘다. */
+  private get attackInterval() {
+    return this.loadout.fireMs * 1.25
+  }
+
   /** 한 발 쏜다. mate가 없으면 사장냥, 있으면 그 고양이가 같은 수치(무기·피해·연사·강화)로 쏜다(393번). */
   private fire(now: number, aim: number, mate?: Mate) {
     const p = mate ? mate.body : this.player
@@ -2606,10 +2612,10 @@ class BattleScene extends Phaser.Scene {
       onComplete: () => flash.setVisible(false),
     })
     // 산탄총: 총구 앞으로 불꽃이 부채꼴로 튄다(탄은 한 덩이, 362번).
-    for (let i = 0; i < style.sparks && !this.reducedMotion; i++) {
-      const a = aim + ((i / (style.sparks - 1)) * 2 - 1) * 0.45
+    const sparkCount = Math.min(3, style.sparks)
+    for (let i = 0; i < sparkCount && !this.reducedMotion; i++) {
+      const a = aim + (sparkCount > 1 ? ((i / (sparkCount - 1)) * 2 - 1) * 0.45 : 0)
       this.trail.emitParticleAt(m.x + Math.cos(a) * 18, m.y + Math.sin(a) * 18)
-      this.trail.emitParticleAt(m.x + Math.cos(a) * 32, m.y + Math.sin(a) * 32)
     }
     const stats = bulletStats(this.loadout)
     const b = this.bullets.get(m.x, m.y, `bullet-${this.opts.hero.weapon.grade}-0`) as Bullet | null
@@ -2618,7 +2624,7 @@ class BattleScene extends Phaser.Scene {
       .enableBody(true, m.x, m.y, true, true)
       .setDepth(4)
     b.look = 0
-    b.trailMs = style.trailMs
+    b.trailMs = Math.max(90, style.trailMs)
     b.damage = stats.damage
     b.power = stats.power
     b.splashRadius = stats.splashRadius
@@ -2629,11 +2635,11 @@ class BattleScene extends Phaser.Scene {
     b.fromY = m.y
     b.range = traits.range == null ? Number.POSITIVE_INFINITY : this.view().h * traits.range
     b.setDisplaySize(
-      BULLET_W * stats.scale * style.length,
-      BULLET_H * stats.scale * style.width,
+      BULLET_W * stats.scale * style.length * 0.7,
+      BULLET_H * stats.scale * style.width * 0.7,
     ).setRotation(base)
     b.clearTint()
-    const hb = bulletHitbox(b.width, b.height, style.length)
+    const hb = bulletHitbox(b.width, b.height, style.length * 0.7)
     b.body?.setCircle(hb.radius, hb.ox, hb.oy)
     b.setVelocity(
       Math.cos(base) * this.loadout.bulletSpeed,
@@ -2792,9 +2798,9 @@ class BattleScene extends Phaser.Scene {
     sfx[key]()
   }
 
-  /** 줄인 움직임이면 파티클을 반만. */
+  /** 마법의 외곽과 적이 잘 보이도록 파티클을 줄인다. */
   private fx(n: number) {
-    return this.reducedMotion ? Math.ceil(n / 2) : n
+    return Math.ceil(n * (this.reducedMotion ? 0.2 : 0.45))
   }
 
   /** 4·5레벨은 3단계 연출이 조금씩 더 커진다. */
@@ -2835,7 +2841,16 @@ class BattleScene extends Phaser.Scene {
     this.flare(this.rings[this.ringIndex++ % this.rings.length], x, y, tint, 0.25, r / 36, ms)
   }
   private glow(x: number, y: number, tint: number, r: number, ms: number, alpha = 0.8) {
-    this.flare(this.glows[this.glowIndex++ % this.glows.length], x, y, tint, 0.3, r / 32, ms, alpha)
+    this.flare(
+      this.glows[this.glowIndex++ % this.glows.length],
+      x,
+      y,
+      tint,
+      0.3,
+      r / 32,
+      Math.min(ms, 240),
+      alpha * 0.45,
+    )
   }
 
   /** 마법이 노릴 수 있는 적: 살아 있고 화면 안에 들어온 적. 같은 배열을 다시 채운다. */
@@ -3531,19 +3546,19 @@ class BattleScene extends Phaser.Scene {
   private impact(x: number, y: number, power: number) {
     const effect = this.impacts[this.impactIndex++ % this.impacts.length]
     this.tweens.killTweensOf(effect)
-    const size = TEX * (0.65 + power * 0.22)
+    const size = TEX * (0.45 + Math.min(power, 5) * 0.1)
     effect
       .setPosition(x, y)
       .setScale(size * 0.3)
       .setAlpha(1)
       .setRotation(Math.random() * Math.PI)
       .setVisible(true)
-    this.hitSpark.explode(5 + power * 3, x, y)
+    this.hitSpark.explode(this.fx(3 + Math.min(power, 5)), x, y)
     this.tweens.add({
       targets: effect,
       scale: size,
       alpha: 0,
-      duration: 210 + power * 25,
+      duration: 160,
       ease: 'Cubic.easeOut',
       onComplete: () => effect.setVisible(false),
     })
@@ -3661,8 +3676,8 @@ class BattleScene extends Phaser.Scene {
       if (target) {
         // 공격 판도 맡은 과녁을 겨눈다 (#593). 과녁이 없으면 제 머리 위(벽).
         const want = this.angleFrom(b.x, b.y, target)
-        if (m.drop === 0 && time - m.lastFire > this.loadout.fireMs) {
-          const ms = this.loadout.fireMs
+        if (m.drop === 0 && time - m.lastFire > this.attackInterval) {
+          const ms = this.attackInterval
           for (let n = 0; time - m.lastFire > ms && n < 3; n++) {
             this.fire(Math.max(m.lastFire + ms, time - ms), want, m)
           }
@@ -3727,6 +3742,7 @@ class BattleScene extends Phaser.Scene {
         }
       }
       this.circuitFx = new CircuitBreakerFx(this)
+      if (!this.reducedMotion) this.cameras.main.shake(180, 0.003)
       this.marketStats.circuits++
       this.physics.pause()
       this.opts.onBanner('서킷브레이커! 거래 정지 · 멘탈 회복', '#8ef3c6')
@@ -3788,7 +3804,7 @@ class BattleScene extends Phaser.Scene {
     }
 
     // 사장냥과 함께 싸우는 고양이가 저마다 맡은 적을 제 총으로 쏜다 (393·409번). 과녁 찾기는 적 풀 전체를 도니 누가 쏠 때거나 80ms마다만 새로 찾는다.
-    const fireMs = this.loadout.fireMs
+    const fireMs = this.attackInterval
     const due = time - this.lastFire > fireMs || this.mates.some((m) => time - m.lastFire > fireMs)
     if (due || time - this.targetAt > 80) {
       this.targets = this.shotTargets()
@@ -3974,7 +3990,7 @@ class BattleScene extends Phaser.Scene {
         b.look = look
         b.setTexture(`bullet-${this.opts.hero.weapon.grade}-${look}`)
       }
-      if (time - (b.trailAt ?? 0) >= b.trailMs) {
+      if (!this.reducedMotion && time - (b.trailAt ?? 0) >= b.trailMs) {
         b.trailAt = time
         this.trail.emitParticleAt(b.x, b.y)
       }
