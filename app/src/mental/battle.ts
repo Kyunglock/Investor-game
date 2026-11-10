@@ -1782,7 +1782,11 @@ class BattleScene extends Phaser.Scene {
       move = -(support?.retreat ?? 0)
       if (wall) wall.arrived = false
     }
-    if (support?.rebuilt) this.opts.onBanner('새 매수벽 등장!', '#7be0c3')
+    if (support?.rebuilt) {
+      this.opts.onBanner('새 매수벽 등장!', '#7be0c3')
+      // 새 매수벽이 서면 다가오던 매도 공격을 뒤로 밀어 숨 돌릴 틈을 준다.
+      this.pushEnemiesBack(0.5)
+    }
     if (support) this.launchBuyOrders(support.fireCount)
     this.buyWallFx?.step(dt, (x, fromY, toY, damage) => {
       const targets = this.magicTargets().filter(
@@ -2506,6 +2510,18 @@ class BattleScene extends Phaser.Scene {
     this.buyWallFx.draw(this.buyWall, lane.left, lane.width, this.buyWallY(), this.reducedMotion)
   }
 
+  /** 매도 주문들을 seconds초 동안 위로(뒤로) 밀어낸다. 매수벽이 무너질 때와 새로 설 때 쓴다. */
+  private pushEnemiesBack(seconds: number) {
+    for (const child of this.enemies.getChildren()) {
+      const enemy = child as Enemy
+      if (!enemy.active || enemy.dying || enemy.cell) continue
+      enemy.wallPushUntil = Math.max(enemy.wallPushUntil, this.elapsed + seconds)
+      enemy.kbx = 0
+      enemy.kby = 0
+      enemy.setVelocity(0, -600)
+    }
+  }
+
   hitBuyWall(damage: number, x: number) {
     if (!this.buyWall?.active || this.over) return
     const before = this.buyWall.hp
@@ -2519,14 +2535,7 @@ class BattleScene extends Phaser.Scene {
       this.opts.onBanner(`매수벽 붕괴! 멘탈 -${loss} · 1.5초 후 재건`, '#ffb278')
       // 일반 피격 무적 시간과 무관하게 붕괴 한 번당 정확히 한 번 깎는다.
       this.hurt(loss, undefined, undefined, true)
-      for (const child of this.enemies.getChildren()) {
-        const enemy = child as Enemy
-        if (!enemy.active || enemy.dying || enemy.cell) continue
-        enemy.wallPushUntil = this.elapsed + 0.35
-        enemy.kbx = 0
-        enemy.kby = 0
-        enemy.setVelocity(0, -600)
-      }
+      this.pushEnemiesBack(0.35)
       sfx.crumble()
       haptic.medium()
     } else {

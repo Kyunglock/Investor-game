@@ -47,11 +47,11 @@ describe('매수벽', () => {
     for (let i = 0; i < 7; i++) expect(wall.step(0.36).fireCount).toBe(1)
     expect(wall.shots).toBe(wall.sells)
   })
-  it('실패는 추가 0%, 클리어는 부순 매도벽당 2%다', () => {
-    expect(assaultBonusPercent(false, 9)).toBe(0)
-    expect(assaultBonusPercent(false, 10)).toBe(0)
-    expect(assaultBonusPercent(true, 5)).toBe(10)
-    expect(assaultBonusPercent(true, 10)).toBe(20)
+  it('추가 수익은 별 0·1·2·3개 → 0·25·50·100%다', () => {
+    expect(assaultBonusPercent(0)).toBe(0)
+    expect(assaultBonusPercent(1)).toBe(25)
+    expect(assaultBonusPercent(2)).toBe(50)
+    expect(assaultBonusPercent(3)).toBe(100)
   })
 })
 
