@@ -97,13 +97,13 @@ import { MATE_LOOKS, mateFormation, spreadTargets } from './mates'
 import { wallOffset } from './stageArt'
 import {
   aimWithJitter,
-  FIRE_STYLES,
   pierceOf,
   SLOW_FACTOR,
   SLOW_SECONDS,
   WEAPON_TRAITS,
   weaponDamage,
 } from './weaponEffects'
+import { GRADE_FIRE, gradeTint } from './weaponVisuals'
 
 /**
  * 멘탈 전투 한 판 (decisions.md 328번). Phaser 3 Arcade로 돈다: 탄·적은 풀에서 재사용하고, 도트 그림(art.ts)은 캔버스에 한 번 구워 둔다. 규칙은 화면
@@ -826,7 +826,7 @@ class BattleScene extends Phaser.Scene {
         lifespan: 110,
         scale: { start: 2 * TEX, end: 0.4 * TEX },
         alpha: { start: 0.6, end: 0 },
-        tint: [0xffe08a, 0xffb300],
+        tint: [gradeTint(this.opts.hero.weapon.grade), 0xffffff],
         emitting: false,
         // 고양이 넷이 쏘면 탄이 넷 배라 꼬리 수를 묶는다 (393번).
         maxAliveParticles: 160,
@@ -848,7 +848,9 @@ class BattleScene extends Phaser.Scene {
       this.flashes.push(this.add.image(0, 0, 'flash').setDepth(6).setVisible(false))
     }
     for (let i = 0; i < 20; i++) {
-      this.impacts.push(this.add.image(0, 0, 'bullet-impact').setDepth(7).setVisible(false))
+      this.impacts.push(
+        this.add.image(0, 0, `impact-${this.opts.hero.weapon.grade}`).setDepth(7).setVisible(false),
+      )
     }
     // 알림 글자(멘탈 ±·투기 진압! 같은 말)는 데미지 숫자보다 위에 둔다.
     for (let i = 0; i < 16; i++) {
@@ -2450,7 +2452,7 @@ class BattleScene extends Phaser.Scene {
   private fire(now: number, aim: number, mate?: Mate) {
     const p = mate ? mate.body : this.player
     const kind = this.opts.hero.weapon.kind
-    const style = FIRE_STYLES[kind]
+    const style = GRADE_FIRE[this.opts.hero.weapon.grade]
     // 무기마다 쏘는 방식 (#563): 총은 겨눈 쪽(aim)을 보고, 탄만 흩어진다(기관단총).
     const base = aimWithJitter(kind, aim, Math.random())
     // 재장전 (#587): 탄창을 다 쓰면 재장전 시간만큼 다음 한 발이 늦어진다(lastFire를 미래로 민다).
@@ -2477,6 +2479,7 @@ class BattleScene extends Phaser.Scene {
     flash
       .setPosition(m.x, m.y)
       .setRotation(aim)
+      .setTint(gradeTint(this.opts.hero.weapon.grade))
       .setScale(TEX * style.flash)
       .setAlpha(1)
       .setVisible(true)
@@ -2505,9 +2508,11 @@ class BattleScene extends Phaser.Scene {
       ease: 'Back.easeOut',
     })
     const stats = bulletStats(this.loadout)
-    const b = this.bullets.get(m.x, m.y, 'bullet-0') as Bullet | null
+    const b = this.bullets.get(m.x, m.y, `bullet-${this.opts.hero.weapon.grade}-0`) as Bullet | null
     if (!b) return
-    b.setTexture('bullet-0').enableBody(true, m.x, m.y, true, true).setDepth(4)
+    b.setTexture(`bullet-${this.opts.hero.weapon.grade}-0`)
+      .enableBody(true, m.x, m.y, true, true)
+      .setDepth(4)
     b.look = 0
     b.trailMs = style.trailMs
     b.damage = stats.damage
@@ -2523,9 +2528,7 @@ class BattleScene extends Phaser.Scene {
       BULLET_W * stats.scale * style.length,
       BULLET_H * stats.scale * style.width,
     ).setRotation(base)
-    // 무기 빛 위에 강화 단계가 오를수록 주황을 더 섞는다.
-    const powerTint = [0xffffff, 0xffdd99, 0xffb966, 0xff9955][stats.power]
-    b.setTint(stats.power && kind === 'pistol' ? powerTint : style.tint)
+    b.clearTint()
     const hb = bulletHitbox(b.width, b.height, style.length)
     b.body?.setCircle(hb.radius, hb.ox, hb.oy)
     b.setVelocity(
@@ -3830,7 +3833,7 @@ class BattleScene extends Phaser.Scene {
       const look = (Math.floor(time / 70) % 2) as 0 | 1
       if (look !== b.look) {
         b.look = look
-        b.setTexture(`bullet-${look}`)
+        b.setTexture(`bullet-${this.opts.hero.weapon.grade}-${look}`)
       }
       if (time - (b.trailAt ?? 0) >= b.trailMs) {
         b.trailAt = time

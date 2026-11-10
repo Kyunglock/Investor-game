@@ -26,7 +26,7 @@ class MentalEngine {
   static final String BURST = "burst";
 
   /** 무기 등급, 낮은 것부터 (346번). */
-  static final List<String> WEAPON_GRADES = List.of("N", "R", "SR", "UR");
+  static final List<String> WEAPON_GRADES = List.of("F", "E", "D", "C", "B", "A", "S");
 
   /** 자본으로 사는 전투 강화 (367·394·410번): 공격력·연사·체력(최대 멘탈). 고양이 속도는 394번에서 뺐다. */
   static final List<String> UPGRADES = List.of("damage", "fire", "hp");
@@ -87,6 +87,16 @@ class MentalEngine {
 
   /** 무기가 없는 회사에 일반 권총 하나를 주고 들게 한다 (346번). 줬으면 true. */
   boolean initWeapons(CompanyState c) {
+    // 출시 전 무기 저장은 변환하지 않고 초기화한다. 회사의 나머지 진행은 보존한다.
+    if (needsWeaponReset(c)) {
+      c.weapons = null;
+      c.weapon = null;
+      c.lastWeaponDraw = null;
+      c.lastWeaponDrawNew = false;
+      c.weaponDraws = 0;
+      c.weaponTickets = properties.mental().weaponGacha().startTickets();
+      c.weaponGachaReady = true;
+    }
     if (c.weapons != null && !c.weapons.isEmpty() && c.weapon != null) {
       return false;
     }
@@ -96,6 +106,13 @@ class MentalEngine {
     }
     c.weapon = c.weapons.getFirst();
     return true;
+  }
+
+  boolean needsWeaponReset(CompanyState c) {
+    return (c.weapons != null && c.weapons.stream().anyMatch(w -> !validWeapon(w.kind, w.grade)))
+        || (c.weapon != null && !validWeapon(c.weapon.kind, c.weapon.grade))
+        || (c.lastWeaponDraw != null
+            && !validWeapon(c.lastWeaponDraw.kind, c.lastWeaponDraw.grade));
   }
 
   /** 무기 뽑기 전에 차린 회사(이 칸이 거짓)면 처음 무기 뽑기권을 준다 (366번). 줬으면 true. */
@@ -109,8 +126,8 @@ class MentalEngine {
   }
 
   /**
-   * 무기 뽑기 (decisions.md 366번): 뽑기권 한 장으로 하나. 등급은 가중치로, 종류는 고르게. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 합성 재료가
-   * 된다. 뽑기권이 없으면 400.
+   * 무기 뽑기 (decisions.md 366번): 뽑기권 한 장으로 하나. 등급은 가중치로, 종류는 등급에 따라. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 합성
+   * 재료가 된다. 뽑기권이 없으면 400.
    */
   void drawWeapon(CompanyState c, SeededRandom random) {
     initWeapons(c);
@@ -131,8 +148,7 @@ class MentalEngine {
         break;
       }
     }
-    List<String> kinds = properties.mental().weapons().keySet().stream().sorted().toList();
-    String kind = kinds.get(rng.nextInt(kinds.size()));
+    String kind = kindOf(grade);
     CompanyState.Weapon owned = find(c, kind, grade);
     if (owned != null) {
       owned.count++;
@@ -144,13 +160,13 @@ class MentalEngine {
   }
 
   /**
-   * 무기 합성 (decisions.md 366번): 같은 무기(종류+등급) mergeCount개를 합쳐 한 등급 위의 같은 종류 하나로. 가장 높은 등급이거나 모자라면
-   * 400. 들고 있던 무기를 다 썼으면 합쳐 만든 무기를 든다.
+   * 무기 합성 (decisions.md 366번): 같은 무기(종류+등급) mergeCount개를 합쳐 한 등급 위의 등급에 해당하는 종류 하나로. 가장 높은 등급이거나
+   * 모자라면 400. 들고 있던 무기를 다 썼으면 합쳐 만든 무기를 든다.
    */
   void mergeWeapon(CompanyState c, String kind, String grade) {
     initWeapons(c);
     int at = WEAPON_GRADES.indexOf(grade);
-    if (!properties.mental().weapons().containsKey(kind) || at < 0) {
+    if (!validWeapon(kind, grade) || at < 0) {
       throw new InvalidRequestException("없는 무기다: " + kind + " " + grade);
     }
     if (at == WEAPON_GRADES.size() - 1) {
@@ -163,11 +179,12 @@ class MentalEngine {
     }
     owned.count -= need;
     String up = WEAPON_GRADES.get(at + 1);
-    CompanyState.Weapon upgraded = find(c, kind, up);
+    String nextKind = kindOf(up);
+    CompanyState.Weapon upgraded = find(c, nextKind, up);
     if (upgraded != null) {
       upgraded.count++;
     } else {
-      upgraded = new CompanyState.Weapon(kind, up);
+      upgraded = new CompanyState.Weapon(nextKind, up);
       c.weapons.add(upgraded);
     }
     if (owned.count == 0) {
@@ -180,6 +197,14 @@ class MentalEngine {
 
   private static CompanyState.Weapon find(CompanyState c, String kind, String grade) {
     return c.weapons.stream().filter(w -> w.same(kind, grade)).findFirst().orElse(null);
+  }
+
+  private String kindOf(String grade) {
+    return properties.mental().weaponGrades().get(grade).kind();
+  }
+
+  private boolean validWeapon(String kind, String grade) {
+    return WEAPON_GRADES.contains(grade) && kindOf(grade).equals(kind);
   }
 
   /**
@@ -264,7 +289,7 @@ class MentalEngine {
   /** 가진 무기 가운데 하나를 든다 (346번). 없는 종류·등급이거나 안 가진 무기면 400. */
   void equip(CompanyState c, String kind, String grade) {
     initWeapons(c);
-    if (!properties.mental().weapons().containsKey(kind) || !WEAPON_GRADES.contains(grade)) {
+    if (!validWeapon(kind, grade)) {
       throw new InvalidRequestException("없는 무기다: " + kind + " " + grade);
     }
     CompanyState.Weapon owned =

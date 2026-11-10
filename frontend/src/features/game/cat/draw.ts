@@ -550,14 +550,17 @@ export function drawCat(c: Ctx, o: CatLook) {
 }
 
 export type GunKind = 'pistol' | 'revolver' | 'smg' | 'shotgun' | 'rifle'
-export type GunGrade = 'N' | 'R' | 'SR' | 'UR'
+export type GunGrade = 'F' | 'E' | 'D' | 'C' | 'B' | 'A' | 'S'
 
 /** 무기 등급별 몸통색 (346번): 일반 잿빛, 고급 파랑, 희귀 보라, 전설 금. */
 export const GUN_GRADE_COLOR: Record<GunGrade, string> = {
-  N: '#6a6670',
-  R: '#4f7fc4',
-  SR: '#8a5fd6',
-  UR: '#e0a93a',
+  F: '#94a3b8',
+  E: '#34d399',
+  D: '#38bdf8',
+  C: '#a78bfa',
+  B: '#e879f9',
+  A: '#fb923c',
+  S: '#67e8f9',
 }
 
 /**
@@ -566,7 +569,7 @@ export const GUN_GRADE_COLOR: Record<GunGrade, string> = {
  * 종류마다 실루엣이 다르다: 권총(기본), 리볼버(실린더), 기관단총(탄창·짧은 개머리), 산탄총(두 겹 총신·나무 펌프), 소총(긴 총신·조준경·나무 개머리).
  * 등급은 몸통색이고 전설은 반짝이까지.
  */
-export function drawGun(c: Ctx, fur: string, kind: GunKind = 'pistol', grade: GunGrade = 'N') {
+export function drawGun(c: Ctx, fur: string, kind: GunKind = 'pistol', grade: GunGrade = 'F') {
   const body = GUN_GRADE_COLOR[grade]
   const darkBody = dark(body, 0.75)
   const wood = '#a98464'
@@ -644,7 +647,7 @@ export function drawGun(c: Ctx, fur: string, kind: GunKind = 'pistol', grade: Gu
   c.strokeStyle = INK
   c.stroke()
   // 전설: 반짝이 둘
-  if (grade === 'UR') {
+  if (grade === 'S') {
     for (const [sx, sy, r] of [
       [len - 2, -7.5, 2.2],
       [3, -7, 1.5],

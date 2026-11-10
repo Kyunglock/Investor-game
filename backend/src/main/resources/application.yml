@@ -152,7 +152,7 @@ raising:
         normal: { ASSAULT: 50, DEFENSE: 50 }
         crash: { ASSAULT: 35, DEFENSE: 65 }
         burst: { ASSAULT: 15, DEFENSE: 85 }
-      # 무기 (decisions.md 346번): 종류마다 공격력(%)·연사 간격(ms)·탄 강화 단계(power, 362번)·탄 속도. 등급(N·R·SR·UR)은 공격력을 damage-percent% 더하고 연사 간격을
+      # 무기 (decisions.md 346번): 종류마다 공격력(%)·연사 간격(ms)·탄 강화 단계(power, 362번)·탄 속도. 등급(F·E·D·C·B·A·S)은 공격력을 damage-percent% 더하고 연사 간격을
       # fire-percent% 줄인다. 무기는 전투에서 떨어지지 않고 무기 뽑기로 얻는다(366번, weapon-gacha)
       weapons:
         pistol: { damage-percent: 100, fire-ms: 260, power: 0, bullet-speed: 720 }
@@ -160,17 +160,20 @@ raising:
         revolver: { damage-percent: 250, fire-ms: 600, power: 0, bullet-speed: 820 }
         smg: { damage-percent: 50, fire-ms: 80, power: 0, bullet-speed: 700 }
         shotgun: { damage-percent: 220, fire-ms: 700, power: 2, bullet-speed: 640 }
-        rifle: { damage-percent: 330, fire-ms: 900, power: 0, bullet-speed: 1100 }
+        rifle: { damage-percent: 330, fire-ms: 900, power: 3, bullet-speed: 1100 }
       weapon-grades:
-        N: { damage-percent: 0, fire-percent: 0 }
-        R: { damage-percent: 25, fire-percent: 8 }
-        SR: { damage-percent: 50, fire-percent: 15 }
-        UR: { damage-percent: 100, fire-percent: 25 }
-      # 무기 뽑기 (decisions.md 366번): 무기 뽑기권 한 장에 한 번. 등급 가중치로 등급을, 종류는 고르게 뽑는다. 같은 무기(종류+등급)가 merge-count개
+        F: { kind: pistol, damage-percent: 0, fire-percent: 0 }
+        E: { kind: pistol, damage-percent: 60, fire-percent: 10 }
+        D: { kind: revolver, damage-percent: 20, fire-percent: 15 }
+        C: { kind: smg, damage-percent: 150, fire-percent: 0 }
+        B: { kind: smg, damage-percent: 250, fire-percent: 20 }
+        A: { kind: shotgun, damage-percent: 900, fire-percent: 20 }
+        S: { kind: rifle, damage-percent: 1000, fire-percent: 60 }
+      # 무기 뽑기 (decisions.md 366번): 무기 뽑기권 한 장에 한 번. 등급 가중치로 등급을, 종류는 등급에 따라 정한다. 같은 무기(종류+등급)가 merge-count개
       # 모이면 합쳐 한 등급 올린다. 뽑기권은 처음 start-tickets장, 분기 전투를 마칠 때마다 battle-tickets장
       # (스테이지를 처음 깰 때·별·EX 도전 보상은 #493에서 붙는다)
       weapon-gacha:
-        grade-weights: { N: 60, R: 30, SR: 9, UR: 1 }
+        grade-weights: { F: 450, E: 260, D: 150, C: 80, B: 40, A: 17, S: 3 }
         start-tickets: 3
         battle-tickets: 1
         merge-count: 2

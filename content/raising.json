@@ -917,14 +917,11 @@
         "pistol": "권총",
         "revolver": "리볼버",
         "smg": "기관단총",
-        "shotgun": "산탄총",
-        "rifle": "소총"
+        "shotgun": "폭발포",
+        "rifle": "성운포"
       },
       "weaponGrades": {
-        "N": "일반",
-        "R": "고급",
-        "SR": "희귀",
-        "UR": "전설"
+        "F": "F", "E": "E", "D": "D", "C": "C", "B": "B", "A": "A", "S": "S"
       }
     },
     "quirks": [

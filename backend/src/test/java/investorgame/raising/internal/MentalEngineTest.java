@@ -8,6 +8,7 @@ import investorgame.common.error.InvalidRequestException;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.content.internal.TestContent;
 import investorgame.raising.CompanyView;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -249,7 +250,7 @@ class MentalEngineTest {
     CompanyState c = ENGINE.open(new HashSeededRandom(1), 150_000_000L);
     assertThat(c.weapons).hasSize(1);
     assertThat(c.weapons.getFirst().kind).isEqualTo(MentalEngine.PISTOL);
-    assertThat(c.weapons.getFirst().grade).isEqualTo("N");
+    assertThat(c.weapons.getFirst().grade).isEqualTo("F");
     assertThat(c.weapon).isSameAs(c.weapons.getFirst());
 
     CompanyState old = company(2);
@@ -262,13 +263,18 @@ class MentalEngineTest {
 
   @Test
   void 무기_수치는_등급이_오를수록_세고_빨라진다() {
-    CompanyProperties.Weapon n = ENGINE.mental.stats("rifle", "N");
-    CompanyProperties.Weapon ur = ENGINE.mental.stats("rifle", "UR");
-    assertThat(ur.damagePercent()).isGreaterThan(n.damagePercent());
-    assertThat(ur.fireMs()).isLessThan(n.fireMs());
-    assertThat(ur.power()).isEqualTo(n.power());
-    assertThat(ENGINE.mental.stats("shotgun", "N").power()).as("산탄총은 강화탄 2단계로 시작").isEqualTo(2);
-    assertThat(ENGINE.mental.stats("pistol", "N").power()).isZero();
+    double previous = 0;
+    for (String grade : MentalEngine.WEAPON_GRADES) {
+      String kind = PROPERTIES.mental().weaponGrades().get(grade).kind();
+      CompanyProperties.Weapon stats = ENGINE.mental.stats(kind, grade);
+      double dps = stats.damagePercent() * 1000.0 / stats.fireMs();
+      if (kind.equals("revolver"))
+        dps *= 1.8 * (6.0 * stats.fireMs()) / (6.0 * stats.fireMs() + 1000);
+      assertThat(dps).as(grade + " 지속 화력").isGreaterThan(previous);
+      previous = dps;
+    }
+    assertThat(ENGINE.mental.stats("shotgun", "A").power()).isEqualTo(2);
+    assertThat(ENGINE.mental.stats("rifle", "S").power()).isEqualTo(3);
   }
 
   @Test
@@ -296,15 +302,15 @@ class MentalEngineTest {
       assertThat(c.weaponTickets).isZero();
       CompanyState.Weapon d = c.lastWeaponDraw;
       grades.merge(d.grade, 1, Integer::sum);
-      boolean pistolN = d.kind.equals(MentalEngine.PISTOL) && d.grade.equals("N");
+      boolean pistolN = d.kind.equals(MentalEngine.PISTOL) && d.grade.equals("F");
       assertThat(c.lastWeaponDrawNew).isEqualTo(!pistolN);
       assertThat(c.weapons).hasSize(pistolN ? 1 : 2);
       if (pistolN) {
         assertThat(c.weapons.getFirst().count).as("이미 가진 무기는 수가 는다").isEqualTo(2);
       }
     }
-    assertThat(grades.getOrDefault("N", 0)).isGreaterThan(grades.getOrDefault("R", 0));
-    assertThat(grades.getOrDefault("R", 0)).isGreaterThan(grades.getOrDefault("SR", 0));
+    assertThat(grades.getOrDefault("F", 0)).isGreaterThan(grades.getOrDefault("E", 0));
+    assertThat(grades.getOrDefault("E", 0)).isGreaterThan(grades.getOrDefault("C", 0));
     CompanyState empty = company(1);
     empty.weaponTickets = 0;
     assertThatThrownBy(() -> ENGINE.mental.drawWeapon(empty, new HashSeededRandom(1)))
@@ -404,20 +410,56 @@ class MentalEngineTest {
   }
 
   @Test
+  void 모든_등급을_합성하면_종류도_등급에_맞춰_바뀐다() {
+    CompanyState c = company(4);
+    for (int i = 0; i < MentalEngine.WEAPON_GRADES.size() - 1; i++) {
+      String grade = MentalEngine.WEAPON_GRADES.get(i);
+      String next = MentalEngine.WEAPON_GRADES.get(i + 1);
+      c.weapon.count = PROPERTIES.mental().weaponGacha().mergeCount();
+      ENGINE.mental.mergeWeapon(c, c.weapon.kind, grade);
+      assertThat(c.weapons).hasSize(1);
+      assertThat(c.weapon.grade).isEqualTo(next);
+      assertThat(c.weapon.kind).isEqualTo(PROPERTIES.mental().weaponGrades().get(next).kind());
+    }
+    assertThatThrownBy(() -> ENGINE.mental.mergeWeapon(c, "rifle", "S"))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> ENGINE.mental.equip(c, "pistol", "S"))
+        .isInstanceOf(InvalidRequestException.class);
+  }
+
+  @Test
+  void 옛_무기만_리셋하고_회사의_나머지_진행은_보존한다() throws Exception {
+    CompanyState c = company(4);
+    long capital = c.capital;
+    c.weapons = new ArrayList<>(List.of(new CompanyState.Weapon("rifle", "UR")));
+    c.weapon = c.weapons.getFirst();
+    c.lastWeaponDraw = c.weapon;
+    c.weaponTickets = 99;
+    assertThat(ENGINE.mental.adopt(c, new HashSeededRandom(4))).isTrue();
+    assertThat(c.weapon.same("pistol", "F")).isTrue();
+    assertThat(c.weapons).hasSize(1);
+    assertThat(c.lastWeaponDraw).isNull();
+    assertThat(c.weaponTickets).isEqualTo(PROPERTIES.mental().weaponGacha().startTickets());
+    assertThat(c.capital).isEqualTo(capital);
+    assertThat(ENGINE.mental.adopt(c, new HashSeededRandom(4))).isFalse();
+  }
+
+  @Test
   void 같은_무기를_합치면_한_등급_올라가고_든_무기도_따라간다() {
     CompanyState c = company(4);
     int need = PROPERTIES.mental().weaponGacha().mergeCount();
-    assertThatThrownBy(() -> ENGINE.mental.mergeWeapon(c, MentalEngine.PISTOL, "N"))
+    assertThatThrownBy(() -> ENGINE.mental.mergeWeapon(c, MentalEngine.PISTOL, "F"))
         .as("하나뿐이면 못 합친다")
         .isInstanceOf(InvalidRequestException.class);
     c.weapons.getFirst().count = need;
-    ENGINE.mental.mergeWeapon(c, MentalEngine.PISTOL, "N");
+    ENGINE.mental.mergeWeapon(c, MentalEngine.PISTOL, "F");
     assertThat(c.weapons).hasSize(1);
-    assertThat(c.weapons.getFirst().grade).isEqualTo("R");
-    assertThat(c.weapon.same(MentalEngine.PISTOL, "R")).as("들고 있던 무기를 다 썼으면 합친 것을 든다").isTrue();
-    c.weapons.getFirst().grade = "UR";
+    assertThat(c.weapons.getFirst().grade).isEqualTo("E");
+    assertThat(c.weapon.same(MentalEngine.PISTOL, "E")).as("들고 있던 무기를 다 썼으면 합친 것을 든다").isTrue();
+    c.weapons.getFirst().grade = "S";
+    c.weapons.getFirst().kind = "rifle";
     c.weapons.getFirst().count = need;
-    assertThatThrownBy(() -> ENGINE.mental.mergeWeapon(c, MentalEngine.PISTOL, "UR"))
+    assertThatThrownBy(() -> ENGINE.mental.mergeWeapon(c, "rifle", "S"))
         .as("가장 높은 등급은 못 합친다")
         .isInstanceOf(InvalidRequestException.class);
   }
@@ -425,17 +467,17 @@ class MentalEngineTest {
   @Test
   void 가진_무기만_들_수_있고_화면_값은_든_것을_표시한다() {
     CompanyState c = company(1);
-    c.weapons.add(new CompanyState.Weapon("smg", "SR"));
-    ENGINE.mental.equip(c, "smg", "SR");
+    c.weapons.add(new CompanyState.Weapon("smg", "C"));
+    ENGINE.mental.equip(c, "smg", "C");
     assertThat(c.weapon.kind).isEqualTo("smg");
     assertThat(ENGINE.mental.weaponViews(c))
         .extracting(w -> w.kind() + ":" + w.equipped())
         .containsExactly("pistol:false", "smg:true");
     assertThat(ENGINE.mental.weaponViews(c).getLast().name()).isEqualTo("기관단총");
-    assertThat(ENGINE.mental.weaponViews(c).getLast().gradeName()).isEqualTo("희귀");
-    assertThatThrownBy(() -> ENGINE.mental.equip(c, "rifle", "N"))
+    assertThat(ENGINE.mental.weaponViews(c).getLast().gradeName()).isEqualTo("C");
+    assertThatThrownBy(() -> ENGINE.mental.equip(c, "rifle", "F"))
         .isInstanceOf(InvalidRequestException.class);
-    assertThatThrownBy(() -> ENGINE.mental.equip(c, "bazooka", "N"))
+    assertThatThrownBy(() -> ENGINE.mental.equip(c, "bazooka", "F"))
         .isInstanceOf(InvalidRequestException.class);
     assertThatThrownBy(() -> ENGINE.mental.equip(c, "smg", "XX"))
         .isInstanceOf(InvalidRequestException.class);

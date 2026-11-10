@@ -232,7 +232,7 @@ export interface paths {
         put?: never;
         /**
          * 가진 무기 가운데 하나를 든다 (decisions.md 346번)
-         * @description 무기는 멘탈 전투에서 드는 총이다. 종류(권총·리볼버·기관단총·산탄총·소총)와 등급(N·R·SR·UR)이 있고, 무기 뽑기로 얻는다(366번).
+         * @description 무기는 멘탈 전투에서 드는 총이다. 종류(F·E 권총, D 리볼버, C·B 기관단총, A 폭발포, S 성운포)와 등급(F·E·D·C·B·A·S)이 있고, 무기 뽑기로 얻는다(366번).
          *     든 무기의 수치가 다음 판의 바탕 수치(공격력·연사·탄 강화 단계·탄 속도)가 된다. 없는 종류·등급이거나 안 가진 무기면 400.
          */
         post: operations["equipWeapon"];
@@ -316,7 +316,7 @@ export interface paths {
         put?: never;
         /**
          * 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번)
-         * @description 등급은 N 60·R 30·SR 9·UR 1의 가중치로, 종류는 고르게 뽑는다. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 무기 합성 재료가 된다.
+         * @description 등급은 F 450·E 260·D 150·C 80·B 40·A 17·S 3의 가중치로, 종류는 등급에 따라 정한다. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 무기 합성 재료가 된다.
          *     결과는 armory.lastDraw에 담긴다. 뽑기권이 없으면 400.
          */
         post: operations["drawWeapon"];
@@ -337,8 +337,8 @@ export interface paths {
         put?: never;
         /**
          * 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번)
-         * @description 같은 종류·등급의 무기 armory.mergeCount개를 합쳐 한 등급 위의 같은 종류 하나로 만든다. 들고 있던 무기를 다 썼으면 합친 무기를 든다.
-         *     모자라거나 가장 높은 등급(UR)이면 400.
+         * @description 같은 종류·등급의 무기 armory.mergeCount개를 합쳐 한 등급 위에 해당하는 종류 하나로 만든다. 들고 있던 무기를 다 썼으면 합친 무기를 든다.
+         *     모자라거나 가장 높은 등급(S)이면 400.
          */
         post: operations["mergeWeapon"];
         delete?: never;
@@ -934,7 +934,7 @@ export interface components {
                 kind: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
                 name: string;
                 /** @enum {string} */
-                grade: "N" | "R" | "SR" | "UR";
+                grade: "F" | "E" | "D" | "C" | "B" | "A" | "S";
                 gradeName: string;
                 /** @description 탄 하나의 공격력(%). 100이 적 체력 1 */
                 damagePercent: number;
@@ -1013,7 +1013,7 @@ export interface components {
                     kind: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
                     name: string;
                     /** @enum {string} */
-                    grade: "N" | "R" | "SR" | "UR";
+                    grade: "F" | "E" | "D" | "C" | "B" | "A" | "S";
                     gradeName: string;
                     /** @description 새로 얻었다. 이미 가진 종류·등급이면 거짓(그 무기의 수가 하나 는다) */
                     isNew: boolean;
@@ -1523,7 +1523,7 @@ export interface operations {
                     /** @enum {string} */
                     kind: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
                     /** @enum {string} */
-                    grade: "N" | "R" | "SR" | "UR";
+                    grade: "F" | "E" | "D" | "C" | "B" | "A" | "S";
                 };
             };
         };
@@ -1670,7 +1670,7 @@ export interface operations {
                     /** @enum {string} */
                     kind: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
                     /** @enum {string} */
-                    grade: "N" | "R" | "SR";
+                    grade: "F" | "E" | "D" | "C" | "B" | "A";
                 };
             };
         };

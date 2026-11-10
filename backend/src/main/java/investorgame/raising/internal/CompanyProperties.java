@@ -109,13 +109,13 @@ public record CompanyProperties(
   /** 무기 종류 하나의 바탕 수치 (346번). damagePercent 100이 탄 하나에 적 체력 1. power는 탄 강화 단계(362번). */
   public record Weapon(int damagePercent, int fireMs, int power, int bulletSpeed) {}
 
-  /** 무기 등급(N·R·SR·UR)이 더하는 공격력(%)과 줄이는 연사 간격(%). */
-  public record WeaponGrade(int damagePercent, int firePercent) {}
+  /** 무기 등급(F·E·D·C·B·A·S)이 더하는 공격력(%)과 줄이는 연사 간격(%). */
+  public record WeaponGrade(String kind, int damagePercent, int firePercent) {}
 
   /**
    * 무기 뽑기 (decisions.md 366번).
    *
-   * @param gradeWeights 등급(N·R·SR·UR)별 가중치. 종류는 고르게 뽑는다
+   * @param gradeWeights 등급(F·E·D·C·B·A·S)별 가중치. 종류는 등급에 따라 정한다
    * @param startTickets 처음(또는 이 칸이 생기기 전의 회사가 처음 불러올 때) 받는 무기 뽑기권
    * @param battleTickets 분기 전투 결과를 보낼 때마다 받는 무기 뽑기권
    * @param mergeCount 합쳐 한 등급 올리는 데 드는 같은 무기 수

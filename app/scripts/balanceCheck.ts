@@ -44,8 +44,8 @@ try {
           {
             kind,
             name: kind,
-            grade: 'N',
-            gradeName: '일반',
+            grade: 'F',
+            gradeName: 'F',
             damagePercent: Number(damagePercent),
             fireMs: Number(fireMs),
             power: Number(power),
