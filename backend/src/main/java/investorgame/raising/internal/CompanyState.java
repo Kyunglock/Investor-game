@@ -524,7 +524,7 @@ class CompanyState {
     int tickets;
   }
 
-  /** 무기 하나 (decisions.md 346번): 종류(pistol·revolver·smg·shotgun·rifle)와 등급(N·R·SR·UR). */
+  /** 무기 하나 (decisions.md 346번): 종류(pistol·revolver·smg·shotgun·rifle)와 등급(F·E·D·C·B·A·S). */
   @JsonIgnoreProperties(ignoreUnknown = true)
   @JsonAutoDetect(fieldVisibility = Visibility.ANY)
   static class Weapon {

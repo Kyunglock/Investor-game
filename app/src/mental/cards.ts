@@ -22,7 +22,6 @@ export interface Card {
   code: CardCode
   grade: CardGrade
   name: string
-  desc: string
   effect: string
   icon: string
   color: string
@@ -57,7 +56,6 @@ export const SIMPLE_CARDS: readonly Card[] = [
     code: 'atk',
     grade: 'N',
     name: '존버 정신',
-    desc: '흔들려도 버틴다',
     effect: '공격력 +10%',
     icon: '💪',
     color: '#ffd84d',
@@ -66,30 +64,26 @@ export const SIMPLE_CARDS: readonly Card[] = [
     code: 'spd',
     grade: 'N',
     name: '원칙 매매',
-    desc: '정한 대로만 쏜다',
     effect: '공격 속도 +10%',
     icon: '📏',
     color: '#8fb8ff',
   },
 ]
 
-const MAGIC_INFO: Record<Magic, { name: string; desc: string; icon: string; color: string }> = {
+const MAGIC_INFO: Record<Magic, { name: string; icon: string; color: string }> = {
   water: {
     name: '물의 마법',
-    desc: '물을 쏘아 맞은 적의 발을 묶는다',
     icon: '💧',
     color: '#5ab8ff',
   },
-  fire: { name: '불의 마법', desc: '불덩이가 떨어진 둘레를 태운다', icon: '🔥', color: '#ff7a45' },
+  fire: { name: '불의 마법', icon: '🔥', color: '#ff7a45' },
   lightning: {
     name: '번개 마법',
-    desc: '하늘에서 내리꽂혀 옆 적에게 튄다',
     icon: '⚡',
     color: '#ffd23f',
   },
   earth: {
     name: '땅의 마법',
-    desc: '바위 충차가 돌진해 매도벽을 들이받는다',
     icon: '🪨',
     color: '#c08a4a',
   },
@@ -133,7 +127,6 @@ export function magicCard(magic: Magic, from: number): Card {
     code: magic,
     grade: magicGrade(to),
     name: info.name,
-    desc: info.desc,
     effect: magicEffect(magic, to),
     icon: info.icon,
     color: info.color,
@@ -150,7 +143,6 @@ export function mateCard(have: number): Card {
     code: 'cat',
     grade: 'R',
     name: '고양이 한 마리 더',
-    desc: '사장냥 옆에 서서 함께 싸운다',
     effect: '무기·공격력·연사는 사장냥과 똑같이 · 마법은 사장냥만',
     icon: '🐱',
     color: '#ff9db8',

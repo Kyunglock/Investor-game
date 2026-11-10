@@ -552,7 +552,7 @@ export function drawCat(c: Ctx, o: CatLook) {
 export type GunKind = 'pistol' | 'revolver' | 'smg' | 'shotgun' | 'rifle'
 export type GunGrade = 'F' | 'E' | 'D' | 'C' | 'B' | 'A' | 'S'
 
-/** 무기 등급별 몸통색 (346번): 일반 잿빛, 고급 파랑, 희귀 보라, 전설 금. */
+/** 무기 F~S 등급색. 앱의 총·탄·명중도 같은 팔레트를 쓴다. */
 export const GUN_GRADE_COLOR: Record<GunGrade, string> = {
   F: '#94a3b8',
   E: '#34d399',

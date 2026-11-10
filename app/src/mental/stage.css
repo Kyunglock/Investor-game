@@ -387,14 +387,6 @@
   box-shadow: 0 2px 0 #00000022;
   white-space: nowrap;
 }
-.stage-card-description {
-  display: block;
-  font-size: 10px;
-  line-height: 1.4;
-  color: #76808c;
-  margin-top: 3px;
-  word-break: keep-all;
-}
 .stage-card-effect {
   width: 100%;
   display: flex;
@@ -1380,4 +1372,86 @@
   margin-top: 4px;
   font-size: 12px;
   color: #6b7a99;
+}
+
+/* 공격 판: 상단 조작 / 가격 / 보스 / 돌파 연출을 서로 다른 줄에 둔다 (#607, #609). */
+.battle-hud-assault .battle-corner {
+  left: 52px;
+  right: 10px;
+  justify-content: flex-end;
+}
+.battle-hud-assault .battle-segment {
+  margin-right: auto;
+}
+.battle-hud-assault .battle-price {
+  top: calc(max(10px, env(safe-area-inset-top)) + 44px);
+  left: 52px;
+  right: 10px;
+}
+.battle-hud-assault .battle-price-now {
+  justify-content: flex-start;
+}
+.battle-hud-assault .battle-price-goal {
+  flex: 0 1 38%;
+}
+.battle-hud-assault .battle-price-value,
+.battle-hud-assault .battle-price-target {
+  font-size: clamp(12px, 3.8vw, 16px);
+}
+.battle-hud-assault .battle-boss-low {
+  top: calc(max(10px, env(safe-area-inset-top)) + 100px);
+  left: 52px;
+  right: 10px;
+}
+.battle-wall-gain {
+  position: absolute;
+  z-index: 3;
+  top: calc(max(10px, env(safe-area-inset-top)) + 142px);
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--font-game);
+  color: #ed5165;
+  text-shadow:
+    0 2px 0 #fff9ec,
+    2px 0 0 #fff9ec,
+    -2px 0 0 #fff9ec,
+    0 -2px 0 #fff9ec;
+  white-space: nowrap;
+}
+.battle-wall-gain small {
+  font-size: 13px;
+  color: #704a4b;
+}
+.battle-wall-gain strong {
+  font-size: 38px;
+  line-height: 1.15;
+  font-weight: 400;
+}
+.battle-footer-assault {
+  flex-direction: column;
+  gap: 4px;
+  font-size: 10px;
+}
+.battle-footer-assault > div {
+  max-width: 100%;
+  flex-wrap: nowrap;
+  overflow: visible;
+  gap: 4px;
+}
+.battle-footer.battle-footer-assault > span {
+  padding: 5px 8px;
+  font-size: 10px;
+  text-align: center;
+}
+.battle-footer.battle-footer-assault > div > span {
+  width: 26px;
+  height: 26px;
+  font-size: 15px;
+}
+.battle-hud-assault .battle-wall-assault {
+  bottom: max(96px, calc(env(safe-area-inset-bottom) + 82px));
 }

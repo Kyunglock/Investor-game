@@ -175,6 +175,7 @@ export interface BattleOptions {
   onError?: (message: string) => void
   onHud: (hud: Hud) => void
   onBanner: (text: string, color: string) => void
+  onWallGain?: (amount: number, start: number) => void
   onHurt: () => void
   /** 레벨이 올랐다(맨 처음엔 Lv.1, 339번): 전투는 멈춰 있고, 카드를 고른 뒤 applyLoadout으로 이어 간다 (330번). */
   onLevelUp: (level: number) => void
@@ -280,6 +281,7 @@ interface WallState {
   price: Phaser.GameObjects.Text
   /** 멈춤 줄에 닿아 사장냥이 멈춰 쏘는 중. */
   arrived: boolean
+  bossStarted?: boolean
   broken: boolean
 }
 /** 매도벽 칸 하나: 자리(줄·칸), 얹힌 물량 글자, 지금 보이는 물량·금 간 정도, 약한 칸인가. */
@@ -901,7 +903,7 @@ class BattleScene extends Phaser.Scene {
     if (this.assault) {
       this.createAssaultPools()
       // 첫 벽은 화면 위쪽 바깥에서 기다린다: 첫 카드를 고르면 치고 올라 벽 앞에 선다.
-      this.addWall(0, this.stopY() - h * 0.5)
+      this.addWall(0, Math.min(this.holdY(), this.stopY() - h * 0.5))
     }
 
     // 첫 카드는 전장이 열린 뒤 고른다 (339번): 멈춘 채로 Lv.1 카드 고르기를 띄운다.
@@ -1183,9 +1185,9 @@ class BattleScene extends Phaser.Scene {
     return Phaser.Math.Clamp(this.view().h * 0.24, 150, 240)
   }
 
-  /** 잡몹 구간 동안 다음 벽이 멈춰 서서 물량을 내보내는 줄: 화면 맨 위에 벽 아래 끝이 보인다. */
+  /** 잡몹 구간 동안 다음 벽의 아래 끝. 뒤판의 여백까지 화면 밖에 숨긴다. */
   private holdY() {
-    return Phaser.Math.Clamp(this.view().h * 0.1, 60, 100)
+    return -16
   }
 
   private lane() {
@@ -1394,13 +1396,8 @@ class BattleScene extends Phaser.Scene {
     haptic.medium()
     const price = this.assaultNow()
     const total = spec.walls.length
-    this.pop(
-      this.view().w - 60,
-      this.playerY() - 120,
-      `+${spec.tick.toLocaleString()}원`,
-      '#ff6b7a',
-      24,
-    )
+    this.pushHud(true)
+    this.opts.onWallGain?.(spec.tick, spec.startPrice)
     if (!this.reducedMotion) {
       // 치고 오르기: 사장냥이 위로 쭉 뛰었다가 제자리로(쏘는 반동과 따로).
       this.tweens.killTweensOf(this.lift)
@@ -1434,13 +1431,14 @@ class BattleScene extends Phaser.Scene {
     this.pushHud(true)
   }
 
-  /** 마지막 벽이 멈춤 줄에 닿으면 큰손이 벽 앞에 나온다(365번 보스의 짜임). */
+  /** 보스 벽이 화면에 들어오면 큰손도 등장한다. 이동 중 벽을 깨도 보스를 건너뛸 수 없다. */
   private startWhale(wall: WallState) {
     const spec = this.assault
     if (!spec) return
     const mid = Boolean(wall.spec.mid)
     const e = this.spawn('whale', [this.view().w / 2, wall.y - 40], true)
     if (!e) return
+    wall.bossStarted = true
     this.tweens.killTweensOf(e)
     e.boss = true
     this.bossMid = mid
@@ -1507,14 +1505,26 @@ class BattleScene extends Phaser.Scene {
     if (!this.assault || this.over) return
     this.rushLeft = ASSAULT_RUSH.seconds
     this.lastFlow = this.elapsed
-    // 다음 벽이 곧바로 위에서 내려와 화면 맨 위(holdY)에 멈춰 서서 물량을 쏟아 낸다. 잡몹 구간이 끝나면 멈춤 줄까지 내려온다.
-    this.addWall(this.wallsBroken, this.stopY() - this.view().h * ASSAULT_MOTION.gap)
-    this.opts.onBanner('다음 매도벽이 물량을 쏟아 낸다! 체결시켜라', '#3a7bea')
+    // 다음 벽의 아래 끝도 화면 밖에 둔다. 잡몹 구간이 끝나 공격 가능해진 뒤에만 들어온다.
+    this.addWall(this.wallsBroken, this.holdY())
+    this.opts.onBanner('매도 물량을 체결하고 다음 벽으로!', '#3a7bea')
   }
 
-  /** 잡몹 구간(#593) 동안 화면 맨 위에 멈춰 물량을 내보내는 다음 벽의 칸: 아직 깨지지 않는다. */
+  /** 잡몹 구간(#593) 동안 화면 밖에서 대기하는 다음 벽: 아직 깨지지 않는다. */
   private held(e: Enemy) {
     return Boolean(e.cell && this.rushLeft > 0 && !e.cell.wall.arrived)
+  }
+
+  /** 개발 화면 검사: 보이는 매도벽이 공격 불가 상태인지 확인한다. */
+  inspectWalls() {
+    return this.walls
+      .filter((wall) => !wall.broken)
+      .map((wall) => ({
+        index: wall.index,
+        bottom: wall.y + 4,
+        held: wall.cells.some((e) => this.held(e)),
+        hp: wall.cells.reduce((sum, e) => sum + e.hp, 0),
+      }))
   }
 
   /** 화면에 남은 매도 물량(벽 칸·큰손 빼고)이 위(fromY)에서부터 차례로 체결된다. */
@@ -1752,9 +1762,7 @@ class BattleScene extends Phaser.Scene {
       if (!rushing && wall.y + move >= stop) {
         wall.arrived = true
         this.stuck = 0
-        if (wall.spec.boss || wall.spec.mid) {
-          this.startWhale(wall)
-        } else if (wall.index === 0) {
+        if (wall.index === 0) {
           this.opts.onBanner(`${spec.name}! 부수고 올라가라`, '#3a7bea')
         }
         this.pushHud(true)
@@ -1775,10 +1783,13 @@ class BattleScene extends Phaser.Scene {
       wl.y += move
       if (!wl.broken) {
         this.placeWall(wl)
-        // 잡몹 구간에 멈춰 선 벽은 옅게: 아직 깨지지 않는다.
-        const a = rushing && !wl.arrived ? 0.7 : 1
+        // 잡몹 구간의 다음 벽은 화면 밖에서 기다린다.
+        const a = rushing && !wl.arrived ? 0 : 1
         for (const c of wl.cells) if (c.active && !c.dying) c.setAlpha(a)
       } else wl.price.y += move
+    }
+    if (wall && !rushing && wall.y > 0 && !wall.bossStarted && (wall.spec.boss || wall.spec.mid)) {
+      this.startWhale(wall)
     }
     // 무너진 벽의 이름표가 화면 아래로 빠지면 치운다.
     this.walls = this.walls.filter((wl) => {
@@ -2741,7 +2752,15 @@ class BattleScene extends Phaser.Scene {
     const { w, h } = this.view()
     for (const child of this.enemies.getChildren()) {
       const e = child as Enemy
-      if (e.active && !e.dying && e.y > 12 && e.y < h && e.x > 0 && e.x < w && !this.held(e))
+      if (
+        e.active &&
+        !e.dying &&
+        (e.cell ? e.cell.wall.y > 0 : e.y > 12) &&
+        e.y < h &&
+        e.x > 0 &&
+        e.x < w &&
+        !this.held(e)
+      )
         buf.push(e)
     }
     return buf
@@ -3872,6 +3891,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
       __mentalMates?: (mates: number) => void
       __mentalAutopilot?: (on: boolean) => void
       __mentalSpeed?: (k: number) => void
+      __mentalWalls?: () => ReturnType<BattleScene['inspectWalls']>
     }
     dev.__mentalDamage = scene.damageStats
     // 공격 판(413번)을 자동으로 돌려 강화 단계별로 걸린 시간을 재는 데 쓴다.
@@ -3879,6 +3899,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
       scene.autopilot = on
     }
     dev.__mentalSpeed = (k) => scene.setSimSpeed(k)
+    dev.__mentalWalls = () => scene.inspectWalls()
     dev.__mentalMagic = (levels) => scene.applyLoadout({ ...scene.loadout, ...levels })
     dev.__mentalMates = (mates) => scene.applyLoadout({ ...scene.loadout, mates })
   }
