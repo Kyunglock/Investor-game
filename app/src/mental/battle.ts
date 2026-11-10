@@ -4117,7 +4117,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
   const game = new Phaser.Game({
     type: Phaser.AUTO,
     parent,
-    backgroundColor: '#bfe8cf',
+    backgroundColor: '#ffe3a4',
     scale: {
       mode: Phaser.Scale.NONE,
       width: Math.round(parent.clientWidth * DPR),

@@ -1,6 +1,9 @@
 type Rect = { x: number; y: number; w: number; h: number }
 const bounds = new WeakMap<HTMLImageElement, Map<string, Rect>>()
 
+/** B안 뒷모습의 오른쪽 어깨. 전투와 준비 화면이 같은 몸·총 결합점을 쓴다. */
+export const STAGE_HERO = { fur: '#ffe2ae', gunX: 88, gunY: 48, gunScale: 1.55 }
+
 /** 원본의 투명 여백만 제외해 기존 충돌 원 안에 맞춘다. 파일은 원본 그대로 보관한다. */
 export function drawSprite(
   c: CanvasRenderingContext2D,
@@ -61,72 +64,47 @@ export function drawSprite(
 /** 화면이 작아져도 사장냥과 아래 조작 안내가 겹치지 않는 방어선. */
 export const wallOffset = (height: number) => Math.max(150, Math.min(230, height * 0.26))
 
-/** 전투용 반투명 멘탈벽. 앞쪽 방어선이 기존 충돌 영역(전체 폭 × 48px)에 맞고, 뒤쪽 유리 면은 장식이다. */
-export function drawMentalWall(c: CanvasRenderingContext2D, cracked: boolean) {
-  c.lineJoin = 'round'
-  c.beginPath()
-  c.moveTo(20, 18)
-  c.quadraticCurveTo(256, -7, 492, 18)
-  c.lineTo(492, 82)
-  c.quadraticCurveTo(256, 57, 20, 82)
-  c.closePath()
-  c.fillStyle = cracked ? '#81d9d277' : '#69ded599'
-  c.fill()
-  c.lineWidth = 5
-  c.strokeStyle = '#79eaf0'
-  c.stroke()
-  c.lineWidth = 2
-  c.strokeStyle = '#f1ffff'
-  c.stroke()
-  for (const x of [4, 484]) {
-    c.fillStyle = '#638ead'
-    c.fillRect(x, 83, 24, 9)
-    c.fillStyle = '#fff0d6'
-    c.strokeStyle = '#aa9479'
-    c.lineWidth = 2
-    c.beginPath()
-    c.roundRect(x, 15, 24, 70, 5)
-    c.fill()
-    c.stroke()
-    c.beginPath()
-    c.arc(x + 12, 10, 9, 0, Math.PI * 2)
-    c.fill()
-    c.stroke()
-    c.fillStyle = '#719bb5'
-    c.fillRect(x + 6, 39, 12, 22)
+/** B안 원본 질감의 블록 아틀라스: 위쪽 매수, 아래쪽 매도, 오른쪽 균열. */
+export function drawOrderBlock(
+  c: CanvasRenderingContext2D,
+  source: HTMLImageElement,
+  sell: boolean,
+  cracked = false,
+) {
+  const w = source.width / 2
+  const h = source.height / 2
+  drawSprite(
+    c,
+    source,
+    { x: cracked ? w : 0, y: sell ? h : 0, w, h },
+    { x: 0, y: 0, w: 85.34, h: 96 },
+  )
+}
+
+export function drawMentalWall(
+  c: CanvasRenderingContext2D,
+  source: HTMLImageElement,
+  cracked: boolean,
+) {
+  for (let i = 0; i < 6; i++) {
+    c.save()
+    c.translate((i * 512) / 6, 0)
+    drawOrderBlock(c, source, false, cracked && (i === 1 || i === 4))
+    c.restore()
   }
-  c.strokeStyle = '#f3ffff'
-  c.lineWidth = 3
-  c.beginPath()
-  c.moveTo(256, 23)
-  c.lineTo(272, 29)
-  c.lineTo(270, 44)
-  c.quadraticCurveTo(266, 54, 256, 60)
-  c.quadraticCurveTo(246, 54, 242, 44)
-  c.lineTo(240, 29)
-  c.closePath()
-  c.stroke()
-  c.fillStyle = '#f3ffff'
-  c.beginPath()
-  c.moveTo(256, 48)
-  c.bezierCurveTo(235, 35, 251, 29, 256, 36)
-  c.bezierCurveTo(261, 29, 277, 35, 256, 48)
-  c.fill()
-  if (cracked) {
-    c.strokeStyle = '#fff8e4'
-    c.lineWidth = 4
-    for (const x of [118, 378]) {
-      c.beginPath()
-      c.moveTo(x, 12)
-      c.lineTo(x - 6, 29)
-      c.lineTo(x + 5, 42)
-      c.lineTo(x - 8, 66)
-      c.moveTo(x + 5, 42)
-      c.lineTo(x + 21, 52)
-      c.stroke()
-      c.strokeStyle = '#559aa5'
-      c.lineWidth = 1.5
-      c.stroke()
-    }
+}
+
+/** 최신 매도벽의 판정·물량은 그대로 두고, 한 줄을 장난감 블록 여섯 개로 표현한다. */
+export function drawToySellWall(
+  c: CanvasRenderingContext2D,
+  source: HTMLImageElement,
+  crack: number,
+) {
+  for (let i = 0; i < 6; i++) {
+    c.save()
+    c.translate(i * 60, 0)
+    c.scale(60 / 85.34, 60 / 96)
+    drawOrderBlock(c, source, true, [2, 4, 1].slice(0, crack).includes(i))
+    c.restore()
   }
 }
