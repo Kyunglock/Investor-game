@@ -4,6 +4,7 @@ export const BUY_WALL = {
   rebuildSeconds: 1.5,
   protectionSeconds: 1,
   shotSeconds: 0.35,
+  shotJitter: 0.2,
   sellsPerShot: 1,
   retreatSeconds: 0.7,
   retreatDistance: 80,
@@ -19,10 +20,17 @@ export class BuyWall {
   shots = 0
   breaks = 0
   private shotClock = 0
+  private nextShot: number
+  private readonly random: () => number
   private protectionLeft = 0
-  constructor(maxMental: number) {
+  constructor(maxMental: number, random: () => number = Math.random) {
+    this.random = random
+    this.nextShot = this.shotDelay()
     this.maxHp = Math.max(1, Math.round(maxMental * BUY_WALL.hpRatio))
     this.hp = this.maxHp
+  }
+  private shotDelay() {
+    return BUY_WALL.shotSeconds + (this.random() * 2 - 1) * BUY_WALL.shotJitter
   }
   get active() {
     return this.hp > 0
@@ -40,6 +48,7 @@ export class BuyWall {
     this.rebuildLeft = BUY_WALL.rebuildSeconds
     this.retreatLeft = BUY_WALL.retreatSeconds
     this.shotClock = 0
+    this.nextShot = this.shotDelay()
     return true
   }
   step(dt: number): { retreat: number; fire: boolean; fireCount: number; rebuilt: boolean } {
@@ -56,14 +65,14 @@ export class BuyWall {
       }
       return { retreat, fire: false, fireCount: 0, rebuilt: this.active }
     }
-    this.shotClock += time
-    const fireCount =
-      this.shotClock >= BUY_WALL.shotSeconds
-        ? Math.max(0, Math.floor(this.sells / BUY_WALL.sellsPerShot) - this.shots)
-        : 0
+    const pending = Math.max(0, Math.floor(this.sells / BUY_WALL.sellsPerShot) - this.shots)
+    // Do not bank idle time or release the entire backlog in one frame.
+    this.shotClock = pending > 0 ? this.shotClock + time : 0
+    const fireCount = pending > 0 && this.shotClock >= this.nextShot ? 1 : 0
     if (fireCount > 0) {
-      this.shots += fireCount
+      this.shots++
       this.shotClock = 0
+      this.nextShot = this.shotDelay()
     }
     return { retreat, fire: fireCount > 0, fireCount, rebuilt: false }
   }

@@ -10,8 +10,8 @@ export const GRADE_FIRE: Record<GunGrade, FireStyle> = {
   D: { ...FIRE_STYLES.revolver, length: 1.5, width: 1.35, sparks: 3 },
   C: { ...FIRE_STYLES.smg, length: 1.1, width: 0.9, flash: 0.9 },
   B: { ...FIRE_STYLES.smg, length: 1.5, width: 1.3, flash: 1.3, sparks: 3, trailMs: 28 },
-  A: { ...FIRE_STYLES.shotgun, length: 1.7, width: 2.1, flash: 2.3 },
-  S: { ...FIRE_STYLES.rifle, length: 3, width: 2, flash: 2.7, sparks: 9, trailMs: 12 },
+  A: { ...FIRE_STYLES.shotgun, length: 1.35, width: 1.4, flash: 1.2 },
+  S: { ...FIRE_STYLES.rifle, length: 1.6, width: 1.3, flash: 1.3, sparks: 3, trailMs: 12 },
 }
 
 export function gradeTint(grade: GunGrade) {

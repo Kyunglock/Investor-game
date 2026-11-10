@@ -23,22 +23,28 @@ describe('매수벽', () => {
     expect(wall.hit(100)).toBe(true)
     expect(wall.breaks).toBe(2)
   })
-  it('매도 물량 하나마다 매수 주문 하나를 보내고 떼로 오면 같은 수로 맞선다', () => {
-    const wall = new BuyWall(100)
+  it('매수 주문은 불규칙한 간격으로 하나씩 발사하고 총량을 보존한다', () => {
+    let roll = 0
+    const wall = new BuyWall(100, () => (roll++ % 2 === 0 ? 0 : 1))
     expect(wall.step(10).fireCount).toBe(0)
-    wall.sells = 8
-    expect(wall.step(0).fireCount).toBe(8)
-    expect(wall.shots).toBe(8)
+    wall.sells = 3
     expect(wall.step(0).fireCount).toBe(0)
-    wall.sells += 5
-    expect(wall.step(0.34).fireCount).toBe(0)
-    expect(wall.step(0.02).fireCount).toBe(5)
+    expect(wall.step(0.16).fireCount).toBe(1)
+    expect(wall.step(0.3).fireCount).toBe(0)
+    expect(wall.step(0.26).fireCount).toBe(1)
+    expect(wall.step(0.16).fireCount).toBe(1)
     expect(wall.shots).toBe(wall.sells)
+    expect(wall.step(10).fireCount).toBe(0)
+  })
+  it('재건 후 밀린 주문도 한 발씩 보낸다', () => {
+    const wall = new BuyWall(100, () => 0.5)
+    wall.sells = 8
     wall.hit(100)
-    wall.sells += 10
     expect(wall.step(1).fireCount).toBe(0)
     expect(wall.step(0.5).fireCount).toBe(0)
-    expect(wall.step(0.35).fireCount).toBe(10)
+    expect(wall.step(0.34).fireCount).toBe(0)
+    expect(wall.step(0.02).fireCount).toBe(1)
+    for (let i = 0; i < 7; i++) expect(wall.step(0.36).fireCount).toBe(1)
     expect(wall.shots).toBe(wall.sells)
   })
   it('실패는 추가 0%, 클리어는 부순 매도벽당 2%다', () => {

@@ -33,12 +33,29 @@ export class CircuitBreakerFx {
     const g = this.ink.clear()
     const cx = w / 2
     const width = Math.min(w - 32, 330)
-    const top = Math.max(h * 0.3, wall.bottom + 24)
+    const enter = Math.min(1, c.elapsed / 0.28)
+    const exit = 1 - c.reveal
+    const top =
+      Math.min(h - 130, Math.max(h * 0.3, wall.bottom + 24)) - (reduced ? 0 : (1 - enter) ** 3 * 24)
+    this.root.setAlpha(Math.min(1, enter * 2) * exit)
+    const shock = Math.min(1, c.elapsed / 0.8)
+    g.fillStyle(0x102a40, 0.12 * exit).fillRect(0, 0, w, h)
+    g.lineStyle(2, 0xffcf70, 0.5 * exit).strokeRoundedRect(8, 8, w - 16, h - 16, 14)
+    if (!reduced && shock < 1) {
+      g.lineStyle(3 * (1 - shock) + 1, 0x8ef3c6, (1 - shock) * 0.85).strokeCircle(
+        cx,
+        top + 56,
+        24 + shock * Math.hypot(w, h) * 0.6,
+      )
+    }
     g.fillStyle(0x102a40, 0.94).fillRoundedRect(cx - width / 2, top, width, 112, 20)
     g.lineStyle(2, 0xf6c86a, 1).strokeRoundedRect(cx - width / 2, top, width, 112, 20)
     g.fillStyle(0xffcf70, reduced ? 1 : 0.7 + Math.sin(c.elapsed * 3) * 0.2)
     g.fillRoundedRect(cx - 47, top + 11, 94, 4, 2)
-    this.title.setPosition(cx, top + 38).setText('서킷브레이커')
+    this.title
+      .setPosition(cx, top + 38)
+      .setScale(reduced ? 1 : 1 + Math.sin(enter * Math.PI) * 0.12)
+      .setText('서킷브레이커')
     this.orders
       .setPosition(cx, top + 72)
       .setText(
