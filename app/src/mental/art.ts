@@ -673,7 +673,7 @@ export function bakeOrders(scene: Phaser.Scene) {
   for (let crack = 0; crack < CELL_CRACKS; crack++) {
     bake(scene, cellKey(crack), CELL_TEX.w, CELL_TEX.h, (c) => drawToySellWall(c, blocks, crack))
   }
-  // 벽 뒤 판: 칸들이 박힌 짙은 남색 띠(호가창 줄).
+  // 벽 뒤 판: 블록 사이를 잇는 옅은 접지 그림자.
   bake(scene, 'wall-band', 64, 32, (c) => {
     c.fillStyle = '#a45d4126'
     c.fillRect(0, 0, 64, 32)
@@ -681,7 +681,7 @@ export function bakeOrders(scene: Phaser.Scene) {
     c.fillRect(0, 0, 64, 2)
     c.fillRect(0, 30, 64, 2)
   })
-  // 파편: 파란 벽 조각과 흰 먼지.
+  // 파편: 산호색 벽 조각과 흰 먼지.
   bake(scene, 'chip', 6, 5, (c) => {
     c.fillStyle = '#ed8766'
     c.beginPath()

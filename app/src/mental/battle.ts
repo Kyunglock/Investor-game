@@ -1183,8 +1183,8 @@ class BattleScene extends Phaser.Scene {
   /** 배경을 이어 붙이고(오르면 함께 내려간다), 지나가는 호가 줄·가격 눈금·속도선, 좌우 조작(드래그·화면 왼쪽/오른쪽 누르기·방향키)을 만든다. */
   private createAssault(w: number, h: number) {
     this.bg2 = this.add.image(0, -h, 'art-street').setOrigin(0).setDisplaySize(w, h)
-    // 시장 쪽 분위기: 거리 그림 위에 옅은 남색을 덮는다(파란 매도 물량이 묻히지 않게 너무 짙지 않게).
-    this.add.rectangle(0, 0, 4000, 4000, 0x16264d, 0.22).setOrigin(0).setDepth(0.5)
+    // 장난감 보드의 크림색을 유지하면서 전장에 아주 옅은 따뜻한 톤만 더한다.
+    this.add.rectangle(0, 0, 4000, 4000, 0xe8b877, 0.04).setOrigin(0).setDepth(0.5)
     this.book = this.add.graphics().setDepth(1)
     this.ladder = this.add.graphics().setDepth(8)
     if (!this.reducedMotion) {
