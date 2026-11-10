@@ -544,6 +544,7 @@ const CARD_ROLES: Record<Card['code'], string> = {
   atk: '공격',
   spd: '연사',
   cat: '동료',
+  'cat-magic': '동료 마법',
   water: '물 마법',
   fire: '불 마법',
   lightning: '번개 마법',
@@ -826,6 +827,11 @@ function CardPick({
                         {c.level.from === 0
                           ? `새 마법 · Lv.${c.level.to}`
                           : `Lv.${c.level.from} → Lv.${c.level.to}`}
+                      </span>
+                    )}
+                    {c.awakening && (
+                      <span className="stage-card-level" data-testid="card-awakening">
+                        마법 고양이 {c.awakening.from} → {c.awakening.to}마리
                       </span>
                     )}
                     {c.mates && (
@@ -1143,9 +1149,11 @@ function Battle({
                 const label =
                   code === 'cat'
                     ? `함께 싸우는 고양이 ${same.length}마리`
-                    : top.level
-                      ? `${top.name} Lv.${same.length}`
-                      : `${top.name} ${same.length}장`
+                    : code === 'cat-magic'
+                      ? `마법을 쓰는 고양이 ${same.length}마리`
+                      : top.level
+                        ? `${top.name} Lv.${same.length}`
+                        : `${top.name} ${same.length}장`
                 return (
                   <span
                     key={code}

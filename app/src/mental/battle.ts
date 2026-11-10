@@ -58,7 +58,15 @@ import {
   whaleSummonSeconds,
 } from './assault'
 import { STAGE_ASSETS } from './assets'
-import { bulletStats, type Loadout, MAGICS, type Magic, type MagicLevels, xpToNext } from './cards'
+import {
+  awakenedMateCount,
+  bulletStats,
+  type Loadout,
+  MAGICS,
+  type Magic,
+  type MagicLevels,
+  xpToNext,
+} from './cards'
 import { CIRCUIT_BREAKER, CircuitBreaker } from './circuitBreaker'
 import { CircuitBreakerFx } from './circuitBreakerFx'
 import {
@@ -251,16 +259,18 @@ type Bullet = Phaser.Physics.Arcade.Image & {
 /** 데미지 숫자 한 칸: 합칠 때 다시 튀게 하는 크기 트윈. */
 type DamageText = Phaser.GameObjects.Text & { punch: Phaser.Tweens.Tween | null }
 
-/** 마법을 쏘는 주체 (392번): 자리와 마법 시계. 마법은 사장냥만 쓴다(440번): 함께 싸우는 고양이(393번)는 시전자를 갖지 않는다. */
+/** 마법을 쏘는 주체 (392번): 자리와 마법 시계. 사장냥과 각성한 동료가 각자의 시계를 가진다. */
 interface MagicCaster {
+  mate?: number
   at: () => { x: number; y: number }
   clock: MagicClock
 }
 /**
- * 함께 싸우는 고양이 (393번): 그림·총. 사장냥과 같은 수치로 쏜다. 마법은 쓰지 않는다: 마법은 사장냥만 쓴다 (440번). 몸(충돌)은 없다: 멘탈벽
+ * 함께 싸우는 고양이 (393번): 그림·총. 사장냥과 같은 수치로 쏜다. 각성 카드를 고르면 마법도 쓴다. 몸(충돌)은 없다: 멘탈벽
  * 뒤에 서서 쏘기만 하고 적에게 맞지 않는다.
  */
 interface Mate {
+  magicMark: Phaser.GameObjects.Text
   body: Phaser.GameObjects.Image
   gun: Phaser.GameObjects.Image
   aim: number
@@ -389,6 +399,8 @@ export interface DamageStats {
   rams: number
   casts: Record<Magic, number>
   /** 함께 싸우는 고양이가 쏜 총알 수와 지금 고양이 수 (393번). */
+  mateCasts: number[]
+  awakenedMates: number
   mateShots: number
   mates: number
 }
@@ -530,6 +542,8 @@ class BattleScene extends Phaser.Scene {
     killing: 0,
     peak: 0,
     casts: { water: 0, fire: 0, lightning: 0, earth: 0 },
+    mateCasts: [0, 0, 0],
+    awakenedMates: 0,
     mateShots: 0,
     mates: 0,
   }
@@ -972,9 +986,26 @@ class BattleScene extends Phaser.Scene {
       this.tweens.killTweensOf(m)
       m.body.destroy()
       m.gun.destroy()
+      m.magicMark.destroy()
     }
     while (this.mates.length < want) this.addMate()
     this.damageStats.mates = this.mates.length
+    const awake = awakenedMateCount(this.loadout)
+    this.casters.length = Math.min(this.casters.length, 1 + awake)
+    while (this.casters.length < 1 + awake) {
+      const index = this.casters.length - 1
+      const mate = this.mates[index]
+      const clock = new MagicClock()
+      for (const magic of MAGICS) clock.ready(magic, this.elapsed + (index + 1) * CAST_STAGGER)
+      this.casters.push({ mate: index, at: () => ({ x: mate.body.x, y: mate.body.y - 24 }), clock })
+      this.ring(mate.body.x, mate.body.y, 0xc7a4ff, 64, 500)
+      this.glow(mate.body.x, mate.body.y - 24, 0xc7a4ff, 80, 500, 0.8)
+      this.pop(mate.body.x, mate.body.y - 60, `${MATE_LOOKS[index].name} 마법 각성!`, '#e3caff', 20)
+    }
+    this.mates.forEach((mate, index) => {
+      mate.magicMark.setVisible(index < awake)
+    })
+    this.damageStats.awakenedMates = awake
   }
 
   /** 고양이 한 마리가 제자리 위에서 떨어져 내려와 합류한다: 쿵, 고리, 이름. */
@@ -992,6 +1023,16 @@ class BattleScene extends Phaser.Scene {
       .setDisplaySize(GUN.w, GUN.h)
       .setDepth(6)
     const mate: Mate = {
+      magicMark: this.add
+        .text(body.x, body.y - 58, '✦', {
+          fontSize: '24px',
+          color: '#e3caff',
+          stroke: '#533b89',
+          strokeThickness: 4,
+        })
+        .setOrigin(0.5)
+        .setDepth(7)
+        .setVisible(false),
       body,
       gun,
       aim: this.aim,
@@ -2858,6 +2899,7 @@ class BattleScene extends Phaser.Scene {
   /** 시전자마다 주기가 된 마법을 쏜다. 노릴 적이 없거나 풀이 다 날고 있으면 잠시 뒤 다시 본다. */
   private castMagic() {
     for (const caster of this.casters) {
+      if (caster.mate !== undefined && this.mates[caster.mate].drop !== 0) continue
       for (const m of MAGICS) {
         const level = this.loadout[m]
         if (!caster.clock.due(m, level, this.elapsed)) continue
@@ -2873,6 +2915,7 @@ class BattleScene extends Phaser.Scene {
         if (cast) {
           caster.clock.cast(m, level, this.elapsed)
           this.damageStats.casts[m]++
+          if (caster.mate !== undefined) this.damageStats.mateCasts[caster.mate]++
         } else {
           caster.clock.retry(m, this.elapsed)
         }
@@ -3635,6 +3678,7 @@ class BattleScene extends Phaser.Scene {
       const b = m.body
       const target = targets[i + 1] ?? null
       b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop)
+      m.magicMark.setPosition(b.x, b.y - 58)
       if (!this.tweens.isTweening(b)) {
         b.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h * (1 + Math.sin(time / 260 + i * 1.7) * 0.025))
       }
