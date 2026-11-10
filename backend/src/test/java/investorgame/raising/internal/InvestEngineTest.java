@@ -207,8 +207,8 @@ class InvestEngineTest {
         .isInstanceOf(InvalidRequestException.class);
     long won = winner.invest.total;
     long before = winner.capital;
-    assertThat(ENGINE.invest.battle(winner, InvestEngine.ASSAULT, 2)).isEqualTo(won / 2);
-    assertThat(winner.capital).isEqualTo(before + won / 2);
+    assertThat(ENGINE.invest.battle(winner, InvestEngine.ASSAULT, 2)).isEqualTo(won / 5);
+    assertThat(winner.capital).isEqualTo(before + won / 5);
     assertThatThrownBy(() -> ENGINE.invest.battle(winner, InvestEngine.ASSAULT, 3))
         .as("한 회의에 한 번")
         .isInstanceOf(InvalidRequestException.class);
@@ -234,6 +234,20 @@ class InvestEngineTest {
     assertThat(InvestEngine.battleOpen(late.invest)).as("분기를 넘기면 끝난다").isFalse();
     assertThatThrownBy(() -> ENGINE.invest.battle(late, InvestEngine.DEFENSE, 3))
         .isInstanceOf(InvalidRequestException.class);
+  }
+
+  @Test
+  void 매도벽_실패는_추가수익이_없고_클리어는_별과_무관하게_벽_열개분을_더한다() {
+    for (int stars = 0; stars <= 3; stars++) {
+      CompanyState c = company(3, stats(50, 100, 100, 100));
+      ENGINE.invest.decide(c, right(c), new HashSeededRandom(3));
+      long original = c.invest.total;
+      long capital = c.capital;
+      long expected = stars == 0 ? 0 : original / 5;
+      assertThat(ENGINE.invest.battle(c, InvestEngine.ASSAULT, stars)).isEqualTo(expected);
+      assertThat(c.invest.total).isEqualTo(original);
+      assertThat(c.capital).isEqualTo(capital + expected);
+    }
   }
 
   /** 회의 뒤 전투의 세기 (#594): 회사가 크고 오래되고 사장이 강해질수록 오른다. 이유마다 몫이 보인다. */

@@ -48,7 +48,6 @@ import {
   cellShares,
   climbSpeed,
   MID_BOSS_NAME,
-  orderPriceStep,
   pickFlow,
   rowHps,
   rushSpawnSeconds,
@@ -58,6 +57,8 @@ import {
   whaleSummonSeconds,
 } from './assault'
 import { STAGE_ASSETS } from './assets'
+import { BUY_WALL, BuyWall } from './buyWall'
+import { BuyWallFx } from './buyWallFx'
 import {
   awakenedMateCount,
   bulletStats,
@@ -480,8 +481,8 @@ class BattleScene extends Phaser.Scene {
   private bossMid = false
   /** 중간 매도벽을 부쉈는데 중간 큰손이 아직 살아 있다: 잡으면 잡몹 구간이 시작된다. */
   private midPending = false
-  /** 잡은 매도 물량으로 오른 가격(원, #593). */
-  private priceBonus = 0
+  private buyWall: BuyWall | null = null
+  private buyWallFx: BuyWallFx | null = null
   /** 지금 오르는 빠르기(px/s)와 지금까지 오른 거리(px): 배경·호가 줄·가격 눈금이 이만큼 내려간다. */
   private climbV = 0
   private climbed = 0
@@ -820,7 +821,9 @@ class BattleScene extends Phaser.Scene {
       const enemy = e as Enemy
       if (!enemy.active || enemy.dying || enemy.cell) return
       const base = enemy.boss && !this.assault ? BOSS.dmg : UNITS[enemy.kind].dmg
-      this.hurt(Math.round(base * this.staged(this.dmgScale)), enemy)
+      const damage = Math.round(base * this.staged(this.dmgScale))
+      if (this.buyWall?.active && !enemy.boss) this.hitBuyWall(damage, enemy.x)
+      else this.hurt(damage, enemy)
       // 공격 판: 매도 물량은 사장냥에 닿으면 멘탈을 깎고 사라진다(되튀어 계속 닿지 않게). 보스는 남는다.
       if (this.assault && !enemy.boss) this.kill(enemy, false)
     })
@@ -931,6 +934,9 @@ class BattleScene extends Phaser.Scene {
     }
     if (this.assault) {
       this.createAssaultPools()
+      this.buyWall = new BuyWall(this.loadout.maxMental)
+      this.buyWallFx = new BuyWallFx(this)
+      this.drawBuyWall()
       // 첫 벽은 화면 위쪽 바깥에서 기다린다: 첫 카드를 고르면 치고 올라 벽 앞에 선다.
       this.addWall(0, Math.min(this.holdY(), this.stopY() - h * 0.5))
     }
@@ -957,7 +963,7 @@ class BattleScene extends Phaser.Scene {
   private playerY() {
     return this.mode === 'defense' && this.genre.target === 'wall'
       ? this.wallY() + 78
-      : this.view().h - 140
+      : this.view().h - (this.assault ? 175 : 140)
   }
 
   /**
@@ -1256,7 +1262,7 @@ class BattleScene extends Phaser.Scene {
     const { w } = this.view()
     this.player.setPosition(
       Phaser.Math.Clamp(x, 34, w - LANE_RIGHT - 14),
-      this.playerY() - this.lift.y,
+      this.playerY() - this.lift.y + (this.buyWall?.push ?? 0),
     )
   }
 
@@ -1829,13 +1835,39 @@ class BattleScene extends Phaser.Scene {
     } else if (wall?.arrived) {
       this.stuck += dt
     }
+    const support = this.buyWall?.step(dt)
+    if (support?.retreat) {
+      move = -support.retreat
+      if (wall) wall.arrived = false
+    }
+    if (support?.rebuilt)
+      this.pop(this.player.x, this.playerY() - 45, '매수벽 재정비!', '#ffd99e', 20)
+    if (support?.fire) {
+      const lane = this.lane()
+      this.buyWallFx?.launch(lane.left + lane.width * (0.2 + Math.random() * 0.6), this.buyWallY())
+    }
+    this.buyWallFx?.step(dt, (x, fromY, toY) => {
+      const targets = this.magicTargets().filter(
+        (e) =>
+          Math.abs(e.x - x) <= Math.max(16, e.displayWidth * 0.45) &&
+          e.y <= fromY + 12 &&
+          e.y >= toY - 12,
+      )
+      const hit = targets.sort((a, b) => b.y - a.y)[0]
+      if (!hit) return false
+      this.hit(hit, this.loadout.damage * 0.75, -Math.PI / 2, 'bullet')
+      this.glow(x, hit.y, 0xffbb79, 28, 180)
+      return true
+    })
+    this.drawBuyWall()
     this.climbV = dt > 0 ? move / dt : 0
     this.climbed += move
-    if (move > 0) {
+    if (move !== 0) {
       for (const bg of [this.bg, this.bg2]) {
         if (!bg) continue
         bg.y += move * 0.5
         if (bg.y >= h) bg.y -= 2 * h
+        if (bg.y < -h) bg.y += 2 * h
       }
     }
     for (const wl of this.walls) {
@@ -1933,6 +1965,18 @@ class BattleScene extends Phaser.Scene {
   inspectMarket() {
     return {
       ...this.marketStats,
+      buyWall: this.buyWall
+        ? {
+            hp: this.buyWall.hp,
+            maxHp: this.buyWall.maxHp,
+            breaks: this.buyWall.breaks,
+            shots: this.buyWall.shots,
+            sells: this.buyWall.sells,
+            rebuildLeft: this.buyWall.rebuildLeft,
+            retreatLeft: this.buyWall.retreatLeft,
+            playerY: this.player.y,
+          }
+        : null,
       circuit: this.circuit
         ? { elapsed: this.circuit.elapsed, assembled: this.circuit.assembled }
         : null,
@@ -2101,6 +2145,7 @@ class BattleScene extends Phaser.Scene {
     e.kbx = 0
     e.kby = 0
     e.born = this.elapsed
+    if (this.buyWall && kind !== 'cell' && kind !== 'whale') this.buyWall.sells++
     if (this.assault && (kind === 'panic' || kind === 'dump')) {
       if (this.marketStats[kind] === 0)
         this.opts.onBanner(
@@ -2120,6 +2165,7 @@ class BattleScene extends Phaser.Scene {
         if (!bg) continue
         bg.y += move
         if (bg.y >= h) bg.y -= 2 * h
+        if (bg.y < -h) bg.y += 2 * h
       }
       this.scrolling -= dt
       if (this.scrolling <= 0) {
@@ -2400,9 +2446,6 @@ class BattleScene extends Phaser.Scene {
       if (isOrder(e.kind)) {
         // 매도 물량을 잡았다: 물량이 0까지 깎이며 "체결!" (413번). 물량이 줄면 가격이 조금 오른다 (#593).
         if (e.kind !== 'whale') this.fill(e.x, e.y, ORDERS[e.kind].shares)
-        if (this.assault && e.kind !== 'whale' && e.kind !== 'fake') {
-          this.priceBonus += orderPriceStep(this.assault)
-        }
       } else {
         sfx.squish()
       }
@@ -2460,8 +2503,8 @@ class BattleScene extends Phaser.Scene {
     })
   }
 
-  private hurt(dmg: number, e?: Enemy, contactX?: number) {
-    if (this.elapsed < this.invulnUntil || this.over) {
+  private hurt(dmg: number, e?: Enemy, contactX?: number, force = false) {
+    if ((!force && this.elapsed < this.invulnUntil) || this.over) {
       return
     }
     this.mental = Math.max(0, this.mental - dmg)
@@ -2497,6 +2540,31 @@ class BattleScene extends Phaser.Scene {
     if (this.mental <= 0) {
       this.finish(false, 'mental')
     }
+  }
+
+  private buyWallY() {
+    return this.playerY() + 48
+  }
+
+  private drawBuyWall() {
+    if (!this.buyWall || !this.buyWallFx) return
+    const lane = this.lane()
+    this.buyWallFx.draw(this.buyWall, lane.left, lane.width, this.buyWallY(), this.reducedMotion)
+  }
+
+  hitBuyWall(damage: number, x: number) {
+    if (!this.buyWall?.active || this.over) return
+    const broken = this.buyWall.hit(damage)
+    this.ring(x, this.buyWallY(), 0xffb278, 35, 220)
+    if (broken) {
+      const loss = Math.max(1, Math.round(this.loadout.maxMental * BUY_WALL.mentalLossRatio))
+      this.opts.onBanner(`매수벽 붕괴! 뒤로 밀린다 · 멘탈 -${loss}`, '#b94a49')
+      this.hurt(loss, undefined, undefined, true)
+      this.hurtUntil = this.time.now + HURT_MS
+      sfx.crumble()
+      haptic.medium()
+    }
+    this.drawBuyWall()
   }
 
   /** 살아 있는 적 가운데 가장 가까운 것. */
@@ -3615,7 +3683,7 @@ class BattleScene extends Phaser.Scene {
         wallsBroken: this.assault ? this.wallsBroken : 0,
         wallsTotal,
         priceStart: this.assault?.startPrice ?? 0,
-        priceEnd: this.assault ? this.assaultNow() : 0,
+        priceEnd: this.assault ? (win ? this.assaultNow() : this.assault.startPrice) : 0,
         stars:
           this.mode === 'advance' || this.mode === 'assault'
             ? stars(
@@ -3639,9 +3707,9 @@ class BattleScene extends Phaser.Scene {
     return this.assault ? ASSAULT_SECONDS : BATTLE_SECONDS
   }
 
-  /** 공격 판의 지금 가격: 부순 벽만큼 + 잡은 물량만큼(#593). */
+  /** 전투 추가 수익 눈금은 부순 매도벽에만 비례한다. */
   private assaultNow() {
-    return this.assault ? assaultPrice(this.assault, this.wallsBroken) + this.priceBonus : 0
+    return this.assault ? assaultPrice(this.assault, this.wallsBroken) : 0
   }
 
   private pushHud(force = false) {
@@ -3970,6 +4038,11 @@ class BattleScene extends Phaser.Scene {
         e.kby = 0
         e.setVelocity((tx - e.x) * 2, (h * 0.18 - e.y) * 2)
       } else if (this.assault) {
+        if (this.buyWall?.active && e.y >= this.buyWallY() - 15) {
+          this.hitBuyWall(Math.round(v.dmg * this.staged(this.dmgScale)), e.x)
+          this.kill(e, false)
+          continue
+        }
         // 매도 물량 (413번): 벽 앞에서 사장냥 쪽으로 내려온다. 시장가는 사장냥을 향해 꺾여 들고, 허매도는 흔들린다. 오르는 만큼 함께 내려간다.
         if (e.y > h + 40) {
           e.disableBody(true, true)
@@ -4065,6 +4138,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
       __mentalAutopilot?: (on: boolean) => void
       __mentalSpeed?: (k: number) => void
       __mentalWalls?: () => ReturnType<BattleScene['inspectWalls']>
+      __mentalBuyWallHit?: (damage: number) => void
       __mentalMarket?: () => ReturnType<BattleScene['inspectMarket']>
     }
     dev.__mentalDamage = scene.damageStats
@@ -4075,6 +4149,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
     dev.__mentalSpeed = (k) => scene.setSimSpeed(k)
     dev.__mentalWalls = () => scene.inspectWalls()
     dev.__mentalMarket = () => scene.inspectMarket()
+    dev.__mentalBuyWallHit = (damage) => scene.hitBuyWall(damage, parent.clientWidth / 2)
     dev.__mentalMagic = (levels) => scene.applyLoadout({ ...scene.loadout, ...levels })
     dev.__mentalMates = (mates) => scene.applyLoadout({ ...scene.loadout, mates })
   }

@@ -267,11 +267,11 @@ raising:
         loss-max-bp: 5000
         loss-cap-bp: 5000
       # 회의 뒤 전투 (decisions.md 414번, #573): 틀린 쪽에 걸었으면 디펜스로 손실을 줄이고(별 0·1·2·3 → 잃은 몫의 100·70·40·0%를 남긴다, 별 3개면
-      # 판돈의 defense-gain-percent%를 더 번다), 맞힌 쪽이면 공격 판(매도벽)으로 번 몫을 키운다(별 0·1·2·3 → ×1·1.2·1.5·2). 건너뛰면 그대로
+      # 판돈의 defense-gain-percent%를 더 번다), 맞힌 쪽이면 공격 판(매도벽)으로 번 몫을 키운다(실패 추가 0%, 매도벽 열 개 클리어는 벽당 2%로 추가 20%). 건너뛰면 그대로
       battle:
         defense-keep-percent: [100, 70, 40, 0]
         defense-gain-percent: 10
-        assault-percent: [100, 120, 150, 200]
+        assault-percent: [100, 120, 120, 120]
       # 기사가 얼마나 또렷한가 (decisions.md 241번): 흐릴수록 읽을 때 안목을 깎아 안목 높은 직원끼리도 의견이 갈린다
       clarity:
         - { code: clear, weight: 35, penalty: 0 }

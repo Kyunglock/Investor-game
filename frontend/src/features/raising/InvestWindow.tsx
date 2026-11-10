@@ -597,9 +597,6 @@ function DebateFold({
   )
 }
 
-/** 공격 판 별에 따른 회의 수익 배율 (414번 ②). */
-const ASSAULT_MULT = [1, 1.2, 1.5, 2] as const
-
 /**
  * 회의 뒤 전투를 했으면 전·후 회의 손익 (decisions.md 414번). big이면 전투를 마치고 돌아온 회의 창의 결과 한 장(#591): 별·배율·회의 손익 전→후를
  * 크게.
@@ -632,7 +629,7 @@ function BattleAfter({
         </p>
         {assault && (
           <p className="mt-2 font-bold text-[26px] text-up">
-            회의 수익 ×{ASSAULT_MULT[Math.min(3, b.stars)]}
+            추가 수익 +{b.before > 0 ? Math.round(((b.after - b.before) / b.before) * 100) : 0}%
           </p>
         )}
         <p className="mt-2 text-[13px] text-muted">회의 손익</p>

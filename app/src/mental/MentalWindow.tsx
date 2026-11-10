@@ -19,6 +19,7 @@ import {
 import { type AssaultSpec, assaultSpec } from './assault'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
+import { assaultBonusPercent } from './buyWall'
 import {
   AUTO_PICK_MS,
   autoPickIndex,
@@ -417,9 +418,6 @@ function levelWhy(parts: { code: string; plus: number }[] | undefined): string {
   return parts.map((p) => ` · ${LEVEL_NAMES[p.code] ?? p.code} +${p.plus}`).join('')
 }
 
-/** 공격 판의 별에 따른 회의 수익 배율 (414번 ②). 서버 `invest.battle`의 규칙과 같다. */
-const ASSAULT_MULT = [1, 1.2, 1.5, 2] as const
-
 /**
  * 매도벽 돌파 결과 (#591, decisions.md 428번): 공격 판이 끝나면 돌파 결과만 크게 보인다. 배지·제목은 공격 판 문구, 별 셋을 크게, 숫자 칸은 부순
  * 매도벽·걸린 시간·주가, 가장 크게 회의 수익 배율과 회의 손익 전→후. 디펜스용 레벨·물리친 적·남은 멘탈은 보이지 않는다.
@@ -439,7 +437,7 @@ function AssaultResult({
       : 0
   const mm = Math.floor(outcome.seconds / 60)
   const ss = String(Math.floor(outcome.seconds % 60)).padStart(2, '0')
-  const mult = ASSAULT_MULT[Math.max(0, Math.min(3, outcome.stars))]
+  const bonusPercent = assaultBonusPercent(outcome.win, outcome.wallsBroken)
   return (
     <div className="stage-result-card" data-testid="mental-result" data-mode="assault">
       <span
@@ -471,7 +469,7 @@ function AssaultResult({
         className="mt-2 font-game text-[34px] leading-none text-[#e8434f]"
         data-testid="assault-mult"
       >
-        회의 수익 ×{mult}
+        추가 수익 +{bonusPercent}%
       </p>
       <p className="mt-2" data-testid="mental-reward">
         {sending ? (
@@ -491,7 +489,7 @@ function AssaultResult({
       <div className="mt-3 grid grid-cols-3 gap-2" data-testid="assault-stats">
         <Stat label="부순 매도벽" value={`${outcome.wallsBroken}/${outcome.wallsTotal}`} />
         <Stat label="걸린 시간" value={`${mm}:${ss}`} />
-        <Stat label="주가" value={`${priceUp >= 0 ? '+' : ''}${priceUp}%`} />
+        <Stat label="추가 수익률" value={`${priceUp >= 0 ? '+' : ''}${priceUp}%`} />
       </div>
     </div>
   )
