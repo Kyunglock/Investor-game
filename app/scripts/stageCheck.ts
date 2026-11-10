@@ -155,8 +155,18 @@ async function assaultCheck() {
       mental: number
       maxMental: number
       physicsPaused: boolean
+      buyWall: {
+        hp: number
+        maxHp: number
+        breaks: number
+        shots: number
+        sells: number
+        rebuildLeft: number
+        retreatLeft: number
+      }
       circuit: { elapsed: number; assembled: number } | null
     }
+    let checkedBuyWall = false
     let checkedCircuit = false
     let circuitBattleTime: number | undefined
     let lastLog = -1
@@ -190,6 +200,51 @@ async function assaultCheck() {
           (k) => (window as unknown as { __mentalSpeed: (k: number) => void }).__mentalSpeed(k),
           speed,
         )
+      }
+      if (
+        process.env.ASSAULT_BUY_WALL_CHECK &&
+        market &&
+        !checkedBuyWall &&
+        market.battleSeconds > 2
+      ) {
+        checkedBuyWall = true
+        const before = await page.evaluate(() => {
+          const w = window as unknown as {
+            __mentalMarket: () => Market
+            __mentalBuyWallHit: (n: number) => void
+            __assaultHandle: { setPaused: (p: boolean) => void }
+          }
+          const before = w.__mentalMarket()
+          w.__mentalBuyWallHit(before.buyWall.maxHp)
+          w.__assaultHandle.setPaused(true)
+          return before
+        })
+        const collapsed = (await state()).market
+        assert(collapsed)
+        assert.equal(collapsed.buyWall.hp, 0, 'support wall collapses')
+        assert.equal(collapsed.buyWall.breaks, before.buyWall.breaks + 1)
+        assert.equal(
+          collapsed.mental,
+          before.mental - Math.round(before.maxMental * 0.12),
+          'collapse removes mental',
+        )
+        await page.waitForTimeout(200)
+        assert.equal(
+          (await state()).market?.buyWall.rebuildLeft,
+          collapsed.buyWall.rebuildLeft,
+          'pause freezes rebuilding',
+        )
+        await page.evaluate(() =>
+          (
+            window as unknown as { __assaultHandle: { setPaused: (p: boolean) => void } }
+          ).__assaultHandle.setPaused(false),
+        )
+        await page.waitForTimeout(80)
+        await page.screenshot({ path: resolve(shots, 'buy-wall-collapse.png') })
+        await page.waitForTimeout(4500 / speed + 100)
+        const rebuilt = (await state()).market
+        assert(rebuilt && rebuilt.buyWall.hp > 0, 'support wall rebuilds')
+        await page.screenshot({ path: resolve(shots, 'buy-wall-rebuilt.png') })
       }
       if (process.env.ASSAULT_MARKET_CHECK && market?.circuit) {
         assert(market.physicsPaused, 'circuit freezes physics')
@@ -270,6 +325,12 @@ async function assaultCheck() {
       if (process.env.ASSAULT_RECOVERY_CHECK)
         assert(market.recovered > 0, 'circuit restores missing mental')
       console.log(`market: ${JSON.stringify(market)}`)
+    }
+    if (process.env.ASSAULT_BUY_WALL_CHECK) {
+      assert(checkedBuyWall, 'collapse was exercised')
+      assert(market)
+      assert(market.buyWall.shots > 0, 'support actually fires')
+      assert(market.buyWall.shots * 5 <= market.buyWall.sells, 'buys stay below one fifth of sells')
     }
     const picked = await page.evaluate(
       () => (window as unknown as { __assaultCards: string[] }).__assaultCards,

@@ -191,7 +191,7 @@ try {
       await page.evaluate(() =>
         (window as unknown as { __mentalSpeed: (k: number) => void }).__mentalSpeed(50),
       )
-      const deadline = Date.now() + 30000
+      const deadline = Date.now() + 60000
       while (Date.now() < deadline && !(await page.getByTestId('mental-done').count())) {
         if (await page.getByTestId('mental-cards').count()) {
           const card = page.getByTestId('mental-cards').locator('button:not(:disabled)').first()
@@ -199,6 +199,8 @@ try {
         }
         await page.waitForTimeout(200)
       }
+      assert.deepEqual(errors, [], 'battle runtime errors')
+      await page.screenshot({ path: `scripts/shots/invest-resume/result-${mode}-${width}.png` })
       await page.getByTestId('mental-done').click()
       await expect(page.getByTestId('invest-battle-summary')).toBeVisible()
       await page.getByTestId('invest-leave').click()
