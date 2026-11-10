@@ -110,10 +110,10 @@ class BalanceSimulationTest {
             case LAZY -> majorityChoice(c.invest); // 지켜본다는 없다(423번): 자동 진행처럼 다수결
           };
       ENGINE.invest.decide(c, choice, boss == Boss.GREEDY, random);
-      // 회의 뒤 전투 (414번, #573): 스테이지를 하는 사장은 별 2개를 얻는다고 친다.
+      // 회의 뒤 전투: 스테이지 사장은 공격 판을 클리어(454번 별 3개), 방어 판은 별 2개로 마친다.
       String battle = InvestEngine.battleMode(c.invest);
       if (battle != null && (boss == Boss.STAGES || boss == Boss.BUYER)) {
-        ENGINE.invest.battle(c, battle, 2);
+        ENGINE.invest.battle(c, battle, InvestEngine.ASSAULT.equals(battle) ? 3 : 2);
       }
     }
     if (boss == Boss.STAGES || boss == Boss.BUYER) {
