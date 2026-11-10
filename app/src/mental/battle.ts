@@ -312,9 +312,9 @@ const CELL_H = 30
 const CELL_GAP = 3
 /** 한 덩어리 매도벽(416번)의 체력 = 줄·칸 체력의 합 × 이 비율. stageCheck로 맞췄다. */
 const CHUNK_HP = 0.65
-/** 공격 판의 길: 왼쪽은 레벨 줄(390번)이 쓴다. 오른쪽 가격 눈금은 뺐다(416번). */
-const LANE_LEFT = 50
-const LANE_RIGHT = 16
+/** 매수벽·매도벽·서킷브레이커 조립 벽은 같은 폭을 유지하고 화면 중앙에 맞춘다. */
+const LANE_LEFT = 33
+const LANE_RIGHT = 33
 /** 같은 소리를 이 간격(ms) 안에 또 내지 않는다(체결·금 가는 소리, 마법 소리). */
 type SoundKey = 'splash' | 'whoosh' | 'boom' | 'zap' | 'rumble' | 'ram' | 'coin' | 'thud' | 'squish'
 
