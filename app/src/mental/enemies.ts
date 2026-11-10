@@ -27,7 +27,7 @@ export const ENEMIES: Record<EnemyKind, EnemySpec> = {
 }
 
 /**
- * 공격 판의 매도 물량 (decisions.md 413번, #573): 공격 판의 적은 패닉셀 고양이가 아니라 파란 "매도" 주문서다. 그림은 art.ts bakeOrders. 64×64 그림
+ * 공격 판의 매도 물량 (decisions.md 413번, #573): 공격 판에는 패닉셀·투매 고양이와 파란 "매도" 주문서가 함께 나온다. 그림은 art.ts bakeOrders. 64×64 그림
  * 좌표의 반지름(r)에 scale을 곱해 보인다(주문서 숫자가 읽히게 고양이 적보다 크게).
  */
 export type OrderKind = 'order' | 'market' | 'bulk' | 'fake' | 'cell' | 'whale'

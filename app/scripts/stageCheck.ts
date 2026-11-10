@@ -51,7 +51,8 @@ async function assaultCheck() {
   const run = async (config: (typeof configs)[number]): Promise<Row> => {
     const started = Date.now()
     const page = await browser.newPage({
-      viewport: { width: 390, height: 844 },
+      viewport: { width: Number(process.env.ASSAULT_WIDTH ?? 390), height: 844 },
+      reducedMotion: process.env.ASSAULT_REDUCED ? 'reduce' : 'no-preference',
       deviceScaleFactor: config.shoot ? 2 : 1,
     })
     const errors: string[] = []
@@ -62,7 +63,7 @@ async function assaultCheck() {
     )
     await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5182/app/')
     await page.evaluate(
-      async ({ level, bonus, salt }) => {
+      async ({ level, bonus, salt, recovery }) => {
         // 같은 판이 같게 돌도록 씨앗을 고정한 난수(mulberry32).
         let seed = 573 + level * 7 + bonus + salt * 1000
         Math.random = () => {
@@ -94,7 +95,8 @@ async function assaultCheck() {
           assault: assaultSpec(level),
           genre: 'DEFENSE',
           hero: { name: '사장냥', weapon: DEFAULT_WEAPON, upgrades: [] },
-          loadout,
+          // 회복 검사에서는 첫 카드 적용 시 최대 멘탈이 60→100으로 늘어 빈 멘탈을 만든다.
+          loadout: recovery ? { ...loadout, maxMental: 60 } : loadout,
           onHud: (hud: unknown) => {
             w.__assaultHud = hud
           },
@@ -114,9 +116,14 @@ async function assaultCheck() {
             w.__assaultOutcome = outcome
           },
         })
+        w.__assaultHandle = handle
         ;(w.__mentalAutopilot as (on: boolean) => void)(true)
       },
-      { ...config, salt: Number(process.env.ASSAULT_SEED ?? 0) },
+      {
+        ...config,
+        salt: Number(process.env.ASSAULT_SEED ?? 0),
+        recovery: Boolean(process.env.ASSAULT_RECOVERY_CHECK),
+      },
     )
     type Hud = {
       boss: { hp: number } | null
@@ -125,12 +132,27 @@ async function assaultCheck() {
       level: number
       assault: { stuck: boolean; wallsBroken: number }
     }
+    type Market = {
+      panic: number
+      dump: number
+      circuits: number
+      recovered: number
+      released: number
+      battleSeconds: number
+      mental: number
+      maxMental: number
+      physicsPaused: boolean
+      circuit: { elapsed: number; queued: number } | null
+    }
+    let checkedCircuit = false
+    let circuitBattleTime: number | undefined
     let lastLog = -1
     const state = () =>
       page.evaluate(() => {
         const w = window as unknown as Record<string, unknown>
         return {
           hud: w.__assaultHud as Hud | undefined,
+          market: (w.__mentalMarket as (() => Market) | undefined)?.(),
           outcome: w.__assaultOutcome as Row | undefined,
         }
       })
@@ -141,7 +163,7 @@ async function assaultCheck() {
     let sped = false
     for (let t = 0; t < 400_000 / speed; t += 100) {
       await page.waitForTimeout(100)
-      const { hud, outcome } = await state()
+      const { hud, outcome, market } = await state()
       if (outcome) break
       if (process.env.ASSAULT_DEBUG && hud && 120 - hud.secondsLeft >= lastLog + 5) {
         lastLog = 120 - hud.secondsLeft
@@ -155,6 +177,42 @@ async function assaultCheck() {
           (k) => (window as unknown as { __mentalSpeed: (k: number) => void }).__mentalSpeed(k),
           speed,
         )
+      }
+      if (process.env.ASSAULT_MARKET_CHECK && market?.circuit) {
+        assert(market.physicsPaused, 'circuit freezes physics')
+        if (circuitBattleTime == null) circuitBattleTime = market.battleSeconds
+        assert.equal(
+          market.battleSeconds,
+          circuitBattleTime,
+          'circuit does not consume battle time',
+        )
+        assert(market.mental <= market.maxMental, 'healing respects max mental')
+        if (!checkedCircuit && market.circuit.elapsed > 1) {
+          checkedCircuit = true
+          const before = await page.evaluate(() => {
+            const w = window as unknown as {
+              __assaultHandle: { setPaused: (p: boolean) => void }
+              __mentalMarket: () => Market
+            }
+            w.__assaultHandle.setPaused(true)
+            return w.__mentalMarket()
+          })
+          await page.waitForTimeout(350)
+          const after = (await state()).market
+          assert(after)
+          assert.equal(
+            after.circuit?.elapsed,
+            before.circuit?.elapsed,
+            'quit dialog pauses circuit',
+          )
+          assert.equal(after.mental, before.mental, 'quit dialog pauses healing')
+          await page.screenshot({ path: resolve(shots, `assault-circuit-${config.bonus}.png`) })
+          await page.evaluate(() =>
+            (
+              window as unknown as { __assaultHandle: { setPaused: (p: boolean) => void } }
+            ).__assaultHandle.setPaused(false),
+          )
+        }
       }
       if (!config.shoot || !hud?.assault) continue
       // 화면 셋: 첫 벽 앞에 멈춰 쏘는 중, 벽이 막 무너진 뒤(치고 오르는 중), 큰손 보스.
@@ -174,7 +232,7 @@ async function assaultCheck() {
       }
     }
     await page.waitForTimeout(1500)
-    const { outcome } = await state()
+    const { outcome, market } = await state()
     assert(outcome, `${config.label}: battle ends`)
     for (const key of [
       'win',
@@ -189,6 +247,15 @@ async function assaultCheck() {
       'priceEnd',
     ])
       assert(key in outcome, `outcome has ${key}`)
+    if (process.env.ASSAULT_MARKET_CHECK && outcome.win) {
+      assert(market && market.panic > 0 && market.dump > 0, 'both monsters actually spawn')
+      assert.equal(market.circuits, 1, 'one circuit per assault')
+      assert.equal(market.released, 6, 'queued sell orders enter battle')
+      assert(checkedCircuit, 'circuit pause and resume checked')
+      if (process.env.ASSAULT_RECOVERY_CHECK)
+        assert(market.recovered > 0, 'circuit restores missing mental')
+      console.log(`market: ${JSON.stringify(market)}`)
+    }
     const picked = await page.evaluate(
       () => (window as unknown as { __assaultCards: string[] }).__assaultCards,
     )

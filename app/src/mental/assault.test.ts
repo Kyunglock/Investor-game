@@ -156,6 +156,15 @@ describe('공격 판: 매도벽 (decisions.md 413번)', () => {
     expect(whaleSummonSeconds(50, 100)).toBeLessThan(ASSAULT_BOSS.summonSeconds)
   })
 
+  it('모든 공격 구간에 패닉셀과 투매가 매도 주문과 함께 나온다', () => {
+    for (const wall of ASSAULT_WALLS) {
+      const kinds = new Set(Array.from({ length: 1000 }, (_, i) => pickFlow(wall.mix, i / 1000)))
+      expect(kinds.has('panic')).toBe(true)
+      expect(kinds.has('dump')).toBe(true)
+      expect(kinds.has('order')).toBe(true)
+    }
+  })
+
   it('매도 물량: 시장가는 작고 빠르고, 대량 매도는 묵직하고 느리고, 허매도는 경험치가 없다', () => {
     expect(ORDERS.market.speed).toBeGreaterThan(ORDERS.order.speed)
     expect(ORDERS.market.r).toBeLessThan(ORDERS.order.r)
