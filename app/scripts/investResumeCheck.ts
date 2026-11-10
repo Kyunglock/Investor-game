@@ -8,7 +8,12 @@ const browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || 
 mkdirSync('scripts/shots/invest-resume', { recursive: true })
 try {
   for (const width of [320, 390])
-    for (const mode of ['ASSAULT', 'DEFENSE'] as const) {
+    for (const [choice, up, mode] of [
+      ['BUY', true, 'ASSAULT'],
+      ['SELL', false, 'ASSAULT'],
+      ['BUY', false, 'DEFENSE'],
+      ['SELL', true, 'DEFENSE'],
+    ] as const) {
       const battle = {
         mode,
         level: 1,
@@ -20,13 +25,13 @@ try {
         after: null as number | null,
       }
       const outcome = {
-        choice: 'BUY',
+        choice,
         big: false,
         delegated: false,
         teamBuy: 0,
         teamSell: 0,
         debate: [],
-        up: true,
+        up,
         reveal: '실적이 올랐다',
         decisive: 0,
         total: 1000000,
@@ -87,9 +92,10 @@ try {
         return route.fulfill({ json: company })
       })
       await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5190/app/')
+      const primary = await page.getByTestId('settle').elementHandle()
       await page.getByTestId('settle').click()
       await page.getByTestId('invest-to-decide').click()
-      await page.locator('[data-choice="BUY"]').click()
+      await page.locator(`[data-choice="${choice}"]`).click()
       await expect(page.getByTestId('invest-battle')).toBeVisible()
       await page.getByTestId('invest-battle').scrollIntoViewIfNeeded()
       await page.screenshot({ path: `scripts/shots/invest-resume/result-${mode}-${width}.png` })
@@ -99,6 +105,19 @@ try {
         mode === 'ASSAULT' ? '매도벽 돌파!' : '멘탈 방어!',
       )
       await expect(page.getByTestId('settle')).toHaveCount(0)
+      assert.ok(
+        await primary?.evaluate(
+          (el) => el.isConnected && el.getAttribute('data-testid') === 'pending-invest-battle',
+        ),
+      )
+      await expect(page.locator('.toy-bottom-cards > button')).toHaveCount(3)
+      const boxes = await page.locator('.toy-bottom-cards > button').evaluateAll((els) =>
+        els.map((el) => {
+          const r = el.getBoundingClientRect()
+          return { left: r.left, right: r.right }
+        }),
+      )
+      assert.ok(boxes[0].right <= boxes[1].left && boxes[1].right <= boxes[2].left)
       await page.getByTestId('pending-invest-battle').scrollIntoViewIfNeeded()
       await page.screenshot({ path: `scripts/shots/invest-resume/home-${mode}-${width}.png` })
       await page.reload()
@@ -147,7 +166,7 @@ try {
       assert.equal(reports, 1)
       assert.deepEqual(errors, [])
       console.log(
-        `PASS ${mode} ${width}: leave, reload, other tab, resume, report once, restore next quarter`,
+        `PASS ${choice}/${up ? 'UP' : 'DOWN'} ${mode} ${width}: leave, reload, other tab, resume, report once, restore next quarter`,
       )
       await page.close()
     }

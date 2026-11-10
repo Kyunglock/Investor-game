@@ -1,5 +1,5 @@
 import type { Company, Drawn } from '@web/api/client'
-import { BattleEntryButton } from '@web/features/raising/BattleEntryButton'
+import { BattleEntryButton, BattleEntryContent } from '@web/features/raising/BattleEntryButton'
 import { GachaReveal, useDrawReveal } from '@web/features/raising/Gacha'
 import { InvestWindow } from '@web/features/raising/InvestWindow'
 import { QuarterSheet } from '@web/features/raising/QuarterSheet'
@@ -259,37 +259,41 @@ export function ActionBar({
             <strong>강화</strong>
             <em>{upgradeLevels > 0 ? `${upgradeLevels}단계 올림` : '공격력·연사'}</em>
           </button>
-          {pending ? (
-            <BattleEntryButton
-              mode={pending.mode}
-              onClick={enterBattle}
-              disabled={busy}
-              compact
-              testId="pending-invest-battle"
-            />
-          ) : (
-            <button
-              type="button"
-              disabled={busy || settleLocked}
-              className={`toy-stat toy-advance ${settleSpot}`}
-              data-testid="settle"
-              data-locked={settleLocked || undefined}
-              onClick={(ev) => {
-                sfx.stamp()
-                haptic.medium()
-                useFx.getState().burstAt(ev.currentTarget, 'sparks')
-                useAppUi.getState().requestSettle()
-              }}
-            >
-              <small>
-                {busy ? '처리 중…' : settleLocked ? '직원을 앉혀주세요' : '다음 분기로'}
-              </small>
-              <strong>▶ 넘기기</strong>
-              <em>
-                자리 {assigned}/{company.seats}
-              </em>
-            </button>
-          )}
+          {/* 중앙 입구는 한 버튼만 유지하고, 서버가 확정한 회의 전투 상태로 내용·동작을 함께 바꾼다. */}
+          <button
+            type="button"
+            disabled={busy || (!pending && settleLocked)}
+            className={
+              pending ? 'battle-entry battle-entry-compact' : `toy-stat toy-advance ${settleSpot}`
+            }
+            data-mode={pending?.mode}
+            data-testid={pending ? 'pending-invest-battle' : 'settle'}
+            data-locked={!pending && settleLocked ? true : undefined}
+            onClick={(ev) => {
+              if (pending) {
+                enterBattle()
+                return
+              }
+              sfx.stamp()
+              haptic.medium()
+              useFx.getState().burstAt(ev.currentTarget, 'sparks')
+              useAppUi.getState().requestSettle()
+            }}
+          >
+            {pending ? (
+              <BattleEntryContent mode={pending.mode} disabled={busy} compact />
+            ) : (
+              <>
+                <small>
+                  {busy ? '처리 중…' : settleLocked ? '직원을 앉혀주세요' : '다음 분기로'}
+                </small>
+                <strong>▶ 넘기기</strong>
+                <em>
+                  자리 {assigned}/{company.seats}
+                </em>
+              </>
+            )}
+          </button>
           {/* 스테이지 입구 (decisions.md 369번): 스테이지 선택 시트를 연다. */}
           <button
             type="button"
