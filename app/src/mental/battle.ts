@@ -44,6 +44,7 @@ import {
   type AssaultWall,
   assaultPrice,
   assaultSpec,
+  assaultStars,
   assaultTarget,
   cellShares,
   climbSpeed,
@@ -3685,19 +3686,21 @@ class BattleScene extends Phaser.Scene {
         priceStart: this.assault?.startPrice ?? 0,
         priceEnd: this.assault ? (win ? this.assaultNow() : this.assault.startPrice) : 0,
         stars:
-          this.mode === 'advance' || this.mode === 'assault'
-            ? stars(
-                {
-                  win,
-                  seconds: this.elapsed,
-                  mentalLeft: this.mental,
-                  maxMental: this.loadout.maxMental,
-                },
-                this.limitSeconds(),
-              )
-            : this.opts.stage
-              ? defenseStars(win, this.mental, this.loadout.maxMental)
-              : 0,
+          this.mode === 'assault'
+            ? assaultStars(win, this.wallsBroken)
+            : this.mode === 'advance'
+              ? stars(
+                  {
+                    win,
+                    seconds: this.elapsed,
+                    mentalLeft: this.mental,
+                    maxMental: this.loadout.maxMental,
+                  },
+                  this.limitSeconds(),
+                )
+              : this.opts.stage
+                ? defenseStars(win, this.mental, this.loadout.maxMental)
+                : 0,
       }),
     )
   }

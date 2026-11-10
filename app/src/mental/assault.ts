@@ -303,3 +303,10 @@ export function climbSpeed(sinceBreak: number, reduced = false): number {
   const t = Math.max(0, sinceBreak) / dashSeconds
   return drift + (dash - drift) * (1 - t) ** 2
 }
+
+/** 제한 시간 안에 전부 돌파하면 3개, 미완료는 부순 벽 개수로 평가한다. */
+export function assaultStars(win: boolean, wallsBroken: number): number {
+  if (win && wallsBroken >= ASSAULT_WALLS.length) return 3
+  if (wallsBroken >= 4) return 2
+  return wallsBroken >= 1 ? 1 : 0
+}

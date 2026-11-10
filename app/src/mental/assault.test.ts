@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest'
-import { stars } from './advance'
 import {
   ASSAULT_BOSS,
   ASSAULT_COLS,
@@ -9,6 +8,7 @@ import {
   ASSAULT_WALLS,
   assaultPrice,
   assaultSpec,
+  assaultStars,
   assaultTarget,
   cellShares,
   climbSpeed,
@@ -176,9 +176,18 @@ describe('공격 판: 매도벽 (decisions.md 413번)', () => {
     expect(UNITS.order).toBe(ORDERS.order)
   })
 
-  it('별은 364번 그대로: 깨면 1, 절반 시간 안 +1, 멘탈 반 넘게 +1', () => {
-    expect(stars({ win: true, seconds: 50, mentalLeft: 80, maxMental: 100 }, 120)).toBe(3)
-    expect(stars({ win: true, seconds: 100, mentalLeft: 30, maxMental: 100 }, 120)).toBe(1)
-    expect(stars({ win: false, seconds: 120, mentalLeft: 90, maxMental: 100 }, 120)).toBe(0)
+  it.each([
+    [0, 0],
+    [1, 1],
+    [3, 1],
+    [4, 2],
+    [9, 2],
+  ])('미완료 %i개 돌파는 별 %i개', (walls, expected) => {
+    expect(assaultStars(false, walls)).toBe(expected)
+  })
+
+  it('시간 안에 모두 돌파하면 남은 멘탈이나 소요 시간과 관계없이 별 셋이다', () => {
+    expect(assaultStars(true, 10)).toBe(3)
+    expect(assaultStars(false, 10)).toBe(2)
   })
 })
