@@ -86,6 +86,7 @@ import {
 import { gunRecoil, stageMuzzle } from './drawStageGun'
 import { ENEMIES, isOrder, ORDERS, UNITS, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkFrame } from './enemyWalk'
+import { type GameSpeed, simScale } from './gameSpeed'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
 import type { Hero } from './hero'
 import { BULLET_H, BULLET_W, bulletHitbox } from './hitbox'
@@ -178,6 +179,8 @@ export interface Outcome {
 }
 
 export interface BattleOptions {
+  /** 처음 배속(gameSpeed.ts). 없으면 1배. */
+  speed?: GameSpeed
   /** 전진 모드 또는 디펜스(EX·번호 스테이지) (364번), 공격 판 (413번). */
   mode: BattleMode
   /** 전진 모드의 스테이지 판 (369번). 없으면 다섯 구간 + 보스. */
@@ -204,6 +207,8 @@ export interface BattleHandle {
   applyLoadout: (loadout: Loadout) => void
   /** 나가기 물음 동안 멈춘다/이어 간다 (345번). 카드 고르기·끝난 뒤에는 아무것도 안 한다. */
   setPaused: (paused: boolean) => void
+  /** 전투 배속(gameSpeed.ts): 1배가 예전 빠르기의 절반. */
+  setSpeed: (speed: GameSpeed) => void
   stop: () => void
 }
 
@@ -512,6 +517,9 @@ class BattleScene extends Phaser.Scene {
   /** 개발 서버의 확인 스크립트가 켜는 자동 조종: 약한 벽 칸 밑으로 가고 바로 위 물량은 비킨다. */
   autopilot = false
   private simSpeed = 1
+  /** 플레이어가 고른 배속의 실제 빠르기(gameSpeed.ts simScale)와, 확인 스크립트가 덮어쓴 빠르기(개발 서버). */
+  private playerScale = simScale(1)
+  private devSpeed: number | null = null
   private player!: Phaser.Physics.Arcade.Image
   /** 권총: 사장냥의 손에서 겨누는 쪽으로 돈다 (341번). */
   private gun!: Phaser.GameObjects.Image
@@ -706,6 +714,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   create() {
+    this.applySpeed()
     if (Object.keys(STAGE_ASSETS).some((key) => !this.textures.exists(`art-${key}`))) {
       this.over = true
       this.opts.onError?.('전장 그림을 불러오지 못했어요. 다시 시도해주세요.')
@@ -3858,10 +3867,29 @@ class BattleScene extends Phaser.Scene {
    * 지나가지 않게), 트윈·지연 호출·전투 시계도 k배다. 1이면 아무것도 바꾸지 않는다.
    */
   setSimSpeed(k: number) {
-    this.simSpeed = Math.max(1, k)
-    this.physics.world.timeScale = 1 / this.simSpeed
-    this.tweens.timeScale = this.simSpeed
-    this.time.timeScale = this.simSpeed
+    this.devSpeed = Math.max(1, k)
+    this.applySpeed()
+  }
+
+  /** 플레이어 배속(gameSpeed.ts). 확인 스크립트가 빠르기를 덮어쓴 동안에는 그쪽을 따른다. */
+  setGameSpeed(speed: GameSpeed) {
+    this.playerScale = simScale(speed)
+    this.applySpeed()
+  }
+
+  /**
+   * 빠르기 k를 전투 시계·트윈·지연 호출·물리에 넣는다. 1보다 빠르면 물리 고정 걸음을 더 자주 밟고(탄이 칸을 뚫지 않게), 느리면 걸음 수는 그대로 두고
+   * 한 걸음의 길이를 줄여 30Hz처럼 끊기지 않게 움직인다.
+   */
+  private applySpeed() {
+    const k = this.devSpeed ?? this.playerScale
+    this.simSpeed = k
+    if (!this.physics?.world) return
+    const world = this.physics.world as Phaser.Physics.Arcade.World & { _frameTime: number }
+    world.timeScale = 1 / Math.max(k, 1)
+    world._frameTime = Math.min(k, 1) / world.fps
+    this.tweens.timeScale = k
+    this.time.timeScale = k
   }
 
   update(_realTime: number, realDtMs: number) {
@@ -4141,6 +4169,7 @@ class BattleScene extends Phaser.Scene {
 /** 한 판을 parent 안에 띄운다. 손잡이로 카드를 쌓고(레벨 업) 끝낸다(창이 닫힐 때). */
 export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHandle {
   const scene = new BattleScene(opts)
+  scene.setGameSpeed(opts.speed ?? 1)
   // 선명하게(344번): RESIZE 모드는 zoom을 무시해 폰에서 캔버스가 CSS px 크기로 흐렸다. 캔버스를 배율만큼 크게 잡고 zoom으로 CSS 크기에 맞춘다.
   // 부모 크기가 바뀌면 직접 다시 잡는다.
   const game = new Phaser.Game({
@@ -4194,6 +4223,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
   return {
     applyLoadout: (loadout) => scene.applyLoadout(loadout),
     setPaused: (paused) => scene.setPaused(paused),
+    setSpeed: (speed) => scene.setGameSpeed(speed),
     stop: () => {
       ro.disconnect()
       game.destroy(true)
