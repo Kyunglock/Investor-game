@@ -5,6 +5,7 @@ import { FxLayer } from '../fx/FxLayer'
 import { armAudio } from '../fx/sound'
 import { useCompanyFx } from '../fx/useCompanyFx'
 import { Shell } from './Shell'
+import { TutorialGuide } from './TutorialGuide'
 import { firstTab, useAppUi } from './ui'
 
 /**
@@ -12,6 +13,7 @@ import { firstTab, useAppUi } from './ui'
  * 튜토리얼이 켜진 채 들어간다. 서버 상태는 웹과 같은 스토어가 들고 있다.
  */
 export function App() {
+  const tutorialRevision = useTutorial((s) => s.revision)
   const status = useRaisingStore((s) => s.status)
   const company = useRaisingStore((s) => s.company)
   const busy = useRaisingStore((s) => s.busy)
@@ -36,7 +38,7 @@ export function App() {
     void open()
   }, [opening, open])
 
-  // 회사가 생기면(차리거나 불러오면) 첫 탭을 정한다: 직원이 없으면 채용부터.
+  // 회사가 생기면(차리거나 불러오면) 첫 탭을 정한다: 처음부터 사무실을 보여 준다.
   const companyId = company?.companyId
   useEffect(() => {
     const c = useRaisingStore.getState().company
@@ -93,7 +95,12 @@ export function App() {
           )}
         </div>
       )}
-      {status === 'ready' && company && <Shell company={company} />}
+      {status === 'ready' && company && (
+        <>
+          <Shell company={company} />
+          <TutorialGuide key={`${company.companyId}-${tutorialRevision}`} company={company} />
+        </>
+      )}
       <FxLayer />
     </>
   )

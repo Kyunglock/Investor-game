@@ -1455,3 +1455,14 @@
 .battle-hud-assault .battle-wall-assault {
   bottom: max(96px, calc(env(safe-area-inset-bottom) + 82px));
 }
+
+.stage-card-manual {
+  margin-top: 10px;
+  padding: 9px 12px;
+  border: 1px solid #a6d3bf;
+  border-radius: 12px;
+  background: #e4f4ea;
+  color: #376c58;
+  font-size: 12px;
+  text-align: center;
+}

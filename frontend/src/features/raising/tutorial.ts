@@ -66,7 +66,7 @@ export function tutorialStep(company: Company): TutorialStep {
       id: 'hire',
       n: 1,
       title: '직원 뽑기',
-      text: '채용 탭에서 채용권으로 사람을 뽑습니다. 카드가 뒤집히며 등급이 드러납니다. 방패의 등급이 높을수록 잘 맞히고, 같은 등급 둘을 모아 카드를 끌어 겹치면 한 단계 올릴 수 있습니다.',
+      text: '채용 탭에서 채용권으로 사람을 뽑습니다. 카드가 뒤집히며 등급이 드러납니다. 등급 휘장과 능력치를 살펴보고 각자 잘하는 자리에 배치해 보세요.',
       tab: 'market',
       spot: 'market',
       short: '채용 탭에서 직원을 뽑자',
@@ -88,9 +88,9 @@ export function tutorialStep(company: Company): TutorialStep {
       id: 'meeting',
       n: 3,
       title: '분기 넘기기',
-      text: '아래 "분기 넘기기"를 누르면 직원이 종목을 물어 옵니다. 물어 왔으면 종목 회의가 열립니다. 직원 의견을 듣고 사장이 정하거나 직원들에게 맡깁니다.',
+      text: '아래 "분기 넘기기"를 누르면 직원이 종목을 물어 옵니다. 물어 왔으면 종목 회의가 열립니다. 기사를 읽고 직원 의견을 들은 뒤 매수·매도를 직접 선택합니다.',
       spot: 'settle',
-      short: '아래 분기 넘기기로 회의와 멘탈 전투를',
+      short: '버튼을 눌러 직접 고르고 첫 전투까지',
     }
   }
   if (!company.lastSettlement) {
@@ -138,16 +138,18 @@ function store(v: 'on' | 'done') {
  */
 export const useTutorial = create<{
   active: boolean
+  revision: number
   /** 아직 한 번도 튜토리얼을 고르거나 끝내지 않았다: 처음 온 사람. */
   fresh: boolean
   start: () => void
   finish: () => void
 }>((set) => ({
   active: stored() === 'on',
+  revision: 0,
   fresh: stored() === null,
   start: () => {
     store('on')
-    set({ active: true, fresh: false })
+    set((s) => ({ active: true, fresh: false, revision: s.revision + 1 }))
   },
   finish: () => {
     store('done')

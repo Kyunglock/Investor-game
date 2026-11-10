@@ -1,0 +1,195 @@
+.guide-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 16px;
+  overflow-y: auto;
+  background: #20364c8c;
+  backdrop-filter: blur(4px);
+}
+.guide-card {
+  position: relative;
+  margin: auto;
+  width: min(100%, 420px);
+  padding: 24px;
+  border: 3px solid #fff7e5;
+  border-radius: 30px;
+  background: radial-gradient(ellipse at top, #fff0c5, transparent 65%), #fffdf6;
+  box-shadow:
+    0 8px 0 #8d8caa,
+    0 24px 70px #172d4d55;
+  color: #343b65;
+  text-align: center;
+}
+.guide-route {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-bottom: 14px;
+}
+.guide-route span {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 2px solid #d9dfed;
+  border-radius: 50%;
+  background: #edf1fa;
+  font-weight: 800;
+  font-size: 12px;
+  color: #8b96b1;
+}
+.guide-route [data-current="true"] {
+  background: #fc795e;
+  border-color: #ffb39e;
+  color: white;
+  box-shadow: 0 3px 0 #ce5f52;
+}
+.guide-route [data-done="true"] {
+  background: #d0efdd;
+  border-color: #a8d4be;
+  color: #397f66;
+}
+.guide-mascot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 12px;
+  border: 3px solid white;
+  border-radius: 28px;
+  background: linear-gradient(145deg, #d4e9fa, #bfd4ee);
+  box-shadow: 0 5px 0 #afc1db;
+  transform: rotate(-4deg);
+}
+.guide-mascot svg {
+  width: 75px;
+  height: 83px;
+  transform: rotate(4deg);
+}
+.guide-mascot b {
+  position: absolute;
+  right: -12px;
+  top: -10px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 3px solid white;
+  border-radius: 50%;
+  background: #f6c870;
+  color: #906128;
+  font-size: 24px;
+}
+.guide-eyebrow {
+  margin: 14px 0 7px;
+  color: #a37547;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+.guide-card h2 {
+  font-family: var(--font-game);
+  font-size: clamp(22px, 6vw, 29px);
+  line-height: 1.25;
+}
+.guide-description {
+  margin: 12px 0;
+  font-size: 14px;
+  line-height: 1.7;
+  word-break: keep-all;
+}
+.guide-ready-list {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+  text-align: left;
+}
+.guide-ready-list > div {
+  padding: 10px 12px;
+  border: 1px solid #dce6ed;
+  border-radius: 13px;
+  background: #f1f7fa;
+}
+.guide-ready-list span {
+  display: block;
+  color: #7487a1;
+  font-size: 10px;
+}
+.guide-ready-list strong {
+  display: block;
+  margin-top: 3px;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.guide-manual {
+  margin: 14px 0 10px;
+  font-size: 12px;
+  color: #698071;
+}
+.guide-next {
+  width: 100%;
+  min-height: 52px;
+  padding: 10px;
+  border: 2px solid #ffbd91;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #ff9770, #ed6857);
+  box-shadow: 0 4px 0 #b9534f;
+  font-family: var(--font-game);
+  font-size: 18px;
+  color: white;
+}
+.guide-next:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #b9534f;
+}
+.guide-next:disabled,
+.guide-skip:disabled {
+  opacity: 0.55;
+}
+.guide-skip {
+  display: block;
+  min-height: 40px;
+  margin: 8px auto -10px;
+  padding: 8px 16px;
+  color: #7c849c;
+  font-size: 12px;
+  text-decoration: underline;
+}
+.guide-card button:focus-visible {
+  outline: 3px solid #405f99;
+  outline-offset: 4px;
+}
+.guide-error {
+  margin: 10px 0;
+  font-size: 12px;
+  color: #b64e51;
+}
+@media (max-height: 700px) {
+  .guide-card {
+    padding: 16px 20px;
+  }
+  .guide-mascot {
+    width: 68px;
+    height: 68px;
+    margin-bottom: 6px;
+  }
+  .guide-mascot svg {
+    width: 51px;
+    height: 58px;
+  }
+  .guide-route {
+    margin-bottom: 10px;
+  }
+  .guide-description {
+    margin: 8px 0;
+    font-size: 13px;
+  }
+  .guide-ready-list {
+    margin: 10px 0;
+  }
+}

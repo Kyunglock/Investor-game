@@ -9,6 +9,7 @@ import { haptic } from '../../fx/haptics'
 import { isMuted, setMuted, sfx } from '../../fx/sound'
 import { chapterName, stageLabel } from '../../mental/advance'
 import { WeaponInventory, weaponBadge } from '../../mental/WeaponInventory'
+import { FIRST_PLAY_KEY, firstQuarter } from '../firstPlay'
 import { BookIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from '../Icons'
 import { Sheet } from '../Sheet'
 import { type BattleEntry, type Tab, type ToyPanel, tabBadge, useAppUi } from '../ui'
@@ -170,7 +171,9 @@ export function ToyCityHome({ company }: { company: Company }) {
       {tutorialOn && !ended && (
         <div className="toy-tutorial" data-testid="tutorial" data-step={tutorial.id}>
           <span>
-            {tutorial.n}/5 · {tutorial.short}
+            {firstQuarter(company)
+              ? '첫 게임 안내 · 직접 선택하면 시작해요'
+              : `${tutorial.n}/5 · ${tutorial.short}`}
           </span>
           <button
             type="button"
@@ -330,6 +333,12 @@ export function ToyCityHome({ company }: { company: Company }) {
                 type="button"
                 className="toy-sheet-secondary"
                 onClick={() => {
+                  try {
+                    localStorage.removeItem(`${FIRST_PLAY_KEY}:${company.companyId}`)
+                    localStorage.removeItem(`investor-game.guide:${company.companyId}`)
+                  } catch {
+                    /* 저장 불가 환경에서도 안내를 연다. */
+                  }
                   useTutorial.getState().start()
                   setPanel(null)
                 }}
