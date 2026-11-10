@@ -1,5 +1,5 @@
-/** 적 넷 (decisions.md 328·333번): 이름이 곧 행동이다. 일자로 천천히 내려온다. 그림은 art.ts. */
-export type EnemyKind = 'panic' | 'dump' | 'spec' | 'stop'
+/** 패닉셀·투매·투기·손절·공매도: 이름이 곧 행동이다. 일자로 천천히 내려온다. 그림은 art.ts. */
+export type EnemyKind = 'panic' | 'dump' | 'spec' | 'stop' | 'short'
 
 export interface EnemySpec {
   /** 충돌 판정 반지름(px). 그림(64×64)의 몸통 크기에 맞춘다. */
@@ -16,6 +16,7 @@ export interface EnemySpec {
 }
 
 export const ENEMIES: Record<EnemyKind, EnemySpec> = {
+  short: { r: 19, fill: '#44558c', label: '공매도', hp: 9, speed: 43, dmg: 11, reward: 45 },
   /** 패닉셀: 빠르고 떼로 */
   panic: { r: 16, fill: '#5b93e6', label: '패닉', hp: 1, speed: 95, dmg: 5, reward: 10 },
   /** 투매: 한쪽에서 줄지어 쏟아진다. 느리지만 단단하다 */
@@ -115,7 +116,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
   },
 }
 
-/** 고양이 적과 매도 물량을 한 표로: 전투(battle.ts)는 이 표로 반지름·체력·피해를 읽는다. 디펜스 출전 화면의 적 소개는 ENEMIES(고양이 넷)만 쓴다. */
+/** 몬스터와 매도 물량을 한 표로: 전투(battle.ts)는 이 표로 반지름·체력·피해를 읽는다. 디펜스 출전 화면의 적 소개는 ENEMIES(몬스터 다섯)만 쓴다. */
 export const UNITS: Record<UnitKind, EnemySpec & { scale?: number; shares?: number }> = {
   ...ENEMIES,
   ...ORDERS,

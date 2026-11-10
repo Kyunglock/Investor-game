@@ -183,7 +183,7 @@ export function enemyKey(kind: UnitKind, frame: number): string {
 
 export function bakeEnemies(scene: Phaser.Scene) {
   const source = scene.textures.get('art-enemies').getSourceImage() as HTMLImageElement
-  const kinds = ['panic', 'dump', 'spec', 'stop'] as const
+  const kinds = ['panic', 'dump', 'spec', 'stop', 'short'] as const
   for (const [i, kind] of kinds.entries()) {
     const sprite = document.createElement('canvas')
     sprite.width = sprite.height = ENEMY_SIZE * DPR
@@ -191,17 +191,20 @@ export function bakeEnemies(scene: Phaser.Scene) {
     if (!paint) continue
     paint.scale(DPR, DPR)
     const size = kind === 'spec' ? 55 : kind === 'panic' ? 43 : 49
-    drawSprite(
-      paint,
-      source,
-      {
-        x: ((i % 2) * source.width) / 2,
-        y: (Math.floor(i / 2) * source.height) / 2,
-        w: source.width / 2,
-        h: source.height / 2,
-      },
-      { x: 32 - size / 2, y: 32 - size / 2, w: size, h: size },
-    )
+    const image =
+      kind === 'short'
+        ? (scene.textures.get('art-shortSeller').getSourceImage() as HTMLImageElement)
+        : source
+    const cell =
+      kind === 'short'
+        ? { x: 0, y: 0, w: image.width, h: image.height }
+        : {
+            x: ((i % 2) * source.width) / 2,
+            y: (Math.floor(i / 2) * source.height) / 2,
+            w: source.width / 2,
+            h: source.height / 2,
+          }
+    drawSprite(paint, image, cell, { x: 32 - size / 2, y: 32 - size / 2, w: size, h: size })
     for (let frame = 0; frame < WALK_FRAMES; frame++) {
       bake(scene, enemyKey(kind, frame), ENEMY_SIZE, ENEMY_SIZE, (c) => {
         const pose = walkPose(kind, frame)

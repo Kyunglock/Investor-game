@@ -109,6 +109,7 @@ import {
 import { MATE_LOOKS, mateFormation, spreadTargets } from './mates'
 import { shareLabel } from './shares'
 import { wallOffset } from './stageArt'
+import { waveKind } from './waves'
 import {
   aimWithJitter,
   pierceOf,
@@ -2113,11 +2114,13 @@ class BattleScene extends Phaser.Scene {
   }
 
   private waveDump() {
-    this.opts.onBanner('투매 물량 쏟아진다!!', '#a98bff')
     const { w } = this.view()
     const grow = 1 + Math.min(1.5, this.curve() / 120)
     // 세 줄로 쏟아진다: 처음 15, 뒤로 갈수록 36까지. 전에는 6~15로 '쏟아진다'는 말이 무색했다.
-    const n = Math.round(15 * grow * this.staged(this.countScale))
+    const n = Math.min(
+      60,
+      Math.round(15 * grow * this.staged(this.countScale) * (this.assault ? 0.6 : 1)),
+    )
     const cols = Math.ceil(n / 3)
     for (let i = 0; i < n; i++) {
       this.spawn('dump', [
@@ -2127,22 +2130,33 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
-  private waveSpec() {
-    this.opts.onBanner('투기 과열! 터지기 전에 잡아', '#ff4f6d')
-    for (
-      let i = 0;
-      i < Math.round((1 + Math.floor(this.curve() / 100)) * this.staged(this.countScale));
-      i++
-    ) {
-      this.spawn('spec')
+  private waveShort() {
+    const { w } = this.view()
+    const count = Math.min(
+      24,
+      Math.round((6 + Math.min(6, this.elapsed / 30)) * this.staged(this.countScale)),
+    )
+    const cols = Math.ceil(count / 2)
+    for (let i = 0; i < count; i++) {
+      this.spawn('short', [
+        w * 0.16 + (((i % cols) + 0.5) * w * 0.68) / cols,
+        -40 - Math.floor(i / cols) * 64,
+      ])
     }
+    this.opts.onBanner('공매도 웨이브! 방패 대열이 밀려온다!', '#9eb7ff')
   }
 
   private wavePanic() {
-    this.opts.onBanner('패닉셀 떼가 몰려온다!!!', '#3a86ff')
     const { w, h } = this.view()
     // 두 겹의 반원 떼: 처음 24, 뒤로 갈수록 44까지. 전에는 10~20이라 떼 같지 않았다.
-    const n = Math.round((24 + Math.min(20, this.curve() / 8)) * this.staged(this.countScale))
+    const n = Math.min(
+      80,
+      Math.round(
+        (24 + Math.min(20, this.curve() / 8)) *
+          this.staged(this.countScale) *
+          (this.assault ? 0.6 : 1),
+      ),
+    )
     const half = Math.ceil(n / 2)
     for (let i = 0; i < n; i++) {
       const ring = i < half ? 0 : 1
@@ -2151,7 +2165,7 @@ class BattleScene extends Phaser.Scene {
       const a = Math.PI + ((j + 0.5) / m) * Math.PI
       const rw = w * (0.28 + ring * 0.05)
       const rh = h * (0.5 + ring * 0.14)
-      this.spawn('panic', [w / 2 + Math.cos(a) * rw, h * 0.25 + Math.sin(a) * rh])
+      this.spawn('panic', [w / 2 + Math.cos(a) * rw, -35 + Math.sin(a) * rh])
     }
   }
 
@@ -3845,22 +3859,22 @@ class BattleScene extends Phaser.Scene {
       this.defenseBossStep()
     }
 
-    // 생성: 한 판(2분)에 걸쳐 갈수록 빨라진다. 파도는 15초마다 투매 → 투기 → 패닉 순으로 돌고 뒤로 갈수록 커진다 (340·363번).
+    // 생성: 한 판(2분)에 걸쳐 갈수록 빨라진다. 파도는 15초마다 패닉셀 → 투매 → 공매도 순으로 돌고 뒤로 갈수록 커진다 (340·363번).
     const every = Math.max(200, 700 - this.curve() * 2.6) / this.staged(this.countScale)
     if (this.mode === 'defense' && time - this.lastSpawn > every) {
       this.lastSpawn = time
       const r = Math.random()
       this.spawn(r < 0.6 ? 'panic' : r < 0.82 ? 'dump' : r < 0.95 ? 'stop' : 'spec')
     }
-    if (this.mode === 'defense' && this.elapsed >= this.nextWave) {
-      const n = Math.floor(this.nextWave / WAVE_SECONDS) % 3
-      if (n === 1) {
-        this.waveDump()
-      } else if (n === 2) {
-        this.waveSpec()
-      } else {
+    if ((this.mode === 'defense' || this.assault) && this.elapsed >= this.nextWave) {
+      const kind = waveKind(Math.round(this.nextWave / WAVE_SECONDS) - 1)
+      if (kind === 'panic') {
         this.wavePanic()
-      }
+        this.opts.onBanner('패닉셀 웨이브! 떼가 몰려온다!', '#82bbff')
+      } else if (kind === 'dump') {
+        this.waveDump()
+        this.opts.onBanner('투매 웨이브! 물량이 쏟아진다!', '#c5a1ff')
+      } else this.waveShort()
       this.nextWave += WAVE_SECONDS
     }
 
@@ -3956,11 +3970,13 @@ class BattleScene extends Phaser.Scene {
         }
         const toward = p.x - e.x
         const vx =
-          e.kind === 'market'
-            ? Phaser.Math.Clamp(toward * 0.7, -80, 80)
-            : e.kind === 'fake'
-              ? Math.sin((this.elapsed - e.born) * 3 + e.walkOffset) * 40
-              : Phaser.Math.Clamp(toward, -1, 1) * 22
+          e.kind === 'short'
+            ? 0
+            : e.kind === 'market'
+              ? Phaser.Math.Clamp(toward * 0.7, -80, 80)
+              : e.kind === 'fake'
+                ? Math.sin((this.elapsed - e.born) * 3 + e.walkOffset) * 40
+                : Phaser.Math.Clamp(toward, -1, 1) * 22
         e.setVelocity(e.kbx + vx, sy + e.kby + this.climbV)
       } else if (this.mode === 'advance') {
         // 길막 적은 천천히 사장냥 쪽으로 다가오고, 아래로 지나가면 다시 위에서 내려온다. 달려드는 패닉은 지나가면 사라진다.
