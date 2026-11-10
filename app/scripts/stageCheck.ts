@@ -63,7 +63,7 @@ async function assaultCheck() {
     )
     await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5182/app/')
     await page.evaluate(
-      async ({ level, bonus, salt, recovery, initialLightning }) => {
+      async ({ level, bonus, salt, recovery, initialLightning, awakenedMates }) => {
         // 같은 판이 같게 돌도록 씨앗을 고정한 난수(mulberry32).
         let seed = 573 + level * 7 + bonus + salt * 1000
         Math.random = () => {
@@ -90,6 +90,11 @@ async function assaultCheck() {
           { kind: 'fire', bonusPercent: bonus },
         ])
         if (initialLightning > 0) loadout = { ...loadout, lightning: initialLightning }
+        if (awakenedMates >= 0) {
+          loadout = { ...loadout, mates: 3, lightning: 2 }
+          for (let i = 0; i < awakenedMates; i++)
+            loadout = cards.applyCard(loadout, cards.mateMagicCard(i))
+        }
         w.__assaultCards = [] as string[]
         const handle = startBattle(host, {
           mode: 'assault',
@@ -106,7 +111,9 @@ async function assaultCheck() {
           onLevelUp: () => {
             // 카드 자동 선택(401번)과 같은 규칙: 가장 높은 등급, 같으면 마법 > 고양이 > 일반.
             setTimeout(() => {
-              const offer = cards.pickCards({ ...loadout })
+              const offer = cards
+                .pickCards({ ...loadout })
+                .filter((c: { code: string }) => awakenedMates < 0 || c.code !== 'cat-magic')
               const card = offer[autoPickIndex(offer)]
               ;(w.__assaultCards as string[]).push(card.code)
               loadout = cards.applyCard(loadout, card)
@@ -125,6 +132,7 @@ async function assaultCheck() {
         salt: Number(process.env.ASSAULT_SEED ?? 0),
         recovery: Boolean(process.env.ASSAULT_RECOVERY_CHECK),
         initialLightning: Number(process.env.ASSAULT_LIGHTNING ?? 0),
+        awakenedMates: Number(process.env.ASSAULT_AWAKENED ?? -1),
       },
     )
     type Hud = {
@@ -277,6 +285,20 @@ async function assaultCheck() {
       )
       assert(casts > 0, 'lightning casts in actual assault')
       console.log(`lightning casts: ${casts}`)
+    }
+    if (process.env.ASSAULT_AWAKENED !== undefined) {
+      const stats = await page.evaluate(
+        () =>
+          (window as unknown as { __mentalDamage: { awakenedMates: number; mateCasts: number[] } })
+            .__mentalDamage,
+      )
+      const count = Number(process.env.ASSAULT_AWAKENED)
+      assert.equal(stats.awakenedMates, count)
+      stats.mateCasts.forEach((casts, index) => {
+        assert(index < count ? casts > 0 : casts === 0, `companion ${index + 1}: ${casts} casts`)
+      })
+      console.log(`awakened companions: ${JSON.stringify(stats.mateCasts)}`)
+      await page.screenshot({ path: resolve(shots, `awakened-${count}.png`) })
     }
     assert.deepEqual(errors, [], `${config.label}: no page errors`)
     await page.close()

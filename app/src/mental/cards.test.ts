@@ -3,6 +3,7 @@ import {
   applyCard,
   BASE_LOADOUT,
   bulletStats,
+  canAwakenMate,
   loadoutOf,
   MAGICS,
   MAX_BULLET_POWER,
@@ -11,6 +12,7 @@ import {
   magicEffect,
   magicGrade,
   mateCard,
+  mateMagicCard,
   pickCards,
   SIMPLE_CARDS,
   xpToNext,
@@ -42,6 +44,10 @@ describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
         if (c.code === 'cat') {
           mates++
           expect(c).toEqual(mateCard(1))
+          continue
+        }
+        if (c.code === 'cat-magic') {
+          expect(c).toEqual(mateMagicCard(0))
           continue
         }
         magics++
@@ -207,5 +213,40 @@ describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
   it('다음 레벨까지 드는 경험치는 레벨이 오를수록 커진다', () => {
     expect(xpToNext(1)).toBeLessThan(xpToNext(2))
     expect(xpToNext(5)).toBeLessThan(xpToNext(6))
+  })
+})
+
+describe('동료 마법 각성', () => {
+  it('한 장은 한 마리만 각성시키고 새 동료는 자동 각성하지 않는다', () => {
+    const original = { ...BASE_LOADOUT, mates: 2, lightning: 2 }
+    const one = applyCard(original, mateMagicCard(0))
+    expect(one).toEqual({ ...original, awakenedMates: 1 })
+    const summoned = applyCard(one, mateCard(2))
+    expect(summoned.awakenedMates).toBe(1)
+    const two = applyCard(summoned, mateMagicCard(1))
+    expect(two.awakenedMates).toBe(2)
+    const three = applyCard(two, mateMagicCard(2))
+    expect(applyCard(three, mateMagicCard(3))).toEqual(three)
+    expect(three.awakenedMates).toBe(3)
+  })
+  it('배운 마법과 미각성 동료가 있어야 등장하고 적용된다', () => {
+    const eligible = { ...BASE_LOADOUT, mates: 2, water: 1 }
+    expect(canAwakenMate(eligible)).toBe(true)
+    expect(
+      Array.from({ length: 100 }, (_, i) => pickCards(eligible, rng(i)))
+        .flat()
+        .some((c) => c.code === 'cat-magic'),
+    ).toBe(true)
+    for (const state of [
+      BASE_LOADOUT,
+      { ...eligible, mates: 0 },
+      { ...eligible, water: 0 },
+      { ...eligible, awakenedMates: 2 },
+    ]) {
+      expect(canAwakenMate(state)).toBe(false)
+      expect(applyCard(state, mateMagicCard(0))).toEqual(state)
+      for (let i = 0; i < 100; i++)
+        expect(pickCards(state, rng(i)).some((c) => c.code === 'cat-magic')).toBe(false)
+    }
   })
 })

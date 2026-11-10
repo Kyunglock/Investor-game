@@ -16,7 +16,7 @@ import {
  */
 export type CardGrade = 'N' | 'R' | 'SR' | 'UR'
 export type Magic = 'water' | 'fire' | 'lightning' | 'earth'
-export type CardCode = 'atk' | 'spd' | 'cat' | Magic
+export type CardCode = 'atk' | 'spd' | 'cat' | 'cat-magic' | Magic
 
 export interface Card {
   code: CardCode
@@ -29,6 +29,7 @@ export interface Card {
   level?: { from: number; to: number }
   /** 고양이 카드: 지금 함께 싸우는 고양이 수와 이 카드로 늘어난 수. */
   mates?: { from: number; to: number }
+  awakening?: { from: number; to: number }
 }
 
 export const GRADE_NAMES: Record<CardGrade, string> = {
@@ -42,6 +43,7 @@ export const GRADE_NAMES: Record<CardGrade, string> = {
 export const MAGIC_CHANCE = 45
 /** 한 칸이 "고양이 한 마리 더"일 확률(%, 393번). 고양이가 다 차면 이 몫은 일반 카드로 간다. 나머지는 일반 카드다. */
 export const MATE_CHANCE = 8
+export const MATE_MAGIC_CHANCE = 8
 /** 함께 싸우는 고양이의 최대 수(393번, 사용자 결정): 사장냥까지 모두 넷. */
 export const MAX_MATES = 3
 
@@ -136,14 +138,14 @@ export function magicCard(magic: Magic, from: number): Card {
 
 export const MAGICS: readonly Magic[] = ['water', 'fire', 'lightning', 'earth']
 
-/** "고양이 한 마리 더" (393번): 희귀 카드. 함께 싸우는 고양이는 사장냥의 무기·피해·연사·카드 효과를 그대로 받는다. 마법은 사장냥만 쓴다 (440번). */
+/** 동료는 같은 무기로 싸우고, 각성 카드를 골라야 마법을 쓴다. */
 export function mateCard(have: number): Card {
   const to = Math.min(MAX_MATES, have + 1)
   return {
     code: 'cat',
     grade: 'R',
     name: '고양이 한 마리 더',
-    effect: '무기·공격력·연사는 사장냥과 똑같이 · 마법은 사장냥만',
+    effect: '무기·공격력·연사는 사장냥과 똑같이 · 마법은 각성 카드로 해금',
     icon: '🐱',
     color: '#ff9db8',
     mates: { from: have, to },
@@ -152,6 +154,34 @@ export function mateCard(have: number): Card {
 
 /** 마법마다 지금 레벨. */
 export type MagicLevels = Record<Magic, number>
+
+type MateMagicState = MagicLevels & { mates?: number; awakenedMates?: number }
+
+export function awakenedMateCount(state: { mates?: number; awakenedMates?: number }): number {
+  return Math.max(
+    0,
+    Math.min(MAX_MATES, Math.floor(state.mates ?? 0), Math.floor(state.awakenedMates ?? 0)),
+  )
+}
+
+export function canAwakenMate(state: MateMagicState): boolean {
+  return (
+    awakenedMateCount(state) < Math.min(MAX_MATES, state.mates ?? 0) &&
+    MAGICS.some((m) => state[m] > 0)
+  )
+}
+
+export function mateMagicCard(have: number): Card {
+  return {
+    code: 'cat-magic',
+    grade: 'SR',
+    name: '고양이 마법 각성',
+    effect: `${have + 1}번째 동료 1마리만 · 사장냥이 배운 마법을 같은 레벨로 사용`,
+    icon: '🐱✨',
+    color: '#c7a4ff',
+    awakening: { from: have, to: Math.min(MAX_MATES, have + 1) },
+  }
+}
 
 /** 총알 강화는 세 단계까지 쌓인다. */
 export const MAX_BULLET_POWER = 3
@@ -177,6 +207,8 @@ export interface Loadout {
   earth: number
   /** 함께 싸우는 고양이 수 (393번, 0~MAX_MATES). */
   mates: number
+  /** 소환 순서대로 마법을 해금한 동료 수. 각성 카드 한 장에 한 마리. */
+  awakenedMates: number
 }
 
 export const BASE_LOADOUT: Loadout = {
@@ -192,6 +224,7 @@ export const BASE_LOADOUT: Loadout = {
   lightning: 0,
   earth: 0,
   mates: 0,
+  awakenedMates: 0,
 }
 
 /**
@@ -230,6 +263,10 @@ export function applyCard(loadout: Loadout, card: Card): Loadout {
       return { ...loadout, fireMs: Math.max(60, loadout.fireMs / 1.1) }
     case 'cat':
       return { ...loadout, mates: Math.min(MAX_MATES, loadout.mates + 1) }
+    case 'cat-magic':
+      return canAwakenMate(loadout)
+        ? { ...loadout, awakenedMates: awakenedMateCount(loadout) + 1 }
+        : loadout
     default:
       return { ...loadout, [card.code]: Math.min(MAGIC_MAX_LEVEL, loadout[card.code] + 1) }
   }
@@ -239,10 +276,7 @@ export function applyCard(loadout: Loadout, card: Card): Loadout {
  * 고를 석 장 (377·392·393번): 칸마다 MATE_CHANCE로 "고양이 한 마리 더"(다 찼으면 일반 카드), MAGIC_CHANCE로 마법, 나머지는 일반 카드. 마법은 아직
  * 최대 레벨이 아닌 것 가운데 하나를 지금 레벨의 다음 레벨 카드로 낸다. 같은 카드는 겹치지 않는다.
  */
-export function pickCards(
-  state: MagicLevels & { mates?: number },
-  random: () => number = Math.random,
-): Card[] {
+export function pickCards(state: MateMagicState, random: () => number = Math.random): Card[] {
   const open = MAGICS.filter((m) => state[m] < MAGIC_MAX_LEVEL)
   const mates = state.mates ?? 0
   const picked: Card[] = []
@@ -254,6 +288,12 @@ export function pickCards(
     } else if (roll < MATE_CHANCE + MAGIC_CHANCE && open.length > 0) {
       const m = open[Math.floor(random() * open.length)]
       card = magicCard(m, state[m])
+    } else if (
+      roll >= MATE_CHANCE + MAGIC_CHANCE &&
+      roll < MATE_CHANCE + MAGIC_CHANCE + MATE_MAGIC_CHANCE &&
+      canAwakenMate(state)
+    ) {
+      card = mateMagicCard(awakenedMateCount(state))
     }
     if (!picked.some((c) => c.code === card.code)) {
       picked.push(card)
