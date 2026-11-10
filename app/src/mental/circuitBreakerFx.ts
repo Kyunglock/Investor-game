@@ -38,9 +38,7 @@ export class CircuitBreakerFx {
     g.lineStyle(2, 0xf6c86a, 1).strokeRoundedRect(cx - width / 2, top, width, 112, 20)
     g.fillStyle(0xffcf70, reduced ? 1 : 0.7 + Math.sin(c.elapsed * 3) * 0.2)
     g.fillRoundedRect(cx - 47, top + 11, 94, 4, 2)
-    this.title
-      .setPosition(cx, top + 38)
-      .setText(`서킷브레이커 · ${Math.ceil(CIRCUIT_BREAKER.seconds - c.elapsed)}초`)
+    this.title.setPosition(cx, top + 38).setText('서킷브레이커')
     this.orders
       .setPosition(cx, top + 72)
       .setText(
@@ -48,14 +46,6 @@ export class CircuitBreakerFx {
           ? `매도 조각 집결 · ${c.assembled}/${CIRCUIT_BREAKER.pieces}`
           : '매도벽 완성! 거래 재개 준비',
       )
-    g.fillStyle(0x27485b).fillRoundedRect(cx - width / 2 + 18, top + 94, width - 36, 4, 2)
-    g.fillStyle(0x8ef3c6).fillRoundedRect(
-      cx - width / 2 + 18,
-      top + 94,
-      (width - 36) * c.progress,
-      4,
-      2,
-    )
     // 전광판 속 그림이 아니라 다음 전투 벽의 실제 위치에 주문 조각 24개를 쌓는다.
     const cols = 6
     const rows = CIRCUIT_BREAKER.pieces / cols
@@ -125,7 +115,7 @@ export class CircuitBreakerFx {
         .fillRect(x - 1.5, y - 5, 3, 10)
     }
     this.recovery
-      .setPosition(Math.max(80, Math.min(w - 80, playerX)), playerY - 88)
+      .setPosition(Math.max(80, Math.min(w - 80, playerX)), playerY - 136)
       .setText(
         c.recovery > 0 ? `멘탈 회복 +${Math.round(c.recovery * c.progress)}` : '멘탈 충전 완료',
       )
