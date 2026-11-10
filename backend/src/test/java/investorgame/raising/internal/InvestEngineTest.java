@@ -207,7 +207,7 @@ class InvestEngineTest {
         .isInstanceOf(InvalidRequestException.class);
     long won = winner.invest.total;
     long before = winner.capital;
-    assertThat(ENGINE.invest.battle(winner, InvestEngine.ASSAULT, 2)).isEqualTo(won / 5);
+    assertThat(ENGINE.invest.battle(winner, InvestEngine.ASSAULT, 3)).isEqualTo(won / 5);
     assertThat(winner.capital).isEqualTo(before + won / 5);
     assertThatThrownBy(() -> ENGINE.invest.battle(winner, InvestEngine.ASSAULT, 3))
         .as("한 회의에 한 번")
@@ -237,13 +237,13 @@ class InvestEngineTest {
   }
 
   @Test
-  void 매도벽_실패는_추가수익이_없고_클리어는_별과_무관하게_벽_열개분을_더한다() {
+  void 매도벽_별_둘까지는_추가수익이_없고_별_셋은_벽_열개분을_더한다() {
     for (int stars = 0; stars <= 3; stars++) {
       CompanyState c = company(3, stats(50, 100, 100, 100));
       ENGINE.invest.decide(c, right(c), new HashSeededRandom(3));
       long original = c.invest.total;
       long capital = c.capital;
-      long expected = stars == 0 ? 0 : original / 5;
+      long expected = stars == 3 ? original / 5 : 0;
       assertThat(ENGINE.invest.battle(c, InvestEngine.ASSAULT, stars)).isEqualTo(expected);
       assertThat(c.invest.total).isEqualTo(original);
       assertThat(c.capital).isEqualTo(capital + expected);

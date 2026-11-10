@@ -315,6 +315,17 @@ async function assaultCheck() {
       'priceEnd',
     ])
       assert(key in outcome, `outcome has ${key}`)
+    assert.equal(
+      outcome.stars,
+      outcome.win && outcome.wallsBroken === 10
+        ? 3
+        : outcome.wallsBroken >= 4
+          ? 2
+          : outcome.wallsBroken >= 1
+            ? 1
+            : 0,
+      'assault stars follow walls cleared',
+    )
     if (process.env.ASSAULT_MARKET_CHECK && outcome.win) {
       assert(market && market.panic > 0 && market.dump > 0, 'both monsters actually spawn')
       assert.equal(market.circuits, 1, 'one circuit per assault')
