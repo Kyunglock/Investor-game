@@ -819,7 +819,7 @@ components:
                           required: [mode, level, levelParts, open, stars, bonus, before, after]
                           properties:
                             mode: { type: string, enum: [DEFENSE, ASSAULT], description: 'DEFENSE: 틀린 쪽에 걸어 디펜스로 손실을 줄인다. ASSAULT: 맞힌 쪽이라 공격 판(매도벽)으로 수익을 키운다' }
-                            level: { type: integer, description: '전투의 세기(1부터). 크게 움직인 종목, 크게 건 회의, 깬 번호 스테이지, 회사 건물, 연차, 자본 전투 강화가 클수록 높다 (#594)' }
+                            level: { type: integer, description: '전투의 세기(1부터). 크게 움직인 종목, 크게 건 회의, 깬 번호 스테이지, 회사 건물, 연차로 오른다. 자본 전투 강화는 방어 전투에서만 난이도에 반영하며 매도벽 돌파에서는 제외한다' }
                             levelParts:
                               type: array
                               description: 세기가 오른 이유와 그만큼(0인 것은 뺐다, #594)

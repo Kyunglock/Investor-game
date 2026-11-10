@@ -770,7 +770,7 @@ export interface components {
                          * @enum {string}
                          */
                         mode: "DEFENSE" | "ASSAULT";
-                        /** @description 전투의 세기(1부터). 크게 움직인 종목, 크게 건 회의, 깬 번호 스테이지, 회사 건물, 연차, 자본 전투 강화가 클수록 높다 (#594) */
+                        /** @description 전투의 세기(1부터). 크게 움직인 종목, 크게 건 회의, 깬 번호 스테이지, 회사 건물, 연차로 오른다. 자본 전투 강화는 방어 전투에서만 난이도에 반영하며 매도벽 돌파에서는 제외한다 */
                         level: number;
                         /** @description 세기가 오른 이유와 그만큼(0인 것은 뺐다, */
                         levelParts: {
