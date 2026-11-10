@@ -1,6 +1,7 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
 import { useRaisingStore } from '@web/features/raising/store'
+import { useTutorial } from '@web/features/raising/tutorial'
 import { type CSSProperties, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { type BattleEntry, useAppUi } from '../app/ui'
@@ -578,6 +579,7 @@ function CardPick({
   paused: boolean
   onPick: (card: Card) => void
 }) {
+  const manual = useTutorial((s) => s.active)
   const [cards] = useState(() => pickCards(levels))
   const [reduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches)
   const plan = useMemo(() => revealPlan(cards.map((c) => c.grade)), [cards])
@@ -695,16 +697,16 @@ function CardPick({
   })
   // 자동 선택 시계: 고를 수 있는 동안만 0.1초씩 센다. 멈춤·앱이 뒤로 간 동안(document.hidden)은 그대로 둔다.
   useEffect(() => {
-    if (!ready || chosen || paused) return
+    if (!ready || chosen || paused || manual) return
     const id = setInterval(() => {
       if (document.hidden) return
       setAutoLeft((left) => Math.max(0, left - 100))
     }, 100)
     return () => clearInterval(id)
-  }, [ready, chosen, paused])
+  }, [ready, chosen, paused, manual])
   useEffect(() => {
-    if (ready && !chosen && autoLeft <= 0) autoPick()
-  }, [ready, chosen, autoLeft])
+    if (!manual && ready && !chosen && autoLeft <= 0) autoPick()
+  }, [ready, chosen, autoLeft, manual])
 
   return (
     <>
@@ -844,7 +846,11 @@ function CardPick({
             )
           })}
         </div>
-        {ready && !chosen ? (
+        {ready && !chosen && manual ? (
+          <p className="stage-card-manual" data-testid="card-manual">
+            카드를 직접 고를 때까지 전투는 멈춰 있어요
+          </p>
+        ) : ready && !chosen ? (
           <div className="stage-card-auto" data-testid="card-auto">
             <span
               className="stage-card-auto-bar"

@@ -107,7 +107,7 @@ export function tabBadge(company: Company, tab: Tab): string | null {
   }
 }
 
-/** 회사를 처음 열 때 설 탭: 직원이 없으면 채용, 있으면 사무실. */
-export function firstTab(company: Company): Tab {
-  return company.employees.length === 0 && company.status !== 'ENDED' ? 'market' : 'office'
+/** 회사를 처음 열 때는 준비된 사무실부터 보여 준다. */
+export function firstTab(_company: Company): Tab {
+  return 'office'
 }

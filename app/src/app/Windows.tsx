@@ -5,12 +5,14 @@ import { InvestWindow } from '@web/features/raising/InvestWindow'
 import { QuarterSheet } from '@web/features/raising/QuarterSheet'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useLocked, useTutorialSpot } from '@web/features/raising/TutorialBanner'
+import { useTutorial } from '@web/features/raising/tutorial'
 import { YearEndSheet } from '@web/features/raising/YearEnd'
 import { useEffect, useState } from 'react'
 import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { MentalWindow } from '../mental/MentalWindow'
+import { firstQuarter } from './firstPlay'
 import { ToyCityMove } from './toy-city/ToyCityMove'
 import { useAppUi } from './ui'
 
@@ -194,6 +196,8 @@ export function ActionBar({
   const settleSpot = useTutorialSpot(company, 'settle')
   // 튜토리얼 잠금 (347번): 분기 넘기기는 직원을 앉힌 뒤 열린다.
   const settleLocked = useLocked(company, 'settle')
+  const firstGame =
+    useTutorial((s) => s.active) && firstQuarter(company) && !company.invest?.outcome
   const ended = company.status === 'ENDED'
   const battle = company.invest?.outcome?.battle
   const pending = battle?.open ? battle : null
@@ -285,9 +289,15 @@ export function ActionBar({
             ) : (
               <>
                 <small>
-                  {busy ? '처리 중…' : settleLocked ? '직원을 앉혀주세요' : '다음 분기로'}
+                  {busy
+                    ? '처리 중…'
+                    : settleLocked
+                      ? '직원을 앉혀주세요'
+                      : firstGame
+                        ? '첫 판 준비 완료'
+                        : '다음 분기로'}
                 </small>
-                <strong>▶ 넘기기</strong>
+                <strong>{firstGame ? '첫 게임 시작' : '▶ 넘기기'}</strong>
                 <em>
                   자리 {assigned}/{company.seats}
                 </em>

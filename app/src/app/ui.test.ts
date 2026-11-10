@@ -75,8 +75,8 @@ describe('앱 탭 (decisions.md 309번)', () => {
     expect(tabBadge(company(), 'issue')).toBeNull()
   })
 
-  it('직원이 없으면 채용부터, 있으면 사무실부터', () => {
-    expect(firstTab(company())).toBe('market')
+  it('처음 들어오면 직원 유무와 관계없이 사무실부터', () => {
+    expect(firstTab(company())).toBe('office')
     expect(firstTab(company({ employees: [{ id: 1 }] as never }))).toBe('office')
     expect(firstTab(company({ status: 'ENDED' }))).toBe('office')
   })
