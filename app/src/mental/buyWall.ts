@@ -2,13 +2,13 @@ export const BUY_WALL = {
   hpRatio: 0.25,
   mentalLossRatio: 0.12,
   rebuildSeconds: 4,
-  shotSeconds: 2.8,
-  sellsPerShot: 5,
+  shotSeconds: 1.8,
+  sellsPerShot: 3,
   retreatSeconds: 0.7,
   retreatDistance: 80,
 } as const
 
-/** 매수 지원은 매도 물량 다섯 개당 최대 한 발. 벽이 무너지면 잠시 재정비한다. */
+/** 매수 지원은 매도 물량 세 개당 최대 한 발. 벽이 무너지면 잠시 재정비한다. */
 export class BuyWall {
   readonly maxHp: number
   hp: number

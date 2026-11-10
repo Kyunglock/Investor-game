@@ -163,6 +163,8 @@ async function assaultCheck() {
         sells: number
         rebuildLeft: number
         retreatLeft: number
+        playerY: number
+        wallY: number
       }
       circuit: { elapsed: number; assembled: number } | null
     }
@@ -208,6 +210,10 @@ async function assaultCheck() {
         market.battleSeconds > 2
       ) {
         checkedBuyWall = true
+        assert(
+          market.buyWall.wallY < market.buyWall.playerY - 60,
+          'buy wall guards the player in front',
+        )
         const before = await page.evaluate(() => {
           const w = window as unknown as {
             __mentalMarket: () => Market
@@ -341,7 +347,7 @@ async function assaultCheck() {
       assert(checkedBuyWall, 'collapse was exercised')
       assert(market)
       assert(market.buyWall.shots > 0, 'support actually fires')
-      assert(market.buyWall.shots * 5 <= market.buyWall.sells, 'buys stay below one fifth of sells')
+      assert(market.buyWall.shots * 3 <= market.buyWall.sells, 'one buy per three sells')
     }
     const picked = await page.evaluate(
       () => (window as unknown as { __assaultCards: string[] }).__assaultCards,

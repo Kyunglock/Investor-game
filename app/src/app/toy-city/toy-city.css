@@ -721,19 +721,20 @@
 }
 .toy-bottom-cards {
   display: grid;
-  grid-template-columns: 1fr 1.45fr 1fr;
-  gap: 7px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 10px;
   align-items: end;
 }
 .toy-stat {
   border: 1px solid #c5cdec;
   background: #fffdf9;
   border-radius: 17px;
-  padding: 10px 3px;
+  padding: 10px 6px;
   box-shadow: 0 4px 0 #8d9ac4;
   text-align: center;
   min-height: 83px;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 .toy-stat small {
   display: block;
@@ -742,10 +743,10 @@
 }
 .toy-stat strong {
   display: block;
-  font-size: clamp(14px, 4.5vw, 20px);
+  font-size: clamp(14px, 4vw, 20px);
   line-height: 1.8;
   letter-spacing: -0.6px;
-  white-space: nowrap;
+  white-space: normal;
 }
 .toy-stat em {
   display: block;
@@ -767,7 +768,7 @@
 }
 .toy-advance strong {
   font-family: var(--font-game);
-  font-size: 27px;
+  font-size: clamp(18px, 5vw, 24px);
   line-height: 1.65;
 }
 .toy-advance small,

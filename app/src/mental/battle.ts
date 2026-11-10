@@ -668,7 +668,7 @@ class BattleScene extends Phaser.Scene {
       this.begun = true
       this.opts.onBanner(
         this.mode === 'assault'
-          ? '돌격! 매도벽을 부수고 올라가라'
+          ? '매도벽을 부수고 다음 벽으로!'
           : this.mode === 'advance'
             ? '전진! 길을 막는 불안을 치워라'
             : '분기 시작! 멘탈 꽉 잡아',
@@ -1570,7 +1570,7 @@ class BattleScene extends Phaser.Scene {
     this.lastFlow = this.elapsed
     // 다음 벽의 아래 끝도 화면 밖에 둔다. 잡몹 구간이 끝나 공격 가능해진 뒤에만 들어온다.
     this.addWall(this.wallsBroken, this.holdY())
-    this.opts.onBanner('매도 물량을 체결하고 다음 벽으로!', '#3a7bea')
+    this.opts.onBanner('매도벽을 부수고 다음 벽으로!', '#3a7bea')
   }
 
   /** 잡몹 구간(#593) 동안 화면 밖에서 대기하는 다음 벽: 아직 깨지지 않는다. */
@@ -1829,7 +1829,7 @@ class BattleScene extends Phaser.Scene {
         wall.arrived = true
         this.stuck = 0
         if (wall.index === 0) {
-          this.opts.onBanner(`${spec.name}! 부수고 올라가라`, '#3a7bea')
+          this.opts.onBanner('매도벽을 부수고 다음 벽으로!', '#3a7bea')
         }
         this.pushHud(true)
       }
@@ -1976,6 +1976,7 @@ class BattleScene extends Phaser.Scene {
             rebuildLeft: this.buyWall.rebuildLeft,
             retreatLeft: this.buyWall.retreatLeft,
             playerY: this.player.y,
+            wallY: this.buyWallY(),
           }
         : null,
       circuit: this.circuit
@@ -2544,7 +2545,8 @@ class BattleScene extends Phaser.Scene {
   }
 
   private buyWallY() {
-    return this.playerY() + 48
+    // 위에서 내려오는 물량을 플레이어보다 먼저 막는다. 돌진·후퇴에도 함께 움직인다.
+    return this.player.y - 80
   }
 
   private drawBuyWall() {
