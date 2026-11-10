@@ -3,8 +3,8 @@ export const CIRCUIT_BREAKER = {
   afterWalls: [5] as readonly number[],
   seconds: 3.6,
   healRatio: 0.2,
-  orders: 6,
-  sharesPerOrder: 300,
+  pieces: 24,
+  assembleUntil: 0.8,
 }
 
 /** 전투 시계와 별개로 흐른다. 카드·나가기 창에서는 step을 호출하지 않는다. */
@@ -17,8 +17,17 @@ export class CircuitBreaker {
   get progress() {
     return Math.min(1, this.elapsed / CIRCUIT_BREAKER.seconds)
   }
-  get queued() {
-    return Math.min(CIRCUIT_BREAKER.orders, Math.floor(this.progress * CIRCUIT_BREAKER.orders))
+  get assembled() {
+    return Math.min(CIRCUIT_BREAKER.pieces, Math.floor(this.formation * CIRCUIT_BREAKER.pieces))
+  }
+  get formation() {
+    return Math.min(1, this.progress / CIRCUIT_BREAKER.assembleUntil)
+  }
+  get reveal() {
+    return Math.max(
+      0,
+      (this.progress - CIRCUIT_BREAKER.assembleUntil) / (1 - CIRCUIT_BREAKER.assembleUntil),
+    )
   }
   get done() {
     return this.progress >= 1

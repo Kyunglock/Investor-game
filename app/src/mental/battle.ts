@@ -453,7 +453,17 @@ class BattleScene extends Phaser.Scene {
   private circuit: CircuitBreaker | null = null
   private circuitFx: CircuitBreakerFx | null = null
   private circuitIndex = 0
-  private marketStats = { panic: 0, dump: 0, circuits: 0, recovered: 0, released: 0 }
+  private circuitWall: WallState | null = null
+  private marketStats = {
+    panic: 0,
+    dump: 0,
+    circuits: 0,
+    recovered: 0,
+    formedWalls: 0,
+    formedPieces: 0,
+    wallHpBefore: 0,
+    wallHpAfter: 0,
+  }
   private rushLeft = 0
   /** 지금 나와 있는 큰손이 중간 큰손인가(#593): 잡아도 판이 끝나지 않고 다음 구간이 열린다. */
   private bossMid = false
@@ -1838,22 +1848,44 @@ class BattleScene extends Phaser.Scene {
     this.mental = Math.min(this.loadout.maxMental, this.mental + recovered)
     this.marketStats.recovered += recovered
     const { w, h } = this.view()
-    this.circuitFx?.draw(c, w, h, this.player.x, this.player.y, this.reducedMotion)
+    const wall = this.circuitWall
+    const lane = this.lane()
+    if (wall) {
+      wall.band.setAlpha(c.reveal)
+      for (const e of wall.cells) {
+        e.setAlpha(c.reveal)
+        e.cell?.label.setAlpha(c.reveal)
+      }
+    }
+    this.circuitFx?.draw(c, w, h, this.player.x, this.player.y, this.reducedMotion, {
+      left: lane.left,
+      width: lane.width,
+      bottom: wall?.y ?? this.stopY(),
+      height: (wall?.spec.rows ?? 3) * CELL_H,
+    })
     this.player.setTexture('hero-idle')
     this.pushHud(true)
     if (!c.done) return
     this.circuitFx?.destroy()
     this.circuitFx = null
     this.circuit = null
-    const lane = this.lane()
-    // 대기하던 300주 주문 6개가 위에서 순서대로 내려온다. 벽 체력은 다시 늘리지 않는다.
-    for (let i = 0; i < c.queued; i++) {
-      const x = lane.left + lane.width * (0.25 + (i % 3) * 0.25)
-      if (this.spawn('order', [x, -40 - Math.floor(i / 3) * 65])) this.marketStats.released++
+    if (wall) {
+      wall.arrived = true
+      wall.band.setAlpha(1)
+      for (const e of wall.cells) {
+        e.setAlpha(1)
+        e.cell?.label.setAlpha(1)
+      }
+      this.rushLeft = 0
+      this.stuck = 0
+      this.marketStats.formedWalls++
+      this.marketStats.formedPieces += c.assembled
+      this.marketStats.wallHpAfter = wall.cells.reduce((sum, e) => sum + e.hp, 0)
     }
+    this.circuitWall = null
     this.invulnUntil = Math.max(this.invulnUntil, this.elapsed + 1.2)
     this.lastFlow = this.elapsed
-    this.opts.onBanner('거래 재개! 대기 매도 물량 유입', '#ffce7a')
+    this.opts.onBanner('거래 재개! 쌓인 매도벽을 돌파하라!', '#ffce7a')
     if (!this.paused && !this.choosing && !this.stopped && !this.over) this.physics.resume()
   }
 
@@ -1861,7 +1893,9 @@ class BattleScene extends Phaser.Scene {
   inspectMarket() {
     return {
       ...this.marketStats,
-      circuit: this.circuit ? { elapsed: this.circuit.elapsed, queued: this.circuit.queued } : null,
+      circuit: this.circuit
+        ? { elapsed: this.circuit.elapsed, assembled: this.circuit.assembled }
+        : null,
       battleSeconds: this.elapsed,
       mental: this.mental,
       maxMental: this.loadout.maxMental,
@@ -3668,6 +3702,21 @@ class BattleScene extends Phaser.Scene {
     ) {
       this.circuitIndex++
       this.circuit = new CircuitBreaker(this.mental, this.loadout.maxMental)
+      this.circuitWall = this.walls.find((wall) => !wall.broken) ?? null
+      if (this.circuitWall) {
+        // 다음 벽의 기존 체력은 유지하고, 쌓이는 조각이 보이도록 세 층 높이로 세운다.
+        const wall = this.circuitWall
+        wall.spec = { ...wall.spec, rows: Math.max(3, wall.spec.rows) }
+        wall.y = this.stopY()
+        this.layoutWall(wall)
+        this.placeWall(wall)
+        this.marketStats.wallHpBefore = wall.cells.reduce((sum, e) => sum + e.hp, 0)
+        wall.band.setAlpha(0)
+        for (const e of wall.cells) {
+          e.setAlpha(0)
+          e.cell?.label.setAlpha(0)
+        }
+      }
       this.circuitFx = new CircuitBreakerFx(this)
       this.marketStats.circuits++
       this.physics.pause()

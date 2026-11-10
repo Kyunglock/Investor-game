@@ -137,12 +137,15 @@ async function assaultCheck() {
       dump: number
       circuits: number
       recovered: number
-      released: number
+      formedWalls: number
+      formedPieces: number
+      wallHpBefore: number
+      wallHpAfter: number
       battleSeconds: number
       mental: number
       maxMental: number
       physicsPaused: boolean
-      circuit: { elapsed: number; queued: number } | null
+      circuit: { elapsed: number; assembled: number } | null
     }
     let checkedCircuit = false
     let circuitBattleTime: number | undefined
@@ -187,7 +190,7 @@ async function assaultCheck() {
           'circuit does not consume battle time',
         )
         assert(market.mental <= market.maxMental, 'healing respects max mental')
-        if (!checkedCircuit && market.circuit.elapsed > 1) {
+        if (!checkedCircuit && market.circuit.elapsed > 2.2) {
           checkedCircuit = true
           const before = await page.evaluate(() => {
             const w = window as unknown as {
@@ -250,7 +253,9 @@ async function assaultCheck() {
     if (process.env.ASSAULT_MARKET_CHECK && outcome.win) {
       assert(market && market.panic > 0 && market.dump > 0, 'both monsters actually spawn')
       assert.equal(market.circuits, 1, 'one circuit per assault')
-      assert.equal(market.released, 6, 'queued sell orders enter battle')
+      assert.equal(market.formedWalls, 1, 'pieces form the next combat wall')
+      assert.equal(market.formedPieces, 24, 'all sell pieces join the wall')
+      assert.equal(market.wallHpAfter, market.wallHpBefore, 'formation preserves intended wall HP')
       assert(checkedCircuit, 'circuit pause and resume checked')
       if (process.env.ASSAULT_RECOVERY_CHECK)
         assert(market.recovered > 0, 'circuit restores missing mental')

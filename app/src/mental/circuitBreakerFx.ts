@@ -28,43 +28,86 @@ export class CircuitBreakerFx {
     playerX: number,
     playerY: number,
     reduced: boolean,
+    wall: { left: number; width: number; bottom: number; height: number },
   ) {
     const g = this.ink.clear()
     const cx = w / 2
     const width = Math.min(w - 32, 330)
-    const top = h * 0.27
-    g.fillStyle(0x102a40, 0.94).fillRoundedRect(cx - width / 2, top, width, 190, 20)
-    g.lineStyle(2, 0xf6c86a, 1).strokeRoundedRect(cx - width / 2, top, width, 190, 20)
-    // 위쪽 거래 정지 표시등. 번쩍임 대신 느리게 밝아진다.
+    const top = Math.max(h * 0.3, wall.bottom + 24)
+    g.fillStyle(0x102a40, 0.94).fillRoundedRect(cx - width / 2, top, width, 112, 20)
+    g.lineStyle(2, 0xf6c86a, 1).strokeRoundedRect(cx - width / 2, top, width, 112, 20)
     g.fillStyle(0xffcf70, reduced ? 1 : 0.7 + Math.sin(c.elapsed * 3) * 0.2)
     g.fillRoundedRect(cx - 47, top + 11, 94, 4, 2)
     this.title
-      .setPosition(cx, top + 39)
+      .setPosition(cx, top + 38)
       .setText(`서킷브레이커 · ${Math.ceil(CIRCUIT_BREAKER.seconds - c.elapsed)}초`)
-    // 양쪽에서 날아와 3단 주문 더미로 정렬된다.
-    for (let i = 0; i < CIRCUIT_BREAKER.orders; i++) {
-      const t = Math.max(0, Math.min(1, c.progress * CIRCUIT_BREAKER.orders - i))
-      if (t === 0) continue
-      const x = cx + (i % 2 === 0 ? -49 : 49) + (reduced ? 0 : (1 - t) * (i % 2 === 0 ? -60 : 60))
-      const y = top + 78 + Math.floor(i / 2) * 13
-      g.fillStyle(0x0a192c, t * 0.5).fillRoundedRect(x - 40, y + 3, 80, 32, 5)
-      g.fillStyle(0x77b6ed, t).fillRoundedRect(x - 40, y, 80, 30, 5)
-      g.lineStyle(1.5, 0xd9efff, t).strokeRoundedRect(x - 40, y, 80, 30, 5)
-      g.lineStyle(2, 0x245483, t)
-        .lineBetween(x - 28, y + 10, x + 7, y + 10)
-        .lineBetween(x - 28, y + 19, x + 23, y + 19)
-    }
     this.orders
-      .setPosition(cx, top + 158)
-      .setText(`매도 대기 ${(c.queued * CIRCUIT_BREAKER.sharesPerOrder).toLocaleString()}주`)
-    g.fillStyle(0x27485b).fillRoundedRect(cx - width / 2 + 18, top + 177, width - 36, 4, 2)
+      .setPosition(cx, top + 72)
+      .setText(
+        c.formation < 1
+          ? `매도 조각 집결 · ${c.assembled}/${CIRCUIT_BREAKER.pieces}`
+          : '매도벽 완성! 거래 재개 준비',
+      )
+    g.fillStyle(0x27485b).fillRoundedRect(cx - width / 2 + 18, top + 94, width - 36, 4, 2)
     g.fillStyle(0x8ef3c6).fillRoundedRect(
       cx - width / 2 + 18,
-      top + 177,
+      top + 94,
       (width - 36) * c.progress,
       4,
       2,
     )
+    // 전광판 속 그림이 아니라 다음 전투 벽의 실제 위치에 주문 조각 24개를 쌓는다.
+    const cols = 6
+    const rows = CIRCUIT_BREAKER.pieces / cols
+    const bw = wall.width / cols
+    const bh = wall.height / rows
+    const alpha = 1 - c.reveal
+    g.lineStyle(1, 0x8bbdf3, 0.35 * alpha).strokeRect(
+      wall.left,
+      wall.bottom - wall.height,
+      wall.width,
+      wall.height,
+    )
+    for (let i = 0; i < CIRCUIT_BREAKER.pieces; i++) {
+      const t = Math.max(0, Math.min(1, (c.formation * (CIRCUIT_BREAKER.pieces + 2) - i) / 3))
+      if (t === 0) continue
+      const row = Math.floor(i / cols)
+      const col = i % cols
+      const tx = wall.left + (col + 0.5) * bw
+      const ty = wall.bottom - (row + 0.5) * bh
+      const fromX = i % 2 === 0 ? -bw : w + bw
+      const ease = 1 - (1 - t) ** 3
+      const x = reduced ? tx : fromX + (tx - fromX) * ease
+      const y = reduced ? ty : ty - Math.sin(t * Math.PI) * 55 - (1 - ease) * 45
+      const visible = alpha * (reduced ? t : Math.min(1, t * 4))
+      g.fillStyle(0x0b2449, visible).fillRoundedRect(
+        x - bw / 2 + 2,
+        y - bh / 2 + 3,
+        bw - 3,
+        bh - 2,
+        3,
+      )
+      g.fillStyle(i % 3 === 0 ? 0x3472c9 : 0x64a6e9, visible).fillRoundedRect(
+        x - bw / 2 + 1,
+        y - bh / 2,
+        bw - 3,
+        bh - 3,
+        3,
+      )
+      g.lineStyle(1.5, 0xbde1ff, visible).strokeRoundedRect(
+        x - bw / 2 + 1,
+        y - bh / 2,
+        bw - 3,
+        bh - 3,
+        3,
+      )
+      g.lineStyle(2, 0x173e79, visible)
+        .lineBetween(x - bw * 0.3, y - 3, x + bw * 0.18, y - 3)
+        .lineBetween(x - bw * 0.3, y + 3, x + bw * 0.3, y + 3)
+      if (!reduced && t > 0.8 && t < 1) {
+        g.lineStyle(2, 0xe2f5ff, (1 - t) * 5).strokeEllipse(tx, ty + bh / 2, bw * 1.25, 10)
+      }
+    }
     // 멘탈 회복이 사장냥으로 들어오는 궤적과 십자 빛.
     const pulse = reduced ? 0.5 : (c.elapsed % 1.2) / 1.2
     g.lineStyle(3, 0x8ef3c6, 0.8 * (1 - pulse)).strokeEllipse(
