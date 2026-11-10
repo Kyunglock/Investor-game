@@ -1,4 +1,5 @@
 import type Phaser from 'phaser'
+import { DPR } from './art'
 import { BUY_WALL, type BuyWall } from './buyWall'
 import { shareLabel } from './shares'
 
@@ -17,11 +18,12 @@ export class BuyWallFx {
     this.ink = scene.add.graphics().setDepth(4)
     this.title = scene.add
       .text(0, 0, '', {
-        fontFamily: 'Jua, sans-serif',
-        fontSize: 12,
+        fontFamily: '"Jua", "Gowun Dodum", sans-serif',
+        fontSize: 18,
         color: '#fff4da',
         stroke: '#803b3f',
-        strokeThickness: 3,
+        strokeThickness: 2,
+        resolution: DPR,
       })
       .setOrigin(0.5)
       .setDepth(6)
@@ -32,11 +34,12 @@ export class BuyWallFx {
       active: false,
       label: scene.add
         .text(0, 0, '', {
-          fontFamily: 'Jua, sans-serif',
-          fontSize: 11,
+          fontFamily: '"Jua", "Gowun Dodum", sans-serif',
+          fontSize: 12,
           color: '#fff7d6',
           stroke: '#9a3f37',
-          strokeThickness: 2,
+          strokeThickness: 1,
+          resolution: DPR,
         })
         .setOrigin(0.5)
         .setDepth(6)
@@ -95,6 +98,8 @@ export class BuyWallFx {
         .setText(`매수벽 붕괴 · 재정비 ${Math.ceil(wall.rebuildLeft)}초`)
         .setPosition(left + width / 2, y)
     }
+    // 강화로 물량 자릿수가 늘어나도 벽 밖으로 넘치지 않게 한다.
+    this.title.setScale(Math.min(1, (width - 20) / Math.max(1, this.title.width)))
     for (const shot of this.shots) {
       shot.label.setVisible(shot.active).setPosition(shot.x, shot.y)
       if (!shot.active) continue
