@@ -110,7 +110,7 @@ import { MATE_LOOKS, mateFormation, spreadTargets } from './mates'
 import { OrderBarrierQueue } from './orderBarrier'
 import { shareLabel } from './shares'
 import { wallOffset } from './stageArt'
-import { waveKind } from './waves'
+import { PANIC_RUSH, panicRushGap, waveKind } from './waves'
 import {
   aimWithJitter,
   pierceOf,
@@ -612,6 +612,11 @@ class BattleScene extends Phaser.Scene {
   /** 첫 카드를 골라 싸움이 시작됐다 (339번). */
   private begun = false
   private nextWave = WAVE_SECONDS
+  /** 다음 패닉셀 러시 시각(초)과, 러시 중이면 아직 나올 패닉셀 수·다음 한 마리까지 남은 시간. */
+  private nextPanicRush: number = PANIC_RUSH.first + panicRushGap(Math.random()) / 2
+  private panicRushLeft = 0
+  private panicRushClock = 0
+  private panicRushEvery = 0
   /** 한 화면에 함께 있는 적의 최대 수(334·340번): 더 있으면 새로 만들지 않는다. */
   /** 동시에 살아 있는 적의 최대: 파도(투매 최대 36, 패닉 최대 44)가 잘리지 않게 넉넉히. */
   private static readonly MAX_ALIVE = 100
@@ -2191,6 +2196,37 @@ class BattleScene extends Phaser.Scene {
       ])
     }
     this.opts.onBanner('공매도 웨이브! 방패 대열이 밀려온다!', '#9eb7ff')
+  }
+
+  /** 패닉셀 러시: 판 중간중간 갑자기 "패닉셀이 몰려온다!!" 하고 몇 초 동안 위에서 패닉셀이 쏟아진다. */
+  private panicRushStep(dt: number) {
+    if (this.panicRushLeft === 0 && this.elapsed >= this.nextPanicRush) {
+      // 정해진 파도와 겹치면 조금 미룬다.
+      if (Math.abs(this.nextWave - this.elapsed) < PANIC_RUSH.waveGuard) {
+        this.nextPanicRush = this.nextWave + PANIC_RUSH.waveGuard
+        return
+      }
+      this.panicRushLeft = Math.max(
+        8,
+        Math.round(PANIC_RUSH.count * this.staged(this.countScale) * (this.assault ? 0.6 : 1)),
+      )
+      this.panicRushEvery = PANIC_RUSH.seconds / this.panicRushLeft
+      this.panicRushClock = 0
+      this.nextPanicRush = this.elapsed + PANIC_RUSH.seconds + panicRushGap(Math.random())
+      this.opts.onBanner('패닉셀이 몰려온다!!', '#e8434f')
+      if (!this.reducedMotion) this.cameras.main.shake(320, 0.006)
+      sfx.rumble()
+      haptic.medium()
+    }
+    if (this.panicRushLeft === 0) return
+    this.panicRushClock += dt
+    const { w } = this.view()
+    while (this.panicRushLeft > 0 && this.panicRushClock >= this.panicRushEvery) {
+      this.panicRushClock -= this.panicRushEvery
+      this.panicRushLeft--
+      // 길 폭 안에서 두세 마리씩 겹쳐 쏟아지듯 위에서 내려온다.
+      this.spawn('panic', [w * (0.14 + Math.random() * 0.72), -30 - Math.random() * 60])
+    }
   }
 
   private wavePanic() {
@@ -3928,6 +3964,7 @@ class BattleScene extends Phaser.Scene {
       } else this.waveShort()
       this.nextWave += WAVE_SECONDS
     }
+    if (this.mode === 'defense' || this.assault) this.panicRushStep(dt)
 
     // 적 움직임: 매 프레임 새 객체를 만들지 않는다.
     const list = this.enemies.getChildren()
