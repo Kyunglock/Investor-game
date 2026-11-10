@@ -305,9 +305,10 @@ export function climbSpeed(sinceBreak: number, reduced = false): number {
   return drift + (dash - drift) * (1 - t) ** 2
 }
 
-/** 제한 시간 안에 전부 돌파하면 3개, 미완료는 부순 벽 개수로 평가한다. */
+/** 돌파 진행률로 평가한다 (455번): 제한 시간 안에 100% 돌파하면 3개, 미완료는 50% 이상 2개, 25% 이상 1개. */
 export function assaultStars(win: boolean, wallsBroken: number): number {
-  if (win && wallsBroken >= ASSAULT_WALLS.length) return 3
-  if (wallsBroken >= 4) return 2
-  return wallsBroken >= 1 ? 1 : 0
+  const total = ASSAULT_WALLS.length
+  if (win && wallsBroken >= total) return 3
+  if (wallsBroken * 2 >= total) return 2
+  return wallsBroken * 4 >= total ? 1 : 0
 }
