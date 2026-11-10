@@ -238,9 +238,9 @@ class InvestEngineTest {
 
   /** 회의 뒤 전투의 세기 (#594): 회사가 크고 오래되고 사장이 강해질수록 오른다. 이유마다 몫이 보인다. */
   @Test
-  void 회의_뒤_전투의_세기는_진행할수록_오른다() {
+  void 회의_뒤_방어_전투의_세기는_진행할수록_오른다() {
     CompanyState c = company(3, stats(50, 100, 100, 100));
-    ENGINE.invest.decide(c, right(c), new HashSeededRandom(3));
+    ENGINE.invest.decide(c, wrong(c), new HashSeededRandom(3));
     int base = ENGINE.invest.battleLevel(c, c.invest, 0);
     assertThat(ENGINE.invest.battleLevel(c, c.invest, 10)).as("스테이지 5개마다 +1").isEqualTo(base + 2);
     c.year = 5;
@@ -257,6 +257,28 @@ class InvestEngineTest {
         .containsEntry("year", 2)
         .containsEntry("building", 2)
         .containsEntry("upgrade", 2);
+  }
+
+  @Test
+  void 매도벽은_강화를_사도_세기가_오르지_않고_진행도만_반영한다() {
+    CompanyState c = company(3, stats(50, 100, 100, 100));
+    ENGINE.invest.decide(c, right(c), new HashSeededRandom(3));
+    assertThat(InvestEngine.battleMode(c.invest)).isEqualTo(InvestEngine.ASSAULT);
+    int base = ENGINE.invest.battleLevel(c, c.invest, 0);
+    for (int level : List.of(49, 50, 100, 500, 2000)) {
+      c.battleLevels.put("damage", level);
+      c.battleLevels.put("fire", level);
+      c.battleLevels.put("hp", level);
+      assertThat(ENGINE.invest.battleLevel(c, c.invest, 0))
+          .as("미뤄둔 같은 미션도 강화 후 더 어려워지지 않는다: " + level)
+          .isEqualTo(base);
+      assertThat(ENGINE.invest.battleLevelParts(c, c.invest, 0)).doesNotContainKey("upgrade");
+    }
+    c.year += 4;
+    c.building = CompanyEngine.LADDER.get(4);
+    assertThat(ENGINE.invest.battleLevel(c, c.invest, 10))
+        .as("연차·건물·스테이지로 오르는 난이도는 유지")
+        .isEqualTo(base + 6);
   }
 
   /** 용기가 낮은 단타 직원은 "제가 알아서 할게요" 하고 제 판단대로 한다. 안목이 좋으면 제멋대로 한 쪽이 맞을 때가 많다. */
