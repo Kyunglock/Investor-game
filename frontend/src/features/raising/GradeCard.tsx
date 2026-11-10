@@ -1,10 +1,10 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useId } from 'react'
 import type { Grade } from '../../api/client'
 import { EMPLOYEE_LADDER } from './grades'
 
 /**
  * 캐릭터 카드의 등급 티어 (decisions.md 294번): 게임 아이템 등급처럼 등급마다 테두리와 등급표가 다르다. F·E 무쇠 → D·C 구리 → B·A 은 → S·SS·SSS 금 →
- * X·XX·XXX 사파이어 → Z·ZZ·ZZZ 황금빛 → XS·XSS·GOD 무지개빛(홀로그램). 금부터는 빛이 흐르고, 사파이어부터는 빛이 번진다. 모양은 index.css의
+ * X·XX·XXX 사파이어 → Z·ZZ·ZZZ 황금빛 → XS·XSS·GOD 무지개빛(홀로그램). 금부터는 빛이 흐르고, 사파이어부터는 빛이 번진다. 문장은 티어마다 월계수·날개·왕관을 더하며, 색은 index.css의
  * `.grade-card`·`.grade-gem`과 티어 클래스가 그린다.
  */
 export type Tier = 'common' | 'bronze' | 'silver' | 'gold' | 'blue' | 'royal' | 'holo'
@@ -118,7 +118,25 @@ export function GradeBadge({
 }) {
   const tier = tierOf(grade)
   const rank = TIER_RANK[tier]
-  const id = `gem-${tier}`
+  const id = `gem-${useId().replace(/:/g, '')}`
+  const ornate = rank >= 4
+  const royal = rank >= 6
+  const marks =
+    tier === 'holo'
+      ? EMPLOYEE_LADDER.indexOf(grade) - EMPLOYEE_LADDER.indexOf('XS') + 1
+      : Math.min(3, grade.length)
+  const body =
+    tier === 'gold'
+      ? 'M28 13 A18 18 0 1 1 27.99 13 Z'
+      : tier === 'blue'
+        ? 'M28 10 L44 20 L44 39 L28 51 L12 39 L12 20 Z'
+        : royal
+          ? 'M28 15 L43 21 L41 39 L28 49 L15 39 L13 21 Z'
+          : tier === 'bronze'
+            ? 'M17 5 H39 L50 16 V43 L39 55 H17 L6 43 V16 Z'
+            : tier === 'silver'
+              ? 'M28 2 L51 15 L47 40 L28 57 L9 40 L5 15 Z'
+              : 'M28 3 L51 10 V30 C51 43 40 53 28 57 C16 53 5 43 5 30 V10 Z'
   const width = BADGE_WIDTH[size]
   return (
     <span
@@ -143,7 +161,7 @@ export function GradeBadge({
             <stop offset="1" className="gem-stop-dark" />
           </linearGradient>
           <clipPath id={`${id}-clip`}>
-            <path d="M28 6 L48 12 V30 C48 41 39 50 28 54 C17 50 8 41 8 30 V12 Z" />
+            <path d={body} />
           </clipPath>
           <linearGradient id={`${id}-gloss`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0" stopColor="#fff" stopOpacity="0.55" />
@@ -151,25 +169,90 @@ export function GradeBadge({
             <stop offset="0.5" stopColor="#fff" stopOpacity="0" />
           </linearGradient>
         </defs>
-        {/* 방패: 바깥 어두운 테, 보석 몸통, 위쪽 광택 */}
+        {/* 장식도 viewBox 안에 두어 카드·이름 줄의 기존 점유 폭을 넘지 않는다. */}
+        {ornate && (
+          <g className="gem-regalia" strokeLinejoin="round">
+            {tier === 'gold' && (
+              <>
+                <path
+                  d="M19 50 C2 43 1 26 9 18 M37 50 C54 43 55 26 47 18"
+                  fill="none"
+                  strokeWidth="1.6"
+                />
+                {[0, 1, 2, 3].map((i) => (
+                  <g key={i}>
+                    <ellipse
+                      cx={6 + i * 0.6}
+                      cy={23 + i * 7}
+                      rx="2.2"
+                      ry="4"
+                      transform={`rotate(-35 ${6 + i * 0.6} ${23 + i * 7})`}
+                    />
+                    <ellipse
+                      cx={50 - i * 0.6}
+                      cy={23 + i * 7}
+                      rx="2.2"
+                      ry="4"
+                      transform={`rotate(35 ${50 - i * 0.6} ${23 + i * 7})`}
+                    />
+                  </g>
+                ))}
+                <path d="M28 1 L30 6 L36 6 L31 10 L33 15 L28 12 L23 15 L25 10 L20 6 L26 6 Z" />
+              </>
+            )}
+            {rank >= 5 && (
+              <>
+                <path d="M16 23 L2 14 L4 27 L16 34 M40 23 L54 14 L52 27 L40 34" />
+                <path d="M15 33 L2 27 L6 39 L18 43 M41 33 L54 27 L50 39 L38 43" />
+                {royal && <path d="M17 42 L5 38 L11 49 L23 51 M39 42 L51 38 L45 49 L33 51" />}
+              </>
+            )}
+            {royal && (
+              <>
+                <path d="M17 15 L14 5 L23 9 L28 1 L33 9 L42 5 L39 15 Z" />
+                <path d="M16 50 L10 57 L23 55 L28 59 L33 55 L46 57 L40 50 Z" />
+                <path d="M17 16 H39" fill="none" strokeWidth="2" />
+              </>
+            )}
+            {tier === 'holo' && (
+              <>
+                <ellipse
+                  cx="28"
+                  cy="31"
+                  rx="26"
+                  ry="22"
+                  fill="none"
+                  strokeWidth=".8"
+                  opacity=".65"
+                />
+                <path d="M2 7 L4 3 L6 7 L10 9 L6 11 L4 15 L2 11 L0 9 Z M50 9 L52 5 L54 9 L56 11 L54 13 L52 17 L50 13 L48 11 Z" />
+              </>
+            )}
+          </g>
+        )}
         <path
-          d="M28 2 L52 9 V30 C52 44 41 54 28 58 C15 54 4 44 4 30 V9 Z"
+          d={body}
           className="gem-rim"
-          strokeWidth={2.2}
+          strokeWidth={ornate ? 2 : 2.2}
           strokeLinejoin="round"
           fill={`url(#${id}-body)`}
         />
+        <path d={body} fill={`url(#${id}-gloss)`} />
         <path
-          d="M28 6 L48 12 V30 C48 41 39 50 28 54 C17 50 8 41 8 30 V12 Z"
-          fill={`url(#${id}-gloss)`}
-        />
-        <path
-          d="M28 6 L48 12 V30 C48 41 39 50 28 54 C17 50 8 41 8 30 V12 Z"
+          d={body}
           fill="none"
           className="gem-inner"
-          strokeWidth={0.8}
-          opacity={0.6}
+          strokeWidth="1"
+          transform="translate(28 31) scale(.86) translate(-28 -31)"
         />
+        {ornate && size !== 'inline' && (
+          <g className="gem-regalia">
+            {Array.from({ length: marks }, (_, i) => (
+              // biome-ignore lint/suspicious/noArrayIndexKey: 고정된 훈장 표식의 개수
+              <path key={i} d={`M${28 + (i - (marks - 1) / 2) * 6} 40 l2 3 -2 3 -2 -3 Z`} />
+            ))}
+          </g>
+        )}
         {shines(tier) && size !== 'inline' && (
           <rect
             x={-20}
@@ -192,9 +275,9 @@ export function GradeBadge({
         )}
         <text
           x="28"
-          y={grade.length > 2 ? 36 : 38}
+          y={ornate ? 36 : 38}
           textAnchor="middle"
-          className={`gem-text font-mono-num ${grade.length > 2 ? 'text-[17px]' : 'text-[24px]'}`}
+          className={`gem-text font-mono-num ${grade.length > 2 ? 'text-[14px]' : grade.length > 1 ? 'text-[18px]' : 'text-[23px]'}`}
           fontWeight={700}
         >
           {grade}

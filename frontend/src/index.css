@@ -782,6 +782,17 @@ p.animate-stamp {
 .grade-gem .gem-inner {
   stroke: var(--g-light);
 }
+.grade-gem .gem-regalia {
+  fill: var(--g-light);
+  stroke: var(--g-dark);
+  stroke-width: 1;
+}
+.grade-gem-inline .gem-regalia {
+  stroke-width: 1.5;
+}
+.grade-gem svg {
+  flex-shrink: 0;
+}
 .grade-gem .gem-text {
   fill: #fff;
   paint-order: stroke fill;
