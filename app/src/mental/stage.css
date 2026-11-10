@@ -649,19 +649,15 @@
   background: #6bb7de;
   transition: height 0.15s;
 }
-/* 멘탈 게이지는 멘탈벽 위에 직접: 벽 그림(벽 줄 위 24px ~ 아래 48px)의 아래쪽(벽 줄 아래 10~34px)에 얹어, 적이 부딪히는 윗단과 사장냥은 가리지 않는다.
-   벽 줄의 높이는 stageArt.ts의 wallOffset(화면 높이 26%, 150~230px)과 같다. */
+/* 멘탈은 하단에 고정하고 보유 카드는 그 위에 놓는다. */
 .battle-wall {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(clamp(150px, 26%, 230px) - 34px);
-  width: min(78%, 300px);
-  height: 24px;
+  width: 100%;
+  max-width: 420px;
+  height: 38px;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 4px 0 9px;
+  padding: 0 8px 0 12px;
   background: #fff2d9e6;
   border: 1.5px solid #a38f76;
   border-radius: 13px;
@@ -678,7 +674,7 @@
   position: relative;
   flex: 1;
   min-width: 40px;
-  height: 16px;
+  height: 22px;
   border-radius: 9px;
   overflow: hidden;
   background: #d4ccce;
@@ -695,12 +691,13 @@
   position: absolute;
   inset: 0;
   text-align: center;
-  font-size: 11px;
-  line-height: 14px;
+  font-size: 13px;
+  line-height: 20px;
   color: #663c38;
   font-weight: 400;
 }
 .battle-footer {
+  flex-direction: column-reverse;
   pointer-events: none;
   position: absolute;
   bottom: max(14px, env(safe-area-inset-bottom));
@@ -711,20 +708,16 @@
   justify-content: center;
   gap: 12px;
 }
-.battle-footer > span {
-  background: #fff9eced;
-  border: 1px solid #8f9eb5;
-  border-radius: 20px;
-  padding: 9px 16px;
-  font-size: 12px;
-  font-weight: 700;
-}
-.battle-footer > div {
+.battle-cards {
   display: flex;
+  justify-content: center;
   gap: 5px;
   flex-wrap: wrap;
 }
-.battle-footer > div > span {
+.battle-cards:empty {
+  display: none;
+}
+.battle-cards > span {
   position: relative;
   display: grid;
   place-items: center;
@@ -735,7 +728,7 @@
   border-radius: 12px;
   font-size: 18px;
 }
-.battle-footer small {
+.battle-cards small {
   position: absolute;
   bottom: -3px;
   right: -3px;
@@ -781,9 +774,6 @@
   }
 }
 @media (max-width: 350px) {
-  .battle-wall {
-    width: 82%;
-  }
   .battle-corner time {
     font-size: 15px;
   }
@@ -800,11 +790,7 @@
     right: 10px;
     gap: 6px;
   }
-  .battle-footer > span {
-    font-size: 10px;
-    padding: 9px;
-  }
-  .battle-footer > div > span {
+  .battle-cards > span {
     width: 29px;
     height: 29px;
     font-size: 16px;
@@ -1352,10 +1338,6 @@
 .battle-boss.battle-boss-low {
   top: calc(max(10px, env(safe-area-inset-top)) + 46px);
 }
-.battle-wall.battle-wall-assault {
-  bottom: 62px;
-  width: min(62%, 240px);
-}
 
 /* 종목 회의 뒤 전투의 규칙 한 줄 (414번): 좁은 폰에서도 잘리지 않게. */
 .stage-heading .stage-invest-rule {
@@ -1431,31 +1413,6 @@
   line-height: 1.15;
   font-weight: 400;
 }
-.battle-footer-assault {
-  flex-direction: column;
-  gap: 4px;
-  font-size: 10px;
-}
-.battle-footer-assault > div {
-  max-width: 100%;
-  flex-wrap: nowrap;
-  overflow: visible;
-  gap: 4px;
-}
-.battle-footer.battle-footer-assault > span {
-  padding: 5px 8px;
-  font-size: 10px;
-  text-align: center;
-}
-.battle-footer.battle-footer-assault > div > span {
-  width: 26px;
-  height: 26px;
-  font-size: 15px;
-}
-.battle-hud-assault .battle-wall-assault {
-  bottom: max(96px, calc(env(safe-area-inset-bottom) + 82px));
-}
-
 .stage-card-manual {
   margin-top: 10px;
   padding: 9px 12px;

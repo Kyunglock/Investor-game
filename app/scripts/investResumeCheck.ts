@@ -140,6 +140,17 @@ try {
         await page.getByTestId('mental-cards').getByRole('button').first().click()
         await page.waitForTimeout(300)
       }
+      await expect(page.getByTestId('mental-cards')).toHaveCount(0)
+      const gauge = await page.getByTestId('battle-wall').boundingBox()
+      const footer = await page.getByTestId('battle-footer').boundingBox()
+      const height = page.viewportSize()?.height ?? 0
+      assert(gauge && footer)
+      assert(gauge.y > height - 80 && gauge.y + gauge.height <= height - 10)
+      assert(gauge.x >= 0 && gauge.x + gauge.width <= width)
+      const badges = await page.locator('.battle-cards').boundingBox()
+      if (badges) assert(badges.y + badges.height <= gauge.y)
+      await expect(page.getByTestId('battle-footer')).not.toContainText('발사')
+      await page.screenshot({ path: `scripts/shots/invest-resume/health-${mode}-${width}.png` })
       await page.getByTestId('mental-quit').click()
       await page.getByTestId('mental-quit-yes').click()
       await page.getByTestId('invest-leave').click()
