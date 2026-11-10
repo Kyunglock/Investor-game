@@ -125,12 +125,12 @@ try {
   const transition = await page.evaluate(() => window.transitionMarket)
   assert.equal(collapse.walls.length, 0, 'old wall breaks before the next wall appears')
   assert(
-    transition.battleSeconds - collapse.market.battleSeconds >= 0.28,
-    'show collapse for 0.3 seconds',
+    transition.battleSeconds - collapse.market.battleSeconds >= 1.48,
+    'show collapse for 1.5 seconds',
   )
   assert(
-    transition.battleSeconds - collapse.market.battleSeconds < 0.6,
-    'no long wait between walls',
+    transition.battleSeconds - collapse.market.battleSeconds < 1.8,
+    'start the next wall promptly after 1.5 seconds',
   )
   await page.waitForFunction(() =>
     window.__mentalWalls().some((wall) => wall.index === 1 && wall.arrived),

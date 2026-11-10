@@ -156,7 +156,7 @@ export const ASSAULT_BOSS = {
 /** 오르는 움직임 (#573 "올라가는 모션"): 벽이 없을 때 천천히 오르는 빠르기(px/s), 벽을 뚫을 때 치고 오르는 빠르기와 그 시간(초). */
 export const ASSAULT_MOTION = {
   /** 파편이 떨어지는 모습을 보여 준 뒤 다음 벽으로 전진한다. */
-  breakSeconds: 0.3,
+  breakSeconds: 1.5,
   drift: 85,
   dash: 950,
   dashSeconds: 0.75,

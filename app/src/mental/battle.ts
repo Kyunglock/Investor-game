@@ -1394,7 +1394,10 @@ class BattleScene extends Phaser.Scene {
     this.stuck = 0
     // 치고 오르는 동안 화면이 쭉 내려가 남아 있던 물량이 사장냥에게 쏟아져 맞았다: 남은 물량은 벽과 함께 체결되고, 치고 오르는 동안은 맞지 않는다.
     this.sweepFlows(wall.y)
-    this.invulnUntil = Math.max(this.invulnUntil, this.elapsed + ASSAULT_MOTION.dashSeconds + 0.5)
+    this.invulnUntil = Math.max(
+      this.invulnUntil,
+      this.elapsed + ASSAULT_MOTION.breakSeconds + ASSAULT_MOTION.dashSeconds + 0.5,
+    )
     const lane = this.lane()
     for (let i = 0; i < 7; i++) {
       const x = lane.left + ((i + 0.5) * lane.width) / 7
