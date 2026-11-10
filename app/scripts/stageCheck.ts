@@ -53,7 +53,7 @@ async function assaultCheck() {
     const page = await browser.newPage({
       viewport: { width: Number(process.env.ASSAULT_WIDTH ?? 390), height: 844 },
       reducedMotion: process.env.ASSAULT_REDUCED ? 'reduce' : 'no-preference',
-      deviceScaleFactor: config.shoot ? 2 : 1,
+      deviceScaleFactor: Number(process.env.ASSAULT_DPR ?? (config.shoot ? 2 : 1)),
     })
     const errors: string[] = []
     page.on('pageerror', (e) => errors.push(e.message))
@@ -247,7 +247,9 @@ async function assaultCheck() {
         )
         await page.waitForTimeout(80)
         await page.screenshot({ path: resolve(shots, 'buy-wall-collapse.png') })
-        await page.waitForTimeout(4500 / speed + 100)
+        await expect
+          .poll(async () => ((await state()).market?.buyWall.hp ?? 0) > 0, { timeout: 15000 })
+          .toBe(true)
         const rebuilt = (await state()).market
         assert(rebuilt && rebuilt.buyWall.hp > 0, 'support wall rebuilds')
         await page.screenshot({ path: resolve(shots, 'buy-wall-rebuilt.png') })
