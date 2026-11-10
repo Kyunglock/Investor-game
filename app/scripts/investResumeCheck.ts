@@ -67,11 +67,39 @@ try {
       const page = await browser.newPage({
         viewport: { width, height: 844 },
         deviceScaleFactor: 2,
-        reducedMotion: 'reduce',
+        reducedMotion: process.env.NORMAL_MOTION ? 'no-preference' : 'reduce',
+        isMobile: true,
+        hasTouch: true,
+        userAgent:
+          'Mozilla/5.0 (Linux; Android 14; Pixel 7 Build/UP1A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/131.0.0.0 Mobile Safari/537.36',
       })
       const errors: string[] = []
+      page.setDefaultTimeout(15000)
       page.on('pageerror', (e) => errors.push(e.message))
       await page.addInitScript(() => localStorage.setItem('investor-game.tutorial', 'done'))
+      await page.addInitScript(() => {
+        const violations: string[] = []
+        ;(window as unknown as { progressViolations: string[] }).progressViolations = violations
+        new MutationObserver(() => {
+          const actions = document.querySelectorAll('.toy-bottom-cards .toy-progress')
+          if (actions.length > 1) violations.push('multiple primary actions')
+          for (const action of actions) {
+            const text = action.textContent ?? ''
+            const battle = /매도벽 돌파|멘탈 방어/.test(text)
+            const quarter = /다음 분기로|넘기기|첫 게임 시작/.test(text)
+            if (battle && quarter) violations.push('mixed battle and quarter labels')
+          }
+        }).observe(document, { childList: true, subtree: true, characterData: true })
+      })
+      const checkTransitions = async () => {
+        assert.deepEqual(
+          await page.evaluate(
+            () => (window as unknown as { progressViolations: string[] }).progressViolations,
+          ),
+          [],
+          'no overlapping actions during state transitions',
+        )
+      }
       await page.route(/\/api\/(company|sessions)(\/|$|\?)/, (route) => {
         const path = new URL(route.request().url()).pathname
         if (route.request().method() === 'POST') {
@@ -96,7 +124,7 @@ try {
       await page.getByTestId('settle').click()
       await page.getByTestId('invest-to-decide').click()
       await page.locator(`[data-choice="${choice}"]`).click()
-      await expect(page.getByTestId('invest-battle')).toBeVisible()
+      await expect(page.getByTestId('invest-battle')).toBeVisible({ timeout: 30000 })
       await page.getByTestId('invest-battle').scrollIntoViewIfNeeded()
       await page.screenshot({ path: `scripts/shots/invest-resume/result-${mode}-${width}.png` })
       await page.getByTestId('invest-leave').click()
@@ -105,11 +133,11 @@ try {
         mode === 'ASSAULT' ? '매도벽 돌파!' : '멘탈 방어!',
       )
       await expect(page.getByTestId('settle')).toHaveCount(0)
-      assert.ok(
-        await primary?.evaluate(
-          (el) => el.isConnected && el.getAttribute('data-testid') === 'pending-invest-battle',
-        ),
-      )
+      assert.ok(await primary?.evaluate((el) => !el.isConnected), 'old quarter button is removed')
+      await expect(page.locator('.toy-progress')).toHaveCount(1)
+      await expect(page.locator('.toy-progress')).toHaveAttribute('data-progress', mode)
+      await expect(page.locator('.toy-progress')).not.toContainText('다음 분기로')
+      await expect(page.locator('.toy-progress')).not.toContainText('넘기기')
       await expect(page.locator('.toy-bottom-cards > button')).toHaveCount(3)
       const boxes = await page.locator('.toy-bottom-cards > button').evaluateAll((els) =>
         els.map((el) => {
@@ -120,6 +148,7 @@ try {
       assert.ok(boxes[0].right <= boxes[1].left && boxes[1].right <= boxes[2].left)
       await page.getByTestId('pending-invest-battle').scrollIntoViewIfNeeded()
       await page.screenshot({ path: `scripts/shots/invest-resume/home-${mode}-${width}.png` })
+      await checkTransitions()
       await page.reload()
       await expect(page.getByTestId('pending-invest-battle')).toBeVisible()
       await page.getByTestId('tab-staff').click()
@@ -136,8 +165,9 @@ try {
       await page.getByTestId('pending-invest-battle').click()
       await page.getByTestId('mental-start').click()
       await expect(page.getByTestId('mental-cards')).toBeVisible()
-      for (let i = 0; i < 3 && (await page.getByTestId('mental-cards').count()); i++) {
-        await page.getByTestId('mental-cards').getByRole('button').first().click()
+      for (let i = 0; i < 10 && (await page.getByTestId('mental-cards').count()); i++) {
+        const card = page.getByTestId('mental-cards').locator('button:not(:disabled)').first()
+        if (await card.count()) await card.click()
         await page.waitForTimeout(300)
       }
       await expect(page.getByTestId('mental-cards')).toHaveCount(0)
@@ -164,7 +194,8 @@ try {
       const deadline = Date.now() + 30000
       while (Date.now() < deadline && !(await page.getByTestId('mental-done').count())) {
         if (await page.getByTestId('mental-cards').count()) {
-          await page.getByTestId('mental-cards').getByRole('button').first().click()
+          const card = page.getByTestId('mental-cards').locator('button:not(:disabled)').first()
+          if (await card.count()) await card.click()
         }
         await page.waitForTimeout(200)
       }
@@ -172,6 +203,10 @@ try {
       await expect(page.getByTestId('invest-battle-summary')).toBeVisible()
       await page.getByTestId('invest-leave').click()
       await expect(page.getByTestId('pending-invest-battle')).toHaveCount(0)
+      await expect(page.locator('.toy-progress')).toHaveAttribute('data-progress', 'QUARTER')
+      await expect(page.locator('.toy-progress')).not.toContainText('매도벽 돌파')
+      await expect(page.locator('.toy-progress')).not.toContainText('멘탈 방어')
+      await checkTransitions()
       await page.getByTestId('settle').click()
       await expect.poll(() => settlements).toBe(1)
       assert.equal(reports, 1)

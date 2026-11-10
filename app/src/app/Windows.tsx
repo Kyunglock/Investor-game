@@ -201,6 +201,7 @@ export function ActionBar({
   const ended = company.status === 'ENDED'
   const battle = company.invest?.outcome?.battle
   const pending = battle?.open ? battle : null
+  const progress = pending?.mode ?? 'QUARTER'
   const enterBattle = () => {
     if (!pending) return
     sfx.stamp()
@@ -263,13 +264,17 @@ export function ActionBar({
             <strong>강화</strong>
             <em>{upgradeLevels > 0 ? `${upgradeLevels}단계 올림` : '공격력·연사'}</em>
           </button>
-          {/* 중앙 입구는 한 버튼만 유지하고, 서버가 확정한 회의 전투 상태로 내용·동작을 함께 바꾼다. */}
+          {/* WebView가 이전 버튼의 합성 레이어를 재사용하지 않도록 분기·전투 상태가 바뀌면 통째로 교체한다. */}
           <button
+            key={`${company.companyId}:${company.year}:${company.quarter}:${progress}`}
             type="button"
             disabled={busy || (!pending && settleLocked)}
             className={
-              pending ? 'battle-entry battle-entry-compact' : `toy-stat toy-advance ${settleSpot}`
+              pending
+                ? 'toy-progress battle-entry battle-entry-compact'
+                : `toy-progress toy-stat toy-advance ${settleSpot}`
             }
+            data-progress={progress}
             data-mode={pending?.mode}
             data-testid={pending ? 'pending-invest-battle' : 'settle'}
             data-locked={!pending && settleLocked ? true : undefined}
