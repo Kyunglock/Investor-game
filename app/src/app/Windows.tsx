@@ -27,7 +27,9 @@ export function Windows({ company }: { company: Company }) {
   const moveBeforeSeats = useRaisingStore((s) => s.moveBeforeSeats)
   const justQuartered = useRaisingStore((s) => s.justQuartered)
   const { settle, convene, scout } = useRaisingStore.getState()
-  const [investOpen, setInvestOpen] = useState(false)
+  const investOpen = useAppUi((s) => s.investOpen)
+  const setInvestOpen = useAppUi((s) => s.setInvestOpen)
+  useEffect(() => () => useAppUi.getState().setInvestOpen(false), [])
   // 멘탈 전투는 스테이지를 골라 들어간다 (decisions.md 369번): 분기를 넘길 때 저절로 뜨지 않는다.
   const battle = useAppUi((s) => s.battle)
   const sheet = useAppUi((s) => s.sheet)
@@ -38,7 +40,7 @@ export function Windows({ company }: { company: Company }) {
       setInvestAfterWeapons(false)
       setInvestOpen(true)
     }
-  }, [investAfterWeapons, sheet])
+  }, [investAfterWeapons, sheet, setInvestOpen])
   const ended = company.status === 'ENDED'
   const drawn = useDrawReveal(company)
 
@@ -192,6 +194,10 @@ export function ActionBar({
 }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
+  const windowOpen = useAppUi((s) => s.investOpen || Boolean(s.battle) || Boolean(s.sheet))
+  const reportOpen = useRaisingStore(
+    (s) => s.justSettled || s.justQuartered || Boolean(s.upgradeMove) || s.moveAlert,
+  )
   const { restart } = useRaisingStore.getState()
   const settleSpot = useTutorialSpot(company, 'settle')
   // 튜토리얼 잠금 (347번): 분기 넘기기는 직원을 앉힌 뒤 열린다.
@@ -208,7 +214,7 @@ export function ActionBar({
     haptic.medium()
     useAppUi.getState().startBattle({ kind: 'invest', mode: pending.mode, level: pending.level })
   }
-  if (ended) {
+  if (ended || windowOpen || reportOpen) {
     return null
   }
   if (company.broke) {
@@ -264,35 +270,36 @@ export function ActionBar({
             <strong>강화</strong>
             <em>{upgradeLevels > 0 ? `${upgradeLevels}단계 올림` : '공격력·연사'}</em>
           </button>
-          {/* WebView가 이전 버튼의 합성 레이어를 재사용하지 않도록 분기·전투 상태가 바뀌면 통째로 교체한다. */}
-          <button
-            key={`${company.companyId}:${company.year}:${company.quarter}:${progress}`}
-            type="button"
-            disabled={busy || (!pending && settleLocked)}
-            className={
-              pending
-                ? 'toy-progress battle-entry battle-entry-compact'
-                : `toy-progress toy-stat toy-advance ${settleSpot}`
-            }
-            data-progress={progress}
-            data-mode={pending?.mode}
-            data-testid={pending ? 'pending-invest-battle' : 'settle'}
-            data-locked={!pending && settleLocked ? true : undefined}
-            onClick={(ev) => {
-              if (pending) {
-                enterBattle()
-                return
-              }
-              sfx.stamp()
-              haptic.medium()
-              useFx.getState().burstAt(ev.currentTarget, 'sparks')
-              useAppUi.getState().requestSettle()
-            }}
-          >
+          {/* 상태별 버튼은 같은 슬롯에서 교체한다. 회의·전투 화면이 열리면 ActionBar 자체를 내린다. */}
+          <div key={`${company.companyId}:${company.year}:${company.quarter}:${progress}`}>
             {pending ? (
-              <BattleEntryContent mode={pending.mode} disabled={busy} compact />
+              <button
+                type="button"
+                className="toy-progress battle-entry battle-entry-compact"
+                data-progress={progress}
+                data-mode={pending.mode}
+                data-testid="pending-invest-battle"
+                disabled={busy}
+                onClick={enterBattle}
+              >
+                <BattleEntryContent mode={pending.mode} disabled={busy} compact />
+              </button>
             ) : (
-              <>
+              <button
+                type="button"
+                className={`toy-progress toy-stat toy-advance ${settleSpot}`}
+                style={{ width: '100%' }}
+                data-progress="QUARTER"
+                data-testid="settle"
+                data-locked={settleLocked || undefined}
+                disabled={busy || settleLocked}
+                onClick={(ev) => {
+                  sfx.stamp()
+                  haptic.medium()
+                  useFx.getState().burstAt(ev.currentTarget, 'sparks')
+                  useAppUi.getState().requestSettle()
+                }}
+              >
                 <small>
                   {busy
                     ? '처리 중…'
@@ -306,9 +313,9 @@ export function ActionBar({
                 <em>
                   자리 {assigned}/{company.seats}
                 </em>
-              </>
+              </button>
             )}
-          </button>
+          </div>
           {/* 스테이지 입구 (decisions.md 369번): 스테이지 선택 시트를 연다. */}
           <button
             type="button"
