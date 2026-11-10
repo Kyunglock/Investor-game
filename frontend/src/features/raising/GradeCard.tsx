@@ -121,7 +121,10 @@ export function GradeBadge({
   const id = `gem-${useId().replace(/:/g, '')}`
   const ornate = rank >= 4
   const royal = rank >= 6
-  const marks = grade === 'GOD' ? 3 : grade === 'XSS' ? 2 : Math.min(3, grade.length)
+  const marks =
+    tier === 'holo'
+      ? EMPLOYEE_LADDER.indexOf(grade) - EMPLOYEE_LADDER.indexOf('XS') + 1
+      : Math.min(3, grade.length)
   const body =
     tier === 'gold'
       ? 'M28 13 A18 18 0 1 1 27.99 13 Z'
