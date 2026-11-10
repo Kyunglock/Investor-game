@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CIRCUIT_BREAKER, CircuitBreaker } from './circuitBreaker'
+import { CIRCUIT_BREAKER, CircuitBreaker, circuitQueueCounts } from './circuitBreaker'
 
 describe('서킷브레이커', () => {
   it('중간 벽 이후 한 번만 예약한다', () => {
@@ -33,4 +33,11 @@ describe('서킷브레이커', () => {
     expect(c.step(-2)).toBe(0)
     expect(c.progress).toBe(before)
   })
+})
+
+it('거래 정지 동안 매수·매도 대기 주문이 많이 쌓이고 매도가 훨씬 많다', () => {
+  const { sells, buys } = circuitQueueCounts()
+  expect(sells).toBeGreaterThanOrEqual(25)
+  expect(buys).toBeGreaterThanOrEqual(8)
+  expect(sells).toBeGreaterThanOrEqual(buys * 2.5)
 })

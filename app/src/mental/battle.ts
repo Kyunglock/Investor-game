@@ -478,6 +478,7 @@ class BattleScene extends Phaser.Scene {
   /** 벽 사이 잡몹 구간(#593)의 남은 초. 0이면 아니다. 끝나면 다음 벽이 내려온다. */
   private circuitSellQueue = new OrderBarrierQueue()
   private circuitSellClock = 0
+  private circuitBuyClock = 0
   private circuit: CircuitBreaker | null = null
   private circuitFx: CircuitBreakerFx | null = null
   private circuitIndex = 0
@@ -1894,14 +1895,25 @@ class BattleScene extends Phaser.Scene {
     const { w, h } = this.view()
     const wall = this.circuitWall
     const barrier = this.circuitBarrier()
-    // 매도 주문은 1.4초에 한 장만, 매수 주문은 평소 발사 시계의 20%로 들어온다.
+    // 거래 정지 동안 매도·매수 주문이 대기 줄에 잔뜩 쌓인다. 매도가 훨씬 많다(CIRCUIT_BREAKER.sellEvery·buyEvery).
+    const open = c.elapsed < CIRCUIT_BREAKER.seconds - CIRCUIT_BREAKER.stopBefore
     this.circuitSellClock += dt
-    if (this.circuitSellClock >= 1.4 && c.elapsed < CIRCUIT_BREAKER.seconds - 0.4 && wall) {
-      this.circuitSellClock = 0
-      this.spawn('order', [
-        barrier.left + barrier.width * (0.15 + Math.random() * 0.7),
-        wall.y + 20,
+    while (open && wall && this.circuitSellClock >= CIRCUIT_BREAKER.sellEvery) {
+      this.circuitSellClock -= CIRCUIT_BREAKER.sellEvery
+      const r = Math.random()
+      this.spawn(r < 0.6 ? 'order' : r < 0.9 ? 'market' : 'bulk', [
+        barrier.left + barrier.width * (0.08 + Math.random() * 0.84),
+        wall.y + 20 + Math.random() * 30,
       ])
+    }
+    this.circuitBuyClock += dt
+    while (open && this.buyWall?.active && this.circuitBuyClock >= CIRCUIT_BREAKER.buyEvery) {
+      this.circuitBuyClock -= CIRCUIT_BREAKER.buyEvery
+      this.buyWallFx?.launch(
+        barrier.left + barrier.width * (0.08 + Math.random() * 0.84),
+        this.buyWallY(),
+        this.loadout.damage * 0.75,
+      )
     }
     this.launchBuyOrders(this.buyWall?.stepOrders(dt * 0.2) ?? 0)
     const sells = (this.enemies.getChildren() as Enemy[])
@@ -3886,6 +3898,7 @@ class BattleScene extends Phaser.Scene {
       }
       this.circuitSellQueue.clear()
       this.circuitSellClock = 0
+      this.circuitBuyClock = 0
       this.buyWallFx?.beginCircuit()
       this.circuitFx = new CircuitBreakerFx(this)
       if (!this.reducedMotion) this.cameras.main.shake(180, 0.003)
