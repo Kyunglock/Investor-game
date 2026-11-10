@@ -2,7 +2,7 @@ type Rect = { x: number; y: number; w: number; h: number }
 const bounds = new WeakMap<HTMLImageElement, Map<string, Rect>>()
 
 /** B안 뒷모습의 오른쪽 어깨. 전투와 준비 화면이 같은 몸·총 결합점을 쓴다. */
-export const STAGE_HERO = { fur: '#ffe2ae', gunX: 88, gunY: 48, gunScale: 1.55 }
+export const STAGE_HERO = { fur: '#ffe2ae', gunX: 78, gunY: 65, gunScale: 1.4 }
 
 /** 원본의 투명 여백만 제외해 기존 충돌 원 안에 맞춘다. 파일은 원본 그대로 보관한다. */
 export function drawSprite(
@@ -70,15 +70,15 @@ export function drawOrderBlock(
   source: HTMLImageElement,
   sell: boolean,
   cracked = false,
+  target: Rect = { x: 0, y: 0, w: 85.34, h: 96 },
 ) {
   const w = source.width / 2
   const h = source.height / 2
-  drawSprite(
-    c,
-    source,
-    { x: cracked ? w : 0, y: sell ? h : 0, w, h },
-    { x: 0, y: 0, w: 85.34, h: 96 },
-  )
+  // 원본 질감·블록 모양·균열은 보존하고, 구울 때만 매도=파랑 / 매수=빨강으로 돌린다.
+  c.save()
+  c.filter = sell ? 'hue-rotate(200deg)' : 'hue-rotate(190deg)'
+  drawSprite(c, source, { x: cracked ? w : 0, y: sell ? h : 0, w, h }, target)
+  c.restore()
 }
 
 export function drawMentalWall(
@@ -103,8 +103,12 @@ export function drawToySellWall(
   for (let i = 0; i < 6; i++) {
     c.save()
     c.translate(i * 60, 0)
-    c.scale(60 / 85.34, 60 / 96)
-    drawOrderBlock(c, source, true, [2, 4, 1].slice(0, crack).includes(i))
+    drawOrderBlock(c, source, true, [2, 4, 1].slice(0, crack).includes(i), {
+      x: 0,
+      y: 0,
+      w: 60,
+      h: 60,
+    })
     c.restore()
   }
 }

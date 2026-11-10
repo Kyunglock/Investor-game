@@ -1,10 +1,12 @@
 import type Phaser from 'phaser'
 import { buyOrderTexture, WALL_LABEL_STYLE } from './art'
 import type { BuyWall } from './buyWall'
+import { type BarrierLane, OrderBarrierQueue } from './orderBarrier'
 import { shareLabel } from './shares'
 
-/** 청록색 장난감 매수벽. 단일 벽의 체력·재건·지원 사격은 기존 규칙을 따른다. */
+/** 붉은색 장난감 매수벽. 단일 벽의 체력·재건·지원 사격은 기존 규칙을 따른다. */
 export class BuyWallFx {
+  private circuitQueue = new OrderBarrierQueue()
   private ink: Phaser.GameObjects.Graphics
   private surface: Phaser.GameObjects.Image
   private title: Phaser.GameObjects.Text
@@ -92,27 +94,56 @@ export class BuyWallFx {
       shot.body.setPosition(shot.x, shot.y).setVisible(shot.active)
     }
   }
+  beginCircuit() {
+    this.circuitQueue.clear()
+  }
+  endCircuit() {
+    this.circuitQueue.clear()
+  }
+  get queuedOrders() {
+    return this.circuitQueue.size
+  }
+  holdOrders(dt: number, lane: BarrierLane) {
+    // 가까운 주문부터 먼저 세워 뒤에서 온 주문이 그 뒤로 쌓이게 한다.
+    const active = this.shots.filter((shot) => shot.active).sort((a, b) => a.y - b.y)
+    for (const shot of active) {
+      this.circuitQueue.move(shot, dt, lane, 'buy')
+      shot.body.setPosition(shot.x, shot.y)
+    }
+  }
   draw(wall: BuyWall, left: number, width: number, y: number, reduced: boolean) {
     const g = this.ink.clear()
     const cw = width / 6
+    const height = (width * 96) / 512
+    const top = y + 32 - height
     const hit = this.hitLeft / 0.28
     const shake = reduced ? 0 : Math.sin((1 - hit) * Math.PI * 5) * hit * 7
     if (wall.active) {
       this.surface
         .setVisible(true)
         .setTexture(wall.hp < wall.maxHp * 0.5 ? 'wall-cracked' : 'wall')
-        .setPosition(left + shake, y - 40 + Math.abs(shake) * 0.4)
-        .setDisplaySize(width, 72)
+        .setPosition(left + shake, top + Math.abs(shake) * 0.4)
+        .setDisplaySize(width, height)
       this.surface.clearTint()
       if (this.hitLeft > 0.2) this.surface.setTintFill(0xffedc2)
-      g.fillStyle(0x4f2837).fillRect(left + 5, y + 24, width - 10, 4)
-      g.fillStyle(0xffdc87).fillRect(left + 5, y + 24, ((width - 10) * wall.hp) / wall.maxHp, 4)
+      // 블록 하단(y + 32)을 덮지 않도록 체력 막대를 5px 아래에 둔다.
+      g.fillStyle(0x4f2837, 0.7).fillRoundedRect(left + 5, y + 37, width - 10, 4, 2)
+      const hpWidth = ((width - 10) * wall.hp) / wall.maxHp
+      if (hpWidth > 0) {
+        g.fillStyle(0xffdc87).fillRoundedRect(
+          left + 5,
+          y + 37,
+          hpWidth,
+          4,
+          Math.min(2, hpWidth / 2),
+        )
+      }
       this.title
         .setText(`매수벽 ${shareLabel(wall.hp)} / ${shareLabel(wall.maxHp)}`)
-        .setPosition(left + width / 2, y - 4)
+        .setPosition(left + width / 2, top + height * 0.58)
     } else {
       this.surface.setVisible(false)
-      g.lineStyle(1, 0x75cabc, 0.6).strokeRoundedRect(left, y - 30, width, 52, 7)
+      g.lineStyle(1, 0xe78181, 0.6).strokeRoundedRect(left, y - 30, width, 52, 7)
       this.title
         .setText(`매수벽 붕괴 · 재정비 ${wall.rebuildLeft.toFixed(1)}초`)
         .setPosition(left + width / 2, y)
@@ -138,12 +169,11 @@ export class BuyWallFx {
       const row = Math.floor(i / 6)
       piece
         .setVisible(this.breakLeft > 0)
-        .setDisplaySize(width, 72)
+        .setDisplaySize(width, height)
         .setPosition(
           left + (col + 0.5) * cw + (reduced ? 0 : (col - 2.5) * fall * 26),
-          y -
-            40 +
-            (row + 0.5) * 36 +
+          top +
+            ((row + 0.5) * height) / 2 +
             (reduced ? 0 : (row ? 45 : -30) * Math.sin(fall * Math.PI) + fall * fall * 85),
         )
         .setAngle(reduced ? 0 : (i % 2 ? 1 : -1) * fall * 35)

@@ -1,9 +1,9 @@
-import { CAT_H, CAT_W, GUN_LEN } from '@web/features/game/cat/draw'
+import { CAT_H, CAT_W } from '@web/features/game/cat/draw'
 import { BOSS_LOOK } from '@web/features/game/cat/look'
 import type Phaser from 'phaser'
-import { drawStageGun } from './drawStageGun'
-import { drawEarthArmor, drawEmber, drawPillar, drawWater, drawWave } from './effectArt'
-import type { UnitKind } from './enemies'
+import { drawStageGun, GUN_ART } from './drawStageGun'
+import { drawEmber, drawPillar, drawWater, drawWave, drawWoodenRam } from './effectArt'
+import { ORDERS, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import type { Hero } from './hero'
@@ -38,12 +38,12 @@ const GUN_K = STAGE_HERO.gunScale
 export const GUN = {
   dx: (STAGE_HERO.gunX - CAT_W / 2) * HERO_SCALE,
   dy: (STAGE_HERO.gunY - CAT_H / 2) * HERO_SCALE,
-  len: GUN_LEN * HERO_SCALE * GUN_K,
-  /** 총 텍스처(상자 좌표 -8..26 × -8..14)의 원점 비율 */
-  ox: 8 / 34,
-  oy: 8 / 22,
-  w: 34 * HERO_SCALE * GUN_K,
-  h: 22 * HERO_SCALE * GUN_K,
+  scale: HERO_SCALE * GUN_K,
+  /** 손·팔까지 포함한 그림 영역의 피벗. */
+  ox: GUN_ART.pivotX / GUN_ART.w,
+  oy: GUN_ART.pivotY / GUN_ART.h,
+  w: GUN_ART.w * HERO_SCALE * GUN_K,
+  h: GUN_ART.h * HERO_SCALE * GUN_K,
 }
 /** 적 그림(64×64) 안에서 적의 반지름 ≈ 20 × 1.1. 화면에서는 battle.ts의 ENEMY_SCALE만큼 줄여 사장냥보다 작다(344번). */
 export const ENEMY_SIZE = 64
@@ -94,7 +94,7 @@ export function bakeHero(scene: Phaser.Scene, hero: Hero) {
   }
   bake(scene, 'gun', GUN.w, GUN.h, (c) => {
     c.scale(HERO_SCALE * GUN_K, HERO_SCALE * GUN_K)
-    c.translate(8, 8)
+    c.translate(GUN_ART.pivotX, GUN_ART.pivotY)
     drawStageGun(c, STAGE_HERO.fur, hero.weapon.kind, hero.weapon.grade)
   })
 }
@@ -170,7 +170,7 @@ export function bakeMates(scene: Phaser.Scene, hero: Hero) {
     bake(scene, mateGunKey(i), GUN.w, GUN.h, (c) => {
       // 총은 사장냥 것과 같고, 쥔 앞발만 고양이 털 색이다.
       c.scale(HERO_SCALE * GUN_K, HERO_SCALE * GUN_K)
-      c.translate(8, 8)
+      c.translate(GUN_ART.pivotX, GUN_ART.pivotY)
       drawStageGun(c, mixed(BOSS_LOOK.fur, look.color), hero.weapon.kind, hero.weapon.grade)
     })
   }
@@ -183,7 +183,7 @@ export function enemyKey(kind: UnitKind, frame: number): string {
 
 export function bakeEnemies(scene: Phaser.Scene) {
   const source = scene.textures.get('art-enemies').getSourceImage() as HTMLImageElement
-  const kinds = ['panic', 'dump', 'spec', 'stop'] as const
+  const kinds = ['panic', 'dump', 'spec', 'stop', 'short'] as const
   for (const [i, kind] of kinds.entries()) {
     const sprite = document.createElement('canvas')
     sprite.width = sprite.height = ENEMY_SIZE * DPR
@@ -191,17 +191,20 @@ export function bakeEnemies(scene: Phaser.Scene) {
     if (!paint) continue
     paint.scale(DPR, DPR)
     const size = kind === 'spec' ? 55 : kind === 'panic' ? 43 : 49
-    drawSprite(
-      paint,
-      source,
-      {
-        x: ((i % 2) * source.width) / 2,
-        y: (Math.floor(i / 2) * source.height) / 2,
-        w: source.width / 2,
-        h: source.height / 2,
-      },
-      { x: 32 - size / 2, y: 32 - size / 2, w: size, h: size },
-    )
+    const image =
+      kind === 'short'
+        ? (scene.textures.get('art-shortSeller').getSourceImage() as HTMLImageElement)
+        : source
+    const cell =
+      kind === 'short'
+        ? { x: 0, y: 0, w: image.width, h: image.height }
+        : {
+            x: ((i % 2) * source.width) / 2,
+            y: (Math.floor(i / 2) * source.height) / 2,
+            w: source.width / 2,
+            h: source.height / 2,
+          }
+    drawSprite(paint, image, cell, { x: 32 - size / 2, y: 32 - size / 2, w: size, h: size })
     for (let frame = 0; frame < WALK_FRAMES; frame++) {
       bake(scene, enemyKey(kind, frame), ENEMY_SIZE, ENEMY_SIZE, (c) => {
         const pose = walkPose(kind, frame)
@@ -348,83 +351,10 @@ export function bakeMagic(scene: Phaser.Scene) {
     c.fillStyle = '#ffffff'
     c.fillRect(0, 0, 6, 10)
   })
-  // 땅 (433번): 충차. 위에서 내려다본 공성 수레: 바퀴 넷 위에 판자 지붕, 그 밑으로 들보가 나오고 끝에 뾰족한 쇠 쐐기. 오른쪽이 나아가는
-  // 쪽이고 화면에서는 위로 돌려 아래에서 위로 들이받는다.
-  // 크게 늘여 쓰니 RAM_ART배로 구워 흐려지지 않게 한다.
+  // 목제 공성 충차: 나무 프레임·밧줄·통나무 단면. 오른쪽 앞끝을 위로 돌려 들이받는다.
   bake(scene, 'magic-ram', 88 * RAM_ART, 48 * RAM_ART, (c) => {
     c.scale(RAM_ART, RAM_ART)
-    // 땅에 드리운 그림자: 수레 몸통만, 살짝 비껴서
-    c.fillStyle = '#1a120a33'
-    c.beginPath()
-    c.roundRect(6, 12, 46, 32, 4)
-    c.fill()
-    // 바퀴 넷(양옆으로 삐져나온다)
-    for (const [x, y] of [
-      [16, 6],
-      [16, 42],
-      [40, 6],
-      [40, 42],
-    ]) {
-      c.fillStyle = '#3a2814'
-      c.fillRect(x - 7, y - 4, 14, 8)
-      c.fillStyle = '#6b4a28'
-      c.fillRect(x - 5, y - 3, 10, 6)
-      c.fillStyle = '#2a1c0e'
-      for (const dx of [-3, 0, 3]) c.fillRect(x + dx - 0.6, y - 3, 1.2, 6)
-    }
-    // 들보: 지붕 밑에서 앞으로 나온 네모난 나무 들보
-    c.fillStyle = '#7a4e26'
-    c.fillRect(44, 17, 18, 14)
-    c.fillStyle = '#5a3818'
-    c.fillRect(44, 27, 18, 4)
-    c.strokeStyle = '#2e1c0a'
-    c.lineWidth = 1.5
-    c.strokeRect(44, 17, 18, 14)
-    // 판자 지붕
-    c.fillStyle = '#9a6a3a'
-    c.fillRect(4, 8, 44, 32)
-    c.fillStyle = '#b5814a'
-    for (let x = 6; x < 46; x += 8) c.fillRect(x, 10, 5, 28)
-    c.strokeStyle = '#2e1c0a'
-    c.lineWidth = 2
-    c.strokeRect(4, 8, 44, 32)
-    // 쇠 띠와 못
-    c.fillStyle = '#4c5560'
-    c.fillRect(4, 13, 44, 3)
-    c.fillRect(4, 32, 44, 3)
-    c.fillStyle = '#c9d2dc'
-    for (const x of [8, 26, 44]) {
-      c.fillRect(x - 1, 13.5, 2, 2)
-      c.fillRect(x - 1, 32.5, 2, 2)
-    }
-    // 쇠 고리(들보와 쐐기 이음)
-    c.fillStyle = '#4c5560'
-    c.fillRect(60, 14, 5, 20)
-    c.fillStyle = '#9aa6b2'
-    c.fillRect(60, 14, 5, 3)
-    // 뾰족한 쇠 쐐기
-    c.beginPath()
-    c.moveTo(64, 10)
-    c.lineTo(87, 24)
-    c.lineTo(64, 38)
-    c.closePath()
-    const steel = c.createLinearGradient(0, 10, 0, 38)
-    steel.addColorStop(0, '#eef2f6')
-    steel.addColorStop(0.5, '#9aa6b2')
-    steel.addColorStop(1, '#4a535e')
-    c.fillStyle = steel
-    c.fill()
-    c.strokeStyle = '#262c33'
-    c.lineWidth = 1.8
-    c.stroke()
-    // 날 선 등줄기
-    c.strokeStyle = '#ffffff'
-    c.lineWidth = 1.2
-    c.beginPath()
-    c.moveTo(65, 24)
-    c.lineTo(85, 24)
-    c.stroke()
-    drawEarthArmor(c)
+    drawWoodenRam(c)
   })
   // 돌 조각: 충차 뒤로 튀는 흙·돌 파편과 땅에서 솟는 돌기둥.
   bake(scene, 'magic-rock', 14, 12, (c) => {
@@ -514,7 +444,10 @@ function ticket(
   c.fillStyle = '#ffffff'
   c.font = `${Math.round(h * 0.28)}px ${ORDER_FONT}`
   c.fillText(look.title, x + w / 2, y + h * 0.2)
-  c.font = `${Math.round(h * 0.44)}px ${ORDER_FONT}`
+  const amountSize = Math.round(h * 0.44)
+  c.font = `${amountSize}px ${ORDER_FONT}`
+  const fit = Math.min(1, (w - 8) / Math.max(1, c.measureText(look.amount).width))
+  c.font = `${amountSize * fit}px ${ORDER_FONT}`
   c.lineWidth = 3
   c.strokeStyle = look.edge
   c.strokeText(look.amount, x + w / 2, y + h * 0.68)
@@ -543,71 +476,98 @@ export function buyOrderTexture(scene: Phaser.Scene, damage: number): string {
   return key
 }
 
-/** 큰손 보스: 파란 고래가 정장 모자를 쓰고 "대량 매도" 팻말을 든다. */
-function whale(c: CanvasRenderingContext2D) {
-  c.fillStyle = '#10204a33'
+/** 작은 크기에서도 얼굴과 넓은 팻말이 구분되는 큰손 고래. 모든 윤곽은 64×64 안에 둔다. */
+export function drawWhale(c: CanvasRenderingContext2D) {
+  c.save()
+  c.lineJoin = 'round'
+  c.lineCap = 'round'
+  const ink = '#203d68'
+  const fill = (color: string, width = 1.6) => {
+    c.fillStyle = color
+    c.fill()
+    c.strokeStyle = ink
+    c.lineWidth = width
+    c.stroke()
+  }
+  c.fillStyle = '#19325224'
   c.beginPath()
-  c.ellipse(32, 57, 24, 4, 0, 0, Math.PI * 2)
+  c.ellipse(32, 59, 23, 3, 0, 0, Math.PI * 2)
   c.fill()
-  // 꼬리
-  c.fillStyle = '#1f3f99'
+  // 단순한 두 갈래 꼬리. 끝과 외곽선까지 그림 영역 안에 여백을 둔다.
   c.beginPath()
-  c.moveTo(52, 34)
-  c.quadraticCurveTo(62, 22, 63, 18)
-  c.quadraticCurveTo(58, 30, 63, 42)
-  c.quadraticCurveTo(58, 40, 52, 40)
+  c.moveTo(47, 32)
+  c.quadraticCurveTo(53, 29, 59, 22)
+  c.quadraticCurveTo(61, 30, 56, 34)
+  c.quadraticCurveTo(61, 35, 60, 42)
+  c.quadraticCurveTo(53, 41, 47, 38)
   c.closePath()
-  c.fill()
-  // 몸
+  fill('#4f8ccd')
+  // 둥근 몸통과 옅은 배. 작은 주문서 장식을 덜어 얼굴을 또렷하게 한다.
+  const body = c.createLinearGradient(0, 20, 0, 52)
+  body.addColorStop(0, '#6da9df')
+  body.addColorStop(1, '#3476b5')
   c.beginPath()
-  c.ellipse(30, 36, 25, 17, 0, 0, Math.PI * 2)
+  c.ellipse(28, 35, 23, 17, -0.05, 0, Math.PI * 2)
+  c.fillStyle = body
   c.fill()
-  c.fillStyle = '#9cc2ff'
-  c.beginPath()
-  c.ellipse(28, 44, 19, 8, 0, 0, Math.PI)
-  c.fill()
-  c.lineWidth = 2
-  c.strokeStyle = '#0d2466'
-  c.beginPath()
-  c.ellipse(30, 36, 25, 17, 0, 0, Math.PI * 2)
+  c.strokeStyle = ink
+  c.lineWidth = 1.8
   c.stroke()
-  // 눈썹·눈(못마땅한 얼굴)
-  c.fillStyle = '#ffffff'
   c.beginPath()
-  c.ellipse(17, 31, 4, 4, 0, 0, Math.PI * 2)
+  c.ellipse(27, 43, 17, 7, 0, 0, Math.PI * 2)
+  c.fillStyle = '#b7ddf4'
   c.fill()
-  c.fillStyle = '#0d2466'
+  // 눈과 짧은 눈썹, 입. 진한 윤곽의 크기를 통일한다.
   c.beginPath()
-  c.ellipse(16, 32, 2, 2.2, 0, 0, Math.PI * 2)
+  c.ellipse(18, 31, 3.5, 4, 0, 0, Math.PI * 2)
+  c.fillStyle = '#fff8e9'
   c.fill()
-  c.lineWidth = 2
   c.beginPath()
-  c.moveTo(11, 25)
-  c.lineTo(22, 28)
+  c.arc(17.5, 31.5, 1.7, 0, Math.PI * 2)
+  c.fillStyle = ink
+  c.fill()
+  c.beginPath()
+  c.moveTo(13, 25.5)
+  c.lineTo(22, 27.5)
+  c.strokeStyle = ink
+  c.lineWidth = 1.7
   c.stroke()
-  // 모자(큰손)
-  c.fillStyle = '#2b2340'
-  c.fillRect(20, 6, 18, 12)
-  c.fillRect(15, 17, 28, 3.5)
-  c.fillStyle = '#ff4f6d'
-  c.fillRect(20, 14, 18, 2.5)
-  // 물줄기 대신 쏟아지는 주문서
-  c.fillStyle = '#cfe2ff'
-  c.fillRect(42, 13, 7, 5)
-  c.fillRect(48, 7, 6, 4)
-  // 팻말
-  c.fillStyle = '#fff9ec'
-  c.strokeStyle = '#0d2466'
-  c.lineWidth = 1.5
   c.beginPath()
-  c.roundRect(14, 40, 30, 13, 3)
-  c.fill()
+  c.moveTo(12, 39)
+  c.quadraticCurveTo(18, 41, 23, 38)
   c.stroke()
-  c.fillStyle = '#1f3f99'
-  c.font = `9px ${ORDER_FONT}`
+  // 큰손을 나타내는 모자: 작은 띠 하나만 남긴다.
+  c.beginPath()
+  c.roundRect(20, 5, 17, 13, 3)
+  fill('#27354e')
+  c.fillStyle = '#d9b66c'
+  c.fillRect(21, 13, 15, 2.5)
+  c.beginPath()
+  c.roundRect(15, 17, 27, 4, 2)
+  fill('#27354e', 1.2)
+  // 지느러미가 팻말의 양끝을 잡는다.
+  for (const x of [8, 52]) {
+    c.beginPath()
+    c.ellipse(x, 46, 4, 5, x < 32 ? -0.35 : 0.35, 0, Math.PI * 2)
+    fill('#4f8ccd', 1.2)
+  }
+  const plate = { x: 8, y: 44, w: 48, h: 16 }
+  c.beginPath()
+  c.roundRect(plate.x, plate.y, plate.w, plate.h, 4)
+  fill('#fff6df', 1.5)
+  const text = '대량 매도'
+  const baseSize = 10
+  c.font = `${baseSize}px ${ORDER_FONT}`
+  const size = Math.min(
+    baseSize,
+    (baseSize * (plate.w - 8)) / Math.max(1, c.measureText(text).width),
+  )
+  c.font = `${size}px ${ORDER_FONT}`
+  c.fillStyle = '#254e80'
   c.textAlign = 'center'
   c.textBaseline = 'middle'
-  c.fillText('대량 매도', 29, 47)
+  c.fillText(text, plate.x + plate.w / 2, plate.y + plate.h / 2 + 0.5)
+  c.restore()
 }
 
 /**
@@ -617,12 +577,24 @@ function whale(c: CanvasRenderingContext2D) {
 export function bakeOrders(scene: Phaser.Scene) {
   const looks = {
     order: {
-      box: { x: 11, y: 18, w: 42, h: 28 },
-      look: { fill: '#3a7bea', edge: '#1b3f8f', band: '#2a5fc4', title: '매도', amount: '300주' },
+      box: { x: 7, y: 17, w: 50, h: 30 },
+      look: {
+        fill: '#3a7bea',
+        edge: '#1b3f8f',
+        band: '#2a5fc4',
+        title: '매도',
+        amount: `${ORDERS.order.shares.toLocaleString('ko-KR')}주`,
+      },
     },
     market: {
-      box: { x: 15, y: 22, w: 34, h: 21 },
-      look: { fill: '#5aa2ff', edge: '#1f56b8', band: '#3f86ea', title: '시장가', amount: '100' },
+      box: { x: 9, y: 20, w: 46, h: 26 },
+      look: {
+        fill: '#5aa2ff',
+        edge: '#1f56b8',
+        band: '#3f86ea',
+        title: '시장가',
+        amount: `${ORDERS.market.shares.toLocaleString('ko-KR')}주`,
+      },
     },
     bulk: {
       box: { x: 6, y: 14, w: 52, h: 36 },
@@ -631,17 +603,17 @@ export function bakeOrders(scene: Phaser.Scene) {
         edge: '#0b1f5c',
         band: '#16337f',
         title: '대량 매도',
-        amount: '5,000주',
+        amount: `${ORDERS.bulk.shares.toLocaleString('ko-KR')}주`,
       },
     },
     fake: {
-      box: { x: 11, y: 18, w: 42, h: 28 },
+      box: { x: 7, y: 17, w: 50, h: 30 },
       look: {
         fill: '#9db6dc',
         edge: '#5c78a8',
         band: '#8aa3cc',
         title: '허매도',
-        amount: '800주',
+        amount: `${ORDERS.fake.shares.toLocaleString('ko-KR')}주`,
         dashed: true,
       },
     },
@@ -686,7 +658,7 @@ export function bakeOrders(scene: Phaser.Scene) {
     bake(scene, enemyKey('whale', frame), ENEMY_SIZE, ENEMY_SIZE, (c) => {
       c.save()
       c.translate(0, Math.sin(phase) * 1.2)
-      whale(c)
+      drawWhale(c)
       c.restore()
     })
   }
@@ -697,15 +669,15 @@ export function bakeOrders(scene: Phaser.Scene) {
   }
   // 벽 뒤 판: 블록 사이를 잇는 옅은 접지 그림자.
   bake(scene, 'wall-band', 64, 32, (c) => {
-    c.fillStyle = '#a45d4126'
+    c.fillStyle = '#416fa426'
     c.fillRect(0, 0, 64, 32)
-    c.fillStyle = '#e4a478'
+    c.fillStyle = '#78aee4'
     c.fillRect(0, 0, 64, 2)
     c.fillRect(0, 30, 64, 2)
   })
-  // 파편: 산호색 벽 조각과 흰 먼지.
+  // 파편: 푸른색 매도벽 조각과 흰 먼지.
   bake(scene, 'chip', 6, 5, (c) => {
-    c.fillStyle = '#ed8766'
+    c.fillStyle = '#669ded'
     c.beginPath()
     c.moveTo(0, 1)
     c.lineTo(5, 0)

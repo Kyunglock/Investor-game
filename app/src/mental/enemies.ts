@@ -1,5 +1,5 @@
-/** 적 넷 (decisions.md 328·333번): 이름이 곧 행동이다. 일자로 천천히 내려온다. 그림은 art.ts. */
-export type EnemyKind = 'panic' | 'dump' | 'spec' | 'stop'
+/** 패닉셀·투매·투기·손절·공매도: 이름이 곧 행동이다. 일자로 천천히 내려온다. 그림은 art.ts. */
+export type EnemyKind = 'panic' | 'dump' | 'spec' | 'stop' | 'short'
 
 export interface EnemySpec {
   /** 충돌 판정 반지름(px). 그림(64×64)의 몸통 크기에 맞춘다. */
@@ -16,6 +16,7 @@ export interface EnemySpec {
 }
 
 export const ENEMIES: Record<EnemyKind, EnemySpec> = {
+  short: { r: 19, fill: '#44558c', label: '공매도', hp: 9, speed: 43, dmg: 11, reward: 45 },
   /** 패닉셀: 빠르고 떼로 */
   panic: { r: 16, fill: '#5b93e6', label: '패닉', hp: 1, speed: 95, dmg: 5, reward: 10 },
   /** 투매: 한쪽에서 줄지어 쏟아진다. 느리지만 단단하다 */
@@ -41,7 +42,7 @@ export interface OrderSpec extends EnemySpec {
 }
 
 export const ORDERS: Record<OrderKind, OrderSpec> = {
-  /** 매도 주문(300주): 천천히 사장냥 쪽으로 다가온다 */
+  /** 매도 주문(2,000주): 천천히 사장냥 쪽으로 다가온다 */
   order: {
     r: 17,
     fill: '#3a7bea',
@@ -51,9 +52,9 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     dmg: 6,
     reward: 12,
     scale: 1.45,
-    shares: 300,
+    shares: 2000,
   },
-  /** 시장가 매도(100주): 작고 빠르게 떼로 쏟아진다 */
+  /** 시장가 매도(1,000주): 작고 빠르게 떼로 쏟아진다 */
   market: {
     r: 12,
     fill: '#5aa2ff',
@@ -63,7 +64,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     dmg: 4,
     reward: 6,
     scale: 1.3,
-    shares: 100,
+    shares: 1000,
   },
   /** 대량 매도(5,000주): 묵직하고 느리고 단단하다 */
   bulk: {
@@ -87,7 +88,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     dmg: 4,
     reward: 0,
     scale: 1.45,
-    shares: 800,
+    shares: 3000,
   },
   /** 매도벽의 한 칸: 움직이지 않고 벽과 함께 내려온다. 체력·물량은 판(assault.ts)이 정한다 */
   cell: {
@@ -115,7 +116,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
   },
 }
 
-/** 고양이 적과 매도 물량을 한 표로: 전투(battle.ts)는 이 표로 반지름·체력·피해를 읽는다. 디펜스 출전 화면의 적 소개는 ENEMIES(고양이 넷)만 쓴다. */
+/** 몬스터와 매도 물량을 한 표로: 전투(battle.ts)는 이 표로 반지름·체력·피해를 읽는다. 디펜스 출전 화면의 적 소개는 ENEMIES(몬스터 다섯)만 쓴다. */
 export const UNITS: Record<UnitKind, EnemySpec & { scale?: number; shares?: number }> = {
   ...ENEMIES,
   ...ORDERS,

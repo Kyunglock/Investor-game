@@ -1,7 +1,9 @@
 import type Phaser from 'phaser'
+import { DPR } from './art'
 import { CIRCUIT_BREAKER, type CircuitBreaker } from './circuitBreaker'
+import type { BarrierLane } from './orderBarrier'
 
-/** 거래 정지 전광판·쌓이는 주문서·사장냥으로 모이는 회복 빛. 전투 객체와 분리해 일시정지에도 제자리를 지킨다. */
+/** 실제 대기 주문 사이에 내려오는 검정·노랑 안전 차단벽. */
 export class CircuitBreakerFx {
   private root: Phaser.GameObjects.Container
   private ink: Phaser.GameObjects.Graphics
@@ -12,14 +14,35 @@ export class CircuitBreakerFx {
     this.ink = scene.add.graphics()
     const text = (size: number, color: string) =>
       scene.add
-        .text(0, 0, '', { fontFamily: 'Jua, sans-serif', fontSize: size, color, align: 'center' })
+        .text(0, 0, '', {
+          fontFamily: '"Jua", "Gowun Dodum", "Noto Sans KR", sans-serif',
+          fontSize: size,
+          color,
+          align: 'center',
+          resolution: DPR,
+          padding: { x: 4, y: 3 },
+        })
         .setOrigin(0.5)
-    this.title = text(23, '#ffe5a0')
-    this.orders = text(15, '#cee6ff')
-    this.recovery = text(18, '#abffe0')
+    this.title = text(23, '#ffe17b')
+    this.orders = text(13, '#ffffff')
+    this.recovery = text(16, '#18594c')
+    this.recovery.setStroke('#fff3d5', 3)
     this.root = scene.add
       .container(0, 0, [this.ink, this.title, this.orders, this.recovery])
       .setDepth(35)
+    // 캔버스에서 처음 쓰는 한글 서브셋도 로드한 뒤 다시 그린다.
+    void document.fonts
+      .load(
+        '23px "Jua"',
+        '서킷브레이커 거래 정지 매수 매도 대기 재개 멘탈 회복 충전 완료 0123456789',
+      )
+      .then(() => {
+        if (this.root.active)
+          for (const label of [this.title, this.orders, this.recovery]) label.updateText()
+      })
+      .catch(() => {
+        /* 준비된 한글 대체 글꼴을 유지한다. */
+      })
   }
   draw(
     c: CircuitBreaker,
@@ -28,111 +51,69 @@ export class CircuitBreakerFx {
     playerX: number,
     playerY: number,
     reduced: boolean,
-    wall: { left: number; width: number; bottom: number; height: number },
+    barrier: BarrierLane & { buys: number; sells: number },
   ) {
     const g = this.ink.clear()
-    const cx = w / 2
-    const width = Math.min(w - 32, 330)
-    const enter = Math.min(1, c.elapsed / 0.28)
-    const exit = 1 - c.reveal
-    const top =
-      Math.min(h - 130, Math.max(h * 0.3, wall.bottom + 24)) - (reduced ? 0 : (1 - enter) ** 3 * 24)
-    this.root.setAlpha(Math.min(1, enter * 2) * exit)
-    const shock = Math.min(1, c.elapsed / 0.8)
-    g.fillStyle(0x102a40, 0.12 * exit).fillRect(0, 0, w, h)
-    g.lineStyle(2, 0xffcf70, 0.5 * exit).strokeRoundedRect(8, 8, w - 16, h - 16, 14)
-    if (!reduced && shock < 1) {
-      g.lineStyle(3 * (1 - shock) + 1, 0x8ef3c6, (1 - shock) * 0.85).strokeCircle(
-        cx,
-        top + 56,
-        24 + shock * Math.hypot(w, h) * 0.6,
-      )
-    }
-    g.fillStyle(0x102a40, 0.94).fillRoundedRect(cx - width / 2, top, width, 112, 20)
-    g.lineStyle(2, 0xf6c86a, 1).strokeRoundedRect(cx - width / 2, top, width, 112, 20)
-    g.fillStyle(0xffcf70, reduced ? 1 : 0.7 + Math.sin(c.elapsed * 3) * 0.2)
-    g.fillRoundedRect(cx - 47, top + 11, 94, 4, 2)
-    this.title
-      .setPosition(cx, top + 38)
-      .setScale(reduced ? 1 : 1 + Math.sin(enter * Math.PI) * 0.12)
-      .setText('서킷브레이커')
-    this.orders
-      .setPosition(cx, top + 72)
-      .setText(
-        c.formation < 1
-          ? `매도 조각 집결 · ${c.assembled}/${CIRCUIT_BREAKER.pieces}`
-          : '매도벽 완성! 거래 재개 준비',
-      )
-    // 전광판 속 그림이 아니라 다음 전투 벽의 실제 위치에 주문 조각 24개를 쌓는다.
-    const cols = 6
-    const rows = CIRCUIT_BREAKER.pieces / cols
-    const bw = wall.width / cols
-    const bh = wall.height / rows
-    const alpha = 1 - c.reveal
-    g.lineStyle(1, 0x8bbdf3, 0.35 * alpha).strokeRect(
-      wall.left,
-      wall.bottom - wall.height,
-      wall.width,
-      wall.height,
-    )
-    for (let i = 0; i < CIRCUIT_BREAKER.pieces; i++) {
-      const t = Math.max(0, Math.min(1, (c.formation * (CIRCUIT_BREAKER.pieces + 2) - i) / 3))
-      if (t === 0) continue
-      const row = Math.floor(i / cols)
-      const col = i % cols
-      const tx = wall.left + (col + 0.5) * bw
-      const ty = wall.bottom - (row + 0.5) * bh
-      const fromX = i % 2 === 0 ? -bw : w + bw
-      const ease = 1 - (1 - t) ** 3
-      const x = reduced ? tx : fromX + (tx - fromX) * ease
-      const y = reduced ? ty : ty - Math.sin(t * Math.PI) * 55 - (1 - ease) * 45
-      const visible = alpha * (reduced ? t : Math.min(1, t * 4))
-      g.fillStyle(0x0b2449, visible).fillRoundedRect(
-        x - bw / 2 + 2,
-        y - bh / 2 + 3,
-        bw - 3,
-        bh - 2,
-        3,
-      )
-      g.fillStyle(i % 3 === 0 ? 0x3472c9 : 0x64a6e9, visible).fillRoundedRect(
-        x - bw / 2 + 1,
-        y - bh / 2,
-        bw - 3,
-        bh - 3,
-        3,
-      )
-      g.lineStyle(1.5, 0xbde1ff, visible).strokeRoundedRect(
-        x - bw / 2 + 1,
-        y - bh / 2,
-        bw - 3,
-        bh - 3,
-        3,
-      )
-      g.lineStyle(2, 0x173e79, visible)
-        .lineBetween(x - bw * 0.3, y - 3, x + bw * 0.18, y - 3)
-        .lineBetween(x - bw * 0.3, y + 3, x + bw * 0.3, y + 3)
-      if (!reduced && t > 0.8 && t < 1) {
-        g.lineStyle(2, 0xe2f5ff, (1 - t) * 5).strokeEllipse(tx, ty + bh / 2, bw * 1.25, 10)
+    const cx = barrier.left + barrier.width / 2
+    const y = Math.round(barrier.y)
+    const enter = Math.min(1, c.elapsed / 0.24)
+    const opening = Math.max(0, (c.elapsed - (CIRCUIT_BREAKER.seconds - 0.3)) / 0.3)
+    const slide = reduced ? 0 : ((1 - enter) ** 3 + opening ** 2) * (barrier.width / 2 + 20)
+    g.fillStyle(0x142230, 0.08 * (1 - opening)).fillRect(0, 0, w, h)
+    for (const side of [-1, 1]) {
+      const half = barrier.width / 2
+      const left = cx + (side < 0 ? -half : 0) + side * slide
+      const right = left + half
+      g.fillStyle(0x201f23).fillRoundedRect(left, y - 32, half, 64, 5)
+      g.lineStyle(2, 0xffce4e).strokeRoundedRect(left, y - 32, half, 64, 5)
+      // 경고 줄무늬는 글자 위아래에만 배치한다.
+      for (const top of [y - 30, y + 21]) {
+        g.fillStyle(0xffce4e).fillRect(left + 2, top, half - 4, 9)
+        g.fillStyle(0x27242a)
+        for (let x = left + 2; x < right - 2; x += 22) {
+          g.fillPoints(
+            [
+              { x, y: top + 9 },
+              { x: Math.min(x + 9, right - 2), y: top },
+              { x: Math.min(x + 18, right - 2), y: top },
+              { x: Math.min(x + 9, right - 2), y: top + 9 },
+            ],
+            true,
+          )
+        }
       }
     }
-    // 멘탈 회복이 사장냥으로 들어오는 궤적과 십자 빛.
+    // 닫힌 두 문짝의 중앙 이음선이 한글 획을 가르지 않게 가린다.
+    if (slide < 2) g.fillStyle(0x201f23).fillRect(cx - 3, y - 20, 6, 40)
+    const alpha = Math.min(1, enter * 2) * (1 - opening)
+    this.title
+      .setPosition(Math.round(cx), y - 10)
+      .setAlpha(alpha)
+      .setText('서킷브레이커')
+    this.orders
+      .setPosition(Math.round(cx), y + 11)
+      .setAlpha(alpha)
+      .setText(`거래 정지 · 매도 ${barrier.sells} / 매수 ${barrier.buys} 대기`)
+    for (const [label, size] of [
+      [this.title, 23],
+      [this.orders, 13],
+    ] as const) {
+      label.setFontSize(size)
+      if (label.width > barrier.width - 20)
+        label.setFontSize(Math.floor((size * (barrier.width - 20)) / label.width))
+    }
     const pulse = reduced ? 0.5 : (c.elapsed % 1.2) / 1.2
-    g.lineStyle(3, 0x8ef3c6, 0.8 * (1 - pulse)).strokeEllipse(
+    g.lineStyle(2, 0x53bfa4, 0.7 * (1 - pulse)).strokeEllipse(
       playerX,
       playerY + 12,
-      60 + pulse * 70,
-      22 + pulse * 24,
+      56 + pulse * 38,
+      20 + pulse * 14,
     )
-    for (let i = 0; i < 5; i++) {
-      const t = reduced ? 0.5 : (c.elapsed * 0.6 + i / 5) % 1
-      const x = playerX + Math.sin(i * 2.4) * 50 * (1 - t)
-      const y = playerY - 75 * (1 - t)
-      g.fillStyle(0xb4ffe2, 0.8)
-        .fillRect(x - 5, y - 1.5, 10, 3)
-        .fillRect(x - 1.5, y - 5, 3, 10)
-    }
     this.recovery
-      .setPosition(Math.max(80, Math.min(w - 80, playerX)), playerY - 136)
+      .setPosition(
+        Math.round(Math.max(80, Math.min(w - 80, playerX))),
+        Math.min(h - 24, playerY + 47),
+      )
       .setText(
         c.recovery > 0 ? `멘탈 회복 +${Math.round(c.recovery * c.progress)}` : '멘탈 충전 완료',
       )

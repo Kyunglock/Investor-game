@@ -54,3 +54,20 @@ describe('매수벽', () => {
     expect(assaultBonusPercent(true, 10)).toBe(20)
   })
 })
+
+it('서킷브레이커는 발사 시계만 20%로 줄이고 총량과 재건 시간을 보존한다', () => {
+  const normal = new BuyWall(100, () => 0.5)
+  const halted = new BuyWall(100, () => 0.5)
+  normal.sells = halted.sells = 20
+  for (let i = 0; i < 240; i++) {
+    normal.stepOrders(1 / 60)
+    halted.stepOrders(0.2 / 60)
+  }
+  expect(halted.shots).toBeGreaterThan(0)
+  expect(halted.shots).toBeLessThan(normal.shots)
+  expect(halted.shots).toBeLessThanOrEqual(halted.sells)
+  halted.hit(100)
+  const rebuild = halted.rebuildLeft
+  expect(halted.stepOrders(4)).toBe(0)
+  expect(halted.rebuildLeft).toBe(rebuild)
+})

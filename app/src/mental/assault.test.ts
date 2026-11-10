@@ -172,7 +172,7 @@ describe('공격 판: 매도벽 (decisions.md 413번)', () => {
     expect(ORDERS.bulk.hp).toBeGreaterThan(ORDERS.order.hp)
     expect(ORDERS.fake.reward).toBe(0)
     // 디펜스 출전 화면의 적 소개(ENEMIES)에는 매도 물량이 섞이지 않는다.
-    expect(Object.keys(ENEMIES)).toEqual(['panic', 'dump', 'spec', 'stop'])
+    expect(Object.keys(ENEMIES).sort()).toEqual(['dump', 'panic', 'short', 'spec', 'stop'])
     expect(UNITS.order).toBe(ORDERS.order)
   })
 
