@@ -23,6 +23,18 @@ import {
 const levels = Array.from({ length: MAGIC_MAX_LEVEL }, (_, i) => i + 1)
 
 describe('물·불·번개 마법 (decisions.md 392번)', () => {
+  it('번개는 레벨마다 추가 타격 수가 두 배가 되고 같은 적을 중복해서 잇지 않는다', () => {
+    expect(levels.map((level) => lightningStats(level).chains)).toEqual([2, 4, 8, 16, 32])
+    const targets = Array.from({ length: 40 }, (_, i) => ({ x: i * 20, y: 0 }))
+    for (const level of levels) {
+      const stats = lightningStats(level)
+      const chain = chainTargets(targets[0], targets, stats.chains, stats.chainRadius)
+      expect(chain).toHaveLength(2 ** level)
+      expect(new Set(chain).size).toBe(chain.length)
+      expect(chain).not.toContain(targets[0])
+    }
+  })
+
   it('레벨이 오를수록 쿨다운은 짧아지고 피해·범위는 커진다', () => {
     for (const l of levels.slice(1)) {
       for (const m of ['water', 'fire', 'lightning', 'earth'] as const) {
