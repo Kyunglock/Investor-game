@@ -694,16 +694,15 @@ class InvestEngine {
     return (int) Math.min(r.lossCapBp(), loss);
   }
 
-  /** 회의 뒤 전투는 맞힌 쪽의 매도벽 돌파만 남긴다. */
+  /** 종목 결정의 정답·오답 모두 회의 뒤에는 매도벽 돌파로 이어진다. */
   static final String ASSAULT = "ASSAULT";
 
-  /** 이 회의 뒤에 할 전투. 틀렸거나 아직 안 정했거나 지켜봤으면 null. 옛 방어 대기도 해제된다. */
+  /** 아직 결정하지 않았거나 지켜봤으면 null. 옛 미완료 방어 대기도 매도벽 돌파로 연결된다. */
   static String battleMode(Invest invest) {
     if (invest == null || invest.choice == null || HOLD.equals(invest.choice)) {
       return null;
     }
-    String right = invest.up ? BUY : SELL;
-    return right.equals(invest.choice) ? ASSAULT : null;
+    return ASSAULT;
   }
 
   /**

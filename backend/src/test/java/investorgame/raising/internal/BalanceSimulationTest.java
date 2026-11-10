@@ -110,7 +110,7 @@ class BalanceSimulationTest {
             case LAZY -> majorityChoice(c.invest); // 지켜본다는 없다(423번): 자동 진행처럼 다수결
           };
       ENGINE.invest.decide(c, choice, boss == Boss.GREEDY, random);
-      // 회의 뒤 전투: 맞힌 회의의 공격 판만 클리어한다. 틀렸을 때 방어 판의 손실 회복은 삭제됐다.
+      // 회의 뒤 전투: 정답·오답 모두 매도벽 돌파를 클리어한다. 손실 회복 보너스는 없다.
       String battle = InvestEngine.battleMode(c.invest);
       if (battle != null && (boss == Boss.STAGES || boss == Boss.BUYER)) {
         ENGINE.invest.battle(c, battle, 3);

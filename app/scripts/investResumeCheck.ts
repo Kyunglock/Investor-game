@@ -11,8 +11,8 @@ try {
     for (const [choice, up, mode] of [
       ['BUY', true, 'ASSAULT'],
       ['SELL', false, 'ASSAULT'],
-      ['BUY', false, 'DEFENSE'],
-      ['SELL', true, 'DEFENSE'],
+      ['BUY', false, 'ASSAULT'],
+      ['SELL', true, 'ASSAULT'],
     ] as const) {
       const battle = {
         mode,
@@ -38,7 +38,7 @@ try {
         returnBp: 1000,
         gainBp: 1000,
         lossBp: -1000,
-        battle: mode === 'ASSAULT' ? battle : null,
+        battle,
         results: [],
         reactions: [],
       }
@@ -125,23 +125,6 @@ try {
       await expect(page.getByTestId('settle')).toHaveCount(0)
       await page.getByTestId('invest-to-decide').click()
       await page.locator(`[data-choice="${choice}"]`).click()
-      if (mode === 'DEFENSE') {
-        await expect(page.getByTestId('invest-settle')).toBeVisible({ timeout: 30000 })
-        await expect(page.getByTestId('invest-battle')).toHaveCount(0)
-        await expect(page.getByTestId('invest-return-office')).toHaveCount(0)
-        await page.getByTestId('invest-leave').click()
-        await expect(page.getByTestId('pending-invest-battle')).toHaveCount(0)
-        await expect(page.getByTestId('settle')).toBeVisible()
-        await page.reload()
-        await expect(page.getByTestId('pending-invest-battle')).toHaveCount(0)
-        await page.getByTestId('settle').click()
-        await expect.poll(() => settlements).toBe(1)
-        assert.equal(reports, 0)
-        assert.deepEqual(errors, [])
-        console.log(`PASS ${choice}/${up ? 'UP' : 'DOWN'} ${width}: no defense, settle directly`)
-        await page.close()
-        continue
-      }
       await expect(page.getByTestId('invest-return-office')).toBeVisible({ timeout: 30000 })
       await expect(page.getByTestId('invest-battle')).toHaveCount(0)
       await expect(page.getByTestId('invest-settle')).toHaveCount(0)
