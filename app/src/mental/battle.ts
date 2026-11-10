@@ -1494,13 +1494,13 @@ class BattleScene extends Phaser.Scene {
     this.assaultCheckClear()
   }
 
-  /** 벽을 부수는 즉시 다음 매도벽을 전투 위치에 세운다. */
+  /** 다음 벽을 즉시 보이게 세우고, 돌파 속도로 전장을 올리며 전투 위치까지 끌어온다. */
   private startRush() {
     if (!this.assault || this.over) return
     this.rushLeft = 0
     this.lastFlow = this.elapsed
-    // 붕괴 연출이 끝나기를 기다리지 않고 바로 공격할 수 있다.
-    this.addWall(this.wallsBroken, this.stopY())
+    // 첫 프레임부터 벽 아래쪽이 보인다. 도착 위치와 거리를 둬 배경·호가 줄도 함께 흐른다.
+    this.addWall(this.wallsBroken, Math.max(32, this.stopY() - 160))
     this.opts.onBanner('매도벽을 부수고 다음 벽으로!', '#3a7bea')
   }
 
@@ -1516,6 +1516,7 @@ class BattleScene extends Phaser.Scene {
       .map((wall) => ({
         index: wall.index,
         bottom: wall.y + 4,
+        arrived: wall.arrived,
         held: wall.cells.some((e) => this.held(e)),
         hp: wall.cells.reduce((sum, e) => sum + e.hp, 0),
       }))
@@ -1883,6 +1884,7 @@ class BattleScene extends Phaser.Scene {
   inspectMarket() {
     return {
       ...this.marketStats,
+      climbed: this.climbed,
       pushedEnemies: (this.enemies.getChildren() as Enemy[])
         .filter((e) => e.active && !e.dying && e.wallPushUntil > this.elapsed)
         .map((e) => ({ y: e.y, velocityY: e.body?.velocity.y })),
@@ -3676,6 +3678,7 @@ class BattleScene extends Phaser.Scene {
       this.assault &&
       !this.circuit &&
       !this.bossEnemy &&
+      this.walls.some((wall) => !wall.broken && wall.arrived) &&
       this.wallsBroken >= (CIRCUIT_BREAKER.afterWalls[this.circuitIndex] ?? Infinity)
     ) {
       this.circuitIndex++
