@@ -78,7 +78,7 @@
 }
 .battle-entry-compact {
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
   min-height: 108px;
   padding: 8px 3px;
   text-align: center;
@@ -95,11 +95,9 @@
 }
 .battle-entry-compact .battle-entry-copy strong {
   font-size: clamp(14px, 3.8vw, 20px);
+  font-weight: 400;
+  font-synthesis: none;
   white-space: nowrap;
-}
-.battle-entry-compact .battle-entry-copy small {
-  font-size: 8px;
-  letter-spacing: 0;
 }
 @media (prefers-reduced-motion: reduce) {
   .battle-entry {

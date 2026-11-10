@@ -44,22 +44,13 @@ export function BattleEntryContent({
       <span className="battle-entry-icon" aria-hidden="true">
         <svg viewBox="0 0 40 40" width="36" height="36" fill="none" aria-hidden="true">
           {assault ? (
-            <>
-              <path
-                d="M5 28V16h8v12M17 28V8h8v20M29 28V14h6v14"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinejoin="round"
-                opacity=".55"
-              />
-              <path
-                d="M4 33 16 21l7 4L36 8m-10 0h10v10"
-                stroke="currentColor"
-                strokeWidth="3.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </>
+            <path
+              d="M20 33V7m-11 11L20 7l11 11"
+              stroke="currentColor"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           ) : (
             <path
               d="M20 4 34 10v12c0 7-8 12-14 15C14 34 6 29 6 22V10L20 4Zm-7 15 5 5 10-11"
@@ -71,8 +62,10 @@ export function BattleEntryContent({
         </svg>
       </span>
       <span className="battle-entry-copy">
-        <small>{disabled ? '처리 중…' : '종목회의 스테이지'}</small>
-        <strong>{assault ? '매도벽 돌파!' : '멘탈 방어!'}</strong>
+        {!compact && <small>{disabled ? '처리 중…' : '종목회의 스테이지'}</small>}
+        <strong>
+          {compact && disabled ? '처리 중…' : assault ? '매도벽 돌파!' : '멘탈 방어!'}
+        </strong>
         {!compact && <span>{assault ? '회의 수익을 키워요' : '회의 손실을 줄여요'}</span>}
       </span>
       {!compact && (
