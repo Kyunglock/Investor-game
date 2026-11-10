@@ -476,71 +476,98 @@ export function buyOrderTexture(scene: Phaser.Scene, damage: number): string {
   return key
 }
 
-/** 큰손 보스: 파란 고래가 정장 모자를 쓰고 "대량 매도" 팻말을 든다. */
-function whale(c: CanvasRenderingContext2D) {
-  c.fillStyle = '#10204a33'
+/** 작은 크기에서도 얼굴과 넓은 팻말이 구분되는 큰손 고래. 모든 윤곽은 64×64 안에 둔다. */
+export function drawWhale(c: CanvasRenderingContext2D) {
+  c.save()
+  c.lineJoin = 'round'
+  c.lineCap = 'round'
+  const ink = '#203d68'
+  const fill = (color: string, width = 1.6) => {
+    c.fillStyle = color
+    c.fill()
+    c.strokeStyle = ink
+    c.lineWidth = width
+    c.stroke()
+  }
+  c.fillStyle = '#19325224'
   c.beginPath()
-  c.ellipse(32, 57, 24, 4, 0, 0, Math.PI * 2)
+  c.ellipse(32, 59, 23, 3, 0, 0, Math.PI * 2)
   c.fill()
-  // 꼬리
-  c.fillStyle = '#1f3f99'
+  // 단순한 두 갈래 꼬리. 끝과 외곽선까지 그림 영역 안에 여백을 둔다.
   c.beginPath()
-  c.moveTo(52, 34)
-  c.quadraticCurveTo(62, 22, 63, 18)
-  c.quadraticCurveTo(58, 30, 63, 42)
-  c.quadraticCurveTo(58, 40, 52, 40)
+  c.moveTo(47, 32)
+  c.quadraticCurveTo(53, 29, 59, 22)
+  c.quadraticCurveTo(61, 30, 56, 34)
+  c.quadraticCurveTo(61, 35, 60, 42)
+  c.quadraticCurveTo(53, 41, 47, 38)
   c.closePath()
-  c.fill()
-  // 몸
+  fill('#4f8ccd')
+  // 둥근 몸통과 옅은 배. 작은 주문서 장식을 덜어 얼굴을 또렷하게 한다.
+  const body = c.createLinearGradient(0, 20, 0, 52)
+  body.addColorStop(0, '#6da9df')
+  body.addColorStop(1, '#3476b5')
   c.beginPath()
-  c.ellipse(30, 36, 25, 17, 0, 0, Math.PI * 2)
+  c.ellipse(28, 35, 23, 17, -0.05, 0, Math.PI * 2)
+  c.fillStyle = body
   c.fill()
-  c.fillStyle = '#9cc2ff'
-  c.beginPath()
-  c.ellipse(28, 44, 19, 8, 0, 0, Math.PI)
-  c.fill()
-  c.lineWidth = 2
-  c.strokeStyle = '#0d2466'
-  c.beginPath()
-  c.ellipse(30, 36, 25, 17, 0, 0, Math.PI * 2)
+  c.strokeStyle = ink
+  c.lineWidth = 1.8
   c.stroke()
-  // 눈썹·눈(못마땅한 얼굴)
-  c.fillStyle = '#ffffff'
   c.beginPath()
-  c.ellipse(17, 31, 4, 4, 0, 0, Math.PI * 2)
+  c.ellipse(27, 43, 17, 7, 0, 0, Math.PI * 2)
+  c.fillStyle = '#b7ddf4'
   c.fill()
-  c.fillStyle = '#0d2466'
+  // 눈과 짧은 눈썹, 입. 진한 윤곽의 크기를 통일한다.
   c.beginPath()
-  c.ellipse(16, 32, 2, 2.2, 0, 0, Math.PI * 2)
+  c.ellipse(18, 31, 3.5, 4, 0, 0, Math.PI * 2)
+  c.fillStyle = '#fff8e9'
   c.fill()
-  c.lineWidth = 2
   c.beginPath()
-  c.moveTo(11, 25)
-  c.lineTo(22, 28)
+  c.arc(17.5, 31.5, 1.7, 0, Math.PI * 2)
+  c.fillStyle = ink
+  c.fill()
+  c.beginPath()
+  c.moveTo(13, 25.5)
+  c.lineTo(22, 27.5)
+  c.strokeStyle = ink
+  c.lineWidth = 1.7
   c.stroke()
-  // 모자(큰손)
-  c.fillStyle = '#2b2340'
-  c.fillRect(20, 6, 18, 12)
-  c.fillRect(15, 17, 28, 3.5)
-  c.fillStyle = '#ff4f6d'
-  c.fillRect(20, 14, 18, 2.5)
-  // 물줄기 대신 쏟아지는 주문서
-  c.fillStyle = '#cfe2ff'
-  c.fillRect(42, 13, 7, 5)
-  c.fillRect(48, 7, 6, 4)
-  // 팻말
-  c.fillStyle = '#fff9ec'
-  c.strokeStyle = '#0d2466'
-  c.lineWidth = 1.5
   c.beginPath()
-  c.roundRect(14, 40, 30, 13, 3)
-  c.fill()
+  c.moveTo(12, 39)
+  c.quadraticCurveTo(18, 41, 23, 38)
   c.stroke()
-  c.fillStyle = '#1f3f99'
-  c.font = `9px ${ORDER_FONT}`
+  // 큰손을 나타내는 모자: 작은 띠 하나만 남긴다.
+  c.beginPath()
+  c.roundRect(20, 5, 17, 13, 3)
+  fill('#27354e')
+  c.fillStyle = '#d9b66c'
+  c.fillRect(21, 13, 15, 2.5)
+  c.beginPath()
+  c.roundRect(15, 17, 27, 4, 2)
+  fill('#27354e', 1.2)
+  // 지느러미가 팻말의 양끝을 잡는다.
+  for (const x of [8, 52]) {
+    c.beginPath()
+    c.ellipse(x, 46, 4, 5, x < 32 ? -0.35 : 0.35, 0, Math.PI * 2)
+    fill('#4f8ccd', 1.2)
+  }
+  const plate = { x: 8, y: 44, w: 48, h: 16 }
+  c.beginPath()
+  c.roundRect(plate.x, plate.y, plate.w, plate.h, 4)
+  fill('#fff6df', 1.5)
+  const text = '대량 매도'
+  const baseSize = 10
+  c.font = `${baseSize}px ${ORDER_FONT}`
+  const size = Math.min(
+    baseSize,
+    (baseSize * (plate.w - 8)) / Math.max(1, c.measureText(text).width),
+  )
+  c.font = `${size}px ${ORDER_FONT}`
+  c.fillStyle = '#254e80'
   c.textAlign = 'center'
   c.textBaseline = 'middle'
-  c.fillText('대량 매도', 29, 47)
+  c.fillText(text, plate.x + plate.w / 2, plate.y + plate.h / 2 + 0.5)
+  c.restore()
 }
 
 /**
@@ -631,7 +658,7 @@ export function bakeOrders(scene: Phaser.Scene) {
     bake(scene, enemyKey('whale', frame), ENEMY_SIZE, ENEMY_SIZE, (c) => {
       c.save()
       c.translate(0, Math.sin(phase) * 1.2)
-      whale(c)
+      drawWhale(c)
       c.restore()
     })
   }
