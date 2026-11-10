@@ -418,7 +418,7 @@ try {
     }
     await route.fulfill({ json: company })
   })
-  /** 위의 흰 판 없이 조각이 제자리에 있는지 (decisions.md 390번): 레벨은 왼쪽 가장자리, 시간·일시정지는 오른쪽 위, 멘탈 게이지는 멘탈벽 그림 위. */
+  /** 위의 흰 판 없이 조각이 제자리에 있는지 (decisions.md 390번): 레벨은 왼쪽 가장자리, 시간·일시정지는 오른쪽 위, 멘탈 게이지는 화면 하단. */
   const checkHud = async () => {
     const { width, height } = page.viewportSize() ?? { width: 0, height: 0 }
     const box = async (id: string) => {
@@ -433,10 +433,10 @@ try {
     const pause = await box('mental-quit')
     assert(timer.x > width / 2 && pause.x + pause.width <= width, 'timer and pause at top right')
     assert(timer.y + timer.height < 70 && pause.y + pause.height < 70, 'corner stays small')
-    // 멘탈벽 줄은 stageArt.ts wallOffset과 같다. 벽 그림은 그 줄 위 24px ~ 아래 48px.
-    const wallY = height - Math.max(150, Math.min(230, height * 0.26))
     const wall = await box('battle-wall')
-    assert(wall.y >= wallY && wall.y + wall.height <= wallY + 48, 'mental gauge on the wall')
+    assert(wall.y > height - 100 && wall.y + wall.height <= height - 10, 'mental gauge at bottom')
+    assert(wall.x >= 0 && wall.x + wall.width <= width, 'mental gauge fits screen')
+    await expect(page.locator('.battle-footer')).not.toContainText('누른 방향으로 발사')
   }
   /**
    * 카드 고르기 (decisions.md 393번): 석 장이 뒤집힌 채 나와 한 장씩 펼쳐지고, 다 펼친 뒤에만 고른다. 다 펼치기 전에 누르면 남은 카드를 한 번에 펼친다.

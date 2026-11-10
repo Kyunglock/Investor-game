@@ -876,7 +876,7 @@ function CardPick({
 }
 
 /**
- * 한 판: Phaser를 늦게 불러 컨테이너에 띄우고, 그 위에 멘탈(멘탈벽 위)·레벨(왼쪽 세로)·시간(오른쪽 위)과 큰 알림을 그린다. 레벨이 오르면 전투 위에 카드 고르기가 뜬다. 오른쪽 위 Ⅱ로 언제든
+ * 한 판: Phaser를 늦게 불러 컨테이너에 띄우고, 그 위에 멘탈(화면 하단)·레벨(왼쪽 세로)·시간(오른쪽 위)과 큰 알림을 그린다. 레벨이 오르면 전투 위에 카드 고르기가 뜬다. 오른쪽 위 Ⅱ로 언제든
  * 나갈 수 있다(345번): 전투를 멈추고 물은 뒤 나가면 강화 없이 결산이다.
  */
 function Battle({
@@ -1015,7 +1015,7 @@ function Battle({
       />
       {hud && !loadError && (
         <>
-          {/* 위의 흰 판을 없앴다 (390번): 적이 내려오는 위쪽 가운데를 비우고, 멘탈은 멘탈벽 위에, 레벨은 왼쪽 가장자리에 세로로 둔다. */}
+          {/* 위의 흰 판을 없앴다 (390번): 적이 내려오는 위쪽 가운데를 비우고, 멘탈은 하단 설명 자리로 옮기고, 레벨은 왼쪽 가장자리에 세로로 둔다. */}
           <div
             className={`battle-hud${hud.assault ? ' battle-hud-assault' : ''}`}
             data-testid="battle-hud"
@@ -1100,10 +1100,18 @@ function Battle({
                 <b>{hud.kills}</b>
               </span>
             </div>
-            <div
-              className={`battle-wall${hud.assault ? ' battle-wall-assault' : ''}`}
-              data-testid="battle-wall"
-            >
+          </div>
+          {gains[0] && (
+            <WallGainFlight
+              key={gains[0].id}
+              gain={gains[0]}
+              target={priceTarget}
+              paused={asking || levelUp !== null}
+              onDone={() => setGains((queue) => queue.slice(1))}
+            />
+          )}
+          <div className="battle-footer" data-testid="battle-footer">
+            <div className="battle-wall" data-testid="battle-wall">
               <span className="battle-wall-label">
                 <span aria-hidden="true">♥</span> {hud.assault ? '멘탈' : '멘탈벽'}
               </span>
@@ -1121,25 +1129,7 @@ function Battle({
                 </strong>
               </div>
             </div>
-          </div>
-          {gains[0] && (
-            <WallGainFlight
-              key={gains[0].id}
-              gain={gains[0]}
-              target={priceTarget}
-              paused={asking || levelUp !== null}
-              onDone={() => setGains((queue) => queue.slice(1))}
-            />
-          )}
-          <div className={`battle-footer${hud.assault ? ' battle-footer-assault' : ''}`}>
-            <span>
-              {mode === 'assault'
-                ? '좌우로 끌거나 화면 왼쪽·오른쪽 누르기 · 위로 자동 사격'
-                : mode === 'advance'
-                  ? '끌어서 움직이기 · 자동 사격'
-                  : '누른 방향으로 발사'}
-            </span>
-            <div>
+            <div className="battle-cards">
               {[...new Set(cards.map((c) => c.code))].map((code) => {
                 const same = cards.filter((c) => c.code === code)
                 const top = same.reduce((a, b) =>
