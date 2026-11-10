@@ -1845,9 +1845,13 @@ class BattleScene extends Phaser.Scene {
       this.pop(this.player.x, this.playerY() - 45, '매수벽 재정비!', '#ffd99e', 20)
     if (support?.fire) {
       const lane = this.lane()
-      this.buyWallFx?.launch(lane.left + lane.width * (0.2 + Math.random() * 0.6), this.buyWallY())
+      this.buyWallFx?.launch(
+        lane.left + lane.width * (0.2 + Math.random() * 0.6),
+        this.buyWallY(),
+        this.loadout.damage * 0.75,
+      )
     }
-    this.buyWallFx?.step(dt, (x, fromY, toY) => {
+    this.buyWallFx?.step(dt, (x, fromY, toY, damage) => {
       const targets = this.magicTargets().filter(
         (e) =>
           Math.abs(e.x - x) <= Math.max(16, e.displayWidth * 0.45) &&
@@ -1856,7 +1860,7 @@ class BattleScene extends Phaser.Scene {
       )
       const hit = targets.sort((a, b) => b.y - a.y)[0]
       if (!hit) return false
-      this.hit(hit, this.loadout.damage * 0.75, -Math.PI / 2, 'bullet')
+      this.hit(hit, damage, -Math.PI / 2, 'bullet')
       this.glow(x, hit.y, 0xffbb79, 28, 180)
       return true
     })
@@ -2295,7 +2299,7 @@ class BattleScene extends Phaser.Scene {
     const pool = kind === 'crit' ? this.crits : this.damage
     const { slot, merged, n } = pool.take(e, kind, amount, this.time.now)
     const t = slot.item
-    const label = damageLabel(kind, slot.total)
+    const label = damageLabel(kind, slot.total, Boolean(this.assault))
     if (t.style.color !== style.color) {
       // 색만 바꾸고(다시 그리지 않음) 아래 setText 또는 updateText로 한 번만 그린다.
       t.style.color = style.color

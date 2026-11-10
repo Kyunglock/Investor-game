@@ -1,4 +1,5 @@
 import type { OrderKind } from './enemies'
+import { SHARES_PER_HP } from './shares'
 
 /**
  * 공격 판: 매도벽을 부수고 올라간다 (decisions.md 413번, #573). 종목 회의에서 맞혔을 때 들어가는 판이다. 길을 가로로 막는 **매도벽**(호가 칸이 줄지어
@@ -231,7 +232,7 @@ export const WEAK_CELL = 0.7
 
 /** 칸에 적힌 물량(주): 체력에 비례하고 100주 단위. 맞을수록 남은 체력만큼 깎여 보인다(0이 되기 전엔 적어도 100주). */
 export function cellShares(maxHp: number, hpLeft: number): number {
-  const full = Math.max(1, Math.round((maxHp * 150) / 100)) * 100
+  const full = Math.max(1, Math.round((maxHp * SHARES_PER_HP) / 100)) * 100
   if (hpLeft <= 0) return 0
   return Math.max(100, Math.ceil((full * Math.min(1, hpLeft / maxHp)) / 100) * 100)
 }
