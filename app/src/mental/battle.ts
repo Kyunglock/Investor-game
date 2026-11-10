@@ -78,19 +78,18 @@ import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres
 import type { Hero } from './hero'
 import { BULLET_H, BULLET_W, bulletHitbox } from './hitbox'
 import {
-  chainTargets,
   densest,
   type EarthStats,
   earthStats,
   fireStats,
   type LightningStats,
+  lightningPlan,
   lightningStats,
   MagicClock,
   magicTier,
   nearestTo,
   ramSpeed,
   siegeTarget,
-  strongest,
   sweepHits,
   type WaterStats,
   waterStats,
@@ -3372,24 +3371,13 @@ class BattleScene extends Phaser.Scene {
     })
   }
 
-  // 번개: 하늘에서 체력이 가장 많은 적에게 내리꽂혀 옆 적에게 차례로 튄다. 가는 줄기(Lv.1) → 굵은 번개(Lv.2) → 여러 갈래(Lv.3).
+  // 번개: 몬스터 중 체력이 가장 많은 적에게 내리꽂혀 몬스터끼리 튄다. 몬스터가 없으면 매도벽을 노린다. 가는 줄기(Lv.1) → 굵은 번개(Lv.2) → 여러 갈래(Lv.3).
 
   private castLightning(from: { x: number; y: number }, level: number): boolean {
     const st = lightningStats(level)
-    const list = this.magicTargets()
-    const struck: Enemy[] = []
-    for (let i = 0; i < st.bolts; i++) {
-      const target = strongest(list, from, struck)
-      if (!target) break
-      struck.push(target)
-    }
-    if (struck.length === 0) return false
-    // 맞아 죽은 적이 목록에서 빠지기 전에 튈 곳까지 정한다.
-    const plans = struck.map((t) => ({
-      t,
-      chain: chainTargets(t, list, st.chains, st.chainRadius),
-    }))
-    for (const { t, chain } of plans) this.strike(t, chain, st, level)
+    const plans = lightningPlan(this.magicTargets(), from, st, (e) => Boolean(e.cell))
+    if (plans.length === 0) return false
+    for (const { target, chain } of plans) this.strike(target, chain, st, level)
     this.playSound('zap')
     return true
   }

@@ -308,6 +308,28 @@ export function chainTargets<T extends Point>(
   return out
 }
 
+/** 매도벽은 몬스터가 없을 때만 노린다. 첫 낙뢰와 연쇄가 같은 대상 목록을 사용한다. */
+export function lightningPlan<T extends Point & { hp: number }>(
+  list: readonly T[],
+  from: Point,
+  stats: Pick<LightningStats, 'bolts' | 'chains' | 'chainRadius'>,
+  isWall: (target: T) => boolean,
+): { target: T; chain: T[] }[] {
+  const monsters = list.filter((target) => !isWall(target))
+  const candidates = monsters.length > 0 ? monsters : list
+  const struck: T[] = []
+  for (let i = 0; i < stats.bolts; i++) {
+    const target = strongest(candidates, from, struck)
+    if (!target) break
+    struck.push(target)
+  }
+  // 피해 처리 전에 모든 경로를 정해 풀 재사용·처치가 다음 경로를 바꾸지 않게 한다.
+  return struck.map((target) => ({
+    target,
+    chain: chainTargets(target, candidates, stats.chains, stats.chainRadius),
+  }))
+}
+
 /**
  * 날아가는 물(물방울·물줄기·물결)이 적에 닿았나: 나아가는 방향(dx, dy 단위 벡터)으로 앞뒤 depth, 옆으로 half 안에 적의 원(반지름 r)이 걸치면 닿는다.
  */

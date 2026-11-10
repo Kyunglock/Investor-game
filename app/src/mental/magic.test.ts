@@ -4,6 +4,7 @@ import {
   densest,
   earthStats,
   fireStats,
+  lightningPlan,
   lightningStats,
   MAGIC_MAX_LEVEL,
   MAGIC_RETRY_SECONDS,
@@ -96,6 +97,51 @@ describe('물·불·번개 마법 (decisions.md 392번)', () => {
     expect(chainTargets(first, list, 3, 100)).toEqual([p3, p1, p2])
     expect(chainTargets(first, list, 9, 100)).toHaveLength(3)
     expect(chainTargets(first, list, 1, 30)).toEqual([])
+  })
+
+  it('번개는 큰 매도벽 대신 몬스터를 먼저 맞히고 연쇄도 벽에 빼앗기지 않는다', () => {
+    const wall = { x: 0, y: 0, hp: 1000, wall: true }
+    const dump = { x: 10, y: 0, hp: 4, wall: false }
+    const panic = { x: 100, y: 0, hp: 1, wall: false }
+    const plans = lightningPlan(
+      [wall, dump, panic],
+      { x: 0, y: 200 },
+      lightningStats(3),
+      (e) => e.wall,
+    )
+    expect(plans).toEqual([{ target: dump, chain: [panic] }])
+  })
+
+  it('여러 줄기도 서로 다른 몬스터를 고르고 큰손 보스도 벽으로 취급하지 않는다', () => {
+    const wall = { x: 0, y: 0, hp: 1000, wall: true }
+    const boss = { x: 0, y: 50, hp: 100, wall: false }
+    const dump = { x: 0, y: 100, hp: 4, wall: false }
+    const plans = lightningPlan(
+      [wall, boss, dump],
+      { x: 0, y: 200 },
+      lightningStats(5),
+      (e) => e.wall,
+    )
+    expect(plans.map((p) => p.target)).toEqual([boss, dump])
+    expect(plans.every((p) => !p.chain.includes(wall))).toBe(true)
+    expect(lightningPlan([wall, dump], { x: 0, y: 200 }, lightningStats(5), (e) => e.wall)).toEqual(
+      [{ target: dump, chain: [] }],
+    )
+  })
+
+  it('벽만 남으면 벽을 때리고, 벽이 없는 디펜스의 타격·연쇄·거리 제한은 그대로다', () => {
+    const wall = { x: 0, y: 0, hp: 100, wall: true }
+    const stats = lightningStats(1)
+    expect(lightningPlan([wall], { x: 0, y: 200 }, stats, (e) => e.wall)).toEqual([
+      { target: wall, chain: [] },
+    ])
+    expect(lightningPlan([], { x: 0, y: 200 }, stats, () => false)).toEqual([])
+    const dump = { x: 0, y: 0, hp: 4, wall: false }
+    const panic = { x: 100, y: 0, hp: 1, wall: false }
+    const far = { x: 400, y: 0, hp: 1, wall: false }
+    expect(lightningPlan([dump, panic, far], { x: 0, y: 200 }, stats, (e) => e.wall)).toEqual([
+      { target: dump, chain: [panic] },
+    ])
   })
 
   it('날아가는 물은 앞뒤 depth, 옆 half 안에 걸친 적에 닿는다', () => {
