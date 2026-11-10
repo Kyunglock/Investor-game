@@ -3572,16 +3572,23 @@ class BattleScene extends Phaser.Scene {
     const st = lightningStats(level)
     const plans = lightningPlan(this.magicTargets(), from, st, (e) => Boolean(e.cell))
     if (plans.length === 0) return false
-    for (const { target, chain } of plans) this.strike(target, chain, st)
+    for (const { target, chain } of plans) this.strike(target, chain, st, from)
     this.playSound('zap')
     return true
   }
 
-  private strike(target: Enemy, chain: Enemy[], st: LightningStats) {
+  private strike(
+    target: Enemy,
+    chain: Enemy[],
+    st: LightningStats,
+    from: { x: number; y: number },
+  ) {
     const width = 4
     const g = this.bolts[this.boltIndex++ % this.bolts.length]
     this.tweens.killTweensOf(g)
     g.clear().setAlpha(1).setVisible(true)
+    // 시전한 고양이에서 첫 대상까지 가는 가는 줄기: 본 낙뢰보다 훨씬 가늘게, 곁가지 없이. 어디서 쏜 번개인지 보이게만 한다.
+    this.drawBolt(g, from.x, from.y, target.x, target.y - 28, 1.8, 0)
     this.drawBolt(g, target.x, target.y - 28, target.x, target.y, width, 0)
     let prev = target
     for (const o of chain) {
