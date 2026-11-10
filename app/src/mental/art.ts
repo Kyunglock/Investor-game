@@ -23,6 +23,18 @@ import { drawWeaponBullet, drawWeaponImpact, WEAPON_GRADES } from './weaponVisua
 /** 화면 배율. 텍스처를 이만큼 크게 굽고 캔버스도 이만큼 크다(battle.ts). 그림 크기(setDisplaySize)는 배율과 상관없이 아래 상수(CSS px)를 쓴다. */
 export const DPR = Math.min(3, (typeof devicePixelRatio === 'number' && devicePixelRatio) || 1)
 
+/** 매수벽과 매도벽의 물량 글자는 같은 서체·크기·외곽선으로 표시한다. */
+export const WALL_LABEL_STYLE = {
+  fontFamily: '"Jua", "Gowun Dodum", sans-serif',
+  fontSize: '18px',
+  color: '#ffffff',
+  align: 'center',
+  stroke: '#0d2466',
+  strokeThickness: 4,
+  lineSpacing: -3,
+  resolution: DPR,
+} satisfies Phaser.Types.GameObjects.Text.TextStyle
+
 /** 사장냥의 화면 크기(px): 상자 100×110의 0.72배. 레퍼런스처럼 화면 높이의 1/12쯤. */
 export const HERO_SCALE = 0.72
 export const HERO_SIZE = { w: CAT_W * HERO_SCALE, h: CAT_H * HERO_SCALE }

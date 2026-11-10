@@ -34,6 +34,7 @@ import {
   mateKey,
   RAM_ART,
   WALL_H,
+  WALL_LABEL_STYLE,
 } from './art'
 import {
   ASSAULT_BOSS,
@@ -1344,16 +1345,7 @@ class BattleScene extends Phaser.Scene {
     e.maxHp = hp
     ;(e.body as Phaser.Physics.Arcade.Body).setImmovable(true)
     const label = this.add
-      .text(0, 0, '', {
-        fontFamily: '"Jua", "Gowun Dodum", sans-serif',
-        fontSize: '18px',
-        color: '#ffffff',
-        align: 'center',
-        stroke: '#0d2466',
-        strokeThickness: 4,
-        lineSpacing: -3,
-        resolution: DPR,
-      })
+      .text(0, 0, '', { ...WALL_LABEL_STYLE })
       .setOrigin(0.5)
       .setDepth(2.6)
     const shares = cellShares(hp, hp)

@@ -1,5 +1,5 @@
 import type Phaser from 'phaser'
-import { DPR } from './art'
+import { DPR, WALL_LABEL_STYLE } from './art'
 import { BUY_WALL, type BuyWall } from './buyWall'
 import { shareLabel } from './shares'
 
@@ -17,14 +17,7 @@ export class BuyWallFx {
   constructor(scene: Phaser.Scene) {
     this.ink = scene.add.graphics().setDepth(4)
     this.title = scene.add
-      .text(0, 0, '', {
-        fontFamily: '"Jua", "Gowun Dodum", sans-serif',
-        fontSize: 18,
-        color: '#fff4da',
-        stroke: '#803b3f',
-        strokeThickness: 2,
-        resolution: DPR,
-      })
+      .text(0, 0, '', { ...WALL_LABEL_STYLE })
       .setOrigin(0.5)
       .setDepth(6)
     this.shots = Array.from({ length: 6 }, () => ({
