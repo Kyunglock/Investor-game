@@ -84,7 +84,12 @@ export class BuyWall {
   }
 }
 
-/** 매도벽 한 개의 기존 가격 눈금은 2%. 실패하면 전투 추가 수익은 없다. */
-export function assaultBonusPercent(win: boolean, wallsBroken: number): number {
-  return win ? Math.min(10, Math.max(0, Math.floor(wallsBroken))) * 2 : 0
+/** 매도벽 돌파 추가 수익(%): 별 1·2·3개 → 25·50·100%. 별이 없으면 0%. */
+export const ASSAULT_STAR_BONUS = [0, 25, 50, 100] as const
+
+/** 광고를 보면 받을 수 있는 매도벽 돌파 추가 수익(%). 지금은 버튼만 있다. */
+export const ASSAULT_AD_BONUS = 400
+
+export function assaultBonusPercent(stars: number): number {
+  return ASSAULT_STAR_BONUS[Math.min(3, Math.max(0, Math.floor(stars)))]
 }

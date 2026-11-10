@@ -19,7 +19,7 @@ import {
 import { type AssaultSpec, assaultSpec } from './assault'
 import { STAGE_ASSETS } from './assets'
 import type { BattleHandle, Hud, Outcome } from './battle'
-import { assaultBonusPercent } from './buyWall'
+import { ASSAULT_AD_BONUS, assaultBonusPercent } from './buyWall'
 import {
   AUTO_PICK_MS,
   autoPickIndex,
@@ -437,7 +437,7 @@ function AssaultResult({
       : 0
   const mm = Math.floor(outcome.seconds / 60)
   const ss = String(Math.floor(outcome.seconds % 60)).padStart(2, '0')
-  const bonusPercent = assaultBonusPercent(outcome.win, outcome.wallsBroken)
+  const bonusPercent = assaultBonusPercent(outcome.stars)
   return (
     <div className="stage-result-card" data-testid="mental-result" data-mode="assault">
       <span
@@ -471,6 +471,15 @@ function AssaultResult({
       >
         추가 수익 +{bonusPercent}%
       </p>
+      {outcome.win ? (
+        <button
+          type="button"
+          className="mt-2 rounded-xl bg-[#ffc83d] px-4 py-2 font-game text-[16px] text-ink shadow"
+          data-testid="assault-ad-bonus"
+        >
+          ▶ 광고 보고 추가 수익 +{ASSAULT_AD_BONUS}%
+        </button>
+      ) : null}
       <p className="mt-2" data-testid="mental-reward">
         {sending ? (
           <span className="text-[14px]">회의 손익을 바꾸는 중…</span>

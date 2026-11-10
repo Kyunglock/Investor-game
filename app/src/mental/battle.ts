@@ -110,7 +110,7 @@ import { MATE_LOOKS, mateFormation, spreadTargets } from './mates'
 import { OrderBarrierQueue } from './orderBarrier'
 import { shareLabel } from './shares'
 import { wallOffset } from './stageArt'
-import { waveKind } from './waves'
+import { PANIC_RUSH, panicRushGap, waveKind } from './waves'
 import {
   aimWithJitter,
   pierceOf,
@@ -433,6 +433,13 @@ const unitK = (kind: UnitKind) => ENEMY_K * (UNITS[kind].scale ?? 1)
 /** 구워 둔 텍스처(배율만큼 큼)를 CSS px 크기로 놓는 배율. 파티클·화염에 쓴다. */
 const TEX = 1 / DPR
 
+/** 공격 판에서 손절·투기·공매도가 처음 나올 때의 배너. */
+const ASSAULT_MOB_BANNERS: Record<'stop' | 'spec' | 'short', [string, string]> = {
+  stop: ['손절매 출현! 단단하게 들이받는다', '#9ba2ad'],
+  spec: ['투기 몬스터 출현! 부풀면 터진다', '#ea4d6a'],
+  short: ['공매도 출현! 방패로 버틴다', '#9eb7ff'],
+}
+
 class BattleScene extends Phaser.Scene {
   private readonly opts: BattleOptions
   private readonly genre
@@ -471,6 +478,7 @@ class BattleScene extends Phaser.Scene {
   /** 벽 사이 잡몹 구간(#593)의 남은 초. 0이면 아니다. 끝나면 다음 벽이 내려온다. */
   private circuitSellQueue = new OrderBarrierQueue()
   private circuitSellClock = 0
+  private circuitBuyClock = 0
   private circuit: CircuitBreaker | null = null
   private circuitFx: CircuitBreakerFx | null = null
   private circuitIndex = 0
@@ -612,6 +620,13 @@ class BattleScene extends Phaser.Scene {
   /** 첫 카드를 골라 싸움이 시작됐다 (339번). */
   private begun = false
   private nextWave = WAVE_SECONDS
+  /** 공격 판에서 이미 출현 배너를 띄운 몹(손절·투기·공매도). */
+  private assaultSeen = new Set<string>()
+  /** 다음 패닉셀 러시 시각(초)과, 러시 중이면 아직 나올 패닉셀 수·다음 한 마리까지 남은 시간. */
+  private nextPanicRush: number = PANIC_RUSH.first + panicRushGap(Math.random()) / 2
+  private panicRushLeft = 0
+  private panicRushClock = 0
+  private panicRushEvery = 0
   /** 한 화면에 함께 있는 적의 최대 수(334·340번): 더 있으면 새로 만들지 않는다. */
   /** 동시에 살아 있는 적의 최대: 파도(투매 최대 36, 패닉 최대 44)가 잘리지 않게 넉넉히. */
   private static readonly MAX_ALIVE = 100
@@ -1782,7 +1797,11 @@ class BattleScene extends Phaser.Scene {
       move = -(support?.retreat ?? 0)
       if (wall) wall.arrived = false
     }
-    if (support?.rebuilt) this.opts.onBanner('새 매수벽 등장!', '#7be0c3')
+    if (support?.rebuilt) {
+      this.opts.onBanner('새 매수벽 등장!', '#7be0c3')
+      // 새 매수벽이 서면 다가오던 매도 공격을 뒤로 밀어 숨 돌릴 틈을 준다.
+      this.pushEnemiesBack(0.5)
+    }
     if (support) this.launchBuyOrders(support.fireCount)
     this.buyWallFx?.step(dt, (x, fromY, toY, damage) => {
       const targets = this.magicTargets().filter(
@@ -1876,14 +1895,25 @@ class BattleScene extends Phaser.Scene {
     const { w, h } = this.view()
     const wall = this.circuitWall
     const barrier = this.circuitBarrier()
-    // 매도 주문은 1.4초에 한 장만, 매수 주문은 평소 발사 시계의 20%로 들어온다.
+    // 거래 정지 동안 매도·매수 주문이 대기 줄에 잔뜩 쌓인다. 매도가 훨씬 많다(CIRCUIT_BREAKER.sellEvery·buyEvery).
+    const open = c.elapsed < CIRCUIT_BREAKER.seconds - CIRCUIT_BREAKER.stopBefore
     this.circuitSellClock += dt
-    if (this.circuitSellClock >= 1.4 && c.elapsed < CIRCUIT_BREAKER.seconds - 0.4 && wall) {
-      this.circuitSellClock = 0
-      this.spawn('order', [
-        barrier.left + barrier.width * (0.15 + Math.random() * 0.7),
-        wall.y + 20,
+    while (open && wall && this.circuitSellClock >= CIRCUIT_BREAKER.sellEvery) {
+      this.circuitSellClock -= CIRCUIT_BREAKER.sellEvery
+      const r = Math.random()
+      this.spawn(r < 0.6 ? 'order' : r < 0.9 ? 'market' : 'bulk', [
+        barrier.left + barrier.width * (0.08 + Math.random() * 0.84),
+        wall.y + 20 + Math.random() * 30,
       ])
+    }
+    this.circuitBuyClock += dt
+    while (open && this.buyWall?.active && this.circuitBuyClock >= CIRCUIT_BREAKER.buyEvery) {
+      this.circuitBuyClock -= CIRCUIT_BREAKER.buyEvery
+      this.buyWallFx?.launch(
+        barrier.left + barrier.width * (0.08 + Math.random() * 0.84),
+        this.buyWallY(),
+        this.loadout.damage * 0.75,
+      )
     }
     this.launchBuyOrders(this.buyWall?.stepOrders(dt * 0.2) ?? 0)
     const sells = (this.enemies.getChildren() as Enemy[])
@@ -2091,6 +2121,13 @@ class BattleScene extends Phaser.Scene {
         )
       this.marketStats[kind]++
     }
+    if (this.assault && (kind === 'stop' || kind === 'spec' || kind === 'short')) {
+      if (!this.assaultSeen.has(kind)) {
+        this.assaultSeen.add(kind)
+        const [text, color] = ASSAULT_MOB_BANNERS[kind]
+        this.opts.onBanner(text, color)
+      }
+    }
     return e
   }
 
@@ -2187,6 +2224,37 @@ class BattleScene extends Phaser.Scene {
       ])
     }
     this.opts.onBanner('공매도 웨이브! 방패 대열이 밀려온다!', '#9eb7ff')
+  }
+
+  /** 패닉셀 러시: 판 중간중간 갑자기 "패닉셀이 몰려온다!!" 하고 몇 초 동안 위에서 패닉셀이 쏟아진다. */
+  private panicRushStep(dt: number) {
+    if (this.panicRushLeft === 0 && this.elapsed >= this.nextPanicRush) {
+      // 정해진 파도와 겹치면 조금 미룬다.
+      if (Math.abs(this.nextWave - this.elapsed) < PANIC_RUSH.waveGuard) {
+        this.nextPanicRush = this.nextWave + PANIC_RUSH.waveGuard
+        return
+      }
+      this.panicRushLeft = Math.max(
+        8,
+        Math.round(PANIC_RUSH.count * this.staged(this.countScale) * (this.assault ? 0.6 : 1)),
+      )
+      this.panicRushEvery = PANIC_RUSH.seconds / this.panicRushLeft
+      this.panicRushClock = 0
+      this.nextPanicRush = this.elapsed + PANIC_RUSH.seconds + panicRushGap(Math.random())
+      this.opts.onBanner('패닉셀이 몰려온다!!', '#e8434f')
+      if (!this.reducedMotion) this.cameras.main.shake(320, 0.006)
+      sfx.rumble()
+      haptic.medium()
+    }
+    if (this.panicRushLeft === 0) return
+    this.panicRushClock += dt
+    const { w } = this.view()
+    while (this.panicRushLeft > 0 && this.panicRushClock >= this.panicRushEvery) {
+      this.panicRushClock -= this.panicRushEvery
+      this.panicRushLeft--
+      // 길 폭 안에서 두세 마리씩 겹쳐 쏟아지듯 위에서 내려온다.
+      this.spawn('panic', [w * (0.14 + Math.random() * 0.72), -30 - Math.random() * 60])
+    }
   }
 
   private wavePanic() {
@@ -2506,6 +2574,18 @@ class BattleScene extends Phaser.Scene {
     this.buyWallFx.draw(this.buyWall, lane.left, lane.width, this.buyWallY(), this.reducedMotion)
   }
 
+  /** 매도 주문들을 seconds초 동안 위로(뒤로) 밀어낸다. 매수벽이 무너질 때와 새로 설 때 쓴다. */
+  private pushEnemiesBack(seconds: number) {
+    for (const child of this.enemies.getChildren()) {
+      const enemy = child as Enemy
+      if (!enemy.active || enemy.dying || enemy.cell) continue
+      enemy.wallPushUntil = Math.max(enemy.wallPushUntil, this.elapsed + seconds)
+      enemy.kbx = 0
+      enemy.kby = 0
+      enemy.setVelocity(0, -600)
+    }
+  }
+
   hitBuyWall(damage: number, x: number) {
     if (!this.buyWall?.active || this.over) return
     const before = this.buyWall.hp
@@ -2519,14 +2599,7 @@ class BattleScene extends Phaser.Scene {
       this.opts.onBanner(`매수벽 붕괴! 멘탈 -${loss} · 1.5초 후 재건`, '#ffb278')
       // 일반 피격 무적 시간과 무관하게 붕괴 한 번당 정확히 한 번 깎는다.
       this.hurt(loss, undefined, undefined, true)
-      for (const child of this.enemies.getChildren()) {
-        const enemy = child as Enemy
-        if (!enemy.active || enemy.dying || enemy.cell) continue
-        enemy.wallPushUntil = this.elapsed + 0.35
-        enemy.kbx = 0
-        enemy.kby = 0
-        enemy.setVelocity(0, -600)
-      }
+      this.pushEnemiesBack(0.35)
       sfx.crumble()
       haptic.medium()
     } else {
@@ -3825,6 +3898,7 @@ class BattleScene extends Phaser.Scene {
       }
       this.circuitSellQueue.clear()
       this.circuitSellClock = 0
+      this.circuitBuyClock = 0
       this.buyWallFx?.beginCircuit()
       this.circuitFx = new CircuitBreakerFx(this)
       if (!this.reducedMotion) this.cameras.main.shake(180, 0.003)
@@ -3919,6 +3993,7 @@ class BattleScene extends Phaser.Scene {
       } else this.waveShort()
       this.nextWave += WAVE_SECONDS
     }
+    if (this.mode === 'defense' || this.assault) this.panicRushStep(dt)
 
     // 적 움직임: 매 프레임 새 객체를 만들지 않는다.
     const list = this.enemies.getChildren()
@@ -4005,21 +4080,12 @@ class BattleScene extends Phaser.Scene {
           if (e.wallPushUntil <= this.elapsed) this.kill(e, false)
           continue
         }
-        // 매도 물량 (413번): 벽 앞에서 사장냥 쪽으로 내려온다. 시장가는 사장냥을 향해 꺾여 들고, 허매도는 흔들린다. 오르는 만큼 함께 내려간다.
+        // 매도 물량 (413번): 벽 앞에서 일직선으로 곧게 내려온다. 사장냥 쪽으로 꺾이거나 흔들리지 않는다. 오르는 만큼 함께 내려간다.
         if (e.y > h + 40) {
           e.disableBody(true, true)
           continue
         }
-        const toward = p.x - e.x
-        const vx =
-          e.kind === 'short'
-            ? 0
-            : e.kind === 'market'
-              ? Phaser.Math.Clamp(toward * 0.7, -80, 80)
-              : e.kind === 'fake'
-                ? Math.sin((this.elapsed - e.born) * 3 + e.walkOffset) * 40
-                : Phaser.Math.Clamp(toward, -1, 1) * 22
-        e.setVelocity(e.kbx + vx, sy + e.kby + this.climbV)
+        e.setVelocity(e.kbx, sy + e.kby + this.climbV)
       } else if (this.mode === 'advance') {
         // 길막 적은 천천히 사장냥 쪽으로 다가오고, 아래로 지나가면 다시 위에서 내려온다. 달려드는 패닉은 지나가면 사라진다.
         if (e.y > h + 50) {

@@ -165,6 +165,17 @@ describe('공격 판: 매도벽 (decisions.md 413번)', () => {
     }
   })
 
+  it('손절은 처음부터, 투기는 셋째 벽부터, 공매도는 넷째 벽부터 섞여 나온다', () => {
+    const kindsAt = (i: number) =>
+      new Set(Array.from({ length: 1000 }, (_, j) => pickFlow(ASSAULT_WALLS[i].mix, j / 1000)))
+    expect(kindsAt(0).has('stop')).toBe(true)
+    expect(kindsAt(0).has('spec')).toBe(false)
+    expect(kindsAt(2).has('spec')).toBe(true)
+    expect(kindsAt(3).has('short')).toBe(true)
+    const last = kindsAt(ASSAULT_WALLS.length - 1)
+    for (const k of ['stop', 'spec', 'short']) expect(last.has(k as never)).toBe(true)
+  })
+
   it('매도 물량: 시장가는 작고 빠르고, 대량 매도는 묵직하고 느리고, 허매도는 경험치가 없다', () => {
     expect(ORDERS.market.speed).toBeGreaterThan(ORDERS.order.speed)
     expect(ORDERS.market.r).toBeLessThan(ORDERS.order.r)
