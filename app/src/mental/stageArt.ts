@@ -73,12 +73,16 @@ export function drawOrderBlock(
 ) {
   const w = source.width / 2
   const h = source.height / 2
+  // 원본 질감·블록 모양·균열은 보존하고, 구울 때만 매도=파랑 / 매수=빨강으로 돌린다.
+  c.save()
+  c.filter = sell ? 'hue-rotate(200deg)' : 'hue-rotate(190deg)'
   drawSprite(
     c,
     source,
     { x: cracked ? w : 0, y: sell ? h : 0, w, h },
     { x: 0, y: 0, w: 85.34, h: 96 },
   )
+  c.restore()
 }
 
 export function drawMentalWall(

@@ -3,7 +3,7 @@ import { buyOrderTexture, WALL_LABEL_STYLE } from './art'
 import type { BuyWall } from './buyWall'
 import { shareLabel } from './shares'
 
-/** 청록색 장난감 매수벽. 단일 벽의 체력·재건·지원 사격은 기존 규칙을 따른다. */
+/** 붉은색 장난감 매수벽. 단일 벽의 체력·재건·지원 사격은 기존 규칙을 따른다. */
 export class BuyWallFx {
   private ink: Phaser.GameObjects.Graphics
   private surface: Phaser.GameObjects.Image
@@ -112,7 +112,7 @@ export class BuyWallFx {
         .setPosition(left + width / 2, y - 4)
     } else {
       this.surface.setVisible(false)
-      g.lineStyle(1, 0x75cabc, 0.6).strokeRoundedRect(left, y - 30, width, 52, 7)
+      g.lineStyle(1, 0xe78181, 0.6).strokeRoundedRect(left, y - 30, width, 52, 7)
       this.title
         .setText(`매수벽 붕괴 · 재정비 ${wall.rebuildLeft.toFixed(1)}초`)
         .setPosition(left + width / 2, y)

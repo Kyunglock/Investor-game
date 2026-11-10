@@ -697,15 +697,15 @@ export function bakeOrders(scene: Phaser.Scene) {
   }
   // 벽 뒤 판: 블록 사이를 잇는 옅은 접지 그림자.
   bake(scene, 'wall-band', 64, 32, (c) => {
-    c.fillStyle = '#a45d4126'
+    c.fillStyle = '#416fa426'
     c.fillRect(0, 0, 64, 32)
-    c.fillStyle = '#e4a478'
+    c.fillStyle = '#78aee4'
     c.fillRect(0, 0, 64, 2)
     c.fillRect(0, 30, 64, 2)
   })
-  // 파편: 산호색 벽 조각과 흰 먼지.
+  // 파편: 푸른색 매도벽 조각과 흰 먼지.
   bake(scene, 'chip', 6, 5, (c) => {
-    c.fillStyle = '#ed8766'
+    c.fillStyle = '#669ded'
     c.beginPath()
     c.moveTo(0, 1)
     c.lineTo(5, 0)
