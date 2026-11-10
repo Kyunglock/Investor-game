@@ -43,7 +43,6 @@ export function InvestWindow({
   onClose,
   onSettle,
   onBattle,
-  battleInOffice = false,
   hold = false,
 }: {
   invest: Invest
@@ -53,19 +52,16 @@ export function InvestWindow({
   onClose: () => void
   onSettle: () => void
   /**
-   * 회의 뒤 전투로 간다 (decisions.md 414번, #573): 틀렸으면 디펜스로 손실을 줄이고, 맞혔으면 공격 판(매도벽)으로 수익을 키운다. 주지 않으면(웹) 전투
-   * 없이 그대로다.
+   * 종목 결정 후 결과 화면의 메인 버튼으로 매도벽 돌파에 진입한다. 주지 않으면(웹) 전투 없이 진행한다.
    */
   onBattle?: (battle: NonNullable<NonNullable<Invest['outcome']>['battle']>) => void
-  /** 앱에서는 회의 결과에서 시작하지 않고 사무실의 버튼으로만 전투에 들어간다. */
-  battleInOffice?: boolean
   /** 결과를 아직 보이지 않는다 (348번): 디펜스 멘탈 전투가 결정 직후에 끼어들어 끝날 때까지. 풀리면 차트가 처음부터 그려진다. */
   hold?: boolean
 }) {
   const busy = useRaisingStore((s) => s.busy)
   const { decideInvest } = useRaisingStore.getState()
   const outcome = invest.outcome
-  const hasBattle = Boolean(onBattle) || battleInOffice
+  const hasBattle = Boolean(onBattle)
   // 세 단계를 한 화면씩 (decisions.md 368번): 종목 분석 → (결정하러 가기) → 투자 결정 → 결과 확인. 정했으면 결과 화면이다.
   const [stage, setStage] = useState<'analysis' | 'decide'>(() =>
     invest.outcome ? 'decide' : 'analysis',
@@ -511,18 +507,7 @@ export function InvestWindow({
                   )}
                   <BattleAfter outcome={outcome} />
                   <div className="meeting-step-action grid gap-2">
-                    {battleInOffice && outcome.battle?.open && (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={onClose}
-                        className="min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
-                        data-testid="invest-return-office"
-                      >
-                        사무실로 돌아가기
-                      </button>
-                    )}
-                    {!battleInOffice && onBattle && outcome.battle?.open && (
+                    {onBattle && outcome.battle?.open && (
                       <BattleEntryButton
                         mode={outcome.battle.mode}
                         disabled={busy}
