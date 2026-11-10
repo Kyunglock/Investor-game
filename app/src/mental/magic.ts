@@ -46,7 +46,7 @@ export interface FireStats {
 export interface LightningStats {
   cooldown: number
   damage: number
-  /** 맞은 적에서 옆 적으로 튀는 수, 튄 피해 비율, 튀는 거리(px). */
+  /** 맞은 적에서 옆 적으로 튀는 수(2^레벨), 튄 피해 비율, 튀는 거리(px). */
   chains: number
   chainDamage: number
   chainRadius: number
@@ -142,11 +142,11 @@ const FIRE: readonly FireStats[] = [
 ]
 
 const LIGHTNING: readonly LightningStats[] = [
-  { cooldown: 2.6, damage: 2.5, chains: 1, chainDamage: 0.6, chainRadius: 150, bolts: 1 },
-  { cooldown: 2.3, damage: 3.5, chains: 2, chainDamage: 0.6, chainRadius: 170, bolts: 1 },
-  { cooldown: 2, damage: 4.5, chains: 4, chainDamage: 0.6, chainRadius: 190, bolts: 1 },
-  { cooldown: 1.8, damage: 5.2, chains: 5, chainDamage: 0.65, chainRadius: 200, bolts: 2 },
-  { cooldown: 1.6, damage: 6, chains: 6, chainDamage: 0.7, chainRadius: 210, bolts: 2 },
+  { cooldown: 2.6, damage: 2.5, chains: 2, chainDamage: 0.6, chainRadius: 150, bolts: 1 },
+  { cooldown: 2.3, damage: 3.5, chains: 4, chainDamage: 0.6, chainRadius: 170, bolts: 1 },
+  { cooldown: 2, damage: 4.5, chains: 8, chainDamage: 0.6, chainRadius: 190, bolts: 1 },
+  { cooldown: 1.8, damage: 5.2, chains: 16, chainDamage: 0.65, chainRadius: 200, bolts: 2 },
+  { cooldown: 1.6, damage: 6, chains: 32, chainDamage: 0.7, chainRadius: 210, bolts: 2 },
 ]
 
 const at = <T>(table: readonly T[], level: number) =>

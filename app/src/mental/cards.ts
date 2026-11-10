@@ -94,7 +94,7 @@ const MAGIC_INFO: Record<Magic, { name: string; icon: string; color: string }> =
 const LOOK_NAMES: Record<Magic, readonly [string, string, string]> = {
   water: ['물방울', '물줄기', '큰 물결'],
   fire: ['불씨', '불덩이', '불기둥'],
-  lightning: ['번개', '굵은 번개', '갈래 번개'],
+  lightning: ['번개', '번개', '번개'],
   earth: ['돌 충차', '바위 충차', '대지 충차'],
 }
 
