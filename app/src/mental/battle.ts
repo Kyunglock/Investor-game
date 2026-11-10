@@ -59,6 +59,8 @@ import {
 } from './assault'
 import { STAGE_ASSETS } from './assets'
 import { bulletStats, type Loadout, MAGICS, type Magic, type MagicLevels, xpToNext } from './cards'
+import { CIRCUIT_BREAKER, CircuitBreaker } from './circuitBreaker'
+import { CircuitBreakerFx } from './circuitBreakerFx'
 import {
   BURN_TICK_SECONDS,
   CRIT_POOL,
@@ -448,6 +450,20 @@ class BattleScene extends Phaser.Scene {
   private stuck = 0
   private lastFlow = 0
   /** 벽 사이 잡몹 구간(#593)의 남은 초. 0이면 아니다. 끝나면 다음 벽이 내려온다. */
+  private circuit: CircuitBreaker | null = null
+  private circuitFx: CircuitBreakerFx | null = null
+  private circuitIndex = 0
+  private circuitWall: WallState | null = null
+  private marketStats = {
+    panic: 0,
+    dump: 0,
+    circuits: 0,
+    recovered: 0,
+    formedWalls: 0,
+    formedPieces: 0,
+    wallHpBefore: 0,
+    wallHpAfter: 0,
+  }
   private rushLeft = 0
   /** 지금 나와 있는 큰손이 중간 큰손인가(#593): 잡아도 판이 끝나지 않고 다음 구간이 열린다. */
   private bossMid = false
@@ -609,7 +625,7 @@ class BattleScene extends Phaser.Scene {
     }
     if (paused) {
       this.physics.pause()
-    } else {
+    } else if (!this.circuit) {
       this.physics.resume()
     }
     this.pushHud(true)
@@ -646,7 +662,7 @@ class BattleScene extends Phaser.Scene {
       // 공격 판은 첫 카드를 고르면 한 번 쭉 치고 오르며 시작한다.
       this.sinceBreak = 0
     }
-    if (!this.over && !this.paused) {
+    if (!this.over && !this.paused && !this.circuit) {
       this.physics.resume()
     }
     this.pushHud(true)
@@ -1724,10 +1740,13 @@ class BattleScene extends Phaser.Scene {
     // 벽 틈(부서진 칸) 자리에서 나오면 좋고, 아니면 길 아무 데나. 벽 바로 앞에서 나온다.
     // 벽이 한 덩어리라(416번) 벽 앞 아무 데서나 나온다.
     const x = lane.left + 16 + Math.random() * (lane.width - 32)
-    if (kind === 'market') {
-      const n = swarmSize(spec, Math.random())
+    if (kind === 'market' || kind === 'panic') {
+      const n =
+        kind === 'panic'
+          ? Math.min(4, swarmSize(spec, Math.random()))
+          : swarmSize(spec, Math.random())
       for (let i = 0; i < n; i++) {
-        const e = this.spawn('market', [
+        const e = this.spawn(kind, [
           Phaser.Math.Clamp(x + (i - (n - 1) / 2) * 22, lane.left + 8, lane.right - 8),
           y + (i % 2) * 18,
         ])
@@ -1819,6 +1838,69 @@ class BattleScene extends Phaser.Scene {
       this.whaleSummon(boss)
     }
     this.drawClimb(dt)
+  }
+
+  /** 거래 정지 동안 전투 시계·탄·적은 멈추고 주문 대기와 멘탈 회복만 진행한다. */
+  private circuitStep(dt: number) {
+    const c = this.circuit
+    if (!c) return
+    const recovered = c.step(dt)
+    this.mental = Math.min(this.loadout.maxMental, this.mental + recovered)
+    this.marketStats.recovered += recovered
+    const { w, h } = this.view()
+    const wall = this.circuitWall
+    const lane = this.lane()
+    if (wall) {
+      wall.band.setAlpha(c.reveal)
+      for (const e of wall.cells) {
+        e.setAlpha(c.reveal)
+        e.cell?.label.setAlpha(c.reveal)
+      }
+    }
+    this.circuitFx?.draw(c, w, h, this.player.x, this.player.y, this.reducedMotion, {
+      left: lane.left,
+      width: lane.width,
+      bottom: wall?.y ?? this.stopY(),
+      height: (wall?.spec.rows ?? 3) * CELL_H,
+    })
+    this.player.setTexture('hero-idle')
+    this.pushHud(true)
+    if (!c.done) return
+    this.circuitFx?.destroy()
+    this.circuitFx = null
+    this.circuit = null
+    if (wall) {
+      wall.arrived = true
+      wall.band.setAlpha(1)
+      for (const e of wall.cells) {
+        e.setAlpha(1)
+        e.cell?.label.setAlpha(1)
+      }
+      this.rushLeft = 0
+      this.stuck = 0
+      this.marketStats.formedWalls++
+      this.marketStats.formedPieces += c.assembled
+      this.marketStats.wallHpAfter = wall.cells.reduce((sum, e) => sum + e.hp, 0)
+    }
+    this.circuitWall = null
+    this.invulnUntil = Math.max(this.invulnUntil, this.elapsed + 1.2)
+    this.lastFlow = this.elapsed
+    this.opts.onBanner('거래 재개! 쌓인 매도벽을 돌파하라!', '#ffce7a')
+    if (!this.paused && !this.choosing && !this.stopped && !this.over) this.physics.resume()
+  }
+
+  /** 개발 서버의 회귀 검사에서 실제 생성·회복·정지 상태를 읽는다. */
+  inspectMarket() {
+    return {
+      ...this.marketStats,
+      circuit: this.circuit
+        ? { elapsed: this.circuit.elapsed, assembled: this.circuit.assembled }
+        : null,
+      battleSeconds: this.elapsed,
+      mental: this.mental,
+      maxMental: this.loadout.maxMental,
+      physicsPaused: this.physics.world.isPaused,
+    }
   }
 
   /** 지나가는 호가 줄(길 위의 옅은 가로줄)과 오르는 동안의 속도선. */
@@ -1979,6 +2061,14 @@ class BattleScene extends Phaser.Scene {
     e.kbx = 0
     e.kby = 0
     e.born = this.elapsed
+    if (this.assault && (kind === 'panic' || kind === 'dump')) {
+      if (this.marketStats[kind] === 0)
+        this.opts.onBanner(
+          kind === 'panic' ? '패닉셀 무리 출현!' : '투매 몬스터가 밀려온다!',
+          kind === 'panic' ? '#82bbff' : '#c5a1ff',
+        )
+      this.marketStats[kind]++
+    }
     return e
   }
 
@@ -2323,7 +2413,7 @@ class BattleScene extends Phaser.Scene {
     this.physics.pause()
     this.stopped = true
     this.time.delayedCall(ms, () => {
-      if (!this.over && !this.paused && !this.choosing) {
+      if (!this.over && !this.paused && !this.choosing && !this.circuit) {
         this.physics.resume()
       }
       this.stopped = false
@@ -3604,6 +3694,39 @@ class BattleScene extends Phaser.Scene {
       return
     }
     const dt = dtMs / 1000
+    if (
+      this.assault &&
+      !this.circuit &&
+      !this.bossEnemy &&
+      this.wallsBroken >= (CIRCUIT_BREAKER.afterWalls[this.circuitIndex] ?? Infinity)
+    ) {
+      this.circuitIndex++
+      this.circuit = new CircuitBreaker(this.mental, this.loadout.maxMental)
+      this.circuitWall = this.walls.find((wall) => !wall.broken) ?? null
+      if (this.circuitWall) {
+        // 다음 벽의 기존 체력은 유지하고, 쌓이는 조각이 보이도록 세 층 높이로 세운다.
+        const wall = this.circuitWall
+        wall.spec = { ...wall.spec, rows: Math.max(3, wall.spec.rows) }
+        wall.y = this.stopY()
+        this.layoutWall(wall)
+        this.placeWall(wall)
+        this.marketStats.wallHpBefore = wall.cells.reduce((sum, e) => sum + e.hp, 0)
+        wall.band.setAlpha(0)
+        for (const e of wall.cells) {
+          e.setAlpha(0)
+          e.cell?.label.setAlpha(0)
+        }
+      }
+      this.circuitFx = new CircuitBreakerFx(this)
+      this.marketStats.circuits++
+      this.physics.pause()
+      this.opts.onBanner('서킷브레이커! 거래 정지 · 멘탈 회복', '#8ef3c6')
+      sfx.levelUp()
+    }
+    if (this.circuit) {
+      this.circuitStep(dt)
+      return
+    }
     this.elapsed += dt
     if (this.elapsed >= this.limitSeconds()) {
       // 디펜스는 버티면 이기고, 전진 모드와 디펜스 보스 스테이지는 시간 안에 못 넘으면(보스를 못 잡으면) 진다 (364·509번).
@@ -3892,6 +4015,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
       __mentalAutopilot?: (on: boolean) => void
       __mentalSpeed?: (k: number) => void
       __mentalWalls?: () => ReturnType<BattleScene['inspectWalls']>
+      __mentalMarket?: () => ReturnType<BattleScene['inspectMarket']>
     }
     dev.__mentalDamage = scene.damageStats
     // 공격 판(413번)을 자동으로 돌려 강화 단계별로 걸린 시간을 재는 데 쓴다.
@@ -3900,6 +4024,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
     }
     dev.__mentalSpeed = (k) => scene.setSimSpeed(k)
     dev.__mentalWalls = () => scene.inspectWalls()
+    dev.__mentalMarket = () => scene.inspectMarket()
     dev.__mentalMagic = (levels) => scene.applyLoadout({ ...scene.loadout, ...levels })
     dev.__mentalMates = (mates) => scene.applyLoadout({ ...scene.loadout, mates })
   }

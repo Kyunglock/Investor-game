@@ -7,8 +7,8 @@ import type { OrderKind } from './enemies'
  * 이 파일은 Phaser 없이 규칙과 숫자만 갖는다. 그리는 것과 움직임은 battle.ts(mode 'assault').
  */
 
-/** 벽 앞에서 쏟아지는 매도 물량의 종류(벽 칸·보스는 빼고). */
-export type FlowKind = Exclude<OrderKind, 'cell' | 'whale'>
+/** 벽 앞에서 쏟아지는 매도 물량과 패닉셀·투매의 종류(벽 칸·보스는 빼고). */
+export type FlowKind = Exclude<OrderKind, 'cell' | 'whale'> | 'panic' | 'dump'
 
 /** 매도벽 하나. */
 export interface AssaultWall {
@@ -31,15 +31,33 @@ export interface AssaultWall {
  * 매도벽 + 큰손. 판이 길어진 만큼 벽 하나는 다섯 구간 때보다 얇다(강화 없는 권총으로 3분 안에 겨우 깬다, stageCheck).
  */
 export const ASSAULT_WALLS: readonly AssaultWall[] = [
-  { rows: 1, cellHp: 4.7, boss: false, spawnSeconds: 1.6, mix: { order: 5, market: 3 } },
-  { rows: 1, cellHp: 5.8, boss: false, spawnSeconds: 1.5, mix: { order: 5, market: 3, fake: 1 } },
-  { rows: 1, cellHp: 6.8, boss: false, spawnSeconds: 1.45, mix: { order: 4, market: 3, fake: 1 } },
+  {
+    rows: 1,
+    cellHp: 4.7,
+    boss: false,
+    spawnSeconds: 1.6,
+    mix: { panic: 2, dump: 1, order: 5, market: 3 },
+  },
+  {
+    rows: 1,
+    cellHp: 5.8,
+    boss: false,
+    spawnSeconds: 1.5,
+    mix: { panic: 2, dump: 1, order: 5, market: 3, fake: 1 },
+  },
+  {
+    rows: 1,
+    cellHp: 6.8,
+    boss: false,
+    spawnSeconds: 1.45,
+    mix: { panic: 2, dump: 1, order: 4, market: 3, fake: 1 },
+  },
   {
     rows: 2,
     cellHp: 4.4,
     boss: false,
     spawnSeconds: 1.4,
-    mix: { order: 4, market: 3, bulk: 1, fake: 1 },
+    mix: { panic: 2, dump: 1, order: 4, market: 3, bulk: 1, fake: 1 },
   },
   {
     rows: 2,
@@ -47,42 +65,42 @@ export const ASSAULT_WALLS: readonly AssaultWall[] = [
     boss: false,
     mid: true,
     spawnSeconds: 1.35,
-    mix: { order: 4, market: 3, bulk: 1, fake: 1 },
+    mix: { panic: 2, dump: 1, order: 4, market: 3, bulk: 1, fake: 1 },
   },
   {
     rows: 1,
     cellHp: 8.9,
     boss: false,
     spawnSeconds: 1.3,
-    mix: { order: 4, market: 4, bulk: 1, fake: 1 },
+    mix: { panic: 2, dump: 1, order: 4, market: 4, bulk: 1, fake: 1 },
   },
   {
     rows: 2,
     cellHp: 5.2,
     boss: false,
     spawnSeconds: 1.25,
-    mix: { order: 4, market: 4, bulk: 1.5, fake: 1 },
+    mix: { panic: 2, dump: 1, order: 4, market: 4, bulk: 1.5, fake: 1 },
   },
   {
     rows: 2,
     cellHp: 5.8,
     boss: false,
     spawnSeconds: 1.2,
-    mix: { order: 3, market: 4, bulk: 1.5, fake: 1 },
+    mix: { panic: 2, dump: 1, order: 3, market: 4, bulk: 1.5, fake: 1 },
   },
   {
     rows: 2,
     cellHp: 6.3,
     boss: false,
     spawnSeconds: 1.15,
-    mix: { order: 3, market: 4, bulk: 2, fake: 1 },
+    mix: { panic: 2, dump: 1, order: 3, market: 4, bulk: 2, fake: 1 },
   },
   {
     rows: 3,
     cellHp: 5.2,
     boss: true,
     spawnSeconds: 1.1,
-    mix: { order: 3, market: 4, bulk: 2, fake: 1 },
+    mix: { panic: 2, dump: 1, order: 3, market: 4, bulk: 2, fake: 1 },
   },
 ]
 
