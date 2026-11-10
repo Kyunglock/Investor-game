@@ -1,11 +1,11 @@
 import type { GunGrade, GunKind } from '@web/features/game/cat/draw'
 import { BOSS_LOOK } from '@web/features/game/cat/look'
 import { useEffect, useRef } from 'react'
-import { drawStageGun } from './drawStageGun'
+import { drawStageGun, GUN_ART } from './drawStageGun'
 
-/** 무기 그림 상자(상자 좌표 -8..26 × -8..14, draw.ts drawGun). */
-const BOX_W = 34
-const BOX_H = 22
+/** 전투와 같은 팔·총 그림 영역. */
+const BOX_W = GUN_ART.w
+const BOX_H = GUN_ART.h
 
 /** 무기 하나를 캔버스에 그린다 (decisions.md 346번): 무기 고르기와 떨어진 무기 카드에. 사장냥 앞발이 쥔 모습 그대로. */
 export function GunSprite({
@@ -32,7 +32,7 @@ export function GunSprite({
     cv.height = Math.ceil(BOX_H * scale)
     c.setTransform(scale, 0, 0, scale, 0, 0)
     c.clearRect(0, 0, BOX_W, BOX_H)
-    c.translate(8, 8)
+    c.translate(GUN_ART.pivotX, GUN_ART.pivotY)
     drawStageGun(c, BOSS_LOOK.fur, kind, grade)
   }, [kind, grade, width])
   return (

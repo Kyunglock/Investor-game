@@ -1,5 +1,21 @@
 import { GUN_GRADE_COLOR, type GunGrade, type GunKind } from '@web/features/game/cat/draw'
 
+/** 팔과 총의 윤곽이 잘리지 않는 공통 그림 영역. */
+export const GUN_ART = { w: 42, h: 32, pivotX: 12, pivotY: 14 }
+
+export function stageMuzzle(grade: GunGrade) {
+  return {
+    x: grade === 'F' ? 19 : grade === 'E' ? 24 : 25,
+    y: grade === 'S' || grade === 'A' || grade === 'B' ? 0 : -1.5,
+  }
+}
+
+/** 25ms 동안 밀리고 155ms 동안 부드럽게 돌아온다. 재장전 시계와 분리한다. */
+export function gunRecoil(elapsedMs: number, reduced: boolean) {
+  if (reduced || elapsedMs < 0 || elapsedMs >= 180) return 0
+  return elapsedMs < 25 ? elapsedMs / 25 : (1 - (elapsedMs - 25) / 155) ** 2
+}
+
 /** 총구는 +x, 피벗은 뒷손. 무기 종류와 등급을 실제 장비에 맞춰 그린다. */
 export function drawStageGun(
   c: CanvasRenderingContext2D,
@@ -22,20 +38,24 @@ export function drawStageGun(
     c.stroke()
   }
   c.lineJoin = 'round'
-  // 팔은 몸 쪽에서 손까지 이어지며 무기와 함께 회전한다.
-  c.beginPath()
-  c.moveTo(-5, 10)
-  c.quadraticCurveTo(-6, 5, 2, 2)
-  c.lineTo(12, 1)
-  c.lineTo(13, 6)
-  c.lineTo(2, 8)
-  c.lineTo(-1, 12)
-  c.closePath()
-  c.fillStyle = fur
-  c.fill()
-  c.strokeStyle = '#76563f'
-  c.lineWidth = 1.5
-  c.stroke()
+  // 몸 쪽의 두 팔이 각각 손잡이와 총몸 아래를 받친다.
+  c.lineCap = 'round'
+  for (const [ex, ey, hx, hy] of [
+    [-7, -7, 1, 7],
+    [-5, -3, 11, 4],
+  ]) {
+    for (const [color, width] of [
+      ['#76563f', 7],
+      [fur, 4.5],
+    ] as const) {
+      c.beginPath()
+      c.moveTo(-8, -8)
+      c.quadraticCurveTo(ex, ey + 9, hx, hy)
+      c.strokeStyle = color
+      c.lineWidth = width
+      c.stroke()
+    }
+  }
   const disk = (x: number, y: number, r: number, color: string) => {
     c.beginPath()
     c.arc(x, y, r, 0, Math.PI * 2)

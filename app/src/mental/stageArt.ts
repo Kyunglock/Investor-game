@@ -2,7 +2,7 @@ type Rect = { x: number; y: number; w: number; h: number }
 const bounds = new WeakMap<HTMLImageElement, Map<string, Rect>>()
 
 /** B안 뒷모습의 오른쪽 어깨. 전투와 준비 화면이 같은 몸·총 결합점을 쓴다. */
-export const STAGE_HERO = { fur: '#ffe2ae', gunX: 88, gunY: 48, gunScale: 1.55 }
+export const STAGE_HERO = { fur: '#ffe2ae', gunX: 78, gunY: 65, gunScale: 1.4 }
 
 /** 원본의 투명 여백만 제외해 기존 충돌 원 안에 맞춘다. 파일은 원본 그대로 보관한다. */
 export function drawSprite(

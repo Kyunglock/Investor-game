@@ -1,7 +1,7 @@
-import { CAT_H, CAT_W, GUN_LEN } from '@web/features/game/cat/draw'
+import { CAT_H, CAT_W } from '@web/features/game/cat/draw'
 import { BOSS_LOOK } from '@web/features/game/cat/look'
 import type Phaser from 'phaser'
-import { drawStageGun } from './drawStageGun'
+import { drawStageGun, GUN_ART } from './drawStageGun'
 import { drawEarthArmor, drawEmber, drawPillar, drawWater, drawWave } from './effectArt'
 import type { UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
@@ -38,12 +38,12 @@ const GUN_K = STAGE_HERO.gunScale
 export const GUN = {
   dx: (STAGE_HERO.gunX - CAT_W / 2) * HERO_SCALE,
   dy: (STAGE_HERO.gunY - CAT_H / 2) * HERO_SCALE,
-  len: GUN_LEN * HERO_SCALE * GUN_K,
-  /** 총 텍스처(상자 좌표 -8..26 × -8..14)의 원점 비율 */
-  ox: 8 / 34,
-  oy: 8 / 22,
-  w: 34 * HERO_SCALE * GUN_K,
-  h: 22 * HERO_SCALE * GUN_K,
+  scale: HERO_SCALE * GUN_K,
+  /** 손·팔까지 포함한 그림 영역의 피벗. */
+  ox: GUN_ART.pivotX / GUN_ART.w,
+  oy: GUN_ART.pivotY / GUN_ART.h,
+  w: GUN_ART.w * HERO_SCALE * GUN_K,
+  h: GUN_ART.h * HERO_SCALE * GUN_K,
 }
 /** 적 그림(64×64) 안에서 적의 반지름 ≈ 20 × 1.1. 화면에서는 battle.ts의 ENEMY_SCALE만큼 줄여 사장냥보다 작다(344번). */
 export const ENEMY_SIZE = 64
@@ -94,7 +94,7 @@ export function bakeHero(scene: Phaser.Scene, hero: Hero) {
   }
   bake(scene, 'gun', GUN.w, GUN.h, (c) => {
     c.scale(HERO_SCALE * GUN_K, HERO_SCALE * GUN_K)
-    c.translate(8, 8)
+    c.translate(GUN_ART.pivotX, GUN_ART.pivotY)
     drawStageGun(c, STAGE_HERO.fur, hero.weapon.kind, hero.weapon.grade)
   })
 }
@@ -170,7 +170,7 @@ export function bakeMates(scene: Phaser.Scene, hero: Hero) {
     bake(scene, mateGunKey(i), GUN.w, GUN.h, (c) => {
       // 총은 사장냥 것과 같고, 쥔 앞발만 고양이 털 색이다.
       c.scale(HERO_SCALE * GUN_K, HERO_SCALE * GUN_K)
-      c.translate(8, 8)
+      c.translate(GUN_ART.pivotX, GUN_ART.pivotY)
       drawStageGun(c, mixed(BOSS_LOOK.fur, look.color), hero.weapon.kind, hero.weapon.grade)
     })
   }

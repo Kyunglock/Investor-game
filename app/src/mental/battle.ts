@@ -83,6 +83,7 @@ import {
   damageLabel,
   scatterOffset,
 } from './damageNumbers'
+import { gunRecoil, stageMuzzle } from './drawStageGun'
 import { ENEMIES, isOrder, ORDERS, UNITS, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkFrame } from './enemyWalk'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
@@ -281,6 +282,7 @@ interface Mate {
   gun: Phaser.GameObjects.Image
   aim: number
   lastFire: number
+  recoilAt: number
   /** 재장전 전까지 쏜 탄 수 (#587, 리볼버). */
   shots: number
   /** 합류할 때 위에서 떨어지는 높이(px). 트윈이 0으로 줄인다. */
@@ -587,6 +589,7 @@ class BattleScene extends Phaser.Scene {
   private score = 0
   private kills = 0
   private elapsed = 0
+  private recoilAt = Number.NEGATIVE_INFINITY
   private lastFire = 0
   /** 사장냥이 쏜 탄 수(재장전, #587). */
   private heroShots = 0
@@ -1033,6 +1036,7 @@ class BattleScene extends Phaser.Scene {
       aim: this.aim,
       // 사장냥과 번갈아 쏘게 연사 간격 안에서 조금씩 어긋나게 시작한다.
       lastFire: this.lastFire + (this.attackInterval * (i + 1)) / (MATE_LOOKS.length + 1),
+      recoilAt: Number.NEGATIVE_INFINITY,
       shots: 0,
       drop: this.reducedMotion ? 0 : -150,
     }
@@ -2508,11 +2512,30 @@ class BattleScene extends Phaser.Scene {
     return close ? near : boss
   }
 
+  private poseGun(
+    gun: Phaser.GameObjects.Image,
+    x: number,
+    y: number,
+    aim: number,
+    firedAt: number,
+    now: number,
+  ) {
+    const kick = gunRecoil(now - firedAt, this.reducedMotion) * 3
+    gun
+      .setPosition(x + GUN.dx - Math.cos(aim) * kick, y + GUN.dy - Math.sin(aim) * kick)
+      .setRotation(aim)
+      .setFlipY(false)
+  }
+
   /** 총구 자리: 쏘는 고양이의 총 피벗에서 겨누는 쪽으로 총 길이만큼. */
   private muzzle(x: number, y: number, aim: number) {
     const px = x + GUN.dx
     const py = y + GUN.dy
-    return { x: px + Math.cos(aim) * GUN.len, y: py + Math.sin(aim) * GUN.len }
+    const tip = stageMuzzle(this.opts.hero.weapon.grade)
+    return {
+      x: px + (Math.cos(aim) * tip.x - Math.sin(aim) * tip.y) * GUN.scale,
+      y: py + (Math.sin(aim) * tip.x + Math.cos(aim) * tip.y) * GUN.scale,
+    }
   }
 
   /**
@@ -2589,11 +2612,13 @@ class BattleScene extends Phaser.Scene {
     const reload = (shots: number) =>
       traits.magazine && shots % traits.magazine === 0 ? traits.reloadMs : 0
     if (mate) {
+      mate.recoilAt = this.time.now
       mate.shots++
       mate.lastFire = now + reload(mate.shots)
       mate.aim = aim
       this.damageStats.mateShots++
     } else {
+      this.recoilAt = this.time.now
       this.heroShots++
       const wait = reload(this.heroShots)
       this.lastFire = now + wait
@@ -2603,6 +2628,7 @@ class BattleScene extends Phaser.Scene {
       this.aim = aim
     }
     // 총 손맛: 총구 화염, 반동(눌렸다 펴짐). 크기·시간이 무기마다 다르다.
+    this.poseGun(mate?.gun ?? this.gun, p.x, p.y, aim, this.time.now, this.time.now)
     const m = this.muzzle(p.x, p.y, aim)
     const flash = this.flashes[this.flashIndex++ % this.flashes.length]
     flash
@@ -3685,19 +3711,15 @@ class BattleScene extends Phaser.Scene {
       if (target) {
         // 공격 판도 맡은 과녁을 겨눈다 (#593). 과녁이 없으면 제 머리 위(벽).
         const want = this.angleFrom(b.x, b.y, target)
+        m.aim += Phaser.Math.Angle.Wrap(want - m.aim) * turn
         if (m.drop === 0 && time - m.lastFire > this.attackInterval) {
           const ms = this.attackInterval
           for (let n = 0; time - m.lastFire > ms && n < 3; n++) {
-            this.fire(Math.max(m.lastFire + ms, time - ms), want, m)
+            this.fire(Math.max(m.lastFire + ms, time - ms), m.aim, m)
           }
-        } else {
-          m.aim += Phaser.Math.Angle.Wrap(want - m.aim) * turn
         }
       }
-      m.gun
-        .setPosition(b.x + GUN.dx, b.y + GUN.dy)
-        .setRotation(m.aim)
-        .setFlipY(Math.cos(m.aim) < 0)
+      this.poseGun(m.gun, b.x, b.y, m.aim, m.recoilAt, time)
     }
   }
 
@@ -3783,27 +3805,7 @@ class BattleScene extends Phaser.Scene {
     const hurting = time < this.hurtUntil
     p.setTexture(hurting ? 'hero-hurt' : ptr.isDown || this.assault ? 'hero-fire' : 'hero-idle')
     p.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
-    if (this.assault) {
-      // 위로 곧게 쏜다 (413번): 좌우로 움직여 벽의 약한 칸을 노리고 물량을 피한다.
-      this.aim = -Math.PI / 2
-    } else if (!ptr.isDown || this.mode === 'advance') {
-      const near = this.mode === 'advance' ? this.autoTarget() : this.nearestEnemy()
-      if (near) {
-        const want = Math.atan2(near.y - (p.y + GUN.dy), near.x - (p.x + GUN.dx))
-        this.aim +=
-          Phaser.Math.Angle.ShortestBetween(
-            Phaser.Math.RadToDeg(this.aim),
-            Phaser.Math.RadToDeg(want),
-          ) *
-          (Math.PI / 180) *
-          Math.min(1, dt * 10)
-      }
-    }
-    this.gun
-      .setVisible(!hurting)
-      .setPosition(p.x + GUN.dx, p.y + GUN.dy)
-      .setRotation(this.aim)
-      .setFlipY(Math.cos(this.aim) < 0)
+    this.poseGun(this.gun, p.x, p.y, this.aim, this.recoilAt, time)
     if (this.wall && this.wallZone) {
       this.wall.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)
       this.wall.setTexture(this.mental <= this.loadout.maxMental / 2 ? 'wall-cracked' : 'wall')
@@ -3820,11 +3822,16 @@ class BattleScene extends Phaser.Scene {
       this.targetAt = time
     }
     const target = this.targets[0] ?? null
+    if (target) {
+      const want = this.angleFrom(p.x, p.y, target)
+      this.aim += Phaser.Math.Angle.Wrap(want - this.aim) * Math.min(1, dt * 14)
+    }
     // 프레임이 연사 간격보다 길면(느린 휴대폰) 밀린 만큼 한 프레임에 몇 발 더 쏜다(최대 3, #587): 아니면 연사가 빠른 무기(기관단총)일수록
     // 프레임 수에 묶여 제 연사를 못 냈다.
     for (let n = 0; target && time - this.lastFire > fireMs && n < 3; n++) {
-      this.fire(Math.max(this.lastFire + fireMs, time - fireMs), this.angleFrom(p.x, p.y, target))
+      this.fire(Math.max(this.lastFire + fireMs, time - fireMs), this.aim)
     }
+    this.poseGun(this.gun, p.x, p.y, this.aim, this.recoilAt, time)
     this.updateMates(time, dt, this.targets)
     // 마법은 총알과 따로 제 주기에 스스로 나간다 (392번).
     this.castMagic()
