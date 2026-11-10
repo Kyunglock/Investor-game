@@ -39,14 +39,6 @@ export function BattleEntryContent({
   compact?: boolean
 }) {
   const assault = mode === 'ASSAULT'
-  if (compact) {
-    return (
-      <span className="battle-entry-copy">
-        <small>{disabled ? '처리 중…' : '종목회의 스테이지'}</small>
-        <strong>{assault ? '매도벽 돌파!' : '멘탈 방어!'}</strong>
-      </span>
-    )
-  }
   return (
     <>
       <span className="battle-entry-icon" aria-hidden="true">

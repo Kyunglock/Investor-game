@@ -36,6 +36,8 @@ interface UiState {
   requestSettle: () => void
   /** 지금 치르는 멘탈 전투. 없으면 null. */
   battle: BattleEntry | null
+  investOpen: boolean
+  setInvestOpen: (open: boolean) => void
   startBattle: (entry: BattleEntry) => void
   endBattle: () => void
   /** 확장으로 밀어낸 쪽 (decisions.md 415번, #577). 사무실을 처음 볼 때 그 자리에 새 라이벌이 밑에서 위로 지어지고 지워진다. */
@@ -50,7 +52,9 @@ export const useAppUi = create<UiState>((set, get) => ({
   sheet: null,
   settleRequest: 0,
   battle: null,
-  startBattle: (battle) => set({ battle, sheet: null }),
+  investOpen: false,
+  setInvestOpen: (investOpen) => set({ investOpen }),
+  startBattle: (battle) => set({ battle, sheet: null, investOpen: false }),
   endBattle: () => set({ battle: null }),
   rivalRise: null,
   setRivalRise: (rivalRise) => set({ rivalRise }),
