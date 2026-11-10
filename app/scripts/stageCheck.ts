@@ -63,7 +63,7 @@ async function assaultCheck() {
     )
     await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5182/app/')
     await page.evaluate(
-      async ({ level, bonus, salt, recovery }) => {
+      async ({ level, bonus, salt, recovery, initialLightning }) => {
         // 같은 판이 같게 돌도록 씨앗을 고정한 난수(mulberry32).
         let seed = 573 + level * 7 + bonus + salt * 1000
         Math.random = () => {
@@ -89,6 +89,7 @@ async function assaultCheck() {
           { kind: 'damage', bonusPercent: bonus },
           { kind: 'fire', bonusPercent: bonus },
         ])
+        if (initialLightning > 0) loadout = { ...loadout, lightning: initialLightning }
         w.__assaultCards = [] as string[]
         const handle = startBattle(host, {
           mode: 'assault',
@@ -123,6 +124,7 @@ async function assaultCheck() {
         ...config,
         salt: Number(process.env.ASSAULT_SEED ?? 0),
         recovery: Boolean(process.env.ASSAULT_RECOVERY_CHECK),
+        initialLightning: Number(process.env.ASSAULT_LIGHTNING ?? 0),
       },
     )
     type Hud = {
@@ -267,6 +269,15 @@ async function assaultCheck() {
     console.log(
       `assault ${config.label}: ${outcome.win ? 'clear' : outcome.reason} ${outcome.seconds}s, cards ${picked.join(',')} (${Math.round((Date.now() - started) / 1000)}s real)`,
     )
+    if (process.env.ASSAULT_LIGHTNING) {
+      const casts = await page.evaluate(
+        () =>
+          (window as unknown as { __mentalDamage: { casts: { lightning: number } } }).__mentalDamage
+            .casts.lightning,
+      )
+      assert(casts > 0, 'lightning casts in actual assault')
+      console.log(`lightning casts: ${casts}`)
+    }
     assert.deepEqual(errors, [], `${config.label}: no page errors`)
     await page.close()
     return { ...outcome, label: config.label, level: config.level }

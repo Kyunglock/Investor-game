@@ -116,7 +116,7 @@ export function magicEffect(magic: Magic, level: number): string {
   }
   const l = lightningStats(level)
   const bolts = l.bolts > 1 ? ` ${l.bolts}줄기` : ''
-  return `${l.cooldown}초마다 ${look}${bolts} · 피해 ${pct(l.damage)} · ${l.chains}마리 튐`
+  return `${l.cooldown}초마다 ${look}${bolts} · 몬스터 우선 · 피해 ${pct(l.damage)} · ${l.chains}마리 튐`
 }
 
 /** 마법 카드 한 장: 지금 레벨에서 한 레벨 올린다. */
