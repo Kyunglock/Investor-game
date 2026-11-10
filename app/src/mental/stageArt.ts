@@ -70,18 +70,14 @@ export function drawOrderBlock(
   source: HTMLImageElement,
   sell: boolean,
   cracked = false,
+  target: Rect = { x: 0, y: 0, w: 85.34, h: 96 },
 ) {
   const w = source.width / 2
   const h = source.height / 2
   // 원본 질감·블록 모양·균열은 보존하고, 구울 때만 매도=파랑 / 매수=빨강으로 돌린다.
   c.save()
   c.filter = sell ? 'hue-rotate(200deg)' : 'hue-rotate(190deg)'
-  drawSprite(
-    c,
-    source,
-    { x: cracked ? w : 0, y: sell ? h : 0, w, h },
-    { x: 0, y: 0, w: 85.34, h: 96 },
-  )
+  drawSprite(c, source, { x: cracked ? w : 0, y: sell ? h : 0, w, h }, target)
   c.restore()
 }
 
@@ -107,8 +103,12 @@ export function drawToySellWall(
   for (let i = 0; i < 6; i++) {
     c.save()
     c.translate(i * 60, 0)
-    c.scale(60 / 85.34, 60 / 96)
-    drawOrderBlock(c, source, true, [2, 4, 1].slice(0, crack).includes(i))
+    drawOrderBlock(c, source, true, [2, 4, 1].slice(0, crack).includes(i), {
+      x: 0,
+      y: 0,
+      w: 60,
+      h: 60,
+    })
     c.restore()
   }
 }

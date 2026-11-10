@@ -1320,16 +1320,21 @@ class BattleScene extends Phaser.Scene {
     return e
   }
 
+  /** 얇은 초기 벽도 정사각형 블록 한 줄보다 낮게 눌리지 않는다. */
+  private wallHeight(wall: WallState) {
+    return Math.max(wall.spec.rows * CELL_H, (this.lane().width - CELL_GAP) / 6 + CELL_GAP)
+  }
+
   /** 칸 크기를 화면 폭에 맞춘다(만들 때와 화면 크기가 바뀔 때). */
   private layoutWall(wall: WallState) {
     const lane = this.lane()
     const cellW = lane.width / wall.cols
     for (const e of wall.cells) {
       if (!e.active || e.dying) continue
-      e.setDisplaySize(cellW - CELL_GAP, wall.spec.rows * CELL_H - CELL_GAP)
+      e.setDisplaySize(cellW - CELL_GAP, this.wallHeight(wall) - CELL_GAP)
       ;(e.body as Phaser.Physics.Arcade.Body).setSize(e.width, e.height, true)
     }
-    wall.band.setDisplaySize(lane.width + 8, wall.spec.rows * CELL_H + 8)
+    wall.band.setDisplaySize(lane.width + 8, this.wallHeight(wall) + 8)
   }
 
   /** 벽과 칸·글자를 지금 y에 놓는다(오를 때 매 프레임). */
@@ -1340,7 +1345,7 @@ class BattleScene extends Phaser.Scene {
       const c = e.cell
       if (!c || !e.active || e.dying) continue
       const x = lane.left + (c.col + 0.5) * cellW
-      const y = wall.y - (wall.spec.rows * CELL_H) / 2
+      const y = wall.y - this.wallHeight(wall) / 2
       e.setPosition(x, y)
       c.label.setPosition(x, y + 1)
     }
@@ -1868,7 +1873,7 @@ class BattleScene extends Phaser.Scene {
       left: lane.left,
       width: lane.width,
       bottom: wall?.y ?? this.stopY(),
-      height: (wall?.spec.rows ?? 3) * CELL_H,
+      height: wall ? this.wallHeight(wall) : 3 * CELL_H,
     })
     this.player.setTexture('hero-idle')
     this.pushHud(true)

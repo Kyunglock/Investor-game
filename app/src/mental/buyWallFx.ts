@@ -95,21 +95,33 @@ export class BuyWallFx {
   draw(wall: BuyWall, left: number, width: number, y: number, reduced: boolean) {
     const g = this.ink.clear()
     const cw = width / 6
+    const height = (width * 96) / 512
+    const top = y + 32 - height
     const hit = this.hitLeft / 0.28
     const shake = reduced ? 0 : Math.sin((1 - hit) * Math.PI * 5) * hit * 7
     if (wall.active) {
       this.surface
         .setVisible(true)
         .setTexture(wall.hp < wall.maxHp * 0.5 ? 'wall-cracked' : 'wall')
-        .setPosition(left + shake, y - 40 + Math.abs(shake) * 0.4)
-        .setDisplaySize(width, 72)
+        .setPosition(left + shake, top + Math.abs(shake) * 0.4)
+        .setDisplaySize(width, height)
       this.surface.clearTint()
       if (this.hitLeft > 0.2) this.surface.setTintFill(0xffedc2)
-      g.fillStyle(0x4f2837).fillRect(left + 5, y + 24, width - 10, 4)
-      g.fillStyle(0xffdc87).fillRect(left + 5, y + 24, ((width - 10) * wall.hp) / wall.maxHp, 4)
+      // 블록 하단(y + 32)을 덮지 않도록 체력 막대를 5px 아래에 둔다.
+      g.fillStyle(0x4f2837, 0.7).fillRoundedRect(left + 5, y + 37, width - 10, 4, 2)
+      const hpWidth = ((width - 10) * wall.hp) / wall.maxHp
+      if (hpWidth > 0) {
+        g.fillStyle(0xffdc87).fillRoundedRect(
+          left + 5,
+          y + 37,
+          hpWidth,
+          4,
+          Math.min(2, hpWidth / 2),
+        )
+      }
       this.title
         .setText(`매수벽 ${shareLabel(wall.hp)} / ${shareLabel(wall.maxHp)}`)
-        .setPosition(left + width / 2, y - 4)
+        .setPosition(left + width / 2, top + height * 0.58)
     } else {
       this.surface.setVisible(false)
       g.lineStyle(1, 0xe78181, 0.6).strokeRoundedRect(left, y - 30, width, 52, 7)
@@ -138,12 +150,11 @@ export class BuyWallFx {
       const row = Math.floor(i / 6)
       piece
         .setVisible(this.breakLeft > 0)
-        .setDisplaySize(width, 72)
+        .setDisplaySize(width, height)
         .setPosition(
           left + (col + 0.5) * cw + (reduced ? 0 : (col - 2.5) * fall * 26),
-          y -
-            40 +
-            (row + 0.5) * 36 +
+          top +
+            ((row + 0.5) * height) / 2 +
             (reduced ? 0 : (row ? 45 : -30) * Math.sin(fall * Math.PI) + fall * fall * 85),
         )
         .setAngle(reduced ? 0 : (i % 2 ? 1 : -1) * fall * 35)
