@@ -142,6 +142,13 @@ try {
       await expect(page.locator('.toy-progress')).not.toContainText('다음 분기로')
       await expect(page.locator('.toy-progress')).not.toContainText('넘기기')
       await expect(page.locator('.toy-progress svg')).toHaveCount(1)
+      await expect(page.locator('.toy-progress svg path')).toHaveCount(1)
+      await expect(page.locator('.toy-progress')).toHaveText(
+        mode === 'ASSAULT' ? '매도벽 돌파!' : '멘탈 방어!',
+      )
+      const icon = await page.locator('.toy-progress .battle-entry-icon').boundingBox()
+      const title = await page.locator('.toy-progress strong').boundingBox()
+      assert(icon && title && icon.y + icon.height + 7 <= title.y)
       await expect(page.locator('.toy-bottom-cards button')).toHaveCount(3)
       const boxes = await page.locator('.toy-bottom-cards button').evaluateAll((els) =>
         els.map((el) => {
