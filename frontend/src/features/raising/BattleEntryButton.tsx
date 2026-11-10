@@ -14,7 +14,6 @@ export function BattleEntryButton({
   compact?: boolean
   testId: string
 }) {
-  const assault = mode === 'ASSAULT'
   return (
     <button
       type="button"
@@ -24,6 +23,24 @@ export function BattleEntryButton({
       disabled={disabled}
       onClick={onClick}
     >
+      <BattleEntryContent mode={mode} disabled={disabled} compact={compact} />
+    </button>
+  )
+}
+
+/** 사무실의 분기 버튼 안에서도 같은 아이콘과 문구를 쓴다. */
+export function BattleEntryContent({
+  mode,
+  disabled,
+  compact = false,
+}: {
+  mode: 'ASSAULT' | 'DEFENSE'
+  disabled?: boolean
+  compact?: boolean
+}) {
+  const assault = mode === 'ASSAULT'
+  return (
+    <>
       <span className="battle-entry-icon" aria-hidden="true">
         <svg viewBox="0 0 40 40" width="36" height="36" fill="none" aria-hidden="true">
           {assault ? (
@@ -63,6 +80,6 @@ export function BattleEntryButton({
           ➜
         </span>
       )}
-    </button>
+    </>
   )
 }
