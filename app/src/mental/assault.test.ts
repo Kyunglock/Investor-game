@@ -178,11 +178,12 @@ describe('공격 판: 매도벽 (decisions.md 413번)', () => {
 
   it.each([
     [0, 0],
-    [1, 1],
+    [2, 0],
     [3, 1],
-    [4, 2],
+    [4, 1],
+    [5, 2],
     [9, 2],
-  ])('미완료 %i개 돌파는 별 %i개', (walls, expected) => {
+  ])('미완료 %i개 돌파(10개 중)는 별 %i개', (walls, expected) => {
     expect(assaultStars(false, walls)).toBe(expected)
   })
 
