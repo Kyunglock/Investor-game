@@ -107,6 +107,7 @@ import {
   waterStats,
 } from './magic'
 import { MATE_LOOKS, mateFormation, spreadTargets } from './mates'
+import { OrderBarrierQueue } from './orderBarrier'
 import { shareLabel } from './shares'
 import { wallOffset } from './stageArt'
 import { waveKind } from './waves'
@@ -468,6 +469,8 @@ class BattleScene extends Phaser.Scene {
   private stuck = 0
   private lastFlow = 0
   /** 벽 사이 잡몹 구간(#593)의 남은 초. 0이면 아니다. 끝나면 다음 벽이 내려온다. */
+  private circuitSellQueue = new OrderBarrierQueue()
+  private circuitSellClock = 0
   private circuit: CircuitBreaker | null = null
   private circuitFx: CircuitBreakerFx | null = null
   private circuitIndex = 0
@@ -1780,17 +1783,7 @@ class BattleScene extends Phaser.Scene {
       if (wall) wall.arrived = false
     }
     if (support?.rebuilt) this.opts.onBanner('새 매수벽 등장!', '#7be0c3')
-    if (support && support.fireCount > 0) {
-      const lane = this.lane()
-      for (let i = 0; i < support.fireCount; i++) {
-        this.buyWallFx?.launch(
-          lane.left +
-            lane.width * (0.1 + (0.8 * ((((this.buyWall?.shots ?? 1) - 1) % 6) + 0.5)) / 6),
-          this.buyWallY(),
-          this.loadout.damage * 0.75,
-        )
-      }
-    }
+    if (support) this.launchBuyOrders(support.fireCount)
     this.buyWallFx?.step(dt, (x, fromY, toY, damage) => {
       const targets = this.magicTargets().filter(
         (e) =>
@@ -1857,6 +1850,22 @@ class BattleScene extends Phaser.Scene {
     this.drawClimb(dt)
   }
 
+  private launchBuyOrders(count: number) {
+    const lane = this.lane()
+    for (let i = 0; i < count; i++) {
+      this.buyWallFx?.launch(
+        lane.left + lane.width * (0.1 + (0.8 * ((((this.buyWall?.shots ?? 1) - 1) % 6) + 0.5)) / 6),
+        this.buyWallY(),
+        this.loadout.damage * 0.75,
+      )
+    }
+  }
+
+  private circuitBarrier() {
+    const lane = this.lane()
+    return { left: lane.left, width: lane.width, y: (this.stopY() + this.buyWallY()) / 2 }
+  }
+
   /** 거래 정지 동안 전투 시계·탄·적은 멈추고 주문 대기와 멘탈 회복만 진행한다. */
   private circuitStep(dt: number) {
     const c = this.circuit
@@ -1866,7 +1875,25 @@ class BattleScene extends Phaser.Scene {
     this.marketStats.recovered += recovered
     const { w, h } = this.view()
     const wall = this.circuitWall
-    const lane = this.lane()
+    const barrier = this.circuitBarrier()
+    // 매도 주문은 1.4초에 한 장만, 매수 주문은 평소 발사 시계의 20%로 들어온다.
+    this.circuitSellClock += dt
+    if (this.circuitSellClock >= 1.4 && c.elapsed < CIRCUIT_BREAKER.seconds - 0.4 && wall) {
+      this.circuitSellClock = 0
+      this.spawn('order', [
+        barrier.left + barrier.width * (0.15 + Math.random() * 0.7),
+        wall.y + 20,
+      ])
+    }
+    this.launchBuyOrders(this.buyWall?.stepOrders(dt * 0.2) ?? 0)
+    const sells = (this.enemies.getChildren() as Enemy[])
+      .filter((e) => e.active && !e.dying && isOrder(e.kind) && !e.cell && !e.boss)
+      .sort((a, b) => b.y - a.y)
+    for (const e of sells) {
+      this.circuitSellQueue.move(e, dt, barrier, 'sell')
+      ;(e.body as Phaser.Physics.Arcade.Body).updateFromGameObject()
+    }
+    this.buyWallFx?.holdOrders(dt, barrier)
     if (wall) {
       wall.band.setAlpha(1)
       for (const e of wall.cells) {
@@ -1875,10 +1902,9 @@ class BattleScene extends Phaser.Scene {
       }
     }
     this.circuitFx?.draw(c, w, h, this.player.x, this.player.y, this.reducedMotion, {
-      left: lane.left,
-      width: lane.width,
-      bottom: wall?.y ?? this.stopY(),
-      height: wall ? this.wallHeight(wall) : 3 * CELL_H,
+      ...barrier,
+      buys: this.buyWallFx?.queuedOrders ?? 0,
+      sells: this.circuitSellQueue.size,
     })
     this.player.setTexture('hero-idle')
     this.pushHud(true)
@@ -1900,9 +1926,11 @@ class BattleScene extends Phaser.Scene {
       this.marketStats.wallHpAfter = wall.cells.reduce((sum, e) => sum + e.hp, 0)
     }
     this.circuitWall = null
+    this.circuitSellQueue.clear()
+    this.buyWallFx?.endCircuit()
     this.invulnUntil = Math.max(this.invulnUntil, this.elapsed + 1.2)
     this.lastFlow = this.elapsed
-    this.opts.onBanner('거래 재개! 쌓인 매도벽을 돌파하라!', '#ffce7a')
+    this.opts.onBanner('거래 재개! 대기 주문이 출발합니다!', '#ffce7a')
     if (!this.paused && !this.choosing && !this.stopped && !this.over) this.physics.resume()
   }
 
@@ -1931,8 +1959,19 @@ class BattleScene extends Phaser.Scene {
           }
         : null,
       circuit: this.circuit
-        ? { elapsed: this.circuit.elapsed, assembled: this.circuit.assembled }
+        ? {
+            elapsed: this.circuit.elapsed,
+            assembled: this.circuit.assembled,
+            barrier: this.circuitBarrier(),
+            queuedBuy: this.buyWallFx?.queuedOrders ?? 0,
+            queuedSell: this.circuitSellQueue.size,
+          }
         : null,
+      sellOrders: (this.enemies.getChildren() as Enemy[]).flatMap((e, id) =>
+        e.active && !e.dying && isOrder(e.kind) && !e.cell && !e.boss
+          ? [{ id, x: e.x, y: e.y, hp: e.hp }]
+          : [],
+      ),
       projectiles: (this.bullets.getChildren() as Bullet[]).flatMap((b, id) =>
         b.active
           ? [{ id, x: b.x, y: b.y, expiresAt: b.life, remainingMs: b.life - this.elapsed * 1000 }]
@@ -3784,6 +3823,9 @@ class BattleScene extends Phaser.Scene {
           e.cell?.label.setAlpha(1)
         }
       }
+      this.circuitSellQueue.clear()
+      this.circuitSellClock = 0
+      this.buyWallFx?.beginCircuit()
       this.circuitFx = new CircuitBreakerFx(this)
       if (!this.reducedMotion) this.cameras.main.shake(180, 0.003)
       this.marketStats.circuits++

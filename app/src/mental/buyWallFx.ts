@@ -1,10 +1,12 @@
 import type Phaser from 'phaser'
 import { buyOrderTexture, WALL_LABEL_STYLE } from './art'
 import type { BuyWall } from './buyWall'
+import { type BarrierLane, OrderBarrierQueue } from './orderBarrier'
 import { shareLabel } from './shares'
 
 /** 붉은색 장난감 매수벽. 단일 벽의 체력·재건·지원 사격은 기존 규칙을 따른다. */
 export class BuyWallFx {
+  private circuitQueue = new OrderBarrierQueue()
   private ink: Phaser.GameObjects.Graphics
   private surface: Phaser.GameObjects.Image
   private title: Phaser.GameObjects.Text
@@ -90,6 +92,23 @@ export class BuyWallFx {
       if (hit(shot.x, shot.y, next, shot.damage) || next < -30) shot.active = false
       shot.y = next
       shot.body.setPosition(shot.x, shot.y).setVisible(shot.active)
+    }
+  }
+  beginCircuit() {
+    this.circuitQueue.clear()
+  }
+  endCircuit() {
+    this.circuitQueue.clear()
+  }
+  get queuedOrders() {
+    return this.circuitQueue.size
+  }
+  holdOrders(dt: number, lane: BarrierLane) {
+    // 가까운 주문부터 먼저 세워 뒤에서 온 주문이 그 뒤로 쌓이게 한다.
+    const active = this.shots.filter((shot) => shot.active).sort((a, b) => a.y - b.y)
+    for (const shot of active) {
+      this.circuitQueue.move(shot, dt, lane, 'buy')
+      shot.body.setPosition(shot.x, shot.y)
     }
   }
   draw(wall: BuyWall, left: number, width: number, y: number, reduced: boolean) {
