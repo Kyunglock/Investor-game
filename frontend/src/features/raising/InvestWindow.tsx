@@ -43,6 +43,7 @@ export function InvestWindow({
   onClose,
   onSettle,
   onBattle,
+  battleInOffice = false,
   hold = false,
 }: {
   invest: Invest
@@ -56,12 +57,15 @@ export function InvestWindow({
    * 없이 그대로다.
    */
   onBattle?: (battle: NonNullable<NonNullable<Invest['outcome']>['battle']>) => void
+  /** 앱에서는 회의 결과에서 시작하지 않고 사무실의 버튼으로만 전투에 들어간다. */
+  battleInOffice?: boolean
   /** 결과를 아직 보이지 않는다 (348번): 디펜스 멘탈 전투가 결정 직후에 끼어들어 끝날 때까지. 풀리면 차트가 처음부터 그려진다. */
   hold?: boolean
 }) {
   const busy = useRaisingStore((s) => s.busy)
   const { decideInvest } = useRaisingStore.getState()
   const outcome = invest.outcome
+  const hasBattle = Boolean(onBattle) || battleInOffice
   // 세 단계를 한 화면씩 (decisions.md 368번): 종목 분석 → (결정하러 가기) → 투자 결정 → 결과 확인. 정했으면 결과 화면이다.
   const [stage, setStage] = useState<'analysis' | 'decide'>(() =>
     invest.outcome ? 'decide' : 'analysis',
@@ -111,7 +115,7 @@ export function InvestWindow({
   const loss = Boolean(outcome && outcome.total < 0)
   // 회의 뒤 전투를 마치고 돌아왔으면 (#591, decisions.md 428번) 회의 결과 전체 대신 전투 결과 한 장과 분기 넘기기만 보인다.
   const battleDone = Boolean(
-    onBattle && outcome?.battle && outcome.battle.stars != null && outcome.battle.after != null,
+    hasBattle && outcome?.battle && outcome.battle.stars != null && outcome.battle.after != null,
   )
   return (
     <Overlay>
@@ -135,7 +139,7 @@ export function InvestWindow({
             <h3>종목 회의</h3>
             <p className="meeting-subtitle">단서를 살피고, 동료의 의견을 들어보세요.</p>
           </div>
-          {outcome && onBattle && (
+          {outcome && hasBattle && (
             <button
               type="button"
               disabled={busy}
@@ -507,7 +511,18 @@ export function InvestWindow({
                   )}
                   <BattleAfter outcome={outcome} />
                   <div className="meeting-step-action grid gap-2">
-                    {onBattle && outcome.battle?.open && (
+                    {battleInOffice && outcome.battle?.open && (
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={onClose}
+                        className="min-h-12 w-full rounded bg-wine font-semibold text-white disabled:opacity-50"
+                        data-testid="invest-return-office"
+                      >
+                        사무실로 돌아가기
+                      </button>
+                    )}
+                    {!battleInOffice && onBattle && outcome.battle?.open && (
                       <BattleEntryButton
                         mode={outcome.battle.mode}
                         disabled={busy}
@@ -516,7 +531,7 @@ export function InvestWindow({
                       />
                     )}
                     {/* 사무실로 나가 전투를 미룰 수 있지만, 전투를 건너뛰고 분기를 넘길 수는 없다. 전투를 마치면 open이 꺼져 넘기기가 나온다. */}
-                    {!(onBattle && outcome.battle?.open) && (
+                    {!(hasBattle && outcome.battle?.open) && (
                       <button
                         type="button"
                         disabled={busy}
