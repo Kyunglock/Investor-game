@@ -225,10 +225,6 @@ export function ToyCityHome({ company }: { company: Company }) {
                   : '성장 목표'}
           </small>
         </button>
-        <button type="button" className="toy-menu" onClick={() => setPanel('stage')}>
-          <ToyIcon kind="heart" />
-          <span>멘탈 수련</span>
-        </button>
         <button
           type="button"
           className="toy-menu"
