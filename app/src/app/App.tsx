@@ -1,4 +1,3 @@
-import { useCompanyAutoPlay } from '@web/features/raising/autoPlay'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useTutorial } from '@web/features/raising/tutorial'
 import { useEffect } from 'react'
@@ -18,7 +17,6 @@ export function App() {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   const { load, open } = useRaisingStore.getState()
-  useCompanyAutoPlay()
   useCompanyFx()
 
   useEffect(() => {

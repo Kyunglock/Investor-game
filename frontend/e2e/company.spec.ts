@@ -554,55 +554,27 @@ test('새 건물 공사가 끝나면 가림막이 걷히며 새 건물이 솟아
   await expect(move).toContainText('반지하 원룸 → 상가 2층')
 })
 
-/** 자동 진행은 확장 알림도 20초 보여 준다. 중간 창을 건너뛰지 않고 자동으로 닫히는지 검사한다. */
-async function waitForAutoReport(page: Page, name: '분기 실적' | '연말 결산서') {
-  const report = page.getByRole('dialog', { name })
-  const move = page.getByRole('alertdialog', { name: '건물이 커졌다' })
-  const quarter = page.getByRole('dialog', { name: '분기 실적' })
-  const intermediate = name === '연말 결산서' ? move.or(quarter) : move
-  // 분기 실적 셋과 중간 확장 알림을 각각 기다린다. 무한히 같은 창을 여는 오류는 실패시킨다.
-  for (let windows = 0; windows < 8; windows++) {
-    await expect(report.or(intermediate)).toBeVisible({ timeout: 30_000 })
-    if (await report.isVisible()) return report
-    await expect(page.getByTestId('auto-countdown')).toContainText('초 뒤 닫힘')
-    const current = (await move.isVisible()) ? move : quarter
-    await expect(current).toBeHidden({ timeout: 25_000 })
-    await expect(page.getByTestId('auto-status')).toBeVisible()
-  }
-  throw new Error(`자동 진행이 중간 알림 8개 뒤에도 ${name}에 도달하지 못했습니다`)
-}
-
-test('자동 진행을 켜면 뽑기·배치·회의·결산을 해마다 하고, 멈추면 선다 (245번)', async ({
-  page,
-}) => {
-  test.setTimeout(300_000)
+test('분기는 직접 넘기고 실적 창은 확인을 누를 때까지 남는다', async ({ page }) => {
+  await page.clock.install()
   await openCompany(page)
-  await page.getByRole('button', { name: '⟳ 자동 진행' }).click()
-  await expect(page.getByTestId('auto-status')).toBeVisible()
-  // 사람이 하던 결산 버튼은 자동 진행 동안 잠긴다.
-  await expect(page.getByRole('button', { name: '1년 차 1분기 넘기기' })).toBeDisabled()
-  // 빈 자리 넷에 사람을 뽑아 앉히고(287번), 회의를 직원 다수결로 정하고, 결산서를 보여 준 뒤 다음 해로 간다.
-  await expect(page.getByTestId('office-seat')).toHaveCount(4, { timeout: 30_000 })
-  // 분기마다 분기 실적을 보여 주고, 네 분기를 넘기면 연말 결산서를 보여 준다 (268번).
-  const quarterSheet = await waitForAutoReport(page, '분기 실적')
-  // 창마다 20초 띄워 두고 남은 초를 창 위에 센다 (277번).
-  await expect(page.getByTestId('auto-countdown')).toContainText('초 뒤 닫힘')
-  await page.waitForTimeout(5_000)
-  await expect(quarterSheet).toBeVisible()
-  await waitForAutoReport(page, '연말 결산서')
-  await expect(page.getByText(/1호 회사 · 2년 차/)).toBeVisible({ timeout: 30_000 })
-  await page.getByRole('button', { name: '■ 자동 멈춤' }).click()
-  await expect(page.getByTestId('auto-status')).toHaveCount(0)
-  // 멈추면 결산서를 닫은 뒤 그 해에 머문다.
-  for (const name of ['연말 결산서', '분기 실적']) {
-    const sheet = page.getByRole('dialog', { name })
-    if (await sheet.isVisible()) {
-      await sheet.getByRole('button', { name: '확인' }).click()
+  await expect(page.getByRole('button', { name: /자동 진행|자동 멈춤/ })).toHaveCount(0)
+  await page.getByRole('button', { name: '1년 차 1분기 넘기기', exact: true }).click()
+  const sheet = page.getByRole('dialog', { name: '분기 실적' })
+  await expect(sheet).toBeVisible()
+  await expect(page.getByTestId('auto-countdown')).toHaveCount(0)
+  const mutations: string[] = []
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname.startsWith('/api/company')) {
+      mutations.push(request.url())
     }
-  }
-  const year = await page.getByText(/1호 회사 · \d+년 차/).innerText()
-  await page.waitForTimeout(3_000)
-  await expect(page.getByText(/1호 회사 · \d+년 차/)).toHaveText(year)
+  })
+  await page.clock.fastForward(60_000)
+  await expect(sheet).toBeVisible()
+  await sheet.getByRole('button', { name: '확인', exact: true }).click()
+  await expect(sheet).toHaveCount(0)
+  await page.clock.fastForward(60_000)
+  await expect(page.getByRole('button', { name: '1년 차 2분기 넘기기', exact: true })).toBeEnabled()
+  expect(mutations).toEqual([])
 })
 
 test('개인정보처리방침이 있고, 게시자 ID가 없으면 광고 자리를 그리지 않는다 (271번)', async ({

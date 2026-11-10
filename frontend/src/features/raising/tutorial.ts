@@ -20,8 +20,8 @@ export type TutorialStep = {
 
 export const TUTORIAL_STEPS = 5
 
-/** 튜토리얼이 잠갔다 여는 것들 (decisions.md 347번): 탭 넷, 분기 넘기기, 자동 진행, 건물 키우기. */
-export type Feature = 'market' | 'staff' | 'settle' | 'issue' | 'record' | 'auto' | 'upgrade'
+/** 튜토리얼이 잠갔다 여는 것들 (decisions.md 347번): 탭 넷, 분기 넘기기, 건물 키우기. */
+export type Feature = 'market' | 'staff' | 'settle' | 'issue' | 'record' | 'upgrade'
 
 export const FEATURE_NAMES: Record<Feature, string> = {
   market: '채용',
@@ -29,7 +29,6 @@ export const FEATURE_NAMES: Record<Feature, string> = {
   settle: '분기 넘기기',
   issue: '이슈',
   record: '기록',
-  auto: '자동 진행',
   upgrade: '건물 키우기',
 }
 
@@ -41,7 +40,7 @@ export const UNLOCKS: Record<TutorialStep['id'], Feature[]> = {
   place: ['staff'],
   meeting: ['settle'],
   sheet: ['issue', 'record'],
-  grow: ['upgrade', 'auto'],
+  grow: ['upgrade'],
 }
 
 export const ALL_FEATURES: Feature[] = STEP_ORDER.flatMap((id) => UNLOCKS[id])
@@ -109,9 +108,9 @@ export function tutorialStep(company: Company): TutorialStep {
     id: 'grow',
     n: 5,
     title: '회사 키우기',
-    text: '자본이 모이면 위의 버튼이 반짝입니다. 눌러서 사무실을 넓히거나 새 건물을 지으세요(건물은 몇 해 걸립니다). 자리가 늘고, 뽑기 등급이 오르고, 새 자리가 열립니다. 급하면 "⟳ 자동 진행"이 공채·배치·회의·결산을 대신합니다. 랜드마크 타워에 올라도 끝이 아닙니다!',
+    text: '자본이 모이면 위의 버튼이 반짝입니다. 눌러서 사무실을 넓히거나 새 건물을 지으세요(건물은 몇 해 걸립니다). 자리가 늘고, 뽑기 등급이 오르고, 새 자리가 열립니다. 랜드마크 타워에 올라도 끝이 아닙니다!',
     spot: 'upgrade',
-    short: '건물 키우기와 자동 진행이 열렸다. 랜드마크 타워까지!',
+    short: '건물 키우기가 열렸다. 랜드마크 타워까지!',
   }
 }
 

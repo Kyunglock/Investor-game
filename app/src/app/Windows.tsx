@@ -1,5 +1,4 @@
 import type { Company, Drawn } from '@web/api/client'
-import { toggleAutoPlay } from '@web/features/raising/autoPlay'
 import { GachaReveal, useDrawReveal } from '@web/features/raising/Gacha'
 import { InvestWindow } from '@web/features/raising/InvestWindow'
 import { QuarterSheet } from '@web/features/raising/QuarterSheet'
@@ -7,7 +6,6 @@ import { useRaisingStore } from '@web/features/raising/store'
 import { useLocked, useTutorialSpot } from '@web/features/raising/TutorialBanner'
 import { YearEndSheet } from '@web/features/raising/YearEnd'
 import { useEffect, useState } from 'react'
-import { createPortal } from 'react-dom'
 import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
@@ -148,7 +146,6 @@ export function Windows({ company }: { company: Company }) {
           }}
         />
       )}
-      <AutoCountdown />
     </>
   )
 }
@@ -174,7 +171,7 @@ function revealFx(d: Drawn, el: HTMLElement | null) {
   haptic.light()
 }
 
-/** 화면 아래의 큰 버튼 (decisions.md 310번): 분기 넘기기(누르면 도장 소리·진동·불꽃)와 자동 진행. 망했으면 다음 회사 차리기. */
+/** 화면 아래의 큰 버튼 (decisions.md 310번): 분기 넘기기(누르면 도장 소리·진동·불꽃). 망했으면 다음 회사 차리기. */
 export function ActionBar({
   company,
   variant = 'default',
@@ -184,12 +181,10 @@ export function ActionBar({
 }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
-  const autoPlay = useRaisingStore((s) => s.autoPlay)
   const { restart } = useRaisingStore.getState()
   const settleSpot = useTutorialSpot(company, 'settle')
-  // 튜토리얼 잠금 (347번): 분기 넘기기는 앉힌 뒤, 자동 진행은 마지막 걸음에 열린다.
+  // 튜토리얼 잠금 (347번): 분기 넘기기는 직원을 앉힌 뒤 열린다.
   const settleLocked = useLocked(company, 'settle')
-  const autoLocked = useLocked(company, 'auto')
   const ended = company.status === 'ENDED'
   if (ended) {
     return null
@@ -231,17 +226,6 @@ export function ActionBar({
             {error}
           </p>
         )}
-        {autoPlay && (
-          <button
-            type="button"
-            className="toy-auto-stop"
-            data-testid="auto"
-            aria-pressed="true"
-            onClick={() => toggleAutoPlay(false)}
-          >
-            자동 진행 중 · 누르면 멈춤
-          </button>
-        )}
         {/* 아래 카드 셋 (decisions.md 367번): 지난 분기 수익·팀 분위기를 빼고 전투 강화와 스테이지를 둔다. */}
         <div className="toy-bottom-cards">
           <button
@@ -260,7 +244,7 @@ export function ActionBar({
           </button>
           <button
             type="button"
-            disabled={busy || autoPlay || settleLocked}
+            disabled={busy || settleLocked}
             className={`toy-stat toy-advance ${settleSpot}`}
             data-testid="settle"
             data-locked={settleLocked || undefined}
@@ -307,30 +291,10 @@ export function ActionBar({
           {error}
         </p>
       )}
-      {autoPlay && (
-        <p className="mb-1 text-center text-[11px] text-teal" data-testid="auto-status">
-          자동 진행 중 · 뽑기 → 배치 → 회의(직원 다수결) → 분기 넘기기
-        </p>
-      )}
-      <div className="grid grid-cols-[auto_1fr] gap-2">
+      <div className="grid gap-2">
         <button
           type="button"
-          aria-pressed={autoPlay}
-          disabled={autoLocked}
-          onClick={() => {
-            sfx.tap()
-            toggleAutoPlay(!autoPlay)
-          }}
-          className={`btn min-h-14 px-3 text-[13px] ${autoPlay ? 'btn-teal' : 'btn-ghost'} ${autoLocked ? 'opacity-40' : ''}`}
-          title="빈 자리에 뽑고, 자동 배치하고, 회의는 직원 다수결로 정하고, 분기를 넘긴다"
-          data-testid="auto"
-          data-locked={autoLocked || undefined}
-        >
-          {autoLocked ? '🔒' : autoPlay ? '■ 자동 멈춤' : '⟳ 자동'}
-        </button>
-        <button
-          type="button"
-          disabled={busy || autoPlay || settleLocked}
+          disabled={busy || settleLocked}
           onClick={(ev) => {
             sfx.stamp()
             haptic.medium()
@@ -347,34 +311,5 @@ export function ActionBar({
         </button>
       </div>
     </div>
-  )
-}
-
-/** 자동 진행이 띄운 창을 닫기까지 남은 초 (decisions.md 277번). */
-function AutoCountdown() {
-  const nextAt = useRaisingStore((s) => s.autoNextAt)
-  const auto = useRaisingStore((s) => s.autoPlay)
-  const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    if (nextAt === null) {
-      return
-    }
-    setNow(Date.now())
-    const id = setInterval(() => setNow(Date.now()), 250)
-    return () => clearInterval(id)
-  }, [nextAt])
-  if (!auto || nextAt === null) {
-    return null
-  }
-  const left = Math.max(0, Math.ceil((nextAt - now) / 1000))
-  return createPortal(
-    <p
-      className="fixed top-3 left-1/2 z-40 -translate-x-1/2 rounded-full bg-teal px-4 py-2 text-[13px] font-semibold text-white shadow-lg"
-      data-testid="auto-countdown"
-      aria-live="polite"
-    >
-      자동 진행 · {left}초 뒤 닫힘
-    </p>,
-    document.body,
   )
 }
