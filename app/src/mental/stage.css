@@ -2,8 +2,8 @@
   position: fixed;
   inset: 0;
   z-index: 40;
-  background: #a6c7b7;
-  color: #34445b;
+  background: #e6bf84;
+  color: #684630;
 }
 .stage-frame {
   position: relative;
@@ -11,7 +11,7 @@
   height: 100%;
   margin: auto;
   isolation: isolate;
-  background-color: #bfe8cf;
+  background-color: #ffe3a4;
   background-size: 100% 100%;
   overflow: hidden;
 }
@@ -31,7 +31,7 @@
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  background: #e8f5e93b;
+  background: #fff1cb3b;
 }
 .stage-heading {
   text-align: center;
@@ -40,7 +40,7 @@
 .stage-eyebrow {
   font-size: 11px;
   letter-spacing: 1px;
-  color: #59766a;
+  color: #8b6847;
   font-weight: 700;
 }
 .stage-heading h2 {
@@ -77,10 +77,10 @@
 .stage-mini-wall {
   margin: -10px auto 9px;
   position: relative;
-  background: #9de6dfbb;
-  border: 2px solid #d4ffff;
-  box-shadow: 0 0 0 1px #70c0c2;
-  border-radius: 50% 50% 8px 8px;
+  background: linear-gradient(#8edbd0, #48aaa6);
+  border: 2px solid #d5fff0;
+  box-shadow: 0 4px 0 #287e80;
+  border-radius: 12px;
   padding: 9px;
   width: 220px;
   font-size: 12px;
@@ -98,7 +98,7 @@
   display: block;
   margin-top: 5px;
   font-size: 11px;
-  color: #567265;
+  color: #8b6847;
 }
 /* 출전 화면의 든 무기 (#564): 고르기·뽑기·합성은 무기 인벤토리(weapons.css)로 옮겼다. */
 .stage-equipped {
@@ -108,10 +108,10 @@
   align-items: center;
   gap: 10px;
   background: #fffaf0ee;
-  border: 1px solid #a9bbc9;
+  border: 1px solid #d4af79;
   border-radius: 16px;
   padding: 8px 10px;
-  box-shadow: 0 3px 0 #89a6b438;
+  box-shadow: 0 3px 0 #ad754538;
 }
 .stage-weapon-change {
   flex: none;
@@ -533,7 +533,7 @@
 }
 .battle-corner time {
   padding: 3px 9px;
-  border: 1.5px solid #8798b1;
+  border: 1.5px solid #c3935f;
   border-radius: 12px;
   background: #fff9ecdd;
   font-size: 17px;
@@ -556,7 +556,7 @@
   pointer-events: auto;
   width: 36px;
   height: 36px;
-  border: 1.5px solid #8798b1;
+  border: 1.5px solid #c3935f;
   border-radius: 12px;
   background: #fffaf1;
   font-size: 19px;
@@ -617,7 +617,7 @@
   gap: 1px;
   width: 100%;
   padding: 4px 0 5px;
-  border: 1.5px solid #8798b1;
+  border: 1.5px solid #c3935f;
   border-radius: 11px;
   background: #fff9ecdd;
   font-weight: 400;
@@ -636,17 +636,17 @@
   position: relative;
   width: 10px;
   height: clamp(90px, 24vh, 200px);
-  border: 1px solid #9aaabd;
+  border: 1px solid #c3935f;
   border-radius: 6px;
   overflow: hidden;
-  background: #dbd7dacc;
+  background: #e9cf9ecc;
 }
 .battle-xp i {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  background: #6bb7de;
+  background: #49b9b0;
   transition: height 0.15s;
 }
 /* 멘탈은 하단에 고정하고 보유 카드는 그 위에 놓는다. */
@@ -677,13 +677,13 @@
   height: 22px;
   border-radius: 9px;
   overflow: hidden;
-  background: #d4ccce;
-  border: 1px solid #a89a9b;
+  background: #dfc79c;
+  border: 1px solid #aa8051;
 }
 .battle-health i {
   display: block;
   height: 100%;
-  background: #f58e7d;
+  background: #9cce5b;
   border-radius: 8px;
   transition: width 0.15s;
 }
@@ -693,7 +693,7 @@
   text-align: center;
   font-size: 13px;
   line-height: 20px;
-  color: #663c38;
+  color: #4a4529;
   font-weight: 400;
 }
 .battle-footer {
@@ -724,7 +724,7 @@
   width: 34px;
   height: 34px;
   background: #fff9eced;
-  border: 1px solid #8f9eb5;
+  border: 1px solid #c3935f;
   border-radius: 12px;
   font-size: 18px;
 }
@@ -732,7 +732,7 @@
   position: absolute;
   bottom: -3px;
   right: -3px;
-  background: #789bb8;
+  background: #a77749;
   color: white;
   border: 1px solid white;
   border-radius: 9px;
@@ -1301,7 +1301,7 @@
   padding: 2px 8px 3px;
   border-radius: 11px;
   background: #fff9ecee;
-  border: 1.5px solid #8798b1;
+  border: 1.5px solid #c3935f;
   line-height: 1.15;
   white-space: nowrap;
 }

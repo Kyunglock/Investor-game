@@ -2,20 +2,13 @@ import { CAT_H, CAT_W, GUN_LEN } from '@web/features/game/cat/draw'
 import { BOSS_LOOK } from '@web/features/game/cat/look'
 import type Phaser from 'phaser'
 import { drawStageGun } from './drawStageGun'
-import {
-  drawEarthArmor,
-  drawEmber,
-  drawPillar,
-  drawSellCell,
-  drawWater,
-  drawWave,
-} from './effectArt'
+import { drawEarthArmor, drawEmber, drawPillar, drawWater, drawWave } from './effectArt'
 import type { UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import type { Hero } from './hero'
 import { MATE_LOOKS } from './mates'
-import { drawMentalWall, drawSprite } from './stageArt'
+import { drawMentalWall, drawSprite, drawToySellWall, STAGE_HERO } from './stageArt'
 import { drawWeaponBullet, drawWeaponImpact, WEAPON_GRADES } from './weaponVisuals'
 
 /** 승인한 캐주얼 시안의 투명 스프라이트를 Phaser 텍스처로 굽고, 무기·벽·탄환을 실시간 상태에 맞춰 합성한다. */
@@ -29,7 +22,7 @@ export const WALL_LABEL_STYLE = {
   fontSize: '18px',
   color: '#ffffff',
   align: 'center',
-  stroke: '#0d2466',
+  stroke: '#79553a',
   strokeThickness: 4,
   lineSpacing: -3,
   resolution: DPR,
@@ -39,11 +32,11 @@ export const WALL_LABEL_STYLE = {
 export const HERO_SCALE = 0.72
 export const HERO_SIZE = { w: CAT_W * HERO_SCALE, h: CAT_H * HERO_SCALE }
 /** 권총을 사장냥 상자 좌표보다 이만큼 크게 그린다(344번): 전에는 작아서 안 보였다. 앞발도 같이 커져 꼭 쥔 느낌이다. */
-const GUN_K = 1.55
+const GUN_K = STAGE_HERO.gunScale
 /** 권총: 사장냥 그림의 가운데에서 피벗(뒷손)까지의 거리(px)와 피벗에서 총구까지(px). */
 export const GUN = {
-  dx: 8,
-  dy: 10,
+  dx: (STAGE_HERO.gunX - CAT_W / 2) * HERO_SCALE,
+  dy: (STAGE_HERO.gunY - CAT_H / 2) * HERO_SCALE,
   len: GUN_LEN * HERO_SCALE * GUN_K,
   /** 총 텍스처(상자 좌표 -8..26 × -8..14)의 원점 비율 */
   ox: 8 / 34,
@@ -81,7 +74,7 @@ export function bakeHero(scene: Phaser.Scene, hero: Hero) {
   const source = scene.textures.get('art-hero').getSourceImage() as HTMLImageElement
   for (const key of HERO_KEYS) {
     bake(scene, key, CAT_W, CAT_H, (c) => {
-      c.fillStyle = '#4f8a7133'
+      c.fillStyle = '#98633633'
       c.beginPath()
       c.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
       c.fill()
@@ -101,7 +94,7 @@ export function bakeHero(scene: Phaser.Scene, hero: Hero) {
   bake(scene, 'gun', GUN.w, GUN.h, (c) => {
     c.scale(HERO_SCALE * GUN_K, HERO_SCALE * GUN_K)
     c.translate(8, 8)
-    drawStageGun(c, BOSS_LOOK.fur, hero.weapon.kind, hero.weapon.grade)
+    drawStageGun(c, STAGE_HERO.fur, hero.weapon.kind, hero.weapon.grade)
   })
 }
 
@@ -160,7 +153,7 @@ export function bakeMates(scene: Phaser.Scene, hero: Hero) {
   const source = scene.textures.get('art-hero').getSourceImage() as HTMLImageElement
   for (const [i, look] of MATE_LOOKS.entries()) {
     bake(scene, mateKey(i), CAT_W, CAT_H, (c) => {
-      c.fillStyle = '#4f8a7133'
+      c.fillStyle = '#98633633'
       c.beginPath()
       c.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
       c.fill()
@@ -245,8 +238,11 @@ export function bakeEnemies(scene: Phaser.Scene) {
 
 /** 멘탈벽과 탄환은 실제 상태에 맞춰 게임 안에서 그린다. */
 export function bakeStage(scene: Phaser.Scene, _genre: Genre) {
+  const blocks = scene.textures.get('art-wallBlocks').getSourceImage() as HTMLImageElement
   for (const cracked of [false, true]) {
-    bake(scene, cracked ? 'wall-cracked' : 'wall', 512, 96, (c) => drawMentalWall(c, cracked))
+    bake(scene, cracked ? 'wall-cracked' : 'wall', 512, 96, (c) =>
+      drawMentalWall(c, blocks, cracked),
+    )
   }
   bake(scene, 'wall-ripple', 80, 50, (c) => {
     for (const r of [15, 25, 36]) {
@@ -672,21 +668,22 @@ export function bakeOrders(scene: Phaser.Scene) {
       c.restore()
     })
   }
-  // 매도벽 칸: 파란 호가 칸. 금은 맞을수록 늘고 3단계는 이가 빠진다. 물량 글자는 battle.ts가 Text로 얹는다.
+  // 블록 질감만 교체한다. 균열 단계와 물량 표시는 기존 전투 상태를 따른다.
+  const blocks = scene.textures.get('art-wallBlocks').getSourceImage() as HTMLImageElement
   for (let crack = 0; crack < CELL_CRACKS; crack++) {
-    bake(scene, cellKey(crack), CELL_TEX.w, CELL_TEX.h, (c) => drawSellCell(c, crack))
+    bake(scene, cellKey(crack), CELL_TEX.w, CELL_TEX.h, (c) => drawToySellWall(c, blocks, crack))
   }
-  // 벽 뒤 판: 칸들이 박힌 짙은 남색 띠(호가창 줄).
+  // 벽 뒤 판: 블록 사이를 잇는 옅은 접지 그림자.
   bake(scene, 'wall-band', 64, 32, (c) => {
-    c.fillStyle = '#14234add'
+    c.fillStyle = '#a45d4126'
     c.fillRect(0, 0, 64, 32)
-    c.fillStyle = '#8fb8ff'
+    c.fillStyle = '#e4a478'
     c.fillRect(0, 0, 64, 2)
     c.fillRect(0, 30, 64, 2)
   })
-  // 파편: 파란 벽 조각과 흰 먼지.
+  // 파편: 산호색 벽 조각과 흰 먼지.
   bake(scene, 'chip', 6, 5, (c) => {
-    c.fillStyle = '#4f8df0'
+    c.fillStyle = '#ed8766'
     c.beginPath()
     c.moveTo(0, 1)
     c.lineTo(5, 0)

@@ -11,10 +11,14 @@ export function drawStageGun(
   const box = (x: number, y: number, w: number, h: number, fill: string, radius = 2) => {
     c.beginPath()
     c.roundRect(x, y, w, h, radius)
-    c.fillStyle = fill
+    const clay = c.createLinearGradient(x, y, x, y + h)
+    clay.addColorStop(0, '#fff2d5')
+    clay.addColorStop(0.22, fill)
+    clay.addColorStop(1, fill)
+    c.fillStyle = clay
     c.fill()
     c.lineWidth = 1.4
-    c.strokeStyle = '#46596b'
+    c.strokeStyle = '#795539'
     c.stroke()
   }
   c.lineJoin = 'round'
@@ -40,7 +44,7 @@ export function drawStageGun(
   }
   box(-1, 0, 6, 10, '#334155')
   if (grade === 'F') {
-    box(0, -4, 15, 7, '#94a3b8')
+    box(0, -4, 15, 7, '#ee9856')
     box(15, -3, 4, 4, '#475569', 1)
     box(2, -6, 2, 2, '#334155', 0.5)
     c.fillStyle = '#e2e8f0'

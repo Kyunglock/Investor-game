@@ -23,7 +23,16 @@ async function checkLayout(page: Page) {
     .evaluateAll((els) =>
       els.map((el) => {
         const r = el.getBoundingClientRect()
-        return { name: el.className, x: r.x, y: r.y, right: r.right, bottom: r.bottom }
+        return {
+          name: el.className,
+          parents: els
+            .filter((parent) => parent !== el && parent.contains(el))
+            .map((parent) => parent.className),
+          x: r.x,
+          y: r.y,
+          right: r.right,
+          bottom: r.bottom,
+        }
       }),
     )
   const { width = 0, height = 0 } = page.viewportSize() ?? {}
@@ -34,6 +43,8 @@ async function checkLayout(page: Page) {
     )
     for (const other of boxes) {
       if (box === other) continue
+      // 하단 멘탈 게이지는 footer의 자식이므로 두 영역의 포함 관계는 정상이다.
+      if (box.parents.includes(other.name) || other.parents.includes(box.name)) continue
       assert(
         !(
           box.x < other.right &&

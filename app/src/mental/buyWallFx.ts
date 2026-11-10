@@ -3,9 +3,10 @@ import { DPR, WALL_LABEL_STYLE } from './art'
 import { BUY_WALL, type BuyWall } from './buyWall'
 import { shareLabel } from './shares'
 
-/** 붉은 매수 주문 벽과 소량의 상승 주문. 매도벽의 파란 물량과 구분한다. */
+/** 청록색 장난감 매수벽. 단일 벽의 체력·재건·지원 사격은 기존 규칙을 따른다. */
 export class BuyWallFx {
   private ink: Phaser.GameObjects.Graphics
+  private surface: Phaser.GameObjects.Image
   private title: Phaser.GameObjects.Text
   private shots: {
     x: number
@@ -15,6 +16,7 @@ export class BuyWallFx {
     label: Phaser.GameObjects.Text
   }[]
   constructor(scene: Phaser.Scene) {
+    this.surface = scene.add.image(0, 0, 'wall').setOrigin(0).setDepth(4)
     this.ink = scene.add.graphics().setDepth(4)
     this.title = scene.add
       .text(0, 0, '', { ...WALL_LABEL_STYLE })
@@ -58,35 +60,29 @@ export class BuyWallFx {
     const g = this.ink.clear()
     const cw = width / 6
     if (wall.active) {
-      // 매도벽처럼 칸을 나누지 않은 하나의 두꺼운 주문 벽이다.
-      g.fillStyle(0x823b48).fillRoundedRect(left - 4, y - 28, width + 8, 58, 8)
-      g.fillStyle(0xe97162).fillRoundedRect(left, y - 30, width, 52, 7)
-      g.lineStyle(2, 0xffdb9f).strokeRoundedRect(left, y - 30, width, 52, 7)
-      g.lineStyle(3, 0xffbc8d).lineBetween(left + 10, y - 24, left + width - 10, y - 24)
-      if (wall.hp < wall.maxHp * 0.5) {
-        const x = left + width * 0.72
-        g.lineStyle(2, 0x803b3f)
-          .lineBetween(x, y - 29, x - 9, y - 15)
-          .lineBetween(x - 9, y - 15, x + 3, y - 7)
-          .lineBetween(x + 3, y - 7, x - 6, y + 7)
-      }
+      this.surface
+        .setVisible(true)
+        .setTexture(wall.hp < wall.maxHp * 0.5 ? 'wall-cracked' : 'wall')
+        .setPosition(left, y - 40)
+        .setDisplaySize(width, 72)
       g.fillStyle(0x4f2837).fillRect(left + 5, y + 24, width - 10, 4)
       g.fillStyle(0xffdc87).fillRect(left + 5, y + 24, ((width - 10) * wall.hp) / wall.maxHp, 4)
       this.title
         .setText(`매수벽 ${shareLabel(wall.hp)} / ${shareLabel(wall.maxHp)}`)
         .setPosition(left + width / 2, y - 4)
     } else {
+      this.surface.setVisible(false)
       const t = Math.min(1, (BUY_WALL.rebuildSeconds - wall.rebuildLeft) / 0.8)
       for (let i = 0; i < 12; i++) {
         const x = left + ((i % 6) + 0.5) * cw + (reduced ? 0 : (i % 2 ? 1 : -1) * t * 30)
-        g.fillStyle(0xef9271, 1 - t).fillRect(
+        g.fillStyle(0x63beb0, 1 - t).fillRect(
           x,
           y + (reduced ? 0 : t * t * 55) + Math.floor(i / 6) * 12,
           cw * 0.45,
           10,
         )
       }
-      g.lineStyle(1, 0xf7c7a5, 0.6).strokeRoundedRect(left, y - 30, width, 52, 7)
+      g.lineStyle(1, 0x75cabc, 0.6).strokeRoundedRect(left, y - 30, width, 52, 7)
       this.title
         .setText(`매수벽 붕괴 · 재정비 ${Math.ceil(wall.rebuildLeft)}초`)
         .setPosition(left + width / 2, y)
@@ -98,7 +94,7 @@ export class BuyWallFx {
       if (!shot.active) continue
       g.fillStyle(0xffd394, 0.35).fillRoundedRect(shot.x - 10, shot.y, 20, 38, 5)
       const width = Math.max(42, shot.label.width + 12)
-      g.fillStyle(0xc64b45).fillRoundedRect(shot.x - width / 2, shot.y - 10, width, 21, 5)
+      g.fillStyle(0x318e89).fillRoundedRect(shot.x - width / 2, shot.y - 10, width, 21, 5)
       g.lineStyle(1.5, 0xffd394).strokeRoundedRect(shot.x - width / 2, shot.y - 10, width, 21, 5)
     }
   }
