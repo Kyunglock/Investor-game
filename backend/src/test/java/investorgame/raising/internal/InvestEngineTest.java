@@ -196,13 +196,13 @@ class InvestEngineTest {
     assertThat(holder.invest.choice).isNull();
   }
 
-  /** 회의 뒤 전투 (414번, #573): 틀렸으면 디펜스로 손실을 줄이고, 맞혔으면 공격 판으로 수익을 키운다. 한 회의에 한 번, 분기를 넘기면 끝난다. */
+  /** 맞힌 회의만 매도벽 돌파가 열리고, 틀린 회의는 손익 그대로 분기를 넘긴다. */
   @Test
-  void 회의_뒤_전투는_틀리면_손실을_줄이고_맞히면_수익을_키운다() {
+  void 회의_뒤_전투는_맞힌_경우에만_열린다() {
     CompanyState winner = company(3, stats(50, 100, 100, 100));
     ENGINE.invest.decide(winner, right(winner), new HashSeededRandom(3));
     assertThat(InvestEngine.battleMode(winner.invest)).isEqualTo(InvestEngine.ASSAULT);
-    assertThatThrownBy(() -> ENGINE.invest.battle(winner, InvestEngine.DEFENSE, 2))
+    assertThatThrownBy(() -> ENGINE.invest.battle(winner, "DEFENSE", 2))
         .as("모드는 회의 결과로 정해진다")
         .isInstanceOf(InvalidRequestException.class);
     long won = winner.invest.total;
@@ -215,24 +215,23 @@ class InvestEngineTest {
 
     CompanyState loser = company(3, stats(50, 100, 100, 100));
     ENGINE.invest.decide(loser, wrong(loser), new HashSeededRandom(3));
-    assertThat(InvestEngine.battleMode(loser.invest)).isEqualTo(InvestEngine.DEFENSE);
+    assertThat(InvestEngine.battleMode(loser.invest)).isNull();
+    assertThat(InvestEngine.battleOpen(loser.invest)).isFalse();
     long lost = loser.invest.total;
-    assertThat(ENGINE.invest.battle(loser, InvestEngine.DEFENSE, 1))
-        .as("별 하나면 잃은 몫의 70%만 남긴다")
-        .isEqualTo(lost * 70 / 100 - lost);
-
-    CompanyState perfect = company(3, stats(50, 100, 100, 100));
-    ENGINE.invest.decide(perfect, wrong(perfect), new HashSeededRandom(3));
-    long stake = perfect.invest.stake;
-    assertThat(ENGINE.invest.battle(perfect, InvestEngine.DEFENSE, 3))
-        .as("별 셋이면 손실을 없애고 판돈의 10%를 번다")
-        .isEqualTo(-perfect.invest.total + stake / 10);
+    long capital = loser.capital;
+    assertThatThrownBy(() -> ENGINE.invest.battle(loser, "DEFENSE", 3))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(loser.invest.total).isEqualTo(lost);
+    assertThat(loser.capital).isEqualTo(capital);
+    int quarter = loser.quarter;
+    ENGINE.settleQuarter(loser, new HashSeededRandom(3));
+    assertThat(loser.quarter).isEqualTo(quarter + 1);
 
     CompanyState late = company(3, stats(50, 100, 100, 100));
-    ENGINE.invest.decide(late, wrong(late), new HashSeededRandom(3));
+    ENGINE.invest.decide(late, right(late), new HashSeededRandom(3));
     ENGINE.settleQuarter(late, new HashSeededRandom(3));
     assertThat(InvestEngine.battleOpen(late.invest)).as("분기를 넘기면 끝난다").isFalse();
-    assertThatThrownBy(() -> ENGINE.invest.battle(late, InvestEngine.DEFENSE, 3))
+    assertThatThrownBy(() -> ENGINE.invest.battle(late, InvestEngine.ASSAULT, 3))
         .isInstanceOf(InvalidRequestException.class);
   }
 
@@ -252,9 +251,9 @@ class InvestEngineTest {
 
   /** 회의 뒤 전투의 세기 (#594): 회사가 크고 오래되고 사장이 강해질수록 오른다. 이유마다 몫이 보인다. */
   @Test
-  void 회의_뒤_방어_전투의_세기는_진행할수록_오른다() {
+  void 매도벽_전투의_세기는_진행할수록_오른다() {
     CompanyState c = company(3, stats(50, 100, 100, 100));
-    ENGINE.invest.decide(c, wrong(c), new HashSeededRandom(3));
+    ENGINE.invest.decide(c, right(c), new HashSeededRandom(3));
     int base = ENGINE.invest.battleLevel(c, c.invest, 0);
     assertThat(ENGINE.invest.battleLevel(c, c.invest, 10)).as("스테이지 5개마다 +1").isEqualTo(base + 2);
     c.year = 5;
@@ -265,12 +264,12 @@ class InvestEngineTest {
     c.battleLevels.put("fire", 40);
     c.battleLevels.put("hp", 500);
     assertThat(ENGINE.invest.battleLevel(c, c.invest, 0))
-        .as("공격·연사 강화 50단계마다 +1, 체력은 넣지 않는다")
-        .isEqualTo(base + 6);
+        .as("구매한 강화는 난이도를 올리지 않는다")
+        .isEqualTo(base + 4);
     assertThat(ENGINE.invest.battleLevelParts(c, c.invest, 0))
         .containsEntry("year", 2)
         .containsEntry("building", 2)
-        .containsEntry("upgrade", 2);
+        .doesNotContainKey("upgrade");
   }
 
   @Test

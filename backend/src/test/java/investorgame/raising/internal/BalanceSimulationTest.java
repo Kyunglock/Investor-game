@@ -110,10 +110,10 @@ class BalanceSimulationTest {
             case LAZY -> majorityChoice(c.invest); // 지켜본다는 없다(423번): 자동 진행처럼 다수결
           };
       ENGINE.invest.decide(c, choice, boss == Boss.GREEDY, random);
-      // 회의 뒤 전투: 스테이지 사장은 공격 판을 클리어(454번 별 3개), 방어 판은 별 2개로 마친다.
+      // 회의 뒤 전투: 맞힌 회의의 공격 판만 클리어한다. 틀렸을 때 방어 판의 손실 회복은 삭제됐다.
       String battle = InvestEngine.battleMode(c.invest);
       if (battle != null && (boss == Boss.STAGES || boss == Boss.BUYER)) {
-        ENGINE.invest.battle(c, battle, InvestEngine.ASSAULT.equals(battle) ? 3 : 2);
+        ENGINE.invest.battle(c, battle, 3);
       }
     }
     if (boss == Boss.STAGES || boss == Boss.BUYER) {
@@ -255,8 +255,12 @@ class BalanceSimulationTest {
     org.assertj.core.api.Assertions.assertThat(stages.capital())
         .as("25년에 #518 전 수준(1조 원대)을 크게 넘지 않는다 (389번)")
         .isLessThan(3_000_000_000_000L);
-    // 등급 간격은 SS까지 본다(371번). 389번: 스테이지 사장은 SS가 23년, 강화 사는 사장은 24년이다.
-    for (int k = 2; k <= LADDER.indexOf("SS"); k++) {
+    // 회의 방어 삭제 후 25년 120판 중앙값: 스테이지 3,542억/S 23년, 강화 사는 쪽 2,476억/S 24년.
+    // 손실 회복 보너스 없이 SS는 25년 안에 닿지 않는다. 경제는 바꾸지 않고 S까지 성장 간격을 검증한다.
+    org.assertj.core.api.Assertions.assertThat(stages.firstYear()[LADDER.indexOf("S")])
+        .as("방어 보너스 없이도 25년 안에 S에 도달한다")
+        .isLessThanOrEqualTo(years);
+    for (int k = 2; k <= LADDER.indexOf("S"); k++) {
       org.assertj.core.api.Assertions.assertThat(stages.firstYear()[k] - stages.firstYear()[k - 1])
           .as(LADDER.get(k - 1) + " → " + LADDER.get(k))
           .isBetween(1L, 6L);
