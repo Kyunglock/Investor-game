@@ -1,12 +1,11 @@
 import { CAT_H, CAT_W } from '@web/features/game/cat/draw'
-import { BOSS_LOOK } from '@web/features/game/cat/look'
+
 import type Phaser from 'phaser'
-import { drawStageGun, GUN_ART } from './drawStageGun'
+import { CAT_SCALE, mateModel } from './catModels'
 import { drawEmber, drawPillar, drawWater, drawWave, drawWoodenRam } from './effectArt'
 import { ORDERS, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
-import type { Hero } from './hero'
 import { MATE_LOOKS } from './mates'
 import { shareLabel, sharesOf } from './shares'
 import { drawMentalWall, drawSprite, drawToySellWall, STAGE_HERO } from './stageArt'
@@ -30,20 +29,12 @@ export const WALL_LABEL_STYLE = {
 } satisfies Phaser.Types.GameObjects.Text.TextStyle
 
 /** 사장냥의 화면 크기(px): 상자 100×110의 0.72배. 레퍼런스처럼 화면 높이의 1/12쯤. */
-export const HERO_SCALE = 0.72
+export const HERO_SCALE = CAT_SCALE
 export const HERO_SIZE = { w: CAT_W * HERO_SCALE, h: CAT_H * HERO_SCALE }
-/** 권총을 사장냥 상자 좌표보다 이만큼 크게 그린다(344번): 전에는 작아서 안 보였다. 앞발도 같이 커져 꼭 쥔 느낌이다. */
-const GUN_K = STAGE_HERO.gunScale
-/** 권총: 사장냥 그림의 가운데에서 피벗(뒷손)까지의 거리(px)와 피벗에서 총구까지(px). */
+/** 기존 표적 분배·조준 기준점. 외형 변경으로 전투 규칙을 바꾸지 않는다. */
 export const GUN = {
   dx: (STAGE_HERO.gunX - CAT_W / 2) * HERO_SCALE,
   dy: (STAGE_HERO.gunY - CAT_H / 2) * HERO_SCALE,
-  scale: HERO_SCALE * GUN_K,
-  /** 손·팔까지 포함한 그림 영역의 피벗. */
-  ox: GUN_ART.pivotX / GUN_ART.w,
-  oy: GUN_ART.pivotY / GUN_ART.h,
-  w: GUN_ART.w * HERO_SCALE * GUN_K,
-  h: GUN_ART.h * HERO_SCALE * GUN_K,
 }
 /** 적 그림(64×64) 안에서 적의 반지름 ≈ 20 × 1.1. 화면에서는 battle.ts의 ENEMY_SCALE만큼 줄여 사장냥보다 작다(344번). */
 export const ENEMY_SIZE = 64
@@ -68,10 +59,10 @@ function bake(scene: Phaser.Scene, key: string, w: number, h: number, paint: Pai
   scene.textures.addCanvas(key, cv)
 }
 
-/** 아군 텍스처 열쇠: hero-idle(가만히)·hero-fire(쏘는 중)·hero-hurt(직접 피격 색상). 총은 'gun'으로 따로 돌린다. */
+/** 승인한 총·앞발 일체형 원본을 그대로 사용하고 피격 상태만 덧칠한다. */
 export const HERO_KEYS = ['hero-idle', 'hero-fire', 'hero-hurt'] as const
 
-export function bakeHero(scene: Phaser.Scene, hero: Hero) {
+export function bakeHero(scene: Phaser.Scene) {
   const source = scene.textures.get('art-hero').getSourceImage() as HTMLImageElement
   for (const key of HERO_KEYS) {
     bake(scene, key, CAT_W, CAT_H, (c) => {
@@ -92,90 +83,28 @@ export function bakeHero(scene: Phaser.Scene, hero: Hero) {
       }
     })
   }
-  bake(scene, 'gun', GUN.w, GUN.h, (c) => {
-    c.scale(HERO_SCALE * GUN_K, HERO_SCALE * GUN_K)
-    c.translate(GUN_ART.pivotX, GUN_ART.pivotY)
-    drawStageGun(c, STAGE_HERO.fur, hero.weapon.kind, hero.weapon.grade)
-  })
 }
 
-/** 함께 싸우는 고양이 i번의 텍스처 열쇠: 몸과 (같은 무기를 쥔) 앞발. */
+/** 기존 동료 순서에 승인한 접힌 귀·장모 모델을 번갈아 사용한다. */
 export const mateKey = (i: number) => `mate-${i}`
-export const mateGunKey = (i: number) => `mate-${i}-gun`
 
-/**
- * 그린 것에 색을 'color'로 섞는다(393번): 밝기는 두고 빛깔만 바꿔 윤곽·눈은 그대로, 털만 다른 색 고양이가 된다. 섞으면 투명한 곳까지 칠해지니 원래 그림의
- * 모양으로 다시 오린다. 'color' 섞기는 캔버스 2D에서 어디서나 된다(필터와 달리).
- */
-function recolor(c: CanvasRenderingContext2D, w: number, h: number, color: string, paint: Painter) {
-  const make = () => {
-    const cv = document.createElement('canvas')
-    cv.width = Math.ceil(w * DPR)
-    cv.height = Math.ceil(h * DPR)
-    return cv
-  }
-  const art = make()
-  const g = art.getContext('2d')
-  const shape = make()
-  const m = shape.getContext('2d')
-  if (!g || !m) return
-  g.scale(DPR, DPR)
-  paint(g)
-  m.drawImage(art, 0, 0)
-  g.setTransform(1, 0, 0, 1, 0, 0)
-  g.globalCompositeOperation = 'color'
-  g.globalAlpha = 0.85
-  g.fillStyle = color
-  g.fillRect(0, 0, art.width, art.height)
-  g.globalAlpha = 1
-  g.globalCompositeOperation = 'destination-in'
-  g.drawImage(shape, 0, 0)
-  c.drawImage(art, 0, 0, w, h)
-}
-
-/** 한 색에 recolor와 같은 섞기를 한 결과 색: 앞발을 털과 같은 색으로 칠할 때 쓴다. */
-function mixed(base: string, color: string): string {
-  const cv = document.createElement('canvas')
-  cv.width = cv.height = 1
-  const g = cv.getContext('2d', { willReadFrequently: true })
-  if (!g) return base
-  g.fillStyle = base
-  g.fillRect(0, 0, 1, 1)
-  g.globalCompositeOperation = 'color'
-  g.globalAlpha = 0.85
-  g.fillStyle = color
-  g.fillRect(0, 0, 1, 1)
-  const [r, gr, b] = g.getImageData(0, 0, 1, 1).data
-  return `rgb(${r}, ${gr}, ${b})`
-}
-
-/** 사장냥과 똑같은 고양이를 색만 바꿔 굽는다(393번). 든 무기도 같고, 무기를 쥔 앞발은 그 고양이 털 색이다. */
-export function bakeMates(scene: Phaser.Scene, hero: Hero) {
-  const source = scene.textures.get('art-hero').getSourceImage() as HTMLImageElement
-  for (const [i, look] of MATE_LOOKS.entries()) {
+export function bakeMates(scene: Phaser.Scene) {
+  for (let i = 0; i < MATE_LOOKS.length; i++) {
+    const source = scene.textures.get(`art-${mateModel(i)}`).getSourceImage() as HTMLImageElement
     bake(scene, mateKey(i), CAT_W, CAT_H, (c) => {
       c.fillStyle = '#98633633'
       c.beginPath()
       c.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
       c.fill()
-      recolor(c, CAT_W, CAT_H, look.color, (g) =>
-        drawSprite(
-          g,
-          source,
-          { x: 0, y: 0, w: source.width, h: source.height },
-          { x: 14, y: 3, w: 75, h: 100 },
-        ),
+      drawSprite(
+        c,
+        source,
+        { x: 0, y: 0, w: source.width, h: source.height },
+        { x: 14, y: 3, w: 75, h: 100 },
       )
-    })
-    bake(scene, mateGunKey(i), GUN.w, GUN.h, (c) => {
-      // 총은 사장냥 것과 같고, 쥔 앞발만 고양이 털 색이다.
-      c.scale(HERO_SCALE * GUN_K, HERO_SCALE * GUN_K)
-      c.translate(GUN_ART.pivotX, GUN_ART.pivotY)
-      drawStageGun(c, mixed(BOSS_LOOK.fur, look.color), hero.weapon.kind, hero.weapon.grade)
     })
   }
 }
-
 /** 고정된 크기의 8프레임 보행. 그림만 변형하고 충돌 원은 유지한다. */
 export function enemyKey(kind: UnitKind, frame: number): string {
   return `${kind}-${frame}`
