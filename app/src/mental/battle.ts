@@ -1865,9 +1865,8 @@ class BattleScene extends Phaser.Scene {
       if (wall) wall.arrived = false
     }
     if (support?.rebuilt) {
+      // 새 매수벽이 서도 몬스터는 밀지 않는다 (458번). 무너질 때 미는 것(0.35초)은 그대로다.
       this.opts.onBanner('새 매수벽 등장!', '#7be0c3')
-      // 새 매수벽이 서면 다가오던 매도 공격을 뒤로 밀어 숨 돌릴 틈을 준다.
-      this.pushEnemiesBack(0.5)
     }
     if (support) this.launchBuyOrders(support.fireCount)
     this.buyWallFx?.step(dt, (x, fromY, toY, damage) => {
