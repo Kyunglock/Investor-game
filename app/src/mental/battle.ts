@@ -508,6 +508,8 @@ class BattleScene extends Phaser.Scene {
   private climbV = 0
   private climbed = 0
   private book: Phaser.GameObjects.Graphics | null = null
+  /** 공격 판의 큰손 체력 막대 (457번): 위 HUD가 아니라 보스 바로 아래에 붙어 따라다닌다. */
+  private bossBar: Phaser.GameObjects.Graphics | null = null
   private ladder: Phaser.GameObjects.Graphics | null = null
   private speedLines: Phaser.GameObjects.Image[] = []
   private chips: Phaser.GameObjects.Particles.ParticleEmitter | null = null
@@ -807,7 +809,7 @@ class BattleScene extends Phaser.Scene {
       if (!bullet.active || !enemy.active || enemy.dying || !bullet.body) {
         return
       }
-      if (bullet.hitList.includes(enemy)) {
+      if (bullet.hitList.includes(enemy) || this.beyondWall(enemy)) {
         return
       }
       const angle = Math.atan2(bullet.body.velocity.y, bullet.body.velocity.x)
@@ -815,7 +817,8 @@ class BattleScene extends Phaser.Scene {
       this.impact(bx, by, bullet.power)
       // 무기마다 다른 효과 (376번): 소총은 뚫고 지나가고, 리볼버는 치명타, 기관단총은 맞은 적을 느리게 한다.
       bullet.hitList.push(enemy)
-      if (--bullet.pierce <= 0) {
+      // 매도벽은 뚫고 지나가지 못한다 (457번): 소총도 벽 칸에서 멈춘다.
+      if (--bullet.pierce <= 0 || enemy.cell) {
         bullet.disableBody(true, true)
       }
       const kind = this.opts.hero.weapon.kind
@@ -992,11 +995,13 @@ class BattleScene extends Phaser.Scene {
     const { w } = this.view()
     const line = mateFormation(this.mates.length + 1, w)
     const off = line[i] ?? 0
-    if (this.mode === 'defense' || !this.player) return w / 2 + off
     if (this.assault) {
-      // 공격 판 (413번): 고양이도 사장냥과 같은 줄에서 좌우로만 따라다니고, 오른쪽 가격 눈금은 비워 둔다.
-      return Phaser.Math.Clamp(this.player.x + off - line[0], 30, w - LANE_RIGHT - 10)
+      // 공격 판 (413번): 사장냥도 붙박이라, 사장냥을 화면 가운데에 두고 줄을 붙이면 넷일 때 줄이 반 칸 오른쪽으로 밀리고 끝 고양이가 가장자리에
+      // 막혀 간격이 좁아졌다. 줄 전체를 레인 가운데에 둔다.
+      const { left, width } = this.lane()
+      return left + width / 2 + off
     }
+    if (this.mode === 'defense' || !this.player) return w / 2 + off
     return Phaser.Math.Clamp(this.player.x + off - line[0], 28, w - 28)
   }
 
@@ -1195,6 +1200,7 @@ class BattleScene extends Phaser.Scene {
     // 장난감 보드의 크림색을 유지하면서 전장에 아주 옅은 따뜻한 톤만 더한다.
     this.add.rectangle(0, 0, 4000, 4000, 0xe8b877, 0.04).setOrigin(0).setDepth(0.5)
     this.book = this.add.graphics().setDepth(1)
+    this.bossBar = this.add.graphics().setDepth(8.6)
     this.ladder = this.add.graphics().setDepth(8)
     if (!this.reducedMotion) {
       for (let i = 0; i < 9; i++) {
@@ -1258,9 +1264,9 @@ class BattleScene extends Phaser.Scene {
     return { left: LANE_LEFT, right: w - LANE_RIGHT, width: w - LANE_LEFT - LANE_RIGHT }
   }
 
-  /** 화면 크기가 바뀌어도 고양이는 아래 중앙에 고정한다. */
+  /** 화면 크기가 바뀌어도 고양이는 아래 중앙에 고정한다. 공격 판은 함께 싸우는 고양이까지 한 줄로 가운데에 선다. */
   private moveHero() {
-    this.player.setPosition(this.view().w / 2, this.playerY())
+    this.player.setPosition(this.assault ? this.standX(0) : this.view().w / 2, this.playerY())
   }
 
   /** 벽 하나를 세운다: 줄마다 칸을 꺼내 체력(약한 칸 하나)·물량 글자를 붙인다. 아직 화면 위에 있어도 된다. */
@@ -1588,6 +1594,20 @@ class BattleScene extends Phaser.Scene {
   /** 잡몹 구간(#593) 동안 화면 밖에서 대기하는 다음 벽: 아직 깨지지 않는다. */
   private held(e: Enemy) {
     return Boolean(e.cell && this.rushLeft > 0 && !e.cell.wall.arrived)
+  }
+
+  /**
+   * 매도벽 너머 (457번): 공격 판에서 화면에 들어온 가장 아래의 성한 매도벽보다 위(벽 너머)에 있는 적은 총알·마법이 닿지 않는다. 벽이 막는다. 벽 칸과
+   * 큰손(벽과 함께 싸운다)은 빼고, 자동 조준도 이런 적은 노리지 않는다.
+   */
+  private beyondWall(e: Enemy) {
+    if (!this.assault || e.cell || e.boss) return false
+    let top = Number.NEGATIVE_INFINITY
+    for (const wall of this.walls) {
+      if (wall.broken || wall.y <= 0 || this.wallLayers(wall).length === 0) continue
+      top = Math.max(top, wall.y - this.wallHeight(wall))
+    }
+    return e.y < top
   }
 
   /** 개발 화면 검사: 보이는 매도벽이 공격 불가 상태인지 확인한다. */
@@ -2412,6 +2432,7 @@ class BattleScene extends Phaser.Scene {
 
   private hit(e: Enemy, dmg: number, angle: number, kind: DamageKind = 'bullet') {
     if (e.dying || !e.active) return
+    if (this.beyondWall(e)) return
     if (e.kind === 'fake') {
       // 허매도 (413번): 맞히면 그냥 사라진다. 체결이 아니라 처치·경험치가 없다.
       this.damageNumber(e, dmg, kind)
@@ -2742,7 +2763,15 @@ class BattleScene extends Phaser.Scene {
       const orders: Enemy[] = []
       for (const child of this.enemies.getChildren()) {
         const e = child as Enemy
-        if (e.active && !e.dying && !e.cell && !e.boss && e.kind !== 'fake' && e.y > -10) {
+        if (
+          e.active &&
+          !e.dying &&
+          !e.cell &&
+          !e.boss &&
+          e.kind !== 'fake' &&
+          e.y > -10 &&
+          !this.beyondWall(e)
+        ) {
           orders.push(e)
         }
       }
@@ -3078,7 +3107,8 @@ class BattleScene extends Phaser.Scene {
         e.y < h &&
         e.x > 0 &&
         e.x < w &&
-        !this.held(e)
+        !this.held(e) &&
+        !this.beyondWall(e)
       )
         buf.push(e)
     }
@@ -3878,6 +3908,23 @@ class BattleScene extends Phaser.Scene {
     })
   }
 
+  /** 큰손 체력 막대를 보스 발밑에 그린다 (457번). 보스가 없거나 공격 판이 아니면 지운다. */
+  private drawBossBar() {
+    const g = this.bossBar
+    if (!g) return
+    g.clear()
+    const boss = this.bossEnemy
+    if (!this.assault || !boss?.active || boss.dying) return
+    const w = Phaser.Math.Clamp(boss.displayWidth * 0.9, 70, 150)
+    const h = 8
+    const x = boss.x - w / 2
+    const y = boss.y + boss.displayHeight / 2 + 4
+    const ratio = Phaser.Math.Clamp(boss.hp / this.bossMax, 0, 1)
+    g.fillStyle(0x2b2340, 0.85).fillRoundedRect(x - 2, y - 2, w + 4, h + 4, 5)
+    g.fillStyle(0xffffff, 0.25).fillRoundedRect(x, y, w, h, 4)
+    if (ratio > 0) g.fillStyle(0xff4f6d, 1).fillRoundedRect(x, y, Math.max(h, w * ratio), h, 4)
+  }
+
   /** 함께 싸우는 고양이: 제자리로 미끄러지고, 숨 쉬고, 맡은 적을 겨눠 연사 간격마다 쏜다 (393·409번). */
   private updateMates(time: number, dt: number, targets: ({ x: number; y: number } | null)[]) {
     const y = this.mode === 'defense' ? this.playerY() : this.player.y
@@ -4003,7 +4050,7 @@ class BattleScene extends Phaser.Scene {
     const ptr = this.input.activePointer
     const { w, h } = this.view()
     p.setVelocity(0, 0)
-    p.setPosition(this.assault ? this.view().w / 2 : this.standX(0), this.playerY())
+    p.setPosition(this.standX(0), this.playerY())
     const hurting = time < this.hurtUntil
     p.setTexture(hurting ? 'hero-hurt' : ptr.isDown || this.assault ? 'hero-fire' : 'hero-idle')
     p.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
@@ -4035,6 +4082,7 @@ class BattleScene extends Phaser.Scene {
     }
     this.poseGun(this.gun, p.x, p.y, this.aim, this.recoilAt, time)
     this.updateMates(time, dt, this.targets)
+    this.drawBossBar()
     // 마법은 총알과 따로 제 주기에 스스로 나간다 (392번).
     this.castMagic()
     this.updateMagic(dt)
