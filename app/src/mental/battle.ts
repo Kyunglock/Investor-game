@@ -1407,8 +1407,10 @@ class BattleScene extends Phaser.Scene {
   private restackWall(wall: WallState, rows: number) {
     const layers = this.wallLayers(wall)
     const total = layers.reduce((sum, e) => sum + e.hp, 0)
-    for (let row = layers.length; row < rows; row++) {
-      const e = this.spawnCell(wall, row, 0, 1, false)
+    // 층 순서(row)가 겹치지 않게 남은 층의 맨 위 다음 번호부터 쌓는다: 같은 번호면 둘 다 맨 아래 층으로 보여 범위 공격을 함께 맞는다.
+    let row = layers.reduce((top, e) => Math.max(top, e.cell?.row ?? 0), -1) + 1
+    for (let n = layers.length; n < rows; n++) {
+      const e = this.spawnCell(wall, row++, 0, 1, false)
       if (e) wall.cells.push(e)
     }
     wall.left = wall.cells.length
@@ -1569,11 +1571,13 @@ class BattleScene extends Phaser.Scene {
         mid ? '중간 큰손 격파! 매도벽이 흔들린다' : '큰손 격파!! 대량 매도벽이 흔들린다',
         '#ffd84d',
       )
-      for (const e of [...last.cells]) {
-        if (e.active && !e.dying && e.cell) {
-          this.hit(e, e.maxHp * ASSAULT_BOSS.wallBreak, -Math.PI / 2, 'lightning')
-        }
-      }
+      // 벽은 한 묶음이라 남은 층 체력의 합에 비례한 한 방을 맨 아래 층에 넣고, 넘친 몫은 위층으로 이어진다.
+      const front = this.frontLayer(last)
+      const total = last.cells.reduce(
+        (sum, e) => (e.active && !e.dying && e.cell ? sum + e.maxHp : sum),
+        0,
+      )
+      if (front) this.hit(front, total * ASSAULT_BOSS.wallBreak, -Math.PI / 2, 'lightning')
     }
     // 중간 큰손을 잡아도 판은 계속된다. 다음 벽은 붕괴 즉시 이미 등장했다.
     if (mid) return
@@ -1601,13 +1605,35 @@ class BattleScene extends Phaser.Scene {
    * 큰손(벽과 함께 싸운다)은 빼고, 자동 조준도 이런 적은 노리지 않는다.
    */
   private beyondWall(e: Enemy) {
-    if (!this.assault || e.cell || e.boss) return false
+    if (!this.assault || e.boss) return false
+    // 매도벽은 한 묶음이다: 맨 아래 층만 맞고, 그 뒤(위)의 층은 범위 공격에도 맞지 않는다. 넘친 피해는 hit()이 다음 층으로 넘긴다.
+    if (e.cell) return this.behindLayer(e)
     let top = Number.NEGATIVE_INFINITY
     for (const wall of this.walls) {
       if (wall.broken || wall.y <= 0 || this.wallLayers(wall).length === 0) continue
       top = Math.max(top, wall.y - this.wallHeight(wall))
     }
     return e.y < top
+  }
+
+  /** 매도벽의 맨 아래(맞는) 층이 아닌 층인가. 맨 아래 층 = 남은 층 가운데 row가 가장 작은 것. */
+  private behindLayer(e: Enemy) {
+    const c = e.cell
+    if (!c) return false
+    for (const o of c.wall.cells) {
+      if (o !== e && o.active && !o.dying && o.cell && o.cell.row < c.row) return true
+    }
+    return false
+  }
+
+  /** 매도벽의 지금 맞는 층(맨 아래 층). */
+  private frontLayer(wall: WallState): Enemy | null {
+    let front: Enemy | null = null
+    for (const o of wall.cells) {
+      if (!o.active || o.dying || !o.cell) continue
+      if (!front || o.cell.row < (front.cell?.row ?? 0)) front = o
+    }
+    return front
   }
 
   /** 개발 화면 검사: 보이는 매도벽이 공격 불가 상태인지 확인한다. */
@@ -1620,6 +1646,8 @@ class BattleScene extends Phaser.Scene {
         arrived: wall.arrived,
         held: wall.cells.some((e) => this.held(e)),
         hp: wall.cells.reduce((sum, e) => sum + e.hp, 0),
+        /** 남은 층(아래부터)의 체력과 최대 체력: 한 묶음이라 맨 아래 층만 깎여야 한다. */
+        layers: this.wallLayers(wall).map((e) => ({ hp: e.hp, maxHp: e.maxHp })),
       }))
   }
 
@@ -2477,7 +2505,12 @@ class BattleScene extends Phaser.Scene {
     // 데미지 숫자는 모든 적, 죽이는 마지막 한 방까지 (391번, 334번의 "한 방에 안 죽는 적에만"을 뒤집음). 리볼버 치명타(376번)는 크고 노랗다.
     this.damageNumber(e, dmg, kind)
     if (e.hp <= 0) {
+      const wall = e.cell?.wall
+      const over = -e.hp
       this.kill(e, true)
+      // 매도벽은 한 묶음의 체력이다: 맨 아래 층을 부수고 남은 피해는 다음 층이 받는다.
+      const next = wall && over > 0 && !wall.broken ? this.frontLayer(wall) : null
+      if (next) this.hit(next, over, angle, kind)
     }
   }
 
@@ -3151,6 +3184,7 @@ class BattleScene extends Phaser.Scene {
 
   /** 불에 탄다: 타는 중이면 더 센 불과 더 긴 시간을 남긴다. 피해는 update의 화상 틱이 준다. */
   private ignite(e: Enemy, dps: number, seconds: number) {
+    if (this.beyondWall(e)) return
     const burning = e.burnUntil > this.elapsed
     e.burnDps = burning ? Math.max(e.burnDps, dps) : dps
     e.burnUntil = Math.max(e.burnUntil, this.elapsed + seconds)
