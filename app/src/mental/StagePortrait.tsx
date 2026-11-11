@@ -29,6 +29,7 @@ export function StagePortrait({ weapon }: { weapon: Weapon }) {
         source,
         { x: 0, y: 0, w: source.width, h: source.height },
         { x: 14, y: 3, w: 75, h: 100 },
+        'height',
       )
     }
     source.src = STAGE_ASSETS.hero

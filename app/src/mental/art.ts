@@ -75,6 +75,7 @@ export function bakeHero(scene: Phaser.Scene) {
         source,
         { x: 0, y: 0, w: source.width, h: source.height },
         { x: 14, y: 3, w: 75, h: 100 },
+        'height',
       )
       if (key === 'hero-hurt') {
         c.globalCompositeOperation = 'source-atop'
@@ -101,6 +102,7 @@ export function bakeMates(scene: Phaser.Scene) {
         source,
         { x: 0, y: 0, w: source.width, h: source.height },
         { x: 14, y: 3, w: 75, h: 100 },
+        'height',
       )
     })
   }

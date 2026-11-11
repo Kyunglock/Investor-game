@@ -81,6 +81,21 @@ try {
       const textures = actors.map((body) =>
         scene.textures.get(body.texture.key).getSourceImage().toDataURL(),
       )
+      const bounds = actors.map((body) => {
+        const canvas = scene.textures.get(body.texture.key).getSourceImage()
+        const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data
+        let top = canvas.height,
+          bottom = 0
+        for (let y = 0; y < canvas.height; y++) {
+          for (let x = 0; x < canvas.width; x++) {
+            if (pixels[(y * canvas.width + x) * 4 + 3] > 128) {
+              top = Math.min(top, y)
+              bottom = Math.max(bottom, y)
+            }
+          }
+        }
+        return { height: bottom - top + 1, bottom }
+      })
       window.catHandle = handle
       window.catPositions = () =>
         [scene.player, ...scene.mates.map((mate) => mate.body)].map((body) => ({
@@ -91,6 +106,7 @@ try {
       return {
         counts,
         textures,
+        bounds,
         shots,
         damage: cards.bulletStats(loadout).damage,
         noOverlay: !scene.textures.exists('gun') && !scene.textures.exists('mate-0-gun'),
@@ -101,6 +117,10 @@ try {
     assert.notEqual(result.textures[1], result.textures[2])
     assert.equal(result.textures[1], result.textures[3])
     assert(result.noOverlay)
+    for (const field of ['height', 'bottom']) {
+      const values = result.bounds.map((bound) => bound[field])
+      assert(Math.max(...values) - Math.min(...values) <= 2, `고양이 ${field} 정렬`)
+    }
     for (const shot of result.shots) {
       assert(shot.exists)
       assert.equal(shot.damage, result.damage)

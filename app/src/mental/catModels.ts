@@ -2,11 +2,11 @@
 export type CatModel = 'hero' | 'fold' | 'fluffy'
 export const mateModel = (index: number): CatModel => (index % 2 === 0 ? 'fold' : 'fluffy')
 
-/** drawSprite의 { x: 14, y: 3, w: 75, h: 100 } 배치 안에서 실제 총구 좌표. */
+/** drawSprite의 높이 100 배치 안에서 실제 총구 좌표. 꼬리 폭으로 크기를 줄이지 않는다. */
 const MUZZLES: Record<CatModel, { x: number; y: number }> = {
   hero: { x: 75, y: 5 },
   fold: { x: 78, y: 5 },
-  fluffy: { x: 82, y: 14 },
+  fluffy: { x: 89, y: 5 },
 }
 
 export function catMuzzle(model: CatModel, x: number, y: number) {
