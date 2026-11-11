@@ -707,15 +707,15 @@ class InvestEngine {
 
   /**
    * 회의 뒤 전투의 세기 (414번, #594에서 진행도·사장 힘을 더함): 1부터, 이유마다 더한 것. 크게 움직인 종목일수록(기사의 크기 0~1을 0~4로), 크게
-   * 걸었으면 +1, 깬 번호 스테이지 5개마다 +1, 회사 건물이 두 단계 오를 때마다 +1, 두 해마다 +1. 구매한 강화가 벽·적 강화로 상쇄되지 않도록 강화 단계는
-   * 제외한다.
+   * 걸었으면 +1, 깬 번호 스테이지 하나마다 +1(459번, 전에는 5개마다), 회사 건물이 두 단계 오를 때마다 +1, 두 해마다 +1. 구매한 강화가 벽·적 강화로
+   * 상쇄되지 않도록 강화 단계는 제외한다.
    */
   java.util.LinkedHashMap<String, Integer> battleLevelParts(
       CompanyState c, Invest invest, int bestStage) {
     java.util.LinkedHashMap<String, Integer> parts = new java.util.LinkedHashMap<>();
     parts.put("news", (int) Math.round(magnitudeAt(invest.magnitudeBp) * 4));
     parts.put("big", invest.big ? 1 : 0);
-    parts.put("stage", bestStage / 5);
+    parts.put("stage", Math.max(0, bestStage));
     String building = c.building == null ? "F" : c.building;
     parts.put("building", Math.max(0, CompanyEngine.LADDER.indexOf(building)) / 2);
     parts.put("year", Math.max(0, c.year - 1) / 2);
