@@ -92,13 +92,13 @@ describe('공격 판: 매도벽 (decisions.md 413번)', () => {
     expect(assaultSpec(1.5).walls[0].cellHp).toBeGreaterThan(one.walls[0].cellHp)
   })
 
-  it('가격은 벽 하나에 한 칸씩 오르고, 목표가는 다 부순 가격이다', () => {
+  it('가격은 벽 하나에 한 칸씩 오르고, 목표가는 다 부순 가격(+100%, 457번)이다', () => {
     const spec = assaultSpec(1, { price: 52000, name: '삼성전자' })
     expect(spec.name).toBe('삼성전자')
-    expect(spec.tick).toBe(1040)
+    expect(spec.tick).toBe(5200)
     expect(assaultPrice(spec, 0)).toBe(52000)
-    expect(assaultPrice(spec, 2)).toBe(54080)
-    expect(assaultTarget(spec)).toBe(52000 + 10 * 1040)
+    expect(assaultPrice(spec, 2)).toBe(62400)
+    expect(assaultTarget(spec)).toBe(52000 * 2)
     expect(assaultPrice(spec, 99)).toBe(assaultTarget(spec))
   })
 

@@ -184,8 +184,11 @@ export const MID_BOSS_NAME = '매도 큰손'
 
 export const MID_BOSS_HP = 0.5
 
-/** 매도 물량 하나를 잡으면 가격이 오르는 몫: 벽 하나의 한 칸(tick)의 이 비율 (#593). */
-export const ORDER_PRICE_SHARE = 0.05
+/** 매도벽을 모두 부수면(클리어) 오르는 종목 가격(%): 클리어 추가 수익 100%(453·455번)와 같다 (457번). */
+export const CLEAR_PRICE_PERCENT = 100
+
+/** 매도 물량 하나를 잡으면 가격이 오르는 몫: 벽 하나의 한 칸(tick)의 이 비율 (#593). 457번에서 한 칸이 2% → 10%로 커져 0.05 → 0.01. */
+export const ORDER_PRICE_SHARE = 0.01
 
 /** 벽 한 줄의 바탕 칸 수(넓은 화면). 좁은 화면(360px 밑)은 하나 적다. */
 export const ASSAULT_COLS = 6
@@ -248,7 +251,8 @@ export interface AssaultSpec {
  * 공격 판 하나 (decisions.md 413번). **level**은 1부터의 난이도다(소수 가능, 1 아래는 1). 회의 쪽(부르는 곳)이 기사의 크기·"크게"(260번)·깬 최고
  * 번호 스테이지로 정해 넘긴다. level이 1 오를 때마다 벽 칸 체력 +45%, 물량 체력 +30%, 나오는 수 +15%, 빠르기 +4%, 멘탈 피해 +15%, 보스 체력 +45%.
  * level 1은 강화 없는 권총으로 3분(ASSAULT_SECONDS) 안에 겨우 깨는 판이다(scripts/stageCheck.ts의 공격 판 표).
- * price는 시작 가격(원, 없으면 10,000), tickPercent는 벽 하나에 오르는 비율(%, 없으면 2).
+ * price는 시작 가격(원, 없으면 10,000), tickPercent는 벽 하나에 오르는 비율(%). 없으면 벽을 모두 부쉈을 때 +100%가 되게 100 ÷ 벽 수(457번,
+ * 클리어 추가 수익 100%와 맞춘다. 전에는 2%라 다 부숴도 +20%였다).
  */
 export function assaultSpec(
   level = 1,
@@ -268,7 +272,12 @@ export function assaultSpec(
     bossHp: ASSAULT_BOSS.hp * (1 + k * ASSAULT_STEP.bossHp),
     midBossHp: ASSAULT_BOSS.hp * MID_BOSS_HP * (1 + k * ASSAULT_STEP.bossHp),
     startPrice,
-    tick: Math.max(1, Math.round((startPrice * (opts.tickPercent ?? 2)) / 100)),
+    tick: Math.max(
+      1,
+      Math.round(
+        (startPrice * (opts.tickPercent ?? CLEAR_PRICE_PERCENT / ASSAULT_WALLS.length)) / 100,
+      ),
+    ),
     name: opts.name ?? '매도벽',
   }
 }
