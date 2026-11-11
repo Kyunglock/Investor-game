@@ -302,9 +302,12 @@ export function pickCards(state: MateMagicState, random: () => number = Math.ran
   return picked
 }
 
-/** 다음 레벨까지 드는 경험치: 레벨이 오를수록 더 든다. 2분 한 판에 예닐곱 번 오르게 잡았다 (363번, 4분일 때는 120). */
+/**
+ * 다음 레벨까지 드는 경험치: 레벨이 오를수록 더 든다. 2분 한 판에 예닐곱 번 오르게 잡았다 (363번, 4분일 때는 120). 레벨이 너무 빨리 올라
+ * 1.5배로 늘렸다 (456번, 70 → 105).
+ */
 export function xpToNext(level: number): number {
-  return Math.round(70 * level ** 1.35)
+  return Math.round(105 * level ** 1.35)
 }
 
 /** 범위 피해가 붙는 강화 단계 (decisions.md 362번). */
