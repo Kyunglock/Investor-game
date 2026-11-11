@@ -45,6 +45,13 @@ class CompanyEngine {
   private static final String RESEARCH_DESK = "research";
   private static final int BP = 10_000;
   private static final int PERCENT = 100;
+
+  /** 운용에서 맞히지 못한 판단이 버는 몫(맞혔을 때의 %, 456번). 손실은 없다. */
+  static final int MISS_GAIN_PERCENT = 25;
+
+  /** 손실이 없어진 만큼 운용 몫을 줄여 회사가 크는 빠르기를 전과 비슷하게 둔다 (456번). */
+  static final int DESK_GAIN_PERCENT = 45;
+
   private static final int MAX_STAT = 100;
 
   /** SSS 위 단계(Employee.rank)별 효과가 열리는 자리 (2.4절). 효과는 쌓인다. */
@@ -1451,16 +1458,6 @@ class CompanyEngine {
       if (employee.rank >= RANK_BIG) {
         gainBp = gainBp * effects.bigGainPercent() / PERCENT;
       }
-      int missBp = scaledMiss(company, returns.missBp());
-      // XSS 철벽: 틀려도 잃는 몫이 절반이다.
-      if (employee.rank >= RANK_WALL) {
-        missBp = missBp * effects.wallMissPercent() / PERCENT;
-      }
-      int flipLossBp = scaledMiss(company, returns.flipBp());
-      // A 손절 (387번): 손이 뒤집혀도 잃는 몫이 줄어든다.
-      if (reaches(employee, STOP_LOSS)) {
-        flipLossBp = flipLossBp * perks.stopLossPercent() / PERCENT;
-      }
       // 시장 손익. 폭락장에는 섹터마다 빠지는 폭이 다르다(식품·금융은 덜, 반도체는 더).
       int phaseBp = properties.phaseBp().getOrDefault(company.phase, 0);
       if (crash) {
@@ -1470,32 +1467,28 @@ class CompanyEngine {
                 phaseBp * returns.crashPercent() / PERCENT,
                 properties.scale().crashPercent());
       }
+      // 운용에 손실은 없다 (456번): 판단마다 등급에 비례한 몫(gainBp)을 번다. 맞히면 다 벌고, 틀리거나 꼬드김에 넘어가거나 손이 뒤집히면
+      // MISS_GAIN_PERCENT만 번다. 시장이 빠지는 해(폭락장)에도 깎이지 않고, 오르는 해의 몫만 더한다. 꼬드김·손 뒤집힘은 팀장 보고(269번)가
+      // 전하게 그대로 센다. 손실이 없어진 만큼 합을 DESK_GAIN_PERCENT로 줄여 회사가 크는 빠르기를 전과 비슷하게 둔다.
       long bp = 0;
+      long missGainBp = gainBp * MISS_GAIN_PERCENT / PERCENT;
       for (int i = 0; i < decisions; i++) {
         int swayRoll = rng.nextInt(BP);
         int flipRoll = rng.nextInt(BP);
         int hitRoll = rng.nextInt(BP);
         // XXX 역발상: 폭락장인 해에 빠지는 동안 사서 회복 구간에서 번다.
-        bp += contrarian ? effects.contrarianCrashBp() : phaseBp * phaseShare;
+        bp += Math.max(0, contrarian ? effects.contrarianCrashBp() : phaseBp * phaseShare);
         if (swayRoll < swayBp) {
           result.flips.merge(StatCodes.CONVICTION, 1, Integer::sum);
-          bp -= missBp;
+          bp += missGainBp;
         } else if (flipRoll < flipBp) {
           result.flips.merge(flipStat, 1, Integer::sum);
-          bp -= crash ? flipLossBp * properties.crashFlipPercent() / PERCENT : flipLossBp;
+          bp += missGainBp;
         } else {
-          // X 확신: 형광펜이 맞으면 알아서 크게 산다. 맞히면 더 벌고 틀려도 덜 잃어 편차가 준다.
-          bp +=
-              hitRoll < hitBp
-                  ? gainBp
-                  : -missBp * (conviction ? effects.convictionMissPercent() : PERCENT) / PERCENT;
+          bp += hitRoll < hitBp ? gainBp : missGainBp;
         }
       }
-      result.pnl = ofStake(stake, bp);
-      // SS 방패 (387번): 한 분기에 잃었으면 손실의 일부를 막는다.
-      if (result.pnl < 0 && reaches(employee, SHIELD)) {
-        result.pnl = result.pnl * (PERCENT - perks.shieldPercent()) / PERCENT;
-      }
+      result.pnl = Math.max(0, ofStake(stake, bp * DESK_GAIN_PERCENT / PERCENT));
       totalPnl = plus(totalPnl, result.pnl);
       employee.totalPnl = plus(employee.totalPnl, result.pnl);
       // 손을 뒤집은 일은 팀장 보고(269번)가 전한다.

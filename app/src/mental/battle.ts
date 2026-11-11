@@ -995,11 +995,13 @@ class BattleScene extends Phaser.Scene {
     const { w } = this.view()
     const line = mateFormation(this.mates.length + 1, w)
     const off = line[i] ?? 0
-    if (this.mode === 'defense' || !this.player) return w / 2 + off
     if (this.assault) {
-      // 공격 판 (413번): 고양이도 사장냥과 같은 줄에서 좌우로만 따라다니고, 오른쪽 가격 눈금은 비워 둔다.
-      return Phaser.Math.Clamp(this.player.x + off - line[0], 30, w - LANE_RIGHT - 10)
+      // 공격 판 (413번): 사장냥도 붙박이라, 사장냥을 화면 가운데에 두고 줄을 붙이면 넷일 때 줄이 반 칸 오른쪽으로 밀리고 끝 고양이가 가장자리에
+      // 막혀 간격이 좁아졌다. 줄 전체를 레인 가운데에 둔다.
+      const { left, width } = this.lane()
+      return left + width / 2 + off
     }
+    if (this.mode === 'defense' || !this.player) return w / 2 + off
     return Phaser.Math.Clamp(this.player.x + off - line[0], 28, w - 28)
   }
 
@@ -1262,9 +1264,9 @@ class BattleScene extends Phaser.Scene {
     return { left: LANE_LEFT, right: w - LANE_RIGHT, width: w - LANE_LEFT - LANE_RIGHT }
   }
 
-  /** 화면 크기가 바뀌어도 고양이는 아래 중앙에 고정한다. */
+  /** 화면 크기가 바뀌어도 고양이는 아래 중앙에 고정한다. 공격 판은 함께 싸우는 고양이까지 한 줄로 가운데에 선다. */
   private moveHero() {
-    this.player.setPosition(this.view().w / 2, this.playerY())
+    this.player.setPosition(this.assault ? this.standX(0) : this.view().w / 2, this.playerY())
   }
 
   /** 벽 하나를 세운다: 줄마다 칸을 꺼내 체력(약한 칸 하나)·물량 글자를 붙인다. 아직 화면 위에 있어도 된다. */
@@ -4049,7 +4051,7 @@ class BattleScene extends Phaser.Scene {
     const ptr = this.input.activePointer
     const { w, h } = this.view()
     p.setVelocity(0, 0)
-    p.setPosition(this.assault ? this.view().w / 2 : this.standX(0), this.playerY())
+    p.setPosition(this.standX(0), this.playerY())
     const hurting = time < this.hurtUntil
     p.setTexture(hurting ? 'hero-hurt' : ptr.isDown || this.assault ? 'hero-fire' : 'hero-idle')
     p.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
