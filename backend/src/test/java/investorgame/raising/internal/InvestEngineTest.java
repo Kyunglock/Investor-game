@@ -259,7 +259,7 @@ class InvestEngineTest {
     CompanyState c = company(3, stats(50, 100, 100, 100));
     ENGINE.invest.decide(c, right(c), new HashSeededRandom(3));
     int base = ENGINE.invest.battleLevel(c, c.invest, 0);
-    assertThat(ENGINE.invest.battleLevel(c, c.invest, 10)).as("스테이지 5개마다 +1").isEqualTo(base + 2);
+    assertThat(ENGINE.invest.battleLevel(c, c.invest, 10)).as("스테이지 하나마다 +1").isEqualTo(base + 10);
     c.year = 5;
     assertThat(ENGINE.invest.battleLevel(c, c.invest, 0)).as("두 해마다 +1").isEqualTo(base + 2);
     c.building = CompanyEngine.LADDER.get(4);
@@ -295,7 +295,7 @@ class InvestEngineTest {
     c.building = CompanyEngine.LADDER.get(4);
     assertThat(ENGINE.invest.battleLevel(c, c.invest, 10))
         .as("연차·건물·스테이지로 오르는 난이도는 유지")
-        .isEqualTo(base + 6);
+        .isEqualTo(base + 14);
   }
 
   /** 용기가 낮은 단타 직원은 "제가 알아서 할게요" 하고 제 판단대로 한다. 안목이 좋으면 제멋대로 한 쪽이 맞을 때가 많다. */
