@@ -31,7 +31,6 @@ import {
   enemyKey,
   GUN,
   HERO_SIZE,
-  mateGunKey,
   mateKey,
   RAM_ART,
   WALL_H,
@@ -70,6 +69,7 @@ import {
   type MagicLevels,
   xpToNext,
 } from './cards'
+import { catMuzzle, mateModel } from './catModels'
 import { CIRCUIT_BREAKER, CircuitBreaker } from './circuitBreaker'
 import { CircuitBreakerFx } from './circuitBreakerFx'
 import {
@@ -83,7 +83,6 @@ import {
   damageLabel,
   scatterOffset,
 } from './damageNumbers'
-import { gunRecoil, stageMuzzle } from './drawStageGun'
 import { ENEMIES, isOrder, ORDERS, UNITS, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkFrame } from './enemyWalk'
 import { type GameSpeed, simScale } from './gameSpeed'
@@ -286,10 +285,8 @@ interface MagicCaster {
 interface Mate {
   magicMark: Phaser.GameObjects.Text
   body: Phaser.GameObjects.Image
-  gun: Phaser.GameObjects.Image
   aim: number
   lastFire: number
-  recoilAt: number
   /** 재장전 전까지 쏜 탄 수 (#587, 리볼버). */
   shots: number
   /** 합류할 때 위에서 떨어지는 높이(px). 트윈이 0으로 줄인다. */
@@ -522,8 +519,6 @@ class BattleScene extends Phaser.Scene {
   private playerScale = simScale(1)
   private devSpeed: number | null = null
   private player!: Phaser.Physics.Arcade.Image
-  /** 권총: 사장냥의 손에서 겨누는 쪽으로 돈다 (341번). */
-  private gun!: Phaser.GameObjects.Image
   /** 겨누는 각도(라디안). 누르면 그쪽, 아니면 가장 가까운 적. */
   private aim = -Math.PI / 2
   /** 디펜스의 멘탈벽: 그림(반투명 보호막)과 닿음 판정. 적이 닿으면 멘탈이 깎인다. */
@@ -609,7 +604,6 @@ class BattleScene extends Phaser.Scene {
   private score = 0
   private kills = 0
   private elapsed = 0
-  private recoilAt = Number.NEGATIVE_INFINITY
   private lastFire = 0
   /** 사장냥이 쏜 탄 수(재장전, #587). */
   private heroShots = 0
@@ -724,8 +718,8 @@ class BattleScene extends Phaser.Scene {
     this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
     this.opts.onReady?.()
     bakeStage(this, this.opts.genre)
-    bakeHero(this, this.opts.hero)
-    bakeMates(this, this.opts.hero)
+    bakeHero(this)
+    bakeMates(this)
     bakeEnemies(this)
     bakeMagic(this)
     if (this.assault) bakeOrders(this)
@@ -753,7 +747,6 @@ class BattleScene extends Phaser.Scene {
         for (const wall of this.walls) this.layoutWall(wall)
       } else if (this.player) {
         this.player.setPosition(this.standX(0), this.playerY())
-        this.gun?.setPosition(this.player.x + GUN.dx, this.playerY() + GUN.dy)
       }
       for (const [i, m] of this.mates.entries()) m.body.setX(this.standX(i + 1))
       this.wall?.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)
@@ -783,12 +776,6 @@ class BattleScene extends Phaser.Scene {
     const tex = this.textures.get('hero-idle').getSourceImage() as { width: number; height: number }
     const k = tex.width / HERO_SIZE.w
     this.player.body?.setCircle(pr * k, (HERO_SIZE.w / 2 - pr) * k, (HERO_SIZE.h / 2 - pr + 4) * k)
-    this.gun = this.add
-      .image(this.player.x + GUN.dx, this.player.y + GUN.dy, 'gun')
-      .setRotation(this.aim)
-      .setOrigin(GUN.ox, GUN.oy)
-      .setDisplaySize(GUN.w, GUN.h)
-      .setDepth(6)
     if (this.mode === 'defense' && this.genre.target === 'wall') {
       this.wall = this.add
         .image(0, this.wallY() - WALL_H, 'wall')
@@ -1014,7 +1001,6 @@ class BattleScene extends Phaser.Scene {
       if (!m) break
       this.tweens.killTweensOf(m)
       m.body.destroy()
-      m.gun.destroy()
       m.magicMark.destroy()
     }
     while (this.mates.length < want) this.addMate()
@@ -1045,12 +1031,6 @@ class BattleScene extends Phaser.Scene {
       .image(this.player.x, y, mateKey(i))
       .setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
       .setDepth(5)
-    const gun = this.add
-      .image(body.x + GUN.dx, y + GUN.dy, mateGunKey(i))
-      .setRotation(this.aim)
-      .setOrigin(GUN.ox, GUN.oy)
-      .setDisplaySize(GUN.w, GUN.h)
-      .setDepth(6)
     const mate: Mate = {
       magicMark: this.add
         .text(body.x, body.y - 58, '✦', {
@@ -1063,18 +1043,15 @@ class BattleScene extends Phaser.Scene {
         .setDepth(7)
         .setVisible(false),
       body,
-      gun,
       aim: this.aim,
       // 사장냥과 번갈아 쏘게 연사 간격 안에서 조금씩 어긋나게 시작한다.
       lastFire: this.lastFire + (this.attackInterval * (i + 1)) / (MATE_LOOKS.length + 1),
-      recoilAt: Number.NEGATIVE_INFINITY,
       shots: 0,
       drop: this.reducedMotion ? 0 : -150,
     }
     this.mates.push(mate)
     // 늘어선 자리가 바뀌었다: 새 고양이는 제자리에서 내려오고 나머지는 옆으로 비켜선다(update가 미끄러지게 옮긴다).
     body.setPosition(this.standX(i + 1), y + mate.drop)
-    gun.setPosition(body.x + GUN.dx, body.y + GUN.dy)
     const land = () => {
       const fx = body.x
       const fy = body.y + 30
@@ -2709,32 +2686,6 @@ class BattleScene extends Phaser.Scene {
     return close ? near : boss
   }
 
-  private poseGun(
-    gun: Phaser.GameObjects.Image,
-    x: number,
-    y: number,
-    aim: number,
-    firedAt: number,
-    now: number,
-  ) {
-    const kick = gunRecoil(now - firedAt, this.reducedMotion) * 3
-    gun
-      .setPosition(x + GUN.dx - Math.cos(aim) * kick, y + GUN.dy - Math.sin(aim) * kick)
-      .setRotation(aim)
-      .setFlipY(false)
-  }
-
-  /** 총구 자리: 쏘는 고양이의 총 피벗에서 겨누는 쪽으로 총 길이만큼. */
-  private muzzle(x: number, y: number, aim: number) {
-    const px = x + GUN.dx
-    const py = y + GUN.dy
-    const tip = stageMuzzle(this.opts.hero.weapon.grade)
-    return {
-      x: px + (Math.cos(aim) * tip.x - Math.sin(aim) * tip.y) * GUN.scale,
-      y: py + (Math.sin(aim) * tip.x + Math.cos(aim) * tip.y) * GUN.scale,
-    }
-  }
-
   /**
    * 이번에 쏠 곳(0번 사장냥, 1번부터 고양이): 디펜스에서 누르고 있으면 모두 누른 자리, 전진 모드는 자동 조준의 과녁, 디펜스에서 안 누르면 사장냥 총에서
    * 520px 안의 가까운 적을 고양이마다 나눠 맡는다(409번, mates.ts spreadTargets. 393번에서는 모두 한 적을 쏴 몰렸다).
@@ -2817,13 +2768,11 @@ class BattleScene extends Phaser.Scene {
     const reload = (shots: number) =>
       traits.magazine && shots % traits.magazine === 0 ? traits.reloadMs : 0
     if (mate) {
-      mate.recoilAt = this.elapsed * 1000
       mate.shots++
       mate.lastFire = now + reload(mate.shots)
       mate.aim = aim
       this.damageStats.mateShots++
     } else {
-      this.recoilAt = this.elapsed * 1000
       this.heroShots++
       const wait = reload(this.heroShots)
       this.lastFire = now + wait
@@ -2832,9 +2781,8 @@ class BattleScene extends Phaser.Scene {
       sfx.shot(kind)
       this.aim = aim
     }
-    // 총 손맛: 총구 화염, 반동(눌렸다 펴짐). 크기·시간이 무기마다 다르다.
-    this.poseGun(mate?.gun ?? this.gun, p.x, p.y, aim, this.elapsed * 1000, this.elapsed * 1000)
-    const m = this.muzzle(p.x, p.y, aim)
+    // 총 손맛: 총구 화염. 크기·시간이 무기마다 다르다.
+    const m = catMuzzle(mate ? mateModel(this.mates.indexOf(mate)) : 'hero', p.x, p.y)
     const flash = this.flashes[this.flashIndex++ % this.flashes.length]
     flash
       .setPosition(m.x, m.y)
@@ -3949,7 +3897,6 @@ class BattleScene extends Phaser.Scene {
           }
         }
       }
-      this.poseGun(m.gun, b.x, b.y, m.aim, m.recoilAt, time)
     }
   }
 
@@ -4045,7 +3992,7 @@ class BattleScene extends Phaser.Scene {
     }
 
     // 붙박이 (332번): 자리는 고정, 누르고 있는 쪽을 쏜다. 그림(341번)은 맞았으면 울상(총을 놓친다), 누르고 있으면 눈썹 꾹, 아니면 가만히.
-    // 총은 따로 겨누는 쪽으로 돈다: 누르면 그쪽, 아니면 가장 가까운 적.
+    // 승인한 상향 포즈를 유지한다. 탄환은 기존 수동·자동 조준 방향을 따른다.
     const p = this.player
     const ptr = this.input.activePointer
     const { w, h } = this.view()
@@ -4054,7 +4001,6 @@ class BattleScene extends Phaser.Scene {
     const hurting = time < this.hurtUntil
     p.setTexture(hurting ? 'hero-hurt' : ptr.isDown || this.assault ? 'hero-fire' : 'hero-idle')
     p.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
-    this.poseGun(this.gun, p.x, p.y, this.aim, this.recoilAt, time)
     if (this.wall && this.wallZone) {
       this.wall.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)
       this.wall.setTexture(this.mental <= this.loadout.maxMental / 2 ? 'wall-cracked' : 'wall')
@@ -4080,7 +4026,6 @@ class BattleScene extends Phaser.Scene {
     for (let n = 0; target && time - this.lastFire > fireMs && n < 3; n++) {
       this.fire(Math.max(this.lastFire + fireMs, time - fireMs), this.aim)
     }
-    this.poseGun(this.gun, p.x, p.y, this.aim, this.recoilAt, time)
     this.updateMates(time, dt, this.targets)
     this.drawBossBar()
     // 마법은 총알과 따로 제 주기에 스스로 나간다 (392번).

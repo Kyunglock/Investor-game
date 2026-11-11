@@ -1,10 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { STAGE_ASSETS } from './assets'
-import { drawStageGun } from './drawStageGun'
 import type { Weapon } from './hero'
-import { drawSprite, STAGE_HERO } from './stageArt'
+import { drawSprite } from './stageArt'
 
-/** 준비 화면도 실제 전투에 쓰는 몸과 장착 무기를 조합한다. */
+/** 준비 화면과 전투 모두 승인한 총·앞발 일체형 원본을 그대로 사용한다. */
 export function StagePortrait({ weapon }: { weapon: Weapon }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
@@ -30,17 +29,14 @@ export function StagePortrait({ weapon }: { weapon: Weapon }) {
         source,
         { x: 0, y: 0, w: source.width, h: source.height },
         { x: 14, y: 3, w: 75, h: 100 },
+        'height',
       )
-      ctx.translate(STAGE_HERO.gunX, STAGE_HERO.gunY)
-      ctx.rotate(-Math.PI / 2)
-      ctx.scale(STAGE_HERO.gunScale, STAGE_HERO.gunScale)
-      drawStageGun(ctx, STAGE_HERO.fur, weapon.kind, weapon.grade)
     }
     source.src = STAGE_ASSETS.hero
     return () => {
       cancelled = true
     }
-  }, [weapon.kind, weapon.grade])
+  }, [])
   return (
     <canvas
       ref={ref}

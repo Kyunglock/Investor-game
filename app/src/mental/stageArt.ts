@@ -10,6 +10,7 @@ export function drawSprite(
   image: HTMLImageElement,
   cell: Rect,
   target: Rect,
+  fit: 'contain' | 'height' = 'contain',
 ) {
   let cache = bounds.get(image)
   if (!cache) {
@@ -45,7 +46,9 @@ export function drawSprite(
         : cell
     cache.set(key, crop)
   }
-  const scale = Math.min(target.w / crop.w, target.h / crop.h)
+  // 고양이는 풍성한 꼬리 때문에 몸이 작아지지 않도록 높이를 기준으로 맞춘다.
+  const scale =
+    fit === 'height' ? target.h / crop.h : Math.min(target.w / crop.w, target.h / crop.h)
   const w = crop.w * scale,
     h = crop.h * scale
   c.drawImage(
