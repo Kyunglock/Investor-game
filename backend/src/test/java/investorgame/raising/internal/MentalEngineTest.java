@@ -267,10 +267,13 @@ class MentalEngineTest {
     for (String grade : MentalEngine.WEAPON_GRADES) {
       String kind = PROPERTIES.mental().weaponGrades().get(grade).kind();
       CompanyProperties.Weapon stats = ENGINE.mental.stats(kind, grade);
-      double dps = stats.damagePercent() * 1000.0 / stats.fireMs();
+      // 실효 화력: 탄 강화(1 + 0.4 × power)와 리볼버 치명타(40% × 3)·여섯 발마다 1초 재장전을 넣는다.
+      double dps = stats.damagePercent() * 1000.0 / stats.fireMs() * (1 + 0.4 * stats.power());
       if (kind.equals("revolver"))
         dps *= 1.8 * (6.0 * stats.fireMs()) / (6.0 * stats.fireMs() + 1000);
       assertThat(dps).as(grade + " 지속 화력").isGreaterThan(previous);
+      if (previous > 0)
+        assertThat(dps / previous).as(grade + " 한 등급 오름폭 (461번)").isBetween(1.6, 1.9);
       previous = dps;
     }
     assertThat(ENGINE.mental.stats("shotgun", "A").power()).isEqualTo(2);
