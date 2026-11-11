@@ -111,7 +111,8 @@ class EconomySimulationTest {
     // A·S는
     // 줄고 D·C는 늘었다).
     assertThat(weak[0]).as("D 직원: 세 배 가까이 자란다").isBetween(2.4, 3.6);
-    assertThat(weak[1]).as("D 직원도 거의 다 첫 이사를 할 수 있다").isBetween(0.8, 0.98);
+    // 456번: 운용에 손실이 없어져 운 나쁜 회사가 거의 없다. 대신 데스크 몫을 줄여(DESK_GAIN_PERCENT) 자라는 빠르기는 전과 비슷하다.
+    assertThat(weak[1]).as("D 직원도 거의 다 첫 이사를 할 수 있다").isBetween(0.8, 1.0);
     assertThat(average[0]).as("C 직원: 세 해에 너댓 배").isBetween(4.0, 6.5);
     assertThat(average[1]).as("C 직원: 거의 다 E에 닿는다").isGreaterThan(0.95);
     assertThat(good[0]).as("A 직원은 C 직원보다 훨씬 크게 자란다(등급마다 두 배)").isGreaterThan(average[0] * 2);
@@ -175,7 +176,8 @@ class EconomySimulationTest {
         halved * 100.0 / trials);
     assertThat(worst).as("회의 한 번에 건물의 값의 3분의 1 넘게 잃지 않는다(−50% × 판돈)").isGreaterThan(-0.34);
     assertThat(deep / (double) meetings).as("회의 한 번에 4분의 1 넘게 잃는 일은 드물다").isLessThan(0.1);
-    assertThat(losses / (double) trials).as("첫 해에 잃는 회사는 열에 둘쯤").isBetween(0.1, 0.3);
+    // 456번: 운용에 손실이 없어 첫 해에 잃는 회사는 종목 회의에서 크게 잃은 드문 경우뿐이다(전에는 열에 둘쯤).
+    assertThat(losses / (double) trials).as("첫 해에 잃는 회사는 드물다").isLessThan(0.05);
     // 411번: 자본이 줄어도 판돈이 그대로라 잃은 뒤에도 같은 크기로 건다. 반토막 3.1%(전 0.5%)지만 버는 양은 줄지 않는다.
     assertThat(halved / (double) trials).as("첫 해에 반토막 나는 회사는 드물다").isLessThan(0.05);
   }
@@ -229,7 +231,7 @@ class EconomySimulationTest {
    * 잃는 해가 있고, 꼭대기에서는 폭락장 한 번에 등급이 떨어질 수 있다.
    */
   @Test
-  void 어느_등급에서도_잃는_해가_있고_한_해에_치솟지_않는다() {
+  void 어느_등급에서도_잃는_해가_드물고_한_해에_치솟지_않는다() {
     int trials = 800;
     for (int k = 2; k <= 10; k++) {
       long capital = (long) (PROPERTIES.gradeCapital().get(k) * 1.7);
@@ -265,7 +267,8 @@ class EconomySimulationTest {
           losses * 100.0 / trials,
           dropped * 100.0 / trials);
       // 411번: 판돈이 건물의 값(띠 바닥)이라 자본(띠 바닥의 1.7배)에 견준 한 해 손익이 작아져 잃는 해가 조금 늘었다(D 44%).
-      assertThat(losses / (double) trials).as(grade + " 회사도 잃는 해가 있다").isBetween(0.12, 0.5);
+      // 456번: 운용에 손실이 없어 잃는 해는 종목 회의에서 크게 잃은 드문 경우뿐이다(전에는 12~50%).
+      assertThat(losses / (double) trials).as(grade + " 회사는 잃는 해가 드물다").isLessThan(0.05);
       // 지원자가 회사 등급을 따라 오면서(289번) 한 해 중앙값이 1.12(D)~1.30(X)배로 낮아졌다: 등급이 바로 높아지지 않는다.
       // 387번: 더 버는 몫이 등급마다 두 배라 데스크 몫의 벽도 등급마다 거의 절반씩 높였다. 800판: D 1.09 · B 1.11 · S 1.13 · SSS
       // 1.27 ·
@@ -279,9 +282,8 @@ class EconomySimulationTest {
       assertThat(ratio[trials / 2]).as(grade + " 회사의 한 해 중앙값 (411번: D 1.05)").isBetween(1.02, 1.45);
       // 꼭대기(X)도 상위 10%가 한 해 두 배 아래다(SS~X 1.57~1.59배).
       assertThat(ratio[trials * 9 / 10]).as(grade + " 회사가 한 해에 등급 띠(3배)를 넘지 않는다").isLessThan(2.0);
-      if (k >= 10) {
-        assertThat(dropped / (double) trials).as(grade + " 꼭대기는 폭락장에 떨어질 수 있다").isGreaterThan(0.1);
-      }
+      // 456번: 운용에 손실이 없어 꼭대기도 폭락장에 등급이 떨어지는 일이 거의 없다(전에는 XX가 열에 하나 넘게 떨어졌다).
+      assertThat(dropped / (double) trials).as(grade + " 회사는 등급이 거의 떨어지지 않는다").isLessThan(0.05);
     }
   }
 }

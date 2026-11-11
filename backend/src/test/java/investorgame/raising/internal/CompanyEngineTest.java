@@ -203,14 +203,13 @@ class CompanyEngineTest {
   }
 
   /**
-   * 직원 등급은 뽑은 그대로 간다 (decisions.md 421번, #582): 크게 잃은 해에도 떨어지지 않고, 폭락장을 버티거나 한 해 일해도 오르지 않는다.
-   * 능력치·SSS 위 단계 모두 그대로고 등급이 바뀌었다는 소식 줄도 없다.
+   * 직원 등급은 뽑은 그대로 간다 (decisions.md 421번, #582): 폭락장을 버티거나 한 해 일해도 오르지 않는다. 능력치·SSS 위 단계 모두 그대로고 등급이
+   * 바뀌었다는 소식 줄도 없다.
    */
   @Test
   void 직원_등급은_결산으로_오르지도_떨어지지도_않는다() {
     List<Map<String, Integer>> kinds =
         List.of(stats(10, 10, 10, 10), stats(30, 30, 30, 30), stats(55, 55, 55, 55), all(95));
-    int big = 0;
     for (int seed = 0; seed < 40; seed++) {
       Map<String, Integer> start = new HashMap<>(kinds.get(seed % kinds.size()));
       CompanyState company = open(seed, start, 1_000_000_000L);
@@ -221,9 +220,6 @@ class CompanyEngineTest {
       ENGINE.place(company, Map.of(e.id, "bio"));
       for (int year = 0; year < 8; year++) {
         CompanyState.Settlement s = settleYear(company, new HashSeededRandom(seed * 31L + year));
-        for (CompanyState.Result r : s.results) {
-          big += r.stake > 0 && r.pnl * 100 <= -r.stake * 30 ? 1 : 0;
-        }
         assertThat(s.lines)
             .as("등급이 바뀌었다는 소식이 없다")
             .noneMatch(
@@ -238,7 +234,6 @@ class CompanyEngineTest {
       assertThat(e.stats).as("능력치 그대로").isEqualTo(before);
       assertThat(e.rank).as("SSS 위 단계 그대로").isEqualTo(rank);
     }
-    assertThat(big).as("크게 잃은 해가 있어도 그대로다").isPositive();
   }
 
   /** X 이상 효과 (2.4절): 확신·역발상·리더는 결산에서, 경보·선견은 연초 회의에서, 사수는 공채 시장에서 보인다. */
@@ -288,9 +283,10 @@ class CompanyEngineTest {
     assertThat(averageWithRank(ace, 7, null))
         .as("XS 큰손은 더 번다")
         .isGreaterThan(averageWithRank(ace, 6, null));
+    // 456번: 운용에 손실이 없어 틀려도 덜 잃는 XSS 철벽은 더 줄일 손실이 없다.
     assertThat(averageWithRank(ace, 8, null))
-        .as("XSS 철벽은 틀려도 덜 잃는다")
-        .isGreaterThan(averageWithRank(ace, 7, null));
+        .as("XSS 철벽은 잃을 것이 없어 큰손과 같다")
+        .isEqualTo(averageWithRank(ace, 7, null));
     assertThat(teammateFlips(9)).as("GOD 신의 손이면 모두 덜 흔들린다").isLessThan(teammateFlips(8));
 
     Map<String, Integer> top = new HashMap<>(ace);
@@ -398,8 +394,8 @@ class CompanyEngineTest {
         Map.of("insight", 80, "patience", 20, "courage", 80, "conviction", 80, "luck", 50);
     assertThat(CompanyEngine.overallGrade(veteran)).isEqualTo("A");
     assertThat(yearPnl(ENGINE, veteran, null, false))
-        .as("A 손절: 손이 뒤집혀도 덜 잃는다")
-        .isGreaterThan(yearPnl(noStopLoss, veteran, null, false));
+        .as("A 손절: 운용에 손실이 없어(456번) 줄일 것이 없다")
+        .isEqualTo(yearPnl(noStopLoss, veteran, null, false));
 
     CompanyEngine noPull =
         withPerks(
@@ -432,8 +428,8 @@ class CompanyEngineTest {
                     0));
     Map<String, Integer> star = all(85);
     assertThat(yearPnl(ENGINE, star, null, false))
-        .as("SS 방패: 잃은 분기의 손실이 준다")
-        .isGreaterThan(yearPnl(noShield, star, null, false));
+        .as("SS 방패: 운용에 손실이 없어(456번) 막을 것이 없다")
+        .isEqualTo(yearPnl(noShield, star, null, false));
   }
 
   /** 첫 직원(바이오 데스크)이 한 해 번 돈의 합, 300판. mate는 같은 데스크(sameDesk) 또는 단타 데스크에 앉는 동료다. */
@@ -709,8 +705,7 @@ class CompanyEngineTest {
 
     Map<String, Integer> steady = stats(50, 30, 30, 85);
     assertThat(yearly(steady, "food", "long-winter", null))
-        .as("긴 겨울엔 덜 빠지는 식품 데스크에 줏대 있는 사람")
-        .isGreaterThan(yearly(steady, "semiconductor", "long-winter", null))
+        .as("긴 겨울엔 식품 데스크가 뜬다")
         .isGreaterThan(yearly(steady, "food", "plain", null));
 
     assertThat(yearly(brave, "game", "plain", "game"))
@@ -795,28 +790,22 @@ class CompanyEngineTest {
     assertThat(next.opening).contains("1호 회사는 문을 닫았다").contains("2호 회사");
   }
 
+  /** 456번: 운용에 손실이 없어 큰 회사도 폭락장에 자본이 줄지 않는다(전에는 판돈을 넘게 잃어 자본이 0이 되는 해가 있었다). */
   @Test
-  void 큰_회사가_폭락장에_판돈을_넘게_잃으면_자본이_0이_되고_소식_줄에_남는다() {
+  void 큰_회사도_폭락장에_운용으로_자본이_줄지_않는다() {
     String emptied = TestContent.load().raising().company().bankrupt().emptied();
-    int emptiedYears = 0;
     for (long seed = 1; seed <= 30; seed++) {
-      // XX 회사(10조)의 게임 데스크: 폭락장 손익과 잃는 몫이 등급 배율로 커져 한 해에 판돈을 넘게 잃을 수 있다 (244번).
       CompanyState company = open(seed, stats(1, 1, 1, 1), 10_000_000_000_000L);
       company.employees.getFirst().desk = "game";
       company.phase = CompanyEngine.CRASH;
-      // 폭락은 한 분기에 한 해 몫이 한꺼번에 터진다 (268번).
       company.crashQuarter = 2;
       company.invest = null;
+      long before = company.capital;
       CompanyState.Settlement settlement = ENGINE.settle(company, new HashSeededRandom(seed));
-      if (company.capital == 0) {
-        emptiedYears++;
-        assertThat(settlement.lines).contains(emptied);
-        assertThat(ENGINE.broke(company)).as("자본 0은 망함이 아니다 (411번)").isFalse();
-      } else {
-        assertThat(settlement.lines).doesNotContain(emptied);
-      }
+      assertThat(settlement.results).allMatch(r -> r.pnl >= 0);
+      assertThat(company.capital).isGreaterThanOrEqualTo(before);
+      assertThat(settlement.lines).doesNotContain(emptied);
     }
-    assertThat(emptiedYears).as("자본이 바닥나는 해가 있다").isPositive();
   }
 
   /**
