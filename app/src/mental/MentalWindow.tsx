@@ -1090,7 +1090,8 @@ function Battle({
             )}
             {hud.boss && (
               <div
-                className={`battle-boss${hud.assault ? ' battle-boss-low' : ''}`}
+                // 공격 판은 체력 막대를 큰손 바로 아래에 그린다(457번, battle.ts drawBossBar). 위 HUD에는 읽어 주는 막대만 남긴다.
+                className={hud.assault ? 'sr-only' : 'battle-boss'}
                 data-testid="battle-boss"
               >
                 <b>{hud.boss.name}</b>
