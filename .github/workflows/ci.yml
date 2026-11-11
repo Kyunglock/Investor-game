@@ -84,7 +84,15 @@ jobs:
           node-version: '24'
       - run: corepack enable
       - run: pnpm install --frozen-lockfile
-      - run: pnpm exec playwright install --with-deps chromium
+      # 러너의 우분투 패키지 서버 이름 풀이가 잠깐 끊기면(#686) 테스트 전에 실패했다. 세 번까지 간격을 두고 다시 설치한다.
+      - name: Playwright 브라우저 설치 (실패 시 재시도)
+        run: |
+          for i in 1 2 3; do
+            pnpm exec playwright install --with-deps chromium && exit 0
+            echo "브라우저 설치 실패 ($i/3), $((i * 30))초 뒤 다시 시도"
+            sleep $((i * 30))
+          done
+          exit 1
       - run: pnpm e2e
       - uses: actions/upload-artifact@v7
         if: failure()
