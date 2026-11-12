@@ -202,61 +202,26 @@ class InvestEngineTest {
     assertThat(holder.invest.choice).isNull();
   }
 
-  /** 맞힌 회의와 틀린 회의 모두 매도벽 돌파가 열리며 회의 손익 계산은 유지한다. */
+  /** 종목회의는 결과에 따라 수익만 정하고 매도벽 돌파로 이어지지 않는다 (474번). 맞혀도 틀려도 회의 뒤 전투가 없다. */
   @Test
-  void 회의_뒤_전투는_정답과_오답_모두_매도벽_돌파다() {
+  void 회의_뒤에는_매도벽_돌파가_없다() {
     CompanyState winner = company(3, stats(50, 100, 100, 100));
-    ENGINE.invest.decide(winner, right(winner), new HashSeededRandom(3));
-    assertThat(InvestEngine.battleMode(winner.invest)).isEqualTo(InvestEngine.ASSAULT);
-    assertThatThrownBy(() -> ENGINE.invest.battle(winner, "DEFENSE", 2))
-        .as("모드는 회의 결과로 정해진다")
-        .isInstanceOf(InvalidRequestException.class);
-    long won = winner.invest.total;
     long before = winner.capital;
-    assertThat(ENGINE.invest.battle(winner, InvestEngine.ASSAULT, 3)).isEqualTo(won);
-    assertThat(winner.capital).isEqualTo(before + won);
+    ENGINE.invest.decide(winner, right(winner), new HashSeededRandom(3));
+    assertThat(winner.invest.total).isPositive();
+    assertThat(winner.capital).isEqualTo(before + winner.invest.total);
+    assertThat(InvestEngine.battleMode(winner.invest)).isNull();
+    assertThat(InvestEngine.battleOpen(winner.invest)).isFalse();
     assertThatThrownBy(() -> ENGINE.invest.battle(winner, InvestEngine.ASSAULT, 3))
-        .as("한 회의에 한 번")
+        .as("회의 뒤 전투는 없다")
         .isInstanceOf(InvalidRequestException.class);
 
     CompanyState loser = company(3, stats(50, 100, 100, 100));
     ENGINE.invest.decide(loser, wrong(loser), new HashSeededRandom(3));
-    assertThat(InvestEngine.battleMode(loser.invest)).isEqualTo(InvestEngine.ASSAULT);
-    assertThat(InvestEngine.battleOpen(loser.invest)).isTrue();
-    long lost = loser.invest.total;
-    long capital = loser.capital;
-    assertThatThrownBy(() -> ENGINE.invest.battle(loser, "DEFENSE", 3))
-        .isInstanceOf(InvalidRequestException.class);
-    assertThat(ENGINE.invest.battle(loser, InvestEngine.ASSAULT, 3)).isZero();
-    assertThat(InvestEngine.battleOpen(loser.invest)).isFalse();
-    assertThatThrownBy(() -> ENGINE.invest.battle(loser, InvestEngine.ASSAULT, 3))
-        .isInstanceOf(InvalidRequestException.class);
-    assertThat(loser.invest.total).isEqualTo(lost);
-    assertThat(loser.capital).isEqualTo(capital);
+    assertThat(InvestEngine.battleMode(loser.invest)).isNull();
     int quarter = loser.quarter;
     ENGINE.settleQuarter(loser, new HashSeededRandom(3));
-    assertThat(loser.quarter).isEqualTo(quarter + 1);
-
-    CompanyState late = company(3, stats(50, 100, 100, 100));
-    ENGINE.invest.decide(late, right(late), new HashSeededRandom(3));
-    ENGINE.settleQuarter(late, new HashSeededRandom(3));
-    assertThat(InvestEngine.battleOpen(late.invest)).as("분기를 넘기면 끝난다").isFalse();
-    assertThatThrownBy(() -> ENGINE.invest.battle(late, InvestEngine.ASSAULT, 3))
-        .isInstanceOf(InvalidRequestException.class);
-  }
-
-  @Test
-  void 매도벽_별_하나_둘_셋은_추가수익_25_50_100퍼센트다() {
-    for (int stars = 0; stars <= 3; stars++) {
-      CompanyState c = company(3, stats(50, 100, 100, 100));
-      ENGINE.invest.decide(c, right(c), new HashSeededRandom(3));
-      long original = c.invest.total;
-      long capital = c.capital;
-      long expected = new long[] {0, original / 4, original / 2, original}[stars];
-      assertThat(ENGINE.invest.battle(c, InvestEngine.ASSAULT, stars)).isEqualTo(expected);
-      assertThat(c.invest.total).isEqualTo(original);
-      assertThat(c.capital).isEqualTo(capital + expected);
-    }
+    assertThat(loser.quarter).as("전투 없이 바로 분기를 넘긴다").isEqualTo(quarter + 1);
   }
 
   /** 회의 뒤 전투의 세기 (#594): 회사가 크고 오래되고 사장이 강해질수록 오른다. 이유마다 몫이 보인다. */
@@ -289,7 +254,6 @@ class InvestEngineTest {
   void 매도벽은_강화를_사도_세기가_오르지_않고_진행도만_반영한다() {
     CompanyState c = company(3, stats(50, 100, 100, 100));
     ENGINE.invest.decide(c, right(c), new HashSeededRandom(3));
-    assertThat(InvestEngine.battleMode(c.invest)).isEqualTo(InvestEngine.ASSAULT);
     int base = ENGINE.invest.battleLevel(c, c.invest, 0);
     for (int level : List.of(49, 50, 100, 500, 2000)) {
       c.battleLevels.put("damage", level);

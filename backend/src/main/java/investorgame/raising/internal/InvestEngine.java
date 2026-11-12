@@ -694,15 +694,15 @@ class InvestEngine {
     return (int) Math.min(r.lossCapBp(), loss);
   }
 
-  /** 종목 결정의 정답·오답 모두 회의 뒤에는 매도벽 돌파로 이어진다. */
+  /** 회의 뒤 전투 모드의 이름 (414번). 474번부터는 쓰지 않는다. */
   static final String ASSAULT = "ASSAULT";
 
-  /** 아직 결정하지 않았거나 지켜봤으면 null. 옛 미완료 방어 대기도 매도벽 돌파로 연결된다. */
+  /**
+   * 회의 뒤 전투의 모드. 종목회의는 결과에 따라 수익만 정하고 매도벽 돌파로 이어지지 않으므로(474번) 늘 null이다. 매도벽 돌파는 메인의 스테이지(472번)로 따로
+   * 한다. 옛 회의의 남은 전투 대기도 열리지 않는다.
+   */
   static String battleMode(Invest invest) {
-    if (invest == null || invest.choice == null || HOLD.equals(invest.choice)) {
-      return null;
-    }
-    return ASSAULT;
+    return null;
   }
 
   /**

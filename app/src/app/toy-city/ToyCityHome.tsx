@@ -14,7 +14,7 @@ import { BookIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from '../Icon
 import { Sheet } from '../Sheet'
 import { type BattleEntry, type Tab, type ToyPanel, tabBadge, useAppUi } from '../ui'
 import { useCountUp } from '../useCountUp'
-import { ActionBar, QuarterMeeting } from '../Windows'
+import { ActionBar } from '../Windows'
 import { BattleUpgrades } from './BattleUpgrades'
 import { growthProgress } from './model'
 import { StreetLife } from './StreetLife'
@@ -80,6 +80,7 @@ export function ToyCityHome({ company }: { company: Company }) {
   const upgradeSpot = useTutorialSpot(company, 'upgrade')
   const marketSpot = useTutorialSpot(company, 'market')
   const staffSpot = useTutorialSpot(company, 'staff')
+  const settleSpot = useTutorialSpot(company, 'settle')
   const progress = growthProgress(company)
   const ended = company.status === 'ENDED'
   const unavailable = ended || Boolean(company.broke)
@@ -185,14 +186,17 @@ export function ToyCityHome({ company }: { company: Company }) {
       )}
       <nav className="toy-side toy-left" aria-label="회사 일">
         {MENU.map(({ tab, text, Icon }) => {
-          const locked = !unlocked.includes(tab) || (ended && tab === 'market')
+          // 종목회의가 이슈 탭에 있으므로(474번) 분기 넘기기가 열리면 이슈 탭도 연다.
+          const locked =
+            (!unlocked.includes(tab) && !(tab === 'issue' && unlocked.includes('settle'))) ||
+            (ended && tab === 'market')
           const badge = tabBadge(company, tab)
           return (
             <button
               key={tab}
               type="button"
               disabled={locked}
-              className={`toy-menu ${tab === 'market' ? marketSpot : tab === 'staff' ? staffSpot : ''}`}
+              className={`toy-menu ${tab === 'market' ? marketSpot : tab === 'staff' ? staffSpot : tab === 'issue' ? settleSpot : ''}`}
               data-testid={`tab-${tab}`}
               data-locked={locked || undefined}
               onClick={() => changeTab(tab)}
@@ -343,23 +347,12 @@ export function ToyCityHome({ company }: { company: Company }) {
   )
 }
 
-/**
- * 보조게임 메뉴 (#698): 주 게임 매도벽 돌파 옆에서 따로 하는 둘. 종목회의(분기 넘기기로 열리고 결산까지 이어진다)와 멘탈 보호 스테이지(번호 디펜스와
- * EX 디펜스).
- */
+/** 보조게임 메뉴 (#698): 주 게임 매도벽 돌파 옆에서 따로 하는 멘탈 보호 스테이지(번호 디펜스와 EX 디펜스). 종목회의는 이슈 탭으로 옮겼다(474번). */
 function SideGames({ company, onMental }: { company: Company; onMental: () => void }) {
   const stages = company.stages
   return (
     <div className="toy-side-games" data-testid="side-games">
       <p className="toy-sheet-lead">매도벽 돌파 말고도 할 수 있어요</p>
-      <section>
-        <h3>종목회의</h3>
-        <p className="text-sm text-muted">
-          기사를 읽고 매수·매도를 골라요. 맞히면 벌고, 틀려도 손실은 없어요. 회의가 끝나면 분기를
-          넘겨요.
-        </p>
-        <QuarterMeeting company={company} />
-      </section>
       <section>
         <h3>멘탈 보호 스테이지</h3>
         <p className="text-sm text-muted">

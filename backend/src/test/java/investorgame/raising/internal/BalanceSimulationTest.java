@@ -110,7 +110,7 @@ class BalanceSimulationTest {
             case LAZY -> majorityChoice(c.invest); // 지켜본다는 없다(423번): 자동 진행처럼 다수결
           };
       ENGINE.invest.decide(c, choice, boss == Boss.GREEDY, random);
-      // 회의 뒤 전투: 정답·오답 모두 매도벽 돌파를 클리어한다. 손실 회복 보너스는 없다.
+      // 회의 뒤 전투는 없다(474번): battleMode가 null이라 건너뛴다.
       String battle = InvestEngine.battleMode(c.invest);
       if (battle != null && (boss == Boss.STAGES || boss == Boss.BUYER)) {
         ENGINE.invest.battle(c, battle, 3);
@@ -239,8 +239,9 @@ class BalanceSimulationTest {
         .as("스테이지를 깨는 사장이 안 깨는 사장보다 크게 번다")
         .isGreaterThan(reader.capital() * 3);
     org.assertj.core.api.Assertions.assertThat(buyer.capital())
+        // 회의 뒤 매도벽 돌파 보너스가 없어져(474번) 차가 조금 줄었다: 세 배 → 두 배 반.
         .as("전투 강화를 사도 스테이지가 성장의 주된 길이다 (394번)")
-        .isGreaterThan(reader.capital() * 3);
+        .isGreaterThan(reader.capital() * 5 / 2);
     // 틀려도 회의에서 잃지 않으므로(#697) 늘 크게 하는 사장이 기사 읽는 사장보다 더 벌 수 있다. 기사를 읽으면 이사 안 하는 사장보다는 낫다.
     org.assertj.core.api.Assertions.assertThat(reader.capital())
         .as("기사 읽는 사장이 이사 안 하고 버티는 사장보다 번다")

@@ -887,12 +887,12 @@ function CardPick({
                     )}
                     {c.awakening && (
                       <span className="stage-card-level" data-testid="card-awakening">
-                        마법 고양이 {c.awakening.from} → {c.awakening.to}마리
+                        마법 고양이 +{c.awakening.to - c.awakening.from}
                       </span>
                     )}
                     {c.mates && (
                       <span className="stage-card-level" data-testid="card-mates">
-                        고양이 {c.mates.from} → {c.mates.to}마리
+                        고양이 +{c.mates.to - c.mates.from}
                       </span>
                     )}
                   </span>

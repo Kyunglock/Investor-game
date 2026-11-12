@@ -17,6 +17,7 @@ import './tutorial-guide.css'
 export function TutorialGuide({ company }: { company: Company }) {
   const active = useTutorial((s) => s.active)
   const battle = useAppUi((s) => s.battle)
+  const investOpen = useAppUi((s) => s.investOpen)
   const [first] = useState(() => firstQuarter(company) && readFirstPlay(company) !== 'done')
   const [page, setPage] = useState<FirstPlayStep>(() => readFirstPlay(company))
   const [preparing, setPreparing] = useState(first && !company.invest?.outcome)
@@ -61,8 +62,9 @@ export function TutorialGuide({ company }: { company: Company }) {
     next('done')
     useTutorial.getState().finish()
   }
-  const finishedBattle = company.invest?.outcome?.battle?.stars != null
-  const review = first && page === 'play' && finishedBattle && !battle
+  // 첫 게임은 회의 결정까지다(474번): 회의 창을 닫거나 분기를 넘기면 돌아본다. 회의 뒤 전투는 없다.
+  const decided = Boolean(company.invest?.outcome) || !firstQuarter(company)
+  const review = first && page === 'play' && decided && !battle && !investOpen
   if (!active || company.status === 'ENDED') return null
   if (first && (page === 'done' || (page === 'play' && !review))) return null
   if (!first && ack === step.id) return null
@@ -82,15 +84,15 @@ export function TutorialGuide({ company }: { company: Company }) {
     : step.title
   const description = first
     ? review
-      ? '투자 결정부터 전투까지 직접 해봤어요. 결과를 확인하고 내 속도로 회사를 키워보세요.'
+      ? '종목회의를 직접 해봤어요. 가운데 매도벽 돌파로 스테이지를 깨며 회사를 키워보세요.'
       : page === 'welcome'
         ? '작은 사무실에서 시작하는 나만의 투자회사. 안내를 누르며 첫 게임을 함께 해봐요.'
         : page === 'team'
           ? '첫 채용권으로 동료를 맞이하고 자리에 앉혔어요. 기본 무기도 준비되어 바로 시작할 수 있어요.'
-          : '기사를 읽고 매수·매도를 골라보세요. 맞히면 벌고, 틀려도 손실 없이 매도벽 돌파로 이어져요.'
+          : '기사를 읽고 매수·매도를 골라보세요. 맞히면 벌고, 틀려도 손실은 없어요.'
     : step.id === 'meeting'
-      ? // 앱은 종목회의를 오른쪽 아래 보조게임 메뉴로 옮겼다 (#698). 가운데는 주 게임 매도벽 돌파다.
-        '오른쪽 아래 "보조게임"의 종목회의를 누르면 직원이 종목을 물어 옵니다. 기사를 읽고 매수·매도를 고르세요. 틀려도 손실은 없어요. 가운데 "매도벽 돌파"는 언제든 스테이지를 골라 할 수 있어요.'
+      ? // 앱은 종목회의를 이슈 탭으로 옮겼다 (474번). 가운데는 주 게임 매도벽 돌파다.
+        '"이슈" 탭의 종목회의를 누르면 직원이 종목을 물어 옵니다. 기사를 읽고 매수·매도를 고르세요. 맞히면 벌고, 틀려도 손실은 없어요. 가운데 "매도벽 돌파"는 언제든 스테이지를 골라 할 수 있어요.'
       : step.text
   const button = first
     ? review
@@ -169,7 +171,7 @@ export function TutorialGuide({ company }: { company: Company }) {
                 ? '차근차근 준비 중…'
                 : error
                   ? '준비를 다시 확인해요'
-                  : '종목회의 + 첫 전투 준비 완료'}
+                  : '첫 종목회의 준비 완료'}
             </strong>
           </div>
         </div>
