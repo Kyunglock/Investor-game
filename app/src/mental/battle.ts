@@ -306,6 +306,8 @@ interface WallState {
   arrived: boolean
   bossStarted?: boolean
   broken: boolean
+  /** 맨 아래 자리(wall.y에 닿는 층)의 row. 층은 row - base 번째 자리에 서고, 아래층이 부서져도 내려앉지 않는다. */
+  base: number
 }
 /** 매도벽 칸 하나: 자리(줄·칸), 얹힌 물량 글자, 지금 보이는 물량·금 간 정도, 약한 칸인가. */
 interface AssaultCell {
@@ -1277,9 +1279,10 @@ class BattleScene extends Phaser.Scene {
       price,
       arrived: false,
       broken: false,
+      base: 0,
     }
     // 매도벽은 칸으로 나누지 않은 덩어리다 (416번). 줄이 여럿이면 길게 늘이지 않고 같은 크기의 벽을 한 층씩 위로 쌓는다. 층마다 그 줄의 체력을 갖고,
-    // 맨 아래 층부터 맞아 부서지면 위층이 내려앉는다.
+    // 맨 아래 층부터 맞아 부서져도 위층은 제자리에 남는다.
     for (let row = 0; row < Math.max(1, ws.rows); row++) {
       const hp = rowHps(ws.cellHp * (1 + row * 0.15), cols).reduce((a, b) => a + b, 0)
       // 칸이 여럿이던 때는 퍼지는 마법·불길이 칸 여러 개를 한꺼번에 맞혔다. 덩어리라 그만큼 덜 단단하게 둔다.
@@ -1346,9 +1349,21 @@ class BattleScene extends Phaser.Scene {
       .sort((a, b) => (a.cell?.row ?? 0) - (b.cell?.row ?? 0))
   }
 
-  /** 지금 벽 전체 높이: 남은 층 수 × 한 층 높이. */
+  /** 층이 서는 자리(아래부터 0): 아래층이 부서져도 바뀌지 않는다. */
+  private layerSlot(wall: WallState, e: Enemy) {
+    return Math.max(0, (e.cell?.row ?? wall.base) - wall.base)
+  }
+
+  /** 지금 벽 전체 높이: wall.y에서 남은 맨 위층의 위 끝까지. */
   private wallHeight(wall: WallState) {
-    return Math.max(1, this.wallLayers(wall).length) * this.layerHeight()
+    const top = this.wallLayers(wall).reduce((m, e) => Math.max(m, this.layerSlot(wall, e)), 0)
+    return (top + 1) * this.layerHeight()
+  }
+
+  /** 지금 맞는 층(남은 맨 아래 층)의 아래 끝 y. 물량은 여기서 나온다. */
+  private frontY(wall: WallState) {
+    const front = this.frontLayer(wall)
+    return front ? wall.y - this.layerSlot(wall, front) * this.layerHeight() : wall.y
   }
 
   /** 칸 크기를 화면 폭에 맞춘다(만들 때와 화면 크기가 바뀔 때, 층이 부서졌을 때). */
@@ -1362,19 +1377,19 @@ class BattleScene extends Phaser.Scene {
     wall.band.setDisplaySize(lane.width + 8, this.wallHeight(wall) + 8)
   }
 
-  /** 벽과 층·글자를 지금 y에 놓는다(오를 때 매 프레임). 맨 아래 층이 wall.y에 닿고 위로 한 층씩 쌓인다. */
+  /** 벽과 층·글자를 지금 y에 놓는다(오를 때 매 프레임). 층마다 제자리(layerSlot)에 선다: 아래층이 부서진 자리는 비워 둔다. */
   private placeWall(wall: WallState) {
     const lane = this.lane()
     const cellW = lane.width / wall.cols
     const layer = this.layerHeight()
-    this.wallLayers(wall).forEach((e, i) => {
+    for (const e of this.wallLayers(wall)) {
       const c = e.cell
-      if (!c) return
+      if (!c) continue
       const x = lane.left + (c.col + 0.5) * cellW
-      const y = wall.y - (i + 0.5) * layer
+      const y = wall.y - (this.layerSlot(wall, e) + 0.5) * layer
       e.setPosition(x, y)
       c.label.setPosition(x, y + 1)
-    })
+    }
     wall.band.setPosition(lane.left - 4, wall.y + 4)
     // 벽 옆의 가격 표는 뺐다(416번): 가격은 위 HUD에만 보인다.
     wall.price.setVisible(false)
@@ -1386,6 +1401,8 @@ class BattleScene extends Phaser.Scene {
     const total = layers.reduce((sum, e) => sum + e.hp, 0)
     // 층 순서(row)가 겹치지 않게 남은 층의 맨 위 다음 번호부터 쌓는다: 같은 번호면 둘 다 맨 아래 층으로 보여 범위 공격을 함께 맞는다.
     let row = layers.reduce((top, e) => Math.max(top, e.cell?.row ?? 0), -1) + 1
+    // 다시 쌓은 벽은 남은 맨 아래 층부터 wall.y에 붙여 세운다.
+    wall.base = layers.length > 0 ? Math.min(...layers.map((e) => e.cell?.row ?? 0)) : row
     for (let n = layers.length; n < rows; n++) {
       const e = this.spawnCell(wall, row++, 0, 1, false)
       if (e) wall.cells.push(e)
@@ -1435,7 +1452,7 @@ class BattleScene extends Phaser.Scene {
     // 적 풀은 돌려 쓰니 부서진 칸은 벽에서 바로 뺀다(같은 객체가 물량으로 다시 나올 수 있다).
     c.wall.cells = c.wall.cells.filter((o) => o !== e)
     c.wall.left = c.wall.cells.length
-    // 위층이 있으면 한 층 내려앉는다.
+    // 위층은 내려앉지 않고 제자리에 남는다. 뒤 판 높이만 남은 맨 위층에 맞춘다.
     if (c.wall.left > 0) {
       this.layoutWall(c.wall)
       this.placeWall(c.wall)
@@ -1794,10 +1811,11 @@ class BattleScene extends Phaser.Scene {
 
   /** 매도 물량은 벽에서 나온다: 벽 아래 끝에서 튀어나오며 벽 면에 먼지와 파편이 인다. 벽 앞에 오래 막힐수록 잦다. */
   private spawnFlow(wall: WallState) {
-    const out = this.spawnFlowAt(wall.spec.mix, wall.y + 6)
+    const y = this.frontY(wall)
+    const out = this.spawnFlowAt(wall.spec.mix, y + 6)
     for (const e of out) {
-      this.chips?.explode(this.fx(2), e.x, wall.y - 4)
-      this.boom.cell.explode(this.fx(2), e.x, wall.y - 2)
+      this.chips?.explode(this.fx(2), e.x, y - 4)
+      this.boom.cell.explode(this.fx(2), e.x, y - 2)
     }
   }
 
