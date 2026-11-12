@@ -82,7 +82,7 @@ import {
   damageLabel,
   scatterOffset,
 } from './damageNumbers'
-import { ENEMIES, isOrder, ORDERS, UNITS, type UnitKind } from './enemies'
+import { ENEMIES, isOrder, orderShares, UNITS, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkFrame } from './enemyWalk'
 import { type GameSpeed, simScale } from './gameSpeed'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
@@ -702,7 +702,7 @@ class BattleScene extends Phaser.Scene {
     bakeMates(this)
     bakeEnemies(this)
     bakeMagic(this)
-    if (this.assault) bakeOrders(this)
+    if (this.assault) bakeOrders(this, this.hpScale)
 
     // 선명하게(344번): 캔버스는 화면 배율만큼 크고(startBattle), 카메라를 그만큼 당겨 논리 좌표(view)는 CSS px 그대로다.
     let previousWidth = this.view().w
@@ -2535,7 +2535,7 @@ class BattleScene extends Phaser.Scene {
       this.gainXp(v.reward)
       if (isOrder(e.kind)) {
         // 매도 물량을 잡았다: 물량이 0까지 깎이며 "체결!" (413번). 물량이 줄면 가격이 조금 오른다 (#593).
-        if (e.kind !== 'whale') this.fill(e.x, e.y, ORDERS[e.kind].shares)
+        if (e.kind !== 'whale') this.fill(e.x, e.y, orderShares(e.kind, this.hpScale))
       } else {
         sfx.squish()
       }

@@ -125,3 +125,8 @@ export const UNITS: Record<UnitKind, EnemySpec & { scale?: number; shares?: numb
 export function isOrder(kind: UnitKind): kind is OrderKind {
   return kind in ORDERS
 }
+
+/** 티켓과 체결 표시는 같은 스테이지 체력 배율로 물량을 늘린다. */
+export function orderShares(kind: OrderKind, hpScale = 1): number {
+  return Math.max(1, Math.round(ORDERS[kind].shares * hpScale))
+}
