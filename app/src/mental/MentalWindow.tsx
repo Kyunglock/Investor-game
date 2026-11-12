@@ -236,9 +236,9 @@ export function MentalWindow({
                 </span>
               )}
               {entry.kind === 'invest' && (
-                // 회의 뒤 전투의 세기와 오른 이유 (#594): 회사가 크고 사장이 강할수록 적도 강하다.
+                // 회의 뒤 전투의 세기와 오른 이유 (#594): 해·분기 하나가 한 스테이지라 분기를 넘길수록 매도벽이 세진다.
                 <span className="stage-level" data-testid="stage-level">
-                  세기 {entry.level}
+                  {company.year}년 {company.quarter}분기 스테이지 · 세기 {entry.level}
                   {levelWhy(company.invest?.outcome?.battle?.levelParts)}
                 </span>
               )}
@@ -410,6 +410,7 @@ const LEVEL_NAMES: Record<string, string> = {
   stage: '수련',
   building: '건물',
   year: '연차',
+  quarter: '분기',
   upgrade: '강화',
 }
 
