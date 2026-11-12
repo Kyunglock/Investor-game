@@ -29,7 +29,6 @@ import {
   cellKey,
   DPR,
   enemyKey,
-  GUN,
   HERO_SIZE,
   mateKey,
   RAM_ART,
@@ -69,7 +68,7 @@ import {
   type MagicLevels,
   xpToNext,
 } from './cards'
-import { catMuzzle, mateModel } from './catModels'
+import { catAim, catMuzzle, mateModel } from './catModels'
 import { CIRCUIT_BREAKER, CircuitBreaker } from './circuitBreaker'
 import { CircuitBreakerFx } from './circuitBreakerFx'
 import {
@@ -2728,10 +2727,9 @@ class BattleScene extends Phaser.Scene {
       const t = this.autoTarget()
       return Array.from({ length: count }, () => t)
     }
-    const gun = (x: number, y: number) => ({ x: x + GUN.dx, y: y + GUN.dy })
     const shooters = [
-      gun(this.player.x, this.player.y),
-      ...this.mates.map((m) => gun(m.body.x, m.body.y)),
+      catMuzzle('hero', this.player.x, this.player.y),
+      ...this.mates.map((m, i) => catMuzzle(mateModel(i), m.body.x, m.body.y)),
     ]
     // 공격 판 (#593, 413번의 "위로 곧게"를 뒤집음): 자동 조준. 매도 물량(허매도 빼고)을 고양이마다 나눠 맡고, 없으면 큰손, 그것도 없으면 제 머리 위로
     // 곧게(바로 위의 매도벽).
@@ -2771,19 +2769,17 @@ class BattleScene extends Phaser.Scene {
     return spreadTargets(shooters, live, 520)
   }
 
-  /** 각도는 총 피벗에서 잰다: 고양이 가운데에서 재면 가까운 적은 총구가 비켜 있어 빗나간다. */
-  private angleFrom(x: number, y: number, target: { x: number; y: number }) {
-    return Math.atan2(target.y - (y + GUN.dy), target.x - (x + GUN.dx))
-  }
-
   /** 초당 발사 수를 기존의 80%로 낮춘다. */
   private get attackInterval() {
     return this.loadout.fireMs * 1.25
   }
 
   /** 한 발 쏜다. mate가 없으면 사장냥, 있으면 그 고양이가 같은 수치(무기·피해·연사·강화)로 쏜다(393번). */
-  private fire(now: number, aim: number, mate?: Mate) {
+  private fire(now: number, target: { x: number; y: number }, mate?: Mate) {
     const p = mate ? mate.body : this.player
+    const model = mate ? mateModel(this.mates.indexOf(mate)) : 'hero'
+    // 표적이 좌우로 바뀌어도 발사 순간에는 실제 총구에서 정확히 겨눈다.
+    const aim = catAim(model, p.x, p.y, target)
     const kind = this.opts.hero.weapon.kind
     const style = GRADE_FIRE[this.opts.hero.weapon.grade]
     // 무기마다 쏘는 방식 (#563): 총은 겨눈 쪽(aim)을 보고, 탄만 흩어진다(기관단총).
@@ -2807,7 +2803,7 @@ class BattleScene extends Phaser.Scene {
       this.aim = aim
     }
     // 총 손맛: 총구 화염. 크기·시간이 무기마다 다르다.
-    const m = catMuzzle(mate ? mateModel(this.mates.indexOf(mate)) : 'hero', p.x, p.y)
+    const m = catMuzzle(model, p.x, p.y)
     const flash = this.flashes[this.flashIndex++ % this.flashes.length]
     flash
       .setPosition(m.x, m.y)
@@ -3829,12 +3825,12 @@ class BattleScene extends Phaser.Scene {
       }
       if (target) {
         // 공격 판도 맡은 과녁을 겨눈다 (#593). 과녁이 없으면 제 머리 위(벽).
-        const want = this.angleFrom(b.x, b.y, target)
+        const want = catAim(mateModel(i), b.x, b.y, target)
         m.aim += Phaser.Math.Angle.Wrap(want - m.aim) * turn
         if (m.drop === 0 && time - m.lastFire > this.attackInterval) {
           const ms = this.attackInterval
           for (let n = 0; time - m.lastFire > ms && n < 3; n++) {
-            this.fire(Math.max(m.lastFire + ms, time - ms), m.aim, m)
+            this.fire(Math.max(m.lastFire + ms, time - ms), target, m)
           }
         }
       }
@@ -3959,13 +3955,13 @@ class BattleScene extends Phaser.Scene {
     }
     const target = this.targets[0] ?? null
     if (target) {
-      const want = this.angleFrom(p.x, p.y, target)
+      const want = catAim('hero', p.x, p.y, target)
       this.aim += Phaser.Math.Angle.Wrap(want - this.aim) * Math.min(1, dt * 14)
     }
     // 프레임이 연사 간격보다 길면(느린 휴대폰) 밀린 만큼 한 프레임에 몇 발 더 쏜다(최대 3, #587): 아니면 연사가 빠른 무기(기관단총)일수록
     // 프레임 수에 묶여 제 연사를 못 냈다.
     for (let n = 0; target && time - this.lastFire > fireMs && n < 3; n++) {
-      this.fire(Math.max(this.lastFire + fireMs, time - fireMs), this.aim)
+      this.fire(Math.max(this.lastFire + fireMs, time - fireMs), target)
     }
     this.updateMates(time, dt, this.targets)
     this.drawBossBar()
