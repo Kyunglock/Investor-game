@@ -8,7 +8,7 @@ import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import { MATE_LOOKS } from './mates'
 import { shareLabel, sharesOf } from './shares'
-import { drawMentalWall, drawSprite, drawToySellWall, STAGE_HERO } from './stageArt'
+import { drawBuyWall, drawMentalWall, drawSprite, drawToySellWall, STAGE_HERO } from './stageArt'
 import { drawWeaponBullet, drawWeaponImpact, WEAPON_GRADES } from './weaponVisuals'
 
 /** 승인한 캐주얼 시안의 투명 스프라이트를 Phaser 텍스처로 굽고, 무기·벽·탄환을 실시간 상태에 맞춰 합성한다. */
@@ -176,6 +176,13 @@ export function bakeStage(scene: Phaser.Scene, _genre: Genre) {
   // 멘탈 보호 스테이지의 멘탈벽은 예전 반투명 보호막 그림이다. 매도벽 돌파의 블록 질감은 쓰지 않는다.
   for (const cracked of [false, true]) {
     bake(scene, cracked ? 'wall-cracked' : 'wall', 512, 96, (c) => drawMentalWall(c, cracked))
+  }
+  // 매도벽 돌파의 매수벽은 붉은 장난감 블록이다. 멘탈벽 그림을 빌려 쓰지 않는다.
+  const blocks = scene.textures.get('art-wallBlocks').getSourceImage() as HTMLImageElement
+  for (const cracked of [false, true]) {
+    bake(scene, cracked ? 'buy-wall-cracked' : 'buy-wall', 512, 96, (c) =>
+      drawBuyWall(c, blocks, cracked),
+    )
   }
   bake(scene, 'wall-ripple', 80, 50, (c) => {
     for (const r of [15, 25, 36]) {

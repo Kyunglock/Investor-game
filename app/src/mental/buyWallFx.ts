@@ -26,13 +26,13 @@ export class BuyWallFx {
   constructor(scene: Phaser.Scene, orderScale: number) {
     this.scene = scene
     this.orderScale = orderScale
-    this.surface = scene.add.image(0, 0, 'wall').setOrigin(0).setDepth(4)
+    this.surface = scene.add.image(0, 0, 'buy-wall').setOrigin(0).setDepth(4)
     this.ink = scene.add.graphics().setDepth(4)
     this.debris = Array.from({ length: 12 }, (_, i) => {
       const col = i % 6
       const row = Math.floor(i / 6)
       const piece = scene.add
-        .image(0, 0, 'wall-cracked')
+        .image(0, 0, 'buy-wall-cracked')
         .setOrigin((col + 0.5) / 6, (row + 0.5) / 2)
         .setDepth(5)
         .setVisible(false)
@@ -127,7 +127,7 @@ export class BuyWallFx {
     if (wall.active) {
       this.surface
         .setVisible(true)
-        .setTexture(wall.hp < wall.maxHp * 0.5 ? 'wall-cracked' : 'wall')
+        .setTexture(wall.hp < wall.maxHp * 0.5 ? 'buy-wall-cracked' : 'buy-wall')
         .setPosition(left + shake, top + Math.abs(shake) * 0.4)
         .setDisplaySize(width, height)
       this.surface.clearTint()

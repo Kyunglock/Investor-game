@@ -84,6 +84,20 @@ export function drawOrderBlock(
   c.restore()
 }
 
+/** 매도벽 돌파의 붉은 장난감 매수벽 (#662): 매수 블록 여섯 개. 멘탈 보호 스테이지의 멘탈벽(drawMentalWall)과 따로 쓴다. */
+export function drawBuyWall(
+  c: CanvasRenderingContext2D,
+  source: HTMLImageElement,
+  cracked: boolean,
+) {
+  for (let i = 0; i < 6; i++) {
+    c.save()
+    c.translate((i * 512) / 6, 0)
+    drawOrderBlock(c, source, false, cracked && (i === 1 || i === 4))
+    c.restore()
+  }
+}
+
 /**
  * 전투용 반투명 멘탈벽 (멘탈 보호 스테이지 전용). 앞쪽 방어선이 기존 충돌 영역(전체 폭 × 48px)에 맞고, 뒤쪽 유리 면은 장식이다. #662에서 장난감
  * 블록으로 바꿨던 것을 예전 그림으로 되돌렸다. 매도벽 돌파의 매수벽·매도벽 블록(drawOrderBlock)과 섞어 쓰지 않는다.
