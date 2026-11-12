@@ -1288,60 +1288,47 @@
   }
 }
 
-/* 공격 판 (decisions.md 413번, #573): 왼쪽 위에 지금 가격·오른 비율·목표가, 멘탈 게이지는 사장냥 발밑, 보스 줄은 가격 아래.
-   오른쪽 가장자리의 가격 눈금은 캔버스가 그린다(battle.ts drawClimb). */
+/* 공격 판의 주가: 목표가·가격 박스 없이 종목명과 상승률만 한 줄에 둔다. */
 .battle-price {
-  position: absolute;
-  top: max(10px, env(safe-area-inset-top));
-  left: 52px;
-  right: 112px;
   display: flex;
-  align-items: stretch;
-  gap: 4px;
-  pointer-events: none;
-}
-.battle-price-now,
-.battle-price-goal {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-  padding: 2px 8px 3px;
-  border-radius: 11px;
-  background: #fff9ecee;
-  border: 1.5px solid #c3935f;
-  line-height: 1.15;
-  white-space: nowrap;
-}
-.battle-price-now {
   flex: 1;
-  flex-direction: row;
-  flex-wrap: wrap;
-  align-items: baseline;
-  column-gap: 5px;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  height: 36px;
+  padding: 0 9px;
+  border: 1px solid #cfaa73;
+  border-radius: 12px;
+  background: #fff9ecee;
+  box-shadow: 0 2px 0 #9266381a;
 }
 .battle-price-name {
-  flex-basis: 100%;
-  font-size: 10px;
-  color: #5b6478;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.battle-price-value,
-.battle-price-target {
-  font-weight: 400;
-  font-size: 16px;
-  font-variant-numeric: tabular-nums;
-}
-.battle-price-target {
+  white-space: nowrap;
   font-size: 13px;
-  color: #b8860b;
+  color: #634624;
 }
 .battle-price-up {
+  flex-shrink: 0;
   font-style: normal;
-  font-size: 12px;
-  color: #e8434f;
+  font-size: 21px;
+  line-height: 1;
+  color: #d83944;
   font-variant-numeric: tabular-nums;
+  animation: battle-price-tick 320ms ease-out;
+}
+@keyframes battle-price-tick {
+  from {
+    transform: scale(1.15);
+    color: #f1872b;
+  }
+  to {
+    transform: scale(1);
+    color: #d83944;
+  }
 }
 
 /* 종목 회의 뒤 전투의 규칙 한 줄 (414번): 좁은 폰에서도 잘리지 않게. */
@@ -1361,34 +1348,49 @@
   color: #6b7a99;
 }
 
-/* 공격 판: 상단 조작 / 가격 / 보스 / 돌파 연출을 서로 다른 줄에 둔다 (#607, #609). */
+/* 상단 한 줄·하단 한 줄만 사용해 좁은 폰에서도 전투 공간을 확보한다. */
 .battle-hud-assault .battle-corner {
-  left: 52px;
-  right: 10px;
-  justify-content: flex-end;
+  left: max(8px, env(safe-area-inset-left));
+  right: max(8px, env(safe-area-inset-right));
+  gap: 4px;
 }
-.battle-hud-assault .battle-segment {
-  margin-right: auto;
+.battle-hud-assault .battle-corner time {
+  flex-shrink: 0;
+  padding: 3px 5px;
+  font-size: 14px;
 }
-.battle-hud-assault .battle-price {
-  top: calc(max(10px, env(safe-area-inset-top)) + 44px);
-  left: 52px;
-  right: 10px;
+.battle-hud-assault .battle-speed {
+  min-width: 36px;
 }
-.battle-hud-assault .battle-price-now {
-  justify-content: flex-start;
+.battle-footer-assault {
+  left: max(10px, env(safe-area-inset-left));
+  right: max(10px, env(safe-area-inset-right));
 }
-.battle-hud-assault .battle-price-goal {
-  flex: 0 1 38%;
+.battle-footer-assault .battle-wall {
+  height: 32px;
+  padding: 0 8px;
+  border-radius: 11px;
 }
-.battle-hud-assault .battle-price-value,
-.battle-hud-assault .battle-price-target {
-  font-size: clamp(12px, 3.8vw, 16px);
+.battle-footer-assault .battle-health {
+  height: 18px;
+}
+.battle-level-inline {
+  flex-shrink: 0;
+  padding-right: 7px;
+  border-right: 1px solid #c9a578;
+  color: #76532c;
+  font-family: var(--font-game);
+  font-size: 12px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .battle-price-up {
+    animation: none;
+  }
 }
 .battle-wall-gain {
   position: absolute;
   z-index: 3;
-  top: calc(max(10px, env(safe-area-inset-top)) + 142px);
+  top: calc(max(10px, env(safe-area-inset-top)) + 56px);
   left: 50%;
   transform: translateX(-50%);
   pointer-events: none;
@@ -1409,9 +1411,13 @@
   color: #704a4b;
 }
 .battle-wall-gain strong {
-  font-size: 38px;
+  font-size: 30px;
   line-height: 1.15;
   font-weight: 400;
+}
+.battle-footer-assault .battle-health strong {
+  line-height: 16px;
+  font-size: 12px;
 }
 .stage-card-manual {
   margin-top: 10px;

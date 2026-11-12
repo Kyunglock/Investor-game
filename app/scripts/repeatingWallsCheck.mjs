@@ -39,13 +39,13 @@ try {
       onHud: (hud) => {
         window.hud = hud
       },
-      onBanner: (text) => {
-        if (text.startsWith('매도벽 돌파!')) {
-          window.collapse = {
-            market: window.__mentalMarket(),
-            walls: window.__mentalWalls(),
-          }
+      onWallGain: () => {
+        window.collapse = {
+          market: window.__mentalMarket(),
+          walls: window.__mentalWalls(),
         }
+      },
+      onBanner: (text) => {
         if (text === '매도벽을 부수고 다음 벽으로!') {
           window.wallTransitions.push(window.__mentalWalls())
           if (window.__mentalWalls().some((wall) => wall.index > 0)) {

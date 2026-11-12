@@ -14,3 +14,9 @@ export function queueWallGain(queue: WallGain[], gain: WallGain): WallGain[] {
 export function shownPrice(price: number, queue: WallGain[]): number {
   return price - queue.reduce((sum, gain) => sum + gain.amount, 0)
 }
+
+/** 돌파한 벽의 비율이 아니라 종목 시작가 대비 실제 주가 상승률. */
+export function priceRise(price: number, start: number): string {
+  const percent = start > 0 ? ((price - start) / start) * 100 : 0
+  return `${Math.round(percent * 10) / 10}%`
+}

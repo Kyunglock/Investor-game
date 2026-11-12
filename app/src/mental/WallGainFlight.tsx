@@ -1,5 +1,5 @@
 import { type RefObject, useEffect, useEffectEvent, useRef } from 'react'
-import type { WallGain } from './wallGain'
+import { priceRise, type WallGain } from './wallGain'
 
 export function WallGainFlight({
   gain,
@@ -32,7 +32,7 @@ export function WallGainFlight({
             { opacity: 1, transform: 'translate(-50%, 0) scale(1)', offset: 0.15 },
             { opacity: 1, transform: 'translate(-50%, 0) scale(1)', offset: 0.55 },
             {
-              opacity: 0.5,
+              opacity: 0,
               transform: `translate(calc(-50% + ${dx}px), ${dy}px) scale(.3)`,
               offset: 1,
             },
@@ -52,8 +52,8 @@ export function WallGainFlight({
   }, [paused])
   return (
     <div ref={node} className="battle-wall-gain" data-testid="battle-wall-gain" aria-live="polite">
-      <small>매도벽 돌파</small>
-      <strong>+{((gain.amount / gain.start) * 100).toFixed(1)}%</strong>
+      <small>주가 상승</small>
+      <strong>+{priceRise(gain.start + gain.amount, gain.start)}</strong>
     </div>
   )
 }

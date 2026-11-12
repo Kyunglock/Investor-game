@@ -1468,7 +1468,6 @@ class BattleScene extends Phaser.Scene {
     sfx.crumble()
     sfx.crash()
     haptic.medium()
-    const price = this.assaultNow()
     const total = spec.walls.length
     this.pushHud(true)
     this.opts.onWallGain?.(spec.tick, spec.startPrice)
@@ -1478,10 +1477,7 @@ class BattleScene extends Phaser.Scene {
       }
       this.assaultCheckClear()
     } else {
-      this.opts.onBanner(
-        `매도벽 돌파! ${this.wallsBroken}/${total} · ${price.toLocaleString()}원`,
-        '#e8434f',
-      )
+      // 주가 상승 연출(onWallGain)만 표시해 같은 돌파 알림이 전장을 겹쳐 가리지 않게 한다.
       this.nextWallIn = ASSAULT_MOTION.breakSeconds
     }
     this.pushHud(true)
@@ -1643,7 +1639,7 @@ class BattleScene extends Phaser.Scene {
     if (!spec || this.over) return
     const bossAlive = Boolean(this.bossEnemy?.active && !this.bossEnemy.dying)
     if (this.wallsBroken >= spec.walls.length && !bossAlive) {
-      this.opts.onBanner(`목표가 돌파!! ${assaultTarget(spec).toLocaleString()}원`, '#ffd84d')
+      this.opts.onBanner('모든 매도벽 돌파!', '#ffd84d')
       haptic.success()
       this.clearShow()
       this.finish(true, 'clear', this.reducedMotion ? 900 : CLEAR_SHOW_MS)
@@ -1651,7 +1647,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   /**
-   * 공격 판 클리어 연출: 화면이 금빛으로 번쩍이고, 남은 물량이 모두 체결되며, "목표가 돌파!!"와 오른 비율이 크게 찍힌다. 위에서 색종이가 쏟아지고
+   * 공격 판 클리어 연출: 화면이 금빛으로 번쩍이고, 남은 물량이 모두 체결되며, "매도벽 돌파!"와 오른 비율이 크게 찍힌다. 위에서 색종이가 쏟아지고
    * 하늘 곳곳에서 불꽃이 터지며 사장냥이 펄쩍 뛴다.
    */
   private clearShow() {
@@ -1682,7 +1678,7 @@ class BattleScene extends Phaser.Scene {
       resolution: DPR,
     }
     const title = this.add
-      .text(w / 2, h * 0.36, '목표가 돌파!!', { ...style, fontSize: '46px' })
+      .text(w / 2, h * 0.36, '매도벽 돌파!', { ...style, fontSize: '46px' })
       .setOrigin(0.5)
       .setDepth(22)
       .setScale(0)
