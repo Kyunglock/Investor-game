@@ -606,7 +606,8 @@ class DefaultCompanyService implements CompanyService {
                 meetings.credit(c),
                 meetings.returnBp(invest),
                 meetings.gainBp(invest),
-                -meetings.lossBp(invest, invest.big),
+                // 틀린 쪽은 손실 없이 0이다 (#697).
+                0,
                 investBattle(c, invest));
     return new CompanyView.Invest(
         invest.title,
@@ -627,7 +628,7 @@ class DefaultCompanyService implements CompanyService {
         debate,
         engine.teamGrade.of(c),
         invest.scouted || Boolean.TRUE.equals(invest.found),
-        new CompanyView.InvestRange(-meetings.lossCapBp(), meetings.gainMaxBp()));
+        new CompanyView.InvestRange(0, meetings.gainMaxBp()));
   }
 
   /** 옛 저장(295번 전)은 kind가 없다: last면 두 줄 가운데 앞이 WIN, 뒤가 LOSE였지만 구분할 수 없어 WIN으로 읽는다. */

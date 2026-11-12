@@ -275,7 +275,7 @@ public record CompanyView(
   /**
    * 종목 회의 수익률의 범위 (decisions.md 388번, 만분율). 데스크 몫과 떼어 낸 회의만의 수익률이다.
    *
-   * @param lossBp 틀렸을 때 가장 크게 잃는 몫(음수, −50%)
+   * @param lossBp 틀렸을 때 가장 크게 잃는 몫. 틀려도 손실이 없어 늘 0이다(#697)
    * @param gainBp 맞혔을 때 가장 크게 버는 몫(+300%)
    */
   public record InvestRange(int lossBp, int gainBp) {}
@@ -334,7 +334,7 @@ public record CompanyView(
    * @param debate 맡겼을 때 매수파·매도파가 주고받은 말(decisions.md 285번). 맡기지 않았으면 비었다
    * @param returnBp 회의 수익률(만분율, decisions.md 388번) = 회의 손익 ÷ 건 판돈. 판돈을 적기 전에 정한 옛 회의면 null
    * @param gainBp 이 종목을 맞힌 쪽으로 했으면 번 수익률(만분율)
-   * @param lossBp 틀린 쪽으로 했으면 잃은 수익률(만분율, 음수, 크게 했으면 크게 틀린 몫)
+   * @param lossBp 틀린 쪽으로 했으면 잃은 수익률(만분율). 틀려도 손실이 없어 늘 0이다(#697)
    */
   public record InvestOutcome(
       String choice,
