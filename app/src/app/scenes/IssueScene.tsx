@@ -1,6 +1,10 @@
 import type { Company } from '@web/api/client'
+import { QuarterMeeting } from '../Windows'
 
-/** 이슈 장면 (6.1절, decisions.md 309번): 폭락 조짐·경보·선견·뜨는 섹터·시대의 끝, 올해 필요한 인재. 이직 제안 카드는 385번에서 뺐다. */
+/**
+ * 이슈 장면 (6.1절, decisions.md 309번): 맨 위에 종목회의(474번, 분기 넘기기), 그 아래 폭락 조짐·경보·선견·뜨는 섹터·시대의 끝, 올해 필요한 인재.
+ * 이직 제안 카드는 385번에서 뺐다.
+ */
 export function IssueScene({ company }: { company: Company }) {
   const m = company.meeting
   if (!m) {
@@ -9,6 +13,14 @@ export function IssueScene({ company }: { company: Company }) {
   const quiet = !m.omen && !m.earlyOmen && !m.forecast && !m.hot && !m.eraEnding
   return (
     <div className="grid gap-2" data-testid="issue-scene">
+      <section className="panel grid gap-1.5 p-3" data-testid="issue-meeting">
+        <p className="text-[15px] font-bold text-ink">종목회의</p>
+        <p className="text-[12px] text-ink/60">
+          기사를 읽고 매수·매도를 골라요. 맞히면 벌고, 틀려도 손실은 없어요. 회의가 끝나면 분기를
+          넘겨요.
+        </p>
+        <QuarterMeeting company={company} />
+      </section>
       {m.omen && (
         <Note
           tone="border-red-pen text-red-pen"

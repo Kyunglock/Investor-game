@@ -127,7 +127,6 @@ export function Windows({ company }: { company: Company }) {
           employees={company.employees}
           onClose={() => {
             setInvestOpen(false)
-            if (company.invest?.outcome) useAppUi.getState().setTab('office')
           }}
           onSettle={() => {
             setInvestOpen(false)
@@ -206,8 +205,6 @@ export function ActionBar({
   const settleSpot = useTutorialSpot(company, 'settle')
   // 튜토리얼 잠금 (347번): 분기 넘기기는 직원을 앉힌 뒤 열린다.
   const settleLocked = useLocked(company, 'settle')
-  const firstGame =
-    useTutorial((s) => s.active) && firstQuarter(company) && !company.invest?.outcome
   const ended = company.status === 'ENDED'
   const battle = company.invest?.outcome?.battle
   const pending = battle?.open ? battle : null
@@ -289,7 +286,7 @@ export function ActionBar({
           </button>
           <button
             type="button"
-            className={`toy-stat ${settleSpot}`}
+            className="toy-stat"
             data-testid="side-open"
             onClick={() => {
               sfx.tap()
@@ -298,11 +295,12 @@ export function ActionBar({
             }}
           >
             <small>보조게임</small>
-            <strong>종목·멘탈</strong>
+            <strong>멘탈 보호</strong>
             <em>
-              {pending ? '회의 뒤 전투 대기' : firstGame ? '첫 게임 시작' : '종목회의·멘탈 보호'}
+              {company.stages && company.stages.best > 0
+                ? `분기 +${company.stages.bonusPercent}%`
+                : '1-1부터'}
             </em>
-            {(pending || firstGame) && <b className="toy-badge">!</b>}
           </button>
         </div>
       </div>
@@ -340,8 +338,8 @@ export function ActionBar({
 }
 
 /**
- * 보조게임의 종목회의 칸 (#698): 분기 넘기기를 누르면 직원이 종목을 물어 오고 종목회의 → 결산으로 이어진다(382번). 회의 뒤 매도벽 돌파가 남아 있으면 그
- * 전투부터 한다. 메인 아래 가운데 자리에서 옮겨 왔다.
+ * 이슈 탭의 종목회의 칸 (474번): 누르면 직원이 종목을 물어 오고 종목회의 → 결산으로 이어진다(382번). 회의는 결과에 따라 수익만 정하고 매도벽 돌파로
+ * 이어지지 않는다. 옛 회의의 남은 전투가 열려 있으면 그 전투부터 한다.
  */
 export function QuarterMeeting({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
