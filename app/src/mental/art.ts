@@ -173,11 +173,9 @@ export function bakeEnemies(scene: Phaser.Scene) {
 
 /** 멘탈벽과 탄환은 실제 상태에 맞춰 게임 안에서 그린다. */
 export function bakeStage(scene: Phaser.Scene, _genre: Genre) {
-  const blocks = scene.textures.get('art-wallBlocks').getSourceImage() as HTMLImageElement
+  // 멘탈 보호 스테이지의 멘탈벽은 예전 반투명 보호막 그림이다. 매도벽 돌파의 블록 질감은 쓰지 않는다.
   for (const cracked of [false, true]) {
-    bake(scene, cracked ? 'wall-cracked' : 'wall', 512, 96, (c) =>
-      drawMentalWall(c, blocks, cracked),
-    )
+    bake(scene, cracked ? 'wall-cracked' : 'wall', 512, 96, (c) => drawMentalWall(c, cracked))
   }
   bake(scene, 'wall-ripple', 80, 50, (c) => {
     for (const r of [15, 25, 36]) {

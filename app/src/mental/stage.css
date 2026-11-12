@@ -77,10 +77,11 @@
 .stage-mini-wall {
   margin: -10px auto 9px;
   position: relative;
-  background: linear-gradient(#8edbd0, #48aaa6);
-  border: 2px solid #d5fff0;
-  box-shadow: 0 4px 0 #287e80;
-  border-radius: 12px;
+  /* 멘탈 보호 스테이지의 예전 반투명 멘탈벽 모양 (전투 안의 멘탈벽과 같게). */
+  background: #9de6dfbb;
+  border: 2px solid #d4ffff;
+  box-shadow: 0 0 0 1px #70c0c2;
+  border-radius: 50% 50% 8px 8px;
   padding: 9px;
   width: 220px;
   font-size: 12px;
