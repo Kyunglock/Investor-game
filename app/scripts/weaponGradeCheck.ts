@@ -10,7 +10,7 @@ mkdirSync(out, { recursive: true })
 const browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || 'msedge' })
 const grades = ['F', 'E', 'D', 'C', 'B', 'A', 'S']
 const kinds = ['pistol', 'pistol', 'revolver', 'smg', 'smg', 'shotgun', 'rifle']
-const damage = [100, 160, 300, 125, 175, 2200, 3630]
+const damage = [100, 160, 450, 165, 230, 1980, 1815]
 const fire = [260, 234, 510, 80, 64, 560, 360]
 const names = ['권총', '권총', '리볼버', '기관단총', '기관단총', '폭발포', '성운포']
 const weapons = grades.map((grade, i) => ({

@@ -161,14 +161,16 @@ raising:
         smg: { damage-percent: 50, fire-ms: 80, power: 0, bullet-speed: 700 }
         shotgun: { damage-percent: 220, fire-ms: 700, power: 2, bullet-speed: 640 }
         rifle: { damage-percent: 330, fire-ms: 900, power: 3, bullet-speed: 1100 }
+      # 등급 밸런스 (decisions.md 461번, #683): 한 대상에 대한 실효 초당 피해(탄 강화 1+0.4×power, 리볼버 치명타·재장전 포함)가 한 등급에
+      # 약 1.75배씩 오른다. F 385 → E 684 → D 1,197 → C 2,062 → B 3,594 → A 6,364 → S 11,091. 종류별 바탕 수치(430번)는 그대로다
       weapon-grades:
         F: { kind: pistol, damage-percent: 0, fire-percent: 0 }
         E: { kind: pistol, damage-percent: 60, fire-percent: 10 }
-        D: { kind: revolver, damage-percent: 20, fire-percent: 15 }
-        C: { kind: smg, damage-percent: 150, fire-percent: 0 }
-        B: { kind: smg, damage-percent: 250, fire-percent: 20 }
-        A: { kind: shotgun, damage-percent: 900, fire-percent: 20 }
-        S: { kind: rifle, damage-percent: 1000, fire-percent: 60 }
+        D: { kind: revolver, damage-percent: 80, fire-percent: 15 }
+        C: { kind: smg, damage-percent: 230, fire-percent: 0 }
+        B: { kind: smg, damage-percent: 360, fire-percent: 20 }
+        A: { kind: shotgun, damage-percent: 800, fire-percent: 20 }
+        S: { kind: rifle, damage-percent: 450, fire-percent: 60 }
       # 무기 뽑기 (decisions.md 366번): 무기 뽑기권 한 장에 한 번. 등급 가중치로 등급을, 종류는 등급에 따라 정한다. 같은 무기(종류+등급)가 merge-count개
       # 모이면 합쳐 한 등급 올린다. 뽑기권은 처음 start-tickets장, 분기 전투를 마칠 때마다 battle-tickets장
       # (스테이지를 처음 깰 때·별·EX 도전 보상은 #493에서 붙는다)
