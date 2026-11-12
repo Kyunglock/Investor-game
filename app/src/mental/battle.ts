@@ -3300,11 +3300,8 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
-  // 땅 (433번): 매도벽 돌파용 충차. 가장 가까운 매도벽 칸·큰손(없으면 체력이 가장 많은 적)을 향해 땅을 박차고 돌진한다. 지나가는 보통 적은 옆으로
-  // 밀쳐 내며 꿰뚫고, 벽·큰손에 닿으면 쾅 들이받고(피해 × siege) 멈춘다. 돌 충차(Lv.1) → 흙먼지를 끄는 바위 충차(Lv.2) → 돌기둥이 솟고 충격파가
-  // 퍼지는 대지 충차(Lv.3).
-
-  private isSiege = (e: Enemy) => Boolean(e.cell) || e.boss
+  // 충차는 매도벽만 겨냥한다. 이동 중 일반 적과 보스는 통과한다.
+  private isSiege = (e: Enemy) => Boolean(e.cell)
 
   private castEarth(from: { x: number; y: number }, level: number): boolean {
     const st = earthStats(level)
@@ -3312,8 +3309,7 @@ class BattleScene extends Phaser.Scene {
     const s = this.rams.find((r) => !r.active)
     if (!target || !s) return false
     const tier = magicTier(level)
-    // 충차는 늘 아래(시전자 줄)에서 위로 곧게 들이받는다. 매도벽은 길 폭을 다 덮는 덩어리라 시전자 바로 위를(벽 끝을 넘지 않게), 큰손·적은 그
-    // 바로 밑에서 출발한다.
+    // 충차는 시전자 바로 위의 매도벽을 향해 곧게 달린다. 출발점은 벽 끝을 넘지 않게 한다.
     let sx = target.x
     if (target.cell) {
       const half = Math.max(0, target.displayWidth / 2 - 14)
@@ -3395,42 +3391,25 @@ class BattleScene extends Phaser.Scene {
         }
       }
     }
-    const angle = Math.atan2(s.dy, s.dx)
     for (const e of this.magicTargets()) {
-      if (s.hitList.includes(e)) continue
-      if (e.cell) {
-        // 벽 덩어리는 가로로 길어 원이 아니라 네모로 본다.
-        if (
-          Math.abs(e.x - s.x) > e.displayWidth / 2 + 6 ||
-          Math.abs(e.y - s.y) > e.displayHeight / 2 + s.depth
-        )
-          continue
-        this.ramImpact(s, st, e)
-        return
-      }
-      if (!sweepHits(s, e, UNITS[e.kind].r)) continue
-      if (e.boss) {
-        this.ramImpact(s, st, e)
-        return
-      }
-      s.hitList.push(e)
-      // 옆으로 밀쳐 낸다: 충차 오른쪽에 있으면 오른쪽으로, 왼쪽이면 왼쪽으로, 조금 앞으로도.
-      const px = -s.dy
-      const py = s.dx
-      const side = (e.x - s.x) * px + (e.y - s.y) * py >= 0 ? 1 : -1
-      e.kbx += (px * side + s.dx * 0.3) * st.push
-      e.kby += (py * side + s.dy * 0.3) * st.push
-      this.dustFx.explode(this.fx(2 + tier), e.x, e.y)
-      this.hit(e, st.damage * this.loadout.damage, angle, 'earth')
+      if (!this.isSiege(e)) continue
+      // 벽 덩어리는 가로로 길어 원이 아니라 네모로 본다.
+      if (
+        Math.abs(e.x - s.x) > e.displayWidth / 2 + 6 ||
+        Math.abs(e.y - s.y) > e.displayHeight / 2 + s.depth
+      )
+        continue
+      this.ramImpact(s, st, e)
+      return
     }
   }
 
-  /** 들이받는다: 벽 칸·큰손에 피해 × siege, 충차가 튕겨 났다 사라지고 돌 조각과 먼지가 쏟아진다. 대지 충차는 둘레에 충격파와 돌기둥. */
+  /** 들이받는다: 매도벽에 피해 × siege, 충차가 튕겨 났다 사라지고 돌 조각과 먼지가 쏟아진다. 대지 충차는 둘레에 충격파와 돌기둥. */
   private ramImpact(s: RamShot, st: EarthStats, e: Enemy) {
     const tier = magicTier(s.level)
     const grow = this.grow(s.level)
     s.active = false
-    // 부딪힌 자리: 벽이면 벽의 앞(아래) 끝, 큰손이면 그 몸.
+    // 부딪힌 자리: 매도벽의 앞(아래) 끝.
     const x = s.x
     const y = e.cell ? e.y + e.displayHeight / 2 : s.y
     const img = s.img
@@ -3460,22 +3439,11 @@ class BattleScene extends Phaser.Scene {
     const dmg = st.damage * this.loadout.damage
     this.hit(e, dmg * st.siege, angle, 'siege')
     if (st.quake > 0) {
-      // 충격파: 들이받은 둘레의 적이 밀려나며 맞는다. 땅이 갈라지며 돌기둥이 솟는다.
+      // 충격파와 돌기둥은 시각 효과만 낸다. 주변 적에게 피해나 밀림을 주지 않는다.
       this.time.delayedCall(70, () => this.ring(x, y, 0xb88a52, st.quake * 1.15, 360))
       for (let i = 0; i < 3; i++) {
         const a = angle + Math.PI + (i - 1) * 0.9
         this.spike(x + Math.cos(a) * st.quake * 0.5, y + 16 + Math.sin(a) * 10, grow)
-      }
-      for (const o of this.magicTargets()) {
-        if (o === e || o.cell || o.boss) continue
-        const reach = st.quake + UNITS[o.kind].r
-        const ox = o.x - x
-        const oy = o.y - y
-        if (ox * ox + oy * oy > reach * reach) continue
-        const oa = Math.atan2(oy, ox)
-        o.kbx += Math.cos(oa) * st.push
-        o.kby += Math.sin(oa) * st.push
-        this.hit(o, dmg, oa, 'earth')
       }
     }
   }

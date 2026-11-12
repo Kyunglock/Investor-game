@@ -53,13 +53,10 @@ export interface LightningStats {
   bolts: number
 }
 
-/**
- * 땅 (433번): 매도벽 돌파용 충차. 바위 충차가 땅을 박차고 곧게 돌진해 앞을 막는 적은 밀쳐 내며 꿰뚫고, 매도벽 칸이나 큰손(보스)에 닿으면 쾅 들이받고
- * 멈춘다. 들이받을 때는 피해에 siege를 곱한다: 보통 적에게는 약하고 벽에는 아주 세다.
- */
+/** 매도벽 돌파용 충차. 매도벽에만 damage × siege 피해를 주며, 일반 적과 보스는 통과한다. */
 export interface EarthStats {
   cooldown: number
-  /** 지나가며 들이받는 보통 적의 피해(공격력 배율). 벽·큰손은 이것에 siege를 곱한다. */
+  /** 매도벽 피해의 기본 공격력 배율. siege를 곱해 적용한다. */
   damage: number
   siege: number
   /** 맞는 폭의 절반(px)과 다 달린 빠르기(px/s). 처음엔 느리게 출발해 빨라진다. */
@@ -67,7 +64,7 @@ export interface EarthStats {
   speed: number
   /** 지나가며 옆으로 밀쳐 내는 세기(px/s). */
   push: number
-  /** 들이받은 자리의 충격파 반지름(px, 3단계부터): 둘레의 적도 damage만큼 맞는다. 0이면 없다. */
+  /** 들이받은 자리의 시각 효과 반지름(px, 3단계부터). 주변 피해는 없다. */
   quake: number
 }
 
@@ -258,7 +255,7 @@ export function strongest<T extends Point & { hp: number }>(
 }
 
 /**
- * 땅의 과녁 (433번): 들이받을 것(매도벽 칸·큰손, isSiege) 가운데 시전자에게 가장 가까운 것. 없으면 번개처럼 체력이 가장 많은 적.
+ * 충차의 과녁: 매도벽 가운데 시전자에게 가장 가까운 것. 매도벽이 없으면 발사하지 않는다.
  */
 export function siegeTarget<T extends Point & { hp: number }>(
   list: readonly T[],
@@ -275,7 +272,7 @@ export function siegeTarget<T extends Point & { hp: number }>(
       best = p
     }
   }
-  return best ?? strongest(list, from)
+  return best
 }
 
 /** 충차의 빠르기: 출발해서 RAM_SPOOL초 동안 다 달린 빠르기의 35%에서 100%까지 빨라진다(땅을 박차고 가속하는 맛). */

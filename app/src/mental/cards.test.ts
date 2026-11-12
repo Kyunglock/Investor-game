@@ -150,9 +150,9 @@ describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
     expect(magicEffect('lightning', 4)).toContain('2줄기')
     // 땅 (433번): 벽·큰손을 들이받는 피해와, 3단계부터 충격파.
     expect(magicEffect('earth', 1)).toContain('돌 충차')
-    expect(magicEffect('earth', 1)).toContain('벽·큰손 피해 408%')
+    expect(magicEffect('earth', 1)).toContain('매도벽만 공격 · 피해 408%')
     expect(magicEffect('earth', 2)).not.toContain('충격파')
-    expect(magicEffect('earth', 3)).toContain('대지 충차 · 벽·큰손 피해 798% · 충격파')
+    expect(magicEffect('earth', 3)).toContain('대지 충차 · 매도벽만 공격 · 피해 798%')
     for (const m of MAGICS) {
       expect(magicEffect(m, 1)).not.toBe(magicEffect(m, 2))
     }
