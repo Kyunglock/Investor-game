@@ -53,7 +53,7 @@ describe('카드 자동 선택 (#566)', () => {
     expect(
       autoPickIndex([
         { grade: 'N', code: 'atk' },
-        { grade: 'SR', code: 'fire' },
+        { grade: 'SR', code: 'meteor' },
         { grade: 'R', code: 'water' },
       ]),
     ).toBe(1)

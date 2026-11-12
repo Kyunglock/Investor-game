@@ -1,4 +1,4 @@
-// 매도벽은 한 묶음이다 (#681): 범위 마법(불·물)이 터져도 맨 아래 층만 깎이고 그 위층은 그대로다. 넘친 피해는 다음 층으로 이어진다.
+// 매도벽은 한 묶음이다 (#681): 범위 마법(메테오·물)이 터져도 맨 아래 층만 깎이고 그 위층은 그대로다. 넘친 피해는 다음 층으로 이어진다.
 // 개발 서버(APP_URL, 기본 http://127.0.0.1:5299/app/)를 띄운 뒤 `node scripts/wallBundleCheck.mjs`.
 import assert from 'node:assert/strict'
 import { chromium } from '@playwright/test'
@@ -27,7 +27,7 @@ try {
     const host = document.createElement('div')
     host.style.cssText = 'position:fixed;inset:0;z-index:99999'
     document.body.append(host)
-    // 총은 거의 쏘지 않고, 범위가 가장 넓은 불(Lv.5)·물(Lv.5)만 벽에 터지게 한다. 첫 벽은 세 층으로 아주 단단하게.
+    // 총은 거의 쏘지 않고, 범위가 가장 넓은 메테오(Lv.5)·물(Lv.5)만 벽에 터지게 한다. 첫 벽은 세 층으로 아주 단단하게.
     const loadout = { ...cards.loadoutOf(DEFAULT_WEAPON), damage: 0.5, fireMs: 100000 }
     const spec = assaultSpec(1)
     spec.walls = spec.walls.map((wall, i) => (i === 0 ? { ...wall, rows: 3, cellHp: 400 } : wall))
@@ -43,7 +43,7 @@ try {
       onLevelUp: () => setTimeout(() => handle.applyLoadout(loadout), 0),
       onDone: () => {},
     })
-    window.magicOn = () => window.__mentalMagic({ fire: 5, water: 5 })
+    window.magicOn = () => window.__mentalMagic({ meteor: 5, water: 5 })
   })
   await page.waitForFunction(() => window.__mentalWalls?.()[0]?.arrived)
   await page.evaluate(() => window.magicOn())

@@ -6,16 +6,15 @@ import { shareLabel } from './shares'
  * (그리는 것은 battle.ts의 damageNumber).
  */
 
-/** 피해 종류: 총알·치명타(리볼버)·마법 넷(물·불·번개·땅)·불 지속(화상 틱)·번개 튐. 땅(433번)은 충차가 지나가며 밀친 피해, 들이받기(siege)는 벽·큰손을 들이받는 한 방이라 크고 합치지 않는다. */
+/** 피해 종류: 총알·치명타(리볼버)·마법 넷(물·메테오·번개·땅)·번개 튐. 땅(433번)은 충차가 지나가며 밀친 피해, 들이받기(siege)는 벽·큰손을 들이받는 한 방이라 크고 합치지 않는다. */
 export type DamageKind =
   | 'bullet'
   | 'crit'
   | 'water'
-  | 'fire'
+  | 'meteor'
   | 'lightning'
   | 'earth'
   | 'siege'
-  | 'burn'
   | 'chain'
 
 export interface DamageStyle {
@@ -37,19 +36,15 @@ export const DAMAGE_STYLE: Record<DamageKind, DamageStyle> = {
   bullet: { color: '#ffffff', scale: 0.7, life: 460, rise: 26, merge: true },
   crit: { color: '#ffd84d', scale: 1.05, life: 640, rise: 34, merge: false },
   water: { color: '#6cc8ff', scale: 0.7, life: 460, rise: 26, merge: true },
-  fire: { color: '#ff9a3c', scale: 0.7, life: 460, rise: 26, merge: true },
+  meteor: { color: '#ff926f', scale: 0.7, life: 460, rise: 26, merge: true },
   lightning: { color: '#ffe94d', scale: 0.7, life: 460, rise: 26, merge: true },
   earth: { color: '#e0a860', scale: 0.7, life: 460, rise: 26, merge: true },
   siege: { color: '#ffb35c', scale: 0.95, life: 600, rise: 32, merge: false },
-  burn: { color: '#ff9a3c', scale: 0.5, life: 380, rise: 18, merge: true },
   chain: { color: '#ffe94d', scale: 0.6, life: 420, rise: 22, merge: true },
 }
 
 /** 같은 적의 같은 피해를 하나로 합치는 시간(ms): 처음 뜬 때부터 센다(합쳐도 오래 남지 않게). */
 export const MERGE_MS = 150
-
-/** 불 지속 피해를 숫자로 묶어 띄우는 간격(초): 틱마다 작게. */
-export const BURN_TICK_SECONDS = 0.5
 
 /** 화면에 동시에 떠 있는 숫자의 최대: 넘치면 가장 오래된 숫자를 돌려 쓴다. 치명타는 따로. */
 export const DAMAGE_POOL = 36

@@ -73,7 +73,6 @@ import { catMuzzle, mateModel } from './catModels'
 import { CIRCUIT_BREAKER, CircuitBreaker } from './circuitBreaker'
 import { CircuitBreakerFx } from './circuitBreakerFx'
 import {
-  BURN_TICK_SECONDS,
   CRIT_POOL,
   DAMAGE_FONT_PX,
   DAMAGE_POOL,
@@ -93,12 +92,13 @@ import {
   densest,
   type EarthStats,
   earthStats,
-  fireStats,
   type LightningStats,
   lightningPlan,
   lightningStats,
   MagicClock,
   magicTier,
+  meteorFalloff,
+  meteorStats,
   nearestTo,
   ramSpeed,
   siegeTarget,
@@ -238,13 +238,9 @@ type Enemy = Phaser.Physics.Arcade.Image & {
   slowUntil: number
   /** 느린 동안의 빠르기 배율(기관단총·물 마법, 376·392번). */
   slowFactor: number
-  /** 불 마법에 타는 동안(전투 시각, 초)과 초당 피해 (392번). */
-  burnUntil: number
-  burnDps: number
-  /** 화상 피해를 숫자로 묶는 중(391번): 지난 숫자 뒤로 탄 피해와 시간(초). BURN_TICK_SECONDS마다 하나로 띄운다. */
-  burnShown: number
-  burnTick: number
-  /** 지금 칠해 둔 빛: 없음·파랑(느림)·주황(화상). */
+  /** 메테오에 맞아 멈추는 종료 시각(초). */
+  stunUntil: number
+  /** 지금 칠해 둔 빛: 없음·파랑(느림)·주황(기절). */
   chilled: boolean
   tintKind: 0 | 1 | 2
   /** 제 크기(배율): 맞아 들썩인 뒤 늘 여기로 돌아온다. 들썩임이 겹쳐 가로세로가 따로 불어 찌그러지던 것을 막는다. */
@@ -347,28 +343,17 @@ interface WaterShot {
   travelled: number
   hitList: Enemy[]
 }
-/** 포물선으로 날아가는 불덩이: 출발·도착 자리와 진행(0~1). */
-interface FireShot {
+/** 미리 만든 운석·경고 원·크레이터를 돌려 쓴다. */
+interface MeteorShot {
   img: Phaser.GameObjects.Image
+  warning: Phaser.GameObjects.Image
+  crater: Phaser.GameObjects.Image
   active: boolean
   level: number
-  sx: number
-  sy: number
   tx: number
   ty: number
-  height: number
   t: number
-  duration: number
-}
-/** 불덩이가 떨어진 자리에 남는 불길: 그동안 들어온 적도 탄다. */
-interface FirePatch {
-  img: Phaser.GameObjects.Image
-  active: boolean
-  level: number
-  x: number
-  y: number
-  until: number
-  nextTick: number
+  delay: number
 }
 /** 공격 판 클리어 연출(clearShow)을 보이는 시간(ms): 끝나면 결과 화면으로 넘어간다. */
 const CLEAR_SHOW_MS = 2300
@@ -398,8 +383,6 @@ const SPIKE_GAP = 48
 /** 물이 날아갈 수 있는 거리(px)와, 끝에서 이만큼 남으면 옅어지기 시작한다. */
 const WATER_RANGE = 820
 const WATER_FADE = 140
-/** 불길이 둘레의 적을 태우는 간격(초). */
-const PATCH_TICK = 0.25
 
 /** 개발 서버의 확인 스크립트(app/scripts/stageCheck.ts)가 읽는 데미지 숫자 집계. 운영 빌드에는 내보내지 않는다. */
 export interface DamageStats {
@@ -548,24 +531,23 @@ class BattleScene extends Phaser.Scene {
       bullet: 0,
       crit: 0,
       water: 0,
-      fire: 0,
+      meteor: 0,
       lightning: 0,
       earth: 0,
       siege: 0,
-      burn: 0,
       chain: 0,
     },
     rams: 0,
     merged: 0,
     killing: 0,
     peak: 0,
-    casts: { water: 0, fire: 0, lightning: 0, earth: 0 },
+    casts: { water: 0, meteor: 0, lightning: 0, earth: 0 },
     mateCasts: [0, 0, 0],
     awakenedMates: 0,
     mateShots: 0,
     mates: 0,
   }
-  /** 마법 (392번): 쏘는 주체들과 풀에서 돌려 쓰는 탄·불길·번개 줄기·빛, 마법마다 파티클 하나. */
+  /** 마법 (392번): 쏘는 주체들과 풀에서 돌려 쓰는 탄·운석·번개 줄기·빛, 마법마다 파티클 하나. */
   private casters: MagicCaster[] = []
   /** 함께 싸우는 고양이 (393번): 들어온 차례대로. */
   private mates: Mate[] = []
@@ -574,17 +556,13 @@ class BattleScene extends Phaser.Scene {
   private targetAt = 0
   private lastSound: Partial<Record<SoundKey, number>> = {}
   private waters: WaterShot[] = []
-  private embers: FireShot[] = []
-  private patches: FirePatch[] = []
-  private patchIndex = 0
+  private meteors: MeteorShot[] = []
   private bolts: Phaser.GameObjects.Graphics[] = []
   private boltIndex = 0
   private rings: Phaser.GameObjects.Image[] = []
   private ringIndex = 0
   private glows: Phaser.GameObjects.Image[] = []
   private glowIndex = 0
-  private pillars: Phaser.GameObjects.Image[] = []
-  private pillarIndex = 0
   private rams: RamShot[] = []
   /** 충차의 "쿵!" 글자(넷을 돌려 쓴다). */
   private thumps: Phaser.GameObjects.Text[] = []
@@ -1312,10 +1290,7 @@ class BattleScene extends Phaser.Scene {
     e.wallPushUntil = 0
     e.slowUntil = 0
     e.slowFactor = 1
-    e.burnUntil = 0
-    e.burnDps = 0
-    e.burnShown = 0
-    e.burnTick = 0
+    e.stunUntil = 0
     e.chilled = false
     e.tintKind = 0
     e.kbx = 0
@@ -2167,10 +2142,7 @@ class BattleScene extends Phaser.Scene {
     e.wallPushUntil = 0
     e.slowUntil = 0
     e.slowFactor = 1
-    e.burnUntil = 0
-    e.burnDps = 0
-    e.burnShown = 0
-    e.burnTick = 0
+    e.stunUntil = 0
     e.chilled = false
     e.tintKind = 0
     const v = UNITS[kind]
@@ -2889,7 +2861,7 @@ class BattleScene extends Phaser.Scene {
     b.life = now + BULLET_LIFE
   }
 
-  /** 적의 빛: 화상이면 주황, 느리면 파랑, 아니면 원래대로. */
+  /** 적의 빛: 기절이면 주황, 느리면 파랑, 아니면 원래대로. */
   private paint(e: Enemy) {
     if (e.tintKind === 2) e.setTint(0xffb38a)
     else if (e.tintKind === 1) e.setTint(0x9fd4ff)
@@ -2907,7 +2879,7 @@ class BattleScene extends Phaser.Scene {
 
   // ── 마법 (392번): 총알과 따로, 제 주기에 스스로 나간다. 레벨이 오를수록 연출이 세 단계로 화려해진다.
 
-  /** 마법의 풀과 파티클을 만든다. 탄·불길·줄기·빛은 미리 만들어 돌려 쓰고, 파티클은 한꺼번에 살아 있는 수를 묶어 폰에서 끊기지 않게 한다. */
+  /** 마법의 풀과 파티클을 만든다. 탄·운석·줄기·빛은 미리 만들어 돌려 쓰고, 파티클은 한꺼번에 살아 있는 수를 묶어 폰에서 끊기지 않게 한다. */
   private createMagic() {
     this.casters.push({
       at: () => ({ x: this.player.x, y: this.player.y - 24 }),
@@ -2961,35 +2933,24 @@ class BattleScene extends Phaser.Scene {
         hitList: [],
       })
     }
-    for (let i = 0; i < 12; i++) {
-      this.embers.push({
-        img: hidden('magic-ember', 6),
+    for (let i = 0; i < 24; i++) {
+      this.meteors.push({
+        img: hidden('magic-rock', 6),
+        warning: hidden('magic-ring', 3),
+        crater: hidden('magic-scorch', 2.5).setTint(0x705d72),
         active: false,
         level: 1,
-        sx: 0,
-        sy: 0,
         tx: 0,
         ty: 0,
-        height: 0,
         t: 0,
-        duration: 1,
+        delay: 0,
       })
-      this.patches.push({
-        img: hidden('magic-scorch', 2.5),
-        active: false,
-        level: 1,
-        x: 0,
-        y: 0,
-        until: 0,
-        nextTick: 0,
-      })
-      this.bolts.push(this.add.graphics().setDepth(8).setVisible(false))
     }
+    for (let i = 0; i < 12; i++) this.bolts.push(this.add.graphics().setDepth(8).setVisible(false))
     for (let i = 0; i < 20; i++) {
       this.rings.push(hidden('magic-ring', 6))
       this.glows.push(hidden('magic-glow', 5))
     }
-    for (let i = 0; i < 6; i++) this.pillars.push(hidden('magic-pillar', 6).setOrigin(0.5, 1))
     // 땅 (433번): 충차 풀(고양이 넷이 같이 써도 넉넉히), 돌기둥, 흙먼지·돌 조각 파티클.
     this.dustFx = soft({
       speed: { min: 20, max: 120 },
@@ -3127,8 +3088,8 @@ class BattleScene extends Phaser.Scene {
         const cast =
           m === 'water'
             ? this.castWater(from, level)
-            : m === 'fire'
-              ? this.castFire(from, level)
+            : m === 'meteor'
+              ? this.castMeteor(from, level)
               : m === 'earth'
                 ? this.castEarth(from, level)
                 : this.castLightning(from, level)
@@ -3145,17 +3106,8 @@ class BattleScene extends Phaser.Scene {
 
   private updateMagic(dt: number) {
     for (const s of this.waters) if (s.active) this.moveWater(s, dt)
-    for (const s of this.embers) if (s.active) this.moveEmber(s, dt)
-    for (const p of this.patches) if (p.active) this.burnPatch(p)
+    for (const s of this.meteors) if (s.active) this.moveMeteor(s, dt)
     for (const r of this.rams) if (r.active) this.moveRam(r, dt)
-  }
-
-  /** 불에 탄다: 타는 중이면 더 센 불과 더 긴 시간을 남긴다. 피해는 update의 화상 틱이 준다. */
-  private ignite(e: Enemy, dps: number, seconds: number) {
-    if (this.beyondWall(e)) return
-    const burning = e.burnUntil > this.elapsed
-    e.burnDps = burning ? Math.max(e.burnDps, dps) : dps
-    e.burnUntil = Math.max(e.burnUntil, this.elapsed + seconds)
   }
 
   // 물: 가까운 적에게 물방울(Lv.1, 맞으면 터져 둘레를 적신다) → 물줄기(Lv.2, 꿰뚫는다) → 큰 물결(Lv.3, 넓게 쓸고 간다). 맞은 적은 느려진다.
@@ -3255,129 +3207,96 @@ class BattleScene extends Phaser.Scene {
     s.img.setVisible(false)
   }
 
-  // 불: 적이 가장 많이 모인 곳에 불씨(Lv.1) → 불덩이(Lv.2) → 불기둥과 폭발(Lv.3)을 던진다. 떨어진 둘레가 타고 불길이 잠시 남는다.
+  // 메테오: 밀집된 적을 예측 조준하고 경고 원 뒤 운석을 수직 낙하시킨다. 화상·지형 피해는 없다.
 
-  private castFire(from: { x: number; y: number }, level: number): boolean {
-    const st = fireStats(level)
-    const target = densest(this.magicTargets(), st.radius)
-    const s = this.embers.find((f) => !f.active)
-    if (!target || !s) return false
-    const tier = magicTier(level)
-    const d = Math.hypot(target.x - from.x, target.y - from.y)
-    s.duration = 0.36 + d / 1600
-    // 내려오는 적이 닿을 자리를 앞질러 노린다.
+  private castMeteor(from: { x: number; y: number }, level: number): boolean {
+    const st = meteorStats(level)
+    // 시전자별로 같은 밀집도의 적은 가까운 쪽부터 고른다.
+    const candidates = [...this.magicTargets()].sort(
+      (a, b) => Math.hypot(a.x - from.x, a.y - from.y) - Math.hypot(b.x - from.x, b.y - from.y),
+    )
+    const target = densest(candidates, st.radius)
+    const free = this.meteors.filter((s) => !s.active)
+    if (!target || free.length < st.count) return false
     const v = target.body?.velocity
-    s.active = true
-    s.level = level
-    s.sx = from.x
-    s.sy = from.y
-    s.tx = target.x + (v?.x ?? 0) * s.duration
-    s.ty = target.y + (v?.y ?? 0) * s.duration
-    s.height = Math.min(140, d * 0.35)
-    s.t = 0
-    s.img
-      .setPosition(from.x, from.y)
-      .setScale(TEX * [0.75, 1.15, 1.6][tier - 1] * this.grow(level))
-      .setAlpha(1)
-      .setVisible(true)
+    for (let i = 0; i < st.count; i++) {
+      const s = free[i]
+      s.active = true
+      s.level = level
+      s.delay = i * 0.16
+      s.t = -s.delay
+      s.tx = Phaser.Math.Clamp(
+        target.x +
+          (v?.x ?? 0) * (st.warning + s.delay) +
+          (i ? (i % 2 ? -1 : 1) * st.radius * 0.25 : 0),
+        12,
+        this.view().w - 12,
+      )
+      s.ty = Phaser.Math.Clamp(
+        target.y + (v?.y ?? 0) * (st.warning + s.delay),
+        12,
+        this.view().h - 50,
+      )
+      s.img.setVisible(false).setTint(0xc98b72).setAlpha(1)
+      s.warning
+        .setPosition(s.tx, s.ty)
+        .setTint(0xff8d76)
+        .setDisplaySize(st.radius * 2, st.radius)
+        .setAlpha(0.6)
+        .setVisible(false)
+    }
     this.playSound('whoosh')
     return true
   }
 
-  private moveEmber(s: FireShot, dt: number) {
-    s.t = Math.min(1, s.t + dt / s.duration)
-    const x = s.sx + (s.tx - s.sx) * s.t
-    const y = s.sy + (s.ty - s.sy) * s.t - Math.sin(Math.PI * s.t) * s.height
-    // 불꽃의 꼬리가 비행 방향 뒤로 흐른다.
-    const vx = s.tx - s.sx
-    const vy = s.ty - s.sy - Math.cos(Math.PI * s.t) * Math.PI * s.height
-    s.img.setPosition(x, y).setRotation(Math.atan2(vy, vx) - Math.PI / 2)
-    this.fireFx.emitParticleAt(x, y, magicTier(s.level) === 3 ? 2 : 1)
-    if (s.t >= 1) {
-      s.active = false
-      s.img.setVisible(false)
-      this.fireExplode(s.tx, s.ty, s.level)
-    }
+  private moveMeteor(s: MeteorShot, dt: number) {
+    s.t += dt
+    if (s.t < 0) return
+    const st = meteorStats(s.level)
+    const progress = Math.min(1, s.t / st.warning)
+    s.warning.setVisible(true).setAlpha(0.3 + progress * 0.45)
+    const drop = Math.max(0, (progress - 0.45) / 0.55)
+    const size = (s.level === 1 ? 26 : 40) * this.grow(s.level)
+    s.img
+      .setVisible(drop > 0)
+      .setDisplaySize(size, size)
+      .setPosition(s.tx, s.ty - 280 * (1 - drop * drop))
+      .setRotation(drop * 1.5)
+    if (drop > 0 && !this.reducedMotion) this.fireFx.emitParticleAt(s.img.x, s.img.y - size / 2, 1)
+    if (progress < 1) return
+    s.active = false
+    s.img.setVisible(false)
+    s.warning.setVisible(false)
+    this.meteorImpact(s)
   }
 
-  private fireExplode(x: number, y: number, level: number) {
-    const st = fireStats(level)
-    const tier = magicTier(level)
-    const grow = this.grow(level)
-    this.ring(x, y, 0xff8a2a, st.radius, 260 + tier * 60)
-    this.glow(x, y, 0xffc04d, st.radius * 0.9, 240 + tier * 40, 0.85)
-    this.fireFx.explode(this.fx([8, 16, 28][tier - 1]), x, y)
-    if (tier >= 2) this.glow(x, y, 0xff5a1f, st.radius * 0.55, 380)
-    if (tier === 3) {
-      // 불기둥: 솟구쳤다 사그라든다. 두 번째 고리가 늦게 퍼지며 폭발이 크게 보인다.
-      const pillar = this.pillars[this.pillarIndex++ % this.pillars.length]
-      this.tweens.killTweensOf(pillar)
-      pillar
-        .setPosition(x, y + st.radius * 0.25)
-        .setScale(TEX * 1.1 * grow, 0)
-        .setAlpha(1)
-        .setVisible(true)
-      this.tweens.add({
-        targets: pillar,
-        scaleY: TEX * 1.25 * grow,
-        duration: 180,
-        ease: 'Back.easeOut',
-        onComplete: () =>
-          this.tweens.add({
-            targets: pillar,
-            alpha: 0,
-            scaleX: TEX * 0.6 * grow,
-            delay: 120,
-            duration: 520,
-            onComplete: () => pillar.setVisible(false),
-          }),
-      })
-      this.time.delayedCall(90, () => this.ring(x, y, 0xffd04d, st.radius * 1.25, 360))
-    }
-    this.playSound('boom')
-    const dmg = st.damage * this.loadout.damage
-    const dps = st.burnDps * this.loadout.damage
-    for (const e of this.magicTargets()) {
-      const reach = st.radius + UNITS[e.kind].r
-      if ((e.x - x) ** 2 + (e.y - y) ** 2 > reach * reach) continue
-      this.ignite(e, dps, st.burnSeconds)
-      this.hit(e, dmg, Math.atan2(e.y - y, e.x - x), 'fire')
-    }
-    const p = this.patches[this.patchIndex++ % this.patches.length]
-    p.active = true
-    p.level = level
-    p.x = x
-    p.y = y
-    p.until = this.elapsed + st.patchSeconds
-    p.nextTick = this.elapsed + PATCH_TICK
-    p.img
+  private meteorImpact(s: MeteorShot) {
+    const { tx: x, ty: y, level } = s
+    const st = meteorStats(level)
+    this.ring(x, y, 0xff9a78, st.radius, 380)
+    if (!this.reducedMotion) this.glow(x, y, 0xffc49a, st.radius, 240, 0.7)
+    this.rockFx.explode(this.fx(10 + level * 3), x, y)
+    this.dustFx.explode(this.fx(8 + level * 2), x, y)
+    this.tweens.killTweensOf(s.crater)
+    s.crater
       .setPosition(x, y)
-      .setDisplaySize(st.radius * 2.2, st.radius * 1.2)
-      .setAlpha(0.75)
+      .setDisplaySize(st.radius * 1.5, st.radius * 0.65)
+      .setAlpha(0.5)
       .setVisible(true)
-  }
-
-  /** 남은 불길: 틱마다 불꽃이 일렁이고 둘레에 들어온 적에 불이 붙는다. 끝나기 0.4초 전부터 옅어진다. */
-  private burnPatch(p: FirePatch) {
-    const left = p.until - this.elapsed
-    if (left <= 0) {
-      p.active = false
-      p.img.setVisible(false)
-      return
-    }
-    p.img.setAlpha(Math.min(0.75, (left / 0.4) * 0.75))
-    if (this.elapsed < p.nextTick) return
-    p.nextTick = this.elapsed + PATCH_TICK
-    const st = fireStats(p.level)
-    for (let i = 0; i < this.fx(magicTier(p.level)); i++) {
-      const a = Math.random() * Math.PI * 2
-      const r = Math.random() * st.radius * 0.8
-      this.fireFx.emitParticleAt(p.x + Math.cos(a) * r, p.y + Math.sin(a) * r * 0.55)
-    }
-    const dps = st.burnDps * this.loadout.damage
-    for (const e of this.magicTargets()) {
-      const reach = st.radius + UNITS[e.kind].r
-      if ((e.x - p.x) ** 2 + (e.y - p.y) ** 2 <= reach * reach) this.ignite(e, dps, st.burnSeconds)
+    this.tweens.add({
+      targets: s.crater,
+      alpha: 0,
+      duration: 900,
+      onComplete: () => s.crater.setVisible(false),
+    })
+    this.playSound('boom')
+    // 판정 때도 벽 너머를 제외한다. 묶인 벽은 하나의 대표 Enemy이므로 운석당 한 번만 맞는다.
+    for (const e of [...this.magicTargets()]) {
+      const distance = Math.max(0, Math.hypot(e.x - x, e.y - y) - UNITS[e.kind].r)
+      const factor = meteorFalloff(distance, st.radius)
+      if (!factor) continue
+      e.stunUntil = Math.max(e.stunUntil, this.elapsed + st.stunSeconds)
+      this.hit(e, st.damage * this.loadout.damage * factor, Math.atan2(e.y - y, e.x - x), 'meteor')
     }
   }
 
@@ -4126,32 +4045,11 @@ class BattleScene extends Phaser.Scene {
       const targetY = this.wallZone ? this.wallY() : p.y
       const d = Math.abs(targetY - e.y) || 1
       // 원거리 공격은 없다 (340번): 손절매도 다른 적처럼 곧장 내려와 부딪힌다.
-      // 기관단총·물 마법에 맞으면 잠깐 느리고 파르스름하다 (376·392번). 불 마법에 맞으면 타며 주황빛이다.
+      // 기관단총·물 마법에 맞으면 잠깐 느리고 파르스름하다 (376·392번). 메테오에 맞으면 잠깐 기절한다.
       const slowed = e.slowUntil > this.elapsed
-      const burning = e.burnUntil > this.elapsed
-      if (burning) {
-        const burn = e.burnDps * dt
-        e.hp -= burn
-        // 화상 숫자는 틱마다 작게 (391번): 매 프레임 띄우면 숫자로 덮이니 BURN_TICK_SECONDS 동안 탄 만큼을 하나로.
-        e.burnShown += burn
-        e.burnTick += dt
-        if (e.burnTick >= BURN_TICK_SECONDS || e.hp <= 0) {
-          this.damageNumber(e, e.burnShown, 'burn')
-          e.burnShown = 0
-          e.burnTick = 0
-        }
-        if (e.hp <= 0) {
-          this.kill(e, true)
-          continue
-        }
-      } else if (e.burnShown > 0) {
-        // 틱 사이에 불이 꺼졌다: 남은 만큼 마저 띄운다.
-        this.damageNumber(e, e.burnShown, 'burn')
-        e.burnShown = 0
-        e.burnTick = 0
-      }
+      const stunned = e.stunUntil > this.elapsed
       e.chilled = slowed
-      const tintKind = burning ? 2 : slowed ? 1 : 0
+      const tintKind = stunned ? 2 : slowed ? 1 : 0
       if (tintKind !== e.tintKind) {
         e.tintKind = tintKind
         this.paint(e)
@@ -4159,7 +4057,7 @@ class BattleScene extends Phaser.Scene {
       // 매도벽 칸은 움직이지 않는다: 벽과 함께 assaultStep이 옮긴다.
       if (e.cell) continue
       const speed = v.speed * this.staged(this.speedScale)
-      const sy = slowed ? speed * e.slowFactor : speed
+      const sy = stunned ? 0 : slowed ? speed * e.slowFactor : speed
       if (e.wallPushUntil > this.elapsed) {
         e.setVelocity(0, -600)
         continue

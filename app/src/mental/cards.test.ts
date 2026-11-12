@@ -29,7 +29,7 @@ function rng(seed: number) {
 
 describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
   it('석 장은 서로 다른 카드이고, 마법 카드는 지금 레벨의 다음 레벨을 낸다', () => {
-    const levels = { water: 2, fire: 0, lightning: 4, earth: 3, mates: 1 }
+    const levels = { water: 2, meteor: 0, lightning: 4, earth: 3, mates: 1 }
     let magics = 0
     let mates = 0
     for (let seed = 0; seed < 80; seed++) {
@@ -76,7 +76,7 @@ describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
   })
 
   it('고양이가 셋 다 차면 고양이 카드는 더 나오지 않고, 그 몫은 일반 카드로 간다', () => {
-    const full = { water: 0, fire: 0, lightning: 0, earth: 0, mates: MAX_MATES }
+    const full = { water: 0, meteor: 0, lightning: 0, earth: 0, mates: MAX_MATES }
     let magics = 0
     let slots = 0
     for (let seed = 0; seed < 200; seed++) {
@@ -96,7 +96,7 @@ describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
     for (let seed = 0; seed < 400; seed++) {
       picks++
       if (
-        pickCards({ water: 0, fire: 0, lightning: 0, earth: 0, mates: 0 }, rng(seed)).some(
+        pickCards({ water: 0, meteor: 0, lightning: 0, earth: 0, mates: 0 }, rng(seed)).some(
           (c) => c.code === 'cat',
         )
       )
@@ -110,13 +110,13 @@ describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
   it('최대 레벨인 마법은 더 나오지 않는다', () => {
     const levels = {
       water: MAGIC_MAX_LEVEL,
-      fire: MAGIC_MAX_LEVEL,
+      meteor: MAGIC_MAX_LEVEL,
       lightning: 1,
       earth: MAGIC_MAX_LEVEL,
     }
     for (let seed = 0; seed < 50; seed++) {
       for (const c of pickCards(levels, rng(seed))) {
-        expect(['water', 'fire', 'earth']).not.toContain(c.code)
+        expect(['water', 'meteor', 'earth']).not.toContain(c.code)
       }
     }
   })
@@ -127,8 +127,8 @@ describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
     expect(applyCard(BASE_LOADOUT, spd).fireMs).toBeCloseTo(260 / 1.1)
     let loadout = BASE_LOADOUT
     for (let i = 0; i < MAGIC_MAX_LEVEL + 2; i++) {
-      loadout = applyCard(loadout, magicCard('fire', loadout.fire))
-      expect(loadout.fire).toBe(Math.min(MAGIC_MAX_LEVEL, i + 1))
+      loadout = applyCard(loadout, magicCard('meteor', loadout.meteor))
+      expect(loadout.meteor).toBe(Math.min(MAGIC_MAX_LEVEL, i + 1))
     }
     expect(loadout.water).toBe(0)
   })
@@ -144,8 +144,8 @@ describe('멘탈 카드 (decisions.md 328·330·377·392·393번)', () => {
     expect(magicEffect('water', 1)).toContain('물방울')
     expect(magicEffect('water', 2)).toContain('물줄기')
     expect(magicEffect('water', 3)).toContain('큰 물결')
-    expect(magicEffect('fire', 1)).toContain('불씨')
-    expect(magicEffect('fire', 3)).toContain('불기둥')
+    expect(magicEffect('meteor', 1)).toContain('운석')
+    expect(magicEffect('meteor', 3)).toContain('유성우')
     expect(magicEffect('lightning', 3)).toContain('번개')
     expect(magicEffect('lightning', 4)).toContain('2줄기')
     // 땅 (433번): 벽·큰손을 들이받는 피해와, 3단계부터 충격파.

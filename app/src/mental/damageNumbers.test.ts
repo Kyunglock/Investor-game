@@ -19,7 +19,7 @@ describe('데미지 숫자 (decisions.md 391번)', () => {
   it('매도벽 돌파에서는 일반·치명타·지속 공격을 매도벽과 같은 주 단위로 표시한다', () => {
     expect(damageLabel('bullet', 8, true)).toBe('1,200주')
     expect(damageLabel('crit', 2, true)).toBe('300주!')
-    expect(damageLabel('burn', 0.01, true)).toBe('2주')
+    expect(damageLabel('meteor', 0.01, true)).toBe('2주')
     expect(damageLabel('bullet', 2)).toBe('20')
   })
 
@@ -39,13 +39,11 @@ describe('데미지 숫자 (decisions.md 391번)', () => {
 
   it('마법 피해는 총알과 다른 색: 물 파랑·불 주황·번개 노랑, 불 지속은 불보다 작다', () => {
     const bullet = DAMAGE_STYLE.bullet.color
-    const magics = ['water', 'fire', 'lightning', 'earth'] as const
+    const magics = ['water', 'meteor', 'lightning', 'earth'] as const
     for (const kind of magics) {
       expect(DAMAGE_STYLE[kind].color).not.toBe(bullet)
     }
     expect(new Set(magics.map((k) => DAMAGE_STYLE[k].color)).size).toBe(4)
-    expect(DAMAGE_STYLE.burn.color).toBe(DAMAGE_STYLE.fire.color)
-    expect(DAMAGE_STYLE.burn.scale).toBeLessThan(DAMAGE_STYLE.fire.scale)
     expect(DAMAGE_STYLE.chain.color).toBe(DAMAGE_STYLE.lightning.color)
   })
 

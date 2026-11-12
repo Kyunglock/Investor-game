@@ -660,13 +660,13 @@ try {
       (l) =>
         (
           window as unknown as { __mentalMagic: (levels: Record<string, number>) => void }
-        ).__mentalMagic({ water: l, fire: l, lightning: l, earth: l }),
+        ).__mentalMagic({ water: l, meteor: l, lightning: l, earth: l }),
       level,
     )
   const pickIfAsked = async (level: number) => {
     if (await page.getByTestId('mental-cards').count()) {
       // 마법 카드를 골라 앱의 마법 레벨도 올린다: 아래의 펼치기 중간 프레임에 영웅·전설 카드가 나오게.
-      await pickCard(['fire', 'water', 'lightning', 'earth'])
+      await pickCard(['meteor', 'water', 'lightning', 'earth'])
       await setMagic(level)
     }
   }
@@ -684,7 +684,7 @@ try {
     }
   }
   const afterMagic = await damage()
-  for (const m of ['water', 'fire', 'lightning', 'earth']) {
+  for (const m of ['water', 'meteor', 'lightning', 'earth']) {
     assert(afterMagic.casts[m] >= beforeMagic.casts[m] + 3, `${m} magic casts on its own`)
     assert(afterMagic.shown[m] > beforeMagic.shown[m], `${m} magic shows its damage numbers`)
   }
