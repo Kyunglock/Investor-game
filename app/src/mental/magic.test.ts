@@ -3,7 +3,6 @@ import {
   chainTargets,
   densest,
   earthStats,
-  fireStats,
   lightningPlan,
   lightningStats,
   MAGIC_MAX_LEVEL,
@@ -11,6 +10,8 @@ import {
   MagicClock,
   magicCooldown,
   magicTier,
+  meteorFalloff,
+  meteorStats,
   nearestTo,
   RAM_SPOOL,
   ramSpeed,
@@ -37,14 +38,16 @@ describe('물·불·번개 마법 (decisions.md 392번)', () => {
 
   it('레벨이 오를수록 쿨다운은 짧아지고 피해·범위는 커진다', () => {
     for (const l of levels.slice(1)) {
-      for (const m of ['water', 'fire', 'lightning', 'earth'] as const) {
+      for (const m of ['water', 'meteor', 'lightning', 'earth'] as const) {
         expect(magicCooldown(m, l)).toBeLessThan(magicCooldown(m, l - 1))
       }
       expect(waterStats(l).damage).toBeGreaterThan(waterStats(l - 1).damage)
       expect(waterStats(l).half).toBeGreaterThan(waterStats(l - 1).half)
       expect(waterStats(l).slowFactor).toBeLessThan(waterStats(l - 1).slowFactor)
-      expect(fireStats(l).damage).toBeGreaterThan(fireStats(l - 1).damage)
-      expect(fireStats(l).radius).toBeGreaterThan(fireStats(l - 1).radius)
+      expect(meteorStats(l).damage * meteorStats(l).count).toBeGreaterThan(
+        meteorStats(l - 1).damage * meteorStats(l - 1).count,
+      )
+      expect(meteorStats(l).radius).toBeGreaterThan(meteorStats(l - 1).radius)
       expect(lightningStats(l).damage).toBeGreaterThan(lightningStats(l - 1).damage)
       expect(lightningStats(l).chains).toBeGreaterThan(lightningStats(l - 1).chains)
       expect(earthStats(l).damage).toBeGreaterThan(earthStats(l - 1).damage)
@@ -66,16 +69,16 @@ describe('물·불·번개 마법 (decisions.md 392번)', () => {
 
   it('마법 시계: 처음 배우면 바로 나가고, 쏜 뒤에는 쿨다운만큼 기다린다', () => {
     const clock = new MagicClock()
-    expect(clock.due('fire', 0, 10)).toBe(false)
-    expect(clock.due('fire', 1, 0)).toBe(true)
-    clock.cast('fire', 1, 5)
-    expect(clock.due('fire', 1, 5 + fireStats(1).cooldown - 0.01)).toBe(false)
-    expect(clock.due('fire', 1, 5 + fireStats(1).cooldown)).toBe(true)
-    clock.retry('fire', 8)
-    expect(clock.due('fire', 1, 8 + MAGIC_RETRY_SECONDS / 2)).toBe(false)
-    clock.cast('fire', 1, 9)
-    clock.ready('fire')
-    expect(clock.due('fire', 2, 9)).toBe(true)
+    expect(clock.due('meteor', 0, 10)).toBe(false)
+    expect(clock.due('meteor', 1, 0)).toBe(true)
+    clock.cast('meteor', 1, 5)
+    expect(clock.due('meteor', 1, 5 + meteorStats(1).cooldown - 0.01)).toBe(false)
+    expect(clock.due('meteor', 1, 5 + meteorStats(1).cooldown)).toBe(true)
+    clock.retry('meteor', 8)
+    expect(clock.due('meteor', 1, 8 + MAGIC_RETRY_SECONDS / 2)).toBe(false)
+    clock.cast('meteor', 1, 9)
+    clock.ready('meteor')
+    expect(clock.due('meteor', 2, 9)).toBe(true)
     // 다른 마법의 시계는 따로 돈다.
     expect(clock.due('water', 1, 9)).toBe(true)
     // 고양이가 여럿이면 시전자마다 조금씩 늦춰 한꺼번에 겹치지 않게 한다 (393번).
@@ -171,7 +174,7 @@ describe('물·불·번개 마법 (decisions.md 392번)', () => {
       expect(e.damage).toBeLessThan(lightningStats(l).damage)
       // 벽에는 초당 피해가 물·불·번개보다 세다.
       const wallDps = (e.damage * e.siege) / e.cooldown
-      for (const other of [waterStats(l), fireStats(l), lightningStats(l)]) {
+      for (const other of [waterStats(l), lightningStats(l)]) {
         expect(wallDps).toBeGreaterThan(other.damage / other.cooldown)
       }
     }
@@ -197,5 +200,26 @@ describe('물·불·번개 마법 (decisions.md 392번)', () => {
     expect(ramSpeed(1000, RAM_SPOOL / 2)).toBeGreaterThan(350)
     expect(ramSpeed(1000, RAM_SPOOL)).toBeCloseTo(1000)
     expect(ramSpeed(1000, 5)).toBeCloseTo(1000)
+  })
+})
+
+describe('메테오 착탄', () => {
+  it('중심에서 가장자리까지 피해가 줄고 범위 밖은 맞지 않는다', () => {
+    expect(meteorFalloff(0, 100)).toBe(1)
+    expect(meteorFalloff(50, 100)).toBeCloseTo(0.825)
+    expect(meteorFalloff(100, 100)).toBeCloseTo(0.65)
+    expect(meteorFalloff(101, 100)).toBe(0)
+  })
+  it('화상 포함 옛 불 마법의 중심 초당 피해를 유지하며 유성우 수가 늘어난다', () => {
+    const old = [4 / 3, 6.75 / 2.7, 10 / 2.4, 11.8 / 2.2, 13.6 / 2]
+    for (let l = 1; l <= 5; l++) {
+      const s = meteorStats(l)
+      expect((s.damage * s.count) / s.cooldown / old[l - 1]).toBeCloseTo(1, 1)
+      expect(s.warning).toBeGreaterThanOrEqual(0.4)
+      expect(s.warning).toBeLessThanOrEqual(0.6)
+      expect(s.stunSeconds).toBeGreaterThanOrEqual(0.3)
+      expect(s.stunSeconds).toBeLessThanOrEqual(0.5)
+    }
+    expect([1, 2, 3, 4, 5].map((l) => meteorStats(l).count)).toEqual([1, 1, 3, 3, 4])
   })
 })

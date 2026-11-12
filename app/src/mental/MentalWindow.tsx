@@ -555,7 +555,7 @@ const CARD_ROLES: Record<Card['code'], string> = {
   cat: '동료',
   'cat-magic': '동료 마법',
   water: '물 마법',
-  fire: '불 마법',
+  meteor: '메테오',
   lightning: '번개 마법',
   earth: '땅 마법',
 }

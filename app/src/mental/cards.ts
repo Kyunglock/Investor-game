@@ -1,9 +1,9 @@
 import {
   earthStats,
-  fireStats,
   lightningStats,
   MAGIC_MAX_LEVEL,
   magicTier,
+  meteorStats,
   waterStats,
 } from './magic'
 
@@ -15,7 +15,7 @@ import {
  * 희귀 카드 "고양이 한 마리 더"(393번)는 사장냥과 똑같이 싸우는 고양이를 한 마리 더 부른다(최대 MAX_MATES).
  */
 export type CardGrade = 'N' | 'R' | 'SR' | 'UR'
-export type Magic = 'water' | 'fire' | 'lightning' | 'earth'
+export type Magic = 'water' | 'meteor' | 'lightning' | 'earth'
 export type CardCode = 'atk' | 'spd' | 'cat' | 'cat-magic' | Magic
 
 export interface Card {
@@ -78,7 +78,7 @@ const MAGIC_INFO: Record<Magic, { name: string; icon: string; color: string }> =
     icon: '💧',
     color: '#5ab8ff',
   },
-  fire: { name: '불의 마법', icon: '🔥', color: '#ff7a45' },
+  meteor: { name: '메테오', icon: '☄️', color: '#ff7a45' },
   lightning: {
     name: '번개 마법',
     icon: '⚡',
@@ -93,7 +93,7 @@ const MAGIC_INFO: Record<Magic, { name: string; icon: string; color: string }> =
 
 const LOOK_NAMES: Record<Magic, readonly [string, string, string]> = {
   water: ['물방울', '물줄기', '큰 물결'],
-  fire: ['불씨', '불덩이', '불기둥'],
+  meteor: ['운석', '대운석', '유성우'],
   lightning: ['번개', '번개', '번개'],
   earth: ['돌 충차', '바위 충차', '대지 충차'],
 }
@@ -107,9 +107,9 @@ export function magicEffect(magic: Magic, level: number): string {
     const w = waterStats(level)
     return `${w.cooldown}초마다 ${look} · 피해 ${pct(w.damage)} · ${pct(1 - w.slowFactor)} 느리게`
   }
-  if (magic === 'fire') {
-    const f = fireStats(level)
-    return `${f.cooldown}초마다 ${look} · 피해 ${pct(f.damage)} · ${f.burnSeconds}초 화상`
+  if (magic === 'meteor') {
+    const f = meteorStats(level)
+    return `${f.cooldown}초마다 ${look} · 개당 피해 ${pct(f.damage)} · ${f.count}개 낙하 · 기절 ${f.stunSeconds}초`
   }
   if (magic === 'earth') {
     const e = earthStats(level)
@@ -136,7 +136,7 @@ export function magicCard(magic: Magic, from: number): Card {
   }
 }
 
-export const MAGICS: readonly Magic[] = ['water', 'fire', 'lightning', 'earth']
+export const MAGICS: readonly Magic[] = ['water', 'meteor', 'lightning', 'earth']
 
 /** 동료는 같은 무기로 싸우고, 각성 카드를 골라야 마법을 쓴다. */
 export function mateCard(have: number): Card {
@@ -201,7 +201,7 @@ export interface Loadout {
   moveSpeed: number
   /** 마법 레벨 (392번). 0이면 없다. */
   water: number
-  fire: number
+  meteor: number
   lightning: number
   /** 땅 마법 레벨 (433번): 매도벽 돌파용 충차. */
   earth: number
@@ -220,7 +220,7 @@ export const BASE_LOADOUT: Loadout = {
   heal: 0,
   moveSpeed: 520,
   water: 0,
-  fire: 0,
+  meteor: 0,
   lightning: 0,
   earth: 0,
   mates: 0,

@@ -1,7 +1,7 @@
 import type { Magic } from './cards'
 
 /**
- * 물·불·번개·땅 마법 (decisions.md 392번, 377번의 "총알에 덤으로 붙는 마법"을 뒤집음. 땅은 433번). 마법은 총알과 따로, 제 주기마다 스스로 나간다. 처음 고르면 Lv.1이고
+ * 물·메테오·번개·땅 마법 (decisions.md 392번, 377번의 "총알에 덤으로 붙는 마법"을 뒤집음. 땅은 433번). 마법은 총알과 따로, 제 주기마다 스스로 나간다. 처음 고르면 Lv.1이고
  * 같은 마법을 또 고를 때마다 한 레벨씩 오른다(최대 MAGIC_MAX_LEVEL). 레벨이 오를수록 쿨다운·피해·범위가 좋아지고, 연출은 세 단계(MagicTier)로 눈에 띄게
  * 화려해진다. 피해는 총알 피해가 아니라 마법 자체의 배율 × 지금 공격력(무기·자본 강화·공격력 카드)이다. 이 모듈은 Phaser 없이 규칙만 가진다(그리는 것은
  * battle.ts의 마법 부분).
@@ -9,7 +9,7 @@ import type { Magic } from './cards'
 
 export const MAGIC_MAX_LEVEL = 5
 
-/** 연출 단계: 물방울→물줄기→큰 물결, 불씨→불덩이→불기둥, 가는 번개→굵은 번개→여러 갈래, 돌 충차→바위 충차→대지 충차. 4·5레벨은 3단계 연출이 조금 더 커진다. */
+/** 연출 단계: 물방울→물줄기→큰 물결, 운석→대운석→유성우, 가는 번개→굵은 번개→여러 갈래, 돌 충차→바위 충차→대지 충차. 4·5레벨은 3단계 연출이 조금 더 커진다. */
 export type MagicTier = 1 | 2 | 3
 
 export function magicTier(level: number): MagicTier {
@@ -31,16 +31,15 @@ export interface WaterStats {
   slowSeconds: number
 }
 
-export interface FireStats {
+export interface MeteorStats {
   cooldown: number
   damage: number
   /** 떨어진 자리에서 터지는 반지름(px). */
   radius: number
-  /** 둘레의 적이 초마다 타는 피해(공격력 배율)와 시간(초). */
-  burnDps: number
-  burnSeconds: number
-  /** 떨어진 자리에 불길이 남는 시간(초): 그동안 들어온 적도 탄다. */
-  patchSeconds: number
+  /** 시간차로 떨어지는 운석 수, 경고 시간과 기절 시간(초). */
+  count: number
+  warning: number
+  stunSeconds: number
 }
 
 export interface LightningStats {
@@ -134,13 +133,18 @@ const WATER: readonly WaterStats[] = [
   },
 ]
 
-const FIRE: readonly FireStats[] = [
-  { cooldown: 3, damage: 2, radius: 42, burnDps: 1, burnSeconds: 2, patchSeconds: 1 },
-  { cooldown: 2.7, damage: 3, radius: 60, burnDps: 1.5, burnSeconds: 2.5, patchSeconds: 1.6 },
-  { cooldown: 2.4, damage: 4, radius: 85, burnDps: 2, burnSeconds: 3, patchSeconds: 2.2 },
-  { cooldown: 2.2, damage: 4.6, radius: 95, burnDps: 2.4, burnSeconds: 3, patchSeconds: 2.5 },
-  { cooldown: 2, damage: 5.2, radius: 105, burnDps: 2.8, burnSeconds: 3, patchSeconds: 2.8 },
+const METEOR: readonly MeteorStats[] = [
+  { cooldown: 3.6, damage: 4.8, radius: 50, count: 1, warning: 0.5, stunSeconds: 0.3 },
+  { cooldown: 3.3, damage: 8.25, radius: 70, count: 1, warning: 0.5, stunSeconds: 0.35 },
+  { cooldown: 3, damage: 4.2, radius: 82, count: 3, warning: 0.5, stunSeconds: 0.4 },
+  { cooldown: 2.8, damage: 5.05, radius: 92, count: 3, warning: 0.5, stunSeconds: 0.45 },
+  { cooldown: 2.6, damage: 4.42, radius: 105, count: 4, warning: 0.5, stunSeconds: 0.5 },
 ]
+
+/** 중심은 100%, 가장자리는 65%. 원 밖은 피해가 없다. */
+export function meteorFalloff(distance: number, radius: number): number {
+  return distance > radius ? 0 : 1 - (0.35 * Math.max(0, distance)) / radius
+}
 
 const LIGHTNING: readonly LightningStats[] = [
   { cooldown: 2.6, damage: 2.5, chains: 2, chainDamage: 0.6, chainRadius: 150, bolts: 1 },
@@ -154,13 +158,13 @@ const at = <T>(table: readonly T[], level: number) =>
   table[Math.max(1, Math.min(MAGIC_MAX_LEVEL, level)) - 1]
 
 export const waterStats = (level: number) => at(WATER, level)
-export const fireStats = (level: number) => at(FIRE, level)
+export const meteorStats = (level: number) => at(METEOR, level)
 export const lightningStats = (level: number) => at(LIGHTNING, level)
 export const earthStats = (level: number) => at(EARTH, level)
 
 export function magicCooldown(magic: Magic, level: number): number {
   if (magic === 'water') return waterStats(level).cooldown
-  if (magic === 'fire') return fireStats(level).cooldown
+  if (magic === 'meteor') return meteorStats(level).cooldown
   if (magic === 'earth') return earthStats(level).cooldown
   return lightningStats(level).cooldown
 }
@@ -175,7 +179,7 @@ export const MAGIC_RETRY_SECONDS = 0.25
 export class MagicClock {
   private readonly next: Record<Magic, number> = {
     water: 0,
-    fire: 0,
+    meteor: 0,
     lightning: 0,
     earth: 0,
   }
@@ -219,7 +223,7 @@ export function nearestTo<T extends Point>(list: readonly T[], from: Point): T |
   return best
 }
 
-/** 불의 과녁: 반지름 안에 다른 적이 가장 많이 모인 적. 같으면 먼저 온 것. */
+/** 메테오의 과녁: 반지름 안에 다른 적이 가장 많이 모인 적. 같으면 먼저 온 것. */
 export function densest<T extends Point>(list: readonly T[], radius: number): T | null {
   let best: T | null = null
   let most = -1

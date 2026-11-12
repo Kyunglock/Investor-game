@@ -119,7 +119,7 @@ try {
           const dev = window as unknown as Dev
           dev.__mentalAutopilot(true)
           dev.__mentalSpeed(2)
-          dev.__mentalMagic({ water: 1, fire: 1, lightning: 1, earth: 1 })
+          dev.__mentalMagic({ water: 1, meteor: 1, lightning: 1, earth: 1 })
         })
         configured = true
       }
