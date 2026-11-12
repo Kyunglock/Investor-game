@@ -67,7 +67,7 @@ export function drawSprite(
 /** 화면이 작아져도 사장냥과 아래 조작 안내가 겹치지 않는 방어선. */
 export const wallOffset = (height: number) => Math.max(150, Math.min(230, height * 0.26))
 
-/** B안 원본 질감의 블록 아틀라스: 위쪽 매수, 아래쪽 매도, 오른쪽 균열. */
+/** 매수·매도 모두 아틀라스 아래쪽 매도 블록 모양을 쓰고 색상만 구분한다. 오른쪽은 균열. */
 export function drawOrderBlock(
   c: CanvasRenderingContext2D,
   source: HTMLImageElement,
@@ -77,10 +77,10 @@ export function drawOrderBlock(
 ) {
   const w = source.width / 2
   const h = source.height / 2
-  // 원본 질감·블록 모양·균열은 보존하고, 구울 때만 매도=파랑 / 매수=빨강으로 돌린다.
+  // 아래쪽 원본은 산호색이다. 같은 모양을 매수는 빨강, 매도는 파랑으로 그린다.
   c.save()
-  c.filter = sell ? 'hue-rotate(200deg)' : 'hue-rotate(190deg)'
-  drawSprite(c, source, { x: cracked ? w : 0, y: sell ? h : 0, w, h }, target)
+  c.filter = sell ? 'hue-rotate(200deg)' : 'none'
+  drawSprite(c, source, { x: cracked ? w : 0, y: h, w, h }, target)
   c.restore()
 }
 
@@ -90,12 +90,10 @@ export function drawBuyWall(
   source: HTMLImageElement,
   cracked: boolean,
 ) {
-  for (let i = 0; i < 6; i++) {
-    c.save()
-    c.translate((i * 512) / 6, 0)
-    drawOrderBlock(c, source, false, cracked && (i === 1 || i === 4))
-    c.restore()
-  }
+  c.save()
+  c.scale(512 / 360, 96 / 60)
+  drawToyOrderWall(c, source, cracked ? 2 : 0, false)
+  c.restore()
 }
 
 /**
@@ -177,10 +175,20 @@ export function drawToySellWall(
   source: HTMLImageElement,
   crack: number,
 ) {
+  drawToyOrderWall(c, source, crack, true)
+}
+
+/** 양쪽 벽의 블록 간격·비율·균열 위치를 함께 유지한다. */
+function drawToyOrderWall(
+  c: CanvasRenderingContext2D,
+  source: HTMLImageElement,
+  crack: number,
+  sell: boolean,
+) {
   for (let i = 0; i < 6; i++) {
     c.save()
     c.translate(i * 60, 0)
-    drawOrderBlock(c, source, true, [2, 4, 1].slice(0, crack).includes(i), {
+    drawOrderBlock(c, source, sell, [2, 4, 1].slice(0, crack).includes(i), {
       x: 0,
       y: 0,
       w: 60,
