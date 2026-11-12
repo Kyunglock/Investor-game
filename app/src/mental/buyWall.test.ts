@@ -1,5 +1,25 @@
 import { describe, expect, it } from 'vitest'
-import { assaultBonusPercent, BUY_WALL, BuyWall } from './buyWall'
+import { assaultBonusPercent, BUY_WALL, BuyWall, buyOrderX } from './buyWall'
+
+describe('매수 티켓의 좌우 분포', () => {
+  it('왼쪽·오른쪽에 각각 40%, 중앙에 20%를 배치하고 영역 안에서도 위치가 달라진다', () => {
+    const xs = Array.from({ length: 1000 }, (_, i) => buyOrderX(0, 100, () => (i + 0.5) / 1000))
+    expect(xs.filter((x) => x < 32)).toHaveLength(400)
+    expect(xs.filter((x) => x > 68)).toHaveLength(400)
+    expect(xs.filter((x) => x >= 32 && x <= 68)).toHaveLength(200)
+    expect(new Set(xs).size).toBe(1000)
+  })
+
+  it('좁은 화면에서도 티켓 중심은 레인 양끝의 여백 안에 머문다', () => {
+    for (const width of [254, 324, 702]) {
+      for (const r of [0, 0.3999, 0.4, 0.7999, 0.8, 0.9999]) {
+        const x = buyOrderX(33, width, () => r)
+        expect(x).toBeGreaterThanOrEqual(33 + width * 0.08)
+        expect(x).toBeLessThanOrEqual(33 + width * 0.92)
+      }
+    }
+  })
+})
 
 describe('매수벽', () => {
   it('붕괴하면 80px 후퇴하고 1.5초 뒤 재건하며 그 뒤 1초간 보호한다', () => {

@@ -10,6 +10,18 @@ export const BUY_WALL = {
   retreatDistance: 80,
 } as const
 
+/** 매수 티켓은 양쪽에 40%씩, 가운데에 20%. 각 영역 안에서도 위치를 무작위로 정한다. */
+export function buyOrderX(left: number, width: number, random: () => number = Math.random) {
+  const r = random()
+  const position =
+    r < 0.4
+      ? 0.08 + (r / 0.4) * 0.24
+      : r < 0.8
+        ? 0.68 + ((r - 0.4) / 0.4) * 0.24
+        : 0.32 + ((r - 0.8) / 0.2) * 0.36
+  return left + width * position
+}
+
 /** 매도 물량 하나당 매수 주문 하나로 맞선다. 붕괴하면 후퇴하고 1.5초 뒤 새 벽을 세운다. */
 export class BuyWall {
   readonly maxHp: number
