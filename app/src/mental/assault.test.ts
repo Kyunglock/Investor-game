@@ -19,9 +19,11 @@ import {
   spawnSeconds,
   swarmSize,
   WEAK_CELL,
+  wallBreakXp,
   wallCols,
   whaleSummonSeconds,
 } from './assault'
+import { xpToNext } from './cards'
 import { ENEMIES, ORDERS, UNITS } from './enemies'
 
 /** 같은 순서로 도는 가짜 난수. */
@@ -201,5 +203,14 @@ describe('공격 판: 매도벽 (decisions.md 413번)', () => {
   it('시간 안에 모두 돌파하면 남은 멘탈이나 소요 시간과 관계없이 별 셋이다', () => {
     expect(assaultStars(true, 10)).toBe(3)
     expect(assaultStars(false, 10)).toBe(2)
+  })
+})
+
+describe('매도벽 경험치 (#700)', () => {
+  it('층 하나에 30, 벽을 무너뜨리면 다음 레벨까지의 40%를 더 준다', () => {
+    expect(ORDERS.cell.reward).toBe(30)
+    expect(wallBreakXp(105)).toBe(42)
+    expect(wallBreakXp(xpToNext(5))).toBe(Math.round(xpToNext(5) * 0.4))
+    expect(wallBreakXp(0)).toBe(1)
   })
 })

@@ -54,11 +54,12 @@ import {
   rushSpawnSeconds,
   spawnSeconds,
   swarmSize,
+  wallBreakXp,
   wallCols,
   whaleSummonSeconds,
 } from './assault'
 import { STAGE_ASSETS } from './assets'
-import { BUY_WALL, BuyWall } from './buyWall'
+import { BUY_WALL, BuyWall, pushedByCollapse } from './buyWall'
 import { BuyWallFx } from './buyWallFx'
 import {
   awakenedMateCount,
@@ -1442,6 +1443,10 @@ class BattleScene extends Phaser.Scene {
     if (!spec) return
     wall.broken = true
     this.wallsBroken++
+    // 벽 하나를 통째로 무너뜨리면 경험치를 한 번에 더 준다 (#700).
+    const breakXp = wallBreakXp(xpToNext(this.level))
+    this.pop(this.view().w / 2, wall.y - 40, `EXP +${breakXp}`, '#7be0c3', 22)
+    this.gainXp(breakXp)
     this.sinceBreak = 0
     this.stuck = 0
     // 치고 오르는 동안 화면이 쭉 내려가 남아 있던 물량이 사장냥에게 쏟아져 맞았다: 남은 물량은 벽과 함께 체결되고, 치고 오르는 동안은 맞지 않는다.
@@ -2503,7 +2508,7 @@ class BattleScene extends Phaser.Scene {
       this.finish(true, 'clear')
     }
     if (e.cell) {
-      // 매도벽 칸 (413번): 물량이 체결되며 부서져 떨어진다. 처치 수에는 넣지 않고 경험치만 조금.
+      // 매도벽 칸 (413번): 물량이 체결되며 부서져 떨어진다. 처치 수에는 넣지 않고 경험치를 준다(#700에서 늘림).
       this.cellBroken(e)
       this.score += v.reward
       this.gainXp(v.reward)
@@ -2643,11 +2648,16 @@ class BattleScene extends Phaser.Scene {
     this.buyWallFx.draw(this.buyWall, lane.left, lane.width, this.buyWallY(), this.reducedMotion)
   }
 
-  /** 매도 주문들을 seconds초 동안 위로(뒤로) 밀어낸다. 매수벽이 무너질 때와 새로 설 때 쓴다. */
+  /**
+   * 매도 주문들을 seconds초 동안 위로(뒤로) 밀어낸다. 매수벽이 무너질 때만 쓰고, 화면 중간선을 넘어온 적만 민다(#699). 새 매수벽이 설 때는
+   * 밀지 않는다(458번).
+   */
   private pushEnemiesBack(seconds: number) {
+    const height = this.view().h
     for (const child of this.enemies.getChildren()) {
       const enemy = child as Enemy
       if (!enemy.active || enemy.dying || enemy.cell) continue
+      if (!pushedByCollapse(enemy.y, height)) continue
       enemy.wallPushUntil = Math.max(enemy.wallPushUntil, this.elapsed + seconds)
       enemy.kbx = 0
       enemy.kby = 0

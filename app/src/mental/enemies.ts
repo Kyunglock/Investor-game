@@ -90,7 +90,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     scale: 1.45,
     shares: 3000,
   },
-  /** 매도벽의 한 칸: 움직이지 않고 벽과 함께 내려온다. 체력·물량은 판(assault.ts)이 정한다 */
+  /** 매도벽의 한 칸(층): 움직이지 않고 벽과 함께 내려온다. 체력·물량은 판(assault.ts)이 정한다. 경험치는 층 하나에 30(#700, 전에는 5) */
   cell: {
     r: 15,
     fill: '#4f8df0',
@@ -98,7 +98,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     hp: 8,
     speed: 0,
     dmg: 0,
-    reward: 5,
+    reward: 30,
     scale: 1,
     shares: 1000,
   },

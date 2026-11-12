@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assaultBonusPercent, BUY_WALL, BuyWall } from './buyWall'
+import { assaultBonusPercent, BUY_WALL, BuyWall, pushedByCollapse } from './buyWall'
 
 describe('매수벽', () => {
   it('붕괴하면 80px 후퇴하고 1.5초 뒤 재건하며 그 뒤 1초간 보호한다', () => {
@@ -70,4 +70,13 @@ it('서킷브레이커는 발사 시계만 20%로 줄이고 총량과 재건 시
   const rebuild = halted.rebuildLeft
   expect(halted.stepOrders(4)).toBe(0)
   expect(halted.rebuildLeft).toBe(rebuild)
+})
+
+describe('매수벽 붕괴 밀어내기 (#699)', () => {
+  it('화면 중간선을 넘어온 적만 뒤로 민다', () => {
+    expect(pushedByCollapse(100, 800)).toBe(false)
+    expect(pushedByCollapse(399, 800)).toBe(false)
+    expect(pushedByCollapse(400, 800)).toBe(true)
+    expect(pushedByCollapse(700, 800)).toBe(true)
+  })
 })
