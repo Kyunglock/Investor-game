@@ -3,7 +3,7 @@ import { CAT_H, CAT_W } from '@web/features/game/cat/draw'
 import type Phaser from 'phaser'
 import { CAT_SCALE, mateModel } from './catModels'
 import { drawEmber, drawPillar, drawWater, drawWave, drawWoodenRam } from './effectArt'
-import { ORDERS, type UnitKind } from './enemies'
+import { orderShares, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import { MATE_LOOKS } from './mates'
@@ -505,7 +505,7 @@ export function drawWhale(c: CanvasRenderingContext2D) {
  * 매도 물량 그림: 64×64 칸 가운데에 그린다(battle.ts가 종류마다 배율을 곱해 놓는다). 프레임마다 살짝 떠올랐다 가라앉아(그림 안에서만) 걷는 고양이 적처럼
  * 같은 열쇠(enemyKey)로 돌린다. 매도벽 칸은 금 간 정도마다 하나씩.
  */
-export function bakeOrders(scene: Phaser.Scene) {
+export function bakeOrders(scene: Phaser.Scene, hpScale = 1) {
   const looks = {
     order: {
       box: { x: 7, y: 17, w: 50, h: 30 },
@@ -514,7 +514,7 @@ export function bakeOrders(scene: Phaser.Scene) {
         edge: '#1b3f8f',
         band: '#2a5fc4',
         title: '매도',
-        amount: `${ORDERS.order.shares.toLocaleString('ko-KR')}주`,
+        amount: `${orderShares('order', hpScale).toLocaleString('ko-KR')}주`,
       },
     },
     market: {
@@ -524,7 +524,7 @@ export function bakeOrders(scene: Phaser.Scene) {
         edge: '#1f56b8',
         band: '#3f86ea',
         title: '시장가',
-        amount: `${ORDERS.market.shares.toLocaleString('ko-KR')}주`,
+        amount: `${orderShares('market', hpScale).toLocaleString('ko-KR')}주`,
       },
     },
     bulk: {
@@ -534,7 +534,7 @@ export function bakeOrders(scene: Phaser.Scene) {
         edge: '#0b1f5c',
         band: '#16337f',
         title: '대량 매도',
-        amount: `${ORDERS.bulk.shares.toLocaleString('ko-KR')}주`,
+        amount: `${orderShares('bulk', hpScale).toLocaleString('ko-KR')}주`,
       },
     },
     fake: {
@@ -544,7 +544,7 @@ export function bakeOrders(scene: Phaser.Scene) {
         edge: '#5c78a8',
         band: '#8aa3cc',
         title: '허매도',
-        amount: `${ORDERS.fake.shares.toLocaleString('ko-KR')}주`,
+        amount: `${orderShares('fake', hpScale).toLocaleString('ko-KR')}주`,
         dashed: true,
       },
     },
