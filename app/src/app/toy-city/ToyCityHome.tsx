@@ -160,7 +160,7 @@ export function ToyCityHome({ company }: { company: Company }) {
         </button>
       </div>
       <header className="toy-stage">
-        <p>CHAPTER {String(company.number).padStart(2, '0')} · TOY CITY</p>
+        <p>CHAPTER {String(company.number).padStart(2, '0')} · 우리들의 작은 회사</p>
         <h1 data-testid="company-building">{officeName(company.grade)}</h1>
         <span>
           {ended ? '끝난 회사' : `${company.year}년 차 ${company.quarter}분기`} · 자리 {assigned} /{' '}

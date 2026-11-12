@@ -1172,3 +1172,66 @@
 .toy-street:is([data-phase="0"], [data-phase="1"], [data-phase="2"]) .toy-cat {
   animation-play-state: paused;
 }
+
+/* 승인된 2D 사무실 시안 (#680). 메뉴 동작과 잠금은 기존 상태를 따른다. */
+.toy-home {
+  color: #704a30;
+  background: #fbe5b3;
+}
+.toy-home .toy-round,
+.toy-home .toy-wallet,
+.toy-home .toy-menu,
+.toy-home .toy-stat,
+.toy-home .toy-speech {
+  color: #704a30;
+  border: 2px solid #fff6d8;
+  background: linear-gradient(#fff1cc, #f2ce8e);
+  box-shadow: 0 4px 0 #b38750;
+}
+.toy-home .toy-growth > div {
+  background: #b38750;
+  border-color: #fff6d8;
+}
+.toy-home .toy-growth i {
+  background: linear-gradient(#c2e96a, #9bd13d);
+}
+.toy-home .toy-stage > p {
+  color: #aa7d48;
+}
+.toy-home .toy-stage > span {
+  background: #ffeabc;
+  border-color: #fff6d8;
+}
+.toy-home .toy-expand {
+  background: #41aaad;
+  color: #fff6dc;
+  border-color: #8ed2ca;
+}
+.toy-home .toy-wallet i {
+  background: #efb633;
+}
+.toy-home .toy-mental-chip i {
+  background: #f37c60;
+  color: #fff6dc;
+}
+.toy-home .toy-bottom-cards > [data-testid="stage-open"] {
+  order: 2;
+  min-height: 108px;
+  background: linear-gradient(#ffae70, #f47850);
+  color: #fff8df;
+}
+.toy-home .toy-bottom-cards > div {
+  order: 3;
+}
+.toy-home .toy-bottom-cards > [data-testid="battle-upgrade-open"] {
+  order: 1;
+}
+.toy-home .toy-bottom-cards {
+  grid-template-columns: 1fr 1.4fr 1fr;
+  align-items: end;
+}
+@media (max-height: 720px) {
+  .toy-home .toy-bottom-cards > [data-testid="stage-open"] {
+    min-height: 85px;
+  }
+}

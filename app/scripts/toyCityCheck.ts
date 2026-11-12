@@ -63,7 +63,7 @@ try {
   await expect(home).toBeVisible()
   const employees = company.employees.filter((e) => e.desk).length
   await expect(home.getByTestId('toy-employee')).toHaveCount(employees)
-  await expect(page.getByTestId('toy-desk')).toHaveCount(0)
+  await expect(page.getByTestId('toy-desk')).toHaveCount(company.seats)
   await expect(page.getByTestId('office-seat')).toHaveCount(0)
   await page.screenshot({ path: resolve(out, 'home.png') })
 
