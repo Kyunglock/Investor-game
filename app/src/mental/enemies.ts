@@ -42,7 +42,7 @@ export interface OrderSpec extends EnemySpec {
 }
 
 export const ORDERS: Record<OrderKind, OrderSpec> = {
-  /** 매도 주문(2,000주): 천천히 사장냥 쪽으로 다가온다 */
+  /** 매도 주문(100주): 천천히 사장냥 쪽으로 다가온다 */
   order: {
     r: 17,
     fill: '#3a7bea',
@@ -52,7 +52,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     dmg: 6,
     reward: 12,
     scale: 1.45,
-    shares: 2000,
+    shares: 100,
   },
   /** 시장가 매도(1,000주): 작고 빠르게 떼로 쏟아진다 */
   market: {
