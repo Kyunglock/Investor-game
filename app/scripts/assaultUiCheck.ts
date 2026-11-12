@@ -7,7 +7,10 @@ import { company } from './fixture.ts'
 
 const out = resolve(import.meta.dirname, 'shots/assault-ui')
 mkdirSync(out, { recursive: true })
-const browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || 'msedge' })
+const browser = await chromium.launch({
+  channel: process.env.BROWSER_CHANNEL || undefined,
+  executablePath: process.env.CHROMIUM_PATH || undefined,
+})
 type Dev = {
   __mentalAutopilot: (on: boolean) => void
   __mentalSpeed: (speed: number) => void
@@ -18,7 +21,7 @@ type Dev = {
 async function checkLayout(page: Page) {
   const boxes = await page
     .locator(
-      '.battle-corner, .battle-price, .battle-boss, .battle-level, .battle-wall, .battle-footer',
+      '.battle-corner, .battle-price, .battle-boss, .battle-level, .battle-wall, .battle-footer, .battle-cards, .battle-price-goal, .battle-price-target',
     )
     .evaluateAll((els) =>
       els.map((el) => {
@@ -36,6 +39,18 @@ async function checkLayout(page: Page) {
       }),
     )
   const { width = 0, height = 0 } = page.viewportSize() ?? {}
+  if (!boxes.length && (await page.getByTestId('mental-result').count())) return
+  const top = boxes.find((box) => box.name === 'battle-corner')
+  assert(top && top.bottom - top.y <= 40, 'top HUD stays on one compact row')
+  assert(
+    !boxes.some((box) =>
+      ['battle-price-goal', 'battle-price-target', 'battle-cards', 'battle-level'].includes(
+        box.name,
+      ),
+    ),
+  )
+  const footer = boxes.find((box) => box.name.includes('battle-footer'))
+  assert(footer && footer.bottom - footer.y <= 34, 'bottom HUD stays compact')
   for (const box of boxes) {
     assert(
       box.x >= 0 && box.right <= width + 1 && box.y >= 0 && box.bottom <= height + 1,
@@ -59,8 +74,12 @@ async function checkLayout(page: Page) {
 }
 
 try {
-  for (const width of [320, 390]) {
-    const page = await browser.newPage({ viewport: { width, height: 740 }, deviceScaleFactor: 2 })
+  for (const width of process.env.UI_WIDTH ? [Number(process.env.UI_WIDTH)] : [320, 390]) {
+    const page = await browser.newPage({
+      viewport: { width, height: Number(process.env.UI_HEIGHT ?? 740) },
+      deviceScaleFactor: 2,
+      reducedMotion: process.env.REDUCED_MOTION ? 'reduce' : 'no-preference',
+    })
     const errors: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     await page.addInitScript(() => localStorage.setItem('investor-game.tutorial', 'done'))
@@ -68,7 +87,20 @@ try {
       route.fulfill({
         json: {
           ...company,
-          invest: null,
+          invest: {
+            title: '신제품 출시',
+            sector: 'semiconductor',
+            sectorName: '반도체',
+            stockName: '테스트반도체전자',
+            range: { lossBp: -1000, gainBp: 1000 },
+            scouted: true,
+            sentences: [],
+            remarks: [],
+            options: [],
+            ready: true,
+            convened: true,
+            outcome: null,
+          },
           lastSettlement: null,
           weapons: [
             {
@@ -101,17 +133,22 @@ try {
     await page.getByTestId('mental-start').click()
     await expect(page.getByTestId('mental-cards')).toBeVisible({ timeout: 30000 })
     await expect(page.locator('.stage-card-description')).toHaveCount(0)
+    await expect(page.getByTestId('battle-price-up')).toHaveText('0%')
+    await expect(page.locator('.battle-price-name')).toHaveText('테스트반도체전자')
     await page.screenshot({ path: resolve(out, `cards-${width}.png`) })
     let configured = false,
+      captured = false,
       gainSeen = false,
       bossSeen = false,
-      heldSeen = false
+      riseSeen = false
     const appeared = new Set<number>()
     const deadline = Date.now() + 180000
     while (Date.now() < deadline && !(await page.getByTestId('mental-result').count())) {
       if (await page.getByTestId('mental-cards').count()) {
-        await page.getByTestId('mental-cards').getByRole('button').first().click({ force: true })
-        await page.waitForTimeout(250)
+        const cards = page.getByTestId('mental-cards')
+        await expect(cards).toHaveAttribute('data-revealed', 'true')
+        await cards.getByRole('button').first().click()
+        await expect(cards).toHaveCount(0)
         continue
       }
       if (!configured) {
@@ -124,12 +161,13 @@ try {
         configured = true
       }
       await checkLayout(page)
+      if (!captured) {
+        await page.screenshot({ path: resolve(out, `battle-${width}.png`) })
+        captured = true
+      }
       const walls = await page.evaluate(() => (window as unknown as Dev).__mentalWalls())
       for (const wall of walls) {
-        if (wall.held) {
-          heldSeen = true
-          assert(wall.bottom <= 0, 'held wall stays offscreen')
-        }
+        assert(!wall.held, 'next wall appears immediately after the collapse transition')
         if (wall.bottom > 0) {
           assert(!wall.held, 'visible wall is hittable')
           appeared.add(wall.index)
@@ -139,6 +177,17 @@ try {
         gainSeen = true
         await page.screenshot({ path: resolve(out, `gain-${width}.png`) })
         await expect(page.getByTestId('battle-wall-gain')).toHaveCount(1)
+        await expect(page.getByTestId('battle-wall-gain')).toContainText('주가 상승')
+        await expect(page.getByTestId('battle-wall-gain')).toContainText('+10%')
+      }
+      if (
+        !riseSeen &&
+        (await page
+          .getByTestId('battle-price-up')
+          .evaluateAll((els) => els[0]?.textContent ?? null)) === '▲20%'
+      ) {
+        riseSeen = true
+        await page.screenshot({ path: resolve(out, `rise-${width}.png`) })
       }
       if (!bossSeen && (await page.getByTestId('battle-boss').count())) {
         bossSeen = true
@@ -150,7 +199,7 @@ try {
     await page.screenshot({ path: resolve(out, `result-${width}.png`) })
     assert(gainSeen, 'wall gain animation appeared')
     assert(bossSeen, 'boss HUD inspected')
-    assert(heldSeen, 'rush inspected')
+    assert(riseSeen, 'stock price rose from 0% to 20%')
     assert(appeared.size >= 3, 'several walls entered the viewport')
     assert.deepEqual(errors, [])
     console.log(
@@ -169,6 +218,7 @@ try {
     })
     await page.getByTestId('mental-start').click()
     await expect(page.getByTestId('mental-cards')).toBeVisible()
+    await expect(page.getByTestId('mental-cards')).toHaveAttribute('data-revealed', 'true')
     await page.getByTestId('mental-cards').getByRole('button').first().click()
     await expect(page.getByTestId('mental-cards')).toHaveCount(0)
     await expect(page.locator('.battle-hud-assault')).toHaveCount(0)

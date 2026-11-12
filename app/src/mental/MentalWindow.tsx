@@ -39,7 +39,7 @@ import { FIRE_STYLE_NAMES, WEAPON_EFFECTS, WEAPON_TRAITS } from './weaponEffects
 import './stage.css'
 import { type Hero, heroOf, type Weapon } from './hero'
 import { WallGainFlight } from './WallGainFlight'
-import { queueWallGain, shownPrice, type WallGain } from './wallGain'
+import { priceRise, queueWallGain, shownPrice, type WallGain } from './wallGain'
 
 type Genre = NonNullable<Company['mental']>['genre']
 
@@ -1026,20 +1026,34 @@ function Battle({
       />
       {hud && !loadError && (
         <>
-          {/* 위의 흰 판을 없앴다 (390번): 적이 내려오는 위쪽 가운데를 비우고, 멘탈은 하단 설명 자리로 옮기고, 레벨은 왼쪽 가장자리에 세로로 둔다. */}
+          {/* 공격 판은 주가와 조작을 상단 한 줄에, 멘탈과 레벨은 하단에 모아 전장을 비운다. */}
           <div
             className={`battle-hud${hud.assault ? ' battle-hud-assault' : ''}`}
             data-testid="battle-hud"
           >
             <div className="battle-corner">
-              {hud.segment && (
+              {hud.segment && !hud.assault && (
                 <b className="battle-segment" data-testid="battle-segment">
-                  {hud.boss
-                    ? '보스'
-                    : hud.assault
-                      ? `남은 벽 ${hud.assault.wallsTotal - hud.assault.wallsBroken}`
-                      : `구간 ${hud.segment.at}/${hud.segment.total}`}
+                  {hud.boss ? '보스' : `구간 ${hud.segment.at}/${hud.segment.total}`}
                 </b>
+              )}
+              {hud.assault && (
+                <div className="battle-price" data-testid="battle-price">
+                  <span className="battle-price-name" title={hud.assault.name}>
+                    {hud.assault.name}
+                  </span>
+                  <em
+                    key={displayPrice}
+                    ref={priceTarget}
+                    className="battle-price-up"
+                    data-testid="battle-price-up"
+                    role="status"
+                    aria-label={`${hud.assault.name} 주가 상승률 ${priceRise(displayPrice, hud.assault.start)}`}
+                  >
+                    {displayPrice > hud.assault.start ? '▲' : ''}
+                    {priceRise(displayPrice, hud.assault.start)}
+                  </em>
+                </div>
               )}
               <time data-testid="battle-timer">
                 {Math.floor(hud.secondsLeft / 60)}:{String(hud.secondsLeft % 60).padStart(2, '0')}
@@ -1074,21 +1088,6 @@ function Battle({
                 Ⅱ
               </button>
             </div>
-            {hud.assault && (
-              <div className="battle-price" data-testid="battle-price">
-                <span className="battle-price-now">
-                  <small className="battle-price-name">{hud.assault.name}</small>
-                  <b className="battle-price-value">{displayPrice.toLocaleString()}</b>
-                  <em ref={priceTarget} className="battle-price-up" data-testid="battle-price-up">
-                    ▲{(((displayPrice - hud.assault.start) / hud.assault.start) * 100).toFixed(1)}%
-                  </em>
-                </span>
-                <span className="battle-price-goal">
-                  <small className="battle-price-name">목표가</small>
-                  <b className="battle-price-target">{hud.assault.target.toLocaleString()}</b>
-                </span>
-              </div>
-            )}
             {hud.boss && (
               <div
                 // 공격 판은 체력 막대를 큰손 바로 아래에 그린다(457번, battle.ts drawBossBar). 위 HUD에는 읽어 주는 막대만 남긴다.
@@ -1108,26 +1107,28 @@ function Battle({
                 </div>
               </div>
             )}
-            <div className="battle-level" data-testid="battle-level">
-              <b>
-                <small>Lv.</small>
-                {hud.level}
-              </b>
-              <div
-                className="battle-xp"
-                role="progressbar"
-                aria-label="다음 레벨 경험치"
-                aria-valuenow={Math.round(hud.xp * 100)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-              >
-                <i style={{ height: `${hud.xp * 100}%` }} />
+            {!hud.assault && (
+              <div className="battle-level" data-testid="battle-level">
+                <b>
+                  <small>Lv.</small>
+                  {hud.level}
+                </b>
+                <div
+                  className="battle-xp"
+                  role="progressbar"
+                  aria-label="다음 레벨 경험치"
+                  aria-valuenow={Math.round(hud.xp * 100)}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <i style={{ height: `${hud.xp * 100}%` }} />
+                </div>
+                <span>
+                  <small>처치</small>
+                  <b>{hud.kills}</b>
+                </span>
               </div>
-              <span>
-                <small>처치</small>
-                <b>{hud.kills}</b>
-              </span>
-            </div>
+            )}
           </div>
           {gains[0] && (
             <WallGainFlight
@@ -1138,8 +1139,16 @@ function Battle({
               onDone={() => setGains((queue) => queue.slice(1))}
             />
           )}
-          <div className="battle-footer" data-testid="battle-footer">
+          <div
+            className={`battle-footer${hud.assault ? ' battle-footer-assault' : ''}`}
+            data-testid="battle-footer"
+          >
             <div className="battle-wall" data-testid="battle-wall">
+              {hud.assault && (
+                <span className="battle-level-inline" title={`레벨 ${hud.level}`}>
+                  Lv.{hud.level}
+                </span>
+              )}
               <span className="battle-wall-label">
                 <span aria-hidden="true">♥</span> {hud.assault ? '멘탈' : '멘탈벽'}
               </span>
@@ -1157,35 +1166,37 @@ function Battle({
                 </strong>
               </div>
             </div>
-            <div className="battle-cards">
-              {[...new Set(cards.map((c) => c.code))].map((code) => {
-                const same = cards.filter((c) => c.code === code)
-                const top = same.reduce((a, b) =>
-                  GRADE_ORDER[b.grade] > GRADE_ORDER[a.grade] ? b : a,
-                )
-                // 마법은 고른 수가 곧 레벨이다(392번). 고양이 카드는 함께 싸우는 고양이 수(393번).
-                const label =
-                  code === 'cat'
-                    ? `함께 싸우는 고양이 ${same.length}마리`
-                    : code === 'cat-magic'
-                      ? `마법을 쓰는 고양이 ${same.length}마리`
-                      : top.level
-                        ? `${top.name} Lv.${same.length}`
-                        : `${top.name} ${same.length}장`
-                return (
-                  <span
-                    key={code}
-                    data-grade={top.grade}
-                    title={label}
-                    role="img"
-                    aria-label={label}
-                  >
-                    {top.icon}
-                    <small>{same.length}</small>
-                  </span>
-                )
-              })}
-            </div>
+            {!hud.assault && (
+              <div className="battle-cards">
+                {[...new Set(cards.map((c) => c.code))].map((code) => {
+                  const same = cards.filter((c) => c.code === code)
+                  const top = same.reduce((a, b) =>
+                    GRADE_ORDER[b.grade] > GRADE_ORDER[a.grade] ? b : a,
+                  )
+                  // 마법은 고른 수가 곧 레벨이다(392번). 고양이 카드는 함께 싸우는 고양이 수(393번).
+                  const label =
+                    code === 'cat'
+                      ? `함께 싸우는 고양이 ${same.length}마리`
+                      : code === 'cat-magic'
+                        ? `마법을 쓰는 고양이 ${same.length}마리`
+                        : top.level
+                          ? `${top.name} Lv.${same.length}`
+                          : `${top.name} ${same.length}장`
+                  return (
+                    <span
+                      key={code}
+                      data-grade={top.grade}
+                      title={label}
+                      role="img"
+                      aria-label={label}
+                    >
+                      {top.icon}
+                      <small>{same.length}</small>
+                    </span>
+                  )
+                })}
+              </div>
+            )}
           </div>
         </>
       )}
