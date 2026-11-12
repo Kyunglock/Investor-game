@@ -380,7 +380,8 @@ class DefaultCompanyService implements CompanyService {
         engine.mental.weaponViews(c),
         engine.mental.armoryView(c),
         engine.mental.upgradeViews(c),
-        engine.mental.stagesView(c));
+        engine.mental.stagesView(c),
+        engine.mental.assaultsView(c));
   }
 
   @Override
@@ -397,6 +398,15 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView reportStage(UUID sessionId, int stage, boolean cleared, int stars) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.mental.reportStage(row.state(), stage, cleared, stars);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView reportAssault(UUID sessionId, int stage, boolean cleared, int stars) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.mental.reportAssault(row.state(), stage, cleared, stars);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

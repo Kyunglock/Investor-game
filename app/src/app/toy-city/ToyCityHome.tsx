@@ -14,7 +14,7 @@ import { BookIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from '../Icon
 import { Sheet } from '../Sheet'
 import { type BattleEntry, type Tab, type ToyPanel, tabBadge, useAppUi } from '../ui'
 import { useCountUp } from '../useCountUp'
-import { ActionBar } from '../Windows'
+import { ActionBar, QuarterMeeting } from '../Windows'
 import { BattleUpgrades } from './BattleUpgrades'
 import { growthProgress } from './model'
 import { StreetLife } from './StreetLife'
@@ -252,12 +252,16 @@ export function ToyCityHome({ company }: { company: Company }) {
             panel === 'upgrade'
               ? '다음 단계로 성장하기'
               : panel === 'stage'
-                ? '멘탈 수련'
-                : panel === 'battle'
-                  ? '자본으로 전투 강화'
-                  : panel === 'weapons'
-                    ? '무기 인벤토리'
-                    : '회사 설정'
+                ? '멘탈 보호 스테이지'
+                : panel === 'assault'
+                  ? '매도벽 돌파'
+                  : panel === 'side'
+                    ? '보조게임'
+                    : panel === 'battle'
+                      ? '자본으로 전투 강화'
+                      : panel === 'weapons'
+                        ? '무기 인벤토리'
+                        : '회사 설정'
           }
           testId={`toy-${panel}-sheet`}
           onClose={() => setPanel(null)}
@@ -308,6 +312,8 @@ export function ToyCityHome({ company }: { company: Company }) {
             </>
           )}
           {panel === 'stage' && <StageSelect company={company} disabled={unavailable} />}
+          {panel === 'assault' && <AssaultSelect company={company} disabled={unavailable} />}
+          {panel === 'side' && <SideGames company={company} onMental={() => setPanel('stage')} />}
           {panel === 'battle' && <BattleUpgrades company={company} />}
           {panel === 'weapons' && <WeaponInventory company={company} />}
           {panel === 'settings' && (
@@ -334,6 +340,138 @@ export function ToyCityHome({ company }: { company: Company }) {
         </Sheet>
       )}
     </div>
+  )
+}
+
+/**
+ * 보조게임 메뉴 (#698): 주 게임 매도벽 돌파 옆에서 따로 하는 둘. 종목회의(분기 넘기기로 열리고 결산까지 이어진다)와 멘탈 보호 스테이지(번호 디펜스와
+ * EX 디펜스).
+ */
+function SideGames({ company, onMental }: { company: Company; onMental: () => void }) {
+  const stages = company.stages
+  return (
+    <div className="toy-side-games" data-testid="side-games">
+      <p className="toy-sheet-lead">매도벽 돌파 말고도 할 수 있어요</p>
+      <section>
+        <h3>종목회의</h3>
+        <p className="text-sm text-muted">
+          기사를 읽고 매수·매도를 골라요. 맞히면 벌고, 틀려도 손실은 없어요. 회의가 끝나면 분기를
+          넘겨요.
+        </p>
+        <QuarterMeeting company={company} />
+      </section>
+      <section>
+        <h3>멘탈 보호 스테이지</h3>
+        <p className="text-sm text-muted">
+          몰려오는 불안을 막아 멘탈벽을 지켜요. 깬 만큼 매 분기 직원들이 더 벌어요.
+        </p>
+        <button
+          type="button"
+          className="toy-stat toy-side-game"
+          data-testid="stage-open"
+          onClick={() => {
+            sfx.tap()
+            haptic.light()
+            onMental()
+          }}
+        >
+          <small>멘탈 전투 · 디펜스</small>
+          <strong>멘탈 보호 ▶</strong>
+          <em>
+            {stages && stages.best > 0
+              ? `${stageLabel(stages.best, stages.perChapter)}까지 · 분기 +${stages.bonusPercent}%`
+              : '1-1부터'}
+            {stages?.exAvailable ? ' · EX 가능' : ''}
+          </em>
+        </button>
+      </section>
+    </div>
+  )
+}
+
+/**
+ * 매도벽 돌파 스테이지 선택 (#698): 주 게임. 1-1부터 차례로 열리고 챕터 끝은 보스다. 스테이지 번호가 매도벽의 세기라 뒤로 갈수록 세진다. 처음 깨면
+ * 자본과 무기 뽑기권, 별을 더 얻으면 뽑기권을 받는다.
+ */
+function AssaultSelect({ company, disabled }: { company: Company; disabled: boolean }) {
+  const assaults = company.assaults
+  const per = assaults?.perChapter ?? 10
+  const last = assaults?.last ?? per
+  const best = assaults?.best ?? 0
+  const open = Math.min(best + 1, last)
+  const chapters = Math.ceil(last / per)
+  const openChapter = Math.ceil(open / per)
+  const [chapter, setChapter] = useState(openChapter)
+  const numbers = Array.from({ length: per }, (_, i) => (chapter - 1) * per + i + 1).filter(
+    (n) => n <= last,
+  )
+  const start = (stage: number) => {
+    sfx.stamp()
+    haptic.medium()
+    useAppUi.getState().startBattle({ kind: 'assault', stage })
+  }
+  const turn = (to: number) => {
+    sfx.tap()
+    setChapter(to)
+  }
+  return (
+    <>
+      <div className="toy-chapter" data-testid="assault-chapter" data-chapter={chapter}>
+        <button
+          type="button"
+          aria-label="앞 챕터"
+          disabled={chapter <= 1}
+          onClick={() => turn(chapter - 1)}
+        >
+          ‹
+        </button>
+        <p className="toy-sheet-lead">
+          챕터 {chapter}
+          {chapter > openChapter && <small> · 잠김</small>}
+        </p>
+        <button
+          type="button"
+          aria-label="다음 챕터"
+          disabled={chapter >= chapters}
+          onClick={() => turn(chapter + 1)}
+        >
+          ›
+        </button>
+      </div>
+      <p className="text-sm text-muted" data-testid="assault-lead">
+        {chapter > openChapter
+          ? `챕터 ${chapter - 1} 보스를 깨면 열린다`
+          : '매도벽을 부수고 올라가요. 처음 깨면 자본과 무기 뽑기권을 받아요.'}
+      </p>
+      <ol className="toy-stage-grid" data-testid="assault-grid">
+        {numbers.map((n) => {
+          const stars = assaults?.stars[n - 1] ?? 0
+          const locked = n > open
+          const boss = n % per === 0
+          return (
+            <li key={n}>
+              <button
+                type="button"
+                className={`toy-stage-pick ${boss ? 'is-boss' : ''} ${stars > 0 ? 'is-cleared' : ''}`}
+                disabled={disabled || locked}
+                data-testid="assault-stage"
+                data-stage={n}
+                data-stars={stars}
+                aria-label={`매도벽 돌파 ${stageLabel(n, per)}${locked ? ' 잠김' : ''}${boss ? ' 보스' : ''} 별 ${stars}개`}
+                onClick={() => start(n)}
+              >
+                <b>{locked ? '🔒' : stageLabel(n, per)}</b>
+                <small aria-hidden="true">
+                  {boss && !locked ? '보스 ' : ''}
+                  {'★'.repeat(stars)}
+                  {'☆'.repeat(3 - stars)}
+                </small>
+              </button>
+            </li>
+          )
+        })}
+      </ol>
+    </>
   )
 }
 

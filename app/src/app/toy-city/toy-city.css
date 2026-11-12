@@ -1214,14 +1214,16 @@
   background: #f37c60;
   color: #fff6dc;
 }
-.toy-home .toy-bottom-cards > [data-testid="stage-open"] {
+/* 가운데가 주 게임 매도벽 돌파 (#698). 오른쪽은 보조게임(종목회의·멘탈 보호) 메뉴. */
+.toy-home .toy-bottom-cards > [data-testid="assault-open"] {
   order: 2;
   min-height: 108px;
   background: linear-gradient(#ffae70, #f47850);
   color: #fff8df;
 }
-.toy-home .toy-bottom-cards > div {
+.toy-home .toy-bottom-cards > [data-testid="side-open"] {
   order: 3;
+  position: relative;
 }
 .toy-home .toy-bottom-cards > [data-testid="battle-upgrade-open"] {
   order: 1;
@@ -1231,7 +1233,41 @@
   align-items: end;
 }
 @media (max-height: 720px) {
-  .toy-home .toy-bottom-cards > [data-testid="stage-open"] {
+  .toy-home .toy-bottom-cards > [data-testid="assault-open"] {
     min-height: 85px;
   }
+}
+
+/* 보조게임 메뉴 (#698): 종목회의·멘탈 보호 스테이지를 한 칸씩. */
+.toy-side-games {
+  display: grid;
+  gap: 14px;
+}
+.toy-side-games .toy-sheet-lead {
+  margin-bottom: 0;
+}
+.toy-side-games section {
+  display: grid;
+  gap: 6px;
+}
+.toy-side-games h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #343b65;
+}
+.toy-side-game {
+  width: 100%;
+  min-height: 76px;
+}
+.toy-side-game[data-testid="settle"]:not(:disabled) {
+  background: #fc795e;
+  color: #fffdf4;
+  border-color: #ffb39e;
+}
+.toy-side-game[data-testid="settle"]:not(:disabled) small,
+.toy-side-game[data-testid="settle"]:not(:disabled) em {
+  color: inherit;
+}
+.toy-side-game:disabled {
+  opacity: 0.55;
 }

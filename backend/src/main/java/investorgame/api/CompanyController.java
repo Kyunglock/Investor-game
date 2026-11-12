@@ -222,6 +222,25 @@ class CompanyController {
 
   record StageRequest(@Positive int stage, boolean cleared, @Min(0) @Max(3) int stars) {}
 
+  /** 매도벽 돌파 스테이지 한 판의 결과를 보낸다 (#698). 몸통은 멘탈 스테이지와 같다. */
+  @PostMapping("/assault")
+  CompanyView reportAssault(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody StageRequest request) {
+    UUID sessionId = cookies.requireSession(token);
+    CompanyView company =
+        companies.reportAssault(sessionId, request.stage(), request.cleared(), request.stars());
+    PLAY.info(
+        "company-assault session={} company={} stage={} cleared={} stars={} ip={}",
+        sessionId,
+        company.companyId(),
+        request.stage(),
+        request.cleared(),
+        request.stars(),
+        ClientIp.current());
+    return company;
+  }
+
   /** EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번). */
   @PostMapping("/ex")
   CompanyView reportEx(

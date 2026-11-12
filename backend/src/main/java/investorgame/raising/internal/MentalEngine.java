@@ -472,6 +472,66 @@ class MentalEngine {
     c.lastStage = r;
   }
 
+  /** 깬 최고 매도벽 돌파 스테이지 (#698). 0이면 아직 없다. */
+  int bestAssault(CompanyState c) {
+    return c.assaultStars == null ? 0 : c.assaultStars.size();
+  }
+
+  /**
+   * 매도벽 돌파 스테이지 한 판의 결과 (#698): 주 게임. 멘탈 스테이지(369번)와 따로 진행하며, 열린 스테이지(1 ~ 깬 최고 + 1, 마지막 스테이지까지)만
+   * 받는다. 보상 규칙은 멘탈 스테이지와 같다: 처음 깨면 자본(번호 × capitalPerStage)과 무기 뽑기권(챕터 끝이면 더), 별이 전보다 많으면 늘어난 별마다
+   * 뽑기권. 분기 강화율(bonusPercent)에는 들어가지 않는다.
+   */
+  void reportAssault(CompanyState c, int stage, boolean cleared, int stars) {
+    CompanyProperties.Stages rule = properties.mental().stages();
+    if (c.assaultStars == null) {
+      c.assaultStars = new java.util.ArrayList<>();
+    }
+    int best = bestAssault(c);
+    if (stage < 1 || stage > Math.min(best + 1, lastStage())) {
+      throw new InvalidRequestException("아직 열리지 않은 매도벽 돌파 스테이지다: " + stage);
+    }
+    if (c.closed) {
+      throw new InvalidRequestException("끝난 회사다");
+    }
+    CompanyState.StageResult r = new CompanyState.StageResult();
+    r.stage = stage;
+    r.cleared = cleared;
+    r.stars = cleared ? Math.clamp(stars, 1, 3) : 0;
+    if (cleared) {
+      if (stage == best + 1) {
+        c.assaultStars.add(0);
+        r.firstClear = true;
+        r.capital = stage * rule.capitalPerStage();
+        r.tickets += stage % rule.perChapter() == 0 ? rule.bossTickets() : rule.clearTickets();
+      }
+      int before = c.assaultStars.get(stage - 1);
+      if (r.stars > before) {
+        r.tickets += (r.stars - before) * rule.starTickets();
+        c.assaultStars.set(stage - 1, r.stars);
+      }
+      c.capital += r.capital;
+      c.yearRewards += r.capital;
+      c.weaponTickets += r.tickets;
+    }
+    c.lastAssault = r;
+  }
+
+  /** 매도벽 돌파 스테이지 화면 값 (#698). */
+  CompanyView.Assaults assaultsView(CompanyState c) {
+    CompanyProperties.Stages rule = properties.mental().stages();
+    CompanyState.StageResult r = c.lastAssault;
+    return new CompanyView.Assaults(
+        bestAssault(c),
+        lastStage(),
+        rule.perChapter(),
+        c.assaultStars == null ? List.of() : List.copyOf(c.assaultStars),
+        r == null
+            ? null
+            : new CompanyView.StageResult(
+                r.stage, r.cleared, r.stars, r.firstClear, r.capital, r.tickets));
+  }
+
   /** 스테이지 화면 값 (369번). */
   CompanyView.Stages stagesView(CompanyState c) {
     CompanyProperties.Stages rule = properties.mental().stages();

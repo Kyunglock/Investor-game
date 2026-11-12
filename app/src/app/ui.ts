@@ -4,13 +4,18 @@ import { create } from 'zustand'
 /** 아래 탭 (decisions.md 309·312번): 사무실 · 채용 · 배치 · 이슈 · 기록. 웹의 탭(이슈·채용·배치·지난 결산·연표)을 폰 화면에 맞게 다시 나눴다. */
 export type Tab = 'office' | 'market' | 'staff' | 'issue' | 'record'
 
-/** 인력 관리의 자리 카드와 메인 화면의 설정·확장·멘탈·전투 강화(367번) 시트. */
-export type ToyPanel = 'upgrade' | 'stage' | 'settings' | 'battle' | 'weapons'
+/**
+ * 인력 관리의 자리 카드와 메인 화면의 설정·확장·멘탈·전투 강화(367번) 시트. assault는 주 게임 매도벽 돌파 스테이지 선택, side는 보조게임
+ * (종목회의·멘탈 보호 스테이지) 메뉴다 (#698).
+ */
+export type ToyPanel = 'upgrade' | 'stage' | 'settings' | 'battle' | 'weapons' | 'assault' | 'side'
 
 /**
- * 들어갈 멘탈 전투 (decisions.md 369·414번): 번호 스테이지, EX 디펜스, 또는 종목 회의 뒤 전투(틀렸으면 디펜스, 맞혔으면 공격 판 매도벽 돌파).
+ * 들어갈 멘탈 전투 (decisions.md 369·414번): 매도벽 돌파 스테이지(주 게임, #698), 멘탈 보호 번호 스테이지, EX 디펜스, 또는 종목 회의 뒤
+ * 전투(매도벽 돌파).
  */
 export type BattleEntry =
+  | { kind: 'assault'; stage: number }
   | { kind: 'stage'; stage: number }
   | { kind: 'ex' }
   | { kind: 'invest'; mode: 'DEFENSE' | 'ASSAULT'; level: number }

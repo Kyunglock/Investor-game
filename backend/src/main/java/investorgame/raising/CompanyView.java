@@ -51,7 +51,8 @@ public record CompanyView(
     List<Weapon> weapons,
     Armory armory,
     List<BattleUpgrade> battleUpgrades,
-    Stages stages) {
+    Stages stages,
+    Assaults assaults) {
 
   /**
    * 업계 순위 (#351): 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다(로그인이 없는 익명 세션). 한 해도 마치지 않았으면 null.
@@ -99,6 +100,18 @@ public record CompanyView(
       int bonusPercent,
       boolean exAvailable,
       StageResult lastResult) {}
+
+  /**
+   * 매도벽 돌파 스테이지 (#698): 주 게임. 멘탈 스테이지와 따로 1-1부터 차례로 깬다.
+   *
+   * @param best 깬 최고 스테이지(0이면 아직 없다). 다음에 열리는 것은 best + 1
+   * @param last 마지막 스테이지
+   * @param perChapter 한 챕터의 스테이지 수. 챕터 마지막은 보스
+   * @param stars 깬 스테이지의 별, 1번부터 차례로
+   * @param lastResult 마지막으로 보낸 결과와 받은 보상. 없으면 null
+   */
+  public record Assaults(
+      int best, int last, int perChapter, List<Integer> stars, StageResult lastResult) {}
 
   /**
    * 스테이지·EX 한 판의 결과 (369번).
