@@ -1,5 +1,25 @@
 import { describe, expect, it } from 'vitest'
-import { assaultBonusPercent, BUY_WALL, BuyWall, pushedByCollapse } from './buyWall'
+import { assaultBonusPercent, BUY_WALL, BuyWall, buyOrderX, pushedByCollapse } from './buyWall'
+
+describe('매수 티켓의 좌우 분포', () => {
+  it('왼쪽·오른쪽에 각각 40%, 중앙에 20%를 배치하고 영역 안에서도 위치가 달라진다', () => {
+    const xs = Array.from({ length: 1000 }, (_, i) => buyOrderX(0, 100, () => (i + 0.5) / 1000))
+    expect(xs.filter((x) => x < 32)).toHaveLength(400)
+    expect(xs.filter((x) => x > 68)).toHaveLength(400)
+    expect(xs.filter((x) => x >= 32 && x <= 68)).toHaveLength(200)
+    expect(new Set(xs).size).toBe(1000)
+  })
+
+  it('좁은 화면에서도 티켓 중심은 레인 양끝의 여백 안에 머문다', () => {
+    for (const width of [254, 324, 702]) {
+      for (const r of [0, 0.3999, 0.4, 0.7999, 0.8, 0.9999]) {
+        const x = buyOrderX(33, width, () => r)
+        expect(x).toBeGreaterThanOrEqual(33 + width * 0.08)
+        expect(x).toBeLessThanOrEqual(33 + width * 0.92)
+      }
+    }
+  })
+})
 
 describe('매수벽', () => {
   it('붕괴하면 80px 후퇴하고 1.5초 뒤 재건하며 그 뒤 1초간 보호한다', () => {
@@ -23,29 +43,29 @@ describe('매수벽', () => {
     expect(wall.hit(100)).toBe(true)
     expect(wall.breaks).toBe(2)
   })
-  it('매수 주문은 불규칙한 간격으로 하나씩 발사하고 총량을 보존한다', () => {
+  it('매수 주문은 불규칙한 간격으로 두 장씩 발사하고 매도 물량의 두 배를 보낸다', () => {
     let roll = 0
     const wall = new BuyWall(100, () => (roll++ % 2 === 0 ? 0 : 1))
     expect(wall.step(10).fireCount).toBe(0)
     wall.sells = 3
     expect(wall.step(0).fireCount).toBe(0)
-    expect(wall.step(0.16).fireCount).toBe(1)
+    expect(wall.step(0.16).fireCount).toBe(2)
     expect(wall.step(0.3).fireCount).toBe(0)
-    expect(wall.step(0.26).fireCount).toBe(1)
-    expect(wall.step(0.16).fireCount).toBe(1)
-    expect(wall.shots).toBe(wall.sells)
+    expect(wall.step(0.26).fireCount).toBe(2)
+    expect(wall.step(0.16).fireCount).toBe(2)
+    expect(wall.shots).toBe(wall.sells * 2)
     expect(wall.step(10).fireCount).toBe(0)
   })
-  it('재건 후 밀린 주문도 한 발씩 보낸다', () => {
+  it('재건 후 밀린 주문도 한 번에 두 장씩 보내고 총량을 보존한다', () => {
     const wall = new BuyWall(100, () => 0.5)
     wall.sells = 8
     wall.hit(100)
     expect(wall.step(1).fireCount).toBe(0)
     expect(wall.step(0.5).fireCount).toBe(0)
     expect(wall.step(0.34).fireCount).toBe(0)
-    expect(wall.step(0.02).fireCount).toBe(1)
-    for (let i = 0; i < 7; i++) expect(wall.step(0.36).fireCount).toBe(1)
-    expect(wall.shots).toBe(wall.sells)
+    expect(wall.step(0.02).fireCount).toBe(2)
+    for (let i = 0; i < 7; i++) expect(wall.step(0.36).fireCount).toBe(2)
+    expect(wall.shots).toBe(wall.sells * 2)
   })
   it('추가 수익은 별 0·1·2·3개 → 0·25·50·100%다', () => {
     expect(assaultBonusPercent(0)).toBe(0)
@@ -65,7 +85,11 @@ it('서킷브레이커는 발사 시계만 20%로 줄이고 총량과 재건 시
   }
   expect(halted.shots).toBeGreaterThan(0)
   expect(halted.shots).toBeLessThan(normal.shots)
-  expect(halted.shots).toBeLessThanOrEqual(halted.sells)
+  expect(halted.shots).toBeLessThanOrEqual(halted.sells * 2)
+  // 거래 정지 중에도 최종 발사량은 매도 물량의 정확히 두 배다.
+  for (let i = 0; i < 100; i++) halted.stepOrders(1)
+  expect(halted.shots).toBe(halted.sells * 2)
+  expect(halted.stepOrders(10)).toBe(0)
   halted.hit(100)
   const rebuild = halted.rebuildLeft
   expect(halted.stepOrders(4)).toBe(0)

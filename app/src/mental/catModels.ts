@@ -17,3 +17,9 @@ export function catMuzzle(model: CatModel, x: number, y: number) {
 import { CAT_H, CAT_W } from '@web/features/game/cat/draw'
 
 export const CAT_SCALE = 0.72
+
+/** 탄이 생성되는 실제 총구에서 표적을 겨눈다. 체형마다 총구 위치가 다르다. */
+export function catAim(model: CatModel, x: number, y: number, target: { x: number; y: number }) {
+  const muzzle = catMuzzle(model, x, y)
+  return Math.atan2(target.y - muzzle.y, target.x - muzzle.x)
+}
