@@ -82,7 +82,16 @@ import {
   damageLabel,
   scatterOffset,
 } from './damageNumbers'
-import { ENEMIES, isOrder, orderShares, UNITS, type UnitKind } from './enemies'
+import {
+  crossOrders,
+  ENEMIES,
+  isOrder,
+  orderHp,
+  orderShares,
+  quantityOrder,
+  UNITS,
+  type UnitKind,
+} from './enemies'
 import { WALK_FRAMES, walkFrame } from './enemyWalk'
 import { type GameSpeed, simScale } from './gameSpeed'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
@@ -809,7 +818,7 @@ class BattleScene extends Phaser.Scene {
       if (!enemy.active || enemy.dying || enemy.cell || enemy.wallPushUntil > this.elapsed) return
       const base = enemy.boss && !this.assault ? BOSS.dmg : UNITS[enemy.kind].dmg
       const damage = Math.round(base * this.staged(this.dmgScale))
-      if (this.buyWall?.active && !enemy.boss) this.hitBuyWall(damage, enemy.x)
+      if (this.buyWall?.active && !enemy.boss) this.hitBuyWall(this.sellAttack(enemy), enemy.x)
       else this.hurt(damage, enemy)
       // 공격 판: 매도 물량은 사장냥에 닿으면 멘탈을 깎고 사라진다(되튀어 계속 닿지 않게). 보스는 남는다.
       if (this.assault && !enemy.boss && enemy.wallPushUntil <= this.elapsed)
@@ -1877,10 +1886,20 @@ class BattleScene extends Phaser.Scene {
           e.y >= toY - 12,
       )
       const hit = targets.sort((a, b) => b.y - a.y)[0]
-      if (!hit) return false
-      this.hit(hit, damage, -Math.PI / 2, 'bullet')
+      if (!hit) return damage
       this.glow(x, hit.y, 0xffbb79, 28, 180)
-      return true
+      // 매수 주문과 매도 물량은 서로 수량만큼 상쇄한다: 남은 매수는 계속 날아간다. 허매도는 수량 없이 사라지고, 몬스터·벽은 매수를 다 받는다.
+      if (hit.kind === 'fake') {
+        this.hit(hit, hit.hp, -Math.PI / 2, 'bullet')
+        return damage
+      }
+      if (quantityOrder(hit.kind) && !hit.boss && !hit.cell) {
+        const { used, left } = crossOrders(damage, hit.hp)
+        this.hit(hit, used, -Math.PI / 2, 'bullet')
+        return left
+      }
+      this.hit(hit, damage, -Math.PI / 2, 'bullet')
+      return 0
     })
     this.drawBuyWall()
     this.climbV = dt > 0 ? move / dt : 0
@@ -2165,11 +2184,14 @@ class BattleScene extends Phaser.Scene {
       this.tweens.add({ targets: e, scale: k, duration: 220, ease: 'Back.easeOut' })
     }
     // 디펜스 번호 스테이지는 뒤로 갈수록 적이 단단하다 (509번). 공격 판은 판의 물량 체력 배율(413번).
+    // 공격 판의 매도 물량은 화면의 수량이 곧 체력이다: 100주면 100주만큼 맞아야 체결된다.
     e.hp =
       this.mode === 'defense'
         ? v.hp * this.staged(this.hpScale)
         : this.assault
-          ? v.hp * this.hpScale
+          ? quantityOrder(kind) && isOrder(kind)
+            ? orderHp(kind, this.hpScale)
+            : v.hp * this.hpScale
           : v.hp
     e.maxHp = e.hp
     e.kbx = 0
@@ -2658,6 +2680,15 @@ class BattleScene extends Phaser.Scene {
       enemy.kby = 0
       enemy.setVelocity(0, -600)
     }
+  }
+
+  /**
+   * 매도 물량이 매수벽에 닿을 때 깎는 양 (전투 단위): 매도 주문·시장가·대량 매도는 남은 수량 그대로다(수량이 곧 공격). 몬스터와 허매도는 바탕 피해 ×
+   * 진행 배율이다.
+   */
+  private sellAttack(e: Enemy): number {
+    if (quantityOrder(e.kind) && !e.boss) return Math.max(0, e.hp)
+    return Math.round(UNITS[e.kind].dmg * this.staged(this.dmgScale))
   }
 
   hitBuyWall(damage: number, x: number) {
@@ -4063,7 +4094,7 @@ class BattleScene extends Phaser.Scene {
         e.setVelocity((tx - e.x) * 2, (h * 0.18 - e.y) * 2)
       } else if (this.assault) {
         if (this.buyWall?.active && e.y >= this.buyWallY() - 15) {
-          this.hitBuyWall(Math.round(v.dmg * this.staged(this.dmgScale)), e.x)
+          this.hitBuyWall(this.sellAttack(e), e.x)
           if (e.wallPushUntil <= this.elapsed) this.kill(e, false)
           continue
         }

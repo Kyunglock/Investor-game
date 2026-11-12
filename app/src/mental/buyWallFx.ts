@@ -83,13 +83,19 @@ export class BuyWallFx {
     shot.body.setTexture(texture).setScale(this.orderScale).setPosition(x, y).setVisible(true)
   }
 
-  step(dt: number, hit: (x: number, fromY: number, toY: number, damage: number) => boolean) {
+  /** hit는 이번에 쓰고 남은 매수 수량(전투 단위)을 돌려준다: 0이면 주문이 사라지고, 줄었으면 남은 수량으로 계속 날아간다. */
+  step(dt: number, hit: (x: number, fromY: number, toY: number, damage: number) => number) {
     this.hitLeft = Math.max(0, this.hitLeft - dt)
     this.breakLeft = Math.max(0, this.breakLeft - dt)
     for (const shot of this.shots) {
       if (!shot.active) continue
       const next = shot.y - dt * 360
-      if (hit(shot.x, shot.y, next, shot.damage) || next < -30) shot.active = false
+      const left = hit(shot.x, shot.y, next, shot.damage)
+      if (left <= 1e-6 || next < -30) shot.active = false
+      else if (left < shot.damage) {
+        shot.damage = left
+        shot.body.setTexture(buyOrderTexture(this.scene, left))
+      }
       shot.y = next
       shot.body.setPosition(shot.x, shot.y).setVisible(shot.active)
     }

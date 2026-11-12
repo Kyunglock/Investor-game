@@ -1,3 +1,5 @@
+import { SHARES_PER_HP } from './shares'
+
 /** 패닉셀·투매·투기·손절·공매도: 이름이 곧 행동이다. 일자로 천천히 내려온다. 그림은 art.ts. */
 export type EnemyKind = 'panic' | 'dump' | 'spec' | 'stop' | 'short'
 
@@ -129,4 +131,24 @@ export function isOrder(kind: UnitKind): kind is OrderKind {
 /** 티켓과 체결 표시는 같은 스테이지 체력 배율로 물량을 늘린다. */
 export function orderShares(kind: OrderKind, hpScale = 1): number {
   return Math.max(1, Math.round(ORDERS[kind].shares * hpScale))
+}
+
+/**
+ * 수량이 곧 체력이자 공격인 매도 물량 (474번 뒤 사용자 요청): 매도 주문·시장가·대량 매도. 허매도(가짜 물량)·매도벽 칸·큰손은 따로 센다.
+ */
+export function quantityOrder(kind: UnitKind): boolean {
+  return kind === 'order' || kind === 'market' || kind === 'bulk'
+}
+
+/** 매도 물량의 체력(전투 단위): 화면의 수량(orderShares) ÷ SHARES_PER_HP. 100주면 100주만큼 맞아야 체결된다. */
+export function orderHp(kind: OrderKind, hpScale = 1): number {
+  return orderShares(kind, hpScale) / SHARES_PER_HP
+}
+
+/**
+ * 매수 주문과 매도 물량이 부딪힐 때 (전투 단위): 서로 적은 쪽만큼 상쇄한다. used만큼 매도가 줄고, 매수는 left가 남아 계속 날아간다(0이면 사라진다).
+ */
+export function crossOrders(buy: number, sell: number): { used: number; left: number } {
+  const used = Math.max(0, Math.min(buy, sell))
+  return { used, left: Math.max(0, buy - used) }
 }
