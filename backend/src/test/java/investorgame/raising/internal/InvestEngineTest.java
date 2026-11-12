@@ -260,18 +260,21 @@ class InvestEngineTest {
     ENGINE.invest.decide(c, right(c), new HashSeededRandom(3));
     int base = ENGINE.invest.battleLevel(c, c.invest, 0);
     assertThat(ENGINE.invest.battleLevel(c, c.invest, 10)).as("스테이지 하나마다 +1").isEqualTo(base + 10);
-    c.year = 5;
-    assertThat(ENGINE.invest.battleLevel(c, c.invest, 0)).as("두 해마다 +1").isEqualTo(base + 2);
+    c.quarter += 1;
+    assertThat(ENGINE.invest.battleLevel(c, c.invest, 0)).as("분기마다 +1").isEqualTo(base + 1);
+    c.quarter -= 1;
+    c.year += 2;
+    assertThat(ENGINE.invest.battleLevel(c, c.invest, 0)).as("두 해 = 여덟 분기").isEqualTo(base + 8);
     c.building = CompanyEngine.LADDER.get(4);
-    assertThat(ENGINE.invest.battleLevel(c, c.invest, 0)).as("건물 두 단계마다 +1").isEqualTo(base + 4);
+    assertThat(ENGINE.invest.battleLevel(c, c.invest, 0)).as("건물 두 단계마다 +1").isEqualTo(base + 10);
     c.battleLevels.put("damage", 60);
     c.battleLevels.put("fire", 40);
     c.battleLevels.put("hp", 500);
     assertThat(ENGINE.invest.battleLevel(c, c.invest, 0))
         .as("구매한 강화는 난이도를 올리지 않는다")
-        .isEqualTo(base + 4);
+        .isEqualTo(base + 10);
     assertThat(ENGINE.invest.battleLevelParts(c, c.invest, 0))
-        .containsEntry("year", 2)
+        .containsEntry("quarter", 8)
         .containsEntry("building", 2)
         .doesNotContainKey("upgrade");
   }
@@ -294,8 +297,8 @@ class InvestEngineTest {
     c.year += 4;
     c.building = CompanyEngine.LADDER.get(4);
     assertThat(ENGINE.invest.battleLevel(c, c.invest, 10))
-        .as("연차·건물·스테이지로 오르는 난이도는 유지")
-        .isEqualTo(base + 14);
+        .as("분기·건물·스테이지로 오르는 난이도는 유지")
+        .isEqualTo(base + 28);
   }
 
   /** 용기가 낮은 단타 직원은 "제가 알아서 할게요" 하고 제 판단대로 한다. 안목이 좋으면 제멋대로 한 쪽이 맞을 때가 많다. */
