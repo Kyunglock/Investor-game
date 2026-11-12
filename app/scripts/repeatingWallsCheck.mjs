@@ -81,7 +81,7 @@ try {
   assert.equal(after.playerY, before.playerY)
   await page.waitForFunction(() => {
     const wall = window.__mentalMarket().buyWall
-    return wall.shots === wall.sells && wall.shots > 0 && wall.feedback.orders.length > 0
+    return wall.shots === wall.sells * 2 && wall.shots > 0 && wall.feedback.orders.length > 0
   })
   const orders = await page.evaluate(() => window.__mentalMarket().buyWall.feedback.orders)
   assert(orders.every((order) => order.title === '매수' && order.amount === '100주'))

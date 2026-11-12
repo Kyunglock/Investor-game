@@ -5,7 +5,7 @@ export const BUY_WALL = {
   protectionSeconds: 1,
   shotSeconds: 0.35,
   shotJitter: 0.2,
-  sellsPerShot: 1,
+  shotsPerSell: 2,
   retreatSeconds: 0.7,
   retreatDistance: 80,
 } as const
@@ -22,7 +22,7 @@ export function buyOrderX(left: number, width: number, random: () => number = Ma
   return left + width * position
 }
 
-/** 매도 물량 하나당 매수 주문 하나로 맞선다. 붕괴하면 후퇴하고 1.5초 뒤 새 벽을 세운다. */
+/** 매도 물량 하나당 매수 주문 두 개로 맞선다. 붕괴하면 후퇴하고 1.5초 뒤 새 벽을 세운다. */
 export class BuyWall {
   readonly maxHp: number
   hp: number
@@ -83,12 +83,13 @@ export class BuyWall {
   /** 거래 정지 중에는 재건·보호 시계와 별도로 주문 발사만 느리게 진행한다. */
   stepOrders(dt: number): number {
     if (!this.active) return 0
-    const pending = Math.max(0, Math.floor(this.sells / BUY_WALL.sellsPerShot) - this.shots)
-    // Do not bank idle time or release the entire backlog in one frame.
+    const pending = Math.max(0, Math.floor(this.sells) * BUY_WALL.shotsPerSell - this.shots)
+    // 쉬는 시간을 모아 두거나 밀린 주문을 한 프레임에 모두 쏘지 않는다. 한 번에 두 장씩 보낸다.
     this.shotClock = pending > 0 ? this.shotClock + Math.max(0, dt) : 0
-    const fireCount = pending > 0 && this.shotClock >= this.nextShot ? 1 : 0
+    const fireCount =
+      pending > 0 && this.shotClock >= this.nextShot ? Math.min(pending, BUY_WALL.shotsPerSell) : 0
     if (fireCount > 0) {
-      this.shots++
+      this.shots += fireCount
       this.shotClock = 0
       this.nextShot = this.shotDelay()
     }
