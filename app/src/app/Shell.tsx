@@ -106,7 +106,8 @@ export function Shell({ company }: { company: Company }) {
       </main>
       {tab !== 'office' && (
         <div className="safe-bottom">
-          {tab !== 'record' && <ActionBar company={company} />}
+          {/* 이슈 탭은 종목회의 칸이 분기 넘기기를 맡는다 (474번). */}
+          {tab !== 'record' && tab !== 'issue' && <ActionBar company={company} />}
           <nav
             className="grid grid-cols-5 gap-1 border-(--outline) border-t-[3px] bg-white px-1.5 pt-1.5 pb-1"
             aria-label="회사 일"
