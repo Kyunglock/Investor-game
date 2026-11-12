@@ -13,7 +13,7 @@
     "sync": "pnpm build && cap sync android",
     "apk": "pnpm sync && cd android && ./gradlew assembleDebug --console=plain",
     "open": "cap open android",
-    "assets": "node scripts/appAssets.ts && pnpm dlx @capacitor/assets generate --android --assetPath assets --iconBackgroundColor '#14161a' --iconBackgroundColorDark '#14161a' --splashBackgroundColor '#14161a' --splashBackgroundColorDark '#14161a'"
+    "assets": "node scripts/appAssets.ts && pnpm dlx @capacitor/assets generate --android --assetPath assets --iconBackgroundColor '#ff571c' --iconBackgroundColorDark '#ff571c' --splashBackgroundColor '#fff3df' --splashBackgroundColorDark '#fff3df'"
   },
   "dependencies": {
     "@capacitor/android": "8.6.0",

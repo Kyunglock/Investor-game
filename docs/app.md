@@ -94,6 +94,8 @@ CAP_SERVER_URL=http://192.168.0.10:5173/app/ pnpm apk   # 같은 Wi-Fi의 내 �
 
 ### 아이콘·시작 화면 다시 만들기
 
+승인한 **매도벽 돌파 고양이** 원본은 `app/assets/source/wall-breaker.png`에 보관한다. `scripts/appAssets.ts`가 이 원본으로 런처 아이콘·크림색 시작 화면·앱 파비콘을 만들며, 재생성해도 예전 차트 그림으로 돌아가지 않는다.
+
 ```bash
 cd app && pnpm assets     # scripts/appAssets.ts가 assets/*.png를 그리고, @capacitor/assets가 res/의 크기별 그림을 만든다
 ```
