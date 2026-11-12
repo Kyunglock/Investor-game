@@ -1540,14 +1540,16 @@ class BattleScene extends Phaser.Scene {
     this.pushHud(true)
   }
 
-  /** 큰손이 시장가 매도를 쏟아 낸다: 발밑에서 사장냥 쪽으로 부채꼴. 화가 나면(체력 반 아래) 대량 매도도 하나. */
+  /**
+   * 큰손이 시장가 매도를 쏟아 낸다: 양옆으로 퍼지지 않고 큰손 바로 앞(발밑)에서 한 줄로 이어 나와 곧게 내려온다. 화가 나면(체력 반 아래) 대량 매도도 하나.
+   */
   private whaleSummon(boss: Enemy) {
     const { w } = this.view()
     const count = Math.round(ASSAULT_BOSS.summonCount * this.countScale)
+    const x = Phaser.Math.Clamp(boss.x, LANE_LEFT + 10, w - LANE_RIGHT - 10)
     for (let i = 0; i < count; i++) {
-      const spread = (i - (count - 1) / 2) * 30
-      const x = Phaser.Math.Clamp(boss.x + spread, LANE_LEFT + 10, w - LANE_RIGHT - 10)
-      this.spawn('market', [x, boss.y + 34 + Math.abs(spread) * 0.3])
+      // 같은 자리에 겹치지 않게 앞뒤로 줄지어 세우고, 좌우로는 아주 조금만 어긋나게 한다.
+      this.spawn('market', [x + (i % 2 ? 6 : -6), boss.y + 34 + i * 24])
     }
     if (boss.hp <= this.bossMax / 2) this.spawn('bulk', [boss.x, boss.y + 40])
     this.pop(boss.x, boss.y + 62, '전량 매도!!', '#ffffff', 22)
