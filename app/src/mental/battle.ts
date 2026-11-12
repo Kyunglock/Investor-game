@@ -57,7 +57,7 @@ import {
   whaleSummonSeconds,
 } from './assault'
 import { STAGE_ASSETS } from './assets'
-import { BUY_WALL, BuyWall } from './buyWall'
+import { BUY_WALL, BuyWall, buyOrderX } from './buyWall'
 import { BuyWallFx } from './buyWallFx'
 import {
   awakenedMateCount,
@@ -1938,7 +1938,7 @@ class BattleScene extends Phaser.Scene {
     const lane = this.lane()
     for (let i = 0; i < count; i++) {
       this.buyWallFx?.launch(
-        lane.left + lane.width * (0.1 + (0.8 * ((((this.buyWall?.shots ?? 1) - 1) % 6) + 0.5)) / 6),
+        buyOrderX(lane.left, lane.width),
         this.buyWallY(),
         this.loadout.damage * 0.75,
       )
