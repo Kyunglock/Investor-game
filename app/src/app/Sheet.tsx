@@ -21,6 +21,8 @@ export function Sheet({
     const root = dialog.current
     root?.focus()
     const keydown = (event: KeyboardEvent) => {
+      // native dialog가 위에 열려 있으면 포커스와 Escape는 그 모달이 처리한다.
+      if (document.querySelector('dialog[open]')) return
       if (event.key === 'Escape') {
         event.preventDefault()
         dismiss()

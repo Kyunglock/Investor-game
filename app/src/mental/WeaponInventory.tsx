@@ -1,10 +1,11 @@
 import type { Company } from '@web/api/client'
 import { useRaisingStore } from '@web/features/raising/store'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { GunSprite } from './GunSprite'
 import { DEFAULT_WEAPON, type Weapon } from './hero'
+import { type DrawResult, WeaponReveal } from './WeaponReveal'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS, WEAPON_TRAITS } from './weaponEffects'
 import './weapons.css'
 
@@ -39,14 +40,49 @@ export function weaponBadge(company: Company): string | null {
 export function WeaponInventory({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
-  const [shown, setShown] = useState(false)
+  const [reveal, setReveal] = useState<{ id: number; result: DrawResult | null } | null>(null)
+  const drawing = useRef(false)
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
+  const draw = async () => {
+    if (
+      drawing.current ||
+      useRaisingStore.getState().busy ||
+      ended ||
+      !armory ||
+      armory.tickets <= 0
+    )
+      return
+    drawing.current = true
+    const id = Date.now()
+    setReveal({ id, result: null })
+    sfx.stamp()
+    try {
+      await useRaisingStore.getState().drawWeapon()
+      const state = useRaisingStore.getState()
+      const last = state.company?.armory?.lastDraw
+      const weapon = state.company?.weapons?.find(
+        (w) => w.kind === last?.kind && w.grade === last.grade,
+      )
+      if (mounted.current)
+        setReveal(!state.error && last && weapon ? { id, result: { draw: last, weapon } } : null)
+    } catch {
+      if (mounted.current) setReveal(null)
+    } finally {
+      drawing.current = false
+    }
+  }
   const armory: Armory | null = company.armory ?? null
   const weapons = company.weapons?.length ? company.weapons : [DEFAULT_WEAPON]
   const equipped = weapons.find((w) => w.equipped) ?? weapons[0]
   const sorted = [...weapons].sort(
     (a, b) => GRADE_ORDER[b.grade] - GRADE_ORDER[a.grade] || a.kind.localeCompare(b.kind),
   )
-  const last = armory?.lastDraw ?? null
   const ended = company.status === 'ENDED'
   return (
     <div className="weapon-inventory" data-testid="weapon-picker">
@@ -78,26 +114,20 @@ export function WeaponInventory({ company }: { company: Company }) {
           type="button"
           className="weapon-draw"
           data-testid="weapon-draw"
-          disabled={busy || ended || !armory || armory.tickets <= 0}
-          onClick={() => {
-            sfx.stamp()
-            haptic.medium()
-            setShown(true)
-            void useRaisingStore.getState().drawWeapon()
-          }}
+          disabled={busy || Boolean(reveal) || ended || !armory || armory.tickets <= 0}
+          onClick={() => void draw()}
         >
           무기 뽑기
         </button>
       </div>
-      {shown && last && (
-        <p className="weapon-drawn animate-pop" data-testid="weapon-drawn" data-new={last.isNew}>
-          <span
-            className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${GRADE_BADGE[last.grade]}`}
-          >
-            {last.gradeName}
-          </span>{' '}
-          {last.name} {last.isNew ? '— 새 무기!' : '— 합성 재료 +1'}
-        </p>
+      {reveal && (
+        <WeaponReveal
+          key={reveal.id}
+          result={reveal.result}
+          tickets={armory?.tickets ?? 0}
+          onClose={() => setReveal(null)}
+          onAgain={() => void draw()}
+        />
       )}
       <p className="mt-3 text-[12px] text-muted">
         가진 무기 {weapons.length}종 · 눌러서 들기

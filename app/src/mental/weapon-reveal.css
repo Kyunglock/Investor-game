@@ -1,0 +1,283 @@
+.weapon-reveal {
+  position: fixed;
+  inset: 0;
+  width: min(100%, 480px);
+  max-width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: auto;
+  padding: 20px;
+  border: 0;
+  color: #fff5dc;
+  background: radial-gradient(ellipse at 50% 42%, #33304d, #11121e 75%);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.weapon-reveal::backdrop {
+  background: #0a0b16ed;
+}
+.weapon-reveal-body {
+  position: relative;
+  isolation: isolate;
+  min-height: 100%;
+  display: grid;
+  align-items: center;
+}
+.weapon-reveal-rays {
+  position: absolute;
+  z-index: -1;
+  inset: 15% 0;
+  pointer-events: none;
+  opacity: 0;
+  border-radius: 50%;
+}
+.weapon-reveal[data-phase="open"] .weapon-reveal-rays,
+.weapon-reveal[data-phase="result"] .weapon-reveal-rays {
+  background: repeating-conic-gradient(
+    from 0deg,
+    transparent 0deg 22deg,
+    var(--reveal-color) 23deg 30deg
+  );
+  opacity: 0.12;
+  animation: weapon-rays 12s linear infinite;
+}
+.weapon-reveal[data-power="0"] .weapon-reveal-rays {
+  display: none;
+}
+.weapon-reveal[data-power="2"] .weapon-reveal-rays,
+.weapon-reveal[data-power="3"] .weapon-reveal-rays {
+  opacity: 0.22;
+}
+.weapon-reveal[data-grade="S"] {
+  background: radial-gradient(ellipse at center, #554019, #080910 75%);
+}
+.weapon-reveal-stage {
+  display: flex;
+  width: 100%;
+  min-height: 70dvh;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 26px;
+  color: inherit;
+  border: 0;
+  background: none;
+}
+.weapon-reveal-stage strong {
+  font-size: 21px;
+  font-family: var(--font-game);
+}
+.weapon-reveal-stage small {
+  color: #d5cee1;
+}
+.weapon-case {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 180px;
+  height: 115px;
+  border: 4px solid #a7adbb;
+  border-radius: 15px;
+  background: linear-gradient(#5e6577 0 40%, #303749 41%);
+  box-shadow:
+    0 0 35px var(--reveal-color),
+    inset 0 0 0 8px #252939;
+}
+.weapon-case i {
+  position: absolute;
+  width: 65px;
+  height: 24px;
+  border: 5px solid #a7adbb;
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  top: -27px;
+}
+.weapon-case b {
+  font-size: 38px;
+  color: var(--reveal-color);
+}
+.weapon-reveal[data-grade] .weapon-case {
+  animation: weapon-case-charge 0.18s ease-in-out infinite alternate;
+}
+.weapon-reveal[data-phase="open"] .weapon-case {
+  animation: weapon-case-open 0.22s ease-out both;
+}
+.weapon-reveal-result {
+  position: relative;
+  text-align: center;
+  padding: 12px 0;
+  animation: weapon-result 0.35s ease-out both;
+}
+.weapon-reveal-new {
+  font-weight: 900;
+  color: var(--reveal-color);
+  letter-spacing: 2px;
+  margin-bottom: 16px;
+}
+.weapon-reveal-result[data-new="true"] .weapon-reveal-new {
+  font-size: 24px;
+}
+.weapon-reveal-grade {
+  display: inline-block;
+  border: 1px solid var(--reveal-color);
+  color: var(--reveal-color);
+  border-radius: 20px;
+  padding: 5px 18px;
+  font-weight: 800;
+}
+.weapon-reveal-art {
+  min-height: 145px;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 0 18px var(--reveal-color));
+}
+.weapon-reveal-result h2 {
+  font-family: var(--font-game);
+  font-size: 30px;
+  margin: 8px 0 14px;
+}
+.weapon-reveal-stats {
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+.weapon-reveal-effect {
+  margin: 16px auto;
+  max-width: 300px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #ffffff0f;
+  color: #ddd5c8;
+  font-size: 13px;
+  line-height: 1.8;
+}
+.weapon-reveal-effect b {
+  color: var(--reveal-color);
+}
+.weapon-reveal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+.weapon-reveal-actions button {
+  flex: 1;
+  min-height: 52px;
+  padding: 10px;
+  border: 1px solid var(--reveal-color);
+  border-radius: 12px;
+  background: #ffffff12;
+  color: #fff5dc;
+  font-weight: 700;
+}
+.weapon-reveal-actions button:last-child:not(:first-child) {
+  background: var(--reveal-color);
+  color: #272236;
+}
+.weapon-reveal-actions small {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+}
+.weapon-reveal button:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+.weapon-reveal[data-power="2"][data-phase="result"]::after,
+.weapon-reveal[data-power="3"][data-phase="result"]::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: var(--reveal-color);
+  animation: weapon-flash 0.4s ease-out both;
+}
+@keyframes weapon-case-charge {
+  from {
+    transform: rotate(-2deg);
+  }
+  to {
+    transform: rotate(2deg);
+  }
+}
+@keyframes weapon-case-open {
+  to {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+@keyframes weapon-result {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes weapon-rays {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes weapon-flash {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@media (max-height: 700px) {
+  .weapon-reveal {
+    padding: 16px;
+  }
+  .weapon-reveal-art {
+    min-height: 105px;
+  }
+  .weapon-reveal-result h2 {
+    font-size: 25px;
+  }
+  .weapon-reveal-new {
+    margin-bottom: 8px;
+  }
+  .weapon-reveal-effect {
+    margin: 10px auto;
+    padding: 9px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .weapon-reveal[data-phase] *,
+  .weapon-reveal[data-phase]::after {
+    animation: none;
+  }
+  .weapon-reveal::after {
+    display: none;
+  }
+}
+
+.weapon-reveal-sparks {
+  display: none;
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+  inset: 24% 0;
+  color: var(--reveal-color);
+  font-size: 30px;
+  line-height: 2.5;
+  word-spacing: 32px;
+  text-align: center;
+}
+.weapon-reveal[data-phase="result"]:not([data-power="0"]) .weapon-reveal-sparks {
+  display: block;
+}
+.weapon-reveal[data-power="2"] .weapon-reveal-body::before,
+.weapon-reveal[data-power="3"] .weapon-reveal-body::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  z-index: -1;
+  inset: 0 28%;
+  background: linear-gradient(transparent, var(--reveal-color), transparent);
+  opacity: 0.12;
+  filter: blur(12px);
+}
