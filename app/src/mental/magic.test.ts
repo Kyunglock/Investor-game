@@ -183,7 +183,7 @@ describe('물·불·번개 마법 (decisions.md 392번)', () => {
     expect(earthStats(3).quake).toBeGreaterThan(0)
   })
 
-  it('땅의 과녁: 가장 가까운 벽 칸·큰손, 없으면 체력이 가장 많은 적', () => {
+  it('충차의 과녁: 가장 가까운 매도벽, 없으면 발사하지 않는다', () => {
     const near = { x: 0, y: -50, hp: 2, wall: false }
     const tough = { x: 300, y: -300, hp: 30, wall: false }
     const wallFar = { x: 0, y: -500, hp: 50, wall: true }
@@ -191,7 +191,7 @@ describe('물·불·번개 마법 (decisions.md 392번)', () => {
     const isWall = (t: { wall: boolean }) => t.wall
     const from = { x: 0, y: 0 }
     expect(siegeTarget([near, tough, wallFar, wallNear], from, isWall)).toBe(wallNear)
-    expect(siegeTarget([near, tough], from, isWall)).toBe(tough)
+    expect(siegeTarget([near, tough], from, isWall)).toBeNull()
     expect(siegeTarget([], from, isWall)).toBeNull()
   })
 

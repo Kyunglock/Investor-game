@@ -85,7 +85,7 @@ const MAGIC_INFO: Record<Magic, { name: string; icon: string; color: string }> =
     color: '#ffd23f',
   },
   earth: {
-    name: '땅의 마법',
+    name: '충차',
     icon: '🪨',
     color: '#c08a4a',
   },
@@ -113,8 +113,7 @@ export function magicEffect(magic: Magic, level: number): string {
   }
   if (magic === 'earth') {
     const e = earthStats(level)
-    const quake = e.quake > 0 ? ' · 충격파' : ''
-    return `${e.cooldown}초마다 ${look} · 벽·큰손 피해 ${pct(e.damage * e.siege)}${quake}`
+    return `${e.cooldown}초마다 ${look} · 매도벽만 공격 · 피해 ${pct(e.damage * e.siege)}`
   }
   const l = lightningStats(level)
   const bolts = l.bolts > 1 ? ` ${l.bolts}줄기` : ''
