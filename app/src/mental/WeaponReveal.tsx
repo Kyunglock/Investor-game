@@ -6,7 +6,7 @@ import { sfx } from '../fx/sound'
 import { GunSprite } from './GunSprite'
 import type { Weapon } from './hero'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from './weaponEffects'
-import { weaponRevealPlan } from './weaponReveal'
+import { weaponRevealPlan } from './weaponRevealPlan'
 import './weapon-reveal.css'
 
 export type DrawResult = {
