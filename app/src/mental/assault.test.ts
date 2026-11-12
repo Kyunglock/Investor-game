@@ -23,6 +23,7 @@ import {
   wallCols,
   whaleSummonSeconds,
 } from './assault'
+import { BUY_ORDER_SPEED } from './buyWall'
 import { xpToNext } from './cards'
 import { ENEMIES, ORDERS, UNITS } from './enemies'
 
@@ -178,8 +179,10 @@ describe('공격 판: 매도벽 (decisions.md 413번)', () => {
     for (const k of ['stop', 'spec', 'short']) expect(last.has(k as never)).toBe(true)
   })
 
-  it('매도 물량: 시장가는 작고 빠르고, 대량 매도는 묵직하고 느리고, 허매도는 경험치가 없다', () => {
-    expect(ORDERS.market.speed).toBeGreaterThan(ORDERS.order.speed)
+  it('매도 물량: 매수 주문과 같은 빠르기, 대량 매도는 묵직하고 느리고, 허매도는 경험치가 없다', () => {
+    expect(ORDERS.order.speed).toBe(BUY_ORDER_SPEED)
+    expect(ORDERS.market.speed).toBe(BUY_ORDER_SPEED)
+    expect(ORDERS.fake.speed).toBe(BUY_ORDER_SPEED)
     expect(ORDERS.market.r).toBeLessThan(ORDERS.order.r)
     expect(ORDERS.bulk.speed).toBeLessThan(ORDERS.order.speed)
     expect(ORDERS.bulk.hp).toBeGreaterThan(ORDERS.order.hp)

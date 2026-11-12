@@ -1,6 +1,6 @@
 import type Phaser from 'phaser'
 import { buyOrderTexture, WALL_LABEL_STYLE } from './art'
-import type { BuyWall } from './buyWall'
+import { BUY_ORDER_SPEED, type BuyWall } from './buyWall'
 import { type BarrierLane, OrderBarrierQueue } from './orderBarrier'
 import { shareLabel } from './shares'
 
@@ -89,7 +89,7 @@ export class BuyWallFx {
     this.breakLeft = Math.max(0, this.breakLeft - dt)
     for (const shot of this.shots) {
       if (!shot.active) continue
-      const next = shot.y - dt * 360
+      const next = shot.y - dt * BUY_ORDER_SPEED
       const left = hit(shot.x, shot.y, next, shot.damage)
       if (left <= 1e-6 || next < -30) shot.active = false
       else if (left < shot.damage) {

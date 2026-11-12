@@ -43,7 +43,10 @@ export interface OrderSpec extends EnemySpec {
   shares: number
 }
 
-/** 매도 물량의 빠르기는 474번 뒤 사용자 요청으로 1.5배(매도 87·시장가 192·대량 45·허매도 99). */
+/**
+ * 매도 물량의 빠르기는 매수 주문(buyWall.ts BUY_ORDER_SPEED, 360)과 같다. 대량 매도만 3분의 2(240)로 느리다. 스테이지 세기의 빠르기 배율은
+ * 붙지 않는다(battle.ts).
+ */
 export const ORDERS: Record<OrderKind, OrderSpec> = {
   /** 매도 주문(100주): 천천히 사장냥 쪽으로 다가온다 */
   order: {
@@ -51,7 +54,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     fill: '#3a7bea',
     label: '매도',
     hp: 2.4,
-    speed: 87,
+    speed: 360,
     dmg: 6,
     reward: 12,
     scale: 1.45,
@@ -63,7 +66,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     fill: '#5aa2ff',
     label: '시장가',
     hp: 0.9,
-    speed: 192,
+    speed: 360,
     dmg: 4,
     reward: 6,
     scale: 1.3,
@@ -75,7 +78,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     fill: '#2347a8',
     label: '대량 매도',
     hp: 13,
-    speed: 45,
+    speed: 240,
     dmg: 13,
     reward: 55,
     scale: 1.55,
@@ -87,7 +90,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     fill: '#9db6dc',
     label: '허매도',
     hp: 1,
-    speed: 99,
+    speed: 360,
     dmg: 4,
     reward: 0,
     scale: 1.45,
