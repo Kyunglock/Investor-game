@@ -312,6 +312,33 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/assault:
+    post:
+      operationId: reportAssault
+      summary: 매도벽 돌파 스테이지 한 판의 결과를 보낸다 (#698)
+      description: |
+        열린 스테이지(1 ~ 깬 최고 + 1)만 받는다. 보상은 멘탈 스테이지와 같다: 처음 깨면 자본(번호 × 1b)과 무기 뽑기권(챕터 끝이면 3장),
+        별을 처음 얻을 때마다 뽑기권 한 장. 못 깼으면 보상 없이 결과만 남는다. 결과는 assaults.lastResult에 담긴다. 아직 안 열린 스테이지면 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stage, cleared, stars]
+              properties:
+                stage: { type: integer, minimum: 1 }
+                cleared: { type: boolean }
+                stars: { type: integer, minimum: 0, maximum: 3 }
+      responses:
+        '200':
+          description: 결과를 받은 뒤의 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/ex:
     post:
       operationId: reportEx
@@ -706,7 +733,7 @@ components:
                   description: 종목 회의 수익률이 오갈 수 있는 범위(만분율, decisions.md 388번). 데스크 몫과 떼어 낸 회의만의 수익률로 −50% ~ +300%
                   required: [lossBp, gainBp]
                   properties:
-                    lossBp: { type: integer, description: 틀렸을 때 가장 크게 잃는 몫(음수). 크게 틀려도 이 아래로는 안 간다 }
+                    lossBp: { type: integer, description: 틀렸을 때 가장 크게 잃는 몫. 틀려도 잃지 않아 늘 0이다 (#697) }
                     gainBp: { type: integer, description: 맞혔을 때 가장 크게 버는 몫. 기사가 클수록 이 끝에 가깝다 }
                 scouted: { type: boolean, description: 이번 분기에 이미 직원이 종목을 물어 왔거나 발굴을 굴렸다 (267·382번) }
                 stockName: { type: string }
@@ -812,7 +839,7 @@ components:
                         total: { type: integer, format: int64, description: 회의 손익. 이미 자본에 들어갔다 }
                         returnBp: { type: [integer, 'null'], description: '회의 수익률(만분율, decisions.md 388번) = 회의 손익 ÷ 건 판돈. 판돈을 적기 전에 정한 옛 회의면 null' }
                         gainBp: { type: integer, description: 이 종목을 맞힌 쪽으로 했으면 번 수익률(만분율). 기사가 클수록 크다(최대 +300%) }
-                        lossBp: { type: integer, description: 틀린 쪽으로 했으면 잃은 수익률(만분율, 음수). 크게 했으면 크게 틀린 몫이고 −50% 아래로는 안 간다 }
+                        lossBp: { type: integer, description: 틀린 쪽으로 했으면 잃은 수익률(만분율). 틀려도 잃지 않아 늘 0이다 (#697) }
                         battle:
                           type: [object, 'null']
                           description: 회의 뒤 전투 (decisions.md 414번, #573). 지켜봤으면 null
@@ -983,6 +1010,28 @@ components:
                   required: [stage, cleared, stars, firstClear, capital, tickets]
                   properties:
                     stage: { type: integer, description: 스테이지 번호. EX 디펜스면 0 }
+                    cleared: { type: boolean }
+                    stars: { type: integer }
+                    firstClear: { type: boolean, description: 이 판에 처음 깼다 }
+                    capital: { type: integer, format: int64, description: 받은 자본 }
+                    tickets: { type: integer, description: 받은 무기 뽑기권 }
+                - type: 'null'
+        assaults:
+          description: 매도벽 돌파 스테이지 (#698). 주 게임. 멘탈 스테이지와 따로 1-1부터 차례로 깬다. 분기 강화율에는 들어가지 않는다
+          type: object
+          required: [best, last, perChapter, stars, lastResult]
+          properties:
+            best: { type: integer, description: 깬 최고 스테이지(0이면 아직 없다). 다음에 열리는 것은 best + 1 }
+            last: { type: integer, description: 마지막 스테이지 }
+            perChapter: { type: integer, description: 한 챕터의 스테이지 수. 챕터 마지막은 보스 }
+            stars: { type: array, items: { type: integer }, description: 깬 스테이지의 별(1~3), 1번부터 차례로 }
+            lastResult:
+              description: 마지막으로 보낸 결과와 받은 보상. 없으면 null
+              oneOf:
+                - type: object
+                  required: [stage, cleared, stars, firstClear, capital, tickets]
+                  properties:
+                    stage: { type: integer, description: 스테이지 번호 }
                     cleared: { type: boolean }
                     stars: { type: integer }
                     firstClear: { type: boolean, description: 이 판에 처음 깼다 }

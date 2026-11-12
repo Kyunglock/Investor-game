@@ -11,6 +11,7 @@ import { useEffect, useState } from 'react'
 import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
+import { stageLabel } from '../mental/advance'
 import { MentalWindow } from '../mental/MentalWindow'
 import { firstQuarter } from './firstPlay'
 import { ToyCityMove } from './toy-city/ToyCityMove'
@@ -143,8 +144,13 @@ export function Windows({ company }: { company: Company }) {
           company={company}
           onDone={() => {
             const back = battle.kind === 'invest'
-            useAppUi.getState().endBattle()
+            const ui = useAppUi.getState()
+            ui.endBattle()
             if (back) setInvestOpen(true)
+            // 매도벽 돌파 스테이지(#698)를 마치면 다음 스테이지를 바로 고르게 선택 화면으로 돌아간다.
+            else if (battle.kind === 'assault' && ui.tab === 'office') {
+              ui.openSheet({ kind: 'toy', panel: 'assault' })
+            }
           }}
           onChangeWeapon={() => {
             // 무기 인벤토리는 사무실 화면의 시트라서, 다른 탭에서 왔어도 사무실로 가서 연다.
@@ -205,13 +211,6 @@ export function ActionBar({
   const ended = company.status === 'ENDED'
   const battle = company.invest?.outcome?.battle
   const pending = battle?.open ? battle : null
-  const progress = pending?.mode ?? 'QUARTER'
-  const enterBattle = () => {
-    if (!pending) return
-    sfx.stamp()
-    haptic.medium()
-    useAppUi.getState().startBattle({ kind: 'invest', mode: pending.mode, level: pending.level })
-  }
   if (ended || windowOpen || reportOpen) {
     return null
   }
@@ -243,8 +242,11 @@ export function ActionBar({
     return null
   }
   if (variant === 'toy') {
-    const assigned = company.employees.filter((e) => e.desk).length
     const upgradeLevels = (company.battleUpgrades ?? []).reduce((n, u) => n + u.level, 0)
+    const best = company.assaults?.best ?? 0
+    const last = company.assaults?.last ?? 1
+    const per = company.assaults?.perChapter ?? 10
+    const next = Math.min(best + 1, last)
     return (
       <div className="toy-action-area">
         {error && (
@@ -252,7 +254,7 @@ export function ActionBar({
             {error}
           </p>
         )}
-        {/* 아래 카드 셋 (decisions.md 367번): 지난 분기 수익·팀 분위기를 빼고 전투 강화와 스테이지를 둔다. */}
+        {/* 아래 카드 셋 (#698): 가운데가 주 게임 매도벽 돌파. 종목회의·멘탈 보호 스테이지는 오른쪽 보조게임 메뉴로 옮겼다. */}
         <div className="toy-bottom-cards">
           <button
             type="button"
@@ -268,70 +270,39 @@ export function ActionBar({
             <strong>강화</strong>
             <em>{upgradeLevels > 0 ? `${upgradeLevels}단계 올림` : '공격력·연사'}</em>
           </button>
-          {/* 상태별 버튼은 같은 슬롯에서 교체한다. 회의·전투 화면이 열리면 ActionBar 자체를 내린다. */}
-          <div key={`${company.companyId}:${company.year}:${company.quarter}:${progress}`}>
-            {pending ? (
-              <button
-                type="button"
-                className="toy-progress battle-entry battle-entry-compact"
-                data-progress={progress}
-                data-mode={pending.mode}
-                data-testid="pending-invest-battle"
-                disabled={busy}
-                onClick={enterBattle}
-              >
-                <BattleEntryContent mode={pending.mode} disabled={busy} compact />
-              </button>
-            ) : (
-              <button
-                type="button"
-                className={`toy-progress toy-stat toy-advance ${settleSpot}`}
-                style={{ width: '100%' }}
-                data-progress="QUARTER"
-                data-testid="settle"
-                data-locked={settleLocked || undefined}
-                disabled={busy || settleLocked}
-                onClick={(ev) => {
-                  sfx.stamp()
-                  haptic.medium()
-                  useFx.getState().burstAt(ev.currentTarget, 'sparks')
-                  useAppUi.getState().requestSettle()
-                }}
-              >
-                <small>
-                  {busy
-                    ? '처리 중…'
-                    : settleLocked
-                      ? '직원을 앉혀주세요'
-                      : firstGame
-                        ? '첫 판 준비 완료'
-                        : '다음 분기로'}
-                </small>
-                <strong>{firstGame ? '첫 게임 시작' : '▶ 넘기기'}</strong>
-                <em>
-                  자리 {assigned}/{company.seats}
-                </em>
-              </button>
-            )}
-          </div>
-          {/* 스테이지 입구 (decisions.md 369번): 스테이지 선택 시트를 연다. */}
           <button
             type="button"
-            className="toy-stat"
-            data-testid="stage-open"
+            className="toy-progress toy-stat toy-advance toy-assault-main"
+            style={{ width: '100%' }}
+            data-testid="assault-open"
+            disabled={busy}
+            onClick={(ev) => {
+              sfx.stamp()
+              haptic.medium()
+              useFx.getState().burstAt(ev.currentTarget, 'sparks')
+              useAppUi.getState().openSheet({ kind: 'toy', panel: 'assault' })
+            }}
+          >
+            <small>주 게임</small>
+            <strong>매도벽 돌파</strong>
+            <em>{best >= last ? '모두 돌파!' : `${stageLabel(next, per)} 도전`}</em>
+          </button>
+          <button
+            type="button"
+            className={`toy-stat ${settleSpot}`}
+            data-testid="side-open"
             onClick={() => {
               sfx.tap()
               haptic.light()
-              useAppUi.getState().openSheet({ kind: 'toy', panel: 'stage' })
+              useAppUi.getState().openSheet({ kind: 'toy', panel: 'side' })
             }}
           >
-            <small>멘탈 전투</small>
-            <strong>매도벽 돌파</strong>
+            <small>보조게임</small>
+            <strong>종목·멘탈</strong>
             <em>
-              {company.stages && company.stages.best > 0
-                ? `${company.stages.best}/${company.stages.last} · +${company.stages.bonusPercent}%`
-                : '1-1부터'}
+              {pending ? '회의 뒤 전투 대기' : firstGame ? '첫 게임 시작' : '종목회의·멘탈 보호'}
             </em>
+            {(pending || firstGame) && <b className="toy-badge">!</b>}
           </button>
         </div>
       </div>
@@ -365,5 +336,72 @@ export function ActionBar({
         </button>
       </div>
     </div>
+  )
+}
+
+/**
+ * 보조게임의 종목회의 칸 (#698): 분기 넘기기를 누르면 직원이 종목을 물어 오고 종목회의 → 결산으로 이어진다(382번). 회의 뒤 매도벽 돌파가 남아 있으면 그
+ * 전투부터 한다. 메인 아래 가운데 자리에서 옮겨 왔다.
+ */
+export function QuarterMeeting({ company }: { company: Company }) {
+  const busy = useRaisingStore((s) => s.busy)
+  const settleSpot = useTutorialSpot(company, 'settle')
+  const settleLocked = useLocked(company, 'settle')
+  const firstGame =
+    useTutorial((s) => s.active) && firstQuarter(company) && !company.invest?.outcome
+  const ended = company.status === 'ENDED' || Boolean(company.broke)
+  const battle = company.invest?.outcome?.battle
+  const pending = battle?.open ? battle : null
+  const assigned = company.employees.filter((e) => e.desk).length
+  if (pending) {
+    return (
+      <button
+        type="button"
+        className="toy-progress battle-entry battle-entry-compact toy-side-game"
+        data-progress={pending.mode}
+        data-mode={pending.mode}
+        data-testid="pending-invest-battle"
+        disabled={busy || ended}
+        onClick={() => {
+          sfx.stamp()
+          haptic.medium()
+          useAppUi
+            .getState()
+            .startBattle({ kind: 'invest', mode: pending.mode, level: pending.level })
+        }}
+      >
+        <BattleEntryContent mode={pending.mode} disabled={busy} compact />
+      </button>
+    )
+  }
+  return (
+    <button
+      type="button"
+      className={`toy-stat toy-side-game ${settleSpot}`}
+      data-progress="QUARTER"
+      data-testid="settle"
+      data-locked={settleLocked || undefined}
+      disabled={busy || settleLocked || ended || !company.meeting}
+      onClick={(ev) => {
+        sfx.stamp()
+        haptic.medium()
+        useFx.getState().burstAt(ev.currentTarget, 'sparks')
+        useAppUi.getState().requestSettle()
+      }}
+    >
+      <small>
+        {busy
+          ? '처리 중…'
+          : settleLocked
+            ? '직원을 앉혀주세요'
+            : firstGame
+              ? '첫 판 준비 완료'
+              : `${company.year}년 차 ${company.quarter}분기 · 다음 분기로`}
+      </small>
+      <strong>{firstGame ? '첫 종목회의 시작' : '종목회의 ▶'}</strong>
+      <em>
+        기사를 읽고 매수·매도 · 틀려도 손실 없음 · 자리 {assigned}/{company.seats}
+      </em>
+    </button>
   )
 }

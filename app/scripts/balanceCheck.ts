@@ -63,6 +63,7 @@ try {
         route.fulfill({ json: company }),
       )
       await page.goto(base)
+      await page.getByTestId('side-open').click()
       await page.getByTestId('stage-open').click()
       await page.locator(`[data-testid=stage][data-stage="${stage}"]`).click()
       await page.getByTestId('mental-start').click()

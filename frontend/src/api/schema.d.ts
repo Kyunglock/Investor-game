@@ -263,6 +263,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/assault": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 매도벽 돌파 스테이지 한 판의 결과를 보낸다 (#698)
+         * @description 열린 스테이지(1 ~ 깬 최고 + 1)만 받는다. 보상은 멘탈 스테이지와 같다: 처음 깨면 자본(번호 × 1b)과 무기 뽑기권(챕터 끝이면 3장),
+         *     별을 처음 얻을 때마다 뽑기권 한 장. 못 깼으면 보상 없이 결과만 남는다. 결과는 assaults.lastResult에 담긴다. 아직 안 열린 스테이지면 400.
+         */
+        post: operations["reportAssault"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/ex": {
         parameters: {
             query?: never;
@@ -645,7 +666,7 @@ export interface components {
                 title: string;
                 /** @description 종목 회의 수익률이 오갈 수 있는 범위(만분율, decisions.md 388번). 데스크 몫과 떼어 낸 회의만의 수익률로 −50% ~ +300% */
                 range: {
-                    /** @description 틀렸을 때 가장 크게 잃는 몫(음수). 크게 틀려도 이 아래로는 안 간다 */
+                    /** @description 틀렸을 때 가장 크게 잃는 몫. 틀려도 잃지 않아 늘 0이다 (#697) */
                     lossBp: number;
                     /** @description 맞혔을 때 가장 크게 버는 몫. 기사가 클수록 이 끝에 가깝다 */
                     gainBp: number;
@@ -761,7 +782,7 @@ export interface components {
                     returnBp: number | null;
                     /** @description 이 종목을 맞힌 쪽으로 했으면 번 수익률(만분율). 기사가 클수록 크다(최대 +300%) */
                     gainBp: number;
-                    /** @description 틀린 쪽으로 했으면 잃은 수익률(만분율 */
+                    /** @description 틀린 쪽으로 했으면 잃은 수익률(만분율). 틀려도 잃지 않아 늘 0이다 (#697) */
                     lossBp: number;
                     /** @description 회의 뒤 전투 (decisions.md 414번, */
                     battle: {
@@ -966,6 +987,33 @@ export interface components {
                 /** @description 마지막으로 보낸 스테이지·EX 결과와 받은 보상. 없으면 null */
                 lastResult: {
                     /** @description 스테이지 번호. EX 디펜스면 0 */
+                    stage: number;
+                    cleared: boolean;
+                    stars: number;
+                    /** @description 이 판에 처음 깼다 */
+                    firstClear: boolean;
+                    /**
+                     * Format: int64
+                     * @description 받은 자본
+                     */
+                    capital: number;
+                    /** @description 받은 무기 뽑기권 */
+                    tickets: number;
+                } | null;
+            };
+            /** @description 매도벽 돌파 스테이지 (#698). 주 게임. 멘탈 스테이지와 따로 1-1부터 차례로 깬다. 분기 강화율에는 들어가지 않는다 */
+            assaults?: {
+                /** @description 깬 최고 스테이지(0이면 아직 없다). 다음에 열리는 것은 best + 1 */
+                best: number;
+                /** @description 마지막 스테이지 */
+                last: number;
+                /** @description 한 챕터의 스테이지 수. 챕터 마지막은 보스 */
+                perChapter: number;
+                /** @description 깬 스테이지의 별(1~3) */
+                stars: number[];
+                /** @description 마지막으로 보낸 결과와 받은 보상. 없으면 null */
+                lastResult: {
+                    /** @description 스테이지 번호 */
                     stage: number;
                     cleared: boolean;
                     stars: number;
@@ -1543,6 +1591,37 @@ export interface operations {
         };
     };
     reportStage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    stage: number;
+                    cleared: boolean;
+                    stars: number;
+                };
+            };
+        };
+        responses: {
+            /** @description 결과를 받은 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    reportAssault: {
         parameters: {
             query?: never;
             header?: never;

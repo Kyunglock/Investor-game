@@ -241,11 +241,10 @@ class BalanceSimulationTest {
     org.assertj.core.api.Assertions.assertThat(buyer.capital())
         .as("전투 강화를 사도 스테이지가 성장의 주된 길이다 (394번)")
         .isGreaterThan(reader.capital() * 3);
+    // 틀려도 회의에서 잃지 않으므로(#697) 늘 크게 하는 사장이 기사 읽는 사장보다 더 벌 수 있다. 기사를 읽으면 이사 안 하는 사장보다는 낫다.
     org.assertj.core.api.Assertions.assertThat(reader.capital())
-        .as(
-            "기사 읽는 사장이 늘 공격·크게 하는 사장의 한 배 반 넘게 번다 (371번은 세 배, 411번에서 판돈이 건물의 값이라 자본이 겹겹이 불지 않아 차가"
-                + " 줄었다)")
-        .isGreaterThan(greedy.capital() * 3 / 2);
+        .as("기사 읽는 사장이 이사 안 하고 버티는 사장보다 번다")
+        .isGreaterThan(lazy.capital());
     org.assertj.core.api.Assertions.assertThat(greedy.capital())
         .as("이사 안 하고 버티는 쪽이 가장 못하다 (규모의 벽은 자본을 본다)")
         .isGreaterThan(lazy.capital());

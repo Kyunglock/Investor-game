@@ -84,6 +84,9 @@ public interface CompanyService {
    */
   CompanyView reportStage(UUID sessionId, int stage, boolean cleared, int stars);
 
+  /** 매도벽 돌파 스테이지 한 판의 결과를 보낸다 (#698). 처음 깨면 자본과 무기 뽑기권, 별을 처음 얻으면 뽑기권을 더 준다. 아직 안 열린 스테이지면 400. */
+  CompanyView reportAssault(UUID sessionId, int stage, boolean cleared, int stars);
+
   /** EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번). 분기에 한 번 무기 뽑기권을 준다. */
   CompanyView reportEx(UUID sessionId, int kills);
 

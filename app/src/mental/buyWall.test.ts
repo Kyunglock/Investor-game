@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { assaultBonusPercent, BUY_WALL, BuyWall, buyOrderX } from './buyWall'
+import { assaultBonusPercent, BUY_WALL, BuyWall, buyOrderX, pushedByCollapse } from './buyWall'
 
 describe('매수 티켓의 좌우 분포', () => {
   it('왼쪽·오른쪽에 각각 40%, 중앙에 20%를 배치하고 영역 안에서도 위치가 달라진다', () => {
@@ -94,4 +94,13 @@ it('서킷브레이커는 발사 시계만 20%로 줄이고 총량과 재건 시
   const rebuild = halted.rebuildLeft
   expect(halted.stepOrders(4)).toBe(0)
   expect(halted.rebuildLeft).toBe(rebuild)
+})
+
+describe('매수벽 붕괴 밀어내기 (#699)', () => {
+  it('화면 중간선을 넘어온 적만 뒤로 민다', () => {
+    expect(pushedByCollapse(100, 800)).toBe(false)
+    expect(pushedByCollapse(399, 800)).toBe(false)
+    expect(pushedByCollapse(400, 800)).toBe(true)
+    expect(pushedByCollapse(700, 800)).toBe(true)
+  })
 })

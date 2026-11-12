@@ -204,6 +204,12 @@ class CompanyState {
   /** 마지막으로 보낸 스테이지·EX 결과와 받은 보상. 없으면 null. */
   StageResult lastStage;
 
+  /** 깬 매도벽 돌파 스테이지의 별 (#698): 1번부터 차례로. 길이가 곧 깬 최고 스테이지다. 옛 회사는 비어 있다. */
+  List<Integer> assaultStars = new ArrayList<>();
+
+  /** 마지막으로 보낸 매도벽 돌파 스테이지 결과와 받은 보상 (#698). 없으면 null. */
+  StageResult lastAssault;
+
   /** 무기 뽑기로 바뀐 뒤의 회사인가 (366번). 그 전에 차린 회사는 거짓으로 읽히고, 처음 불러올 때 처음 뽑기권을 받는다. */
   boolean weaponGachaReady;
 

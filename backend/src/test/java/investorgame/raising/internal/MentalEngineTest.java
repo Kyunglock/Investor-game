@@ -171,6 +171,44 @@ class MentalEngineTest {
     assertThat(compared).isGreaterThan(20);
   }
 
+  /** 매도벽 돌파 스테이지 (#698): 멘탈 스테이지와 따로 차례로 열리고, 보상 규칙은 같으며, 분기 강화율에는 들어가지 않는다. */
+  @Test
+  void 매도벽_돌파_스테이지는_멘탈_스테이지와_따로_차례로_열린다() {
+    CompanyState c = company(9);
+    CompanyProperties.Stages rule = PROPERTIES.mental().stages();
+    assertThatThrownBy(() -> ENGINE.mental.reportAssault(c, 2, true, 3))
+        .as("아직 안 열린 스테이지")
+        .isInstanceOf(InvalidRequestException.class);
+    long capital = c.capital;
+    int tickets = c.weaponTickets;
+    ENGINE.mental.reportAssault(c, 1, false, 0);
+    assertThat(ENGINE.mental.bestAssault(c)).as("못 깨면 그대로").isZero();
+    assertThat(c.capital).isEqualTo(capital);
+    assertThat(c.lastAssault.cleared).isFalse();
+
+    ENGINE.mental.reportAssault(c, 1, true, 2);
+    assertThat(ENGINE.mental.bestAssault(c)).isEqualTo(1);
+    assertThat(c.capital).isEqualTo(capital + rule.capitalPerStage());
+    assertThat(c.weaponTickets).isEqualTo(tickets + rule.clearTickets() + 2 * rule.starTickets());
+    assertThat(c.lastAssault.firstClear).isTrue();
+    assertThat(ENGINE.mental.bestStage(c)).as("멘탈 스테이지와 따로다").isZero();
+    assertThat(ENGINE.mental.bonusPercent(c)).as("분기 강화율에는 안 든다").isZero();
+    assertThat(c.lastStage).isNull();
+
+    ENGINE.mental.reportAssault(c, 2, true, 3);
+    CompanyView.Assaults view = ENGINE.mental.assaultsView(c);
+    assertThat(view.best()).isEqualTo(2);
+    assertThat(view.stars()).containsExactly(2, 3);
+    assertThat(view.lastResult().stage()).isEqualTo(2);
+    assertThat(view.last()).isEqualTo(ENGINE.mental.lastStage());
+
+    CompanyState old = company(10);
+    old.assaultStars = null;
+    assertThat(ENGINE.mental.assaultsView(old).best()).as("옛 회사").isZero();
+    ENGINE.mental.reportAssault(old, 1, true, 1);
+    assertThat(ENGINE.mental.bestAssault(old)).isEqualTo(1);
+  }
+
   @Test
   void 스테이지는_차례로_열리고_처음_깨면_자본과_뽑기권_별을_처음_얻으면_뽑기권을_더_준다() {
     CompanyState c = company(8);

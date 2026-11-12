@@ -586,6 +586,7 @@ try {
   )
   await page.screenshot({ path: resolve(out, 'weapons.png') })
   await page.getByRole('button', { name: '닫기' }).first().click()
+  await page.getByTestId('side-open').click()
   await page.getByTestId('stage-open').click()
   await page.locator('[data-testid=stage][data-stage="1"]').click()
   await expect(page.getByTestId('mental-lobby')).toBeVisible()
@@ -798,6 +799,7 @@ try {
   const enemyAsset = /\/assets\/enemies(?:-[\w-]+)?\.png$/
   await page.route(enemyAsset, (route) => route.fulfill({ status: 404, body: '' }))
   await page.reload()
+  await page.getByTestId('side-open').click()
   await page.getByTestId('stage-open').click()
   await page.locator('[data-testid=stage][data-stage="1"]').click()
   await page.getByTestId('mental-start').click()

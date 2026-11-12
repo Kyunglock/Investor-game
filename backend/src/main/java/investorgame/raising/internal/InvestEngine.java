@@ -582,7 +582,6 @@ class InvestEngine {
                 / CompanyEngine.QUARTERS);
     // 종목 회의만의 수익률 (388번): 데스크 몫과 떼어 내 기사의 크기로 정한다. 누가 어느 자리에 앉았든 같다.
     int gainBp = gainBp(c.invest);
-    int lossBp = lossBp(c.invest, big);
     int stubborn = big ? properties.invest().bigStubbornPercent() : PERCENT;
     String right = c.invest.up ? BUY : SELL;
     String swayAction = Sentiment.POS.name().equals(c.invest.swaySentiment) ? BUY : SELL;
@@ -624,7 +623,8 @@ class InvestEngine {
         result.rival = own;
         result.guard = company.flipStat(c, e);
       }
-      int bp = HOLD.equals(result.action) ? 0 : result.action.equals(right) ? gainBp : -lossBp;
+      // 틀린 쪽으로 했어도 자본은 깎이지 않는다 (#697): 맞히면 벌고, 틀리거나 지켜봤으면 0이다.
+      int bp = result.action.equals(right) ? gainBp : 0;
       result.pnl = CompanyEngine.ofStake(stake, bp);
       total += result.pnl;
       e.totalPnl += result.pnl;
@@ -763,11 +763,7 @@ class InvestEngine {
     return bonus;
   }
 
-  /** 화면에 보이는 회의 수익률의 범위(만분율): 틀렸을 때 가장 크게 잃는 몫과 맞혔을 때 가장 크게 버는 몫 (388번). */
-  int lossCapBp() {
-    return properties.invest().returns().lossCapBp();
-  }
-
+  /** 화면에 보이는 회의 수익률의 범위 끝(만분율): 맞혔을 때 가장 크게 버는 몫 (388번). 틀려도 잃지 않아 아래 끝은 0이다(#697). */
   int gainMaxBp() {
     return properties.invest().returns().gainMaxBp();
   }

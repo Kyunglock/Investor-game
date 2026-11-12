@@ -54,6 +54,8 @@ interface RaisingState {
   reportStage: (stage: number, cleared: boolean, stars: number) => Promise<void>
   /** 종목 회의 뒤 전투의 결과 (decisions.md 414번, #573). 별에 따라 회의 손익이 바뀐다. */
   reportInvestBattle: (mode: 'DEFENSE' | 'ASSAULT', stars: number) => Promise<void>
+  /** 매도벽 돌파 스테이지 한 판의 결과를 보낸다 (#698). 결과는 company.assaults.lastResult. */
+  reportAssault: (stage: number, cleared: boolean, stars: number) => Promise<void>
   /** EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번). */
   reportEx: (kills: number) => Promise<void>
   /**
@@ -202,6 +204,9 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
 
     reportStage: (stage, cleared, stars) =>
       change(api.POST('/api/company/stage', { body: { stage, cleared, stars } })),
+
+    reportAssault: (stage, cleared, stars) =>
+      change(api.POST('/api/company/assault', { body: { stage, cleared, stars } })),
 
     reportEx: (kills) => change(api.POST('/api/company/ex', { body: { kills } })),
 

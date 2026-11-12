@@ -88,13 +88,12 @@ class InvestEngineTest {
       lastGain = gain;
       lastLoss = loss;
     }
-    assertThat(ENGINE.invest.lossCapBp()).isEqualTo(5_000);
     assertThat(ENGINE.invest.gainMaxBp()).isEqualTo(30_000);
   }
 
   /**
    * 종목 회의는 데스크 수익과 별개다 (decisions.md 388번): 같은 종목이면 식품 데스크든 게임 데스크든, 직원 등급이 높든 낮든 수익률이 같다(등급 효과
-   * 387번은 분기 데스크에만). 회의 수익률(returnBp)은 회의 손익 ÷ 건 판돈이라, 사장 말대로 했으면 맞힌 만큼 벌고 틀린 만큼 잃는다.
+   * 387번은 분기 데스크에만). 회의 수익률(returnBp)은 회의 손익 ÷ 건 판돈이라, 사장 말대로 했으면 맞힌 만큼 벌고 틀리면 0이다(#697).
    */
   @Test
   void 회의_수익률은_자리와_등급에_상관없이_같다() {
@@ -111,11 +110,11 @@ class InvestEngineTest {
         continue;
       }
       checked++;
-      int expected =
-          wins ? ENGINE.invest.gainBp(food.invest) : -ENGINE.invest.lossBp(food.invest, false);
+      // 틀려도 잃지 않는다 (#697).
+      int expected = wins ? ENGINE.invest.gainBp(food.invest) : 0;
       assertThat(a.pnl).as("자리·등급과 상관없다").isEqualTo(b.pnl);
       assertThat(ENGINE.invest.returnBp(food.invest)).isEqualTo(expected);
-      assertThat(ENGINE.invest.returnBp(food.invest)).isBetween(-5_000, 30_000);
+      assertThat(ENGINE.invest.returnBp(food.invest)).isBetween(0, 30_000);
     }
     assertThat(checked).isGreaterThan(30);
     CompanyState.Invest old = sized(1_000);
@@ -172,7 +171,7 @@ class InvestEngineTest {
     assertThat(s.lines).noneMatch(l -> l.startsWith("투자 회의"));
   }
 
-  /** 줏대·용기가 만점이면 사장 말대로 하고, 맞히면 벌고 틀리면 잃는다. 손익은 바로 자본에 들어간다. 사장은 지켜볼 수 없다(423번). */
+  /** 줏대·용기가 만점이면 사장 말대로 하고, 맞히면 벌고 틀려도 잃지 않는다(#697). 손익은 바로 자본에 들어간다. 사장은 지켜볼 수 없다(423번). */
   @Test
   void 고집이_없는_직원은_사장_말대로_한다() {
     CompanyState company = company(3, stats(50, 100, 100, 100));
@@ -185,8 +184,15 @@ class InvestEngineTest {
     assertThat(company.capital).isEqualTo(before + r.pnl);
 
     CompanyState loser = company(3, stats(50, 100, 100, 100));
+    long loserBefore = loser.capital;
     ENGINE.invest.decide(loser, wrong(loser), new HashSeededRandom(3));
-    assertThat(loser.invest.results.getFirst().pnl).isNegative();
+    assertThat(loser.invest.results.getFirst().pnl).as("틀려도 마이너스가 아니다 (#697)").isZero();
+    assertThat(loser.capital).isEqualTo(loserBefore);
+    CompanyState bigLoser = company(3, stats(50, 100, 100, 100));
+    long bigBefore = bigLoser.capital;
+    ENGINE.invest.decide(bigLoser, wrong(bigLoser), true, new HashSeededRandom(3));
+    assertThat(bigLoser.invest.total).as("크게 틀려도 잃지 않는다").isZero();
+    assertThat(bigLoser.capital).isEqualTo(bigBefore);
 
     CompanyState holder = company(3, stats(50, 100, 100, 100));
     assertThatThrownBy(

@@ -22,6 +22,14 @@ export function buyOrderX(left: number, width: number, random: () => number = Ma
   return left + width * position
 }
 
+/**
+ * 매수벽이 무너질 때 뒤로 밀리는 적인가 (#699): 화면 세로 중간선을 넘어 매수벽 쪽(아래)으로 내려온 적만 민다. 중간선 위쪽의 아직 먼 적은
+ * 그대로 둔다.
+ */
+export function pushedByCollapse(y: number, viewHeight: number): boolean {
+  return y >= viewHeight / 2
+}
+
 /** 매도 물량 하나당 매수 주문 두 개로 맞선다. 붕괴하면 후퇴하고 1.5초 뒤 새 벽을 세운다. */
 export class BuyWall {
   readonly maxHp: number

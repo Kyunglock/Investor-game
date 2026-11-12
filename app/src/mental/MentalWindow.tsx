@@ -73,9 +73,15 @@ export function MentalWindow({
   const modal = useRef<HTMLDivElement>(null)
   // 디펜스가 주 콘텐츠다 (509번): 번호 스테이지도 EX도 멘탈벽을 지키는 디펜스다. 전진 모드(364번)는 지금 쓰지 않는다.
   // 종목 회의 뒤 전투(414번): 맞힌 쪽에 걸었으면 공격 판(매도벽 돌파, 413번), 틀렸으면 디펜스.
-  const assaultLevel = entry.kind === 'invest' && entry.mode === 'ASSAULT' ? entry.level : null
+  // 매도벽 돌파 스테이지(주 게임, #698)는 스테이지 번호가 곧 세기다(459번처럼 하나마다 +1). 종목 이름 없이 싸운다.
+  const assaultLevel =
+    entry.kind === 'assault'
+      ? entry.stage
+      : entry.kind === 'invest' && entry.mode === 'ASSAULT'
+        ? entry.level
+        : null
   const mode: BattleMode = assaultLevel !== null ? 'assault' : 'defense'
-  const stockName = company.invest?.stockName
+  const stockName = entry.kind === 'invest' ? company.invest?.stockName : undefined
   const assault = useMemo(
     () => (assaultLevel === null ? undefined : assaultSpec(assaultLevel, { name: stockName })),
     [assaultLevel, stockName],
@@ -152,7 +158,9 @@ export function MentalWindow({
     setSending(true)
     setReportError(null)
     const store = useRaisingStore.getState()
-    if (entry.kind === 'stage') {
+    if (entry.kind === 'assault') {
+      await store.reportAssault(entry.stage, outcome.win, outcome.stars)
+    } else if (entry.kind === 'stage') {
       await store.reportStage(entry.stage, outcome.win, outcome.stars)
     } else if (entry.kind === 'invest') {
       await store.reportInvestBattle(entry.mode, outcome.stars)
@@ -170,7 +178,13 @@ export function MentalWindow({
   useEffect(() => {
     if (outcome) void save()
   }, [outcome])
-  const reward = saved && entry.kind !== 'invest' ? (company.stages?.lastResult ?? null) : null
+  const reward =
+    saved && entry.kind === 'assault'
+      ? (company.assaults?.lastResult ?? null)
+      : saved && entry.kind !== 'invest'
+        ? (company.stages?.lastResult ?? null)
+        : null
+  const assaultPerChapter = company.assaults?.perChapter ?? perChapter
   const investBattle = saved && entry.kind === 'invest' ? company.invest?.outcome?.battle : null
 
   return createPortal(
@@ -201,20 +215,24 @@ export function MentalWindow({
           <div className="stage-lobby" data-testid="mental-lobby">
             <header className="stage-heading">
               <span className="stage-eyebrow">
-                {entry.kind === 'stage'
-                  ? '멘탈 수련'
-                  : entry.kind === 'invest'
-                    ? `종목 회의 뒤 전투 · 세기 ${entry.level}`
-                    : 'EX 도전 · 분기에 한 번'}
+                {entry.kind === 'assault'
+                  ? `매도벽 돌파 스테이지 · 세기 ${entry.stage}`
+                  : entry.kind === 'stage'
+                    ? '멘탈 보호 스테이지'
+                    : entry.kind === 'invest'
+                      ? `종목 회의 뒤 전투 · 세기 ${entry.level}`
+                      : 'EX 도전 · 분기에 한 번'}
               </span>
               <h2>
-                {entry.kind === 'stage'
-                  ? `수련 ${stageLabel(entry.stage, perChapter)}`
-                  : entry.kind === 'invest'
-                    ? mode === 'assault'
-                      ? '매도벽 돌파!'
-                      : '멘탈을 지켜라'
-                    : 'EX 디펜스'}
+                {entry.kind === 'assault'
+                  ? `매도벽 돌파 ${stageLabel(entry.stage, assaultPerChapter)}`
+                  : entry.kind === 'stage'
+                    ? `수련 ${stageLabel(entry.stage, perChapter)}`
+                    : entry.kind === 'invest'
+                      ? mode === 'assault'
+                        ? '매도벽 돌파!'
+                        : '멘탈을 지켜라'
+                      : 'EX 디펜스'}
               </h2>
               {/* 매도벽 돌파는 설명 글(어느 쪽에 걸었나·별 배율)을 뺐다 (439번). */}
               {entry.kind === 'invest' && mode !== 'assault' && (
@@ -223,7 +241,7 @@ export function MentalWindow({
                   다 막고 판돈 10% 더
                 </p>
               )}
-              {entry.kind !== 'invest' && (
+              {entry.kind !== 'invest' && entry.kind !== 'assault' && (
                 <p>{company.mental?.headline ?? '흔들리지 않는 마음으로'}</p>
               )}
             </header>
@@ -302,7 +320,8 @@ export function MentalWindow({
                 setHero(heroOf(company))
               }}
             >
-              {spec ? '출발' : '멘탈 지키러 가기'} <span aria-hidden="true">▶</span>
+              {mode === 'assault' ? '돌파하러 가기' : spec ? '출발' : '멘탈 지키러 가기'}{' '}
+              <span aria-hidden="true">▶</span>
             </button>
             <button
               type="button"
@@ -320,7 +339,13 @@ export function MentalWindow({
         {outcome && (
           <div className="stage-summary">
             {mode === 'assault' ? (
-              <AssaultResult outcome={outcome} battle={investBattle} sending={sending} />
+              <AssaultResult
+                outcome={outcome}
+                battle={investBattle}
+                sending={sending}
+                stage={entry.kind === 'assault'}
+                reward={reward}
+              />
             ) : (
               <div className="stage-result-card" data-testid="mental-result">
                 <span
@@ -428,10 +453,15 @@ function AssaultResult({
   outcome,
   battle,
   sending,
+  stage,
+  reward,
 }: {
   outcome: Outcome
   battle: { before: number; after?: number | null } | null | undefined
   sending: boolean
+  /** 매도벽 돌파 스테이지(주 게임, #698): 회의 손익 대신 스테이지 보상(자본·무기 뽑기권)을 보인다. */
+  stage: boolean
+  reward: { firstClear: boolean; capital: number; tickets: number } | null
 }) {
   const priceUp =
     outcome.priceStart > 0
@@ -467,13 +497,27 @@ function AssaultResult({
           </span>
         ))}
       </p>
-      <p
-        className="mt-2 font-game text-[34px] leading-none text-[#e8434f]"
-        data-testid="assault-mult"
-      >
-        추가 수익 +{bonusPercent}%
-      </p>
-      {outcome.win ? (
+      {stage ? (
+        <p className="mt-2 text-[15px]" data-testid="mental-reward">
+          {sending
+            ? '보상을 받는 중…'
+            : !reward
+              ? ''
+              : reward.capital > 0 || reward.tickets > 0
+                ? `${reward.firstClear ? '처음 깼다! ' : ''}${reward.capital > 0 ? `자본 +${money(reward.capital)} · ` : ''}무기 뽑기권 +${reward.tickets}장`
+                : outcome.win
+                  ? '이번에 더 받을 보상은 없다.'
+                  : '깨면 자본과 무기 뽑기권을 받는다.'}
+        </p>
+      ) : (
+        <p
+          className="mt-2 font-game text-[34px] leading-none text-[#e8434f]"
+          data-testid="assault-mult"
+        >
+          추가 수익 +{bonusPercent}%
+        </p>
+      )}
+      {outcome.win && !stage ? (
         <button
           type="button"
           className="mt-2 rounded-xl bg-[#ffc83d] px-4 py-2 font-game text-[16px] text-ink shadow"
@@ -482,7 +526,7 @@ function AssaultResult({
           ▶ 광고 보고 추가 수익 +{ASSAULT_AD_BONUS}%
         </button>
       ) : null}
-      <p className="mt-2" data-testid="mental-reward">
+      <p className="mt-2" data-testid={stage ? undefined : 'mental-reward'} hidden={stage}>
         {sending ? (
           <span className="text-[14px]">회의 손익을 바꾸는 중…</span>
         ) : battle && battle.after != null ? (
@@ -500,7 +544,10 @@ function AssaultResult({
       <div className="mt-3 grid grid-cols-3 gap-2" data-testid="assault-stats">
         <Stat label="부순 매도벽" value={`${outcome.wallsBroken}/${outcome.wallsTotal}`} />
         <Stat label="걸린 시간" value={`${mm}:${ss}`} />
-        <Stat label="추가 수익률" value={`${priceUp >= 0 ? '+' : ''}${priceUp}%`} />
+        <Stat
+          label={stage ? '주가 상승' : '추가 수익률'}
+          value={`${priceUp >= 0 ? '+' : ''}${priceUp}%`}
+        />
       </div>
     </div>
   )
