@@ -5,7 +5,6 @@ import { type CSSProperties, memo, useEffect, useId, useRef, useState } from 're
 import { useFx } from '../../fx/fx'
 import { haptic } from '../../fx/haptics'
 import { sfx } from '../../fx/sound'
-import { CatFigure } from './CatFigure'
 import {
   expansionSide,
   MOVE_DONE,
@@ -17,6 +16,7 @@ import {
   rivalName,
   rivalShown,
 } from './model'
+import { OfficeCat } from './OfficeCat'
 
 export type OfficeTransition = { before: Grade; after: Grade; beforeSeats: number }
 
@@ -58,7 +58,7 @@ const Rival = memo(function Rival({
       data-hit={hit}
     >
       <path d={`M${x} ${560 - height}l9-7h${width}v${height}l-9 7`} fill="#8fa5c8" />
-      <rect x={x} y={560 - height} width={width} height={height} rx="5" fill="#b9c7e2" />
+      <rect x={x} y={560 - height} width={width} height={height} rx="5" fill="#c3c9c3" />
       {/* 밀려날 때 간판은 떨어지는 조각(Eviction)이 따로 그린다. */}
       {!hit && (
         <g className="toy-rival-sign">
@@ -66,7 +66,7 @@ const Rival = memo(function Rival({
         </g>
       )}
       <RivalWindows x={x} width={width} height={height} />
-      <rect x={x + width / 2 - 11} y="537" width="22" height="23" fill="#829bc4" />
+      <rect x={x + width / 2 - 11} y="537" width="22" height="23" fill="#a1afae" />
     </g>
   )
 })
@@ -114,7 +114,7 @@ function RivalWindows({ x, width, height }: { x: number; width: number; height: 
 const Backdrop = memo(function Backdrop() {
   return (
     <>
-      <g fill="#9ec7dc">
+      <g fill="#d5c49f">
         {Array.from({ length: 17 }, (_, i) => (
           <rect
             // biome-ignore lint/suspicious/noArrayIndexKey: 고정된 배경 건물 좌표다.
@@ -127,9 +127,9 @@ const Backdrop = memo(function Backdrop() {
           />
         ))}
       </g>
-      <path d="M-700 555h1800v500H-700" fill="#b9d8c6" />
-      <path d="M-700 609h1800v446H-700" fill="#a0c7b8" />
-      <path d="M-700 620h1800" stroke="#c8dfd0" strokeWidth="5" />
+      <path d="M-700 555h1800v500H-700" fill="#edcd91" />
+      <path d="M-700 609h1800v446H-700" fill="#e2b976" />
+      <path d="M-700 620h1800" stroke="#f6dcaa" strokeWidth="5" />
     </>
   )
 })
@@ -147,7 +147,7 @@ function RivalSign({
 }) {
   return (
     <>
-      <rect x={x + 4} y={568 - height} width={width - 8} height="24" rx="3" fill="#829bc4" />
+      <rect x={x + 4} y={568 - height} width={width - 8} height="24" rx="3" fill="#a1afae" />
       <text
         x={x + width / 2}
         y={584 - height}
@@ -291,7 +291,7 @@ function Impact({
             width={i % 3 ? 12 : 9}
             height={i % 3 ? 7 : 9}
             rx="1.5"
-            fill={['#c96f4a', '#b9c7e2', '#829bc4', '#e3a06b'][i % 4]}
+            fill={['#c96f4a', '#c3c9c3', '#a1afae', '#e3a06b'][i % 4]}
             style={flyStyle(dx * dir, dy, r, 0.1)}
           />
         ))}
@@ -554,7 +554,7 @@ export function ToyCityStreet({
     <svg
       className={`toy-street${celebrate ? ' toy-celebrate' : ''}`}
       viewBox="0 0 390 814"
-      preserveAspectRatio="xMidYMid slice"
+      preserveAspectRatio="none"
       aria-label={`우리 회사 · 자리 ${company.seats}개`}
       data-testid="toy-street"
       data-seats={company.seats}
@@ -567,7 +567,7 @@ export function ToyCityStreet({
           <stop offset="1" stopColor="#f0ddba" />
         </linearGradient>
       </defs>
-      <rect width="390" height="814" fill="#b9ddf2" />
+      <rect width="390" height="814" fill="#fbe5b3" />
       <circle cx="75" cy="250" r="32" fill="#fff0b9" />
       <g fill="#fff" opacity=".5">
         <rect x="28" y="233" width="95" height="12" rx="6" />
@@ -633,6 +633,11 @@ export function ToyCityStreet({
               // biome-ignore lint/suspicious/noArrayIndexKey: 아래층부터 고정된 층 번호다.
               <g key={`floor-${row}`}>
                 <rect x={x + 10} y={y} width={w - 20} height="73" rx="3" fill="#ffdfb0" />
+                <rect x={x + 18} y={y + 9} width={w - 36} height="29" rx="3" fill="#b5d0be" />
+                <path d={`M${x + 24} ${y + 12}h${w - 48}`} stroke="#edf1ce" strokeWidth="2" />
+                <path d={`M${center} ${y}v8`} stroke="#bda476" />
+                <ellipse cx={center} cy={y + 8} rx="10" ry="3" fill="#fff9d9" />
+                <path d={`M${center - 8} ${y + 9}l-12 28h40l-12-28Z`} fill="#fff9d9" opacity=".2" />
                 <path d={`M${x + 8} ${y + 75}h${w - 16}`} stroke="#cdb28b" strokeWidth="5" />
               </g>
             )
@@ -650,9 +655,9 @@ export function ToyCityStreet({
             strokeWidth="5"
             strokeLinecap="round"
           />
-          <path d={`M${x - 5} ${top}l13-10h${w + 7}l-13 10`} fill="#7797ce" />
-          <rect x={x - 5} y={top} width={w + 11} height="11" rx="3" fill="#557ac0" />
-          <rect x={center - 60} y={top - 31} width="120" height="25" rx="6" fill="#557ac0" />
+          <path d={`M${x - 5} ${top}l13-10h${w + 7}l-13 10`} fill="#6ebfbc" />
+          <rect x={x - 5} y={top} width={w + 11} height="11" rx="3" fill="#309fa3" />
+          <rect x={center - 60} y={top - 31} width="120" height="25" rx="6" fill="#309fa3" />
           <text
             x={center}
             y={top - 14}
@@ -663,30 +668,38 @@ export function ToyCityStreet({
           >
             흔들리지 않는 고양이
           </text>
-          {employees.map((employee, i) => {
-            const p = g.positions[i]
+          {g.positions.map((p, i) => {
+            const employee = employees[i]
             return (
               <g
-                key={employee.id}
+                key={`${p.x}-${p.y}`}
                 transform={`translate(${p.x},${p.y + 17})`}
                 className="toy-resident"
-                aria-label={employee.name}
+                data-testid="toy-desk"
+                data-occupied={Boolean(employee)}
+                aria-label={employee ? `${employee.name} 자리` : '빈 자리'}
               >
-                <ellipse cx="18" cy="41" rx="17" ry="3" fill="#b4917433" />
-                <g
-                  className="toy-cat"
-                  data-testid="toy-employee"
-                  style={{ '--toy-jump-delay': `${(i % 3) * 0.06}s` } as CSSProperties}
-                >
-                  <CatFigure id={employee.id} grade={employee.overallGrade} />
-                </g>
+                {employee && (
+                  <g
+                    className="toy-cat"
+                    data-testid="toy-employee"
+                    style={{ '--toy-jump-delay': `${(i % 3) * 0.06}s` } as CSSProperties}
+                  >
+                    <OfficeCat id={employee.id} grade={employee.overallGrade} />
+                  </g>
+                )}
+                <rect x="2" y="39" width="32" height="4" rx="2" fill="#baa276" />
+                <path d="M6 43v6m24-6v6" stroke="#baa276" strokeWidth="2" />
+                <rect x="6" y="22" width="23" height="16" rx="2" fill="#568483" stroke="#c7cba1" />
+                <path d="m9 33 5-5 5 3 7-7" fill="none" stroke="#c4d899" strokeWidth="1.5" />
+                <path d="M17 38v3m-4 0h8" stroke="#568483" strokeWidth="2" />
               </g>
             )
           })}
         </g>
         <g transform="translate(177 612) scale(1.25)">
           <g className="toy-cat">
-            <CatFigure />
+            <OfficeCat />
           </g>
         </g>
         {up && (phase === 1 || phase === 2) && (

@@ -325,8 +325,8 @@ export function ActionBar({
               useAppUi.getState().openSheet({ kind: 'toy', panel: 'stage' })
             }}
           >
-            <small>멘탈</small>
-            <strong>강화</strong>
+            <small>멘탈 전투</small>
+            <strong>매도벽 돌파</strong>
             <em>
               {company.stages && company.stages.best > 0
                 ? `${company.stages.best}/${company.stages.last} · +${company.stages.bonusPercent}%`

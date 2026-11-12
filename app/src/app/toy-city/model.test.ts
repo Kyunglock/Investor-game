@@ -39,6 +39,20 @@ describe('토이시티의 실제 회사 상태 표시', () => {
     },
   )
 
+  it.each([
+    [5, 1],
+    [6, 2],
+    [10, 2],
+    [11, 3],
+  ])('정원 %i석은 %i층에 보존된다', (seats, rows) => {
+    const g = officeGeometry('F', seats)
+    expect(g.rows).toBe(rows)
+    expect(g.positions).toHaveLength(seats)
+    for (const y of new Set(g.positions.map((p) => p.y))) {
+      expect(g.positions.filter((p) => p.y === y).length).toBeLessThanOrEqual(5)
+    }
+  })
+
   it('확장 기준과 공사 진행률은 서버의 비용·기간을 따른다', () => {
     const company = {
       capital: 80,

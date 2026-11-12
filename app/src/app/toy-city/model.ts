@@ -7,7 +7,7 @@ export const expansionSide = (after: Grade) => (gradeIndex(after) % 2 === 1 ? 'l
 /** Geometry is presentation only. Capacity always comes from the server. */
 export function officeGeometry(grade: Grade, seats: number) {
   const count = Math.max(1, Math.floor(seats))
-  const columns = Math.min(6, Math.max(4, Math.ceil(Math.sqrt(count))))
+  const columns = 5
   const rows = Math.ceil(count / columns)
   const width = Math.max(170, columns * 38 + 18) + gradeIndex(grade) * 4
   const height = rows * 86 + 104
@@ -16,9 +16,8 @@ export function officeGeometry(grade: Grade, seats: number) {
   const scale = Math.min(1, 265 / (height + 31), 245 / width)
   const positions = Array.from({ length: Math.max(0, seats) }, (_, i) => {
     const row = Math.floor(i / columns)
-    const onRow = Math.min(columns, count - row * columns)
     return {
-      x: x + 15 + ((width - 30) / onRow) * ((i % columns) + 0.5) - 18,
+      x: x + 15 + ((width - 30) / columns) * ((i % columns) + 0.5) - 18,
       y: 560 - 120 - row * 86,
     }
   })
