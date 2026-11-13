@@ -1,4 +1,4 @@
-// 매도벽은 한 묶음이다 (#681): 범위 마법(메테오·물)이 터져도 맨 아래 층만 깎이고 그 위층은 그대로다. 넘친 피해는 다음 층으로 이어진다.
+// 매도벽 범위 공격: 앞줄을 겨냥해도 범위 안의 뒤쪽 층에 스플래시 피해가 들어간다.
 // 개발 서버(APP_URL, 기본 http://127.0.0.1:5299/app/)를 띄운 뒤 `node scripts/wallBundleCheck.mjs`.
 import assert from 'node:assert/strict'
 import { chromium } from '@playwright/test'
@@ -16,6 +16,8 @@ try {
     route.fulfill({ json: company }),
   )
   await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5299/app/')
+  await page.locator('[data-testid=idle-canvas] canvas').waitFor({ timeout: 30000 })
+  await page.waitForFunction(() => window.__mentalWalls?.().length > 0)
   await page.evaluate(async () => {
     const base = '/app/src/mental/'
     const [{ startBattle }, cards, { assaultSpec }, { DEFAULT_WEAPON }] = await Promise.all([
@@ -46,11 +48,18 @@ try {
     window.magicOn = () => window.__mentalMagic({ meteor: 5, water: 5 })
   })
   await page.waitForFunction(() => window.__mentalWalls?.()[0]?.arrived)
+  assert.equal((await page.evaluate(() => window.__mentalWalls()))[0].layers.length, 3)
   await page.evaluate(() => window.magicOn())
   await page.waitForFunction(
     () => {
       const [front] = window.__mentalWalls()[0].layers
-      return front.maxHp - front.hp > front.maxHp * 0.01
+      return (
+        front.hp < front.maxHp &&
+        window
+          .__mentalWalls()[0]
+          .layers.slice(1)
+          .some((layer) => layer.hp < layer.maxHp)
+      )
     },
     null,
     { timeout: 30000 },
@@ -59,7 +68,10 @@ try {
   assert.equal(wall.layers.length, 3)
   const [front, ...behind] = wall.layers
   assert(front.hp < front.maxHp, '맨 아래 층은 깎인다')
-  for (const layer of behind) assert.equal(layer.hp, layer.maxHp, '위층은 범위 마법에 맞지 않는다')
+  assert(
+    behind.some((layer) => layer.hp < layer.maxHp),
+    '범위 안의 뒤쪽 층도 맞는다',
+  )
   assert.deepEqual(errors, [])
   console.log('wall bundle ok', JSON.stringify(wall.layers))
 } finally {

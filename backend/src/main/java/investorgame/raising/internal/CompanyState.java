@@ -26,6 +26,8 @@ class CompanyState {
   static class Idle {
     long wall = 1;
     double damage;
+    double nextDamage;
+    double afterNextDamage;
     long earned;
     double incomeRemainder;
     double activeSeconds;

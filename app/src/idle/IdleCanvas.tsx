@@ -42,6 +42,7 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
         ]
         battle.current = startBattle(host.current, {
           mode: 'assault',
+          speed: 2,
           assault: spec,
           genre: 'DEFENSE',
           hero: heroOf(c),

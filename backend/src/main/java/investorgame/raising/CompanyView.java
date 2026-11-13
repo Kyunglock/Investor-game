@@ -64,7 +64,10 @@ public record CompanyView(
       boolean boss,
       List<IdleSkill> skills,
       long nextUnlock,
-      double circuitSeconds) {}
+      double circuitSeconds,
+      List<IdleWall> upcoming) {}
+
+  public record IdleWall(long wall, double hp, double maxHp) {}
 
   public record IdleSkill(String code, String name, long unlockWall, boolean owned) {}
 

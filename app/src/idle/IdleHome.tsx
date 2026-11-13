@@ -124,10 +124,17 @@ export function IdleHome({
       ) : (
         <>
           <header className="idle-hud">
-            <div className="idle-cash">
+            <div
+              className="idle-cash"
+              role="status"
+              aria-label={`보유 자본 ${money(company.capital)}`}
+            >
               <span className="idle-coin">₩</span>
               <b>{money(company.capital)}</b>
             </div>
+            <strong className="idle-wall-number" data-testid="idle-wall-number">
+              매도벽 {(idle?.wall ?? 1).toLocaleString()}
+            </strong>
             <div
               className="idle-cash"
               role="status"
@@ -141,7 +148,6 @@ export function IdleHome({
             </button>
           </header>
           <div className="idle-stage">
-            <strong>매도벽 {(idle?.wall ?? 1).toLocaleString()}</strong>
             <em>
               {connected ? ((idle?.circuitSeconds ?? 0) > 0 ? '거래 정지' : '● AUTO') : '연결 대기'}
             </em>
