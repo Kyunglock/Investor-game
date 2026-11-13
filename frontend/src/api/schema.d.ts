@@ -289,13 +289,15 @@ export interface paths {
                         sequence: number;
                         /** @enum {string} */
                         action: "start" | "tick" | "stop";
-                        /** @description 실제 명중한 매도벽과 공격 종류별 횟수. 없으면 벽 피해 없음. 피해량과 발사 한도는 서버에서 계산 */
+                        /** @description 실제 명중한 매도벽과 공격 종류별 횟수 및 표시 피해 합계. 서버가 무기·획득 스킬별 피해와 발사 한도로 검증하며, 명중 없이는 벽 피해 없음 */
                         hits?: {
                             /** Format: int64 */
                             wall: number;
                             /** @enum {string} */
                             kind: "bullet" | "water" | "meteor" | "bolt" | "ram";
                             count: number;
+                            /** @description 실제 충돌 피해의 합계. 치명타·지원 주문·범위 감쇠를 포함하며 초당 피해를 곱하지 않음 */
+                            damage?: number;
                         }[];
                     };
                 };

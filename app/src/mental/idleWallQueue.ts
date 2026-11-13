@@ -90,16 +90,15 @@ export class IdleWallQueueFx {
   /** Future walls are not physics targets; only an actual explosion overlapping them reports a hit. */
   hitWalls(x: number, y: number, radius: number) {
     return this.layers
-      .filter(
-        ({ body, hp }) =>
-          body.visible &&
-          hp > 0 &&
-          Math.hypot(
-            Math.max(0, Math.abs(x - body.x) - body.displayWidth / 2),
-            Math.max(0, body.y - body.displayHeight - y, y - body.y),
-          ) <= radius,
-      )
-      .map(({ wall }) => wall)
+      .filter(({ body, hp }) => body.visible && hp > 0)
+      .map(({ wall, body }) => ({
+        wall,
+        distance: Math.hypot(
+          Math.max(0, Math.abs(x - body.x) - body.displayWidth / 2),
+          Math.max(0, body.y - body.displayHeight - y, y - body.y),
+        ),
+      }))
+      .filter(({ distance }) => distance <= radius)
   }
 
   inspect() {

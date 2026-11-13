@@ -16,7 +16,9 @@ class IdleEngine {
   private final String serverId = UUID.randomUUID().toString();
   private static final double SPEED = 2;
   private static final long[] UNLOCKS = {5, 15, 30, 50};
-  private static final double[] COOLDOWNS = {3, 6, 4, 8};
+  // The acquired skills are level 1 in the renderer (mental/magic.ts).
+  private static final double[] COOLDOWNS = {2.4, 3.6, 2.6, 3.6};
+  private static final double[] SKILL_DAMAGE = {1.5, 4.8, 2.5, 1.2 * 3.4};
   private static final String[] CODES = {"water", "meteor", "bolt", "ram"};
   private static final String[] NAMES = {"물 스킬", "메테오 고양이", "번개 스킬", "충차 고양이"};
 
@@ -31,12 +33,12 @@ class IdleEngine {
       // Keep legacy clears, without paying their rewards a second time.
       c.idle.wall = 1L + c.assaultStars.stream().filter(s -> s > 0).count();
     }
-    if (c.idle.hitVersion == 0) {
-      // Old queued damage came from elapsed time, without any area contact.
+    if (c.idle.hitVersion < 2) {
+      // Old queued damage used elapsed DPS or inflated per-hit formulas.
       c.idle.nextDamage = 0;
       c.idle.afterNextDamage = 0;
       c.idle.damage = Math.min(c.idle.damage, maxHp(c.idle.wall) - 1);
-      c.idle.hitVersion = 1;
+      c.idle.hitVersion = 2;
     }
     return c.idle;
   }
@@ -85,9 +87,9 @@ class IdleEngine {
     double base =
         engine.mental.weaponViews(c).stream()
             .filter(CompanyView.Weapon::equipped)
-            .mapToDouble(w -> 12.0 * w.damagePercent() / 100 * 1000 / w.fireMs())
+            .mapToDouble(w -> w.damagePercent() / 100.0 * 1000 / w.fireMs())
             .findFirst()
-            .orElse(12);
+            .orElse(1000.0 / 260);
     for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
       if (!"hp".equals(u.kind())) base *= 1 + u.bonusPercent() / 100.0;
     }
@@ -95,28 +97,35 @@ class IdleEngine {
   }
 
   private double dps(CompanyState c) {
-    long owned = viewSkills(c).stream().filter(CompanyView.IdleSkill::owned).count();
-    return SPEED * baseDps(c) * (1 + owned * 0.25);
-  }
-
-  private List<CompanyView.IdleSkill> viewSkills(CompanyState c) {
     long wall = state(c).wall;
-    return java.util.stream.IntStream.range(0, UNLOCKS.length)
-        .mapToObj(i -> new CompanyView.IdleSkill(CODES[i], NAMES[i], UNLOCKS[i], wall > UNLOCKS[i]))
-        .toList();
+    int casters = 1 + (wall > 15 ? 1 : 0) + (wall > 50 ? 1 : 0);
+    double damage = bulletDamage(c);
+    double total = baseDps(c) * bulletPower(c) / 1.25;
+    for (int i = 0; i < UNLOCKS.length; i++) {
+      if (wall > UNLOCKS[i]) total += damage * SKILL_DAMAGE[i] / COOLDOWNS[i];
+    }
+    return SPEED * casters * total;
   }
 
   private double bulletDamage(CompanyState c) {
     double damage =
         engine.mental.weaponViews(c).stream()
             .filter(CompanyView.Weapon::equipped)
-            .mapToDouble(w -> 12.0 * w.damagePercent() / 100)
+            .mapToDouble(w -> w.damagePercent() / 100.0)
             .findFirst()
-            .orElse(12);
+            .orElse(1);
     for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
       if ("damage".equals(u.kind())) damage *= 1 + u.bonusPercent() / 100.0;
     }
     return Math.max(1, Math.min(1_000_000_000, damage));
+  }
+
+  private double bulletPower(CompanyState c) {
+    return engine.mental.weaponViews(c).stream()
+        .filter(CompanyView.Weapon::equipped)
+        .mapToDouble(w -> 1 + Math.max(0, Math.min(3, w.power())) * 0.4)
+        .findFirst()
+        .orElse(1);
   }
 
   private void tick(CompanyState c, double seconds, List<IdleHit> hits) {
@@ -129,36 +138,48 @@ class IdleEngine {
     long earned = (long) income;
     s.incomeRemainder = income - earned;
     if (s.hitCredits == null || s.hitCredits.length != 5) s.hitCredits = new double[5];
-    // Contact counts identify actual hits, never damage or rewards. Per-kind credits
-    // bound them by server weapon stats and acquired skills; unused time alone cannot hurt a wall.
+    // Match the damage shown at collision, bounded by owned attacks and server stats.
+    // A contact is not a second of DPS: fire upgrades must never multiply a single hit.
     boolean explosive =
         engine.mental.weaponViews(c).stream().anyMatch(w -> w.equipped() && w.power() >= 2);
     long front = s.wall;
+    int casters = 1 + (front > 15 ? 1 : 0) + (front > 50 ? 1 : 0);
+    double weaponDamage = bulletDamage(c);
+    boolean critical =
+        engine.mental.weaponViews(c).stream()
+            .anyMatch(w -> w.equipped() && "revolver".equals(w.kind()));
     for (int kind = 0; kind < 5 && active > 0; kind++) {
       if (kind > 0 && front <= UNLOCKS[kind - 1]) continue;
-      double damage = kind == 0 ? bulletDamage(c) : s.dps * COOLDOWNS[kind - 1] * 0.25;
-      double interval = kind == 0 ? damage / s.dps : COOLDOWNS[kind - 1];
+      double damage = weaponDamage * (kind == 0 ? bulletPower(c) : SKILL_DAMAGE[kind - 1]);
+      double maxDamage = damage * (kind == 0 && critical ? 3 : 1);
+      double interval = (kind == 0 ? weaponDamage / s.dps : COOLDOWNS[kind - 1]) / casters;
       s.hitCredits[kind] =
           Math.min(Math.max(2, 6 / interval), s.hitCredits[kind] + active / interval);
       String code = kind == 0 ? "bullet" : CODES[kind - 1];
       int[] counts = new int[3];
+      double[] amounts = new double[3];
       for (IdleHit hit : hits) {
         if (hit == null || !code.equals(hit.kind()) || hit.count() <= 0) continue;
         long offset = hit.wall() - front;
         if (offset < 0 || offset > 2) continue;
         // Only actual area contacts may affect queued walls, and only with an owned area attack.
         if (offset > 0 && !(kind == 1 || kind == 2 || (kind == 0 && explosive))) continue;
-        counts[(int) offset] = Math.min(1000, counts[(int) offset] + Math.min(1000, hit.count()));
+        double reported = hit.damage() == null ? damage * hit.count() : hit.damage();
+        if (!Double.isFinite(reported) || reported <= 0) continue;
+        int index = (int) offset;
+        int count = Math.min(hit.count(), 1000 - counts[index]);
+        counts[index] += count;
+        amounts[index] += Math.min(reported / hit.count(), maxDamage) * count;
       }
       int most = Math.max(counts[0], Math.max(counts[1], counts[2]));
       double accepted = Math.min(most, s.hitCredits[kind]);
       s.hitCredits[kind] -= accepted;
-      s.damage += Math.min(counts[0], accepted) * damage;
-      s.nextDamage =
-          Math.min(maxHp(front + 1), s.nextDamage + Math.min(counts[1], accepted) * damage * 0.5);
-      s.afterNextDamage =
-          Math.min(
-              maxHp(front + 2), s.afterNextDamage + Math.min(counts[2], accepted) * damage * 0.25);
+      for (int i = 0; i < 3; i++) {
+        if (counts[i] > 0) amounts[i] *= Math.min(counts[i], accepted) / counts[i];
+      }
+      s.damage += amounts[0];
+      s.nextDamage = Math.min(maxHp(front + 1), s.nextDamage + amounts[1]);
+      s.afterNextDamage = Math.min(maxHp(front + 2), s.afterNextDamage + amounts[2]);
     }
     // Pay only for contacted walls in order. No leftover DPS rolls into an untouched new wall.
     while (s.circuitSeconds == 0 && s.damage + 1e-7 >= maxHp(s.wall)) {

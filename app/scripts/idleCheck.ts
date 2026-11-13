@@ -53,7 +53,7 @@ try {
     const errors: string[] = []
     const loadingErrors: string[] = []
     const actions: string[] = []
-    const reportedHits: { wall: number; kind: string; count: number }[] = []
+    const reportedHits: { wall: number; kind: string; count: number; damage: number }[] = []
     let circuitJustStarted = false
     page.on('pageerror', (e) => errors.push(e.message))
     page.on('console', (message) => {
@@ -79,7 +79,7 @@ try {
             company.idle.hp = Math.max(
               1,
               company.idle.hp -
-                hits.reduce((total: number, hit: { count: number }) => total + hit.count * 12, 0),
+                hits.reduce((total: number, hit: { damage: number }) => total + hit.damage, 0),
             )
           }
         }
@@ -110,12 +110,14 @@ try {
     await expect.poll(() => actions.filter((a) => a === 'tick').length).toBeGreaterThan(0)
     await page.evaluate(() =>
       window.dispatchEvent(
-        new CustomEvent('idle-wall-hit', { detail: { wall: 1, kind: 'bullet' } }),
+        new CustomEvent('idle-wall-hit', { detail: { wall: 1, kind: 'bullet', damage: 1 } }),
       ),
     )
     await expect
       .poll(() =>
-        reportedHits.some((hit) => hit.wall === 1 && hit.kind === 'bullet' && hit.count > 0),
+        reportedHits.some(
+          (hit) => hit.wall === 1 && hit.kind === 'bullet' && hit.count > 0 && hit.damage > 0,
+        ),
       )
       .toBe(true)
     assert.equal(await page.locator('.idle-skills, .idle-upgrades').count(), 0)

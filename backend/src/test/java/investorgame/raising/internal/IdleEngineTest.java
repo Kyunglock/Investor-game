@@ -12,6 +12,8 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import tools.jackson.databind.json.JsonMapper;
 
 class IdleEngineTest {
@@ -68,13 +70,44 @@ class IdleEngineTest {
   void contactsDamageOnlyTheirWallAndDuplicatesCannotPayTwice() {
     start(1);
     tick(1000, new IdleHit(1, "bullet", 1));
-    assertThat(state.idle.damage).isEqualTo(12);
+    assertThat(state.idle.damage).isEqualTo(1);
     assertThat(state.idle.nextDamage).isZero();
     engine.beat(state, "one", sequence, "tick", List.of(new IdleHit(1, "bullet", 1)));
-    assertThat(state.idle.damage).isEqualTo(12);
+    assertThat(state.idle.damage).isEqualTo(1);
     tick(1000, new IdleHit(2, "bullet", 1), new IdleHit(50, "meteor", 10));
-    assertThat(state.idle.damage).isEqualTo(12);
+    assertThat(state.idle.damage).isEqualTo(1);
     assertThat(state.idle.nextDamage).isZero();
+  }
+
+  @Test
+  void collisionAmountsMatchDisplayWithoutHiddenMultiplier() {
+    start(51);
+    tick(
+        3000,
+        new IdleHit(51, "bullet", 1, 0.75),
+        new IdleHit(51, "water", 1, 1.5),
+        new IdleHit(51, "meteor", 1, 2.4));
+    assertThat(state.idle.damage).isCloseTo(4.65, org.assertj.core.data.Offset.offset(1e-9));
+    double damage = state.idle.damage;
+    tick(1000);
+    assertThat(state.idle.damage).isEqualTo(damage);
+  }
+
+  @Test
+  void fireUpgradeCannotMultiplySingleMeteorDamage() {
+    state.battleLevels.put("fire", 100);
+    start(16);
+    tick(3000, new IdleHit(16, "meteor", 1, 4.8));
+    assertThat(state.idle.damage).isEqualTo(4.8);
+  }
+
+  @Test
+  void forgedAmountsAreLimitedByWeaponAndAcquiredSkillStats() {
+    start(1);
+    tick(1000, new IdleHit(1, "bullet", 1, 1e12), new IdleHit(1, "meteor", 1, 1e12));
+    assertThat(state.idle.damage).isEqualTo(1);
+    tick(1000, new IdleHit(1, "bullet", 1, Double.NaN), new IdleHit(1, "bullet", 1, -1.0));
+    assertThat(state.idle.damage).isEqualTo(1);
   }
 
   @Test
@@ -106,7 +139,8 @@ class IdleEngineTest {
   void forgedHitCountsAreBoundedByWeaponRateAndSkillsMustBeOwned() {
     start(1);
     tick(1000, new IdleHit(1, "bullet", 1000), new IdleHit(1, "meteor", 1000));
-    assertThat(state.idle.damage).isEqualTo(state.idle.dps * 2);
+    assertThat(state.idle.damage)
+        .isCloseTo(state.idle.dps * 2, org.assertj.core.data.Offset.offset(1e-9));
     assertThat(state.idle.wall).isEqualTo(1);
     for (int i = 0; i < 10; i++) tick(1000);
     double before = state.idle.damage;
@@ -134,7 +168,7 @@ class IdleEngineTest {
 
   @Test
   void highPowerDoesNotRollOverIntoUntouchedWalls() {
-    state.battleLevels.put("damage", 1000);
+    state.battleLevels.put("damage", 10000);
     start(1);
     tick(1000, new IdleHit(1, "bullet", 1000));
     assertThat(state.idle.wall).isEqualTo(2);
@@ -193,9 +227,11 @@ class IdleEngineTest {
     assertThat(state.idle.damage).isZero();
   }
 
-  @Test
-  void legacyUncontactedQueuedDamageIsRepairedOnceWithoutResettingProgress() {
+  @ParameterizedTest
+  @ValueSource(ints = {0, 1})
+  void legacyInflatedQueuedDamageIsRepairedOnceWithoutResettingProgress(int version) {
     state.idle = new CompanyState.Idle();
+    state.idle.hitVersion = version;
     state.idle.wall = 16;
     state.idle.damage = IdleEngine.maxHp(16);
     state.idle.nextDamage = IdleEngine.maxHp(17);
