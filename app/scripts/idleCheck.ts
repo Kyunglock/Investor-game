@@ -179,7 +179,43 @@ try {
     }
     await page.getByRole('button', { name: '회사', exact: true }).click()
     await expect(page.getByTestId('office-scene')).toBeVisible()
-    await page.getByRole('button', { name: '← 자동 매도벽 돌파' }).click()
+    const nav = page.getByRole('navigation', { name: '게임 메뉴' }).last()
+    await expect(nav.getByRole('button')).toHaveCount(5)
+    await expect(nav.getByRole('button', { name: '회사', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    for (const name of ['성장', '고양이', '소환']) {
+      await nav.getByRole('button', { name }).click()
+      await expect(page.getByTestId('idle-menu')).toBeVisible()
+      await expect(nav.getByRole('button', { name })).toHaveAttribute('aria-current', 'page')
+      await page.getByRole('button', { name: '닫기 ✕' }).click()
+      await expect(page.getByTestId('office-scene')).toBeVisible()
+      await expect(nav.getByRole('button', { name: '회사', exact: true })).toHaveAttribute(
+        'aria-current',
+        'page',
+      )
+    }
+    // A short viewport must scroll office controls above the fixed navigation.
+    await page.setViewportSize({ width, height: 640 })
+    await page.locator('.idle-office').evaluate((el) => {
+      el.scrollTop = el.scrollHeight
+    })
+    const office = await page.getByTestId('office-scene').boundingBox()
+    const tabs = await nav.boundingBox()
+    assert.ok(office && tabs && office.y + office.height <= tabs.y + 1)
+    await page.screenshot({ path: `/tmp/idle-office-${width}.png`, fullPage: true })
+    await nav.getByRole('button', { name: '돌파', exact: true }).click()
+    await expect(page.getByTestId('office-scene')).toHaveCount(0)
+    await expect(page.locator('.idle-stage')).toBeVisible()
+    assert.equal(
+      await page.evaluate(
+        () =>
+          (window as unknown as { idleCanvas: Element }).idleCanvas ===
+          document.querySelector('[data-testid=idle-canvas] canvas'),
+      ),
+      true,
+    )
     await expect(page.getByTestId('idle-battle')).toBeVisible()
     assert.deepEqual(errors, [])
     await page.close()
