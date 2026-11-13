@@ -467,10 +467,10 @@ paths:
   /api/company/cat/draw:
     post:
       operationId: drawCat
-      summary: 자본으로 고양이 한 마리를 뽑는다 (decisions.md 488번)
+      summary: 뽑기권 한 장으로 고양이 한 마리를 뽑는다 (decisions.md 488·493번)
       description: |
-        값은 idle.catPrice(10b부터)이고 뽑을 때마다 1.3배씩 오른다. 하늘냥·민트냥이 40%씩, 라일락냥이 20%로 나온다. 새 고양이는 출전 칸이 비어 있으면
-        바로 출전하고, 이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 자본이 모자라면 400. 쓴 돈은 전투 강화 비용으로 적는다.
+        무기 뽑기와 같은 뽑기권(armory.tickets)을 한 장 쓴다. 고양이는 여섯이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
+        이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 뽑기권이 없으면 400.
       responses:
         '200':
           description: 뽑은 뒤의 회사
@@ -493,7 +493,7 @@ paths:
               type: object
               required: [code, fielded]
               properties:
-                code: { type: string, enum: [sky, mint, lilac] }
+                code: { type: string, enum: [sky, mint, lilac, sunset, night, snow] }
                 fielded: { type: boolean }
       responses:
         '200':
@@ -519,7 +519,7 @@ paths:
               type: object
               required: [code]
               properties:
-                code: { type: string, enum: [sky, mint, lilac] }
+                code: { type: string, enum: [sky, mint, lilac, sunset, night, snow] }
                 kind: { type: string, enum: [pistol, revolver, smg, shotgun, rifle] }
                 grade: { type: string, enum: [F, E, D, C, B, A, S, SS, SSS, SR, UR, LR] }
       responses:
@@ -1118,7 +1118,7 @@ components:
                 - type: 'null'
         idle:
           type: object
-          required: [wall, hp, maxHp, dps, earned, boss, skills, nextUnlock, cats, catPrice, fieldSlots, wallDps]
+          required: [wall, hp, maxHp, dps, earned, boss, skills, nextUnlock, cats, fieldSlots, wallDps]
           properties:
             wall: { type: integer, format: int64 }
             hp: { type: number }
@@ -1148,8 +1148,7 @@ components:
                   name: { type: string }
                   unlockWall: { type: integer, format: int64 }
                   owned: { type: boolean }
-            catPrice: { type: integer, format: int64, description: 다음 고양이 뽑기 값 (488번) }
-            fieldSlots: { type: integer, description: 한 번에 출전하는 고양이 수 (492번) }
+            fieldSlots: { type: integer, description: 한 번에 출전하는 고양이 수 (492·493번, 넷) }
             wallDps: { type: number, description: 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 }
             cats:
               type: array
@@ -1158,7 +1157,7 @@ components:
                 type: object
                 required: [code, name, level, damagePercent, firePercent, criticalPercent, fielded, weapon]
                 properties:
-                  code: { type: string, enum: [sky, mint, lilac] }
+                  code: { type: string, enum: [sky, mint, lilac, sunset, night, snow] }
                   name: { type: string }
                   level: { type: integer, description: 0이면 아직 없다. 또 뽑을 때마다 하나씩 오른다 }
                   damagePercent: { type: integer, description: 이 고양이 총의 공격력(%). 든 무기 공격력의 이만큼으로 쏜다. 레벨과 특성이 들어 있다 (492번) }

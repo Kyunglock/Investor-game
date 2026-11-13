@@ -49,6 +49,7 @@ import {
   assaultTarget,
   cellShares,
   climbSpeed,
+  idleAssaultSpec,
   MID_BOSS_NAME,
   pickFlow,
   rowHps,
@@ -240,6 +241,8 @@ export interface BattleHandle {
 
 const INK = '#2b2340'
 const BULLET_LIFE = 900
+/** 자동 전투에서 맞힌 피해를 화면의 벽 체력에서 먼저 빼 두는 시간(실제 ms): 서버의 1초 주기와 왕복 시간보다 조금 길다 (493번). */
+const IDLE_HIT_MS = 1400
 
 type Enemy = Phaser.Physics.Arcade.Image & {
   kind: UnitKind
@@ -481,9 +484,9 @@ class BattleScene extends Phaser.Scene {
   /** 디펜스 번호 스테이지(509번): 적 체력 배율과, 보스를 이미 불렀나. EX(스테이지 없음)는 배율 1이고 보스가 없다. */
   private readonly hpScale: number
   /** 디펜스 번호 스테이지의 적 수·빠르기·멘탈 피해 배율 (#565). EX 디펜스는 1. */
-  private readonly countScale: number
-  private readonly speedScale: number
-  private readonly dmgScale: number
+  private countScale: number
+  private speedScale: number
+  private dmgScale: number
   private readonly defenseBoss: boolean
   private bossCalled = false
   /** 공격 판 (413번): 판, 화면에 있는 벽(지금 벽과 다음 벽), 부순 벽 수, 벽을 뚫은 뒤 지난 초, 지금 벽 앞에 막힌 초, 마지막으로 물량이 나온 때. */
@@ -491,6 +494,8 @@ class BattleScene extends Phaser.Scene {
   private walls: WallState[] = []
   private idleQueue?: IdleWallQueueFx
   private idleWall = 0
+  /** 지금 벽에 방금 맞힌 피해(실제 ms와 양). 서버 값이 따라올 때까지 화면의 벽 체력에서 먼저 뺀다 (493번). */
+  private idleHits: { at: number; amount: number }[] = []
   private idleTransition = false
   private runRush = 0
   private wallsBroken = 0
@@ -1562,7 +1567,11 @@ class BattleScene extends Phaser.Scene {
         this.wallsBroken = 0
         const snapshot = this.opts.idle?.()
         this.idleWall = snapshot?.wall ?? this.idleWall
-        spec.walls = [{ ...spec.walls[0], boss: this.idleWall % 10 === 0, mid: false, rows: 1 }]
+        // 벽이 깊어질수록 미션처럼 물량이 잦고 무거워진다 (493번).
+        Object.assign(spec, idleAssaultSpec(this.idleWall))
+        this.countScale = spec.enemyCount
+        this.speedScale = spec.enemySpeed
+        this.dmgScale = spec.enemyDmg
         // The next wall takes the exact position of the first queued wall.
         const spacing = idleWallLayout(this.lane().width, this.view().h).spacing
         this.addWall(0, Math.min(wall.y, this.stopY()) - spacing)
@@ -1719,15 +1728,21 @@ class BattleScene extends Phaser.Scene {
     const wall = this.walls.find((w) => !w.broken)
     if (!wall) return
     if (snapshot.wall !== this.idleWall) {
+      this.idleHits = []
       if (this.circuit) this.endCircuit()
       if (this.bossEnemy?.active) this.kill(this.bossEnemy, false)
       for (const cell of [...wall.cells]) if (cell.active && !cell.dying) this.kill(cell, false)
       return
     }
+    // 서버는 1초마다 답한다: 그사이 맞힌 피해를 먼저 빼서 맞는 즉시 줄어 보이게 한다. 서버 값이 따라온 뒤(IDLE_HIT_MS)에는 뺀 것을 잊는다.
+    // 벽이 깨지는 판정은 서버 것이라 여기서는 0까지 내리지 않는다.
+    const since = performance.now() - IDLE_HIT_MS
+    this.idleHits = this.idleHits.filter((hit) => hit.at >= since)
+    const pending = this.idleHits.reduce((sum, hit) => sum + hit.amount, 0)
     const cells = this.wallLayers(wall)
     for (const cell of cells) {
       cell.maxHp = snapshot.maxHp / Math.max(1, cells.length)
-      const hp = Math.max(0.01, snapshot.hp / Math.max(1, cells.length))
+      const hp = Math.max(0.01, (snapshot.hp - pending) / Math.max(1, cells.length))
       if (cell.hp !== hp) {
         cell.hp = hp
         this.crackCell(cell)
@@ -2025,8 +2040,9 @@ class BattleScene extends Phaser.Scene {
       return 0
     })
     this.drawBuyWall()
+    // 벽 앞에서는 멈춰 서서 쏘고, 벽을 부수면 다음 벽까지 걸어간다 (493번): 배경도 그때만 흐른다.
     const scroll =
-      this.opts.idle && !this.reducedMotion
+      this.idleAdvancing && !this.reducedMotion
         ? Math.max(move, dt * (this.runRush > 0 ? 620 : 95))
         : move
     this.climbV = dt > 0 ? scroll / dt : 0
@@ -2615,7 +2631,10 @@ class BattleScene extends Phaser.Scene {
       return
     }
     if (this.opts.idle && e.cell) {
-      if (!this.idleTransition) this.reportIdleHit(this.idleWall, kind, dmg)
+      if (!this.idleTransition) {
+        this.reportIdleHit(this.idleWall, kind, dmg)
+        this.idleHits.push({ at: performance.now(), amount: dmg })
+      }
     } else e.hp -= dmg
     // 매도벽은 연사 중에도 장갑과 균열이 보여야 한다. 밝기만 올리고 명중 불꽃을 얹는다.
     if (e.cell) e.clearTint()
@@ -2980,6 +2999,12 @@ class BattleScene extends Phaser.Scene {
   /** index번째 고양이의 그림 차례 (mates.ts MATE_LOOKS): 자동 전투는 고양이마다 제 그림, 스테이지는 들어온 차례다. */
   private mateLook(index: number) {
     return this.mateGun(index)?.look ?? index
+  }
+
+  /** 자동 전투에서 다음 벽으로 가는 중인가 (493번): 벽을 부순 직후의 질주, 벽 전환, 아직 벽에 닿지 않은 동안. 벽 앞에서는 멈춰 선다. */
+  private get idleAdvancing() {
+    if (!this.opts.idle) return false
+    return this.runRush > 0 || this.idleTransition || !this.walls.find((w) => !w.broken)?.arrived
   }
 
   /** 자동 전투에서 매수벽이 무너져 다시 설 때까지는 공격이 멈춘다 (492번): 매수벽 강화가 화력을 지킨다. */
@@ -4073,17 +4098,18 @@ class BattleScene extends Phaser.Scene {
       const target = targets[i + 1] ?? null
       if (this.opts.idle)
         b.setTexture(
-          this.reducedMotion
+          this.reducedMotion || !this.idleAdvancing
             ? mateKey(this.mateLook(i))
             : catRunKey(
                 mateKey(this.mateLook(i)),
                 catRunFrame(time / 1000, i + 1, this.runRush > 0),
               ),
         )
-      // 라일락냥은 하늘냥과 같은 그림이라 보랏빛으로 가린다 (492번).
+      // 같은 그림을 쓰는 고양이는 빛깔로 가린다 (492·493번).
       if (this.opts.idle) {
-        if (this.mateLook(i) === 2) b.setTint(0xd9c2ff)
-        else b.clearTint()
+        const tint = MATE_LOOKS[this.mateLook(i)].tint
+        if (tint === undefined) b.clearTint()
+        else b.setTint(tint)
       }
       b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop)
       m.magicMark.setPosition(b.x, b.y - 58)
@@ -4212,7 +4238,7 @@ class BattleScene extends Phaser.Scene {
     p.setTexture(
       hurting
         ? 'hero-hurt'
-        : this.opts.idle && !this.reducedMotion
+        : this.idleAdvancing && !this.reducedMotion
           ? catRunKey('hero', catRunFrame(this.elapsed, 0, this.runRush > 0))
           : ptr.isDown || this.assault
             ? 'hero-fire'

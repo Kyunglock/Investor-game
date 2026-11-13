@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import { useEffect, useRef, useState } from 'react'
-import { assaultSpec } from '../mental/assault'
+import { idleAssaultSpec } from '../mental/assault'
 import type { BattleHandle } from '../mental/battle'
 import { heroOf } from '../mental/hero'
 import { idleLoadout } from './loadout'
@@ -36,10 +36,7 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
       .then(({ startBattle }) => {
         if (disposed || !host.current) return
         const c = latest.current.company
-        const spec = assaultSpec(1)
-        spec.walls = [
-          { ...spec.walls[0], rows: 1, mid: false, boss: (c.idle?.wall ?? 1) % 10 === 0 },
-        ]
+        const spec = idleAssaultSpec(c.idle?.wall ?? 1)
         battle.current = startBattle(host.current, {
           mode: 'assault',
           speed: 2,

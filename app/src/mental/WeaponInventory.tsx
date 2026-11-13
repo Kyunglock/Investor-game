@@ -7,7 +7,7 @@ import { sfx } from '../fx/sound'
 import { GunSprite } from './GunSprite'
 import { DEFAULT_WEAPON, type Weapon } from './hero'
 import { type DrawResult, WeaponReveal } from './WeaponReveal'
-import { FIRE_STYLE_NAMES, WEAPON_EFFECTS, WEAPON_TRAITS } from './weaponEffects'
+import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from './weaponEffects'
 import './weapons.css'
 
 type Armory = NonNullable<Company['armory']>
@@ -31,6 +31,9 @@ export const GRADE_BADGE: Record<Weapon['grade'], string> = {
   LR: 'bg-yellow-100 text-yellow-900',
 }
 
+/** 인벤토리 한 쪽의 칸 수: 8칸 × 5줄 (493번). */
+const SLOTS = 40
+
 /** 인벤토리 메뉴의 배지: 쓸 수 있는 무기 뽑기권 수. */
 export function weaponBadge(company: Company): string | null {
   const tickets = company.armory?.tickets ?? 0
@@ -43,6 +46,9 @@ export function weaponBadge(company: Company): string | null {
  */
 export function WeaponInventory({ company }: { company: Company }) {
   const [page, setPage] = useState(0)
+  const [picked, setPicked] = useState<{ kind: Weapon['kind']; grade: Weapon['grade'] } | null>(
+    null,
+  )
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   const [reveal, setReveal] = useState<{ id: number; result: DrawResult | null } | null>(null)
@@ -90,12 +96,14 @@ export function WeaponInventory({ company }: { company: Company }) {
     (a, b) =>
       GUN_GRADES.indexOf(b.grade) - GUN_GRADES.indexOf(a.grade) || a.kind.localeCompare(b.kind),
   )
-  const pageCount = Math.max(1, Math.ceil(sorted.length / 6))
+  const pageCount = Math.max(1, Math.ceil(sorted.length / SLOTS))
   const currentPage = Math.min(page, pageCount - 1)
-  const slots = Array.from({ length: 6 }, (_, i) => ({
+  const slots = Array.from({ length: SLOTS }, (_, i) => ({
     id: `slot-${i}`,
-    weapon: sorted[currentPage * 6 + i] ?? null,
+    weapon: sorted[currentPage * SLOTS + i] ?? null,
   }))
+  // 칸이 작아 칸에는 그림·등급·수만 있다: 고른 무기(처음엔 든 무기)의 정보와 장착·합성은 위 칸에서 한다 (493번).
+  const shown = weapons.find((w) => w.kind === picked?.kind && w.grade === picked.grade) ?? equipped
   const ended = company.status === 'ENDED'
   // 고양이가 빌려 든 무기 (488번): 칸에 든 고양이 이름을 보인다. 사장냥이 들면 고양이는 내려놓는다.
   const holdersOf = (w: Weapon) =>
@@ -118,32 +126,66 @@ export function WeaponInventory({ company }: { company: Company }) {
       <section
         className="weapon-equipped"
         data-testid="weapon-equipped"
-        data-kind={equipped.kind}
-        data-grade={equipped.grade}
+        data-kind={shown.kind}
+        data-grade={shown.grade}
       >
-        <GunSprite kind={equipped.kind} grade={equipped.grade} width={96} />
+        <GunSprite kind={shown.kind} grade={shown.grade} width={96} />
         <div className="min-w-0">
-          <p className="text-[11px] text-muted">지금 든 무기</p>
+          <p className="text-[11px] text-muted">
+            {shown.equipped
+              ? '지금 든 무기'
+              : `고른 무기 · ×${shown.count}${holdersOf(shown)[0] ? ` · ${holdersOf(shown)[0].name} 장착` : ''}`}
+          </p>
           <p className="font-game text-[19px]">
-            {equipped.name}{' '}
+            {shown.name}{' '}
             <span
-              className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${GRADE_BADGE[equipped.grade]}`}
+              className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${GRADE_BADGE[shown.grade]}`}
             >
-              {equipped.gradeName}
+              {shown.gradeName}
             </span>
           </p>
           <p className="text-[12px] text-muted">
-            공격 ×{equipped.damagePercent / 100} · {(1000 / equipped.fireMs).toFixed(1)}발/초
+            공격 ×{shown.damagePercent / 100} · {(1000 / shown.fireMs).toFixed(1)}발/초
           </p>
           <p className="weapon-tag">
-            {FIRE_STYLE_NAMES[equipped.kind]} · {WEAPON_EFFECTS[equipped.kind].name}
+            {FIRE_STYLE_NAMES[shown.kind]} · {WEAPON_EFFECTS[shown.kind].name}
           </p>
-          <p className="weapon-effect">{WEAPON_EFFECTS[equipped.kind].desc}</p>
-          <p className="weapon-traits">
-            강점 · {WEAPON_TRAITS[equipped.kind].strength}
-            <br />
-            약점 · {WEAPON_TRAITS[equipped.kind].weakness}
-          </p>
+          <p className="weapon-effect">{WEAPON_EFFECTS[shown.kind].desc}</p>
+          <div className="weapon-actions">
+            <button
+              type="button"
+              className="weapon-equip"
+              data-testid="weapon-equip"
+              disabled={busy || ended || shown.equipped}
+              onClick={() => {
+                sfx.tap()
+                haptic.light()
+                void change(() => useRaisingStore.getState().equipWeapon(shown.kind, shown.grade))
+              }}
+            >
+              {shown.equipped ? '장착 중' : '장착'}
+            </button>
+            {armory && shown.grade !== 'LR' && shown.count >= armory.mergeCount && (
+              <button
+                type="button"
+                className="weapon-merge"
+                data-testid="weapon-merge"
+                disabled={busy || ended}
+                onClick={() => {
+                  sfx.levelUp()
+                  haptic.medium()
+                  void change(() =>
+                    useRaisingStore.getState().mergeWeapon(shown.kind, shown.grade as MergeGrade),
+                  )
+                }}
+              >
+                {armory.mergeCount}개 합성
+                {shown.count - armory.mergeCount <
+                  (shown.equipped ? 1 : 0) + holdersOf(shown).length &&
+                  holdersOf(shown).length > 0 && <small> · 고양이 장비 풀림</small>}
+              </button>
+            )}
+          </div>
         </div>
       </section>
       <div className="weapon-draw-row">
@@ -171,54 +213,31 @@ export function WeaponInventory({ company }: { company: Company }) {
         />
       )}
       <p className="mt-3 text-[12px] text-muted">
-        가진 무기 {weapons.length}종 · 눌러서 들기
+        가진 무기 {weapons.length}종 · 눌러서 고르기
         {armory ? ` · 같은 무기 ${armory.mergeCount}개면 합성` : ''}
       </p>
-      <ul className="weapon-grid" aria-label="무기 인벤토리 · 6칸">
+      <ul className="weapon-grid" aria-label="무기 인벤토리 · 8칸 5줄">
         {slots.map(({ id, weapon: w }) =>
           w ? (
             <li key={`${w.kind}-${w.grade}`} className="weapon-slot" data-testid="inventory-slot">
               <button
                 type="button"
-                disabled={busy || ended || w.equipped}
                 aria-pressed={w.equipped}
+                aria-label={`${w.name} ${w.gradeName} ${w.count}개${w.equipped ? ' 장착 중' : ''}`}
                 onClick={() => {
                   sfx.tap()
-                  haptic.light()
-                  void change(() => useRaisingStore.getState().equipWeapon(w.kind, w.grade))
+                  setPicked({ kind: w.kind, grade: w.grade })
                 }}
-                className={`weapon-card ${w.equipped ? 'is-equipped' : ''}`}
+                className={`weapon-card ${w.equipped ? 'is-equipped' : ''} ${w === shown ? 'is-picked' : ''}`}
                 data-testid="weapon"
                 data-kind={w.kind}
                 data-grade={w.grade}
               >
-                <GunSprite kind={w.kind} grade={w.grade} width={76} />
+                <GunSprite kind={w.kind} grade={w.grade} width={34} />
                 <span className={`weapon-slot-grade ${GRADE_BADGE[w.grade]}`}>{w.gradeName}</span>
-                <span className="weapon-slot-name">{w.name}</span>
-                <span className="weapon-slot-status">
-                  {w.equipped ? '장착 중' : (holdersOf(w)[0]?.name ?? FIRE_STYLE_NAMES[w.kind])}
-                </span>
-                <span className="weapon-slot-count">×{w.count}</span>
+                {w.count > 1 && <span className="weapon-slot-count">×{w.count}</span>}
+                {holdersOf(w).length > 0 && <span className="weapon-slot-cat" aria-hidden="true" />}
               </button>
-              {armory && w.grade !== 'LR' && w.count >= armory.mergeCount && (
-                <button
-                  type="button"
-                  className="weapon-merge"
-                  data-testid="weapon-merge"
-                  disabled={busy || ended}
-                  onClick={() => {
-                    sfx.levelUp()
-                    haptic.medium()
-                    void change(() =>
-                      useRaisingStore.getState().mergeWeapon(w.kind, w.grade as MergeGrade),
-                    )
-                  }}
-                >
-                  {armory.mergeCount}개 합성
-                  {w.count - armory.mergeCount < (w.equipped ? 1 : 0) + holdersOf(w).length &&
-                    holdersOf(w).length > 0 && <small> · 고양이 장비 풀림</small>}
-                </button>
-              )}
             </li>
           ) : (
             <li
@@ -226,34 +245,33 @@ export function WeaponInventory({ company }: { company: Company }) {
               className="weapon-slot weapon-slot-empty"
               data-testid="inventory-slot"
               aria-label="빈 슬롯"
-            >
-              <span aria-hidden="true">＋</span>
-              <span>빈 슬롯</span>
-            </li>
+            />
           ),
         )}
       </ul>
-      <nav className="weapon-pages" aria-label="인벤토리 페이지">
-        <button
-          type="button"
-          disabled={currentPage === 0}
-          onClick={() => setPage(currentPage - 1)}
-          aria-label="이전 무기 페이지"
-        >
-          ‹
-        </button>
-        <span aria-live="polite">
-          {currentPage + 1} / {pageCount}
-        </span>
-        <button
-          type="button"
-          disabled={currentPage + 1 >= pageCount}
-          onClick={() => setPage(currentPage + 1)}
-          aria-label="다음 무기 페이지"
-        >
-          ›
-        </button>
-      </nav>
+      {pageCount > 1 && (
+        <nav className="weapon-pages" aria-label="인벤토리 페이지">
+          <button
+            type="button"
+            disabled={currentPage === 0}
+            onClick={() => setPage(currentPage - 1)}
+            aria-label="이전 무기 페이지"
+          >
+            ‹
+          </button>
+          <span aria-live="polite">
+            {currentPage + 1} / {pageCount}
+          </span>
+          <button
+            type="button"
+            disabled={currentPage + 1 >= pageCount}
+            onClick={() => setPage(currentPage + 1)}
+            aria-label="다음 무기 페이지"
+          >
+            ›
+          </button>
+        </nav>
+      )}
       {dropped && (
         <p role="status" className="mt-2 text-[12px] text-muted" data-testid="weapon-dropped">
           {dropped}

@@ -4,11 +4,17 @@
  * (art.ts bakeMates). 이 모듈은 Phaser 없이 늘어서는 자리와 동료 이름을 가진다.
  */
 
-/** 기존 동료 식별색과 합류 이름. 실제 외형은 catModels의 승인 원본을 사용한다. */
-export const MATE_LOOKS: readonly { color: string; name: string }[] = [
+/**
+ * 동료 식별색과 합류 이름. 실제 외형은 catModels의 승인 원본 둘(접힌 귀·장모)을 번갈아 쓰고, 넷째부터는 같은 그림에 빛깔(tint)을 입혀 가린다
+ * (493번: 자동 전투의 고양이 여섯). 스테이지의 카드 고양이는 앞의 셋까지만 쓴다(cards.ts MAX_MATES).
+ */
+export const MATE_LOOKS: readonly { color: string; name: string; tint?: number }[] = [
   { color: '#5fb4ff', name: '하늘냥' },
   { color: '#3fcf9a', name: '민트냥' },
-  { color: '#b98cff', name: '라일락냥' },
+  { color: '#b98cff', name: '라일락냥', tint: 0xd9c2ff },
+  { color: '#ff9d5c', name: '노을냥', tint: 0xffc49c },
+  { color: '#5b6388', name: '밤냥', tint: 0x8f98bd },
+  { color: '#bfe6ff', name: '눈꽃냥', tint: 0xd8f1ff },
 ]
 
 /** 고양이 사이의 가장 넓은 간격(px)과 화면 양쪽에 남길 틈(px). */

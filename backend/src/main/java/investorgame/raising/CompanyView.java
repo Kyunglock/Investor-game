@@ -65,7 +65,6 @@ public record CompanyView(
       List<IdleSkill> skills,
       long nextUnlock,
       List<IdleCat> cats,
-      long catPrice,
       int fieldSlots,
       double wallDps,
       double circuitSeconds,

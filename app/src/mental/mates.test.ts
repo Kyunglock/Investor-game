@@ -4,8 +4,8 @@ import { MATE_GAP, MATE_LOOKS, MATE_MARGIN, mateFormation, spreadTargets } from 
 
 describe('함께 싸우는 고양이 (decisions.md 393번)', () => {
   it('고양이마다 색과 이름이 있고 최대 수만큼 있다', () => {
-    expect(MATE_LOOKS).toHaveLength(MAX_MATES)
-    expect(new Set(MATE_LOOKS.map((l) => l.color)).size).toBe(MAX_MATES)
+    expect(MATE_LOOKS.length).toBeGreaterThanOrEqual(MAX_MATES)
+    expect(new Set(MATE_LOOKS.map((l) => l.color)).size).toBe(MATE_LOOKS.length)
   })
 
   it('혼자면 사장냥은 가운데에 선다', () => {

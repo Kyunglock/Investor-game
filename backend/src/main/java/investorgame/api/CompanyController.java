@@ -321,7 +321,7 @@ class CompanyController {
     return companies.mergeWeapon(cookies.requireSession(token), request.kind(), request.grade());
   }
 
-  /** 자본으로 고양이 한 마리를 뽑는다 (decisions.md 488번). */
+  /** 뽑기권 한 장으로 고양이 한 마리를 뽑는다 (decisions.md 488·493번). */
   @PostMapping("/cat/draw")
   CompanyView drawCat(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
     UUID sessionId = cookies.requireSession(token);

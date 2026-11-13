@@ -10,6 +10,9 @@ export interface UpcomingWall {
   maxHp: number
 }
 
+/** The stack starts right under the one-line HUD (decisions.md 493 removed the status line). */
+export const IDLE_WALL_TOP = 60
+
 /** Leave room for the HUD above the stack and the buy wall below it. */
 export function idleWallLayout(laneWidth: number, viewportHeight: number) {
   const height = Math.max(
@@ -17,10 +20,10 @@ export function idleWallLayout(laneWidth: number, viewportHeight: number) {
     Math.min(
       64,
       (laneWidth - 3) / 6 + 3,
-      (viewportHeight - 305 - 90 - UPCOMING_WALLS * IDLE_WALL_GAP) / 3,
+      (viewportHeight - 305 - IDLE_WALL_TOP - UPCOMING_WALLS * IDLE_WALL_GAP) / 3,
     ),
   )
-  const bottom = 90 + 3 * height + UPCOMING_WALLS * IDLE_WALL_GAP
+  const bottom = IDLE_WALL_TOP + 3 * height + UPCOMING_WALLS * IDLE_WALL_GAP
   return { bottom, height, spacing: height + IDLE_WALL_GAP }
 }
 

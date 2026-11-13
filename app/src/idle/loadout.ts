@@ -3,7 +3,7 @@ import { loadoutOf } from '../mental/cards'
 import { DEFAULT_WEAPON, heroOf } from '../mental/hero'
 
 /** 고양이마다 전투 그림이 정해져 있다 (mates.ts MATE_LOOKS의 차례, 492번). */
-export const CAT_LOOKS = { sky: 0, mint: 1, lilac: 2 } as const
+export const CAT_LOOKS = { sky: 0, mint: 1, lilac: 2, sunset: 3, night: 4, snow: 5 } as const
 
 export function idleLoadout(company: Company) {
   const hero = heroOf(company)

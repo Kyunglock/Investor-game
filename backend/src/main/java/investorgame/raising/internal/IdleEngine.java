@@ -26,18 +26,17 @@ class IdleEngine {
   private static final double[] SKILL_DAMAGE = {1.5, 4.8, 2.5, 1.2 * 3.4};
   private static final String[] CODES = {"water", "meteor", "bolt", "ram"};
   private static final String[] NAMES = {"물 스킬", "메테오 스킬", "번개 스킬", "충차 스킬"};
-  // Cats (decisions.md 488, 492): each has one trait for its own gun. Lilac is the rare one.
-  private static final List<String> CATS = List.of("sky", "mint", "lilac");
-  private static final String[] CAT_NAMES = {"하늘냥", "민트냥", "라일락냥"};
-  private static final int[] CAT_WEIGHTS = {40, 40, 20};
-  private static final double[] CAT_FIRE = {1.25, 1, 1};
-  private static final double[] CAT_DAMAGE = {1, 1.25, 1};
-  private static final double[] CAT_CRITICAL = {1, 1, 1.5};
+  // Cats (decisions.md 488, 492, 493): each has a trait for its own gun. Drawn with a ticket.
+  private static final List<String> CATS =
+      List.of("sky", "mint", "lilac", "sunset", "night", "snow");
+  private static final String[] CAT_NAMES = {"하늘냥", "민트냥", "라일락냥", "노을냥", "밤냥", "눈꽃냥"};
+  private static final int[] CAT_WEIGHTS = {25, 25, 10, 15, 15, 10};
+  private static final double[] CAT_FIRE = {1.25, 1, 1, 1.1, 1, 1.4};
+  private static final double[] CAT_DAMAGE = {1, 1.25, 1, 1.1, 1.1, 1};
+  private static final double[] CAT_CRITICAL = {1, 1, 1.5, 1, 1.25, 1};
   // Cats used to join at these walls. Saves from then keep them.
   private static final long[] CAT_LEGACY_WALLS = {15, 50};
-  private static final int FIELD_SLOTS = 2;
-  private static final long CAT_PRICE = 10_000_000;
-  private static final double CAT_PRICE_GROWTH = 1.3;
+  private static final int FIELD_SLOTS = 4;
   // A cat's gun hits for this share of the weapon's damage; each level above 1 adds the bonus.
   private static final double CAT_POWER = 0.5;
   private static final double CAT_LEVEL_BONUS = 0.2;
@@ -251,7 +250,8 @@ class IdleEngine {
       earned =
           CompanyEngine.plus(
               earned, (long) Math.min(1_000_000_000_000L, maxHp(s.wall) * REWARD_PER_HEALTH));
-      if (s.wall % 10 == 0 && c.weaponTickets < Integer.MAX_VALUE) c.weaponTickets++;
+      // A ticket every fifth wall (493): tickets now draw cats as well as weapons.
+      if (s.wall % 5 == 0 && c.weaponTickets < Integer.MAX_VALUE) c.weaponTickets++;
       s.wall++;
       s.damage = s.nextDamage;
       s.nextDamage = s.afterNextDamage;
@@ -266,19 +266,13 @@ class IdleEngine {
     c.yearRewards = CompanyEngine.plus(c.yearRewards, earned);
   }
 
-  private static long catPrice(int draws) {
-    return Math.round(CAT_PRICE * StrictMath.pow(CAT_PRICE_GROWTH, draws));
-  }
-
-  /** Cat gacha (decisions.md 488): pay capital for one random cat. A duplicate levels it up. */
+  /** Cat gacha (decisions.md 488, 493): one ticket for one cat. A duplicate levels it up. */
   void drawCat(CompanyState c, SeededRandom random) {
     CompanyState.Idle s = state(c);
-    long price = catPrice(s.catDraws);
-    if (c.capital < price) {
-      throw new InvalidRequestException("자본이 모자라다: " + price + "원 필요");
+    if (c.weaponTickets <= 0) {
+      throw new InvalidRequestException("뽑기권이 없다");
     }
-    c.capital -= price;
-    c.yearUpgrades += price;
+    c.weaponTickets--;
     s.catDraws++;
     int roll =
         random.forKey("cat-draw", s.catDraws).nextInt(java.util.Arrays.stream(CAT_WEIGHTS).sum());
@@ -389,7 +383,6 @@ class IdleEngine {
         skills,
         next,
         cats,
-        catPrice(s.catDraws),
         FIELD_SLOTS,
         SPEED * s.wallDps,
         s.circuitSeconds,
