@@ -66,6 +66,11 @@ export function ToyCityHome({ company }: { company: Company }) {
   useEffect(() => () => useAppUi.getState().setRivalRise(null), [])
   const panel = sheet?.kind === 'toy' ? sheet.panel : null
   const setPanel = (panel: ToyPanel | null) => {
+    if (panel === 'assault') {
+      useAppUi.getState().setTab('office')
+      window.dispatchEvent(new Event('idle-home'))
+      return
+    }
     if (panel) useAppUi.getState().openSheet({ kind: 'toy', panel })
     else useAppUi.getState().closeSheet()
   }

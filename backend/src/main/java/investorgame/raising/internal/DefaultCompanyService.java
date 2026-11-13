@@ -21,13 +21,18 @@ class DefaultCompanyService implements CompanyService {
   private final CompanyRepository companies;
   private final MemoryRepository memories;
   private final CompanyEngine engine;
+  private final IdleEngine idle;
   private final SecureRandom seeds = new SecureRandom();
 
   DefaultCompanyService(
-      CompanyRepository companies, MemoryRepository memories, CompanyEngine engine) {
+      CompanyRepository companies,
+      MemoryRepository memories,
+      CompanyEngine engine,
+      IdleEngine idle) {
     this.companies = companies;
     this.memories = memories;
     this.engine = engine;
+    this.idle = idle;
   }
 
   @Override
@@ -381,7 +386,8 @@ class DefaultCompanyService implements CompanyService {
         engine.mental.armoryView(c),
         engine.mental.upgradeViews(c),
         engine.mental.stagesView(c),
-        engine.mental.assaultsView(c));
+        engine.mental.assaultsView(c),
+        idle.view(c));
   }
 
   @Override
@@ -404,11 +410,19 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView reportAssault(UUID sessionId, int stage, boolean cleared, int stars) {
+  public CompanyView idleBeat(UUID sessionId, String runId, long sequence, String action) {
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.mental.reportAssault(row.state(), stage, cleared, stars);
+    engine.mental.initWeapons(row.state());
+    idle.beat(row.state(), runId, sequence, action);
     companies.update(row.id(), row.state(), false);
     return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView reportAssault(UUID sessionId, int stage, boolean cleared, int stars) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    throw new InvalidRequestException("매도벽 돌파는 자동 전투로 변경되었습니다");
   }
 
   @Override

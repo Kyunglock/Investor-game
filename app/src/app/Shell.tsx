@@ -1,5 +1,6 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
+import { IdleBattle } from '@web/features/raising/IdleBattle'
 import { officeName } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useTutorialSpot } from '@web/features/raising/TutorialBanner'
@@ -9,6 +10,7 @@ import {
   unlockedFeatures,
   useTutorial,
 } from '@web/features/raising/tutorial'
+import { useIdleBattle } from '@web/features/raising/useIdleBattle'
 import { useEffect, useRef, useState } from 'react'
 import { isMuted, setMuted, sfx } from '../fx/sound'
 import { BookIcon, BuildingIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from './Icons'
@@ -17,6 +19,7 @@ import { IssueScene } from './scenes/IssueScene'
 import { OfficeScene } from './scenes/OfficeScene'
 import { RecordScene } from './scenes/RecordScene'
 import { StaffScene } from './scenes/StaffScene'
+import { CatFigure } from './toy-city/CatFigure'
 import { type Tab, tabBadge, tabFromWeb, useAppUi } from './ui'
 import { useCountUp } from './useCountUp'
 import { ActionBar, Windows } from './Windows'
@@ -34,6 +37,13 @@ const TABS: { id: Tab; label: string; icon: () => React.ReactNode }[] = [
  * 장면을 옆으로 밀어 가며 본다. 장면 안에서만 스크롤한다. 폭락·손실이면 화면이 흔들리고(FxLayer), 자본은 숫자가 굴러간다.
  */
 export function Shell({ company }: { company: Company }) {
+  const connected = useIdleBattle(company.companyId)
+  const [manage, setManage] = useState(false)
+  useEffect(() => {
+    const home = () => setManage(false)
+    window.addEventListener('idle-home', home)
+    return () => window.removeEventListener('idle-home', home)
+  }, [])
   const tab = useAppUi((s) => s.tab)
   const modalBack = useAppUi((s) => s.modalBack)
   const webTab = useRaisingStore((s) => s.tab)
@@ -97,7 +107,21 @@ export function Shell({ company }: { company: Company }) {
           }
           data-testid="scene"
         >
-          {tab === 'office' && <OfficeScene company={company} />}
+          {tab === 'office' &&
+            (manage ? (
+              <>
+                <button type="button" className="btn m-3" onClick={() => setManage(false)}>
+                  ← 자동 매도벽 돌파
+                </button>
+                <OfficeScene company={company} />
+              </>
+            ) : (
+              <IdleBattle company={company} connected={connected} onManage={() => setManage(true)}>
+                <svg viewBox="0 0 36 45" role="img" aria-label="사장 고양이">
+                  <CatFigure />
+                </svg>
+              </IdleBattle>
+            ))}
           {tab === 'market' && <GachaScene company={company} />}
           {tab === 'staff' && <StaffScene company={company} />}
           {tab === 'issue' && <IssueScene company={company} />}

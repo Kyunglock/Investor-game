@@ -11,7 +11,6 @@ import { useEffect, useState } from 'react'
 import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
-import { stageLabel } from '../mental/advance'
 import { MentalWindow } from '../mental/MentalWindow'
 import { firstQuarter } from './firstPlay'
 import { ToyCityMove } from './toy-city/ToyCityMove'
@@ -243,10 +242,6 @@ export function ActionBar({
   }
   if (variant === 'toy') {
     const upgradeLevels = (company.battleUpgrades ?? []).reduce((n, u) => n + u.level, 0)
-    const best = company.assaults?.best ?? 0
-    const last = company.assaults?.last ?? 1
-    const per = company.assaults?.perChapter ?? 10
-    const next = Math.min(best + 1, last)
     return (
       <div className="toy-action-area">
         {error && (
@@ -280,12 +275,12 @@ export function ActionBar({
               sfx.stamp()
               haptic.medium()
               useFx.getState().burstAt(ev.currentTarget, 'sparks')
-              useAppUi.getState().openSheet({ kind: 'toy', panel: 'assault' })
+              window.dispatchEvent(new Event('idle-home'))
             }}
           >
             <small>주 게임</small>
             <strong>매도벽 돌파</strong>
-            <em>{best >= last ? '모두 돌파!' : `${stageLabel(next, per)} 도전`}</em>
+            <em>{`${company.idle?.wall ?? 1}번째 벽 · 자동 전투`}</em>
           </button>
           <button
             type="button"

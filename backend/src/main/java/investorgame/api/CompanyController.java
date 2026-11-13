@@ -50,6 +50,22 @@ class CompanyController {
     return ResponseEntity.of(cookies.session(token).flatMap(companies::current));
   }
 
+  @PostMapping("/idle")
+  CompanyView idle(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody IdleRequest request) {
+    return companies.idleBeat(
+        cookies.requireSession(token),
+        request.runId().toString(),
+        request.sequence(),
+        request.action());
+  }
+
+  record IdleRequest(
+      @NotNull UUID runId,
+      @PositiveOrZero long sequence,
+      @jakarta.validation.constraints.Pattern(regexp = "start|tick|stop") @NotNull String action) {}
+
   /** 사장의 사재로 첫 회사를 차린다 (decisions.md 228번). 회사가 이미 있으면 400. */
   @PostMapping
   ResponseEntity<CompanyView> open(

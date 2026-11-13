@@ -263,6 +263,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/idle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 화면에 켜 둔 자동 전투의 접속 신호. 3초 넘는 공백은 보상 없음 */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** Format: uuid */
+                        runId: string;
+                        /** Format: int64 */
+                        sequence: number;
+                        /** @enum {string} */
+                        action: "start" | "tick" | "stop";
+                    };
+                };
+            };
+            responses: {
+                /** @description 서버가 계산한 전투와 회사 상태 */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Company"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/assault": {
         parameters: {
             query?: never;
@@ -1000,6 +1047,25 @@ export interface components {
                     /** @description 받은 무기 뽑기권 */
                     tickets: number;
                 } | null;
+            };
+            idle?: {
+                /** Format: int64 */
+                wall: number;
+                hp: number;
+                maxHp: number;
+                dps: number;
+                /** Format: int64 */
+                earned: number;
+                boss: boolean;
+                /** Format: int64 */
+                nextUnlock: number;
+                skills: {
+                    code: string;
+                    name: string;
+                    /** Format: int64 */
+                    unlockWall: number;
+                    owned: boolean;
+                }[];
             };
             /** @description 매도벽 돌파 스테이지 (#698). 주 게임. 멘탈 스테이지와 따로 1-1부터 차례로 깬다. 분기 강화율에는 들어가지 않는다 */
             assaults?: {
