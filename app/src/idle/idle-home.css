@@ -156,9 +156,13 @@
   font-size: 11px;
   min-height: 53px;
 }
-.idle-nav svg {
-  width: 23px;
-  height: 23px;
+.idle-icon {
+  width: 1em;
+  height: 1em;
+  flex-shrink: 0;
+}
+.idle-nav .idle-icon {
+  font-size: 25px;
 }
 .idle-nav .on {
   color: #744322;
@@ -214,6 +218,9 @@
 }
 .idle-tabs button {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   padding: 10px;
   font-size: 13px;
@@ -294,6 +301,10 @@
   display: block;
   font-size: 14px;
 }
+.idle-stat-info > small {
+  display: block;
+  margin-top: 2px;
+}
 .idle-stat-info small {
   font:
     500 10px "Noto Sans KR",
@@ -366,6 +377,213 @@
   margin-top: 6px;
   color: #937b53;
 }
+.idle-cash .idle-icon {
+  font-size: 18px;
+  color: #b0762f;
+}
+.idle-tabs .idle-icon {
+  font-size: 15px;
+  margin-right: 4px;
+}
+.idle-tab-badge {
+  margin-left: 4px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  background: #e47353;
+  color: #fff;
+  font:
+    700 9px "Noto Sans KR",
+    sans-serif;
+}
+.idle-stat-icon .idle-icon {
+  font-size: 26px;
+}
+.idle-collection .idle-stat-icon {
+  flex-shrink: 0;
+}
+.idle-collection article:not(.owned) .idle-stat-icon {
+  color: #a99c84;
+  background: #e6dccb;
+  border-color: #d3c5ab;
+}
+.idle-cat-gacha {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px 12px 12px 14px;
+  border: 1.5px solid #d9a85a;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fff3c9, #ffe2a8);
+  box-shadow: 0 2px 0 #d8ae6d;
+}
+.idle-cat-gacha > div {
+  flex: 1;
+  min-width: 0;
+}
+.idle-cat-gacha b {
+  display: block;
+  font-size: 15px;
+}
+.idle-cat-gacha small,
+.idle-cat-info > small {
+  display: block;
+  font:
+    500 10.5px "Noto Sans KR",
+    sans-serif;
+  margin-top: 4px;
+  color: #8f7448;
+  word-break: keep-all;
+}
+.idle-cats {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.idle-cat {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px 12px;
+  align-items: center;
+  background: #eee5d5;
+  border: 1px solid #d1b88b;
+  border-radius: 16px;
+  padding: 10px 12px 10px 10px;
+}
+.idle-cat.owned {
+  background: #fffaf0;
+}
+.idle-cat.fielded {
+  border: 1.5px solid #8fb26b;
+  background: #f7fbe9;
+}
+.idle-cat-portrait {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 66px;
+  border: 1.5px solid #dec08a;
+  border-radius: 14px;
+  background: radial-gradient(circle at 50% 35%, #fff8e2, #f3dcae);
+  overflow: hidden;
+}
+.idle-cat-portrait img {
+  width: 112%;
+  max-width: none;
+  pointer-events: none;
+}
+.idle-cat-portrait.is-locked {
+  background: #e3d9c8;
+  border-color: #cdbfa5;
+}
+.idle-cat-portrait.is-locked img {
+  filter: brightness(0);
+  opacity: 0.22;
+}
+.idle-cat-portrait .idle-icon {
+  position: absolute;
+  font-size: 24px;
+  color: #8d7c62;
+}
+.idle-cat-guns small {
+  font:
+    500 10px "Noto Sans KR",
+    sans-serif;
+  color: #8f7448;
+}
+.idle-cat-info b {
+  display: block;
+  font-size: 15px;
+}
+.idle-cat-info b small {
+  font:
+    700 10px "Noto Sans KR",
+    sans-serif;
+  color: #b0762f;
+}
+.idle-cat-gun {
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 2px 8px 2px 4px;
+  min-height: 32px;
+  border: 1px solid #dcc59c;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 12px;
+  max-width: 100%;
+}
+button.idle-cat-gun {
+  box-shadow: 0 2px 0 #dcc59c;
+}
+.idle-cat-gun i,
+.idle-cat-guns i {
+  border-radius: 5px;
+  padding: 1px 5px;
+  font:
+    800 10px "Noto Sans KR",
+    sans-serif;
+  font-style: normal;
+}
+.idle-cat-gun em {
+  font:
+    700 10px "Noto Sans KR",
+    sans-serif;
+  font-style: normal;
+  color: #b0762f;
+  margin-left: 2px;
+}
+.idle-cat-field {
+  min-width: 62px;
+  min-height: 44px;
+  padding: 8px 9px;
+  border: 1.5px solid #c18c46;
+  border-radius: 11px;
+  background: linear-gradient(#ffe6a5, #ffd07b);
+  box-shadow: 0 2px 0 #d2a25d;
+  font-size: 12px;
+}
+.idle-cat-field[aria-pressed="true"] {
+  border-color: #7fa25c;
+  background: linear-gradient(#e6f4c8, #cfe7a3);
+  box-shadow: 0 2px 0 #9dbb78;
+  color: #4b6a2f;
+}
+.idle-cat-field:disabled {
+  opacity: 0.6;
+}
+.idle-cat-guns {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px dashed #d6ba8a;
+}
+.idle-cat-guns button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  min-height: 74px;
+  padding: 6px;
+  border: 1px solid #dcc59c;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 12px;
+}
+.idle-cat-guns button[aria-pressed="true"] {
+  border: 2px solid #749cc0;
+  background: #e2eff7;
+}
+.idle-cat-guns button:disabled:not([aria-pressed="true"]) {
+  opacity: 0.5;
+}
 .idle-canvas-error {
   position: absolute;
   inset: 30% 20px auto;
@@ -383,6 +601,10 @@
   border-radius: 10px;
 }
 @media (max-width: 350px) {
+  .idle-cat-field {
+    grid-column: 1 / -1;
+    min-height: 38px;
+  }
   .idle-stat {
     gap: 6px;
     padding: 10px 6px;

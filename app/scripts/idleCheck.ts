@@ -18,14 +18,34 @@ try {
           priceGrowthPercent: 10,
           bonusPercent: 0,
           nextBonusPercent: 10,
+          maxLevel: 0,
         },
         {
           kind: 'fire',
+          level: 100,
+          price: 1000000,
+          priceGrowthPercent: 10,
+          bonusPercent: 100,
+          nextBonusPercent: 100,
+          maxLevel: 100,
+        },
+        {
+          kind: 'hp',
           level: 0,
           price: 1000000,
           priceGrowthPercent: 10,
           bonusPercent: 0,
           nextBonusPercent: 10,
+          maxLevel: 0,
+        },
+        {
+          kind: 'crit',
+          level: 0,
+          price: 1000000,
+          priceGrowthPercent: 10,
+          bonusPercent: 0,
+          nextBonusPercent: 20,
+          maxLevel: 0,
         },
       ],
       idle: {
@@ -40,9 +60,28 @@ try {
         upcoming: [] as { wall: number; hp: number; maxHp: number }[],
         skills: [
           { code: 'water', name: '물 스킬', unlockWall: 5, owned: false },
-          { code: 'meteor', name: '메테오 고양이', unlockWall: 15, owned: false },
+          { code: 'meteor', name: '메테오 스킬', unlockWall: 15, owned: false },
           { code: 'bolt', name: '번개 스킬', unlockWall: 30, owned: false },
-          { code: 'ram', name: '충차 고양이', unlockWall: 50, owned: false },
+          { code: 'ram', name: '충차 스킬', unlockWall: 50, owned: false },
+        ],
+        catPrice: 3000000,
+        cats: [
+          {
+            code: 'sky',
+            name: '하늘냥',
+            level: 0,
+            bonusPercent: 0,
+            fielded: false,
+            weapon: null as { kind: string; grade: string } | null,
+          },
+          {
+            code: 'mint',
+            name: '민트냥',
+            level: 0,
+            bonusPercent: 0,
+            fielded: false,
+            weapon: null as { kind: string; grade: string } | null,
+          },
         ],
       },
     }
@@ -55,6 +94,8 @@ try {
     const actions: string[] = []
     const reportedHits: { wall: number; kind: string; count: number; damage: number }[] = []
     let circuitJustStarted = false
+    let catDraws = 0
+    const hires: number[] = []
     page.on('pageerror', (e) => errors.push(e.message))
     page.on('console', (message) => {
       if (message.type() === 'error') loadingErrors.push(message.text())
@@ -83,6 +124,23 @@ try {
             )
           }
         }
+      }
+      // Cat gacha, fielding and equipment (decisions.md 488): the mock keeps the server's shape.
+      const path = new URL(route.request().url()).pathname
+      const sent = route.request().postDataJSON()
+      const cat = company.idle.cats.find((c) => c.code === sent?.code)
+      if (path.endsWith('/draws')) hires.push(sent.count)
+      if (path.endsWith('/cat/draw')) {
+        const drawn = company.idle.cats[catDraws++ % 2]
+        company.capital -= company.idle.catPrice
+        company.idle.catPrice = Math.round(company.idle.catPrice * 1.5)
+        drawn.level++
+        drawn.bonusPercent = (drawn.level - 1) * 10
+        if (drawn.level === 1) drawn.fielded = true
+      } else if (path.endsWith('/cat/field') && cat) {
+        cat.fielded = sent.fielded
+      } else if (path.endsWith('/cat/weapon') && cat) {
+        cat.weapon = sent.kind ? { kind: sent.kind, grade: sent.grade } : null
       }
       await route.fulfill({ json: company })
     })
@@ -124,8 +182,52 @@ try {
     await page.getByRole('button', { name: '성장' }).click()
     await expect(page.getByTestId('idle-menu')).toBeVisible()
     await expect(page.getByText('초당 공격력')).toBeVisible()
+    // Four stats (decisions.md 487): fire speed stops at its cap, the others can be bought.
+    await expect(page.getByTestId('idle-stat')).toHaveCount(4)
+    const stat = (kind: string) => page.locator(`[data-testid=idle-stat][data-kind=${kind}]`)
+    await expect(stat('fire')).toContainText('공격 속도')
+    await expect(stat('fire')).toContainText('+100% · 최대')
+    await expect(stat('fire').getByRole('button')).toBeDisabled()
+    await expect(stat('fire').getByRole('button')).toHaveText('MAX')
+    await expect(stat('hp')).toContainText('매수벽 강화')
+    await expect(stat('crit')).toContainText('치명타 피해')
+    await expect(stat('crit')).toContainText('+0% → +20%')
+    await page.screenshot({ path: `/tmp/idle-growth-${width}.png`, fullPage: true })
     await page.getByRole('tab', { name: '스킬', exact: true }).click()
     await expect(page.getByText('5벽 돌파 시 획득', { exact: true })).toBeVisible()
+    // Meteor and ram are skills of their own, not cats (decisions.md 491).
+    await expect(page.getByText('메테오 스킬')).toBeVisible()
+    await expect(page.getByText('50벽 돌파 시 획득', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: '닫기 ✕' }).click()
+    // Cats come from the gacha, are fielded, and borrow owned weapons (decisions.md 488).
+    await page.getByRole('button', { name: '고양이' }).click()
+    await expect(page.getByTestId('cat')).toHaveCount(2)
+    await expect(page.getByTestId('cat-field')).toHaveCount(0)
+    await expect(page.getByText('벽 돌파 시 합류')).toHaveCount(0)
+    await page.getByTestId('cat-draw').click()
+    const sky = page.locator('[data-testid=cat][data-code=sky]')
+    await expect(page.getByTestId('cat-gacha')).toContainText('하늘냥 합류!')
+    await expect(sky.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'true')
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => (window as unknown as { __mentalDamage?: { mates: number } }).__mentalDamage?.mates,
+        ),
+      )
+      .toBe(1)
+    await sky.getByTestId('cat-field').click()
+    await expect(sky.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'false')
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => (window as unknown as { __mentalDamage?: { mates: number } }).__mentalDamage?.mates,
+        ),
+      )
+      .toBe(0)
+    await sky.getByTestId('cat-field').click()
+    await sky.getByTestId('cat-gun').click()
+    await expect(sky.getByTestId('cat-weapon').first()).toBeVisible()
+    await page.screenshot({ path: `/tmp/idle-cats-${width}.png`, fullPage: true })
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     assert.equal(
       await page.evaluate(
@@ -341,17 +443,32 @@ try {
     await expect(page.getByTestId('assault-open')).toHaveCount(0)
     await expect(page.getByTestId('side-open')).toHaveCount(0)
     await expect(page.getByTestId('battle-upgrade-open')).toHaveCount(0)
+    // The office no longer has its own inventory; weapons live in Growth (decisions.md 489).
+    await expect(page.getByTestId('open-weapons')).toHaveCount(0)
+    // Hiring draws at once with every usable ticket instead of opening a menu (decisions.md 490).
+    await page.getByTestId('tab-market').click()
+    await expect
+      .poll(() => hires)
+      .toEqual([
+        Math.min(
+          company.gacha.tickets,
+          company.gacha.rosterMax - company.gacha.roster,
+          company.gacha.maxDraws,
+        ),
+      ])
+    await expect(page.getByTestId('office-scene')).toBeVisible()
+    await expect(page.getByTestId('gacha-scene')).toHaveCount(0)
     const officeTicks = actions.filter((action) => action === 'tick').length
     await expect
       .poll(() => actions.filter((action) => action === 'tick').length)
       .toBeGreaterThan(officeTicks)
     const nav = page.getByRole('navigation', { name: '게임 메뉴' }).last()
-    await expect(nav.getByRole('button')).toHaveCount(5)
+    await expect(nav.getByRole('button')).toHaveCount(4)
     await expect(nav.getByRole('button', { name: '회사', exact: true })).toHaveAttribute(
       'aria-current',
       'page',
     )
-    for (const name of ['성장', '고양이', '소환']) {
+    for (const name of ['성장', '고양이']) {
       await nav.getByRole('button', { name }).click()
       await expect(page.getByTestId('idle-menu')).toBeVisible()
       await expect(nav.getByRole('button', { name })).toHaveAttribute('aria-current', 'page')

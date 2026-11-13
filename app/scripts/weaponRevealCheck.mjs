@@ -58,7 +58,8 @@ try {
         return route.fulfill({ json: company })
       })
       await page.goto('http://127.0.0.1:5182/app/')
-      await page.getByTestId('open-weapons').click()
+      await page.getByRole('button', { name: '성장' }).click()
+      await page.getByRole('tab', { name: /인벤토리/ }).click()
       await page.getByTestId('weapon-draw').click()
       await expect(page.getByTestId('weapon-reveal')).toBeVisible()
       await expect(page.getByTestId('weapon-reveal')).not.toHaveAttribute('data-grade', /.+/)
@@ -84,7 +85,7 @@ try {
       await expect(page.getByTestId('weapon-reveal-again')).toHaveCount(0)
       await page.keyboard.press('Escape')
       await expect(page.getByTestId('weapon-reveal')).toHaveCount(0)
-      await expect(page.getByTestId('toy-weapons-sheet')).toBeVisible()
+      await expect(page.getByTestId('idle-menu')).toBeVisible()
       await expect(page.getByTestId('weapon-tickets')).toHaveText('0')
       await expect(page.getByTestId('weapon-draw')).toBeDisabled()
       assert.equal(calls, 3)
@@ -93,7 +94,8 @@ try {
       await page.emulateMedia({ reducedMotion: 'reduce' })
       company.armory.tickets = 1
       await page.reload()
-      await page.getByTestId('open-weapons').click()
+      await page.getByRole('button', { name: '성장' }).click()
+      await page.getByRole('tab', { name: /인벤토리/ }).click()
       await page.getByTestId('weapon-draw').click()
       await expect(page.getByTestId('weapon-drawn')).toBeVisible()
       const animation = await page

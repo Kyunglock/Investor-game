@@ -69,6 +69,7 @@ import {
   MAGICS,
   type Magic,
   type MagicLevels,
+  type MateGun,
   xpToNext,
 } from './cards'
 import { catAim, catMuzzle, mateModel } from './catModels'
@@ -98,7 +99,7 @@ import {
 import { WALK_FRAMES, walkFrame } from './enemyWalk'
 import { type GameSpeed, simScale } from './gameSpeed'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
-import type { Hero } from './hero'
+import type { Hero, Weapon } from './hero'
 import { BULLET_H, BULLET_W, bulletHitbox } from './hitbox'
 import { IdleWallQueueFx, idleWallLayout } from './idleWallQueue'
 import {
@@ -130,6 +131,7 @@ import {
   SLOW_FACTOR,
   SLOW_SECONDS,
   WEAPON_TRAITS,
+  type WeaponKind,
   weaponDamage,
 } from './weaponEffects'
 import { BULLET_VISUAL_SCALE, GRADE_FIRE, gradeTint } from './weaponVisuals'
@@ -273,6 +275,9 @@ type Enemy = Phaser.Physics.Arcade.Image & {
 }
 type Bullet = Phaser.Physics.Arcade.Image & {
   life: number
+  /** 쏜 총 (488번): 고양이가 따로 든 총이면 사장냥 것과 다르다. */
+  kind: WeaponKind
+  grade: Weapon['grade']
   look: 0 | 1
   damage: number
   power: number
@@ -824,8 +829,8 @@ class BattleScene extends Phaser.Scene {
       if (--bullet.pierce <= 0 || enemy.cell) {
         bullet.disableBody(true, true)
       }
-      const kind = this.opts.hero.weapon.kind
-      const shot = weaponDamage(kind, bullet.damage, Math.random())
+      const kind = bullet.kind
+      const shot = weaponDamage(kind, bullet.damage, Math.random(), this.loadout.critBonus)
       if (kind === 'smg') {
         this.slow(enemy, SLOW_FACTOR, SLOW_SECONDS)
       }
@@ -2942,14 +2947,25 @@ class BattleScene extends Phaser.Scene {
     return this.loadout.fireMs * 1.25
   }
 
+  /** index번째 고양이가 따로 든 총 (488번). 없으면 사장냥과 같은 총을 쏜다(393번). */
+  private mateGun(index: number): MateGun | undefined {
+    return this.loadout.mateGuns[index]
+  }
+
+  private mateInterval(index: number) {
+    return (this.mateGun(index)?.fireMs ?? this.loadout.fireMs) * 1.25
+  }
+
   /** 한 발 쏜다. mate가 없으면 사장냥, 있으면 그 고양이가 같은 수치(무기·피해·연사·강화)로 쏜다(393번). */
   private fire(now: number, target: { x: number; y: number }, mate?: Mate) {
     const p = mate ? mate.body : this.player
     const model = mate ? mateModel(this.mates.indexOf(mate)) : 'hero'
     // 표적이 좌우로 바뀌어도 발사 순간에는 실제 총구에서 정확히 겨눈다.
     const aim = catAim(model, p.x, p.y, target)
-    const kind = this.opts.hero.weapon.kind
-    const style = GRADE_FIRE[this.opts.hero.weapon.grade]
+    const gun = mate ? this.mateGun(this.mates.indexOf(mate)) : undefined
+    const kind = gun?.kind ?? this.opts.hero.weapon.kind
+    const grade = gun?.grade ?? this.opts.hero.weapon.grade
+    const style = GRADE_FIRE[grade]
     // 무기마다 쏘는 방식 (#563): 총은 겨눈 쪽(aim)을 보고, 탄만 흩어진다(기관단총).
     const base = aimWithJitter(kind, aim, Math.random())
     // 재장전 (#587): 탄창을 다 쓰면 재장전 시간만큼 다음 한 발이 늦어진다(lastFire를 미래로 민다).
@@ -2976,7 +2992,7 @@ class BattleScene extends Phaser.Scene {
     flash
       .setPosition(m.x, m.y)
       .setRotation(aim)
-      .setTint(gradeTint(this.opts.hero.weapon.grade))
+      .setTint(gradeTint(grade))
       .setScale(TEX * style.flash)
       .setAlpha(1)
       .setVisible(true)
@@ -2994,12 +3010,12 @@ class BattleScene extends Phaser.Scene {
       const a = aim + (sparkCount > 1 ? ((i / (sparkCount - 1)) * 2 - 1) * 0.45 : 0)
       this.trail.emitParticleAt(m.x + Math.cos(a) * 18, m.y + Math.sin(a) * 18)
     }
-    const stats = bulletStats(this.loadout)
-    const b = this.bullets.get(m.x, m.y, `bullet-${this.opts.hero.weapon.grade}-0`) as Bullet | null
+    const stats = bulletStats(gun ?? this.loadout)
+    const b = this.bullets.get(m.x, m.y, `bullet-${grade}-0`) as Bullet | null
     if (!b) return
-    b.setTexture(`bullet-${this.opts.hero.weapon.grade}-0`)
-      .enableBody(true, m.x, m.y, true, true)
-      .setDepth(6.5)
+    b.setTexture(`bullet-${grade}-0`).enableBody(true, m.x, m.y, true, true).setDepth(6.5)
+    b.kind = kind
+    b.grade = grade
     b.look = 0
     b.trailMs = Math.max(90, style.trailMs)
     b.damage = stats.damage
@@ -3018,10 +3034,8 @@ class BattleScene extends Phaser.Scene {
     b.clearTint()
     const hb = bulletHitbox(b.width, b.height, style.length * 0.7 * BULLET_VISUAL_SCALE)
     b.body?.setCircle(hb.radius, hb.ox, hb.oy)
-    b.setVelocity(
-      Math.cos(base) * this.loadout.bulletSpeed,
-      Math.sin(base) * this.loadout.bulletSpeed,
-    )
+    const speed = gun?.bulletSpeed ?? this.loadout.bulletSpeed
+    b.setVelocity(Math.cos(base) * speed, Math.sin(base) * speed)
     b.life = now + BULLET_LIFE
   }
 
@@ -4040,8 +4054,8 @@ class BattleScene extends Phaser.Scene {
         // 공격 판도 맡은 과녁을 겨눈다 (#593). 과녁이 없으면 제 머리 위(벽).
         const want = catAim(mateModel(i), b.x, b.y, target)
         m.aim += Phaser.Math.Angle.Wrap(want - m.aim) * turn
-        if (m.drop === 0 && time - m.lastFire > this.attackInterval) {
-          const ms = this.attackInterval
+        if (m.drop === 0 && time - m.lastFire > this.mateInterval(i)) {
+          const ms = this.mateInterval(i)
           for (let n = 0; time - m.lastFire > ms && n < 3; n++) {
             this.fire(Math.max(m.lastFire + ms, time - ms), target, m)
           }
@@ -4175,7 +4189,9 @@ class BattleScene extends Phaser.Scene {
 
     // 사장냥과 함께 싸우는 고양이가 저마다 맡은 적을 제 총으로 쏜다 (393·409번). 과녁 찾기는 적 풀 전체를 도니 누가 쏠 때거나 80ms마다만 새로 찾는다.
     const fireMs = this.attackInterval
-    const due = time - this.lastFire > fireMs || this.mates.some((m) => time - m.lastFire > fireMs)
+    const due =
+      time - this.lastFire > fireMs ||
+      this.mates.some((m, i) => time - m.lastFire > this.mateInterval(i))
     if (due || time - this.targetAt > 80) {
       this.targets = this.shotTargets()
       this.targetAt = time
@@ -4336,7 +4352,7 @@ class BattleScene extends Phaser.Scene {
       const look = (Math.floor(time / 70) % 2) as 0 | 1
       if (look !== b.look) {
         b.look = look
-        b.setTexture(`bullet-${this.opts.hero.weapon.grade}-${look}`)
+        b.setTexture(`bullet-${b.grade}-${look}`)
       }
       if (!this.reducedMotion && time - (b.trailAt ?? 0) >= b.trailMs) {
         b.trailAt = time

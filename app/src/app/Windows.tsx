@@ -36,7 +36,7 @@ export function Windows({ company }: { company: Company }) {
   // 회의 뒤 전투에서 무기를 바꾸러 갔으면, 인벤토리를 닫을 때 회의 창으로 돌아온다. 회의 창이 인벤토리를 덮지 않게 그동안은 닫아 둔다.
   const [investAfterWeapons, setInvestAfterWeapons] = useState(false)
   useEffect(() => {
-    if (investAfterWeapons && !(sheet?.kind === 'toy' && sheet.panel === 'weapons')) {
+    if (investAfterWeapons && sheet?.kind !== 'weapons') {
       setInvestAfterWeapons(false)
       setInvestOpen(true)
     }
@@ -154,12 +154,12 @@ export function Windows({ company }: { company: Company }) {
             }
           }}
           onChangeWeapon={() => {
-            // 무기 인벤토리는 사무실 화면의 시트라서, 다른 탭에서 왔어도 사무실로 가서 연다.
+            // 무기 인벤토리는 사무실 탭(자동 전투 화면)의 성장 메뉴에 있어서, 다른 탭에서 왔어도 거기로 가서 연다.
             const back = battle.kind === 'invest'
             const ui = useAppUi.getState()
             ui.endBattle()
             ui.setTab('office')
-            ui.openSheet({ kind: 'toy', panel: 'weapons' })
+            ui.openSheet({ kind: 'weapons' })
             if (back) setInvestAfterWeapons(true)
           }}
         />

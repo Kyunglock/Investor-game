@@ -2,14 +2,21 @@ import type { Company } from '@web/api/client'
 import { describe, expect, it } from 'vitest'
 import { idleLoadout } from './loadout'
 
-const company = (owned: string[], bonus = 0) =>
+type Cat = { code: string; fielded: boolean; bonusPercent?: number; weapon?: object | null }
+
+const company = (owned: string[], cats: Cat[] = [], bonus = 0) =>
   ({
     idle: {
       skills: ['water', 'meteor', 'bolt', 'ram'].map((code) => ({
         code,
         owned: owned.includes(code),
       })),
+      cats: cats.map((cat) => ({ bonusPercent: 0, weapon: null, ...cat })),
     },
+    weapons: [
+      { kind: 'pistol', grade: 'F', damagePercent: 100, fireMs: 260, power: 0, bulletSpeed: 720 },
+      { kind: 'rifle', grade: 'S', damagePercent: 400, fireMs: 520, power: 1, bulletSpeed: 900 },
+    ].map((w, i) => ({ ...w, equipped: i === 0 })),
     battleUpgrades: [{ kind: 'damage', bonusPercent: bonus }],
   }) as unknown as Company
 
@@ -21,25 +28,58 @@ describe('방치형 전투 획득 상태', () => {
       lightning: 0,
       earth: 0,
       mates: 0,
+      mateGuns: [],
     })
   })
-  it('획득한 능력만 기존 전투의 마법과 동료로 연결한다', () => {
-    expect(idleLoadout(company(['water', 'meteor']))).toMatchObject({
-      water: 1,
-      meteor: 1,
-      lightning: 0,
-      earth: 0,
-      mates: 1,
-    })
+  it('스킬은 고양이와 상관없이, 고양이는 출전한 만큼만 전투에 연결한다 (488·491번)', () => {
+    expect(
+      idleLoadout(
+        company(
+          ['water', 'meteor'],
+          [
+            { code: 'sky', fielded: true },
+            { code: 'mint', fielded: false },
+          ],
+        ),
+      ),
+    ).toMatchObject({ water: 1, meteor: 1, lightning: 0, earth: 0, mates: 1 })
     expect(idleLoadout(company(['water', 'meteor', 'bolt', 'ram']))).toMatchObject({
       water: 1,
       meteor: 1,
       lightning: 1,
       earth: 1,
-      mates: 2,
+      mates: 0,
     })
   })
   it('영구 강화가 무기 피해에 반영된다', () => {
-    expect(idleLoadout(company([], 100)).damage).toBe(2 * idleLoadout(company([])).damage)
+    expect(idleLoadout(company([], [], 100)).damage).toBe(2 * idleLoadout(company([])).damage)
+  })
+  it('고양이는 제가 든 총과 레벨로 쏘고, 총이 없으면 기본 권총을 쏜다 (488번)', () => {
+    const loadout = idleLoadout(
+      company(
+        [],
+        [
+          {
+            code: 'sky',
+            fielded: true,
+            bonusPercent: 20,
+            weapon: { kind: 'rifle', grade: 'S' },
+          },
+          { code: 'mint', fielded: true },
+        ],
+        50,
+      ),
+    )
+    expect(loadout.mateGuns).toEqual([
+      {
+        kind: 'rifle',
+        grade: 'S',
+        damage: 4 * 1.5 * 1.2,
+        bulletPower: 1,
+        fireMs: 520,
+        bulletSpeed: 900,
+      },
+      { kind: 'pistol', grade: 'F', damage: 1.5, bulletPower: 0, fireMs: 260, bulletSpeed: 720 },
+    ])
   })
 })

@@ -96,6 +96,9 @@ export function WeaponInventory({ company }: { company: Company }) {
     weapon: sorted[currentPage * 6 + i] ?? null,
   }))
   const ended = company.status === 'ENDED'
+  // 고양이가 빌려 든 무기 (488번): 칸에 든 고양이 이름을 보인다. 사장냥이 들면 고양이는 내려놓는다.
+  const holderOf = (w: Weapon) =>
+    company.idle?.cats.find((cat) => cat.weapon?.kind === w.kind && cat.weapon.grade === w.grade)
   return (
     <div className="weapon-inventory" data-testid="weapon-picker">
       <section
@@ -179,7 +182,7 @@ export function WeaponInventory({ company }: { company: Company }) {
                 <span className={`weapon-slot-grade ${GRADE_BADGE[w.grade]}`}>{w.gradeName}</span>
                 <span className="weapon-slot-name">{w.name}</span>
                 <span className="weapon-slot-status">
-                  {w.equipped ? '장착 중' : FIRE_STYLE_NAMES[w.kind]}
+                  {w.equipped ? '장착 중' : (holderOf(w)?.name ?? FIRE_STYLE_NAMES[w.kind])}
                 </span>
                 <span className="weapon-slot-count">×{w.count}</span>
               </button>

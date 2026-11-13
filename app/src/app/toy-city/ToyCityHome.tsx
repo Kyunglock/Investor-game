@@ -1,5 +1,6 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
+import { drawable } from '@web/features/raising/gachaRules'
 import { nextStep, officeName } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useLocked, useTutorialSpot } from '@web/features/raising/TutorialBanner'
@@ -8,7 +9,6 @@ import { useEffect, useState } from 'react'
 import { haptic } from '../../fx/haptics'
 import { isMuted, setMuted, sfx } from '../../fx/sound'
 import { chapterName, stageLabel } from '../../mental/advance'
-import { WeaponInventory, weaponBadge } from '../../mental/WeaponInventory'
 import { FIRST_PLAY_KEY, firstQuarter } from '../firstPlay'
 import { BookIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from '../Icons'
 import { Sheet } from '../Sheet'
@@ -20,11 +20,7 @@ import { growthProgress } from './model'
 import { StreetLife } from './StreetLife'
 import { ToyCityStreet } from './ToyCityStreet'
 
-export function ToyIcon({
-  kind,
-}: {
-  kind: 'upgrade' | 'heart' | 'settings' | 'cup' | 'auto' | 'gun'
-}) {
+export function ToyIcon({ kind }: { kind: 'upgrade' | 'heart' | 'settings' | 'cup' | 'auto' }) {
   const paths = {
     upgrade: 'M6 22V3M3 3h18L6 9m11-6v7m-3 2h6v6h-6zM3 22h7',
     heart: 'M12 21S2 14 2 8a5 5 0 0 1 10-1 5 5 0 0 1 10 1c0 6-10 13-10 13Z',
@@ -32,7 +28,6 @@ export function ToyIcon({
       'm9 2-1 3-3 1-3 3 2 3-1 4 3 3 4-1 3 3 4-2 1-4 3-2-1-4-4-1-1-4ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
     cup: 'M7 3h10v7a5 5 0 0 1-10 0Zm0 2H3v4q0 4 5 4m9-8h4v4q0 4-5 4m-4 2v6m-5 0h10',
     auto: 'M19 7a8 8 0 1 0 1 9M19 2v5h-5m-4 1 6 4-6 4Z',
-    gun: 'M3 8h17l1 3h-6l-1 2h-3l-2 6H5l2-6H3ZM9 13v-2',
   }
   return (
     <svg
@@ -95,6 +90,24 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
   const changeTab = (tab: Tab) => {
     sfx.tap()
     useAppUi.getState().setTab(tab)
+  }
+  // 채용은 메뉴를 거치지 않고 가진 채용권만큼 바로 뽑는다 (490번). 결과 카드는 Windows가 띄운다. 도감과 확률은 채용 도감 탭에 있다.
+  const [hireNote, setHireNote] = useState<string | null>(null)
+  const hire = () => {
+    const count = drawable(company)
+    if (count < 1) {
+      sfx.tap()
+      setHireNote(
+        company.gacha.tickets < 1
+          ? '채용권이 없어요 · 분기를 넘기면 받아요'
+          : '자리가 꽉 찼어요 · 건물을 올려 자리를 늘려요',
+      )
+      return
+    }
+    sfx.stamp()
+    haptic.medium()
+    setHireNote(null)
+    void useRaisingStore.getState().draw(count)
   }
   return (
     <div className="toy-home" data-testid="office-scene">
@@ -204,7 +217,7 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
               className={`toy-menu ${tab === 'market' ? marketSpot : tab === 'staff' ? staffSpot : tab === 'issue' ? settleSpot : ''}`}
               data-testid={`tab-${tab}`}
               data-locked={locked || undefined}
-              onClick={() => changeTab(tab)}
+              onClick={() => (tab === 'market' ? hire() : changeTab(tab))}
             >
               <Icon />
               <span>{text}</span>
@@ -234,23 +247,15 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
                   : '성장 목표'}
           </small>
         </button>
-        <button
-          type="button"
-          className="toy-menu"
-          data-testid="open-weapons"
-          onClick={() => setPanel('weapons')}
-        >
-          <ToyIcon kind="gun" />
-          <span>인벤토리</span>
-          {weaponBadge(company) && <b className="toy-badge">{weaponBadge(company)}</b>}
-        </button>
       </div>
-      <div className="toy-speech">
-        {resting > 0
-          ? `쉬는 고양이 ${resting}명 · 배치해보세요`
-          : assigned > 0
-            ? `고양이 ${assigned}명이 열심히 일하는 중`
-            : '첫 동료를 기다리고 있어요'}
+      <div className="toy-speech" role="status">
+        {hireNote
+          ? hireNote
+          : resting > 0
+            ? `쉬는 고양이 ${resting}명 · 배치해보세요`
+            : assigned > 0
+              ? `고양이 ${assigned}명이 열심히 일하는 중`
+              : '첫 동료를 기다리고 있어요'}
       </div>
       <div className="toy-bottom">
         <ActionBar company={company} variant="toy" connected={connected} />
@@ -268,9 +273,7 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
                     ? '보조게임'
                     : panel === 'battle'
                       ? '자본으로 전투 강화'
-                      : panel === 'weapons'
-                        ? '인벤토리'
-                        : '회사 설정'
+                      : '회사 설정'
           }
           testId={`toy-${panel}-sheet`}
           onClose={() => setPanel(null)}
@@ -324,7 +327,6 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
           {panel === 'assault' && <AssaultSelect company={company} disabled={unavailable} />}
           {panel === 'side' && <SideGames company={company} onMental={() => setPanel('stage')} />}
           {panel === 'battle' && <BattleUpgrades company={company} />}
-          {panel === 'weapons' && <WeaponInventory company={company} />}
           {panel === 'settings' && (
             <>
               <p className="toy-sheet-lead">내 속도에 맞춰 회사를 키워요</p>

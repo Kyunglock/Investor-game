@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   aimWithJitter,
+  BASE_CRIT_CHANCE,
+  BASE_CRIT_MULT,
   CRIT_MULT,
   FIRE_STYLES,
   pierceOf,
@@ -19,7 +21,12 @@ describe('무기마다 다른 효과 (decisions.md 376번)', () => {
   it('리볼버만 치명타가 터진다', () => {
     expect(weaponDamage('revolver', 2, 0.1)).toEqual({ damage: 2 * CRIT_MULT, crit: true })
     expect(weaponDamage('revolver', 2, 0.9)).toEqual({ damage: 2, crit: false })
-    expect(weaponDamage('pistol', 2, 0.1)).toEqual({ damage: 2, crit: false })
+    expect(weaponDamage('pistol', 2, 0.2)).toEqual({ damage: 2, crit: false })
+    // 다른 무기도 10%로 두 배, 치명타 피해 강화는 배율에 곱한다 (487번).
+    expect(weaponDamage('pistol', 2, 0.05)).toEqual({ damage: 2 * BASE_CRIT_MULT, crit: true })
+    expect(weaponDamage('pistol', 2, BASE_CRIT_CHANCE).crit).toBe(false)
+    expect(weaponDamage('revolver', 2, 0.1, 0.5).damage).toBe(2 * CRIT_MULT * 1.5)
+    expect(weaponDamage('revolver', 2, 0.9, 0.5).damage).toBe(2)
   })
 
   it('소총만 여러 적을 뚫는다', () => {

@@ -111,6 +111,15 @@ public interface CompanyService {
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). 모자라거나 가장 높은 등급이면 400. */
   CompanyView mergeWeapon(UUID sessionId, String kind, String grade);
 
+  /** 고양이 뽑기 (decisions.md 488번): 자본으로 한 마리. 이미 가진 고양이면 레벨이 오른다. */
+  CompanyView drawCat(UUID sessionId);
+
+  /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
+  CompanyView fieldCat(UUID sessionId, String code, boolean fielded);
+
+  /** 고양이에게 가진 무기 하나를 들린다 (488번). kind와 grade가 null이면 뺀다. */
+  CompanyView equipCat(UUID sessionId, String code, String kind, String grade);
+
   /** 최근에 차린 회사부터 limit개. 관리자 플레이 기록용이며 세션을 따지지 않는다. */
   List<CompanySummary> recent(int limit);
 }
