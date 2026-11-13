@@ -3,11 +3,11 @@ import { chromium, expect } from '@playwright/test'
 import { company as fixture } from './fixture.ts'
 
 const browser = await chromium.launch({
-  executablePath: '/usr/bin/chromium',
+  executablePath: process.env.CHROMIUM_PATH || undefined,
   args: ['--no-sandbox'],
 })
 try {
-  for (const width of [320, 390, 1024]) {
+  for (const width of process.env.UI_WIDTH ? [Number(process.env.UI_WIDTH)] : [320, 390, 1024]) {
     const company = {
       ...structuredClone(fixture),
       battleUpgrades: [
@@ -59,16 +59,36 @@ try {
       }
       await route.fulfill({ json: company })
     })
-    await page.goto('http://localhost:5173/app/')
+    await page.goto(process.env.APP_URL ?? 'http://localhost:5173/app/')
     await expect(page.getByTestId('idle-battle'))
       .toBeVisible()
       .catch(async (e) => {
         console.log(errors, await page.locator('body').textContent())
         throw e
       })
-    await expect(page.getByText('● 자동 전투 중')).toBeVisible()
+    await expect(page.getByText('● AUTO')).toBeVisible()
+    await expect(page.locator('[data-testid=idle-canvas] canvas')).toBeVisible()
+    await page.evaluate(() => {
+      ;(window as unknown as { idleCanvas: Element | null }).idleCanvas = document.querySelector(
+        '[data-testid=idle-canvas] canvas',
+      )
+    })
     await expect.poll(() => actions.filter((a) => a === 'tick').length).toBeGreaterThan(0)
-    assert.equal(await page.locator('.idle-spell').count(), 0)
+    assert.equal(await page.locator('.idle-skills, .idle-upgrades').count(), 0)
+    await page.getByRole('button', { name: '성장' }).click()
+    await expect(page.getByTestId('idle-menu')).toBeVisible()
+    await expect(page.getByText('초당 공격력')).toBeVisible()
+    await page.getByRole('tab', { name: '스킬', exact: true }).click()
+    await expect(page.getByText('5벽 돌파 시 획득', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: '닫기 ✕' }).click()
+    assert.equal(
+      await page.evaluate(
+        () =>
+          (window as unknown as { idleCanvas: Element }).idleCanvas ===
+          document.querySelector('[data-testid=idle-canvas] canvas'),
+      ),
+      true,
+    )
     assert.equal(
       await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
       false,
@@ -83,13 +103,81 @@ try {
     await page.evaluate(() =>
       window.dispatchEvent(new CustomEvent('idle-app-active', { detail: true })),
     )
-    await expect.poll(() => actions.at(-1)).toBe('start')
+    await expect.poll(() => actions.slice(stopped).includes('start')).toBe(true)
     company.idle.wall = 6
     company.idle.skills[0].owned = true
     company.idle.nextUnlock = 15
-    await expect(page.locator('.idle-water')).toBeAttached()
+    await expect(page.locator('.idle-stage strong')).toHaveText('매도벽 6')
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(
+            () => (window as unknown as { __mentalWalls: () => unknown[] }).__mentalWalls().length,
+          ),
+        { timeout: 10000 },
+      )
+      .toBe(1)
+    const walls = await page.evaluate(() =>
+      (window as unknown as { __mentalWalls: () => { hp: number }[] }).__mentalWalls(),
+    )
+    assert.equal(walls.length, 1)
+    assert(walls[0].hp > 0)
+    await expect
+      .poll(
+        async () =>
+          page.evaluate(
+            () =>
+              (
+                window as unknown as { __mentalWalls: () => { arrived: boolean }[] }
+              ).__mentalWalls()[0]?.arrived,
+          ),
+        { timeout: 15000 },
+      )
+      .toBe(true)
     await page.screenshot({ path: `/tmp/idle-${width}.png`, fullPage: true })
-    await page.getByRole('button', { name: '회사 관리 ↗' }).click()
+    await page.getByRole('button', { name: '성장' }).click()
+    await page.getByRole('tab', { name: '능력치', exact: true }).click()
+    await page.screenshot({ path: `/tmp/idle-growth-${width}.png`, fullPage: true })
+    await page.getByRole('button', { name: '닫기 ✕' }).click()
+    if (width === 390) {
+      await page.evaluate(() =>
+        (window as unknown as { __mentalSpeed: (n: number) => void }).__mentalSpeed(20),
+      )
+      await expect
+        .poll(
+          async () =>
+            page.evaluate(
+              () =>
+                (
+                  window as unknown as { __mentalMarket: () => { battleSeconds: number } }
+                ).__mentalMarket().battleSeconds,
+            ),
+          { timeout: 30000 },
+        )
+        .toBeGreaterThan(185)
+      assert.equal(await page.getByTestId('mental-result').count(), 0)
+      await page.evaluate(() =>
+        (window as unknown as { __mentalSpeed: (n: number) => void }).__mentalSpeed(1),
+      )
+      company.idle.wall = 10
+      company.idle.boss = true
+      await expect(page.locator('.idle-stage strong')).toHaveText('매도벽 10')
+      await page.waitForTimeout(1500)
+      company.idle.wall = 11
+      company.idle.boss = false
+      await expect(page.locator('.idle-stage strong')).toHaveText('매도벽 11')
+      await expect
+        .poll(
+          async () =>
+            page.evaluate(
+              () =>
+                (window as unknown as { __mentalWalls: () => unknown[] }).__mentalWalls().length,
+            ),
+          { timeout: 10000 },
+        )
+        .toBe(1)
+    }
+    await page.getByRole('button', { name: '회사', exact: true }).click()
     await expect(page.getByTestId('office-scene')).toBeVisible()
     await page.getByRole('button', { name: '← 자동 매도벽 돌파' }).click()
     await expect(page.getByTestId('idle-battle')).toBeVisible()

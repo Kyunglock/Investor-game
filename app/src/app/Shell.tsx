@@ -1,6 +1,5 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
-import { IdleBattle } from '@web/features/raising/IdleBattle'
 import { officeName } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useTutorialSpot } from '@web/features/raising/TutorialBanner'
@@ -13,13 +12,13 @@ import {
 import { useIdleBattle } from '@web/features/raising/useIdleBattle'
 import { useEffect, useRef, useState } from 'react'
 import { isMuted, setMuted, sfx } from '../fx/sound'
+import { IdleHome } from '../idle/IdleHome'
 import { BookIcon, BuildingIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from './Icons'
 import { GachaScene } from './scenes/GachaScene'
 import { IssueScene } from './scenes/IssueScene'
 import { OfficeScene } from './scenes/OfficeScene'
 import { RecordScene } from './scenes/RecordScene'
 import { StaffScene } from './scenes/StaffScene'
-import { CatFigure } from './toy-city/CatFigure'
 import { type Tab, tabBadge, tabFromWeb, useAppUi } from './ui'
 import { useCountUp } from './useCountUp'
 import { ActionBar, Windows } from './Windows'
@@ -116,11 +115,7 @@ export function Shell({ company }: { company: Company }) {
                 <OfficeScene company={company} />
               </>
             ) : (
-              <IdleBattle company={company} connected={connected} onManage={() => setManage(true)}>
-                <svg viewBox="0 0 36 45" role="img" aria-label="사장 고양이">
-                  <CatFigure />
-                </svg>
-              </IdleBattle>
+              <IdleHome company={company} connected={connected} onManage={() => setManage(true)} />
             ))}
           {tab === 'market' && <GachaScene company={company} />}
           {tab === 'staff' && <StaffScene company={company} />}

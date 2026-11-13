@@ -1,0 +1,372 @@
+.idle-home {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: #ffedbe;
+  color: #553a27;
+  font-family: "Jua", "Noto Sans KR", sans-serif;
+}
+.idle-canvas {
+  position: absolute;
+  inset: 0;
+}
+.idle-canvas canvas {
+  display: block;
+}
+.idle-hud {
+  position: absolute;
+  top: max(12px, env(safe-area-inset-top));
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  pointer-events: none;
+}
+.idle-cash {
+  height: 34px;
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  border: 1.5px solid #c69b59;
+  background: #fff9e8e8;
+  border-radius: 12px;
+  padding: 0 10px;
+  font-size: 16px;
+  box-shadow: 0 2px 0 #a2783525;
+}
+.idle-cash:first-child {
+  flex: 1;
+}
+.idle-coin {
+  display: grid;
+  place-items: center;
+  width: 21px;
+  height: 21px;
+  border: 1.5px solid #d1962e;
+  border-radius: 50%;
+  background: #ffda66;
+  color: #ad7226;
+  font-size: 13px;
+}
+.idle-hud button {
+  pointer-events: auto;
+  background: #fff8e3e8;
+  border: 1.5px solid #c69b59;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  font-size: 18px;
+}
+.idle-stage {
+  position: absolute;
+  top: calc(max(12px, env(safe-area-inset-top)) + 49px);
+  left: 0;
+  right: 0;
+  text-align: center;
+  text-shadow: 0 1px #fff3ca;
+  pointer-events: none;
+}
+.idle-stage strong {
+  font-size: 22px;
+}
+.idle-stage em {
+  font:
+    700 9px "Noto Sans KR",
+    sans-serif;
+  color: #4a7a49;
+  background: #f3f8dce8;
+  border: 1px solid #93ad70;
+  padding: 3px 6px;
+  border-radius: 12px;
+  font-style: normal;
+  margin-left: 7px;
+  vertical-align: 3px;
+}
+.idle-stage p {
+  font:
+    500 10px "Noto Sans KR",
+    sans-serif;
+  color: #946a39;
+  margin: 3px 0 0;
+}
+.idle-nav {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  padding: 9px 8px max(13px, env(safe-area-inset-bottom));
+  gap: 6px;
+  border-top: 2px solid #c19555;
+  background: linear-gradient(#fff6dcf5, #ffe7ac);
+  box-shadow: 0 -4px 16px #91642a12;
+  z-index: 3;
+  color: #553a27;
+  font-family: "Jua", sans-serif;
+}
+.idle-nav button {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 7px 0 5px;
+  color: #957854;
+  font-size: 11px;
+  min-height: 53px;
+}
+.idle-nav svg {
+  width: 23px;
+  height: 23px;
+}
+.idle-nav .on {
+  color: #744322;
+  background: linear-gradient(#ffe3a1, #ffcc6d);
+  border: 1.5px solid #c48637;
+  box-shadow: 0 2px 0 #c48c42;
+}
+.idle-dot {
+  position: absolute;
+  right: 15px;
+  top: 5px;
+  width: 6px;
+  height: 6px;
+  background: #e47353;
+  border: 1px solid #fff6db;
+  border-radius: 50%;
+}
+.idle-sheet {
+  background: transparent;
+  color: #553a27;
+  font-family: "Jua", sans-serif;
+}
+.idle-sheet > section {
+  background: #fff5de;
+  border: 2px solid #b78448;
+  border-bottom: 0;
+  border-radius: 25px 25px 0 0;
+  box-shadow: 0 -6px 24px #54331b40;
+  padding: 10px 16px 18px;
+  max-height: calc(85dvh - 83px);
+  min-height: 360px;
+}
+.idle-sheet > section h3 {
+  font:
+    22px "Jua",
+    sans-serif;
+}
+.idle-sheet > .idle-nav {
+  position: relative;
+  flex-shrink: 0;
+}
+.idle-subtitle {
+  font:
+    500 10px "Noto Sans KR",
+    sans-serif;
+  color: #947247;
+  margin: 4px 0;
+}
+.idle-tabs {
+  display: flex;
+  border-bottom: 1px solid #d6ba8a;
+  margin: 17px 0 14px;
+}
+.idle-tabs button {
+  flex: 1;
+  text-align: center;
+  padding: 10px;
+  font-size: 13px;
+  color: #a08967;
+  min-height: 44px;
+}
+.idle-tabs [aria-selected="true"],
+.idle-tabs [aria-pressed="true"] {
+  color: #80502d;
+  border-bottom: 3px solid #c58a3e;
+}
+.idle-power {
+  padding: 12px 14px;
+  background: #f1e6cf;
+  border: 1px solid #e0c9a2;
+  border-radius: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+.idle-power strong {
+  font-size: 20px;
+}
+.idle-buy-count {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 15px 0 10px;
+  font:
+    500 10px "Noto Sans KR",
+    sans-serif;
+  color: #947247;
+}
+.idle-buy-count > div {
+  display: flex;
+  background: #eadbbe;
+  padding: 3px;
+  border-radius: 9px;
+  gap: 2px;
+}
+.idle-buy-count button {
+  padding: 7px 9px;
+  font-size: 10px;
+  border-radius: 6px;
+  min-height: 32px;
+}
+.idle-buy-count [aria-pressed="true"] {
+  background: #fff9ec;
+  box-shadow: 0 1px 3px #73542120;
+  color: #745333;
+}
+.idle-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fffaf0;
+  border: 1px solid #dbc19b;
+  border-radius: 14px;
+  padding: 13px 10px;
+  margin-top: 9px;
+}
+.idle-stat-icon {
+  width: 40px;
+  height: 42px;
+  background: #f6e4bb;
+  border: 1px solid #dec08a;
+  border-radius: 11px;
+  display: grid;
+  place-items: center;
+  color: #ad7641;
+  font-size: 23px;
+}
+.idle-stat-info {
+  flex: 1;
+}
+.idle-stat-info b {
+  display: block;
+  font-size: 14px;
+}
+.idle-stat-info small {
+  font:
+    500 10px "Noto Sans KR",
+    sans-serif;
+  color: #9e8661;
+}
+.idle-stat-info p {
+  margin: 5px 0 0;
+  font-size: 12px;
+  color: #6e8d56;
+}
+.idle-buy {
+  background: linear-gradient(#ffe6a5, #ffd07b);
+  border: 1.5px solid #c18c46;
+  border-radius: 11px;
+  min-width: 84px;
+  padding: 8px 9px;
+  box-shadow: 0 2px 0 #d2a25d;
+  text-align: center;
+  font-size: 12px;
+}
+.idle-buy:disabled {
+  opacity: 0.45;
+}
+.idle-buy small {
+  display: block;
+  font:
+    500 9px "Noto Sans KR",
+    sans-serif;
+  margin-top: 4px;
+  color: #926637;
+}
+.idle-sheet-note {
+  text-align: center;
+  font:
+    500 10px "Noto Sans KR",
+    sans-serif;
+  color: #8a9b68;
+  margin: 14px 0 0;
+}
+.idle-collection {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+.idle-collection article {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  background: #eee5d5;
+  border: 1px solid #d1b88b;
+  border-radius: 14px;
+  padding: 14px;
+}
+.idle-collection .owned {
+  background: #fff5d0;
+}
+.idle-collection article > span {
+  font-size: 30px;
+}
+.idle-collection b {
+  display: block;
+  font-size: 15px;
+}
+.idle-collection small {
+  display: block;
+  font:
+    11px "Noto Sans KR",
+    sans-serif;
+  margin-top: 6px;
+  color: #937b53;
+}
+.idle-canvas-error {
+  position: absolute;
+  inset: 30% 20px auto;
+  background: #fff5de;
+  border: 2px solid #b78448;
+  border-radius: 16px;
+  padding: 20px;
+  text-align: center;
+}
+.idle-canvas-error button {
+  display: block;
+  margin: 10px auto;
+  background: #ffd07b;
+  padding: 8px;
+  border-radius: 10px;
+}
+@media (max-width: 350px) {
+  .idle-stat {
+    gap: 6px;
+    padding: 10px 6px;
+  }
+  .idle-stat-icon {
+    width: 30px;
+  }
+  .idle-stat-info b {
+    font-size: 12px;
+  }
+  .idle-buy {
+    min-width: 72px;
+  }
+  .idle-stat-info p {
+    font-size: 10px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .idle-sheet > section {
+    animation: none;
+    transform: none;
+  }
+}
