@@ -2,8 +2,8 @@
 export const BUY_ORDER_SPEED = 360
 
 export const BUY_WALL = {
-  hpRatio: 0.25,
-  mentalLossRatio: 0.12,
+  hpRatio: 0.5,
+  mentalLossRatio: 0.08,
   rebuildSeconds: 1.5,
   protectionSeconds: 1,
   shotSeconds: 0.35,

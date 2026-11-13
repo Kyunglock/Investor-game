@@ -70,7 +70,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     dmg: 4,
     reward: 6,
     scale: 1.3,
-    shares: 1000,
+    shares: 200,
   },
   /** 대량 매도(5,000주): 묵직하고 느리고 단단하다 */
   bulk: {
@@ -82,7 +82,7 @@ export const ORDERS: Record<OrderKind, OrderSpec> = {
     dmg: 13,
     reward: 55,
     scale: 1.55,
-    shares: 5000,
+    shares: 1500,
   },
   /** 허매도: 맞히면 그냥 사라지는 가짜 물량(체결이 아니라 경험치·처치가 없다) */
   fake: {

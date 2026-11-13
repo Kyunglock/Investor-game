@@ -24,9 +24,10 @@ describe('매수 티켓의 좌우 분포', () => {
 describe('매수벽', () => {
   it('붕괴하면 80px 후퇴하고 1.5초 뒤 재건하며 그 뒤 1초간 보호한다', () => {
     const wall = new BuyWall(100)
+    expect(wall.maxHp).toBe(50)
     expect(wall.hit(10)).toBe(false)
-    expect(wall.hp).toBe(15)
-    expect(wall.hit(20)).toBe(true)
+    expect(wall.hp).toBe(40)
+    expect(wall.hit(45)).toBe(true)
     expect(wall.active).toBe(false)
     expect(wall.hp).toBe(0)
     expect(wall.rebuildLeft).toBe(1.5)
