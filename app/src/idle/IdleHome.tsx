@@ -1,7 +1,7 @@
 import type { Company } from '@web/api/client'
 import { money } from '@web/features/game/labels'
 import { useRaisingStore } from '@web/features/raising/store'
-import { useEffect, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import { Sheet } from '../app/Sheet'
 import { GachaScene } from '../app/scenes/GachaScene'
 import { MAX_BATCH, queuedCost } from '../app/toy-city/upgradeQueue'
@@ -36,10 +36,16 @@ export function IdleHome({
   company,
   connected,
   onManage,
+  managing,
+  onBattle,
+  office,
 }: {
   company: Company
   connected: boolean
   onManage: () => void
+  managing: boolean
+  onBattle: () => void
+  office: ReactNode
 }) {
   const [menu, setMenu] = useState<Menu>('battle')
   const [part, setPart] = useState<'stats' | 'weapons' | 'skills'>('stats')
@@ -55,8 +61,12 @@ export function IdleHome({
     if (next === 'company') {
       setMenu('battle')
       onManage()
-    } else setMenu(next)
+    } else {
+      setMenu(next)
+      if (next === 'battle') onBattle()
+    }
   }
+  const activeMenu = menu === 'battle' && managing ? 'company' : menu
   const affordable = company.battleUpgrades?.some(
     (u) => u.kind !== 'hp' && u.price <= company.capital,
   )
@@ -66,8 +76,8 @@ export function IdleHome({
         <button
           key={item.key}
           type="button"
-          className={menu === item.key ? 'on' : ''}
-          aria-current={menu === item.key ? 'page' : undefined}
+          className={activeMenu === item.key ? 'on' : ''}
+          aria-current={activeMenu === item.key ? 'page' : undefined}
           onClick={() => navigate(item.key)}
         >
           <svg
@@ -103,32 +113,44 @@ export function IdleHome({
     </div>
   )
   return (
-    <section className="idle-home" data-testid="idle-battle" aria-label="무한 매도벽 돌파">
+    <section
+      className="idle-home"
+      data-testid="idle-battle"
+      aria-label={managing ? '회사' : '무한 매도벽 돌파'}
+    >
       <IdleCanvas company={company} connected={connected} />
-      <header className="idle-hud">
-        <div className="idle-cash">
-          <span className="idle-coin">₩</span>
-          <b>{money(company.capital)}</b>
-        </div>
-        <div
-          className="idle-cash"
-          role="status"
-          aria-label={`무기 뽑기권 ${company.armory?.tickets ?? 0}장`}
-        >
-          <span aria-hidden="true">▣</span>
-          {company.armory?.tickets ?? 0}
-        </div>
-        <button type="button" aria-label="회사 메뉴" onClick={onManage}>
-          ☰
-        </button>
-      </header>
-      <div className="idle-stage">
-        <strong>매도벽 {(idle?.wall ?? 1).toLocaleString()}</strong>
-        <em>{connected ? '● AUTO' : '연결 대기'}</em>
-        <p>
-          {idle?.boss ? '대량 매도 큰손 등장' : `큰손 등장까지 ${10 - ((idle?.wall ?? 1) % 10)}벽`}
-        </p>
-      </div>
+      {managing ? (
+        <div className="idle-office">{office}</div>
+      ) : (
+        <>
+          <header className="idle-hud">
+            <div className="idle-cash">
+              <span className="idle-coin">₩</span>
+              <b>{money(company.capital)}</b>
+            </div>
+            <div
+              className="idle-cash"
+              role="status"
+              aria-label={`무기 뽑기권 ${company.armory?.tickets ?? 0}장`}
+            >
+              <span aria-hidden="true">▣</span>
+              {company.armory?.tickets ?? 0}
+            </div>
+            <button type="button" aria-label="회사 메뉴" onClick={onManage}>
+              ☰
+            </button>
+          </header>
+          <div className="idle-stage">
+            <strong>매도벽 {(idle?.wall ?? 1).toLocaleString()}</strong>
+            <em>{connected ? '● AUTO' : '연결 대기'}</em>
+            <p>
+              {idle?.boss
+                ? '대량 매도 큰손 등장'
+                : `큰손 등장까지 ${10 - ((idle?.wall ?? 1) % 10)}벽`}
+            </p>
+          </div>
+        </>
+      )}
       {nav}
       {menu !== 'battle' && menu !== 'company' && (
         <Sheet

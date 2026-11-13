@@ -1,10 +1,20 @@
 .idle-home {
   position: fixed;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   inset: 0;
   overflow: hidden;
   background: #ffedbe;
   color: #553a27;
   font-family: "Jua", "Noto Sans KR", sans-serif;
+}
+/* Keep the office above the shared tabs, including on short screens. */
+.idle-office {
+  position: relative;
+  grid-row: 1;
+  overflow-y: auto;
+  padding-top: env(safe-area-inset-top);
+  background: #d7e7ed;
 }
 .idle-canvas {
   position: absolute;
@@ -104,6 +114,10 @@
   z-index: 3;
   color: #553a27;
   font-family: "Jua", sans-serif;
+}
+.idle-home > .idle-nav {
+  position: relative;
+  grid-row: 2;
 }
 .idle-nav button {
   position: relative;

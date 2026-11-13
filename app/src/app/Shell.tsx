@@ -106,17 +106,16 @@ export function Shell({ company }: { company: Company }) {
           }
           data-testid="scene"
         >
-          {tab === 'office' &&
-            (manage ? (
-              <>
-                <button type="button" className="btn m-3" onClick={() => setManage(false)}>
-                  ← 자동 매도벽 돌파
-                </button>
-                <OfficeScene company={company} />
-              </>
-            ) : (
-              <IdleHome company={company} connected={connected} onManage={() => setManage(true)} />
-            ))}
+          {tab === 'office' && (
+            <IdleHome
+              company={company}
+              connected={connected}
+              managing={manage}
+              onManage={() => setManage(true)}
+              onBattle={() => setManage(false)}
+              office={<OfficeScene company={company} />}
+            />
+          )}
           {tab === 'market' && <GachaScene company={company} />}
           {tab === 'staff' && <StaffScene company={company} />}
           {tab === 'issue' && <IssueScene company={company} />}
