@@ -25,7 +25,9 @@ export function useIdleBattle(companyId?: string) {
     let disposed = false
     let nativeActive = true
     let runId = crypto.randomUUID()
-    let sequence = 0
+    // The sequence never goes back, even across runs and reloads: the screen compares it with the
+    // server's last handled beat to know which hits are already in the wall health (decisions.md 496).
+    let sequence = useRaisingStore.getState().company?.idle?.sequence ?? 0
     let started = false
     let pending = false
     let blocked = false
@@ -34,6 +36,8 @@ export function useIdleBattle(companyId?: string) {
     const visible = () => !document.hidden && nativeActive
     const stop = () => {
       contacts.clear()
+      // The server drops pending hits on a stop or a gap, so the renderer forgets its early damage.
+      window.dispatchEvent(new Event('idle-hits-clear'))
       generation++
       started = false
       setConnected(false)
@@ -48,7 +52,6 @@ export function useIdleBattle(companyId?: string) {
         }),
       ).catch(() => {})
       runId = crypto.randomUUID()
-      sequence = 0
     }
     const tick = async () => {
       if (disposed || blocked || pending || !visible() || useRaisingStore.getState().busy) return
@@ -63,6 +66,8 @@ export function useIdleBattle(companyId?: string) {
           action: started ? ('tick' as const) : ('start' as const),
           hits: started ? contacts.drain() : [],
         }
+        if (started)
+          window.dispatchEvent(new CustomEvent('idle-hits-sent', { detail: body.sequence }))
         const res = await inOrder(() => api.POST('/api/company/idle', { body }))
         if (disposed || version !== generation || !visible()) return
         if (!res.data) {

@@ -29,8 +29,15 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
       nativeActive = (event as CustomEvent<boolean>).detail
       pause()
     }
+    // The heartbeat loop says which beat carried the hits so far, and when it dropped them
+    // (decisions.md 496): the renderer keeps its early damage until the server has handled that beat.
+    const sent = (event: Event) =>
+      battle.current?.idleHitsSent((event as CustomEvent<number>).detail)
+    const dropped = () => battle.current?.clearIdleHits()
     document.addEventListener('visibilitychange', visibility)
     window.addEventListener('idle-app-active', native)
+    window.addEventListener('idle-hits-sent', sent)
+    window.addEventListener('idle-hits-clear', dropped)
     setError(null)
     void import('../mental/battle')
       .then(({ startBattle }) => {
@@ -71,6 +78,8 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
       window.dispatchEvent(new Event('idle-hits-clear'))
       document.removeEventListener('visibilitychange', visibility)
       window.removeEventListener('idle-app-active', native)
+      window.removeEventListener('idle-hits-sent', sent)
+      window.removeEventListener('idle-hits-clear', dropped)
       battle.current?.stop()
       battle.current = null
     }
