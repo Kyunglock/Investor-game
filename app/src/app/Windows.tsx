@@ -193,9 +193,11 @@ function revealFx(d: Drawn, el: HTMLElement | null) {
 export function ActionBar({
   company,
   variant = 'default',
+  connected = false,
 }: {
   company: Company
   variant?: 'default' | 'toy'
+  connected?: boolean
 }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
@@ -237,11 +239,8 @@ export function ActionBar({
       </div>
     )
   }
-  if (!company.meeting) {
-    return null
-  }
   if (variant === 'toy') {
-    const upgradeLevels = (company.battleUpgrades ?? []).reduce((n, u) => n + u.level, 0)
+    const assigned = company.employees.filter((employee) => employee.desk).length
     return (
       <div className="toy-action-area">
         {error && (
@@ -249,62 +248,32 @@ export function ActionBar({
             {error}
           </p>
         )}
-        {/* 아래 카드 셋 (#698): 가운데가 주 게임 매도벽 돌파. 종목회의·멘탈 보호 스테이지는 오른쪽 보조게임 메뉴로 옮겼다. */}
-        <div className="toy-bottom-cards">
-          <button
-            type="button"
-            className="toy-stat"
-            data-testid="battle-upgrade-open"
-            onClick={() => {
-              sfx.tap()
-              haptic.light()
-              useAppUi.getState().openSheet({ kind: 'toy', panel: 'battle' })
-            }}
-          >
-            <small>자본으로</small>
-            <strong>강화</strong>
-            <em>{upgradeLevels > 0 ? `${upgradeLevels}단계 올림` : '공격력·연사'}</em>
-          </button>
-          <button
-            type="button"
-            className="toy-progress toy-stat toy-advance toy-assault-main"
-            style={{ width: '100%' }}
-            data-testid="assault-open"
-            disabled={busy}
-            onClick={(ev) => {
-              sfx.stamp()
-              haptic.medium()
-              useFx.getState().burstAt(ev.currentTarget, 'sparks')
-              window.dispatchEvent(new Event('idle-home'))
-            }}
-          >
-            <small>주 게임</small>
-            <strong>매도벽 돌파</strong>
-            <em>{`${company.idle?.wall ?? 1}번째 벽 · 자동 전투`}</em>
-          </button>
-          <button
-            type="button"
-            className="toy-stat"
-            data-testid="side-open"
-            onClick={() => {
-              sfx.tap()
-              haptic.light()
-              useAppUi.getState().openSheet({ kind: 'toy', panel: 'side' })
-            }}
-          >
-            <small>보조게임</small>
-            <strong>멘탈 보호</strong>
-            <em>
-              {company.stages && company.stages.best > 0
-                ? `분기 +${company.stages.bonusPercent}%`
-                : '1-1부터'}
-            </em>
-          </button>
-        </div>
+        <section className="toy-support" aria-label="돌파 지원 현황" data-testid="office-support">
+          <div className="toy-support-heading">
+            <strong>돌파 지원 사무실</strong>
+            <span role="status">{connected ? '● 자동 전투 중' : '연결 대기'}</span>
+          </div>
+          <dl>
+            <div>
+              <dt>현재 매도벽</dt>
+              <dd>{(company.idle?.wall ?? 1).toLocaleString()}벽</dd>
+            </div>
+            <div>
+              <dt>배치한 직원</dt>
+              <dd>
+                {assigned} / {company.seats}
+              </dd>
+            </div>
+            <div>
+              <dt>대기 중인 직원</dt>
+              <dd>{company.employees.length - assigned}명</dd>
+            </div>
+          </dl>
+        </section>
       </div>
     )
   }
-  if (pending) return null
+  if (!company.meeting || pending) return null
   return (
     <div className="px-4 pt-2 pb-2 text-ink">
       {error && (

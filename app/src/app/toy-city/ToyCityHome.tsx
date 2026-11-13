@@ -58,7 +58,7 @@ const MENU = [
   { tab: 'record', text: '기록', Icon: BookIcon },
 ] as const
 
-export function ToyCityHome({ company }: { company: Company }) {
+export function ToyCityHome({ company, connected }: { company: Company; connected: boolean }) {
   const sheet = useAppUi((s) => s.sheet)
   // 확장 뒤 처음 사무실을 볼 때만 새 라이벌이 지어진다 (415번): 다른 탭으로 가면 지운다.
   const rivalRise = useAppUi((s) => s.rivalRise)
@@ -166,7 +166,7 @@ export function ToyCityHome({ company }: { company: Company }) {
         </button>
       </div>
       <header className="toy-stage">
-        <p>CHAPTER {String(company.number).padStart(2, '0')} · 우리들의 작은 회사</p>
+        <p>돌파 지원 · 사무실 관리</p>
         <h1 data-testid="company-building">{officeName(company.grade)}</h1>
         <span>
           {ended ? '끝난 회사' : `${company.year}년 차 ${company.quarter}분기`} · 자리 {assigned} /{' '}
@@ -253,7 +253,7 @@ export function ToyCityHome({ company }: { company: Company }) {
             : '첫 동료를 기다리고 있어요'}
       </div>
       <div className="toy-bottom">
-        <ActionBar company={company} variant="toy" />
+        <ActionBar company={company} variant="toy" connected={connected} />
       </div>
       {panel && (
         <Sheet
