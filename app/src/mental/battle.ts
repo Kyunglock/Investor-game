@@ -129,6 +129,7 @@ import { PANIC_RUSH, panicRushGap, waveKind } from './waves'
 import {
   aimWithJitter,
   pierceOf,
+  SHOT_WEIGHT,
   SLOW_FACTOR,
   SLOW_SECONDS,
   WEAPON_TRAITS,
@@ -2107,7 +2108,7 @@ class BattleScene extends Phaser.Scene {
       this.buyWallFx?.launch(
         buyOrderX(lane.left, lane.width),
         this.buyWallY(),
-        this.loadout.damage * 0.75,
+        this.loadout.damage * 0.75 * (1 + this.loadout.buyBonus),
       )
     }
   }
@@ -2153,7 +2154,7 @@ class BattleScene extends Phaser.Scene {
       this.buyWallFx?.launch(
         barrier.left + barrier.width * (0.08 + Math.random() * 0.84),
         this.buyWallY(),
-        this.loadout.damage * 0.75,
+        this.loadout.damage * 0.75 * (1 + this.loadout.buyBonus),
       )
     }
     this.launchBuyOrders(this.buyWall?.stepOrders(dt * 0.2) ?? 0)
@@ -2992,7 +2993,7 @@ class BattleScene extends Phaser.Scene {
 
   /** 초당 발사 수를 기존의 80%로 낮춘다. */
   private get attackInterval() {
-    return this.loadout.fireMs * 1.25
+    return this.loadout.fireMs * 1.25 * SHOT_WEIGHT
   }
 
   /** index번째 고양이가 따로 든 총 (488번). 없으면 사장냥과 같은 총을 쏜다(393번). */
@@ -3001,7 +3002,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   private mateInterval(index: number) {
-    return (this.mateGun(index)?.fireMs ?? this.loadout.fireMs) * 1.25
+    return (this.mateGun(index)?.fireMs ?? this.loadout.fireMs) * 1.25 * SHOT_WEIGHT
   }
 
   /** index번째 고양이의 그림 차례 (mates.ts MATE_LOOKS): 자동 전투는 고양이마다 제 그림, 스테이지는 들어온 차례다. */
@@ -3083,10 +3084,10 @@ class BattleScene extends Phaser.Scene {
     b.critical = gun?.critical ?? 1
     b.look = 0
     b.trailMs = Math.max(90, style.trailMs)
-    b.damage = stats.damage
+    b.damage = stats.damage * SHOT_WEIGHT
     b.power = stats.power
     b.splashRadius = stats.splashRadius
-    b.splashDamage = stats.splashDamage
+    b.splashDamage = stats.splashDamage * SHOT_WEIGHT
     b.pierce = pierceOf(kind)
     b.hitList = []
     b.fromX = m.x

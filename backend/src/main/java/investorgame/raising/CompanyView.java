@@ -168,7 +168,8 @@ public record CompanyView(
   /**
    * 자본으로 사는 전투 강화 하나 (decisions.md 367·394번). 최대 단계는 없다.
    *
-   * @param kind damage(공격력)·fire(연사)·hp(체력: 최대 멘탈, 410번)·crit(치명타 피해, 487번)
+   * @param kind damage(공격력)·fire(연사)·hp(매수벽 체력: 최대 멘탈, 410번)·buy(매수벽 공격: 매수 주문의 공격력, 495번)·crit(치명타
+   *     피해, 487번)
    * @param level 지금 단계(0부터)
    * @param price 다음 단계 값
    * @param priceGrowthPercent 단계마다 값이 오르는 비율(%). 꾹 눌러 연속으로 올릴 때 화면이 다음 값들을 미리 셈한다(정하는 것은 서버)

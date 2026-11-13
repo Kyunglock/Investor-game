@@ -47,6 +47,9 @@ class IdleEngine {
   // Matches weaponEffects.ts: revolver 3x, every other weapon 2x (decisions.md 487).
   private static final double REVOLVER_CRITICAL = 3;
   private static final double CRITICAL = 2;
+  // Matches weaponEffects.ts SHOT_WEIGHT (decisions.md 495): every gun fires this many times
+  // slower than its stats and each bullet hits that much harder. Damage per second is unchanged.
+  private static final double BULLET_WEIGHT = 2;
 
   /** One gun on the field: the boss cat's, then one per fielded cat. */
   private record Shooter(
@@ -204,14 +207,17 @@ class IdleEngine {
     double bulletMax = 0;
     double bulletsPerSecond = 0;
     for (Shooter shooter : shooters) {
-      bulletMax = Math.max(bulletMax, shooter.damage() * shooter.power() * shooter.critical());
-      bulletsPerSecond += shooter.perSecond();
+      bulletMax =
+          Math.max(
+              bulletMax, BULLET_WEIGHT * shooter.damage() * shooter.power() * shooter.critical());
+      bulletsPerSecond += shooter.perSecond() / BULLET_WEIGHT;
     }
     long front = s.wall;
     double dealt = 0;
     for (int kind = 0; kind < 5 && active > 0; kind++) {
       if (kind > 0 && front <= UNLOCKS[kind - 1]) continue;
-      double damage = hero.damage() * (kind == 0 ? hero.power() : SKILL_DAMAGE[kind - 1]);
+      double damage =
+          hero.damage() * (kind == 0 ? BULLET_WEIGHT * hero.power() : SKILL_DAMAGE[kind - 1]);
       double maxDamage = kind == 0 ? bulletMax : damage;
       double interval = kind == 0 ? 1 / bulletsPerSecond : COOLDOWNS[kind - 1] / shooters.size();
       s.hitCredits[kind] =

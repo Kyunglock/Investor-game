@@ -372,7 +372,7 @@ export interface paths {
         put?: never;
         /**
          * 자본으로 전투 강화를 levels단계까지 산다 (decisions.md 367·394번)
-         * @description 공격력(+3%)·연사(쏘는 빠르기 +2%, 100%까지)·체력(+3%)·치명타 피해(+6%)를 단계마다 올린다. 연사 말고는 최대 단계가 없다. 값은 1b부터 단계마다 4%씩 오른다.
+         * @description 공격력(+3%)·연사(쏘는 빠르기 +2%, 100%까지)·매수벽 체력(+3%)·매수벽 공격(+3%)·치명타 피해(+6%)를 단계마다 올린다. 연사 말고는 최대 단계가 없다. 값은 1b부터 단계마다 4%씩 오른다.
          *     상한에 닿은 강화를 사면 400 (487번).
          *     꾹 눌러 연속으로 올릴 때 화면이 모은 단계를 levels로 묶어 보낸다: 자본이 닿는 데까지 한 단계씩 사고, 한 단계도 못 사면 400.
          *     쓴 돈은 분기 실적·결산서에 전투 강화 비용으로 따로 적는다. 고양이 속도 강화는 394번에서 뺐다.
@@ -1205,10 +1205,10 @@ export interface components {
             /** @description 자본으로 사는 전투 강화 (decisions.md 367·394번). 공격력·연사, 최대 단계 없이 멘탈 전투의 바탕 수치에 영구로 붙는다 */
             battleUpgrades?: {
                 /**
-                 * @description damage: 공격력, fire: 연사(쏘는 빠르기가 오른다, 100%까지), hp: 체력(최대 멘탈과 매수벽이 오른다), crit: 치명타 피해(치명타 배율이 오른다)
+                 * @description damage: 공격력, fire: 연사(쏘는 빠르기가 오른다, 100%까지), hp: 매수벽 체력(최대 멘탈과 매수벽이 오른다), buy: 매수벽 공격(매수 주문의 공격력이 오른다), crit: 치명타 피해(치명타 배율이 오른다)
                  * @enum {string}
                  */
-                kind: "damage" | "fire" | "hp" | "crit";
+                kind: "damage" | "fire" | "hp" | "buy" | "crit";
                 /** @description 지금 단계(0부터) */
                 level: number;
                 /**
@@ -1868,7 +1868,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    kind: "damage" | "fire" | "hp" | "crit";
+                    kind: "damage" | "fire" | "hp" | "buy" | "crit";
                     /** @description 올릴 단계 수. 없으면 1 */
                     levels?: number;
                 };

@@ -7,7 +7,7 @@ import { sfx } from '../fx/sound'
 import { GunSprite } from './GunSprite'
 import { DEFAULT_WEAPON, type Weapon } from './hero'
 import { type DrawResult, WeaponReveal } from './WeaponReveal'
-import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from './weaponEffects'
+import { FIRE_STYLE_NAMES, SHOT_WEIGHT, WEAPON_EFFECTS } from './weaponEffects'
 import './weapons.css'
 
 type Armory = NonNullable<Company['armory']>
@@ -145,7 +145,8 @@ export function WeaponInventory({ company }: { company: Company }) {
             </span>
           </p>
           <p className="text-[12px] text-muted">
-            공격 ×{shown.damagePercent / 100} · {(1000 / shown.fireMs).toFixed(1)}발/초
+            공격 ×{(shown.damagePercent / 100) * SHOT_WEIGHT} ·{' '}
+            {(1000 / shown.fireMs / SHOT_WEIGHT).toFixed(1)}발/초
           </p>
           <p className="weapon-tag">
             {FIRE_STYLE_NAMES[shown.kind]} · {WEAPON_EFFECTS[shown.kind].name}

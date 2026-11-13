@@ -212,6 +212,8 @@ export interface Loadout {
   awakenedMates: number
   /** 치명타 피해 강화 (487번): 치명타 배율에 1 + 이만큼을 곱한다. */
   critBonus: number
+  /** 매수벽 공격 강화 (495번): 매수 주문의 공격력에 1 + 이만큼을 곱한다. */
+  buyBonus: number
   /** 고양이가 따로 든 총 (488번), 줄 선 차례대로. 없는 자리의 고양이는 사장냥과 같은 총을 쏜다. */
   mateGuns: MateGun[]
 }
@@ -245,6 +247,7 @@ export const BASE_LOADOUT: Loadout = {
   mates: 0,
   awakenedMates: 0,
   critBonus: 0,
+  buyBonus: 0,
   mateGuns: [],
 }
 
@@ -259,9 +262,12 @@ export function loadoutOf(
     power: number
     bulletSpeed: number
   },
-  upgrades: ReadonlyArray<{ kind: 'damage' | 'fire' | 'hp' | 'crit'; bonusPercent: number }> = [],
+  upgrades: ReadonlyArray<{
+    kind: 'damage' | 'fire' | 'hp' | 'buy' | 'crit'
+    bonusPercent: number
+  }> = [],
 ): Loadout {
-  const bonus = (kind: 'damage' | 'fire' | 'hp' | 'crit') =>
+  const bonus = (kind: 'damage' | 'fire' | 'hp' | 'buy' | 'crit') =>
     (upgrades.find((u) => u.kind === kind)?.bonusPercent ?? 0) / 100
   return {
     ...BASE_LOADOUT,
@@ -273,6 +279,7 @@ export function loadoutOf(
     // 체력 강화(410번)는 최대 멘탈을 그만큼 늘린다. 판은 가득 찬 채로 시작한다.
     maxMental: Math.round(BASE_LOADOUT.maxMental * (1 + bonus('hp'))),
     critBonus: bonus('crit'),
+    buyBonus: bonus('buy'),
   }
 }
 

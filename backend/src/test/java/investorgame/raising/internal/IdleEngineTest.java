@@ -74,12 +74,13 @@ class IdleEngineTest {
   void contactsDamageOnlyTheirWallAndDuplicatesCannotPayTwice() {
     start(1);
     tick(1000, new IdleHit(1, "bullet", 1));
-    assertThat(state.idle.damage).isEqualTo(1);
+    // One pistol bullet: twice the weapon's damage at half its rate (decisions.md 495).
+    assertThat(state.idle.damage).isEqualTo(2);
     assertThat(state.idle.nextDamage).isZero();
     engine.beat(state, "one", sequence, "tick", List.of(new IdleHit(1, "bullet", 1)));
-    assertThat(state.idle.damage).isEqualTo(1);
+    assertThat(state.idle.damage).isEqualTo(2);
     tick(1000, new IdleHit(2, "bullet", 1), new IdleHit(50, "meteor", 10));
-    assertThat(state.idle.damage).isEqualTo(1);
+    assertThat(state.idle.damage).isEqualTo(2);
     assertThat(state.idle.nextDamage).isZero();
   }
 
@@ -109,9 +110,9 @@ class IdleEngineTest {
   void forgedAmountsAreLimitedByWeaponAndAcquiredSkillStats() {
     start(1);
     tick(1000, new IdleHit(1, "bullet", 1, 1e12), new IdleHit(1, "meteor", 1, 1e12));
-    assertThat(state.idle.damage).as("one pistol critical at most").isEqualTo(2);
+    assertThat(state.idle.damage).as("one pistol critical at most").isEqualTo(4);
     tick(1000, new IdleHit(1, "bullet", 1, Double.NaN), new IdleHit(1, "bullet", 1, -1.0));
-    assertThat(state.idle.damage).isEqualTo(2);
+    assertThat(state.idle.damage).isEqualTo(4);
   }
 
   @Test
@@ -375,7 +376,8 @@ class IdleEngineTest {
     // Boss cat and sky (fires 25% faster), both with the starting pistol.
     tick(1000, new IdleHit(16, "bullet", 1000, 1000.0));
     assertThat(state.idle.damage)
-        .isCloseTo(2 * 2.25 * 1000.0 / 260, org.assertj.core.data.Offset.offset(1e-9));
+        .as("half as many bullets as the guns' stats say")
+        .isCloseTo(2.25 * 1000.0 / 260, org.assertj.core.data.Offset.offset(1e-9));
     assertThat(engine.view(state).wallDps()).as("what the wall really took lately").isPositive();
     // A forged bullet may claim the strongest gun's critical: here the boss cat's pistol, since
     // a level 6 cat still shoots at 50% x (1 + 0.2 x 5) = 100%.
@@ -383,11 +385,11 @@ class IdleEngineTest {
     double before = state.idle.damage;
     for (int i = 0; i < 3; i++) tick(1000);
     tick(1000, new IdleHit(16, "bullet", 1, 1e12));
-    assertThat(state.idle.damage - before).isEqualTo(2);
+    assertThat(state.idle.damage - before).isEqualTo(4);
     state.idle.cats.put("sky", 11);
     before = state.idle.damage;
     tick(1000, new IdleHit(16, "bullet", 1, 1e12));
-    assertThat(state.idle.damage - before).as("level 11 cat: 150% pistol critical").isEqualTo(3);
+    assertThat(state.idle.damage - before).as("level 11 cat: 150% pistol critical").isEqualTo(6);
   }
 
   private investorgame.raising.CompanyView.CatWeapon weaponOf(String code) {

@@ -64,7 +64,7 @@ interface RaisingState {
    * 회사(실패면 null)를 돌려준다.
    */
   buyBattleUpgrade: (
-    kind: 'damage' | 'fire' | 'hp' | 'crit',
+    kind: 'damage' | 'fire' | 'hp' | 'buy' | 'crit',
     levels?: number,
   ) => Promise<Company | null>
   /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). 결과는 company.armory.lastDraw. */

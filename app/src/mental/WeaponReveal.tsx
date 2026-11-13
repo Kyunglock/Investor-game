@@ -5,7 +5,7 @@ import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { GunSprite } from './GunSprite'
 import type { Weapon } from './hero'
-import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from './weaponEffects'
+import { FIRE_STYLE_NAMES, SHOT_WEIGHT, WEAPON_EFFECTS } from './weaponEffects'
 import { weaponRevealPlan } from './weaponRevealPlan'
 import './weapon-reveal.css'
 
@@ -136,8 +136,8 @@ export function WeaponReveal({
               </div>
               <h2>{result.draw.name}</h2>
               <p className="weapon-reveal-stats">
-                공격력 ×{result.weapon.damagePercent / 100} · 연사{' '}
-                {(1000 / result.weapon.fireMs).toFixed(1)}발/초
+                공격력 ×{(result.weapon.damagePercent / 100) * SHOT_WEIGHT} · 연사{' '}
+                {(1000 / result.weapon.fireMs / SHOT_WEIGHT).toFixed(1)}발/초
               </p>
               <p>{FIRE_STYLE_NAMES[result.draw.kind]}</p>
               <p className="weapon-reveal-effect">
