@@ -179,6 +179,15 @@ try {
     }
     await page.getByRole('button', { name: '회사', exact: true }).click()
     await expect(page.getByTestId('office-scene')).toBeVisible()
+    await expect(page.getByTestId('office-support')).toContainText('자동 전투 중')
+    await expect(page.getByTestId('office-support')).toContainText(`${company.idle.wall}벽`)
+    await expect(page.getByTestId('assault-open')).toHaveCount(0)
+    await expect(page.getByTestId('side-open')).toHaveCount(0)
+    await expect(page.getByTestId('battle-upgrade-open')).toHaveCount(0)
+    const officeTicks = actions.filter((action) => action === 'tick').length
+    await expect
+      .poll(() => actions.filter((action) => action === 'tick').length)
+      .toBeGreaterThan(officeTicks)
     const nav = page.getByRole('navigation', { name: '게임 메뉴' }).last()
     await expect(nav.getByRole('button')).toHaveCount(5)
     await expect(nav.getByRole('button', { name: '회사', exact: true })).toHaveAttribute(

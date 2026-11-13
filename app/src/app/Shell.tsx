@@ -113,7 +113,7 @@ export function Shell({ company }: { company: Company }) {
               managing={manage}
               onManage={() => setManage(true)}
               onBattle={() => setManage(false)}
-              office={<OfficeScene company={company} />}
+              office={<OfficeScene company={company} connected={connected} />}
             />
           )}
           {tab === 'market' && <GachaScene company={company} />}

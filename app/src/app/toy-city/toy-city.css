@@ -719,12 +719,6 @@
   left: 12px;
   right: 12px;
 }
-.toy-bottom-cards {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: 10px;
-  align-items: end;
-}
 .toy-stat {
   border: 1px solid #c5cdec;
   background: #fffdf9;
@@ -1214,28 +1208,47 @@
   background: #f37c60;
   color: #fff6dc;
 }
-/* 가운데가 주 게임 매도벽 돌파 (#698). 오른쪽은 보조게임(종목회의·멘탈 보호) 메뉴. */
-.toy-home .toy-bottom-cards > [data-testid="assault-open"] {
-  order: 2;
-  min-height: 108px;
-  background: linear-gradient(#ffae70, #f47850);
-  color: #fff8df;
+/* 사무실은 같은 돌파 진행을 지원하는 관리 화면이다. */
+.toy-home .toy-support {
+  padding: 10px;
+  border: 2px solid #fff5d8;
+  border-radius: 18px;
+  background: #fff0cf;
+  color: #735332;
+  box-shadow: 0 3px 0 #b68c55;
 }
-.toy-home .toy-bottom-cards > [data-testid="side-open"] {
-  order: 3;
-  position: relative;
+.toy-home .toy-support-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
 }
-.toy-home .toy-bottom-cards > [data-testid="battle-upgrade-open"] {
-  order: 1;
+.toy-home .toy-support-heading strong {
+  font-size: 14px;
 }
-.toy-home .toy-bottom-cards {
-  grid-template-columns: 1fr 1.4fr 1fr;
-  align-items: end;
+.toy-home .toy-support-heading span {
+  font-size: 10px;
+  color: #547944;
 }
-@media (max-height: 720px) {
-  .toy-home .toy-bottom-cards > [data-testid="assault-open"] {
-    min-height: 85px;
-  }
+.toy-home .toy-support dl {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  text-align: center;
+}
+.toy-home .toy-support dl > div {
+  padding: 6px 2px;
+  border-radius: 10px;
+  background: #fff8e7;
+}
+.toy-home .toy-support dt {
+  font-size: 9px;
+  color: #957854;
+}
+.toy-home .toy-support dd {
+  margin: 3px 0 0;
+  font-size: 14px;
 }
 
 /* 보조게임 메뉴 (#698): 종목회의·멘탈 보호 스테이지를 한 칸씩. */
