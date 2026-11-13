@@ -62,6 +62,13 @@ const SHAPES = {
       <path d="M3 9.7h18M3 14.3h18M9 5v4.7m6-4.7v4.7M6 9.7v4.6m6-4.6v4.6m6-4.6v4.6M9 14.3V19m6-4.7V19" />
     </>
   ),
+  // 매수벽 공격: 벽에서 위로 쏘아 올리는 매수 주문.
+  buy: (
+    <>
+      <path d="M3 15h18v6H3Z" fill="currentColor" fillOpacity=".28" />
+      <path d="M9 15v6m6-6v6M12 12V3m-3.5 3.5L12 3l3.5 3.5M5.5 11V8m13 3V8" />
+    </>
+  ),
   // 치명타: 과녁 한가운데에 터지는 별.
   crit: (
     <>

@@ -287,6 +287,9 @@ export function assaultSpec(
  * 열 벽을 넘길 때마다 미션 레벨이 하나 오른 만큼 수·빠르기·공격이 는다. 벽은 늘 한 줄이고 체력은 서버가 정한다. 물량 하나의 체력(주식 수)은
  * 그대로 둔다: 물량 그림의 주식 수가 한 번만 구워지기 때문이다.
  */
+/** 자동 전투에서 매도벽이 물량을 내는 빈도의 배율 (미션 대비, 495번). */
+export const IDLE_FLOW = 1.5
+
 export function idleAssaultSpec(wall: number): AssaultSpec {
   const at = Math.max(0, Math.floor(wall) - 1)
   const spec = assaultSpec(1 + Math.floor(at / ASSAULT_WALLS.length))
@@ -294,6 +297,8 @@ export function idleAssaultSpec(wall: number): AssaultSpec {
   return {
     ...spec,
     enemyHp: 1,
+    // 매도벽에서 나오는 물량이 미션보다 잦다 (495번).
+    enemyCount: spec.enemyCount * IDLE_FLOW,
     walls: [{ ...template, rows: 1, mid: false, boss: Math.floor(wall) % 10 === 0 }],
   }
 }

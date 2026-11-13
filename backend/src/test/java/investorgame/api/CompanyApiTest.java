@@ -436,7 +436,7 @@ class CompanyApiTest {
             .read("$.companyId", String.class);
     DocumentContext opened = json(mvc.perform(get("/api/company").cookie(session)));
     List<String> kinds = opened.read("$.battleUpgrades[*].kind");
-    assertThat(kinds).containsExactly("damage", "fire", "hp", "crit");
+    assertThat(kinds).containsExactly("damage", "fire", "hp", "buy", "crit");
     assertThat(opened.read("$.battleUpgrades[0].level", Integer.class)).isZero();
     assertThat(opened.read("$.battleUpgrades[0].price", Long.class)).isEqualTo(1_000_000L);
     assertThat(opened.read("$.battleUpgrades[0].nextBonusPercent", Integer.class)).isEqualTo(3);

@@ -71,7 +71,7 @@ try {
       await page.screenshot({ path: `/tmp/weapon-shots/${width}-${grade}-charge.png` })
       await expect(page.getByTestId('weapon-drawn')).toBeVisible()
       await expect(page.getByTestId('weapon-drawn')).toContainText('NEW!')
-      await expect(page.getByTestId('weapon-drawn')).toContainText('공격력 ×2')
+      await expect(page.getByTestId('weapon-drawn')).toContainText('공격력 ×4')
       await page.waitForTimeout(450)
       await page.screenshot({ path: `/tmp/weapon-shots/${width}-${grade}-result.png` })
       const bounds = await page.getByTestId('weapon-reveal-again').boundingBox()

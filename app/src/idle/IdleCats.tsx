@@ -22,8 +22,8 @@ const CATS: Record<CatCode, { art: string; tone?: string }> = {
   snow: { art: STAGE_ASSETS.fluffy, tone: 'snow' },
 }
 
-/** 인벤토리 격자: 8칸 × 3줄 (493번). */
-const SLOTS = 24
+/** 인벤토리 격자: 6칸 × 3줄 (495번). */
+const SLOTS = 18
 
 /** 이 고양이 총의 특성: 서버가 준 연사·치명타 배율을 그대로 읽는다. 공격력 특성은 damagePercent에 이미 들어 있다. */
 function trait(cat: Cat) {
@@ -267,7 +267,7 @@ export function IdleCats({ company }: { company: Company }) {
           </div>
         </article>
       )}
-      <ul className="idle-cat-grid" aria-label="고양이 인벤토리 · 8칸 3줄">
+      <ul className="idle-cat-grid" aria-label="고양이 인벤토리 · 6칸 3줄">
         {Array.from({ length: SLOTS }, (_, i) => idle.cats[i] ?? null).map((c, i) =>
           c ? (
             <li key={c.code}>

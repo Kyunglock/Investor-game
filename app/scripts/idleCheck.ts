@@ -40,6 +40,15 @@ try {
           maxLevel: 0,
         },
         {
+          kind: 'buy',
+          level: 0,
+          price: 1000000,
+          priceGrowthPercent: 10,
+          bonusPercent: 0,
+          nextBonusPercent: 10,
+          maxLevel: 0,
+        },
+        {
           kind: 'crit',
           level: 0,
           price: 1000000,
@@ -187,13 +196,14 @@ try {
     await expect(page.getByText('모든 공격이 벽에 맞을 때')).toBeVisible()
     await expect(page.getByTestId('idle-wall-dps')).toContainText('실제 벽 피해')
     // Four stats (decisions.md 487): fire speed stops at its cap, the others can be bought.
-    await expect(page.getByTestId('idle-stat')).toHaveCount(4)
+    await expect(page.getByTestId('idle-stat')).toHaveCount(5)
     const stat = (kind: string) => page.locator(`[data-testid=idle-stat][data-kind=${kind}]`)
     await expect(stat('fire')).toContainText('공격 속도')
     await expect(stat('fire')).toContainText('+100% · 최대')
     await expect(stat('fire').getByRole('button')).toBeDisabled()
     await expect(stat('fire').getByRole('button')).toHaveText('MAX')
-    await expect(stat('hp')).toContainText('매수벽 강화')
+    await expect(stat('hp')).toContainText('매수벽 체력')
+    await expect(stat('buy')).toContainText('매수벽 공격')
     await expect(stat('crit')).toContainText('치명타 피해')
     await expect(stat('crit')).toContainText('+0% → +20%')
     await page.screenshot({ path: `/tmp/idle-growth-${width}.png`, fullPage: true })
@@ -203,9 +213,9 @@ try {
     await expect(page.getByText('메테오 스킬')).toBeVisible()
     await expect(page.getByText('50벽 돌파 시 획득', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: '닫기 ✕' }).click()
-    // Cats are drawn with tickets, fielded in four slots, and kept in an 8 x 3 grid (488, 493).
+    // Cats are drawn with tickets, fielded in four slots, and kept in a 6 x 3 grid (488, 493, 495).
     await page.getByRole('button', { name: '고양이' }).click()
-    await expect(page.locator('.idle-cat-grid > li')).toHaveCount(24)
+    await expect(page.locator('.idle-cat-grid > li')).toHaveCount(18)
     await expect(page.getByTestId('cat')).toHaveCount(6)
     await expect(page.getByTestId('cat-slot')).toHaveCount(4)
     await expect(page.getByTestId('cat-field')).toHaveCount(0)

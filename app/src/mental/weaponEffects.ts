@@ -86,6 +86,12 @@ export const CRIT_MULT = 3
 export const BASE_CRIT_CHANCE = 0.2
 export const BASE_CRIT_MULT = 2
 
+/**
+ * 탄의 무게 (495번): 모든 총이 무기 수치보다 느리게 쏘고 그만큼 세게 때린다. 초당 피해는 그대로다. 서버(IdleEngine BULLET_WEIGHT)가 같은 값으로
+ * 한 발의 상한과 빈도를 잡는다. 스킬은 무기 공격력을 그대로 쓴다.
+ */
+export const SHOT_WEIGHT = 2
+
 /** 기관단총 둔화: 이어지는 시간(초)과 그동안의 빠르기 배율. */
 export const SLOW_SECONDS = 1
 export const SLOW_FACTOR = 0.6

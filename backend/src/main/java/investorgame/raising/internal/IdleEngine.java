@@ -41,12 +41,15 @@ class IdleEngine {
   private static final double CAT_POWER = 0.5;
   private static final double CAT_LEVEL_BONUS = 0.2;
   // Capital per point of wall health on a clear, and per active second at wall 1 (492).
-  private static final double REWARD_PER_HEALTH = 40_000;
+  private static final double REWARD_PER_HEALTH = 60_000;
   private static final double INCOME = 20_000;
   private static final double INCOME_GROWTH = 0.05;
   // Matches weaponEffects.ts: revolver 3x, every other weapon 2x (decisions.md 487).
   private static final double REVOLVER_CRITICAL = 3;
   private static final double CRITICAL = 2;
+  // Matches weaponEffects.ts SHOT_WEIGHT (decisions.md 495): every gun fires this many times
+  // slower than its stats and each bullet hits that much harder. Damage per second is unchanged.
+  private static final double BULLET_WEIGHT = 2;
 
   /** One gun on the field: the boss cat's, then one per fielded cat. */
   private record Shooter(
@@ -167,7 +170,7 @@ class IdleEngine {
     // The first walls fall in seconds; later ones grow faster than linearly so upgrades matter
     // (492).
     long depth = wall - 1;
-    return (30 + 18.0 * depth + 0.6 * depth * depth) * (wall % 10 == 0 ? 4 : 1);
+    return (20 + 12.0 * depth + 0.4 * depth * depth) * (wall % 10 == 0 ? 4 : 1);
   }
 
   private double dps(CompanyState c) {
@@ -204,14 +207,17 @@ class IdleEngine {
     double bulletMax = 0;
     double bulletsPerSecond = 0;
     for (Shooter shooter : shooters) {
-      bulletMax = Math.max(bulletMax, shooter.damage() * shooter.power() * shooter.critical());
-      bulletsPerSecond += shooter.perSecond();
+      bulletMax =
+          Math.max(
+              bulletMax, BULLET_WEIGHT * shooter.damage() * shooter.power() * shooter.critical());
+      bulletsPerSecond += shooter.perSecond() / BULLET_WEIGHT;
     }
     long front = s.wall;
     double dealt = 0;
     for (int kind = 0; kind < 5 && active > 0; kind++) {
       if (kind > 0 && front <= UNLOCKS[kind - 1]) continue;
-      double damage = hero.damage() * (kind == 0 ? hero.power() : SKILL_DAMAGE[kind - 1]);
+      double damage =
+          hero.damage() * (kind == 0 ? BULLET_WEIGHT * hero.power() : SKILL_DAMAGE[kind - 1]);
       double maxDamage = kind == 0 ? bulletMax : damage;
       double interval = kind == 0 ? 1 / bulletsPerSecond : COOLDOWNS[kind - 1] / shooters.size();
       s.hitCredits[kind] =
