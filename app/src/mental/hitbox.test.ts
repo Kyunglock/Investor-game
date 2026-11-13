@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { BULLET_VISUAL_SCALE, GRADE_FIRE } from './weaponVisuals'
 import { BULLET_H, BULLET_R, BULLET_W, bulletHitbox } from './hitbox'
+import { BULLET_VISUAL_SCALE, GRADE_FIRE } from './weaponVisuals'
 
 describe('탄 충돌 원', () => {
   it('어느 배율로 구웠든 원의 가운데는 그림의 가운데다', () => {
