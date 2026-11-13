@@ -276,27 +276,27 @@ class IdleEngineTest {
     assertThat(state.idle.damage).isEqualTo(4.8);
     assertThat(engine.view(state).skills()).hasSize(4).allMatch(skill -> skill.owned());
     assertThatThrownBy(() -> engine.drawCat(state, random))
+        .as("no ticket, no cat")
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
 
-    long first = engine.view(state).catPrice();
-    state.capital = first;
+    // One ticket, one cat (decisions.md 493). Capital is not spent.
+    state.weaponTickets = 1;
+    long capital = state.capital;
     engine.drawCat(state, random);
-    assertThat(state.capital).isZero();
-    assertThat(state.yearUpgrades).isEqualTo(first);
-    assertThat(first).isEqualTo(10_000_000);
-    assertThat(engine.view(state).catPrice()).isEqualTo(Math.round(first * 1.3));
+    assertThat(state.weaponTickets).isZero();
+    assertThat(state.capital).isEqualTo(capital);
     var drawn = engine.view(state).cats().stream().filter(cat -> cat.level() == 1).toList();
     assertThat(drawn).as("a new cat is fielded at once").hasSize(1).allMatch(cat -> cat.fielded());
 
-    // Duplicates raise the level; with enough draws all three cats are owned, two of them fielded.
-    state.capital = Long.MAX_VALUE / 4;
-    for (int i = 0; i < 30; i++) engine.drawCat(state, random);
+    // Duplicates raise the level; with enough draws all six cats are owned, four of them fielded.
+    state.weaponTickets = 60;
+    for (int i = 0; i < 60; i++) engine.drawCat(state, random);
     var cats = engine.view(state).cats();
-    assertThat(cats).hasSize(3).allMatch(cat -> cat.level() >= 1);
-    assertThat(cats.stream().mapToInt(cat -> cat.level()).sum()).isEqualTo(31);
+    assertThat(cats).hasSize(6).allMatch(cat -> cat.level() >= 1);
+    assertThat(cats.stream().mapToInt(cat -> cat.level()).sum()).isEqualTo(61);
     assertThat(cats.stream().filter(cat -> cat.fielded()).count())
         .isEqualTo(engine.view(state).fieldSlots())
-        .isEqualTo(2);
+        .isEqualTo(4);
     // A cat's gun: half the weapon's damage, +20% of that per level, times its trait.
     var sky = cats.getFirst();
     assertThat(sky.damagePercent()).isEqualTo((int) Math.round(50 * (1 + 0.2 * (sky.level() - 1))));
@@ -311,7 +311,7 @@ class IdleEngineTest {
     engine.fieldCat(state, fielded, false);
     engine.fieldCat(state, resting, true);
     assertThat(engine.view(state).cats().stream().filter(cat -> cat.fielded()).count())
-        .isEqualTo(2);
+        .isEqualTo(4);
   }
 
   @Test

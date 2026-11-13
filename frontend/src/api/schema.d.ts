@@ -436,9 +436,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 자본으로 고양이 한 마리를 뽑는다 (decisions.md 488번)
-         * @description 값은 idle.catPrice(10b부터)이고 뽑을 때마다 1.3배씩 오른다. 하늘냥·민트냥이 40%씩, 라일락냥이 20%로 나온다. 새 고양이는 출전 칸이 비어 있으면
-         *     바로 출전하고, 이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 자본이 모자라면 400. 쓴 돈은 전투 강화 비용으로 적는다.
+         * 뽑기권 한 장으로 고양이 한 마리를 뽑는다 (decisions.md 488·493번)
+         * @description 무기 뽑기와 같은 뽑기권(armory.tickets)을 한 장 쓴다. 고양이는 여섯이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
+         *     이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 뽑기권이 없으면 400.
          */
         post: operations["drawCat"];
         delete?: never;
@@ -1148,19 +1148,14 @@ export interface components {
                     unlockWall: number;
                     owned: boolean;
                 }[];
-                /**
-                 * Format: int64
-                 * @description 다음 고양이 뽑기 값 (488번)
-                 */
-                catPrice: number;
-                /** @description 한 번에 출전하는 고양이 수 (492번) */
+                /** @description 한 번에 출전하는 고양이 수 (492·493번 */
                 fieldSlots: number;
                 /** @description 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 */
                 wallDps: number;
                 /** @description 고양이 (488·491번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏜다. 스킬과는 상관없다 */
                 cats: {
                     /** @enum {string} */
-                    code: "sky" | "mint" | "lilac";
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow";
                     name: string;
                     /** @description 0이면 아직 없다. 또 뽑을 때마다 하나씩 오른다 */
                     level: number;
@@ -1983,7 +1978,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "sky" | "mint" | "lilac";
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow";
                     fielded: boolean;
                 };
             };
@@ -2014,7 +2009,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "sky" | "mint" | "lilac";
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow";
                     /** @enum {string} */
                     kind?: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
                     /** @enum {string} */

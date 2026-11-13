@@ -151,8 +151,17 @@ export function IdleHome({
               <span className="idle-coin">₩</span>
               <b>{money(company.capital)}</b>
             </div>
-            <strong className="idle-wall-number" data-testid="idle-wall-number">
-              매도벽 {(idle?.wall ?? 1).toLocaleString()}
+            {/* 상태 줄은 없앴다 (493번): 평소엔 벽 번호만, 전투가 멈춘 때만 그 까닭을 여기에 보인다. */}
+            <strong
+              className="idle-wall-number"
+              data-testid="idle-wall-number"
+              data-state={connected ? ((idle?.circuitSeconds ?? 0) > 0 ? 'halt' : 'auto') : 'wait'}
+            >
+              {connected
+                ? (idle?.circuitSeconds ?? 0) > 0
+                  ? '거래 정지'
+                  : `매도벽 ${(idle?.wall ?? 1).toLocaleString()}`
+                : '연결 대기'}
             </strong>
             <div
               className="idle-cash"
@@ -166,16 +175,6 @@ export function IdleHome({
               ☰
             </button>
           </header>
-          <div className="idle-stage">
-            <em>
-              {connected ? ((idle?.circuitSeconds ?? 0) > 0 ? '거래 정지' : '● AUTO') : '연결 대기'}
-            </em>
-            <p>
-              {idle?.boss
-                ? '대량 매도 큰손 등장'
-                : `큰손 등장까지 ${10 - ((idle?.wall ?? 1) % 10)}벽`}
-            </p>
-          </div>
           {blocked && (
             <div className="idle-blocked" role="alert" data-testid="idle-blocked">
               <p>다른 화면에서 전투 중이라 여기는 멈췄어요</p>

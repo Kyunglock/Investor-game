@@ -61,8 +61,8 @@ try {
       onDone: () => {},
       onLevelUp: () => handle.applyLoadout(loadout),
     })
-    window.enableIdleAttacks = (meteor = 1) =>
-      handle.applyLoadout({ ...loadout, fireMs: 100, meteor })
+    window.enableIdleAttacks = (meteor = 1, fireMs = 100) =>
+      handle.applyLoadout({ ...loadout, fireMs, meteor })
     window.pauseIdleTest = (paused) => handle.setPaused(paused)
     window.stopIdleTest = () => handle.stop()
   })
@@ -92,12 +92,19 @@ try {
   assert(
     hits.filter((hit) => hit.kind === 'meteor').every((hit) => hit.damage > 0 && hit.damage <= 2.4),
   )
-  // The renderer cannot clear a wall by itself; the server snapshot still has full health.
-  assert.equal((await page.evaluate(() => window.__mentalWalls()))[0].hp, 5000)
+  // The renderer cannot clear a wall by itself. It only shows the last moments' hits ahead of the
+  // server (decisions.md 493); once the server stays silent the wall is back at the snapshot.
+  const shown = (await page.evaluate(() => window.__mentalWalls()))[0].hp
+  assert(shown > 4900 && shown < 5000, `predicted health ${shown}`)
   await page.evaluate(() => window.pauseIdleTest(true))
   const pausedCount = await page.evaluate(() => window.actualIdleHits.length)
   await page.waitForTimeout(500)
   assert.equal(await page.evaluate(() => window.actualIdleHits.length), pausedCount)
+  await page.evaluate(() => window.pauseIdleTest(false))
+  await page.evaluate(() => window.enableIdleAttacks(0, 100000))
+  await page.waitForTimeout(2200)
+  assert.equal((await page.evaluate(() => window.__mentalWalls()))[0].hp, 5000)
+  await page.evaluate(() => window.pauseIdleTest(true))
   // Boss health must be independent from wall health, including its death effect.
   await page.evaluate(async () => {
     window.stopIdleTest()

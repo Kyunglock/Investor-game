@@ -10,6 +10,7 @@ try {
   for (const width of process.env.UI_WIDTH ? [Number(process.env.UI_WIDTH)] : [320, 390, 1024]) {
     const company = {
       ...structuredClone(fixture),
+      armory: { tickets: 6, mergeCount: 2, lastDraw: null },
       battleUpgrades: [
         {
           kind: 'damage',
@@ -64,13 +65,15 @@ try {
           { code: 'bolt', name: '번개 스킬', unlockWall: 30, owned: false },
           { code: 'ram', name: '충차 스킬', unlockWall: 50, owned: false },
         ],
-        catPrice: 3000000,
-        fieldSlots: 2,
+        fieldSlots: 4,
         wallDps: 0,
         cats: [
           ['sky', '하늘냥', 125, 100],
           ['mint', '민트냥', 100, 100],
           ['lilac', '라일락냥', 100, 150],
+          ['sunset', '노을냥', 110, 100],
+          ['night', '밤냥', 100, 125],
+          ['snow', '눈꽃냥', 140, 100],
         ].map(([code, name, firePercent, criticalPercent]) => ({
           code,
           name,
@@ -129,12 +132,11 @@ try {
       const cat = company.idle.cats.find((c) => c.code === sent?.code)
       if (path.endsWith('/draws')) hires.push(sent.count)
       if (path.endsWith('/cat/draw')) {
-        const drawn = company.idle.cats[catDraws++ % 3]
-        company.capital -= company.idle.catPrice
-        company.idle.catPrice = Math.round(company.idle.catPrice * 1.3)
+        const drawn = company.idle.cats[catDraws++ % 6]
+        company.armory.tickets--
         drawn.level++
         drawn.damagePercent = 50 + (drawn.level - 1) * 10
-        if (drawn.level === 1 && company.idle.cats.filter((c) => c.fielded).length < 2)
+        if (drawn.level === 1 && company.idle.cats.filter((c) => c.fielded).length < 4)
           drawn.fielded = true
       } else if (path.endsWith('/cat/field') && cat) {
         cat.fielded = sent.fielded
@@ -157,7 +159,9 @@ try {
         await page.screenshot({ path: `/tmp/idle-failure-${width}.png` }).catch(() => {})
         throw e
       })
-    await expect(page.getByText('● AUTO')).toBeVisible()
+    // No status line (decisions.md 493): the HUD shows only the wall number while fighting.
+    await expect(page.getByTestId('idle-wall-number')).toHaveAttribute('data-state', 'auto')
+    await expect(page.locator('.idle-stage')).toHaveCount(0)
     await expect(page.locator('[data-testid=idle-canvas] canvas')).toBeVisible({ timeout: 30000 })
     await page.evaluate(() => {
       ;(window as unknown as { idleCanvas: Element | null }).idleCanvas = document.querySelector(
@@ -199,41 +203,39 @@ try {
     await expect(page.getByText('메테오 스킬')).toBeVisible()
     await expect(page.getByText('50벽 돌파 시 획득', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: '닫기 ✕' }).click()
-    // Cats come from the gacha, are fielded, and borrow owned weapons (decisions.md 488).
+    // Cats are drawn with tickets, fielded in four slots, and kept in an 8 x 3 grid (488, 493).
     await page.getByRole('button', { name: '고양이' }).click()
-    await expect(page.getByTestId('cat')).toHaveCount(3)
+    await expect(page.locator('.idle-cat-grid > li')).toHaveCount(24)
+    await expect(page.getByTestId('cat')).toHaveCount(6)
+    await expect(page.getByTestId('cat-slot')).toHaveCount(4)
     await expect(page.getByTestId('cat-field')).toHaveCount(0)
-    await expect(page.getByText('벽 돌파 시 합류')).toHaveCount(0)
+    const tickets = company.armory.tickets
     await page.getByTestId('cat-draw').click()
-    const sky = page.locator('[data-testid=cat][data-code=sky]')
     await expect(page.getByTestId('cat-gacha')).toContainText('하늘냥 합류!')
-    await expect(sky.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'true')
-    await expect
-      .poll(() =>
-        page.evaluate(
-          () => (window as unknown as { __mentalDamage?: { mates: number } }).__mentalDamage?.mates,
-        ),
+    await expect(page.getByTestId('cat-draw')).toContainText(`뽑기권 ${tickets - 1}장`)
+    const detail = page.getByTestId('cat-detail')
+    await expect(detail).toHaveAttribute('data-code', 'sky')
+    await expect(detail.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'true')
+    await expect(page.locator('[data-testid=cat-slot][data-code=sky]')).toBeVisible()
+    const mates = () =>
+      page.evaluate(
+        () => (window as unknown as { __mentalDamage?: { mates: number } }).__mentalDamage?.mates,
       )
-      .toBe(1)
-    await sky.getByTestId('cat-field').click()
-    await expect(sky.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'false')
-    await expect
-      .poll(() =>
-        page.evaluate(
-          () => (window as unknown as { __mentalDamage?: { mates: number } }).__mentalDamage?.mates,
-        ),
-      )
-      .toBe(0)
-    await sky.getByTestId('cat-field').click()
-    // Two field slots (decisions.md 492): the third cat waits until one rests.
-    await page.getByTestId('cat-draw').click()
-    await page.getByTestId('cat-draw').click()
-    const lilac = page.locator('[data-testid=cat][data-code=lilac]')
-    await expect(lilac.getByTestId('cat-field')).toBeDisabled()
-    await expect(lilac.getByTestId('cat-field')).toHaveText('칸 없음')
-    await expect(lilac).toContainText('치명타 피해 +50%')
-    await sky.getByTestId('cat-gun').click()
-    await expect(sky.getByTestId('cat-weapon').first()).toBeVisible()
+    await expect.poll(mates).toBe(1)
+    await detail.getByTestId('cat-field').click()
+    await expect(detail.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'false')
+    await expect.poll(mates).toBe(0)
+    await detail.getByTestId('cat-field').click()
+    // Four field slots: the fifth cat waits until one rests.
+    for (let i = 0; i < 4; i++) await page.getByTestId('cat-draw').click()
+    await expect(detail).toHaveAttribute('data-code', 'night')
+    await expect(detail.getByTestId('cat-field')).toBeDisabled()
+    await expect(detail.getByTestId('cat-field')).toHaveText('칸 없음')
+    await expect(detail).toContainText('치명타 피해 +25%')
+    await expect.poll(mates).toBe(4)
+    await page.locator('[data-testid=cat][data-code=sky]').click()
+    await detail.getByTestId('cat-gun').click()
+    await expect(detail.getByTestId('cat-weapon').first()).toBeVisible()
     await page.screenshot({ path: `/tmp/idle-cats-${width}.png`, fullPage: true })
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     assert.equal(
@@ -332,20 +334,10 @@ try {
     await expect.poll(async () => (await market()).circuit, { timeout: 10000 }).toBe(null)
     await expect.poll(async () => (await market()).physicsPaused).toBe(false)
     await expect.poll(async () => (await market()).battleSeconds).toBeGreaterThan(circuitClock)
-    if (width === 390) {
-      // Acquired companions run too; observe multiple animation frames without moving hitboxes.
-      company.idle.skills[1].owned = true
-      await expect.poll(async () => (await market()).catTextures.length).toBeGreaterThan(1)
-      const frames = new Set<string>()
-      for (let i = 0; i < 8; i++) {
-        frames.add((await market()).catTextures.join(','))
-        await page.waitForTimeout(80)
-      }
-      assert(frames.size >= 3)
-      assert((await market()).catTextures.every((key) => key.includes('-run-')))
-    } else {
-      assert((await market()).catTextures.every((key) => !key.includes('-run-')))
-    }
+    // Cats stand still while they shoot a wall; they walk only after breaking it (decisions.md 493).
+    const running = async () =>
+      (await market()).catTextures.some((key: string) => key.includes('-run-'))
+    await expect.poll(running, { timeout: 10000 }).toBe(false)
     const queuedWalls = () =>
       page.evaluate(
         () =>
@@ -377,7 +369,7 @@ try {
     const number = await page.getByTestId('idle-wall-number').boundingBox()
     assert(cash && number && cash.x + cash.width <= number.x)
     const queue = await queuedWalls()
-    assert(queue.every((wall) => wall.visible && wall.top >= 85))
+    assert(queue.every((wall) => wall.visible && wall.top >= 55))
     assert(queue[1].bottom < queue[0].top)
     await page.screenshot({ path: `/tmp/idle-${width}.png`, fullPage: true })
     await page.getByRole('button', { name: '성장' }).click()
@@ -405,6 +397,11 @@ try {
         (window as unknown as { __mentalSpeed: (n: number) => void }).__mentalSpeed(1),
       )
       company.idle.wall = 8
+      if (width === 390) {
+        // The wall broke: every cat walks to the next one, then stops again.
+        await expect.poll(running).toBe(true)
+        await expect.poll(running, { timeout: 10000 }).toBe(false)
+      }
       await expect.poll(async () => (await queuedWalls()).map((wall) => wall.wall)).toEqual([9, 10])
       assert.equal((await queuedWalls())[1].boss, true)
       company.idle.wall = 10
@@ -497,11 +494,11 @@ try {
     await page.screenshot({ path: `/tmp/idle-office-${width}.png`, fullPage: true })
     await nav.getByRole('button', { name: '돌파', exact: true }).click()
     await expect(page.getByTestId('office-scene')).toHaveCount(0)
-    await expect(page.locator('.idle-stage')).toBeVisible()
+    await expect(page.getByTestId('idle-wall-number')).toBeVisible()
     await expect
       .poll(async () => {
         const queue = await queuedWalls()
-        return queue.length === 2 && queue.every((wall) => wall.top >= 85)
+        return queue.length === 2 && queue.every((wall) => wall.top >= 55)
       })
       .toBe(true)
     await page.screenshot({ path: `/tmp/idle-stack-short-${width}.png`, fullPage: true })

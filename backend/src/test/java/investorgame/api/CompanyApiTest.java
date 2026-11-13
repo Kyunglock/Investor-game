@@ -385,19 +385,21 @@ class CompanyApiTest {
    * levels로 묶어 사고, 자본이 닿는 데까지만 산다. 고양이 속도는 없다. 쓴 돈은 분기 실적의 전투 강화 비용 줄에 나온다.
    */
   @Test
-  void 고양이는_자본으로_뽑아_출전시키고_가진_무기를_들린다() throws Exception {
+  void 고양이는_뽑기권으로_뽑아_출전시키고_가진_무기를_들린다() throws Exception {
     mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated());
     DocumentContext opened = json(mvc.perform(get("/api/company").cookie(session)));
     List<Integer> levels = opened.read("$.idle.cats[*].level");
-    assertThat(levels).as("고양이는 벽을 돌파해도 저절로 오지 않는다 (488번)").containsExactly(0, 0, 0);
-    long price = opened.read("$.idle.catPrice", Long.class);
+    assertThat(levels).as("고양이는 벽을 돌파해도 저절로 오지 않는다 (488번)").containsOnly(0).hasSize(6);
+    int tickets = opened.read("$.armory.tickets", Integer.class);
     long capital = opened.read("$.capital", Long.class);
     postJson("/api/company/cat/field", "{\"code\":\"sky\",\"fielded\":true}")
         .andExpect(status().isBadRequest());
 
     DocumentContext drawn = json(postJson("/api/company/cat/draw", "").andExpect(status().isOk()));
-    assertThat(drawn.read("$.capital", Long.class)).isEqualTo(capital - price);
-    assertThat(drawn.read("$.idle.catPrice", Long.class)).isEqualTo(Math.round(price * 1.3));
+    assertThat(drawn.read("$.armory.tickets", Integer.class))
+        .as("무기와 같은 뽑기권 한 장 (493번)")
+        .isEqualTo(tickets - 1);
+    assertThat(drawn.read("$.capital", Long.class)).isEqualTo(capital);
     List<Map<String, Object>> cats = drawn.read("$.idle.cats[?(@.level == 1)]");
     assertThat(cats).as("새 고양이는 바로 출전한다").hasSize(1);
     assertThat(cats.getFirst()).containsEntry("fielded", true);
@@ -409,7 +411,7 @@ class CompanyApiTest {
                     "/api/company/cat/field", "{\"code\":\"%s\",\"fielded\":false}".formatted(code))
                 .andExpect(status().isOk()));
     List<Boolean> fielded = rested.read("$.idle.cats[*].fielded");
-    assertThat(fielded).containsExactly(false, false, false);
+    assertThat(fielded).containsOnly(false);
 
     // 사장냥이 든 하나뿐인 권총은 못 가져간다. 종류만 보내거나 없는 고양이도 400.
     postJson(
