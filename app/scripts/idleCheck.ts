@@ -134,6 +134,27 @@ try {
         { timeout: 15000 },
       )
       .toBe(true)
+    const queuedWalls = () =>
+      page.evaluate(
+        () =>
+          (
+            window as unknown as {
+              __mentalWalls: () => {
+                upcoming: {
+                  wall: number
+                  top: number
+                  bottom: number
+                  visible: boolean
+                  boss: boolean
+                }[]
+              }[]
+            }
+          ).__mentalWalls()[0]?.upcoming ?? [],
+      )
+    await expect.poll(async () => (await queuedWalls()).map((wall) => wall.wall)).toEqual([7, 8, 9])
+    const queue = await queuedWalls()
+    assert(queue.every((wall) => wall.visible && wall.top >= 120))
+    assert(queue[2].bottom < queue[1].top && queue[1].bottom < queue[0].top)
     await page.screenshot({ path: `/tmp/idle-${width}.png`, fullPage: true })
     await page.getByRole('button', { name: '성장' }).click()
     await page.getByRole('tab', { name: '능력치', exact: true }).click()
@@ -159,10 +180,17 @@ try {
       await page.evaluate(() =>
         (window as unknown as { __mentalSpeed: (n: number) => void }).__mentalSpeed(1),
       )
+      company.idle.wall = 8
+      await expect
+        .poll(async () => (await queuedWalls()).map((wall) => wall.wall))
+        .toEqual([9, 10, 11])
+      assert.equal((await queuedWalls())[1].boss, true)
       company.idle.wall = 10
       company.idle.boss = true
       await expect(page.locator('.idle-stage strong')).toHaveText('매도벽 10')
-      await page.waitForTimeout(1500)
+      await expect
+        .poll(async () => (await queuedWalls()).map((wall) => wall.wall))
+        .toEqual([11, 12, 13])
       company.idle.wall = 11
       company.idle.boss = false
       await expect(page.locator('.idle-stage strong')).toHaveText('매도벽 11')
@@ -177,6 +205,9 @@ try {
         )
         .toBe(1)
     }
+    await expect
+      .poll(async () => (await queuedWalls()).map((wall) => wall.wall))
+      .toEqual([company.idle.wall + 1, company.idle.wall + 2, company.idle.wall + 3])
     await page.getByRole('button', { name: '회사', exact: true }).click()
     await expect(page.getByTestId('office-scene')).toBeVisible()
     await expect(page.getByTestId('office-support')).toContainText('자동 전투 중')
@@ -217,6 +248,13 @@ try {
     await nav.getByRole('button', { name: '돌파', exact: true }).click()
     await expect(page.getByTestId('office-scene')).toHaveCount(0)
     await expect(page.locator('.idle-stage')).toBeVisible()
+    await expect
+      .poll(async () => {
+        const queue = await queuedWalls()
+        return queue.length === 3 && queue.every((wall) => wall.top >= 120)
+      })
+      .toBe(true)
+    await page.screenshot({ path: `/tmp/idle-stack-short-${width}.png`, fullPage: true })
     assert.equal(
       await page.evaluate(
         () =>

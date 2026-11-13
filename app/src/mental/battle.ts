@@ -97,6 +97,7 @@ import { type GameSpeed, simScale } from './gameSpeed'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
 import type { Hero } from './hero'
 import { BULLET_H, BULLET_W, bulletHitbox } from './hitbox'
+import { IdleWallQueueFx, idleWallLayout } from './idleWallQueue'
 import {
   densest,
   type EarthStats,
@@ -475,6 +476,7 @@ class BattleScene extends Phaser.Scene {
   /** 공격 판 (413번): 판, 화면에 있는 벽(지금 벽과 다음 벽), 부순 벽 수, 벽을 뚫은 뒤 지난 초, 지금 벽 앞에 막힌 초, 마지막으로 물량이 나온 때. */
   private readonly assault: AssaultSpec | null
   private walls: WallState[] = []
+  private idleQueue?: IdleWallQueueFx
   private idleWall = 0
   private idleTransition = false
   private wallsBroken = 0
@@ -744,7 +746,13 @@ class BattleScene extends Phaser.Scene {
         if (this.player) this.moveHero()
       } else if (this.mode === 'assault') {
         if (this.player) this.moveHero()
-        for (const wall of this.walls) this.layoutWall(wall)
+        for (const wall of this.walls) {
+          if (this.opts.idle) {
+            wall.y = wall.arrived ? this.stopY() : Math.min(wall.y, this.stopY())
+          }
+          this.layoutWall(wall)
+          this.placeWall(wall)
+        }
       } else if (this.player) {
         this.player.setPosition(this.standX(0), this.playerY())
       }
@@ -945,8 +953,15 @@ class BattleScene extends Phaser.Scene {
       this.buyWall = new BuyWall(this.loadout.maxMental)
       this.buyWallFx = new BuyWallFx(this, unitK('order'))
       this.drawBuyWall()
-      // 첫 벽은 화면 위쪽 바깥에서 기다린다: 첫 카드를 고르면 치고 올라 벽 앞에 선다.
-      this.addWall(0, Math.min(this.holdY(), this.stopY() - h * 0.5))
+      // 자동 전투는 쌓인 벽 앞에서 시작하고, 기존 스테이지는 첫 카드 선택 뒤 벽까지 전진한다.
+      if (this.opts.idle) {
+        this.idleWall = this.opts.idle().wall
+        this.idleQueue = new IdleWallQueueFx(this)
+      }
+      this.addWall(
+        0,
+        this.opts.idle ? this.stopY() : Math.min(this.holdY(), this.stopY() - h * 0.5),
+      )
     }
 
     // 첫 카드는 전장이 열린 뒤 고른다 (339번): 멈춘 채로 Lv.1 카드 고르기를 띄운다.
@@ -1227,6 +1242,7 @@ class BattleScene extends Phaser.Scene {
 
   /** 벽이 멈춰 서는 줄(맨 아랫줄의 아래 끝): 화면 높이의 34%, 190~320px. 사장냥과 사이에 물량이 내려올 거리를 남긴다. */
   private stopY() {
+    if (this.opts.idle) return idleWallLayout(this.lane().width, this.view().h).bottom
     // 벽은 사장냥에게서 멀찍이(위로) 선다: 벽에서 나온 물량이 내려올 거리가 넉넉하다.
     return Phaser.Math.Clamp(this.view().h * 0.24, 150, 240)
   }
@@ -1334,6 +1350,7 @@ class BattleScene extends Phaser.Scene {
 
   /** 매도벽 한 층의 높이: 정사각형 블록 한 줄. 층이 여럿이어도 늘이지 않고 이 높이로 쌓는다. */
   private layerHeight() {
+    if (this.opts.idle) return idleWallLayout(this.lane().width, this.view().h).height
     return (this.lane().width - CELL_GAP) / 6 + CELL_GAP
   }
 
@@ -1388,6 +1405,9 @@ class BattleScene extends Phaser.Scene {
     wall.band.setPosition(lane.left - 4, wall.y + 4)
     // 벽 옆의 가격 표는 뺐다(416번): 가격은 위 HUD에만 보인다.
     wall.price.setVisible(false)
+    if (this.opts.idle && !wall.broken) {
+      this.idleQueue?.draw(this.idleWall, wall.y, lane.left, lane.width, layer)
+    }
   }
 
   /** 서킷브레이커 (#593): 벽의 남은 체력은 그대로 두고 rows층으로 다시 쌓는다(층마다 같은 몫). */
@@ -1505,7 +1525,9 @@ class BattleScene extends Phaser.Scene {
         const snapshot = this.opts.idle?.()
         this.idleWall = snapshot?.wall ?? this.idleWall
         spec.walls = [{ ...spec.walls[0], boss: this.idleWall % 10 === 0, mid: false, rows: 1 }]
-        this.addWall(0, Math.max(32, this.stopY() - 160))
+        // The next wall takes the exact position of the first queued wall.
+        const spacing = idleWallLayout(this.lane().width, this.view().h).spacing
+        this.addWall(0, Math.min(wall.y, this.stopY()) - spacing)
         this.idleTransition = false
       })
       return
@@ -1676,6 +1698,7 @@ class BattleScene extends Phaser.Scene {
       .filter((wall) => !wall.broken)
       .map((wall) => ({
         index: wall.index,
+        upcoming: this.idleQueue?.inspect() ?? [],
         bottom: wall.y + 4,
         arrived: wall.arrived,
         held: wall.cells.some((e) => this.held(e)),
