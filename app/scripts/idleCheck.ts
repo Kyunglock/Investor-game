@@ -49,8 +49,15 @@ try {
       reducedMotion: 'reduce',
     })
     const errors: string[] = []
+    const loadingErrors: string[] = []
     const actions: string[] = []
     page.on('pageerror', (e) => errors.push(e.message))
+    page.on('console', (message) => {
+      if (message.type() === 'error') loadingErrors.push(message.text())
+    })
+    page.on('requestfailed', (request) =>
+      loadingErrors.push(`${request.method()} ${request.url()}: ${request.failure()?.errorText}`),
+    )
     await page.route(/\/api\/(company|sessions)(\/|$|\?)/, async (route) => {
       if (route.request().url().endsWith('/idle')) {
         const body = route.request().postDataJSON()
@@ -60,14 +67,21 @@ try {
       await route.fulfill({ json: company })
     })
     await page.goto(process.env.APP_URL ?? 'http://localhost:5173/app/')
+    // A cold Vite server may still be compiling modules after its HTML responds.
     await expect(page.getByTestId('idle-battle'))
-      .toBeVisible()
+      .toBeVisible({ timeout: 30000 })
       .catch(async (e) => {
-        console.log(errors, await page.locator('body').textContent())
+        console.log({
+          width,
+          errors,
+          loadingErrors,
+          body: await page.locator('body').textContent(),
+        })
+        await page.screenshot({ path: `/tmp/idle-failure-${width}.png` }).catch(() => {})
         throw e
       })
     await expect(page.getByText('● AUTO')).toBeVisible()
-    await expect(page.locator('[data-testid=idle-canvas] canvas')).toBeVisible()
+    await expect(page.locator('[data-testid=idle-canvas] canvas')).toBeVisible({ timeout: 30000 })
     await page.evaluate(() => {
       ;(window as unknown as { idleCanvas: Element | null }).idleCanvas = document.querySelector(
         '[data-testid=idle-canvas] canvas',

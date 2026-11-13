@@ -100,14 +100,32 @@ jobs:
           pnpm --dir ../app exec playwright install chromium
           pnpm --dir ../app dev --port 5182 --strictPort > /tmp/idle-vite.log 2>&1 &
           VITE_PID=$!
-          trap 'kill "$VITE_PID" 2>/dev/null || true' EXIT
+          cleanup() {
+            result=$?
+            if [ "$result" -ne 0 ]; then cat /tmp/idle-vite.log; fi
+            kill "$VITE_PID" 2>/dev/null || true
+            exit "$result"
+          }
+          trap cleanup EXIT
+          ready=false
           for i in $(seq 1 30); do
-            curl -fsS http://localhost:5182/app/ > /dev/null && break
+            if curl -fsS http://localhost:5182/app/ > /dev/null; then
+              ready=true
+              break
+            fi
+            kill -0 "$VITE_PID" 2>/dev/null || exit 1
             sleep 1
           done
+          if [ "$ready" != true ]; then
+            echo "앱 개발 서버가 30초 안에 준비되지 않았습니다."
+            exit 1
+          fi
           APP_URL=http://localhost:5182/app/ node ../app/scripts/idleCheck.ts
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-trace
-          path: frontend/test-results
+          path: |
+            frontend/test-results
+            /tmp/idle-vite.log
+            /tmp/idle-failure-*.png
