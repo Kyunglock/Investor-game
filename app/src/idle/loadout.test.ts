@@ -7,7 +7,10 @@ type Cat = { code: string; fielded: boolean; bonusPercent?: number; weapon?: obj
 const company = (owned: string[], cats: Cat[] = [], bonus = 0) =>
   ({
     idle: {
-      skills: ['water', 'bolt'].map((code) => ({ code, owned: owned.includes(code) })),
+      skills: ['water', 'meteor', 'bolt', 'ram'].map((code) => ({
+        code,
+        owned: owned.includes(code),
+      })),
       cats: cats.map((cat) => ({ bonusPercent: 0, weapon: null, ...cat })),
     },
     weapons: [
@@ -28,29 +31,25 @@ describe('방치형 전투 획득 상태', () => {
       mateGuns: [],
     })
   })
-  it('획득한 마법과 출전한 고양이만 전투에 연결한다 (488번)', () => {
+  it('스킬은 고양이와 상관없이, 고양이는 출전한 만큼만 전투에 연결한다 (488·491번)', () => {
     expect(
       idleLoadout(
         company(
-          ['water'],
+          ['water', 'meteor'],
           [
-            { code: 'meteor', fielded: true },
-            { code: 'ram', fielded: false },
+            { code: 'sky', fielded: true },
+            { code: 'mint', fielded: false },
           ],
         ),
       ),
     ).toMatchObject({ water: 1, meteor: 1, lightning: 0, earth: 0, mates: 1 })
-    expect(
-      idleLoadout(
-        company(
-          ['water', 'bolt'],
-          [
-            { code: 'meteor', fielded: true },
-            { code: 'ram', fielded: true },
-          ],
-        ),
-      ),
-    ).toMatchObject({ water: 1, meteor: 1, lightning: 1, earth: 1, mates: 2 })
+    expect(idleLoadout(company(['water', 'meteor', 'bolt', 'ram']))).toMatchObject({
+      water: 1,
+      meteor: 1,
+      lightning: 1,
+      earth: 1,
+      mates: 0,
+    })
   })
   it('영구 강화가 무기 피해에 반영된다', () => {
     expect(idleLoadout(company([], [], 100)).damage).toBe(2 * idleLoadout(company([])).damage)
@@ -61,12 +60,12 @@ describe('방치형 전투 획득 상태', () => {
         [],
         [
           {
-            code: 'meteor',
+            code: 'sky',
             fielded: true,
             bonusPercent: 20,
             weapon: { kind: 'rifle', grade: 'S' },
           },
-          { code: 'ram', fielded: true },
+          { code: 'mint', fielded: true },
         ],
         50,
       ),

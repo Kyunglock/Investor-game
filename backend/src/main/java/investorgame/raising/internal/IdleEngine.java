@@ -18,15 +18,18 @@ class IdleEngine {
   private final CompanyEngine engine;
   private final String serverId = UUID.randomUUID().toString();
   private static final double SPEED = 2;
-  // Attack kinds after the bullet (kind 0). Water and bolt unlock by wall; meteor and ram belong
-  // to the cat of the same code and work only while that cat is fielded (decisions.md 488).
+  // Attack kinds after the bullet (kind 0): skills, unlocked by wall. Cats are separate and only
+  // add their own guns (decisions.md 488, 491).
   private static final long[] UNLOCKS = {5, 15, 30, 50};
   // The acquired skills are level 1 in the renderer (mental/magic.ts).
   private static final double[] COOLDOWNS = {2.4, 3.6, 2.6, 3.6};
   private static final double[] SKILL_DAMAGE = {1.5, 4.8, 2.5, 1.2 * 3.4};
   private static final String[] CODES = {"water", "meteor", "bolt", "ram"};
-  private static final String[] NAMES = {"물 스킬", "메테오 고양이", "번개 스킬", "충차 고양이"};
-  private static final List<String> CATS = List.of("meteor", "ram");
+  private static final String[] NAMES = {"물 스킬", "메테오 스킬", "번개 스킬", "충차 스킬"};
+  private static final List<String> CATS = List.of("sky", "mint");
+  private static final String[] CAT_NAMES = {"하늘냥", "민트냥"};
+  // Cats used to join at these walls. Saves from then keep them.
+  private static final long[] CAT_LEGACY_WALLS = {15, 50};
   private static final long CAT_PRICE = 3_000_000;
   private static final double CAT_PRICE_GROWTH = 1.5;
   // A duplicate draw raises the cat's level: its own gun hits this much harder per level.
@@ -58,20 +61,15 @@ class IdleEngine {
       c.idle.hitVersion = 2;
     }
     if (c.idle.cats == null) {
-      // Cats used to join at walls 15 and 50. Keep the ones already earned.
       c.idle.cats = new LinkedHashMap<>();
-      for (String code : CATS) {
-        if (c.idle.wall > UNLOCKS[List.of(CODES).indexOf(code)]) {
-          c.idle.cats.put(code, 1);
-          c.idle.fielded.add(code);
+      for (int i = 0; i < CATS.size(); i++) {
+        if (c.idle.wall > CAT_LEGACY_WALLS[i]) {
+          c.idle.cats.put(CATS.get(i), 1);
+          c.idle.fielded.add(CATS.get(i));
         }
       }
     }
     return c.idle;
-  }
-
-  private static boolean owned(CompanyState.Idle s, int skill, long wall) {
-    return CATS.contains(CODES[skill]) ? s.fielded.contains(CODES[skill]) : wall > UNLOCKS[skill];
   }
 
   private List<Shooter> shooters(CompanyState c) {
@@ -158,7 +156,7 @@ class IdleEngine {
       total += shooter.damage() * shooter.perSecond() * shooter.power() / 1.25;
     }
     for (int i = 0; i < CODES.length; i++) {
-      if (owned(s, i, s.wall)) {
+      if (s.wall > UNLOCKS[i]) {
         total += shooters.size() * shooters.getFirst().damage() * SKILL_DAMAGE[i] / COOLDOWNS[i];
       }
     }
@@ -188,7 +186,7 @@ class IdleEngine {
     }
     long front = s.wall;
     for (int kind = 0; kind < 5 && active > 0; kind++) {
-      if (kind > 0 && !owned(s, kind - 1, front)) continue;
+      if (kind > 0 && front <= UNLOCKS[kind - 1]) continue;
       double damage = hero.damage() * (kind == 0 ? hero.power() : SKILL_DAMAGE[kind - 1]);
       double maxDamage = kind == 0 ? bulletMax : damage;
       double interval = kind == 0 ? 1 / bulletsPerSecond : COOLDOWNS[kind - 1] / shooters.size();
@@ -316,7 +314,6 @@ class IdleEngine {
     CompanyState.Idle s = state(c);
     List<CompanyView.IdleSkill> skills =
         java.util.stream.IntStream.range(0, CODES.length)
-            .filter(i -> !CATS.contains(CODES[i]))
             .mapToObj(
                 i -> new CompanyView.IdleSkill(CODES[i], NAMES[i], UNLOCKS[i], s.wall > UNLOCKS[i]))
             .toList();
@@ -334,7 +331,7 @@ class IdleEngine {
                   CompanyState.Weapon weapon = s.catWeapons.get(code);
                   return new CompanyView.IdleCat(
                       code,
-                      NAMES[List.of(CODES).indexOf(code)],
+                      CAT_NAMES[CATS.indexOf(code)],
                       level,
                       (int) Math.round(CAT_LEVEL_BONUS * 100 * Math.max(0, level - 1)),
                       s.fielded.contains(code),

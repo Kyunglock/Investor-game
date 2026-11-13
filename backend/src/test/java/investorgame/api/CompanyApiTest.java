@@ -392,7 +392,7 @@ class CompanyApiTest {
     assertThat(levels).as("고양이는 벽을 돌파해도 저절로 오지 않는다 (488번)").containsExactly(0, 0);
     long price = opened.read("$.idle.catPrice", Long.class);
     long capital = opened.read("$.capital", Long.class);
-    postJson("/api/company/cat/field", "{\"code\":\"meteor\",\"fielded\":true}")
+    postJson("/api/company/cat/field", "{\"code\":\"sky\",\"fielded\":true}")
         .andExpect(status().isBadRequest());
 
     DocumentContext drawn = json(postJson("/api/company/cat/draw", "").andExpect(status().isOk()));

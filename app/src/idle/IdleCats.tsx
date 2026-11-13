@@ -13,10 +13,10 @@ import { IdleIcon } from './icons'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
-/** 고양이마다 제 그림과 제 스킬 (488번). 사장냥은 늘 출전한다. */
-const CATS: Record<CatCode, { art: string; skill: string }> = {
-  meteor: { art: STAGE_ASSETS.fold, skill: '메테오를 떨어뜨려요' },
-  ram: { art: STAGE_ASSETS.fluffy, skill: '충차로 벽을 들이받아요' },
+/** 고양이마다 제 그림 (488번, 전투의 접힌 귀·장모 고양이). 사장냥은 늘 출전한다. */
+const ART: Record<CatCode, string> = {
+  sky: STAGE_ASSETS.fold,
+  mint: STAGE_ASSETS.fluffy,
 }
 
 function Portrait({ art, locked }: { art: string; locked?: boolean }) {
@@ -29,7 +29,8 @@ function Portrait({ art, locked }: { art: string; locked?: boolean }) {
 }
 
 /**
- * 고양이 메뉴 (decisions.md 488번): 자본으로 고양이를 뽑고, 출전시키고, 고양이마다 가진 무기를 하나씩 들린다. 값과 결과는 서버가 정한다.
+ * 고양이 메뉴 (decisions.md 488·491번): 자본으로 고양이를 뽑고, 출전시키고, 고양이마다 가진 무기를 하나씩 들린다. 스킬은 고양이와 상관없이
+ * 성장 › 스킬에 있다. 값과 결과는 서버가 정한다.
  */
 export function IdleCats({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
@@ -107,14 +108,14 @@ export function IdleCats({ company }: { company: Company }) {
               data-testid="cat"
               data-code={cat.code}
             >
-              <Portrait art={CATS[cat.code].art} locked={!owned} />
+              <Portrait art={ART[cat.code]} locked={!owned} />
               <div className="idle-cat-info">
                 <b>
                   {cat.name} {owned && <small>Lv.{cat.level}</small>}
                 </b>
                 <small>
                   {owned
-                    ? `${CATS[cat.code].skill}${cat.bonusPercent > 0 ? ` · 총 공격력 +${cat.bonusPercent}%` : ''}`
+                    ? `제 총으로 함께 쏴요${cat.bonusPercent > 0 ? ` · 총 공격력 +${cat.bonusPercent}%` : ''}`
                     : '고양이 뽑기로 만나요'}
                 </small>
                 {owned && (

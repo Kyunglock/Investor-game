@@ -60,21 +60,23 @@ try {
         upcoming: [] as { wall: number; hp: number; maxHp: number }[],
         skills: [
           { code: 'water', name: '물 스킬', unlockWall: 5, owned: false },
+          { code: 'meteor', name: '메테오 스킬', unlockWall: 15, owned: false },
           { code: 'bolt', name: '번개 스킬', unlockWall: 30, owned: false },
+          { code: 'ram', name: '충차 스킬', unlockWall: 50, owned: false },
         ],
         catPrice: 3000000,
         cats: [
           {
-            code: 'meteor',
-            name: '메테오 고양이',
+            code: 'sky',
+            name: '하늘냥',
             level: 0,
             bonusPercent: 0,
             fielded: false,
             weapon: null as { kind: string; grade: string } | null,
           },
           {
-            code: 'ram',
-            name: '충차 고양이',
+            code: 'mint',
+            name: '민트냥',
             level: 0,
             bonusPercent: 0,
             fielded: false,
@@ -193,6 +195,9 @@ try {
     await page.screenshot({ path: `/tmp/idle-growth-${width}.png`, fullPage: true })
     await page.getByRole('tab', { name: '스킬', exact: true }).click()
     await expect(page.getByText('5벽 돌파 시 획득', { exact: true })).toBeVisible()
+    // Meteor and ram are skills of their own, not cats (decisions.md 491).
+    await expect(page.getByText('메테오 스킬')).toBeVisible()
+    await expect(page.getByText('50벽 돌파 시 획득', { exact: true })).toBeVisible()
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     // Cats come from the gacha, are fielded, and borrow owned weapons (decisions.md 488).
     await page.getByRole('button', { name: '고양이' }).click()
@@ -200,9 +205,9 @@ try {
     await expect(page.getByTestId('cat-field')).toHaveCount(0)
     await expect(page.getByText('벽 돌파 시 합류')).toHaveCount(0)
     await page.getByTestId('cat-draw').click()
-    const meteor = page.locator('[data-testid=cat][data-code=meteor]')
-    await expect(page.getByTestId('cat-gacha')).toContainText('메테오 고양이 합류!')
-    await expect(meteor.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'true')
+    const sky = page.locator('[data-testid=cat][data-code=sky]')
+    await expect(page.getByTestId('cat-gacha')).toContainText('하늘냥 합류!')
+    await expect(sky.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'true')
     await expect
       .poll(() =>
         page.evaluate(
@@ -210,8 +215,8 @@ try {
         ),
       )
       .toBe(1)
-    await meteor.getByTestId('cat-field').click()
-    await expect(meteor.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'false')
+    await sky.getByTestId('cat-field').click()
+    await expect(sky.getByTestId('cat-field')).toHaveAttribute('aria-pressed', 'false')
     await expect
       .poll(() =>
         page.evaluate(
@@ -219,9 +224,9 @@ try {
         ),
       )
       .toBe(0)
-    await meteor.getByTestId('cat-field').click()
-    await meteor.getByTestId('cat-gun').click()
-    await expect(meteor.getByTestId('cat-weapon').first()).toBeVisible()
+    await sky.getByTestId('cat-field').click()
+    await sky.getByTestId('cat-gun').click()
+    await expect(sky.getByTestId('cat-weapon').first()).toBeVisible()
     await page.screenshot({ path: `/tmp/idle-cats-${width}.png`, fullPage: true })
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     assert.equal(

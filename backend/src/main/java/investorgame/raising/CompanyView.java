@@ -70,7 +70,7 @@ public record CompanyView(
       List<IdleWall> upcoming) {}
 
   /**
-   * 고양이 한 마리 (decisions.md 488번). 뽑기로 얻고, 출전해야 함께 싸우며 제 스킬(code)을 쓴다.
+   * 고양이 한 마리 (decisions.md 488·491번). 뽑기로 얻고, 출전하면 제 총으로 함께 쏜다. 스킬과는 상관없다.
    *
    * @param level 0이면 아직 없다. 또 뽑을 때마다 하나씩 오른다
    * @param bonusPercent 레벨로 붙는 이 고양이 총의 공격력(%)

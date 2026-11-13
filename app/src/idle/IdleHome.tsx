@@ -105,7 +105,9 @@ export function IdleHome({
       {idle?.skills.map((skill) => (
         <article key={skill.code} className={skill.owned ? 'owned' : ''}>
           <span className="idle-stat-icon" aria-hidden="true">
-            <IdleIcon name={skill.owned ? (skill.code as 'water' | 'bolt') : 'lock'} />
+            <IdleIcon
+              name={skill.owned ? (skill.code as 'water' | 'meteor' | 'bolt' | 'ram') : 'lock'}
+            />
           </span>
           <div>
             <b>{skill.name}</b>

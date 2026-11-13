@@ -437,7 +437,7 @@ export interface paths {
         put?: never;
         /**
          * 자본으로 고양이 한 마리를 뽑는다 (decisions.md 488번)
-         * @description 값은 idle.catPrice이고 뽑을 때마다 1.5배씩 오른다. 고양이는 고르게 뽑힌다. 새 고양이는 바로 출전하고, 이미 가진 고양이면 레벨이 하나 올라
+         * @description 값은 idle.catPrice이고 뽑을 때마다 1.5배씩 오른다. 고양이(하늘냥·민트냥)는 고르게 뽑힌다. 새 고양이는 바로 출전하고, 이미 가진 고양이면 레벨이 하나 올라
          *     그 고양이 총의 공격력이 10% 는다. 자본이 모자라면 400. 쓴 돈은 전투 강화 비용으로 적는다.
          */
         post: operations["drawCat"];
@@ -458,7 +458,7 @@ export interface paths {
         put?: never;
         /**
          * 가진 고양이를 출전시키거나 쉬게 한다 (decisions.md 488번)
-         * @description 출전한 고양이만 함께 쏘고 제 스킬을 쓴다. 가지지 않은 고양이면 400.
+         * @description 출전한 고양이만 제 총으로 함께 쏜다. 스킬은 고양이와 상관없이 벽 돌파로 얻는다 (491번). 가지지 않은 고양이면 400.
          */
         post: operations["fieldCat"];
         delete?: never;
@@ -1153,10 +1153,10 @@ export interface components {
                  * @description 다음 고양이 뽑기 값 (488번)
                  */
                 catPrice: number;
-                /** @description 고양이 (488번). 뽑기로 얻고, 출전한 고양이만 함께 쏘며 제 스킬(code)을 쓴다 */
+                /** @description 고양이 (488·491번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏜다. 스킬과는 상관없다 */
                 cats: {
                     /** @enum {string} */
-                    code: "meteor" | "ram";
+                    code: "sky" | "mint";
                     name: string;
                     /** @description 0이면 아직 없다. 또 뽑을 때마다 하나씩 오른다 */
                     level: number;
@@ -1975,7 +1975,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "meteor" | "ram";
+                    code: "sky" | "mint";
                     fielded: boolean;
                 };
             };
@@ -2006,7 +2006,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "meteor" | "ram";
+                    code: "sky" | "mint";
                     /** @enum {string} */
                     kind?: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
                     /** @enum {string} */
