@@ -7,10 +7,14 @@ export function Sheet({
   onClose,
   children,
   testId,
+  className = '',
+  footer,
 }: {
   title: ReactNode
   onClose: () => void
   children: ReactNode
+  className?: string
+  footer?: ReactNode
   testId?: string
 }) {
   const dialog = useRef<HTMLElement>(null)
@@ -58,7 +62,9 @@ export function Sheet({
     }
   }, [])
   return createPortal(
-    <div className="fixed inset-0 z-30 flex flex-col justify-end bg-[rgba(20,22,26,0.5)]">
+    <div
+      className={`fixed inset-0 z-30 flex flex-col justify-end bg-[rgba(20,22,26,0.5)] ${className}`}
+    >
       <button type="button" aria-label="닫기" className="flex-1" onClick={onClose} />
       <section
         ref={dialog}
@@ -84,6 +90,7 @@ export function Sheet({
         </div>
         <div className="mt-2">{children}</div>
       </section>
+      {footer}
     </div>,
     document.body,
   )

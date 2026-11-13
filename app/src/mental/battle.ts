@@ -186,7 +186,16 @@ export interface Outcome {
   priceEnd: number
 }
 
+export interface IdleSnapshot {
+  wall: number
+  hp: number
+  maxHp: number
+}
+
 export interface BattleOptions {
+  /** Foreground idle mode: wall health and progression are server-authoritative. */
+  idle?: () => IdleSnapshot
+
   /** 처음 배속(gameSpeed.ts). 없으면 1배. */
   speed?: GameSpeed
   /** 전진 모드 또는 디펜스(EX·번호 스테이지) (364번), 공격 판 (413번). */
@@ -466,6 +475,8 @@ class BattleScene extends Phaser.Scene {
   /** 공격 판 (413번): 판, 화면에 있는 벽(지금 벽과 다음 벽), 부순 벽 수, 벽을 뚫은 뒤 지난 초, 지금 벽 앞에 막힌 초, 마지막으로 물량이 나온 때. */
   private readonly assault: AssaultSpec | null
   private walls: WallState[] = []
+  private idleWall = 0
+  private idleTransition = false
   private wallsBroken = 0
   private sinceBreak = 0
   private stuck = 0
@@ -1482,6 +1493,23 @@ class BattleScene extends Phaser.Scene {
     sfx.crumble()
     sfx.crash()
     haptic.medium()
+    if (this.opts.idle) {
+      this.idleTransition = true
+      this.time.delayedCall(450, () => {
+        for (const old of this.walls) {
+          old.price.destroy()
+          if (old.band.active) old.band.destroy()
+        }
+        this.walls = []
+        this.wallsBroken = 0
+        const snapshot = this.opts.idle?.()
+        this.idleWall = snapshot?.wall ?? this.idleWall
+        spec.walls = [{ ...spec.walls[0], boss: this.idleWall % 10 === 0, mid: false, rows: 1 }]
+        this.addWall(0, Math.max(32, this.stopY() - 160))
+        this.idleTransition = false
+      })
+      return
+    }
     const total = spec.walls.length
     this.pushHud(true)
     this.opts.onWallGain?.(spec.tick, spec.startPrice)
@@ -1616,6 +1644,32 @@ class BattleScene extends Phaser.Scene {
     return front
   }
 
+  /** Reconcile the existing renderer with saved progress, without client rewards or stage resets. */
+  private syncIdleWall() {
+    if (!this.opts.idle || this.idleTransition) return
+    const snapshot = this.opts.idle()
+    if (!this.idleWall) this.idleWall = snapshot.wall
+    const wall = this.walls.find((w) => !w.broken)
+    if (!wall) return
+    if (snapshot.wall !== this.idleWall) {
+      if (this.bossEnemy?.active) this.kill(this.bossEnemy, false)
+      for (const cell of [...wall.cells]) if (cell.active && !cell.dying) this.kill(cell, false)
+      return
+    }
+    const cells = this.wallLayers(wall)
+    for (const cell of cells) {
+      cell.maxHp = snapshot.maxHp / Math.max(1, cells.length)
+      const hp = Math.max(0.01, snapshot.hp / Math.max(1, cells.length))
+      if (cell.hp !== hp) {
+        cell.hp = hp
+        this.crackCell(cell)
+      }
+    }
+    if (this.bossEnemy?.active) {
+      this.bossEnemy.hp = this.bossEnemy.maxHp * Math.max(0.001, snapshot.hp / snapshot.maxHp)
+    }
+  }
+
   /** 개발 화면 검사: 보이는 매도벽이 공격 불가 상태인지 확인한다. */
   inspectWalls() {
     return this.walls
@@ -1649,6 +1703,7 @@ class BattleScene extends Phaser.Scene {
 
   /** 마지막 벽까지 다 부수고 큰손도 없으면 깼다: 클리어 연출을 보이고 결과로 넘어간다. */
   private assaultCheckClear() {
+    if (this.opts.idle) return
     const spec = this.assault
     if (!spec || this.over) return
     const bossAlive = Boolean(this.bossEnemy?.active && !this.bossEnemy.dying)
@@ -2464,7 +2519,7 @@ class BattleScene extends Phaser.Scene {
       this.hitSpark.explode(2, e.x - Math.cos(angle) * 10, e.y + 10)
       return
     }
-    e.hp -= dmg
+    if (!(this.opts.idle && (e.cell || e.boss))) e.hp -= dmg
     // 매도벽은 연사 중에도 장갑과 균열이 보여야 한다. 밝기만 올리고 명중 불꽃을 얹는다.
     if (e.cell) e.clearTint()
     else e.setTintFill(0xffffff)
@@ -2586,6 +2641,7 @@ class BattleScene extends Phaser.Scene {
 
   /** 경험치: 적의 값만큼. 다음 레벨에 닿으면 전투를 멈추고 카드를 고르게 한다 (330번). */
   private gainXp(amount: number) {
+    if (this.opts.idle) return
     this.xp += amount
     if (this.xp < xpToNext(this.level) || this.over || this.choosing) {
       return
@@ -2616,6 +2672,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   private hurt(dmg: number, e?: Enemy, contactX?: number, force = false) {
+    if (this.opts.idle) return
     if ((!force && this.elapsed < this.invulnUntil) || this.over) {
       return
     }
@@ -3735,6 +3792,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   private finish(win: boolean, reason: Outcome['reason'], delayMs?: number) {
+    if (this.opts.idle) return
     if (this.over) {
       return
     }
@@ -3911,9 +3969,11 @@ class BattleScene extends Phaser.Scene {
     if (this.over || this.stopped || this.choosing || this.paused) {
       return
     }
+    this.syncIdleWall()
     const dt = dtMs / 1000
     if (
       this.assault &&
+      !this.opts.idle &&
       !this.circuit &&
       !this.bossEnemy &&
       this.walls.some((wall) => !wall.broken && wall.arrived) &&
@@ -3954,7 +4014,7 @@ class BattleScene extends Phaser.Scene {
     this.elapsed += dt
     // 물리가 멈추는 카드 선택·일시정지·서킷브레이커는 탄 수명/연사/재장전에도 포함하지 않는다.
     const time = this.elapsed * 1000
-    if (this.elapsed >= this.limitSeconds()) {
+    if (!this.opts.idle && this.elapsed >= this.limitSeconds()) {
       // 디펜스는 버티면 이기고, 전진 모드와 디펜스 보스 스테이지는 시간 안에 못 넘으면(보스를 못 잡으면) 진다 (364·509번).
       if (this.mode === 'advance' || this.mode === 'assault' || this.defenseBoss) {
         if (this.assault) this.opts.onBanner('시간 초과… 매도벽에 막혔다', '#6b7a99')

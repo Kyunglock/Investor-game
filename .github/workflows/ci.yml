@@ -94,6 +94,18 @@ jobs:
           done
           exit 1
       - run: pnpm e2e
+      - name: 앱 전체화면 자동 전투 검증
+        run: |
+          pnpm --dir ../app install --frozen-lockfile
+          pnpm --dir ../app exec playwright install chromium
+          pnpm --dir ../app dev --port 5182 --strictPort > /tmp/idle-vite.log 2>&1 &
+          VITE_PID=$!
+          trap 'kill "$VITE_PID" 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do
+            curl -fsS http://localhost:5182/app/ > /dev/null && break
+            sleep 1
+          done
+          APP_URL=http://localhost:5182/app/ node ../app/scripts/idleCheck.ts
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
