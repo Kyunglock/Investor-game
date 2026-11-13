@@ -128,7 +128,7 @@ import {
   WEAPON_TRAITS,
   weaponDamage,
 } from './weaponEffects'
-import { GRADE_FIRE, gradeTint } from './weaponVisuals'
+import { BULLET_VISUAL_SCALE, GRADE_FIRE, gradeTint } from './weaponVisuals'
 
 /**
  * 멘탈 전투 한 판 (decisions.md 328번). Phaser 3 Arcade로 돈다: 탄·적은 풀에서 재사용하고, 도트 그림(art.ts)은 캔버스에 한 번 구워 둔다. 규칙은 화면
@@ -854,15 +854,15 @@ class BattleScene extends Phaser.Scene {
     this.boom = boom
     this.trail = this.add
       .particles(0, 0, 'trail', {
-        lifespan: 110,
+        lifespan: 150,
         scale: { start: 2 * TEX, end: 0.4 * TEX },
-        alpha: { start: 0.6, end: 0 },
+        alpha: { start: 0.85, end: 0 },
         tint: [gradeTint(this.opts.hero.weapon.grade), 0xffffff],
         emitting: false,
         // 고양이 넷이 쏘면 탄이 넷 배라 꼬리 수를 묶는다 (393번).
         maxAliveParticles: 160,
       })
-      .setDepth(3)
+      .setDepth(5.5)
     this.hitSpark = this.add
       .particles(0, 0, 'spark', {
         speed: { min: 120, max: 260 },
@@ -2868,7 +2868,7 @@ class BattleScene extends Phaser.Scene {
     if (!b) return
     b.setTexture(`bullet-${this.opts.hero.weapon.grade}-0`)
       .enableBody(true, m.x, m.y, true, true)
-      .setDepth(4)
+      .setDepth(6.5)
     b.look = 0
     b.trailMs = Math.max(90, style.trailMs)
     b.damage = stats.damage
@@ -2881,11 +2881,11 @@ class BattleScene extends Phaser.Scene {
     b.fromY = m.y
     b.range = traits.range == null ? Number.POSITIVE_INFINITY : this.view().h * traits.range
     b.setDisplaySize(
-      BULLET_W * stats.scale * style.length * 0.7,
-      BULLET_H * stats.scale * style.width * 0.7,
+      BULLET_W * stats.scale * style.length * 0.7 * BULLET_VISUAL_SCALE,
+      BULLET_H * stats.scale * style.width * 0.7 * BULLET_VISUAL_SCALE,
     ).setRotation(base)
     b.clearTint()
-    const hb = bulletHitbox(b.width, b.height, style.length * 0.7)
+    const hb = bulletHitbox(b.width, b.height, style.length * 0.7 * BULLET_VISUAL_SCALE)
     b.body?.setCircle(hb.radius, hb.ox, hb.oy)
     b.setVelocity(
       Math.cos(base) * this.loadout.bulletSpeed,
