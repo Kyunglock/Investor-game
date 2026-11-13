@@ -29,6 +29,7 @@ class CompanyState {
     long earned;
     double incomeRemainder;
     double activeSeconds;
+    double circuitSeconds;
     long lastBeat;
     String runId;
     String serverId;

@@ -19,6 +19,7 @@ import {
   TRICKLE_SECONDS,
 } from './advance'
 import {
+  bakeCatRuns,
   bakeEnemies,
   bakeHero,
   bakeMagic,
@@ -70,6 +71,7 @@ import {
   xpToNext,
 } from './cards'
 import { catAim, catMuzzle, mateModel } from './catModels'
+import { catRunFrame, catRunKey } from './catRun'
 import { CIRCUIT_BREAKER, CircuitBreaker } from './circuitBreaker'
 import { CircuitBreakerFx } from './circuitBreakerFx'
 import {
@@ -188,6 +190,7 @@ export interface Outcome {
 }
 
 export interface IdleSnapshot {
+  circuitSeconds?: number
   wall: number
   hp: number
   maxHp: number
@@ -479,6 +482,7 @@ class BattleScene extends Phaser.Scene {
   private idleQueue?: IdleWallQueueFx
   private idleWall = 0
   private idleTransition = false
+  private runRush = 0
   private wallsBroken = 0
   private sinceBreak = 0
   private stuck = 0
@@ -722,6 +726,7 @@ class BattleScene extends Phaser.Scene {
     bakeStage(this, this.opts.genre)
     bakeHero(this)
     bakeMates(this)
+    if (this.opts.idle) bakeCatRuns(this)
     bakeEnemies(this)
     bakeMagic(this)
     if (this.assault) bakeOrders(this, this.hpScale)
@@ -1515,7 +1520,7 @@ class BattleScene extends Phaser.Scene {
     haptic.medium()
     if (this.opts.idle) {
       this.idleTransition = true
-      this.time.delayedCall(450, () => {
+      this.time.delayedCall(this.reducedMotion ? 450 : 160, () => {
         for (const old of this.walls) {
           old.price.destroy()
           if (old.band.active) old.band.destroy()
@@ -1529,6 +1534,7 @@ class BattleScene extends Phaser.Scene {
         const spacing = idleWallLayout(this.lane().width, this.view().h).spacing
         this.addWall(0, Math.min(wall.y, this.stopY()) - spacing)
         this.idleTransition = false
+        this.runRush = 0.95
       })
       return
     }
@@ -1674,6 +1680,7 @@ class BattleScene extends Phaser.Scene {
     const wall = this.walls.find((w) => !w.broken)
     if (!wall) return
     if (snapshot.wall !== this.idleWall) {
+      if (this.circuit) this.endCircuit()
       if (this.bossEnemy?.active) this.kill(this.bossEnemy, false)
       for (const cell of [...wall.cells]) if (cell.active && !cell.dying) this.kill(cell, false)
       return
@@ -1929,7 +1936,9 @@ class BattleScene extends Phaser.Scene {
     let move = 0
     const rushing = this.rushLeft > 0
     if (wall && !wall.arrived) {
-      move = climbSpeed(this.sinceBreak, this.reducedMotion) * dt
+      move = this.opts.idle
+        ? (idleWallLayout(this.lane().width, this.view().h).spacing * dt) / 0.45
+        : climbSpeed(this.sinceBreak, this.reducedMotion) * dt
       const stop = rushing ? this.holdY() : this.stopY()
       if (rushing) this.rushLeft = Math.max(0, this.rushLeft - dt)
       if (wall.y + move >= stop) {
@@ -1980,12 +1989,16 @@ class BattleScene extends Phaser.Scene {
       return 0
     })
     this.drawBuyWall()
-    this.climbV = dt > 0 ? move / dt : 0
-    this.climbed += move
-    if (move !== 0) {
+    const scroll =
+      this.opts.idle && !this.reducedMotion
+        ? Math.max(move, dt * (this.runRush > 0 ? 620 : 95))
+        : move
+    this.climbV = dt > 0 ? scroll / dt : 0
+    this.climbed += scroll
+    if (scroll !== 0) {
       for (const bg of [this.bg, this.bg2]) {
         if (!bg) continue
-        bg.y += move * 0.5
+        bg.y += scroll * 0.5
         if (bg.y >= h) bg.y -= 2 * h
         if (bg.y < -h) bg.y += 2 * h
       }
@@ -2030,6 +2043,7 @@ class BattleScene extends Phaser.Scene {
       this.whaleSummon(boss)
     }
     this.drawClimb(dt)
+    this.climbV = dt > 0 ? move / dt : 0
   }
 
   private launchBuyOrders(count: number) {
@@ -2052,7 +2066,16 @@ class BattleScene extends Phaser.Scene {
   private circuitStep(dt: number) {
     const c = this.circuit
     if (!c) return
-    const recovered = c.step(dt)
+    const remaining = this.opts.idle?.().circuitSeconds ?? 0
+    const target = this.opts.idle
+      ? remaining > 0
+        ? Math.min(
+            CIRCUIT_BREAKER.seconds - 0.001,
+            Math.max(c.elapsed + dt, CIRCUIT_BREAKER.seconds - remaining),
+          )
+        : CIRCUIT_BREAKER.seconds
+      : c.elapsed + dt
+    const recovered = c.step(Math.max(0, target - c.elapsed))
     this.mental = Math.min(this.loadout.maxMental, this.mental + recovered)
     this.marketStats.recovered += recovered
     const { w, h } = this.view()
@@ -2100,8 +2123,16 @@ class BattleScene extends Phaser.Scene {
       sells: this.circuitSellQueue.size,
     })
     this.player.setTexture('hero-idle')
+    for (const [i, mate] of this.mates.entries()) mate.body.setTexture(mateKey(i))
     this.pushHud(true)
     if (!c.done) return
+    this.endCircuit()
+  }
+
+  private endCircuit() {
+    const c = this.circuit
+    if (!c) return
+    const wall = this.circuitWall
     this.circuitFx?.destroy()
     this.circuitFx = null
     this.circuit = null
@@ -2171,6 +2202,9 @@ class BattleScene extends Phaser.Scene {
           : [],
       ),
       battleSeconds: this.elapsed,
+      running: Boolean(this.opts.idle && !this.circuit && !this.paused),
+      runRush: this.runRush,
+      catTextures: [this.player.texture.key, ...this.mates.map((mate) => mate.body.texture.key)],
       mental: this.mental,
       maxMental: this.loadout.maxMental,
       physicsPaused: this.physics.world.isPaused,
@@ -3936,6 +3970,12 @@ class BattleScene extends Phaser.Scene {
     for (const [i, m] of this.mates.entries()) {
       const b = m.body
       const target = targets[i + 1] ?? null
+      if (this.opts.idle)
+        b.setTexture(
+          this.reducedMotion
+            ? mateKey(i)
+            : catRunKey(mateKey(i), catRunFrame(time / 1000, i + 1, this.runRush > 0)),
+        )
       b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop)
       m.magicMark.setPosition(b.x, b.y - 58)
       if (!this.tweens.isTweening(b)) {
@@ -3994,13 +4034,16 @@ class BattleScene extends Phaser.Scene {
     }
     this.syncIdleWall()
     const dt = dtMs / 1000
+    this.runRush = Math.max(0, this.runRush - dt)
+    const circuitDue = this.opts.idle
+      ? (this.opts.idle().circuitSeconds ?? 0) > 0 && !this.idleTransition
+      : !this.bossEnemy &&
+        this.wallsBroken >= (CIRCUIT_BREAKER.afterWalls[this.circuitIndex] ?? Infinity)
     if (
       this.assault &&
-      !this.opts.idle &&
+      circuitDue &&
       !this.circuit &&
-      !this.bossEnemy &&
-      this.walls.some((wall) => !wall.broken && wall.arrived) &&
-      this.wallsBroken >= (CIRCUIT_BREAKER.afterWalls[this.circuitIndex] ?? Infinity)
+      this.walls.some((wall) => !wall.broken && (this.opts.idle || wall.arrived))
     ) {
       this.circuitIndex++
       this.circuit = new CircuitBreaker(this.mental, this.loadout.maxMental)
@@ -4008,7 +4051,7 @@ class BattleScene extends Phaser.Scene {
       if (this.circuitWall) {
         // 다음 벽의 기존 체력은 유지하고, 쌓이는 조각이 보이도록 세 층으로 다시 쌓는다.
         const wall = this.circuitWall
-        this.restackWall(wall, Math.max(3, wall.spec.rows))
+        if (!this.opts.idle) this.restackWall(wall, Math.max(3, wall.spec.rows))
         wall.y = this.stopY()
         this.layoutWall(wall)
         this.placeWall(wall)
@@ -4026,12 +4069,13 @@ class BattleScene extends Phaser.Scene {
       this.circuitFx = new CircuitBreakerFx(this)
       if (!this.reducedMotion) this.cameras.main.shake(180, 0.003)
       this.marketStats.circuits++
+      this.runRush = 0
       this.physics.pause()
       this.opts.onBanner('서킷브레이커! 거래 정지 · 멘탈 회복', '#8ef3c6')
       sfx.levelUp()
     }
     if (this.circuit) {
-      this.circuitStep(dt)
+      this.circuitStep(this.opts.idle ? realDtMs / 1000 : dt)
       return
     }
     this.elapsed += dt
@@ -4056,7 +4100,15 @@ class BattleScene extends Phaser.Scene {
     p.setVelocity(0, 0)
     p.setPosition(this.standX(0), this.playerY())
     const hurting = time < this.hurtUntil
-    p.setTexture(hurting ? 'hero-hurt' : ptr.isDown || this.assault ? 'hero-fire' : 'hero-idle')
+    p.setTexture(
+      hurting
+        ? 'hero-hurt'
+        : this.opts.idle && !this.reducedMotion
+          ? catRunKey('hero', catRunFrame(this.elapsed, 0, this.runRush > 0))
+          : ptr.isDown || this.assault
+            ? 'hero-fire'
+            : 'hero-idle',
+    )
     p.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
     if (this.wall && this.wallZone) {
       this.wall.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)

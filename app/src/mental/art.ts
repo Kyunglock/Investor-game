@@ -2,6 +2,7 @@ import { CAT_H, CAT_W } from '@web/features/game/cat/draw'
 
 import type Phaser from 'phaser'
 import { CAT_SCALE, mateModel } from './catModels'
+import { CAT_RUN_FRAMES, catRunKey, catRunPose } from './catRun'
 import { drawEmber, drawPillar, drawWater, drawWave, drawWoodenRam } from './effectArt'
 import { orderShares, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
@@ -83,6 +84,59 @@ export function bakeHero(scene: Phaser.Scene) {
         c.fillRect(0, 0, CAT_W, CAT_H)
       }
     })
+  }
+}
+
+/** Bake alternating leg strides from the original cats, keeping the upper-body silhouette. */
+export function bakeCatRuns(scene: Phaser.Scene) {
+  const models = [
+    { base: 'hero', model: 'hero' },
+    ...MATE_LOOKS.map((_, i) => ({ base: mateKey(i), model: mateModel(i) })),
+  ]
+  for (const { base, model } of models) {
+    const source = scene.textures.get(`art-${model}`).getSourceImage() as HTMLImageElement
+    const sprite = document.createElement('canvas')
+    sprite.width = CAT_W * DPR
+    sprite.height = CAT_H * DPR
+    const paint = sprite.getContext('2d')
+    if (!paint) continue
+    paint.scale(DPR, DPR)
+    drawSprite(
+      paint,
+      source,
+      { x: 0, y: 0, w: source.width, h: source.height },
+      { x: 14, y: 3, w: 75, h: 100 },
+      'height',
+    )
+    for (let frame = 0; frame < CAT_RUN_FRAMES; frame++) {
+      bake(scene, catRunKey(base, frame), CAT_W, CAT_H, (c) => {
+        const pose = catRunPose(frame)
+        c.fillStyle = '#98633633'
+        c.beginPath()
+        c.ellipse(50, 102, 24, 4, 0, 0, Math.PI * 2)
+        c.fill()
+        c.save()
+        c.translate(CAT_W / 2, 80 + pose.bob)
+        c.rotate(pose.lean)
+        c.translate(-CAT_W / 2, -80)
+        const ankle = 86
+        c.drawImage(sprite, 0, 0, CAT_W * DPR, ankle * DPR, 0, 0, CAT_W, ankle)
+        for (const [side, stride] of [pose.left, pose.right].entries()) {
+          c.drawImage(
+            sprite,
+            ((side * CAT_W) / 2) * DPR,
+            ankle * DPR,
+            (CAT_W / 2) * DPR,
+            (CAT_H - ankle) * DPR,
+            (side * CAT_W) / 2,
+            ankle,
+            CAT_W / 2,
+            (CAT_H - ankle) * (1 + stride),
+          )
+        }
+        c.restore()
+      })
+    }
   }
 }
 

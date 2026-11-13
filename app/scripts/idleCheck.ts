@@ -36,6 +36,7 @@ try {
         earned: 0,
         boss: false,
         nextUnlock: 5,
+        circuitSeconds: 0,
         skills: [
           { code: 'water', name: '물 스킬', unlockWall: 5, owned: false },
           { code: 'meteor', name: '메테오 고양이', unlockWall: 15, owned: false },
@@ -46,7 +47,7 @@ try {
     }
     const page = await browser.newPage({
       viewport: { width, height: 900 },
-      reducedMotion: 'reduce',
+      reducedMotion: width === 390 ? 'no-preference' : 'reduce',
     })
     const errors: string[] = []
     const loadingErrors: string[] = []
@@ -62,7 +63,10 @@ try {
       if (route.request().url().endsWith('/idle')) {
         const body = route.request().postDataJSON()
         actions.push(body.action)
-        if (body.action === 'tick') company.idle.hp = Math.max(1, company.idle.hp - 12)
+        if (body.action === 'tick') {
+          if (company.idle.circuitSeconds > 0) company.idle.circuitSeconds--
+          else company.idle.hp = Math.max(1, company.idle.hp - 12)
+        }
       }
       await route.fulfill({ json: company })
     })
@@ -148,6 +152,59 @@ try {
         { timeout: 15000 },
       )
       .toBe(true)
+    const market = () =>
+      page.evaluate(() =>
+        (
+          window as unknown as {
+            __mentalMarket: () => {
+              battleSeconds: number
+              physicsPaused: boolean
+              running: boolean
+              catTextures: string[]
+              circuits: number
+              circuit: null | { elapsed: number; queuedSell: number; queuedBuy: number }
+            }
+          }
+        ).__mentalMarket(),
+      )
+    company.idle.circuitSeconds = 4
+    await expect.poll(async () => (await market()).circuit !== null).toBe(true)
+    await expect(page.getByText('거래 정지', { exact: true })).toBeVisible()
+    await expect.poll(async () => (await market()).circuit?.queuedSell ?? 0).toBeGreaterThan(0)
+    assert.equal((await market()).physicsPaused, true)
+    await expect.poll(async () => (await market()).circuit?.queuedBuy ?? 0).toBeGreaterThan(0)
+    const circuitClock = (await market()).battleSeconds
+    await page.screenshot({ path: `/tmp/idle-circuit-${width}.png`, fullPage: true })
+    await page.evaluate(() =>
+      window.dispatchEvent(new CustomEvent('idle-app-active', { detail: false })),
+    )
+    await expect.poll(() => actions.at(-1)).toBe('stop')
+    const pausedCircuit = (await market()).circuit?.elapsed
+    const frozenRemaining = company.idle.circuitSeconds
+    await page.waitForTimeout(800)
+    assert.equal((await market()).circuit?.elapsed, pausedCircuit)
+    assert.equal(company.idle.circuitSeconds, frozenRemaining)
+    assert.equal((await market()).battleSeconds, circuitClock)
+    await page.evaluate(() =>
+      window.dispatchEvent(new CustomEvent('idle-app-active', { detail: true })),
+    )
+    await expect.poll(async () => (await market()).circuit, { timeout: 10000 }).toBe(null)
+    await expect.poll(async () => (await market()).physicsPaused).toBe(false)
+    await expect.poll(async () => (await market()).battleSeconds).toBeGreaterThan(circuitClock)
+    if (width === 390) {
+      // Acquired companions run too; observe multiple animation frames without moving hitboxes.
+      company.idle.skills[1].owned = true
+      await expect.poll(async () => (await market()).catTextures.length).toBeGreaterThan(1)
+      const frames = new Set<string>()
+      for (let i = 0; i < 8; i++) {
+        frames.add((await market()).catTextures.join(','))
+        await page.waitForTimeout(80)
+      }
+      assert(frames.size >= 3)
+      assert((await market()).catTextures.every((key) => key.includes('-run-')))
+    } else {
+      assert((await market()).catTextures.every((key) => !key.includes('-run-')))
+    }
     const queuedWalls = () =>
       page.evaluate(
         () =>
@@ -218,6 +275,17 @@ try {
           { timeout: 10000 },
         )
         .toBe(1)
+    }
+    if (width === 390) {
+      company.idle.wall = 16
+      company.idle.circuitSeconds = 4
+      await expect.poll(async () => (await market()).circuits).toBe(2)
+      // A fast server can reach another halt before the previous client animation finishes.
+      company.idle.wall = 26
+      company.idle.circuitSeconds = 4
+      await expect.poll(async () => (await market()).circuits).toBe(3)
+      await expect.poll(async () => (await market()).circuit?.queuedSell ?? 0).toBeGreaterThan(0)
+      await expect.poll(async () => (await market()).circuit, { timeout: 10000 }).toBe(null)
     }
     await expect
       .poll(async () => (await queuedWalls()).map((wall) => wall.wall))
