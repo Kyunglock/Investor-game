@@ -4057,9 +4057,7 @@ class BattleScene extends Phaser.Scene {
       }
       // 매도벽 칸은 움직이지 않는다: 벽과 함께 assaultStep이 옮긴다.
       if (e.cell) continue
-      // 공격 판의 매도 물량은 매수 주문과 같은 빠르기로 내려온다: 스테이지 세기의 빠르기 배율을 붙이지 않는다.
-      const speed =
-        this.assault && isOrder(e.kind) ? v.speed : v.speed * this.staged(this.speedScale)
+      const speed = v.speed * this.staged(this.speedScale)
       const sy = stunned ? 0 : slowed ? speed * e.slowFactor : speed
       if (e.wallPushUntil > this.elapsed) {
         e.setVelocity(0, -600)

@@ -1,4 +1,4 @@
-/** 매수 주문이 위로 날아가는 빠르기(px/초). 매도 물량도 같은 빠르기로 내려온다(대량 매도만 느리게). */
+/** 매수 주문이 위로 날아가는 빠르기(px/초). */
 export const BUY_ORDER_SPEED = 360
 
 export const BUY_WALL = {
