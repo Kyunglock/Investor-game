@@ -35,14 +35,18 @@ async function assaultCheck() {
     stars: number
     kills: number
   }
-  const configs = [
-    { label: '강화 없음', level: 1, bonus: 0, shoot: false },
-    { label: '공격·연사 +50%', level: 1, bonus: 50, shoot: true },
-    { label: '공격·연사 +200%', level: 1, bonus: 200, shoot: false },
-    { label: '강화 없음 · 판 level 2', level: 2, bonus: 0, shoot: false },
-    { label: '공격·연사 +200% · 판 level 3', level: 3, bonus: 200, shoot: false },
-    { label: '강화 없음 · 판 level 4', level: 4, bonus: 0, shoot: false },
-  ]
+  // ASSAULT_LEVELS=1,2,3이면 강화 없이 그 판들만 돈다(밸런스 표).
+  const levels = process.env.ASSAULT_LEVELS?.split(',').map(Number)
+  const configs = levels
+    ? levels.map((level) => ({ label: '강화 없음', level, bonus: 0, shoot: false }))
+    : [
+        { label: '강화 없음', level: 1, bonus: 0, shoot: false },
+        { label: '공격·연사 +50%', level: 1, bonus: 50, shoot: true },
+        { label: '공격·연사 +200%', level: 1, bonus: 200, shoot: false },
+        { label: '강화 없음 · 판 level 2', level: 2, bonus: 0, shoot: false },
+        { label: '공격·연사 +200% · 판 level 3', level: 3, bonus: 200, shoot: false },
+        { label: '강화 없음 · 판 level 4', level: 4, bonus: 0, shoot: false },
+      ]
   // 판마다 새 페이지(찍는 판만 배율 2).
   const only = process.env.ASSAULT_ONLY
   const picked = only
@@ -177,7 +181,14 @@ async function assaultCheck() {
         const w = window as unknown as Record<string, unknown>
         return {
           hud: w.__assaultHud as Hud | undefined,
-          market: (w.__mentalMarket as (() => Market) | undefined)?.(),
+          // 전투 장면이 다 만들어지기 전에는 시장 상태를 읽지 못한다.
+          market: (() => {
+            try {
+              return (w.__mentalMarket as (() => Market) | undefined)?.()
+            } catch {
+              return undefined
+            }
+          })(),
           outcome: w.__assaultOutcome as Row | undefined,
         }
       })
@@ -310,6 +321,14 @@ async function assaultCheck() {
     await page.waitForTimeout(1500)
     const { outcome, market } = await state()
     assert(outcome, `${config.label}: battle ends`)
+    if (process.env.ASSAULT_TABLE_ONLY) {
+      await page.close()
+      const row = { ...outcome, label: config.label, level: config.level } as Row
+      console.log(
+        `level ${row.level} · ${row.label}: ${row.win ? '깼다' : `못 깸(${row.reason})`} ${row.seconds}초 · 벽 ${row.wallsBroken}/${row.wallsTotal} · 멘탈 ${row.mentalLeft}/${row.maxMental} · 별 ${row.stars}`,
+      )
+      return row
+    }
     for (const key of [
       'win',
       'stars',
