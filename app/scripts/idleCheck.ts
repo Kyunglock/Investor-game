@@ -53,6 +53,7 @@ try {
     const errors: string[] = []
     const loadingErrors: string[] = []
     const actions: string[] = []
+    const reportedHits: { wall: number; kind: string; count: number }[] = []
     let circuitJustStarted = false
     page.on('pageerror', (e) => errors.push(e.message))
     page.on('console', (message) => {
@@ -65,12 +66,22 @@ try {
       if (route.request().url().endsWith('/idle')) {
         const body = route.request().postDataJSON()
         actions.push(body.action)
+        reportedHits.push(...(body.hits ?? []))
         if (body.action === 'tick' && circuitJustStarted) {
           circuitJustStarted = false
         } else if (body.action === 'tick') {
           if (company.idle.circuitSeconds > 0)
             company.idle.circuitSeconds = Math.max(0, company.idle.circuitSeconds - 2)
-          else company.idle.hp = Math.max(1, company.idle.hp - 24)
+          else {
+            const hits = (body.hits ?? []).filter(
+              (hit: { wall: number }) => hit.wall === company.idle.wall,
+            )
+            company.idle.hp = Math.max(
+              1,
+              company.idle.hp -
+                hits.reduce((total: number, hit: { count: number }) => total + hit.count * 12, 0),
+            )
+          }
         }
       }
       await route.fulfill({ json: company })
@@ -97,6 +108,16 @@ try {
       )
     })
     await expect.poll(() => actions.filter((a) => a === 'tick').length).toBeGreaterThan(0)
+    await page.evaluate(() =>
+      window.dispatchEvent(
+        new CustomEvent('idle-wall-hit', { detail: { wall: 1, kind: 'bullet' } }),
+      ),
+    )
+    await expect
+      .poll(() =>
+        reportedHits.some((hit) => hit.wall === 1 && hit.kind === 'bullet' && hit.count > 0),
+      )
+      .toBe(true)
     assert.equal(await page.locator('.idle-skills, .idle-upgrades').count(), 0)
     await page.getByRole('button', { name: '성장' }).click()
     await expect(page.getByTestId('idle-menu')).toBeVisible()

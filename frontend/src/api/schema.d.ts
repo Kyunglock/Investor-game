@@ -289,6 +289,14 @@ export interface paths {
                         sequence: number;
                         /** @enum {string} */
                         action: "start" | "tick" | "stop";
+                        /** @description 실제 명중한 매도벽과 공격 종류별 횟수. 없으면 벽 피해 없음. 피해량과 발사 한도는 서버에서 계산 */
+                        hits?: {
+                            /** Format: int64 */
+                            wall: number;
+                            /** @enum {string} */
+                            kind: "bullet" | "water" | "meteor" | "bolt" | "ram";
+                            count: number;
+                        }[];
                     };
                 };
             };

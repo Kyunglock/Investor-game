@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { API_BASE, api } from '../../api/client'
+import { type IdleContact, IdleContacts } from './idleContacts'
 import { useRaisingStore } from './store'
 
 /** One foreground heartbeat loop per application; server owns all progress. */
@@ -15,8 +16,10 @@ export function useIdleBattle(companyId?: string) {
     let pending = false
     let blocked = false
     let generation = 0
+    const contacts = new IdleContacts()
     const visible = () => !document.hidden && nativeActive
     const stop = () => {
+      contacts.clear()
       generation++
       started = false
       setConnected(false)
@@ -38,7 +41,12 @@ export function useIdleBattle(companyId?: string) {
       const version = generation
       try {
         const res = await api.POST('/api/company/idle', {
-          body: { runId, sequence: ++sequence, action: started ? 'tick' : 'start' },
+          body: {
+            runId,
+            sequence: ++sequence,
+            action: started ? 'tick' : 'start',
+            hits: started ? contacts.drain() : [],
+          },
         })
         if (disposed || version !== generation || !visible()) return
         if (!res.data) {
@@ -58,6 +66,14 @@ export function useIdleBattle(companyId?: string) {
         pending = false
       }
     }
+    const hit = (event: Event) => {
+      if (!started || blocked || disposed || !visible()) return
+      const company = useRaisingStore.getState().company
+      if (company?.companyId !== companyId || !company.idle || company.idle.circuitSeconds) return
+      const { wall, kind } = (event as CustomEvent<IdleContact>).detail
+      contacts.add(wall, kind, company.idle.wall)
+    }
+    const clearContacts = () => contacts.clear()
     const visibility = () => {
       if (!visible()) stop()
       else {
@@ -71,6 +87,8 @@ export function useIdleBattle(companyId?: string) {
     }
     document.addEventListener('visibilitychange', visibility)
     window.addEventListener('pagehide', stop)
+    window.addEventListener('idle-wall-hit', hit)
+    window.addEventListener('idle-hits-clear', clearContacts)
     window.addEventListener('idle-app-active', native)
     const timer = setInterval(() => void tick(), 1000)
     void tick()
@@ -79,6 +97,8 @@ export function useIdleBattle(companyId?: string) {
       clearInterval(timer)
       document.removeEventListener('visibilitychange', visibility)
       window.removeEventListener('pagehide', stop)
+      window.removeEventListener('idle-wall-hit', hit)
+      window.removeEventListener('idle-hits-clear', clearContacts)
       window.removeEventListener('idle-app-active', native)
       stop()
     }

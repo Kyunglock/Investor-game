@@ -410,10 +410,11 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView idleBeat(UUID sessionId, String runId, long sequence, String action) {
+  public CompanyView idleBeat(
+      UUID sessionId, String runId, long sequence, String action, List<IdleHit> hits) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.mental.initWeapons(row.state());
-    idle.beat(row.state(), runId, sequence, action);
+    idle.beat(row.state(), runId, sequence, action, hits);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

@@ -1,3 +1,4 @@
+import type { IdleAttackKind } from '@web/features/raising/idleContacts'
 import Phaser from 'phaser'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
@@ -200,6 +201,7 @@ export interface IdleSnapshot {
 export interface BattleOptions {
   /** Foreground idle mode: wall health and progression are server-authoritative. */
   idle?: () => IdleSnapshot
+  onIdleHit?: (wall: number, kind: IdleAttackKind) => void
 
   /** 처음 배속(gameSpeed.ts). 없으면 1배. */
   speed?: GameSpeed
@@ -2585,7 +2587,9 @@ class BattleScene extends Phaser.Scene {
       this.hitSpark.explode(2, e.x - Math.cos(angle) * 10, e.y + 10)
       return
     }
-    if (!(this.opts.idle && (e.cell || e.boss))) e.hp -= dmg
+    if (this.opts.idle && (e.cell || e.boss)) {
+      if (!this.idleTransition) this.reportIdleHit(this.idleWall, kind)
+    } else e.hp -= dmg
     // 매도벽은 연사 중에도 장갑과 균열이 보여야 한다. 밝기만 올리고 명중 불꽃을 얹는다.
     if (e.cell) e.clearTint()
     else e.setTintFill(0xffffff)
@@ -3346,6 +3350,7 @@ class BattleScene extends Phaser.Scene {
     this.ring(x, y, 0x6cc0ff, st.splash, 260)
     this.glow(x, y, 0xbfe8ff, st.splash * 0.8, 200, 0.6)
     this.waterFx.explode(this.fx(10), x, y)
+    this.idleAreaHit(x, y, st.splash, 'water')
     const angle = Math.atan2(s.dy, s.dx)
     for (const e of this.magicTargets(true)) {
       if (this.areaDistance(e, x, y) <= st.splash) this.waterHit(e, st, angle, true)
@@ -3445,6 +3450,7 @@ class BattleScene extends Phaser.Scene {
       onComplete: () => s.crater.setVisible(false),
     })
     this.playSound('boom')
+    this.idleAreaHit(x, y, st.radius, 'meteor')
     // 범위 안의 뒤쪽 매도벽도 맞는다. 묶인 벽은 운석당 한 번만 맞는다.
     for (const e of [...this.magicTargets(true)]) {
       const distance = this.areaDistance(e, x, y)
@@ -3827,6 +3833,23 @@ class BattleScene extends Phaser.Scene {
   }
 
   /** 범위 피해 (decisions.md 362번): 맞은 적을 뺀, 터진 자리 반지름 안의 적이 함께 맞는다. 바깥으로 밀어내는 각도로 맞는다. */
+  private reportIdleHit(wall: number, kind: DamageKind) {
+    const code: IdleAttackKind =
+      kind === 'water' || kind === 'meteor'
+        ? kind
+        : kind === 'lightning' || kind === 'chain'
+          ? 'bolt'
+          : kind === 'earth' || kind === 'siege'
+            ? 'ram'
+            : 'bullet'
+    this.opts.onIdleHit?.(wall, code)
+  }
+
+  private idleAreaHit(x: number, y: number, radius: number, kind: DamageKind) {
+    if (!this.opts.idle || this.idleTransition || this.circuit) return
+    for (const wall of this.idleQueue?.hitWalls(x, y, radius) ?? []) this.reportIdleHit(wall, kind)
+  }
+
   private areaDistance(e: Enemy, x: number, y: number) {
     if (e.cell) {
       return Math.hypot(
@@ -3838,6 +3861,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   private splash(x: number, y: number, radius: number, dmg: number, except: Enemy) {
+    this.idleAreaHit(x, y, radius, 'bullet')
     for (const child of this.enemies.getChildren()) {
       const e = child as Enemy
       if (e === except || !e.active || e.dying) {

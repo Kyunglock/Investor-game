@@ -58,13 +58,25 @@ class CompanyController {
         cookies.requireSession(token),
         request.runId().toString(),
         request.sequence(),
-        request.action());
+        request.action(),
+        request.hits() == null
+            ? List.of()
+            : request.hits().stream()
+                .map(h -> new CompanyService.IdleHit(h.wall(), h.kind(), h.count()))
+                .toList());
   }
 
   record IdleRequest(
       @NotNull UUID runId,
       @PositiveOrZero long sequence,
-      @jakarta.validation.constraints.Pattern(regexp = "start|tick|stop") @NotNull String action) {}
+      @jakarta.validation.constraints.Pattern(regexp = "start|tick|stop") @NotNull String action,
+      @jakarta.validation.constraints.Size(max = 15) List<@NotNull @Valid IdleHitRequest> hits) {}
+
+  record IdleHitRequest(
+      @Positive long wall,
+      @NotNull @jakarta.validation.constraints.Pattern(regexp = "bullet|water|meteor|bolt|ram")
+          String kind,
+      @Min(1) @Max(1000) int count) {}
 
   /** 사장의 사재로 첫 회사를 차린다 (decisions.md 228번). 회사가 이미 있으면 400. */
   @PostMapping

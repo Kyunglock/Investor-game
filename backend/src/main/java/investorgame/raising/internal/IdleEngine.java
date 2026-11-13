@@ -1,6 +1,7 @@
 package investorgame.raising.internal;
 
 import investorgame.common.error.InvalidRequestException;
+import investorgame.raising.CompanyService.IdleHit;
 import investorgame.raising.CompanyView;
 import java.time.Clock;
 import java.util.List;
@@ -30,14 +31,26 @@ class IdleEngine {
       // Keep legacy clears, without paying their rewards a second time.
       c.idle.wall = 1L + c.assaultStars.stream().filter(s -> s > 0).count();
     }
+    if (c.idle.hitVersion == 0) {
+      // Old queued damage came from elapsed time, without any area contact.
+      c.idle.nextDamage = 0;
+      c.idle.afterNextDamage = 0;
+      c.idle.damage = Math.min(c.idle.damage, maxHp(c.idle.wall) - 1);
+      c.idle.hitVersion = 1;
+    }
     return c.idle;
   }
 
   void beat(CompanyState c, String runId, long sequence, String action) {
+    beat(c, runId, sequence, action, List.of());
+  }
+
+  void beat(CompanyState c, String runId, long sequence, String action, List<IdleHit> hits) {
     CompanyState.Idle s = state(c);
     long now = clock.millis();
     if ("start".equals(action)) {
       if (runId.equals(s.runId)) return; // Retried start must never reset the sequence.
+      s.hitCredits = new double[5];
       s.runId = runId;
       s.sequence = sequence;
       s.lastBeat = now;
@@ -50,28 +63,14 @@ class IdleEngine {
     s.sequence = sequence;
     if ("stop".equals(action)) {
       s.lastBeat = 0;
+      s.hitCredits = new double[5];
       return;
     }
     long elapsed = now - s.lastBeat;
     if (s.lastBeat > 0 && elapsed > 0 && elapsed <= 3000 && serverId.equals(s.serverId)) {
-      double seconds = elapsed / 1000.0 * SPEED;
-      double attackSeconds = Math.max(0, seconds - s.circuitSeconds);
-      double extra = 0;
-      boolean explosive =
-          engine.mental.weaponViews(c).stream().anyMatch(w -> w.equipped() && w.power() >= 2);
-      double near = explosive ? s.dps * 0.5 : 0;
-      double far = 0;
-      for (int i = 0; i < UNLOCKS.length; i++) {
-        if (s.wall <= UNLOCKS[i]) continue;
-        double casts =
-            Math.floor((s.activeSeconds + attackSeconds) / COOLDOWNS[i])
-                - Math.floor(s.activeSeconds / COOLDOWNS[i]);
-        double skillDamage = casts * s.dps * COOLDOWNS[i] * 0.25;
-        extra += skillDamage;
-        if (attackSeconds > 0 && i <= 1) near += skillDamage * 0.5 / attackSeconds;
-        if (attackSeconds > 0 && i == 1) far += skillDamage * 0.25 / attackSeconds;
-      }
-      advance(c, seconds, s.dps + (attackSeconds > 0 ? extra / attackSeconds : 0), near, far);
+      tick(c, elapsed / 1000.0 * SPEED, hits == null ? List.of() : hits);
+    } else {
+      s.hitCredits = new double[5];
     }
     s.lastBeat = now;
     s.serverId = serverId;
@@ -107,32 +106,62 @@ class IdleEngine {
         .toList();
   }
 
-  void advance(CompanyState c, double seconds, double power) {
-    advance(c, seconds, power, 0, 0);
+  private double bulletDamage(CompanyState c) {
+    double damage =
+        engine.mental.weaponViews(c).stream()
+            .filter(CompanyView.Weapon::equipped)
+            .mapToDouble(w -> 12.0 * w.damagePercent() / 100)
+            .findFirst()
+            .orElse(12);
+    for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
+      if ("damage".equals(u.kind())) damage *= 1 + u.bonusPercent() / 100.0;
+    }
+    return Math.max(1, Math.min(1_000_000_000, damage));
   }
 
-  // Upcoming walls retain splash damage, but only the front wall can pay a reward.
-  void advance(CompanyState c, double seconds, double power, double near, double far) {
+  private void tick(CompanyState c, double seconds, List<IdleHit> hits) {
     CompanyState.Idle s = state(c);
-    double activeSeconds = 0;
-    long earned = 0;
-    int cleared = 0;
-    while ((seconds > 0 || (s.circuitSeconds == 0 && s.damage >= maxHp(s.wall)))
-        && cleared < 1000) {
-      if (s.circuitSeconds > 0) {
-        double stopped = Math.min(seconds, s.circuitSeconds);
-        s.circuitSeconds -= stopped;
-        seconds -= stopped;
-        continue;
+    double stopped = Math.min(seconds, s.circuitSeconds);
+    s.circuitSeconds -= stopped;
+    double active = seconds - stopped;
+    s.activeSeconds += active;
+    double income = s.incomeRemainder + active * 20_000;
+    long earned = (long) income;
+    s.incomeRemainder = income - earned;
+    if (s.hitCredits == null || s.hitCredits.length != 5) s.hitCredits = new double[5];
+    // Contact counts identify actual hits, never damage or rewards. Per-kind credits
+    // bound them by server weapon stats and acquired skills; unused time alone cannot hurt a wall.
+    boolean explosive =
+        engine.mental.weaponViews(c).stream().anyMatch(w -> w.equipped() && w.power() >= 2);
+    long front = s.wall;
+    for (int kind = 0; kind < 5 && active > 0; kind++) {
+      if (kind > 0 && front <= UNLOCKS[kind - 1]) continue;
+      double damage = kind == 0 ? bulletDamage(c) : s.dps * COOLDOWNS[kind - 1] * 0.25;
+      double interval = kind == 0 ? damage / s.dps : COOLDOWNS[kind - 1];
+      s.hitCredits[kind] =
+          Math.min(Math.max(2, 6 / interval), s.hitCredits[kind] + active / interval);
+      String code = kind == 0 ? "bullet" : CODES[kind - 1];
+      int[] counts = new int[3];
+      for (IdleHit hit : hits) {
+        if (hit == null || !code.equals(hit.kind()) || hit.count() <= 0) continue;
+        long offset = hit.wall() - front;
+        if (offset < 0 || offset > 2) continue;
+        // Only actual area contacts may affect queued walls, and only with an owned area attack.
+        if (offset > 0 && !(kind == 1 || kind == 2 || (kind == 0 && explosive))) continue;
+        counts[(int) offset] = Math.min(1000, counts[(int) offset] + Math.min(1000, hit.count()));
       }
-      double remaining = Math.max(0, maxHp(s.wall) - s.damage);
-      double attacking = Math.min(seconds, remaining / power);
-      s.damage += attacking * power;
-      s.nextDamage = Math.min(maxHp(s.wall + 1), s.nextDamage + attacking * near);
-      s.afterNextDamage = Math.min(maxHp(s.wall + 2), s.afterNextDamage + attacking * far);
-      seconds -= attacking;
-      activeSeconds += attacking;
-      if (s.damage + 1e-7 < maxHp(s.wall)) break;
+      int most = Math.max(counts[0], Math.max(counts[1], counts[2]));
+      double accepted = Math.min(most, s.hitCredits[kind]);
+      s.hitCredits[kind] -= accepted;
+      s.damage += Math.min(counts[0], accepted) * damage;
+      s.nextDamage =
+          Math.min(maxHp(front + 1), s.nextDamage + Math.min(counts[1], accepted) * damage * 0.5);
+      s.afterNextDamage =
+          Math.min(
+              maxHp(front + 2), s.afterNextDamage + Math.min(counts[2], accepted) * damage * 0.25);
+    }
+    // Pay only for contacted walls in order. No leftover DPS rolls into an untouched new wall.
+    while (s.circuitSeconds == 0 && s.damage + 1e-7 >= maxHp(s.wall)) {
       earned =
           CompanyEngine.plus(earned, (long) Math.min(1_000_000_000L, 100_000.0 + s.wall * 10_000));
       if (s.wall % 10 == 0 && c.weaponTickets < Integer.MAX_VALUE) c.weaponTickets++;
@@ -140,16 +169,11 @@ class IdleEngine {
       s.damage = s.nextDamage;
       s.nextDamage = s.afterNextDamage;
       s.afterNextDamage = 0;
-      cleared++;
-      // Repeat the former mid-stage trading halt in the endless battle.
-      if (s.wall % 10 == 6) s.circuitSeconds = 4;
+      if (s.wall % 10 == 6) {
+        s.circuitSeconds = 4;
+        s.hitCredits = new double[5];
+      }
     }
-    // Trading halts freeze attack income and skill clocks as well as wall damage.
-    s.activeSeconds += activeSeconds;
-    double income = s.incomeRemainder + activeSeconds * 20_000;
-    long attackIncome = (long) income;
-    s.incomeRemainder = income - attackIncome;
-    earned = CompanyEngine.plus(earned, attackIncome);
     s.earned = CompanyEngine.plus(s.earned, earned);
     c.capital = CompanyEngine.plus(c.capital, earned);
     c.yearRewards = CompanyEngine.plus(c.yearRewards, earned);
