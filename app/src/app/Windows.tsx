@@ -145,7 +145,10 @@ export function Windows({ company }: { company: Company }) {
             const back = battle.kind === 'invest'
             const ui = useAppUi.getState()
             ui.endBattle()
-            if (back) setInvestOpen(true)
+            if (battle.kind === 'assault' && battle.tutorial) {
+              ui.setTab('office')
+              useTutorial.getState().finish()
+            } else if (back) setInvestOpen(true)
             // 매도벽 돌파 스테이지(#698)를 마치면 다음 스테이지를 바로 고르게 선택 화면으로 돌아간다.
             else if (battle.kind === 'assault' && ui.tab === 'office') {
               ui.openSheet({ kind: 'toy', panel: 'assault' })

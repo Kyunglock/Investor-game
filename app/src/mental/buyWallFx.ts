@@ -1,5 +1,5 @@
 import type Phaser from 'phaser'
-import { buyOrderTexture, WALL_LABEL_STYLE } from './art'
+import { buyOrderTexture, CELL_TEX, WALL_LABEL_STYLE } from './art'
 import { BUY_ORDER_SPEED, type BuyWall } from './buyWall'
 import { type BarrierLane, OrderBarrierQueue } from './orderBarrier'
 import { shareLabel } from './shares'
@@ -120,7 +120,7 @@ export class BuyWallFx {
   draw(wall: BuyWall, left: number, width: number, y: number, reduced: boolean) {
     const g = this.ink.clear()
     const cw = width / 6
-    const height = (width * 96) / 512
+    const height = (width * CELL_TEX.h) / CELL_TEX.w
     const top = y + 32 - height
     const hit = this.hitLeft / 0.28
     const shake = reduced ? 0 : Math.sin((1 - hit) * Math.PI * 5) * hit * 7

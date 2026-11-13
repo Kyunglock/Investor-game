@@ -3,6 +3,9 @@ import { FIRE_STYLES, type FireStyle } from './weaponEffects'
 
 export const WEAPON_GRADES = ['F', 'E', 'D', 'C', 'B', 'A', 'S'] as const
 
+/** 표시만 키운다. 충돌 원은 이 배율을 나눠 기존 크기를 유지한다. */
+export const BULLET_VISUAL_SCALE = 1.65
+
 /** 등급은 무기 실루엣뿐 아니라 탄·총구·꼬리·명중 모양까지 결정한다. */
 export const GRADE_FIRE: Record<GunGrade, FireStyle> = {
   F: { ...FIRE_STYLES.pistol, length: 0.8, width: 0.8, flash: 0.7, trailMs: 70 },
@@ -30,7 +33,13 @@ export function drawWeaponBullet(c: CanvasRenderingContext2D, grade: GunGrade, f
   tail.addColorStop(0, `${color}00`)
   tail.addColorStop(1, color)
   bar(0, 3, 30, 4, tail)
-  if (grade === 'F') bar(18, 3, 11, 4, '#e2e8f0')
+  // 밝은 거리·매도벽·마법 위에서도 윤곽이 남는 짙은 외곽과 불투명한 중심.
+  bar(8, 0.5, 24, 9, '#24334f')
+  bar(10, 2, 20, 6, color)
+  if (grade === 'F') {
+    bar(11, 2, 19, 6, '#ffd36a')
+    bar(15, 3.5, 13, 3, '#ffffff')
+  }
   if (grade === 'E') {
     bar(10, 2, 20, 6, color)
     bar(15, 3, 13, 2, '#ecfdf5')
