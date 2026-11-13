@@ -1,13 +1,13 @@
 import type { GunGrade, GunKind } from '@web/features/game/cat/draw'
-import { BOSS_LOOK } from '@web/features/game/cat/look'
 import { useEffect, useRef } from 'react'
-import { drawStageGun, GUN_ART } from './drawStageGun'
+import { STAGE_ASSETS } from './assets'
+import { drawInventoryGun } from './weaponArt'
 
-/** 전투와 같은 팔·총 그림 영역. */
-const BOX_W = GUN_ART.w
-const BOX_H = GUN_ART.h
+/** 인벤토리는 무기만 중앙에 배치한다. 전투의 손·자세와 분리된 그림 영역. */
+const BOX_W = 96
+const BOX_H = 72
 
-/** 무기 하나를 캔버스에 그린다 (decisions.md 346번): 무기 고르기와 떨어진 무기 카드에. 사장냥 앞발이 쥔 모습 그대로. */
+/** 목록·장착 정보·뽑기 카드에서 쓰는 손 없는 무기 아이콘. */
 export function GunSprite({
   kind,
   grade,
@@ -30,11 +30,19 @@ export function GunSprite({
     const scale = (width / BOX_W) * dpr
     cv.width = Math.ceil(BOX_W * scale)
     cv.height = Math.ceil(BOX_H * scale)
-    c.setTransform(scale, 0, 0, scale, 0, 0)
-    c.clearRect(0, 0, BOX_W, BOX_H)
-    c.translate(GUN_ART.pivotX, GUN_ART.pivotY)
-    drawStageGun(c, BOSS_LOOK.fur, kind, grade)
-  }, [kind, grade, width])
+    let cancelled = false
+    const source = new Image()
+    source.onload = () => {
+      if (cancelled) return
+      c.setTransform(scale, 0, 0, scale, 0, 0)
+      c.clearRect(0, 0, BOX_W, BOX_H)
+      drawInventoryGun(c, source, grade)
+    }
+    source.src = STAGE_ASSETS.weapons
+    return () => {
+      cancelled = true
+    }
+  }, [grade, width])
   return (
     <canvas
       ref={ref}

@@ -26,7 +26,11 @@ class MentalEngine {
   static final String BURST = "burst";
 
   /** 무기 등급, 낮은 것부터 (346번). */
-  static final List<String> WEAPON_GRADES = List.of("F", "E", "D", "C", "B", "A", "S");
+  static final List<String> WEAPON_GRADES =
+      List.of("F", "E", "D", "C", "B", "A", "S", "SS", "SSS", "SR", "UR", "LR");
+
+  /** 뽑기는 A까지. 상위 등급은 설정에 가중치가 들어가도 합성으로만 얻는다. */
+  static final List<String> DRAW_GRADES = List.of("F", "E", "D", "C", "B", "A");
 
   /** 자본으로 사는 전투 강화 (367·394·410번): 공격력·연사·체력(최대 멘탈). 고양이 속도는 394번에서 뺐다. */
   static final List<String> UPGRADES = List.of("damage", "fire", "hp");
@@ -138,10 +142,10 @@ class MentalEngine {
     c.weaponDraws++;
     RandomGenerator rng = random.forKey("weapon-draw", c.weaponDraws);
     Map<String, Integer> weights = properties.mental().weaponGacha().gradeWeights();
-    int total = WEAPON_GRADES.stream().mapToInt(g -> weights.getOrDefault(g, 0)).sum();
+    int total = DRAW_GRADES.stream().mapToInt(g -> weights.getOrDefault(g, 0)).sum();
     int roll = rng.nextInt(total);
     String grade = WEAPON_GRADES.getFirst();
-    for (String g : WEAPON_GRADES) {
+    for (String g : DRAW_GRADES) {
       roll -= weights.getOrDefault(g, 0);
       if (roll < 0) {
         grade = g;

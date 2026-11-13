@@ -1,4 +1,5 @@
 import type { Company } from '@web/api/client'
+import { GUN_GRADES } from '@web/features/game/cat/draw'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useEffect, useRef, useState } from 'react'
 import { haptic } from '../fx/haptics'
@@ -11,8 +12,8 @@ import './weapons.css'
 
 type Armory = NonNullable<Company['armory']>
 
-/** 합칠 수 있는 등급: 가장 높은 등급(S)은 못 합친다 (366번). */
-type MergeGrade = Exclude<Weapon['grade'], 'S'>
+/** 합칠 수 있는 등급: 가장 높은 등급(LR)은 못 합친다 (366번). */
+type MergeGrade = Exclude<Weapon['grade'], 'LR'>
 
 /** 무기 등급 배지 색 (346번). */
 export const GRADE_BADGE: Record<Weapon['grade'], string> = {
@@ -23,9 +24,12 @@ export const GRADE_BADGE: Record<Weapon['grade'], string> = {
   B: 'bg-fuchsia-100 text-fuchsia-800',
   A: 'bg-orange-100 text-orange-800',
   S: 'bg-cyan-100 text-cyan-900',
+  SS: 'bg-blue-100 text-blue-900',
+  SSS: 'bg-purple-100 text-purple-900',
+  SR: 'bg-rose-100 text-rose-900',
+  UR: 'bg-lime-100 text-lime-900',
+  LR: 'bg-yellow-100 text-yellow-900',
 }
-
-const GRADE_ORDER: Record<Weapon['grade'], number> = { F: 0, E: 1, D: 2, C: 3, B: 4, A: 5, S: 6 }
 
 /** 인벤토리 메뉴의 배지: 쓸 수 있는 무기 뽑기권 수. */
 export function weaponBadge(company: Company): string | null {
@@ -38,6 +42,7 @@ export function weaponBadge(company: Company): string | null {
  * 든 무기를 위에 크게 보이고, 아래에 가진 무기를 등급 높은 순으로 늘어놓는다. 누르면 들고, 같은 무기가 mergeCount개면 합쳐 한 등급 올린다.
  */
 export function WeaponInventory({ company }: { company: Company }) {
+  const [page, setPage] = useState(0)
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   const [reveal, setReveal] = useState<{ id: number; result: DrawResult | null } | null>(null)
@@ -81,13 +86,25 @@ export function WeaponInventory({ company }: { company: Company }) {
   const weapons = company.weapons?.length ? company.weapons : [DEFAULT_WEAPON]
   const equipped = weapons.find((w) => w.equipped) ?? weapons[0]
   const sorted = [...weapons].sort(
-    (a, b) => GRADE_ORDER[b.grade] - GRADE_ORDER[a.grade] || a.kind.localeCompare(b.kind),
+    (a, b) =>
+      GUN_GRADES.indexOf(b.grade) - GUN_GRADES.indexOf(a.grade) || a.kind.localeCompare(b.kind),
   )
+  const pageCount = Math.max(1, Math.ceil(sorted.length / 6))
+  const currentPage = Math.min(page, pageCount - 1)
+  const slots = Array.from({ length: 6 }, (_, i) => ({
+    id: `slot-${i}`,
+    weapon: sorted[currentPage * 6 + i] ?? null,
+  }))
   const ended = company.status === 'ENDED'
   return (
     <div className="weapon-inventory" data-testid="weapon-picker">
-      <section className="weapon-equipped" data-testid="weapon-equipped" data-kind={equipped.kind}>
-        <GunSprite kind={equipped.kind} grade={equipped.grade} width={120} />
+      <section
+        className="weapon-equipped"
+        data-testid="weapon-equipped"
+        data-kind={equipped.kind}
+        data-grade={equipped.grade}
+      >
+        <GunSprite kind={equipped.kind} grade={equipped.grade} width={96} />
         <div className="min-w-0">
           <p className="text-[11px] text-muted">지금 든 무기</p>
           <p className="font-game text-[19px]">
@@ -103,6 +120,12 @@ export function WeaponInventory({ company }: { company: Company }) {
           </p>
           <p className="weapon-tag">
             {FIRE_STYLE_NAMES[equipped.kind]} · {WEAPON_EFFECTS[equipped.kind].name}
+          </p>
+          <p className="weapon-effect">{WEAPON_EFFECTS[equipped.kind].desc}</p>
+          <p className="weapon-traits">
+            강점 · {WEAPON_TRAITS[equipped.kind].strength}
+            <br />
+            약점 · {WEAPON_TRAITS[equipped.kind].weakness}
           </p>
         </div>
       </section>
@@ -120,6 +143,7 @@ export function WeaponInventory({ company }: { company: Company }) {
           무기 뽑기
         </button>
       </div>
+      <p className="mt-2 text-[11px] text-muted">뽑기 F~A · S 이상은 합성으로 획득 · 최고 LR</p>
       {reveal && (
         <WeaponReveal
           key={reveal.id}
@@ -133,69 +157,82 @@ export function WeaponInventory({ company }: { company: Company }) {
         가진 무기 {weapons.length}종 · 눌러서 들기
         {armory ? ` · 같은 무기 ${armory.mergeCount}개면 합성` : ''}
       </p>
-      <ul className="weapon-grid">
-        {sorted.map((w) => (
-          <li key={`${w.kind}-${w.grade}`}>
-            <button
-              type="button"
-              disabled={busy || ended || w.equipped}
-              aria-pressed={w.equipped}
-              onClick={() => {
-                sfx.tap()
-                haptic.light()
-                void useRaisingStore.getState().equipWeapon(w.kind, w.grade)
-              }}
-              className={`weapon-card ${w.equipped ? 'is-equipped' : ''}`}
-              data-testid="weapon"
-              data-kind={w.kind}
-              data-grade={w.grade}
-            >
-              <GunSprite kind={w.kind} grade={w.grade} width={88} />
-              <span className="font-game text-[15px]">
-                {w.name}{' '}
-                <span
-                  className={`rounded-md px-1.5 py-0.5 text-[11px] font-bold ${GRADE_BADGE[w.grade]}`}
-                >
-                  {w.gradeName}
-                </span>
-              </span>
-              <span className="text-[11px] text-muted">
-                {w.equipped ? '장착 중 · ' : ''}공격 ×{w.damagePercent / 100} ·{' '}
-                {(1000 / w.fireMs).toFixed(1)}발/초{w.count > 1 ? ` · ${w.count}개` : ''}
-              </span>
-              <span className="weapon-tag">{FIRE_STYLE_NAMES[w.kind]}</span>
-              <span
-                className="weapon-effect"
-                data-testid="weapon-effect"
-                title={WEAPON_EFFECTS[w.kind].desc}
-              >
-                {WEAPON_EFFECTS[w.kind].name} · {WEAPON_EFFECTS[w.kind].desc}
-              </span>
-              {/* 강점·약점 한 줄 (#587, decisions.md 430번). */}
-              <span className="weapon-traits" data-testid="weapon-traits">
-                <b className="text-teal">강점</b> {WEAPON_TRAITS[w.kind].strength}
-                <br />
-                <b className="text-red-pen">약점</b> {WEAPON_TRAITS[w.kind].weakness}
-              </span>
-            </button>
-            {armory && w.grade !== 'S' && w.count >= armory.mergeCount && (
+      <ul className="weapon-grid" aria-label="무기 인벤토리 · 6칸">
+        {slots.map(({ id, weapon: w }) =>
+          w ? (
+            <li key={`${w.kind}-${w.grade}`} className="weapon-slot" data-testid="inventory-slot">
               <button
                 type="button"
-                className="weapon-merge"
-                data-testid="weapon-merge"
-                disabled={busy || ended}
+                disabled={busy || ended || w.equipped}
+                aria-pressed={w.equipped}
                 onClick={() => {
-                  sfx.levelUp()
-                  haptic.medium()
-                  void useRaisingStore.getState().mergeWeapon(w.kind, w.grade as MergeGrade)
+                  sfx.tap()
+                  haptic.light()
+                  void useRaisingStore.getState().equipWeapon(w.kind, w.grade)
                 }}
+                className={`weapon-card ${w.equipped ? 'is-equipped' : ''}`}
+                data-testid="weapon"
+                data-kind={w.kind}
+                data-grade={w.grade}
               >
-                {armory.mergeCount}개 합쳐 등급 올리기
+                <GunSprite kind={w.kind} grade={w.grade} width={76} />
+                <span className={`weapon-slot-grade ${GRADE_BADGE[w.grade]}`}>{w.gradeName}</span>
+                <span className="weapon-slot-name">{w.name}</span>
+                <span className="weapon-slot-status">
+                  {w.equipped ? '장착 중' : FIRE_STYLE_NAMES[w.kind]}
+                </span>
+                <span className="weapon-slot-count">×{w.count}</span>
               </button>
-            )}
-          </li>
-        ))}
+              {armory && w.grade !== 'LR' && w.count >= armory.mergeCount && (
+                <button
+                  type="button"
+                  className="weapon-merge"
+                  data-testid="weapon-merge"
+                  disabled={busy || ended}
+                  onClick={() => {
+                    sfx.levelUp()
+                    haptic.medium()
+                    void useRaisingStore.getState().mergeWeapon(w.kind, w.grade as MergeGrade)
+                  }}
+                >
+                  {armory.mergeCount}개 합성
+                </button>
+              )}
+            </li>
+          ) : (
+            <li
+              key={id}
+              className="weapon-slot weapon-slot-empty"
+              data-testid="inventory-slot"
+              aria-label="빈 슬롯"
+            >
+              <span aria-hidden="true">＋</span>
+              <span>빈 슬롯</span>
+            </li>
+          ),
+        )}
       </ul>
+      <nav className="weapon-pages" aria-label="인벤토리 페이지">
+        <button
+          type="button"
+          disabled={currentPage === 0}
+          onClick={() => setPage(currentPage - 1)}
+          aria-label="이전 무기 페이지"
+        >
+          ‹
+        </button>
+        <span aria-live="polite">
+          {currentPage + 1} / {pageCount}
+        </span>
+        <button
+          type="button"
+          disabled={currentPage + 1 >= pageCount}
+          onClick={() => setPage(currentPage + 1)}
+          aria-label="다음 무기 페이지"
+        >
+          ›
+        </button>
+      </nav>
       {error && (
         <p role="alert" className="mt-2 text-red-pen">
           {error}

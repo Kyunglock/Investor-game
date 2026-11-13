@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { STAGE_ASSETS } from './assets'
 import type { Weapon } from './hero'
-import { drawSprite } from './stageArt'
+import { drawEquippedHero } from './weaponArt'
 
-/** 준비 화면과 전투 모두 승인한 총·앞발 일체형 원본을 그대로 사용한다. */
+/** 준비 화면과 전투 모두 같은 장착 무기를 손 위치에 합성한다. */
 export function StagePortrait({ weapon }: { weapon: Weapon }) {
   const ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
@@ -12,7 +12,10 @@ export function StagePortrait({ weapon }: { weapon: Weapon }) {
     if (!cv || !ctx) return
     let cancelled = false
     const source = new Image()
-    source.onload = () => {
+    const weapons = new Image()
+    const paint = () => {
+      if (!source.complete || !source.naturalWidth || !weapons.complete || !weapons.naturalWidth)
+        return
       if (cancelled) return
       const dpr = Math.min(3, window.devicePixelRatio || 1)
       cv.width = 180 * dpr
@@ -24,19 +27,16 @@ export function StagePortrait({ weapon }: { weapon: Weapon }) {
       ctx.beginPath()
       ctx.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
       ctx.fill()
-      drawSprite(
-        ctx,
-        source,
-        { x: 0, y: 0, w: source.width, h: source.height },
-        { x: 14, y: 3, w: 75, h: 100 },
-        'height',
-      )
+      drawEquippedHero(ctx, source, weapons, weapon.grade)
     }
+    source.onload = paint
+    weapons.onload = paint
     source.src = STAGE_ASSETS.hero
+    weapons.src = STAGE_ASSETS.weapons
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [weapon.grade])
   return (
     <canvas
       ref={ref}

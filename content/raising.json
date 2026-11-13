@@ -921,7 +921,8 @@
         "rifle": "성운포"
       },
       "weaponGrades": {
-        "F": "F", "E": "E", "D": "D", "C": "C", "B": "B", "A": "A", "S": "S"
+        "F": "F", "E": "E", "D": "D", "C": "C", "B": "B", "A": "A", "S": "S",
+        "SS": "SS", "SSS": "SSS", "SR": "SR", "UR": "UR", "LR": "LR"
       }
     },
     "quirks": [

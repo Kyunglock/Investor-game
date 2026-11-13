@@ -320,8 +320,8 @@ class CompanyApiTest {
           .param(
               "old",
               """
-              {"weapons":[{"kind":"rifle","grade":"UR","count":8}],
-               "weapon":{"kind":"rifle","grade":"UR","count":8},
+              {"weapons":[{"kind":"rifle","grade":"OBSOLETE","count":8}],
+               "weapon":{"kind":"rifle","grade":"OBSOLETE","count":8},
                "weaponTickets":99,"weaponGachaReady":true,"closed":true}
               """)
           .update();

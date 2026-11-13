@@ -62,3 +62,9 @@ TOP LEFT: small blue teardrop panic enemy, pointed top, worried tiny eyes and do
 `short-seller.png`는 내장 image_gen 도구로 생성한 투명 PNG다. 기존 `enemies.png`를 화풍 참조로 사용했다. 남색 후드와 하락 화살표 방패, 분리된 두 발을 가진 전용 몹이며, 기존 몹의 색만 바꾼 것이 아니다. `art.ts`에서 8프레임 걷기 동작을 굽는다. 생성 프롬프트는 `short-seller.prompt.txt`에 보관한다.
 
 패닉셀 → 투매 → 공매도 웨이브는 방어전과 매도벽 돌파전에서 전투 시간 15초마다 반복한다. 공매도는 체력 9, 속도 43, 접촉 피해 11의 두 줄 대열이다. 일시정지·카드 선택·서킷브레이커 중에는 웨이브 시계가 멈춘다. `APP_URL=http://127.0.0.1:5307/app/ node scripts/waveCheck.mjs`로 두 모드의 등장 순서를 확인한다.
+
+### C안 무기 장착 (2026-11-13)
+
+`weapon-arcade-atlas.png`는 승인한 C ARCADE 시안의 4열 × 3행 투명 원본이다. 왼쪽부터 F, E, D, C / B, A, S, SS / SSS, SR, UR, LR 순서다. `weaponArt.ts`가 셀의 투명 여백만 제외해 목록과 전투에 같은 그림을 사용한다.
+
+`hero-unarmed.png`는 `hero-upward.png`에서 고정 총만 제거한 원본이다. 팔과 자세를 유지하며, 장착 무기를 손 위치에 합성한다. 대기·공격·피격·걷기·준비 화면이 같은 합성 함수를 사용한다. 기존 원본은 보관한다. 무기 그림의 출처는 사용자 승인 시안을 바탕으로 한 이미지 생성이며, 원본 파일을 임의로 잘라 덮어쓰지 않는다.

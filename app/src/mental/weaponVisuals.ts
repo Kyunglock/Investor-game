@@ -1,7 +1,7 @@
-import { GUN_GRADE_COLOR, type GunGrade } from '@web/features/game/cat/draw'
+import { GUN_GRADE_COLOR, GUN_GRADES, type GunGrade } from '@web/features/game/cat/draw'
 import { FIRE_STYLES, type FireStyle } from './weaponEffects'
 
-export const WEAPON_GRADES = ['F', 'E', 'D', 'C', 'B', 'A', 'S'] as const
+export const WEAPON_GRADES = GUN_GRADES
 
 /** 표시만 키운다. 충돌 원은 이 배율을 나눠 기존 크기를 유지한다. */
 export const BULLET_VISUAL_SCALE = 1.65
@@ -15,6 +15,11 @@ export const GRADE_FIRE: Record<GunGrade, FireStyle> = {
   B: { ...FIRE_STYLES.smg, length: 1.5, width: 1.3, flash: 1.3, sparks: 3, trailMs: 28 },
   A: { ...FIRE_STYLES.shotgun, length: 1.35, width: 1.4, flash: 1.2 },
   S: { ...FIRE_STYLES.rifle, length: 1.6, width: 1.3, flash: 1.3, sparks: 3, trailMs: 12 },
+  SS: { ...FIRE_STYLES.rifle, length: 1.65, width: 1.3, flash: 1.3, sparks: 3, trailMs: 12 },
+  SSS: { ...FIRE_STYLES.rifle, length: 1.7, width: 1.35, flash: 1.4, sparks: 3, trailMs: 12 },
+  SR: { ...FIRE_STYLES.rifle, length: 1.75, width: 1.4, flash: 1.4, sparks: 4, trailMs: 12 },
+  UR: { ...FIRE_STYLES.rifle, length: 1.8, width: 1.4, flash: 1.5, sparks: 4, trailMs: 12 },
+  LR: { ...FIRE_STYLES.rifle, length: 1.85, width: 1.45, flash: 1.5, sparks: 4, trailMs: 12 },
 }
 
 export function gradeTint(grade: GunGrade) {
@@ -29,62 +34,39 @@ export function drawWeaponBullet(c: CanvasRenderingContext2D, grade: GunGrade, f
     c.roundRect(x, y, w, h, h / 2)
     c.fill()
   }
-  const tail = c.createLinearGradient(0, 0, 30, 0)
+  // C안의 구슬형 에너지 탄. 작은 화면에서도 흰 반사광과 둥근 핵이 남는다.
+  const tail = c.createLinearGradient(0, 0, 26, 0)
   tail.addColorStop(0, `${color}00`)
-  tail.addColorStop(1, color)
-  bar(0, 3, 30, 4, tail)
-  // 밝은 거리·매도벽·마법 위에서도 윤곽이 남는 짙은 외곽과 불투명한 중심.
-  bar(8, 0.5, 24, 9, '#24334f')
-  bar(10, 2, 20, 6, color)
-  if (grade === 'F') {
-    bar(11, 2, 19, 6, '#ffd36a')
-    bar(15, 3.5, 13, 3, '#ffffff')
-  }
-  if (grade === 'E') {
-    bar(10, 2, 20, 6, color)
-    bar(15, 3, 13, 2, '#ecfdf5')
-  }
-  if (grade === 'D') {
-    c.fillStyle = color
+  tail.addColorStop(1, `${color}bb`)
+  bar(frame ? 2 : 0, 3.5, 26, 3, tail)
+  const orb = c.createRadialGradient(24, 3.5, 0.2, 26, 5, 4.5)
+  orb.addColorStop(0, '#ffffff')
+  orb.addColorStop(0.28, color)
+  orb.addColorStop(1, grade === 'LR' ? '#b77909' : '#265c9a')
+  c.beginPath()
+  c.arc(26, 5, 4.3, 0, Math.PI * 2)
+  c.fillStyle = orb
+  c.fill()
+  c.strokeStyle = '#ffffffdd'
+  c.lineWidth = 0.8
+  c.stroke()
+  bar(10, 4.5, 12, 1, '#ffffffbb')
+  if (['SSS', 'SR', 'UR', 'LR'].includes(grade)) {
+    c.strokeStyle = color
+    c.lineWidth = 0.8
     c.beginPath()
-    c.moveTo(9, 5)
-    c.lineTo(20, 0)
-    c.lineTo(31, 5)
-    c.lineTo(20, 10)
-    c.fill()
-    bar(18, 4, 9, 2, '#fff')
-  }
-  if (grade === 'C') {
-    bar(9, 2, 21, 3, color)
-    bar(9, 6, 17, 2, '#ede9fe')
-  }
-  if (grade === 'B') {
-    for (let i = 0; i < 3; i++) bar(5 + i * 4, i * 3 + 0.5, 25 - i * 4, 2, i === 1 ? '#fff' : color)
-  }
-  if (grade === 'A') {
-    bar(12, 1, 17, 8, '#7c2d12')
-    bar(16, 1.5, 13, 7, color)
-    bar(20, 3, 9, 3, '#fff7ed')
-    c.fillStyle = '#facc15'
-    c.beginPath()
-    c.moveTo(14, 1)
-    c.lineTo(frame ? 0 : 5, 5)
-    c.lineTo(14, 9)
-    c.fill()
-  }
-  if (grade === 'S') {
-    bar(0, 4, 31, 2, '#fff')
-    c.strokeStyle = frame ? '#e9d5ff' : color
-    c.lineWidth = 1
-    c.beginPath()
-    c.ellipse(22, 5, 7, 4, 0, 0, Math.PI * 2)
+    c.ellipse(frame ? 17 : 19, 5, 1.5, 4, -0.2, 0, Math.PI * 2)
     c.stroke()
-    c.fillStyle = '#fff'
+  }
+  if (grade === 'LR') {
     c.beginPath()
-    c.moveTo(30, 5)
-    c.lineTo(21, 1)
-    c.lineTo(15, 5)
-    c.lineTo(21, 9)
+    for (let i = 0; i < 8; i++) {
+      const a = (i * Math.PI) / 4
+      const radius = i % 2 ? 1.2 : 3.4
+      c.lineTo(26 + Math.cos(a) * radius, 5 + Math.sin(a) * radius)
+    }
+    c.closePath()
+    c.fillStyle = '#fffbe8'
     c.fill()
   }
 }
@@ -97,10 +79,10 @@ export function drawWeaponImpact(c: CanvasRenderingContext2D, grade: GunGrade) {
   c.lineWidth = grade === 'A' ? 5 : 2
   if (rank > 0) {
     c.beginPath()
-    c.arc(0, 0, grade === 'S' ? 30 : 18 + rank * 2, 0, Math.PI * 2)
+    c.arc(0, 0, Math.min(30, 18 + rank * 2), 0, Math.PI * 2)
     c.stroke()
   }
-  if (grade === 'S') {
+  if (rank >= WEAPON_GRADES.indexOf('S')) {
     c.strokeStyle = '#e9d5ff'
     c.beginPath()
     c.ellipse(0, 0, 37, 12, -0.5, 0, Math.PI * 2)
@@ -112,7 +94,7 @@ export function drawWeaponImpact(c: CanvasRenderingContext2D, grade: GunGrade) {
     c.fillStyle = color
     c.beginPath()
     c.moveTo(8, -2)
-    c.lineTo(20 + rank * 2, 0)
+    c.lineTo(Math.min(36, 20 + rank * 2), 0)
     c.lineTo(8, 2)
     c.fill()
     c.restore()

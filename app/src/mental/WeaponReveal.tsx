@@ -60,7 +60,7 @@ export function WeaponReveal({
     if (phase !== 'result' || !result || sounded.current || reduced) return
     sounded.current = true
     sfx.weaponReveal(result.draw.grade)
-    if (result.draw.grade === 'S') haptic.burst()
+    if (plan.power >= 3) haptic.burst()
     else if (plan.power >= 2) haptic.heavy()
     else haptic.light()
   }, [phase, result, plan.power, reduced])

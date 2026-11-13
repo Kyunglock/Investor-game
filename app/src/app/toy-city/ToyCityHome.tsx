@@ -241,7 +241,7 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
           onClick={() => setPanel('weapons')}
         >
           <ToyIcon kind="gun" />
-          <span>무기</span>
+          <span>인벤토리</span>
           {weaponBadge(company) && <b className="toy-badge">{weaponBadge(company)}</b>}
         </button>
       </div>
@@ -269,7 +269,7 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
                     : panel === 'battle'
                       ? '자본으로 전투 강화'
                       : panel === 'weapons'
-                        ? '무기 인벤토리'
+                        ? '인벤토리'
                         : '회사 설정'
           }
           testId={`toy-${panel}-sheet`}

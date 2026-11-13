@@ -1,6 +1,50 @@
 type Rect = { x: number; y: number; w: number; h: number }
 const bounds = new WeakMap<HTMLImageElement, Map<string, Rect>>()
 
+/** 투명한 스프라이트 셀의 실제 그림 영역. 같은 원본·셀은 한 번만 스캔한다. */
+export function spriteBounds(image: HTMLImageElement, cell: Rect): Rect {
+  let cache = bounds.get(image)
+  if (!cache) {
+    cache = new Map()
+    bounds.set(image, cache)
+  }
+  const key = `${cell.x},${cell.y},${cell.w},${cell.h}`
+  let crop = cache.get(key)
+  if (!crop) {
+    const cv = document.createElement('canvas')
+    cv.width = Math.ceil(cell.w)
+    cv.height = Math.ceil(cell.h)
+    const ctx = cv.getContext('2d', { willReadFrequently: true })
+    if (!ctx) return cell
+    ctx.drawImage(image, cell.x, cell.y, cell.w, cell.h, 0, 0, cv.width, cv.height)
+    const rgba = ctx.getImageData(0, 0, cv.width, cv.height).data
+    let left = cell.w,
+      right = 0,
+      top = cell.h,
+      bottom = 0
+    for (let y = 0; y < cv.height; y++)
+      for (let x = 0; x < cv.width; x++) {
+        if (rgba[(y * cv.width + x) * 4 + 3] > 24) {
+          left = Math.min(left, x)
+          right = Math.max(right, x)
+          top = Math.min(top, y)
+          bottom = Math.max(bottom, y)
+        }
+      }
+    crop =
+      right >= left && bottom >= top
+        ? {
+            x: cell.x + (left * cell.w) / cv.width,
+            y: cell.y + (top * cell.h) / cv.height,
+            w: ((right - left + 1) * cell.w) / cv.width,
+            h: ((bottom - top + 1) * cell.h) / cv.height,
+          }
+        : cell
+    cache.set(key, crop)
+  }
+  return crop
+}
+
 /** B안 뒷모습의 오른쪽 어깨. 전투와 준비 화면이 같은 몸·총 결합점을 쓴다. */
 export const STAGE_HERO = { fur: '#ffe2ae', gunX: 78, gunY: 65, gunScale: 1.4 }
 
@@ -12,40 +56,7 @@ export function drawSprite(
   target: Rect,
   fit: 'contain' | 'height' = 'contain',
 ) {
-  let cache = bounds.get(image)
-  if (!cache) {
-    cache = new Map()
-    bounds.set(image, cache)
-  }
-  const key = `${cell.x},${cell.y},${cell.w},${cell.h}`
-  let crop = cache.get(key)
-  if (!crop) {
-    const cv = document.createElement('canvas')
-    cv.width = cell.w
-    cv.height = cell.h
-    const ctx = cv.getContext('2d', { willReadFrequently: true })
-    if (!ctx) return
-    ctx.drawImage(image, cell.x, cell.y, cell.w, cell.h, 0, 0, cell.w, cell.h)
-    const rgba = ctx.getImageData(0, 0, cell.w, cell.h).data
-    let left = cell.w,
-      right = 0,
-      top = cell.h,
-      bottom = 0
-    for (let y = 0; y < cell.h; y++)
-      for (let x = 0; x < cell.w; x++) {
-        if (rgba[(y * cell.w + x) * 4 + 3] > 24) {
-          left = Math.min(left, x)
-          right = Math.max(right, x)
-          top = Math.min(top, y)
-          bottom = Math.max(bottom, y)
-        }
-      }
-    crop =
-      right >= left && bottom >= top
-        ? { x: cell.x + left, y: cell.y + top, w: right - left + 1, h: bottom - top + 1 }
-        : cell
-    cache.set(key, crop)
-  }
+  const crop = spriteBounds(image, cell)
   // 고양이는 풍성한 꼬리 때문에 몸이 작아지지 않도록 높이를 기준으로 맞춘다.
   const scale =
     fit === 'height' ? target.h / crop.h : Math.min(target.w / crop.w, target.h / crop.h)

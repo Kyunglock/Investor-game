@@ -22,6 +22,7 @@ export function drawStageGun(
   fur: string,
   _kind: GunKind,
   grade: GunGrade,
+  withHands = true,
 ) {
   const glow = GUN_GRADE_COLOR[grade]
   const box = (x: number, y: number, w: number, h: number, fill: string, radius = 2) => {
@@ -40,10 +41,12 @@ export function drawStageGun(
   c.lineJoin = 'round'
   // 몸 쪽의 두 팔이 각각 손잡이와 총몸 아래를 받친다.
   c.lineCap = 'round'
-  for (const [ex, ey, hx, hy] of [
-    [-7, -7, 1, 7],
-    [-5, -3, 11, 4],
-  ]) {
+  for (const [ex, ey, hx, hy] of withHands
+    ? [
+        [-7, -7, 1, 7],
+        [-5, -3, 11, 4],
+      ]
+    : []) {
     for (const [color, width] of [
       ['#76563f', 7],
       [fur, 4.5],
@@ -141,10 +144,12 @@ export function drawStageGun(
     c.lineWidth = 1
     c.stroke()
   }
-  for (const [x, y] of [
-    [1, 7],
-    [11, 4],
-  ]) {
+  for (const [x, y] of withHands
+    ? [
+        [1, 7],
+        [11, 4],
+      ]
+    : []) {
     c.beginPath()
     c.ellipse(x, y, 3.7, 3.1, -0.25, 0, Math.PI * 2)
     c.fillStyle = fur

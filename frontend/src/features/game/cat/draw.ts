@@ -550,9 +550,23 @@ export function drawCat(c: Ctx, o: CatLook) {
 }
 
 export type GunKind = 'pistol' | 'revolver' | 'smg' | 'shotgun' | 'rifle'
-export type GunGrade = 'F' | 'E' | 'D' | 'C' | 'B' | 'A' | 'S'
+export const GUN_GRADES = [
+  'F',
+  'E',
+  'D',
+  'C',
+  'B',
+  'A',
+  'S',
+  'SS',
+  'SSS',
+  'SR',
+  'UR',
+  'LR',
+] as const
+export type GunGrade = (typeof GUN_GRADES)[number]
 
-/** 무기 F~S 등급색. 앱의 총·탄·명중도 같은 팔레트를 쓴다. */
+/** 무기 F~LR 등급색. 앱의 총·탄·명중도 같은 팔레트를 쓴다. */
 export const GUN_GRADE_COLOR: Record<GunGrade, string> = {
   F: '#94a3b8',
   E: '#34d399',
@@ -561,6 +575,11 @@ export const GUN_GRADE_COLOR: Record<GunGrade, string> = {
   B: '#e879f9',
   A: '#fb923c',
   S: '#67e8f9',
+  SS: '#60a5fa',
+  SSS: '#c084fc',
+  SR: '#fb7185',
+  UR: '#4ade80',
+  LR: '#facc15',
 }
 
 /**
@@ -647,7 +666,7 @@ export function drawGun(c: Ctx, fur: string, kind: GunKind = 'pistol', grade: Gu
   c.strokeStyle = INK
   c.stroke()
   // 전설: 반짝이 둘
-  if (grade === 'S') {
+  if (GUN_GRADES.indexOf(grade) >= GUN_GRADES.indexOf('S')) {
     for (const [sx, sy, r] of [
       [len - 2, -7.5, 2.2],
       [3, -7, 1.5],
