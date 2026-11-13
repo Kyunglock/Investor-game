@@ -201,7 +201,7 @@ export interface IdleSnapshot {
 export interface BattleOptions {
   /** Foreground idle mode: wall health and progression are server-authoritative. */
   idle?: () => IdleSnapshot
-  onIdleHit?: (wall: number, kind: IdleAttackKind) => void
+  onIdleHit?: (wall: number, kind: IdleAttackKind, damage: number) => void
 
   /** 처음 배속(gameSpeed.ts). 없으면 1배. */
   speed?: GameSpeed
@@ -1611,6 +1611,12 @@ class BattleScene extends Phaser.Scene {
     this.hitstop(140)
     const mid = this.bossMid
     this.bossMid = false
+    // 방치형의 큰손은 별도 적이다. 처치 보너스를 벽 명중으로 보고하면
+    // 벽에 닿은 공격 없이도 서버가 벽을 돌파시킨다.
+    if (this.opts.idle) {
+      this.opts.onBanner('큰손 격파!', '#ffd84d')
+      return
+    }
     const last = this.walls.find((wl) => (mid ? wl.spec.mid : wl.spec.boss) && !wl.broken)
     if (last) {
       this.opts.onBanner(
@@ -1703,9 +1709,6 @@ class BattleScene extends Phaser.Scene {
         cell.hp = hp
         this.crackCell(cell)
       }
-    }
-    if (this.bossEnemy?.active) {
-      this.bossEnemy.hp = this.bossEnemy.maxHp * Math.max(0.001, snapshot.hp / snapshot.maxHp)
     }
   }
 
@@ -2172,6 +2175,7 @@ class BattleScene extends Phaser.Scene {
   inspectMarket() {
     return {
       ...this.marketStats,
+      boss: this.bossEnemy?.active ? { hp: this.bossEnemy.hp, maxHp: this.bossEnemy.maxHp } : null,
       simSpeed: this.simSpeed,
       climbed: this.climbed,
       nextWallIn: this.nextWallIn,
@@ -2587,8 +2591,8 @@ class BattleScene extends Phaser.Scene {
       this.hitSpark.explode(2, e.x - Math.cos(angle) * 10, e.y + 10)
       return
     }
-    if (this.opts.idle && (e.cell || e.boss)) {
-      if (!this.idleTransition) this.reportIdleHit(this.idleWall, kind)
+    if (this.opts.idle && e.cell) {
+      if (!this.idleTransition) this.reportIdleHit(this.idleWall, kind, dmg)
     } else e.hp -= dmg
     // 매도벽은 연사 중에도 장갑과 균열이 보여야 한다. 밝기만 올리고 명중 불꽃을 얹는다.
     if (e.cell) e.clearTint()
@@ -3350,7 +3354,7 @@ class BattleScene extends Phaser.Scene {
     this.ring(x, y, 0x6cc0ff, st.splash, 260)
     this.glow(x, y, 0xbfe8ff, st.splash * 0.8, 200, 0.6)
     this.waterFx.explode(this.fx(10), x, y)
-    this.idleAreaHit(x, y, st.splash, 'water')
+    this.idleAreaHit(x, y, st.splash, 'water', st.damage * this.loadout.damage)
     const angle = Math.atan2(s.dy, s.dx)
     for (const e of this.magicTargets(true)) {
       if (this.areaDistance(e, x, y) <= st.splash) this.waterHit(e, st, angle, true)
@@ -3450,7 +3454,7 @@ class BattleScene extends Phaser.Scene {
       onComplete: () => s.crater.setVisible(false),
     })
     this.playSound('boom')
-    this.idleAreaHit(x, y, st.radius, 'meteor')
+    this.idleAreaHit(x, y, st.radius, 'meteor', st.damage * this.loadout.damage)
     // 범위 안의 뒤쪽 매도벽도 맞는다. 묶인 벽은 운석당 한 번만 맞는다.
     for (const e of [...this.magicTargets(true)]) {
       const distance = this.areaDistance(e, x, y)
@@ -3833,7 +3837,8 @@ class BattleScene extends Phaser.Scene {
   }
 
   /** 범위 피해 (decisions.md 362번): 맞은 적을 뺀, 터진 자리 반지름 안의 적이 함께 맞는다. 바깥으로 밀어내는 각도로 맞는다. */
-  private reportIdleHit(wall: number, kind: DamageKind) {
+  private reportIdleHit(wall: number, kind: DamageKind, damage: number) {
+    if (!Number.isFinite(damage) || damage <= 0) return
     const code: IdleAttackKind =
       kind === 'water' || kind === 'meteor'
         ? kind
@@ -3842,12 +3847,15 @@ class BattleScene extends Phaser.Scene {
           : kind === 'earth' || kind === 'siege'
             ? 'ram'
             : 'bullet'
-    this.opts.onIdleHit?.(wall, code)
+    this.opts.onIdleHit?.(wall, code, damage)
   }
 
-  private idleAreaHit(x: number, y: number, radius: number, kind: DamageKind) {
+  private idleAreaHit(x: number, y: number, radius: number, kind: DamageKind, damage: number) {
     if (!this.opts.idle || this.idleTransition || this.circuit) return
-    for (const wall of this.idleQueue?.hitWalls(x, y, radius) ?? []) this.reportIdleHit(wall, kind)
+    for (const { wall, distance } of this.idleQueue?.hitWalls(x, y, radius) ?? []) {
+      const factor = kind === 'meteor' ? meteorFalloff(distance, radius) : 1
+      this.reportIdleHit(wall, kind, damage * factor)
+    }
   }
 
   private areaDistance(e: Enemy, x: number, y: number) {
@@ -3861,7 +3869,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   private splash(x: number, y: number, radius: number, dmg: number, except: Enemy) {
-    this.idleAreaHit(x, y, radius, 'bullet')
+    this.idleAreaHit(x, y, radius, 'bullet', dmg)
     for (const child of this.enemies.getChildren()) {
       const e = child as Enemy
       if (e === except || !e.active || e.dying) {

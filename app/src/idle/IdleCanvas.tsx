@@ -48,9 +48,11 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
           hero: heroOf(c),
           loadout: idleLoadout(c),
           idle: () => latest.current.company.idle ?? { wall: 1, hp: 120, maxHp: 120 },
-          onIdleHit: (wall, kind) => {
+          onIdleHit: (wall, kind, damage) => {
             if (!disposed && foreground && nativeActive && latest.current.connected) {
-              window.dispatchEvent(new CustomEvent('idle-wall-hit', { detail: { wall, kind } }))
+              window.dispatchEvent(
+                new CustomEvent('idle-wall-hit', { detail: { wall, kind, damage } }),
+              )
             }
           },
           onHud: () => {},

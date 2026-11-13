@@ -62,7 +62,7 @@ class CompanyController {
         request.hits() == null
             ? List.of()
             : request.hits().stream()
-                .map(h -> new CompanyService.IdleHit(h.wall(), h.kind(), h.count()))
+                .map(h -> new CompanyService.IdleHit(h.wall(), h.kind(), h.count(), h.damage()))
                 .toList());
   }
 
@@ -76,7 +76,8 @@ class CompanyController {
       @Positive long wall,
       @NotNull @jakarta.validation.constraints.Pattern(regexp = "bullet|water|meteor|bolt|ram")
           String kind,
-      @Min(1) @Max(1000) int count) {}
+      @Min(1) @Max(1000) int count,
+      @PositiveOrZero @jakarta.validation.constraints.DecimalMax("1000000000000") Double damage) {}
 
   /** 사장의 사재로 첫 회사를 차린다 (decisions.md 228번). 회사가 이미 있으면 400. */
   @PostMapping

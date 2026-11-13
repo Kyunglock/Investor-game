@@ -54,7 +54,7 @@ try {
       hero: { name: '명중검증', weapon: DEFAULT_WEAPON, upgrades: [] },
       loadout,
       idle: () => snapshot,
-      onIdleHit: (wall, kind) => window.actualIdleHits.push({ wall, kind }),
+      onIdleHit: (wall, kind, damage) => window.actualIdleHits.push({ wall, kind, damage }),
       onHud: () => {},
       onBanner: () => {},
       onHurt: () => {},
@@ -64,6 +64,7 @@ try {
     window.enableIdleAttacks = (meteor = 1) =>
       handle.applyLoadout({ ...loadout, fireMs: 100, meteor })
     window.pauseIdleTest = (paused) => handle.setPaused(paused)
+    window.stopIdleTest = () => handle.stop()
   })
   await page.waitForFunction(() => window.__mentalWalls?.()[0]?.arrived)
   await page.waitForFunction(() => window.__mentalMarket().battleSeconds > 3)
@@ -82,14 +83,61 @@ try {
   )
   const hits = await page.evaluate(() => window.actualIdleHits)
   assert(hits.every((hit) => hit.wall === 16 || hit.kind === 'meteor'))
+  assert(hits.filter((hit) => hit.kind === 'bullet').every((hit) => hit.damage === 0.5))
+  assert(
+    hits.filter((hit) => hit.kind === 'meteor').every((hit) => hit.damage > 0 && hit.damage <= 2.4),
+  )
   // The renderer cannot clear a wall by itself; the server snapshot still has full health.
   assert.equal((await page.evaluate(() => window.__mentalWalls()))[0].hp, 5000)
   await page.evaluate(() => window.pauseIdleTest(true))
   const pausedCount = await page.evaluate(() => window.actualIdleHits.length)
   await page.waitForTimeout(500)
   assert.equal(await page.evaluate(() => window.actualIdleHits.length), pausedCount)
+  // Boss health must be independent from wall health, including its death effect.
+  await page.evaluate(async () => {
+    window.stopIdleTest()
+    const base = '/app/src/mental/'
+    const [{ startBattle }, { loadoutOf }, { assaultSpec }, { DEFAULT_WEAPON }] = await Promise.all(
+      ['battle.ts', 'cards.ts', 'assault.ts', 'hero.ts'].map((file) => import(base + file)),
+    )
+    const host = document.createElement('div')
+    host.style.cssText = 'position:fixed;inset:0;z-index:99999'
+    document.body.append(host)
+    const spec = assaultSpec(1)
+    spec.walls = [{ ...spec.walls[0], rows: 1, boss: true, spawnSeconds: 10000 }]
+    spec.bossHp = 3
+    const loadout = { ...loadoutOf(DEFAULT_WEAPON), fireMs: 100, damage: 0.5 }
+    window.actualIdleHits = []
+    let sawBoss = false
+    window.bossTestDone = false
+    const handle = startBattle(host, {
+      mode: 'assault',
+      speed: 2,
+      assault: spec,
+      genre: 'DEFENSE',
+      hero: { name: '큰손 검증', weapon: DEFAULT_WEAPON, upgrades: [] },
+      loadout,
+      idle: () => ({ wall: 10, hp: 5000, maxHp: 5000 }),
+      onIdleHit: (wall, kind) => window.actualIdleHits.push({ wall, kind }),
+      onHud: () => {
+        const boss = window.__mentalMarket?.().boss
+        if (boss) sawBoss = true
+        if (sawBoss && !boss && !window.bossTestDone) {
+          window.bossTestDone = true
+          handle.setPaused(true)
+        }
+      },
+      onBanner: () => {},
+      onHurt: () => {},
+      onDone: () => {},
+      onLevelUp: () => handle.applyLoadout(loadout),
+    })
+  })
+  await page.waitForFunction(() => window.bossTestDone)
+  assert.deepEqual(await page.evaluate(() => window.actualIdleHits), [])
+  assert.equal((await page.evaluate(() => window.__mentalWalls()))[0].hp, 5000)
   assert.deepEqual(errors, [])
-  console.log('PASS: no timer contacts, real bullet/area contacts, no client clear, pause')
+  console.log('PASS: no timer contacts, real bullet/area contacts, independent boss, pause')
 } finally {
   await browser.close()
 }

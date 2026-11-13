@@ -70,8 +70,8 @@ export function useIdleBattle(companyId?: string) {
       if (!started || blocked || disposed || !visible()) return
       const company = useRaisingStore.getState().company
       if (company?.companyId !== companyId || !company.idle || company.idle.circuitSeconds) return
-      const { wall, kind } = (event as CustomEvent<IdleContact>).detail
-      contacts.add(wall, kind, company.idle.wall)
+      const { wall, kind, damage } = (event as CustomEvent<IdleContact>).detail
+      contacts.add(wall, kind, company.idle.wall, damage)
     }
     const clearContacts = () => contacts.clear()
     const visibility = () => {
