@@ -243,6 +243,8 @@ const INK = '#2b2340'
 const BULLET_LIFE = 900
 /** 자동 전투에서 맞힌 피해를 화면의 벽 체력에서 먼저 빼 두는 시간(실제 ms): 서버의 1초 주기와 왕복 시간보다 조금 길다 (493번). */
 const IDLE_HIT_MS = 1400
+/** 자동 전투에서 벽 앞에 막힌 시간으로 셈하는 상한(초): 물량 간격이 바탕의 절반까지만 줄어든다 (assault.ts spawnSeconds, 494번). */
+const IDLE_STUCK_MAX = 25
 
 type Enemy = Phaser.Physics.Arcade.Image & {
   kind: UnitKind
@@ -2004,7 +2006,8 @@ class BattleScene extends Phaser.Scene {
         this.pushHud(true)
       }
     } else if (wall?.arrived) {
-      this.stuck += dt
+      // 벽 앞에 오래 막힐수록 물량이 잦아진다(spawnSeconds). 자동 전투는 끝이 없어 그대로 두면 막힌 벽에서 영영 못 벗어나므로 두 배까지만 잦아진다 (494번).
+      this.stuck = this.opts.idle ? Math.min(IDLE_STUCK_MAX, this.stuck + dt) : this.stuck + dt
     }
     const support = this.buyWall?.step(dt)
     if ((this.buyWall && !this.buyWall.active) || support?.retreat) {
@@ -2881,6 +2884,11 @@ class BattleScene extends Phaser.Scene {
       // 일반 피격 무적 시간과 무관하게 붕괴 한 번당 정확히 한 번 깎는다.
       this.hurt(loss, undefined, undefined, true)
       this.pushEnemiesBack(0.35)
+      // 자동 전투는 무너진 동안 공격이 멈춘다(492번): 쌓인 물량이 새 벽을 곧바로 다시 무너뜨리지 않게, 무너지며 화면의 물량을 모두 받아 낸다 (494번).
+      if (this.opts.idle) {
+        this.sweepFlows(0)
+        this.stuck = 0
+      }
       sfx.crumble()
       haptic.medium()
     } else {
