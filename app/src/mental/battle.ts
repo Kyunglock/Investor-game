@@ -200,6 +200,8 @@ export interface IdleSnapshot {
   wall: number
   hp: number
   maxHp: number
+  /** 서버가 마지막으로 처리한 접속 신호의 순번: 이 순번까지 보낸 명중은 hp에 들어 있다 (496번). */
+  sequence?: number
 }
 
 export interface BattleOptions {
@@ -237,13 +239,20 @@ export interface BattleHandle {
   setPaused: (paused: boolean) => void
   /** 전투 배속(gameSpeed.ts): 1배가 예전 빠르기의 절반. */
   setSpeed: (speed: GameSpeed) => void
+  /** 자동 전투: 지금까지 맞힌 것이 이 순번의 접속 신호에 실려 나갔다 (496번). */
+  idleHitsSent: (sequence: number) => void
+  /** 자동 전투: 보내려던 명중을 버렸다(멈춤·끊김). 먼저 빼 둔 피해도 잊는다. */
+  clearIdleHits: () => void
   stop: () => void
 }
 
 const INK = '#2b2340'
 const BULLET_LIFE = 900
-/** 자동 전투에서 맞힌 피해를 화면의 벽 체력에서 먼저 빼 두는 시간(실제 ms): 서버의 1초 주기와 왕복 시간보다 조금 길다 (493번). */
-const IDLE_HIT_MS = 1400
+/**
+ * 자동 전투에서 먼저 빼 둔 피해를 서버 답 없이 들고 있는 상한(실제 ms). 평소에는 서버가 처리한 순번으로 잊고(496번), 답이 영영 오지 않을 때만
+ * 이 시간으로 잊는다.
+ */
+const IDLE_HIT_MS = 5000
 /** 자동 전투에서 벽 앞에 막힌 시간으로 셈하는 상한(초): 물량 간격이 바탕의 절반까지만 줄어든다 (assault.ts spawnSeconds, 494번). */
 const IDLE_STUCK_MAX = 25
 
@@ -498,7 +507,8 @@ class BattleScene extends Phaser.Scene {
   private idleQueue?: IdleWallQueueFx
   private idleWall = 0
   /** 지금 벽에 방금 맞힌 피해(실제 ms와 양). 서버 값이 따라올 때까지 화면의 벽 체력에서 먼저 뺀다 (493번). */
-  private idleHits: { at: number; amount: number }[] = []
+  /** 먼저 빼 둔 명중. sequence는 실려 나간 접속 신호의 순번이고, 아직 안 나갔으면 없다 (496번). */
+  private idleHits: { at: number; amount: number; sequence?: number }[] = []
   private idleTransition = false
   private runRush = 0
   private wallsBroken = 0
@@ -689,6 +699,14 @@ class BattleScene extends Phaser.Scene {
       this.physics.resume()
     }
     this.pushHud(true)
+  }
+
+  idleHitsSent(sequence: number) {
+    for (const hit of this.idleHits) hit.sequence ??= sequence
+  }
+
+  clearIdleHits() {
+    this.idleHits = []
   }
 
   applyLoadout(loadout: Loadout) {
@@ -1737,10 +1755,14 @@ class BattleScene extends Phaser.Scene {
       for (const cell of [...wall.cells]) if (cell.active && !cell.dying) this.kill(cell, false)
       return
     }
-    // 서버는 1초마다 답한다: 그사이 맞힌 피해를 먼저 빼서 맞는 즉시 줄어 보이게 한다. 서버 값이 따라온 뒤(IDLE_HIT_MS)에는 뺀 것을 잊는다.
+    // 서버는 1초마다 답한다: 그사이 맞힌 피해를 먼저 빼서 맞는 즉시 줄어 보이게 한다. 뺀 것은 그 명중을 실은 접속 신호를 서버가 처리했을 때
+    // (snapshot.sequence) 잊는다: 시간으로 잊으면 서버 값에 이미 든 피해를 또 빼거나 아직 안 든 피해를 돌려놓아 체력이 오르내렸다 (496번).
     // 벽이 깨지는 판정은 서버 것이라 여기서는 0까지 내리지 않는다.
     const since = performance.now() - IDLE_HIT_MS
-    this.idleHits = this.idleHits.filter((hit) => hit.at >= since)
+    const handled = snapshot.sequence ?? -1
+    this.idleHits = this.idleHits.filter(
+      (hit) => hit.at >= since && (hit.sequence === undefined || hit.sequence > handled),
+    )
     const pending = this.idleHits.reduce((sum, hit) => sum + hit.amount, 0)
     const cells = this.wallLayers(wall)
     for (const cell of cells) {
@@ -4495,6 +4517,8 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
     applyLoadout: (loadout) => scene.applyLoadout(loadout),
     setPaused: (paused) => scene.setPaused(paused),
     setSpeed: (speed) => scene.setGameSpeed(speed),
+    idleHitsSent: (sequence) => scene.idleHitsSent(sequence),
+    clearIdleHits: () => scene.clearIdleHits(),
     stop: () => {
       ro.disconnect()
       game.destroy(true)

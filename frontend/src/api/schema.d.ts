@@ -1134,6 +1134,11 @@ export interface components {
                 nextUnlock: number;
                 /** @description 서킷브레이커 잔여 게임 시간. 기본 2배속이며 거래 정지 중에는 공격과 보상이 멈춤 */
                 circuitSeconds?: number;
+                /**
+                 * Format: int64
+                 * @description 서버가 마지막으로 처리한 접속 신호의 순번. 화면은 이 순번까지 보낸 명중을 hp에 반영된 것으로 본다
+                 */
+                sequence?: number;
                 /** @description 뒤쪽 두 매도벽의 체력. 스플래시 피해를 저장하며 보상은 앞에서부터 지급 */
                 upcoming?: {
                     /** Format: int64 */

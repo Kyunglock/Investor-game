@@ -58,6 +58,18 @@ class IdleEngineTest {
   }
 
   @Test
+  void viewCarriesTheLastHandledBeatSoTheScreenKnowsWhichHitsAreInTheHealth() {
+    start(1);
+    tick(500, new IdleHit(1, "bullet", 1));
+    double hp = engine.view(state).hp();
+    assertThat(engine.view(state).sequence()).isEqualTo(sequence);
+    // A replayed beat changes neither the health nor the acknowledged sequence.
+    engine.beat(state, "one", sequence, "tick", List.of(new IdleHit(1, "bullet", 1)));
+    assertThat(engine.view(state).sequence()).isEqualTo(sequence);
+    assertThat(engine.view(state).hp()).isEqualTo(hp);
+  }
+
+  @Test
   void timeAndAcquiredSkillsAloneNeverDamageWalls() {
     start(51);
     for (int i = 0; i < 20; i++) tick(1000);

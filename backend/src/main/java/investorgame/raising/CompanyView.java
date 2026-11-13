@@ -68,7 +68,8 @@ public record CompanyView(
       int fieldSlots,
       double wallDps,
       double circuitSeconds,
-      List<IdleWall> upcoming) {}
+      List<IdleWall> upcoming,
+      long sequence) {}
 
   /**
    * 고양이 한 마리 (decisions.md 488·491번). 뽑기로 얻고, 출전하면 제 총으로 함께 쏜다. 스킬과는 상관없다.

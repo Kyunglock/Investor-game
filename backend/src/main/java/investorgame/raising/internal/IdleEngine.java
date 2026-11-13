@@ -396,8 +396,7 @@ class IdleEngine {
             new CompanyView.IdleWall(
                 s.wall + 1, Math.max(0, maxHp(s.wall + 1) - s.nextDamage), maxHp(s.wall + 1)),
             new CompanyView.IdleWall(
-                s.wall + 2,
-                Math.max(0, maxHp(s.wall + 2) - s.afterNextDamage),
-                maxHp(s.wall + 2))));
+                s.wall + 2, Math.max(0, maxHp(s.wall + 2) - s.afterNextDamage), maxHp(s.wall + 2))),
+        s.sequence);
   }
 }
