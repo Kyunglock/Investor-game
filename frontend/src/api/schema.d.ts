@@ -1059,6 +1059,8 @@ export interface components {
                 boss: boolean;
                 /** Format: int64 */
                 nextUnlock: number;
+                /** @description 서킷브레이커 잔여 활성 시간. 거래 정지 중에는 공격과 보상이 멈춤 */
+                circuitSeconds?: number;
                 skills: {
                     code: string;
                     name: string;

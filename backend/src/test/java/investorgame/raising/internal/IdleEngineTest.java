@@ -79,6 +79,7 @@ class IdleEngineTest {
     engine.advance(state, 1, IdleEngine.maxHp(5));
     assertThat(engine.view(state).skills().getFirst().owned()).isTrue();
     assertThat(engine.view(state).skills().get(1).owned()).isFalse();
+    engine.advance(state, 4, 120); // Finish the foreground trading halt.
     state.idle.wall = 10;
     assertThat(engine.view(state).boss()).isTrue();
     engine.advance(state, 1, IdleEngine.maxHp(10));
@@ -104,6 +105,55 @@ class IdleEngineTest {
     clock.now += 100000;
     engine.beat(state, "one", 4, "tick");
     assertThat(state.idle.damage).isEqualTo(before);
+  }
+
+  @Test
+  void circuitStopsDamageIncomeAndSkillTimeAndSurvivesOffline() {
+    engine.view(state);
+    state.idle.wall = 5;
+    engine.advance(state, 1, IdleEngine.maxHp(5));
+    assertThat(state.idle.wall).isEqualTo(6);
+    assertThat(engine.view(state).circuitSeconds()).isEqualTo(4);
+    long capital = state.capital;
+    double active = state.idle.activeSeconds;
+    engine.beat(state, "one", 0, "start");
+    clock.now += 1000;
+    engine.beat(state, "one", 1, "tick");
+    assertThat(state.idle.circuitSeconds).isEqualTo(3);
+    assertThat(state.idle.damage).isZero();
+    assertThat(state.capital).isEqualTo(capital);
+    assertThat(state.idle.activeSeconds).isEqualTo(active);
+    engine.beat(state, "one", 1, "tick");
+    assertThat(state.idle.circuitSeconds).isEqualTo(3);
+    engine.beat(state, "one", 2, "stop");
+    clock.now += 86400000;
+    engine.beat(state, "two", 0, "start");
+    assertThat(state.idle.circuitSeconds).isEqualTo(3);
+    clock.now += 3000;
+    engine.beat(state, "two", 1, "tick");
+    assertThat(state.idle.circuitSeconds).isZero();
+    assertThat(state.capital).isEqualTo(capital);
+    clock.now += 1000;
+    engine.beat(state, "two", 2, "tick");
+    assertThat(state.idle.damage).isPositive();
+    assertThat(state.capital).isGreaterThan(capital);
+  }
+
+  @Test
+  void highDamageCannotSkipCircuitAndLaterCircuitsRepeat() {
+    engine.advance(state, 1, 1_000_000);
+    assertThat(state.idle.wall).isEqualTo(6);
+    assertThat(state.idle.damage).isZero();
+    assertThat(state.idle.circuitSeconds).isBetween(3.0, 4.0);
+    JsonMapper json = JsonMapper.builder().build();
+    CompanyState saved = json.readValue(json.writeValueAsString(state), CompanyState.class);
+    assertThat(engine.view(saved)).isEqualTo(engine.view(state));
+    engine.advance(saved, saved.idle.circuitSeconds, 1_000_000);
+    assertThat(saved.idle.damage).isZero();
+    engine.advance(saved, 1, 1_000_000);
+    assertThat(saved.idle.wall).isEqualTo(16);
+    assertThat(saved.idle.circuitSeconds).isBetween(3.0, 4.0);
+    assertThat(saved.weaponTickets).isEqualTo(1);
   }
 
   @Test

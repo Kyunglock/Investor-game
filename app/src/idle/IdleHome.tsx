@@ -142,7 +142,9 @@ export function IdleHome({
           </header>
           <div className="idle-stage">
             <strong>매도벽 {(idle?.wall ?? 1).toLocaleString()}</strong>
-            <em>{connected ? '● AUTO' : '연결 대기'}</em>
+            <em>
+              {connected ? ((idle?.circuitSeconds ?? 0) > 0 ? '거래 정지' : '● AUTO') : '연결 대기'}
+            </em>
             <p>
               {idle?.boss
                 ? '대량 매도 큰손 등장'
@@ -239,7 +241,9 @@ export function IdleHome({
           )}
           <p className="idle-sheet-note">
             {connected
-              ? '● 메뉴를 보는 동안에도 자동 전투 중'
+              ? (idle?.circuitSeconds ?? 0) > 0
+                ? '서킷브레이커 · 거래 재개 대기'
+                : '● 메뉴를 보는 동안에도 자동 전투 중'
               : '연결을 기다리는 동안 전투가 멈춰 있어요'}
           </p>
         </Sheet>

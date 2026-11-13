@@ -251,7 +251,13 @@ export function ActionBar({
         <section className="toy-support" aria-label="돌파 지원 현황" data-testid="office-support">
           <div className="toy-support-heading">
             <strong>돌파 지원 사무실</strong>
-            <span role="status">{connected ? '● 자동 전투 중' : '연결 대기'}</span>
+            <span role="status">
+              {connected
+                ? (company.idle?.circuitSeconds ?? 0) > 0
+                  ? '거래 정지'
+                  : '● 자동 전투 중'
+                : '연결 대기'}
+            </span>
           </div>
           <dl>
             <div>

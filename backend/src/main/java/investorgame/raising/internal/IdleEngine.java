@@ -54,16 +54,16 @@ class IdleEngine {
     long elapsed = now - s.lastBeat;
     if (s.lastBeat > 0 && elapsed > 0 && elapsed <= 3000 && serverId.equals(s.serverId)) {
       double seconds = elapsed / 1000.0;
+      double attackSeconds = Math.max(0, seconds - s.circuitSeconds);
       double extra = 0;
       for (int i = 0; i < UNLOCKS.length; i++) {
         if (s.wall <= UNLOCKS[i]) continue;
         double casts =
-            Math.floor((s.activeSeconds + seconds) / COOLDOWNS[i])
+            Math.floor((s.activeSeconds + attackSeconds) / COOLDOWNS[i])
                 - Math.floor(s.activeSeconds / COOLDOWNS[i]);
         extra += casts * s.dps * COOLDOWNS[i] * 0.25;
       }
-      s.activeSeconds += seconds;
-      advance(c, seconds, s.dps + extra / seconds);
+      advance(c, seconds, s.dps + (attackSeconds > 0 ? extra / attackSeconds : 0));
     }
     s.lastBeat = now;
     s.serverId = serverId;
@@ -101,27 +101,37 @@ class IdleEngine {
 
   void advance(CompanyState c, double seconds, double power) {
     CompanyState.Idle s = state(c);
-    // Income during attacks means a tough wall never locks the player out of upgrades.
-    double income = s.incomeRemainder + seconds * 20_000;
-    long earned = (long) income;
-    s.incomeRemainder = income - earned;
-    double damage = power * seconds;
+    double activeSeconds = 0;
+    long earned = 0;
     int cleared = 0;
-    // Bound work even for extreme legacy upgrades; excess damage remains on this wall.
-    while (damage > 0 && cleared < 1000) {
-      double remaining = Math.max(0, maxHp(s.wall) - s.damage);
-      if (damage < remaining) {
-        s.damage += damage;
-        break;
+    while (seconds > 0 && cleared < 1000) {
+      if (s.circuitSeconds > 0) {
+        double stopped = Math.min(seconds, s.circuitSeconds);
+        s.circuitSeconds -= stopped;
+        seconds -= stopped;
+        continue;
       }
-      damage -= remaining;
+      double remaining = Math.max(0, maxHp(s.wall) - s.damage);
+      double attacking = Math.min(seconds, remaining / power);
+      s.damage += attacking * power;
+      seconds -= attacking;
+      activeSeconds += attacking;
+      if (s.damage + 1e-7 < maxHp(s.wall)) break;
       earned =
           CompanyEngine.plus(earned, (long) Math.min(1_000_000_000L, 100_000.0 + s.wall * 10_000));
       if (s.wall % 10 == 0 && c.weaponTickets < Integer.MAX_VALUE) c.weaponTickets++;
       s.wall++;
       s.damage = 0;
       cleared++;
+      // Repeat the former mid-stage trading halt in the endless battle.
+      if (s.wall % 10 == 6) s.circuitSeconds = 4;
     }
+    // Trading halts freeze attack income and skill clocks as well as wall damage.
+    s.activeSeconds += activeSeconds;
+    double income = s.incomeRemainder + activeSeconds * 20_000;
+    long attackIncome = (long) income;
+    s.incomeRemainder = income - attackIncome;
+    earned = CompanyEngine.plus(earned, attackIncome);
     s.earned = CompanyEngine.plus(s.earned, earned);
     c.capital = CompanyEngine.plus(c.capital, earned);
     c.yearRewards = CompanyEngine.plus(c.yearRewards, earned);
@@ -148,6 +158,7 @@ class IdleEngine {
         s.earned,
         s.wall % 10 == 0,
         skills,
-        next);
+        next,
+        s.circuitSeconds);
   }
 }
