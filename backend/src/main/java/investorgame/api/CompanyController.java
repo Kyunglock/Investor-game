@@ -321,6 +321,43 @@ class CompanyController {
     return companies.mergeWeapon(cookies.requireSession(token), request.kind(), request.grade());
   }
 
+  /** 자본으로 고양이 한 마리를 뽑는다 (decisions.md 488번). */
+  @PostMapping("/cat/draw")
+  CompanyView drawCat(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
+    UUID sessionId = cookies.requireSession(token);
+    CompanyView company = companies.drawCat(sessionId);
+    PLAY.info(
+        "company-cat-draw session={} company={} ip={}",
+        sessionId,
+        company.companyId(),
+        ClientIp.current());
+    return company;
+  }
+
+  /** 가진 고양이를 출전시키거나 쉬게 한다 (decisions.md 488번). */
+  @PostMapping("/cat/field")
+  CompanyView fieldCat(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody CatFieldRequest request) {
+    return companies.fieldCat(cookies.requireSession(token), request.code(), request.fielded());
+  }
+
+  record CatFieldRequest(@NotBlank String code, @NotNull Boolean fielded) {}
+
+  /** 고양이에게 가진 무기 하나를 들린다. kind와 grade를 비우면 뺀다 (decisions.md 488번). */
+  @PostMapping("/cat/weapon")
+  CompanyView equipCat(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody CatWeaponRequest request) {
+    if ((request.kind() == null) != (request.grade() == null)) {
+      throw new InvalidRequestException("kind와 grade는 함께 보내거나 함께 비운다");
+    }
+    return companies.equipCat(
+        cookies.requireSession(token), request.code(), request.kind(), request.grade());
+  }
+
+  record CatWeaponRequest(@NotBlank String code, String kind, String grade) {}
+
   /** 그 자리의 팀장을 정한다 (decisions.md 269번). */
   /** 이사 비용을 내고 다음 건물로 간다 (decisions.md 296번). */
   @PostMapping("/upgrade")

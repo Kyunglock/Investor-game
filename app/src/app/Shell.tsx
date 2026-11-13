@@ -25,7 +25,7 @@ import { ActionBar, Windows } from './Windows'
 
 const TABS: { id: Tab; label: string; icon: () => React.ReactNode }[] = [
   { id: 'office', label: '사무실', icon: BuildingIcon },
-  { id: 'market', label: '채용', icon: ClipboardIcon },
+  { id: 'market', label: '채용 도감', icon: ClipboardIcon },
   { id: 'staff', label: '인력 관리', icon: ChairIcon },
   { id: 'issue', label: '이슈', icon: NewsIcon },
   { id: 'record', label: '기록', icon: BookIcon },

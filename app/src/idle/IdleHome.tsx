@@ -3,34 +3,36 @@ import { money } from '@web/features/game/labels'
 import { useRaisingStore } from '@web/features/raising/store'
 import { type ReactNode, useEffect, useState } from 'react'
 import { Sheet } from '../app/Sheet'
-import { GachaScene } from '../app/scenes/GachaScene'
 import { MAX_BATCH, queuedCost } from '../app/toy-city/upgradeQueue'
 import { useAppUi } from '../app/ui'
-import { WeaponInventory } from '../mental/WeaponInventory'
+import { WeaponInventory, weaponBadge } from '../mental/WeaponInventory'
 import { IdleCanvas } from './IdleCanvas'
+import { IdleCats } from './IdleCats'
+import { IdleIcon, type IdleIconName } from './icons'
 import './idle-home.css'
 
-type Menu = 'battle' | 'growth' | 'cats' | 'summon' | 'company'
-const menus: { key: Menu; label: string; path: string }[] = [
-  {
-    key: 'battle',
-    label: '돌파',
-    path: 'm6 3 15 15-3 3L3 6V3h3Zm8 11 5-5m-5-6h7v7M3 21l6-6m-4-2 6 6',
-  },
-  { key: 'growth', label: '성장', path: 'M4 20V10h4v10m4 0V5h4v15m4 0V2M2 22h21' },
-  {
-    key: 'cats',
-    label: '고양이',
-    path: 'M4 12 3 3l7 4h4l7-4-1 9v4c0 6-16 6-16 0v-4Zm4 1h1m6 0h1m-6 4 2 1 2-1',
-  },
-  { key: 'summon', label: '소환', path: 'm12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3 3-7Z' },
-  {
-    key: 'company',
-    label: '회사',
-    path: 'M4 22V5l8-3 8 3v17M9 22v-5h6v5M8 7h1m6 0h1M8 11h1m6 0h1',
-  },
+type Menu = 'battle' | 'growth' | 'cats' | 'company'
+type Part = 'stats' | 'weapons' | 'skills'
+const menus: { key: Menu; label: string }[] = [
+  { key: 'battle', label: '돌파' },
+  { key: 'growth', label: '성장' },
+  { key: 'cats', label: '고양이' },
+  { key: 'company', label: '회사' },
 ]
-const symbols: Record<string, string> = { water: '💧', meteor: '☄', bolt: 'ϟ', ram: '🪵' }
+const parts: { key: Part; label: string; icon: IdleIconName }[] = [
+  { key: 'stats', label: '능력치', icon: 'stats' },
+  { key: 'weapons', label: '인벤토리', icon: 'bag' },
+  { key: 'skills', label: '스킬', icon: 'spark' },
+]
+type Upgrade = NonNullable<Company['battleUpgrades']>[number]
+/** 능력치 (487번): 공격력·공격 속도·매수벽(체력 강화, 410번: 최대 멘탈과 그 절반인 매수벽 체력이 함께 오른다)·치명타 피해. */
+const STATS: Record<Upgrade['kind'], { name: string; note: string }> = {
+  damage: { name: '공격력', note: '탄 공격력' },
+  fire: { name: '공격 속도', note: '쏘는 빠르기' },
+  hp: { name: '매수벽 강화', note: '매수벽 체력·최대 멘탈' },
+  crit: { name: '치명타 피해', note: '치명타 배율' },
+}
+const maxed = (u: Upgrade) => u.maxLevel > 0 && u.level >= u.maxLevel
 
 export function IdleHome({
   company,
@@ -47,29 +49,38 @@ export function IdleHome({
   onBattle: () => void
   office: ReactNode
 }) {
-  const [menu, setMenu] = useState<Menu>('battle')
-  const [part, setPart] = useState<'stats' | 'weapons' | 'skills'>('stats')
-  const [summon, setSummon] = useState<'weapon' | 'staff'>('weapon')
+  const [ownMenu, setMenu] = useState<Menu>('battle')
+  const [ownPart, setPart] = useState<Part>('stats')
+  // 전투에서 "무기 바꾸기"로 오면(Windows) 성장 › 인벤토리가 열린다. 닫거나 다른 데로 가면 그 요청을 지운다.
+  const weaponsAsked = useAppUi((s) => s.sheet?.kind === 'weapons')
+  const menu = weaponsAsked ? 'growth' : ownMenu
+  const part = weaponsAsked ? 'weapons' : ownPart
+  const go = (next: Menu, nextPart: Part = part) => {
+    if (weaponsAsked) useAppUi.getState().closeSheet()
+    setMenu(next)
+    setPart(nextPart)
+  }
   const idle = company.idle
   useEffect(() => {
     if (menu === 'battle' || menu === 'company') return
     const previous = useAppUi.getState().modalBack
-    useAppUi.getState().setModalBack(() => setMenu('battle'))
+    useAppUi.getState().setModalBack(() => {
+      if (useAppUi.getState().sheet?.kind === 'weapons') useAppUi.getState().closeSheet()
+      setMenu('battle')
+    })
     return () => useAppUi.getState().setModalBack(previous)
   }, [menu])
   const navigate = (next: Menu) => {
     if (next === 'company') {
-      setMenu('battle')
+      go('battle')
       onManage()
     } else {
-      setMenu(next)
+      go(next)
       if (next === 'battle') onBattle()
     }
   }
   const activeMenu = menu === 'battle' && managing ? 'company' : menu
-  const affordable = company.battleUpgrades?.some(
-    (u) => u.kind !== 'hp' && u.price <= company.capital,
-  )
+  const affordable = company.battleUpgrades?.some((u) => !maxed(u) && u.price <= company.capital)
   const nav = (
     <nav className="idle-nav" aria-label="게임 메뉴">
       {menus.map((item) => (
@@ -80,17 +91,7 @@ export function IdleHome({
           aria-current={activeMenu === item.key ? 'page' : undefined}
           onClick={() => navigate(item.key)}
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.8"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d={item.path} />
-          </svg>
+          <IdleIcon name={item.key} />
           <span>{item.label}</span>
           {item.key === 'growth' && affordable && (
             <i className="idle-dot" role="img" aria-label="강화 가능" />
@@ -103,7 +104,9 @@ export function IdleHome({
     <div className="idle-collection">
       {idle?.skills.map((skill) => (
         <article key={skill.code} className={skill.owned ? 'owned' : ''}>
-          <span aria-hidden="true">{skill.owned ? symbols[skill.code] : '🔒'}</span>
+          <span className="idle-stat-icon" aria-hidden="true">
+            <IdleIcon name={skill.owned ? (skill.code as 'water' | 'bolt') : 'lock'} />
+          </span>
           <div>
             <b>{skill.name}</b>
             <small>{skill.owned ? '획득 · 자동 발동' : `${skill.unlockWall}벽 돌파 시 획득`}</small>
@@ -140,7 +143,7 @@ export function IdleHome({
               role="status"
               aria-label={`무기 뽑기권 ${company.armory?.tickets ?? 0}장`}
             >
-              <span aria-hidden="true">▣</span>
+              <IdleIcon name="ticket" />
               {company.armory?.tickets ?? 0}
             </div>
             <button type="button" aria-label="회사 메뉴" onClick={onManage}>
@@ -163,7 +166,7 @@ export function IdleHome({
       {menu !== 'battle' && menu !== 'company' && (
         <Sheet
           title={menus.find((m) => m.key === menu)?.label}
-          onClose={() => setMenu('battle')}
+          onClose={() => go('battle')}
           testId="idle-menu"
           className="idle-sheet"
           footer={nav}
@@ -172,15 +175,19 @@ export function IdleHome({
             <>
               <p className="idle-subtitle">강해진 만큼, 더 빠르게 돌파해요</p>
               <div className="idle-tabs" role="tablist" aria-label="성장 분류">
-                {(['stats', 'weapons', 'skills'] as const).map((key, i) => (
+                {parts.map((item) => (
                   <button
-                    key={key}
+                    key={item.key}
                     type="button"
                     role="tab"
-                    aria-selected={part === key}
-                    onClick={() => setPart(key)}
+                    aria-selected={part === item.key}
+                    onClick={() => go('growth', item.key)}
                   >
-                    {['능력치', '인벤토리', '스킬'][i]}
+                    <IdleIcon name={item.icon} />
+                    {item.label}
+                    {item.key === 'weapons' && weaponBadge(company) && (
+                      <b className="idle-tab-badge">{weaponBadge(company)}</b>
+                    )}
                   </button>
                 ))}
               </div>
@@ -193,58 +200,7 @@ export function IdleHome({
               )}
             </>
           )}
-          {menu === 'cats' && (
-            <>
-              <p className="idle-subtitle">돌파 보상으로 얻은 고양이가 함께 싸워요</p>
-              <div className="idle-collection">
-                <article className="owned">
-                  <span aria-hidden="true">🐱</span>
-                  <div>
-                    <b>사장냥</b>
-                    <small>기본 동료 · 장착한 무기로 자동 공격</small>
-                  </div>
-                </article>
-                {idle?.skills
-                  .filter((s) => ['meteor', 'ram'].includes(s.code))
-                  .map((s) => (
-                    <article key={s.code} className={s.owned ? 'owned' : ''}>
-                      <span aria-hidden="true">{s.owned ? '🐱' : '🔒'}</span>
-                      <div>
-                        <b>{s.name}</b>
-                        <small>
-                          {s.owned ? '획득 · 함께 전투 중' : `${s.unlockWall}벽 돌파 시 합류`}
-                        </small>
-                      </div>
-                    </article>
-                  ))}
-              </div>
-            </>
-          )}
-          {menu === 'summon' && (
-            <>
-              <div className="idle-tabs">
-                <button
-                  type="button"
-                  aria-pressed={summon === 'weapon'}
-                  onClick={() => setSummon('weapon')}
-                >
-                  무기 뽑기
-                </button>
-                <button
-                  type="button"
-                  aria-pressed={summon === 'staff'}
-                  onClick={() => setSummon('staff')}
-                >
-                  직원 채용
-                </button>
-              </div>
-              {summon === 'weapon' ? (
-                <WeaponInventory company={company} />
-              ) : (
-                <GachaScene company={company} />
-              )}
-            </>
-          )}
+          {menu === 'cats' && <IdleCats company={company} />}
           <p className="idle-sheet-note">
             {connected
               ? (idle?.circuitSeconds ?? 0) > 0
@@ -278,54 +234,52 @@ function IdleStats({ company }: { company: Company }) {
           ))}
         </div>
       </div>
-      {company.battleUpgrades
-        ?.filter((u) => u.kind !== 'hp')
-        .map((u) => {
-          let levels = count
-          while (
-            levels > 1 &&
-            queuedCost(u.price, u.priceGrowthPercent, 0, levels) > company.capital
-          )
-            levels--
-          const price = queuedCost(u.price, u.priceGrowthPercent, 0, levels)
-          return (
-            <article className="idle-stat" key={u.kind}>
-              <span className="idle-stat-icon" aria-hidden="true">
-                {u.kind === 'damage' ? '⚔' : '➶'}
-              </span>
-              <div className="idle-stat-info">
-                <b>
-                  {u.kind === 'damage' ? '공격력' : '공격 속도'} <small>Lv.{u.level}</small>
-                </b>
-                <p>
-                  +{u.bonusPercent}% → +
-                  {u.bonusPercent + (u.nextBonusPercent - u.bonusPercent) * levels}%
-                </p>
-              </div>
-              <button
-                type="button"
-                className="idle-buy"
-                disabled={buying || company.capital < price}
-                onClick={async () => {
-                  setBuying(true)
-                  setError(null)
-                  try {
-                    const result = await useRaisingStore.getState().buyBattleUpgrade(u.kind, levels)
-                    if (!result)
-                      setError(
-                        useRaisingStore.getState().error ?? '연결이 끊겼어요. 다시 시도해 주세요.',
-                      )
-                  } finally {
-                    setBuying(false)
-                  }
-                }}
-              >
-                강화 ×{levels}
-                <small>{money(price)}</small>
-              </button>
-            </article>
-          )
-        })}
+      {company.battleUpgrades?.map((u) => {
+        const full = maxed(u)
+        let levels = u.maxLevel > 0 ? Math.min(count, u.maxLevel - u.level) : count
+        while (levels > 1 && queuedCost(u.price, u.priceGrowthPercent, 0, levels) > company.capital)
+          levels--
+        const price = queuedCost(u.price, u.priceGrowthPercent, 0, levels)
+        return (
+          <article className="idle-stat" key={u.kind} data-testid="idle-stat" data-kind={u.kind}>
+            <span className="idle-stat-icon" aria-hidden="true">
+              <IdleIcon name={u.kind} />
+            </span>
+            <div className="idle-stat-info">
+              <b>
+                {STATS[u.kind].name} <small>Lv.{u.level}</small>
+              </b>
+              <small>{STATS[u.kind].note}</small>
+              <p>
+                {full
+                  ? `+${u.bonusPercent}% · 최대`
+                  : `+${u.bonusPercent}% → +${u.bonusPercent + (u.nextBonusPercent - u.bonusPercent) * levels}%`}
+              </p>
+            </div>
+            <button
+              type="button"
+              className="idle-buy"
+              disabled={full || buying || company.capital < price}
+              onClick={async () => {
+                setBuying(true)
+                setError(null)
+                try {
+                  const result = await useRaisingStore.getState().buyBattleUpgrade(u.kind, levels)
+                  if (!result)
+                    setError(
+                      useRaisingStore.getState().error ?? '연결이 끊겼어요. 다시 시도해 주세요.',
+                    )
+                } finally {
+                  setBuying(false)
+                }
+              }}
+            >
+              {full ? 'MAX' : `강화 ×${levels}`}
+              {!full && <small>{money(price)}</small>}
+            </button>
+          </article>
+        )
+      })}
       {error && <p role="alert">{error}</p>}
     </>
   )

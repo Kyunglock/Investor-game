@@ -82,6 +82,9 @@ export const WEAPON_TRAITS: Record<WeaponKind, WeaponTraits> = {
 /** 리볼버 치명타: 확률과 배율. */
 export const CRIT_CHANCE = 0.4
 export const CRIT_MULT = 3
+/** 다른 무기의 치명타 (487번): 확률과 배율. 서버(IdleEngine)가 같은 배율로 한 발의 상한을 잡는다. */
+export const BASE_CRIT_CHANCE = 0.1
+export const BASE_CRIT_MULT = 2
 
 /** 기관단총 둔화: 이어지는 시간(초)과 그동안의 빠르기 배율. */
 export const SLOW_SECONDS = 1
@@ -90,10 +93,12 @@ export const SLOW_FACTOR = 0.6
 /** 소총 관통: 탄 하나가 맞히는 적의 수. 다른 무기는 하나. */
 export const RIFLE_PIERCE = 4
 
-/** 한 발의 피해와 치명타 여부. roll은 0~1 난수(테스트에서 고정). */
-export function weaponDamage(kind: WeaponKind, damage: number, roll: number) {
-  const crit = kind === 'revolver' && roll < CRIT_CHANCE
-  return { damage: crit ? damage * CRIT_MULT : damage, crit }
+/** 한 발의 피해와 치명타 여부. roll은 0~1 난수(테스트에서 고정). critBonus는 치명타 피해 강화(487번): 배율에 1 + 이만큼을 곱한다. */
+export function weaponDamage(kind: WeaponKind, damage: number, roll: number, critBonus = 0) {
+  const revolver = kind === 'revolver'
+  const crit = roll < (revolver ? CRIT_CHANCE : BASE_CRIT_CHANCE)
+  const mult = (revolver ? CRIT_MULT : BASE_CRIT_MULT) * (1 + critBonus)
+  return { damage: crit ? damage * mult : damage, crit }
 }
 
 /** 탄 하나가 맞힐 수 있는 적의 수. */

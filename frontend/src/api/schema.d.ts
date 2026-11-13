@@ -372,7 +372,8 @@ export interface paths {
         put?: never;
         /**
          * 자본으로 전투 강화를 levels단계까지 산다 (decisions.md 367·394번)
-         * @description 공격력(+1%)·연사(쏘는 빠르기 +1%)를 단계마다, 최대 단계 없이 끝없이. 값은 1b부터 단계마다 4%씩 오른다.
+         * @description 공격력(+1%)·연사(쏘는 빠르기 +1%, 100%까지)·체력(+1%)·치명타 피해(+2%)를 단계마다 올린다. 연사 말고는 최대 단계가 없다. 값은 1b부터 단계마다 4%씩 오른다.
+         *     상한에 닿은 강화를 사면 400 (487번).
          *     꾹 눌러 연속으로 올릴 때 화면이 모은 단계를 levels로 묶어 보낸다: 자본이 닿는 데까지 한 단계씩 사고, 한 단계도 못 사면 400.
          *     쓴 돈은 분기 실적·결산서에 전투 강화 비용으로 따로 적는다. 고양이 속도 강화는 394번에서 뺐다.
          */
@@ -419,6 +420,68 @@ export interface paths {
          *     모자라거나 가장 높은 등급(LR)이면 400.
          */
         post: operations["mergeWeapon"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/cat/draw": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 자본으로 고양이 한 마리를 뽑는다 (decisions.md 488번)
+         * @description 값은 idle.catPrice이고 뽑을 때마다 1.5배씩 오른다. 고양이는 고르게 뽑힌다. 새 고양이는 바로 출전하고, 이미 가진 고양이면 레벨이 하나 올라
+         *     그 고양이 총의 공격력이 10% 는다. 자본이 모자라면 400. 쓴 돈은 전투 강화 비용으로 적는다.
+         */
+        post: operations["drawCat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/cat/field": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 가진 고양이를 출전시키거나 쉬게 한다 (decisions.md 488번)
+         * @description 출전한 고양이만 함께 쏘고 제 스킬을 쓴다. 가지지 않은 고양이면 400.
+         */
+        post: operations["fieldCat"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/cat/weapon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 고양이에게 가진 무기 하나를 들린다 (decisions.md 488번)
+         * @description 고양이는 가진 무기의 한 개씩을 빌려 든다. kind와 grade를 함께 비우면 뺀다(기본 권총을 쏜다). 남는 것이 없으면 다른 고양이가 든 것을 가져오고,
+         *     사장냥이 든 하나뿐인 무기면 400. 가지지 않은 고양이·무기도 400.
+         */
+        post: operations["equipCat"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1085,6 +1148,29 @@ export interface components {
                     unlockWall: number;
                     owned: boolean;
                 }[];
+                /**
+                 * Format: int64
+                 * @description 다음 고양이 뽑기 값 (488번)
+                 */
+                catPrice: number;
+                /** @description 고양이 (488번). 뽑기로 얻고, 출전한 고양이만 함께 쏘며 제 스킬(code)을 쓴다 */
+                cats: {
+                    /** @enum {string} */
+                    code: "meteor" | "ram";
+                    name: string;
+                    /** @description 0이면 아직 없다. 또 뽑을 때마다 하나씩 오른다 */
+                    level: number;
+                    /** @description 레벨로 붙는 이 고양이 총의 공격력(%) */
+                    bonusPercent: number;
+                    fielded: boolean;
+                    /** @description 든 무기. 없으면 null(기본 권총을 쏜다) */
+                    weapon: {
+                        /** @enum {string} */
+                        kind: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
+                        /** @enum {string} */
+                        grade: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "SR" | "UR" | "LR";
+                    } | null;
+                }[];
             };
             /** @description 매도벽 돌파 스테이지 (#698). 주 게임. 멘탈 스테이지와 따로 1-1부터 차례로 깬다. 분기 강화율에는 들어가지 않는다 */
             assaults?: {
@@ -1116,10 +1202,10 @@ export interface components {
             /** @description 자본으로 사는 전투 강화 (decisions.md 367·394번). 공격력·연사, 최대 단계 없이 멘탈 전투의 바탕 수치에 영구로 붙는다 */
             battleUpgrades?: {
                 /**
-                 * @description damage: 공격력, fire: 연사(쏘는 빠르기가 오른다), hp: 체력(최대 멘탈이 오른다)
+                 * @description damage: 공격력, fire: 연사(쏘는 빠르기가 오른다, 100%까지), hp: 체력(최대 멘탈과 매수벽이 오른다), crit: 치명타 피해(치명타 배율이 오른다)
                  * @enum {string}
                  */
-                kind: "damage" | "fire" | "hp";
+                kind: "damage" | "fire" | "hp" | "crit";
                 /** @description 지금 단계(0부터) */
                 level: number;
                 /**
@@ -1133,6 +1219,8 @@ export interface components {
                 bonusPercent: number;
                 /** @description 다음 단계의 효과(%) */
                 nextBonusPercent: number;
+                /** @description 살 수 있는 마지막 단계 (487번). 0이면 끝없이 산다 */
+                maxLevel: number;
             }[];
             /** @description 무기 뽑기 (decisions.md 366번). 무기는 전투에서 떨어지지 않고 무기 뽑기권으로 뽑는다 */
             armory?: {
@@ -1777,7 +1865,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    kind: "damage" | "fire" | "hp";
+                    kind: "damage" | "fire" | "hp" | "crit";
                     /** @description 올릴 단계 수. 없으면 1 */
                     levels?: number;
                 };
@@ -1840,6 +1928,94 @@ export interface operations {
         };
         responses: {
             /** @description 합친 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    drawCat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 뽑은 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    fieldCat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    code: "meteor" | "ram";
+                    fielded: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description 바꾼 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    equipCat: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    code: "meteor" | "ram";
+                    /** @enum {string} */
+                    kind?: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
+                    /** @enum {string} */
+                    grade?: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "SR" | "UR" | "LR";
+                };
+            };
+        };
+        responses: {
+            /** @description 바꾼 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -39,6 +39,17 @@ class CompanyState {
     String serverId;
     long sequence;
     double dps;
+
+    /** 가진 고양이의 레벨 (decisions.md 488번): 뽑으면 1, 또 뽑으면 하나씩 오른다. 이 칸이 없던 저장은 돌파한 벽으로 채운다. */
+    Map<String, Integer> cats;
+
+    /** 출전한 고양이, 줄 선 차례대로. */
+    List<String> fielded = new ArrayList<>();
+
+    /** 고양이가 든 무기. 가진 무기(weapons)의 한 개씩을 빌려 든다. */
+    Map<String, Weapon> catWeapons = new LinkedHashMap<>();
+
+    int catDraws;
   }
 
   /** 사장이 차린 몇 번째 회사인가(1부터). */

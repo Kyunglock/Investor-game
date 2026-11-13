@@ -64,8 +64,22 @@ public record CompanyView(
       boolean boss,
       List<IdleSkill> skills,
       long nextUnlock,
+      List<IdleCat> cats,
+      long catPrice,
       double circuitSeconds,
       List<IdleWall> upcoming) {}
+
+  /**
+   * 고양이 한 마리 (decisions.md 488번). 뽑기로 얻고, 출전해야 함께 싸우며 제 스킬(code)을 쓴다.
+   *
+   * @param level 0이면 아직 없다. 또 뽑을 때마다 하나씩 오른다
+   * @param bonusPercent 레벨로 붙는 이 고양이 총의 공격력(%)
+   * @param weapon 든 무기. 없으면 null(기본 권총을 쏜다)
+   */
+  public record IdleCat(
+      String code, String name, int level, int bonusPercent, boolean fielded, CatWeapon weapon) {}
+
+  public record CatWeapon(String kind, String grade) {}
 
   public record IdleWall(long wall, double hp, double maxHp) {}
 
@@ -144,12 +158,13 @@ public record CompanyView(
   /**
    * 자본으로 사는 전투 강화 하나 (decisions.md 367·394번). 최대 단계는 없다.
    *
-   * @param kind damage(공격력)·fire(연사)·hp(체력: 최대 멘탈, 410번)
+   * @param kind damage(공격력)·fire(연사)·hp(체력: 최대 멘탈, 410번)·crit(치명타 피해, 487번)
    * @param level 지금 단계(0부터)
    * @param price 다음 단계 값
    * @param priceGrowthPercent 단계마다 값이 오르는 비율(%). 꾹 눌러 연속으로 올릴 때 화면이 다음 값들을 미리 셈한다(정하는 것은 서버)
    * @param bonusPercent 지금 단계의 효과(%): 공격력은 그만큼 오르고, 연사는 쏘는 빠르기가 그만큼 오르고, 체력은 최대 멘탈이 그만큼 오른다
    * @param nextBonusPercent 다음 단계의 효과(%)
+   * @param maxLevel 살 수 있는 마지막 단계(487번). 0이면 끝없이 산다
    */
   public record BattleUpgrade(
       String kind,
@@ -157,7 +172,8 @@ public record CompanyView(
       long price,
       int priceGrowthPercent,
       int bonusPercent,
-      int nextBonusPercent) {}
+      int nextBonusPercent,
+      int maxLevel) {}
 
   /**
    * 뽑은 무기 하나 (366번).

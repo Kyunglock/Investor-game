@@ -83,7 +83,12 @@ try {
   )
   const hits = await page.evaluate(() => window.actualIdleHits)
   assert(hits.every((hit) => hit.wall === 16 || hit.kind === 'meteor'))
-  assert(hits.filter((hit) => hit.kind === 'bullet').every((hit) => hit.damage === 0.5))
+  // A bullet is its plain damage, or twice that on a pistol critical (decisions.md 487).
+  assert(
+    hits
+      .filter((hit) => hit.kind === 'bullet')
+      .every((hit) => hit.damage === 0.5 || hit.damage === 1),
+  )
   assert(
     hits.filter((hit) => hit.kind === 'meteor').every((hit) => hit.damage > 0 && hit.damage <= 2.4),
   )

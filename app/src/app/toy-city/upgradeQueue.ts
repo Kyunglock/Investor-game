@@ -8,7 +8,7 @@ export type UpgradeKind = NonNullable<Company['battleUpgrades']>[number]['kind']
 type Upgrade = NonNullable<Company['battleUpgrades']>[number]
 
 /** 강화 종류, 줄을 비우는 차례이기도 하다 (410번 체력). */
-const KINDS = ['damage', 'fire', 'hp'] as const
+const KINDS = ['damage', 'fire', 'hp', 'crit'] as const
 
 /** 한 요청에 묶는 최대 단계 수 (서버 mental.upgrades.max-batch와 같다). */
 export const MAX_BATCH = 100
@@ -53,7 +53,7 @@ export interface UpgradeView {
 }
 
 export class UpgradeQueue {
-  private pending: Record<UpgradeKind, number> = { damage: 0, fire: 0, hp: 0 }
+  private pending: Record<UpgradeKind, number> = { damage: 0, fire: 0, hp: 0, crit: 0 }
   private flight: InFlight | null = null
 
   private readonly send: (kind: UpgradeKind, levels: number) => Promise<Company | null>
@@ -160,7 +160,7 @@ export class UpgradeQueue {
     const bought = after?.battleUpgrades?.find((x) => x.kind === kind)?.level
     if (bought == null || bought - u.level < levels) {
       // 자본이 모자라 덜 샀거나 실패했다: 줄을 비우고 서버가 정한 값으로 돌아간다.
-      this.pending = { damage: 0, fire: 0, hp: 0 }
+      this.pending = { damage: 0, fire: 0, hp: 0, crit: 0 }
       this.onChange()
       this.onShort(kind)
       return

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import investorgame.behavior.internal.TestBehavior;
+import investorgame.common.random.HashSeededRandom;
 import investorgame.content.internal.TestContent;
 import investorgame.raising.CompanyService.IdleHit;
 import java.time.Clock;
@@ -46,6 +47,8 @@ class IdleEngineTest {
   private void start(long wall) {
     engine.view(state);
     state.idle.wall = wall;
+    // An old save at this wall: the cats that used to join at walls 15 and 50 are kept.
+    state.idle.cats = null;
     engine.beat(state, "one", 0, "start");
   }
 
@@ -105,9 +108,9 @@ class IdleEngineTest {
   void forgedAmountsAreLimitedByWeaponAndAcquiredSkillStats() {
     start(1);
     tick(1000, new IdleHit(1, "bullet", 1, 1e12), new IdleHit(1, "meteor", 1, 1e12));
-    assertThat(state.idle.damage).isEqualTo(1);
+    assertThat(state.idle.damage).as("one pistol critical at most").isEqualTo(2);
     tick(1000, new IdleHit(1, "bullet", 1, Double.NaN), new IdleHit(1, "bullet", 1, -1.0));
-    assertThat(state.idle.damage).isEqualTo(1);
+    assertThat(state.idle.damage).isEqualTo(2);
   }
 
   @Test
@@ -139,13 +142,13 @@ class IdleEngineTest {
   void forgedHitCountsAreBoundedByWeaponRateAndSkillsMustBeOwned() {
     start(1);
     tick(1000, new IdleHit(1, "bullet", 1000), new IdleHit(1, "meteor", 1000));
-    assertThat(state.idle.damage)
-        .isCloseTo(state.idle.dps * 2, org.assertj.core.data.Offset.offset(1e-9));
+    double dps = 1000.0 / 260;
+    assertThat(state.idle.damage).isCloseTo(dps * 2, org.assertj.core.data.Offset.offset(1e-9));
     assertThat(state.idle.wall).isEqualTo(1);
     for (int i = 0; i < 10; i++) tick(1000);
     double before = state.idle.damage;
     tick(1, new IdleHit(1, "bullet", 1000));
-    assertThat(state.idle.damage - before).isLessThanOrEqualTo(state.idle.dps * 6);
+    assertThat(state.idle.damage - before).isLessThanOrEqualTo(dps * 6);
   }
 
   @Test
@@ -256,5 +259,105 @@ class IdleEngineTest {
     double damage = engine.view(state).dps();
     state.battleLevels.put("fire", 10);
     assertThat(engine.view(state).dps()).isGreaterThan(damage);
+  }
+
+  @Test
+  void catsComeFromTheGachaNotFromWalls() {
+    HashSeededRandom random = new HashSeededRandom(7);
+    start(1);
+    state.idle.wall = 60;
+    assertThat(engine.view(state).cats()).allMatch(cat -> cat.level() == 0 && !cat.fielded());
+    tick(3000, new IdleHit(60, "meteor", 1), new IdleHit(60, "ram", 1));
+    assertThat(state.idle.damage).as("no cat, no cat skill").isZero();
+    assertThatThrownBy(() -> engine.drawCat(state, random))
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+
+    long first = engine.view(state).catPrice();
+    state.capital = first;
+    engine.drawCat(state, random);
+    assertThat(state.capital).isZero();
+    assertThat(state.yearUpgrades).isEqualTo(first);
+    assertThat(engine.view(state).catPrice()).isEqualTo(Math.round(first * 1.5));
+    var drawn = engine.view(state).cats().stream().filter(cat -> cat.level() == 1).toList();
+    assertThat(drawn).as("a new cat is fielded at once").hasSize(1).allMatch(cat -> cat.fielded());
+
+    // Duplicates raise the level; with enough draws both cats are owned.
+    state.capital = Long.MAX_VALUE / 4;
+    for (int i = 0; i < 12; i++) engine.drawCat(state, random);
+    var cats = engine.view(state).cats();
+    assertThat(cats).allMatch(cat -> cat.level() >= 1 && cat.fielded());
+    assertThat(cats.stream().mapToInt(cat -> cat.level()).sum()).isEqualTo(13);
+    assertThat(cats).allMatch(cat -> cat.bonusPercent() == (cat.level() - 1) * 10);
+  }
+
+  @Test
+  void onlyFieldedCatsShootAndCast() {
+    start(16);
+    double withCat = engine.view(state).dps();
+    engine.fieldCat(state, "meteor", false);
+    assertThat(engine.view(state).dps()).isLessThan(withCat);
+    tick(3000, new IdleHit(16, "meteor", 1));
+    assertThat(state.idle.damage).isZero();
+    engine.fieldCat(state, "meteor", true);
+    tick(3000, new IdleHit(16, "meteor", 1));
+    assertThat(state.idle.damage).isEqualTo(4.8);
+    assertThatThrownBy(() -> engine.fieldCat(state, "ram", true))
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+  }
+
+  @Test
+  void catsBorrowOwnedWeaponsAndTheBossCatKeepsItsOwn() {
+    company.mental.initWeapons(state);
+    start(51);
+    assertThatThrownBy(() -> engine.equipCat(state, "meteor", "pistol", "F"))
+        .as("the only copy is in the boss cat's paws")
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+    assertThatThrownBy(() -> engine.equipCat(state, "meteor", "rifle", "S"))
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+
+    state.weapons.add(new CompanyState.Weapon("rifle", "S"));
+    double before = engine.view(state).dps();
+    engine.equipCat(state, "meteor", "rifle", "S");
+    assertThat(engine.view(state).dps()).isGreaterThan(before);
+    assertThat(weaponOf("meteor"))
+        .isEqualTo(new investorgame.raising.CompanyView.CatWeapon("rifle", "S"));
+    // One copy: the cat that equips last takes it from the other cat.
+    engine.equipCat(state, "ram", "rifle", "S");
+    assertThat(weaponOf("meteor")).isNull();
+    assertThat(weaponOf("ram")).isNotNull();
+    // The boss cat takes the last copy back.
+    company.mental.equip(state, "rifle", "S");
+    engine.releaseWeapons(state);
+    assertThat(weaponOf("ram")).isNull();
+    // A second copy can be shared.
+    state.weapons.getLast().count = 2;
+    engine.equipCat(state, "ram", "rifle", "S");
+    assertThat(weaponOf("ram")).isNotNull();
+    engine.equipCat(state, "ram", null, null);
+    assertThat(weaponOf("ram")).isNull();
+  }
+
+  @Test
+  void aCatsBulletIsLimitedByItsOwnGunAndLevel() {
+    company.mental.initWeapons(state);
+    start(16);
+    // Boss cat and one cat, both with the starting pistol: two guns' worth of contacts.
+    tick(1000, new IdleHit(16, "bullet", 1000, 1000.0));
+    assertThat(state.idle.damage)
+        .isCloseTo(2 * 2 * 1000.0 / 260, org.assertj.core.data.Offset.offset(1e-9));
+    // The level bonus raises only what a single forged bullet may claim.
+    state.idle.cats.put("meteor", 6);
+    double before = state.idle.damage;
+    for (int i = 0; i < 3; i++) tick(1000);
+    tick(1000, new IdleHit(16, "bullet", 1, 1e12));
+    assertThat(state.idle.damage - before).as("level 6 pistol critical").isEqualTo(1.5 * 2);
+  }
+
+  private investorgame.raising.CompanyView.CatWeapon weaponOf(String code) {
+    return engine.view(state).cats().stream()
+        .filter(cat -> cat.code().equals(code))
+        .findFirst()
+        .orElseThrow()
+        .weapon();
   }
 }

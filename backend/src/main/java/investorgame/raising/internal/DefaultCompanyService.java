@@ -395,6 +395,7 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView equipWeapon(UUID sessionId, String kind, String grade) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.mental.equip(row.state(), kind, grade);
+    idle.releaseWeapons(row.state());
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -458,6 +459,35 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView mergeWeapon(UUID sessionId, String kind, String grade) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.mental.mergeWeapon(row.state(), kind, grade);
+    idle.releaseWeapons(row.state());
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView drawCat(UUID sessionId) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    idle.drawCat(row.state(), new HashSeededRandom(row.seed()));
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView fieldCat(UUID sessionId, String code, boolean fielded) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    idle.fieldCat(row.state(), code, fielded);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView equipCat(UUID sessionId, String code, String kind, String grade) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    engine.mental.initWeapons(row.state());
+    idle.equipCat(row.state(), code, kind, grade);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

@@ -385,18 +385,65 @@ class CompanyApiTest {
    * levels로 묶어 사고, 자본이 닿는 데까지만 산다. 고양이 속도는 없다. 쓴 돈은 분기 실적의 전투 강화 비용 줄에 나온다.
    */
   @Test
+  void 고양이는_자본으로_뽑아_출전시키고_가진_무기를_들린다() throws Exception {
+    mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated());
+    DocumentContext opened = json(mvc.perform(get("/api/company").cookie(session)));
+    List<Integer> levels = opened.read("$.idle.cats[*].level");
+    assertThat(levels).as("고양이는 벽을 돌파해도 저절로 오지 않는다 (488번)").containsExactly(0, 0);
+    long price = opened.read("$.idle.catPrice", Long.class);
+    long capital = opened.read("$.capital", Long.class);
+    postJson("/api/company/cat/field", "{\"code\":\"meteor\",\"fielded\":true}")
+        .andExpect(status().isBadRequest());
+
+    DocumentContext drawn = json(postJson("/api/company/cat/draw", "").andExpect(status().isOk()));
+    assertThat(drawn.read("$.capital", Long.class)).isEqualTo(capital - price);
+    assertThat(drawn.read("$.idle.catPrice", Long.class)).isEqualTo(Math.round(price * 1.5));
+    List<Map<String, Object>> cats = drawn.read("$.idle.cats[?(@.level == 1)]");
+    assertThat(cats).as("새 고양이는 바로 출전한다").hasSize(1);
+    assertThat(cats.getFirst()).containsEntry("fielded", true);
+    String code = (String) cats.getFirst().get("code");
+
+    DocumentContext rested =
+        json(
+            postJson(
+                    "/api/company/cat/field", "{\"code\":\"%s\",\"fielded\":false}".formatted(code))
+                .andExpect(status().isOk()));
+    List<Boolean> fielded = rested.read("$.idle.cats[*].fielded");
+    assertThat(fielded).containsExactly(false, false);
+
+    // 사장냥이 든 하나뿐인 권총은 못 가져간다. 종류만 보내거나 없는 고양이도 400.
+    postJson(
+            "/api/company/cat/weapon",
+            "{\"code\":\"%s\",\"kind\":\"pistol\",\"grade\":\"F\"}".formatted(code))
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/cat/weapon", "{\"code\":\"%s\",\"kind\":\"pistol\"}".formatted(code))
+        .andExpect(status().isBadRequest());
+    postJson("/api/company/cat/weapon", "{\"code\":\"dog\"}").andExpect(status().isBadRequest());
+    DocumentContext bare =
+        json(
+            postJson("/api/company/cat/weapon", "{\"code\":\"%s\"}".formatted(code))
+                .andExpect(status().isOk()));
+    List<Object> weapons = bare.read("$.idle.cats[*].weapon");
+    assertThat(weapons).containsOnlyNulls();
+  }
+
+  @Test
   void 전투_강화를_묶어_사고_자본이_닿는_데까지만_오른다() throws Exception {
     String id =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()))
             .read("$.companyId", String.class);
     DocumentContext opened = json(mvc.perform(get("/api/company").cookie(session)));
     List<String> kinds = opened.read("$.battleUpgrades[*].kind");
-    assertThat(kinds).containsExactly("damage", "fire", "hp");
+    assertThat(kinds).containsExactly("damage", "fire", "hp", "crit");
     assertThat(opened.read("$.battleUpgrades[0].level", Integer.class)).isZero();
     assertThat(opened.read("$.battleUpgrades[0].price", Long.class)).isEqualTo(1_000_000L);
     assertThat(opened.read("$.battleUpgrades[0].nextBonusPercent", Integer.class)).isEqualTo(1);
-    Map<String, Object> first = opened.read("$.battleUpgrades[0]");
-    assertThat(first).doesNotContainKey("maxLevel");
+    assertThat(opened.read("$.battleUpgrades[0].maxLevel", Integer.class))
+        .as("공격력은 끝없이 산다")
+        .isZero();
+    assertThat(opened.read("$.battleUpgrades[1].maxLevel", Integer.class))
+        .as("연사는 100%에서 멈춘다 (487번)")
+        .isEqualTo(100);
     long capital = opened.read("$.capital", Long.class);
 
     DocumentContext one =

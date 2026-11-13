@@ -3,6 +3,7 @@ package investorgame.raising.internal;
 import investorgame.behavior.internal.TestBehavior;
 import investorgame.common.random.HashSeededRandom;
 import investorgame.content.internal.TestContent;
+import investorgame.raising.CompanyView;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -53,9 +54,11 @@ class BalanceSimulationTest {
       long budget = c.capital * BUYER_PERCENT / 100;
       while (true) {
         String kind =
-            MentalEngine.UPGRADES.stream()
-                .min(Comparator.comparingInt(k -> c.battleLevels.getOrDefault(k, 0)))
-                .orElseThrow();
+            ENGINE.mental.upgradeViews(c).stream()
+                .filter(u -> u.maxLevel() == 0 || u.level() < u.maxLevel())
+                .min(Comparator.comparingInt(CompanyView.BattleUpgrade::level))
+                .orElseThrow()
+                .kind();
         long price = ENGINE.mental.upgradePrice(c.battleLevels.getOrDefault(kind, 0));
         if (price > budget) {
           break;

@@ -595,9 +595,10 @@ try {
   }
   const base = process.env.APP_URL ?? 'http://127.0.0.1:5182/app/'
   await page.goto(base)
-  // 무기는 메인의 무기 인벤토리에서 고른다 (#564). 출전 화면에는 든 무기만 보인다.
-  await page.getByTestId('open-weapons').click()
-  await expect(page.getByTestId('toy-weapons-sheet')).toBeVisible()
+  // 무기는 성장 › 인벤토리에서 고른다 (#564, 489번). 출전 화면에는 든 무기만 보인다.
+  await page.getByRole('button', { name: '성장' }).click()
+  await page.getByRole('tab', { name: /인벤토리/ }).click()
+  await expect(page.getByTestId('idle-menu')).toBeVisible()
   await page.locator('[data-testid=weapon][data-grade=R]').click()
   await expect(page.locator('[data-testid=weapon][data-grade=R]')).toHaveAttribute(
     'aria-pressed',

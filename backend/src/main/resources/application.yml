@@ -207,7 +207,9 @@ raising:
         base-price: 1000000
         price-growth-percent: 4
         max-batch: 100
-        step-percent: { damage: 1, fire: 1, hp: 1 }
+        # 치명타 피해(crit)는 치명타 배율을 단계마다 2%씩 (487번). 연사는 100%(간격 절반)에서 멈춘다 (487번)
+        step-percent: { damage: 1, fire: 1, hp: 1, crit: 2 }
+        max-percent: { fire: 100 }
     # 등급 효과 (decisions.md 289·387번): 종합 등급마다 분기 데스크에서 맞혔을 때 버는 몫에 gain-percent%를 더 얹는다. 등급마다 두 배라
     # F 1.1배 · S 7.4배 · SS 13.8배 · SSS 26.6배를 벌고, SSS 위(X~GOD)도 단계마다 두 배다. 종목 회의 손익에는 붙지 않는다.
     # 높을수록 판단이 정확하다: 손이 뒤집힐 확률(사기·근속과 함께 곱한다)에 flip-percent%를 곱하고, 종목 회의에서 기사를 읽을 때 안목에 read-bonus를 더한다

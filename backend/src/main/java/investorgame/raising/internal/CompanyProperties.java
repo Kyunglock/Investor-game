@@ -124,15 +124,20 @@ public record CompanyProperties(
       Map<String, Integer> gradeWeights, int startTickets, int battleTickets, int mergeCount) {}
 
   /**
-   * 자본으로 사는 전투 강화 (decisions.md 367·394번). 최대 단계는 없다.
+   * 자본으로 사는 전투 강화 (decisions.md 367·394번). maxPercent에 없는 강화는 최대 단계가 없다.
    *
    * @param basePrice 첫 단계 값(원)
    * @param priceGrowthPercent 단계마다 값이 오르는 비율(%)
    * @param maxBatch 한 요청에 올릴 수 있는 단계 수(꾹 눌러 모은 단계를 묶어 보낸다)
    * @param stepPercent 강화(damage·fire)마다 한 단계에 오르는 비율(%). fire는 쏘는 빠르기가 오른다(간격 ÷ (1 + 비율))
+   * @param maxPercent 강화마다 효과의 상한(%, 487번). 상한에 닿은 단계부터는 못 산다. 없는 강화는 끝없이 오른다
    */
   public record Upgrades(
-      long basePrice, int priceGrowthPercent, int maxBatch, Map<String, Integer> stepPercent) {}
+      long basePrice,
+      int priceGrowthPercent,
+      int maxBatch,
+      Map<String, Integer> stepPercent,
+      Map<String, Integer> maxPercent) {}
 
   /** 건물 이사 (decisions.md 296번): 이사 비용은 다음 띠 자본의 percent%. 자본이 다음 띠 + 비용 이상일 때만 간다. */
   /**

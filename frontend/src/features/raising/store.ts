@@ -8,6 +8,7 @@ type Status = 'loading' | 'ready' | 'error'
 export type MentalCard = 'hold' | 'split' | 'rule' | 'steel' | 'calm' | 'heal'
 export type WeaponKind = 'pistol' | 'revolver' | 'smg' | 'shotgun' | 'rifle'
 export type WeaponGrade = NonNullable<Company['weapons']>[number]['grade']
+export type CatCode = NonNullable<Company['idle']>['cats'][number]['code']
 
 interface RaisingState {
   status: Status
@@ -62,11 +63,23 @@ interface RaisingState {
    * 자본으로 전투 강화를 levels단계까지 산다 (decisions.md 367·394번). 꾹 눌러 연속으로 올리는 화면이 줄을 세워 부르므로 busy를 켜지 않는다. 받은
    * 회사(실패면 null)를 돌려준다.
    */
-  buyBattleUpgrade: (kind: 'damage' | 'fire' | 'hp', levels?: number) => Promise<Company | null>
+  buyBattleUpgrade: (
+    kind: 'damage' | 'fire' | 'hp' | 'crit',
+    levels?: number,
+  ) => Promise<Company | null>
   /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). 결과는 company.armory.lastDraw. */
   drawWeapon: () => Promise<void>
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */
   mergeWeapon: (kind: WeaponKind, grade: Exclude<WeaponGrade, 'LR'>) => Promise<void>
+  /** 자본으로 고양이 한 마리를 뽑는다 (decisions.md 488번). 받은 회사(실패면 null)를 돌려준다. */
+  drawCat: () => Promise<Company | null>
+  /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
+  fieldCat: (code: CatCode, fielded: boolean) => Promise<void>
+  /** 고양이에게 가진 무기 하나를 들린다. weapon이 null이면 뺀다 (488번). */
+  equipCat: (
+    code: CatCode,
+    weapon: { kind: WeaponKind; grade: WeaponGrade } | null,
+  ) => Promise<void>
   /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 249번). 됐으면 true. */
   convene: () => Promise<boolean>
   /** 올해 종목 회의에서 고른다: BUY·SELL (decisions.md 229·423번). big이면 크게 한다 (260번). */
@@ -223,6 +236,18 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
 
     mergeWeapon: (kind, grade) =>
       change(api.POST('/api/company/weapon/merge', { body: { kind, grade } })),
+
+    drawCat: async () => {
+      const res = await safely(api.POST('/api/company/cat/draw'))
+      set({ company: res?.data ?? get().company, error: reason(res?.error) })
+      return res?.data ?? null
+    },
+
+    fieldCat: (code, fielded) =>
+      change(api.POST('/api/company/cat/field', { body: { code, fielded } })),
+
+    equipCat: (code, weapon) =>
+      change(api.POST('/api/company/cat/weapon', { body: { code, ...weapon } })),
 
     convene: async () => {
       if (get().company?.invest?.convened) {

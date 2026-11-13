@@ -33,7 +33,7 @@ class MentalEngine {
   static final List<String> DRAW_GRADES = List.of("F", "E", "D", "C", "B", "A");
 
   /** 자본으로 사는 전투 강화 (367·394·410번): 공격력·연사·체력(최대 멘탈). 고양이 속도는 394번에서 뺐다. */
-  static final List<String> UPGRADES = List.of("damage", "fire", "hp");
+  static final List<String> UPGRADES = List.of("damage", "fire", "hp", "crit");
 
   /** 처음 드는 무기: 일반 권총. */
   static final String PISTOL = "pistol";
@@ -233,11 +233,16 @@ class MentalEngine {
     if (c.closed) {
       throw new InvalidRequestException("끝난 회사다");
     }
-    int max = properties.mental().upgrades().maxBatch();
-    if (levels < 1 || levels > max) {
-      throw new InvalidRequestException("한 번에 1~" + max + "단계까지 올린다: " + levels);
+    int batch = properties.mental().upgrades().maxBatch();
+    if (levels < 1 || levels > batch) {
+      throw new InvalidRequestException("한 번에 1~" + batch + "단계까지 올린다: " + levels);
     }
-    int level = c.battleLevels.getOrDefault(kind, 0);
+    int level = upgradeLevel(c, kind);
+    int max = maxLevel(kind);
+    if (level >= max) {
+      throw new InvalidRequestException("더 올릴 수 없는 강화다: " + kind);
+    }
+    levels = Math.min(levels, max - level);
     int bought = 0;
     while (bought < levels) {
       long price = upgradePrice(level + bought);
@@ -255,21 +260,35 @@ class MentalEngine {
     return bought;
   }
 
+  /** 효과 상한(487번)에 닿는 단계. 상한이 없으면 Integer.MAX_VALUE. */
+  private int maxLevel(String kind) {
+    CompanyProperties.Upgrades rule = properties.mental().upgrades();
+    Integer cap = rule.maxPercent().get(kind);
+    return cap == null ? Integer.MAX_VALUE : cap / rule.stepPercent().get(kind);
+  }
+
+  /** 지금 단계. 상한이 생기기 전에 넘겨 산 단계는 상한으로 읽는다 (487번). */
+  private int upgradeLevel(CompanyState c, String kind) {
+    return Math.min(c.battleLevels.getOrDefault(kind, 0), maxLevel(kind));
+  }
+
   /** 전투 강화의 화면 값 (367·394번): 강화마다 지금 단계·다음 값·효과. */
   List<CompanyView.BattleUpgrade> upgradeViews(CompanyState c) {
     CompanyProperties.Upgrades rule = properties.mental().upgrades();
     return UPGRADES.stream()
         .map(
             kind -> {
-              int level = c.battleLevels.getOrDefault(kind, 0);
+              int level = upgradeLevel(c, kind);
               int step = rule.stepPercent().getOrDefault(kind, 0);
+              int max = maxLevel(kind);
               return new CompanyView.BattleUpgrade(
                   kind,
                   level,
                   upgradePrice(level),
                   rule.priceGrowthPercent(),
                   level * step,
-                  (level + 1) * step);
+                  Math.min(level + 1, max) * step,
+                  max == Integer.MAX_VALUE ? 0 : max);
             })
         .toList();
   }

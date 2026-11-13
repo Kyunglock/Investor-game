@@ -1,3 +1,4 @@
+import type { Weapon } from './hero'
 import {
   earthStats,
   lightningStats,
@@ -6,6 +7,7 @@ import {
   meteorStats,
   waterStats,
 } from './magic'
+import type { WeaponKind } from './weaponEffects'
 
 /**
  * 멘탈 카드 (decisions.md 328·330·377·392·393번). 처음 한 장, 그리고 레벨이 오를 때마다 한 장을 고른다. 효과는 한 판 안의 화면 규칙이라 앱이 가진다.
@@ -208,6 +210,20 @@ export interface Loadout {
   mates: number
   /** 소환 순서대로 마법을 해금한 동료 수. 각성 카드 한 장에 한 마리. */
   awakenedMates: number
+  /** 치명타 피해 강화 (487번): 치명타 배율에 1 + 이만큼을 곱한다. */
+  critBonus: number
+  /** 고양이가 따로 든 총 (488번), 줄 선 차례대로. 없는 자리의 고양이는 사장냥과 같은 총을 쏜다. */
+  mateGuns: MateGun[]
+}
+
+/** 고양이 한 마리의 총 (488번): 무기와 강화·고양이 레벨을 더한 수치. */
+export interface MateGun {
+  kind: WeaponKind
+  grade: Weapon['grade']
+  damage: number
+  bulletPower: number
+  fireMs: number
+  bulletSpeed: number
 }
 
 export const BASE_LOADOUT: Loadout = {
@@ -224,6 +240,8 @@ export const BASE_LOADOUT: Loadout = {
   earth: 0,
   mates: 0,
   awakenedMates: 0,
+  critBonus: 0,
+  mateGuns: [],
 }
 
 /**
@@ -237,9 +255,9 @@ export function loadoutOf(
     power: number
     bulletSpeed: number
   },
-  upgrades: ReadonlyArray<{ kind: 'damage' | 'fire' | 'hp'; bonusPercent: number }> = [],
+  upgrades: ReadonlyArray<{ kind: 'damage' | 'fire' | 'hp' | 'crit'; bonusPercent: number }> = [],
 ): Loadout {
-  const bonus = (kind: 'damage' | 'fire' | 'hp') =>
+  const bonus = (kind: 'damage' | 'fire' | 'hp' | 'crit') =>
     (upgrades.find((u) => u.kind === kind)?.bonusPercent ?? 0) / 100
   return {
     ...BASE_LOADOUT,
@@ -250,6 +268,7 @@ export function loadoutOf(
     bulletSpeed: weapon.bulletSpeed,
     // 체력 강화(410번)는 최대 멘탈을 그만큼 늘린다. 판은 가득 찬 채로 시작한다.
     maxMental: Math.round(BASE_LOADOUT.maxMental * (1 + bonus('hp'))),
+    critBonus: bonus('crit'),
   }
 }
 
@@ -315,7 +334,7 @@ export const SPLASH_FROM = 2
 /**
  * 강화 수치와 연출은 같은 단계에서 계산한다. 2단계부터는 맞은 자리에서 터져 주변 적도 휘말린다: 반지름(px)과 맞은 적 피해에 대한 비율.
  */
-export function bulletStats(loadout: Loadout) {
+export function bulletStats(loadout: Pick<Loadout, 'damage' | 'bulletPower'>) {
   const power = Math.min(MAX_BULLET_POWER, Math.max(0, loadout.bulletPower))
   const damage = loadout.damage * (1 + power * 0.4)
   const splash = power >= SPLASH_FROM

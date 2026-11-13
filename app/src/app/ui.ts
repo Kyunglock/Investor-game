@@ -8,7 +8,7 @@ export type Tab = 'office' | 'market' | 'staff' | 'issue' | 'record'
  * 인력 관리의 자리 카드와 메인 화면의 설정·확장·멘탈·전투 강화(367번) 시트. assault는 주 게임 매도벽 돌파 스테이지 선택, side는 보조게임
  * (종목회의·멘탈 보호 스테이지) 메뉴다 (#698).
  */
-export type ToyPanel = 'upgrade' | 'stage' | 'settings' | 'battle' | 'weapons' | 'assault' | 'side'
+export type ToyPanel = 'upgrade' | 'stage' | 'settings' | 'battle' | 'assault' | 'side'
 
 /**
  * 들어갈 멘탈 전투 (decisions.md 369·414번): 매도벽 돌파 스테이지(주 게임, #698), 멘탈 보호 번호 스테이지, EX 디펜스, 또는 종목 회의 뒤
@@ -19,12 +19,16 @@ export type BattleEntry =
   | { kind: 'stage'; stage: number }
   | { kind: 'ex' }
   | { kind: 'invest'; mode: 'DEFENSE' | 'ASSAULT'; level: number }
-/** 인력 관리의 시트 (decisions.md 412번): 팀(desk), 앉은 직원 상세(employee), 휴게실 동료를 보낼 팀 고르기(lounge). */
+/**
+ * 인력 관리의 시트 (decisions.md 412번): 팀(desk), 앉은 직원 상세(employee), 휴게실 동료를 보낼 팀 고르기(lounge). weapons는 전투에서
+ * 무기를 바꾸러 올 때 여는 성장 › 인벤토리다 (489번).
+ */
 export type Sheet =
   | { kind: 'desk'; desk: string }
   | { kind: 'employee'; id: number }
   | { kind: 'lounge'; id: number }
   | { kind: 'toy'; panel: ToyPanel }
+  | { kind: 'weapons' }
 
 interface UiState {
   tab: Tab
