@@ -1,4 +1,4 @@
-import { CAT_H, CAT_W } from '@web/features/game/cat/draw'
+import { CAT_H, CAT_W, type GunGrade } from '@web/features/game/cat/draw'
 
 import type Phaser from 'phaser'
 import { CAT_SCALE, mateModel } from './catModels'
@@ -10,6 +10,7 @@ import type { Genre } from './genres'
 import { MATE_LOOKS } from './mates'
 import { shareLabel, sharesOf } from './shares'
 import { drawBuyWall, drawMentalWall, drawSprite, drawToySellWall, STAGE_HERO } from './stageArt'
+import { drawEquippedHero } from './weaponArt'
 import { drawWeaponBullet, drawWeaponImpact, WEAPON_GRADES } from './weaponVisuals'
 
 /** 승인한 캐주얼 시안의 투명 스프라이트를 Phaser 텍스처로 굽고, 무기·벽·탄환을 실시간 상태에 맞춰 합성한다. */
@@ -60,10 +61,10 @@ function bake(scene: Phaser.Scene, key: string, w: number, h: number, paint: Pai
   scene.textures.addCanvas(key, cv)
 }
 
-/** 승인한 총·앞발 일체형 원본을 그대로 사용하고 피격 상태만 덧칠한다. */
+/** 장착 무기를 원본 고양이와 합성하고 피격 상태만 덧칠한다. */
 export const HERO_KEYS = ['hero-idle', 'hero-fire', 'hero-hurt'] as const
 
-export function bakeHero(scene: Phaser.Scene) {
+export function bakeHero(scene: Phaser.Scene, grade: GunGrade) {
   const source = scene.textures.get('art-hero').getSourceImage() as HTMLImageElement
   for (const key of HERO_KEYS) {
     bake(scene, key, CAT_W, CAT_H, (c) => {
@@ -71,12 +72,11 @@ export function bakeHero(scene: Phaser.Scene) {
       c.beginPath()
       c.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
       c.fill()
-      drawSprite(
+      drawEquippedHero(
         c,
         source,
-        { x: 0, y: 0, w: source.width, h: source.height },
-        { x: 14, y: 3, w: 75, h: 100 },
-        'height',
+        scene.textures.get('art-weapons').getSourceImage() as HTMLImageElement,
+        grade,
       )
       if (key === 'hero-hurt') {
         c.globalCompositeOperation = 'source-atop'
@@ -88,7 +88,7 @@ export function bakeHero(scene: Phaser.Scene) {
 }
 
 /** Bake alternating leg strides from the original cats, keeping the upper-body silhouette. */
-export function bakeCatRuns(scene: Phaser.Scene) {
+export function bakeCatRuns(scene: Phaser.Scene, grade: GunGrade) {
   const models = [
     { base: 'hero', model: 'hero' },
     ...MATE_LOOKS.map((_, i) => ({ base: mateKey(i), model: mateModel(i) })),
@@ -101,13 +101,22 @@ export function bakeCatRuns(scene: Phaser.Scene) {
     const paint = sprite.getContext('2d')
     if (!paint) continue
     paint.scale(DPR, DPR)
-    drawSprite(
-      paint,
-      source,
-      { x: 0, y: 0, w: source.width, h: source.height },
-      { x: 14, y: 3, w: 75, h: 100 },
-      'height',
-    )
+    if (model === 'hero') {
+      drawEquippedHero(
+        paint,
+        source,
+        scene.textures.get('art-weapons').getSourceImage() as HTMLImageElement,
+        grade,
+      )
+    } else {
+      drawSprite(
+        paint,
+        source,
+        { x: 0, y: 0, w: source.width, h: source.height },
+        { x: 14, y: 3, w: 75, h: 100 },
+        'height',
+      )
+    }
     for (let frame = 0; frame < CAT_RUN_FRAMES; frame++) {
       bake(scene, catRunKey(base, frame), CAT_W, CAT_H, (c) => {
         const pose = catRunPose(frame)

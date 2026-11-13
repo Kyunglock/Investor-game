@@ -1,10 +1,12 @@
-/** 승인한 총·앞발 일체형 원본. 세 번째 동료도 승인된 두 체형 중 하나를 사용한다. */
+import { EQUIPPED_MUZZLE } from './weaponArt'
+
+/** 사장냥은 장착 무기를 합성하고 동료는 총·앞발 일체형 원본. 세 번째 동료도 승인된 두 체형 중 하나를 사용한다. */
 export type CatModel = 'hero' | 'fold' | 'fluffy'
 export const mateModel = (index: number): CatModel => (index % 2 === 0 ? 'fold' : 'fluffy')
 
 /** drawSprite의 높이 100 배치 안에서 실제 총구 좌표. 꼬리 폭으로 크기를 줄이지 않는다. */
 const MUZZLES: Record<CatModel, { x: number; y: number }> = {
-  hero: { x: 75, y: 5 },
+  hero: EQUIPPED_MUZZLE,
   fold: { x: 78, y: 5 },
   fluffy: { x: 89, y: 5 },
 }

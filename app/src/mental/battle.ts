@@ -727,9 +727,9 @@ class BattleScene extends Phaser.Scene {
     this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches
     this.opts.onReady?.()
     bakeStage(this, this.opts.genre)
-    bakeHero(this)
+    bakeHero(this, this.opts.hero.weapon.grade)
     bakeMates(this)
-    if (this.opts.idle) bakeCatRuns(this)
+    if (this.opts.idle) bakeCatRuns(this, this.opts.hero.weapon.grade)
     bakeEnemies(this)
     bakeMagic(this)
     if (this.assault) bakeOrders(this, this.hpScale)

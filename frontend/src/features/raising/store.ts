@@ -66,7 +66,7 @@ interface RaisingState {
   /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). 결과는 company.armory.lastDraw. */
   drawWeapon: () => Promise<void>
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */
-  mergeWeapon: (kind: WeaponKind, grade: Exclude<WeaponGrade, 'S'>) => Promise<void>
+  mergeWeapon: (kind: WeaponKind, grade: Exclude<WeaponGrade, 'LR'>) => Promise<void>
   /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 249번). 됐으면 true. */
   convene: () => Promise<boolean>
   /** 올해 종목 회의에서 고른다: BUY·SELL (decisions.md 229·423번). big이면 크게 한다 (260번). */

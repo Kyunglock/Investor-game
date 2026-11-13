@@ -108,10 +108,11 @@ function noise(ms: number, gain = 0.08, at = 0) {
 export const sfx = {
   /** 무기 공개: 등급이 높을수록 화음을 쌓는다. 기존 카드·성장 음색을 따른다. */
   weaponReveal: (grade: string) => {
-    const high = ['B', 'A', 'S'].includes(grade)
-    const notes = grade === 'S' ? [392, 494, 587, 784, 988] : high ? [440, 554, 659] : [520, 660]
+    const top = ['S', 'SS', 'SSS', 'SR', 'UR', 'LR'].includes(grade)
+    const high = top || ['B', 'A'].includes(grade)
+    const notes = top ? [392, 494, 587, 784, 988] : high ? [440, 554, 659] : [520, 660]
     notes.forEach((hz, i) => {
-      tone(hz, grade === 'S' ? 500 : 220, {
+      tone(hz, top ? 500 : 220, {
         wave: 'triangle',
         gain: high ? 0.07 : 0.04,
         at: i * 0.065,

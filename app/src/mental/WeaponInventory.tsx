@@ -1,4 +1,5 @@
 import type { Company } from '@web/api/client'
+import { GUN_GRADES } from '@web/features/game/cat/draw'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useEffect, useRef, useState } from 'react'
 import { haptic } from '../fx/haptics'
@@ -11,8 +12,8 @@ import './weapons.css'
 
 type Armory = NonNullable<Company['armory']>
 
-/** 합칠 수 있는 등급: 가장 높은 등급(S)은 못 합친다 (366번). */
-type MergeGrade = Exclude<Weapon['grade'], 'S'>
+/** 합칠 수 있는 등급: 가장 높은 등급(LR)은 못 합친다 (366번). */
+type MergeGrade = Exclude<Weapon['grade'], 'LR'>
 
 /** 무기 등급 배지 색 (346번). */
 export const GRADE_BADGE: Record<Weapon['grade'], string> = {
@@ -23,9 +24,12 @@ export const GRADE_BADGE: Record<Weapon['grade'], string> = {
   B: 'bg-fuchsia-100 text-fuchsia-800',
   A: 'bg-orange-100 text-orange-800',
   S: 'bg-cyan-100 text-cyan-900',
+  SS: 'bg-blue-100 text-blue-900',
+  SSS: 'bg-purple-100 text-purple-900',
+  SR: 'bg-rose-100 text-rose-900',
+  UR: 'bg-lime-100 text-lime-900',
+  LR: 'bg-yellow-100 text-yellow-900',
 }
-
-const GRADE_ORDER: Record<Weapon['grade'], number> = { F: 0, E: 1, D: 2, C: 3, B: 4, A: 5, S: 6 }
 
 /** 인벤토리 메뉴의 배지: 쓸 수 있는 무기 뽑기권 수. */
 export function weaponBadge(company: Company): string | null {
@@ -82,7 +86,8 @@ export function WeaponInventory({ company }: { company: Company }) {
   const weapons = company.weapons?.length ? company.weapons : [DEFAULT_WEAPON]
   const equipped = weapons.find((w) => w.equipped) ?? weapons[0]
   const sorted = [...weapons].sort(
-    (a, b) => GRADE_ORDER[b.grade] - GRADE_ORDER[a.grade] || a.kind.localeCompare(b.kind),
+    (a, b) =>
+      GUN_GRADES.indexOf(b.grade) - GUN_GRADES.indexOf(a.grade) || a.kind.localeCompare(b.kind),
   )
   const pageCount = Math.max(1, Math.ceil(sorted.length / 6))
   const currentPage = Math.min(page, pageCount - 1)
@@ -93,7 +98,12 @@ export function WeaponInventory({ company }: { company: Company }) {
   const ended = company.status === 'ENDED'
   return (
     <div className="weapon-inventory" data-testid="weapon-picker">
-      <section className="weapon-equipped" data-testid="weapon-equipped" data-kind={equipped.kind}>
+      <section
+        className="weapon-equipped"
+        data-testid="weapon-equipped"
+        data-kind={equipped.kind}
+        data-grade={equipped.grade}
+      >
         <GunSprite kind={equipped.kind} grade={equipped.grade} width={96} />
         <div className="min-w-0">
           <p className="text-[11px] text-muted">지금 든 무기</p>
@@ -133,6 +143,7 @@ export function WeaponInventory({ company }: { company: Company }) {
           무기 뽑기
         </button>
       </div>
+      <p className="mt-2 text-[11px] text-muted">뽑기 F~A · S 이상은 합성으로 획득 · 최고 LR</p>
       {reveal && (
         <WeaponReveal
           key={reveal.id}
@@ -172,7 +183,7 @@ export function WeaponInventory({ company }: { company: Company }) {
                 </span>
                 <span className="weapon-slot-count">×{w.count}</span>
               </button>
-              {armory && w.grade !== 'S' && w.count >= armory.mergeCount && (
+              {armory && w.grade !== 'LR' && w.count >= armory.mergeCount && (
                 <button
                   type="button"
                   className="weapon-merge"
