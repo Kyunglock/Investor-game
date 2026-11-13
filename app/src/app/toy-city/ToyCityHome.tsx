@@ -168,7 +168,7 @@ export function ToyCityHome({ company }: { company: Company }) {
           {company.seats}
         </span>
       </header>
-      {tutorialOn && !ended && (
+      {tutorialOn && !ended && !firstQuarter(company) && (
         <div className="toy-tutorial" data-testid="tutorial" data-step={tutorial.id}>
           <span>
             {firstQuarter(company)

@@ -15,7 +15,7 @@ export type ToyPanel = 'upgrade' | 'stage' | 'settings' | 'battle' | 'weapons' |
  * 전투(매도벽 돌파).
  */
 export type BattleEntry =
-  | { kind: 'assault'; stage: number }
+  | { kind: 'assault'; stage: number; tutorial?: boolean }
   | { kind: 'stage'; stage: number }
   | { kind: 'ex' }
   | { kind: 'invest'; mode: 'DEFENSE' | 'ASSAULT'; level: number }
