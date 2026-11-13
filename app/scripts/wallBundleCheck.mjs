@@ -9,7 +9,10 @@ const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
 })
 try {
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } })
+  const page = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    reducedMotion: 'reduce',
+  })
   const errors = []
   page.on('pageerror', (error) => errors.push(error.message))
   await page.route(/\/api\/(company|sessions)(\/|$|\?)/, (route) =>
@@ -18,6 +21,9 @@ try {
   await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5299/app/')
   await page.locator('[data-testid=idle-canvas] canvas').waitFor({ timeout: 30000 })
   await page.waitForFunction(() => window.__mentalWalls?.().length > 0)
+  await page.evaluate(() =>
+    window.dispatchEvent(new CustomEvent('idle-app-active', { detail: false })),
+  )
   await page.evaluate(async () => {
     const base = '/app/src/mental/'
     const [{ startBattle }, cards, { assaultSpec }, { DEFAULT_WEAPON }] = await Promise.all([
@@ -29,12 +35,14 @@ try {
     const host = document.createElement('div')
     host.style.cssText = 'position:fixed;inset:0;z-index:99999'
     document.body.append(host)
-    // 총은 거의 쏘지 않고, 범위가 가장 넓은 메테오(Lv.5)·물(Lv.5)만 벽에 터지게 한다. 첫 벽은 세 층으로 아주 단단하게.
+    // 일반 적이 끼어들면 자동 조준이 벽 대신 적을 골라 검증이 무작위로 실패한다.
+    // 적 생성을 늦춰 세 층의 단단한 벽만 실제 마법의 표적으로 남긴다.
     const loadout = { ...cards.loadoutOf(DEFAULT_WEAPON), damage: 0.5, fireMs: 100000 }
     const spec = assaultSpec(1)
-    spec.walls = spec.walls.map((wall, i) => (i === 0 ? { ...wall, rows: 3, cellHp: 400 } : wall))
+    spec.walls = [{ ...spec.walls[0], rows: 3, cellHp: 400, spawnSeconds: 10000 }]
     const handle = startBattle(host, {
       mode: 'assault',
+      speed: 2,
       assault: spec,
       genre: 'DEFENSE',
       hero: { name: '사장냥', weapon: DEFAULT_WEAPON, upgrades: [] },
@@ -50,20 +58,31 @@ try {
   await page.waitForFunction(() => window.__mentalWalls?.()[0]?.arrived)
   assert.equal((await page.evaluate(() => window.__mentalWalls()))[0].layers.length, 3)
   await page.evaluate(() => window.magicOn())
-  await page.waitForFunction(
-    () => {
-      const [front] = window.__mentalWalls()[0].layers
-      return (
-        front.hp < front.maxHp &&
-        window
-          .__mentalWalls()[0]
-          .layers.slice(1)
-          .some((layer) => layer.hp < layer.maxHp)
+  await page
+    .waitForFunction(
+      () => {
+        const [front] = window.__mentalWalls()[0].layers
+        return (
+          front.hp < front.maxHp &&
+          window
+            .__mentalWalls()[0]
+            .layers.slice(1)
+            .some((layer) => layer.hp < layer.maxHp)
+        )
+      },
+      null,
+      { timeout: 30000 },
+    )
+    .catch(async (error) => {
+      console.log(
+        await page.evaluate(() => ({
+          walls: window.__mentalWalls(),
+          market: window.__mentalMarket(),
+          damage: window.__mentalDamage,
+        })),
       )
-    },
-    null,
-    { timeout: 30000 },
-  )
+      throw error
+    })
   const [wall] = await page.evaluate(() => window.__mentalWalls())
   assert.equal(wall.layers.length, 3)
   const [front, ...behind] = wall.layers
