@@ -44,17 +44,17 @@ class IdleEngineTest {
     assertThat(state.capital).isZero();
     clock.now += 1000;
     engine.beat(state, "one", 1, "tick");
-    assertThat(state.capital).isEqualTo(20000);
+    assertThat(state.capital).isEqualTo(40000);
     double damage = state.idle.damage;
     engine.beat(state, "one", 1, "tick");
     assertThat(state.idle.damage).isEqualTo(damage);
     clock.now += 86400000;
     engine.beat(state, "one", 2, "tick");
-    assertThat(state.capital).isEqualTo(20000);
+    assertThat(state.capital).isEqualTo(40000);
     engine.beat(state, "one", 3, "stop");
     clock.now += 1000;
     engine.beat(state, "one", 4, "tick");
-    assertThat(state.capital).isEqualTo(20000);
+    assertThat(state.capital).isEqualTo(40000);
   }
 
   @Test
@@ -100,7 +100,7 @@ class IdleEngineTest {
       clock.now += 1000;
       engine.beat(state, "one", i, "tick");
     }
-    assertThat(state.idle.damage).isEqualTo(base * 3.75);
+    assertThat(state.idle.damage).isEqualTo(base * 7.5);
     double before = state.idle.damage;
     clock.now += 100000;
     engine.beat(state, "one", 4, "tick");
@@ -119,17 +119,17 @@ class IdleEngineTest {
     engine.beat(state, "one", 0, "start");
     clock.now += 1000;
     engine.beat(state, "one", 1, "tick");
-    assertThat(state.idle.circuitSeconds).isEqualTo(3);
+    assertThat(state.idle.circuitSeconds).isEqualTo(2);
     assertThat(state.idle.damage).isZero();
     assertThat(state.capital).isEqualTo(capital);
     assertThat(state.idle.activeSeconds).isEqualTo(active);
     engine.beat(state, "one", 1, "tick");
-    assertThat(state.idle.circuitSeconds).isEqualTo(3);
+    assertThat(state.idle.circuitSeconds).isEqualTo(2);
     engine.beat(state, "one", 2, "stop");
     clock.now += 86400000;
     engine.beat(state, "two", 0, "start");
-    assertThat(state.idle.circuitSeconds).isEqualTo(3);
-    clock.now += 3000;
+    assertThat(state.idle.circuitSeconds).isEqualTo(2);
+    clock.now += 1000;
     engine.beat(state, "two", 1, "tick");
     assertThat(state.idle.circuitSeconds).isZero();
     assertThat(state.capital).isEqualTo(capital);
@@ -154,6 +154,65 @@ class IdleEngineTest {
     assertThat(saved.idle.wall).isEqualTo(16);
     assertThat(saved.idle.circuitSeconds).isBetween(3.0, 4.0);
     assertThat(saved.weaponTickets).isEqualTo(1);
+  }
+
+  @Test
+  void splashPersistsAndRewardsWaitForFrontWall() {
+    engine.advance(state, 1, 12, 200, 200);
+    assertThat(state.idle.wall).isEqualTo(1);
+    assertThat(state.capital).isEqualTo(20000);
+    assertThat(engine.view(state).upcoming()).allMatch(w -> w.hp() == 0);
+    JsonMapper json = JsonMapper.builder().build();
+    CompanyState saved = json.readValue(json.writeValueAsString(state), CompanyState.class);
+    assertThat(engine.view(saved)).isEqualTo(engine.view(state));
+    engine.advance(saved, 1, 108);
+    assertThat(saved.idle.wall).isEqualTo(4);
+    assertThat(saved.capital).isEqualTo(400000); // Two seconds of income + walls 1, 2, 3.
+    assertThat(saved.idle.damage).isZero();
+    assertThat(engine.view(saved).upcoming()).allMatch(w -> w.hp() == w.maxHp());
+  }
+
+  @Test
+  void splashCannotSkipTradingHaltOrPayBossTwice() {
+    engine.view(state);
+    state.idle.wall = 5;
+    engine.advance(state, 1, IdleEngine.maxHp(5), 10000, 10000);
+    assertThat(state.idle.wall).isEqualTo(6);
+    assertThat(state.idle.circuitSeconds).isEqualTo(4);
+    long paid = state.capital;
+    engine.advance(state, 2, 10000, 10000, 10000);
+    assertThat(state.idle.wall).isEqualTo(6);
+    assertThat(state.capital).isEqualTo(paid);
+    engine.advance(state, 2, 10000);
+    assertThat(state.idle.wall).isEqualTo(8);
+    state.idle.wall = 9;
+    state.idle.damage = 0;
+    engine.advance(state, 1, IdleEngine.maxHp(9), 10000, 10000);
+    assertThat(state.idle.wall).isEqualTo(12);
+    assertThat(state.weaponTickets).isEqualTo(1);
+    engine.advance(state, 0, 10000);
+    assertThat(state.weaponTickets).isEqualTo(1);
+  }
+
+  @Test
+  void splashRequiresAnAcquiredSkillAndStopsOffline() {
+    engine.beat(state, "one", 0, "start");
+    clock.now += 1000;
+    engine.beat(state, "one", 1, "tick");
+    assertThat(state.idle.damage).isEqualTo(state.idle.dps * 2);
+    assertThat(state.idle.nextDamage).isZero();
+    assertThat(state.idle.afterNextDamage).isZero();
+    state.idle.wall = 16;
+    clock.now += 2000;
+    engine.beat(state, "one", 2, "tick"); // Six virtual seconds: owned water and meteor cast.
+    assertThat(state.idle.nextDamage).isPositive();
+    assertThat(state.idle.afterNextDamage).isPositive();
+    double near = state.idle.nextDamage;
+    double far = state.idle.afterNextDamage;
+    clock.now += 100000;
+    engine.beat(state, "one", 3, "tick");
+    assertThat(state.idle.nextDamage).isEqualTo(near);
+    assertThat(state.idle.afterNextDamage).isEqualTo(far);
   }
 
   @Test

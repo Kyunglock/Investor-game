@@ -121,6 +121,7 @@ jobs:
             exit 1
           fi
           APP_URL=http://localhost:5182/app/ node ../app/scripts/idleCheck.ts
+          APP_URL=http://localhost:5182/app/ node ../app/scripts/wallBundleCheck.mjs
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

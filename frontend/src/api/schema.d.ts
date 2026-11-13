@@ -1059,8 +1059,15 @@ export interface components {
                 boss: boolean;
                 /** Format: int64 */
                 nextUnlock: number;
-                /** @description 서킷브레이커 잔여 활성 시간. 거래 정지 중에는 공격과 보상이 멈춤 */
+                /** @description 서킷브레이커 잔여 게임 시간. 기본 2배속이며 거래 정지 중에는 공격과 보상이 멈춤 */
                 circuitSeconds?: number;
+                /** @description 뒤쪽 두 매도벽의 체력. 스플래시 피해를 저장하며 보상은 앞에서부터 지급 */
+                upcoming?: {
+                    /** Format: int64 */
+                    wall: number;
+                    hp: number;
+                    maxHp: number;
+                }[];
                 skills: {
                     code: string;
                     name: string;

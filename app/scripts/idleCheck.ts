@@ -37,6 +37,7 @@ try {
         boss: false,
         nextUnlock: 5,
         circuitSeconds: 0,
+        upcoming: [] as { wall: number; hp: number; maxHp: number }[],
         skills: [
           { code: 'water', name: '물 스킬', unlockWall: 5, owned: false },
           { code: 'meteor', name: '메테오 고양이', unlockWall: 15, owned: false },
@@ -52,6 +53,7 @@ try {
     const errors: string[] = []
     const loadingErrors: string[] = []
     const actions: string[] = []
+    let circuitJustStarted = false
     page.on('pageerror', (e) => errors.push(e.message))
     page.on('console', (message) => {
       if (message.type() === 'error') loadingErrors.push(message.text())
@@ -63,9 +65,12 @@ try {
       if (route.request().url().endsWith('/idle')) {
         const body = route.request().postDataJSON()
         actions.push(body.action)
-        if (body.action === 'tick') {
-          if (company.idle.circuitSeconds > 0) company.idle.circuitSeconds--
-          else company.idle.hp = Math.max(1, company.idle.hp - 12)
+        if (body.action === 'tick' && circuitJustStarted) {
+          circuitJustStarted = false
+        } else if (body.action === 'tick') {
+          if (company.idle.circuitSeconds > 0)
+            company.idle.circuitSeconds = Math.max(0, company.idle.circuitSeconds - 2)
+          else company.idle.hp = Math.max(1, company.idle.hp - 24)
         }
       }
       await route.fulfill({ json: company })
@@ -125,7 +130,7 @@ try {
     company.idle.wall = 6
     company.idle.skills[0].owned = true
     company.idle.nextUnlock = 15
-    await expect(page.locator('.idle-stage strong')).toHaveText('매도벽 6')
+    await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 6')
     await expect
       .poll(
         async () =>
@@ -158,6 +163,7 @@ try {
           window as unknown as {
             __mentalMarket: () => {
               battleSeconds: number
+              simSpeed: number
               physicsPaused: boolean
               running: boolean
               catTextures: string[]
@@ -167,19 +173,22 @@ try {
           }
         ).__mentalMarket(),
       )
+    assert.equal((await market()).simSpeed, 1) // Existing 2x speed uses simScale(2) = 1.
     company.idle.circuitSeconds = 4
+    circuitJustStarted = true
     await expect.poll(async () => (await market()).circuit !== null).toBe(true)
     await expect(page.getByText('거래 정지', { exact: true })).toBeVisible()
     await expect.poll(async () => (await market()).circuit?.queuedSell ?? 0).toBeGreaterThan(0)
     assert.equal((await market()).physicsPaused, true)
     await expect.poll(async () => (await market()).circuit?.queuedBuy ?? 0).toBeGreaterThan(0)
-    const circuitClock = (await market()).battleSeconds
-    await page.screenshot({ path: `/tmp/idle-circuit-${width}.png`, fullPage: true })
     await page.evaluate(() =>
       window.dispatchEvent(new CustomEvent('idle-app-active', { detail: false })),
     )
     await expect.poll(() => actions.at(-1)).toBe('stop')
+    const circuitClock = (await market()).battleSeconds
     const pausedCircuit = (await market()).circuit?.elapsed
+    assert.notEqual(pausedCircuit, undefined)
+    await page.screenshot({ path: `/tmp/idle-circuit-${width}.png`, fullPage: true })
     const frozenRemaining = company.idle.circuitSeconds
     await page.waitForTimeout(800)
     assert.equal((await market()).circuit?.elapsed, pausedCircuit)
@@ -213,6 +222,8 @@ try {
               __mentalWalls: () => {
                 upcoming: {
                   wall: number
+                  hp: number
+                  crack: string
                   top: number
                   bottom: number
                   visible: boolean
@@ -222,10 +233,20 @@ try {
             }
           ).__mentalWalls()[0]?.upcoming ?? [],
       )
-    await expect.poll(async () => (await queuedWalls()).map((wall) => wall.wall)).toEqual([7, 8, 9])
+    await expect.poll(async () => (await queuedWalls()).map((wall) => wall.wall)).toEqual([7, 8])
+    const intact = (await queuedWalls())[0].crack
+    company.idle.upcoming = [
+      { wall: 7, hp: 30, maxHp: 264 },
+      { wall: 8, hp: 100, maxHp: 288 },
+    ]
+    await expect.poll(async () => (await queuedWalls())[0].hp).toBe(30)
+    assert.notEqual((await queuedWalls())[0].crack, intact)
+    const cash = await page.locator('.idle-cash').first().boundingBox()
+    const number = await page.getByTestId('idle-wall-number').boundingBox()
+    assert(cash && number && cash.x + cash.width <= number.x)
     const queue = await queuedWalls()
-    assert(queue.every((wall) => wall.visible && wall.top >= 120))
-    assert(queue[2].bottom < queue[1].top && queue[1].bottom < queue[0].top)
+    assert(queue.every((wall) => wall.visible && wall.top >= 85))
+    assert(queue[1].bottom < queue[0].top)
     await page.screenshot({ path: `/tmp/idle-${width}.png`, fullPage: true })
     await page.getByRole('button', { name: '성장' }).click()
     await page.getByRole('tab', { name: '능력치', exact: true }).click()
@@ -252,19 +273,17 @@ try {
         (window as unknown as { __mentalSpeed: (n: number) => void }).__mentalSpeed(1),
       )
       company.idle.wall = 8
-      await expect
-        .poll(async () => (await queuedWalls()).map((wall) => wall.wall))
-        .toEqual([9, 10, 11])
+      await expect.poll(async () => (await queuedWalls()).map((wall) => wall.wall)).toEqual([9, 10])
       assert.equal((await queuedWalls())[1].boss, true)
       company.idle.wall = 10
       company.idle.boss = true
-      await expect(page.locator('.idle-stage strong')).toHaveText('매도벽 10')
+      await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 10')
       await expect
         .poll(async () => (await queuedWalls()).map((wall) => wall.wall))
-        .toEqual([11, 12, 13])
+        .toEqual([11, 12])
       company.idle.wall = 11
       company.idle.boss = false
-      await expect(page.locator('.idle-stage strong')).toHaveText('매도벽 11')
+      await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 11')
       await expect
         .poll(
           async () =>
@@ -279,17 +298,19 @@ try {
     if (width === 390) {
       company.idle.wall = 16
       company.idle.circuitSeconds = 4
+      circuitJustStarted = true
       await expect.poll(async () => (await market()).circuits).toBe(2)
       // A fast server can reach another halt before the previous client animation finishes.
       company.idle.wall = 26
       company.idle.circuitSeconds = 4
+      circuitJustStarted = true
       await expect.poll(async () => (await market()).circuits).toBe(3)
       await expect.poll(async () => (await market()).circuit?.queuedSell ?? 0).toBeGreaterThan(0)
       await expect.poll(async () => (await market()).circuit, { timeout: 10000 }).toBe(null)
     }
     await expect
       .poll(async () => (await queuedWalls()).map((wall) => wall.wall))
-      .toEqual([company.idle.wall + 1, company.idle.wall + 2, company.idle.wall + 3])
+      .toEqual([company.idle.wall + 1, company.idle.wall + 2])
     await page.getByRole('button', { name: '회사', exact: true }).click()
     await expect(page.getByTestId('office-scene')).toBeVisible()
     await expect(page.getByTestId('office-support')).toContainText('자동 전투 중')
@@ -333,7 +354,7 @@ try {
     await expect
       .poll(async () => {
         const queue = await queuedWalls()
-        return queue.length === 3 && queue.every((wall) => wall.top >= 120)
+        return queue.length === 2 && queue.every((wall) => wall.top >= 85)
       })
       .toBe(true)
     await page.screenshot({ path: `/tmp/idle-stack-short-${width}.png`, fullPage: true })

@@ -191,6 +191,7 @@ export interface Outcome {
 
 export interface IdleSnapshot {
   circuitSeconds?: number
+  upcoming?: { wall: number; hp: number; maxHp: number }[]
   wall: number
   hp: number
   maxHp: number
@@ -1411,7 +1412,14 @@ class BattleScene extends Phaser.Scene {
     // 벽 옆의 가격 표는 뺐다(416번): 가격은 위 HUD에만 보인다.
     wall.price.setVisible(false)
     if (this.opts.idle && !wall.broken) {
-      this.idleQueue?.draw(this.idleWall, wall.y, lane.left, lane.width, layer)
+      this.idleQueue?.draw(
+        this.idleWall,
+        wall.y,
+        lane.left,
+        lane.width,
+        layer,
+        this.opts.idle?.().upcoming,
+      )
     }
   }
 
@@ -2162,6 +2170,7 @@ class BattleScene extends Phaser.Scene {
   inspectMarket() {
     return {
       ...this.marketStats,
+      simSpeed: this.simSpeed,
       climbed: this.climbed,
       nextWallIn: this.nextWallIn,
       pushedEnemies: (this.enemies.getChildren() as Enemy[])
@@ -2561,9 +2570,9 @@ class BattleScene extends Phaser.Scene {
     stats.peak = Math.max(stats.peak, this.damage.live() + this.crits.live())
   }
 
-  private hit(e: Enemy, dmg: number, angle: number, kind: DamageKind = 'bullet') {
+  private hit(e: Enemy, dmg: number, angle: number, kind: DamageKind = 'bullet', area = false) {
     if (e.dying || !e.active) return
-    if (this.beyondWall(e)) return
+    if (this.beyondWall(e) && !(area && e.cell)) return
     if (e.kind === 'fake') {
       // 허매도 (413번): 맞히면 그냥 사라진다. 체결이 아니라 처치·경험치가 없다.
       this.damageNumber(e, dmg, kind)
@@ -3203,7 +3212,7 @@ class BattleScene extends Phaser.Scene {
   }
 
   /** 마법이 노릴 수 있는 적: 살아 있고 화면 안에 들어온 적. 같은 배열을 다시 채운다. */
-  private magicTargets(): Enemy[] {
+  private magicTargets(area = false): Enemy[] {
     const buf = this.targetBuf
     buf.length = 0
     const { w, h } = this.view()
@@ -3217,7 +3226,7 @@ class BattleScene extends Phaser.Scene {
         e.x > 0 &&
         e.x < w &&
         !this.held(e) &&
-        !this.beyondWall(e)
+        (!this.beyondWall(e) || (area && Boolean(e.cell)))
       )
         buf.push(e)
     }
@@ -3338,15 +3347,14 @@ class BattleScene extends Phaser.Scene {
     this.glow(x, y, 0xbfe8ff, st.splash * 0.8, 200, 0.6)
     this.waterFx.explode(this.fx(10), x, y)
     const angle = Math.atan2(s.dy, s.dx)
-    for (const e of this.magicTargets()) {
-      const reach = st.splash + UNITS[e.kind].r
-      if ((e.x - x) ** 2 + (e.y - y) ** 2 <= reach * reach) this.waterHit(e, st, angle)
+    for (const e of this.magicTargets(true)) {
+      if (this.areaDistance(e, x, y) <= st.splash) this.waterHit(e, st, angle, true)
     }
   }
 
-  private waterHit(e: Enemy, st: WaterStats, angle: number) {
+  private waterHit(e: Enemy, st: WaterStats, angle: number, area = false) {
     this.slow(e, st.slowFactor, st.slowSeconds)
-    this.hit(e, st.damage * this.loadout.damage, angle, 'water')
+    this.hit(e, st.damage * this.loadout.damage, angle, 'water', area)
   }
 
   private endWater(s: WaterShot) {
@@ -3437,13 +3445,19 @@ class BattleScene extends Phaser.Scene {
       onComplete: () => s.crater.setVisible(false),
     })
     this.playSound('boom')
-    // 판정 때도 벽 너머를 제외한다. 묶인 벽은 하나의 대표 Enemy이므로 운석당 한 번만 맞는다.
-    for (const e of [...this.magicTargets()]) {
-      const distance = Math.max(0, Math.hypot(e.x - x, e.y - y) - UNITS[e.kind].r)
+    // 범위 안의 뒤쪽 매도벽도 맞는다. 묶인 벽은 운석당 한 번만 맞는다.
+    for (const e of [...this.magicTargets(true)]) {
+      const distance = this.areaDistance(e, x, y)
       const factor = meteorFalloff(distance, st.radius)
       if (!factor) continue
       e.stunUntil = Math.max(e.stunUntil, this.elapsed + st.stunSeconds)
-      this.hit(e, st.damage * this.loadout.damage * factor, Math.atan2(e.y - y, e.x - x), 'meteor')
+      this.hit(
+        e,
+        st.damage * this.loadout.damage * factor,
+        Math.atan2(e.y - y, e.x - x),
+        'meteor',
+        true,
+      )
     }
   }
 
@@ -3813,15 +3827,24 @@ class BattleScene extends Phaser.Scene {
   }
 
   /** 범위 피해 (decisions.md 362번): 맞은 적을 뺀, 터진 자리 반지름 안의 적이 함께 맞는다. 바깥으로 밀어내는 각도로 맞는다. */
+  private areaDistance(e: Enemy, x: number, y: number) {
+    if (e.cell) {
+      return Math.hypot(
+        Math.max(0, Math.abs(e.x - x) - e.displayWidth / 2),
+        Math.max(0, Math.abs(e.y - y) - e.displayHeight / 2),
+      )
+    }
+    return Math.max(0, Math.hypot(e.x - x, e.y - y) - UNITS[e.kind].r)
+  }
+
   private splash(x: number, y: number, radius: number, dmg: number, except: Enemy) {
     for (const child of this.enemies.getChildren()) {
       const e = child as Enemy
       if (e === except || !e.active || e.dying) {
         continue
       }
-      const reach = radius + UNITS[e.kind].r
-      if ((e.x - x) ** 2 + (e.y - y) ** 2 <= reach * reach) {
-        this.hit(e, dmg, Math.atan2(e.y - y, e.x - x))
+      if (this.areaDistance(e, x, y) <= radius) {
+        this.hit(e, dmg, Math.atan2(e.y - y, e.x - x), 'bullet', true)
       }
     }
   }
@@ -4075,7 +4098,7 @@ class BattleScene extends Phaser.Scene {
       sfx.levelUp()
     }
     if (this.circuit) {
-      this.circuitStep(this.opts.idle ? realDtMs / 1000 : dt)
+      this.circuitStep(this.opts.idle ? (realDtMs / 1000) * 2 : dt)
       return
     }
     this.elapsed += dt
