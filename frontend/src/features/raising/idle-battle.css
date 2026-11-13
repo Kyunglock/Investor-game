@@ -1,0 +1,347 @@
+.idle-home {
+  color: #293a44;
+  background: #faf3e3;
+  min-height: 100%;
+  padding: 16px;
+  max-width: 760px;
+  margin: auto;
+  font-family: inherit;
+}
+.idle-heading,
+.idle-wallet {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.idle-heading h1 {
+  font-size: 27px;
+  font-weight: 900;
+  margin: 2px 0 12px;
+}
+.idle-heading small {
+  font-size: 11px;
+  color: #61706b;
+}
+.idle-heading button {
+  background: #fff;
+  border: 2px solid #354c4b;
+  border-radius: 14px;
+  padding: 10px;
+  font-size: 12px;
+  font-weight: bold;
+}
+.idle-wallet {
+  background: #fff8d9;
+  border-radius: 14px;
+  padding: 12px;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+.idle-wallet b {
+  display: block;
+  font-size: 20px;
+}
+.idle-live {
+  color: #367c64;
+  font-size: 11px;
+}
+.idle-arena {
+  height: 420px;
+  position: relative;
+  overflow: hidden;
+  border: 3px solid #384d55;
+  border-radius: 24px;
+  background: linear-gradient(#badbd9, #edf1d4 65%, #d7e0bc);
+  box-shadow: 0 5px 0 #b3c3ae;
+}
+.idle-road {
+  position: absolute;
+  inset: 0 10%;
+  background: repeating-linear-gradient(0deg, transparent 0 45px, #ffffff50 46px 48px);
+  transform: perspective(280px) rotateX(12deg);
+  animation: idle-road 4s linear infinite;
+  animation-play-state: paused;
+}
+.idle-wave {
+  position: relative;
+  text-align: center;
+  padding: 15px;
+}
+.idle-wave strong {
+  display: block;
+  font-size: 28px;
+  font-weight: 900;
+}
+.idle-wave small,
+.idle-wave span {
+  display: block;
+  font-size: 11px;
+}
+.idle-wall {
+  position: absolute;
+  left: 7%;
+  right: 7%;
+  top: 108px;
+  text-align: center;
+  background: #6a99b5;
+  padding: 10px;
+  border: 3px solid #35556c;
+  border-radius: 15px;
+  box-shadow: 0 7px 0 #3f708c;
+  color: white;
+  animation: idle-arrive 0.4s ease-out;
+}
+.idle-boss {
+  background: #76659e;
+  border-color: #483e65;
+}
+.idle-wall > strong {
+  font-size: 13px;
+}
+.idle-bricks {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin: 7px 0;
+}
+.idle-bricks span {
+  border: 1px solid #d9f0ff;
+  background: #ffffff20;
+  padding: 6px 0;
+  border-radius: 4px;
+  font-size: 10px;
+}
+.idle-wall progress {
+  display: block;
+  width: 100%;
+  height: 10px;
+  accent-color: #ffcf5e;
+}
+.idle-wall small {
+  font-size: 10px;
+}
+.idle-team {
+  position: absolute;
+  bottom: 52px;
+  left: 12%;
+  right: 12%;
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  align-items: end;
+}
+.idle-team > svg {
+  width: 65px;
+  height: 80px;
+  overflow: visible;
+}
+.idle-cat {
+  font-size: 45px;
+  position: relative;
+}
+.idle-cat small {
+  position: absolute;
+  font-size: 20px;
+  bottom: 0;
+  right: -10px;
+}
+.idle-power {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff9e8d9;
+  padding: 10px 14px;
+  font-size: 12px;
+}
+.idle-power span {
+  float: right;
+  font-size: 10px;
+}
+.idle-shots {
+  position: absolute;
+  inset: 260px 30% 100px;
+  display: flex;
+  justify-content: space-around;
+}
+.idle-shots i {
+  height: 14px;
+  width: 5px;
+  background: #ffec87;
+  border-radius: 10px;
+  box-shadow: 0 0 9px #ffc447;
+  animation: idle-shot 0.7s linear infinite;
+  animation-play-state: paused;
+}
+.idle-shots i:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.idle-shots i:nth-child(3) {
+  animation-delay: 0.4s;
+}
+.idle-magic {
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  top: 240px;
+  display: flex;
+  justify-content: space-around;
+}
+.idle-spell {
+  font-size: 28px;
+  animation: idle-spell 3s infinite;
+  animation-play-state: paused;
+}
+.idle-meteor {
+  animation-duration: 6s;
+  animation-delay: 0.6s;
+}
+.idle-bolt {
+  animation-duration: 4s;
+  animation-delay: 1.2s;
+}
+.idle-ram {
+  animation-duration: 8s;
+  animation-delay: 1.8s;
+}
+.idle-running .idle-road,
+.idle-running .idle-shots i,
+.idle-running .idle-spell {
+  animation-play-state: running;
+}
+.idle-growth {
+  margin-top: 20px;
+}
+.idle-growth h2 {
+  font-size: 15px;
+  font-weight: 800;
+}
+.idle-growth p {
+  font-size: 11px;
+  color: #67736c;
+  margin: 4px 0 10px;
+}
+.idle-skills {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.idle-skills > div {
+  background: #e9e5db;
+  border: 1px solid #d2d1c4;
+  border-radius: 12px;
+  padding: 10px 3px;
+  text-align: center;
+}
+.idle-skills .owned {
+  background: #fff6cc;
+  border-color: #d9b452;
+}
+.idle-skills span {
+  font-size: 23px;
+  display: block;
+}
+.idle-skills b {
+  display: block;
+  font-size: 10px;
+  margin: 4px 0;
+}
+.idle-skills small {
+  font-size: 9px;
+  color: #657367;
+}
+.idle-upgrades {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+.idle-upgrades button {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  background: #fff;
+  border: 2px solid #446158;
+  border-radius: 15px;
+  padding: 12px;
+  box-shadow: 0 3px 0 #b9c6af;
+}
+.idle-upgrades button:disabled {
+  opacity: 0.55;
+}
+.idle-upgrades span {
+  font-size: 13px;
+}
+.idle-upgrades strong {
+  font-size: 12px;
+  color: #a54c32;
+}
+.idle-upgrades small {
+  font-size: 10px;
+}
+.idle-footnote {
+  font-size: 10px;
+  line-height: 1.6;
+  color: #69756c;
+  text-align: center;
+  margin-top: 14px;
+}
+@keyframes idle-road {
+  to {
+    background-position: 0 96px;
+  }
+}
+@keyframes idle-shot {
+  from {
+    transform: translateY(35px);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-25px);
+    opacity: 0;
+  }
+}
+@keyframes idle-spell {
+  0%,
+  65%,
+  100% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.5);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-55px) scale(1.3);
+  }
+}
+@keyframes idle-arrive {
+  from {
+    transform: translateY(-90px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .idle-home .idle-road,
+  .idle-home .idle-shots i,
+  .idle-home .idle-spell,
+  .idle-home .idle-wall {
+    animation: none;
+  }
+}
+@media (max-width: 360px) {
+  .idle-home {
+    padding: 10px;
+  }
+  .idle-live {
+    font-size: 10px;
+  }
+  .idle-power span {
+    float: none;
+    display: block;
+  }
+}

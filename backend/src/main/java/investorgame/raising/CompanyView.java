@@ -52,7 +52,20 @@ public record CompanyView(
     Armory armory,
     List<BattleUpgrade> battleUpgrades,
     Stages stages,
-    Assaults assaults) {
+    Assaults assaults,
+    Idle idle) {
+
+  public record Idle(
+      long wall,
+      double hp,
+      double maxHp,
+      double dps,
+      long earned,
+      boolean boss,
+      List<IdleSkill> skills,
+      long nextUnlock) {}
+
+  public record IdleSkill(String code, String name, long unlockWall, boolean owned) {}
 
   /**
    * 업계 순위 (#351): 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다(로그인이 없는 익명 세션). 한 해도 마치지 않았으면 null.

@@ -17,6 +17,9 @@ import { useAppUi } from './app/ui'
 
 // 안드로이드 뒤로 가기: 시트가 열려 있으면 닫고, 다른 탭이면 사무실로, 사무실이면 앱을 뒤로 보낸다 (decisions.md 309번).
 if (Capacitor.isNativePlatform()) {
+  void NativeApp.addListener('appStateChange', ({ isActive }) => {
+    window.dispatchEvent(new CustomEvent('idle-app-active', { detail: isActive }))
+  })
   void NativeApp.addListener('backButton', () => {
     if (!useAppUi.getState().back()) {
       void NativeApp.minimizeApp()

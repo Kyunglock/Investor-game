@@ -312,6 +312,26 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/company/idle:
+    post:
+      summary: 화면에 켜 둔 자동 전투의 접속 신호. 3초 넘는 공백은 보상 없음
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [runId, sequence, action]
+              properties:
+                runId: { type: string, format: uuid }
+                sequence: { type: integer, format: int64, minimum: 0 }
+                action: { type: string, enum: [start, tick, stop] }
+      responses:
+        '200':
+          description: 서버가 계산한 전투와 회사 상태
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
   /api/company/assault:
     post:
       operationId: reportAssault
@@ -1016,6 +1036,27 @@ components:
                     capital: { type: integer, format: int64, description: 받은 자본 }
                     tickets: { type: integer, description: 받은 무기 뽑기권 }
                 - type: 'null'
+        idle:
+          type: object
+          required: [wall, hp, maxHp, dps, earned, boss, skills, nextUnlock]
+          properties:
+            wall: { type: integer, format: int64 }
+            hp: { type: number }
+            maxHp: { type: number }
+            dps: { type: number }
+            earned: { type: integer, format: int64 }
+            boss: { type: boolean }
+            nextUnlock: { type: integer, format: int64 }
+            skills:
+              type: array
+              items:
+                type: object
+                required: [code, name, unlockWall, owned]
+                properties:
+                  code: { type: string }
+                  name: { type: string }
+                  unlockWall: { type: integer, format: int64 }
+                  owned: { type: boolean }
         assaults:
           description: 매도벽 돌파 스테이지 (#698). 주 게임. 멘탈 스테이지와 따로 1-1부터 차례로 깬다. 분기 강화율에는 들어가지 않는다
           type: object

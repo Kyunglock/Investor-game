@@ -14,6 +14,8 @@ public interface CompanyService {
   /** 세션의 가장 최근 회사. 매각을 빼기 전에 시대가 끝나 멈췄던 회사면 다음 해부터 다시 돌린다 (decisions.md 236번). */
   Optional<CompanyView> current(UUID sessionId);
 
+  CompanyView idleBeat(UUID sessionId, String runId, long sequence, String action);
+
   /**
    * 사장의 사재로 회사를 차린다. 이미 회사가 있으면 400. 가장 최근 회사가 망했으면(자본 0) 그 회사를 닫고 다음 번호로 새로 차린다 (decisions.md
    * 247번).
