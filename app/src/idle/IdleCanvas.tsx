@@ -48,6 +48,11 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
           hero: heroOf(c),
           loadout: idleLoadout(c),
           idle: () => latest.current.company.idle ?? { wall: 1, hp: 120, maxHp: 120 },
+          onIdleHit: (wall, kind) => {
+            if (!disposed && foreground && nativeActive && latest.current.connected) {
+              window.dispatchEvent(new CustomEvent('idle-wall-hit', { detail: { wall, kind } }))
+            }
+          },
           onHud: () => {},
           onBanner: () => {},
           onHurt: () => {},
@@ -64,6 +69,7 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
       })
     return () => {
       disposed = true
+      window.dispatchEvent(new Event('idle-hits-clear'))
       document.removeEventListener('visibilitychange', visibility)
       window.removeEventListener('idle-app-active', native)
       battle.current?.stop()

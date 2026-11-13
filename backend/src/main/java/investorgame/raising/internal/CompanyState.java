@@ -28,6 +28,8 @@ class CompanyState {
     double damage;
     double nextDamage;
     double afterNextDamage;
+    int hitVersion;
+    double[] hitCredits = new double[5];
     long earned;
     double incomeRemainder;
     double activeSeconds;
