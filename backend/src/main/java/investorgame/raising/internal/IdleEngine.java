@@ -41,7 +41,7 @@ class IdleEngine {
   private static final double CAT_POWER = 0.5;
   private static final double CAT_LEVEL_BONUS = 0.2;
   // Capital per point of wall health on a clear, and per active second at wall 1 (492).
-  private static final double REWARD_PER_HEALTH = 40_000;
+  private static final double REWARD_PER_HEALTH = 60_000;
   private static final double INCOME = 20_000;
   private static final double INCOME_GROWTH = 0.05;
   // Matches weaponEffects.ts: revolver 3x, every other weapon 2x (decisions.md 487).
@@ -170,7 +170,7 @@ class IdleEngine {
     // The first walls fall in seconds; later ones grow faster than linearly so upgrades matter
     // (492).
     long depth = wall - 1;
-    return (30 + 18.0 * depth + 0.6 * depth * depth) * (wall % 10 == 0 ? 4 : 1);
+    return (20 + 12.0 * depth + 0.4 * depth * depth) * (wall % 10 == 0 ? 4 : 1);
   }
 
   private double dps(CompanyState c) {

@@ -202,7 +202,7 @@ class IdleEngineTest {
     // A cleared wall pays by its health (decisions.md 492).
     assertThat(state.capital)
         .isEqualTo(
-            paid + (long) (IdleEngine.maxHp(6) * 40000) + (long) (IdleEngine.maxHp(7) * 40000));
+            paid + (long) (IdleEngine.maxHp(6) * 60000) + (long) (IdleEngine.maxHp(7) * 60000));
   }
 
   @Test
