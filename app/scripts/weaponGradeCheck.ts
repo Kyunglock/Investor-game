@@ -7,7 +7,11 @@ import { company } from './fixture.ts'
 
 const out = resolve(import.meta.dirname, 'shots/weapon-grades')
 mkdirSync(out, { recursive: true })
-const browser = await chromium.launch({ channel: process.env.BROWSER_CHANNEL || 'msedge' })
+const browser = await chromium.launch(
+  process.env.BROWSER_EXECUTABLE
+    ? { executablePath: process.env.BROWSER_EXECUTABLE }
+    : { channel: process.env.BROWSER_CHANNEL || 'msedge' },
+)
 const grades = ['F', 'E', 'D', 'C', 'B', 'A', 'S']
 const kinds = ['pistol', 'pistol', 'revolver', 'smg', 'smg', 'shotgun', 'rifle']
 const damage = [100, 160, 450, 165, 230, 1980, 1815]
@@ -32,7 +36,10 @@ try {
       deviceScaleFactor: 2,
     })
     const errors: string[] = []
-    page.on('pageerror', (e) => errors.push(e.message))
+    page.on('pageerror', (e) => {
+      errors.push(e.message)
+      console.error(e.message)
+    })
     await page.addInitScript(() => localStorage.setItem('investor-game.tutorial', 'done'))
     await page.route(/\/api\/(company|sessions)(\/|$|\?)/, (route) =>
       route.fulfill({
@@ -46,28 +53,29 @@ try {
       }),
     )
     await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5186/app/')
-    await page.getByTestId('settle').waitFor()
-    await page.evaluate(async () => {
-      const path = '/app/src/app/ui.ts'
-      const { useAppUi } = await import(/* @vite-ignore */ path)
-      useAppUi.getState().openSheet({ kind: 'toy', panel: 'weapons' })
-    })
-    await expect(page.getByTestId('weapon')).toHaveCount(7)
-    await expect(page.getByTestId('weapon-merge')).toHaveCount(6)
+    await page.getByTestId('idle-battle').waitFor()
+    await page.getByRole('button', { name: '성장', exact: true }).click()
+    await page.getByRole('tab', { name: '인벤토리', exact: true }).click()
+    await expect(page.getByTestId('inventory-slot')).toHaveCount(6)
+    await expect(page.getByTestId('weapon')).toHaveCount(6)
+    await expect(page.getByTestId('weapon-merge')).toHaveCount(5)
+    await page.getByRole('button', { name: '다음 무기 페이지' }).click()
+    await expect(page.getByTestId('inventory-slot')).toHaveCount(6)
+    await expect(page.getByTestId('weapon')).toHaveCount(1)
+    await expect(page.getByLabel('빈 슬롯', { exact: true })).toHaveCount(5)
+    await expect(page.getByTestId('weapon-merge')).toHaveCount(1)
+    await expect(page.getByRole('button', { name: '다음 무기 페이지' })).toBeDisabled()
+    await page.getByRole('button', { name: '이전 무기 페이지' }).click()
+    await expect(page.getByRole('button', { name: '이전 무기 페이지' })).toBeDisabled()
     await page.screenshot({ path: resolve(out, `inventory-${grade}.png`) })
-    await page.evaluate(async () => {
-      const path = '/app/src/app/ui.ts'
-      const { useAppUi } = await import(/* @vite-ignore */ path)
-      useAppUi.getState().startBattle({ kind: 'invest', mode: 'ASSAULT', level: 1 })
-    })
-    await page.getByTestId('mental-start').click()
-    await expect(page.getByTestId('mental-cards')).toBeVisible()
-    await page.getByTestId('mental-cards').getByRole('button').first().click()
-    await page.waitForTimeout(2400)
-    await expect(page.getByTestId('battle-hud')).toBeVisible()
+    await page.getByRole('button', { name: '닫기 ✕', exact: true }).click()
+    await expect(page.getByTestId('idle-canvas').locator('canvas')).toBeVisible()
+    await page.waitForTimeout(1000)
     await page.screenshot({ path: resolve(out, `battle-${grade}.png`) })
     assert.deepEqual(errors, [])
-    console.log(`PASS ${grade}: inventory, six merge buttons, battle, no browser errors`)
+    console.log(
+      `PASS ${grade}: six-slot inventory, pagination, merge buttons, battle, no browser errors`,
+    )
     await page.close()
   }
   // 실제 총·탄·명중 원화를 같은 배율로 나란히 놓아 일곱 등급을 비교한다.
@@ -106,7 +114,7 @@ try {
       c.save()
       c.translate(180, y + 32)
       c.scale(2.5, 2.5)
-      drawStageGun(c, '#efcfa4', 'pistol', grade)
+      drawStageGun(c, '', 'pistol', grade, false)
       c.restore()
       c.save()
       c.translate(430, y + 30)

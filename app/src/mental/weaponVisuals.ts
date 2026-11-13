@@ -29,63 +29,70 @@ export function drawWeaponBullet(c: CanvasRenderingContext2D, grade: GunGrade, f
     c.roundRect(x, y, w, h, h / 2)
     c.fill()
   }
-  const tail = c.createLinearGradient(0, 0, 30, 0)
+  // 탄두와 잔상을 분리한다. 텍스처 크기·중심과 충돌 판정은 유지한다.
+  const tail = c.createLinearGradient(0, 0, 24, 0)
   tail.addColorStop(0, `${color}00`)
-  tail.addColorStop(1, color)
-  bar(0, 3, 30, 4, tail)
-  // 밝은 거리·매도벽·마법 위에서도 윤곽이 남는 짙은 외곽과 불투명한 중심.
-  bar(8, 0.5, 24, 9, '#24334f')
-  bar(10, 2, 20, 6, color)
-  if (grade === 'F') {
-    bar(11, 2, 19, 6, '#ffd36a')
-    bar(15, 3.5, 13, 3, '#ffffff')
-  }
-  if (grade === 'E') {
-    bar(10, 2, 20, 6, color)
-    bar(15, 3, 13, 2, '#ecfdf5')
-  }
-  if (grade === 'D') {
-    c.fillStyle = color
+  tail.addColorStop(1, `${color}bb`)
+  bar(frame ? 2 : 0, 3.5, 24, 3, tail)
+  const shell = (back: number, half: number, fill: string) => {
     c.beginPath()
-    c.moveTo(9, 5)
-    c.lineTo(20, 0)
-    c.lineTo(31, 5)
-    c.lineTo(20, 10)
+    c.moveTo(back, 5 - half)
+    c.lineTo(25, 5 - half)
+    c.quadraticCurveTo(29, 5 - half, 31, 5)
+    c.quadraticCurveTo(29, 5 + half, 25, 5 + half)
+    c.lineTo(back, 5 + half)
+    c.closePath()
+    c.fillStyle = fill
     c.fill()
-    bar(18, 4, 9, 2, '#fff')
+    c.strokeStyle = '#26364b'
+    c.lineWidth = 0.8
+    c.stroke()
   }
-  if (grade === 'C') {
-    bar(9, 2, 21, 3, color)
-    bar(9, 6, 17, 2, '#ede9fe')
-  }
-  if (grade === 'B') {
-    for (let i = 0; i < 3; i++) bar(5 + i * 4, i * 3 + 0.5, 25 - i * 4, 2, i === 1 ? '#fff' : color)
-  }
-  if (grade === 'A') {
-    bar(12, 1, 17, 8, '#7c2d12')
-    bar(16, 1.5, 13, 7, color)
-    bar(20, 3, 9, 3, '#fff7ed')
-    c.fillStyle = '#facc15'
+  if (grade === 'F' || grade === 'E') {
+    shell(18, 2.4, grade === 'F' ? '#f4c569' : color)
+    bar(20, 3.5, 7, 1.2, '#fff8db')
+    c.fillStyle = grade === 'F' ? '#b97935' : '#176453'
+    c.fillRect(18, 3, 2, 4)
+  } else if (grade === 'D') {
+    shell(15, 3.3, '#9dddf5')
+    bar(18, 3, 9, 1.5, '#fff')
+    c.fillStyle = '#37728e'
+    c.fillRect(16, 2.5, 2, 5)
+  } else if (grade === 'C' || grade === 'B') {
+    shell(13, grade === 'B' ? 2.5 : 1.8, color)
+    bar(15, 4.3, 13, 1.2, '#fff')
+    if (grade === 'B') {
+      bar(frame ? 4 : 7, 1, 9, 1, '#f0abfc')
+      bar(frame ? 7 : 4, 8, 9, 1, '#f0abfc')
+    }
+  } else if (grade === 'A') {
+    c.fillStyle = '#ffba58'
     c.beginPath()
-    c.moveTo(14, 1)
-    c.lineTo(frame ? 0 : 5, 5)
-    c.lineTo(14, 9)
+    c.moveTo(18, 2)
+    c.lineTo(frame ? 5 : 1, 5)
+    c.lineTo(18, 8)
     c.fill()
-  }
-  if (grade === 'S') {
-    bar(0, 4, 31, 2, '#fff')
-    c.strokeStyle = frame ? '#e9d5ff' : color
+    shell(18, 3.6, '#fb923c')
+    bar(22, 3, 6, 2, '#fff4cc')
+    c.fillStyle = '#9a4b31'
+    c.fillRect(18, 2, 2, 6)
+  } else {
+    c.strokeStyle = frame ? '#c4b5fd' : color
     c.lineWidth = 1
     c.beginPath()
     c.ellipse(22, 5, 7, 4, 0, 0, Math.PI * 2)
     c.stroke()
-    c.fillStyle = '#fff'
     c.beginPath()
-    c.moveTo(30, 5)
-    c.lineTo(21, 1)
-    c.lineTo(15, 5)
-    c.lineTo(21, 9)
+    c.moveTo(12, 5)
+    c.lineTo(23, 2)
+    c.lineTo(31, 5)
+    c.lineTo(23, 8)
+    c.closePath()
+    c.fillStyle = '#ecfeff'
     c.fill()
+    c.strokeStyle = '#0891b2'
+    c.stroke()
+    bar(2, 4.5, 24, 1, '#ffffffcc')
   }
 }
 

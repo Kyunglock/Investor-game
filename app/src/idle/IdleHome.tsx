@@ -180,7 +180,7 @@ export function IdleHome({
                     aria-selected={part === key}
                     onClick={() => setPart(key)}
                   >
-                    {['능력치', '무기', '스킬'][i]}
+                    {['능력치', '인벤토리', '스킬'][i]}
                   </button>
                 ))}
               </div>
