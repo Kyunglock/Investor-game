@@ -408,17 +408,18 @@ class MentalEngineTest {
   }
 
   @Test
-  void 전투_강화는_자본으로_끝없이_사고_한_단계에_1퍼센트씩_값은_완만하게_오른다() {
+  void 전투_강화는_자본으로_끝없이_사고_값은_완만하게_오른다() {
     CompanyState c = company(5);
     CompanyProperties.Upgrades rule = PROPERTIES.mental().upgrades();
     assertThat(MentalEngine.UPGRADES)
         .as("고양이 속도 강화는 뺐고(394번) 체력(410번)과 치명타 피해(487번)를 넣었다")
         .containsExactly("damage", "fire", "hp", "crit");
     assertThat(rule.stepPercent())
-        .containsEntry("damage", 1)
-        .containsEntry("fire", 1)
-        .containsEntry("hp", 1)
-        .containsEntry("crit", 2);
+        .as("공격력·체력 3%, 연사 2%, 치명타 피해 6% (492번)")
+        .containsEntry("damage", 3)
+        .containsEntry("fire", 2)
+        .containsEntry("hp", 3)
+        .containsEntry("crit", 6);
     assertThat(rule.maxPercent()).as("연사만 100%에서 멈춘다 (487번)").containsOnly(Map.entry("fire", 100));
     long before = c.capital;
     assertThat(ENGINE.mental.buyUpgrade(c, "damage", 1)).isEqualTo(1);
@@ -436,8 +437,8 @@ class MentalEngineTest {
     assertThat(ENGINE.mental.upgradePrice(5_000)).as("long을 넘으면 못 사는 값").isEqualTo(Long.MAX_VALUE);
     CompanyView.BattleUpgrade damage = view(c, "damage");
     assertThat(damage.level()).isEqualTo(1);
-    assertThat(damage.bonusPercent()).isEqualTo(1);
-    assertThat(damage.nextBonusPercent()).isEqualTo(2);
+    assertThat(damage.bonusPercent()).isEqualTo(3);
+    assertThat(damage.nextBonusPercent()).isEqualTo(6);
     assertThat(damage.price()).isEqualTo(ENGINE.mental.upgradePrice(1));
     assertThat(damage.priceGrowthPercent()).isEqualTo(rule.priceGrowthPercent());
 
@@ -453,35 +454,35 @@ class MentalEngineTest {
     assertThat(ENGINE.mental.buyUpgrade(c, "hp", 50)).isEqualTo(50);
     assertThat(c.battleLevels.get("hp")).isEqualTo(250);
     assertThat(c.yearUpgrades - spent).as("묶어 사도 한 단계씩 산 값의 합").isEqualTo(expected);
-    assertThat(view(c, "hp").bonusPercent()).isEqualTo(250);
+    assertThat(view(c, "hp").bonusPercent()).isEqualTo(750);
     assertThat(view(c, "hp").maxLevel()).as("0이면 끝없이 산다").isZero();
     assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "fire", 0))
         .isInstanceOf(InvalidRequestException.class);
     assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "fire", rule.maxBatch() + 1))
         .isInstanceOf(InvalidRequestException.class);
 
-    // 연사는 100%에서 멈춘다 (487번): 넘치게 보내도 상한까지만 사고, 닿은 뒤에는 400.
-    assertThat(ENGINE.mental.buyUpgrade(c, "fire", 60)).isEqualTo(60);
-    long atSixty = c.capital;
-    assertThat(ENGINE.mental.buyUpgrade(c, "fire", 100)).as("남은 40단계만 산다").isEqualTo(40);
-    long forty = 0;
-    for (int level = 60; level < 100; level++) {
-      forty += ENGINE.mental.upgradePrice(level);
+    // 연사는 100%(50단계)에서 멈춘다 (487·492번): 넘치게 보내도 상한까지만 사고, 닿은 뒤에는 400.
+    assertThat(ENGINE.mental.buyUpgrade(c, "fire", 30)).isEqualTo(30);
+    long atThirty = c.capital;
+    assertThat(ENGINE.mental.buyUpgrade(c, "fire", 100)).as("남은 20단계만 산다").isEqualTo(20);
+    long twenty = 0;
+    for (int level = 30; level < 50; level++) {
+      twenty += ENGINE.mental.upgradePrice(level);
     }
-    assertThat(atSixty - c.capital).isEqualTo(forty);
+    assertThat(atThirty - c.capital).isEqualTo(twenty);
     assertThat(view(c, "fire").bonusPercent()).isEqualTo(100);
     assertThat(view(c, "fire").nextBonusPercent()).isEqualTo(100);
-    assertThat(view(c, "fire").maxLevel()).isEqualTo(100);
+    assertThat(view(c, "fire").maxLevel()).isEqualTo(50);
     assertThatThrownBy(() -> ENGINE.mental.buyUpgrade(c, "fire", 1))
         .isInstanceOf(InvalidRequestException.class);
     // 상한이 생기기 전에 넘겨 산 단계는 상한으로 읽는다.
     c.battleLevels.put("fire", 250);
-    assertThat(view(c, "fire").level()).isEqualTo(100);
+    assertThat(view(c, "fire").level()).isEqualTo(50);
     assertThat(view(c, "fire").bonusPercent()).isEqualTo(100);
 
-    // 치명타 피해는 한 단계에 2%씩 끝없이 (487번).
+    // 치명타 피해는 한 단계에 6%씩 끝없이 (487·492번).
     assertThat(ENGINE.mental.buyUpgrade(c, "crit", 5)).isEqualTo(5);
-    assertThat(view(c, "crit").bonusPercent()).isEqualTo(10);
+    assertThat(view(c, "crit").bonusPercent()).isEqualTo(30);
     assertThat(view(c, "crit").maxLevel()).isZero();
 
     // 자본이 닿는 데까지만 산다. 한 단계도 못 사면 400.
@@ -501,7 +502,7 @@ class MentalEngineTest {
     // 체력(최대 멘탈)도 같은 규칙으로 산다 (410번).
     CompanyState tough = company(7);
     assertThat(ENGINE.mental.buyUpgrade(tough, "hp", 3)).isEqualTo(3);
-    assertThat(view(tough, "hp").bonusPercent()).isEqualTo(3);
+    assertThat(view(tough, "hp").bonusPercent()).isEqualTo(9);
     assertThat(view(tough, "hp").price()).isEqualTo(ENGINE.mental.upgradePrice(3));
   }
 

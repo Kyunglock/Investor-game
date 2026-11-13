@@ -91,7 +91,7 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
     sfx.tap()
     useAppUi.getState().setTab(tab)
   }
-  // 채용은 메뉴를 거치지 않고 가진 채용권만큼 바로 뽑는다 (490번). 결과 카드는 Windows가 띄운다. 도감과 확률은 채용 도감 탭에 있다.
+  // 채용은 메뉴를 거치지 않고 가진 채용권만큼 바로 뽑는다 (490번). 결과 카드는 Windows가 띄운다. 도감과 확률은 다른 장면 아래의 도감 탭에 있다.
   const [hireNote, setHireNote] = useState<string | null>(null)
   const hire = () => {
     const count = drawable(company)

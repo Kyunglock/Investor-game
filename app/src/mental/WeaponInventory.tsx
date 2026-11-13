@@ -46,6 +46,7 @@ export function WeaponInventory({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   const [reveal, setReveal] = useState<{ id: number; result: DrawResult | null } | null>(null)
+  const [dropped, setDropped] = useState<string | null>(null)
   const drawing = useRef(false)
   const mounted = useRef(true)
   useEffect(() => {
@@ -97,8 +98,21 @@ export function WeaponInventory({ company }: { company: Company }) {
   }))
   const ended = company.status === 'ENDED'
   // 고양이가 빌려 든 무기 (488번): 칸에 든 고양이 이름을 보인다. 사장냥이 들면 고양이는 내려놓는다.
-  const holderOf = (w: Weapon) =>
-    company.idle?.cats.find((cat) => cat.weapon?.kind === w.kind && cat.weapon.grade === w.grade)
+  const holdersOf = (w: Weapon) =>
+    company.idle?.cats.filter(
+      (cat) => cat.weapon?.kind === w.kind && cat.weapon.grade === w.grade,
+    ) ?? []
+  // 사장냥이 들거나 합성해 수가 모자라면 고양이가 무기를 내려놓는다: 말없이 풀리지 않게 알린다 (492번).
+  const change = async (action: () => Promise<void>) => {
+    const armed = company.idle?.cats.filter((cat) => cat.weapon) ?? []
+    setDropped(null)
+    await action()
+    const now = useRaisingStore.getState().company?.idle?.cats ?? []
+    const names = armed
+      .filter((cat) => !now.find((c) => c.code === cat.code)?.weapon)
+      .map((cat) => cat.name)
+    if (mounted.current && names.length > 0) setDropped(`${names.join('·')}: 무기를 내려놓았어요`)
+  }
   return (
     <div className="weapon-inventory" data-testid="weapon-picker">
       <section
@@ -171,7 +185,7 @@ export function WeaponInventory({ company }: { company: Company }) {
                 onClick={() => {
                   sfx.tap()
                   haptic.light()
-                  void useRaisingStore.getState().equipWeapon(w.kind, w.grade)
+                  void change(() => useRaisingStore.getState().equipWeapon(w.kind, w.grade))
                 }}
                 className={`weapon-card ${w.equipped ? 'is-equipped' : ''}`}
                 data-testid="weapon"
@@ -182,7 +196,7 @@ export function WeaponInventory({ company }: { company: Company }) {
                 <span className={`weapon-slot-grade ${GRADE_BADGE[w.grade]}`}>{w.gradeName}</span>
                 <span className="weapon-slot-name">{w.name}</span>
                 <span className="weapon-slot-status">
-                  {w.equipped ? '장착 중' : (holderOf(w)?.name ?? FIRE_STYLE_NAMES[w.kind])}
+                  {w.equipped ? '장착 중' : (holdersOf(w)[0]?.name ?? FIRE_STYLE_NAMES[w.kind])}
                 </span>
                 <span className="weapon-slot-count">×{w.count}</span>
               </button>
@@ -195,10 +209,14 @@ export function WeaponInventory({ company }: { company: Company }) {
                   onClick={() => {
                     sfx.levelUp()
                     haptic.medium()
-                    void useRaisingStore.getState().mergeWeapon(w.kind, w.grade as MergeGrade)
+                    void change(() =>
+                      useRaisingStore.getState().mergeWeapon(w.kind, w.grade as MergeGrade),
+                    )
                   }}
                 >
                   {armory.mergeCount}개 합성
+                  {w.count - armory.mergeCount < (w.equipped ? 1 : 0) + holdersOf(w).length &&
+                    holdersOf(w).length > 0 && <small> · 고양이 장비 풀림</small>}
                 </button>
               )}
             </li>
@@ -236,6 +254,11 @@ export function WeaponInventory({ company }: { company: Company }) {
           ›
         </button>
       </nav>
+      {dropped && (
+        <p role="status" className="mt-2 text-[12px] text-muted" data-testid="weapon-dropped">
+          {dropped}
+        </p>
+      )}
       {error && (
         <p role="alert" className="mt-2 text-red-pen">
           {error}

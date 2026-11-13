@@ -11,6 +11,8 @@ export const BUY_WALL = {
   shotsPerSell: 2,
   retreatSeconds: 0.7,
   retreatDistance: 80,
+  /** 자동 전투의 재건 시간(초, 492번): 그동안 공격이 멈추므로 매수벽 강화가 화력을 지킨다. */
+  idleRebuildSeconds: 2,
 } as const
 
 /** 매수 티켓은 양쪽에 40%씩, 가운데에 20%. 각 영역 안에서도 위치를 무작위로 정한다. */
@@ -35,7 +37,7 @@ export function pushedByCollapse(y: number, viewHeight: number): boolean {
 
 /** 매도 물량 하나당 매수 주문 두 개로 맞선다. 붕괴하면 후퇴하고 1.5초 뒤 새 벽을 세운다. */
 export class BuyWall {
-  readonly maxHp: number
+  maxHp: number
   hp: number
   rebuildLeft = 0
   retreatLeft = 0
@@ -46,8 +48,14 @@ export class BuyWall {
   private nextShot: number
   private readonly random: () => number
   private protectionLeft = 0
-  constructor(maxMental: number, random: () => number = Math.random) {
+  private readonly rebuildSeconds: number
+  constructor(
+    maxMental: number,
+    random: () => number = Math.random,
+    rebuildSeconds: number = BUY_WALL.rebuildSeconds,
+  ) {
     this.random = random
+    this.rebuildSeconds = rebuildSeconds
     this.nextShot = this.shotDelay()
     this.maxHp = Math.max(1, Math.round(maxMental * BUY_WALL.hpRatio))
     this.hp = this.maxHp
@@ -57,6 +65,12 @@ export class BuyWall {
   }
   get active() {
     return this.hp > 0
+  }
+  /** 체력 강화를 사면 서 있는 벽도 그만큼 두꺼워진다 (492번). */
+  resize(maxMental: number) {
+    const next = Math.max(1, Math.round(maxMental * BUY_WALL.hpRatio))
+    if (this.active) this.hp = Math.max(1, this.hp + next - this.maxHp)
+    this.maxHp = next
   }
   get push() {
     return this.retreatLeft > 0
@@ -68,7 +82,7 @@ export class BuyWall {
     this.hp = Math.max(0, this.hp - Math.max(0, damage))
     if (this.hp > 0) return false
     this.breaks++
-    this.rebuildLeft = BUY_WALL.rebuildSeconds
+    this.rebuildLeft = this.rebuildSeconds
     this.retreatLeft = BUY_WALL.retreatSeconds
     this.shotClock = 0
     this.nextShot = this.shotDelay()

@@ -1,11 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { API_BASE, api } from '../../api/client'
 import { type IdleContact, IdleContacts } from './idleContacts'
 import { useRaisingStore } from './store'
 
-/** One foreground heartbeat loop per application; server owns all progress. */
+// Heartbeats leave in the order they were made, even across a remount: a late start from the
+// previous loop must not land after the next loop's start and take the run back (decisions.md 492).
+let queue: Promise<unknown> = Promise.resolve()
+function inOrder<T>(send: () => Promise<T>): Promise<T> {
+  const sent = queue.then(send, send)
+  queue = sent.catch(() => undefined)
+  return sent
+}
+
+/**
+ * One foreground heartbeat loop per application; server owns all progress. `blocked` means the
+ * server refused this screen because another one holds the run; `resume` takes the run back.
+ */
 export function useIdleBattle(companyId?: string) {
   const [connected, setConnected] = useState(false)
+  const [blocked, setBlocked] = useState(false)
+  const resume = useRef(() => {})
   useEffect(() => {
     if (!companyId) return
     let disposed = false
@@ -23,13 +37,16 @@ export function useIdleBattle(companyId?: string) {
       generation++
       started = false
       setConnected(false)
-      void fetch(`${API_BASE}/api/company/idle`, {
-        method: 'POST',
-        credentials: 'include',
-        keepalive: true,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ runId, sequence: ++sequence, action: 'stop' }),
-      }).catch(() => {})
+      const body = JSON.stringify({ runId, sequence: ++sequence, action: 'stop' })
+      void inOrder(() =>
+        fetch(`${API_BASE}/api/company/idle`, {
+          method: 'POST',
+          credentials: 'include',
+          keepalive: true,
+          headers: { 'Content-Type': 'application/json' },
+          body,
+        }),
+      ).catch(() => {})
       runId = crypto.randomUUID()
       sequence = 0
     }
@@ -40,17 +57,17 @@ export function useIdleBattle(companyId?: string) {
       pending = true
       const version = generation
       try {
-        const res = await api.POST('/api/company/idle', {
-          body: {
-            runId,
-            sequence: ++sequence,
-            action: started ? 'tick' : 'start',
-            hits: started ? contacts.drain() : [],
-          },
-        })
+        const body = {
+          runId,
+          sequence: ++sequence,
+          action: started ? ('tick' as const) : ('start' as const),
+          hits: started ? contacts.drain() : [],
+        }
+        const res = await inOrder(() => api.POST('/api/company/idle', { body }))
         if (disposed || version !== generation || !visible()) return
         if (!res.data) {
           blocked = res.response.status === 400
+          setBlocked(blocked)
           stop()
           return
         }
@@ -76,10 +93,12 @@ export function useIdleBattle(companyId?: string) {
     const clearContacts = () => contacts.clear()
     const visibility = () => {
       if (!visible()) stop()
-      else {
-        blocked = false
-        void tick()
-      }
+      else resume.current()
+    }
+    resume.current = () => {
+      blocked = false
+      setBlocked(false)
+      void tick()
     }
     const native = (event: Event) => {
       nativeActive = (event as CustomEvent<boolean>).detail
@@ -103,5 +122,5 @@ export function useIdleBattle(companyId?: string) {
       stop()
     }
   }, [companyId])
-  return connected
+  return { connected, blocked, resume: () => resume.current() }
 }

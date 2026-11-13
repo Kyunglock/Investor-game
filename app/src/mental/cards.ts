@@ -224,6 +224,10 @@ export interface MateGun {
   bulletPower: number
   fireMs: number
   bulletSpeed: number
+  /** 이 고양이 총의 치명타 배율에 곱하는 값 (492번, 특성). 보통 1. */
+  critical: number
+  /** 전투 그림 (mates.ts MATE_LOOKS의 차례): 고양이마다 제 그림으로 선다. */
+  look: number
 }
 
 export const BASE_LOADOUT: Loadout = {

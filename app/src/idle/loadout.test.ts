@@ -2,7 +2,14 @@ import type { Company } from '@web/api/client'
 import { describe, expect, it } from 'vitest'
 import { idleLoadout } from './loadout'
 
-type Cat = { code: string; fielded: boolean; bonusPercent?: number; weapon?: object | null }
+type Cat = {
+  code: string
+  fielded: boolean
+  damagePercent?: number
+  firePercent?: number
+  criticalPercent?: number
+  weapon?: object | null
+}
 
 const company = (owned: string[], cats: Cat[] = [], bonus = 0) =>
   ({
@@ -11,7 +18,13 @@ const company = (owned: string[], cats: Cat[] = [], bonus = 0) =>
         code,
         owned: owned.includes(code),
       })),
-      cats: cats.map((cat) => ({ bonusPercent: 0, weapon: null, ...cat })),
+      cats: cats.map((cat) => ({
+        damagePercent: 50,
+        firePercent: 100,
+        criticalPercent: 100,
+        weapon: null,
+        ...cat,
+      })),
     },
     weapons: [
       { kind: 'pistol', grade: 'F', damagePercent: 100, fireMs: 260, power: 0, bulletSpeed: 720 },
@@ -54,18 +67,19 @@ describe('방치형 전투 획득 상태', () => {
   it('영구 강화가 무기 피해에 반영된다', () => {
     expect(idleLoadout(company([], [], 100)).damage).toBe(2 * idleLoadout(company([])).damage)
   })
-  it('고양이는 제가 든 총과 레벨로 쏘고, 총이 없으면 기본 권총을 쏜다 (488번)', () => {
+  it('고양이는 제가 든 총을 제 화력·특성으로 쏘고, 총이 없으면 기본 권총을 쏜다 (488·492번)', () => {
     const loadout = idleLoadout(
       company(
         [],
         [
           {
-            code: 'sky',
+            code: 'mint',
             fielded: true,
-            bonusPercent: 20,
+            damagePercent: 75,
             weapon: { kind: 'rifle', grade: 'S' },
           },
-          { code: 'mint', fielded: true },
+          { code: 'sky', fielded: true, firePercent: 125 },
+          { code: 'lilac', fielded: false, criticalPercent: 150 },
         ],
         50,
       ),
@@ -74,12 +88,23 @@ describe('방치형 전투 획득 상태', () => {
       {
         kind: 'rifle',
         grade: 'S',
-        damage: 4 * 1.5 * 1.2,
+        damage: 4 * 1.5 * 0.75,
         bulletPower: 1,
         fireMs: 520,
         bulletSpeed: 900,
+        critical: 1,
+        look: 1,
       },
-      { kind: 'pistol', grade: 'F', damage: 1.5, bulletPower: 0, fireMs: 260, bulletSpeed: 720 },
+      {
+        kind: 'pistol',
+        grade: 'F',
+        damage: 1.5 * 0.5,
+        bulletPower: 0,
+        fireMs: 260 / 1.25,
+        bulletSpeed: 720,
+        critical: 1,
+        look: 0,
+      },
     ])
   })
 })

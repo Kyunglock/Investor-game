@@ -4,7 +4,7 @@ import { chromium, expect } from '@playwright/test'
 import { company as fixture } from './fixture.ts'
 
 mkdirSync('/tmp/weapon-shots', { recursive: true })
-const browser = await chromium.launch()
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined })
 try {
   for (const [width, height] of [
     [390, 844],
@@ -57,7 +57,7 @@ try {
         }
         return route.fulfill({ json: company })
       })
-      await page.goto('http://127.0.0.1:5182/app/')
+      await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5182/app/')
       await page.getByRole('button', { name: '성장' }).click()
       await page.getByRole('tab', { name: /인벤토리/ }).click()
       await page.getByTestId('weapon-draw').click()

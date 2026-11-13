@@ -389,7 +389,7 @@ class CompanyApiTest {
     mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated());
     DocumentContext opened = json(mvc.perform(get("/api/company").cookie(session)));
     List<Integer> levels = opened.read("$.idle.cats[*].level");
-    assertThat(levels).as("고양이는 벽을 돌파해도 저절로 오지 않는다 (488번)").containsExactly(0, 0);
+    assertThat(levels).as("고양이는 벽을 돌파해도 저절로 오지 않는다 (488번)").containsExactly(0, 0, 0);
     long price = opened.read("$.idle.catPrice", Long.class);
     long capital = opened.read("$.capital", Long.class);
     postJson("/api/company/cat/field", "{\"code\":\"sky\",\"fielded\":true}")
@@ -397,7 +397,7 @@ class CompanyApiTest {
 
     DocumentContext drawn = json(postJson("/api/company/cat/draw", "").andExpect(status().isOk()));
     assertThat(drawn.read("$.capital", Long.class)).isEqualTo(capital - price);
-    assertThat(drawn.read("$.idle.catPrice", Long.class)).isEqualTo(Math.round(price * 1.5));
+    assertThat(drawn.read("$.idle.catPrice", Long.class)).isEqualTo(Math.round(price * 1.3));
     List<Map<String, Object>> cats = drawn.read("$.idle.cats[?(@.level == 1)]");
     assertThat(cats).as("새 고양이는 바로 출전한다").hasSize(1);
     assertThat(cats.getFirst()).containsEntry("fielded", true);
@@ -409,7 +409,7 @@ class CompanyApiTest {
                     "/api/company/cat/field", "{\"code\":\"%s\",\"fielded\":false}".formatted(code))
                 .andExpect(status().isOk()));
     List<Boolean> fielded = rested.read("$.idle.cats[*].fielded");
-    assertThat(fielded).containsExactly(false, false);
+    assertThat(fielded).containsExactly(false, false, false);
 
     // 사장냥이 든 하나뿐인 권총은 못 가져간다. 종류만 보내거나 없는 고양이도 400.
     postJson(
@@ -437,13 +437,13 @@ class CompanyApiTest {
     assertThat(kinds).containsExactly("damage", "fire", "hp", "crit");
     assertThat(opened.read("$.battleUpgrades[0].level", Integer.class)).isZero();
     assertThat(opened.read("$.battleUpgrades[0].price", Long.class)).isEqualTo(1_000_000L);
-    assertThat(opened.read("$.battleUpgrades[0].nextBonusPercent", Integer.class)).isEqualTo(1);
+    assertThat(opened.read("$.battleUpgrades[0].nextBonusPercent", Integer.class)).isEqualTo(3);
     assertThat(opened.read("$.battleUpgrades[0].maxLevel", Integer.class))
         .as("공격력은 끝없이 산다")
         .isZero();
     assertThat(opened.read("$.battleUpgrades[1].maxLevel", Integer.class))
-        .as("연사는 100%에서 멈춘다 (487번)")
-        .isEqualTo(100);
+        .as("연사는 100%(50단계)에서 멈춘다 (487·492번)")
+        .isEqualTo(50);
     long capital = opened.read("$.capital", Long.class);
 
     DocumentContext one =
@@ -457,7 +457,7 @@ class CompanyApiTest {
             postJson("/api/company/battle-upgrade", "{\"kind\":\"fire\",\"levels\":5}")
                 .andExpect(status().isOk()));
     assertThat(five.read("$.battleUpgrades[1].level", Integer.class)).isEqualTo(5);
-    assertThat(five.read("$.battleUpgrades[1].bonusPercent", Integer.class)).isEqualTo(5);
+    assertThat(five.read("$.battleUpgrades[1].bonusPercent", Integer.class)).isEqualTo(10);
     long spent = capital - five.read("$.capital", Long.class);
     assertThat(spent).as("1b + 연사 다섯 단계").isGreaterThan(6_000_000L).isLessThan(7_000_000L);
 

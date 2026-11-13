@@ -65,24 +65,22 @@ try {
           { code: 'ram', name: '충차 스킬', unlockWall: 50, owned: false },
         ],
         catPrice: 3000000,
+        fieldSlots: 2,
+        wallDps: 0,
         cats: [
-          {
-            code: 'sky',
-            name: '하늘냥',
-            level: 0,
-            bonusPercent: 0,
-            fielded: false,
-            weapon: null as { kind: string; grade: string } | null,
-          },
-          {
-            code: 'mint',
-            name: '민트냥',
-            level: 0,
-            bonusPercent: 0,
-            fielded: false,
-            weapon: null as { kind: string; grade: string } | null,
-          },
-        ],
+          ['sky', '하늘냥', 125, 100],
+          ['mint', '민트냥', 100, 100],
+          ['lilac', '라일락냥', 100, 150],
+        ].map(([code, name, firePercent, criticalPercent]) => ({
+          code,
+          name,
+          level: 0,
+          damagePercent: 50,
+          firePercent,
+          criticalPercent,
+          fielded: false,
+          weapon: null as { kind: string; grade: string } | null,
+        })),
       },
     }
     const page = await browser.newPage({
@@ -131,12 +129,13 @@ try {
       const cat = company.idle.cats.find((c) => c.code === sent?.code)
       if (path.endsWith('/draws')) hires.push(sent.count)
       if (path.endsWith('/cat/draw')) {
-        const drawn = company.idle.cats[catDraws++ % 2]
+        const drawn = company.idle.cats[catDraws++ % 3]
         company.capital -= company.idle.catPrice
-        company.idle.catPrice = Math.round(company.idle.catPrice * 1.5)
+        company.idle.catPrice = Math.round(company.idle.catPrice * 1.3)
         drawn.level++
-        drawn.bonusPercent = (drawn.level - 1) * 10
-        if (drawn.level === 1) drawn.fielded = true
+        drawn.damagePercent = 50 + (drawn.level - 1) * 10
+        if (drawn.level === 1 && company.idle.cats.filter((c) => c.fielded).length < 2)
+          drawn.fielded = true
       } else if (path.endsWith('/cat/field') && cat) {
         cat.fielded = sent.fielded
       } else if (path.endsWith('/cat/weapon') && cat) {
@@ -181,7 +180,8 @@ try {
     assert.equal(await page.locator('.idle-skills, .idle-upgrades').count(), 0)
     await page.getByRole('button', { name: '성장' }).click()
     await expect(page.getByTestId('idle-menu')).toBeVisible()
-    await expect(page.getByText('초당 공격력')).toBeVisible()
+    await expect(page.getByText('모든 공격이 벽에 맞을 때')).toBeVisible()
+    await expect(page.getByTestId('idle-wall-dps')).toContainText('실제 벽 피해')
     // Four stats (decisions.md 487): fire speed stops at its cap, the others can be bought.
     await expect(page.getByTestId('idle-stat')).toHaveCount(4)
     const stat = (kind: string) => page.locator(`[data-testid=idle-stat][data-kind=${kind}]`)
@@ -201,7 +201,7 @@ try {
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     // Cats come from the gacha, are fielded, and borrow owned weapons (decisions.md 488).
     await page.getByRole('button', { name: '고양이' }).click()
-    await expect(page.getByTestId('cat')).toHaveCount(2)
+    await expect(page.getByTestId('cat')).toHaveCount(3)
     await expect(page.getByTestId('cat-field')).toHaveCount(0)
     await expect(page.getByText('벽 돌파 시 합류')).toHaveCount(0)
     await page.getByTestId('cat-draw').click()
@@ -225,6 +225,13 @@ try {
       )
       .toBe(0)
     await sky.getByTestId('cat-field').click()
+    // Two field slots (decisions.md 492): the third cat waits until one rests.
+    await page.getByTestId('cat-draw').click()
+    await page.getByTestId('cat-draw').click()
+    const lilac = page.locator('[data-testid=cat][data-code=lilac]')
+    await expect(lilac.getByTestId('cat-field')).toBeDisabled()
+    await expect(lilac.getByTestId('cat-field')).toHaveText('칸 없음')
+    await expect(lilac).toContainText('치명타 피해 +50%')
     await sky.getByTestId('cat-gun').click()
     await expect(sky.getByTestId('cat-weapon').first()).toBeVisible()
     await page.screenshot({ path: `/tmp/idle-cats-${width}.png`, fullPage: true })

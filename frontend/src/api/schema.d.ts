@@ -372,7 +372,7 @@ export interface paths {
         put?: never;
         /**
          * 자본으로 전투 강화를 levels단계까지 산다 (decisions.md 367·394번)
-         * @description 공격력(+1%)·연사(쏘는 빠르기 +1%, 100%까지)·체력(+1%)·치명타 피해(+2%)를 단계마다 올린다. 연사 말고는 최대 단계가 없다. 값은 1b부터 단계마다 4%씩 오른다.
+         * @description 공격력(+3%)·연사(쏘는 빠르기 +2%, 100%까지)·체력(+3%)·치명타 피해(+6%)를 단계마다 올린다. 연사 말고는 최대 단계가 없다. 값은 1b부터 단계마다 4%씩 오른다.
          *     상한에 닿은 강화를 사면 400 (487번).
          *     꾹 눌러 연속으로 올릴 때 화면이 모은 단계를 levels로 묶어 보낸다: 자본이 닿는 데까지 한 단계씩 사고, 한 단계도 못 사면 400.
          *     쓴 돈은 분기 실적·결산서에 전투 강화 비용으로 따로 적는다. 고양이 속도 강화는 394번에서 뺐다.
@@ -437,8 +437,8 @@ export interface paths {
         put?: never;
         /**
          * 자본으로 고양이 한 마리를 뽑는다 (decisions.md 488번)
-         * @description 값은 idle.catPrice이고 뽑을 때마다 1.5배씩 오른다. 고양이(하늘냥·민트냥)는 고르게 뽑힌다. 새 고양이는 바로 출전하고, 이미 가진 고양이면 레벨이 하나 올라
-         *     그 고양이 총의 공격력이 10% 는다. 자본이 모자라면 400. 쓴 돈은 전투 강화 비용으로 적는다.
+         * @description 값은 idle.catPrice(10b부터)이고 뽑을 때마다 1.3배씩 오른다. 하늘냥·민트냥이 40%씩, 라일락냥이 20%로 나온다. 새 고양이는 출전 칸이 비어 있으면
+         *     바로 출전하고, 이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 자본이 모자라면 400. 쓴 돈은 전투 강화 비용으로 적는다.
          */
         post: operations["drawCat"];
         delete?: never;
@@ -458,7 +458,7 @@ export interface paths {
         put?: never;
         /**
          * 가진 고양이를 출전시키거나 쉬게 한다 (decisions.md 488번)
-         * @description 출전한 고양이만 제 총으로 함께 쏜다. 스킬은 고양이와 상관없이 벽 돌파로 얻는다 (491번). 가지지 않은 고양이면 400.
+         * @description 출전한 고양이만 제 총으로 함께 쏜다. 스킬은 고양이와 상관없이 벽 돌파로 얻는다 (491번). 가지지 않은 고양이거나 출전 칸(idle.fieldSlots)이 꽉 찼으면 400.
          */
         post: operations["fieldCat"];
         delete?: never;
@@ -1153,15 +1153,23 @@ export interface components {
                  * @description 다음 고양이 뽑기 값 (488번)
                  */
                 catPrice: number;
+                /** @description 한 번에 출전하는 고양이 수 (492번) */
+                fieldSlots: number;
+                /** @description 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 */
+                wallDps: number;
                 /** @description 고양이 (488·491번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏜다. 스킬과는 상관없다 */
                 cats: {
                     /** @enum {string} */
-                    code: "sky" | "mint";
+                    code: "sky" | "mint" | "lilac";
                     name: string;
                     /** @description 0이면 아직 없다. 또 뽑을 때마다 하나씩 오른다 */
                     level: number;
-                    /** @description 레벨로 붙는 이 고양이 총의 공격력(%) */
-                    bonusPercent: number;
+                    /** @description 이 고양이 총의 공격력(%). 든 무기 공격력의 이만큼으로 쏜다. 레벨과 특성이 들어 있다 (492번) */
+                    damagePercent: number;
+                    /** @description 이 고양이 총의 쏘는 빠르기(%). 특성이 없으면 100 */
+                    firePercent: number;
+                    /** @description 이 고양이 총의 치명타 배율(%). 특성이 없으면 100 */
+                    criticalPercent: number;
                     fielded: boolean;
                     /** @description 든 무기. 없으면 null(기본 권총을 쏜다) */
                     weapon: {
@@ -1975,7 +1983,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "sky" | "mint";
+                    code: "sky" | "mint" | "lilac";
                     fielded: boolean;
                 };
             };
@@ -2006,7 +2014,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "sky" | "mint";
+                    code: "sky" | "mint" | "lilac";
                     /** @enum {string} */
                     kind?: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
                     /** @enum {string} */
