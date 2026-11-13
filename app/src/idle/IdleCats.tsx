@@ -13,15 +13,23 @@ import { IdleIcon } from './icons'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
-/** 고양이마다 제 그림 (488번, 전투의 접힌 귀·장모 고양이). 사장냥은 늘 출전한다. */
-const ART: Record<CatCode, string> = {
-  sky: STAGE_ASSETS.fold,
-  mint: STAGE_ASSETS.fluffy,
+/** 고양이마다 제 그림과 특성 (488·492번). 라일락냥은 하늘냥 그림을 보랏빛으로 쓴다. 특성 수치는 서버가 준다. */
+const CATS: Record<CatCode, { art: string; trait: (cat: Cat) => string }> = {
+  sky: { art: STAGE_ASSETS.fold, trait: (cat) => `연사 +${cat.firePercent - 100}%` },
+  // 민트냥의 공격력 특성(서버 IdleEngine.CAT_DAMAGE)은 damagePercent에 이미 들어 있다.
+  mint: { art: STAGE_ASSETS.fluffy, trait: () => '공격력 특화' },
+  lilac: {
+    art: STAGE_ASSETS.fold,
+    trait: (cat) => `치명타 피해 +${cat.criticalPercent - 100}%`,
+  },
 }
 
-function Portrait({ art, locked }: { art: string; locked?: boolean }) {
+function Portrait({ art, locked, tone }: { art: string; locked?: boolean; tone?: string }) {
   return (
-    <span className={`idle-cat-portrait ${locked ? 'is-locked' : ''}`} aria-hidden="true">
+    <span
+      className={`idle-cat-portrait ${locked ? 'is-locked' : ''} ${tone ? `is-${tone}` : ''}`}
+      aria-hidden="true"
+    >
       <img src={art} alt="" draggable={false} />
       {locked && <IdleIcon name="lock" />}
     </span>
@@ -43,6 +51,7 @@ export function IdleCats({ company }: { company: Company }) {
   const hero = heroOf(company)
   const weapons = company.weapons?.length ? company.weapons : [DEFAULT_WEAPON]
   const same = (w: Weapon, held: Cat['weapon']) => w.kind === held?.kind && w.grade === held.grade
+  const fielded = idle.cats.filter((cat) => cat.fielded).length
   const draw = async () => {
     setDrawing(true)
     sfx.stamp()
@@ -62,7 +71,9 @@ export function IdleCats({ company }: { company: Company }) {
   }
   return (
     <>
-      <p className="idle-subtitle">뽑은 고양이를 출전시키면 함께 싸워요</p>
+      <p className="idle-subtitle">
+        뽑은 고양이를 출전시키면 함께 싸워요 · 출전 {fielded} / {idle.fieldSlots}
+      </p>
       <section className="idle-cat-gacha" data-testid="cat-gacha">
         <div>
           <b>고양이 뽑기</b>
@@ -70,8 +81,8 @@ export function IdleCats({ company }: { company: Company }) {
             {drawn
               ? drawn.isNew
                 ? `${drawn.cat.name} 합류!`
-                : `${drawn.cat.name} Lv.${drawn.cat.level} · 총 공격력 +${drawn.cat.bonusPercent}%`
-              : '새 고양이가 합류하고, 또 나오면 레벨이 올라요'}
+                : `${drawn.cat.name} Lv.${drawn.cat.level} · 화력 ${drawn.cat.damagePercent}%`
+              : '새 고양이가 합류하고, 또 나오면 레벨이 올라 화력이 세져요'}
           </small>
         </div>
         <button
@@ -108,15 +119,19 @@ export function IdleCats({ company }: { company: Company }) {
               data-testid="cat"
               data-code={cat.code}
             >
-              <Portrait art={ART[cat.code]} locked={!owned} />
+              <Portrait
+                art={CATS[cat.code].art}
+                locked={!owned}
+                tone={cat.code === 'lilac' ? 'lilac' : undefined}
+              />
               <div className="idle-cat-info">
                 <b>
                   {cat.name} {owned && <small>Lv.{cat.level}</small>}
                 </b>
                 <small>
                   {owned
-                    ? `제 총으로 함께 쏴요${cat.bonusPercent > 0 ? ` · 총 공격력 +${cat.bonusPercent}%` : ''}`
-                    : '고양이 뽑기로 만나요'}
+                    ? `무기 공격력의 ${cat.damagePercent}%로 쏴요 · ${CATS[cat.code].trait(cat)}`
+                    : `${CATS[cat.code].trait(cat)} · 고양이 뽑기로 만나요`}
                 </small>
                 {owned && (
                   <button
@@ -142,14 +157,14 @@ export function IdleCats({ company }: { company: Company }) {
                   className="idle-cat-field"
                   data-testid="cat-field"
                   aria-pressed={cat.fielded}
-                  disabled={busy}
+                  disabled={busy || (!cat.fielded && fielded >= idle.fieldSlots)}
                   onClick={() => {
                     sfx.tap()
                     haptic.light()
                     void useRaisingStore.getState().fieldCat(cat.code, !cat.fielded)
                   }}
                 >
-                  {cat.fielded ? '출전 중' : '출전'}
+                  {cat.fielded ? '출전 중' : fielded >= idle.fieldSlots ? '칸 없음' : '출전'}
                 </button>
               )}
               {arming === cat.code && (

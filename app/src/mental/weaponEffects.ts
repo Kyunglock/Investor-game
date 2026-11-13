@@ -83,7 +83,7 @@ export const WEAPON_TRAITS: Record<WeaponKind, WeaponTraits> = {
 export const CRIT_CHANCE = 0.4
 export const CRIT_MULT = 3
 /** 다른 무기의 치명타 (487번): 확률과 배율. 서버(IdleEngine)가 같은 배율로 한 발의 상한을 잡는다. */
-export const BASE_CRIT_CHANCE = 0.1
+export const BASE_CRIT_CHANCE = 0.2
 export const BASE_CRIT_MULT = 2
 
 /** 기관단총 둔화: 이어지는 시간(초)과 그동안의 빠르기 배율. */

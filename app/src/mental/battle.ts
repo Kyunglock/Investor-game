@@ -278,6 +278,8 @@ type Bullet = Phaser.Physics.Arcade.Image & {
   /** 쏜 총 (488번): 고양이가 따로 든 총이면 사장냥 것과 다르다. */
   kind: WeaponKind
   grade: Weapon['grade']
+  /** 쏜 총의 치명타 배율에 곱하는 값 (492번, 고양이 특성). */
+  critical: number
   look: 0 | 1
   damage: number
   power: number
@@ -690,6 +692,7 @@ class BattleScene extends Phaser.Scene {
       }
     }
     this.loadout = { ...loadout, heal: 0 }
+    this.buyWall?.resize(loadout.maxMental)
     this.syncMates()
     if (loadout.heal > 0) {
       this.mental = Math.min(loadout.maxMental, this.mental + loadout.heal)
@@ -830,7 +833,12 @@ class BattleScene extends Phaser.Scene {
         bullet.disableBody(true, true)
       }
       const kind = bullet.kind
-      const shot = weaponDamage(kind, bullet.damage, Math.random(), this.loadout.critBonus)
+      const shot = weaponDamage(
+        kind,
+        bullet.damage,
+        Math.random(),
+        (1 + this.loadout.critBonus) * bullet.critical - 1,
+      )
       if (kind === 'smg') {
         this.slow(enemy, SLOW_FACTOR, SLOW_SECONDS)
       }
@@ -963,7 +971,11 @@ class BattleScene extends Phaser.Scene {
     }
     if (this.assault) {
       this.createAssaultPools()
-      this.buyWall = new BuyWall(this.loadout.maxMental)
+      this.buyWall = new BuyWall(
+        this.loadout.maxMental,
+        Math.random,
+        this.opts.idle ? BUY_WALL.idleRebuildSeconds : undefined,
+      )
       this.buyWallFx = new BuyWallFx(this, unitK('order'))
       this.drawBuyWall()
       // 자동 전투는 쌓인 벽 앞에서 시작하고, 기존 스테이지는 첫 카드 선택 뒤 벽까지 전진한다.
@@ -1043,7 +1055,13 @@ class BattleScene extends Phaser.Scene {
       this.casters.push({ mate: index, at: () => ({ x: mate.body.x, y: mate.body.y - 24 }), clock })
       this.ring(mate.body.x, mate.body.y, 0xc7a4ff, 64, 500)
       this.glow(mate.body.x, mate.body.y - 24, 0xc7a4ff, 80, 500, 0.8)
-      this.pop(mate.body.x, mate.body.y - 60, `${MATE_LOOKS[index].name} 마법 각성!`, '#e3caff', 20)
+      this.pop(
+        mate.body.x,
+        mate.body.y - 60,
+        `${MATE_LOOKS[this.mateLook(index)].name} 마법 각성!`,
+        '#e3caff',
+        20,
+      )
     }
     this.mates.forEach((mate, index) => {
       mate.magicMark.setVisible(index < awake)
@@ -1056,7 +1074,7 @@ class BattleScene extends Phaser.Scene {
     const i = this.mates.length
     const y = this.mode === 'defense' ? this.playerY() : this.player.y
     const body = this.add
-      .image(this.player.x, y, mateKey(i))
+      .image(this.player.x, y, mateKey(this.mateLook(i)))
       .setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
       .setDepth(5)
     const mate: Mate = {
@@ -1086,7 +1104,7 @@ class BattleScene extends Phaser.Scene {
       this.ring(fx, fy, 0xffffff, 56, 320)
       this.glow(fx, fy - 20, 0xffe7a8, 60, 360, 0.7)
       this.hitSpark.explode(this.fx(14), fx, fy)
-      this.pop(fx, body.y - 56, `${MATE_LOOKS[i].name} 합류!`, '#ffe08a', 22)
+      this.pop(fx, body.y - 56, `${MATE_LOOKS[this.mateLook(i)].name} 합류!`, '#ffe08a', 22)
       sfx.mateJoin()
     }
     if (this.reducedMotion) {
@@ -2141,7 +2159,7 @@ class BattleScene extends Phaser.Scene {
       sells: this.circuitSellQueue.size,
     })
     this.player.setTexture('hero-idle')
-    for (const [i, mate] of this.mates.entries()) mate.body.setTexture(mateKey(i))
+    for (const [i, mate] of this.mates.entries()) mate.body.setTexture(mateKey(this.mateLook(i)))
     this.pushHud(true)
     if (!c.done) return
     this.endCircuit()
@@ -2835,6 +2853,9 @@ class BattleScene extends Phaser.Scene {
     this.buyWallFx?.impact(x, broken)
     const lost = broken ? before : before - this.buyWall.hp
     this.pop(x, this.buyWallY() - 55, `매수 -${shareLabel(lost)}`, '#ffb278', 20)
+    if (broken && this.opts.idle) {
+      this.pop(this.view().w / 2, this.buyWallY() - 84, '매수벽 붕괴! 공격 중단', '#ff8a5c', 22)
+    }
     if (broken) {
       const loss = Math.max(1, Math.round(this.loadout.maxMental * BUY_WALL.mentalLossRatio))
       this.opts.onBanner(`매수벽 붕괴! 멘탈 -${loss} · 1.5초 후 재건`, '#ffb278')
@@ -2902,7 +2923,7 @@ class BattleScene extends Phaser.Scene {
     }
     const shooters = [
       catMuzzle('hero', this.player.x, this.player.y),
-      ...this.mates.map((m, i) => catMuzzle(mateModel(i), m.body.x, m.body.y)),
+      ...this.mates.map((m, i) => catMuzzle(mateModel(this.mateLook(i)), m.body.x, m.body.y)),
     ]
     // 공격 판 (#593, 413번의 "위로 곧게"를 뒤집음): 자동 조준. 매도 물량(허매도 빼고)을 고양이마다 나눠 맡고, 없으면 큰손, 그것도 없으면 제 머리 위로
     // 곧게(바로 위의 매도벽).
@@ -2956,10 +2977,20 @@ class BattleScene extends Phaser.Scene {
     return (this.mateGun(index)?.fireMs ?? this.loadout.fireMs) * 1.25
   }
 
+  /** index번째 고양이의 그림 차례 (mates.ts MATE_LOOKS): 자동 전투는 고양이마다 제 그림, 스테이지는 들어온 차례다. */
+  private mateLook(index: number) {
+    return this.mateGun(index)?.look ?? index
+  }
+
+  /** 자동 전투에서 매수벽이 무너져 다시 설 때까지는 공격이 멈춘다 (492번): 매수벽 강화가 화력을 지킨다. */
+  private get disarmed() {
+    return Boolean(this.opts.idle && this.buyWall && !this.buyWall.active)
+  }
+
   /** 한 발 쏜다. mate가 없으면 사장냥, 있으면 그 고양이가 같은 수치(무기·피해·연사·강화)로 쏜다(393번). */
   private fire(now: number, target: { x: number; y: number }, mate?: Mate) {
     const p = mate ? mate.body : this.player
-    const model = mate ? mateModel(this.mates.indexOf(mate)) : 'hero'
+    const model = mate ? mateModel(this.mateLook(this.mates.indexOf(mate))) : 'hero'
     // 표적이 좌우로 바뀌어도 발사 순간에는 실제 총구에서 정확히 겨눈다.
     const aim = catAim(model, p.x, p.y, target)
     const gun = mate ? this.mateGun(this.mates.indexOf(mate)) : undefined
@@ -3016,6 +3047,7 @@ class BattleScene extends Phaser.Scene {
     b.setTexture(`bullet-${grade}-0`).enableBody(true, m.x, m.y, true, true).setDepth(6.5)
     b.kind = kind
     b.grade = grade
+    b.critical = gun?.critical ?? 1
     b.look = 0
     b.trailMs = Math.max(90, style.trailMs)
     b.damage = stats.damage
@@ -4042,9 +4074,17 @@ class BattleScene extends Phaser.Scene {
       if (this.opts.idle)
         b.setTexture(
           this.reducedMotion
-            ? mateKey(i)
-            : catRunKey(mateKey(i), catRunFrame(time / 1000, i + 1, this.runRush > 0)),
+            ? mateKey(this.mateLook(i))
+            : catRunKey(
+                mateKey(this.mateLook(i)),
+                catRunFrame(time / 1000, i + 1, this.runRush > 0),
+              ),
         )
+      // 라일락냥은 하늘냥과 같은 그림이라 보랏빛으로 가린다 (492번).
+      if (this.opts.idle) {
+        if (this.mateLook(i) === 2) b.setTint(0xd9c2ff)
+        else b.clearTint()
+      }
       b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop)
       m.magicMark.setPosition(b.x, b.y - 58)
       if (!this.tweens.isTweening(b)) {
@@ -4052,9 +4092,9 @@ class BattleScene extends Phaser.Scene {
       }
       if (target) {
         // 공격 판도 맡은 과녁을 겨눈다 (#593). 과녁이 없으면 제 머리 위(벽).
-        const want = catAim(mateModel(i), b.x, b.y, target)
+        const want = catAim(mateModel(this.mateLook(i)), b.x, b.y, target)
         m.aim += Phaser.Math.Angle.Wrap(want - m.aim) * turn
-        if (m.drop === 0 && time - m.lastFire > this.mateInterval(i)) {
+        if (m.drop === 0 && !this.disarmed && time - m.lastFire > this.mateInterval(i)) {
           const ms = this.mateInterval(i)
           for (let n = 0; time - m.lastFire > ms && n < 3; n++) {
             this.fire(Math.max(m.lastFire + ms, time - ms), target, m)
@@ -4203,7 +4243,7 @@ class BattleScene extends Phaser.Scene {
     }
     // 프레임이 연사 간격보다 길면(느린 휴대폰) 밀린 만큼 한 프레임에 몇 발 더 쏜다(최대 3, #587): 아니면 연사가 빠른 무기(기관단총)일수록
     // 프레임 수에 묶여 제 연사를 못 냈다.
-    for (let n = 0; target && time - this.lastFire > fireMs && n < 3; n++) {
+    for (let n = 0; target && !this.disarmed && time - this.lastFire > fireMs && n < 3; n++) {
       this.fire(Math.max(this.lastFire + fireMs, time - fireMs), target)
     }
     this.updateMates(time, dt, this.targets)

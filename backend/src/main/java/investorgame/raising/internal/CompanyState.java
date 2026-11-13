@@ -50,6 +50,9 @@ class CompanyState {
     Map<String, Weapon> catWeapons = new LinkedHashMap<>();
 
     int catDraws;
+
+    /** 최근 벽이 실제로 받은 피해(게임 초당, 492번). 화면의 실제 화력 표시에만 쓴다. */
+    double wallDps;
   }
 
   /** 사장이 차린 몇 번째 회사인가(1부터). */

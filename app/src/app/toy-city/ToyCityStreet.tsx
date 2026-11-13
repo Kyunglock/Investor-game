@@ -510,7 +510,7 @@ export function ToyCityStreet({
       ? Math.max(58, (195 - (after.width * after.scale) / 2 - 28) / 2)
       : Math.min(332, (195 + (after.width * after.scale) / 2 + 28 + 390) / 2)
   const targetY =
-    560 + 10 * after.scale - (targetSide === 'left' ? 220 : 242) - 7 * after.scale - 70
+    560 + 10 * after.scale - (targetSide === 'left' ? 250 : 242) - 7 * after.scale - 70
   const plan = company.upgrade
   const showGoal = onUpgrade && plan && !transition && company.status !== 'ENDED' && !company.broke
   // 부딪힘 연출: 우리 건물은 골목만큼 내달려 옆 건물에 닿는다. 효과는 카메라 축척(k)을 되돌려 화면에서 같은 크기로 그린다.

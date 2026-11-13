@@ -26,14 +26,25 @@ class IdleEngine {
   private static final double[] SKILL_DAMAGE = {1.5, 4.8, 2.5, 1.2 * 3.4};
   private static final String[] CODES = {"water", "meteor", "bolt", "ram"};
   private static final String[] NAMES = {"물 스킬", "메테오 스킬", "번개 스킬", "충차 스킬"};
-  private static final List<String> CATS = List.of("sky", "mint");
-  private static final String[] CAT_NAMES = {"하늘냥", "민트냥"};
+  // Cats (decisions.md 488, 492): each has one trait for its own gun. Lilac is the rare one.
+  private static final List<String> CATS = List.of("sky", "mint", "lilac");
+  private static final String[] CAT_NAMES = {"하늘냥", "민트냥", "라일락냥"};
+  private static final int[] CAT_WEIGHTS = {40, 40, 20};
+  private static final double[] CAT_FIRE = {1.25, 1, 1};
+  private static final double[] CAT_DAMAGE = {1, 1.25, 1};
+  private static final double[] CAT_CRITICAL = {1, 1, 1.5};
   // Cats used to join at these walls. Saves from then keep them.
   private static final long[] CAT_LEGACY_WALLS = {15, 50};
-  private static final long CAT_PRICE = 3_000_000;
-  private static final double CAT_PRICE_GROWTH = 1.5;
-  // A duplicate draw raises the cat's level: its own gun hits this much harder per level.
-  private static final double CAT_LEVEL_BONUS = 0.1;
+  private static final int FIELD_SLOTS = 2;
+  private static final long CAT_PRICE = 10_000_000;
+  private static final double CAT_PRICE_GROWTH = 1.3;
+  // A cat's gun hits for this share of the weapon's damage; each level above 1 adds the bonus.
+  private static final double CAT_POWER = 0.5;
+  private static final double CAT_LEVEL_BONUS = 0.2;
+  // Capital per point of wall health on a clear, and per active second at wall 1 (492).
+  private static final double REWARD_PER_HEALTH = 40_000;
+  private static final double INCOME = 20_000;
+  private static final double INCOME_GROWTH = 0.05;
   // Matches weaponEffects.ts: revolver 3x, every other weapon 2x (decisions.md 487).
   private static final double REVOLVER_CRITICAL = 3;
   private static final double CRITICAL = 2;
@@ -62,7 +73,7 @@ class IdleEngine {
     }
     if (c.idle.cats == null) {
       c.idle.cats = new LinkedHashMap<>();
-      for (int i = 0; i < CATS.size(); i++) {
+      for (int i = 0; i < CAT_LEGACY_WALLS.length; i++) {
         if (c.idle.wall > CAT_LEGACY_WALLS[i]) {
           c.idle.cats.put(CATS.get(i), 1);
           c.idle.fielded.add(CATS.get(i));
@@ -89,10 +100,19 @@ class IdleEngine {
     List<Shooter> shooters = new ArrayList<>();
     shooters.add(shooter(c.weapon, damageUp, fireUp, criticalUp));
     for (String code : s.fielded) {
-      double level = 1 + CAT_LEVEL_BONUS * (s.cats.get(code) - 1);
-      shooters.add(shooter(s.catWeapons.get(code), damageUp * level, fireUp, criticalUp));
+      int cat = CATS.indexOf(code);
+      shooters.add(
+          shooter(
+              s.catWeapons.get(code),
+              damageUp * power(s.cats.get(code)) * CAT_DAMAGE[cat],
+              fireUp * CAT_FIRE[cat],
+              criticalUp * CAT_CRITICAL[cat]));
     }
     return shooters;
+  }
+
+  private static double power(int level) {
+    return CAT_POWER * (1 + CAT_LEVEL_BONUS * (level - 1));
   }
 
   /** A cat without a gun, and a company from before weapons, shoots the starting pistol. */
@@ -103,7 +123,7 @@ class IdleEngine {
         engine.mental.stats(
             kind, weapon == null ? MentalEngine.WEAPON_GRADES.getFirst() : weapon.grade);
     return new Shooter(
-        Math.max(1, Math.min(1_000_000_000, stats.damagePercent() / 100.0 * damageUp)),
+        Math.min(1_000_000_000, stats.damagePercent() / 100.0 * damageUp),
         1000.0 / stats.fireMs() * fireUp,
         1 + Math.max(0, Math.min(3, stats.power())) * 0.4,
         ("revolver".equals(kind) ? REVOLVER_CRITICAL : CRITICAL) * criticalUp,
@@ -145,7 +165,10 @@ class IdleEngine {
   }
 
   static double maxHp(long wall) {
-    return (120 + 24.0 * (wall - 1)) * (wall % 10 == 0 ? 4 : 1);
+    // The first walls fall in seconds; later ones grow faster than linearly so upgrades matter
+    // (492).
+    long depth = wall - 1;
+    return (30 + 18.0 * depth + 0.6 * depth * depth) * (wall % 10 == 0 ? 4 : 1);
   }
 
   private double dps(CompanyState c) {
@@ -169,7 +192,8 @@ class IdleEngine {
     s.circuitSeconds -= stopped;
     double active = seconds - stopped;
     s.activeSeconds += active;
-    double income = s.incomeRemainder + active * 20_000;
+    double income =
+        s.incomeRemainder + active * INCOME * (1 + INCOME_GROWTH * Math.min(s.wall - 1, 10_000));
     long earned = (long) income;
     s.incomeRemainder = income - earned;
     if (s.hitCredits == null || s.hitCredits.length != 5) s.hitCredits = new double[5];
@@ -185,6 +209,7 @@ class IdleEngine {
       bulletsPerSecond += shooter.perSecond();
     }
     long front = s.wall;
+    double dealt = 0;
     for (int kind = 0; kind < 5 && active > 0; kind++) {
       if (kind > 0 && front <= UNLOCKS[kind - 1]) continue;
       double damage = hero.damage() * (kind == 0 ? hero.power() : SKILL_DAMAGE[kind - 1]);
@@ -215,13 +240,17 @@ class IdleEngine {
         if (counts[i] > 0) amounts[i] *= Math.min(counts[i], accepted) / counts[i];
       }
       s.damage += amounts[0];
+      dealt += amounts[0] + amounts[1] + amounts[2];
       s.nextDamage = Math.min(maxHp(front + 1), s.nextDamage + amounts[1]);
       s.afterNextDamage = Math.min(maxHp(front + 2), s.afterNextDamage + amounts[2]);
     }
+    // What the walls really took lately, per active second: the stat shown next to the estimate.
+    if (active > 0) s.wallDps += (dealt / active - s.wallDps) * Math.min(1, active / 10);
     // Pay only for contacted walls in order. No leftover DPS rolls into an untouched new wall.
     while (s.circuitSeconds == 0 && s.damage + 1e-7 >= maxHp(s.wall)) {
       earned =
-          CompanyEngine.plus(earned, (long) Math.min(1_000_000_000L, 100_000.0 + s.wall * 10_000));
+          CompanyEngine.plus(
+              earned, (long) Math.min(1_000_000_000_000L, maxHp(s.wall) * REWARD_PER_HEALTH));
       if (s.wall % 10 == 0 && c.weaponTickets < Integer.MAX_VALUE) c.weaponTickets++;
       s.wall++;
       s.damage = s.nextDamage;
@@ -251,14 +280,23 @@ class IdleEngine {
     c.capital -= price;
     c.yearUpgrades += price;
     s.catDraws++;
-    String code = CATS.get(random.forKey("cat-draw", s.catDraws).nextInt(CATS.size()));
-    if (s.cats.merge(code, 1, Integer::sum) == 1) s.fielded.add(code);
+    int roll =
+        random.forKey("cat-draw", s.catDraws).nextInt(java.util.Arrays.stream(CAT_WEIGHTS).sum());
+    int cat = 0;
+    while (roll >= CAT_WEIGHTS[cat]) roll -= CAT_WEIGHTS[cat++];
+    String code = CATS.get(cat);
+    if (s.cats.merge(code, 1, Integer::sum) == 1 && s.fielded.size() < FIELD_SLOTS) {
+      s.fielded.add(code);
+    }
   }
 
   void fieldCat(CompanyState c, String code, boolean fielded) {
     CompanyState.Idle s = state(c);
     if (!s.cats.containsKey(code)) throw new InvalidRequestException("가지지 않은 고양이다: " + code);
     s.fielded.remove(code);
+    if (fielded && s.fielded.size() >= FIELD_SLOTS) {
+      throw new InvalidRequestException("출전 칸이 꽉 찼다: " + FIELD_SLOTS + "마리까지 출전한다");
+    }
     if (fielded) s.fielded.add(code);
     s.hitCredits = new double[5];
   }
@@ -328,12 +366,15 @@ class IdleEngine {
             .map(
                 code -> {
                   int level = s.cats.getOrDefault(code, 0);
+                  int cat = CATS.indexOf(code);
                   CompanyState.Weapon weapon = s.catWeapons.get(code);
                   return new CompanyView.IdleCat(
                       code,
-                      CAT_NAMES[CATS.indexOf(code)],
+                      CAT_NAMES[cat],
                       level,
-                      (int) Math.round(CAT_LEVEL_BONUS * 100 * Math.max(0, level - 1)),
+                      (int) Math.round(100 * power(Math.max(1, level)) * CAT_DAMAGE[cat]),
+                      (int) Math.round(100 * CAT_FIRE[cat]),
+                      (int) Math.round(100 * CAT_CRITICAL[cat]),
                       s.fielded.contains(code),
                       weapon == null ? null : new CompanyView.CatWeapon(weapon.kind, weapon.grade));
                 })
@@ -349,6 +390,8 @@ class IdleEngine {
         next,
         cats,
         catPrice(s.catDraws),
+        FIELD_SLOTS,
+        SPEED * s.wallDps,
         s.circuitSeconds,
         List.of(
             new CompanyView.IdleWall(

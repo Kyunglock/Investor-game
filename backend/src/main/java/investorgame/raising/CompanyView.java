@@ -66,6 +66,8 @@ public record CompanyView(
       long nextUnlock,
       List<IdleCat> cats,
       long catPrice,
+      int fieldSlots,
+      double wallDps,
       double circuitSeconds,
       List<IdleWall> upcoming) {}
 
@@ -73,11 +75,20 @@ public record CompanyView(
    * 고양이 한 마리 (decisions.md 488·491번). 뽑기로 얻고, 출전하면 제 총으로 함께 쏜다. 스킬과는 상관없다.
    *
    * @param level 0이면 아직 없다. 또 뽑을 때마다 하나씩 오른다
-   * @param bonusPercent 레벨로 붙는 이 고양이 총의 공격력(%)
+   * @param damagePercent 이 고양이 총의 공격력(%): 든 무기 공격력의 이만큼으로 쏜다. 레벨과 특성이 들어 있다 (492번)
+   * @param firePercent 이 고양이 총의 쏘는 빠르기(%). 특성이 없으면 100
+   * @param criticalPercent 이 고양이 총의 치명타 배율(%). 특성이 없으면 100
    * @param weapon 든 무기. 없으면 null(기본 권총을 쏜다)
    */
   public record IdleCat(
-      String code, String name, int level, int bonusPercent, boolean fielded, CatWeapon weapon) {}
+      String code,
+      String name,
+      int level,
+      int damagePercent,
+      int firePercent,
+      int criticalPercent,
+      boolean fielded,
+      CatWeapon weapon) {}
 
   public record CatWeapon(String kind, String grade) {}
 

@@ -1,6 +1,7 @@
 import { money } from '@web/features/game/labels'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useEffect } from 'react'
+import { useAppUi } from '../app/ui'
 import { companyEvents, type FxEvent } from './events'
 import { useFx } from './fx'
 import { haptic } from './haptics'
@@ -15,6 +16,8 @@ export function playEvent(e: FxEvent) {
   const fx = useFx.getState()
   switch (e.kind) {
     case 'capital':
+      // 자동 전투의 초당 수입 같은 작은 증감(1b 미만)과 메뉴가 열려 있을 때의 증감은 띄우지 않는다: 숫자가 메뉴 위로 계속 떠다녔다 (492번).
+      if (Math.abs(e.delta) < 1_000_000 || useAppUi.getState().modalBack) return
       fx.floatAt(capitalEl(), signed(e.delta), e.delta > 0 ? 'up' : 'down')
       if (e.delta > 0) {
         sfx.coin()

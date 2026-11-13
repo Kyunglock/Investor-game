@@ -66,7 +66,8 @@ class IdleEngineTest {
     assertThat(state.idle.nextDamage).isZero();
     assertThat(state.idle.afterNextDamage).isZero();
     assertThat(state.idle.activeSeconds).isEqualTo(40); // Foreground time still runs at 2x.
-    assertThat(state.capital).isEqualTo(800000);
+    // Time income grows 5% per wall past the first (decisions.md 492).
+    assertThat(state.capital).isEqualTo(Math.round(40 * 20000 * 3.5));
   }
 
   @Test
@@ -197,7 +198,10 @@ class IdleEngineTest {
     tick(1000);
     assertThat(state.idle.wall).isEqualTo(8);
     assertThat(state.idle.damage).isZero();
-    assertThat(state.capital).isEqualTo(paid + 160000 + 170000);
+    // A cleared wall pays by its health (decisions.md 492).
+    assertThat(state.capital)
+        .isEqualTo(
+            paid + (long) (IdleEngine.maxHp(6) * 40000) + (long) (IdleEngine.maxHp(7) * 40000));
   }
 
   @Test
@@ -279,17 +283,35 @@ class IdleEngineTest {
     engine.drawCat(state, random);
     assertThat(state.capital).isZero();
     assertThat(state.yearUpgrades).isEqualTo(first);
-    assertThat(engine.view(state).catPrice()).isEqualTo(Math.round(first * 1.5));
+    assertThat(first).isEqualTo(10_000_000);
+    assertThat(engine.view(state).catPrice()).isEqualTo(Math.round(first * 1.3));
     var drawn = engine.view(state).cats().stream().filter(cat -> cat.level() == 1).toList();
     assertThat(drawn).as("a new cat is fielded at once").hasSize(1).allMatch(cat -> cat.fielded());
 
-    // Duplicates raise the level; with enough draws both cats are owned.
+    // Duplicates raise the level; with enough draws all three cats are owned, two of them fielded.
     state.capital = Long.MAX_VALUE / 4;
-    for (int i = 0; i < 12; i++) engine.drawCat(state, random);
+    for (int i = 0; i < 30; i++) engine.drawCat(state, random);
     var cats = engine.view(state).cats();
-    assertThat(cats).allMatch(cat -> cat.level() >= 1 && cat.fielded());
-    assertThat(cats.stream().mapToInt(cat -> cat.level()).sum()).isEqualTo(13);
-    assertThat(cats).allMatch(cat -> cat.bonusPercent() == (cat.level() - 1) * 10);
+    assertThat(cats).hasSize(3).allMatch(cat -> cat.level() >= 1);
+    assertThat(cats.stream().mapToInt(cat -> cat.level()).sum()).isEqualTo(31);
+    assertThat(cats.stream().filter(cat -> cat.fielded()).count())
+        .isEqualTo(engine.view(state).fieldSlots())
+        .isEqualTo(2);
+    // A cat's gun: half the weapon's damage, +20% of that per level, times its trait.
+    var sky = cats.getFirst();
+    assertThat(sky.damagePercent()).isEqualTo((int) Math.round(50 * (1 + 0.2 * (sky.level() - 1))));
+    assertThat(sky.firePercent()).isEqualTo(125);
+    assertThat(cats.get(1).firePercent()).isEqualTo(100);
+    assertThat(cats.get(2).criticalPercent()).isEqualTo(150);
+    // The bench is full: resting one cat makes room for another.
+    var resting = cats.stream().filter(cat -> !cat.fielded()).findFirst().orElseThrow().code();
+    var fielded = cats.stream().filter(cat -> cat.fielded()).findFirst().orElseThrow().code();
+    assertThatThrownBy(() -> engine.fieldCat(state, resting, true))
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+    engine.fieldCat(state, fielded, false);
+    engine.fieldCat(state, resting, true);
+    assertThat(engine.view(state).cats().stream().filter(cat -> cat.fielded()).count())
+        .isEqualTo(2);
   }
 
   @Test
@@ -350,16 +372,22 @@ class IdleEngineTest {
   void aCatsBulletIsLimitedByItsOwnGunAndLevel() {
     company.mental.initWeapons(state);
     start(16);
-    // Boss cat and one cat, both with the starting pistol: two guns' worth of contacts.
+    // Boss cat and sky (fires 25% faster), both with the starting pistol.
     tick(1000, new IdleHit(16, "bullet", 1000, 1000.0));
     assertThat(state.idle.damage)
-        .isCloseTo(2 * 2 * 1000.0 / 260, org.assertj.core.data.Offset.offset(1e-9));
-    // The level bonus raises only what a single forged bullet may claim.
+        .isCloseTo(2 * 2.25 * 1000.0 / 260, org.assertj.core.data.Offset.offset(1e-9));
+    assertThat(engine.view(state).wallDps()).as("what the wall really took lately").isPositive();
+    // A forged bullet may claim the strongest gun's critical: here the boss cat's pistol, since
+    // a level 6 cat still shoots at 50% x (1 + 0.2 x 5) = 100%.
     state.idle.cats.put("sky", 6);
     double before = state.idle.damage;
     for (int i = 0; i < 3; i++) tick(1000);
     tick(1000, new IdleHit(16, "bullet", 1, 1e12));
-    assertThat(state.idle.damage - before).as("level 6 pistol critical").isEqualTo(1.5 * 2);
+    assertThat(state.idle.damage - before).isEqualTo(2);
+    state.idle.cats.put("sky", 11);
+    before = state.idle.damage;
+    tick(1000, new IdleHit(16, "bullet", 1, 1e12));
+    assertThat(state.idle.damage - before).as("level 11 cat: 150% pistol critical").isEqualTo(3);
   }
 
   private investorgame.raising.CompanyView.CatWeapon weaponOf(String code) {

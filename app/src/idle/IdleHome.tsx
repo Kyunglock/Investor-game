@@ -5,7 +5,9 @@ import { type ReactNode, useEffect, useState } from 'react'
 import { Sheet } from '../app/Sheet'
 import { MAX_BATCH, queuedCost } from '../app/toy-city/upgradeQueue'
 import { useAppUi } from '../app/ui'
+import { heroOf } from '../mental/hero'
 import { WeaponInventory, weaponBadge } from '../mental/WeaponInventory'
+import { BASE_CRIT_CHANCE, BASE_CRIT_MULT, CRIT_CHANCE, CRIT_MULT } from '../mental/weaponEffects'
 import { IdleCanvas } from './IdleCanvas'
 import { IdleCats } from './IdleCats'
 import { IdleIcon, type IdleIconName } from './icons'
@@ -29,14 +31,23 @@ type Upgrade = NonNullable<Company['battleUpgrades']>[number]
 const STATS: Record<Upgrade['kind'], { name: string; note: string }> = {
   damage: { name: '공격력', note: '탄 공격력' },
   fire: { name: '공격 속도', note: '쏘는 빠르기' },
-  hp: { name: '매수벽 강화', note: '매수벽 체력·최대 멘탈' },
+  hp: { name: '매수벽 강화', note: '매수벽이 무너지면 다시 설 때까지 공격이 멈춰요' },
   crit: { name: '치명타 피해', note: '치명타 배율' },
 }
 const maxed = (u: Upgrade) => u.maxLevel > 0 && u.level >= u.maxLevel
+/** 지금 든 무기의 치명타 (492번): 확률과 강화를 더한 배율을 그대로 보여 준다. */
+function critNote(company: Company, u: Upgrade) {
+  const revolver = heroOf(company).weapon.kind === 'revolver'
+  const chance = revolver ? CRIT_CHANCE : BASE_CRIT_CHANCE
+  const mult = (revolver ? CRIT_MULT : BASE_CRIT_MULT) * (1 + u.bonusPercent / 100)
+  return `지금 무기는 ${Math.round(chance * 100)}% 확률로 ${mult.toFixed(2)}배`
+}
 
 export function IdleHome({
   company,
   connected,
+  blocked,
+  onResume,
   onManage,
   managing,
   onBattle,
@@ -44,6 +55,9 @@ export function IdleHome({
 }: {
   company: Company
   connected: boolean
+  /** 다른 화면이 전투를 가져가 서버가 이 화면을 거절했다. onResume으로 다시 가져온다 (492번). */
+  blocked: boolean
+  onResume: () => void
   onManage: () => void
   managing: boolean
   onBattle: () => void
@@ -162,6 +176,14 @@ export function IdleHome({
                 : `큰손 등장까지 ${10 - ((idle?.wall ?? 1) % 10)}벽`}
             </p>
           </div>
+          {blocked && (
+            <div className="idle-blocked" role="alert" data-testid="idle-blocked">
+              <p>다른 화면에서 전투 중이라 여기는 멈췄어요</p>
+              <button type="button" onClick={onResume}>
+                여기서 이어 하기
+              </button>
+            </div>
+          )}
         </>
       )}
       {nav}
@@ -223,8 +245,18 @@ function IdleStats({ company }: { company: Company }) {
   return (
     <>
       <div className="idle-power">
-        <span>초당 공격력</span>
+        <span>
+          화력
+          <small>모든 공격이 벽에 맞을 때</small>
+        </span>
         <strong>{Math.round(company.idle?.dps ?? 0).toLocaleString()}</strong>
+      </div>
+      <div className="idle-power idle-power-real" data-testid="idle-wall-dps">
+        <span>
+          실제 벽 피해
+          <small>최근 초당 · 몬스터에 맞은 탄은 빼고</small>
+        </span>
+        <strong>{(company.idle?.wallDps ?? 0).toFixed(1)}</strong>
       </div>
       <div className="idle-buy-count">
         <span>강화 횟수</span>
@@ -251,7 +283,7 @@ function IdleStats({ company }: { company: Company }) {
               <b>
                 {STATS[u.kind].name} <small>Lv.{u.level}</small>
               </b>
-              <small>{STATS[u.kind].note}</small>
+              <small>{u.kind === 'crit' ? critNote(company, u) : STATS[u.kind].note}</small>
               <p>
                 {full
                   ? `+${u.bonusPercent}% · 최대`

@@ -25,7 +25,7 @@ import { ActionBar, Windows } from './Windows'
 
 const TABS: { id: Tab; label: string; icon: () => React.ReactNode }[] = [
   { id: 'office', label: '사무실', icon: BuildingIcon },
-  { id: 'market', label: '채용 도감', icon: ClipboardIcon },
+  { id: 'market', label: '도감', icon: ClipboardIcon },
   { id: 'staff', label: '인력 관리', icon: ChairIcon },
   { id: 'issue', label: '이슈', icon: NewsIcon },
   { id: 'record', label: '기록', icon: BookIcon },
@@ -36,7 +36,8 @@ const TABS: { id: Tab; label: string; icon: () => React.ReactNode }[] = [
  * 장면을 옆으로 밀어 가며 본다. 장면 안에서만 스크롤한다. 폭락·손실이면 화면이 흔들리고(FxLayer), 자본은 숫자가 굴러간다.
  */
 export function Shell({ company }: { company: Company }) {
-  const connected = useIdleBattle(company.companyId)
+  const idleBattle = useIdleBattle(company.companyId)
+  const connected = idleBattle.connected
   const [manage, setManage] = useState(false)
   useEffect(() => {
     const home = () => setManage(false)
@@ -110,6 +111,8 @@ export function Shell({ company }: { company: Company }) {
             <IdleHome
               company={company}
               connected={connected}
+              blocked={idleBattle.blocked}
+              onResume={idleBattle.resume}
               managing={manage}
               onManage={() => setManage(true)}
               onBattle={() => setManage(false)}
