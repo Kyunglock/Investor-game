@@ -1,80 +1,60 @@
 import type { Company } from '@web/api/client'
-import { useRaisingStore } from '@web/features/raising/store'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { firstQuarter, prepareFirstPlay } from './firstPlay'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { needsFirstStage, readFirstPlay, saveFirstPlay } from './firstPlay'
 
-vi.mock('@web/features/raising/placement', () => ({
-  autoPlace: (c: Company) => c.employees.map((e) => ({ employeeId: e.id, desk: 'trade' })),
-}))
+const company = {
+  companyId: 'first',
+  status: 'ACTIVE',
+  number: 1,
+  year: 1,
+  quarter: 1,
+  lastQuarter: null,
+  lastSettlement: null,
+} as Company
 
-const original = useRaisingStore.getState()
-const current = () => useRaisingStore.getState().company as Company
-const change = (patch: Partial<Company>) =>
-  useRaisingStore.setState({ company: { ...current(), ...patch } })
-const draw = vi.fn(async () => {
-  change({ employees: [{ id: 1, desk: null }] as Company['employees'] })
-  useRaisingStore.setState({ justDrew: true })
-})
-const place = vi.fn(async () => {
-  change({ employees: [{ id: 1, desk: 'trade' }] as Company['employees'] })
-})
-const scout = vi.fn(async () => {
-  change({ invest: { ...current().invest, ready: true } as Company['invest'] })
-  return true
-})
+afterEach(() => vi.unstubAllGlobals())
 
-beforeEach(() => {
-  vi.clearAllMocks()
-  useRaisingStore.setState({
-    company: {
-      companyId: 'first',
-      status: 'ACTIVE',
-      number: 1,
-      year: 1,
-      quarter: 1,
-      lastQuarter: null,
-      lastSettlement: null,
-      employees: [],
-      desks: [{ code: 'trade', trades: true }],
-      invest: { ready: false, outcome: null },
-    } as unknown as Company,
-    error: null,
-    busy: false,
-    justDrew: false,
-    draw,
-    place,
-    scout,
+describe('첫 스테이지 진입', () => {
+  it('새 회사는 시작하고, 이미 첫 스테이지를 깬 회사는 다시 시작하지 않는다', () => {
+    expect(needsFirstStage(company)).toBe(true)
+    expect(needsFirstStage({ ...company, assaults: { best: 1 } as Company['assaults'] })).toBe(
+      false,
+    )
   })
-})
-afterEach(() => useRaisingStore.setState(original))
-
-describe('첫 판 준비', () => {
-  it('동시에 호출해도 채용·배치·종목 준비는 한 번만 한다', async () => {
-    await Promise.all([prepareFirstPlay(current()), prepareFirstPlay(current())])
-    await prepareFirstPlay(current())
-    expect(draw).toHaveBeenCalledTimes(1)
-    expect(place).toHaveBeenCalledTimes(1)
-    expect(scout).toHaveBeenCalledTimes(1)
-    expect(useRaisingStore.getState().justDrew).toBe(false)
+  it('진행 중이거나 끝난 회사는 첫 전투로 끌어오지 않는다', () => {
+    expect(needsFirstStage({ ...company, quarter: 2 })).toBe(false)
+    expect(needsFirstStage({ ...company, status: 'ENDED' })).toBe(false)
   })
-  it('배치 실패 뒤 재시도해도 동료를 중복 채용하지 않는다', async () => {
-    place.mockImplementationOnce(async () => {
-      useRaisingStore.setState({ error: '연결 실패' })
+  it('예전 설명 중간 저장과 중단한 전투는 첫 스테이지로 이어간다', () => {
+    const getItem = vi.fn(() => 'welcome')
+    vi.stubGlobal('localStorage', { getItem })
+    for (const step of ['welcome', 'team', 'ready', 'play']) {
+      getItem.mockReturnValue(step)
+      expect(needsFirstStage(company)).toBe(true)
+    }
+    getItem.mockReturnValue('done')
+    expect(needsFirstStage(company)).toBe(false)
+  })
+  it('완료 기록은 회사별로 저장한다', () => {
+    const records = new Map<string, string>()
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => records.get(key),
+      setItem: (key: string, value: string) => records.set(key, value),
     })
-    await expect(prepareFirstPlay(current())).rejects.toThrow('연결 실패')
-    await prepareFirstPlay(current())
-    expect(draw).toHaveBeenCalledTimes(1)
-    expect(place).toHaveBeenCalledTimes(2)
-    expect(scout).toHaveBeenCalledTimes(1)
+    saveFirstPlay(company, 'done')
+    expect(readFirstPlay(company)).toBe('done')
+    expect(needsFirstStage({ ...company, companyId: 'other' })).toBe(true)
   })
-  it('첫 분기를 지난 회사와 이미 결정한 회의에는 준비 작업을 하지 않는다', async () => {
-    change({ quarter: 2 })
-    expect(firstQuarter(current())).toBe(false)
-    await expect(prepareFirstPlay(current())).rejects.toThrow('회사 상태')
-    change({ quarter: 1, invest: { outcome: {} } as Company['invest'] })
-    await prepareFirstPlay(current())
-    expect(draw).not.toHaveBeenCalled()
-    expect(place).not.toHaveBeenCalled()
-    expect(scout).not.toHaveBeenCalled()
+  it('저장소가 차단되어도 첫 전투 진입을 막지 않는다', () => {
+    vi.stubGlobal('localStorage', {
+      getItem: () => {
+        throw new Error('blocked')
+      },
+      setItem: () => {
+        throw new Error('blocked')
+      },
+    })
+    expect(needsFirstStage(company)).toBe(true)
+    expect(() => saveFirstPlay(company, 'done')).not.toThrow()
   })
 })

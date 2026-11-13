@@ -4,6 +4,7 @@ import { useRaisingStore } from '@web/features/raising/store'
 import { useTutorial } from '@web/features/raising/tutorial'
 import { type CSSProperties, useEffect, useEffectEvent, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { saveFirstPlay } from '../app/firstPlay'
 import { type BattleEntry, useAppUi } from '../app/ui'
 import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
@@ -30,6 +31,7 @@ import {
 } from './cardReveal'
 import { applyCard, type Card, GRADE_NAMES, loadoutOf, pickCards } from './cards'
 import { ENEMIES } from './enemies'
+import { FirstClear } from './FirstClear'
 import { GunSprite } from './GunSprite'
 import { type GameSpeed, loadGameSpeed, nextGameSpeed, saveGameSpeed } from './gameSpeed'
 import { BATTLE_SECONDS } from './genres'
@@ -61,7 +63,9 @@ export function MentalWindow({
   onChangeWeapon: () => void
 }) {
   // 싸우는 사람과 든 무기는 출전을 누르는 순간 굳힌다: 회사가 다시 그려져도 한 판이 다시 시작되지 않게.
-  const [hero, setHero] = useState<Hero | null>(null)
+  const tutorial = entry.kind === 'assault' && entry.tutorial === true
+  const [hero, setHero] = useState<Hero | null>(() => (tutorial ? heroOf(company) : null))
+  const [celebrated, setCelebrated] = useState(false)
   const started = hero !== null
   const [picked, setPicked] = useState<Card[]>([])
   const [outcome, setOutcome] = useState<Outcome | null>(null)
@@ -178,6 +182,13 @@ export function MentalWindow({
   useEffect(() => {
     if (outcome) void save()
   }, [outcome])
+  const returnToOffice = useEffectEvent(() => {
+    saveFirstPlay(company, 'done')
+    onDone()
+  })
+  useEffect(() => {
+    if (tutorial && outcome?.win && saved && celebrated) returnToOffice()
+  }, [tutorial, outcome, saved, celebrated])
   const reward =
     saved && entry.kind === 'assault'
       ? (company.assaults?.lastResult ?? null)
@@ -338,7 +349,9 @@ export function MentalWindow({
         )}
         {outcome && (
           <div className="stage-summary">
-            {mode === 'assault' ? (
+            {tutorial && outcome.win ? (
+              <FirstClear onComplete={() => setCelebrated(true)} />
+            ) : mode === 'assault' ? (
               <AssaultResult
                 outcome={outcome}
                 battle={investBattle}
@@ -402,20 +415,34 @@ export function MentalWindow({
                 </p>
               </div>
             )}
-            <button
-              type="button"
-              disabled={sending || busy}
-              onClick={() => {
-                sfx.stamp()
-                haptic.medium()
-                if (reportError) void save()
-                else onDone()
-              }}
-              className="stage-primary"
-              data-testid="mental-done"
-            >
-              {sending ? '저장 중…' : reportError ? '다시 저장하기' : '돌아가기 ▶'}
-            </button>
+            {(!tutorial || !outcome.win || reportError) && (
+              <button
+                type="button"
+                disabled={sending || busy || (!saved && !reportError)}
+                onClick={() => {
+                  sfx.stamp()
+                  haptic.medium()
+                  if (reportError) void save()
+                  else if (tutorial && !outcome.win) {
+                    setPicked([])
+                    setSaved(false)
+                    setCelebrated(false)
+                    setOutcome(null)
+                  } else onDone()
+                }}
+                className="stage-primary"
+                data-testid="mental-done"
+              >
+                {sending
+                  ? '저장 중…'
+                  : reportError
+                    ? '다시 저장하기'
+                    : tutorial
+                      ? '다시 도전 ▶'
+                      : '돌아가기 ▶'}
+              </button>
+            )}
+            {tutorial && outcome.win && sending && <p role="status">기록을 저장하는 중…</p>}
             {reportError && (
               <p className="stage-error" role="alert">
                 {reportError}
