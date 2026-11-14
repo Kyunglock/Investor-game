@@ -46,6 +46,12 @@ cd backend
 ADMIN_TOKEN=아무-비밀값 ./gradlew bootTestRun
 ```
 
+### 테스트판
+
+서버를 `SANDBOX_CODE` 환경 변수와 함께 띄우면 테스트판이 켜진다(비워 두면 꺼짐). 앱 화면 주소에 `?test=1`을 붙여 열면(테스트판 APK `app-test-debug`가 그렇게 연다.
+브라우저라면 `/app/?test=1`) 코드를 묻고, 맞으면 본 게임과 따로 둔 테스트판 회사로 들어간다. 테스트판에서는 자본·채용권·뽑기권이 떨어지지 않고, 왼쪽의
+"테스트판" 단추로 원하는 매도벽으로 건너뛰거나 처음부터 다시 할 수 있다 (decisions.md 499번).
+
 ### 안드로이드 앱 (APK)
 
 앱 전용 화면(`app/`)을 WebView에 담은 앱이다 ([`docs/app.md`](./docs/app.md)). 앱 화면은 웹과 같이 `https://game.kwaklabs.com/app/`에 배포되고, GitHub Actions의 **Android** 워크플로를 돌리면 그 주소를 띄우는 `app-debug.apk`가 Artifacts에 생긴다.

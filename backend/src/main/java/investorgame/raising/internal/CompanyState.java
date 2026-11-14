@@ -172,6 +172,13 @@ class CompanyState {
   String opening;
 
   long capital;
+
+  /** 테스트판의 회사 (decisions.md 499번): 자본·채용권·뽑기권이 떨어지지 않고 업계 순위에 남지 않는다. */
+  boolean sandbox;
+
+  /** 테스트판의 무한 지갑을 껐다 (499번): 다시 채우지 않아, 그 벽에서 버는 돈과 강화 값을 그대로 겪는다. */
+  boolean sandboxFinite;
+
   List<Employee> employees = new ArrayList<>();
   int hired;
 

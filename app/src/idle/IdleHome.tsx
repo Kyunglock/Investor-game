@@ -10,6 +10,7 @@ import { WeaponInventory, weaponBadge } from '../mental/WeaponInventory'
 import { BASE_CRIT_CHANCE, BASE_CRIT_MULT, CRIT_CHANCE, CRIT_MULT } from '../mental/weaponEffects'
 import { IdleCanvas } from './IdleCanvas'
 import { IdleCats } from './IdleCats'
+import { IdleSandbox } from './IdleSandbox'
 import { IdleIcon, type IdleIconName } from './icons'
 import './idle-home.css'
 
@@ -160,7 +161,8 @@ export function IdleHome({
               aria-label={`보유 자본 ${money(company.capital)}`}
             >
               <span className="idle-coin">₩</span>
-              <b>{money(company.capital)}</b>
+              {/* 테스트판의 지갑은 떨어지지 않는다 (499번). */}
+              <b>{company.sandboxInfinite ? '∞' : money(company.capital)}</b>
             </div>
             {/* 상태 줄은 없앴다 (493번): 평소엔 벽 번호만, 전투가 멈춘 때만 그 까닭을 여기에 보인다. */}
             <strong
@@ -180,12 +182,13 @@ export function IdleHome({
               aria-label={`무기 뽑기권 ${company.armory?.tickets ?? 0}장`}
             >
               <IdleIcon name="ticket" />
-              {company.armory?.tickets ?? 0}
+              {company.sandboxInfinite ? '∞' : (company.armory?.tickets ?? 0)}
             </div>
             <button type="button" aria-label="회사 메뉴" onClick={onManage}>
               ☰
             </button>
           </header>
+          <IdleSandbox company={company} />
           {blocked && (
             <div className="idle-blocked" role="alert" data-testid="idle-blocked">
               <p>다른 화면에서 전투 중이라 여기는 멈췄어요</p>

@@ -1,10 +1,14 @@
 apply plugin: 'com.android.application'
 
+// 테스트판 앱 (decisions.md 499번): APP_TEST=1 로 만들면 다른 앱 ID와 이름을 가져 본 앱과 나란히 깔린다.
+def testApp = System.getenv("APP_TEST") == "1"
+
 android {
     namespace = "com.kyunglock.investorgame"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.kyunglock.investorgame"
+        applicationId testApp ? "com.kyunglock.investorgame.test" : "com.kyunglock.investorgame"
+        manifestPlaceholders = [appLabel: testApp ? "고양이 테스트판" : "@string/app_name"]
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

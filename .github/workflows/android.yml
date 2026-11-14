@@ -77,6 +77,26 @@ jobs:
           path: app/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
+      # 테스트판 앱 (decisions.md 499번): 같은 화면을 `?test=1` 로 띄우는 다른 앱 ID(com.kyunglock.investorgame.test)의 APK.
+      # 본 앱과 나란히 깔리고 저장도 따로다. 열면 테스트판 코드를 묻는다(서버의 SANDBOX_CODE). 화면을 APK 안에 담는 방식에는 만들지 않는다.
+      - name: 테스트판 디버그 APK
+        if: env.CAP_SERVER_URL != ''
+        run: |
+          case "$CAP_SERVER_URL" in *\?*) sep='&' ;; *) sep='?' ;; esac
+          CAP_SERVER_URL="${CAP_SERVER_URL}${sep}test=1" pnpm exec cap sync android
+          (cd android && APP_TEST=1 ./gradlew assembleDebug --console=plain)
+          mkdir -p "$RUNNER_TEMP/test-apk"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/test-apk/app-test-debug.apk"
+          # 뒤의 배포용 APK 는 본 앱의 주소로 만든다.
+          pnpm exec cap sync android
+
+      - uses: actions/upload-artifact@v7
+        if: env.CAP_SERVER_URL != ''
+        with:
+          name: app-test-debug
+          path: ${{ runner.temp }}/test-apk/app-test-debug.apk
+          if-no-files-found: error
+
       # 서명 키가 저장소 Secrets 에 있으면(ANDROID_KEYSTORE_BASE64·ANDROID_KEYSTORE_PASSWORD·ANDROID_KEY_ALIAS·ANDROID_KEY_PASSWORD)
       # 배포용 APK 도 만든다. 없으면 건너뛴다. 스토어 올리기(AAB)는 bundleRelease 로 바꾸면 된다.
       - name: 배포용 APK (서명 키가 있을 때)

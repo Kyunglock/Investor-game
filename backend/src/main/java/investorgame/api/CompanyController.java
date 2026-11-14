@@ -47,7 +47,7 @@ class CompanyController {
   ResponseEntity<CompanyView> current(
       @CookieValue(name = SessionCookies.NAME, required = false) String token) {
     // 세션이 없거나 만료된 첫 방문도 "회사가 없다"(404)다 (#346): 전에는 401이 콘솔과 운영 로그에 찍혔다.
-    return ResponseEntity.of(cookies.session(token).flatMap(companies::current));
+    return ResponseEntity.of(cookies.player(token).flatMap(companies::current));
   }
 
   @PostMapping("/idle")
@@ -55,7 +55,7 @@ class CompanyController {
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody IdleRequest request) {
     return companies.idleBeat(
-        cookies.requireSession(token),
+        cookies.requirePlayer(token),
         request.runId().toString(),
         request.sequence(),
         request.action(),
@@ -83,7 +83,7 @@ class CompanyController {
   @PostMapping
   ResponseEntity<CompanyView> open(
       @CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    UUID sessionId = cookies.requireSession(token);
+    UUID sessionId = cookies.requirePlayer(token);
     CompanyView company = companies.open(sessionId);
     PLAY.info(
         "company-open session={} company={} ip={}",
@@ -101,7 +101,7 @@ class CompanyController {
   CompanyView draw(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody DrawRequest request) {
-    UUID sessionId = cookies.requireSession(token);
+    UUID sessionId = cookies.requirePlayer(token);
     CompanyView company = companies.draw(sessionId, request.count(), request.draws());
     PLAY.info(
         "company-draw session={} company={} count={} ip={}",
@@ -119,7 +119,7 @@ class CompanyController {
   CompanyView release(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody ReleaseRequest request) {
-    return companies.release(cookies.requireSession(token), request.employeeId());
+    return companies.release(cookies.requirePlayer(token), request.employeeId());
   }
 
   record ReleaseRequest(@NotNull Integer employeeId) {}
@@ -127,7 +127,7 @@ class CompanyController {
   /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 249번). */
   @PostMapping("/invest/open")
   CompanyView convene(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    return companies.convene(cookies.requireSession(token));
+    return companies.convene(cookies.requirePlayer(token));
   }
 
   /** 올해 투자 회의에서 고른다: BUY·SELL (decisions.md 229·423번). */
@@ -135,7 +135,7 @@ class CompanyController {
   CompanyView invest(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody InvestRequest request) {
-    UUID sessionId = cookies.requireSession(token);
+    UUID sessionId = cookies.requirePlayer(token);
     CompanyView company =
         companies.invest(sessionId, request.choice(), Boolean.TRUE.equals(request.big()));
     PLAY.info(
@@ -157,7 +157,7 @@ class CompanyController {
   CompanyView investBattle(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody InvestBattleRequest request) {
-    UUID sessionId = cookies.requireSession(token);
+    UUID sessionId = cookies.requirePlayer(token);
     CompanyView company = companies.investBattle(sessionId, request.mode(), request.stars());
     PLAY.info(
         "company-invest-battle session={} company={} mode={} stars={} ip={}",
@@ -174,7 +174,7 @@ class CompanyController {
   /** 분기 넘기기를 누르면 직원이 종목을 물어 온다 (decisions.md 267·382번). 물어 왔으면 종목 회의가 열린다. */
   @PostMapping("/scout")
   CompanyView scout(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    return companies.scout(cookies.requireSession(token));
+    return companies.scout(cookies.requirePlayer(token));
   }
 
   /** 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 328번). */
@@ -182,7 +182,7 @@ class CompanyController {
   CompanyView mental(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody MentalRequest request) {
-    UUID sessionId = cookies.requireSession(token);
+    UUID sessionId = cookies.requirePlayer(token);
     CompanyView company =
         companies.mental(
             sessionId,
@@ -216,7 +216,7 @@ class CompanyController {
   CompanyView equipWeapon(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody WeaponRequest request) {
-    UUID sessionId = cookies.requireSession(token);
+    UUID sessionId = cookies.requirePlayer(token);
     CompanyView company = companies.equipWeapon(sessionId, request.kind(), request.grade());
     PLAY.info(
         "company-weapon session={} company={} kind={} grade={} ip={}",
@@ -235,7 +235,7 @@ class CompanyController {
   CompanyView reportStage(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody StageRequest request) {
-    UUID sessionId = cookies.requireSession(token);
+    UUID sessionId = cookies.requirePlayer(token);
     CompanyView company =
         companies.reportStage(sessionId, request.stage(), request.cleared(), request.stars());
     PLAY.info(
@@ -256,7 +256,7 @@ class CompanyController {
   CompanyView reportAssault(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody StageRequest request) {
-    UUID sessionId = cookies.requireSession(token);
+    UUID sessionId = cookies.requirePlayer(token);
     CompanyView company =
         companies.reportAssault(sessionId, request.stage(), request.cleared(), request.stars());
     PLAY.info(
@@ -275,7 +275,7 @@ class CompanyController {
   CompanyView reportEx(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody ExRequest request) {
-    return companies.reportEx(cookies.requireSession(token), request.kills());
+    return companies.reportEx(cookies.requirePlayer(token), request.kills());
   }
 
   record ExRequest(@PositiveOrZero int kills) {}
@@ -285,7 +285,7 @@ class CompanyController {
   CompanyView buyBattleUpgrade(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody BattleUpgradeRequest request) {
-    UUID sessionId = cookies.requireSession(token);
+    UUID sessionId = cookies.requirePlayer(token);
     int levels = request.levels() == null ? 1 : request.levels();
     CompanyView company = companies.buyBattleUpgrade(sessionId, request.kind(), levels);
     PLAY.info(
@@ -303,7 +303,7 @@ class CompanyController {
   /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). */
   @PostMapping("/weapon/draw")
   CompanyView drawWeapon(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    UUID sessionId = cookies.requireSession(token);
+    UUID sessionId = cookies.requirePlayer(token);
     CompanyView company = companies.drawWeapon(sessionId);
     PLAY.info(
         "company-weapon-draw session={} company={} ip={}",
@@ -318,13 +318,13 @@ class CompanyController {
   CompanyView mergeWeapon(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody WeaponRequest request) {
-    return companies.mergeWeapon(cookies.requireSession(token), request.kind(), request.grade());
+    return companies.mergeWeapon(cookies.requirePlayer(token), request.kind(), request.grade());
   }
 
   /** 뽑기권 한 장으로 고양이 한 마리를 뽑는다 (decisions.md 488·493번). */
   @PostMapping("/cat/draw")
   CompanyView drawCat(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    UUID sessionId = cookies.requireSession(token);
+    UUID sessionId = cookies.requirePlayer(token);
     CompanyView company = companies.drawCat(sessionId);
     PLAY.info(
         "company-cat-draw session={} company={} ip={}",
@@ -339,7 +339,7 @@ class CompanyController {
   CompanyView fieldCat(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody CatFieldRequest request) {
-    return companies.fieldCat(cookies.requireSession(token), request.code(), request.fielded());
+    return companies.fieldCat(cookies.requirePlayer(token), request.code(), request.fielded());
   }
 
   record CatFieldRequest(@NotBlank String code, @NotNull Boolean fielded) {}
@@ -353,7 +353,7 @@ class CompanyController {
       throw new InvalidRequestException("kind와 grade는 함께 보내거나 함께 비운다");
     }
     return companies.equipCat(
-        cookies.requireSession(token), request.code(), request.kind(), request.grade());
+        cookies.requirePlayer(token), request.code(), request.kind(), request.grade());
   }
 
   record CatWeaponRequest(@NotBlank String code, String kind, String grade) {}
@@ -362,14 +362,14 @@ class CompanyController {
   /** 이사 비용을 내고 다음 건물로 간다 (decisions.md 296번). */
   @PostMapping("/upgrade")
   CompanyView upgrade(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    return companies.upgrade(cookies.requireSession(token));
+    return companies.upgrade(cookies.requirePlayer(token));
   }
 
   @PostMapping("/leader")
   CompanyView leader(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody LeaderRequest request) {
-    return companies.leader(cookies.requireSession(token), request.desk(), request.employeeId());
+    return companies.leader(cookies.requirePlayer(token), request.desk(), request.employeeId());
   }
 
   record LeaderRequest(@NotBlank String desk, @NotNull Integer employeeId) {}
@@ -389,7 +389,7 @@ class CompanyController {
       }
       placements.put(seat.employeeId(), seat.desk());
     }
-    return companies.place(cookies.requireSession(token), placements);
+    return companies.place(cookies.requirePlayer(token), placements);
   }
 
   /** 올해 결산. 요청에 결산할 해를 싣는다: 같은 결산이 두 번 와도 한 해만 넘어간다 (decisions.md 234번). */
@@ -397,7 +397,7 @@ class CompanyController {
   CompanyView settle(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
       @Valid @RequestBody SettleRequest request) {
-    UUID sessionId = cookies.requireSession(token);
+    UUID sessionId = cookies.requirePlayer(token);
     CompanyView company = companies.settle(sessionId, request.year(), request.quarter());
     PLAY.info(
         "company-settle session={} company={} year={} quarter={} capital={} grade={} ip={}",

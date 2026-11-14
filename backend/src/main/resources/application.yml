@@ -19,6 +19,10 @@ management:
 admin:
   token: ${ADMIN_TOKEN:}
 
+# 테스트판(/api/sandbox)을 여는 코드. 비워 두면 테스트판은 꺼진다 (decisions.md 499번)
+sandbox:
+  code: ${SANDBOX_CODE:}
+
 content:
   # 콘텐츠 JSON 디렉터리 후보(작업 디렉터리 기준). 있으면 클래스 경로보다 먼저 읽어 IDE 실행에서도 콘텐츠가 보인다. 운영은 클래스 경로만 쓴다
   dirs: ../content, content

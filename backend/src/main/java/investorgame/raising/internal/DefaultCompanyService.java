@@ -279,7 +279,99 @@ class DefaultCompanyService implements CompanyService {
     engine.adoptGacha(row.state());
     // 엔딩을 없앴다 (374번): 옛 엔딩으로 멈췄던 회사도 다시 이어 간다. 요청 끝에 함께 저장된다.
     row.state().finished = false;
+    refill(row.state());
     return row;
+  }
+
+  // 테스트판의 지갑 (499번): 요청마다 다시 채우므로 한 번에 쓸 만큼이면 되고, 곱셈에도 넘치지 않는 크기.
+  private static final long SANDBOX_CAPITAL = 1_000_000_000_000_000L;
+  private static final int SANDBOX_TICKETS = 1_000_000;
+
+  /** 테스트판 회사면 자본·채용권·뽑기권을 다시 채운다. 요청 끝에 함께 저장된다. */
+  private static void refill(CompanyState c) {
+    if (!c.sandbox || c.sandboxFinite) return;
+    c.capital = Math.max(c.capital, SANDBOX_CAPITAL);
+    c.tickets = Math.max(c.tickets, SANDBOX_TICKETS);
+    c.weaponTickets = Math.max(c.weaponTickets, SANDBOX_TICKETS);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView sandbox(UUID sessionId) {
+    if (companies.lockActive(sessionId).isEmpty()) open(sessionId);
+    CompanyRepository.Row row = lockActive(sessionId);
+    row.state().sandbox = true;
+    refill(row.state());
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  private CompanyRepository.Row lockSandbox(UUID sessionId) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    if (!row.state().sandbox) throw new InvalidRequestException("테스트판 회사가 아니다");
+    return row;
+  }
+
+  @Override
+  @Transactional
+  public CompanyView sandboxWall(UUID sessionId, long wall) {
+    CompanyRepository.Row row = lockSandbox(sessionId);
+    engine.mental.initWeapons(row.state());
+    idle.jump(row.state(), wall);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView sandboxReset(UUID sessionId) {
+    CompanyRepository.Row old = lockSandbox(sessionId);
+    old.state().closed = true;
+    companies.update(old.id(), old.state(), true);
+    long seed = seeds.nextLong();
+    CompanyState fresh = engine.open(new HashSeededRandom(seed), engine.openingCapital());
+    fresh.sandbox = true;
+    fresh.sandboxFinite = old.state().sandboxFinite;
+    companies.insert(
+        new CompanyRepository.Row(UUID.randomUUID(), sessionId, "ACTIVE", seed, fresh));
+    return sandbox(sessionId);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView sandboxWallet(UUID sessionId, boolean infinite) {
+    CompanyRepository.Row row = lockSandbox(sessionId);
+    CompanyState c = row.state();
+    c.sandboxFinite = !infinite;
+    if (infinite) {
+      refill(c);
+    } else {
+      c.capital = engine.openingCapital();
+      c.tickets = 0;
+      c.weaponTickets = 0;
+    }
+    companies.update(row.id(), c, false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView sandboxCats(UUID sessionId, int level) {
+    CompanyRepository.Row row = lockSandbox(sessionId);
+    idle.grantCats(row.state(), level);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView sandboxWeapon(UUID sessionId, String grade) {
+    CompanyRepository.Row row = lockSandbox(sessionId);
+    // 사장냥과 출전한 고양이 넷이 하나씩 들고도 하나가 남는다.
+    engine.mental.grant(row.state(), grade, 6);
+    idle.releaseWeapons(row.state());
+    companies.update(row.id(), row.state(), false);
+    return view(row);
   }
 
   private CompanyView view(CompanyRepository.Row row) {
@@ -387,7 +479,9 @@ class DefaultCompanyService implements CompanyService {
         engine.mental.upgradeViews(c),
         engine.mental.stagesView(c),
         engine.mental.assaultsView(c),
-        idle.view(c));
+        idle.view(c),
+        c.sandbox,
+        c.sandbox && !c.sandboxFinite);
   }
 
   @Override
@@ -506,6 +600,8 @@ class DefaultCompanyService implements CompanyService {
   /** 연말 자본을 남기고 같은 연차 회사들 가운데 자리를 결산 소식에 적는다 (#351). 지난해보다 상위 몇 %가 5%p 넘게 오르거나 내렸으면 그렇게 말한다. */
   private void recordYear(CompanyRepository.Row row, int year) {
     CompanyState c = row.state();
+    // 테스트판의 자본은 업계 순위에 남기지 않는다 (499번).
+    if (c.sandbox) return;
     companies.recordYear(row.id(), year, c.capital);
     companies
         .rankAt(row.id(), year)
