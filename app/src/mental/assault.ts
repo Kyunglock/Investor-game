@@ -292,8 +292,8 @@ export function assaultSpec(
  * 벽 체력을 따라가야 깊은 벽에서 한 방에 지워지지 않는다. 첫 벽들(체력 수십)은 거의 그대로다.
  */
 export const IDLE_THREAT_HP = 760
-/** 큰손 벽의 체력 배율(서버 IdleEngine.maxHp): 물량은 큰손 벽이라고 네 배가 되지 않는다. */
-const IDLE_BOSS_HP = 4
+/** 큰손 벽의 체력 배율(서버 IdleEngine.BOSS_HP, 518번): 물량은 큰손 벽이라고 세 배가 되지 않는다. */
+export const IDLE_BOSS_HP = 3
 
 /** wall번째 벽(체력 maxHp) 앞 물량의 배율. 주문서의 주식 수가 깔끔하게 유효 숫자 둘로 끊는다. */
 export function idleThreat(wall: number, maxHp: number): number {

@@ -42,6 +42,11 @@ class IdleEngine {
   private static final double BUY_ORDERS_PER_SECOND = 2 / 0.15;
   // Matches the app's mental/assault.ts idleThreat.
   private static final double THREAT_HP = 760;
+  // Wall health (518): base + linear x depth + square x depth^2, every tenth wall x BOSS_HP.
+  private static final double HP_BASE = 20;
+  private static final double HP_LINEAR = 12;
+  private static final double HP_SQUARE = 0.2;
+  private static final double BOSS_HP = 3;
   private static final double RALLY_FIRE = 2;
   // A beat this late still counts in full (decisions.md 497): on a slow link the screen sends the
   // next beat only after the last answer, and dropping those hits refilled the wall. A longer
@@ -235,9 +240,14 @@ class IdleEngine {
 
   static double maxHp(long wall) {
     // The first walls fall in seconds; later ones grow faster than linearly so upgrades matter
-    // (492).
+    // (492). The curve was softened in 518: the square term halved, every tenth wall x3.
+    return plainHp(wall) * (wall % 10 == 0 ? BOSS_HP : 1);
+  }
+
+  /** A wall's health before the every-tenth-wall multiplier. */
+  private static double plainHp(long wall) {
     long depth = wall - 1;
-    return (20 + 12.0 * depth + 0.4 * depth * depth) * (wall % 10 == 0 ? 4 : 1);
+    return HP_BASE + HP_LINEAR * depth + HP_SQUARE * depth * depth;
   }
 
   private double dps(CompanyState c) {
@@ -276,7 +286,7 @@ class IdleEngine {
    * The order scale in front of a wall (498): matches the app's idleThreat, two significant digits.
    */
   static double threat(long wall) {
-    double hp = maxHp(wall) / (wall % 10 == 0 ? 4 : 1);
+    double hp = plainHp(wall);
     return new java.math.BigDecimal(1 + hp / THREAT_HP)
         .round(new java.math.MathContext(2))
         .doubleValue();
