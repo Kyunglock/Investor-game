@@ -1443,7 +1443,7 @@ class BattleScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(2.6)
     const shares = cellShares(hp, hp)
-    label.setText(`매도 ${shares.toLocaleString()}주`)
+    label.setText(this.cellLabel(shares))
     e.cell = { wall, row, col, label, shares, crack: 0, weak }
     this.paint(e)
     return e
@@ -1518,6 +1518,12 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
+  /** 벽 칸에 적는 물량. 자동 전투는 "매도" 없이 몇 주인지만 적는다 (507번). */
+  private cellLabel(shares: number) {
+    const text = `${shares.toLocaleString()}주`
+    return this.opts.idle ? text : `매도 ${text}`
+  }
+
   /** 서킷브레이커 (#593): 벽의 남은 체력은 그대로 두고 rows층으로 다시 쌓는다(층마다 같은 몫). */
   private restackWall(wall: WallState, rows: number) {
     const layers = this.wallLayers(wall)
@@ -1538,7 +1544,7 @@ class BattleScene extends Phaser.Scene {
       if (e.cell) {
         e.cell.crack = 0
         e.cell.shares = cellShares(e.hp, e.hp)
-        e.cell.label.setText(`매도 ${e.cell.shares.toLocaleString()}주`)
+        e.cell.label.setText(this.cellLabel(e.cell.shares))
       }
       e.setTexture(cellKey(0))
     }
@@ -1560,7 +1566,7 @@ class BattleScene extends Phaser.Scene {
     const shares = cellShares(e.maxHp, e.hp)
     if (shares !== c.shares && e.hp > 0) {
       c.shares = shares
-      c.label.setText(`매도 ${shares.toLocaleString()}주`)
+      c.label.setText(this.cellLabel(shares))
     }
   }
 
