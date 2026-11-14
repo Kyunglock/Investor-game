@@ -3359,7 +3359,6 @@ class BattleScene extends Phaser.Scene {
     const kind = gun?.kind ?? this.opts.hero.weapon.kind
     const grade = gun?.grade ?? this.opts.hero.weapon.grade
     const style = GRADE_FIRE[grade]
-    // 무기마다 쏘는 방식 (#563): 총은 겨눈 쪽(aim)을 보고, 탄만 흩어진다(기관단총).
     // 재장전 (#587): 탄창을 다 쓰면 재장전 시간만큼 다음 한 발이 늦어진다(lastFire를 미래로 민다).
     const traits = WEAPON_TRAITS[kind]
     const reload = (shots: number) =>
@@ -3385,6 +3384,7 @@ class BattleScene extends Phaser.Scene {
     // 총 손맛: 총구 화염. 크기·시간이 무기마다 다르다.
     const posed = this.poseGun(p, aim, kick, mate)
     const m = posed.muzzle
+    // 기관단총의 흩어짐도 실제 총구에서 표적을 향한 방향을 기준으로 적용한다.
     const base = aimWithJitter(kind, catShotAngle(m, target), Math.random())
     const flash = this.flashes[this.flashIndex++ % this.flashes.length]
     flash
@@ -4570,7 +4570,7 @@ class BattleScene extends Phaser.Scene {
       return
     }
 
-    // 붙박이 (332번): 자리는 고정, 누르고 있는 쪽을 쏜다. 그림(341번)은 맞았으면 울상(총을 놓친다), 누르고 있으면 눈썹 꾹, 아니면 가만히.
+    // 붙박이 (332번): 자리는 고정하고, 누른 곳 또는 배정한 표적을 쏜다.
     // 팔·손·꼬리가 포함된 방향별 그림으로 조준하고 몸 전체는 회전하지 않는다.
     const p = this.player
     const { w, h } = this.view()

@@ -299,7 +299,7 @@ try {
       }
       assert.deepEqual(errors, [])
       console.log(
-        `PASS: ${mode}: original join count/cap, distinct models, nine shoulder poses, upright bodies through 360-degree target changes, all four rendered muzzle origins/damage`,
+        `PASS: ${mode}: original join count/cap, distinct models, nine shoulder poses, upright bodies through 360-degree target changes, all four rendered muzzle origins/damage, 7 cats × 9 poses × 12 grades, bounded running textures`,
       )
       const cleaned = await page.evaluate(() => {
         const scene = window.feedbackScene
