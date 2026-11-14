@@ -70,7 +70,18 @@ public record CompanyView(
       double wallDps,
       double circuitSeconds,
       List<IdleWall> upcoming,
-      long sequence) {}
+      long sequence,
+      List<IdleActive> actives) {}
+
+  /**
+   * 액티브 스킬 하나 (decisions.md 503번): 눌러서 쓴다. 시간은 화면에서 흐르는 실제 초다(전투는 2배속).
+   *
+   * @param cooldown 한 번 쓰고 다시 쓸 때까지
+   * @param seconds 효과가 이어지는 시간
+   * @param readyIn 다시 쓸 수 있을 때까지 남은 시간. 0이면 쓸 수 있다. 전투가 돌아가는 동안만 준다
+   */
+  public record IdleActive(
+      String code, String name, double cooldown, double seconds, double readyIn) {}
 
   /**
    * 고양이 한 마리 (decisions.md 488·501번). 뽑기로 얻고, 출전하면 제 총으로 함께 쏘고 제 스킬을 쓴다.

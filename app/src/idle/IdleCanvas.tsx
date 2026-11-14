@@ -1,5 +1,6 @@
 import type { Company } from '@web/api/client'
 import { useEffect, useRef, useState } from 'react'
+import type { ActiveCode } from '../mental/actives'
 import { idleAssaultSpec } from '../mental/assault'
 import type { BattleHandle } from '../mental/battle'
 import { heroOf } from '../mental/hero'
@@ -39,11 +40,15 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
     // 테스트판의 도구 창이 몬스터 습격을 바로 부른다 (decisions.md 499번).
     const raidCalled = (event: Event) =>
       battle.current?.callIdleRaid((event as CustomEvent<IdleRaidKind>).detail)
+    // 액티브 스킬 단추 (decisions.md 503번): 서버가 받아 준 스킬의 효과를 전투가 낸다.
+    const activeUsed = (event: Event) =>
+      battle.current?.castActive((event as CustomEvent<ActiveCode>).detail)
     document.addEventListener('visibilitychange', visibility)
     window.addEventListener('idle-app-active', native)
     window.addEventListener('idle-hits-sent', sent)
     window.addEventListener('idle-hits-clear', dropped)
     window.addEventListener('idle-test-raid', raidCalled)
+    window.addEventListener('idle-active', activeUsed)
     setError(null)
     void import('../mental/battle')
       .then(({ startBattle }) => {
@@ -89,6 +94,7 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
       window.removeEventListener('idle-hits-sent', sent)
       window.removeEventListener('idle-hits-clear', dropped)
       window.removeEventListener('idle-test-raid', raidCalled)
+      window.removeEventListener('idle-active', activeUsed)
       battle.current?.stop()
       battle.current = null
     }

@@ -70,11 +70,12 @@ class CompanyController {
       @NotNull UUID runId,
       @PositiveOrZero long sequence,
       @jakarta.validation.constraints.Pattern(regexp = "start|tick|stop") @NotNull String action,
-      @jakarta.validation.constraints.Size(max = 15) List<@NotNull @Valid IdleHitRequest> hits) {}
+      @jakarta.validation.constraints.Size(max = 18) List<@NotNull @Valid IdleHitRequest> hits) {}
 
   record IdleHitRequest(
       @Positive long wall,
-      @NotNull @jakarta.validation.constraints.Pattern(regexp = "bullet|water|meteor|bolt|ram")
+      @NotNull
+          @jakarta.validation.constraints.Pattern(regexp = "bullet|water|meteor|bolt|ram|barrage")
           String kind,
       @Min(1) @Max(1000) int count,
       @PositiveOrZero @jakarta.validation.constraints.DecimalMax("1000000000000") Double damage) {}
@@ -335,6 +336,16 @@ class CompanyController {
   }
 
   /** 가진 고양이를 출전시키거나 쉬게 한다 (decisions.md 488번). */
+  /** 액티브 스킬을 쓴다 (decisions.md 503번). */
+  @PostMapping("/idle/active")
+  CompanyView useActive(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody ActiveRequest request) {
+    return companies.useActive(cookies.requirePlayer(token), request.code());
+  }
+
+  record ActiveRequest(@NotBlank String code) {}
+
   @PostMapping("/cat/field")
   CompanyView fieldCat(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,

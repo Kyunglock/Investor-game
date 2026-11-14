@@ -63,6 +63,13 @@ export class BuyWall {
   private shotDelay() {
     return BUY_WALL.shotSeconds + (this.random() * 2 - 1) * BUY_WALL.shotJitter
   }
+  /** 방어선 구축 (503번): 벽이 바로 다시 서고 seconds 동안 깎이지 않는다. */
+  fortify(seconds: number) {
+    this.hp = this.maxHp
+    this.rebuildLeft = 0
+    this.retreatLeft = 0
+    this.protectionLeft = Math.max(this.protectionLeft, seconds)
+  }
   get active() {
     return this.hp > 0
   }
