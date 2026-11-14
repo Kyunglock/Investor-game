@@ -184,7 +184,11 @@ class IdleEngineTest {
   void bulletsPierceIntoTheTwoWallsBehindAtHalfAndQuarterDamageAndPersist() {
     // 총알 관통 (decisions.md 520번): 맨 앞 벽 100% → 다음 벽 50% → 그다음 벽 25%.
     start(1);
-    tick(1000, new IdleHit(1, "bullet", 1), new IdleHit(2, "bullet", 1), new IdleHit(3, "bullet", 1));
+    tick(
+        1000,
+        new IdleHit(1, "bullet", 1),
+        new IdleHit(2, "bullet", 1),
+        new IdleHit(3, "bullet", 1));
     assertThat(state.idle.damage).isEqualTo(2);
     assertThat(state.idle.nextDamage).isEqualTo(1);
     assertThat(state.idle.afterNextDamage).isEqualTo(0.5);
@@ -231,7 +235,9 @@ class IdleEngineTest {
   void explosionsAndSkillsNeverReachTheWallsBehind() {
     // 폭발 무기와 고양이 스킬의 광역 피해는 맨 앞 벽만 (520번).
     start(1);
-    state.idle.cats = new java.util.LinkedHashMap<>(java.util.Map.of("sky", 9, "mint", 9, "lilac", 9, "sunset", 9));
+    state.idle.cats =
+        new java.util.LinkedHashMap<>(
+            java.util.Map.of("sky", 9, "mint", 9, "lilac", 9, "sunset", 9));
     state.idle.fielded = new java.util.ArrayList<>(List.of("sky", "mint", "lilac", "sunset"));
     tick(
         3000,
