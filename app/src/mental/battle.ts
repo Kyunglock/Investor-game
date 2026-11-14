@@ -75,7 +75,14 @@ import {
   type MateGun,
   xpToNext,
 } from './cards'
-import { CAT_GUN, catGunAim, catGunPose, catShoulder } from './catGun'
+import {
+  CAT_GUN,
+  CAT_GUN_DEPTH,
+  CAT_SHOT_DEPTH,
+  catGunAim,
+  catGunPose,
+  catShoulder,
+} from './catGun'
 import { CAT_SCALE, mateModel } from './catModels'
 import { catRunFrame, catRunKey } from './catRun'
 import { CIRCUIT_BREAKER, CircuitBreaker } from './circuitBreaker'
@@ -871,7 +878,7 @@ class BattleScene extends Phaser.Scene {
     this.player = this.physics.add.image(w / 2, this.playerY(), 'hero-idle')
     this.heroGun = this.add
       .image(0, 0, bakeCatGun(this, this.opts.hero.weapon.grade, 'hero'))
-      .setDepth(5.1)
+      .setDepth(CAT_GUN_DEPTH)
     this.poseGun(this.player, this.aim, 0)
     this.player.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h).setDepth(5)
     const pr = 22
@@ -1008,7 +1015,7 @@ class BattleScene extends Phaser.Scene {
     this.createMagic()
     // 총구 화염은 고양이 넷이 함께 쏘아도 모자라지 않게 (393번).
     for (let i = 0; i < 12; i++) {
-      this.flashes.push(this.add.image(0, 0, 'flash').setDepth(6).setVisible(false))
+      this.flashes.push(this.add.image(0, 0, 'flash').setDepth(CAT_SHOT_DEPTH).setVisible(false))
     }
     for (let i = 0; i < 20; i++) {
       this.impacts.push(
@@ -1196,7 +1203,7 @@ class BattleScene extends Phaser.Scene {
             this.mateLook(i),
           ),
         )
-        .setDepth(5.1),
+        .setDepth(CAT_GUN_DEPTH),
       aim: this.aim,
       // 사장냥과 번갈아 쏘게 연사 간격 안에서 조금씩 어긋나게 시작한다.
       lastFire: this.lastFire + (this.attackInterval * (i + 1)) / (MATE_LOOKS.length + 1),
@@ -3405,7 +3412,9 @@ class BattleScene extends Phaser.Scene {
     const stats = bulletStats(gun ?? this.loadout)
     const b = this.bullets.get(m.x, m.y, `bullet-${grade}-0`) as Bullet | null
     if (!b) return
-    b.setTexture(`bullet-${grade}-0`).enableBody(true, m.x, m.y, true, true).setDepth(6.5)
+    b.setTexture(`bullet-${grade}-0`)
+      .enableBody(true, m.x, m.y, true, true)
+      .setDepth(CAT_SHOT_DEPTH)
     b.kind = kind
     b.grade = grade
     b.critical = gun?.critical ?? 1

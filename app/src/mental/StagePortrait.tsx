@@ -30,6 +30,13 @@ export function StagePortrait({ weapon }: { weapon: Weapon }) {
       ctx.beginPath()
       ctx.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
       ctx.fill()
+      const pose = catGunPose('hero', 0, 0, -Math.PI / 4)
+      ctx.save()
+      ctx.translate(50 + pose.x / CAT_SCALE, 55 + pose.y / CAT_SCALE)
+      ctx.rotate(pose.angle)
+      ctx.translate(-CAT_GUN.pivotX, -CAT_GUN.pivotY)
+      drawBattleGun(ctx, weapons, weapon.grade)
+      ctx.restore()
       drawSprite(
         ctx,
         source,
@@ -37,18 +44,11 @@ export function StagePortrait({ weapon }: { weapon: Weapon }) {
         { x: 14, y: 3, w: 75, h: 100 },
         'height',
       )
-      const pose = catGunPose('hero', 0, 0, -Math.PI / 2)
-      ctx.save()
-      ctx.translate(50 + pose.x / CAT_SCALE, 55 + pose.y / CAT_SCALE)
-      ctx.rotate(pose.angle)
-      ctx.translate(-CAT_GUN.pivotX, -CAT_GUN.pivotY)
-      drawBattleGun(ctx, weapons, weapon.grade)
-      ctx.restore()
     }
     source.onload = paint
     weapons.onload = paint
     source.src = STAGE_ASSETS.rigBodies
-    weapons.src = STAGE_ASSETS.battleWeapons
+    weapons.src = STAGE_ASSETS.weapons
     return () => {
       cancelled = true
     }

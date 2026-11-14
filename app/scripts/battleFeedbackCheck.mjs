@@ -70,7 +70,7 @@ try {
           const expected = gun
             .getWorldTransformMatrix()
             .transformPoint(
-              gun.width * (63 / 80) - gun.displayOriginX,
+              gun.width * (50 / 80) - gun.displayOriginX,
               gun.height * 0.5 - gun.displayOriginY,
             )
           const bullet = scene.bullets
@@ -81,10 +81,43 @@ try {
                 Math.abs(b.fromX - expected.x) < 0.01 &&
                 Math.abs(b.fromY - expected.y) < 0.01,
             )
+          const bodyCanvas = scene.textures.get(body.texture.key).getSourceImage()
+          const gunCanvas = scene.textures.get(gun.texture.key).getSourceImage()
+          const bodyPixels = bodyCanvas
+            .getContext('2d')
+            .getImageData(0, 0, bodyCanvas.width, bodyCanvas.height).data
+          const gunPixels = gunCanvas
+            .getContext('2d')
+            .getImageData(0, 0, gunCanvas.width, gunCanvas.height).data
+          const gunMatrix = gun.getWorldTransformMatrix()
+          const bodyMatrix = body.getWorldTransformMatrix()
+          let opaque = 0,
+            covered = 0
+          for (let y = 0; y < gunCanvas.height; y += 2) {
+            for (let x = 0; x < gunCanvas.width; x += 2) {
+              if (gunPixels[(y * gunCanvas.width + x) * 4 + 3] < 200) continue
+              opaque++
+              const world = gunMatrix.transformPoint(x - gun.displayOriginX, y - gun.displayOriginY)
+              const local = bodyMatrix.applyInverse(world.x, world.y)
+              const bx = Math.round(local.x + body.displayOriginX)
+              const by = Math.round(local.y + body.displayOriginY)
+              if (
+                bx >= 0 &&
+                bx < bodyCanvas.width &&
+                by >= 0 &&
+                by < bodyCanvas.height &&
+                bodyPixels[(by * bodyCanvas.width + bx) * 4 + 3] > 200
+              )
+                covered++
+            }
+          }
           shots.push({
             exists: Boolean(bullet),
             damage: bullet?.damage,
             vy: bullet?.body.velocity.y,
+            gunBehindBody: gun.depth < body.depth,
+            covered: covered / opaque,
+            bulletBehindBody: bullet?.depth < body.depth,
           })
         })
         const textures = actors.map((body) =>
@@ -135,6 +168,9 @@ try {
         assert(shot.exists)
         assert.equal(shot.damage, result.damage * 2)
         assert(shot.vy < 0)
+        assert(shot.gunBehindBody)
+        assert(shot.covered >= 0.6, `몸과 팔이 총 대부분을 가림: ${shot.covered}`)
+        assert(shot.bulletBehindBody)
       }
       await page.evaluate(() => window.catHandle.setPaused(false))
       await page.waitForTimeout(1800)
@@ -197,7 +233,7 @@ try {
       }
       assert.deepEqual(errors, [])
       console.log(
-        `PASS: ${mode}: original join count/cap, distinct models, separate gun/paws, upright bodies, all four rendered muzzle origins/damage`,
+        `PASS: ${mode}: original join count/cap, distinct models, body-occluded guns, upright side-profile bodies, all four rendered muzzle origins/damage`,
       )
       const cleaned = await page.evaluate(() => {
         const scene = window.feedbackScene
@@ -205,7 +241,7 @@ try {
         window.catHandle.applyLoadout({ ...scene.loadout, mates: 0 })
         return guns.every((gun) => !gun.scene)
       })
-      assert(cleaned, '동료 해제 시 분리된 총·앞발 이미지도 제거')
+      assert(cleaned, '동료 해제 시 분리된 총 이미지도 제거')
       await page.evaluate(() => window.catHandle.stop())
       await page.close()
     }
