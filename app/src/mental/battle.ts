@@ -102,7 +102,7 @@ import { WALK_FRAMES, walkFrame } from './enemyWalk'
 import { type GameSpeed, simScale } from './gameSpeed'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
 import { DEFAULT_WEAPON, type Hero, type Weapon } from './hero'
-import { BULLET_H, BULLET_W, bulletHitbox } from './hitbox'
+import { BULLET_W, bulletHitbox } from './hitbox'
 import { IdleWallQueueFx, idleWallLayout } from './idleWallQueue'
 import {
   densest,
@@ -146,7 +146,7 @@ import {
   type WeaponKind,
   weaponDamage,
 } from './weaponEffects'
-import { BULLET_VISUAL_SCALE, GRADE_FIRE, gradeTint } from './weaponVisuals'
+import { BULLET_ART, BULLET_VISUAL_SCALE, GRADE_FIRE, gradeTint, sparkles } from './weaponVisuals'
 
 /**
  * 멘탈 전투 한 판 (decisions.md 328번). Phaser 3 Arcade로 돈다: 탄·적은 풀에서 재사용하고, 도트 그림(art.ts)은 캔버스에 한 번 구워 둔다. 규칙은 화면
@@ -271,6 +271,10 @@ const BULLET_LIFE = 900
  * 이 시간으로 잊는다. 서버가 늦은 접속 신호를 받아 주는 10초(497번)보다 길다.
  */
 const IDLE_HIT_MS = 12000
+/** 사격 모션 (513번): 반동 1일 때 뒤로 밀리는 거리(px), 눌리는 비율, 넓어지는 비율, 젖혀지는 각(rad), 그리고 초당 줄어드는 빠르기. */
+const RECOIL = { back: 5, squash: 0.07, wide: 0.05, lean: 0.07, decay: 16 }
+const recoilDecay = (kick: number, dt: number) =>
+  kick < 0.01 ? 0 : kick * Math.exp(-RECOIL.decay * dt)
 /** 화면의 벽이 바닥난 채로 서버의 판정을 다시 묻는 간격(ms): 서버가 아직 아니라고 해도 접속 신호가 몰리지 않게 한다. */
 const IDLE_WALL_DOWN_MS = 250
 /** 자동 전투에서 벽 앞에 막힌 시간으로 셈하는 상한(초): 물량 간격이 바탕의 절반까지만 줄어든다 (assault.ts spawnSeconds, 494번). */
@@ -356,6 +360,8 @@ interface Mate {
   shots: number
   /** 합류할 때 위에서 떨어지는 높이(px). 트윈이 0으로 줄인다. */
   drop: number
+  /** 쏜 직후의 반동(0이면 가만히, 513번). 쏠 때 채우고 금세 줄어든다. */
+  kick: number
 }
 /** 공격 판(413번)의 매도벽 하나: 칸들(적 풀의 'cell')과 뒤 판, 가격 이름표. y는 맨 아랫줄의 아래 끝(화면 y)이고 오를 때 함께 내려온다. */
 interface WallState {
@@ -593,6 +599,7 @@ class BattleScene extends Phaser.Scene {
   private boom!: Record<UnitKind, Phaser.GameObjects.Particles.ParticleEmitter>
   /** 총 손맛: 탄 꼬리, 맞는 자리의 불꽃, 총구 화염 풀. */
   private trail!: Phaser.GameObjects.Particles.ParticleEmitter
+  private twinkle!: Phaser.GameObjects.Particles.ParticleEmitter
   private hitSpark!: Phaser.GameObjects.Particles.ParticleEmitter
   private flashes: Phaser.GameObjects.Image[] = []
   private flashIndex = 0
@@ -892,7 +899,7 @@ class BattleScene extends Phaser.Scene {
       if (bullet.wallShot && !enemy.cell && !enemy.boss) return
       const angle = Math.atan2(bullet.body.velocity.y, bullet.body.velocity.x)
       const [bx, by] = [bullet.x, bullet.y]
-      this.impact(bx, by, bullet.power)
+      this.impact(bx, by, bullet.power, bullet.grade)
       // 무기마다 다른 효과 (376번): 소총은 뚫고 지나가고, 리볼버는 치명타, 기관단총은 맞은 적을 느리게 한다.
       bullet.hitList.push(enemy)
       // 매도벽은 뚫고 지나가지 못한다 (457번): 소총도 벽 칸에서 멈춘다.
@@ -964,12 +971,24 @@ class BattleScene extends Phaser.Scene {
         lifespan: 150,
         scale: { start: 2 * TEX, end: 0.4 * TEX },
         alpha: { start: 0.85, end: 0 },
-        tint: [gradeTint(this.opts.hero.weapon.grade), 0xffffff],
+        tint: gradeTint(this.opts.hero.weapon.grade),
         emitting: false,
         // 고양이 넷이 쏘면 탄이 넷 배라 꼬리 수를 묶는다 (393번).
         maxAliveParticles: 160,
       })
       .setDepth(5.5)
+    // S 등급부터 탄이 흘리는 반짝이 (512번): 작은 별이 흩어지며 사라진다.
+    this.twinkle = this.add
+      .particles(0, 0, 'twinkle', {
+        lifespan: { min: 220, max: 420 },
+        speed: { min: 8, max: 46 },
+        scale: { start: 1.1 * TEX, end: 0 },
+        rotate: { min: 0, max: 180 },
+        alpha: { start: 1, end: 0 },
+        emitting: false,
+        maxAliveParticles: 70,
+      })
+      .setDepth(5.6)
     this.hitSpark = this.add
       .particles(0, 0, 'spark', {
         speed: { min: 120, max: 260 },
@@ -1164,6 +1183,7 @@ class BattleScene extends Phaser.Scene {
       lastFire: this.lastFire + (this.attackInterval * (i + 1)) / (MATE_LOOKS.length + 1),
       shots: 0,
       drop: this.reducedMotion ? 0 : -150,
+      kick: 0,
     }
     this.mates.push(mate)
     // 늘어선 자리가 바뀌었다: 새 고양이는 제자리에서 내려오고 나머지는 옆으로 비켜선다(update가 미끄러지게 옮긴다).
@@ -3211,6 +3231,8 @@ class BattleScene extends Phaser.Scene {
     if (this.opts.idle) bakeCatRuns(this, hero, grades)
   }
   private mateGunsBaked = ''
+  /** 사장냥의 반동 (513번, Mate.kick과 같다). */
+  private heroKick = 0
 
   /** index번째 고양이의 그림 차례 (mates.ts MATE_LOOKS): 자동 전투는 고양이마다 제 그림, 스테이지는 들어온 차례다. */
   private mateLook(index: number) {
@@ -3245,12 +3267,16 @@ class BattleScene extends Phaser.Scene {
     const traits = WEAPON_TRAITS[kind]
     const reload = (shots: number) =>
       traits.magazine && shots % traits.magazine === 0 ? traits.reloadMs : 0
+    // 사격 모션 (513번): 쏠 때마다 몸이 뒤로 밀렸다 돌아온다. 총구 화염이 큰 무기일수록 세다.
+    const kick = this.reducedMotion ? 0 : Math.min(1.5, style.flash)
     if (mate) {
+      mate.kick = kick
       mate.shots++
       mate.lastFire = now + reload(mate.shots)
       mate.aim = aim
       this.damageStats.mateShots++
     } else {
+      this.heroKick = kick
       this.heroShots++
       const wait = reload(this.heroShots)
       this.lastFire = now + wait
@@ -3279,6 +3305,7 @@ class BattleScene extends Phaser.Scene {
     })
     // 산탄총: 총구 앞으로 불꽃이 부채꼴로 튄다(탄은 한 덩이, 362번).
     const sparkCount = Math.min(3, style.sparks)
+    this.trail.setParticleTint(gradeTint(grade))
     for (let i = 0; i < sparkCount && !this.reducedMotion; i++) {
       const a = aim + (sparkCount > 1 ? ((i / (sparkCount - 1)) * 2 - 1) * 0.45 : 0)
       this.trail.emitParticleAt(m.x + Math.cos(a) * 18, m.y + Math.sin(a) * 18)
@@ -3306,7 +3333,7 @@ class BattleScene extends Phaser.Scene {
     b.range = traits.range == null ? Number.POSITIVE_INFINITY : this.view().h * traits.range
     b.setDisplaySize(
       BULLET_W * stats.scale * style.length * 0.7 * BULLET_VISUAL_SCALE,
-      BULLET_H * stats.scale * style.width * 0.7 * BULLET_VISUAL_SCALE,
+      BULLET_ART.h * stats.scale * style.width * 0.7 * BULLET_VISUAL_SCALE,
     ).setRotation(base)
     b.clearTint()
     const hb = bulletHitbox(b.width, b.height, style.length * 0.7 * BULLET_VISUAL_SCALE)
@@ -4178,9 +4205,11 @@ class BattleScene extends Phaser.Scene {
   }
 
   /** 명중 폭발: 재사용 풀로 섬광과 충격파를 함께 펼친다. */
-  private impact(x: number, y: number, power: number) {
+  private impact(x: number, y: number, power: number, grade: Weapon['grade']) {
     const effect = this.impacts[this.impactIndex++ % this.impacts.length]
     this.tweens.killTweensOf(effect)
+    // 명중 모양도 그 탄의 등급 것이다 (512번).
+    effect.setTexture(`impact-${grade}`)
     const size = TEX * (0.45 + Math.min(power, 5) * 0.1)
     effect
       .setPosition(x, y)
@@ -4315,7 +4344,7 @@ class BattleScene extends Phaser.Scene {
 
   /** 함께 싸우는 고양이: 제자리로 미끄러지고, 숨 쉬고, 맡은 적을 겨눠 연사 간격마다 쏜다 (393·409번). */
   private updateMates(time: number, dt: number, targets: ({ x: number; y: number } | null)[]) {
-    const y = this.mode === 'defense' ? this.playerY() : this.player.y
+    const y = this.mode === 'defense' ? this.playerY() : this.player.y - this.heroKick * RECOIL.back
     const k = Math.min(1, dt * 8)
     const turn = Math.min(1, dt * 10)
     for (const [i, m] of this.mates.entries()) {
@@ -4330,10 +4359,15 @@ class BattleScene extends Phaser.Scene {
                 catRunFrame(time / 1000, i + 1, this.runRush > 0),
               ),
         )
-      b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop)
+      m.kick = recoilDecay(m.kick, dt)
+      b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop + m.kick * RECOIL.back)
+      b.setRotation(-m.kick * RECOIL.lean)
       m.magicMark.setPosition(b.x, b.y - 58)
       if (!this.tweens.isTweening(b)) {
-        b.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h * (1 + Math.sin(time / 260 + i * 1.7) * 0.025))
+        b.setDisplaySize(
+          HERO_SIZE.w * (1 + m.kick * RECOIL.wide),
+          HERO_SIZE.h * (1 + Math.sin(time / 260 + i * 1.7) * 0.025) * (1 - m.kick * RECOIL.squash),
+        )
       }
       if (target) {
         // 공격 판도 맡은 과녁을 겨눈다 (#593). 과녁이 없으면 제 머리 위(벽).
@@ -4452,7 +4486,8 @@ class BattleScene extends Phaser.Scene {
     const ptr = this.input.activePointer
     const { w, h } = this.view()
     p.setVelocity(0, 0)
-    p.setPosition(this.standX(0), this.playerY())
+    this.heroKick = recoilDecay(this.heroKick, dt)
+    p.setPosition(this.standX(0), this.playerY() + this.heroKick * RECOIL.back)
     const hurting = time < this.hurtUntil
     p.setTexture(
       hurting
@@ -4463,7 +4498,10 @@ class BattleScene extends Phaser.Scene {
             ? 'hero-fire'
             : 'hero-idle',
     )
-    p.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
+    p.setDisplaySize(
+      HERO_SIZE.w * (1 + this.heroKick * RECOIL.wide),
+      HERO_SIZE.h * (1 - this.heroKick * RECOIL.squash),
+    ).setRotation(-this.heroKick * RECOIL.lean)
     if (this.wall && this.wallZone) {
       this.wall.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)
       this.wall.setTexture(this.mental <= this.loadout.maxMental / 2 ? 'wall-cracked' : 'wall')
@@ -4642,7 +4680,14 @@ class BattleScene extends Phaser.Scene {
       }
       if (!this.reducedMotion && time - (b.trailAt ?? 0) >= b.trailMs) {
         b.trailAt = time
+        // 꼬리는 그 탄의 등급 빛깔이다 (512번): 고양이마다 든 무기가 달라 사장냥 빛깔 하나로 칠하지 않는다.
+        const tint = gradeTint(b.grade)
+        this.trail.setParticleTint(tint)
         this.trail.emitParticleAt(b.x, b.y)
+        if (sparkles(b.grade)) {
+          this.twinkle.setParticleTint(Math.random() < 0.5 ? 0xffffff : tint)
+          this.twinkle.emitParticleAt(b.x, b.y)
+        }
       }
     }
   }

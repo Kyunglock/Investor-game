@@ -11,7 +11,7 @@ import { MATE_LOOKS } from './mates'
 import { shareLabel, sharesOf } from './shares'
 import { drawBuyWall, drawMentalWall, drawSprite, drawToySellWall, STAGE_HERO } from './stageArt'
 import { drawEquippedHero, drawEquippedMate } from './weaponArt'
-import { drawWeaponBullet, drawWeaponImpact, WEAPON_GRADES } from './weaponVisuals'
+import { BULLET_ART, drawWeaponBullet, drawWeaponImpact, WEAPON_GRADES } from './weaponVisuals'
 
 /** 승인한 캐주얼 시안의 투명 스프라이트를 Phaser 텍스처로 굽고, 무기·벽·탄환을 실시간 상태에 맞춰 합성한다. */
 
@@ -284,7 +284,9 @@ export function bakeStage(scene: Phaser.Scene, _genre: Genre) {
   })
   for (const grade of WEAPON_GRADES) {
     for (const look of [0, 1] as const) {
-      bake(scene, `bullet-${grade}-${look}`, 32, 10, (c) => drawWeaponBullet(c, grade, look))
+      bake(scene, `bullet-${grade}-${look}`, BULLET_ART.w, BULLET_ART.h, (c) =>
+        drawWeaponBullet(c, grade, look),
+      )
     }
     bake(scene, `impact-${grade}`, 80, 80, (c) => drawWeaponImpact(c, grade))
   }
@@ -305,10 +307,22 @@ export function bakeStage(scene: Phaser.Scene, _genre: Genre) {
     c.fill()
   })
   // 탄 꼬리·맞은 파편: 작은 둥근 점
+  // 흰 점에 탄의 등급 빛깔을 입힌다 (512번).
   bake(scene, 'trail', 4, 4, (c) => {
     c.beginPath()
     c.ellipse(2, 2, 2, 2, 0, 0, Math.PI * 2)
-    c.fillStyle = '#ffb060'
+    c.fillStyle = '#ffffff'
+    c.fill()
+  })
+  // S 등급부터 탄이 흘리는 반짝이: 네 갈래 별.
+  bake(scene, 'twinkle', 8, 8, (c) => {
+    c.beginPath()
+    for (let i = 0; i < 8; i++) {
+      const r = i % 2 ? 1.1 : 4
+      c.lineTo(4 + Math.cos((i * Math.PI) / 4) * r, 4 + Math.sin((i * Math.PI) / 4) * r)
+    }
+    c.closePath()
+    c.fillStyle = '#ffffff'
     c.fill()
   })
   bake(scene, 'spark', 4, 4, (c) => {
