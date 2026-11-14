@@ -494,7 +494,7 @@ class BattleScene extends Phaser.Scene {
   private bossEnemy: Enemy | null = null
   private lastSummon = 0
   /** 디펜스 번호 스테이지(509번): 적 체력 배율과, 보스를 이미 불렀나. EX(스테이지 없음)는 배율 1이고 보스가 없다. */
-  private readonly hpScale: number
+  private hpScale: number
   /** 디펜스 번호 스테이지의 적 수·빠르기·멘탈 피해 배율 (#565). EX 디펜스는 1. */
   private countScale: number
   private speedScale: number
@@ -701,6 +701,11 @@ class BattleScene extends Phaser.Scene {
     this.pushHud(true)
   }
 
+  /** 자동 전투의 매수벽은 물량과 같은 배율로 두꺼워진다 (498번): 매수 대 매도의 균형은 그대로이고, 물량을 지우는 데 드는 화력만 는다. */
+  private buyWallMental() {
+    return this.loadout.maxMental * (this.opts.idle ? this.hpScale : 1)
+  }
+
   idleHitsSent(sequence: number) {
     for (const hit of this.idleHits) hit.sequence ??= sequence
   }
@@ -718,7 +723,7 @@ class BattleScene extends Phaser.Scene {
       }
     }
     this.loadout = { ...loadout, heal: 0 }
-    this.buyWall?.resize(loadout.maxMental)
+    this.buyWall?.resize(this.buyWallMental())
     this.syncMates()
     if (loadout.heal > 0) {
       this.mental = Math.min(loadout.maxMental, this.mental + loadout.heal)
@@ -998,7 +1003,7 @@ class BattleScene extends Phaser.Scene {
     if (this.assault) {
       this.createAssaultPools()
       this.buyWall = new BuyWall(
-        this.loadout.maxMental,
+        this.buyWallMental(),
         Math.random,
         this.opts.idle ? BUY_WALL.idleRebuildSeconds : undefined,
       )
@@ -1589,10 +1594,16 @@ class BattleScene extends Phaser.Scene {
         const snapshot = this.opts.idle?.()
         this.idleWall = snapshot?.wall ?? this.idleWall
         // 벽이 깊어질수록 미션처럼 물량이 잦고 무거워진다 (493번).
-        Object.assign(spec, idleAssaultSpec(this.idleWall))
+        Object.assign(spec, idleAssaultSpec(this.idleWall, snapshot?.maxHp))
         this.countScale = spec.enemyCount
         this.speedScale = spec.enemySpeed
         this.dmgScale = spec.enemyDmg
+        if (spec.enemyHp !== this.hpScale) {
+          // 열 벽마다 물량의 수량이 는다 (498번): 주문서에 적힌 주식 수도 새로 칠한다.
+          this.hpScale = spec.enemyHp
+          bakeOrders(this, this.hpScale, true)
+          this.buyWall?.resize(this.buyWallMental())
+        }
         // The next wall takes the exact position of the first queued wall.
         const spacing = idleWallLayout(this.lane().width, this.view().h).spacing
         this.addWall(0, Math.min(wall.y, this.stopY()) - spacing)

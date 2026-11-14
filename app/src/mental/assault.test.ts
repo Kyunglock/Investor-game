@@ -12,7 +12,9 @@ import {
   assaultTarget,
   cellShares,
   climbSpeed,
+  IDLE_THREAT_HP,
   idleAssaultSpec,
+  idleThreat,
   orderPriceStep,
   pickFlow,
   rowHps,
@@ -225,11 +227,25 @@ describe('매도벽 경험치 (#700)', () => {
     expect(fourth.spawnSeconds).toBeLessThan(first.walls[0].spawnSeconds)
     expect(fourth.rows).toBe(1)
     expect(idleAssaultSpec(10).walls[0].boss).toBe(true)
-    // 열 벽을 넘기면 미션 레벨이 하나 오른 만큼 수·공격이 늘고, 물량 하나의 체력은 그대로다.
+    // 열 벽을 넘기면 수·공격이 는다. 벽 체력을 모르면 물량 하나의 수량은 그대로다.
     const next = idleAssaultSpec(11)
     expect(next.walls[0].mix).toEqual(ASSAULT_WALLS[0].mix)
     expect(next.enemyCount).toBeGreaterThan(first.enemyCount)
     expect(next.enemyDmg).toBeGreaterThan(first.enemyDmg)
     expect(next.enemyHp).toBe(1)
+  })
+  it('자동 전투의 물량은 매도벽 체력을 따라 커진다 (498번)', () => {
+    // 첫 벽(체력 20)은 그대로이고, 벽 체력이 IDLE_THREAT_HP만큼 늘 때마다 한 배씩 는다.
+    expect(idleThreat(1, 20)).toBe(1)
+    expect(idleThreat(51, IDLE_THREAT_HP)).toBe(2)
+    expect(idleThreat(201, 18248)).toBe(25)
+    // 큰손 벽은 체력이 네 배지만 물량은 이웃 벽과 비슷하다.
+    expect(idleThreat(200, 4 * 18084)).toBe(25)
+    expect(idleThreat(5, 0)).toBe(1)
+    const deep = idleAssaultSpec(201, 18248)
+    const same = idleAssaultSpec(201)
+    expect(deep.enemyHp).toBe(25)
+    expect(deep.enemyDmg).toBe(same.enemyDmg * 25)
+    expect(deep.enemyCount).toBe(same.enemyCount)
   })
 })

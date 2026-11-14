@@ -45,8 +45,24 @@ export const WALL_H = 24
 type Painter = (c: CanvasRenderingContext2D) => void
 
 /** 캔버스에 그려 텍스처로 굽는다. 그림 좌표는 w×h(px)이고 배율만큼 크게 그린다. 같은 열쇠가 있으면 건너뛴다. */
-function bake(scene: Phaser.Scene, key: string, w: number, h: number, paint: Painter) {
+function bake(
+  scene: Phaser.Scene,
+  key: string,
+  w: number,
+  h: number,
+  paint: Painter,
+  redraw = false,
+) {
   if (scene.textures.exists(key)) {
+    // 같은 그림을 다시 칠한다: 이미 화면에 있는 것도 함께 바뀐다 (자동 전투의 물량 수량, 498번).
+    const old = scene.textures.get(key) as Phaser.Textures.CanvasTexture
+    if (!redraw || typeof old.getContext !== 'function') return
+    const c = old.getContext()
+    c.setTransform(1, 0, 0, 1, 0, 0)
+    c.clearRect(0, 0, old.width, old.height)
+    c.scale(DPR, DPR)
+    paint(c)
+    old.refresh()
     return
   }
   const cv = document.createElement('canvas')
@@ -573,7 +589,8 @@ export function drawWhale(c: CanvasRenderingContext2D) {
  * 매도 물량 그림: 64×64 칸 가운데에 그린다(battle.ts가 종류마다 배율을 곱해 놓는다). 프레임마다 살짝 떠올랐다 가라앉아(그림 안에서만) 걷는 고양이 적처럼
  * 같은 열쇠(enemyKey)로 돌린다. 매도벽 칸은 금 간 정도마다 하나씩.
  */
-export function bakeOrders(scene: Phaser.Scene, hpScale = 1) {
+/** redraw면 이미 구운 그림의 수량을 새 배율로 다시 칠한다. */
+export function bakeOrders(scene: Phaser.Scene, hpScale = 1, redraw = false) {
   const looks = {
     order: {
       box: { x: 7, y: 17, w: 50, h: 30 },
@@ -620,39 +637,46 @@ export function bakeOrders(scene: Phaser.Scene, hpScale = 1) {
   for (let frame = 0; frame < WALK_FRAMES; frame++) {
     const phase = (frame / WALK_FRAMES) * Math.PI * 2
     for (const [kind, v] of Object.entries(looks)) {
-      bake(scene, enemyKey(kind as UnitKind, frame), ENEMY_SIZE, ENEMY_SIZE, (c) => {
-        // 그림자는 제자리, 종이만 들썩인다. 시장가는 더 빨리 흔들린다.
-        c.fillStyle = '#10204a26'
-        c.beginPath()
-        c.ellipse(32, 56, v.box.w * 0.42, 3.5, 0, 0, Math.PI * 2)
-        c.fill()
-        c.save()
-        c.translate(32, 32 + Math.sin(phase) * 1.6)
-        c.rotate(Math.sin(phase + 1) * (kind === 'market' ? 0.08 : 0.04))
-        c.translate(-32, -32)
-        // 대량 매도는 뒤에 겹친 종이 두 장.
-        if (kind === 'bulk') {
-          for (const d of [6, 3]) {
-            c.fillStyle = d === 6 ? '#0b1f5c88' : '#16337fbb'
-            c.beginPath()
-            c.roundRect(v.box.x + d, v.box.y - d, v.box.w, v.box.h, 6)
-            c.fill()
+      bake(
+        scene,
+        enemyKey(kind as UnitKind, frame),
+        ENEMY_SIZE,
+        ENEMY_SIZE,
+        (c) => {
+          // 그림자는 제자리, 종이만 들썩인다. 시장가는 더 빨리 흔들린다.
+          c.fillStyle = '#10204a26'
+          c.beginPath()
+          c.ellipse(32, 56, v.box.w * 0.42, 3.5, 0, 0, Math.PI * 2)
+          c.fill()
+          c.save()
+          c.translate(32, 32 + Math.sin(phase) * 1.6)
+          c.rotate(Math.sin(phase + 1) * (kind === 'market' ? 0.08 : 0.04))
+          c.translate(-32, -32)
+          // 대량 매도는 뒤에 겹친 종이 두 장.
+          if (kind === 'bulk') {
+            for (const d of [6, 3]) {
+              c.fillStyle = d === 6 ? '#0b1f5c88' : '#16337fbb'
+              c.beginPath()
+              c.roundRect(v.box.x + d, v.box.y - d, v.box.w, v.box.h, 6)
+              c.fill()
+            }
           }
-        }
-        // 시장가는 아래로 쏟아지는 꼬리(속도선) 셋.
-        if (kind === 'market') {
-          c.strokeStyle = '#9cc8ff'
-          c.lineWidth = 2
-          for (const dx of [-9, 0, 9]) {
-            c.beginPath()
-            c.moveTo(32 + dx, v.box.y - 2)
-            c.lineTo(32 + dx, v.box.y - 10)
-            c.stroke()
+          // 시장가는 아래로 쏟아지는 꼬리(속도선) 셋.
+          if (kind === 'market') {
+            c.strokeStyle = '#9cc8ff'
+            c.lineWidth = 2
+            for (const dx of [-9, 0, 9]) {
+              c.beginPath()
+              c.moveTo(32 + dx, v.box.y - 2)
+              c.lineTo(32 + dx, v.box.y - 10)
+              c.stroke()
+            }
           }
-        }
-        ticket(c, v.box, v.look)
-        c.restore()
-      })
+          ticket(c, v.box, v.look)
+          c.restore()
+        },
+        redraw,
+      )
     }
     bake(scene, enemyKey('whale', frame), ENEMY_SIZE, ENEMY_SIZE, (c) => {
       c.save()

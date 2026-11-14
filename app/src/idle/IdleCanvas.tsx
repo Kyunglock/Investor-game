@@ -43,7 +43,7 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
       .then(({ startBattle }) => {
         if (disposed || !host.current) return
         const c = latest.current.company
-        const spec = idleAssaultSpec(c.idle?.wall ?? 1)
+        const spec = idleAssaultSpec(c.idle?.wall ?? 1, c.idle?.maxHp)
         battle.current = startBattle(host.current, {
           mode: 'assault',
           speed: 2,
