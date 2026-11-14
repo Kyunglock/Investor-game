@@ -6,6 +6,11 @@ try {
   for (const reducedMotion of ['no-preference', 'reduce']) {
     for (const mode of ['assault', 'defense']) {
       const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion })
+      if (process.env.WALL_SHOTS) {
+        await page.exposeFunction('captureWallBreak', () =>
+          page.screenshot({ path: `/tmp/wall-break-${mode}-${reducedMotion}.png` }),
+        )
+      }
       await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5319/app/')
       const result = await page.evaluate(async (mode) => {
         const [{ startBattle }, cards, { DEFAULT_WEAPON }, { catMuzzle }] = await Promise.all([
@@ -93,8 +98,41 @@ try {
             wallStable &&= surface.x === position.x && surface.y === position.y
           }
         }
+        let shatter = null
+        if (mode === 'assault') {
+          scene.setSimSpeed(1)
+          const wall = scene.walls.find((wall) => !wall.broken)
+          wall.y = scene.stopY()
+          wall.arrived = true
+          scene.placeWall(wall)
+          const cells = [...wall.cells]
+          const source = cells[0]
+          const texture = source.texture.key
+          for (const cell of cells) scene.kill(cell, false)
+          const pieces = scene.sellWallFx.pieces
+          const initial = pieces.map((piece) => ({ x: piece.x, y: piece.y }))
+          const textured = pieces.every((piece) => piece.texture.key === texture && piece.isCropped)
+          const hidden = cells.every((cell) => !cell.active && !cell.body.enable)
+          await new Promise((resolve) => setTimeout(resolve, 100))
+          if (window.captureWallBreak) await window.captureWallBreak()
+          const moving = pieces.some(
+            (piece, i) => piece.x !== initial[i].x || piece.y !== initial[i].y,
+          )
+          await new Promise((resolve) => setTimeout(resolve, 700))
+          const cleared = pieces.every((piece) => !piece.visible)
+          for (let i = 0; i < 10; i++) scene.sellWallFx.shatter(source, scene.reducedMotion)
+          shatter = { textured, hidden, moving, cleared, pool: scene.sellWallFx.pieces.length }
+        }
         handle.stop()
-        return { originMatches, mateIndependent, wallIndependent, fixedPose, maxRecoil, wallStable }
+        return {
+          originMatches,
+          mateIndependent,
+          wallIndependent,
+          fixedPose,
+          maxRecoil,
+          wallStable,
+          shatter,
+        }
       }, mode)
       for (const key of [
         'originMatches',
@@ -107,6 +145,13 @@ try {
       }
       assert(result.maxRecoil <= 1.8, 'small recoil only')
       if (reducedMotion === 'reduce') assert.equal(result.maxRecoil, 0)
+      if (result.shatter) {
+        assert.equal(result.shatter.textured, true)
+        assert.equal(result.shatter.hidden, true)
+        assert.equal(result.shatter.moving, reducedMotion !== 'reduce')
+        assert.equal(result.shatter.cleared, true)
+        assert.equal(result.shatter.pool, 48)
+      }
       console.log(`PASS ${mode}/${reducedMotion}`, result)
       await page.close()
     }

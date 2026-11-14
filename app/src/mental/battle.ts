@@ -124,6 +124,7 @@ import {
 } from './magic'
 import { MATE_LOOKS, mateFormation, spreadTargets } from './mates'
 import { OrderBarrierQueue } from './orderBarrier'
+import { SellWallFx } from './sellWallFx'
 import { shareLabel } from './shares'
 import { wallOffset } from './stageArt'
 import {
@@ -572,6 +573,7 @@ class BattleScene extends Phaser.Scene {
   private bossBar: Phaser.GameObjects.Graphics | null = null
   private ladder: Phaser.GameObjects.Graphics | null = null
   private speedLines: Phaser.GameObjects.Image[] = []
+  private sellWallFx: SellWallFx | null = null
   private chips: Phaser.GameObjects.Particles.ParticleEmitter | null = null
   private fills: Phaser.GameObjects.Text[] = []
   private fillIndex = 0
@@ -1325,6 +1327,7 @@ class BattleScene extends Phaser.Scene {
 
   /** 체결 숫자(물량이 깎이다 "체결!")와 벽 파편. */
   private createAssaultPools() {
+    this.sellWallFx = new SellWallFx(this)
     for (let i = 0; i < 14; i++) {
       this.fills.push(
         this.add
@@ -1573,7 +1576,9 @@ class BattleScene extends Phaser.Scene {
     if (crack > c.crack) {
       c.crack = crack
       e.setTexture(cellKey(crack))
-      this.chips?.explode(this.fx(4 + crack * 2), e.x, e.y + 6)
+      this.chips?.explode(this.fx(8 + crack * 3), e.x, e.y + 6)
+      if (!this.reducedMotion)
+        this.ring(e.x, e.y, 0xdff4ff, Math.min(70, e.displayWidth * 0.3), 200)
       this.playSound('thud')
     } else if (Math.random() < 0.35) {
       this.chips?.explode(1, e.x, e.y + 8)
@@ -1591,7 +1596,10 @@ class BattleScene extends Phaser.Scene {
     if (!c) return
     e.cell = null
     c.label.destroy()
-    this.chips?.explode(this.fx(14), e.x, e.y)
+    this.sellWallFx?.shatter(e, this.reducedMotion)
+    this.chips?.explode(this.fx(20), e.x, e.y)
+    if (!this.reducedMotion)
+      this.ring(e.x, e.y, 0xbfe0ff, Math.min(110, e.displayWidth * 0.45), 300)
     this.fill(e.x, e.y, cellShares(e.maxHp, e.maxHp), '#bfe0ff')
     // 적 풀은 돌려 쓰니 부서진 칸은 벽에서 바로 뺀다(같은 객체가 물량으로 다시 나올 수 있다).
     c.wall.cells = c.wall.cells.filter((o) => o !== e)
@@ -1629,7 +1637,11 @@ class BattleScene extends Phaser.Scene {
       this.chips?.explode(this.fx(8), x, wall.y - 8)
       this.boom.cell.explode(this.fx(4), x, wall.y - 10)
     }
-    this.glow(this.view().w / 2, wall.y - 20, 0xbfe0ff, lane.width * 0.45, 380, 0.5)
+    this.pop(this.view().w / 2, wall.y - 12, '매도벽 돌파!', '#fff0ae', 32)
+    if (!this.reducedMotion) {
+      this.ring(this.view().w / 2, wall.y - 20, 0xffe6a0, lane.width * 0.65, 460)
+      this.glow(this.view().w / 2, wall.y - 20, 0xbfe0ff, lane.width * 0.45, 240, 0.8)
+    }
     this.tweens.add({
       targets: wall.band,
       alpha: 0,
@@ -2880,15 +2892,8 @@ class BattleScene extends Phaser.Scene {
       e.dying = true
       if (e.body) e.body.enable = false
       this.tweens.killTweensOf(e)
-      this.tweens.add({
-        targets: e,
-        y: e.y + 26,
-        angle: Phaser.Math.Between(-25, 25),
-        alpha: 0,
-        duration: this.reducedMotion ? 120 : 300,
-        ease: 'Quad.easeIn',
-        onComplete: () => e.disableBody(true, true),
-      })
+      // 원본은 즉시 숨기고 독립된 파편이 붕괴를 이어 간다.
+      e.disableBody(true, true)
       return
     }
     if (e.blocker) {
