@@ -101,7 +101,7 @@ import {
 import { WALK_FRAMES, walkFrame } from './enemyWalk'
 import { type GameSpeed, simScale } from './gameSpeed'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
-import type { Hero, Weapon } from './hero'
+import { DEFAULT_WEAPON, type Hero, type Weapon } from './hero'
 import { BULLET_H, BULLET_W, bulletHitbox } from './hitbox'
 import { IdleWallQueueFx, idleWallLayout } from './idleWallQueue'
 import {
@@ -758,6 +758,7 @@ class BattleScene extends Phaser.Scene {
     }
     this.loadout = { ...loadout, heal: 0 }
     this.buyWall?.resize(this.buyWallMental())
+    this.bakeMateGuns()
     this.syncMates()
     if (loadout.heal > 0) {
       this.mental = Math.min(loadout.maxMental, this.mental + loadout.heal)
@@ -801,8 +802,7 @@ class BattleScene extends Phaser.Scene {
     this.opts.onReady?.()
     bakeStage(this, this.opts.genre)
     bakeHero(this, this.opts.hero.weapon.grade)
-    bakeMates(this)
-    if (this.opts.idle) bakeCatRuns(this, this.opts.hero.weapon.grade)
+    this.bakeMateGuns()
     bakeEnemies(this)
     bakeMagic(this)
     if (this.assault) bakeOrders(this, this.hpScale)
@@ -3193,6 +3193,25 @@ class BattleScene extends Phaser.Scene {
     )
   }
 
+  /**
+   * 고양이 그림을 든 무기대로 굽는다 (511번). 자동 전투는 고양이마다 제 무기의 등급, 스테이지의 카드 고양이는 사장냥과 같은 무기다.
+   * 장비가 바뀌어 등급이 달라졌을 때만 다시 굽는다. 같은 그림을 쓰는 고양이의 빛깔도 여기서 몸에 입힌다(492·493번).
+   */
+  private bakeMateGuns() {
+    // 그림을 불러오기 전에 수치가 먼저 들어올 수 있다(applyLoadout): 그때는 create가 굽는다.
+    if (!this.textures?.exists('art-weapons')) return
+    const hero = this.opts.hero.weapon.grade
+    const grades = MATE_LOOKS.map(() => (this.opts.idle ? DEFAULT_WEAPON.grade : hero))
+    for (const gun of this.loadout.mateGuns)
+      if (gun.look !== undefined) grades[gun.look] = gun.grade
+    const key = grades.join()
+    if (key === this.mateGunsBaked) return
+    this.mateGunsBaked = key
+    bakeMates(this, grades)
+    if (this.opts.idle) bakeCatRuns(this, hero, grades)
+  }
+  private mateGunsBaked = ''
+
   /** index번째 고양이의 그림 차례 (mates.ts MATE_LOOKS): 자동 전투는 고양이마다 제 그림, 스테이지는 들어온 차례다. */
   private mateLook(index: number) {
     return this.mateGun(index)?.look ?? index
@@ -4311,12 +4330,6 @@ class BattleScene extends Phaser.Scene {
                 catRunFrame(time / 1000, i + 1, this.runRush > 0),
               ),
         )
-      // 같은 그림을 쓰는 고양이는 빛깔로 가린다 (492·493번).
-      if (this.opts.idle) {
-        const tint = MATE_LOOKS[this.mateLook(i)].tint
-        if (tint === undefined) b.clearTint()
-        else b.setTint(tint)
-      }
       b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop)
       m.magicMark.setPosition(b.x, b.y - 58)
       if (!this.tweens.isTweening(b)) {

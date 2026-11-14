@@ -1,7 +1,7 @@
 import { CAT_H, CAT_W, type GunGrade } from '@web/features/game/cat/draw'
 
 import type Phaser from 'phaser'
-import { CAT_SCALE, mateModel } from './catModels'
+import { CAT_SCALE, type CatModel, mateModel } from './catModels'
 import { CAT_RUN_FRAMES, catRunKey, catRunPose } from './catRun'
 import { drawEmber, drawPillar, drawWater, drawWave, drawWoodenRam } from './effectArt'
 import { orderShares, type UnitKind } from './enemies'
@@ -10,7 +10,7 @@ import type { Genre } from './genres'
 import { MATE_LOOKS } from './mates'
 import { shareLabel, sharesOf } from './shares'
 import { drawBuyWall, drawMentalWall, drawSprite, drawToySellWall, STAGE_HERO } from './stageArt'
-import { drawEquippedHero } from './weaponArt'
+import { drawEquippedHero, drawEquippedMate } from './weaponArt'
 import { drawWeaponBullet, drawWeaponImpact, WEAPON_GRADES } from './weaponVisuals'
 
 /** 승인한 캐주얼 시안의 투명 스프라이트를 Phaser 텍스처로 굽고, 무기·벽·탄환을 실시간 상태에 맞춰 합성한다. */
@@ -104,12 +104,12 @@ export function bakeHero(scene: Phaser.Scene, grade: GunGrade) {
 }
 
 /** Bake alternating leg strides from the original cats, keeping the upper-body silhouette. */
-export function bakeCatRuns(scene: Phaser.Scene, grade: GunGrade) {
+export function bakeCatRuns(scene: Phaser.Scene, grade: GunGrade, mateGrades: readonly GunGrade[]) {
   const models = [
     { base: 'hero', model: 'hero' },
-    ...MATE_LOOKS.map((_, i) => ({ base: mateKey(i), model: mateModel(i) })),
-  ]
-  for (const { base, model } of models) {
+    ...MATE_LOOKS.map((_, i) => ({ base: mateKey(i), model: mateModel(i), look: i })),
+  ] as { base: string; model: CatModel; look?: number }[]
+  for (const { base, model, look } of models) {
     const source = scene.textures.get(`art-${model}`).getSourceImage() as HTMLImageElement
     const sprite = document.createElement('canvas')
     sprite.width = CAT_W * DPR
@@ -125,13 +125,7 @@ export function bakeCatRuns(scene: Phaser.Scene, grade: GunGrade) {
         grade,
       )
     } else {
-      drawSprite(
-        paint,
-        source,
-        { x: 0, y: 0, w: source.width, h: source.height },
-        { x: 14, y: 3, w: 75, h: 100 },
-        'height',
-      )
+      paintMate(scene, paint, look ?? 0, mateGrades[look ?? 0] ?? grade)
     }
     for (let frame = 0; frame < CAT_RUN_FRAMES; frame++) {
       bake(scene, catRunKey(base, frame), CAT_W, CAT_H, (c) => {
@@ -168,21 +162,37 @@ export function bakeCatRuns(scene: Phaser.Scene, grade: GunGrade) {
 /** 기존 동료 순서에 승인한 접힌 귀·장모 모델을 번갈아 사용한다. */
 export const mateKey = (i: number) => `mate-${i}`
 
-export function bakeMates(scene: Phaser.Scene) {
+/** look번째 고양이의 몸에 그 등급의 무기를 얹어 그린다 (511번). 같은 그림을 쓰는 고양이의 빛깔(tint)은 몸에만 입힌다. */
+function paintMate(
+  scene: Phaser.Scene,
+  c: CanvasRenderingContext2D,
+  look: number,
+  grade: GunGrade,
+) {
+  const model = mateModel(look)
+  if (model === 'hero') return
+  const image = (key: string) => scene.textures.get(key).getSourceImage() as HTMLImageElement
+  drawEquippedMate(
+    c,
+    model,
+    image(`art-${model}`),
+    image(`art-${model}GunMask`),
+    image('art-weapons'),
+    grade,
+    { w: CAT_W, h: CAT_H },
+    MATE_LOOKS[look].tint,
+  )
+}
+
+/** grades[i]는 i번째 그림의 고양이가 든 무기의 등급이다. 장비가 바뀌면 다시 굽는다. */
+export function bakeMates(scene: Phaser.Scene, grades: readonly GunGrade[]) {
   for (let i = 0; i < MATE_LOOKS.length; i++) {
-    const source = scene.textures.get(`art-${mateModel(i)}`).getSourceImage() as HTMLImageElement
     bake(scene, mateKey(i), CAT_W, CAT_H, (c) => {
       c.fillStyle = '#98633633'
       c.beginPath()
       c.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
       c.fill()
-      drawSprite(
-        c,
-        source,
-        { x: 0, y: 0, w: source.width, h: source.height },
-        { x: 14, y: 3, w: 75, h: 100 },
-        'height',
-      )
+      paintMate(scene, c, i, grades[i] ?? 'F')
     })
   }
 }

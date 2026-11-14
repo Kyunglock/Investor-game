@@ -1,4 +1,6 @@
+import fluffyGunMask from './assets/cat-fluffy-gun-mask.png'
 import fluffy from './assets/cat-fluffy-upward.png'
+import foldGunMask from './assets/cat-fold-gun-mask.png'
 import fold from './assets/cat-fold-upward.png'
 import enemies from './assets/enemies.png'
 import hero from './assets/hero-unarmed.png'
@@ -13,6 +15,8 @@ export const STAGE_ASSETS = {
   hero,
   fold,
   fluffy,
+  foldGunMask,
+  fluffyGunMask,
   enemies,
   wallBlocks,
   shortSeller,
