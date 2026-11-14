@@ -1,51 +1,19 @@
 import type { Company } from '@web/api/client'
 import { GUN_GRADES } from '@web/features/game/cat/draw'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
-import { STAGE_ASSETS } from '../mental/assets'
 import { GunSprite } from '../mental/GunSprite'
 import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
 import { GRADE_BADGE } from '../mental/WeaponInventory'
-import { IdleIcon } from './icons'
+import { catTrait, CatPortrait as Portrait } from './CatPortrait'
+import { type CatDraw, CatReveal } from './CatReveal'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
-/** 고양이마다 제 그림과 특성 (488·492·493번). 그림은 접힌 귀·장모 둘이고, 나머지는 빛깔(tone)로 가린다. 특성 수치는 서버가 준다. */
-const CATS: Record<CatCode, { art: string; tone?: string }> = {
-  sky: { art: STAGE_ASSETS.fold },
-  mint: { art: STAGE_ASSETS.fluffy },
-  lilac: { art: STAGE_ASSETS.fold, tone: 'lilac' },
-  sunset: { art: STAGE_ASSETS.fluffy, tone: 'sunset' },
-  night: { art: STAGE_ASSETS.fold, tone: 'night' },
-  snow: { art: STAGE_ASSETS.fluffy, tone: 'snow' },
-}
-
 /** 인벤토리 격자: 6칸 × 3줄 (495번). */
 const SLOTS = 18
-
-/** 이 고양이 총의 특성: 서버가 준 연사·치명타 배율을 그대로 읽는다. 공격력 특성은 damagePercent에 이미 들어 있다. */
-function trait(cat: Cat) {
-  const parts = [
-    cat.firePercent > 100 && `연사 +${cat.firePercent - 100}%`,
-    cat.criticalPercent > 100 && `치명타 피해 +${cat.criticalPercent - 100}%`,
-  ].filter(Boolean)
-  return parts.length > 0 ? parts.join(' · ') : '공격력 특화'
-}
-
-function Portrait({ code, locked }: { code?: CatCode; locked?: boolean }) {
-  const look = code ? CATS[code] : { art: STAGE_ASSETS.hero }
-  return (
-    <span
-      className={`idle-cat-portrait ${locked ? 'is-locked' : ''} ${look.tone ? `is-${look.tone}` : ''}`}
-      aria-hidden="true"
-    >
-      <img src={look.art} alt="" draggable={false} />
-      {locked && <IdleIcon name="lock" />}
-    </span>
-  )
-}
 
 /**
  * 고양이 메뉴 (decisions.md 488·491·493번): 뽑기권으로 고양이를 뽑고, 위의 출전 칸 넷에 세우고, 고양이마다 가진 무기를 하나씩 들린다. 아래는
@@ -54,8 +22,16 @@ function Portrait({ code, locked }: { code?: CatCode; locked?: boolean }) {
 export function IdleCats({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
-  const [drawing, setDrawing] = useState(false)
-  const [drawn, setDrawn] = useState<{ cat: Cat; isNew: boolean } | null>(null)
+  const [reveal, setReveal] = useState<{ id: number; result: CatDraw | null } | null>(null)
+  const [drawn, setDrawn] = useState<CatDraw | null>(null)
+  const drawing = useRef(false)
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
   const [picked, setPicked] = useState<CatCode | null>(null)
   const [arming, setArming] = useState(false)
   const idle = company.idle
@@ -72,23 +48,32 @@ export function IdleCats({ company }: { company: Company }) {
     setArming(false)
     setPicked(picked === code ? null : code)
   }
+  // 무기 뽑기와 같은 연출 (508번): 상자가 떨다 열리고 고양이가 나온다. 결과는 서버 응답의 스냅샷이다.
   const draw = async () => {
-    setDrawing(true)
+    if (drawing.current || useRaisingStore.getState().busy || tickets < 1) return
+    drawing.current = true
+    const id = Date.now()
+    setReveal({ id, result: null })
     sfx.stamp()
     try {
       const after = await useRaisingStore.getState().drawCat()
       const got = after?.idle?.cats.find(
         (c) => c.level !== idle.cats.find((old) => old.code === c.code)?.level,
       )
-      if (got) {
-        sfx.levelUp()
-        haptic.medium()
-        setDrawn({ cat: got, isNew: got.level === 1 })
-        setPicked(got.code)
-        setArming(false)
+      if (!mounted.current) return
+      if (!got) {
+        setReveal(null)
+        return
       }
+      const result = { cat: got, isNew: got.level === 1 }
+      setReveal({ id, result })
+      setDrawn(result)
+      setPicked(got.code)
+      setArming(false)
+    } catch {
+      if (mounted.current) setReveal(null)
     } finally {
-      setDrawing(false)
+      drawing.current = false
     }
   }
   return (
@@ -108,13 +93,22 @@ export function IdleCats({ company }: { company: Company }) {
           type="button"
           className="idle-buy"
           data-testid="cat-draw"
-          disabled={drawing || busy || tickets < 1}
+          disabled={Boolean(reveal) || busy || tickets < 1}
           onClick={() => void draw()}
         >
           뽑기
           <small>뽑기권 {tickets}장</small>
         </button>
       </section>
+      {reveal && (
+        <CatReveal
+          key={reveal.id}
+          result={reveal.result}
+          tickets={tickets}
+          onClose={() => setReveal(null)}
+          onAgain={() => void draw()}
+        />
+      )}
       <p className="idle-subtitle">
         출전 {fielded.length} / {idle.fieldSlots} · 사장냥은 늘 함께 싸워요
       </p>
@@ -155,7 +149,8 @@ export function IdleCats({ company }: { company: Company }) {
               {cat.name} <small>Lv.{cat.level}</small>
             </b>
             <small>
-              무기 공격력의 {cat.damagePercent}%로 쏴요 · {trait(cat)} · 고유 스킬 {cat.skillName}
+              무기 공격력의 {cat.damagePercent}%로 쏴요 · {catTrait(cat)} · 고유 스킬{' '}
+              {cat.skillName}
             </small>
             <button
               type="button"

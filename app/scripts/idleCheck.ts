@@ -229,7 +229,18 @@ try {
     await expect(page.getByTestId('cat-slot')).toHaveCount(4)
     await expect(page.getByTestId('cat-field')).toHaveCount(0)
     const tickets = company.armory.tickets
+    // The draw opens the same reveal as the weapon draw (decisions.md 508).
+    const drawCat = async () => {
+      await page.getByTestId('cat-draw').click()
+      await expect(page.getByTestId('cat-drawn')).toBeVisible()
+      await page.getByTestId('cat-reveal-close').click()
+      await expect(page.getByTestId('cat-reveal')).toHaveCount(0)
+    }
     await page.getByTestId('cat-draw').click()
+    await expect(page.getByTestId('cat-drawn')).toHaveAttribute('data-code', 'sky')
+    await expect(page.getByTestId('cat-drawn')).toHaveAttribute('data-new', 'true')
+    await expect(page.getByTestId('cat-drawn')).toContainText('NEW! 새 고양이')
+    await page.getByTestId('cat-reveal-close').click()
     await expect(page.getByTestId('cat-gacha')).toContainText('하늘냥 합류! 고유 스킬 메테오 스킬')
     await expect(page.getByTestId('cat-draw')).toContainText(`뽑기권 ${tickets - 1}장`)
     const detail = page.getByTestId('cat-detail')
@@ -246,7 +257,7 @@ try {
     await expect.poll(mates).toBe(0)
     await detail.getByTestId('cat-field').click()
     // Four field slots: the fifth cat waits until one rests.
-    for (let i = 0; i < 4; i++) await page.getByTestId('cat-draw').click()
+    for (let i = 0; i < 4; i++) await drawCat()
     await expect(detail).toHaveAttribute('data-code', 'night')
     await expect(detail.getByTestId('cat-field')).toBeDisabled()
     await expect(detail.getByTestId('cat-field')).toHaveText('칸 없음')
