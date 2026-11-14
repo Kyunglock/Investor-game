@@ -321,7 +321,7 @@ type Bullet = Phaser.Physics.Arcade.Image & {
   /** 2단계부터 맞은 자리에서 터져 휘말리게 하는 반지름(px)과 피해. 0이면 없다. */
   splashRadius: number
   splashDamage: number
-  /** 자동 전투에서 사장냥이 매도벽을 겨눠 쏜 탄 (504번): 길 위의 물량에 막히지 않는다. */
+  /** 자동 전투에서 사장냥이 매도벽을 겨눠 쏜 탄 (504번): 길 위의 물량을 맞히고 뚫고 지나가 벽까지 간다 (516번). */
   wallShot: boolean
   /** 앞으로 더 맞힐 수 있는 적의 수(소총 관통, 376번)와 이미 맞힌 적. */
   pierce: number
@@ -890,15 +890,15 @@ class BattleScene extends Phaser.Scene {
       if (bullet.hitList.includes(enemy) || this.beyondWall(enemy)) {
         return
       }
-      // 벽을 겨눈 탄은 물량을 지나친다 (504번).
-      if (bullet.wallShot && !enemy.cell && !enemy.boss) return
+      // 벽을 겨눈 탄은 길 위의 물량을 맞히고 뚫고 지나간다 (516번). 전에는 맞히지 않고 그냥 지나쳐(504번) 탄이 물량을 통과하는 것처럼 보였다.
+      const through = bullet.wallShot && !enemy.cell && !enemy.boss
       const angle = Math.atan2(bullet.body.velocity.y, bullet.body.velocity.x)
       const [bx, by] = [bullet.x, bullet.y]
       this.impact(bx, by, bullet.power, bullet.grade)
       // 무기마다 다른 효과 (376번): 소총은 뚫고 지나가고, 리볼버는 치명타, 기관단총은 맞은 적을 느리게 한다.
       bullet.hitList.push(enemy)
       // 매도벽은 뚫고 지나가지 못한다 (457번): 소총도 벽 칸에서 멈춘다.
-      if (--bullet.pierce <= 0 || enemy.cell) {
+      if (!through && (--bullet.pierce <= 0 || enemy.cell)) {
         bullet.disableBody(true, true)
       }
       const kind = bullet.kind
@@ -3320,7 +3320,7 @@ class BattleScene extends Phaser.Scene {
     b.splashDamage = stats.splashDamage * SHOT_WEIGHT
     b.pierce = pierceOf(kind)
     b.hitList = []
-    // 자동 전투에서 사장냥이 매도벽(또는 큰손)을 겨눈 탄은 길 위의 물량을 지나쳐 벽까지 간다 (504번).
+    // 자동 전투에서 사장냥이 매도벽(또는 큰손)을 겨눈 탄은 길 위의 물량을 뚫고 벽까지 간다 (504·516번).
     const aimed = target as Partial<Enemy>
     b.wallShot = Boolean(this.opts.idle) && !mate && Boolean(aimed.cell || aimed.boss)
     b.fromX = m.x
