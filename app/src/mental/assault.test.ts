@@ -244,14 +244,14 @@ describe('매도벽 경험치 (#700)', () => {
     // 첫 벽(체력 20)은 그대로이고, 벽 체력이 IDLE_THREAT_HP만큼 늘 때마다 한 배씩 는다.
     expect(idleThreat(1, 20)).toBe(1)
     expect(idleThreat(51, IDLE_THREAT_HP)).toBe(2)
-    expect(idleThreat(201, 18248)).toBe(25)
-    // 큰손 벽은 체력이 네 배지만 물량은 이웃 벽과 비슷하다.
-    expect(idleThreat(200, 4 * 18084)).toBe(25)
+    expect(idleThreat(201, 10420)).toBe(15)
+    // 큰손 벽은 체력이 세 배지만 물량은 이웃 벽과 비슷하다 (518번).
+    expect(idleThreat(200, 3 * 10328.2)).toBe(15)
     expect(idleThreat(5, 0)).toBe(1)
-    const deep = idleAssaultSpec(201, 18248)
+    const deep = idleAssaultSpec(201, 10420)
     const same = idleAssaultSpec(201)
-    expect(deep.enemyHp).toBe(25)
-    expect(deep.enemyDmg).toBe(same.enemyDmg * 25)
+    expect(deep.enemyHp).toBe(15)
+    expect(deep.enemyDmg).toBe(same.enemyDmg * 15)
     expect(deep.enemyCount).toBe(same.enemyCount)
   })
 })

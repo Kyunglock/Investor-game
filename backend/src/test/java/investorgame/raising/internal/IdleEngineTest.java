@@ -703,7 +703,7 @@ class IdleEngineTest {
     tick(1000);
     double order = 0.75 * IdleEngine.threat(100);
     assertThat(IdleEngine.threat(1)).isEqualTo(1.0);
-    assertThat(IdleEngine.threat(100)).isEqualTo(7.7);
+    assertThat(IdleEngine.threat(100)).isEqualTo(5.2);
     // A buy order is capped at its own damage, whatever the screen reports.
     tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
