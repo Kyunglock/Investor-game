@@ -4,7 +4,7 @@ import { chromium } from '@playwright/test'
 
 const output = resolve(
   import.meta.dirname,
-  '../../docs/mockups/2026-11-14-cat-poses/game-poses.png',
+  '../../docs/mockups/2026-11-14-outlined-underhand/game-poses.png',
 )
 mkdirSync(dirname(output), { recursive: true })
 const browser = await chromium.launch()
