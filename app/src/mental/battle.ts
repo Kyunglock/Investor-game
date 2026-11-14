@@ -314,6 +314,8 @@ type Bullet = Phaser.Physics.Arcade.Image & {
   /** 2단계부터 맞은 자리에서 터져 휘말리게 하는 반지름(px)과 피해. 0이면 없다. */
   splashRadius: number
   splashDamage: number
+  /** 자동 전투에서 사장냥이 매도벽을 겨눠 쏜 탄 (504번): 길 위의 물량에 막히지 않는다. */
+  wallShot: boolean
   /** 앞으로 더 맞힐 수 있는 적의 수(소총 관통, 376번)와 이미 맞힌 적. */
   pierce: number
   hitList: Enemy[]
@@ -678,6 +680,8 @@ class BattleScene extends Phaser.Scene {
   /** 자동 전투의 다음 몬스터 습격 시각(전투 초)과 지금까지의 습격 수 (500번). */
   private nextIdleRaid: number = IDLE_RAID.first
   private idleRaids = 0
+  /** 사장냥이 쏜 발 수: 자동 전투에서 혼자일 때 세 발에 한 발은 벽을 노린다 (504번). */
+  private heroAims = 0
   private calledRaid: IdleRaidKind | null = null
   private panicRushClock = 0
   private panicRushEvery = 0
@@ -871,6 +875,8 @@ class BattleScene extends Phaser.Scene {
       if (bullet.hitList.includes(enemy) || this.beyondWall(enemy)) {
         return
       }
+      // 벽을 겨눈 탄은 물량을 지나친다 (504번).
+      if (bullet.wallShot && !enemy.cell && !enemy.boss) return
       const angle = Math.atan2(bullet.body.velocity.y, bullet.body.velocity.x)
       const [bx, by] = [bullet.x, bullet.y]
       this.impact(bx, by, bullet.power)
@@ -1827,6 +1833,8 @@ class BattleScene extends Phaser.Scene {
     for (const child of this.enemies.getChildren()) {
       const e = child as Enemy
       if (!e.active || e.dying || e.cell || e.boss) continue
+      // 자동 전투 (504번): 벽이 부서질 때 체결되는 것은 매도 물량뿐이다. 습격으로 온 몬스터는 남아 계속 내려온다.
+      if (this.opts.idle && !isOrder(e.kind)) continue
       const delay = this.reducedMotion ? 0 : Math.min(420, Math.max(0, e.y - fromY) * 0.6)
       e.dying = true
       if (e.body) e.body.enable = false
@@ -3074,15 +3082,20 @@ class BattleScene extends Phaser.Scene {
         }
       }
       const boss = this.bossEnemy?.active && !this.bossEnemy.dying ? this.bossEnemy : null
-      return spreadTargets(shooters, orders, 900).map(
-        (t, i) =>
-          t ??
-          boss ??
-          nearestTo(
-            this.magicTargets().filter((e) => Boolean(e.cell)),
-            shooters[i],
-          ),
-      )
+      const wallOf = (i: number) =>
+        boss ??
+        nearestTo(
+          this.magicTargets().filter((e) => Boolean(e.cell)),
+          shooters[i],
+        )
+      const targets = spreadTargets(shooters, orders, 900).map((t, i) => t ?? wallOf(i))
+      // 자동 전투 (504번): 물량이 끊이지 않아도 매도벽은 맞아야 한다. 고양이가 있으면 사장냥은 벽만 쏘고 고양이들이 물량을 맡는다. 혼자면 세 발에
+      // 한 발을 벽에 쏜다(물량을 막는 손이 사장냥뿐이라 더 자주 쏘면 매수벽이 못 버틴다). 전에는 물량이 있는 동안 아무도 벽을 쏘지 않아, 깊은 벽에서 벽이 한참 깎이지 않았다.
+      if (this.opts.idle && (this.mates.length > 0 || this.heroAims % 3 === 2)) {
+        const wall = wallOf(0)
+        if (wall && !('cell' in wall && this.held(wall as Enemy))) targets[0] = wall
+      }
+      return targets
     }
     // 안 누르면 고양이마다 다른 적을 노린다 (409번): 사장냥 총에서 520px 안의 가까운 적을 나눠 맡는다.
     const live: Enemy[] = []
@@ -3126,6 +3139,7 @@ class BattleScene extends Phaser.Scene {
   /** 한 발 쏜다. mate가 없으면 사장냥, 있으면 그 고양이가 같은 수치(무기·피해·연사·강화)로 쏜다(393번). */
   private fire(now: number, target: { x: number; y: number }, mate?: Mate) {
     const p = mate ? mate.body : this.player
+    if (!mate) this.heroAims++
     const model = mate ? mateModel(this.mateLook(this.mates.indexOf(mate))) : 'hero'
     // 표적이 좌우로 바뀌어도 발사 순간에는 실제 총구에서 정확히 겨눈다.
     const aim = catAim(model, p.x, p.y, target)
@@ -3192,6 +3206,9 @@ class BattleScene extends Phaser.Scene {
     b.splashDamage = stats.splashDamage * SHOT_WEIGHT
     b.pierce = pierceOf(kind)
     b.hitList = []
+    // 자동 전투에서 사장냥이 매도벽(또는 큰손)을 겨눈 탄은 길 위의 물량을 지나쳐 벽까지 간다 (504번).
+    const aimed = target as Partial<Enemy>
+    b.wallShot = Boolean(this.opts.idle) && !mate && Boolean(aimed.cell || aimed.boss)
     b.fromX = m.x
     b.fromY = m.y
     b.range = traits.range == null ? Number.POSITIVE_INFINITY : this.view().h * traits.range
