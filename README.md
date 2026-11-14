@@ -46,6 +46,13 @@ cd backend
 ADMIN_TOKEN=아무-비밀값 ./gradlew bootTestRun
 ```
 
+### 테스트 체험판
+
+서버를 `SANDBOX_CODE` 환경 변수와 함께 띄우면 테스트 체험판이 켜진다(비워 두면 꺼짐). 앱의 자동 전투 화면에서 위쪽 "매도벽 N" 칸을 빠르게 일곱 번 누르고
+그 코드를 넣으면, 본 게임과 따로 둔 체험판 회사로 들어간다. 체험판에서는 자본·채용권·뽑기권이 떨어지지 않아 강화와 고양이·무기 뽑기를 마음껏 해 볼 수 있고,
+왼쪽의 "나가기"로 본 게임에 돌아온다 (decisions.md 499번).
+
+
 ### 안드로이드 앱 (APK)
 
 앱 전용 화면(`app/`)을 WebView에 담은 앱이다 ([`docs/app.md`](./docs/app.md)). 앱 화면은 웹과 같이 `https://game.kwaklabs.com/app/`에 배포되고, GitHub Actions의 **Android** 워크플로를 돌리면 그 주소를 띄우는 `app-debug.apk`가 Artifacts에 생긴다.

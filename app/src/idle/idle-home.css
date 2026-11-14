@@ -59,6 +59,8 @@
   white-space: nowrap;
 }
 .idle-wall-number {
+  /* 체험판의 숨은 입구가 누름을 받는다 (499번). 캔버스는 누름을 쓰지 않는다. */
+  pointer-events: auto;
   flex: 0 1 auto;
   margin: 0 auto;
   padding: 6px 12px;
@@ -734,4 +736,85 @@ button.idle-cat-gun {
     animation: none;
     transform: none;
   }
+}
+
+/* 테스트 체험판 (decisions.md 499번): 왼쪽 가장자리의 작은 표시와 나가기, 숨은 입구로 여는 코드 창. */
+.idle-sandbox {
+  position: absolute;
+  top: 46%;
+  left: 6px;
+  z-index: 2;
+  display: grid;
+  gap: 4px;
+  padding: 6px;
+  border: 1.5px solid #8a5bd6;
+  border-radius: 12px;
+  background: #f4ecffe6;
+  box-shadow: 0 2px 0 #b9a0e6;
+  text-align: center;
+  font-size: 11px;
+  color: #4b2a8f;
+}
+.idle-sandbox button {
+  min-width: 48px;
+  min-height: 44px;
+  padding: 4px 8px;
+  border: 1.5px solid #8a5bd6;
+  border-radius: 9px;
+  background: #fff;
+  font-size: 12px;
+  color: #4b2a8f;
+}
+.idle-sandbox-gate {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #2b234066;
+}
+.idle-sandbox-gate form {
+  display: grid;
+  gap: 10px;
+  width: min(320px, 100%);
+  padding: 18px;
+  border: 2px solid #c48637;
+  border-radius: 16px;
+  background: #fffaf0;
+  box-shadow: 0 4px 0 #c48c42;
+}
+.idle-sandbox-gate h2 {
+  font-size: 17px;
+}
+.idle-sandbox-note {
+  font-size: 13px;
+  line-height: 1.5;
+}
+.idle-sandbox-error {
+  font-size: 13px;
+  color: #c0392b;
+}
+.idle-sandbox-gate input {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1.5px solid #c18c46;
+  border-radius: 11px;
+  background: #fff;
+  font-size: 16px;
+}
+.idle-sandbox-gate button {
+  min-height: 44px;
+  border: 1.5px solid #c18c46;
+  border-radius: 11px;
+  background: linear-gradient(#ffe6a5, #ffd07b);
+  box-shadow: 0 2px 0 #d2a25d;
+}
+.idle-sandbox-gate button:disabled {
+  opacity: 0.5;
+}
+.idle-sandbox-gate form > div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }

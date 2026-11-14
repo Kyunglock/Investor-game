@@ -552,6 +552,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sandbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 코드를 넣고 테스트 체험판에 들어간다 (decisions.md 499번)
+         * @description 코드가 맞으면 체험판 쿠키(IG_SANDBOX)를 심고 이 플레이어의 체험판 회사를 돌려준다. 쿠키가 있는 동안 /api/company 요청은 본 게임과 따로 둔
+         *     체험판 회사로 간다. 체험판 회사는 자본·채용권·뽑기권이 요청마다 다시 채워지고 업계 순위에 남지 않는다. 서버에 코드가 없으면(꺼짐) 404,
+         *     코드가 틀리면 400.
+         */
+        post: operations["enterSandbox"];
+        /**
+         * 체험판에서 나온다. 다음 요청부터 본 게임의 회사다 (decisions.md 499번)
+         * @description 체험판 쿠키를 지운다. 체험판 회사는 남아 다시 들어오면 이어진다.
+         */
+        delete: operations["leaveSandbox"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/plays": {
         parameters: {
             query?: never;
@@ -1121,6 +1147,8 @@ export interface components {
                     tickets: number;
                 } | null;
             };
+            /** @description 테스트 체험판의 회사다 (decisions.md 499번). 자본과 뽑기권이 떨어지지 않는다 */
+            sandbox?: boolean;
             idle?: {
                 /** Format: int64 */
                 wall: number;
@@ -2125,6 +2153,53 @@ export interface operations {
             400: components["responses"]["InvalidRequest"];
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    enterSandbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                };
+            };
+        };
+        responses: {
+            /** @description 체험판 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    leaveSandbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 나왔다 */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     getPlayLog: {

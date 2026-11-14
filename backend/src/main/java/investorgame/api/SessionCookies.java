@@ -18,10 +18,22 @@ class SessionCookies {
 
   private final SessionService sessions;
   private final SessionProperties properties;
+  private final Sandbox sandbox;
 
-  SessionCookies(SessionService sessions, SessionProperties properties) {
+  SessionCookies(SessionService sessions, SessionProperties properties, Sandbox sandbox) {
     this.sessions = sessions;
     this.properties = properties;
+    this.sandbox = sandbox;
+  }
+
+  /** 회사 요청이 쓸 ID (decisions.md 499번): 체험판에 들어와 있으면 체험판 회사의 ID, 아니면 세션 ID. */
+  UUID requirePlayer(String token) {
+    return sandbox.player(requireSession(token));
+  }
+
+  /** {@link #session}의 회사 요청용: 체험판에 들어와 있으면 체험판 회사의 ID. */
+  Optional<UUID> player(String token) {
+    return session(token).map(sandbox::player);
   }
 
   /**

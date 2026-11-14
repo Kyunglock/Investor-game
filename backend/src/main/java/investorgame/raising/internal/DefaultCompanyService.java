@@ -279,7 +279,31 @@ class DefaultCompanyService implements CompanyService {
     engine.adoptGacha(row.state());
     // 엔딩을 없앴다 (374번): 옛 엔딩으로 멈췄던 회사도 다시 이어 간다. 요청 끝에 함께 저장된다.
     row.state().finished = false;
+    refill(row.state());
     return row;
+  }
+
+  // 체험판의 지갑 (499번): 요청마다 다시 채우므로 한 번에 쓸 만큼이면 되고, 곱셈에도 넘치지 않는 크기.
+  private static final long SANDBOX_CAPITAL = 1_000_000_000_000_000L;
+  private static final int SANDBOX_TICKETS = 1_000_000;
+
+  /** 체험판 회사면 자본·채용권·뽑기권을 다시 채운다. 요청 끝에 함께 저장된다. */
+  private static void refill(CompanyState c) {
+    if (!c.sandbox) return;
+    c.capital = Math.max(c.capital, SANDBOX_CAPITAL);
+    c.tickets = Math.max(c.tickets, SANDBOX_TICKETS);
+    c.weaponTickets = Math.max(c.weaponTickets, SANDBOX_TICKETS);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView sandbox(UUID sessionId) {
+    if (companies.lockActive(sessionId).isEmpty()) open(sessionId);
+    CompanyRepository.Row row = lockActive(sessionId);
+    row.state().sandbox = true;
+    refill(row.state());
+    companies.update(row.id(), row.state(), false);
+    return view(row);
   }
 
   private CompanyView view(CompanyRepository.Row row) {
@@ -387,7 +411,8 @@ class DefaultCompanyService implements CompanyService {
         engine.mental.upgradeViews(c),
         engine.mental.stagesView(c),
         engine.mental.assaultsView(c),
-        idle.view(c));
+        idle.view(c),
+        c.sandbox);
   }
 
   @Override
@@ -506,6 +531,8 @@ class DefaultCompanyService implements CompanyService {
   /** 연말 자본을 남기고 같은 연차 회사들 가운데 자리를 결산 소식에 적는다 (#351). 지난해보다 상위 몇 %가 5%p 넘게 오르거나 내렸으면 그렇게 말한다. */
   private void recordYear(CompanyRepository.Row row, int year) {
     CompanyState c = row.state();
+    // 체험판의 자본은 업계 순위에 남기지 않는다 (499번).
+    if (c.sandbox) return;
     companies.recordYear(row.id(), year, c.capital);
     companies
         .rankAt(row.id(), year)

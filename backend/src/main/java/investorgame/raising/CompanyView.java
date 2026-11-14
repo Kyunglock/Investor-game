@@ -53,7 +53,8 @@ public record CompanyView(
     List<BattleUpgrade> battleUpgrades,
     Stages stages,
     Assaults assaults,
-    Idle idle) {
+    Idle idle,
+    boolean sandbox) {
 
   public record Idle(
       long wall,

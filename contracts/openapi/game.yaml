@@ -597,6 +597,38 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/sandbox:
+    post:
+      operationId: enterSandbox
+      summary: 코드를 넣고 테스트 체험판에 들어간다 (decisions.md 499번)
+      description: |
+        코드가 맞으면 체험판 쿠키(IG_SANDBOX)를 심고 이 플레이어의 체험판 회사를 돌려준다. 쿠키가 있는 동안 /api/company 요청은 본 게임과 따로 둔
+        체험판 회사로 간다. 체험판 회사는 자본·채용권·뽑기권이 요청마다 다시 채워지고 업계 순위에 남지 않는다. 서버에 코드가 없으면(꺼짐) 404,
+        코드가 틀리면 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        '200':
+          description: 체험판 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      operationId: leaveSandbox
+      summary: 체험판에서 나온다. 다음 요청부터 본 게임의 회사다 (decisions.md 499번)
+      description: 체험판 쿠키를 지운다. 체험판 회사는 남아 다시 들어오면 이어진다.
+      responses:
+        '204': { description: 나왔다 }
   /api/admin/plays:
     get:
       operationId: getPlayLog
@@ -1116,6 +1148,7 @@ components:
                     capital: { type: integer, format: int64, description: 받은 자본 }
                     tickets: { type: integer, description: 받은 무기 뽑기권 }
                 - type: 'null'
+        sandbox: { type: boolean, description: 테스트 체험판의 회사다 (decisions.md 499번). 자본과 뽑기권이 떨어지지 않는다 }
         idle:
           type: object
           required: [wall, hp, maxHp, dps, earned, boss, skills, nextUnlock, cats, fieldSlots, wallDps]

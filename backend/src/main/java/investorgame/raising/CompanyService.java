@@ -114,6 +114,12 @@ public interface CompanyService {
   /** 고양이 뽑기 (decisions.md 488·493번): 뽑기권 한 장으로 한 마리. 이미 가진 고양이면 레벨이 오른다. */
   CompanyView drawCat(UUID sessionId);
 
+  /**
+   * 테스트 체험판 (decisions.md 499번): 이 세션의 체험판 회사를 돌려준다. 없으면 차리고, 자본·채용권·뽑기권을 채운다. 체험판 회사는 무엇을 하든 그 전에
+   * 다시 채워지고 업계 순위에 남지 않는다.
+   */
+  CompanyView sandbox(UUID sessionId);
+
   /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
   CompanyView fieldCat(UUID sessionId, String code, boolean fielded);
 
