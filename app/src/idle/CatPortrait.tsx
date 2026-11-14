@@ -1,27 +1,31 @@
 import type { Company } from '@web/api/client'
 import type { CatCode } from '@web/features/raising/store'
-import { STAGE_ASSETS } from '../mental/assets'
+import portraits from './assets/cat-portraits.png'
 import { IdleIcon } from './icons'
 
-/** 고양이마다 제 그림 (488·492·493번). 그림은 접힌 귀·장모 둘이고, 나머지는 빛깔(tone)로 가린다. */
-const CATS: Record<CatCode, { art: string; tone?: string }> = {
-  sky: { art: STAGE_ASSETS.fold },
-  mint: { art: STAGE_ASSETS.fluffy },
-  lilac: { art: STAGE_ASSETS.fold, tone: 'lilac' },
-  sunset: { art: STAGE_ASSETS.fluffy, tone: 'sunset' },
-  night: { art: STAGE_ASSETS.fold, tone: 'night' },
-  snow: { art: STAGE_ASSETS.fluffy, tone: 'snow' },
+/** 앱 아이콘과 같은 입체 질감의 정면 초상화. 색뿐 아니라 귀·무늬·표정도 구분한다. */
+const CATS: Record<CatCode, number> = {
+  sky: 1,
+  mint: 2,
+  lilac: 3,
+  sunset: 4,
+  night: 5,
+  snow: 6,
 }
 
-/** 고양이 얼굴 칸. code가 없으면 사장냥이다. */
+/** 카드·출전 칸·뽑기 결과가 같은 얼굴을 사용한다. code가 없으면 사장냥이다. */
 export function CatPortrait({ code, locked }: { code?: CatCode; locked?: boolean }) {
-  const look = code ? CATS[code] : { art: STAGE_ASSETS.hero }
+  const cell = code ? CATS[code] : 0
   return (
-    <span
-      className={`idle-cat-portrait ${locked ? 'is-locked' : ''} ${look.tone ? `is-${look.tone}` : ''}`}
-      aria-hidden="true"
-    >
-      <img src={look.art} alt="" draggable={false} />
+    <span className={`idle-cat-portrait ${locked ? 'is-locked' : ''}`} aria-hidden="true">
+      <svg
+        className="idle-cat-face"
+        viewBox={`${cell % 4} ${Math.floor(cell / 4)} 1 1`}
+        aria-hidden="true"
+        focusable="false"
+      >
+        <image href={portraits} width="4" height="2" />
+      </svg>
       {locked && <IdleIcon name="lock" />}
     </span>
   )

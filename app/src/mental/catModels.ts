@@ -11,9 +11,17 @@ const MUZZLES: Record<CatModel, { x: number; y: number }> = {
   fluffy: MATE_HOLD.fluffy.muzzle,
 }
 
-export function catMuzzle(model: CatModel, x: number, y: number) {
+export type CatPose = { rotation?: number; scaleX?: number; scaleY?: number }
+
+export function catMuzzle(model: CatModel, x: number, y: number, pose: CatPose = {}) {
   const tip = MUZZLES[model]
-  return { x: x + (tip.x - CAT_W / 2) * CAT_SCALE, y: y + (tip.y - CAT_H / 2) * CAT_SCALE }
+  const dx = (tip.x - CAT_W / 2) * (pose.scaleX ?? CAT_SCALE)
+  const dy = (tip.y - CAT_H / 2) * (pose.scaleY ?? CAT_SCALE)
+  const angle = pose.rotation ?? 0
+  return {
+    x: x + dx * Math.cos(angle) - dy * Math.sin(angle),
+    y: y + dx * Math.sin(angle) + dy * Math.cos(angle),
+  }
 }
 
 import { CAT_H, CAT_W } from '@web/features/game/cat/draw'
@@ -21,7 +29,13 @@ import { CAT_H, CAT_W } from '@web/features/game/cat/draw'
 export const CAT_SCALE = 0.72
 
 /** 탄이 생성되는 실제 총구에서 표적을 겨눈다. 체형마다 총구 위치가 다르다. */
-export function catAim(model: CatModel, x: number, y: number, target: { x: number; y: number }) {
-  const muzzle = catMuzzle(model, x, y)
+export function catAim(
+  model: CatModel,
+  x: number,
+  y: number,
+  target: { x: number; y: number },
+  pose: CatPose = {},
+) {
+  const muzzle = catMuzzle(model, x, y, pose)
   return Math.atan2(target.y - muzzle.y, target.x - muzzle.x)
 }
