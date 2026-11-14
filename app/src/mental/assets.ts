@@ -1,8 +1,10 @@
-import fluffyGunMask from './assets/cat-fluffy-gun-mask.png'
-import fluffy from './assets/cat-fluffy-upward.png'
-import foldGunMask from './assets/cat-fold-gun-mask.png'
-import fold from './assets/cat-fold-upward.png'
-import rigBodies from './assets/cat-rig-bodies.png'
+import heroPoses from './assets/cat-hero-poses.png'
+import lilacPoses from './assets/cat-lilac-poses.png'
+import mintPoses from './assets/cat-mint-poses.png'
+import nightPoses from './assets/cat-night-poses.png'
+import skyPoses from './assets/cat-sky-poses.png'
+import snowPoses from './assets/cat-snow-poses.png'
+import sunsetPoses from './assets/cat-sunset-poses.png'
 import enemies from './assets/enemies.png'
 import hero from './assets/hero-unarmed.png'
 import shortSeller from './assets/short-seller.png'
@@ -13,13 +15,16 @@ import battleWeapons from './assets/weapon-battle-overhead-atlas.png'
 
 /** Vite가 APK와 /app/ 배포 모두에 포함하는 실제 전투 자산. */
 export const STAGE_ASSETS = {
-  rigBodies,
+  heroPoses,
+  skyPoses,
+  mintPoses,
+  lilacPoses,
+  sunsetPoses,
+  nightPoses,
+  snowPoses,
+
   street,
   hero,
-  fold,
-  fluffy,
-  foldGunMask,
-  fluffyGunMask,
   enemies,
   wallBlocks,
   shortSeller,

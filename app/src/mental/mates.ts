@@ -1,21 +1,12 @@
-/**
- * 함께 싸우는 고양이 (decisions.md 393번): "고양이 한 마리 더" 카드로 한 마리씩, 최대 셋(cards.ts MAX_MATES). 사장냥과 똑같이 세다: 같은 무기·피해·연사·
- * 카드 효과로 저마다 총을 쏜다. 마법은 쓰지 않는다(마법은 사장냥만, 440번). 생김새는 승인한 접힌 귀·장모 원본을 번갈아 사용한다
- * (art.ts bakeMates). 이 모듈은 Phaser 없이 늘어서는 자리와 동료 이름을 가진다.
- */
-
-/**
- * 동료 식별색과 합류 이름. 실제 외형은 catModels의 승인 원본 둘(접힌 귀·장모)을 번갈아 쓰고, 넷째부터는 같은 그림에 빛깔(tint)을 입혀 가린다
- * (493번: 자동 전투의 고양이 여섯). 스테이지의 카드 고양이는 앞의 셋까지만 쓴다(cards.ts MAX_MATES).
- */
-export const MATE_LOOKS: readonly { color: string; name: string; tint?: number }[] = [
-  { color: '#5fb4ff', name: '하늘냥' },
-  { color: '#3fcf9a', name: '민트냥' },
-  { color: '#b98cff', name: '라일락냥', tint: 0xd9c2ff },
-  { color: '#ff9d5c', name: '노을냥', tint: 0xffc49c },
-  { color: '#5b6388', name: '밤냥', tint: 0x8f98bd },
-  { color: '#bfe6ff', name: '눈꽃냥', tint: 0xd8f1ff },
-]
+/** 고양이 카드의 정체성을 전투에서도 유지한다. 각 동료는 눈·털·귀가 다른 전용 9방향 그림을 쓴다. */
+export const MATE_LOOKS = [
+  { color: '#5fb4ff', name: '하늘냥', poses: 'skyPoses' },
+  { color: '#3fcf9a', name: '민트냥', poses: 'mintPoses' },
+  { color: '#b98cff', name: '라일락냥', poses: 'lilacPoses' },
+  { color: '#ff9d5c', name: '노을냥', poses: 'sunsetPoses' },
+  { color: '#5b6388', name: '밤냥', poses: 'nightPoses' },
+  { color: '#bfe6ff', name: '눈꽃냥', poses: 'snowPoses' },
+] as const
 
 /** 고양이 사이의 가장 넓은 간격(px)과 화면 양쪽에 남길 틈(px). */
 export const MATE_GAP = 84

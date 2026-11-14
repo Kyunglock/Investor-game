@@ -185,33 +185,90 @@ try {
       const circle = await page.evaluate(() => {
         const scene = window.feedbackScene
         const actors = [scene.player, ...scene.mates.map((m) => m.body)]
-        const fixed = actors.map((body) => ({ x: body.x, y: body.y, texture: body.texture.key }))
+        const fixed = actors.map((body) => ({ x: body.x, y: body.y }))
+        const seen = actors.map(() => new Set())
         let upright = true,
-          aimed = true,
-          unchanged = true
-        for (let step = 0; step < 16; step++) {
-          const angle = (step * Math.PI) / 8
+          limited = true,
+          unchanged = true,
+          aimed = true
+        for (let step = 0; step < 24; step++) {
+          const angle = (step * Math.PI) / 12
           for (const [i, body] of actors.entries()) {
-            const target = { x: body.x + Math.cos(angle) * 180, y: body.y + Math.sin(angle) * 180 }
+            for (const b of scene.bullets.getChildren()) b.disableBody(true, true)
+            const target = { x: body.x + Math.cos(angle) * 220, y: body.y + Math.sin(angle) * 220 }
             scene.fire(scene.time.now + step * 4 + i, target, i ? scene.mates[i - 1] : undefined)
             const gun = i ? scene.mates[i - 1].gun : scene.heroGun
-            const dx = target.x - gun.x,
-              dy = target.y - gun.y
+            const bullet = scene.bullets.getChildren().find((b) => b.active)
+            const dx = target.x - bullet.fromX,
+              dy = target.y - bullet.fromY
             upright &&= body.rotation === 0
+            limited &&=
+              gun.rotation >= (-150 * Math.PI) / 180 - 0.001 &&
+              gun.rotation <= (-30 * Math.PI) / 180 + 0.001
             aimed &&=
-              Math.abs(dx * Math.sin(gun.rotation) - dy * Math.cos(gun.rotation)) < 0.001 &&
-              dx * Math.cos(gun.rotation) + dy * Math.sin(gun.rotation) > 0
-            unchanged &&=
-              body.x === fixed[i].x &&
-              body.y === fixed[i].y &&
-              body.texture.key === fixed[i].texture
+              Math.abs(dx * Math.sin(bullet.rotation) - dy * Math.cos(bullet.rotation)) < 0.001
+            unchanged &&= body.x === fixed[i].x && body.y === fixed[i].y
+            seen[i].add(body.texture.key)
           }
         }
-        return { upright, aimed, unchanged }
+        return { upright, limited, unchanged, aimed, poses: seen.map((keys) => keys.size) }
       })
       assert(circle.upright, '표적이 360도 이동해도 사장냥과 동료 몸은 회전하지 않음')
-      assert(circle.aimed, '표적 각도는 분리된 총에만 적용')
-      assert(circle.unchanged, '조준 중 기존 몸 자세·위치·그림을 유지')
+      assert(circle.limited, '총과 견착 자세는 좌우 60도까지만 표현')
+      assert(circle.aimed, '방향 그림이 바뀌어도 탄은 실제 총구에서 표적을 향함')
+      assert(circle.unchanged, '조준 중 충돌 기준 위치 유지')
+      assert(
+        circle.poses.every((count) => count === 9),
+        '사장냥과 모든 동료가 9방향 자세 전환',
+      )
+      const allCats = await page.evaluate(async () => {
+        const scene = window.feedbackScene
+        const { bakeCatBody } = await import('/app/src/mental/art.ts')
+        const { CAT_POSE_DEGREES, catPoseAngle } = await import('/app/src/mental/catPose.ts')
+        const { WEAPON_GRADES } = await import('/app/src/mental/weaponVisuals.ts')
+        window.catHandle.applyLoadout({ ...scene.loadout, mates: 6 })
+        const actors = [scene.player, ...scene.mates.map((m) => m.body)]
+        const identities = new Set()
+        let intact = true,
+          upright = true,
+          guns = true
+        for (const [i, body] of actors.entries()) {
+          for (const index of CAT_POSE_DEGREES.keys()) {
+            scene.poseGun(body, catPoseAngle(index), 0, i ? scene.mates[i - 1] : undefined)
+            upright &&= body.rotation === 0 && body.texture.key.includes(`pose-${index}`)
+            identities.add(body.texture.key)
+            const source = scene.textures.get(body.texture.key).getSourceImage()
+            const upper = source.getContext('2d').getImageData(0, 0, source.width, 70).data
+            for (let frame = 0; frame < 8; frame++) {
+              const key = bakeCatBody(scene, index, i ? i - 1 : undefined, frame)
+              const cv = scene.textures.get(key).getSourceImage()
+              const moved = cv.getContext('2d').getImageData(0, 0, cv.width, 70).data
+              intact &&= upper.every((value, pixel) => value === moved[pixel])
+            }
+            for (const grade of WEAPON_GRADES) {
+              scene.opts.hero.weapon = { ...scene.opts.hero.weapon, grade }
+              scene.poseGun(body, catPoseAngle(index), 0, i ? scene.mates[i - 1] : undefined)
+              const gun = i ? scene.mates[i - 1].gun : scene.heroGun
+              guns &&= gun.texture.key === `cat-gun-${grade}` && gun.depth < body.depth
+            }
+          }
+        }
+        const running = scene.textures.getTextureKeys().filter((key) => key.endsWith('-running'))
+        return {
+          actors: actors.length,
+          poses: identities.size,
+          intact,
+          upright,
+          guns,
+          running: running.length,
+        }
+      })
+      assert.equal(allCats.actors, 7)
+      assert.equal(allCats.poses, 63, '고양이 7종 × 고유 자세 9개')
+      assert.equal(allCats.running, 7, '달리기는 고양이마다 캔버스 하나만 재사용')
+      assert(allCats.intact, '보행 중에도 견착한 머리·팔은 총에 맞는 같은 위치를 유지')
+      assert(allCats.upright)
+      assert(allCats.guns, '12등급 무기가 63개 자세 뒤에서 교체됨')
       if (mode === 'assault') {
         const broken = await page.evaluate(() => {
           const scene = window.feedbackScene
@@ -242,7 +299,7 @@ try {
       }
       assert.deepEqual(errors, [])
       console.log(
-        `PASS: ${mode}: original join count/cap, distinct models, separate gun/paws, upright bodies through 360-degree target changes, all four rendered muzzle origins/damage`,
+        `PASS: ${mode}: original join count/cap, distinct models, nine shoulder poses, upright bodies through 360-degree target changes, all four rendered muzzle origins/damage`,
       )
       const cleaned = await page.evaluate(() => {
         const scene = window.feedbackScene
@@ -250,7 +307,7 @@ try {
         window.catHandle.applyLoadout({ ...scene.loadout, mates: 0 })
         return guns.every((gun) => !gun.scene)
       })
-      assert(cleaned, '동료 해제 시 분리된 총·앞발 이미지도 제거')
+      assert(cleaned, '동료 해제 시 분리된 총 이미지도 제거')
       await page.evaluate(() => window.catHandle.stop())
       await page.close()
     }

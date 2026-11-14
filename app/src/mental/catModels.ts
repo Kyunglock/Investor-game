@@ -1,8 +1,9 @@
 import { EQUIPPED_MUZZLE, MATE_HOLD } from './weaponArt'
 
-/** 사장냥과 동료 모두 든 무기를 합성한다(동료는 원본의 총을 지우고 얹는다, 511번). 세 번째 동료도 승인된 두 체형 중 하나를 사용한다. */
+/** 총을 결합할 체형. 실제 몸·눈 그림은 각 고양이의 전용 아틀라스를 쓴다. */
 export type CatModel = 'hero' | 'fold' | 'fluffy'
-export const mateModel = (index: number): CatModel => (index % 2 === 0 ? 'fold' : 'fluffy')
+export const mateModel = (index: number): CatModel =>
+  index === 0 ? 'fold' : index === 1 || index === 5 ? 'fluffy' : 'hero'
 
 /** drawSprite의 높이 100 배치 안에서 실제 총구 좌표. 꼬리 폭으로 크기를 줄이지 않는다. */
 const MUZZLES: Record<CatModel, { x: number; y: number }> = {
