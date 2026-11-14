@@ -16,6 +16,7 @@ import {
   idleAssaultSpec,
   idleThreat,
   orderPriceStep,
+  ordersOnly,
   pickFlow,
   rowHps,
   rushSpawnSeconds,
@@ -216,20 +217,25 @@ describe('매도벽 경험치 (#700)', () => {
     expect(wallBreakXp(xpToNext(5))).toBe(Math.round(xpToNext(5) * 0.4))
     expect(wallBreakXp(0)).toBe(1)
   })
-  it('자동 전투의 물량은 벽이 깊어질수록 미션처럼 무거워진다 (493번)', () => {
+  it('자동 전투의 매도벽은 매도 물량만 내고, 벽이 깊어질수록 미션처럼 잦아진다 (493·500번)', () => {
     const first = idleAssaultSpec(1)
     expect(first.walls).toHaveLength(1)
     expect(first.walls[0]).toMatchObject({ rows: 1, mid: false, boss: false })
-    expect(first.walls[0].mix).toEqual(ASSAULT_WALLS[0].mix)
-    // 열 벽 한 바퀴 안에서는 미션의 벽 차례대로: 넷째 벽부터 공매도가 섞이고 간격이 짧아진다.
+    // 몬스터는 벽의 물량에 섞이지 않는다: 이따금 습격으로만 온다 (500번).
+    expect(first.walls[0].mix).toEqual(ordersOnly(ASSAULT_WALLS[0].mix))
+    for (const wall of [1, 4, 7, 10, 11]) {
+      const kinds = Object.keys(idleAssaultSpec(wall).walls[0].mix)
+      expect(kinds.length).toBeGreaterThan(0)
+      expect(kinds.every((kind) => kind in ORDERS)).toBe(true)
+    }
+    // 열 벽 한 바퀴 안에서는 미션의 벽 차례대로 간격이 짧아진다.
     const fourth = idleAssaultSpec(4).walls[0]
-    expect(fourth.mix.short).toBeGreaterThan(0)
     expect(fourth.spawnSeconds).toBeLessThan(first.walls[0].spawnSeconds)
     expect(fourth.rows).toBe(1)
     expect(idleAssaultSpec(10).walls[0].boss).toBe(true)
     // 열 벽을 넘기면 수·공격이 는다. 벽 체력을 모르면 물량 하나의 수량은 그대로다.
     const next = idleAssaultSpec(11)
-    expect(next.walls[0].mix).toEqual(ASSAULT_WALLS[0].mix)
+    expect(next.walls[0].mix).toEqual(first.walls[0].mix)
     expect(next.enemyCount).toBeGreaterThan(first.enemyCount)
     expect(next.enemyDmg).toBeGreaterThan(first.enemyDmg)
     expect(next.enemyHp).toBe(1)
