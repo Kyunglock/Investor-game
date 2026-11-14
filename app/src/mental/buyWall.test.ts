@@ -147,11 +147,11 @@ describe('매수벽 붕괴 밀어내기 (#699)', () => {
 describe('자동 전투의 매수 주문 피해 (514번)', () => {
   it('무기와 따로 센다: 바탕 0.75 × 그 벽의 물량 배율 × 매수벽 공격 강화', () => {
     expect(idleBuyOrderDamage(1, 0)).toBe(0.75)
-    // 물량 배율은 서버 IdleEngine.threat과 같다: 100벽(큰손)은 7.7.
-    const hp100 = (20 + 12 * 99 + 0.4 * 99 * 99) * 4
-    expect(idleThreat(100, hp100)).toBe(7.7)
-    expect(idleBuyOrderDamage(7.7, 0)).toBeCloseTo(5.775)
+    // 물량 배율은 서버 IdleEngine.threat과 같다: 100벽(큰손)은 5.2 (518번의 체력 곡선).
+    const hp100 = (20 + 12 * 99 + 0.2 * 99 * 99) * 3
+    expect(idleThreat(100, hp100)).toBe(5.2)
+    expect(idleBuyOrderDamage(5.2, 0)).toBeCloseTo(3.9)
     // 매수벽 공격 강화 +30%.
-    expect(idleBuyOrderDamage(7.7, 0.3)).toBeCloseTo(5.775 * 1.3)
+    expect(idleBuyOrderDamage(5.2, 0.3)).toBeCloseTo(3.9 * 1.3)
   })
 })
