@@ -42,11 +42,13 @@ class IdleEngine {
   private static final double BUY_ORDERS_PER_SECOND = 2 / 0.15;
   // Matches the app's mental/assault.ts idleThreat.
   private static final double THREAT_HP = 760;
+
   /**
-   * Bullet pierce (520): every bullet goes through the front wall into the two behind it, weaker
-   * at each wall. The app's IDLE_PIERCE holds the same shares.
+   * Bullet pierce (520): every bullet goes through the front wall into the two behind it, weaker at
+   * each wall. The app's IDLE_PIERCE holds the same shares.
    */
   static final double[] PIERCE = {1, 0.5, 0.25};
+
   private static final double RALLY_FIRE = 2;
   // A beat this late still counts in full (decisions.md 497): on a slow link the screen sends the
   // next beat only after the last answer, and dropping those hits refilled the wall. A longer
