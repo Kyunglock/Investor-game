@@ -131,7 +131,7 @@ class CompanyEngineTest {
       assertThat(company.tickets)
           .as("분기·연말마다 채용권을 받는다")
           .isGreaterThan(PROPERTIES.gacha().startTickets());
-      capitals[k] = company.capital;
+      capitals[k] = (long) company.capital;
     }
     assertThat(capitals[0]).isEqualTo(capitals[1]);
   }
@@ -529,7 +529,7 @@ class CompanyEngineTest {
   @Test
   void 채용권으로_뽑고_데리고_있을_자리가_모자라면_내보낸다() {
     CompanyState company = ENGINE.open(new HashSeededRandom(5), ENGINE.openingCapital());
-    long capital = company.capital;
+    long capital = (long) company.capital;
     List<CompanyState.Drawn> drawn = ENGINE.draw(company, 2, new HashSeededRandom(5));
     assertThat(drawn).hasSize(2);
     assertThat(company.employees).hasSize(2).allSatisfy(e -> assertThat(e.desk).isNull());
@@ -800,7 +800,7 @@ class CompanyEngineTest {
       company.phase = CompanyEngine.CRASH;
       company.crashQuarter = 2;
       company.invest = null;
-      long before = company.capital;
+      long before = (long) company.capital;
       CompanyState.Settlement settlement = ENGINE.settle(company, new HashSeededRandom(seed));
       assertThat(settlement.results).allMatch(r -> r.pnl >= 0);
       assertThat(company.capital).isGreaterThanOrEqualTo(before);
@@ -835,7 +835,7 @@ class CompanyEngineTest {
     assertThat(staff.get(0).desk).isEqualTo("research");
 
     // 연말에 건물이 줄어들면(F, 자리 4, 296번) 넘친 둘이 일어난다: 돕는 자리가 먼저, 그다음 나중에 들어온 사람.
-    company.gradedCapital = company.capital;
+    company.gradedCapital = (long) company.capital;
     company.building = ENGINE.grade(company.capital);
     ENGINE.fitSeats(company);
     assertThat(ENGINE.seats(company)).isEqualTo(4);
@@ -847,7 +847,7 @@ class CompanyEngineTest {
 
     // 돕는 자리가 없으면 나중에 들어온 사람부터 일어난다.
     company.capital = 1_000_000;
-    company.gradedCapital = company.capital;
+    company.gradedCapital = (long) company.capital;
     staff.get(0).desk = "bio";
     List<CompanyState.Employee> stood = ENGINE.fitSeats(company);
     assertThat(stood).extracting(e -> e.id).containsExactly(staff.get(4).id);
@@ -931,7 +931,7 @@ class CompanyEngineTest {
       CompanyState company = ENGINE.open(new HashSeededRandom(seed), ENGINE.openingCapital());
       HashSeededRandom random = new HashSeededRandom(seed);
       for (int year = 1; year <= 4; year++) {
-        long start = company.capital;
+        long start = (long) company.capital;
         if (company.tickets > 0 && company.employees.size() < ENGINE.seats(company)) {
           CompanyState.Employee hired = drawOne(company);
           Map<Integer, String> seats = new HashMap<>();
@@ -1133,7 +1133,7 @@ class CompanyEngineTest {
     assertThat(ENGINE.seats(company)).isEqualTo(4);
 
     // 이사: 비용이 빠지고 자리가 늘고 연표에 남는다. 그해 이사 비용은 결산에 따로 적힌다.
-    long before = company.capital;
+    long before = (long) company.capital;
     ENGINE.upgrade(company);
     assertThat(ENGINE.grade(company)).isEqualTo("E");
     assertThat(company.capital).isEqualTo(before - 18_000_000L);

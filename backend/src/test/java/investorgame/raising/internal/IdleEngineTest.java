@@ -78,8 +78,9 @@ class IdleEngineTest {
     assertThat(state.idle.nextDamage).isZero();
     assertThat(state.idle.afterNextDamage).isZero();
     assertThat(state.idle.activeSeconds).isEqualTo(40); // Foreground time still runs at 2x.
-    // Time income grows 5% per wall past the first (decisions.md 492).
-    assertThat(state.capital).isEqualTo(Math.round(40 * 20000 * 3.5));
+    // Time income grows 5% per wall past the first (decisions.md 492), times the wall's price
+    // level: 10% more per wall (505).
+    assertThat(state.capital).isEqualTo(Math.floor(40 * 20000 * 3.5 * StrictMath.pow(1.1, 50)));
   }
 
   @Test
@@ -217,7 +218,7 @@ class IdleEngineTest {
     tick(1000, new IdleHit(5, "bullet", 1));
     assertThat(state.idle.wall).isEqualTo(6);
     assertThat(state.idle.circuitSeconds).isEqualTo(4);
-    long paid = state.capital;
+    long paid = (long) state.capital;
     tick(1000, new IdleHit(6, "bullet", 1000));
     assertThat(state.idle.wall).isEqualTo(6);
     assertThat(state.capital).isEqualTo(paid);
@@ -225,9 +226,12 @@ class IdleEngineTest {
     assertThat(state.idle.wall).isEqualTo(8);
     assertThat(state.idle.damage).isZero();
     // A cleared wall pays by its health (decisions.md 492).
+    // The wall's price level multiplies it: 10% more per wall (505).
     assertThat(state.capital)
         .isEqualTo(
-            paid + (long) (IdleEngine.maxHp(6) * 60000) + (long) (IdleEngine.maxHp(7) * 60000));
+            paid
+                + Math.floor(IdleEngine.maxHp(6) * 60000 * StrictMath.pow(1.1, 5))
+                + Math.floor(IdleEngine.maxHp(7) * 60000 * StrictMath.pow(1.1, 6)));
   }
 
   @Test
@@ -307,7 +311,7 @@ class IdleEngineTest {
 
     // One ticket, one cat (decisions.md 493). Capital is not spent.
     state.weaponTickets = 1;
-    long capital = state.capital;
+    long capital = (long) state.capital;
     engine.drawCat(state, random);
     assertThat(state.weaponTickets).isZero();
     assertThat(state.capital).isEqualTo(capital);
@@ -372,6 +376,37 @@ class IdleEngineTest {
     assertThat(state.idle.damage - before).isGreaterThan(alone);
     assertThatThrownBy(() -> engine.fieldCat(state, "mint", true))
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+  }
+
+  @Test
+  void pricesAndPayGrowTogetherWithTheWallPastWhatALongHolds() {
+    // 물가 (decisions.md 505번): 벽마다 보상·수입·강화 값이 함께 10%씩 커진다.
+    start(1);
+    company.mental.initWeapons(state);
+    double first = engine.view(state).dps();
+    long firstPrice = company.mental.upgradeViews(state).getFirst().price().longValue();
+    state.idle.wall = 2001;
+    double level = StrictMath.pow(1.1, 2000);
+    assertThat(level).as("far beyond a long, around the z unit").isGreaterThan(1e78);
+    assertThat(company.mental.upgradeViews(state).getFirst().price().doubleValue())
+        .isCloseTo(firstPrice * level, org.assertj.core.data.Percentage.withPercentage(1e-6));
+    assertThat(engine.view(state).dps()).as("the fight itself is unchanged").isEqualTo(first);
+    // One second of income at that wall buys what one second bought at the first wall.
+    tick(1000);
+    tick(500);
+    double income = state.capital;
+    assertThat(income).isGreaterThan(1e78);
+    assertThat(engine.view(state).earned().doubleValue()).isEqualTo(income);
+    // The wall's reward is on the same scale, with no cap.
+    state.idle.damage = IdleEngine.maxHp(2001) - 1;
+    state.idle.hitCredits = new double[6];
+    tick(500, new IdleHit(2001, "bullet", 1, 4.0));
+    assertThat(state.idle.wall).isEqualTo(2002);
+    assertThat(state.capital - income)
+        .isGreaterThan(IdleEngine.maxHp(2001) * 60000 * level * 0.999);
+    // Buying still works at that size.
+    int bought = company.mental.buyUpgrade(state, "damage", 5);
+    assertThat(bought).isEqualTo(5);
   }
 
   @Test

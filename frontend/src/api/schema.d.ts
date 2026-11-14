@@ -743,7 +743,7 @@ export interface components {
             quarter: number;
             /** @description 올해 마지막으로 넘긴 분기의 실적. 1분기를 넘기기 전이면 null (268번) */
             lastQuarter?: components["schemas"]["Quarter"] | null;
-            /** Format: int64 */
+            /** @description 자본. 자동 전투의 물가(decisions.md 505번)로 int64를 넘게 커진다. 소수 없는 수다 */
             capital: number;
             grade: components["schemas"]["Grade"];
             /**
@@ -1272,7 +1272,7 @@ export interface components {
                 hp: number;
                 maxHp: number;
                 dps: number;
-                /** Format: int64 */
+                /** @description 자동 전투로 번 돈. int64를 넘게 커진다 (505번) */
                 earned: number;
                 boss: boolean;
                 /** @description 서킷브레이커 잔여 게임 시간. 기본 2배속이며 거래 정지 중에는 공격과 보상이 멈춤 */
@@ -1377,10 +1377,7 @@ export interface components {
                 kind: "damage" | "fire" | "hp" | "buy" | "crit";
                 /** @description 지금 단계(0부터) */
                 level: number;
-                /**
-                 * Format: int64
-                 * @description 다음 단계 값
-                 */
+                /** @description 다음 단계 값. 지금 벽의 물가가 곱해져 있고 int64를 넘게 커진다 (505번) */
                 price: number;
                 /** @description 단계마다 값이 오르는 비율(%). 꾹 눌러 연속으로 올릴 때 화면이 다음 값들을 미리 셈한다(정하는 것은 서버) */
                 priceGrowthPercent: number;

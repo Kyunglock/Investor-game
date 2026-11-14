@@ -146,7 +146,7 @@ class EconomySimulationTest {
       while (company.year == 1) {
         ENGINE.scout.discover(company, random);
         if (ENGINE.invest.open(company)) {
-          long before = company.capital;
+          long before = (long) company.capital;
           long building = ENGINE.buildingValue(company);
           ENGINE.invest.decide(company, majority(company.invest), random);
           // 411번: 판돈이 건물의 값에서 나오므로 회의 한 번의 무게도 건물의 값에 견준다.

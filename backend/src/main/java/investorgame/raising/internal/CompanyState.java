@@ -30,7 +30,7 @@ class CompanyState {
     double afterNextDamage;
     int hitVersion;
     double[] hitCredits = new double[5];
-    long earned;
+    double earned;
     double incomeRemainder;
     double activeSeconds;
     double circuitSeconds;
@@ -177,7 +177,11 @@ class CompanyState {
   /** 차릴 때의 한 줄(1호 직원·공동창업자). */
   String opening;
 
-  long capital;
+  /**
+   * 자본. 자동 전투의 물가(decisions.md 505번)로 long을 넘게 커지므로 실수로 둔다. 옛 저장의 정수는 그대로 읽힌다. 2^53(약 9e)보다 작은 동안은
+   * 정수 계산이 정확하다.
+   */
+  double capital;
 
   /** 테스트판의 회사 (decisions.md 499번): 자본·채용권·뽑기권이 떨어지지 않고 업계 순위에 남지 않는다. */
   boolean sandbox;

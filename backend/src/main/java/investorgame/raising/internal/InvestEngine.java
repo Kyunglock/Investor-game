@@ -643,7 +643,7 @@ class InvestEngine {
     // 판돈이 건물의 값이라 자본보다 클 수 있다 (411번): 잃을 자본이 모자라면 잃은 사람들의 손실을 그만큼 줄인다.
     long[] capped =
         CompanyEngine.capLosses(
-            c.capital, c.invest.results.stream().mapToLong(r -> r.pnl).toArray());
+            (long) c.capital, c.invest.results.stream().mapToLong(r -> r.pnl).toArray());
     total = 0;
     for (int i = 0; i < capped.length; i++) {
       InvestResult r = c.invest.results.get(i);
@@ -759,7 +759,7 @@ class InvestEngine {
     invest.battleStars = stars;
     invest.battleBonus = bonus;
     invest.battleClosed = true;
-    c.capital = CompanyEngine.plus(c.capital, bonus);
+    c.capital += bonus;
     return bonus;
   }
 

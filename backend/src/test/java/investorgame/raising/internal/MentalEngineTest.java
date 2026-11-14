@@ -179,7 +179,7 @@ class MentalEngineTest {
     assertThatThrownBy(() -> ENGINE.mental.reportAssault(c, 2, true, 3))
         .as("아직 안 열린 스테이지")
         .isInstanceOf(InvalidRequestException.class);
-    long capital = c.capital;
+    long capital = (long) c.capital;
     int tickets = c.weaponTickets;
     ENGINE.mental.reportAssault(c, 1, false, 0);
     assertThat(ENGINE.mental.bestAssault(c)).as("못 깨면 그대로").isZero();
@@ -216,7 +216,7 @@ class MentalEngineTest {
     assertThatThrownBy(() -> ENGINE.mental.reportStage(c, 2, true, 3))
         .as("아직 안 열린 스테이지")
         .isInstanceOf(InvalidRequestException.class);
-    long capital = c.capital;
+    long capital = (long) c.capital;
     int tickets = c.weaponTickets;
     ENGINE.mental.reportStage(c, 1, false, 0);
     assertThat(ENGINE.mental.bestStage(c)).as("못 깨면 그대로").isZero();
@@ -422,7 +422,7 @@ class MentalEngineTest {
         .containsEntry("buy", 3)
         .containsEntry("crit", 6);
     assertThat(rule.maxPercent()).as("연사만 100%에서 멈춘다 (487번)").containsOnly(Map.entry("fire", 100));
-    long before = c.capital;
+    long before = (long) c.capital;
     assertThat(ENGINE.mental.buyUpgrade(c, "damage", 1)).isEqualTo(1);
     assertThat(c.capital).isEqualTo(before - rule.basePrice());
     assertThat(c.yearUpgrades).as("강화 비용은 따로 적는다").isEqualTo(rule.basePrice());
@@ -440,11 +440,11 @@ class MentalEngineTest {
     assertThat(damage.level()).isEqualTo(1);
     assertThat(damage.bonusPercent()).isEqualTo(3);
     assertThat(damage.nextBonusPercent()).isEqualTo(6);
-    assertThat(damage.price()).isEqualTo(ENGINE.mental.upgradePrice(1));
+    assertThat(damage.price().longValue()).isEqualTo(ENGINE.mental.upgradePrice(1));
     assertThat(damage.priceGrowthPercent()).isEqualTo(rule.priceGrowthPercent());
 
-    // 꾹 눌러 모은 단계는 묶어 산다. 최대 단계는 없다.
-    c.capital = Long.MAX_VALUE / 4;
+    // 꾹 눌러 모은 단계는 묶어 산다. 최대 단계는 없다. 자본은 실수라(505번) 정수 계산이 정확한 2^53 아래로 둔다.
+    c.capital = 1_000_000_000_000_000L;
     long spent = c.yearUpgrades;
     long expected = 0;
     for (int level = 0; level < 250; level++) {
@@ -464,7 +464,7 @@ class MentalEngineTest {
 
     // 연사는 100%(50단계)에서 멈춘다 (487·492번): 넘치게 보내도 상한까지만 사고, 닿은 뒤에는 400.
     assertThat(ENGINE.mental.buyUpgrade(c, "fire", 30)).isEqualTo(30);
-    long atThirty = c.capital;
+    long atThirty = (long) c.capital;
     assertThat(ENGINE.mental.buyUpgrade(c, "fire", 100)).as("남은 20단계만 산다").isEqualTo(20);
     long twenty = 0;
     for (int level = 30; level < 50; level++) {
@@ -504,7 +504,7 @@ class MentalEngineTest {
     CompanyState tough = company(7);
     assertThat(ENGINE.mental.buyUpgrade(tough, "hp", 3)).isEqualTo(3);
     assertThat(view(tough, "hp").bonusPercent()).isEqualTo(9);
-    assertThat(view(tough, "hp").price()).isEqualTo(ENGINE.mental.upgradePrice(3));
+    assertThat(view(tough, "hp").price().longValue()).isEqualTo(ENGINE.mental.upgradePrice(3));
   }
 
   @Test
@@ -549,7 +549,7 @@ class MentalEngineTest {
   @Test
   void 옛_무기만_리셋하고_회사의_나머지_진행은_보존한다() throws Exception {
     CompanyState c = company(4);
-    long capital = c.capital;
+    long capital = (long) c.capital;
     c.weapons = new ArrayList<>(List.of(new CompanyState.Weapon("rifle", "OBSOLETE")));
     c.weapon = c.weapons.getFirst();
     c.lastWeaponDraw = c.weapon;
