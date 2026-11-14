@@ -3,7 +3,7 @@ import { Haptics, ImpactStyle, NotificationType } from '@capacitor/haptics'
 
 /**
  * 진동 (decisions.md 310번). 앱에서는 Capacitor 햅틱, 브라우저에서는 navigator.vibrate. 안 되면 조용히 지나간다.
- * 끄기(521번, #792)는 소리처럼 브라우저에 남는다. 꺼져 있으면 아래의 모든 진동이 아무것도 하지 않는다.
+ * 끄기(521번, #792)는 소리처럼 브라우저에 남는다. 단추는 매도벽 돌파 화면의 설정 창에 있다(522번). 꺼져 있으면 아래의 모든 진동이 아무것도 하지 않는다.
  */
 const KEY = 'investor-app.haptic'
 

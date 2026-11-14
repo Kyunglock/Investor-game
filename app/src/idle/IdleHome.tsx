@@ -14,6 +14,7 @@ import { BASE_CRIT_CHANCE, BASE_CRIT_MULT, CRIT_CHANCE, CRIT_MULT } from '../men
 import { IdleActives } from './IdleActives'
 import { IdleCanvas } from './IdleCanvas'
 import { IdleCats } from './IdleCats'
+import { IdleOptions } from './IdleOptions'
 import { IdleSandbox } from './IdleSandbox'
 import { IdleIcon, type IdleIconName } from './icons'
 import './idle-home.css'
@@ -211,6 +212,7 @@ export function IdleHome({
               ☰
             </button>
           </header>
+          <IdleOptions />
           <IdleSandbox company={company} />
           <IdleActives company={company} connected={connected} />
           {blocked && (
