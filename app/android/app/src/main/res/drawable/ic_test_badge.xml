@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 테스트판 앱 아이콘의 띠 (decisions.md 499번): 보라 띠에 흰 글자 TEST. 108dp 아이콘의 가운데 72dp 안에 든다. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#6B3FD4"
+        android:pathData="M18,62h72v24h-72z" />
+    <!-- T -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M31,67h10v3.4h-3.3v12.6h-3.4v-12.6h-3.3z" />
+    <!-- E -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M43.5,67h10v3.4h-6.6v2.9h5.6v3.2h-5.6v3.1h6.6v3.4h-10z" />
+    <!-- S -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M56,67h10v3.4h-6.6v2.9h6.6v9.7h-10v-3.4h6.6v-3.1h-6.6z" />
+    <!-- T -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M68.5,67h10v3.4h-3.3v12.6h-3.4v-12.6h-3.3z" />
+</vector>

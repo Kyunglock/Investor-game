@@ -8,7 +8,12 @@ android {
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
         applicationId testApp ? "com.kyunglock.investorgame.test" : "com.kyunglock.investorgame"
-        manifestPlaceholders = [appLabel: testApp ? "고양이 테스트판" : "@string/app_name"]
+        // 테스트판은 이름과 아이콘(보라 바탕에 TEST 띠)이 달라 홈 화면에서 본 앱과 구분된다.
+        manifestPlaceholders = [
+            appLabel    : testApp ? "[테스트] 고양이" : "@string/app_name",
+            appIcon     : testApp ? "@drawable/ic_launcher_test" : "@mipmap/ic_launcher",
+            appRoundIcon: testApp ? "@drawable/ic_launcher_test" : "@mipmap/ic_launcher_round",
+        ]
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
