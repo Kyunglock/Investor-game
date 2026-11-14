@@ -141,6 +141,19 @@ class IdleEngineTest {
   }
 
   @Test
+  void slowBeatsKeepEveryRealHitButALongSilenceKeepsNone() {
+    start(1);
+    tick(1000);
+    // Four seconds between beats on a slow link: the pistol fired about 15 bullets meanwhile.
+    tick(4000, new IdleHit(1, "bullet", 14, 14.0));
+    assertThat(state.idle.damage).isEqualTo(14);
+    assertThat(state.capital).isEqualTo(5 * 40000);
+    tick(10001, new IdleHit(1, "bullet", 3, 3.0));
+    assertThat(state.idle.damage).isEqualTo(14);
+    assertThat(state.capital).isEqualTo(5 * 40000);
+  }
+
+  @Test
   void restartAndSecondTabCannotDoublePay() {
     start(1);
     clock.now += 1000;

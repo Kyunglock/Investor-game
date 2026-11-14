@@ -272,7 +272,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 화면에 켜 둔 자동 전투의 접속 신호. 3초 넘는 공백은 보상 없음 */
+        /** 화면에 켜 둔 자동 전투의 접속 신호. 10초 넘는 공백은 보상 없음 */
         post: {
             parameters: {
                 query?: never;
