@@ -74,7 +74,8 @@ class CompanyController {
 
   record IdleHitRequest(
       @Positive long wall,
-      @NotNull @jakarta.validation.constraints.Pattern(regexp = "bullet|water|meteor|bolt|ram|barrage")
+      @NotNull
+          @jakarta.validation.constraints.Pattern(regexp = "bullet|water|meteor|bolt|ram|barrage")
           String kind,
       @Min(1) @Max(1000) int count,
       @PositiveOrZero @jakarta.validation.constraints.DecimalMax("1000000000000") Double damage) {}
