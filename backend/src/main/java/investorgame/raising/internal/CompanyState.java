@@ -51,6 +51,9 @@ class CompanyState {
 
     int catDraws;
 
+    /** 스킬이 고양이의 고유 능력이 된 뒤의 저장이다 (501번). 아니면 벽으로 얻었던 스킬을 그 스킬의 고양이로 한 번 바꿔 준다. */
+    boolean catSkills;
+
     /** 최근 벽이 실제로 받은 피해(게임 초당, 492번). 화면의 실제 화력 표시에만 쓴다. */
     double wallDps;
   }

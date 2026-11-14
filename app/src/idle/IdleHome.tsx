@@ -117,19 +117,29 @@ export function IdleHome({
   )
   const skills = (
     <div className="idle-collection">
-      {idle?.skills.map((skill) => (
-        <article key={skill.code} className={skill.owned ? 'owned' : ''}>
-          <span className="idle-stat-icon" aria-hidden="true">
-            <IdleIcon
-              name={skill.owned ? (skill.code as 'water' | 'meteor' | 'bolt' | 'ram') : 'lock'}
-            />
-          </span>
-          <div>
-            <b>{skill.name}</b>
-            <small>{skill.owned ? '획득 · 자동 발동' : `${skill.unlockWall}벽 돌파 시 획득`}</small>
-          </div>
-        </article>
-      ))}
+      {idle?.skills.map((skill) => {
+        // 스킬은 고양이의 고유 능력이다 (501번): 그 고양이가 출전해 있는 동안 발동한다.
+        const cats = idle.cats.filter((cat) => cat.skill === skill.code)
+        const casting = cats.filter((cat) => cat.fielded)
+        const names = (list: typeof cats) => list.map((cat) => cat.name).join('·')
+        return (
+          <article key={skill.code} className={skill.owned ? 'owned' : ''}>
+            <span className="idle-stat-icon" aria-hidden="true">
+              <IdleIcon
+                name={skill.owned ? (skill.code as 'water' | 'meteor' | 'bolt' | 'ram') : 'lock'}
+              />
+            </span>
+            <div>
+              <b>{skill.name}</b>
+              <small>
+                {skill.owned
+                  ? `발동 중 · ${names(casting)}`
+                  : `${names(cats)}의 고유 스킬 · 출전하면 발동`}
+              </small>
+            </div>
+          </article>
+        )
+      })}
     </div>
   )
   return (

@@ -49,7 +49,7 @@ function Portrait({ code, locked }: { code?: CatCode; locked?: boolean }) {
 
 /**
  * 고양이 메뉴 (decisions.md 488·491·493번): 뽑기권으로 고양이를 뽑고, 위의 출전 칸 넷에 세우고, 고양이마다 가진 무기를 하나씩 들린다. 아래는
- * 가진 고양이의 인벤토리 격자다. 스킬은 고양이와 상관없이 성장 › 스킬에 있다. 결과는 서버가 정한다.
+ * 가진 고양이의 인벤토리 격자다. 고양이마다 고유 스킬이 하나 있고 출전해 있는 동안 발동한다 (501번). 결과는 서버가 정한다.
  */
 export function IdleCats({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
@@ -99,7 +99,7 @@ export function IdleCats({ company }: { company: Company }) {
           <small>
             {drawn
               ? drawn.isNew
-                ? `${drawn.cat.name} 합류!`
+                ? `${drawn.cat.name} 합류! 고유 스킬 ${drawn.cat.skillName}`
                 : `${drawn.cat.name} Lv.${drawn.cat.level} · 화력 ${drawn.cat.damagePercent}%`
               : '뽑기권 한 장으로 한 마리 · 또 나오면 레벨이 올라요'}
           </small>
@@ -155,7 +155,7 @@ export function IdleCats({ company }: { company: Company }) {
               {cat.name} <small>Lv.{cat.level}</small>
             </b>
             <small>
-              무기 공격력의 {cat.damagePercent}%로 쏴요 · {trait(cat)}
+              무기 공격력의 {cat.damagePercent}%로 쏴요 · {trait(cat)} · 고유 스킬 {cat.skillName}
             </small>
             <button
               type="button"

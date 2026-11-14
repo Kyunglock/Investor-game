@@ -1118,7 +1118,7 @@ components:
                 - type: 'null'
         idle:
           type: object
-          required: [wall, hp, maxHp, dps, earned, boss, skills, nextUnlock, cats, fieldSlots, wallDps]
+          required: [wall, hp, maxHp, dps, earned, boss, skills, cats, fieldSlots, wallDps]
           properties:
             wall: { type: integer, format: int64 }
             hp: { type: number }
@@ -1126,7 +1126,6 @@ components:
             dps: { type: number }
             earned: { type: integer, format: int64 }
             boss: { type: boolean }
-            nextUnlock: { type: integer, format: int64 }
             circuitSeconds: { type: number, description: 서킷브레이커 잔여 게임 시간. 기본 2배속이며 거래 정지 중에는 공격과 보상이 멈춤 }
             sequence: { type: integer, format: int64, description: 서버가 마지막으로 처리한 접속 신호의 순번. 화면은 이 순번까지 보낸 명중을 hp에 반영된 것으로 본다 }
             upcoming:
@@ -1141,22 +1140,22 @@ components:
                   maxHp: { type: number }
             skills:
               type: array
+              description: 스킬 넷(물·메테오·번개·충차). 스킬은 고양이의 고유 능력이다 (decisions.md 501번)
               items:
                 type: object
-                required: [code, name, unlockWall, owned]
+                required: [code, name, owned]
                 properties:
                   code: { type: string }
                   name: { type: string }
-                  unlockWall: { type: integer, format: int64 }
-                  owned: { type: boolean }
+                  owned: { type: boolean, description: 지금 발동 중이다. 이 스킬을 가진 고양이가 출전해 있다 }
             fieldSlots: { type: integer, description: 한 번에 출전하는 고양이 수 (492·493번, 넷) }
             wallDps: { type: number, description: 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 }
             cats:
               type: array
-              description: 고양이 (488·491번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏜다. 스킬과는 상관없다
+              description: 고양이 (488·501번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏘고 제 스킬을 쓴다
               items:
                 type: object
-                required: [code, name, level, damagePercent, firePercent, criticalPercent, fielded, weapon]
+                required: [code, name, level, damagePercent, firePercent, criticalPercent, fielded, weapon, skill, skillName]
                 properties:
                   code: { type: string, enum: [sky, mint, lilac, sunset, night, snow] }
                   name: { type: string }
@@ -1165,6 +1164,8 @@ components:
                   firePercent: { type: integer, description: 이 고양이 총의 쏘는 빠르기(%). 특성이 없으면 100 }
                   criticalPercent: { type: integer, description: 이 고양이 총의 치명타 배율(%). 특성이 없으면 100 }
                   fielded: { type: boolean }
+                  skill: { type: string, enum: [water, meteor, bolt, ram], description: 이 고양이의 고유 스킬 (501번). 출전해 있는 동안 발동한다 }
+                  skillName: { type: string }
                   weapon:
                     description: 든 무기. 없으면 null(기본 권총을 쏜다)
                     oneOf:
