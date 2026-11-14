@@ -296,6 +296,19 @@ class IdleEngine {
     }
   }
 
+  /** 테스트판 (decisions.md 499번): 고른 벽 앞에 바로 선다. 그 벽은 새 벽이고 거래 정지와 쌓인 피해는 지운다. */
+  void jump(CompanyState c, long wall) {
+    CompanyState.Idle s = state(c);
+    s.wall = Math.max(1, Math.min(MAX_JUMP_WALL, wall));
+    s.damage = 0;
+    s.nextDamage = 0;
+    s.afterNextDamage = 0;
+    s.circuitSeconds = 0;
+    s.hitCredits = new double[5];
+  }
+
+  static final long MAX_JUMP_WALL = 100_000;
+
   void fieldCat(CompanyState c, String code, boolean fielded) {
     CompanyState.Idle s = state(c);
     if (!s.cats.containsKey(code)) throw new InvalidRequestException("가지지 않은 고양이다: " + code);

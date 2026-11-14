@@ -10,7 +10,7 @@ import { WeaponInventory, weaponBadge } from '../mental/WeaponInventory'
 import { BASE_CRIT_CHANCE, BASE_CRIT_MULT, CRIT_CHANCE, CRIT_MULT } from '../mental/weaponEffects'
 import { IdleCanvas } from './IdleCanvas'
 import { IdleCats } from './IdleCats'
-import { IdleSandbox, useSandboxGate } from './IdleSandbox'
+import { IdleSandbox } from './IdleSandbox'
 import { IdleIcon, type IdleIconName } from './icons'
 import './idle-home.css'
 
@@ -67,7 +67,6 @@ export function IdleHome({
 }) {
   const [ownMenu, setMenu] = useState<Menu>('battle')
   const [ownPart, setPart] = useState<Part>('stats')
-  const sandboxGate = useSandboxGate()
   // 전투에서 "무기 바꾸기"로 오면(Windows) 성장 › 인벤토리가 열린다. 닫거나 다른 데로 가면 그 요청을 지운다.
   const weaponsAsked = useAppUi((s) => s.sheet?.kind === 'weapons')
   const menu = weaponsAsked ? 'growth' : ownMenu
@@ -152,16 +151,14 @@ export function IdleHome({
               aria-label={`보유 자본 ${money(company.capital)}`}
             >
               <span className="idle-coin">₩</span>
-              {/* 체험판의 지갑은 떨어지지 않는다 (499번). */}
+              {/* 테스트판의 지갑은 떨어지지 않는다 (499번). */}
               <b>{company.sandbox ? '∞' : money(company.capital)}</b>
             </div>
             {/* 상태 줄은 없앴다 (493번): 평소엔 벽 번호만, 전투가 멈춘 때만 그 까닭을 여기에 보인다. */}
-            {/* biome-ignore lint/a11y/useKeyWithClickEvents: 숨은 입구 (499번): 빠르게 일곱 번 누르면 테스트 체험판의 코드 창이 뜬다. 일부러 드러내지 않는다. */}
             <strong
               className="idle-wall-number"
               data-testid="idle-wall-number"
               data-state={connected ? ((idle?.circuitSeconds ?? 0) > 0 ? 'halt' : 'auto') : 'wait'}
-              onClick={sandboxGate.tap}
             >
               {connected
                 ? (idle?.circuitSeconds ?? 0) > 0
@@ -181,7 +178,7 @@ export function IdleHome({
               ☰
             </button>
           </header>
-          <IdleSandbox company={company} open={sandboxGate.open} onClose={sandboxGate.close} />
+          <IdleSandbox company={company} />
           {blocked && (
             <div className="idle-blocked" role="alert" data-testid="idle-blocked">
               <p>다른 화면에서 전투 중이라 여기는 멈췄어요</p>

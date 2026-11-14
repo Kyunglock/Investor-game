@@ -73,10 +73,14 @@ interface RaisingState {
   mergeWeapon: (kind: WeaponKind, grade: Exclude<WeaponGrade, 'LR'>) => Promise<void>
   /** 자본으로 고양이 한 마리를 뽑는다 (decisions.md 488번). 받은 회사(실패면 null)를 돌려준다. */
   drawCat: () => Promise<Company | null>
-  /** 코드를 넣고 테스트 체험판에 들어간다 (decisions.md 499번). 안 되면 까닭을, 되면 null을 돌려준다. */
+  /** 코드를 넣고 테스트판에 들어간다 (decisions.md 499번). 안 되면 까닭을, 되면 null을 돌려준다. */
   enterSandbox: (code: string) => Promise<string | null>
-  /** 체험판에서 나와 본 게임의 회사를 다시 읽는다. */
+  /** 테스트판에서 나와 본 게임의 회사를 다시 읽는다. */
   leaveSandbox: () => Promise<void>
+  /** 테스트판: 고른 매도벽 앞으로 옮긴다. */
+  jumpSandboxWall: (wall: number) => Promise<void>
+  /** 테스트판: 회사를 처음부터 새로 차린다. */
+  resetSandbox: () => Promise<void>
   /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
   fieldCat: (code: CatCode, fielded: boolean) => Promise<void>
   /** 고양이에게 가진 무기 하나를 들린다. weapon이 null이면 뺀다 (488번). */
@@ -245,7 +249,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       const res = await safely(api.POST('/api/sandbox', { body: { code } }))
       if (!res?.data) {
         const status = res?.response.status
-        if (status === 404) return '체험판이 열려 있지 않아요'
+        if (status === 404) return '테스트판이 열려 있지 않아요'
         return status === 400 ? '코드가 맞지 않아요' : '연결이 끊겼어요. 다시 시도해 주세요'
       }
       set({ company: res.data, error: null })
@@ -255,6 +259,8 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       await safely(api.DELETE('/api/sandbox'))
       await get().load()
     },
+    jumpSandboxWall: (wall) => change(api.POST('/api/sandbox/wall', { body: { wall } })),
+    resetSandbox: () => change(api.POST('/api/sandbox/reset')),
     drawCat: async () => {
       const res = await safely(api.POST('/api/company/cat/draw'))
       set({ company: res?.data ?? get().company, error: reason(res?.error) })

@@ -19,7 +19,7 @@ management:
 admin:
   token: ${ADMIN_TOKEN:}
 
-# 테스트 체험판(/api/sandbox)을 여는 코드. 비워 두면 체험판은 꺼진다 (decisions.md 499번)
+# 테스트판(/api/sandbox)을 여는 코드. 비워 두면 테스트판은 꺼진다 (decisions.md 499번)
 sandbox:
   code: ${SANDBOX_CODE:}
 

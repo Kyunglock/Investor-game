@@ -115,10 +115,16 @@ public interface CompanyService {
   CompanyView drawCat(UUID sessionId);
 
   /**
-   * 테스트 체험판 (decisions.md 499번): 이 세션의 체험판 회사를 돌려준다. 없으면 차리고, 자본·채용권·뽑기권을 채운다. 체험판 회사는 무엇을 하든 그 전에
+   * 테스트판 (decisions.md 499번): 이 세션의 테스트판 회사를 돌려준다. 없으면 차리고, 자본·채용권·뽑기권을 채운다. 테스트판 회사는 무엇을 하든 그 전에
    * 다시 채워지고 업계 순위에 남지 않는다.
    */
   CompanyView sandbox(UUID sessionId);
+
+  /** 테스트판 회사를 고른 매도벽 앞으로 옮긴다 (499번). 테스트판 회사가 아니면 400. */
+  CompanyView sandboxWall(UUID sessionId, long wall);
+
+  /** 테스트판 회사를 닫고 처음부터 새로 차린다 (499번). 테스트판 회사가 아니면 400. */
+  CompanyView sandboxReset(UUID sessionId);
 
   /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
   CompanyView fieldCat(UUID sessionId, String code, boolean fielded);

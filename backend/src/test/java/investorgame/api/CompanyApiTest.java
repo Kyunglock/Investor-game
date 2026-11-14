@@ -44,7 +44,7 @@ class CompanyApiTest {
   }
 
   @Test
-  void 코드를_두지_않은_서버에는_체험판이_없다() throws Exception {
+  void 코드를_두지_않은_서버에는_테스트판이_없다() throws Exception {
     postJson("/api/sandbox", "{\"code\":\"anything\"}").andExpect(status().isNotFound());
   }
 

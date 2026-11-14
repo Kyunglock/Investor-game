@@ -6,6 +6,7 @@ import java.util.HexFormat;
 import java.util.UUID;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -13,8 +14,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.util.WebUtils;
 
 /**
- * 테스트 체험판 (decisions.md 499번). 코드를 넣은 플레이어는 본 게임과 따로 체험판 회사를 가진다: 체험판 쿠키가 있는 동안 회사 요청은 세션 ID에서 만든
- * 다른 ID로 가서, 본 게임의 회사는 건드리지 않는다. 쿠키 값은 코드로 서명한 세션 ID라 코드를 모르면 만들 수 없고 다른 세션에는 통하지 않는다.
+ * 테스트판 (decisions.md 499번). 코드를 넣은 플레이어는 본 게임과 따로 테스트판 회사를 가진다: 테스트판 쿠키가 있는 동안 회사 요청은 세션 ID에서 만든 다른
+ * ID로 가서, 본 게임의 회사는 건드리지 않는다. 쿠키 값은 코드로 서명한 세션 ID라 코드를 모르면 만들 수 없고 다른 세션에는 통하지 않는다.
  */
 @Component
 class Sandbox {
@@ -41,7 +42,7 @@ class Sandbox {
             code.getBytes(StandardCharsets.UTF_8));
   }
 
-  /** 회사 요청이 쓸 ID: 이 요청에 이 세션의 체험판 쿠키가 있으면 체험판 ID, 아니면 세션 ID 그대로. */
+  /** 회사 요청이 쓸 ID: 이 요청에 이 세션의 테스트판 쿠키가 있으면 테스트판 ID, 아니면 세션 ID 그대로. */
   UUID player(UUID sessionId) {
     if (!enabled()
         || !(RequestContextHolder.getRequestAttributes()
@@ -54,10 +55,15 @@ class Sandbox {
         MessageDigest.isEqual(
             sign(sessionId).getBytes(StandardCharsets.UTF_8),
             cookie.getValue().getBytes(StandardCharsets.UTF_8));
-    return signed ? id(sessionId) : sessionId;
+    if (!signed) return sessionId;
+    // 세션 쿠키처럼 쓸 때마다 만료를 새로 건다: 테스트판 앱을 매일 열어도 코드를 다시 묻지 않는다.
+    if (attrs.getResponse() != null) {
+      attrs.getResponse().addHeader(HttpHeaders.SET_COOKIE, enter(sessionId).toString());
+    }
+    return id(sessionId);
   }
 
-  /** 체험판 회사가 매달리는 ID. 세션마다 하나로 정해진다. */
+  /** 테스트판 회사가 매달리는 ID. 세션마다 하나로 정해진다. */
   UUID id(UUID sessionId) {
     return UUID.nameUUIDFromBytes(("sandbox:" + sessionId).getBytes(StandardCharsets.UTF_8));
   }

@@ -26,12 +26,12 @@ class SessionCookies {
     this.sandbox = sandbox;
   }
 
-  /** 회사 요청이 쓸 ID (decisions.md 499번): 체험판에 들어와 있으면 체험판 회사의 ID, 아니면 세션 ID. */
+  /** 회사 요청이 쓸 ID (decisions.md 499번): 테스트판에 들어와 있으면 테스트판 회사의 ID, 아니면 세션 ID. */
   UUID requirePlayer(String token) {
     return sandbox.player(requireSession(token));
   }
 
-  /** {@link #session}의 회사 요청용: 체험판에 들어와 있으면 체험판 회사의 ID. */
+  /** {@link #session}의 회사 요청용: 테스트판에 들어와 있으면 테스트판 회사의 ID. */
   Optional<UUID> player(String token) {
     return session(token).map(sandbox::player);
   }

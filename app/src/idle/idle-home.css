@@ -59,8 +59,6 @@
   white-space: nowrap;
 }
 .idle-wall-number {
-  /* 체험판의 숨은 입구가 누름을 받는다 (499번). 캔버스는 누름을 쓰지 않는다. */
-  pointer-events: auto;
   flex: 0 1 auto;
   margin: 0 auto;
   padding: 6px 12px;
@@ -738,7 +736,7 @@ button.idle-cat-gun {
   }
 }
 
-/* 테스트 체험판 (decisions.md 499번): 왼쪽 가장자리의 작은 표시와 나가기, 숨은 입구로 여는 코드 창. */
+/* 테스트판 (decisions.md 499번): 왼쪽 가장자리의 단추, 코드 창과 도구 창. */
 .idle-sandbox {
   position: absolute;
   top: 46%;
@@ -751,19 +749,36 @@ button.idle-cat-gun {
   border-radius: 12px;
   background: #f4ecffe6;
   box-shadow: 0 2px 0 #b9a0e6;
+  min-width: 52px;
+  min-height: 48px;
   text-align: center;
   font-size: 11px;
   color: #4b2a8f;
 }
-.idle-sandbox button {
-  min-width: 48px;
-  min-height: 44px;
-  padding: 4px 8px;
-  border: 1.5px solid #8a5bd6;
-  border-radius: 9px;
-  background: #fff;
+.idle-sandbox-label {
+  font-size: 13px;
+}
+.idle-sandbox-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.idle-sandbox-row button {
+  padding: 0 18px;
+}
+.idle-sandbox-chips {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+.idle-sandbox-chips button {
+  padding: 0;
   font-size: 12px;
-  color: #4b2a8f;
+}
+.idle-sandbox-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
 }
 .idle-sandbox-gate {
   position: absolute;
@@ -796,6 +811,7 @@ button.idle-cat-gun {
   color: #c0392b;
 }
 .idle-sandbox-gate input {
+  min-width: 0;
   min-height: 44px;
   padding: 8px 12px;
   border: 1.5px solid #c18c46;
@@ -812,9 +828,4 @@ button.idle-cat-gun {
 }
 .idle-sandbox-gate button:disabled {
   opacity: 0.5;
-}
-.idle-sandbox-gate form > div {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
 }
