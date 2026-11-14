@@ -19,6 +19,8 @@ export class BuyWallFx {
     y: number
     damage: number
     active: boolean
+    /** 매수세례의 주문 (503번): 벽에 닿은 피해를 따로 센다. */
+    barrage: boolean
     body: Phaser.GameObjects.Image
   }[]
   private scene: Phaser.Scene
@@ -72,25 +74,35 @@ export class BuyWallFx {
         })),
     }
   }
-  launch(x: number, y: number, damage: number) {
+  launch(x: number, y: number, damage: number, barrage = false) {
     const texture = buyOrderTexture(this.scene, damage)
     let shot = this.shots.find((s) => !s.active)
     if (!shot) {
-      shot = { x, y, damage, active: false, body: this.scene.add.image(x, y, texture).setDepth(6) }
+      shot = {
+        x,
+        y,
+        damage,
+        active: false,
+        barrage,
+        body: this.scene.add.image(x, y, texture).setDepth(6),
+      }
       this.shots.push(shot)
     }
-    Object.assign(shot, { x, y, damage, active: true })
+    Object.assign(shot, { x, y, damage, active: true, barrage })
     shot.body.setTexture(texture).setScale(this.orderScale).setPosition(x, y).setVisible(true)
   }
 
   /** hit는 이번에 쓰고 남은 매수 수량(전투 단위)을 돌려준다: 0이면 주문이 사라지고, 줄었으면 남은 수량으로 계속 날아간다. */
-  step(dt: number, hit: (x: number, fromY: number, toY: number, damage: number) => number) {
+  step(
+    dt: number,
+    hit: (x: number, fromY: number, toY: number, damage: number, barrage: boolean) => number,
+  ) {
     this.hitLeft = Math.max(0, this.hitLeft - dt)
     this.breakLeft = Math.max(0, this.breakLeft - dt)
     for (const shot of this.shots) {
       if (!shot.active) continue
       const next = shot.y - dt * BUY_ORDER_SPEED
-      const left = hit(shot.x, shot.y, next, shot.damage)
+      const left = hit(shot.x, shot.y, next, shot.damage, shot.barrage)
       if (left <= 1e-6 || next < -30) shot.active = false
       else if (left < shot.damage) {
         shot.damage = left

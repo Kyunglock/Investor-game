@@ -8,6 +8,7 @@ type Status = 'loading' | 'ready' | 'error'
 export type MentalCard = 'hold' | 'split' | 'rule' | 'steel' | 'calm' | 'heal'
 export type WeaponKind = 'pistol' | 'revolver' | 'smg' | 'shotgun' | 'rifle'
 export type WeaponGrade = NonNullable<Company['weapons']>[number]['grade']
+export type ActiveCode = NonNullable<NonNullable<Company['idle']>['actives']>[number]['code']
 export type CatCode = NonNullable<Company['idle']>['cats'][number]['code']
 
 interface RaisingState {
@@ -73,6 +74,8 @@ interface RaisingState {
   mergeWeapon: (kind: WeaponKind, grade: Exclude<WeaponGrade, 'LR'>) => Promise<void>
   /** 자본으로 고양이 한 마리를 뽑는다 (decisions.md 488번). 받은 회사(실패면 null)를 돌려준다. */
   drawCat: () => Promise<Company | null>
+  /** 액티브 스킬을 쓴다 (decisions.md 503번). 서버가 받아 줬으면 true. 전투를 멈추지 않게 busy를 켜지 않는다. */
+  useActive: (code: ActiveCode) => Promise<boolean>
   /** 코드를 넣고 테스트판에 들어간다 (decisions.md 499번). 안 되면 까닭을, 되면 null을 돌려준다. */
   enterSandbox: (code: string) => Promise<string | null>
   /** 테스트판에서 나와 본 게임의 회사를 다시 읽는다. */
@@ -270,6 +273,12 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     setSandboxWallet: (infinite) => change(api.POST('/api/sandbox/wallet', { body: { infinite } })),
     grantSandboxCats: (level) => change(api.POST('/api/sandbox/cats', { body: { level } })),
     grantSandboxWeapon: (grade) => change(api.POST('/api/sandbox/weapon', { body: { grade } })),
+    useActive: async (code) => {
+      const res = await safely(api.POST('/api/company/idle/active', { body: { code } }))
+      if (!res?.data) return false
+      set({ company: res.data })
+      return true
+    },
     drawCat: async () => {
       const res = await safely(api.POST('/api/company/cat/draw'))
       set({ company: res?.data ?? get().company, error: reason(res?.error) })

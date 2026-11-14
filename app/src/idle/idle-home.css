@@ -905,3 +905,51 @@ button.idle-cat-gun {
 .idle-sandbox-gate button:disabled {
   opacity: 0.5;
 }
+
+/* 액티브 스킬 단추 (decisions.md 503번): 오른쪽 가장자리에 세로로. 대기 중이면 어두운 막이 위에서부터 걷힌다. */
+.idle-actives {
+  position: absolute;
+  right: 6px;
+  top: 44%;
+  z-index: 2;
+  display: grid;
+  gap: 8px;
+}
+.idle-actives button {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-content: center;
+  gap: 2px;
+  width: 66px;
+  min-height: 52px;
+  padding: 4px;
+  border: 2px solid #c48637;
+  border-radius: 14px;
+  background: linear-gradient(#fff3c9, #ffd27a);
+  box-shadow: 0 3px 0 #c48c42;
+  text-align: center;
+  color: #5a3310;
+}
+.idle-actives b {
+  font-size: 12px;
+  line-height: 1.15;
+  word-break: keep-all;
+}
+.idle-actives .idle-active-note {
+  font-size: 9px;
+  line-height: 1.2;
+  word-break: keep-all;
+  opacity: 0.85;
+}
+.idle-actives button:disabled {
+  background: #e8dfcc;
+  box-shadow: 0 3px 0 #b9ad95;
+  color: #7a6b55;
+}
+.idle-actives i {
+  position: absolute;
+  inset: 0 0 auto;
+  background: #2b234033;
+  pointer-events: none;
+}

@@ -2,6 +2,7 @@ import type { IdleAttackKind } from '@web/features/raising/idleContacts'
 import Phaser from 'phaser'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
+import { ACTIVE_BANNERS, ACTIVES, type ActiveCode } from './actives'
 import {
   type BattleMode,
   BOSS,
@@ -256,6 +257,8 @@ export interface BattleHandle {
   clearIdleHits: () => void
   /** 테스트판: 그 종류의 몬스터 습격을 바로 부른다. */
   callIdleRaid: (kind: IdleRaidKind) => void
+  /** 자동 전투: 액티브 스킬의 연출과 효과를 낸다 (503번). */
+  castActive: (code: ActiveCode) => void
   stop: () => void
 }
 
@@ -682,6 +685,11 @@ class BattleScene extends Phaser.Scene {
   private idleRaids = 0
   /** 사장냥이 쏜 발 수: 자동 전투에서 혼자일 때 세 발에 한 발은 벽을 노린다 (504번). */
   private heroAims = 0
+  /** 액티브 스킬 (503번): 매수세례의 남은 주문 수와 시계, 불장이 끝나는 전투 초, 지금 알리는 명중의 종류. */
+  private barrageLeft = 0
+  private barrageClock = 0
+  private rallyUntil = 0
+  private reportAs: IdleAttackKind | null = null
   private calledRaid: IdleRaidKind | null = null
   private panicRushClock = 0
   private panicRushEvery = 0
@@ -2081,7 +2089,25 @@ class BattleScene extends Phaser.Scene {
       this.opts.onBanner('새 매수벽 등장!', '#7be0c3')
     }
     if (support) this.launchBuyOrders(support.fireCount)
-    this.buyWallFx?.step(dt, (x, fromY, toY, damage) => {
+    if (this.barrageLeft > 0) {
+      // 매수세례 (503번): 매수벽이 짧은 동안 굵은 매수 주문을 쏟아 낸다.
+      const every = ACTIVES.barrage.seconds / ACTIVES.barrage.shots
+      const lane = this.lane()
+      this.barrageClock += dt
+      while (this.barrageLeft > 0 && this.barrageClock >= every) {
+        this.barrageClock -= every
+        this.barrageLeft--
+        this.buyWallFx?.launch(
+          buyOrderX(lane.left, lane.width),
+          this.buyWallY(),
+          this.loadout.damage * 0.75 * (1 + this.loadout.buyBonus) * ACTIVES.barrage.power,
+          true,
+        )
+      }
+    }
+    this.buyWallFx?.step(dt, (x, fromY, toY, damage, barrage) => {
+      // 매수세례의 주문이 벽에 닿으면 서버에 제 종류로 알린다: 탄의 횟수 예산을 쓰지 않는다.
+      this.reportAs = barrage ? 'barrage' : null
       const targets = this.magicTargets().filter(
         (e) =>
           Math.abs(e.x - x) <= Math.max(16, e.displayWidth * 0.45) &&
@@ -2104,6 +2130,7 @@ class BattleScene extends Phaser.Scene {
       this.hit(hit, damage, -Math.PI / 2, 'bullet')
       return 0
     })
+    this.reportAs = null
     this.drawBuyWall()
     // 벽 앞에서는 멈춰 서서 쏘고, 벽을 부수면 다음 벽까지 걸어간다 (493번): 배경도 그때만 흐른다.
     const scroll =
@@ -3108,7 +3135,30 @@ class BattleScene extends Phaser.Scene {
 
   /** 초당 발사 수를 기존의 80%로 낮춘다. */
   private get attackInterval() {
-    return this.loadout.fireMs * 1.25 * SHOT_WEIGHT
+    return (this.loadout.fireMs * 1.25 * SHOT_WEIGHT) / this.rallyFire
+  }
+
+  /** 불장 (503번): 타는 동안 모든 총이 두 배 빨리 나간다. */
+  private get rallyFire() {
+    return this.elapsed < this.rallyUntil ? ACTIVES.rally.fire : 1
+  }
+
+  /** 액티브 스킬을 쓴다 (503번): 서버가 받아 준 뒤에 부른다. */
+  castActive(code: ActiveCode) {
+    if (!this.opts.idle || this.over) return
+    if (code === 'barrage') {
+      this.barrageLeft = ACTIVES.barrage.shots
+      this.barrageClock = 0
+    } else if (code === 'rally') {
+      this.rallyUntil = this.elapsed + ACTIVES.rally.seconds
+    } else {
+      this.buyWall?.fortify(ACTIVES.fortify.seconds)
+      this.drawBuyWall()
+    }
+    const [text, color] = ACTIVE_BANNERS[code]
+    this.opts.onIdleRaid?.(text, color)
+    sfx.levelUp()
+    haptic.medium()
   }
 
   /** index번째 고양이가 따로 든 총 (488번). 없으면 사장냥과 같은 총을 쏜다(393번). */
@@ -3117,7 +3167,9 @@ class BattleScene extends Phaser.Scene {
   }
 
   private mateInterval(index: number) {
-    return (this.mateGun(index)?.fireMs ?? this.loadout.fireMs) * 1.25 * SHOT_WEIGHT
+    return (
+      ((this.mateGun(index)?.fireMs ?? this.loadout.fireMs) * 1.25 * SHOT_WEIGHT) / this.rallyFire
+    )
   }
 
   /** index번째 고양이의 그림 차례 (mates.ts MATE_LOOKS): 자동 전투는 고양이마다 제 그림, 스테이지는 들어온 차례다. */
@@ -4043,13 +4095,14 @@ class BattleScene extends Phaser.Scene {
   private reportIdleHit(wall: number, kind: DamageKind, damage: number) {
     if (!Number.isFinite(damage) || damage <= 0) return
     const code: IdleAttackKind =
-      kind === 'water' || kind === 'meteor'
+      this.reportAs ??
+      (kind === 'water' || kind === 'meteor'
         ? kind
         : kind === 'lightning' || kind === 'chain'
           ? 'bolt'
           : kind === 'earth' || kind === 'siege'
             ? 'ram'
-            : 'bullet'
+            : 'bullet')
     this.opts.onIdleHit?.(wall, code, damage)
   }
 
@@ -4622,6 +4675,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
     idleHitsSent: (sequence) => scene.idleHitsSent(sequence),
     clearIdleHits: () => scene.clearIdleHits(),
     callIdleRaid: (kind) => scene.callIdleRaid(kind),
+    castActive: (code) => scene.castActive(code),
     stop: () => {
       ro.disconnect()
       game.destroy(true)

@@ -120,4 +120,18 @@ describe('매수벽 붕괴 밀어내기 (#699)', () => {
     wall.step(BUY_WALL.idleRebuildSeconds)
     expect(wall.hp).toBe(100)
   })
+  it('방어선 구축은 무너진 벽을 바로 세우고 그동안 깎이지 않게 한다 (503번)', () => {
+    const wall = new BuyWall(100, () => 0.5)
+    expect(wall.hit(wall.maxHp)).toBe(true)
+    expect(wall.active).toBe(false)
+    wall.fortify(6)
+    expect(wall.active).toBe(true)
+    expect(wall.hp).toBe(wall.maxHp)
+    // 무적인 동안에는 맞아도 그대로다.
+    expect(wall.hit(wall.maxHp)).toBe(false)
+    expect(wall.hp).toBe(wall.maxHp)
+    wall.step(6)
+    expect(wall.hit(1)).toBe(false)
+    expect(wall.hp).toBe(wall.maxHp - 1)
+  })
 })

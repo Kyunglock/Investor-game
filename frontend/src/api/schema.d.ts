@@ -293,8 +293,11 @@ export interface paths {
                         hits?: {
                             /** Format: int64 */
                             wall: number;
-                            /** @enum {string} */
-                            kind: "bullet" | "water" | "meteor" | "bolt" | "ram";
+                            /**
+                             * @description barrage는 액티브 스킬 매수세례의 매수 주문 (503번)
+                             * @enum {string}
+                             */
+                            kind: "bullet" | "water" | "meteor" | "bolt" | "ram" | "barrage";
                             count: number;
                             /** @description 실제 충돌 피해의 합계. 치명타·지원 주문·범위 감쇠를 포함하며 초당 피해를 곱하지 않음 */
                             damage?: number;
@@ -314,6 +317,27 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/company/idle/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 액티브 스킬을 쓴다 (decisions.md 503번)
+         * @description 매수세례(barrage)·불장(rally)·방어선 구축(fortify). 처음부터 모두 쓸 수 있고, 쓰면 재사용 대기 시간이 돈다. 대기 시간은 전투가 돌아가는 동안만
+         *     흐른다. 없는 스킬이거나 대기 중이거나 거래 정지 중이면 400.
+         */
+        post: operations["useIdleActive"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1265,6 +1289,18 @@ export interface components {
                     hp: number;
                     maxHp: number;
                 }[];
+                /** @description 액티브 스킬 (decisions.md 503번). 눌러서 쓴다. 시간은 화면에서 흐르는 실제 초다 */
+                actives?: {
+                    /** @enum {string} */
+                    code: "barrage" | "rally" | "fortify";
+                    name: string;
+                    /** @description 한 번 쓰고 다시 쓸 때까지(초) */
+                    cooldown: number;
+                    /** @description 효과가 이어지는 시간(초) */
+                    seconds: number;
+                    /** @description 다시 쓸 수 있을 때까지 남은 시간(초). 0이면 쓸 수 있다 */
+                    readyIn: number;
+                }[];
                 /** @description 스킬 넷(물·메테오·번개·충차). 스킬은 고양이의 고유 능력이다 (decisions.md 501번) */
                 skills: {
                     code: string;
@@ -1914,6 +1950,36 @@ export interface operations {
         };
         responses: {
             /** @description 결과를 받은 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    useIdleActive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    code: "barrage" | "rally" | "fortify";
+                };
+            };
+        };
+        responses: {
+            /** @description 쓴 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;
