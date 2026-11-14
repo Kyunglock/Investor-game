@@ -3,8 +3,9 @@ import { CAT_H, CAT_W, type GunGrade } from '@web/features/game/cat/draw'
 import type Phaser from 'phaser'
 import { drawBattleGun } from './battleWeaponArt'
 import { CAT_GUN } from './catGun'
-import { CAT_SCALE, type CatModel, mateModel } from './catModels'
-import { CAT_RUN_FRAMES, catRunKey, catRunPose } from './catRun'
+import { CAT_SCALE, type CatModel } from './catModels'
+import { drawCatPose } from './catPoseArt'
+import { catRunPose } from './catRun'
 import { drawEmber, drawPillar, drawWater, drawWave, drawWoodenRam } from './effectArt'
 import { orderShares, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
@@ -81,134 +82,109 @@ function bake(
 /** 장착 무기를 원본 고양이와 합성하고 피격 상태만 덧칠한다. */
 export const HERO_KEYS = ['hero-idle', 'hero-fire', 'hero-hurt'] as const
 
-/** 3종의 몸에는 팔·총이 없다. 조준하는 앞발과 무기는 별도 이미지다. */
-function drawRigBody(
-  scene: Phaser.Scene,
-  c: CanvasRenderingContext2D,
-  model: CatModel,
-  tint?: number,
-) {
-  const source = scene.textures.get('art-rigBodies').getSourceImage() as HTMLImageElement
-  const column = model === 'hero' ? 0 : model === 'fold' ? 1 : 2
-  const layer = document.createElement('canvas')
-  layer.width = CAT_W * DPR
-  layer.height = CAT_H * DPR
-  const paint = layer.getContext('2d')
-  if (!paint) return
-  paint.scale(DPR, DPR)
-  drawSprite(
-    paint,
-    source,
-    { x: (column * source.width) / 3, y: 0, w: source.width / 3, h: source.height },
-    { x: 14, y: 3, w: 75, h: 100 },
-    'height',
-  )
-  if (tint !== undefined) {
-    paint.globalCompositeOperation = 'source-atop'
-    paint.globalAlpha = 0.3
-    paint.fillStyle = `#${tint.toString(16).padStart(6, '0')}`
-    paint.fillRect(0, 0, CAT_W, CAT_H)
-  }
-  c.drawImage(layer, 0, 0, CAT_W, CAT_H)
+function drawRigBody(scene: Phaser.Scene, c: CanvasRenderingContext2D, index = 4, look?: number) {
+  const asset = look === undefined ? 'heroPoses' : MATE_LOOKS[look].poses
+  const source = scene.textures.get(`art-${asset}`).getSourceImage() as HTMLImageElement
+  drawCatPose(c, source, index)
 }
 
+function shadow(c: CanvasRenderingContext2D) {
+  c.fillStyle = '#98633633'
+  c.beginPath()
+  c.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
+  c.fill()
+}
+
+/** 첫 화면에도 준비 화면과 같은 중앙 견착 자세를 쓴다. */
 export function bakeHero(scene: Phaser.Scene, _grade: GunGrade) {
   for (const key of HERO_KEYS) {
     bake(scene, key, CAT_W, CAT_H, (c) => {
-      c.fillStyle = '#98633633'
-      c.beginPath()
-      c.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
-      c.fill()
-      drawRigBody(scene, c, 'hero')
-      if (key === 'hero-hurt') {
-        c.globalCompositeOperation = 'source-atop'
-        c.fillStyle = '#fc795e33'
-        c.fillRect(0, 0, CAT_W, CAT_H)
-      }
+      shadow(c)
+      drawRigBody(scene, c)
     })
   }
 }
 
-/** 총 윗면과 그 아래에 가려진 앞발. 함께 회전해 전투 시점을 유지한다. */
-export function bakeCatGun(scene: Phaser.Scene, grade: GunGrade, model: CatModel, look?: number) {
-  const key = `cat-gun-${grade}-${model}-${look ?? 'hero'}`
+/** 총의 등급만 바꾼다. 고양이의 손·털·눈은 몸 그림에서 유지된다. */
+export function bakeCatGun(scene: Phaser.Scene, grade: GunGrade, _model: CatModel, _look?: number) {
+  const key = `cat-gun-${grade}`
   bake(scene, key, CAT_GUN.w, CAT_GUN.h, (c) => {
-    const fur = model === 'hero' ? '#efc58f' : model === 'fold' ? '#929bb9' : '#ead4b9'
-    const tint = look === undefined ? undefined : MATE_LOOKS[look]?.tint
-    const color = tint === undefined ? fur : `#${tint.toString(16).padStart(6, '0')}`
     drawBattleGun(
       c,
       scene.textures.get('art-battleWeapons').getSourceImage() as HTMLImageElement,
       grade,
-      color,
     )
   })
   return key
 }
 
-/** Bake alternating leg strides from the original cats, keeping the upper-body silhouette. */
-export function bakeCatRuns(
+/** 정지 자세는 캐시하고 달리기는 고양이마다 한 캔버스만 재사용한다. */
+const runStates = new WeakMap<Phaser.Scene, Map<string, string>>()
+export function bakeCatBody(
   scene: Phaser.Scene,
-  _grade: GunGrade,
-  _mateGrades: readonly GunGrade[],
+  index: number,
+  look?: number,
+  runFrame?: number,
+  hurt = false,
 ) {
-  const models = [
-    { base: 'hero', model: 'hero' },
-    ...MATE_LOOKS.map((_, i) => ({ base: mateKey(i), model: mateModel(i), look: i })),
-  ] as { base: string; model: CatModel; look?: number }[]
-  for (const { base, model, look } of models) {
-    const sprite = document.createElement('canvas')
-    sprite.width = CAT_W * DPR
-    sprite.height = CAT_H * DPR
-    const paint = sprite.getContext('2d')
-    if (!paint) continue
-    paint.scale(DPR, DPR)
-    drawRigBody(scene, paint, model, look === undefined ? undefined : MATE_LOOKS[look].tint)
-    for (let frame = 0; frame < CAT_RUN_FRAMES; frame++) {
-      bake(scene, catRunKey(base, frame), CAT_W, CAT_H, (c) => {
-        const pose = catRunPose(frame)
-        c.fillStyle = '#98633633'
-        c.beginPath()
-        c.ellipse(50, 102, 24, 4, 0, 0, Math.PI * 2)
-        c.fill()
-        c.save()
-        c.translate(CAT_W / 2, 80 + pose.bob)
-        c.rotate(pose.lean)
-        c.translate(-CAT_W / 2, -80)
-        const ankle = 86
-        c.drawImage(sprite, 0, 0, CAT_W * DPR, ankle * DPR, 0, 0, CAT_W, ankle)
-        for (const [side, stride] of [pose.left, pose.right].entries()) {
-          c.drawImage(
-            sprite,
-            ((side * CAT_W) / 2) * DPR,
-            ankle * DPR,
-            (CAT_W / 2) * DPR,
-            (CAT_H - ankle) * DPR,
-            (side * CAT_W) / 2,
-            ankle,
-            CAT_W / 2,
-            (CAT_H - ankle) * (1 + stride),
-          )
-        }
-        c.restore()
-      })
+  const base = look === undefined ? 'hero' : mateKey(look)
+  const key = `${base}-pose-${index}${hurt ? '-hurt' : ''}`
+  bake(scene, key, CAT_W, CAT_H, (c) => {
+    shadow(c)
+    drawRigBody(scene, c, index, look)
+    if (hurt) {
+      c.globalCompositeOperation = 'source-atop'
+      c.fillStyle = '#fc795e33'
+      c.fillRect(0, 0, CAT_W, CAT_H)
     }
+  })
+  if (runFrame === undefined || hurt) return key
+  const runKey = `${base}-running`
+  let states = runStates.get(scene)
+  if (!states) {
+    states = new Map()
+    runStates.set(scene, states)
   }
+  const state = `${index}-${runFrame}`
+  if (states.get(runKey) === state && scene.textures.exists(runKey)) return runKey
+  const sprite = scene.textures.get(key).getSourceImage() as HTMLCanvasElement
+  bake(
+    scene,
+    runKey,
+    CAT_W,
+    CAT_H,
+    (c) => {
+      const pose = catRunPose(runFrame)
+      const ankle = 86
+      // 견착한 상체·손은 총과 같은 자리에 고정하고 양쪽 발만 번갈아 움직인다.
+      c.drawImage(sprite, 0, 0, sprite.width, ankle * DPR, 0, 0, CAT_W, ankle)
+      for (const [side, stride] of [pose.left, pose.right].entries()) {
+        c.drawImage(
+          sprite,
+          (side * CAT_W * DPR) / 2,
+          ankle * DPR,
+          (CAT_W * DPR) / 2,
+          (CAT_H - ankle) * DPR,
+          (side * CAT_W) / 2,
+          ankle,
+          CAT_W / 2,
+          (CAT_H - ankle) * (1 + stride),
+        )
+      }
+    },
+    true,
+  )
+  states.set(runKey, state)
+  return runKey
 }
 
-/** 기존 동료 순서에 승인한 접힌 귀·장모 모델을 번갈아 사용한다. */
 export const mateKey = (i: number) => `mate-${i}`
 
-/** look번째 고양이의 몸에 그 등급의 무기를 얹어 그린다 (511번). 같은 그림을 쓰는 고양이의 빛깔(tint)은 몸에만 입힌다. */
-/** grades[i]는 i번째 그림의 고양이가 든 무기의 등급이다. 장비가 바뀌면 다시 굽는다. */
 export function bakeMates(scene: Phaser.Scene, _grades: readonly GunGrade[]) {
   for (let i = 0; i < MATE_LOOKS.length; i++) {
     bake(scene, mateKey(i), CAT_W, CAT_H, (c) => {
-      c.fillStyle = '#98633633'
-      c.beginPath()
-      c.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
-      c.fill()
-      drawRigBody(scene, c, mateModel(i), MATE_LOOKS[i].tint)
+      shadow(c)
+      drawRigBody(scene, c, 4, i)
     })
   }
 }

@@ -3,8 +3,8 @@ import { STAGE_ASSETS } from './assets'
 import { drawBattleGun } from './battleWeaponArt'
 import { CAT_GUN, catGunPose } from './catGun'
 import { CAT_SCALE } from './catModels'
+import { drawCatPose } from './catPoseArt'
 import type { Weapon } from './hero'
-import { drawSprite } from './stageArt'
 
 /** 준비 화면과 전투 모두 같은 장착 무기를 손 위치에 합성한다. */
 export function StagePortrait({ weapon }: { weapon: Weapon }) {
@@ -37,17 +37,11 @@ export function StagePortrait({ weapon }: { weapon: Weapon }) {
       ctx.translate(-CAT_GUN.pivotX, -CAT_GUN.pivotY)
       drawBattleGun(ctx, weapons, weapon.grade)
       ctx.restore()
-      drawSprite(
-        ctx,
-        source,
-        { x: 0, y: 0, w: source.width / 3, h: source.height },
-        { x: 14, y: 3, w: 75, h: 100 },
-        'height',
-      )
+      drawCatPose(ctx, source, 4)
     }
     source.onload = paint
     weapons.onload = paint
-    source.src = STAGE_ASSETS.rigBodies
+    source.src = STAGE_ASSETS.heroPoses
     weapons.src = STAGE_ASSETS.battleWeapons
     return () => {
       cancelled = true

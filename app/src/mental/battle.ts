@@ -21,8 +21,8 @@ import {
   TRICKLE_SECONDS,
 } from './advance'
 import {
+  bakeCatBody,
   bakeCatGun,
-  bakeCatRuns,
   bakeEnemies,
   bakeHero,
   bakeMagic,
@@ -75,9 +75,9 @@ import {
   type MateGun,
   xpToNext,
 } from './cards'
-import { CAT_GUN, catGunAim, catGunPose, catShoulder } from './catGun'
+import { CAT_GUN, catGunAim, catGunPose, catShotAngle, catShoulder } from './catGun'
 import { CAT_SCALE, mateModel } from './catModels'
-import { catRunFrame, catRunKey } from './catRun'
+import { catRunFrame } from './catRun'
 import { CIRCUIT_BREAKER, CircuitBreaker } from './circuitBreaker'
 import { CircuitBreakerFx } from './circuitBreakerFx'
 import {
@@ -3285,7 +3285,7 @@ class BattleScene extends Phaser.Scene {
 
   /**
    * 고양이 그림을 든 무기대로 굽는다 (511번). 자동 전투는 고양이마다 제 무기의 등급, 스테이지의 카드 고양이는 사장냥과 같은 무기다.
-   * 장비가 바뀌어 등급이 달라졌을 때만 다시 굽는다. 같은 그림을 쓰는 고양이의 빛깔도 여기서 몸에 입힌다(492·493번).
+   * 장비가 바뀌어도 고양이별 전용 몸·눈 아틀라스는 그대로 유지한다.
    */
   private bakeMateGuns() {
     // 그림을 불러오기 전에 수치가 먼저 들어올 수 있다(applyLoadout): 그때는 create가 굽는다.
@@ -3298,7 +3298,6 @@ class BattleScene extends Phaser.Scene {
     if (key === this.mateGunsBaked) return
     this.mateGunsBaked = key
     bakeMates(this, grades)
-    if (this.opts.idle) bakeCatRuns(this, hero, grades)
   }
   private mateGunsBaked = ''
   /** 사장냥의 반동 (513번, Mate.kick과 같다). */
@@ -3321,7 +3320,7 @@ class BattleScene extends Phaser.Scene {
     return Boolean(this.opts.idle && this.buyWall && !this.buyWall.active)
   }
 
-  /** 몸은 고정하고 총과 두 앞발만 어깨 축에서 조준·반동한다. */
+  /** 몸은 회전하지 않고 팔·눈·꼬리가 함께 그려진 9방향 견착 자세로 바꾼다. */
   private poseGun(body: Phaser.GameObjects.Image, aim: number, kick: number, mate?: Mate) {
     // 생성·리사이즈·즉시 발사를 포함해 몸에는 표적 각도를 적용하지 않는다.
     body.setRotation(0)
@@ -3333,12 +3332,17 @@ class BattleScene extends Phaser.Scene {
       : this.opts.hero.weapon.grade
     const gun = mate?.gun ?? this.heroGun
     const pose = catGunPose(model, body.x, body.y, aim, this.reducedMotion ? 0 : kick)
+    const running = this.opts.idle && this.idleAdvancing && !this.reducedMotion
+    const runFrame = running ? catRunFrame(this.elapsed, index + 1, this.runRush > 0) : undefined
+    body.setTexture(
+      bakeCatBody(this, pose.index, look, runFrame, !mate && this.time.now < this.hurtUntil),
+    )
     gun
       .setTexture(bakeCatGun(this, grade, model, look))
       .setOrigin(CAT_GUN.pivotX / CAT_GUN.w, CAT_GUN.pivotY / CAT_GUN.h)
       .setDisplaySize(CAT_GUN.w * CAT_SCALE, CAT_GUN.h * CAT_SCALE)
       .setPosition(pose.x, pose.y)
-      .setRotation(aim)
+      .setRotation(pose.angle)
       .setAlpha(body.alpha)
       .setVisible(body.visible)
     return pose
@@ -3355,13 +3359,11 @@ class BattleScene extends Phaser.Scene {
     const kind = gun?.kind ?? this.opts.hero.weapon.kind
     const grade = gun?.grade ?? this.opts.hero.weapon.grade
     const style = GRADE_FIRE[grade]
-    // 무기마다 쏘는 방식 (#563): 총은 겨눈 쪽(aim)을 보고, 탄만 흩어진다(기관단총).
-    const base = aimWithJitter(kind, aim, Math.random())
     // 재장전 (#587): 탄창을 다 쓰면 재장전 시간만큼 다음 한 발이 늦어진다(lastFire를 미래로 민다).
     const traits = WEAPON_TRAITS[kind]
     const reload = (shots: number) =>
       traits.magazine && shots % traits.magazine === 0 ? traits.reloadMs : 0
-    // 총과 앞발만 총열 반대 방향으로 밀렸다 돌아온다. 몸과 발은 제자리를 지킨다.
+    // 견착한 손 안에서 총만 짧게 반동하고 몸과 발은 제자리를 지킨다.
     const kick = this.reducedMotion ? 0 : Math.min(1.5, style.flash)
     if (mate) {
       mate.kick = kick
@@ -3380,11 +3382,14 @@ class BattleScene extends Phaser.Scene {
       this.aim = aim
     }
     // 총 손맛: 총구 화염. 크기·시간이 무기마다 다르다.
-    const m = this.poseGun(p, aim, kick, mate).muzzle
+    const posed = this.poseGun(p, aim, kick, mate)
+    const m = posed.muzzle
+    // 기관단총의 흩어짐도 실제 총구에서 표적을 향한 방향을 기준으로 적용한다.
+    const base = aimWithJitter(kind, catShotAngle(m, target), Math.random())
     const flash = this.flashes[this.flashIndex++ % this.flashes.length]
     flash
       .setPosition(m.x, m.y)
-      .setRotation(aim)
+      .setRotation(posed.angle)
       .setTint(gradeTint(grade))
       .setScale(TEX * style.flash)
       .setAlpha(1)
@@ -4447,15 +4452,6 @@ class BattleScene extends Phaser.Scene {
     for (const [i, m] of this.mates.entries()) {
       const b = m.body
       const target = targets[i + 1] ?? null
-      if (this.opts.idle)
-        b.setTexture(
-          this.reducedMotion || !this.idleAdvancing
-            ? mateKey(this.mateLook(i))
-            : catRunKey(
-                mateKey(this.mateLook(i)),
-                catRunFrame(time / 1000, i + 1, this.runRush > 0),
-              ),
-        )
       m.kick = recoilDecay(m.kick, dt)
       b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop)
       m.magicMark.setPosition(b.x, b.y - 58)
@@ -4574,24 +4570,13 @@ class BattleScene extends Phaser.Scene {
       return
     }
 
-    // 붙박이 (332번): 자리는 고정, 누르고 있는 쪽을 쏜다. 그림(341번)은 맞았으면 울상(총을 놓친다), 누르고 있으면 눈썹 꾹, 아니면 가만히.
-    // 몸과 발은 고정하고, 분리된 앞발·총만 수동·자동 조준 방향을 따른다.
+    // 붙박이 (332번): 자리는 고정하고, 누른 곳 또는 배정한 표적을 쏜다.
+    // 팔·손·꼬리가 포함된 방향별 그림으로 조준하고 몸 전체는 회전하지 않는다.
     const p = this.player
-    const ptr = this.input.activePointer
     const { w, h } = this.view()
     p.setVelocity(0, 0)
     this.heroKick = recoilDecay(this.heroKick, dt)
     p.setPosition(this.standX(0), this.playerY())
-    const hurting = time < this.hurtUntil
-    p.setTexture(
-      hurting
-        ? 'hero-hurt'
-        : this.idleAdvancing && !this.reducedMotion
-          ? catRunKey('hero', catRunFrame(this.elapsed, 0, this.runRush > 0))
-          : ptr.isDown || this.assault
-            ? 'hero-fire'
-            : 'hero-idle',
-    )
     p.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
     if (this.wall && this.wallZone) {
       this.wall.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)

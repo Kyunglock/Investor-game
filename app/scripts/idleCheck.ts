@@ -371,8 +371,9 @@ try {
     await expect.poll(async () => (await market()).physicsPaused).toBe(false)
     await expect.poll(async () => (await market()).battleSeconds).toBeGreaterThan(circuitClock)
     // Cats stand still while they shoot a wall; they walk only after breaking it (decisions.md 493).
+    // 방향별 달리기는 프레임마다 새 키 대신 고양이별 캔버스 하나를 갱신한다.
     const running = async () =>
-      (await market()).catTextures.some((key: string) => key.includes('-run-'))
+      (await market()).catTextures.some((key: string) => key.endsWith('-running'))
     await expect.poll(running, { timeout: 10000 }).toBe(false)
     const queuedWalls = () =>
       page.evaluate(
