@@ -3,7 +3,7 @@ import { CAT_GUN } from './catGun'
 import { spriteBounds } from './stageArt'
 import { weaponCell } from './weaponArt'
 
-/** 기존 측면 총. 몸보다 먼저 그려 옆으로 나온 총열 끝만 보이게 한다. */
+/** 위에서 본 총. 머리·어깨·팔 아래에 그려 견착한 총열 앞쪽을 드러낸다. */
 export function drawBattleGun(
   c: CanvasRenderingContext2D,
   source: HTMLImageElement,
@@ -11,5 +11,5 @@ export function drawBattleGun(
 ) {
   const crop = spriteBounds(source, weaponCell(source, grade))
   const tipX = CAT_GUN.pivotX + CAT_GUN.barrel
-  c.drawImage(source, crop.x, crop.y, crop.w, crop.h, 8, CAT_GUN.pivotY - 9.6, tipX - 8, 24)
+  c.drawImage(source, crop.x, crop.y, crop.w, crop.h, 8, CAT_GUN.pivotY - 10, tipX - 8, 20)
 }

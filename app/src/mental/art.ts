@@ -81,7 +81,7 @@ function bake(
 /** 장착 무기를 원본 고양이와 합성하고 피격 상태만 덧칠한다. */
 export const HERO_KEYS = ['hero-idle', 'hero-fire', 'hero-hurt'] as const
 
-/** 가슴 앞에 팔을 모은 옆자세. 몸과 가까운 팔이 뒤에 그린 총 대부분을 가린다. */
+/** 위·뒤에서 보는 견착 자세. 머리와 가까운 팔이 총 뒤쪽을 가린다. */
 function drawRigBody(
   scene: Phaser.Scene,
   c: CanvasRenderingContext2D,
@@ -100,7 +100,7 @@ function drawRigBody(
     paint,
     source,
     { x: (column * source.width) / 3, y: 0, w: source.width / 3, h: source.height },
-    { x: 14, y: 3, w: 75, h: 100 },
+    { x: 14, y: 9, w: 75, h: 94 },
     'height',
   )
   if (tint !== undefined) {
@@ -129,11 +129,15 @@ export function bakeHero(scene: Phaser.Scene, _grade: GunGrade) {
   }
 }
 
-/** 몸 앞에서 잡은 측면 총. 실제 화면에서는 고양이 몸이 이 층을 가린다. */
+/** 어깨에 붙인 총의 윗면. 몸과 팔이 이 층 위에 겹쳐진다. */
 export function bakeCatGun(scene: Phaser.Scene, grade: GunGrade, model: CatModel, look?: number) {
   const key = `cat-gun-${grade}-${model}-${look ?? 'hero'}`
   bake(scene, key, CAT_GUN.w, CAT_GUN.h, (c) => {
-    drawBattleGun(c, scene.textures.get('art-weapons').getSourceImage() as HTMLImageElement, grade)
+    drawBattleGun(
+      c,
+      scene.textures.get('art-battleWeapons').getSourceImage() as HTMLImageElement,
+      grade,
+    )
   })
   return key
 }

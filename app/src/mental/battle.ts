@@ -849,10 +849,10 @@ class BattleScene extends Phaser.Scene {
       } else if (this.player) {
         this.player.setPosition(this.standX(0), this.playerY())
       }
-      if (this.player && this.heroGun) this.poseGun(this.player, this.aim, this.heroKick)
+      if (this.player && this.heroGun) this.poseGun(this.player, this.heroKick)
       for (const [i, m] of this.mates.entries()) {
         m.body.setX(this.standX(i + 1))
-        this.poseGun(m.body, m.aim, m.kick, m)
+        this.poseGun(m.body, m.kick, m)
       }
       this.wall?.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)
       if (this.wallZone) {
@@ -879,7 +879,7 @@ class BattleScene extends Phaser.Scene {
     this.heroGun = this.add
       .image(0, 0, bakeCatGun(this, this.opts.hero.weapon.grade, 'hero'))
       .setDepth(CAT_GUN_DEPTH)
-    this.poseGun(this.player, this.aim, 0)
+    this.poseGun(this.player, 0)
     this.player.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h).setDepth(5)
     const pr = 22
     const tex = this.textures.get('hero-idle').getSourceImage() as { width: number; height: number }
@@ -1214,7 +1214,7 @@ class BattleScene extends Phaser.Scene {
     this.mates.push(mate)
     // 늘어선 자리가 바뀌었다: 새 고양이는 제자리에서 내려오고 나머지는 옆으로 비켜선다(update가 미끄러지게 옮긴다).
     body.setPosition(this.standX(i + 1), y + mate.drop)
-    this.poseGun(body, mate.aim, 0, mate)
+    this.poseGun(body, 0, mate)
     const land = () => {
       const fx = body.x
       const fy = body.y + 30
@@ -2381,10 +2381,10 @@ class BattleScene extends Phaser.Scene {
       sells: this.circuitSellQueue.size,
     })
     this.player.setTexture('hero-idle')
-    this.poseGun(this.player, this.aim, 0)
+    this.poseGun(this.player, 0)
     for (const [i, mate] of this.mates.entries()) {
       mate.body.setTexture(mateKey(this.mateLook(i)))
-      this.poseGun(mate.body, mate.aim, 0, mate)
+      this.poseGun(mate.body, 0, mate)
     }
     this.pushHud(true)
     if (!c.done) return
@@ -3328,8 +3328,8 @@ class BattleScene extends Phaser.Scene {
     return Boolean(this.opts.idle && this.buyWall && !this.buyWall.active)
   }
 
-  /** 몸은 고정하고 총과 두 앞발만 어깨 축에서 조준·반동한다. */
-  private poseGun(body: Phaser.GameObjects.Image, aim: number, kick: number, mate?: Mate) {
+  /** 총을 어깨·두 손에 붙인 자세로 유지하며 짧은 반동만 준다. */
+  private poseGun(body: Phaser.GameObjects.Image, kick: number, mate?: Mate) {
     const index = mate ? this.mates.indexOf(mate) : -1
     const look = mate ? this.mateLook(index) : undefined
     const model = look === undefined ? 'hero' : mateModel(look)
@@ -3337,13 +3337,13 @@ class BattleScene extends Phaser.Scene {
       ? (this.mateGun(index)?.grade ?? this.opts.hero.weapon.grade)
       : this.opts.hero.weapon.grade
     const gun = mate?.gun ?? this.heroGun
-    const pose = catGunPose(model, body.x, body.y, aim, this.reducedMotion ? 0 : kick)
+    const pose = catGunPose(model, body.x, body.y, this.reducedMotion ? 0 : kick)
     gun
       .setTexture(bakeCatGun(this, grade, model, look))
       .setOrigin(CAT_GUN.pivotX / CAT_GUN.w, CAT_GUN.pivotY / CAT_GUN.h)
       .setDisplaySize(CAT_GUN.w * CAT_SCALE, CAT_GUN.h * CAT_SCALE)
       .setPosition(pose.x, pose.y)
-      .setRotation(aim)
+      .setRotation(pose.angle)
       .setAlpha(body.alpha)
       .setVisible(body.visible)
     return pose
@@ -3354,20 +3354,19 @@ class BattleScene extends Phaser.Scene {
     const p = mate ? mate.body : this.player
     if (!mate) this.heroAims++
     const model = mate ? mateModel(this.mateLook(this.mates.indexOf(mate))) : 'hero'
-    // 표적이 좌우로 바뀌어도 발사 순간에는 실제 총구에서 정확히 겨눈다.
-    const aim = catGunAim(model, p.x, p.y, target)
     const gun = mate ? this.mateGun(this.mates.indexOf(mate)) : undefined
     const kind = gun?.kind ?? this.opts.hero.weapon.kind
     const grade = gun?.grade ?? this.opts.hero.weapon.grade
     const style = GRADE_FIRE[grade]
-    // 무기마다 쏘는 방식 (#563): 총은 겨눈 쪽(aim)을 보고, 탄만 흩어진다(기관단총).
+    const kick = this.reducedMotion ? 0 : Math.min(1.5, style.flash)
+    const aim = catGunAim(model, p.x, p.y, target, kick)
+    // 견착 자세를 유지하며 탄환만 실제 총구에서 표적으로 향한다.
     const base = aimWithJitter(kind, aim, Math.random())
     // 재장전 (#587): 탄창을 다 쓰면 재장전 시간만큼 다음 한 발이 늦어진다(lastFire를 미래로 민다).
     const traits = WEAPON_TRAITS[kind]
     const reload = (shots: number) =>
       traits.magazine && shots % traits.magazine === 0 ? traits.reloadMs : 0
-    // 총과 앞발만 총열 반대 방향으로 밀렸다 돌아온다. 몸과 발은 제자리를 지킨다.
-    const kick = this.reducedMotion ? 0 : Math.min(1.5, style.flash)
+    // 총만 짧게 밀렸다 돌아오며 어깨와 앞발은 견착 자세를 유지한다.
     if (mate) {
       mate.kick = kick
       mate.shots++
@@ -3385,11 +3384,12 @@ class BattleScene extends Phaser.Scene {
       this.aim = aim
     }
     // 총 손맛: 총구 화염. 크기·시간이 무기마다 다르다.
-    const m = this.poseGun(p, aim, kick, mate).muzzle
+    const pose = this.poseGun(p, kick, mate)
+    const m = pose.muzzle
     const flash = this.flashes[this.flashIndex++ % this.flashes.length]
     flash
       .setPosition(m.x, m.y)
-      .setRotation(aim)
+      .setRotation(pose.angle)
       .setTint(gradeTint(grade))
       .setScale(TEX * style.flash)
       .setAlpha(1)
@@ -4481,7 +4481,7 @@ class BattleScene extends Phaser.Scene {
           }
         }
       }
-      this.poseGun(b, m.aim, m.kick, m)
+      this.poseGun(b, m.kick, m)
     }
   }
 
@@ -4628,7 +4628,7 @@ class BattleScene extends Phaser.Scene {
     for (let n = 0; target && !this.disarmed && time - this.lastFire > fireMs && n < 3; n++) {
       this.fire(Math.max(this.lastFire + fireMs, time - fireMs), target)
     }
-    this.poseGun(p, this.aim, this.heroKick)
+    this.poseGun(p, this.heroKick)
     this.updateMates(time, dt, this.targets)
     this.drawBossBar()
     // 마법은 총알과 따로 제 주기에 스스로 나간다 (392번).

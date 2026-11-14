@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { CAT_GUN, catGunAim, catGunPose, catShoulder } from './catGun'
+import { CAT_GUN, CAT_SHOULDER_ANGLE, catGunAim, catGunPose, catShoulder } from './catGun'
 import { CAT_SCALE } from './catModels'
 
-describe('어깨 축으로 분리한 총과 앞발', () => {
-  it('체형·표적 방향·반동에 관계없이 총열과 총구에서 출발한 탄이 같은 표적을 향한다', () => {
+describe('어깨와 두 손에 고정한 견착 자세', () => {
+  it('체형·표적 방향·반동에 관계없이 견착 자세를 유지하고 실제 총구의 탄이 표적을 향한다', () => {
     for (const model of ['hero', 'fold', 'fluffy'] as const) {
       for (const target of [
         { x: 20, y: 100 },
@@ -11,9 +11,10 @@ describe('어깨 축으로 분리한 총과 앞발', () => {
         { x: 340, y: 100 },
         { x: 340, y: 550 },
       ]) {
-        const aim = catGunAim(model, 180, 600, target)
         for (const kick of [0, 0.5, 1.5]) {
-          const pose = catGunPose(model, 180, 600, aim, kick)
+          const aim = catGunAim(model, 180, 600, target, kick)
+          const pose = catGunPose(model, 180, 600, kick)
+          expect(pose.angle).toBe(CAT_SHOULDER_ANGLE)
           expect(Math.hypot(pose.muzzle.x - pose.x, pose.muzzle.y - pose.y)).toBeCloseTo(
             CAT_GUN.barrel * CAT_SCALE,
           )
@@ -26,9 +27,9 @@ describe('어깨 축으로 분리한 총과 앞발', () => {
     }
   })
   it('반동은 총열 반대 방향으로만 이동하고 몸의 기준점은 움직이지 않는다', () => {
-    const angle = -Math.PI / 3
-    const rest = catGunPose('hero', 180, 600, angle)
-    const shot = catGunPose('hero', 180, 600, angle, 1)
+    const angle = CAT_SHOULDER_ANGLE
+    const rest = catGunPose('hero', 180, 600)
+    const shot = catGunPose('hero', 180, 600, 1)
     expect({ x: rest.x, y: rest.y }).toEqual(catShoulder('hero', 180, 600))
     expect(shot.x - rest.x).toBeCloseTo(-Math.cos(angle) * 2.4)
     expect(shot.y - rest.y).toBeCloseTo(-Math.sin(angle) * 2.4)

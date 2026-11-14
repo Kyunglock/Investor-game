@@ -70,7 +70,7 @@ try {
           const expected = gun
             .getWorldTransformMatrix()
             .transformPoint(
-              gun.width * (50 / 80) - gun.displayOriginX,
+              gun.width * (60 / 80) - gun.displayOriginX,
               gun.height * 0.5 - gun.displayOriginY,
             )
           const bullet = scene.bullets
@@ -116,6 +116,7 @@ try {
             damage: bullet?.damage,
             vy: bullet?.body.velocity.y,
             gunBehindBody: gun.depth < body.depth,
+            shouldered: Math.abs(gun.rotation + (Math.PI * 2) / 9) < 0.0001,
             covered: covered / opaque,
             bulletBehindBody: bullet?.depth < body.depth,
           })
@@ -169,6 +170,7 @@ try {
         assert.equal(shot.damage, result.damage * 2)
         assert(shot.vy < 0)
         assert(shot.gunBehindBody)
+        assert(shot.shouldered)
         assert(shot.covered >= 0.6, `몸과 팔이 총 대부분을 가림: ${shot.covered}`)
         assert(shot.bulletBehindBody)
       }
@@ -197,7 +199,12 @@ try {
                 i ? scene.mates[i - 1] : undefined,
               )
             }
-            return actors.every((body) => body.rotation === 0)
+            return (
+              actors.every((body) => body.rotation === 0) &&
+              [scene.heroGun, ...scene.mates.map((m) => m.gun)].every(
+                (gun) => Math.abs(gun.rotation + (Math.PI * 2) / 9) < 0.0001,
+              )
+            )
           }, targetX)
           assert(aligned)
           await page.screenshot({ path: `${out}/${mode}-aim-${targetX}.png` })
@@ -233,7 +240,7 @@ try {
       }
       assert.deepEqual(errors, [])
       console.log(
-        `PASS: ${mode}: original join count/cap, distinct models, body-occluded guns, upright side-profile bodies, all four rendered muzzle origins/damage`,
+        `PASS: ${mode}: original join count/cap, distinct models, body-occluded guns, overhead shouldered bodies, all four rendered muzzle origins/damage`,
       )
       const cleaned = await page.evaluate(() => {
         const scene = window.feedbackScene
