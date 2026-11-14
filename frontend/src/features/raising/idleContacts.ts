@@ -1,4 +1,4 @@
-export type IdleAttackKind = 'bullet' | 'water' | 'meteor' | 'bolt' | 'ram' | 'barrage'
+export type IdleAttackKind = 'bullet' | 'water' | 'meteor' | 'bolt' | 'ram' | 'barrage' | 'buy'
 export interface IdleContact {
   wall: number
   kind: IdleAttackKind
@@ -6,7 +6,7 @@ export interface IdleContact {
   damage: number
 }
 
-/** At most three walls × six attack kinds; draining prevents replay on the next heartbeat. */
+/** At most three walls × seven attack kinds; draining prevents replay on the next heartbeat. */
 export class IdleContacts {
   private hits = new Map<string, IdleContact>()
 
@@ -18,7 +18,7 @@ export class IdleContacts {
     if (old && old.count < 1000) {
       old.count++
       old.damage += damage
-    } else if (!old && this.hits.size < 18) this.hits.set(key, { wall, kind, count: 1, damage })
+    } else if (!old && this.hits.size < 21) this.hits.set(key, { wall, kind, count: 1, damage })
   }
 
   drain() {

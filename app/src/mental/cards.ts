@@ -221,6 +221,8 @@ export interface Loadout {
    * 쓰지 않는다. 없으면(미션) 사장냥과 각성한 고양이가 가진 마법을 모두 쓴다.
    */
   mateMagic?: Magic[]
+  /** 자동 전투 (515번): mateMagic과 같은 차례로, 그 고양이의 스킬 레벨(1~5). 없으면 loadout의 마법 레벨을 쓴다. */
+  mateMagicLevels?: number[]
 }
 
 /** 고양이 한 마리의 총 (488번): 무기와 강화·고양이 레벨을 더한 수치. */

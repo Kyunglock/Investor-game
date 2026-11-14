@@ -297,7 +297,7 @@ export interface paths {
                              * @description barrage는 액티브 스킬 매수세례의 매수 주문 (503번)
                              * @enum {string}
                              */
-                            kind: "bullet" | "water" | "meteor" | "bolt" | "ram" | "barrage";
+                            kind: "bullet" | "water" | "meteor" | "bolt" | "ram" | "barrage" | "buy";
                             count: number;
                             /** @description 실제 충돌 피해의 합계. 치명타·지원 주문·범위 감쇠를 포함하며 초당 피해를 곱하지 않음 */
                             damage?: number;
@@ -1307,6 +1307,8 @@ export interface components {
                     name: string;
                     /** @description 지금 발동 중이다. 이 스킬을 가진 고양이가 출전해 있다 */
                     owned: boolean;
+                    /** @description 출전한 고양이 가운데 이 스킬의 가장 높은 레벨 (515번). 발동 중이 아니면 0 */
+                    level: number;
                 }[];
                 /** @description 한 번에 출전하는 고양이 수 (492·493번 */
                 fieldSlots: number;
@@ -1332,6 +1334,10 @@ export interface components {
                      */
                     skill: "water" | "meteor" | "bolt" | "ram";
                     skillName: string;
+                    /** @description 고유 스킬의 레벨 1~5 (515번). 고양이 레벨이 둘 오를 때마다 하나 오른다 */
+                    skillLevel: number;
+                    /** @description 스킬 레벨이 다음에 오르는 고양이 레벨. 최고 레벨이면 0 */
+                    skillNextLevel: number;
                     /** @description 든 무기. 없으면 null(기본 권총을 쏜다) */
                     weapon: {
                         /** @enum {string} */

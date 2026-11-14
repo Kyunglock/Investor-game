@@ -1,5 +1,5 @@
 import type Phaser from 'phaser'
-import { CELL_CRACKS, cellKey, WALL_LABEL_STYLE } from './art'
+import { CELL_CRACKS, cellKey } from './art'
 
 export const IDLE_WALL_GAP = 6
 const UPCOMING_WALLS = 2
@@ -27,28 +27,21 @@ export function idleWallLayout(laneWidth: number, viewportHeight: number) {
   return { bottom, height, spacing: height + IDLE_WALL_GAP }
 }
 
-/** Server-owned splash health for the two walls behind the current target. */
+/** Server-owned splash health for the two walls behind the current target. They carry no text (decisions.md 507). */
 export class IdleWallQueueFx {
   private layers: {
     wall: number
     hp: number
     maxHp: number
     body: Phaser.GameObjects.Image
-    label: Phaser.GameObjects.Text
   }[]
 
   constructor(scene: Phaser.Scene) {
-    this.layers = Array.from({ length: UPCOMING_WALLS }, (_, i) => ({
+    this.layers = Array.from({ length: UPCOMING_WALLS }, () => ({
       wall: 0,
       hp: 0,
       maxHp: 0,
       body: scene.add.image(0, 0, cellKey(0)).setOrigin(0.5, 1).setDepth(2.2).setVisible(false),
-      label: scene.add
-        .text(0, 0, '', { ...WALL_LABEL_STYLE, fontSize: '13px', strokeThickness: 3 })
-        .setOrigin(0.5)
-        .setDepth(2.3)
-        .setAlpha(1 - i * 0.12)
-        .setVisible(false),
     }))
   }
 
@@ -77,16 +70,10 @@ export class IdleWallQueueFx {
         .setDisplaySize(width - 3, height - 3)
         .setAlpha(0.9 - i * 0.13)
         .setVisible(true)
-      layer.label.setPosition(left + width / 2, y - height / 2).setVisible(true)
       if (!changed) continue
       layer.wall = wall
       layer.hp = hp
       layer.maxHp = maxHp
-      layer.label
-        .setText(
-          `매도벽 ${wall.toLocaleString()} · ${hp <= 0 ? '돌파 대기' : `${Math.ceil((100 * hp) / Math.max(1, maxHp))}%`}${wall % 10 === 0 ? ' · 큰손' : ''}`,
-        )
-        .setColor(wall % 10 === 0 ? '#ffe49a' : '#ffffff')
     }
   }
 

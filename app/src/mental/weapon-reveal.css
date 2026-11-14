@@ -281,3 +281,15 @@
   opacity: 0.12;
   filter: blur(12px);
 }
+
+/* 고양이 뽑기 (decisions.md 508번): 같은 창에 총 대신 고양이 얼굴이 크게 나온다. */
+.cat-reveal-art .idle-cat-portrait {
+  width: 150px;
+  height: 150px;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #fff8e2, #f3dcae);
+}
+.cat-reveal .weapon-case b {
+  font-size: 34px;
+}

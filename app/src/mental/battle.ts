@@ -62,7 +62,7 @@ import {
   whaleSummonSeconds,
 } from './assault'
 import { STAGE_ASSETS } from './assets'
-import { BUY_WALL, BuyWall, buyOrderX, pushedByCollapse } from './buyWall'
+import { BUY_WALL, BuyWall, buyOrderX, idleBuyOrderDamage, pushedByCollapse } from './buyWall'
 import { BuyWallFx } from './buyWallFx'
 import {
   awakenedMateCount,
@@ -101,8 +101,8 @@ import {
 import { WALK_FRAMES, walkFrame } from './enemyWalk'
 import { type GameSpeed, simScale } from './gameSpeed'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
-import type { Hero, Weapon } from './hero'
-import { BULLET_H, BULLET_W, bulletHitbox } from './hitbox'
+import { DEFAULT_WEAPON, type Hero, type Weapon } from './hero'
+import { BULLET_W, bulletHitbox } from './hitbox'
 import { IdleWallQueueFx, idleWallLayout } from './idleWallQueue'
 import {
   densest,
@@ -146,7 +146,7 @@ import {
   type WeaponKind,
   weaponDamage,
 } from './weaponEffects'
-import { BULLET_VISUAL_SCALE, GRADE_FIRE, gradeTint } from './weaponVisuals'
+import { BULLET_ART, BULLET_VISUAL_SCALE, GRADE_FIRE, gradeTint, sparkles } from './weaponVisuals'
 
 /**
  * 멘탈 전투 한 판 (decisions.md 328번). Phaser 3 Arcade로 돈다: 탄·적은 풀에서 재사용하고, 도트 그림(art.ts)은 캔버스에 한 번 구워 둔다. 규칙은 화면
@@ -269,6 +269,10 @@ const BULLET_LIFE = 900
  * 이 시간으로 잊는다. 서버가 늦은 접속 신호를 받아 주는 10초(497번)보다 길다.
  */
 const IDLE_HIT_MS = 12000
+/** 사격 모션 (513번): 반동 1일 때 뒤로 밀리는 거리(px), 눌리는 비율, 넓어지는 비율, 젖혀지는 각(rad), 그리고 초당 줄어드는 빠르기. */
+const RECOIL = { back: 5, squash: 0.07, wide: 0.05, lean: 0.07, decay: 16 }
+const recoilDecay = (kick: number, dt: number) =>
+  kick < 0.01 ? 0 : kick * Math.exp(-RECOIL.decay * dt)
 /** 자동 전투에서 벽 앞에 막힌 시간으로 셈하는 상한(초): 물량 간격이 바탕의 절반까지만 줄어든다 (assault.ts spawnSeconds, 494번). */
 const IDLE_STUCK_MAX = 25
 
@@ -317,7 +321,7 @@ type Bullet = Phaser.Physics.Arcade.Image & {
   /** 2단계부터 맞은 자리에서 터져 휘말리게 하는 반지름(px)과 피해. 0이면 없다. */
   splashRadius: number
   splashDamage: number
-  /** 자동 전투에서 사장냥이 매도벽을 겨눠 쏜 탄 (504번): 길 위의 물량에 막히지 않는다. */
+  /** 자동 전투에서 사장냥이 매도벽을 겨눠 쏜 탄 (504번): 길 위의 물량을 맞히고 뚫고 지나가 벽까지 간다 (516번). */
   wallShot: boolean
   /** 앞으로 더 맞힐 수 있는 적의 수(소총 관통, 376번)와 이미 맞힌 적. */
   pierce: number
@@ -352,6 +356,8 @@ interface Mate {
   shots: number
   /** 합류할 때 위에서 떨어지는 높이(px). 트윈이 0으로 줄인다. */
   drop: number
+  /** 쏜 직후의 반동(0이면 가만히, 513번). 쏠 때 채우고 금세 줄어든다. */
+  kick: number
 }
 /** 공격 판(413번)의 매도벽 하나: 칸들(적 풀의 'cell')과 뒤 판, 가격 이름표. y는 맨 아랫줄의 아래 끝(화면 y)이고 오를 때 함께 내려온다. */
 interface WallState {
@@ -588,6 +594,7 @@ class BattleScene extends Phaser.Scene {
   private boom!: Record<UnitKind, Phaser.GameObjects.Particles.ParticleEmitter>
   /** 총 손맛: 탄 꼬리, 맞는 자리의 불꽃, 총구 화염 풀. */
   private trail!: Phaser.GameObjects.Particles.ParticleEmitter
+  private twinkle!: Phaser.GameObjects.Particles.ParticleEmitter
   private hitSpark!: Phaser.GameObjects.Particles.ParticleEmitter
   private flashes: Phaser.GameObjects.Image[] = []
   private flashIndex = 0
@@ -753,6 +760,7 @@ class BattleScene extends Phaser.Scene {
     }
     this.loadout = { ...loadout, heal: 0 }
     this.buyWall?.resize(this.buyWallMental())
+    this.bakeMateGuns()
     this.syncMates()
     if (loadout.heal > 0) {
       this.mental = Math.min(loadout.maxMental, this.mental + loadout.heal)
@@ -796,8 +804,7 @@ class BattleScene extends Phaser.Scene {
     this.opts.onReady?.()
     bakeStage(this, this.opts.genre)
     bakeHero(this, this.opts.hero.weapon.grade)
-    bakeMates(this)
-    if (this.opts.idle) bakeCatRuns(this, this.opts.hero.weapon.grade)
+    this.bakeMateGuns()
     bakeEnemies(this)
     bakeMagic(this)
     if (this.assault) bakeOrders(this, this.hpScale)
@@ -883,15 +890,15 @@ class BattleScene extends Phaser.Scene {
       if (bullet.hitList.includes(enemy) || this.beyondWall(enemy)) {
         return
       }
-      // 벽을 겨눈 탄은 물량을 지나친다 (504번).
-      if (bullet.wallShot && !enemy.cell && !enemy.boss) return
+      // 벽을 겨눈 탄은 길 위의 물량을 맞히고 뚫고 지나간다 (516번). 전에는 맞히지 않고 그냥 지나쳐(504번) 탄이 물량을 통과하는 것처럼 보였다.
+      const through = bullet.wallShot && !enemy.cell && !enemy.boss
       const angle = Math.atan2(bullet.body.velocity.y, bullet.body.velocity.x)
       const [bx, by] = [bullet.x, bullet.y]
-      this.impact(bx, by, bullet.power)
+      this.impact(bx, by, bullet.power, bullet.grade)
       // 무기마다 다른 효과 (376번): 소총은 뚫고 지나가고, 리볼버는 치명타, 기관단총은 맞은 적을 느리게 한다.
       bullet.hitList.push(enemy)
       // 매도벽은 뚫고 지나가지 못한다 (457번): 소총도 벽 칸에서 멈춘다.
-      if (--bullet.pierce <= 0 || enemy.cell) {
+      if (!through && (--bullet.pierce <= 0 || enemy.cell)) {
         bullet.disableBody(true, true)
       }
       const kind = bullet.kind
@@ -959,12 +966,24 @@ class BattleScene extends Phaser.Scene {
         lifespan: 150,
         scale: { start: 2 * TEX, end: 0.4 * TEX },
         alpha: { start: 0.85, end: 0 },
-        tint: [gradeTint(this.opts.hero.weapon.grade), 0xffffff],
+        tint: gradeTint(this.opts.hero.weapon.grade),
         emitting: false,
         // 고양이 넷이 쏘면 탄이 넷 배라 꼬리 수를 묶는다 (393번).
         maxAliveParticles: 160,
       })
       .setDepth(5.5)
+    // S 등급부터 탄이 흘리는 반짝이 (512번): 작은 별이 흩어지며 사라진다.
+    this.twinkle = this.add
+      .particles(0, 0, 'twinkle', {
+        lifespan: { min: 220, max: 420 },
+        speed: { min: 8, max: 46 },
+        scale: { start: 1.1 * TEX, end: 0 },
+        rotate: { min: 0, max: 180 },
+        alpha: { start: 1, end: 0 },
+        emitting: false,
+        maxAliveParticles: 70,
+      })
+      .setDepth(5.6)
     this.hitSpark = this.add
       .particles(0, 0, 'spark', {
         speed: { min: 120, max: 260 },
@@ -1159,6 +1178,7 @@ class BattleScene extends Phaser.Scene {
       lastFire: this.lastFire + (this.attackInterval * (i + 1)) / (MATE_LOOKS.length + 1),
       shots: 0,
       drop: this.reducedMotion ? 0 : -150,
+      kick: 0,
     }
     this.mates.push(mate)
     // 늘어선 자리가 바뀌었다: 새 고양이는 제자리에서 내려오고 나머지는 옆으로 비켜선다(update가 미끄러지게 옮긴다).
@@ -1438,7 +1458,7 @@ class BattleScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(2.6)
     const shares = cellShares(hp, hp)
-    label.setText(`매도 ${shares.toLocaleString()}주`)
+    label.setText(this.cellLabel(shares))
     e.cell = { wall, row, col, label, shares, crack: 0, weak }
     this.paint(e)
     return e
@@ -1513,6 +1533,12 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
+  /** 벽 칸에 적는 물량. 자동 전투는 "매도" 없이 몇 주인지만 적는다 (507번). */
+  private cellLabel(shares: number) {
+    const text = `${shares.toLocaleString()}주`
+    return this.opts.idle ? text : `매도 ${text}`
+  }
+
   /** 서킷브레이커 (#593): 벽의 남은 체력은 그대로 두고 rows층으로 다시 쌓는다(층마다 같은 몫). */
   private restackWall(wall: WallState, rows: number) {
     const layers = this.wallLayers(wall)
@@ -1533,7 +1559,7 @@ class BattleScene extends Phaser.Scene {
       if (e.cell) {
         e.cell.crack = 0
         e.cell.shares = cellShares(e.hp, e.hp)
-        e.cell.label.setText(`매도 ${e.cell.shares.toLocaleString()}주`)
+        e.cell.label.setText(this.cellLabel(e.cell.shares))
       }
       e.setTexture(cellKey(0))
     }
@@ -1555,7 +1581,7 @@ class BattleScene extends Phaser.Scene {
     const shares = cellShares(e.maxHp, e.hp)
     if (shares !== c.shares && e.hp > 0) {
       c.shares = shares
-      c.label.setText(`매도 ${shares.toLocaleString()}주`)
+      c.label.setText(this.cellLabel(shares))
     }
   }
 
@@ -2100,14 +2126,14 @@ class BattleScene extends Phaser.Scene {
         this.buyWallFx?.launch(
           buyOrderX(lane.left, lane.width),
           this.buyWallY(),
-          this.loadout.damage * 0.75 * (1 + this.loadout.buyBonus) * ACTIVES.barrage.power,
+          this.buyOrderDamage() * ACTIVES.barrage.power,
           true,
         )
       }
     }
     this.buyWallFx?.step(dt, (x, fromY, toY, damage, barrage) => {
-      // 매수세례의 주문이 벽에 닿으면 서버에 제 종류로 알린다: 탄의 횟수 예산을 쓰지 않는다.
-      this.reportAs = barrage ? 'barrage' : null
+      // 매수 주문이 벽에 닿으면 서버에 제 종류로 알린다: 탄의 횟수 예산을 쓰지 않는다 (매수세례 503번, 보통 매수 주문 514번).
+      this.reportAs = barrage ? 'barrage' : 'buy'
       const targets = this.magicTargets().filter(
         (e) =>
           Math.abs(e.x - x) <= Math.max(16, e.displayWidth * 0.45) &&
@@ -2190,13 +2216,23 @@ class BattleScene extends Phaser.Scene {
     this.climbV = dt > 0 ? move / dt : 0
   }
 
+  /**
+   * 매수 주문 한 장의 피해. 자동 전투는 무기와 따로 센다 (514번): 그 벽의 물량 배율과 매수벽 공격 강화만 따른다. 스테이지는 전처럼 공격력의
+   * 0.75배다.
+   */
+  private buyOrderDamage() {
+    return this.opts.idle
+      ? idleBuyOrderDamage(this.hpScale, this.loadout.buyBonus)
+      : this.loadout.damage * BUY_WALL.orderDamage * (1 + this.loadout.buyBonus)
+  }
+
   private launchBuyOrders(count: number) {
     const lane = this.lane()
     for (let i = 0; i < count; i++) {
       this.buyWallFx?.launch(
         buyOrderX(lane.left, lane.width),
         this.buyWallY(),
-        this.loadout.damage * 0.75 * (1 + this.loadout.buyBonus),
+        this.buyOrderDamage(),
       )
     }
   }
@@ -2242,7 +2278,7 @@ class BattleScene extends Phaser.Scene {
       this.buyWallFx?.launch(
         barrier.left + barrier.width * (0.08 + Math.random() * 0.84),
         this.buyWallY(),
-        this.loadout.damage * 0.75 * (1 + this.loadout.buyBonus),
+        this.buyOrderDamage(),
       )
     }
     this.launchBuyOrders(this.buyWall?.stepOrders(dt * 0.2) ?? 0)
@@ -3172,6 +3208,27 @@ class BattleScene extends Phaser.Scene {
     )
   }
 
+  /**
+   * 고양이 그림을 든 무기대로 굽는다 (511번). 자동 전투는 고양이마다 제 무기의 등급, 스테이지의 카드 고양이는 사장냥과 같은 무기다.
+   * 장비가 바뀌어 등급이 달라졌을 때만 다시 굽는다. 같은 그림을 쓰는 고양이의 빛깔도 여기서 몸에 입힌다(492·493번).
+   */
+  private bakeMateGuns() {
+    // 그림을 불러오기 전에 수치가 먼저 들어올 수 있다(applyLoadout): 그때는 create가 굽는다.
+    if (!this.textures?.exists('art-weapons')) return
+    const hero = this.opts.hero.weapon.grade
+    const grades = MATE_LOOKS.map(() => (this.opts.idle ? DEFAULT_WEAPON.grade : hero))
+    for (const gun of this.loadout.mateGuns)
+      if (gun.look !== undefined) grades[gun.look] = gun.grade
+    const key = grades.join()
+    if (key === this.mateGunsBaked) return
+    this.mateGunsBaked = key
+    bakeMates(this, grades)
+    if (this.opts.idle) bakeCatRuns(this, hero, grades)
+  }
+  private mateGunsBaked = ''
+  /** 사장냥의 반동 (513번, Mate.kick과 같다). */
+  private heroKick = 0
+
   /** index번째 고양이의 그림 차례 (mates.ts MATE_LOOKS): 자동 전투는 고양이마다 제 그림, 스테이지는 들어온 차례다. */
   private mateLook(index: number) {
     return this.mateGun(index)?.look ?? index
@@ -3205,12 +3262,16 @@ class BattleScene extends Phaser.Scene {
     const traits = WEAPON_TRAITS[kind]
     const reload = (shots: number) =>
       traits.magazine && shots % traits.magazine === 0 ? traits.reloadMs : 0
+    // 사격 모션 (513번): 쏠 때마다 몸이 뒤로 밀렸다 돌아온다. 총구 화염이 큰 무기일수록 세다.
+    const kick = this.reducedMotion ? 0 : Math.min(1.5, style.flash)
     if (mate) {
+      mate.kick = kick
       mate.shots++
       mate.lastFire = now + reload(mate.shots)
       mate.aim = aim
       this.damageStats.mateShots++
     } else {
+      this.heroKick = kick
       this.heroShots++
       const wait = reload(this.heroShots)
       this.lastFire = now + wait
@@ -3239,6 +3300,7 @@ class BattleScene extends Phaser.Scene {
     })
     // 산탄총: 총구 앞으로 불꽃이 부채꼴로 튄다(탄은 한 덩이, 362번).
     const sparkCount = Math.min(3, style.sparks)
+    this.trail.setParticleTint(gradeTint(grade))
     for (let i = 0; i < sparkCount && !this.reducedMotion; i++) {
       const a = aim + (sparkCount > 1 ? ((i / (sparkCount - 1)) * 2 - 1) * 0.45 : 0)
       this.trail.emitParticleAt(m.x + Math.cos(a) * 18, m.y + Math.sin(a) * 18)
@@ -3258,7 +3320,7 @@ class BattleScene extends Phaser.Scene {
     b.splashDamage = stats.splashDamage * SHOT_WEIGHT
     b.pierce = pierceOf(kind)
     b.hitList = []
-    // 자동 전투에서 사장냥이 매도벽(또는 큰손)을 겨눈 탄은 길 위의 물량을 지나쳐 벽까지 간다 (504번).
+    // 자동 전투에서 사장냥이 매도벽(또는 큰손)을 겨눈 탄은 길 위의 물량을 뚫고 벽까지 간다 (504·516번).
     const aimed = target as Partial<Enemy>
     b.wallShot = Boolean(this.opts.idle) && !mate && Boolean(aimed.cell || aimed.boss)
     b.fromX = m.x
@@ -3266,7 +3328,7 @@ class BattleScene extends Phaser.Scene {
     b.range = traits.range == null ? Number.POSITIVE_INFINITY : this.view().h * traits.range
     b.setDisplaySize(
       BULLET_W * stats.scale * style.length * 0.7 * BULLET_VISUAL_SCALE,
-      BULLET_H * stats.scale * style.width * 0.7 * BULLET_VISUAL_SCALE,
+      BULLET_ART.h * stats.scale * style.width * 0.7 * BULLET_VISUAL_SCALE,
     ).setRotation(base)
     b.clearTint()
     const hb = bulletHitbox(b.width, b.height, style.length * 0.7 * BULLET_VISUAL_SCALE)
@@ -3501,7 +3563,10 @@ class BattleScene extends Phaser.Scene {
       if (own && caster.mate === undefined) continue
       for (const m of MAGICS) {
         if (own && caster.mate !== undefined && own[caster.mate] !== m) continue
-        const level = this.loadout[m]
+        // 자동 전투의 스킬 레벨은 고양이마다 다르다 (515번): 같은 스킬의 두 마리도 저마다 제 레벨로 쓴다.
+        const level =
+          (own && caster.mate !== undefined ? this.loadout.mateMagicLevels?.[caster.mate] : null) ??
+          this.loadout[m]
         if (!caster.clock.due(m, level, this.elapsed)) continue
         const from = caster.at()
         const cast =
@@ -4138,9 +4203,11 @@ class BattleScene extends Phaser.Scene {
   }
 
   /** 명중 폭발: 재사용 풀로 섬광과 충격파를 함께 펼친다. */
-  private impact(x: number, y: number, power: number) {
+  private impact(x: number, y: number, power: number, grade: Weapon['grade']) {
     const effect = this.impacts[this.impactIndex++ % this.impacts.length]
     this.tweens.killTweensOf(effect)
+    // 명중 모양도 그 탄의 등급 것이다 (512번).
+    effect.setTexture(`impact-${grade}`)
     const size = TEX * (0.45 + Math.min(power, 5) * 0.1)
     effect
       .setPosition(x, y)
@@ -4275,7 +4342,7 @@ class BattleScene extends Phaser.Scene {
 
   /** 함께 싸우는 고양이: 제자리로 미끄러지고, 숨 쉬고, 맡은 적을 겨눠 연사 간격마다 쏜다 (393·409번). */
   private updateMates(time: number, dt: number, targets: ({ x: number; y: number } | null)[]) {
-    const y = this.mode === 'defense' ? this.playerY() : this.player.y
+    const y = this.mode === 'defense' ? this.playerY() : this.player.y - this.heroKick * RECOIL.back
     const k = Math.min(1, dt * 8)
     const turn = Math.min(1, dt * 10)
     for (const [i, m] of this.mates.entries()) {
@@ -4290,16 +4357,15 @@ class BattleScene extends Phaser.Scene {
                 catRunFrame(time / 1000, i + 1, this.runRush > 0),
               ),
         )
-      // 같은 그림을 쓰는 고양이는 빛깔로 가린다 (492·493번).
-      if (this.opts.idle) {
-        const tint = MATE_LOOKS[this.mateLook(i)].tint
-        if (tint === undefined) b.clearTint()
-        else b.setTint(tint)
-      }
-      b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop)
+      m.kick = recoilDecay(m.kick, dt)
+      b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop + m.kick * RECOIL.back)
+      b.setRotation(-m.kick * RECOIL.lean)
       m.magicMark.setPosition(b.x, b.y - 58)
       if (!this.tweens.isTweening(b)) {
-        b.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h * (1 + Math.sin(time / 260 + i * 1.7) * 0.025))
+        b.setDisplaySize(
+          HERO_SIZE.w * (1 + m.kick * RECOIL.wide),
+          HERO_SIZE.h * (1 + Math.sin(time / 260 + i * 1.7) * 0.025) * (1 - m.kick * RECOIL.squash),
+        )
       }
       if (target) {
         // 공격 판도 맡은 과녁을 겨눈다 (#593). 과녁이 없으면 제 머리 위(벽).
@@ -4418,7 +4484,8 @@ class BattleScene extends Phaser.Scene {
     const ptr = this.input.activePointer
     const { w, h } = this.view()
     p.setVelocity(0, 0)
-    p.setPosition(this.standX(0), this.playerY())
+    this.heroKick = recoilDecay(this.heroKick, dt)
+    p.setPosition(this.standX(0), this.playerY() + this.heroKick * RECOIL.back)
     const hurting = time < this.hurtUntil
     p.setTexture(
       hurting
@@ -4429,7 +4496,10 @@ class BattleScene extends Phaser.Scene {
             ? 'hero-fire'
             : 'hero-idle',
     )
-    p.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
+    p.setDisplaySize(
+      HERO_SIZE.w * (1 + this.heroKick * RECOIL.wide),
+      HERO_SIZE.h * (1 - this.heroKick * RECOIL.squash),
+    ).setRotation(-this.heroKick * RECOIL.lean)
     if (this.wall && this.wallZone) {
       this.wall.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)
       this.wall.setTexture(this.mental <= this.loadout.maxMental / 2 ? 'wall-cracked' : 'wall')
@@ -4608,7 +4678,14 @@ class BattleScene extends Phaser.Scene {
       }
       if (!this.reducedMotion && time - (b.trailAt ?? 0) >= b.trailMs) {
         b.trailAt = time
+        // 꼬리는 그 탄의 등급 빛깔이다 (512번): 고양이마다 든 무기가 달라 사장냥 빛깔 하나로 칠하지 않는다.
+        const tint = gradeTint(b.grade)
+        this.trail.setParticleTint(tint)
         this.trail.emitParticleAt(b.x, b.y)
+        if (sparkles(b.grade)) {
+          this.twinkle.setParticleTint(Math.random() < 0.5 ? 0xffffff : tint)
+          this.twinkle.emitParticleAt(b.x, b.y)
+        }
       }
     }
   }

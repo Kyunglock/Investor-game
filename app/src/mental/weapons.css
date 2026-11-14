@@ -1,6 +1,7 @@
 /* 무기 인벤토리 (#564, decisions.md 346·366번): 메인의 무기 메뉴 시트. */
 .weapon-equipped {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
   background: #e2eff7;
@@ -68,13 +69,66 @@
 /* 고양이가 든 무기 (488번): 칸 오른쪽 위의 발바닥 점. */
 .weapon-slot-cat {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 7px;
-  height: 7px;
+  top: 1px;
+  right: 1px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: #8fb26b;
   border: 1px solid #fff;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+}
+.weapon-slot-cat .idle-cat-portrait {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+}
+/* 인벤토리에서 고양이에게 무기를 쥐여 준다 (510번). */
+.weapon-holders {
+  flex: 0 0 100%;
+  margin-top: 0;
+  padding-top: 8px;
+  border-top: 1px dashed #c3cdd1;
+}
+.weapon-holders p {
+  font-size: 11px;
+  color: #596c7b;
+}
+.weapon-holders ul {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 4px;
+}
+.weapon-holders button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 3px 0 2px;
+  border: 1.5px solid #c3cdd1;
+  border-radius: 10px;
+  background: #fff;
+}
+.weapon-holders button[aria-pressed="true"] {
+  border-color: #e08a00;
+  background: #fff3d6;
+}
+.weapon-holders button:disabled {
+  opacity: 0.45;
+}
+.weapon-holders .idle-cat-portrait {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 50%;
+}
+.weapon-holders small {
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
 }
 .weapon-draw:disabled,
 .weapon-merge:disabled {
@@ -88,7 +142,7 @@
 }
 .weapon-grid {
   display: grid;
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 4px;
   margin-top: 6px;
 }

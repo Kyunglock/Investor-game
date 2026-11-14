@@ -1,14 +1,14 @@
-import { EQUIPPED_MUZZLE } from './weaponArt'
+import { EQUIPPED_MUZZLE, MATE_HOLD } from './weaponArt'
 
-/** 사장냥은 장착 무기를 합성하고 동료는 총·앞발 일체형 원본. 세 번째 동료도 승인된 두 체형 중 하나를 사용한다. */
+/** 사장냥과 동료 모두 든 무기를 합성한다(동료는 원본의 총을 지우고 얹는다, 511번). 세 번째 동료도 승인된 두 체형 중 하나를 사용한다. */
 export type CatModel = 'hero' | 'fold' | 'fluffy'
 export const mateModel = (index: number): CatModel => (index % 2 === 0 ? 'fold' : 'fluffy')
 
 /** drawSprite의 높이 100 배치 안에서 실제 총구 좌표. 꼬리 폭으로 크기를 줄이지 않는다. */
 const MUZZLES: Record<CatModel, { x: number; y: number }> = {
   hero: EQUIPPED_MUZZLE,
-  fold: { x: 78, y: 5 },
-  fluffy: { x: 89, y: 5 },
+  fold: MATE_HOLD.fold.muzzle,
+  fluffy: MATE_HOLD.fluffy.muzzle,
 }
 
 export function catMuzzle(model: CatModel, x: number, y: number) {

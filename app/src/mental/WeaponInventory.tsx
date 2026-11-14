@@ -4,6 +4,7 @@ import { useRaisingStore } from '@web/features/raising/store'
 import { useEffect, useRef, useState } from 'react'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
+import { CatPortrait } from '../idle/CatPortrait'
 import { GunSprite } from './GunSprite'
 import { DEFAULT_WEAPON, type Weapon } from './hero'
 import { type DrawResult, WeaponReveal } from './WeaponReveal'
@@ -31,8 +32,8 @@ export const GRADE_BADGE: Record<Weapon['grade'], string> = {
   LR: 'bg-yellow-100 text-yellow-900',
 }
 
-/** 인벤토리 한 쪽의 칸 수: 8칸 × 5줄 (493번). */
-const SLOTS = 40
+/** 인벤토리 한 쪽의 칸 수: 6칸 × 6줄 (509번). */
+const SLOTS = 36
 
 /** 인벤토리 메뉴의 배지: 쓸 수 있는 무기 뽑기권 수. */
 export function weaponBadge(company: Company): string | null {
@@ -110,6 +111,8 @@ export function WeaponInventory({ company }: { company: Company }) {
     company.idle?.cats.filter(
       (cat) => cat.weapon?.kind === w.kind && cat.weapon.grade === w.grade,
     ) ?? []
+  // 인벤토리에서 바로 고양이에게 쥐여 준다 (510번): 가진 고양이만 보인다.
+  const cats = company.idle?.cats.filter((cat) => cat.level > 0) ?? []
   // 사장냥이 들거나 합성해 수가 모자라면 고양이가 무기를 내려놓는다: 말없이 풀리지 않게 알린다 (492번).
   const change = async (action: () => Promise<void>) => {
     const armed = company.idle?.cats.filter((cat) => cat.weapon) ?? []
@@ -164,7 +167,7 @@ export function WeaponInventory({ company }: { company: Company }) {
                 void change(() => useRaisingStore.getState().equipWeapon(shown.kind, shown.grade))
               }}
             >
-              {shown.equipped ? '장착 중' : '장착'}
+              {shown.equipped ? '사장냥 장착 중' : '사장냥 장착'}
             </button>
             {armory && shown.grade !== 'LR' && shown.count >= armory.mergeCount && (
               <button
@@ -188,6 +191,45 @@ export function WeaponInventory({ company }: { company: Company }) {
             )}
           </div>
         </div>
+        {cats.length > 0 && (
+          <div className="weapon-holders" data-testid="weapon-holders">
+            <p>누가 들까요? 고양이를 누르면 이 무기를 쥐여 줘요</p>
+            <ul aria-label={`${shown.name} ${shown.gradeName}을 들 고양이`}>
+              {cats.map((cat) => {
+                const held = cat.weapon?.kind === shown.kind && cat.weapon.grade === shown.grade
+                // 사장냥이 든 하나뿐인 무기는 가져올 수 없다. 다른 고양이가 든 것은 가져온다(서버 IdleEngine.equipCat).
+                const free = shown.count - (shown.equipped ? 1 : 0)
+                return (
+                  <li key={cat.code}>
+                    <button
+                      type="button"
+                      data-testid="weapon-holder"
+                      data-code={cat.code}
+                      aria-pressed={held}
+                      aria-label={`${cat.name}${held ? ' 이 무기 장착 중, 누르면 내려놓기' : '에게 쥐여 주기'}`}
+                      disabled={busy || ended || (!held && free < 1)}
+                      onClick={() => {
+                        sfx.tap()
+                        haptic.light()
+                        void change(() =>
+                          useRaisingStore
+                            .getState()
+                            .equipCat(
+                              cat.code,
+                              held ? null : { kind: shown.kind, grade: shown.grade },
+                            ),
+                        )
+                      }}
+                    >
+                      <CatPortrait code={cat.code} />
+                      <small>{held ? '장착 중' : cat.name}</small>
+                    </button>
+                  </li>
+                )
+              })}
+            </ul>
+          </div>
+        )}
       </section>
       <div className="weapon-draw-row">
         <p className="font-game text-[15px]">
@@ -217,7 +259,7 @@ export function WeaponInventory({ company }: { company: Company }) {
         가진 무기 {weapons.length}종 · 눌러서 고르기
         {armory ? ` · 같은 무기 ${armory.mergeCount}개면 합성` : ''}
       </p>
-      <ul className="weapon-grid" aria-label="무기 인벤토리 · 8칸 5줄">
+      <ul className="weapon-grid" aria-label="무기 인벤토리 · 6칸 6줄">
         {slots.map(({ id, weapon: w }) =>
           w ? (
             <li key={`${w.kind}-${w.grade}`} className="weapon-slot" data-testid="inventory-slot">
@@ -234,10 +276,14 @@ export function WeaponInventory({ company }: { company: Company }) {
                 data-kind={w.kind}
                 data-grade={w.grade}
               >
-                <GunSprite kind={w.kind} grade={w.grade} width={34} />
+                <GunSprite kind={w.kind} grade={w.grade} width={44} />
                 <span className={`weapon-slot-grade ${GRADE_BADGE[w.grade]}`}>{w.gradeName}</span>
                 {w.count > 1 && <span className="weapon-slot-count">×{w.count}</span>}
-                {holdersOf(w).length > 0 && <span className="weapon-slot-cat" aria-hidden="true" />}
+                {holdersOf(w).length > 0 && (
+                  <span className="weapon-slot-cat" data-testid="weapon-slot-cat">
+                    <CatPortrait code={holdersOf(w)[0].code} />
+                  </span>
+                )}
               </button>
             </li>
           ) : (

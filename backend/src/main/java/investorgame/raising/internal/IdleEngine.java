@@ -18,9 +18,11 @@ class IdleEngine {
   private final CompanyEngine engine;
   private final String serverId = UUID.randomUUID().toString();
   private static final double SPEED = 2;
-  // Credit buckets: the bullet, the four cat skills, and the buy barrage (decisions.md 503).
-  private static final int KINDS = 6;
+  // Credit buckets: the bullet, the four cat skills, the buy barrage (decisions.md 503), and the
+  // buy wall's own buy orders (514).
+  private static final int KINDS = 7;
   private static final int BARRAGE = 5;
+  private static final int BUY = 6;
   // Active skills (503): the player presses them. Seconds are game seconds (twice real time).
   // barrage: the buy wall pours buy orders; rally: every gun fires twice as fast; fortify: the buy
   // wall is rebuilt and cannot be hurt (the wall is the screen's, so the server only keeps time).
@@ -31,7 +33,15 @@ class IdleEngine {
   // Matches the app's mental/actives.ts.
   private static final int BARRAGE_SHOTS = 40;
   private static final double BARRAGE_POWER = 3;
+  // A buy order's damage is its own number (514): this base times the wall's order scale (the
+  // same scale the sell orders and the buy wall's health use, 498) times the buy upgrade. It does
+  // not follow the weapon. Matches the app's mental/buyWall.ts BUY_WALL.orderDamage.
   private static final double BUY_ORDER_DAMAGE = 0.75;
+  // The buy wall answers every sell order with two buy orders, a pair every 0.15 game seconds at
+  // the fastest (buyWall.ts shotSeconds - shotJitter).
+  private static final double BUY_ORDERS_PER_SECOND = 2 / 0.15;
+  // Matches the app's mental/assault.ts idleThreat.
+  private static final double THREAT_HP = 760;
   private static final double RALLY_FIRE = 2;
   // A beat this late still counts in full (decisions.md 497): on a slow link the screen sends the
   // next beat only after the last answer, and dropping those hits refilled the wall. A longer
@@ -39,9 +49,29 @@ class IdleEngine {
   private static final long GRACE_MS = 10_000;
   // Attack kinds after the bullet (kind 0): skills. Each cat has one as its own ability and casts
   // it while fielded (decisions.md 501). Walls no longer unlock skills.
-  // The acquired skills are level 1 in the renderer (mental/magic.ts).
-  private static final double[] COOLDOWNS = {2.4, 3.6, 2.6, 3.6};
-  private static final double[] SKILL_DAMAGE = {1.5, 4.8, 2.5, 1.2 * 3.4};
+  // A skill has five levels (515), the renderer's tables (mental/magic.ts): cooldown, damage per
+  // hit as a multiple of the boss cat's gun, and hits on the wall per cast (meteors per cast; a
+  // bolt and one chain per lightning stroke). The level follows the cat's level.
+  private static final int SKILL_MAX_LEVEL = 5;
+  private static final int SKILL_CAT_LEVELS = 2;
+  private static final double[][] COOLDOWNS = {
+    {2.4, 2.1, 1.8, 1.6, 1.4},
+    {3.6, 3.3, 3, 2.8, 2.6},
+    {2.6, 2.3, 2, 1.8, 1.6},
+    {3.6, 3.2, 3, 2.8, 2.6}
+  };
+  private static final double[][] SKILL_DAMAGE = {
+    {1.5, 2, 2.6, 3, 3.4},
+    {4.8, 8.25, 4.2, 5.05, 4.42},
+    {2.5, 3.5, 4.5, 5.2, 6},
+    {1.2 * 3.4, 1.6 * 3.6, 2.1 * 3.8, 2.5 * 4, 2.9 * 4.2}
+  };
+  private static final double[][] SKILL_HITS = {
+    {1, 1, 1, 1, 1},
+    {1, 1, 3, 3, 4},
+    {2, 2, 2, 3, 3},
+    {1, 1, 1, 1, 1}
+  };
   private static final String[] CODES = {"water", "meteor", "bolt", "ram"};
   private static final String[] NAMES = {"물 스킬", "메테오 스킬", "번개 스킬", "충차 스킬"};
   // Cats (decisions.md 488, 492, 493): each has a trait for its own gun. Drawn with a ticket.
@@ -217,11 +247,44 @@ class IdleEngine {
     for (Shooter shooter : shooters) {
       total += shooter.damage() * shooter.perSecond() * shooter.power() / 1.25;
     }
-    int[] casters = casters(s);
-    for (int i = 0; i < CODES.length; i++) {
-      total += casters[i] * shooters.getFirst().damage() * SKILL_DAMAGE[i] / COOLDOWNS[i];
+    for (String code : s.fielded) {
+      int cat = CATS.indexOf(code);
+      if (cat < 0) continue;
+      int skill = CAT_SKILL[cat];
+      int level = skillLevel(s.cats.getOrDefault(code, 1)) - 1;
+      total +=
+          shooters.getFirst().damage()
+              * SKILL_DAMAGE[skill][level]
+              * (skill == 1 ? SKILL_HITS[skill][level] : 1)
+              / COOLDOWNS[skill][level];
     }
     return SPEED * total;
+  }
+
+  /** A cat's skill level (515): one more for every two cat levels, up to five. */
+  static int skillLevel(int catLevel) {
+    return Math.min(SKILL_MAX_LEVEL, 1 + Math.max(0, catLevel - 1) / SKILL_CAT_LEVELS);
+  }
+
+  /** The cat level at which the skill next levels up, or 0 at the top level. */
+  private static int nextSkillAt(int catLevel) {
+    int level = skillLevel(catLevel);
+    return level >= SKILL_MAX_LEVEL ? 0 : 1 + level * SKILL_CAT_LEVELS;
+  }
+
+  /**
+   * The order scale in front of a wall (498): matches the app's idleThreat, two significant digits.
+   */
+  static double threat(long wall) {
+    double hp = maxHp(wall) / (wall % 10 == 0 ? 4 : 1);
+    return new java.math.BigDecimal(1 + hp / THREAT_HP)
+        .round(new java.math.MathContext(2))
+        .doubleValue();
+  }
+
+  /** One buy order's damage at this wall (514). The weapon is not in it. */
+  private double buyOrder(CompanyState c, long wall) {
+    return BUY_ORDER_DAMAGE * threat(wall) * buyUp(c);
   }
 
   private double buyUp(CompanyState c) {
@@ -295,14 +358,23 @@ class IdleEngine {
     double dealt = 0;
     for (int kind = 0; kind < 5 && active > 0; kind++) {
       if (kind > 0 && casters[kind - 1] == 0) continue;
-      double damage =
-          hero.damage() * (kind == 0 ? BULLET_WEIGHT * hero.power() : SKILL_DAMAGE[kind - 1]);
+      // A skill is cast by each fielded cat that has it, at that cat's level (515): the hit budget
+      // adds up over them and one hit may be as strong as the highest level's.
+      double perHit = kind == 0 ? BULLET_WEIGHT * hero.power() : 0;
+      double perSecond = kind == 0 ? bulletsPerSecond : 0;
+      double gained = kind == 0 ? active / (1 / bulletsPerSecond) : 0;
+      for (String cat : kind == 0 ? List.<String>of() : s.fielded) {
+        int at = CATS.indexOf(cat);
+        if (at < 0 || CAT_SKILL[at] != kind - 1) continue;
+        int level = skillLevel(s.cats.getOrDefault(cat, 1)) - 1;
+        perHit = Math.max(perHit, SKILL_DAMAGE[kind - 1][level]);
+        perSecond += SKILL_HITS[kind - 1][level] / COOLDOWNS[kind - 1][level];
+        gained += active * SKILL_HITS[kind - 1][level] / COOLDOWNS[kind - 1][level];
+      }
+      double damage = hero.damage() * perHit;
       double maxDamage = kind == 0 ? bulletMax : damage;
-      double interval = kind == 0 ? 1 / bulletsPerSecond : COOLDOWNS[kind - 1] / casters[kind - 1];
       s.hitCredits[kind] =
-          Math.min(
-              Math.max(2, SPEED * GRACE_MS / 1000 / interval),
-              s.hitCredits[kind] + active / interval);
+          Math.min(Math.max(2, SPEED * GRACE_MS / 1000 * perSecond), s.hitCredits[kind] + gained);
       String code = kind == 0 ? "bullet" : CODES[kind - 1];
       int[] counts = new int[3];
       double[] amounts = new double[3];
@@ -331,7 +403,7 @@ class IdleEngine {
       s.afterNextDamage = Math.min(maxHp(front + 2), s.afterNextDamage + amounts[2]);
     }
     // 매수세례 (503): its buy orders that reach the front wall. Credits come from the press, not time.
-    double barrageMax = hero.damage() * BUY_ORDER_DAMAGE * buyUp(c) * BARRAGE_POWER;
+    double barrageMax = buyOrder(c, front) * BARRAGE_POWER;
     for (IdleHit hit : hits) {
       if (active <= 0 || hit == null || !"barrage".equals(hit.kind()) || hit.count() <= 0) continue;
       if (hit.wall() != front) continue;
@@ -342,6 +414,26 @@ class IdleEngine {
       double amount = Math.min(reported / hit.count(), barrageMax) * accepted;
       s.damage += amount;
       dealt += amount;
+    }
+    // The buy wall's own buy orders that got past the sell orders to the front wall (514). They
+    // have their own budget and their own damage: they no longer spend the bullets' budget.
+    if (active > 0) {
+      s.hitCredits[BUY] =
+          Math.min(
+              SPEED * GRACE_MS / 1000 * BUY_ORDERS_PER_SECOND,
+              s.hitCredits[BUY] + active * BUY_ORDERS_PER_SECOND);
+      double buyMax = buyOrder(c, front);
+      for (IdleHit hit : hits) {
+        if (hit == null || !"buy".equals(hit.kind()) || hit.count() <= 0) continue;
+        if (hit.wall() != front) continue;
+        double reported = hit.damage() == null ? buyMax * hit.count() : hit.damage();
+        if (!Double.isFinite(reported) || reported <= 0) continue;
+        double accepted = Math.min(hit.count(), s.hitCredits[BUY]);
+        s.hitCredits[BUY] -= accepted;
+        double amount = Math.min(reported / hit.count(), buyMax) * accepted;
+        s.damage += amount;
+        dealt += amount;
+      }
     }
     // What the walls really took lately, per active second: the stat shown next to the estimate.
     if (active > 0) s.wallDps += (dealt / active - s.wallDps) * Math.min(1, active / 10);
@@ -470,7 +562,17 @@ class IdleEngine {
     int[] casters = casters(s);
     List<CompanyView.IdleSkill> skills =
         java.util.stream.IntStream.range(0, CODES.length)
-            .mapToObj(i -> new CompanyView.IdleSkill(CODES[i], NAMES[i], casters[i] > 0))
+            .mapToObj(
+                i -> {
+                  int skill = i;
+                  int level =
+                      s.fielded.stream()
+                          .filter(k -> CATS.contains(k) && CAT_SKILL[CATS.indexOf(k)] == skill)
+                          .mapToInt(k -> skillLevel(s.cats.getOrDefault(k, 1)))
+                          .max()
+                          .orElse(0);
+                  return new CompanyView.IdleSkill(CODES[i], NAMES[i], casters[i] > 0, level);
+                })
             .toList();
     List<CompanyView.IdleCat> cats =
         CATS.stream()
@@ -489,7 +591,9 @@ class IdleEngine {
                       s.fielded.contains(code),
                       weapon == null ? null : new CompanyView.CatWeapon(weapon.kind, weapon.grade),
                       CODES[CAT_SKILL[cat]],
-                      NAMES[CAT_SKILL[cat]]);
+                      NAMES[CAT_SKILL[cat]],
+                      skillLevel(Math.max(1, level)),
+                      nextSkillAt(Math.max(1, level)));
                 })
             .toList();
     return new CompanyView.Idle(

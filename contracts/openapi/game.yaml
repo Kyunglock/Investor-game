@@ -335,7 +335,7 @@ paths:
                     required: [wall, kind, count]
                     properties:
                       wall: { type: integer, format: int64, minimum: 1 }
-                      kind: { type: string, enum: [bullet, water, meteor, bolt, ram, barrage], description: barrage는 액티브 스킬 매수세례의 매수 주문 (503번) }
+                      kind: { type: string, enum: [bullet, water, meteor, bolt, ram, barrage, buy], description: barrage는 액티브 스킬 매수세례의 매수 주문 (503번), buy는 매수벽의 보통 매수 주문 (514번) }
                       count: { type: integer, minimum: 1, maximum: 1000 }
                       damage: { type: number, minimum: 0, maximum: 1000000000000, description: 실제 충돌 피해의 합계. 치명타·지원 주문·범위 감쇠를 포함하며 초당 피해를 곱하지 않음 }
       responses:
@@ -1317,11 +1317,12 @@ components:
               description: 스킬 넷(물·메테오·번개·충차). 스킬은 고양이의 고유 능력이다 (decisions.md 501번)
               items:
                 type: object
-                required: [code, name, owned]
+                required: [code, name, owned, level]
                 properties:
                   code: { type: string }
                   name: { type: string }
                   owned: { type: boolean, description: 지금 발동 중이다. 이 스킬을 가진 고양이가 출전해 있다 }
+                  level: { type: integer, description: 출전한 고양이 가운데 이 스킬의 가장 높은 레벨 (515번). 발동 중이 아니면 0 }
             fieldSlots: { type: integer, description: 한 번에 출전하는 고양이 수 (492·493번, 넷) }
             wallDps: { type: number, description: 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 }
             cats:
@@ -1329,7 +1330,7 @@ components:
               description: 고양이 (488·501번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏘고 제 스킬을 쓴다
               items:
                 type: object
-                required: [code, name, level, damagePercent, firePercent, criticalPercent, fielded, weapon, skill, skillName]
+                required: [code, name, level, damagePercent, firePercent, criticalPercent, fielded, weapon, skill, skillName, skillLevel, skillNextLevel]
                 properties:
                   code: { type: string, enum: [sky, mint, lilac, sunset, night, snow] }
                   name: { type: string }
@@ -1340,6 +1341,8 @@ components:
                   fielded: { type: boolean }
                   skill: { type: string, enum: [water, meteor, bolt, ram], description: 이 고양이의 고유 스킬 (501번). 출전해 있는 동안 발동한다 }
                   skillName: { type: string }
+                  skillLevel: { type: integer, description: 고유 스킬의 레벨 1~5 (515번). 고양이 레벨이 둘 오를 때마다 하나 오른다 }
+                  skillNextLevel: { type: integer, description: 스킬 레벨이 다음에 오르는 고양이 레벨. 최고 레벨이면 0 }
                   weapon:
                     description: 든 무기. 없으면 null(기본 권총을 쏜다)
                     oneOf:

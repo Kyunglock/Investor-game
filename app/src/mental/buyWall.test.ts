@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { assaultBonusPercent, BUY_WALL, BuyWall, buyOrderX, pushedByCollapse } from './buyWall'
+import { idleThreat } from './assault'
+import {
+  assaultBonusPercent,
+  BUY_WALL,
+  BuyWall,
+  buyOrderX,
+  idleBuyOrderDamage,
+  pushedByCollapse,
+} from './buyWall'
 
 describe('매수 티켓의 좌우 분포', () => {
   it('왼쪽·오른쪽에 각각 40%, 중앙에 20%를 배치하고 영역 안에서도 위치가 달라진다', () => {
@@ -133,5 +141,17 @@ describe('매수벽 붕괴 밀어내기 (#699)', () => {
     wall.step(6)
     expect(wall.hit(1)).toBe(false)
     expect(wall.hp).toBe(wall.maxHp - 1)
+  })
+})
+
+describe('자동 전투의 매수 주문 피해 (514번)', () => {
+  it('무기와 따로 센다: 바탕 0.75 × 그 벽의 물량 배율 × 매수벽 공격 강화', () => {
+    expect(idleBuyOrderDamage(1, 0)).toBe(0.75)
+    // 물량 배율은 서버 IdleEngine.threat과 같다: 100벽(큰손)은 7.7.
+    const hp100 = (20 + 12 * 99 + 0.4 * 99 * 99) * 4
+    expect(idleThreat(100, hp100)).toBe(7.7)
+    expect(idleBuyOrderDamage(7.7, 0)).toBeCloseTo(5.775)
+    // 매수벽 공격 강화 +30%.
+    expect(idleBuyOrderDamage(7.7, 0.3)).toBeCloseTo(5.775 * 1.3)
   })
 })

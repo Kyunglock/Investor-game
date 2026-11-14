@@ -14,7 +14,12 @@ export function idleLoadout(company: Company) {
   // 스킬은 고양이의 고유 능력이다 (501번): 출전한 고양이가 제 총을 쏘고 제 스킬 하나를 쓴다. 총이 없으면 기본 권총이다(서버 IdleEngine과 같다).
   const cats = company.idle?.cats.filter((cat) => cat.fielded) ?? []
   loadout.mateMagic = cats.map((cat) => SKILL_MAGIC[cat.skill])
-  for (const magic of loadout.mateMagic) loadout[magic] = 1
+  // 스킬 레벨은 고양이마다 다르다 (515번). 마법 칸(loadout.water 등)에는 그 스킬의 가장 높은 레벨을 둔다.
+  loadout.mateMagicLevels = cats.map((cat) => cat.skillLevel)
+  for (const cat of cats) {
+    const magic = SKILL_MAGIC[cat.skill]
+    loadout[magic] = Math.max(loadout[magic], cat.skillLevel)
+  }
   loadout.mates = cats.length
   loadout.mateGuns = cats.map((cat) => {
     const weapon =

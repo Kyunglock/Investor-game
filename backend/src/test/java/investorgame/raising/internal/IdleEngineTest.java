@@ -2,6 +2,7 @@ package investorgame.raising.internal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.offset;
 
 import investorgame.behavior.internal.TestBehavior;
 import investorgame.common.random.HashSeededRandom;
@@ -399,7 +400,7 @@ class IdleEngineTest {
     assertThat(engine.view(state).earned().doubleValue()).isEqualTo(income);
     // The wall's reward is on the same scale, with no cap.
     state.idle.damage = IdleEngine.maxHp(2001) - 1;
-    state.idle.hitCredits = new double[6];
+    state.idle.hitCredits = new double[7];
     tick(500, new IdleHit(2001, "bullet", 1, 4.0));
     assertThat(state.idle.wall).isEqualTo(2002);
     assertThat(state.capital - income)
@@ -427,11 +428,13 @@ class IdleEngineTest {
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
     assertThatThrownBy(() -> engine.useActive(state, "nope"))
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
-    // Forty buy orders, each at most three times a buy order (0.75 of the pistol's 1 damage).
+    // Forty buy orders, each at most three times a buy order: 0.75 times the wall's order scale
+    // (514). The weapon is not in it.
+    double order = 0.75 * IdleEngine.threat(100);
     tick(1000, new IdleHit(100, "barrage", 50, 50 * 1000.0));
-    assertThat(state.idle.damage).isEqualTo(40 * 2.25);
+    assertThat(state.idle.damage).isCloseTo(40 * 3 * order, offset(1e-9));
     tick(1000, new IdleHit(100, "barrage", 10, 22.5));
-    assertThat(state.idle.damage).as("the press is spent").isEqualTo(40 * 2.25);
+    assertThat(state.idle.damage).as("the press is spent").isCloseTo(40 * 3 * order, offset(1e-9));
 
     // The cooldown runs only while the battle runs: 30 real seconds at double speed.
     for (int i = 0; i < 27; i++) tick(1000);
@@ -446,19 +449,19 @@ class IdleEngineTest {
     start(1);
     state.idle.wall = 100;
     for (int i = 0; i < 3; i++) tick(1000);
-    state.idle.hitCredits = new double[6];
+    state.idle.hitCredits = new double[7];
     tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
     double plain = state.idle.damage;
     assertThat(plain).isPositive();
     engine.useActive(state, "rally");
     state.idle.damage = 0;
-    state.idle.hitCredits = new double[6];
+    state.idle.hitCredits = new double[7];
     tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
     assertThat(state.idle.damage).isCloseTo(2 * plain, org.assertj.core.data.Offset.offset(1e-9));
     // Five real seconds later it is over.
     for (int i = 0; i < 5; i++) tick(1000);
     state.idle.damage = 0;
-    state.idle.hitCredits = new double[6];
+    state.idle.hitCredits = new double[7];
     tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
     assertThat(state.idle.damage).isCloseTo(plain, org.assertj.core.data.Offset.offset(1e-9));
   }
@@ -475,7 +478,7 @@ class IdleEngineTest {
     state.idle.cats.put("night", 1);
     state.idle.fielded.add("night");
     state.idle.damage = 0;
-    state.idle.hitCredits = new double[5];
+    state.idle.hitCredits = new double[7];
     tick(1800, new IdleHit(1, "meteor", 4));
     assertThat(state.idle.damage).isEqualTo(2 * 4.8);
   }
@@ -555,6 +558,96 @@ class IdleEngineTest {
     before = state.idle.damage;
     tick(1000, new IdleHit(16, "bullet", 1, 1e12));
     assertThat(state.idle.damage - before).as("level 11 cat: 150% pistol critical").isEqualTo(6);
+  }
+
+  @Test
+  void buyOrdersHaveTheirOwnDamageAndBudget() {
+    start(1);
+    state.idle.wall = 100;
+    tick(1000);
+    double order = 0.75 * IdleEngine.threat(100);
+    assertThat(IdleEngine.threat(1)).isEqualTo(1.0);
+    assertThat(IdleEngine.threat(100)).isEqualTo(7.7);
+    // A buy order is capped at its own damage, whatever the screen reports.
+    tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
+    assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
+    // A stronger weapon and the damage upgrade change nothing: buy damage is its own number (514).
+    state.capital = 1e18;
+    company.mental.buyUpgrade(state, "damage", 20);
+    state.idle.damage = 0;
+    tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
+    assertThat(state.idle.damage).isCloseTo(2 * order, offset(1e-9));
+    // Only the buy upgrade raises it.
+    double before = buyBonus();
+    company.mental.buyUpgrade(state, "buy", 10);
+    double up = (1 + buyBonus() / 100) / (1 + before / 100);
+    assertThat(up).isGreaterThan(1);
+    state.idle.damage = 0;
+    tick(1000, new IdleHit(100, "buy", 2, 2 * 1000.0));
+    assertThat(state.idle.damage).isCloseTo(2 * order * up, offset(1e-9));
+    // Buy orders do not spend the bullets' budget, and the reverse.
+    state.idle.damage = 0;
+    state.idle.hitCredits = new double[7];
+    tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
+    double bullets = state.idle.damage;
+    state.idle.damage = 0;
+    state.idle.hitCredits = new double[7];
+    tick(1000, new IdleHit(100, "bullet", 1000, 1000.0), new IdleHit(100, "buy", 1, 1000.0));
+    assertThat(state.idle.damage).isCloseTo(bullets + order * up, offset(1e-9));
+    // The budget is the buy wall's fastest fire: far more than that is not accepted.
+    state.idle.damage = 0;
+    state.idle.hitCredits = new double[7];
+    tick(1000, new IdleHit(100, "buy", 1000, 1000 * 1000.0));
+    assertThat(state.idle.damage).isLessThan(30 * order * up);
+  }
+
+  private double buyBonus() {
+    return company.mental.upgradeViews(state).stream()
+        .filter(u -> "buy".equals(u.kind()))
+        .findFirst()
+        .orElseThrow()
+        .bonusPercent();
+  }
+
+  @Test
+  void aSkillLevelsUpWithItsCat() {
+    assertThat(IdleEngine.skillLevel(1)).isEqualTo(1);
+    assertThat(IdleEngine.skillLevel(2)).isEqualTo(1);
+    assertThat(IdleEngine.skillLevel(3)).isEqualTo(2);
+    assertThat(IdleEngine.skillLevel(9)).isEqualTo(5);
+    assertThat(IdleEngine.skillLevel(1000)).isEqualTo(5);
+    start(1);
+    state.idle.wall = 100;
+    state.idle.cats.put("mint", 1);
+    state.idle.fielded.add("mint");
+    var cat = engine.view(state).cats().stream().filter(c -> "mint".equals(c.code())).findFirst();
+    assertThat(cat.orElseThrow().skillLevel()).isEqualTo(1);
+    assertThat(cat.orElseThrow().skillNextLevel()).isEqualTo(3);
+    // Level 1 water: 1.5 times the gun, once per 2.4 s. 1.2 s at double speed is one cooldown.
+    tick(1200, new IdleHit(100, "water", 3, 3 * 1000.0));
+    assertThat(state.idle.damage).isCloseTo(1.5, offset(1e-9));
+    // Cat level 5 is skill level 3: 2.6 times the gun, once per 1.8 s.
+    state.idle.cats.put("mint", 5);
+    state.idle.damage = 0;
+    state.idle.hitCredits = new double[7];
+    tick(900, new IdleHit(100, "water", 3, 3 * 1000.0));
+    assertThat(state.idle.damage).isCloseTo(2.6, offset(1e-9));
+    cat = engine.view(state).cats().stream().filter(c -> "mint".equals(c.code())).findFirst();
+    assertThat(cat.orElseThrow().skillLevel()).isEqualTo(3);
+    assertThat(cat.orElseThrow().skillNextLevel()).isEqualTo(7);
+    assertThat(engine.view(state).skills().getFirst().level()).isEqualTo(3);
+    // The top level has no next level.
+    state.idle.cats.put("mint", 9);
+    cat = engine.view(state).cats().stream().filter(c -> "mint".equals(c.code())).findFirst();
+    assertThat(cat.orElseThrow().skillLevel()).isEqualTo(5);
+    assertThat(cat.orElseThrow().skillNextLevel()).isZero();
+    // A level 3 meteor shower drops three rocks per cast: three hits per 3 s.
+    state.idle.cats.put("sky", 5);
+    state.idle.fielded.add("sky");
+    state.idle.damage = 0;
+    state.idle.hitCredits = new double[7];
+    tick(1500, new IdleHit(100, "meteor", 10, 10 * 1000.0));
+    assertThat(state.idle.damage).isCloseTo(3 * 4.2, offset(1e-9));
   }
 
   private investorgame.raising.CompanyView.CatWeapon weaponOf(String code) {
