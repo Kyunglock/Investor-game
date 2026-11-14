@@ -908,7 +908,9 @@ class BattleScene extends Phaser.Scene {
       }
       // 벽을 겨눈 탄은 길 위의 물량을 맞히고 뚫고 지나간다 (516번). 전에는 맞히지 않고 그냥 지나쳐(504번) 탄이 물량을 통과하는 것처럼 보였다.
       const through = bullet.wallShot && !enemy.cell && !enemy.boss
-      const angle = Math.atan2(bullet.body.velocity.y, bullet.body.velocity.x)
+      // 탄을 끄면 속도가 0이 된다: 뒤 벽으로 뚫고 가는 방향(520번)에 쓰려고 먼저 적어 둔다.
+      const [vx, vy] = [bullet.body.velocity.x, bullet.body.velocity.y]
+      const angle = Math.atan2(vy, vx)
       const [bx, by] = [bullet.x, bullet.y]
       this.impact(bx, by, bullet.power, bullet.grade)
       // 무기마다 다른 효과 (376번): 소총은 뚫고 지나가고, 리볼버는 치명타, 기관단총은 맞은 적을 느리게 한다.
@@ -929,7 +931,7 @@ class BattleScene extends Phaser.Scene {
       }
       this.hit(enemy, shot.damage, angle, shot.crit ? 'crit' : 'bullet')
       // 매도벽 돌파: 벽을 맞힌 총알은 뒤의 두 벽까지 뚫고 간다 (520번). 폭발(아래 splash)은 맨 앞 벽만 맞는다.
-      if (enemy.cell) this.pierceIdleWalls(bullet, bx, by, shot.damage, shot.crit)
+      if (enemy.cell) this.pierceIdleWalls(bullet, bx, by, vx, vy, shot.damage, shot.crit)
       // 산탄총은 맞은 적을 밀어낸다 (#587). 보스·매도벽은 밀리지 않는다.
       const push = WEAPON_TRAITS[kind].knockback
       if (push > 0 && !enemy.boss && !enemy.cell && !enemy.dying) {
@@ -4303,12 +4305,19 @@ class BattleScene extends Phaser.Scene {
    * 여기서 판정한다: 맞은 벽 번호와 줄어든 피해를 서버에 알리고, 총알이 이어 날아가는 모습과 줄어든 피해 숫자를 띄운다. 무기 폭발과 고양이 스킬은
    * 뒤 벽에 닿지 않는다.
    */
-  private pierceIdleWalls(bullet: Bullet, x: number, y: number, damage: number, crit: boolean) {
+  private pierceIdleWalls(
+    bullet: Bullet,
+    x: number,
+    y: number,
+    vx: number,
+    vy: number,
+    damage: number,
+    crit: boolean,
+  ) {
     if (!this.opts.idle || !this.idleQueue || this.idleTransition || this.circuit) return
-    const velocity = bullet.body?.velocity
     // 벽은 위로 쌓여 있다: 위로 날던 총알만 뚫고 간다.
-    if (!velocity || velocity.y >= 0) return
-    const slope = velocity.x / -velocity.y
+    if (vy >= 0) return
+    const slope = vx / -vy
     const layers = this.idleQueue.behind(x, slope, y)
     const hits = idlePierceHits(this.idleWall, damage, layers)
     if (!layers.length) return
@@ -4316,10 +4325,7 @@ class BattleScene extends Phaser.Scene {
     // 총알이 마지막 벽까지 이어 날아간다. 벽을 지날 때마다 불꽃과 줄어든 피해 숫자.
     const last = layers[layers.length - 1]
     const shot = this.pierceShots[this.pierceIndex++ % this.pierceShots.length]
-    const ms = Math.min(
-      140,
-      (Math.hypot(last.x - x, last.y - y) / Math.hypot(velocity.x, velocity.y)) * 1000,
-    )
+    const ms = Math.min(140, (Math.hypot(last.x - x, last.y - y) / Math.hypot(vx, vy)) * 1000)
     this.tweens.killTweensOf(shot)
     shot
       .setTexture(bullet.texture.key)

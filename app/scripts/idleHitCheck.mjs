@@ -1,4 +1,4 @@
-// Real Phaser contacts: time alone must never create damage reports, and rear hits need area overlap.
+// Real Phaser contacts: time alone must never create damage reports, and only pierced bullets reach rear walls.
 import assert from 'node:assert/strict'
 import { chromium } from '@playwright/test'
 import { company } from './fixture.ts'
@@ -80,23 +80,34 @@ try {
   await page.waitForFunction(() =>
     window.actualIdleHits.some((h) => h.wall === 16 && h.kind === 'bullet'),
   )
+  // Bullet pierce (decisions.md 520): the bullet that hit the front wall goes on through the two
+  // walls behind it, at 50% and 25%.
   await page.waitForFunction(() =>
-    window.actualIdleHits.some((h) => h.wall === 17 && h.kind === 'meteor'),
+    window.actualIdleHits.some((h) => h.wall === 17 && h.kind === 'bullet'),
   )
-  assert.equal(await page.evaluate(() => window.actualIdleHits.some((h) => h.wall === 18)), false)
+  await page.waitForFunction(() =>
+    window.actualIdleHits.some((h) => h.wall === 18 && h.kind === 'bullet'),
+  )
   await page.evaluate(() => window.enableIdleAttacks(5))
   await page.waitForFunction(() =>
-    window.actualIdleHits.some((h) => h.wall === 18 && h.kind === 'meteor'),
+    window.actualIdleHits.some((h) => h.wall === 16 && h.kind === 'meteor'),
   )
+  await page.waitForTimeout(1500)
   const hits = await page.evaluate(() => window.actualIdleHits)
-  assert(hits.every((hit) => hit.wall === 16 || hit.kind === 'meteor'))
+  // Skills and explosions stop at the front wall: only bullets reach the walls behind.
+  assert(hits.every((hit) => hit.wall === 16 || hit.kind === 'bullet'))
+  assert(hits.every((hit) => hit.wall >= 16 && hit.wall <= 18))
   // A bullet is twice the weapon's damage (decisions.md 495), or twice that again on a pistol
-  // critical (487).
+  // critical (487); each wall it goes through halves it.
+  const share = { 16: 1, 17: 0.5, 18: 0.25 }
   assert(
     hits
       .filter((hit) => hit.kind === 'bullet')
-      .every((hit) => hit.damage === 1 || hit.damage === 2),
+      .every((hit) => hit.damage === share[hit.wall] || hit.damage === 2 * share[hit.wall]),
   )
+  // One bullet reports each wall once: as many pierced hits as front hits (give or take one in flight).
+  const bullets = (wall) => hits.filter((hit) => hit.kind === 'bullet' && hit.wall === wall).length
+  assert(bullets(17) <= bullets(16) && bullets(18) <= bullets(17), 'pierce without a front hit')
   assert(
     hits.filter((hit) => hit.kind === 'meteor').every((hit) => hit.damage > 0 && hit.damage <= 2.4),
   )
@@ -185,7 +196,7 @@ try {
   assert.equal((await page.evaluate(() => window.__mentalWalls()))[0].hp, 5000)
   assert.deepEqual(errors, [])
   console.log(
-    'PASS: no timer contacts, real bullet/area contacts, no health bounce, independent boss, pause',
+    'PASS: no timer contacts, real bullet/pierce contacts, no health bounce, independent boss, pause',
   )
 } finally {
   await browser.close()
