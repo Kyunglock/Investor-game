@@ -13,6 +13,7 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
   const battle = useRef<BattleHandle | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [attempt, setAttempt] = useState(0)
+  const [raid, setRaid] = useState<{ text: string; color: string; id: number } | null>(null)
   // biome-ignore lint/correctness/useExhaustiveDependencies: Retry and weapon changes recreate the renderer; server wall progress is preserved.
   useEffect(() => {
     if (!host.current || !company.companyId) return
@@ -59,6 +60,8 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
               )
             }
           },
+          // 몬스터 습격만 알린다 (decisions.md 500번). 그 밖의 전투 알림은 자동 전투에서 띄우지 않는다.
+          onIdleRaid: (text, color) => setRaid((old) => ({ text, color, id: (old?.id ?? 0) + 1 })),
           onHud: () => {},
           onBanner: () => {},
           onHurt: () => {},
@@ -91,6 +94,17 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
   return (
     <>
       <div ref={host} className="idle-canvas" data-testid="idle-canvas" aria-hidden="true" />
+      {raid && (
+        <p
+          key={raid.id}
+          className="idle-raid"
+          data-testid="idle-raid"
+          style={{ background: raid.color }}
+          aria-live="polite"
+        >
+          {raid.text}
+        </p>
+      )}
       {error && (
         <div className="idle-canvas-error" role="alert">
           {error}
