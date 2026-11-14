@@ -95,7 +95,8 @@ class IdleEngineTest {
     assertThat(state.idle.damage).isEqualTo(2);
     tick(1000, new IdleHit(2, "bullet", 1), new IdleHit(50, "meteor", 10));
     assertThat(state.idle.damage).isEqualTo(2);
-    assertThat(state.idle.nextDamage).isZero();
+    // A bullet reported on the next wall is a pierce (520): half a bullet, queued on that wall.
+    assertThat(state.idle.nextDamage).isEqualTo(1);
   }
 
   @Test
@@ -235,25 +236,28 @@ class IdleEngineTest {
   void explosionsAndSkillsNeverReachTheWallsBehind() {
     // 폭발 무기와 고양이 스킬의 광역 피해는 맨 앞 벽만 (520번).
     start(1);
+    state.idle.wall = 100;
     state.idle.cats =
         new java.util.LinkedHashMap<>(
             java.util.Map.of("sky", 9, "mint", 9, "lilac", 9, "sunset", 9));
     state.idle.fielded = new java.util.ArrayList<>(List.of("sky", "mint", "lilac", "sunset"));
     tick(
         3000,
-        new IdleHit(1, "water", 1),
-        new IdleHit(1, "meteor", 1),
-        new IdleHit(1, "bolt", 1),
-        new IdleHit(1, "ram", 1));
+        new IdleHit(100, "water", 1),
+        new IdleHit(100, "meteor", 1),
+        new IdleHit(100, "bolt", 1),
+        new IdleHit(100, "ram", 1));
     double front = state.idle.damage;
+    assertThat(front).isPositive();
     tick(
         3000,
-        new IdleHit(2, "water", 1),
-        new IdleHit(2, "meteor", 1),
-        new IdleHit(2, "bolt", 1),
-        new IdleHit(2, "ram", 1),
-        new IdleHit(3, "water", 1),
-        new IdleHit(3, "meteor", 1));
+        new IdleHit(101, "water", 1),
+        new IdleHit(101, "meteor", 1),
+        new IdleHit(101, "bolt", 1),
+        new IdleHit(101, "ram", 1),
+        new IdleHit(102, "water", 1),
+        new IdleHit(102, "meteor", 1));
+    assertThat(state.idle.wall).isEqualTo(100);
     assertThat(state.idle.damage).isEqualTo(front);
     assertThat(state.idle.nextDamage).isZero();
     assertThat(state.idle.afterNextDamage).isZero();
