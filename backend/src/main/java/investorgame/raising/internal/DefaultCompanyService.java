@@ -262,8 +262,8 @@ class DefaultCompanyService implements CompanyService {
                   c.era,
                   c.year,
                   c.settlements.size(),
-                  c.capital,
-                  engine.grade(c.capital),
+                  (long) c.capital,
+                  engine.grade((long) c.capital),
                   c.employees.size(),
                   c.sold,
                   r.createdAt(),
@@ -290,7 +290,8 @@ class DefaultCompanyService implements CompanyService {
   /** 테스트판 회사면 자본·채용권·뽑기권을 다시 채운다. 요청 끝에 함께 저장된다. */
   private static void refill(CompanyState c) {
     if (!c.sandbox || c.sandboxFinite) return;
-    c.capital = Math.max(c.capital, SANDBOX_CAPITAL);
+    // 물가(505번)를 따라가야 깊은 벽에서도 강화를 살 수 있다.
+    c.capital = Math.max(c.capital, SANDBOX_CAPITAL * CompanyEngine.inflation(c));
     c.tickets = Math.max(c.tickets, SANDBOX_TICKETS);
     c.weaponTickets = Math.max(c.weaponTickets, SANDBOX_TICKETS);
   }
@@ -346,7 +347,7 @@ class DefaultCompanyService implements CompanyService {
     if (infinite) {
       refill(c);
     } else {
-      c.capital = engine.openingCapital();
+      c.capital = Math.floor(engine.openingCapital() * CompanyEngine.inflation(c));
       c.tickets = 0;
       c.weaponTickets = 0;
     }
@@ -455,7 +456,7 @@ class DefaultCompanyService implements CompanyService {
         c.opening,
         c.year,
         c.quarter,
-        c.capital,
+        CompanyView.money(c.capital),
         grade,
         next,
         upgradeView(c),
@@ -612,7 +613,7 @@ class DefaultCompanyService implements CompanyService {
     CompanyState c = row.state();
     // 테스트판의 자본은 업계 순위에 남기지 않는다 (499번).
     if (c.sandbox) return;
-    companies.recordYear(row.id(), year, c.capital);
+    companies.recordYear(row.id(), year, (long) c.capital);
     companies
         .rankAt(row.id(), year)
         .ifPresent(

@@ -15,30 +15,42 @@ export const STAT_KEYS = Object.keys(STAT_LABELS) as (keyof Stats)[]
 /** 게임 금액 단위 (decisions.md 313번): 1,000마다 a·b·c·d… 로 올라간다. 등급 글자(F~S)와 헷갈리지 않게 소문자다. */
 export const MONEY_UNITS = 'abcdefghijklmnopqrstuvwxyz'
 
+/** 천 단위로 n번 나눈 금액의 단위 글자: 1 → a … 26 → z, 그 뒤는 aa, ab … zz (decisions.md 505번). */
+export function moneyUnit(n: number): string {
+  const last = MONEY_UNITS.length
+  if (n <= last) return MONEY_UNITS[n - 1]
+  const at = Math.min(n - last - 1, last * last - 1)
+  return MONEY_UNITS[Math.floor(at / last)] + MONEY_UNITS[at % last]
+}
+
+/** 단위 글자가 닿는 끝: zz. 그 위의 금액은 zz에 큰 숫자를 붙여 적는다. */
+const MONEY_STEPS = MONEY_UNITS.length * (MONEY_UNITS.length + 1)
+
 /**
- * 게임 금액: 1,000 아래는 그대로, 그 위는 1a(1천)·1b(100만)·1c(10억)·1d(1조)·1e(1천조)… 앞자리는 세 자리까지(10 아래는 소수 둘째, 100 아래는 첫째 자리).
- * 원화(억·조)를 쓰지 않는다. 예: 950 · 3.5a · 412.5b → 413b · 1.2c · −45.3b.
+ * 게임 금액: 1,000 아래는 그대로, 그 위는 1a(1천)·1b(100만)·1c(10억)·1d(1조)·1e(1천조)… 1z, 그 뒤는 1aa·1ab… 앞자리는 세 자리까지(10 아래는
+ * 소수 둘째, 100 아래는 첫째 자리). 원화(억·조)를 쓰지 않는다. 예: 950 · 3.5a · 412.5b → 413b · 1.2c · −45.3b.
  */
 export function money(amount: number): string {
+  if (!Number.isFinite(amount)) return '∞'
   const sign = amount < 0 ? '−' : ''
   let abs = Math.abs(Math.round(amount))
   if (abs < 1000) {
     return `${sign}${abs}`
   }
   let unit = 0
-  while (abs >= 1000 && unit < MONEY_UNITS.length) {
+  while (abs >= 1000 && unit < MONEY_STEPS) {
     abs /= 1000
     unit++
   }
   const digits = abs < 10 ? 2 : abs < 100 ? 1 : 0
   let text = abs.toFixed(digits)
   // 999.96b가 반올림으로 1000b가 되면 1c로 올린다.
-  if (Number(text) >= 1000 && unit < MONEY_UNITS.length) {
+  if (Number(text) >= 1000 && unit < MONEY_STEPS) {
     unit++
     text = (Number(text) / 1000).toFixed(2)
   }
   text = text.includes('.') ? text.replace(/\.?0+$/, '') : text
-  return `${sign}${text}${MONEY_UNITS[unit - 1]}`
+  return `${sign}${text}${moneyUnit(unit)}`
 }
 
 /** 부호를 붙인 게임 금액: +3.5a, −45.3b, 0. */

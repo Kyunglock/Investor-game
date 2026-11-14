@@ -267,9 +267,14 @@ class IdleEngine {
     // 불장 (503): bullets come twice as often while it burns. A beat that starts inside it counts.
     double rally = s.activeSeconds < s.rallyUntil ? RALLY_FIRE : 1;
     s.activeSeconds += active;
+    // 물가 (505번): 시간 수입과 벽 보상은 그 벽의 물가만큼 크다.
     double income =
-        s.incomeRemainder + active * INCOME * (1 + INCOME_GROWTH * Math.min(s.wall - 1, 10_000));
-    long earned = (long) income;
+        s.incomeRemainder
+            + active
+                * INCOME
+                * (1 + INCOME_GROWTH * Math.min(s.wall - 1, 10_000))
+                * CompanyEngine.inflation(c);
+    double earned = Math.floor(income);
     s.incomeRemainder = income - earned;
     if (s.hitCredits == null || s.hitCredits.length != KINDS) s.hitCredits = new double[KINDS];
     // Match the damage shown at collision, bounded by owned attacks and server stats.
@@ -342,9 +347,7 @@ class IdleEngine {
     if (active > 0) s.wallDps += (dealt / active - s.wallDps) * Math.min(1, active / 10);
     // Pay only for contacted walls in order. No leftover DPS rolls into an untouched new wall.
     while (s.circuitSeconds == 0 && s.damage + 1e-7 >= maxHp(s.wall)) {
-      earned =
-          CompanyEngine.plus(
-              earned, (long) Math.min(1_000_000_000_000L, maxHp(s.wall) * REWARD_PER_HEALTH));
+      earned += Math.floor(maxHp(s.wall) * REWARD_PER_HEALTH * CompanyEngine.inflation(c));
       // A ticket every fifth wall (493): tickets now draw cats as well as weapons.
       if (s.wall % 5 == 0 && c.weaponTickets < Integer.MAX_VALUE) c.weaponTickets++;
       s.wall++;
@@ -356,9 +359,9 @@ class IdleEngine {
         s.hitCredits = new double[KINDS];
       }
     }
-    s.earned = CompanyEngine.plus(s.earned, earned);
-    c.capital = CompanyEngine.plus(c.capital, earned);
-    c.yearRewards = CompanyEngine.plus(c.yearRewards, earned);
+    s.earned += earned;
+    c.capital += earned;
+    c.yearRewards = CompanyEngine.plus(c.yearRewards, (long) earned);
   }
 
   /** Cat gacha (decisions.md 488, 493): one ticket for one cat. A duplicate levels it up. */
@@ -494,7 +497,7 @@ class IdleEngine {
         Math.max(0, maxHp(s.wall) - s.damage),
         maxHp(s.wall),
         dps(c),
-        s.earned,
+        CompanyView.money(s.earned),
         s.wall % 10 == 0,
         skills,
         cats,

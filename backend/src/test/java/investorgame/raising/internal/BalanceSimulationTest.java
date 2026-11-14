@@ -51,7 +51,7 @@ class BalanceSimulationTest {
       }
     }
     if (boss == Boss.BUYER) {
-      long budget = c.capital * BUYER_PERCENT / 100;
+      long budget = (long) c.capital * BUYER_PERCENT / 100;
       while (true) {
         String kind =
             ENGINE.mental.upgradeViews(c).stream()
@@ -164,7 +164,7 @@ class BalanceSimulationTest {
         bought += ENGINE.mental.upgradePrice(i);
       }
     }
-    return new Life(first, c.capital, levels, booked, bought);
+    return new Life(first, (long) c.capital, levels, booked, bought);
   }
 
   static long median(long[] xs) {

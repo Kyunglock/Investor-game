@@ -806,7 +806,7 @@ components:
           oneOf:
             - $ref: '#/components/schemas/Quarter'
             - type: 'null'
-        capital: { type: integer, format: int64 }
+        capital: { type: number, description: 자본. 자동 전투의 물가(decisions.md 505번)로 int64를 넘게 커진다. 소수 없는 수다 }
         grade: { $ref: '#/components/schemas/Grade' }
         nextGradeCapital: { type: [integer, 'null'], format: int64, description: 다음 띠의 자본. 끝 등급이면 null }
         upgrade:
@@ -1286,7 +1286,7 @@ components:
             hp: { type: number }
             maxHp: { type: number }
             dps: { type: number }
-            earned: { type: integer, format: int64 }
+            earned: { type: number, description: 자동 전투로 번 돈. int64를 넘게 커진다 (505번) }
             boss: { type: boolean }
             circuitSeconds: { type: number, description: 서킷브레이커 잔여 게임 시간. 기본 2배속이며 거래 정지 중에는 공격과 보상이 멈춤 }
             sequence: { type: integer, format: int64, description: 서버가 마지막으로 처리한 접속 신호의 순번. 화면은 이 순번까지 보낸 명중을 hp에 반영된 것으로 본다 }
@@ -1380,7 +1380,7 @@ components:
             properties:
               kind: { type: string, enum: [damage, fire, hp, buy, crit], description: 'damage: 공격력, fire: 연사(쏘는 빠르기가 오른다, 100%까지), hp: 매수벽 체력(최대 멘탈과 매수벽이 오른다), buy: 매수벽 공격(매수 주문의 공격력이 오른다), crit: 치명타 피해(치명타 배율이 오른다)' }
               level: { type: integer, description: 지금 단계(0부터) }
-              price: { type: integer, format: int64, description: 다음 단계 값 }
+              price: { type: number, description: 다음 단계 값. 지금 벽의 물가가 곱해져 있고 int64를 넘게 커진다 (505번) }
               priceGrowthPercent: { type: integer, description: 단계마다 값이 오르는 비율(%). 꾹 눌러 연속으로 올릴 때 화면이 다음 값들을 미리 셈한다(정하는 것은 서버) }
               bonusPercent: { type: integer, description: 지금 단계의 효과(%) }
               nextBonusPercent: { type: integer, description: 다음 단계의 효과(%) }

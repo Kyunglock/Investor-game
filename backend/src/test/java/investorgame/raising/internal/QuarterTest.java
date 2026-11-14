@@ -40,7 +40,7 @@ class QuarterTest {
       for (int quarter = 1; quarter <= 4; quarter++) {
         assertThat(c.year).isEqualTo(1);
         assertThat(c.quarter).isEqualTo(quarter);
-        long before = c.capital;
+        long before = (long) c.capital;
         long base = ENGINE.stakeBase(c);
         CompanyState.Quarter q = ENGINE.settleQuarter(c, new HashSeededRandom(seed));
         assertThat(q.quarter).isEqualTo(quarter);

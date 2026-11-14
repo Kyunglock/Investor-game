@@ -213,12 +213,19 @@ class MentalEngine {
 
   /**
    * 전투 강화 level단계에서 다음 단계로 가는 값 (394번): 처음 basePrice, 단계마다 priceGrowthPercent%씩 오른다(끝없이 살 수 있게
-   * 완만하게). long을 넘으면 Long.MAX_VALUE(못 산다).
+   * 완만하게). 거기에 지금 벽의 물가를 곱한다 (505번): 벽이 깊을수록 버는 돈이 커지는 만큼 값도 커진다.
    */
   long upgradePrice(int level) {
     CompanyProperties.Upgrades rule = properties.mental().upgrades();
     double growth = 1 + rule.priceGrowthPercent() / 100.0;
     return Math.round(rule.basePrice() * StrictMath.pow(growth, level));
+  }
+
+  /** 물가를 곱한 지금 벽에서의 값 (505번). 첫 벽에서는 upgradePrice(level)과 같다. */
+  double upgradePrice(CompanyState c, int level) {
+    CompanyProperties.Upgrades rule = properties.mental().upgrades();
+    double growth = 1 + rule.priceGrowthPercent() / 100.0;
+    return Math.rint(rule.basePrice() * StrictMath.pow(growth, level) * CompanyEngine.inflation(c));
   }
 
   /**
@@ -245,16 +252,16 @@ class MentalEngine {
     levels = Math.min(levels, max - level);
     int bought = 0;
     while (bought < levels) {
-      long price = upgradePrice(level + bought);
+      double price = upgradePrice(c, level + bought);
       if (c.capital < price) {
         break;
       }
       c.capital -= price;
-      c.yearUpgrades += price;
+      c.yearUpgrades = CompanyEngine.plus(c.yearUpgrades, (long) price);
       bought++;
     }
     if (bought == 0) {
-      throw new InvalidRequestException("자본이 모자라다: " + upgradePrice(level) + "원 필요");
+      throw new InvalidRequestException("자본이 모자라다");
     }
     c.battleLevels.put(kind, level + bought);
     return bought;
@@ -284,7 +291,7 @@ class MentalEngine {
               return new CompanyView.BattleUpgrade(
                   kind,
                   level,
-                  upgradePrice(level),
+                  CompanyView.money(upgradePrice(c, level)),
                   rule.priceGrowthPercent(),
                   level * step,
                   Math.min(level + 1, max) * step,

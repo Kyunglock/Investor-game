@@ -175,7 +175,7 @@ class InvestEngineTest {
   @Test
   void 고집이_없는_직원은_사장_말대로_한다() {
     CompanyState company = company(3, stats(50, 100, 100, 100));
-    long before = company.capital;
+    long before = (long) company.capital;
     ENGINE.invest.decide(company, right(company), new HashSeededRandom(3));
     CompanyState.InvestResult r = company.invest.results.getFirst();
     assertThat(r.follow).isEqualTo(InvestEngine.BOSS);
@@ -184,12 +184,12 @@ class InvestEngineTest {
     assertThat(company.capital).isEqualTo(before + r.pnl);
 
     CompanyState loser = company(3, stats(50, 100, 100, 100));
-    long loserBefore = loser.capital;
+    long loserBefore = (long) loser.capital;
     ENGINE.invest.decide(loser, wrong(loser), new HashSeededRandom(3));
     assertThat(loser.invest.results.getFirst().pnl).as("틀려도 마이너스가 아니다 (#697)").isZero();
     assertThat(loser.capital).isEqualTo(loserBefore);
     CompanyState bigLoser = company(3, stats(50, 100, 100, 100));
-    long bigBefore = bigLoser.capital;
+    long bigBefore = (long) bigLoser.capital;
     ENGINE.invest.decide(bigLoser, wrong(bigLoser), true, new HashSeededRandom(3));
     assertThat(bigLoser.invest.total).as("크게 틀려도 잃지 않는다").isZero();
     assertThat(bigLoser.capital).isEqualTo(bigBefore);
@@ -206,7 +206,7 @@ class InvestEngineTest {
   @Test
   void 회의_뒤에는_매도벽_돌파가_없다() {
     CompanyState winner = company(3, stats(50, 100, 100, 100));
-    long before = winner.capital;
+    long before = (long) winner.capital;
     ENGINE.invest.decide(winner, right(winner), new HashSeededRandom(3));
     assertThat(winner.invest.total).isPositive();
     assertThat(winner.capital).isEqualTo(before + winner.invest.total);

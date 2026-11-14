@@ -14,6 +14,13 @@ describe('게임 금액 (decisions.md 313번)', () => {
     expect(money(1_200_000_000)).toBe('1.2c')
     expect(money(56_361_500_000_000)).toBe('56.4d')
     expect(money(1_000_000_000_000_000)).toBe('1e')
+    // 자동 전투의 물가로 돈이 z를 넘는다 (decisions.md 505번): z 다음은 aa, ab …
+    expect(money(1e18)).toBe('1f')
+    expect(money(2.5e78)).toBe('2.5z')
+    expect(money(1e81)).toBe('1aa')
+    expect(money(3.3e84)).toBe('3.3ab')
+    expect(money(9.99e158)).toBe('999az')
+    expect(money(1e159)).toBe('1ba')
     expect(money(-5_200_000)).toBe('−5.2b')
   })
 

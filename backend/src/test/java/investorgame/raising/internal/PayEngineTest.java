@@ -41,7 +41,7 @@ class PayEngineTest {
     CompanyState big = company(1, 3_000_000_000L, 1);
     CompanyState.Employee e = ENGINE.hire(big, stats(50));
     ENGINE.place(big, Map.of(e.id, "bio"));
-    long before = big.capital;
+    long before = (long) big.capital;
     CompanyState.Quarter q = ENGINE.settleQuarter(big, new HashSeededRandom(1));
     assertThat(q.capitalBefore + q.staff + q.fee - q.hiring).isEqualTo(q.capitalAfter);
     assertThat(before).isEqualTo(q.capitalBefore);

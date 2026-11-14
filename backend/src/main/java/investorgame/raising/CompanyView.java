@@ -31,7 +31,7 @@ public record CompanyView(
     String opening,
     int year,
     int quarter,
-    long capital,
+    java.math.BigDecimal capital,
     String grade,
     Long nextGradeCapital,
     Upgrade upgrade,
@@ -57,12 +57,17 @@ public record CompanyView(
     boolean sandbox,
     boolean sandboxInfinite) {
 
+  /** 화면에 주는 돈 (decisions.md 505번): long을 넘게 커지므로 소수 없는 큰 수로 준다. JSON에서는 그냥 숫자다. */
+  public static java.math.BigDecimal money(double amount) {
+    return new java.math.BigDecimal(Double.isFinite(amount) ? Math.floor(amount) : 0);
+  }
+
   public record Idle(
       long wall,
       double hp,
       double maxHp,
       double dps,
-      long earned,
+      java.math.BigDecimal earned,
       boolean boss,
       List<IdleSkill> skills,
       List<IdleCat> cats,
@@ -201,7 +206,7 @@ public record CompanyView(
   public record BattleUpgrade(
       String kind,
       int level,
-      long price,
+      java.math.BigDecimal price,
       int priceGrowthPercent,
       int bonusPercent,
       int nextBonusPercent,

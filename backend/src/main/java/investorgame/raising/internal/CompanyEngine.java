@@ -156,11 +156,12 @@ class CompanyEngine {
     company.capital = Math.max(0, capital);
     company.tickets = properties.gacha().startTickets();
     company.gachaReady = true;
-    company.building = grade(company.capital);
+    company.building = grade((long) company.capital);
     company.era = eras().getFirst().code();
     company.opening =
         Korean.fill(
-            content.raising().company().opening(), Map.of("capital", money(company.capital)));
+            content.raising().company().opening(),
+            Map.of("capital", money((long) company.capital)));
     mental.initWeapons(company);
     mental.initWeaponGacha(company);
     startYear(company, random);
@@ -220,7 +221,7 @@ class CompanyEngine {
                 "next",
                 String.valueOf(next.number),
                 "capital",
-                money(next.capital)));
+                money((long) next.capital)));
     startYear(next, random);
     history.opened(next);
     return next;
@@ -458,7 +459,7 @@ class CompanyEngine {
   boolean canSell(CompanyState company) {
     return !company.sold
         && (eraOver(company)
-            || LADDER.indexOf(grade(company.capital))
+            || LADDER.indexOf(grade((long) company.capital))
                 >= LADDER.indexOf(properties.sale().minGrade()));
   }
 
@@ -476,7 +477,7 @@ class CompanyEngine {
 
   /** 판 회사의 등급만큼 명성이 오른다. 시대가 끝나기 전에 스스로 팔면 조금 더. */
   int fameFor(CompanyState company) {
-    int points = LADDER.indexOf(grade(company.capital)) + 1;
+    int points = LADDER.indexOf(grade((long) company.capital)) + 1;
     return eraOver(company) ? points : points + properties.sale().voluntaryBonus();
   }
 
@@ -515,7 +516,7 @@ class CompanyEngine {
             "era",
             era(next).name(),
             "capital",
-            money(next.capital),
+            money((long) next.capital),
             "names",
             String.join("·", next.employees.stream().map(e -> e.name).toList()));
     next.opening =
@@ -810,6 +811,10 @@ class CompanyEngine {
   /** 게임 금액 단위. 등급 글자(F~S)와 헷갈리지 않게 소문자다. */
   static final String MONEY_UNITS = "abcdefghijklmnopqrstuvwxyz";
 
+  String grade(double capital) {
+    return grade((long) capital);
+  }
+
   String grade(long capital) {
     int at = 0;
     for (int i = 0; i < properties.gradeCapital().size(); i++) {
@@ -822,7 +827,7 @@ class CompanyEngine {
 
   /** 회사 등급을 정하는 자본: 연초 자본. 분기 결산으로 자본이 바뀌어도 등급·건물·자리 수는 연말에만 바뀐다 (268번). */
   long gradedCapital(CompanyState company) {
-    return company.gradedCapital != null ? company.gradedCapital : company.capital;
+    return company.gradedCapital != null ? company.gradedCapital : (long) company.capital;
   }
 
   /** 회사 등급 = 산 건물 (decisions.md 296번). 이 칸이 없던 회사는 연초 자본으로 정한다(296번 전처럼). */
@@ -832,6 +837,10 @@ class CompanyEngine {
 
   int seats(CompanyState company) {
     return seatsOf(grade(company));
+  }
+
+  int seats(double capital) {
+    return seats((long) capital);
   }
 
   int seats(long capital) {
@@ -945,7 +954,7 @@ class CompanyEngine {
     long cost = upgradeCost(company);
     company.capital -= cost;
     company.yearMoving += cost;
-    company.gradedCapital = company.capital;
+    company.gradedCapital = (long) company.capital;
     // 공사 기간 없이 바로 옮긴다 (405번): 322번(#347)의 몇 해에 걸친 공사를 뺐다.
     company.building = next;
     history.add(company, company.year, "grow", null, next);
@@ -1059,8 +1068,8 @@ class CompanyEngine {
     Market next = marketOf(company, company.year + 1, random);
     company.nextPhase = next.phase();
     company.nextOmen = next.omen();
-    company.yearStartCapital = company.capital;
-    company.gradedCapital = company.capital;
+    company.yearStartCapital = (long) company.capital;
+    company.gradedCapital = (long) company.capital;
     company.yearHiring = 0;
     company.yearMoving = 0;
     company.yearUpgrades = 0;
@@ -1082,7 +1091,7 @@ class CompanyEngine {
    * ScoutEngine).
    */
   void startQuarter(CompanyState company, SeededRandom random) {
-    company.quarterStartCapital = company.capital;
+    company.quarterStartCapital = (long) company.capital;
     company.invest = invest.create(company, random);
     company.mental = mental.create(company, random);
   }
@@ -1367,6 +1376,17 @@ class CompanyEngine {
     return out;
   }
 
+  /**
+   * 자동 전투의 물가 (decisions.md 505번): 벽 하나를 돌파할 때마다 벽 보상·시간 수입·전투 강화의 값이 함께 이만큼 곱해진다. 돈의 단위가 벽을 따라 a,
+   * b, c … z로 커지고, 그 벽에서 버는 돈과 그 벽에서의 강화 값의 비는 그대로다. 실수가 넘치지 않게 지수는 6,000벽에서 멈춘다.
+   */
+  static final double INFLATION = 1.1;
+
+  static double inflation(CompanyState company) {
+    long wall = company.idle == null ? 1 : company.idle.wall;
+    return StrictMath.pow(INFLATION, Math.max(0, Math.min(6_000, wall - 1)));
+  }
+
   static long plus(long a, long b) {
     long sum = a + b;
     return ((a ^ sum) & (b ^ sum)) < 0 ? (a < 0 ? Long.MIN_VALUE : Long.MAX_VALUE) : sum;
@@ -1399,13 +1419,13 @@ class CompanyEngine {
     }
     RandomGenerator rng = random.forKey("company-settle", company.year, company.quarter);
     if (company.quarter == 1 || company.yearStake == null) {
-      company.yearStake = company.capital;
+      company.yearStake = (long) company.capital;
     }
     CompanyState.Quarter q = new CompanyState.Quarter();
     q.year = company.year;
     q.quarter = company.quarter;
     q.capitalBefore =
-        company.quarterStartCapital != null ? company.quarterStartCapital : company.capital;
+        company.quarterStartCapital != null ? company.quarterStartCapital : (long) company.capital;
     int research = researchInsight(company);
     List<Employee> traders = traders(company);
     long stake = stakeOf(company, traders.size());
@@ -1497,7 +1517,7 @@ class CompanyEngine {
     long fee = (long) (stakeBase(company) * properties.feeBp() / (double) BP / QUARTERS);
     // 판돈이 건물의 값이라 자본보다 클 수 있다 (411번): 잃을 자본이 모자라면 잃은 사람들의 손실을 그만큼 줄인다(장부가 맞게).
     long[] pnls = q.results.stream().mapToLong(r -> r.pnl).toArray();
-    long[] capped = capLosses(plus(company.capital, fee), pnls);
+    long[] capped = capLosses(plus((long) company.capital, fee), pnls);
     totalPnl = 0;
     for (int i = 0; i < capped.length; i++) {
       CompanyState.Result r = q.results.get(i);
@@ -1517,8 +1537,8 @@ class CompanyEngine {
     // 팀장 보고 (269번): 분기를 넘기면 자리마다 팀장이 보고한다. 돕는 자리는 이 분기에 한 일을 센다 (278번).
     recordSupport(company, q);
     q.reports.addAll(teams.reports(company, q.results, List.of(q), "이번 분기", company.turn()));
-    company.capital = Math.max(0, plus(company.capital, plus(fee, totalPnl)));
-    q.capitalAfter = company.capital;
+    company.capital = Math.max(0, company.capital + plus(fee, totalPnl));
+    q.capitalAfter = (long) company.capital;
     if (company.invest != null && company.invest.choice != null) {
       q.investTitle = company.invest.title;
       // 회의 뒤 전투로 바뀐 몫(414번)도 회의 손익에 넣는다. 받지 못한 전투는 이 분기를 넘기며 배율 1로 끝난다.
@@ -1636,7 +1656,7 @@ class CompanyEngine {
                       + (count > 1 ? " (" + count + "번)" : "")));
     }
     pay.yearEnd(company, company.yearLines);
-    settlement.capitalAfter = company.capital;
+    settlement.capitalAfter = (long) company.capital;
     if (company.capital == 0) {
       settlement.lines.add(content.raising().company().bankrupt().emptied());
     }
@@ -1644,7 +1664,7 @@ class CompanyEngine {
     countTenure(company, settlement);
     // 등급·건물·자리 수는 연말에만 바뀐다 (268번). 건물은 저절로 오르지 않고(296번: 이사 비용을 내야 한다), 지은 건물은 자본이 줄어도 그대로다(#347).
     String kept = grade(company);
-    company.gradedCapital = company.capital;
+    company.gradedCapital = (long) company.capital;
     company.building = kept;
     if (company.buildingTo != null && --company.buildLeft <= 0) {
       // 공사가 끝났다 (#347): 새 건물로 옮긴다. 405번부터 새 공사는 없고, 그 전에 시작한 공사만 여기서 끝난다. 랜드마크 타워면 축하한다(374번).
