@@ -125,7 +125,15 @@ import { MATE_LOOKS, mateFormation, spreadTargets } from './mates'
 import { OrderBarrierQueue } from './orderBarrier'
 import { shareLabel } from './shares'
 import { wallOffset } from './stageArt'
-import { PANIC_RUSH, panicRushGap, waveKind } from './waves'
+import {
+  IDLE_RAID,
+  IDLE_RAID_BANNERS,
+  idleRaidGap,
+  idleRaidKind,
+  PANIC_RUSH,
+  panicRushGap,
+  waveKind,
+} from './waves'
 import {
   aimWithJitter,
   pierceOf,
@@ -208,6 +216,8 @@ export interface BattleOptions {
   /** Foreground idle mode: wall health and progression are server-authoritative. */
   idle?: () => IdleSnapshot
   onIdleHit?: (wall: number, kind: IdleAttackKind, damage: number) => void
+  /** 자동 전투의 몬스터 습격 알림 (500번). */
+  onIdleRaid?: (text: string, color: string) => void
 
   /** 처음 배속(gameSpeed.ts). 없으면 1배. */
   speed?: GameSpeed
@@ -662,6 +672,9 @@ class BattleScene extends Phaser.Scene {
   /** 다음 패닉셀 러시 시각(초)과, 러시 중이면 아직 나올 패닉셀 수·다음 한 마리까지 남은 시간. */
   private nextPanicRush: number = PANIC_RUSH.first + panicRushGap(Math.random()) / 2
   private panicRushLeft = 0
+  /** 자동 전투의 다음 몬스터 습격 시각(전투 초)과 지금까지의 습격 수 (500번). */
+  private nextIdleRaid: number = IDLE_RAID.first
+  private idleRaids = 0
   private panicRushClock = 0
   private panicRushEvery = 0
   /** 한 화면에 함께 있는 적의 최대 수(334·340번): 더 있으면 새로 만들지 않는다. */
@@ -2405,7 +2418,7 @@ class BattleScene extends Phaser.Scene {
     e.born = this.elapsed
     if (this.buyWall && kind !== 'cell' && kind !== 'whale') this.buyWall.sells++
     if (this.assault && (kind === 'panic' || kind === 'dump')) {
-      if (this.marketStats[kind] === 0)
+      if (this.marketStats[kind] === 0 && !this.opts.idle)
         this.opts.onBanner(
           kind === 'panic' ? '패닉셀 무리 출현!' : '투매 몬스터가 밀려온다!',
           kind === 'panic' ? '#82bbff' : '#c5a1ff',
@@ -2517,6 +2530,38 @@ class BattleScene extends Phaser.Scene {
     this.opts.onBanner('공매도 웨이브! 방패 대열이 밀려온다!', '#9eb7ff')
   }
 
+  /**
+   * 자동 전투의 몬스터 습격 (500번): 몬스터는 평소에 나오지 않고, 이따금 알림과 함께 한 떼가 몰려온다. 종류는 패닉셀 → 투매 → 공매도 → 투기 순으로
+   * 돈다. 거래 정지와 벽이 바뀌는 사이에는 미룬다.
+   */
+  private idleRaidStep(dt: number) {
+    if (this.elapsed >= this.nextIdleRaid && !this.circuit && !this.idleTransition) {
+      const kind = idleRaidKind(this.idleRaids++)
+      this.nextIdleRaid = this.elapsed + idleRaidGap(Math.random())
+      const [text, color] = IDLE_RAID_BANNERS[kind]
+      this.opts.onIdleRaid?.(text, color)
+      if (kind === 'panic') this.startPanicRush()
+      else if (kind === 'dump') this.waveDump()
+      else if (kind === 'short') this.waveShort()
+      else this.raidSpec()
+      if (kind !== 'panic') sfx.rumble()
+    }
+    this.pourPanicRush(dt)
+  }
+
+  /** 투기 세력: 크고 느린 투기 몬스터 몇과 그 앞의 손절매 한 줄. */
+  private raidSpec() {
+    const { w } = this.view()
+    const specs = Math.min(8, Math.round(3 * this.staged(this.countScale)))
+    for (let i = 0; i < specs; i++) {
+      this.spawn('spec', [w * 0.16 + ((i + 0.5) * w * 0.68) / specs, -70])
+    }
+    const stops = Math.min(12, Math.round(5 * this.staged(this.countScale)))
+    for (let i = 0; i < stops; i++) {
+      this.spawn('stop', [w * 0.16 + ((i + 0.5) * w * 0.68) / stops, -24])
+    }
+  }
+
   /** 패닉셀 러시: 판 중간중간 갑자기 "패닉셀이 몰려온다!!" 하고 몇 초 동안 위에서 패닉셀이 쏟아진다. */
   private panicRushStep(dt: number) {
     if (this.panicRushLeft === 0 && this.elapsed >= this.nextPanicRush) {
@@ -2525,18 +2570,26 @@ class BattleScene extends Phaser.Scene {
         this.nextPanicRush = this.nextWave + PANIC_RUSH.waveGuard
         return
       }
-      this.panicRushLeft = Math.max(
-        8,
-        Math.round(PANIC_RUSH.count * this.staged(this.countScale) * (this.assault ? 0.6 : 1)),
-      )
-      this.panicRushEvery = PANIC_RUSH.seconds / this.panicRushLeft
-      this.panicRushClock = 0
       this.nextPanicRush = this.elapsed + PANIC_RUSH.seconds + panicRushGap(Math.random())
       this.opts.onBanner('패닉셀이 몰려온다!!', '#e8434f')
-      if (!this.reducedMotion) this.cameras.main.shake(320, 0.006)
-      sfx.rumble()
-      haptic.medium()
+      this.startPanicRush()
     }
+    this.pourPanicRush(dt)
+  }
+
+  private startPanicRush() {
+    this.panicRushLeft = Math.max(
+      8,
+      Math.round(PANIC_RUSH.count * this.staged(this.countScale) * (this.assault ? 0.6 : 1)),
+    )
+    this.panicRushEvery = PANIC_RUSH.seconds / this.panicRushLeft
+    this.panicRushClock = 0
+    if (!this.reducedMotion) this.cameras.main.shake(320, 0.006)
+    sfx.rumble()
+    haptic.medium()
+  }
+
+  private pourPanicRush(dt: number) {
     if (this.panicRushLeft === 0) return
     this.panicRushClock += dt
     const { w } = this.view()
@@ -4342,7 +4395,8 @@ class BattleScene extends Phaser.Scene {
       const r = Math.random()
       this.spawn(r < 0.6 ? 'panic' : r < 0.82 ? 'dump' : r < 0.95 ? 'stop' : 'spec')
     }
-    if ((this.mode === 'defense' || this.assault) && this.elapsed >= this.nextWave) {
+    if (this.opts.idle) this.idleRaidStep(dt)
+    else if ((this.mode === 'defense' || this.assault) && this.elapsed >= this.nextWave) {
       const kind = waveKind(Math.round(this.nextWave / WAVE_SECONDS) - 1)
       if (kind === 'panic') {
         this.wavePanic()
@@ -4353,7 +4407,7 @@ class BattleScene extends Phaser.Scene {
       } else this.waveShort()
       this.nextWave += WAVE_SECONDS
     }
-    if (this.mode === 'defense' || this.assault) this.panicRushStep(dt)
+    if (!this.opts.idle && (this.mode === 'defense' || this.assault)) this.panicRushStep(dt)
 
     // 적 움직임: 매 프레임 새 객체를 만들지 않는다.
     const list = this.enemies.getChildren()
