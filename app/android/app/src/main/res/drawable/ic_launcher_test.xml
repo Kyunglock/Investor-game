@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 테스트판 앱의 아이콘, 적응형 아이콘이 없는 옛 안드로이드용: 본 앱 아이콘에 TEST 띠를 얹는다. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@mipmap/ic_launcher" />
+    <item android:drawable="@drawable/ic_test_badge" />
+</layer-list>
