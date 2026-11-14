@@ -1393,7 +1393,7 @@ export interface components {
                 kind: "damage" | "fire" | "hp" | "buy" | "crit";
                 /** @description 지금 단계(0부터) */
                 level: number;
-                /** @description 다음 단계 값. 지금 벽의 물가가 곱해져 있고 int64를 넘게 커진다 (505번) */
+                /** @description 다음 단계 값. 단계로만 정하고 벽의 물가는 곱하지 않는다 (519번). 수백 단계 뒤에는 int64를 넘게 커진다 */
                 price: number;
                 /** @description 단계마다 값이 오르는 비율(%). 꾹 눌러 연속으로 올릴 때 화면이 다음 값들을 미리 셈한다(정하는 것은 서버) */
                 priceGrowthPercent: number;

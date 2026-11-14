@@ -290,7 +290,7 @@ class DefaultCompanyService implements CompanyService {
   /** 테스트판 회사면 자본·채용권·뽑기권을 다시 채운다. 요청 끝에 함께 저장된다. */
   private static void refill(CompanyState c) {
     if (!c.sandbox || c.sandboxFinite) return;
-    // 물가(505번)를 따라가야 깊은 벽에서도 강화를 살 수 있다.
+    // 그 벽의 물가(505번)만큼 채운다: 깊은 벽에서 버는 돈의 크기와 맞춘다.
     c.capital = Math.max(c.capital, SANDBOX_CAPITAL * CompanyEngine.inflation(c));
     c.tickets = Math.max(c.tickets, SANDBOX_TICKETS);
     c.weaponTickets = Math.max(c.weaponTickets, SANDBOX_TICKETS);
