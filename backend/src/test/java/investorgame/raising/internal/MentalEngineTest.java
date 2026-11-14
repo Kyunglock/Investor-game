@@ -483,7 +483,7 @@ class MentalEngineTest {
     long spent = c.yearUpgrades;
     long expected = 0;
     for (int level = 0; level < 250; level++) {
-      expected += ENGINE.mental.upgradePrice(level);
+      expected += (long) ENGINE.mental.upgradePrice(level);
     }
     assertThat(ENGINE.mental.buyUpgrade(c, "hp", 100)).isEqualTo(100);
     assertThat(ENGINE.mental.buyUpgrade(c, "hp", 100)).isEqualTo(100);
@@ -503,7 +503,7 @@ class MentalEngineTest {
     assertThat(ENGINE.mental.buyUpgrade(c, "fire", 100)).as("남은 20단계만 산다").isEqualTo(20);
     long twenty = 0;
     for (int level = 30; level < 50; level++) {
-      twenty += ENGINE.mental.upgradePrice(level);
+      twenty += (long) ENGINE.mental.upgradePrice(level);
     }
     assertThat(atThirty - c.capital).isEqualTo(twenty);
     assertThat(view(c, "fire").bonusPercent()).isEqualTo(100);

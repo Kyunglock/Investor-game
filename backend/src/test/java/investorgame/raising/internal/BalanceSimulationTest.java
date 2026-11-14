@@ -161,7 +161,7 @@ class BalanceSimulationTest {
     long bought = 0;
     for (int level : c.battleLevels.values()) {
       for (int i = 0; i < level; i++) {
-        bought += ENGINE.mental.upgradePrice(i);
+        bought += (long) ENGINE.mental.upgradePrice(i);
       }
     }
     return new Life(first, (long) c.capital, levels, booked, bought);
