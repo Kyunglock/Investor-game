@@ -1,4 +1,4 @@
-import type { EnemyKind, OrderKind } from './enemies'
+import { type EnemyKind, isOrder, type OrderKind } from './enemies'
 import { SHARES_PER_HP } from './shares'
 
 /**
@@ -305,6 +305,11 @@ export function idleThreat(wall: number, maxHp: number): number {
 /** 자동 전투에서 매도벽이 물량을 내는 빈도의 배율 (미션 대비, 495번). */
 export const IDLE_FLOW = 1.5
 
+/** 물량 구성에서 몬스터(패닉셀·투매·공매도·투기·손절매)를 뺀다. */
+export function ordersOnly(mix: AssaultWall['mix']): AssaultWall['mix'] {
+  return Object.fromEntries(Object.entries(mix).filter(([kind]) => isOrder(kind as FlowKind)))
+}
+
 export function idleAssaultSpec(wall: number, maxHp = 0): AssaultSpec {
   const at = Math.max(0, Math.floor(wall) - 1)
   const spec = assaultSpec(1 + Math.floor(at / ASSAULT_WALLS.length))
@@ -316,7 +321,16 @@ export function idleAssaultSpec(wall: number, maxHp = 0): AssaultSpec {
     enemyDmg: spec.enemyDmg * threat,
     // 매도벽에서 나오는 물량이 미션보다 잦다 (495번).
     enemyCount: spec.enemyCount * IDLE_FLOW,
-    walls: [{ ...template, rows: 1, mid: false, boss: Math.floor(wall) % 10 === 0 }],
+    // 매도벽은 매도 물량만 낸다: 몬스터는 이따금 습격으로만 온다 (500번).
+    walls: [
+      {
+        ...template,
+        mix: ordersOnly(template.mix),
+        rows: 1,
+        mid: false,
+        boss: Math.floor(wall) % 10 === 0,
+      },
+    ],
   }
 }
 
