@@ -468,7 +468,9 @@ class MentalEngineTest {
     assertThat(ENGINE.mental.upgradePrice(200))
         .as("200단계째 약 25억")
         .isBetween(2_000_000_000.0, 3_000_000_000.0);
-    assertThat(ENGINE.mental.upgradePrice(5_000)).as("long을 넘어도 값은 단계를 따라 계속 오른다").isGreaterThan(1e90);
+    assertThat(ENGINE.mental.upgradePrice(5_000))
+        .as("long을 넘어도 값은 단계를 따라 계속 오른다")
+        .isGreaterThan(1e90);
     CompanyView.BattleUpgrade damage = view(c, "damage");
     assertThat(damage.level()).isEqualTo(1);
     assertThat(damage.bonusPercent()).isEqualTo(3);
@@ -537,7 +539,8 @@ class MentalEngineTest {
     CompanyState tough = company(7);
     assertThat(ENGINE.mental.buyUpgrade(tough, "hp", 3)).isEqualTo(3);
     assertThat(view(tough, "hp").bonusPercent()).isEqualTo(9);
-    assertThat(view(tough, "hp").price().longValue()).isEqualTo((long) ENGINE.mental.upgradePrice(3));
+    assertThat(view(tough, "hp").price().longValue())
+        .isEqualTo((long) ENGINE.mental.upgradePrice(3));
   }
 
   @Test
