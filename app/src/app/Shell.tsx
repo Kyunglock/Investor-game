@@ -11,9 +11,18 @@ import {
 } from '@web/features/raising/tutorial'
 import { useIdleBattle } from '@web/features/raising/useIdleBattle'
 import { useEffect, useRef, useState } from 'react'
+import { haptic, isHapticOff, setHapticOff } from '../fx/haptics'
 import { isMuted, setMuted, sfx } from '../fx/sound'
 import { IdleHome } from '../idle/IdleHome'
-import { BookIcon, BuildingIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from './Icons'
+import {
+  BookIcon,
+  BuildingIcon,
+  ChairIcon,
+  ClipboardIcon,
+  HapticIcon,
+  NewsIcon,
+  SoundIcon,
+} from './Icons'
 import { GachaScene } from './scenes/GachaScene'
 import { IssueScene } from './scenes/IssueScene'
 import { OfficeScene } from './scenes/OfficeScene'
@@ -205,10 +214,11 @@ export function Shell({ company }: { company: Company }) {
   )
 }
 
-/** 머리띠: 건물 이름과 해·분기, 굴러가는 자본, 소리 끄기. */
+/** 머리띠: 건물 이름과 해·분기, 굴러가는 자본, 진동 끄기(521번), 소리 끄기. */
 function Hud({ company }: { company: Company }) {
   const capital = useCountUp(company.capital)
   const [muted, setMutedState] = useState(isMuted)
+  const [hapticOff, setHapticOffState] = useState(isHapticOff)
   const ended = company.status === 'ENDED'
   return (
     <header
@@ -243,6 +253,23 @@ function Hud({ company }: { company: Company }) {
             {money(capital)}
           </p>
         </div>
+        <button
+          type="button"
+          aria-pressed={hapticOff}
+          aria-label={hapticOff ? '진동 켜기' : '진동 끄기'}
+          data-testid="haptic-toggle"
+          onClick={() => {
+            setHapticOff(!hapticOff)
+            setHapticOffState(!hapticOff)
+            if (hapticOff) {
+              // 켰음을 짧게 한 번 알려 준다.
+              haptic.medium()
+            }
+          }}
+          className="rounded-full p-1.5 text-ink/55 active:scale-90"
+        >
+          <HapticIcon off={hapticOff} />
+        </button>
         <button
           type="button"
           aria-pressed={muted}
