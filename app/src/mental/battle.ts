@@ -1,3 +1,4 @@
+import { CAT_H, CAT_W } from '@web/features/game/cat/draw'
 import type { IdleAttackKind } from '@web/features/raising/idleContacts'
 import Phaser from 'phaser'
 import { haptic } from '../fx/haptics'
@@ -270,7 +271,7 @@ const BULLET_LIFE = 900
  */
 const IDLE_HIT_MS = 12000
 /** 사격 모션 (513번): 반동 1일 때 뒤로 밀리는 거리(px), 눌리는 비율, 넓어지는 비율, 젖혀지는 각(rad), 그리고 초당 줄어드는 빠르기. */
-const RECOIL = { back: 5, squash: 0.07, wide: 0.05, lean: 0.07, decay: 16 }
+const RECOIL = { back: 3, squash: 0.018, wide: 0.008, lean: 0.018, decay: 22 }
 const recoilDecay = (kick: number, dt: number) =>
   kick < 0.01 ? 0 : kick * Math.exp(-RECOIL.decay * dt)
 /** 자동 전투에서 벽 앞에 막힌 시간으로 셈하는 상한(초): 물량 간격이 바탕의 절반까지만 줄어든다 (assault.ts spawnSeconds, 494번). */
@@ -1574,6 +1575,7 @@ class BattleScene extends Phaser.Scene {
       c.crack = crack
       e.setTexture(cellKey(crack))
       this.chips?.explode(this.fx(4 + crack * 2), e.x, e.y + 6)
+      this.ring(e.x, e.y + e.displayHeight * 0.35, 0xffd58a, 30 + crack * 10, 180)
       this.playSound('thud')
     } else if (Math.random() < 0.35) {
       this.chips?.explode(1, e.x, e.y + 8)
@@ -1591,7 +1593,10 @@ class BattleScene extends Phaser.Scene {
     if (!c) return
     e.cell = null
     c.label.destroy()
-    this.chips?.explode(this.fx(14), e.x, e.y)
+    this.shatterWallLayer(e)
+    this.chips?.explode(this.fx(28), e.x, e.y)
+    this.ring(e.x, e.y, 0xffdf9e, Math.min(150, e.displayWidth * 0.6), 300)
+    this.glow(e.x, e.y, 0xffefc4, 65, 160, 0.65)
     this.fill(e.x, e.y, cellShares(e.maxHp, e.maxHp), '#bfe0ff')
     // 적 풀은 돌려 쓰니 부서진 칸은 벽에서 바로 뺀다(같은 객체가 물량으로 다시 나올 수 있다).
     c.wall.cells = c.wall.cells.filter((o) => o !== e)
@@ -1605,6 +1610,39 @@ class BattleScene extends Phaser.Scene {
     if (c.wall.left <= 0 && !c.wall.broken) this.wallCollapse(c.wall)
   }
 
+  /** 풀의 적과 분리한 벽 조각: 블록 무늬를 유지한 채 양옆으로 튄다. */
+  private shatterWallLayer(e: Enemy) {
+    if (this.reducedMotion) return
+    for (let i = 0; i < 6; i++) {
+      const direction = (i - 2.5) / 2.5
+      const piece = this.add
+        .image(e.x, e.y, e.texture.key)
+        .setName('wall-fragment')
+        .setDepth(7)
+        .setScale(e.scaleX, e.scaleY)
+        .setCrop((i * e.width) / 6, 0, e.width / 6, e.height)
+      this.tweens.add({
+        targets: piece,
+        x: e.x + direction * 75,
+        y: e.y - 30 - (1 - Math.abs(direction)) * 25,
+        angle: direction * 16,
+        duration: 150,
+        ease: 'Quad.easeOut',
+        onComplete: () =>
+          this.tweens.add({
+            targets: piece,
+            x: piece.x + direction * 45,
+            y: piece.y + 100,
+            angle: direction * 40,
+            alpha: 0,
+            duration: 320,
+            ease: 'Quad.easeIn',
+            onComplete: () => piece.destroy(),
+          }),
+      })
+    }
+  }
+
   /** 벽이 무너진다: 판이 내려앉으며 파편과 먼지, 가격이 한 칸 뛰고, 사장냥이 쭉 치고 오른다. 다음 벽이 위에서 내려온다. */
   private wallCollapse(wall: WallState) {
     const spec = this.assault
@@ -1613,7 +1651,7 @@ class BattleScene extends Phaser.Scene {
     this.wallsBroken++
     // 벽 하나를 통째로 무너뜨리면 경험치를 한 번에 더 준다 (#700).
     const breakXp = wallBreakXp(xpToNext(this.level))
-    this.pop(this.view().w / 2, wall.y - 40, `EXP +${breakXp}`, '#7be0c3', 22)
+    this.pop(this.view().w / 2, wall.y - 72, `EXP +${breakXp}`, '#7be0c3', 22)
     this.gainXp(breakXp)
     this.sinceBreak = 0
     this.stuck = 0
@@ -1624,10 +1662,19 @@ class BattleScene extends Phaser.Scene {
       this.elapsed + ASSAULT_MOTION.breakSeconds + ASSAULT_MOTION.dashSeconds + 0.5,
     )
     const lane = this.lane()
+    const burstY = wall.y - 12
+    const centerX = this.view().w / 2
+    if (!this.reducedMotion) this.cameras.main.shake(210, 0.005)
+    this.ring(centerX, burstY, 0xffe5a3, lane.width * 0.75, 380)
+    this.pop(centerX, burstY - 24, '매도벽 격파!', '#ffe5a3', 28)
     for (let i = 0; i < 7; i++) {
       const x = lane.left + ((i + 0.5) * lane.width) / 7
-      this.chips?.explode(this.fx(8), x, wall.y - 8)
-      this.boom.cell.explode(this.fx(4), x, wall.y - 10)
+      // 중앙부터 바깥으로 짧게 연쇄 폭발. 벽이 교체되어도 좌표는 고정한다.
+      this.time.delayedCall(this.reducedMotion ? 0 : Math.abs(i - 3) * 35, () => {
+        this.chips?.explode(this.fx(18), x, burstY)
+        this.boom.cell.explode(this.fx(10), x, burstY)
+        this.glow(x, burstY, 0xffd58a, 34, 180, 0.55)
+      })
     }
     this.glow(this.view().w / 2, wall.y - 20, 0xbfe0ff, lane.width * 0.45, 380, 0.5)
     this.tweens.add({
@@ -3245,13 +3292,22 @@ class BattleScene extends Phaser.Scene {
     return Boolean(this.opts.idle && this.buyWall && !this.buyWall.active)
   }
 
+  /** DPR 텍스처 배율 대신 실제 표시 크기로 총구를 변환한다. */
+  private catPose(body: Phaser.GameObjects.Image) {
+    return {
+      rotation: body.rotation,
+      scaleX: body.displayWidth / CAT_W,
+      scaleY: body.displayHeight / CAT_H,
+    }
+  }
+
   /** 한 발 쏜다. mate가 없으면 사장냥, 있으면 그 고양이가 같은 수치(무기·피해·연사·강화)로 쏜다(393번). */
   private fire(now: number, target: { x: number; y: number }, mate?: Mate) {
     const p = mate ? mate.body : this.player
     if (!mate) this.heroAims++
     const model = mate ? mateModel(this.mateLook(this.mates.indexOf(mate))) : 'hero'
     // 표적이 좌우로 바뀌어도 발사 순간에는 실제 총구에서 정확히 겨눈다.
-    const aim = catAim(model, p.x, p.y, target)
+    const aim = catAim(model, p.x, p.y, target, this.catPose(p))
     const gun = mate ? this.mateGun(this.mates.indexOf(mate)) : undefined
     const kind = gun?.kind ?? this.opts.hero.weapon.kind
     const grade = gun?.grade ?? this.opts.hero.weapon.grade
@@ -3281,7 +3337,7 @@ class BattleScene extends Phaser.Scene {
       this.aim = aim
     }
     // 총 손맛: 총구 화염. 크기·시간이 무기마다 다르다.
-    const m = catMuzzle(model, p.x, p.y)
+    const m = catMuzzle(model, p.x, p.y, this.catPose(p))
     const flash = this.flashes[this.flashIndex++ % this.flashes.length]
     flash
       .setPosition(m.x, m.y)
@@ -4359,7 +4415,7 @@ class BattleScene extends Phaser.Scene {
         )
       m.kick = recoilDecay(m.kick, dt)
       b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop + m.kick * RECOIL.back)
-      b.setRotation(-m.kick * RECOIL.lean)
+      b.setRotation(Phaser.Math.Clamp(m.aim + Math.PI / 2, -0.35, 0.35) - m.kick * RECOIL.lean)
       m.magicMark.setPosition(b.x, b.y - 58)
       if (!this.tweens.isTweening(b)) {
         b.setDisplaySize(
@@ -4499,7 +4555,9 @@ class BattleScene extends Phaser.Scene {
     p.setDisplaySize(
       HERO_SIZE.w * (1 + this.heroKick * RECOIL.wide),
       HERO_SIZE.h * (1 - this.heroKick * RECOIL.squash),
-    ).setRotation(-this.heroKick * RECOIL.lean)
+    ).setRotation(
+      Phaser.Math.Clamp(this.aim + Math.PI / 2, -0.35, 0.35) - this.heroKick * RECOIL.lean,
+    )
     if (this.wall && this.wallZone) {
       this.wall.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)
       this.wall.setTexture(this.mental <= this.loadout.maxMental / 2 ? 'wall-cracked' : 'wall')

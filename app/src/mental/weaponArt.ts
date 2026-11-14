@@ -38,7 +38,7 @@ export function drawEquippedHero(
   const crop = spriteBounds(weapons, weaponCell(weapons, grade))
   c.save()
   c.translate(EQUIPPED_MUZZLE.x, EQUIPPED_MUZZLE.y)
-  c.rotate(-Math.PI / 2 + 0.3)
+  c.rotate(-Math.PI / 2)
   c.drawImage(weapons, crop.x, crop.y, crop.w, crop.h, -57, -12, 57, 34)
   c.restore()
   // 원본 앞발을 총 위에 다시 얹어 손잡이와 앞 총몸을 잡게 한다.
