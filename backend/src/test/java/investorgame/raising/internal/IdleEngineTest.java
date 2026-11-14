@@ -516,8 +516,8 @@ class IdleEngineTest {
   }
 
   @Test
-  void pricesAndPayGrowTogetherWithTheWallPastWhatALongHolds() {
-    // 물가 (decisions.md 505번): 벽마다 보상·수입·강화 값이 함께 10%씩 커진다.
+  void payGrowsWithTheWallPastWhatALongHoldsWhileUpgradePricesStayFixed() {
+    // 물가 (decisions.md 505번): 벽마다 보상·수입이 10%씩 커진다. 강화 값은 단계로만 정한다 (519번).
     start(1);
     company.mental.initWeapons(state);
     double first = engine.view(state).dps();
@@ -525,10 +525,10 @@ class IdleEngineTest {
     state.idle.wall = 2001;
     double level = StrictMath.pow(1.1, 2000);
     assertThat(level).as("far beyond a long, around the z unit").isGreaterThan(1e78);
-    assertThat(company.mental.upgradeViews(state).getFirst().price().doubleValue())
-        .isCloseTo(firstPrice * level, org.assertj.core.data.Percentage.withPercentage(1e-6));
+    assertThat(company.mental.upgradeViews(state).getFirst().price().longValue())
+        .as("the upgrade costs what it cost at the first wall")
+        .isEqualTo(firstPrice);
     assertThat(engine.view(state).dps()).as("the fight itself is unchanged").isEqualTo(first);
-    // One second of income at that wall buys what one second bought at the first wall.
     tick(1000);
     tick(500);
     double income = state.capital;
@@ -541,9 +541,13 @@ class IdleEngineTest {
     assertThat(state.idle.wall).isEqualTo(2002);
     assertThat(state.capital - income)
         .isGreaterThan(IdleEngine.maxHp(2001) * 60000 * level * 0.999);
-    // Buying still works at that size.
+    // Buying costs the level's price only, however deep the wall.
+    state.capital = 10 * firstPrice;
     int bought = company.mental.buyUpgrade(state, "damage", 5);
     assertThat(bought).isEqualTo(5);
+    double spent = 0;
+    for (int i = 0; i < 5; i++) spent += company.mental.upgradePrice(i);
+    assertThat(state.capital).isEqualTo(10 * firstPrice - spent);
   }
 
   @Test
