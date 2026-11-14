@@ -70,6 +70,9 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
               )
             }
           },
+          onIdleWallDown: () => {
+            if (!disposed) window.dispatchEvent(new Event('idle-wall-down'))
+          },
           // 몬스터 습격만 알린다 (decisions.md 500번). 그 밖의 전투 알림은 자동 전투에서 띄우지 않는다.
           onIdleRaid: (text, color) => setRaid((old) => ({ text, color, id: (old?.id ?? 0) + 1 })),
           onHud: () => {},

@@ -218,6 +218,8 @@ export interface BattleOptions {
   /** Foreground idle mode: wall health and progression are server-authoritative. */
   idle?: () => IdleSnapshot
   onIdleHit?: (wall: number, kind: IdleAttackKind, damage: number) => void
+  /** 자동 전투: 화면의 매도벽 체력이 바닥났다. 서버의 돌파 판정을 다음 접속 신호까지 기다리지 않고 바로 묻는다 (506번). */
+  onIdleWallDown?: () => void
   /** 자동 전투의 몬스터 습격 알림 (500번). */
   onIdleRaid?: (text: string, color: string) => void
 
@@ -269,6 +271,8 @@ const BULLET_LIFE = 900
  * 이 시간으로 잊는다. 서버가 늦은 접속 신호를 받아 주는 10초(497번)보다 길다.
  */
 const IDLE_HIT_MS = 12000
+/** 화면의 벽이 바닥난 채로 서버의 판정을 다시 묻는 간격(ms): 서버가 아직 아니라고 해도 접속 신호가 몰리지 않게 한다. */
+const IDLE_WALL_DOWN_MS = 250
 /** 자동 전투에서 벽 앞에 막힌 시간으로 셈하는 상한(초): 물량 간격이 바탕의 절반까지만 줄어든다 (assault.ts spawnSeconds, 494번). */
 const IDLE_STUCK_MAX = 25
 
@@ -527,6 +531,7 @@ class BattleScene extends Phaser.Scene {
   /** 지금 벽에 방금 맞힌 피해(실제 ms와 양). 서버 값이 따라올 때까지 화면의 벽 체력에서 먼저 뺀다 (493번). */
   /** 먼저 빼 둔 명중. sequence는 실려 나간 접속 신호의 순번이고, 아직 안 나갔으면 없다 (496번). */
   private idleHits: { at: number; amount: number; sequence?: number }[] = []
+  private idleWallDownAt = 0
   private idleTransition = false
   private runRush = 0
   private wallsBroken = 0
@@ -1809,6 +1814,16 @@ class BattleScene extends Phaser.Scene {
       (hit) => hit.at >= since && (hit.sequence === undefined || hit.sequence > handled),
     )
     const pending = this.idleHits.reduce((sum, hit) => sum + hit.amount, 0)
+    // 화면에서 벽이 바닥나면 돌파 판정을 바로 묻는다: 다음 접속 신호(1초)까지 "100주"로 버티며 명중을 버리지 않게 (506번).
+    const now = performance.now()
+    if (
+      pending > 0 &&
+      snapshot.hp - pending <= 0 &&
+      now - this.idleWallDownAt >= IDLE_WALL_DOWN_MS
+    ) {
+      this.idleWallDownAt = now
+      this.opts.onIdleWallDown?.()
+    }
     const cells = this.wallLayers(wall)
     for (const cell of cells) {
       cell.maxHp = snapshot.maxHp / Math.max(1, cells.length)
