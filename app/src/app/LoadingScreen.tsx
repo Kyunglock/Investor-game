@@ -12,30 +12,70 @@ const TIPS = [
   '출전 칸은 넷: 사장냥은 늘 함께 싸워요',
 ]
 
-const MESSAGES = {
-  loading: '회사를 불러오는 중…',
-  opening: '새 회사를 차리는 중…',
-} as const
+/**
+ * 그림을 미리 내려받는다 (517번). 하나가 끝날 때마다(실패해도) onEach를 부르므로 로딩이 그림 하나에 걸려 멈추지 않는다. 브라우저 캐시에 들어가 전투
+ * 화면이 바로 그린다.
+ */
+export function preloadImages(urls: string[], onEach: () => void) {
+  const images = urls.map((url) => {
+    const image = new Image()
+    let counted = false
+    const done = () => {
+      if (counted) return
+      counted = true
+      onEach()
+    }
+    image.onload = done
+    image.onerror = done
+    image.src = url
+    if (image.complete) done()
+    return image
+  })
+  return () => {
+    for (const image of images) {
+      image.onload = null
+      image.onerror = null
+    }
+  }
+}
 
 /**
- * 로딩 화면 (decisions.md 517번): 앱을 열어 회사를 불러오거나 처음 회사를 차리는 동안 보인다. 사장냥이 통통 뛰고, 막대가 차오르고(서버가 진행을
- * 알려 주지 않으므로 90%까지 천천히 다가간다), 도움말이 바뀐다.
+ * 접속 로딩 화면 (decisions.md 517번): 앱을 열면 서버에 접속하고, 회사를 불러오거나 차리고, 전투 그림을 미리 받는 동안 보인다. 막대는 실제로 끝난
+ * 단계(progress)를 따라 부드럽게 차오르고, 다 되면(done) 100%를 채운 뒤 사라진다(leaving).
  */
-export function LoadingScreen({ stage }: { stage: keyof typeof MESSAGES }) {
-  const [progress, setProgress] = useState(8)
+export function LoadingScreen({
+  message,
+  progress,
+  done = false,
+  leaving = false,
+}: {
+  message: string
+  /** 0~100: 끝난 단계만큼 */
+  progress: number
+  done?: boolean
+  leaving?: boolean
+}) {
+  const target = done ? 100 : Math.min(progress, 95)
+  const [shown, setShown] = useState(4)
   const [tip, setTip] = useState(() => Math.floor(Math.random() * TIPS.length))
   useEffect(() => {
-    const fill = setInterval(() => setProgress((p) => p + (90 - p) * 0.12), 180)
+    const fill = setInterval(
+      () =>
+        setShown((p) => (p >= target ? p : Math.min(target, p + Math.max(1, (target - p) * 0.25)))),
+      60,
+    )
+    return () => clearInterval(fill)
+  }, [target])
+  useEffect(() => {
     const turn = setInterval(() => setTip((t) => (t + 1) % TIPS.length), 2600)
-    return () => {
-      clearInterval(fill)
-      clearInterval(turn)
-    }
+    return () => clearInterval(turn)
   }, [])
+  const percent = Math.round(shown)
   return (
     <div
       className="loading-screen app-bg"
-      data-testid={stage === 'loading' ? 'loading' : 'opening-company'}
+      data-testid="loading"
+      data-leaving={leaving}
       role="status"
       aria-live="polite"
     >
@@ -49,16 +89,17 @@ export function LoadingScreen({ stage }: { stage: keyof typeof MESSAGES }) {
           <img src={STAGE_ASSETS.hero} alt="" draggable={false} />
           <span className="loading-screen-shadow" />
         </div>
-        <p className="loading-screen-message">{MESSAGES[stage]}</p>
+        <p className="loading-screen-message">{message}</p>
         <div
           className="loading-screen-bar"
           role="progressbar"
-          aria-label="불러오는 정도"
+          aria-label="접속 진행"
           aria-valuemin={0}
           aria-valuemax={100}
-          aria-valuenow={Math.round(progress)}
+          aria-valuenow={percent}
         >
-          <span style={{ width: `${progress}%` }} />
+          <span style={{ width: `${shown}%` }} />
+          <em>{percent}%</em>
         </div>
         <p className="loading-screen-tip" key={tip}>
           <b>TIP</b> {TIPS[tip]}
