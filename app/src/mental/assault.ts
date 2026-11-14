@@ -284,19 +284,36 @@ export function assaultSpec(
 
 /**
  * 자동 전투의 wall번째 벽 앞 물량 (493번): 예전 매도벽 돌파 미션처럼 열 벽 한 바퀴 안에서는 미션의 벽 차례대로 물량 구성과 등장 간격이 무거워지고,
- * 열 벽을 넘길 때마다 미션 레벨이 하나 오른 만큼 수·빠르기·공격이 는다. 벽은 늘 한 줄이고 체력은 서버가 정한다. 물량 하나의 체력(주식 수)은
- * 그대로 둔다: 물량 그림의 주식 수가 한 번만 구워지기 때문이다.
+ * 열 벽을 넘길 때마다 미션 레벨이 하나 오른 만큼 수·빠르기·공격이 는다. 물량 하나의 수량(체력이자 매수벽을 깎는 양)과 몬스터의 체력·공격은
+ * 그 벽의 체력을 따라 커진다(idleThreat, 498번). 벽은 늘 한 줄이고 체력은 서버가 정한다.
  */
+/**
+ * 자동 전투의 물량 배율 (498번): 매도벽 체력이 이만큼 늘 때마다 물량이 한 배씩 커진다. 벽을 깨는 데 드는 화력이 벽 체력을 따라가므로, 물량도
+ * 벽 체력을 따라가야 깊은 벽에서 한 방에 지워지지 않는다. 첫 벽들(체력 수십)은 거의 그대로다.
+ */
+export const IDLE_THREAT_HP = 760
+/** 큰손 벽의 체력 배율(서버 IdleEngine.maxHp): 물량은 큰손 벽이라고 네 배가 되지 않는다. */
+const IDLE_BOSS_HP = 4
+
+/** wall번째 벽(체력 maxHp) 앞 물량의 배율. 주문서의 주식 수가 깔끔하게 유효 숫자 둘로 끊는다. */
+export function idleThreat(wall: number, maxHp: number): number {
+  if (!Number.isFinite(maxHp) || maxHp <= 0) return 1
+  const hp = Math.floor(wall) % 10 === 0 ? maxHp / IDLE_BOSS_HP : maxHp
+  return Number((1 + hp / IDLE_THREAT_HP).toPrecision(2))
+}
+
 /** 자동 전투에서 매도벽이 물량을 내는 빈도의 배율 (미션 대비, 495번). */
 export const IDLE_FLOW = 1.5
 
-export function idleAssaultSpec(wall: number): AssaultSpec {
+export function idleAssaultSpec(wall: number, maxHp = 0): AssaultSpec {
   const at = Math.max(0, Math.floor(wall) - 1)
   const spec = assaultSpec(1 + Math.floor(at / ASSAULT_WALLS.length))
+  const threat = idleThreat(wall, maxHp)
   const template = ASSAULT_WALLS[at % ASSAULT_WALLS.length]
   return {
     ...spec,
-    enemyHp: 1,
+    enemyHp: threat,
+    enemyDmg: spec.enemyDmg * threat,
     // 매도벽에서 나오는 물량이 미션보다 잦다 (495번).
     enemyCount: spec.enemyCount * IDLE_FLOW,
     walls: [{ ...template, rows: 1, mid: false, boss: Math.floor(wall) % 10 === 0 }],
