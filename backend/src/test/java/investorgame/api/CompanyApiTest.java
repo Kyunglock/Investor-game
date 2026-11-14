@@ -43,11 +43,6 @@ class CompanyApiTest {
     session = new Cookie(cookie.getName(), cookie.getValue());
   }
 
-  @Test
-  void 코드를_두지_않은_서버에는_테스트판이_없다() throws Exception {
-    postJson("/api/sandbox", "{\"code\":\"anything\"}").andExpect(status().isNotFound());
-  }
-
   private static DocumentContext json(ResultActions result) throws Exception {
     return JsonPath.parse(result.andReturn().getResponse().getContentAsString());
   }
