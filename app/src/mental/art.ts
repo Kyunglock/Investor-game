@@ -1,6 +1,7 @@
 import { CAT_H, CAT_W, type GunGrade } from '@web/features/game/cat/draw'
 
 import type Phaser from 'phaser'
+import { drawBattleGun } from './battleWeaponArt'
 import { CAT_GUN } from './catGun'
 import { CAT_SCALE, type CatModel, mateModel } from './catModels'
 import { CAT_RUN_FRAMES, catRunKey, catRunPose } from './catRun'
@@ -10,15 +11,7 @@ import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import { MATE_LOOKS } from './mates'
 import { shareLabel, sharesOf } from './shares'
-import {
-  drawBuyWall,
-  drawMentalWall,
-  drawSprite,
-  drawToySellWall,
-  STAGE_HERO,
-  spriteBounds,
-} from './stageArt'
-import { weaponCell } from './weaponArt'
+import { drawBuyWall, drawMentalWall, drawSprite, drawToySellWall, STAGE_HERO } from './stageArt'
 import { BULLET_ART, drawWeaponBullet, drawWeaponImpact, WEAPON_GRADES } from './weaponVisuals'
 
 /** 승인한 캐주얼 시안의 투명 스프라이트를 Phaser 텍스처로 굽고, 무기·벽·탄환을 실시간 상태에 맞춰 합성한다. */
@@ -136,37 +129,19 @@ export function bakeHero(scene: Phaser.Scene, _grade: GunGrade) {
   }
 }
 
-/** 두 앞발이 손잡이와 총열 아래를 잡은 한 층. 총과 함께 회전해 손이 떨어지지 않는다. */
+/** 총 윗면과 그 아래에 가려진 앞발. 함께 회전해 전투 시점을 유지한다. */
 export function bakeCatGun(scene: Phaser.Scene, grade: GunGrade, model: CatModel, look?: number) {
   const key = `cat-gun-${grade}-${model}-${look ?? 'hero'}`
   bake(scene, key, CAT_GUN.w, CAT_GUN.h, (c) => {
     const fur = model === 'hero' ? '#efc58f' : model === 'fold' ? '#929bb9' : '#ead4b9'
     const tint = look === undefined ? undefined : MATE_LOOKS[look]?.tint
     const color = tint === undefined ? fur : `#${tint.toString(16).padStart(6, '0')}`
-    c.lineCap = 'round'
-    c.strokeStyle = color
-    c.lineWidth = 10
-    c.beginPath()
-    c.moveTo(17, 46)
-    c.lineTo(23, 45)
-    c.moveTo(17, 48)
-    c.quadraticCurveTo(28, 54, 47, 41)
-    c.stroke()
-    const source = scene.textures.get('art-weapons').getSourceImage() as HTMLImageElement
-    const crop = spriteBounds(source, weaponCell(source, grade))
-    c.drawImage(source, crop.x, crop.y, crop.w, crop.h, 8, 19, 55, 32)
-    for (const [x, y] of [
-      [23, 45],
-      [47, 40],
-    ]) {
-      const shade = c.createRadialGradient(x - 2, y - 3, 1, x, y, 7)
-      shade.addColorStop(0, '#fff3df')
-      shade.addColorStop(1, color)
-      c.fillStyle = shade
-      c.beginPath()
-      c.ellipse(x, y, 5, 6, -0.2, 0, Math.PI * 2)
-      c.fill()
-    }
+    drawBattleGun(
+      c,
+      scene.textures.get('art-battleWeapons').getSourceImage() as HTMLImageElement,
+      grade,
+      color,
+    )
   })
   return key
 }

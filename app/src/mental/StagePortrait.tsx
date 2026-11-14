@@ -1,7 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { STAGE_ASSETS } from './assets'
+import { drawBattleGun } from './battleWeaponArt'
+import { CAT_GUN, catGunPose } from './catGun'
+import { CAT_SCALE } from './catModels'
 import type { Weapon } from './hero'
-import { drawEquippedHero } from './weaponArt'
+import { drawSprite } from './stageArt'
 
 /** 준비 화면과 전투 모두 같은 장착 무기를 손 위치에 합성한다. */
 export function StagePortrait({ weapon }: { weapon: Weapon }) {
@@ -27,12 +30,25 @@ export function StagePortrait({ weapon }: { weapon: Weapon }) {
       ctx.beginPath()
       ctx.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
       ctx.fill()
-      drawEquippedHero(ctx, source, weapons, weapon.grade)
+      drawSprite(
+        ctx,
+        source,
+        { x: 0, y: 0, w: source.width / 3, h: source.height },
+        { x: 14, y: 3, w: 75, h: 100 },
+        'height',
+      )
+      const pose = catGunPose('hero', 0, 0, -Math.PI / 2)
+      ctx.save()
+      ctx.translate(50 + pose.x / CAT_SCALE, 55 + pose.y / CAT_SCALE)
+      ctx.rotate(pose.angle)
+      ctx.translate(-CAT_GUN.pivotX, -CAT_GUN.pivotY)
+      drawBattleGun(ctx, weapons, weapon.grade)
+      ctx.restore()
     }
     source.onload = paint
     weapons.onload = paint
-    source.src = STAGE_ASSETS.hero
-    weapons.src = STAGE_ASSETS.weapons
+    source.src = STAGE_ASSETS.rigBodies
+    weapons.src = STAGE_ASSETS.battleWeapons
     return () => {
       cancelled = true
     }
