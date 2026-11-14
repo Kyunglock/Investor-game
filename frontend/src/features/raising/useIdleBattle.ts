@@ -30,8 +30,6 @@ export function useIdleBattle(companyId?: string) {
     let sequence = useRaisingStore.getState().company?.idle?.sequence ?? 0
     let started = false
     let pending = false
-    // The screen's wall ran out while a beat was in flight: ask again as soon as it lands (decisions.md 506).
-    let urgent = false
     let blocked = false
     let generation = 0
     const contacts = new IdleContacts()
@@ -88,18 +86,7 @@ export function useIdleBattle(companyId?: string) {
         if (!disposed && version === generation) stop()
       } finally {
         pending = false
-        if (urgent) {
-          urgent = false
-          void tick()
-        }
       }
-    }
-    // The server alone breaks a wall. Waiting for the next one-second beat left the wall standing at
-    // "100주" and threw the hits of that second away, so the hits go out at once (decisions.md 506).
-    const wallDown = () => {
-      if (!started || blocked || disposed || !visible()) return
-      if (pending) urgent = true
-      else void tick()
     }
     const hit = (event: Event) => {
       if (!started || blocked || disposed || !visible()) return
@@ -126,7 +113,6 @@ export function useIdleBattle(companyId?: string) {
     window.addEventListener('pagehide', stop)
     window.addEventListener('idle-wall-hit', hit)
     window.addEventListener('idle-hits-clear', clearContacts)
-    window.addEventListener('idle-wall-down', wallDown)
     window.addEventListener('idle-app-active', native)
     const timer = setInterval(() => void tick(), 1000)
     void tick()
@@ -137,7 +123,6 @@ export function useIdleBattle(companyId?: string) {
       window.removeEventListener('pagehide', stop)
       window.removeEventListener('idle-wall-hit', hit)
       window.removeEventListener('idle-hits-clear', clearContacts)
-      window.removeEventListener('idle-wall-down', wallDown)
       window.removeEventListener('idle-app-active', native)
       stop()
     }
