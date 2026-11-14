@@ -62,6 +62,16 @@ export function BookIcon() {
   )
 }
 
+/** 진동: 흔들리는 휴대폰. 꺼지면 떨림 줄 대신 빗금. */
+export function HapticIcon({ off }: { off: boolean }) {
+  return (
+    <svg {...base} aria-hidden="true">
+      <rect x="8" y="4" width="8" height="16" rx="2" />
+      {off ? <path d="M4 4l16 16" /> : <path d="M4 9v6M20 9v6" />}
+    </svg>
+  )
+}
+
 export function SoundIcon({ off }: { off: boolean }) {
   return (
     <svg {...base} aria-hidden="true">
