@@ -47,6 +47,13 @@ class IdleEngine {
   private static final double HP_LINEAR = 12;
   private static final double HP_SQUARE = 0.2;
   private static final double BOSS_HP = 3;
+
+  /**
+   * Bullet pierce (520): every bullet goes through the front wall into the two behind it, weaker at
+   * each wall. The app's IDLE_PIERCE holds the same shares.
+   */
+  static final double[] PIERCE = {1, 0.5, 0.25};
+
   private static final double RALLY_FIRE = 2;
   // A beat this late still counts in full (decisions.md 497): on a slow link the screen sends the
   // next beat only after the last answer, and dropping those hits refilled the wall. A longer
@@ -131,6 +138,9 @@ class IdleEngine {
       c.idle.damage = Math.min(c.idle.damage, maxHp(c.idle.wall) - 1);
       c.idle.hitVersion = 2;
     }
+    // Saves from before 520 could hold a queued wall already at zero health.
+    c.idle.nextDamage = Math.min(c.idle.nextDamage, maxHp(c.idle.wall + 1) - 1);
+    c.idle.afterNextDamage = Math.min(c.idle.afterNextDamage, maxHp(c.idle.wall + 2) - 1);
     if (c.idle.cats == null) {
       c.idle.cats = new LinkedHashMap<>();
       for (int i = 0; i < CAT_LEGACY_WALLS.length; i++) {
@@ -354,7 +364,6 @@ class IdleEngine {
     // A contact is not a second of DPS: fire upgrades must never multiply a single hit.
     List<Shooter> shooters = shooters(c);
     Shooter hero = shooters.getFirst();
-    boolean explosive = shooters.stream().anyMatch(Shooter::explosive);
     double bulletMax = 0;
     double bulletsPerSecond = 0;
     for (Shooter shooter : shooters) {
@@ -392,14 +401,16 @@ class IdleEngine {
         if (hit == null || !code.equals(hit.kind()) || hit.count() <= 0) continue;
         long offset = hit.wall() - front;
         if (offset < 0 || offset > 2) continue;
-        // Only actual area contacts may affect queued walls, and only with an owned area attack.
-        if (offset > 0 && !(kind == 1 || kind == 2 || (kind == 0 && explosive))) continue;
-        double reported = hit.damage() == null ? damage * hit.count() : hit.damage();
-        if (!Double.isFinite(reported) || reported <= 0) continue;
+        // Only a bullet's pierce reaches the queued walls (520): explosions and skills stop at the
+        // front wall.
+        if (offset > 0 && kind != 0) continue;
         int index = (int) offset;
+        double reported =
+            hit.damage() == null ? damage * PIERCE[index] * hit.count() : hit.damage();
+        if (!Double.isFinite(reported) || reported <= 0) continue;
         int count = Math.min(hit.count(), 1000 - counts[index]);
         counts[index] += count;
-        amounts[index] += Math.min(reported / hit.count(), maxDamage) * count;
+        amounts[index] += Math.min(reported / hit.count(), maxDamage * PIERCE[index]) * count;
       }
       int most = Math.max(counts[0], Math.max(counts[1], counts[2]));
       double accepted = Math.min(most, s.hitCredits[kind]);
@@ -408,9 +419,14 @@ class IdleEngine {
         if (counts[i] > 0) amounts[i] *= Math.min(counts[i], accepted) / counts[i];
       }
       s.damage += amounts[0];
-      dealt += amounts[0] + amounts[1] + amounts[2];
-      s.nextDamage = Math.min(maxHp(front + 1), s.nextDamage + amounts[1]);
-      s.afterNextDamage = Math.min(maxHp(front + 2), s.afterNextDamage + amounts[2]);
+      // A queued wall never breaks before the one in front of it (520): it keeps its last point of
+      // health until it is the front wall.
+      double next = Math.min(maxHp(front + 1) - 1, s.nextDamage + amounts[1]);
+      double afterNext = Math.min(maxHp(front + 2) - 1, s.afterNextDamage + amounts[2]);
+      dealt += amounts[0] + Math.max(0, next - s.nextDamage);
+      dealt += Math.max(0, afterNext - s.afterNextDamage);
+      s.nextDamage = next;
+      s.afterNextDamage = afterNext;
     }
     // 매수세례 (503): its buy orders that reach the front wall. Credits come from the press, not time.
     double barrageMax = buyOrder(c, front) * BARRAGE_POWER;
