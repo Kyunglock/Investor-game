@@ -63,7 +63,6 @@ public record CompanyView(
       long earned,
       boolean boss,
       List<IdleSkill> skills,
-      long nextUnlock,
       List<IdleCat> cats,
       int fieldSlots,
       double wallDps,
@@ -72,13 +71,14 @@ public record CompanyView(
       long sequence) {}
 
   /**
-   * 고양이 한 마리 (decisions.md 488·491번). 뽑기로 얻고, 출전하면 제 총으로 함께 쏜다. 스킬과는 상관없다.
+   * 고양이 한 마리 (decisions.md 488·501번). 뽑기로 얻고, 출전하면 제 총으로 함께 쏘고 제 스킬을 쓴다.
    *
    * @param level 0이면 아직 없다. 또 뽑을 때마다 하나씩 오른다
    * @param damagePercent 이 고양이 총의 공격력(%): 든 무기 공격력의 이만큼으로 쏜다. 레벨과 특성이 들어 있다 (492번)
    * @param firePercent 이 고양이 총의 쏘는 빠르기(%). 특성이 없으면 100
    * @param criticalPercent 이 고양이 총의 치명타 배율(%). 특성이 없으면 100
    * @param weapon 든 무기. 없으면 null(기본 권총을 쏜다)
+   * @param skill 이 고양이의 고유 스킬 코드(water·meteor·bolt·ram). 출전해 있는 동안 발동한다 (501번)
    */
   public record IdleCat(
       String code,
@@ -88,13 +88,20 @@ public record CompanyView(
       int firePercent,
       int criticalPercent,
       boolean fielded,
-      CatWeapon weapon) {}
+      CatWeapon weapon,
+      String skill,
+      String skillName) {}
 
   public record CatWeapon(String kind, String grade) {}
 
   public record IdleWall(long wall, double hp, double maxHp) {}
 
-  public record IdleSkill(String code, String name, long unlockWall, boolean owned) {}
+  /**
+   * 스킬 하나 (decisions.md 501번).
+   *
+   * @param owned 지금 발동 중이다: 이 스킬을 가진 고양이가 출전해 있다
+   */
+  public record IdleSkill(String code, String name, boolean owned) {}
 
   /**
    * 업계 순위 (#351): 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다(로그인이 없는 익명 세션). 한 해도 마치지 않았으면 null.

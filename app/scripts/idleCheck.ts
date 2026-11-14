@@ -65,25 +65,25 @@ try {
         dps: 12,
         earned: 0,
         boss: false,
-        nextUnlock: 5,
         circuitSeconds: 0,
         upcoming: [] as { wall: number; hp: number; maxHp: number }[],
         skills: [
-          { code: 'water', name: '물 스킬', unlockWall: 5, owned: false },
-          { code: 'meteor', name: '메테오 스킬', unlockWall: 15, owned: false },
-          { code: 'bolt', name: '번개 스킬', unlockWall: 30, owned: false },
-          { code: 'ram', name: '충차 스킬', unlockWall: 50, owned: false },
+          { code: 'water', name: '물 스킬', owned: false },
+          { code: 'meteor', name: '메테오 스킬', owned: false },
+          { code: 'bolt', name: '번개 스킬', owned: false },
+          { code: 'ram', name: '충차 스킬', owned: false },
         ],
         fieldSlots: 4,
         wallDps: 0,
         cats: [
-          ['sky', '하늘냥', 125, 100],
-          ['mint', '민트냥', 100, 100],
-          ['lilac', '라일락냥', 100, 150],
-          ['sunset', '노을냥', 110, 100],
-          ['night', '밤냥', 100, 125],
-          ['snow', '눈꽃냥', 140, 100],
-        ].map(([code, name, firePercent, criticalPercent]) => ({
+          // Each cat has a skill of its own (decisions.md 501).
+          ['sky', '하늘냥', 125, 100, 'meteor', '메테오 스킬'],
+          ['mint', '민트냥', 100, 100, 'water', '물 스킬'],
+          ['lilac', '라일락냥', 100, 150, 'bolt', '번개 스킬'],
+          ['sunset', '노을냥', 110, 100, 'ram', '충차 스킬'],
+          ['night', '밤냥', 100, 125, 'meteor', '메테오 스킬'],
+          ['snow', '눈꽃냥', 140, 100, 'water', '물 스킬'],
+        ].map(([code, name, firePercent, criticalPercent, skill, skillName]) => ({
           code,
           name,
           level: 0,
@@ -91,6 +91,8 @@ try {
           firePercent,
           criticalPercent,
           fielded: false,
+          skill,
+          skillName,
           weapon: null as { kind: string; grade: string } | null,
         })),
       },
@@ -152,6 +154,9 @@ try {
       } else if (path.endsWith('/cat/weapon') && cat) {
         cat.weapon = sent.kind ? { kind: sent.kind, grade: sent.grade } : null
       }
+      for (const skill of company.idle.skills) {
+        skill.owned = company.idle.cats.some((c) => c.fielded && c.skill === skill.code)
+      }
       await route.fulfill({ json: company })
     })
     await page.goto(process.env.APP_URL ?? 'http://localhost:5173/app/')
@@ -208,10 +213,14 @@ try {
     await expect(stat('crit')).toContainText('+0% → +20%')
     await page.screenshot({ path: `/tmp/idle-growth-${width}.png`, fullPage: true })
     await page.getByRole('tab', { name: '스킬', exact: true }).click()
-    await expect(page.getByText('5벽 돌파 시 획득', { exact: true })).toBeVisible()
-    // Meteor and ram are skills of their own, not cats (decisions.md 491).
+    // A skill is a cat's own ability, cast while that cat is fielded (decisions.md 501).
     await expect(page.getByText('메테오 스킬')).toBeVisible()
-    await expect(page.getByText('50벽 돌파 시 획득', { exact: true })).toBeVisible()
+    await expect(
+      page.getByText('하늘냥·밤냥의 고유 스킬 · 출전하면 발동', { exact: true }),
+    ).toBeVisible()
+    await expect(
+      page.getByText('노을냥의 고유 스킬 · 출전하면 발동', { exact: true }),
+    ).toBeVisible()
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     // Cats are drawn with tickets, fielded in four slots, and kept in a 6 x 3 grid (488, 493, 495).
     await page.getByRole('button', { name: '고양이' }).click()
@@ -221,7 +230,7 @@ try {
     await expect(page.getByTestId('cat-field')).toHaveCount(0)
     const tickets = company.armory.tickets
     await page.getByTestId('cat-draw').click()
-    await expect(page.getByTestId('cat-gacha')).toContainText('하늘냥 합류!')
+    await expect(page.getByTestId('cat-gacha')).toContainText('하늘냥 합류! 고유 스킬 메테오 스킬')
     await expect(page.getByTestId('cat-draw')).toContainText(`뽑기권 ${tickets - 1}장`)
     const detail = page.getByTestId('cat-detail')
     await expect(detail).toHaveAttribute('data-code', 'sky')
@@ -272,8 +281,6 @@ try {
     )
     await expect.poll(() => actions.slice(stopped).includes('start')).toBe(true)
     company.idle.wall = 6
-    company.idle.skills[0].owned = true
-    company.idle.nextUnlock = 15
     await expect(page.getByTestId('idle-wall-number')).toHaveText('매도벽 6')
     await expect
       .poll(

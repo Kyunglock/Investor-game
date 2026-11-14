@@ -241,8 +241,8 @@ class IdleEngineTest {
     assertThat(state.weaponTickets).isEqualTo(1);
     tick(1000, new IdleHit(10, "bullet", 1));
     assertThat(state.weaponTickets).isEqualTo(1);
-    assertThat(engine.view(state).skills().getFirst().owned()).isTrue();
-    assertThat(engine.view(state).skills().get(1).owned()).isFalse();
+    // Walls no longer unlock skills (decisions.md 501): without a cat nothing is cast.
+    assertThat(engine.view(state).skills()).hasSize(4).noneMatch(skill -> skill.owned());
   }
 
   @Test
@@ -297,10 +297,10 @@ class IdleEngineTest {
     start(1);
     state.idle.wall = 60;
     assertThat(engine.view(state).cats()).allMatch(cat -> cat.level() == 0 && !cat.fielded());
-    // Skills are unlocked by walls and do not need a cat (decisions.md 491).
+    // A skill is a cat's own ability (decisions.md 501): deep walls alone cast nothing.
     tick(3000, new IdleHit(60, "meteor", 1));
-    assertThat(state.idle.damage).isEqualTo(4.8);
-    assertThat(engine.view(state).skills()).hasSize(4).allMatch(skill -> skill.owned());
+    assertThat(state.idle.damage).isZero();
+    assertThat(engine.view(state).skills()).hasSize(4).noneMatch(skill -> skill.owned());
     assertThatThrownBy(() -> engine.drawCat(state, random))
         .as("no ticket, no cat")
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
@@ -341,13 +341,25 @@ class IdleEngineTest {
   }
 
   @Test
-  void onlyFieldedCatsShootButSkillsDoNotNeedCats() {
+  void onlyFieldedCatsShootAndCastTheirOwnSkill() {
     start(16);
+    assertThat(engine.view(state).cats().getFirst())
+        .as("the sky cat's own skill is the meteor")
+        .matches(cat -> cat.code().equals("sky") && cat.skill().equals("meteor"));
     double withCat = engine.view(state).dps();
     engine.fieldCat(state, "sky", false);
     assertThat(engine.view(state).dps()).isLessThan(withCat);
+    assertThat(engine.view(state).skills()).noneMatch(skill -> skill.owned());
     tick(3000, new IdleHit(16, "meteor", 1));
-    assertThat(state.idle.damage).as("the skill fires without the cat").isEqualTo(4.8);
+    assertThat(state.idle.damage).as("a resting cat's skill does nothing").isZero();
+    engine.fieldCat(state, "sky", true);
+    tick(3000, new IdleHit(16, "meteor", 1), new IdleHit(16, "water", 1));
+    assertThat(state.idle.damage).as("only the fielded cat's own skill lands").isEqualTo(4.8);
+    assertThat(engine.view(state).skills())
+        .filteredOn(skill -> skill.owned())
+        .extracting(skill -> skill.code())
+        .containsExactly("meteor");
+    engine.fieldCat(state, "sky", false);
     // A resting cat's gun no longer adds to the bullet budget.
     for (int i = 0; i < 3; i++) tick(1000);
     double before = state.idle.damage;
@@ -360,6 +372,45 @@ class IdleEngineTest {
     assertThat(state.idle.damage - before).isGreaterThan(alone);
     assertThatThrownBy(() -> engine.fieldCat(state, "mint", true))
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+  }
+
+  @Test
+  void twoCatsWithTheSameSkillCastItTwiceAsOften() {
+    start(1);
+    state.idle.cats.put("sky", 1);
+    state.idle.fielded.add("sky");
+    // 1.8 s at double speed is one 3.6 s cooldown.
+    tick(1800, new IdleHit(1, "meteor", 2));
+    assertThat(state.idle.damage).as("one caster, one meteor per cooldown").isEqualTo(4.8);
+    // The night cat's own skill is the meteor too.
+    state.idle.cats.put("night", 1);
+    state.idle.fielded.add("night");
+    state.idle.damage = 0;
+    state.idle.hitCredits = new double[5];
+    tick(1800, new IdleHit(1, "meteor", 4));
+    assertThat(state.idle.damage).isEqualTo(2 * 4.8);
+  }
+
+  @Test
+  void savesThatUnlockedSkillsByWallsKeepThemAsCats() {
+    engine.view(state);
+    state.idle.wall = 31;
+    state.idle.cats = new java.util.LinkedHashMap<>();
+    state.idle.fielded.clear();
+    state.idle.catSkills = false;
+    var view = engine.view(state);
+    // Water, meteor and bolt were unlocked at walls 5, 15 and 30; the ram (50) was not.
+    assertThat(view.skills())
+        .filteredOn(skill -> skill.owned())
+        .extracting(skill -> skill.code())
+        .containsExactly("water", "meteor", "bolt");
+    assertThat(view.cats())
+        .filteredOn(cat -> cat.fielded())
+        .extracting(cat -> cat.code())
+        .containsExactlyInAnyOrder("mint", "sky", "lilac");
+    // Only once: resting a cat afterwards is not undone.
+    engine.fieldCat(state, "mint", false);
+    assertThat(engine.view(state).skills().getFirst().owned()).isFalse();
   }
 
   @Test
