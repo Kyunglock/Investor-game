@@ -314,7 +314,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
   /api/company/idle:
     post:
-      summary: 화면에 켜 둔 자동 전투의 접속 신호. 3초 넘는 공백은 보상 없음
+      summary: 화면에 켜 둔 자동 전투의 접속 신호. 10초 넘는 공백은 보상 없음
       requestBody:
         required: true
         content:

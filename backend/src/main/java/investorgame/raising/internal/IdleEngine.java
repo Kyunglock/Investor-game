@@ -18,6 +18,10 @@ class IdleEngine {
   private final CompanyEngine engine;
   private final String serverId = UUID.randomUUID().toString();
   private static final double SPEED = 2;
+  // A beat this late still counts in full (decisions.md 497): on a slow link the screen sends the
+  // next beat only after the last answer, and dropping those hits refilled the wall. A longer
+  // silence is a closed or sleeping app and pays nothing.
+  private static final long GRACE_MS = 10_000;
   // Attack kinds after the bullet (kind 0): skills, unlocked by wall. Cats are separate and only
   // add their own guns (decisions.md 488, 491).
   private static final long[] UNLOCKS = {5, 15, 30, 50};
@@ -157,7 +161,7 @@ class IdleEngine {
       return;
     }
     long elapsed = now - s.lastBeat;
-    if (s.lastBeat > 0 && elapsed > 0 && elapsed <= 3000 && serverId.equals(s.serverId)) {
+    if (s.lastBeat > 0 && elapsed > 0 && elapsed <= GRACE_MS && serverId.equals(s.serverId)) {
       tick(c, elapsed / 1000.0 * SPEED, hits == null ? List.of() : hits);
     } else {
       s.hitCredits = new double[5];
@@ -221,7 +225,9 @@ class IdleEngine {
       double maxDamage = kind == 0 ? bulletMax : damage;
       double interval = kind == 0 ? 1 / bulletsPerSecond : COOLDOWNS[kind - 1] / shooters.size();
       s.hitCredits[kind] =
-          Math.min(Math.max(2, 6 / interval), s.hitCredits[kind] + active / interval);
+          Math.min(
+              Math.max(2, SPEED * GRACE_MS / 1000 / interval),
+              s.hitCredits[kind] + active / interval);
       String code = kind == 0 ? "bullet" : CODES[kind - 1];
       int[] counts = new int[3];
       double[] amounts = new double[3];

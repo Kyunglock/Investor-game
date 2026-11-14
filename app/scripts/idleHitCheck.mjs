@@ -113,7 +113,7 @@ try {
   await page.evaluate(() => window.pauseIdleTest(false))
   await page.evaluate(() => window.enableIdleAttacks(0, 100000))
   await page.waitForTimeout(1000)
-  // Start from fresh hits so the last-resort timeout (5 s without any answer) stays out of the way.
+  // Start from fresh hits so the last-resort timeout (12 s without any answer) stays out of the way.
   await page.evaluate(() => window.clearIdleHits())
   await page.waitForTimeout(100)
   assert.equal(await wallHp(), 5000)
