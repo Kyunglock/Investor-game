@@ -464,16 +464,16 @@ class MentalEngineTest {
     assertThat(ENGINE.mental.upgradePrice(1)).isEqualTo(1_040_000L);
     assertThat(ENGINE.mental.upgradePrice(100))
         .as("100단계째 약 0.5억")
-        .isBetween(40_000_000L, 60_000_000L);
+        .isBetween(40_000_000.0, 60_000_000.0);
     assertThat(ENGINE.mental.upgradePrice(200))
         .as("200단계째 약 25억")
-        .isBetween(2_000_000_000L, 3_000_000_000L);
-    assertThat(ENGINE.mental.upgradePrice(5_000)).as("long을 넘으면 못 사는 값").isEqualTo(Long.MAX_VALUE);
+        .isBetween(2_000_000_000.0, 3_000_000_000.0);
+    assertThat(ENGINE.mental.upgradePrice(5_000)).as("long을 넘어도 값은 단계를 따라 계속 오른다").isGreaterThan(1e90);
     CompanyView.BattleUpgrade damage = view(c, "damage");
     assertThat(damage.level()).isEqualTo(1);
     assertThat(damage.bonusPercent()).isEqualTo(3);
     assertThat(damage.nextBonusPercent()).isEqualTo(6);
-    assertThat(damage.price().longValue()).isEqualTo(ENGINE.mental.upgradePrice(1));
+    assertThat(damage.price().longValue()).isEqualTo((long) ENGINE.mental.upgradePrice(1));
     assertThat(damage.priceGrowthPercent()).isEqualTo(rule.priceGrowthPercent());
 
     // 꾹 눌러 모은 단계는 묶어 산다. 최대 단계는 없다. 자본은 실수라(505번) 정수 계산이 정확한 2^53 아래로 둔다.
@@ -537,7 +537,7 @@ class MentalEngineTest {
     CompanyState tough = company(7);
     assertThat(ENGINE.mental.buyUpgrade(tough, "hp", 3)).isEqualTo(3);
     assertThat(view(tough, "hp").bonusPercent()).isEqualTo(9);
-    assertThat(view(tough, "hp").price().longValue()).isEqualTo(ENGINE.mental.upgradePrice(3));
+    assertThat(view(tough, "hp").price().longValue()).isEqualTo((long) ENGINE.mental.upgradePrice(3));
   }
 
   @Test

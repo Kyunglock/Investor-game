@@ -59,7 +59,7 @@ class BalanceSimulationTest {
                 .min(Comparator.comparingInt(CompanyView.BattleUpgrade::level))
                 .orElseThrow()
                 .kind();
-        long price = ENGINE.mental.upgradePrice(c.battleLevels.getOrDefault(kind, 0));
+        long price = (long) ENGINE.mental.upgradePrice(c.battleLevels.getOrDefault(kind, 0));
         if (price > budget) {
           break;
         }
