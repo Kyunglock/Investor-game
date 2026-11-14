@@ -736,7 +736,56 @@ button.idle-cat-gun {
   }
 }
 
-<<<<<<< HEAD
+/* 몬스터 습격 알림 (decisions.md 500번): 매도벽과 매수벽 사이에 잠깐 뜬다. */
+.idle-raid {
+  pointer-events: none;
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  z-index: 2;
+  width: max-content;
+  max-width: 90%;
+  padding: 10px 18px;
+  border: 2px solid #fff5df;
+  border-radius: 14px;
+  box-shadow: 0 3px 0 #2b234055;
+  color: #fff;
+  font-family: var(--font-game);
+  font-size: 18px;
+  text-align: center;
+  animation: idle-raid 2.4s both;
+}
+@keyframes idle-raid {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -10px) scale(0.9);
+  }
+  10%,
+  80% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 6px) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .idle-raid {
+    animation-name: idle-raid-still;
+  }
+}
+@keyframes idle-raid-still {
+  0%,
+  80% {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, 0);
+  }
+
 /* 테스트판 (decisions.md 499번): 왼쪽 가장자리의 단추, 코드 창과 도구 창. */
 .idle-sandbox {
   position: absolute;
@@ -829,55 +878,4 @@ button.idle-cat-gun {
 }
 .idle-sandbox-gate button:disabled {
   opacity: 0.5;
-=======
-/* 몬스터 습격 알림 (decisions.md 500번): 매도벽과 매수벽 사이에 잠깐 뜬다. */
-.idle-raid {
-  pointer-events: none;
-  position: absolute;
-  left: 50%;
-  top: 38%;
-  z-index: 2;
-  width: max-content;
-  max-width: 90%;
-  padding: 10px 18px;
-  border: 2px solid #fff5df;
-  border-radius: 14px;
-  box-shadow: 0 3px 0 #2b234055;
-  color: #fff;
-  font-family: var(--font-game);
-  font-size: 18px;
-  text-align: center;
-  animation: idle-raid 2.4s both;
-}
-@keyframes idle-raid {
-  0% {
-    opacity: 0;
-    transform: translate(-50%, -10px) scale(0.9);
-  }
-  10%,
-  80% {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, 6px) scale(1);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .idle-raid {
-    animation-name: idle-raid-still;
-  }
-}
-@keyframes idle-raid-still {
-  0%,
-  80% {
-    opacity: 1;
-    transform: translate(-50%, 0);
-  }
-  100% {
-    opacity: 0;
-    transform: translate(-50%, 0);
-  }
->>>>>>> origin/main
 }
