@@ -871,7 +871,7 @@ class BattleScene extends Phaser.Scene {
     this.player = this.physics.add.image(w / 2, this.playerY(), 'hero-idle')
     this.heroGun = this.add
       .image(0, 0, bakeCatGun(this, this.opts.hero.weapon.grade, 'hero'))
-      .setDepth(5.1)
+      .setDepth(4.8)
     this.poseGun(this.player, this.aim, 0)
     this.player.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h).setDepth(5)
     const pr = 22
@@ -1196,7 +1196,7 @@ class BattleScene extends Phaser.Scene {
             this.mateLook(i),
           ),
         )
-        .setDepth(5.1),
+        .setDepth(4.8),
       aim: this.aim,
       // 사장냥과 번갈아 쏘게 연사 간격 안에서 조금씩 어긋나게 시작한다.
       lastFire: this.lastFire + (this.attackInterval * (i + 1)) / (MATE_LOOKS.length + 1),

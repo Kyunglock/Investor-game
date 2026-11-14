@@ -24,19 +24,12 @@ export function StagePortrait({ weapon }: { weapon: Weapon }) {
       cv.width = 180 * dpr
       cv.height = 180 * dpr
       ctx.scale(dpr, dpr)
-      ctx.translate(15, 4)
+      ctx.translate(15, 16)
       ctx.scale(1.5, 1.5)
       ctx.fillStyle = '#98633633'
       ctx.beginPath()
       ctx.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
       ctx.fill()
-      drawSprite(
-        ctx,
-        source,
-        { x: 0, y: 0, w: source.width / 3, h: source.height },
-        { x: 14, y: 3, w: 75, h: 100 },
-        'height',
-      )
       const pose = catGunPose('hero', 0, 0, -Math.PI / 2)
       ctx.save()
       ctx.translate(50 + pose.x / CAT_SCALE, 55 + pose.y / CAT_SCALE)
@@ -44,6 +37,13 @@ export function StagePortrait({ weapon }: { weapon: Weapon }) {
       ctx.translate(-CAT_GUN.pivotX, -CAT_GUN.pivotY)
       drawBattleGun(ctx, weapons, weapon.grade)
       ctx.restore()
+      drawSprite(
+        ctx,
+        source,
+        { x: 0, y: 0, w: source.width / 3, h: source.height },
+        { x: 14, y: 3, w: 75, h: 100 },
+        'height',
+      )
     }
     source.onload = paint
     weapons.onload = paint
