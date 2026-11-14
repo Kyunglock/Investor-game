@@ -51,6 +51,12 @@ class CompanyState {
 
     int catDraws;
 
+    /** 액티브 스킬 (503번): 코드 → 다시 쓸 수 있게 되는 활성 시간(activeSeconds). */
+    Map<String, Double> activeReady = new LinkedHashMap<>();
+
+    /** 불장이 끝나는 활성 시간 (503번). */
+    double rallyUntil;
+
     /** 스킬이 고양이의 고유 능력이 된 뒤의 저장이다 (501번). 아니면 벽으로 얻었던 스킬을 그 스킬의 고양이로 한 번 바꿔 준다. */
     boolean catSkills;
 

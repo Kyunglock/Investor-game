@@ -18,6 +18,21 @@ class IdleEngine {
   private final CompanyEngine engine;
   private final String serverId = UUID.randomUUID().toString();
   private static final double SPEED = 2;
+  // Credit buckets: the bullet, the four cat skills, and the buy barrage (decisions.md 503).
+  private static final int KINDS = 6;
+  private static final int BARRAGE = 5;
+  // Active skills (503): the player presses them. Seconds are game seconds (twice real time).
+  // barrage: the buy wall pours buy orders; rally: every gun fires twice as fast; fortify: the buy
+  // wall is rebuilt and cannot be hurt (the wall is the screen's, so the server only keeps time).
+  private static final List<String> ACTIVES = List.of("barrage", "rally", "fortify");
+  private static final String[] ACTIVE_NAMES = {"매수세례", "불장", "방어선 구축"};
+  private static final double[] ACTIVE_COOLDOWN = {60, 90, 90};
+  private static final double[] ACTIVE_SECONDS = {6, 10, 6};
+  // Matches the app's mental/actives.ts.
+  private static final int BARRAGE_SHOTS = 40;
+  private static final double BARRAGE_POWER = 3;
+  private static final double BUY_ORDER_DAMAGE = 0.75;
+  private static final double RALLY_FIRE = 2;
   // A beat this late still counts in full (decisions.md 497): on a slow link the screen sends the
   // next beat only after the last answer, and dropping those hits refilled the wall. A longer
   // silence is a closed or sleeping app and pays nothing.
@@ -163,7 +178,7 @@ class IdleEngine {
     long now = clock.millis();
     if ("start".equals(action)) {
       if (runId.equals(s.runId)) return; // Retried start must never reset the sequence.
-      s.hitCredits = new double[5];
+      s.hitCredits = new double[KINDS];
       s.runId = runId;
       s.sequence = sequence;
       s.lastBeat = now;
@@ -175,14 +190,14 @@ class IdleEngine {
     s.sequence = sequence;
     if ("stop".equals(action)) {
       s.lastBeat = 0;
-      s.hitCredits = new double[5];
+      s.hitCredits = new double[KINDS];
       return;
     }
     long elapsed = now - s.lastBeat;
     if (s.lastBeat > 0 && elapsed > 0 && elapsed <= GRACE_MS && serverId.equals(s.serverId)) {
       tick(c, elapsed / 1000.0 * SPEED, hits == null ? List.of() : hits);
     } else {
-      s.hitCredits = new double[5];
+      s.hitCredits = new double[KINDS];
     }
     s.lastBeat = now;
     s.serverId = serverId;
@@ -209,6 +224,31 @@ class IdleEngine {
     return SPEED * total;
   }
 
+  private double buyUp(CompanyState c) {
+    for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
+      if ("buy".equals(u.kind())) return 1 + u.bonusPercent() / 100.0;
+    }
+    return 1;
+  }
+
+  /**
+   * 액티브 스킬을 쓴다 (decisions.md 503번). 없는 스킬이거나 아직 재사용 대기 중이면 400. 대기 시간은 전투가 돌아가는 동안만 흐른다(접속 신호의 활성
+   * 시간).
+   */
+  void useActive(CompanyState c, String code) {
+    CompanyState.Idle s = state(c);
+    int at = ACTIVES.indexOf(code);
+    if (at < 0) throw new InvalidRequestException("없는 스킬이다: " + code);
+    if (s.activeReady.getOrDefault(code, 0.0) > s.activeSeconds + 1e-9) {
+      throw new InvalidRequestException("아직 쓸 수 없다");
+    }
+    if (s.circuitSeconds > 0) throw new InvalidRequestException("거래 정지 중에는 쓸 수 없다");
+    s.activeReady.put(code, s.activeSeconds + ACTIVE_COOLDOWN[at]);
+    if (s.hitCredits == null || s.hitCredits.length != KINDS) s.hitCredits = new double[KINDS];
+    if (at == 0) s.hitCredits[BARRAGE] = BARRAGE_SHOTS;
+    if (at == 1) s.rallyUntil = s.activeSeconds + ACTIVE_SECONDS[at];
+  }
+
   /** How many fielded cats cast each skill (501). A resting cat's skill does nothing. */
   private static int[] casters(CompanyState.Idle s) {
     int[] casters = new int[CODES.length];
@@ -224,12 +264,14 @@ class IdleEngine {
     double stopped = Math.min(seconds, s.circuitSeconds);
     s.circuitSeconds -= stopped;
     double active = seconds - stopped;
+    // 불장 (503): bullets come twice as often while it burns. A beat that starts inside it counts.
+    double rally = s.activeSeconds < s.rallyUntil ? RALLY_FIRE : 1;
     s.activeSeconds += active;
     double income =
         s.incomeRemainder + active * INCOME * (1 + INCOME_GROWTH * Math.min(s.wall - 1, 10_000));
     long earned = (long) income;
     s.incomeRemainder = income - earned;
-    if (s.hitCredits == null || s.hitCredits.length != 5) s.hitCredits = new double[5];
+    if (s.hitCredits == null || s.hitCredits.length != KINDS) s.hitCredits = new double[KINDS];
     // Match the damage shown at collision, bounded by owned attacks and server stats.
     // A contact is not a second of DPS: fire upgrades must never multiply a single hit.
     List<Shooter> shooters = shooters(c);
@@ -241,7 +283,7 @@ class IdleEngine {
       bulletMax =
           Math.max(
               bulletMax, BULLET_WEIGHT * shooter.damage() * shooter.power() * shooter.critical());
-      bulletsPerSecond += shooter.perSecond() / BULLET_WEIGHT;
+      bulletsPerSecond += rally * shooter.perSecond() / BULLET_WEIGHT;
     }
     long front = s.wall;
     int[] casters = casters(s);
@@ -283,6 +325,19 @@ class IdleEngine {
       s.nextDamage = Math.min(maxHp(front + 1), s.nextDamage + amounts[1]);
       s.afterNextDamage = Math.min(maxHp(front + 2), s.afterNextDamage + amounts[2]);
     }
+    // 매수세례 (503): its buy orders that reach the front wall. Credits come from the press, not time.
+    double barrageMax = hero.damage() * BUY_ORDER_DAMAGE * buyUp(c) * BARRAGE_POWER;
+    for (IdleHit hit : hits) {
+      if (active <= 0 || hit == null || !"barrage".equals(hit.kind()) || hit.count() <= 0) continue;
+      if (hit.wall() != front) continue;
+      double reported = hit.damage() == null ? barrageMax * hit.count() : hit.damage();
+      if (!Double.isFinite(reported) || reported <= 0) continue;
+      double accepted = Math.min(hit.count(), s.hitCredits[BARRAGE]);
+      s.hitCredits[BARRAGE] -= accepted;
+      double amount = Math.min(reported / hit.count(), barrageMax) * accepted;
+      s.damage += amount;
+      dealt += amount;
+    }
     // What the walls really took lately, per active second: the stat shown next to the estimate.
     if (active > 0) s.wallDps += (dealt / active - s.wallDps) * Math.min(1, active / 10);
     // Pay only for contacted walls in order. No leftover DPS rolls into an untouched new wall.
@@ -298,7 +353,7 @@ class IdleEngine {
       s.afterNextDamage = 0;
       if (s.wall % 10 == 6) {
         s.circuitSeconds = 4;
-        s.hitCredits = new double[5];
+        s.hitCredits = new double[KINDS];
       }
     }
     s.earned = CompanyEngine.plus(s.earned, earned);
@@ -332,7 +387,7 @@ class IdleEngine {
     s.nextDamage = 0;
     s.afterNextDamage = 0;
     s.circuitSeconds = 0;
-    s.hitCredits = new double[5];
+    s.hitCredits = new double[KINDS];
   }
 
   static final long MAX_JUMP_WALL = 100_000;
@@ -344,7 +399,7 @@ class IdleEngine {
       s.cats.put(code, Math.max(1, Math.min(MAX_CAT_LEVEL, level)));
       if (s.fielded.size() < FIELD_SLOTS && !s.fielded.contains(code)) s.fielded.add(code);
     }
-    s.hitCredits = new double[5];
+    s.hitCredits = new double[KINDS];
   }
 
   static final int MAX_CAT_LEVEL = 1000;
@@ -357,7 +412,7 @@ class IdleEngine {
       throw new InvalidRequestException("출전 칸이 꽉 찼다: " + FIELD_SLOTS + "마리까지 출전한다");
     }
     if (fielded) s.fielded.add(code);
-    s.hitCredits = new double[5];
+    s.hitCredits = new double[KINDS];
   }
 
   /**
@@ -451,6 +506,19 @@ class IdleEngine {
                 s.wall + 1, Math.max(0, maxHp(s.wall + 1) - s.nextDamage), maxHp(s.wall + 1)),
             new CompanyView.IdleWall(
                 s.wall + 2, Math.max(0, maxHp(s.wall + 2) - s.afterNextDamage), maxHp(s.wall + 2))),
-        s.sequence);
+        s.sequence,
+        java.util.stream.IntStream.range(0, ACTIVES.size())
+            .mapToObj(
+                i ->
+                    new CompanyView.IdleActive(
+                        ACTIVES.get(i),
+                        ACTIVE_NAMES[i],
+                        ACTIVE_COOLDOWN[i] / SPEED,
+                        ACTIVE_SECONDS[i] / SPEED,
+                        Math.max(
+                                0,
+                                s.activeReady.getOrDefault(ACTIVES.get(i), 0.0) - s.activeSeconds)
+                            / SPEED))
+            .toList());
   }
 }

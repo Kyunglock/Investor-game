@@ -375,6 +375,60 @@ class IdleEngineTest {
   }
 
   @Test
+  void activeSkillsArePressedAndWaitOutTheirCooldown() {
+    start(1);
+    state.idle.wall = 100;
+    tick(1000);
+    var actives = engine.view(state).actives();
+    assertThat(actives).extracting(a -> a.code()).containsExactly("barrage", "rally", "fortify");
+    assertThat(actives).allMatch(a -> a.readyIn() == 0);
+    // Without the press, barrage hits are worth nothing.
+    tick(1000, new IdleHit(100, "barrage", 10, 22.5));
+    assertThat(state.idle.damage).isZero();
+
+    engine.useActive(state, "barrage");
+    assertThat(engine.view(state).actives().getFirst().readyIn()).isEqualTo(30);
+    assertThatThrownBy(() -> engine.useActive(state, "barrage"))
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+    assertThatThrownBy(() -> engine.useActive(state, "nope"))
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+    // Forty buy orders, each at most three times a buy order (0.75 of the pistol's 1 damage).
+    tick(1000, new IdleHit(100, "barrage", 50, 50 * 1000.0));
+    assertThat(state.idle.damage).isEqualTo(40 * 2.25);
+    tick(1000, new IdleHit(100, "barrage", 10, 22.5));
+    assertThat(state.idle.damage).as("the press is spent").isEqualTo(40 * 2.25);
+
+    // The cooldown runs only while the battle runs: 30 real seconds at double speed.
+    for (int i = 0; i < 27; i++) tick(1000);
+    assertThatThrownBy(() -> engine.useActive(state, "barrage"))
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+    tick(1000);
+    engine.useActive(state, "barrage");
+  }
+
+  @Test
+  void rallyDoublesTheBulletBudgetWhileItBurns() {
+    start(1);
+    state.idle.wall = 100;
+    for (int i = 0; i < 3; i++) tick(1000);
+    state.idle.hitCredits = new double[6];
+    tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
+    double plain = state.idle.damage;
+    assertThat(plain).isPositive();
+    engine.useActive(state, "rally");
+    state.idle.damage = 0;
+    state.idle.hitCredits = new double[6];
+    tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
+    assertThat(state.idle.damage).isCloseTo(2 * plain, org.assertj.core.data.Offset.offset(1e-9));
+    // Five real seconds later it is over.
+    for (int i = 0; i < 5; i++) tick(1000);
+    state.idle.damage = 0;
+    state.idle.hitCredits = new double[6];
+    tick(1000, new IdleHit(100, "bullet", 1000, 1000.0));
+    assertThat(state.idle.damage).isCloseTo(plain, org.assertj.core.data.Offset.offset(1e-9));
+  }
+
+  @Test
   void twoCatsWithTheSameSkillCastItTwiceAsOften() {
     start(1);
     state.idle.cats.put("sky", 1);

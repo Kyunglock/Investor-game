@@ -8,6 +8,7 @@ import { useAppUi } from '../app/ui'
 import { heroOf } from '../mental/hero'
 import { WeaponInventory, weaponBadge } from '../mental/WeaponInventory'
 import { BASE_CRIT_CHANCE, BASE_CRIT_MULT, CRIT_CHANCE, CRIT_MULT } from '../mental/weaponEffects'
+import { IdleActives } from './IdleActives'
 import { IdleCanvas } from './IdleCanvas'
 import { IdleCats } from './IdleCats'
 import { IdleSandbox } from './IdleSandbox'
@@ -189,6 +190,7 @@ export function IdleHome({
             </button>
           </header>
           <IdleSandbox company={company} />
+          <IdleActives company={company} connected={connected} />
           {blocked && (
             <div className="idle-blocked" role="alert" data-testid="idle-blocked">
               <p>다른 화면에서 전투 중이라 여기는 멈췄어요</p>
