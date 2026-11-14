@@ -297,6 +297,40 @@ class IdleEngineTest {
   }
 
   @Test
+  void tenPullDrawsTenCatsInOrderOrNoneAtAll() {
+    HashSeededRandom random = new HashSeededRandom(11);
+    start(1);
+    // 10연속 (517번): 뽑기권이 열 장 없으면 한 마리도 뽑지 않는다.
+    state.weaponTickets = 9;
+    assertThatThrownBy(() -> engine.drawCats(state, random, 10))
+        .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
+    assertThat(state.weaponTickets).isEqualTo(9);
+    assertThat(engine.view(state).cats()).allMatch(cat -> cat.level() == 0);
+
+    state.weaponTickets = 10;
+    engine.drawCats(state, random, 10);
+    assertThat(state.weaponTickets).isZero();
+    var view = engine.view(state);
+    assertThat(view.lastDraws()).hasSize(10);
+    assertThat(view.cats().stream().mapToInt(cat -> cat.level()).sum()).isEqualTo(10);
+    // 나온 차례의 레벨: 같은 고양이가 또 나오면 하나씩 오르고, 처음 나올 때만 새것이다.
+    java.util.Map<String, Integer> seen = new java.util.HashMap<>();
+    for (var d : view.lastDraws()) {
+      int level = seen.merge(d.code(), 1, Integer::sum);
+      assertThat(d.level()).isEqualTo(level);
+      assertThat(d.isNew()).isEqualTo(level == 1);
+    }
+    for (var cat : view.cats()) {
+      assertThat(cat.level()).isEqualTo(seen.getOrDefault(cat.code(), 0));
+    }
+
+    // 한 번 뽑기는 그 한 마리만 남긴다.
+    state.weaponTickets = 1;
+    engine.drawCat(state, random);
+    assertThat(engine.view(state).lastDraws()).hasSize(1);
+  }
+
+  @Test
   void catsComeFromTheGachaNotFromWalls() {
     HashSeededRandom random = new HashSeededRandom(7);
     start(1);

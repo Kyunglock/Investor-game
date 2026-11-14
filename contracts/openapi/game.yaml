@@ -450,10 +450,18 @@ paths:
   /api/company/weapon/draw:
     post:
       operationId: drawWeapon
-      summary: 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번)
+      summary: 무기 뽑기권 한 장에 무기 하나, 10연속이면 열 개를 뽑는다 (decisions.md 366·517번)
       description: |
         등급은 F 450·E 260·D 150·C 80·B 40·A 17·S 3의 가중치로, 종류는 등급에 따라 정한다. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 무기 합성 재료가 된다.
-        결과는 armory.lastDraw에 담긴다. 뽑기권이 없으면 400.
+        결과는 armory.lastDraw에, 한꺼번에 뽑은 것은 armory.lastDraws에 차례대로 담긴다. 뽑기권이 count장보다 적으면 하나도 뽑지 않고 400.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                count: { type: integer, minimum: 1, maximum: 10, description: 한꺼번에 뽑을 수(10연속, 517번). 없으면 1 }
       responses:
         '200':
           description: 뽑은 뒤의 회사
@@ -492,10 +500,19 @@ paths:
   /api/company/cat/draw:
     post:
       operationId: drawCat
-      summary: 뽑기권 한 장으로 고양이 한 마리를 뽑는다 (decisions.md 488·493번)
+      summary: 뽑기권 한 장에 고양이 한 마리, 10연속이면 열 마리를 뽑는다 (decisions.md 488·493·517번)
       description: |
         무기 뽑기와 같은 뽑기권(armory.tickets)을 한 장 쓴다. 고양이는 여섯이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
-        이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 뽑기권이 없으면 400.
+        이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 나온 고양이는 idle.lastDraws에 차례대로 담긴다.
+        뽑기권이 count장보다 적으면 하나도 뽑지 않고 400.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                count: { type: integer, minimum: 1, maximum: 10, description: 한꺼번에 뽑을 수(10연속, 517번). 없으면 1 }
       responses:
         '200':
           description: 뽑은 뒤의 회사
@@ -1300,6 +1317,16 @@ components:
                   wall: { type: integer, format: int64 }
                   hp: { type: number }
                   maxHp: { type: number }
+            lastDraws:
+              type: array
+              description: 마지막 고양이 뽑기(한 번 또는 10연속, 517번)에서 나온 고양이, 나온 차례대로
+              items:
+                type: object
+                required: [code, level, isNew]
+                properties:
+                  code: { type: string, enum: [sky, mint, lilac, sunset, night, snow] }
+                  level: { type: integer, description: 나온 직후의 레벨. 10연속에서 같은 고양이가 또 나오면 차례로 오른다 }
+                  isNew: { type: boolean, description: 처음 얻은 고양이 }
             actives:
               type: array
               description: 액티브 스킬 (decisions.md 503번). 눌러서 쓴다. 시간은 화면에서 흐르는 실제 초다
@@ -1391,7 +1418,7 @@ components:
         armory:
           description: 무기 뽑기 (decisions.md 366번). 무기는 전투에서 떨어지지 않고 무기 뽑기권으로 뽑는다
           type: object
-          required: [tickets, mergeCount, lastDraw]
+          required: [tickets, mergeCount, lastDraw, lastDraws]
           properties:
             tickets: { type: integer, description: 가진 무기 뽑기권 }
             mergeCount: { type: integer, description: 합쳐 한 등급 올리는 데 드는 같은 무기 수 }
@@ -1407,6 +1434,18 @@ components:
                     gradeName: { type: string }
                     isNew: { type: boolean, description: 새로 얻었다. 이미 가진 종류·등급이면 거짓(그 무기의 수가 하나 는다) }
                 - type: 'null'
+            lastDraws:
+              type: array
+              description: 마지막 뽑기(한 번 또는 10연속, 517번)에서 나온 무기, 나온 차례대로. 같은 무기가 두 번 나오면 두 번째는 isNew가 거짓
+              items:
+                type: object
+                required: [kind, name, grade, gradeName, isNew]
+                properties:
+                  kind: { type: string, enum: [pistol, revolver, smg, shotgun, rifle] }
+                  name: { type: string }
+                  grade: { type: string, enum: [F, E, D, C, B, A, S, SS, SSS, SR, UR, LR] }
+                  gradeName: { type: string }
+                  isNew: { type: boolean }
     Quarter:
       type: object
       description: 분기 하나의 실적 (decisions.md 268번)

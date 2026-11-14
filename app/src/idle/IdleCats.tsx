@@ -6,9 +6,10 @@ import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { GunSprite } from '../mental/GunSprite'
 import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
-import { GRADE_BADGE } from '../mental/WeaponInventory'
+import { type TenCard, TenReveal } from '../mental/TenReveal'
+import { GRADE_BADGE, TEN } from '../mental/WeaponInventory'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
-import { type CatDraw, CatReveal } from './CatReveal'
+import { type CatDraw, CatReveal, catRevealPlan } from './CatReveal'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
@@ -24,6 +25,7 @@ export function IdleCats({ company }: { company: Company }) {
   const error = useRaisingStore((s) => s.error)
   const [reveal, setReveal] = useState<{ id: number; result: CatDraw | null } | null>(null)
   const [drawn, setDrawn] = useState<CatDraw | null>(null)
+  const [ten, setTen] = useState<{ id: number; cards: TenCard[] | null } | null>(null)
   const drawing = useRef(false)
   const mounted = useRef(true)
   useEffect(() => {
@@ -76,6 +78,53 @@ export function IdleCats({ company }: { company: Company }) {
       drawing.current = false
     }
   }
+  // 10연속 (517번): 열 장으로 열 마리. 같은 고양이가 또 나오면 차례로 레벨이 오른다.
+  const drawTen = async () => {
+    if (drawing.current || useRaisingStore.getState().busy || tickets < TEN) return
+    drawing.current = true
+    const id = Date.now()
+    setReveal(null)
+    setTen({ id, cards: null })
+    sfx.stamp()
+    try {
+      const after = await useRaisingStore.getState().drawCat(TEN)
+      if (!mounted.current) return
+      const draws = after?.idle?.lastDraws ?? []
+      const cats = after?.idle?.cats ?? []
+      if (draws.length !== TEN) {
+        setTen(null)
+        return
+      }
+      setTen({
+        id,
+        cards: draws.map((d, i) => {
+          const plan = catRevealPlan(d.isNew)
+          const info = cats.find((c) => c.code === d.code)
+          return {
+            key: `${i}-${d.code}`,
+            art: <Portrait code={d.code} />,
+            badge: `Lv.${d.level}`,
+            name: info?.name ?? d.code,
+            note: d.isNew ? 'NEW!' : '레벨 업',
+            isNew: d.isNew,
+            color: plan.color,
+            power: plan.power,
+            sound: plan.sound,
+          }
+        }),
+      })
+      const last = cats.find((c) => c.code === draws[draws.length - 1].code)
+      if (last) {
+        setDrawn({ cat: last, isNew: draws.some((d) => d.code === last.code && d.isNew) })
+        setPicked(last.code)
+        setArming(false)
+      }
+    } catch {
+      if (mounted.current) setTen(null)
+    } finally {
+      drawing.current = false
+    }
+  }
   return (
     <>
       <section className="idle-cat-gacha" data-testid="cat-gacha">
@@ -93,13 +142,37 @@ export function IdleCats({ company }: { company: Company }) {
           type="button"
           className="idle-buy"
           data-testid="cat-draw"
-          disabled={Boolean(reveal) || busy || tickets < 1}
+          disabled={Boolean(reveal || ten) || busy || tickets < 1}
           onClick={() => void draw()}
         >
           뽑기
           <small>뽑기권 {tickets}장</small>
         </button>
+        <button
+          type="button"
+          className="idle-buy idle-buy-ten"
+          data-testid="cat-draw-ten"
+          disabled={Boolean(reveal || ten) || busy || tickets < TEN}
+          onClick={() => void drawTen()}
+        >
+          10연속
+          <small>뽑기권 {TEN}장</small>
+        </button>
       </section>
+      {ten && (
+        <TenReveal
+          key={ten.id}
+          label="고양이 10연속 뽑기"
+          testId="cat-ten"
+          icon="🐾"
+          loading="고양이 열 마리를 데려오는 중…"
+          cards={ten.cards}
+          canAgain={tickets >= TEN}
+          againNote={`뽑기권 ${tickets}장`}
+          onClose={() => setTen(null)}
+          onAgain={() => void drawTen()}
+        />
+      )}
       {reveal && (
         <CatReveal
           key={reveal.id}

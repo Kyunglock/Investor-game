@@ -302,17 +302,28 @@ class CompanyController {
 
   record BattleUpgradeRequest(@NotBlank String kind, @Positive Integer levels) {}
 
-  /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). */
+  /** 무기 뽑기권 한 장에 무기 하나, 본문의 count개를 한꺼번에(10연속, 517번). 본문이 없으면 하나 (decisions.md 366번). */
   @PostMapping("/weapon/draw")
-  CompanyView drawWeapon(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
+  CompanyView drawWeapon(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody(required = false) DrawCountRequest request) {
     UUID sessionId = cookies.requirePlayer(token);
-    CompanyView company = companies.drawWeapon(sessionId);
+    int count = DrawCountRequest.countOf(request);
+    CompanyView company = companies.drawWeapon(sessionId, count);
     PLAY.info(
-        "company-weapon-draw session={} company={} ip={}",
+        "company-weapon-draw session={} company={} count={} ip={}",
         sessionId,
         company.companyId(),
+        count,
         ClientIp.current());
     return company;
+  }
+
+  /** 뽑기 수 (517번): 1 또는 10연속. 없으면 1. */
+  record DrawCountRequest(@Min(1) @Max(10) Integer count) {
+    static int countOf(DrawCountRequest request) {
+      return request == null || request.count() == null ? 1 : request.count();
+    }
   }
 
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */
@@ -323,15 +334,19 @@ class CompanyController {
     return companies.mergeWeapon(cookies.requirePlayer(token), request.kind(), request.grade());
   }
 
-  /** 뽑기권 한 장으로 고양이 한 마리를 뽑는다 (decisions.md 488·493번). */
+  /** 뽑기권 한 장에 고양이 한 마리, 본문의 count마리를 한꺼번에(10연속, 517번). 본문이 없으면 한 마리 (decisions.md 488·493번). */
   @PostMapping("/cat/draw")
-  CompanyView drawCat(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
+  CompanyView drawCat(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody(required = false) DrawCountRequest request) {
     UUID sessionId = cookies.requirePlayer(token);
-    CompanyView company = companies.drawCat(sessionId);
+    int count = DrawCountRequest.countOf(request);
+    CompanyView company = companies.drawCat(sessionId, count);
     PLAY.info(
-        "company-cat-draw session={} company={} ip={}",
+        "company-cat-draw session={} company={} count={} ip={}",
         sessionId,
         company.companyId(),
+        count,
         ClientIp.current());
     return company;
   }

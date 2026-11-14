@@ -69,11 +69,12 @@ interface RaisingState {
     levels?: number,
   ) => Promise<Company | null>
   /** 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번). 결과는 company.armory.lastDraw. */
-  drawWeapon: () => Promise<void>
+  /** count개를 한꺼번에 (10연속, 517번). 없으면 하나. */
+  drawWeapon: (count?: number) => Promise<void>
   /** 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번). */
   mergeWeapon: (kind: WeaponKind, grade: Exclude<WeaponGrade, 'LR'>) => Promise<void>
   /** 자본으로 고양이 한 마리를 뽑는다 (decisions.md 488번). 받은 회사(실패면 null)를 돌려준다. */
-  drawCat: () => Promise<Company | null>
+  drawCat: (count?: number) => Promise<Company | null>
   /** 액티브 스킬을 쓴다 (decisions.md 503번). 서버가 받아 줬으면 true. 전투를 멈추지 않게 busy를 켜지 않는다. */
   useActive: (code: ActiveCode) => Promise<boolean>
   /** 코드를 넣고 테스트판에 들어간다 (decisions.md 499번). 안 되면 까닭을, 되면 null을 돌려준다. */
@@ -249,7 +250,8 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       return res?.data ?? null
     },
 
-    drawWeapon: () => change(api.POST('/api/company/weapon/draw')),
+    drawWeapon: (count = 1) =>
+      change(api.POST('/api/company/weapon/draw', { body: { count } })),
 
     mergeWeapon: (kind, grade) =>
       change(api.POST('/api/company/weapon/merge', { body: { kind, grade } })),
@@ -279,8 +281,8 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       set({ company: res.data })
       return true
     },
-    drawCat: async () => {
-      const res = await safely(api.POST('/api/company/cat/draw'))
+    drawCat: async (count = 1) => {
+      const res = await safely(api.POST('/api/company/cat/draw', { body: { count } }))
       set({ company: res?.data ?? get().company, error: reason(res?.error) })
       return res?.data ?? null
     },

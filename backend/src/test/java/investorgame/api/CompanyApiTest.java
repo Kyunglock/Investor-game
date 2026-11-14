@@ -350,6 +350,13 @@ class CompanyApiTest {
     int tickets = opened.read("$.armory.tickets", Integer.class);
     assertThat(tickets).as("처음 무기 뽑기권").isPositive();
     assertThat(opened.read("$.armory.lastDraw", Object.class)).isNull();
+    // 10연속 (517번): 열 장이 없으면 하나도 뽑지 않고, 열한 개는 받지 않는다.
+    if (tickets < 10) {
+      postJson("/api/company/weapon/draw", "{\"count\":10}").andExpect(status().isBadRequest());
+      postJson("/api/company/cat/draw", "{\"count\":10}").andExpect(status().isBadRequest());
+    }
+    postJson("/api/company/weapon/draw", "{\"count\":11}").andExpect(status().isBadRequest());
+    postJson("/api/company/weapon/draw", "{\"count\":0}").andExpect(status().isBadRequest());
     assertThat(opened.read("$.weapons[0].count", Integer.class)).isEqualTo(1);
     DocumentContext drawn = opened;
     for (int i = 0; i < tickets; i++) {

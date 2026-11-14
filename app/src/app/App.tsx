@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { FxLayer } from '../fx/FxLayer'
 import { armAudio } from '../fx/sound'
 import { useCompanyFx } from '../fx/useCompanyFx'
+import { LoadingScreen } from './LoadingScreen'
 import { Shell } from './Shell'
 import { TutorialGuide } from './TutorialGuide'
 import { firstTab, useAppUi } from './ui'
@@ -49,14 +50,7 @@ export function App() {
 
   return (
     <>
-      {status === 'loading' && (
-        <div
-          className="flex h-dvh items-center justify-center app-bg text-ink/70"
-          data-testid="loading"
-        >
-          <p className="animate-pulse-soft text-[14px]">불러오는 중…</p>
-        </div>
-      )}
+      {status === 'loading' && <LoadingScreen stage="loading" />}
       {status === 'error' && (
         <div className="flex h-dvh flex-col items-center justify-center gap-3 app-bg px-6 text-ink">
           <p role="alert" className="text-[15px]">
@@ -71,28 +65,23 @@ export function App() {
           </button>
         </div>
       )}
-      {opening && (
+      {opening && !error && <LoadingScreen stage="opening" />}
+      {opening && error && (
         <div
           className="flex h-dvh flex-col items-center justify-center gap-3 app-bg px-6 text-ink"
           data-testid="opening-company"
         >
-          {error ? (
-            <>
-              <p role="alert" className="text-[15px]">
-                {error}
-              </p>
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void open()}
-                className="btn btn-ghost min-h-12 px-6 text-[14px]"
-              >
-                다시 시도
-              </button>
-            </>
-          ) : (
-            <p className="animate-pulse-soft text-[14px]">사무실 문을 여는 중…</p>
-          )}
+          <p role="alert" className="text-[15px]">
+            {error}
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => void open()}
+            className="btn btn-ghost min-h-12 px-6 text-[14px]"
+          >
+            다시 시도
+          </button>
         </div>
       )}
       {status === 'ready' && company && (
