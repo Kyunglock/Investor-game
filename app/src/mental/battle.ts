@@ -1,4 +1,3 @@
-import { CAT_H, CAT_W } from '@web/features/game/cat/draw'
 import type { IdleAttackKind } from '@web/features/raising/idleContacts'
 import Phaser from 'phaser'
 import { haptic } from '../fx/haptics'
@@ -22,6 +21,7 @@ import {
   TRICKLE_SECONDS,
 } from './advance'
 import {
+  bakeCatGun,
   bakeCatRuns,
   bakeEnemies,
   bakeHero,
@@ -75,7 +75,8 @@ import {
   type MateGun,
   xpToNext,
 } from './cards'
-import { catAim, catMuzzle, mateModel } from './catModels'
+import { CAT_GUN, catGunAim, catGunPose, catShoulder } from './catGun'
+import { CAT_SCALE, mateModel } from './catModels'
 import { catRunFrame, catRunKey } from './catRun'
 import { CIRCUIT_BREAKER, CircuitBreaker } from './circuitBreaker'
 import { CircuitBreakerFx } from './circuitBreakerFx'
@@ -270,8 +271,8 @@ const BULLET_LIFE = 900
  * 이 시간으로 잊는다. 서버가 늦은 접속 신호를 받아 주는 10초(497번)보다 길다.
  */
 const IDLE_HIT_MS = 12000
-/** 사격 모션 (513번): 반동 1일 때 뒤로 밀리는 거리(px), 눌리는 비율, 넓어지는 비율, 젖혀지는 각(rad), 그리고 초당 줄어드는 빠르기. */
-const RECOIL = { back: 3, squash: 0.018, wide: 0.008, lean: 0.018, decay: 22 }
+/** 총과 앞발에만 적용하는 반동의 초당 감쇠. 몸통·발·충돌 위치는 변형하지 않는다. */
+const RECOIL = { decay: 22 }
 const recoilDecay = (kick: number, dt: number) =>
   kick < 0.01 ? 0 : kick * Math.exp(-RECOIL.decay * dt)
 /** 자동 전투에서 벽 앞에 막힌 시간으로 셈하는 상한(초): 물량 간격이 바탕의 절반까지만 줄어든다 (assault.ts spawnSeconds, 494번). */
@@ -351,6 +352,7 @@ interface MagicCaster {
 interface Mate {
   magicMark: Phaser.GameObjects.Text
   body: Phaser.GameObjects.Image
+  gun: Phaser.GameObjects.Image
   aim: number
   lastFire: number
   /** 재장전 전까지 쏜 탄 수 (#587, 리볼버). */
@@ -840,7 +842,11 @@ class BattleScene extends Phaser.Scene {
       } else if (this.player) {
         this.player.setPosition(this.standX(0), this.playerY())
       }
-      for (const [i, m] of this.mates.entries()) m.body.setX(this.standX(i + 1))
+      if (this.player && this.heroGun) this.poseGun(this.player, this.aim, this.heroKick)
+      for (const [i, m] of this.mates.entries()) {
+        m.body.setX(this.standX(i + 1))
+        this.poseGun(m.body, m.aim, m.kick, m)
+      }
       this.wall?.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)
       if (this.wallZone) {
         this.wallZone.setPosition(w / 2, this.wallY()).setSize(w, WALL_H * 2)
@@ -863,6 +869,10 @@ class BattleScene extends Phaser.Scene {
     this.mental = this.loadout.maxMental
     // 아군은 사장냥(341번): 상자 100×110의 0.72배. 몸통 가운데에 충돌 원을 둔다. 둘 다 아래에 붙박이.
     this.player = this.physics.add.image(w / 2, this.playerY(), 'hero-idle')
+    this.heroGun = this.add
+      .image(0, 0, bakeCatGun(this, this.opts.hero.weapon.grade, 'hero'))
+      .setDepth(5.1)
+    this.poseGun(this.player, this.aim, 0)
     this.player.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h).setDepth(5)
     const pr = 22
     const tex = this.textures.get('hero-idle').getSourceImage() as { width: number; height: number }
@@ -1123,6 +1133,7 @@ class BattleScene extends Phaser.Scene {
       if (!m) break
       this.tweens.killTweensOf(m)
       m.body.destroy()
+      m.gun.destroy()
       m.magicMark.destroy()
     }
     while (this.mates.length < want) this.addMate()
@@ -1174,6 +1185,18 @@ class BattleScene extends Phaser.Scene {
         .setDepth(7)
         .setVisible(false),
       body,
+      gun: this.add
+        .image(
+          body.x,
+          body.y,
+          bakeCatGun(
+            this,
+            this.mateGun(i)?.grade ?? this.opts.hero.weapon.grade,
+            mateModel(this.mateLook(i)),
+            this.mateLook(i),
+          ),
+        )
+        .setDepth(5.1),
       aim: this.aim,
       // 사장냥과 번갈아 쏘게 연사 간격 안에서 조금씩 어긋나게 시작한다.
       lastFire: this.lastFire + (this.attackInterval * (i + 1)) / (MATE_LOOKS.length + 1),
@@ -1184,6 +1207,7 @@ class BattleScene extends Phaser.Scene {
     this.mates.push(mate)
     // 늘어선 자리가 바뀌었다: 새 고양이는 제자리에서 내려오고 나머지는 옆으로 비켜선다(update가 미끄러지게 옮긴다).
     body.setPosition(this.standX(i + 1), y + mate.drop)
+    this.poseGun(body, mate.aim, 0, mate)
     const land = () => {
       const fx = body.x
       const fy = body.y + 30
@@ -2350,7 +2374,11 @@ class BattleScene extends Phaser.Scene {
       sells: this.circuitSellQueue.size,
     })
     this.player.setTexture('hero-idle')
-    for (const [i, mate] of this.mates.entries()) mate.body.setTexture(mateKey(this.mateLook(i)))
+    this.poseGun(this.player, this.aim, 0)
+    for (const [i, mate] of this.mates.entries()) {
+      mate.body.setTexture(mateKey(this.mateLook(i)))
+      this.poseGun(mate.body, mate.aim, 0, mate)
+    }
     this.pushHud(true)
     if (!c.done) return
     this.endCircuit()
@@ -3170,8 +3198,8 @@ class BattleScene extends Phaser.Scene {
       return Array.from({ length: count }, () => t)
     }
     const shooters = [
-      catMuzzle('hero', this.player.x, this.player.y),
-      ...this.mates.map((m, i) => catMuzzle(mateModel(this.mateLook(i)), m.body.x, m.body.y)),
+      catShoulder('hero', this.player.x, this.player.y),
+      ...this.mates.map((m, i) => catShoulder(mateModel(this.mateLook(i)), m.body.x, m.body.y)),
     ]
     // 공격 판 (#593, 413번의 "위로 곧게"를 뒤집음): 자동 조준. 매도 물량(허매도 빼고)을 고양이마다 나눠 맡고, 없으면 큰손, 그것도 없으면 제 머리 위로
     // 곧게(바로 위의 매도벽).
@@ -3275,6 +3303,7 @@ class BattleScene extends Phaser.Scene {
   private mateGunsBaked = ''
   /** 사장냥의 반동 (513번, Mate.kick과 같다). */
   private heroKick = 0
+  private heroGun!: Phaser.GameObjects.Image
 
   /** index번째 고양이의 그림 차례 (mates.ts MATE_LOOKS): 자동 전투는 고양이마다 제 그림, 스테이지는 들어온 차례다. */
   private mateLook(index: number) {
@@ -3292,13 +3321,25 @@ class BattleScene extends Phaser.Scene {
     return Boolean(this.opts.idle && this.buyWall && !this.buyWall.active)
   }
 
-  /** DPR 텍스처 배율 대신 실제 표시 크기로 총구를 변환한다. */
-  private catPose(body: Phaser.GameObjects.Image) {
-    return {
-      rotation: body.rotation,
-      scaleX: body.displayWidth / CAT_W,
-      scaleY: body.displayHeight / CAT_H,
-    }
+  /** 몸은 고정하고 총과 두 앞발만 어깨 축에서 조준·반동한다. */
+  private poseGun(body: Phaser.GameObjects.Image, aim: number, kick: number, mate?: Mate) {
+    const index = mate ? this.mates.indexOf(mate) : -1
+    const look = mate ? this.mateLook(index) : undefined
+    const model = look === undefined ? 'hero' : mateModel(look)
+    const grade = mate
+      ? (this.mateGun(index)?.grade ?? this.opts.hero.weapon.grade)
+      : this.opts.hero.weapon.grade
+    const gun = mate?.gun ?? this.heroGun
+    const pose = catGunPose(model, body.x, body.y, aim, this.reducedMotion ? 0 : kick)
+    gun
+      .setTexture(bakeCatGun(this, grade, model, look))
+      .setOrigin(CAT_GUN.pivotX / CAT_GUN.w, CAT_GUN.pivotY / CAT_GUN.h)
+      .setDisplaySize(CAT_GUN.w * CAT_SCALE, CAT_GUN.h * CAT_SCALE)
+      .setPosition(pose.x, pose.y)
+      .setRotation(aim)
+      .setAlpha(body.alpha)
+      .setVisible(body.visible)
+    return pose
   }
 
   /** 한 발 쏜다. mate가 없으면 사장냥, 있으면 그 고양이가 같은 수치(무기·피해·연사·강화)로 쏜다(393번). */
@@ -3307,7 +3348,7 @@ class BattleScene extends Phaser.Scene {
     if (!mate) this.heroAims++
     const model = mate ? mateModel(this.mateLook(this.mates.indexOf(mate))) : 'hero'
     // 표적이 좌우로 바뀌어도 발사 순간에는 실제 총구에서 정확히 겨눈다.
-    const aim = catAim(model, p.x, p.y, target, this.catPose(p))
+    const aim = catGunAim(model, p.x, p.y, target)
     const gun = mate ? this.mateGun(this.mates.indexOf(mate)) : undefined
     const kind = gun?.kind ?? this.opts.hero.weapon.kind
     const grade = gun?.grade ?? this.opts.hero.weapon.grade
@@ -3318,7 +3359,7 @@ class BattleScene extends Phaser.Scene {
     const traits = WEAPON_TRAITS[kind]
     const reload = (shots: number) =>
       traits.magazine && shots % traits.magazine === 0 ? traits.reloadMs : 0
-    // 사격 모션 (513번): 쏠 때마다 몸이 뒤로 밀렸다 돌아온다. 총구 화염이 큰 무기일수록 세다.
+    // 총과 앞발만 총열 반대 방향으로 밀렸다 돌아온다. 몸과 발은 제자리를 지킨다.
     const kick = this.reducedMotion ? 0 : Math.min(1.5, style.flash)
     if (mate) {
       mate.kick = kick
@@ -3337,7 +3378,7 @@ class BattleScene extends Phaser.Scene {
       this.aim = aim
     }
     // 총 손맛: 총구 화염. 크기·시간이 무기마다 다르다.
-    const m = catMuzzle(model, p.x, p.y, this.catPose(p))
+    const m = this.poseGun(p, aim, kick, mate).muzzle
     const flash = this.flashes[this.flashIndex++ % this.flashes.length]
     flash
       .setPosition(m.x, m.y)
@@ -4398,7 +4439,7 @@ class BattleScene extends Phaser.Scene {
 
   /** 함께 싸우는 고양이: 제자리로 미끄러지고, 숨 쉬고, 맡은 적을 겨눠 연사 간격마다 쏜다 (393·409번). */
   private updateMates(time: number, dt: number, targets: ({ x: number; y: number } | null)[]) {
-    const y = this.mode === 'defense' ? this.playerY() : this.player.y - this.heroKick * RECOIL.back
+    const y = this.mode === 'defense' ? this.playerY() : this.player.y
     const k = Math.min(1, dt * 8)
     const turn = Math.min(1, dt * 10)
     for (const [i, m] of this.mates.entries()) {
@@ -4414,18 +4455,15 @@ class BattleScene extends Phaser.Scene {
               ),
         )
       m.kick = recoilDecay(m.kick, dt)
-      b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop + m.kick * RECOIL.back)
-      b.setRotation(Phaser.Math.Clamp(m.aim + Math.PI / 2, -0.35, 0.35) - m.kick * RECOIL.lean)
+      b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop)
+      b.setRotation(0)
       m.magicMark.setPosition(b.x, b.y - 58)
       if (!this.tweens.isTweening(b)) {
-        b.setDisplaySize(
-          HERO_SIZE.w * (1 + m.kick * RECOIL.wide),
-          HERO_SIZE.h * (1 + Math.sin(time / 260 + i * 1.7) * 0.025) * (1 - m.kick * RECOIL.squash),
-        )
+        b.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
       }
       if (target) {
         // 공격 판도 맡은 과녁을 겨눈다 (#593). 과녁이 없으면 제 머리 위(벽).
-        const want = catAim(mateModel(this.mateLook(i)), b.x, b.y, target)
+        const want = catGunAim(mateModel(this.mateLook(i)), b.x, b.y, target)
         m.aim += Phaser.Math.Angle.Wrap(want - m.aim) * turn
         if (m.drop === 0 && !this.disarmed && time - m.lastFire > this.mateInterval(i)) {
           const ms = this.mateInterval(i)
@@ -4434,6 +4472,7 @@ class BattleScene extends Phaser.Scene {
           }
         }
       }
+      this.poseGun(b, m.aim, m.kick, m)
     }
   }
 
@@ -4535,13 +4574,13 @@ class BattleScene extends Phaser.Scene {
     }
 
     // 붙박이 (332번): 자리는 고정, 누르고 있는 쪽을 쏜다. 그림(341번)은 맞았으면 울상(총을 놓친다), 누르고 있으면 눈썹 꾹, 아니면 가만히.
-    // 승인한 상향 포즈를 유지한다. 탄환은 기존 수동·자동 조준 방향을 따른다.
+    // 몸과 발은 고정하고, 분리된 앞발·총만 수동·자동 조준 방향을 따른다.
     const p = this.player
     const ptr = this.input.activePointer
     const { w, h } = this.view()
     p.setVelocity(0, 0)
     this.heroKick = recoilDecay(this.heroKick, dt)
-    p.setPosition(this.standX(0), this.playerY() + this.heroKick * RECOIL.back)
+    p.setPosition(this.standX(0), this.playerY())
     const hurting = time < this.hurtUntil
     p.setTexture(
       hurting
@@ -4552,12 +4591,7 @@ class BattleScene extends Phaser.Scene {
             ? 'hero-fire'
             : 'hero-idle',
     )
-    p.setDisplaySize(
-      HERO_SIZE.w * (1 + this.heroKick * RECOIL.wide),
-      HERO_SIZE.h * (1 - this.heroKick * RECOIL.squash),
-    ).setRotation(
-      Phaser.Math.Clamp(this.aim + Math.PI / 2, -0.35, 0.35) - this.heroKick * RECOIL.lean,
-    )
+    p.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h).setRotation(0)
     if (this.wall && this.wallZone) {
       this.wall.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)
       this.wall.setTexture(this.mental <= this.loadout.maxMental / 2 ? 'wall-cracked' : 'wall')
@@ -4577,7 +4611,7 @@ class BattleScene extends Phaser.Scene {
     }
     const target = this.targets[0] ?? null
     if (target) {
-      const want = catAim('hero', p.x, p.y, target)
+      const want = catGunAim('hero', p.x, p.y, target)
       this.aim += Phaser.Math.Angle.Wrap(want - this.aim) * Math.min(1, dt * 14)
     }
     // 프레임이 연사 간격보다 길면(느린 휴대폰) 밀린 만큼 한 프레임에 몇 발 더 쏜다(최대 3, #587): 아니면 연사가 빠른 무기(기관단총)일수록
@@ -4585,6 +4619,7 @@ class BattleScene extends Phaser.Scene {
     for (let n = 0; target && !this.disarmed && time - this.lastFire > fireMs && n < 3; n++) {
       this.fire(Math.max(this.lastFire + fireMs, time - fireMs), target)
     }
+    this.poseGun(p, this.aim, this.heroKick)
     this.updateMates(time, dt, this.targets)
     this.drawBossBar()
     // 마법은 총알과 따로 제 주기에 스스로 나간다 (392번).

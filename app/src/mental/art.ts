@@ -1,6 +1,7 @@
 import { CAT_H, CAT_W, type GunGrade } from '@web/features/game/cat/draw'
 
 import type Phaser from 'phaser'
+import { CAT_GUN } from './catGun'
 import { CAT_SCALE, type CatModel, mateModel } from './catModels'
 import { CAT_RUN_FRAMES, catRunKey, catRunPose } from './catRun'
 import { drawEmber, drawPillar, drawWater, drawWave, drawWoodenRam } from './effectArt'
@@ -9,8 +10,15 @@ import { WALK_FRAMES, walkPose } from './enemyWalk'
 import type { Genre } from './genres'
 import { MATE_LOOKS } from './mates'
 import { shareLabel, sharesOf } from './shares'
-import { drawBuyWall, drawMentalWall, drawSprite, drawToySellWall, STAGE_HERO } from './stageArt'
-import { drawEquippedHero, drawEquippedMate } from './weaponArt'
+import {
+  drawBuyWall,
+  drawMentalWall,
+  drawSprite,
+  drawToySellWall,
+  STAGE_HERO,
+  spriteBounds,
+} from './stageArt'
+import { weaponCell } from './weaponArt'
 import { BULLET_ART, drawWeaponBullet, drawWeaponImpact, WEAPON_GRADES } from './weaponVisuals'
 
 /** 승인한 캐주얼 시안의 투명 스프라이트를 Phaser 텍스처로 굽고, 무기·벽·탄환을 실시간 상태에 맞춰 합성한다. */
@@ -80,20 +88,45 @@ function bake(
 /** 장착 무기를 원본 고양이와 합성하고 피격 상태만 덧칠한다. */
 export const HERO_KEYS = ['hero-idle', 'hero-fire', 'hero-hurt'] as const
 
-export function bakeHero(scene: Phaser.Scene, grade: GunGrade) {
-  const source = scene.textures.get('art-hero').getSourceImage() as HTMLImageElement
+/** 3종의 몸에는 팔·총이 없다. 조준하는 앞발과 무기는 별도 이미지다. */
+function drawRigBody(
+  scene: Phaser.Scene,
+  c: CanvasRenderingContext2D,
+  model: CatModel,
+  tint?: number,
+) {
+  const source = scene.textures.get('art-rigBodies').getSourceImage() as HTMLImageElement
+  const column = model === 'hero' ? 0 : model === 'fold' ? 1 : 2
+  const layer = document.createElement('canvas')
+  layer.width = CAT_W * DPR
+  layer.height = CAT_H * DPR
+  const paint = layer.getContext('2d')
+  if (!paint) return
+  paint.scale(DPR, DPR)
+  drawSprite(
+    paint,
+    source,
+    { x: (column * source.width) / 3, y: 0, w: source.width / 3, h: source.height },
+    { x: 14, y: 3, w: 75, h: 100 },
+    'height',
+  )
+  if (tint !== undefined) {
+    paint.globalCompositeOperation = 'source-atop'
+    paint.globalAlpha = 0.3
+    paint.fillStyle = `#${tint.toString(16).padStart(6, '0')}`
+    paint.fillRect(0, 0, CAT_W, CAT_H)
+  }
+  c.drawImage(layer, 0, 0, CAT_W, CAT_H)
+}
+
+export function bakeHero(scene: Phaser.Scene, _grade: GunGrade) {
   for (const key of HERO_KEYS) {
     bake(scene, key, CAT_W, CAT_H, (c) => {
       c.fillStyle = '#98633633'
       c.beginPath()
       c.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
       c.fill()
-      drawEquippedHero(
-        c,
-        source,
-        scene.textures.get('art-weapons').getSourceImage() as HTMLImageElement,
-        grade,
-      )
+      drawRigBody(scene, c, 'hero')
       if (key === 'hero-hurt') {
         c.globalCompositeOperation = 'source-atop'
         c.fillStyle = '#fc795e33'
@@ -103,30 +136,59 @@ export function bakeHero(scene: Phaser.Scene, grade: GunGrade) {
   }
 }
 
+/** 두 앞발이 손잡이와 총열 아래를 잡은 한 층. 총과 함께 회전해 손이 떨어지지 않는다. */
+export function bakeCatGun(scene: Phaser.Scene, grade: GunGrade, model: CatModel, look?: number) {
+  const key = `cat-gun-${grade}-${model}-${look ?? 'hero'}`
+  bake(scene, key, CAT_GUN.w, CAT_GUN.h, (c) => {
+    const fur = model === 'hero' ? '#efc58f' : model === 'fold' ? '#929bb9' : '#ead4b9'
+    const tint = look === undefined ? undefined : MATE_LOOKS[look]?.tint
+    const color = tint === undefined ? fur : `#${tint.toString(16).padStart(6, '0')}`
+    c.lineCap = 'round'
+    c.strokeStyle = color
+    c.lineWidth = 10
+    c.beginPath()
+    c.moveTo(17, 46)
+    c.lineTo(23, 45)
+    c.moveTo(17, 48)
+    c.quadraticCurveTo(28, 54, 47, 41)
+    c.stroke()
+    const source = scene.textures.get('art-weapons').getSourceImage() as HTMLImageElement
+    const crop = spriteBounds(source, weaponCell(source, grade))
+    c.drawImage(source, crop.x, crop.y, crop.w, crop.h, 8, 19, 55, 32)
+    for (const [x, y] of [
+      [23, 45],
+      [47, 40],
+    ]) {
+      const shade = c.createRadialGradient(x - 2, y - 3, 1, x, y, 7)
+      shade.addColorStop(0, '#fff3df')
+      shade.addColorStop(1, color)
+      c.fillStyle = shade
+      c.beginPath()
+      c.ellipse(x, y, 5, 6, -0.2, 0, Math.PI * 2)
+      c.fill()
+    }
+  })
+  return key
+}
+
 /** Bake alternating leg strides from the original cats, keeping the upper-body silhouette. */
-export function bakeCatRuns(scene: Phaser.Scene, grade: GunGrade, mateGrades: readonly GunGrade[]) {
+export function bakeCatRuns(
+  scene: Phaser.Scene,
+  _grade: GunGrade,
+  _mateGrades: readonly GunGrade[],
+) {
   const models = [
     { base: 'hero', model: 'hero' },
     ...MATE_LOOKS.map((_, i) => ({ base: mateKey(i), model: mateModel(i), look: i })),
   ] as { base: string; model: CatModel; look?: number }[]
   for (const { base, model, look } of models) {
-    const source = scene.textures.get(`art-${model}`).getSourceImage() as HTMLImageElement
     const sprite = document.createElement('canvas')
     sprite.width = CAT_W * DPR
     sprite.height = CAT_H * DPR
     const paint = sprite.getContext('2d')
     if (!paint) continue
     paint.scale(DPR, DPR)
-    if (model === 'hero') {
-      drawEquippedHero(
-        paint,
-        source,
-        scene.textures.get('art-weapons').getSourceImage() as HTMLImageElement,
-        grade,
-      )
-    } else {
-      paintMate(scene, paint, look ?? 0, mateGrades[look ?? 0] ?? grade)
-    }
+    drawRigBody(scene, paint, model, look === undefined ? undefined : MATE_LOOKS[look].tint)
     for (let frame = 0; frame < CAT_RUN_FRAMES; frame++) {
       bake(scene, catRunKey(base, frame), CAT_W, CAT_H, (c) => {
         const pose = catRunPose(frame)
@@ -163,36 +225,15 @@ export function bakeCatRuns(scene: Phaser.Scene, grade: GunGrade, mateGrades: re
 export const mateKey = (i: number) => `mate-${i}`
 
 /** look번째 고양이의 몸에 그 등급의 무기를 얹어 그린다 (511번). 같은 그림을 쓰는 고양이의 빛깔(tint)은 몸에만 입힌다. */
-function paintMate(
-  scene: Phaser.Scene,
-  c: CanvasRenderingContext2D,
-  look: number,
-  grade: GunGrade,
-) {
-  const model = mateModel(look)
-  if (model === 'hero') return
-  const image = (key: string) => scene.textures.get(key).getSourceImage() as HTMLImageElement
-  drawEquippedMate(
-    c,
-    model,
-    image(`art-${model}`),
-    image(`art-${model}GunMask`),
-    image('art-weapons'),
-    grade,
-    { w: CAT_W, h: CAT_H },
-    MATE_LOOKS[look].tint,
-  )
-}
-
 /** grades[i]는 i번째 그림의 고양이가 든 무기의 등급이다. 장비가 바뀌면 다시 굽는다. */
-export function bakeMates(scene: Phaser.Scene, grades: readonly GunGrade[]) {
+export function bakeMates(scene: Phaser.Scene, _grades: readonly GunGrade[]) {
   for (let i = 0; i < MATE_LOOKS.length; i++) {
     bake(scene, mateKey(i), CAT_W, CAT_H, (c) => {
       c.fillStyle = '#98633633'
       c.beginPath()
       c.ellipse(50, 102, 26, 5, 0, 0, Math.PI * 2)
       c.fill()
-      paintMate(scene, c, i, grades[i] ?? 'F')
+      drawRigBody(scene, c, mateModel(i), MATE_LOOKS[i].tint)
     })
   }
 }
