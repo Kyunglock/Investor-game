@@ -156,15 +156,16 @@ class SandboxApiTest {
         json(
             mvc.perform(tool("cats", "{\"level\":10}", in)).andExpect(status().isOk()).andReturn());
     assertThat(cats.read("$.idle.cats[*].level").toString()).isEqualTo("[10,10,10,10,10,10]");
-    assertThat(cats.read("$.idle.cats[?(@.fielded)].code").toString())
+    assertThat(cats.read("$.idle.cats[?(@.fielded == true)].code").toString())
         .isEqualTo("[\"sky\",\"mint\",\"lilac\",\"sunset\"]");
     DocumentContext armed =
         json(
             mvc.perform(tool("weapon", "{\"grade\":\"S\"}", in))
                 .andExpect(status().isOk())
                 .andReturn());
-    assertThat(armed.read("$.weapons[?(@.equipped)].grade").toString()).isEqualTo("[\"S\"]");
-    assertThat(armed.read("$.weapons[?(@.equipped)].count").toString()).isEqualTo("[6]");
+    assertThat(armed.read("$.weapons[?(@.equipped == true)].grade").toString())
+        .isEqualTo("[\"S\"]");
+    assertThat(armed.read("$.weapons[?(@.equipped == true)].count").toString()).isEqualTo("[6]");
     mvc.perform(tool("weapon", "{\"grade\":\"ZZ\"}", in)).andExpect(status().isBadRequest());
 
     // 무한 지갑을 끄면 처음 돈과 뽑기권 0에서 시작해 다시 채워지지 않고, 켜면 다시 채워진다.
