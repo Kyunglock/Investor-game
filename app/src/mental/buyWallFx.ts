@@ -135,12 +135,11 @@ export class BuyWallFx {
     const height = (width * CELL_TEX.h) / CELL_TEX.w
     const top = y + 32 - height
     const hit = this.hitLeft / 0.28
-    const shake = reduced ? 0 : Math.sin((1 - hit) * Math.PI * 5) * hit * 7
     if (wall.active) {
       this.surface
         .setVisible(true)
         .setTexture(wall.hp < wall.maxHp * 0.5 ? 'buy-wall-cracked' : 'buy-wall')
-        .setPosition(left + shake, top + Math.abs(shake) * 0.4)
+        .setPosition(left, top)
         .setDisplaySize(width, height)
       this.surface.clearTint()
       if (this.hitLeft > 0.2) this.surface.setTintFill(0xffedc2)
