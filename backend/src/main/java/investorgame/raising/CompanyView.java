@@ -76,7 +76,16 @@ public record CompanyView(
       double circuitSeconds,
       List<IdleWall> upcoming,
       long sequence,
-      List<IdleActive> actives) {}
+      List<IdleActive> actives,
+      List<CatDraw> lastDraws) {}
+
+  /**
+   * 고양이 뽑기에서 나온 한 마리 (517번).
+   *
+   * @param level 나온 직후의 레벨. 10연속에서 같은 고양이가 또 나오면 차례로 오른다
+   * @param isNew 처음 얻은 고양이
+   */
+  public record CatDraw(String code, int level, boolean isNew) {}
 
   /**
    * 액티브 스킬 하나 (decisions.md 503번): 눌러서 쓴다. 시간은 화면에서 흐르는 실제 초다(전투는 2배속).
@@ -147,8 +156,10 @@ public record CompanyView(
    * @param tickets 가진 무기 뽑기권
    * @param mergeCount 합쳐 한 등급 올리는 데 드는 같은 무기 수
    * @param lastDraw 마지막으로 뽑은 무기. 뽑은 적이 없으면 null
+   * @param lastDraws 마지막 뽑기(한 번 또는 10연속, 517번)에서 나온 무기, 나온 차례대로
    */
-  public record Armory(int tickets, int mergeCount, WeaponDraw lastDraw) {}
+  public record Armory(
+      int tickets, int mergeCount, WeaponDraw lastDraw, List<WeaponDraw> lastDraws) {}
 
   /**
    * 멘탈 스테이지 (decisions.md 369번).

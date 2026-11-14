@@ -97,6 +97,7 @@ class MentalEngine {
       c.weapon = null;
       c.lastWeaponDraw = null;
       c.lastWeaponDrawNew = false;
+      c.lastWeaponDraws = new ArrayList<>();
       c.weaponDraws = 0;
       c.weaponTickets = properties.mental().weaponGacha().startTickets();
       c.weaponGachaReady = true;
@@ -134,10 +135,27 @@ class MentalEngine {
    * 재료가 된다. 뽑기권이 없으면 400.
    */
   void drawWeapon(CompanyState c, SeededRandom random) {
+    drawWeapons(c, random, 1);
+  }
+
+  /** 무기 count개를 한꺼번에 뽑는다 (517번 10연속 뽑기). 뽑기권이 count장보다 적으면 하나도 뽑지 않고 400. */
+  void drawWeapons(CompanyState c, SeededRandom random, int count) {
     initWeapons(c);
-    if (c.weaponTickets <= 0) {
-      throw new InvalidRequestException("무기 뽑기권이 없다");
+    if (count < 1) {
+      throw new InvalidRequestException("뽑을 수가 1보다 작다");
     }
+    if (c.weaponTickets < count) {
+      throw new InvalidRequestException(
+          c.weaponTickets <= 0 ? "무기 뽑기권이 없다" : "무기 뽑기권이 " + count + "장 있어야 한다");
+    }
+    List<CompanyState.Pulled> drawn = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      drawn.add(drawOne(c, random));
+    }
+    c.lastWeaponDraws = drawn;
+  }
+
+  private CompanyState.Pulled drawOne(CompanyState c, SeededRandom random) {
     c.weaponTickets--;
     c.weaponDraws++;
     RandomGenerator rng = random.forKey("weapon-draw", c.weaponDraws);
@@ -161,6 +179,7 @@ class MentalEngine {
     }
     c.lastWeaponDraw = new CompanyState.Weapon(kind, grade);
     c.lastWeaponDrawNew = owned == null;
+    return new CompanyState.Pulled(kind, grade, 0, owned == null);
   }
 
   /**
@@ -313,7 +332,19 @@ class MentalEngine {
                 text().weapons().get(d.kind),
                 d.grade,
                 text().weaponGrades().get(d.grade),
-                c.lastWeaponDrawNew));
+                c.lastWeaponDrawNew),
+        (c.lastWeaponDraws == null ? List.<CompanyState.Pulled>of() : c.lastWeaponDraws)
+            .stream()
+                .filter(x -> validWeapon(x.kind, x.grade))
+                .map(
+                    x ->
+                        new CompanyView.WeaponDraw(
+                            x.kind,
+                            text().weapons().get(x.kind),
+                            x.grade,
+                            text().weaponGrades().get(x.grade),
+                            x.isNew))
+                .toList());
   }
 
   /** 가진 무기 가운데 하나를 든다 (346번). 없는 종류·등급이거나 안 가진 무기면 400. */

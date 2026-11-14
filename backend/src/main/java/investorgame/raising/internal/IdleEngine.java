@@ -458,20 +458,35 @@ class IdleEngine {
 
   /** Cat gacha (decisions.md 488, 493): one ticket for one cat. A duplicate levels it up. */
   void drawCat(CompanyState c, SeededRandom random) {
+    drawCats(c, random, 1);
+  }
+
+  /** Ten-pull (517): count tickets for count cats, all or nothing. */
+  void drawCats(CompanyState c, SeededRandom random, int count) {
     CompanyState.Idle s = state(c);
-    if (c.weaponTickets <= 0) {
-      throw new InvalidRequestException("뽑기권이 없다");
+    if (count < 1) {
+      throw new InvalidRequestException("뽑을 수가 1보다 작다");
     }
-    c.weaponTickets--;
-    s.catDraws++;
-    int roll =
-        random.forKey("cat-draw", s.catDraws).nextInt(java.util.Arrays.stream(CAT_WEIGHTS).sum());
-    int cat = 0;
-    while (roll >= CAT_WEIGHTS[cat]) roll -= CAT_WEIGHTS[cat++];
-    String code = CATS.get(cat);
-    if (s.cats.merge(code, 1, Integer::sum) == 1 && s.fielded.size() < FIELD_SLOTS) {
-      s.fielded.add(code);
+    if (c.weaponTickets < count) {
+      throw new InvalidRequestException(
+          c.weaponTickets <= 0 ? "뽑기권이 없다" : "뽑기권이 " + count + "장 있어야 한다");
     }
+    List<CompanyState.Pulled> drawn = new ArrayList<>();
+    for (int i = 0; i < count; i++) {
+      c.weaponTickets--;
+      s.catDraws++;
+      int roll =
+          random.forKey("cat-draw", s.catDraws).nextInt(java.util.Arrays.stream(CAT_WEIGHTS).sum());
+      int cat = 0;
+      while (roll >= CAT_WEIGHTS[cat]) roll -= CAT_WEIGHTS[cat++];
+      String code = CATS.get(cat);
+      int level = s.cats.merge(code, 1, Integer::sum);
+      if (level == 1 && s.fielded.size() < FIELD_SLOTS) {
+        s.fielded.add(code);
+      }
+      drawn.add(new CompanyState.Pulled(code, null, level, level == 1));
+    }
+    s.lastDraws = drawn;
   }
 
   /** 테스트판 (decisions.md 499번): 고른 벽 앞에 바로 선다. 그 벽은 새 벽이고 거래 정지와 쌓인 피해는 지운다. */
@@ -626,6 +641,11 @@ class IdleEngine {
                                 0,
                                 s.activeReady.getOrDefault(ACTIVES.get(i), 0.0) - s.activeSeconds)
                             / SPEED))
-            .toList());
+            .toList(),
+        (s.lastDraws == null ? List.<CompanyState.Pulled>of() : s.lastDraws)
+            .stream()
+                .filter(d -> CATS.contains(d.kind))
+                .map(d -> new CompanyView.CatDraw(d.kind, d.level, d.isNew))
+                .toList());
   }
 }

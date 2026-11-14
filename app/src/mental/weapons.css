@@ -36,6 +36,20 @@
   padding: 6px 16px;
   font-size: 16px;
 }
+.weapon-draw-row p {
+  margin-right: auto;
+}
+/* 10연속 (517번): 같은 줄에 한 번 뽑기 옆에 둔다. */
+.weapon-draw-ten {
+  padding: 4px 12px;
+  line-height: 1.1;
+  background: #ff9f43;
+}
+.weapon-draw-ten small {
+  display: block;
+  font-size: 9px;
+  font-family: "Noto Sans KR", sans-serif;
+}
 .weapon-actions {
   display: flex;
   gap: 6px;

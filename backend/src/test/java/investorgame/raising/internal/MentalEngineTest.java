@@ -359,6 +359,39 @@ class MentalEngineTest {
   }
 
   @Test
+  void 무기_10연속_뽑기는_열_장을_쓰고_나온_차례대로_남기며_모자라면_하나도_뽑지_않는다() {
+    CompanyState c = company(5);
+    c.weaponTickets = 9;
+    assertThatThrownBy(() -> ENGINE.mental.drawWeapons(c, new HashSeededRandom(5), 10))
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(c.weaponTickets).isEqualTo(9);
+    assertThat(c.lastWeaponDraws).isEmpty();
+
+    c.weaponTickets = 10;
+    int before = c.weapons.stream().mapToInt(w -> w.count).sum();
+    ENGINE.mental.drawWeapons(c, new HashSeededRandom(5), 10);
+    assertThat(c.weaponTickets).isZero();
+    assertThat(c.lastWeaponDraws).hasSize(10);
+    assertThat(c.weapons.stream().mapToInt(w -> w.count).sum()).isEqualTo(before + 10);
+    var last = c.lastWeaponDraws.getLast();
+    assertThat(c.lastWeaponDraw.same(last.kind, last.grade)).isTrue();
+    var view = ENGINE.mental.armoryView(c);
+    assertThat(view.lastDraws()).hasSize(10);
+    // 같은 무기가 두 번 나오면 두 번째는 새것이 아니다.
+    java.util.Set<String> seen = new java.util.HashSet<>();
+    for (var d : view.lastDraws()) {
+      assertThat(d.isNew())
+          .isEqualTo(
+              seen.add(d.kind() + d.grade())
+                  && !(d.kind().equals(MentalEngine.PISTOL) && d.grade().equals("F")));
+    }
+
+    c.weaponTickets = 1;
+    ENGINE.mental.drawWeapon(c, new HashSeededRandom(5));
+    assertThat(c.lastWeaponDraws).hasSize(1);
+  }
+
+  @Test
   void 뽑기의_모든_가중치_구간은_A_이하이고_상위_등급은_합성_전용이다() {
     assertThat(MentalEngine.DRAW_GRADES).containsExactly("F", "E", "D", "C", "B", "A");
     assertThat(PROPERTIES.mental().weaponGacha().gradeWeights().keySet())

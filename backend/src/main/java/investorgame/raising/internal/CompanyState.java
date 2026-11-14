@@ -51,6 +51,9 @@ class CompanyState {
 
     int catDraws;
 
+    /** 마지막 고양이 뽑기(한 번 또는 10연속, 517번)에서 나온 고양이, 나온 차례대로. kind는 비고 grade 대신 level을 쓴다. */
+    List<Pulled> lastDraws = new ArrayList<>();
+
     /** 액티브 스킬 (503번): 코드 → 다시 쓸 수 있게 되는 활성 시간(activeSeconds). */
     Map<String, Double> activeReady = new LinkedHashMap<>();
 
@@ -275,6 +278,9 @@ class CompanyState {
   Weapon lastWeaponDraw;
 
   boolean lastWeaponDrawNew;
+
+  /** 마지막 뽑기(한 번 또는 10연속, 517번)에서 나온 무기, 나온 차례대로. 옛 저장은 비어 있다. */
+  List<Pulled> lastWeaponDraws = new ArrayList<>();
 
   /** 이 회사에서 이미 나온 뉴스. 투자 회의에 같은 뉴스가 다시 나오지 않는다(다 쓰면 비운다). */
   List<String> usedNews = new ArrayList<>();
@@ -583,6 +589,25 @@ class CompanyState {
     boolean firstClear;
     long capital;
     int tickets;
+  }
+
+  /** 뽑기에서 나온 것 하나 (517번): 무기면 종류·등급, 고양이면 코드(kind)와 그때의 레벨. 새로 얻었으면 isNew. */
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class Pulled {
+    String kind;
+    String grade;
+    int level;
+    boolean isNew;
+
+    Pulled() {}
+
+    Pulled(String kind, String grade, int level, boolean isNew) {
+      this.kind = kind;
+      this.grade = grade;
+      this.level = level;
+      this.isNew = isNew;
+    }
   }
 
   /** 무기 하나 (decisions.md 346번): 종류(pistol·revolver·smg·shotgun·rifle)와 등급(F·E·D·C·B·A·S). */

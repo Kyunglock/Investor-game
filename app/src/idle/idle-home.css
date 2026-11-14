@@ -953,3 +953,10 @@ button.idle-cat-gun {
   background: #2b234033;
   pointer-events: none;
 }
+/* 10연속 (517번): 한 번 뽑기 옆. */
+.idle-cat-gacha .idle-buy {
+  min-width: 70px;
+}
+.idle-buy-ten {
+  background: linear-gradient(#ffc98a, #ff9f43);
+}

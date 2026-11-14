@@ -293,3 +293,90 @@
 .cat-reveal .weapon-case b {
   font-size: 34px;
 }
+
+/* 10연속 뽑기 (decisions.md 517번): 상자가 열리면 열 장이 5 × 2로 차례로 뒤집힌다. */
+.ten-reveal-result {
+  text-align: center;
+  padding: 8px 0;
+}
+.ten-reveal-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0 0 4px;
+  padding: 0;
+  list-style: none;
+}
+.ten-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 6px 2px 7px;
+  border: 1.5px solid var(--card-color);
+  border-radius: 10px;
+  background: #ffffff0d;
+  animation: ten-card-flip 0.38s ease-out both;
+}
+.ten-card[data-power="2"],
+.ten-card[data-power="3"] {
+  background: radial-gradient(
+    circle at 50% 35%,
+    color-mix(in srgb, var(--card-color) 35%, transparent),
+    #ffffff0d 70%
+  );
+  box-shadow: 0 0 14px var(--card-color);
+}
+.ten-card-badge {
+  font-size: 10px;
+  font-weight: 900;
+  color: var(--card-color);
+  white-space: nowrap;
+}
+.ten-card-art {
+  display: grid;
+  place-items: center;
+  height: 50px;
+  width: 100%;
+  filter: drop-shadow(0 0 6px var(--card-color));
+}
+.ten-card-art .idle-cat-portrait {
+  width: 46px;
+  height: 46px;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 40%, #fff8e2, #f3dcae);
+}
+.ten-card-name {
+  width: 100%;
+  font-size: 11px;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ten-card-note {
+  font-size: 9px;
+  color: #d5cee1;
+  white-space: nowrap;
+}
+.ten-card[data-new="true"] .ten-card-note {
+  color: var(--card-color);
+  font-weight: 800;
+}
+@keyframes ten-card-flip {
+  from {
+    opacity: 0;
+    transform: rotateY(90deg) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (max-width: 360px) {
+  .ten-reveal-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

@@ -7,11 +7,16 @@ import { sfx } from '../fx/sound'
 import { CatPortrait } from '../idle/CatPortrait'
 import { GunSprite } from './GunSprite'
 import { DEFAULT_WEAPON, type Weapon } from './hero'
+import { type TenCard, TenReveal } from './TenReveal'
 import { type DrawResult, WeaponReveal } from './WeaponReveal'
 import { FIRE_STYLE_NAMES, SHOT_WEIGHT, WEAPON_EFFECTS } from './weaponEffects'
+import { weaponRevealPlan } from './weaponRevealPlan'
 import './weapons.css'
 
 type Armory = NonNullable<Company['armory']>
+
+/** 10연속 뽑기 (517번): 뽑기권 열 장으로 열 개. */
+export const TEN = 10
 
 /** 합칠 수 있는 등급: 가장 높은 등급(LR)은 못 합친다 (366번). */
 type MergeGrade = Exclude<Weapon['grade'], 'LR'>
@@ -53,6 +58,7 @@ export function WeaponInventory({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
   const [reveal, setReveal] = useState<{ id: number; result: DrawResult | null } | null>(null)
+  const [ten, setTen] = useState<{ id: number; cards: TenCard[] | null } | null>(null)
   const [dropped, setDropped] = useState<string | null>(null)
   const drawing = useRef(false)
   const mounted = useRef(true)
@@ -86,6 +92,53 @@ export function WeaponInventory({ company }: { company: Company }) {
         setReveal(!state.error && last && weapon ? { id, result: { draw: last, weapon } } : null)
     } catch {
       if (mounted.current) setReveal(null)
+    } finally {
+      drawing.current = false
+    }
+  }
+  // 10연속 (517번): 열 장을 한 번에 쓰고, 상자가 열리면 열 개가 차례로 나온다.
+  const drawTen = async () => {
+    if (
+      drawing.current ||
+      useRaisingStore.getState().busy ||
+      ended ||
+      !armory ||
+      armory.tickets < TEN
+    )
+      return
+    drawing.current = true
+    const id = Date.now()
+    setReveal(null)
+    setTen({ id, cards: null })
+    sfx.stamp()
+    try {
+      await useRaisingStore.getState().drawWeapon(TEN)
+      const state = useRaisingStore.getState()
+      const draws = state.company?.armory?.lastDraws ?? []
+      if (!mounted.current) return
+      setTen(
+        !state.error && draws.length === TEN
+          ? {
+              id,
+              cards: draws.map((d, i) => {
+                const plan = weaponRevealPlan(d.grade)
+                return {
+                  key: `${i}-${d.kind}-${d.grade}`,
+                  art: <GunSprite kind={d.kind} grade={d.grade} width={58} />,
+                  badge: `${d.gradeName} 등급`,
+                  name: d.name,
+                  note: d.isNew ? 'NEW!' : '재료 +1',
+                  isNew: d.isNew,
+                  color: plan.color,
+                  power: plan.power,
+                  sound: d.grade,
+                }
+              }),
+            }
+          : null,
+      )
+    } catch {
+      if (mounted.current) setTen(null)
     } finally {
       drawing.current = false
     }
@@ -239,10 +292,20 @@ export function WeaponInventory({ company }: { company: Company }) {
           type="button"
           className="weapon-draw"
           data-testid="weapon-draw"
-          disabled={busy || Boolean(reveal) || ended || !armory || armory.tickets <= 0}
+          disabled={busy || Boolean(reveal || ten) || ended || !armory || armory.tickets <= 0}
           onClick={() => void draw()}
         >
           무기 뽑기
+        </button>
+        <button
+          type="button"
+          className="weapon-draw weapon-draw-ten"
+          data-testid="weapon-draw-ten"
+          disabled={busy || Boolean(reveal || ten) || ended || !armory || armory.tickets < TEN}
+          onClick={() => void drawTen()}
+        >
+          10연속
+          <small>뽑기권 {TEN}장</small>
         </button>
       </div>
       <p className="mt-2 text-[11px] text-muted">뽑기 F~A · S 이상은 합성으로 획득 · 최고 LR</p>
@@ -253,6 +316,20 @@ export function WeaponInventory({ company }: { company: Company }) {
           tickets={armory?.tickets ?? 0}
           onClose={() => setReveal(null)}
           onAgain={() => void draw()}
+        />
+      )}
+      {ten && (
+        <TenReveal
+          key={ten.id}
+          label="무기 10연속 뽑기"
+          testId="weapon-ten"
+          icon="★"
+          loading="무기 열 개를 가져오는 중…"
+          cards={ten.cards}
+          canAgain={(armory?.tickets ?? 0) >= TEN}
+          againNote={`뽑기권 ${armory?.tickets ?? 0}장`}
+          onClose={() => setTen(null)}
+          onAgain={() => void drawTen()}
         />
       )}
       <p className="mt-3 text-[12px] text-muted">

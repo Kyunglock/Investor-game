@@ -12,7 +12,20 @@
     <title>흔들리지 않는 고양이</title>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- 로딩 화면 (decisions.md 517번): 스크립트가 내려오는 동안 보이고, 앱이 그리면 LoadingScreen으로 바뀐다. -->
+    <div id="root">
+      <div
+        style="display:grid;place-items:center;height:100dvh;color:#2b2340;font-family:sans-serif;text-align:center;background:linear-gradient(180deg,#8fd6ff 0%,#b9ecf2 60%,#c9f3df 100%)"
+      >
+        <div style="width:min(100% - 32px,320px)">
+          <p style="margin:0;font-size:22px;font-weight:700">흔들리지 않는<br /><b style="font-size:42px;color:#ffb547">고양이</b></p>
+          <div style="margin-top:24px;height:12px;border:2px solid #2b2340;border-radius:99px;background:#fffaf0;overflow:hidden">
+            <div style="width:20%;height:100%;background:#ffd23f"></div>
+          </div>
+          <p style="margin-top:12px;font-size:14px">게임을 준비하는 중…</p>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

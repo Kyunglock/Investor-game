@@ -542,9 +542,9 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView drawWeapon(UUID sessionId) {
+  public CompanyView drawWeapon(UUID sessionId, int count) {
     CompanyRepository.Row row = lockActive(sessionId);
-    engine.mental.drawWeapon(row.state(), new HashSeededRandom(row.seed()));
+    engine.mental.drawWeapons(row.state(), new HashSeededRandom(row.seed()), count);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }
@@ -561,9 +561,9 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView drawCat(UUID sessionId) {
+  public CompanyView drawCat(UUID sessionId, int count) {
     CompanyRepository.Row row = lockActive(sessionId);
-    idle.drawCat(row.state(), new HashSeededRandom(row.seed()));
+    idle.drawCats(row.state(), new HashSeededRandom(row.seed()), count);
     companies.update(row.id(), row.state(), false);
     return view(row);
   }

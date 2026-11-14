@@ -418,9 +418,9 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 무기 뽑기권 한 장으로 무기 하나를 뽑는다 (decisions.md 366번)
+         * 무기 뽑기권 한 장에 무기 하나, 10연속이면 열 개를 뽑는다 (decisions.md 366·517번)
          * @description 등급은 F 450·E 260·D 150·C 80·B 40·A 17·S 3의 가중치로, 종류는 등급에 따라 정한다. 이미 가진 종류·등급이면 그 무기의 수가 하나 늘어 무기 합성 재료가 된다.
-         *     결과는 armory.lastDraw에 담긴다. 뽑기권이 없으면 400.
+         *     결과는 armory.lastDraw에, 한꺼번에 뽑은 것은 armory.lastDraws에 차례대로 담긴다. 뽑기권이 count장보다 적으면 하나도 뽑지 않고 400.
          */
         post: operations["drawWeapon"];
         delete?: never;
@@ -460,9 +460,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 뽑기권 한 장으로 고양이 한 마리를 뽑는다 (decisions.md 488·493번)
+         * 뽑기권 한 장에 고양이 한 마리, 10연속이면 열 마리를 뽑는다 (decisions.md 488·493·517번)
          * @description 무기 뽑기와 같은 뽑기권(armory.tickets)을 한 장 쓴다. 고양이는 여섯이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
-         *     이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 뽑기권이 없으면 400.
+         *     이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 나온 고양이는 idle.lastDraws에 차례대로 담긴다.
+         *     뽑기권이 count장보다 적으면 하나도 뽑지 않고 400.
          */
         post: operations["drawCat"];
         delete?: never;
@@ -1289,6 +1290,15 @@ export interface components {
                     hp: number;
                     maxHp: number;
                 }[];
+                /** @description 마지막 고양이 뽑기(한 번 또는 10연속, 517번)에서 나온 고양이, 나온 차례대로 */
+                lastDraws?: {
+                    /** @enum {string} */
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow";
+                    /** @description 나온 직후의 레벨. 10연속에서 같은 고양이가 또 나오면 차례로 오른다 */
+                    level: number;
+                    /** @description 처음 얻은 고양이 */
+                    isNew: boolean;
+                }[];
                 /** @description 액티브 스킬 (decisions.md 503번). 눌러서 쓴다. 시간은 화면에서 흐르는 실제 초다 */
                 actives?: {
                     /** @enum {string} */
@@ -1411,6 +1421,16 @@ export interface components {
                     /** @description 새로 얻었다. 이미 가진 종류·등급이면 거짓(그 무기의 수가 하나 는다) */
                     isNew: boolean;
                 } | null;
+                /** @description 마지막 뽑기(한 번 또는 10연속, 517번)에서 나온 무기, 나온 차례대로. 같은 무기가 두 번 나오면 두 번째는 isNew가 거짓 */
+                lastDraws: {
+                    /** @enum {string} */
+                    kind: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
+                    name: string;
+                    /** @enum {string} */
+                    grade: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "SR" | "UR" | "LR";
+                    gradeName: string;
+                    isNew: boolean;
+                }[];
             };
         };
         /** @description 분기 하나의 실적 (decisions.md 268번) */
@@ -2095,7 +2115,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description 한꺼번에 뽑을 수(10연속 */
+                    count?: number;
+                };
+            };
+        };
         responses: {
             /** @description 뽑은 뒤의 회사 */
             200: {
@@ -2150,7 +2177,14 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description 한꺼번에 뽑을 수(10연속 */
+                    count?: number;
+                };
+            };
+        };
         responses: {
             /** @description 뽑은 뒤의 회사 */
             200: {
