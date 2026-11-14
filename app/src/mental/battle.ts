@@ -1093,7 +1093,9 @@ class BattleScene extends Phaser.Scene {
     }
     while (this.mates.length < want) this.addMate()
     this.damageStats.mates = this.mates.length
-    const awake = awakenedMateCount(this.loadout)
+    // 자동 전투에서는 출전한 고양이가 모두 제 스킬을 쓴다 (501번).
+    const own = this.loadout.mateMagic
+    const awake = own ? this.mates.length : awakenedMateCount(this.loadout)
     this.casters.length = Math.min(this.casters.length, 1 + awake)
     while (this.casters.length < 1 + awake) {
       const index = this.casters.length - 1
@@ -1101,6 +1103,7 @@ class BattleScene extends Phaser.Scene {
       const clock = new MagicClock()
       for (const magic of MAGICS) clock.ready(magic, this.elapsed + (index + 1) * CAST_STAGGER)
       this.casters.push({ mate: index, at: () => ({ x: mate.body.x, y: mate.body.y - 24 }), clock })
+      if (own) continue
       this.ring(mate.body.x, mate.body.y, 0xc7a4ff, 64, 500)
       this.glow(mate.body.x, mate.body.y - 24, 0xc7a4ff, 80, 500, 0.8)
       this.pop(
@@ -3422,9 +3425,13 @@ class BattleScene extends Phaser.Scene {
 
   /** 시전자마다 주기가 된 마법을 쏜다. 노릴 적이 없거나 풀이 다 날고 있으면 잠시 뒤 다시 본다. */
   private castMagic() {
+    // 자동 전투 (501번): 고양이는 제 고유 스킬만 쓰고 사장냥은 쓰지 않는다.
+    const own = this.loadout.mateMagic
     for (const caster of this.casters) {
       if (caster.mate !== undefined && this.mates[caster.mate].drop !== 0) continue
+      if (own && caster.mate === undefined) continue
       for (const m of MAGICS) {
+        if (own && caster.mate !== undefined && own[caster.mate] !== m) continue
         const level = this.loadout[m]
         if (!caster.clock.due(m, level, this.elapsed)) continue
         const from = caster.at()

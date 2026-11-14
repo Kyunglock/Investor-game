@@ -5,10 +5,20 @@ import { idleLoadout } from './loadout'
 type Cat = {
   code: string
   fielded: boolean
+  skill?: string
   damagePercent?: number
   firePercent?: number
   criticalPercent?: number
   weapon?: object | null
+}
+
+const SKILLS: Record<string, string> = {
+  sky: 'meteor',
+  mint: 'water',
+  lilac: 'bolt',
+  sunset: 'ram',
+  night: 'meteor',
+  snow: 'water',
 }
 
 const company = (owned: string[], cats: Cat[] = [], bonus = 0) =>
@@ -19,6 +29,8 @@ const company = (owned: string[], cats: Cat[] = [], bonus = 0) =>
         owned: owned.includes(code),
       })),
       cats: cats.map((cat) => ({
+        // 고양이마다 고유 스킬이 하나다 (서버 IdleEngine CAT_SKILL, 501번).
+        skill: SKILLS[cat.code],
         damagePercent: 50,
         firePercent: 100,
         criticalPercent: 100,
@@ -44,24 +56,28 @@ describe('방치형 전투 획득 상태', () => {
       mateGuns: [],
     })
   })
-  it('스킬은 고양이와 상관없이, 고양이는 출전한 만큼만 전투에 연결한다 (488·491번)', () => {
-    expect(
-      idleLoadout(
-        company(
-          ['water', 'meteor'],
-          [
-            { code: 'sky', fielded: true },
-            { code: 'mint', fielded: false },
-          ],
-        ),
+  it('스킬은 고양이의 고유 능력이다: 출전한 고양이의 스킬만 그 고양이가 쓴다 (501번)', () => {
+    const loadout = idleLoadout(
+      company(
+        ['meteor', 'bolt'],
+        [
+          { code: 'sky', fielded: true },
+          { code: 'mint', fielded: false },
+          { code: 'lilac', fielded: true },
+        ],
       ),
-    ).toMatchObject({ water: 1, meteor: 1, lightning: 0, earth: 0, mates: 1 })
+    )
+    expect(loadout).toMatchObject({ water: 0, meteor: 1, lightning: 1, earth: 0, mates: 2 })
+    // 줄 선 차례대로 그 고양이의 마법 하나. 쉬는 민트냥의 물은 없다.
+    expect(loadout.mateMagic).toEqual(['meteor', 'lightning'])
+    // 고양이가 없으면 스킬도 없다: 벽을 아무리 돌파해도 사장냥은 스킬을 쓰지 않는다.
     expect(idleLoadout(company(['water', 'meteor', 'bolt', 'ram']))).toMatchObject({
-      water: 1,
-      meteor: 1,
-      lightning: 1,
-      earth: 1,
+      water: 0,
+      meteor: 0,
+      lightning: 0,
+      earth: 0,
       mates: 0,
+      mateMagic: [],
     })
   })
   it('영구 강화가 무기 피해에 반영된다', () => {

@@ -1251,8 +1251,6 @@ export interface components {
                 /** Format: int64 */
                 earned: number;
                 boss: boolean;
-                /** Format: int64 */
-                nextUnlock: number;
                 /** @description 서킷브레이커 잔여 게임 시간. 기본 2배속이며 거래 정지 중에는 공격과 보상이 멈춤 */
                 circuitSeconds?: number;
                 /**
@@ -1267,18 +1265,18 @@ export interface components {
                     hp: number;
                     maxHp: number;
                 }[];
+                /** @description 스킬 넷(물·메테오·번개·충차). 스킬은 고양이의 고유 능력이다 (decisions.md 501번) */
                 skills: {
                     code: string;
                     name: string;
-                    /** Format: int64 */
-                    unlockWall: number;
+                    /** @description 지금 발동 중이다. 이 스킬을 가진 고양이가 출전해 있다 */
                     owned: boolean;
                 }[];
                 /** @description 한 번에 출전하는 고양이 수 (492·493번 */
                 fieldSlots: number;
                 /** @description 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 */
                 wallDps: number;
-                /** @description 고양이 (488·491번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏜다. 스킬과는 상관없다 */
+                /** @description 고양이 (488·501번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏘고 제 스킬을 쓴다 */
                 cats: {
                     /** @enum {string} */
                     code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow";
@@ -1292,6 +1290,12 @@ export interface components {
                     /** @description 이 고양이 총의 치명타 배율(%). 특성이 없으면 100 */
                     criticalPercent: number;
                     fielded: boolean;
+                    /**
+                     * @description 이 고양이의 고유 스킬 (501번). 출전해 있는 동안 발동한다
+                     * @enum {string}
+                     */
+                    skill: "water" | "meteor" | "bolt" | "ram";
+                    skillName: string;
                     /** @description 든 무기. 없으면 null(기본 권총을 쏜다) */
                     weapon: {
                         /** @enum {string} */

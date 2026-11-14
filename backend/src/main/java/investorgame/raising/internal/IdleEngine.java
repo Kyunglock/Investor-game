@@ -22,9 +22,8 @@ class IdleEngine {
   // next beat only after the last answer, and dropping those hits refilled the wall. A longer
   // silence is a closed or sleeping app and pays nothing.
   private static final long GRACE_MS = 10_000;
-  // Attack kinds after the bullet (kind 0): skills, unlocked by wall. Cats are separate and only
-  // add their own guns (decisions.md 488, 491).
-  private static final long[] UNLOCKS = {5, 15, 30, 50};
+  // Attack kinds after the bullet (kind 0): skills. Each cat has one as its own ability and casts
+  // it while fielded (decisions.md 501). Walls no longer unlock skills.
   // The acquired skills are level 1 in the renderer (mental/magic.ts).
   private static final double[] COOLDOWNS = {2.4, 3.6, 2.6, 3.6};
   private static final double[] SKILL_DAMAGE = {1.5, 4.8, 2.5, 1.2 * 3.4};
@@ -38,6 +37,11 @@ class IdleEngine {
   private static final double[] CAT_FIRE = {1.25, 1, 1, 1.1, 1, 1.4};
   private static final double[] CAT_DAMAGE = {1, 1.25, 1, 1.1, 1.1, 1};
   private static final double[] CAT_CRITICAL = {1, 1, 1.5, 1, 1.25, 1};
+  // Each cat's own skill, as an index into CODES (501): sky meteor, mint water, lilac bolt,
+  // sunset ram, night meteor, snow water. Matches the app's idle/loadout.ts CAT_SKILLS.
+  private static final int[] CAT_SKILL = {1, 0, 2, 3, 1, 0};
+  private static final long[] OLD_UNLOCKS = {5, 15, 30, 50};
+  private static final String[] OLD_SKILL_CATS = {"mint", "sky", "lilac", "sunset"};
   // Cats used to join at these walls. Saves from then keep them.
   private static final long[] CAT_LEGACY_WALLS = {15, 50};
   private static final int FIELD_SLOTS = 4;
@@ -85,6 +89,20 @@ class IdleEngine {
           c.idle.fielded.add(CATS.get(i));
         }
       }
+    }
+    if (!c.idle.catSkills) {
+      // Skills used to unlock at these walls (water, meteor, bolt, ram). A save that had one keeps
+      // it as a cat with that skill, fielded while a slot is free (501).
+      for (int i = 0; i < OLD_UNLOCKS.length; i++) {
+        int skill = i;
+        boolean has =
+            c.idle.cats.keySet().stream().anyMatch(k -> CAT_SKILL[CATS.indexOf(k)] == skill);
+        if (c.idle.wall > OLD_UNLOCKS[i] && !has) {
+          c.idle.cats.put(OLD_SKILL_CATS[i], 1);
+          if (c.idle.fielded.size() < FIELD_SLOTS) c.idle.fielded.add(OLD_SKILL_CATS[i]);
+        }
+      }
+      c.idle.catSkills = true;
     }
     return c.idle;
   }
@@ -184,12 +202,21 @@ class IdleEngine {
     for (Shooter shooter : shooters) {
       total += shooter.damage() * shooter.perSecond() * shooter.power() / 1.25;
     }
+    int[] casters = casters(s);
     for (int i = 0; i < CODES.length; i++) {
-      if (s.wall > UNLOCKS[i]) {
-        total += shooters.size() * shooters.getFirst().damage() * SKILL_DAMAGE[i] / COOLDOWNS[i];
-      }
+      total += casters[i] * shooters.getFirst().damage() * SKILL_DAMAGE[i] / COOLDOWNS[i];
     }
     return SPEED * total;
+  }
+
+  /** How many fielded cats cast each skill (501). A resting cat's skill does nothing. */
+  private static int[] casters(CompanyState.Idle s) {
+    int[] casters = new int[CODES.length];
+    for (String code : s.fielded) {
+      int cat = CATS.indexOf(code);
+      if (cat >= 0) casters[CAT_SKILL[cat]]++;
+    }
+    return casters;
   }
 
   private void tick(CompanyState c, double seconds, List<IdleHit> hits) {
@@ -217,13 +244,14 @@ class IdleEngine {
       bulletsPerSecond += shooter.perSecond() / BULLET_WEIGHT;
     }
     long front = s.wall;
+    int[] casters = casters(s);
     double dealt = 0;
     for (int kind = 0; kind < 5 && active > 0; kind++) {
-      if (kind > 0 && front <= UNLOCKS[kind - 1]) continue;
+      if (kind > 0 && casters[kind - 1] == 0) continue;
       double damage =
           hero.damage() * (kind == 0 ? BULLET_WEIGHT * hero.power() : SKILL_DAMAGE[kind - 1]);
       double maxDamage = kind == 0 ? bulletMax : damage;
-      double interval = kind == 0 ? 1 / bulletsPerSecond : COOLDOWNS[kind - 1] / shooters.size();
+      double interval = kind == 0 ? 1 / bulletsPerSecond : COOLDOWNS[kind - 1] / casters[kind - 1];
       s.hitCredits[kind] =
           Math.min(
               Math.max(2, SPEED * GRACE_MS / 1000 / interval),
@@ -381,17 +409,11 @@ class IdleEngine {
 
   CompanyView.Idle view(CompanyState c) {
     CompanyState.Idle s = state(c);
+    int[] casters = casters(s);
     List<CompanyView.IdleSkill> skills =
         java.util.stream.IntStream.range(0, CODES.length)
-            .mapToObj(
-                i -> new CompanyView.IdleSkill(CODES[i], NAMES[i], UNLOCKS[i], s.wall > UNLOCKS[i]))
+            .mapToObj(i -> new CompanyView.IdleSkill(CODES[i], NAMES[i], casters[i] > 0))
             .toList();
-    long next =
-        skills.stream()
-            .filter(skill -> !skill.owned())
-            .mapToLong(CompanyView.IdleSkill::unlockWall)
-            .findFirst()
-            .orElse(0);
     List<CompanyView.IdleCat> cats =
         CATS.stream()
             .map(
@@ -407,7 +429,9 @@ class IdleEngine {
                       (int) Math.round(100 * CAT_FIRE[cat]),
                       (int) Math.round(100 * CAT_CRITICAL[cat]),
                       s.fielded.contains(code),
-                      weapon == null ? null : new CompanyView.CatWeapon(weapon.kind, weapon.grade));
+                      weapon == null ? null : new CompanyView.CatWeapon(weapon.kind, weapon.grade),
+                      CODES[CAT_SKILL[cat]],
+                      NAMES[CAT_SKILL[cat]]);
                 })
             .toList();
     return new CompanyView.Idle(
@@ -418,7 +442,6 @@ class IdleEngine {
         s.earned,
         s.wall % 10 == 0,
         skills,
-        next,
         cats,
         FIELD_SLOTS,
         SPEED * s.wallDps,
