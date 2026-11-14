@@ -105,6 +105,7 @@ import { type GameSpeed, simScale } from './gameSpeed'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
 import { DEFAULT_WEAPON, type Hero, type Weapon } from './hero'
 import { BULLET_W, bulletHitbox } from './hitbox'
+import { idlePierceHits } from './idlePierce'
 import { IdleWallQueueFx, idleWallLayout } from './idleWallQueue'
 import {
   densest,
@@ -532,6 +533,10 @@ class BattleScene extends Phaser.Scene {
   private readonly assault: AssaultSpec | null
   private walls: WallState[] = []
   private idleQueue?: IdleWallQueueFx
+  /** 뒤 벽으로 뚫고 가는 총알의 그림(520번)과, 뒤 벽마다 피해 숫자를 합치는 열쇠. */
+  private pierceShots: Phaser.GameObjects.Image[] = []
+  private pierceIndex = 0
+  private pierceOwners = [{}, {}]
   private idleWall = 0
   /** 지금 벽에 방금 맞힌 피해(실제 ms와 양). 서버 값이 따라올 때까지 화면의 벽 체력에서 먼저 뺀다 (493번). */
   /** 먼저 빼 둔 명중. sequence는 실려 나간 접속 신호의 순번이고, 아직 안 나갔으면 없다 (496번). */
@@ -923,6 +928,8 @@ class BattleScene extends Phaser.Scene {
         this.slow(enemy, SLOW_FACTOR, SLOW_SECONDS)
       }
       this.hit(enemy, shot.damage, angle, shot.crit ? 'crit' : 'bullet')
+      // 매도벽 돌파: 벽을 맞힌 총알은 뒤의 두 벽까지 뚫고 간다 (520번). 폭발(아래 splash)은 맨 앞 벽만 맞는다.
+      if (enemy.cell) this.pierceIdleWalls(bullet, bx, by, shot.damage, shot.crit)
       // 산탄총은 맞은 적을 밀어낸다 (#587). 보스·매도벽은 밀리지 않는다.
       const push = WEAPON_TRAITS[kind].knockback
       if (push > 0 && !enemy.boss && !enemy.cell && !enemy.dying) {
@@ -1074,6 +1081,12 @@ class BattleScene extends Phaser.Scene {
       if (this.opts.idle) {
         this.idleWall = this.opts.idle().wall
         this.idleQueue = new IdleWallQueueFx(this)
+        this.pierceShots = Array.from({ length: 16 }, () =>
+          this.add
+            .image(0, 0, `bullet-${this.opts.hero.weapon.grade}-0`)
+            .setDepth(6.4)
+            .setVisible(false),
+        )
       }
       this.addWall(
         0,
@@ -2812,10 +2825,24 @@ class BattleScene extends Phaser.Scene {
    * 글자 크기는 하나로 두고 종류별 크기는 배율로만 바꿔, 글자나 색이 바뀔 때만 한 번 다시 그린다.
    */
   private damageNumber(e: Enemy, amount: number, kind: DamageKind) {
+    // 머리 위: 충돌 원 반지름(텍스처 px)에 지금 크기를 곱한다. 부푼 투기·큰 보스도 머리 위에 뜬다.
+    const r = UNITS[e.kind].r * DPR * Math.abs(e.scaleY)
+    this.damageNumberAt(e, e.x, e.y - r - 10, amount, kind, e.hp <= 0)
+  }
+
+  /** 데미지 숫자를 owner(같은 것끼리 합친다)의 (ox, oy) 자리에 띄운다. 적이 아닌 것(자동 전투의 뒤 벽, 520번)도 쓴다. */
+  private damageNumberAt(
+    owner: object,
+    ox: number,
+    oy: number,
+    amount: number,
+    kind: DamageKind,
+    killing = false,
+  ) {
     if (amount <= 0) return
     const style = DAMAGE_STYLE[kind]
     const pool = kind === 'crit' ? this.crits : this.damage
-    const { slot, merged, n } = pool.take(e, kind, amount, this.time.now)
+    const { slot, merged, n } = pool.take(owner, kind, amount, this.time.now)
     const t = slot.item
     const label = damageLabel(kind, slot.total, Boolean(this.assault))
     if (t.style.color !== style.color) {
@@ -2825,7 +2852,7 @@ class BattleScene extends Phaser.Scene {
     }
     t.setText(label)
     const stats = this.damageStats
-    if (e.hp <= 0) stats.killing++
+    if (killing) stats.killing++
     if (merged) {
       // 합친 숫자는 제자리에서 한 번 더 튄다. 떠오르며 사라지는 트윈은 처음 뜬 때 그대로라 오래 남지 않는다.
       stats.merged++
@@ -2838,10 +2865,8 @@ class BattleScene extends Phaser.Scene {
     this.tweens.killTweensOf(t)
     const { w } = this.view()
     const { dx, dy } = scatterOffset(n)
-    // 머리 위: 충돌 원 반지름(텍스처 px)에 지금 크기를 곱한다. 부푼 투기·큰 보스도 머리 위에 뜬다.
-    const r = UNITS[e.kind].r * DPR * Math.abs(e.scaleY)
-    const x = Phaser.Math.Clamp(e.x + dx, 16, w - 16)
-    const y = e.y - r - 10 + dy
+    const x = Phaser.Math.Clamp(ox + dx, 16, w - 16)
+    const y = oy + dy
     const big = kind === 'crit' ? 1.7 : 1.3
     t.setPosition(x, y)
       .setAlpha(1)
@@ -3778,7 +3803,6 @@ class BattleScene extends Phaser.Scene {
     this.ring(x, y, 0x6cc0ff, st.splash, 260)
     this.glow(x, y, 0xbfe8ff, st.splash * 0.8, 200, 0.6)
     this.waterFx.explode(this.fx(10), x, y)
-    this.idleAreaHit(x, y, st.splash, 'water', st.damage * this.loadout.damage)
     const angle = Math.atan2(s.dy, s.dx)
     for (const e of this.magicTargets(true)) {
       if (this.areaDistance(e, x, y) <= st.splash) this.waterHit(e, st, angle, true)
@@ -3878,7 +3902,6 @@ class BattleScene extends Phaser.Scene {
       onComplete: () => s.crater.setVisible(false),
     })
     this.playSound('boom')
-    this.idleAreaHit(x, y, st.radius, 'meteor', st.damage * this.loadout.damage)
     // 범위 안의 뒤쪽 매도벽도 맞는다. 묶인 벽은 운석당 한 번만 맞는다.
     for (const e of [...this.magicTargets(true)]) {
       const distance = this.areaDistance(e, x, y)
@@ -4275,11 +4298,58 @@ class BattleScene extends Phaser.Scene {
     this.opts.onIdleHit?.(wall, code, damage)
   }
 
-  private idleAreaHit(x: number, y: number, radius: number, kind: DamageKind, damage: number) {
-    if (!this.opts.idle || this.idleTransition || this.circuit) return
-    for (const { wall, distance } of this.idleQueue?.hitWalls(x, y, radius) ?? []) {
-      const factor = kind === 'meteor' ? meteorFalloff(distance, radius) : 1
-      this.reportIdleHit(wall, kind, damage * factor)
+  /**
+   * 총알 관통 (decisions.md 520번): 맨 앞 매도벽을 맞힌 총알이 뒤의 두 벽까지 뚫고 가며 절반씩 줄어든 피해를 준다. 뒤 벽은 물리 대상이 아니라
+   * 여기서 판정한다: 맞은 벽 번호와 줄어든 피해를 서버에 알리고, 총알이 이어 날아가는 모습과 줄어든 피해 숫자를 띄운다. 무기 폭발과 고양이 스킬은
+   * 뒤 벽에 닿지 않는다.
+   */
+  private pierceIdleWalls(bullet: Bullet, x: number, y: number, damage: number, crit: boolean) {
+    if (!this.opts.idle || !this.idleQueue || this.idleTransition || this.circuit) return
+    const velocity = bullet.body?.velocity
+    // 벽은 위로 쌓여 있다: 위로 날던 총알만 뚫고 간다.
+    if (!velocity || velocity.y >= 0) return
+    const slope = velocity.x / -velocity.y
+    const layers = this.idleQueue.behind(x, slope, y)
+    const hits = idlePierceHits(this.idleWall, damage, layers)
+    if (!layers.length) return
+    for (const hit of hits) this.reportIdleHit(hit.wall, 'bullet', hit.damage)
+    // 총알이 마지막 벽까지 이어 날아간다. 벽을 지날 때마다 불꽃과 줄어든 피해 숫자.
+    const last = layers[layers.length - 1]
+    const shot = this.pierceShots[this.pierceIndex++ % this.pierceShots.length]
+    const ms = Math.min(
+      140,
+      (Math.hypot(last.x - x, last.y - y) / Math.hypot(velocity.x, velocity.y)) * 1000,
+    )
+    this.tweens.killTweensOf(shot)
+    shot
+      .setTexture(bullet.texture.key)
+      .setPosition(x, y)
+      .setRotation(bullet.rotation)
+      .setDisplaySize(bullet.displayWidth, bullet.displayHeight)
+      .setAlpha(0.85)
+      .setVisible(true)
+    this.tweens.add({
+      targets: shot,
+      x: last.x,
+      y: last.y,
+      alpha: 0.35,
+      duration: Math.max(40, ms),
+      onComplete: () => shot.setVisible(false),
+    })
+    for (const hit of hits) {
+      const layer = layers.find((entry) => entry.wall === hit.wall)
+      if (!layer) continue
+      this.time.delayedCall((Math.max(40, ms) * hit.behind) / layers.length, () => {
+        if (this.over || this.stopped) return
+        this.hitSpark.explode(2, layer.x, layer.y)
+        this.damageNumberAt(
+          this.pierceOwners[hit.behind - 1],
+          layer.x,
+          layer.top - 4,
+          hit.damage,
+          crit ? 'crit' : 'bullet',
+        )
+      })
     }
   }
 
@@ -4294,7 +4364,6 @@ class BattleScene extends Phaser.Scene {
   }
 
   private splash(x: number, y: number, radius: number, dmg: number, except: Enemy) {
-    this.idleAreaHit(x, y, radius, 'bullet', dmg)
     for (const child of this.enemies.getChildren()) {
       const e = child as Enemy
       if (e === except || !e.active || e.dying) {
