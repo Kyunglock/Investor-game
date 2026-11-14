@@ -250,8 +250,7 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       return res?.data ?? null
     },
 
-    drawWeapon: (count = 1) =>
-      change(api.POST('/api/company/weapon/draw', { body: { count } })),
+    drawWeapon: (count = 1) => change(api.POST('/api/company/weapon/draw', { body: { count } })),
 
     mergeWeapon: (kind, grade) =>
       change(api.POST('/api/company/weapon/merge', { body: { kind, grade } })),
