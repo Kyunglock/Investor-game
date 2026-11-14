@@ -6,6 +6,7 @@ type Cat = {
   code: string
   fielded: boolean
   skill?: string
+  skillLevel?: number
   damagePercent?: number
   firePercent?: number
   criticalPercent?: number
@@ -31,6 +32,7 @@ const company = (owned: string[], cats: Cat[] = [], bonus = 0) =>
       cats: cats.map((cat) => ({
         // 고양이마다 고유 스킬이 하나다 (서버 IdleEngine CAT_SKILL, 501번).
         skill: SKILLS[cat.code],
+        skillLevel: 1,
         damagePercent: 50,
         firePercent: 100,
         criticalPercent: 100,
@@ -70,6 +72,21 @@ describe('방치형 전투 획득 상태', () => {
     expect(loadout).toMatchObject({ water: 0, meteor: 1, lightning: 1, earth: 0, mates: 2 })
     // 줄 선 차례대로 그 고양이의 마법 하나. 쉬는 민트냥의 물은 없다.
     expect(loadout.mateMagic).toEqual(['meteor', 'lightning'])
+    expect(loadout.mateMagicLevels).toEqual([1, 1])
+    // 스킬 레벨은 고양이마다 다르다 (515번): 같은 스킬의 두 마리도 저마다 제 레벨이고, 마법 칸에는 가장 높은 레벨이 든다.
+    const levelled = idleLoadout(
+      company(
+        ['meteor'],
+        [
+          { code: 'sky', fielded: true, skillLevel: 3 },
+          { code: 'night', fielded: true, skillLevel: 1 },
+          { code: 'mint', fielded: true, skillLevel: 5 },
+        ],
+      ),
+    )
+    expect(levelled.mateMagic).toEqual(['meteor', 'meteor', 'water'])
+    expect(levelled.mateMagicLevels).toEqual([3, 1, 5])
+    expect(levelled).toMatchObject({ meteor: 3, water: 5 })
     // 고양이가 없으면 스킬도 없다: 벽을 아무리 돌파해도 사장냥은 스킬을 쓰지 않는다.
     expect(idleLoadout(company(['water', 'meteor', 'bolt', 'ram']))).toMatchObject({
       water: 0,

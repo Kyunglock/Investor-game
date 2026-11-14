@@ -108,7 +108,9 @@ public record CompanyView(
       boolean fielded,
       CatWeapon weapon,
       String skill,
-      String skillName) {}
+      String skillName,
+      int skillLevel,
+      int skillNextLevel) {}
 
   public record CatWeapon(String kind, String grade) {}
 
@@ -119,7 +121,7 @@ public record CompanyView(
    *
    * @param owned 지금 발동 중이다: 이 스킬을 가진 고양이가 출전해 있다
    */
-  public record IdleSkill(String code, String name, boolean owned) {}
+  public record IdleSkill(String code, String name, boolean owned, int level) {}
 
   /**
    * 업계 순위 (#351): 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다(로그인이 없는 익명 세션). 한 해도 마치지 않았으면 null.

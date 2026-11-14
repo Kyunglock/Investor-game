@@ -62,7 +62,7 @@ import {
   whaleSummonSeconds,
 } from './assault'
 import { STAGE_ASSETS } from './assets'
-import { BUY_WALL, BuyWall, buyOrderX, pushedByCollapse } from './buyWall'
+import { BUY_WALL, BuyWall, buyOrderX, idleBuyOrderDamage, pushedByCollapse } from './buyWall'
 import { BuyWallFx } from './buyWallFx'
 import {
   awakenedMateCount,
@@ -2141,14 +2141,14 @@ class BattleScene extends Phaser.Scene {
         this.buyWallFx?.launch(
           buyOrderX(lane.left, lane.width),
           this.buyWallY(),
-          this.loadout.damage * 0.75 * (1 + this.loadout.buyBonus) * ACTIVES.barrage.power,
+          this.buyOrderDamage() * ACTIVES.barrage.power,
           true,
         )
       }
     }
     this.buyWallFx?.step(dt, (x, fromY, toY, damage, barrage) => {
-      // 매수세례의 주문이 벽에 닿으면 서버에 제 종류로 알린다: 탄의 횟수 예산을 쓰지 않는다.
-      this.reportAs = barrage ? 'barrage' : null
+      // 매수 주문이 벽에 닿으면 서버에 제 종류로 알린다: 탄의 횟수 예산을 쓰지 않는다 (매수세례 503번, 보통 매수 주문 514번).
+      this.reportAs = barrage ? 'barrage' : 'buy'
       const targets = this.magicTargets().filter(
         (e) =>
           Math.abs(e.x - x) <= Math.max(16, e.displayWidth * 0.45) &&
@@ -2231,13 +2231,23 @@ class BattleScene extends Phaser.Scene {
     this.climbV = dt > 0 ? move / dt : 0
   }
 
+  /**
+   * 매수 주문 한 장의 피해. 자동 전투는 무기와 따로 센다 (514번): 그 벽의 물량 배율과 매수벽 공격 강화만 따른다. 스테이지는 전처럼 공격력의
+   * 0.75배다.
+   */
+  private buyOrderDamage() {
+    return this.opts.idle
+      ? idleBuyOrderDamage(this.hpScale, this.loadout.buyBonus)
+      : this.loadout.damage * BUY_WALL.orderDamage * (1 + this.loadout.buyBonus)
+  }
+
   private launchBuyOrders(count: number) {
     const lane = this.lane()
     for (let i = 0; i < count; i++) {
       this.buyWallFx?.launch(
         buyOrderX(lane.left, lane.width),
         this.buyWallY(),
-        this.loadout.damage * 0.75 * (1 + this.loadout.buyBonus),
+        this.buyOrderDamage(),
       )
     }
   }
@@ -2283,7 +2293,7 @@ class BattleScene extends Phaser.Scene {
       this.buyWallFx?.launch(
         barrier.left + barrier.width * (0.08 + Math.random() * 0.84),
         this.buyWallY(),
-        this.loadout.damage * 0.75 * (1 + this.loadout.buyBonus),
+        this.buyOrderDamage(),
       )
     }
     this.launchBuyOrders(this.buyWall?.stepOrders(dt * 0.2) ?? 0)
@@ -3568,7 +3578,10 @@ class BattleScene extends Phaser.Scene {
       if (own && caster.mate === undefined) continue
       for (const m of MAGICS) {
         if (own && caster.mate !== undefined && own[caster.mate] !== m) continue
-        const level = this.loadout[m]
+        // 자동 전투의 스킬 레벨은 고양이마다 다르다 (515번): 같은 스킬의 두 마리도 저마다 제 레벨로 쓴다.
+        const level =
+          (own && caster.mate !== undefined ? this.loadout.mateMagicLevels?.[caster.mate] : null) ??
+          this.loadout[m]
         if (!caster.clock.due(m, level, this.elapsed)) continue
         const from = caster.at()
         const cast =

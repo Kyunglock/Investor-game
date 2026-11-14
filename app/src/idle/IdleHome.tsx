@@ -5,7 +5,10 @@ import { type ReactNode, useEffect, useState } from 'react'
 import { Sheet } from '../app/Sheet'
 import { MAX_BATCH, queuedCost } from '../app/toy-city/upgradeQueue'
 import { useAppUi } from '../app/ui'
+import { idleThreat } from '../mental/assault'
+import { idleBuyOrderDamage } from '../mental/buyWall'
 import { heroOf } from '../mental/hero'
+import { sharesOf } from '../mental/shares'
 import { WeaponInventory, weaponBadge } from '../mental/WeaponInventory'
 import { BASE_CRIT_CHANCE, BASE_CRIT_MULT, CRIT_CHANCE, CRIT_MULT } from '../mental/weaponEffects'
 import { IdleActives } from './IdleActives'
@@ -34,8 +37,15 @@ const STATS: Record<Upgrade['kind'], { name: string; note: string }> = {
   damage: { name: '공격력', note: '탄 공격력' },
   fire: { name: '공격 속도', note: '쏘는 빠르기' },
   hp: { name: '매수벽 체력', note: '매수벽이 무너지면 다시 설 때까지 공격이 멈춰요' },
-  buy: { name: '매수벽 공격', note: '매수 주문이 매도 물량을 더 세게 받아쳐요' },
+  buy: { name: '매수벽 공격', note: '매수 주문의 피해 · 무기와 따로 세요' },
   crit: { name: '치명타 피해', note: '치명타 배율' },
+}
+/** 스킬은 고양이 레벨이 둘 오를 때마다 한 레벨 오른다 (515번): 레벨마다 달라지는 것을 한 줄로 적는다. */
+const SKILL_NOTES = {
+  water: '레벨이 오르면 물방울 → 물줄기 → 큰 물결, 더 자주·세게',
+  meteor: '레벨이 오르면 운석 → 대운석 → 유성우, 더 자주·넓게',
+  bolt: '레벨이 오르면 번개가 굵어지고 더 많이 튀어요',
+  ram: '레벨이 오르면 충차가 커지고 벽을 더 세게 들이받아요',
 }
 const maxed = (u: Upgrade) => u.maxLevel > 0 && u.level >= u.maxLevel
 /** 지금 든 무기의 치명타 (492번): 확률과 강화를 더한 배율을 그대로 보여 준다. */
@@ -44,6 +54,14 @@ function critNote(company: Company, u: Upgrade) {
   const chance = revolver ? CRIT_CHANCE : BASE_CRIT_CHANCE
   const mult = (revolver ? CRIT_MULT : BASE_CRIT_MULT) * (1 + u.bonusPercent / 100)
   return `지금 무기는 ${Math.round(chance * 100)}% 확률로 ${mult.toFixed(2)}배`
+}
+
+/** 매수 주문 한 장의 수량 (514번): 무기와 상관없이 그 벽의 물량 배율과 이 강화만 따른다. */
+function buyNote(company: Company, u: Upgrade) {
+  const idle = company.idle
+  if (!idle) return STATS.buy.note
+  const damage = idleBuyOrderDamage(idleThreat(idle.wall, idle.maxHp), u.bonusPercent / 100)
+  return `매수 주문 한 장 ${sharesOf(damage).toLocaleString()}주 · 무기와 따로 세요`
 }
 
 export function IdleHome({
@@ -132,12 +150,16 @@ export function IdleHome({
               />
             </span>
             <div>
-              <b>{skill.name}</b>
+              <b>
+                {skill.name}
+                {skill.owned ? ` Lv.${skill.level}` : ''}
+              </b>
               <small>
                 {skill.owned
-                  ? `발동 중 · ${names(casting)}`
+                  ? `발동 중 · ${casting.map((cat) => `${cat.name} Lv.${cat.skillLevel}`).join(' · ')}`
                   : `${names(cats)}의 고유 스킬 · 출전하면 발동`}
               </small>
+              <small>{SKILL_NOTES[skill.code as keyof typeof SKILL_NOTES]}</small>
             </div>
           </article>
         )
@@ -298,7 +320,13 @@ function IdleStats({ company }: { company: Company }) {
               <b>
                 {STATS[u.kind].name} <small>Lv.{u.level}</small>
               </b>
-              <small>{u.kind === 'crit' ? critNote(company, u) : STATS[u.kind].note}</small>
+              <small>
+                {u.kind === 'crit'
+                  ? critNote(company, u)
+                  : u.kind === 'buy'
+                    ? buyNote(company, u)
+                    : STATS[u.kind].note}
+              </small>
               <p>
                 {full
                   ? `+${u.bonusPercent}% · 최대`

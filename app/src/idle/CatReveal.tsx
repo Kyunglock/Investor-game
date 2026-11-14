@@ -135,7 +135,9 @@ export function CatReveal({
               <p className="weapon-reveal-new">
                 {result.isNew ? 'NEW! 새 고양이' : `레벨 업! Lv.${result.cat.level}`}
               </p>
-              <span className="weapon-reveal-grade">고유 {result.cat.skillName}</span>
+              <span className="weapon-reveal-grade">
+                고유 {result.cat.skillName} Lv.{result.cat.skillLevel}
+              </span>
               <div className="weapon-reveal-art cat-reveal-art">
                 <CatPortrait code={result.cat.code} />
               </div>
@@ -147,6 +149,10 @@ export function CatReveal({
                 <b>{result.isNew ? '출전 칸에 세우면 함께 싸워요' : '총의 화력이 올랐어요'}</b>
                 <br />
                 출전해 있는 동안 {result.cat.skillName}이 나가요
+                <br />
+                {result.cat.skillNextLevel > 0
+                  ? `고양이 Lv.${result.cat.skillNextLevel}이 되면 스킬이 Lv.${result.cat.skillLevel + 1}로 올라요`
+                  : '스킬이 최고 레벨이에요'}
               </p>
               <div className="weapon-reveal-actions">
                 <button type="button" onClick={onClose} data-testid="cat-reveal-close">

@@ -85,7 +85,7 @@ export function IdleCats({ company }: { company: Company }) {
             {drawn
               ? drawn.isNew
                 ? `${drawn.cat.name} 합류! 고유 스킬 ${drawn.cat.skillName}`
-                : `${drawn.cat.name} Lv.${drawn.cat.level} · 화력 ${drawn.cat.damagePercent}%`
+                : `${drawn.cat.name} Lv.${drawn.cat.level} · 화력 ${drawn.cat.damagePercent}% · ${drawn.cat.skillName} Lv.${drawn.cat.skillLevel}`
               : '뽑기권 한 장으로 한 마리 · 또 나오면 레벨이 올라요'}
           </small>
         </div>
@@ -149,8 +149,13 @@ export function IdleCats({ company }: { company: Company }) {
               {cat.name} <small>Lv.{cat.level}</small>
             </b>
             <small>
-              무기 공격력의 {cat.damagePercent}%로 쏴요 · {catTrait(cat)} · 고유 스킬{' '}
-              {cat.skillName}
+              무기 공격력의 {cat.damagePercent}%로 쏴요 · {catTrait(cat)}
+            </small>
+            <small data-testid="cat-skill">
+              고유 스킬 {cat.skillName} Lv.{cat.skillLevel}
+              {cat.skillNextLevel > 0
+                ? ` · 고양이 Lv.${cat.skillNextLevel}에 스킬 Lv.${cat.skillLevel + 1}`
+                : ' · 최고 레벨'}
             </small>
             <button
               type="button"
