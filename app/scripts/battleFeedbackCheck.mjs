@@ -17,13 +17,11 @@ try {
       page.on('pageerror', (error) => errors.push(error.message))
       await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5319/app/')
       const result = await page.evaluate(async (mode) => {
-        const [{ startBattle }, cards, { DEFAULT_WEAPON }, { catMuzzle, mateModel }] =
-          await Promise.all([
-            import('/app/src/mental/battle.ts'),
-            import('/app/src/mental/cards.ts'),
-            import('/app/src/mental/hero.ts'),
-            import('/app/src/mental/catModels.ts'),
-          ])
+        const [{ startBattle }, cards, { DEFAULT_WEAPON }] = await Promise.all([
+          import('/app/src/mental/battle.ts'),
+          import('/app/src/mental/cards.ts'),
+          import('/app/src/mental/hero.ts'),
+        ])
         // 테스트에서만 생성된 씬을 관찰한다.
         const manager = window.Phaser.Scenes.SceneManager.prototype
         const create = manager.create
@@ -68,12 +66,13 @@ try {
         const shots = []
         actors.forEach((body, i) => {
           scene.fire(scene.time.now + i, { x: body.x, y: 0 }, i ? scene.mates[i - 1] : undefined)
-          const expected = catMuzzle(
-            i ? mateModel(i - 1) : 'hero',
-            body.x,
-            body.y,
-            scene.catPose(body),
-          )
+          const gun = i ? scene.mates[i - 1].gun : scene.heroGun
+          const expected = gun
+            .getWorldTransformMatrix()
+            .transformPoint(
+              gun.width * (63 / 80) - gun.displayOriginX,
+              gun.height * 0.5 - gun.displayOriginY,
+            )
           const bullet = scene.bullets
             .getChildren()
             .find(
@@ -122,14 +121,16 @@ try {
           bounds,
           shots,
           damage: cards.bulletStats(loadout).damage,
-          noOverlay: !scene.textures.exists('gun') && !scene.textures.exists('mate-0-gun'),
+          separateGuns: scene.heroGun.active && scene.mates.every((m) => m.gun.active),
+          bodiesUpright: actors.every((body) => body.rotation === 0),
         }
       }, mode)
       assert.deepEqual(result.counts, [0, 1, 2, 3, 3])
       assert.notEqual(result.textures[0], result.textures[1])
       assert.notEqual(result.textures[1], result.textures[2])
 
-      assert(result.noOverlay)
+      assert(result.separateGuns)
+      assert(result.bodiesUpright)
       for (const shot of result.shots) {
         assert(shot.exists)
         assert.equal(shot.damage, result.damage * 2)
@@ -148,6 +149,24 @@ try {
         assert(position.y > 0 && position.y < 640)
       }
       await page.screenshot({ path: `${out}/${mode}-${reduced}-320.png` })
+      if (!reduced) {
+        for (const targetX of [20, 160, 300]) {
+          const aligned = await page.evaluate((x) => {
+            const scene = window.feedbackScene
+            const actors = [scene.player, ...scene.mates.map((m) => m.body)]
+            for (const [i, body] of actors.entries()) {
+              scene.fire(
+                scene.time.now + i,
+                { x, y: body.y - 120 },
+                i ? scene.mates[i - 1] : undefined,
+              )
+            }
+            return actors.every((body) => body.rotation === 0)
+          }, targetX)
+          assert(aligned)
+          await page.screenshot({ path: `${out}/${mode}-aim-${targetX}.png` })
+        }
+      }
       if (mode === 'assault') {
         const broken = await page.evaluate(() => {
           const scene = window.feedbackScene
@@ -178,8 +197,15 @@ try {
       }
       assert.deepEqual(errors, [])
       console.log(
-        `PASS: ${mode}: original join count/cap, distinct models, no gun overlay, all four muzzle origins/damage`,
+        `PASS: ${mode}: original join count/cap, distinct models, separate gun/paws, upright bodies, all four rendered muzzle origins/damage`,
       )
+      const cleaned = await page.evaluate(() => {
+        const scene = window.feedbackScene
+        const guns = scene.mates.map((m) => m.gun)
+        window.catHandle.applyLoadout({ ...scene.loadout, mates: 0 })
+        return guns.every((gun) => !gun.scene)
+      })
+      assert(cleaned, '동료 해제 시 분리된 총·앞발 이미지도 제거')
       await page.evaluate(() => window.catHandle.stop())
       await page.close()
     }
