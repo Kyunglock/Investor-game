@@ -182,6 +182,36 @@ try {
           await page.screenshot({ path: `${out}/${mode}-aim-${targetX}.png` })
         }
       }
+      const circle = await page.evaluate(() => {
+        const scene = window.feedbackScene
+        const actors = [scene.player, ...scene.mates.map((m) => m.body)]
+        const fixed = actors.map((body) => ({ x: body.x, y: body.y, texture: body.texture.key }))
+        let upright = true,
+          aimed = true,
+          unchanged = true
+        for (let step = 0; step < 16; step++) {
+          const angle = (step * Math.PI) / 8
+          for (const [i, body] of actors.entries()) {
+            const target = { x: body.x + Math.cos(angle) * 180, y: body.y + Math.sin(angle) * 180 }
+            scene.fire(scene.time.now + step * 4 + i, target, i ? scene.mates[i - 1] : undefined)
+            const gun = i ? scene.mates[i - 1].gun : scene.heroGun
+            const dx = target.x - gun.x,
+              dy = target.y - gun.y
+            upright &&= body.rotation === 0
+            aimed &&=
+              Math.abs(dx * Math.sin(gun.rotation) - dy * Math.cos(gun.rotation)) < 0.001 &&
+              dx * Math.cos(gun.rotation) + dy * Math.sin(gun.rotation) > 0
+            unchanged &&=
+              body.x === fixed[i].x &&
+              body.y === fixed[i].y &&
+              body.texture.key === fixed[i].texture
+          }
+        }
+        return { upright, aimed, unchanged }
+      })
+      assert(circle.upright, '표적이 360도 이동해도 사장냥과 동료 몸은 회전하지 않음')
+      assert(circle.aimed, '표적 각도는 분리된 총에만 적용')
+      assert(circle.unchanged, '조준 중 기존 몸 자세·위치·그림을 유지')
       if (mode === 'assault') {
         const broken = await page.evaluate(() => {
           const scene = window.feedbackScene
@@ -212,7 +242,7 @@ try {
       }
       assert.deepEqual(errors, [])
       console.log(
-        `PASS: ${mode}: original join count/cap, distinct models, separate gun/paws, upright bodies, all four rendered muzzle origins/damage`,
+        `PASS: ${mode}: original join count/cap, distinct models, separate gun/paws, upright bodies through 360-degree target changes, all four rendered muzzle origins/damage`,
       )
       const cleaned = await page.evaluate(() => {
         const scene = window.feedbackScene
