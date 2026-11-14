@@ -1,12 +1,34 @@
 import type { Company } from '@web/api/client'
-import { useRaisingStore } from '@web/features/raising/store'
+import { useRaisingStore, type WeaponGrade } from '@web/features/raising/store'
 import { type FormEvent, useState } from 'react'
 import { idleThreat } from '../mental/assault'
+import { IDLE_RAID_ORDER, type IdleRaidKind } from '../mental/waves'
 
 /** 벽 건너뛰기: 지금 벽에서 더하고 빼는 걸음과 바로 가는 벽. 큰손 벽(10의 배수)과 그 앞뒤를 보기 쉽게 골랐다. */
 const WALL_STEPS = [-10, -1, 1, 10, 50, 100] as const
 const WALL_PRESETS = [1, 50, 100, 200, 500, 1000] as const
 const MAX_WALL = 100000
+const RAID_NAMES: Record<IdleRaidKind, string> = {
+  panic: '패닉셀',
+  dump: '투매',
+  short: '공매도',
+  spec: '투기',
+}
+const CAT_LEVELS = [1, 5, 10, 30] as const
+const WEAPON_GRADES: WeaponGrade[] = [
+  'F',
+  'E',
+  'D',
+  'C',
+  'B',
+  'A',
+  'S',
+  'SS',
+  'SSS',
+  'SR',
+  'UR',
+  'LR',
+]
 
 /**
  * 테스트판의 입구 (decisions.md 499번): 주소에 `?test=1`이 붙어 있을 때만 열린다. 테스트판 APK가 그 주소를 띄우고, 브라우저에서도 그 주소로 들어갈
@@ -58,6 +80,13 @@ export function IdleSandbox({ company }: { company: Company }) {
       .jumpSandboxWall(Math.max(1, Math.min(MAX_WALL, Math.floor(to))))
     setBusy(false)
     setTarget('')
+  }
+  const store = () => useRaisingStore.getState()
+  const run = async (action: () => Promise<void>) => {
+    if (busy) return
+    setBusy(true)
+    await action()
+    setBusy(false)
   }
   const reset = async () => {
     if (busy) return
@@ -145,10 +174,63 @@ export function IdleSandbox({ company }: { company: Company }) {
                 </button>
               ))}
             </div>
-            <p className="idle-sandbox-note">
-              자본·채용권·뽑기권은 쓸 때마다 다시 채워져요. 강화와 뽑기는 성장·고양이 메뉴에서
-              그대로 해요.
-            </p>
+            <span className="idle-sandbox-label">몬스터 습격 바로 부르기</span>
+            <div className="idle-sandbox-chips is-four">
+              {IDLE_RAID_ORDER.map((kind) => (
+                <button
+                  key={kind}
+                  type="button"
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('idle-test-raid', { detail: kind }))
+                    closePanel()
+                  }}
+                >
+                  {RAID_NAMES[kind]}
+                </button>
+              ))}
+            </div>
+            <span className="idle-sandbox-label">고양이 여섯 모두 받기</span>
+            <div className="idle-sandbox-chips is-four">
+              {CAT_LEVELS.map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void run(() => store().grantSandboxCats(level))}
+                >
+                  Lv.{level}
+                </button>
+              ))}
+            </div>
+            <span className="idle-sandbox-label">무기 받아 들기 (여섯 자루)</span>
+            <div className="idle-sandbox-chips">
+              {WEAPON_GRADES.map((grade) => (
+                <button
+                  key={grade}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void run(() => store().grantSandboxWeapon(grade))}
+                >
+                  {grade}
+                </button>
+              ))}
+            </div>
+            <label className="idle-sandbox-check">
+              <input
+                type="checkbox"
+                checked={Boolean(company.sandboxInfinite)}
+                disabled={busy}
+                onChange={(e) => void run(() => store().setSandboxWallet(e.target.checked))}
+              />
+              <span>
+                무한 지갑
+                <small className="idle-sandbox-hint">
+                  {company.sandboxInfinite
+                    ? '자본·채용권·뽑기권이 쓸 때마다 다시 채워져요'
+                    : '꺼짐: 이 벽에서 버는 돈으로만 강화해요'}
+                </small>
+              </span>
+            </label>
             <div className="idle-sandbox-actions">
               <button type="button" onClick={() => void reset()} disabled={busy}>
                 {resetAsked ? '한 번 더 누르면 초기화' : '처음부터 다시'}

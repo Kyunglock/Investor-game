@@ -785,6 +785,7 @@ button.idle-cat-gun {
     opacity: 0;
     transform: translate(-50%, 0);
   }
+}
 
 /* 테스트판 (decisions.md 499번): 왼쪽 가장자리의 단추, 코드 창과 도구 창. */
 .idle-sandbox {
@@ -821,6 +822,28 @@ button.idle-cat-gun {
   grid-template-columns: repeat(6, 1fr);
   gap: 6px;
 }
+.idle-sandbox-chips.is-four {
+  grid-template-columns: repeat(4, 1fr);
+}
+.idle-sandbox-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 14px;
+}
+.idle-sandbox-check input {
+  flex: none;
+  width: 22px;
+  min-height: 22px;
+  height: 22px;
+  padding: 0;
+}
+.idle-sandbox-hint {
+  display: block;
+  font-size: 12px;
+  opacity: 0.75;
+}
 .idle-sandbox-chips button {
   padding: 0;
   font-size: 12px;
@@ -836,10 +859,13 @@ button.idle-cat-gun {
   z-index: 30;
   display: grid;
   place-items: center;
-  padding: 24px;
+  padding: max(16px, env(safe-area-inset-top)) 24px max(16px, env(safe-area-inset-bottom));
   background: #2b234066;
 }
 .idle-sandbox-gate form {
+  /* 도구가 많아 낮은 화면에서는 창 안에서 굴린다. */
+  max-height: 100%;
+  overflow-y: auto;
   display: grid;
   gap: 10px;
   width: min(320px, 100%);

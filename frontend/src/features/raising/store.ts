@@ -81,6 +81,12 @@ interface RaisingState {
   jumpSandboxWall: (wall: number) => Promise<void>
   /** 테스트판: 회사를 처음부터 새로 차린다. */
   resetSandbox: () => Promise<void>
+  /** 테스트판: 무한 지갑을 켜고 끈다. */
+  setSandboxWallet: (infinite: boolean) => Promise<void>
+  /** 테스트판: 고양이 여섯을 모두 그 레벨로 받는다. */
+  grantSandboxCats: (level: number) => Promise<void>
+  /** 테스트판: 그 등급의 무기를 받아 사장냥이 든다. */
+  grantSandboxWeapon: (grade: WeaponGrade) => Promise<void>
   /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
   fieldCat: (code: CatCode, fielded: boolean) => Promise<void>
   /** 고양이에게 가진 무기 하나를 들린다. weapon이 null이면 뺀다 (488번). */
@@ -261,6 +267,9 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     },
     jumpSandboxWall: (wall) => change(api.POST('/api/sandbox/wall', { body: { wall } })),
     resetSandbox: () => change(api.POST('/api/sandbox/reset')),
+    setSandboxWallet: (infinite) => change(api.POST('/api/sandbox/wallet', { body: { infinite } })),
+    grantSandboxCats: (level) => change(api.POST('/api/sandbox/cats', { body: { level } })),
+    grantSandboxWeapon: (grade) => change(api.POST('/api/sandbox/weapon', { body: { grade } })),
     drawCat: async () => {
       const res = await safely(api.POST('/api/company/cat/draw'))
       set({ company: res?.data ?? get().company, error: reason(res?.error) })

@@ -42,6 +42,28 @@ class Sandbox {
             code.getBytes(StandardCharsets.UTF_8));
   }
 
+  // 틀린 코드를 거듭 넣어 맞히지 못하게, 같은 주소에서 10분에 열 번까지만 틀릴 수 있다. 그 뒤로는 맞는 코드도 받지 않는다.
+  private static final int MAX_MISSES = 10;
+  private static final long MISS_WINDOW_MS = 600_000;
+  private final java.util.concurrent.ConcurrentHashMap<String, long[]> misses =
+      new java.util.concurrent.ConcurrentHashMap<>();
+
+  /** 코드가 맞는가. 같은 접속 주소에서 너무 많이 틀렸으면 한동안 무엇을 넣어도 아니다. */
+  boolean tryCode(String code) {
+    String ip = String.valueOf(ClientIp.current());
+    long now = System.currentTimeMillis();
+    long[] seen = misses.get(ip);
+    if (seen != null && now - seen[1] > MISS_WINDOW_MS) {
+      misses.remove(ip);
+      seen = null;
+    }
+    if (seen != null && seen[0] >= MAX_MISSES) return false;
+    if (matches(code)) return true;
+    misses.merge(ip, new long[] {1, now}, (old, one) -> new long[] {old[0] + 1, old[1]});
+    if (misses.size() > 10_000) misses.clear();
+    return false;
+  }
+
   /** 회사 요청이 쓸 ID: 이 요청에 이 세션의 테스트판 쿠키가 있으면 테스트판 ID, 아니면 세션 ID 그대로. */
   UUID player(UUID sessionId) {
     if (!enabled()

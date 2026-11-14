@@ -310,6 +310,24 @@ class MentalEngine {
   }
 
   /** 가진 무기 가운데 하나를 든다 (346번). 없는 종류·등급이거나 안 가진 무기면 400. */
+  /** 테스트판 (decisions.md 499번): 그 등급의 무기를 count개 주고 사장냥이 든다. 없는 등급이면 400. */
+  void grant(CompanyState c, String grade, int count) {
+    initWeapons(c);
+    if (!WEAPON_GRADES.contains(grade)) {
+      throw new InvalidRequestException("없는 무기 등급이다: " + grade);
+    }
+    String kind = kindOf(grade);
+    CompanyState.Weapon owned = find(c, kind, grade);
+    if (owned != null) {
+      owned.count += count;
+    } else {
+      CompanyState.Weapon weapon = new CompanyState.Weapon(kind, grade);
+      weapon.count = count;
+      c.weapons.add(weapon);
+    }
+    equip(c, kind, grade);
+  }
+
   void equip(CompanyState c, String kind, String grade) {
     initWeapons(c);
     if (!validWeapon(kind, grade)) {

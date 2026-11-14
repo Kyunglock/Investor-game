@@ -152,7 +152,7 @@ export function IdleHome({
             >
               <span className="idle-coin">₩</span>
               {/* 테스트판의 지갑은 떨어지지 않는다 (499번). */}
-              <b>{company.sandbox ? '∞' : money(company.capital)}</b>
+              <b>{company.sandboxInfinite ? '∞' : money(company.capital)}</b>
             </div>
             {/* 상태 줄은 없앴다 (493번): 평소엔 벽 번호만, 전투가 멈춘 때만 그 까닭을 여기에 보인다. */}
             <strong
@@ -172,7 +172,7 @@ export function IdleHome({
               aria-label={`무기 뽑기권 ${company.armory?.tickets ?? 0}장`}
             >
               <IdleIcon name="ticket" />
-              {company.sandbox ? '∞' : (company.armory?.tickets ?? 0)}
+              {company.sandboxInfinite ? '∞' : (company.armory?.tickets ?? 0)}
             </div>
             <button type="button" aria-label="회사 메뉴" onClick={onManage}>
               ☰

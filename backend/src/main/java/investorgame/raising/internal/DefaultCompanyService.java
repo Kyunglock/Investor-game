@@ -289,7 +289,7 @@ class DefaultCompanyService implements CompanyService {
 
   /** 테스트판 회사면 자본·채용권·뽑기권을 다시 채운다. 요청 끝에 함께 저장된다. */
   private static void refill(CompanyState c) {
-    if (!c.sandbox) return;
+    if (!c.sandbox || c.sandboxFinite) return;
     c.capital = Math.max(c.capital, SANDBOX_CAPITAL);
     c.tickets = Math.max(c.tickets, SANDBOX_TICKETS);
     c.weaponTickets = Math.max(c.weaponTickets, SANDBOX_TICKETS);
@@ -331,9 +331,47 @@ class DefaultCompanyService implements CompanyService {
     long seed = seeds.nextLong();
     CompanyState fresh = engine.open(new HashSeededRandom(seed), engine.openingCapital());
     fresh.sandbox = true;
+    fresh.sandboxFinite = old.state().sandboxFinite;
     companies.insert(
         new CompanyRepository.Row(UUID.randomUUID(), sessionId, "ACTIVE", seed, fresh));
     return sandbox(sessionId);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView sandboxWallet(UUID sessionId, boolean infinite) {
+    CompanyRepository.Row row = lockSandbox(sessionId);
+    CompanyState c = row.state();
+    c.sandboxFinite = !infinite;
+    if (infinite) {
+      refill(c);
+    } else {
+      c.capital = engine.openingCapital();
+      c.tickets = 0;
+      c.weaponTickets = 0;
+    }
+    companies.update(row.id(), c, false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView sandboxCats(UUID sessionId, int level) {
+    CompanyRepository.Row row = lockSandbox(sessionId);
+    idle.grantCats(row.state(), level);
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView sandboxWeapon(UUID sessionId, String grade) {
+    CompanyRepository.Row row = lockSandbox(sessionId);
+    // 사장냥과 출전한 고양이 넷이 하나씩 들고도 하나가 남는다.
+    engine.mental.grant(row.state(), grade, 6);
+    idle.releaseWeapons(row.state());
+    companies.update(row.id(), row.state(), false);
+    return view(row);
   }
 
   private CompanyView view(CompanyRepository.Row row) {
@@ -442,7 +480,8 @@ class DefaultCompanyService implements CompanyService {
         engine.mental.stagesView(c),
         engine.mental.assaultsView(c),
         idle.view(c),
-        c.sandbox);
+        c.sandbox,
+        c.sandbox && !c.sandboxFinite);
   }
 
   @Override

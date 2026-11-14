@@ -41,7 +41,7 @@ class SandboxController {
       @Valid @RequestBody EnterRequest request) {
     if (!sandbox.enabled()) throw new NotFoundException("테스트판이 꺼져 있다");
     UUID sessionId = cookies.requireSession(token);
-    if (!sandbox.matches(request.code())) throw new InvalidRequestException("코드가 맞지 않다");
+    if (!sandbox.tryCode(request.code())) throw new InvalidRequestException("코드가 맞지 않다");
     return ResponseEntity.ok()
         .header(HttpHeaders.SET_COOKIE, sandbox.enter(sessionId).toString())
         .body(companies.sandbox(sandbox.id(sessionId)));
@@ -68,6 +68,36 @@ class SandboxController {
   CompanyView reset(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
     return companies.sandboxReset(cookies.requirePlayer(token));
   }
+
+  /** 무한 지갑을 켜고 끈다. */
+  @PostMapping("/wallet")
+  CompanyView wallet(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody WalletRequest request) {
+    return companies.sandboxWallet(cookies.requirePlayer(token), request.infinite());
+  }
+
+  /** 고양이 여섯을 모두 그 레벨로 준다. */
+  @PostMapping("/cats")
+  CompanyView cats(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody CatsRequest request) {
+    return companies.sandboxCats(cookies.requirePlayer(token), request.level());
+  }
+
+  /** 그 등급의 무기를 주고 사장냥이 든다. */
+  @PostMapping("/weapon")
+  CompanyView weapon(
+      @CookieValue(name = SessionCookies.NAME, required = false) String token,
+      @Valid @RequestBody WeaponRequest request) {
+    return companies.sandboxWeapon(cookies.requirePlayer(token), request.grade());
+  }
+
+  record WalletRequest(boolean infinite) {}
+
+  record CatsRequest(@Min(1) @Max(1000) int level) {}
+
+  record WeaponRequest(@NotBlank @Size(max = 4) String grade) {}
 
   record WallRequest(@Min(1) @Max(100_000) long wall) {}
 

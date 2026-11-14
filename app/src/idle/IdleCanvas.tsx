@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { idleAssaultSpec } from '../mental/assault'
 import type { BattleHandle } from '../mental/battle'
 import { heroOf } from '../mental/hero'
+import type { IdleRaidKind } from '../mental/waves'
 import { idleLoadout } from './loadout'
 
 export function IdleCanvas({ company, connected }: { company: Company; connected: boolean }) {
@@ -35,10 +36,14 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
     const sent = (event: Event) =>
       battle.current?.idleHitsSent((event as CustomEvent<number>).detail)
     const dropped = () => battle.current?.clearIdleHits()
+    // 테스트판의 도구 창이 몬스터 습격을 바로 부른다 (decisions.md 499번).
+    const raidCalled = (event: Event) =>
+      battle.current?.callIdleRaid((event as CustomEvent<IdleRaidKind>).detail)
     document.addEventListener('visibilitychange', visibility)
     window.addEventListener('idle-app-active', native)
     window.addEventListener('idle-hits-sent', sent)
     window.addEventListener('idle-hits-clear', dropped)
+    window.addEventListener('idle-test-raid', raidCalled)
     setError(null)
     void import('../mental/battle')
       .then(({ startBattle }) => {
@@ -83,6 +88,7 @@ export function IdleCanvas({ company, connected }: { company: Company; connected
       window.removeEventListener('idle-app-active', native)
       window.removeEventListener('idle-hits-sent', sent)
       window.removeEventListener('idle-hits-clear', dropped)
+      window.removeEventListener('idle-test-raid', raidCalled)
       battle.current?.stop()
       battle.current = null
     }

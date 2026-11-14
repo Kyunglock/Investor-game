@@ -309,6 +309,18 @@ class IdleEngine {
 
   static final long MAX_JUMP_WALL = 100_000;
 
+  /** 테스트판 (499번): 고양이 여섯을 모두 그 레벨로 주고, 빈 출전 칸을 차례대로 채운다. */
+  void grantCats(CompanyState c, int level) {
+    CompanyState.Idle s = state(c);
+    for (String code : CATS) {
+      s.cats.put(code, Math.max(1, Math.min(MAX_CAT_LEVEL, level)));
+      if (s.fielded.size() < FIELD_SLOTS && !s.fielded.contains(code)) s.fielded.add(code);
+    }
+    s.hitCredits = new double[5];
+  }
+
+  static final int MAX_CAT_LEVEL = 1000;
+
   void fieldCat(CompanyState c, String code, boolean fielded) {
     CompanyState.Idle s = state(c);
     if (!s.cats.containsKey(code)) throw new InvalidRequestException("가지지 않은 고양이다: " + code);

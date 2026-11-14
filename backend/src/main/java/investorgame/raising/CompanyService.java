@@ -126,6 +126,15 @@ public interface CompanyService {
   /** 테스트판 회사를 닫고 처음부터 새로 차린다 (499번). 테스트판 회사가 아니면 400. */
   CompanyView sandboxReset(UUID sessionId);
 
+  /** 테스트판의 무한 지갑을 켜고 끈다 (499번). 끄면 자본은 회사를 차릴 때의 돈, 채용권·뽑기권은 0에서 시작해 그 벽에서 버는 대로만 쓴다. 켜면 다시 채운다. */
+  CompanyView sandboxWallet(UUID sessionId, boolean infinite);
+
+  /** 테스트판: 고양이 여섯을 모두 그 레벨로 주고 빈 출전 칸을 채운다 (499번). */
+  CompanyView sandboxCats(UUID sessionId, int level);
+
+  /** 테스트판: 그 등급의 무기를 여섯 개 주고 사장냥이 든다 (499번). 없는 등급이면 400. */
+  CompanyView sandboxWeapon(UUID sessionId, String grade);
+
   /** 가진 고양이를 출전시키거나 쉬게 한다 (488번). */
   CompanyView fieldCat(UUID sessionId, String code, boolean fielded);
 

@@ -652,6 +652,72 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /api/sandbox/wallet:
+    post:
+      operationId: setSandboxWallet
+      summary: 테스트판의 무한 지갑을 켜고 끈다 (decisions.md 499번). 끄면 자본은 처음 돈, 채용권·뽑기권은 0에서 시작한다
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [infinite]
+              properties:
+                infinite: { type: boolean }
+      responses:
+        '200':
+          description: 바뀐 뒤의 테스트판 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/sandbox/cats:
+    post:
+      operationId: grantSandboxCats
+      summary: 테스트판에서 고양이 여섯을 모두 그 레벨로 받고 빈 출전 칸을 채운다 (decisions.md 499번)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [level]
+              properties:
+                level: { type: integer, minimum: 1, maximum: 1000 }
+      responses:
+        '200':
+          description: 바뀐 뒤의 테스트판 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /api/sandbox/weapon:
+    post:
+      operationId: grantSandboxWeapon
+      summary: 테스트판에서 그 등급의 무기를 여섯 개 받고 사장냥이 든다 (decisions.md 499번)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [grade]
+              properties:
+                grade: { type: string, enum: [F, E, D, C, B, A, S, SS, SSS, SR, UR, LR] }
+      responses:
+        '200':
+          description: 바뀐 뒤의 테스트판 회사
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Company' }
+        '400': { $ref: '#/components/responses/InvalidRequest' }
+        '401': { $ref: '#/components/responses/SessionRequired' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /api/sandbox/reset:
     post:
       operationId: resetSandbox
@@ -1185,7 +1251,8 @@ components:
                     capital: { type: integer, format: int64, description: 받은 자본 }
                     tickets: { type: integer, description: 받은 무기 뽑기권 }
                 - type: 'null'
-        sandbox: { type: boolean, description: 테스트판의 회사다 (decisions.md 499번). 자본과 뽑기권이 떨어지지 않는다 }
+        sandbox: { type: boolean, description: 테스트판의 회사다 (decisions.md 499번) }
+        sandboxInfinite: { type: boolean, description: 테스트판의 무한 지갑이 켜져 있다. 자본과 뽑기권이 떨어지지 않는다 }
         idle:
           type: object
           required: [wall, hp, maxHp, dps, earned, boss, skills, nextUnlock, cats, fieldSlots, wallDps]

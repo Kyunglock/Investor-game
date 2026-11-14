@@ -598,6 +598,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/sandbox/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 테스트판의 무한 지갑을 켜고 끈다 (decisions.md 499번). 끄면 자본은 처음 돈, 채용권·뽑기권은 0에서 시작한다 */
+        post: operations["setSandboxWallet"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sandbox/cats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 테스트판에서 고양이 여섯을 모두 그 레벨로 받고 빈 출전 칸을 채운다 (decisions.md 499번) */
+        post: operations["grantSandboxCats"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/sandbox/weapon": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 테스트판에서 그 등급의 무기를 여섯 개 받고 사장냥이 든다 (decisions.md 499번) */
+        post: operations["grantSandboxWeapon"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/sandbox/reset": {
         parameters: {
             query?: never;
@@ -1187,8 +1238,10 @@ export interface components {
                     tickets: number;
                 } | null;
             };
-            /** @description 테스트판의 회사다 (decisions.md 499번). 자본과 뽑기권이 떨어지지 않는다 */
+            /** @description 테스트판의 회사다 (decisions.md 499번) */
             sandbox?: boolean;
+            /** @description 테스트판의 무한 지갑이 켜져 있다. 자본과 뽑기권이 떨어지지 않는다 */
+            sandboxInfinite?: boolean;
             idle?: {
                 /** Format: int64 */
                 wall: number;
@@ -2259,6 +2312,94 @@ export interface operations {
         };
         responses: {
             /** @description 옮긴 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setSandboxWallet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    infinite: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description 바뀐 뒤의 테스트판 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    grantSandboxCats: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    level: number;
+                };
+            };
+        };
+        responses: {
+            /** @description 바뀐 뒤의 테스트판 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    grantSandboxWeapon: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    grade: "F" | "E" | "D" | "C" | "B" | "A" | "S" | "SS" | "SSS" | "SR" | "UR" | "LR";
+                };
+            };
+        };
+        responses: {
+            /** @description 바뀐 뒤의 테스트판 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

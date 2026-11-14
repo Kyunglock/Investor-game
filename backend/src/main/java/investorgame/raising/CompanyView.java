@@ -54,7 +54,8 @@ public record CompanyView(
     Stages stages,
     Assaults assaults,
     Idle idle,
-    boolean sandbox) {
+    boolean sandbox,
+    boolean sandboxInfinite) {
 
   public record Idle(
       long wall,

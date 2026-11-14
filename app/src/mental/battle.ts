@@ -128,6 +128,7 @@ import { wallOffset } from './stageArt'
 import {
   IDLE_RAID,
   IDLE_RAID_BANNERS,
+  type IdleRaidKind,
   idleRaidGap,
   idleRaidKind,
   PANIC_RUSH,
@@ -253,6 +254,8 @@ export interface BattleHandle {
   idleHitsSent: (sequence: number) => void
   /** 자동 전투: 보내려던 명중을 버렸다(멈춤·끊김). 먼저 빼 둔 피해도 잊는다. */
   clearIdleHits: () => void
+  /** 테스트판: 그 종류의 몬스터 습격을 바로 부른다. */
+  callIdleRaid: (kind: IdleRaidKind) => void
   stop: () => void
 }
 
@@ -675,6 +678,7 @@ class BattleScene extends Phaser.Scene {
   /** 자동 전투의 다음 몬스터 습격 시각(전투 초)과 지금까지의 습격 수 (500번). */
   private nextIdleRaid: number = IDLE_RAID.first
   private idleRaids = 0
+  private calledRaid: IdleRaidKind | null = null
   private panicRushClock = 0
   private panicRushEvery = 0
   /** 한 화면에 함께 있는 적의 최대 수(334·340번): 더 있으면 새로 만들지 않는다. */
@@ -2533,7 +2537,9 @@ class BattleScene extends Phaser.Scene {
    */
   private idleRaidStep(dt: number) {
     if (this.elapsed >= this.nextIdleRaid && !this.circuit && !this.idleTransition) {
-      const kind = idleRaidKind(this.idleRaids++)
+      // 테스트판이 고른 습격(callIdleRaid)이 있으면 그것을, 아니면 차례대로.
+      const kind = this.calledRaid ?? idleRaidKind(this.idleRaids++)
+      this.calledRaid = null
       this.nextIdleRaid = this.elapsed + idleRaidGap(Math.random())
       const [text, color] = IDLE_RAID_BANNERS[kind]
       this.opts.onIdleRaid?.(text, color)
@@ -2544,6 +2550,13 @@ class BattleScene extends Phaser.Scene {
       if (kind !== 'panic') sfx.rumble()
     }
     this.pourPanicRush(dt)
+  }
+
+  /** 테스트판 (499번): 기다리지 않고 그 종류의 습격을 바로 부른다. 거래 정지나 벽이 바뀌는 중이면 끝나는 대로 온다. */
+  callIdleRaid(kind: IdleRaidKind) {
+    if (!this.opts.idle) return
+    this.calledRaid = kind
+    this.nextIdleRaid = this.elapsed
   }
 
   /** 투기 세력: 크고 느린 투기 몬스터 몇과 그 앞의 손절매 한 줄. */
@@ -4584,6 +4597,7 @@ export function startBattle(parent: HTMLElement, opts: BattleOptions): BattleHan
     setSpeed: (speed) => scene.setGameSpeed(speed),
     idleHitsSent: (sequence) => scene.idleHitsSent(sequence),
     clearIdleHits: () => scene.clearIdleHits(),
+    callIdleRaid: (kind) => scene.callIdleRaid(kind),
     stop: () => {
       ro.disconnect()
       game.destroy(true)

@@ -151,10 +151,57 @@ class SandboxApiTest {
     assertThat(fresh.read("$.idle.wall", Long.class)).isEqualTo(1);
     assertThat(fresh.read("$.battleUpgrades[?(@.kind=='damage')].level").toString())
         .isEqualTo("[0]");
+    // 고양이 여섯을 그 레벨로 받고 넷이 출전한다. 무기를 받으면 사장냥이 든다.
+    DocumentContext cats =
+        json(
+            mvc.perform(tool("cats", "{\"level\":10}", in)).andExpect(status().isOk()).andReturn());
+    assertThat(cats.read("$.idle.cats[*].level").toString()).isEqualTo("[10,10,10,10,10,10]");
+    assertThat(cats.read("$.idle.cats[?(@.fielded)].code").toString())
+        .isEqualTo("[\"sky\",\"mint\",\"lilac\",\"sunset\"]");
+    DocumentContext armed =
+        json(
+            mvc.perform(tool("weapon", "{\"grade\":\"S\"}", in))
+                .andExpect(status().isOk())
+                .andReturn());
+    assertThat(armed.read("$.weapons[?(@.equipped)].grade").toString()).isEqualTo("[\"S\"]");
+    assertThat(armed.read("$.weapons[?(@.equipped)].count").toString()).isEqualTo("[6]");
+    mvc.perform(tool("weapon", "{\"grade\":\"ZZ\"}", in)).andExpect(status().isBadRequest());
+
+    // 무한 지갑을 끄면 처음 돈과 뽑기권 0에서 시작해 다시 채워지지 않고, 켜면 다시 채워진다.
+    DocumentContext finite =
+        json(
+            mvc.perform(tool("wallet", "{\"infinite\":false}", in))
+                .andExpect(status().isOk())
+                .andReturn());
+    assertThat(finite.read("$.sandbox", Boolean.class)).isTrue();
+    assertThat(finite.read("$.sandboxInfinite", Boolean.class)).isFalse();
+    assertThat(finite.read("$.armory.tickets", Integer.class)).isZero();
+    long pocket = finite.read("$.capital", Long.class);
+    mvc.perform(post("/api/company/cat/draw").cookie(session, in))
+        .andExpect(status().isBadRequest());
+    assertThat(
+            json(mvc.perform(get("/api/company").cookie(session, in)).andReturn())
+                .read("$.capital", Long.class))
+        .isEqualTo(pocket);
+    DocumentContext refilled =
+        json(
+            mvc.perform(tool("wallet", "{\"infinite\":true}", in))
+                .andExpect(status().isOk())
+                .andReturn());
+    assertThat(refilled.read("$.sandboxInfinite", Boolean.class)).isTrue();
+    assertThat(refilled.read("$.capital", Long.class)).isGreaterThan(pocket);
+
     // 본 게임의 회사는 그대로다.
     DocumentContext main = json(mvc.perform(get("/api/company").cookie(session)).andReturn());
     assertThat(main.read("$.sandbox", Boolean.class)).isFalse();
     assertThat(main.read("$.idle.wall", Long.class)).isEqualTo(1);
+  }
+
+  private MockHttpServletRequestBuilder tool(String name, String body, Cookie in) {
+    return post("/api/sandbox/" + name)
+        .cookie(session, in)
+        .contentType(MediaType.APPLICATION_JSON)
+        .content(body);
   }
 
   private MockHttpServletRequestBuilder wall(long wall) {
