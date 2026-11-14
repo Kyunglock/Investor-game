@@ -34,5 +34,5 @@ export function drawBattleGun(
   // 총몸 아래로 가려진 손잡이는 그리지 않는다. 총구 중심은 공통 발사 축에 맞춘다.
   const crop = spriteBounds(source, weaponCell(source, grade))
   const tipX = CAT_GUN.pivotX + CAT_GUN.barrel
-  c.drawImage(source, crop.x, crop.y, crop.w, crop.h, 8, CAT_GUN.pivotY - 10, tipX - 8, 20)
+  c.drawImage(source, crop.x, crop.y, crop.w, crop.h, 8, CAT_GUN.pivotY - 9, tipX - 8, 18)
 }

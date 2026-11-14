@@ -17,10 +17,11 @@ try {
       page.on('pageerror', (error) => errors.push(error.message))
       await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5319/app/')
       const result = await page.evaluate(async (mode) => {
-        const [{ startBattle }, cards, { DEFAULT_WEAPON }] = await Promise.all([
+        const [{ startBattle }, cards, { DEFAULT_WEAPON }, { CAT_GUN }] = await Promise.all([
           import('/app/src/mental/battle.ts'),
           import('/app/src/mental/cards.ts'),
           import('/app/src/mental/hero.ts'),
+          import('/app/src/mental/catGun.ts'),
         ])
         // 테스트에서만 생성된 씬을 관찰한다.
         const manager = window.Phaser.Scenes.SceneManager.prototype
@@ -70,7 +71,7 @@ try {
           const expected = gun
             .getWorldTransformMatrix()
             .transformPoint(
-              gun.width * (63 / 80) - gun.displayOriginX,
+              gun.width * ((CAT_GUN.pivotX + CAT_GUN.barrel) / CAT_GUN.w) - gun.displayOriginX,
               gun.height * 0.5 - gun.displayOriginY,
             )
           const bullet = scene.bullets
@@ -81,7 +82,19 @@ try {
                 Math.abs(b.fromX - expected.x) < 0.01 &&
                 Math.abs(b.fromY - expected.y) < 0.01,
             )
+          const canvas = scene.textures.get(body.texture.key).getSourceImage()
+          const local = body.getWorldTransformMatrix().applyInverse(expected.x, expected.y)
+          const bx = Math.round(local.x + body.displayOriginX)
+          const by = Math.round(local.y + body.displayOriginY)
+          const muzzleClear =
+            bx < 0 ||
+            by < 0 ||
+            bx >= canvas.width ||
+            by >= canvas.height ||
+            canvas.getContext('2d').getImageData(bx, by, 1, 1).data[3] < 128
           shots.push({
+            gunBehindBody: gun.depth < body.depth,
+            muzzleClear,
             exists: Boolean(bullet),
             damage: bullet?.damage,
             vy: bullet?.body.velocity.y,
@@ -133,6 +146,8 @@ try {
       assert(result.bodiesUpright)
       for (const shot of result.shots) {
         assert(shot.exists)
+        assert(shot.gunBehindBody)
+        assert(shot.muzzleClear, '몸 뒤에 그린 총의 총구는 머리 밖에 노출')
         assert.equal(shot.damage, result.damage * 2)
         assert(shot.vy < 0)
       }
@@ -167,6 +182,36 @@ try {
           await page.screenshot({ path: `${out}/${mode}-aim-${targetX}.png` })
         }
       }
+      const circle = await page.evaluate(() => {
+        const scene = window.feedbackScene
+        const actors = [scene.player, ...scene.mates.map((m) => m.body)]
+        const fixed = actors.map((body) => ({ x: body.x, y: body.y, texture: body.texture.key }))
+        let upright = true,
+          aimed = true,
+          unchanged = true
+        for (let step = 0; step < 16; step++) {
+          const angle = (step * Math.PI) / 8
+          for (const [i, body] of actors.entries()) {
+            const target = { x: body.x + Math.cos(angle) * 180, y: body.y + Math.sin(angle) * 180 }
+            scene.fire(scene.time.now + step * 4 + i, target, i ? scene.mates[i - 1] : undefined)
+            const gun = i ? scene.mates[i - 1].gun : scene.heroGun
+            const dx = target.x - gun.x,
+              dy = target.y - gun.y
+            upright &&= body.rotation === 0
+            aimed &&=
+              Math.abs(dx * Math.sin(gun.rotation) - dy * Math.cos(gun.rotation)) < 0.001 &&
+              dx * Math.cos(gun.rotation) + dy * Math.sin(gun.rotation) > 0
+            unchanged &&=
+              body.x === fixed[i].x &&
+              body.y === fixed[i].y &&
+              body.texture.key === fixed[i].texture
+          }
+        }
+        return { upright, aimed, unchanged }
+      })
+      assert(circle.upright, '표적이 360도 이동해도 사장냥과 동료 몸은 회전하지 않음')
+      assert(circle.aimed, '표적 각도는 분리된 총에만 적용')
+      assert(circle.unchanged, '조준 중 기존 몸 자세·위치·그림을 유지')
       if (mode === 'assault') {
         const broken = await page.evaluate(() => {
           const scene = window.feedbackScene
@@ -197,7 +242,7 @@ try {
       }
       assert.deepEqual(errors, [])
       console.log(
-        `PASS: ${mode}: original join count/cap, distinct models, separate gun/paws, upright bodies, all four rendered muzzle origins/damage`,
+        `PASS: ${mode}: original join count/cap, distinct models, separate gun/paws, upright bodies through 360-degree target changes, all four rendered muzzle origins/damage`,
       )
       const cleaned = await page.evaluate(() => {
         const scene = window.feedbackScene

@@ -1,7 +1,7 @@
 import { CAT_SCALE, type CatModel } from './catModels'
 
-/** 무기 그림은 오른쪽을 향하며, 총구는 어깨 축에서 43px 앞이다. */
-export const CAT_GUN = { w: 80, h: 64, pivotX: 20, pivotY: 32, barrel: 43 }
+/** 무기 그림은 오른쪽을 향하며, 총구는 어깨 축에서 70px 앞이다. */
+export const CAT_GUN = { w: 104, h: 64, pivotX: 20, pivotY: 32, barrel: 70 }
 const SHOULDERS: Record<CatModel, { x: number; y: number }> = {
   hero: { x: 73, y: 65 },
   fold: { x: 73, y: 65 },

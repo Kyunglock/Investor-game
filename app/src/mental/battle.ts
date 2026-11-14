@@ -871,7 +871,7 @@ class BattleScene extends Phaser.Scene {
     this.player = this.physics.add.image(w / 2, this.playerY(), 'hero-idle')
     this.heroGun = this.add
       .image(0, 0, bakeCatGun(this, this.opts.hero.weapon.grade, 'hero'))
-      .setDepth(5.1)
+      .setDepth(4.8)
     this.poseGun(this.player, this.aim, 0)
     this.player.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h).setDepth(5)
     const pr = 22
@@ -1196,7 +1196,7 @@ class BattleScene extends Phaser.Scene {
             this.mateLook(i),
           ),
         )
-        .setDepth(5.1),
+        .setDepth(4.8),
       aim: this.aim,
       // 사장냥과 번갈아 쏘게 연사 간격 안에서 조금씩 어긋나게 시작한다.
       lastFire: this.lastFire + (this.attackInterval * (i + 1)) / (MATE_LOOKS.length + 1),
@@ -3323,6 +3323,8 @@ class BattleScene extends Phaser.Scene {
 
   /** 몸은 고정하고 총과 두 앞발만 어깨 축에서 조준·반동한다. */
   private poseGun(body: Phaser.GameObjects.Image, aim: number, kick: number, mate?: Mate) {
+    // 생성·리사이즈·즉시 발사를 포함해 몸에는 표적 각도를 적용하지 않는다.
+    body.setRotation(0)
     const index = mate ? this.mates.indexOf(mate) : -1
     const look = mate ? this.mateLook(index) : undefined
     const model = look === undefined ? 'hero' : mateModel(look)
@@ -4456,7 +4458,6 @@ class BattleScene extends Phaser.Scene {
         )
       m.kick = recoilDecay(m.kick, dt)
       b.setPosition(b.x + (this.standX(i + 1) - b.x) * k, y + m.drop)
-      b.setRotation(0)
       m.magicMark.setPosition(b.x, b.y - 58)
       if (!this.tweens.isTweening(b)) {
         b.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
@@ -4591,7 +4592,7 @@ class BattleScene extends Phaser.Scene {
             ? 'hero-fire'
             : 'hero-idle',
     )
-    p.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h).setRotation(0)
+    p.setDisplaySize(HERO_SIZE.w, HERO_SIZE.h)
     if (this.wall && this.wallZone) {
       this.wall.setPosition(0, this.wallY() - WALL_H).setDisplaySize(w, WALL_H * 3)
       this.wall.setTexture(this.mental <= this.loadout.maxMental / 2 ? 'wall-cracked' : 'wall')
