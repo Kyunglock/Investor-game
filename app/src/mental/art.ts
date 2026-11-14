@@ -138,7 +138,7 @@ export function bakeCatGun(scene: Phaser.Scene, grade: GunGrade, model: CatModel
   return key
 }
 
-/** Bake alternating leg strides from the original cats, keeping the upper-body silhouette. */
+/** 옆자세의 겹친 발은 한 덩어리로 움직여 발 중간이 갈라지지 않게 한다. */
 export function bakeCatRuns(
   scene: Phaser.Scene,
   _grade: GunGrade,
@@ -169,19 +169,17 @@ export function bakeCatRuns(
         c.translate(-CAT_W / 2, -80)
         const ankle = 86
         c.drawImage(sprite, 0, 0, CAT_W * DPR, ankle * DPR, 0, 0, CAT_W, ankle)
-        for (const [side, stride] of [pose.left, pose.right].entries()) {
-          c.drawImage(
-            sprite,
-            ((side * CAT_W) / 2) * DPR,
-            ankle * DPR,
-            (CAT_W / 2) * DPR,
-            (CAT_H - ankle) * DPR,
-            (side * CAT_W) / 2,
-            ankle,
-            CAT_W / 2,
-            (CAT_H - ankle) * (1 + stride),
-          )
-        }
+        c.drawImage(
+          sprite,
+          0,
+          ankle * DPR,
+          CAT_W * DPR,
+          (CAT_H - ankle) * DPR,
+          0,
+          ankle,
+          CAT_W,
+          (CAT_H - ankle) * (1 + pose.left),
+        )
         c.restore()
       })
     }
