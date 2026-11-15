@@ -138,51 +138,6 @@ class CompanyEngineTest {
     }
   }
 
-  /**
-   * 채용 뽑기 (decisions.md 312번): 채용권 한 장에 한 명이 쉬는 채로 온다. 돈은 들지 않는다. 데리고 있을 수 있는 사람은 100명이고, 넘으면 내보내야
-   * 더 뽑는다.
-   */
-  @Test
-  void 채용권으로_뽑고_데리고_있을_자리가_모자라면_내보낸다() {
-    CompanyState company = ENGINE.open(new HashSeededRandom(5), ENGINE.openingCapital());
-    long capital = (long) company.capital;
-    List<CompanyState.Drawn> drawn = ENGINE.draw(company, 2, new HashSeededRandom(5));
-    assertThat(drawn).hasSize(2);
-    assertThat(company.employees).hasSize(2).allSatisfy(e -> assertThat(e.desk).isNull());
-    assertThat(drawn)
-        .extracting(d -> d.name)
-        .containsExactlyElementsOf(company.employees.stream().map(e -> e.name).toList());
-    assertThat(company.tickets).isEqualTo(PROPERTIES.gacha().startTickets() - 2);
-    assertThat(company.capital).as("뽑기는 돈이 들지 않는다").isEqualTo(capital);
-    assertThat(company.draws).isEqualTo(2);
-    assertThat(company.collection.values().stream().mapToInt(Integer::intValue).sum()).isEqualTo(2);
-    assertThatThrownBy(
-            () ->
-                ENGINE.draw(
-                    company, PROPERTIES.gacha().startTickets() - 1, new HashSeededRandom(5)))
-        .as("채용권이 모자란다")
-        .isInstanceOf(InvalidRequestException.class);
-    assertThatThrownBy(
-            () -> ENGINE.draw(company, PROPERTIES.gacha().maxDraws() + 1, new HashSeededRandom(5)))
-        .isInstanceOf(InvalidRequestException.class);
-
-    // 데리고 있는 인원에 상한이 없다 (354번): 백 명을 넘겨도 더 뽑는다.
-    assertThat(ENGINE.rosterMax(company)).isGreaterThan(100_000);
-    company.tickets = 200;
-    while (company.employees.size() < 100) {
-      int room = 100 - company.employees.size();
-      ENGINE.draw(company, Math.min(PROPERTIES.gacha().maxDraws(), room), new HashSeededRandom(5));
-    }
-    assertThat(company.employees).hasSize(100);
-    ENGINE.draw(company, 1, new HashSeededRandom(5));
-    assertThat(company.employees).hasSize(101);
-    CompanyState.Employee gone = company.employees.getFirst();
-    ENGINE.release(company, gone.id);
-    assertThat(company.employees).hasSize(100).doesNotContain(gone);
-    assertThat(company.alumni).extracting(a -> a.name).containsExactly(gone.name);
-    ENGINE.draw(company, 1, new HashSeededRandom(5));
-  }
-
   /** 뽑기 하나. 채용권이 없으면 한 장 쥐여 준다. */
   private static CompanyState.Employee drawOne(CompanyState company) {
     company.tickets = Math.max(company.tickets, 1);
@@ -206,10 +161,11 @@ class CompanyEngineTest {
     int[] counts = new int[CompanyEngine.LADDER.size()];
     int stars = 0;
     int total = 0;
-    for (int round = 0; round < 300; round++) {
+    // 반지하는 자리가 넷이라(524번) 한 번에 넷씩 뽑고 비운다.
+    for (int round = 0; round < 600; round++) {
       company.employees.clear();
-      company.tickets = 8;
-      for (CompanyState.Drawn d : ENGINE.draw(company, 8, new HashSeededRandom(round))) {
+      company.tickets = 4;
+      for (CompanyState.Drawn d : ENGINE.draw(company, 4, new HashSeededRandom(round))) {
         counts[CompanyEngine.LADDER.indexOf(d.grade)]++;
         stars += d.star ? 1 : 0;
         total++;
@@ -230,7 +186,7 @@ class CompanyEngineTest {
     CompanyState.Drawn star = null;
     for (int round = 0; round < 400 && star == null; round++) {
       CompanyState company = ENGINE.open(new HashSeededRandom(round), ENGINE.openingCapital());
-      for (CompanyState.Drawn d : ENGINE.draw(company, 5, new HashSeededRandom(round))) {
+      for (CompanyState.Drawn d : ENGINE.draw(company, 4, new HashSeededRandom(round))) {
         if (d.star) {
           star = d;
           found = company;
@@ -262,53 +218,6 @@ class CompanyEngineTest {
     assertThat(ENGINE.interested(hired)).as("단타 데스크는 섹터를 가리지 않는다").isFalse();
     hired.desk = hired.sector; // 섹터 데스크의 코드는 섹터 코드와 같다
     assertThat(ENGINE.interested(hired)).isTrue();
-  }
-
-  /**
-   * 자리가 줄면 넘친 사람이 쉰다 (#311, decisions.md 248번): 돕는 자리부터, 그다음 나중에 들어온 사람부터. 자리 수는 연말에만 바뀐다 (268번): 해
-   * 가운데 자본이 띠 아래로 내려가도 그해에는 그대로다.
-   */
-  @Test
-  void 자본이_줄어_자리가_줄면_돕는_자리부터_일어나_쉰다() {
-    // E 회사(자리 6)에 여섯을 앉힌다. 해 가운데 자본이 1.2억 아래로 떨어져도 그해에는 자리 여섯 그대로다.
-    CompanyState company = open(5, stats(50, 50, 50, 50), 120_000_000 + 1_000_000);
-    for (int i = 0; i < 5; i++) {
-      ENGINE.hire(company, stats(50, 50, 50, 50));
-    }
-    List<CompanyState.Employee> staff = company.employees;
-    List<String> traders = List.of("bio", "day", "game", "food", "finance");
-    Map<Integer, String> seats = new HashMap<>();
-    seats.put(staff.get(0).id, "research");
-    for (int i = 1; i < 6; i++) {
-      seats.put(staff.get(i).id, traders.get(i - 1));
-    }
-    ENGINE.place(company, seats);
-    assertThat(ENGINE.seats(company)).isEqualTo(6);
-
-    company.capital -= 2_000_000;
-    assertThat(company.capital).isLessThan(120_000_000);
-    assertThat(ENGINE.seats(company)).as("자리 수는 연말에만 바뀐다").isEqualTo(6);
-    assertThat(staff.get(0).desk).isEqualTo("research");
-
-    // 연말에 건물이 줄어들면(F, 자리 4, 296번) 넘친 둘이 일어난다: 돕는 자리가 먼저, 그다음 나중에 들어온 사람.
-    company.gradedCapital = (long) company.capital;
-    company.building = ENGINE.grade(company.capital);
-    ENGINE.fitSeats(company);
-    assertThat(ENGINE.seats(company)).isEqualTo(4);
-    assertThat(staff.get(0).desk).as("돕는 자리가 먼저 일어난다").isNull();
-    assertThat(staff.get(5).desk).isNull();
-    for (int i = 1; i < 5; i++) {
-      assertThat(staff.get(i).desk).isEqualTo(traders.get(i - 1));
-    }
-
-    // 돕는 자리가 없으면 나중에 들어온 사람부터 일어난다.
-    company.capital = 1_000_000;
-    company.gradedCapital = (long) company.capital;
-    staff.get(0).desk = "bio";
-    List<CompanyState.Employee> stood = ENGINE.fitSeats(company);
-    assertThat(stood).extracting(e -> e.id).containsExactly(staff.get(4).id);
-    assertThat(staff.get(0).desk).isEqualTo("bio");
-    assertThat(staff.get(1).desk).isEqualTo("bio");
   }
 
   /** 판돈은 자본이 아니라 건물의 값이다 (411번): 자본을 전투 강화·이사에 다 써도 버는 양이 그대로다. */
@@ -349,36 +258,6 @@ class CompanyEngineTest {
     assertThat(CompanyEngine.money(-5_200_000)).isEqualTo("−5.2b");
   }
 
-  /** 뽑은 사람 이름은 성 × 이름 조합을 겹치지 않게 돌리고 직함을 붙이지 않는다 (#319, decisions.md 256번). */
-  @Test
-  void 뽑은_사람_이름은_겹치지_않고_직함이_없다() {
-    var texts = TestContent.load().raising().company();
-    int total = texts.surnames().size() * texts.names().size();
-    CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
-    java.util.Set<String> names = new java.util.HashSet<>();
-    String previous = null;
-    while (names.size() < total) {
-      company.tickets = PROPERTIES.gacha().maxDraws();
-      company.employees.clear();
-      for (CompanyState.Drawn d :
-          ENGINE.draw(
-              company,
-              Math.min(PROPERTIES.gacha().maxDraws(), ENGINE.rosterMax(company)),
-              new HashSeededRandom(1))) {
-        assertThat(names.add(d.name)).as("겹친 이름: %s", d.name).isTrue();
-        assertThat(d.name).doesNotContain("대리").doesNotContain("수습").doesNotContain("주임");
-        if (previous != null) {
-          assertThat(d.name.charAt(0)).as("이웃한 사람의 성이 다르다").isNotEqualTo(previous.charAt(0));
-        }
-        previous = d.name;
-        if (names.size() == total) {
-          break;
-        }
-      }
-    }
-    assertThat(names).hasSize(total);
-  }
-
   /** SSS 회사의 뽑기는 위 칸에서 X 이상 경력직이 나온다(312번). 계약금(258번)은 연봉·이적료와 함께 뺐다(383·385번). */
   @Test
   void SSS_회사의_뽑기에는_경력직이_나온다() {
@@ -387,16 +266,17 @@ class CompanyEngineTest {
     assertThat(ENGINE.rateGrade(company, ENGINE.rates().get(2))).isEqualTo("X");
     company.tickets = 60;
     List<CompanyState.Drawn> drawn = new java.util.ArrayList<>();
+    List<CompanyState.Employee> hired = new java.util.ArrayList<>();
     for (int i = 0; i < 6; i++) {
       drawn.addAll(ENGINE.draw(company, 10, new HashSeededRandom(3)));
+      // 자리(34)를 넘기지 않게 비운다 (524번).
+      hired.addAll(company.employees);
+      company.employees.clear();
     }
     CompanyState.Drawn veteran =
         drawn.stream().filter(d -> d.grade.equals("X")).findFirst().orElseThrow();
     CompanyState.Employee e =
-        company.employees.stream()
-            .filter(x -> x.id == veteran.employeeId)
-            .findFirst()
-            .orElseThrow();
+        hired.stream().filter(x -> x.id == veteran.employeeId).findFirst().orElseThrow();
     assertThat(e.rank).isEqualTo(1);
     assertThat(e.stats.values())
         .as("능력치가 모두 SSS 띠")
@@ -479,9 +359,9 @@ class CompanyEngineTest {
     assertThat(ENGINE.rateGrade(company, ENGINE.rates().get(1))).as("중심이 A로 오른다").isEqualTo("A");
     int sum = 0;
     int count = 0;
-    for (int round = 0; round < 60; round++) {
-      company.tickets = 5;
-      for (CompanyState.Drawn d : ENGINE.draw(company, 5, new HashSeededRandom(round))) {
+    for (int round = 0; round < 100; round++) {
+      company.tickets = 3;
+      for (CompanyState.Drawn d : ENGINE.draw(company, 3, new HashSeededRandom(round))) {
         sum += CompanyEngine.LADDER.indexOf(d.grade);
         count++;
       }
@@ -524,5 +404,107 @@ class CompanyEngineTest {
     // 옮긴 뒤에도 그대로다: 아무도 떠나지 않는다.
     ENGINE.adoptRealtime(old);
     assertThat(old.employees).as("아무도 떠나지 않는다").hasSize(2);
+  }
+
+  /**
+   * 채용 뽑기 (decisions.md 312번): 채용권 한 장에 한 명이 쉬는 채로 온다. 돈은 들지 않는다. 데리고 있을 수 있는 사람은 100명이고, 넘으면 내보내야
+   * 더 뽑는다.
+   */
+  @Test
+  void 채용권으로_뽑으면_바로_자리에_앉고_자리가_차면_회사를_넓혀야_더_뽑는다() {
+    // 인력 관리를 없앴다 (decisions.md 524번): 뽑은 직원은 사장이 배치하지 않아도 빈 자리에 앉는다.
+    CompanyState company = ENGINE.open(new HashSeededRandom(5), ENGINE.openingCapital());
+    long capital = (long) company.capital;
+    List<CompanyState.Drawn> drawn = ENGINE.draw(company, 2, new HashSeededRandom(5));
+    assertThat(drawn).hasSize(2);
+    assertThat(company.employees).hasSize(2).allSatisfy(e -> assertThat(e.desk).isNotNull());
+    assertThat(company.employees.getFirst().desk)
+        .as("첫 직원은 돈을 굴리는 자리에 앉아 종목회의를 열 수 있다")
+        .isEqualTo("semiconductor");
+    assertThat(company.employees.get(1).desk).as("팀을 차례대로 채운다").isEqualTo("bio");
+    assertThat(ENGINE.traders(company)).hasSize(2);
+    assertThat(drawn)
+        .extracting(d -> d.name)
+        .containsExactlyElementsOf(company.employees.stream().map(e -> e.name).toList());
+    assertThat(company.tickets).isEqualTo(PROPERTIES.gacha().startTickets() - 2);
+    assertThat(company.capital).as("뽑기는 돈이 들지 않는다").isEqualTo(capital);
+    assertThat(company.draws).isEqualTo(2);
+    assertThat(company.collection.values().stream().mapToInt(Integer::intValue).sum()).isEqualTo(2);
+    assertThatThrownBy(
+            () -> ENGINE.draw(company, PROPERTIES.gacha().maxDraws() + 1, new HashSeededRandom(5)))
+        .isInstanceOf(InvalidRequestException.class);
+
+    // 반지하(F)는 자리가 넷이다: 둘 더 뽑으면 꽉 차고, 그 뒤로는 채용권이 있어도 못 뽑는다.
+    assertThat(ENGINE.seats(company)).isEqualTo(4);
+    company.tickets = 10;
+    assertThatThrownBy(() -> ENGINE.draw(company, 3, new HashSeededRandom(5)))
+        .as("자리를 넘겨 뽑을 수 없다")
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("회사를 넓히면");
+    assertThat(company.tickets).as("거절되면 채용권을 쓰지 않는다").isEqualTo(10);
+    ENGINE.draw(company, 2, new HashSeededRandom(5));
+    assertThat(company.employees).hasSize(4).allSatisfy(e -> assertThat(e.desk).isNotNull());
+    assertThatThrownBy(() -> ENGINE.draw(company, 1, new HashSeededRandom(5)))
+        .isInstanceOf(InvalidRequestException.class)
+        .hasMessageContaining("회사를 넓히면");
+
+    // 회사를 넓히면 자리가 늘어 다시 뽑는다.
+    company.capital = 10_000_000_000L;
+    ENGINE.upgrade(company);
+    assertThat(ENGINE.seats(company)).isEqualTo(6);
+    ENGINE.draw(company, 2, new HashSeededRandom(5));
+    assertThat(company.employees).hasSize(6).allSatisfy(e -> assertThat(e.desk).isNotNull());
+    assertThat(company.employees.stream().map(e -> e.desk).distinct().count())
+        .as("사람이 적은 팀부터 채워 여섯이 저마다 다른 팀이다")
+        .isEqualTo(6);
+  }
+
+  @Test
+  void 쉬던_직원은_불러올_때_모두_앉히고_자리가_모자라도_잃지_않는다() {
+    // 인력 관리가 있던 때의 저장 (524번): 쉬는 사람과 자리 수를 넘는 사람이 있을 수 있다.
+    CompanyState company = ENGINE.open(new HashSeededRandom(8), ENGINE.openingCapital());
+    for (int i = 0; i < 7; i++) {
+      ENGINE.hire(company, all(50));
+    }
+    ENGINE.place(company, Map.of(1, "day", 2, "day"));
+    assertThat(company.employees).filteredOn(e -> e.desk == null).hasSize(5);
+    assertThat(ENGINE.seats(company)).as("자리는 넷뿐이다").isEqualTo(4);
+    assertThat(ENGINE.seatAll(company)).isTrue();
+    assertThat(company.employees).hasSize(7).allSatisfy(e -> assertThat(e.desk).isNotNull());
+    assertThat(company.employees.get(0).desk).as("앉아 있던 사람은 그대로다").isEqualTo("day");
+    assertThat(ENGINE.seatAll(company)).as("다 앉았으면 그대로").isFalse();
+    // 모두 번다: 자리와 상관없다.
+    assertThat(ENGINE.staffIncome(company))
+        .isEqualTo(7 * ENGINE.incomeOf(company.employees.getFirst()));
+  }
+
+  /** 뽑은 사람 이름은 성 × 이름 조합을 겹치지 않게 돌리고 직함을 붙이지 않는다 (#319, decisions.md 256번). */
+  @Test
+  void 뽑은_사람_이름은_겹치지_않고_직함이_없다() {
+    var texts = TestContent.load().raising().company();
+    int total = texts.surnames().size() * texts.names().size();
+    CompanyState company = ENGINE.open(new HashSeededRandom(1), ENGINE.openingCapital());
+    java.util.Set<String> names = new java.util.HashSet<>();
+    String previous = null;
+    while (names.size() < total) {
+      company.tickets = PROPERTIES.gacha().maxDraws();
+      company.employees.clear();
+      for (CompanyState.Drawn d :
+          ENGINE.draw(
+              company,
+              Math.min(PROPERTIES.gacha().maxDraws(), ENGINE.seats(company)),
+              new HashSeededRandom(1))) {
+        assertThat(names.add(d.name)).as("겹친 이름: %s", d.name).isTrue();
+        assertThat(d.name).doesNotContain("대리").doesNotContain("수습").doesNotContain("주임");
+        if (previous != null) {
+          assertThat(d.name.charAt(0)).as("이웃한 사람의 성이 다르다").isNotEqualTo(previous.charAt(0));
+        }
+        previous = d.name;
+        if (names.size() == total) {
+          break;
+        }
+      }
+    }
+    assertThat(names).hasSize(total);
   }
 }

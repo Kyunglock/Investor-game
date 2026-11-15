@@ -257,15 +257,13 @@ public record CompanyView(
       int count) {}
 
   /**
-   * @param desk 앉은 자리 코드. 쉬면 null
+   * @param desk 앉은 자리 코드. 뽑으면 바로 앉는다 (524번). 자리는 그림과 종목회의의 팀에만 쓰인다
    * @param overallGrade 종합 등급(F~SSS, 그 위 X~GOD). 뽑은 그대로 가고 오르거나 떨어지지 않는다 (421번)
    * @param effects 등급 효과 이름(A 손절·S 끌어주기·SS 방패·SSS 전설의 촉, X 이상의 확신·경보…). 쌓인다 (2.4절, decisions.md
    *     387번)
    * @param perk 등급 효과 한 줄: 이름·맞히면 버는 배수·손 뒤집힘 보정·이름 붙은 효과·(decisions.md 289·387번)
    * @param sector 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다. 없으면 null
    * @param role 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번)
-   * @param leader 앉은 자리의 팀장이다 (decisions.md 269번)
-   * @param morale 사기(−2~+2). 낮으면 손이 더 뒤집힌다 (270번)
    */
   public record Employee(
       int id,
@@ -278,8 +276,6 @@ public record CompanyView(
       String sector,
       String sectorName,
       String role,
-      boolean leader,
-      int morale,
       String quirk,
       String quirkName,
       java.math.BigDecimal incomePerSecond) {}
@@ -288,8 +284,8 @@ public record CompanyView(
    * 채용 뽑기 (decisions.md 312번).
    *
    * @param tickets 가진 채용권. 한 장에 한 명
-   * @param roster 데리고 있는 사람 수(쉬는 사람 포함)
-   * @param rosterMax 데리고 있을 수 있는 사람 수(100명, 337번). 넘으면 내보내야 더 뽑는다
+   * @param roster 데리고 있는 사람 수
+   * @param rosterMax 데리고 있을 수 있는 사람 수 = 회사의 자리 수 (524번). 꽉 차면 회사를 넓혀야 더 뽑는다
    * @param draws 지금까지 뽑은 횟수. 뽑기 요청에 싣는다
    * @param maxDraws 한 번에 뽑을 수 있는 최대 수
    * @param rates 이 회사의 확률표: 칸마다 나오는 등급과 확률. star면 특급

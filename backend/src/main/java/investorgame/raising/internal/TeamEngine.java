@@ -1,7 +1,6 @@
 package investorgame.raising.internal;
 
 import investorgame.common.Korean;
-import investorgame.common.error.InvalidRequestException;
 import investorgame.content.ContentCatalog;
 import investorgame.content.RaisingContent;
 import investorgame.raising.internal.CompanyState.Employee;
@@ -35,44 +34,16 @@ class TeamEngine {
     if (members.isEmpty()) {
       return Optional.empty();
     }
-    Integer chosen = c.leaders.get(desk);
-    if (chosen != null) {
-      Optional<Employee> named = members.stream().filter(e -> e.id == chosen).findFirst();
-      if (named.isPresent()) {
-        return named;
-      }
-    }
     return members.stream()
         .max(
             Comparator.comparingInt(
                     (Employee e) -> CompanyEngine.LADDER.indexOf(CompanyEngine.employeeGrade(e)))
-                .thenComparingInt(e -> e.deskYears)
                 .thenComparingInt(e -> -e.id));
   }
 
   /** 팀장인가. */
   boolean leads(CompanyState c, Employee e) {
     return e.desk != null && leaderOf(c, e.desk).map(x -> x.id == e.id).orElse(false);
-  }
-
-  /** 자리를 떠난 사람의 지정을 지운다. 배치가 바뀔 때마다 부른다: 돌아와도 다시 정하기 전에는 팀장이 아니다. */
-  void tidy(CompanyState c) {
-    c.leaders
-        .entrySet()
-        .removeIf(
-            x ->
-                c.employees.stream()
-                    .noneMatch(e -> e.id == x.getValue() && x.getKey().equals(e.desk)));
-  }
-
-  /** 사장이 팀장을 정한다. 그 자리에 앉은 사람이 아니면 400. */
-  void appoint(CompanyState c, String desk, int employeeId) {
-    Employee e =
-        c.employees.stream()
-            .filter(x -> x.id == employeeId && desk.equals(x.desk))
-            .findFirst()
-            .orElseThrow(() -> new InvalidRequestException("그 자리에 앉은 직원이 아니다"));
-    c.leaders.put(desk, e.id);
   }
 
   /** 보고자 한 줄: "반도체 데스크 팀장 박한결". */

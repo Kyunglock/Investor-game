@@ -202,49 +202,6 @@ class CompanyApiTest {
     assertThat(weapons).containsOnlyNulls();
   }
 
-  /** 데리고 있을 자리가 차면 내보내야 뽑는다. 인사팀이 뽑기를 돕는다 (decisions.md 312번, 6.3절). 직원 합성은 384번에서 뺐다. */
-  @Test
-  void 내보내고_인사팀이_뽑기를_돕는다() throws Exception {
-    json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
-    DocumentContext five = draw(5);
-    List<Integer> ids = five.read("$.employees[*].id");
-    assertThat(ids).hasSize(5);
-    assertThat(five.read("$.gacha.roster", Integer.class)).isEqualTo(5);
-    assertThat(five.read("$.gacha.tickets", Integer.class)).isEqualTo(5);
-
-    DocumentContext released =
-        json(
-            postJson("/api/company/release", "{\"employeeId\":%d}".formatted(ids.get(4)))
-                .andExpect(status().isOk()));
-    assertThat(released.read("$.gacha.roster", Integer.class)).isEqualTo(4);
-    List<String> kinds = released.read("$.history.timeline[*].kind");
-    assertThat(kinds).contains("left");
-    postJson("/api/company/release", "{\"employeeId\":%d}".formatted(ids.get(4)))
-        .andExpect(status().isBadRequest());
-
-    DocumentContext placed =
-        json(
-            postJson(
-                    "/api/company/placement",
-                    "{\"seats\":[{\"employeeId\":" + ids.get(0) + ",\"desk\":\"hr\"}]}")
-                .andExpect(status().isOk()));
-    assertThat(placed.read("$.meeting.hrCap", String.class)).isNotBlank();
-  }
-
-  /** 배치에 같은 직원이 두 번 오면 400이다 (#317, decisions.md 254번). 전에는 뒤의 것이 조용히 덮었다. */
-  @Test
-  void 배치에_같은_직원이_두_번_오면_400이다() throws Exception {
-    DocumentContext company =
-        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
-    assertThat(company.read("$.gacha.tickets", Integer.class)).isPositive();
-    int id = draw(1).read("$.employees[0].id");
-    postJson(
-            "/api/company/placement",
-            "{\"seats\":[{\"employeeId\":%d,\"desk\":\"bio\"},{\"employeeId\":%d,\"desk\":null}]}"
-                .formatted(id, id))
-        .andExpect(status().isBadRequest());
-  }
-
   /** 같은 세션이 동시에 회사를 두 번 차려도 하나만 생기고 500이 나지 않는다 (#317, 254번). */
   @Test
   void 동시에_두_번_차려도_회사는_하나고_500이_나지_않는다() throws Exception {
@@ -370,42 +327,6 @@ class CompanyApiTest {
         .andExpect(status().is4xxClientError());
     mvc.perform(post("/api/company/scout").cookie(session)).andExpect(status().is4xxClientError());
     postJson("/api/company/mental", "{}").andExpect(status().is4xxClientError());
-  }
-
-  /** 종목회의는 기회를 써서 연다 (523번): 새 회사는 한 번을 가지고 시작한다. */
-  @Test
-  void 종목회의는_기회_하나를_써서_열고_정하면_바로_자본에_들어간다() throws Exception {
-    mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated());
-    DocumentContext hired = draw(1);
-    int id = hired.read("$.employees[0].id", Integer.class);
-    // 돈을 굴리는 자리에 아무도 없으면 열 수 없고 기회도 쓰지 않는다.
-    mvc.perform(post("/api/company/invest/open").cookie(session))
-        .andExpect(status().isBadRequest());
-    postJson("/api/company/placement", "{\"seats\":[{\"employeeId\":" + id + ",\"desk\":\"day\"}]}")
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.meetings.chances").value(1));
-
-    DocumentContext opened =
-        json(
-            mvc.perform(post("/api/company/invest/open").cookie(session))
-                .andExpect(status().isOk()));
-    assertThat(opened.read("$.meetings.chances", Integer.class)).isZero();
-    assertThat(opened.read("$.meetings.nextSeconds", Long.class)).isBetween(1L, 3600L);
-    assertThat(opened.read("$.invest.ready", Boolean.class)).isTrue();
-    assertThat(opened.read("$.invest.convened", Boolean.class)).isTrue();
-    String title = opened.read("$.invest.title", String.class);
-    // 정하지 않은 회의가 있으면 다시 열어도 그 회의다.
-    mvc.perform(post("/api/company/invest/open").cookie(session))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.invest.title").value(title))
-        .andExpect(jsonPath("$.meetings.chances").value(0));
-
-    DocumentContext decided = decide("BUY");
-    assertThat(decided.read("$.invest.outcome", Object.class)).isNotNull();
-    assertThat(decided.read("$.capital", Double.class)).isGreaterThanOrEqualTo(0);
-    // 기회가 없으면 다음 회의는 아직 못 연다.
-    mvc.perform(post("/api/company/invest/open").cookie(session))
-        .andExpect(status().isBadRequest());
   }
 
   /** 파산·엔딩·시대의 끝으로 멈췄던 회사도 되살려 이어서 한다 (523번). */
@@ -553,5 +474,45 @@ class CompanyApiTest {
     DocumentContext after = json(mvc.perform(get("/api/company").cookie(session)));
     assertThat(after.read("$.gacha.tickets", Integer.class)).as("이사할 때마다 받았다").isPositive();
     drawRequest(1, after.read("$.gacha.draws", Integer.class)).andExpect(status().isOk());
+  }
+
+  /** 종목회의는 기회를 써서 연다 (523번): 새 회사는 한 번을 가지고 시작한다. */
+  @Test
+  void 종목회의는_기회_하나를_써서_열고_정하면_바로_자본에_들어간다() throws Exception {
+    mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated());
+    // 직원이 없으면 열 수 없고 기회도 쓰지 않는다.
+    mvc.perform(post("/api/company/invest/open").cookie(session))
+        .andExpect(status().isBadRequest());
+    // 뽑은 직원은 바로 돈을 굴리는 자리에 앉는다 (524번): 배치하지 않아도 회의를 연다.
+    DocumentContext hired = draw(1);
+    assertThat(hired.read("$.employees[0].desk", String.class)).isEqualTo("semiconductor");
+    assertThat(hired.read("$.meetings.chances", Integer.class)).isEqualTo(1);
+    // 없앤 길: 배치·팀장·내보내기.
+    postJson("/api/company/placement", "{\"seats\":[]}").andExpect(status().is4xxClientError());
+    postJson("/api/company/leader", "{\"desk\":\"day\",\"employeeId\":1}")
+        .andExpect(status().is4xxClientError());
+    postJson("/api/company/release", "{\"employeeId\":1}").andExpect(status().is4xxClientError());
+
+    DocumentContext opened =
+        json(
+            mvc.perform(post("/api/company/invest/open").cookie(session))
+                .andExpect(status().isOk()));
+    assertThat(opened.read("$.meetings.chances", Integer.class)).isZero();
+    assertThat(opened.read("$.meetings.nextSeconds", Long.class)).isBetween(1L, 3600L);
+    assertThat(opened.read("$.invest.ready", Boolean.class)).isTrue();
+    assertThat(opened.read("$.invest.convened", Boolean.class)).isTrue();
+    String title = opened.read("$.invest.title", String.class);
+    // 정하지 않은 회의가 있으면 다시 열어도 그 회의다.
+    mvc.perform(post("/api/company/invest/open").cookie(session))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.invest.title").value(title))
+        .andExpect(jsonPath("$.meetings.chances").value(0));
+
+    DocumentContext decided = decide("BUY");
+    assertThat(decided.read("$.invest.outcome", Object.class)).isNotNull();
+    assertThat(decided.read("$.capital", Double.class)).isGreaterThanOrEqualTo(0);
+    // 기회가 없으면 다음 회의는 아직 못 연다.
+    mvc.perform(post("/api/company/invest/open").cookie(session))
+        .andExpect(status().isBadRequest());
   }
 }
