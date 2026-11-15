@@ -445,7 +445,8 @@ class CompanyApiTest {
     assertThat(
             jdbc.sql(
                     """
-                SELECT (state ? 'quarters') OR (state ? 'settlements') OR (state ? 'quarter')
+                SELECT jsonb_exists(state, 'quarters') OR jsonb_exists(state, 'settlements')
+                  OR jsonb_exists(state, 'quarter')
                 FROM raising_company WHERE id = CAST(:id AS uuid)
                 """)
                 .param("id", id)
