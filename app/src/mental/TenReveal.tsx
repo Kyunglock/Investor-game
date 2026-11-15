@@ -4,7 +4,7 @@ import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import './weapon-reveal.css'
 
-/** 10연속 뽑기에서 나온 한 장 (517번). */
+/** 10연차에서 나온 한 장 (517번). */
 export type TenCard = {
   key: string
   art: ReactNode
@@ -21,9 +21,20 @@ export type TenCard = {
   sound: Parameters<typeof sfx.weaponReveal>[0]
 }
 
+/** 10연차 단추에 붙는 덤 표시 (526번): 10연차는 열 개 값에 tenCount개가 나온다. 덤이 없으면 그리지 않는다. */
+export function TenBonus({ count }: { count: number }) {
+  const bonus = count - 10
+  if (bonus < 1) return null
+  return (
+    <i className="ten-bonus" data-testid="ten-bonus">
+      +{bonus}
+    </i>
+  )
+}
+
 /**
- * 10연속 뽑기 연출 (decisions.md 517번): 한 번 뽑기와 같은 창·상자를 쓰고, 상자가 열리면 열 장이 차례로 뒤집힌다. 가장 좋은 한 장이 뜸의
- * 길이와 빛을 정한다. 결과는 이번 서버 응답의 스냅샷이다.
+ * 10연차 연출 (decisions.md 517·526번): 한 번 뽑기와 같은 창·상자를 쓰고, 상자가 열리면 받은 장(열한 장)이 차례로 뒤집힌다. 가장 좋은 한 장이
+ * 뜸의 길이와 빛을 정한다. 결과는 이번 서버 응답의 스냅샷이다.
  */
 export function TenReveal({
   label,
@@ -42,8 +53,8 @@ export function TenReveal({
   loading: string
   cards: TenCard[] | null
   canAgain: boolean
-  /** 다시 뽑기 단추 아래 줄: 남은 뽑기권 */
-  againNote: string
+  /** 다시 뽑기 단추 아래 줄: 10연차의 다이아 값 */
+  againNote: ReactNode
   onClose: () => void
   onAgain: () => void
 }) {
@@ -133,15 +144,17 @@ export function TenReveal({
               <b>{icon}</b>
             </span>
             <strong>
-              {!cards ? loading : phase === 'open' ? '10연속 개봉!' : '열 개의 상자가 떨려요…'}
+              {!cards ? loading : phase === 'open' ? '10연차 개봉!' : '상자들이 떨려요…'}
             </strong>
             <small>{cards ? '화면을 누르면 바로 공개' : '잠시만 기다려 주세요'}</small>
           </button>
         ) : (
           cards && (
             <section className="ten-reveal-result" aria-live="polite">
-              <p className="weapon-reveal-new">10연속 결과 · NEW {fresh}</p>
-              <ul className="ten-reveal-grid">
+              <p className="weapon-reveal-new">
+                10연차 결과 {cards.length}개 · NEW {fresh}
+              </p>
+              <ul className="ten-reveal-grid" data-count={cards.length}>
                 {cards.map((card, i) => (
                   <li
                     key={card.key}
@@ -169,7 +182,7 @@ export function TenReveal({
                 </button>
                 {canAgain && (
                   <button type="button" onClick={onAgain} data-testid={`${testId}-again`}>
-                    10연속 한 번 더 <small>{againNote}</small>
+                    10연차 한 번 더 <small>{againNote}</small>
                   </button>
                 )}
               </div>

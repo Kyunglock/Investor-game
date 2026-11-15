@@ -13,7 +13,7 @@ try {
   for (const width of process.env.UI_WIDTH ? [Number(process.env.UI_WIDTH)] : [320, 390, 1024]) {
     const company = {
       ...structuredClone(fixture),
-      armory: { tickets: 6, mergeCount: 2, lastDraw: null },
+      armory: { mergeCount: 2, lastDraw: null, lastDraws: [] },
       battleUpgrades: [
         {
           kind: 'damage',
@@ -153,7 +153,7 @@ try {
       if (path.endsWith('/draws')) hires.push(sent.count)
       if (path.endsWith('/cat/draw')) {
         const drawn = company.idle.cats[catDraws++ % 6]
-        company.armory.tickets--
+        company.diamonds.amount -= company.diamonds.draw
         drawn.level++
         drawn.damagePercent = 50 + (drawn.level - 1) * 10
         if (drawn.level === 1 && company.idle.cats.filter((c) => c.fielded).length < 4)
@@ -232,13 +232,18 @@ try {
       page.getByText('노을냥의 고유 스킬 · 출전하면 발동', { exact: true }),
     ).toBeVisible()
     await page.getByRole('button', { name: '닫기 ✕' }).click()
-    // Cats are drawn with tickets, fielded in four slots, and kept in a 6 x 3 grid (488, 493, 495).
+    // Cats are drawn with diamonds (decisions.md 526), fielded in four slots, and kept in a 6 x 3 grid (488, 493, 495).
     await page.getByRole('button', { name: '고양이' }).click()
     await expect(page.locator('.idle-cat-grid > li')).toHaveCount(18)
     await expect(page.getByTestId('cat')).toHaveCount(6)
     await expect(page.getByTestId('cat-slot')).toHaveCount(4)
     await expect(page.getByTestId('cat-field')).toHaveCount(0)
-    const tickets = company.armory.tickets
+    const diamonds = company.diamonds.amount
+    // The draw buttons carry their diamond prices, and the ten-pull shows its bonus (+1).
+    await expect(page.getByTestId('cat-draw')).toContainText('다이아 100개')
+    await expect(page.getByTestId('cat-draw-ten')).toContainText('10연차')
+    await expect(page.getByTestId('cat-draw-ten')).toContainText('다이아 1,000개')
+    await expect(page.getByTestId('cat-draw-ten').getByTestId('ten-bonus')).toHaveText('+1')
     // The draw opens the same reveal as the weapon draw (decisions.md 508).
     const drawCat = async () => {
       await page.getByTestId('cat-draw').click()
@@ -252,7 +257,7 @@ try {
     await expect(page.getByTestId('cat-drawn')).toContainText('NEW! 새 고양이')
     await page.getByTestId('cat-reveal-close').click()
     await expect(page.getByTestId('cat-gacha')).toContainText('하늘냥 합류! 고유 스킬 메테오 스킬')
-    await expect(page.getByTestId('cat-draw')).toContainText(`뽑기권 ${tickets - 1}장`)
+    assert.equal(company.diamonds.amount, diamonds - company.diamonds.draw)
     const detail = page.getByTestId('cat-detail')
     await expect(detail).toHaveAttribute('data-code', 'sky')
     // The cat's own skill starts at level 1 and says when it levels up (decisions.md 515).
@@ -500,13 +505,13 @@ try {
     await expect(page.getByTestId('battle-upgrade-open')).toHaveCount(0)
     // The office no longer has its own inventory; weapons live in Growth (decisions.md 489).
     await expect(page.getByTestId('open-weapons')).toHaveCount(0)
-    // Hiring draws at once with every usable ticket instead of opening a menu (decisions.md 490).
+    // Hiring draws at once with as many as the diamonds allow instead of opening a menu (decisions.md 490).
     await page.getByTestId('tab-market').click()
     await expect
       .poll(() => hires)
       .toEqual([
         Math.min(
-          company.gacha.tickets,
+          Math.floor(company.diamonds.amount / company.diamonds.hire),
           company.gacha.rosterMax - company.gacha.roster,
           company.gacha.maxDraws,
         ),

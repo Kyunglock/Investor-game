@@ -226,7 +226,7 @@ export function IdleSandbox({ company }: { company: Company }) {
                 무한 지갑
                 <small className="idle-sandbox-hint">
                   {company.sandboxInfinite
-                    ? '자본·채용권·뽑기권이 쓸 때마다 다시 채워져요'
+                    ? '자본과 다이아가 쓸 때마다 다시 채워져요'
                     : '꺼짐: 이 벽에서 버는 돈으로만 강화해요'}
                 </small>
               </span>
@@ -261,7 +261,7 @@ export function IdleSandbox({ company }: { company: Company }) {
           <form onSubmit={submit}>
             <h2>테스트판</h2>
             <p className="idle-sandbox-note">
-              자본과 뽑기권이 떨어지지 않는 연습용 회사예요. 본 게임은 그대로 남아요.
+              자본과 다이아가 떨어지지 않는 연습용 회사예요. 본 게임은 그대로 남아요.
             </p>
             <input
               value={code}

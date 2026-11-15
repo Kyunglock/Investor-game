@@ -85,7 +85,7 @@ try {
           ...company,
           invest: null,
           weapons: owned,
-          armory: { tickets: 3, mergeCount: 2, lastDraw: null },
+          armory: { mergeCount: 2, lastDraw: null, lastDraws: [] },
         },
       })
     })
