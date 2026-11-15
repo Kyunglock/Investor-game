@@ -249,6 +249,10 @@ try {
     await expect(page.getByTestId('cat-drawn')).toHaveAttribute('data-code', 'sky')
     await expect(page.getByTestId('cat-drawn')).toHaveAttribute('data-new', 'true')
     await expect(page.getByTestId('cat-drawn')).toContainText('NEW! 새 고양이')
+    await expect(page.getByTestId('cat-drawn').getByTestId('skill-badge')).toHaveAttribute(
+      'data-skill',
+      'meteor',
+    )
     await page.getByTestId('cat-reveal-close').click()
     await expect(page.getByTestId('cat-gacha')).toContainText('하늘냥 합류! 고유 스킬 메테오 스킬')
     assert.equal(company.diamonds.amount, diamonds - company.diamonds.draw)
@@ -258,6 +262,25 @@ try {
     // Picking a cat explains its skill (decisions.md 530): what it does, how it grows, the next level.
     await expect(detail.getByTestId('cat-skill')).toContainText('고유 스킬 메테오 스킬 Lv.1')
     await expect(detail.getByTestId('cat-skill')).toContainText('운석 → 대운석 → 유성우')
+    // The skill wears its badge (decisions.md 531): large here, small on the slot and the grid cell.
+    const badge = detail.getByTestId('cat-skill').getByTestId('skill-badge').first()
+    await expect(badge).toHaveAttribute('data-skill', 'meteor')
+    await expect(badge).toHaveAttribute('data-level', '1')
+    await expect(
+      page.locator('[data-testid=cat-slot][data-code=sky]').getByTestId('skill-badge'),
+    ).toHaveAttribute('data-skill', 'meteor')
+    // A cat not drawn yet shows its skill locked.
+    await expect(
+      page.locator('[data-testid=cat][data-code=mint]').getByTestId('skill-badge'),
+    ).toHaveAttribute('data-level', '0')
+    // The glint twinkles gently, and stays still when motion is reduced.
+    assert.equal(
+      await badge
+        .locator('.skill-badge-glints path')
+        .first()
+        .evaluate((el) => getComputedStyle(el).animationName),
+      width === 390 ? 'skill-badge-glint' : 'none',
+    )
     await expect(detail.getByTestId('cat-skill-next')).toHaveText(
       '고양이 Lv.3에 스킬 Lv.2 · 앞으로 2레벨',
     )

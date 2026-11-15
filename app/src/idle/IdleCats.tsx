@@ -6,11 +6,12 @@ import { sfx } from '../fx/sound'
 import { BOSS_NAME, GRADE_BADGE, mergeable } from '../mental/armory'
 import { GunSprite } from '../mental/GunSprite'
 import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
+import { magicTier } from '../mental/magic'
 import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from '../mental/weaponEffects'
 import { CatGear } from './CatGear'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
 import { IdleGacha } from './IdleGacha'
-import { IdleIcon } from './icons'
+import { SkillBadge } from './SkillBadge'
 import { SKILLS } from './skills'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
@@ -82,13 +83,16 @@ export function IdleCats({ company, gearAsked }: { company: Company; gearAsked?:
             {c ? (
               <button
                 type="button"
-                className={picked === c.code ? 'is-picked' : ''}
+                className={`idle-cat-slot ${picked === c.code ? 'is-picked' : ''}`}
                 data-testid="cat-slot"
                 data-code={c.code}
                 aria-label={`출전 ${i + 1}번 ${c.name}`}
                 onClick={() => pick(c.code)}
               >
                 <Portrait code={c.code} />
+                <span className="idle-cat-badge">
+                  <SkillBadge skill={c.skill} level={c.skillLevel} size={22} />
+                </span>
                 <small className="idle-cat-slot-name">{c.name}</small>
               </button>
             ) : (
@@ -137,9 +141,7 @@ export function IdleCats({ company, gearAsked }: { company: Company; gearAsked?:
         {/* 스킬 설명 (530번): 하는 일, 레벨이 오르면 달라지는 점, 다음 스킬 레벨까지 필요한 고양이 레벨. */}
         {cat && skill && (
           <section className="idle-cat-skill" data-testid="cat-skill" data-skill={cat.skill}>
-            <span className="idle-stat-icon" aria-hidden="true">
-              <IdleIcon name={cat.skill} />
-            </span>
+            <SkillBadge skill={cat.skill} level={cat.skillLevel} size={60} />
             <div className="idle-skill-text">
               <b className="idle-skill-title">
                 고유 스킬 {cat.skillName}{' '}
@@ -147,6 +149,22 @@ export function IdleCats({ company, gearAsked }: { company: Company; gearAsked?:
               </b>
               <p className="idle-skill-line">{skill.does}</p>
               <p className="idle-skill-line">{skill.grows}</p>
+              {/* 레벨에 따라 바뀌는 모습 (531번): 지금 단계에 테를 두른다. */}
+              <ol className="idle-skill-tiers" aria-label="레벨에 따라 바뀌는 모습">
+                {skill.tiers.map((name, i) => {
+                  const now = magicTier(cat.skillLevel) === i + 1
+                  return (
+                    <li
+                      key={name}
+                      className={`idle-skill-tier ${now ? 'is-now' : ''}`}
+                      aria-current={now || undefined}
+                    >
+                      <SkillBadge skill={cat.skill} level={i + 1} size={24} />
+                      {name}
+                    </li>
+                  )
+                })}
+              </ol>
               <p className="idle-skill-line idle-skill-next" data-testid="cat-skill-next">
                 {cat.skillNextLevel > 0
                   ? `고양이 Lv.${cat.skillNextLevel}에 스킬 Lv.${cat.skillLevel + 1} · 앞으로 ${cat.skillNextLevel - cat.level}레벨`
@@ -191,18 +209,22 @@ export function IdleCats({ company, gearAsked }: { company: Company; gearAsked?:
             <li key={c.code}>
               <button
                 type="button"
-                className={`${c.level > 0 ? 'owned' : ''} ${c.fielded ? 'fielded' : ''} ${picked === c.code ? 'is-picked' : ''}`}
+                className={`idle-cat-cell ${c.level > 0 ? 'owned' : ''} ${c.fielded ? 'fielded' : ''} ${picked === c.code ? 'is-picked' : ''}`}
                 data-testid="cat"
                 data-code={c.code}
                 disabled={c.level < 1}
                 aria-label={
                   c.level > 0
-                    ? `${c.name} 레벨 ${c.level}${c.fielded ? ' 출전 중' : ''}`
-                    : `${c.name} 아직 없음`
+                    ? `${c.name} 레벨 ${c.level}${c.fielded ? ' 출전 중' : ''} · 고유 스킬 ${c.skillName}`
+                    : `${c.name} 아직 없음 · 고유 스킬 ${c.skillName}`
                 }
                 onClick={() => pick(c.code)}
               >
                 <Portrait code={c.code} locked={c.level < 1} />
+                {/* 고유 스킬 (531번): 못 가진 고양이의 스킬은 흑백에 자물쇠다. */}
+                <span className="idle-cat-badge">
+                  <SkillBadge skill={c.skill} level={c.skillLevel} size={18} locked={c.level < 1} />
+                </span>
                 {c.level > 0 && <i>Lv.{c.level}</i>}
               </button>
             </li>

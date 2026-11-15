@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { CatPortrait, catTrait } from './CatPortrait'
+import { SkillBadge } from './SkillBadge'
 import '../mental/weapon-reveal.css'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
@@ -145,6 +146,10 @@ export function CatReveal({
               </span>
               <div className="weapon-reveal-art cat-reveal-art">
                 <CatPortrait code={result.cat.code} />
+                {/* 고유 스킬 배지 (531번): 초상화 귀퉁이에 건다. */}
+                <span className="cat-reveal-badge">
+                  <SkillBadge skill={result.cat.skill} level={result.cat.skillLevel} size={58} />
+                </span>
               </div>
               <h2>{result.cat.name}</h2>
               <p className="weapon-reveal-stats">

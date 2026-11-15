@@ -290,6 +290,17 @@
   border-radius: 50%;
   background: radial-gradient(circle at 50% 40%, #fff8e2, #f3dcae);
 }
+.cat-reveal-art {
+  position: relative;
+  width: fit-content;
+  margin: 0 auto;
+}
+.cat-reveal-badge {
+  position: absolute;
+  right: -14px;
+  bottom: -4px;
+  filter: drop-shadow(0 2px 4px #0008);
+}
 .cat-reveal .weapon-case b {
   font-size: 34px;
 }

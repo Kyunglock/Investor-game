@@ -71,32 +71,6 @@ const SHAPES = {
       <path d="M12 1.5v2.4m0 16.2v2.4M1.5 12h2.4m16.2 0h2.4" />
     </>
   ),
-  water: (
-    <>
-      <path
-        d="M12 3c3.8 4.6 6 7.8 6 11a6 6 0 0 1-12 0c0-3.2 2.2-6.4 6-11Z"
-        fill="currentColor"
-        fillOpacity=".28"
-      />
-      <path d="M9.3 14.5a2.8 2.8 0 0 0 2.2 2.6" strokeWidth="1.4" />
-    </>
-  ),
-  bolt: <path d="M13.5 2 5 13.5h6L9.5 22 19 9.5h-6.5Z" fill="currentColor" fillOpacity=".28" />,
-  meteor: (
-    <>
-      <circle cx="9" cy="15" r="5.5" fill="currentColor" fillOpacity=".28" />
-      <path d="M13.5 10.5 21 3m-4 9.5L21.5 8M11.5 7.5 16 3" />
-    </>
-  ),
-  // 충차: 바퀴 달린 통나무.
-  ram: (
-    <>
-      <path d="M3 8.5h14l4 3.5-4 3.5H3Z" fill="currentColor" fillOpacity=".28" />
-      <circle cx="7.5" cy="18.5" r="2" />
-      <circle cx="15" cy="18.5" r="2" />
-      <path d="M7 8.5v7m4-7v7" strokeWidth="1.3" />
-    </>
-  ),
   lock: (
     <>
       <rect x="5" y="11" width="14" height="10" rx="2.5" fill="currentColor" fillOpacity=".28" />
