@@ -209,6 +209,23 @@ class CompanyState {
   /** 다이아 (decisions.md 526번): 직원·고양이·무기 뽑기에 쓴다. 뽑기권(tickets·weaponTickets)을 대신한다. */
   long diamonds;
 
+  /** 마지막으로 출석 보상을 받은 날(한국 시간, yyyy-MM-dd). 받은 적이 없으면 null (528번). */
+  String attendDay;
+
+  /** 지금까지 받은 출석 보상의 수 (528번). 출석판의 다음 칸 = 이 수를 칸 수로 나눈 나머지. 없던 저장은 0: 1일 차부터다. */
+  int attendCount;
+
+  /** 마지막으로 받은 출석 보상. 화면이 획득 연출에 쓴다. */
+  AttendReward lastAttend;
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class AttendReward {
+    int day;
+    long diamonds;
+    double money;
+  }
+
   /** 뽑기권을 다이아로 바꾼 뒤의 저장인가 (526번). 아니면 불러올 때 남은 뽑기권을 한 번 바꿔 준다. */
   boolean diamondsReady;
 

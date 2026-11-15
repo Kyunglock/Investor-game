@@ -62,7 +62,24 @@ public record CompanyProperties(
     Mental mental,
     Income income,
     Meetings meetings,
-    Diamonds diamonds) {
+    Diamonds diamonds,
+    Attendance attendance) {
+
+  /**
+   * 출석 보상 (decisions.md 528번): 출석판의 칸을 차례로 받고 끝 칸 다음은 다시 첫 칸이다.
+   *
+   * @param days 출석판의 칸, 1일 차부터
+   * @param passExp 출석하면 받는 시즌패스 경험치 (#798)
+   */
+  public record Attendance(List<AttendanceDay> days, int passExp) {}
+
+  /**
+   * 출석판의 한 칸.
+   *
+   * @param diamonds 받는 다이아. 돈 칸이면 0
+   * @param incomeMinutes 돈 칸이면 그때 회사의 초당 수입 × 이만큼(분)을 받는다. 다이아 칸이면 0
+   */
+  public record AttendanceDay(long diamonds, int incomeMinutes) {}
 
   /**
    * 다이아 (decisions.md 526번): 직원·고양이·무기 뽑기에 쓰는 하나뿐인 뽑기 재화. 뽑기권을 대신한다.

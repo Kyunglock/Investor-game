@@ -299,6 +299,11 @@ class IdleEngine {
         * (1 + engine.mental.bonusPercent(c) / 100.0);
   }
 
+  /** The company's income per real second on screen (the fight runs at SPEED). */
+  double perSecond(CompanyState c) {
+    return SPEED * incomeRate(c);
+  }
+
   /** One employee's share of that income, per real second on screen. */
   double incomeOf(CompanyState c, CompanyState.Employee e) {
     return SPEED

@@ -1,0 +1,137 @@
+package investorgame.raising.internal;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import investorgame.behavior.internal.TestBehavior;
+import investorgame.common.error.InvalidRequestException;
+import investorgame.common.random.HashSeededRandom;
+import investorgame.content.internal.TestContent;
+import java.time.Instant;
+import java.util.List;
+import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
+
+/** 출석 보상 (decisions.md 528번). 실제 콘텐츠와 application.yml 수치로 돌린다. */
+class RewardsEngineTest {
+
+  private static final CompanyProperties PROPERTIES =
+      TestBehavior.bind("raising.company", CompanyProperties.class);
+  private static final long DAY = 86_400_000L;
+
+  private final CompanyEngine engine =
+      new CompanyEngine(TestContent.load(), TestBehavior.create(), PROPERTIES);
+  private final IdleEngineTest.MutableClock clock = new IdleEngineTest.MutableClock();
+  private final IdleEngine idle = new IdleEngine(clock, engine);
+  private final RewardsEngine rewards = new RewardsEngine(idle, engine);
+
+  private CompanyState opened() {
+    // 2026-11-15 12:00 (한국 시간).
+    clock.now = Instant.parse("2026-11-15T03:00:00Z").toEpochMilli();
+    CompanyState c = engine.open(new HashSeededRandom(4), engine.openingCapital());
+    c.capital = 0;
+    c.diamonds = 0;
+    return c;
+  }
+
+  @Test
+  void 출석판은_7일이고_한_주기에_다이아_650이다() {
+    List<CompanyProperties.AttendanceDay> days = PROPERTIES.attendance().days();
+    assertThat(days).hasSize(7);
+    assertThat(days.stream().mapToLong(CompanyProperties.AttendanceDay::diamonds).toArray())
+        .containsExactly(50, 0, 100, 0, 100, 100, 300);
+    assertThat(days.stream().mapToLong(CompanyProperties.AttendanceDay::diamonds).sum())
+        .isEqualTo(650);
+    assertThat(days.get(1).incomeMinutes()).isEqualTo(30);
+    assertThat(days.get(3).incomeMinutes()).isEqualTo(30);
+    assertThat(PROPERTIES.attendance().passExp()).isEqualTo(100);
+  }
+
+  @Test
+  void 하루에_한_번만_받고_한국_시간_자정에_다시_열린다() {
+    CompanyState c = opened();
+    assertThat(rewards.view(c).claimable()).as("옛 저장과 새 회사는 1일 차부터").isTrue();
+    assertThat(rewards.view(c).today()).isEqualTo(1);
+    rewards.attend(c);
+    assertThat(c.diamonds).isEqualTo(50);
+    assertThat(rewards.view(c).claimable()).isFalse();
+    assertThat(rewards.view(c).today()).as("오늘 받은 칸").isEqualTo(1);
+    assertThat(rewards.view(c).lastReward().diamonds()).isEqualTo(50);
+    assertThatThrownBy(() -> rewards.attend(c))
+        .as("같은 날 두 번")
+        .isInstanceOf(InvalidRequestException.class);
+    assertThat(c.diamonds).isEqualTo(50);
+    // 한국 시간 23:59에는 아직 같은 날이다.
+    clock.now = Instant.parse("2026-11-15T14:59:00Z").toEpochMilli();
+    assertThat(rewards.view(c).claimable()).isFalse();
+    // 2분 뒤는 한국 시간으로 다음 날 00:01이다.
+    clock.now += 2 * 60_000L;
+    assertThat(idle.today()).isEqualTo("2026-11-16");
+    assertThat(rewards.view(c).claimable()).isTrue();
+    assertThat(rewards.view(c).today()).isEqualTo(2);
+  }
+
+  @Test
+  void 돈_칸은_그때_회사의_초당_수입_30분어치다() {
+    CompanyState c = opened();
+    engine.hire(
+        c,
+        java.util.Map.of(
+            "insight", 50, "patience", 50, "courage", 50, "conviction", 50, "luck", 50));
+    rewards.attend(c);
+    clock.now += DAY;
+    double perSecond = idle.view(c).income().perSecond().doubleValue();
+    assertThat(rewards.view(c).board().get(1).money().doubleValue())
+        .as("출석판이 지금 받으면 들어올 돈을 미리 보인다")
+        .isEqualTo(Math.floor(30 * 60 * idle.perSecond(c)));
+    double before = c.capital;
+    rewards.attend(c);
+    assertThat(c.capital - before)
+        .isCloseTo(1800 * perSecond, org.assertj.core.data.Offset.offset(1800.0));
+    assertThat(c.diamonds).as("돈 칸은 다이아를 주지 않는다").isEqualTo(50);
+    assertThat(rewards.view(c).lastReward().money().doubleValue()).isEqualTo(c.capital - before);
+  }
+
+  @Test
+  void 빠진_날이_있어도_이어서_가고_7일_차_다음은_다시_1일_차다() {
+    CompanyState c = opened();
+    long[] expected = {50, 0, 100, 0, 100, 100, 300};
+    for (int day = 0; day < 7; day++) {
+      assertThat(rewards.view(c).today()).isEqualTo(day + 1);
+      long before = c.diamonds;
+      rewards.attend(c);
+      assertThat(c.diamonds - before).as("%d일 차", day + 1).isEqualTo(expected[day]);
+      var board = rewards.view(c).board();
+      for (int i = 0; i < 7; i++) {
+        assertThat(board.get(i).claimed()).as("받은 날 %d의 칸 %d", day + 1, i + 1).isEqualTo(i <= day);
+      }
+      // 사흘을 빠져도 처음으로 돌아가지 않는다.
+      clock.now += (day == 2 ? 4 : 1) * DAY;
+    }
+    assertThat(c.diamonds).as("한 주기").isEqualTo(650);
+    // 다음 날은 새 주기의 1일 차다: 받은 칸이 없다.
+    assertThat(rewards.view(c).claimable()).isTrue();
+    assertThat(rewards.view(c).today()).isEqualTo(1);
+    assertThat(rewards.view(c).board()).noneMatch(d -> d.claimed());
+    rewards.attend(c);
+    assertThat(c.diamonds).isEqualTo(700);
+  }
+
+  @Test
+  void 출석은_저장에_남고_테스트판은_날짜를_넘길_수_있다() throws Exception {
+    CompanyState c = opened();
+    rewards.attend(c);
+    JsonMapper json = JsonMapper.builder().build();
+    CompanyState saved = json.readValue(json.writeValueAsString(c), CompanyState.class);
+    assertThat(rewards.view(saved)).isEqualTo(rewards.view(c));
+    assertThat(rewards.view(saved).claimable()).isFalse();
+    rewards.nextDay(saved);
+    assertThat(rewards.view(saved).claimable()).isTrue();
+    assertThat(rewards.view(saved).today()).isEqualTo(2);
+    // 출석 칸이 없던 저장은 1일 차부터다.
+    CompanyState old = json.readValue("{\"capital\":1000}", CompanyState.class);
+    assertThat(rewards.view(old).today()).isEqualTo(1);
+    assertThat(rewards.view(old).claimable()).isTrue();
+    assertThat(rewards.view(old).lastReward()).isNull();
+  }
+}

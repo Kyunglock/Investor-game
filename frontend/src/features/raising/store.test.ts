@@ -79,3 +79,40 @@ describe('종목회의 열기 (#803)', () => {
     expect(useRaisingStore.getState().error).toBe('종목회의 기회가 없습니다.')
   })
 })
+
+describe('출석 보상 (528번)', () => {
+  const attendance = (claimable: boolean) => ({
+    today: 1,
+    claimable,
+    board: [],
+    lastReward: claimable ? null : { day: 1, diamonds: 50, money: 0 },
+  })
+
+  it('받으면 받은 회사를 돌려주고 busy를 켜지 않는다', async () => {
+    const after = { ...before, attendance: attendance(false) }
+    post.mockResolvedValue({ data: after } as never)
+    const result = await useRaisingStore.getState().claimAttendance()
+    expect(post).toHaveBeenCalledWith('/api/company/attendance')
+    expect(result?.attendance.lastReward).toEqual({ day: 1, diamonds: 50, money: 0 })
+    expect(useRaisingStore.getState().company).toBe(after)
+    expect(useRaisingStore.getState().busy).toBe(false)
+  })
+
+  it('오늘 이미 받았거나 끊기면 null이고 회사는 그대로다', async () => {
+    post.mockResolvedValueOnce({ error: { message: '오늘은 이미 받았어요.' } } as never)
+    expect(await useRaisingStore.getState().claimAttendance()).toBeNull()
+    expect(useRaisingStore.getState().error).toBe('오늘은 이미 받았어요.')
+    expect(useRaisingStore.getState().company).toBe(before)
+    post.mockRejectedValueOnce(new Error('offline'))
+    expect(await useRaisingStore.getState().claimAttendance()).toBeNull()
+    expect(useRaisingStore.getState().company).toBe(before)
+  })
+
+  it('테스트판에서 다음 날로 넘긴다', async () => {
+    const after = { ...before, attendance: attendance(true) }
+    post.mockResolvedValue({ data: after } as never)
+    await useRaisingStore.getState().skipSandboxDay()
+    expect(post).toHaveBeenCalledWith('/api/sandbox/next-day')
+    expect(useRaisingStore.getState().company).toBe(after)
+  })
+})

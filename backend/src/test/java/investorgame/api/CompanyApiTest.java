@@ -529,4 +529,27 @@ class CompanyApiTest {
     mvc.perform(post("/api/company/invest/open").cookie(session))
         .andExpect(status().isBadRequest());
   }
+
+  /** 출석 보상 (decisions.md 528번): 하루에 한 번. */
+  @Test
+  void 출석_보상은_하루에_한_번_받는다() throws Exception {
+    DocumentContext opened =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    assertThat(opened.read("$.attendance.claimable", Boolean.class)).isTrue();
+    assertThat(opened.read("$.attendance.today", Integer.class)).isEqualTo(1);
+    List<Integer> board = opened.read("$.attendance.board[*].diamonds");
+    assertThat(board).containsExactly(50, 0, 100, 0, 100, 100, 300);
+    long diamonds = opened.read("$.diamonds.amount", Long.class);
+    DocumentContext claimed =
+        json(
+            mvc.perform(post("/api/company/attendance").cookie(session))
+                .andExpect(status().isOk()));
+    assertThat(claimed.read("$.diamonds.amount", Long.class)).isEqualTo(diamonds + 50);
+    assertThat(claimed.read("$.attendance.claimable", Boolean.class)).isFalse();
+    assertThat(claimed.read("$.attendance.board[0].claimed", Boolean.class)).isTrue();
+    assertThat(claimed.read("$.attendance.lastReward.diamonds", Long.class)).isEqualTo(50);
+    mvc.perform(post("/api/company/attendance").cookie(session)).andExpect(status().isBadRequest());
+    // 본 게임에서는 날짜를 넘기는 길이 없다.
+    mvc.perform(post("/api/sandbox/next-day").cookie(session)).andExpect(status().isBadRequest());
+  }
 }
