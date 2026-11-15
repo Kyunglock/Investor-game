@@ -1898,3 +1898,42 @@
   color: #3f7a2c;
   text-align: center;
 }
+
+/* 프레임 표시 (543번): 테스트판에서만, 테스트판 단추 위에 뜬다. */
+.idle-frames {
+  position: absolute;
+  top: calc(46% - 62px);
+  left: 6px;
+  z-index: 2;
+  display: grid;
+  gap: 1px;
+  min-width: 62px;
+  padding: 4px 6px;
+  border: 1.5px solid #2f7d46;
+  border-radius: 10px;
+  background: #102418d9;
+  color: #8dffb0;
+  font:
+    700 10px / 1.25 "JetBrains Mono",
+    monospace;
+  text-align: left;
+}
+.idle-frames-fps {
+  font-size: 12px;
+}
+.idle-frames-note {
+  font-size: 9px;
+  color: #d5e8da;
+}
+.idle-frames[data-level="fair"] {
+  border-color: #c79a1e;
+  color: #ffd866;
+}
+.idle-frames[data-level="bad"] {
+  border-color: #c9483f;
+  color: #ff8f86;
+}
+.idle-sandbox-chips [aria-pressed="true"] {
+  outline: 2px solid #8a5bd6;
+  outline-offset: 1px;
+}
