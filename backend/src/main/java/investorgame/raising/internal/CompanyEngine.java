@@ -845,13 +845,21 @@ class CompanyEngine {
     adoptRealtime(company);
   }
 
-  /** 뽑기권이 있던 때의 저장을 옮긴다 (526번): 남은 채용권과 무기·고양이 뽑기권을 한 장에 per-ticket 다이아로 바꾼다. 한 번만. 바꿨으면 true. */
+  /**
+   * 뽑기권이 있던 때의 저장을 옮긴다 (526번): 남은 채용권과 무기·고양이 뽑기권을 한 장에 per-ticket 다이아로 바꾸고, 그때까지 멘탈 보호 스테이지에서 얻은
+   * 별에 다이아를 소급해 준다(먼저 플레이한 사람이 손해 보지 않게, #797). 한 번만. 바꿨으면 true.
+   */
   boolean adoptDiamonds(CompanyState company) {
     if (company.diamondsReady) {
       return false;
     }
     long tickets = Math.max(0, (long) company.tickets) + Math.max(0, (long) company.weaponTickets);
     company.diamonds += tickets * properties.diamonds().perTicket();
+    if (company.stageStars != null) {
+      for (int i = 0; i < company.stageStars.size(); i++) {
+        company.diamonds += properties.diamonds().forStars(i + 1, 0, company.stageStars.get(i));
+      }
+    }
     company.tickets = 0;
     company.weaponTickets = 0;
     company.diamondsReady = true;

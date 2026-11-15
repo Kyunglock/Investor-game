@@ -105,6 +105,27 @@ class DiamondsTest {
   }
 
   @Test
+  void 옛_저장에서_이미_얻은_별에는_다이아를_한_번_소급해_준다() throws Exception {
+    // #797: 별 3·2·1개인 스테이지 셋과 별 3개인 10번째 스테이지.
+    JsonMapper json = JsonMapper.builder().build();
+    CompanyState old =
+        json.readValue(
+            "{\"capital\":1000,\"weaponTickets\":1,\"stageStars\":[3,2,1,0,0,0,0,0,0,3]}",
+            CompanyState.class);
+    assertThat(engine.adoptDiamonds(old)).isTrue();
+    assertThat(old.diamonds)
+        .as("뽑기권 100 + 별 100 + 60 + 30 + 10번째 스테이지 200")
+        .isEqualTo(100 + 100 + 60 + 30 + 200);
+    assertThat(engine.adoptDiamonds(old)).isFalse();
+    assertThat(old.diamonds).isEqualTo(490);
+    // 옮긴 뒤에 같은 별을 다시 따도 또 주지 않는다.
+    engine.mental.reportStage(old, 1, true, 3);
+    assertThat(old.lastStage.diamonds).isZero();
+    engine.mental.reportStage(old, 2, true, 3);
+    assertThat(old.lastStage.diamonds).as("새로 얻은 3개째 별만").isEqualTo(40);
+  }
+
+  @Test
   void 벽을_깨거나_이사해도_뽑기_재화는_나오지_않는다() {
     CompanyState c = engine.open(random, engine.openingCapital());
     c.capital = 10_000_000_000L;
