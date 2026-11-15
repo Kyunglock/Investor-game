@@ -325,6 +325,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/company/shop/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * 상점에서 상품 하나를 산다 (decisions.md 541번)
+         * @description 게임 재화로만 산다. 값은 다이아(priceDiamonds)나 돈(priceMoney: 지금 회사의 초당 수입 몇 분어치)이고, 주는 것도 다이아나 돈이다.
+         *     상품마다 하루에 살 수 있는 횟수가 있고 한국 시간 자정에 다시 찬다(서버 시각으로 판정한다). 산 것은 shop.lastReceipt에 담긴다.
+         *     없는 상품이거나 오늘 횟수를 다 썼거나 재화가 모자라면 400.
+         */
+        post: operations["buyShopItem"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/company/ex": {
         parameters: {
             query?: never;
@@ -873,6 +895,34 @@ export interface components {
                     catName?: string | null;
                 }[];
             };
+            /** @description 상점 (decisions.md 541번). 게임 재화로만 사는 날마다의 상품. 남은 횟수는 한국 시간 자정에 다시 찬다 */
+            shop: {
+                /** @description 진열 차례대로 */
+                items: {
+                    code: string;
+                    name: string;
+                    /** @description 다이아 값. 돈으로 사거나 무료면 0 */
+                    priceDiamonds: number;
+                    /** @description 돈 값(지금의 초당 수입 기준). 다이아로 사거나 무료면 null */
+                    priceMoney?: number | null;
+                    /** @description 주는 다이아. 돈을 주면 0 */
+                    giveDiamonds: number;
+                    /** @description 돈을 주면 회사의 초당 수입 몇 분어치인가. 다이아를 주면 0 */
+                    giveIncomeMinutes: number;
+                    /** @description 돈을 주면 지금 사면 들어올 돈. 다이아를 주면 null */
+                    giveMoney?: number | null;
+                    /** @description 하루에 살 수 있는 횟수 */
+                    dailyLimit: number;
+                    /** @description 오늘 남은 횟수 */
+                    left: number;
+                }[];
+                /** @description 마지막으로 산 것. 산 적이 없으면 null */
+                lastReceipt?: {
+                    code: string;
+                    diamonds: number;
+                    money: number;
+                } | null;
+            };
             /** @description 출석 보상 (decisions.md 528번). 하루에 한 번이고 한국 시간 자정에 다시 열린다. 누적 7일 주기라 빠진 날이 있어도 이어서 간다 */
             attendance: {
                 /** @description 오늘 받을 칸(1부터). 오늘 이미 받았으면 오늘 받은 칸 */
@@ -1303,6 +1353,11 @@ export interface components {
                 }[];
                 /** @description 마지막 고양이 뽑기(한 번 또는 10연속, 517번)에서 나온 고양이, 나온 차례대로 */
                 lastDraws?: {
+                    /**
+                     * @description 그 고양이의 등급 (539번)
+                     * @enum {string}
+                     */
+                    grade: "C" | "B" | "A" | "S";
                     /** @enum {string} */
                     code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
                     /** @description 나온 직후의 레벨. 10연속에서 같은 고양이가 또 나오면 차례로 오른다 */
@@ -1335,6 +1390,8 @@ export interface components {
                 fieldSlots: number;
                 /** @description 최근 벽이 실제로 받은 초당 피해 (492번). dps는 모든 공격이 벽에 맞을 때의 어림값이다 */
                 wallDps: number;
+                /** @description 전투력 (538번). 성장 탭이 보여 주는 숫자 하나: 모든 총·스킬의 초당 피해(치명타 포함)와 매수 주문, 매수벽 체력 강화를 묶었다. 벽 번호는 보지 않는다 */
+                power: number;
                 /** @description 고양이 (488·501번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏘고 제 스킬을 쓴다 */
                 cats: {
                     /** @enum {string} */
@@ -1359,6 +1416,11 @@ export interface components {
                     skillLevel: number;
                     /** @description 스킬 레벨이 다음에 오르는 고양이 레벨. 최고 레벨이면 0 */
                     skillNextLevel: number;
+                    /**
+                     * @description 등급 (539번). 종마다 정해져 있다. 높을수록 총이 세고(C 1배 · B 1.4배 · A 2배 · S 3배) 뽑기에서 드물다
+                     * @enum {string}
+                     */
+                    grade: "C" | "B" | "A" | "S";
                     /** @description 든 무기. 없으면 null(기본 권총을 쏜다) */
                     weapon: {
                         /** @enum {string} */
@@ -1898,6 +1960,32 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description 보상을 받은 뒤의 회사 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Company"];
+                };
+            };
+            400: components["responses"]["InvalidRequest"];
+            401: components["responses"]["SessionRequired"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    buyShopItem: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description 상품 코드 (shop.items[].code) */
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 산 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;

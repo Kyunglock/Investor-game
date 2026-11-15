@@ -10,8 +10,10 @@ const extraCats = JSON.parse(
   ),
 ) as { code: string; name: string }[]
 
-// The company menu carries a dot ("종목회의 가능") while a stock meeting can be opened (#803).
-const COMPANY_MENU = /^회사( 종목회의 가능| EX 디펜스 가능)?$/
+// The shop tab carries a dot ("무료 상품 있음") while a free item is left (decisions.md 541).
+const SHOP_MENU = /^상점( 무료 상품 있음)?$/
+// The weapons tab carries a dot while weapons can be merged (540).
+const WEAPON_MENU = /^무기( 합칠 수 있는 무기 있음)?$/
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROMIUM_PATH || undefined,
@@ -87,6 +89,7 @@ try {
         ],
         fieldSlots: 4,
         wallDps: 0,
+        power: 1038,
         // Real-time income (#803): the HUD shows it under the capital. No offline payout yet.
         income: { perSecond: 48_500, staffPerSecond: 12_500, bonusPercent: 0 },
         offline: null as { at: number; seconds: number; earned: number; capped: boolean } | null,
@@ -112,6 +115,8 @@ try {
           // A skill gains a level at cat level 10, 20, 30, 40 (decisions.md 534).
           skillLevel: 1,
           skillNextLevel: 10,
+          // 등급은 종마다 정해져 있다 (539번).
+          grade: code === 'night' || code === 'snow' ? 'A' : 'C',
           weapon: null as { kind: string; grade: string } | null,
         })),
       },
@@ -162,6 +167,17 @@ try {
         drawn.damagePercent = 50 + (drawn.level - 1) * 10
         if (drawn.level === 1 && company.idle.cats.filter((c) => c.fielded).length < 4)
           drawn.fielded = true
+      } else if (path.includes('/shop/')) {
+        const item = company.shop.items.find((i) => path.endsWith(`/shop/${i.code}`))
+        if (item) {
+          item.left--
+          company.diamonds.amount += item.giveDiamonds - item.priceDiamonds
+          company.shop.lastReceipt = {
+            code: item.code,
+            diamonds: item.giveDiamonds,
+            money: item.giveMoney ?? 0,
+          } as never
+        }
       } else if (path.endsWith('/cat/field') && cat) {
         cat.fielded = sent.fielded
       } else if (path.endsWith('/cat/weapon') && cat) {
@@ -214,8 +230,10 @@ try {
     assert.equal(await page.locator('.idle-skills, .idle-upgrades').count(), 0)
     await page.getByRole('button', { name: '성장' }).click()
     await expect(page.getByTestId('idle-menu')).toBeVisible()
-    await expect(page.getByText('모든 공격이 벽에 맞을 때')).toBeVisible()
-    await expect(page.getByTestId('idle-wall-dps')).toContainText('실제 벽 피해')
+    // 전투력 하나만 보인다 (538번): 화력과 실제 벽 피해는 뺐다.
+    await expect(page.getByTestId('idle-power')).toContainText('전투력')
+    await expect(page.getByTestId('idle-power')).toContainText('1,038')
+    await expect(page.getByText('실제 벽 피해')).toHaveCount(0)
     // Four stats (decisions.md 487): fire speed stops at its cap, the others can be bought.
     await expect(page.getByTestId('idle-stat')).toHaveCount(5)
     const stat = (kind: string) => page.locator(`[data-testid=idle-stat][data-kind=${kind}]`)
@@ -233,17 +251,30 @@ try {
     await expect(page.getByTestId('weapon-picker')).toHaveCount(0)
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     // Cats are drawn with diamonds (decisions.md 526), fielded in four slots, and shown in a scrolling six-column roster (488, 493, 495).
-    await page.getByRole('button', { name: '고양이' }).click()
+    await page.getByRole('button', { name: '고양이', exact: true }).click()
     await expect(page.locator('.idle-cat-grid > li')).toHaveCount(42)
     await expect(page.getByTestId('cat')).toHaveCount(39)
     await expect(page.getByTestId('cat-slot')).toHaveCount(4)
     await expect(page.getByTestId('cat-field')).toHaveCount(0)
+    // Every cat wears its grade (decisions.md 539), owned or not.
+    await expect(page.locator('[data-testid=cat][data-code=night]')).toHaveAttribute(
+      'data-grade',
+      'A',
+    )
+    // The draws moved to the shop tab (541); the cats tab keeps the roster only.
+    await expect(page.getByTestId('cat-gacha')).toHaveCount(0)
+    const toShop = () => page.getByRole('button', { name: SHOP_MENU }).last().click()
+    const toCats = () => page.getByRole('button', { name: '고양이', exact: true }).last().click()
+    const pickCat = (code: string) => page.locator(`[data-testid=cat][data-code=${code}]`).click()
+    await toShop()
     const diamonds = company.diamonds.amount
     // The draw buttons carry their diamond prices, and the ten-pull shows its bonus (+1).
     await expect(page.getByTestId('cat-draw')).toContainText('다이아 100개')
     await expect(page.getByTestId('cat-draw-ten')).toContainText('10연차')
     await expect(page.getByTestId('cat-draw-ten')).toContainText('다이아 1,000개')
     await expect(page.getByTestId('cat-draw-ten').getByTestId('ten-bonus')).toHaveText('+1')
+    // The odds by grade are written under the draw (539).
+    await expect(page.getByTestId('draw-note')).toContainText('S 2% · A 10% · B 28% · C 60%')
     // The draw opens the same reveal as the weapon draw (decisions.md 508).
     const drawCat = async () => {
       await page.getByTestId('cat-draw').click()
@@ -255,13 +286,36 @@ try {
     await expect(page.getByTestId('cat-drawn')).toHaveAttribute('data-code', 'sky')
     await expect(page.getByTestId('cat-drawn')).toHaveAttribute('data-new', 'true')
     await expect(page.getByTestId('cat-drawn')).toContainText('NEW! 새 고양이')
+    await expect(page.getByTestId('cat-drawn-grade')).toContainText('C 등급')
     await expect(page.getByTestId('cat-drawn').getByTestId('skill-badge')).toHaveAttribute(
       'data-skill',
       'meteor',
     )
     await page.getByTestId('cat-reveal-close').click()
-    await expect(page.getByTestId('cat-gacha')).toContainText('하늘냥 합류! 고유 스킬 메테오 스킬')
+    await expect(page.getByTestId('cat-gacha')).toContainText(
+      'C 등급 하늘냥 합류! 고유 스킬 메테오 스킬',
+    )
     assert.equal(company.diamonds.amount, diamonds - company.diamonds.draw)
+    // Today's goods (541): four items; the free one is taken once and the tab's dot goes out.
+    await expect(page.getByTestId('shop-item')).toHaveCount(4)
+    const free = page.locator('[data-testid=shop-item][data-code=free]')
+    await expect(free).toContainText('다이아 20개')
+    await expect(free.getByTestId('shop-buy')).toContainText('무료')
+    await expect(page.getByTestId('shop-dot').last()).toBeVisible()
+    await free.getByTestId('shop-buy').click()
+    await expect(page.getByTestId('shop-got')).toHaveText(
+      '오늘의 무료 다이아: 다이아 20개 받았어요',
+    )
+    await expect(free.getByTestId('shop-buy')).toBeDisabled()
+    await expect(free).toContainText('오늘 0 / 1번 남음')
+    await expect(page.getByTestId('shop-dot')).toHaveCount(0)
+    assert.equal(company.diamonds.amount, diamonds - company.diamonds.draw + 20)
+    await expect(page.locator('[data-testid=shop-item][data-code=money-small]')).toContainText(
+      '수입 30분어치',
+    )
+    await page.screenshot({ path: `/tmp/idle-shop-${width}.png`, fullPage: true })
+    await toCats()
+    await pickCat('sky')
     const detail = page.getByTestId('cat-detail')
     await expect(detail).toHaveAttribute('data-code', 'sky')
     // The cat's own skill starts at level 1 and says when it levels up (decisions.md 515).
@@ -302,8 +356,12 @@ try {
     await expect.poll(mates).toBe(0)
     await detail.getByTestId('cat-field').click()
     // Four field slots: the fifth cat waits until one rests.
+    await toShop()
     for (let i = 0; i < 4; i++) await drawCat()
+    await toCats()
+    await pickCat('night')
     await expect(detail).toHaveAttribute('data-code', 'night')
+    await expect(detail.getByTestId('cat-grade')).toHaveText('A')
     await expect(detail.getByTestId('cat-field')).toBeDisabled()
     await expect(detail.getByTestId('cat-field')).toHaveText('칸 없음')
     await expect(detail).toContainText('치명타 피해 +25%')
@@ -336,9 +394,25 @@ try {
     await detail.getByTestId('cat-field').click()
     await page.locator('[data-testid=cat][data-code=sky]').click()
     await detail.getByTestId('cat-field').click()
-    await detail.getByTestId('cat-gun').click()
-    await expect(detail.getByTestId('cat-weapon').first()).toBeVisible()
     await page.screenshot({ path: `/tmp/idle-cats-${width}.png`, fullPage: true })
+    // The cat's gun leads to the weapons tab with that cat chosen (decisions.md 540).
+    await detail.getByTestId('cat-gun').click()
+    await expect(page.getByTestId('weapon-now')).toContainText('하늘냥의 무기')
+    await expect(page.locator('[data-testid=gear-wearer][data-code=sky]')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await expect(page.getByTestId('cat-weapon').first()).toBeVisible()
+    await page.locator('[data-testid=gear-wearer][data-code=boss]').click()
+    await expect(page.getByTestId('weapon-now')).toContainText('의 무기')
+    await expect(page.locator('[data-testid=gear-wearer][data-code=boss]')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    await page.screenshot({ path: `/tmp/idle-weapons-${width}.png`, fullPage: true })
+    // The weapon draw is in the shop: the link opens it on the weapon draw.
+    await page.getByTestId('weapon-to-shop').click()
+    await expect(page.getByTestId('cat-gacha')).toHaveAttribute('data-kind', 'weapon')
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     assert.equal(
       await page.evaluate(
@@ -448,6 +522,7 @@ try {
                 upcoming: {
                   wall: number
                   hp: number
+                  label: string
                   crack: string
                   top: number
                   bottom: number
@@ -468,6 +543,20 @@ try {
     await expect.poll(async () => (await queuedWalls())[0].hp).toBeLessThanOrEqual(30)
     assert((await queuedWalls())[0].hp >= 1)
     assert.notEqual((await queuedWalls())[0].crack, intact)
+    // The walls behind show their remaining shares only (decisions.md 542): 30 of 264 health is
+    // at most 4,500 of 39,600 shares, and the untouched one further back still reads more.
+    const labels = (await queuedWalls()).map((wall) => wall.label)
+    assert(
+      labels.every((label) => /^[\d,]+주$/.test(label)),
+      `rear wall labels: ${labels}`,
+    )
+    const sharesOn = (label: string) => Number(label.replace(/[^\d]/g, ''))
+    assert(sharesOn(labels[0]) >= 100 && sharesOn(labels[0]) <= 4500, labels[0])
+    assert(sharesOn(labels[1]) > sharesOn(labels[0]), labels.join(' / '))
+    await page.screenshot({
+      path: `/tmp/idle-rear-${width}.png`,
+      clip: { x: 0, y: 40, width, height: 260 },
+    })
     const cash = await page.locator('.idle-cash').first().boundingBox()
     const number = await page.getByTestId('idle-wall-number').boundingBox()
     assert(cash && number && cash.x + cash.width <= number.x)
@@ -476,8 +565,8 @@ try {
     const income = await page.getByTestId('idle-income').boundingBox()
     assert(income && income.y >= cash.y && income.y + income.height <= cash.y + cash.height + 0.5)
     assert(income.x + income.width <= cash.x + cash.width + 0.5, 'income fits the capital chip')
-    // A meeting can be opened (chances left, someone on a trading desk): the company menu has a dot.
-    await expect(page.getByTestId('meeting-dot')).toBeVisible()
+    // The company tab is off (decisions.md 540), so its meeting dot is not shown either.
+    await expect(page.getByTestId('meeting-dot')).toHaveCount(0)
     await expect(page.getByTestId('offline-income')).toHaveCount(0)
     const queue = await queuedWalls()
     assert(queue.every((wall) => wall.visible && wall.top >= 55))
@@ -556,58 +645,34 @@ try {
     await expect
       .poll(async () => (await queuedWalls()).map((wall) => wall.wall))
       .toEqual([company.idle.wall + 1, company.idle.wall + 2])
-    await page.getByRole('button', { name: COMPANY_MENU }).click()
-    await expect(page.getByTestId('office-scene')).toBeVisible()
-    await expect(page.getByTestId('office-support')).toContainText('자동 전투 중')
-    await expect(page.getByTestId('office-support')).toContainText(`${company.idle.wall}벽`)
-    await expect(page.getByTestId('assault-open')).toHaveCount(0)
-    await expect(page.getByTestId('side-open')).toHaveCount(0)
-    await expect(page.getByTestId('battle-upgrade-open')).toHaveCount(0)
-    // The office has no inventory of its own; weapons live in the Cats menu (decisions.md 489, 530).
-    await expect(page.getByTestId('open-weapons')).toHaveCount(0)
-    // Hiring draws at once with as many as the diamonds allow instead of opening a menu (decisions.md 490).
-    await page.getByTestId('tab-market').click()
-    await expect
-      .poll(() => hires)
-      .toEqual([
-        Math.min(
-          Math.floor(company.diamonds.amount / company.diamonds.hire),
-          company.gacha.rosterMax - company.gacha.roster,
-          company.gacha.maxDraws,
-        ),
-      ])
-    await expect(page.getByTestId('office-scene')).toBeVisible()
-    await expect(page.getByTestId('gacha-scene')).toHaveCount(0)
-    const officeTicks = actions.filter((action) => action === 'tick').length
-    await expect
-      .poll(() => actions.filter((action) => action === 'tick').length)
-      .toBeGreaterThan(officeTicks)
+    // The company tab is switched off (decisions.md 540): no tab, no ☰ button, no office screen.
+    await expect(page.getByRole('button', { name: /^회사/ })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: '회사 메뉴' })).toHaveCount(0)
     const nav = page.getByRole('navigation', { name: '게임 메뉴' }).last()
-    await expect(nav.getByRole('button')).toHaveCount(4)
-    await expect(nav.getByRole('button', { name: COMPANY_MENU })).toHaveAttribute(
+    await expect(nav.getByRole('button')).toHaveCount(5)
+    await expect(nav.getByRole('button', { name: '돌파', exact: true })).toHaveAttribute(
       'aria-current',
       'page',
     )
-    for (const name of ['성장', '고양이']) {
-      await nav.getByRole('button', { name }).click()
+    for (const name of [/^성장/, WEAPON_MENU, '고양이', SHOP_MENU]) {
+      const tab = page
+        .getByRole('navigation', { name: '게임 메뉴' })
+        .last()
+        .getByRole('button', typeof name === 'string' ? { name, exact: true } : { name })
+      await tab.click()
       await expect(page.getByTestId('idle-menu')).toBeVisible()
-      await expect(nav.getByRole('button', { name })).toHaveAttribute('aria-current', 'page')
+      await expect(
+        page
+          .getByRole('navigation', { name: '게임 메뉴' })
+          .last()
+          .getByRole('button', typeof name === 'string' ? { name, exact: true } : { name }),
+      ).toHaveAttribute('aria-current', 'page')
       await page.getByRole('button', { name: '닫기 ✕' }).click()
-      await expect(page.getByTestId('office-scene')).toBeVisible()
-      await expect(nav.getByRole('button', { name: COMPANY_MENU })).toHaveAttribute(
-        'aria-current',
-        'page',
-      )
+      await expect(page.getByTestId('idle-menu')).toHaveCount(0)
     }
-    // A short viewport must scroll office controls above the fixed navigation.
+    await expect(page.getByTestId('office-scene')).toHaveCount(0)
+    // A short viewport keeps the fixed navigation on screen.
     await page.setViewportSize({ width, height: 640 })
-    await page.locator('.idle-office').evaluate((el) => {
-      el.scrollTop = el.scrollHeight
-    })
-    const office = await page.getByTestId('office-scene').boundingBox()
-    const tabs = await nav.boundingBox()
-    assert.ok(office && tabs && office.y + office.height <= tabs.y + 1)
-    await page.screenshot({ path: `/tmp/idle-office-${width}.png`, fullPage: true })
     await nav.getByRole('button', { name: '돌파', exact: true }).click()
     await expect(page.getByTestId('office-scene')).toHaveCount(0)
     await expect(page.getByTestId('idle-wall-number')).toBeVisible()
@@ -631,7 +696,7 @@ try {
     await page.close()
   }
   console.log(
-    'PASS: main view, heartbeat, background stop/resume, skill gating, management, 320/390/1024px',
+    'PASS: main view, heartbeat, background stop/resume, skill gating, five tabs, 320/390/1024px',
   )
 } finally {
   await browser.close()

@@ -46,6 +46,7 @@ try {
           cats: [],
           fieldSlots: 4,
           wallDps: 0,
+          power: 1038,
           income: { perSecond: 48_500, staffPerSecond: 12_500, bonusPercent: 0 },
         },
       }
@@ -78,7 +79,7 @@ try {
       })
       await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5182/app/')
       // 무기 뽑기는 고양이 메뉴의 뽑기 자리에서 고른다 (530번).
-      await page.getByRole('button', { name: '고양이' }).click()
+      await page.getByRole('button', { name: /^상점/ }).click()
       await page.getByTestId('draw-kind-weapon').click()
       await page.getByTestId('weapon-draw').click()
       await expect(page.getByTestId('weapon-reveal')).toBeVisible()
@@ -115,7 +116,7 @@ try {
       company.diamonds.amount = 100
       await page.reload()
       // 무기 뽑기는 고양이 메뉴의 뽑기 자리에서 고른다 (530번).
-      await page.getByRole('button', { name: '고양이' }).click()
+      await page.getByRole('button', { name: /^상점/ }).click()
       await page.getByTestId('draw-kind-weapon').click()
       await page.getByTestId('weapon-draw').click()
       await expect(page.getByTestId('weapon-drawn')).toBeVisible()

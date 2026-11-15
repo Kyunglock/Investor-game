@@ -349,10 +349,33 @@
     sans-serif;
   color: #9e8661;
 }
-.idle-power-real {
-  margin-top: 6px;
-  background: #eef3dc;
-  border-color: #c5d3a0;
+.idle-power-gain {
+  margin-right: 8px;
+  font-style: normal;
+  font-size: 13px;
+  color: #3f8f4c;
+  animation: idle-power-gain 1.6s ease-out both;
+}
+@keyframes idle-power-gain {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  20% {
+    opacity: 1;
+    transform: none;
+  }
+  80% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .idle-power-gain {
+    animation: none;
+  }
 }
 .idle-power strong {
   font-size: 20px;
@@ -1795,4 +1818,122 @@
   color: #6b4322;
   font-weight: 700;
   opacity: 1;
+}
+
+/* 고양이 등급 (539번): C·B·A·S 글자 딱지. 격자와 출전 칸에는 오른쪽 위에 건다. */
+.idle-cat-grade {
+  display: inline-block;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 5px;
+  font:
+    800 10px / 15px "Noto Sans KR",
+    sans-serif;
+  font-style: normal;
+  text-align: center;
+  color: #fff;
+  background: #8a97a8;
+}
+.idle-cat-grade.is-B {
+  background: #7c6ee6;
+}
+.idle-cat-grade.is-A {
+  background: #ee8a2b;
+}
+.idle-cat-grade.is-S {
+  color: #5a3a00;
+  background: linear-gradient(135deg, #ffe58a, #ffb93b);
+  box-shadow: 0 0 0 1px #fff3c4 inset;
+}
+.idle-cat-grade.is-locked {
+  filter: grayscale(1);
+  opacity: 0.7;
+}
+.idle-cat-grade-tag {
+  position: absolute;
+  right: 1px;
+  top: 1px;
+  min-width: 13px;
+  padding: 0 3px;
+  font-size: 9px;
+  line-height: 13px;
+  pointer-events: none;
+}
+.idle-cat-grid button[data-grade="S"].owned {
+  border-color: #e7b23c;
+}
+
+/* 무기 탭 (540번): 누가 들지 고르는 줄, 지금 든 무기, 장비 목록. */
+.idle-wearers {
+  flex-wrap: wrap;
+}
+.idle-weapon-held {
+  cursor: default;
+}
+.idle-weapon-draw {
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px;
+  border: 1.5px dashed #d9a85a;
+  border-radius: 12px;
+  background: #fff7e2;
+  font:
+    700 12px "Noto Sans KR",
+    sans-serif;
+  color: #9a6420;
+}
+/* 상점 탭 (541번): 날마다의 상품은 성장 탭의 능력치 칸과 같은 모양이다. */
+.idle-shop-item .idle-buy {
+  min-width: 78px;
+}
+.idle-shop-got {
+  margin-top: 8px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  background: #eef6df;
+  font:
+    700 12px "Noto Sans KR",
+    sans-serif;
+  color: #3f7a2c;
+  text-align: center;
+}
+
+/* 프레임 표시 (543번): 테스트판에서만, 테스트판 단추 위에 뜬다. */
+.idle-frames {
+  position: absolute;
+  top: calc(46% - 62px);
+  left: 6px;
+  z-index: 2;
+  display: grid;
+  gap: 1px;
+  min-width: 62px;
+  padding: 4px 6px;
+  border: 1.5px solid #2f7d46;
+  border-radius: 10px;
+  background: #102418d9;
+  color: #8dffb0;
+  font:
+    700 10px / 1.25 "JetBrains Mono",
+    monospace;
+  text-align: left;
+}
+.idle-frames-fps {
+  font-size: 12px;
+}
+.idle-frames-note {
+  font-size: 9px;
+  color: #d5e8da;
+}
+.idle-frames[data-level="fair"] {
+  border-color: #c79a1e;
+  color: #ffd866;
+}
+.idle-frames[data-level="bad"] {
+  border-color: #c9483f;
+  color: #ff8f86;
+}
+.idle-sandbox-chips [aria-pressed="true"] {
+  outline: 2px solid #8a5bd6;
+  outline-offset: 1px;
 }

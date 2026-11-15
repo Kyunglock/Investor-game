@@ -144,10 +144,45 @@ class IdleEngine {
     "레몬냥", "코코아냥", "로즈냥", "호랑냥", "구름냥", "별빛냥", "샴냥", "짝귀냥", "단풍냥", "세이지냥", "살구냥", "자두냥", "조각냥",
     "졸린냥", "산호냥", "트러플냥", "서리냥", "버터냥", "테라냥", "등꽃냥", "오드냥", "피스타냥", "모래냥", "볼터치냥", "청록냥", "오트냥"
   };
-  private static final int[] CAT_WEIGHTS = {
-    25, 25, 10, 15, 15, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
-    10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10
-  };
+  // 고양이 등급 (decisions.md 539번): 종마다 정해져 있다. C 16 · B 12 · A 7 · S 4종이고 S는 스킬마다 하나다.
+  static final List<String> CAT_GRADES = List.of("C", "B", "A", "S");
+  private static final java.util.Set<String> GRADE_S =
+      java.util.Set.of("star", "silver", "wisteria", "frost");
+  private static final java.util.Set<String> GRADE_A =
+      java.util.Set.of("tiger", "panda", "night", "snow", "rose", "ocean", "siam");
+  private static final java.util.Set<String> GRADE_B =
+      java.util.Set.of(
+          "caramel", "mocha", "peach", "biscuit", "lemon", "cocoa", "cloud", "tilt", "russet",
+          "plum", "coral", "truffle");
+  // A grade's share of the draws (percent) and its cats' gun damage (x the level's power).
+  private static final int[] GRADE_PERCENT = {60, 28, 10, 2};
+  private static final double[] GRADE_DAMAGE = {1, 1.4, 2, 3};
+  private static final int[] CAT_GRADE = CATS.stream().mapToInt(IdleEngine::gradeIndex).toArray();
+  // Each grade's share is split evenly over its cats: percent x (all cats' common multiple) / n.
+  private static final int[] CAT_WEIGHTS = catWeights();
+
+  private static int gradeIndex(String code) {
+    return GRADE_S.contains(code) ? 3 : GRADE_A.contains(code) ? 2 : GRADE_B.contains(code) ? 1 : 0;
+  }
+
+  private static int[] catWeights() {
+    int[] count = new int[CAT_GRADES.size()];
+    for (int grade : CAT_GRADE) count[grade]++;
+    int common = 1;
+    for (int n : count) common *= n;
+    int[] weights = new int[CAT_GRADE.length];
+    for (int i = 0; i < weights.length; i++) {
+      weights[i] = GRADE_PERCENT[CAT_GRADE[i]] * (common / count[CAT_GRADE[i]]);
+    }
+    return weights;
+  }
+
+  /** A cat's grade letter (539). */
+  static String catGrade(String code) {
+    int at = CATS.indexOf(code);
+    return CAT_GRADES.get(at < 0 ? 0 : CAT_GRADE[at]);
+  }
+
   private static final double[] CAT_FIRE = {
     1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1,
     1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1, 1.1, 1, 1.4, 1.25, 1, 1
@@ -174,13 +209,19 @@ class IdleEngine {
   // A cat's gun hits for this share of the weapon's damage; each level above 1 adds the bonus.
   private static final double CAT_POWER = 0.5;
   private static final double CAT_LEVEL_BONUS = 0.2;
-  // Capital per point of wall health on a clear, and per active second at wall 1 (492).
-  private static final double REWARD_PER_HEALTH = 60_000;
+  // A cleared wall pays this many game seconds of its own time income, a boss wall BOSS_REWARD
+  // times that (537). It used to pay per point of wall health, which outgrew the time income.
+  static final double REWARD_SECONDS = 30;
+  private static final double BOSS_REWARD = 3;
+  // Capital per active game second at wall 1 (492).
   private static final double INCOME = 20_000;
   private static final double INCOME_GROWTH = 0.05;
   // Matches weaponEffects.ts: revolver 3x, every other weapon 2x (decisions.md 487).
   private static final double REVOLVER_CRITICAL = 3;
   private static final double CRITICAL = 2;
+  // Matches weaponEffects.ts CRIT_CHANCE and BASE_CRIT_CHANCE.
+  private static final double REVOLVER_CHANCE = 0.4;
+  private static final double CRITICAL_CHANCE = 0.2;
   // Matches weaponEffects.ts SHOT_WEIGHT (decisions.md 495): every gun fires this many times
   // slower than its stats and each bullet hits that much harder. Damage per second is unchanged.
   private static final double BULLET_WEIGHT = 2;
@@ -258,7 +299,7 @@ class IdleEngine {
       shooters.add(
           shooter(
               s.catWeapons.get(code),
-              damageUp * power(s.cats.get(code)) * CAT_DAMAGE[cat],
+              damageUp * power(s.cats.get(code)) * CAT_DAMAGE[cat] * GRADE_DAMAGE[CAT_GRADE[cat]],
               fireUp * CAT_FIRE[cat],
               criticalUp * CAT_CRITICAL[cat]));
     }
@@ -354,6 +395,19 @@ class IdleEngine {
     }
   }
 
+  /**
+   * What clearing the front wall pays (537): REWARD_SECONDS of the wall's own time income at its
+   * price level, three times that on a boss wall. Employees and the stage bonus are not in it.
+   */
+  private static double reward(CompanyState c) {
+    CompanyState.Idle s = c.idle;
+    return Math.floor(
+        wallIncome(s)
+            * REWARD_SECONDS
+            * (s.wall % 10 == 0 ? BOSS_REWARD : 1)
+            * CompanyEngine.inflation(c));
+  }
+
   /** The wall's own time income per game second, before the price level (492). */
   private static double wallIncome(CompanyState.Idle s) {
     return INCOME * (1 + INCOME_GROWTH * Math.min(s.wall - 1, 10_000));
@@ -433,6 +487,50 @@ class IdleEngine {
               / COOLDOWNS[skill][level];
     }
     return SPEED * total;
+  }
+
+  // 전투력 (538): the weights of the parts that are not bullet or skill damage.
+  private static final double POWER_SCALE = 100;
+  private static final double POWER_BUY_ORDERS = 2;
+  private static final double POWER_HP_WEIGHT = 0.25;
+
+  /**
+   * 전투력 (decisions.md 538번): 성장 탭이 보여 주는 숫자 하나. 모든 총과 스킬의 초당 피해(치명타 기대값 포함)에 매수 주문의 피해를 더하고, 매수벽 체력
+   * 강화의 4분의 1을 곱한다. 벽 번호는 보지 않으므로 강화·무기·고양이가 바뀔 때만 오른다.
+   */
+  private double power(CompanyState c) {
+    CompanyState.Idle s = state(c);
+    List<Shooter> shooters = shooters(c);
+    double total = 0;
+    for (int i = 0; i < shooters.size(); i++) {
+      Shooter shooter = shooters.get(i);
+      CompanyState.Weapon weapon = i == 0 ? c.weapon : s.catWeapons.get(s.fielded.get(i - 1));
+      double chance =
+          weapon != null && "revolver".equals(weapon.kind) ? REVOLVER_CHANCE : CRITICAL_CHANCE;
+      total +=
+          shooter.damage()
+              * shooter.perSecond()
+              * shooter.power()
+              / 1.25
+              * (1 + chance * (shooter.critical() - 1));
+    }
+    for (String code : s.fielded) {
+      int cat = CATS.indexOf(code);
+      if (cat < 0) continue;
+      int skill = CAT_SKILL[cat];
+      int level = skillLevel(s.cats.getOrDefault(code, 1)) - 1;
+      total +=
+          shooters.getFirst().damage()
+              * SKILL_DAMAGE[skill][level]
+              * SKILL_HITS[skill][level]
+              / COOLDOWNS[skill][level];
+    }
+    total += BUY_ORDER_DAMAGE * POWER_BUY_ORDERS * buyUp(c);
+    double hpUp = 0;
+    for (CompanyView.BattleUpgrade u : engine.mental.upgradeViews(c)) {
+      if ("hp".equals(u.kind())) hpUp = u.bonusPercent() / 100.0;
+    }
+    return Math.floor(POWER_SCALE * SPEED * total * (1 + POWER_HP_WEIGHT * hpUp));
   }
 
   /** A cat's skill level (515, 534): one more at cat level 10, 20, 30 and 40, up to five. */
@@ -639,7 +737,7 @@ class IdleEngine {
     // Walls break in order, and what is left of the breaking damage goes on to the next wall
     // (532): the screen broke it at that hit and kept shooting.
     while (s.circuitSeconds == 0 && s.damage + 1e-7 >= maxHp(s.wall)) {
-      earned += Math.floor(maxHp(s.wall) * REWARD_PER_HEALTH * CompanyEngine.inflation(c));
+      earned += reward(c);
       // 시즌패스 경험치 (529번): 벽 하나에 exp.wall.
       engine.pass.gain(c, engine.pass.rule().exp().wall(), todayDate());
       double left = Math.max(0, s.damage - maxHp(s.wall));
@@ -843,7 +941,12 @@ class IdleEngine {
                       code,
                       CAT_NAMES[cat],
                       level,
-                      (int) Math.round(100 * power(Math.max(1, level)) * CAT_DAMAGE[cat]),
+                      (int)
+                          Math.round(
+                              100
+                                  * power(Math.max(1, level))
+                                  * CAT_DAMAGE[cat]
+                                  * GRADE_DAMAGE[CAT_GRADE[cat]]),
                       (int) Math.round(100 * CAT_FIRE[cat]),
                       (int) Math.round(100 * CAT_CRITICAL[cat]),
                       s.fielded.contains(code),
@@ -851,7 +954,8 @@ class IdleEngine {
                       CODES[CAT_SKILL[cat]],
                       NAMES[CAT_SKILL[cat]],
                       skillLevel(Math.max(1, level)),
-                      nextSkillAt(Math.max(1, level)));
+                      nextSkillAt(Math.max(1, level)),
+                      CAT_GRADES.get(CAT_GRADE[cat]));
                 })
             .toList();
     return new CompanyView.Idle(
@@ -888,7 +992,7 @@ class IdleEngine {
         (s.lastDraws == null ? List.<CompanyState.Pulled>of() : s.lastDraws)
             .stream()
                 .filter(d -> CATS.contains(d.kind))
-                .map(d -> new CompanyView.CatDraw(d.kind, d.level, d.isNew))
+                .map(d -> new CompanyView.CatDraw(d.kind, d.level, d.isNew, catGrade(d.kind)))
                 .toList(),
         new CompanyView.Income(
             CompanyView.money(SPEED * incomeRate(c)),
@@ -904,6 +1008,7 @@ class IdleEngine {
                 s.offlineAt,
                 Math.round(s.offlineSeconds),
                 CompanyView.money(s.offlineEarned),
-                s.offlineCapped));
+                s.offlineCapped),
+        power(c));
   }
 }

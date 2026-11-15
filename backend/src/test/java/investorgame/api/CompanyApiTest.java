@@ -553,6 +553,35 @@ class CompanyApiTest {
     mvc.perform(post("/api/sandbox/next-day").cookie(session)).andExpect(status().isBadRequest());
   }
 
+  /** 상점 (decisions.md 541번): 게임 재화로 사고 하루 횟수가 있다. */
+  @Test
+  void 상점에서_무료_다이아를_하루에_한_번_받고_다이아로_돈을_산다() throws Exception {
+    DocumentContext opened =
+        json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
+    List<String> codes = opened.read("$.shop.items[*].code");
+    assertThat(codes).containsExactly("free", "diamonds", "money-small", "money-large");
+    assertThat(opened.read("$.idle.cats[0].grade", String.class)).as("하늘냥은 C 등급").isEqualTo("C");
+    assertThat(opened.read("$.idle.power", Double.class)).isPositive();
+    long diamonds = opened.read("$.diamonds.amount", Long.class);
+    DocumentContext free =
+        json(
+            mvc.perform(post("/api/company/shop/free").cookie(session)).andExpect(status().isOk()));
+    assertThat(free.read("$.diamonds.amount", Long.class)).isEqualTo(diamonds + 20);
+    assertThat(free.read("$.shop.items[0].left", Integer.class)).isZero();
+    assertThat(free.read("$.shop.lastReceipt.diamonds", Long.class)).isEqualTo(20);
+    mvc.perform(post("/api/company/shop/free").cookie(session)).andExpect(status().isBadRequest());
+    mvc.perform(post("/api/company/shop/nothing").cookie(session))
+        .andExpect(status().isBadRequest());
+    double capital = free.read("$.capital", Double.class);
+    DocumentContext bought =
+        json(
+            mvc.perform(post("/api/company/shop/money-small").cookie(session))
+                .andExpect(status().isOk()));
+    assertThat(bought.read("$.diamonds.amount", Long.class)).isEqualTo(diamonds + 20 - 60);
+    assertThat(bought.read("$.capital", Double.class)).isGreaterThan(capital);
+    assertThat(bought.read("$.shop.items[2].left", Integer.class)).isEqualTo(2);
+  }
+
   /** 시즌패스 (decisions.md 529번): 출석으로 얻은 경험치로 1단계를 받는다. */
   @Test
   void 시즌패스는_도달한_단계만_한_번_받는다() throws Exception {

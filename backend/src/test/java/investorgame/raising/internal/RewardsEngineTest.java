@@ -134,4 +134,54 @@ class RewardsEngineTest {
     assertThat(rewards.view(old).claimable()).isTrue();
     assertThat(rewards.view(old).lastReward()).isNull();
   }
+
+  @Test
+  void 상점은_게임_재화로_사고_하루_횟수가_한국_시간_자정에_다시_찬다() {
+    // 상점 (decisions.md 541번): 무료 다이아 20(하루 1번), 돈으로 다이아 20(초당 수입 20분어치, 5번),
+    // 다이아 60으로 수입 30분어치(3번), 다이아 200으로 수입 2시간어치(1번).
+    CompanyState c = opened();
+    assertThat(rewards.shopView(c).items())
+        .extracting(i -> i.code())
+        .containsExactly("free", "diamonds", "money-small", "money-large");
+    rewards.buy(c, "free");
+    assertThat(c.diamonds).isEqualTo(20);
+    assertThat(rewards.shopView(c).lastReceipt().diamonds()).isEqualTo(20);
+    assertThatThrownBy(() -> rewards.buy(c, "free"))
+        .as("하루 한 번")
+        .isInstanceOf(InvalidRequestException.class);
+    // 돈으로 다이아: 값은 지금 초당 수입의 20분어치다.
+    double perSecond = idle.perSecond(c);
+    double price = Math.floor(20 * 60 * perSecond);
+    assertThat(rewards.shopView(c).items().get(1).priceMoney().doubleValue()).isEqualTo(price);
+    assertThatThrownBy(() -> rewards.buy(c, "diamonds"))
+        .as("돈이 모자라다")
+        .isInstanceOf(InvalidRequestException.class);
+    c.capital = price * 5 + 7;
+    for (int i = 0; i < 5; i++) rewards.buy(c, "diamonds");
+    assertThat(c.capital).isEqualTo(7);
+    assertThat(c.diamonds).isEqualTo(120);
+    assertThat(rewards.shopView(c).items().get(1).left()).isZero();
+    assertThatThrownBy(() -> rewards.buy(c, "diamonds"))
+        .isInstanceOf(InvalidRequestException.class);
+    // 다이아로 돈: 60개에 수입 30분어치.
+    rewards.buy(c, "money-small");
+    assertThat(c.diamonds).isEqualTo(60);
+    assertThat(c.capital).isEqualTo(7 + Math.floor(30 * 60 * perSecond));
+    assertThat(rewards.shopView(c).items().get(2).left()).isEqualTo(2);
+    assertThatThrownBy(() -> rewards.buy(c, "money-large"))
+        .as("다이아가 모자라다")
+        .isInstanceOf(InvalidRequestException.class);
+    assertThatThrownBy(() -> rewards.buy(c, "nothing")).isInstanceOf(InvalidRequestException.class);
+    // 다음 날(한국 시간)에는 횟수가 다시 찬다.
+    clock.now += DAY;
+    assertThat(rewards.shopView(c).items()).allMatch(i -> i.left() == i.dailyLimit());
+    rewards.buy(c, "free");
+    assertThat(c.diamonds).isEqualTo(80);
+    // 저장을 거쳐도 그날 산 횟수가 남는다.
+    CompanyState again =
+        JsonMapper.builder()
+            .build()
+            .readValue(JsonMapper.builder().build().writeValueAsString(c), CompanyState.class);
+    assertThat(rewards.shopView(again).items().get(0).left()).isZero();
+  }
 }

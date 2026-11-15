@@ -83,6 +83,11 @@ interface RaisingState {
    */
   claimAttendance: () => Promise<Company | null>
   /**
+   * 상점에서 상품 하나를 산다 (decisions.md 541번). 산 것은 company.shop.lastReceipt. 산 회사(거절되거나 끊겼으면 null)를 돌려준다.
+   * 전투를 멈추지 않게 busy를 켜지 않는다.
+   */
+  buyShopItem: (code: string) => Promise<Company | null>
+  /**
    * 시즌패스의 단계 보상을 받는다 (decisions.md 529번). step을 주면 그 단계 하나, 없으면 받을 수 있는 것을 모두 받는다. 받은 것은
    * company.pass.lastRewards. 받은 회사(거절되거나 끊겼으면 null)를 돌려준다. 전투를 멈추지 않게 busy를 켜지 않는다.
    */
@@ -245,6 +250,11 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
     skipSandboxDay: () => change(api.POST('/api/sandbox/next-day')),
     claimAttendance: async () => {
       const res = await safely(api.POST('/api/company/attendance'))
+      set({ company: res?.data ?? get().company, error: reason(res?.error) })
+      return res?.data ?? null
+    },
+    buyShopItem: async (code) => {
+      const res = await safely(api.POST('/api/company/shop/{code}', { params: { path: { code } } }))
       set({ company: res?.data ?? get().company, error: reason(res?.error) })
       return res?.data ?? null
     },

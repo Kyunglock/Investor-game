@@ -76,6 +76,7 @@ function world() {
       })),
       fieldSlots: 4,
       wallDps: 0,
+      power: 1038,
       income: { perSecond: 48_500, staffPerSecond: 12_500, bonusPercent: 0 },
       offline: null,
       lastDraws: [],
@@ -92,6 +93,8 @@ function world() {
         skillName,
         skillLevel: code === 'night' ? 5 : Math.floor(i / 2) + 1,
         skillNextLevel: code === 'night' ? 0 : i + 2 + (i % 2),
+        // 등급은 종마다 정해져 있다 (539번).
+        grade: code === 'night' || code === 'snow' ? 'A' : 'C',
         weapon:
           code === 'sky'
             ? { kind: 'pistol', grade: 'E' }
@@ -199,15 +202,15 @@ try {
 
       // 성장 메뉴에는 능력치만 있다: 탭 줄이 없다.
       await page.getByRole('button', { name: '성장' }).click()
-      await expect(page.getByTestId('idle-wall-dps')).toBeVisible()
+      await expect(page.getByTestId('idle-power')).toBeVisible()
       await expect(page.getByRole('tab')).toHaveCount(0)
       await expect(page.getByTestId('weapon-picker')).toHaveCount(0)
       await noOverflow(page)
       await shot('growth')
       await page.getByRole('button', { name: '닫기 ✕' }).click()
 
-      await page.getByRole('button', { name: '고양이' }).click()
-      // 뽑기 자리: 고양이 뽑기와 무기 뽑기를 한 화면에서 고른다.
+      // 뽑기는 상점 탭에 있다 (541번): 고양이 뽑기와 무기 뽑기를 한 화면에서 고른다.
+      await page.getByRole('button', { name: /^상점/ }).click()
       await expect(page.getByTestId('cat-draw')).toBeVisible()
       await expect(page.getByTestId('weapon-draw-badge')).toContainText('12')
       await shot('draw-cat')
@@ -218,20 +221,24 @@ try {
       await shot('draw-weapon')
       await page.getByTestId('draw-kind-cat').click()
 
-      // 처음에는 사장냥이 골라져 있다: 스킬 설명은 없고 장비를 고를 수 있다.
-      const detail = page.getByTestId('cat-detail')
-      await expect(detail).toHaveAttribute('data-code', 'boss')
-      await expect(detail.getByTestId('cat-skill')).toHaveCount(0)
-      await expect(detail.getByTestId('cat-gun')).toContainText('권총')
-      await detail.getByTestId('cat-gun').click()
+      // 무기 탭 (540번): 처음에는 사장냥이 골라져 있고 바로 장비를 고를 수 있다.
+      const tab = (name) =>
+        page.getByRole('navigation', { name: '게임 메뉴' }).last().getByRole('button', { name })
+      await tab(/^무기/).click()
+      const now = page.getByTestId('weapon-now')
+      await expect(page.locator('[data-testid=gear-wearer][data-code=boss]')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
+      await expect(now).toContainText('권총')
       await expect(cell(page, 'F', 'boss')).toHaveAttribute('aria-pressed', 'true')
       // 하늘냥·민트냥이 든 것은 사장냥이 못 고른다.
       await expect(cell(page, 'E', 'sky')).toBeDisabled()
       await expect(cell(page, 'E', 'sky')).toContainText('장착 중')
       await expect(cell(page, 'E', 'sky')).toContainText('하늘냥')
       await expect(cell(page, 'S', 'mint')).toBeDisabled()
-      await expect(detail.getByTestId('cat-unequip')).toHaveCount(0)
-      await detail.scrollIntoViewIfNeeded()
+      await expect(page.getByTestId('cat-unequip')).toHaveCount(0)
+      await now.scrollIntoViewIfNeeded()
       await shot('boss')
       // 사장냥이 남은 리볼버 D를 든다.
       await cell(page, 'D').first().click()
@@ -241,7 +248,11 @@ try {
       await cell(page, 'F').first().click()
       await expect(cell(page, 'F', 'boss')).toHaveAttribute('aria-pressed', 'true')
 
-      // 하늘냥을 누르면 스킬 설명이 나온다.
+      // 고양이 탭: 사장냥이 골라져 있고 스킬 설명이 없다. 하늘냥을 누르면 스킬 설명이 나온다.
+      await tab('고양이').click()
+      const detail = page.getByTestId('cat-detail')
+      await expect(detail).toHaveAttribute('data-code', 'boss')
+      await expect(detail.getByTestId('cat-skill')).toHaveCount(0)
       await page.locator('[data-testid=cat][data-code=sky]').click()
       await expect(detail).toHaveAttribute('data-code', 'sky')
       const skill = detail.getByTestId('cat-skill')
@@ -255,8 +266,12 @@ try {
       await expect(detail.getByTestId('cat-skill-next')).toHaveText('스킬 최고 레벨이에요')
       await page.locator('[data-testid=cat][data-code=sky]').click()
 
-      // 하늘냥의 장비 목록: 든 것, 남이 든 것, 남은 것.
+      // 하늘냥의 무기를 누르면 무기 탭이 하늘냥으로 열린다: 든 것, 남이 든 것, 남은 것.
       await detail.getByTestId('cat-gun').click()
+      await expect(page.locator('[data-testid=gear-wearer][data-code=sky]')).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      )
       await expect(cell(page, 'E', 'sky')).toHaveAttribute('aria-pressed', 'true')
       await expect(cell(page, 'F', 'boss')).toBeDisabled()
       await expect(cell(page, 'F', 'boss')).toContainText('장착 중')
@@ -267,7 +282,7 @@ try {
       await expect(cell(page, 'F')).toHaveCount(2)
       await expect(cell(page, 'F').last()).toContainText('×2')
       await expect(cell(page, 'E')).toHaveCount(1)
-      await detail.scrollIntoViewIfNeeded()
+      await now.scrollIntoViewIfNeeded()
       await noOverflow(page)
       await shot('cat-detail')
 
@@ -358,23 +373,13 @@ try {
       await expect(page.getByTestId('gear-merge')).toHaveText('리볼버 D 2개 → C')
 
       // 무기 빼기.
-      await detail.getByTestId('cat-unequip').click()
+      await page.getByTestId('cat-unequip').click()
       await expect(cell(page, 'D', 'sky')).toHaveCount(0)
       assert.equal(company.idle.cats[0].weapon, null)
       await noOverflow(page)
       await page.getByRole('button', { name: '닫기 ✕' }).click()
 
-      // 출전 화면의 "무기 바꾸기"는 고양이 메뉴의 사장냥 장비를 연다.
-      await page.getByRole('button', { name: /^회사( 종목회의 가능| EX 디펜스 가능)?$/ }).click()
-      await page.getByTestId('stage-open').click()
-      await page.locator('[data-testid=stage]:not([disabled])').first().click()
-      await page.getByTestId('stage-weapon-change').click()
-      await expect(page.getByTestId('idle-menu')).toBeVisible()
-      await expect(detail).toHaveAttribute('data-code', 'boss')
-      await expect(page.getByTestId('cat-gear')).toBeVisible()
-      await expect(cell(page, 'F', 'boss')).toHaveAttribute('aria-pressed', 'true')
-      await page.getByRole('button', { name: '닫기 ✕' }).click()
-      await expect(page.getByTestId('idle-menu')).toHaveCount(0)
+      // 출전 화면의 "무기 바꾸기"는 회사 탭 뒤에 있어 꺼 둔 동안에는 갈 수 없다 (540번). 켜면 무기 탭의 사장냥 장비가 열린다.
       assert.deepEqual(refused, [], '화면은 서버가 거절할 일을 시키지 않는다')
       assert.deepEqual(errors, [])
       await page.close()
@@ -393,8 +398,7 @@ try {
       await page.addInitScript(() => localStorage.setItem('investor-game.tutorial', 'done'))
       await page.route(/\/api\/(company|sessions)(\/|$|\?)/, route)
       await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5182/app/')
-      await page.getByRole('button', { name: '고양이' }).click()
-      await page.getByTestId('cat-gun').click()
+      await page.getByRole('button', { name: /^무기/ }).click()
       const cdp = await context.newCDPSession(page)
       const touch = (type, x, y) =>
         cdp.send('Input.dispatchTouchEvent', {

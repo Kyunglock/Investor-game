@@ -64,7 +64,33 @@ public record CompanyProperties(
     Meetings meetings,
     Diamonds diamonds,
     Attendance attendance,
-    Pass pass) {
+    Pass pass,
+    Shop shop) {
+
+  /**
+   * 상점 (decisions.md 541번): 게임 재화로만 사는 날마다의 상품. 한국 시간 자정에 산 횟수가 지워진다.
+   *
+   * @param items 진열 차례대로
+   */
+  public record Shop(List<ShopItem> items) {}
+
+  /**
+   * 상품 하나. 값은 다이아나 돈 가운데 하나(둘 다 0이면 무료)이고, 주는 것도 다이아나 돈 가운데 하나다.
+   *
+   * @param priceDiamonds 다이아 값
+   * @param priceIncomeMinutes 돈 값 = 살 때 회사의 초당 수입 × 이만큼(분)
+   * @param giveDiamonds 주는 다이아
+   * @param giveIncomeMinutes 주는 돈 = 살 때 회사의 초당 수입 × 이만큼(분)
+   * @param dailyLimit 하루에 살 수 있는 횟수
+   */
+  public record ShopItem(
+      String code,
+      String name,
+      long priceDiamonds,
+      int priceIncomeMinutes,
+      long giveDiamonds,
+      int giveIncomeMinutes,
+      int dailyLimit) {}
 
   /**
    * 시즌패스 (decisions.md 529번): 무료 줄 하나. 시즌은 epoch(한국 시간 자정)부터 days일마다 이어진다.

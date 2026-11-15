@@ -3,6 +3,8 @@ import { useRaisingStore, type WeaponGrade } from '@web/features/raising/store'
 import { type FormEvent, useState } from 'react'
 import { idleThreat } from '../mental/assault'
 import { IDLE_RAID_ORDER, type IdleRaidKind } from '../mental/waves'
+import { readFrameMeter, saveFrameMeter } from './frameMeter'
+import { IdleFrameMeter } from './IdleFrameMeter'
 
 /** 벽 건너뛰기: 지금 벽에서 더하고 빼는 걸음과 바로 가는 벽. 큰손 벽(10의 배수)과 그 앞뒤를 보기 쉽게 골랐다. */
 const WALL_STEPS = [-10, -1, 1, 10, 50, 100] as const
@@ -49,6 +51,8 @@ export function IdleSandbox({ company }: { company: Company }) {
   const [panel, setPanel] = useState(false)
   const [target, setTarget] = useState('')
   const [resetAsked, setResetAsked] = useState(false)
+  // 프레임 표시 (543번): 테스트판에서만 뜨고, 도구 창에서 켜고 끈다.
+  const [frames, setFrames] = useState(readFrameMeter)
   const close = () => {
     setOpen(false)
     setCode('')
@@ -107,6 +111,7 @@ export function IdleSandbox({ company }: { company: Company }) {
   }
   return (
     <>
+      {company.sandbox && frames && <IdleFrameMeter />}
       {company.sandbox && (
         <button
           type="button"
@@ -215,7 +220,24 @@ export function IdleSandbox({ company }: { company: Company }) {
                 </button>
               ))}
             </div>
-            <span className="idle-sandbox-label">출석 보상</span>
+            <span className="idle-sandbox-label">프레임 표시 (FPS · 가장 긴 프레임 · 끊김)</span>
+            <div className="idle-sandbox-chips is-two">
+              {[true, false].map((on) => (
+                <button
+                  key={String(on)}
+                  type="button"
+                  aria-pressed={frames === on}
+                  data-testid={on ? 'idle-sandbox-frames-on' : 'idle-sandbox-frames-off'}
+                  onClick={() => {
+                    saveFrameMeter(on)
+                    setFrames(on)
+                  }}
+                >
+                  {on ? '켜기' : '끄기'}
+                </button>
+              ))}
+            </div>
+            <span className="idle-sandbox-label">출석·상점</span>
             <div className="idle-sandbox-chips is-one">
               <button
                 type="button"

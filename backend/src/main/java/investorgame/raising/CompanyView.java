@@ -40,6 +40,7 @@ public record CompanyView(
     Meetings meetings,
     Attendance attendance,
     Pass pass,
+    Shop shop,
     List<LockedDesk> lockedDesks,
     List<Weapon> weapons,
     Armory armory,
@@ -119,6 +120,37 @@ public record CompanyView(
       String catName) {}
 
   /**
+   * 상점 (decisions.md 541번): 게임 재화로만 사는 날마다의 상품. 한국 시간 자정에 남은 횟수가 다시 찬다.
+   *
+   * @param lastReceipt 마지막으로 산 것. 산 적이 없으면 null
+   */
+  public record Shop(List<ShopItem> items, ShopReceipt lastReceipt) {}
+
+  /**
+   * 상품 하나.
+   *
+   * @param priceDiamonds 다이아 값. 돈으로 사거나 무료면 0
+   * @param priceMoney 돈 값(지금의 초당 수입 기준). 다이아로 사거나 무료면 null
+   * @param giveDiamonds 주는 다이아. 돈을 주면 0
+   * @param giveIncomeMinutes 돈을 주면 회사의 초당 수입 몇 분어치인가. 다이아를 주면 0
+   * @param giveMoney 돈을 주면 지금 사면 들어올 돈. 다이아를 주면 null
+   * @param dailyLimit 하루에 살 수 있는 횟수
+   * @param left 오늘 남은 횟수
+   */
+  public record ShopItem(
+      String code,
+      String name,
+      long priceDiamonds,
+      java.math.BigDecimal priceMoney,
+      long giveDiamonds,
+      int giveIncomeMinutes,
+      java.math.BigDecimal giveMoney,
+      int dailyLimit,
+      int left) {}
+
+  public record ShopReceipt(String code, long diamonds, java.math.BigDecimal money) {}
+
+  /**
    * 출석 보상 (decisions.md 528번): 하루에 한 번, 한국 시간 자정에 다시 열린다. 누적 출석이라 빠진 날이 있어도 이어서 간다.
    *
    * @param today 오늘 받을 칸(1부터). 오늘 이미 받았으면 오늘 받은 칸
@@ -191,15 +223,17 @@ public record CompanyView(
       List<IdleActive> actives,
       List<CatDraw> lastDraws,
       Income income,
-      Offline offline) {}
+      Offline offline,
+      double power) {}
 
   /**
    * 고양이 뽑기에서 나온 한 마리 (517번).
    *
    * @param level 나온 직후의 레벨. 10연속에서 같은 고양이가 또 나오면 차례로 오른다
    * @param isNew 처음 얻은 고양이
+   * @param grade 그 고양이의 등급 (539번)
    */
-  public record CatDraw(String code, int level, boolean isNew) {}
+  public record CatDraw(String code, int level, boolean isNew, String grade) {}
 
   /**
    * 액티브 스킬 하나 (decisions.md 503번): 눌러서 쓴다. 시간은 화면에서 흐르는 실제 초다(전투는 2배속).
@@ -220,6 +254,7 @@ public record CompanyView(
    * @param criticalPercent 이 고양이 총의 치명타 배율(%). 특성이 없으면 100
    * @param weapon 든 무기. 없으면 null(기본 권총을 쏜다)
    * @param skill 이 고양이의 고유 스킬 코드(water·meteor·bolt·ram). 출전해 있는 동안 발동한다 (501번)
+   * @param grade 등급 C·B·A·S (539번). 종마다 정해져 있고, 높을수록 총이 세고 뽑기에서 드물다
    */
   public record IdleCat(
       String code,
@@ -233,7 +268,8 @@ public record CompanyView(
       String skill,
       String skillName,
       int skillLevel,
-      int skillNextLevel) {}
+      int skillNextLevel,
+      String grade) {}
 
   public record CatWeapon(String kind, String grade) {}
 

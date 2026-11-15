@@ -59,9 +59,78 @@ class RewardsEngine {
     engine.pass.gain(c, rule().passExp(), idle.todayDate());
   }
 
-  /** 테스트판: 하루가 지난 셈 친다. 오늘 받은 출석을 다시 받을 수 있다. */
+  /** 테스트판: 하루가 지난 셈 친다. 오늘 받은 출석을 다시 받고 상점의 산 횟수가 지워진다. */
   void nextDay(CompanyState c) {
     c.attendDay = null;
+    c.shopDay = null;
+    c.shopBought.clear();
+  }
+
+  /** 상점의 산 횟수는 한국 시간 자정에 지워진다 (541번). */
+  private void rollShop(CompanyState c) {
+    if (c.shopBought == null) c.shopBought = new java.util.HashMap<>();
+    if (!idle.today().equals(c.shopDay)) {
+      c.shopDay = idle.today();
+      c.shopBought.clear();
+    }
+  }
+
+  /** 상점에서 상품 하나를 산다 (541번). 값은 다이아나 돈(지금 초당 수입 × 분)이고, 하루 횟수를 다 썼거나 재화가 모자라거나 없는 상품이면 400. */
+  void buy(CompanyState c, String code) {
+    rollShop(c);
+    CompanyProperties.ShopItem item =
+        engine.shop().items().stream()
+            .filter(i -> i.code().equals(code))
+            .findFirst()
+            .orElseThrow(() -> new InvalidRequestException("없는 상품이에요: " + code));
+    int bought = c.shopBought.getOrDefault(code, 0);
+    if (bought >= item.dailyLimit()) {
+      throw new InvalidRequestException("오늘은 다 샀어요. 내일 다시 열려요");
+    }
+    double price = money(c, item.priceIncomeMinutes());
+    if (c.capital < price) {
+      throw new InvalidRequestException("돈이 모자라요");
+    }
+    CompanyEngine.spend(c, item.priceDiamonds());
+    c.capital -= price;
+    CompanyState.ShopReceipt receipt = new CompanyState.ShopReceipt();
+    receipt.code = code;
+    receipt.diamonds = item.giveDiamonds();
+    receipt.money = money(c, item.giveIncomeMinutes());
+    c.diamonds += receipt.diamonds;
+    c.capital += receipt.money;
+    c.shopBought.put(code, bought + 1);
+    c.lastShop = receipt;
+  }
+
+  /** 상점의 화면 값 (541번): 상품마다 지금의 값과 주는 것, 오늘 남은 횟수. */
+  CompanyView.Shop shopView(CompanyState c) {
+    rollShop(c);
+    List<CompanyView.ShopItem> items =
+        engine.shop().items().stream()
+            .map(
+                i ->
+                    new CompanyView.ShopItem(
+                        i.code(),
+                        i.name(),
+                        i.priceDiamonds(),
+                        i.priceIncomeMinutes() > 0
+                            ? CompanyView.money(money(c, i.priceIncomeMinutes()))
+                            : null,
+                        i.giveDiamonds(),
+                        i.giveIncomeMinutes(),
+                        i.giveIncomeMinutes() > 0
+                            ? CompanyView.money(money(c, i.giveIncomeMinutes()))
+                            : null,
+                        i.dailyLimit(),
+                        Math.max(0, i.dailyLimit() - c.shopBought.getOrDefault(i.code(), 0))))
+            .toList();
+    CompanyState.ShopReceipt r = c.lastShop;
+    return new CompanyView.Shop(
+        items,
+        r == null
+            ? null
+            : new CompanyView.ShopReceipt(r.code, r.diamonds, CompanyView.money(r.money)));
   }
 
   /**

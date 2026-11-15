@@ -184,6 +184,56 @@ export const company = {
   // 종목회의의 기회 (#803): 한 시간에 하나씩, 세 개까지.
   meetings: { chances: 2, max: 3, nextSeconds: 1500 },
   // 출석 보상 (528번): 오늘 것은 이미 받은 채로 둔다. 출석판이 스스로 떠서 다른 화면 검사를 가리지 않게.
+  // 상점 (541번): 무료 다이아와 돈·다이아 교환. 오늘은 아무것도 사지 않았다.
+  shop: {
+    items: [
+      {
+        code: 'free',
+        name: '오늘의 무료 다이아',
+        priceDiamonds: 0,
+        priceMoney: null,
+        giveDiamonds: 20,
+        giveIncomeMinutes: 0,
+        giveMoney: null,
+        dailyLimit: 1,
+        left: 1,
+      },
+      {
+        code: 'diamonds',
+        name: '다이아 꾸러미',
+        priceDiamonds: 0,
+        priceMoney: 58_200_000,
+        giveDiamonds: 20,
+        giveIncomeMinutes: 0,
+        giveMoney: null,
+        dailyLimit: 5,
+        left: 5,
+      },
+      {
+        code: 'money-small',
+        name: '돈 보따리',
+        priceDiamonds: 60,
+        priceMoney: null,
+        giveDiamonds: 0,
+        giveIncomeMinutes: 30,
+        giveMoney: 87_300_000,
+        dailyLimit: 3,
+        left: 3,
+      },
+      {
+        code: 'money-large',
+        name: '큰 돈 보따리',
+        priceDiamonds: 200,
+        priceMoney: null,
+        giveDiamonds: 0,
+        giveIncomeMinutes: 120,
+        giveMoney: 349_200_000,
+        dailyLimit: 1,
+        left: 1,
+      },
+    ],
+    lastReceipt: null,
+  },
   attendance: {
     today: 3,
     claimable: false,

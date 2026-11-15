@@ -869,6 +869,10 @@ class CompanyEngine {
     return true;
   }
 
+  CompanyProperties.Shop shop() {
+    return properties.shop();
+  }
+
   CompanyProperties.Attendance attendance() {
     return properties.attendance();
   }

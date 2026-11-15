@@ -244,6 +244,23 @@ class CompanyState {
     String cat;
   }
 
+  /** 상점에서 산 횟수를 센 날(한국 시간, yyyy-MM-dd). 날이 바뀌면 shopBought를 비운다 (541번). */
+  String shopDay;
+
+  /** 그날 상품마다 산 횟수 (541번). */
+  java.util.Map<String, Integer> shopBought = new java.util.HashMap<>();
+
+  /** 마지막으로 산 상품. 화면이 "받았어요"에 쓴다. */
+  ShopReceipt lastShop;
+
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  @JsonAutoDetect(fieldVisibility = Visibility.ANY)
+  static class ShopReceipt {
+    String code;
+    long diamonds;
+    double money;
+  }
+
   /** 마지막으로 출석 보상을 받은 날(한국 시간, yyyy-MM-dd). 받은 적이 없으면 null (528번). */
   String attendDay;
 
