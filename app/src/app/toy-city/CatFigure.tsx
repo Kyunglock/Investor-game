@@ -2,16 +2,16 @@ import type { Grade } from '@web/api/client'
 import { breedOf } from '@web/features/game/cat/look'
 import { LADDER } from '@web/features/raising/grades'
 
-/** 눈: 뜬 눈, 웃는 눈(팀장), 감은 눈(휴게실에서 조는 동료). */
+/** 눈: 뜬 눈, 웃는 눈, 감은 눈. */
 export type CatEyes = 'open' | 'happy' | 'sleep'
 
-/** 정장 색: 등급이 높으면 짙은 정장. 팀장도 짙은 정장을 입는다. */
-export function suitOf(grade: Grade, leader = false): string {
-  return leader || LADDER.indexOf(grade) >= 6 ? '#526780' : '#779a9a'
+/** 정장 색: 등급이 높으면 짙은 정장. */
+export function suitOf(grade: Grade): string {
+  return LADDER.indexOf(grade) >= 6 ? '#526780' : '#779a9a'
 }
 
 /**
- * 정장 입은 고양이 직원 한 마리 (viewBox 0 0 36 40). 메인 거리와 인력 관리의 사무실이 같이 그린다. 털빛은 번호로 정해진 품종(breedOf)을 따른다.
+ * 정장 입은 고양이 직원 한 마리 (viewBox 0 0 36 40). 메인 거리가 그린다. 털빛은 번호로 정해진 품종(breedOf)을 따른다.
  * <g>라서 바깥 <svg> 안에 넣는다.
  */
 export function CatFigure({

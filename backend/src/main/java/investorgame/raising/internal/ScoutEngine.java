@@ -26,14 +26,8 @@ class ScoutEngine {
     this.properties = properties;
   }
 
-  /**
-   * 종목을 물어 온 사람의 호칭 (#346): 그 자리의 팀장이면 분기 실적의 팀장 보고와 같이 "종목 발굴팀 팀장", 아니면 직함. 전에는 같은 사람이 회의에서는 "종목
-   * 발굴 담당", 실적에서는 "종목 발굴팀 팀장"이었다.
-   */
+  /** 종목을 물어 온 사람의 호칭 (#346): 앉은 자리의 직함. 팀장 호칭은 없앴다 (524번). */
   String finderTitle(CompanyState c, Employee e) {
-    if (e.desk != null && company.teams.leads(c, e)) {
-      return company.desk(e.desk).name() + " 팀장";
-    }
     return roleOf(e);
   }
 

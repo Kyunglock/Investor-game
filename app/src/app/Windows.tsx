@@ -8,6 +8,7 @@ import { useFx } from '../fx/fx'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { MentalWindow } from '../mental/MentalWindow'
+import { rate } from './income'
 import { ToyCityMove } from './toy-city/ToyCityMove'
 import { useAppUi } from './ui'
 
@@ -121,7 +122,7 @@ function revealFx(d: Drawn, el: HTMLElement | null) {
   haptic.light()
 }
 
-/** 사무실 화면 아래의 돌파 지원 현황: 지금 매도벽과 배치한 직원 수. */
+/** 사무실 화면 아래의 돌파 지원 현황: 지금 매도벽과 함께하는 동료 수, 직원들이 1초에 버는 돈. */
 export function OfficeSupport({ company, connected }: { company: Company; connected: boolean }) {
   const error = useRaisingStore((s) => s.error)
   const windowOpen = useAppUi((s) => s.investOpen || Boolean(s.battle) || Boolean(s.sheet))
@@ -129,7 +130,10 @@ export function OfficeSupport({ company, connected }: { company: Company; connec
   if (windowOpen || moving) {
     return null
   }
-  const assigned = company.employees.filter((employee) => employee.desk).length
+  // 서버가 준 직원 몫을 쓰고, 없으면 직원마다의 초당 수입을 더한다.
+  const staffRate =
+    company.idle?.income.staffPerSecond ??
+    company.employees.reduce((sum, e) => sum + e.incomePerSecond, 0)
   return (
     <div className="toy-action-area">
       {error && (
@@ -154,14 +158,12 @@ export function OfficeSupport({ company, connected }: { company: Company; connec
             <dd>{(company.idle?.wall ?? 1).toLocaleString()}벽</dd>
           </div>
           <div>
-            <dt>배치한 직원</dt>
-            <dd>
-              {assigned} / {company.seats}
-            </dd>
+            <dt>함께하는 동료</dt>
+            <dd>{company.employees.length}명</dd>
           </div>
           <div>
-            <dt>대기 중인 직원</dt>
-            <dd>{company.employees.length - assigned}명</dd>
+            <dt>직원 초당 수입</dt>
+            <dd>+{rate(staffRate)}</dd>
           </div>
         </dl>
       </section>

@@ -24,14 +24,12 @@ interface RaisingState {
     beforeSeats?: number
   } | null
   /** 튜토리얼이 가리키는 탭 (231번). null이면 화면이 정한다. */
-  tab: 'meeting' | 'market' | 'staff' | null
+  tab: 'meeting' | 'market' | null
   load: () => Promise<void>
   /** 사장의 사재로 첫 회사를 차린다 (decisions.md 228번). */
   open: () => Promise<void>
-  /** 채용권으로 count명을 뽑는다 (decisions.md 312번). */
+  /** 채용권으로 count명을 뽑는다 (decisions.md 312번). 뽑힌 직원은 서버가 바로 자리에 앉힌다 (#801). */
   draw: (count: number) => Promise<void>
-  /** 직원을 내보낸다 (312번). */
-  release: (employeeId: number) => Promise<void>
   /** 이사 비용을 내고 다음 건물로 간다 (decisions.md 296번). */
   upgrade: () => Promise<void>
   /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). */
@@ -89,9 +87,6 @@ interface RaisingState {
   convene: () => Promise<boolean>
   /** 종목회의에서 고른다: BUY·SELL (decisions.md 229·423번). big이면 크게 한다 (260번). */
   decideInvest: (choice: string, big?: boolean) => Promise<void>
-  place: (seats: { employeeId: number; desk: string | null }[]) => Promise<void>
-  /** 그 자리의 팀장을 정한다 (decisions.md 269번). */
-  appointLeader: (desk: string, employeeId: number) => Promise<void>
 }
 
 /** 요청이 끊기면(모바일에서 다른 앱에 다녀옴 등) 예외 대신 undefined. 버튼이 잠긴 채로 남지 않게 한다. */
@@ -163,8 +158,6 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
         set({ justDrew: true })
       }
     },
-
-    release: (employeeId) => change(api.POST('/api/company/release', { body: { employeeId } })),
 
     upgrade: async () => {
       const before = get().company
@@ -268,10 +261,5 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
           body: { choice: choice as 'BUY' | 'SELL', big },
         }),
       ),
-
-    place: (seats) => change(api.POST('/api/company/placement', { body: { seats } })),
-
-    appointLeader: (desk, employeeId) =>
-      change(api.POST('/api/company/leader', { body: { desk, employeeId } })),
   }
 })

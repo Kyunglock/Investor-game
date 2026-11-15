@@ -15,7 +15,7 @@ import { haptic } from '../../fx/haptics'
 import { isMuted, setMuted, sfx } from '../../fx/sound'
 import { chapterName, stageLabel } from '../../mental/advance'
 import { FIRST_PLAY_KEY, firstMeeting } from '../firstPlay'
-import { BookIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from '../Icons'
+import { BookIcon, ClipboardIcon, NewsIcon, SoundIcon } from '../Icons'
 import { Sheet } from '../Sheet'
 import { type BattleEntry, type Tab, type ToyPanel, tabBadge, useAppUi } from '../ui'
 import { useCountUp } from '../useCountUp'
@@ -53,7 +53,6 @@ export function ToyIcon({ kind }: { kind: 'upgrade' | 'heart' | 'settings' | 'cu
 
 const MENU = [
   { tab: 'market', text: '채용', Icon: ClipboardIcon },
-  { tab: 'staff', text: '인력 관리', Icon: ChairIcon },
   { tab: 'issue', text: '이슈', Icon: NewsIcon },
   { tab: 'record', text: '기록', Icon: BookIcon },
 ] as const
@@ -84,11 +83,10 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
   const upgradeLocked = useLocked(company, 'upgrade')
   const upgradeSpot = useTutorialSpot(company, 'upgrade')
   const marketSpot = useTutorialSpot(company, 'market')
-  const staffSpot = useTutorialSpot(company, 'staff')
   const settleSpot = useTutorialSpot(company, 'settle')
   const progress = growthProgress(company)
-  const assigned = company.employees.filter((e) => e.desk).length
-  const resting = company.employees.length - assigned
+  // 뽑은 직원은 서버가 바로 앉히므로 쉬는 사람이 없다 (#801).
+  const staff = company.employees.length
   const plan = company.upgrade
   const changeTab = (tab: Tab) => {
     sfx.tap()
@@ -103,7 +101,7 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
       setHireNote(
         company.gacha.tickets < 1
           ? '채용권이 없어요 · 건물을 올리면 받아요'
-          : '자리가 꽉 찼어요 · 건물을 올려 자리를 늘려요',
+          : '자리가 꽉 찼어요 · 회사를 넓히면 더 뽑을 수 있어요',
       )
       return
     }
@@ -182,9 +180,7 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
       <header className="toy-stage">
         <p>돌파 지원 · 사무실 관리</p>
         <h1 data-testid="company-building">{officeName(company.grade)}</h1>
-        <span>
-          자리 {assigned} / {company.seats}
-        </span>
+        <span>동료 {staff}명</span>
       </header>
       {/* 첫 종목회의를 정하기 전까지는 첫 판의 흐름이 이끈다 (#803): 그 뒤에 남은 걸음만 한 줄로 보인다. */}
       {tutorialOn && !firstMeeting(company) && (
@@ -212,7 +208,7 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
               key={tab}
               type="button"
               disabled={locked}
-              className={`toy-menu ${tab === 'market' ? marketSpot : tab === 'staff' ? staffSpot : tab === 'issue' ? settleSpot : ''}`}
+              className={`toy-menu ${tab === 'market' ? marketSpot : tab === 'issue' ? settleSpot : ''}`}
               data-testid={`tab-${tab}`}
               data-locked={locked || undefined}
               onClick={() => (tab === 'market' ? hire() : changeTab(tab))}
@@ -241,11 +237,9 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
       <div className="toy-speech" role="status">
         {hireNote
           ? hireNote
-          : resting > 0
-            ? `쉬는 고양이 ${resting}명 · 배치해보세요`
-            : assigned > 0
-              ? `고양이 ${assigned}명이 열심히 일하는 중`
-              : '첫 동료를 기다리고 있어요'}
+          : staff > 0
+            ? `고양이 ${staff}명이 열심히 일하는 중`
+            : '첫 동료를 기다리고 있어요'}
       </div>
       <div className="toy-bottom">
         <OfficeSupport company={company} connected={connected} />

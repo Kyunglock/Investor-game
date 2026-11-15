@@ -45,7 +45,7 @@ describe('"너희가 알아서 해" 저울 (decisions.md 291번)', () => {
 })
 
 describe('"너희가 알아서 해" 양쪽 사람 (decisions.md 295·304번)', () => {
-  it('토론에서 말한 사람(팀장)만 서고, 의견을 낸 사람이 없는 쪽에는 끌려 나온 사람이 선다', () => {
+  it('토론에서 말한 사람만 서고, 의견을 낸 사람이 없는 쪽에는 끌려 나온 사람이 선다', () => {
     const debate: DebateLine[] = [
       { name: '김매수', side: 'BUY', text: '…', last: false },
       { name: '옆자리 신입', side: 'SELL', text: '…', last: false },

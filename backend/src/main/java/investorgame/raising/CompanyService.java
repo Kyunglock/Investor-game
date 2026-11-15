@@ -1,7 +1,6 @@
 package investorgame.raising;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -35,17 +34,8 @@ public interface CompanyService {
    */
   CompanyView draw(UUID sessionId, int count, int draws);
 
-  /** 직원을 내보낸다 (312번). */
-  CompanyView release(UUID sessionId, int employeeId);
-
-  /** 그 자리의 팀장을 정한다 (decisions.md 269번). 그 자리에 앉은 직원이 아니면 400. */
-  CompanyView leader(UUID sessionId, String desk, int employeeId);
-
   /** 이사 비용을 내고 다음 건물로 간다 (decisions.md 296번). 자본이 모자라거나 끝 등급이면 400. */
   CompanyView upgrade(UUID sessionId);
-
-  /** 직원 ID → 자리 코드(쉬면 null). 자리 수를 넘으면 400. */
-  CompanyView place(UUID sessionId, Map<Integer, String> placements);
 
   /**
    * 올해 투자 회의를 연다: 지금 배치로 직원 한마디와 형광펜을 굳힌다. 그 뒤로 배치를 바꿔도 그대로다. 이미 열었으면 지금 회사를 그대로 돌려준다. 열 수 없으면(정했거나

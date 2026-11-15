@@ -28,7 +28,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * @param market 뽑은 사람의 능력치 (decisions.md 228번)
  * @param gacha 채용 뽑기: 채용권으로 뽑는다 (decisions.md 312·315번, 합성은 384번에서 뺐다)
  * @param invest 투자 회의: 해마다 한 번 단서 기사를 놓고 직원들과 고민한다 (decisions.md 229번)
- * @param people 근속과 사기 (decisions.md 262·270번, 이직 제안은 385번에서 뺐다)
  * @param scout 종목 발굴: 종목 회의는 직원이 종목을 물어 올 때만 열린다 (decisions.md 267번)
  * @param sale 매각과 재창업 (9절). 매각을 뺀 뒤(236번)로는 API가 부르지 않는다. 다시 붙일 때를 위해 남겼다 (264번)
  */
@@ -57,7 +56,6 @@ public record CompanyProperties(
     Market market,
     Gacha gacha,
     Invest invest,
-    People people,
     Scout scout,
     Sale sale,
     String endingGrade,
@@ -252,21 +250,6 @@ public record CompanyProperties(
   public record Clarity(String code, int weight, int penalty) {}
 
   /**
-   * 근속 (decisions.md 262번). 이직 제안(poach-from-year·poach-percent·transfer-percent)은 385번에서 뺐다.
-   *
-   * @param settleYears 같은 자리에서 이 해째부터 손에 익는다
-   * @param settledFlipPercent 손에 익으면 손이 뒤집힐 확률에 곱한다
-   */
-  public record People(int settleYears, int settledFlipPercent, Pay pay) {}
-
-  /**
-   * 사기 (decisions.md 270번). 연봉·연봉 협상·사표는 뺐다(383번).
-   *
-   * @param moraleFlipPercent 사기 한 칸마다 손이 뒤집힐 확률에 더하거나(낮을 때) 빼는(높을 때) 비율(%)
-   */
-  public record Pay(int moraleFlipPercent) {}
-
-  /**
    * 뽑은 사람의 능력치 (decisions.md 228·312번). 계약금(fees·fee-bp·veteran-fee-*)은 채용 뽑기로 바뀌며 내지 않게 됐고(312번),
    * 그것을 바탕으로 하던 연봉(383번)과 이적료(385번)도 빠져 함께 뺐다.
    *
@@ -284,7 +267,6 @@ public record CompanyProperties(
    * @param achievementTickets 업적 하나를 열 때 받는 채용권
    * @param moveTickets 건물을 올릴 때 받는 채용권
    * @param maxDraws 한 번에 뽑을 수 있는 최대 수
-   * @param rosterMax 데리고 있을 수 있는 사람 수(쉬는 사람 포함, 337번). 넘으면 내보내야 더 뽑는다
    * @param rates 확률표: 회사 등급(인사팀이면 더 높게)에서 steps 단계 위가 percent%로. star면 특급
    */
   public record Gacha(
@@ -294,7 +276,6 @@ public record CompanyProperties(
       int achievementTickets,
       int moveTickets,
       int maxDraws,
-      int rosterMax,
       List<Rate> rates) {}
 
   /** 뽑기 확률표의 한 칸: 회사 등급보다 steps 단계 위(음수면 아래)가 percent%. star면 특급(특급 연출, 능력치가 그 띠에 고르게). */

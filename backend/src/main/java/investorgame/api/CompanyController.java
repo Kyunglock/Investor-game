@@ -10,9 +10,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -114,16 +112,6 @@ class CompanyController {
   }
 
   record DrawRequest(@NotNull @Positive Integer count, @NotNull @PositiveOrZero Integer draws) {}
-
-  /** 직원을 내보낸다 (decisions.md 312번). */
-  @PostMapping("/release")
-  CompanyView release(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody ReleaseRequest request) {
-    return companies.release(cookies.requirePlayer(token), request.employeeId());
-  }
-
-  record ReleaseRequest(@NotNull Integer employeeId) {}
 
   /**
    * 종목회의를 연다 (decisions.md 249·523번): 기회 하나를 써서 직원이 종목을 물어 오고 한마디와 형광펜을 굳힌다. 정하지 않은 회의가 있으면 그 회의로
@@ -352,34 +340,4 @@ class CompanyController {
   CompanyView upgrade(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
     return companies.upgrade(cookies.requirePlayer(token));
   }
-
-  @PostMapping("/leader")
-  CompanyView leader(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody LeaderRequest request) {
-    return companies.leader(cookies.requirePlayer(token), request.desk(), request.employeeId());
-  }
-
-  record LeaderRequest(@NotBlank String desk, @NotNull Integer employeeId) {}
-
-  @PostMapping("/placement")
-  CompanyView place(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody PlacementRequest request) {
-    Map<Integer, String> placements = new HashMap<>();
-    for (Seat seat : request.seats()) {
-      // 같은 직원이 두 번 오면 어느 쪽인지 모르니 400 (254번). 전에는 뒤의 것이 조용히 덮었다.
-      if (placements.containsKey(seat.employeeId())) {
-        throw new InvalidRequestException("같은 직원이 두 번 왔다: " + seat.employeeId());
-      }
-      placements.put(seat.employeeId(), seat.desk());
-    }
-    return companies.place(cookies.requirePlayer(token), placements);
-  }
-
-  /** replace는 자리가 꽉 찼을 때 내보낼 직원 ID. */
-  record PlacementRequest(@NotNull List<@Valid Seat> seats) {}
-
-  /** desk가 null이면 쉰다. */
-  record Seat(@NotNull Integer employeeId, String desk) {}
 }

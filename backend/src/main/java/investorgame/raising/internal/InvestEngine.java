@@ -667,10 +667,6 @@ class InvestEngine {
     c.invest.stake = stake * traders.size();
     c.capital = Math.max(0, c.capital + total);
     c.invest.reactions = reactions(c, choice, random);
-    // 자기 말을 들어 줬는지에 따라 사기가 움직인다 (270번). 맡겼으면 사장이 들어 주고 말고가 없다.
-    if (!delegated) {
-      company.pay.afterMeeting(c);
-    }
   }
 
   /**

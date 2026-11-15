@@ -9,7 +9,6 @@ import investorgame.raising.CompanySummary;
 import investorgame.raising.CompanyView;
 import java.security.SecureRandom;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -47,12 +46,13 @@ class DefaultCompanyService implements CompanyService {
    */
   private CompanyRepository.Row adopt(CompanyRepository.Row row) {
     CompanyState c = row.state();
-    boolean overSeated = c.employees.stream().filter(e -> e.desk != null).count() > engine.seats(c);
+    // 인력 관리가 있던 때의 저장 (524번): 쉬는 직원이 있으면 자리에 앉힌다.
+    boolean resting = c.employees.stream().anyMatch(e -> e.desk == null);
     if (c.gachaReady
         && c.realtime
         && c.weapon != null
         && c.weaponGachaReady
-        && !overSeated
+        && !resting
         && !engine.mental.needsWeaponReset(c)) {
       return row;
     }
@@ -60,9 +60,8 @@ class DefaultCompanyService implements CompanyService {
     boolean gacha = engine.adoptGacha(locked.state());
     boolean mental = engine.mental.adopt(locked.state());
     boolean moved = engine.adoptRealtime(locked.state());
-    // 자리 수가 줄었으면(354번처럼) 옛 회사에서 넘치게 앉은 사람은 쉬는 사람으로 내린다.
-    boolean stood = !engine.fitSeats(locked.state()).isEmpty();
-    if (gacha || mental || moved || stood) {
+    boolean seated = engine.seatAll(locked.state());
+    if (gacha || mental || moved || seated) {
       companies.update(locked.id(), locked.state(), false);
     }
     return locked;
@@ -122,15 +121,6 @@ class DefaultCompanyService implements CompanyService {
 
   @Override
   @Transactional
-  public CompanyView release(UUID sessionId, int employeeId) {
-    CompanyRepository.Row row = lockActive(sessionId);
-    engine.release(row.state(), employeeId);
-    companies.update(row.id(), row.state(), false);
-    return view(row);
-  }
-
-  @Override
-  @Transactional
   public CompanyView convene(UUID sessionId) {
     CompanyRepository.Row row = lockActive(sessionId);
     engine.openMeeting(row.state(), new HashSeededRandom(row.seed()), idle.now());
@@ -176,24 +166,6 @@ class DefaultCompanyService implements CompanyService {
   }
 
   @Override
-  @Transactional
-  public CompanyView leader(UUID sessionId, String desk, int employeeId) {
-    CompanyRepository.Row row = lockActive(sessionId);
-    engine.teams.appoint(row.state(), desk, employeeId);
-    companies.update(row.id(), row.state(), false);
-    return view(row);
-  }
-
-  @Override
-  @Transactional
-  public CompanyView place(UUID sessionId, Map<Integer, String> placements) {
-    CompanyRepository.Row row = lockActive(sessionId);
-    engine.place(row.state(), placements);
-    companies.update(row.id(), row.state(), false);
-    return view(row);
-  }
-
-  @Override
   @Transactional(readOnly = true)
   public List<CompanySummary> recent(int limit) {
     return companies.recent(limit).stream()
@@ -223,6 +195,7 @@ class DefaultCompanyService implements CompanyService {
     engine.adoptGacha(row.state());
     // 분기·결산이 있던 때의 회사면 실시간 구조로 옮기고, 종목회의의 기회를 지금까지 센다 (523번). 요청 끝에 함께 저장된다.
     engine.adoptRealtime(row.state());
+    engine.seatAll(row.state());
     engine.accrueMeetings(row.state(), idle.now());
     refill(row.state());
     return row;
@@ -342,8 +315,6 @@ class DefaultCompanyService implements CompanyService {
                         e.sector,
                         e.sector == null ? null : engine.sectorName(e.sector),
                         engine.scout.roleOf(e),
-                        engine.teams.leads(c, e),
-                        e.morale,
                         engine.quirks.code(e),
                         engine.quirks.name(e),
                         CompanyView.money(idle.incomeOf(c, e))))
@@ -549,7 +520,7 @@ class DefaultCompanyService implements CompanyService {
     return new CompanyView.Gacha(
         c.tickets,
         c.employees.size(),
-        engine.rosterMax(c),
+        engine.seats(c),
         c.draws,
         engine.maxDraws(),
         rates,

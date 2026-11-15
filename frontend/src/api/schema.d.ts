@@ -57,51 +57,11 @@ export interface paths {
         put?: never;
         /**
          * 채용권으로 count명을 뽑는다 (decisions.md 312번)
-         * @description 채용권 한 장에 한 명이 쉬는 채로 온다. 돈은 들지 않는다. 등급은 회사 등급(인사팀이 있으면 더 높게)을 중심으로 한 확률표대로다.
+         * @description 채용권 한 장에 한 명이 오고 서버가 바로 빈 자리에 앉힌다(524번, 사장이 배치하지 않는다). 자리(seats)가 꽉 차면 400: 회사를 넓혀야 더 뽑는다. 돈은 들지 않는다. 등급은 회사 등급(인사팀이 있으면 더 높게)을 중심으로 한 확률표대로다.
          *     요청에 지금까지 뽑은 횟수(draws)를 싣는다: 이미 한 뽑기면 아무것도 하지 않고 지금 회사를 돌려주고, 아직 오지 않은 것이면 400.
-         *     채용권이나 데리고 있을 자리(100명)가 모자라거나 한 번에 maxDraws를 넘으면 400.
+         *     채용권이 모자라거나 한 번에 maxDraws를 넘으면 400.
          */
         post: operations["drawEmployees"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/company/release": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 직원을 내보낸다 (decisions.md 312번)
-         * @description 데리고 있을 자리를 비운다. 명예의 전당과 연표에 남는다.
-         */
-        post: operations["releaseEmployee"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/company/placement": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 직원을 자리에 앉힌다. 사장은 배치만 한다
-         * @description 자리 수를 넘거나, 없는 직원·자리이거나, 같은 직원이 두 번 오면 400 (decisions.md 254번).
-         */
-        post: operations["placeEmployees"];
         delete?: never;
         options?: never;
         head?: never;
@@ -120,7 +80,7 @@ export interface paths {
         /**
          * 종목회의를 연다 (decisions.md 249·523번)
          * @description 기회 하나(meetings.chances)를 써서 새 회의를 연다: 직원이 종목을 물어 오고, 지금 배치로 직원 한마디(invest.remarks)와 리서치 팀 형광펜을 굳힌다.
-         *     그 뒤로 배치를 바꿔도 그대로라 배치를 바꿔 가며 정답을 알아낼 수 없다.
+         *     그 뒤로 직원이 늘어도 그 회의에서 본 말은 그대로다.
          *     정하지 않은 회의가 이미 있으면 기회를 쓰지 않고 그 회의를 돌려준다.
          *     기회가 없거나 돈을 굴리는 자리에 아무도 없으면 400(기회는 쓰지 않는다).
          */
@@ -488,27 +448,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/company/leader": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 그 자리의 팀장을 정한다 (decisions.md 269번)
-         * @description 사람이 앉은 자리마다 팀장이 한 명 있다. 정하지 않았으면 그 자리에서 종합 등급이 가장 높은 사람이다.
-         *     정한 팀장이 자리를 떠나면 지정이 풀린다. 그 자리에 앉은 직원이 아니면 400.
-         */
-        post: operations["appointLeader"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/sandbox": {
         parameters: {
             query?: never;
@@ -701,14 +640,11 @@ export interface components {
                 grades: {
                     [key: string]: components["schemas"]["Grade"];
                 };
+                /** @description 앉은 자리 코드. 뽑으면 서버가 빈 자리에 바로 앉힌다 (524번). 자리는 그림과 종목회의의 팀에만 쓰이고 수입과 상관없다 */
                 desk?: string | null;
                 /** @description 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다 */
                 sector?: string | null;
                 sectorName?: string | null;
-                /** @description 앉은 자리의 팀장이다 (decisions.md 269번) */
-                leader: boolean;
-                /** @description 사기. 낮으면 손이 더 뒤집힌다 (270번) */
-                morale: number;
                 /**
                  * @description 버릇 (decisions.md 349번). 번호로 정해져 바뀌지 않고 첫인사 문구가 이를 따른다
                  * @enum {string}
@@ -771,9 +707,9 @@ export interface components {
             gacha: {
                 /** @description 가진 채용권. 한 장에 한 명. 회사를 차릴 때와 이사할 때 받는다 */
                 tickets: number;
-                /** @description 데리고 있는 사람 수(쉬는 사람 포함) */
+                /** @description 데리고 있는 사람 수 */
                 roster: number;
-                /** @description 데리고 있을 수 있는 사람 수(100명). 넘으면 내보내야 더 뽑는다 */
+                /** @description 데리고 있을 수 있는 사람 수 = 회사의 자리 수 (524번). roster가 여기에 닿으면 더 뽑을 수 없고, 회사를 넓히면 는다 */
                 rosterMax: number;
                 /** @description 지금까지 뽑은 횟수. 뽑기 요청에 싣는다 */
                 draws: number;
@@ -1489,68 +1425,6 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    releaseEmployee: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    employeeId: number;
-                };
-            };
-        };
-        responses: {
-            /** @description 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    placeEmployees: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    seats: {
-                        employeeId: number;
-                        /** @description 자리 코드. null이면 쉰다 */
-                        desk?: string | null;
-                    }[];
-                };
-            };
-        };
-        responses: {
-            /** @description 배치한 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
     conveneInvestMeeting: {
         parameters: {
             query?: never;
@@ -2018,36 +1892,6 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-        };
-    };
-    appointLeader: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    desk: string;
-                    employeeId: number;
-                };
-            };
-        };
-        responses: {
-            /** @description 팀장을 정한 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
         };
     };
     enterSandbox: {

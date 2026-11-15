@@ -107,8 +107,8 @@ export function ToyCityMove({
           </b>
           <p>
             {company.seats > beforeSeats
-              ? '회사가 넓어졌어요. 인력 관리에서 새 동료를 배치해보세요.'
-              : '현재 자리와 직원 배치를 확인해보세요.'}
+              ? '회사가 넓어졌어요. 이제 동료를 더 뽑을 수 있어요.'
+              : '지금 자리 수를 확인해보세요.'}
           </p>
           {opened.length > 0 && <p>새로 열린 직무: {opened.map((d) => d.name).join(' · ')}</p>}
           <button ref={button} type="button" className="toy-sheet-action" onClick={done}>

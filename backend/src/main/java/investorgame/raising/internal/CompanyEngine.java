@@ -86,7 +86,6 @@ class CompanyEngine {
     this.invest = new InvestEngine(this, content, behavior, properties);
     this.scout = new ScoutEngine(this, invest, properties);
     this.teams = new TeamEngine(this, content);
-    this.pay = new PayEngine(content, properties);
     this.history = new CompanyHistory(content);
     this.mental = new MentalEngine(content, properties);
     this.quirks = new Quirks(content);
@@ -112,8 +111,6 @@ class CompanyEngine {
   final TeamEngine teams;
 
   /** 사기 (decisions.md 270번). */
-  final PayEngine pay;
-
   static final String HR_DESK = "hr";
 
   /** 인사팀에 앉은 직원 가운데 종합 등급이 가장 높은 직원 (6.3절). 없으면 공채를 맡길 수 없다. */
@@ -167,13 +164,6 @@ class CompanyEngine {
     return company;
   }
 
-  /** 이번 결산이 같은 자리 settle-years 해째 이상인가: 손이 덜 뒤집힌다 (262번). */
-  boolean settled(Employee employee) {
-    return employee.desk != null
-        && employee.desk.equals(employee.lastDesk)
-        && employee.deskYears + 1 >= properties.people().settleYears();
-  }
-
   /** 등급 효과의 "더 버는 몫"(%, 289·387번): 종합 등급마다 두 배, SSS 위 단계(X~GOD)도 이어서 두 배. */
   long perkGainPercent(Employee employee) {
     return gainPercentOf(employeeGrade(employee));
@@ -209,12 +199,6 @@ class CompanyEngine {
         .anyMatch(e -> e != employee && employee.desk.equals(e.desk) && reaches(e, PULL));
   }
 
-  /** 맞히면 버는 배수(1 + 더 버는 몫): "13.8". */
-  private static String times(long gainPercent) {
-    return String.format(
-        java.util.Locale.ROOT, "%,.1f", (PERCENT + gainPercent) / (double) PERCENT);
-  }
-
   /** 그 등급까지 쌓인 등급 효과 가운데 가장 높은 것 (387번). A 아래면 없다. */
   private java.util.Optional<RaisingContent.Effect> topEffect(String grade) {
     int at = LADDER.indexOf(grade);
@@ -231,15 +215,9 @@ class CompanyEngine {
     RaisingContent.Perks texts = content.raising().company().perks();
     String grade = overallGrade(stats);
     String full = gradeOf(stats, rank);
-    long gain = gainPercentOf(full);
     int steady = PERCENT - perkFlipPercent(stats);
     List<String> parts = new ArrayList<>();
     parts.add(rank > 0 ? full : texts.names().get(grade));
-    parts.add(
-        Korean.fill(
-            texts.gain(),
-            Map.of(
-                "times", times(gain), "gain", String.format(java.util.Locale.ROOT, "%,d", gain))));
     if (steady > 0) {
       parts.add(Korean.fill(texts.steady(), Map.of("percent", String.valueOf(steady))));
     }
@@ -253,13 +231,14 @@ class CompanyEngine {
     return String.join(" · ", parts);
   }
 
-  /** 뽑기 카드의 짧은 등급 효과 (387번): "맞히면 13.8배 · 방패". 등급만으로 정해 지난 뽑기에도 보인다. */
+  /**
+   * 뽑기 결과 카드에 보이는 등급 효과 한 줄 (387번): 그 등급의 이름 붙은 효과, 없으면 등급 이름. "맞히면 N배"는 분기 손익에 쓰던 배수라 뺐다 (524번).
+   */
   String drawnPerk(String grade) {
-    String line =
-        Korean.fill(
-            content.raising().company().perks().drawn(),
-            Map.of("times", times(gainPercentOf(grade))));
-    return topEffect(grade).map(effect -> line + " · " + effect.name()).orElse(line);
+    RaisingContent.Perks texts = content.raising().company().perks();
+    return topEffect(grade)
+        .map(effect -> effect.name())
+        .orElse(texts.names().getOrDefault(grade, grade));
   }
 
   /** 첫 회사의 시작 자본(사장의 사재). */
@@ -455,11 +434,6 @@ class CompanyEngine {
     return b == 0 ? a : gcd(b, a % b);
   }
 
-  /** 데리고 있을 수 있는 사람 수: 상한이 없다(354번, roster-max를 아주 크게). 전에는 100명(337번). */
-  int rosterMax(CompanyState company) {
-    return properties.gacha().rosterMax();
-  }
-
   /** 지금 회사의 뽑기 중심 등급(LADDER 자리): 회사 등급 + level-steps, 인사팀이 있으면 인사 직원보다 cap-steps 아래까지 (6.3절). */
   int drawLevel(CompanyState company) {
     int level = LADDER.indexOf(grade(company)) + properties.market().levelSteps();
@@ -499,8 +473,9 @@ class CompanyEngine {
     if (company.tickets < count) {
       throw new InvalidRequestException("채용권이 모자란다");
     }
-    if (company.employees.size() + count > rosterMax(company)) {
-      throw new InvalidRequestException("데리고 있을 자리가 모자란다. 내보내야 더 뽑는다");
+    // 뽑은 직원은 바로 자리에 앉는다 (524번): 자리가 꽉 차면 더 뽑을 수 없고, 회사를 넓히면 자리가 는다.
+    if (company.employees.size() + count > seats(company)) {
+      throw new InvalidRequestException("자리가 모자라요. 회사를 넓히면 더 뽑을 수 있어요");
     }
     int total = rates().stream().mapToInt(CompanyProperties.Rate::percent).sum();
     int sssAt = LADDER.indexOf(StatGrade.SSS.name());
@@ -542,6 +517,7 @@ class CompanyEngine {
       }
       Employee employee = add(company, nextName(company), stats);
       employee.sector = sectors.get(rng.nextInt(sectors.size()));
+      seat(company, employee);
       employee.rank = at > sssAt ? Math.min(RANK_GOD, at - sssAt) : 0;
       String grade = employeeGrade(employee);
       CompanyState.Drawn drawn = new CompanyState.Drawn();
@@ -563,7 +539,6 @@ class CompanyEngine {
             null);
       }
     }
-    fitSeats(company);
     return company.lastDraw;
   }
 
@@ -590,15 +565,6 @@ class CompanyEngine {
     return before == 0;
   }
 
-  /** 직원을 내보낸다 (decisions.md 312번): 데리고 있을 자리를 비운다. 명예의 전당과 연표에 남는다. */
-  void release(CompanyState company, int employeeId) {
-    requireOpen(company);
-    Employee e = employee(company, employeeId);
-    history.retire(company, e);
-    company.employees.remove(e);
-    teams.tidy(company);
-  }
-
   private static Employee employee(CompanyState company, int id) {
     return company.employees.stream()
         .filter(e -> e.id == id)
@@ -623,34 +589,6 @@ class CompanyEngine {
                   "reason",
                   texts.ticketReasons().getOrDefault(reason, ""))));
     }
-  }
-
-  /** 자리가 줄었을 때 먼저 일어나는 자리: 인사팀 → 종목 발굴팀 → 리서치 팀 → 리스크 관리 팀 → 돈을 굴리는 자리 (decisions.md 248·267번). */
-  private static final List<String> STAND_UP_ORDER =
-      List.of(HR_DESK, ScoutEngine.SCOUT_DESK, RESEARCH_DESK, RISK_DESK);
-
-  /**
-   * 앉은 사람이 자리 수보다 많으면 넘친 사람을 쉬게 한다 (248번). 결산·계약금·새로 받기로 자본이 줄어 회사 등급과 자리 수가 내려갔을 때다. 돈을 굴리는 자리를
-   * 지키려고 돕는 자리(인사팀 → 리서치 팀 → 리스크 관리 팀)부터, 그다음 돈을 굴리는 자리에서 나중에 들어온 사람부터 일어난다. 쉬게 된 사람을 들어온 순서로 돌려준다.
-   */
-  List<Employee> fitSeats(CompanyState company) {
-    List<Employee> seated =
-        new java.util.ArrayList<>(company.employees.stream().filter(e -> e.desk != null).toList());
-    int over = seated.size() - seats(company);
-    if (over <= 0) {
-      return List.of();
-    }
-    seated.sort(
-        java.util.Comparator.comparingInt(
-                (Employee e) -> {
-                  int at = STAND_UP_ORDER.indexOf(e.desk);
-                  return at < 0 ? STAND_UP_ORDER.size() : at;
-                })
-            .thenComparingInt(e -> -e.id));
-    List<Employee> stood = seated.subList(0, over);
-    stood.forEach(e -> e.desk = null);
-    teams.tidy(company);
-    return stood.stream().sorted(java.util.Comparator.comparingInt(e -> e.id)).toList();
   }
 
   private void requireOpen(CompanyState company) {
@@ -1090,7 +1028,43 @@ class CompanyEngine {
   /** 한 자리(데스크·팀)에 앉힐 수 있는 최대 인원 (decisions.md 440번, 사용자 결정). 앱의 `placement.ts` DESK_CAP과 같다. */
   static final int DESK_CAP = 8;
 
-  /** 직원을 자리에 앉힌다. 자리 수를 넘게 앉힐 수 없다. 빠진 직원은 쉬고, 같은 자리에는 DESK_CAP명까지 앉는다. */
+  /**
+   * 뽑은 직원을 빈 자리에 앉힌다 (decisions.md 524번): 사장이 배치하지 않는다. 지금 열린 자리 가운데 사람이 가장 적은 자리에, 같으면 자리 차례대로(돈을
+   * 굴리는 자리가 먼저다). 자리는 거리와 사무실 그림, 종목회의의 팀에만 쓰이고 수입과는 상관없다. 한 자리에 DESK_CAP명이 넘지 않게 하되, 모든 자리가 찼으면
+   * 그래도 가장 적은 자리에 앉힌다(뽑은 직원을 잃지 않는다).
+   */
+  void seat(CompanyState company, Employee employee) {
+    Map<String, Long> counts = new HashMap<>();
+    for (Employee e : company.employees) {
+      if (e.desk != null && e != employee) {
+        counts.merge(e.desk, 1L, Long::sum);
+      }
+    }
+    List<RaisingContent.Desk> open =
+        desks().stream().filter(d -> deskOpen(company, d.code())).toList();
+    employee.desk =
+        open.stream()
+            .min(java.util.Comparator.comparingLong(d -> counts.getOrDefault(d.code(), 0L)))
+            .orElseThrow()
+            .code();
+  }
+
+  /** 쉬고 있는 직원을 모두 앉힌다 (524번): 인력 관리가 있던 때의 저장을 옮긴다. 자리 수를 넘어도 앉힌다. 앉혔으면 true. */
+  boolean seatAll(CompanyState company) {
+    boolean changed = false;
+    for (Employee e : company.employees) {
+      if (e.desk == null) {
+        seat(company, e);
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
+  /**
+   * 직원을 자리에 앉힌다. 화면에서는 부르지 않는다(524번): 시험이 팀을 짤 때 쓴다. 자리 수를 넘게 앉힐 수 없다. 빠진 직원은 쉬고, 같은 자리에는
+   * DESK_CAP명까지 앉는다.
+   */
   void place(CompanyState company, Map<Integer, String> placements) {
     int placed = (int) placements.values().stream().filter(d -> d != null).count();
     if (placed > seats(company)) {
@@ -1117,7 +1091,6 @@ class CompanyEngine {
     for (Employee employee : company.employees) {
       employee.desk = placements.get(employee.id);
     }
-    teams.tidy(company);
   }
 
   /** 꼬드김에 넘어갈 확률과 손이 뒤집힐 확률(만분율). */
@@ -1136,15 +1109,8 @@ class CompanyEngine {
             * (PERCENT - risk)
             / PERCENT;
     int flipBp = behavior.flipChanceBp(employee.stats.get(flipStat(company, employee)));
-    if (settled(employee)) {
-      // 같은 자리 세 해째부터 손에 익는다 (262번).
-      flipBp = flipBp * properties.people().settledFlipPercent() / PERCENT;
-    }
     // 등급 효과 (387번): 높은 등급일수록 판단이 흔들리지 않는다.
     flipBp = flipBp * perkFlipPercent(employee.stats) / PERCENT;
-    // 사기 (270번): 낮으면 손이 더 뒤집히고 높으면 덜 뒤집힌다.
-    flipBp = flipBp * pay.moralePercent(employee) / PERCENT;
-    swayBp = swayBp * pay.moralePercent(employee) / PERCENT;
     boolean led =
         company.employees.stream()
             .anyMatch(e -> e != employee && employee.desk.equals(e.desk) && e.rank >= RANK_LEADER);

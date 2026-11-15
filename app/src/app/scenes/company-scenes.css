@@ -144,6 +144,56 @@
   border-color: #a8bde3;
   box-shadow: 0 3px 0 #7895c5;
 }
+/* 자리가 꽉 차서 채용이 막혔을 때만 보이는 안내 (#801). */
+.recruit-full {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  padding: 9px 12px;
+  border: 1px solid #e6b3a6;
+  border-radius: 12px;
+  background: #fff1ec;
+  color: #a2412c;
+  font-size: 12px;
+}
+.recruit-full b {
+  font-size: 14px;
+  white-space: nowrap;
+}
+/* 채용 장면의 동료 한 줄 (#801): 등급 방패 · 이름과 앉은 팀 · 초당 수입. */
+.crew-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  padding: 6px 10px;
+  border: 1px solid #e4d6b8;
+  border-radius: 12px;
+  background: #fffdf8;
+  text-align: left;
+}
+.crew-row:active {
+  background: #fff3d1;
+}
+.crew-name {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.25;
+}
+.crew-name b,
+.crew-name small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.crew-name small {
+  font-size: 11px;
+  color: #8a7557;
+}
 .record-achievements > li {
   padding: 16px 12px;
   border-radius: 16px;

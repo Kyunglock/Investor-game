@@ -121,7 +121,7 @@ try {
     await expect(page.getByTestId('invest')).toBeVisible()
     assert.equal(opens, 1)
     // 정하지 않고 나가면 이어서 할 수 있고, 기회는 다시 쓰지 않는다.
-    await page.getByRole('button', { name: '배치 다시 보기' }).click()
+    await page.getByRole('button', { name: '나중에 정하기' }).click()
     await expect(page.getByTestId('invest')).toHaveCount(0)
     await expect(button).toHaveText('종목회의 이어서 하기')
     await expect(page.getByTestId('meeting-chances')).toHaveText('1 / 3')
@@ -164,7 +164,7 @@ try {
     // 돈을 굴리는 자리가 비면 기회가 있어도 열 수 없다.
     company.meetings.chances = 3
     company.meetings.nextSeconds = 0
-    for (const e of company.employees) if (e.desk !== 'research') e.desk = null
+    for (const e of company.employees) e.desk = 'research'
     await expect(page.getByTestId('meeting-hint')).toBeVisible()
     await expect(button).toBeDisabled()
     await expect(page.getByTestId('meeting-next')).toHaveCount(0)

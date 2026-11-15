@@ -6,7 +6,7 @@ import { money } from '../game/labels'
 import { Overlay } from '../game/Overlay'
 import { CHART_MS, InvestChart } from './InvestChart'
 import { ReturnResult } from './InvestReturn'
-import { chartTimeline, groupRemarks, leadersOf, OPINIONS, percentOf } from './investShow'
+import { chartTimeline, groupRemarks, OPINIONS, percentOf, voiceOf } from './investShow'
 import { useRaisingStore } from './store'
 import { TeamClash, teamClashMs } from './TeamClash'
 
@@ -146,7 +146,7 @@ export function InvestWindow({
           )}
           {!outcome && (
             <button type="button" onClick={onClose} className="text-[12px] text-muted underline">
-              배치 다시 보기
+              나중에 정하기
             </button>
           )}
         </header>
@@ -191,7 +191,7 @@ export function InvestWindow({
 
               {!outcome && (
                 <p className="mt-2 text-[12px] text-muted" data-testid="invest-frozen">
-                  회의에서 나온 말은 배치를 다시 바꿔도 그대로입니다.
+                  회의에서 나온 말은 나갔다 와도 그대로입니다.
                 </p>
               )}
               {/* 단계마다 누를 버튼은 창 아래에 붙어 있다 (368번): 내용이 길어도 버튼은 늘 보인다. */}
@@ -227,8 +227,8 @@ export function InvestWindow({
                 // 안목이 가장 높은 사람이 대표로 한 번만 한다. 사람이 많은 의견이 먼저.
                 <div className="mt-2 grid gap-2" data-testid="remarks">
                   {groupRemarks(invest.remarks).map((g, i) => {
-                    // 팀장만 이름을 보이고 나머지는 "외 N명" (293번).
-                    const { shown, voice, others } = leadersOf(g.remarks, employees)
+                    // 대표 한 사람만 이름을 보이고 나머지는 "외 N명" (293번, #801).
+                    const { voice, others } = voiceOf(g.remarks, employees)
                     return (
                       <section
                         key={g.read}
@@ -242,22 +242,16 @@ export function InvestWindow({
                         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                           <h4 className="font-bold text-[14px]">{OPINIONS[g.read].label}</h4>
                           <ul className="flex flex-wrap items-baseline gap-1 text-ink">
-                            {shown.map((r) => (
-                              <li
-                                key={r.employeeId}
-                                className="flex items-baseline gap-1 rounded bg-card px-1.5 text-[13px]"
+                            <li className="flex items-baseline gap-1 rounded bg-card px-1.5 text-[13px]">
+                              <b>{voice.name}</b>
+                              {/* 이름 옆에 등급 (decisions.md 355번) */}
+                              <span
+                                className="font-mono-num text-[11px] text-muted"
+                                data-testid="voice-grade"
                               >
-                                <span className="text-[11px] text-muted">팀장</span>
-                                <b>{r.name}</b>
-                                {/* 팀장 옆 이름 옆에 등급 (decisions.md 355번) */}
-                                <span
-                                  className="font-mono-num text-[11px] text-muted"
-                                  data-testid="leader-grade"
-                                >
-                                  {employees.find((e) => e.id === r.employeeId)?.overallGrade}
-                                </span>
-                              </li>
-                            ))}
+                                {employees.find((e) => e.id === voice.employeeId)?.overallGrade}
+                              </span>
+                            </li>
                             {others > 0 && (
                               <li className="text-[12px] text-muted">외 {others}명</li>
                             )}

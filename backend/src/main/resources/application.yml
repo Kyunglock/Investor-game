@@ -134,13 +134,6 @@ raising:
       interval-minutes: 60
       max: 3
       start-chances: 1
-    # 사람 이야기 (decisions.md 262번): 같은 자리 settle-years 해째부터 손 뒤집힘 settled-flip-percent배. 이직 제안과 이적료는 385번에서 뺐다
-    people:
-      settle-years: 3
-      settled-flip-percent: 80
-      # 사기 (decisions.md 270번): 사기 한 칸마다 손 뒤집힘 ±morale-flip-percent%. 연봉·연봉 협상·사표는 뺐다(383번)
-      pay:
-        morale-flip-percent: 15
     # 능력치 한 띠 = 10점. ZZ 사수가 신입의 가장 높은 능력치를 한 띠 올린다(222번). 직원 등급은 뽑은 그대로 간다(421번):
     # 큰 손실로 떨어지지도, 폭락장을 버티거나 한 해 일해 오르지도 않는다
     experience:
@@ -260,8 +253,6 @@ raising:
       achievement-tickets: 1
       move-tickets: 1
       max-draws: 10
-      # 데리고 있을 수 있는 사람 (354번): 상한이 없다. 화면은 이 값 이상이면 상한을 보이지 않는다(337번의 100명을 뺐다)
-      roster-max: 999999
       # 확률표: 회사 등급(인사팀이면 더 높게)보다 steps 단계 위가 percent%. 맨 끝은 특급(전의 특급 인재, 290번)
       rates:
         - { steps: -1, percent: 30, star: false }

@@ -10,7 +10,7 @@ import {
 } from './tutorial'
 
 /**
- * 튜토리얼 띠 (decisions.md 302번): 회사 화면 머리에 지금 걸음(1~4)과 할 일을 보인다. 걸음은 회사 상태가 정하고(직원을 뽑으면 다음 걸음으로), 걸음이 탭을 가리키면
+ * 튜토리얼 띠 (decisions.md 302번): 회사 화면 머리에 지금 걸음(1~3)과 할 일을 보인다. 걸음은 회사 상태가 정하고(직원을 뽑으면 다음 걸음으로), 걸음이 탭을 가리키면
  * 그 탭을 열어 준다. 건너뛰기·끝내기를 누르면 브라우저에 남아 다시 보이지 않는다.
  */
 export function TutorialBanner({ company }: { company: Company }) {
@@ -67,7 +67,7 @@ export function useLocked(company: Company, feature: Feature): boolean {
 }
 
 /** 지금 걸음이 가리키는 것이면 반짝이는 테두리 클래스. 튜토리얼이 꺼져 있으면 빈 문자열. */
-export function useTutorialSpot(company: Company, spot: 'market' | 'staff' | 'settle' | 'upgrade') {
+export function useTutorialSpot(company: Company, spot: 'market' | 'settle' | 'upgrade') {
   const active = useTutorial((s) => s.active)
   if (!active) {
     return ''

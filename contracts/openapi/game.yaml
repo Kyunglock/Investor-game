@@ -5,7 +5,7 @@ info:
   description: |
     클라이언트와 서버의 계약. 통합 담당만 수정한다 (architecture.md 8절).
     클라이언트 타입은 `web`에서 `pnpm gen:api`로 생성한다.
-    규칙 정보(확률, 숨은 방향, 변동 폭, 시드)는 응답에 담지 않는다. 증권사(회사·공채 시장·배치·종목회의·실시간 수입)의 API다.
+    규칙 정보(확률, 숨은 방향, 변동 폭, 시드)는 응답에 담지 않는다. 증권사(회사·채용 뽑기·종목회의·실시간 수입)의 API다.
     회사 매각은 뺐다 (decisions.md 236번).
     3분 육성 판은 없앴다 (decisions.md 228번).
 servers:
@@ -49,9 +49,9 @@ paths:
       operationId: drawEmployees
       summary: 채용권으로 count명을 뽑는다 (decisions.md 312번)
       description: |
-        채용권 한 장에 한 명이 쉬는 채로 온다. 돈은 들지 않는다. 등급은 회사 등급(인사팀이 있으면 더 높게)을 중심으로 한 확률표대로다.
+        채용권 한 장에 한 명이 오고 서버가 바로 빈 자리에 앉힌다(524번, 사장이 배치하지 않는다). 자리(seats)가 꽉 차면 400: 회사를 넓혀야 더 뽑는다. 돈은 들지 않는다. 등급은 회사 등급(인사팀이 있으면 더 높게)을 중심으로 한 확률표대로다.
         요청에 지금까지 뽑은 횟수(draws)를 싣는다: 이미 한 뽑기면 아무것도 하지 않고 지금 회사를 돌려주고, 아직 오지 않은 것이면 400.
-        채용권이나 데리고 있을 자리(100명)가 모자라거나 한 번에 maxDraws를 넘으면 400.
+        채용권이 모자라거나 한 번에 maxDraws를 넘으면 400.
       requestBody:
         required: true
         content:
@@ -71,66 +71,13 @@ paths:
         '400': { $ref: '#/components/responses/InvalidRequest' }
         '401': { $ref: '#/components/responses/SessionRequired' }
         '404': { $ref: '#/components/responses/NotFound' }
-  /api/company/release:
-    post:
-      operationId: releaseEmployee
-      summary: 직원을 내보낸다 (decisions.md 312번)
-      description: 데리고 있을 자리를 비운다. 명예의 전당과 연표에 남는다.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [employeeId]
-              properties:
-                employeeId: { type: integer }
-      responses:
-        '200':
-          description: 뒤의 회사
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Company' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/SessionRequired' }
-        '404': { $ref: '#/components/responses/NotFound' }
-  /api/company/placement:
-    post:
-      operationId: placeEmployees
-      summary: 직원을 자리에 앉힌다. 사장은 배치만 한다
-      description: 자리 수를 넘거나, 없는 직원·자리이거나, 같은 직원이 두 번 오면 400 (decisions.md 254번).
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [seats]
-              properties:
-                seats:
-                  type: array
-                  items:
-                    type: object
-                    required: [employeeId]
-                    properties:
-                      employeeId: { type: integer }
-                      desk: { type: [string, 'null'], description: 자리 코드. null이면 쉰다 }
-      responses:
-        '200':
-          description: 배치한 뒤의 회사
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Company' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/SessionRequired' }
-        '404': { $ref: '#/components/responses/NotFound' }
   /api/company/invest/open:
     post:
       operationId: conveneInvestMeeting
       summary: 종목회의를 연다 (decisions.md 249·523번)
       description: |
         기회 하나(meetings.chances)를 써서 새 회의를 연다: 직원이 종목을 물어 오고, 지금 배치로 직원 한마디(invest.remarks)와 리서치 팀 형광펜을 굳힌다.
-        그 뒤로 배치를 바꿔도 그대로라 배치를 바꿔 가며 정답을 알아낼 수 없다.
+        그 뒤로 직원이 늘어도 그 회의에서 본 말은 그대로다.
         정하지 않은 회의가 이미 있으면 기회를 쓰지 않고 그 회의를 돌려준다.
         기회가 없거나 돈을 굴리는 자리에 아무도 없으면 400(기회는 쓰지 않는다).
       responses:
@@ -534,32 +481,6 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Error' }
 
-  /api/company/leader:
-    post:
-      operationId: appointLeader
-      summary: 그 자리의 팀장을 정한다 (decisions.md 269번)
-      description: |
-        사람이 앉은 자리마다 팀장이 한 명 있다. 정하지 않았으면 그 자리에서 종합 등급이 가장 높은 사람이다.
-        정한 팀장이 자리를 떠나면 지정이 풀린다. 그 자리에 앉은 직원이 아니면 400.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [desk, employeeId]
-              properties:
-                desk: { type: string }
-                employeeId: { type: integer }
-      responses:
-        '200':
-          description: 팀장을 정한 뒤의 회사
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Company' }
-        '400': { $ref: '#/components/responses/InvalidRequest' }
-        '401': { $ref: '#/components/responses/SessionRequired' }
-        '404': { $ref: '#/components/responses/NotFound' }
   /api/sandbox:
     post:
       operationId: enterSandbox
@@ -755,7 +676,7 @@ components:
           type: array
           items:
             type: object
-            required: [id, name, overallGrade, grades, effects, perk, leader, morale, incomePerSecond]
+            required: [id, name, overallGrade, grades, effects, perk, incomePerSecond]
             properties:
               id: { type: integer }
               name: { type: string }
@@ -768,11 +689,9 @@ components:
                 items: { type: string }
               perk: { type: string, description: '등급 효과 한 줄: 이름·맞히면 버는 배수(더 버는 몫, 등급마다 두 배)·손 뒤집힘 보정·그 등급의 이름 붙은 효과 (decisions.md 289·387번)' }
               grades: { type: object, additionalProperties: { $ref: '#/components/schemas/Grade' } }
-              desk: { type: [string, 'null'] }
+              desk: { type: [string, 'null'], description: 앉은 자리 코드. 뽑으면 서버가 빈 자리에 바로 앉힌다 (524번). 자리는 그림과 종목회의의 팀에만 쓰이고 수입과 상관없다 }
               sector: { type: [string, 'null'], description: 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다 }
               sectorName: { type: [string, 'null'] }
-              leader: { type: boolean, description: 앉은 자리의 팀장이다 (decisions.md 269번) }
-              morale: { type: integer, minimum: -2, maximum: 2, description: 사기. 낮으면 손이 더 뒤집힌다 (270번) }
               quirk: { type: string, enum: [gut, chat, chart, news, coffee], description: 버릇 (decisions.md 349번). 번호로 정해져 바뀌지 않고 첫인사 문구가 이를 따른다 }
               quirkName: { type: string, description: 버릇 이름(촉파·단톡방파·차트파·뉴스파·커피파) }
               role: { type: [string, 'null'], description: 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번) }
@@ -827,8 +746,8 @@ components:
           required: [tickets, roster, rosterMax, draws, maxDraws, rates, drawn, collection]
           properties:
             tickets: { type: integer, description: 가진 채용권. 한 장에 한 명. 회사를 차릴 때와 이사할 때 받는다 }
-            roster: { type: integer, description: 데리고 있는 사람 수(쉬는 사람 포함) }
-            rosterMax: { type: integer, description: 데리고 있을 수 있는 사람 수(100명). 넘으면 내보내야 더 뽑는다 }
+            roster: { type: integer, description: 데리고 있는 사람 수 }
+            rosterMax: { type: integer, description: '데리고 있을 수 있는 사람 수 = 회사의 자리 수 (524번). roster가 여기에 닿으면 더 뽑을 수 없고, 회사를 넓히면 는다' }
             draws: { type: integer, description: 지금까지 뽑은 횟수. 뽑기 요청에 싣는다 }
             maxDraws: { type: integer, description: 한 번에 뽑을 수 있는 최대 수 }
             rates:

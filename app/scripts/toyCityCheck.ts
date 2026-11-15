@@ -24,6 +24,8 @@ try {
     ...structuredClone(fixture),
     grade: 'F',
     seats: 4,
+    // 직원은 자리 수를 넘지 않는다 (#801).
+    employees: structuredClone(fixture.employees.slice(0, 4)),
     capital: 10_000_000_000,
     upgrade: {
       to: 'E',
@@ -70,11 +72,8 @@ try {
   await page.keyboard.press('Escape')
   await expect(page.getByTestId('toy-settings-sheet')).toHaveCount(0)
 
-  await page.getByTestId('tab-staff').click()
-  await expect(page.getByTestId('desk-row').first()).toBeVisible()
-  await page.getByTestId('desk-row').first().click()
-  await page.getByRole('button', { name: '닫기 ✕' }).click()
-  await page.getByTestId('tab-office').click()
+  // 없어진 인력 관리 메뉴는 보이지 않는다 (#801).
+  await expect(page.getByTestId('tab-staff')).toHaveCount(0)
   for (const tab of ['market', 'issue', 'record']) {
     await page.getByTestId(`tab-${tab}`).click()
     await page.getByTestId('tab-office').click()

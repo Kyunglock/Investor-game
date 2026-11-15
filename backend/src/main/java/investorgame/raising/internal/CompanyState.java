@@ -103,12 +103,6 @@ class CompanyState {
 
   int buildLeft;
 
-  /**
-   * 자리마다 사장이 정한 팀장: 자리 코드 → 직원 번호 (decisions.md 269번). 정하지 않았거나 그 사람이 자리를 떠났으면 그 자리에서 종합 등급이 가장 높은
-   * 사람이 팀장이다.
-   */
-  Map<String, Integer> leaders = new LinkedHashMap<>();
-
   /** 종목회의마다 다른 난수 열쇠 (523번): 회의끼리 기사·한마디·판정이 겹치지 않게. 분기가 있던 때의 열쇠(해 × 10 + 분기)와 겹치지 않는 자리에서 센다. */
   int turn() {
     return 1000 + meetings;
@@ -266,23 +260,11 @@ class CompanyState {
      */
     int rank;
 
-    /** 같은 자리에서 결산을 맞은 해 수 (decisions.md 262번). 자리가 바뀌면 1부터 다시 센다. */
-    int deskYears;
-
-    /** 지난 결산 때 앉아 있던 자리. 근속을 세는 데 쓴다. */
-    String lastDesk;
-
     /** 들어온 해 (decisions.md 263번). 이 칸을 더하기 전에 들어온 직원은 0. */
     int joinedYear;
 
     /** 이 회사에서 번 돈의 합(결산과 투자 회의). 명예의 전당이 쓴다 (263번). */
     long totalPnl;
-
-    /** 사기(−2~+2, 270번). 낮으면 손이 더 뒤집히고 높으면 덜 뒤집힌다. 해마다 0 쪽으로 한 칸 돌아온다. */
-    int morale;
-
-    /** 올해 한 번도 자리에 앉지 않았나: 연말에 쉬어서 사기가 오른다. 분기를 넘길 때마다 앉아 있었으면 거짓. */
-    boolean restedAllYear = true;
 
     /** 옛 합성으로 이어받은 버릇 (350번, 384번에서 합성을 뺐다). 없으면 번호로 정한 버릇(349번). */
     String quirk;
