@@ -59,7 +59,10 @@ class CompanyController {
         request.hits() == null
             ? List.of()
             : request.hits().stream()
-                .map(h -> new CompanyService.IdleHit(h.wall(), h.kind(), h.count(), h.damage()))
+                .map(
+                    h ->
+                        new CompanyService.IdleHit(
+                            h.wall(), h.kind(), h.count(), h.damage(), h.depth()))
                 .toList());
   }
 
@@ -67,7 +70,7 @@ class CompanyController {
       @NotNull UUID runId,
       @PositiveOrZero long sequence,
       @jakarta.validation.constraints.Pattern(regexp = "start|tick|stop") @NotNull String action,
-      @jakarta.validation.constraints.Size(max = 18) List<@NotNull @Valid IdleHitRequest> hits) {}
+      @jakarta.validation.constraints.Size(max = 60) List<@NotNull @Valid IdleHitRequest> hits) {}
 
   record IdleHitRequest(
       @Positive long wall,
@@ -76,7 +79,8 @@ class CompanyController {
               regexp = "bullet|water|meteor|bolt|ram|barrage|buy")
           String kind,
       @Min(1) @Max(1000) int count,
-      @PositiveOrZero @jakarta.validation.constraints.DecimalMax("1000000000000") Double damage) {}
+      @PositiveOrZero @jakarta.validation.constraints.DecimalMax("1000000000000") Double damage,
+      @Min(0) @Max(2) Integer depth) {}
 
   /** 사장의 사재로 첫 회사를 차린다 (decisions.md 228번). 회사가 이미 있으면 400. */
   @PostMapping

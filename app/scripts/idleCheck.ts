@@ -63,12 +63,13 @@ try {
       ],
       idle: {
         wall: 1,
-        hp: 120,
-        maxHp: 120,
+        hp: 1200,
+        maxHp: 1200,
         dps: 12,
         earned: 0,
         boss: false,
         circuitSeconds: 0,
+        sequence: 0,
         upcoming: [] as { wall: number; hp: number; maxHp: number }[],
         skills: [
           { code: 'water', name: '물 스킬', owned: false, level: 0 },
@@ -129,21 +130,15 @@ try {
         const body = route.request().postDataJSON()
         actions.push(body.action)
         reportedHits.push(...(body.hits ?? []))
+        // The screen breaks walls ahead of the server (decisions.md 532); idleHitCheck covers that.
+        // Here the server keeps the wall where the check puts it: it handles every heartbeat (the
+        // screen forgets those hits) and credits none of them, so the screen never gets further
+        // ahead than one heartbeat's hits, and those are far too few to break a wall this size.
+        company.idle.sequence = body.sequence
         if (body.action === 'tick' && circuitJustStarted) {
           circuitJustStarted = false
-        } else if (body.action === 'tick') {
-          if (company.idle.circuitSeconds > 0)
-            company.idle.circuitSeconds = Math.max(0, company.idle.circuitSeconds - 2)
-          else {
-            const hits = (body.hits ?? []).filter(
-              (hit: { wall: number }) => hit.wall === company.idle.wall,
-            )
-            company.idle.hp = Math.max(
-              1,
-              company.idle.hp -
-                hits.reduce((total: number, hit: { damage: number }) => total + hit.damage, 0),
-            )
-          }
+        } else if (body.action === 'tick' && company.idle.circuitSeconds > 0) {
+          company.idle.circuitSeconds = Math.max(0, company.idle.circuitSeconds - 2)
         }
       }
       // Cat gacha, fielding and equipment (decisions.md 488): the mock keeps the server's shape.
@@ -195,7 +190,9 @@ try {
     await expect.poll(() => actions.filter((a) => a === 'tick').length).toBeGreaterThan(0)
     await page.evaluate(() =>
       window.dispatchEvent(
-        new CustomEvent('idle-wall-hit', { detail: { wall: 1, kind: 'bullet', damage: 1 } }),
+        new CustomEvent('idle-wall-hit', {
+          detail: { wall: 1, kind: 'bullet', depth: 0, damage: 1 },
+        }),
       ),
     )
     await expect
@@ -431,7 +428,9 @@ try {
       { wall: 7, hp: 30, maxHp: 264 },
       { wall: 8, hp: 100, maxHp: 288 },
     ]
-    await expect.poll(async () => (await queuedWalls())[0].hp).toBe(30)
+    // The server's 30, less the pierced hits it has not handled yet (decisions.md 520, 532).
+    await expect.poll(async () => (await queuedWalls())[0].hp).toBeLessThanOrEqual(30)
+    assert((await queuedWalls())[0].hp >= 1)
     assert.notEqual((await queuedWalls())[0].crack, intact)
     const cash = await page.locator('.idle-cash').first().boundingBox()
     const number = await page.getByTestId('idle-wall-number').boundingBox()
@@ -452,6 +451,9 @@ try {
     await page.screenshot({ path: `/tmp/idle-growth-${width}.png`, fullPage: true })
     await page.getByRole('button', { name: '닫기 ✕' }).click()
     if (width === 390) {
+      // Twenty times the hits in a heartbeat: the wall must be too big for those as well.
+      company.idle.hp = company.idle.maxHp = 1e9
+      await page.waitForTimeout(1200)
       await page.evaluate(() =>
         (window as unknown as { __mentalSpeed: (n: number) => void }).__mentalSpeed(20),
       )
@@ -471,6 +473,9 @@ try {
       await page.evaluate(() =>
         (window as unknown as { __mentalSpeed: (n: number) => void }).__mentalSpeed(1),
       )
+      // The last fast hits are handled before the wall goes back to its size.
+      await page.waitForTimeout(1500)
+      company.idle.hp = company.idle.maxHp = 1200
       company.idle.wall = 8
       if (width === 390) {
         // The wall broke: every cat walks to the next one, then stops again.

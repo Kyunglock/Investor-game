@@ -13,9 +13,17 @@ public interface CompanyService {
   /** 세션의 가장 최근 회사. 매각을 빼기 전에 시대가 끝나 멈췄던 회사면 다음 해부터 다시 돌린다 (decisions.md 236번). */
   Optional<CompanyView> current(UUID sessionId);
 
-  record IdleHit(long wall, String kind, int count, Double damage) {
+  /**
+   * depth: how many walls the bullet had already gone through when it hit (0 = the wall the screen
+   * was attacking). Null from an old screen: the distance from the saved front wall.
+   */
+  record IdleHit(long wall, String kind, int count, Double damage, Integer depth) {
     public IdleHit(long wall, String kind, int count) {
-      this(wall, kind, count, null);
+      this(wall, kind, count, null, null);
+    }
+
+    public IdleHit(long wall, String kind, int count, Double damage) {
+      this(wall, kind, count, damage, null);
     }
   }
 

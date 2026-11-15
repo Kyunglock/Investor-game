@@ -1,5 +1,6 @@
 import type { Company } from '@web/api/client'
 import { type ActiveCode, useRaisingStore } from '@web/features/raising/store'
+import { useShownIdle } from '@web/features/raising/useIdleBattle'
 import { useState } from 'react'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
@@ -13,8 +14,9 @@ export function IdleActives({ company, connected }: { company: Company; connecte
   const [pending, setPending] = useState<ActiveCode | null>(null)
   const idle = company.idle
   const actives = idle?.actives ?? []
+  // 거래 정지는 화면이 벽을 부순 때 시작한다 (532번): 서버가 알기 전에도 단추가 잠긴다.
+  const halted = useShownIdle(idle).circuitSeconds > 0
   if (actives.length === 0) return null
-  const halted = (idle?.circuitSeconds ?? 0) > 0
   const use = async (code: ActiveCode) => {
     if (pending) return
     setPending(code)

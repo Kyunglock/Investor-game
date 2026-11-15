@@ -1,7 +1,25 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { API_BASE, api } from '../../api/client'
 import { type IdleContact, IdleContacts } from './idleContacts'
+import { IdlePredictor, type IdleServer, type IdleShown } from './idlePredict'
 import { useRaisingStore } from './store'
+
+// The screen breaks the wall first and the heartbeat below saves it afterwards (decisions.md 532):
+// every hit that will be sent is also replayed here on top of the server's last answer.
+const predictor = new IdlePredictor()
+let predicted: string | undefined
+const NEW_WALL: IdleShown = { wall: 1, hp: 120, maxHp: 120, upcoming: [], circuitSeconds: 0 }
+
+/** The wall and health to show for the server's `company.idle`: its state plus the hits it has not handled yet. */
+export function shownIdle(idle: IdleServer | null | undefined): IdleShown {
+  return idle ? predictor.view(idle) : NEW_WALL
+}
+
+/** `shownIdle` for React: renders again when the shown wall number or trading halt changes. */
+export function useShownIdle(idle: IdleServer | null | undefined): IdleShown {
+  useSyncExternalStore(predictor.subscribe, predictor.shownKey)
+  return shownIdle(idle)
+}
 
 // Heartbeats leave in the order they were made, even across a remount: a late start from the
 // previous loop must not land after the next loop's start and take the run back (decisions.md 492).
@@ -22,6 +40,9 @@ export function useIdleBattle(companyId?: string) {
   const resume = useRef(() => {})
   useEffect(() => {
     if (!companyId) return
+    // Nothing shown for another company counts here.
+    if (predicted !== companyId) predictor.reset()
+    predicted = companyId
     let disposed = false
     let nativeActive = true
     let runId = crypto.randomUUID()
@@ -36,8 +57,8 @@ export function useIdleBattle(companyId?: string) {
     const visible = () => !document.hidden && nativeActive
     const stop = () => {
       contacts.clear()
-      // The server drops pending hits on a stop or a gap, so the renderer forgets its early damage.
-      window.dispatchEvent(new Event('idle-hits-clear'))
+      // The server drops pending hits on a stop or a gap, so the screen stops counting on them.
+      predictor.clear()
       generation++
       started = false
       setConnected(false)
@@ -66,8 +87,8 @@ export function useIdleBattle(companyId?: string) {
           action: started ? ('tick' as const) : ('start' as const),
           hits: started ? contacts.drain() : [],
         }
-        if (started)
-          window.dispatchEvent(new CustomEvent('idle-hits-sent', { detail: body.sequence }))
+        // The hits so far leave with this beat: they are forgotten when the server has handled it (496).
+        if (started) predictor.sent(body.sequence)
         const res = await inOrder(() => api.POST('/api/company/idle', { body }))
         if (disposed || version !== generation || !visible()) return
         if (!res.data) {
@@ -91,11 +112,14 @@ export function useIdleBattle(companyId?: string) {
     const hit = (event: Event) => {
       if (!started || blocked || disposed || !visible()) return
       const company = useRaisingStore.getState().company
-      if (company?.companyId !== companyId || !company.idle || company.idle.circuitSeconds) return
-      const { wall, kind, damage } = (event as CustomEvent<IdleContact>).detail
-      contacts.add(wall, kind, company.idle.wall, damage)
+      // No hit counts during a trading halt, the screen's own (532) or the server's.
+      if (company?.companyId !== companyId || !company.idle) return
+      if (shownIdle(company.idle).circuitSeconds > 0) return
+      const { wall, kind, depth = 0, damage } = (event as CustomEvent<Partial<IdleContact>>).detail
+      if (wall === undefined || kind === undefined || damage === undefined) return
+      // Only what the heartbeat will carry is shown: the two must not drift apart.
+      if (contacts.add(wall, kind, depth, damage)) predictor.add({ wall, depth, damage })
     }
-    const clearContacts = () => contacts.clear()
     const visibility = () => {
       if (!visible()) stop()
       else resume.current()
@@ -112,7 +136,6 @@ export function useIdleBattle(companyId?: string) {
     document.addEventListener('visibilitychange', visibility)
     window.addEventListener('pagehide', stop)
     window.addEventListener('idle-wall-hit', hit)
-    window.addEventListener('idle-hits-clear', clearContacts)
     window.addEventListener('idle-app-active', native)
     const timer = setInterval(() => void tick(), 1000)
     void tick()
@@ -122,7 +145,6 @@ export function useIdleBattle(companyId?: string) {
       document.removeEventListener('visibilitychange', visibility)
       window.removeEventListener('pagehide', stop)
       window.removeEventListener('idle-wall-hit', hit)
-      window.removeEventListener('idle-hits-clear', clearContacts)
       window.removeEventListener('idle-app-active', native)
       stop()
     }

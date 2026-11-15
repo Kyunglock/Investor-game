@@ -175,15 +175,16 @@ class IdleEngineTest {
 
   @Test
   void forgedHitCountsAreBoundedByWeaponRateAndSkillsMustBeOwned() {
-    start(1);
-    tick(1000, new IdleHit(1, "bullet", 1000), new IdleHit(1, "meteor", 1000));
+    start(10);
+    tick(1000, new IdleHit(10, "bullet", 1000), new IdleHit(10, "meteor", 1000));
     double dps = 1000.0 / 260;
     assertThat(state.idle.damage).isCloseTo(dps * 2, org.assertj.core.data.Offset.offset(1e-9));
-    assertThat(state.idle.wall).isEqualTo(1);
+    assertThat(state.idle.wall).isEqualTo(10);
     for (int i = 0; i < 10; i++) tick(1000);
     double before = state.idle.damage;
-    tick(1, new IdleHit(1, "bullet", 1000));
-    assertThat(state.idle.damage - before).isLessThanOrEqualTo(dps * 6);
+    tick(1, new IdleHit(10, "bullet", 1000));
+    // The hit budget holds at most the grace time's worth of shots (497): twenty of them here.
+    assertThat(state.idle.damage - before).isLessThanOrEqualTo(dps * 20 + 1e-9);
   }
 
   @Test
@@ -281,12 +282,12 @@ class IdleEngineTest {
     assertThat(engine.view(state).upcoming()).allMatch(wall -> wall.hp() == 1);
     // Breaking the front wall brings the next one forward with its last point of health: it needs
     // a hit of its own, and so does the one after it.
-    tick(1000, new IdleHit(1, "bullet", 1000));
+    tick(1000, new IdleHit(1, "bullet", 1, IdleEngine.maxHp(1)));
     assertThat(state.idle.wall).isEqualTo(2);
     assertThat(engine.view(state).hp()).isEqualTo(1);
     tick(1000);
     assertThat(state.idle.wall).isEqualTo(2);
-    tick(1000, new IdleHit(2, "bullet", 1));
+    tick(1000, new IdleHit(2, "bullet", 1, 1.0));
     assertThat(state.idle.wall).isEqualTo(3);
     assertThat(engine.view(state).hp()).isEqualTo(1);
   }
@@ -302,15 +303,45 @@ class IdleEngineTest {
   }
 
   @Test
-  void highPowerDoesNotRollOverIntoUntouchedWalls() {
+  void whatIsLeftOfTheBreakingDamageGoesOnToTheNextWall() {
+    // 화면이 먼저 벽을 부순다 (532번): 넘친 피해와 그 뒤의 명중은 다음 벽의 것이다.
     state.battleLevels.put("damage", 10000);
     start(1);
-    tick(1000, new IdleHit(1, "bullet", 1000));
+    tick(1000, new IdleHit(1, "bullet", 1, IdleEngine.maxHp(1) + 5));
     assertThat(state.idle.wall).isEqualTo(2);
+    assertThat(state.idle.damage).isEqualTo(5);
+    // The screen was already two walls on when it sent these: direct hits are damage to the front
+    // wall here, whichever wall the screen names.
+    tick(
+        1000,
+        new IdleHit(3, "bullet", 1, IdleEngine.maxHp(2), 0),
+        new IdleHit(4, "bullet", 1, 3.0, 1));
+    assertThat(state.idle.wall).isEqualTo(3);
+    assertThat(state.idle.damage).isEqualTo(5);
+    assertThat(state.idle.nextDamage).isEqualTo(3);
+    // One huge hit runs through several walls, but stops at the circuit breaker.
+    tick(1000, new IdleHit(3, "bullet", 1000));
+    assertThat(state.idle.wall).isEqualTo(6);
+    assertThat(state.idle.circuitSeconds).isEqualTo(4);
+  }
+
+  @Test
+  void piercedHitsKeepToTheWallTheyNameEvenFarBehind() {
+    start(1);
+    state.battleLevels.put("damage", 10000);
+    tick(
+        1000,
+        new IdleHit(4, "bullet", 1, 2.0, 2),
+        new IdleHit(6, "bullet", 1, 4.0, 1),
+        new IdleHit(8, "bullet", 1, 4.0, 1),
+        new IdleHit(1, "bullet", 1, 4.0, 1));
+    assertThat(state.idle.wall).isEqualTo(1);
     assertThat(state.idle.damage).isZero();
-    tick(1000, new IdleHit(1, "bullet", 1000)); // In-flight old-wall events are stale.
-    assertThat(state.idle.wall).isEqualTo(2);
-    assertThat(state.idle.damage).isZero();
+    assertThat(state.idle.farDamage).containsExactly(2, 0, 4, 0);
+    // They come forward as the walls in front break.
+    tick(1000, new IdleHit(1, "bullet", 1, IdleEngine.maxHp(1), 0));
+    assertThat(state.idle.afterNextDamage).isEqualTo(2);
+    assertThat(state.idle.farDamage).containsExactly(0, 4, 0, 0);
   }
 
   @Test
@@ -319,7 +350,7 @@ class IdleEngineTest {
     state.idle.damage = IdleEngine.maxHp(5) - 1;
     state.idle.nextDamage = IdleEngine.maxHp(6) - 1;
     state.idle.afterNextDamage = IdleEngine.maxHp(7) - 1;
-    tick(1000, new IdleHit(5, "bullet", 1));
+    tick(1000, new IdleHit(5, "bullet", 1, 1.0));
     assertThat(state.idle.wall).isEqualTo(6);
     assertThat(state.idle.circuitSeconds).isEqualTo(4);
     long paid = (long) state.capital;
@@ -329,9 +360,9 @@ class IdleEngineTest {
     tick(1000);
     // Pierced walls keep their last point of health (520): each needs one hit as the front wall.
     assertThat(state.idle.wall).isEqualTo(6);
-    tick(1000, new IdleHit(6, "bullet", 1));
+    tick(1000, new IdleHit(6, "bullet", 1, 1.0));
     assertThat(state.idle.wall).isEqualTo(7);
-    tick(1000, new IdleHit(7, "bullet", 1));
+    tick(1000, new IdleHit(7, "bullet", 1, 1.0));
     assertThat(state.idle.wall).isEqualTo(8);
     assertThat(state.idle.damage).isZero();
     // A cleared wall pays by its health (decisions.md 492).
