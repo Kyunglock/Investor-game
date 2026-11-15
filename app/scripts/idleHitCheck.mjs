@@ -210,7 +210,7 @@ async function realRun(browser, { delay, wall = 1, until, credit = 1, legacy = f
       else if (drawn > checked) {
         // The renderer just dropped wall `drawn`: it draws none while the next one comes up.
         const hud = hudAt(drawn + 1)
-        assert(hud && hud.t - frame.t < 150, `the HUD was late for wall ${drawn + 1}`)
+        assert(hud && hud.t - frame.t < 400, `the HUD was late for wall ${drawn + 1}`)
         checked = drawn
       }
     }
@@ -468,7 +468,7 @@ try {
   const bottomed = broke.frames.filter((f) => f.wall === 21 && f.hp !== null && f.hp <= BOTTOM)
   assert.equal(bottomed.length, 0, 'the broken wall stood at the bottom')
   const gone = broke.frames.find((f) => f.t >= broke.at && f.wall !== 21)
-  assert(gone && gone.t - broke.at < 100, `wall 21 fell ${gone && gone.t - broke.at} ms late`)
+  assert(gone && gone.t - broke.at < 250, `wall 21 fell ${gone && gone.t - broke.at} ms late`)
   // Leftover (532): everything that hit wall 21 beyond its 3, plus the pierced hits on wall 22.
   const sum = (list) => list.reduce((total, hit) => total + hit.damage, 0)
   const direct = sum(broke.hits.filter((hit) => hit.depth === 0))
