@@ -50,7 +50,7 @@ describe('튜토리얼 잠금·해금 (decisions.md 347번)', () => {
     expect(unlockedFeatures(company(seated as never), true)).toEqual(['market', 'settle', 'issue'])
     const decided = company({ ...seated, invest: { outcome: { total: 0 } } } as never)
     expect(unlockedFeatures(decided, true)).toEqual(ALL_FEATURES)
-    expect(ALL_FEATURES).toEqual(['market', 'settle', 'issue', 'record', 'upgrade'])
+    expect(ALL_FEATURES).toEqual(['market', 'settle', 'issue', 'upgrade'])
     expect(unlockedFeatures(company(), false)).toEqual(ALL_FEATURES)
   })
 })

@@ -13,11 +13,10 @@ import { useIdleBattle } from '@web/features/raising/useIdleBattle'
 import { useEffect, useRef, useState } from 'react'
 import { isMuted, setMuted, sfx } from '../fx/sound'
 import { IdleHome } from '../idle/IdleHome'
-import { BookIcon, BuildingIcon, ClipboardIcon, NewsIcon, SoundIcon } from './Icons'
+import { BuildingIcon, ClipboardIcon, NewsIcon, SoundIcon } from './Icons'
 import { GachaScene } from './scenes/GachaScene'
 import { IssueScene } from './scenes/IssueScene'
 import { OfficeScene } from './scenes/OfficeScene'
-import { RecordScene } from './scenes/RecordScene'
 import { type Tab, tabBadge, tabFromWeb, useAppUi } from './ui'
 import { useCountUp } from './useCountUp'
 import { Windows } from './Windows'
@@ -26,7 +25,6 @@ const TABS: { id: Tab; label: string; icon: () => React.ReactNode }[] = [
   { id: 'office', label: '사무실', icon: BuildingIcon },
   { id: 'market', label: '도감', icon: ClipboardIcon },
   { id: 'issue', label: '이슈', icon: NewsIcon },
-  { id: 'record', label: '기록', icon: BookIcon },
 ]
 
 /**
@@ -117,13 +115,12 @@ export function Shell({ company }: { company: Company }) {
           )}
           {tab === 'market' && <GachaScene company={company} />}
           {tab === 'issue' && <IssueScene company={company} />}
-          {tab === 'record' && <RecordScene company={company} />}
         </div>
       </main>
       {tab !== 'office' && (
         <div className="safe-bottom">
           <nav
-            className="grid grid-cols-4 gap-1 border-(--outline) border-t-[3px] bg-white px-1.5 pt-1.5 pb-1"
+            className="grid grid-cols-3 gap-1 border-(--outline) border-t-[3px] bg-white px-1.5 pt-1.5 pb-1"
             aria-label="회사 일"
           >
             {TABS.map((t) => {

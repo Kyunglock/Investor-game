@@ -71,7 +71,7 @@ try {
       await expect(page.getByTestId('first-clear')).toBeVisible()
     }
     await expect(page.getByTestId('first-clear')).toHaveCount(0, { timeout: 10000 })
-    await expect(page.getByTestId('company-building')).toBeVisible()
+    await expect(page.getByTestId('company-capital')).toBeVisible()
     await expect(page.getByTestId('assault-chapter')).toHaveCount(0)
     assert.equal(
       await page.evaluate(
@@ -82,7 +82,7 @@ try {
     )
     // 완료 후 같은 회사를 새로고침해도 첫 스테이지를 다시 시작하지 않는다.
     await page.reload()
-    await expect(page.getByTestId('company-building')).toBeVisible()
+    await expect(page.getByTestId('company-capital')).toBeVisible()
     await expect(page.getByTestId('battle-canvas')).toHaveCount(0)
     assert.deepEqual(errors, [])
     await page.close()
