@@ -469,6 +469,37 @@ class IdleEngineTest {
   }
 
   @Test
+  void expandedRosterPreservesOwnedCatsAndEveryNewCompanionCanFight() {
+    start(1);
+    state.idle.cats.put("sky", 17);
+    state.idle.fielded.add("sky");
+    var before = engine.view(state).cats().getFirst();
+    var roster = engine.view(state).cats();
+    assertThat(roster).hasSize(39);
+    assertThat(roster.stream().map(cat -> cat.code()).distinct().count()).isEqualTo(39);
+    assertThat(roster.getFirst()).isEqualTo(before);
+    assertThat(roster.subList(6, 39)).allMatch(cat -> cat.level() == 0 && !cat.fielded());
+    // Each new ID is accepted for fielding and participates in both gun and skill calculations.
+    for (var cat : roster.subList(6, 39)) {
+      state.idle.cats.put(cat.code(), 1);
+      engine.fieldCat(state, cat.code(), true);
+      var view = engine.view(state);
+      assertThat(
+              view.cats().stream()
+                  .filter(c -> c.code().equals(cat.code()))
+                  .findFirst()
+                  .orElseThrow()
+                  .fielded())
+          .isTrue();
+      assertThat(view.dps()).isPositive();
+      assertThat(view.skills())
+          .anyMatch(skill -> skill.code().equals(cat.skill()) && skill.owned());
+      engine.fieldCat(state, cat.code(), false);
+    }
+    assertThat(engine.view(state).cats().getFirst()).isEqualTo(before);
+  }
+
+  @Test
   void catsComeFromTheGachaNotFromWalls() {
     HashSeededRandom random = new HashSeededRandom(7);
     start(1);
@@ -491,12 +522,13 @@ class IdleEngineTest {
     var drawn = engine.view(state).cats().stream().filter(cat -> cat.level() == 1).toList();
     assertThat(drawn).as("a new cat is fielded at once").hasSize(1).allMatch(cat -> cat.fielded());
 
-    // Duplicates raise the level; with enough draws all six cats are owned, four of them fielded.
-    state.diamonds = (60) * 100L;
-    for (int i = 0; i < 60; i++) engine.drawCat(state, random);
+    // Duplicates raise the level; with enough draws all 39 companions are owned, four of them
+    // fielded.
+    state.diamonds = (600) * 100L;
+    for (int i = 0; i < 600; i++) engine.drawCat(state, random);
     var cats = engine.view(state).cats();
-    assertThat(cats).hasSize(6).allMatch(cat -> cat.level() >= 1);
-    assertThat(cats.stream().mapToInt(cat -> cat.level()).sum()).isEqualTo(61);
+    assertThat(cats).hasSize(39).allMatch(cat -> cat.level() >= 1);
+    assertThat(cats.stream().mapToInt(cat -> cat.level()).sum()).isEqualTo(601);
     assertThat(cats.stream().filter(cat -> cat.fielded()).count())
         .isEqualTo(engine.view(state).fieldSlots())
         .isEqualTo(4);

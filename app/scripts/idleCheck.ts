@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { chromium, expect } from '@playwright/test'
 import { company as fixture } from './fixture.ts'
+
+const extraCats = JSON.parse(
+  readFileSync(
+    new URL('../../docs/mockups/2026-11-15-cat-roster-40/manifest.json', import.meta.url),
+    'utf8',
+  ),
+) as { code: string; name: string }[]
 
 // The company menu carries a dot ("종목회의 가능") while a stock meeting can be opened (#803).
 const COMPANY_MENU = /^회사( 종목회의 가능| EX 디펜스 가능)?$/
@@ -90,6 +98,7 @@ try {
           ['sunset', '노을냥', 110, 100, 'ram', '충차 스킬'],
           ['night', '밤냥', 100, 125, 'meteor', '메테오 스킬'],
           ['snow', '눈꽃냥', 140, 100, 'water', '물 스킬'],
+          ...extraCats.map((cat) => [cat.code, cat.name, 125, 100, 'meteor', '메테오 스킬']),
         ].map(([code, name, firePercent, criticalPercent, skill, skillName]) => ({
           code,
           name,
@@ -223,10 +232,10 @@ try {
     await expect(page.getByRole('tab')).toHaveCount(0)
     await expect(page.getByTestId('weapon-picker')).toHaveCount(0)
     await page.getByRole('button', { name: '닫기 ✕' }).click()
-    // Cats are drawn with diamonds (decisions.md 526), fielded in four slots, and kept in a 6 x 3 grid (488, 493, 495).
+    // Cats are drawn with diamonds (decisions.md 526), fielded in four slots, and shown in a scrolling six-column roster (488, 493, 495).
     await page.getByRole('button', { name: '고양이' }).click()
-    await expect(page.locator('.idle-cat-grid > li')).toHaveCount(18)
-    await expect(page.getByTestId('cat')).toHaveCount(6)
+    await expect(page.locator('.idle-cat-grid > li')).toHaveCount(42)
+    await expect(page.getByTestId('cat')).toHaveCount(39)
     await expect(page.getByTestId('cat-slot')).toHaveCount(4)
     await expect(page.getByTestId('cat-field')).toHaveCount(0)
     const diamonds = company.diamonds.amount
@@ -299,7 +308,34 @@ try {
     await expect(detail.getByTestId('cat-field')).toHaveText('칸 없음')
     await expect(detail).toContainText('치명타 피해 +25%')
     await expect.poll(mates).toBe(4)
+    // The last approved companion is visible below the fold and uses its own portrait/texture.
+    const finalCat = company.idle.cats.at(-1)
+    assert(finalCat)
+    finalCat.level = 1
     await page.locator('[data-testid=cat][data-code=sky]').click()
+    await detail.getByTestId('cat-field').click()
+    const lastCat = page.locator('[data-testid=cat][data-code=oat]')
+    await expect(lastCat).toBeEnabled()
+    await lastCat.click()
+    await expect(detail).toHaveAttribute('data-code', 'oat')
+    await expect(detail.locator('.idle-cat-face image')).toHaveAttribute('href', /cats-38-40/)
+    await detail.getByTestId('cat-field').click()
+    await expect.poll(mates).toBe(4)
+    await expect(page.locator('[data-testid=cat-slot][data-code=oat]')).toBeVisible()
+    await page.screenshot({ path: `/tmp/idle-roster-40-${width}.png`, fullPage: true })
+    if (process.env.ROSTER_ONLY === '1') {
+      assert.deepEqual(errors, [])
+      assert.equal(
+        await page.evaluate(() => document.documentElement.scrollWidth > innerWidth),
+        false,
+      )
+      console.log(`PASS: 39 companion cards, last companion portrait and fielding at ${width}px`)
+      await page.close()
+      continue
+    }
+    await detail.getByTestId('cat-field').click()
+    await page.locator('[data-testid=cat][data-code=sky]').click()
+    await detail.getByTestId('cat-field').click()
     await detail.getByTestId('cat-gun').click()
     await expect(detail.getByTestId('cat-weapon').first()).toBeVisible()
     await page.screenshot({ path: `/tmp/idle-cats-${width}.png`, fullPage: true })

@@ -421,7 +421,7 @@ export interface paths {
         put?: never;
         /**
          * 다이아로 고양이를 뽑는다. 한 번 100, 10연차는 1,000에 열한 마리 (decisions.md 488·493·517·526번)
-         * @description 무기 뽑기와 같은 값이다. 고양이는 여섯이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
+         * @description 무기 뽑기와 같은 값이다. 동료 고양이는 39종(사장냥 포함 총 40종)이고 가중치대로 나온다. 새 고양이는 출전 칸이 비어 있으면 바로 출전하고,
          *     이미 가진 고양이면 레벨이 하나 올라 그 고양이 총의 공격력이 20% 는다. 나온 고양이는 idle.lastDraws에 차례대로 담긴다.
          *     다이아가 모자라면 하나도 뽑지 않고 400.
          */
@@ -566,7 +566,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 테스트판에서 고양이 여섯을 모두 그 레벨로 받고 빈 출전 칸을 채운다 (decisions.md 499번) */
+        /** 테스트판에서 동료 고양이 39종을 모두 그 레벨로 받고 빈 출전 칸을 채운다 (decisions.md 499번) */
         post: operations["grantSandboxCats"];
         delete?: never;
         options?: never;
@@ -1304,7 +1304,7 @@ export interface components {
                 /** @description 마지막 고양이 뽑기(한 번 또는 10연속, 517번)에서 나온 고양이, 나온 차례대로 */
                 lastDraws?: {
                     /** @enum {string} */
-                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow";
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
                     /** @description 나온 직후의 레벨. 10연속에서 같은 고양이가 또 나오면 차례로 오른다 */
                     level: number;
                     /** @description 처음 얻은 고양이 */
@@ -1338,7 +1338,7 @@ export interface components {
                 /** @description 고양이 (488·501번). 뽑기로 얻고, 출전한 고양이만 제 총으로 함께 쏘고 제 스킬을 쓴다 */
                 cats: {
                     /** @enum {string} */
-                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow";
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
                     name: string;
                     /** @description 0이면 아직 없다. 또 뽑을 때마다 하나씩 오른다 */
                     level: number;
@@ -2075,7 +2075,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow";
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
                     fielded: boolean;
                 };
             };
@@ -2106,7 +2106,7 @@ export interface operations {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow";
+                    code: "sky" | "mint" | "lilac" | "sunset" | "night" | "snow" | "caramel" | "mocha" | "peach" | "silver" | "panda" | "biscuit" | "ocean" | "lemon" | "cocoa" | "rose" | "tiger" | "cloud" | "star" | "siam" | "tilt" | "russet" | "sage" | "apricot" | "plum" | "patch" | "drowsy" | "coral" | "truffle" | "frost" | "butter" | "terra" | "wisteria" | "odd" | "pistachio" | "sand" | "blush" | "petrol" | "oat";
                     /** @enum {string} */
                     kind?: "pistol" | "revolver" | "smg" | "shotgun" | "rifle";
                     /** @enum {string} */

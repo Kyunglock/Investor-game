@@ -12,9 +12,11 @@ import street from './assets/toy-arena.png'
 import wallBlocks from './assets/wall-blocks-toy.png'
 import weapons from './assets/weapon-arcade-atlas.png'
 import battleWeapons from './assets/weapon-battle-overhead-atlas.png'
+import { ROSTER_ASSETS } from './catRosterAssets'
 
 /** Vite가 APK와 /app/ 배포 모두에 포함하는 실제 전투 자산. */
 export const STAGE_ASSETS = {
+  ...ROSTER_ASSETS,
   heroPoses,
   skyPoses,
   mintPoses,

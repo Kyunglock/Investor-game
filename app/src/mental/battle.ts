@@ -1196,7 +1196,8 @@ class BattleScene extends Phaser.Scene {
         .setDepth(4.8),
       aim: this.aim,
       // 사장냥과 번갈아 쏘게 연사 간격 안에서 조금씩 어긋나게 시작한다.
-      lastFire: this.lastFire + (this.attackInterval * (i + 1)) / (MATE_LOOKS.length + 1),
+      lastFire:
+        this.lastFire + (this.attackInterval * (i + 1)) / (Math.max(1, this.loadout.mates) + 1),
       shots: 0,
       drop: this.reducedMotion ? 0 : -150,
       kick: 0,

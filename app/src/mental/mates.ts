@@ -1,3 +1,5 @@
+import { NEW_CATS } from './catRoster'
+
 /** 고양이 카드의 정체성을 전투에서도 유지한다. 각 동료는 눈·털·귀가 다른 전용 9방향 그림을 쓴다. */
 export const MATE_LOOKS = [
   { color: '#5fb4ff', name: '하늘냥', poses: 'skyPoses' },
@@ -6,6 +8,13 @@ export const MATE_LOOKS = [
   { color: '#ff9d5c', name: '노을냥', poses: 'sunsetPoses' },
   { color: '#5b6388', name: '밤냥', poses: 'nightPoses' },
   { color: '#bfe6ff', name: '눈꽃냥', poses: 'snowPoses' },
+  ...NEW_CATS.map((cat) => ({
+    color: cat.color,
+    name: cat.name,
+    poses: `roster${cat.atlas}`,
+    slot: cat.slot,
+    atlas: cat.atlas,
+  })),
 ] as const
 
 /** 고양이 사이의 가장 넓은 간격(px)과 화면 양쪽에 남길 틈(px). */

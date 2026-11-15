@@ -189,7 +189,7 @@ export function IdleSandbox({ company }: { company: Company }) {
                 </button>
               ))}
             </div>
-            <span className="idle-sandbox-label">고양이 여섯 모두 받기</span>
+            <span className="idle-sandbox-label">동료 고양이 39종 모두 받기</span>
             <div className="idle-sandbox-chips is-four">
               {CAT_LEVELS.map((level) => (
                 <button

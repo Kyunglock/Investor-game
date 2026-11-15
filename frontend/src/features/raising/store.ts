@@ -71,7 +71,7 @@ interface RaisingState {
   resetSandbox: () => Promise<void>
   /** 테스트판: 무한 지갑을 켜고 끈다. */
   setSandboxWallet: (infinite: boolean) => Promise<void>
-  /** 테스트판: 고양이 여섯을 모두 그 레벨로 받는다. */
+  /** 테스트판: 동료 고양이 39종을 모두 그 레벨로 받는다. */
   grantSandboxCats: (level: number) => Promise<void>
   /** 테스트판: 그 등급의 무기를 받아 사장냥이 든다. */
   grantSandboxWeapon: (grade: WeaponGrade) => Promise<void>

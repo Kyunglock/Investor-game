@@ -16,8 +16,8 @@ import { SKILLS } from './skills'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
-/** 인벤토리 격자: 6칸 × 3줄 (495번). */
-const SLOTS = 18
+/** 6열 격자. 보유 여부와 관계없이 전체 도감을 표시한다. */
+const COLUMNS = 6
 
 /**
  * 고양이 메뉴 (decisions.md 488·491·493·526·530번): 다이아로 고양이와 무기를 뽑고, 위의 출전 칸 넷에 세우고, 사장냥과 고양이마다 가진 무기를
@@ -203,8 +203,11 @@ export function IdleCats({ company, gearAsked }: { company: Company; gearAsked?:
         </button>
         {arming && <CatGear company={company} wearer={cat} />}
       </article>
-      <ul className="idle-cat-grid" aria-label="고양이 인벤토리 · 6칸 3줄">
-        {Array.from({ length: SLOTS }, (_, i) => idle.cats[i] ?? null).map((c, i) =>
+      <ul className="idle-cat-grid" aria-label={`고양이 인벤토리 · 동료 ${idle.cats.length}종`}>
+        {Array.from(
+          { length: Math.max(18, Math.ceil(idle.cats.length / COLUMNS) * COLUMNS) },
+          (_, i) => idle.cats[i] ?? null,
+        ).map((c, i) =>
           c ? (
             <li key={c.code}>
               <button

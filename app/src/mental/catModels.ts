@@ -1,9 +1,16 @@
+import { NEW_CATS } from './catRoster'
 import { EQUIPPED_MUZZLE, MATE_HOLD } from './weaponArt'
 
 /** 총을 결합할 체형. 실제 몸·눈 그림은 각 고양이의 전용 아틀라스를 쓴다. */
 export type CatModel = 'hero' | 'fold' | 'fluffy'
 export const mateModel = (index: number): CatModel =>
-  index === 0 ? 'fold' : index === 1 || index === 5 ? 'fluffy' : 'hero'
+  index >= 6
+    ? (NEW_CATS[index - 6]?.model ?? 'hero')
+    : index === 0
+      ? 'fold'
+      : index === 1 || index === 5
+        ? 'fluffy'
+        : 'hero'
 
 /** drawSprite의 높이 100 배치 안에서 실제 총구 좌표. 꼬리 폭으로 크기를 줄이지 않는다. */
 const MUZZLES: Record<CatModel, { x: number; y: number }> = {

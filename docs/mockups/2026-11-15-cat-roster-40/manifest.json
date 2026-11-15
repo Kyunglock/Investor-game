@@ -1,0 +1,332 @@
+[
+  {
+    "code": "caramel",
+    "name": "카라멜냥",
+    "model": "hero",
+    "color": "#e7ad56",
+    "description": "cat08 buttery orange, very wide puffy cheeks, small upright ears, curled tail",
+    "number": 8,
+    "atlas": 0,
+    "slot": 0
+  },
+  {
+    "code": "mocha",
+    "name": "모카냥",
+    "model": "fold",
+    "color": "#895e49",
+    "description": "cat09 chocolate brown folded ears, cream muzzle, short hooked cream-tipped tail",
+    "number": 9,
+    "atlas": 0,
+    "slot": 1
+  },
+  {
+    "code": "peach",
+    "name": "복숭아냥",
+    "model": "hero",
+    "color": "#eda49a",
+    "description": "cat10 peach pink, coral heart forehead, cream muzzle, peach curled tail",
+    "number": 10,
+    "atlas": 0,
+    "slot": 2
+  },
+  {
+    "code": "silver",
+    "name": "은빛냥",
+    "model": "fluffy",
+    "color": "#aaa8b6",
+    "description": "cat11 silver gray, diamond forehead marking, ivory angular cheek ruff, plume tail",
+    "number": 11,
+    "atlas": 1,
+    "slot": 0
+  },
+  {
+    "code": "panda",
+    "name": "판다냥",
+    "model": "hero",
+    "color": "#625052",
+    "description": "cat12 ivory with charcoal eye patches and small dark rounded triangular CAT ears, dark bobtail; still a CAT",
+    "number": 12,
+    "atlas": 1,
+    "slot": 1
+  },
+  {
+    "code": "biscuit",
+    "name": "비스킷냥",
+    "model": "fold",
+    "color": "#d5a477",
+    "description": "cat13 warm biscuit cream, cocoa cheek freckles, folded ears, chubby belly",
+    "number": 13,
+    "atlas": 1,
+    "slot": 2
+  },
+  {
+    "code": "ocean",
+    "name": "바다냥",
+    "model": "hero",
+    "color": "#78b0bd",
+    "description": "cat14 dusty teal blue, ivory forehead teardrop, thick curled tail",
+    "number": 14,
+    "atlas": 2,
+    "slot": 0
+  },
+  {
+    "code": "lemon",
+    "name": "레몬냥",
+    "model": "fluffy",
+    "color": "#edd279",
+    "description": "cat15 pale lemon yellow fluffy cat, ivory cheek tufts, large layered plume tail",
+    "number": 15,
+    "atlas": 2,
+    "slot": 1
+  },
+  {
+    "code": "cocoa",
+    "name": "코코아냥",
+    "model": "hero",
+    "color": "#865c49",
+    "description": "cat16 cocoa brown, broad symmetrical ivory face blaze, small upright ears",
+    "number": 16,
+    "atlas": 2,
+    "slot": 2
+  },
+  {
+    "code": "rose",
+    "name": "로즈냥",
+    "model": "hero",
+    "color": "#cf9b9f",
+    "description": "cat17 dusty rose and gray calico, asymmetric ivory cheek, hooked tail",
+    "number": 17,
+    "atlas": 3,
+    "slot": 0
+  },
+  {
+    "code": "tiger",
+    "name": "호랑냥",
+    "model": "hero",
+    "color": "#e39a45",
+    "description": "cat18 pumpkin orange stout tabby with thick dark chocolate stripes, sturdy paws",
+    "number": 18,
+    "atlas": 3,
+    "slot": 1
+  },
+  {
+    "code": "cloud",
+    "name": "구름냥",
+    "model": "fluffy",
+    "color": "#bbc8dc",
+    "description": "cat19 pale blue-white very fluffy, small ears emerging from cloudlike rounded tufts, enormous fluffy tail",
+    "number": 19,
+    "atlas": 3,
+    "slot": 2
+  },
+  {
+    "code": "star",
+    "name": "별빛냥",
+    "model": "hero",
+    "color": "#797baf",
+    "description": "cat20 midnight indigo round cat, cream four-point forehead star, gold eyes, cream tail tip",
+    "number": 20,
+    "atlas": 4,
+    "slot": 0
+  },
+  {
+    "code": "siam",
+    "name": "샴냥",
+    "model": "hero",
+    "color": "#b99b83",
+    "description": "cat21 ivory chunky Siamese, cocoa face mask ears paws tail, blue eyes",
+    "number": 21,
+    "atlas": 4,
+    "slot": 1
+  },
+  {
+    "code": "tilt",
+    "name": "짝귀냥",
+    "model": "fold",
+    "color": "#a69e9c",
+    "description": "cat22 warm gray tabby, ONE folded ear ONE upright ear, three short white forehead dashes",
+    "number": 22,
+    "atlas": 4,
+    "slot": 2
+  },
+  {
+    "code": "russet",
+    "name": "단풍냥",
+    "model": "fluffy",
+    "color": "#c87d5b",
+    "description": "cat23 russet red fluffy cat, scalloped ivory cheek ruff, russet plume tail cream tip",
+    "number": 23,
+    "atlas": 5,
+    "slot": 0
+  },
+  {
+    "code": "sage",
+    "name": "세이지냥",
+    "model": "hero",
+    "color": "#acb58e",
+    "description": "cat24 pale sage green, asymmetric large ivory eye patch, wide upright triangular ears, tightly curled ring tail",
+    "number": 24,
+    "atlas": 5,
+    "slot": 1
+  },
+  {
+    "code": "apricot",
+    "name": "살구냥",
+    "model": "hero",
+    "color": "#eaba87",
+    "description": "cat25 soft apricot with two ivory eyebrow spots, huge puffy cheeks, short pompom bobtail",
+    "number": 25,
+    "atlas": 5,
+    "slot": 2
+  },
+  {
+    "code": "plum",
+    "name": "자두냥",
+    "model": "fluffy",
+    "color": "#80647e",
+    "description": "cat26 dark plum fluffy with lilac cheek tufts, golden eyes, thick plume tail",
+    "number": 26,
+    "atlas": 6,
+    "slot": 0
+  },
+  {
+    "code": "patch",
+    "name": "조각냥",
+    "model": "hero",
+    "color": "#c8aa87",
+    "description": "cat27 cream with one caramel ear one gray ear, speckled nose, three-color thick tail",
+    "number": 27,
+    "atlas": 6,
+    "slot": 1
+  },
+  {
+    "code": "drowsy",
+    "name": "졸린냥",
+    "model": "fold",
+    "color": "#b0a8aa",
+    "description": "cat28 extra squat silver gray folded-ear, half-lidded blue eyes, ivory crescent muzzle, broad short tail",
+    "number": 28,
+    "atlas": 6,
+    "slot": 2
+  },
+  {
+    "code": "coral",
+    "name": "산호냥",
+    "model": "fluffy",
+    "color": "#e5a293",
+    "description": "cat29 pale coral fluffy cat, ivory neck ruff, ears tips curl backward, broad layered fluffy tail",
+    "number": 29,
+    "atlas": 7,
+    "slot": 0
+  },
+  {
+    "code": "truffle",
+    "name": "트러플냥",
+    "model": "hero",
+    "color": "#8a6456",
+    "description": "cat30 deep cocoa with caramel round cheek spots, small upright ears, cream spiral tail",
+    "number": 30,
+    "atlas": 7,
+    "slot": 1
+  },
+  {
+    "code": "frost",
+    "name": "서리냥",
+    "model": "hero",
+    "color": "#9eafcb",
+    "description": "cat31 powder blue stout cat, dark slate eyebrows stripes, white cheek tips, thick club tail",
+    "number": 31,
+    "atlas": 7,
+    "slot": 2
+  },
+  {
+    "code": "butter",
+    "name": "버터냥",
+    "model": "fold",
+    "color": "#e8c489",
+    "description": "cat32 buttercream, tan saddle marking, folded ears, sleepy smile, short tail",
+    "number": 32,
+    "atlas": 8,
+    "slot": 0
+  },
+  {
+    "code": "terra",
+    "name": "테라냥",
+    "model": "hero",
+    "color": "#c98f72",
+    "description": "cat33 ivory terracotta patchwork, one terracotta eye patch, green eyes, broad upright ears, thick ring tail",
+    "number": 33,
+    "atlas": 8,
+    "slot": 1
+  },
+  {
+    "code": "wisteria",
+    "name": "등꽃냥",
+    "model": "fluffy",
+    "color": "#b6a0c1",
+    "description": "cat34 dusty lavender longhair, three large cheek lobes each side, dark plum ear tips, large fluffy fan tail",
+    "number": 34,
+    "atlas": 8,
+    "slot": 2
+  },
+  {
+    "code": "odd",
+    "name": "오드냥",
+    "model": "hero",
+    "color": "#645e68",
+    "description": "cat35 charcoal, asymmetrical ivory nose stripe, one blue one amber eye, large triangular ears, ivory-tipped curled tail",
+    "number": 35,
+    "atlas": 9,
+    "slot": 0
+  },
+  {
+    "code": "pistachio",
+    "name": "피스타냥",
+    "model": "hero",
+    "color": "#b0b88a",
+    "description": "cat36 pistachio and cream, curled sculpted forelock, round cheeks, green ears, pompom tail",
+    "number": 36,
+    "atlas": 9,
+    "slot": 1
+  },
+  {
+    "code": "sand",
+    "name": "모래냥",
+    "model": "hero",
+    "color": "#cfa975",
+    "description": "cat37 sand tabby, broad cheek jowls, brown oval spots, amber eyes, striped thick tail",
+    "number": 37,
+    "atlas": 9,
+    "slot": 2
+  },
+  {
+    "code": "blush",
+    "name": "볼터치냥",
+    "model": "fluffy",
+    "color": "#ebc9b9",
+    "description": "cat38 ivory fluffy, blush peach ears cheeks, peach curled forelock, pink nose, plume tail peach tip",
+    "number": 38,
+    "atlas": 10,
+    "slot": 0
+  },
+  {
+    "code": "petrol",
+    "name": "청록냥",
+    "model": "fold",
+    "color": "#7194a3",
+    "description": "cat39 petrol blue squat folded ears, ivory chin, small pale forehead freckles, blue-gray ring tail",
+    "number": 39,
+    "atlas": 10,
+    "slot": 1
+  },
+  {
+    "code": "oat",
+    "name": "오트냥",
+    "model": "fluffy",
+    "color": "#c6a185",
+    "description": "cat40 oatmeal chunky cat, cinnamon ear tips asymmetric cheek marking, brown determined brows, three-lobed sculpted chest fur, cinnamon tipped tail",
+    "number": 40,
+    "atlas": 10,
+    "slot": 2
+  }
+]
