@@ -5,7 +5,7 @@ import { drawBattleGun } from './battleWeaponArt'
 import { CAT_GUN } from './catGun'
 import { CAT_SCALE, type CatModel } from './catModels'
 import { drawCatPose } from './catPoseArt'
-import { catRunPose } from './catRun'
+import { drawCatRun } from './catRunArt'
 import { drawEmber, drawPillar, drawWater, drawWave, drawWoodenRam } from './effectArt'
 import { orderShares, type UnitKind } from './enemies'
 import { WALK_FRAMES, walkPose } from './enemyWalk'
@@ -125,6 +125,10 @@ export function bakeCatGun(scene: Phaser.Scene, grade: GunGrade, _model: CatMode
 
 /** 정지 자세는 캐시하고 달리기는 고양이마다 한 캔버스만 재사용한다. */
 const runStates = new WeakMap<Phaser.Scene, Map<string, string>>()
+const runSources = new WeakMap<
+  Phaser.Scene,
+  Map<string, { index: number; canvas: HTMLCanvasElement }>
+>()
 export function bakeCatBody(
   scene: Phaser.Scene,
   index: number,
@@ -152,30 +156,33 @@ export function bakeCatBody(
   }
   const state = `${index}-${runFrame}`
   if (states.get(runKey) === state && scene.textures.exists(runKey)) return runKey
-  const sprite = scene.textures.get(key).getSourceImage() as HTMLCanvasElement
+  let sources = runSources.get(scene)
+  if (!sources) {
+    sources = new Map()
+    runSources.set(scene, sources)
+  }
+  let source = sources.get(base)
+  if (!source || source.index !== index) {
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.ceil(CAT_W * DPR)
+    canvas.height = Math.ceil(CAT_H * DPR)
+    const paint = canvas.getContext('2d', { willReadFrequently: true })
+    if (!paint) return key
+    paint.scale(DPR, DPR)
+    // 보행 원본에는 몸만 그린다. 바닥 그림자는 변형하지 않는다.
+    drawRigBody(scene, paint, index, look)
+    source = { index, canvas }
+    sources.set(base, source)
+  }
+  const sprite = source.canvas
   bake(
     scene,
     runKey,
     CAT_W,
     CAT_H,
     (c) => {
-      const pose = catRunPose(runFrame)
-      const ankle = 86
-      // 견착한 상체·손은 총과 같은 자리에 고정하고 양쪽 발만 번갈아 움직인다.
-      c.drawImage(sprite, 0, 0, sprite.width, ankle * DPR, 0, 0, CAT_W, ankle)
-      for (const [side, stride] of [pose.left, pose.right].entries()) {
-        c.drawImage(
-          sprite,
-          (side * CAT_W * DPR) / 2,
-          ankle * DPR,
-          (CAT_W * DPR) / 2,
-          (CAT_H - ankle) * DPR,
-          (side * CAT_W) / 2,
-          ankle,
-          CAT_W / 2,
-          (CAT_H - ankle) * (1 + stride),
-        )
-      }
+      shadow(c)
+      drawCatRun(c, sprite, runFrame)
     },
     true,
   )
