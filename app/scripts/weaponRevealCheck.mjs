@@ -34,6 +34,20 @@ try {
         // 다이아 200개: 한 번 뽑기(100)를 두 번 한다 (526번).
         diamonds: { ...fixture.diamonds, amount: 200 },
         armory: { mergeCount: 3, lastDraw: null, lastDraws: [] },
+        // 뽑기 자리는 자동 전투가 있는 회사에만 있다.
+        idle: {
+          wall: 1,
+          hp: 120,
+          maxHp: 120,
+          dps: 12,
+          earned: 0,
+          boss: false,
+          skills: [],
+          cats: [],
+          fieldSlots: 4,
+          wallDps: 0,
+          income: { perSecond: 48_500, staffPerSecond: 12_500, bonusPercent: 0 },
+        },
       }
       let calls = 0
       let reject = true
@@ -63,8 +77,9 @@ try {
         return route.fulfill({ json: company })
       })
       await page.goto(process.env.APP_URL ?? 'http://127.0.0.1:5182/app/')
-      await page.getByRole('button', { name: '성장' }).click()
-      await page.getByRole('tab', { name: /인벤토리/ }).click()
+      // 무기 뽑기는 고양이 메뉴의 뽑기 자리에서 고른다 (530번).
+      await page.getByRole('button', { name: '고양이' }).click()
+      await page.getByTestId('draw-kind-weapon').click()
       await page.getByTestId('weapon-draw').click()
       await expect(page.getByTestId('weapon-reveal')).toBeVisible()
       await expect(page.getByTestId('weapon-reveal')).not.toHaveAttribute('data-grade', /.+/)
@@ -91,7 +106,7 @@ try {
       await page.keyboard.press('Escape')
       await expect(page.getByTestId('weapon-reveal')).toHaveCount(0)
       await expect(page.getByTestId('idle-menu')).toBeVisible()
-      await expect(page.getByTestId('weapon-diamonds')).toHaveText('0')
+      await expect(page.getByTestId('idle-diamonds')).toHaveText('0')
       await expect(page.getByTestId('weapon-draw')).toBeDisabled()
       assert.equal(calls, 3)
       assert.deepEqual(errors, [])
@@ -99,8 +114,9 @@ try {
       await page.emulateMedia({ reducedMotion: 'reduce' })
       company.diamonds.amount = 100
       await page.reload()
-      await page.getByRole('button', { name: '성장' }).click()
-      await page.getByRole('tab', { name: /인벤토리/ }).click()
+      // 무기 뽑기는 고양이 메뉴의 뽑기 자리에서 고른다 (530번).
+      await page.getByRole('button', { name: '고양이' }).click()
+      await page.getByTestId('draw-kind-weapon').click()
       await page.getByTestId('weapon-draw').click()
       await expect(page.getByTestId('weapon-drawn')).toBeVisible()
       const animation = await page

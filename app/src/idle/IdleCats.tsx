@@ -1,16 +1,17 @@
 import type { Company } from '@web/api/client'
-import { GUN_GRADES } from '@web/features/game/cat/draw'
-import { DiamondPrice } from '@web/features/raising/DiamondIcon'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
+import { BOSS_NAME, GRADE_BADGE, mergeable } from '../mental/armory'
 import { GunSprite } from '../mental/GunSprite'
 import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
-import { TenBonus, type TenCard, TenReveal } from '../mental/TenReveal'
-import { GRADE_BADGE, TEN } from '../mental/WeaponInventory'
+import { FIRE_STYLE_NAMES, WEAPON_EFFECTS } from '../mental/weaponEffects'
+import { CatGear } from './CatGear'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
-import { type CatDraw, CatReveal, catRevealPlan } from './CatReveal'
+import { IdleGacha } from './IdleGacha'
+import { IdleIcon } from './icons'
+import { SKILLS } from './skills'
 
 type Cat = NonNullable<Company['idle']>['cats'][number]
 
@@ -18,186 +19,63 @@ type Cat = NonNullable<Company['idle']>['cats'][number]
 const SLOTS = 18
 
 /**
- * 고양이 메뉴 (decisions.md 488·491·493·526번): 다이아로 고양이를 뽑고, 위의 출전 칸 넷에 세우고, 고양이마다 가진 무기를 하나씩 들린다. 아래는
- * 가진 고양이의 인벤토리 격자다. 고양이마다 고유 스킬이 하나 있고 출전해 있는 동안 발동한다 (501번). 결과는 서버가 정한다.
+ * 고양이 메뉴 (decisions.md 488·491·493·526·530번): 다이아로 고양이와 무기를 뽑고, 위의 출전 칸 넷에 세우고, 사장냥과 고양이마다 가진 무기를
+ * 하나씩 들린다. 아래는 가진 고양이의 인벤토리 격자다. 고양이를 누르면 그 고양이의 고유 스킬 설명과 장비가 나온다 (501번). 결과는 서버가 정한다.
  */
-export function IdleCats({ company }: { company: Company }) {
+export function IdleCats({ company, gearAsked }: { company: Company; gearAsked?: boolean }) {
   const busy = useRaisingStore((s) => s.busy)
   const error = useRaisingStore((s) => s.error)
-  const [reveal, setReveal] = useState<{ id: number; result: CatDraw | null } | null>(null)
-  const [drawn, setDrawn] = useState<CatDraw | null>(null)
-  const [ten, setTen] = useState<{ id: number; cards: TenCard[] | null } | null>(null)
-  const drawing = useRef(false)
-  const mounted = useRef(true)
-  useEffect(() => {
-    mounted.current = true
-    return () => {
-      mounted.current = false
-    }
-  }, [])
+  // 고른 고양이. null이면 사장냥이다.
   const [picked, setPicked] = useState<CatCode | null>(null)
-  const [arming, setArming] = useState(false)
+  const [arming, setArming] = useState(Boolean(gearAsked))
+  // 전투에서 "무기 바꾸기"로 왔다(Windows): 사장냥의 장비 목록을 연다.
+  useEffect(() => {
+    if (!gearAsked) return
+    setPicked(null)
+    setArming(true)
+  }, [gearAsked])
   const idle = company.idle
   if (!idle) return null
   const hero = heroOf(company)
-  // 뽑기 값은 서버가 준다 (526번): 한 번은 draw, 10연차는 tenDraw에 tenCount마리.
-  const diamonds = company.diamonds
-  const canOne = diamonds.amount >= diamonds.draw
-  const canTen = diamonds.amount >= diamonds.tenDraw
-  const weapons = company.weapons?.length ? company.weapons : [DEFAULT_WEAPON]
   const same = (w: Weapon, held: Cat['weapon']) => w.kind === held?.kind && w.grade === held.grade
   const fielded = idle.cats.filter((cat) => cat.fielded)
-  const cat = idle.cats.find((c) => c.code === picked && c.level > 0)
-  const gun = cat ? (weapons.find((w) => same(w, cat.weapon)) ?? DEFAULT_WEAPON) : null
-  const pick = (code: CatCode) => {
+  const cat = idle.cats.find((c) => c.code === picked && c.level > 0) ?? null
+  const gun = cat
+    ? (company.weapons?.find((w) => same(w, cat.weapon)) ?? DEFAULT_WEAPON)
+    : hero.weapon
+  const pick = (code: CatCode | null) => {
     sfx.tap()
     setArming(false)
     setPicked(picked === code ? null : code)
   }
-  // 무기 뽑기와 같은 연출 (508번): 상자가 떨다 열리고 고양이가 나온다. 결과는 서버 응답의 스냅샷이다.
-  const draw = async () => {
-    if (drawing.current || useRaisingStore.getState().busy || !canOne) return
-    drawing.current = true
-    const id = Date.now()
-    setReveal({ id, result: null })
-    sfx.stamp()
-    try {
-      const after = await useRaisingStore.getState().drawCat()
-      const got = after?.idle?.cats.find(
-        (c) => c.level !== idle.cats.find((old) => old.code === c.code)?.level,
-      )
-      if (!mounted.current) return
-      if (!got) {
-        setReveal(null)
-        return
-      }
-      const result = { cat: got, isNew: got.level === 1 }
-      setReveal({ id, result })
-      setDrawn(result)
-      setPicked(got.code)
-      setArming(false)
-    } catch {
-      if (mounted.current) setReveal(null)
-    } finally {
-      drawing.current = false
-    }
-  }
-  // 10연차 (517·526번): 한 번에 tenCount마리. 같은 고양이가 또 나오면 차례로 레벨이 오른다.
-  const drawTen = async () => {
-    if (drawing.current || useRaisingStore.getState().busy || !canTen) return
-    drawing.current = true
-    const id = Date.now()
-    setReveal(null)
-    setTen({ id, cards: null })
-    sfx.stamp()
-    try {
-      const after = await useRaisingStore.getState().drawCat(TEN)
-      if (!mounted.current) return
-      const draws = after?.idle?.lastDraws ?? []
-      const cats = after?.idle?.cats ?? []
-      if (draws.length < 1) {
-        setTen(null)
-        return
-      }
-      setTen({
-        id,
-        cards: draws.map((d, i) => {
-          const plan = catRevealPlan(d.isNew)
-          const info = cats.find((c) => c.code === d.code)
-          return {
-            key: `${i}-${d.code}`,
-            art: <Portrait code={d.code} />,
-            badge: `Lv.${d.level}`,
-            name: info?.name ?? d.code,
-            note: d.isNew ? 'NEW!' : '레벨 업',
-            isNew: d.isNew,
-            color: plan.color,
-            power: plan.power,
-            sound: plan.sound,
-          }
-        }),
-      })
-      const last = cats.find((c) => c.code === draws[draws.length - 1].code)
-      if (last) {
-        setDrawn({ cat: last, isNew: draws.some((d) => d.code === last.code && d.isNew) })
-        setPicked(last.code)
-        setArming(false)
-      }
-    } catch {
-      if (mounted.current) setTen(null)
-    } finally {
-      drawing.current = false
-    }
-  }
+  const skill = cat ? SKILLS[cat.skill] : null
+  const canMerge = mergeable(company).length > 0
   return (
     <>
-      <section className="idle-cat-gacha" data-testid="cat-gacha">
-        <div>
-          <b>고양이 뽑기</b>
-          <small>
-            {drawn
-              ? drawn.isNew
-                ? `${drawn.cat.name} 합류! 고유 스킬 ${drawn.cat.skillName}`
-                : `${drawn.cat.name} Lv.${drawn.cat.level} · 화력 ${drawn.cat.damagePercent}% · ${drawn.cat.skillName} Lv.${drawn.cat.skillLevel}`
-              : canOne
-                ? `또 나오면 레벨이 올라요 · 10연차는 ${diamonds.tenCount}마리`
-                : '다이아가 모자라요 · 멘탈 보호 스테이지의 별로 얻어요'}
-          </small>
-        </div>
-        <button
-          type="button"
-          className="idle-buy"
-          data-testid="cat-draw"
-          disabled={Boolean(reveal || ten) || busy || !canOne}
-          onClick={() => void draw()}
-        >
-          뽑기
-          <small>
-            <DiamondPrice amount={diamonds.draw} />
-          </small>
-        </button>
-        <button
-          type="button"
-          className="idle-buy idle-buy-ten"
-          data-testid="cat-draw-ten"
-          disabled={Boolean(reveal || ten) || busy || !canTen}
-          onClick={() => void drawTen()}
-        >
-          10연차
-          <TenBonus count={diamonds.tenCount} />
-          <small>
-            <DiamondPrice amount={diamonds.tenDraw} />
-          </small>
-        </button>
-      </section>
-      {ten && (
-        <TenReveal
-          key={ten.id}
-          label="고양이 10연차"
-          testId="cat-ten"
-          icon="🐾"
-          loading={`고양이 ${diamonds.tenCount}마리를 데려오는 중…`}
-          cards={ten.cards}
-          canAgain={canTen}
-          againNote={<DiamondPrice amount={diamonds.tenDraw} />}
-          onClose={() => setTen(null)}
-          onAgain={() => void drawTen()}
-        />
-      )}
-      {reveal && (
-        <CatReveal
-          key={reveal.id}
-          result={reveal.result}
-          price={diamonds.draw}
-          canAgain={canOne}
-          onClose={() => setReveal(null)}
-          onAgain={() => void draw()}
-        />
-      )}
+      <IdleGacha
+        company={company}
+        onCat={(code) => {
+          setPicked(code)
+          setArming(false)
+        }}
+      />
       <p className="idle-subtitle">
         출전 {fielded.length} / {idle.fieldSlots} · 사장냥은 늘 함께 싸워요
       </p>
       <ul className="idle-cat-field-row" aria-label="출전 칸">
+        <li>
+          <button
+            type="button"
+            className={`idle-cat-boss ${cat ? '' : 'is-picked'}`}
+            data-testid="cat-boss"
+            aria-label={`${BOSS_NAME} · 늘 출전`}
+            aria-pressed={!cat}
+            onClick={() => pick(null)}
+          >
+            <Portrait />
+            <small className="idle-cat-slot-name">{BOSS_NAME}</small>
+          </button>
+        </li>
         {Array.from({ length: idle.fieldSlots }, (_, i) => fielded[i] ?? null).map((c, i) => (
           // biome-ignore lint/suspicious/noArrayIndexKey: 출전 칸은 자리 번호가 곧 열쇠다.
           <li key={i}>
@@ -211,7 +89,7 @@ export function IdleCats({ company }: { company: Company }) {
                 onClick={() => pick(c.code)}
               >
                 <Portrait code={c.code} />
-                <small>{c.name}</small>
+                <small className="idle-cat-slot-name">{c.name}</small>
               </button>
             ) : (
               <span
@@ -226,38 +104,19 @@ export function IdleCats({ company }: { company: Company }) {
           </li>
         ))}
       </ul>
-      {cat && gun ? (
-        <article className="idle-cat owned" data-testid="cat-detail" data-code={cat.code}>
-          <Portrait code={cat.code} />
-          <div className="idle-cat-info">
-            <b>
-              {cat.name} <small>Lv.{cat.level}</small>
-            </b>
-            <small>
-              무기 공격력의 {cat.damagePercent}%로 쏴요 · {catTrait(cat)}
-            </small>
-            <small data-testid="cat-skill">
-              고유 스킬 {cat.skillName} Lv.{cat.skillLevel}
-              {cat.skillNextLevel > 0
-                ? ` · 고양이 Lv.${cat.skillNextLevel}에 스킬 Lv.${cat.skillLevel + 1}`
-                : ' · 최고 레벨'}
-            </small>
-            <button
-              type="button"
-              className="idle-cat-gun"
-              data-testid="cat-gun"
-              aria-expanded={arming}
-              onClick={() => {
-                sfx.tap()
-                setArming(!arming)
-              }}
-            >
-              <GunSprite kind={gun.kind} grade={gun.grade} width={40} />
-              {cat.weapon ? gun.name : '기본 권총'}
-              <i className={GRADE_BADGE[gun.grade]}>{gun.gradeName}</i>
-              <em>장비 ›</em>
-            </button>
-          </div>
+      <article className="idle-cat owned" data-testid="cat-detail" data-code={cat?.code ?? 'boss'}>
+        <Portrait code={cat?.code} />
+        <div className="idle-cat-info">
+          <b>
+            {cat ? cat.name : hero.name} {cat && <small>Lv.{cat.level}</small>}
+          </b>
+          <small>
+            {cat
+              ? `무기 공격력의 ${cat.damagePercent}%로 쏴요 · ${catTrait(cat)}`
+              : '늘 맨 앞에서 싸워요 · 아래 고양이를 누르면 출전·장비를 바꿔요'}
+          </small>
+        </div>
+        {cat ? (
           <button
             type="button"
             className="idle-cat-field"
@@ -272,86 +131,60 @@ export function IdleCats({ company }: { company: Company }) {
           >
             {cat.fielded ? '출전 중' : fielded.length >= idle.fieldSlots ? '칸 없음' : '출전'}
           </button>
-          {arming && (
-            <ul className="idle-cat-guns" aria-label={`${cat.name} 장비`}>
-              {[...weapons]
-                .sort(
-                  (a, b) =>
-                    GUN_GRADES.indexOf(b.grade) - GUN_GRADES.indexOf(a.grade) ||
-                    a.kind.localeCompare(b.kind),
-                )
-                .map((w) => {
-                  const held = same(w, cat.weapon)
-                  const others = idle.cats.filter((c) => c.code !== cat.code && same(w, c.weapon))
-                  // 사장냥이 든 하나뿐인 무기는 가져올 수 없다. 다른 고양이가 든 것은 가져온다(서버 IdleEngine.equipCat).
-                  const free = w.count - (w.equipped ? 1 : 0)
-                  return (
-                    <li key={`${w.kind}-${w.grade}`}>
-                      <button
-                        type="button"
-                        data-testid="cat-weapon"
-                        data-kind={w.kind}
-                        data-grade={w.grade}
-                        aria-pressed={held}
-                        disabled={busy || held || free < 1}
-                        onClick={() => {
-                          sfx.tap()
-                          haptic.light()
-                          void useRaisingStore
-                            .getState()
-                            .equipCat(cat.code, { kind: w.kind, grade: w.grade })
-                        }}
-                      >
-                        <GunSprite kind={w.kind} grade={w.grade} width={52} />
-                        <span>
-                          {w.name} <i className={GRADE_BADGE[w.grade]}>{w.gradeName}</i>
-                        </span>
-                        <small>
-                          {held
-                            ? '장착 중'
-                            : free < 1
-                              ? '사장냥 장착'
-                              : free - others.length < 1
-                                ? `${others[0].name}에게서 가져오기`
-                                : `×${w.count}`}
-                        </small>
-                      </button>
-                    </li>
-                  )
-                })}
-              {cat.weapon && (
-                <li>
-                  <button
-                    type="button"
-                    data-testid="cat-unequip"
-                    disabled={busy}
-                    onClick={() => {
-                      sfx.tap()
-                      void useRaisingStore.getState().equipCat(cat.code, null)
-                    }}
-                  >
-                    <span>무기 빼기</span>
-                    <small>기본 권총을 쏴요</small>
-                  </button>
-                </li>
-              )}
-            </ul>
-          )}
-        </article>
-      ) : (
-        <article className="idle-cat owned" data-testid="cat-detail">
-          <Portrait />
-          <div className="idle-cat-info">
-            <b>{hero.name}</b>
-            <small>아래 칸의 고양이를 누르면 출전·장비를 바꿀 수 있어요</small>
-            <span className="idle-cat-gun">
-              <GunSprite kind={hero.weapon.kind} grade={hero.weapon.grade} width={40} />
-              {hero.weapon.name}
-              <i className={GRADE_BADGE[hero.weapon.grade]}>{hero.weapon.gradeName}</i>
+        ) : (
+          <span className="idle-cat-field idle-cat-always">늘 출전</span>
+        )}
+        {/* 스킬 설명 (530번): 하는 일, 레벨이 오르면 달라지는 점, 다음 스킬 레벨까지 필요한 고양이 레벨. */}
+        {cat && skill && (
+          <section className="idle-cat-skill" data-testid="cat-skill" data-skill={cat.skill}>
+            <span className="idle-stat-icon" aria-hidden="true">
+              <IdleIcon name={cat.skill} />
             </span>
-          </div>
-        </article>
-      )}
+            <div className="idle-skill-text">
+              <b className="idle-skill-title">
+                고유 스킬 {cat.skillName}{' '}
+                <small className="idle-skill-lv">Lv.{cat.skillLevel}</small>
+              </b>
+              <p className="idle-skill-line">{skill.does}</p>
+              <p className="idle-skill-line">{skill.grows}</p>
+              <p className="idle-skill-line idle-skill-next" data-testid="cat-skill-next">
+                {cat.skillNextLevel > 0
+                  ? `고양이 Lv.${cat.skillNextLevel}에 스킬 Lv.${cat.skillLevel + 1} · 앞으로 ${cat.skillNextLevel - cat.level}레벨`
+                  : '스킬 최고 레벨이에요'}
+              </p>
+              <p className="idle-skill-line">
+                {cat.fielded ? '출전 중이라 발동하고 있어요' : '출전하면 발동해요'}
+              </p>
+            </div>
+          </section>
+        )}
+        <button
+          type="button"
+          className="idle-cat-gun"
+          data-testid="cat-gun"
+          aria-expanded={arming}
+          onClick={() => {
+            sfx.tap()
+            setArming(!arming)
+          }}
+        >
+          <GunSprite kind={gun.kind} grade={gun.grade} width={40} />
+          <span className="idle-gun-text">
+            {cat && !cat.weapon ? '기본 권총' : gun.name}{' '}
+            <i className={`idle-grade ${GRADE_BADGE[gun.grade]}`}>{gun.gradeName}</i>
+            <small className="idle-gun-note">
+              {FIRE_STYLE_NAMES[gun.kind]} · {WEAPON_EFFECTS[gun.kind].name}
+            </small>
+          </span>
+          <em className="idle-gun-open">
+            장비 {arming ? '▴' : '▾'}
+            {canMerge && !arming && (
+              <i className="idle-gun-dot" role="img" aria-label="합칠 수 있는 무기 있음" />
+            )}
+          </em>
+        </button>
+        {arming && <CatGear company={company} wearer={cat} />}
+      </article>
       <ul className="idle-cat-grid" aria-label="고양이 인벤토리 · 6칸 3줄">
         {Array.from({ length: SLOTS }, (_, i) => idle.cats[i] ?? null).map((c, i) =>
           c ? (

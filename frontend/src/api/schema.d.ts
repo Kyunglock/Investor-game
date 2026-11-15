@@ -148,6 +148,7 @@ export interface paths {
          * 가진 무기 가운데 하나를 든다 (decisions.md 346번)
          * @description 무기는 멘탈 전투에서 드는 총이다. 종류(F·E 권총, D 리볼버, C·B 기관단총, A 폭발포, S~LR 성운포)와 등급(F·E·D·C·B·A·S·SS·SSS·SR·UR·LR)이 있고, F~A는 무기 뽑기로, S~LR은 합성으로만 얻는다.
          *     든 무기의 수치가 다음 판의 바탕 수치(공격력·연사·탄 강화 단계·탄 속도)가 된다. 없는 종류·등급이거나 안 가진 무기면 400.
+         *     고양이가 들고 있어 아무도 들지 않은 것이 없는 무기도 400 (decisions.md 530번).
          */
         post: operations["equipWeapon"];
         delete?: never;
@@ -397,8 +398,8 @@ export interface paths {
         put?: never;
         /**
          * 같은 무기 여럿을 합쳐 한 등급 올린다 (decisions.md 366번)
-         * @description 같은 종류·등급의 무기 armory.mergeCount개를 합쳐 한 등급 위에 해당하는 종류 하나로 만든다. 들고 있던 무기를 다 썼으면 합친 무기를 든다.
-         *     모자라거나 가장 높은 등급(LR)이면 400.
+         * @description 같은 종류·등급의 무기 armory.mergeCount개를 합쳐 한 등급 위에 해당하는 종류 하나로 만든다. 사장냥이나 고양이가 든 것은 합치기에 쓰지 않는다
+         *     (decisions.md 530번): 아무도 들지 않은 것이 mergeCount개 있어야 한다. 모자라거나 가장 높은 등급(LR)이면 400.
          */
         post: operations["mergeWeapon"];
         delete?: never;
@@ -460,8 +461,8 @@ export interface paths {
         put?: never;
         /**
          * 고양이에게 가진 무기 하나를 들린다 (decisions.md 488번)
-         * @description 고양이는 가진 무기의 한 개씩을 빌려 든다. kind와 grade를 함께 비우면 뺀다(기본 권총을 쏜다). 남는 것이 없으면 다른 고양이가 든 것을 가져오고,
-         *     사장냥이 든 하나뿐인 무기면 400. 가지지 않은 고양이·무기도 400.
+         * @description 고양이는 가진 무기의 한 개씩을 빌려 든다. kind와 grade를 함께 비우면 뺀다(기본 권총을 쏜다). 사장냥이나 다른 고양이가 든 것은
+         *     가져가지 못한다(decisions.md 530번): 아무도 들지 않은 것이 없으면 400. 가지지 않은 고양이·무기도 400.
          */
         post: operations["equipCat"];
         delete?: never;

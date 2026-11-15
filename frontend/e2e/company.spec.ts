@@ -204,6 +204,77 @@ test('무기 10연차는 다이아 1,000개에 열한 개를 주고, 다이아�
   expect(after.diamonds.amount).toBe(0)
 })
 
+test('다른 고양이나 사장냥이 든 무기는 못 가져가고 합치기에도 못 쓴다 (#791)', async ({ page }) => {
+  const api = page.request
+  expect((await api.post('/api/sessions')).ok()).toBe(true)
+  let company = await companyOf(await api.post('/api/company'))
+  const owned = () => (company.idle?.cats ?? []).filter((cat) => cat.level > 0)
+  const copies = (w: { kind: string; grade: string }) =>
+    company.weapons?.find((x) => x.kind === w.kind && x.grade === w.grade)?.count ?? 0
+
+  // 고양이를 한 마리씩 뽑아 두 마리를 모은다. 같은 고양이만 나오면(드물다) 다이아가 떨어지기 전에 그만둔다.
+  for (let i = 0; i < 6 && owned().length < 2; i++) {
+    company = await companyOf(await api.post('/api/company/cat/draw', { data: { count: 1 } }))
+  }
+  if (owned().length < 2) {
+    test.info().annotations.push({
+      type: 'skip-one-cat',
+      description: '여섯 번을 뽑아도 고양이가 한 종류뿐이었다',
+    })
+    return
+  }
+  const [first, second] = owned()
+
+  // 사장냥이 든 하나뿐인 무기는 고양이가 못 든다.
+  const held = company.weapons?.find((w) => w.equipped)
+  expect(held?.count).toBe(1)
+  const fromBoss = await api.post('/api/company/cat/weapon', {
+    data: { code: first.code, kind: held?.kind, grade: held?.grade },
+  })
+  expect(fromBoss.status()).toBe(400)
+
+  // 무기를 하나 뽑으면 아무도 들지 않은 것이 꼭 하나 생긴다: 새 무기 하나거나, 사장냥이 든 무기가 둘이 된다.
+  company = await companyOf(await api.post('/api/company/weapon/draw', { data: { count: 1 } }))
+  const drawn = company.armory?.lastDraw
+  if (!drawn) throw new Error('뽑은 무기가 없다')
+  const spare = { kind: drawn.kind, grade: drawn.grade }
+  const before = copies(spare)
+
+  company = await companyOf(
+    await api.post('/api/company/cat/weapon', { data: { code: first.code, ...spare } }),
+  )
+  expect(company.idle?.cats.find((cat) => cat.code === first.code)?.weapon).toEqual(spare)
+
+  // 다른 고양이는 그 무기를 가져가지 못한다: 400이고 아무것도 바뀌지 않는다.
+  const taken = await api.post('/api/company/cat/weapon', { data: { code: second.code, ...spare } })
+  expect(taken.status()).toBe(400)
+  expect(((await taken.json()) as { message?: string }).message ?? '').toContain('장착 중')
+  // 사장냥도 못 가져간다. (사장냥이 이미 든 무기와 같으면 든 채로 둔다.)
+  if (!(held?.kind === spare.kind && held.grade === spare.grade)) {
+    expect((await api.post('/api/company/weapon', { data: spare })).status()).toBe(400)
+  }
+  // 든 무기는 합치기에 쓰이지 않는다: 가진 수가 합칠 수만큼이어도 400이고 수는 그대로다.
+  expect((await api.post('/api/company/weapon/merge', { data: spare })).status()).toBe(400)
+  company = await companyOf(await api.get('/api/company'))
+  expect(copies(spare)).toBe(before)
+  expect(company.idle?.cats.find((cat) => cat.code === first.code)?.weapon).toEqual(spare)
+  expect(company.idle?.cats.find((cat) => cat.code === second.code)?.weapon).toBeNull()
+  expect(company.weapons?.find((w) => w.equipped)).toMatchObject({
+    kind: held?.kind,
+    grade: held?.grade,
+  })
+
+  // 내려놓으면 다른 고양이가 든다.
+  company = await companyOf(
+    await api.post('/api/company/cat/weapon', { data: { code: first.code } }),
+  )
+  company = await companyOf(
+    await api.post('/api/company/cat/weapon', { data: { code: second.code, ...spare } }),
+  )
+  expect(company.idle?.cats.find((cat) => cat.code === first.code)?.weapon).toBeNull()
+  expect(company.idle?.cats.find((cat) => cat.code === second.code)?.weapon).toEqual(spare)
+})
+
 test('출석 보상은 하루에 한 번 받는다 (#799)', async ({ page }) => {
   const api = page.request
   expect((await api.post('/api/sessions')).ok()).toBe(true)

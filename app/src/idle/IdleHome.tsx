@@ -13,7 +13,6 @@ import { idleThreat } from '../mental/assault'
 import { idleBuyOrderDamage } from '../mental/buyWall'
 import { heroOf } from '../mental/hero'
 import { sharesOf } from '../mental/shares'
-import { WeaponInventory, weaponBadge } from '../mental/WeaponInventory'
 import { BASE_CRIT_CHANCE, BASE_CRIT_MULT, CRIT_CHANCE, CRIT_MULT } from '../mental/weaponEffects'
 import { IdleActives } from './IdleActives'
 import { IdleAttendance } from './IdleAttendance'
@@ -22,22 +21,16 @@ import { IdleCats } from './IdleCats'
 import { IdleOptions } from './IdleOptions'
 import { IdlePass } from './IdlePass'
 import { IdleSandbox } from './IdleSandbox'
-import { IdleIcon, type IdleIconName } from './icons'
+import { IdleIcon } from './icons'
 import { OfflineIncome } from './OfflineIncome'
 import './idle-home.css'
 
 type Menu = 'battle' | 'growth' | 'cats' | 'company'
-type Part = 'stats' | 'weapons' | 'skills'
 const menus: { key: Menu; label: string }[] = [
   { key: 'battle', label: '돌파' },
   { key: 'growth', label: '성장' },
   { key: 'cats', label: '고양이' },
   { key: 'company', label: '회사' },
-]
-const parts: { key: Part; label: string; icon: IdleIconName }[] = [
-  { key: 'stats', label: '능력치', icon: 'stats' },
-  { key: 'weapons', label: '인벤토리', icon: 'bag' },
-  { key: 'skills', label: '스킬', icon: 'spark' },
 ]
 type Upgrade = NonNullable<Company['battleUpgrades']>[number]
 /** 능력치 (487번): 공격력·공격 속도·매수벽(체력 강화, 410번: 최대 멘탈과 그 절반인 매수벽 체력이 함께 오른다)·치명타 피해. */
@@ -47,13 +40,6 @@ const STATS: Record<Upgrade['kind'], { name: string; note: string }> = {
   hp: { name: '매수벽 체력', note: '매수벽이 무너지면 다시 설 때까지 공격이 멈춰요' },
   buy: { name: '매수벽 공격', note: '매수 주문의 피해 · 무기와 따로 세요' },
   crit: { name: '치명타 피해', note: '치명타 배율' },
-}
-/** 스킬은 고양이 레벨이 둘 오를 때마다 한 레벨 오른다 (515번): 레벨마다 달라지는 것을 한 줄로 적는다. */
-const SKILL_NOTES = {
-  water: '레벨이 오르면 물방울 → 물줄기 → 큰 물결, 더 자주·세게',
-  meteor: '레벨이 오르면 운석 → 대운석 → 유성우, 더 자주·넓게',
-  bolt: '레벨이 오르면 번개가 굵어지고 더 많이 튀어요',
-  ram: '레벨이 오르면 충차가 커지고 벽을 더 세게 들이받아요',
 }
 const maxed = (u: Upgrade) => u.maxLevel > 0 && u.level >= u.maxLevel
 /** 지금 든 무기의 치명타 (492번): 확률과 강화를 더한 배율을 그대로 보여 준다. */
@@ -93,15 +79,12 @@ export function IdleHome({
   office: ReactNode
 }) {
   const [ownMenu, setMenu] = useState<Menu>('battle')
-  const [ownPart, setPart] = useState<Part>('stats')
-  // 전투에서 "무기 바꾸기"로 오면(Windows) 성장 › 인벤토리가 열린다. 닫거나 다른 데로 가면 그 요청을 지운다.
+  // 전투에서 "무기 바꾸기"로 오면(Windows) 고양이 탭의 사장냥 장비가 열린다 (530번). 닫거나 다른 데로 가면 그 요청을 지운다.
   const weaponsAsked = useAppUi((s) => s.sheet?.kind === 'weapons')
-  const menu = weaponsAsked ? 'growth' : ownMenu
-  const part = weaponsAsked ? 'weapons' : ownPart
-  const go = (next: Menu, nextPart: Part = part) => {
+  const menu = weaponsAsked ? 'cats' : ownMenu
+  const go = (next: Menu) => {
     if (weaponsAsked) useAppUi.getState().closeSheet()
     setMenu(next)
-    setPart(nextPart)
   }
   const idle = company.idle
   // 자본은 1초마다 서버에서 새로 온다 (#803): 숫자가 그 사이를 굴러가며 계속 불어난다.
@@ -168,37 +151,6 @@ export function IdleHome({
         </button>
       ))}
     </nav>
-  )
-  const skills = (
-    <div className="idle-collection">
-      {idle?.skills.map((skill) => {
-        // 스킬은 고양이의 고유 능력이다 (501번): 그 고양이가 출전해 있는 동안 발동한다.
-        const cats = idle.cats.filter((cat) => cat.skill === skill.code)
-        const casting = cats.filter((cat) => cat.fielded)
-        const names = (list: typeof cats) => list.map((cat) => cat.name).join('·')
-        return (
-          <article key={skill.code} className={skill.owned ? 'owned' : ''}>
-            <span className="idle-stat-icon" aria-hidden="true">
-              <IdleIcon
-                name={skill.owned ? (skill.code as 'water' | 'meteor' | 'bolt' | 'ram') : 'lock'}
-              />
-            </span>
-            <div>
-              <b>
-                {skill.name}
-                {skill.owned ? ` Lv.${skill.level}` : ''}
-              </b>
-              <small>
-                {skill.owned
-                  ? `발동 중 · ${casting.map((cat) => `${cat.name} Lv.${cat.skillLevel}`).join(' · ')}`
-                  : `${names(cats)}의 고유 스킬 · 출전하면 발동`}
-              </small>
-              <small>{SKILL_NOTES[skill.code as keyof typeof SKILL_NOTES]}</small>
-            </div>
-          </article>
-        )
-      })}
-    </div>
   )
   return (
     <section
@@ -284,33 +236,10 @@ export function IdleHome({
           {menu === 'growth' && (
             <>
               <p className="idle-subtitle">강해진 만큼, 더 빠르게 돌파해요</p>
-              <div className="idle-tabs" role="tablist" aria-label="성장 분류">
-                {parts.map((item) => (
-                  <button
-                    key={item.key}
-                    type="button"
-                    role="tab"
-                    aria-selected={part === item.key}
-                    onClick={() => go('growth', item.key)}
-                  >
-                    <IdleIcon name={item.icon} />
-                    {item.label}
-                    {item.key === 'weapons' && weaponBadge(company) && (
-                      <b className="idle-tab-badge">{weaponBadge(company)}</b>
-                    )}
-                  </button>
-                ))}
-              </div>
-              {part === 'stats' ? (
-                <IdleStats company={company} />
-              ) : part === 'weapons' ? (
-                <WeaponInventory company={company} />
-              ) : (
-                skills
-              )}
+              <IdleStats company={company} />
             </>
           )}
-          {menu === 'cats' && <IdleCats company={company} />}
+          {menu === 'cats' && <IdleCats company={company} gearAsked={weaponsAsked} />}
           <p className="idle-sheet-note">
             {connected
               ? (idle?.circuitSeconds ?? 0) > 0

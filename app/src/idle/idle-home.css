@@ -331,27 +331,6 @@
   color: #947247;
   margin: 4px 0;
 }
-.idle-tabs {
-  display: flex;
-  border-bottom: 1px solid #d6ba8a;
-  margin: 17px 0 14px;
-}
-.idle-tabs button {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 10px;
-  font-size: 13px;
-  color: #a08967;
-  min-height: 44px;
-}
-.idle-tabs [aria-selected="true"],
-.idle-tabs [aria-pressed="true"] {
-  color: #80502d;
-  border-bottom: 3px solid #c58a3e;
-}
 .idle-power {
   padding: 12px 14px;
   background: #f1e6cf;
@@ -478,38 +457,6 @@
   color: #8a9b68;
   margin: 14px 0 0;
 }
-.idle-collection {
-  display: grid;
-  gap: 10px;
-  margin-top: 16px;
-}
-.idle-collection article {
-  display: flex;
-  gap: 14px;
-  align-items: center;
-  background: #eee5d5;
-  border: 1px solid #d1b88b;
-  border-radius: 14px;
-  padding: 14px;
-}
-.idle-collection .owned {
-  background: #fff5d0;
-}
-.idle-collection article > span {
-  font-size: 30px;
-}
-.idle-collection b {
-  display: block;
-  font-size: 15px;
-}
-.idle-collection small {
-  display: block;
-  font:
-    11px "Noto Sans KR",
-    sans-serif;
-  margin-top: 6px;
-  color: #937b53;
-}
 .idle-cash .idle-icon {
   font-size: 18px;
   color: #b0762f;
@@ -543,10 +490,6 @@
     font-size: 13px;
   }
 }
-.idle-tabs .idle-icon {
-  font-size: 15px;
-  margin-right: 4px;
-}
 .idle-tab-badge {
   margin-left: 4px;
   padding: 1px 5px;
@@ -560,34 +503,6 @@
 .idle-stat-icon .idle-icon {
   font-size: 26px;
 }
-.idle-collection .idle-stat-icon {
-  flex-shrink: 0;
-}
-.idle-collection article:not(.owned) .idle-stat-icon {
-  color: #a99c84;
-  background: #e6dccb;
-  border-color: #d3c5ab;
-}
-.idle-cat-gacha {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-  padding: 12px 12px 12px 14px;
-  border: 1.5px solid #d9a85a;
-  border-radius: 16px;
-  background: linear-gradient(135deg, #fff3c9, #ffe2a8);
-  box-shadow: 0 2px 0 #d8ae6d;
-}
-.idle-cat-gacha > div {
-  flex: 1;
-  min-width: 0;
-}
-.idle-cat-gacha b {
-  display: block;
-  font-size: 15px;
-}
-.idle-cat-gacha small,
 .idle-cat-info > small {
   display: block;
   font:
@@ -639,8 +554,8 @@
 }
 .idle-cat-field-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
   margin: 8px 0 10px;
 }
 .idle-cat-field-row button,
@@ -651,8 +566,8 @@
   justify-content: center;
   gap: 3px;
   width: 100%;
-  min-height: 92px;
-  padding: 6px 2px;
+  min-height: 84px;
+  padding: 5px 1px;
   border: 1.5px solid #8fb26b;
   border-radius: 14px;
   background: #f7fbe9;
@@ -665,9 +580,11 @@
   font-size: 22px;
 }
 .idle-cat-field-row .idle-cat-portrait {
-  width: 52px;
-  height: 56px;
+  width: min(48px, 100% - 6px);
+  height: auto;
+  aspect-ratio: 13 / 14;
 }
+
 .idle-cat-field-row .is-picked,
 .idle-cat-grid .is-picked {
   outline: 2px solid #e08a00;
@@ -734,12 +651,6 @@
 .idle-cat-grid .idle-cat-portrait .idle-icon {
   font-size: 15px;
 }
-.idle-cat-guns small {
-  font:
-    500 10px "Noto Sans KR",
-    sans-serif;
-  color: #8f7448;
-}
 .idle-cat-info b {
   display: block;
   font-size: 15px;
@@ -749,40 +660,6 @@
     700 10px "Noto Sans KR",
     sans-serif;
   color: #b0762f;
-}
-.idle-cat-gun {
-  white-space: nowrap;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin-top: 6px;
-  padding: 2px 8px 2px 4px;
-  min-height: 32px;
-  border: 1px solid #dcc59c;
-  border-radius: 10px;
-  background: #fff;
-  font-size: 12px;
-  max-width: 100%;
-}
-button.idle-cat-gun {
-  box-shadow: 0 2px 0 #dcc59c;
-}
-.idle-cat-gun i,
-.idle-cat-guns i {
-  border-radius: 5px;
-  padding: 1px 5px;
-  font:
-    800 10px "Noto Sans KR",
-    sans-serif;
-  font-style: normal;
-}
-.idle-cat-gun em {
-  font:
-    700 10px "Noto Sans KR",
-    sans-serif;
-  font-style: normal;
-  color: #b0762f;
-  margin-left: 2px;
 }
 .idle-cat-field {
   min-width: 62px;
@@ -803,35 +680,6 @@ button.idle-cat-gun {
 .idle-cat-field:disabled {
   opacity: 0.6;
 }
-.idle-cat-guns {
-  grid-column: 1 / -1;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  padding-top: 10px;
-  border-top: 1px dashed #d6ba8a;
-}
-.idle-cat-guns button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  width: 100%;
-  min-height: 74px;
-  padding: 6px;
-  border: 1px solid #dcc59c;
-  border-radius: 12px;
-  background: #fff;
-  font-size: 12px;
-}
-.idle-cat-guns button[aria-pressed="true"] {
-  border: 2px solid #749cc0;
-  background: #e2eff7;
-}
-.idle-cat-guns button:disabled:not([aria-pressed="true"]) {
-  opacity: 0.5;
-}
 .idle-canvas-error {
   position: absolute;
   inset: 30% 20px auto;
@@ -850,8 +698,15 @@ button.idle-cat-gun {
 }
 @media (max-width: 350px) {
   .idle-cat-field {
-    grid-column: 1 / -1;
-    min-height: 38px;
+    min-width: 54px;
+    padding: 8px 4px;
+  }
+  .idle-cat-portrait {
+    width: 54px;
+    height: 58px;
+  }
+  .idle-cat-field-row {
+    gap: 4px;
   }
   .idle-stat {
     gap: 6px;
@@ -1101,7 +956,7 @@ button.idle-cat-gun {
   pointer-events: none;
 }
 /* 10연차 (517번): 한 번 뽑기 옆. 덤 표시(+1)가 단추 위에 걸친다 (526번). */
-.idle-cat-gacha .idle-buy {
+.idle-gacha .idle-buy {
   position: relative;
   flex-shrink: 0;
   min-width: 70px;
@@ -1503,4 +1358,398 @@ button.idle-cat-gun {
 }
 .idle-pass-source {
   white-space: nowrap;
+}
+
+/* 뽑기 (530번): 위에서 고양이·무기를 고르고, 아래에서 한 번·10연차를 뽑는다. */
+.idle-gacha {
+  margin-top: 12px;
+  padding: 8px 10px 10px;
+  border: 1.5px solid #d9a85a;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fff3c9, #ffe2a8);
+  box-shadow: 0 2px 0 #d8ae6d;
+}
+.idle-gacha-kinds {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 12px;
+  background: #f0cf8f;
+}
+.idle-gacha-kind {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  border-radius: 9px;
+  font-size: 13px;
+  color: #94703c;
+}
+.idle-gacha-kind[aria-selected="true"] {
+  background: #fffaf0;
+  box-shadow: 0 1px 0 #c99a55;
+  color: #6b4322;
+}
+.idle-gacha-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.idle-gacha-note {
+  flex: 1;
+  min-width: 0;
+  font:
+    500 10.5px / 1.4 "Noto Sans KR",
+    sans-serif;
+  color: #8f7448;
+  word-break: keep-all;
+}
+.idle-cat-always {
+  display: grid;
+  place-items: center;
+  border-color: #7fa25c;
+  background: linear-gradient(#e6f4c8, #cfe7a3);
+  box-shadow: 0 2px 0 #9dbb78;
+  color: #4b6a2f;
+}
+/* 사장냥 칸 (530번): 늘 출전해 있고, 누르면 사장냥의 장비를 고른다. */
+.idle-cat-boss {
+  border-color: #d9a85a;
+  background: #fff3c9;
+}
+.idle-cat-slot-name {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 10px;
+}
+/* 스킬 설명 (530번): 고양이를 누르면 그 고양이의 고유 스킬이 하는 일과 다음 레벨이 나온다. */
+.idle-cat-skill {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px;
+  border: 1px solid #e0c9a2;
+  border-radius: 12px;
+  background: #fff5d0;
+}
+.idle-skill-text {
+  flex: 1;
+  min-width: 0;
+}
+.idle-skill-title {
+  display: block;
+  font-size: 14px;
+}
+.idle-skill-lv {
+  font:
+    700 10px "Noto Sans KR",
+    sans-serif;
+  color: #b0762f;
+}
+.idle-skill-line {
+  margin: 3px 0 0;
+  font:
+    500 10.5px / 1.4 "Noto Sans KR",
+    sans-serif;
+  color: #8f7448;
+  word-break: keep-all;
+}
+.idle-skill-next {
+  color: #6e8d56;
+  font-weight: 700;
+}
+/* 든 무기 (530번): 누르면 아래에 장비 목록이 열린다. */
+.idle-cat-gun {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 10px 4px 6px;
+  border: 1px solid #dcc59c;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 0 #dcc59c;
+  font-size: 13px;
+  text-align: left;
+}
+.idle-gun-text {
+  flex: 1;
+  min-width: 0;
+}
+.idle-gun-note {
+  display: block;
+  font:
+    500 10px "Noto Sans KR",
+    sans-serif;
+  color: #8f7448;
+}
+.idle-grade {
+  border-radius: 5px;
+  padding: 1px 5px;
+  font:
+    800 10px "Noto Sans KR",
+    sans-serif;
+  font-style: normal;
+}
+.idle-gun-open {
+  position: relative;
+  flex-shrink: 0;
+  padding-right: 4px;
+  font:
+    700 11px "Noto Sans KR",
+    sans-serif;
+  font-style: normal;
+  color: #b0762f;
+}
+.idle-gun-dot {
+  position: absolute;
+  right: -5px;
+  top: -4px;
+  width: 7px;
+  height: 7px;
+  background: #e47353;
+  border: 1px solid #fff6db;
+  border-radius: 50%;
+}
+/* 장비 목록 (530번): 한 칸이 무기 하나. 짧게 누르면 장착, 길게 눌러 같은 무기 위로 끌면 합친다. */
+.idle-gear {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.idle-gear-hint {
+  min-height: 30px;
+  margin: 0 0 6px;
+  font:
+    500 10.5px / 1.4 "Noto Sans KR",
+    sans-serif;
+  color: #8f7448;
+  word-break: keep-all;
+}
+.idle-gear-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.idle-gear-cell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1px;
+  width: 100%;
+  min-height: 80px;
+  padding: 16px 2px 4px;
+  border: 1px solid #dcc59c;
+  border-radius: 12px;
+  background: #fff;
+  font-size: 11px;
+  /* 길게 눌러 끌 때 글자가 골라지거나 메뉴가 뜨지 않게 한다. 위아래로 넘기는 것은 그대로다. */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  transition:
+    transform 0.12s,
+    opacity 0.12s;
+}
+.idle-gear-art {
+  pointer-events: none;
+}
+.idle-gear-grade {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+}
+.idle-gear-count {
+  position: absolute;
+  top: 3px;
+  right: 4px;
+  font:
+    800 10px "Noto Sans KR",
+    sans-serif;
+  font-style: normal;
+  color: #8a5a20;
+}
+.idle-gear-name {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font:
+    500 9.5px / 1.25 "Noto Sans KR",
+    sans-serif;
+  color: #8f7448;
+}
+.idle-gear-held {
+  display: block;
+  font-weight: 800;
+  color: #4f7396;
+}
+.idle-gear-holder {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid #dec08a;
+}
+.idle-gear-holder .idle-cat-portrait {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+}
+.idle-gear-cell[aria-pressed="true"] {
+  border: 2px solid #749cc0;
+  background: #e2eff7;
+}
+.idle-gear-cell:disabled {
+  background: #eee5d5;
+  border-style: dashed;
+}
+.idle-gear-cell:disabled .idle-gear-art {
+  opacity: 0.55;
+}
+.idle-gear-cell.is-off {
+  opacity: 0.4;
+}
+.idle-gear-cell.is-source {
+  opacity: 0.45;
+  border-style: dashed;
+}
+.idle-gear-cell.is-target {
+  border: 2px solid #e08a00;
+  background: #fff3c9;
+  animation: idle-gear-pulse 0.9s ease-in-out infinite;
+}
+.idle-gear-cell.is-over {
+  transform: scale(1.08);
+  background: #ffe08a;
+  box-shadow: 0 0 0 3px #ffb52e66;
+  animation: none;
+}
+@keyframes idle-gear-pulse {
+  50% {
+    box-shadow: 0 0 0 4px #ffb52e55;
+  }
+}
+.idle-gear-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 8px;
+}
+.idle-gear-off,
+.idle-gear-merge {
+  min-height: 36px;
+  padding: 4px 10px;
+  border: 1px solid #dcc59c;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 12px;
+}
+.idle-gear-off-note {
+  font:
+    500 10px "Noto Sans KR",
+    sans-serif;
+  color: #8f7448;
+}
+.idle-gear-manual {
+  min-height: 36px;
+  margin-left: auto;
+  padding: 4px 2px;
+  font:
+    500 10.5px "Noto Sans KR",
+    sans-serif;
+  color: #947247;
+  text-decoration: underline;
+}
+.idle-gear-merges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+/* 끄는 무기: 손가락을 따라다닌다. */
+.idle-gear-ghost {
+  position: fixed;
+  left: -34px;
+  top: -52px;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  width: 68px;
+  height: 60px;
+  border: 2px solid #e08a00;
+  border-radius: 14px;
+  background: #fffaf0e6;
+  box-shadow: 0 8px 18px #54331b55;
+  pointer-events: none;
+}
+/* 합친 결과: 새 등급의 무기를 잠깐 보인다. */
+.idle-merge-result {
+  position: fixed;
+  left: 50%;
+  top: 38%;
+  z-index: 60;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 170px;
+  padding: 12px 18px 14px;
+  border: 2px solid #c48637;
+  border-radius: 18px;
+  background: linear-gradient(#fff8e2, #ffe3a1);
+  box-shadow: 0 10px 28px #54331b66;
+  color: #553a27;
+  font:
+    15px "Jua",
+    sans-serif;
+  transform: translate(-50%, -50%);
+  animation: idle-merge-pop 2.2s ease-out both;
+  pointer-events: none;
+}
+.idle-merge-title {
+  font-size: 13px;
+  color: #b0762f;
+}
+@keyframes idle-merge-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.6);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+  18%,
+  82% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -54%) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .idle-gear-cell,
+  .idle-gear-cell.is-target {
+    animation: none;
+    transition: none;
+  }
+  .idle-merge-result {
+    animation: none;
+  }
 }
