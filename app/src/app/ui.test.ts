@@ -1,6 +1,6 @@
 import type { Company } from '@web/api/client'
 import { describe, expect, it } from 'vitest'
-import { firstTab, tabBadge, tabFromWeb, useAppUi } from './ui'
+import { firstTab, stageBadge, stageDiamonds, tabBadge, tabFromWeb, useAppUi } from './ui'
 
 function company(over: Partial<Company> = {}): Company {
   return {
@@ -86,6 +86,24 @@ describe('앱 탭 (decisions.md 309번)', () => {
     expect(tabBadge(c, 'market')).toBe('2')
     expect(tabBadge(c, 'office')).toBeNull()
     expect(tabBadge(company(), 'issue')).toBeNull()
+  })
+
+  it('멘탈 보호 입구의 표는 오늘 EX 디펜스가 남았을 때만 (527번)', () => {
+    const stages = (exAvailable: boolean) =>
+      ({ exAvailable, exDiamonds: 300, diamondsLeft: [100, 100] }) as never
+    expect(stageBadge(company())).toBeNull()
+    expect(stageBadge(company({ stages: stages(true) }))).toBe('!')
+    // 번호 스테이지에 다이아가 남아 있어도 EX를 마쳤으면 달지 않는다.
+    expect(stageBadge(company({ stages: stages(false) }))).toBeNull()
+  })
+
+  it('스테이지마다 남은 다이아: 다 받았거나 값이 없으면 0 (527번)', () => {
+    const c = company({ stages: { diamondsLeft: [0, 40, 100] } as never })
+    expect(stageDiamonds(c, 1)).toBe(0)
+    expect(stageDiamonds(c, 2)).toBe(40)
+    expect(stageDiamonds(c, 3)).toBe(100)
+    expect(stageDiamonds(c, 4)).toBe(0)
+    expect(stageDiamonds(company(), 1)).toBe(0)
   })
 
   it('처음 들어오면 직원 유무와 관계없이 사무실부터', () => {

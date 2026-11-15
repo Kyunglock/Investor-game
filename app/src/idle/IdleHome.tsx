@@ -7,7 +7,7 @@ import { rate } from '../app/income'
 import { meetingReady } from '../app/meeting'
 import { Sheet } from '../app/Sheet'
 import { MAX_BATCH, queuedCost } from '../app/toy-city/upgradeQueue'
-import { useAppUi } from '../app/ui'
+import { stageBadge, useAppUi } from '../app/ui'
 import { useCountUp } from '../app/useCountUp'
 import { idleThreat } from '../mental/assault'
 import { idleBuyOrderDamage } from '../mental/buyWall'
@@ -106,6 +106,7 @@ export function IdleHome({
   const capital = useCountUp(company.capital)
   // 종목회의를 열거나 이어 갈 수 있으면 회사 메뉴에 점을 단다 (#803).
   const meeting = meetingReady(company)
+  const exReady = stageBadge(company) !== null
   useEffect(() => {
     if (menu === 'battle' || menu === 'company') return
     const previous = useAppUi.getState().modalBack
@@ -147,6 +148,15 @@ export function IdleHome({
               role="img"
               aria-label="종목회의 가능"
               data-testid="meeting-dot"
+            />
+          )}
+          {/* 오늘 EX 디펜스가 남아 있으면 받을 다이아가 있다 (527번, #797). 점은 하나만 단다. */}
+          {item.key === 'company' && !meeting && exReady && (
+            <i
+              className="idle-dot"
+              role="img"
+              aria-label="EX 디펜스 가능"
+              data-testid="stage-dot"
             />
           )}
         </button>
