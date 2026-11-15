@@ -532,8 +532,6 @@ class IdleEngine {
     // Pay only for contacted walls in order. No leftover DPS rolls into an untouched new wall.
     while (s.circuitSeconds == 0 && s.damage + 1e-7 >= maxHp(s.wall)) {
       earned += Math.floor(maxHp(s.wall) * REWARD_PER_HEALTH * CompanyEngine.inflation(c));
-      // A ticket every fifth wall (493): tickets now draw cats as well as weapons.
-      if (s.wall % 5 == 0 && c.weaponTickets < Integer.MAX_VALUE) c.weaponTickets++;
       s.wall++;
       s.damage = s.nextDamage;
       s.nextDamage = s.afterNextDamage;
@@ -558,13 +556,10 @@ class IdleEngine {
     if (count < 1) {
       throw new InvalidRequestException("뽑을 수가 1보다 작다");
     }
-    if (c.weaponTickets < count) {
-      throw new InvalidRequestException(
-          c.weaponTickets <= 0 ? "뽑기권이 없다" : "뽑기권이 " + count + "장 있어야 한다");
-    }
+    // Diamonds (526): 100 for one, 1,000 for the ten-pull that gives eleven.
+    CompanyEngine.spend(c, engine.diamonds().cost(count));
     List<CompanyState.Pulled> drawn = new ArrayList<>();
-    for (int i = 0; i < count; i++) {
-      c.weaponTickets--;
+    for (int i = 0; i < engine.diamonds().items(count); i++) {
       s.catDraws++;
       int roll =
           random.forKey("cat-draw", s.catDraws).nextInt(java.util.Arrays.stream(CAT_WEIGHTS).sum());

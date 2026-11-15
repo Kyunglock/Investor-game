@@ -26,6 +26,7 @@ public record CompanyView(
     Era era,
     String opening,
     java.math.BigDecimal capital,
+    Diamonds diamonds,
     String grade,
     Long nextGradeCapital,
     Upgrade upgrade,
@@ -46,6 +47,17 @@ public record CompanyView(
     Idle idle,
     boolean sandbox,
     boolean sandboxInfinite) {
+
+  /**
+   * 다이아 (decisions.md 526번): 직원·고양이·무기 뽑기에 쓰는 하나뿐인 뽑기 재화. 멘탈 보호 스테이지의 별과 EX 디펜스로 얻는다.
+   *
+   * @param amount 가진 다이아
+   * @param draw 고양이·무기 한 번 뽑는 값
+   * @param tenDraw 고양이·무기 10연차의 값
+   * @param tenCount 10연차에 나오는 수(하나 더)
+   * @param hire 직원 한 명을 뽑는 값
+   */
+  public record Diamonds(long amount, long draw, long tenDraw, int tenCount, long hire) {}
 
   /**
    * 종목회의의 기회 (decisions.md 523번): 1시간마다 하나씩 생기고 max까지 쌓인다. 자리를 비운 동안에도 쌓인다.
@@ -154,13 +166,11 @@ public record CompanyView(
   /**
    * 무기 뽑기 (decisions.md 366번).
    *
-   * @param tickets 가진 무기 뽑기권
    * @param mergeCount 합쳐 한 등급 올리는 데 드는 같은 무기 수
    * @param lastDraw 마지막으로 뽑은 무기. 뽑은 적이 없으면 null
    * @param lastDraws 마지막 뽑기(한 번 또는 10연속, 517번)에서 나온 무기, 나온 차례대로
    */
-  public record Armory(
-      int tickets, int mergeCount, WeaponDraw lastDraw, List<WeaponDraw> lastDraws) {}
+  public record Armory(int mergeCount, WeaponDraw lastDraw, List<WeaponDraw> lastDraws) {}
 
   /**
    * 멘탈 스테이지 (decisions.md 369번).
@@ -200,10 +210,10 @@ public record CompanyView(
    * @param stage 스테이지 번호. EX 디펜스면 0
    * @param firstClear 이 판에 처음 깼다
    * @param capital 받은 자본
-   * @param tickets 받은 무기 뽑기권
+   * @param diamonds 받은 다이아 (526번)
    */
   public record StageResult(
-      int stage, boolean cleared, int stars, boolean firstClear, long capital, int tickets) {}
+      int stage, boolean cleared, int stars, boolean firstClear, long capital, long diamonds) {}
 
   /**
    * 자본으로 사는 전투 강화 하나 (decisions.md 367·394번). 최대 단계는 없다.
@@ -283,7 +293,6 @@ public record CompanyView(
   /**
    * 채용 뽑기 (decisions.md 312번).
    *
-   * @param tickets 가진 채용권. 한 장에 한 명
    * @param roster 데리고 있는 사람 수
    * @param rosterMax 데리고 있을 수 있는 사람 수 = 회사의 자리 수 (524번). 꽉 차면 회사를 넓혀야 더 뽑는다
    * @param draws 지금까지 뽑은 횟수. 뽑기 요청에 싣는다
@@ -293,7 +302,6 @@ public record CompanyView(
    * @param collection 도감: 등급(F~GOD)마다 뽑아서 얻은 사람 수. 다음 회사로 이어진다
    */
   public record Gacha(
-      int tickets,
       int roster,
       int rosterMax,
       int draws,

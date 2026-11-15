@@ -285,7 +285,7 @@ export function MentalWindow({
                   <small>
                     {spec
                       ? '누른 방향으로 발사 · 멘탈벽이 많이 남을수록 별이 많다'
-                      : '누른 방향으로 발사 · 적을 많이 잡을수록 무기 뽑기권이 많다'}
+                      : '누른 방향으로 발사 · 하루 한 번 다이아를 받는다'}
                   </small>
                 </>
               )}
@@ -404,10 +404,10 @@ export function MentalWindow({
                       ? `회의 손익 ${signedMoney(investBattle.before)} → ${signedMoney(investBattle.after)}`
                       : !reward
                         ? ''
-                        : reward.capital > 0 || reward.tickets > 0
-                          ? `${reward.firstClear ? '처음 깼다! ' : ''}${reward.capital > 0 ? `자본 +${money(reward.capital)} · ` : ''}무기 뽑기권 +${reward.tickets}장`
+                        : reward.capital > 0 || reward.diamonds > 0
+                          ? rewardText(reward)
                           : spec && !outcome.win
-                            ? '깨면 자본과 무기 뽑기권을 받는다.'
+                            ? '깨면 자본을, 별을 처음 얻으면 다이아를 받는다.'
                             : '이번에 더 받을 보상은 없다.'}
                 </p>
               </div>
@@ -469,6 +469,18 @@ function levelWhy(parts: { code: string; plus: number }[] | undefined): string {
   return parts.map((p) => ` · ${LEVEL_NAMES[p.code] ?? p.code} +${p.plus}`).join('')
 }
 
+/** 스테이지·EX 한 판에서 받은 보상 (company.stages.lastResult, company.assaults.lastResult). */
+type StageReward = { firstClear: boolean; capital: number; diamonds: number }
+
+/** 받은 보상 한 줄: 자본과 다이아 가운데 받은 것만 적는다 (526번). */
+function rewardText(reward: StageReward): string {
+  const parts = [
+    reward.capital > 0 ? `자본 +${money(reward.capital)}` : '',
+    reward.diamonds > 0 ? `다이아 +${reward.diamonds.toLocaleString()}개` : '',
+  ].filter(Boolean)
+  return `${reward.firstClear ? '처음 깼다! ' : ''}${parts.join(' · ')}`
+}
+
 /**
  * 매도벽 돌파 결과 (#591, decisions.md 428번): 공격 판이 끝나면 돌파 결과만 크게 보인다. 배지·제목은 공격 판 문구, 별 셋을 크게, 숫자 칸은 부순
  * 매도벽·걸린 시간·주가, 가장 크게 회의 수익 배율과 회의 손익 전→후. 디펜스용 레벨·물리친 적·남은 멘탈은 보이지 않는다.
@@ -483,9 +495,9 @@ function AssaultResult({
   outcome: Outcome
   battle: { before: number; after?: number | null } | null | undefined
   sending: boolean
-  /** 매도벽 돌파 스테이지(주 게임, #698): 회의 손익 대신 스테이지 보상(자본·무기 뽑기권)을 보인다. */
+  /** 매도벽 돌파 스테이지(주 게임, #698): 회의 손익 대신 스테이지 보상(자본)을 보인다. 다이아는 주지 않는다 (526번). */
   stage: boolean
-  reward: { firstClear: boolean; capital: number; tickets: number } | null
+  reward: StageReward | null
 }) {
   const priceUp =
     outcome.priceStart > 0
@@ -527,11 +539,11 @@ function AssaultResult({
             ? '보상을 받는 중…'
             : !reward
               ? ''
-              : reward.capital > 0 || reward.tickets > 0
-                ? `${reward.firstClear ? '처음 깼다! ' : ''}${reward.capital > 0 ? `자본 +${money(reward.capital)} · ` : ''}무기 뽑기권 +${reward.tickets}장`
+              : reward.capital > 0 || reward.diamonds > 0
+                ? rewardText(reward)
                 : outcome.win
                   ? '이번에 더 받을 보상은 없다.'
-                  : '깨면 자본과 무기 뽑기권을 받는다.'}
+                  : '처음 깨면 자본을 받는다.'}
         </p>
       ) : (
         <p

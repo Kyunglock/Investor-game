@@ -347,12 +347,13 @@ class IdleEngineTest {
     start(10);
     state.idle.damage = IdleEngine.maxHp(10) - 1;
     tick(1000);
-    assertThat(state.weaponTickets).isZero();
+    long diamonds = state.diamonds;
     tick(1000, new IdleHit(10, "bullet", 1));
     assertThat(state.idle.wall).isEqualTo(11);
-    assertThat(state.weaponTickets).isEqualTo(1);
+    // 벽을 깨도 뽑기 재화는 나오지 않는다 (526번): 전에는 다섯 벽마다 뽑기권이 나왔다.
+    assertThat(state.diamonds).isEqualTo(diamonds);
     tick(1000, new IdleHit(10, "bullet", 1));
-    assertThat(state.weaponTickets).isEqualTo(1);
+    assertThat(state.diamonds).isEqualTo(diamonds);
     // Walls no longer unlock skills (decisions.md 501): without a cat nothing is cast.
     assertThat(engine.view(state).skills()).hasSize(4).noneMatch(skill -> skill.owned());
   }
@@ -407,19 +408,20 @@ class IdleEngineTest {
   void tenPullDrawsTenCatsInOrderOrNoneAtAll() {
     HashSeededRandom random = new HashSeededRandom(11);
     start(1);
-    // 10연속 (517번): 뽑기권이 열 장 없으면 한 마리도 뽑지 않는다.
-    state.weaponTickets = 9;
+    // 10연차 (517·526번): 다이아가 1,000 없으면 한 마리도 뽑지 않는다.
+    state.diamonds = (9) * 100L;
     assertThatThrownBy(() -> engine.drawCats(state, random, 10))
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
-    assertThat(state.weaponTickets).isEqualTo(9);
+    assertThat(state.diamonds).isEqualTo(900);
     assertThat(engine.view(state).cats()).allMatch(cat -> cat.level() == 0);
 
-    state.weaponTickets = 10;
+    state.diamonds = (10) * 100L;
     engine.drawCats(state, random, 10);
-    assertThat(state.weaponTickets).isZero();
+    assertThat(state.diamonds).isZero();
     var view = engine.view(state);
-    assertThat(view.lastDraws()).hasSize(10);
-    assertThat(view.cats().stream().mapToInt(cat -> cat.level()).sum()).isEqualTo(10);
+    // 10연차는 1,000다이아에 열한 마리다 (526번).
+    assertThat(view.lastDraws()).hasSize(11);
+    assertThat(view.cats().stream().mapToInt(cat -> cat.level()).sum()).isEqualTo(11);
     // 나온 차례의 레벨: 같은 고양이가 또 나오면 하나씩 오르고, 처음 나올 때만 새것이다.
     java.util.Map<String, Integer> seen = new java.util.HashMap<>();
     for (var d : view.lastDraws()) {
@@ -432,7 +434,7 @@ class IdleEngineTest {
     }
 
     // 한 번 뽑기는 그 한 마리만 남긴다.
-    state.weaponTickets = 1;
+    state.diamonds = (1) * 100L;
     engine.drawCat(state, random);
     assertThat(engine.view(state).lastDraws()).hasSize(1);
   }
@@ -448,20 +450,20 @@ class IdleEngineTest {
     assertThat(state.idle.damage).isZero();
     assertThat(engine.view(state).skills()).hasSize(4).noneMatch(skill -> skill.owned());
     assertThatThrownBy(() -> engine.drawCat(state, random))
-        .as("no ticket, no cat")
+        .as("no diamonds, no cat")
         .isInstanceOf(investorgame.common.error.InvalidRequestException.class);
 
-    // One ticket, one cat (decisions.md 493). Capital is not spent.
-    state.weaponTickets = 1;
+    // 100 diamonds, one cat (decisions.md 493, 526). Capital is not spent.
+    state.diamonds = (1) * 100L;
     long capital = (long) state.capital;
     engine.drawCat(state, random);
-    assertThat(state.weaponTickets).isZero();
+    assertThat(state.diamonds).isZero();
     assertThat(state.capital).isEqualTo(capital);
     var drawn = engine.view(state).cats().stream().filter(cat -> cat.level() == 1).toList();
     assertThat(drawn).as("a new cat is fielded at once").hasSize(1).allMatch(cat -> cat.fielded());
 
     // Duplicates raise the level; with enough draws all six cats are owned, four of them fielded.
-    state.weaponTickets = 60;
+    state.diamonds = (60) * 100L;
     for (int i = 0; i < 60; i++) engine.drawCat(state, random);
     var cats = engine.view(state).cats();
     assertThat(cats).hasSize(6).allMatch(cat -> cat.level() >= 1);

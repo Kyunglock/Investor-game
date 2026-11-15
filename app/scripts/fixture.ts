@@ -155,6 +155,8 @@ export const company = {
   era: { code: 'ai', name: 'AI 반도체 시대', description: '반도체가 뜨고 바이오는 조용하다.' },
   opening: null,
   capital: 412_500_000,
+  // 다이아 (526번): 직원·고양이·무기 뽑기에 쓴다. 10연차 한 번과 한 번 뽑기 두 번이 되는 수다.
+  diamonds: { amount: 1200, draw: 100, tenDraw: 1000, tenCount: 11, hire: 100 },
   grade: 'E',
   nextGradeCapital: 600_000_000,
   upgrade: { to: 'D', cost: 150_000_000, needed: 750_000_000, affordable: false },
@@ -179,7 +181,6 @@ export const company = {
   // 종목회의의 기회 (#803): 한 시간에 하나씩, 세 개까지.
   meetings: { chances: 2, max: 3, nextSeconds: 1500 },
   gacha: {
-    tickets: 6,
     roster: 7,
     // 데리고 있을 수 있는 수는 자리 수와 같다 (#801).
     rosterMax: 8,

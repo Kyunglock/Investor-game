@@ -50,6 +50,7 @@ class DefaultCompanyService implements CompanyService {
     boolean resting = c.employees.stream().anyMatch(e -> e.desk == null);
     if (c.gachaReady
         && c.realtime
+        && c.diamondsReady
         && c.weapon != null
         && c.weaponGachaReady
         && !resting
@@ -61,7 +62,9 @@ class DefaultCompanyService implements CompanyService {
     boolean mental = engine.mental.adopt(locked.state());
     boolean moved = engine.adoptRealtime(locked.state());
     boolean seated = engine.seatAll(locked.state());
-    if (gacha || mental || moved || seated) {
+    // 무기·채용 뽑기의 옛 칸을 먼저 옮긴 뒤에 남은 뽑기권을 다이아로 바꾼다 (526번).
+    boolean diamonds = engine.adoptDiamonds(locked.state());
+    if (gacha || mental || moved || seated || diamonds) {
       companies.update(locked.id(), locked.state(), false);
     }
     return locked;
@@ -156,6 +159,13 @@ class DefaultCompanyService implements CompanyService {
   }
 
   /** 다음 건물로 가는 데 드는 돈 (296번). 끝 등급이거나 끝난 회사면 null. */
+  /** 다이아와 뽑기 값 (526번). */
+  private CompanyView.Diamonds diamondsView(CompanyState c) {
+    CompanyProperties.Diamonds rule = engine.diamonds();
+    return new CompanyView.Diamonds(
+        c.diamonds, rule.draw(), rule.tenDraw(), rule.tenCount(), rule.hire());
+  }
+
   private CompanyView.Upgrade upgradeView(CompanyState c) {
     String to = engine.nextGrade(c);
     Long needed = engine.upgradeNeeded(c);
@@ -195,6 +205,7 @@ class DefaultCompanyService implements CompanyService {
     engine.adoptGacha(row.state());
     // 분기·결산이 있던 때의 회사면 실시간 구조로 옮기고, 종목회의의 기회를 지금까지 센다 (523번). 요청 끝에 함께 저장된다.
     engine.adoptRealtime(row.state());
+    engine.adoptDiamonds(row.state());
     engine.seatAll(row.state());
     engine.accrueMeetings(row.state(), idle.now());
     refill(row.state());
@@ -203,15 +214,14 @@ class DefaultCompanyService implements CompanyService {
 
   // 테스트판의 지갑 (499번): 요청마다 다시 채우므로 한 번에 쓸 만큼이면 되고, 곱셈에도 넘치지 않는 크기.
   private static final long SANDBOX_CAPITAL = 1_000_000_000_000_000L;
-  private static final int SANDBOX_TICKETS = 1_000_000;
+  private static final long SANDBOX_DIAMONDS = 100_000_000L;
 
-  /** 테스트판 회사면 자본·채용권·뽑기권을 다시 채운다. 요청 끝에 함께 저장된다. */
+  /** 테스트판 회사면 자본·다이아를 다시 채운다. 요청 끝에 함께 저장된다. */
   private static void refill(CompanyState c) {
     if (!c.sandbox || c.sandboxFinite) return;
     // 그 벽의 물가(505번)만큼 채운다: 깊은 벽에서 버는 돈의 크기와 맞춘다.
     c.capital = Math.max(c.capital, SANDBOX_CAPITAL * CompanyEngine.inflation(c));
-    c.tickets = Math.max(c.tickets, SANDBOX_TICKETS);
-    c.weaponTickets = Math.max(c.weaponTickets, SANDBOX_TICKETS);
+    c.diamonds = Math.max(c.diamonds, SANDBOX_DIAMONDS);
   }
 
   @Override
@@ -266,8 +276,7 @@ class DefaultCompanyService implements CompanyService {
       refill(c);
     } else {
       c.capital = Math.floor(engine.openingCapital() * CompanyEngine.inflation(c));
-      c.tickets = 0;
-      c.weaponTickets = 0;
+      c.diamonds = 0;
     }
     companies.update(row.id(), c, false);
     return view(row);
@@ -359,6 +368,7 @@ class DefaultCompanyService implements CompanyService {
         new CompanyView.Era(era.code(), era.name(), era.description()),
         c.opening,
         CompanyView.money(c.capital),
+        diamondsView(c),
         grade,
         next,
         upgradeView(c),
@@ -518,14 +528,7 @@ class DefaultCompanyService implements CompanyService {
             .map(g -> new CompanyView.CollectionEntry(g, c.collection.getOrDefault(g, 0)))
             .toList();
     return new CompanyView.Gacha(
-        c.tickets,
-        c.employees.size(),
-        engine.seats(c),
-        c.draws,
-        engine.maxDraws(),
-        rates,
-        drawn,
-        collection);
+        c.employees.size(), engine.seats(c), c.draws, engine.maxDraws(), rates, drawn, collection);
   }
 
   private CompanyView.Invest investView(CompanyState c, HashSeededRandom random) {

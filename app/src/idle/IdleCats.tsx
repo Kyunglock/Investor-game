@@ -1,12 +1,13 @@
 import type { Company } from '@web/api/client'
 import { GUN_GRADES } from '@web/features/game/cat/draw'
+import { DiamondPrice } from '@web/features/raising/DiamondIcon'
 import { type CatCode, useRaisingStore } from '@web/features/raising/store'
 import { useEffect, useRef, useState } from 'react'
 import { haptic } from '../fx/haptics'
 import { sfx } from '../fx/sound'
 import { GunSprite } from '../mental/GunSprite'
 import { DEFAULT_WEAPON, heroOf, type Weapon } from '../mental/hero'
-import { type TenCard, TenReveal } from '../mental/TenReveal'
+import { TenBonus, type TenCard, TenReveal } from '../mental/TenReveal'
 import { GRADE_BADGE, TEN } from '../mental/WeaponInventory'
 import { catTrait, CatPortrait as Portrait } from './CatPortrait'
 import { type CatDraw, CatReveal, catRevealPlan } from './CatReveal'
@@ -17,7 +18,7 @@ type Cat = NonNullable<Company['idle']>['cats'][number]
 const SLOTS = 18
 
 /**
- * 고양이 메뉴 (decisions.md 488·491·493번): 뽑기권으로 고양이를 뽑고, 위의 출전 칸 넷에 세우고, 고양이마다 가진 무기를 하나씩 들린다. 아래는
+ * 고양이 메뉴 (decisions.md 488·491·493·526번): 다이아로 고양이를 뽑고, 위의 출전 칸 넷에 세우고, 고양이마다 가진 무기를 하나씩 들린다. 아래는
  * 가진 고양이의 인벤토리 격자다. 고양이마다 고유 스킬이 하나 있고 출전해 있는 동안 발동한다 (501번). 결과는 서버가 정한다.
  */
 export function IdleCats({ company }: { company: Company }) {
@@ -39,7 +40,10 @@ export function IdleCats({ company }: { company: Company }) {
   const idle = company.idle
   if (!idle) return null
   const hero = heroOf(company)
-  const tickets = company.armory?.tickets ?? 0
+  // 뽑기 값은 서버가 준다 (526번): 한 번은 draw, 10연차는 tenDraw에 tenCount마리.
+  const diamonds = company.diamonds
+  const canOne = diamonds.amount >= diamonds.draw
+  const canTen = diamonds.amount >= diamonds.tenDraw
   const weapons = company.weapons?.length ? company.weapons : [DEFAULT_WEAPON]
   const same = (w: Weapon, held: Cat['weapon']) => w.kind === held?.kind && w.grade === held.grade
   const fielded = idle.cats.filter((cat) => cat.fielded)
@@ -52,7 +56,7 @@ export function IdleCats({ company }: { company: Company }) {
   }
   // 무기 뽑기와 같은 연출 (508번): 상자가 떨다 열리고 고양이가 나온다. 결과는 서버 응답의 스냅샷이다.
   const draw = async () => {
-    if (drawing.current || useRaisingStore.getState().busy || tickets < 1) return
+    if (drawing.current || useRaisingStore.getState().busy || !canOne) return
     drawing.current = true
     const id = Date.now()
     setReveal({ id, result: null })
@@ -78,9 +82,9 @@ export function IdleCats({ company }: { company: Company }) {
       drawing.current = false
     }
   }
-  // 10연속 (517번): 열 장으로 열 마리. 같은 고양이가 또 나오면 차례로 레벨이 오른다.
+  // 10연차 (517·526번): 한 번에 tenCount마리. 같은 고양이가 또 나오면 차례로 레벨이 오른다.
   const drawTen = async () => {
-    if (drawing.current || useRaisingStore.getState().busy || tickets < TEN) return
+    if (drawing.current || useRaisingStore.getState().busy || !canTen) return
     drawing.current = true
     const id = Date.now()
     setReveal(null)
@@ -91,7 +95,7 @@ export function IdleCats({ company }: { company: Company }) {
       if (!mounted.current) return
       const draws = after?.idle?.lastDraws ?? []
       const cats = after?.idle?.cats ?? []
-      if (draws.length !== TEN) {
+      if (draws.length < 1) {
         setTen(null)
         return
       }
@@ -135,40 +139,47 @@ export function IdleCats({ company }: { company: Company }) {
               ? drawn.isNew
                 ? `${drawn.cat.name} 합류! 고유 스킬 ${drawn.cat.skillName}`
                 : `${drawn.cat.name} Lv.${drawn.cat.level} · 화력 ${drawn.cat.damagePercent}% · ${drawn.cat.skillName} Lv.${drawn.cat.skillLevel}`
-              : '뽑기권 한 장으로 한 마리 · 또 나오면 레벨이 올라요'}
+              : canOne
+                ? `또 나오면 레벨이 올라요 · 10연차는 ${diamonds.tenCount}마리`
+                : '다이아가 모자라요 · 멘탈 보호 스테이지의 별로 얻어요'}
           </small>
         </div>
         <button
           type="button"
           className="idle-buy"
           data-testid="cat-draw"
-          disabled={Boolean(reveal || ten) || busy || tickets < 1}
+          disabled={Boolean(reveal || ten) || busy || !canOne}
           onClick={() => void draw()}
         >
           뽑기
-          <small>뽑기권 {tickets}장</small>
+          <small>
+            <DiamondPrice amount={diamonds.draw} />
+          </small>
         </button>
         <button
           type="button"
           className="idle-buy idle-buy-ten"
           data-testid="cat-draw-ten"
-          disabled={Boolean(reveal || ten) || busy || tickets < TEN}
+          disabled={Boolean(reveal || ten) || busy || !canTen}
           onClick={() => void drawTen()}
         >
-          10연속
-          <small>뽑기권 {TEN}장</small>
+          10연차
+          <TenBonus count={diamonds.tenCount} />
+          <small>
+            <DiamondPrice amount={diamonds.tenDraw} />
+          </small>
         </button>
       </section>
       {ten && (
         <TenReveal
           key={ten.id}
-          label="고양이 10연속 뽑기"
+          label="고양이 10연차"
           testId="cat-ten"
           icon="🐾"
-          loading="고양이 열 마리를 데려오는 중…"
+          loading={`고양이 ${diamonds.tenCount}마리를 데려오는 중…`}
           cards={ten.cards}
-          canAgain={tickets >= TEN}
-          againNote={`뽑기권 ${tickets}장`}
+          canAgain={canTen}
+          againNote={<DiamondPrice amount={diamonds.tenDraw} />}
           onClose={() => setTen(null)}
           onAgain={() => void drawTen()}
         />
@@ -177,7 +188,8 @@ export function IdleCats({ company }: { company: Company }) {
         <CatReveal
           key={reveal.id}
           result={reveal.result}
-          tickets={tickets}
+          price={diamonds.draw}
+          canAgain={canOne}
           onClose={() => setReveal(null)}
           onAgain={() => void draw()}
         />

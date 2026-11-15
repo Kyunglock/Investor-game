@@ -44,7 +44,7 @@ class QuirksTest {
   @Test
   void 뽑히면_버릇대로_첫인사를_하고_자리표시가_남지_않는다() {
     CompanyState c = ENGINE.open(new HashSeededRandom(2), 150_000_000L);
-    c.tickets = 5;
+    c.diamonds = (5) * 100L;
     ENGINE.draw(c, 5, new HashSeededRandom(2));
     assertThat(c.lastDraw).hasSize(5);
     for (CompanyState.Drawn d : c.lastDraw) {

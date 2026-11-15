@@ -33,22 +33,35 @@
   box-shadow: 0 2px 0 #2b2340;
 }
 .weapon-draw {
-  padding: 6px 16px;
-  font-size: 16px;
+  position: relative;
+  flex-shrink: 0;
+  padding: 4px 12px;
+  font-size: 15px;
+  line-height: 1.15;
+  white-space: nowrap;
 }
 .weapon-draw-row p {
   margin-right: auto;
+  min-width: 0;
+  white-space: nowrap;
 }
-/* 10연속 (517번): 같은 줄에 한 번 뽑기 옆에 둔다. */
-.weapon-draw-ten {
-  padding: 4px 12px;
-  line-height: 1.1;
-  background: #ff9f43;
-}
-.weapon-draw-ten small {
+/* 다이아가 모자랄 때의 한 줄 (526번): 가진 다이아 아래에 작게. */
+.weapon-draw-short {
   display: block;
-  font-size: 9px;
+  font:
+    500 10px "Noto Sans KR",
+    sans-serif;
+  color: #c0392b;
+}
+/* 단추마다 아래에 다이아 값을 적는다 (526번). */
+.weapon-draw small {
+  display: block;
+  font-size: 10px;
   font-family: "Noto Sans KR", sans-serif;
+}
+/* 10연차 (517번): 같은 줄에 한 번 뽑기 옆에 둔다. */
+.weapon-draw-ten {
+  background: #ff9f43;
 }
 .weapon-actions {
   display: flex;

@@ -97,7 +97,7 @@ class CompanyApiTest {
             .andExpect(jsonPath("$.weapons.length()").value(1))
             .andExpect(jsonPath("$.weapons[0].grade").value("F"))
             .andExpect(jsonPath("$.weapons[0].kind").value("pistol"))
-            .andExpect(jsonPath("$.armory.tickets").value(3));
+            .andExpect(jsonPath("$.diamonds.amount").value(1000));
       }
       assertThat(
               jdbc.sql(
@@ -110,31 +110,41 @@ class CompanyApiTest {
   }
 
   @Test
-  void 무기_뽑기권으로_무기를_뽑고_다_쓰면_400이다() throws Exception {
+  void 다이아로_무기를_뽑고_다_쓰면_400이다() throws Exception {
     DocumentContext opened =
         json(mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated()));
-    int tickets = opened.read("$.armory.tickets", Integer.class);
-    assertThat(tickets).as("처음 무기 뽑기권").isPositive();
+    // 새 회사는 다이아 1,000으로 시작한다 (526번): 10연차 한 번이다.
+    assertThat(opened.read("$.diamonds.amount", Long.class)).isEqualTo(1000);
+    assertThat(opened.read("$.diamonds.draw", Long.class)).isEqualTo(100);
+    assertThat(opened.read("$.diamonds.tenDraw", Long.class)).isEqualTo(1000);
+    assertThat(opened.read("$.diamonds.tenCount", Integer.class)).isEqualTo(11);
+    assertThat(opened.read("$.diamonds.hire", Long.class)).isEqualTo(100);
     assertThat(opened.read("$.armory.lastDraw", Object.class)).isNull();
-    // 10연속 (517번): 열 장이 없으면 하나도 뽑지 않고, 열한 개는 받지 않는다.
-    if (tickets < 10) {
-      postJson("/api/company/weapon/draw", "{\"count\":10}").andExpect(status().isBadRequest());
-      postJson("/api/company/cat/draw", "{\"count\":10}").andExpect(status().isBadRequest());
-    }
     postJson("/api/company/weapon/draw", "{\"count\":11}").andExpect(status().isBadRequest());
     postJson("/api/company/weapon/draw", "{\"count\":0}").andExpect(status().isBadRequest());
     assertThat(opened.read("$.weapons[0].count", Integer.class)).isEqualTo(1);
-    DocumentContext drawn = opened;
-    for (int i = 0; i < tickets; i++) {
-      drawn = json(postJson("/api/company/weapon/draw", "").andExpect(status().isOk()));
-    }
-    assertThat(drawn.read("$.armory.tickets", Integer.class)).isZero();
+    // 한 번에 100.
+    DocumentContext one = json(postJson("/api/company/weapon/draw", "").andExpect(status().isOk()));
+    assertThat(one.read("$.diamonds.amount", Long.class)).isEqualTo(900);
+    // 10연차는 1,000이 있어야 한다: 모자라면 하나도 뽑지 않는다(무기도 고양이도).
+    postJson("/api/company/weapon/draw", "{\"count\":10}").andExpect(status().isBadRequest());
+    postJson("/api/company/cat/draw", "{\"count\":10}").andExpect(status().isBadRequest());
+    jdbc.sql(
+            "UPDATE raising_company SET state = jsonb_set(state, '{diamonds}', '1000')"
+                + " WHERE id = CAST(:id AS uuid)")
+        .param("id", opened.read("$.companyId", String.class))
+        .update();
+    DocumentContext drawn =
+        json(postJson("/api/company/weapon/draw", "{\"count\":10}").andExpect(status().isOk()));
+    assertThat(drawn.read("$.diamonds.amount", Long.class)).isZero();
+    List<Object> ten = drawn.read("$.armory.lastDraws[*]");
+    assertThat(ten).as("10연차는 열한 개").hasSize(11);
     assertThat(drawn.read("$.armory.lastDraw.grade", String.class))
         .isIn("F", "E", "D", "C", "B", "A", "S");
     List<Integer> counts = drawn.read("$.weapons[*].count");
     assertThat(counts.stream().mapToInt(Integer::intValue).sum())
         .as("처음 권총 하나 + 뽑은 수")
-        .isEqualTo(1 + tickets);
+        .isEqualTo(1 + 1 + 11);
     postJson("/api/company/weapon/draw", "").andExpect(status().isBadRequest());
     // 모자란 합성: 뽑기 운에 따라 같은 무기 둘이 나올 수 있으니(그러면 합성이 된다) 하나도 없는 종류·등급을 고른다.
     List<java.util.Map<String, Object>> weapons = drawn.read("$.weapons[*]");
@@ -158,20 +168,20 @@ class CompanyApiTest {
    * levels로 묶어 사고, 자본이 닿는 데까지만 산다. 고양이 속도는 없다. 쓴 돈은 분기 실적의 전투 강화 비용 줄에 나온다.
    */
   @Test
-  void 고양이는_뽑기권으로_뽑아_출전시키고_가진_무기를_들린다() throws Exception {
+  void 고양이는_다이아로_뽑아_출전시키고_가진_무기를_들린다() throws Exception {
     mvc.perform(post("/api/company").cookie(session)).andExpect(status().isCreated());
     DocumentContext opened = json(mvc.perform(get("/api/company").cookie(session)));
     List<Integer> levels = opened.read("$.idle.cats[*].level");
     assertThat(levels).as("고양이는 벽을 돌파해도 저절로 오지 않는다 (488번)").containsOnly(0).hasSize(6);
-    int tickets = opened.read("$.armory.tickets", Integer.class);
+    long diamonds = opened.read("$.diamonds.amount", Long.class);
     long capital = opened.read("$.capital", Long.class);
     postJson("/api/company/cat/field", "{\"code\":\"sky\",\"fielded\":true}")
         .andExpect(status().isBadRequest());
 
     DocumentContext drawn = json(postJson("/api/company/cat/draw", "").andExpect(status().isOk()));
-    assertThat(drawn.read("$.armory.tickets", Integer.class))
-        .as("무기와 같은 뽑기권 한 장 (493번)")
-        .isEqualTo(tickets - 1);
+    assertThat(drawn.read("$.diamonds.amount", Long.class))
+        .as("무기와 같은 값: 다이아 100 (526번)")
+        .isEqualTo(diamonds - 100);
     assertThat(drawn.read("$.capital", Long.class)).isEqualTo(capital);
     List<Map<String, Object>> cats = drawn.read("$.idle.cats[?(@.level == 1)]");
     assertThat(cats).as("새 고양이는 바로 출전한다").hasSize(1);
@@ -477,7 +487,6 @@ class CompanyApiTest {
     assertThat(kinds.stream().map(String::valueOf)).contains("grow", "ending");
     // 회사는 멈추지 않는다: 계속 뽑는다.
     DocumentContext after = json(mvc.perform(get("/api/company").cookie(session)));
-    assertThat(after.read("$.gacha.tickets", Integer.class)).as("이사할 때마다 받았다").isPositive();
     drawRequest(1, after.read("$.gacha.draws", Integer.class)).andExpect(status().isOk());
   }
 

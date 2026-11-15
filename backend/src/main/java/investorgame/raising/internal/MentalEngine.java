@@ -64,7 +64,6 @@ class MentalEngine {
       c.lastWeaponDrawNew = false;
       c.lastWeaponDraws = new ArrayList<>();
       c.weaponDraws = 0;
-      c.weaponTickets = properties.mental().weaponGacha().startTickets();
       c.weaponGachaReady = true;
     }
     if (c.weapons != null && !c.weapons.isEmpty() && c.weapon != null) {
@@ -91,7 +90,6 @@ class MentalEngine {
       return false;
     }
     c.weaponGachaReady = true;
-    c.weaponTickets += properties.mental().weaponGacha().startTickets();
     return true;
   }
 
@@ -109,19 +107,16 @@ class MentalEngine {
     if (count < 1) {
       throw new InvalidRequestException("뽑을 수가 1보다 작다");
     }
-    if (c.weaponTickets < count) {
-      throw new InvalidRequestException(
-          c.weaponTickets <= 0 ? "무기 뽑기권이 없다" : "무기 뽑기권이 " + count + "장 있어야 한다");
-    }
+    // 다이아로 뽑는다 (526번): 한 번 100, 10연차는 1,000에 열한 개.
+    CompanyEngine.spend(c, properties.diamonds().cost(count));
     List<CompanyState.Pulled> drawn = new ArrayList<>();
-    for (int i = 0; i < count; i++) {
+    for (int i = 0; i < properties.diamonds().items(count); i++) {
       drawn.add(drawOne(c, random));
     }
     c.lastWeaponDraws = drawn;
   }
 
   private CompanyState.Pulled drawOne(CompanyState c, SeededRandom random) {
-    c.weaponTickets--;
     c.weaponDraws++;
     RandomGenerator rng = random.forKey("weapon-draw", c.weaponDraws);
     Map<String, Integer> weights = properties.mental().weaponGacha().gradeWeights();
@@ -280,7 +275,6 @@ class MentalEngine {
   CompanyView.Armory armoryView(CompanyState c) {
     CompanyState.Weapon d = c.lastWeaponDraw;
     return new CompanyView.Armory(
-        c.weaponTickets,
         properties.mental().weaponGacha().mergeCount(),
         d == null
             ? null
@@ -420,15 +414,15 @@ class MentalEngine {
         c.stageStars.add(0);
         r.firstClear = true;
         r.capital = stage * rule.capitalPerStage();
-        r.tickets += stage % rule.perChapter() == 0 ? rule.bossTickets() : rule.clearTickets();
       }
       int before = c.stageStars.get(stage - 1);
       if (r.stars > before) {
-        r.tickets += (r.stars - before) * rule.starTickets();
+        // 별을 처음 얻을 때마다 다이아 (526번): 이미 얻은 별은 다시 깨도 주지 않는다.
+        r.diamonds = properties.diamonds().forStars(stage, before, r.stars);
         c.stageStars.set(stage - 1, r.stars);
       }
       c.capital += r.capital;
-      c.weaponTickets += r.tickets;
+      c.diamonds += r.diamonds;
     }
     c.lastStage = r;
   }
@@ -441,12 +435,11 @@ class MentalEngine {
     if (today.equals(c.exDay)) {
       return;
     }
-    CompanyProperties.Stages rule = properties.mental().stages();
     c.exDay = today;
     CompanyState.StageResult r = new CompanyState.StageResult();
     r.cleared = true;
-    r.tickets = Math.min(rule.exMaxTickets(), 1 + Math.max(0, kills) / rule.exKillsPerTicket());
-    c.weaponTickets += r.tickets;
+    r.diamonds = properties.diamonds().ex();
+    c.diamonds += r.diamonds;
     c.lastStage = r;
   }
 
@@ -481,15 +474,12 @@ class MentalEngine {
         c.assaultStars.add(0);
         r.firstClear = true;
         r.capital = stage * rule.capitalPerStage();
-        r.tickets += stage % rule.perChapter() == 0 ? rule.bossTickets() : rule.clearTickets();
       }
       int before = c.assaultStars.get(stage - 1);
       if (r.stars > before) {
-        r.tickets += (r.stars - before) * rule.starTickets();
         c.assaultStars.set(stage - 1, r.stars);
       }
       c.capital += r.capital;
-      c.weaponTickets += r.tickets;
     }
     c.lastAssault = r;
   }
@@ -506,7 +496,7 @@ class MentalEngine {
         r == null
             ? null
             : new CompanyView.StageResult(
-                r.stage, r.cleared, r.stars, r.firstClear, r.capital, r.tickets));
+                r.stage, r.cleared, r.stars, r.firstClear, r.capital, r.diamonds));
   }
 
   /** 스테이지 화면 값 (369번). */
@@ -523,6 +513,6 @@ class MentalEngine {
         r == null
             ? null
             : new CompanyView.StageResult(
-                r.stage, r.cleared, r.stars, r.firstClear, r.capital, r.tickets));
+                r.stage, r.cleared, r.stars, r.firstClear, r.capital, r.diamonds));
   }
 }

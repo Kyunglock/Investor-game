@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Company, Drawn } from '../../api/client'
 import { Overlay } from '../game/Overlay'
+import { DiamondIcon } from './DiamondIcon'
 import { GradeBadge, tierClass, tierOf } from './GradeCard'
-import { collected, drawable } from './gachaRules'
+import { collected, diamondText, drawable } from './gachaRules'
 import { EMPLOYEE_LADDER } from './grades'
 import { titleOf } from './office'
 import { useRaisingStore } from './store'
@@ -213,25 +214,27 @@ export function CollectionGrid({ company }: { company: Company }) {
   )
 }
 
-/** 웹의 채용 탭 (312번): 채용권과 뽑기 버튼, 확률표, 도감. 합성은 뺐다(384번). 뽑힌 직원은 서버가 바로 앉힌다 (#801). */
 /** 이 값 이상이면 인원 상한이 없는 것으로 본다 (decisions.md 354번). */
 const NO_LIMIT = 100_000
 
+/** 웹의 채용 탭 (312·526번): 가진 다이아와 뽑기 버튼, 확률표, 도감. 합성은 뺐다(384번). 뽑힌 직원은 서버가 바로 앉힌다 (#801). */
 export function GachaPanel({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
   const { draw } = useRaisingStore.getState()
   const g = company.gacha
   const many = drawable(company)
   const full = g.roster >= g.rosterMax
+  const d = company.diamonds
+  const short = !full && d.amount < d.hire
   return (
     <section data-testid="gacha">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <p className="text-[14px]">
-          🎟 채용권{' '}
-          <b className="font-mono-num text-[18px]" data-testid="tickets">
-            {g.tickets}
+          <DiamondIcon /> 다이아{' '}
+          <b className="font-mono-num text-[18px]" data-testid="diamonds">
+            {diamondText(d.amount)}
           </b>
-          장
+          개
         </p>
         <p className="text-[12px] text-muted" data-testid="roster">
           데리고 있는 사람 {g.roster}
@@ -239,7 +242,8 @@ export function GachaPanel({ company }: { company: Company }) {
         </p>
       </div>
       <p className="mt-1 text-[12px] text-muted">
-        채용권 한 장에 한 명이 옵니다. 회사를 차릴 때와 이사할 때 채용권을 받습니다.
+        한 명에 다이아 {d.hire.toLocaleString()}개예요. 다이아는 멘탈 보호 스테이지에서 별을 처음
+        얻으면 받아요.
         {company.meeting?.hrCap && ` 인사팀 덕에 ${company.meeting.hrCap} 언저리까지 나옵니다.`}
       </p>
       <div className="mt-2 grid grid-cols-2 gap-2">
@@ -250,7 +254,8 @@ export function GachaPanel({ company }: { company: Company }) {
           className="min-h-12 rounded bg-wine font-semibold text-white disabled:opacity-50"
           data-testid="draw-one"
         >
-          1명 뽑기
+          1명 뽑기 · <DiamondIcon />
+          {d.hire.toLocaleString()}
         </button>
         <button
           type="button"
@@ -259,9 +264,21 @@ export function GachaPanel({ company }: { company: Company }) {
           className="min-h-12 rounded border border-wine font-semibold text-wine disabled:opacity-50"
           data-testid="draw-many"
         >
-          {many >= 2 ? `${many}명 뽑기` : '여러 명 뽑기'}
+          {many >= 2 ? (
+            <>
+              {many}명 뽑기 · <DiamondIcon />
+              {(d.hire * many).toLocaleString()}
+            </>
+          ) : (
+            '여러 명 뽑기'
+          )}
         </button>
       </div>
+      {short && (
+        <p className="mt-1 text-[12px] text-wine" data-testid="diamonds-short">
+          다이아가 모자라요
+        </p>
+      )}
       {full && (
         <p className="mt-1 text-[12px] text-wine" data-testid="roster-full">
           자리 {g.roster} / {g.rosterMax} · 회사를 넓히면 더 뽑을 수 있어요

@@ -61,7 +61,55 @@ public record CompanyProperties(
     String endingGrade,
     Mental mental,
     Income income,
-    Meetings meetings) {
+    Meetings meetings,
+    Diamonds diamonds) {
+
+  /**
+   * 다이아 (decisions.md 526번): 직원·고양이·무기 뽑기에 쓰는 하나뿐인 뽑기 재화. 뽑기권을 대신한다.
+   *
+   * @param start 새 회사가 받는 다이아
+   * @param draw 고양이·무기 한 번 뽑는 값
+   * @param tenDraw 고양이·무기 10연차의 값
+   * @param tenCount 10연차에 나오는 수(+1)
+   * @param hire 직원 한 명을 뽑는 값
+   * @param perTicket 옛 저장의 뽑기권 한 장을 다이아로 바꾸는 값
+   * @param stars 멘탈 보호 스테이지에서 별을 처음 얻을 때 받는 다이아: 1개째·2개째·3개째
+   * @param bonusEvery 이 수의 배수인 스테이지는 별 보상이 bonusTimes배
+   * @param ex EX 디펜스(하루에 한 번)의 보상
+   */
+  public record Diamonds(
+      long start,
+      long draw,
+      long tenDraw,
+      int tenCount,
+      long hire,
+      long perTicket,
+      List<Long> stars,
+      int bonusEvery,
+      int bonusTimes,
+      long ex) {
+
+    private static final int TEN = 10;
+
+    /** 고양이·무기를 count번 뽑는 값: 한 번에 draw, 열 번(10연차)이면 tenDraw. */
+    public long cost(int count) {
+      return count >= TEN ? tenDraw : draw * count;
+    }
+
+    /** count번 뽑기에 나오는 수: 10연차는 tenCount(하나 더). */
+    public int items(int count) {
+      return count >= TEN ? tenCount : count;
+    }
+
+    /** before개였던 별이 now개가 되며 새로 받는 다이아. 이미 얻은 별은 다시 주지 않는다. bonusEvery의 배수 스테이지는 bonusTimes배. */
+    public long forStars(int stage, int before, int now) {
+      long sum = 0;
+      for (int star = Math.max(0, before); star < now && star < stars.size(); star++) {
+        sum += stars.get(star);
+      }
+      return stage % bonusEvery == 0 ? sum * bonusTimes : sum;
+    }
+  }
 
   /**
    * 실시간 수입 (decisions.md 523번): 직원 한 명의 초당 수입 = 등급별 기본값 × (1 + 능력치 합 ÷ 100).
@@ -101,25 +149,11 @@ public record CompanyProperties(
    *
    * @param perChapter 한 챕터의 스테이지 수. 지금은 챕터 하나라 이것이 마지막 스테이지다. 챕터 마지막은 보스
    * @param capitalPerStage 처음 깰 때 주는 자본 = 스테이지 번호 × 이것
-   * @param clearTickets 처음 깰 때 주는 무기 뽑기권
-   * @param bossTickets 보스 스테이지를 처음 깰 때 주는 무기 뽑기권
-   * @param starTickets 별을 처음 얻을 때마다 주는 무기 뽑기권
    * @param bonusPerStage 분기 강화율: 깬 최고 스테이지 하나에 이만큼(%)
    * @param maxBonus 분기 강화율 상한(%)
-   * @param exKillsPerTicket EX 디펜스: 물리친 적 이만큼마다 뽑기권 한 장 더
-   * @param exMaxTickets EX 디펜스가 주는 뽑기권 상한
    */
   public record Stages(
-      int perChapter,
-      int chapters,
-      long capitalPerStage,
-      int clearTickets,
-      int bossTickets,
-      int starTickets,
-      int bonusPerStage,
-      int maxBonus,
-      int exKillsPerTicket,
-      int exMaxTickets) {}
+      int perChapter, int chapters, long capitalPerStage, int bonusPerStage, int maxBonus) {}
 
   /** 무기 종류 하나의 바탕 수치 (346번). damagePercent 100이 탄 하나에 적 체력 1. power는 탄 강화 단계(362번). */
   public record Weapon(int damagePercent, int fireMs, int power, int bulletSpeed) {}
@@ -131,12 +165,9 @@ public record CompanyProperties(
    * 무기 뽑기 (decisions.md 366번).
    *
    * @param gradeWeights 등급(F·E·D·C·B·A·S)별 가중치. 종류는 등급에 따라 정한다
-   * @param startTickets 처음(또는 이 칸이 생기기 전의 회사가 처음 불러올 때) 받는 무기 뽑기권
-   * @param battleTickets 분기 전투 결과를 보낼 때마다 받는 무기 뽑기권
    * @param mergeCount 합쳐 한 등급 올리는 데 드는 같은 무기 수
    */
-  public record WeaponGacha(
-      Map<String, Integer> gradeWeights, int startTickets, int battleTickets, int mergeCount) {}
+  public record WeaponGacha(Map<String, Integer> gradeWeights, int mergeCount) {}
 
   /**
    * 자본으로 사는 전투 강화 (decisions.md 367·394번). maxPercent에 없는 강화는 최대 단계가 없다.
@@ -261,31 +292,18 @@ public record CompanyProperties(
   /**
    * 채용 뽑기 (decisions.md 312번).
    *
-   * @param startTickets 회사를 차릴 때 받는 채용권
-   * @param quarterTickets 분기를 넘길 때마다 받는 채용권
-   * @param yearTickets 연말 결산 때 더 받는 채용권
-   * @param achievementTickets 업적 하나를 열 때 받는 채용권
-   * @param moveTickets 건물을 올릴 때 받는 채용권
    * @param maxDraws 한 번에 뽑을 수 있는 최대 수
    * @param rates 확률표: 회사 등급(인사팀이면 더 높게)에서 steps 단계 위가 percent%로. star면 특급
    */
-  public record Gacha(
-      int startTickets,
-      int quarterTickets,
-      int yearTickets,
-      int achievementTickets,
-      int moveTickets,
-      int maxDraws,
-      List<Rate> rates) {}
+  public record Gacha(int maxDraws, List<Rate> rates) {}
 
   /** 뽑기 확률표의 한 칸: 회사 등급보다 steps 단계 위(음수면 아래)가 percent%. star면 특급(특급 연출, 능력치가 그 띠에 고르게). */
   public record Rate(int steps, int percent, boolean star) {}
 
   /**
    * @param capSteps 인사 직원이 끌어올리는 뽑기 중심 등급 = 인사 직원 종합 등급보다 이만큼 아래. 회사 등급으로 정한 중심보다 높을 때만 쓴다
-   * @param extraTickets 인사팀에 사람이 있으면 연말에 더 받는 채용권
    */
-  public record Hr(int capSteps, int extraTickets) {}
+  public record Hr(int capSteps) {}
 
   /**
    * @param convictionGainBp X 확신: 맞히면 더 버는 몫(만분율)

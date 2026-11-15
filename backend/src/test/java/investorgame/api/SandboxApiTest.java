@@ -176,7 +176,7 @@ class SandboxApiTest {
                 .andReturn());
     assertThat(finite.read("$.sandbox", Boolean.class)).isTrue();
     assertThat(finite.read("$.sandboxInfinite", Boolean.class)).isFalse();
-    assertThat(finite.read("$.armory.tickets", Integer.class)).isZero();
+    assertThat(finite.read("$.diamonds.amount", Long.class)).isZero();
     long pocket = finite.read("$.capital", Long.class);
     mvc.perform(post("/api/company/cat/draw").cookie(session, in))
         .andExpect(status().isBadRequest());

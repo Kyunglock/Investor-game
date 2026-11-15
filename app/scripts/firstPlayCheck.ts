@@ -39,7 +39,7 @@ try {
         }
         await new Promise((resolve) => setTimeout(resolve, 4200))
         company.assaults.best = 1
-        company.assaults.lastResult = { firstClear: true, capital: 10000, tickets: 1 }
+        company.assaults.lastResult = { firstClear: true, capital: 10000, diamonds: 0 }
       }
       await route.fulfill({ json: company })
     })

@@ -206,6 +206,12 @@ class CompanyState {
   /** 무기 뽑기권 (decisions.md 366번). */
   int weaponTickets;
 
+  /** 다이아 (decisions.md 526번): 직원·고양이·무기 뽑기에 쓴다. 뽑기권(tickets·weaponTickets)을 대신한다. */
+  long diamonds;
+
+  /** 뽑기권을 다이아로 바꾼 뒤의 저장인가 (526번). 아니면 불러올 때 남은 뽑기권을 한 번 바꿔 준다. */
+  boolean diamondsReady;
+
   /**
    * 자본으로 산 전투 강화의 단계 (decisions.md 367·394번): damage·fire. 없으면 0단계. 394번에서 끝없이 올리게 바꾸며 옛
    * 칸(battleUpgrades)을 버리고 새 이름으로 둬서, 출시 전 옛 회사의 강화는 돌려주지 않고 0단계로 돌아간다.
@@ -450,7 +456,9 @@ class CompanyState {
     int stars;
     boolean firstClear;
     long capital;
-    int tickets;
+
+    /** 받은 다이아 (526번). 뽑기권을 주던 때의 저장에는 없다. */
+    long diamonds;
   }
 
   /** 뽑기에서 나온 것 하나 (517번): 무기면 종류·등급, 고양이면 코드(kind)와 그때의 레벨. 새로 얻었으면 isNew. */

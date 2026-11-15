@@ -69,7 +69,7 @@ export function tutorialStep(company: Company): TutorialStep {
       id: 'hire',
       n: 1,
       title: '직원 뽑기',
-      text: '채용 탭에서 채용권으로 사람을 뽑습니다. 카드가 뒤집히며 등급이 드러납니다. 뽑힌 직원은 바로 자리에 앉아 1초마다 돈을 벌어 옵니다.',
+      text: '채용 탭에서 다이아로 사람을 뽑습니다. 카드가 뒤집히며 등급이 드러납니다. 뽑힌 직원은 바로 자리에 앉아 1초마다 돈을 벌어 옵니다.',
       tab: 'market',
       spot: 'market',
       short: '채용 탭에서 직원을 뽑자',

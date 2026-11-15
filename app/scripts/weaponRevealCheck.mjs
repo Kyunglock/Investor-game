@@ -31,7 +31,9 @@ try {
       let company = {
         ...fixture,
         weapons: [weapon],
-        armory: { tickets: 2, mergeCount: 3, lastDraw: null },
+        // 다이아 200개: 한 번 뽑기(100)를 두 번 한다 (526번).
+        diamonds: { ...fixture.diamonds, amount: 200 },
+        armory: { mergeCount: 3, lastDraw: null, lastDraws: [] },
       }
       let calls = 0
       let reject = true
@@ -42,15 +44,18 @@ try {
           if (reject) return route.fulfill({ status: 400, json: { message: '뽑기 실패 테스트' } })
           company = {
             ...company,
+            diamonds: {
+              ...company.diamonds,
+              amount: company.diamonds.amount - company.diamonds.draw,
+            },
             armory: {
               ...company.armory,
-              tickets: company.armory.tickets - 1,
               lastDraw: {
                 kind: weapon.kind,
                 name: weapon.name,
                 grade,
                 gradeName: grade,
-                isNew: company.armory.tickets === 2,
+                isNew: company.diamonds.amount === 200,
               },
             },
           }
@@ -86,13 +91,13 @@ try {
       await page.keyboard.press('Escape')
       await expect(page.getByTestId('weapon-reveal')).toHaveCount(0)
       await expect(page.getByTestId('idle-menu')).toBeVisible()
-      await expect(page.getByTestId('weapon-tickets')).toHaveText('0')
+      await expect(page.getByTestId('weapon-diamonds')).toHaveText('0')
       await expect(page.getByTestId('weapon-draw')).toBeDisabled()
       assert.equal(calls, 3)
       assert.deepEqual(errors, [])
       // Reduced motion: successful response shows result immediately, without animation.
       await page.emulateMedia({ reducedMotion: 'reduce' })
-      company.armory.tickets = 1
+      company.diamonds.amount = 100
       await page.reload()
       await page.getByRole('button', { name: '성장' }).click()
       await page.getByRole('tab', { name: /인벤토리/ }).click()
