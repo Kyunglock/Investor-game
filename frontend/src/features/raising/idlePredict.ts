@@ -58,7 +58,9 @@ export interface IdleLocalHit {
   sequence?: number
 }
 
-const circuitWall = (wall: number) => wall % 10 === 6
+/** 서킷브레이커는 꺼 두었다 (IdleEngine.CIRCUIT_ENABLED와 같이 바꾼다). */
+const CIRCUIT_ENABLED: boolean = false
+const circuitWall = (wall: number) => CIRCUIT_ENABLED && wall % 10 === 6
 
 export class IdlePredictor {
   private hits: IdleLocalHit[] = []

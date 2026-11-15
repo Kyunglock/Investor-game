@@ -1685,7 +1685,6 @@ class BattleScene extends Phaser.Scene {
     const lane = this.lane()
     const burstY = wall.y - 12
     const centerX = this.view().w / 2
-    if (!this.reducedMotion) this.cameras.main.shake(210, 0.005)
     this.ring(centerX, burstY, 0xffe5a3, lane.width * 0.75, 380)
     this.pop(centerX, burstY - 24, '매도벽 격파!', '#ffe5a3', 28)
     for (let i = 0; i < 7; i++) {
@@ -4562,7 +4561,8 @@ class BattleScene extends Phaser.Scene {
     this.runRush = Math.max(0, this.runRush - dt)
     const circuitDue = this.opts.idle
       ? (this.opts.idle().circuitSeconds ?? 0) > 0 && !this.idleTransition
-      : !this.bossEnemy &&
+      : CIRCUIT_BREAKER.enabled &&
+        !this.bossEnemy &&
         this.wallsBroken >= (CIRCUIT_BREAKER.afterWalls[this.circuitIndex] ?? Infinity)
     if (
       this.assault &&

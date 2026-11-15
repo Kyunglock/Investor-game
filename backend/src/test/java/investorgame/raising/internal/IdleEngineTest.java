@@ -319,10 +319,10 @@ class IdleEngineTest {
     assertThat(state.idle.wall).isEqualTo(3);
     assertThat(state.idle.damage).isEqualTo(5);
     assertThat(state.idle.nextDamage).isEqualTo(3);
-    // One huge hit runs through several walls, but stops at the circuit breaker.
+    // One huge hit runs through several walls. The circuit breaker is off: it does not stop at 6.
     tick(1000, new IdleHit(3, "bullet", 1000));
-    assertThat(state.idle.wall).isEqualTo(6);
-    assertThat(state.idle.circuitSeconds).isEqualTo(4);
+    assertThat(state.idle.wall).isGreaterThan(6);
+    assertThat(state.idle.circuitSeconds).isZero();
   }
 
   @Test
@@ -345,18 +345,16 @@ class IdleEngineTest {
   }
 
   @Test
-  void alreadyHitRearWallsClearInOrderButCannotSkipCircuit() {
+  void alreadyHitRearWallsClearInOrderWithoutCircuit() {
     start(5);
     state.idle.damage = IdleEngine.maxHp(5) - 1;
     state.idle.nextDamage = IdleEngine.maxHp(6) - 1;
     state.idle.afterNextDamage = IdleEngine.maxHp(7) - 1;
     tick(1000, new IdleHit(5, "bullet", 1, 1.0));
     assertThat(state.idle.wall).isEqualTo(6);
-    assertThat(state.idle.circuitSeconds).isEqualTo(4);
+    // The circuit breaker is off: wall 6 does not halt trading.
+    assertThat(state.idle.circuitSeconds).isZero();
     long paid = (long) state.capital;
-    tick(1000, new IdleHit(6, "bullet", 1000));
-    assertThat(state.idle.wall).isEqualTo(6);
-    assertThat(state.capital).isEqualTo(paid);
     tick(1000);
     // Pierced walls keep their last point of health (520): each needs one hit as the front wall.
     assertThat(state.idle.wall).isEqualTo(6);

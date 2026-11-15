@@ -26,6 +26,7 @@ try {
       import('/app/src/mental/circuitBreaker.ts'),
     ])
     // Exercise the real circuit path at the first wall in this browser-only test.
+    CIRCUIT_BREAKER.enabled = true
     CIRCUIT_BREAKER.afterWalls[0] = 0
     const host = document.createElement('div')
     host.style.cssText = 'position:fixed;inset:0;z-index:99999'

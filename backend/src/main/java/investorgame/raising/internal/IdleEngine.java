@@ -18,6 +18,10 @@ class IdleEngine {
   private final CompanyEngine engine;
   private final String serverId = UUID.randomUUID().toString();
   private static final double SPEED = 2;
+
+  /** 서킷브레이커(484번)는 꺼 두었다: 6·16·26…번째 벽에서 거래를 멈추지 않는다. 저장된 정지 시간은 흘러 풀린다. */
+  static final boolean CIRCUIT_ENABLED = false;
+
   // Credit buckets: the bullet, the four cat skills, the buy barrage (decisions.md 503), and the
   // buy wall's own buy orders (514).
   private static final int KINDS = 7;
@@ -585,7 +589,7 @@ class IdleEngine {
       s.damage = queued[0] + left;
       System.arraycopy(queued, 1, queued, 0, queued.length - 1);
       queued[queued.length - 1] = 0;
-      if (s.wall % 10 == 6) {
+      if (CIRCUIT_ENABLED && s.wall % 10 == 6) {
         s.circuitSeconds = 4;
         s.hitCredits = new double[KINDS];
       }

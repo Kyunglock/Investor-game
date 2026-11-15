@@ -270,7 +270,7 @@ export function MentalWindow({
               )}
               <StagePortrait weapon={heroOf(company).weapon} />
               {mode === 'assault' && (
-                <small>패닉셀·투매를 뚫고 전진! 중간 서킷브레이커에서 멘탈 회복</small>
+                <small>패닉셀·투매를 뚫고 전진!</small>
               )}
               {mode !== 'assault' && (
                 <>
