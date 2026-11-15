@@ -38,6 +38,7 @@ public record CompanyView(
     History history,
     Invest invest,
     Meetings meetings,
+    Attendance attendance,
     List<LockedDesk> lockedDesks,
     List<Weapon> weapons,
     Armory armory,
@@ -58,6 +59,30 @@ public record CompanyView(
    * @param hire 직원 한 명을 뽑는 값
    */
   public record Diamonds(long amount, long draw, long tenDraw, int tenCount, long hire) {}
+
+  /**
+   * 출석 보상 (decisions.md 528번): 하루에 한 번, 한국 시간 자정에 다시 열린다. 누적 출석이라 빠진 날이 있어도 이어서 간다.
+   *
+   * @param today 오늘 받을 칸(1부터). 오늘 이미 받았으면 오늘 받은 칸
+   * @param claimable 오늘 보상을 아직 안 받았다
+   * @param board 출석판, 1일 차부터
+   * @param lastReward 마지막으로 받은 보상. 받은 적이 없으면 null
+   */
+  public record Attendance(
+      int today, boolean claimable, List<AttendanceDay> board, AttendanceReward lastReward) {}
+
+  /**
+   * 출석판의 한 칸.
+   *
+   * @param diamonds 받는 다이아. 돈 칸이면 0
+   * @param incomeMinutes 돈 칸이면 회사의 초당 수입 몇 분어치인가. 다이아 칸이면 0
+   * @param money 돈 칸이면 지금 받으면 들어올 돈(지금의 초당 수입 기준). 다이아 칸이면 null
+   * @param claimed 이번 주기에서 이미 받은 칸
+   */
+  public record AttendanceDay(
+      int day, long diamonds, int incomeMinutes, java.math.BigDecimal money, boolean claimed) {}
+
+  public record AttendanceReward(int day, long diamonds, java.math.BigDecimal money) {}
 
   /**
    * 종목회의의 기회 (decisions.md 523번): 1시간마다 하나씩 생기고 max까지 쌓인다. 자리를 비운 동안에도 쌓인다.

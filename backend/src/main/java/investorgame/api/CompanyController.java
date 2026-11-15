@@ -231,6 +231,20 @@ class CompanyController {
 
   record ExRequest(@PositiveOrZero int kills) {}
 
+  /** 오늘의 출석 보상을 받는다 (decisions.md 528번). 하루에 한 번이고 오늘 이미 받았으면 400. */
+  @PostMapping("/attendance")
+  CompanyView attend(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
+    UUID sessionId = cookies.requirePlayer(token);
+    CompanyView company = companies.attend(sessionId);
+    PLAY.info(
+        "company-attendance session={} company={} day={} ip={}",
+        sessionId,
+        company.companyId(),
+        company.attendance().today(),
+        ClientIp.current());
+    return company;
+  }
+
   /** 자본으로 전투 강화를 levels단계까지(없으면 한 단계) 산다 (decisions.md 367·394번). 꾹 눌러 모은 단계를 묶어 보낸다. */
   @PostMapping("/battle-upgrade")
   CompanyView buyBattleUpgrade(

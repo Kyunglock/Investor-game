@@ -866,6 +866,10 @@ class CompanyEngine {
     return true;
   }
 
+  CompanyProperties.Attendance attendance() {
+    return properties.attendance();
+  }
+
   CompanyProperties.Diamonds diamonds() {
     return properties.diamonds();
   }

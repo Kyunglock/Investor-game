@@ -85,6 +85,12 @@ class SandboxController {
     return companies.sandboxCats(cookies.requirePlayer(token), request.level());
   }
 
+  /** 하루가 지난 셈 친다: 출석 보상을 다시 받을 수 있다 (decisions.md 528번). */
+  @PostMapping("/next-day")
+  CompanyView nextDay(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
+    return companies.sandboxNextDay(cookies.requirePlayer(token));
+  }
+
   /** 그 등급의 무기를 주고 사장냥이 든다. */
   @PostMapping("/weapon")
   CompanyView weapon(

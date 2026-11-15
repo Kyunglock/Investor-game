@@ -21,17 +21,20 @@ class DefaultCompanyService implements CompanyService {
   private final MemoryRepository memories;
   private final CompanyEngine engine;
   private final IdleEngine idle;
+  private final RewardsEngine rewards;
   private final SecureRandom seeds = new SecureRandom();
 
   DefaultCompanyService(
       CompanyRepository companies,
       MemoryRepository memories,
       CompanyEngine engine,
-      IdleEngine idle) {
+      IdleEngine idle,
+      RewardsEngine rewards) {
     this.companies = companies;
     this.memories = memories;
     this.engine = engine;
     this.idle = idle;
+    this.rewards = rewards;
   }
 
   @Override
@@ -381,6 +384,7 @@ class DefaultCompanyService implements CompanyService {
         investView(c, new HashSeededRandom(row.seed())),
         new CompanyView.Meetings(
             c.meetingChances, engine.meetingMax(), engine.meetingWaitSeconds(c, now)),
+        rewards.view(c),
         lockedDesks,
         engine.mental.weaponViews(c),
         engine.mental.armoryView(c),
@@ -427,6 +431,24 @@ class DefaultCompanyService implements CompanyService {
   public CompanyView reportAssault(UUID sessionId, int stage, boolean cleared, int stars) {
     CompanyRepository.Row row = lockActive(sessionId);
     throw new InvalidRequestException("매도벽 돌파는 자동 전투로 변경되었습니다");
+  }
+
+  @Override
+  @Transactional
+  public CompanyView attend(UUID sessionId) {
+    CompanyRepository.Row row = lockActive(sessionId);
+    rewards.attend(row.state());
+    companies.update(row.id(), row.state(), false);
+    return view(row);
+  }
+
+  @Override
+  @Transactional
+  public CompanyView sandboxNextDay(UUID sessionId) {
+    CompanyRepository.Row row = lockSandbox(sessionId);
+    rewards.nextDay(row.state());
+    companies.update(row.id(), row.state(), false);
+    return view(row);
   }
 
   @Override

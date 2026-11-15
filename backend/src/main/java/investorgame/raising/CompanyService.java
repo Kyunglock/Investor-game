@@ -70,6 +70,12 @@ public interface CompanyService {
   /** EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번). 분기에 한 번 무기 뽑기권을 준다. */
   CompanyView reportEx(UUID sessionId, int kills);
 
+  /** 오늘의 출석 보상을 받는다 (decisions.md 528번). 하루에 한 번, 한국 시간 자정 기준. 오늘 이미 받았으면 400. */
+  CompanyView attend(UUID sessionId);
+
+  /** 테스트판: 하루가 지난 셈 쳐서 출석 보상을 다시 받을 수 있게 한다 (528번). 테스트판 회사가 아니면 400. */
+  CompanyView sandboxNextDay(UUID sessionId);
+
   /**
    * 자본으로 전투 강화(damage·fire)를 levels단계까지 산다 (decisions.md 367·394번). 자본이 닿는 데까지 사고, 한 단계도 못 사면 400.
    * 최대 단계는 없다.
