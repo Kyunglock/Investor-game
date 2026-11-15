@@ -102,7 +102,7 @@ try {
     })
     const toIssue = async () => {
       await page.getByTestId('idle-battle').waitFor({ timeout: 30000 })
-      await page.getByRole('button', { name: /^회사( 종목회의 가능)?$/ }).click()
+      await page.getByRole('button', { name: /^회사( 종목회의 가능| EX 디펜스 가능)?$/ }).click()
       await page.getByTestId('tab-issue').click()
       await expect(page.getByTestId('meeting-open')).toBeVisible()
     }

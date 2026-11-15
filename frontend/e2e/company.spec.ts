@@ -41,6 +41,9 @@ test('회사를 차려 뽑으면 바로 앉아 1초마다 벌고, 기회를 써�
   // 새 회사는 다이아 1,000개로 시작한다 (526번).
   expect(company.diamonds.amount).toBe(START_DIAMONDS)
   expect(company.diamonds.hire).toBeGreaterThan(0)
+  // 다이아 미션 (527번): 첫 스테이지의 별 셋에 100, EX 디펜스는 하루 한 번 300.
+  expect(company.stages?.diamondsLeft[0]).toBe(100)
+  expect(company.stages?.exDiamonds).toBe(300)
 
   // 다이아로 뽑는다 (store.draw: 지금까지 뽑은 횟수를 함께 보낸다). 한 명에 diamonds.hire가 든다.
   const count = Math.min(affordable(company), company.gacha.maxDraws, company.seats)

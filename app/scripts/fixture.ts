@@ -149,6 +149,9 @@ const employee = (
   ...extra,
 })
 
+/** 깬 스테이지의 별: 다 받은 칸·덜 받은 칸·보스(1-10)가 한 챕터에 섞여 보이게. */
+const STAGE_STARS = [3, 3, 3, 3, 2, 3, 3, 1, 3, 2, 3, 2]
+
 export const company = {
   companyId: '00000000-0000-0000-0000-000000000001',
   number: 1,
@@ -333,4 +336,19 @@ export const company = {
     ],
   },
   invest: null,
+  // 멘탈 보호 스테이지 (527번): 별 30·30·40, 10의 배수는 두 배. 아직 얻지 않은 별의 몫이 남은 다이아다.
+  stages: {
+    best: STAGE_STARS.length,
+    last: 50,
+    perChapter: 10,
+    stars: STAGE_STARS,
+    bonusPercent: 30,
+    exAvailable: true,
+    diamondsLeft: Array.from({ length: 50 }, (_, i) => {
+      const left = [100, 70, 40, 0][STAGE_STARS[i] ?? 0]
+      return (i + 1) % 10 === 0 ? left * 2 : left
+    }),
+    exDiamonds: 300,
+    lastResult: null,
+  },
 } satisfies Company

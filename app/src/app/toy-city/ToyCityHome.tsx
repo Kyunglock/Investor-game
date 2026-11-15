@@ -18,7 +18,15 @@ import { chapterName, stageLabel } from '../../mental/advance'
 import { FIRST_PLAY_KEY, firstMeeting } from '../firstPlay'
 import { ClipboardIcon, NewsIcon, SoundIcon } from '../Icons'
 import { Sheet } from '../Sheet'
-import { type BattleEntry, type Tab, type ToyPanel, tabBadge, useAppUi } from '../ui'
+import {
+  type BattleEntry,
+  stageBadge,
+  stageDiamonds,
+  type Tab,
+  type ToyPanel,
+  tabBadge,
+  useAppUi,
+} from '../ui'
 import { useCountUp } from '../useCountUp'
 import { OfficeSupport } from '../Windows'
 import { BattleUpgrades } from './BattleUpgrades'
@@ -224,6 +232,28 @@ export function ToyCityHome({ company, connected }: { company: Company; connecte
           <span>건물 올리기</span>
           <small>{upgradeLocked ? '잠김' : plan?.affordable ? '확장 가능' : '성장 목표'}</small>
         </button>
+        {/* 다이아 미션 (527번, #797): 멘탈 보호 스테이지로 가는 입구. 오늘 EX 디펜스가 남아 있으면 표를 단다. */}
+        {company.stages && (
+          <button
+            type="button"
+            className="toy-menu"
+            data-testid="stage-open"
+            aria-label={`멘탈 보호 스테이지${stageBadge(company) ? ' · EX 디펜스 가능' : ''}`}
+            onClick={() => {
+              sfx.tap()
+              haptic.light()
+              setPanel('stage')
+            }}
+          >
+            <ToyIcon kind="heart" />
+            <span>멘탈 보호</span>
+            {stageBadge(company) && (
+              <b className="toy-badge" data-testid="stage-badge" aria-hidden="true">
+                {stageBadge(company)}
+              </b>
+            )}
+          </button>
+        )}
       </div>
       <div className="toy-speech" role="status">
         {hireNote
@@ -501,21 +531,32 @@ function StageSelect({ company }: { company: Company }) {
           ? `챕터 ${chapter - 1} 보스를 깨면 열린다`
           : `마친 최고 수련만큼 회사의 초당 수입이 늘어요: 지금 초당 수입 +${stages.bonusPercent}%`}
       </p>
+      <p className="text-sm text-muted" data-testid="stage-diamond-lead">
+        별을 처음 얻을 때마다 다이아를 받아요.
+      </p>
       <ol className="toy-stage-grid" data-testid="stage-grid">
         {numbers.map((n) => {
           const stars = stages.stars[n - 1] ?? 0
           const locked = n > open
           const boss = n % per === 0
+          // 남은 다이아 (527번): 얻지 않은 별의 몫. 10의 배수 스테이지는 두 배라 ×2를 단다. 다 받으면 흐리게 "다 받음".
+          const left = stageDiamonds(company, n)
+          const double = n % 10 === 0
           return (
             <li key={n}>
               <button
                 type="button"
-                className={`toy-stage-pick ${boss ? 'is-boss' : ''} ${stars > 0 ? 'is-cleared' : ''}`}
+                className={`toy-stage-pick has-diamonds ${boss ? 'is-boss' : ''} ${stars > 0 ? 'is-cleared' : ''}`}
                 disabled={locked}
                 data-testid="stage"
                 data-stage={n}
                 data-stars={stars}
-                aria-label={`수련 ${stageLabel(n, per)}${locked ? ' 잠김' : ''}${boss ? ' 보스' : ''} 별 ${stars}개`}
+                data-diamonds={left}
+                aria-label={`수련 ${stageLabel(n, per)}${locked ? ' 잠김' : ''}${boss ? ' 보스' : ''} 별 ${stars}개 · ${
+                  left > 0
+                    ? `남은 다이아 ${left.toLocaleString()}개${double ? ' (두 배)' : ''}`
+                    : '다이아 다 받음'
+                }`}
                 onClick={() => start({ kind: 'stage', stage: n })}
               >
                 <b>{locked ? '🔒' : stageLabel(n, per)}</b>
@@ -524,6 +565,29 @@ function StageSelect({ company }: { company: Company }) {
                   {'★'.repeat(stars)}
                   {'☆'.repeat(3 - stars)}
                 </small>
+                {left > 0 ? (
+                  <span
+                    className="toy-stage-diamonds"
+                    aria-hidden="true"
+                    data-testid="stage-diamonds"
+                  >
+                    <DiamondIcon />
+                    {diamondText(left)}
+                  </span>
+                ) : (
+                  <span
+                    className="toy-stage-diamonds is-done"
+                    aria-hidden="true"
+                    data-testid="stage-diamonds"
+                  >
+                    다 받음
+                  </span>
+                )}
+                {double && left > 0 && (
+                  <i className="toy-stage-double" aria-hidden="true">
+                    ×2
+                  </i>
+                )}
               </button>
             </li>
           )
@@ -536,7 +600,13 @@ function StageSelect({ company }: { company: Company }) {
         disabled={!stages.exAvailable}
         onClick={() => start({ kind: 'ex' })}
       >
-        {stages.exAvailable ? 'EX 디펜스 · 하루 한 번 · 다이아 보상' : 'EX 디펜스는 내일 다시'}
+        {stages.exAvailable ? (
+          <>
+            EX 디펜스 · 하루 한 번 · <DiamondIcon /> 다이아 {stages.exDiamonds.toLocaleString()}개
+          </>
+        ) : (
+          'EX 디펜스는 내일 다시'
+        )}
       </button>
     </>
   )
