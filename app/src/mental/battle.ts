@@ -105,7 +105,7 @@ import { type GameSpeed, simScale } from './gameSpeed'
 import { BATTLE_SECONDS, GENRES, type Genre, PACE, WAVE_SECONDS } from './genres'
 import { DEFAULT_WEAPON, type Hero, type Weapon } from './hero'
 import { BULLET_W, bulletHitbox } from './hitbox'
-import { idlePierceHits } from './idlePierce'
+import { idlePierceHits, idlePierceReach } from './idlePierce'
 import { IdleWallQueueFx, idleWallLayout } from './idleWallQueue'
 import {
   densest,
@@ -1453,7 +1453,7 @@ class BattleScene extends Phaser.Scene {
   private spawnCell(wall: WallState, row: number, col: number, hp: number, weak: boolean) {
     const e = this.enemies.get(0, 0, cellKey(0)) as Enemy | null
     if (!e) return null
-    e.setTexture(cellKey(0))
+    e.setTexture(cellKey(0, wall.spec.boss))
       .enableBody(true, 0, 0, true, true)
       .setAlpha(1)
       .setAngle(0)
@@ -1584,7 +1584,7 @@ class BattleScene extends Phaser.Scene {
         e.cell.shares = cellShares(e.hp, e.hp)
         e.cell.label.setText(this.cellLabel(e.cell.shares))
       }
-      e.setTexture(cellKey(0))
+      e.setTexture(cellKey(0, wall.spec.boss))
     }
   }
 
@@ -1595,7 +1595,7 @@ class BattleScene extends Phaser.Scene {
     const crack = Math.min(CELL_CRACKS - 1, Math.floor((1 - e.hp / e.maxHp) * CELL_CRACKS))
     if (crack > c.crack) {
       c.crack = crack
-      e.setTexture(cellKey(crack))
+      e.setTexture(cellKey(crack, c.wall.spec.boss))
       this.chips?.explode(this.fx(4 + crack * 2), e.x, e.y + 6)
       this.ring(e.x, e.y + e.displayHeight * 0.35, 0xffd58a, 30 + crack * 10, 180)
       this.playSound('thud')
@@ -3455,8 +3455,8 @@ class BattleScene extends Phaser.Scene {
   private paint(e: Enemy) {
     if (e.tintKind === 2) e.setTint(0xffb38a)
     else if (e.tintKind === 1) e.setTint(0x9fd4ff)
-    // 매도벽 칸: 보통 칸은 조금 짙게, 약한 칸은 밝게(좌우로 움직여 노릴 곳).
-    else if (e.cell && !e.cell.weak) e.setTint(0xb4c4e4)
+    // 매도벽 칸: 보통 칸은 조금 짙게, 약한 칸은 밝게(좌우로 움직여 노릴 곳). 대량 매도벽은 보라 그림 그대로 둔다.
+    else if (e.cell && !e.cell.weak && !e.cell.wall.spec.boss) e.setTint(0xb4c4e4)
     else e.clearTint()
   }
 
@@ -4299,7 +4299,11 @@ class BattleScene extends Phaser.Scene {
     // 벽은 위로 쌓여 있다: 위로 날던 총알만 뚫고 간다.
     if (vy >= 0) return
     const slope = vx / -vy
-    const layers = this.idleQueue.behind(x, slope, y)
+    // 대량 매도벽은 뚫리지 않는다: 맨 앞이 대량 매도벽이면 총알이 거기서 멈추고, 뒤의 대량 매도벽 앞에서도 멈춘다.
+    const reach = idlePierceReach(this.idleWall)
+    const layers = this.idleQueue
+      .behind(x, slope, y)
+      .filter((layer) => layer.wall - this.idleWall <= reach)
     const hits = idlePierceHits(this.idleWall, damage, layers)
     if (!layers.length) return
     for (const hit of hits) this.reportIdleHit(hit.wall, 'bullet', hit.damage, hit.behind)

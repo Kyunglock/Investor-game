@@ -5,6 +5,23 @@
  */
 export const IDLE_PIERCE: readonly number[] = [1, 0.5, 0.25]
 
+/** 열 번째 벽마다 서는 대량 매도벽(큰손 벽, 서버 IdleEngine.maxHp의 BOSS_HP). */
+export function idleBossWall(wall: number): boolean {
+  return Math.floor(wall) % 10 === 0
+}
+
+/**
+ * 총알이 맨 앞 벽(front) 뒤로 몇 벽까지 뚫고 가나: 대량 매도벽은 뚫리지 않는다. 맨 앞이 대량 매도벽이면 0이고, 뒤에 대량 매도벽이 있으면 그 앞까지다
+ * (대량 매도벽 자신도 관통 피해를 받지 않는다). 서버 IdleEngine.pierceBlocked와 같은 규칙이다.
+ */
+export function idlePierceReach(front: number): number {
+  if (idleBossWall(front)) return 0
+  for (let behind = 1; behind < IDLE_PIERCE.length; behind++) {
+    if (idleBossWall(front + behind)) return behind - 1
+  }
+  return IDLE_PIERCE.length - 1
+}
+
 /** 뒤 벽이 남기는 체력: 맨 앞 벽보다 먼저 깨지지 않게 서버가 여기까지만 깎는다. */
 export const IDLE_PIERCE_FLOOR = 1
 
@@ -26,7 +43,7 @@ export function idlePierceHits(
 ): PierceHit[] {
   if (!Number.isFinite(damage) || damage <= 0) return []
   const hits: PierceHit[] = []
-  for (let behind = 1; behind < IDLE_PIERCE.length; behind++) {
+  for (let behind = 1; behind <= idlePierceReach(front); behind++) {
     const target = walls.find((entry) => entry.wall === front + behind)
     if (!target || target.hp <= IDLE_PIERCE_FLOOR) continue
     hits.push({ wall: target.wall, behind, damage: damage * IDLE_PIERCE[behind] })
