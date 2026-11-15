@@ -2053,39 +2053,48 @@ class BattleScene extends Phaser.Scene {
     }
   }
 
-  /** 체결 숫자: 물량이 0까지 깎인 뒤 "체결!"이 떠오르며 사라진다. */
-  private fill(x: number, y: number, shares: number, color = '#dff0ff') {
+  /**
+   * 체결 글자: 물량이 0까지 깎인 뒤 "체결!"이 떠오르며 사라진다(매도벽 칸·큰손). countdown이 거짓이면 깎이는 수량 없이 "체결!"만
+   * 뜬다(매도 티켓, 544번).
+   */
+  private fill(x: number, y: number, shares: number, color = '#dff0ff', countdown = true) {
     if (this.fills.length === 0) return
     const t = this.fills[this.fillIndex++ % this.fills.length]
     this.tweens.killTweensOf(t)
     const { w } = this.view()
     const px = Phaser.Math.Clamp(x, 30, w - 30)
-    t.setText(`${shares.toLocaleString()}주`)
-      .setColor(color)
+    t.setColor(color)
       .setPosition(px, y - 6)
       .setAlpha(1)
       .setScale(0.9)
       .setVisible(true)
-    const counter = { n: shares }
-    this.tweens.add({
-      targets: counter,
-      n: 0,
-      duration: this.reducedMotion ? 1 : 240,
-      ease: 'Quad.easeOut',
-      onUpdate: () => t.setText(`${(Math.round(counter.n / 10) * 10).toLocaleString()}주`),
-      onComplete: () => {
-        t.setText('체결!').setScale(1.25)
-        this.tweens.add({
-          targets: t,
-          y: y - 40,
-          scale: 1,
-          alpha: 0,
-          duration: 420,
-          ease: 'Cubic.easeOut',
-          onComplete: () => t.setVisible(false),
-        })
-      },
-    })
+    const filled = () => {
+      t.setText('체결!').setScale(1.25)
+      this.tweens.add({
+        targets: t,
+        y: y - 40,
+        scale: 1,
+        alpha: 0,
+        duration: 420,
+        ease: 'Cubic.easeOut',
+        onComplete: () => t.setVisible(false),
+      })
+    }
+    if (countdown) {
+      t.setText(`${shares.toLocaleString()}주`)
+      const counter = { n: shares }
+      this.tweens.add({
+        targets: counter,
+        n: 0,
+        duration: this.reducedMotion ? 1 : 240,
+        ease: 'Quad.easeOut',
+        onUpdate: () => t.setText(`${(Math.round(counter.n / 10) * 10).toLocaleString()}주`),
+        onComplete: filled,
+      })
+    } else {
+      // 매도 티켓 (544번): 깎이는 수량 없이 바로 "체결!"이 떠오르며 사라진다.
+      filled()
+    }
     this.playSound('coin')
   }
 
@@ -2978,8 +2987,9 @@ class BattleScene extends Phaser.Scene {
       this.score += v.reward
       this.gainXp(v.reward)
       if (isOrder(e.kind)) {
-        // 매도 물량을 잡았다: 물량이 0까지 깎이며 "체결!" (413번). 물량이 줄면 가격이 조금 오른다 (#593).
-        if (e.kind !== 'whale') this.fill(e.x, e.y, orderShares(e.kind, this.hpScale))
+        // 매도 물량을 잡았다: 수량이 깎이는 숫자 없이 "체결!"만 뜬다 (544번, 전에는 413번). 물량이 줄면 가격이 조금 오른다 (#593).
+        if (e.kind !== 'whale')
+          this.fill(e.x, e.y, orderShares(e.kind, this.hpScale), undefined, false)
       } else {
         sfx.squish()
       }
