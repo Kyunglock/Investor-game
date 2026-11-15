@@ -2971,7 +2971,7 @@ class BattleScene extends Phaser.Scene {
         this.segmentCleared()
       }
     }
-    this.boom[e.kind].explode(e.kind === 'spec' ? 28 : 7, e.x, e.y)
+    this.boom[e.kind].explode(e.kind === 'spec' ? 12 : 7, e.x, e.y)
     if (byPlayer) {
       this.kills++
       this.score += v.reward
@@ -2983,7 +2983,7 @@ class BattleScene extends Phaser.Scene {
         sfx.squish()
       }
       if (e.kind === 'spec') {
-        this.hitstop(70)
+        // 멈칫은 두지 않는다 (535번): 떼로 잡으면 전투가 이어 끊겼다.
         this.pop(e.x, e.y - 40, '투기 진압!', '#ffd84d', 30)
       } else if (e.kind === 'stop') {
         this.pop(e.x, e.y - 30, '손절 안 해!', '#ffd84d', 22)
