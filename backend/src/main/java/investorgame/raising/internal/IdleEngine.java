@@ -645,6 +645,7 @@ class IdleEngine {
     s.damage = 0;
     s.nextDamage = 0;
     s.afterNextDamage = 0;
+    s.farDamage = null;
     s.circuitSeconds = 0;
     s.hitCredits = new double[KINDS];
   }
