@@ -28,8 +28,6 @@ interface RaisingState {
   load: () => Promise<void>
   /** 사장의 사재로 첫 회사를 차린다 (decisions.md 228번). */
   open: () => Promise<void>
-  /** 지금 회사를 닫고 사장의 사재로 다음 회사를 차린다 (decisions.md 247번). 세션은 그대로다. */
-  restart: () => Promise<void>
   /** 채용권으로 count명을 뽑는다 (decisions.md 312번). */
   draw: (count: number) => Promise<void>
   /** 직원을 내보낸다 (312번). */
@@ -151,16 +149,6 @@ export const useRaisingStore = create<RaisingState>((set, get) => {
       }
       set({ busy: false, error: reason(res?.error) })
       await get().load()
-    },
-
-    restart: async () => {
-      set({ busy: true, error: null })
-      const res = await safely(api.POST('/api/company'))
-      if (res?.data) {
-        set({ company: res.data, busy: false, tab: null })
-        return
-      }
-      set({ busy: false, error: reason(res?.error) })
     },
 
     draw: async (count) => {

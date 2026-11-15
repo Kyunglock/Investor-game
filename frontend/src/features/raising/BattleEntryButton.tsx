@@ -28,7 +28,7 @@ export function BattleEntryButton({
   )
 }
 
-/** 사무실의 분기 버튼 안에서도 같은 아이콘과 문구를 쓴다. */
+/** 사무실의 버튼 안에서도 같은 아이콘과 문구를 쓴다. */
 export function BattleEntryContent({
   mode,
   disabled,

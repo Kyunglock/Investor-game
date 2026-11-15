@@ -30,16 +30,12 @@ function employee(
   return { id, sector, grades: { insight, patience, courage, conviction, luck: 'C' } }
 }
 
-function company(
-  seats: number,
-  employees: unknown[],
-  options: { omen?: string; hot?: string } = {},
-): Company {
+function company(seats: number, employees: unknown[], options: { hot?: string } = {}): Company {
   return {
     seats,
     desks: desks.map((d) => ({ ...d, hot: d.code === options.hot })),
     employees,
-    meeting: { wanted: '', omen: options.omen },
+    meeting: {},
   } as unknown as Company
 }
 
@@ -75,7 +71,7 @@ describe('자동 배치 (decisions.md 232·233번)', () => {
     expect(deskOf(autoPlace(company(1, [brave], { hot: 'bio' })), 1)).toBe('semiconductor')
   })
 
-  it('셋째는 리서치 팀(안목), 폭락 조짐이 있으면 리스크 관리 팀(줏대)', () => {
+  it('셋째는 리서치 팀(안목)에 앉힌다', () => {
     const staff = [
       employee(1, 'D', 'S', 'D', 'D'),
       employee(2, 'D', 'D', 'S', 'D'),
@@ -87,9 +83,6 @@ describe('자동 배치 (decisions.md 232·233번)', () => {
     expect(deskOf(calm, 2)).toBe('semiconductor')
     expect(deskOf(calm, 3)).toBe('research')
     expect(deskOf(calm, 4)).toBeNull()
-    const stormy = autoPlace(company(3, staff, { omen: '폭락 조짐' }))
-    expect(deskOf(stormy, 4)).toBe('risk')
-    expect(deskOf(stormy, 3)).toBeNull()
   })
 
   it('자리가 모자라면 남은 사람은 쉬고, 혼자면 가장 맞는 자리에 앉는다', () => {
@@ -132,17 +125,9 @@ describe('배치를 돕는 것 (decisions.md 259번)', () => {
     expect(ranked).toHaveLength(desks.length)
   })
 
-  it('폭락 조짐이 있으면 자동 배치가 폭락장에 덜 빠지는 자리를 더 쳐준다', () => {
-    const safe = { ...company(1, [employee(1, 'C', 'B', 'B', 'B')], { omen: '조짐' }) }
-    safe.desks = safe.desks.map((d) => ({ ...d, crashPercent: d.code === 'food' ? 30 : 100 }))
-    expect(autoPlace(safe)).toEqual([{ employeeId: 1, desk: 'food' }])
-    const calm = { ...safe, meeting: { wanted: '' } } as Company
-    expect(autoPlace(calm)[0].desk).not.toBe('food')
-  })
-
   it('자리의 예상 효과를 짧게 말한다', () => {
     const d = { ...desks[4], gainBp: 1800, missBp: 600, crashPercent: 30 }
-    expect(deskEffect(d)).toBe('맞히면 +18% · 틀리면 −6% · 폭락장에 덜 빠짐')
+    expect(deskEffect(d)).toBe('맞히면 +18% · 틀리면 −6%')
     expect(deskEffect({ ...desks[7], description: '형광펜을 빌려준다' })).toBe('형광펜을 빌려준다')
   })
 })

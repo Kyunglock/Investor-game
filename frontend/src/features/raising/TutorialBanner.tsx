@@ -10,21 +10,20 @@ import {
 } from './tutorial'
 
 /**
- * 튜토리얼 띠 (decisions.md 302번): 회사 화면 머리에 지금 걸음(1~5)과 할 일을 보인다. 걸음은 회사 상태가 정하고(직원을 뽑으면 다음 걸음으로), 걸음이 탭을 가리키면
+ * 튜토리얼 띠 (decisions.md 302번): 회사 화면 머리에 지금 걸음(1~4)과 할 일을 보인다. 걸음은 회사 상태가 정하고(직원을 뽑으면 다음 걸음으로), 걸음이 탭을 가리키면
  * 그 탭을 열어 준다. 건너뛰기·끝내기를 누르면 브라우저에 남아 다시 보이지 않는다.
  */
 export function TutorialBanner({ company }: { company: Company }) {
   const active = useTutorial((s) => s.active)
   const { finish } = useTutorial.getState()
   const step = tutorialStep(company)
-  const ended = company.status === 'ENDED'
   // 걸음이 바뀌어 탭을 가리키면 한 번 열어 준다. 그 뒤로 사장이 다른 탭을 봐도 되돌리지 않는다.
   useEffect(() => {
-    if (active && !ended && step.tab) {
+    if (active && step.tab) {
       useRaisingStore.setState({ tab: step.tab })
     }
-  }, [active, ended, step.tab])
-  if (!active || ended) {
+  }, [active, step.tab])
+  if (!active) {
     return null
   }
   const last = step.n === TUTORIAL_STEPS
@@ -70,7 +69,7 @@ export function useLocked(company: Company, feature: Feature): boolean {
 /** 지금 걸음이 가리키는 것이면 반짝이는 테두리 클래스. 튜토리얼이 꺼져 있으면 빈 문자열. */
 export function useTutorialSpot(company: Company, spot: 'market' | 'staff' | 'settle' | 'upgrade') {
   const active = useTutorial((s) => s.active)
-  if (!active || company.status === 'ENDED') {
+  if (!active) {
     return ''
   }
   return tutorialStep(company).spot === spot ? 'ring-2 ring-teal ring-offset-2 animate-glow' : ''
