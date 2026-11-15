@@ -54,15 +54,9 @@ export class IdleWallQueueFx {
       hp: 0,
       maxHp: 0,
       body: scene.add.image(0, 0, cellKey(0)).setOrigin(0.5, 1).setDepth(2.2).setVisible(false),
-      // 피해 숫자(깊이 8)가 벽 위로 떠오르며 지나가도 읽히게 그 위에, 짙은 바탕의 딱지로 적는다.
+      // 맨 앞 벽 칸과 같은 글자(바탕 딱지 없이)로 적는다. 피해 숫자(깊이 8)가 지나가도 가리지 않게 그 위에 둔다.
       label: scene.add
-        .text(0, 0, '', {
-          ...WALL_LABEL_STYLE,
-          fontSize: '14px',
-          strokeThickness: 0,
-          backgroundColor: 'rgba(20, 44, 84, 0.78)',
-          padding: { x: 7, y: 2 },
-        })
+        .text(0, 0, '', { ...WALL_LABEL_STYLE })
         .setOrigin(0.5)
         .setDepth(8.5)
         .setVisible(false),
@@ -95,10 +89,9 @@ export class IdleWallQueueFx {
         .setDisplaySize(width - 3, height - 3)
         .setAlpha(0.9 - i * 0.13)
         .setVisible(true)
-      // 낮은 화면에서 벽이 얇아지면 글자도 줄인다.
+      // 맨 앞 벽 칸처럼 벽 한가운데에 같은 크기로 적는다.
       layer.label
-        .setPosition(left + width / 2, y - (height - 3) / 2)
-        .setScale(Math.min(1, (height - 3) / 26))
+        .setPosition(left + width / 2, y - (height - 3) / 2 + 1)
         .setAlpha(0.95 - i * 0.13)
         .setVisible(true)
       if (!changed) continue
