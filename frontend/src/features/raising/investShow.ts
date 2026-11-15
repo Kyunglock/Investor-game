@@ -146,16 +146,14 @@ export function groupRemarks(remarks: Remark[]): { read: Remark['read']; remarks
 }
 
 /**
- * 의견 칸에 세우는 사람 (decisions.md 293번): 사람이 많아지면 이름이 칸을 꽉 채워서 **팀장만** 이름을 보이고 나머지는 "외 N명"이다. 대표 한마디도 팀장
- * 가운데 안목이 가장 높은 사람이 한다. 그 칸에 팀장이 없으면(팀장이 다른 의견이다) 칸에서 안목이 가장 높은 사람 하나만 세운다.
+ * 의견 칸에 세우는 사람 (decisions.md 293번, #801): 사람이 많아지면 이름이 칸을 꽉 채워서 대표 한 사람만 이름을 보이고 나머지는 "외 N명"이다. 대표는
+ * 칸에서 안목이 가장 높은 사람이다. 사장이 정하는 팀장은 없어졌다.
  */
-export function leadersOf(
+export function voiceOf(
   remarks: Remark[],
   employees: Company['employees'],
-): { shown: Remark[]; voice: Remark; others: number } {
-  const leaders = remarks.filter((r) => employees.find((e) => e.id === r.employeeId)?.leader)
-  const shown = leaders.length > 0 ? leaders : [spokesperson(remarks, employees)]
-  return { shown, voice: spokesperson(shown, employees), others: remarks.length - shown.length }
+): { voice: Remark; others: number } {
+  return { voice: spokesperson(remarks, employees), others: remarks.length - 1 }
 }
 
 /**

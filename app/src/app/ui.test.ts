@@ -37,19 +37,19 @@ describe('앱 탭 (decisions.md 309번)', () => {
 
   it('뒤로 가기는 시트 → 사무실 → 끝 순으로 되돌아간다', () => {
     const ui = useAppUi.getState()
-    ui.setTab('staff')
-    ui.openSheet({ kind: 'desk', desk: 'bio' })
+    ui.setTab('market')
+    ui.openSheet({ kind: 'employee', id: 1 })
     expect(useAppUi.getState().back()).toBe(true)
     expect(useAppUi.getState().sheet).toBeNull()
-    expect(useAppUi.getState().tab).toBe('staff')
+    expect(useAppUi.getState().tab).toBe('market')
     expect(useAppUi.getState().back()).toBe(true)
     expect(useAppUi.getState().tab).toBe('office')
     expect(useAppUi.getState().back()).toBe(false)
   })
 
   it('탭을 바꾸면 열린 시트는 닫힌다', () => {
-    useAppUi.getState().openSheet({ kind: 'desk', desk: 'day' })
-    useAppUi.getState().setTab('market')
+    useAppUi.getState().openSheet({ kind: 'employee', id: 1 })
+    useAppUi.getState().setTab('issue')
     expect(useAppUi.getState().sheet).toBeNull()
   })
 
@@ -58,20 +58,21 @@ describe('앱 탭 (decisions.md 309번)', () => {
     expect(tabFromWeb('settlement')).toBeNull()
     expect(tabFromWeb('market')).toBe('market')
     expect(tabFromWeb(null)).toBeNull()
+    // 없어진 배치 탭을 가리키는 옛 링크는 사무실로 간다 (#801).
+    expect(tabFromWeb('staff')).toBe('office')
   })
 
-  it('탭의 표: 이슈 !, 채용권 수, 배치 앉힌 수', () => {
+  it('탭의 표: 이슈 !, 채용권 수', () => {
     const c = company({
       gacha: { tickets: 2 } as never,
       employees: [
         { id: 1, desk: 'bio' },
-        { id: 2, desk: null },
+        { id: 2, desk: 'bio' },
       ] as never,
       meetings: { chances: 1, max: 3, nextSeconds: 60 },
     })
     expect(tabBadge(c, 'issue')).toBe('!')
     expect(tabBadge(c, 'market')).toBe('2')
-    expect(tabBadge(c, 'staff')).toBe('1/4')
     expect(tabBadge(c, 'office')).toBeNull()
     expect(tabBadge(company(), 'issue')).toBeNull()
   })

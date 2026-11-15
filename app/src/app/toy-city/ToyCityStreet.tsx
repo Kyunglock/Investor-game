@@ -395,7 +395,7 @@ function Sparkles({ points, k }: { points: [number, number][]; k: number }) {
   )
 }
 
-/** 실제 배치된 직원만 그린다. 인력 관리는 별도 탭에서 한다. */
+/** 서버가 앉힌 자리(desk)대로 직원을 그린다. 자리가 없는 직원은 그리지 않는다 (#801). */
 export function ToyCityStreet({
   company,
   transition,

@@ -129,7 +129,7 @@ export function teamClashMs(debate: DebateLine[]): number {
 }
 
 /**
- * 한쪽에 서는 사람 (decisions.md 295번): 토론에서 말한 사람(팀장, 그쪽에 팀장이 없으면 안목 1위, 비었으면 끌려 나온 사람)만. 말한 순서대로.
+ * 한쪽에 서는 사람 (decisions.md 295번): 토론에서 말한 사람(그쪽의 안목 1위, 비었으면 끌려 나온 사람)만. 말한 순서대로.
  */
 export function sidePeople(names: string[], side: 'BUY' | 'SELL', debate: DebateLine[]): string[] {
   const spoke = [...new Set(debate.filter((d) => d.side === side).map((d) => d.name))]
@@ -375,7 +375,7 @@ export function TeamClash({
                 talking={up}
                 fallback={done ? (wins ? '🙌' : '😩') : name.slice(0, 1)}
               />
-              {/* 이름은 한 줄에 온전히, 팀장 별·등급은 그 밑 작은 줄에: 한 줄에 다 넣으니 세 글자 이름이 칸(48px)을 넘어 밀렸다. */}
+              {/* 이름은 한 줄에 온전히, 등급은 그 밑 작은 줄에: 한 줄에 다 넣으니 세 글자 이름이 칸(48px)을 넘어 밀렸다. */}
               <span
                 className={`whitespace-nowrap text-center text-[10px] leading-tight ${up ? 'font-bold' : ''}`}
                 data-testid="speaker-name"
@@ -384,7 +384,6 @@ export function TeamClash({
               </span>
               {staffOf(name) && (
                 <span className="whitespace-nowrap text-center font-mono-num text-[9px] text-muted leading-none">
-                  {staffOf(name)?.leader && <span className="text-gold">★</span>}
                   {staffOf(name)?.overallGrade}
                 </span>
               )}
@@ -562,9 +561,7 @@ export function TeamClash({
                     <span
                       className={`block text-[11px] ${buySide ? 'text-up' : 'text-right text-down'}`}
                     >
-                      {who?.leader && <span className="text-gold">★</span>}
                       {d.name}
-                      {who?.leader ? ' · 팀장' : ''}
                     </span>
                     <div
                       // 외침 (358번): 느낌표로 끝나는 말은 크게 튀어나오며 흔들리고, 선언은 쿵 찍힌다.

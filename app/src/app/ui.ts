@@ -2,11 +2,14 @@ import type { Company } from '@web/api/client'
 import { create } from 'zustand'
 import { meetingReady } from './meeting'
 
-/** 아래 탭 (decisions.md 309·312번): 사무실 · 채용 · 배치 · 이슈 · 기록. 웹의 탭(이슈·채용·배치·지난 결산·연표)을 폰 화면에 맞게 다시 나눴다. */
-export type Tab = 'office' | 'market' | 'staff' | 'issue' | 'record'
+/**
+ * 아래 탭 (decisions.md 309·312번): 사무실 · 채용 · 이슈 · 기록. 웹의 탭을 폰 화면에 맞게 다시 나눴다. 뽑은 직원은 서버가 앉히므로 배치 탭은
+ * 없다 (#801).
+ */
+export type Tab = 'office' | 'market' | 'issue' | 'record'
 
 /**
- * 인력 관리의 자리 카드와 메인 화면의 설정·확장·멘탈·전투 강화(367번) 시트. assault는 주 게임 매도벽 돌파 스테이지 선택, side는 보조게임
+ * 메인 화면의 설정·확장·멘탈·전투 강화(367번) 시트. assault는 주 게임 매도벽 돌파 스테이지 선택, side는 보조게임
  * (종목회의·멘탈 보호 스테이지) 메뉴다 (#698).
  */
 export type ToyPanel = 'upgrade' | 'stage' | 'settings' | 'battle' | 'assault' | 'side'
@@ -21,13 +24,11 @@ export type BattleEntry =
   | { kind: 'ex' }
   | { kind: 'invest'; mode: 'DEFENSE' | 'ASSAULT'; level: number }
 /**
- * 인력 관리의 시트 (decisions.md 412번): 팀(desk), 앉은 직원 상세(employee), 휴게실 동료를 보낼 팀 고르기(lounge). weapons는 전투에서
- * 무기를 바꾸러 올 때 여는 성장 › 인벤토리다 (489번).
+ * 시트: employee는 채용 화면의 우리 직원 목록에서 여는 직원 상세다 (#801). weapons는 전투에서 무기를 바꾸러 올 때 여는 성장 › 인벤토리다
+ * (489번).
  */
 export type Sheet =
-  | { kind: 'desk'; desk: string }
   | { kind: 'employee'; id: number }
-  | { kind: 'lounge'; id: number }
   | { kind: 'toy'; panel: ToyPanel }
   | { kind: 'weapons' }
 
@@ -87,13 +88,16 @@ export const useAppUi = create<UiState>((set, get) => ({
   },
 }))
 
-/** 웹의 튜토리얼이 가리키는 탭을 앱 탭으로 (TutorialBanner가 store.tab을 바꾼다). */
+/**
+ * 웹의 튜토리얼이 가리키는 탭을 앱 탭으로 (TutorialBanner가 store.tab을 바꾼다). 없어진 배치 탭(staff)을 가리키는 옛 링크는 사무실로 간다
+ * (#801).
+ */
 export function tabFromWeb(tab: string | null): Tab | null {
   switch (tab) {
     case 'market':
       return 'market'
     case 'staff':
-      return 'staff'
+      return 'office'
     case 'meeting':
       return 'issue'
 
@@ -102,15 +106,13 @@ export function tabFromWeb(tab: string | null): Tab | null {
   }
 }
 
-/** 탭에 다는 표: 이슈는 !(종목회의를 열거나 이어 갈 수 있다, #803), 채용은 채용권 수, 배치는 앉힌 수. */
+/** 탭에 다는 표: 이슈는 !(종목회의를 열거나 이어 갈 수 있다, #803), 채용은 채용권 수. */
 export function tabBadge(company: Company, tab: Tab): string | null {
   switch (tab) {
     case 'issue':
       return meetingReady(company) ? '!' : null
     case 'market':
       return company.gacha.tickets > 0 ? String(company.gacha.tickets) : null
-    case 'staff':
-      return `${company.employees.filter((e) => e.desk).length}/${company.seats}`
     default:
       return null
   }

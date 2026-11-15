@@ -102,11 +102,11 @@ export function MeetingCard({ company }: { company: Company }) {
         disabled={busy || locked || !can}
         onClick={(ev) => void open(ev.currentTarget)}
       >
-        {busy ? '처리 중…' : locked ? '직원을 앉혀주세요' : LABEL[state]}
+        {busy ? '처리 중…' : locked ? '직원을 먼저 뽑아주세요' : LABEL[state]}
       </button>
       {state === 'nodesk' && !locked && (
         <p className="text-[12px] text-ink/60" data-testid="meeting-hint">
-          돈을 굴리는 자리에 직원을 앉혀야 회의를 열 수 있어요.
+          돈을 굴리는 팀에 동료가 없어요. 동료를 더 뽑으면 회의를 열 수 있어요.
         </p>
       )}
       {error && (

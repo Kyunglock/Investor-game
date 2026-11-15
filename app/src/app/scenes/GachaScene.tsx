@@ -1,24 +1,34 @@
 import './company-scenes.css'
 import type { Company } from '@web/api/client'
 import { CollectionGrid, RatesTable } from '@web/features/raising/Gacha'
+import { GradeBadge, GradeCard } from '@web/features/raising/GradeCard'
 import { collected, drawable } from '@web/features/raising/gachaRules'
+import { LADDER } from '@web/features/raising/grades'
+import { titleOf } from '@web/features/raising/office'
 import { useRaisingStore } from '@web/features/raising/store'
 import { useState } from 'react'
 import { useFx } from '../../fx/fx'
 import { haptic } from '../../fx/haptics'
 import { sfx } from '../../fx/sound'
+import { type Employee, EmployeeDetail, IncomeTag } from '../people'
+import { Sheet } from '../Sheet'
+import { useAppUi } from '../ui'
 
-type Part = 'draw' | 'dex'
+type Part = 'draw' | 'crew' | 'dex'
 
 /**
- * 채용 장면 (decisions.md 312번): 뽑기 · 도감. 뽑기는 큰 채용권 숫자와 1명·N명 뽑기 버튼, 확률표(내보내기는 없앴다, 338번). 도감은 만난 등급을
- * 모은다. 직원 합성은 뺐다(384번).
+ * 채용 장면 (decisions.md 312번, #801): 뽑기 · 동료 · 도감. 뽑기는 큰 채용권 숫자와 1명·N명 뽑기 버튼, 확률표. 뽑힌 직원은 서버가 바로 자리에
+ * 앉히므로 사장이 할 배치가 없고, 동료 목록에서 한 명을 누르면 상세(등급·능력치·초당 수입)를 본다. 도감은 만난 등급을 모은다.
  */
 export function GachaScene({ company }: { company: Company }) {
   const [part, setPart] = useState<Part>('draw')
+  const sheet = useAppUi((s) => s.sheet)
+  const shown =
+    sheet?.kind === 'employee' ? company.employees.find((e) => e.id === sheet.id) : undefined
 
   const parts: { id: Part; label: string; badge?: string }[] = [
     { id: 'draw', label: '뽑기' },
+    { id: 'crew', label: `동료 ${company.employees.length}` },
     { id: 'dex', label: `도감 ${collected(company)}/${company.gacha.collection.length}` },
   ]
   return (
@@ -60,23 +70,87 @@ export function GachaScene({ company }: { company: Company }) {
       </div>
       <div className="mt-3">
         {part === 'draw' && <DrawPart company={company} />}
+        {part === 'crew' && <CrewPart company={company} />}
         {part === 'dex' && (
           <div className="panel p-3">
             <CollectionGrid company={company} />
           </div>
         )}
       </div>
+      {shown && (
+        <Sheet
+          title={shown.name}
+          onClose={() => useAppUi.getState().closeSheet()}
+          testId="employee-sheet"
+        >
+          <GradeCard
+            grade={shown.overallGrade}
+            badgeLabel="종합"
+            className="p-3 pl-[68px]"
+            data-testid="employee"
+          >
+            <EmployeeDetail employee={shown} company={company} />
+          </GradeCard>
+        </Sheet>
+      )}
     </div>
   )
 }
 
-/** 뽑기: 채용권 숫자, 1명·N명 뽑기, 확률표. */
+/** 우리 동료 목록 (#801): 등급이 높은 순으로 이름·등급·앉은 팀·초당 수입. 누르면 상세 시트가 열린다. 보기만 한다. */
+function CrewPart({ company }: { company: Company }) {
+  const rank = (e: Employee) => LADDER.indexOf(e.overallGrade)
+  const crew = [...company.employees].sort((a, b) => rank(b) - rank(a) || a.id - b.id)
+  const deskName = (code: string | null | undefined) =>
+    company.desks.find((d) => d.code === code)?.name
+  if (crew.length === 0) {
+    return (
+      <p className="panel p-4 text-center text-[13px] text-ink/60" data-testid="crew-empty">
+        아직 함께하는 동료가 없어요. 뽑기에서 첫 동료를 만나보세요.
+      </p>
+    )
+  }
+  return (
+    <div className="panel p-3">
+      <p className="mb-2 text-[12px] text-ink/60">
+        뽑은 동료는 바로 자리에 앉아 일해요. 눌러서 자세히 볼 수 있어요.
+      </p>
+      <ul className="grid gap-1.5" data-testid="crew">
+        {crew.map((e) => (
+          <li key={e.id}>
+            <button
+              type="button"
+              onClick={() => {
+                sfx.tap()
+                useAppUi.getState().openSheet({ kind: 'employee', id: e.id })
+              }}
+              className="crew-row"
+              data-testid="crew-row"
+            >
+              <GradeBadge grade={e.overallGrade} size="sm" />
+              <span className="crew-name">
+                <b>{e.name}</b>
+                <small>{deskName(e.desk) ?? titleOf(e.overallGrade)}</small>
+              </span>
+              <IncomeTag employee={e} />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/** 뽑기: 채용권 숫자, 1명·N명 뽑기, 확률표. 자리가 꽉 차면 뽑을 수 없고 그때만 자리 수를 보인다 (#801). */
 function DrawPart({ company }: { company: Company }) {
   const busy = useRaisingStore((s) => s.busy)
+  const error = useRaisingStore((s) => s.error)
   const { draw } = useRaisingStore.getState()
   const g = company.gacha
-  const many = drawable(company)
-  const full = g.roster >= g.rosterMax
+  // 자리(seats)만큼만 데리고 있을 수 있다: 남은 자리보다 많이 뽑지 않는다.
+  const seatsLeft = Math.max(0, company.seats - company.employees.length)
+  const many = Math.min(drawable(company), seatsLeft)
+  const full = seatsLeft === 0
   const press = (count: number, el: Element) => {
     sfx.stamp()
     haptic.medium()
@@ -95,8 +169,7 @@ function DrawPart({ company }: { company: Company }) {
         <div className="text-right">
           <p className="text-[12px] text-ink/60">함께하는 동료</p>
           <p className="font-mono-num text-[20px] font-bold" data-testid="roster">
-            {g.roster}
-            {g.rosterMax < 100_000 && ` / ${g.rosterMax}`}명
+            {company.employees.length}명
           </p>
         </div>
       </div>
@@ -109,7 +182,7 @@ function DrawPart({ company }: { company: Company }) {
           data-testid="draw-one"
         >
           <span>1명 뽑기</span>
-          <small>채용권 1장</small>
+          <small>{full ? '자리가 없어요' : '채용권 1장'}</small>
         </button>
         <button
           type="button"
@@ -119,12 +192,28 @@ function DrawPart({ company }: { company: Company }) {
           data-testid="draw-many"
         >
           <span>{many >= 2 ? `${many}명 뽑기` : '여러 명'}</span>
-          <small>{many >= 2 ? `채용권 ${many}장` : '채용권을 모아주세요'}</small>
+          <small>
+            {many >= 2
+              ? `채용권 ${many}장`
+              : full
+                ? '자리가 없어요'
+                : seatsLeft < 2
+                  ? '남은 자리 1'
+                  : '채용권을 모아주세요'}
+          </small>
         </button>
       </div>
+      {error && (
+        <p role="alert" className="text-[12px] text-red-pen" data-testid="draw-error">
+          {error}
+        </p>
+      )}
       {full ? (
-        <p className="text-[12px] text-red-pen" data-testid="roster-full">
-          데리고 있을 자리({g.rosterMax}명)가 꽉 찼습니다.
+        <p className="recruit-full" data-testid="roster-full">
+          <b className="font-mono-num">
+            자리 {company.employees.length} / {company.seats}
+          </b>
+          <span>회사를 넓히면 더 뽑을 수 있어요</span>
         </p>
       ) : (
         <p className="text-[12px] text-ink/60">

@@ -13,12 +13,11 @@ import { useIdleBattle } from '@web/features/raising/useIdleBattle'
 import { useEffect, useRef, useState } from 'react'
 import { isMuted, setMuted, sfx } from '../fx/sound'
 import { IdleHome } from '../idle/IdleHome'
-import { BookIcon, BuildingIcon, ChairIcon, ClipboardIcon, NewsIcon, SoundIcon } from './Icons'
+import { BookIcon, BuildingIcon, ClipboardIcon, NewsIcon, SoundIcon } from './Icons'
 import { GachaScene } from './scenes/GachaScene'
 import { IssueScene } from './scenes/IssueScene'
 import { OfficeScene } from './scenes/OfficeScene'
 import { RecordScene } from './scenes/RecordScene'
-import { StaffScene } from './scenes/StaffScene'
 import { type Tab, tabBadge, tabFromWeb, useAppUi } from './ui'
 import { useCountUp } from './useCountUp'
 import { Windows } from './Windows'
@@ -26,13 +25,12 @@ import { Windows } from './Windows'
 const TABS: { id: Tab; label: string; icon: () => React.ReactNode }[] = [
   { id: 'office', label: '사무실', icon: BuildingIcon },
   { id: 'market', label: '도감', icon: ClipboardIcon },
-  { id: 'staff', label: '인력 관리', icon: ChairIcon },
   { id: 'issue', label: '이슈', icon: NewsIcon },
   { id: 'record', label: '기록', icon: BookIcon },
 ]
 
 /**
- * 앱 화면의 틀 (decisions.md 309·310번, #803): 위에 회사 머리띠(건물·자본), 가운데 장면 하나, 아래에 다섯 탭. 문서처럼 길게 내리지 않고
+ * 앱 화면의 틀 (decisions.md 309·310번, #803): 위에 회사 머리띠(건물·자본), 가운데 장면 하나, 아래에 네 탭. 문서처럼 길게 내리지 않고
  * 장면을 옆으로 밀어 가며 본다. 장면 안에서만 스크롤한다. 자본은 숫자가 굴러간다.
  */
 export function Shell({ company }: { company: Company }) {
@@ -66,7 +64,6 @@ export function Shell({ company }: { company: Company }) {
     prevTab.current = tab
   }, [tab])
   const marketSpot = useTutorialSpot(company, 'market')
-  const staffSpot = useTutorialSpot(company, 'staff')
   // 튜토리얼 잠금·해금 (347번): 열리지 않은 탭은 잠긴다. 새로 열리면 위에 잠깐 알린다.
   const tutorialOn = useTutorial((s) => s.active)
   const unlocked = unlockedFeatures(company, tutorialOn)
@@ -119,7 +116,6 @@ export function Shell({ company }: { company: Company }) {
             />
           )}
           {tab === 'market' && <GachaScene company={company} />}
-          {tab === 'staff' && <StaffScene company={company} />}
           {tab === 'issue' && <IssueScene company={company} />}
           {tab === 'record' && <RecordScene company={company} />}
         </div>
@@ -127,7 +123,7 @@ export function Shell({ company }: { company: Company }) {
       {tab !== 'office' && (
         <div className="safe-bottom">
           <nav
-            className="grid grid-cols-5 gap-1 border-(--outline) border-t-[3px] bg-white px-1.5 pt-1.5 pb-1"
+            className="grid grid-cols-4 gap-1 border-(--outline) border-t-[3px] bg-white px-1.5 pt-1.5 pb-1"
             aria-label="회사 일"
           >
             {TABS.map((t) => {
@@ -152,7 +148,7 @@ export function Shell({ company }: { company: Company }) {
                     on
                       ? 'border-(--outline) bg-(--gold-bright) text-ink shadow-[0_3px_0_var(--outline)]'
                       : 'border-transparent text-ink/60'
-                  } ${t.id === 'market' ? marketSpot : t.id === 'staff' ? staffSpot : ''}`}
+                  } ${t.id === 'market' ? marketSpot : ''}`}
                   data-testid={`tab-${t.id}`}
                   data-locked={locked || undefined}
                 >

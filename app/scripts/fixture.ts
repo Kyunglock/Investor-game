@@ -127,20 +127,19 @@ const employee = (
   name: string,
   overallGrade: Grade,
   grades: Record<string, Grade>,
-  desk: string | null,
+  // 뽑으면 서버가 바로 앉히므로 모두 자리가 있다 (#801).
+  desk: string,
   extra: Partial<Company['employees'][number]> = {},
 ): Company['employees'][number] => ({
   id,
   name,
   overallGrade,
   effects: [],
-  perk: '주니어 · 맞히면 1.4배 번다(+40%) · 손 뒤집힘 −10% · 한 해 일하면 40% 확률로 자란다',
+  perk: '주니어 · 손 뒤집힘 −10% · 한 해 일하면 40% 확률로 자란다',
   grades,
   desk,
   sector: null,
   sectorName: null,
-  leader: false,
-  morale: 0,
   role: null,
   // 직원이 1초에 버는 돈 (#803): 보기용으로 번호에 따라 조금씩 다르게 둔다.
   incomePerSecond: 1200 + id * 350,
@@ -159,19 +158,18 @@ export const company = {
   grade: 'E',
   nextGradeCapital: 600_000_000,
   upgrade: { to: 'D', cost: 150_000_000, needed: 750_000_000, affordable: false },
-  seats: 6,
+  seats: 8,
   employees: [
     employee(1, '김대리', 'B', g('B', 'A', 'C', 'B', 'D'), 'semiconductor', {
-      leader: true,
       sector: 'semiconductor',
       sectorName: '반도체',
     }),
-    employee(2, '박과장', 'C', g('C', 'C', 'B', 'D', 'C'), 'bio', { leader: true, morale: -1 }),
-    employee(3, '이사원', 'D', g('A', 'D', 'E', 'D', 'C'), 'research', { leader: true }),
-    employee(4, '최주임', 'E', g('E', 'E', 'D', 'F', 'B'), 'semiconductor', { morale: 1 }),
-    employee(5, '한도윤', 'S', g('S', 'A', 'S', 'A', 'B'), null),
-    employee(6, '정아름', 'E', g('E', 'D', 'E', 'E', 'D'), null),
-    employee(7, '윤서연', 'E', g('E', 'F', 'E', 'E', 'D'), null),
+    employee(2, '박과장', 'C', g('C', 'C', 'B', 'D', 'C'), 'bio'),
+    employee(3, '이사원', 'D', g('A', 'D', 'E', 'D', 'C'), 'research'),
+    employee(4, '최주임', 'E', g('E', 'E', 'D', 'F', 'B'), 'semiconductor'),
+    employee(5, '한도윤', 'S', g('S', 'A', 'S', 'A', 'B'), 'day'),
+    employee(6, '정아름', 'E', g('E', 'D', 'E', 'E', 'D'), 'food'),
+    employee(7, '윤서연', 'E', g('E', 'F', 'E', 'E', 'D'), 'bio'),
   ],
   desks,
   meeting: {
@@ -183,7 +181,8 @@ export const company = {
   gacha: {
     tickets: 6,
     roster: 7,
-    rosterMax: 12,
+    // 데리고 있을 수 있는 수는 자리 수와 같다 (#801).
+    rosterMax: 8,
     draws: 9,
     maxDraws: 10,
     rates: [

@@ -213,7 +213,7 @@ export function CollectionGrid({ company }: { company: Company }) {
   )
 }
 
-/** 웹의 채용 탭 (312번): 채용권과 뽑기 버튼, 확률표, 도감. 내보내기는 없앴다(338번), 합성도 뺐다(384번). */
+/** 웹의 채용 탭 (312번): 채용권과 뽑기 버튼, 확률표, 도감. 합성은 뺐다(384번). 뽑힌 직원은 서버가 바로 앉힌다 (#801). */
 /** 이 값 이상이면 인원 상한이 없는 것으로 본다 (decisions.md 354번). */
 const NO_LIMIT = 100_000
 
@@ -264,7 +264,7 @@ export function GachaPanel({ company }: { company: Company }) {
       </div>
       {full && (
         <p className="mt-1 text-[12px] text-wine" data-testid="roster-full">
-          데리고 있을 자리가 꽉 찼습니다.
+          자리 {g.roster} / {g.rosterMax} · 회사를 넓히면 더 뽑을 수 있어요
         </p>
       )}
       <details className="mt-2">

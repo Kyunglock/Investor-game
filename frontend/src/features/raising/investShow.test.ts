@@ -4,11 +4,11 @@ import {
   chartTimeline,
   groupRemarks,
   investTimeline,
-  leadersOf,
   matchupOf,
   percentOf,
   returnText,
   spokesperson,
+  voiceOf,
 } from './investShow'
 
 type Result = NonNullable<NonNullable<Company['invest']>['outcome']>['results'][number]
@@ -143,19 +143,13 @@ describe('같은 의견 칸의 대표 (decisions.md 246번)', () => {
     expect(spokesperson([remark(1)], staff).employeeId).toBe(1)
   })
 
-  it('팀장만 이름을 보이고 나머지는 "외 N명"이며, 팀장이 없는 칸은 대표 하나만 선다 (293번)', () => {
-    const led = [
-      { id: 1, leader: true, grades: { insight: 'C' } },
-      { id: 2, leader: false, grades: { insight: 'S' } },
-      { id: 3, leader: true, grades: { insight: 'A' } },
-    ] as unknown as Company['employees']
-    const all = leadersOf([remark(1), remark(2), remark(3)], led)
-    expect(all.shown.map((r) => r.employeeId)).toEqual([1, 3])
-    expect(all.voice.employeeId).toBe(3)
-    expect(all.others).toBe(1)
-    const none = leadersOf([remark(2)], led)
-    expect(none.shown.map((r) => r.employeeId)).toEqual([2])
-    expect(none.others).toBe(0)
+  it('대표 한 사람만 이름을 보이고 나머지는 "외 N명"이다 (293번, #801)', () => {
+    const all = voiceOf([remark(1), remark(2), remark(3)], staff)
+    expect(all.voice.employeeId).toBe(2)
+    expect(all.others).toBe(2)
+    const alone = voiceOf([remark(1)], staff)
+    expect(alone.voice.employeeId).toBe(1)
+    expect(alone.others).toBe(0)
   })
 })
 
