@@ -500,16 +500,27 @@ class MentalEngine {
   }
 
   /** 스테이지 화면 값 (369번). */
+  private static final int MAX_STARS = 3;
+
   CompanyView.Stages stagesView(CompanyState c, String today) {
     CompanyProperties.Stages rule = properties.mental().stages();
     CompanyState.StageResult r = c.lastStage;
+    List<Integer> stars = c.stageStars == null ? List.of() : List.copyOf(c.stageStars);
+    // 스테이지마다 아직 받을 수 있는 다이아 (527번): 얻지 않은 별의 몫. 다 받았으면 0.
+    List<Long> remaining = new ArrayList<>();
+    for (int stage = 1; stage <= lastStage(); stage++) {
+      int earned = stage <= stars.size() ? stars.get(stage - 1) : 0;
+      remaining.add(properties.diamonds().forStars(stage, earned, MAX_STARS));
+    }
     return new CompanyView.Stages(
         bestStage(c),
         lastStage(),
         rule.perChapter(),
-        c.stageStars == null ? List.of() : List.copyOf(c.stageStars),
+        stars,
         bonusPercent(c),
         !today.equals(c.exDay),
+        remaining,
+        properties.diamonds().ex(),
         r == null
             ? null
             : new CompanyView.StageResult(

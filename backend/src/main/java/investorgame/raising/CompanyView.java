@@ -179,8 +179,10 @@ public record CompanyView(
    * @param last 마지막 스테이지(챕터당 스테이지 수 × 챕터 수, 407번)
    * @param perChapter 한 챕터의 스테이지 수. 챕터 마지막은 보스
    * @param stars 깬 스테이지의 별, 1번부터 차례로
-   * @param bonusPercent 이번 분기 강화율(%): 깬 최고 스테이지로 매 분기 저절로 붙는다
-   * @param exAvailable 이번 분기 EX 디펜스를 아직 안 했다
+   * @param bonusPercent 멘탈 보호 보너스(%): 깬 최고 스테이지만큼 회사의 초당 수입에 곱한다 (523번)
+   * @param exAvailable 오늘 EX 디펜스를 아직 안 했다. 하루에 한 번이다 (523번)
+   * @param diamondsLeft 스테이지마다 아직 받을 수 있는 다이아, 1번부터 마지막 스테이지까지 (527번). 별 셋을 다 얻었으면 0
+   * @param exDiamonds EX 디펜스 한 번의 다이아 (527번)
    * @param lastResult 마지막으로 보낸 스테이지·EX 결과와 받은 보상. 없으면 null
    */
   public record Stages(
@@ -190,6 +192,8 @@ public record CompanyView(
       List<Integer> stars,
       int bonusPercent,
       boolean exAvailable,
+      List<Long> diamondsLeft,
+      long exDiamonds,
       StageResult lastResult) {}
 
   /**
