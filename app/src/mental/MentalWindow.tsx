@@ -269,9 +269,7 @@ export function MentalWindow({
                 </span>
               )}
               <StagePortrait weapon={heroOf(company).weapon} />
-              {mode === 'assault' && (
-                <small>패닉셀·투매를 뚫고 전진!</small>
-              )}
+              {mode === 'assault' && <small>패닉셀·투매를 뚫고 전진!</small>}
               {mode !== 'assault' && (
                 <>
                   <div className="stage-mini-wall">
