@@ -401,6 +401,7 @@ class DefaultCompanyService implements CompanyService {
   @Transactional
   public CompanyView equipWeapon(UUID sessionId, String kind, String grade) {
     CompanyRepository.Row row = lockActive(sessionId);
+    idle.requireFreeForBoss(row.state(), kind, grade);
     engine.mental.equip(row.state(), kind, grade);
     idle.releaseWeapons(row.state());
     companies.update(row.id(), row.state(), false);
@@ -517,6 +518,7 @@ class DefaultCompanyService implements CompanyService {
   @Transactional
   public CompanyView mergeWeapon(UUID sessionId, String kind, String grade) {
     CompanyRepository.Row row = lockActive(sessionId);
+    idle.requireFreeForMerge(row.state(), kind, grade, engine.mental.mergeCount());
     engine.mental.mergeWeapon(row.state(), kind, grade);
     idle.releaseWeapons(row.state());
     companies.update(row.id(), row.state(), false);
