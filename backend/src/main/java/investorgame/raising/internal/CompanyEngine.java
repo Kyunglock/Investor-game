@@ -199,12 +199,6 @@ class CompanyEngine {
         .anyMatch(e -> e != employee && employee.desk.equals(e.desk) && reaches(e, PULL));
   }
 
-  /** 맞히면 버는 배수(1 + 더 버는 몫): "13.8". */
-  private static String times(long gainPercent) {
-    return String.format(
-        java.util.Locale.ROOT, "%,.1f", (PERCENT + gainPercent) / (double) PERCENT);
-  }
-
   /** 그 등급까지 쌓인 등급 효과 가운데 가장 높은 것 (387번). A 아래면 없다. */
   private java.util.Optional<RaisingContent.Effect> topEffect(String grade) {
     int at = LADDER.indexOf(grade);
@@ -237,13 +231,14 @@ class CompanyEngine {
     return String.join(" · ", parts);
   }
 
-  /** 뽑기 카드의 짧은 등급 효과 (387번): "맞히면 13.8배 · 방패". 등급만으로 정해 지난 뽑기에도 보인다. */
+  /**
+   * 뽑기 결과 카드에 보이는 등급 효과 한 줄 (387번): 그 등급의 이름 붙은 효과, 없으면 등급 이름. "맞히면 N배"는 분기 손익에 쓰던 배수라 뺐다 (524번).
+   */
   String drawnPerk(String grade) {
-    String line =
-        Korean.fill(
-            content.raising().company().perks().drawn(),
-            Map.of("times", times(gainPercentOf(grade))));
-    return topEffect(grade).map(effect -> line + " · " + effect.name()).orElse(line);
+    RaisingContent.Perks texts = content.raising().company().perks();
+    return topEffect(grade)
+        .map(effect -> effect.name())
+        .orElse(texts.names().getOrDefault(grade, grade));
   }
 
   /** 첫 회사의 시작 자본(사장의 사재). */
