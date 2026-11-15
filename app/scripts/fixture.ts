@@ -1,4 +1,7 @@
-import type { Company, Grade } from '../../frontend/src/api/client.ts'
+import type { components } from '../../frontend/src/api/schema.d.ts'
+
+type Company = components['schemas']['Company']
+type Grade = components['schemas']['Grade']
 
 /**
  * 화면을 눈으로 보기 위한 가짜 회사 (scripts/shot.ts). 서버 없이 Playwright가 /api/company에 이 값을 돌려준다. 규칙·숫자는 아무 뜻 없는 보기용이다.

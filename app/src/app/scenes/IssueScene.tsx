@@ -12,8 +12,8 @@ export function IssueScene({ company }: { company: Company }) {
       <section className="panel grid gap-1.5 p-3" data-testid="issue-meeting">
         <p className="text-[15px] font-bold text-ink">종목회의</p>
         <p className="text-[12px] text-ink/60">
-          기사를 읽고 매수·매도를 골라요. 맞히면 벌고, 틀려도 손실은 없어요. 기회는 한 시간에 하나씩
-          생겨요.
+          기사를 읽고 매수·매도를 골라요. 맞히면 벌고 틀리면 잃어요(자본이 0 아래로 내려가지는
+          않아요). 기회는 한 시간에 하나씩 생겨요.
         </p>
         <MeetingCard company={company} />
       </section>
