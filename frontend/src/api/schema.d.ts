@@ -1036,6 +1036,13 @@ export interface components {
                 bonusPercent: number;
                 /** @description 오늘 EX 디펜스를 아직 안 했다. 하루에 한 번이고 한국 시간 자정에 다시 열린다 (523번) */
                 exAvailable: boolean;
+                /** @description 스테이지마다 아직 받을 수 있는 다이아, 1번부터 마지막 스테이지까지 (527번). 별을 처음 얻을 때마다 받으므로 얻지 않은 별의 몫이다. 별 셋을 다 얻었으면 0 */
+                diamondsLeft: number[];
+                /**
+                 * Format: int64
+                 * @description EX 디펜스 한 번의 다이아 (527번)
+                 */
+                exDiamonds: number;
                 /** @description 마지막으로 보낸 스테이지·EX 결과와 받은 보상. 없으면 null */
                 lastResult: {
                     /** @description 스테이지 번호. EX 디펜스면 0 */
