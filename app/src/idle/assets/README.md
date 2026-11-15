@@ -10,3 +10,7 @@
 ## 신규 동료 33종 (2026-11-15)
 
 승인 시안 08~40의 초상화는 `../../mental/assets/roster/` 원본에 전투 자세와 함께 보관한다. `CatPortrait`가 `catRosterFrames.json`의 초상화 영역만 읽으며 기존 7종은 위 원본을 유지한다.
+
+## 카드용 얼굴 아틀라스 (`cat-faces.webp`)
+
+화면에서는 위 원본을 직접 받지 않는다. `scripts/catFaceAtlas.py`가 기존 7종(`cat-portraits.png`)과 신규 33종(roster 원본의 초상화 영역)의 얼굴만 잘라 256px 칸 8×5 WebP 한 장(약 0.6MB)과 위치표 `cat-face-rects.json`으로 만든다. 1~2MB짜리 전투 원본 11장(약 19MB)을 카드 하나 그리려고 받지 않게 하려는 것이다. 원본이나 `catRosterFrames.json`이 바뀌면 스크립트를 다시 돌린다. 이 아틀라스는 로딩 화면에서 가장 먼저 미리 받는다.
