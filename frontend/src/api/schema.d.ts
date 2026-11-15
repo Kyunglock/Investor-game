@@ -37,7 +37,7 @@ export interface paths {
         /**
          * 사장의 사재로 회사를 차린다 (decisions.md 228·247번)
          * @description 직원 없이 열리고 첫 해 공채 시장에 지원자가 와 있다. 이미 회사가 있으면 400(회사는 세션마다 하나).
-         *     가장 최근 회사가 망했으면(broke가 있으면) 그 회사를 닫고 다음 번호의 회사를 새로 차린다. 직원은 쉬는 채로 모두 따라온다 (decisions.md 265번).
+         *     회사는 끝나지 않는다 (523번): 파산해 닫고 다음 회사를 차리는 길은 없앴다.
          */
         post: operations["openCompany"];
         delete?: never;
@@ -108,30 +108,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/company/settle": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 한 분기를 넘긴다. 4분기면 연말 결산을 하고 다음 해 연초 회의로 간다 (decisions.md 268번)
-         * @description 직원들이 배치대로 한 분기를 굴린 결과가 lastQuarter에 실린다.
-         *     4분기를 넘기면 네 분기를 모은 연말 결산서가 lastSettlement에 실리고 다음 해 지원자가 온다. 회사는 끝나지 않는다(236번).
-         *     종목 회의를 열 수 있는데(invest.ready) 안 했으면 400.
-         *     넘길 해와 분기를 싣는다. 이미 넘긴 분기면 아무것도 하지 않고 지금 회사를 200으로 돌려준다(같은 요청이 두 번 와도 한 분기만 넘어간다).
-         *     아직 오지 않은 분기면 400 (decisions.md 234번).
-         */
-        post: operations["settleQuarter"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/company/invest/open": {
         parameters: {
             query?: never;
@@ -142,10 +118,11 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * 올해 투자 회의를 연다 (decisions.md 249번)
-         * @description 지금 배치로 직원 한마디(invest.remarks)와 리서치 팀 형광펜을 굳힌다. 그 뒤로 배치를 바꿔도 그대로라 배치를 바꿔 가며 정답을 알아낼 수 없다.
-         *     열기 전에는 remarks가 비어 있고 형광펜도 없다. 이미 열었으면 지금 회사를 그대로 돌려준다.
-         *     열 수 없는 회의(정했거나 돈을 굴리는 자리에 아무도 없다)면 400.
+         * 종목회의를 연다 (decisions.md 249·523번)
+         * @description 기회 하나(meetings.chances)를 써서 새 회의를 연다: 직원이 종목을 물어 오고, 지금 배치로 직원 한마디(invest.remarks)와 리서치 팀 형광펜을 굳힌다.
+         *     그 뒤로 배치를 바꿔도 그대로라 배치를 바꿔 가며 정답을 알아낼 수 없다.
+         *     정하지 않은 회의가 이미 있으면 기회를 쓰지 않고 그 회의를 돌려준다.
+         *     기회가 없거나 돈을 굴리는 자리에 아무도 없으면 400(기회는 쓰지 않는다).
          */
         post: operations["conveneInvestMeeting"];
         delete?: never;
@@ -189,32 +166,9 @@ export interface paths {
          * 종목 회의 뒤 전투의 결과를 보낸다 (decisions.md 414번,
          * @description 틀린 쪽에 걸었으면 디펜스(DEFENSE)로 손실을 줄이고(별 0·1·2·3 → 잃은 몫의 100·70·40·0%, 별 3개면 판돈의 10%를 더 번다),
          *     맞힌 쪽이면 공격 판(ASSAULT)으로 번 몫을 키운다(실패는 추가 0%, 매도벽 열 개 클리어는 벽당 2%로 추가 20%, 기존 회의 수익 유지). 바뀐 몫은 자본에 들어가고 invest.outcome.battle에 실린다.
-         *     모드가 회의 결과와 다르거나, 지켜봤거나, 이미 보냈거나, 그 분기를 넘겼으면 400.
+         *     모드가 회의 결과와 다르거나, 지켜봤거나, 이미 보냈거나, 다음 회의를 열었으면 400.
          */
         post: operations["reportInvestBattle"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/company/mental": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 328번)
-         * @description 분기마다 결산 직전에 멘탈 카드를 고르고 나쁜 투자 습관(패닉셀·투매·투기·손절매)을 쏘아 물리치는 한 판(4분)을 치른다(앱). 레벨이 오를 때마다 카드를 한 장 더 고른다(330번). 한 판은 화면이 돌리고,
-         *     서버는 물리친 적과 남은 멘탈을 상한으로 잘라 강화율을 매긴다. 강화율만큼 그 분기 돈을 굴리는 직원 모두 더 벌고 손이 덜 뒤집힌다.
-         *     이미 보냈으면 아무것도 하지 않고 지금 회사를 돌려준다(같은 요청이 두 번 와도 한 번만). 이번 분기가 아니거나 없는 카드면 400.
-         *     치르지 않고 분기를 넘겨도 된다: 강화가 없을 뿐이다.
-         */
-        post: operations["reportMentalBattle"];
         delete?: never;
         options?: never;
         head?: never;
@@ -376,7 +330,7 @@ export interface paths {
         put?: never;
         /**
          * EX 디펜스 한 판의 결과를 보낸다 (decisions.md 369번)
-         * @description 분기에 한 번 무기 뽑기권 1 + 물리친 적 40마다 한 장(최대 3장). 이번 분기에 이미 했으면 그대로 둔다.
+         * @description 하루에 한 번(한국 시간 자정에 다시 열린다, 523번) 무기 뽑기권 1 + 물리친 적 40마다 한 장(최대 3장). 오늘 이미 했으면 그대로 둔다.
          */
         post: operations["reportEx"];
         delete?: never;
@@ -399,7 +353,7 @@ export interface paths {
          * @description 공격력(+3%)·연사(쏘는 빠르기 +2%, 100%까지)·매수벽 체력(+3%)·매수벽 공격(+3%)·치명타 피해(+6%)를 단계마다 올린다. 연사 말고는 최대 단계가 없다. 값은 1b부터 단계마다 4%씩 오른다.
          *     상한에 닿은 강화를 사면 400 (487번).
          *     꾹 눌러 연속으로 올릴 때 화면이 모은 단계를 levels로 묶어 보낸다: 자본이 닿는 데까지 한 단계씩 사고, 한 단계도 못 사면 400.
-         *     쓴 돈은 분기 실적·결산서에 전투 강화 비용으로 따로 적는다. 고양이 속도 강화는 394번에서 뺐다.
+         *     고양이 속도 강화는 394번에서 뺐다.
          */
         post: operations["buyBattleUpgrade"];
         delete?: never;
@@ -507,28 +461,6 @@ export interface paths {
          *     사장냥이 든 하나뿐인 무기면 400. 가지지 않은 고양이·무기도 400.
          */
         post: operations["equipCat"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/company/scout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * 분기 넘기기를 누르면 직원이 종목을 물어 온다 (decisions.md 267·382번)
-         * @description 지금 배치로 한 분기에 한 번 굴린다: 종목 발굴팀(낮은 확률로 섹터 데스크) 직원이 종목을 물어 오면 invest.ready가 참이 되고 종목 회의가 열린다.
-         *     아무도 안 왔으면 그대로 분기를 넘기면 된다. 이미 굴렸거나 돈을 굴리는 자리에 아무도 없으면 아무것도 하지 않고 지금 회사를 돌려준다.
-         *     거시경제 회의(266번)는 382번에서 뺐다.
-         */
-        post: operations["scoutStock"];
         delete?: never;
         options?: never;
         head?: never;
@@ -719,15 +651,10 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description 회사 화면의 값. 올해 시장 갈래는 숨은 값이라 조짐만 담는다. 직원 능력치는 등급만. */
+        /** @description 회사 화면의 값. 직원 능력치는 등급만. 분기·결산·파산·엔딩은 없다 (decisions.md 523번). 회사는 끝나지 않고 시간이 흐르는 대로 돈을 번다 */
         Company: {
             /** Format: uuid */
             companyId: string;
-            /**
-             * @description ENDED는 매각을 빼기 전(236번)에 팔린 회사. 시대가 끝나 멈췄던 회사는 다시 열면 ACTIVE로 이어진다
-             * @enum {string}
-             */
-            status: "ACTIVE" | "ENDED";
             /** @description 사장이 차린 몇 번째 회사인가 */
             number: number;
             /** @description 지금 시대 (9.4절). 시대는 세 해마다 다른 시대로 바뀐다 (decisions.md 250번) */
@@ -738,12 +665,6 @@ export interface components {
             };
             /** @description 회사를 차릴 때의 한 줄 */
             opening?: string | null;
-            /** @description 지금 해(1부터). 회사는 끝나지 않고 해마다 이어진다 (decisions.md 236번) */
-            year: number;
-            /** @description 지금 분기. 턴 하나가 한 분기다 (decisions.md 268번) */
-            quarter: number;
-            /** @description 올해 마지막으로 넘긴 분기의 실적. 1분기를 넘기기 전이면 null (268번) */
-            lastQuarter?: components["schemas"]["Quarter"] | null;
             /** @description 자본. 자동 전투의 물가(decisions.md 505번)로 int64를 넘게 커진다. 소수 없는 수다 */
             capital: number;
             grade: components["schemas"]["Grade"];
@@ -752,27 +673,21 @@ export interface components {
              * @description 다음 띠의 자본. 끝 등급이면 null
              */
             nextGradeCapital?: number | null;
-            /** @description 건물 이사 (decisions.md 296번). 다음 건물로 가는 데 드는 돈. 끝 등급이거나 끝난 회사면 null */
+            /** @description 건물 이사 (decisions.md 296번). 자본이 needed를 넘으면 cost를 내고 곧바로 다음 건물로 확장한다. 끝 등급이면 null */
             upgrade?: {
                 to: components["schemas"]["Grade"];
                 /**
                  * Format: int64
-                 * @description 이사 비용(다음 띠 자본의 15%). 공사 중이면 0
+                 * @description 이사 비용(다음 띠 자본의 15%)
                  */
                 cost: number;
                 /**
                  * Format: int64
-                 * @description 이사하려면 있어야 하는 자본(다음 띠 + 이사 비용). 공사 중이면 0
+                 * @description 이사하려면 있어야 하는 자본(다음 띠 + 이사 비용)
                  */
                 needed: number;
                 affordable: boolean;
-                /** @description 그 건물을 짓는 데 걸리는 해 (#347). 같은 건물 안에서 책상만 늘면 0(바로 된다) */
-                years: number;
-                /** @description 공사 중이면 남은 해 */
-                left: number | null;
             } | null;
-            /** @description 망한 회사의 한 줄. 자본이 0이면 있고 */
-            broke?: string | null;
             seats: number;
             employees: {
                 id: number;
@@ -790,10 +705,6 @@ export interface components {
                 /** @description 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다 */
                 sector?: string | null;
                 sectorName?: string | null;
-                /** @description 지금 자리에서 결산을 맞은 해 수 (decisions.md 262번) */
-                deskYears: number;
-                /** @description 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다 */
-                settled: boolean;
                 /** @description 앉은 자리의 팀장이다 (decisions.md 269번) */
                 leader: boolean;
                 /** @description 사기. 낮으면 손이 더 뒤집힌다 (270번) */
@@ -807,6 +718,8 @@ export interface components {
                 quirkName?: string;
                 /** @description 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번) */
                 role?: string | null;
+                /** @description 이 직원이 실제 1초에 버는 돈 (523번): 등급별 기본값 × (1 + 능력치 합 ÷ 100)에 그 벽의 물가와 멘탈 보호 보너스를 곱했다. 자리와 상관없다 */
+                incomePerSecond: number;
             }[];
             desks: {
                 code: string;
@@ -835,24 +748,28 @@ export interface components {
                 description: string;
                 unlockGrade: components["schemas"]["Grade"];
             }[];
+            /** @description 채용·시대 안내 줄 */
             meeting?: {
-                /** @description 폭락 조짐. 헛조짐일 수도 있다 */
-                omen?: string | null;
                 /** @description 인사팀에 사람이 있으면 지원자 등급의 중심이 오를 수 있는 곳(인사 직원보다 두 단계 아래). 없으면 null (6.3절) */
                 hrCap?: components["schemas"]["Grade"] | null;
-                /** @description XX 경보. 내년 폭락 조짐 한 줄 */
-                earlyOmen?: string | null;
-                /** @description ZZZ 선견. 내년 시장 한 줄 */
-                forecast?: string | null;
-                wanted: string;
                 /** @description 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절) */
                 hot?: string | null;
-                /** @description 지금 시대의 마지막 해면 "내년에는 시대가 바뀐다" 한 줄. 아니면 null (decisions.md 250번) */
-                eraEnding?: string | null;
-            } | null;
+            };
+            /** @description 종목회의의 기회 (decisions.md 523번). 1시간마다 하나씩 생기고 max까지 쌓인다. 자리를 비운 동안에도 쌓인다 */
+            meetings: {
+                /** @description 지금 열 수 있는 횟수. /api/company/invest/open이 하나를 쓴다 */
+                chances: number;
+                /** @description 쌓이는 상한(3) */
+                max: number;
+                /**
+                 * Format: int64
+                 * @description 다음 기회까지 남은 시간(초). 상한에 찼으면 0
+                 */
+                nextSeconds: number;
+            };
             /** @description 채용 뽑기 (decisions.md 312번). 공채 시장(지원자를 골라 계약금을 내고 뽑던 것, 228번)을 대신한다 */
             gacha: {
-                /** @description 가진 채용권. 한 장에 한 명. 회사를 차릴 때·분기·연말·업적·이사로 받고 다음 회사로 이어진다 */
+                /** @description 가진 채용권. 한 장에 한 명. 회사를 차릴 때와 이사할 때 받는다 */
                 tickets: number;
                 /** @description 데리고 있는 사람 수(쉬는 사람 포함) */
                 roster: number;
@@ -868,7 +785,7 @@ export interface components {
                     percent: number;
                     star: boolean;
                 }[];
-                /** @description 마지막 뽑기에서 온 사람. 분기를 넘기면 비운다. 화면이 카드를 뒤집어 보인다 */
+                /** @description 마지막 뽑기에서 온 사람. 화면이 카드를 뒤집어 보인다 */
                 drawn: {
                     employeeId: number;
                     name: string;
@@ -921,8 +838,8 @@ export interface components {
                 }[];
             };
             /**
-             * @description 올해 종목 회의 (decisions.md 229번). 끝난 회사나 옛 회사면 null. 숨은 방향은 정한 뒤 outcome에만 있다.
-             *     직원이 종목을 물어 와야(finder) 열린다: 그 전에는 ready가 거짓이다 (267번). 분기 넘기기를 누르면 /api/company/scout로 물어 온다(382번)
+             * @description 지금(또는 마지막) 종목회의 (decisions.md 229·523번). 아직 한 번도 열지 않았으면 null. 숨은 방향은 정한 뒤 outcome에만 있다.
+             *     /api/company/invest/open이 기회 하나를 써서 연다: 직원이 종목을 물어 오고(finder) 한마디가 굳는다. 정한 회의는 다음 회의를 열 때까지 결과로 남는다
              */
             invest?: {
                 title: string;
@@ -933,7 +850,7 @@ export interface components {
                     /** @description 맞혔을 때 가장 크게 버는 몫. 기사가 클수록 이 끝에 가깝다 */
                     gainBp: number;
                 };
-                /** @description 이번 분기에 이미 직원이 종목을 물어 왔거나 발굴을 굴렸다 (267·382번) */
+                /** @description 이 회의에 직원이 종목을 물어 왔다 (267·523번) */
                 scouted: boolean;
                 stockName: string;
                 sectorName: string;
@@ -1061,7 +978,7 @@ export interface components {
                             code: "news" | "big" | "stage" | "building" | "year" | "upgrade";
                             plus: number;
                         }[];
-                        /** @description 아직 할 수 있다. 분기를 넘기면 끝난다(배율 1) */
+                        /** @description 아직 할 수 있다. 다음 회의를 열면 끝난다(배율 1) */
                         open: boolean;
                         /** @description 얻은 별(0~3). 아직 안 했으면 null */
                         stars: number | null;
@@ -1125,92 +1042,6 @@ export interface components {
                     }[];
                 } | null;
             } | null;
-            lastSettlement?: {
-                year: number;
-                /** @enum {string} */
-                phase: "boom" | "normal" | "crash";
-                omen?: string | null;
-                /**
-                 * Format: int64
-                 * @description 연초 회의 때의 자본 (decisions.md 251번)
-                 */
-                capitalBefore: number;
-                /** Format: int64 */
-                capitalAfter: number;
-                /**
-                 * Format: int64
-                 * @description 수수료 매출
-                 */
-                fee: number;
-                /**
-                 * Format: int64
-                 * @description 그해 인사 비용(계약금·새로 받기 값. 이적료는 385번에서 이직 제안과 함께 뺐다). 연초 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 이사 비용 = 연말 자본 (251·296번)
-                 */
-                hiring: number;
-                /**
-                 * Format: int64
-                 * @description 그해 낸 이사 비용 (296번)
-                 */
-                moving: number;
-                /**
-                 * Format: int64
-                 * @description 그해 전투 강화에 쓴 돈 (decisions.md 367번)
-                 */
-                upgrades: number;
-                /**
-                 * Format: int64
-                 * @description 그해 스테이지 보상으로 받은 자본 (decisions.md 369번)
-                 */
-                rewards: number;
-                /** @description 그해 투자 회의(기사 제목과 손익, 이미 자본에 들어갔다). 회의를 안 했거나 옛 결산이면 null (decisions.md 240번) */
-                invest?: {
-                    title: string;
-                    /** Format: int64 */
-                    total: number;
-                } | null;
-                /** @description 그해 네 분기의 실적 (decisions.md 268번). 분기 결산 전의 옛 결산이면 비어 있다 */
-                quarters: components["schemas"]["Quarter"][];
-                gradeBefore: components["schemas"]["Grade"];
-                gradeAfter: components["schemas"]["Grade"];
-                /** @description 그해 연 업적 이름 (decisions.md 263번) */
-                achieved: string[];
-                results: {
-                    employeeId: number;
-                    name: string;
-                    desk: string;
-                    /** Format: int64 */
-                    stake: number;
-                    /** Format: int64 */
-                    pnl: number;
-                    flips: {
-                        [key: string]: number;
-                    };
-                }[];
-                lines: string[];
-                /** @description 팀장들의 한 해 보고 (decisions.md 269번) */
-                reports: components["schemas"]["Report"][];
-            } | null;
-            /** @description 업계 순위 (#351). 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다. 한 해도 마치지 않았으면 null */
-            industry?: {
-                /** @description 견준 연차(지난 연말) */
-                year: number;
-                /** @description 그 연차를 마친 회사 가운데 자리(1이 맨 위) */
-                rank: number;
-                /** @description 그 연차를 마친 회사 수 */
-                total: number;
-            };
-            /** @description 이번 분기의 멘탈 전투 (decisions.md 328번). 그 분기 이벤트가 장르를 정한다. 끝난 회사나 이 칸이 생기기 전의 분기면 null */
-            mental?: {
-                /**
-                 * @description ASSAULT: 공격(적이 위에서 내려온다), DEFENSE: 디펜스(금고를 지킨다)
-                 * @enum {string}
-                 */
-                genre: "ASSAULT" | "DEFENSE";
-                /** @description 이벤트 머리글 */
-                headline: string;
-                /** @description 이번 분기 결과를 이미 보냈다 */
-                done: boolean;
-            } | null;
             /** @description 가진 무기 (decisions.md 346번). 수치는 등급을 더한 최종값으로 한 판의 바탕 수치다. 처음엔 일반 권총 하나 */
             weapons?: {
                 /** @enum {string} */
@@ -1232,7 +1063,7 @@ export interface components {
                 /** @description 가진 수 (decisions.md 366번). 같은 무기를 또 뽑으면 늘고, armory.mergeCount개면 합쳐 한 등급 올린다 */
                 count: number;
             }[];
-            /** @description 멘탈 스테이지 (decisions.md 369번). 번호 스테이지를 골라 전진 모드로 깬다. 분기 강화율은 깬 최고 스테이지로 매 분기 저절로 붙는다 */
+            /** @description 멘탈 스테이지 (decisions.md 369번). 번호 스테이지를 골라 전진 모드로 깬다. 깬 최고 스테이지만큼 회사의 초당 수입이 는다 (523번) */
             stages?: {
                 /** @description 깬 최고 스테이지(0이면 아직 없다). 다음에 열리는 것은 best + 1 */
                 best: number;
@@ -1242,9 +1073,9 @@ export interface components {
                 perChapter: number;
                 /** @description 깬 스테이지의 별(1~3) */
                 stars: number[];
-                /** @description 이번 분기 강화율(%) */
+                /** @description 멘탈 보호 보너스(%). 회사의 초당 수입에 곱한다 (523번) */
                 bonusPercent: number;
-                /** @description 이번 분기 EX 디펜스를 아직 안 했다 */
+                /** @description 오늘 EX 디펜스를 아직 안 했다. 하루에 한 번이고 한국 시간 자정에 다시 열린다 (523번) */
                 exAvailable: boolean;
                 /** @description 마지막으로 보낸 스테이지·EX 결과와 받은 보상. 없으면 null */
                 lastResult: {
@@ -1268,6 +1099,31 @@ export interface components {
             /** @description 테스트판의 무한 지갑이 켜져 있다. 자본과 뽑기권이 떨어지지 않는다 */
             sandboxInfinite?: boolean;
             idle?: {
+                /** @description 회사의 수입 (523번). 화면에서 흐르는 실제 1초에 버는 돈이고, 접속해 있는 동안과 자리를 비운 동안이 같다 */
+                income: {
+                    /** @description 회사의 초당 수입 = (매도벽 돌파의 시간 수입 + 직원 초당 수입의 합) × (1 + 멘탈 보호 보너스) */
+                    perSecond: number;
+                    /** @description 그 가운데 직원들의 몫 */
+                    staffPerSecond: number;
+                    /** @description 멘탈 보호 보너스(%) */
+                    bonusPercent: number;
+                };
+                /** @description 자리를 비운 동안 번 돈 (523번). 마지막으로 받은 것이 남아 있고, 화면은 at이 바뀐 것을 보고 한 번 알려 준다. 받은 적이 없으면 null */
+                offline?: {
+                    /**
+                     * Format: int64
+                     * @description 받은 때(서버 시각
+                     */
+                    at: number;
+                    /**
+                     * Format: int64
+                     * @description 비운 시간(초). 상한(8시간)까지만 센다
+                     */
+                    seconds: number;
+                    earned: number;
+                    /** @description 상한보다 오래 비워 상한만큼만 받았다 */
+                    capped: boolean;
+                } | null;
                 /** Format: int64 */
                 wall: number;
                 hp: number;
@@ -1357,7 +1213,7 @@ export interface components {
                     } | null;
                 }[];
             };
-            /** @description 매도벽 돌파 스테이지 (#698). 주 게임. 멘탈 스테이지와 따로 1-1부터 차례로 깬다. 분기 강화율에는 들어가지 않는다 */
+            /** @description 매도벽 돌파 스테이지 (#698). 주 게임. 멘탈 스테이지와 따로 1-1부터 차례로 깬다. 멘탈 보호 보너스에는 들어가지 않는다 */
             assaults?: {
                 /** @description 깬 최고 스테이지(0이면 아직 없다). 다음에 열리는 것은 best + 1 */
                 best: number;
@@ -1433,71 +1289,6 @@ export interface components {
                 }[];
             };
         };
-        /** @description 분기 하나의 실적 (decisions.md 268번) */
-        Quarter: {
-            year: number;
-            quarter: number;
-            /** Format: int64 */
-            capitalBefore: number;
-            /** Format: int64 */
-            capitalAfter: number;
-            /**
-             * Format: int64
-             * @description 수수료 매출(한 해 몫의 4분의 1)
-             */
-            fee: number;
-            /**
-             * Format: int64
-             * @description 직원들이 이 분기에 굴린 몫
-             */
-            staff: number;
-            /**
-             * Format: int64
-             * @description 이 분기에 낸 인사 비용(계약금·새로 받기 값). 시작 자본 + 회의 + 직원들 + 수수료 − 인사 비용 − 이사 비용 = 끝 자본
-             */
-            hiring: number;
-            /**
-             * Format: int64
-             * @description 이 분기에 낸 이사 비용 (296번)
-             */
-            moving: number;
-            /**
-             * Format: int64
-             * @description 이 분기에 전투 강화에 쓴 돈 (decisions.md 367번)
-             */
-            upgrades: number;
-            /**
-             * Format: int64
-             * @description 이 분기에 스테이지 보상으로 받은 자본 (decisions.md 369번)
-             */
-            rewards: number;
-            /** @description 이 분기 종목 회의(기사 제목과 손익). 안 열렸으면 null */
-            invest?: {
-                title: string;
-                /** Format: int64 */
-                total: number;
-            } | null;
-            /** @description 이 분기에 폭락이 터졌다 */
-            crash: boolean;
-            lines: string[];
-            /** @description 팀장 보고. 사람이 앉은 자리마다 한 줄 (decisions.md 269번) */
-            reports: components["schemas"]["Report"][];
-        };
-        /** @description 팀장 보고 한 줄 (decisions.md 269번) */
-        Report: {
-            desk: string;
-            deskName: string;
-            leaderId: number;
-            leader: string;
-            /** @description 보고자: "반도체 데스크 팀장 박한결" */
-            head: string;
-            /**
-             * Format: int64
-             * @description 돈을 굴리는 팀의 손익. 돕는 팀이면 null
-             */
-            pnl?: number | null;
-            text: string;
-        };
         /** @description 종목을 물어 온 직원 (decisions.md 267번) */
         Finder: {
             employeeId: number;
@@ -1550,10 +1341,6 @@ export interface components {
             number: number;
             /** @description 시대 코드 */
             era: string;
-            /** @description 지금 해. 시대가 끝났으면 turns + 1 */
-            year: number;
-            /** @description 결산한 해의 수 */
-            settled: number;
             /** Format: int64 */
             capital: number;
             grade: components["schemas"]["Grade"];
@@ -1637,7 +1424,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description 돌고 있거나 끝난 회사 */
+            /** @description 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1764,38 +1551,6 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
-    settleQuarter: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description 넘길 해. 보통 지금 해(Company.year) */
-                    year: number;
-                    /** @description 넘길 분기. 보통 지금 분기(Company.quarter) */
-                    quarter: number;
-                };
-            };
-        };
-        responses: {
-            /** @description 결산한 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
     conveneInvestMeeting: {
         parameters: {
             query?: never;
@@ -1872,44 +1627,6 @@ export interface operations {
         };
         responses: {
             /** @description 전투 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
-            400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    reportMentalBattle: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description 지금 해(Company.year) */
-                    year: number;
-                    /** @description 지금 분기(Company.quarter) */
-                    quarter: number;
-                    /** @description 고른 멘탈 카드, 고른 순서대로. 처음 한 장 + 레벨이 오를 때마다 한 장 (330번) */
-                    cards: ("hold" | "split" | "rule" | "steel" | "calm" | "heal")[];
-                    /** @description 물리친 적 수 */
-                    kills: number;
-                    /** @description 끝날 때 남은 멘탈 */
-                    mentalLeft: number;
-                };
-            };
-        };
-        responses: {
-            /** @description 결과를 받은 뒤의 회사 */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2261,28 +1978,6 @@ export interface operations {
                 };
             };
             400: components["responses"]["InvalidRequest"];
-            401: components["responses"]["SessionRequired"];
-            404: components["responses"]["NotFound"];
-        };
-    };
-    scoutStock: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description 굴린 뒤의 회사 */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Company"];
-                };
-            };
             401: components["responses"]["SessionRequired"];
             404: components["responses"]["NotFound"];
         };

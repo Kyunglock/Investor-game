@@ -53,10 +53,10 @@ class ScoutEngine {
   }
 
   /**
-   * 종목을 물어 온다 (267번). 분기 넘기기를 누르면 지금 배치로 한 분기에 한 번 굴린다(같은 분기에 다시 불러도 아무것도 하지 않는다). 종목 발굴팀 직원부터(안목이
-   * 높은 사람부터) base + 안목 × insight-percent / 100 확률로, 그다음 섹터 데스크 직원이 desk-percent 확률로. 먼저 가져온 한 사람의
-   * 종목으로 종목 회의가 열린다. 첫 회사의 첫 분기에는 회의를 배우게 돈을 굴리는 직원이 꼭 하나 가져온다. 돈을 굴리는 사람이 없으면 가져와도 굴릴 수 없어 아무도 오지
-   * 않는다(그래도 그 분기에는 굴린 셈이다).
+   * 종목을 물어 온다 (267번). 종목회의를 열 때(523번) 지금 배치로 한 번 굴린다. 종목 발굴팀 직원부터(안목이 높은 사람부터) base + 안목 ×
+   * insight-percent / 100 확률로, 그다음 섹터 데스크 직원이 desk-percent 확률로 가져온다. 아무도 걸리지 않으면 종목 발굴팀에서 안목이 가장 높은
+   * 사람이, 그 팀이 비었으면 돈을 굴리는 직원 가운데 한 사람이 가져온다: 기회를 쓴 회의는 꼭 열린다(전에는 분기에 한 번 굴려 아무도 안 오면 회의가 없었다). 돈을
+   * 굴리는 사람이 없으면 가져와도 굴릴 수 없어 아무도 오지 않는다.
    */
   void discover(CompanyState c, SeededRandom random) {
     if (c.invest == null || !Boolean.FALSE.equals(c.invest.found) || c.invest.scouted) {
@@ -93,11 +93,11 @@ class ScoutEngine {
         }
       }
     }
-    if (finder == null && c.number == 1 && c.year == 1 && c.quarter == 1) {
-      finder = traders.getFirst();
-    }
     if (finder == null) {
-      return;
+      finder =
+          scouts.isEmpty()
+              ? traders.get(random.forKey("scout-any", c.turn()).nextInt(traders.size()))
+              : scouts.getFirst();
     }
     c.usedNews.remove(c.invest.news);
     c.invest = invest.found(c, finder, finderTitle(c, finder), random);

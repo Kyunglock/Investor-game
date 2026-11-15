@@ -223,6 +223,7 @@ class IdleEngine {
     long now = clock.millis();
     if ("start".equals(action)) {
       if (runId.equals(s.runId)) return; // Retried start must never reset the sequence.
+      away(c, now);
       s.hitCredits = new double[KINDS];
       s.runId = runId;
       s.sequence = sequence;
@@ -233,19 +234,88 @@ class IdleEngine {
     if (!runId.equals(s.runId)) throw new InvalidRequestException("다른 화면에서 전투 중입니다. 다시 연결해 주세요.");
     if (sequence <= s.sequence) return;
     s.sequence = sequence;
+    long elapsed = now - s.lastBeat;
+    boolean live =
+        s.lastBeat > 0 && elapsed > 0 && elapsed <= GRACE_MS && serverId.equals(s.serverId);
     if ("stop".equals(action)) {
+      // The time since the last beat is paid like any other gap, so nothing is lost at the end.
+      away(c, now);
       s.lastBeat = 0;
       s.hitCredits = new double[KINDS];
       return;
     }
-    long elapsed = now - s.lastBeat;
-    if (s.lastBeat > 0 && elapsed > 0 && elapsed <= GRACE_MS && serverId.equals(s.serverId)) {
+    if (live) {
       tick(c, elapsed / 1000.0 * SPEED, hits == null ? List.of() : hits);
+      s.lastSeen = now;
     } else {
+      // A gap (a sleeping phone, a restarted server): the fight did not run, the income did.
+      away(c, now);
       s.hitCredits = new double[KINDS];
     }
     s.lastBeat = now;
     s.serverId = serverId;
+  }
+
+  /** Away shorter than this is paid without a notice. */
+  private static final long NOTICE_MS = 60_000;
+
+  /**
+   * Income for the time nobody was playing (decisions.md 523): from the last beat to now at the
+   * same rate the screen shows, up to offline-hours. Walls are not broken meanwhile. A first beat
+   * ever (no lastSeen) pays nothing.
+   */
+  private void away(CompanyState c, long now) {
+    CompanyState.Idle s = state(c);
+    long gone = s.lastSeen > 0 ? now - s.lastSeen : 0;
+    s.lastSeen = now;
+    if (gone <= 0) return;
+    long cap = engine.offlineSeconds() * 1000;
+    double seconds = Math.min(gone, cap) / 1000.0;
+    double income = s.incomeRemainder + seconds * SPEED * incomeRate(c);
+    double earned = Math.floor(income);
+    s.incomeRemainder = income - earned;
+    s.earned += earned;
+    c.capital += earned;
+    if (gone >= NOTICE_MS) {
+      s.offlineAt = now;
+      s.offlineSeconds = seconds;
+      s.offlineEarned = earned;
+      s.offlineCapped = gone > cap;
+    }
+  }
+
+  /** The wall's own time income per game second, before the price level (492). */
+  private static double wallIncome(CompanyState.Idle s) {
+    return INCOME * (1 + INCOME_GROWTH * Math.min(s.wall - 1, 10_000));
+  }
+
+  /**
+   * The company's income per game second (523): (the wall's time income + every employee's income)
+   * x the wall's price level (505) x (1 + the mental stage bonus).
+   */
+  double incomeRate(CompanyState c) {
+    return (wallIncome(state(c)) + engine.staffIncome(c))
+        * CompanyEngine.inflation(c)
+        * (1 + engine.mental.bonusPercent(c) / 100.0);
+  }
+
+  /** One employee's share of that income, per real second on screen. */
+  double incomeOf(CompanyState c, CompanyState.Employee e) {
+    return SPEED
+        * engine.incomeOf(e)
+        * CompanyEngine.inflation(c)
+        * (1 + engine.mental.bonusPercent(c) / 100.0);
+  }
+
+  long now() {
+    return clock.millis();
+  }
+
+  private static final java.time.ZoneId SEOUL = java.time.ZoneId.of("Asia/Seoul");
+
+  /** Today in Korea (yyyy-MM-dd): daily things reset at Korean midnight (523). */
+  String today() {
+    return java.time.LocalDate.ofInstant(clock.instant(), SEOUL).toString();
   }
 
   static double maxHp(long wall) {
@@ -351,12 +421,8 @@ class IdleEngine {
     double rally = s.activeSeconds < s.rallyUntil ? RALLY_FIRE : 1;
     s.activeSeconds += active;
     // 물가 (505번): 시간 수입과 벽 보상은 그 벽의 물가만큼 크다.
-    double income =
-        s.incomeRemainder
-            + active
-                * INCOME
-                * (1 + INCOME_GROWTH * Math.min(s.wall - 1, 10_000))
-                * CompanyEngine.inflation(c);
+    // 직원의 초당 수입과 멘탈 보호 보너스도 같은 틱에 들어온다 (523번).
+    double income = s.incomeRemainder + active * incomeRate(c);
     double earned = Math.floor(income);
     s.incomeRemainder = income - earned;
     if (s.hitCredits == null || s.hitCredits.length != KINDS) s.hitCredits = new double[KINDS];
@@ -479,7 +545,6 @@ class IdleEngine {
     }
     s.earned += earned;
     c.capital += earned;
-    c.yearRewards = CompanyEngine.plus(c.yearRewards, (long) earned);
   }
 
   /** Cat gacha (decisions.md 488, 493): one ticket for one cat. A duplicate levels it up. */
@@ -672,6 +737,21 @@ class IdleEngine {
             .stream()
                 .filter(d -> CATS.contains(d.kind))
                 .map(d -> new CompanyView.CatDraw(d.kind, d.level, d.isNew))
-                .toList());
+                .toList(),
+        new CompanyView.Income(
+            CompanyView.money(SPEED * incomeRate(c)),
+            CompanyView.money(
+                SPEED
+                    * engine.staffIncome(c)
+                    * CompanyEngine.inflation(c)
+                    * (1 + engine.mental.bonusPercent(c) / 100.0)),
+            engine.mental.bonusPercent(c)),
+        s.offlineAt <= 0
+            ? null
+            : new CompanyView.Offline(
+                s.offlineAt,
+                Math.round(s.offlineSeconds),
+                CompanyView.money(s.offlineEarned),
+                s.offlineCapped));
   }
 }

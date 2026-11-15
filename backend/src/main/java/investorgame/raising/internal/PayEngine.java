@@ -69,20 +69,4 @@ class PayEngine {
     }
   }
 
-  /** 분기를 넘길 때 자리에 앉아 있던 사람은 올해 쉰 것이 아니다. */
-  void markWorked(CompanyState c) {
-    c.employees.stream().filter(e -> e.desk != null).forEach(e -> e.restedAllYear = false);
-  }
-
-  /** 연말 (270번): 사기가 0 쪽으로 한 칸 돌아오고, 한 해 내내 쉰 사람은 기운을 되찾는다(+1). 소식 줄을 남긴다. */
-  void yearEnd(CompanyState c, List<String> lines) {
-    for (Employee e : c.employees) {
-      e.morale -= Integer.signum(e.morale);
-      if (e.restedAllYear && e.joinedYear < c.year) {
-        shift(e, 1);
-        lines.add(Korean.fill(texts().rested(), Map.of("name", e.name)));
-      }
-      e.restedAllYear = true;
-    }
-  }
 }

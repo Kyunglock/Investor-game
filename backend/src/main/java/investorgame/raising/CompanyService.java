@@ -65,25 +65,6 @@ public interface CompanyService {
    */
   CompanyView investBattle(UUID sessionId, String mode, int stars);
 
-  /**
-   * 분기 넘기기를 누르면 직원이 종목을 물어 온다 (decisions.md 267·382번): 지금 배치로 한 분기에 한 번 굴린다. 물어 왔으면 invest.ready가
-   * 참이 되고 종목 회의를 열 수 있다. 이미 굴렸거나 돈을 굴리는 직원이 없으면 아무것도 하지 않는다.
-   */
-  CompanyView scout(UUID sessionId);
-
-  /**
-   * 한 분기를 넘긴다 (decisions.md 268번). 4분기면 연말 결산을 하고 다음 해 1분기로 간다. 넘길 해와 분기를 싣는다: 이미 넘긴 분기면 아무것도 하지 않고
-   * 지금 회사를 돌려준다(버튼 두 번, 끊긴 요청 다시 보내기, 234번). 아직 오지 않은 분기거나, 이번 분기에 열 수 있는 종목 회의를 안 했으면 400.
-   */
-  CompanyView settle(UUID sessionId, int year, int quarter);
-
-  /**
-   * 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 328번). 고른 카드 목록(처음 한 장 + 레벨마다 한 장)과 결과를 받아 서버가 상한으로 자르고 강화율을
-   * 매겨 그 분기 결산에 건다. 이미 보냈으면 그대로 돌려준다. 이번 분기가 아니거나 없는 카드면 400.
-   */
-  CompanyView mental(
-      UUID sessionId, int year, int quarter, List<String> cards, int kills, int mentalLeft);
-
   /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). 없는 종류·등급이거나 안 가진 무기면 400. */
   CompanyView equipWeapon(UUID sessionId, String kind, String grade);
 

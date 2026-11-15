@@ -126,7 +126,9 @@ class CompanyController {
 
   record ReleaseRequest(@NotNull Integer employeeId) {}
 
-  /** 올해 투자 회의를 연다: 직원 한마디와 형광펜을 굳힌다 (decisions.md 249번). */
+  /**
+   * 종목회의를 연다 (decisions.md 249·523번): 기회 하나를 써서 직원이 종목을 물어 오고 한마디와 형광펜을 굳힌다. 정하지 않은 회의가 있으면 그 회의로 돌아간다.
+   */
   @PostMapping("/invest/open")
   CompanyView convene(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
     return companies.convene(cookies.requirePlayer(token));
@@ -141,10 +143,9 @@ class CompanyController {
     CompanyView company =
         companies.invest(sessionId, request.choice(), Boolean.TRUE.equals(request.big()));
     PLAY.info(
-        "company-invest session={} company={} year={} choice={} big={} ip={}",
+        "company-invest session={} company={} choice={} big={} ip={}",
         sessionId,
         company.companyId(),
-        company.year(),
         request.choice(),
         request.big(),
         ClientIp.current());
@@ -172,46 +173,6 @@ class CompanyController {
   }
 
   record InvestBattleRequest(@NotBlank String mode, @Min(0) @Max(3) int stars) {}
-
-  /** 분기 넘기기를 누르면 직원이 종목을 물어 온다 (decisions.md 267·382번). 물어 왔으면 종목 회의가 열린다. */
-  @PostMapping("/scout")
-  CompanyView scout(@CookieValue(name = SessionCookies.NAME, required = false) String token) {
-    return companies.scout(cookies.requirePlayer(token));
-  }
-
-  /** 이번 분기 멘탈 전투의 결과를 보낸다 (decisions.md 328번). */
-  @PostMapping("/mental")
-  CompanyView mental(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody MentalRequest request) {
-    UUID sessionId = cookies.requirePlayer(token);
-    CompanyView company =
-        companies.mental(
-            sessionId,
-            request.year(),
-            request.quarter(),
-            request.cards(),
-            request.kills(),
-            request.mentalLeft());
-    PLAY.info(
-        "company-mental session={} company={} year={} quarter={} cards={} kills={} left={} ip={}",
-        sessionId,
-        company.companyId(),
-        request.year(),
-        request.quarter(),
-        request.cards(),
-        request.kills(),
-        request.mentalLeft(),
-        ClientIp.current());
-    return company;
-  }
-
-  record MentalRequest(
-      @Positive int year,
-      @Min(1) @Max(4) int quarter,
-      @NotEmpty List<@NotBlank String> cards,
-      @PositiveOrZero int kills,
-      @PositiveOrZero int mentalLeft) {}
 
   /** 가진 무기 가운데 하나를 든다 (decisions.md 346번). */
   @PostMapping("/weapon")
@@ -401,9 +362,6 @@ class CompanyController {
 
   record LeaderRequest(@NotBlank String desk, @NotNull Integer employeeId) {}
 
-  /** 넘길 해와 분기 (decisions.md 234·268번). 이미 넘긴 분기면 아무것도 하지 않는다. */
-  record SettleRequest(@NotNull @Positive Integer year, @NotNull @Min(1) @Max(4) Integer quarter) {}
-
   @PostMapping("/placement")
   CompanyView place(
       @CookieValue(name = SessionCookies.NAME, required = false) String token,
@@ -417,25 +375,6 @@ class CompanyController {
       placements.put(seat.employeeId(), seat.desk());
     }
     return companies.place(cookies.requirePlayer(token), placements);
-  }
-
-  /** 올해 결산. 요청에 결산할 해를 싣는다: 같은 결산이 두 번 와도 한 해만 넘어간다 (decisions.md 234번). */
-  @PostMapping("/settle")
-  CompanyView settle(
-      @CookieValue(name = SessionCookies.NAME, required = false) String token,
-      @Valid @RequestBody SettleRequest request) {
-    UUID sessionId = cookies.requirePlayer(token);
-    CompanyView company = companies.settle(sessionId, request.year(), request.quarter());
-    PLAY.info(
-        "company-settle session={} company={} year={} quarter={} capital={} grade={} ip={}",
-        sessionId,
-        company.companyId(),
-        request.year(),
-        request.quarter(),
-        company.capital(),
-        company.grade(),
-        ClientIp.current());
-    return company;
   }
 
   /** replace는 자리가 꽉 찼을 때 내보낼 직원 ID. */

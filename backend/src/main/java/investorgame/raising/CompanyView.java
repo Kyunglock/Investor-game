@@ -5,32 +5,26 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 회사 화면의 값 (증권사 육성 설계 4·6절). 올해 시장 갈래는 숨은 값이라 조짐만 담는다. 직원 능력치는 등급만.
+ * 회사 화면의 값 (증권사 육성 설계 4·6절). 직원 능력치는 등급만. 분기·결산·파산·엔딩은 없앴다 (decisions.md 523번): 회사는 끝나지 않고 시간이 흐르는
+ * 대로 돈을 번다.
  *
- * @param year 지금 해(1부터). 회사는 끝나지 않고 해마다 이어진다 (decisions.md 236번)
- * @param quarter 지금 분기(1~4). 턴 하나가 한 분기다 (decisions.md 268번)
- * @param lastQuarter 올해 마지막으로 넘긴 분기의 실적. 1분기 전이면 null (268번)
- * @param grade 자본으로 매기는 회사 등급 (4.5절)
+ * @param grade 회사 등급 = 산 건물 (4.5절)
  * @param nextGradeCapital 다음 등급의 자본. 맨 위면 null
  * @param seats 앉힐 수 있는 자리 수
- * @param meeting 연초 회의. 끝난 회사면 null
+ * @param meeting 채용·시대 안내 줄
  * @param gacha 채용 뽑기: 채용권, 데리고 있는 사람, 확률표, 마지막 뽑기, 도감 (decisions.md 312번)
  * @param history 회사 연표·업적·명예의 전당 (decisions.md 263번)
- * @param broke 망한 회사의 한 줄. 자본이 0이면 있고, 그때 사재로 다음 회사를 차릴 수 있다. 아니면 null (decisions.md 247번)
- * @param invest 올해 종목 회의. 끝난 회사나 옛 회사면 null (decisions.md 229번). 직원이 물어 오기 전에는 ready가 거짓이다 (267번)
- * @param lastSettlement 지난 결산. 아직 없으면 null
+ * @param invest 지금(또는 마지막) 종목회의. 아직 한 번도 열지 않았으면 null (decisions.md 229·523번)
+ * @param meetings 종목회의의 기회 (523번)
  * @param number 사장이 차린 몇 번째 회사인가
  * @param era 이 회사의 시대 (9.4절)
  * @param opening 회사를 차릴 때의 한 줄
  */
 public record CompanyView(
     UUID companyId,
-    Status status,
     int number,
     Era era,
     String opening,
-    int year,
-    int quarter,
     java.math.BigDecimal capital,
     String grade,
     Long nextGradeCapital,
@@ -41,13 +35,9 @@ public record CompanyView(
     Meeting meeting,
     Gacha gacha,
     History history,
-    String broke,
     Invest invest,
-    Quarter lastQuarter,
-    Settlement lastSettlement,
-    Industry industry,
+    Meetings meetings,
     List<LockedDesk> lockedDesks,
-    Mental mental,
     List<Weapon> weapons,
     Armory armory,
     List<BattleUpgrade> battleUpgrades,
@@ -56,6 +46,33 @@ public record CompanyView(
     Idle idle,
     boolean sandbox,
     boolean sandboxInfinite) {
+
+  /**
+   * 종목회의의 기회 (decisions.md 523번): 1시간마다 하나씩 생기고 max까지 쌓인다. 자리를 비운 동안에도 쌓인다.
+   *
+   * @param chances 지금 열 수 있는 횟수
+   * @param nextSeconds 다음 기회까지 남은 시간(초). 상한에 찼으면 0
+   */
+  public record Meetings(int chances, int max, long nextSeconds) {}
+
+  /**
+   * 회사의 수입 (523번): 화면에서 흐르는 실제 1초에 버는 돈. 접속해 있는 동안과 자리를 비운 동안이 같다.
+   *
+   * @param perSecond 회사의 초당 수입 = (매도벽 돌파의 시간 수입 + 직원 초당 수입의 합) × (1 + 멘탈 보호 보너스)
+   * @param staffPerSecond 그 가운데 직원들의 몫
+   * @param bonusPercent 멘탈 보호 보너스(%)
+   */
+  public record Income(
+      java.math.BigDecimal perSecond, java.math.BigDecimal staffPerSecond, int bonusPercent) {}
+
+  /**
+   * 자리를 비운 동안 번 돈 (523번). 화면이 at이 바뀐 것을 보고 한 번 알려 준다.
+   *
+   * @param at 받은 때(서버 시각, ms)
+   * @param seconds 비운 시간(초). 상한(8시간)까지만 센다
+   * @param capped 상한보다 오래 비워 상한만큼만 받았다
+   */
+  public record Offline(long at, long seconds, java.math.BigDecimal earned, boolean capped) {}
 
   /** 화면에 주는 돈 (decisions.md 505번): long을 넘게 커지므로 소수 없는 큰 수로 준다. JSON에서는 그냥 숫자다. */
   public static java.math.BigDecimal money(double amount) {
@@ -77,7 +94,9 @@ public record CompanyView(
       List<IdleWall> upcoming,
       long sequence,
       List<IdleActive> actives,
-      List<CatDraw> lastDraws) {}
+      List<CatDraw> lastDraws,
+      Income income,
+      Offline offline) {}
 
   /**
    * 고양이 뽑기에서 나온 한 마리 (517번).
@@ -131,24 +150,6 @@ public record CompanyView(
    * @param owned 지금 발동 중이다: 이 스킬을 가진 고양이가 출전해 있다
    */
   public record IdleSkill(String code, String name, boolean owned, int level) {}
-
-  /**
-   * 업계 순위 (#351): 실제 유저 회사끼리 같은 연차의 연말 자본으로 견준다. 이름은 없다(로그인이 없는 익명 세션). 한 해도 마치지 않았으면 null.
-   *
-   * @param year 견준 연차(지난 연말)
-   * @param rank 그 연차를 마친 회사 가운데 자리(1이 맨 위)
-   * @param total 그 연차를 마친 회사 수
-   */
-  public record Industry(int year, int rank, int total) {}
-
-  /**
-   * 이번 분기의 멘탈 전투 (decisions.md 328번). 끝난 회사나 이 칸이 생기기 전의 분기면 null.
-   *
-   * @param genre ASSAULT(공격)·DEFENSE(디펜스). 그 분기 이벤트가 정한다
-   * @param headline 이벤트 머리글
-   * @param done 이번 분기 결과를 이미 보냈다. 참이면 다시 치르지 않는다
-   */
-  public record Mental(String genre, String headline, boolean done) {}
 
   /**
    * 무기 뽑기 (decisions.md 366번).
@@ -255,11 +256,6 @@ public record CompanyView(
       boolean equipped,
       int count) {}
 
-  public enum Status {
-    ACTIVE,
-    ENDED
-  }
-
   /**
    * @param desk 앉은 자리 코드. 쉬면 null
    * @param overallGrade 종합 등급(F~SSS, 그 위 X~GOD). 뽑은 그대로 가고 오르거나 떨어지지 않는다 (421번)
@@ -267,8 +263,6 @@ public record CompanyView(
    *     387번)
    * @param perk 등급 효과 한 줄: 이름·맞히면 버는 배수·손 뒤집힘 보정·이름 붙은 효과·(decisions.md 289·387번)
    * @param sector 관심 섹터 코드. 같은 섹터 데스크에 앉으면 조금 더 번다. 없으면 null
-   * @param deskYears 지금 자리에서 결산을 맞은 해 수 (decisions.md 262번)
-   * @param settled 올해 결산이 같은 자리 세 해째 이상이라 손이 덜 뒤집힌다
    * @param role 앉은 자리의 직함(애널리스트·종목 발굴 담당…). 직함이 없는 자리거나 쉬면 null (decisions.md 267번)
    * @param leader 앉은 자리의 팀장이다 (decisions.md 269번)
    * @param morale 사기(−2~+2). 낮으면 손이 더 뒤집힌다 (270번)
@@ -283,13 +277,12 @@ public record CompanyView(
       String perk,
       String sector,
       String sectorName,
-      int deskYears,
-      boolean settled,
       String role,
       boolean leader,
       int morale,
       String quirk,
-      String quirkName) {}
+      String quirkName,
+      java.math.BigDecimal incomePerSecond) {}
 
   /**
    * 채용 뽑기 (decisions.md 312번).
@@ -527,44 +520,10 @@ public record CompanyView(
   public record LockedDesk(String code, String name, String description, String unlockGrade) {}
 
   /**
-   * @param omen 폭락 조짐(빨간 글씨). 없으면 null. 헛조짐일 수도 있다
    * @param hrCap 인사팀에 사람이 있으면 지원자 등급의 중심이 오를 수 있는 곳(인사 직원보다 두 단계 아래). 없으면 null
-   * @param earlyOmen XX 경보: 내년 폭락 조짐 한 줄. 경보 직원이 없거나 조짐이 없으면 null
-   * @param forecast ZZZ 선견: 내년 시장 한 줄. 선견 직원이 없으면 null
-   * @param wanted 회사가 올해 필요한 인재 한 줄 (6.1절 1번)
    * @param hot 이번 시대에 뜨는 섹터 한 줄. 뜨는 섹터가 없는 시대면 null (9.4절)
    */
-  /**
-   * @param eraEnding 지금 시대의 마지막 해면 "내년에는 시대가 바뀐다" 한 줄. 아니면 null (decisions.md 250번)
-   */
-  public record Meeting(
-      String hrCap,
-      String omen,
-      String earlyOmen,
-      String forecast,
-      String wanted,
-      String hot,
-      String eraEnding) {}
-
-  public record Settlement(
-      int year,
-      String phase,
-      String omen,
-      long capitalBefore,
-      long capitalAfter,
-      long fee,
-      long hiring,
-      long moving,
-      long upgrades,
-      long rewards,
-      SettlementInvest invest,
-      List<Quarter> quarters,
-      String gradeBefore,
-      String gradeAfter,
-      List<String> achieved,
-      List<Result> results,
-      List<String> lines,
-      List<Report> reports) {}
+  public record Meeting(String hrCap, String hot) {}
 
   /**
    * 건물 이사 (decisions.md 296번): 다음 건물로 가는 데 드는 돈. 끝 등급이면 null.
@@ -580,58 +539,7 @@ public record CompanyView(
    * @param years 그 건물을 짓는 데 걸리는 해. 같은 건물 안에서 책상만 늘면 0(바로 된다)
    * @param left 공사 중이면 남은 해, 아니면 null
    */
-  public record Upgrade(
-      String to, long cost, long needed, boolean affordable, int years, Integer left) {}
-
-  /** 결산한 해의 투자 회의: 기사 제목과 회의 손익(이미 자본에 들어갔다). 회의를 안 했으면 결산의 invest가 null (decisions.md 240번). */
-  public record SettlementInvest(String title, long total) {}
-
-  /**
-   * 분기 하나의 실적 (decisions.md 268번).
-   *
-   * @param staff 직원들이 이 분기에 굴린 몫
-   * @param hiring 이 분기에 낸 인사 비용(계약금·새로 받기 값)
-   * @param moving 이 분기에 낸 이사 비용 (296번)
-   * @param upgrades 이 분기에 전투 강화에 쓴 돈 (367번)
-   * @param rewards 이 분기에 스테이지 보상으로 받은 자본 (369번)
-   * @param invest 이 분기 종목 회의. 안 열렸으면 null
-   * @param crash 이 분기에 폭락이 터졌다
-   * @param lines 분기 소식 줄(직원 소식)
-   */
-  public record Quarter(
-      int year,
-      int quarter,
-      long capitalBefore,
-      long capitalAfter,
-      long fee,
-      long staff,
-      long hiring,
-      long moving,
-      long upgrades,
-      long rewards,
-      SettlementInvest invest,
-      boolean crash,
-      List<String> lines,
-      List<Report> reports) {}
-
-  /**
-   * 팀장 보고 한 줄 (decisions.md 269번).
-   *
-   * @param head 보고자: "반도체 데스크 팀장 박한결"
-   * @param pnl 돈을 굴리는 팀의 손익. 돕는 팀이면 null
-   */
-  public record Report(
-      String desk,
-      String deskName,
-      int leaderId,
-      String leader,
-      String head,
-      Long pnl,
-      String text) {}
-
-  /** flips는 능력치 코드 → 그해 뒤집힌 횟수. */
-  public record Result(
-      int employeeId, String name, String desk, long stake, long pnl, Map<String, Integer> flips) {}
+  public record Upgrade(String to, long cost, long needed, boolean affordable) {}
 
   public record Era(String code, String name, String description) {}
 

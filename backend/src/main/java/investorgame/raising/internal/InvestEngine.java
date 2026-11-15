@@ -719,7 +719,7 @@ class InvestEngine {
     parts.put("stage", Math.max(0, bestStage));
     String building = c.building == null ? "F" : c.building;
     parts.put("building", Math.max(0, CompanyEngine.LADDER.indexOf(building)) / 2);
-    parts.put("quarter", Math.max(0, c.quarterIndex() - 1));
+    parts.put("quarter", Math.max(0, c.meetings - 1));
     return parts;
   }
 
